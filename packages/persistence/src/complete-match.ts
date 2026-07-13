@@ -8,6 +8,7 @@ import {
   type ChronicleRecorderExecution,
 } from "@cowards/replay"
 import {
+  CANONICAL_COMPATIBILITY_TUPLES,
   RuntimeExecutionFinalStateSchema,
   RuntimeExecutionResolvedEvidenceSnapshotSchema,
   validateCanonicalGameState,
@@ -141,22 +142,73 @@ const candidateCompleteKeys = [
   "integrityIdentity",
 ] as const
 
+const currentCompleteKeys = [
+  "jobId",
+  "leaseToken",
+  "chronicle",
+  "finalState",
+  "integrityIdentity",
+] as const
+
+const exactTupleMatches = (
+  actual: RuntimeExecutionResolvedEvidenceSnapshot["compatibility"],
+  expected: Readonly<RuntimeExecutionResolvedEvidenceSnapshot["compatibility"]>,
+): boolean =>
+  actual.tupleId === expected.tupleId &&
+  isDeepStrictEqual(actual.tuple, expected.tuple)
+
 const prepareCompletion = (input: CompleteMatchRequest): PreparedCompletion => {
-  if (!isRecord(input) || input.profile !== "candidate-v1.37") {
-    const current = input as CompleteMatchInput
+  if (!isRecord(input)) {
+    throw new MatchCompletionSemanticSystemFailure("COMPLETION_ROUTE_INVALID")
+  }
+
+  // Parse the entire response evidence before route selection, semantic
+  // admission, cloning any gameplay document, or deriving persisted fields.
+  // This prevents a partial type cast from influencing either route.
+  const parsedIdentity =
+    RuntimeExecutionResolvedEvidenceSnapshotSchema.safeParse(
+      input.integrityIdentity,
+    )
+  if (!parsedIdentity.success) {
+    throw new MatchCompletionSemanticSystemFailure(
+      "COMPLETION_EVIDENCE_SHAPE_INVALID",
+    )
+  }
+  const integrityIdentity = globalThis.structuredClone(parsedIdentity.data)
+  const candidateEnvelope = hasExactKeys(input, candidateCompleteKeys)
+  const currentEnvelope = hasExactKeys(input, currentCompleteKeys)
+
+  if (currentEnvelope) {
+    const activeCurrent = CANONICAL_COMPATIBILITY_TUPLES[0]
+    if (
+      !activeCurrent ||
+      !exactTupleMatches(integrityIdentity.compatibility, activeCurrent)
+    ) {
+      throw new MatchCompletionSemanticSystemFailure(
+        "CURRENT_ROUTE_TUPLE_INVALID",
+      )
+    }
+    const current = input as unknown as CompleteMatchInput
     return {
       profile: "current-exact",
       jobId: current.jobId,
       leaseToken: current.leaseToken,
       chronicle: globalThis.structuredClone(current.chronicle),
       finalState: globalThis.structuredClone(current.finalState),
-      integrityIdentity: globalThis.structuredClone(current.integrityIdentity),
+      integrityIdentity,
     }
   }
-  if (!hasExactKeys(input, candidateCompleteKeys)) {
+
+  // Candidate routing is established by the exact candidate envelope and the
+  // engine/replay admission brand below. The caller-controlled profile string
+  // is never sufficient to select this route.
+  if (!candidateEnvelope) {
     throw new MatchCompletionSemanticSystemFailure("CANDIDATE_ROUTE_INVALID")
   }
   const candidate = input as unknown as CandidateCompleteMatchInput
+  if (candidate.profile !== "candidate-v1.37") {
+    throw new MatchCompletionSemanticSystemFailure("CANDIDATE_ROUTE_INVALID")
+  }
   let admission: Readonly<CandidateChronicleAdmission>
   try {
     const semanticInput: CandidateReplaySemanticInput = {
@@ -173,9 +225,6 @@ const prepareCompletion = (input: CompleteMatchRequest): PreparedCompletion => {
     )
   }
   const finalState = globalThis.structuredClone(candidate.finalState)
-  const integrityIdentity = globalThis.structuredClone(
-    candidate.integrityIdentity,
-  )
   const parsedFinal = RuntimeExecutionFinalStateSchema.safeParse(finalState)
   if (!parsedFinal.success) {
     throw new MatchCompletionSemanticSystemFailure(
@@ -407,6 +456,15 @@ interface IdempotentCompletionRow extends LockedCompletionRow {
   chronicle_bottom_execution_evidence: unknown
   chronicle_top_execution_evidence: unknown
   chronicle_execution_evidence_pair_hash: string
+  chronicle_compatibility_tuple_id: string
+  chronicle_compatibility_rules_version: string
+  chronicle_compatibility_engine_version: string
+  chronicle_compatibility_runtime_abi_version: string
+  chronicle_compatibility_chronicle_version: string
+  chronicle_compatibility_arena_catalog_version: string
+  chronicle_compatibility_set_policy_version: string
+  chronicle_authority_bundle_hash: string
+  chronicle_authority_registry_generation: string
   chronicle_authority_publication_id: string
   chronicle_authority_install_receipt_id: string
   chronicle_authority_payload_sha256: string
@@ -705,6 +763,10 @@ export const completeMatch = async (
           and top_entrant.authority_registry_generation = authority.generation::text
           and bottom_entrant.scheduling_status <> 'disabled'
           and top_entrant.scheduling_status <> 'disabled'
+          and bottom_entrant.scheduling_evaluated_at <= now()
+          and bottom_entrant.scheduling_fresh_until >= now()
+          and top_entrant.scheduling_evaluated_at <= now()
+          and top_entrant.scheduling_fresh_until >= now()
           and (
             (bottom_entrant.scheduling_status = 'counted'
              and bottom_conformance.id is not null)
@@ -880,6 +942,15 @@ export const completeMatch = async (
             c.bottom_execution_evidence as chronicle_bottom_execution_evidence,
             c.top_execution_evidence as chronicle_top_execution_evidence,
             c.execution_evidence_pair_hash as chronicle_execution_evidence_pair_hash,
+            c.compatibility_tuple_id as chronicle_compatibility_tuple_id,
+            c.compatibility_rules_version as chronicle_compatibility_rules_version,
+            c.compatibility_engine_version as chronicle_compatibility_engine_version,
+            c.compatibility_runtime_abi_version as chronicle_compatibility_runtime_abi_version,
+            c.compatibility_chronicle_version as chronicle_compatibility_chronicle_version,
+            c.compatibility_arena_catalog_version as chronicle_compatibility_arena_catalog_version,
+            c.compatibility_set_policy_version as chronicle_compatibility_set_policy_version,
+            c.authority_bundle_hash as chronicle_authority_bundle_hash,
+            c.authority_registry_generation as chronicle_authority_registry_generation,
             c.authority_publication_id as chronicle_authority_publication_id,
             c.authority_install_receipt_id as chronicle_authority_install_receipt_id,
             c.authority_payload_sha256 as chronicle_authority_payload_sha256,
@@ -989,6 +1060,22 @@ export const completeMatch = async (
         ) ||
         !isDeepStrictEqual(row.chronicle_top_execution_evidence, pair.top) ||
         row.chronicle_execution_evidence_pair_hash !== pair.pairHash ||
+        row.chronicle_compatibility_tuple_id !== row.compatibility_tuple_id ||
+        row.chronicle_compatibility_rules_version !==
+          row.compatibility_rules_version ||
+        row.chronicle_compatibility_engine_version !==
+          row.compatibility_engine_version ||
+        row.chronicle_compatibility_runtime_abi_version !==
+          row.compatibility_runtime_abi_version ||
+        row.chronicle_compatibility_chronicle_version !==
+          row.compatibility_chronicle_version ||
+        row.chronicle_compatibility_arena_catalog_version !==
+          row.compatibility_arena_catalog_version ||
+        row.chronicle_compatibility_set_policy_version !==
+          row.compatibility_set_policy_version ||
+        row.chronicle_authority_bundle_hash !== row.authority_bundle_hash ||
+        row.chronicle_authority_registry_generation !==
+          row.authority_registry_generation ||
         row.chronicle_authority_publication_id !==
           row.authority_publication_id ||
         row.chronicle_authority_install_receipt_id !==

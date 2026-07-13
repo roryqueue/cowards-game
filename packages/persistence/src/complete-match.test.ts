@@ -1,5 +1,6 @@
 import { Buffer } from "node:buffer"
 import { createHash, randomUUID } from "node:crypto"
+import { gunzipSync } from "node:zlib"
 import {
   CANDIDATE_MATCH_KERNEL,
   type GameState,
@@ -11,6 +12,7 @@ import {
 } from "@cowards/replay"
 import {
   CANONICAL_COMPATIBILITY_TUPLES,
+  type Chronicle,
   type ExecutableLaneIdentity,
   type RuntimeEntrantExecutionEvidence,
   type RuntimeExecutionResolvedEvidenceSnapshot,
@@ -23,6 +25,7 @@ import {
   MatchCompletionIntegritySystemFailure,
   completeMatch,
   deriveMatchCompletionFields,
+  type CandidateCompleteMatchInput,
   validateCompletionIntegritySnapshot,
 } from "./complete-match.js"
 import { migrate } from "./migrations.js"
@@ -36,6 +39,7 @@ import {
   type MatchExecutionEvidencePair,
   type MatchSetIntegrityIdentity,
 } from "./integrity-evidence.js"
+import { ACTIVE_OLD_COMPLETION_GZIP_BASE64 } from "./active-old-completion.fixture.js"
 
 const tuple = CANONICAL_COMPATIBILITY_TUPLES[0]!
 const sha256 = (value: string): string =>
@@ -146,22 +150,39 @@ const passiveRuntime: StrategyRuntime = {
   },
 }
 
-const builtMatch = (namespace: string) => {
-  const execution = CANDIDATE_MATCH_KERNEL.runMatch({
-    matchId: `${namespace}:match`,
-    seed: `${namespace}:seed`,
-    arenaVariant: {
-      id: `${namespace}:arena`,
-      name: "Completion integrity",
-      initialBounds: { minX: 0, maxX: 11, minY: 0, maxY: 11 },
-      terrainStones: [],
-    },
-    bottomPlayerId: `${namespace}:player:bottom`,
-    topPlayerId: `${namespace}:player:top`,
-    bottomStrategyRevisionId: `${namespace}:revision:bottom`,
-    topStrategyRevisionId: `${namespace}:revision:top`,
-    runtime: passiveRuntime,
-  })
+const matchInput = (namespace: string) => ({
+  matchId: `${namespace}:match`,
+  seed: `${namespace}:seed`,
+  arenaVariant: {
+    id: `${namespace}:arena`,
+    name: "Completion integrity",
+    initialBounds: { minX: 0, maxX: 11, minY: 0, maxY: 11 },
+    terrainStones: [],
+  },
+  bottomPlayerId: `${namespace}:player:bottom`,
+  topPlayerId: `${namespace}:player:top`,
+  bottomStrategyRevisionId: `${namespace}:revision:bottom`,
+  topStrategyRevisionId: `${namespace}:revision:top`,
+  runtime: passiveRuntime,
+})
+
+const ACTIVE_OLD_COMPLETION_TEMPLATE = gunzipSync(
+  Buffer.from(ACTIVE_OLD_COMPLETION_GZIP_BASE64, "base64"),
+).toString("utf8")
+
+const builtMatch = (
+  namespace: string,
+  seed = `${namespace}:seed`,
+): { chronicle: Chronicle; finalState: GameState } =>
+  JSON.parse(
+    ACTIVE_OLD_COMPLETION_TEMPLATE.replaceAll("__NS__", namespace).replaceAll(
+      "__SEED__",
+      seed,
+    ),
+  ) as { chronicle: Chronicle; finalState: GameState }
+
+const builtCandidateMatch = (namespace: string) => {
+  const execution = CANDIDATE_MATCH_KERNEL.runMatch(matchInput(namespace))
   const recorded = recordChronicleFromExecution({
     execution,
     metadata: {
@@ -180,6 +201,31 @@ const builtMatch = (namespace: string) => {
   })
   if (!candidate.ok) throw new Error(candidate.issues[0]?.code)
   return { execution, ...recorded }
+}
+
+const candidateCompletionInput = (
+  namespace: string,
+  integrityIdentity: RuntimeExecutionResolvedEvidenceSnapshot,
+): CandidateCompleteMatchInput => {
+  const built = builtCandidateMatch(namespace)
+  if (built.execution.kind !== "completed") {
+    throw new Error("candidate execution did not complete")
+  }
+  const outcome = built.finalState.outcome
+  if (!outcome) throw new Error("candidate execution has no outcome")
+  return {
+    profile: "candidate-v1.37",
+    compatibility: built.semanticIdentity,
+    chronicle: built.chronicle,
+    boundaryAnchors: built.boundaryAnchors,
+    execution: built.execution,
+    jobId: `${namespace}:job`,
+    leaseToken: `${namespace}:lease`,
+    finalState: built.finalState,
+    terminalStateHash: built.execution.transitions.at(-1)!.afterStateHash,
+    outcome,
+    integrityIdentity,
+  }
 }
 
 const finalState = {
@@ -346,6 +392,54 @@ describe("Match completion integrity identity", () => {
         })
       }
     }
+  })
+
+  it("rejects partial, relabeled, and mixed candidate provenance before opening the database", async () => {
+    const namespace = "completion:route-unit"
+    const { identity, pair } = completionIdentity(namespace)
+    const snapshot = responseSnapshot(identity, pair)
+    const candidate = candidateCompletionInput(namespace, snapshot)
+    const pool = {
+      async connect() {
+        throw new Error("database connection must not open")
+      },
+    } as unknown as Pool
+
+    await expect(
+      completeMatch(pool, {
+        ...candidate,
+        integrityIdentity: {
+          compatibility: candidate.compatibility,
+          authorityBundleHash: snapshot.authorityBundleHash,
+          registryGeneration: snapshot.registryGeneration,
+          entrants: {
+            bottom: { strategyRevisionId: pair.bottom.strategyRevisionId },
+            top: { strategyRevisionId: pair.top.strategyRevisionId },
+          },
+        } as unknown as RuntimeExecutionResolvedEvidenceSnapshot,
+      }),
+    ).rejects.toMatchObject({
+      code: "COMPLETION_EVIDENCE_SHAPE_INVALID",
+      failureCategory: "system_failure",
+      playerPenalty: false,
+    })
+
+    await expect(
+      completeMatch(pool, {
+        ...candidate,
+        profile: "current-exact",
+      } as unknown as CandidateCompleteMatchInput),
+    ).rejects.toMatchObject({
+      code: "CANDIDATE_ROUTE_INVALID",
+      failureCategory: "system_failure",
+      playerPenalty: false,
+    })
+
+    await expect(completeMatch(pool, candidate)).rejects.toMatchObject({
+      code: "CANDIDATE_CROSS_DOCUMENT_IDENTITY_INVALID",
+      failureCategory: "system_failure",
+      playerPenalty: false,
+    })
   })
 })
 
@@ -627,8 +721,8 @@ const seedCompletionMatch = async (
       pair.top.strategyRevisionId,
       `${namespace}:arena`,
       `${namespace}:seed`,
-      `${namespace}:player:bottom`,
-      `${namespace}:player:top`,
+      "player:bottom",
+      "player:top",
       ...pairValues,
     ],
   )
@@ -810,6 +904,71 @@ describePostgres(
       })
     })
 
+    it("refuses every stale or not-yet-evaluated entrant scheduling decision without mutation", async () => {
+      const cases = [
+        {
+          entrantKey: pair.bottom.entrantKey,
+          column: "scheduling_evaluated_at",
+          invalid: "2099-08-12T12:00:00.000Z",
+          restore: pair.bottom.schedulingDecision.evaluatedAt,
+        },
+        {
+          entrantKey: pair.bottom.entrantKey,
+          column: "scheduling_fresh_until",
+          invalid: "2026-07-12T12:00:00.000Z",
+          restore: pair.bottom.schedulingDecision.freshUntil,
+        },
+        {
+          entrantKey: pair.top.entrantKey,
+          column: "scheduling_evaluated_at",
+          invalid: "2099-08-12T12:00:00.000Z",
+          restore: pair.top.schedulingDecision.evaluatedAt,
+        },
+        {
+          entrantKey: pair.top.entrantKey,
+          column: "scheduling_fresh_until",
+          invalid: "2026-07-12T12:00:00.000Z",
+          restore: pair.top.schedulingDecision.freshUntil,
+        },
+      ] as const
+
+      for (const fixture of cases) {
+        await pool.query(
+          "alter table match_set_execution_entrants disable trigger match_set_execution_entrants_append_only",
+        )
+        await pool.query(
+          `update match_set_execution_entrants
+              set ${fixture.column} = $1
+            where match_set_id = $2 and entrant_key = $3`,
+          [fixture.invalid, `${namespace}:match-set`, fixture.entrantKey],
+        )
+        await pool.query(
+          "alter table match_set_execution_entrants enable trigger match_set_execution_entrants_append_only",
+        )
+        const before = await snapshotCanonicalRows(pool)
+        await expect(
+          completeMatch(pool, input(responseSnapshot(identity, pair))),
+        ).rejects.toMatchObject({
+          code: "MATCH_COMPLETION_OPERATIONAL_FAILURE",
+          failureCategory: "system_failure",
+          playerPenalty: false,
+        })
+        expect(await snapshotCanonicalRows(pool)).toEqual(before)
+        await pool.query(
+          "alter table match_set_execution_entrants disable trigger match_set_execution_entrants_append_only",
+        )
+        await pool.query(
+          `update match_set_execution_entrants
+              set ${fixture.column} = $1
+            where match_set_id = $2 and entrant_key = $3`,
+          [fixture.restore, `${namespace}:match-set`, fixture.entrantKey],
+        )
+        await pool.query(
+          "alter table match_set_execution_entrants enable trigger match_set_execution_entrants_append_only",
+        )
+      }
+    })
+
     it("rolls back attempt mismatch and late writes, then proves exact success, idempotence, and conflict refusal", async () => {
       await pool.query(
         `update match_job_attempts
@@ -914,16 +1073,61 @@ describePostgres(
       })
       expect(await snapshotCanonicalRows(pool)).toEqual(completed)
 
+      const chronicleIdentityCases = [
+        ["compatibility_tuple_id", `sha256:${"f".repeat(64)}`],
+        ["compatibility_rules_version", "wrong-rules"],
+        ["compatibility_engine_version", "wrong-engine"],
+        ["compatibility_runtime_abi_version", "wrong-runtime-abi"],
+        ["compatibility_chronicle_version", "wrong-chronicle"],
+        ["compatibility_arena_catalog_version", "wrong-arena"],
+        ["compatibility_set_policy_version", "wrong-set-policy"],
+        ["authority_bundle_hash", "f".repeat(64)],
+        ["authority_registry_generation", "999"],
+      ] as const
+      for (const [column, conflicting] of chronicleIdentityCases) {
+        const original = await pool.query<Record<string, string>>(
+          `select ${column} from chronicles where match_id = $1`,
+          [`${namespace}:match`],
+        )
+        await pool.query(
+          "alter table chronicles disable trigger chronicles_integrity_identity_immutable",
+        )
+        await pool.query(
+          `update chronicles set ${column} = $1 where match_id = $2`,
+          [conflicting, `${namespace}:match`],
+        )
+        await pool.query(
+          "alter table chronicles enable trigger chronicles_integrity_identity_immutable",
+        )
+        const corrupted = await snapshotCanonicalRows(pool)
+        await expect(
+          completeMatch(pool, input(responseSnapshot(identity, pair))),
+        ).rejects.toMatchObject({
+          code: "EVIDENCE_IDENTITY_MISMATCH",
+          failureCategory: "system_failure",
+          playerPenalty: false,
+        })
+        expect(await snapshotCanonicalRows(pool)).toEqual(corrupted)
+        await pool.query(
+          "alter table chronicles disable trigger chronicles_integrity_identity_immutable",
+        )
+        await pool.query(
+          `update chronicles set ${column} = $1 where match_id = $2`,
+          [original.rows[0]![column], `${namespace}:match`],
+        )
+        await pool.query(
+          "alter table chronicles enable trigger chronicles_integrity_identity_immutable",
+        )
+      }
+      expect(await snapshotCanonicalRows(pool)).toEqual(completed)
+
       await expect(
         completeMatch(pool, {
           ...input(responseSnapshot(identity, pair)),
-          chronicle: {
-            ...built.chronicle,
-            reproducibility: {
-              ...built.chronicle.reproducibility,
-              seed: `${namespace}:conflicting-seed`,
-            },
-          },
+          chronicle: builtMatch(namespace, `${namespace}:conflicting-seed`)
+            .chronicle,
+          finalState: builtMatch(namespace, `${namespace}:conflicting-seed`)
+            .finalState,
         }),
       ).rejects.toMatchObject({
         code: "EVIDENCE_IDENTITY_MISMATCH",
@@ -934,3 +1138,76 @@ describePostgres(
     })
   },
 )
+
+describePostgres("PostgreSQL completion authority-head refusal", () => {
+  const schema = `completion_head_${randomUUID().replaceAll("-", "")}`
+  const namespace = `completion-head:${randomUUID()}`
+  const { identity, pair } = completionIdentity(namespace)
+  const built = builtMatch(namespace)
+  let admin: Pool
+  let pool: Pool
+
+  beforeAll(async () => {
+    admin = new Pool({ connectionString: databaseUrl! })
+    await admin.query(`create schema ${schema}`)
+    pool = new Pool({
+      connectionString: databaseUrl!,
+      options: `-c search_path=${schema}`,
+      max: 1,
+    })
+    await migrate(pool)
+    await seedCompletionMatch(pool, namespace, identity, pair)
+    await pool.query(
+      `insert into runtime_evidence_authority_publication_events
+        (id, publication_id, event_kind, attempt_id, envelope_sha256,
+         reason_code, receipt, occurred_at)
+       select $1, id, 'uncertain', $2, envelope_sha256,
+              'INSTALL_STATE_UNCERTAIN',
+              jsonb_build_object(
+                'schemaVersion', 'v1.37-runtime-evidence-authority-install-receipt-v1',
+                'generation', generation::text,
+                'payloadSha256', payload_sha256,
+                'envelopeSha256', envelope_sha256,
+                'sourceManifestHash', source_manifest_hash,
+                'sourceIds', jsonb_build_object(
+                  'attestationIds', attestation_ids,
+                  'certificateIds', certificate_ids,
+                  'revocationIds', revocation_ids,
+                  'supersessionIds', supersession_ids,
+                  'laneControlIds', lane_control_ids
+                )
+              ), now() + interval '1 second'
+         from runtime_evidence_authority_publications where id = $3`,
+      [
+        `${namespace}:uncertain-head`,
+        `${namespace}:uncertain-attempt`,
+        `${namespace}:publication`,
+      ],
+    )
+  }, 30_000)
+
+  afterAll(async () => {
+    await pool.end()
+    await admin.query(`drop schema ${schema} cascade`)
+    await admin.end()
+  })
+
+  it("rejects a fully seeded graph whose exact receipt is no longer installed", async () => {
+    const before = await snapshotCanonicalRows(pool)
+    await expect(
+      completeMatch(pool, {
+        jobId: `${namespace}:job`,
+        leaseToken: `${namespace}:lease`,
+        chronicle: built.chronicle,
+        finalState: built.finalState,
+        integrityIdentity: responseSnapshot(identity, pair),
+      }),
+    ).rejects.toMatchObject({
+      code: "MATCH_COMPLETION_OPERATIONAL_FAILURE",
+      failureCategory: "system_failure",
+      ownership: "system_operation",
+      playerPenalty: false,
+    })
+    expect(await snapshotCanonicalRows(pool)).toEqual(before)
+  })
+})

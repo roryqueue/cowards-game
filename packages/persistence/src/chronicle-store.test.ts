@@ -297,7 +297,7 @@ describe("Chronicle storage", () => {
     expect(store.size()).toBe(1)
   })
 
-  it("rejects a serializable candidate-shaped object without the admission brand", async () => {
+  it("rejects a candidate envelope relabeled with the active-current tuple", async () => {
     const store = createMemoryChronicleStoreForTests()
     await expect(
       store.put({
@@ -307,7 +307,7 @@ describe("Chronicle storage", () => {
         },
         integrityIdentity: currentIntegrityIdentity(),
       } as never),
-    ).rejects.toThrow(/trusted semantic admission/iu)
+    ).rejects.toThrow(/identity|pair/iu)
     expect(store.size()).toBe(0)
   })
 

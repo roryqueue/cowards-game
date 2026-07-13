@@ -1,24 +1,116 @@
-import { randomUUID } from "node:crypto"
+import { createHash, randomUUID } from "node:crypto"
 import {
   CANDIDATE_MATCH_KERNEL,
   type GameState,
   type StrategyRuntime,
 } from "@cowards/engine"
 import { recordChronicleFromExecution } from "@cowards/replay"
-import type {
-  RuntimeExecutionResolvedEvidenceSnapshot,
-  SoldierBrainInput,
-  StrategyInput,
+import {
+  CANONICAL_COMPATIBILITY_TUPLES,
+  type ExecutableLaneIdentity,
+  type RuntimeEntrantExecutionEvidence,
+  type RuntimeExecutionResolvedEvidenceSnapshot,
+  type SoldierBrainInput,
+  type StrategyInput,
 } from "@cowards/spec"
 import { Pool } from "pg"
 import { describe, expect, it } from "vitest"
 import {
-  MatchCompletionOperationalSystemFailure,
   MatchCompletionSemanticSystemFailure,
   completeMatch,
   type CandidateCompleteMatchInput,
 } from "./complete-match.js"
 import { migrate } from "./migrations.js"
+import {
+  createMatchExecutionEvidencePair,
+  createMatchSetIntegrityIdentity,
+} from "./integrity-evidence.js"
+
+const tuple = CANONICAL_COMPATIBILITY_TUPLES[0]!
+const sha256 = (value: string): string =>
+  createHash("sha256").update(value).digest("hex")
+
+const lane = (
+  side: "bottom" | "top",
+  namespace: string,
+): ExecutableLaneIdentity => ({
+  providerId: `${namespace}:provider:${side}`,
+  languageId: side === "bottom" ? "typescript" : "python",
+  runtimeId: `${namespace}:runtime:${side}`,
+  runtimeVersion: "1",
+  toolchainId: `${namespace}:toolchain:${side}`,
+  toolchainVersion: "1",
+  adapterId: `${namespace}:adapter:${side}`,
+  adapterVersion: "1",
+  policyId: `${namespace}:policy`,
+  policyVersion: "1",
+  corpusId: `${namespace}:corpus`,
+  corpusVersion: "1",
+  artifactId: `${namespace}:artifact:${side}`,
+  artifactSha256: sha256(`${namespace}:artifact:${side}`),
+  implementationId: `${namespace}:implementation:${side}`,
+  buildId: `${namespace}:build:${side}`,
+  semanticTupleId: tuple.tupleId,
+  semanticTuple: { ...tuple.tuple },
+})
+
+const entrant = (
+  side: "bottom" | "top",
+  namespace: string,
+): RuntimeEntrantExecutionEvidence => ({
+  entrantKey: `${namespace}:entrant:${side}`,
+  strategyRevisionId: `${namespace}:revision:${side}`,
+  laneIdentity: lane(side, namespace),
+  containmentCertificateRef: {
+    kind: "containment",
+    certificateId: `${namespace}:certificate:containment:${side}`,
+    certificateVersion: "runtime-certificate-v1",
+    certificateRecordHash: sha256(`${namespace}:containment:${side}`),
+    registryGeneration: "1",
+  },
+  conformanceCertificateRef: {
+    kind: "conformance",
+    certificateId: `${namespace}:certificate:conformance:${side}`,
+    certificateVersion: "runtime-certificate-v1",
+    certificateRecordHash: sha256(`${namespace}:conformance:${side}`),
+    registryGeneration: "1",
+  },
+  schedulingDecision: {
+    status: "counted",
+    reasonCode: "EVIDENCE_CURRENT",
+    evaluatedAt: "2026-07-12T12:00:00.000Z",
+    freshUntil: "2099-08-12T12:00:00.000Z",
+    registryGeneration: "1",
+  },
+})
+
+const activeIntegrityIdentity = (
+  namespace: string,
+): RuntimeExecutionResolvedEvidenceSnapshot => {
+  const entrants = [entrant("bottom", namespace), entrant("top", namespace)]
+  const identity = createMatchSetIntegrityIdentity({
+    compatibility: { tupleId: tuple.tupleId, tuple: { ...tuple.tuple } },
+    authorityBundleHash: sha256(`${namespace}:bundle`),
+    registryGeneration: "1",
+    expectedEntrants: entrants.map((entry) => ({
+      entrantKey: entry.entrantKey,
+      strategyRevisionId: entry.strategyRevisionId,
+    })),
+    entrants,
+  })
+  const pair = createMatchExecutionEvidencePair(identity, {
+    bottomEntrantKey: `${namespace}:entrant:bottom`,
+    topEntrantKey: `${namespace}:entrant:top`,
+    bottomStrategyRevisionId: `${namespace}:revision:bottom`,
+    topStrategyRevisionId: `${namespace}:revision:top`,
+  })
+  return {
+    compatibility: identity.compatibility,
+    authorityBundleHash: identity.authorityBundleHash,
+    registryGeneration: identity.registryGeneration,
+    entrants: { bottom: pair.bottom, top: pair.top },
+  }
+}
 
 const passiveRuntime: StrategyRuntime = {
   selectActivations(input: StrategyInput) {
@@ -76,18 +168,9 @@ const createCandidateInput = (
   const outcome = execution.recorderMaterial.finalState.outcome
   if (!outcome) throw new Error("candidate execution has no outcome")
 
-  // Plan 16 deliberately does not fabricate a candidate publication or
-  // receipt. This response-shaped identity is enough to exercise semantic
-  // admission; only Plan 19 can make it schedulable/persistable.
-  const integrityIdentity = {
-    compatibility: recorded.semanticIdentity,
-    authorityBundleHash: "0".repeat(64),
-    registryGeneration: "1",
-    entrants: {
-      bottom: { strategyRevisionId: bottomRevisionId },
-      top: { strategyRevisionId: topRevisionId },
-    },
-  } as unknown as RuntimeExecutionResolvedEvidenceSnapshot
+  // The snapshot is fully schema-valid. Its active-current tuple deliberately
+  // cannot authorize candidate execution provenance.
+  const integrityIdentity = activeIntegrityIdentity(namespace)
 
   return {
     profile: "candidate-v1.37",
@@ -211,14 +294,15 @@ describePostgres("candidate persistence semantic integrity", () => {
     })
   }, 30_000)
 
-  it("valid candidate evidence remains non-authorizing without a real Plan 19 receipt", async () => {
+  it("candidate execution cannot be relabeled with active-current evidence", async () => {
     await withDatabase(async (pool, namespace) => {
       const input = createCandidateInput(namespace)
       const before = await snapshotCanonicalRows(pool)
 
       await expect(completeMatch(pool, input)).rejects.toMatchObject({
-        code: new MatchCompletionOperationalSystemFailure().code,
+        code: "CANDIDATE_CROSS_DOCUMENT_IDENTITY_INVALID",
         failureCategory: "system_failure",
+        ownership: "system_integrity",
         playerPenalty: false,
       })
       expect(await snapshotCanonicalRows(pool)).toEqual(before)

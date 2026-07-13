@@ -20,6 +20,7 @@ import type {
   PlayerId,
   StrategyRevisionId,
 } from "@cowards/spec"
+import { CANONICAL_COMPATIBILITY_TUPLES } from "@cowards/spec"
 import type { Queryable } from "./repositories.js"
 import {
   createMatchExecutionEvidencePair,
@@ -190,12 +191,15 @@ const validatePutInput = (
       "Current Chronicle insertion requires one exact integrity identity.",
     )
   }
-  const candidateRoute = hasExactKeys(input, [
+  const candidateEnvelope = hasExactKeys(input, [
     "candidateAdmission",
     "integrityIdentity",
   ])
-  const currentRoute = hasExactKeys(input, ["chronicle", "integrityIdentity"])
-  if (!candidateRoute && !currentRoute) {
+  const currentEnvelope = hasExactKeys(input, [
+    "chronicle",
+    "integrityIdentity",
+  ])
+  if (!candidateEnvelope && !currentEnvelope) {
     throw new ChronicleValidationSystemFailure(
       "Chronicle insertion requires one exact current or candidate integrity identity route.",
     )
@@ -216,6 +220,41 @@ const validatePutInput = (
       "Current Chronicle integrity identity is partial or malformed.",
     )
   }
+  const identity =
+    integrityIdentity.identity as Readonly<MatchSetIntegrityIdentity>
+  const evidencePair =
+    integrityIdentity.evidencePair as Readonly<MatchExecutionEvidencePair>
+
+  let candidateRoute: boolean
+  try {
+    // The SQL-value helper is also the validator-brand gate. A caller cannot
+    // authorize a Chronicle with a merely certificate-shaped identity.
+    matchSetIntegritySqlValues(identity)
+    const candidateTuple =
+      identity.compatibility.tupleId === INACTIVE_V1_37_REPLAY_TUPLE.tupleId &&
+      isDeepStrictEqual(
+        identity.compatibility.tuple,
+        INACTIVE_V1_37_REPLAY_TUPLE.tuple,
+      )
+    const activeCurrent = CANONICAL_COMPATIBILITY_TUPLES[0]
+    const currentTuple =
+      activeCurrent !== undefined &&
+      identity.compatibility.tupleId === activeCurrent.tupleId &&
+      isDeepStrictEqual(identity.compatibility.tuple, activeCurrent.tuple)
+    if (
+      (candidateTuple && !candidateEnvelope) ||
+      (currentTuple && !currentEnvelope) ||
+      (!candidateTuple && !currentTuple)
+    ) {
+      throw new Error("route tuple mismatch")
+    }
+    candidateRoute = candidateTuple
+  } catch {
+    throw new ChronicleValidationSystemFailure(
+      "Current Chronicle integrity identity is not the exact ordered Match pair.",
+    )
+  }
+
   const candidateAdmission = input.candidateAdmission
   if (
     candidateRoute &&
@@ -226,20 +265,11 @@ const validatePutInput = (
       "Candidate Chronicle insertion requires a trusted semantic admission.",
     )
   }
-  const chronicle = (
-    candidateRoute
-      ? (candidateAdmission as unknown as CandidateChronicleAdmission).chronicle
-      : input.chronicle
-  ) as Chronicle
-  const identity =
-    integrityIdentity.identity as Readonly<MatchSetIntegrityIdentity>
-  const evidencePair =
-    integrityIdentity.evidencePair as Readonly<MatchExecutionEvidencePair>
+  const chronicle = candidateRoute
+    ? (candidateAdmission as unknown as CandidateChronicleAdmission).chronicle
+    : (input.chronicle as Chronicle)
 
   try {
-    // The SQL-value helper is also the validator-brand gate. A caller cannot
-    // authorize a Chronicle with a merely certificate-shaped identity.
-    matchSetIntegritySqlValues(identity)
     const [bottomStrategyRevisionId, topStrategyRevisionId] =
       chronicle.reproducibility.strategyRevisionIds
     const expectedPair = createMatchExecutionEvidencePair(identity, {
@@ -254,16 +284,6 @@ const validatePutInput = (
       evidencePair.pairHash !== expectedPair.pairHash
     ) {
       throw new Error("pair mismatch")
-    }
-    if (
-      candidateRoute &&
-      (identity.compatibility.tupleId !== INACTIVE_V1_37_REPLAY_TUPLE.tupleId ||
-        !isDeepStrictEqual(
-          identity.compatibility.tuple,
-          INACTIVE_V1_37_REPLAY_TUPLE.tuple,
-        ))
-    ) {
-      throw new Error("candidate tuple mismatch")
     }
   } catch {
     throw new ChronicleValidationSystemFailure(

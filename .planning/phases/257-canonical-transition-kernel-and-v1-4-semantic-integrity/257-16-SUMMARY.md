@@ -17,7 +17,8 @@ tech-stack:
   added: []
   patterns: [weakset admission brand, validate-before-derive, claim-strength lock, exact idempotence]
 key-files:
-  created: []
+  created:
+    - packages/persistence/src/active-old-completion.fixture.ts
   modified:
     - packages/persistence/src/complete-match.ts
     - packages/persistence/src/complete-match.test.ts
@@ -86,15 +87,19 @@ status: complete
 - Added guarded row-count predicates for Match, job, and attempt completion. Lease/attempt drift is an operational system failure; semantic invalidity is non-retryable system integrity; authority drift remains retryable system failure. All have `playerPenalty: false`.
 - Migrated both persistence-owned `buildChronicleFromMatch` references to one candidate execution and one recording. The persistence-ready inventory now reports exactly **8 executable references** and **12 non-executable mentions**.
 - Replaced count-only RED proof with real-PostgreSQL exact row-content snapshots for invalid candidate state, reconstruction drift, response drift, job-attempt mismatch, forced late rollback, exact current success, idempotence, and Chronicle conflict.
+- Closed persistence review findings: the full evidence schema is parsed before derivation; current/candidate routes require exact envelopes and tuples; scheduling locks require both decision timestamps to be current; idempotence compares every Chronicle tuple/bundle/generation field; and missing-installed-head refusal is proved against a fully seeded authority graph.
+- Replaced the current-route success approximation with immutable captured output from the committed active v1.4 path. Candidate bytes are no longer accepted as evidence of current-route success.
 
 ## Task Commit
 
 1. **Task 1: Validate before derive/write and lock exact completion identity** — `7380adb`
+2. **Review closure: Harden persistence provenance, freshness, and idempotence** — included in the follow-up Plan 16 review-fix commit
 
 ## Files Modified
 
 - `packages/persistence/src/complete-match.ts` — Candidate pre-admission, claim-strength locked completion, exact idempotence, DB identity, and guarded result/job/attempt writes.
-- `packages/persistence/src/complete-match.test.ts` — Candidate run-once/record-once fixture, exact authority fixture, full-row rollback, current success, idempotence, conflict, and attempt mismatch proof.
+- `packages/persistence/src/active-old-completion.fixture.ts` — Immutable captured active-v1.4 Chronicle and final-state proof for the pre-activation current route.
+- `packages/persistence/src/complete-match.test.ts` — Candidate run-once/record-once fixture, exact authority fixture, full-row rollback, current success, scheduling freshness, idempotence, conflict, and attempt mismatch proof.
 - `packages/persistence/src/chronicle-store.ts` — Branded candidate admission, route-aware insertion, cloned evidence, and strict PostgreSQL/memory conflict comparison.
 - `packages/persistence/src/chronicle-store.test.ts` — Exact duplicate/conflict behavior and unbranded candidate rejection.
 - `packages/persistence/src/semantic-integrity.test.ts` — Random-schema candidate invalidity, reconstruction failure, inactive authorization, and exact canonical row snapshots.
@@ -105,6 +110,7 @@ status: complete
 - The candidate admission object clones all persistable inputs but never clones or serializes the engine's trusted execution brand. This closes mutation-after-validation without creating a forgeable execution receipt.
 - Historical v1.4 remains a read-only retrieval/replay concern. No historical insertion or backfill route was added.
 - Publication/source/receipt checks are repeated in SQL and in application-level exact comparisons. This makes late drift and partial row matches fail closed even if a future query is weakened accidentally.
+- A caller-controlled current Chronicle cannot be given a trustworthy opaque provenance receipt inside persistence alone. The pre-activation current route therefore remains strict exact-envelope plus active-tuple admission; adversarial origin proof must be minted at the trusted producer boundary during Plan 19 atomic activation. Plan 16 does not claim that stripped, byte-identical candidate output can be distinguished by persistence alone.
 
 ## Deviations from Plan
 
@@ -118,7 +124,8 @@ None in Plan-16-owned scope. Candidate receipt-backed success remains intentiona
 
 ## Verification
 
-- Final Plan-16 real-PostgreSQL suite: **15/15 passed** across semantic integrity, Match completion, and Chronicle storage.
+- Final Plan-16 real-PostgreSQL suite: **18/18 passed** across semantic integrity, Match completion, and Chronicle storage.
+- Review-specific PostgreSQL proof covers candidate/current mixed provenance rejection, four stale/not-yet-effective scheduling timestamps, nine Chronicle identity conflicts, and fully seeded installed-head refusal with exact zero mutation.
 - Exact focused `semantic|rollback|reconstruction` checkpoint: **4/4 passed**, with unrelated tests skipped by the plan filter.
 - Active current completion: exact success, full receipt/evidence copy, idempotent retry, conflict refusal, and rollback passed.
 - Candidate receipt absence: semantically valid evidence remains non-authorizing with exact zero-row mutation.
