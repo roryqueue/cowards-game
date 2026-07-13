@@ -112,6 +112,105 @@ func TestIntegrityEvidenceSemanticTupleExcludesExecutableIdentity(t *testing.T) 
 	}
 }
 
+func TestIntegrityEvidenceClassifierMatchesCanonicalStatusFloor(t *testing.T) {
+	laneHash := "sha256:" + strings.Repeat("a", 64)
+	containment := runtimeEvidenceAuthorityCertificate{
+		Kind:                  "containment",
+		CertificateID:         "certificate:containment:current",
+		CertificateVersion:    "runtime-containment-certificate-v1",
+		CertificateRecordHash: "sha256:" + strings.Repeat("b", 64),
+		LaneIdentityHash:      laneHash,
+		AttestationIDs:        []string{"attestation:containment"},
+	}
+	conformance := runtimeEvidenceAuthorityCertificate{
+		Kind:                  "conformance",
+		CertificateID:         "certificate:conformance:current",
+		CertificateVersion:    "runtime-conformance-certificate-v1",
+		CertificateRecordHash: "sha256:" + strings.Repeat("c", 64),
+		LaneIdentityHash:      laneHash,
+		AttestationIDs:        []string{"attestation:conformance"},
+	}
+	authority := &verifiedRuntimeEvidenceAuthority{
+		AuthorityBundleHash: "sha256:" + strings.Repeat("d", 64),
+		RegistryGeneration:  "9",
+		TrustDomain:         runtimeEvidenceAuthorityProductionTrustDomain,
+		Payload: runtimeEvidenceAuthorityPayload{
+			RegistryGeneration:   "9",
+			IssuedAt:             "2026-07-12T00:00:00.000Z",
+			ValidFrom:            "2026-07-12T00:00:00.000Z",
+			ValidUntil:           "2026-08-12T00:00:00.000Z",
+			Certificates:         []runtimeEvidenceAuthorityCertificate{containment, conformance},
+			Revocations:          []runtimeEvidenceAuthorityRevocation{},
+			Supersessions:        []runtimeEvidenceAuthoritySupersession{},
+			OperatorLaneDisables: []runtimeEvidenceAuthorityLaneDisable{},
+		},
+	}
+	containmentRef := runtimeEvidenceCertificateReferenceFor(containment, "9")
+	conformanceRef := runtimeEvidenceCertificateReferenceFor(conformance, "9")
+
+	tests := []struct {
+		name       string
+		input      executableLaneEvidenceInput
+		status     executableLaneEvidenceStatus
+		reasonCode string
+	}{
+		{
+			name:       "no containment disables execution",
+			input:      executableLaneEvidenceInput{Authority: authority, ExpectedLaneIdentityHash: laneHash, EvaluationInstant: "2026-07-13T00:00:00.000Z", ActiveRegistryGeneration: "9"},
+			status:     executableLaneEvidenceDisabled,
+			reasonCode: "CONTAINMENT_MISSING",
+		},
+		{
+			name:       "containment without conformance is exhibition only",
+			input:      executableLaneEvidenceInput{Authority: authority, ExpectedLaneIdentityHash: laneHash, EvaluationInstant: "2026-07-13T00:00:00.000Z", ActiveRegistryGeneration: "9", ContainmentCertificate: &containmentRef},
+			status:     executableLaneEvidenceExhibitionOnly,
+			reasonCode: "CONFORMANCE_MISSING",
+		},
+		{
+			name:       "complete exact evidence is counted",
+			input:      executableLaneEvidenceInput{Authority: authority, ExpectedLaneIdentityHash: laneHash, EvaluationInstant: "2026-07-13T00:00:00.000Z", ActiveRegistryGeneration: "9", ContainmentCertificate: &containmentRef, ConformanceCertificate: &conformanceRef},
+			status:     executableLaneEvidenceCounted,
+			reasonCode: "EVIDENCE_CURRENT",
+		},
+		{
+			name:       "identity mutation fails closed",
+			input:      executableLaneEvidenceInput{Authority: authority, ExpectedLaneIdentityHash: "sha256:" + strings.Repeat("e", 64), EvaluationInstant: "2026-07-13T00:00:00.000Z", ActiveRegistryGeneration: "9", ContainmentCertificate: &containmentRef, ConformanceCertificate: &conformanceRef},
+			status:     executableLaneEvidenceDisabled,
+			reasonCode: "IDENTITY_MISMATCH",
+		},
+		{
+			name:       "generation mutation fails closed",
+			input:      executableLaneEvidenceInput{Authority: authority, ExpectedLaneIdentityHash: laneHash, EvaluationInstant: "2026-07-13T00:00:00.000Z", ActiveRegistryGeneration: "10", ContainmentCertificate: &containmentRef, ConformanceCertificate: &conformanceRef},
+			status:     executableLaneEvidenceDisabled,
+			reasonCode: "REGISTRY_GENERATION_DRIFT",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			result := classifyExecutableLaneEvidence(test.input)
+			if result.Status != test.status || result.ReasonCode != test.reasonCode {
+				t.Fatalf("unexpected evidence classification: %+v", result)
+			}
+		})
+	}
+
+	revoked := *authority
+	revoked.Payload = authority.Payload
+	revoked.Payload.Revocations = []runtimeEvidenceAuthorityRevocation{{CertificateID: containment.CertificateID, CertificateRecordHash: containment.CertificateRecordHash, RevokedAt: "2026-07-12T12:00:00.000Z", ReasonCode: "REVOKED"}}
+	revokedResult := classifyExecutableLaneEvidence(executableLaneEvidenceInput{Authority: &revoked, ExpectedLaneIdentityHash: laneHash, EvaluationInstant: "2026-07-13T00:00:00.000Z", ActiveRegistryGeneration: "9", ContainmentCertificate: &containmentRef, ConformanceCertificate: &conformanceRef})
+	if revokedResult.Status != executableLaneEvidenceDisabled || revokedResult.ReasonCode != "CONTAINMENT_REVOKED" {
+		t.Fatalf("revoked containment did not disable execution: %+v", revokedResult)
+	}
+
+	disabled := *authority
+	disabled.Payload = authority.Payload
+	disabled.Payload.OperatorLaneDisables = []runtimeEvidenceAuthorityLaneDisable{{LaneIdentityHash: laneHash, DisabledAt: "2026-07-12T12:00:00.000Z", ReasonCode: "OPERATOR_DISABLED"}}
+	disabledResult := classifyExecutableLaneEvidence(executableLaneEvidenceInput{Authority: &disabled, ExpectedLaneIdentityHash: laneHash, EvaluationInstant: "2026-07-13T00:00:00.000Z", ActiveRegistryGeneration: "9", ContainmentCertificate: &containmentRef, ConformanceCertificate: &conformanceRef})
+	if disabledResult.Status != executableLaneEvidenceDisabled || disabledResult.ReasonCode != "OPERATOR_DISABLED" {
+		t.Fatalf("operator switch promoted evidence: %+v", disabledResult)
+	}
+}
+
 func readGoBackendArtifact(t *testing.T, name string) []byte {
 	t.Helper()
 	bytes, err := os.ReadFile("../../packages/spec/artifacts/" + name)

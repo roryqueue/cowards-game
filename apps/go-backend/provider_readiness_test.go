@@ -341,6 +341,39 @@ func TestProviderReadinessRejectsMissingEngineEvidence(t *testing.T) {
 	}
 }
 
+func TestRevisionReadinessProviderProofNeverPromotesWithoutCanonicalEvidence(t *testing.T) {
+	t.Setenv("COWARDS_PROVIDER_VALIDATION_SECRET", "cowards-provider-validation-test-secret-v1.33")
+	sourceHash := hashString("provider proof is not authority")
+	sourceBytes := len([]byte("provider proof is not authority"))
+	validation := map[string]any{"valid": true, "sourceHash": sourceHash, "sourceBytes": sourceBytes}
+	tests := []struct {
+		language string
+		runtime  map[string]any
+		metadata map[string]any
+	}{
+		{language: "typescript", runtime: defaultRuntimeMetadata(), metadata: providerReadinessSourceArtifactMetadata(t, "typescript", "strategy-language-provider-js-ts", sourceHash, sourceBytes, true)},
+		{language: "python", runtime: pythonRuntimeMetadata(), metadata: providerReadinessSourceArtifactMetadata(t, "python", "strategy-language-provider-python", sourceHash, sourceBytes, true)},
+		{language: "rust", runtime: wasmWasiRuntimeMetadata("rust"), metadata: providerReadinessCompiledArtifactMetadata(t, "rust", sourceHash, sourceBytes)},
+		{language: "zig", runtime: wasmWasiRuntimeMetadata("zig"), metadata: providerReadinessCompiledArtifactMetadata(t, "zig", sourceHash, sourceBytes)},
+	}
+	for _, test := range tests {
+		t.Run(test.language, func(t *testing.T) {
+			result := classifyRevisionReadiness(revisionReadinessInput{
+				SourceFormat:        test.language,
+				Runtime:             test.runtime,
+				Validation:          validation,
+				Metadata:            test.metadata,
+				EngineCompatibility: engineCompatibility(),
+				SourceHash:          sourceHash,
+				SourceBytes:         sourceBytes,
+			})
+			if result.State != revisionReadinessExecutionDisabled || result.PublicCategory != "containment_missing" || result.EntryEligible || result.CountedEligible {
+				t.Fatalf("%s provider declaration promoted without canonical evidence: %+v", test.language, result)
+			}
+		})
+	}
+}
+
 func providerReadinessSourceArtifactMetadata(t *testing.T, languageID string, providerID string, sourceHash string, sourceBytes int, includeBytes bool) map[string]any {
 	t.Helper()
 	artifactPayload := []byte(languageID + "-artifact")
