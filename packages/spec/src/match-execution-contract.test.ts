@@ -9,10 +9,14 @@ import {
   MATCH_EXECUTION_CONTRACT_FIXTURES_V1,
   MATCH_EXECUTION_FAILURE_CATEGORIES,
   MATCH_EXECUTION_LIFECYCLE_STATES,
+  MatchExecutionExactEvidenceV137Schema,
   MatchExecutionMatchSetSummaryV1Schema,
   MatchExecutionReplayEvidenceV1Schema,
   MatchExecutionReplayMetadataV1Schema,
   assertPublicServiceDtoLeakSafe,
+  createMatchExecutionExactEvidenceV137,
+  parseMatchExecutionEvidenceByVersion,
+  projectPublicMatchExecutionIntegrityEvidenceV137,
   publicMatchSetSummaryExample,
   publicReplayEvidenceExample,
   publicReplayMetadataExample,
@@ -23,6 +27,7 @@ import {
   toMatchExecutionReplayEvidenceV1,
   toMatchExecutionReplayMetadataV1,
 } from "./index.js"
+import { CANONICAL_COMPATIBILITY_TUPLES } from "./integrity-authority.js"
 
 const repoRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -52,6 +57,107 @@ const privateMarkers = [
 ] as const
 
 describe("match execution app contract v1", () => {
+  it("persists one exact compatibility tuple and ordered heterogeneous entrant evidence pair", () => {
+    const registered = CANONICAL_COMPATIBILITY_TUPLES[0]!
+    const lane = (side: "bottom" | "top", languageId: string) => ({
+      providerId: `provider:${side}`,
+      languageId,
+      runtimeId: `runtime:${side}`,
+      runtimeVersion: "1.0.0",
+      toolchainId: `toolchain:${side}`,
+      toolchainVersion: "1.0.0",
+      adapterId: `adapter:${side}`,
+      adapterVersion: "1.0.0",
+      policyId: "package-none",
+      policyVersion: "1.0.0",
+      corpusId: "corpus:v1.37",
+      corpusVersion: "1.0.0",
+      artifactId: `artifact:${side}`,
+      artifactSha256: `${side}:artifact:hash`,
+      implementationId: `implementation:${side}`,
+      buildId: `build:${side}`,
+      semanticTupleId: registered.tupleId,
+      semanticTuple: { ...registered.tuple },
+    })
+    const entrant = (side: "bottom" | "top", languageId: string) => ({
+      entrantKey: `entrant:${side}`,
+      strategyRevisionId: `strategy-revision:${side}`,
+      laneIdentity: lane(side, languageId),
+      containmentCertificateRef: {
+        kind: "containment" as const,
+        certificateId: `containment:${side}`,
+        certificateVersion: "1.0.0",
+        certificateRecordHash: `containment:${side}:hash`,
+        registryGeneration: "registry-generation:1",
+      },
+      conformanceCertificateRef: {
+        kind: "conformance" as const,
+        certificateId: `conformance:${side}`,
+        certificateVersion: "1.0.0",
+        certificateRecordHash: `conformance:${side}:hash`,
+        registryGeneration: "registry-generation:1",
+      },
+      schedulingDecision: {
+        status: "counted" as const,
+        reasonCode: "EVIDENCE_CURRENT" as const,
+        evaluatedAt: "2026-07-13T00:00:00.000Z",
+        freshUntil: "2026-08-13T00:00:00.000Z",
+        registryGeneration: "registry-generation:1",
+      },
+    })
+    const evidenceSnapshot = {
+      compatibility: {
+        tupleId: registered.tupleId,
+        tuple: { ...registered.tuple },
+      },
+      authorityBundleHash: "authority-bundle-hash:v1",
+      registryGeneration: "registry-generation:1",
+      entrants: {
+        bottom: entrant("bottom", "typescript"),
+        top: entrant("top", "python"),
+      },
+    }
+
+    const exact = createMatchExecutionExactEvidenceV137({
+      matchId: "match:exact-evidence",
+      bottomEntrantKey: "entrant:bottom",
+      topEntrantKey: "entrant:top",
+      evidenceSnapshot,
+    })
+    expect(MatchExecutionExactEvidenceV137Schema.parse(exact)).toEqual(exact)
+    expect(exact.evidenceSnapshot.entrants.top.laneIdentity.languageId).toBe(
+      "python",
+    )
+    expect(() =>
+      createMatchExecutionExactEvidenceV137({
+        matchId: "match:exact-evidence",
+        bottomEntrantKey: "entrant:top",
+        topEntrantKey: "entrant:bottom",
+        evidenceSnapshot,
+      }),
+    ).toThrow(/ordered entrant evidence/i)
+
+    const publicProjection =
+      projectPublicMatchExecutionIntegrityEvidenceV137(exact)
+    const publicBytes = JSON.stringify(publicProjection)
+    expect(publicProjection.compatibility.tupleId).toBe(registered.tupleId)
+    expect(publicBytes).not.toMatch(
+      /toolchainId|artifactSha256|buildId|certificateId|strategyMemory|objective/i,
+    )
+
+    const historical = {
+      profile: "historical-v1.4" as const,
+      matchId: "match:historical-v1.4",
+      rulesVersion: "cowards-rules-v1.4",
+      chronicleVersion: "chronicle-v1.4",
+      originalCountedStatus: "counted" as const,
+    }
+    const before = JSON.stringify(historical)
+    expect(parseMatchExecutionEvidenceByVersion(historical)).toMatchObject({
+      classification: "historical_original_semantics",
+    })
+    expect(JSON.stringify(historical)).toBe(before)
+  })
   it("freezes lifecycle vocabulary and retryability as evidence fields", () => {
     expect(MATCH_EXECUTION_APP_CONTRACT_VERSION).toBe("match-execution-app-v1")
     expect(MATCH_EXECUTION_LIFECYCLE_STATES).toEqual([
