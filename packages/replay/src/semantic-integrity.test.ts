@@ -57,7 +57,7 @@ describe("replay semantic integrity", () => {
     if (!recorded.ok || execution.kind !== "completed") {
       throw new Error("candidate execution did not complete")
     }
-    const initialState = structuredClone(
+    const initialState = globalThis.structuredClone(
       execution.recorderMaterial.initialState,
     )
     initialState.arenaVariant.terrainStones.push({ x: 2, y: 11 })

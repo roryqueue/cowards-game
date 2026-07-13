@@ -275,7 +275,7 @@ describe("validateChronicle", () => {
   it("rejects the first invalid candidate state with bounded semantic codes", () => {
     const input = createCandidateReplayInput()
     if (input.execution.kind !== "completed") throw new Error("not completed")
-    const initialState = structuredClone(
+    const initialState = globalThis.structuredClone(
       input.execution.recorderMaterial.initialState,
     )
     initialState.arenaVariant.terrainStones.push({ x: 2, y: 11 })
