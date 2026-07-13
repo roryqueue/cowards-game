@@ -102,6 +102,7 @@ Each TDD task was committed through RED and GREEN:
 2. **Task 1 GREEN: exact Chronicle identity writer** - `7f47d33` (feat)
 3. **Task 2 RED: completion drift and PostgreSQL rollback cases** - `bfc97a4` (test)
 4. **Task 2 GREEN: locked completion recheck and propagation** - `092c2a7` (feat)
+5. **Acceptance hardening: pin immutable v1.4 Chronicle hash** - `ede2cdb` (test)
 
 ## Files Created/Modified
 
@@ -159,7 +160,7 @@ None - the existing local PostgreSQL topology was sufficient.
 
 ## Self-Check: PASSED
 
-- All four RED/GREEN commits exist in order and all five modified artifacts exist.
+- Both RED/GREEN commit pairs plus the fixed historical-hash acceptance commit exist in order, and all five modified artifacts exist.
 - Unit, full persistence, configured-PostgreSQL drift, late rollback, exact success, Chronicle identity, historical hash, and diff checks pass.
 - The user-owned dirty consolidated spec and `.planning/config.json` remained unstaged and untouched.
 
