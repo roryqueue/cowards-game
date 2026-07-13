@@ -15,6 +15,8 @@ import {
   matchSetIntegritySqlValues,
   parseMatchSetIntegrityIdentityRows,
   persistMatchSetIntegrityIdentity,
+  resolveHistoricalIntegrityEvidence,
+  hashHistoricalIntegritySource,
 } from "./integrity-evidence.js"
 import { migrate } from "./migrations.js"
 
@@ -88,6 +90,88 @@ const identityInput = (count = 2) => {
     entrants,
   }
 }
+
+const historicalReleaseManifest = Object.freeze({
+  manifestId: "release:v1.4",
+  manifestHash: createHash("sha256").update("release:v1.4").digest("hex"),
+  compatibility: Object.freeze({
+    tupleId: tupleRecord.tupleId,
+    tuple: Object.freeze({ ...tupleRecord.tuple }),
+  }),
+})
+
+const historicalSource = () => ({
+  matchSetId: "matchset:historical:v1.4",
+  rulesVersion: "cowards-rules-v1.4",
+  engineVersion: null,
+  runtimeAbiVersion: null,
+  chronicleVersion: "chronicle-v1.4",
+  arenaCatalogVersion: null,
+  setPolicyVersion: null,
+  originalCounted: true,
+  originalOutcome: Object.freeze({ winnerId: "player:bottom", reason: "LAST_ACTIVE" }),
+})
+
+describe("historical and legacy integrity resolution", () => {
+  it("resolves exact v1.4 historical evidence read-only under original semantics", () => {
+    const source = historicalSource()
+    const before = hashHistoricalIntegritySource(source)
+    const resolution = resolveHistoricalIntegrityEvidence({
+      source,
+      releaseManifests: [historicalReleaseManifest],
+    })
+
+    expect(resolution).toMatchObject({
+      kind: "resolved_historical",
+      originalCounted: true,
+      rulesVersion: "cowards-rules-v1.4",
+      chronicleVersion: "chronicle-v1.4",
+      manifestId: "release:v1.4",
+      eligibleUnderOriginalSemantics: true,
+    })
+    expect(resolution).not.toHaveProperty("containmentCertificateRef")
+    expect(resolution).not.toHaveProperty("conformanceCertificateRef")
+    expect(hashHistoricalIntegritySource(source)).toBe(before)
+    expect(source).toEqual(historicalSource())
+  })
+
+  it("keeps incomplete legacy evidence explicit and ineligible without mutation", () => {
+    const source = { ...historicalSource(), chronicleVersion: null }
+    const before = hashHistoricalIntegritySource(source)
+    const resolution = resolveHistoricalIntegrityEvidence({
+      source,
+      releaseManifests: [historicalReleaseManifest],
+    })
+
+    expect(resolution).toMatchObject({
+      kind: "legacy_incomplete",
+      originalCounted: true,
+      eligibleUnderOriginalSemantics: false,
+      note: "This historical result does not contain enough immutable version evidence for standings recomputation.",
+    })
+    expect(hashHistoricalIntegritySource(source)).toBe(before)
+  })
+
+  it("leaves conflicting or unknown legacy evidence unresolved and never upgrades it", () => {
+    const source = {
+      ...historicalSource(),
+      chronicleVersion: "chronicle-v1.3",
+    }
+    const resolution = resolveHistoricalIntegrityEvidence({
+      source,
+      releaseManifests: [historicalReleaseManifest],
+    })
+
+    expect(resolution).toMatchObject({
+      kind: "unresolved",
+      originalCounted: true,
+      eligibleUnderOriginalSemantics: false,
+    })
+    expect(resolution).not.toHaveProperty("compatibility")
+    expect(resolution).not.toHaveProperty("authorityBundleHash")
+    expect(resolution).not.toHaveProperty("registryGeneration")
+  })
+})
 
 describe("exact MatchSet integrity identity", () => {
   it.each([2, 3, 4, 5, 6, 7, 8])(
