@@ -29,6 +29,7 @@ const runtimeEvidenceAuthorityHighWaterSchemaVersion = "v1.37-runtime-evidence-a
 const runtimeEvidenceAuthorityPublicKeySchemaVersion = "v1.37-runtime-evidence-authority-public-key-v1"
 const runtimeEvidenceAuthorityProductionTrustDomain = "cowards-game:runtime-evidence-authority:production:v1"
 const runtimeEvidenceAuthorityFixtureTrustDomain = "cowards-game:runtime-evidence-authority:fixture:v1"
+const runtimeEvidenceAuthorityPublicationEnvelopeDomain = "cowards-game:runtime-evidence-authority-publication-envelope:v1"
 const runtimeEvidenceAuthorityEnvelopeByteLimit = 1_500_000
 const runtimeEvidenceAuthorityPayloadByteLimit = 1_000_000
 const runtimeEvidenceAuthorityPublicKeyByteLimit = 16 * 1024
@@ -123,8 +124,10 @@ type runtimeEvidenceAuthorityHighWater struct {
 
 type verifiedRuntimeEvidenceAuthority struct {
 	AuthorityBundleHash       string
+	EnvelopeSHA256            string
 	RegistryGeneration        string
 	SemanticTupleManifestHash string
+	CompatibilityTuple        registeredCompatibilityTuple
 	TrustDomain               string
 	KeyID                     string
 	Payload                   runtimeEvidenceAuthorityPayload
@@ -274,7 +277,8 @@ func inspectRuntimeEvidenceAuthorityBundle(serialized []byte, options runtimeEvi
 	if evaluation.Before(issuedAt) || evaluation.Before(validFrom) || evaluation.After(validUntil) {
 		return nil, authorityError("VALIDITY")
 	}
-	if !options.IntegrityManifest.hasTupleID(payload.SemanticTupleManifestHash) {
+	compatibilityTuple, exists := options.IntegrityManifest.byTupleID[payload.SemanticTupleManifestHash]
+	if !exists {
 		return nil, authorityError("TUPLE_MANIFEST")
 	}
 	if options.ExpectedTrustDomain == runtimeEvidenceAuthorityProductionTrustDomain {
@@ -286,12 +290,22 @@ func inspectRuntimeEvidenceAuthorityBundle(serialized []byte, options runtimeEvi
 	}
 	return &verifiedRuntimeEvidenceAuthority{
 		AuthorityBundleHash:       payloadHash,
+		EnvelopeSHA256:            hashRuntimeEvidenceAuthorityPublicationEnvelope(serialized),
 		RegistryGeneration:        payload.RegistryGeneration,
 		SemanticTupleManifestHash: payload.SemanticTupleManifestHash,
+		CompatibilityTuple:        compatibilityTuple,
 		TrustDomain:               envelope.TrustDomain,
 		KeyID:                     envelope.KeyID,
 		Payload:                   payload,
 	}, nil
+}
+
+func hashRuntimeEvidenceAuthorityPublicationEnvelope(serialized []byte) string {
+	hash := sha256.New()
+	_, _ = hash.Write([]byte(runtimeEvidenceAuthorityPublicationEnvelopeDomain))
+	_, _ = hash.Write([]byte{0})
+	_, _ = hash.Write(serialized)
+	return "sha256:" + hex.EncodeToString(hash.Sum(nil))
 }
 
 func parseRuntimeEvidenceAuthorityPayload(serialized []byte) (runtimeEvidenceAuthorityPayload, error) {

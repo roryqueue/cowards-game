@@ -36,6 +36,7 @@ type LiveServer struct {
 	now               func() time.Time
 	strategyArtifacts map[string]strategyArtifact
 	authority         *verifiedRuntimeEvidenceAuthority
+	loadAuthority     func() (*verifiedRuntimeEvidenceAuthority, error)
 	orchestrator      *goMatchOrchestrator
 	stopOrchestrator  context.CancelFunc
 }
@@ -94,6 +95,7 @@ func newLiveServerWithDependencies(ctx context.Context, databaseURL string, depe
 		now:               time.Now,
 		strategyArtifacts: artifacts,
 		authority:         authority,
+		loadAuthority:     dependencies.loadAuthority,
 		orchestrator:      dependencies.newOrchestrator(pool, os.Getenv("COWARDS_RUNTIME_SERVICE_URL")),
 	}
 	orchestrationMode := strings.TrimSpace(os.Getenv("COWARDS_GO_ORCHESTRATION"))
@@ -2302,6 +2304,10 @@ func (server *LiveServer) insertAccountRevision(ctx context.Context, input accou
 }
 
 func (server *LiveServer) createExhibitionMatchSet(ctx context.Context, userID string, presetID string, revisionIDs []string, counted bool) (map[string]any, error) {
+	return server.createExhibitionMatchSetWithDependencies(ctx, userID, presetID, revisionIDs, counted, server.defaultExhibitionCreationDependencies())
+}
+
+func (server *LiveServer) createExhibitionMatchSetWithDependencies(ctx context.Context, userID string, presetID string, revisionIDs []string, counted bool, dependencies exhibitionCreationDependencies) (map[string]any, error) {
 	matchSetPresetID, err := competitionMatchSetPresetID(presetID)
 	if err != nil || len(revisionIDs) < 2 || len(revisionIDs) > 8 {
 		return nil, errors.New("invalid exhibition input")
@@ -2315,22 +2321,43 @@ func (server *LiveServer) createExhibitionMatchSet(ctx context.Context, userID s
 	}
 	now := server.now()
 	matchSetID := "match-set:exhibition:" + randomID()
-	entrants, err := server.loadOwnedEntrants(ctx, userID, revisionIDs, now, counted)
+	if dependencies.loadEntrants == nil || dependencies.loadAuthority == nil || dependencies.resolveEvidence == nil || dependencies.begin == nil {
+		return nil, errors.New("creation integrity unavailable")
+	}
+	entrants, err := dependencies.loadEntrants(ctx, userID, revisionIDs, now)
 	if err != nil {
 		return nil, err
 	}
 	if len(entrants) != len(revisionIDs) {
 		return nil, errors.New("revision ownership mismatch")
 	}
+	authority, err := dependencies.loadAuthority()
+	if err != nil || authority == nil {
+		return nil, errors.New("creation integrity unavailable")
+	}
+	integrityIdentity, err := dependencies.resolveEvidence(ctx, authority, entrants, counted, now)
+	if err != nil || integrityIdentity == nil {
+		return nil, errors.New("creation integrity unavailable")
+	}
+	for _, entrant := range entrants {
+		delete(entrant, "_creationRuntime")
+		delete(entrant, "_creationMetadata")
+	}
 	matches := generatePairwiseMatches(matchSetID, matchSetPresetID, entrants)
 	duplicateKey := buildDuplicateKey(userID, presetID, revisionIDs)
-	tx, err := server.pool.Begin(ctx)
+	tx, err := dependencies.begin(ctx)
 	if err != nil {
 		return nil, err
 	}
 	defer func() {
 		_ = tx.Rollback(ctx)
 	}()
+	installedReceipt, err := server.lockInstalledAuthorityReceipt(ctx, tx, authority, now)
+	if err != nil || installedReceipt == nil {
+		return nil, errors.New("creation integrity unavailable")
+	}
+	_ = integrityIdentity
+	_ = installedReceipt
 	var activeDuplicate string
 	err = tx.QueryRow(ctx, `
 		select id
@@ -2424,7 +2451,7 @@ func (server *LiveServer) createExhibitionMatchSet(ctx context.Context, userID s
 	}, nil
 }
 
-func (server *LiveServer) loadOwnedEntrants(ctx context.Context, userID string, revisionIDs []string, lockedAt time.Time, counted bool) ([]map[string]any, error) {
+func (server *LiveServer) loadOwnedEntrants(ctx context.Context, userID string, revisionIDs []string, lockedAt time.Time) ([]map[string]any, error) {
 	rows, err := server.pool.Query(ctx, `
 		select sr.id, sr.source_hash, sr.source_bytes, sr.runtime,
 		       sr.engine_compatibility, sr.validation, sr.metadata,
@@ -2452,12 +2479,6 @@ func (server *LiveServer) loadOwnedEntrants(ctx context.Context, userID string, 
 		}
 		runtime := jsonMap(runtimeRaw)
 		metadata := jsonMap(metadataRaw)
-		if counted && !runtimeAllowsCountedPlay(runtime, metadata, sourceHash, sourceBytes) {
-			return nil, errors.New("runtime is not counted-play eligible")
-		}
-		if !counted && !runtimeAllowsNonCountedExhibition(runtime, metadata, sourceHash, sourceBytes) {
-			return nil, errors.New("runtime is not eligible for non-counted exhibition")
-		}
 		label := stringValue(metadata, "label")
 		if label == "" {
 			label = id
@@ -2470,6 +2491,8 @@ func (server *LiveServer) loadOwnedEntrants(ctx context.Context, userID string, 
 			"sourceHash":          sourceHash,
 			"sourceBytes":         sourceBytes,
 			"runtime":             publicRuntimeMetadata(runtime),
+			"_creationRuntime":    runtime,
+			"_creationMetadata":   metadata,
 			"runtimeSemantics":    runtimeSemanticsForRevision(runtime, metadata, sourceHash, sourceBytes),
 			"engineCompatibility": jsonMap(engineRaw),
 			"lockedAt":            lockedAt.Format(time.RFC3339Nano),
