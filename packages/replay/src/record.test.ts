@@ -53,6 +53,7 @@ const run = () =>
 const metadata = {
   schemaVersion: "chronicle-v1.4" as const,
   semanticTupleId: CANDIDATE_MATCH_KERNEL.tupleId,
+  semanticTuple: CANDIDATE_MATCH_KERNEL.tuple,
 }
 
 describe("recordChronicleFromExecution", () => {
@@ -64,26 +65,24 @@ describe("recordChronicleFromExecution", () => {
     if (!recorded.ok || execution.kind !== "completed") return
 
     expect(
-      recorded.chronicle.events.map(
-        ({ type, sequence, context, privacy, payload }) => ({
-          type,
-          sequence,
-          context,
-          privacy,
-          payload,
-        }),
-      ),
+      recorded.chronicle.events.map(({ type, sequence, privacy, payload }) => ({
+        type,
+        sequence,
+        privacy,
+        payload,
+      })),
     ).toEqual(
-      execution.result.events.map(
-        ({ type, sequence, context, privacy, payload }) => ({
-          type,
-          sequence,
-          context: context ?? {},
-          privacy: privacy ?? "public",
-          payload,
-        }),
-      ),
+      execution.result.events.map(({ type, sequence, privacy, payload }) => ({
+        type,
+        sequence,
+        privacy: privacy ?? "public",
+        payload,
+      })),
     )
+    expect(
+      recorded.chronicle.events.find(({ type }) => type === "ROUND_STARTED")
+        ?.context,
+    ).toEqual({ phaseNumber: 1, roundNumber: 1 })
     expect(recorded.chronicle.events.map(({ sequence }) => sequence)).toEqual(
       recorded.chronicle.events.map((_, sequence) => sequence),
     )
@@ -95,9 +94,11 @@ describe("recordChronicleFromExecution", () => {
     expect(recorded.boundaryAnchors).toHaveLength(
       recorded.chronicle.snapshots.length,
     )
-    expect(recorded.boundaryAnchors.every(({ stateHash }) =>
-      /^sha256:[0-9a-f]{64}$/u.test(stateHash),
-    )).toBe(true)
+    expect(
+      recorded.boundaryAnchors.every(({ stateHash }) =>
+        /^sha256:[0-9a-f]{64}$/u.test(stateHash),
+      ),
+    ).toBe(true)
     expect(recorded.finalState).toEqual(execution.result.state)
     expect(recorded.semanticIdentity).toEqual({
       tupleId: CANDIDATE_MATCH_KERNEL.tupleId,
@@ -167,37 +168,60 @@ describe("recordChronicleFromExecution", () => {
   })
 
   it.each([
-    ["result event drift", (execution: ReturnType<typeof run>) => {
-      if (execution.kind !== "completed") return execution
-      return {
-        ...execution,
-        result: { ...execution.result, events: execution.result.events.slice(1) },
-      }
-    }, "RECORDER_EVENT_STREAM_INVALID"],
-    ["boundary hash drift", (execution: ReturnType<typeof run>) => {
-      if (execution.kind !== "completed") return execution
-      const transitions = execution.transitions.map((transition, index) =>
-        index === 0
-          ? { ...transition, beforeStateHash: `sha256:${"0".repeat(64)}` }
-          : transition,
-      )
-      return {
-        ...execution,
-        transitions,
-        recorderMaterial: { ...execution.recorderMaterial, boundaries: transitions },
-      }
-    }, "RECORDER_BOUNDARY_INTEGRITY_INVALID"],
-    ["semantic identity drift", (execution: ReturnType<typeof run>) => {
-      if (execution.kind !== "completed") return execution
-      const transitions = execution.transitions.map((transition, index) =>
-        index === 0 ? { ...transition, semanticTupleId: "sha256:wrong" } : transition,
-      )
-      return {
-        ...execution,
-        transitions,
-        recorderMaterial: { ...execution.recorderMaterial, boundaries: transitions },
-      }
-    }, "RECORDER_SEMANTIC_IDENTITY_INVALID"],
+    [
+      "result event drift",
+      (execution: ReturnType<typeof run>) => {
+        if (execution.kind !== "completed") return execution
+        return {
+          ...execution,
+          result: {
+            ...execution.result,
+            events: execution.result.events.slice(1),
+          },
+        }
+      },
+      "RECORDER_EVENT_STREAM_INVALID",
+    ],
+    [
+      "boundary hash drift",
+      (execution: ReturnType<typeof run>) => {
+        if (execution.kind !== "completed") return execution
+        const transitions = execution.transitions.map((transition, index) =>
+          index === 0
+            ? { ...transition, beforeStateHash: `sha256:${"0".repeat(64)}` }
+            : transition,
+        )
+        return {
+          ...execution,
+          transitions,
+          recorderMaterial: {
+            ...execution.recorderMaterial,
+            boundaries: transitions,
+          },
+        }
+      },
+      "RECORDER_BOUNDARY_INTEGRITY_INVALID",
+    ],
+    [
+      "semantic identity drift",
+      (execution: ReturnType<typeof run>) => {
+        if (execution.kind !== "completed") return execution
+        const transitions = execution.transitions.map((transition, index) =>
+          index === 0
+            ? { ...transition, semanticTupleId: "sha256:wrong" }
+            : transition,
+        )
+        return {
+          ...execution,
+          transitions,
+          recorderMaterial: {
+            ...execution.recorderMaterial,
+            boundaries: transitions,
+          },
+        }
+      },
+      "RECORDER_SEMANTIC_IDENTITY_INVALID",
+    ],
   ] as const)("fails closed for %s", (_name, mutate, code) => {
     const recorded = recordChronicleFromExecution({
       execution: mutate(run()) as ReturnType<typeof run>,
@@ -215,7 +239,9 @@ describe("recordChronicleFromExecution", () => {
       "utf8",
     )
 
-    expect(source).not.toMatch(/StrategyRuntime|runMatch|resolveRound|resolveActivation/)
+    expect(source).not.toMatch(
+      /StrategyRuntime|runMatch|resolveRound|resolveActivation/,
+    )
     expect(source).not.toMatch(/kernel\/driver|kernel\/step|\.\/build/)
   })
 })

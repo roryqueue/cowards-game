@@ -4,7 +4,6 @@ import { spawnSync } from "node:child_process"
 import path from "node:path"
 import { describe, expect, it, vi } from "vitest"
 import type { Pool } from "pg"
-import type { WorkerRunnerDependencies } from "./runner.js"
 import {
   assertTypeScriptWorkerEntrypointAllowed,
   assertTypeScriptWorkerJobOwnershipAllowed,
@@ -24,7 +23,6 @@ const allDependencies = () => ({
   loadRunMatchInput: vi.fn(),
   createRuntimeFromRevision: vi.fn(),
   createRuntimeConfig: vi.fn(),
-  buildChronicleFromMatch: vi.fn(),
   completeMatch: vi.fn(),
   recordAttemptFailure: vi.fn(),
   mutateMatchFailure: vi.fn(),
@@ -59,11 +57,14 @@ describe("retired direct TypeScript Match worker", () => {
     { lifecycleOwner: "unspecified", workerPurpose: "test" },
     { lifecycleOwner: "unknown", workerPurpose: "surprise" },
     "malformed",
-  ])("rejects every direct ownership config before inspection: %j", (config) => {
-    expectRetired(() =>
-      assertTypeScriptWorkerJobOwnershipAllowed(config as never),
-    )
-  })
+  ])(
+    "rejects every direct ownership config before inspection: %j",
+    (config) => {
+      expectRetired(() =>
+        assertTypeScriptWorkerJobOwnershipAllowed(config as never),
+      )
+    },
+  )
 
   it.each([
     undefined,
@@ -80,11 +81,12 @@ describe("retired direct TypeScript Match worker", () => {
       STRATEGY_EXECUTION_ADAPTER: "subprocess",
       NODE_ENV: "test",
     },
-  ])("rejects every executable environment with one stable error: %j", (env) => {
-    expectRetired(() =>
-      assertTypeScriptWorkerEntrypointAllowed(env as never),
-    )
-  })
+  ])(
+    "rejects every executable environment with one stable error: %j",
+    (env) => {
+      expectRetired(() => assertTypeScriptWorkerEntrypointAllowed(env as never))
+    },
+  )
 
   it.each([
     undefined,
@@ -217,6 +219,8 @@ describe("retired direct TypeScript Match worker", () => {
     const source = readFileSync(`${__dirname}/runner.ts`, "utf8")
     expect(source).not.toMatch(/const\s+defaultDependencies\s*=/)
     expect(source).not.toMatch(/allowedTypeScriptWorkerPurposes/)
-    expect(source).not.toMatch(/workerPurpose\s*===\s*["'](?:rollback|test|parity)/)
+    expect(source).not.toMatch(
+      /workerPurpose\s*===\s*["'](?:rollback|test|parity)/,
+    )
   })
 })

@@ -27,7 +27,6 @@ export interface WorkerRunnerDependencies {
   loadRunMatchInput?: ((...args: never[]) => unknown) | undefined
   createRuntimeFromRevision?: ((...args: never[]) => unknown) | undefined
   createRuntimeConfig?: ((...args: never[]) => unknown) | undefined
-  buildChronicleFromMatch?: ((...args: never[]) => unknown) | undefined
   completeMatch?: ((...args: never[]) => unknown) | undefined
   recordAttemptFailure?: ((...args: never[]) => unknown) | undefined
   mutateMatchFailure?: ((...args: never[]) => unknown) | undefined

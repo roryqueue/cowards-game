@@ -3,8 +3,11 @@ import { createHash } from "node:crypto"
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
-import { buildChronicleFromMatch } from "../packages/replay/src/build.ts"
-import { projectPublicChronicle } from "../packages/replay/src/project.ts"
+import { CANDIDATE_MATCH_KERNEL } from "../packages/engine/src/index.ts"
+import {
+  projectPublicChronicle,
+  recordChronicleFromExecution,
+} from "../packages/replay/src/index.ts"
 import { createChronicleMetadata } from "../packages/persistence/src/chronicle-store.ts"
 import { createWorkshopAnalyticsDemoSnapshot } from "../packages/persistence/src/workshop-analytics.ts"
 import { createCowardsLocalService } from "../packages/service/src/index.ts"
@@ -98,6 +101,20 @@ const runtimeSemantics = {
 
 const PUBLIC_STRATEGY_ID = "strategy:go-parity:sentinel"
 
+const recordGoldenChronicle = () => {
+  const execution = CANDIDATE_MATCH_KERNEL.runMatch(createGoldenMatchInput())
+  const recorded = recordChronicleFromExecution({
+    execution,
+    metadata: {
+      schemaVersion: "chronicle-v1.4",
+      semanticTupleId: CANDIDATE_MATCH_KERNEL.tupleId,
+      semanticTuple: CANDIDATE_MATCH_KERNEL.tuple,
+    },
+  })
+  if (!recorded.ok) throw new Error(recorded.failure.code)
+  return recorded.chronicle
+}
+
 const createPublicStrategyCard = (): PublicStrategyCardDto => ({
   strategyId: PUBLIC_STRATEGY_ID,
   strategyRevisionId: "strategy-revision:go-parity:sentinel",
@@ -126,7 +143,7 @@ const createPublicStrategyCard = (): PublicStrategyCardDto => ({
 })
 
 const createGoldenMatchSetResult = (): PublicMatchSetResultDto => {
-  const { chronicle } = buildChronicleFromMatch(createGoldenMatchInput())
+  const chronicle = recordGoldenChronicle()
   const metadata = createChronicleMetadata(chronicle)
   return {
     matchSetId: "match-set:go-parity:golden",
@@ -233,7 +250,7 @@ const createDegradedMatchSetResult = (): PublicMatchSetResultDto => ({
 })
 
 const createParityService = () => {
-  const { chronicle } = buildChronicleFromMatch(createGoldenMatchInput())
+  const chronicle = recordGoldenChronicle()
   const stored = {
     artifact: chronicle,
     metadata: createChronicleMetadata(chronicle),

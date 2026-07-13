@@ -1,5 +1,9 @@
-import { type RunMatchInput, type StrategyRuntime } from "@cowards/engine"
-import { buildChronicleFromMatch } from "@cowards/replay"
+import {
+  CANDIDATE_MATCH_KERNEL,
+  type RunMatchInput,
+  type StrategyRuntime,
+} from "@cowards/engine"
+import { recordChronicleFromExecution } from "@cowards/replay"
 import {
   INITIAL_BOUNDS,
   type Action,
@@ -206,7 +210,19 @@ const buildScenario = (
     assertions: string[]
   }>,
 ): CanonicalReplayScenario => {
-  const { chronicle } = buildChronicleFromMatch(input)
+  const execution = CANDIDATE_MATCH_KERNEL.runMatch(input)
+  const recorded = recordChronicleFromExecution({
+    execution,
+    metadata: {
+      schemaVersion: "chronicle-v1.4",
+      semanticTupleId: CANDIDATE_MATCH_KERNEL.tupleId,
+      semanticTuple: CANDIDATE_MATCH_KERNEL.tuple,
+    },
+  })
+  if (!recorded.ok) {
+    throw new Error(recorded.failure.code)
+  }
+  const { chronicle } = recorded
 
   return {
     id,

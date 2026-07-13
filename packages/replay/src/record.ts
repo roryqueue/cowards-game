@@ -26,6 +26,7 @@ const HASH_PATTERN = /^sha256:[0-9a-f]{64}$/u
 interface RecorderCoordinates {
   readonly phaseNumber: number
   readonly roundNumber: 1 | 2 | 3 | 4
+  readonly stage: string
   readonly ordinal: number
 }
 
@@ -71,6 +72,7 @@ export type ChronicleRecorderExecution =
 export interface ChronicleRecordingMetadata {
   readonly schemaVersion: ChronicleSchemaVersion
   readonly semanticTupleId: string
+  readonly semanticTuple: Readonly<CanonicalCompatibilityTuple>
 }
 
 export type ChronicleRecorderFailureCode =
@@ -202,7 +204,9 @@ const projectState = (state: GameState) => ({
   outcome: state.outcome ?? null,
 })
 
-const hashProjection = (projection: Readonly<Record<string, unknown>>): string =>
+const hashProjection = (
+  projection: Readonly<Record<string, unknown>>,
+): string =>
   `sha256:${createHash("sha256")
     .update(`${STATE_HASH_DOMAIN}\0`, "utf8")
     .update(JSON.stringify(projection), "utf8")
@@ -226,10 +230,22 @@ const safeEvent = ({
 })
 
 const metadataIsSafe = (metadata: ChronicleRecordingMetadata): boolean =>
-  same(Object.keys(metadata).sort(), ["schemaVersion", "semanticTupleId"]) &&
+  same(Object.keys(metadata).sort(), [
+    "schemaVersion",
+    "semanticTuple",
+    "semanticTupleId",
+  ]) &&
   metadata.schemaVersion === "chronicle-v1.4" &&
   typeof metadata.semanticTupleId === "string" &&
-  metadata.semanticTupleId.length > 0
+  metadata.semanticTupleId.length > 0 &&
+  same(Object.keys(metadata.semanticTuple).sort(), [
+    "arenaCatalog",
+    "chronicle",
+    "engine",
+    "rules",
+    "runtimeAbi",
+    "setPolicy",
+  ])
 
 const readObject = (
   value: JsonValue | undefined,
@@ -248,6 +264,9 @@ const explicitOwner = (
   const owner = object?.ownerPlayerId ?? object?.playerId
   return typeof owner === "string" && owner.length > 0 ? owner : undefined
 }
+
+const cloneControlledJson = (value: JsonValue): JsonValue =>
+  JSON.parse(JSON.stringify(value)) as JsonValue
 
 const boardFromProjection = (
   projection: Readonly<Record<string, unknown>>,
@@ -269,6 +288,24 @@ const outcomeFromProjection = (
 
 const lastEventSequence = (transition: RecorderTransition): number =>
   transition.events.at(-1)?.sequence ?? 0
+
+const fallbackContext = (
+  transition: RecorderTransition,
+): ChronicleEventContext => {
+  if (
+    transition.transitionKind === "MATCH_STARTED" ||
+    transition.transitionKind === "MAX_PHASES_EXCEEDED"
+  ) {
+    return {}
+  }
+  if (transition.transitionKind === "CONTRACTION_RESOLVED") {
+    return { phaseNumber: transition.coordinates.phaseNumber }
+  }
+  return {
+    phaseNumber: transition.coordinates.phaseNumber,
+    roundNumber: transition.coordinates.roundNumber,
+  }
+}
 
 const createSnapshots = (
   transitions: readonly RecorderTransition[],
@@ -334,7 +371,8 @@ const createSnapshots = (
       ({ type }) => type === "ROUND_STARTED",
     )
     if (roundStarted !== undefined) {
-      if (openRound !== undefined && previous !== undefined) closeRound(previous)
+      if (openRound !== undefined && previous !== undefined)
+        closeRound(previous)
       openRound = {
         phaseNumber: transition.coordinates.phaseNumber,
         roundNumber: transition.coordinates.roundNumber,
@@ -352,7 +390,8 @@ const createSnapshots = (
       ({ type }) => type === "CONTRACTION_RESOLVED",
     )
     if (contraction !== undefined) {
-      if (openRound !== undefined && previous !== undefined) closeRound(previous)
+      if (openRound !== undefined && previous !== undefined)
+        closeRound(previous)
       append(
         "CONTRACTION",
         contraction.sequence,
@@ -390,6 +429,7 @@ const validateExecution = (
   const first = transitions[0]!
   if (
     first.semanticTupleId !== metadata.semanticTupleId ||
+    !same(first.semanticTuple, metadata.semanticTuple) ||
     transitions.some(
       (transition) =>
         transition.semanticTupleId !== metadata.semanticTupleId ||
@@ -417,7 +457,10 @@ const validateExecution = (
 
   if (
     !same(first.beforeState, projectState(recorderMaterial.initialState)) ||
-    !same(transitions.at(-1)!.afterState, projectState(recorderMaterial.finalState))
+    !same(
+      transitions.at(-1)!.afterState,
+      projectState(recorderMaterial.finalState),
+    )
   ) {
     return "RECORDER_MATERIAL_INVALID"
   }
@@ -431,7 +474,8 @@ const validateExecution = (
       hashProjection(transition.afterState) !== transition.afterStateHash ||
       transition.failureStatus !== null ||
       (index > 0 &&
-        (transitions[index - 1]!.afterStateHash !== transition.beforeStateHash ||
+        (transitions[index - 1]!.afterStateHash !==
+          transition.beforeStateHash ||
           !same(transitions[index - 1]!.afterState, transition.beforeState)))
     ) {
       return "RECORDER_BOUNDARY_INTEGRITY_INVALID"
@@ -462,7 +506,13 @@ export const recordChronicleFromExecution = ({
 
   const events: ChronicleEvent[] = []
   const byPlayerId: Record<PlayerId, Record<string, JsonValue>> = {}
+  const transitionBySequence = new Map(
+    execution.transitions.flatMap((transition) =>
+      transition.events.map((event) => [event.sequence, transition] as const),
+    ),
+  )
   for (const summary of execution.recorderMaterial.events) {
+    const transition = transitionBySequence.get(summary.sequence)!
     const privateRef =
       summary.privatePayload === undefined
         ? undefined
@@ -471,15 +521,18 @@ export const recordChronicleFromExecution = ({
       const owner = explicitOwner(summary.privatePayload)!
       byPlayerId[owner] = {
         ...(byPlayerId[owner] ?? {}),
-        [privateRef]: globalThis.structuredClone(summary.privatePayload!),
+        [privateRef]: cloneControlledJson(summary.privatePayload!),
       }
     }
     events.push({
       type: summary.type,
       sequence: summary.sequence,
-      context: summary.context === undefined ? {} : { ...summary.context },
+      context: {
+        ...fallbackContext(transition),
+        ...(summary.context ?? {}),
+      },
       privacy: summary.privacy ?? "public",
-      payload: globalThis.structuredClone(summary.payload),
+      payload: cloneControlledJson(summary.payload),
       ...(privateRef === undefined ? {} : { privateRef }),
     })
   }

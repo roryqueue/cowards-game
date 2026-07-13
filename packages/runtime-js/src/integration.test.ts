@@ -1,9 +1,13 @@
 import { describe, expect, it } from "vitest"
-import { runMatch, type RunMatchInput } from "@cowards/engine"
 import {
-  buildChronicleFromMatch,
+  CANDIDATE_MATCH_KERNEL,
+  runMatch,
+  type RunMatchInput,
+} from "@cowards/engine"
+import {
   projectOwnerChronicle,
   projectPublicChronicle,
+  recordChronicleFromExecution,
 } from "@cowards/replay"
 import { createScenarioStateParts } from "@cowards/test-utils"
 import { buildStrategyRevision } from "./revision.js"
@@ -63,6 +67,20 @@ export default {
   },
 }
 `
+
+const recordInput = (input: RunMatchInput) => {
+  const execution = CANDIDATE_MATCH_KERNEL.runMatch(input)
+  const recorded = recordChronicleFromExecution({
+    execution,
+    metadata: {
+      schemaVersion: "chronicle-v1.4",
+      semanticTupleId: CANDIDATE_MATCH_KERNEL.tupleId,
+      semanticTuple: CANDIDATE_MATCH_KERNEL.tuple,
+    },
+  })
+  if (!recorded.ok) throw new Error(recorded.failure.code)
+  return recorded
+}
 
 describe("runtime-js engine and Chronicle integration", () => {
   it("runs a valid default-object strategy revision through runMatch", () => {
@@ -156,7 +174,7 @@ describe("runtime-js engine and Chronicle integration", () => {
   })
 
   it("thrown soldierBrain exception creates private Chronicle runtime violation details", () => {
-    const { chronicle } = buildChronicleFromMatch(
+    const { chronicle } = recordInput(
       createInput(`
 export default {
   selectActivations(input) {
