@@ -100,20 +100,20 @@ Plans:
   4. Executable compatibility fixtures preserve same-direction collision, successful-push reversal history, blocked MOVE/PUSH, terminal timing, Backstab behavior, and every other audited valid v1.4 ruling.
   5. If any clarification or refactor would change a valid state, Action legality, event order, outcome, terminal timing/reason, or Strategy observation, work stops for an explicit compatibility ruling before expectations change.
 
-**Plans:** 2/22 plans executed
+**Plans:** 5/22 plans executed
 
 **Wave 1 — permanent RED and compatibility evidence**
 
 - [x] 257-01-PLAN.md — Freeze pre-refactor authority evidence and one-kernel RED contracts.
 - [x] 257-02-PLAN.md — Freeze approved lifecycle and excess-order repair RED cases.
-- [ ] 257-03-PLAN.md — Capture the complete valid-v1.4 compatibility corpus and companion addendum.
-- [ ] 257-04-PLAN.md — Establish cross-boundary semantic-integrity RED vectors with precise failure markers.
+- [x] 257-03-PLAN.md — Capture the complete valid-v1.4 compatibility corpus and companion addendum.
+- [x] 257-04-PLAN.md — Establish cross-boundary semantic-integrity RED vectors with precise failure markers.
 
 **Wave 2 — semantic contracts and reference ownership**
 
 - [ ] 257-05-PLAN.md — Implement bounded deterministic semantic validators and failure ownership.
 - [ ] 257-07-PLAN.md — Prepare an inactive semantic tuple/event/arena candidate without activating it.
-- [ ] 257-11-PLAN.md — Freeze the AST-aware executable-reference ownership inventory.
+- [x] 257-11-PLAN.md — Freeze the AST-aware executable-reference ownership inventory.
 
 **Wave 3 — immutable admission and candidate event coverage**
 
