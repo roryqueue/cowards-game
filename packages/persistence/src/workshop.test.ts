@@ -37,6 +37,7 @@ import {
   workshopTemplateSource,
 } from "./workshop.js"
 import type { Pool } from "pg"
+import type { MatchSetExecutionEvidenceResolver } from "./matchset-service.js"
 import {
   buildAdvancedStrategyRevision,
   listAdvancedStrategies,
@@ -137,6 +138,43 @@ describe("Workshop service contracts", () => {
       }),
     ).rejects.toThrow(/containment.*unavailable|production.*empty/iu)
     expect(calls).toBe(0)
+  })
+
+  it("resolves Workshop revision and opponent as independent entrants", async () => {
+    let captured: readonly {
+      entrantKey: string
+      strategyRevisionId: string
+    }[] = []
+    const resolver: MatchSetExecutionEvidenceResolver = {
+      trustDomain: "fixture",
+      async resolve(input) {
+        captured = input.entrants
+        throw new Error("captured fixture resolution")
+      },
+    }
+    const pool = {
+      async query() {
+        throw new Error("unreachable")
+      },
+    } as unknown as Pool
+    await expect(
+      createWorkshopTestMatchSet(pool, {
+        revisionId: "strategy-revision:workshop:test",
+        opponentId: "opponent:cautious",
+        presetId: "smoke-v1",
+        evidenceResolver: resolver,
+      }),
+    ).rejects.toThrow("captured fixture resolution")
+    expect(captured).toEqual([
+      {
+        entrantKey: "strategy-revision:workshop:test",
+        strategyRevisionId: "strategy-revision:workshop:test",
+      },
+      {
+        entrantKey: WORKSHOP_OPPONENTS[0].revisionId,
+        strategyRevisionId: WORKSHOP_OPPONENTS[0].revisionId,
+      },
+    ])
   })
 
   it("ships valid built-in template and opponent sources", () => {

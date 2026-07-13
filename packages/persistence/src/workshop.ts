@@ -30,8 +30,12 @@ import type {
 } from "@cowards/spec"
 import type { Pool } from "pg"
 import { withTransaction } from "./db.js"
-import { createMatchSetService } from "./matchset-service.js"
-import { generatePresetMatrix } from "./matchset-service.js"
+import {
+  createMatchSetService,
+  generatePresetMatrix,
+  resolveMatchSetExecutionEvidence,
+  type MatchSetExecutionEvidenceResolver,
+} from "./matchset-service.js"
 import {
   listMatchStatusesForSet,
   type MatchSetMatchSummary,
@@ -1535,15 +1539,29 @@ export const createWorkshopTestMatchSet = async (
     opponentId: WorkshopOpponentSummary["id"]
     presetId: MatchSetPresetId
     matchSetId?: MatchSetId | undefined
+    now?: Date | undefined
+    evidenceResolver?: MatchSetExecutionEvidenceResolver | undefined
   },
 ): Promise<WorkshopTestSummary & { matchIds: MatchId[] }> => {
+  const opponent = findWorkshopOpponent(input.opponentId)
+  const now = input.now ?? new Date()
+  const integrityIdentity = await resolveMatchSetExecutionEvidence({
+    resolver: input.evidenceResolver,
+    purpose: "workshop",
+    evaluationInstant: now.toISOString(),
+    entrants: [input.revisionId, opponent.revisionId].map(
+      (strategyRevisionId) => ({
+        entrantKey: strategyRevisionId,
+        strategyRevisionId,
+      }),
+    ),
+  })
   await ensureWorkshopSeed(pool)
   const repositories = createRepositories(pool)
   assertWorkshopRevisionCanBeTested(
     await repositories.getStrategyRevision(input.revisionId),
     input.revisionId,
   )
-  const opponent = findWorkshopOpponent(input.opponentId)
   const matchSetId = input.matchSetId ?? createWorkshopMatchSetId()
   const matrix = generatePresetMatrix({
     id: matchSetId,
@@ -1560,6 +1578,7 @@ export const createWorkshopTestMatchSet = async (
     topStrategyRevisionId: opponent.revisionId,
     bottomPlayerId: WORKSHOP_PLAYER_ID,
     topPlayerId: opponent.playerId,
+    integrityIdentity,
   })
   return {
     matchSetId: created.matchSetId,

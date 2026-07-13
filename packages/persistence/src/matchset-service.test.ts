@@ -26,7 +26,10 @@ const sha256 = (value: string): string =>
   createHash("sha256").update(value).digest("hex")
 const languages = ["typescript", "python", "rust", "zig"] as const
 
-const lane = (index: number, namespace = "fixture"): ExecutableLaneIdentity => ({
+const lane = (
+  index: number,
+  namespace = "fixture",
+): ExecutableLaneIdentity => ({
   providerId: `${namespace}:provider:${index}`,
   languageId: languages[index % languages.length]!,
   runtimeId: `${namespace}:runtime:${index}`,
@@ -230,7 +233,7 @@ describe("exact MatchSet creation", () => {
           languageIdsByRevision: Object.fromEntries(
             bindings.map((binding, index) => [
               binding.strategyRevisionId,
-              languages[index % languages.length],
+              languages[index % languages.length]!,
             ]),
           ),
         }),
@@ -310,13 +313,15 @@ describe("exact MatchSet creation", () => {
       expect(matches).toHaveLength(input.matches.length)
       expect(jobs).toHaveLength(input.matches.length)
       expect(
-        genericEntrants.map((call) =>
-          (call.values.at(-2) as RuntimeEntrantExecutionEvidence).laneIdentity
-            .languageId,
+        genericEntrants.map(
+          (call) =>
+            (call.values.at(-2) as RuntimeEntrantExecutionEvidence).laneIdentity
+              .languageId,
         ),
       ).toEqual(
-        Array.from({ length: count }, (_, index) =>
-          languages[index % languages.length],
+        Array.from(
+          { length: count },
+          (_, index) => languages[index % languages.length],
         ),
       )
       for (const [index, match] of matches.entries()) {
@@ -330,62 +335,78 @@ describe("exact MatchSet creation", () => {
   )
 
   it.each([
-    ["missing", (input: CreateMatchSetFromMatrixInput) => {
-      delete (input.integrityIdentity.executionEntrants as Record<string, unknown>)[
-        "fixture:entrant:1"
-      ]
-    }],
-    ["extra", (input: CreateMatchSetFromMatrixInput) => {
-      ;(input.integrityIdentity.executionEntrants as Record<string, unknown>)[
-        "fixture:entrant:extra"
-      ] = entrant(7)
-    }],
-    ["wrong revision", (input: CreateMatchSetFromMatrixInput) => {
-      const evidence = input.integrityIdentity.executionEntrants[
-        "fixture:entrant:1"
-      ]!
-      ;(input.integrityIdentity.executionEntrants as Record<string, unknown>)[
-        "fixture:entrant:1"
-      ] = { ...evidence, strategyRevisionId: "fixture:revision:wrong" }
-    }],
-    ["swapped side", (input: CreateMatchSetFromMatrixInput) => {
-      input.matches[0] = {
-        ...input.matches[0]!,
-        bottomEntrantKey: input.matches[0]!.topEntrantKey,
-      }
-    }],
-    ["stale", (input: CreateMatchSetFromMatrixInput) => {
-      const evidence = input.integrityIdentity.executionEntrants[
-        "fixture:entrant:1"
-      ]!
-      ;(input.integrityIdentity.executionEntrants as Record<string, unknown>)[
-        "fixture:entrant:1"
-      ] = {
-        ...evidence,
-        schedulingDecision: {
-          ...evidence.schedulingDecision,
-          freshUntil: "2020-01-01T00:00:00.000Z",
-        },
-      }
-    }],
-  ] as const)("rejects %s evidence before the first SQL statement", async (_, mutate) => {
-    const fake = fakeDatabase()
-    const input = inputFor(2)
-    mutate(input)
-    await expect(
-      insertMatchSetWithMatrixOnClient(fake.client, input),
-    ).rejects.toThrow()
-    expect(fake.calls).toEqual([])
-  })
+    [
+      "missing",
+      (input: CreateMatchSetFromMatrixInput) => {
+        delete (
+          input.integrityIdentity.executionEntrants as Record<string, unknown>
+        )["fixture:entrant:1"]
+      },
+    ],
+    [
+      "extra",
+      (input: CreateMatchSetFromMatrixInput) => {
+        ;(input.integrityIdentity.executionEntrants as Record<string, unknown>)[
+          "fixture:entrant:extra"
+        ] = entrant(7)
+      },
+    ],
+    [
+      "wrong revision",
+      (input: CreateMatchSetFromMatrixInput) => {
+        const evidence =
+          input.integrityIdentity.executionEntrants["fixture:entrant:1"]!
+        ;(input.integrityIdentity.executionEntrants as Record<string, unknown>)[
+          "fixture:entrant:1"
+        ] = { ...evidence, strategyRevisionId: "fixture:revision:wrong" }
+      },
+    ],
+    [
+      "swapped side",
+      (input: CreateMatchSetFromMatrixInput) => {
+        input.matches[0] = {
+          ...input.matches[0]!,
+          bottomEntrantKey: input.matches[0]!.topEntrantKey,
+        }
+      },
+    ],
+    [
+      "stale",
+      (input: CreateMatchSetFromMatrixInput) => {
+        const evidence =
+          input.integrityIdentity.executionEntrants["fixture:entrant:1"]!
+        ;(input.integrityIdentity.executionEntrants as Record<string, unknown>)[
+          "fixture:entrant:1"
+        ] = {
+          ...evidence,
+          schedulingDecision: {
+            ...evidence.schedulingDecision,
+            freshUntil: "2020-01-01T00:00:00.000Z",
+          },
+        }
+      },
+    ],
+  ] as const)(
+    "rejects %s evidence before the first SQL statement",
+    async (_, mutate) => {
+      const fake = fakeDatabase()
+      const input = inputFor(2)
+      mutate(input)
+      await expect(
+        insertMatchSetWithMatrixOnClient(fake.client, input),
+      ).rejects.toThrow()
+      expect(fake.calls).toEqual([])
+    },
+  )
 
   it("rolls the complete matrix back after a forced late child failure", async () => {
     const fake = fakeDatabase("insert into match_jobs")
     await expect(
       createMatchSetService(fake.pool).createFromMatrix(inputFor(3)),
     ).rejects.toThrow("forced late child failure")
-    expect(fake.calls.some((call) => call.sql.startsWith("insert into match_sets"))).toBe(
-      true,
-    )
+    expect(
+      fake.calls.some((call) => call.sql.startsWith("insert into match_sets")),
+    ).toBe(true)
     expect(fake.calls.at(-1)?.sql).toBe("rollback")
   })
 })
@@ -581,9 +602,9 @@ describePostgres("PostgreSQL MatchSet integrity identity and zero rows", () => {
         postgresInput.integrityIdentity.executionEntrants[row.entrant_key],
       )
     }
-    expect(competitionEntrants.rows.map((row) => row.execution_entrant_key)).toEqual(
-      Object.keys(postgresInput.integrityIdentity.executionEntrants),
-    )
+    expect(
+      competitionEntrants.rows.map((row) => row.execution_entrant_key),
+    ).toEqual(Object.keys(postgresInput.integrityIdentity.executionEntrants))
     expect(pairs.rows).toHaveLength(postgresInput.matches.length)
     for (const pair of pairs.rows) {
       expect(pair.bottom_execution_entrant_key).toBe(pair.job_bottom)
@@ -596,9 +617,9 @@ describePostgres("PostgreSQL MatchSet integrity identity and zero rows", () => {
 
   it("keeps every record family at zero for rejected PostgreSQL input", async () => {
     const rejected = inputFor(2, `${namespace}:rejected`)
-    delete (rejected.integrityIdentity.executionEntrants as Record<string, unknown>)[
-      `${namespace}:rejected:entrant:1`
-    ]
+    delete (
+      rejected.integrityIdentity.executionEntrants as Record<string, unknown>
+    )[`${namespace}:rejected:entrant:1`]
     await expect(
       insertMatchSetWithMatrixOnClient(client, rejected),
     ).rejects.toThrow(/coverage|missing/iu)

@@ -1,9 +1,13 @@
+import { createHash } from "node:crypto"
 import type {
+  ExecutableLaneIdentity,
   MatchId,
   MatchSetId,
   PlayerId,
+  StrategyLanguageId,
   StrategyRevisionId,
 } from "@cowards/spec"
+import { CANONICAL_COMPATIBILITY_TUPLES } from "@cowards/spec"
 import type { Pool, PoolClient } from "pg"
 import { createRepositories } from "./repositories.js"
 import { withTransaction } from "./db.js"
@@ -33,6 +37,183 @@ export interface IntegritySchedulingIdentity {
   authorityBundleHash: string
   registryGeneration: string
   executionEntrants: Readonly<Record<string, EntrantExecutionEvidence>>
+}
+
+export type MatchSetEvidencePurpose =
+  | "counted"
+  | "exhibition"
+  | "workshop"
+  | "development"
+
+export interface MatchSetEvidenceEntrantBinding {
+  entrantKey: string
+  strategyRevisionId: StrategyRevisionId
+}
+
+export interface MatchSetEvidenceResolutionRequest {
+  purpose: MatchSetEvidencePurpose
+  evaluationInstant: string
+  entrants: readonly MatchSetEvidenceEntrantBinding[]
+}
+
+export interface MatchSetExecutionEvidenceResolver {
+  readonly trustDomain: "production" | "fixture"
+  resolve(
+    input: MatchSetEvidenceResolutionRequest,
+  ): Promise<IntegritySchedulingIdentity>
+}
+
+export const EMPTY_PRODUCTION_MATCH_SET_EVIDENCE_RESOLVER: MatchSetExecutionEvidenceResolver =
+  Object.freeze({
+    trustDomain: "production" as const,
+    async resolve(): Promise<IntegritySchedulingIdentity> {
+      throw new IntegrityEvidenceInputError(
+        "Production containment authority is empty; MatchSet creation is unavailable.",
+      )
+    },
+  })
+
+const fixtureHash = (value: string): string =>
+  createHash("sha256").update(`fixture:v1.37:${value}`, "utf8").digest("hex")
+
+export const createFixtureMatchSetEvidenceResolver = (
+  options: {
+    languageIdsByRevision?:
+      | Readonly<Record<string, StrategyLanguageId>>
+      | undefined
+    omitStrategyRevisionIds?: readonly string[] | undefined
+  } = {},
+): MatchSetExecutionEvidenceResolver =>
+  Object.freeze({
+    trustDomain: "fixture" as const,
+    async resolve(
+      input: MatchSetEvidenceResolutionRequest,
+    ): Promise<IntegritySchedulingIdentity> {
+      const tuple = CANONICAL_COMPATIBILITY_TUPLES[0]!
+      const registryGeneration = "fixture:v1.37:generation:1"
+      const omitted = new Set(options.omitStrategyRevisionIds ?? [])
+      const executionEntrants = Object.fromEntries(
+        input.entrants
+          .filter((binding) => !omitted.has(binding.strategyRevisionId))
+          .map((binding, index) => {
+            const languageId =
+              options.languageIdsByRevision?.[binding.strategyRevisionId] ??
+              "typescript"
+            const laneIdentity: ExecutableLaneIdentity = {
+              providerId: `fixture:provider:${languageId}`,
+              languageId,
+              runtimeId: `fixture:runtime:${languageId}`,
+              runtimeVersion: "1",
+              toolchainId: `fixture:toolchain:${languageId}`,
+              toolchainVersion: "1",
+              adapterId: `fixture:adapter:${languageId}`,
+              adapterVersion: "1",
+              policyId: "fixture:policy:v1.37",
+              policyVersion: "1",
+              corpusId: "fixture:corpus:v1.37",
+              corpusVersion: "1",
+              artifactId: `fixture:artifact:${binding.strategyRevisionId}`,
+              artifactSha256: fixtureHash(
+                `artifact:${binding.strategyRevisionId}`,
+              ),
+              implementationId: `fixture:implementation:${languageId}`,
+              buildId: `fixture:build:${languageId}:${index}`,
+              semanticTupleId: tuple.tupleId,
+              semanticTuple: { ...tuple.tuple },
+            }
+            return [
+              binding.entrantKey,
+              {
+                entrantKey: binding.entrantKey,
+                strategyRevisionId: binding.strategyRevisionId,
+                laneIdentity,
+                containmentCertificateRef: {
+                  kind: "containment" as const,
+                  certificateId: `fixture:certificate:containment:${binding.strategyRevisionId}`,
+                  certificateVersion: "fixture-runtime-certificate-v1",
+                  certificateRecordHash: fixtureHash(
+                    `containment:${binding.strategyRevisionId}`,
+                  ),
+                  registryGeneration,
+                },
+                conformanceCertificateRef: {
+                  kind: "conformance" as const,
+                  certificateId: `fixture:certificate:conformance:${binding.strategyRevisionId}`,
+                  certificateVersion: "fixture-runtime-certificate-v1",
+                  certificateRecordHash: fixtureHash(
+                    `conformance:${binding.strategyRevisionId}`,
+                  ),
+                  registryGeneration,
+                },
+                schedulingDecision: {
+                  status: "exhibition_only" as const,
+                  reasonCode: "CONFORMANCE_MISSING" as const,
+                  evaluatedAt: input.evaluationInstant,
+                  freshUntil: "2099-12-31T23:59:59.999Z",
+                  registryGeneration,
+                },
+              },
+            ]
+          }),
+      )
+      return {
+        compatibility: {
+          tupleId: tuple.tupleId,
+          tuple: { ...tuple.tuple },
+        },
+        authorityBundleHash: fixtureHash("authority-bundle"),
+        registryGeneration,
+        executionEntrants,
+      }
+    },
+  })
+
+export const resolveMatchSetExecutionEvidence = async (input: {
+  resolver?: MatchSetExecutionEvidenceResolver | undefined
+  purpose: MatchSetEvidencePurpose
+  evaluationInstant: string
+  entrants: readonly MatchSetEvidenceEntrantBinding[]
+}): Promise<IntegritySchedulingIdentity> => {
+  const resolver =
+    input.resolver ?? EMPTY_PRODUCTION_MATCH_SET_EVIDENCE_RESOLVER
+  if (input.purpose === "counted" && resolver.trustDomain !== "production") {
+    throw new IntegrityEvidenceInputError(
+      "Fixture-domain evidence cannot authorize counted MatchSet creation.",
+    )
+  }
+  const resolved = await resolver.resolve({
+    purpose: input.purpose,
+    evaluationInstant: input.evaluationInstant,
+    entrants: input.entrants.map((entrant) => ({ ...entrant })),
+  })
+  const identity = createMatchSetIntegrityIdentity({
+    compatibility: resolved.compatibility,
+    authorityBundleHash: resolved.authorityBundleHash,
+    registryGeneration: resolved.registryGeneration,
+    expectedEntrants: input.entrants.map((entrant) => ({ ...entrant })),
+    entrants: Object.values(resolved.executionEntrants),
+  })
+  if (
+    identity.normalizedEntrants.some(
+      (entrant) =>
+        entrant.schedulingDecision.status === "disabled" ||
+        (input.purpose === "counted" &&
+          (entrant.schedulingDecision.status !== "counted" ||
+            entrant.schedulingDecision.reasonCode !== "EVIDENCE_CURRENT")),
+    )
+  ) {
+    throw new IntegrityEvidenceInputError(
+      input.purpose === "counted"
+        ? "Counted MatchSet creation requires current containment and conformance for every entrant."
+        : "MatchSet creation requires current containment for every entrant.",
+    )
+  }
+  return Object.freeze({
+    compatibility: identity.compatibility,
+    authorityBundleHash: identity.authorityBundleHash,
+    registryGeneration: identity.registryGeneration,
+    executionEntrants: identity.entrantsByKey,
+  })
 }
 
 export interface CreateMatchSetFromMatrixInput {
@@ -78,8 +259,13 @@ export interface CreateMatchSetFromPresetInput {
   integrityIdentity: IntegritySchedulingIdentity
 }
 
+type GeneratePresetMatrixInput = Omit<
+  CreateMatchSetFromPresetInput,
+  "integrityIdentity"
+>
+
 export const generatePresetMatrix = (
-  input: CreateMatchSetFromPresetInput,
+  input: GeneratePresetMatrixInput,
 ): CreateMatchRecordInput[] => {
   const preset = getMatchSetPreset(input.presetId)
   const matches: CreateMatchRecordInput[] = []
@@ -167,7 +353,11 @@ const validateMatchSetCreation = (
     input.integrityIdentity.executionEntrants,
   ).sort(([left], [right]) => utf8KeyOrder(left, right))
   for (const [key, evidence] of executionEntrants) {
-    if (!evidence || typeof evidence !== "object" || evidence.entrantKey !== key) {
+    if (
+      !evidence ||
+      typeof evidence !== "object" ||
+      evidence.entrantKey !== key
+    ) {
       throw new IntegrityEvidenceInputError(
         "Execution entrant map keys must exactly match entrant evidence keys.",
       )
@@ -211,7 +401,10 @@ const validateMatchSetCreation = (
   const linkedEntrantKeys = new Set<string>()
   for (const entrant of input.competitionEntrants ?? []) {
     const evidence = identity.entrantsByKey[entrant.executionEntrantKey]
-    if (!evidence || evidence.strategyRevisionId !== entrant.strategyRevisionId) {
+    if (
+      !evidence ||
+      evidence.strategyRevisionId !== entrant.strategyRevisionId
+    ) {
       throw new IntegrityEvidenceInputError(
         "Competition entrant execution evidence binding is missing or invalid.",
       )

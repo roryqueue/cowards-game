@@ -477,7 +477,7 @@ describe("trial ladder contracts", () => {
       sql.includes("from trial_ladder_entries"),
     )
     expect(schedulingUpdate).toBeGreaterThan(-1)
-    expect(schedulingUpdate).toBeLessThan(entryRead)
+    expect(schedulingUpdate).toBeGreaterThan(entryRead)
     expect(
       lifecycle.calls.some(
         (sql) =>
@@ -773,10 +773,7 @@ describe("trial ladder contracts", () => {
 
   it("keeps the migration full owner/Season uniqueness policy", () => {
     const migrationSource = readFileSync(
-      new URL(
-        "../migrations/0004_competition_trust_beta.sql",
-        import.meta.url,
-      ),
+      new URL("../migrations/0004_competition_trust_beta.sql", import.meta.url),
       "utf8",
     )
     expect(migrationSource).toContain("unique(season_id, owner_user_id)")

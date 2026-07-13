@@ -16,6 +16,7 @@ import {
   validateManualExhibitionRevisionIds,
 } from "./competition.js"
 import type { Pool } from "pg"
+import type { MatchSetExecutionEvidenceResolver } from "./matchset-service.js"
 
 const TEST_PROVIDER_VALIDATION_SECRET =
   "cowards-provider-validation-test-secret-v1.33"
@@ -228,12 +229,42 @@ describe("competition helpers", () => {
         match.topEntrantKey,
       ]),
     ).toEqual([
-      ["strategy-revision:a", "strategy-revision:b", "strategy-revision:a", "strategy-revision:b"],
-      ["strategy-revision:b", "strategy-revision:a", "strategy-revision:b", "strategy-revision:a"],
-      ["strategy-revision:a", "strategy-revision:c", "strategy-revision:a", "strategy-revision:c"],
-      ["strategy-revision:c", "strategy-revision:a", "strategy-revision:c", "strategy-revision:a"],
-      ["strategy-revision:b", "strategy-revision:c", "strategy-revision:b", "strategy-revision:c"],
-      ["strategy-revision:c", "strategy-revision:b", "strategy-revision:c", "strategy-revision:b"],
+      [
+        "strategy-revision:a",
+        "strategy-revision:b",
+        "strategy-revision:a",
+        "strategy-revision:b",
+      ],
+      [
+        "strategy-revision:b",
+        "strategy-revision:a",
+        "strategy-revision:b",
+        "strategy-revision:a",
+      ],
+      [
+        "strategy-revision:a",
+        "strategy-revision:c",
+        "strategy-revision:a",
+        "strategy-revision:c",
+      ],
+      [
+        "strategy-revision:c",
+        "strategy-revision:a",
+        "strategy-revision:c",
+        "strategy-revision:a",
+      ],
+      [
+        "strategy-revision:b",
+        "strategy-revision:c",
+        "strategy-revision:b",
+        "strategy-revision:c",
+      ],
+      [
+        "strategy-revision:c",
+        "strategy-revision:b",
+        "strategy-revision:c",
+        "strategy-revision:b",
+      ],
     ])
   })
 
@@ -255,6 +286,52 @@ describe("competition helpers", () => {
       }),
     ).rejects.toThrow(/containment.*unavailable|production.*empty/iu)
     expect(calls).toBe(0)
+  })
+
+  it("resolves every distinct exhibition entrant by stable revision key before database access", async () => {
+    let captured: readonly {
+      entrantKey: string
+      strategyRevisionId: string
+    }[] = []
+    const resolver: MatchSetExecutionEvidenceResolver = {
+      trustDomain: "fixture",
+      async resolve(input) {
+        captured = input.entrants
+        throw new Error("captured fixture resolution")
+      },
+    }
+    const pool = {
+      async query() {
+        throw new Error("unreachable")
+      },
+    } as unknown as Pool
+    await expect(
+      createManualExhibitionMatchSet(pool, {
+        creatorUserId: "user:alpha",
+        presetId: "smoke-exhibition-v1",
+        revisionIds: [
+          "strategy-revision:typescript",
+          "strategy-revision:python",
+          "strategy-revision:rust",
+        ],
+        now: new Date("2026-07-12T12:00:00.000Z"),
+        evidenceResolver: resolver,
+      }),
+    ).rejects.toThrow("captured fixture resolution")
+    expect(captured).toEqual([
+      {
+        entrantKey: "strategy-revision:typescript",
+        strategyRevisionId: "strategy-revision:typescript",
+      },
+      {
+        entrantKey: "strategy-revision:python",
+        strategyRevisionId: "strategy-revision:python",
+      },
+      {
+        entrantKey: "strategy-revision:rust",
+        strategyRevisionId: "strategy-revision:rust",
+      },
+    ])
   })
 
   it("returns retry-after information once exhibition create limits are exceeded", () => {

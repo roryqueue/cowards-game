@@ -40,7 +40,11 @@ import type { Pool } from "pg"
 import type { PoolClient } from "pg"
 import { withTransaction } from "./db.js"
 import { generateCompetitionPairwiseMatrix } from "./competition.js"
-import { insertMatchSetWithMatrixOnClient } from "./matchset-service.js"
+import {
+  insertMatchSetWithMatrixOnClient,
+  resolveMatchSetExecutionEvidence,
+  type MatchSetExecutionEvidenceResolver,
+} from "./matchset-service.js"
 import { createRepositories } from "./repositories.js"
 import { createDevelopmentSeedData } from "./seed.js"
 import type { MatchSetStatus } from "./schema.js"
@@ -971,13 +975,17 @@ const readSeasonEntries = async (
 
 export const scheduleTrialLadderSeason = async (
   pool: Pool,
-  input: { seasonId: string; actorUserId?: UserId | undefined },
+  input: {
+    seasonId: string
+    actorUserId?: UserId | undefined
+    now?: Date | undefined
+    evidenceResolver?: MatchSetExecutionEvidenceResolver | undefined
+  },
 ): Promise<{
   scheduleRunId: string
   createdMatchSetIds: string[]
   leftoverEntryIds: string[]
 }> => {
-  await ensureCompetitionArenas(pool)
   return withTransaction(pool, async (client) => {
     const seasonResult = await client.query<{
       id: string
@@ -1037,15 +1045,6 @@ export const scheduleTrialLadderSeason = async (
         "Trial ladder season must be open or scheduling before MatchSets can be generated.",
       )
     }
-    if (season.status === "open") {
-      await setTrialLadderSeasonStatusOnClient(client, {
-        seasonId: input.seasonId,
-        status: "scheduling",
-        actorUserId: input.actorUserId,
-        reason: "Froze counted entries for deterministic scheduling.",
-      })
-    }
-
     const entries = stableEntryOrder(
       (await readSeasonEntries(client, input.seasonId)).filter(
         (entry) => entry.status === "active",
@@ -1057,6 +1056,14 @@ export const scheduleTrialLadderSeason = async (
     const scheduleRunId = `trial-schedule:${randomUUID()}`
 
     if (entries.length < season.minimum_entries || fullPodCount === 0) {
+      if (season.status === "open") {
+        await setTrialLadderSeasonStatusOnClient(client, {
+          seasonId: input.seasonId,
+          status: "scheduling",
+          actorUserId: input.actorUserId,
+          reason: "Froze counted entries for deterministic scheduling.",
+        })
+      }
       const leftoverEntryIds = entries.map((entry) => entry.id)
       await client.query(
         `
@@ -1089,7 +1096,8 @@ export const scheduleTrialLadderSeason = async (
       }
     }
 
-    const createdMatchSetIds: string[] = []
+    const now = input.now ?? new Date()
+    const preparedPods = []
     for (let podIndex = 0; podIndex < fullPodCount; podIndex += 1) {
       const pod = entries.slice(podIndex * podSize, (podIndex + 1) * podSize)
       const matchSetId = `match-set:trial:${input.seasonId}:0:${podIndex}`
@@ -1103,9 +1111,45 @@ export const scheduleTrialLadderSeason = async (
         presetId: TRIAL_LADDER_PRESET_ID,
         entrants,
       })
+      const integrityIdentity = await resolveMatchSetExecutionEvidence({
+        resolver: input.evidenceResolver,
+        purpose: "counted",
+        evaluationInstant: now.toISOString(),
+        entrants: entrants.map((entrant) => ({
+          entrantKey: entrant.strategyRevisionId,
+          strategyRevisionId: entrant.strategyRevisionId,
+        })),
+      })
+      preparedPods.push({
+        podIndex,
+        matchSetId,
+        entrants,
+        matches,
+        integrityIdentity,
+      })
+    }
+
+    if (season.status === "open") {
+      await setTrialLadderSeasonStatusOnClient(client, {
+        seasonId: input.seasonId,
+        status: "scheduling",
+        actorUserId: input.actorUserId,
+        reason: "Froze counted entries for deterministic scheduling.",
+      })
+    }
+    const repositories = createRepositories(client)
+    for (const arena of createDevelopmentSeedData().arenas) {
+      await repositories.upsertArenaVariant(arena)
+    }
+
+    const createdMatchSetIds: string[] = []
+    for (const prepared of preparedPods) {
+      const { podIndex, matchSetId, entrants, matches, integrityIdentity } =
+        prepared
       await insertMatchSetWithMatrixOnClient(client, {
         id: matchSetId,
         matches,
+        integrityIdentity,
         matchSet: {
           presetId: "standard-v1",
           presetVersion: "v1",
@@ -1120,11 +1164,12 @@ export const scheduleTrialLadderSeason = async (
             excludesPrivateStrategyData: true,
             trialLadder: true,
           },
-          lockedAt: new Date(),
+          lockedAt: now,
         },
         competitionEntrants: entrants.map((entrant) => ({
           id: `${matchSetId}:${entrant.entryId}`,
           entrantIndex: entrant.entrantIndex,
+          executionEntrantKey: entrant.strategyRevisionId,
           strategyRevisionId: entrant.strategyRevisionId,
           ownerUserId: entrant.ownerUserId,
           ownerHandle: entrant.ownerHandle,

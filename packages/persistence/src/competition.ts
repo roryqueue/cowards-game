@@ -23,8 +23,12 @@ import {
   type UserId,
 } from "@cowards/spec"
 import type { Pool } from "pg"
-import { createMatchSetService } from "./matchset-service.js"
-import type { CreateMatchInput } from "./match-service.js"
+import {
+  createMatchSetService,
+  resolveMatchSetExecutionEvidence,
+  type MatchSetExecutionEvidenceResolver,
+} from "./matchset-service.js"
+import type { CreateMatchRecordInput } from "./match-service.js"
 import { getMatchSetPreset } from "./presets.js"
 import { createRepositories } from "./repositories.js"
 import { createDevelopmentSeedData } from "./seed.js"
@@ -472,10 +476,10 @@ export const generateCompetitionPairwiseMatrix = (input: {
   matchSetId: string
   presetId: CompetitionPresetId
   entrants: readonly CompetitionEntrantSnapshot[]
-}): CreateMatchInput[] => {
+}): CreateMatchRecordInput[] => {
   const competitionPreset = getCompetitionPreset(input.presetId)
   const matchSetPreset = getMatchSetPreset(competitionPreset.matchSetPresetId)
-  const matches: CreateMatchInput[] = []
+  const matches: CreateMatchRecordInput[] = []
   let index = 0
 
   for (let left = 0; left < input.entrants.length; left += 1) {
@@ -492,6 +496,8 @@ export const generateCompetitionPairwiseMatrix = (input: {
             seed: `${seed}:pair:${left}-${right}`,
             bottomPlayerId: `player:${input.matchSetId}:entrant:${left}`,
             topPlayerId: `player:${input.matchSetId}:entrant:${right}`,
+            bottomEntrantKey: bottom.strategyRevisionId,
+            topEntrantKey: top.strategyRevisionId,
           })
           index += 1
           if (competitionPreset.mirroredPairwise) {
@@ -503,6 +509,8 @@ export const generateCompetitionPairwiseMatrix = (input: {
               seed: `${seed}:pair:${left}-${right}:mirror`,
               bottomPlayerId: `player:${input.matchSetId}:entrant:${right}`,
               topPlayerId: `player:${input.matchSetId}:entrant:${left}`,
+              bottomEntrantKey: top.strategyRevisionId,
+              topEntrantKey: bottom.strategyRevisionId,
             })
             index += 1
           }
@@ -606,6 +614,7 @@ export const createManualExhibitionMatchSet = async (
     matchSetId?: string | undefined
     now?: Date | undefined
     rateLimitPolicy?: ExhibitionRateLimitPolicy | undefined
+    evidenceResolver?: MatchSetExecutionEvidenceResolver | undefined
   },
 ): Promise<{
   matchSetId: string
@@ -615,6 +624,15 @@ export const createManualExhibitionMatchSet = async (
   validateManualExhibitionRevisionIds(input.revisionIds)
   const preset = getCompetitionPreset(input.presetId)
   const now = input.now ?? new Date()
+  const integrityIdentity = await resolveMatchSetExecutionEvidence({
+    resolver: input.evidenceResolver,
+    purpose: "exhibition",
+    evaluationInstant: now.toISOString(),
+    entrants: input.revisionIds.map((strategyRevisionId) => ({
+      entrantKey: strategyRevisionId,
+      strategyRevisionId,
+    })),
+  })
   await assertExhibitionCreateRateLimit(pool, {
     userId: input.creatorUserId,
     now,
@@ -646,6 +664,7 @@ export const createManualExhibitionMatchSet = async (
   const created = await createMatchSetService(pool).createFromMatrix({
     id: matchSetId,
     matches,
+    integrityIdentity,
     matchSet: {
       presetId: preset.matchSetPresetId,
       presetVersion: "v1",
@@ -666,6 +685,7 @@ export const createManualExhibitionMatchSet = async (
     competitionEntrants: entrants.map((entrant) => ({
       id: `${matchSetId}:${entrant.entrantId}`,
       entrantIndex: entrant.entrantIndex,
+      executionEntrantKey: entrant.strategyRevisionId,
       strategyRevisionId: entrant.strategyRevisionId,
       ownerUserId: entrant.ownerUserId,
       ownerHandle: entrant.ownerHandle,
