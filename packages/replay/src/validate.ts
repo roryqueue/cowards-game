@@ -1,6 +1,7 @@
 import {
   ChronicleSchema,
   COMPATIBILITY_VERSIONS,
+  resolveCanonicalCompatibilityTuple,
   type Chronicle,
   type ChronicleEventType,
   type ChronicleSnapshotKind,
@@ -43,6 +44,83 @@ const error = (
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   value !== null && typeof value === "object" && !Array.isArray(value)
+
+const hasExactKeys = (
+  value: Record<string, unknown>,
+  expected: readonly string[],
+): boolean => {
+  const keys = Object.keys(value)
+  return (
+    keys.length === expected.length &&
+    expected.every((key) => Object.hasOwn(value, key))
+  )
+}
+
+export type ReplayCompatibilityIdentityResolution =
+  | {
+      status: "current_exact"
+      tupleId: string
+    }
+  | {
+      status: "historical_original_semantics"
+      tupleResolution: "unresolved_legacy"
+    }
+  | {
+      status: "invalid"
+      reason: "missing_or_mixed_current_tuple" | "unsupported_profile"
+    }
+
+export const resolveReplayCompatibilityIdentity = (
+  input: unknown,
+): ReplayCompatibilityIdentityResolution => {
+  if (!isRecord(input)) {
+    return { status: "invalid", reason: "unsupported_profile" }
+  }
+  if (input.profile === "historical-v1.4") {
+    return hasExactKeys(input, ["profile", "chronicle"])
+      ? {
+          status: "historical_original_semantics",
+          tupleResolution: "unresolved_legacy",
+        }
+      : { status: "invalid", reason: "unsupported_profile" }
+  }
+  if (
+    input.profile !== "current-exact" ||
+    !hasExactKeys(input, ["profile", "compatibility", "chronicle"])
+  ) {
+    return {
+      status: "invalid",
+      reason:
+        input.profile === "current-exact"
+          ? "missing_or_mixed_current_tuple"
+          : "unsupported_profile",
+    }
+  }
+  const resolved = resolveCanonicalCompatibilityTuple(input.compatibility)
+  return resolved
+    ? { status: "current_exact", tupleId: resolved.tupleId }
+    : { status: "invalid", reason: "missing_or_mixed_current_tuple" }
+}
+
+export const validateReplayInput = (
+  input: unknown,
+): ChronicleValidationResult => {
+  const compatibility = resolveReplayCompatibilityIdentity(input)
+  if (compatibility.status === "invalid") {
+    return {
+      ok: false,
+      errors: [
+        error(
+          "VERSION_INCOMPATIBLE",
+          compatibility.reason === "missing_or_mixed_current_tuple"
+            ? "Current replay requires one exact registered compatibility tuple."
+            : "Replay compatibility profile is unsupported.",
+        ),
+      ],
+    }
+  }
+  return validateChronicle((input as Record<string, unknown>).chronicle)
+}
 
 export const migrateChronicle = (
   chronicle: JsonValue,
