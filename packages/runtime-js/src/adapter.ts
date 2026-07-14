@@ -62,10 +62,25 @@ export interface StrategyExecutionRequestV117 {
   /** Host-only authority. Successor guest harnesses never receive this value. */
   readonly signingIdentity: RuntimeInvocationSigningIdentityV117
   /**
-   * Complete host-observed accounting. Omission is accepted only so current
-   * candidate adapters can return an authenticated fail-closed response.
+   * Fixture-only successor seam. The adapter calls this only after it owns a
+   * complete raw guest observation, then returns that observation and the
+   * supplied evidence to the host bridge as one value. Production callers do
+   * not provide it and therefore fail closed until real meters are available.
    */
-  readonly receiptEvidence?: RuntimeInvocationExecutionReceiptEvidenceV117
+  readonly fixtureEvidenceAfterObservationForTestsOnly?: (
+    observation: StrategyExecutionAccountingObservationV117,
+  ) => RuntimeInvocationExecutionReceiptEvidenceV117
+}
+
+export interface StrategyExecutionAccountingObservationV117 {
+  /** Bytes after the one-byte guest frame tag, or the proven N+1 sentinel. */
+  readonly payloadBytes: number
+  /** Complete guest transport frame bytes, including its one-byte tag. */
+  readonly stdoutBytes: number
+  /** Host-observed diagnostic bytes; diagnostic contents never cross here. */
+  readonly stderrBytes: number
+  /** True only when the READY/GO method watchdog reached its signed bound. */
+  readonly methodDeadlineExceeded: boolean
 }
 
 export interface StrategyExecutionAdapterV117 extends StrategyExecutionAdapter {

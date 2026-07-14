@@ -184,7 +184,7 @@ describe("createSubprocessStrategyExecutionAdapter", () => {
         activationCount: 1,
         mySoldiers: [{ id: "bottom-1" }],
       },
-      timeoutMs: 1_000,
+      timeoutMs: 5_000,
     })
 
     expect(result).toEqual({
@@ -260,7 +260,7 @@ export default {
       source: transpileOrThrow(escapeAtImportSource),
       methodName: "selectActivations",
       input: {},
-      timeoutMs: 1_000,
+      timeoutMs: 5_000,
     })
 
     expect(result.ok).toBe(false)

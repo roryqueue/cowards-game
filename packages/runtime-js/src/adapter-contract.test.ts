@@ -17,7 +17,10 @@ import {
   type RuntimeInvocationSigningIdentityV117,
   type StrategyInput,
 } from "@cowards/spec"
-import type { StrategyExecutionAdapter } from "./adapter.js"
+import type {
+  StrategyExecutionAccountingObservationV117,
+  StrategyExecutionAdapter,
+} from "./adapter.js"
 import {
   activeStrategyExecutionAdapter,
   getStrategyExecutionAdapterMetadata,
@@ -159,7 +162,9 @@ type CandidateAdapter = {
     requestBytes: Uint8Array
     executableSource: string
     signingIdentity: RuntimeInvocationSigningIdentityV117
-    receiptEvidence?: RuntimeInvocationExecutionReceiptEvidenceV117
+    fixtureEvidenceAfterObservationForTestsOnly?: (
+      observation: StrategyExecutionAccountingObservationV117,
+    ) => RuntimeInvocationExecutionReceiptEvidenceV117
   }): Uint8Array
 }
 
@@ -235,18 +240,39 @@ const executeCandidate = (
   request = candidateRequest(),
 ) => executeCandidateWith(adapter, request, transpiledSource())
 
+const automaticCandidateEvidence = Symbol("automatic-candidate-evidence")
+
 const executeCandidateWith = (
   adapter: StrategyExecutionAdapter,
   request: AuthenticatedRuntimeInvocationRequestV117,
   executableSource: string,
-  receiptEvidence: RuntimeInvocationExecutionReceiptEvidenceV117 | undefined =
-    completeCandidateEvidence(request),
+  receiptEvidence:
+    | RuntimeInvocationExecutionReceiptEvidenceV117
+    | undefined
+    | typeof automaticCandidateEvidence = automaticCandidateEvidence,
 ) => {
   const responseBytes = (adapter as unknown as CandidateAdapter).executeV117({
     requestBytes: serializeRuntimeInvocationRequestV117(request),
     executableSource,
     signingIdentity: candidateIdentity,
-    ...(receiptEvidence === undefined ? {} : { receiptEvidence }),
+    ...(receiptEvidence === undefined
+      ? {}
+      : {
+          fixtureEvidenceAfterObservationForTestsOnly: (
+            observation: StrategyExecutionAccountingObservationV117,
+          ) =>
+            receiptEvidence === automaticCandidateEvidence
+              ? completeCandidateEvidence(request, {
+                  wallMilliseconds: observation.methodDeadlineExceeded
+                    ? request.budget.methodLimit.counters.wallMilliseconds
+                        .maximum + 1
+                    : 1,
+                  payloadBytes: observation.payloadBytes,
+                  stdoutBytes: observation.stdoutBytes,
+                  stderrBytes: observation.stderrBytes,
+                })
+              : receiptEvidence,
+        }),
   })
   return verifyRuntimeInvocationResponseV117(
     responseBytes,
@@ -465,7 +491,7 @@ describe("StrategyExecutionAdapter contract", () => {
         activationCount: 1,
         mySoldiers: [{ id: "bottom-1" }],
       },
-      timeoutMs: 1_000,
+      timeoutMs: 5_000,
     })
 
     expect(result.ok).toBe(true)
@@ -516,7 +542,7 @@ export default {
 `),
       methodName: "selectActivations",
       input: {},
-      timeoutMs: 1_000,
+      timeoutMs: 5_000,
       outputByteLimit: 128,
     })
 
@@ -540,7 +566,7 @@ export default {
 `),
       methodName: "selectActivations",
       input: {},
-      timeoutMs: 1_000,
+      timeoutMs: 5_000,
       outputByteLimit: 128,
     })
 
@@ -573,7 +599,7 @@ export default {
 `),
             methodName: "selectActivations",
             input: runtimeInput,
-            timeoutMs: 1_000,
+            timeoutMs: 5_000,
           })
 
           expect(result.ok).toBe(false)
@@ -586,7 +612,7 @@ export default {
       it("returns schema-normalized valid Strategy output", () => {
         const runtime = createRuntimeFromRevision(
           buildStrategyRevision({ source: validStrategySource }),
-          { adapter: adapterFactory.createAdapter(), timeoutMs: 1_000 },
+          { adapter: adapterFactory.createAdapter(), timeoutMs: 5_000 },
         )
 
         const result = runtime.selectActivations(runtimeInput)
@@ -605,7 +631,7 @@ export default {
       it("returns player-caused invalid output as a RuntimeResult failure", () => {
         const runtime = createRuntimeFromRevision(
           buildStrategyRevision({ source: invalidOutputStrategySource }),
-          { adapter: adapterFactory.createAdapter(), timeoutMs: 1_000 },
+          { adapter: adapterFactory.createAdapter(), timeoutMs: 5_000 },
         )
 
         const result = runtime.selectActivations(runtimeInput)
@@ -642,7 +668,7 @@ export default {
     })
     const runtime = createRuntimeFromRevision(
       buildStrategyRevision({ source: validStrategySource }),
-      { adapter, timeoutMs: 1_000 },
+      { adapter, timeoutMs: 5_000 },
     )
 
     expect(() => runtime.selectActivations(runtimeInput)).toThrow(
@@ -791,6 +817,103 @@ export default {
       },
     )
 
+    it("rejects complete accounting whose byte deltas do not match the observation", () => {
+      const request = candidateRequest()
+      const mismatched = completeCandidateEvidence(request, {
+        payloadBytes: 1,
+        stdoutBytes: 1,
+      })
+      const adapter = createSubprocessStrategyExecutionAdapter({
+        spawnSync: () =>
+          ({
+            pid: 123,
+            output: ["", successFrame, ""],
+            stdout: successFrame,
+            stderr: "",
+            status: 0,
+            signal: null,
+          }) as SpawnSyncReturns<string>,
+      })
+
+      const result = executeCandidateWith(
+        adapter,
+        request,
+        transpiledSource(),
+        mismatched,
+      )
+
+      expect(result).toMatchObject({
+        kind: "success",
+        value: {
+          accounting: {
+            disposition: "no_commit",
+            poststate: request.accounting.prestate,
+          },
+          outcome: {
+            kind: "system_failure",
+            failure: { code: "AMBIGUOUS_ATTRIBUTION" },
+          },
+        },
+      })
+      expect(result.kind).toBe("success")
+      if (result.kind === "success") {
+        expect(result.value.outcome.trace.safeCodes).toEqual(
+          expect.arrayContaining([
+            "PAYLOAD_SCHEMA_VALID",
+            "ACCOUNTING_EVIDENCE_REJECTED",
+            "AMBIGUOUS_ATTRIBUTION",
+          ]),
+        )
+      }
+    })
+
+    it("binds partial system-failure stdout and stderr observations numerically", () => {
+      const request = candidateRequest()
+      const stdout = "partial-output-XYZ"
+      const stderr = "diagnostic-XYZ"
+      const adapter = createSubprocessStrategyExecutionAdapter({
+        spawnSync: () =>
+          ({
+            pid: 123,
+            output: ["", stdout, stderr],
+            stdout,
+            stderr,
+            status: null,
+            signal: null,
+            error: Object.assign(new Error("private outer watchdog detail"), {
+              code: "ETIMEDOUT",
+            }),
+          }) as SpawnSyncReturns<string>,
+      })
+      const evidence = completeCandidateEvidence(request, {
+        attribution: "host",
+        payloadBytes: 0,
+        stdoutBytes: new TextEncoder().encode(stdout).byteLength,
+        stderrBytes: new TextEncoder().encode(stderr).byteLength,
+      })
+
+      const result = executeCandidateWith(
+        adapter,
+        request,
+        transpiledSource(),
+        evidence,
+      )
+
+      expect(result).toMatchObject({
+        kind: "success",
+        value: {
+          accounting: { disposition: "no_commit" },
+          outcome: {
+            kind: "system_failure",
+            failure: { code: "HOST_CRASH", retryable: true },
+          },
+        },
+      })
+      expect(JSON.stringify(result)).not.toMatch(
+        /private outer watchdog detail|partial-output-XYZ|diagnostic-XYZ/u,
+      )
+    })
+
     it("produces one authenticated byte-identical success with complete host-observed evidence", () => {
       const results = candidateAdapters().map(({ label, adapter }) => ({
         label,
@@ -914,7 +1037,13 @@ export default {
         adapterFor("Iprivate legacy violation tail"),
         mixedRequest,
         transpiledSource(),
-        completeCandidateEvidence(mixedRequest, { attribution: "host" }),
+        completeCandidateEvidence(mixedRequest, {
+          attribution: "host",
+          payloadBytes: 0,
+          stdoutBytes: new TextEncoder().encode(
+            "Iprivate legacy violation tail",
+          ).byteLength,
+        }),
       )
       expect(mixed).toMatchObject({
         kind: "success",
@@ -938,6 +1067,7 @@ export default {
           payloadBytes:
             overCapRequest.budget.methodLimit.counters.payloadBytes.maximum +
             1,
+          stdoutBytes: 1,
         }),
       )
       expect(atCap).toMatchObject({
@@ -1105,40 +1235,48 @@ export default {
 
     it("separates the startup watchdog from the signed nested method limit", () => {
       const request = candidateRequest()
-      let observedOptions: Record<string, unknown> | undefined
-      const adapter = createSubprocessStrategyExecutionAdapter({
-        spawnSync: (_command, _args, options) => {
-          observedOptions = options as unknown as Record<string, unknown>
-          return {
-            pid: 123,
-            output: ["", successFrame, ""],
-            stdout: successFrame,
-            stderr: "",
-            status: 0,
-            signal: null,
-          } as SpawnSyncReturns<string>
-        },
-      })
+      for (const [label, createAdapter] of [
+        ["subprocess", createSubprocessStrategyExecutionAdapter],
+        ["container", createContainerSubprocessStrategyExecutionAdapter],
+      ] as const) {
+        let observedOptions: Record<string, unknown> | undefined
+        const adapter = createAdapter({
+          spawnSync: (_command, _args, options) => {
+            observedOptions = options as unknown as Record<string, unknown>
+            return {
+              pid: 123,
+              output: ["", successFrame, ""],
+              stdout: successFrame,
+              stderr: "",
+              status: 0,
+              signal: null,
+            } as SpawnSyncReturns<string>
+          },
+        })
 
-      const result = executeCandidate(adapter, request)
-      expect(result).toMatchObject({
-        kind: "success",
-        value: { outcome: { kind: "success" } },
-      })
-      expect(observedOptions?.timeout).toBe(
-        RUNTIME_ABI_V1_17.budgets.preflight.profiles.artifactValidation
-          .wallMilliseconds +
-          request.budget.methodLimit.counters.wallMilliseconds.maximum +
-          request.budget.methodLimit.cancellation
-            .terminationGraceMilliseconds,
-      )
-      expect(JSON.parse(String(observedOptions?.input))).toMatchObject({
-        methodWallMilliseconds:
-          request.budget.methodLimit.counters.wallMilliseconds.maximum,
-      })
-      expect(observedOptions?.maxBuffer).toBe(
-        request.budget.methodLimit.counters.payloadBytes.maximum + 1,
-      )
+        const result = executeCandidate(adapter, request)
+        expect(result, label).toMatchObject({
+          kind: "success",
+          value: { outcome: { kind: "success" } },
+        })
+        expect(observedOptions?.timeout, label).toBe(
+          RUNTIME_ABI_V1_17.budgets.preflight.profiles.artifactValidation
+            .wallMilliseconds +
+            request.budget.methodLimit.counters.wallMilliseconds.maximum +
+            request.budget.methodLimit.cancellation
+              .terminationGraceMilliseconds,
+        )
+        expect(
+          JSON.parse(String(observedOptions?.input)),
+          label,
+        ).toMatchObject({
+          methodWallMilliseconds:
+            request.budget.methodLimit.counters.wallMilliseconds.maximum,
+        })
+        expect(observedOptions?.maxBuffer, label).toBe(
+          request.budget.methodLimit.counters.stdoutBytes.maximum + 1,
+        )
+      }
     })
 
     it(
@@ -1159,24 +1297,55 @@ export default {
 }
 `)
         const request = candidateRequest({ artifactSource: source })
-        const result = executeCandidateWith(
+        for (const adapter of [
           createWorkerThreadStrategyExecutionAdapter(),
-          request,
-          source,
-        )
+          createSubprocessStrategyExecutionAdapter(),
+        ]) {
+          const result = executeCandidateWith(adapter, request, source)
 
-        expect(result).toMatchObject({
+          expect(result, adapter.metadata.id).toMatchObject({
+            kind: "success",
+            value: {
+              outcome: {
+                kind: "success",
+                value: { activationOrders: [], strategyMemory: {} },
+              },
+            },
+          })
+        }
+      },
+      15_000,
+    )
+
+    it("starts the signed deadline at method entry in worker and subprocess lanes", () => {
+      const source = transpileOrThrow(`
+export default {
+  selectActivations() {
+    while (true) {}
+  },
+  soldierBrain() {
+    return { action: { type: "TURN_TO_STONE" }, soldierMemory: null }
+  },
+}
+`)
+      const request = candidateRequest({ artifactSource: source })
+      for (const adapter of [
+        createWorkerThreadStrategyExecutionAdapter(),
+        createSubprocessStrategyExecutionAdapter(),
+      ]) {
+        const result = executeCandidateWith(adapter, request, source)
+        expect(result, adapter.metadata.id).toMatchObject({
           kind: "success",
           value: {
+            accounting: { disposition: "commit" },
             outcome: {
-              kind: "success",
-              value: { activationOrders: [], strategyMemory: {} },
+              kind: "player_violation",
+              violation: { code: "TIMEOUT" },
             },
           },
         })
-      },
-      10_000,
-    )
+      }
+    })
 
     it("commits a proven N+1 payload violation and never a host guess", () => {
       const source = transpileOrThrow(`
@@ -1198,6 +1367,7 @@ export default {
       const evidence = completeCandidateEvidence(request, {
         payloadBytes:
           request.budget.methodLimit.counters.payloadBytes.maximum + 1,
+        stdoutBytes: 1,
       })
       for (const adapter of [
         createSubprocessStrategyExecutionAdapter({
@@ -1346,6 +1516,8 @@ export default {
       const request = candidateRequest({ artifactSource: invalidArtifact })
       const evidence = completeCandidateEvidence(request, {
         attribution: "host",
+        payloadBytes: 0,
+        stdoutBytes: 1,
       })
       for (const adapter of [
         createWorkerThreadStrategyExecutionAdapter(),

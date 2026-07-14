@@ -1,6 +1,9 @@
 import type { StrategyExecutionAdapterV117 } from "./adapter.js"
 import { workerThreadStrategyExecutionAdapterMetadata } from "./adapter.js"
-import { executeStrategyRuntimeAbiV117 } from "./abi-bridge.js"
+import {
+  createRuntimeGuestExecutionV117,
+  executeStrategyRuntimeAbiV117,
+} from "./abi-bridge.js"
 import {
   runStrategyMethodInWorker,
   runStrategyMethodInWorkerV117,
@@ -20,8 +23,17 @@ export const createWorkerThreadStrategyExecutionAdapter =
     },
     executeV117(request) {
       return executeStrategyRuntimeAbiV117({
-        ...request,
-        invokeGuest: runStrategyMethodInWorkerV117,
+        requestBytes: request.requestBytes,
+        executableSource: request.executableSource,
+        signingIdentity: request.signingIdentity,
+        invokeGuest(guest) {
+          const observation = runStrategyMethodInWorkerV117(guest)
+          return createRuntimeGuestExecutionV117(
+            observation,
+            guest.outputByteLimit,
+            request.fixtureEvidenceAfterObservationForTestsOnly,
+          )
+        },
       })
     },
   })

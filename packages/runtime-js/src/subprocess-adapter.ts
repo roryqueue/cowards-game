@@ -9,7 +9,11 @@ import type {
   StrategyExecutionAdapterMetadata,
   StrategyExecutionRequest,
 } from "./adapter.js"
-import { executeStrategyRuntimeAbiV117 } from "./abi-bridge.js"
+import {
+  createRuntimeGuestExecutionV117,
+  executeStrategyRuntimeAbiV117,
+  type RuntimeGuestObservationV117,
+} from "./abi-bridge.js"
 import { RUNTIME_TIMEOUT_MS } from "./guards.js"
 import {
   SUBPROCESS_HARNESS_SOURCE,
@@ -178,64 +182,88 @@ export const createSubprocessStrategyExecutionAdapter = (
     },
     executeV117(request) {
       return executeStrategyRuntimeAbiV117({
-        ...request,
+        requestBytes: request.requestBytes,
+        executableSource: request.executableSource,
+        signingIdentity: request.signingIdentity,
         invokeGuest(guest) {
+          const observed = (
+            observation: RuntimeGuestObservationV117,
+          ) =>
+            createRuntimeGuestExecutionV117(
+              observation,
+              guest.outputByteLimit,
+              request.fixtureEvidenceAfterObservationForTestsOnly,
+            )
           const input = JSON.stringify({
             source: guest.executableSource,
             methodName: guest.methodName,
             input: guest.input,
             outputByteLimit: guest.outputByteLimit,
+            methodWallMilliseconds: guest.timeoutMs,
           })
           const result = spawn(nodePath, harnessArgs(SUBPROCESS_HARNESS_V117_SOURCE), {
             encoding: "utf8",
             env,
             input,
             killSignal: "SIGKILL",
-            maxBuffer: Math.max(guest.outputByteLimit + 1, stderrBytes),
+            maxBuffer: Math.max(guest.stdoutByteLimit + 1, stderrBytes),
             shell: false,
             stdio: ["pipe", "pipe", "pipe"],
-            timeout: guest.timeoutMs,
+            timeout:
+              guest.startupTimeoutMs +
+              guest.timeoutMs +
+              guest.cancellationGraceMilliseconds,
             windowsHide: true,
           })
           const stdout = asString(result.stdout)
           const stderr = asString(result.stderr)
+          const stdoutByteLength = new TextEncoder().encode(stdout).byteLength
+          const stderrByteLength = new TextEncoder().encode(stderr).byteLength
           try {
             assertWithinByteCap("stderr", stderr, stderrBytes)
           } catch {
-            return {
+            return observed({
               kind: "system_failure",
               code: "TRANSPORT_CRASH",
               retryable: true,
-            }
+              stdoutBytes: stdoutByteLength,
+              stderrBytes: stderrByteLength,
+            })
           }
           if (result.error) {
-            return errorCode(result.error) === "ETIMEDOUT"
-              ? {
-                  kind: "system_failure",
-                  code: "AMBIGUOUS_ATTRIBUTION",
-                  retryable: false,
-                }
-              : {
-                  kind: "system_failure",
-                  code: "HOST_CRASH",
-                  retryable: true,
-                }
+            return observed({
+              kind: "system_failure",
+              code: "HOST_CRASH",
+              retryable: true,
+              stdoutBytes: stdoutByteLength,
+              stderrBytes: stderrByteLength,
+            })
           }
           if (result.signal || (typeof result.status === "number" && result.status !== 0)) {
-            return {
+            return observed({
               kind: "system_failure",
               code: "RUNTIME_CRASH",
               retryable: true,
-            }
+              stdoutBytes: stdoutByteLength,
+              stderrBytes: stderrByteLength,
+            })
           }
           const frame = new TextEncoder().encode(stdout)
-          return frame.byteLength <= guest.outputByteLimit + 1
-            ? { kind: "raw_frame", bytes: frame }
-            : {
+          return observed(
+            frame.byteLength <= guest.stdoutByteLimit + 1
+              ? {
+                  kind: "raw_frame",
+                  bytes: frame,
+                  stderrBytes: stderrByteLength,
+                }
+              : {
                 kind: "system_failure",
                 code: "TRANSPORT_CRASH",
                 retryable: true,
-              }
+                stdoutBytes: stdoutByteLength,
+                stderrBytes: stderrByteLength,
+              },
+          )
         },
       })
     },

@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto"
 import {
+  RUNTIME_ABI_V1_17,
   RUNTIME_INVOCATION_V1_17_PLAYER_VIOLATIONS,
   STRATEGY_RUNTIME_ABI_VERSION,
   SoldierBrainResultV117Schema,
@@ -25,6 +26,7 @@ import {
 import type { RuntimeResult } from "@cowards/engine"
 import type {
   StrategyExecutionAdapter,
+  StrategyExecutionAccountingObservationV117,
   StrategyExecutionAdapterOptions,
   StrategyMethodName,
 } from "./adapter.js"
@@ -128,6 +130,8 @@ export const RUNTIME_GUEST_FRAME_TAGS_V117 = Object.freeze({
   oversizedOutput: "O",
   runtimeFailure: "R",
   transportFailure: "T",
+  hostFailure: "H",
+  deadlineExceeded: "D",
 } as const)
 
 export type RuntimeGuestSystemFailureV117 = Readonly<{
@@ -141,28 +145,37 @@ export type RuntimeGuestSystemFailureV117 = Readonly<{
     | "AMBIGUOUS_ATTRIBUTION"
   >
   retryable: boolean
+  stdoutBytes?: number
+  stderrBytes?: number
 }>
 
 export type RuntimeGuestObservationV117 =
-  | Readonly<{ kind: "raw_frame"; bytes: Uint8Array }>
+  | Readonly<{
+      kind: "raw_frame"
+      bytes: Uint8Array
+      stderrBytes?: number
+    }>
   | RuntimeGuestSystemFailureV117
+
+export type RuntimeGuestExecutionV117 = Readonly<{
+  observation: RuntimeGuestObservationV117
+  receiptEvidence?: RuntimeInvocationExecutionReceiptEvidenceV117
+}>
 
 export interface ExecuteStrategyRuntimeAbiBridgeInputV117 {
   readonly requestBytes: Uint8Array
   readonly executableSource: string
   readonly signingIdentity: RuntimeInvocationSigningIdentityV117
-  /**
-   * Complete host-observed execution evidence. Current JS adapters cannot
-   * produce equivalent evidence themselves, so omission fails closed.
-   */
-  readonly receiptEvidence?: RuntimeInvocationExecutionReceiptEvidenceV117
   readonly invokeGuest: (input: {
     readonly executableSource: string
     readonly methodName: AuthenticatedRuntimeInvocationRequestV117["method"]
     readonly input: JsonValue
     readonly timeoutMs: number
+    readonly startupTimeoutMs: number
+    readonly cancellationGraceMilliseconds: number
     readonly outputByteLimit: number
-  }) => RuntimeGuestObservationV117
+    readonly stdoutByteLimit: number
+  }) => RuntimeGuestExecutionV117
 }
 
 const sha256 = (bytes: Uint8Array): `sha256:${string}` =>
@@ -192,6 +205,7 @@ const systemFailure = (
   request: AuthenticatedRuntimeInvocationRequestV117,
   code: RuntimeInvocationSystemFailureCodeV117,
   retryable: boolean,
+  priorSafeCodes: readonly string[] = [],
 ): RuntimeInvocationResultV117 => ({
   kind: "system_failure",
   failure: {
@@ -199,11 +213,17 @@ const systemFailure = (
     publicMessage: "Runtime system failure.",
     retryable,
   },
-  trace: traceFor(request, [
-    "ADAPTER_AUTHENTICATED",
-    "OUTER_BINDINGS_VERIFIED",
-    code,
-  ]),
+  trace: traceFor(
+    request,
+    Array.from(
+      new Set([
+        ...(priorSafeCodes.length > 0
+          ? priorSafeCodes
+          : ["ADAPTER_AUTHENTICATED", "OUTER_BINDINGS_VERIFIED"]),
+        code,
+      ]),
+    ),
+  ),
 })
 
 const successfulPayload = (
@@ -302,8 +322,65 @@ const classifyGuestFrame = (
       return systemFailure(request, "TRANSPORT_CRASH", true)
     case RUNTIME_GUEST_FRAME_TAGS_V117.runtimeFailure:
       return systemFailure(request, "RUNTIME_CRASH", true)
+    case RUNTIME_GUEST_FRAME_TAGS_V117.hostFailure:
+      return systemFailure(request, "HOST_CRASH", true)
+    case RUNTIME_GUEST_FRAME_TAGS_V117.deadlineExceeded:
+      return playerViolation(
+        request,
+        "TIMEOUT",
+        "WALL_DEADLINE_EXCEEDED",
+      )
     default:
       return systemFailure(request, "TRANSPORT_CRASH", true)
+  }
+}
+
+export const observeRuntimeGuestAccountingV117 = (
+  observation: RuntimeGuestObservationV117,
+  outputByteLimit: number,
+): StrategyExecutionAccountingObservationV117 => {
+  if (observation.kind !== "raw_frame") {
+    return {
+      payloadBytes: 0,
+      stdoutBytes: observation.stdoutBytes ?? 0,
+      stderrBytes: observation.stderrBytes ?? 0,
+      methodDeadlineExceeded: false,
+    }
+  }
+  const tag = String.fromCharCode(observation.bytes[0] ?? 0)
+  return {
+    payloadBytes:
+      tag === RUNTIME_GUEST_FRAME_TAGS_V117.success
+        ? Math.max(0, observation.bytes.byteLength - 1)
+        : tag === RUNTIME_GUEST_FRAME_TAGS_V117.oversizedOutput
+          ? outputByteLimit + 1
+          : 0,
+    stdoutBytes: observation.bytes.byteLength,
+    stderrBytes: observation.stderrBytes ?? 0,
+    methodDeadlineExceeded:
+      tag === RUNTIME_GUEST_FRAME_TAGS_V117.deadlineExceeded,
+  }
+}
+
+export const createRuntimeGuestExecutionV117 = (
+  observation: RuntimeGuestObservationV117,
+  outputByteLimit: number,
+  evidenceAfterObservation:
+    | ((
+        observation: StrategyExecutionAccountingObservationV117,
+      ) => RuntimeInvocationExecutionReceiptEvidenceV117)
+    | undefined,
+): RuntimeGuestExecutionV117 => {
+  if (evidenceAfterObservation === undefined) return { observation }
+  try {
+    return {
+      observation,
+      receiptEvidence: evidenceAfterObservation(
+        observeRuntimeGuestAccountingV117(observation, outputByteLimit),
+      ),
+    }
+  } catch {
+    return { observation }
   }
 }
 
@@ -328,11 +405,19 @@ const hasCompleteAccounting = (
   evidence: RuntimeInvocationExecutionReceiptEvidenceV117 | undefined,
 ): evidence is RuntimeInvocationExecutionReceiptEvidenceV117 => {
   try {
+    const counterNames = [
+      "wallMilliseconds",
+      "computeFuel",
+      "payloadBytes",
+      "stdoutBytes",
+      "stderrBytes",
+    ] as const
     return (
       evidence !== undefined &&
       evidence.attribution !== "ambiguous" &&
-      Object.values(evidence.counters).every(
-        (counter) => counter.status === "measured",
+      Object.keys(evidence.counters).length === counterNames.length &&
+      counterNames.every(
+        (counter) => evidence.counters[counter].status === "measured",
       ) &&
       evidence.memory.status === "measured" &&
       evidence.process.status === "verified" &&
@@ -346,6 +431,17 @@ const hasCompleteAccounting = (
     return false
   }
 }
+
+const accountingMatchesObservation = (
+  evidence: RuntimeInvocationExecutionReceiptEvidenceV117,
+  observation: StrategyExecutionAccountingObservationV117,
+): boolean =>
+  evidence.counters.payloadBytes.status === "measured" &&
+  evidence.counters.payloadBytes.delta === observation.payloadBytes &&
+  evidence.counters.stdoutBytes.status === "measured" &&
+  evidence.counters.stdoutBytes.delta === observation.stdoutBytes &&
+  evidence.counters.stderrBytes.status === "measured" &&
+  evidence.counters.stderrBytes.delta === observation.stderrBytes
 
 const authenticatedResponse = (
   request: AuthenticatedRuntimeInvocationRequestV117,
@@ -378,6 +474,23 @@ const ambiguousResponse = (
     signingIdentity,
   )
 
+const incompatibleEvidenceResponse = (
+  request: AuthenticatedRuntimeInvocationRequestV117,
+  signingIdentity: RuntimeInvocationSigningIdentityV117,
+  observedOutcome: RuntimeInvocationResultV117,
+  reason:
+    | "ACCOUNTING_EVIDENCE_UNAVAILABLE"
+    | "ACCOUNTING_EVIDENCE_REJECTED",
+): Uint8Array =>
+  ambiguousResponse(
+    request,
+    signingIdentity,
+    systemFailure(request, "AMBIGUOUS_ATTRIBUTION", false, [
+      ...observedOutcome.trace.safeCodes,
+      reason,
+    ]),
+  )
+
 /**
  * Host-only successor bridge. It authenticates raw request bytes before
  * materialization, gives the guest only source/method/input/budgets, admits
@@ -407,6 +520,7 @@ export const executeStrategyRuntimeAbiV117 = (
   }
   const methodLimit = request.budget.methodLimit
   const outputByteLimit = methodLimit.counters.payloadBytes.maximum
+  const stdoutByteLimit = methodLimit.counters.stdoutBytes.maximum
   if (outputByteLimit > RUNTIME_OUTPUT_BYTES) {
     return ambiguousResponse(
       request,
@@ -414,51 +528,100 @@ export const executeStrategyRuntimeAbiV117 = (
       systemFailure(request, "OUTER_FRAME_WRONG_BINDING", false),
     )
   }
-  if (!hasCompleteAccounting(input.receiptEvidence)) {
-    return ambiguousResponse(request, input.signingIdentity)
-  }
-  try {
-    createRuntimeInvocationExecutionReceiptV117(
-      request,
-      input.receiptEvidence,
-    )
-  } catch {
-    return ambiguousResponse(request, input.signingIdentity)
-  }
-
   let outcome: RuntimeInvocationResultV117
-  let observation: RuntimeGuestObservationV117
+  let execution: RuntimeGuestExecutionV117
   try {
-    observation = input.invokeGuest({
+    execution = input.invokeGuest({
       executableSource: input.executableSource,
       methodName: request.method,
       input: request.input.value,
       timeoutMs: methodLimit.counters.wallMilliseconds.maximum,
+      startupTimeoutMs:
+        RUNTIME_ABI_V1_17.budgets.preflight.profiles.artifactValidation
+          .wallMilliseconds,
+      cancellationGraceMilliseconds:
+        methodLimit.cancellation.terminationGraceMilliseconds,
       outputByteLimit,
+      stdoutByteLimit,
     })
   } catch {
-    observation = {
-      kind: "system_failure",
-      code: "ADAPTER_CRASH",
-      retryable: true,
+    execution = {
+      observation: {
+        kind: "system_failure",
+        code: "ADAPTER_CRASH",
+        retryable: true,
+      },
     }
   }
+  const observation = execution.observation
   outcome =
     observation.kind === "raw_frame"
-      ? classifyGuestFrame(request, observation.bytes)
+      ? observation.bytes.byteLength > stdoutByteLimit
+        ? playerViolation(
+            request,
+            "OVERSIZED_OUTPUT",
+            "STDOUT_CAP_EXCEEDED",
+          )
+        : classifyGuestFrame(request, observation.bytes)
       : systemFailure(request, observation.code, observation.retryable)
+
+  if (!hasCompleteAccounting(execution.receiptEvidence)) {
+    return incompatibleEvidenceResponse(
+      request,
+      input.signingIdentity,
+      outcome,
+      execution.receiptEvidence === undefined
+        ? "ACCOUNTING_EVIDENCE_UNAVAILABLE"
+        : "ACCOUNTING_EVIDENCE_REJECTED",
+    )
+  }
+  const accountingObservation = observeRuntimeGuestAccountingV117(
+    observation,
+    outputByteLimit,
+  )
+  if (
+    !accountingMatchesObservation(
+      execution.receiptEvidence,
+      accountingObservation,
+    )
+  ) {
+    return incompatibleEvidenceResponse(
+      request,
+      input.signingIdentity,
+      outcome,
+      "ACCOUNTING_EVIDENCE_REJECTED",
+    )
+  }
+  try {
+    createRuntimeInvocationExecutionReceiptV117(
+      request,
+      execution.receiptEvidence,
+    )
+  } catch {
+    return incompatibleEvidenceResponse(
+      request,
+      input.signingIdentity,
+      outcome,
+      "ACCOUNTING_EVIDENCE_REJECTED",
+    )
+  }
 
   try {
     return authenticatedResponse(
       request,
       outcome,
-      input.receiptEvidence,
+      execution.receiptEvidence,
       input.signingIdentity,
     )
   } catch {
     // Invalid, unavailable, ambiguous, or outcome-inconsistent accounting can
     // never be translated into a player penalty or committed gameplay state.
-    return ambiguousResponse(request, input.signingIdentity)
+    return incompatibleEvidenceResponse(
+      request,
+      input.signingIdentity,
+      outcome,
+      "ACCOUNTING_EVIDENCE_REJECTED",
+    )
   }
 }
 

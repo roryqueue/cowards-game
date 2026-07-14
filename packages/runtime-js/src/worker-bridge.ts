@@ -9,6 +9,7 @@ import type { JsonValue } from "@cowards/spec"
 import type { RuntimeGuestObservationV117 } from "./abi-bridge.js"
 import { RUNTIME_OUTPUT_BYTES, RUNTIME_TIMEOUT_MS } from "./guards.js"
 import {
+  WORKER_SIGNAL_V117,
   WORKER_HARNESS_SOURCE,
   WORKER_HARNESS_V117_SOURCE,
 } from "./worker-harness.js"
@@ -118,7 +119,9 @@ export const runStrategyMethodInWorkerV117 = (args: {
   methodName: StrategyMethodName
   input: JsonValue
   timeoutMs: number
+  startupTimeoutMs: number
   outputByteLimit: number
+  stdoutByteLimit: number
 }): RuntimeGuestObservationV117 => {
   const signalBuffer = new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT)
   const signal = new Int32Array(signalBuffer)
@@ -142,14 +145,54 @@ export const runStrategyMethodInWorkerV117 = (args: {
     },
   })
 
-  const waitResult = Atomics.wait(signal, 0, 0, args.timeoutMs)
-  if (waitResult === "timed-out") {
+  const startupWait = Atomics.wait(
+    signal,
+    0,
+    WORKER_SIGNAL_V117.starting,
+    args.startupTimeoutMs,
+  )
+  if (
+    startupWait === "timed-out" ||
+    Atomics.load(signal, 0) === WORKER_SIGNAL_V117.starting
+  ) {
     void worker.terminate()
     port1.close()
     return {
       kind: "system_failure",
-      code: "AMBIGUOUS_ATTRIBUTION",
-      retryable: false,
+      code: "HOST_CRASH",
+      retryable: true,
+    }
+  }
+
+  if (Atomics.load(signal, 0) === WORKER_SIGNAL_V117.ready) {
+    Atomics.store(signal, 0, WORKER_SIGNAL_V117.go)
+    Atomics.notify(signal, 0)
+    const methodWait = Atomics.wait(
+      signal,
+      0,
+      WORKER_SIGNAL_V117.go,
+      args.timeoutMs,
+    )
+    if (
+      methodWait === "timed-out" ||
+      Atomics.load(signal, 0) !== WORKER_SIGNAL_V117.done
+    ) {
+      void worker.terminate()
+      port1.close()
+      return {
+        kind: "raw_frame",
+        bytes: Uint8Array.of("D".charCodeAt(0)),
+      }
+    }
+  }
+
+  if (Atomics.load(signal, 0) !== WORKER_SIGNAL_V117.done) {
+    void worker.terminate()
+    port1.close()
+    return {
+      kind: "system_failure",
+      code: "RUNTIME_CRASH",
+      retryable: true,
     }
   }
 
@@ -164,7 +207,7 @@ export const runStrategyMethodInWorkerV117 = (args: {
       retryable: true,
     }
   }
-  if (message.byteLength > args.outputByteLimit + 1) {
+  if (message.byteLength > args.stdoutByteLimit + 1) {
     return {
       kind: "system_failure",
       code: "TRANSPORT_CRASH",

@@ -1,4 +1,8 @@
-import { CANDIDATE_BOUNDED_CANONICAL_SOURCE } from "./candidate-bounded-canonical-source.js"
+import { RUNTIME_ABI_V1_17 } from "@cowards/spec"
+import {
+  WORKER_HARNESS_V117_SOURCE,
+  WORKER_SIGNAL_V117,
+} from "./worker-harness.js"
 
 export const SUBPROCESS_HARNESS_SOURCE = `
 import { exit, stderr, stdin, stdout } from "node:process"
@@ -311,124 +315,102 @@ void main()
 /** Inactive v1.17 guest. Authentication and response signing remain host-only. */
 export const SUBPROCESS_HARNESS_V117_SOURCE = `
 import { stdin, stdout } from "node:process"
+import { MessageChannel, receiveMessageOnPort, Worker } from "node:worker_threads"
 
-const forbidden = (name) => new Proxy(function blocked() {}, {
-  apply() { throw new Error("FORBIDDEN_CAPABILITY:" + name) },
-  construct() { throw new Error("FORBIDDEN_CAPABILITY:" + name) },
-  get() { throw new Error("FORBIDDEN_CAPABILITY:" + name) },
-})
-const sanitizedMath = new Proxy(Math, {
-  get(target, property) {
-    if (property === "random") throw new Error("FORBIDDEN_CAPABILITY:Math.random")
-    const value = Reflect.get(target, property)
-    return typeof value === "function" ? value.bind(target) : value
-  },
-})
-const installGlobalBlocks = () => {
-  Object.defineProperty(globalThis, "eval", {
-    value: forbidden("eval"), writable: false, configurable: false,
-  })
-  Object.defineProperty(globalThis, "Math", {
-    value: sanitizedMath, writable: false, configurable: false,
-  })
-  Object.defineProperty(Function.prototype, "constructor", {
-    value: forbidden("Function.constructor"), writable: false, configurable: false,
-  })
-}
-const moduleSource = (source) => [
-  'const sanitizedGlobalThis = new Proxy(Object.freeze({}), { get(_target, property) { throw new Error("FORBIDDEN_CAPABILITY:" + String(property)) }, set(_target, property) { throw new Error("FORBIDDEN_CAPABILITY:" + String(property)) } })',
-  'const module = { exports: {} }',
-  'const exports = module.exports',
-  'const forbidden = (name) => new Proxy(function blocked() {}, { apply() { throw new Error("FORBIDDEN_CAPABILITY:" + name) }, construct() { throw new Error("FORBIDDEN_CAPABILITY:" + name) }, get() { throw new Error("FORBIDDEN_CAPABILITY:" + name) } })',
-  'const Function = forbidden("Function")',
-  'const process = forbidden("process")',
-  'const require = forbidden("require")',
-  'const fetch = forbidden("fetch")',
-  'const WebAssembly = forbidden("WebAssembly")',
-  'const Worker = forbidden("Worker")',
-  'const Date = forbidden("Date")',
-  'const crypto = forbidden("crypto")',
-  'const performance = forbidden("performance")',
-  'const Buffer = forbidden("Buffer")',
-  'const queueMicrotask = forbidden("queueMicrotask")',
-  'const setTimeout = forbidden("setTimeout")',
-  'const setInterval = forbidden("setInterval")',
-  'const setImmediate = forbidden("setImmediate")',
-  'const console = forbidden("console")',
-  'const global = sanitizedGlobalThis',
-  'const globalThis = sanitizedGlobalThis',
-  source,
-  'export default module.exports && module.exports.default',
-].join("\\n")
-const moduleUrl = (source) => new URL(
-  "data:text/javascript;charset=utf-8," + encodeURIComponent(moduleSource(source)),
+const workerSource = ${JSON.stringify(WORKER_HARNESS_V117_SOURCE)}
+const workerUrl = new URL(
+  "data:text/javascript;charset=utf-8," + encodeURIComponent(workerSource),
 )
-const frame = (tag, payload = new Uint8Array()) => {
-  const bytes = new Uint8Array(payload.length + 1)
-  bytes[0] = tag.charCodeAt(0)
-  bytes.set(payload, 1)
-  return bytes
-}
-${CANDIDATE_BOUNDED_CANONICAL_SOURCE}
-const caughtTag = (error, fallback) => {
-  const message = error instanceof Error ? error.message : ""
-  return message.startsWith("FORBIDDEN_CAPABILITY:") ? "F" : fallback
-}
+const frame = (tag) => Uint8Array.of(tag.charCodeAt(0))
 const readInput = async () => {
   const chunks = []
   for await (const chunk of stdin) chunks.push(chunk)
   return chunks.join("")
 }
 const main = async () => {
-  let output
   let request
-  installGlobalBlocks()
   try {
     request = JSON.parse(await readInput())
   } catch {
-    output = frame("T")
+    stdout.write(frame("T"))
+    return
   }
-  if (output === undefined &&
-    (!request || typeof request !== "object" || Array.isArray(request) ||
-      Object.keys(request).length !== 4 ||
+  if (!request || typeof request !== "object" || Array.isArray(request) ||
+      Object.keys(request).length !== 5 ||
       typeof request.source !== "string" || request.source.length === 0 ||
       (request.methodName !== "selectActivations" && request.methodName !== "soldierBrain") ||
       !Object.hasOwn(request, "input") ||
       !Number.isSafeInteger(request.outputByteLimit) || request.outputByteLimit < 0 ||
-      request.outputByteLimit > 262144)) {
-    output = frame("T")
+      request.outputByteLimit > 262144 ||
+      !Number.isSafeInteger(request.methodWallMilliseconds) ||
+      request.methodWallMilliseconds <= 0) {
+    stdout.write(frame("T"))
+    return
   }
-  if (output === undefined) {
-    try {
-      const imported = await import(moduleUrl(request.source).href)
-      const strategy = imported.default
-      const method = strategy && strategy[request.methodName]
-      if (typeof method !== "function") {
-        output = frame("I")
-      } else {
-        let value
-        try {
-          value = method.call(strategy, request.input)
-        } catch (error) {
-          output = frame(caughtTag(error, "X"))
-        }
-        if (output === undefined) {
-          if (value && typeof value.then === "function") {
-            output = frame("I")
-          } else {
-            try {
-              output = boundedCanonicalFrame(value, request.outputByteLimit)
-            } catch (error) {
-              output = frame(caughtTag(error, "I"))
-            }
-          }
-        }
-      }
-    } catch (error) {
-      output = frame(caughtTag(error, "R"))
+
+  const signalBuffer = new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT)
+  const signal = new Int32Array(signalBuffer)
+  const { port1, port2 } = new MessageChannel()
+  const worker = new Worker(workerUrl, {
+    workerData: {
+      source: request.source,
+      methodName: request.methodName,
+      input: request.input,
+      outputByteLimit: request.outputByteLimit,
+      port: port2,
+      signalBuffer,
+    },
+    transferList: [port2],
+    env: {},
+    execArgv: [],
+    resourceLimits: {
+      maxOldGenerationSizeMb: 16,
+      maxYoungGenerationSizeMb: 8,
+      stackSizeMb: 4,
+    },
+  })
+
+  const startupWait = Atomics.wait(
+    signal,
+    0,
+    ${WORKER_SIGNAL_V117.starting},
+    ${RUNTIME_ABI_V1_17.budgets.preflight.profiles.artifactValidation.wallMilliseconds},
+  )
+  if (startupWait === "timed-out" ||
+      Atomics.load(signal, 0) === ${WORKER_SIGNAL_V117.starting}) {
+    await worker.terminate()
+    port1.close()
+    stdout.write(frame("H"))
+    return
+  }
+  if (Atomics.load(signal, 0) === ${WORKER_SIGNAL_V117.ready}) {
+    Atomics.store(signal, 0, ${WORKER_SIGNAL_V117.go})
+    Atomics.notify(signal, 0)
+    const methodWait = Atomics.wait(
+      signal,
+      0,
+      ${WORKER_SIGNAL_V117.go},
+      request.methodWallMilliseconds,
+    )
+    if (methodWait === "timed-out" ||
+        Atomics.load(signal, 0) !== ${WORKER_SIGNAL_V117.done}) {
+      await worker.terminate()
+      port1.close()
+      stdout.write(frame("D"))
+      return
     }
   }
-  stdout.write(output)
+  if (Atomics.load(signal, 0) !== ${WORKER_SIGNAL_V117.done}) {
+    await worker.terminate()
+    port1.close()
+    stdout.write(frame("R"))
+    return
+  }
+  await worker.terminate()
+  const received = receiveMessageOnPort(port1)
+  port1.close()
+  const output = received && received.message
+  stdout.write(output instanceof Uint8Array ? output : frame("R"))
 }
 void main()
 `

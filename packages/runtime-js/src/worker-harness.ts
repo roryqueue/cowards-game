@@ -1,5 +1,12 @@
 import { CANDIDATE_BOUNDED_CANONICAL_SOURCE } from "./candidate-bounded-canonical-source.js"
 
+export const WORKER_SIGNAL_V117 = Object.freeze({
+  starting: 0,
+  ready: 1,
+  go: 2,
+  done: 3,
+} as const)
+
 export const WORKER_HARNESS_SOURCE = `
 import { workerData } from "node:worker_threads"
 
@@ -305,50 +312,66 @@ const caughtTag = (error, fallback) => {
   const message = error instanceof Error ? error.message : ""
   return message.startsWith("FORBIDDEN_CAPABILITY:") ? "F" : fallback
 }
+const signal = new Int32Array(workerData.signalBuffer)
+const publish = (output) => {
+  workerData.port.postMessage(output, [output.buffer])
+  Atomics.store(signal, 0, ${WORKER_SIGNAL_V117.done})
+  Atomics.notify(signal, 0)
+  workerData.port.close()
+}
 const main = async () => {
-  let output
   if (!workerData || typeof workerData !== "object" ||
     typeof workerData.source !== "string" || workerData.source.length === 0 ||
     (workerData.methodName !== "selectActivations" && workerData.methodName !== "soldierBrain") ||
     !Object.hasOwn(workerData, "input") ||
     !Number.isSafeInteger(workerData.outputByteLimit) || workerData.outputByteLimit < 0 ||
     workerData.outputByteLimit > 262144) {
-    output = frame("T")
-  } else {
-    try {
-      installGlobalBlocks()
-      const imported = await import(moduleUrl(workerData.source).href)
-      const strategy = imported.default
-      const method = strategy && strategy[workerData.methodName]
-      if (typeof method !== "function") {
-        output = frame("I")
-      } else {
-        let value
-        try {
-          value = method.call(strategy, workerData.input)
-        } catch (error) {
-          output = frame(caughtTag(error, "X"))
-        }
-        if (output === undefined) {
-          if (value && typeof value.then === "function") {
-            output = frame("I")
-          } else {
-            try {
-              output = boundedCanonicalFrame(value, workerData.outputByteLimit)
-            } catch (error) {
-              output = frame(caughtTag(error, "I"))
-            }
-          }
-        }
+    publish(frame("T"))
+    return
+  }
+  let method
+  let strategy
+  try {
+    installGlobalBlocks()
+    const imported = await import(moduleUrl(workerData.source).href)
+    strategy = imported.default
+    method = strategy && strategy[workerData.methodName]
+  } catch (error) {
+    publish(frame(caughtTag(error, "R")))
+    return
+  }
+  if (typeof method !== "function") {
+    publish(frame("I"))
+    return
+  }
+
+  Atomics.store(signal, 0, ${WORKER_SIGNAL_V117.ready})
+  Atomics.notify(signal, 0)
+  Atomics.wait(signal, 0, ${WORKER_SIGNAL_V117.ready})
+  if (Atomics.load(signal, 0) !== ${WORKER_SIGNAL_V117.go}) {
+    publish(frame("R"))
+    return
+  }
+
+  let output
+  let value
+  try {
+    value = method.call(strategy, workerData.input)
+  } catch (error) {
+    output = frame(caughtTag(error, "X"))
+  }
+  if (output === undefined) {
+    if (value && typeof value.then === "function") {
+      output = frame("I")
+    } else {
+      try {
+        output = boundedCanonicalFrame(value, workerData.outputByteLimit)
+      } catch (error) {
+        output = frame(caughtTag(error, "I"))
       }
-    } catch (error) {
-      output = frame(caughtTag(error, "R"))
     }
   }
-  workerData.port.postMessage(output, [output.buffer])
-  Atomics.store(new Int32Array(workerData.signalBuffer), 0, 1)
-  Atomics.notify(new Int32Array(workerData.signalBuffer), 0)
-  workerData.port.close()
+  publish(output)
 }
 void main()
 `

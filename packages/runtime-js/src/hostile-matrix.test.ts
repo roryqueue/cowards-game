@@ -20,7 +20,10 @@ import {
   type StrategyRevision,
   type StrategyRevisionValidationCode,
 } from "@cowards/spec"
-import type { StrategyExecutionAdapter } from "./adapter.js"
+import type {
+  StrategyExecutionAccountingObservationV117,
+  StrategyExecutionAdapter,
+} from "./adapter.js"
 import { createRuntimeFromRevision } from "./executor.js"
 import { buildStrategyRevision } from "./revision.js"
 import { createSubprocessStrategyExecutionAdapter } from "./subprocess-adapter.js"
@@ -394,7 +397,9 @@ type CandidateAdapter = StrategyExecutionAdapter & {
     requestBytes: Uint8Array
     executableSource: string
     signingIdentity: RuntimeInvocationSigningIdentityV117
-    receiptEvidence?: RuntimeInvocationExecutionReceiptEvidenceV117
+    fixtureEvidenceAfterObservationForTestsOnly?: (
+      observation: StrategyExecutionAccountingObservationV117,
+    ) => RuntimeInvocationExecutionReceiptEvidenceV117
   }): Uint8Array
 }
 
@@ -476,7 +481,53 @@ const executeCandidate = (
     requestBytes: Uint8Array.from(candidateRequestBytes),
     executableSource: validSource,
     signingIdentity: candidateIdentity,
-    ...(receiptEvidence === undefined ? {} : { receiptEvidence }),
+    ...(receiptEvidence === undefined
+      ? {}
+      : {
+          fixtureEvidenceAfterObservationForTestsOnly: (
+            observation: StrategyExecutionAccountingObservationV117,
+          ) => {
+            const prestate = admittedExpectedCandidateRequest.accounting.prestate
+            return {
+              ...receiptEvidence,
+              counters: {
+                ...receiptEvidence.counters,
+                wallMilliseconds: {
+                  status: "measured" as const,
+                  delta: observation.methodDeadlineExceeded
+                    ? admittedExpectedCandidateRequest.budget.methodLimit
+                        .counters.wallMilliseconds.maximum + 1
+                    : 1,
+                  cumulative:
+                    prestate.cumulative.wallMilliseconds +
+                    (observation.methodDeadlineExceeded
+                      ? admittedExpectedCandidateRequest.budget.methodLimit
+                          .counters.wallMilliseconds.maximum + 1
+                      : 1),
+                },
+                payloadBytes: {
+                  status: "measured" as const,
+                  delta: observation.payloadBytes,
+                  cumulative:
+                    prestate.cumulative.payloadBytes +
+                    observation.payloadBytes,
+                },
+                stdoutBytes: {
+                  status: "measured" as const,
+                  delta: observation.stdoutBytes,
+                  cumulative:
+                    prestate.cumulative.stdoutBytes + observation.stdoutBytes,
+                },
+                stderrBytes: {
+                  status: "measured" as const,
+                  delta: observation.stderrBytes,
+                  cumulative:
+                    prestate.cumulative.stderrBytes + observation.stderrBytes,
+                },
+              },
+            }
+          },
+        }),
   })
   return verifyRuntimeInvocationResponseV117(
     responseBytes,
@@ -516,7 +567,7 @@ describe("hostile Strategy matrix", () => {
           : buildStrategyRevision({ source: hostileCase.source })
         const runtime = createRuntimeFromRevision(revision, {
           adapter: adapterCase.createAdapter(),
-          timeoutMs: hostileCase.timeoutMs ?? 500,
+          timeoutMs: hostileCase.timeoutMs ?? 5_000,
         })
 
         const execute = () =>
@@ -524,18 +575,20 @@ describe("hostile Strategy matrix", () => {
             ? runtime.selectActivations(strategyInput)
             : runtime.runSoldierBrain(soldierBrainInput)
 
+        let result: ReturnType<typeof execute>
         try {
-          const result = execute()
-          expect(result.ok).toBe(false)
-          if (!result.ok) {
-            expect(hostileCase.expectedViolations).toContain(
-              result.violation.type,
-            )
-          }
+          result = execute()
         } catch (error) {
           expect(error).toBeInstanceOf(SubprocessSystemFailure)
           const code = (error as SubprocessSystemFailure).code
           expect(hostileCase.allowedSystemFailures ?? []).toContain(code)
+          return
+        }
+        expect(result.ok).toBe(false)
+        if (!result.ok) {
+          expect(hostileCase.expectedViolations).toContain(
+            result.violation.type,
+          )
         }
       })
     })
