@@ -63,7 +63,7 @@ coverage:
     requirement: RABI-05
     verification:
       - kind: unit
-        ref: "runtime-invocation-v1-17.test.ts and service-contract.test.ts (14/14)"
+        ref: "runtime-invocation-v1-17.test.ts and service-contract.test.ts (18/18)"
         status: pass
     human_judgment: false
   - id: D4
