@@ -5,15 +5,15 @@ milestone_name: Rules Integrity and Strategy Evaluation Foundations — ACTIVE
 current_phase: 258
 current_phase_name: canonical-json-failure-semantics-and-artifact-identity
 status: in_progress
-stopped_at: Completed 258-09 and 258-10; ready for 258-11
-last_updated: "2026-07-14T17:35:00.000Z"
+stopped_at: Completed 258-11; ready for 258-12
+last_updated: "2026-07-14T19:13:20.000Z"
 last_activity: 2026-07-14
-last_activity_desc: Phase 258 Plan 09 completed Python raw ABI and exact original-versus-normalized source identity
+last_activity_desc: Phase 258 Plan 11 completed Go canonical retry and PostgreSQL rollback authority with zero review findings
 progress:
   total_phases: 6
   completed_phases: 2
   total_plans: 55
-  completed_plans: 50
+  completed_plans: 51
   percent: 33
 ---
 
@@ -29,9 +29,9 @@ See: `.planning/PROJECT.md` (updated 2026-07-12)
 ## Current Position
 
 Phase: 258 (canonical-json-failure-semantics-and-artifact-identity) — IN PROGRESS
-Plan: 10 of 14
-Status: Plans 09 and 10 complete; all Wave 8 language and exact-source migrations green
-Last activity: 2026-07-14 — Completed Plan 258-09 Python candidate and exact source identity
+Plan: 11 of 14
+Status: Plan 11 complete with zero review findings; Go canonical retry and persistence rollback proofs green
+Last activity: 2026-07-14 — Completed Plan 258-11 Go retry and persistence authority
 
 Progress: [███░░░░░░░] 33%
 
@@ -61,8 +61,8 @@ Progress: [███░░░░░░░] 33%
 
 **Resume file:** None
 
-Last session: 2026-07-14T17:35:00.000Z
-Stopped at: Completed 258-09 and 258-10; ready for 258-11
+Last session: 2026-07-14T19:13:20.000Z
+Stopped at: Completed 258-11; ready for 258-12
 Next command: `$gsd-execute-phase 258`
 
 ## Performance Metrics
@@ -103,8 +103,14 @@ Next command: `$gsd-execute-phase 258`
 | Phase 258 P08 | 19min | 1 task + 3 review loops | 10 runtime/test files |
 | Phase 258 P10 | 22min | 2 tasks + review | 6 runtime/evaluator/fixture files |
 | Phase 258 P09 | 2h 18min | 2 tasks + adversarial rereview | 23 implementation/migration/proof files |
+| Phase 258 P11 | 1h 2min | 2 tasks + 3 review loops | 24 implementation/test/artifact files |
 
 ## Decisions
+
+- [Phase 258]: Go v1.17 admits the same bounded canonical JSON profile and complete 70-vector corpus as TypeScript while v1.16 retains its historical dispatch and immutable wire bytes. — The Go control plane cannot hide duplicate keys, numeric drift, Unicode faults, ordering changes, or limit violations behind map conversion.
+- [Phase 258]: Retry is Go-owned, limited to three total attempts and the signed cumulative budget, and allowed only for generated retryable system failures using identical request bytes and prestate. — Caller input, cancellation, player violations, and changed bytes cannot expand or redirect retry authority.
+- [Phase 258]: Successful runtime payloads must pass the exact closed method schema and memory/objective/aggregate ceilings before consumption, and generated version/retry/failure authority uses deny-default accessors rather than mutable maps. — Authentication alone cannot bless invalid semantic output, and package mutation cannot rewrite historical classification.
+- [Phase 258]: Named PostgreSQL proofs establish transaction equality or full rollback for system failure and faults after Chronicle, Match, job, attempt, and at commit. — Infrastructure and persistence failure cannot partially mutate gameplay, evidence, memory, standings, or success markers.
 
 - [Phase 258]: Original source bytes are immutable canonical evidence while normalized bytes are a separately identified derivative bound by an explicit policy, line-ending facts, and artifact manifest. — Normalization can never overwrite or impersonate the submitted source domain.
 - [Phase 258]: The repository recomputes every v2 source identity derivative from exact source and rejects caller drift before SQL; released migration 0018 remains byte-stable and 0019 performs forward-only hardening with no backfill. — Routes and services cannot mint semantic identity, and historical bytes are never fabricated or reinterpreted.
