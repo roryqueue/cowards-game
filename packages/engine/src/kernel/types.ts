@@ -1,5 +1,6 @@
 import {
   hashCanonicalCompatibilityTuple,
+  hashCanonicalIdentityValue,
   type CanonicalCompatibilityTuple,
 } from "@cowards/spec"
 import type {
@@ -45,7 +46,10 @@ export const CANDIDATE_KERNEL_V117_SEMANTIC_TUPLE = Object.freeze({
 }) satisfies Readonly<CanonicalCompatibilityTuple>
 
 export const CANDIDATE_KERNEL_V117_SEMANTIC_TUPLE_ID =
-  "sha256:0d8a04fdfe49e3aa7261728ee51beb0a9049b661aad978277f2892c3a4bc54fe" as const
+  `sha256:${hashCanonicalIdentityValue(
+    "semanticTuple",
+    CANDIDATE_KERNEL_V117_SEMANTIC_TUPLE,
+  )}` as const
 
 export type KernelEffectKind = "selectActivations" | "soldierBrain"
 

@@ -194,23 +194,48 @@ const runtimeResume = (
   request: KernelEffectRequest,
 ): KernelResume => {
   try {
-    const detachedRequest = globalThis.structuredClone(request)
-    const deepFreeze = (value: unknown): void => {
-      if (value === null || typeof value !== "object" || Object.isFrozen(value)) {
-        return
+    const result = (() => {
+      if (
+        request.semanticTupleId !==
+        CANDIDATE_KERNEL_V117_SEMANTIC_TUPLE_ID
+      ) {
+        return request.kind === "selectActivations"
+          ? runtime.selectActivations(request.input)
+          : runtime.runSoldierBrain(request.input)
       }
-      for (const child of Object.values(value as Record<string, unknown>)) {
-        deepFreeze(child)
+      const detachedRequest = globalThis.structuredClone(request)
+      const deepFreeze = (value: unknown): void => {
+        if (
+          value === null ||
+          typeof value !== "object" ||
+          Object.isFrozen(value)
+        ) {
+          return
+        }
+        for (const child of Object.values(value as Record<string, unknown>)) {
+          deepFreeze(child)
+        }
+        Object.freeze(value)
       }
-      Object.freeze(value)
-    }
-    deepFreeze(detachedRequest)
-    const result =
-      detachedRequest.kind === "selectActivations"
+      deepFreeze(detachedRequest)
+      return detachedRequest.kind === "selectActivations"
         ? runtime.selectActivations(detachedRequest.input, detachedRequest)
         : runtime.runSoldierBrain(detachedRequest.input, detachedRequest)
+    })()
 
-    if ("kind" in result) {
+    if (
+      request.semanticTupleId ===
+      CANDIDATE_KERNEL_V117_SEMANTIC_TUPLE_ID
+    ) {
+      if (!("kind" in result) || result.kind !== "v1_17_bound") {
+        return {
+          kind: "runtime_resume",
+          requestId: request.requestId,
+          effectKind: request.kind,
+          classification: "system_failure",
+          failure: { code: "OUTER_FRAME_UNDECODABLE", retryable: false },
+        }
+      }
       const parsedRequest =
         AuthenticatedRuntimeInvocationRequestV117Schema.safeParse(
           result.request,
@@ -232,10 +257,7 @@ const runtimeResume = (
       const admittedInput = admitCanonicalJsonValue(request.input, {
         profile: "host-api-value",
       })
-      const expectedCandidateTuple = {
-        ...CANDIDATE_KERNEL_SEMANTIC_TUPLE,
-        runtimeAbi: "strategy-runtime-abi-v1.17",
-      }
+      const expectedCandidateTuple = CANDIDATE_KERNEL_V117_SEMANTIC_TUPLE
       const serializedRequest = serializeRuntimeInvocationRequestV117(
         boundRequest,
       )
@@ -318,7 +340,7 @@ const runtimeResume = (
         violation,
       }
     }
-    if (result.ok) {
+    if ("ok" in result && result.ok) {
       return {
         kind: "runtime_resume",
         requestId: request.requestId,
@@ -336,12 +358,21 @@ const runtimeResume = (
         failure: result.systemFailure,
       }
     }
+    if ("violation" in result) {
+      return {
+        kind: "runtime_resume",
+        requestId: request.requestId,
+        effectKind: request.kind,
+        classification: "player_violation",
+        violation: result.violation,
+      }
+    }
     return {
       kind: "runtime_resume",
       requestId: request.requestId,
       effectKind: request.kind,
-      classification: "player_violation",
-      violation: result.violation,
+      classification: "system_failure",
+      failure: { code: "RUNTIME_INVOCATION_THROWN", retryable: false },
     }
   } catch {
     return {

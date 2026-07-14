@@ -1,8 +1,10 @@
 import { createHash } from "node:crypto"
 import {
+  encodeCanonicalJson,
   projectRestrictedSemanticIntegrityFailure,
   validateCanonicalGameState,
   type CanonicalCompatibilityTuple,
+  type JsonValue,
   type SemanticIntegrityResult,
 } from "@cowards/spec"
 import type { GameState, TransitionEventSummary } from "../types.js"
@@ -37,6 +39,8 @@ const STATE_HASH_DOMAIN =
   "cowards-game:candidate-game-state-projection:v1" as const
 const RECORDER_HASH_DOMAIN =
   "cowards-game:candidate-recorder-material:v1" as const
+const V117_EFFECT_REQUEST_HASH_DOMAIN =
+  "cowards-game:kernel-effect-request:v1.17" as const
 const HASH_PATTERN = /^sha256:[0-9a-f]{64}$/u
 
 const codePointCompare = (left: string, right: string): number => {
@@ -333,12 +337,191 @@ export const coordinatesForMachine = (
   }
 }
 
+const normalizeEffectIdentityJson = (value: unknown): JsonValue => {
+  if (value === undefined) return null
+  if (
+    value === null ||
+    typeof value === "string" ||
+    typeof value === "number" ||
+    typeof value === "boolean"
+  ) {
+    return value
+  }
+  if (typeof value !== "object") {
+    throw new Error("KERNEL_EFFECT_IDENTITY_NON_JSON")
+  }
+  type Container = JsonValue[] | Record<string, JsonValue>
+  const root: Container = Array.isArray(value) ? [] : {}
+  const pending: Array<{ source: object; target: Container }> = [
+    { source: value, target: root },
+  ]
+  while (pending.length > 0) {
+    const current = pending.pop()!
+    for (const [key, child] of Object.entries(current.source)) {
+      let normalized: JsonValue
+      if (child === undefined) {
+        normalized = null
+      } else if (
+        child === null ||
+        typeof child === "string" ||
+        typeof child === "number" ||
+        typeof child === "boolean"
+      ) {
+        normalized = child
+      } else if (typeof child === "object") {
+        const target: Container = Array.isArray(child) ? [] : {}
+        normalized = target
+        pending.push({ source: child, target })
+      } else {
+        throw new Error("KERNEL_EFFECT_IDENTITY_NON_JSON")
+      }
+      if (Array.isArray(current.target)) {
+        current.target[Number(key)] = normalized
+      } else {
+        current.target[key] = normalized
+      }
+    }
+  }
+  return root
+}
+
 export const expectedEffectRequestId = (
   machine: MatchMachine,
   kind: KernelEffectRequest["kind"],
   suffix: string,
-): string =>
-  `effect:${machine.cursor.ordinal}:${machine.cursor.stage}:${kind}:${suffix}`
+): string => {
+  if (
+    machine.semanticTuple.tupleId !==
+    CANDIDATE_KERNEL_V117_SEMANTIC_TUPLE_ID
+  ) {
+    return `effect:${machine.cursor.ordinal}:${machine.cursor.stage}:${kind}:${suffix}`
+  }
+  const privateState = (state: GameState) => ({
+    matchId: state.matchId,
+    seed: state.seed,
+    versions: {
+      spec: state.versions.spec,
+      engine: state.versions.engine,
+      runtimeJs: state.versions.runtimeJs,
+      chronicle: state.versions.chronicle,
+      strategyRevision: state.versions.strategyRevision,
+      arenaVariant: state.versions.arenaVariant,
+    },
+    arenaVariant: {
+      id: state.arenaVariant.id,
+      name: state.arenaVariant.name,
+      initialBounds: {
+        minX: state.arenaVariant.initialBounds.minX,
+        maxX: state.arenaVariant.initialBounds.maxX,
+        minY: state.arenaVariant.initialBounds.minY,
+        maxY: state.arenaVariant.initialBounds.maxY,
+      },
+      terrainStones: [...state.arenaVariant.terrainStones]
+        .map(({ x, y }) => ({ x, y }))
+        .sort((left, right) => left.x - right.x || left.y - right.y),
+    },
+    players: [...state.players]
+      .map((player) => ({
+        id: player.id,
+        side: player.side,
+        strategyRevisionId: player.strategyRevisionId,
+        strategyMemory: normalizeEffectIdentityJson(player.strategyMemory),
+      }))
+      .sort((left, right) => codePointCompare(left.id, right.id)),
+    soldiers: [...state.soldiers]
+      .map((soldier) => ({
+        id: soldier.id,
+        ownerPlayerId: soldier.ownerPlayerId,
+        status: soldier.status,
+        position:
+          soldier.position === null
+            ? null
+            : { x: soldier.position.x, y: soldier.position.y },
+        facing: soldier.facing ?? null,
+        lastSuccessfulMoveDirection:
+          soldier.lastSuccessfulMoveDirection ?? null,
+        soldierMemory: normalizeEffectIdentityJson(soldier.soldierMemory),
+      }))
+      .sort((left, right) => codePointCompare(left.id, right.id)),
+    phase: state.phase,
+    phaseNumber: state.phaseNumber,
+    roundNumber: state.roundNumber,
+    activationCount: state.activationCount,
+    initiativePlayerId: state.initiativePlayerId,
+    bounds: {
+      minX: state.bounds.minX,
+      maxX: state.bounds.maxX,
+      minY: state.bounds.minY,
+      maxY: state.bounds.maxY,
+    },
+    terrainStones: [...state.terrainStones]
+      .map(({ x, y }) => ({ x, y }))
+      .sort((left, right) => left.x - right.x || left.y - right.y),
+    outcome: state.outcome ?? null,
+  })
+  const material = {
+    kind,
+    suffix,
+    executionMode: machine.executionMode,
+    semanticTupleId: machine.semanticTuple.tupleId,
+    state: privateState(machine.state),
+    initialState: privateState(machine.initialState),
+    cursor: {
+      stage: machine.cursor.stage,
+      ordinal: machine.cursor.ordinal,
+      phaseNumber: machine.cursor.phaseNumber,
+      roundNumber: machine.cursor.roundNumber,
+      cycleLayer: machine.cursor.cycleLayer,
+      slotIndex: machine.cursor.slotIndex,
+    },
+    maxPhases: machine.maxPhases,
+    phasesRun: machine.phasesRun,
+    pendingEffect: null,
+    selections: {
+      bottom: machine.selections.bottom.map(({ soldierId, objective }) => ({
+        soldierId,
+        objective: normalizeEffectIdentityJson(objective),
+      })),
+      top: machine.selections.top.map(({ soldierId, objective }) => ({
+        soldierId,
+        objective: normalizeEffectIdentityJson(objective),
+      })),
+    },
+    slots: machine.slots.map((slot) => ({
+      activationId: slot.activationId,
+      activationIndex: slot.activationIndex,
+      actingPlayerId: slot.actingPlayerId,
+      soldierId: slot.soldierId,
+      objective: normalizeEffectIdentityJson(slot.objective),
+      cycleIndex: slot.cycleIndex,
+      advanced: slot.advanced,
+      ended: slot.ended,
+      terminalReason: slot.terminalReason ?? null,
+    })),
+    fullEvents: machine.fullEvents.map((summary) => ({
+      type: summary.type,
+      sequence: summary.sequence,
+      payload: normalizeEffectIdentityJson(summary.payload),
+      context: normalizeEffectIdentityJson(summary.context),
+      privacy: summary.privacy ?? null,
+      privatePayload: normalizeEffectIdentityJson(summary.privatePayload),
+    })),
+    consumedRequestIds: [...machine.consumedRequestIds].sort(codePointCompare),
+  } as JsonValue
+  const encoded = encodeCanonicalJson(material, {
+    context: "canonical-manifest",
+  })
+  if (!encoded.ok) {
+    throw new Error(
+      `KERNEL_EFFECT_IDENTITY_INVALID:${encoded.error.code}:${encoded.error.path.join(".")}`,
+    )
+  }
+  const digest = createHash("sha256")
+    .update(`${V117_EFFECT_REQUEST_HASH_DOMAIN}\0`, "utf8")
+    .update(encoded.bytes)
+    .digest("hex")
+  return `effect:v1.17:${digest}`
+}
 
 export const createTransitionRecord = (input: {
   before: MatchMachine

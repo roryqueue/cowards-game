@@ -189,6 +189,7 @@ describe("Phase 258 successor runtime ownership", () => {
           }
           ;(input.soldierMemory as { n: number }).n += 1
           return {
+            kind: "legacy-user-metadata",
             ok: true as const,
             value: {
               action: { type: "TURN_TO_STONE" as const },
@@ -209,6 +210,43 @@ describe("Phase 258 successor runtime ownership", () => {
       execution.result?.state.soldiers.find(({ id }) => id === soldier.id)
         ?.soldierMemory,
     ).toEqual({ n: 1 })
+  })
+
+  it("rejects an unbound legacy success on the v1.17-only runtime path", () => {
+    const state = withPrivateMemory()
+    const soldier = state.soldiers.find(
+      (candidate) => candidate.ownerPlayerId === state.players[0].id,
+    )
+    if (!soldier) throw new Error("missing fixture soldier")
+
+    const execution = MATCH_KERNEL.runActivationFromStateV117({
+      state,
+      soldierId: soldier.id,
+      runtime: {
+        selectActivations() {
+          throw new Error("selection is unreachable in activation mode")
+        },
+        runSoldierBrain() {
+          return {
+            ok: true as const,
+            value: {
+              action: { type: "TURN_TO_STONE" as const },
+              soldierMemory: { unboundMustNotCommit: true },
+            },
+          }
+        },
+      },
+    })
+
+    expect(execution).toMatchObject({
+      kind: "failure",
+      transitions: [],
+      failure: {
+        classification: "system_failure",
+        code: "OUTER_FRAME_UNDECODABLE",
+      },
+      unchangedState: state,
+    })
   })
 
   it("makes v1.17 effect identity unique to the complete prestate", () => {
