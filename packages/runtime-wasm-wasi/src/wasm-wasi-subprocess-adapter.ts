@@ -46,31 +46,13 @@ import {
   type RuntimeResult,
   type StrategyRuntime,
 } from "@cowards/engine"
-import { validateWasmWasiImports } from "./validation.js"
-
-export const WASM_WASI_V1_17_EXECUTION_SETTINGS = Object.freeze({
-  runtime: "wasmtime-cli",
-  runtimeInterface: "wasi-preview1-command",
-  environment: "empty",
-  preopenedDirectories: Object.freeze([] as string[]),
-  network: "unavailable",
-  arguments: "none",
-  fuel: "request-budget-computeFuel",
-  wallTimeout: "request-budget-wallMilliseconds",
-  linearMemory: "request-budget-memoryBytes",
-  wasmStackBytes: 1_048_576,
-  trapOnGrowFailure: true,
-  stdout: "raw-canonical-strategy-payload",
-  stderrBytes: 65_536,
-  processLimit: 1,
-  unsupportedMeters: Object.freeze([
-    "portable-cross-runtime-compute-equivalence",
-    "guest-process-tree-accounting",
-    "per-invocation-peak-linear-memory-observation",
-    "signed-match-cumulative-meter-readback",
-  ]),
-  certification: "uncertified",
-} as const)
+import {
+  collectWasmWasiCandidateIdentityV117,
+  validateWasmWasiImports,
+  type WasmWasiCandidateIdentityV117,
+} from "./validation.js"
+import { WASM_WASI_V1_17_EXECUTION_SETTINGS } from "./metadata.js"
+export { WASM_WASI_V1_17_EXECUTION_SETTINGS } from "./metadata.js"
 
 export type WasmWasiGuestAttributionV117 =
   | "none"
@@ -103,6 +85,7 @@ export interface WasmWasiStrategyRequestV117 {
   revision: StrategyRevision
   request: AuthenticatedRuntimeInvocationRequestV117
   signingIdentity: RuntimeInvocationSigningIdentityV117
+  executionIdentity: WasmWasiCandidateIdentityV117
   executeGuest?:
     | ((input: WasmWasiGuestExecutionInputV117) => WasmWasiGuestObservationV117)
     | undefined
@@ -277,7 +260,7 @@ const wasmtimeObservation = (
       stdout,
       stderr,
       attribution:
-        stdout.byteLength >= outputBytes
+        stdout.byteLength > outputBytes
           ? "proven_output_exhaustion"
           : "transport_crash",
     }
@@ -478,6 +461,43 @@ export const runWasmWasiStrategyMethodV117Sync = (
     return authenticateCandidateOutcome(
       input.request,
       outcome,
+      input.signingIdentity,
+    )
+  }
+  let observedIdentity: WasmWasiCandidateIdentityV117
+  try {
+    observedIdentity = collectWasmWasiCandidateIdentityV117(
+      input.revision.runtime.language.id as "rust" | "zig",
+      input.revision.metadata.compiledArtifact!,
+    )
+  } catch {
+    return authenticateCandidateOutcome(
+      input.request,
+      candidateOutcome("host_crash", input.request, null, [
+        "WASM_WASI_EXECUTION_IDENTITY_UNAVAILABLE",
+      ]),
+      input.signingIdentity,
+    )
+  }
+  const expectedIdentity = admitCanonicalJsonValue(input.executionIdentity, {
+    profile: "canonical-manifest",
+  })
+  const actualIdentity = admitCanonicalJsonValue(observedIdentity, {
+    profile: "canonical-manifest",
+  })
+  if (
+    !expectedIdentity.ok ||
+    !actualIdentity.ok ||
+    input.executionIdentity.identitySha256 !== observedIdentity.identitySha256 ||
+    !Buffer.from(expectedIdentity.canonicalBytes).equals(
+      Buffer.from(actualIdentity.canonicalBytes),
+    )
+  ) {
+    return authenticateCandidateOutcome(
+      input.request,
+      candidateOutcome("outer_frame_wrong_binding", input.request, null, [
+        "WASM_WASI_STALE_RUNTIME_TOOLCHAIN_OR_SETTINGS_IDENTITY",
+      ]),
       input.signingIdentity,
     )
   }

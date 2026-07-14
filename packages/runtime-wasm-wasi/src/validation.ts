@@ -1,30 +1,304 @@
 import { Buffer } from "node:buffer"
 import { spawnSync } from "node:child_process"
 import { createHash } from "node:crypto"
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
+import {
+  accessSync,
+  constants,
+  mkdtempSync,
+  realpathSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from "node:fs"
 import { tmpdir } from "node:os"
-import { join } from "node:path"
+import { delimiter, join, relative } from "node:path"
+import { fileURLToPath } from "node:url"
 import {
   COMPATIBILITY_VERSIONS,
+  RUNTIME_INVOCATION_V1_17_CANDIDATE,
   STRATEGY_RUNTIME_ABI_VERSION,
   STRATEGY_SOURCE_BYTES,
   STRATEGY_WASM_ARTIFACT_BYTES,
   StrategyRuntimeResponseEnvelopeSchema,
   StrategyRevisionSchema,
+  hashCanonicalIdentity,
+  hashCanonicalIdentityValue,
   runtimeCompatibilityKey,
   type CompiledStrategyArtifact,
+  type JsonValue,
   type StrategyRevision,
   type StrategyRevisionMetadata,
   type StrategyRevisionValidationIssue,
   type StrategyRevisionValidationReport,
 } from "@cowards/spec"
-import { wasmWasiRuntimeMetadata } from "./metadata.js"
+import {
+  WASM_WASI_V1_17_EXECUTION_SETTINGS,
+  wasmWasiRuntimeMetadata,
+} from "./metadata.js"
 
 const hashBytes = (bytes: Buffer): string =>
   createHash("sha256").update(bytes).digest("hex")
 
 const hashSource = (source: string): string =>
   createHash("sha256").update(source).digest("hex")
+
+const prefixedSha256 = (bytes: Uint8Array | string): `sha256:${string}` =>
+  `sha256:${createHash("sha256").update(bytes).digest("hex")}`
+
+const resolveExactCommandPath = (command: string): string | null => {
+  for (const directory of (process.env.PATH ?? "").split(delimiter)) {
+    if (directory.length === 0) continue
+    const candidate = join(directory, command)
+    try {
+      accessSync(candidate, constants.X_OK)
+      return candidate
+    } catch {
+      // Keep looking for the exact executable selected by PATH.
+    }
+  }
+  return null
+}
+
+const requireCommandOutput = (
+  commandPath: string,
+  args: readonly string[],
+): string => {
+  const result = spawnSync(commandPath, [...args], {
+    encoding: "utf8",
+    shell: false,
+    env: { PATH: process.env.PATH ?? "" },
+    timeout: 5_000,
+    maxBuffer: 256 * 1024,
+  })
+  if (result.error !== undefined || result.status !== 0) {
+    throw new Error("Exact WASM/WASI identity command was unavailable")
+  }
+  return (result.stdout ?? "").trim()
+}
+
+const hashDirectoryTree = (root: string): `sha256:${string}` => {
+  const files: string[] = []
+  const visit = (directory: string): void => {
+    for (const name of readdirSync(directory).sort()) {
+      const path = join(directory, name)
+      const stat = statSync(path)
+      if (stat.isDirectory()) visit(path)
+      else if (stat.isFile()) files.push(path)
+    }
+  }
+  visit(root)
+  const hash = createHash("sha256")
+  for (const path of files.sort()) {
+    const name = Buffer.from(relative(root, path), "utf8")
+    const bytes = readFileSync(path)
+    const nameLength = Buffer.alloc(8)
+    nameLength.writeBigUInt64BE(BigInt(name.byteLength))
+    const byteLength = Buffer.alloc(8)
+    byteLength.writeBigUInt64BE(BigInt(bytes.byteLength))
+    hash.update(nameLength).update(name).update(byteLength).update(bytes)
+  }
+  return `sha256:${hash.digest("hex")}`
+}
+
+export interface WasmWasiCandidateIdentityV117 {
+  schemaVersion: "runtime-wasm-wasi-identity-v1.17"
+  runtimeAbi: "strategy-runtime-abi-v1.17"
+  languageId: "rust" | "zig"
+  artifact: {
+    sha256: `sha256:${string}`
+    bytes: number
+    targetTriple: string
+    wasiProfile: "preview1"
+    guestPayloadAbi: "raw-canonical-json-v1"
+  }
+  compiler: {
+    executableSha256: `sha256:${string}`
+    resolvedPathSha256: `sha256:${string}`
+    reportedVersion: string
+    targetTriple: string
+    flags: readonly string[]
+  }
+  stdlibSysroot: {
+    kind: "target-libdir" | "compiler-embedded-no-stdlib"
+    sha256: `sha256:${string}`
+  }
+  runtime: {
+    executableSha256: `sha256:${string}`
+    resolvedPathSha256: `sha256:${string}`
+    reportedVersion: string
+    interface: "wasi-preview1-command"
+  }
+  adapter: { buildSha256: `sha256:${string}` }
+  settings: {
+    sha256: `sha256:${string}`
+    value: typeof WASM_WASI_V1_17_EXECUTION_SETTINGS
+  }
+  containment: {
+    profileId: "wasm-wasi-preview1-empty-env-no-preopen-v1.17"
+    sha256: `sha256:${string}`
+  }
+  metering: {
+    supported: readonly string[]
+    unsupported: readonly string[]
+  }
+  countedCertification: "uncertified"
+  certificationReasons: readonly string[]
+  productionTrustedProducers: readonly []
+  identitySha256: `sha256:${string}`
+}
+
+export const collectWasmWasiCandidateIdentityV117 = (
+  languageId: "rust" | "zig",
+  artifact: CompiledStrategyArtifact,
+): WasmWasiCandidateIdentityV117 => {
+  if (
+    artifact.toolchain.language !== languageId ||
+    artifact.hash.length !== 64 ||
+    artifact.wasiProfile !== "preview1"
+  ) {
+    throw new TypeError("Candidate artifact does not match the requested WASM lane")
+  }
+  const compilerName = languageId === "rust" ? "rustc" : "zig"
+  const compilerPath = resolveExactCommandPath(compilerName)
+  const wasmtimePath = resolveExactCommandPath("wasmtime")
+  if (compilerPath === null || wasmtimePath === null) {
+    throw new Error("Exact WASM/WASI compiler or runtime executable is unavailable")
+  }
+  const reportedVersion =
+    languageId === "rust"
+      ? requireCommandOutput(compilerPath, ["--version", "--verbose"])
+      : `zig ${requireCommandOutput(compilerPath, ["version"])}`
+  const wasmtimeVersion = requireCommandOutput(wasmtimePath, ["--version"])
+  const targetTriple = languageId === "rust" ? "wasm32-wasip1" : "wasm32-wasi"
+  if (artifact.targetTriple !== targetTriple) {
+    throw new TypeError("Candidate artifact target does not match the exact lane")
+  }
+  const compilerResolvedPath = realpathSync(compilerPath)
+  const wasmtimeResolvedPath = realpathSync(wasmtimePath)
+  const compilerBytes = readFileSync(compilerResolvedPath)
+  const stdlibSysroot =
+    languageId === "rust"
+      ? {
+          kind: "target-libdir" as const,
+          sha256: hashDirectoryTree(
+            requireCommandOutput(compilerPath, [
+              "--print",
+              "target-libdir",
+              "--target",
+              targetTriple,
+            ]),
+          ),
+        }
+      : {
+          kind: "compiler-embedded-no-stdlib" as const,
+          sha256: `sha256:${hashCanonicalIdentity("sysrootStdlib", [
+            new TextEncoder().encode("zig-no-stdlib-self-contained-guest"),
+            compilerBytes,
+          ])}` as `sha256:${string}`,
+        }
+  const adapterBuildSha256 = `sha256:${hashCanonicalIdentity("adapterBuild", [
+    readFileSync(fileURLToPath(new URL("./metadata.ts", import.meta.url))),
+    readFileSync(fileURLToPath(new URL("./validation.ts", import.meta.url))),
+    readFileSync(
+      fileURLToPath(new URL("./wasm-wasi-subprocess-adapter.ts", import.meta.url)),
+    ),
+  ])}` as `sha256:${string}`
+  const settingsSha256 = `sha256:${hashCanonicalIdentityValue(
+    "runtimeExecutable",
+    WASM_WASI_V1_17_EXECUTION_SETTINGS as unknown as JsonValue,
+  )}` as `sha256:${string}`
+  const containmentValue = {
+    environment: WASM_WASI_V1_17_EXECUTION_SETTINGS.environment,
+    network: WASM_WASI_V1_17_EXECUTION_SETTINGS.network,
+    preopenedDirectories:
+      WASM_WASI_V1_17_EXECUTION_SETTINGS.preopenedDirectories,
+    processLimit: WASM_WASI_V1_17_EXECUTION_SETTINGS.processLimit,
+    runtimeInterface:
+      WASM_WASI_V1_17_EXECUTION_SETTINGS.runtimeInterface,
+  }
+  const containmentSha256 = `sha256:${hashCanonicalIdentityValue(
+    "containmentPolicy",
+    containmentValue as unknown as JsonValue,
+  )}` as `sha256:${string}`
+  const base = {
+    schemaVersion: "runtime-wasm-wasi-identity-v1.17" as const,
+    runtimeAbi: RUNTIME_INVOCATION_V1_17_CANDIDATE.runtimeAbiVersion,
+    languageId,
+    artifact: {
+      sha256: `sha256:${artifact.hash}` as `sha256:${string}`,
+      bytes: artifact.bytes,
+      targetTriple,
+      wasiProfile: "preview1" as const,
+      guestPayloadAbi: "raw-canonical-json-v1" as const,
+    },
+    compiler: {
+      executableSha256: prefixedSha256(compilerBytes),
+      resolvedPathSha256: prefixedSha256(compilerResolvedPath),
+      reportedVersion,
+      targetTriple,
+      flags:
+        languageId === "rust"
+          ? ["--target", targetTriple, "-O", "<source>", "-o", "<artifact>"]
+          : [
+              "build-exe",
+              "<source>",
+              "-target",
+              targetTriple,
+              "-O",
+              "ReleaseSmall",
+              "--cache-dir",
+              "<ephemeral>",
+              "--global-cache-dir",
+              "<ephemeral>",
+              "-femit-bin=<artifact>",
+            ],
+    },
+    stdlibSysroot,
+    runtime: {
+      executableSha256: prefixedSha256(readFileSync(wasmtimeResolvedPath)),
+      resolvedPathSha256: prefixedSha256(wasmtimeResolvedPath),
+      reportedVersion: wasmtimeVersion,
+      interface: "wasi-preview1-command" as const,
+    },
+    adapter: { buildSha256: adapterBuildSha256 },
+    settings: {
+      sha256: settingsSha256,
+      value: WASM_WASI_V1_17_EXECUTION_SETTINGS,
+    },
+    containment: {
+      profileId:
+        "wasm-wasi-preview1-empty-env-no-preopen-v1.17" as const,
+      sha256: containmentSha256,
+    },
+    metering: {
+      supported: [
+        "wasmtime-fuel-ceiling",
+        "wasmtime-epoch-wall-ceiling",
+        "wasmtime-linear-memory-ceiling",
+        "wasmtime-stack-ceiling",
+        "host-stdout-byte-ceiling",
+        "single-process-no-preopen-empty-env",
+      ],
+      unsupported: WASM_WASI_V1_17_EXECUTION_SETTINGS.unsupportedMeters,
+    },
+    countedCertification: "uncertified" as const,
+    certificationReasons: [
+      "Phase 259 full-state event memory objective and failure-trace conformance is not yet complete.",
+      "Portable cross-language compute and cumulative meter equivalence is unavailable.",
+      "This local executable observation is not a digest-addressed production deployment pin.",
+    ],
+    productionTrustedProducers: [] as const,
+  }
+  return {
+    ...base,
+    identitySha256: `sha256:${hashCanonicalIdentityValue(
+      "evidenceBundle",
+      base as unknown as JsonValue,
+    )}`,
+  }
+}
 
 const issue = (
   code: StrategyRevisionValidationIssue["code"],

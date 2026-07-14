@@ -177,6 +177,26 @@ const completedObservation = (
   attribution: "none",
 })
 
+const candidateIdentityCache = new Map<
+  string,
+  ReturnType<typeof collectWasmWasiCandidateIdentityV117>
+>()
+
+const candidateExecutionIdentity = (
+  revision: ReturnType<typeof buildRustStrategyRevision>,
+) => {
+  const artifact = revision.metadata.compiledArtifact
+  if (artifact === undefined) throw new Error("Candidate artifact is missing")
+  const cached = candidateIdentityCache.get(artifact.hash)
+  if (cached !== undefined) return cached
+  const identity = collectWasmWasiCandidateIdentityV117(
+    revision.runtime.language.id as "rust" | "zig",
+    artifact,
+  )
+  candidateIdentityCache.set(artifact.hash, identity)
+  return identity
+}
+
 const runCandidateObservation = (
   request: AuthenticatedRuntimeInvocationRequestV117,
   revision: ReturnType<typeof buildRustStrategyRevision>,
@@ -186,6 +206,7 @@ const runCandidateObservation = (
     request,
     revision,
     signingIdentity: candidateSigningIdentity,
+    executionIdentity: candidateExecutionIdentity(revision),
     executeGuest: ({ stdin, settings }) => {
       expect(new TextDecoder().decode(stdin)).toBe(
         '{"input":' +
@@ -307,6 +328,7 @@ describe("WASM/WASI runtime v1.17 candidate host authority", () => {
       request,
       revision,
       signingIdentity: candidateSigningIdentity,
+      executionIdentity: candidateExecutionIdentity(revision),
       executeGuest: () => {
         executed = true
         return completedObservation(
@@ -322,6 +344,42 @@ describe("WASM/WASI runtime v1.17 candidate host authority", () => {
         code: "OUTER_FRAME_WRONG_BINDING",
         publicMessage: "Runtime system failure.",
         retryable: false,
+      },
+    })
+  })
+
+  it("fails stale runtime toolchain or settings identity before guest execution", () => {
+    const request = candidateRequest(revision)
+    const identity = candidateExecutionIdentity(revision)
+    let executed = false
+    const response = runWasmWasiStrategyMethodV117Sync({
+      request,
+      revision,
+      signingIdentity: candidateSigningIdentity,
+      executionIdentity: {
+        ...identity,
+        identitySha256: `sha256:${"0".repeat(64)}`,
+      },
+      executeGuest: () => {
+        executed = true
+        return completedObservation(
+          '{"action":{"type":"TURN_TO_STONE"},"soldierMemory":null}',
+        )
+      },
+    })
+
+    expect(executed).toBe(false)
+    expect(response.outcome).toMatchObject({
+      kind: "system_failure",
+      failure: {
+        code: "OUTER_FRAME_WRONG_BINDING",
+        publicMessage: "Runtime system failure.",
+        retryable: false,
+      },
+      trace: {
+        safeCodes: [
+          "WASM_WASI_STALE_RUNTIME_TOOLCHAIN_OR_SETTINGS_IDENTITY",
+        ],
       },
     })
   })

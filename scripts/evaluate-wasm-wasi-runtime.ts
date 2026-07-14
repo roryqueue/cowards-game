@@ -1,4 +1,5 @@
 #!/usr/bin/env -S pnpm exec tsx
+/* eslint-disable no-restricted-imports -- Repository evidence evaluator must execute package sources directly. */
 import { writeFileSync, readFileSync } from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
@@ -10,12 +11,20 @@ import {
   validateRustStrategySource,
   validateZigStrategySource,
   zigReadinessEvidence,
+  collectWasmWasiCandidateIdentityV117,
 } from "../packages/runtime-wasm-wasi/src/validation.ts"
 import {
   createWasmWasiRuntimeFromRevision,
   runWasmWasiStrategyMethodSync,
+  runWasmWasiStrategyMethodV117Sync,
 } from "../packages/runtime-wasm-wasi/src/wasm-wasi-subprocess-adapter.ts"
-import type { StrategyRevision } from "../packages/spec/src/index.ts"
+import {
+  createAuthenticatedRuntimeInvocationRequestV117,
+  serializeRuntimeInvocationResponseV117,
+  verifyRuntimeInvocationResponseV117,
+  type RuntimeInvocationSigningIdentityV117,
+  type StrategyRevision,
+} from "../packages/spec/src/index.ts"
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const repoRoot = path.resolve(__dirname, "..")
@@ -43,6 +52,10 @@ const abiDecisionPath = path.join(
 const promotionDecisionPath = path.join(
   repoRoot,
   ".planning/artifacts/v1.22-promotion-decision.md",
+)
+const candidateEnvelopePath = path.join(
+  repoRoot,
+  "packages/spec/artifacts/runtime-abi-v1.17-wasm-language-envelopes.json",
 )
 
 type ProbeStatus = "pass" | "fail"
@@ -143,6 +156,28 @@ export fn _start() void {
     } else {
         writeAll("{\\"ok\\":true,\\"abiVersion\\":\\"strategy-runtime-abi-v1.14\\",\\"value\\":{\\"activationOrders\\":[],\\"strategyMemory\\":null}}\\n");
     }
+}
+`
+
+const candidateRustSource = `
+fn main() {
+    print!("{}", r#"{"action":{"type":"TURN_TO_STONE"},"soldierMemory":null}"#);
+}
+`
+
+const candidateZigSource = `
+const Ciovec = extern struct { buf: [*]const u8, buf_len: usize };
+
+extern "wasi_snapshot_preview1" fn fd_write(u32, *const Ciovec, usize, *usize) u16;
+
+fn writeAll(bytes: []const u8) void {
+    var written: usize = 0;
+    var iov = Ciovec{ .buf = bytes.ptr, .buf_len = bytes.len };
+    _ = fd_write(1, &iov, 1, &written);
+}
+
+export fn _start() void {
+    writeAll("{\\"action\\":{\\"type\\":\\"TURN_TO_STONE\\"},\\"soldierMemory\\":null}");
 }
 `
 
@@ -573,7 +608,164 @@ Python remains non-counted exhibition beta. JS/TS remains the counted Strategy p
 Sandbox language: v1.22 improves candidate-readiness evidence only. It is not production sandbox certification.
 `
 
+const candidateSigningIdentity: RuntimeInvocationSigningIdentityV117 = {
+  keyId: "fixture-only:wasm-wasi-adapter:v1.17",
+  secret: "fixture-only-wasm-wasi-v1.17-secret",
+}
+
+const candidateRequestFor = (revision: StrategyRevision) => {
+  const artifact = revision.metadata.compiledArtifact
+  if (artifact === undefined) {
+    throw new Error("Candidate WASM fixture requires an immutable artifact")
+  }
+  return createAuthenticatedRuntimeInvocationRequestV117(
+    {
+      requestId: `request:wasm-wasi:v1.17:${revision.runtime.language.id}`,
+      invocationId: `invocation:wasm-wasi:v1.17:${revision.runtime.language.id}`,
+      kernelRequestId: `kernel-request:wasm-wasi:v1.17:${revision.runtime.language.id}`,
+      method: "soldierBrain",
+      semanticTuple: {
+        rules: "cowards-rules-v1.4",
+        engine: "engine-kernel-v1.37-candidate-1",
+        runtimeAbi: "strategy-runtime-abi-v1.17",
+        chronicle: "chronicle-recorder-current-events-v1.37-candidate-1",
+        arenaCatalog: "semantic-arena-catalog-v1.37-candidate-1",
+        setPolicy: "canonical-set-policy-v1.4",
+      },
+      sourceIdentity: {
+        strategyRevisionId: revision.id,
+        originalSourceSha256: `sha256:${revision.sourceHash}`,
+        normalizedSourceSha256: `sha256:${revision.sourceHash}`,
+        artifactSha256: `sha256:${artifact.hash}`,
+      },
+      budget: {
+        profileId: "runtime-budget-profile-v1.17-candidate",
+        wallMilliseconds: 1_000,
+        computeFuel: 10_000_000,
+        memoryBytes: 67_108_864,
+        outputBytes: 262_144,
+        processLimit: 1,
+        matchCumulative: {
+          invocationCountMaximum: 260,
+          wallMilliseconds: 13_000,
+          computeFuel: 2_600_000_000,
+          payloadBytes: 68_157_440,
+          stdoutBytes: 68_157_440,
+          stderrBytes: 17_039_360,
+          memoryBytes: 67_108_864,
+          accounting:
+            "signed-monotonic-per-invocation-deltas-plus-cumulative-total",
+          overflow:
+            "stop-before-next-invocation-and-classify-by-proven-cause",
+        },
+      },
+      input: {
+        value: {
+          awarenessGrid: { cells: [] },
+          cycleIndex: 0,
+          hasAdvancedThisActivation: false,
+          maxCycles: 12,
+          self: {
+            facing: "UP",
+            id: `soldier:${revision.runtime.language.id}:1`,
+            lastSuccessfulMoveDirection: null,
+            ownerPlayerId: `player:${revision.runtime.language.id}`,
+            position: { x: 1, y: 1 },
+            status: "ACTIVE",
+          },
+          soldierMemory: null,
+        },
+      },
+      retry: {
+        retryId: `retry:wasm-wasi:v1.17:${revision.runtime.language.id}`,
+        attempt: 0,
+        previousRequestSha256: null,
+      },
+    },
+    candidateSigningIdentity,
+  )
+}
+
+const buildCandidateEnvelopeFixture = () => {
+  const revisions = [
+    buildRustStrategyRevision({ source: candidateRustSource }),
+    buildZigStrategyRevision({ source: candidateZigSource }),
+  ]
+  const guestRequestFields = ["input", "method", "runtimeAbi"] as const
+  const guestPayloadFields = {
+    selectActivations: ["activationOrders", "strategyMemory"],
+    soldierBrain: ["action", "soldierMemory"],
+  } as const
+  const resultKinds = ["success", "player_violation", "system_failure"] as const
+  const budgetFields = [
+    "profileId",
+    "profileSha256",
+    "wallMilliseconds",
+    "computeFuel",
+    "memoryBytes",
+    "outputBytes",
+    "processLimit",
+    "matchCumulative",
+  ] as const
+  const languages = revisions.map((revision) => {
+    const artifact = revision.metadata.compiledArtifact
+    if (artifact === undefined) {
+      throw new Error("Candidate fixture artifact is missing")
+    }
+    const request = candidateRequestFor(revision)
+    const identity = collectWasmWasiCandidateIdentityV117(
+      revision.runtime.language.id as "rust" | "zig",
+      artifact,
+    )
+    const response = runWasmWasiStrategyMethodV117Sync({
+      revision,
+      request,
+      signingIdentity: candidateSigningIdentity,
+      executionIdentity: identity,
+    })
+    const verified = verifyRuntimeInvocationResponseV117(
+      serializeRuntimeInvocationResponseV117(response),
+      request,
+      candidateSigningIdentity,
+    )
+    if (verified.kind !== "success" || response.outcome.kind !== "success") {
+      throw new Error(
+        `${revision.runtime.language.id} candidate raw-payload probe failed`,
+      )
+    }
+    return {
+      languageId: revision.runtime.language.id,
+      targetTriple: artifact.targetTriple,
+      guestRequestFields,
+      guestPayloadFields,
+      resultKinds,
+      budgetFields,
+      guestPayloadAbi: "raw-canonical-json-v1",
+      outerEnvelopeOwner: "adapter-host",
+      probeOutcome: response.outcome.kind,
+      probeAuthentication: "hmac-sha256-host-owned",
+      identity,
+      countedCertification: "uncertified",
+      certificationScope:
+        "contract probe only; Phase 259 owns full four-language conformance",
+    }
+  })
+  return {
+    schemaVersion: "runtime-abi-v1.17-wasm-language-envelopes-v1",
+    generatedAt: "2026-07-14T00:00:00.000Z",
+    candidateStatus: "inactive-candidate",
+    current: false,
+    runtimeAbi: "strategy-runtime-abi-v1.17",
+    guestAbi: "WASI Preview 1 stdin canonical request/raw canonical payload",
+    outerEnvelopeOwner: "adapter-host",
+    countedCertification: "uncertified",
+    productionTrustedProducers: [],
+    languages,
+  } as const
+}
+
 const report = buildReport()
+const candidateEnvelopeFixture = buildCandidateEnvelopeFixture()
 const rawZigEvidence = zigReadinessEvidence()
 const zigEvidence = {
   ...rawZigEvidence,
@@ -593,6 +785,7 @@ const reportJson = serialize(report)
 const reportMarkdown = buildMarkdown(report)
 const zigJson = serialize(zig)
 const zigMarkdown = buildZigMarkdown(zig.evidence)
+const candidateEnvelopeJson = serialize(candidateEnvelopeFixture)
 
 if (checkMode) {
   const currentReportJson = readFileSync(artifactPath, "utf8")
@@ -601,13 +794,15 @@ if (checkMode) {
   const currentZigMarkdown = readFileSync(zigMarkdownPath, "utf8")
   const currentAbiDecision = readFileSync(abiDecisionPath, "utf8")
   const currentPromotionDecision = readFileSync(promotionDecisionPath, "utf8")
+  const currentCandidateEnvelope = readFileSync(candidateEnvelopePath, "utf8")
   if (
     currentReportJson !== reportJson ||
     currentReportMarkdown !== reportMarkdown ||
     currentZigJson !== zigJson ||
     currentZigMarkdown !== zigMarkdown ||
     currentAbiDecision !== abiDecisionMarkdown ||
-    currentPromotionDecision !== promotionDecisionMarkdown
+    currentPromotionDecision !== promotionDecisionMarkdown ||
+    currentCandidateEnvelope !== candidateEnvelopeJson
   ) {
     throw new Error(
       "WASM/WASI evidence artifacts are stale; run pnpm wasm-wasi:evaluate",
@@ -620,6 +815,7 @@ if (checkMode) {
   writeFileSync(zigMarkdownPath, zigMarkdown)
   writeFileSync(abiDecisionPath, abiDecisionMarkdown)
   writeFileSync(promotionDecisionPath, promotionDecisionMarkdown)
+  writeFileSync(candidateEnvelopePath, candidateEnvelopeJson)
 }
 
 if (report.summary.fail > 0) {
