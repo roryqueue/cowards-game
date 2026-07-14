@@ -292,6 +292,29 @@ describe("runtime invocation v1.17 exclusive ownership", () => {
       { kind: "system_failure", trace: trace() },
       { ...system, failure: { ...system.failure, diagnostics: "private" } },
       { ...success, trace: { ...trace(), source: "private Strategy source" } },
+      {
+        ...success,
+        value: {
+          activationOrders: [{ soldierId: "soldier", private: true }],
+          strategyMemory: null,
+        },
+      },
+      {
+        ...success,
+        value: {
+          activationOrders: [],
+          strategyMemory: null,
+          private: true,
+        },
+      },
+      {
+        kind: "success",
+        value: {
+          action: { type: "TURN_TO_STONE", direction: "UP" },
+          soldierMemory: null,
+        },
+        trace: { ...trace(), method: "soldierBrain" },
+      },
     ]) {
       expect(RuntimeInvocationResultV117Schema.safeParse(invalid).success).toBe(
         false,
