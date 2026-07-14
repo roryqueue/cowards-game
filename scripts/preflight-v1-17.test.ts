@@ -188,6 +188,50 @@ describe("v1.17 preflight contract", () => {
     }
   })
 
+  it("rejects credential-bearing or non-origin web URLs before database access", async () => {
+    for (const webUrl of [
+      "http://user:password@127.0.0.1:3000",
+      "file:///tmp/replay.html",
+      "http://127.0.0.1:3000/private?token=never-print",
+    ]) {
+      let databaseStarts = 0
+      await expect(
+        runPreflight(["--skip-redis"], {
+          checkCapabilityArtifact: () => [],
+          environment: {
+            COWARDS_WEB_URL: webUrl,
+          },
+          createPool: () => {
+            databaseStarts += 1
+            throw new Error("database must not start")
+          },
+          writeLine: () => undefined,
+        }),
+      ).rejects.toThrow(/HTTP\(S\) origin/iu)
+      expect(databaseStarts).toBe(0)
+    }
+  })
+
+  it("redacts arbitrary check failures from default output", async () => {
+    const secret = "postgresql://admin:password@private.internal/cowards"
+    const lines: string[] = []
+    const code = await runPreflight(["--skip-redis", "--skip-web"], {
+      checkCapabilityArtifact: () => {
+        throw new Error(`driver failed at ${secret}`)
+      },
+      environment: {},
+      createPool: () => {
+        throw new Error("database must not start")
+      },
+      writeLine: (line) => lines.push(line),
+    })
+
+    expect(code).toBe(1)
+    expect(lines.join("\n")).toMatch(/details are intentionally redacted/iu)
+    expect(lines.join("\n")).not.toContain(secret)
+    expect(lines.join("\n")).not.toContain("private.internal")
+  })
+
   it("sends an exact allowlist without redirects and rejects foreign or terminal results", async () => {
     const calls: Array<{ url: string; init: RequestInit }> = []
     const acceptedFetch: typeof globalThis.fetch = async (input, init) => {
@@ -266,5 +310,15 @@ describe("v1.17 preflight contract", () => {
     expect(message).toMatch(/intentionally redacted/iu)
     expect(message).not.toContain(secret)
     expect(message).not.toContain("attacker.invalid")
+  })
+
+  it("keeps replay origins and arbitrary crash messages out of default output", () => {
+    const source = readFileSync(
+      new URL("./preflight.ts", import.meta.url),
+      "utf8",
+    )
+    expect(source).not.toContain("replayUrl.href")
+    expect(source).not.toMatch(/preflight crashed: \$\{errorMessage\(error\)\}/u)
+    expect(source).toContain("dependencies.fetch")
   })
 })
