@@ -1,4 +1,4 @@
-import type { SpawnSyncReturns } from "node:child_process"
+import { spawnSync, type SpawnSyncReturns } from "node:child_process"
 import { createHash } from "node:crypto"
 import { describe, expect, it } from "vitest"
 import type { RuntimeResult } from "@cowards/engine"
@@ -107,6 +107,7 @@ const sha256 = (bytes: Uint8Array): `sha256:${string}` =>
 const candidateRequest = (
   overrides: Partial<{
     outputBytes: number
+    wallMilliseconds: number
     input: StrategyInput
     artifactSource: string
   }> = {},
@@ -139,7 +140,7 @@ const candidateRequest = (
       },
       budget: {
         profileId: "runtime-budget-profile-v1.17-candidate",
-        wallMilliseconds: 1_000,
+        wallMilliseconds: overrides.wallMilliseconds ?? 1_000,
         computeFuel: 10_000_000,
         memoryBytes: 67_108_864,
         outputBytes: overrides.outputBytes ?? 262_144,
@@ -847,6 +848,116 @@ export default {
             /private Strategy|ArrayBuffer|stack|source/iu,
           )
         }
+      }
+    })
+
+    it("short-circuits a zero wall budget before starting any runtime", () => {
+      const request = candidateRequest({ wallMilliseconds: 0 })
+      let subprocessCalls = 0
+      let containerCalls = 0
+      const adapters = [
+        createWorkerThreadStrategyExecutionAdapter(),
+        createSubprocessStrategyExecutionAdapter({
+          spawnSync: () => {
+            subprocessCalls += 1
+            throw new Error("zero-budget subprocess must not start")
+          },
+        }),
+        createContainerSubprocessStrategyExecutionAdapter({
+          spawnSync: () => {
+            containerCalls += 1
+            throw new Error("zero-budget container must not start")
+          },
+        }),
+      ]
+
+      for (const adapter of adapters) {
+        const result = executeCandidate(adapter, request)
+        expect(result).toMatchObject({
+          kind: "success",
+          value: {
+            outcome: {
+              kind: "system_failure",
+              failure: {
+                code: "AMBIGUOUS_ATTRIBUTION",
+                publicMessage: "Runtime system failure.",
+                retryable: false,
+              },
+            },
+          },
+        })
+      }
+      expect(subprocessCalls).toBe(0)
+      expect(containerCalls).toBe(0)
+    })
+
+    it("stops successor canonical output at N+1 before reading later values", () => {
+      const source = transpileOrThrow(`
+export default {
+  selectActivations() {
+    const strategyMemory = ["x".repeat(4096)]
+    Object.defineProperty(strategyMemory, 1, {
+      enumerable: true,
+      get() { throw new Error("later value must remain unread") },
+    })
+    return { activationOrders: [], strategyMemory }
+  },
+  soldierBrain() {
+    return { action: { type: "TURN_TO_STONE" }, soldierMemory: {} }
+  },
+}
+`)
+      const request = candidateRequest({
+        artifactSource: source,
+        outputBytes: 128,
+      })
+      for (const adapter of [
+        createWorkerThreadStrategyExecutionAdapter(),
+        createSubprocessStrategyExecutionAdapter(),
+      ]) {
+        const result = executeCandidateWith(adapter, request, source)
+        expect(result).toMatchObject({
+          kind: "success",
+          value: {
+            outcome: {
+              kind: "player_violation",
+              violation: { code: "OVERSIZED_OUTPUT" },
+            },
+          },
+        })
+      }
+    })
+
+    it("bounds successor harness encoding and emits system IPC tags", async () => {
+      const workerHarness = await import("./worker-harness.js")
+      const subprocessHarness = await import("./subprocess-harness.js")
+      const sources = [
+        workerHarness.WORKER_HARNESS_V117_SOURCE,
+        subprocessHarness.SUBPROCESS_HARNESS_V117_SOURCE,
+      ]
+      for (const source of sources) {
+        expect(source).toContain("boundedCanonicalFrame")
+        expect(source).not.toMatch(/\.map\(canonical\)|encode\(canonical/iu)
+      }
+
+      for (const malformed of ["{", "{}"] as const) {
+        const result = spawnSync(
+          process.execPath,
+          [
+            "--input-type=module",
+            "--eval",
+            subprocessHarness.SUBPROCESS_HARNESS_V117_SOURCE,
+          ],
+          {
+            encoding: "utf8",
+            env: { NODE_ENV: "production" },
+            input: malformed,
+            shell: false,
+          },
+        )
+        expect(result.status).toBe(0)
+        expect(result.stdout).toBe("T")
+        expect(result.stderr).toBe("")
       }
     })
   })
