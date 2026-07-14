@@ -138,6 +138,10 @@ export const executeCandidateRuntimeInvocationV117 = <
     requestBytes,
     input.identity,
   )
+  const expectedRequest =
+    admittedRequest.kind === "success"
+      ? admittedRequest.value
+      : input.request
   let outcome: RuntimeInvocationResultV117<TValue> | undefined
 
   if (admittedRequest.kind !== "success") {
@@ -154,13 +158,13 @@ export const executeCandidateRuntimeInvocationV117 = <
           publicMessage: "Runtime system failure.",
           retryable: true,
         },
-        trace: candidateRequestTrace(input.request, requestBytes),
+        trace: candidateRequestTrace(expectedRequest, requestBytes),
       }
     }
     if (responseBytes !== undefined) {
       const admittedResponse = verifyRuntimeInvocationResponseV117(
         responseBytes,
-        input.request,
+        expectedRequest,
         input.identity,
       )
       outcome =
@@ -178,7 +182,7 @@ export const executeCandidateRuntimeInvocationV117 = <
         publicMessage: "Runtime system failure.",
         retryable: true,
       },
-      trace: candidateRequestTrace(input.request, requestBytes),
+      trace: candidateRequestTrace(expectedRequest, requestBytes),
     }
   }
 
@@ -186,7 +190,7 @@ export const executeCandidateRuntimeInvocationV117 = <
   return {
     internalExecution,
     publicResult: candidatePublicResult(
-      input.request,
+      expectedRequest,
       outcome as RuntimeInvocationResultV117,
     ),
   }
