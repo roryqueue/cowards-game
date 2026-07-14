@@ -186,7 +186,7 @@ Plans:
 
 **Wave 2 — shared raw corpus**
 
-- [ ] 258-02-PLAN.md — Generate the byte-exact positive/negative corpus and named TypeScript/Go RED consumers.
+- [x] 258-02-PLAN.md — Generate the byte-exact positive/negative corpus and named TypeScript/Go RED consumers.
 
 **Wave 3 — bounded scanner/parser subsets with expected RED**
 

@@ -5,15 +5,15 @@ milestone_name: Rules Integrity and Strategy Evaluation Foundations — ACTIVE
 current_phase: 258
 current_phase_name: canonical-json-failure-semantics-and-artifact-identity
 status: in_progress
-stopped_at: Completed 258-01-PLAN.md; ready for 258-02 corpus generation
-last_updated: "2026-07-14T03:33:40.000Z"
+stopped_at: Completed 258-02-PLAN.md; ready for 258-03 bounded scanner/parser
+last_updated: "2026-07-14T03:57:18.000Z"
 last_activity: 2026-07-13
 last_activity_desc: Phase 258 second plan-check findings closed; 14 plans serialized across 12 waves
 progress:
   total_phases: 6
   completed_phases: 2
   total_plans: 55
-  completed_plans: 42
+  completed_plans: 43
   percent: 33
 ---
 
@@ -29,9 +29,9 @@ See: `.planning/PROJECT.md` (updated 2026-07-12)
 ## Current Position
 
 Phase: 258 (canonical-json-failure-semantics-and-artifact-identity) — IN PROGRESS
-Plan: 1 of 14
-Status: Plan 01 complete; exact v1.17 calibration and inactive successor contract frozen
-Last activity: 2026-07-13 — Completed Plan 258-01 calibration and contract freeze
+Plan: 2 of 14
+Status: Plan 02 complete; 70-vector raw corpus and exact TypeScript/Go expected RED frozen
+Last activity: 2026-07-13 — Completed Plan 258-02 canonical JSON raw corpus and qualified RED
 
 Progress: [███░░░░░░░] 33%
 
@@ -62,7 +62,7 @@ Progress: [███░░░░░░░] 33%
 **Resume file:** None
 
 Last session: 2026-07-14T03:33:40.000Z
-Stopped at: Completed 258-01-PLAN.md; ready for 258-02 corpus generation
+Stopped at: Completed 258-02-PLAN.md; ready for 258-03 bounded scanner/parser
 Next command: `$gsd-execute-phase 258`
 
 ## Performance Metrics
@@ -94,8 +94,12 @@ Next command: `$gsd-execute-phase 258`
 | Phase 257 P21 | 23min | 1 task | 8 implementation/test/monitor files |
 | Phase 257 P22 | 36min | 1 task | 8 implementation/test/proof files |
 | Phase 258 P01 | 17min | 2 tasks | 8 calibration/contract files |
+| Phase 258 P02 | 11min | 2 tasks | 89 corpus/consumer/verifier files |
 
 ## Decisions
+
+- [Phase 258]: Canonical JSON v1.1 corpus identity is the fixed domain plus unsigned-64-bit length frames over each ordered vector ID and its literal raw bytes. — Host parsing cannot normalize malformed UTF-8, duplicate keys, number lexemes, or ordering before identity is proved.
+- [Phase 258]: Expected RED is valid only after TypeScript and Go enumerate the same complete 70-vector root and identity, then exit exactly 1 with their own missing-codec sentinel. — Discovery, import, compile, configuration, timeout, generic nonzero, disabled tests, and counterfeit sentinels cannot represent progress.
 
 - [Phase 257]: Compatibility evidence locks twenty scenario hashes plus thirteen observation-dimension roots. — This detects both named-scenario drift and the affected state/event/runtime/observation dimension without silently rewriting a golden.
 - [Phase 257]: D-12 is preservation, not fixture-regeneration authority; only D-09, D-10, D-11, D-13, D-14, and D-15 are accepted. — Unknown, missing, duplicate, and preserved-ruling IDs fail closed at the update boundary.
