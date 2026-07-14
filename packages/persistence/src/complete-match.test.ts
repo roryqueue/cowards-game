@@ -992,7 +992,9 @@ describePostgres(
           execution: violation.execution,
           boundaryAnchors: violation.boundaryAnchors,
         }
-        const adapterProposedState = structuredClone(violation.finalState)
+        const adapterProposedState = JSON.parse(
+          JSON.stringify(violation.finalState),
+        ) as GameState
         adapterProposedState.players[0]!.strategyMemory = {
           adapterProposedStrategyMemoryMustNotCommit: true,
         }
