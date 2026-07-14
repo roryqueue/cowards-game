@@ -5,15 +5,15 @@ milestone_name: Rules Integrity and Strategy Evaluation Foundations — ACTIVE
 current_phase: 258
 current_phase_name: canonical-json-failure-semantics-and-artifact-identity
 status: in_progress
-stopped_at: Completed 258-07-PLAN.md; ready for 258-08 language adapter migration
-last_updated: "2026-07-14T15:08:59.000Z"
+stopped_at: Completed 258-08-PLAN.md; ready for remaining language adapter migration
+last_updated: "2026-07-14T15:31:06.000Z"
 last_activity: 2026-07-14
-last_activity_desc: Phase 258 Plan 07 exact runtime-effect ownership and no-mutation successor bridge completed; v1.14 behavior unchanged
+last_activity_desc: Phase 258 Plan 08 unified TypeScript successor adapters completed; v1.14 behavior and v1.16 proof bytes unchanged
 progress:
   total_phases: 6
   completed_phases: 2
   total_plans: 55
-  completed_plans: 47
+  completed_plans: 48
   percent: 33
 ---
 
@@ -29,9 +29,9 @@ See: `.planning/PROJECT.md` (updated 2026-07-12)
 ## Current Position
 
 Phase: 258 (canonical-json-failure-semantics-and-artifact-identity) — IN PROGRESS
-Plan: 7 of 14
-Status: Plan 07 complete; exact successor effect ownership and no-mutation runtime bridge green
-Last activity: 2026-07-14 — Completed Plan 258-07 transition ownership and retry identity
+Plan: 8 of 14
+Status: Plan 08 complete; TypeScript worker/subprocess/container successor bridge green
+Last activity: 2026-07-14 — Completed Plan 258-08 TypeScript raw ABI migration
 
 Progress: [███░░░░░░░] 33%
 
@@ -62,7 +62,7 @@ Progress: [███░░░░░░░] 33%
 **Resume file:** None
 
 Last session: 2026-07-14T15:08:59.000Z
-Stopped at: Completed 258-07-PLAN.md; ready for 258-08 language adapter migration
+Stopped at: Completed 258-08-PLAN.md; ready for remaining language adapter migration
 Next command: `$gsd-execute-phase 258`
 
 ## Performance Metrics
@@ -100,8 +100,14 @@ Next command: `$gsd-execute-phase 258`
 | Phase 258 P06 | 17min | 2 tasks | 5 implementation/test/artifact files |
 | Phase 258 P05 | 22min | 2 tasks + review | 10 implementation/test/audit files |
 | Phase 258 P07 | 46min | 2 tasks + review | 9 implementation/test files |
+| Phase 258 P08 | 19min | 1 task + 3 review loops | 10 runtime/test files |
 
 ## Decisions
+
+- [Phase 258]: TypeScript worker, subprocess, and container successors share one host-only authenticated bridge; guest code receives source, method, input, and budgets but never signing material. — No guest or transport can mint adapter authority, and all three paths produce the same exclusive result and safe trace.
+- [Phase 258]: The adapter hashes the exact executable UTF-8 bytes against the authenticated artifact identity before guest startup. — Signed metadata cannot authorize different resolved code, and mismatch is a zero-invocation system failure.
+- [Phase 258]: Host-observed TypeScript timeout remains ambiguous and system-owned until equivalent guest attribution meters exist. — Documentation, a timeout label, or process termination cannot manufacture a player penalty or counted-lane proof.
+- [Phase 258]: Current v1.14 adapter execution and v1.16 request, response, service, receipt, client, and migration bytes remain unchanged while v1.17 stays inactive. — Additive successor work cannot reinterpret valid current gameplay or historical evidence.
 
 - [Phase 258]: Successor effect identity is a domain-separated canonical hash of the complete pre-effect machine and private prestate, while only the hash crosses the runtime boundary. — Identical observations cannot authorize response replay across a different Match, initiative state, hidden memory, or scheduling prestate.
 - [Phase 258]: Current v1.14 retains its one-argument mutable runtime call and permissive legacy result shape; detached frozen requests, a second binding argument, and exclusive authenticated results apply only to v1.17. — Defining the successor cannot change valid current Strategy behavior.
