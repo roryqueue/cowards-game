@@ -31,6 +31,7 @@ export {
   RUNTIME_INVOCATION_V1_17_PLAYER_VIOLATION_CODES,
   RUNTIME_INVOCATION_V1_17_PLAYER_VIOLATIONS,
   RUNTIME_INVOCATION_V1_17_SYSTEM_FAILURE_CODES,
+  RUNTIME_INVOCATION_V1_17_SYSTEM_FAILURE_RETRYABILITY,
   RUNTIME_INVOCATION_V1_17_TEST_KEY_ID,
   RuntimeInvocationResultV117Schema,
   RuntimeInvocationTraceV117Schema,
@@ -1738,8 +1739,7 @@ export const validateStrategyRuntimeMetadataPolicy = (
   if (
     language &&
     adapter &&
-    (!language.enabledForNormalPlay ||
-      !adapter.enabledForNormalPlay)
+    (!language.enabledForNormalPlay || !adapter.enabledForNormalPlay)
   ) {
     issues.push(productIssue("NON_COUNTED_RUNTIME", "warning"))
   }
@@ -1776,13 +1776,13 @@ export const evaluateStrategyRuntimeCountedEligibility = (
     : null
   const identityMatchesRuntime = Boolean(
     runtime &&
-      provider &&
-      evidence &&
-      evidence.expectedIdentity.providerId === provider.id &&
-      evidence.expectedIdentity.languageId === runtime.language.id &&
-      evidence.expectedIdentity.adapterId === runtime.adapter.id &&
-      evidence.expectedIdentity.adapterVersion === runtime.adapter.version &&
-      evidence.expectedIdentity.semanticTuple.runtimeAbi === runtime.abiVersion,
+    provider &&
+    evidence &&
+    evidence.expectedIdentity.providerId === provider.id &&
+    evidence.expectedIdentity.languageId === runtime.language.id &&
+    evidence.expectedIdentity.adapterId === runtime.adapter.id &&
+    evidence.expectedIdentity.adapterVersion === runtime.adapter.version &&
+    evidence.expectedIdentity.semanticTuple.runtimeAbi === runtime.abiVersion,
   )
   if (!evidence || !identityMatchesRuntime) {
     const nonCounted = countedMessage("NON_COUNTED_RUNTIME")

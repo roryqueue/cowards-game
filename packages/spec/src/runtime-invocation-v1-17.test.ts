@@ -683,6 +683,7 @@ describe("runtime invocation v1.17 authenticated candidate wire", () => {
       "serializeRuntimeInvocationResponseV117",
       "verifyRuntimeInvocationRequestV117",
       "verifyRuntimeInvocationResponseV117",
+      "RUNTIME_INVOCATION_V1_17_SYSTEM_FAILURE_RETRYABILITY",
     ]) {
       expect(publicRuntime, name).toHaveProperty(name)
     }

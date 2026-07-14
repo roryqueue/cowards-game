@@ -85,9 +85,20 @@ export const RUNTIME_INVOCATION_V1_17_SYSTEM_FAILURE_CODES = deepFreeze([
 export type RuntimeInvocationSystemFailureCodeV117 =
   (typeof RUNTIME_INVOCATION_V1_17_SYSTEM_FAILURE_CODES)[number]
 
-export type RuntimeInvocationMethodV117 =
-  | "selectActivations"
-  | "soldierBrain"
+export const RUNTIME_INVOCATION_V1_17_SYSTEM_FAILURE_RETRYABILITY = deepFreeze({
+  OUTER_FRAME_MISSING: true,
+  OUTER_FRAME_TRUNCATED: true,
+  OUTER_FRAME_UNAUTHENTICATED: false,
+  OUTER_FRAME_WRONG_BINDING: false,
+  OUTER_FRAME_UNDECODABLE: false,
+  ADAPTER_CRASH: true,
+  RUNTIME_CRASH: true,
+  HOST_CRASH: true,
+  TRANSPORT_CRASH: true,
+  AMBIGUOUS_ATTRIBUTION: false,
+} as const satisfies Record<RuntimeInvocationSystemFailureCodeV117, boolean>)
+
+export type RuntimeInvocationMethodV117 = "selectActivations" | "soldierBrain"
 
 export interface RuntimeInvocationTraceV117 {
   readonly requestId: string
@@ -110,9 +121,7 @@ export interface RuntimeInvocationSystemFailureV117 {
   readonly retryable: boolean
 }
 
-export type RuntimeInvocationResultV117<
-  TValue = JsonValue,
-> =
+export type RuntimeInvocationResultV117<TValue = JsonValue> =
   | Readonly<{
       kind: "success"
       value: TValue
@@ -138,15 +147,17 @@ export type RuntimeInvocationResultV117<
 const canonicalJsonValueSchema = (
   profile: CanonicalJsonBoundaryProfileId,
 ): z.ZodType<JsonValue> =>
-  z.custom<JsonValue>(() => true).superRefine((value, ctx) => {
-    const admitted = admitCanonicalJsonValue(value, { profile })
-    if (admitted.ok) return
-    ctx.addIssue({
-      code: "custom",
-      path: [...admitted.error.path],
-      message: `canonical-json-v1:${admitted.error.code}`,
+  z
+    .custom<JsonValue>(() => true)
+    .superRefine((value, ctx) => {
+      const admitted = admitCanonicalJsonValue(value, { profile })
+      if (admitted.ok) return
+      ctx.addIssue({
+        code: "custom",
+        path: [...admitted.error.path],
+        message: `canonical-json-v1:${admitted.error.code}`,
+      })
     })
-  })
 
 const HostApiJsonValueSchema = canonicalJsonValueSchema("host-api-value")
 const Sha256Schema = z.string().regex(/^sha256:[0-9a-f]{64}$/u)
@@ -188,25 +199,24 @@ const RuntimeInvocationSuccessV117Schema = z.union([
     .strict(),
 ])
 
-const RuntimeInvocationPlayerViolationV117Schema = z
-  .union(
-    RUNTIME_INVOCATION_V1_17_PLAYER_VIOLATION_CODES.map((code) =>
-      z
-        .object({
-          kind: z.literal("player_violation"),
-          violation: z
-            .object({
-              code: z.literal(code),
-              publicMessage: z.literal(
-                RUNTIME_INVOCATION_V1_17_PLAYER_VIOLATIONS[code].publicMessage,
-              ),
-            })
-            .strict(),
-          trace: RuntimeInvocationTraceV117Schema,
-        })
-        .strict(),
-    ) as unknown as readonly [z.ZodTypeAny, z.ZodTypeAny, ...z.ZodTypeAny[]],
-  )
+const RuntimeInvocationPlayerViolationV117Schema = z.union(
+  RUNTIME_INVOCATION_V1_17_PLAYER_VIOLATION_CODES.map((code) =>
+    z
+      .object({
+        kind: z.literal("player_violation"),
+        violation: z
+          .object({
+            code: z.literal(code),
+            publicMessage: z.literal(
+              RUNTIME_INVOCATION_V1_17_PLAYER_VIOLATIONS[code].publicMessage,
+            ),
+          })
+          .strict(),
+        trace: RuntimeInvocationTraceV117Schema,
+      })
+      .strict(),
+  ) as unknown as readonly [z.ZodTypeAny, z.ZodTypeAny, ...z.ZodTypeAny[]],
+)
 
 const RuntimeInvocationSystemFailureV117Schema = z
   .object({
@@ -221,6 +231,16 @@ const RuntimeInvocationSystemFailureV117Schema = z
     trace: RuntimeInvocationTraceV117Schema,
   })
   .strict()
+  .superRefine((outcome, ctx) => {
+    const expected =
+      RUNTIME_INVOCATION_V1_17_SYSTEM_FAILURE_RETRYABILITY[outcome.failure.code]
+    if (outcome.failure.retryable === expected) return
+    ctx.addIssue({
+      code: "custom",
+      path: ["failure", "retryable"],
+      message: `retryable must be ${String(expected)} for ${outcome.failure.code}`,
+    })
+  })
 
 export const RuntimeInvocationResultV117Schema = z.union([
   RuntimeInvocationSuccessV117Schema,
@@ -269,66 +289,74 @@ export const RUNTIME_INVOCATION_V1_17_OWNERSHIP_MATRIX = deepFreeze({
   outer_frame_missing: {
     kind: "system_failure",
     code: "OUTER_FRAME_MISSING",
-    retryable: true,
+    retryable:
+      RUNTIME_INVOCATION_V1_17_SYSTEM_FAILURE_RETRYABILITY.OUTER_FRAME_MISSING,
   },
   outer_frame_truncated: {
     kind: "system_failure",
     code: "OUTER_FRAME_TRUNCATED",
-    retryable: true,
+    retryable:
+      RUNTIME_INVOCATION_V1_17_SYSTEM_FAILURE_RETRYABILITY.OUTER_FRAME_TRUNCATED,
   },
   outer_frame_unauthenticated: {
     kind: "system_failure",
     code: "OUTER_FRAME_UNAUTHENTICATED",
-    retryable: false,
+    retryable:
+      RUNTIME_INVOCATION_V1_17_SYSTEM_FAILURE_RETRYABILITY.OUTER_FRAME_UNAUTHENTICATED,
   },
   outer_frame_wrong_binding: {
     kind: "system_failure",
     code: "OUTER_FRAME_WRONG_BINDING",
-    retryable: false,
+    retryable:
+      RUNTIME_INVOCATION_V1_17_SYSTEM_FAILURE_RETRYABILITY.OUTER_FRAME_WRONG_BINDING,
   },
   outer_frame_undecodable: {
     kind: "system_failure",
     code: "OUTER_FRAME_UNDECODABLE",
-    retryable: false,
+    retryable:
+      RUNTIME_INVOCATION_V1_17_SYSTEM_FAILURE_RETRYABILITY.OUTER_FRAME_UNDECODABLE,
   },
   adapter_crash: {
     kind: "system_failure",
     code: "ADAPTER_CRASH",
-    retryable: true,
+    retryable:
+      RUNTIME_INVOCATION_V1_17_SYSTEM_FAILURE_RETRYABILITY.ADAPTER_CRASH,
   },
   runtime_crash: {
     kind: "system_failure",
     code: "RUNTIME_CRASH",
-    retryable: true,
+    retryable:
+      RUNTIME_INVOCATION_V1_17_SYSTEM_FAILURE_RETRYABILITY.RUNTIME_CRASH,
   },
   host_crash: {
     kind: "system_failure",
     code: "HOST_CRASH",
-    retryable: true,
+    retryable: RUNTIME_INVOCATION_V1_17_SYSTEM_FAILURE_RETRYABILITY.HOST_CRASH,
   },
   transport_crash: {
     kind: "system_failure",
     code: "TRANSPORT_CRASH",
-    retryable: true,
+    retryable:
+      RUNTIME_INVOCATION_V1_17_SYSTEM_FAILURE_RETRYABILITY.TRANSPORT_CRASH,
   },
   strategy_exception_ambiguous: {
     kind: "system_failure",
     code: "AMBIGUOUS_ATTRIBUTION",
-    retryable: false,
+    retryable:
+      RUNTIME_INVOCATION_V1_17_SYSTEM_FAILURE_RETRYABILITY.AMBIGUOUS_ATTRIBUTION,
   },
   strategy_exhaustion_ambiguous: {
     kind: "system_failure",
     code: "AMBIGUOUS_ATTRIBUTION",
-    retryable: false,
+    retryable:
+      RUNTIME_INVOCATION_V1_17_SYSTEM_FAILURE_RETRYABILITY.AMBIGUOUS_ATTRIBUTION,
   },
 } as const)
 
 export type RuntimeInvocationBoundaryEventV117 =
   keyof typeof RUNTIME_INVOCATION_V1_17_OWNERSHIP_MATRIX
 
-export const classifyRuntimeInvocationV117 = <
-  TValue extends JsonValue,
->(
+export const classifyRuntimeInvocationV117 = <TValue extends JsonValue>(
   event: RuntimeInvocationBoundaryEventV117,
   trace: RuntimeInvocationTraceV117,
   value: TValue,
@@ -340,9 +368,8 @@ export const classifyRuntimeInvocationV117 = <
   if (classification.kind === "player_violation") {
     return {
       kind: "player_violation",
-      violation: RUNTIME_INVOCATION_V1_17_PLAYER_VIOLATIONS[
-        classification.code
-      ],
+      violation:
+        RUNTIME_INVOCATION_V1_17_PLAYER_VIOLATIONS[classification.code],
       trace,
     }
   }
@@ -359,8 +386,7 @@ export const classifyRuntimeInvocationV117 = <
 
 export const RUNTIME_INVOCATION_V1_17_TEST_KEY_ID =
   "fixture-only:runtime-adapter:v1.17-candidate" as const
-export const RUNTIME_INVOCATION_V1_17_AUTH_ALGORITHM =
-  "hmac-sha256" as const
+export const RUNTIME_INVOCATION_V1_17_AUTH_ALGORITHM = "hmac-sha256" as const
 
 export interface RuntimeInvocationAuthenticationV117 {
   readonly algorithm: typeof RUNTIME_INVOCATION_V1_17_AUTH_ALGORITHM
@@ -490,11 +516,17 @@ export type AuthenticatedRuntimeInvocationResponseV117<
 > = RuntimeInvocationResponseBaseV117 &
   (
     | Readonly<{
-        outcome: Extract<RuntimeInvocationResultV117<TValue>, { kind: "success" }>
+        outcome: Extract<
+          RuntimeInvocationResultV117<TValue>,
+          { kind: "success" }
+        >
         payloadBinding: RuntimeInvocationPayloadBindingV117
       }>
     | Readonly<{
-        outcome: Exclude<RuntimeInvocationResultV117<TValue>, { kind: "success" }>
+        outcome: Exclude<
+          RuntimeInvocationResultV117<TValue>,
+          { kind: "success" }
+        >
         payloadBinding: null
       }>
   )
@@ -510,9 +542,10 @@ const SemanticTupleWithoutIdSchema = z
   })
   .strict()
 
-const RuntimeInvocationSemanticTupleV117Schema = SemanticTupleWithoutIdSchema.extend({
-  tupleId: Sha256Schema,
-}).strict()
+const RuntimeInvocationSemanticTupleV117Schema =
+  SemanticTupleWithoutIdSchema.extend({
+    tupleId: Sha256Schema,
+  }).strict()
 
 const RuntimeInvocationSourceIdentityV117Schema = z
   .object({
@@ -684,7 +717,9 @@ const canonicalBytes = (value: JsonValue): Uint8Array => {
     context: "authenticated-outer-envelope",
   })
   if (!encoded.ok) {
-    throw new TypeError(`Candidate envelope is not canonical JSON: ${encoded.error.code}`)
+    throw new TypeError(
+      `Candidate envelope is not canonical JSON: ${encoded.error.code}`,
+    )
   }
   return encoded.bytes
 }
@@ -695,8 +730,7 @@ const canonicalHash = (value: JsonValue): `sha256:${string}` =>
 const identityHash = (
   domain: "semanticTuple" | "budgetProfile",
   value: JsonValue,
-): `sha256:${string}` =>
-  `sha256:${hashCanonicalIdentityValue(domain, value)}`
+): `sha256:${string}` => `sha256:${hashCanonicalIdentityValue(domain, value)}`
 
 const retryIdentityHash = (value: JsonValue): `sha256:${string}` =>
   sha256Bytes(
@@ -745,8 +779,15 @@ const authenticationMatches = (
 ): boolean => {
   if (envelope.authentication.keyId !== identity.keyId) return false
   const unsigned = withoutAuthentication(envelope)
-  const expected = authenticate(label, unsigned as unknown as JsonValue, identity)
-  if (expected.signatureInputSha256 !== envelope.authentication.signatureInputSha256) {
+  const expected = authenticate(
+    label,
+    unsigned as unknown as JsonValue,
+    identity,
+  )
+  if (
+    expected.signatureInputSha256 !==
+    envelope.authentication.signatureInputSha256
+  ) {
     return false
   }
   const actualBytes = Buffer.from(
@@ -757,15 +798,19 @@ const authenticationMatches = (
     expected.signature.slice("hmac-sha256:".length),
     "hex",
   )
-  return actualBytes.byteLength === expectedBytes.byteLength &&
+  return (
+    actualBytes.byteLength === expectedBytes.byteLength &&
     timingSafeEqual(actualBytes, expectedBytes)
+  )
 }
 
 export const createAuthenticatedRuntimeInvocationRequestV117 = (
   input: CreateRuntimeInvocationRequestV117Input,
   identity: RuntimeInvocationSigningIdentityV117,
 ): AuthenticatedRuntimeInvocationRequestV117 => {
-  const semanticTupleWithoutId = SemanticTupleWithoutIdSchema.parse(input.semanticTuple)
+  const semanticTupleWithoutId = SemanticTupleWithoutIdSchema.parse(
+    input.semanticTuple,
+  )
   const sourceIdentity = RuntimeInvocationSourceIdentityV117Schema.parse(
     input.sourceIdentity,
   )
@@ -851,7 +896,8 @@ const outcomeTraceMatchesRequest = (
   request: AuthenticatedRuntimeInvocationRequestV117,
 ): boolean => {
   const binding = requestBinding(request)
-  return trace.requestId === binding.requestId &&
+  return (
+    trace.requestId === binding.requestId &&
     trace.invocationId === binding.invocationId &&
     trace.kernelRequestId === binding.kernelRequestId &&
     trace.method === binding.method &&
@@ -859,6 +905,7 @@ const outcomeTraceMatchesRequest = (
     trace.budgetProfileSha256 === binding.budgetProfileSha256 &&
     trace.inputSha256 === binding.inputSha256 &&
     trace.retryIdentitySha256 === binding.retryIdentitySha256
+  )
 }
 
 export const createAuthenticatedRuntimeInvocationResponseV117 = <
@@ -872,7 +919,9 @@ export const createAuthenticatedRuntimeInvocationResponseV117 = <
     !authenticationMatches("request", request, identity) ||
     !requestDerivedBindingsMatch(request)
   ) {
-    throw new TypeError("Cannot authenticate a response for an invalid candidate request")
+    throw new TypeError(
+      "Cannot authenticate a response for an invalid candidate request",
+    )
   }
   const parsedOutcome = RuntimeInvocationResultV117Schema.parse(
     outcome,
@@ -882,12 +931,13 @@ export const createAuthenticatedRuntimeInvocationResponseV117 = <
       "Cannot authenticate a response with an outcome trace outside the request binding",
     )
   }
-  const payloadBinding = parsedOutcome.kind === "success"
-    ? {
-        sha256: canonicalHash(parsedOutcome.value),
-        canonicalByteLength: canonicalBytes(parsedOutcome.value).byteLength,
-      }
-    : null
+  const payloadBinding =
+    parsedOutcome.kind === "success"
+      ? {
+          sha256: canonicalHash(parsedOutcome.value),
+          canonicalByteLength: canonicalBytes(parsedOutcome.value).byteLength,
+        }
+      : null
   const unsigned = {
     contractVersion: RUNTIME_INVOCATION_V1_17_CANDIDATE.contractVersion,
     candidateStatus: RUNTIME_INVOCATION_V1_17_CANDIDATE.lifecycle,
@@ -913,7 +963,8 @@ export const createAuthenticatedRuntimeInvocationResponseV117 = <
 export const serializeRuntimeInvocationResponseV117 = (
   response: AuthenticatedRuntimeInvocationResponseV117,
 ): Uint8Array => {
-  const parsed = AuthenticatedRuntimeInvocationResponseV117Schema.parse(response)
+  const parsed =
+    AuthenticatedRuntimeInvocationResponseV117Schema.parse(response)
   return canonicalBytes(parsed as unknown as JsonValue)
 }
 
@@ -941,17 +992,7 @@ const verificationFailure = (
   failure: {
     code,
     publicMessage: "Runtime system failure.",
-    retryable: RUNTIME_INVOCATION_V1_17_OWNERSHIP_MATRIX[
-      code === "OUTER_FRAME_MISSING"
-        ? "outer_frame_missing"
-        : code === "OUTER_FRAME_TRUNCATED"
-          ? "outer_frame_truncated"
-          : code === "OUTER_FRAME_UNAUTHENTICATED"
-            ? "outer_frame_unauthenticated"
-            : code === "OUTER_FRAME_WRONG_BINDING"
-              ? "outer_frame_wrong_binding"
-              : "outer_frame_undecodable"
-    ].retryable,
+    retryable: RUNTIME_INVOCATION_V1_17_SYSTEM_FAILURE_RETRYABILITY[code],
   },
   trace: verificationTrace(bytes, partial),
 })
@@ -959,7 +1000,9 @@ const verificationFailure = (
 const parseCanonicalEnvelope = <T>(
   bytes: Uint8Array,
   schema: z.ZodType<T>,
-): { ok: true; value: T } | { ok: false; code: RuntimeInvocationSystemFailureCodeV117 } => {
+):
+  | { ok: true; value: T }
+  | { ok: false; code: RuntimeInvocationSystemFailureCodeV117 } => {
   if (bytes.byteLength === 0) return { ok: false, code: "OUTER_FRAME_MISSING" }
   const parsed = admitCanonicalJsonBytes(bytes, {
     profile: "authenticated-envelope",
@@ -967,9 +1010,10 @@ const parseCanonicalEnvelope = <T>(
   if (!parsed.ok) {
     return {
       ok: false,
-      code: parsed.error.byteOffset >= bytes.byteLength
-        ? "OUTER_FRAME_TRUNCATED"
-        : "OUTER_FRAME_UNDECODABLE",
+      code:
+        parsed.error.byteOffset >= bytes.byteLength
+          ? "OUTER_FRAME_TRUNCATED"
+          : "OUTER_FRAME_UNDECODABLE",
     }
   }
   const envelope = schema.safeParse(parsed.value)
@@ -985,7 +1029,8 @@ const requestDerivedBindingsMatch = (
   const budget = withoutProperty(request.budget, "profileSha256")
   const retry = withoutProperty(request.retry, "identitySha256")
   const inputBytes = canonicalBytes(request.input.value)
-  return request.semanticTuple.tupleId ===
+  return (
+    request.semanticTuple.tupleId ===
       identityHash("semanticTuple", semanticTuple as unknown as JsonValue) &&
     request.budget.profileSha256 ===
       identityHash("budgetProfile", budget as unknown as JsonValue) &&
@@ -993,12 +1038,13 @@ const requestDerivedBindingsMatch = (
     request.input.canonicalByteLength === inputBytes.byteLength &&
     request.retry.identitySha256 ===
       retryIdentityHash(retry as unknown as JsonValue)
+  )
 }
 
-function withoutProperty<
-  T extends object,
-  K extends keyof T,
->(value: T, key: K): Omit<T, K> {
+function withoutProperty<T extends object, K extends keyof T>(
+  value: T,
+  key: K,
+): Omit<T, K> {
   const { [key]: _removed, ...rest } = value
   return rest
 }
@@ -1105,7 +1151,10 @@ const verifyRuntimeInvocationResponseV117Unsafe = (
   return {
     kind: "success",
     value: response,
-    trace: { ...partial, safeCodes: ["ADAPTER_AUTHENTICATED", "OUTER_BINDINGS_VERIFIED"] },
+    trace: {
+      ...partial,
+      safeCodes: ["ADAPTER_AUTHENTICATED", "OUTER_BINDINGS_VERIFIED"],
+    },
   }
 }
 
