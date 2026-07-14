@@ -4,7 +4,11 @@ import {
   RUNTIME_INVOCATION_V1_17_TEST_KEY_ID,
   RUNTIME_INVOCATION_V1_17_PLAYER_VIOLATIONS,
   createAuthenticatedRuntimeInvocationRequestV117,
-  serializeRuntimeInvocationRequestV117,
+  createAuthenticatedRuntimeInvocationResponseV117,
+  createRuntimeAbiV117ExecutionLedger,
+  createRuntimeInvocationExecutionReceiptV117,
+  createRuntimeInvocationBudgetV117,
+  createRuntimeInvocationTraceV117,
   type AuthenticatedRuntimeInvocationRequestV117,
   type JsonValue,
   type RuntimeInvocationResultV117,
@@ -37,6 +41,11 @@ const matchInput = {
 const sha256 = (value: unknown): string =>
   createHash("sha256").update(JSON.stringify(value)).digest("hex")
 
+const candidateSigningIdentity = {
+  keyId: RUNTIME_INVOCATION_V1_17_TEST_KEY_ID,
+  secret: "fixture-only:phase-258-engine-binding",
+} as const
+
 const candidateRequestFor = (
   request: KernelEffectRequest,
 ): AuthenticatedRuntimeInvocationRequestV117 =>
@@ -60,27 +69,8 @@ const candidateRequestFor = (
         normalizedSourceSha256: `sha256:${"b".repeat(64)}`,
         artifactSha256: `sha256:${"c".repeat(64)}`,
       },
-      budget: {
-        profileId: "runtime-budget-profile-v1.17-candidate",
-        wallMilliseconds: 50,
-        computeFuel: 10_000_000,
-        memoryBytes: 67_108_864,
-        outputBytes: 262_144,
-        processLimit: 1,
-        matchCumulative: {
-          invocationCountMaximum: 260,
-          wallMilliseconds: 13_000,
-          computeFuel: 2_600_000_000,
-          payloadBytes: 68_157_440,
-          stdoutBytes: 68_157_440,
-          stderrBytes: 17_039_360,
-          memoryBytes: 67_108_864,
-          accounting:
-            "signed-monotonic-per-invocation-deltas-plus-cumulative-total",
-          overflow:
-            "stop-before-next-invocation-and-classify-by-proven-cause",
-        },
-      },
+      budget: createRuntimeInvocationBudgetV117(request.kind),
+      accounting: { prestate: createRuntimeAbiV117ExecutionLedger() },
       input: { value: request.input as unknown as JsonValue },
       retry: {
         retryId: `retry:${request.requestId}`,
@@ -88,10 +78,7 @@ const candidateRequestFor = (
         previousRequestSha256: null,
       },
     },
-    {
-      keyId: RUNTIME_INVOCATION_V1_17_TEST_KEY_ID,
-      secret: "fixture-only:phase-258-engine-binding",
-    },
+    candidateSigningIdentity,
   )
 
 const traceFor = (
@@ -100,29 +87,111 @@ const traceFor = (
 ): RuntimeInvocationTraceV117 => {
   const candidate = candidateRequestFor(request)
   return {
-    requestId: candidate.requestId,
-    invocationId: candidate.invocationId,
-    kernelRequestId: candidate.kernelRequestId,
-    method: candidate.method,
-    requestSha256: `sha256:${createHash("sha256")
-      .update(serializeRuntimeInvocationRequestV117(candidate))
-      .digest("hex")}`,
-    budgetProfileSha256: candidate.budget.profileSha256,
-    inputSha256: candidate.input.canonicalSha256,
-    retryIdentitySha256: candidate.retry.identitySha256,
-    safeCodes: [],
+    ...createRuntimeInvocationTraceV117(candidate, []),
     ...overrides,
   }
 }
 
-const bindOutcome = <TValue,>(
+const measuredReceiptFor = (
+  request: AuthenticatedRuntimeInvocationRequestV117,
+  outcome: RuntimeInvocationResultV117<JsonValue>,
+) => {
+  const prestate = request.accounting.prestate
+  const measuredCounter = (
+    counter:
+      | "wallMilliseconds"
+      | "computeFuel"
+      | "payloadBytes"
+      | "stdoutBytes"
+      | "stderrBytes",
+  ) => ({
+    status: "measured" as const,
+    delta: 1,
+    cumulative: prestate.cumulative[counter] + 1,
+  })
+  return createRuntimeInvocationExecutionReceiptV117(request, {
+    attribution:
+      outcome.kind === "system_failure"
+        ? ("ambiguous" as const)
+        : ("proven_strategy" as const),
+    counters: {
+      wallMilliseconds: measuredCounter("wallMilliseconds"),
+      computeFuel: measuredCounter("computeFuel"),
+      payloadBytes: measuredCounter("payloadBytes"),
+      stdoutBytes: measuredCounter("stdoutBytes"),
+      stderrBytes: measuredCounter("stderrBytes"),
+    },
+    memory: {
+      status: "measured",
+      peakBytes: 1,
+      cumulativePeakBytes: Math.max(prestate.cumulative.memoryBytes, 1),
+    },
+    process: {
+      status: "verified",
+      processes: 1,
+      threads: 1,
+      children: 0,
+    },
+    capabilities: {
+      status: "verified",
+      filesystem: "none",
+      network: "disabled",
+      environment: "empty",
+      shell: "disabled",
+    },
+    cancellation: {
+      status: "verified",
+      terminationRequired: false,
+      receiptPresent: false,
+      graceMilliseconds: 0,
+    },
+    accountingEvidence: {
+      status: "verified",
+      signatureVerified: true,
+      monotonic: true,
+    },
+  })
+}
+
+/* eslint-disable no-redeclare -- Overloads preserve the request-specific Strategy result type in this test fixture. */
+function bindOutcome(
+  request: RuntimeRequestFor<"selectActivations">,
+  outcome: RuntimeInvocationResultV117<StrategyResult>,
+  authenticate?: boolean,
+): CandidateBoundRuntimeInvocationV117<StrategyResult>
+function bindOutcome(
+  request: RuntimeRequestFor<"soldierBrain">,
+  outcome: RuntimeInvocationResultV117<SoldierBrainResult>,
+  authenticate?: boolean,
+): CandidateBoundRuntimeInvocationV117<SoldierBrainResult>
+function bindOutcome(
   request: KernelEffectRequest,
-  outcome: RuntimeInvocationResultV117<TValue>,
-): CandidateBoundRuntimeInvocationV117<TValue> => ({
-  kind: "v1_17_bound",
-  request: candidateRequestFor(request),
-  outcome,
-})
+  outcome:
+    | RuntimeInvocationResultV117<StrategyResult>
+    | RuntimeInvocationResultV117<SoldierBrainResult>,
+  authenticate = true,
+): CandidateBoundRuntimeInvocationV117<StrategyResult | SoldierBrainResult> {
+  const candidate = candidateRequestFor(request)
+  const boundOutcome = authenticate
+    ? createAuthenticatedRuntimeInvocationResponseV117(
+        candidate,
+        outcome as RuntimeInvocationResultV117<JsonValue>,
+        measuredReceiptFor(
+          candidate,
+          outcome as RuntimeInvocationResultV117<JsonValue>,
+        ),
+        candidateSigningIdentity,
+      ).outcome
+    : outcome
+  return {
+    kind: "v1_17_bound",
+    request: candidate,
+    outcome: boundOutcome as RuntimeInvocationResultV117<
+      StrategyResult | SoldierBrainResult
+    >,
+  }
+}
+/* eslint-enable no-redeclare */
 
 const initialState = (): GameState =>
   (MATCH_KERNEL.createMachine(matchInput) as { state: GameState }).state
@@ -356,67 +425,64 @@ describe("Phase 258 successor runtime ownership", () => {
     ).toEqual({ committedOnlyAfterValidation: true })
   })
 
-  it(
-    "applies only the engine-owned v1.4 consequence to an adapter-classified player violation",
-    () => {
-      const state = withPrivateMemory()
-      const soldier = state.soldiers.find(
-        (candidate) => candidate.ownerPlayerId === state.players[0].id,
-      )
-      if (!soldier) throw new Error("missing fixture soldier")
-      const beforeMemory = sha256({
-        players: state.players.map(({ strategyMemory }) => strategyMemory),
-        soldiers: state.soldiers.map(({ soldierMemory }) => soldierMemory),
-      })
-      const observations: SoldierBrainInput[] = []
+  it("applies only the engine-owned v1.4 consequence to an adapter-classified player violation", () => {
+    const state = withPrivateMemory()
+    const soldier = state.soldiers.find(
+      (candidate) => candidate.ownerPlayerId === state.players[0].id,
+    )
+    if (!soldier) throw new Error("missing fixture soldier")
+    const beforeMemory = sha256({
+      players: state.players.map(({ strategyMemory }) => strategyMemory),
+      soldiers: state.soldiers.map(({ soldierMemory }) => soldierMemory),
+    })
+    const observations: SoldierBrainInput[] = []
 
-      const execution = MATCH_KERNEL.runActivationFromStateV117({
-        state,
-        soldierId: soldier.id,
-        runtime: {
-          selectActivations() {
-            throw new Error("selection is unreachable in activation mode")
-          },
-          runSoldierBrain(
-            input: SoldierBrainInput,
-            request?: RuntimeRequestFor<"soldierBrain">,
-          ): CandidateBoundRuntimeInvocationV117<SoldierBrainResult> {
-            if (!request) throw new Error("driver omitted kernel request")
-            observations.push(globalThis.structuredClone(input))
-            return bindOutcome(request, {
-              kind: "player_violation",
-              violation:
-                RUNTIME_INVOCATION_V1_17_PLAYER_VIOLATIONS.INVALID_OUTPUT,
-              trace: traceFor(request, {
-                safeCodes: ["ADAPTER_CLASSIFIED_INVALID_OUTPUT"],
-              }),
-            })
-          },
+    const execution = MATCH_KERNEL.runActivationFromStateV117({
+      state,
+      soldierId: soldier.id,
+      runtime: {
+        selectActivations() {
+          throw new Error("selection is unreachable in activation mode")
         },
-      })
+        runSoldierBrain(
+          input: SoldierBrainInput,
+          request?: RuntimeRequestFor<"soldierBrain">,
+        ): CandidateBoundRuntimeInvocationV117<SoldierBrainResult> {
+          if (!request) throw new Error("driver omitted kernel request")
+          observations.push(globalThis.structuredClone(input))
+          return bindOutcome(request, {
+            kind: "player_violation",
+            violation:
+              RUNTIME_INVOCATION_V1_17_PLAYER_VIOLATIONS.INVALID_OUTPUT,
+            trace: traceFor(request, {
+              safeCodes: ["ADAPTER_CLASSIFIED_INVALID_OUTPUT"],
+            }),
+          })
+        },
+      },
+    })
 
-      expect(execution.kind).toBe("completed")
-      if (execution.kind !== "completed" || !execution.result) return
-      const after = execution.result.state
-      const memoryAfter = sha256({
-        players: after.players.map(({ strategyMemory }) => strategyMemory),
-        soldiers: after.soldiers.map(({ soldierMemory }) => soldierMemory),
-      })
-      expect(memoryAfter).toBe(beforeMemory)
-      expect(observations).toHaveLength(1)
-      expect(execution.result.events.map(({ type }) => type)).toEqual([
-        "ACTIVATION_STARTED",
-        "CYCLE_STARTED",
-        "AWARENESS_GRID_OBSERVED",
-        "RUNTIME_VIOLATION",
-        "SOLDIER_STONED",
-        "ACTIVATION_ENDED",
-      ])
-      expect(
-        after.soldiers.find(({ id }) => id === soldier.id)?.status,
-      ).toBe("STONE")
-    },
-  )
+    expect(execution.kind).toBe("completed")
+    if (execution.kind !== "completed" || !execution.result) return
+    const after = execution.result.state
+    const memoryAfter = sha256({
+      players: after.players.map(({ strategyMemory }) => strategyMemory),
+      soldiers: after.soldiers.map(({ soldierMemory }) => soldierMemory),
+    })
+    expect(memoryAfter).toBe(beforeMemory)
+    expect(observations).toHaveLength(1)
+    expect(execution.result.events.map(({ type }) => type)).toEqual([
+      "ACTIVATION_STARTED",
+      "CYCLE_STARTED",
+      "AWARENESS_GRID_OBSERVED",
+      "RUNTIME_VIOLATION",
+      "SOLDIER_STONED",
+      "ACTIVATION_ENDED",
+    ])
+    expect(after.soldiers.find(({ id }) => id === soldier.id)?.status).toBe(
+      "STONE",
+    )
+  })
 
   it.each([
     ["adapter-crash", "ADAPTER_CRASH", true],
@@ -448,12 +514,17 @@ describe("Phase 258 successor runtime ownership", () => {
             expect(Object.isFrozen(input)).toBe(true)
             expect(Object.isFrozen(input.soldierMemory)).toBe(true)
             expect(() => {
-              ;(input.soldierMemory as Record<string, unknown>).attemptMutation =
-                "must-not-reach-gameplay"
+              ;(
+                input.soldierMemory as Record<string, unknown>
+              ).attemptMutation = "must-not-reach-gameplay"
             }).toThrow()
             return bindOutcome(request, {
               kind: "system_failure",
-              failure: { code, publicMessage: "Runtime system failure.", retryable },
+              failure: {
+                code,
+                publicMessage: "Runtime system failure.",
+                retryable,
+              },
               trace: traceFor(request),
             })
           },
@@ -532,14 +603,18 @@ describe("Phase 258 successor runtime ownership", () => {
           request?: RuntimeRequestFor<"soldierBrain">,
         ): CandidateBoundRuntimeInvocationV117<SoldierBrainResult> {
           if (!request) throw new Error("driver omitted kernel request")
-          return bindOutcome(request, {
-            kind: "player_violation",
-            violation:
-              RUNTIME_INVOCATION_V1_17_PLAYER_VIOLATIONS.INVALID_OUTPUT,
-            trace: traceFor(request, {
-              kernelRequestId: `${request.requestId}:forged`,
-            }),
-          })
+          return bindOutcome(
+            request,
+            {
+              kind: "player_violation",
+              violation:
+                RUNTIME_INVOCATION_V1_17_PLAYER_VIOLATIONS.INVALID_OUTPUT,
+              trace: traceFor(request, {
+                kernelRequestId: `${request.requestId}:forged`,
+              }),
+            },
+            false,
+          )
         },
       },
     })
@@ -576,16 +651,20 @@ describe("Phase 258 successor runtime ownership", () => {
           request?: RuntimeRequestFor<"soldierBrain">,
         ): CandidateBoundRuntimeInvocationV117<SoldierBrainResult> {
           if (!request) throw new Error("driver omitted kernel request")
-          return bindOutcome(request, {
-            kind: "success",
-            value: {
-              action: { type: "TURN_TO_STONE" },
-              soldierMemory: { mustNotCommit: true },
+          return bindOutcome(
+            request,
+            {
+              kind: "success",
+              value: {
+                action: { type: "TURN_TO_STONE" },
+                soldierMemory: { mustNotCommit: true },
+              },
+              trace: traceFor(request, {
+                inputSha256: `sha256:${"9".repeat(64)}`,
+              }),
             },
-            trace: traceFor(request, {
-              inputSha256: `sha256:${"9".repeat(64)}`,
-            }),
-          })
+            false,
+          )
         },
       },
     })
