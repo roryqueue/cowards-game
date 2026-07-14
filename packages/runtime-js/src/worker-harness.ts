@@ -247,6 +247,24 @@ const forbidden = (name) => new Proxy(function blocked() {}, {
   construct() { throw new Error("FORBIDDEN_CAPABILITY:" + name) },
   get() { throw new Error("FORBIDDEN_CAPABILITY:" + name) },
 })
+const sanitizedMath = new Proxy(Math, {
+  get(target, property) {
+    if (property === "random") throw new Error("FORBIDDEN_CAPABILITY:Math.random")
+    const value = Reflect.get(target, property)
+    return typeof value === "function" ? value.bind(target) : value
+  },
+})
+const installGlobalBlocks = () => {
+  Object.defineProperty(globalThis, "eval", {
+    value: forbidden("eval"), writable: false, configurable: false,
+  })
+  Object.defineProperty(globalThis, "Math", {
+    value: sanitizedMath, writable: false, configurable: false,
+  })
+  Object.defineProperty(Function.prototype, "constructor", {
+    value: forbidden("Function.constructor"), writable: false, configurable: false,
+  })
+}
 const compareBytes = (left, right) => {
   const a = encoder.encode(left)
   const b = encoder.encode(right)
@@ -272,6 +290,7 @@ const canonical = (value) => {
   ).join(",") + "}"
 }
 const moduleSource = (source) => [
+  'const sanitizedGlobalThis = new Proxy(Object.freeze({}), { get(_target, property) { throw new Error("FORBIDDEN_CAPABILITY:" + String(property)) }, set(_target, property) { throw new Error("FORBIDDEN_CAPABILITY:" + String(property)) } })',
   'const module = { exports: {} }',
   'const exports = module.exports',
   'const forbidden = (name) => new Proxy(function blocked() {}, { apply() { throw new Error("FORBIDDEN_CAPABILITY:" + name) }, construct() { throw new Error("FORBIDDEN_CAPABILITY:" + name) }, get() { throw new Error("FORBIDDEN_CAPABILITY:" + name) } })',
@@ -285,7 +304,13 @@ const moduleSource = (source) => [
   'const crypto = forbidden("crypto")',
   'const performance = forbidden("performance")',
   'const Buffer = forbidden("Buffer")',
+  'const queueMicrotask = forbidden("queueMicrotask")',
+  'const setTimeout = forbidden("setTimeout")',
+  'const setInterval = forbidden("setInterval")',
+  'const setImmediate = forbidden("setImmediate")',
   'const console = forbidden("console")',
+  'const global = sanitizedGlobalThis',
+  'const globalThis = sanitizedGlobalThis',
   source,
   'export default module.exports && module.exports.default',
 ].join("\\n")
@@ -301,6 +326,7 @@ const frame = (tag, payload = new Uint8Array()) => {
 const main = async () => {
   let output
   try {
+    installGlobalBlocks()
     const imported = await import(moduleUrl(workerData.source).href)
     const strategy = imported.default
     const method = strategy && strategy[workerData.methodName]
