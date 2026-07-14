@@ -13,7 +13,7 @@ import {
   writeFileSync,
 } from "node:fs"
 import { tmpdir } from "node:os"
-import { delimiter, join, relative } from "node:path"
+import { delimiter, dirname, extname, join, relative } from "node:path"
 import { fileURLToPath } from "node:url"
 import {
   COMPATIBILITY_VERSIONS,
@@ -149,22 +149,81 @@ export interface WasmWasiCandidateIdentityV117 {
   identitySha256: `sha256:${string}`
 }
 
+export interface WasmWasiCandidateArtifactV117 extends Omit<
+  CompiledStrategyArtifact,
+  "abiEnvelope" | "abiVersion" | "publicEvidence"
+> {
+  abiEnvelope: "stdin-canonical-request-stdout-raw-canonical-payload"
+  abiVersion: "strategy-runtime-abi-v1.17"
+  publicEvidence: {
+    label: string
+    nonCounted: true
+    sandboxClaim: "candidate-readiness-only"
+  }
+}
+
+export interface WasmWasiCandidateRevisionV117 {
+  id: string
+  sourceHash: string
+  sourceBytes: number
+  runtime: {
+    abiVersion: "strategy-runtime-abi-v1.17"
+    language: {
+      id: "rust" | "zig"
+      version: string
+    }
+    adapter: {
+      id: "runtime-wasm-wasi-wasmtime-preview1"
+      version: "v1.17-candidate"
+    }
+  }
+  metadata: {
+    compiledArtifact: WasmWasiCandidateArtifactV117
+  }
+}
+
+export const resolveWasmWasiAdapterBuildFilesV117 = (
+  moduleUrl: string = import.meta.url,
+): readonly string[] => {
+  const modulePath = fileURLToPath(moduleUrl)
+  const extension = extname(modulePath)
+  if (extension !== ".ts" && extension !== ".js") {
+    throw new Error("WASM/WASI adapter build module extension is unsupported")
+  }
+  const directory = dirname(modulePath)
+  const files = [
+    join(directory, `metadata${extension}`),
+    join(directory, `validation${extension}`),
+    join(directory, `wasm-wasi-subprocess-adapter${extension}`),
+  ]
+  for (const file of files) accessSync(file, constants.R_OK)
+  return files
+}
+
 export const collectWasmWasiCandidateIdentityV117 = (
   languageId: "rust" | "zig",
-  artifact: CompiledStrategyArtifact,
+  artifact: WasmWasiCandidateArtifactV117,
 ): WasmWasiCandidateIdentityV117 => {
   if (
     artifact.toolchain.language !== languageId ||
     artifact.hash.length !== 64 ||
-    artifact.wasiProfile !== "preview1"
+    artifact.wasiProfile !== "preview1" ||
+    artifact.abiVersion !==
+      RUNTIME_INVOCATION_V1_17_CANDIDATE.runtimeAbiVersion ||
+    artifact.abiEnvelope !==
+      "stdin-canonical-request-stdout-raw-canonical-payload"
   ) {
-    throw new TypeError("Candidate artifact does not match the requested WASM lane")
+    throw new TypeError(
+      "Candidate artifact does not match the requested WASM lane",
+    )
   }
   const compilerName = languageId === "rust" ? "rustc" : "zig"
   const compilerPath = resolveExactCommandPath(compilerName)
   const wasmtimePath = resolveExactCommandPath("wasmtime")
   if (compilerPath === null || wasmtimePath === null) {
-    throw new Error("Exact WASM/WASI compiler or runtime executable is unavailable")
+    throw new Error(
+      "Exact WASM/WASI compiler or runtime executable is unavailable",
+    )
   }
   const reportedVersion =
     languageId === "rust"
@@ -173,7 +232,9 @@ export const collectWasmWasiCandidateIdentityV117 = (
   const wasmtimeVersion = requireCommandOutput(wasmtimePath, ["--version"])
   const targetTriple = languageId === "rust" ? "wasm32-wasip1" : "wasm32-wasi"
   if (artifact.targetTriple !== targetTriple) {
-    throw new TypeError("Candidate artifact target does not match the exact lane")
+    throw new TypeError(
+      "Candidate artifact target does not match the exact lane",
+    )
   }
   const compilerResolvedPath = realpathSync(compilerPath)
   const wasmtimeResolvedPath = realpathSync(wasmtimePath)
@@ -198,13 +259,10 @@ export const collectWasmWasiCandidateIdentityV117 = (
             compilerBytes,
           ])}` as `sha256:${string}`,
         }
-  const adapterBuildSha256 = `sha256:${hashCanonicalIdentity("adapterBuild", [
-    readFileSync(fileURLToPath(new URL("./metadata.ts", import.meta.url))),
-    readFileSync(fileURLToPath(new URL("./validation.ts", import.meta.url))),
-    readFileSync(
-      fileURLToPath(new URL("./wasm-wasi-subprocess-adapter.ts", import.meta.url)),
-    ),
-  ])}` as `sha256:${string}`
+  const adapterBuildSha256 = `sha256:${hashCanonicalIdentity(
+    "adapterBuild",
+    resolveWasmWasiAdapterBuildFilesV117().map((file) => readFileSync(file)),
+  )}` as `sha256:${string}`
   const settingsSha256 = `sha256:${hashCanonicalIdentityValue(
     "runtimeExecutable",
     WASM_WASI_V1_17_EXECUTION_SETTINGS as unknown as JsonValue,
@@ -215,8 +273,7 @@ export const collectWasmWasiCandidateIdentityV117 = (
     preopenedDirectories:
       WASM_WASI_V1_17_EXECUTION_SETTINGS.preopenedDirectories,
     processLimit: WASM_WASI_V1_17_EXECUTION_SETTINGS.processLimit,
-    runtimeInterface:
-      WASM_WASI_V1_17_EXECUTION_SETTINGS.runtimeInterface,
+    runtimeInterface: WASM_WASI_V1_17_EXECUTION_SETTINGS.runtimeInterface,
   }
   const containmentSha256 = `sha256:${hashCanonicalIdentityValue(
     "containmentPolicy",
@@ -268,8 +325,7 @@ export const collectWasmWasiCandidateIdentityV117 = (
       value: WASM_WASI_V1_17_EXECUTION_SETTINGS,
     },
     containment: {
-      profileId:
-        "wasm-wasi-preview1-empty-env-no-preopen-v1.17" as const,
+      profileId: "wasm-wasi-preview1-empty-env-no-preopen-v1.17" as const,
       sha256: containmentSha256,
     },
     metering: {
@@ -502,6 +558,47 @@ export interface WasmCompileResult {
   forbiddenPatterns: string[]
 }
 
+interface WasmArtifactAbiDeclaration {
+  abiEnvelope:
+    | CompiledStrategyArtifact["abiEnvelope"]
+    | WasmWasiCandidateArtifactV117["abiEnvelope"]
+  abiVersion: string
+  publicEvidence: CompiledStrategyArtifact["publicEvidence"]
+}
+
+type DeclaredWasmArtifact<D extends WasmArtifactAbiDeclaration> = Omit<
+  CompiledStrategyArtifact,
+  "abiEnvelope" | "abiVersion" | "publicEvidence"
+> &
+  D
+
+interface DeclaredWasmCompileResult<D extends WasmArtifactAbiDeclaration> {
+  ok: boolean
+  artifact?: DeclaredWasmArtifact<D> | undefined
+  errors: StrategyRevisionValidationIssue[]
+  forbiddenPatterns: string[]
+}
+
+const LEGACY_WASM_ARTIFACT_ABI = {
+  abiEnvelope: "stdin-stdout-json",
+  abiVersion: STRATEGY_RUNTIME_ABI_VERSION,
+  publicEvidence: {
+    label: "WASM/WASI counted provider artifact",
+    nonCounted: false,
+    sandboxClaim: "candidate-readiness-only",
+  },
+} as const satisfies WasmArtifactAbiDeclaration
+
+const CANDIDATE_WASM_ARTIFACT_ABI_V117 = {
+  abiEnvelope: "stdin-canonical-request-stdout-raw-canonical-payload",
+  abiVersion: RUNTIME_INVOCATION_V1_17_CANDIDATE.runtimeAbiVersion,
+  publicEvidence: {
+    label: "WASM/WASI v1.17 raw-payload candidate artifact",
+    nonCounted: true,
+    sandboxClaim: "candidate-readiness-only",
+  },
+} as const satisfies WasmArtifactAbiDeclaration
+
 const rustcVersion = (): string => {
   const result = spawnSync("rustc", ["--version"], {
     encoding: "utf8",
@@ -603,7 +700,10 @@ const zigSourceGate = (
   return { errors, forbiddenPatterns, sourceHash, sourceBytes }
 }
 
-export const compileZigWasmArtifact = (source: string): WasmCompileResult => {
+const compileZigWasmArtifactWithAbi = <D extends WasmArtifactAbiDeclaration>(
+  source: string,
+  abi: D,
+): DeclaredWasmCompileResult<D> => {
   const gate = zigSourceGate(source)
   if (gate.errors.length > 0) {
     return {
@@ -698,7 +798,7 @@ export const compileZigWasmArtifact = (source: string): WasmCompileResult => {
         ],
       }
     }
-    const artifact: CompiledStrategyArtifact = {
+    const artifact: DeclaredWasmArtifact<D> = {
       format: "wasm",
       hash: hashBytes(artifactBytes),
       bytes: artifactBytes.byteLength,
@@ -706,8 +806,6 @@ export const compileZigWasmArtifact = (source: string): WasmCompileResult => {
       sourceHash: gate.sourceHash,
       wasiProfile: "preview1",
       targetTriple: "wasm32-wasi",
-      abiEnvelope: "stdin-stdout-json",
-      abiVersion: STRATEGY_RUNTIME_ABI_VERSION,
       validationStatus: "valid",
       createdAt: new Date(0).toISOString(),
       toolchain: {
@@ -718,11 +816,7 @@ export const compileZigWasmArtifact = (source: string): WasmCompileResult => {
         commandSummary:
           "zig build-exe strategy.zig -target wasm32-wasi -O ReleaseSmall --cache-dir <temp> --global-cache-dir <temp> -femit-bin=strategy.wasm",
       },
-      publicEvidence: {
-        label: "Zig WASM/WASI counted provider artifact",
-        nonCounted: false,
-        sandboxClaim: "candidate-readiness-only",
-      },
+      ...abi,
     }
     return { ok: true, artifact, errors: [], forbiddenPatterns: [] }
   } finally {
@@ -730,7 +824,19 @@ export const compileZigWasmArtifact = (source: string): WasmCompileResult => {
   }
 }
 
-export const compileRustWasmArtifact = (source: string): WasmCompileResult => {
+export const compileZigWasmArtifact = (source: string): WasmCompileResult =>
+  compileZigWasmArtifactWithAbi(source, {
+    ...LEGACY_WASM_ARTIFACT_ABI,
+    publicEvidence: {
+      ...LEGACY_WASM_ARTIFACT_ABI.publicEvidence,
+      label: "Zig WASM/WASI counted provider artifact",
+    },
+  })
+
+const compileRustWasmArtifactWithAbi = <D extends WasmArtifactAbiDeclaration>(
+  source: string,
+  abi: D,
+): DeclaredWasmCompileResult<D> => {
   const sourceHash = hashSource(source)
   const sourceBytes = Buffer.byteLength(source)
   const errors: StrategyRevisionValidationIssue[] = []
@@ -857,7 +963,7 @@ export const compileRustWasmArtifact = (source: string): WasmCompileResult => {
         ],
       }
     }
-    const artifact: CompiledStrategyArtifact = {
+    const artifact: DeclaredWasmArtifact<D> = {
       format: "wasm",
       hash: hashBytes(artifactBytes),
       bytes: artifactBytes.byteLength,
@@ -865,8 +971,6 @@ export const compileRustWasmArtifact = (source: string): WasmCompileResult => {
       sourceHash,
       wasiProfile: "preview1",
       targetTriple: "wasm32-wasip1",
-      abiEnvelope: "stdin-stdout-json",
-      abiVersion: STRATEGY_RUNTIME_ABI_VERSION,
       validationStatus: "valid",
       createdAt: new Date(0).toISOString(),
       toolchain: {
@@ -877,17 +981,101 @@ export const compileRustWasmArtifact = (source: string): WasmCompileResult => {
         commandSummary:
           "rustc --target wasm32-wasip1 -O strategy.rs -o strategy.wasm",
       },
-      publicEvidence: {
-        label: "Rust WASM/WASI counted provider artifact",
-        nonCounted: false,
-        sandboxClaim: "candidate-readiness-only",
-      },
+      ...abi,
     }
     return { ok: true, artifact, errors: [], forbiddenPatterns }
   } finally {
     rmSync(dir, { recursive: true, force: true })
   }
 }
+
+export const compileRustWasmArtifact = (source: string): WasmCompileResult =>
+  compileRustWasmArtifactWithAbi(source, {
+    ...LEGACY_WASM_ARTIFACT_ABI,
+    publicEvidence: {
+      ...LEGACY_WASM_ARTIFACT_ABI.publicEvidence,
+      label: "Rust WASM/WASI counted provider artifact",
+    },
+  })
+
+export interface WasmWasiCandidateCompileResultV117 {
+  ok: boolean
+  artifact?: WasmWasiCandidateArtifactV117 | undefined
+  errors: StrategyRevisionValidationIssue[]
+  forbiddenPatterns: string[]
+}
+
+export const compileRustWasmArtifactV117 = (
+  source: string,
+): WasmWasiCandidateCompileResultV117 => {
+  const compiled = compileRustWasmArtifactWithAbi(
+    source,
+    CANDIDATE_WASM_ARTIFACT_ABI_V117,
+  )
+  return !compiled.ok || compiled.artifact === undefined
+    ? {
+        ok: false,
+        errors: compiled.errors,
+        forbiddenPatterns: compiled.forbiddenPatterns,
+      }
+    : compiled
+}
+
+export const compileZigWasmArtifactV117 = (
+  source: string,
+): WasmWasiCandidateCompileResultV117 => {
+  const compiled = compileZigWasmArtifactWithAbi(
+    source,
+    CANDIDATE_WASM_ARTIFACT_ABI_V117,
+  )
+  return !compiled.ok || compiled.artifact === undefined
+    ? {
+        ok: false,
+        errors: compiled.errors,
+        forbiddenPatterns: compiled.forbiddenPatterns,
+      }
+    : compiled
+}
+
+const buildWasmWasiCandidateRevisionV117 = (
+  languageId: "rust" | "zig",
+  source: string,
+): WasmWasiCandidateRevisionV117 => {
+  const compiled =
+    languageId === "rust"
+      ? compileRustWasmArtifactV117(source)
+      : compileZigWasmArtifactV117(source)
+  if (!compiled.ok || compiled.artifact === undefined) {
+    throw new Error(
+      `Cannot build ${languageId} WASM/WASI v1.17 candidate from invalid source`,
+    )
+  }
+  const sourceHash = hashSource(source)
+  return {
+    id: `strategy-revision:${languageId}-wasi-v1.17:${sourceHash}:${compiled.artifact.hash.slice(0, 16)}`,
+    sourceHash,
+    sourceBytes: Buffer.byteLength(source),
+    runtime: {
+      abiVersion: RUNTIME_INVOCATION_V1_17_CANDIDATE.runtimeAbiVersion,
+      language: {
+        id: languageId,
+        version:
+          languageId === "rust" ? "1.95.0-wasm32-wasip1" : "0.16.0-wasm32-wasi",
+      },
+      adapter: {
+        id: "runtime-wasm-wasi-wasmtime-preview1",
+        version: "v1.17-candidate",
+      },
+    },
+    metadata: { compiledArtifact: compiled.artifact },
+  }
+}
+
+export const buildRustWasmCandidateRevisionV117 = (source: string) =>
+  buildWasmWasiCandidateRevisionV117("rust", source)
+
+export const buildZigWasmCandidateRevisionV117 = (source: string) =>
+  buildWasmWasiCandidateRevisionV117("zig", source)
 
 export const validateRustStrategySource = (
   source: string,

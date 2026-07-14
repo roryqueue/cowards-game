@@ -49,6 +49,7 @@ import {
 import {
   collectWasmWasiCandidateIdentityV117,
   validateWasmWasiImports,
+  type WasmWasiCandidateRevisionV117,
   type WasmWasiCandidateIdentityV117,
 } from "./validation.js"
 import { WASM_WASI_V1_17_EXECUTION_SETTINGS } from "./metadata.js"
@@ -82,12 +83,18 @@ export interface WasmWasiGuestExecutionInputV117 {
 }
 
 export interface WasmWasiStrategyRequestV117 {
-  revision: StrategyRevision
+  revision: WasmWasiCandidateRevisionV117
   request: AuthenticatedRuntimeInvocationRequestV117
   signingIdentity: RuntimeInvocationSigningIdentityV117
   executionIdentity: WasmWasiCandidateIdentityV117
   executeGuest?:
     | ((input: WasmWasiGuestExecutionInputV117) => WasmWasiGuestObservationV117)
+    | undefined
+  hostOperations?:
+    | {
+        validateImports?: typeof validateWasmWasiImports
+        makeTempDirectory?: (prefix: string) => string
+      }
     | undefined
 }
 
@@ -142,7 +149,11 @@ const candidateOutcome = (
   value: JsonValue = null,
   safeCodes: readonly string[] = ["WASM_WASI_HOST_OUTER_AUTHORITY"],
 ): RuntimeInvocationResultV117 =>
-  classifyRuntimeInvocationV117(event, candidateTrace(request, safeCodes), value)
+  classifyRuntimeInvocationV117(
+    event,
+    candidateTrace(request, safeCodes),
+    value,
+  )
 
 const candidatePlayerViolation = (
   request: AuthenticatedRuntimeInvocationRequestV117,
@@ -166,8 +177,9 @@ const authenticateCandidateOutcome = (
   )
 
 const candidateArtifactBytesFor = (
-  revision: StrategyRevision,
+  revision: WasmWasiCandidateRevisionV117,
   request: AuthenticatedRuntimeInvocationRequestV117,
+  validateImports: typeof validateWasmWasiImports,
 ):
   | { ok: true; bytes: Buffer }
   | {
@@ -182,6 +194,10 @@ const candidateArtifactBytesFor = (
       `sha256:${revision.sourceHash}` ||
     request.sourceIdentity.normalizedSourceSha256 !==
       `sha256:${revision.sourceHash}` ||
+    revision.runtime.abiVersion !==
+      RUNTIME_INVOCATION_V1_17_CANDIDATE.runtimeAbiVersion ||
+    revision.runtime.adapter.id !== "runtime-wasm-wasi-wasmtime-preview1" ||
+    revision.runtime.adapter.version !== "v1.17-candidate" ||
     request.budget.processLimit !==
       WASM_WASI_V1_17_EXECUTION_SETTINGS.processLimit ||
     artifact?.bytesBase64 === undefined
@@ -195,11 +211,15 @@ const candidateArtifactBytesFor = (
   const bytes = Buffer.from(artifact.bytesBase64, "base64")
   if (
     request.sourceIdentity.artifactSha256 !== `sha256:${artifact.hash}` ||
+    artifact.sourceHash !== revision.sourceHash ||
     bytes.byteLength !== artifact.bytes ||
     hashBytes(bytes) !== artifact.hash ||
     artifact.validationStatus !== "valid" ||
     artifact.wasiProfile !== "preview1" ||
-    artifact.abiEnvelope !== "stdin-stdout-json" ||
+    artifact.abiEnvelope !==
+      "stdin-canonical-request-stdout-raw-canonical-payload" ||
+    artifact.abiVersion !==
+      RUNTIME_INVOCATION_V1_17_CANDIDATE.runtimeAbiVersion ||
     artifact.toolchain.language !== revision.runtime.language.id ||
     !(
       (revision.runtime.language.id === "rust" &&
@@ -214,7 +234,15 @@ const candidateArtifactBytesFor = (
       safeCode: "WASM_WASI_STALE_SOURCE_OR_ARTIFACT_IDENTITY",
     }
   }
-  if (validateWasmWasiImports(bytes).length > 0) {
+  const importErrors = validateImports(bytes)
+  if (importErrors.some((error) => error.code !== "FORBIDDEN_PATTERN")) {
+    return {
+      ok: false,
+      event: "outer_frame_wrong_binding",
+      safeCode: "WASM_WASI_MALFORMED_ARTIFACT_PREFLIGHT",
+    }
+  }
+  if (importErrors.length > 0) {
     return {
       ok: false,
       event: "payload_illegal",
@@ -236,7 +264,9 @@ const guestRequestBytes = (
     { profile: "host-api-value" },
   )
   if (!admitted.ok) {
-    throw new TypeError("Authenticated candidate request has no canonical guest input")
+    throw new TypeError(
+      "Authenticated candidate request has no canonical guest input",
+    )
   }
   return admitted.canonicalBytes
 }
@@ -244,12 +274,35 @@ const guestRequestBytes = (
 const wasmtimeObservation = (
   result: SpawnSyncReturns<Buffer>,
   outputBytes: number,
+  stderrBytes: number,
 ): WasmWasiGuestObservationV117 => {
   const stdout = result.stdout ?? Buffer.alloc(0)
   const stderr = result.stderr ?? Buffer.alloc(0)
   const stderrText = stderr.toString("utf8").toLowerCase()
+  if (stdout.byteLength > outputBytes) {
+    return {
+      kind: "failed",
+      status: result.status,
+      signal: result.signal,
+      stdout,
+      stderr,
+      attribution: "proven_output_exhaustion",
+    }
+  }
+  if (stderr.byteLength > stderrBytes) {
+    return {
+      kind: "failed",
+      status: result.status,
+      signal: result.signal,
+      stdout,
+      stderr,
+      attribution:
+        result.status === 0 && result.error === undefined
+          ? "proven_output_exhaustion"
+          : "transport_crash",
+    }
+  }
   if (
-    stdout.byteLength > outputBytes ||
     result.error?.message.includes("maxBuffer") ||
     result.error?.message.includes("ENOBUFS")
   ) {
@@ -259,10 +312,7 @@ const wasmtimeObservation = (
       signal: result.signal,
       stdout,
       stderr,
-      attribution:
-        stdout.byteLength > outputBytes
-          ? "proven_output_exhaustion"
-          : "transport_crash",
+      attribution: "transport_crash",
     }
   }
   if (result.error !== undefined) {
@@ -296,7 +346,7 @@ const wasmtimeObservation = (
       : stderrText.includes("memory out of bounds") ||
           stderrText.includes("failed to grow memory")
         ? "proven_memory_exhaustion"
-      : result.signal !== null
+        : result.signal !== null
           ? "ambiguous_trap"
           : stderrText.includes("wasm 'unreachable' instruction executed") ||
               stderrText.includes("integer divide by zero") ||
@@ -353,10 +403,15 @@ const executeCandidateGuest = (
       shell: false,
       timeout: input.request.budget.wallMilliseconds + 250,
       maxBuffer:
-        input.request.budget.outputBytes + input.settings.stderrBytes,
+        Math.max(input.request.budget.outputBytes, input.settings.stderrBytes) +
+        1,
     },
   )
-  return wasmtimeObservation(result, input.request.budget.outputBytes)
+  return wasmtimeObservation(
+    result,
+    input.request.budget.outputBytes,
+    input.settings.stderrBytes,
+  )
 }
 
 const eventForObservation = (
@@ -387,18 +442,28 @@ const outcomeForObservation = (
   request: AuthenticatedRuntimeInvocationRequestV117,
   observation: WasmWasiGuestObservationV117,
 ): RuntimeInvocationResultV117 => {
+  if (
+    observation.kind === "completed" &&
+    (observation.stdout.byteLength > request.budget.outputBytes ||
+      observation.stderr.byteLength >
+        WASM_WASI_V1_17_EXECUTION_SETTINGS.stderrBytes)
+  ) {
+    return candidatePlayerViolation(request, "OVERSIZED_OUTPUT", [
+      "WASM_WASI_HOST_OUTER_AUTHORITY",
+      "WASM_WASI_PROVEN_OUTPUT_EXHAUSTION",
+    ])
+  }
   if (observation.kind === "failed") {
     if (observation.attribution === "proven_output_exhaustion") {
-      return candidatePlayerViolation(
-        request,
-        "OVERSIZED_OUTPUT",
-        [
-          "WASM_WASI_HOST_OUTER_AUTHORITY",
-          "WASM_WASI_PROVEN_OUTPUT_EXHAUSTION",
-        ],
-      )
+      return candidatePlayerViolation(request, "OVERSIZED_OUTPUT", [
+        "WASM_WASI_HOST_OUTER_AUTHORITY",
+        "WASM_WASI_PROVEN_OUTPUT_EXHAUSTION",
+      ])
     }
-    return candidateOutcome(eventForObservation(observation.attribution), request)
+    return candidateOutcome(
+      eventForObservation(observation.attribution),
+      request,
+    )
   }
   const admitted = admitCanonicalJsonBytes(observation.stdout, {
     profile: "strategy-payload",
@@ -425,16 +490,11 @@ const outcomeForObservation = (
   ) {
     return candidateOutcome("payload_schema_invalid", request)
   }
-  return candidateOutcome(
-    "success",
-    request,
-    parsed.data as JsonValue,
-    [
-      "WASM_WASI_HOST_OUTER_AUTHORITY",
-      "RAW_PAYLOAD_SCANNED",
-      "PAYLOAD_CANONICAL",
-    ],
-  )
+  return candidateOutcome("success", request, parsed.data as JsonValue, [
+    "WASM_WASI_HOST_OUTER_AUTHORITY",
+    "RAW_PAYLOAD_SCANNED",
+    "PAYLOAD_CANONICAL",
+  ])
 }
 
 export const runWasmWasiStrategyMethodV117Sync = (
@@ -446,18 +506,35 @@ export const runWasmWasiStrategyMethodV117Sync = (
     input.signingIdentity,
   )
   if (admittedRequest.kind !== "success") {
-    throw new TypeError("WASM/WASI candidate adapter requires an authenticated request")
+    throw new TypeError(
+      "WASM/WASI candidate adapter requires an authenticated request",
+    )
   }
-  const artifact = candidateArtifactBytesFor(input.revision, input.request)
+  let artifact: ReturnType<typeof candidateArtifactBytesFor>
+  try {
+    artifact = candidateArtifactBytesFor(
+      input.revision,
+      input.request,
+      input.hostOperations?.validateImports ?? validateWasmWasiImports,
+    )
+  } catch {
+    return authenticateCandidateOutcome(
+      input.request,
+      candidateOutcome("adapter_crash", input.request, null, [
+        "WASM_WASI_ARTIFACT_PREFLIGHT_CRASH",
+      ]),
+      input.signingIdentity,
+    )
+  }
   if (!artifact.ok) {
     const outcome =
       artifact.safeCode === "WASM_WASI_FORBIDDEN_IMPORT"
-        ? candidatePlayerViolation(
-            input.request,
-            "FORBIDDEN_CAPABILITY",
-            [artifact.safeCode],
-          )
-        : candidateOutcome(artifact.event, input.request, null, [artifact.safeCode])
+        ? candidatePlayerViolation(input.request, "FORBIDDEN_CAPABILITY", [
+            artifact.safeCode,
+          ])
+        : candidateOutcome(artifact.event, input.request, null, [
+            artifact.safeCode,
+          ])
     return authenticateCandidateOutcome(
       input.request,
       outcome,
@@ -467,8 +544,8 @@ export const runWasmWasiStrategyMethodV117Sync = (
   let observedIdentity: WasmWasiCandidateIdentityV117
   try {
     observedIdentity = collectWasmWasiCandidateIdentityV117(
-      input.revision.runtime.language.id as "rust" | "zig",
-      input.revision.metadata.compiledArtifact!,
+      input.revision.runtime.language.id,
+      input.revision.metadata.compiledArtifact,
     )
   } catch {
     return authenticateCandidateOutcome(
@@ -488,7 +565,8 @@ export const runWasmWasiStrategyMethodV117Sync = (
   if (
     !expectedIdentity.ok ||
     !actualIdentity.ok ||
-    input.executionIdentity.identitySha256 !== observedIdentity.identitySha256 ||
+    input.executionIdentity.identitySha256 !==
+      observedIdentity.identitySha256 ||
     !Buffer.from(expectedIdentity.canonicalBytes).equals(
       Buffer.from(actualIdentity.canonicalBytes),
     )
@@ -501,15 +579,15 @@ export const runWasmWasiStrategyMethodV117Sync = (
       input.signingIdentity,
     )
   }
-  const compiledArtifact = input.revision.metadata.compiledArtifact!
+  const compiledArtifact = input.revision.metadata.compiledArtifact
   const expectedCompiler =
     input.revision.runtime.language.id === "rust" ? "rustc" : "zig"
   const expectedCommandSummary =
     input.revision.runtime.language.id === "rust"
       ? "rustc --target wasm32-wasip1 -O strategy.rs -o strategy.wasm"
       : "zig build-exe strategy.zig -target wasm32-wasi -O ReleaseSmall --cache-dir <temp> --global-cache-dir <temp> -femit-bin=strategy.wasm"
-  const observedCompilerVersion = observedIdentity.compiler.reportedVersion
-    .split("\n", 1)[0]
+  const observedCompilerVersion =
+    observedIdentity.compiler.reportedVersion.split("\n", 1)[0]
   if (
     compiledArtifact.toolchain.compiler !== expectedCompiler ||
     compiledArtifact.toolchain.compilerVersion !== observedCompilerVersion ||
@@ -525,9 +603,13 @@ export const runWasmWasiStrategyMethodV117Sync = (
       input.signingIdentity,
     )
   }
-  const dir = mkdtempSync(join(tmpdir(), "cowards-wasmtime-v1-17-"))
-  const artifactPath = join(dir, "strategy.wasm")
+  let dir: string | null = null
+  let outcome: RuntimeInvocationResultV117
   try {
+    const makeTempDirectory =
+      input.hostOperations?.makeTempDirectory ?? mkdtempSync
+    dir = makeTempDirectory(join(tmpdir(), "cowards-wasmtime-v1-17-"))
+    const artifactPath = join(dir, "strategy.wasm")
     writeFileSync(artifactPath, artifact.bytes)
     const executeGuest = input.executeGuest ?? executeCandidateGuest
     const observation = executeGuest({
@@ -536,21 +618,24 @@ export const runWasmWasiStrategyMethodV117Sync = (
       settings: WASM_WASI_V1_17_EXECUTION_SETTINGS,
       request: input.request,
     })
-    const outcome = outcomeForObservation(input.request, observation)
-    return authenticateCandidateOutcome(
-      input.request,
-      outcome,
-      input.signingIdentity,
-    )
+    outcome = outcomeForObservation(input.request, observation)
   } catch {
-    return authenticateCandidateOutcome(
-      input.request,
-      candidateOutcome("adapter_crash", input.request),
-      input.signingIdentity,
-    )
-  } finally {
-    rmSync(dir, { recursive: true, force: true })
+    outcome = candidateOutcome("adapter_crash", input.request)
   }
+  if (dir !== null) {
+    try {
+      rmSync(dir, { recursive: true, force: true })
+    } catch {
+      outcome = candidateOutcome("adapter_crash", input.request, null, [
+        "WASM_WASI_TEMP_CLEANUP_CRASH",
+      ])
+    }
+  }
+  return authenticateCandidateOutcome(
+    input.request,
+    outcome,
+    input.signingIdentity,
+  )
 }
 
 const artifactBytesFor = (

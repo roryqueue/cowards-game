@@ -12,6 +12,9 @@ import {
   validateZigStrategySource,
   zigReadinessEvidence,
   collectWasmWasiCandidateIdentityV117,
+  buildRustWasmCandidateRevisionV117,
+  buildZigWasmCandidateRevisionV117,
+  type WasmWasiCandidateRevisionV117,
 } from "../packages/runtime-wasm-wasi/src/validation.ts"
 import {
   createWasmWasiRuntimeFromRevision,
@@ -613,7 +616,7 @@ const candidateSigningIdentity: RuntimeInvocationSigningIdentityV117 = {
   secret: "fixture-only-wasm-wasi-v1.17-secret",
 }
 
-const candidateRequestFor = (revision: StrategyRevision) => {
+const candidateRequestFor = (revision: WasmWasiCandidateRevisionV117) => {
   const artifact = revision.metadata.compiledArtifact
   if (artifact === undefined) {
     throw new Error("Candidate WASM fixture requires an immutable artifact")
@@ -655,8 +658,7 @@ const candidateRequestFor = (revision: StrategyRevision) => {
           memoryBytes: 67_108_864,
           accounting:
             "signed-monotonic-per-invocation-deltas-plus-cumulative-total",
-          overflow:
-            "stop-before-next-invocation-and-classify-by-proven-cause",
+          overflow: "stop-before-next-invocation-and-classify-by-proven-cause",
         },
       },
       input: {
@@ -688,8 +690,8 @@ const candidateRequestFor = (revision: StrategyRevision) => {
 
 const buildCandidateEnvelopeFixture = () => {
   const revisions = [
-    buildRustStrategyRevision({ source: candidateRustSource }),
-    buildZigStrategyRevision({ source: candidateZigSource }),
+    buildRustWasmCandidateRevisionV117(candidateRustSource),
+    buildZigWasmCandidateRevisionV117(candidateZigSource),
   ]
   const guestRequestFields = ["input", "method", "runtimeAbi"] as const
   const guestPayloadFields = {

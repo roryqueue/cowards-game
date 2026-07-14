@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest"
-import { readFileSync } from "node:fs"
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import { createHash } from "node:crypto"
+import { Buffer } from "node:buffer"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
+import { pathToFileURL } from "node:url"
 import {
   createAuthenticatedRuntimeInvocationRequestV117,
   serializeRuntimeInvocationResponseV117,
@@ -13,11 +17,15 @@ import {
   compileZigWasmArtifact,
   buildRustStrategyRevision,
   compileRustWasmArtifact,
+  buildRustWasmCandidateRevisionV117,
+  compileRustWasmArtifactV117,
+  compileZigWasmArtifactV117,
   validateRustStrategySource,
   validateZigStrategySource,
   zigReadinessEvidence,
   collectWasmWasiCandidateIdentityV117,
   resolveWasmWasiAdapterBuildFilesV117,
+  type WasmWasiCandidateRevisionV117,
 } from "./validation.js"
 import { wasmWasiRuntimeMetadataV117 } from "./metadata.js"
 import {
@@ -85,8 +93,33 @@ export fn _start() void {
 }
 `
 
+const candidateRustSource = `
+fn main() {
+    print!("{}", r#"{"action":{"type":"TURN_TO_STONE"},"soldierMemory":null}"#);
+}
+`
+
+const candidateZigSource = `
+const Ciovec = extern struct { buf: [*]const u8, buf_len: usize };
+
+extern "wasi_snapshot_preview1" fn fd_write(u32, *const Ciovec, usize, *usize) u16;
+
+fn writeAll(bytes: []const u8) void {
+    var written: usize = 0;
+    var iov = Ciovec{ .buf = bytes.ptr, .buf_len = bytes.len };
+    _ = fd_write(1, &iov, 1, &written);
+}
+
+export fn _start() void {
+    writeAll("{\\"action\\":{\\"type\\":\\"TURN_TO_STONE\\"},\\"soldierMemory\\":null}");
+}
+`
+
 const rustCompileProbe = compileRustWasmArtifact(rustSource)
 const zigCompileProbe = compileZigWasmArtifact(zigSource)
+const candidateRustCompileProbe =
+  compileRustWasmArtifactV117(candidateRustSource)
+const candidateZigCompileProbe = compileZigWasmArtifactV117(candidateZigSource)
 
 const candidateSigningIdentity: RuntimeInvocationSigningIdentityV117 = {
   keyId: "fixture-only:wasm-wasi-adapter:v1.17",
@@ -94,7 +127,10 @@ const candidateSigningIdentity: RuntimeInvocationSigningIdentityV117 = {
 }
 
 const candidateRequest = (
-  revision: ReturnType<typeof buildRustStrategyRevision>,
+  revision: Pick<
+    WasmWasiCandidateRevisionV117,
+    "id" | "sourceHash" | "metadata"
+  >,
   artifactSha256 = revision.metadata.compiledArtifact?.hash,
   outputBytes = 262_144,
 ): AuthenticatedRuntimeInvocationRequestV117 => {
@@ -138,8 +174,7 @@ const candidateRequest = (
           memoryBytes: 67_108_864,
           accounting:
             "signed-monotonic-per-invocation-deltas-plus-cumulative-total",
-          overflow:
-            "stop-before-next-invocation-and-classify-by-proven-cause",
+          overflow: "stop-before-next-invocation-and-classify-by-proven-cause",
         },
       },
       input: {
@@ -186,14 +221,14 @@ const candidateIdentityCache = new Map<
 >()
 
 const candidateExecutionIdentity = (
-  revision: ReturnType<typeof buildRustStrategyRevision>,
+  revision: WasmWasiCandidateRevisionV117,
 ) => {
   const artifact = revision.metadata.compiledArtifact
   if (artifact === undefined) throw new Error("Candidate artifact is missing")
   const cached = candidateIdentityCache.get(artifact.hash)
   if (cached !== undefined) return cached
   const identity = collectWasmWasiCandidateIdentityV117(
-    revision.runtime.language.id as "rust" | "zig",
+    revision.runtime.language.id,
     artifact,
   )
   candidateIdentityCache.set(artifact.hash, identity)
@@ -202,7 +237,7 @@ const candidateExecutionIdentity = (
 
 const runCandidateObservation = (
   request: AuthenticatedRuntimeInvocationRequestV117,
-  revision: ReturnType<typeof buildRustStrategyRevision>,
+  revision: WasmWasiCandidateRevisionV117,
   observation: WasmWasiGuestObservationV117,
 ) =>
   runWasmWasiStrategyMethodV117Sync({
@@ -222,10 +257,16 @@ const runCandidateObservation = (
   })
 
 describe("WASM/WASI runtime v1.17 candidate host authority", () => {
-  const revision = buildRustStrategyRevision({ source: rustSource })
+  const revision = buildRustWasmCandidateRevisionV117(candidateRustSource)
 
   it("requires the available Rust compiler instead of skipping candidate proof", () => {
     expect(revision.metadata.compiledArtifact).toBeDefined()
+    expect(revision.metadata.compiledArtifact.abiVersion).toBe(
+      "strategy-runtime-abi-v1.17",
+    )
+    expect(revision.metadata.compiledArtifact.abiEnvelope).toBe(
+      "stdin-canonical-request-stdout-raw-canonical-payload",
+    )
   })
 
   it("treats guest stdout as raw Strategy payload and host-authenticates the outer response", () => {
@@ -269,26 +310,36 @@ describe("WASM/WASI runtime v1.17 candidate host authority", () => {
       stdout:
         '{"action":{"type":"TURN_TO_STONE"},"soldierMemory":null,"soldierMemory":{}}',
     },
-    { label: "non-canonical payload", stdout: '{"soldierMemory":null,"action":{"type":"TURN_TO_STONE"}}' },
-    { label: "invalid UTF-8 payload", stdout: new Uint8Array([0x7b, 0xff, 0x7d]) },
-  ])("classifies $label as one authenticated player violation", ({ stdout }) => {
-    const request = candidateRequest(revision)
-    const observation = completedObservation("")
-    observation.stdout = typeof stdout === "string" ? new TextEncoder().encode(stdout) : stdout
-    const response = runCandidateObservation(request, revision, observation)
+    {
+      label: "non-canonical payload",
+      stdout: '{"soldierMemory":null,"action":{"type":"TURN_TO_STONE"}}',
+    },
+    {
+      label: "invalid UTF-8 payload",
+      stdout: new Uint8Array([0x7b, 0xff, 0x7d]),
+    },
+  ])(
+    "classifies $label as one authenticated player violation",
+    ({ stdout }) => {
+      const request = candidateRequest(revision)
+      const observation = completedObservation("")
+      observation.stdout =
+        typeof stdout === "string" ? new TextEncoder().encode(stdout) : stdout
+      const response = runCandidateObservation(request, revision, observation)
 
-    expect(response.outcome).toEqual(
-      expect.objectContaining({
-        kind: "player_violation",
-        violation: {
-          code: "INVALID_OUTPUT",
-          publicMessage: "Strategy returned an invalid payload.",
-        },
-      }),
-    )
-    expect(response.payloadBinding).toBeNull()
-    expect("failure" in response.outcome).toBe(false)
-  })
+      expect(response.outcome).toEqual(
+        expect.objectContaining({
+          kind: "player_violation",
+          violation: {
+            code: "INVALID_OUTPUT",
+            publicMessage: "Strategy returned an invalid payload.",
+          },
+        }),
+      )
+      expect(response.payloadBinding).toBeNull()
+      expect("failure" in response.outcome).toBe(false)
+    },
+  )
 
   it.each([
     ["proven_strategy_exception", "player_violation", "THROWN_EXCEPTION"],
@@ -380,9 +431,7 @@ describe("WASM/WASI runtime v1.17 candidate host authority", () => {
         retryable: false,
       },
       trace: {
-        safeCodes: [
-          "WASM_WASI_STALE_RUNTIME_TOOLCHAIN_OR_SETTINGS_IDENTITY",
-        ],
+        safeCodes: ["WASM_WASI_STALE_RUNTIME_TOOLCHAIN_OR_SETTINGS_IDENTITY"],
       },
     })
   })
@@ -510,16 +559,22 @@ describe("WASM/WASI runtime v1.17 candidate host authority", () => {
   })
 
   it("rejects a legacy v1.14 artifact instead of relabeling it as v1.17", () => {
-    const request = candidateRequest(revision)
-    const response = runCandidateObservation(
-      request,
-      revision,
-      completedObservation(
-        '{"action":{"type":"TURN_TO_STONE"},"soldierMemory":null}',
-      ),
+    const legacyRevision = buildRustStrategyRevision({ source: rustSource })
+    const request = candidateRequest(
+      legacyRevision as unknown as WasmWasiCandidateRevisionV117,
     )
+    const response = runWasmWasiStrategyMethodV117Sync({
+      request,
+      revision: legacyRevision as unknown as WasmWasiCandidateRevisionV117,
+      signingIdentity: candidateSigningIdentity,
+      executionIdentity: candidateExecutionIdentity(revision),
+      executeGuest: () =>
+        completedObservation(
+          '{"action":{"type":"TURN_TO_STONE"},"soldierMemory":null}',
+        ),
+    })
 
-    expect(revision.metadata.compiledArtifact?.abiVersion).toBe(
+    expect(legacyRevision.metadata.compiledArtifact?.abiVersion).toBe(
       "strategy-runtime-abi-v1.14",
     )
     expect(response.outcome).toMatchObject({
@@ -587,29 +642,44 @@ describe("WASM/WASI runtime v1.17 candidate host authority", () => {
 
 describe("WASM/WASI runtime v1.17 exact Rust/Zig identity", () => {
   it("resolves emitted JavaScript adapter-build inputs for built imports", () => {
-    const files = resolveWasmWasiAdapterBuildFilesV117(
-      new URL("../dist/validation.js", import.meta.url).href,
-    )
+    const directory = mkdtempSync(join(tmpdir(), "cowards-wasm-built-inputs-"))
+    try {
+      for (const name of [
+        "metadata.js",
+        "validation.js",
+        "wasm-wasi-subprocess-adapter.js",
+      ]) {
+        writeFileSync(join(directory, name), "export {}\n", "utf8")
+      }
+      const files = resolveWasmWasiAdapterBuildFilesV117(
+        pathToFileURL(join(directory, "validation.js")).href,
+      )
 
-    expect(files).toHaveLength(3)
-    expect(files.every((file) => file.endsWith(".js"))).toBe(true)
-    expect(files.every((file) => !file.endsWith(".ts"))).toBe(true)
+      expect(files).toHaveLength(3)
+      expect(files.every((file) => file.endsWith(".js"))).toBe(true)
+      expect(files.every((file) => !file.endsWith(".ts"))).toBe(true)
+    } finally {
+      rmSync(directory, { recursive: true, force: true })
+    }
   })
 
   it("binds resolved compiler runtime target flags adapter stdlib and settings", () => {
-    expect(rustCompileProbe.artifact).toBeDefined()
-    expect(zigCompileProbe.artifact).toBeDefined()
-    if (rustCompileProbe.artifact === undefined || zigCompileProbe.artifact === undefined) {
+    expect(candidateRustCompileProbe.artifact).toBeDefined()
+    expect(candidateZigCompileProbe.artifact).toBeDefined()
+    if (
+      candidateRustCompileProbe.artifact === undefined ||
+      candidateZigCompileProbe.artifact === undefined
+    ) {
       throw new Error("Rust and Zig candidate toolchains are required")
     }
 
     const rustIdentity = collectWasmWasiCandidateIdentityV117(
       "rust",
-      rustCompileProbe.artifact,
+      candidateRustCompileProbe.artifact,
     )
     const zigIdentity = collectWasmWasiCandidateIdentityV117(
       "zig",
-      zigCompileProbe.artifact,
+      candidateZigCompileProbe.artifact,
     )
 
     for (const identity of [rustIdentity, zigIdentity]) {
@@ -653,7 +723,7 @@ describe("WASM/WASI runtime v1.17 exact Rust/Zig identity", () => {
     expect(rustIdentity.compiler.targetTriple).toBe("wasm32-wasip1")
     expect(zigIdentity.compiler.targetTriple).toBe("wasm32-wasi")
     expect(rustIdentity.identitySha256).not.toBe(zigIdentity.identitySha256)
-  })
+  }, 15_000)
 
   it("keeps candidate metadata inactive and counted authority unavailable", () => {
     for (const language of ["rust", "zig"] as const) {
