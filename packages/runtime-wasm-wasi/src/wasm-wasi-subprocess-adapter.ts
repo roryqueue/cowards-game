@@ -96,16 +96,22 @@ export interface WasmWasiGuestExecutionInputV117 {
   request: AuthenticatedRuntimeInvocationRequestV117
 }
 
+export interface WasmWasiGuestExecutionResultV117 {
+  observation: WasmWasiGuestObservationV117
+  executionReceiptEvidence?:
+    | RuntimeInvocationExecutionReceiptEvidenceV117
+    | undefined
+}
+
 export interface WasmWasiStrategyRequestV117 {
   revision: WasmWasiCandidateRevisionV117
   request: AuthenticatedRuntimeInvocationRequestV117
   signingIdentity: RuntimeInvocationSigningIdentityV117
   executionIdentity: WasmWasiCandidateIdentityV117
-  executionReceiptEvidence?:
-    | RuntimeInvocationExecutionReceiptEvidenceV117
-    | undefined
   executeGuest?:
-    | ((input: WasmWasiGuestExecutionInputV117) => WasmWasiGuestObservationV117)
+    | ((
+        input: WasmWasiGuestExecutionInputV117,
+      ) => WasmWasiGuestExecutionResultV117)
     | undefined
   hostOperations?:
     | {
@@ -181,6 +187,7 @@ const authenticateCandidateOutcome = (
   outcome: RuntimeInvocationResultV117,
   signingIdentity: RuntimeInvocationSigningIdentityV117,
   evidence?: RuntimeInvocationExecutionReceiptEvidenceV117 | undefined,
+  observation?: WasmWasiGuestObservationV117 | undefined,
 ): AuthenticatedRuntimeInvocationResponseV117 => {
   const unavailableEvidence = {
     attribution: "ambiguous" as const,
@@ -206,12 +213,14 @@ const authenticateCandidateOutcome = (
     ]
     return createAuthenticatedRuntimeInvocationResponseV117(
       request,
-      candidateOutcome(
-        "strategy_exhaustion_ambiguous",
-        request,
-        null,
-        safeCodes,
-      ),
+      observation === undefined && outcome.kind === "system_failure"
+        ? outcome
+        : candidateOutcome(
+            "strategy_exhaustion_ambiguous",
+            request,
+            null,
+            safeCodes,
+          ),
       createRuntimeInvocationExecutionReceiptV117(
         request,
         unavailableEvidence,
@@ -219,7 +228,7 @@ const authenticateCandidateOutcome = (
       signingIdentity,
     )
   }
-  if (evidence === undefined) return failClosed()
+  if (evidence === undefined || observation === undefined) return failClosed()
   try {
     const complete =
       evidence.attribution !== "ambiguous" &&
@@ -232,6 +241,38 @@ const authenticateCandidateOutcome = (
       evidence.cancellation.status === "verified" &&
       evidence.accountingEvidence.status === "verified"
     if (!complete) return failClosed()
+    const expectedAttribution =
+      observation.stderr.byteLength >
+        WASM_WASI_V1_17_EXECUTION_SETTINGS.stderrBytes ||
+      observation.attribution === "host_crash" ||
+      observation.attribution === "transport_crash"
+        ? "host"
+        : observation.attribution === "ambiguous_trap" ||
+            observation.attribution === "accounting_unavailable" ||
+            (observation.attribution === "proven_strategy_exception" &&
+              observation.provenance !==
+                "structured_host_strategy_exception") ||
+            (observation.attribution === "proven_fuel_exhaustion" &&
+              observation.provenance !== "structured_host_fuel_meter") ||
+            (observation.attribution === "proven_memory_exhaustion" &&
+              observation.provenance !== "structured_host_memory_meter")
+          ? "ambiguous"
+          : "proven_strategy"
+    const directlyObservedCounters = {
+      payloadBytes: observation.stdout.byteLength,
+      stdoutBytes: observation.stdout.byteLength,
+      stderrBytes: observation.stderr.byteLength,
+    } as const
+    const evidenceMatchesObservation =
+      evidence.attribution === expectedAttribution &&
+      Object.entries(directlyObservedCounters).every(([name, delta]) => {
+        const counter =
+          evidence.counters[
+            name as keyof typeof directlyObservedCounters
+          ]
+        return counter.status === "measured" && counter.delta === delta
+      })
+    if (!evidenceMatchesObservation) return failClosed()
     return createAuthenticatedRuntimeInvocationResponseV117(
       request,
       outcome,
@@ -656,7 +697,6 @@ export const runWasmWasiStrategyMethodV117Sync = (
         "WASM_WASI_ARTIFACT_PREFLIGHT_CRASH",
       ]),
       input.signingIdentity,
-      input.executionReceiptEvidence,
     )
   }
   if (!artifact.ok) {
@@ -672,7 +712,6 @@ export const runWasmWasiStrategyMethodV117Sync = (
       input.request,
       outcome,
       input.signingIdentity,
-      input.executionReceiptEvidence,
     )
   }
   let observedIdentity: WasmWasiCandidateIdentityV117
@@ -688,7 +727,6 @@ export const runWasmWasiStrategyMethodV117Sync = (
         "WASM_WASI_EXECUTION_IDENTITY_UNAVAILABLE",
       ]),
       input.signingIdentity,
-      input.executionReceiptEvidence,
     )
   }
   const expectedIdentity = admitCanonicalJsonValue(input.executionIdentity, {
@@ -712,7 +750,6 @@ export const runWasmWasiStrategyMethodV117Sync = (
         "WASM_WASI_STALE_RUNTIME_TOOLCHAIN_OR_SETTINGS_IDENTITY",
       ]),
       input.signingIdentity,
-      input.executionReceiptEvidence,
     )
   }
   const compiledArtifact = input.revision.metadata.compiledArtifact
@@ -737,27 +774,32 @@ export const runWasmWasiStrategyMethodV117Sync = (
         "WASM_WASI_STALE_ARTIFACT_TOOLCHAIN_IDENTITY",
       ]),
       input.signingIdentity,
-      input.executionReceiptEvidence,
     )
   }
   let dir: string | null = null
   let outcome: RuntimeInvocationResultV117
+  let executionResult: WasmWasiGuestExecutionResultV117 | undefined
   try {
     const makeTempDirectory =
       input.hostOperations?.makeTempDirectory ?? mkdtempSync
     dir = makeTempDirectory(join(tmpdir(), "cowards-wasmtime-v1-17-"))
     const artifactPath = join(dir, "strategy.wasm")
     writeFileSync(artifactPath, artifact.bytes)
-    const executeGuest = input.executeGuest ?? executeCandidateGuest
-    const observation = executeGuest({
+    const executeGuest =
+      input.executeGuest ??
+      ((guestInput: WasmWasiGuestExecutionInputV117) => ({
+        observation: executeCandidateGuest(guestInput),
+      }))
+    executionResult = executeGuest({
       artifactPath,
       stdin: guestRequestBytes(input.request),
       settings: WASM_WASI_V1_17_EXECUTION_SETTINGS,
       request: input.request,
     })
-    outcome = outcomeForObservation(input.request, observation)
+    outcome = outcomeForObservation(input.request, executionResult.observation)
   } catch {
     outcome = candidateOutcome("adapter_crash", input.request)
+    executionResult = undefined
   }
   if (dir !== null) {
     try {
@@ -766,13 +808,15 @@ export const runWasmWasiStrategyMethodV117Sync = (
       outcome = candidateOutcome("adapter_crash", input.request, null, [
         "WASM_WASI_TEMP_CLEANUP_CRASH",
       ])
+      executionResult = undefined
     }
   }
   return authenticateCandidateOutcome(
     input.request,
     outcome,
     input.signingIdentity,
-    input.executionReceiptEvidence,
+    executionResult?.executionReceiptEvidence,
+    executionResult?.observation,
   )
 }
 

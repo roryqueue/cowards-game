@@ -362,10 +362,6 @@ const runCandidateObservation = (
     revision,
     signingIdentity: candidateSigningIdentity,
     executionIdentity: candidateExecutionIdentity(revision),
-    executionReceiptEvidence: completeExecutionEvidenceFor(
-      request,
-      observation,
-    ),
     executeGuest: ({ stdin, settings }) => {
       expect(new TextDecoder().decode(stdin)).toBe(
         '{"input":' +
@@ -373,7 +369,13 @@ const runCandidateObservation = (
           ',"method":"soldierBrain","runtimeAbi":"strategy-runtime-abi-v1.17"}',
       )
       expect(settings).toEqual(WASM_WASI_V1_17_EXECUTION_SETTINGS)
-      return observation
+      return {
+        observation,
+        executionReceiptEvidence: completeExecutionEvidenceFor(
+          request,
+          observation,
+        ),
+      }
     },
   })
 
@@ -434,10 +436,11 @@ describe("WASM/WASI runtime v1.17 candidate host authority", () => {
       revision,
       signingIdentity: candidateSigningIdentity,
       executionIdentity: candidateExecutionIdentity(revision),
-      executeGuest: () =>
-        completedObservation(
+      executeGuest: () => ({
+        observation: completedObservation(
           '{"action":{"type":"TURN_TO_STONE"},"soldierMemory":null}',
         ),
+      }),
     })
     const verified = verifyRuntimeInvocationResponseV117(
       serializeRuntimeInvocationResponseV117(response),
@@ -509,7 +512,7 @@ describe("WASM/WASI runtime v1.17 candidate host authority", () => {
         revision,
         signingIdentity: candidateSigningIdentity,
         executionIdentity: candidateExecutionIdentity(revision),
-        executeGuest: () => observation,
+        executeGuest: () => ({ observation }),
       })
 
       expect(response.outcome).toMatchObject({
@@ -535,14 +538,16 @@ describe("WASM/WASI runtime v1.17 candidate host authority", () => {
       revision,
       signingIdentity: candidateSigningIdentity,
       executionIdentity: candidateExecutionIdentity(revision),
-      executionReceiptEvidence: {
-        ...completeEvidence,
-        counters: {
-          ...completeEvidence.counters,
-          computeFuel: { status: "unavailable" },
+      executeGuest: () => ({
+        observation,
+        executionReceiptEvidence: {
+          ...completeEvidence,
+          counters: {
+            ...completeEvidence.counters,
+            computeFuel: { status: "unavailable" },
+          },
         },
-      },
-      executeGuest: () => observation,
+      }),
     })
 
     expect(response.outcome).toMatchObject({
@@ -564,10 +569,12 @@ describe("WASM/WASI runtime v1.17 candidate host authority", () => {
         revision,
         signingIdentity: candidateSigningIdentity,
         executionIdentity: candidateExecutionIdentity(revision),
-        executionReceiptEvidence: {
-          attribution: "proven_strategy",
-        } as RuntimeInvocationExecutionReceiptEvidenceV117,
-        executeGuest: () => observation,
+        executeGuest: () => ({
+          observation,
+          executionReceiptEvidence: {
+            attribution: "proven_strategy",
+          } as RuntimeInvocationExecutionReceiptEvidenceV117,
+        }),
       })
 
     expect(execute).not.toThrow()
@@ -608,18 +615,20 @@ describe("WASM/WASI runtime v1.17 candidate host authority", () => {
         revision,
         signingIdentity: candidateSigningIdentity,
         executionIdentity: candidateExecutionIdentity(revision),
-        executionReceiptEvidence: {
-          ...evidence,
-          counters: {
-            ...evidence.counters,
-            [counterName]: {
-              ...counter,
-              delta: counter.delta + 1,
-              cumulative: counter.cumulative + 1,
+        executeGuest: () => ({
+          observation,
+          executionReceiptEvidence: {
+            ...evidence,
+            counters: {
+              ...evidence.counters,
+              [counterName]: {
+                ...counter,
+                delta: counter.delta + 1,
+                cumulative: counter.cumulative + 1,
+              },
             },
           },
-        },
-        executeGuest: () => observation,
+        }),
       })
 
       expect(response.outcome).toMatchObject({
@@ -754,16 +763,13 @@ describe("WASM/WASI runtime v1.17 candidate host authority", () => {
       revision,
       signingIdentity: candidateSigningIdentity,
       executionIdentity: candidateExecutionIdentity(revision),
-      executionReceiptEvidence: completeExecutionEvidenceFor(
-        request,
-        undefined,
-        "host",
-      ),
       executeGuest: () => {
         executed = true
-        return completedObservation(
-          '{"action":{"type":"TURN_TO_STONE"},"soldierMemory":null}',
-        )
+        return {
+          observation: completedObservation(
+            '{"action":{"type":"TURN_TO_STONE"},"soldierMemory":null}',
+          ),
+        }
       },
     })
 
@@ -790,16 +796,13 @@ describe("WASM/WASI runtime v1.17 candidate host authority", () => {
         ...identity,
         identitySha256: `sha256:${"0".repeat(64)}`,
       },
-      executionReceiptEvidence: completeExecutionEvidenceFor(
-        request,
-        undefined,
-        "host",
-      ),
       executeGuest: () => {
         executed = true
-        return completedObservation(
-          '{"action":{"type":"TURN_TO_STONE"},"soldierMemory":null}',
-        )
+        return {
+          observation: completedObservation(
+            '{"action":{"type":"TURN_TO_STONE"},"soldierMemory":null}',
+          ),
+        }
       },
     })
 
@@ -841,16 +844,13 @@ describe("WASM/WASI runtime v1.17 candidate host authority", () => {
       revision: staleRevision,
       signingIdentity: candidateSigningIdentity,
       executionIdentity: candidateExecutionIdentity(revision),
-      executionReceiptEvidence: completeExecutionEvidenceFor(
-        request,
-        undefined,
-        "host",
-      ),
       executeGuest: () => {
         executed = true
-        return completedObservation(
-          '{"action":{"type":"TURN_TO_STONE"},"soldierMemory":null}',
-        )
+        return {
+          observation: completedObservation(
+            '{"action":{"type":"TURN_TO_STONE"},"soldierMemory":null}',
+          ),
+        }
       },
     })
 
@@ -869,15 +869,11 @@ describe("WASM/WASI runtime v1.17 candidate host authority", () => {
       revision,
       signingIdentity: candidateSigningIdentity,
       executionIdentity: candidateExecutionIdentity(revision),
-      executionReceiptEvidence: completeExecutionEvidenceFor(
-        request,
-        undefined,
-        "host",
-      ),
-      executeGuest: () =>
-        completedObservation(
+      executeGuest: () => ({
+        observation: completedObservation(
           '{"action":{"type":"TURN_TO_STONE"},"soldierMemory":null}',
         ),
+      }),
     }
     for (const hostOperations of [
       {
@@ -938,11 +934,6 @@ describe("WASM/WASI runtime v1.17 candidate host authority", () => {
         "rust",
         malformedRevision.metadata.compiledArtifact!,
       ),
-      executionReceiptEvidence: completeExecutionEvidenceFor(
-        request,
-        undefined,
-        "host",
-      ),
       executeGuest: () => {
         throw new Error("malformed artifact reached execution")
       },
@@ -988,16 +979,13 @@ describe("WASM/WASI runtime v1.17 candidate host authority", () => {
         "rust",
         oversizedRevision.metadata.compiledArtifact,
       ),
-      executionReceiptEvidence: completeExecutionEvidenceFor(
-        request,
-        undefined,
-        "host",
-      ),
       executeGuest: () => {
         executed = true
-        return completedObservation(
-          '{"action":{"type":"TURN_TO_STONE"},"soldierMemory":null}',
-        )
+        return {
+          observation: completedObservation(
+            '{"action":{"type":"TURN_TO_STONE"},"soldierMemory":null}',
+          ),
+        }
       },
     })
 
@@ -1023,15 +1011,11 @@ describe("WASM/WASI runtime v1.17 candidate host authority", () => {
       revision: legacyCandidateRevision,
       signingIdentity: candidateSigningIdentity,
       executionIdentity: candidateExecutionIdentity(revision),
-      executionReceiptEvidence: completeExecutionEvidenceFor(
-        request,
-        undefined,
-        "host",
-      ),
-      executeGuest: () =>
-        completedObservation(
+      executeGuest: () => ({
+        observation: completedObservation(
           '{"action":{"type":"TURN_TO_STONE"},"soldierMemory":null}',
         ),
+      }),
     })
 
     expect(legacyRevision.metadata.compiledArtifact?.abiVersion).toBe(
@@ -1298,15 +1282,11 @@ describe("WASM/WASI runtime v1.17 exact Rust/Zig identity", () => {
         "rust",
         tamperedRevision.metadata.compiledArtifact,
       ),
-      executionReceiptEvidence: completeExecutionEvidenceFor(
-        request,
-        undefined,
-        "host",
-      ),
-      executeGuest: () =>
-        completedObservation(
+      executeGuest: () => ({
+        observation: completedObservation(
           '{"action":{"type":"TURN_TO_STONE"},"soldierMemory":null}',
         ),
+      }),
     })
 
     expect(response.outcome).toMatchObject({
