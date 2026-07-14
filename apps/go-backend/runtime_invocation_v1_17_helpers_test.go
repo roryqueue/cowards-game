@@ -1,8 +1,13 @@
 package main
 
 import (
+	"bytes"
 	"context"
+	"errors"
+	"os"
+	"strconv"
 	"testing"
+	"time"
 )
 
 func signedRuntimeInvocationResponseV117ForTest(
@@ -115,5 +120,139 @@ func TestPhase258RuntimeInvocationV117WrongBindingAndAmbiguousNeverRetry(t *test
 	})
 	if failure != nil || response == nil || response.Outcome.Kind != "system_failure" || response.Outcome.Failure == nil || response.Outcome.Failure.Retryable || calls != 1 {
 		t.Fatalf("ambiguous attribution retried or changed ownership: response=%+v failure=%+v calls=%d", response, failure, calls)
+	}
+}
+
+func TestPhase258CanonicalRetryPostgres(t *testing.T) {
+	databaseURL := os.Getenv("COWARDS_GO_BACKEND_TEST_DATABASE_URL")
+	if databaseURL == "" {
+		t.Fatal("COWARDS_GO_BACKEND_TEST_DATABASE_URL is required for TestPhase258CanonicalRetryPostgres")
+	}
+	ctx := context.Background()
+	pool := semanticCurrentIsolatedPool(t, ctx, databaseURL)
+	fixture := seedSemanticCurrentAuthority(t, ctx, pool, time.Date(2026, 7, 14, 16, 30, 0, 0, time.UTC))
+	requestBytes := readRuntimeInvocationV117Fixture(t, "runtime-execution-service-request.v1.17.candidate.json")
+	successBytes := readRuntimeInvocationV117Fixture(t, "runtime-execution-service-response.v1.17.candidate.wire.json")
+	identity := runtimeInvocationV117SigningIdentity{KeyID: runtimeInvocationV117FixtureKeyID, Secret: runtimeInvocationV117FixtureSecret}
+	request, failure := verifyRuntimeInvocationRequestV117(requestBytes, identity)
+	if failure != nil {
+		t.Fatal(failure)
+	}
+
+	signedSystem := func(code string, retryable bool) []byte {
+		return signedRuntimeInvocationResponseV117ForTest(t, request, map[string]any{
+			"kind": "system_failure",
+			"failure": map[string]any{
+				"code":          code,
+				"publicMessage": "Runtime system failure.",
+				"retryable":     retryable,
+			},
+			"trace": runtimeInvocationTraceV117ForRequest(request),
+		}, identity)
+	}
+	signedPlayer := func(code string, publicMessage string) []byte {
+		return signedRuntimeInvocationResponseV117ForTest(t, request, map[string]any{
+			"kind": "player_violation",
+			"violation": map[string]any{
+				"code":          code,
+				"publicMessage": publicMessage,
+			},
+			"trace": runtimeInvocationTraceV117ForRequest(request),
+		}, identity)
+	}
+
+	type transportStep struct {
+		payload []byte
+		err     error
+	}
+	type retryCase struct {
+		name            string
+		request         []byte
+		steps           []transportStep
+		expectedCalls   int
+		expectedOutcome string
+		expectedFailure string
+	}
+	cases := []retryCase{
+		{
+			name: "proven timeout is one player-owned attempt", request: requestBytes,
+			steps:         []transportStep{{payload: signedPlayer("TIMEOUT", "Strategy exhausted its invocation budget.")}},
+			expectedCalls: 1, expectedOutcome: "player_violation",
+		},
+		{
+			name: "adapter crash retries from identical bytes", request: requestBytes,
+			steps:         []transportStep{{payload: signedSystem("ADAPTER_CRASH", true)}, {payload: successBytes}},
+			expectedCalls: 2, expectedOutcome: "success",
+		},
+		{
+			name: "transport error retries from identical bytes", request: requestBytes,
+			steps:         []transportStep{{err: errors.New("fixture transport crash")}, {payload: successBytes}},
+			expectedCalls: 2, expectedOutcome: "success",
+		},
+		{
+			name: "malformed truncated envelope retries", request: requestBytes,
+			steps:         []transportStep{{payload: []byte("{")}, {payload: successBytes}},
+			expectedCalls: 2, expectedOutcome: "success",
+		},
+		{
+			name: "unavailable accounting is ambiguous and nonretryable", request: requestBytes,
+			steps:         []transportStep{{payload: signedSystem("AMBIGUOUS_ATTRIBUTION", false)}},
+			expectedCalls: 1, expectedOutcome: "system_failure",
+		},
+		{
+			name: "signed system transport crash retries", request: requestBytes,
+			steps:         []transportStep{{payload: signedSystem("TRANSPORT_CRASH", true)}, {payload: successBytes}},
+			expectedCalls: 2, expectedOutcome: "success",
+		},
+		{
+			name: "invalid output is one player-owned attempt", request: requestBytes,
+			steps:         []transportStep{{payload: signedPlayer("INVALID_OUTPUT", "Strategy returned an invalid payload.")}},
+			expectedCalls: 1, expectedOutcome: "player_violation",
+		},
+	}
+	staleRequest := bytes.Replace(requestBytes, []byte("sha256:dddddddd"), []byte("sha256:eeeeeeee"), 1)
+	if bytes.Equal(staleRequest, requestBytes) {
+		t.Fatal("stale artifact mutation marker missing")
+	}
+	cases = append(cases, retryCase{
+		name: "stale artifact fails before transport", request: staleRequest,
+		expectedCalls: 0, expectedFailure: "OUTER_FRAME_UNAUTHENTICATED",
+	})
+
+	for index, candidate := range cases {
+		candidate := candidate
+		t.Run(candidate.name, func(t *testing.T) {
+			fixture.seedMatch(t, ctx, pool, "canonical-retry-"+strconv.Itoa(index))
+			before := semanticCompletionSnapshot(t, ctx, pool)
+			calls := 0
+			response, failure := executeRuntimeInvocationV117WithRetry(ctx, candidate.request, identity, 3, func(_ context.Context, sent []byte) ([]byte, error) {
+				if calls >= len(candidate.steps) {
+					t.Fatalf("unexpected transport call %d", calls+1)
+				}
+				if !bytes.Equal(sent, requestBytes) {
+					t.Fatalf("transport call %d did not receive exact pinned request bytes", calls+1)
+				}
+				step := candidate.steps[calls]
+				calls++
+				sent[0] ^= 0xff
+				return step.payload, step.err
+			})
+			if calls != candidate.expectedCalls {
+				t.Fatalf("unexpected call count: want=%d got=%d", candidate.expectedCalls, calls)
+			}
+			if candidate.expectedFailure != "" {
+				if failure == nil || failure.Code != candidate.expectedFailure || failure.Retryable {
+					t.Fatalf("unexpected failure: %+v", failure)
+				}
+			} else {
+				if failure != nil || response == nil || response.Outcome.Kind != candidate.expectedOutcome {
+					t.Fatalf("unexpected response/failure: response=%+v failure=%+v", response, failure)
+				}
+			}
+			after := semanticCompletionSnapshot(t, ctx, pool)
+			if !jsonValuesEqual(before, after) {
+				t.Fatalf("runtime outcome mutated canonical gameplay, memory, result, standing, or idempotency state: before=%s after=%s", before, after)
+			}
+		})
 	}
 }
