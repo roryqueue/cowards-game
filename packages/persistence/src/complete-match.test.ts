@@ -1068,7 +1068,12 @@ describePostgres(
           where job_id = $1 and attempt_number = 1`,
         [`${namespace}:job`],
       )
-      const persistenceFaults = [
+      const persistenceFaults: readonly {
+        readonly name: string
+        readonly table: string
+        readonly predicate: string
+        readonly deferred?: boolean
+      }[] = [
         {
           name: "after Chronicle",
           table: "matches",
@@ -1090,7 +1095,7 @@ describePostgres(
           predicate: `new.job_id = '${namespace.replaceAll("'", "''")}:job'`,
           deferred: true,
         },
-      ] as const
+      ]
       for (const [index, fault] of persistenceFaults.entries()) {
         const beforeLateFailure = await snapshotCanonicalRows(pool)
         const functionName = `phase258_completion_fault_${index}`
