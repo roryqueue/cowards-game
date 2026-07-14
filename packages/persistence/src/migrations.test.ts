@@ -6,8 +6,17 @@ import {
 } from "@cowards/spec"
 import { describe, expect, it } from "vitest"
 import { readFile } from "node:fs/promises"
+import { randomUUID } from "node:crypto"
+import { Pool } from "pg"
 import { createDevelopmentSeedData } from "./seed.js"
-import { migrationsDirectory, readMigrationFiles } from "./migrations.js"
+import {
+  migrate,
+  migrationsDirectory,
+  readMigrationFiles,
+} from "./migrations.js"
+
+const databaseUrl = process.env.DATABASE_URL
+const describeDatabase = databaseUrl ? describe : describe.skip
 
 const requiredTables = [
   "users",
@@ -40,10 +49,13 @@ describe("migrations", () => {
     expect(names).toContain("0013_runtime_evidence_authority_publication.sql")
     expect(names).toContain("0014_matchset_authority_install_receipts.sql")
     expect(names).toContain("0018_strategy_revision_source_identity.sql")
+    expect(names).toContain(
+      "0019_strategy_revision_source_identity_hardening.sql",
+    )
     expect(names).toEqual([...names].sort())
   })
 
-  it("defines an all-or-none immutable source identity v2 group without legacy backfill", async () => {
+  it("defines the additive all-or-none source identity v2 group without legacy backfill", async () => {
     const sql = await readFile(
       new URL(
         "0018_strategy_revision_source_identity.sql",
@@ -64,12 +76,42 @@ describe("migrations", () => {
       expect(sql).toContain(column)
     }
     expect(sql).toContain("num_nonnulls")
-    expect(sql).toContain("source_line_endings - 'kind' - 'lf' - 'crlf' - 'cr'")
-    expect(sql).toContain("normalized_source_bytes = octet_length")
-    expect(sql).toContain("source_has_final_newline =")
-    expect(sql).toContain("old.source is distinct from new.source")
+    expect(sql).toContain("strategy_revisions_source_identity_v2_shape")
+    expect(sql).toContain(
+      "old.source_identity_version is not null and old.source is distinct from new.source",
+    )
     expect(sql).toContain("source identity v2 is immutable")
     expect(sql).not.toMatch(
+      /update\s+strategy_revisions\s+set\s+source_identity_version/iu,
+    )
+  })
+
+  it("puts post-release source identity hardening in follow-on migration 0019", async () => {
+    const original = await readFile(
+      new URL(
+        "0018_strategy_revision_source_identity.sql",
+        migrationsDirectory,
+      ),
+      "utf8",
+    )
+    const hardening = await readFile(
+      new URL(
+        "0019_strategy_revision_source_identity_hardening.sql",
+        migrationsDirectory,
+      ),
+      "utf8",
+    )
+    expect(original).toContain(
+      "old.source_identity_version is not null and old.source is distinct from new.source",
+    )
+    expect(original).not.toContain(
+      "source_line_endings - 'kind' - 'lf' - 'crlf' - 'cr'",
+    )
+    expect(hardening).toContain(
+      "source_line_endings - 'kind' - 'lf' - 'crlf' - 'cr'",
+    )
+    expect(hardening).toContain("old.source is distinct from new.source")
+    expect(hardening).not.toMatch(
       /update\s+strategy_revisions\s+set\s+source_identity_version/iu,
     )
   })
@@ -151,6 +193,113 @@ describe("migrations", () => {
       "alter column conformance_certificate_id drop not null",
     )
     expect(sql).toContain("match_set_execution_entrants_purpose_floor")
+  })
+})
+
+describeDatabase("source identity hardening migration upgrade", () => {
+  it("applies 0019 when 0018 is already recorded and hardens legacy rows", async () => {
+    const schema = `phase258_0019_${randomUUID().replaceAll("-", "")}`
+    const pool = new Pool({ connectionString: databaseUrl!, max: 1 })
+    try {
+      await pool.query(`create schema ${schema}`)
+      await pool.query(`set search_path to ${schema}`)
+      await pool.query(`
+        create table strategy_revisions (
+          id text primary key,
+          source text not null,
+          source_identity_version text,
+          original_source_hash text,
+          original_source_bytes integer,
+          normalized_source_hash text,
+          normalized_source_bytes integer,
+          source_normalization_policy text,
+          source_line_endings jsonb,
+          source_has_final_newline boolean
+        );
+        alter table strategy_revisions
+          add constraint strategy_revisions_source_identity_all_or_none
+          check (
+            num_nonnulls(
+              source_identity_version, original_source_hash,
+              original_source_bytes, normalized_source_hash,
+              normalized_source_bytes, source_normalization_policy,
+              source_line_endings, source_has_final_newline
+            ) in (0, 8)
+          ),
+          add constraint strategy_revisions_source_identity_v2_shape
+          check (
+            source_identity_version is null or (
+              source_identity_version = 'strategy-source-identity-v2' and
+              original_source_hash ~ '^[0-9a-f]{64}$' and
+              original_source_bytes = octet_length(source) and
+              normalized_source_hash ~ '^[0-9a-f]{64}$' and
+              normalized_source_bytes >= 0 and
+              source_normalization_policy = 'source-line-endings-lf-v1.17' and
+              jsonb_typeof(source_line_endings) = 'object'
+            )
+          );
+        create function prevent_strategy_revision_source_identity_update()
+        returns trigger language plpgsql as $$
+        begin
+          if old.source_identity_version is distinct from new.source_identity_version or
+             old.original_source_hash is distinct from new.original_source_hash or
+             old.original_source_bytes is distinct from new.original_source_bytes or
+             old.normalized_source_hash is distinct from new.normalized_source_hash or
+             old.normalized_source_bytes is distinct from new.normalized_source_bytes or
+             old.source_normalization_policy is distinct from new.source_normalization_policy or
+             old.source_line_endings is distinct from new.source_line_endings or
+             old.source_has_final_newline is distinct from new.source_has_final_newline or
+             (old.source_identity_version is not null and old.source is distinct from new.source)
+          then
+            raise exception 'source identity v2 is immutable';
+          end if;
+          return new;
+        end;
+        $$;
+        create trigger strategy_revisions_source_identity_immutable
+        before update on strategy_revisions for each row
+        execute function prevent_strategy_revision_source_identity_update();
+        insert into strategy_revisions (id, source) values ('legacy', 'legacy');
+        create table schema_migrations (
+          filename text primary key,
+          applied_at timestamptz not null default now()
+        );
+      `)
+      const files = await readMigrationFiles()
+      for (const file of files) {
+        if (file.name < "0019_strategy_revision_source_identity_hardening.sql") {
+          await pool.query(
+            "insert into schema_migrations (filename) values ($1)",
+            [file.name],
+          )
+        }
+      }
+
+      const result = await migrate(pool)
+      expect(result.applied).toEqual([
+        "0019_strategy_revision_source_identity_hardening.sql",
+      ])
+      await expect(
+        pool.query(
+          "update strategy_revisions set source = 'rewritten' where id = 'legacy'",
+        ),
+      ).rejects.toThrow(/immutable/iu)
+      await expect(
+        pool.query(
+          `insert into strategy_revisions values (
+             'bad', 'a\\nb', 'strategy-source-identity-v2', $1, 4, $2, 4,
+             'source-line-endings-lf-v1.17',
+             '{"kind":"lf","lf":0,"crlf":0,"cr":0,"extra":1}'::jsonb,
+             false
+           )`,
+          ["a".repeat(64), "b".repeat(64)],
+        ),
+      ).rejects.toThrow(/source_identity_v2_shape/iu)
+    } finally {
+      await pool.query("set search_path to public")
+      await pool.query(`drop schema if exists ${schema} cascade`)
+      await pool.end()
+    }
   })
 })
 

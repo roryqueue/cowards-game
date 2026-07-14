@@ -400,6 +400,20 @@ describe("Python subprocess Strategy provider ABI", () => {
     }
   })
 
+  it.each([
+    '{"extra":0,"kind":"strategy_exception"}',
+    '{"kind":"strategy_exception","payloadBase64":"e30="}',
+    '{"kind":"invalid_output","payloadBase64":"e30="}',
+    '{"kind":"payload","payloadBase64":"e30=","private":true}',
+  ])(
+    "rejects mixed or extra host envelope fields as transport failure: %s",
+    (hostEnvelope) => {
+      expect(
+        admitPythonCandidateHostResponseV117(Buffer.from(hostEnvelope)),
+      ).toEqual({ kind: "transport_crash" })
+    },
+  )
+
   it("fails a zero signed wall budget closed without launching the host", () => {
     const revision = buildPythonStrategyRevision({ source: pythonSource })
     const request = candidateRequest(revision, { wallMilliseconds: 0 })
@@ -462,6 +476,62 @@ describe("Python subprocess Strategy provider ABI", () => {
             : response.value.outcome.kind,
         ).toBe(code)
       }
+    }
+  })
+
+  it("bounds real-host canonical output before transport and owns overflow", () => {
+    const source = `def select_activations(input):\n    return {"activationOrders": [], "strategyMemory": "x" * 70000}\n\ndef soldier_brain(input):\n    return {"action": {"type": "TURN_TO_STONE"}, "soldierMemory": None}\n`
+    const revision = buildPythonStrategyRevision({ source })
+    const request = candidateRequest(revision, { outputBytes: 256 })
+    const host = runPythonCandidateHostV117(
+      request,
+      buildPythonSourceIdentityV117(source).normalizedSource,
+    )
+    expect(host.kind).toBe("oversized_output")
+
+    const response = verifyRuntimeInvocationResponseV117(
+      createPythonCandidateInvocationAdapterV117({
+        revision,
+        identity: candidateIdentity,
+      })(serializeRuntimeInvocationRequestV117(request)),
+      request,
+      candidateIdentity,
+    )
+    expect(response.kind).toBe("success")
+    if (response.kind === "success") {
+      expect(response.value.outcome).toMatchObject({
+        kind: "player_violation",
+        violation: { code: "OVERSIZED_OUTPUT" },
+      })
+      expect(response.value.outcome).not.toHaveProperty("failure")
+    }
+  })
+
+  it("starts the signed wall budget at guest entry and records unavailable meters", () => {
+    const revision = buildPythonStrategyRevision({ source: pythonSource })
+    const request = candidateRequest(revision, { wallMilliseconds: 5 })
+    const host = runPythonCandidateHostV117(
+      request,
+      buildPythonSourceIdentityV117(pythonSource).normalizedSource,
+    )
+    expect(host.kind, JSON.stringify(host)).toBe("payload")
+
+    const response = verifyRuntimeInvocationResponseV117(
+      createPythonCandidateInvocationAdapterV117({
+        revision,
+        identity: candidateIdentity,
+      })(serializeRuntimeInvocationRequestV117(request)),
+      request,
+      candidateIdentity,
+    )
+    expect(response.kind).toBe("success")
+    if (response.kind === "success") {
+      expect(response.value.outcome.trace.safeCodes).toEqual(
+        expect.arrayContaining([
+          "COMPUTE_METER_UNAVAILABLE",
+          "MEMORY_METER_UNAVAILABLE",
+        ]),
+      )
     }
   })
 
