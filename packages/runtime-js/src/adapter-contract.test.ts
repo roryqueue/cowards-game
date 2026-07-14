@@ -3,6 +3,7 @@ import { createHash } from "node:crypto"
 import { describe, expect, it } from "vitest"
 import type { RuntimeResult } from "@cowards/engine"
 import {
+  RUNTIME_ABI_V1_17,
   RUNTIME_INVOCATION_V1_17_TEST_KEY_ID,
   createAuthenticatedRuntimeInvocationRequestV117,
   createRuntimeAbiV117ExecutionLedger,
@@ -1043,7 +1044,7 @@ export default {
       }
     })
 
-    it("passes only the signed nested method limits to the guest", () => {
+    it("separates the startup watchdog from the signed nested method limit", () => {
       const request = candidateRequest()
       let observedOptions: Record<string, unknown> | undefined
       const adapter = createSubprocessStrategyExecutionAdapter({
@@ -1066,12 +1067,57 @@ export default {
         value: { outcome: { kind: "success" } },
       })
       expect(observedOptions?.timeout).toBe(
-        request.budget.methodLimit.counters.wallMilliseconds.maximum,
+        RUNTIME_ABI_V1_17.budgets.preflight.profiles.artifactValidation
+          .wallMilliseconds +
+          request.budget.methodLimit.counters.wallMilliseconds.maximum +
+          request.budget.methodLimit.cancellation
+            .terminationGraceMilliseconds,
       )
+      expect(JSON.parse(String(observedOptions?.input))).toMatchObject({
+        methodWallMilliseconds:
+          request.budget.methodLimit.counters.wallMilliseconds.maximum,
+      })
       expect(observedOptions?.maxBuffer).toBe(
         request.budget.methodLimit.counters.payloadBytes.maximum + 1,
       )
     })
+
+    it(
+      "does not spend the signed method budget on valid module startup",
+      () => {
+        const source = transpileOrThrow(`
+let startupAccumulator = 0
+for (let index = 0; index < 100_000_000; index += 1) {
+  startupAccumulator += index
+}
+export default {
+  selectActivations() {
+    return { activationOrders: [], strategyMemory: startupAccumulator > 0 ? {} : null }
+  },
+  soldierBrain() {
+    return { action: { type: "TURN_TO_STONE" }, soldierMemory: null }
+  },
+}
+`)
+        const request = candidateRequest({ artifactSource: source })
+        const result = executeCandidateWith(
+          createWorkerThreadStrategyExecutionAdapter(),
+          request,
+          source,
+        )
+
+        expect(result).toMatchObject({
+          kind: "success",
+          value: {
+            outcome: {
+              kind: "success",
+              value: { activationOrders: [], strategyMemory: {} },
+            },
+          },
+        })
+      },
+      10_000,
+    )
 
     it("commits a proven N+1 payload violation and never a host guess", () => {
       const source = transpileOrThrow(`
