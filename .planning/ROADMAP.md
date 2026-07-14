@@ -206,7 +206,7 @@ Plans:
 
 **Wave 7 — transition ownership**
 
-- [ ] 258-07-PLAN.md — Enforce engine-only penalties, no-mutation system failure, and identical system retry.
+- [x] 258-07-PLAN.md — Enforce engine-only penalties, no-mutation system failure, and identical system retry.
 
 **Wave 8 — language adapters and exact source persistence**
 
@@ -298,7 +298,7 @@ Cycle-cap, inward-start, facing-only MOVE, reversal-history, attacker-facing/Adv
 |-------|----------------|--------|-----------|
 | 256. Counted Safety and Canonical Authority | 19/19 | Complete    | 2026-07-13 |
 | 257. Canonical Transition Kernel and v1.4 Semantic Integrity | 22/22 | Complete | 2026-07-13 |
-| 258. Canonical JSON, Failure Semantics, and Artifact Identity | 6/14 | In Progress | - |
+| 258. Canonical JSON, Failure Semantics, and Artifact Identity | 7/14 | In Progress | - |
 | 259. Executable Four-Language and Chronicle Conformance | 0/TBD | Not started | - |
 | 260. Truthful Strategy Inputs, Arena Authority, and Set Fairness | 0/TBD | Not started | - |
 | 261. Integrated Service Proof, Drift Guards, and Release | 0/TBD | Not started | - |

@@ -5,15 +5,15 @@ milestone_name: Rules Integrity and Strategy Evaluation Foundations — ACTIVE
 current_phase: 258
 current_phase_name: canonical-json-failure-semantics-and-artifact-identity
 status: in_progress
-stopped_at: Completed 258-05-PLAN.md; ready for 258-07 transition ownership
-last_updated: "2026-07-14T14:16:25.000Z"
+stopped_at: Completed 258-07-PLAN.md; ready for 258-08 language adapter migration
+last_updated: "2026-07-14T15:08:59.000Z"
 last_activity: 2026-07-14
-last_activity_desc: Phase 258 Plan 06 exclusive successor invocation ABI and authenticated candidate envelope completed; v1.16 dispatch unchanged
+last_activity_desc: Phase 258 Plan 07 exact runtime-effect ownership and no-mutation successor bridge completed; v1.14 behavior unchanged
 progress:
   total_phases: 6
   completed_phases: 2
   total_plans: 55
-  completed_plans: 46
+  completed_plans: 47
   percent: 33
 ---
 
@@ -29,9 +29,9 @@ See: `.planning/PROJECT.md` (updated 2026-07-12)
 ## Current Position
 
 Phase: 258 (canonical-json-failure-semantics-and-artifact-identity) — IN PROGRESS
-Plan: 6 of 14
-Status: Plan 05 complete; bounded successor admission and permanent deep audit green
-Last activity: 2026-07-14 — Completed Plan 258-05 bounded JSON spec/service integration
+Plan: 7 of 14
+Status: Plan 07 complete; exact successor effect ownership and no-mutation runtime bridge green
+Last activity: 2026-07-14 — Completed Plan 258-07 transition ownership and retry identity
 
 Progress: [███░░░░░░░] 33%
 
@@ -61,8 +61,8 @@ Progress: [███░░░░░░░] 33%
 
 **Resume file:** None
 
-Last session: 2026-07-14T14:16:25.000Z
-Stopped at: Completed 258-05-PLAN.md; ready for 258-07 transition ownership
+Last session: 2026-07-14T15:08:59.000Z
+Stopped at: Completed 258-07-PLAN.md; ready for 258-08 language adapter migration
 Next command: `$gsd-execute-phase 258`
 
 ## Performance Metrics
@@ -99,8 +99,13 @@ Next command: `$gsd-execute-phase 258`
 | Phase 258 P04 | 24min | 2 tasks | 15 implementation/fixture/receipt files |
 | Phase 258 P06 | 17min | 2 tasks | 5 implementation/test/artifact files |
 | Phase 258 P05 | 22min | 2 tasks + review | 10 implementation/test/audit files |
+| Phase 258 P07 | 46min | 2 tasks + review | 9 implementation/test files |
 
 ## Decisions
+
+- [Phase 258]: Successor effect identity is a domain-separated canonical hash of the complete pre-effect machine and private prestate, while only the hash crosses the runtime boundary. — Identical observations cannot authorize response replay across a different Match, initiative state, hidden memory, or scheduling prestate.
+- [Phase 258]: Current v1.14 retains its one-argument mutable runtime call and permissive legacy result shape; detached frozen requests, a second binding argument, and exclusive authenticated results apply only to v1.17. — Defining the successor cannot change valid current Strategy behavior.
+- [Phase 258]: Plan-05 classifies raw Strategy payload faults, runtime-service authenticates and pins the exact request/response, and only the canonical kernel applies the existing v1.4 penalty. — Services and adapters cannot invent gameplay consequences, and system failures remain zero-mutation.
 
 - [Phase 258]: Successor success payloads are validated by one cycle-free method-bound schema shared by the authenticated ABI and runtime-service, including exact StrategyMemory, SoldierMemory, and objective caps. — An aggregate payload limit cannot conceal an invalid nested field or let the adapter authenticate a success the service would reject.
 - [Phase 258]: Outer-envelope corruption is a redacted system failure while only canonical or schema-invalid decoded Strategy payload is player-owned. — Raw transport evidence is preserved until its owning boundary classifies it, and infrastructure failure never becomes a player penalty.
