@@ -305,3 +305,100 @@ const main = async () => {
 
 void main()
 `
+
+/** Inactive v1.17 guest. Authentication and response signing remain host-only. */
+export const SUBPROCESS_HARNESS_V117_SOURCE = `
+import { stdin, stdout } from "node:process"
+
+const encoder = new TextEncoder()
+const compareBytes = (left, right) => {
+  const a = encoder.encode(left)
+  const b = encoder.encode(right)
+  for (let index = 0; index < Math.min(a.length, b.length); index += 1) {
+    if (a[index] !== b[index]) return a[index] - b[index]
+  }
+  return a.length - b.length
+}
+const canonical = (value) => {
+  if (value === null || typeof value === "string" || typeof value === "boolean") {
+    return JSON.stringify(value)
+  }
+  if (typeof value === "number") {
+    if (!Number.isFinite(value)) throw new Error("INVALID_OUTPUT")
+    return Object.is(value, -0) ? "0" : JSON.stringify(value).replace(/e\\+/u, "e")
+  }
+  if (Array.isArray(value)) return "[" + value.map(canonical).join(",") + "]"
+  if (typeof value !== "object" || value === undefined) throw new Error("INVALID_OUTPUT")
+  const prototype = Object.getPrototypeOf(value)
+  if (prototype !== Object.prototype && prototype !== null) throw new Error("INVALID_OUTPUT")
+  return "{" + Object.keys(value).sort(compareBytes).map((key) =>
+    JSON.stringify(key) + ":" + canonical(value[key])
+  ).join(",") + "}"
+}
+const moduleSource = (source) => [
+  'const module = { exports: {} }',
+  'const exports = module.exports',
+  'const forbidden = (name) => new Proxy(function blocked() {}, { apply() { throw new Error("FORBIDDEN_CAPABILITY:" + name) }, construct() { throw new Error("FORBIDDEN_CAPABILITY:" + name) }, get() { throw new Error("FORBIDDEN_CAPABILITY:" + name) } })',
+  'const Function = forbidden("Function")',
+  'const process = forbidden("process")',
+  'const require = forbidden("require")',
+  'const fetch = forbidden("fetch")',
+  'const WebAssembly = forbidden("WebAssembly")',
+  'const Worker = forbidden("Worker")',
+  'const Date = forbidden("Date")',
+  'const crypto = forbidden("crypto")',
+  'const performance = forbidden("performance")',
+  'const Buffer = forbidden("Buffer")',
+  'const console = forbidden("console")',
+  source,
+  'export default module.exports && module.exports.default',
+].join("\\n")
+const moduleUrl = (source) => new URL(
+  "data:text/javascript;charset=utf-8," + encodeURIComponent(moduleSource(source)),
+)
+const frame = (tag, payload = new Uint8Array()) => {
+  const bytes = new Uint8Array(payload.length + 1)
+  bytes[0] = tag.charCodeAt(0)
+  bytes.set(payload, 1)
+  return bytes
+}
+const readInput = async () => {
+  const chunks = []
+  for await (const chunk of stdin) chunks.push(chunk)
+  return chunks.join("")
+}
+const main = async () => {
+  let output
+  try {
+    const request = JSON.parse(await readInput())
+    if (!request || typeof request !== "object" ||
+      typeof request.source !== "string" ||
+      (request.methodName !== "selectActivations" && request.methodName !== "soldierBrain") ||
+      !Number.isSafeInteger(request.outputByteLimit) || request.outputByteLimit < 0) {
+      output = frame("I")
+    } else {
+      const imported = await import(moduleUrl(request.source).href)
+      const strategy = imported.default
+      const method = strategy && strategy[request.methodName]
+      if (typeof method !== "function") {
+        output = frame("I")
+      } else {
+        const value = method.call(strategy, request.input)
+        if (value && typeof value.then === "function") {
+          output = frame("I")
+        } else {
+          const payload = encoder.encode(canonical(value))
+          output = payload.length > request.outputByteLimit
+            ? frame("O")
+            : frame("S", payload)
+        }
+      }
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : ""
+    output = frame(message.startsWith("FORBIDDEN_CAPABILITY:") ? "F" : "X")
+  }
+  stdout.write(output)
+}
+void main()
+`

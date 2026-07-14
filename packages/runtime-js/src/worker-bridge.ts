@@ -5,8 +5,13 @@ import {
 } from "node:worker_threads"
 import type { RuntimeResult } from "@cowards/engine"
 import type { StrategyMethodName } from "./adapter.js"
+import type { JsonValue } from "@cowards/spec"
+import type { RuntimeGuestObservationV117 } from "./abi-bridge.js"
 import { RUNTIME_OUTPUT_BYTES, RUNTIME_TIMEOUT_MS } from "./guards.js"
-import { WORKER_HARNESS_SOURCE } from "./worker-harness.js"
+import {
+  WORKER_HARNESS_SOURCE,
+  WORKER_HARNESS_V117_SOURCE,
+} from "./worker-harness.js"
 
 type WorkerResult =
   | { ok: true; value: unknown }
@@ -24,6 +29,13 @@ const workerScriptUrl = (): URL =>
   new URL(
     `data:text/javascript;charset=utf-8,${encodeURIComponent(
       WORKER_HARNESS_SOURCE,
+    )}`,
+  )
+
+const workerScriptUrlV117 = (): URL =>
+  new URL(
+    `data:text/javascript;charset=utf-8,${encodeURIComponent(
+      WORKER_HARNESS_V117_SOURCE,
     )}`,
   )
 
@@ -99,4 +111,65 @@ export const runStrategyMethodInWorker = (args: {
   }
 
   return received.message
+}
+
+export const runStrategyMethodInWorkerV117 = (args: {
+  executableSource: string
+  methodName: StrategyMethodName
+  input: JsonValue
+  timeoutMs: number
+  outputByteLimit: number
+}): RuntimeGuestObservationV117 => {
+  const signalBuffer = new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT)
+  const signal = new Int32Array(signalBuffer)
+  const { port1, port2 } = new MessageChannel()
+  const worker = new Worker(workerScriptUrlV117(), {
+    workerData: {
+      source: args.executableSource,
+      methodName: args.methodName,
+      input: args.input,
+      outputByteLimit: args.outputByteLimit,
+      port: port2,
+      signalBuffer,
+    },
+    transferList: [port2],
+    env: {},
+    execArgv: [],
+    resourceLimits: {
+      maxOldGenerationSizeMb: 16,
+      maxYoungGenerationSizeMb: 8,
+      stackSizeMb: 4,
+    },
+  })
+
+  const waitResult = Atomics.wait(signal, 0, 0, args.timeoutMs)
+  if (waitResult === "timed-out") {
+    void worker.terminate()
+    port1.close()
+    return {
+      kind: "system_failure",
+      code: "AMBIGUOUS_ATTRIBUTION",
+      retryable: false,
+    }
+  }
+
+  void worker.terminate()
+  const received = receiveMessageOnPort(port1)
+  port1.close()
+  const message = received?.message
+  if (!(message instanceof Uint8Array)) {
+    return {
+      kind: "system_failure",
+      code: "RUNTIME_CRASH",
+      retryable: true,
+    }
+  }
+  if (message.byteLength > args.outputByteLimit + 1) {
+    return {
+      kind: "system_failure",
+      code: "TRANSPORT_CRASH",
+      retryable: true,
+    }
+  }
+  return { kind: "raw_frame", bytes: Uint8Array.from(message) }
 }

@@ -387,7 +387,7 @@ describe("StrategyExecutionAdapter contract", () => {
     expect(result.ok).toBe(true)
     expect(result.ok && result.value).toEqual({
       activationOrders: [
-        { soldierId: "bottom-1", objective: { target: "bottom-1" } },
+        { objective: { target: "bottom-1" }, soldierId: "bottom-1" },
       ],
       strategyMemory: { adapter: "worker-thread" },
     })
@@ -574,7 +574,7 @@ export default {
   describe("inactive v1.17 authenticated raw-byte contract", () => {
     const successFrame = `S${JSON.stringify({
       activationOrders: [
-        { soldierId: "bottom-1", objective: { target: "bottom-1" } },
+        { objective: { target: "bottom-1" }, soldierId: "bottom-1" },
       ],
       strategyMemory: { adapter: "worker-thread" },
     })}`

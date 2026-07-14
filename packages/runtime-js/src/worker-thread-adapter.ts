@@ -1,9 +1,13 @@
-import type { StrategyExecutionAdapter } from "./adapter.js"
+import type { StrategyExecutionAdapterV117 } from "./adapter.js"
 import { workerThreadStrategyExecutionAdapterMetadata } from "./adapter.js"
-import { runStrategyMethodInWorker } from "./worker-bridge.js"
+import { executeStrategyRuntimeAbiV117 } from "./abi-bridge.js"
+import {
+  runStrategyMethodInWorker,
+  runStrategyMethodInWorkerV117,
+} from "./worker-bridge.js"
 
 export const createWorkerThreadStrategyExecutionAdapter =
-  (): StrategyExecutionAdapter => ({
+  (): StrategyExecutionAdapterV117 => ({
     metadata: workerThreadStrategyExecutionAdapterMetadata,
     execute(request) {
       return runStrategyMethodInWorker({
@@ -12,6 +16,12 @@ export const createWorkerThreadStrategyExecutionAdapter =
         input: request.input,
         timeoutMs: request.timeoutMs,
         outputByteLimit: request.outputByteLimit,
+      })
+    },
+    executeV117(request) {
+      return executeStrategyRuntimeAbiV117({
+        ...request,
+        invokeGuest: runStrategyMethodInWorkerV117,
       })
     },
   })

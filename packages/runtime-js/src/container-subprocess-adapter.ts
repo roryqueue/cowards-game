@@ -5,12 +5,16 @@ import {
 } from "node:child_process"
 import type { RuntimeResult } from "@cowards/engine"
 import {
-  type StrategyExecutionAdapter,
+  type StrategyExecutionAdapterV117,
   type StrategyExecutionAdapterMetadata,
   type StrategyExecutionRequest,
 } from "./adapter.js"
+import { executeStrategyRuntimeAbiV117 } from "./abi-bridge.js"
 import { RUNTIME_TIMEOUT_MS } from "./guards.js"
-import { SUBPROCESS_HARNESS_SOURCE } from "./subprocess-harness.js"
+import {
+  SUBPROCESS_HARNESS_SOURCE,
+  SUBPROCESS_HARNESS_V117_SOURCE,
+} from "./subprocess-harness.js"
 import {
   assertWithinByteCap,
   encodeSubprocessIpcRequest,
@@ -141,7 +145,7 @@ const assertSafeDockerImage = (image: string): void => {
 
 export const createContainerSubprocessStrategyExecutionAdapter = (
   options: ContainerSubprocessStrategyExecutionAdapterOptions = {},
-): StrategyExecutionAdapter => {
+): StrategyExecutionAdapterV117 => {
   const spawn = options.spawnSync ?? spawnSync
   const dockerPath = options.dockerPath ?? "docker"
   const image = options.image ?? DEFAULT_CONTAINER_SUBPROCESS_IMAGE
@@ -216,6 +220,79 @@ export const createContainerSubprocessStrategyExecutionAdapter = (
         )
       }
       return parseSubprocessIpcResponse(stdout, stdoutBytes)
+    },
+    executeV117(request) {
+      return executeStrategyRuntimeAbiV117({
+        ...request,
+        invokeGuest(guest) {
+          const input = JSON.stringify({
+            source: guest.executableSource,
+            methodName: guest.methodName,
+            input: guest.input,
+            outputByteLimit: guest.outputByteLimit,
+          })
+          const result = spawn(
+            dockerPath,
+            dockerArgs({
+              image,
+              harnessSource: SUBPROCESS_HARNESS_V117_SOURCE,
+              memory,
+              cpus,
+              pidsLimit,
+            }),
+            {
+              encoding: "utf8",
+              env: { PATH: process.env.PATH ?? "" },
+              input,
+              killSignal: "SIGKILL",
+              maxBuffer: Math.max(guest.outputByteLimit + 1, stderrBytes),
+              shell: false,
+              stdio: ["pipe", "pipe", "pipe"],
+              timeout: guest.timeoutMs,
+              windowsHide: true,
+            },
+          )
+          const stdout = asString(result.stdout)
+          const stderr = asString(result.stderr)
+          try {
+            assertWithinByteCap("stderr", stderr, stderrBytes)
+          } catch {
+            return {
+              kind: "system_failure",
+              code: "TRANSPORT_CRASH",
+              retryable: true,
+            }
+          }
+          if (result.error) {
+            return errorCode(result.error) === "ETIMEDOUT"
+              ? {
+                  kind: "system_failure",
+                  code: "AMBIGUOUS_ATTRIBUTION",
+                  retryable: false,
+                }
+              : {
+                  kind: "system_failure",
+                  code: "HOST_CRASH",
+                  retryable: true,
+                }
+          }
+          if (result.signal || (typeof result.status === "number" && result.status !== 0)) {
+            return {
+              kind: "system_failure",
+              code: "RUNTIME_CRASH",
+              retryable: true,
+            }
+          }
+          const frame = new TextEncoder().encode(stdout)
+          return frame.byteLength <= guest.outputByteLimit + 1
+            ? { kind: "raw_frame", bytes: frame }
+            : {
+                kind: "system_failure",
+                code: "TRANSPORT_CRASH",
+                retryable: true,
+              }
+        },
+      })
     },
   }
 }
