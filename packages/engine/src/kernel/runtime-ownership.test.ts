@@ -143,7 +143,134 @@ type RuntimeRequestFor<TKind extends KernelEffectRequest["kind"]> = Extract<
   { kind: TKind }
 >
 
+const soldierEffectFor = (
+  state: GameState,
+  soldierId: string,
+): RuntimeRequestFor<"soldierBrain"> => {
+  let machine = MATCH_KERNEL.createActivationMachineV117({ state, soldierId })
+  for (let step = 0; step < 20; step += 1) {
+    const result = MATCH_KERNEL.stepMatch(machine, { kind: "advance" })
+    if (result.kind === "effect") {
+      if (result.request.kind !== "soldierBrain") {
+        throw new Error("candidate activation yielded wrong effect")
+      }
+      return result.request
+    }
+    if (result.kind !== "transition") {
+      throw new Error("candidate activation failed before Soldier effect")
+    }
+    machine = result.machine
+  }
+  throw new Error("candidate activation did not yield a Soldier effect")
+}
+
 describe("Phase 258 successor runtime ownership", () => {
+  it("preserves the current v1.14 one-argument mutable runtime call", () => {
+    const state = withPrivateMemory()
+    const soldier = state.soldiers.find(
+      (candidate) => candidate.ownerPlayerId === state.players[0].id,
+    )
+    if (!soldier) throw new Error("missing fixture soldier")
+    soldier.soldierMemory = { n: 0 }
+    let callContract: unknown
+
+    const execution = MATCH_KERNEL.runActivationFromState({
+      state,
+      soldierId: soldier.id,
+      runtime: {
+        selectActivations() {
+          throw new Error("selection is unreachable in activation mode")
+        },
+        runSoldierBrain(input: SoldierBrainInput) {
+          callContract = {
+            argumentCount: arguments.length,
+            inputFrozen: Object.isFrozen(input),
+            memoryFrozen: Object.isFrozen(input.soldierMemory),
+          }
+          ;(input.soldierMemory as { n: number }).n += 1
+          return {
+            ok: true as const,
+            value: {
+              action: { type: "TURN_TO_STONE" as const },
+              soldierMemory: input.soldierMemory,
+            },
+          }
+        },
+      },
+    })
+
+    expect(callContract).toEqual({
+      argumentCount: 1,
+      inputFrozen: false,
+      memoryFrozen: false,
+    })
+    expect(execution).toMatchObject({ kind: "completed" })
+    expect(
+      execution.result?.state.soldiers.find(({ id }) => id === soldier.id)
+        ?.soldierMemory,
+    ).toEqual({ n: 1 })
+  })
+
+  it("makes v1.17 effect identity unique to the complete prestate", () => {
+    const state = withPrivateMemory()
+    const soldier = state.soldiers.find(
+      (candidate) => candidate.ownerPlayerId === state.players[0].id,
+    )
+    if (!soldier) throw new Error("missing fixture soldier")
+    const same = globalThis.structuredClone(state)
+    const hidden = globalThis.structuredClone(state)
+    const hiddenSoldier = hidden.soldiers.find(({ id }) => id !== soldier.id)
+    if (!hiddenSoldier) throw new Error("missing hidden fixture soldier")
+    hiddenSoldier.soldierMemory = { hiddenPrestate: "different" }
+    const initiative = globalThis.structuredClone(state)
+    initiative.initiativePlayerId = initiative.players[1].id
+    const match = globalThis.structuredClone(state)
+    match.matchId = `${match.matchId}:different`
+
+    const request = soldierEffectFor(state, soldier.id)
+    const sameRequest = soldierEffectFor(same, soldier.id)
+    const hiddenRequest = soldierEffectFor(hidden, soldier.id)
+    const initiativeRequest = soldierEffectFor(initiative, soldier.id)
+    const matchRequest = soldierEffectFor(match, soldier.id)
+
+    expect(sameRequest.requestId).toBe(request.requestId)
+    expect(hiddenRequest.input).toEqual(request.input)
+    expect(initiativeRequest.input).toEqual(request.input)
+    expect(hiddenRequest.requestId).not.toBe(request.requestId)
+    expect(initiativeRequest.requestId).not.toBe(request.requestId)
+    expect(matchRequest.requestId).not.toBe(request.requestId)
+
+    const replayed = MATCH_KERNEL.runActivationFromStateV117({
+      state: hidden,
+      soldierId: soldier.id,
+      runtime: {
+        selectActivations() {
+          throw new Error("selection is unreachable in activation mode")
+        },
+        runSoldierBrain() {
+          return bindOutcome(request, {
+            kind: "success",
+            value: {
+              action: { type: "TURN_TO_STONE" },
+              soldierMemory: { replayMustNotCommit: true },
+            },
+            trace: traceFor(request),
+          })
+        },
+      },
+    })
+
+    expect(replayed).toMatchObject({
+      kind: "failure",
+      transitions: [],
+      failure: {
+        classification: "system_failure",
+        code: "OUTER_FRAME_WRONG_BINDING",
+      },
+      unchangedState: hidden,
+    })
+  })
+
   it("normalizes a v1.17 success only at the driver seam", () => {
     const state = withPrivateMemory()
     const soldier = state.soldiers.find(
