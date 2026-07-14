@@ -58,7 +58,7 @@ created: 2026-07-13
 | 258-12-02 | 12 | 10 | RABI-07/08 | T-258-12 | Missing meter uncertified | preflight | exact preflight/service files | ✅ | ⬜ pending |
 | 258-13-01 | 13 | 11 | RABI-06/07 | T-258-13 | Identity graph closed DAG | adversarial | exact evidence files | ✅ | ⬜ pending |
 | 258-13-02 | 13 | 11 | RABI-05/06/08 | T-258-13 | Both receipt versions exact | integration | exact generator/service/Go files | ✅ | ⬜ pending |
-| 258-14-01 | 14 | 12 | RABI-01..08 | T-258-14 | Preactivation allowlist and exact test manifest green | preactivation | runner `--stage preactivation --require-all` | ✅ | ⬜ pending |
+| 258-14-01 | 14 | 12 | RABI-01..08 | T-258-14 | Preactivation allowlist and exact Go default/mixed/historical test manifest green | preactivation | runner `--stage preactivation --require-all` | ✅ | ⬜ pending |
 | 258-14-02 | 14 | 12 | RABI-03/05/06/07 | T-258-14 | Small default pointer set flips atomically | activation | runner `--stage activation --require-all` | ✅ | ⬜ pending |
 | 258-14-03 | 14 | 12 | RABI-01..08 | T-258-14 | Final hashes/evaluator/DB proof are post-flip | DB/e2e | Full suite command above | ✅ | ⬜ pending |
 
@@ -75,6 +75,7 @@ created: 2026-07-13
 - [x] The final full command supplies both PostgreSQL DSNs and executes persistence, full Go, atomic activation, all runtime packages, repository gates, build, lint and typecheck.
 - [x] Residual checks apply only to named Phase-258 consumers/tests; baseline conditional DB skips remain allowed, while named Phase-258 DB tests must report PASS and not SKIP.
 - [x] Final activation hashes are generated only after the small default flip.
+- [x] Plan 14 Task 1 owns all Go default-pointer tests and names exact current-default, route, mixed-version, and literal-v1.16 historical cases.
 
 ## Manual-Only Verifications
 
