@@ -914,6 +914,15 @@ describe("WASM/WASI runtime v1.17 exact Rust/Zig identity", () => {
         hasFinalNewline: false,
       }),
     ).toBe(false)
+    expect(
+      isWasmWasiSourceIdentityV117({
+        ...identity,
+        originalSourceBytes: 1,
+        normalizedSourceBytes: 1,
+        lineEndings: { kind: "lf", lf: 1, crlf: 0, cr: 0 },
+        hasFinalNewline: false,
+      }),
+    ).toBe(false)
   })
 
   it("rejects coherent caller relabeling when artifact bytes retain the compiled source attestation", () => {
