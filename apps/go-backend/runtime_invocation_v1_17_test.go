@@ -194,3 +194,113 @@ func TestPhase258RuntimeInvocationV117RetriesOnlySystemFailureWithPinnedBytes(t 
 		t.Fatalf("request identity is not pinned to exact bytes: %s", request.RequestSHA256)
 	}
 }
+
+func TestPhase258RuntimeInvocationV117UsesFiniteGoOwnedSignedBudgetRetryPolicy(t *testing.T) {
+	requestBytes := readRuntimeInvocationV117Fixture(t, "runtime-execution-service-request.v1.17.candidate.json")
+	identity := runtimeInvocationV117SigningIdentity{KeyID: runtimeInvocationV117FixtureKeyID, Secret: runtimeInvocationV117FixtureSecret}
+
+	t.Run("candidate policy caps repeated system retries", func(t *testing.T) {
+		request, failure := verifyRuntimeInvocationRequestV117(requestBytes, identity)
+		if failure != nil {
+			t.Fatal(failure)
+		}
+		systemBytes := signedRuntimeInvocationResponseV117ForTest(t, request, map[string]any{
+			"kind":    "system_failure",
+			"failure": map[string]any{"code": "TRANSPORT_CRASH", "publicMessage": "Runtime system failure.", "retryable": true},
+			"trace":   runtimeInvocationTraceV117ForRequest(request),
+		}, identity)
+		calls := 0
+		response, failure := executeRuntimeInvocationV117(context.Background(), requestBytes, identity, func(_ context.Context, _ []byte) ([]byte, error) {
+			calls++
+			return systemBytes, nil
+		})
+		if failure != nil || response == nil || response.Outcome.Kind != "system_failure" || calls != 3 {
+			t.Fatalf("Go-owned retry ceiling drifted: response=%+v failure=%+v calls=%d", response, failure, calls)
+		}
+	})
+
+	for _, candidate := range []struct {
+		name       string
+		maximum    int64
+		attempt    int64
+		wantCalls  int
+		wantResult bool
+	}{
+		{name: "zero signed invocation maximum is rejected", maximum: 0, attempt: 0},
+		{name: "over policy signed invocation maximum is rejected", maximum: 261, attempt: 0},
+		{name: "maximum safe integer invocation maximum is rejected", maximum: 9_007_199_254_740_991, attempt: 0},
+		{name: "attempt at signed maximum is rejected", maximum: 260, attempt: 260},
+		{name: "maximum safe integer attempt is rejected", maximum: 260, attempt: 9_007_199_254_740_991},
+		{name: "remaining signed budget limits calls", maximum: 1, attempt: 0, wantCalls: 1, wantResult: true},
+	} {
+		candidate := candidate
+		t.Run(candidate.name, func(t *testing.T) {
+			signedRequest := signedMutatedRuntimeInvocationRequestV117ForTest(t, requestBytes, identity, func(envelope map[string]any) {
+				budget := envelope["budget"].(map[string]any)
+				budget["matchCumulative"].(map[string]any)["invocationCountMaximum"] = runtimeInvocationV117JSONIntegerForTest(candidate.maximum)
+				envelope["retry"].(map[string]any)["attempt"] = runtimeInvocationV117JSONIntegerForTest(candidate.attempt)
+			})
+			request, verifyFailure := verifyRuntimeInvocationRequestV117(signedRequest, identity)
+			if verifyFailure != nil {
+				t.Fatalf("signed fixture was not structurally valid: %+v", verifyFailure)
+			}
+			systemBytes := signedRuntimeInvocationResponseV117ForTest(t, request, map[string]any{
+				"kind":    "system_failure",
+				"failure": map[string]any{"code": "TRANSPORT_CRASH", "publicMessage": "Runtime system failure.", "retryable": true},
+				"trace":   runtimeInvocationTraceV117ForRequest(request),
+			}, identity)
+			calls := 0
+			response, failure := executeRuntimeInvocationV117(context.Background(), signedRequest, identity, func(_ context.Context, _ []byte) ([]byte, error) {
+				calls++
+				return systemBytes, nil
+			})
+			if calls != candidate.wantCalls {
+				t.Fatalf("signed budget call limit drifted: want=%d got=%d", candidate.wantCalls, calls)
+			}
+			if candidate.wantResult {
+				if failure != nil || response == nil || response.Outcome.Kind != "system_failure" {
+					t.Fatalf("last in-budget result was not returned: response=%+v failure=%+v", response, failure)
+				}
+				return
+			}
+			if response != nil || failure == nil || failure.Code != "OUTER_FRAME_WRONG_BINDING" || failure.Retryable {
+				t.Fatalf("invalid signed retry budget did not fail closed: response=%+v failure=%+v", response, failure)
+			}
+		})
+	}
+
+	t.Run("pre-cancelled context never reaches transport", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel()
+		calls := 0
+		response, failure := executeRuntimeInvocationV117(ctx, requestBytes, identity, func(_ context.Context, _ []byte) ([]byte, error) {
+			calls++
+			return nil, nil
+		})
+		if calls != 0 || response != nil || failure == nil || failure.Code != "AMBIGUOUS_ATTRIBUTION" || failure.Retryable {
+			t.Fatalf("pre-cancelled invocation was not rejected: response=%+v failure=%+v calls=%d", response, failure, calls)
+		}
+	})
+
+	t.Run("cancellation stops before a retry", func(t *testing.T) {
+		request, failure := verifyRuntimeInvocationRequestV117(requestBytes, identity)
+		if failure != nil {
+			t.Fatal(failure)
+		}
+		systemBytes := signedRuntimeInvocationResponseV117ForTest(t, request, map[string]any{
+			"kind":    "system_failure",
+			"failure": map[string]any{"code": "TRANSPORT_CRASH", "publicMessage": "Runtime system failure.", "retryable": true},
+			"trace":   runtimeInvocationTraceV117ForRequest(request),
+		}, identity)
+		ctx, cancel := context.WithCancel(context.Background())
+		calls := 0
+		response, failure := executeRuntimeInvocationV117(ctx, requestBytes, identity, func(_ context.Context, _ []byte) ([]byte, error) {
+			calls++
+			cancel()
+			return systemBytes, nil
+		})
+		if calls != 1 || response != nil || failure == nil || failure.Code != "AMBIGUOUS_ATTRIBUTION" || failure.Retryable {
+			t.Fatalf("cancellation did not stop retry: response=%+v failure=%+v calls=%d", response, failure, calls)
+		}
+	})
+}
