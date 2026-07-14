@@ -3,6 +3,10 @@ import {
   WORKER_HARNESS_V117_SOURCE,
   WORKER_SIGNAL_V117,
 } from "./worker-harness.js"
+import {
+  CANDIDATE_GO_CONTROL_PREFIX,
+  CANDIDATE_TERMINATION_CONTROL_PREFIX,
+} from "./candidate-subprocess-observation.js"
 
 export const SUBPROCESS_HARNESS_SOURCE = `
 import { exit, stderr, stdin, stdout } from "node:process"
@@ -314,7 +318,7 @@ void main()
 
 /** Inactive v1.17 guest. Authentication and response signing remain host-only. */
 export const SUBPROCESS_HARNESS_V117_SOURCE = `
-import { stdin, stdout } from "node:process"
+import { hrtime, stderr, stdin, stdout } from "node:process"
 import { MessageChannel, receiveMessageOnPort, Worker } from "node:worker_threads"
 
 const workerSource = ${JSON.stringify(WORKER_HARNESS_V117_SOURCE)}
@@ -328,6 +332,7 @@ const readInput = async () => {
   return chunks.join("")
 }
 const main = async () => {
+  const launchStarted = hrtime.bigint()
   let request
   try {
     request = JSON.parse(await readInput())
@@ -370,11 +375,25 @@ const main = async () => {
     },
   })
 
+  const launchElapsedMilliseconds =
+    Number(hrtime.bigint() - launchStarted) / 1000000
+  if (launchElapsedMilliseconds >
+      ${RUNTIME_ABI_V1_17.budgets.preflight.profiles.artifactValidation.wallMilliseconds}) {
+    await worker.terminate()
+    port1.close()
+    stdout.write(frame("H"))
+    return
+  }
+  const startupRemainingMilliseconds = Math.max(
+    0,
+    ${RUNTIME_ABI_V1_17.budgets.preflight.profiles.artifactValidation.wallMilliseconds} -
+      launchElapsedMilliseconds,
+  )
   const startupWait = Atomics.wait(
     signal,
     0,
     ${WORKER_SIGNAL_V117.starting},
-    ${RUNTIME_ABI_V1_17.budgets.preflight.profiles.artifactValidation.wallMilliseconds},
+    startupRemainingMilliseconds,
   )
   if (startupWait === "timed-out" ||
       Atomics.load(signal, 0) === ${WORKER_SIGNAL_V117.starting}) {
@@ -384,8 +403,11 @@ const main = async () => {
     return
   }
   if (Atomics.load(signal, 0) === ${WORKER_SIGNAL_V117.ready}) {
+    const methodStarted = hrtime.bigint()
     Atomics.store(signal, 0, ${WORKER_SIGNAL_V117.go})
     Atomics.notify(signal, 0)
+    stderr.write(${JSON.stringify(CANDIDATE_GO_CONTROL_PREFIX)} +
+      String(methodStarted) + "\\n")
     const methodWait = Atomics.wait(
       signal,
       0,
@@ -394,9 +416,19 @@ const main = async () => {
     )
     if (methodWait === "timed-out" ||
         Atomics.load(signal, 0) !== ${WORKER_SIGNAL_V117.done}) {
+      const terminationStarted = hrtime.bigint()
       await worker.terminate()
+      const terminationMilliseconds = Math.ceil(
+        Number(hrtime.bigint() - terminationStarted) / 1000000,
+      )
       port1.close()
-      stdout.write(frame("D"))
+      stderr.write(${JSON.stringify(CANDIDATE_TERMINATION_CONTROL_PREFIX)} +
+        String(terminationMilliseconds) + "\\n")
+      stdout.write(frame(
+        terminationMilliseconds <= ${RUNTIME_ABI_V1_17.budgets.selectActivations.vector.cancellation.terminationGraceMilliseconds}
+          ? "D"
+          : "H",
+      ))
       return
     }
   }
@@ -406,7 +438,6 @@ const main = async () => {
     stdout.write(frame("R"))
     return
   }
-  await worker.terminate()
   const received = receiveMessageOnPort(port1)
   port1.close()
   const output = received && received.message

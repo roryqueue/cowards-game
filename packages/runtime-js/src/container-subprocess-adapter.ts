@@ -1,8 +1,10 @@
 import {
   spawnSync,
+  type SpawnSyncOptionsWithBufferEncoding,
   type SpawnSyncOptionsWithStringEncoding,
   type SpawnSyncReturns,
 } from "node:child_process"
+import type { Buffer } from "node:buffer"
 import type { RuntimeResult } from "@cowards/engine"
 import {
   type StrategyExecutionAdapterV117,
@@ -12,8 +14,11 @@ import {
 import {
   createRuntimeGuestExecutionV117,
   executeStrategyRuntimeAbiV117,
+  observeRuntimeGuestAccountingV117,
   type RuntimeGuestObservationV117,
 } from "./abi-bridge.js"
+import { consumeCandidateEvidenceFixture } from "./candidate-evidence-fixture.js"
+import { observeCandidateSubprocessV117 } from "./candidate-subprocess-observation.js"
 import { RUNTIME_TIMEOUT_MS } from "./guards.js"
 import {
   SUBPROCESS_HARNESS_SOURCE,
@@ -33,6 +38,12 @@ type SpawnSyncLike = (
   args: readonly string[],
   options: SpawnSyncOptionsWithStringEncoding,
 ) => SpawnSyncReturns<string>
+
+type SpawnSyncBufferLike = (
+  command: string,
+  args: readonly string[],
+  options: SpawnSyncOptionsWithBufferEncoding,
+) => SpawnSyncReturns<Buffer>
 
 export interface ContainerSubprocessStrategyExecutionAdapterOptions {
   dockerPath?: string | undefined
@@ -151,6 +162,7 @@ export const createContainerSubprocessStrategyExecutionAdapter = (
   options: ContainerSubprocessStrategyExecutionAdapterOptions = {},
 ): StrategyExecutionAdapterV117 => {
   const spawn = options.spawnSync ?? spawnSync
+  const spawnCandidate = spawn as unknown as SpawnSyncBufferLike
   const dockerPath = options.dockerPath ?? "docker"
   const image = options.image ?? DEFAULT_CONTAINER_SUBPROCESS_IMAGE
   assertSafeDockerImage(image)
@@ -236,8 +248,13 @@ export const createContainerSubprocessStrategyExecutionAdapter = (
           ) =>
             createRuntimeGuestExecutionV117(
               observation,
-              guest.outputByteLimit,
-              request.fixtureEvidenceAfterObservationForTestsOnly,
+              consumeCandidateEvidenceFixture(
+                request,
+                observeRuntimeGuestAccountingV117(
+                  observation,
+                  guest.outputByteLimit,
+                ),
+              ),
             )
           const input = JSON.stringify({
             source: guest.executableSource,
@@ -246,7 +263,8 @@ export const createContainerSubprocessStrategyExecutionAdapter = (
             outputByteLimit: guest.outputByteLimit,
             methodWallMilliseconds: guest.timeoutMs,
           })
-          const result = spawn(
+          const launchStartedNanoseconds = process.hrtime.bigint()
+          const result = spawnCandidate(
             dockerPath,
             dockerArgs({
               image,
@@ -256,11 +274,13 @@ export const createContainerSubprocessStrategyExecutionAdapter = (
               pidsLimit,
             }),
             {
-              encoding: "utf8",
               env: { PATH: process.env.PATH ?? "" },
               input,
               killSignal: "SIGKILL",
-              maxBuffer: Math.max(guest.stdoutByteLimit + 1, stderrBytes),
+              maxBuffer: Math.max(
+                guest.stdoutByteLimit + 1,
+                Math.min(guest.stderrByteLimit, stderrBytes) + 1,
+              ),
               shell: false,
               stdio: ["pipe", "pipe", "pipe"],
               timeout:
@@ -270,54 +290,23 @@ export const createContainerSubprocessStrategyExecutionAdapter = (
               windowsHide: true,
             },
           )
-          const stdout = asString(result.stdout)
-          const stderr = asString(result.stderr)
-          const stdoutByteLength = new TextEncoder().encode(stdout).byteLength
-          const stderrByteLength = new TextEncoder().encode(stderr).byteLength
-          try {
-            assertWithinByteCap("stderr", stderr, stderrBytes)
-          } catch {
-            return observed({
-              kind: "system_failure",
-              code: "TRANSPORT_CRASH",
-              retryable: true,
-              stdoutBytes: stdoutByteLength,
-              stderrBytes: stderrByteLength,
-            })
-          }
-          if (result.error) {
-            return observed({
-              kind: "system_failure",
-              code: "HOST_CRASH",
-              retryable: true,
-              stdoutBytes: stdoutByteLength,
-              stderrBytes: stderrByteLength,
-            })
-          }
-          if (result.signal || (typeof result.status === "number" && result.status !== 0)) {
-            return observed({
-              kind: "system_failure",
-              code: "RUNTIME_CRASH",
-              retryable: true,
-              stdoutBytes: stdoutByteLength,
-              stderrBytes: stderrByteLength,
-            })
-          }
-          const frame = new TextEncoder().encode(stdout)
+          const receivedAtNanoseconds = process.hrtime.bigint()
           return observed(
-            frame.byteLength <= guest.stdoutByteLimit + 1
-              ? {
-                  kind: "raw_frame",
-                  bytes: frame,
-                  stderrBytes: stderrByteLength,
-                }
-              : {
-                kind: "system_failure",
-                code: "TRANSPORT_CRASH",
-                retryable: true,
-                stdoutBytes: stdoutByteLength,
-                stderrBytes: stderrByteLength,
-              },
+            observeCandidateSubprocessV117({
+              result,
+              launchStartedNanoseconds,
+              receivedAtNanoseconds,
+              startupTimeoutMilliseconds: guest.startupTimeoutMs,
+              methodWallMilliseconds: guest.timeoutMs,
+              cancellationGraceMilliseconds:
+                guest.cancellationGraceMilliseconds,
+              outputByteLimit: guest.outputByteLimit,
+              stdoutByteLimit: guest.stdoutByteLimit,
+              stderrByteLimit: Math.min(
+                guest.stderrByteLimit,
+                stderrBytes,
+              ),
+            }),
           )
         },
       })

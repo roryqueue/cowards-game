@@ -120,9 +120,11 @@ export const runStrategyMethodInWorkerV117 = (args: {
   input: JsonValue
   timeoutMs: number
   startupTimeoutMs: number
+  cancellationGraceMilliseconds: number
   outputByteLimit: number
   stdoutByteLimit: number
 }): RuntimeGuestObservationV117 => {
+  const launchStarted = process.hrtime.bigint()
   const signalBuffer = new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT)
   const signal = new Int32Array(signalBuffer)
   const { port1, port2 } = new MessageChannel()
@@ -145,11 +147,26 @@ export const runStrategyMethodInWorkerV117 = (args: {
     },
   })
 
+  const launchElapsedMilliseconds =
+    Number(process.hrtime.bigint() - launchStarted) / 1_000_000
+  if (launchElapsedMilliseconds > args.startupTimeoutMs) {
+    void worker.terminate()
+    port1.close()
+    return {
+      kind: "system_failure",
+      code: "HOST_CRASH",
+      retryable: true,
+    }
+  }
+  const startupRemainingMilliseconds = Math.max(
+    0,
+    args.startupTimeoutMs - launchElapsedMilliseconds,
+  )
   const startupWait = Atomics.wait(
     signal,
     0,
     WORKER_SIGNAL_V117.starting,
-    args.startupTimeoutMs,
+    startupRemainingMilliseconds,
   )
   if (
     startupWait === "timed-out" ||
@@ -165,6 +182,7 @@ export const runStrategyMethodInWorkerV117 = (args: {
   }
 
   if (Atomics.load(signal, 0) === WORKER_SIGNAL_V117.ready) {
+    const methodStarted = process.hrtime.bigint()
     Atomics.store(signal, 0, WORKER_SIGNAL_V117.go)
     Atomics.notify(signal, 0)
     const methodWait = Atomics.wait(
@@ -180,10 +198,55 @@ export const runStrategyMethodInWorkerV117 = (args: {
       void worker.terminate()
       port1.close()
       return {
-        kind: "raw_frame",
-        bytes: Uint8Array.of("D".charCodeAt(0)),
+        kind: "system_failure",
+        code: "AMBIGUOUS_ATTRIBUTION",
+        retryable: false,
+        cancellation: {
+          terminationRequired: true,
+          receiptPresent: false,
+          graceMilliseconds: 0,
+        },
       }
     }
+
+    const received = receiveMessageOnPort(port1)
+    const methodElapsedMilliseconds =
+      Number(process.hrtime.bigint() - methodStarted) / 1_000_000
+    const message = received?.message
+    if (methodElapsedMilliseconds > args.timeoutMs) {
+      void worker.terminate()
+      port1.close()
+      return {
+        kind: "system_failure",
+        code: "AMBIGUOUS_ATTRIBUTION",
+        retryable: false,
+        stdoutBytes:
+          message instanceof Uint8Array ? message.byteLength : 0,
+        cancellation: {
+          terminationRequired: true,
+          receiptPresent: false,
+          graceMilliseconds: 0,
+        },
+      }
+    }
+    void worker.terminate()
+    port1.close()
+    if (!(message instanceof Uint8Array)) {
+      return {
+        kind: "system_failure",
+        code: "RUNTIME_CRASH",
+        retryable: true,
+      }
+    }
+    if (message.byteLength > args.stdoutByteLimit + 1) {
+      return {
+        kind: "system_failure",
+        code: "TRANSPORT_CRASH",
+        retryable: true,
+        stdoutBytes: message.byteLength,
+      }
+    }
+    return { kind: "raw_frame", bytes: Uint8Array.from(message) }
   }
 
   if (Atomics.load(signal, 0) !== WORKER_SIGNAL_V117.done) {
@@ -196,8 +259,8 @@ export const runStrategyMethodInWorkerV117 = (args: {
     }
   }
 
-  void worker.terminate()
   const received = receiveMessageOnPort(port1)
+  void worker.terminate()
   port1.close()
   const message = received?.message
   if (!(message instanceof Uint8Array)) {

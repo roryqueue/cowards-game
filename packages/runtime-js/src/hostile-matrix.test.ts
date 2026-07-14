@@ -1,4 +1,5 @@
 import type { SpawnSyncReturns } from "node:child_process"
+import { Buffer } from "node:buffer"
 import { createHash } from "node:crypto"
 import { describe, expect, it } from "vitest"
 import {
@@ -20,15 +21,13 @@ import {
   type StrategyRevision,
   type StrategyRevisionValidationCode,
 } from "@cowards/spec"
-import type {
-  StrategyExecutionAccountingObservationV117,
-  StrategyExecutionAdapter,
-} from "./adapter.js"
+import type { StrategyExecutionAdapter } from "./adapter.js"
 import { createRuntimeFromRevision } from "./executor.js"
 import { buildStrategyRevision } from "./revision.js"
 import { createSubprocessStrategyExecutionAdapter } from "./subprocess-adapter.js"
 import { SubprocessSystemFailure } from "./subprocess-ipc.js"
 import { createWorkerThreadStrategyExecutionAdapter } from "./worker-thread-adapter.js"
+import { registerCandidateEvidenceFixture } from "./candidate-evidence-fixture.js"
 
 const bottomSoldier: SoldierSnapshot = {
   id: "bottom-1",
@@ -397,9 +396,6 @@ type CandidateAdapter = StrategyExecutionAdapter & {
     requestBytes: Uint8Array
     executableSource: string
     signingIdentity: RuntimeInvocationSigningIdentityV117
-    fixtureEvidenceAfterObservationForTestsOnly?: (
-      observation: StrategyExecutionAccountingObservationV117,
-    ) => RuntimeInvocationExecutionReceiptEvidenceV117
   }): Uint8Array
 }
 
@@ -466,69 +462,68 @@ const executeCandidate = (
   receiptEvidence?: RuntimeInvocationExecutionReceiptEvidenceV117,
 ) => {
   const adapter = createSubprocessStrategyExecutionAdapter({
-    spawnSync: () =>
-      ({
+    spawnSync: () => {
+      const stdoutBuffer = Buffer.from(stdout)
+      return {
         pid: 123,
-        output: ["", stdout, ""],
-        stdout,
-        stderr: "",
+        output: [Buffer.alloc(0), stdoutBuffer, Buffer.alloc(0)],
+        stdout: stdoutBuffer,
+        stderr: Buffer.alloc(0),
         status: 0,
         signal: null,
         ...resultOverrides,
-      }) as SpawnSyncReturns<string>,
+      } as unknown as SpawnSyncReturns<string>
+    },
   }) as CandidateAdapter
-  const responseBytes = adapter.executeV117({
+  const invocation = {
     requestBytes: Uint8Array.from(candidateRequestBytes),
     executableSource: validSource,
     signingIdentity: candidateIdentity,
-    ...(receiptEvidence === undefined
-      ? {}
-      : {
-          fixtureEvidenceAfterObservationForTestsOnly: (
-            observation: StrategyExecutionAccountingObservationV117,
-          ) => {
-            const prestate = admittedExpectedCandidateRequest.accounting.prestate
-            return {
-              ...receiptEvidence,
-              counters: {
-                ...receiptEvidence.counters,
-                wallMilliseconds: {
-                  status: "measured" as const,
-                  delta: observation.methodDeadlineExceeded
-                    ? admittedExpectedCandidateRequest.budget.methodLimit
-                        .counters.wallMilliseconds.maximum + 1
-                    : 1,
-                  cumulative:
-                    prestate.cumulative.wallMilliseconds +
-                    (observation.methodDeadlineExceeded
-                      ? admittedExpectedCandidateRequest.budget.methodLimit
-                          .counters.wallMilliseconds.maximum + 1
-                      : 1),
-                },
-                payloadBytes: {
-                  status: "measured" as const,
-                  delta: observation.payloadBytes,
-                  cumulative:
-                    prestate.cumulative.payloadBytes +
-                    observation.payloadBytes,
-                },
-                stdoutBytes: {
-                  status: "measured" as const,
-                  delta: observation.stdoutBytes,
-                  cumulative:
-                    prestate.cumulative.stdoutBytes + observation.stdoutBytes,
-                },
-                stderrBytes: {
-                  status: "measured" as const,
-                  delta: observation.stderrBytes,
-                  cumulative:
-                    prestate.cumulative.stderrBytes + observation.stderrBytes,
-                },
-              },
-            }
+  }
+  if (receiptEvidence !== undefined) {
+    registerCandidateEvidenceFixture(invocation, (observation) => {
+      const prestate = admittedExpectedCandidateRequest.accounting.prestate
+      const wallMilliseconds = observation.methodDeadlineExceeded
+        ? admittedExpectedCandidateRequest.budget.methodLimit.counters
+            .wallMilliseconds.maximum + 1
+        : 1
+      return {
+        ...receiptEvidence,
+        counters: {
+          ...receiptEvidence.counters,
+          wallMilliseconds: {
+            status: "measured" as const,
+            delta: wallMilliseconds,
+            cumulative:
+              prestate.cumulative.wallMilliseconds + wallMilliseconds,
           },
-        }),
-  })
+          payloadBytes: {
+            status: "measured" as const,
+            delta: observation.payloadBytes,
+            cumulative:
+              prestate.cumulative.payloadBytes + observation.payloadBytes,
+          },
+          stdoutBytes: {
+            status: "measured" as const,
+            delta: observation.stdoutBytes,
+            cumulative:
+              prestate.cumulative.stdoutBytes + observation.stdoutBytes,
+          },
+          stderrBytes: {
+            status: "measured" as const,
+            delta: observation.stderrBytes,
+            cumulative:
+              prestate.cumulative.stderrBytes + observation.stderrBytes,
+          },
+        },
+        cancellation: {
+          status: "verified" as const,
+          ...observation.cancellation,
+        },
+      }
+    })
+  }
+  const responseBytes = adapter.executeV117(invocation)
   return verifyRuntimeInvocationResponseV117(
     responseBytes,
     admittedExpectedCandidateRequest,

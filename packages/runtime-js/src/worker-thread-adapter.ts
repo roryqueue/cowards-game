@@ -3,7 +3,9 @@ import { workerThreadStrategyExecutionAdapterMetadata } from "./adapter.js"
 import {
   createRuntimeGuestExecutionV117,
   executeStrategyRuntimeAbiV117,
+  observeRuntimeGuestAccountingV117,
 } from "./abi-bridge.js"
+import { consumeCandidateEvidenceFixture } from "./candidate-evidence-fixture.js"
 import {
   runStrategyMethodInWorker,
   runStrategyMethodInWorkerV117,
@@ -30,8 +32,13 @@ export const createWorkerThreadStrategyExecutionAdapter =
           const observation = runStrategyMethodInWorkerV117(guest)
           return createRuntimeGuestExecutionV117(
             observation,
-            guest.outputByteLimit,
-            request.fixtureEvidenceAfterObservationForTestsOnly,
+            consumeCandidateEvidenceFixture(
+              request,
+              observeRuntimeGuestAccountingV117(
+                observation,
+                guest.outputByteLimit,
+              ),
+            ),
           )
         },
       })

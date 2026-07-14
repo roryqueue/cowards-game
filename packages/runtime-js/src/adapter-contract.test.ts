@@ -1,4 +1,5 @@
 import { spawnSync, type SpawnSyncReturns } from "node:child_process"
+import { Buffer } from "node:buffer"
 import { createHash } from "node:crypto"
 import { describe, expect, it } from "vitest"
 import type { RuntimeResult } from "@cowards/engine"
@@ -36,6 +37,7 @@ import { createSubprocessStrategyExecutionAdapter } from "./subprocess-adapter.j
 import { SubprocessSystemFailure } from "./subprocess-ipc.js"
 import { createContainerSubprocessStrategyExecutionAdapter } from "./container-subprocess-adapter.js"
 import { CANDIDATE_BOUNDED_CANONICAL_SOURCE } from "./candidate-bounded-canonical-source.js"
+import { registerCandidateEvidenceFixture } from "./candidate-evidence-fixture.js"
 
 const validStrategySource = `
 export default {
@@ -162,9 +164,6 @@ type CandidateAdapter = {
     requestBytes: Uint8Array
     executableSource: string
     signingIdentity: RuntimeInvocationSigningIdentityV117
-    fixtureEvidenceAfterObservationForTestsOnly?: (
-      observation: StrategyExecutionAccountingObservationV117,
-    ) => RuntimeInvocationExecutionReceiptEvidenceV117
   }): Uint8Array
 }
 
@@ -251,29 +250,36 @@ const executeCandidateWith = (
     | undefined
     | typeof automaticCandidateEvidence = automaticCandidateEvidence,
 ) => {
-  const responseBytes = (adapter as unknown as CandidateAdapter).executeV117({
+  const invocation = {
     requestBytes: serializeRuntimeInvocationRequestV117(request),
     executableSource,
     signingIdentity: candidateIdentity,
-    ...(receiptEvidence === undefined
-      ? {}
-      : {
-          fixtureEvidenceAfterObservationForTestsOnly: (
-            observation: StrategyExecutionAccountingObservationV117,
-          ) =>
-            receiptEvidence === automaticCandidateEvidence
-              ? completeCandidateEvidence(request, {
-                  wallMilliseconds: observation.methodDeadlineExceeded
-                    ? request.budget.methodLimit.counters.wallMilliseconds
-                        .maximum + 1
-                    : 1,
-                  payloadBytes: observation.payloadBytes,
-                  stdoutBytes: observation.stdoutBytes,
-                  stderrBytes: observation.stderrBytes,
-                })
-              : receiptEvidence,
-        }),
-  })
+  }
+  if (receiptEvidence !== undefined) {
+    registerCandidateEvidenceFixture(invocation, (observation) => {
+      if (receiptEvidence !== automaticCandidateEvidence) {
+        return receiptEvidence
+      }
+      const evidence = completeCandidateEvidence(request, {
+        wallMilliseconds: observation.methodDeadlineExceeded
+          ? request.budget.methodLimit.counters.wallMilliseconds.maximum + 1
+          : 1,
+        payloadBytes: observation.payloadBytes,
+        stdoutBytes: observation.stdoutBytes,
+        stderrBytes: observation.stderrBytes,
+      })
+      return {
+        ...evidence,
+        cancellation: {
+          status: "verified",
+          ...observation.cancellation,
+        },
+      }
+    })
+  }
+  const responseBytes = (adapter as unknown as CandidateAdapter).executeV117(
+    invocation,
+  )
   return verifyRuntimeInvocationResponseV117(
     responseBytes,
     request,
@@ -368,6 +374,22 @@ describe("StrategyExecutionAdapter contract", () => {
     expect(workerEntrypoint.getStrategyExecutionAdapterMetadata().default).toBe(
       true,
     )
+  })
+
+  it("keeps candidate evidence fixture authority out of package entrypoints", async () => {
+    const [rootEntrypoint, workerEntrypoint] = await Promise.all([
+      import("./index.js"),
+      import("./worker.js"),
+    ])
+
+    for (const entrypoint of [rootEntrypoint, workerEntrypoint]) {
+      expect(Object.keys(entrypoint)).not.toContain(
+        "registerCandidateEvidenceFixture",
+      )
+      expect(JSON.stringify(Object.keys(entrypoint))).not.toMatch(
+        /fixture.*evidence|evidence.*fixture/iu,
+      )
+    }
   })
 
   it("describes worker threads as containment, not the final sandbox", () => {
@@ -688,6 +710,27 @@ export default {
       ],
       strategyMemory: { adapter: "worker-thread" },
     })}`
+    const candidateSpawnResult = (
+      stdout: string | Uint8Array,
+      overrides: Partial<{
+        stderr: string | Uint8Array
+        status: number | null
+        signal: string | null
+        error: Error
+      }> = {},
+    ): SpawnSyncReturns<string> => {
+      const stdoutBuffer = Buffer.from(stdout)
+      const stderrBuffer = Buffer.from(overrides.stderr ?? "")
+      return {
+        pid: 123,
+        output: [Buffer.alloc(0), stdoutBuffer, stderrBuffer],
+        stdout: stdoutBuffer,
+        stderr: stderrBuffer,
+        status: overrides.status ?? 0,
+        signal: overrides.signal ?? null,
+        ...(overrides.error === undefined ? {} : { error: overrides.error }),
+      } as unknown as SpawnSyncReturns<string>
+    }
 
     const candidateAdapters = (): readonly {
       label: string
@@ -700,29 +743,13 @@ export default {
       {
         label: "subprocess",
         adapter: createSubprocessStrategyExecutionAdapter({
-          spawnSync: () =>
-            ({
-              pid: 123,
-              output: ["", successFrame, ""],
-              stdout: successFrame,
-              stderr: "",
-              status: 0,
-              signal: null,
-            }) as SpawnSyncReturns<string>,
+          spawnSync: () => candidateSpawnResult(successFrame),
         }),
       },
       {
         label: "container",
         adapter: createContainerSubprocessStrategyExecutionAdapter({
-          spawnSync: () =>
-            ({
-              pid: 123,
-              output: ["", successFrame, ""],
-              stdout: successFrame,
-              stderr: "",
-              status: 0,
-              signal: null,
-            }) as SpawnSyncReturns<string>,
+          spawnSync: () => candidateSpawnResult(successFrame),
         }),
       },
     ]
@@ -752,21 +779,15 @@ export default {
       const request = candidateRequest()
       let fixtureCalls = 0
       const adapter = createSubprocessStrategyExecutionAdapter({
-        spawnSync: () =>
-          ({
-            pid: 123,
-            output: ["", successFrame, ""],
-            stdout: successFrame,
-            stderr: "",
-            status: 0,
-            signal: null,
-          }) as SpawnSyncReturns<string>,
+        spawnSync: () => candidateSpawnResult(successFrame),
       }) as unknown as CandidateAdapter
-      const responseBytes = adapter.executeV117({
+      const maliciousInvocation = {
         requestBytes: serializeRuntimeInvocationRequestV117(request),
         executableSource: transpiledSource(),
         signingIdentity: candidateIdentity,
-        fixtureEvidenceAfterObservationForTestsOnly: (observation) => {
+        fixtureEvidenceAfterObservationForTestsOnly: (
+          observation: StrategyExecutionAccountingObservationV117,
+        ) => {
           fixtureCalls += 1
           return completeCandidateEvidence(request, {
             payloadBytes: observation.payloadBytes,
@@ -774,7 +795,12 @@ export default {
             stderrBytes: observation.stderrBytes,
           })
         },
-      })
+      }
+      const responseBytes = (
+        adapter.executeV117 as unknown as (
+          input: typeof maliciousInvocation,
+        ) => Uint8Array
+      )(maliciousInvocation)
       const result = verifyRuntimeInvocationResponseV117(
         responseBytes,
         request,
@@ -820,14 +846,7 @@ export default {
         const adapter = createSubprocessStrategyExecutionAdapter({
           spawnSync: () => {
             calls += 1
-            return {
-              pid: 123,
-              output: ["", successFrame, ""],
-              stdout: successFrame,
-              stderr: "",
-              status: 0,
-              signal: null,
-            } as SpawnSyncReturns<string>
+            return candidateSpawnResult(successFrame)
           },
         })
         const result = executeCandidateWith(
@@ -870,15 +889,7 @@ export default {
         stdoutBytes: 1,
       })
       const adapter = createSubprocessStrategyExecutionAdapter({
-        spawnSync: () =>
-          ({
-            pid: 123,
-            output: ["", successFrame, ""],
-            stdout: successFrame,
-            stderr: "",
-            status: 0,
-            signal: null,
-          }) as SpawnSyncReturns<string>,
+        spawnSync: () => candidateSpawnResult(successFrame),
       })
 
       const result = executeCandidateWith(
@@ -919,17 +930,13 @@ export default {
       const stderr = "diagnostic-XYZ"
       const adapter = createSubprocessStrategyExecutionAdapter({
         spawnSync: () =>
-          ({
-            pid: 123,
-            output: ["", stdout, stderr],
-            stdout,
+          candidateSpawnResult(stdout, {
             stderr,
             status: null,
-            signal: null,
             error: Object.assign(new Error("private outer watchdog detail"), {
               code: "ETIMEDOUT",
             }),
-          }) as SpawnSyncReturns<string>,
+          }),
       })
       const evidence = completeCandidateEvidence(request, {
         attribution: "host",
@@ -1051,14 +1058,7 @@ export default {
         createSubprocessStrategyExecutionAdapter({
           spawnSync: (...args) => {
             calls.push(args)
-            return {
-              pid: 123,
-              output: ["", stdout, ""],
-              stdout,
-              stderr: "",
-              status: 0,
-              signal: null,
-            } as SpawnSyncReturns<string>
+            return candidateSpawnResult(stdout)
           },
         })
 
@@ -1144,15 +1144,7 @@ export default {
         stdoutBytes: payloadBytes.byteLength + 1,
       })
       const adapter = createSubprocessStrategyExecutionAdapter({
-        spawnSync: () =>
-          ({
-            pid: 123,
-            output: ["", stdout, ""],
-            stdout,
-            stderr: "",
-            status: 0,
-            signal: null,
-          }) as SpawnSyncReturns<string>,
+        spawnSync: () => candidateSpawnResult(stdout),
       })
 
       const result = executeCandidateWith(
@@ -1183,15 +1175,7 @@ export default {
         stdoutBytes: 1,
       })
       const adapter = createSubprocessStrategyExecutionAdapter({
-        spawnSync: () =>
-          ({
-            pid: 123,
-            output: ["", "D", ""],
-            stdout: "D",
-            stderr: "",
-            status: 0,
-            signal: null,
-          }) as SpawnSyncReturns<string>,
+        spawnSync: () => candidateSpawnResult("D"),
       })
 
       const result = executeCandidateWith(
@@ -1236,15 +1220,7 @@ export default {
       for (const adapter of [
         createWorkerThreadStrategyExecutionAdapter(),
         createSubprocessStrategyExecutionAdapter({
-          spawnSync: () =>
-            ({
-              pid: 123,
-              output: ["", "F", ""],
-              stdout: "F",
-              stderr: "",
-              status: 0,
-              signal: null,
-            }) as SpawnSyncReturns<string>,
+          spawnSync: () => candidateSpawnResult("F"),
         }),
       ]) {
         const result = executeCandidateWith(adapter, request, source)
@@ -1293,15 +1269,7 @@ export default {
         for (const adapter of [
           createWorkerThreadStrategyExecutionAdapter(),
           createSubprocessStrategyExecutionAdapter({
-            spawnSync: () =>
-              ({
-                pid: 123,
-                output: ["", tag, ""],
-                stdout: tag,
-                stderr: "",
-                status: 0,
-                signal: null,
-              }) as SpawnSyncReturns<string>,
+            spawnSync: () => candidateSpawnResult(tag),
           }),
         ]) {
           const result = executeCandidateWith(adapter, request, source)
@@ -1328,14 +1296,7 @@ export default {
         const adapter = createAdapter({
           spawnSync: (_command, _args, options) => {
             observedOptions = options as unknown as Record<string, unknown>
-            return {
-              pid: 123,
-              output: ["", successFrame, ""],
-              stdout: successFrame,
-              stderr: "",
-              status: 0,
-              signal: null,
-            } as SpawnSyncReturns<string>
+            return candidateSpawnResult(successFrame)
           },
         })
 
@@ -1361,7 +1322,7 @@ export default {
         expect(observedOptions?.maxBuffer, label).toBe(
           request.budget.methodLimit.counters.stdoutBytes.maximum + 1,
         )
-        expect(observedOptions?.encoding, label).toBe("buffer")
+        expect(observedOptions?.encoding, label).toBeUndefined()
       }
     })
 
@@ -1420,16 +1381,29 @@ export default {
         createSubprocessStrategyExecutionAdapter(),
       ]) {
         const result = executeCandidateWith(adapter, request, source)
-        expect(result, adapter.metadata.id).toMatchObject({
-          kind: "success",
-          value: {
-            accounting: { disposition: "commit" },
-            outcome: {
-              kind: "player_violation",
-              violation: { code: "TIMEOUT" },
-            },
-          },
-        })
+        expect(result, adapter.metadata.id).toMatchObject(
+          adapter.metadata.id === "worker-thread"
+            ? {
+                kind: "success",
+                value: {
+                  accounting: { disposition: "no_commit" },
+                  outcome: {
+                    kind: "system_failure",
+                    failure: { code: "AMBIGUOUS_ATTRIBUTION" },
+                  },
+                },
+              }
+            : {
+                kind: "success",
+                value: {
+                  accounting: { disposition: "commit" },
+                  outcome: {
+                    kind: "player_violation",
+                    violation: { code: "TIMEOUT" },
+                  },
+                },
+              },
+        )
       }
     })
 
@@ -1457,26 +1431,10 @@ export default {
       })
       for (const adapter of [
         createSubprocessStrategyExecutionAdapter({
-          spawnSync: () =>
-            ({
-              pid: 123,
-              output: ["", "O", ""],
-              stdout: "O",
-              stderr: "",
-              status: 0,
-              signal: null,
-            }) as SpawnSyncReturns<string>,
+          spawnSync: () => candidateSpawnResult("O"),
         }),
         createContainerSubprocessStrategyExecutionAdapter({
-          spawnSync: () =>
-            ({
-              pid: 123,
-              output: ["", "O", ""],
-              stdout: "O",
-              stderr: "",
-              status: 0,
-              signal: null,
-            }) as SpawnSyncReturns<string>,
+          spawnSync: () => candidateSpawnResult("O"),
         }),
       ]) {
         const result = executeCandidateWith(adapter, request, source, evidence)
@@ -1563,15 +1521,7 @@ export default {
       for (const adapter of [
         createWorkerThreadStrategyExecutionAdapter(),
         createSubprocessStrategyExecutionAdapter({
-          spawnSync: () =>
-            ({
-              pid: 123,
-              output: ["", canonicalFrame, ""],
-              stdout: canonicalFrame,
-              stderr: "",
-              status: 0,
-              signal: null,
-            }) as SpawnSyncReturns<string>,
+          spawnSync: () => candidateSpawnResult(canonicalFrame),
         }),
       ]) {
         const result = executeCandidateWith(adapter, request, source)
@@ -1608,15 +1558,7 @@ export default {
       for (const adapter of [
         createWorkerThreadStrategyExecutionAdapter(),
         createSubprocessStrategyExecutionAdapter({
-          spawnSync: () =>
-            ({
-              pid: 123,
-              output: ["", "R", ""],
-              stdout: "R",
-              stderr: "",
-              status: 0,
-              signal: null,
-            }) as SpawnSyncReturns<string>,
+          spawnSync: () => candidateSpawnResult("R"),
         }),
       ]) {
         const result = executeCandidateWith(

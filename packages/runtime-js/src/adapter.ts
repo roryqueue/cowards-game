@@ -1,8 +1,5 @@
 import type { RuntimeResult } from "@cowards/engine"
-import type {
-  RuntimeInvocationExecutionReceiptEvidenceV117,
-  RuntimeInvocationSigningIdentityV117,
-} from "@cowards/spec"
+import type { RuntimeInvocationSigningIdentityV117 } from "@cowards/spec"
 
 export type StrategyMethodName = "selectActivations" | "soldierBrain"
 
@@ -61,15 +58,6 @@ export interface StrategyExecutionRequestV117 {
   readonly executableSource: string
   /** Host-only authority. Successor guest harnesses never receive this value. */
   readonly signingIdentity: RuntimeInvocationSigningIdentityV117
-  /**
-   * Fixture-only successor seam. The adapter calls this only after it owns a
-   * complete raw guest observation, then returns that observation and the
-   * supplied evidence to the host bridge as one value. Production callers do
-   * not provide it and therefore fail closed until real meters are available.
-   */
-  readonly fixtureEvidenceAfterObservationForTestsOnly?: (
-    observation: StrategyExecutionAccountingObservationV117,
-  ) => RuntimeInvocationExecutionReceiptEvidenceV117
 }
 
 export interface StrategyExecutionAccountingObservationV117 {
@@ -81,6 +69,12 @@ export interface StrategyExecutionAccountingObservationV117 {
   readonly stderrBytes: number
   /** True only when the READY/GO method watchdog reached its signed bound. */
   readonly methodDeadlineExceeded: boolean
+  /** Host-owned cancellation evidence bound to this exact observation. */
+  readonly cancellation: Readonly<{
+    terminationRequired: boolean
+    receiptPresent: boolean
+    graceMilliseconds: number
+  }>
 }
 
 export interface StrategyExecutionAdapterV117 extends StrategyExecutionAdapter {

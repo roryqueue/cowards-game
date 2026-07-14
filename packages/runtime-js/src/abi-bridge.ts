@@ -147,13 +147,23 @@ export type RuntimeGuestSystemFailureV117 = Readonly<{
   retryable: boolean
   stdoutBytes?: number
   stderrBytes?: number
+  cancellation?: RuntimeGuestCancellationObservationV117
+}>
+
+export type RuntimeGuestCancellationObservationV117 = Readonly<{
+  terminationRequired: boolean
+  receiptPresent: boolean
+  graceMilliseconds: number
 }>
 
 export type RuntimeGuestObservationV117 =
   | Readonly<{
       kind: "raw_frame"
       bytes: Uint8Array
+      payloadBytes?: number
+      stdoutBytes?: number
       stderrBytes?: number
+      cancellation?: RuntimeGuestCancellationObservationV117
     }>
   | RuntimeGuestSystemFailureV117
 
@@ -175,6 +185,7 @@ export interface ExecuteStrategyRuntimeAbiBridgeInputV117 {
     readonly cancellationGraceMilliseconds: number
     readonly outputByteLimit: number
     readonly stdoutByteLimit: number
+    readonly stderrByteLimit: number
   }) => RuntimeGuestExecutionV117
 }
 
@@ -345,43 +356,48 @@ export const observeRuntimeGuestAccountingV117 = (
       stdoutBytes: observation.stdoutBytes ?? 0,
       stderrBytes: observation.stderrBytes ?? 0,
       methodDeadlineExceeded: false,
+      cancellation: observation.cancellation ?? {
+        terminationRequired: false,
+        receiptPresent: false,
+        graceMilliseconds: 0,
+      },
     }
   }
   const tag = String.fromCharCode(observation.bytes[0] ?? 0)
   return {
     payloadBytes:
-      tag === RUNTIME_GUEST_FRAME_TAGS_V117.success
+      observation.payloadBytes ??
+      (tag === RUNTIME_GUEST_FRAME_TAGS_V117.success
         ? Math.max(0, observation.bytes.byteLength - 1)
         : tag === RUNTIME_GUEST_FRAME_TAGS_V117.oversizedOutput
           ? outputByteLimit + 1
-          : 0,
-    stdoutBytes: observation.bytes.byteLength,
+          : 0),
+    stdoutBytes: observation.stdoutBytes ?? observation.bytes.byteLength,
     stderrBytes: observation.stderrBytes ?? 0,
     methodDeadlineExceeded:
       tag === RUNTIME_GUEST_FRAME_TAGS_V117.deadlineExceeded,
+    cancellation: observation.cancellation ??
+      (tag === RUNTIME_GUEST_FRAME_TAGS_V117.deadlineExceeded
+        ? {
+            terminationRequired: true,
+            receiptPresent: false,
+            graceMilliseconds: 0,
+          }
+        : {
+            terminationRequired: false,
+            receiptPresent: false,
+            graceMilliseconds: 0,
+          }),
   }
 }
 
 export const createRuntimeGuestExecutionV117 = (
   observation: RuntimeGuestObservationV117,
-  outputByteLimit: number,
-  evidenceAfterObservation:
-    | ((
-        observation: StrategyExecutionAccountingObservationV117,
-      ) => RuntimeInvocationExecutionReceiptEvidenceV117)
-    | undefined,
+  receiptEvidence: RuntimeInvocationExecutionReceiptEvidenceV117 | undefined,
 ): RuntimeGuestExecutionV117 => {
-  if (evidenceAfterObservation === undefined) return { observation }
-  try {
-    return {
-      observation,
-      receiptEvidence: evidenceAfterObservation(
-        observeRuntimeGuestAccountingV117(observation, outputByteLimit),
-      ),
-    }
-  } catch {
-    return { observation }
-  }
+  return receiptEvidence === undefined
+    ? { observation }
+    : { observation, receiptEvidence }
 }
 
 const ambiguousEvidence =
@@ -441,7 +457,24 @@ const accountingMatchesObservation = (
   evidence.counters.stdoutBytes.status === "measured" &&
   evidence.counters.stdoutBytes.delta === observation.stdoutBytes &&
   evidence.counters.stderrBytes.status === "measured" &&
-  evidence.counters.stderrBytes.delta === observation.stderrBytes
+  evidence.counters.stderrBytes.delta === observation.stderrBytes &&
+  evidence.cancellation.status === "verified" &&
+  evidence.cancellation.terminationRequired ===
+    observation.cancellation.terminationRequired &&
+  evidence.cancellation.receiptPresent ===
+    observation.cancellation.receiptPresent &&
+  evidence.cancellation.graceMilliseconds ===
+    observation.cancellation.graceMilliseconds
+
+const hasBoundedTerminationReceipt = (
+  request: AuthenticatedRuntimeInvocationRequestV117,
+  observation: RuntimeGuestObservationV117,
+): boolean =>
+  observation.cancellation?.terminationRequired === true &&
+  observation.cancellation.receiptPresent &&
+  observation.cancellation.graceMilliseconds >= 0 &&
+  observation.cancellation.graceMilliseconds <=
+    request.budget.methodLimit.cancellation.terminationGraceMilliseconds
 
 const authenticatedResponse = (
   request: AuthenticatedRuntimeInvocationRequestV117,
@@ -521,6 +554,7 @@ export const executeStrategyRuntimeAbiV117 = (
   const methodLimit = request.budget.methodLimit
   const outputByteLimit = methodLimit.counters.payloadBytes.maximum
   const stdoutByteLimit = methodLimit.counters.stdoutBytes.maximum
+  const stderrByteLimit = methodLimit.counters.stderrBytes.maximum
   if (outputByteLimit > RUNTIME_OUTPUT_BYTES) {
     return ambiguousResponse(
       request,
@@ -543,6 +577,7 @@ export const executeStrategyRuntimeAbiV117 = (
         methodLimit.cancellation.terminationGraceMilliseconds,
       outputByteLimit,
       stdoutByteLimit,
+      stderrByteLimit,
     })
   } catch {
     execution = {
@@ -562,6 +597,15 @@ export const executeStrategyRuntimeAbiV117 = (
             "OVERSIZED_OUTPUT",
             "STDOUT_CAP_EXCEEDED",
           )
+        : String.fromCharCode(observation.bytes[0] ?? 0) ===
+              RUNTIME_GUEST_FRAME_TAGS_V117.deadlineExceeded &&
+            !hasBoundedTerminationReceipt(request, observation)
+          ? systemFailure(request, "AMBIGUOUS_ATTRIBUTION", false, [
+              "ADAPTER_AUTHENTICATED",
+              "OUTER_BINDINGS_VERIFIED",
+              "WALL_DEADLINE_EXCEEDED",
+              "TERMINATION_RECEIPT_UNAVAILABLE",
+            ])
         : classifyGuestFrame(request, observation.bytes)
       : systemFailure(request, observation.code, observation.retryable)
 
