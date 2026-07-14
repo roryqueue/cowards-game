@@ -748,6 +748,52 @@ export default {
       }
     })
 
+    it("does not accept fixture evidence injection from an adapter caller", () => {
+      const request = candidateRequest()
+      let fixtureCalls = 0
+      const adapter = createSubprocessStrategyExecutionAdapter({
+        spawnSync: () =>
+          ({
+            pid: 123,
+            output: ["", successFrame, ""],
+            stdout: successFrame,
+            stderr: "",
+            status: 0,
+            signal: null,
+          }) as SpawnSyncReturns<string>,
+      }) as unknown as CandidateAdapter
+      const responseBytes = adapter.executeV117({
+        requestBytes: serializeRuntimeInvocationRequestV117(request),
+        executableSource: transpiledSource(),
+        signingIdentity: candidateIdentity,
+        fixtureEvidenceAfterObservationForTestsOnly: (observation) => {
+          fixtureCalls += 1
+          return completeCandidateEvidence(request, {
+            payloadBytes: observation.payloadBytes,
+            stdoutBytes: observation.stdoutBytes,
+            stderrBytes: observation.stderrBytes,
+          })
+        },
+      })
+      const result = verifyRuntimeInvocationResponseV117(
+        responseBytes,
+        request,
+        candidateIdentity,
+      )
+
+      expect(fixtureCalls).toBe(0)
+      expect(result).toMatchObject({
+        kind: "success",
+        value: {
+          accounting: { disposition: "no_commit" },
+          outcome: {
+            kind: "system_failure",
+            failure: { code: "AMBIGUOUS_ATTRIBUTION" },
+          },
+        },
+      })
+    })
+
     it.each(["ambiguous", "unavailable", "incomplete"] as const)(
       "observes the guest before failing closed for %s post-execution accounting evidence",
       (posture) => {
@@ -1128,6 +1174,45 @@ export default {
       })
     })
 
+    it("does not commit TIMEOUT without a bounded termination receipt", () => {
+      const request = candidateRequest()
+      const evidence = completeCandidateEvidence(request, {
+        wallMilliseconds:
+          request.budget.methodLimit.counters.wallMilliseconds.maximum + 1,
+        payloadBytes: 0,
+        stdoutBytes: 1,
+      })
+      const adapter = createSubprocessStrategyExecutionAdapter({
+        spawnSync: () =>
+          ({
+            pid: 123,
+            output: ["", "D", ""],
+            stdout: "D",
+            stderr: "",
+            status: 0,
+            signal: null,
+          }) as SpawnSyncReturns<string>,
+      })
+
+      const result = executeCandidateWith(
+        adapter,
+        request,
+        transpiledSource(),
+        evidence,
+      )
+
+      expect(result).toMatchObject({
+        kind: "success",
+        value: {
+          accounting: { disposition: "no_commit" },
+          outcome: {
+            kind: "system_failure",
+            failure: { code: "AMBIGUOUS_ATTRIBUTION" },
+          },
+        },
+      })
+    })
+
     it.each([
       ["globalThis.process", "globalThis.process.cwd()"],
       ["Math.random", "Math.random()"],
@@ -1276,6 +1361,7 @@ export default {
         expect(observedOptions?.maxBuffer, label).toBe(
           request.budget.methodLimit.counters.stdoutBytes.maximum + 1,
         )
+        expect(observedOptions?.encoding, label).toBe("buffer")
       }
     })
 
