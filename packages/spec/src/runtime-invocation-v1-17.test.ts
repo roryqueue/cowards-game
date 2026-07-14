@@ -46,13 +46,15 @@ const responseFixturePath = path.join(
 const sha256 = (bytes: Uint8Array): `sha256:${string}` =>
   `sha256:${createHash("sha256").update(bytes).digest("hex")}`
 
-const candidateRequest = (): AuthenticatedRuntimeInvocationRequestV117 =>
+const candidateRequest = (
+  method: "selectActivations" | "soldierBrain" = "selectActivations",
+): AuthenticatedRuntimeInvocationRequestV117 =>
   createAuthenticatedRuntimeInvocationRequestV117(
     {
       requestId: "request:candidate:v1.17:0001",
       invocationId: "invocation:candidate:v1.17:0001",
       kernelRequestId: "kernel-request:candidate:v1.17:0001",
-      method: "selectActivations",
+      method,
       semanticTuple: {
         rules: "cowards-rules-v1.4",
         engine: "engine-kernel-v1.37-candidate-1",
@@ -114,6 +116,100 @@ const candidateResponse = (request = candidateRequest()) =>
       secret: fixtureSecret,
     },
   )
+
+const signedSuccessResponseBytes = (
+  method: "selectActivations" | "soldierBrain",
+  value: JsonValue,
+): Readonly<{
+  request: AuthenticatedRuntimeInvocationRequestV117
+  bytes: Uint8Array
+}> => {
+  const request = candidateRequest(method)
+  const requestTrace = {
+    requestId: request.requestId,
+    invocationId: request.invocationId,
+    kernelRequestId: request.kernelRequestId,
+    method: request.method,
+    requestSha256: sha256(serializeRuntimeInvocationRequestV117(request)),
+    budgetProfileSha256: request.budget.profileSha256,
+    inputSha256: request.input.canonicalSha256,
+    retryIdentitySha256: request.retry.identitySha256,
+    safeCodes: ["ADAPTER_AUTHENTICATED", "PAYLOAD_CANONICAL"],
+  } as const
+  const valid =
+    method === "selectActivations"
+      ? createAuthenticatedRuntimeInvocationResponseV117(
+          request,
+          {
+            kind: "success",
+            value: { activationOrders: [], strategyMemory: null },
+            trace: requestTrace,
+          },
+          {
+            keyId: RUNTIME_INVOCATION_V1_17_TEST_KEY_ID,
+            secret: fixtureSecret,
+          },
+        )
+      : createAuthenticatedRuntimeInvocationResponseV117(
+          request,
+          {
+            kind: "success",
+            value: {
+              action: { type: "TURN_TO_STONE" },
+              soldierMemory: null,
+            },
+            trace: requestTrace,
+          },
+          {
+            keyId: RUNTIME_INVOCATION_V1_17_TEST_KEY_ID,
+            secret: fixtureSecret,
+          },
+        )
+  const payload = encodeCanonicalJson(value, {
+    context: "authenticated-outer-envelope",
+  })
+  if (!payload.ok) throw new Error(payload.error.code)
+  const { authentication: _authentication, ...validUnsigned } = valid
+  const unsigned = {
+    ...validUnsigned,
+    outcome: {
+      kind: "success" as const,
+      value,
+      trace: requestTrace,
+    },
+    payloadBinding: {
+      sha256: sha256(payload.bytes),
+      canonicalByteLength: payload.bytes.byteLength,
+    },
+  }
+  const encodedUnsigned = encodeCanonicalJson(
+    unsigned as unknown as JsonValue,
+    {
+      context: "authenticated-outer-envelope",
+    },
+  )
+  if (!encodedUnsigned.ok) throw new Error(encodedUnsigned.error.code)
+  const signatureInput = frameCanonicalIdentity("evidenceBundle", [
+    new TextEncoder().encode("runtime-invocation-v1.17:response"),
+    encodedUnsigned.bytes,
+  ])
+  const envelope = {
+    ...unsigned,
+    authentication: {
+      algorithm: "hmac-sha256" as const,
+      keyId: RUNTIME_INVOCATION_V1_17_TEST_KEY_ID,
+      signatureInputSha256: sha256(signatureInput),
+      signature: `hmac-sha256:${createHmac("sha256", fixtureSecret)
+        .update(signatureInput)
+        .digest("hex")}` as const,
+    },
+  }
+  const encoded = encodeCanonicalJson(envelope as unknown as JsonValue, {
+    context: "authenticated-outer-envelope",
+  })
+  if (!encoded.ok) throw new Error(encoded.error.code)
+  return { request, bytes: encoded.bytes }
+}
 
 const signedSystemFailureResponseBytes = (
   code: (typeof RUNTIME_INVOCATION_V1_17_SYSTEM_FAILURE_CODES)[number],
@@ -388,6 +484,80 @@ describe("runtime invocation v1.17 exclusive ownership", () => {
 })
 
 describe("runtime invocation v1.17 authenticated candidate wire", () => {
+  it.each([
+    [
+      "result",
+      "selectActivations",
+      {
+        activationOrders: [],
+        strategyMemory: null,
+        private: true,
+      },
+    ],
+    [
+      "activation order",
+      "selectActivations",
+      {
+        activationOrders: [{ soldierId: "soldier:1", private: true }],
+        strategyMemory: null,
+      },
+    ],
+    [
+      "action",
+      "soldierBrain",
+      {
+        action: { type: "TURN_TO_STONE", direction: "UP" },
+        soldierMemory: null,
+      },
+    ],
+  ] as const)("rejects signed unknown nested %s keys", (_label, method, value) => {
+    const signed = signedSuccessResponseBytes(method, value)
+    expect(
+      verifyRuntimeInvocationResponseV117(signed.bytes, signed.request, {
+        keyId: RUNTIME_INVOCATION_V1_17_TEST_KEY_ID,
+        secret: fixtureSecret,
+      }),
+    ).toMatchObject({
+      kind: "system_failure",
+      failure: {
+        code: "OUTER_FRAME_UNDECODABLE",
+        retryable: false,
+      },
+    })
+  })
+
+  it("rejects a signed success payload over the 256 KiB invocation cap", () => {
+    const value = {
+      activationOrders: Array.from({ length: 270 }, (_, index) => ({
+        soldierId: `soldier:${index}`,
+        objective: "x".repeat(1022),
+      })),
+      strategyMemory: null,
+    }
+    const payload = encodeCanonicalJson(value, {
+      context: "decoded-strategy-payload",
+    })
+    expect(payload.ok).toBe(true)
+    if (!payload.ok) return
+    expect(payload.bytes.byteLength).toBeGreaterThan(
+      RUNTIME_ABI_V1_17.fieldCaps.invocationOutput.value,
+    )
+
+    const signed = signedSuccessResponseBytes("selectActivations", value)
+    expect(
+      verifyRuntimeInvocationResponseV117(signed.bytes, signed.request, {
+        keyId: RUNTIME_INVOCATION_V1_17_TEST_KEY_ID,
+        secret: fixtureSecret,
+      }),
+    ).toMatchObject({
+      kind: "system_failure",
+      failure: {
+        code: "OUTER_FRAME_UNDECODABLE",
+        retryable: false,
+      },
+    })
+  })
+
   it("accepts only signed system-failure responses with exact retryability", () => {
     for (const code of RUNTIME_INVOCATION_V1_17_SYSTEM_FAILURE_CODES) {
       const signed = signedSystemFailureResponseBytes(
