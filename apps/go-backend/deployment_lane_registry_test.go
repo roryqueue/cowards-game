@@ -27,10 +27,11 @@ func newDeploymentLaneFixture(t *testing.T) deploymentLaneFixture {
 	toolchain := mapValue(mapValue(metadata, "sourceArtifact"), "toolchain")
 	toolchain["runtime"] = "typescript-transpileModule"
 	toolchain["runtimeVersion"] = "6.0.3"
+	engine := engineCompatibility()
 	tuple := registeredCompatibilityTuple{
 		TupleID: "sha256:" + strings.Repeat("a", 64),
 		Tuple: canonicalCompatibilityTuple{
-			Rules: "cowards-rules-v1.4", Engine: "0.1.4", RuntimeABI: strategyRuntimeABIVersion,
+			Rules: "cowards-rules-v1.4", Engine: stringValue(engine, "engine"), RuntimeABI: strategyRuntimeABIVersion,
 			Chronicle: "chronicle-v1.4", ArenaCatalog: "canonical-arena-catalog-v1.4", SetPolicy: "canonical-set-policy-v1.4",
 		},
 	}
@@ -44,7 +45,6 @@ func newDeploymentLaneFixture(t *testing.T) deploymentLaneFixture {
 	registry := &goDeploymentLaneRegistry{SchemaVersion: deploymentLaneRegistrySchemaVersion, RegistryID: "test:deployment-lanes", Lanes: []goDeploymentLaneProfile{profile}}
 	revisionID := "strategy-revision:test:typescript"
 	runtime := defaultRuntimeMetadata()
-	engine := engineCompatibility()
 	lane, ok := registry.resolveRevision(revisionID, sourceHash, sourceBytes, runtime, engine, metadata, tuple)
 	if !ok || lane == nil {
 		t.Fatal("deployment registry did not resolve exact fixture revision")
