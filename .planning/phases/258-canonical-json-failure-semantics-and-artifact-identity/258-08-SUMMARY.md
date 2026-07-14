@@ -31,6 +31,7 @@ key-files:
     - packages/runtime-js/src/subprocess-harness.ts
     - packages/runtime-js/src/container-subprocess-adapter.ts
     - packages/runtime-js/src/worker-thread-adapter.ts
+    - packages/runtime-js/src/candidate-bounded-canonical-source.ts
     - packages/runtime-js/src/adapter-contract.test.ts
     - packages/runtime-js/src/hostile-matrix.test.ts
 key-decisions:
@@ -99,11 +100,13 @@ status: complete
 6. **Review fix: Restore successor containment guards** — `57efc24`
 7. **Review RED: Expose serialization ownership drift** — `7e50d74`
 8. **Review fix: Preserve successor failure ownership** — `f7cf7d1`
+9. **Independent-review RED: Expose zero-budget, allocation, and IPC ownership gaps** — `6b8beaf`
+10. **Independent-review fix: Close adapter boundary findings** — `a5a7df8`
 
 ## Verification
 
-- Plan-focused worker/subprocess/container/hostile matrix passed **98/98** across four files.
-- Complete `@cowards/runtime-js` suite passed **196/196** across eleven files.
+- Plan-focused worker/subprocess/container/hostile matrix passed **103/103** across four files after the independent-review fixes.
+- Complete `@cowards/runtime-js` suite passed **201/201** across eleven files.
 - Runtime-js typecheck and ESLint passed.
 - Stable `@cowards/spec` suite passed **73/73**; successor ABI, canonical-boundary, runtime ABI, runtime-js integration, and legacy executor subset passed **61/61**.
 - Exact v1.16 hashes remained unchanged: request `5d04fa4d82eb814bb034ce9b5f1d5c80945e3d4e02c9124ca39a6670e9c0eab5`, response `9c870d57e0125eb80ab2ba941ecbbede8a9a775f61c0b278abec25c491374d97`, service `9a0a0411056d06ce4b426b7749256460369124fa752c6c2f81912b8b0bfb31fc`, semantic receipt `36052047a870068ab81ced8c78f3b7f4e8130034a57ee8d16bc3873a50507d1d`, Go client `8fdd3cbc206d2d7e1f77a3603a4f9ea5e664c5ab6f649c87d3e308d99556043f`, Go client test `4a52986d2a43598c0e9556504459143ab56d94d97b22b2296cf84067927e8185`, and migration `ac19e1d825217dfb72142685eb65e62933cea49541ceb39338235b32d2430a69`.
@@ -140,7 +143,26 @@ status: complete
    - Strategy invocation and canonical serialization now have separate catch boundaries; forbidden access remains forbidden, direct throws remain proven exceptions, and serialization faults are invalid output.
    - **Committed in:** RED `7e50d74`, GREEN `f7cf7d1`
 
-**Total deviations:** 4 correctness/security fixes. **Impact:** Stronger artifact authority, containment, and failure ownership with no current-runtime or gameplay activation.
+5. **[High — timeout consistency] A signed zero wall budget reached `spawnSync` as `timeout: 0`.**
+   - Node interprets a zero subprocess timeout as no timeout, while the worker lane observed immediate exhaustion; the three TypeScript paths could therefore disagree and start guest infrastructure for an already exhausted invocation.
+   - The authenticated host bridge now returns redacted `AMBIGUOUS_ATTRIBUTION` before invoking any worker, subprocess, or container when the wall budget is zero.
+   - **Committed in:** RED `6b8beaf`, GREEN `a5a7df8`
+
+6. **[Critical — bounded allocation] Successor harnesses built a complete canonical string and then a complete UTF-8 payload before checking the output limit.**
+   - An oversized or adversarial return could amplify memory independently of the signed payload budget and could evaluate later getters even after the first N+1 bytes already proved overflow.
+   - Both harnesses now embed one shared bounded canonical writer. It writes directly into a budget-sized frame, enforces the frozen depth/node/collection ceilings, preserves unsigned UTF-8 key order and canonical escapes/numbers, and stops on the first attempted byte beyond N without reading later values or constructing a second payload buffer.
+   - **Committed in:** RED `6b8beaf`, GREEN `a5a7df8`
+
+7. **[Critical — failure ownership] Malformed or schema-invalid internal guest IPC emitted player-owned exception/invalid-output tags.**
+   - Broken host-to-guest framing could therefore be converted into a player penalty even though no valid Strategy call was attributable.
+   - Malformed and schema-invalid internal requests now emit the private `T` transport tag, which the host maps only to redacted retryable `TRANSPORT_CRASH`. Pre-method artifact-load failure uses `R` and remains system-owned as `RUNTIME_CRASH`; only an exception caught directly at the Strategy method call site uses the player-owned exception tag.
+   - **Committed in:** RED `6b8beaf`, GREEN `a5a7df8`
+
+**Total deviations:** 7 correctness/security fixes. **Impact:** Stronger artifact authority, containment, allocation bounds, timeout consistency, and failure ownership with no current-runtime or gameplay activation.
+
+## Independent Review Addendum
+
+The post-completion independent review reproduced all three reported gaps before any fix. The final regression additionally proves canonical Unicode key ordering, escaping, exponent and negative-zero encoding, exact N/N+1 output behavior, no access to later values after overflow, zero runtime starts for zero wall budget, and system ownership for malformed request IPC and pre-method load failure. Active v1.14 execution and all pinned v1.16 proof bytes remain unchanged.
 
 ## User Setup Required
 
