@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding/binary"
 	"encoding/hex"
@@ -8,11 +9,10 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 	"regexp"
 	"testing"
 )
-
-const missingCanonicalJSONGoCodecSentinel = "[EXPECTED_RED:MISSING_CANONICAL_JSON_GO_CODEC]"
 
 type canonicalJSONCorpusExpectation struct {
 	Kind                string `json:"kind"`
@@ -96,9 +96,36 @@ func TestCanonicalJSONV11SharedCorpus(t *testing.T) {
 			if len(canonical) != vector.Expectation.CanonicalByteLength || hex.EncodeToString(canonicalDigest[:]) != vector.Expectation.CanonicalSHA256 {
 				t.Fatalf("canonical identity drift for %s", vector.ID)
 			}
+			decoded := decodeCanonicalJSONV11(raw, canonicalJSONV11Options{
+				Context:          canonicalJSONV11DecodedStrategyPayload,
+				RequireCanonical: false,
+			})
+			if decoded.Error != nil {
+				t.Fatalf("%s unexpectedly rejected: %+v", vector.ID, decoded.Error)
+			}
+			if !bytes.Equal(decoded.CanonicalBytes, canonical) {
+				t.Fatalf("%s canonical bytes differ\nwant=%q\n got=%q", vector.ID, canonical, decoded.CanonicalBytes)
+			}
+			strict := decodeCanonicalJSONV11(canonical, canonicalJSONV11Options{
+				Context:          canonicalJSONV11DecodedStrategyPayload,
+				RequireCanonical: true,
+			})
+			if strict.Error != nil || !bytes.Equal(strict.CanonicalBytes, canonical) {
+				t.Fatalf("%s canonical form was not accepted exactly: %+v", vector.ID, strict.Error)
+			}
 		case "error":
 			if !errorCode.MatchString(vector.Expectation.Code) || vector.Expectation.ByteOffset < 0 || (vector.Expectation.Owner != "player_violation" && vector.Expectation.Owner != "system_failure") || vector.Expectation.Path == nil {
 				t.Fatalf("incomplete error expectation for %s", vector.ID)
+			}
+			decoded := decodeCanonicalJSONV11(raw, canonicalJSONV11Options{
+				Context:          canonicalJSONV11DecodedStrategyPayload,
+				RequireCanonical: false,
+			})
+			if decoded.Error == nil {
+				t.Fatalf("%s unexpectedly succeeded", vector.ID)
+			}
+			if decoded.Error.Code != vector.Expectation.Code || decoded.Error.ByteOffset != vector.Expectation.ByteOffset || decoded.Error.Owner != vector.Expectation.Owner || !reflect.DeepEqual(decoded.Error.Path, vector.Expectation.Path) {
+				t.Fatalf("%s error mismatch\nwant=%+v\n got=%+v", vector.ID, vector.Expectation, decoded.Error)
 			}
 		default:
 			t.Fatalf("unknown expectation kind for %s: %q", vector.ID, vector.Expectation.Kind)
@@ -108,5 +135,4 @@ func TestCanonicalJSONV11SharedCorpus(t *testing.T) {
 		t.Fatalf("vector root drift: want=%s got=%s", corpus.VectorRootSHA256, actual)
 	}
 	fmt.Printf("[CANONICAL_JSON_CORPUS:GO] count=%d root=%s enumeration=%s\n", corpus.VectorCount, corpus.VectorRootSHA256, hex.EncodeToString(enumeration.Sum(nil)))
-	t.Fatal(missingCanonicalJSONGoCodecSentinel)
 }
