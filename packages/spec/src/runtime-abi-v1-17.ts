@@ -620,6 +620,952 @@ export const assessRuntimeAbiV117Certification = (
     : { status: "uncertified" as const, missingMeters, missingIdentityPins }
 }
 
+export const RUNTIME_ABI_V1_17_LEDGER_SCHEMA_VERSION =
+  "runtime-budget-ledger-v1" as const
+
+export type RuntimeAbiV117ExecutionMethod =
+  | "selectActivations"
+  | "soldierBrain"
+export type RuntimeAbiV117PreflightProfile = keyof typeof preflightProfiles
+export type RuntimeAbiV117LedgerAttribution =
+  | "proven_strategy"
+  | "host"
+  | "ambiguous"
+
+export type RuntimeAbiV117UnavailableEvidence = Readonly<{
+  status: "unavailable" | "ambiguous"
+}>
+
+export type RuntimeAbiV117CounterEvidence =
+  | Readonly<{
+      status: "measured"
+      delta: number
+      cumulative: number
+    }>
+  | RuntimeAbiV117UnavailableEvidence
+
+export type RuntimeAbiV117MemoryEvidence =
+  | Readonly<{
+      status: "measured"
+      peakBytes: number
+      cumulativePeakBytes: number
+    }>
+  | RuntimeAbiV117UnavailableEvidence
+
+export type RuntimeAbiV117ProcessEvidence =
+  | Readonly<{
+      status: "verified"
+      processes: number
+      threads: number
+      children: number
+    }>
+  | RuntimeAbiV117UnavailableEvidence
+
+export type RuntimeAbiV117ExecutionCapabilityEvidence =
+  | Readonly<{
+      status: "verified"
+      filesystem: string
+      network: string
+      environment: string
+      shell: string
+    }>
+  | RuntimeAbiV117UnavailableEvidence
+
+export type RuntimeAbiV117PreflightCapabilityEvidence =
+  | Readonly<{
+      status: "verified"
+      filesystem: string
+      network: string
+    }>
+  | RuntimeAbiV117UnavailableEvidence
+
+export type RuntimeAbiV117CancellationEvidence =
+  | Readonly<{
+      status: "verified"
+      terminationRequired: boolean
+      receiptPresent: boolean
+      graceMilliseconds: number
+    }>
+  | RuntimeAbiV117UnavailableEvidence
+
+export type RuntimeAbiV117AccountingEvidence =
+  | Readonly<{
+      status: "verified"
+      signatureVerified: boolean
+      monotonic: boolean
+    }>
+  | RuntimeAbiV117UnavailableEvidence
+
+export type RuntimeAbiV117ExecutionCounterName =
+  | "wallMilliseconds"
+  | "computeFuel"
+  | "payloadBytes"
+  | "stdoutBytes"
+  | "stderrBytes"
+
+export type RuntimeAbiV117PreflightCounterName =
+  | "wallMilliseconds"
+  | "computeFuel"
+  | "inputBytes"
+  | "outputBytes"
+  | "stderrBytes"
+
+export interface RuntimeAbiV117ExecutionLedgerReceipt {
+  readonly domain: "execution"
+  readonly prestateRevision: number
+  readonly invocationId: string
+  readonly requestIdentity: string
+  readonly evidenceIdentity: string
+  readonly method: RuntimeAbiV117ExecutionMethod
+  readonly attribution: RuntimeAbiV117LedgerAttribution
+  readonly counters: Partial<
+    Record<RuntimeAbiV117ExecutionCounterName, RuntimeAbiV117CounterEvidence>
+  >
+  readonly memory?: RuntimeAbiV117MemoryEvidence | undefined
+  readonly process?: RuntimeAbiV117ProcessEvidence | undefined
+  readonly capabilities?: RuntimeAbiV117ExecutionCapabilityEvidence | undefined
+  readonly cancellation?: RuntimeAbiV117CancellationEvidence | undefined
+  readonly accountingEvidence?: RuntimeAbiV117AccountingEvidence | undefined
+}
+
+export interface RuntimeAbiV117PreflightLedgerReceipt {
+  readonly domain: "preflight"
+  readonly profile: RuntimeAbiV117PreflightProfile
+  readonly prestateRevision: number
+  readonly operationId: string
+  readonly requestIdentity: string
+  readonly evidenceIdentity: string
+  readonly attribution: RuntimeAbiV117LedgerAttribution
+  readonly counters: Partial<
+    Record<RuntimeAbiV117PreflightCounterName, RuntimeAbiV117CounterEvidence>
+  >
+  readonly memory?: RuntimeAbiV117MemoryEvidence | undefined
+  readonly process?: RuntimeAbiV117ProcessEvidence | undefined
+  readonly capabilities?: RuntimeAbiV117PreflightCapabilityEvidence | undefined
+  readonly accountingEvidence?: RuntimeAbiV117AccountingEvidence | undefined
+}
+
+export type RuntimeAbiV117LedgerReceipt =
+  | RuntimeAbiV117ExecutionLedgerReceipt
+  | RuntimeAbiV117PreflightLedgerReceipt
+
+export interface RuntimeAbiV117LedgerCommitment {
+  readonly identity: string
+  readonly requestIdentity: string
+  readonly evidenceIdentity: string
+  readonly prestateRevision: number
+  readonly scope: string
+  readonly outcome: "success" | "player_violation"
+  readonly dimensions: readonly string[]
+}
+
+export interface RuntimeAbiV117ExecutionLedger {
+  readonly schemaVersion: typeof RUNTIME_ABI_V1_17_LEDGER_SCHEMA_VERSION
+  readonly domain: "execution"
+  readonly revision: number
+  readonly methodInvocations: Readonly<
+    Record<RuntimeAbiV117ExecutionMethod, number>
+  >
+  readonly cumulative: Readonly<{
+    invocationCount: number
+    wallMilliseconds: number
+    computeFuel: number
+    payloadBytes: number
+    stdoutBytes: number
+    stderrBytes: number
+    memoryBytes: number
+  }>
+  readonly commitments: readonly RuntimeAbiV117LedgerCommitment[]
+}
+
+export interface RuntimeAbiV117PreflightLedger<
+  TProfile extends RuntimeAbiV117PreflightProfile = RuntimeAbiV117PreflightProfile,
+> {
+  readonly schemaVersion: typeof RUNTIME_ABI_V1_17_LEDGER_SCHEMA_VERSION
+  readonly domain: "preflight"
+  readonly profile: TProfile
+  readonly revision: number
+  readonly cumulative: Readonly<{
+    operationCount: number
+    wallMilliseconds: number
+    computeFuel: number
+    inputBytes: number
+    outputBytes: number
+    stderrBytes: number
+    memoryBytes: number
+  }>
+  readonly commitments: readonly RuntimeAbiV117LedgerCommitment[]
+}
+
+export type RuntimeAbiV117Ledger =
+  | RuntimeAbiV117ExecutionLedger
+  | RuntimeAbiV117PreflightLedger
+
+export type RuntimeAbiV117LedgerFailureCode =
+  | "LEDGER_DOMAIN_MISMATCH"
+  | "LEDGER_PRESTATE_MISMATCH"
+  | "LEDGER_IDENTITY_CONFLICT"
+  | "METER_EVIDENCE_MISSING"
+  | "METER_EVIDENCE_UNAVAILABLE"
+  | "METER_EVIDENCE_AMBIGUOUS"
+  | "METER_ACCOUNTING_DECREASING"
+  | "METER_ACCOUNTING_INCONSISTENT"
+  | "HOST_RESOURCE_EXCESS"
+  | "HOST_RESOURCE_ACCOUNTING"
+  | "ENFORCEMENT_EVIDENCE_INVALID"
+
+export type RuntimeAbiV117LedgerDebitResult<
+  TLedger extends RuntimeAbiV117Ledger = RuntimeAbiV117Ledger,
+> =
+  | Readonly<{
+      kind: "success"
+      ledger: TLedger
+      committed: boolean
+      replayed: boolean
+    }>
+  | Readonly<{
+      kind: "player_violation"
+      violation: Readonly<{
+        code: "RUNTIME_BUDGET_EXCEEDED"
+        dimensions: readonly string[]
+      }>
+      ledger: TLedger
+      committed: boolean
+      replayed: boolean
+    }>
+  | Readonly<{
+      kind: "system_failure"
+      failure: Readonly<{
+        code: RuntimeAbiV117LedgerFailureCode
+        dimension?: string | undefined
+      }>
+      ledger: TLedger
+      committed: false
+      replayed: false
+    }>
+
+const identityPattern = /^sha256:[0-9a-f]{64}$/u
+
+const isNonnegativeSafeInteger = (value: number): boolean =>
+  Number.isSafeInteger(value) && value >= 0
+
+const ledgerSystemFailure = <TLedger extends RuntimeAbiV117Ledger>(
+  ledger: TLedger,
+  code: RuntimeAbiV117LedgerFailureCode,
+  dimension?: string,
+): RuntimeAbiV117LedgerDebitResult<TLedger> =>
+  deepFreeze({
+    kind: "system_failure" as const,
+    failure: {
+      code,
+      ...(dimension === undefined ? {} : { dimension }),
+    },
+    ledger,
+    committed: false as const,
+    replayed: false as const,
+  })
+
+const unavailableEvidenceFailure = (
+  evidence: { status: string } | undefined,
+): RuntimeAbiV117LedgerFailureCode | undefined => {
+  if (evidence === undefined) return "METER_EVIDENCE_MISSING"
+  if (evidence.status === "unavailable") return "METER_EVIDENCE_UNAVAILABLE"
+  if (evidence.status === "ambiguous") return "METER_EVIDENCE_AMBIGUOUS"
+  return undefined
+}
+
+type CounterValidation =
+  | Readonly<{ ok: true; value: number }>
+  | Readonly<{
+      ok: false
+      code: RuntimeAbiV117LedgerFailureCode
+    }>
+
+const validateCounterEvidence = (
+  previous: number,
+  evidence: RuntimeAbiV117CounterEvidence | undefined,
+): CounterValidation => {
+  const unavailable = unavailableEvidenceFailure(evidence)
+  if (unavailable !== undefined) return { ok: false, code: unavailable }
+  if (evidence?.status !== "measured") {
+    return { ok: false, code: "ENFORCEMENT_EVIDENCE_INVALID" }
+  }
+  if (
+    !isNonnegativeSafeInteger(evidence.delta) ||
+    !isNonnegativeSafeInteger(evidence.cumulative) ||
+    evidence.cumulative < previous
+  ) {
+    return { ok: false, code: "METER_ACCOUNTING_DECREASING" }
+  }
+  const expected = previous + evidence.delta
+  if (
+    !Number.isSafeInteger(expected) ||
+    evidence.cumulative !== expected
+  ) {
+    return { ok: false, code: "METER_ACCOUNTING_INCONSISTENT" }
+  }
+  return { ok: true, value: evidence.cumulative }
+}
+
+const validateMemoryEvidence = (
+  previous: number,
+  evidence: RuntimeAbiV117MemoryEvidence | undefined,
+): CounterValidation => {
+  const unavailable = unavailableEvidenceFailure(evidence)
+  if (unavailable !== undefined) return { ok: false, code: unavailable }
+  if (evidence?.status !== "measured") {
+    return { ok: false, code: "ENFORCEMENT_EVIDENCE_INVALID" }
+  }
+  if (
+    !isNonnegativeSafeInteger(evidence.peakBytes) ||
+    !isNonnegativeSafeInteger(evidence.cumulativePeakBytes) ||
+    evidence.cumulativePeakBytes < previous
+  ) {
+    return { ok: false, code: "METER_ACCOUNTING_DECREASING" }
+  }
+  if (evidence.cumulativePeakBytes !== Math.max(previous, evidence.peakBytes)) {
+    return { ok: false, code: "METER_ACCOUNTING_INCONSISTENT" }
+  }
+  return { ok: true, value: evidence.cumulativePeakBytes }
+}
+
+const validateIdentity = (
+  identity: string,
+  requestIdentity: string,
+  evidenceIdentity: string,
+): boolean =>
+  identity.length > 0 &&
+  !identity.includes("\0") &&
+  identityPattern.test(requestIdentity) &&
+  identityPattern.test(evidenceIdentity)
+
+const uniqueDimensions = (dimensions: readonly string[]): readonly string[] =>
+  Object.freeze([...new Set(dimensions)])
+
+const replayCommittedResult = <TLedger extends RuntimeAbiV117Ledger>(
+  ledger: TLedger,
+  commitment: RuntimeAbiV117LedgerCommitment,
+): RuntimeAbiV117LedgerDebitResult<TLedger> =>
+  commitment.outcome === "success"
+    ? deepFreeze({
+        kind: "success" as const,
+        ledger,
+        committed: false,
+        replayed: true,
+      })
+    : deepFreeze({
+        kind: "player_violation" as const,
+        violation: {
+          code: "RUNTIME_BUDGET_EXCEEDED" as const,
+          dimensions: commitment.dimensions,
+        },
+        ledger,
+        committed: false,
+        replayed: true,
+      })
+
+const existingCommitmentResult = <TLedger extends RuntimeAbiV117Ledger>(
+  ledger: TLedger,
+  input: Readonly<{
+    identity: string
+    requestIdentity: string
+    evidenceIdentity: string
+    prestateRevision: number
+    scope: string
+  }>,
+): RuntimeAbiV117LedgerDebitResult<TLedger> | undefined => {
+  const existing = ledger.commitments.find(
+    (commitment) => commitment.identity === input.identity,
+  )
+  if (existing === undefined) return undefined
+  if (
+    existing.requestIdentity !== input.requestIdentity ||
+    existing.evidenceIdentity !== input.evidenceIdentity ||
+    existing.prestateRevision !== input.prestateRevision ||
+    existing.scope !== input.scope
+  ) {
+    return ledgerSystemFailure(ledger, "LEDGER_IDENTITY_CONFLICT")
+  }
+  return replayCommittedResult(ledger, existing)
+}
+
+export const createRuntimeAbiV117ExecutionLedger =
+  (): RuntimeAbiV117ExecutionLedger =>
+    deepFreeze({
+      schemaVersion: RUNTIME_ABI_V1_17_LEDGER_SCHEMA_VERSION,
+      domain: "execution" as const,
+      revision: 0,
+      methodInvocations: {
+        selectActivations: 0,
+        soldierBrain: 0,
+      },
+      cumulative: {
+        invocationCount: 0,
+        wallMilliseconds: 0,
+        computeFuel: 0,
+        payloadBytes: 0,
+        stdoutBytes: 0,
+        stderrBytes: 0,
+        memoryBytes: 0,
+      },
+      commitments: [] as RuntimeAbiV117LedgerCommitment[],
+    })
+
+export const createRuntimeAbiV117PreflightLedger = <
+  TProfile extends RuntimeAbiV117PreflightProfile,
+>(
+  profile: TProfile,
+): RuntimeAbiV117PreflightLedger<TProfile> =>
+  deepFreeze({
+    schemaVersion: RUNTIME_ABI_V1_17_LEDGER_SCHEMA_VERSION,
+    domain: "preflight" as const,
+    profile,
+    revision: 0,
+    cumulative: {
+      operationCount: 0,
+      wallMilliseconds: 0,
+      computeFuel: 0,
+      inputBytes: 0,
+      outputBytes: 0,
+      stderrBytes: 0,
+      memoryBytes: 0,
+    },
+    commitments: [] as RuntimeAbiV117LedgerCommitment[],
+  })
+
+const executionCounterContract = {
+  wallMilliseconds: {
+    invocationMaximum: invocationVector.wall.value,
+    matchMaximum: RUNTIME_ABI_V1_17.budgets.matchCumulative.wallMilliseconds,
+    invocationDimension: "invocation.wall",
+    matchDimension: "match.wall",
+  },
+  computeFuel: {
+    invocationMaximum: invocationVector.compute.value,
+    matchMaximum: RUNTIME_ABI_V1_17.budgets.matchCumulative.computeFuel,
+    invocationDimension: "invocation.compute",
+    matchDimension: "match.compute",
+  },
+  payloadBytes: {
+    invocationMaximum: invocationVector.payload.value,
+    matchMaximum: RUNTIME_ABI_V1_17.budgets.matchCumulative.payloadBytes,
+    invocationDimension: "invocation.payload",
+    matchDimension: "match.payload",
+  },
+  stdoutBytes: {
+    invocationMaximum: invocationVector.stdout.value,
+    matchMaximum: RUNTIME_ABI_V1_17.budgets.matchCumulative.stdoutBytes,
+    invocationDimension: "invocation.stdout",
+    matchDimension: "match.stdout",
+  },
+  stderrBytes: {
+    invocationMaximum: invocationVector.stderr.value,
+    matchMaximum: RUNTIME_ABI_V1_17.budgets.matchCumulative.stderrBytes,
+    invocationDimension: "invocation.stderr",
+    matchDimension: "match.stderr",
+  },
+} as const satisfies Record<
+  RuntimeAbiV117ExecutionCounterName,
+  {
+    invocationMaximum: number
+    matchMaximum: number
+    invocationDimension: string
+    matchDimension: string
+  }
+>
+
+const evidenceShapeFailure = (
+  evidence:
+    | RuntimeAbiV117ProcessEvidence
+    | RuntimeAbiV117ExecutionCapabilityEvidence
+    | RuntimeAbiV117PreflightCapabilityEvidence
+    | RuntimeAbiV117CancellationEvidence
+    | RuntimeAbiV117AccountingEvidence
+    | undefined,
+): RuntimeAbiV117LedgerFailureCode | undefined =>
+  unavailableEvidenceFailure(evidence)
+
+const debitExecutionLedger = (
+  ledger: RuntimeAbiV117ExecutionLedger,
+  receipt: RuntimeAbiV117ExecutionLedgerReceipt,
+): RuntimeAbiV117LedgerDebitResult<RuntimeAbiV117ExecutionLedger> => {
+  const identity = receipt.invocationId
+  const scope = receipt.method
+  if (
+    !validateIdentity(
+      identity,
+      receipt.requestIdentity,
+      receipt.evidenceIdentity,
+    )
+  ) {
+    return ledgerSystemFailure(ledger, "LEDGER_IDENTITY_CONFLICT")
+  }
+  const replay = existingCommitmentResult(ledger, {
+    identity,
+    requestIdentity: receipt.requestIdentity,
+    evidenceIdentity: receipt.evidenceIdentity,
+    prestateRevision: receipt.prestateRevision,
+    scope,
+  })
+  if (replay !== undefined) return replay
+  if (receipt.prestateRevision !== ledger.revision) {
+    return ledgerSystemFailure(ledger, "LEDGER_PRESTATE_MISMATCH")
+  }
+  if (receipt.attribution === "ambiguous") {
+    return ledgerSystemFailure(ledger, "METER_EVIDENCE_AMBIGUOUS")
+  }
+
+  const nextCounters = {} as Record<RuntimeAbiV117ExecutionCounterName, number>
+  const dimensions: string[] = []
+  for (const counter of Object.keys(
+    executionCounterContract,
+  ) as RuntimeAbiV117ExecutionCounterName[]) {
+    const evidence = receipt.counters[counter]
+    const validation = validateCounterEvidence(
+      ledger.cumulative[counter],
+      evidence,
+    )
+    if (!validation.ok) {
+      return ledgerSystemFailure(ledger, validation.code, counter)
+    }
+    nextCounters[counter] = validation.value
+    const contract = executionCounterContract[counter]
+    if (evidence?.status === "measured") {
+      if (evidence.delta > contract.invocationMaximum) {
+        dimensions.push(contract.invocationDimension)
+      }
+      if (validation.value > contract.matchMaximum) {
+        dimensions.push(contract.matchDimension)
+      }
+    }
+  }
+
+  const memoryValidation = validateMemoryEvidence(
+    ledger.cumulative.memoryBytes,
+    receipt.memory,
+  )
+  if (!memoryValidation.ok) {
+    return ledgerSystemFailure(ledger, memoryValidation.code, "memory")
+  }
+  if (receipt.memory?.status === "measured") {
+    if (receipt.memory.peakBytes > invocationVector.memory.value) {
+      dimensions.push("invocation.memory")
+    }
+    if (
+      memoryValidation.value >
+      RUNTIME_ABI_V1_17.budgets.matchCumulative.memoryBytes
+    ) {
+      dimensions.push("match.memory")
+    }
+  }
+
+  const processFailure = evidenceShapeFailure(receipt.process)
+  if (processFailure !== undefined) {
+    return ledgerSystemFailure(ledger, processFailure, "process")
+  }
+  if (
+    receipt.process?.status !== "verified" ||
+    !isNonnegativeSafeInteger(receipt.process.processes) ||
+    !isNonnegativeSafeInteger(receipt.process.threads) ||
+    !isNonnegativeSafeInteger(receipt.process.children) ||
+    receipt.process.processes === 0 ||
+    receipt.process.threads === 0
+  ) {
+    return ledgerSystemFailure(
+      ledger,
+      "ENFORCEMENT_EVIDENCE_INVALID",
+      "process",
+    )
+  }
+  if (
+    receipt.process.processes > invocationVector.process.processes ||
+    receipt.process.threads > invocationVector.process.threads ||
+    receipt.process.children > invocationVector.process.children
+  ) {
+    dimensions.push("invocation.process")
+  }
+
+  const capabilityFailure = evidenceShapeFailure(receipt.capabilities)
+  if (capabilityFailure !== undefined) {
+    return ledgerSystemFailure(ledger, capabilityFailure, "capabilities")
+  }
+  if (receipt.capabilities?.status !== "verified") {
+    return ledgerSystemFailure(
+      ledger,
+      "ENFORCEMENT_EVIDENCE_INVALID",
+      "capabilities",
+    )
+  }
+  if (
+    receipt.capabilities.filesystem !==
+      invocationVector.capabilities.filesystem ||
+    receipt.capabilities.network !== invocationVector.capabilities.network ||
+    receipt.capabilities.environment !==
+      invocationVector.capabilities.environment ||
+    receipt.capabilities.shell !== invocationVector.capabilities.shell
+  ) {
+    dimensions.push("invocation.capabilities")
+  }
+
+  const cancellationFailure = evidenceShapeFailure(receipt.cancellation)
+  if (cancellationFailure !== undefined) {
+    return ledgerSystemFailure(ledger, cancellationFailure, "cancellation")
+  }
+  if (
+    receipt.cancellation?.status !== "verified" ||
+    !isNonnegativeSafeInteger(receipt.cancellation.graceMilliseconds) ||
+    (receipt.cancellation.terminationRequired &&
+      (!receipt.cancellation.receiptPresent ||
+        receipt.cancellation.graceMilliseconds >
+          invocationVector.cancellation.terminationGraceMilliseconds))
+  ) {
+    return ledgerSystemFailure(
+      ledger,
+      "ENFORCEMENT_EVIDENCE_INVALID",
+      "cancellation",
+    )
+  }
+
+  const accountingFailure = evidenceShapeFailure(receipt.accountingEvidence)
+  if (accountingFailure !== undefined) {
+    return ledgerSystemFailure(ledger, accountingFailure, "accountingEvidence")
+  }
+  if (
+    receipt.accountingEvidence?.status !== "verified" ||
+    !receipt.accountingEvidence.signatureVerified
+  ) {
+    return ledgerSystemFailure(
+      ledger,
+      "ENFORCEMENT_EVIDENCE_INVALID",
+      "accountingEvidence",
+    )
+  }
+  if (!receipt.accountingEvidence.monotonic) {
+    return ledgerSystemFailure(
+      ledger,
+      "METER_ACCOUNTING_DECREASING",
+      "accountingEvidence",
+    )
+  }
+
+  const nextMethodCount = ledger.methodInvocations[receipt.method] + 1
+  const nextInvocationCount = ledger.cumulative.invocationCount + 1
+  if (
+    nextMethodCount >
+    RUNTIME_ABI_V1_17.budgets[receipt.method].invocationCountMaximum
+  ) {
+    dimensions.unshift(`method.${receipt.method}.invocationCount`)
+  }
+  if (
+    nextInvocationCount >
+    RUNTIME_ABI_V1_17.budgets.matchCumulative.invocationCountMaximum
+  ) {
+    dimensions.unshift("match.invocationCount")
+  }
+  const finalDimensions = uniqueDimensions(dimensions)
+  if (receipt.attribution === "host") {
+    return ledgerSystemFailure(
+      ledger,
+      finalDimensions.length > 0
+        ? "HOST_RESOURCE_EXCESS"
+        : "HOST_RESOURCE_ACCOUNTING",
+    )
+  }
+
+  const outcome =
+    finalDimensions.length === 0 ? "success" : "player_violation"
+  const commitment = deepFreeze({
+    identity,
+    requestIdentity: receipt.requestIdentity,
+    evidenceIdentity: receipt.evidenceIdentity,
+    prestateRevision: receipt.prestateRevision,
+    scope,
+    outcome,
+    dimensions: finalDimensions,
+  } satisfies RuntimeAbiV117LedgerCommitment)
+  const nextLedger = deepFreeze({
+    ...ledger,
+    revision: ledger.revision + 1,
+    methodInvocations: {
+      ...ledger.methodInvocations,
+      [receipt.method]: nextMethodCount,
+    },
+    cumulative: {
+      invocationCount: nextInvocationCount,
+      ...nextCounters,
+      memoryBytes: memoryValidation.value,
+    },
+    commitments: [...ledger.commitments, commitment],
+  } satisfies RuntimeAbiV117ExecutionLedger)
+  return outcome === "success"
+    ? deepFreeze({
+        kind: "success" as const,
+        ledger: nextLedger,
+        committed: true,
+        replayed: false,
+      })
+    : deepFreeze({
+        kind: "player_violation" as const,
+        violation: {
+          code: "RUNTIME_BUDGET_EXCEEDED" as const,
+          dimensions: finalDimensions,
+        },
+        ledger: nextLedger,
+        committed: true,
+        replayed: false,
+      })
+}
+
+const preflightLimits = (profile: RuntimeAbiV117PreflightProfile) => {
+  const frozen = preflightProfiles[profile]
+  return {
+    counters: {
+      wallMilliseconds: frozen.wallMilliseconds,
+      computeFuel: frozen.computeFuel,
+      inputBytes: frozen.inputBytes,
+      outputBytes: frozen.outputBytes,
+      stderrBytes: "stderrBytes" in frozen ? frozen.stderrBytes : 0,
+    },
+    memoryBytes: frozen.memoryBytes,
+    process: {
+      processes: frozen.processes,
+      threads: "threads" in frozen ? frozen.threads : 1,
+      children: "children" in frozen ? frozen.children : 0,
+    },
+    capabilities: {
+      network: frozen.network,
+      filesystem: frozen.filesystem,
+    },
+  } as const
+}
+
+const preflightDimension = (
+  profile: RuntimeAbiV117PreflightProfile,
+  counter: RuntimeAbiV117PreflightCounterName,
+): string => {
+  const suffix =
+    counter === "wallMilliseconds"
+      ? "wall"
+      : counter === "computeFuel"
+        ? "compute"
+        : counter === "inputBytes"
+          ? "input"
+          : counter === "outputBytes"
+            ? "output"
+            : "stderr"
+  return `preflight.${profile}.${suffix}`
+}
+
+const debitPreflightLedger = <
+  TProfile extends RuntimeAbiV117PreflightProfile,
+>(
+  ledger: RuntimeAbiV117PreflightLedger<TProfile>,
+  receipt: RuntimeAbiV117PreflightLedgerReceipt,
+): RuntimeAbiV117LedgerDebitResult<RuntimeAbiV117PreflightLedger<TProfile>> => {
+  if (receipt.profile !== ledger.profile) {
+    return ledgerSystemFailure(ledger, "LEDGER_DOMAIN_MISMATCH")
+  }
+  const identity = receipt.operationId
+  const scope = receipt.profile
+  if (
+    !validateIdentity(
+      identity,
+      receipt.requestIdentity,
+      receipt.evidenceIdentity,
+    )
+  ) {
+    return ledgerSystemFailure(ledger, "LEDGER_IDENTITY_CONFLICT")
+  }
+  const replay = existingCommitmentResult(ledger, {
+    identity,
+    requestIdentity: receipt.requestIdentity,
+    evidenceIdentity: receipt.evidenceIdentity,
+    prestateRevision: receipt.prestateRevision,
+    scope,
+  })
+  if (replay !== undefined) return replay
+  if (receipt.prestateRevision !== ledger.revision) {
+    return ledgerSystemFailure(ledger, "LEDGER_PRESTATE_MISMATCH")
+  }
+  if (receipt.attribution === "ambiguous") {
+    return ledgerSystemFailure(ledger, "METER_EVIDENCE_AMBIGUOUS")
+  }
+
+  const limits = preflightLimits(ledger.profile)
+  const nextCounters = {} as Record<RuntimeAbiV117PreflightCounterName, number>
+  const dimensions: string[] = []
+  for (const counter of Object.keys(
+    limits.counters,
+  ) as RuntimeAbiV117PreflightCounterName[]) {
+    const validation = validateCounterEvidence(
+      ledger.cumulative[counter],
+      receipt.counters[counter],
+    )
+    if (!validation.ok) {
+      return ledgerSystemFailure(ledger, validation.code, counter)
+    }
+    nextCounters[counter] = validation.value
+    if (validation.value > limits.counters[counter]) {
+      dimensions.push(preflightDimension(ledger.profile, counter))
+    }
+  }
+
+  const memoryValidation = validateMemoryEvidence(
+    ledger.cumulative.memoryBytes,
+    receipt.memory,
+  )
+  if (!memoryValidation.ok) {
+    return ledgerSystemFailure(ledger, memoryValidation.code, "memory")
+  }
+  if (memoryValidation.value > limits.memoryBytes) {
+    dimensions.push(`preflight.${ledger.profile}.memory`)
+  }
+
+  const processFailure = evidenceShapeFailure(receipt.process)
+  if (processFailure !== undefined) {
+    return ledgerSystemFailure(ledger, processFailure, "process")
+  }
+  if (
+    receipt.process?.status !== "verified" ||
+    !isNonnegativeSafeInteger(receipt.process.processes) ||
+    !isNonnegativeSafeInteger(receipt.process.threads) ||
+    !isNonnegativeSafeInteger(receipt.process.children) ||
+    receipt.process.processes === 0 ||
+    receipt.process.threads === 0
+  ) {
+    return ledgerSystemFailure(
+      ledger,
+      "ENFORCEMENT_EVIDENCE_INVALID",
+      "process",
+    )
+  }
+  if (
+    receipt.process.processes > limits.process.processes ||
+    receipt.process.threads > limits.process.threads ||
+    receipt.process.children > limits.process.children
+  ) {
+    dimensions.push(`preflight.${ledger.profile}.process`)
+  }
+
+  const capabilityFailure = evidenceShapeFailure(receipt.capabilities)
+  if (capabilityFailure !== undefined) {
+    return ledgerSystemFailure(ledger, capabilityFailure, "capabilities")
+  }
+  if (receipt.capabilities?.status !== "verified") {
+    return ledgerSystemFailure(
+      ledger,
+      "ENFORCEMENT_EVIDENCE_INVALID",
+      "capabilities",
+    )
+  }
+  if (
+    receipt.capabilities.network !== limits.capabilities.network ||
+    receipt.capabilities.filesystem !== limits.capabilities.filesystem
+  ) {
+    dimensions.push(`preflight.${ledger.profile}.capabilities`)
+  }
+
+  const accountingFailure = evidenceShapeFailure(receipt.accountingEvidence)
+  if (accountingFailure !== undefined) {
+    return ledgerSystemFailure(ledger, accountingFailure, "accountingEvidence")
+  }
+  if (
+    receipt.accountingEvidence?.status !== "verified" ||
+    !receipt.accountingEvidence.signatureVerified
+  ) {
+    return ledgerSystemFailure(
+      ledger,
+      "ENFORCEMENT_EVIDENCE_INVALID",
+      "accountingEvidence",
+    )
+  }
+  if (!receipt.accountingEvidence.monotonic) {
+    return ledgerSystemFailure(
+      ledger,
+      "METER_ACCOUNTING_DECREASING",
+      "accountingEvidence",
+    )
+  }
+
+  const finalDimensions = uniqueDimensions(dimensions)
+  if (receipt.attribution === "host") {
+    return ledgerSystemFailure(
+      ledger,
+      finalDimensions.length > 0
+        ? "HOST_RESOURCE_EXCESS"
+        : "HOST_RESOURCE_ACCOUNTING",
+    )
+  }
+  const outcome =
+    finalDimensions.length === 0 ? "success" : "player_violation"
+  const commitment = deepFreeze({
+    identity,
+    requestIdentity: receipt.requestIdentity,
+    evidenceIdentity: receipt.evidenceIdentity,
+    prestateRevision: receipt.prestateRevision,
+    scope,
+    outcome,
+    dimensions: finalDimensions,
+  } satisfies RuntimeAbiV117LedgerCommitment)
+  const nextLedger = deepFreeze({
+    ...ledger,
+    revision: ledger.revision + 1,
+    cumulative: {
+      operationCount: ledger.cumulative.operationCount + 1,
+      ...nextCounters,
+      memoryBytes: memoryValidation.value,
+    },
+    commitments: [...ledger.commitments, commitment],
+  } satisfies RuntimeAbiV117PreflightLedger<TProfile>)
+  return outcome === "success"
+    ? deepFreeze({
+        kind: "success" as const,
+        ledger: nextLedger,
+        committed: true,
+        replayed: false,
+      })
+    : deepFreeze({
+        kind: "player_violation" as const,
+        violation: {
+          code: "RUNTIME_BUDGET_EXCEEDED" as const,
+          dimensions: finalDimensions,
+        },
+        ledger: nextLedger,
+        committed: true,
+        replayed: false,
+      })
+}
+
+/* eslint-disable no-redeclare -- TypeScript overload signatures share one implementation. */
+export function debitRuntimeAbiV117Ledger(
+  ledger: RuntimeAbiV117ExecutionLedger,
+  receipt: RuntimeAbiV117ExecutionLedgerReceipt,
+): RuntimeAbiV117LedgerDebitResult<RuntimeAbiV117ExecutionLedger>
+export function debitRuntimeAbiV117Ledger<
+  TProfile extends RuntimeAbiV117PreflightProfile,
+>(
+  ledger: RuntimeAbiV117PreflightLedger<TProfile>,
+  receipt: RuntimeAbiV117PreflightLedgerReceipt,
+): RuntimeAbiV117LedgerDebitResult<RuntimeAbiV117PreflightLedger<TProfile>>
+export function debitRuntimeAbiV117Ledger(
+  ledger: RuntimeAbiV117Ledger,
+  receipt: RuntimeAbiV117LedgerReceipt,
+): RuntimeAbiV117LedgerDebitResult
+export function debitRuntimeAbiV117Ledger(
+  ledger: RuntimeAbiV117Ledger,
+  receipt: RuntimeAbiV117LedgerReceipt,
+): RuntimeAbiV117LedgerDebitResult {
+  if (ledger.domain !== receipt.domain) {
+    return ledgerSystemFailure(ledger, "LEDGER_DOMAIN_MISMATCH")
+  }
+  return ledger.domain === "execution" && receipt.domain === "execution"
+    ? debitExecutionLedger(ledger, receipt)
+    : ledger.domain === "preflight" && receipt.domain === "preflight"
+      ? debitPreflightLedger(ledger, receipt)
+      : ledgerSystemFailure(ledger, "LEDGER_DOMAIN_MISMATCH")
+}
+/* eslint-enable no-redeclare */
+
 export const validateRuntimeAbiV117Contract = (): string[] => {
   const errors: string[] = []
   const expectedDecisions = Array.from(

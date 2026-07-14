@@ -612,7 +612,25 @@ describe("runtime ABI v1.17 pure budget ledger", () => {
     for (const [dimension, receipt] of [
       [
         "invocation.process",
+        { ...exactReceipt, process: { ...exactReceipt.process, processes: 2 } },
+      ],
+      [
+        "invocation.process",
         { ...exactReceipt, process: { ...exactReceipt.process, threads: 2 } },
+      ],
+      [
+        "invocation.process",
+        { ...exactReceipt, process: { ...exactReceipt.process, children: 1 } },
+      ],
+      [
+        "invocation.capabilities",
+        {
+          ...exactReceipt,
+          capabilities: {
+            ...exactReceipt.capabilities,
+            filesystem: "read-only",
+          },
+        },
       ],
       [
         "invocation.capabilities",
@@ -622,6 +640,23 @@ describe("runtime ABI v1.17 pure budget ledger", () => {
             ...exactReceipt.capabilities,
             network: "inherited",
           },
+        },
+      ],
+      [
+        "invocation.capabilities",
+        {
+          ...exactReceipt,
+          capabilities: {
+            ...exactReceipt.capabilities,
+            environment: "minimal",
+          },
+        },
+      ],
+      [
+        "invocation.capabilities",
+        {
+          ...exactReceipt,
+          capabilities: { ...exactReceipt.capabilities, shell: "enabled" },
         },
       ],
     ] as const) {
@@ -929,13 +964,31 @@ describe("runtime ABI v1.17 pure budget ledger", () => {
       ],
       [
         "preflight.compilation.process",
+        { ...exactReceipt, process: { ...exactReceipt.process, processes: 2 } },
+      ],
+      [
+        "preflight.compilation.process",
         { ...exactReceipt, process: { ...exactReceipt.process, threads: 9 } },
+      ],
+      [
+        "preflight.compilation.process",
+        { ...exactReceipt, process: { ...exactReceipt.process, children: 1 } },
       ],
       [
         "preflight.compilation.capabilities",
         {
           ...exactReceipt,
           capabilities: { ...exactReceipt.capabilities, network: "inherited" },
+        },
+      ],
+      [
+        "preflight.compilation.capabilities",
+        {
+          ...exactReceipt,
+          capabilities: {
+            ...exactReceipt.capabilities,
+            filesystem: "host",
+          },
         },
       ],
     ] as const) {
