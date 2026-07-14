@@ -1200,7 +1200,7 @@ describe("runtime execution service v1.17 candidate bridge", () => {
     const authenticatedResponse =
       createAuthenticatedRuntimeInvocationResponseV117(
         request,
-        outcome as RuntimeInvocationResultV117<JsonValue>,
+        outcome as unknown as RuntimeInvocationResultV117<JsonValue>,
         candidateReceipt(request),
         candidateIdentity,
       )

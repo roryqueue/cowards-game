@@ -9,6 +9,7 @@ import {
   ChronicleSchema,
   STRATEGY_RUNTIME_ABI_VERSION,
   findRuntimeBrokerRegistryEntry,
+  createRuntimeInvocationTraceV117,
   hashExecutableLaneIdentity,
   serializeRuntimeInvocationRequestV117,
   validateStrategyLanguageProviderRuntimeCompatibility,
@@ -22,6 +23,7 @@ import {
   type RuntimeExecutionServiceResponse,
   type RuntimeExecutionServiceSystemFailureCode,
   type RuntimeInvocationResultV117,
+  type RuntimeInvocationResponseAccountingV117,
   type RuntimeInvocationSigningIdentityV117,
   type RuntimeInvocationTraceV117,
   type RuntimeEntrantAuthorityReference,
@@ -84,23 +86,16 @@ export interface CandidateRuntimeInvocationPublicResultV117 {
 export interface CandidateRuntimeInvocationExecutionV117<TExecution> {
   /** Private engine material. Never serialize this field on a public route. */
   readonly internalExecution: TExecution
+  /** Verified private accounting from an authenticated adapter response. */
+  readonly authenticatedAccounting?: RuntimeInvocationResponseAccountingV117
   readonly publicResult: CandidateRuntimeInvocationPublicResultV117
 }
 
 const candidateRequestTrace = (
   request: AuthenticatedRuntimeInvocationRequestV117,
-  requestBytes: Uint8Array,
-): RuntimeInvocationTraceV117 => ({
-  requestId: request.requestId,
-  invocationId: request.invocationId,
-  kernelRequestId: request.kernelRequestId,
-  method: request.method,
-  requestSha256: `sha256:${createHash("sha256").update(requestBytes).digest("hex")}`,
-  budgetProfileSha256: request.budget.profileSha256,
-  inputSha256: request.input.canonicalSha256,
-  retryIdentitySha256: request.retry.identitySha256,
-  safeCodes: ["ADAPTER_CRASH"],
-})
+  safeCode: string,
+): RuntimeInvocationTraceV117 =>
+  createRuntimeInvocationTraceV117(request, [safeCode])
 
 const candidatePublicResult = (
   request: AuthenticatedRuntimeInvocationRequestV117,
@@ -144,6 +139,9 @@ export const executeCandidateRuntimeInvocationV117 = <
       ? admittedRequest.value
       : input.request
   let outcome: RuntimeInvocationResultV117<TValue> | undefined
+  let authenticatedAccounting:
+    | RuntimeInvocationResponseAccountingV117
+    | undefined
 
   if (admittedRequest.kind !== "success") {
     outcome = admittedRequest as RuntimeInvocationResultV117<TValue>
@@ -161,7 +159,7 @@ export const executeCandidateRuntimeInvocationV117 = <
             publicMessage: "Runtime system failure.",
             retryable: true,
           },
-          trace: candidateRequestTrace(expectedRequest, requestBytes),
+          trace: candidateRequestTrace(expectedRequest, "TRANSPORT_CRASH"),
         }
       }
     } catch {
@@ -172,7 +170,7 @@ export const executeCandidateRuntimeInvocationV117 = <
           publicMessage: "Runtime system failure.",
           retryable: true,
         },
-        trace: candidateRequestTrace(expectedRequest, requestBytes),
+        trace: candidateRequestTrace(expectedRequest, "ADAPTER_CRASH"),
       }
     }
     if (responseBytes !== undefined) {
@@ -181,10 +179,13 @@ export const executeCandidateRuntimeInvocationV117 = <
         expectedRequest,
         input.identity,
       )
-      outcome =
-        admittedResponse.kind === "success"
-          ? (admittedResponse.value.outcome as RuntimeInvocationResultV117<TValue>)
-          : (admittedResponse as RuntimeInvocationResultV117<TValue>)
+      if (admittedResponse.kind === "success") {
+        outcome = admittedResponse.value
+          .outcome as RuntimeInvocationResultV117<TValue>
+        authenticatedAccounting = admittedResponse.value.accounting
+      } else {
+        outcome = admittedResponse as RuntimeInvocationResultV117<TValue>
+      }
     }
   }
 
@@ -196,13 +197,16 @@ export const executeCandidateRuntimeInvocationV117 = <
         publicMessage: "Runtime system failure.",
         retryable: true,
       },
-      trace: candidateRequestTrace(expectedRequest, requestBytes),
+      trace: candidateRequestTrace(expectedRequest, "TRANSPORT_CRASH"),
     }
   }
 
   const internalExecution = input.executeOutcome(outcome, expectedRequest)
   return {
     internalExecution,
+    ...(authenticatedAccounting === undefined
+      ? {}
+      : { authenticatedAccounting }),
     publicResult: candidatePublicResult(
       expectedRequest,
       outcome as RuntimeInvocationResultV117,
