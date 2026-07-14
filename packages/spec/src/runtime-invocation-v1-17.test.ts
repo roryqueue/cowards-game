@@ -8,6 +8,7 @@ import type { JsonValue } from "./types.js"
 import {
   RUNTIME_INVOCATION_V1_17_CANDIDATE,
   RUNTIME_INVOCATION_V1_17_OWNERSHIP_MATRIX,
+  RUNTIME_INVOCATION_V1_17_PLAYER_VIOLATIONS,
   RUNTIME_INVOCATION_V1_17_TEST_KEY_ID,
   RuntimeInvocationResultV117Schema,
   classifyRuntimeInvocationV117,
@@ -22,6 +23,8 @@ import {
   type RuntimeInvocationTraceV117,
 } from "./runtime-invocation-v1-17.js"
 import { RUNTIME_EXECUTION_SERVICE_VERSION } from "./runtime-execution-service.js"
+import { RUNTIME_ABI_V1_17 } from "./runtime-abi-v1-17.js"
+import * as publicRuntime from "./runtime.js"
 
 const hash = (character: string): `sha256:${string}` =>
   `sha256:${character.repeat(64)}`
@@ -246,6 +249,21 @@ describe("runtime invocation v1.17 exclusive ownership", () => {
     void mixed
     void absent
   })
+
+  it("keeps every exported canonical ownership record deeply immutable", () => {
+    expect(Object.isFrozen(RUNTIME_INVOCATION_V1_17_OWNERSHIP_MATRIX)).toBe(true)
+    expect(
+      Object.values(RUNTIME_INVOCATION_V1_17_OWNERSHIP_MATRIX).every((row) =>
+        Object.isFrozen(row),
+      ),
+    ).toBe(true)
+    expect(Object.isFrozen(RUNTIME_INVOCATION_V1_17_PLAYER_VIOLATIONS)).toBe(true)
+    expect(
+      Object.values(RUNTIME_INVOCATION_V1_17_PLAYER_VIOLATIONS).every((row) =>
+        Object.isFrozen(row),
+      ),
+    ).toBe(true)
+  })
 })
 
 describe("runtime invocation v1.17 authenticated candidate wire", () => {
@@ -278,6 +296,13 @@ describe("runtime invocation v1.17 authenticated candidate wire", () => {
     })
     expect(request.kind).toBe("success")
     if (request.kind !== "success") return
+    expect(request.value.budget).toMatchObject({
+      matchCumulative: RUNTIME_ABI_V1_17.budgets.matchCumulative,
+    })
+    expect(request.trace.safeCodes).toEqual([
+      "ADAPTER_AUTHENTICATED",
+      "OUTER_BINDINGS_VERIFIED",
+    ])
     const response = verifyRuntimeInvocationResponseV117(
       readFileSync(responseFixturePath),
       request.value,
@@ -435,6 +460,21 @@ describe("runtime invocation v1.17 authenticated candidate wire", () => {
           .digest("hex"),
         relativePath,
       ).toBe(expected)
+    }
+  })
+
+  it("publishes the complete candidate envelope API through the package runtime surface", () => {
+    for (const name of [
+      "AuthenticatedRuntimeInvocationRequestV117Schema",
+      "AuthenticatedRuntimeInvocationResponseV117Schema",
+      "createAuthenticatedRuntimeInvocationRequestV117",
+      "createAuthenticatedRuntimeInvocationResponseV117",
+      "serializeRuntimeInvocationRequestV117",
+      "serializeRuntimeInvocationResponseV117",
+      "verifyRuntimeInvocationRequestV117",
+      "verifyRuntimeInvocationResponseV117",
+    ]) {
+      expect(publicRuntime, name).toHaveProperty(name)
     }
   })
 })
