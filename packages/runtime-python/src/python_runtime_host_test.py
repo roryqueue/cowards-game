@@ -158,6 +158,50 @@ class PythonRuntimeHostV117Tests(unittest.TestCase):
 
         self.assertEqual(result, {"kind": "pre_method_host_failure"})
 
+    def test_module_initialization_is_not_debited_to_the_method_wall(self):
+        source = (
+            "value = sum(range(10000000))\n\n"
+            "def select_activations(input):\n"
+            "    return {\"activationOrders\": [], \"strategyMemory\": value}\n"
+        )
+        result = run_host(
+            candidate_envelope(
+                {
+                    "methodLimit": method_limit(),
+                    "meterStatus": {
+                        "computeFuel": "unavailable",
+                        "memoryBytes": "unavailable",
+                    },
+                },
+                source,
+            )
+        )
+
+        self.assertEqual(result["kind"], "payload")
+
+    def test_precomputed_payload_serialization_remains_inside_method_wall(self):
+        source = (
+            "payload = [0] * 60000\n\n"
+            "def select_activations(input):\n"
+            "    return {\"activationOrders\": [], \"strategyMemory\": payload}\n"
+        )
+        limit = method_limit()
+        limit["counters"]["wallMilliseconds"]["maximum"] = 1
+        result = run_host(
+            candidate_envelope(
+                {
+                    "methodLimit": limit,
+                    "meterStatus": {
+                        "computeFuel": "unavailable",
+                        "memoryBytes": "unavailable",
+                    },
+                },
+                source,
+            )
+        )
+
+        self.assertEqual(result, {"kind": "strategy_timeout"})
+
 
 if __name__ == "__main__":
     unittest.main()

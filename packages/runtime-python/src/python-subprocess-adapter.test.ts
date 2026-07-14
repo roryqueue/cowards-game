@@ -3,6 +3,7 @@ import { Buffer } from "node:buffer"
 import { createHash } from "node:crypto"
 import {
   admitPythonCandidateHostResponseV117,
+  createPythonCandidateInvocationAdapterFixtureV117,
   createPythonCandidateInvocationAdapterV117,
   createPythonRuntimeFromRevision,
   PYTHON_RUNTIME_ENVIRONMENT,
@@ -11,6 +12,7 @@ import {
   runPythonStrategyMethod,
   runPythonStrategyMethodSync,
   runPythonCandidateHostV117,
+  type PythonCandidateHostResultV117,
 } from "./python-subprocess-adapter.js"
 import {
   RUNTIME_INVOCATION_V1_17_TEST_KEY_ID,
@@ -160,6 +162,20 @@ const trustedEvidenceFor = (
   }
 }
 
+const fixtureExecution = (
+  observation: PythonCandidateHostResultV117["observation"],
+  receiptEvidence?: RuntimeInvocationExecutionReceiptEvidenceV117,
+): PythonCandidateHostResultV117 => ({ observation, receiptEvidence })
+
+const measuredDelta = (
+  counter: RuntimeInvocationExecutionReceiptEvidenceV117["counters"]["stdoutBytes"],
+): number => {
+  if (counter.status !== "measured") {
+    throw new TypeError("fixture counter must be measured")
+  }
+  return counter.delta
+}
+
 describe("Python subprocess Strategy provider ABI", () => {
   it("binds original CRLF bytes separately from the normalized executable artifact", () => {
     const source = `${pythonSource.trim().replace(/\n/gu, "\r\n")}\r\n# exact CRLF\r\n`
@@ -200,7 +216,7 @@ describe("Python subprocess Strategy provider ABI", () => {
       request,
       buildPythonSourceIdentityV117(source).normalizedSource,
     )
-    expect(host.kind, JSON.stringify(host)).toBe("payload")
+    expect(host.observation.kind, JSON.stringify(host)).toBe("payload")
     const adapter = createPythonCandidateInvocationAdapterV117({
       revision,
       identity: candidateIdentity,
@@ -261,14 +277,22 @@ describe("Python subprocess Strategy provider ABI", () => {
     (_name, payloadBytes, kind, code) => {
       const revision = buildPythonStrategyRevision({ source: pythonSource })
       const request = candidateRequest(revision)
-      const adapter = createPythonCandidateInvocationAdapterV117({
+      const evidence = trustedEvidenceFor(request, {
+        payloadBytes: payloadBytes.byteLength,
+      })
+      const adapter = createPythonCandidateInvocationAdapterFixtureV117({
         revision,
         identity: candidateIdentity,
-        hostRunner: () => ({
-          kind: "payload",
-          payloadBytes,
-          receiptEvidence: trustedEvidenceFor(request),
-        }),
+        fixtureOnlyObservedExecution: () =>
+          fixtureExecution(
+            {
+              kind: "payload",
+              payloadBytes,
+              stdoutBytes: measuredDelta(evidence.counters.stdoutBytes),
+              stderrBytes: measuredDelta(evidence.counters.stderrBytes),
+            },
+            evidence,
+          ),
       })
       const response = verifyRuntimeInvocationResponseV117(
         adapter(serializeRuntimeInvocationRequestV117(request)),
@@ -326,25 +350,37 @@ describe("Python subprocess Strategy provider ABI", () => {
   ])("keeps %s in its exclusive owner", (_name, hostResult, kind, code, trusted) => {
     const revision = buildPythonStrategyRevision({ source: pythonSource })
     const request = candidateRequest(revision)
-    const adapter = createPythonCandidateInvocationAdapterV117({
+    const evidence = trusted
+      ? trustedEvidenceFor(
+          request,
+          trusted === "timeout"
+            ? {
+                wallMilliseconds:
+                  request.budget.methodLimit.counters.wallMilliseconds.maximum +
+                  1,
+                payloadBytes: 0,
+              }
+            : { payloadBytes: 0 },
+        )
+      : undefined
+    const adapter = createPythonCandidateInvocationAdapterFixtureV117({
       revision,
       identity: candidateIdentity,
-      hostRunner: () =>
-        trusted
-          ? {
-              ...hostResult,
-              receiptEvidence: trustedEvidenceFor(
-                request,
-                trusted === "timeout"
-                  ? {
-                      wallMilliseconds:
-                        request.budget.methodLimit.counters.wallMilliseconds
-                          .maximum + 1,
-                    }
-                  : {},
-              ),
-            }
-          : hostResult,
+      fixtureOnlyObservedExecution: () =>
+        fixtureExecution(
+          {
+            ...hostResult,
+            stdoutBytes:
+              evidence === undefined
+                ? 0
+                : measuredDelta(evidence.counters.stdoutBytes),
+            stderrBytes:
+              evidence === undefined
+                ? 0
+                : measuredDelta(evidence.counters.stderrBytes),
+          },
+          evidence,
+        ),
     })
     const response = verifyRuntimeInvocationResponseV117(
       adapter(serializeRuntimeInvocationRequestV117(request)),
@@ -439,12 +475,16 @@ describe("Python subprocess Strategy provider ABI", () => {
       const request = candidateRequest(forged)
       let hostCalled = false
       const response = verifyRuntimeInvocationResponseV117(
-        createPythonCandidateInvocationAdapterV117({
+        createPythonCandidateInvocationAdapterFixtureV117({
           revision: forged,
           identity: candidateIdentity,
-          hostRunner: () => {
+          fixtureOnlyObservedExecution: () => {
             hostCalled = true
-            return { kind: "host_crash" }
+            return fixtureExecution({
+              kind: "host_crash",
+              stdoutBytes: 0,
+              stderrBytes: 0,
+            })
           },
         })(serializeRuntimeInvocationRequestV117(request)),
         request,
@@ -532,12 +572,14 @@ describe("Python subprocess Strategy provider ABI", () => {
   it("owns malformed host base64 as transport failure without a player penalty", () => {
     const revision = buildPythonStrategyRevision({ source: pythonSource })
     const request = candidateRequest(revision)
-    const adapter = createPythonCandidateInvocationAdapterV117({
+    const adapter = createPythonCandidateInvocationAdapterFixtureV117({
       revision,
       identity: candidateIdentity,
-      hostRunner: () =>
-        admitPythonCandidateHostResponseV117(
-          Buffer.from('{"kind":"payload","payloadBase64":"!!!!"}'),
+      fixtureOnlyObservedExecution: () =>
+        fixtureExecution(
+          admitPythonCandidateHostResponseV117(
+            Buffer.from('{"kind":"payload","payloadBase64":"!!!!"}'),
+          ),
         ),
     })
     const response = verifyRuntimeInvocationResponseV117(
@@ -565,16 +607,45 @@ describe("Python subprocess Strategy provider ABI", () => {
     (hostEnvelope) => {
       expect(
         admitPythonCandidateHostResponseV117(Buffer.from(hostEnvelope)),
-      ).toEqual({ kind: "transport_crash" })
+      ).toMatchObject({ kind: "transport_crash" })
     },
   )
 
   it("admits the closed host-failure envelope as host-owned failure", () => {
-    expect(
-      admitPythonCandidateHostResponseV117(
-        Buffer.from('{"kind":"host_failure"}'),
-      ),
-    ).toMatchObject({ kind: "host_crash" })
+    const revision = buildPythonStrategyRevision({ source: pythonSource })
+    const request = candidateRequest(revision)
+    const observation = admitPythonCandidateHostResponseV117(
+      Buffer.from('{"kind":"host_failure"}'),
+    )
+    expect(observation).toMatchObject({ kind: "host_crash" })
+    const evidence = {
+      ...trustedEvidenceFor(request, {
+        payloadBytes: 0,
+        stdoutBytes: observation.stdoutBytes,
+        stderrBytes: observation.stderrBytes,
+      }),
+      attribution: "host" as const,
+    }
+    const response = verifyRuntimeInvocationResponseV117(
+      createPythonCandidateInvocationAdapterFixtureV117({
+        revision,
+        identity: candidateIdentity,
+        fixtureOnlyObservedExecution: () =>
+          fixtureExecution(observation, evidence),
+      })(serializeRuntimeInvocationRequestV117(request)),
+      request,
+      candidateIdentity,
+    )
+
+    expect(response.kind).toBe("success")
+    if (response.kind === "success") {
+      expect(response.value.outcome).toMatchObject({
+        kind: "system_failure",
+        failure: { code: "HOST_CRASH" },
+        trace: { safeCodes: expect.arrayContaining(["RAW_HOST_CRASH_OBSERVED"]) },
+      })
+      expect(response.value.accounting.disposition).toBe("no_commit")
+    }
   })
 
   it("passes the exact nested v1.17 method limit to the Python host", () => {
@@ -588,7 +659,7 @@ describe("Python subprocess Strategy provider ABI", () => {
       runPythonCandidateHostV117(
         request,
         buildPythonSourceIdentityV117(pythonSource).normalizedSource,
-      ).kind,
+      ).observation.kind,
     ).toBe("payload")
   })
 
@@ -596,11 +667,15 @@ describe("Python subprocess Strategy provider ABI", () => {
     const revision = buildPythonStrategyRevision({ source: pythonSource })
     const request = candidateRequest(revision)
     const response = verifyRuntimeInvocationResponseV117(
-      createPythonCandidateInvocationAdapterV117({
+      createPythonCandidateInvocationAdapterFixtureV117({
         revision,
         identity: candidateIdentity,
-        hostRunner: () => ({
-          kind: "strategy_exception",
+        fixtureOnlyObservedExecution: () => ({
+          observation: {
+            kind: "strategy_exception",
+            stdoutBytes: 1,
+            stderrBytes: 0,
+          },
           receiptEvidence: {
             attribution: "proven_strategy",
           } as RuntimeInvocationExecutionReceiptEvidenceV117,
@@ -623,46 +698,61 @@ describe("Python subprocess Strategy provider ABI", () => {
     }
   })
 
-  it("rejects signed evidence whose payload delta predates the observed payload", () => {
-    const revision = buildPythonStrategyRevision({ source: pythonSource })
-    const request = candidateRequest(revision)
-    const payloadBytes = Buffer.from(
-      '{"activationOrders":[],"strategyMemory":null}',
-    )
-    const response = verifyRuntimeInvocationResponseV117(
-      createPythonCandidateInvocationAdapterV117({
-        revision,
-        identity: candidateIdentity,
-        hostRunner: () => ({
-          kind: "payload",
-          payloadBytes,
-          receiptEvidence: trustedEvidenceFor(request, {
-            payloadBytes: payloadBytes.byteLength - 1,
-          }),
-        }),
-      })(serializeRuntimeInvocationRequestV117(request)),
-      request,
-      candidateIdentity,
-    )
-
-    expect(response.kind).toBe("success")
-    if (response.kind === "success") {
-      expect(response.value.outcome).toMatchObject({
-        kind: "system_failure",
-        failure: { code: "AMBIGUOUS_ATTRIBUTION" },
-        trace: {
-          safeCodes: expect.arrayContaining([
-            "RAW_PAYLOAD_OBSERVED",
-            "ACCOUNTING_EVIDENCE_REJECTED",
-          ]),
-        },
-      })
-      expect(response.value.accounting.disposition).toBe("no_commit")
-      expect(response.value.accounting.poststate).toEqual(
-        request.accounting.prestate,
+  it.each(["payloadBytes", "stdoutBytes", "stderrBytes"] as const)(
+    "rejects signed evidence whose %s delta predates direct observation",
+    (dimension) => {
+      const revision = buildPythonStrategyRevision({ source: pythonSource })
+      const request = candidateRequest(revision)
+      const payloadBytes = Buffer.from(
+        '{"activationOrders":[],"strategyMemory":null}',
       )
-    }
-  })
+      const observed = {
+        payloadBytes: payloadBytes.byteLength,
+        stdoutBytes: 91,
+        stderrBytes: 7,
+      }
+      const evidence = trustedEvidenceFor(request, {
+        ...observed,
+        [dimension]: observed[dimension] - 1,
+      })
+      const response = verifyRuntimeInvocationResponseV117(
+        createPythonCandidateInvocationAdapterFixtureV117({
+          revision,
+          identity: candidateIdentity,
+          fixtureOnlyObservedExecution: () =>
+            fixtureExecution(
+              {
+                kind: "payload",
+                payloadBytes,
+                stdoutBytes: observed.stdoutBytes,
+                stderrBytes: observed.stderrBytes,
+              },
+              evidence,
+            ),
+        })(serializeRuntimeInvocationRequestV117(request)),
+        request,
+        candidateIdentity,
+      )
+
+      expect(response.kind).toBe("success")
+      if (response.kind === "success") {
+        expect(response.value.outcome).toMatchObject({
+          kind: "system_failure",
+          failure: { code: "AMBIGUOUS_ATTRIBUTION" },
+          trace: {
+            safeCodes: expect.arrayContaining([
+              "RAW_PAYLOAD_OBSERVED",
+              "ACCOUNTING_EVIDENCE_REJECTED",
+            ]),
+          },
+        })
+        expect(response.value.accounting.disposition).toBe("no_commit")
+        expect(response.value.accounting.poststate).toEqual(
+          request.accounting.prestate,
+        )
+      }
+    },
+  )
 
   it("applies the signed output budget to decoded raw payload bytes at N and N+1", () => {
     const revision = buildPythonStrategyRevision({ source: pythonSource })
@@ -687,16 +777,23 @@ describe("Python subprocess Strategy provider ABI", () => {
     ] as const) {
       const request = candidateRequest(revision)
       const response = verifyRuntimeInvocationResponseV117(
-        createPythonCandidateInvocationAdapterV117({
+        createPythonCandidateInvocationAdapterFixtureV117({
           revision,
           identity: candidateIdentity,
-          hostRunner: () => ({
-            kind: "payload",
-            payloadBytes,
-            receiptEvidence: trustedEvidenceFor(request, {
+          fixtureOnlyObservedExecution: () => {
+            const evidence = trustedEvidenceFor(request, {
               payloadBytes: payloadBytes.byteLength,
-            }),
-          }),
+            })
+            return fixtureExecution(
+              {
+                kind: "payload",
+                payloadBytes,
+                stdoutBytes: measuredDelta(evidence.counters.stdoutBytes),
+                stderrBytes: measuredDelta(evidence.counters.stderrBytes),
+              },
+              evidence,
+            )
+          },
         })(serializeRuntimeInvocationRequestV117(request)),
         request,
         candidateIdentity,
@@ -720,7 +817,7 @@ describe("Python subprocess Strategy provider ABI", () => {
       request,
       buildPythonSourceIdentityV117(source).normalizedSource,
     )
-    expect(host.kind).toBe("oversized_output")
+    expect(host.observation.kind).toBe("oversized_output")
 
     const response = verifyRuntimeInvocationResponseV117(
       createPythonCandidateInvocationAdapterV117({
@@ -750,7 +847,7 @@ describe("Python subprocess Strategy provider ABI", () => {
       request,
       buildPythonSourceIdentityV117(pythonSource).normalizedSource,
     )
-    expect(host.kind, JSON.stringify(host)).toBe("payload")
+    expect(host.observation.kind, JSON.stringify(host)).toBe("payload")
 
     const response = verifyRuntimeInvocationResponseV117(
       createPythonCandidateInvocationAdapterV117({
@@ -784,7 +881,7 @@ describe("Python subprocess Strategy provider ABI", () => {
       request,
       buildPythonSourceIdentityV117(source).normalizedSource,
     )
-    expect(host.kind).toBe("strategy_timeout")
+    expect(host.observation.kind).toBe("strategy_timeout")
 
     const response = verifyRuntimeInvocationResponseV117(
       createPythonCandidateInvocationAdapterV117({
@@ -859,7 +956,7 @@ describe("Python subprocess Strategy provider ABI", () => {
       const elapsedMilliseconds = Date.now() - started
 
       expect(elapsedMilliseconds).toBeLessThan(2_500)
-      expect(host.kind).toBe("pre_method_host_failure")
+      expect(host.observation.kind).toBe("pre_method_host_failure")
       expect(response.kind).toBe("success")
       if (response.kind === "success") {
         expect(response.value.outcome).toMatchObject({
@@ -892,7 +989,7 @@ describe("Python subprocess Strategy provider ABI", () => {
       candidateIdentity,
     )
 
-    expect(host.kind).toBe("pre_method_host_failure")
+    expect(host.observation.kind).toBe("pre_method_host_failure")
     expect(response.kind).toBe("success")
     if (response.kind === "success") {
       expect(response.value.outcome).toMatchObject({
@@ -937,14 +1034,67 @@ describe("Python subprocess Strategy provider ABI", () => {
       request,
       buildPythonSourceIdentityV117(source).normalizedSource,
     )
-    expect(host.kind).toBe("oversized_output")
-    expect(host.stdoutBytes).toBeGreaterThan(
+    expect(host.observation.kind).toBe("oversized_output")
+    expect(host.observation.stdoutBytes).toBeGreaterThan(
       request.budget.methodLimit.counters.stdoutBytes.maximum,
     )
-    if (host.payloadBytes !== undefined) {
-      expect(host.payloadBytes.byteLength).toBeGreaterThan(249_900)
-      expect(host.payloadBytes.byteLength).toBeLessThanOrEqual(
+    if (
+      host.observation.kind === "oversized_output" &&
+      host.observation.payloadBytes !== undefined
+    ) {
+      expect(host.observation.payloadBytes.byteLength).toBeGreaterThan(249_900)
+      expect(host.observation.payloadBytes.byteLength).toBeLessThanOrEqual(
         request.budget.methodLimit.counters.payloadBytes.maximum,
+      )
+    }
+  })
+
+  it("attributes complete base64 transport exhaustion to stdout in the signed receipt", () => {
+    const revision = buildPythonStrategyRevision({ source: pythonSource })
+    const request = candidateRequest(revision)
+    const payloadBytes = Buffer.from(
+      '{"activationOrders":[],"strategyMemory":null}',
+    )
+    const stdoutBytes =
+      request.budget.methodLimit.counters.stdoutBytes.maximum + 1
+    const evidence = trustedEvidenceFor(request, {
+      payloadBytes: payloadBytes.byteLength,
+      stdoutBytes,
+      stderrBytes: 0,
+    })
+    const response = verifyRuntimeInvocationResponseV117(
+      createPythonCandidateInvocationAdapterFixtureV117({
+        revision,
+        identity: candidateIdentity,
+        fixtureOnlyObservedExecution: () =>
+          fixtureExecution(
+            {
+              kind: "oversized_output",
+              payloadBytes,
+              stdoutBytes,
+              stderrBytes: 0,
+            },
+            evidence,
+          ),
+      })(serializeRuntimeInvocationRequestV117(request)),
+      request,
+      candidateIdentity,
+    )
+
+    expect(response.kind).toBe("success")
+    if (response.kind === "success") {
+      expect(response.value.outcome).toMatchObject({
+        kind: "player_violation",
+        violation: { code: "OVERSIZED_OUTPUT" },
+      })
+      expect(response.value.accounting.disposition).toBe("commit")
+      expect(response.value.accounting.receipt.counters).toMatchObject({
+        payloadBytes: { status: "measured", delta: payloadBytes.byteLength },
+        stdoutBytes: { status: "measured", delta: stdoutBytes },
+        stderrBytes: { status: "measured", delta: 0 },
+      })
+      expect(response.value.accounting.poststate.cumulative.stdoutBytes).toBe(
+        stdoutBytes,
       )
     }
   })
@@ -958,7 +1108,7 @@ describe("Python subprocess Strategy provider ABI", () => {
       buildPythonSourceIdentityV117(source).normalizedSource,
     )
 
-    expect(host.kind).toBe("pre_method_host_failure")
+    expect(host.observation.kind).toBe("pre_method_host_failure")
   })
 
   it("classifies an actual-host non-serializable return as INVALID_OUTPUT", () => {
@@ -996,9 +1146,9 @@ describe("Python subprocess Strategy provider ABI", () => {
       request,
       buildPythonSourceIdentityV117(source).normalizedSource,
     )
-    expect(host.kind).toBe("payload")
-    if (host.kind === "payload") {
-      expect(Buffer.from(host.payloadBytes).toString("utf8")).toBe(
+    expect(host.observation.kind).toBe("payload")
+    if (host.observation.kind === "payload") {
+      expect(Buffer.from(host.observation.payloadBytes).toString("utf8")).toBe(
         '{"activationOrders":[],"strategyMemory":{"whole":1}}',
       )
     }

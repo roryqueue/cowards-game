@@ -55,29 +55,47 @@ export const pythonRuntimeHostArgs = (): readonly string[] => [
 
 export { pythonExperimentalRuntimeMetadata }
 
-type PythonCandidateRawObservationV117 =
-  | { readonly kind: "payload"; readonly payloadBytes: Uint8Array }
-  | { readonly kind: "invalid_output" }
-  | { readonly kind: "oversized_output" }
-  | { readonly kind: "strategy_exception" }
-  | { readonly kind: "strategy_timeout" }
-  | { readonly kind: "host_crash" }
-  | { readonly kind: "transport_crash" }
-  | { readonly kind: "preflight_unavailable" }
+const PYTHON_CANDIDATE_PREFLIGHT_WATCHDOG_MS = 1_000
+const PYTHON_CANDIDATE_HOST_SHUTDOWN_MARGIN_MS = 2_000
 
-export type PythonCandidateHostResultV117 =
-  PythonCandidateRawObservationV117 &
-    Readonly<{
-      receiptEvidence?: RuntimeInvocationExecutionReceiptEvidenceV117
-    }>
+type PythonCandidateObservedByteDimensionsV117 = Readonly<{
+  stdoutBytes: number
+  stderrBytes: number
+}>
+
+type PythonCandidateRawObservationV117 =
+  | (PythonCandidateObservedByteDimensionsV117 & {
+      readonly kind: "payload"
+      readonly payloadBytes: Uint8Array
+    })
+  | (PythonCandidateObservedByteDimensionsV117 & {
+      readonly kind: "oversized_output"
+      readonly payloadBytes?: Uint8Array | undefined
+    })
+  | (PythonCandidateObservedByteDimensionsV117 & {
+      readonly kind:
+        | "invalid_output"
+        | "strategy_exception"
+        | "strategy_timeout"
+        | "host_crash"
+        | "transport_crash"
+        | "preflight_unavailable"
+        | "pre_method_host_failure"
+    })
+
+export type PythonCandidateHostResultV117 = Readonly<{
+  observation: PythonCandidateRawObservationV117
+  receiptEvidence?: RuntimeInvocationExecutionReceiptEvidenceV117 | undefined
+}>
 
 export interface PythonCandidateInvocationAdapterOptionsV117 {
   readonly revision: StrategyRevision
   readonly identity: RuntimeInvocationSigningIdentityV117
-  readonly hostRunner?: (
-    request: AuthenticatedRuntimeInvocationRequestV117,
-    normalizedSource: string,
-  ) => PythonCandidateHostResultV117
+}
+
+export interface PythonCandidateInvocationAdapterFixtureOptionsV117
+  extends PythonCandidateInvocationAdapterOptionsV117 {
+  readonly fixtureOnlyObservedExecution: () => PythonCandidateHostResultV117
 }
 
 const candidateTrace = (
@@ -156,6 +174,8 @@ const rawObservationSafeCode = (
       return "RAW_TRANSPORT_CRASH_OBSERVED"
     case "preflight_unavailable":
       return "RAW_PREFLIGHT_UNAVAILABLE_OBSERVED"
+    case "pre_method_host_failure":
+      return "RAW_PRE_METHOD_HOST_FAILURE_OBSERVED"
   }
 }
 
@@ -203,11 +223,13 @@ const rawOutcome = (
   }
   return pythonCandidateSystemFailure(
     request,
-    observation.kind === "host_crash"
+    observation.kind === "host_crash" ||
+    observation.kind === "pre_method_host_failure"
       ? "HOST_CRASH"
       : observation.kind === "transport_crash"
         ? "TRANSPORT_CRASH"
         : "AMBIGUOUS_ATTRIBUTION",
+    [rawObservationSafeCode(observation)],
   )
 }
 
@@ -236,16 +258,55 @@ const failClosedResponse = (
 
 const responseForObservation = (
   request: AuthenticatedRuntimeInvocationRequestV117,
-  observation: PythonCandidateHostResultV117,
+  execution: PythonCandidateHostResultV117,
   identity: RuntimeInvocationSigningIdentityV117,
 ) => {
+  const { observation } = execution
   const safeCode = rawObservationSafeCode(observation)
-  if (observation.receiptEvidence !== undefined) {
+  if (execution.receiptEvidence !== undefined) {
     try {
+      const evidence = execution.receiptEvidence
+      const expectedPayloadBytes =
+        observation.kind === "payload" ||
+        observation.kind === "oversized_output"
+          ? (observation.payloadBytes?.byteLength ?? 0)
+          : 0
+      const observedCountersMatch =
+        evidence.counters.payloadBytes.status === "measured" &&
+        evidence.counters.payloadBytes.delta === expectedPayloadBytes &&
+        evidence.counters.stdoutBytes.status === "measured" &&
+        evidence.counters.stdoutBytes.delta === observation.stdoutBytes &&
+        evidence.counters.stderrBytes.status === "measured" &&
+        evidence.counters.stderrBytes.delta === observation.stderrBytes
+      const completeEvidence =
+        evidence.attribution !== "ambiguous" &&
+        Object.values(evidence.counters).every(
+          (counter) => counter.status === "measured",
+        ) &&
+        evidence.memory.status === "measured" &&
+        evidence.process.status === "verified" &&
+        evidence.capabilities.status === "verified" &&
+        evidence.cancellation.status === "verified" &&
+        evidence.accountingEvidence.status === "verified"
+      const strategyObservation =
+        observation.kind === "payload" ||
+        observation.kind === "invalid_output" ||
+        observation.kind === "oversized_output" ||
+        observation.kind === "strategy_exception" ||
+        observation.kind === "strategy_timeout"
+      if (
+        !observedCountersMatch ||
+        !completeEvidence ||
+        (strategyObservation
+          ? evidence.attribution !== "proven_strategy"
+          : evidence.attribution !== "host")
+      ) {
+        throw new TypeError("Observed execution does not match receipt evidence")
+      }
       const outcome = rawOutcome(request, observation)
       const receipt = createRuntimeInvocationExecutionReceiptV117(
         request,
-        observation.receiptEvidence,
+        evidence,
       )
       return createAuthenticatedRuntimeInvocationResponseV117(
         request,
@@ -267,7 +328,12 @@ const responseForObservation = (
 
 export const admitPythonCandidateHostResponseV117 = (
   stdout: Uint8Array,
-): PythonCandidateHostResultV117 => {
+  stderr: Uint8Array = new Uint8Array(),
+): PythonCandidateRawObservationV117 => {
+  const observedBytes = {
+    stdoutBytes: stdout.byteLength,
+    stderrBytes: stderr.byteLength,
+  } as const
   const admitted = admitCanonicalJsonBytes(stdout, {
     profile: "authenticated-envelope",
   })
@@ -276,7 +342,7 @@ export const admitPythonCandidateHostResponseV117 = (
     admitted.value === null ||
     Array.isArray(admitted.value)
   ) {
-    return { kind: "transport_crash" }
+    return { kind: "transport_crash", ...observedBytes }
   }
   const envelope = admitted.value as Record<string, JsonValue>
   const keys = Object.keys(envelope)
@@ -285,28 +351,42 @@ export const admitPythonCandidateHostResponseV117 = (
     keys[0] === "kind" &&
     envelope.kind === "strategy_exception"
   ) {
-    return { kind: "strategy_exception" }
+    return { kind: "strategy_exception", ...observedBytes }
   }
   if (
     keys.length === 1 &&
     keys[0] === "kind" &&
     envelope.kind === "invalid_output"
   ) {
-    return { kind: "invalid_output" }
+    return { kind: "invalid_output", ...observedBytes }
   }
   if (
     keys.length === 1 &&
     keys[0] === "kind" &&
     envelope.kind === "oversized_output"
   ) {
-    return { kind: "oversized_output" }
+    return { kind: "oversized_output", ...observedBytes }
   }
   if (
     keys.length === 1 &&
     keys[0] === "kind" &&
     envelope.kind === "strategy_timeout"
   ) {
-    return { kind: "strategy_timeout" }
+    return { kind: "strategy_timeout", ...observedBytes }
+  }
+  if (
+    keys.length === 1 &&
+    keys[0] === "kind" &&
+    envelope.kind === "host_failure"
+  ) {
+    return { kind: "host_crash", ...observedBytes }
+  }
+  if (
+    keys.length === 1 &&
+    keys[0] === "kind" &&
+    envelope.kind === "pre_method_host_failure"
+  ) {
+    return { kind: "pre_method_host_failure", ...observedBytes }
   }
   if (
     keys.length !== 2 ||
@@ -315,16 +395,16 @@ export const admitPythonCandidateHostResponseV117 = (
     envelope.kind !== "payload" ||
     typeof envelope.payloadBase64 !== "string"
   ) {
-    return { kind: "transport_crash" }
+    return { kind: "transport_crash", ...observedBytes }
   }
   const payloadBytes = Buffer.from(envelope.payloadBase64, "base64")
   if (
     payloadBytes.byteLength === 0 ||
     payloadBytes.toString("base64") !== envelope.payloadBase64
   ) {
-    return { kind: "transport_crash" }
+    return { kind: "transport_crash", ...observedBytes }
   }
-  return { kind: "payload", payloadBytes }
+  return { kind: "payload", payloadBytes, ...observedBytes }
 }
 
 export const runPythonCandidateHostV117 = (
@@ -352,21 +432,47 @@ export const runPythonCandidateHostV117 = (
     }),
     env: PYTHON_RUNTIME_ENVIRONMENT,
     shell: false,
-    // Infrastructure watchdog only. The signed wall budget begins immediately
-    // before the Strategy method inside the Python host and is classified there.
-    timeout: 30_000,
+    // Infrastructure/preflight watchdog only. The signed wall begins after
+    // module startup and function lookup inside the Python host.
+    timeout:
+      PYTHON_CANDIDATE_PREFLIGHT_WATCHDOG_MS +
+      request.budget.methodLimit.counters.wallMilliseconds.maximum +
+      PYTHON_CANDIDATE_HOST_SHUTDOWN_MARGIN_MS,
     maxBuffer:
       Math.ceil(
         (request.budget.methodLimit.counters.payloadBytes.maximum * 4) / 3,
       ) +
       64 * 1024,
   })
+  const stdout = new Uint8Array(result.stdout ?? Buffer.alloc(0))
+  const stderr = new Uint8Array(result.stderr ?? Buffer.alloc(0))
+  const observedBytes = {
+    stdoutBytes: stdout.byteLength,
+    stderrBytes: stderr.byteLength,
+  } as const
   if (result.error || result.signal || result.status !== 0) {
-    return { kind: "host_crash" }
+    return { observation: { kind: "host_crash", ...observedBytes } }
   }
-  return admitPythonCandidateHostResponseV117(
-    new Uint8Array(result.stdout ?? Buffer.alloc(0)),
-  )
+  let observation = admitPythonCandidateHostResponseV117(stdout, stderr)
+  if (
+    stderr.byteLength >
+    request.budget.methodLimit.counters.stderrBytes.maximum
+  ) {
+    observation = { kind: "host_crash", ...observedBytes }
+  } else if (
+    stdout.byteLength >
+    request.budget.methodLimit.counters.stdoutBytes.maximum
+  ) {
+    observation =
+      observation.kind === "payload"
+        ? {
+            kind: "oversized_output",
+            payloadBytes: observation.payloadBytes,
+            ...observedBytes,
+          }
+        : { kind: "transport_crash", ...observedBytes }
+  }
+  return { observation }
 }
 
 const candidatePythonArtifact = (
@@ -438,9 +544,12 @@ const candidatePythonArtifact = (
   return { ok: true, normalizedSource: identity.normalizedSource }
 }
 
-export const createPythonCandidateInvocationAdapterV117 =
+const createPythonCandidateInvocationAdapter =
   (
     options: PythonCandidateInvocationAdapterOptionsV117,
+    fixtureOnlyObservedExecution?:
+      | (() => PythonCandidateHostResultV117)
+      | undefined,
   ): ((requestBytes: Uint8Array) => Uint8Array) =>
   (requestBytes) => {
     const admittedRequest = verifyRuntimeInvocationRequestV117(
@@ -477,10 +586,9 @@ export const createPythonCandidateInvocationAdapterV117 =
     }
     let response
     try {
-      const host = (options.hostRunner ?? runPythonCandidateHostV117)(
-        request,
-        artifact.normalizedSource,
-      )
+      const host =
+        fixtureOnlyObservedExecution?.() ??
+        runPythonCandidateHostV117(request, artifact.normalizedSource)
       response = responseForObservation(request, host, options.identity)
     } catch {
       response = failClosedResponse(
@@ -490,10 +598,21 @@ export const createPythonCandidateInvocationAdapterV117 =
         ["RAW_ADAPTER_CRASH_OBSERVED"],
       )
     }
-    return serializeRuntimeInvocationResponseV117(
-      response,
-    )
+    return serializeRuntimeInvocationResponseV117(response)
   }
+
+export const createPythonCandidateInvocationAdapterV117 = (
+  options: PythonCandidateInvocationAdapterOptionsV117,
+): ((requestBytes: Uint8Array) => Uint8Array) =>
+  createPythonCandidateInvocationAdapter(options)
+
+export const createPythonCandidateInvocationAdapterFixtureV117 = (
+  options: PythonCandidateInvocationAdapterFixtureOptionsV117,
+): ((requestBytes: Uint8Array) => Uint8Array) =>
+  createPythonCandidateInvocationAdapter(
+    options,
+    options.fixtureOnlyObservedExecution,
+  )
 
 export interface PythonStrategyRequestInput {
   sourceText?: string | undefined

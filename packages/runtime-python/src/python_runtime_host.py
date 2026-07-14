@@ -11,6 +11,7 @@ import time
 ABI_VERSION = "strategy-runtime-abi-v1.14"
 CANDIDATE_ABI_VERSION = "strategy-runtime-abi-v1.17"
 CANDIDATE_HOST_PROTOCOL = "python-runtime-host-v1.17"
+CANDIDATE_PREFLIGHT_WATCHDOG_SECONDS = 1.0
 MAX_SAFE_INTEGER = 9_007_199_254_740_991
 
 
@@ -247,54 +248,50 @@ def run_candidate_guest(
         close_quietly(go_write)
         close_quietly(result_read)
         try:
-            write_all(ready_write, b"R")
-            close_quietly(ready_write)
-            if os.read(go_read, 1) != b"G":
-                os._exit(2)
-            close_quietly(go_read)
             try:
                 namespace = {"__builtins__": safe_builtins}
                 exec(source, namespace, namespace)
-            except BaseException:
-                write_all(
-                    result_write,
-                    candidate_envelope_bytes("strategy_exception"),
-                )
-            else:
                 function = namespace.get(function_name)
-                if not callable(function):
+            except BaseException:
+                function = None
+            if not callable(function):
+                write_all(ready_write, b"F")
+            else:
+                # Module initialization and function lookup are complete before
+                # the host-owned method wall begins. The parent starts that wall
+                # immediately before releasing this already-resolved callable.
+                write_all(ready_write, b"R")
+                close_quietly(ready_write)
+                if os.read(go_read, 1) != b"G":
+                    os._exit(2)
+                close_quietly(go_read)
+                try:
+                    result = function(input_value)
+                except BaseException:
                     write_all(
                         result_write,
-                        candidate_envelope_bytes("invalid_output"),
+                        candidate_envelope_bytes("strategy_exception"),
                     )
                 else:
                     try:
-                        result = function(input_value)
+                        payload = bounded_canonical_json_bytes(
+                            result,
+                            budget["counters"]["payloadBytes"]["maximum"],
+                        )
+                        write_all(
+                            result_write,
+                            candidate_envelope_bytes("payload", payload),
+                        )
+                    except OutputLimitExceeded:
+                        write_all(
+                            result_write,
+                            candidate_envelope_bytes("oversized_output"),
+                        )
                     except BaseException:
                         write_all(
                             result_write,
-                            candidate_envelope_bytes("strategy_exception"),
+                            candidate_envelope_bytes("invalid_output"),
                         )
-                    else:
-                        try:
-                            payload = bounded_canonical_json_bytes(
-                                result,
-                                budget["counters"]["payloadBytes"]["maximum"],
-                            )
-                            write_all(
-                                result_write,
-                                candidate_envelope_bytes("payload", payload),
-                            )
-                        except OutputLimitExceeded:
-                            write_all(
-                                result_write,
-                                candidate_envelope_bytes("oversized_output"),
-                            )
-                        except BaseException:
-                            write_all(
-                                result_write,
-                                candidate_envelope_bytes("invalid_output"),
-                            )
         except BaseException:
             os._exit(3)
         finally:
@@ -307,10 +304,13 @@ def run_candidate_guest(
     close_quietly(go_read)
     close_quietly(result_write)
     try:
-        ready, _, _ = select.select([ready_read], [], [], 5.0)
-        if not ready or os.read(ready_read, 1) != b"R":
+        ready, _, _ = select.select(
+            [ready_read], [], [], CANDIDATE_PREFLIGHT_WATCHDOG_SECONDS
+        )
+        ready_signal = os.read(ready_read, 1) if ready else b""
+        if ready_signal != b"R":
             kill_and_reap(child_pid)
-            return {"kind": "host_failure"}
+            return {"kind": "pre_method_host_failure"}
         close_quietly(ready_read)
 
         deadline = (
@@ -536,6 +536,8 @@ def candidate_main(envelope):
         sys.stdout.buffer.flush()
     elif guest["kind"] == "strategy_timeout":
         sys.stdout.write('{"kind":"strategy_timeout"}')
+    elif guest["kind"] == "pre_method_host_failure":
+        sys.stdout.write('{"kind":"pre_method_host_failure"}')
     else:
         sys.stdout.write('{"kind":"host_failure"}')
     return 0
