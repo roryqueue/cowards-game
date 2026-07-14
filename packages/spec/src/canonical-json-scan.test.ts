@@ -35,7 +35,11 @@ const corpus = JSON.parse(
 }
 
 const scannerVectors = corpus.vectors.filter(
-  (vector) => vector.operation !== "host-encode",
+  (
+    vector,
+  ): vector is typeof vector & {
+    operation: CanonicalJsonScanOptions["operation"]
+  } => vector.operation !== "host-encode",
 )
 
 describe("canonical JSON v1.1 iterative raw-byte scanner", () => {
@@ -52,7 +56,8 @@ describe("canonical JSON v1.1 iterative raw-byte scanner", () => {
         limits: vector.limits,
       })
       if (vector.expectation.kind === "error") {
-        expect(result, vector.id).toEqual({ ok: false, error: vector.expectation })
+        const { kind: _kind, ...expectedError } = vector.expectation
+        expect(result, vector.id).toEqual({ ok: false, error: expectedError })
       } else {
         expect(result.ok, vector.id).toBe(true)
         if (result.ok) {
