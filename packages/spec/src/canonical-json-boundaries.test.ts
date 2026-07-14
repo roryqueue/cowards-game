@@ -13,6 +13,7 @@ import {
   SoldierMemoryV117Schema,
   StrategyMemoryV117Schema,
 } from "./schemas.js"
+import { RuntimeInvocationResultV117Schema } from "./runtime-invocation-v1-17.js"
 
 const text = (value: string): Uint8Array => new TextEncoder().encode(value)
 const repoRoot = path.resolve(import.meta.dirname, "../../..")
@@ -49,7 +50,7 @@ describe("successor canonical JSON boundaries", () => {
     expect(admitCanonicalJsonBytes(over, { profile })).toMatchObject({
       ok: false,
       error: {
-        code: "MAX_RAW_UTF8_BYTES_EXCEEDED",
+        code: "FIELD_CAP_EXCEEDED",
         byteOffset: cap,
         owner: "player_violation",
       },
@@ -74,6 +75,23 @@ describe("successor canonical JSON boundaries", () => {
       expect(() => schema.safeParse(deep)).not.toThrow()
       expect(schema.safeParse(deep).success).toBe(false)
     }
+    const deepResult = {
+      kind: "success",
+      value: deep,
+      trace: {
+        requestId: "request:deep",
+        invocationId: "invocation:deep",
+        kernelRequestId: "kernel-request:deep",
+        method: "selectActivations",
+        requestSha256: `sha256:${"1".repeat(64)}`,
+        budgetProfileSha256: `sha256:${"2".repeat(64)}`,
+        inputSha256: `sha256:${"3".repeat(64)}`,
+        retryIdentitySha256: `sha256:${"4".repeat(64)}`,
+        safeCodes: [],
+      },
+    }
+    expect(() => RuntimeInvocationResultV117Schema.safeParse(deepResult)).not.toThrow()
+    expect(RuntimeInvocationResultV117Schema.safeParse(deepResult).success).toBe(false)
   })
 
   it("never lets lower profiles loosen the frozen global ceilings", () => {

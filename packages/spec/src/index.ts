@@ -1,6 +1,7 @@
 export * from "./constants.js"
 export * from "./analytics.js"
 export * from "./canonical-instant.js"
+export * from "./canonical-json.js"
 export * from "./competition.js"
 export * from "./competition-entry-eligibility.js"
 export * from "./competition-counted-state.js"

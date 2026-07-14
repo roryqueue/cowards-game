@@ -6,7 +6,11 @@ import {
   hashCanonicalIdentityValue,
 } from "./canonical-identity-domains.js"
 import { encodeCanonicalJson } from "./canonical-json-encode.js"
-import { parseCanonicalJson } from "./canonical-json-parse.js"
+import {
+  admitCanonicalJsonBytes,
+  admitCanonicalJsonValue,
+  type CanonicalJsonBoundaryProfileId,
+} from "./canonical-json.js"
 import type { JsonValue } from "./types.js"
 
 const deepFreeze = <T>(value: T): Readonly<T> => {
@@ -127,16 +131,21 @@ export type RuntimeInvocationResultV117<
       violation?: never
     }>
 
-const JsonValueSchema: z.ZodType<JsonValue> = z.lazy(() =>
-  z.union([
-    z.null(),
-    z.boolean(),
-    z.number().finite(),
-    z.string(),
-    z.array(JsonValueSchema),
-    z.record(z.string(), JsonValueSchema),
-  ]),
-)
+const canonicalJsonValueSchema = (
+  profile: CanonicalJsonBoundaryProfileId,
+): z.ZodType<JsonValue> =>
+  z.custom<JsonValue>(() => true).superRefine((value, ctx) => {
+    const admitted = admitCanonicalJsonValue(value, { profile })
+    if (admitted.ok) return
+    ctx.addIssue({
+      code: "custom",
+      path: [...admitted.error.path],
+      message: `canonical-json-v1:${admitted.error.code}`,
+    })
+  })
+
+const HostApiJsonValueSchema = canonicalJsonValueSchema("host-api-value")
+const StrategyPayloadJsonValueSchema = canonicalJsonValueSchema("strategy-payload")
 
 const Sha256Schema = z.string().regex(/^sha256:[0-9a-f]{64}$/u)
 const SafeCodeSchema = z.string().regex(/^[A-Z][A-Z0-9_]{0,63}$/u)
@@ -159,7 +168,7 @@ export const RuntimeInvocationTraceV117Schema = z
 const RuntimeInvocationSuccessV117Schema = z
   .object({
     kind: z.literal("success"),
-    value: JsonValueSchema,
+    value: StrategyPayloadJsonValueSchema,
     trace: RuntimeInvocationTraceV117Schema,
   })
   .strict()
@@ -541,7 +550,7 @@ const RuntimeInvocationBudgetV117Schema = BudgetWithoutHashSchema.extend({
 
 const RuntimeInvocationInputV117Schema = z
   .object({
-    value: JsonValueSchema,
+    value: HostApiJsonValueSchema,
     canonicalSha256: Sha256Schema,
     canonicalByteLength: NonnegativeSafeIntegerSchema,
   })
@@ -746,7 +755,7 @@ export const createAuthenticatedRuntimeInvocationRequestV117 = (
     input.sourceIdentity,
   )
   const budgetWithoutHash = BudgetWithoutHashSchema.parse(input.budget)
-  const inputValue = JsonValueSchema.parse(input.input.value)
+  const inputValue = HostApiJsonValueSchema.parse(input.input.value)
   const inputBytes = canonicalBytes(inputValue)
   const retryWithoutHash = RetryWithoutHashSchema.parse(input.retry)
   const unsigned = {
@@ -937,9 +946,8 @@ const parseCanonicalEnvelope = <T>(
   schema: z.ZodType<T>,
 ): { ok: true; value: T } | { ok: false; code: RuntimeInvocationSystemFailureCodeV117 } => {
   if (bytes.byteLength === 0) return { ok: false, code: "OUTER_FRAME_MISSING" }
-  const parsed = parseCanonicalJson(bytes, {
-    context: "authenticated-outer-envelope",
-    operation: "require-canonical",
+  const parsed = admitCanonicalJsonBytes(bytes, {
+    profile: "authenticated-envelope",
   })
   if (!parsed.ok) {
     return {
