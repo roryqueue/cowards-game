@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"os"
+	"strings"
 	"testing"
 )
 
@@ -81,14 +82,64 @@ func TestPhase258RuntimeInvocationV117RejectsUnsignedBudgetStaleIdentityAndMixed
 		t.Fatal(failure)
 	}
 	mixed := signedRuntimeInvocationResponseV117ForTest(t, request, map[string]any{
-		"kind": "success",
-		"value": map[string]any{"activationOrders": []any{}, "strategyMemory": map[string]any{}},
+		"kind":      "success",
+		"value":     map[string]any{"activationOrders": []any{}, "strategyMemory": map[string]any{}},
 		"violation": map[string]any{"code": "INVALID_OUTPUT", "publicMessage": "Strategy returned an invalid payload."},
-		"trace": runtimeInvocationTraceV117ForRequest(request),
+		"trace":     runtimeInvocationTraceV117ForRequest(request),
 	}, identity)
 	_, failure = verifyRuntimeInvocationResponseV117(mixed, request, identity)
 	if failure == nil || failure.Code != "OUTER_FRAME_UNDECODABLE" || failure.Retryable {
 		t.Fatalf("mixed result did not fail closed: %+v", failure)
+	}
+}
+
+func TestPhase258RuntimeInvocationV117RejectsSignedMalformedAndOversizeSuccessPayloads(t *testing.T) {
+	requestBytes := readRuntimeInvocationV117Fixture(t, "runtime-execution-service-request.v1.17.candidate.json")
+	identity := runtimeInvocationV117SigningIdentity{KeyID: runtimeInvocationV117FixtureKeyID, Secret: runtimeInvocationV117FixtureSecret}
+
+	type payloadCase struct {
+		name   string
+		method string
+		value  map[string]any
+	}
+	largeOrders := make([]any, 20_000)
+	for index := range largeOrders {
+		largeOrders[index] = map[string]any{"soldierId": "soldier"}
+	}
+	cases := []payloadCase{
+		{name: "activation order missing soldier id", method: "selectActivations", value: map[string]any{"activationOrders": []any{map[string]any{}}, "strategyMemory": nil}},
+		{name: "activation order empty soldier id", method: "selectActivations", value: map[string]any{"activationOrders": []any{map[string]any{"soldierId": ""}}, "strategyMemory": nil}},
+		{name: "activation order has unknown field", method: "selectActivations", value: map[string]any{"activationOrders": []any{map[string]any{"soldierId": "soldier", "unknown": true}}, "strategyMemory": nil}},
+		{name: "objective exceeds one KiB", method: "selectActivations", value: map[string]any{"activationOrders": []any{map[string]any{"soldierId": "soldier", "objective": strings.Repeat("o", 1_024)}}, "strategyMemory": nil}},
+		{name: "strategy memory exceeds thirty two KiB", method: "selectActivations", value: map[string]any{"activationOrders": []any{}, "strategyMemory": strings.Repeat("m", 32*1_024)}},
+		{name: "invocation payload exceeds two hundred fifty six KiB", method: "selectActivations", value: map[string]any{"activationOrders": largeOrders, "strategyMemory": nil}},
+		{name: "unknown action", method: "soldierBrain", value: map[string]any{"action": map[string]any{"type": "HOLD"}, "soldierMemory": nil}},
+		{name: "move direction invalid", method: "soldierBrain", value: map[string]any{"action": map[string]any{"type": "MOVE", "direction": "NORTH"}, "soldierMemory": nil}},
+		{name: "turn to stone carries direction", method: "soldierBrain", value: map[string]any{"action": map[string]any{"type": "TURN_TO_STONE", "direction": "UP"}, "soldierMemory": nil}},
+		{name: "action has unknown field", method: "soldierBrain", value: map[string]any{"action": map[string]any{"type": "TURN", "direction": "LEFT", "unknown": true}, "soldierMemory": nil}},
+		{name: "soldier memory exceeds two KiB", method: "soldierBrain", value: map[string]any{"action": map[string]any{"type": "TURN_TO_STONE"}, "soldierMemory": strings.Repeat("m", 2*1_024)}},
+	}
+
+	for _, candidate := range cases {
+		candidate := candidate
+		t.Run(candidate.name, func(t *testing.T) {
+			signedRequest := signedMutatedRuntimeInvocationRequestV117ForTest(t, requestBytes, identity, func(envelope map[string]any) {
+				envelope["method"] = candidate.method
+			})
+			request, failure := verifyRuntimeInvocationRequestV117(signedRequest, identity)
+			if failure != nil {
+				t.Fatal(failure)
+			}
+			responseBytes := signedRuntimeInvocationResponseV117ForTest(t, request, map[string]any{
+				"kind":  "success",
+				"value": candidate.value,
+				"trace": runtimeInvocationTraceV117ForRequest(request),
+			}, identity)
+			response, failure := verifyRuntimeInvocationResponseV117(responseBytes, request, identity)
+			if response != nil || failure == nil || failure.Code != "OUTER_FRAME_UNDECODABLE" || failure.Retryable {
+				t.Fatalf("signed malformed success reached authority: response=%+v failure=%+v", response, failure)
+			}
+		})
 	}
 }
 
@@ -101,14 +152,14 @@ func TestPhase258RuntimeInvocationV117RetriesOnlySystemFailureWithPinnedBytes(t 
 		t.Fatal(failure)
 	}
 	systemBytes := signedRuntimeInvocationResponseV117ForTest(t, request, map[string]any{
-		"kind": "system_failure",
+		"kind":    "system_failure",
 		"failure": map[string]any{"code": "TRANSPORT_CRASH", "publicMessage": "Runtime system failure.", "retryable": true},
-		"trace": runtimeInvocationTraceV117ForRequest(request),
+		"trace":   runtimeInvocationTraceV117ForRequest(request),
 	}, identity)
 	playerBytes := signedRuntimeInvocationResponseV117ForTest(t, request, map[string]any{
-		"kind": "player_violation",
+		"kind":      "player_violation",
 		"violation": map[string]any{"code": "INVALID_OUTPUT", "publicMessage": "Strategy returned an invalid payload."},
-		"trace": runtimeInvocationTraceV117ForRequest(request),
+		"trace":     runtimeInvocationTraceV117ForRequest(request),
 	}, identity)
 
 	var observed [][]byte

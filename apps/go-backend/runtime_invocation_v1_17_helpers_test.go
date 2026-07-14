@@ -3,12 +3,62 @@ package main
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"os"
 	"strconv"
 	"testing"
 	"time"
 )
+
+func signedMutatedRuntimeInvocationRequestV117ForTest(
+	t *testing.T,
+	requestBytes []byte,
+	identity runtimeInvocationV117SigningIdentity,
+	mutate func(map[string]any),
+) []byte {
+	t.Helper()
+	envelope, failure := runtimeInvocationV117ParseCanonicalEnvelope(requestBytes)
+	if failure != nil {
+		t.Fatal(failure)
+	}
+	mutate(envelope)
+	budget := envelope["budget"].(map[string]any)
+	budgetHash, err := runtimeInvocationV117IdentityHash(
+		runtimeInvocationV117IdentityBudgetProfile,
+		runtimeInvocationV117WithoutProperty(budget, "profileSha256"),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	budget["profileSha256"] = budgetHash
+	retry := envelope["retry"].(map[string]any)
+	retryHash, err := runtimeInvocationV117RetryIdentityHash(
+		runtimeInvocationV117WithoutProperty(retry, "identitySha256"),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	retry["identitySha256"] = retryHash
+	authentication, err := runtimeInvocationV117Authenticate(
+		"request",
+		runtimeInvocationV117WithoutProperty(envelope, "authentication"),
+		identity,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	envelope["authentication"] = authentication
+	canonical, err := runtimeInvocationV117CanonicalValue(envelope)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return canonical
+}
+
+func runtimeInvocationV117JSONIntegerForTest(value int64) json.Number {
+	return json.Number(strconv.FormatInt(value, 10))
+}
 
 func signedRuntimeInvocationResponseV117ForTest(
 	t *testing.T,
