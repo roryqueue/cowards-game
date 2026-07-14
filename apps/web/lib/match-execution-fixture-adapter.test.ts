@@ -51,36 +51,56 @@ describe("match execution fixture adapter", () => {
       client?.getPublicMatchSetSummary("match-set:does-not-exist"),
     ).resolves.toBeNull()
     await expect(
-      client?.getPublicReplayMetadata("match:fixture:public-safe-replay"),
+      client?.getPublicReplayMetadata("match:runtime-service:golden"),
     ).resolves.toMatchObject({
       kind: "publicReplayMetadata",
-      matchId: "match:fixture:public-safe-replay",
+      matchId: "match:runtime-service:golden",
       metadata: {
-        eventCount: 4,
-        snapshotCount: 4,
+        hash: "sha256:e6122e9111f64940929216db472648e7489a953af05bfbd6c0fdd91a9139b3f5",
+        eventCount: 31,
+        snapshotCount: 12,
+        arenaVariantId: "arena-empty-12x12",
+        outcome: { type: "DRAW" },
       },
     })
     await expect(
-      client?.getPublicReplayEvidence("match:fixture:public-safe-replay"),
+      client?.getPublicReplayEvidence("match:runtime-service:golden"),
     ).resolves.toMatchObject({
       kind: "publicReplayEvidence",
-      matchId: "match:fixture:public-safe-replay",
+      matchId: "match:runtime-service:golden",
       metadata: {
-        eventCount: 4,
-        snapshotCount: 4,
+        hash: "sha256:e6122e9111f64940929216db472648e7489a953af05bfbd6c0fdd91a9139b3f5",
+        eventCount: 31,
+        snapshotCount: 12,
+        arenaVariantId: "arena-empty-12x12",
+        outcome: { type: "DRAW" },
       },
       projection: {
-        events: [
+        reproducibility: {
+          matchId: "match:runtime-service:golden",
+          arenaVariantId: "arena-empty-12x12",
+        },
+        events: expect.arrayContaining([
           { type: "MATCH_STARTED", sequence: 0 },
-          { type: "ROUND_STARTED", sequence: 1 },
-          { type: "MOVE_ADVANCED", sequence: 2 },
-          { type: "MATCH_ENDED", sequence: 3 },
-        ],
+          { type: "CONTRACTION_RESOLVED", sequence: 13 },
+          { type: "MATCH_ENDED", sequence: 30 },
+        ]),
       },
     })
+    const evidence = await client?.getPublicReplayEvidence(
+      "match:runtime-service:golden",
+    )
+    expect(evidence?.projection.events).toHaveLength(31)
+    expect(evidence?.projection.snapshots).toHaveLength(12)
+    expect(evidence?.projection.snapshots[0]?.board.soldiers).toHaveLength(16)
+    expect(
+      evidence?.projection.events.filter(
+        (event) => event.type === "MATCH_ENDED",
+      ),
+    ).toEqual([evidence?.projection.events.at(-1)])
     await expect(
       client?.getPublicReplayCompetitionContext(
-        "match:fixture:public-safe-replay",
+        "match:runtime-service:golden",
       ),
     ).resolves.toMatchObject({
       matchSetId: "match-set:fixture:public-safe-replay",

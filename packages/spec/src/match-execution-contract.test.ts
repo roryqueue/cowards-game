@@ -278,6 +278,62 @@ describe("match execution app contract v1", () => {
     }
   })
 
+  it("derives the public-safe replay contract from one admitted v1.16 semantic receipt", () => {
+    const fixture = MATCH_EXECUTION_CONTRACT_FIXTURES_V1.find(
+      (candidate) => candidate.id === "public-safe-replay",
+    )
+    const summary = fixture?.service.matchSetSummary
+    const metadata = fixture?.service.replayMetadata
+    const evidence = fixture?.service.replayEvidence
+    const match = summary?.result.matches[0]
+    const firstSnapshot = evidence?.projection.snapshots[0]
+    const finalSnapshot = evidence?.projection.snapshots.at(-1)
+    const terminalEvents =
+      evidence?.projection.events.filter(
+        (event) => event.type === "MATCH_ENDED",
+      ) ?? []
+
+    expect(fixture?.classification).toBe("public")
+    expect(fixture?.label).toContain("service-contract fixture")
+    expect(summary?.result.preset.label).toContain("Service-contract-backed")
+    expect(match?.matchId).toBe("match:runtime-service:golden")
+    expect(metadata?.matchId).toBe(match?.matchId)
+    expect(evidence?.matchId).toBe(match?.matchId)
+    expect(evidence?.projection.reproducibility.matchId).toBe(match?.matchId)
+    expect(match?.chronicleHash).toBe(metadata?.metadata.hash)
+    expect(evidence?.metadata.hash).toBe(metadata?.metadata.hash)
+    expect(summary?.result.provenance.chronicleHashes).toEqual([
+      metadata?.metadata.hash,
+    ])
+    expect(match?.arenaVariantId).toBe("arena-empty-12x12")
+    expect(metadata?.metadata.arenaVariantId).toBe(match?.arenaVariantId)
+    expect(evidence?.metadata.arenaVariantId).toBe(match?.arenaVariantId)
+    expect(evidence?.projection.reproducibility.arenaVariantId).toBe(
+      match?.arenaVariantId,
+    )
+    expect(metadata?.metadata.eventCount).toBe(31)
+    expect(metadata?.metadata.snapshotCount).toBe(12)
+    expect(evidence?.projection.events).toHaveLength(31)
+    expect(evidence?.projection.snapshots).toHaveLength(12)
+    expect(firstSnapshot).toMatchObject({
+      kind: "MATCH_START",
+      sequence: 0,
+      board: {
+        bounds: { minX: 0, maxX: 11, minY: 0, maxY: 11 },
+      },
+    })
+    expect(firstSnapshot?.board.soldiers).toHaveLength(16)
+    expect(terminalEvents).toHaveLength(1)
+    expect(terminalEvents[0]).toEqual(evidence?.projection.events.at(-1))
+    expect(terminalEvents[0]?.payload).toEqual({ type: "DRAW" })
+    expect(finalSnapshot).toMatchObject({
+      kind: "TERMINAL",
+      sequence: 30,
+      outcome: { type: "DRAW" },
+    })
+    expect(evidence?.metadata.outcome).toEqual(finalSnapshot?.outcome)
+  })
+
   it("keeps public fixtures and app DTO schemas free of private markers", () => {
     const payload = JSON.stringify(MATCH_EXECUTION_CONTRACT_FIXTURES_V1)
     for (const marker of privateMarkers) {
