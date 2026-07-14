@@ -586,6 +586,59 @@ describe("WASM/WASI runtime v1.17 candidate host authority", () => {
     expect(response.accounting.poststate).toEqual(request.accounting.prestate)
   })
 
+  it.each([
+    "payloadBytes",
+    "stdoutBytes",
+    "stderrBytes",
+  ] as const)(
+    "fails closed when signed %s accounting disagrees with the observed guest bytes",
+    (counterName) => {
+      const request = candidateRequest(revision)
+      const observation = completedObservation(
+        '{"action":{"type":"TURN_TO_STONE"},"soldierMemory":null}',
+      )
+      observation.stderr = new TextEncoder().encode("fixture stderr")
+      const evidence = completeExecutionEvidenceFor(request, observation)
+      const counter = evidence.counters[counterName]
+      if (counter.status !== "measured") {
+        throw new Error("Fixture counter must be measured")
+      }
+      const response = runWasmWasiStrategyMethodV117Sync({
+        request,
+        revision,
+        signingIdentity: candidateSigningIdentity,
+        executionIdentity: candidateExecutionIdentity(revision),
+        executionReceiptEvidence: {
+          ...evidence,
+          counters: {
+            ...evidence.counters,
+            [counterName]: {
+              ...counter,
+              delta: counter.delta + 1,
+              cumulative: counter.cumulative + 1,
+            },
+          },
+        },
+        executeGuest: () => observation,
+      })
+
+      expect(response.outcome).toMatchObject({
+        kind: "system_failure",
+        failure: { code: "AMBIGUOUS_ATTRIBUTION" },
+        trace: {
+          safeCodes: expect.arrayContaining([
+            "RAW_PAYLOAD_SCANNED",
+            "WASM_WASI_EQUIVALENT_ACCOUNTING_UNAVAILABLE",
+          ]),
+        },
+      })
+      expect(response.accounting.disposition).toBe("no_commit")
+      expect(response.accounting.poststate).toEqual(
+        request.accounting.prestate,
+      )
+    },
+  )
+
   it("rejects parseable JSON whose raw bytes are not the admitted canonical bytes", () => {
     const response = runCandidateObservation(
       candidateRequest(revision),
