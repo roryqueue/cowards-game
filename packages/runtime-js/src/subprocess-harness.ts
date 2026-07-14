@@ -392,6 +392,10 @@ const frame = (tag, payload = new Uint8Array()) => {
   bytes.set(payload, 1)
   return bytes
 }
+const caughtTag = (error, fallback) => {
+  const message = error instanceof Error ? error.message : ""
+  return message.startsWith("FORBIDDEN_CAPABILITY:") ? "F" : fallback
+}
 const readInput = async () => {
   const chunks = []
   for await (const chunk of stdin) chunks.push(chunk)
@@ -414,20 +418,30 @@ const main = async () => {
       if (typeof method !== "function") {
         output = frame("I")
       } else {
-        const value = method.call(strategy, request.input)
-        if (value && typeof value.then === "function") {
-          output = frame("I")
-        } else {
-          const payload = encoder.encode(canonical(value))
-          output = payload.length > request.outputByteLimit
-            ? frame("O")
-            : frame("S", payload)
+        let value
+        try {
+          value = method.call(strategy, request.input)
+        } catch (error) {
+          output = frame(caughtTag(error, "X"))
+        }
+        if (output === undefined) {
+          if (value && typeof value.then === "function") {
+            output = frame("I")
+          } else {
+            try {
+              const payload = encoder.encode(canonical(value))
+              output = payload.length > request.outputByteLimit
+                ? frame("O")
+                : frame("S", payload)
+            } catch (error) {
+              output = frame(caughtTag(error, "I"))
+            }
+          }
         }
       }
     }
   } catch (error) {
-    const message = error instanceof Error ? error.message : ""
-    output = frame(message.startsWith("FORBIDDEN_CAPABILITY:") ? "F" : "X")
+    output = frame(caughtTag(error, "X"))
   }
   stdout.write(output)
 }

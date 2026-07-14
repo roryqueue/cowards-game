@@ -323,6 +323,10 @@ const frame = (tag, payload = new Uint8Array()) => {
   bytes.set(payload, 1)
   return bytes
 }
+const caughtTag = (error, fallback) => {
+  const message = error instanceof Error ? error.message : ""
+  return message.startsWith("FORBIDDEN_CAPABILITY:") ? "F" : fallback
+}
 const main = async () => {
   let output
   try {
@@ -333,19 +337,29 @@ const main = async () => {
     if (typeof method !== "function") {
       output = frame("I")
     } else {
-      const value = method.call(strategy, workerData.input)
-      if (value && typeof value.then === "function") {
-        output = frame("I")
-      } else {
-        const payload = encoder.encode(canonical(value))
-        output = payload.length > workerData.outputByteLimit
-          ? frame("O")
-          : frame("S", payload)
+      let value
+      try {
+        value = method.call(strategy, workerData.input)
+      } catch (error) {
+        output = frame(caughtTag(error, "X"))
+      }
+      if (output === undefined) {
+        if (value && typeof value.then === "function") {
+          output = frame("I")
+        } else {
+          try {
+            const payload = encoder.encode(canonical(value))
+            output = payload.length > workerData.outputByteLimit
+              ? frame("O")
+              : frame("S", payload)
+          } catch (error) {
+            output = frame(caughtTag(error, "I"))
+          }
+        }
       }
     }
   } catch (error) {
-    const message = error instanceof Error ? error.message : ""
-    output = frame(message.startsWith("FORBIDDEN_CAPABILITY:") ? "F" : "X")
+    output = frame(caughtTag(error, "X"))
   }
   workerData.port.postMessage(output, [output.buffer])
   Atomics.store(new Int32Array(workerData.signalBuffer), 0, 1)
