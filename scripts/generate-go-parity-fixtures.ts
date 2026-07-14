@@ -1,4 +1,5 @@
 #!/usr/bin/env -S pnpm exec tsx
+import { Buffer } from "node:buffer"
 import { createHash } from "node:crypto"
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs"
 import path from "node:path"

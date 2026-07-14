@@ -1,3 +1,4 @@
+import type { Buffer } from "node:buffer"
 import { createHash } from "node:crypto"
 import { spawnSync } from "node:child_process"
 import {
