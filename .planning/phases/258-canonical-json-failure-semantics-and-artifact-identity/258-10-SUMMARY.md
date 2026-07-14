@@ -95,13 +95,15 @@ status: complete
 4. **Task 2 GREEN: Bind exact WASM execution identity** — `a4dc64a`
 5. **Review RED: Expose stale artifact compiler metadata** — `b38d7b8`
 6. **Review fix: Reject stale artifact toolchains** — `bfbc2dc`
+7. **Independent review RED: Expose preflight, ABI, stderr, and built-identity gaps** — `d907419`
+8. **Independent review fix: Close WASM review boundary gaps** — `0f8161c`
 
 ## Verification
 
-- Full `@cowards/runtime-wasm-wasi` suite passed **27/27** with Rust and Zig available; candidate proof used no conditional skip.
+- Full `@cowards/runtime-wasm-wasi` suite passed **33/33** with Rust and Zig available; candidate proof used no conditional skip.
 - The evaluator passed **19/19** hostile/real-runtime probes with rustc 1.95.0, Zig 0.16.0, and Wasmtime 45.0.0, including real raw-payload success for both languages.
 - `pnpm exec tsx scripts/evaluate-wasm-wasi-runtime.ts --check`, runtime package typecheck, focused ESLint, and `git diff --check` passed.
-- Candidate envelope fixture SHA-256 is `cd32fedca2b87cde2e579eb92e9c44de7c545acb22bec7963000a6114b1e2e8b`; exact Rust and Zig identity IDs are `sha256:98f1165894b1408137d69f5b095c3accdc7bfa88a1d289d4f61b01dc5562676d` and `sha256:fc558635e0d1f5a4622072b4f3dd643cc78300a4d628caa61b395d0174baa44f`.
+- Candidate envelope fixture SHA-256 is `2418e9eb682a18ccb546a21f6163e0ed0841984698ea8dd84ab6decfd2f27afa`; exact Rust and Zig identity IDs are `sha256:14a404f537954ebf4d9b6aa3ccbce383e6ad37f5665309642e828b01890e4a41` and `sha256:938060e6c52ad70da49f8b171b50a2b058a4faa308b8f9dadcd740ab9434dfc6`.
 - Legacy v1.22 artifact hashes remained exact: hardening JSON `bf445e88...dd54a`, hardening Markdown `ea0576e0...dd04`, Zig JSON `5c854ad2...fd2c`, Zig Markdown `2813c039...68a`, ABI decision `9776218d...5467`, and promotion decision `3e72ee9e...b8b7`.
 
 ## Decisions Made
@@ -143,6 +145,17 @@ None.
 ## Next Phase Readiness
 
 Plan 258-11 can consume the Rust/Zig candidate fixture and exact failure vocabulary in Go parity/retry proof. Plans 258-12 and 258-13 can carry the explicit unsupported-meter posture and exact identity nodes into capability publication and the closed evidence DAG. Activation remains owned by Plan 258-14.
+
+## Review Closure Addendum
+
+Independent review found four release-blocking boundary gaps and closed all four before Plan 258-11 handoff:
+
+1. Artifact-import validation, temporary-directory creation, write/execute setup, and cleanup faults now return authenticated `system_failure` outcomes; none can escape as an unauthenticated throw or become player blame.
+2. Candidate compilers construct artifacts under the explicit v1.17 raw-payload ABI declaration. The adapter rejects legacy v1.14 artifacts, stale source hashes, and mismatched runtime/adapter tuples instead of relabeling or executing them.
+3. Stdout and stderr ceilings are enforced independently and exactly. Only proven guest output exhaustion is a player violation; ambiguous runtime/transport stderr remains a retry-policy-aware system failure.
+4. Adapter-build identity resolves sibling modules by the imported module's emitted extension. A fresh package build imported `dist/validation.js`, collected identity from three emitted `.js` files, and produced build digest `sha256:bf8f1d89936b40707365417b9b1300051b2fbf5ae20f6a0718bf2523c48e57eb`; no sibling `.ts` dependency remained.
+
+The follow-up independent-style rereview found and fixed two assurance issues before closure: candidate ABI metadata is now selected during compilation rather than overlaid onto a legacy result, and the resolver regression creates isolated emitted-module fixtures so a clean test checkout does not depend on a pre-existing `dist/` tree. Final gates passed: **33/33** package tests, package build and typecheck, focused ESLint, evaluator **19/19** in write and `--check` modes, emitted-JavaScript identity collection, `git diff --check`, and exact preservation of all six legacy v1.22 evidence hashes. Remaining review findings: **0**.
 
 ## Self-Check: PASSED
 
