@@ -646,12 +646,55 @@ const optionalRegistry = async () => {
   if (!existsSync(absolutePath)) return undefined
   return import(pathToFileURL(absolutePath).href) as Promise<{
     renderRuntimeAbiV117ContractJson: () => string
+    RUNTIME_ABI_V1_17: {
+      calibration: { inputManifestSha256: string }
+      canonicalJson: {
+        ceilings: Record<string, number>
+      }
+      fieldCaps: Record<string, { value: number; unit: string }>
+    }
   }>
+}
+
+const checkRegistryCalibrationParity = (
+  registry: NonNullable<Awaited<ReturnType<typeof optionalRegistry>>>,
+  receipt: ReturnType<typeof evaluateCalibration>,
+): string[] => {
+  const errors: string[] = []
+  const expectedCeilings = RUNTIME_ABI_V1_17_CALIBRATION_LIMITS
+  if (
+    JSON.stringify(registry.RUNTIME_ABI_V1_17.canonicalJson.ceilings) !==
+    JSON.stringify(expectedCeilings)
+  ) {
+    errors.push("RUNTIME_ABI_V1_17 canonical JSON ceilings differ from calibration")
+  }
+  if (
+    JSON.stringify(registry.RUNTIME_ABI_V1_17.fieldCaps) !==
+    JSON.stringify(RUNTIME_ABI_V1_17_FIELD_CAPS)
+  ) {
+    errors.push("RUNTIME_ABI_V1_17 field caps differ from calibration")
+  }
+  if (
+    registry.RUNTIME_ABI_V1_17.calibration.inputManifestSha256 !==
+    receipt.inputManifest.sha256
+  ) {
+    errors.push("RUNTIME_ABI_V1_17 input manifest hash differs from calibration")
+  }
+  return errors
 }
 
 const main = async (): Promise<void> => {
   const args = new Set(process.argv.slice(2))
   const registry = await optionalRegistry()
+  const receipt = evaluateCalibration()
+  const parityErrors = registry
+    ? checkRegistryCalibrationParity(registry, receipt)
+    : []
+  if (parityErrors.length > 0) {
+    console.error(parityErrors.join("\n"))
+    process.exitCode = 1
+    return
+  }
   if (args.has("--write")) {
     writeCalibrationArtifacts()
     if (registry) {
@@ -662,7 +705,7 @@ const main = async (): Promise<void> => {
     }
   }
   if (args.has("--check")) {
-    const errors = checkCalibrationArtifacts()
+    const errors = [...checkCalibrationArtifacts(), ...parityErrors]
     if (registry) {
       const expected = registry.renderRuntimeAbiV117ContractJson()
       if (
