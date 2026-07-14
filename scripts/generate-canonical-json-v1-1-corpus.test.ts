@@ -4,6 +4,7 @@ import { tmpdir } from "node:os"
 import path from "node:path"
 import { pathToFileURL } from "node:url"
 import { afterEach, describe, expect, it } from "vitest"
+import type * as SubjectModule from "./generate-canonical-json-v1-1-corpus.ts"
 
 const repoRoot = path.resolve(import.meta.dirname, "..")
 const subjectPath = path.join(
@@ -12,7 +13,7 @@ const subjectPath = path.join(
 )
 const tempRoots: string[] = []
 
-type Subject = typeof import("./generate-canonical-json-v1-1-corpus.ts")
+type Subject = typeof SubjectModule
 
 const subject = async (): Promise<Subject> => {
   expect(

@@ -1,4 +1,5 @@
 #!/usr/bin/env -S pnpm exec tsx
+import { Buffer } from "node:buffer"
 import { createHash } from "node:crypto"
 import {
   existsSync,
@@ -9,6 +10,7 @@ import {
 } from "node:fs"
 import path from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
+// eslint-disable-next-line no-restricted-imports -- this repo-root generator emits spec fixtures.
 import { RUNTIME_ABI_V1_17 } from "../packages/spec/src/runtime-abi-v1-17.ts"
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")

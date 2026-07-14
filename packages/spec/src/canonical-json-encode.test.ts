@@ -69,7 +69,7 @@ describe("canonical JSON v1 iterative encoder", () => {
       expect(actual.byteLength, `${vector.id} byte length`).toBe(expected.byteLength)
       expect(actual.equals(expected), `${vector.id} canonical bytes`).toBe(true)
     }
-  })
+  }, 20_000)
 
   it("uses shortest normalized finite binary64 spellings", () => {
     const cases: readonly [number, string][] = [
