@@ -5,8 +5,8 @@ milestone_name: Rules Integrity and Strategy Evaluation Foundations — ACTIVE
 current_phase: 258
 current_phase_name: canonical-json-failure-semantics-and-artifact-identity
 status: in_progress
-stopped_at: Completed 258-06-PLAN.md; ready for 258-05 bounded admission integration
-last_updated: "2026-07-14T05:04:44.000Z"
+stopped_at: Completed 258-05-PLAN.md; ready for 258-07 transition ownership
+last_updated: "2026-07-14T14:16:25.000Z"
 last_activity: 2026-07-14
 last_activity_desc: Phase 258 Plan 06 exclusive successor invocation ABI and authenticated candidate envelope completed; v1.16 dispatch unchanged
 progress:
@@ -29,9 +29,9 @@ See: `.planning/PROJECT.md` (updated 2026-07-12)
 ## Current Position
 
 Phase: 258 (canonical-json-failure-semantics-and-artifact-identity) — IN PROGRESS
-Plan: 5 of 14
-Status: Plan 06 complete; exclusive authenticated v1.17 candidate ABI green and non-current
-Last activity: 2026-07-14 — Completed Plan 258-06 successor invocation ABI and candidate envelope
+Plan: 6 of 14
+Status: Plan 05 complete; bounded successor admission and permanent deep audit green
+Last activity: 2026-07-14 — Completed Plan 258-05 bounded JSON spec/service integration
 
 Progress: [███░░░░░░░] 33%
 
@@ -61,8 +61,8 @@ Progress: [███░░░░░░░] 33%
 
 **Resume file:** None
 
-Last session: 2026-07-14T05:04:44.000Z
-Stopped at: Completed 258-06-PLAN.md; ready for 258-05 bounded admission integration
+Last session: 2026-07-14T14:16:25.000Z
+Stopped at: Completed 258-05-PLAN.md; ready for 258-07 transition ownership
 Next command: `$gsd-execute-phase 258`
 
 ## Performance Metrics
@@ -98,8 +98,13 @@ Next command: `$gsd-execute-phase 258`
 | Phase 258 P03 | 15min | 2 tasks | 4 scanner/parser files |
 | Phase 258 P04 | 24min | 2 tasks | 15 implementation/fixture/receipt files |
 | Phase 258 P06 | 17min | 2 tasks | 5 implementation/test/artifact files |
+| Phase 258 P05 | 22min | 2 tasks + review | 10 implementation/test/audit files |
 
 ## Decisions
+
+- [Phase 258]: Successor success payloads are validated by one cycle-free method-bound schema shared by the authenticated ABI and runtime-service, including exact StrategyMemory, SoldierMemory, and objective caps. — An aggregate payload limit cannot conceal an invalid nested field or let the adapter authenticate a success the service would reject.
+- [Phase 258]: Outer-envelope corruption is a redacted system failure while only canonical or schema-invalid decoded Strategy payload is player-owned. — Raw transport evidence is preserved until its owning boundary classifies it, and infrastructure failure never becomes a player penalty.
+- [Phase 258]: Plan 05 installs candidate raw admission without rewriting active v1.16 HTTP+JSON dispatch or its immutable proof bytes. — Successor definition remains separate from the Plan-258-14 atomic activation decision.
 
 - [Phase 258]: Every v1.17 candidate invocation result has exactly one strict kind: success owns value, player_violation owns a registered canonical violation, and system_failure owns a redacted failure. — Mixed ownership is unrepresentable in both TypeScript and the runtime schema.
 - [Phase 258]: The adapter authenticates canonical outer request and response envelopes after revalidating every derived identity binding; guest stdout is only untrusted payload material. — A Strategy cannot self-authenticate transport authority or convert malformed outer frames into player blame.
