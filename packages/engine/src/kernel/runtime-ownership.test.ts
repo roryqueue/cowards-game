@@ -9,6 +9,7 @@ import {
   createRuntimeInvocationExecutionReceiptV117,
   createRuntimeInvocationBudgetV117,
   createRuntimeInvocationTraceV117,
+  encodeCanonicalJson,
   type AuthenticatedRuntimeInvocationRequestV117,
   type JsonValue,
   type RuntimeInvocationResultV117,
@@ -104,11 +105,26 @@ const measuredReceiptFor = (
       | "payloadBytes"
       | "stdoutBytes"
       | "stderrBytes",
+    delta = 1,
   ) => ({
     status: "measured" as const,
-    delta: 1,
-    cumulative: prestate.cumulative[counter] + 1,
+    delta,
+    cumulative: prestate.cumulative[counter] + delta,
   })
+  const successPayload =
+    outcome.kind === "success"
+      ? encodeCanonicalJson(outcome.value, {
+          context: "authenticated-outer-envelope",
+        })
+      : undefined
+  if (successPayload !== undefined && !successPayload.ok) {
+    throw new Error("engine runtime fixture payload is not canonical")
+  }
+  const payloadByteLength = successPayload?.bytes.byteLength ?? 1
+  const stdoutByteLength = successPayload?.bytes.byteLength
+    ? successPayload.bytes.byteLength + 1
+    : 1
+  const stderrByteLength = successPayload === undefined ? 1 : 0
   return createRuntimeInvocationExecutionReceiptV117(request, {
     attribution:
       outcome.kind === "system_failure"
@@ -117,9 +133,9 @@ const measuredReceiptFor = (
     counters: {
       wallMilliseconds: measuredCounter("wallMilliseconds"),
       computeFuel: measuredCounter("computeFuel"),
-      payloadBytes: measuredCounter("payloadBytes"),
-      stdoutBytes: measuredCounter("stdoutBytes"),
-      stderrBytes: measuredCounter("stderrBytes"),
+      payloadBytes: measuredCounter("payloadBytes", payloadByteLength),
+      stdoutBytes: measuredCounter("stdoutBytes", stdoutByteLength),
+      stderrBytes: measuredCounter("stderrBytes", stderrByteLength),
     },
     memory: {
       status: "measured",
