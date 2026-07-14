@@ -135,6 +135,7 @@ export {
   type RuntimePreflightLimitsV117,
   type RuntimePreflightObservedEvidenceInputV117,
   type RuntimePreflightObservedEvidenceV117,
+  type RuntimePreflightOperationResultV117,
   type RuntimePreflightOutcomeV117,
   type RuntimePreflightProducerIdentityV117,
   type RuntimePreflightReceiptEvidenceV117,

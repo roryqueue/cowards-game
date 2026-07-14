@@ -1477,6 +1477,8 @@ const budgetViolationCodeForDimensions = (
       dimension.includes("memory")
     ) {
       codes.add("TIMEOUT")
+    } else if (dimension.includes("process")) {
+      codes.add("FORBIDDEN_CAPABILITY")
     } else {
       return undefined
     }

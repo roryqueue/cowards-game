@@ -675,7 +675,7 @@ describe("candidate v1.17 authenticated preflight contract", () => {
             kind: "invalid_input",
             code: "PREFLIGHT_INPUT_INVALID",
             owner: "system_failure",
-          },
+          } as any,
         }),
       ),
     ).toThrow()
@@ -695,17 +695,26 @@ describe("candidate v1.17 authenticated preflight contract", () => {
       evidence,
       signingIdentity,
     )
+    const reboundInput = requestInput()
+    reboundInput.input.bytes = new TextEncoder().encode("different bytes")
+    const reboundRequest = createAuthenticatedRuntimePreflightRequestV117(
+      reboundInput,
+      signingIdentity,
+    )
+    expect(() =>
+      createAuthenticatedRuntimePreflightReceiptV117(
+        reboundRequest,
+        evidence,
+        signingIdentity,
+      ),
+    ).toThrow(/unbound preflight evidence/u)
     const draft = globalThis.structuredClone(receipt) as Record<string, any>
     draft.evidence.operationResult = { kind: "valid" }
     const tampered = canonicalBytes(
       resign(draft as typeof receipt, "receipt") as unknown as JsonValue,
     )
     expect(
-      verifyRuntimePreflightReceiptV117(
-        tampered,
-        candidate,
-        signingIdentity,
-      ),
+      verifyRuntimePreflightReceiptV117(tampered, candidate, signingIdentity),
     ).toEqual({
       ok: false,
       disposition: "no_commit",

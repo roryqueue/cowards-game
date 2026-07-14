@@ -467,7 +467,39 @@ const RuntimePreflightAccountingReceiptV117Schema = z
   })
   .strict()
 
+export type RuntimePreflightOperationResultV117 =
+  | Readonly<{ kind: "valid" }>
+  | Readonly<{
+      kind: "invalid_input"
+      code: "PREFLIGHT_INPUT_INVALID"
+      owner: "submission_violation"
+    }>
+  | Readonly<{
+      kind: "infrastructure_failure"
+      code: "PREFLIGHT_INFRASTRUCTURE_UNAVAILABLE"
+      owner: "system_failure"
+    }>
+
+const RuntimePreflightOperationResultV117Schema = z.union([
+  z.object({ kind: z.literal("valid") }).strict(),
+  z
+    .object({
+      kind: z.literal("invalid_input"),
+      code: z.literal("PREFLIGHT_INPUT_INVALID"),
+      owner: z.literal("submission_violation"),
+    })
+    .strict(),
+  z
+    .object({
+      kind: z.literal("infrastructure_failure"),
+      code: z.literal("PREFLIGHT_INFRASTRUCTURE_UNAVAILABLE"),
+      owner: z.literal("system_failure"),
+    })
+    .strict(),
+])
+
 export interface RuntimePreflightObservedEvidenceInputV117 {
+  readonly operationResult: RuntimePreflightOperationResultV117
   readonly attribution: RuntimeAbiV117LedgerAttribution
   readonly counters: Readonly<
     Record<RuntimeAbiV117PreflightCounterName, RuntimeAbiV117CounterEvidence>
@@ -492,6 +524,17 @@ export interface RuntimePreflightObservedEvidenceV117 extends RuntimePreflightRe
   readonly accountingReceipt: RuntimeAbiV117PreflightLedgerReceipt
 }
 
+const operationResultMatchesOwnership = (
+  request: AuthenticatedRuntimePreflightRequestV117,
+  result: RuntimePreflightOperationResultV117,
+): boolean =>
+  result.kind === "valid" ||
+  (result.kind === "invalid_input" &&
+    result.owner === request.budget.limits.failureOwnership.invalidInput) ||
+  (result.kind === "infrastructure_failure" &&
+    result.owner ===
+      request.budget.limits.failureOwnership.unavailableInfrastructure)
+
 const RuntimePreflightReceiptEvidenceV117Schema = z
   .object({
     profileSha256: Sha256Schema,
@@ -500,6 +543,7 @@ const RuntimePreflightReceiptEvidenceV117Schema = z
     producerIdentitySha256: Sha256Schema,
     toolchainIdentitySha256: Sha256Schema,
     containmentIdentitySha256: Sha256Schema,
+    operationResult: RuntimePreflightOperationResultV117Schema,
     attribution: z.enum(["proven_strategy", "host", "ambiguous"]),
     counters: CountersSchema,
     memory: MemoryEvidenceSchema,
@@ -537,15 +581,17 @@ export type RuntimePreflightOutcomeV117 =
   | Readonly<{ kind: "success" }>
   | Readonly<{
       kind: "submission_violation"
-      code: "PREFLIGHT_BUDGET_EXCEEDED"
-      dimensions: readonly string[]
+      code: "PREFLIGHT_BUDGET_EXCEEDED" | "PREFLIGHT_INPUT_INVALID"
+      dimensions?: readonly string[]
     }>
   | Readonly<{
       kind: "system_failure"
-      code: Extract<
-        RuntimeAbiV117LedgerDebitResult,
-        { kind: "system_failure" }
-      >["failure"]["code"]
+      code:
+        | Extract<
+            RuntimeAbiV117LedgerDebitResult,
+            { kind: "system_failure" }
+          >["failure"]["code"]
+        | "PREFLIGHT_INFRASTRUCTURE_UNAVAILABLE"
     }>
 
 export interface RuntimePreflightResponseAccountingV117 {
@@ -607,6 +653,12 @@ const RuntimePreflightOutcomeV117Schema = z.union([
     .strict(),
   z
     .object({
+      kind: z.literal("submission_violation"),
+      code: z.literal("PREFLIGHT_INPUT_INVALID"),
+    })
+    .strict(),
+  z
+    .object({
       kind: z.literal("system_failure"),
       code: z.enum([
         "LEDGER_SCHEMA_INVALID",
@@ -623,6 +675,7 @@ const RuntimePreflightOutcomeV117Schema = z.union([
         "HOST_RESOURCE_EXCESS",
         "HOST_RESOURCE_ACCOUNTING",
         "ENFORCEMENT_EVIDENCE_INVALID",
+        "PREFLIGHT_INFRASTRUCTURE_UNAVAILABLE",
       ]),
     })
     .strict(),
@@ -1247,6 +1300,7 @@ export const createRuntimePreflightObservedEvidenceV117 = (
   }
   const parsedInput = z
     .object({
+      operationResult: RuntimePreflightOperationResultV117Schema,
       attribution: z.enum(["proven_strategy", "host", "ambiguous"]),
       counters: CountersSchema,
       memory: MemoryEvidenceSchema,
@@ -1256,6 +1310,11 @@ export const createRuntimePreflightObservedEvidenceV117 = (
     })
     .strict()
     .parse(input) as RuntimePreflightObservedEvidenceInputV117
+  if (!operationResultMatchesOwnership(request, parsedInput.operationResult)) {
+    throw new TypeError(
+      "Preflight operation result does not match frozen failure ownership",
+    )
+  }
   const withoutIdentity = {
     profileSha256: request.budget.profileSha256,
     inputSha256: request.input.sha256,
@@ -1347,6 +1406,7 @@ const evidenceDerivedBindingsMatch = (
     accountingEvidence: evidence.accountingEvidence,
   }
   return (
+    operationResultMatchesOwnership(request, evidence.operationResult) &&
     evidence.profileSha256 === request.budget.profileSha256 &&
     evidence.inputSha256 === request.input.sha256 &&
     evidence.inputIdentitySha256 === request.input.identitySha256 &&
@@ -1377,20 +1437,51 @@ const outcomeForDebit = (
         }
       : { kind: "system_failure", code: debit.failure.code }
 
-const deriveResponseAccounting = (
+const inputAccountingMismatch = (
   request: AuthenticatedRuntimePreflightRequestV117,
   receipt: RuntimeAbiV117PreflightLedgerReceipt,
+): boolean => {
+  const evidence = receipt.counters.inputBytes
+  return (
+    evidence?.status === "measured" &&
+    (evidence.delta !== request.input.byteLength ||
+      evidence.cumulative !==
+        request.accounting.prestate.cumulative.inputBytes +
+          request.input.byteLength)
+  )
+}
+
+const deriveResponseAccounting = (
+  request: AuthenticatedRuntimePreflightRequestV117,
+  evidence: RuntimePreflightObservedEvidenceV117,
 ): Readonly<{
   outcome: RuntimePreflightOutcomeV117
   accounting: RuntimePreflightResponseAccountingV117
 }> => {
-  const debit = debitRuntimeAbiV117Ledger(request.accounting.prestate, receipt)
-  const outcome = outcomeForDebit(debit)
+  const receipt = evidence.accountingReceipt
+  const inputMismatch = inputAccountingMismatch(request, receipt)
+  const infrastructureFailure =
+    evidence.operationResult.kind === "infrastructure_failure"
+  const debit =
+    inputMismatch || infrastructureFailure
+      ? undefined
+      : debitRuntimeAbiV117Ledger(request.accounting.prestate, receipt)
+  const outcome: RuntimePreflightOutcomeV117 = inputMismatch
+    ? { kind: "system_failure", code: "METER_ACCOUNTING_INCONSISTENT" }
+    : infrastructureFailure
+      ? {
+          kind: "system_failure",
+          code: "PREFLIGHT_INFRASTRUCTURE_UNAVAILABLE",
+        }
+      : debit?.kind !== "system_failure" &&
+          evidence.operationResult.kind === "invalid_input"
+        ? { kind: "submission_violation", code: "PREFLIGHT_INPUT_INVALID" }
+        : outcomeForDebit(debit!)
   const disposition =
-    debit.kind === "system_failure"
+    debit === undefined || debit.kind === "system_failure"
       ? ("no_commit" as const)
       : ("commit" as const)
-  const poststate = debit.ledger
+  const poststate = debit?.ledger ?? request.accounting.prestate
   const withoutIdentity = {
     schemaVersion: "runtime-preflight-accounting-v1.17" as const,
     domain: "preflight" as const,
@@ -1440,7 +1531,7 @@ export const createAuthenticatedRuntimePreflightReceiptV117 = (
       "Cannot issue a receipt with unbound preflight evidence",
     )
   }
-  const derived = deriveResponseAccounting(request, evidence.accountingReceipt)
+  const derived = deriveResponseAccounting(request, evidence)
   const unsigned = {
     contractVersion: RUNTIME_PREFLIGHT_V1_17_CANDIDATE.contractVersion,
     runtimeAbiVersion: RUNTIME_PREFLIGHT_V1_17_CANDIDATE.runtimeAbiVersion,
@@ -1487,7 +1578,7 @@ const responseDerivedBindingsMatch = (
     accountingReceipt: response.accounting.receipt,
   } as RuntimePreflightObservedEvidenceV117
   if (!evidenceDerivedBindingsMatch(request, evidence)) return false
-  const derived = deriveResponseAccounting(request, response.accounting.receipt)
+  const derived = deriveResponseAccounting(request, evidence)
   return (
     sameCanonicalValue(
       response.requestBinding as unknown as JsonValue,

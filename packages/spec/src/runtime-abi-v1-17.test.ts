@@ -664,6 +664,17 @@ describe("runtime ABI v1.17 pure budget ledger", () => {
         },
       })
       expect(host.ledger).toBe(initial)
+      const ambiguous = runtimeAbi.debitRuntimeAbiV117Ledger(initial, {
+        ...exactReceipt,
+        attribution: "ambiguous",
+        process,
+      })
+      expect(ambiguous).toMatchObject({
+        kind: "system_failure",
+        committed: false,
+        failure: { code: "METER_EVIDENCE_AMBIGUOUS" },
+      })
+      expect(ambiguous.ledger).toBe(initial)
     }
   })
 
@@ -1092,6 +1103,17 @@ describe("runtime ABI v1.17 pure budget ledger", () => {
         },
       })
       expect(host.ledger).toBe(initial)
+      const ambiguous = runtimeAbi.debitRuntimeAbiV117Ledger(initial, {
+        ...exactReceipt,
+        attribution: "ambiguous",
+        process,
+      })
+      expect(ambiguous).toMatchObject({
+        kind: "system_failure",
+        committed: false,
+        failure: { code: "METER_EVIDENCE_AMBIGUOUS" },
+      })
+      expect(ambiguous.ledger).toBe(initial)
     }
   })
 

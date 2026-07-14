@@ -1597,11 +1597,7 @@ const debitExecutionLedger = (
     receipt.process.threads > invocationVector.process.threads ||
     receipt.process.children > invocationVector.process.children
   ) {
-    return ledgerSystemFailure(
-      ledger,
-      "HOST_RESOURCE_EXCESS",
-      "invocation.process",
-    )
+    dimensions.push("invocation.process")
   }
 
   const capabilityFailure = evidenceShapeFailure(receipt.capabilities)
@@ -1680,6 +1676,7 @@ const debitExecutionLedger = (
       finalDimensions.length > 0
         ? "HOST_RESOURCE_EXCESS"
         : "HOST_RESOURCE_ACCOUNTING",
+      finalDimensions.length === 1 ? finalDimensions[0] : undefined,
     )
   }
 
@@ -1862,11 +1859,7 @@ const debitPreflightLedger = <TProfile extends RuntimeAbiV117PreflightProfile>(
     receipt.process.threads > limits.process.threads ||
     receipt.process.children > limits.process.children
   ) {
-    return ledgerSystemFailure(
-      ledger,
-      "HOST_RESOURCE_EXCESS",
-      `preflight.${ledger.profile}.process`,
-    )
+    dimensions.push(`preflight.${ledger.profile}.process`)
   }
 
   const capabilityFailure = evidenceShapeFailure(receipt.capabilities)
@@ -1920,6 +1913,7 @@ const debitPreflightLedger = <TProfile extends RuntimeAbiV117PreflightProfile>(
       finalDimensions.length > 0
         ? "HOST_RESOURCE_EXCESS"
         : "HOST_RESOURCE_ACCOUNTING",
+      finalDimensions.length === 1 ? finalDimensions[0] : undefined,
     )
   }
   const outcome = finalDimensions.length === 0 ? "success" : "player_violation"
