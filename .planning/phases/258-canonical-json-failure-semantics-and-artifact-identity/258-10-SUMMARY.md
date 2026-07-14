@@ -97,13 +97,15 @@ status: complete
 6. **Review fix: Reject stale artifact toolchains** — `bfbc2dc`
 7. **Independent review RED: Expose preflight, ABI, stderr, and built-identity gaps** — `d907419`
 8. **Independent review fix: Close WASM review boundary gaps** — `0f8161c`
+9. **External rereview RED: Expose remaining canonicality, provenance, and identity gaps** — `b021476`
+10. **External rereview fix: Close remaining WASM authority gaps** — `8c332fa`
 
 ## Verification
 
-- Full `@cowards/runtime-wasm-wasi` suite passed **33/33** with Rust and Zig available; candidate proof used no conditional skip.
+- Full `@cowards/runtime-wasm-wasi` suite passed **38/38** with Rust and Zig available; candidate proof used no conditional skip.
 - The evaluator passed **19/19** hostile/real-runtime probes with rustc 1.95.0, Zig 0.16.0, and Wasmtime 45.0.0, including real raw-payload success for both languages.
 - `pnpm exec tsx scripts/evaluate-wasm-wasi-runtime.ts --check`, runtime package typecheck, focused ESLint, and `git diff --check` passed.
-- Candidate envelope fixture SHA-256 is `2418e9eb682a18ccb546a21f6163e0ed0841984698ea8dd84ab6decfd2f27afa`; exact Rust and Zig identity IDs are `sha256:14a404f537954ebf4d9b6aa3ccbce383e6ad37f5665309642e828b01890e4a41` and `sha256:938060e6c52ad70da49f8b171b50a2b058a4faa308b8f9dadcd740ab9434dfc6`.
+- Candidate envelope fixture SHA-256 is `ed55a9dccf2a69e55d78e80aa37160e0a55c6da42eb78867a3090c43c2f3c1ef`; exact Rust and Zig identity IDs are `sha256:1d0a3033ae126146280169d5f2827de1611b85e53879f704abde98b6699f6bbb` and `sha256:a3dd1815362814df994db620388738e64a40575671f4fd74f7bd0ca497101ebe`.
 - Legacy v1.22 artifact hashes remained exact: hardening JSON `bf445e88...dd54a`, hardening Markdown `ea0576e0...dd04`, Zig JSON `5c854ad2...fd2c`, Zig Markdown `2813c039...68a`, ABI decision `9776218d...5467`, and promotion decision `3e72ee9e...b8b7`.
 
 ## Decisions Made
@@ -156,6 +158,19 @@ Independent review found four release-blocking boundary gaps and closed all four
 4. Adapter-build identity resolves sibling modules by the imported module's emitted extension. A fresh package build imported `dist/validation.js`, collected identity from three emitted `.js` files, and produced build digest `sha256:bf8f1d89936b40707365417b9b1300051b2fbf5ae20f6a0718bf2523c48e57eb`; no sibling `.ts` dependency remained.
 
 The follow-up independent-style rereview found and fixed two assurance issues before closure: candidate ABI metadata is now selected during compilation rather than overlaid onto a legacy result, and the resolver regression creates isolated emitted-module fixtures so a clean test checkout does not depend on a pre-existing `dist/` tree. Final gates passed: **33/33** package tests, package build and typecheck, focused ESLint, evaluator **19/19** in write and `--check` modes, emitted-JavaScript identity collection, `git diff --check`, and exact preservation of all six legacy v1.22 evidence hashes. Remaining review findings: **0**.
+
+## Second External Review Closure
+
+External rereview reopened Plan 258-10 with three High and three Medium findings. RED commit `b021476` reproduced six expected failures, including acceptance of raw `1.0` as canonical JSON and selection of the rustup proxy digest instead of the actual rustc binary. GREEN commit `8c332fa` closed every finding:
+
+1. Successful guest stdout must now equal the admitted canonical bytes byte-for-byte before schema validation; parseable alternate encodings, whitespace, or numeric spellings fail as authenticated invalid output.
+2. Wasmtime stderr text and exit status no longer infer Strategy exceptions, fuel exhaustion, or memory exhaustion. Those cases remain system-owned unless an observation carries the matching structured host provenance.
+3. Rust identity resolves `rustup which rustc`, hashes the selected compiler executable, and separately binds the rustup invocation shim. The candidate evidence now records selected rustc SHA-256 `fcf2ce6f5b55d90d29867767262ad179ed761a8b54d24b5c181c535fa05ced19`.
+4. Adapter build identity incorporates exact digests for the engine source/package manifest, spec source/package manifest, and workspace lockfile. A fresh built import bound three emitted JavaScript files plus those three dependency digests and produced `sha256:5044e4938f0ef90026d5012b841f8d8d6d8d9233fa6888c122179980ca4f96d1`.
+5. Candidate revisions no longer expose an unbound `sourceBytes` field. Invocation authority is the immutable revision ID, original/normalized source hashes, artifact hash, runtime tuple, and artifact source hash.
+6. Per-invocation stderr is independently capped at 16,384 bytes, records missing guest-stderr provenance as an unsupported meter, and is always system-owned without independent provenance—even for status zero or simultaneous stdout overflow.
+
+The final independent rereview also verified system-failure precedence when stdout and stderr overflow together and rejected claimed proven exception/fuel/memory attributions lacking structured host provenance. Final gates passed: **38/38** package tests, evaluator **19/19** in write and `--check` modes, package build and typecheck, focused ESLint, emitted-JavaScript/dependency-closure identity collection, `git diff --check`, and exact preservation of all six legacy v1.22 evidence hashes. Remaining external findings: **0**.
 
 ## Self-Check: PASSED
 
