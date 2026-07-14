@@ -21,6 +21,12 @@ const runtimeInvocationV117CandidateStatus = "inactive-candidate"
 const runtimeInvocationV117IdentityEvidenceBundle = "cowards-game:runtime-identity:v1:evidence-bundle"
 const runtimeInvocationV117IdentitySemanticTuple = "cowards-game:runtime-identity:v1:semantic-tuple"
 const runtimeInvocationV117IdentityBudgetProfile = "cowards-game:runtime-identity:v1:budget-profile"
+const runtimeInvocationV117StrategyMemoryMaximumBytes = 32 * 1024
+const runtimeInvocationV117SoldierMemoryMaximumBytes = 2 * 1024
+const runtimeInvocationV117ObjectiveMaximumBytes = 1024
+const runtimeInvocationV117OutputMaximumBytes = 256 * 1024
+const runtimeInvocationV117CandidateRetryAttemptMaximum int64 = 3
+const runtimeInvocationV117CandidateInvocationCountMaximum int64 = 260
 
 type runtimeInvocationV117SigningIdentity struct {
 	KeyID  string
@@ -472,6 +478,66 @@ var runtimeInvocationV117SystemFailureCodes = map[string]bool{
 	"AMBIGUOUS_ATTRIBUTION":       false,
 }
 
+func runtimeInvocationV117CanonicalWithin(value any, maximumBytes int) bool {
+	canonical, err := runtimeInvocationV117CanonicalValue(value)
+	return err == nil && len(canonical) <= maximumBytes
+}
+
+func runtimeInvocationV117StrategyResultValid(payload map[string]any) bool {
+	if !runtimeInvocationV117ExactKeys(payload, "activationOrders", "strategyMemory") ||
+		!runtimeInvocationV117CanonicalWithin(payload["strategyMemory"], runtimeInvocationV117StrategyMemoryMaximumBytes) {
+		return false
+	}
+	orders, ok := payload["activationOrders"].([]any)
+	if !ok || len(orders) > canonicalJSONV11DefaultLimits.ArrayEntries {
+		return false
+	}
+	for _, value := range orders {
+		order, ok := runtimeInvocationV117Object(value)
+		if !ok {
+			return false
+		}
+		_, hasObjective := order["objective"]
+		if (!hasObjective && !runtimeInvocationV117ExactKeys(order, "soldierId")) ||
+			(hasObjective && !runtimeInvocationV117ExactKeys(order, "soldierId", "objective")) {
+			return false
+		}
+		soldierID, ok := order["soldierId"].(string)
+		if !ok || soldierID == "" {
+			return false
+		}
+		if hasObjective && !runtimeInvocationV117CanonicalWithin(order["objective"], runtimeInvocationV117ObjectiveMaximumBytes) {
+			return false
+		}
+	}
+	return true
+}
+
+func runtimeInvocationV117ActionValid(value any) bool {
+	action, ok := runtimeInvocationV117Object(value)
+	if !ok {
+		return false
+	}
+	actionType, ok := action["type"].(string)
+	if !ok {
+		return false
+	}
+	if actionType == "TURN_TO_STONE" {
+		return runtimeInvocationV117ExactKeys(action, "type")
+	}
+	if (actionType != "MOVE" && actionType != "TURN") || !runtimeInvocationV117ExactKeys(action, "type", "direction") {
+		return false
+	}
+	direction, ok := action["direction"].(string)
+	return ok && (direction == "UP" || direction == "DOWN" || direction == "LEFT" || direction == "RIGHT")
+}
+
+func runtimeInvocationV117SoldierBrainResultValid(payload map[string]any) bool {
+	return runtimeInvocationV117ExactKeys(payload, "action", "soldierMemory") &&
+		runtimeInvocationV117ActionValid(payload["action"]) &&
+		runtimeInvocationV117CanonicalWithin(payload["soldierMemory"], runtimeInvocationV117SoldierMemoryMaximumBytes)
+}
+
 func runtimeInvocationV117OutcomeValid(value any, method string) bool {
 	outcome, ok := runtimeInvocationV117Object(value)
 	if !ok {
@@ -487,17 +553,13 @@ func runtimeInvocationV117OutcomeValid(value any, method string) bool {
 			return false
 		}
 		payload, ok := runtimeInvocationV117Object(outcome["value"])
-		if !ok {
+		if !ok || !runtimeInvocationV117CanonicalWithin(payload, runtimeInvocationV117OutputMaximumBytes) {
 			return false
 		}
 		if method == "selectActivations" {
-			if !runtimeInvocationV117ExactKeys(payload, "activationOrders", "strategyMemory") {
-				return false
-			}
-			_, ok = payload["activationOrders"].([]any)
-			return ok
+			return runtimeInvocationV117StrategyResultValid(payload)
 		}
-		return runtimeInvocationV117ExactKeys(payload, "action", "soldierMemory")
+		return runtimeInvocationV117SoldierBrainResultValid(payload)
 	case "player_violation":
 		if !runtimeInvocationV117ExactKeys(outcome, "kind", "violation", "trace") || !runtimeInvocationV117TraceValid(outcome["trace"]) {
 			return false
@@ -820,18 +882,50 @@ func verifyRuntimeInvocationResponseV117(payload []byte, request *runtimeInvocat
 
 type runtimeInvocationV117Transport func(context.Context, []byte) ([]byte, error)
 
-func executeRuntimeInvocationV117WithRetry(ctx context.Context, requestBytes []byte, identity runtimeInvocationV117SigningIdentity, maximumAttempts int, transport runtimeInvocationV117Transport) (*runtimeInvocationResponseV117, *runtimeInvocationV117Failure) {
+func runtimeInvocationV117RetryAttemptLimit(request *runtimeInvocationRequestV117) (int, *runtimeInvocationV117Failure) {
+	maximum := request.Budget.MatchCumulative.InvocationCountMaximum
+	current := request.Retry.Attempt
+	if maximum < 1 || maximum > runtimeInvocationV117CandidateInvocationCountMaximum || current < 0 || current >= maximum {
+		return 0, runtimeInvocationV117FailureFor("OUTER_FRAME_WRONG_BINDING")
+	}
+	remaining := maximum - current
+	if remaining > runtimeInvocationV117CandidateRetryAttemptMaximum {
+		remaining = runtimeInvocationV117CandidateRetryAttemptMaximum
+	}
+	return int(remaining), nil
+}
+
+func runtimeInvocationV117ContextFailure(ctx context.Context) *runtimeInvocationV117Failure {
+	if ctx == nil {
+		return runtimeInvocationV117FailureFor("AMBIGUOUS_ATTRIBUTION")
+	}
+	select {
+	case <-ctx.Done():
+		return runtimeInvocationV117FailureFor("AMBIGUOUS_ATTRIBUTION")
+	default:
+		return nil
+	}
+}
+
+func executeRuntimeInvocationV117(ctx context.Context, requestBytes []byte, identity runtimeInvocationV117SigningIdentity, transport runtimeInvocationV117Transport) (*runtimeInvocationResponseV117, *runtimeInvocationV117Failure) {
 	pinnedBytes := append([]byte(nil), requestBytes...)
 	request, failure := verifyRuntimeInvocationRequestV117(pinnedBytes, identity)
 	if failure != nil {
 		return nil, failure
 	}
-	if maximumAttempts < 1 {
-		maximumAttempts = 1
+	maximumAttempts, failure := runtimeInvocationV117RetryAttemptLimit(request)
+	if failure != nil {
+		return nil, failure
 	}
 	for attempt := 0; attempt < maximumAttempts; attempt++ {
+		if failure = runtimeInvocationV117ContextFailure(ctx); failure != nil {
+			return nil, failure
+		}
 		responseBytes, err := transport(ctx, append([]byte(nil), pinnedBytes...))
 		if err != nil {
+			if failure = runtimeInvocationV117ContextFailure(ctx); failure != nil {
+				return nil, failure
+			}
 			failure = runtimeInvocationV117FailureFor("TRANSPORT_CRASH")
 			if attempt+1 < maximumAttempts {
 				continue

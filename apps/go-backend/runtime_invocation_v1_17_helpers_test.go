@@ -146,7 +146,7 @@ func TestPhase258RuntimeInvocationV117WrongBindingAndAmbiguousNeverRetry(t *test
 	}
 
 	calls := 0
-	_, failure = executeRuntimeInvocationV117WithRetry(context.Background(), requestBytes, identity, 3, func(_ context.Context, _ []byte) ([]byte, error) {
+	_, failure = executeRuntimeInvocationV117(context.Background(), requestBytes, identity, func(_ context.Context, _ []byte) ([]byte, error) {
 		calls++
 		return wrongBytes, nil
 	})
@@ -164,7 +164,7 @@ func TestPhase258RuntimeInvocationV117WrongBindingAndAmbiguousNeverRetry(t *test
 		"trace": runtimeInvocationTraceV117ForRequest(request),
 	}, identity)
 	calls = 0
-	response, failure := executeRuntimeInvocationV117WithRetry(context.Background(), requestBytes, identity, 3, func(_ context.Context, _ []byte) ([]byte, error) {
+	response, failure := executeRuntimeInvocationV117(context.Background(), requestBytes, identity, func(_ context.Context, _ []byte) ([]byte, error) {
 		calls++
 		return ambiguousBytes, nil
 	})
@@ -275,7 +275,7 @@ func TestPhase258CanonicalRetryPostgres(t *testing.T) {
 			fixture.seedMatch(t, ctx, pool, "canonical-retry-"+strconv.Itoa(index))
 			before := semanticCompletionSnapshot(t, ctx, pool)
 			calls := 0
-			response, failure := executeRuntimeInvocationV117WithRetry(ctx, candidate.request, identity, 3, func(_ context.Context, sent []byte) ([]byte, error) {
+			response, failure := executeRuntimeInvocationV117(ctx, candidate.request, identity, func(_ context.Context, sent []byte) ([]byte, error) {
 				if calls >= len(candidate.steps) {
 					t.Fatalf("unexpected transport call %d", calls+1)
 				}

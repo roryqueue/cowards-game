@@ -163,7 +163,7 @@ func TestPhase258RuntimeInvocationV117RetriesOnlySystemFailureWithPinnedBytes(t 
 	}, identity)
 
 	var observed [][]byte
-	result, failure := executeRuntimeInvocationV117WithRetry(context.Background(), requestBytes, identity, 2, func(_ context.Context, sent []byte) ([]byte, error) {
+	result, failure := executeRuntimeInvocationV117(context.Background(), requestBytes, identity, func(_ context.Context, sent []byte) ([]byte, error) {
 		observed = append(observed, append([]byte(nil), sent...))
 		sent[0] ^= 0xff // the transport cannot mutate the pinned retry bytes
 		if len(observed) == 1 {
@@ -181,7 +181,7 @@ func TestPhase258RuntimeInvocationV117RetriesOnlySystemFailureWithPinnedBytes(t 
 	}
 
 	observed = nil
-	result, failure = executeRuntimeInvocationV117WithRetry(context.Background(), requestBytes, identity, 3, func(_ context.Context, sent []byte) ([]byte, error) {
+	result, failure = executeRuntimeInvocationV117(context.Background(), requestBytes, identity, func(_ context.Context, sent []byte) ([]byte, error) {
 		observed = append(observed, append([]byte(nil), sent...))
 		return playerBytes, nil
 	})
