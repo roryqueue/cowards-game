@@ -2,6 +2,7 @@ import { Buffer } from "node:buffer"
 import { createHash } from "node:crypto"
 import { isDeepStrictEqual } from "node:util"
 import {
+  RUNTIME_INVOCATION_V1_17_CANDIDATE,
   RuntimeExecutionServiceRequestSchema,
   RuntimeExecutionServiceResponseSchema,
   RuntimeExecutionFinalStateSchema,
@@ -9,12 +10,20 @@ import {
   STRATEGY_RUNTIME_ABI_VERSION,
   findRuntimeBrokerRegistryEntry,
   hashExecutableLaneIdentity,
+  serializeRuntimeInvocationRequestV117,
   validateStrategyLanguageProviderRuntimeCompatibility,
+  verifyRuntimeInvocationRequestV117,
+  verifyRuntimeInvocationResponseV117,
+  type AuthenticatedRuntimeInvocationRequestV117,
+  type JsonValue,
   type MatchId,
   type PlayerId,
   type RuntimeExecutionServiceRequest,
   type RuntimeExecutionServiceResponse,
   type RuntimeExecutionServiceSystemFailureCode,
+  type RuntimeInvocationResultV117,
+  type RuntimeInvocationSigningIdentityV117,
+  type RuntimeInvocationTraceV117,
   type RuntimeEntrantAuthorityReference,
   type Chronicle,
   type StrategyRevision,
@@ -45,6 +54,143 @@ import type {
   VerifiedMountedRuntimeEvidenceAuthority,
 } from "./runtime-evidence-authority.js"
 import { issueRuntimeSemanticReceipt } from "./semantic-receipt.js"
+
+export interface CandidateRuntimeInvocationInputV117<
+  TValue = JsonValue,
+  TExecution = unknown,
+> {
+  readonly request: AuthenticatedRuntimeInvocationRequestV117
+  readonly identity: RuntimeInvocationSigningIdentityV117
+  readonly invoke: (requestBytes: Uint8Array) => Uint8Array
+  readonly executeOutcome: (
+    outcome: RuntimeInvocationResultV117<TValue>,
+  ) => TExecution
+}
+
+export interface CandidateRuntimeInvocationPublicResultV117 {
+  readonly contractVersion: typeof RUNTIME_INVOCATION_V1_17_CANDIDATE.contractVersion
+  readonly candidateStatus: typeof RUNTIME_INVOCATION_V1_17_CANDIDATE.lifecycle
+  readonly current: false
+  readonly requestId: string
+  readonly invocationId: string
+  readonly kernelRequestId: string
+  readonly method: AuthenticatedRuntimeInvocationRequestV117["method"]
+  readonly classification: RuntimeInvocationResultV117["kind"]
+  readonly code?: string | undefined
+  readonly retryable?: boolean | undefined
+}
+
+export interface CandidateRuntimeInvocationExecutionV117<TExecution> {
+  /** Private engine material. Never serialize this field on a public route. */
+  readonly internalExecution: TExecution
+  readonly publicResult: CandidateRuntimeInvocationPublicResultV117
+}
+
+const candidateRequestTrace = (
+  request: AuthenticatedRuntimeInvocationRequestV117,
+  requestBytes: Uint8Array,
+): RuntimeInvocationTraceV117 => ({
+  requestId: request.requestId,
+  invocationId: request.invocationId,
+  kernelRequestId: request.kernelRequestId,
+  method: request.method,
+  requestSha256: `sha256:${createHash("sha256").update(requestBytes).digest("hex")}`,
+  budgetProfileSha256: request.budget.profileSha256,
+  inputSha256: request.input.canonicalSha256,
+  retryIdentitySha256: request.retry.identitySha256,
+  safeCodes: ["ADAPTER_CRASH"],
+})
+
+const candidatePublicResult = (
+  request: AuthenticatedRuntimeInvocationRequestV117,
+  outcome: RuntimeInvocationResultV117,
+): CandidateRuntimeInvocationPublicResultV117 => ({
+  contractVersion: RUNTIME_INVOCATION_V1_17_CANDIDATE.contractVersion,
+  candidateStatus: RUNTIME_INVOCATION_V1_17_CANDIDATE.lifecycle,
+  current: false,
+  requestId: request.requestId,
+  invocationId: request.invocationId,
+  kernelRequestId: request.kernelRequestId,
+  method: request.method,
+  classification: outcome.kind,
+  ...(outcome.kind === "player_violation"
+    ? { code: outcome.violation.code }
+    : outcome.kind === "system_failure"
+      ? { code: outcome.failure.code, retryable: outcome.failure.retryable }
+      : {}),
+})
+
+/**
+ * Inactive v1.17 candidate bridge. It performs exactly one adapter attempt,
+ * verifies the complete authenticated response binding, and delegates every
+ * gameplay consequence or rollback to the canonical engine driver. Retry is
+ * deliberately absent: the Go authority may call this bridge again only with
+ * the same signed request and prestate.
+ */
+export const executeCandidateRuntimeInvocationV117 = <
+  TValue = JsonValue,
+  TExecution = unknown,
+>(
+  input: CandidateRuntimeInvocationInputV117<TValue, TExecution>,
+): CandidateRuntimeInvocationExecutionV117<TExecution> => {
+  const requestBytes = serializeRuntimeInvocationRequestV117(input.request)
+  const admittedRequest = verifyRuntimeInvocationRequestV117(
+    requestBytes,
+    input.identity,
+  )
+  let outcome: RuntimeInvocationResultV117<TValue> | undefined
+
+  if (admittedRequest.kind !== "success") {
+    outcome = admittedRequest as RuntimeInvocationResultV117<TValue>
+  } else {
+    let responseBytes: Uint8Array | undefined
+    try {
+      responseBytes = input.invoke(Uint8Array.from(requestBytes))
+    } catch {
+      outcome = {
+        kind: "system_failure",
+        failure: {
+          code: "ADAPTER_CRASH",
+          publicMessage: "Runtime system failure.",
+          retryable: true,
+        },
+        trace: candidateRequestTrace(input.request, requestBytes),
+      }
+    }
+    if (responseBytes !== undefined) {
+      const admittedResponse = verifyRuntimeInvocationResponseV117(
+        responseBytes,
+        input.request,
+        input.identity,
+      )
+      outcome =
+        admittedResponse.kind === "success"
+          ? (admittedResponse.value.outcome as RuntimeInvocationResultV117<TValue>)
+          : (admittedResponse as RuntimeInvocationResultV117<TValue>)
+    }
+  }
+
+  if (outcome === undefined) {
+    outcome = {
+      kind: "system_failure",
+      failure: {
+        code: "TRANSPORT_CRASH",
+        publicMessage: "Runtime system failure.",
+        retryable: true,
+      },
+      trace: candidateRequestTrace(input.request, requestBytes),
+    }
+  }
+
+  const internalExecution = input.executeOutcome(outcome)
+  return {
+    internalExecution,
+    publicResult: candidatePublicResult(
+      input.request,
+      outcome as RuntimeInvocationResultV117,
+    ),
+  }
+}
 
 const readRecord = (value: unknown): Record<string, unknown> | undefined =>
   value !== null && typeof value === "object" && !Array.isArray(value)

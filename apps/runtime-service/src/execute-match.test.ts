@@ -1,3 +1,4 @@
+import { Buffer } from "node:buffer"
 import { createHash } from "node:crypto"
 import { readFileSync, readdirSync } from "node:fs"
 import { join } from "node:path"
@@ -14,6 +15,7 @@ import {
   serializeRuntimeInvocationRequestV117,
   serializeRuntimeInvocationResponseV117,
   type AuthenticatedRuntimeInvocationRequestV117,
+  type JsonValue,
   type RuntimeInvocationResultV117,
   type RuntimeInvocationTraceV117,
   type RuntimeExecutionServiceRequest,
@@ -81,12 +83,14 @@ const hash = (character: string): `sha256:${string}` =>
 const sha256 = (bytes: Uint8Array): `sha256:${string}` =>
   `sha256:${createHash("sha256").update(bytes).digest("hex")}`
 
-const candidateRequest = (): AuthenticatedRuntimeInvocationRequestV117 =>
+const candidateRequest = (
+  kernelRequestId = candidateKernelRequest().requestId,
+): AuthenticatedRuntimeInvocationRequestV117 =>
   createAuthenticatedRuntimeInvocationRequestV117(
     {
       requestId: "request:service-candidate:v1.17",
       invocationId: "invocation:service-candidate:v1.17",
-      kernelRequestId: "kernel-request:service-candidate:v1.17",
+      kernelRequestId,
       method: "soldierBrain",
       semanticTuple: {
         rules: "cowards-rules-v1.4",
@@ -172,6 +176,27 @@ const candidateState = (): GameState => {
   return state
 }
 
+const candidateKernelRequest = () => {
+  const state = candidateState()
+  const soldier = state.soldiers.find(
+    (candidate) => candidate.ownerPlayerId === state.players[0].id,
+  )
+  if (!soldier) throw new Error("missing candidate fixture soldier")
+  let machine = MATCH_KERNEL.createActivationMachine({
+    state,
+    soldierId: soldier.id,
+  })
+  for (let index = 0; index < 32; index += 1) {
+    const stepped = MATCH_KERNEL.stepMatch(machine, { kind: "advance" })
+    if (stepped.kind === "effect") return stepped.request
+    if (stepped.kind === "failure" || stepped.kind === "completed") {
+      throw new Error("candidate fixture failed before runtime effect")
+    }
+    machine = stepped.machine
+  }
+  throw new Error("candidate fixture did not yield a runtime effect")
+}
+
 const executeCandidateOutcome = (
   outcome: RuntimeInvocationResultV117<SoldierBrainResult>,
 ) => {
@@ -189,17 +214,8 @@ const executeCandidateOutcome = (
       },
       runSoldierBrain(
         _input: SoldierBrainInput,
-        request,
       ): RuntimeInvocationResultV117<SoldierBrainResult> {
-        if (!request) throw new Error("driver omitted request")
-        return {
-          ...outcome,
-          trace: {
-            ...outcome.trace,
-            kernelRequestId: request.requestId,
-            method: request.kind,
-          },
-        } as RuntimeInvocationResultV117<SoldierBrainResult>
+        return outcome
       },
     },
   })
@@ -860,7 +876,7 @@ describe("runtime execution service v1.17 candidate bridge", () => {
     const responseBytes = serializeRuntimeInvocationResponseV117(
       createAuthenticatedRuntimeInvocationResponseV117(
         request,
-        outcome,
+        outcome as unknown as RuntimeInvocationResultV117<JsonValue>,
         candidateIdentity,
       ),
     )

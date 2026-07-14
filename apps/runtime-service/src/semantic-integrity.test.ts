@@ -125,6 +125,33 @@ describe("runtime-service semantic integrity", () => {
     })
   })
 
+  it("keeps the inactive v1.17 candidate outside historical v1.16 default dispatch", () => {
+    const createRuntimeForRevision = vi.fn()
+    const response = executeRuntimeServiceRequest(
+      {
+        ...request,
+        contractVersion: "runtime-execution-service-v1.17",
+      },
+      createRuntimeServiceConfig({
+        strategyExecutionAdapter: "worker-thread",
+        resolveDeploymentLaneIdentity: createFixtureDeploymentLaneIdentity,
+        semanticReceiptSecret,
+      }),
+      {
+        authorityLoader: authority.authorityLoader,
+        createRuntimeForRevision,
+      },
+    )
+
+    expect(response).toMatchObject({
+      contractVersion: "runtime-execution-service-v1.16",
+      ok: false,
+      kind: "systemFailure",
+      systemFailure: { code: "MALFORMED_REQUEST", retryable: false },
+    })
+    expect(createRuntimeForRevision).not.toHaveBeenCalled()
+  })
+
   it("fails closed when the recorded final state differs from canonical reconstruction", () => {
     const response = executeRuntimeServiceRequest(
       request,
