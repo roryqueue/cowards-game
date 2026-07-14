@@ -79,7 +79,10 @@ const preflightProfiles = deepFreeze({
     memoryBytes: 64 * MiB,
     inputBytes: 64 * KiB,
     outputBytes: 32 * KiB,
+    stderrBytes: 0,
     processes: 1,
+    threads: 1,
+    children: 0,
     network: "disabled",
     filesystem: "none",
     failureOwnership: {
@@ -110,7 +113,10 @@ const preflightProfiles = deepFreeze({
     memoryBytes: 128 * MiB,
     inputBytes: 4 * MiB,
     outputBytes: 256 * KiB,
+    stderrBytes: 0,
     processes: 1,
+    threads: 1,
+    children: 0,
     network: "disabled",
     filesystem: "artifact-read-only",
     failureOwnership: {
@@ -124,7 +130,10 @@ const preflightProfiles = deepFreeze({
     memoryBytes: 512 * MiB,
     inputBytes: 8 * MiB,
     outputBytes: 8 * MiB,
+    stderrBytes: 0,
     processes: 1,
+    threads: 1,
+    children: 0,
     network: "disabled",
     filesystem: "closed-corpus-read-only",
     failureOwnership: {
@@ -623,9 +632,7 @@ export const assessRuntimeAbiV117Certification = (
 export const RUNTIME_ABI_V1_17_LEDGER_SCHEMA_VERSION =
   "runtime-budget-ledger-v1" as const
 
-export type RuntimeAbiV117ExecutionMethod =
-  | "selectActivations"
-  | "soldierBrain"
+export type RuntimeAbiV117ExecutionMethod = "selectActivations" | "soldierBrain"
 export type RuntimeAbiV117PreflightProfile = keyof typeof preflightProfiles
 export type RuntimeAbiV117LedgerAttribution =
   | "proven_strategy"
@@ -779,7 +786,8 @@ export interface RuntimeAbiV117ExecutionLedger {
 }
 
 export interface RuntimeAbiV117PreflightLedger<
-  TProfile extends RuntimeAbiV117PreflightProfile = RuntimeAbiV117PreflightProfile,
+  TProfile extends RuntimeAbiV117PreflightProfile =
+    RuntimeAbiV117PreflightProfile,
 > {
   readonly schemaVersion: typeof RUNTIME_ABI_V1_17_LEDGER_SCHEMA_VERSION
   readonly domain: "preflight"
@@ -802,6 +810,9 @@ export type RuntimeAbiV117Ledger =
   | RuntimeAbiV117PreflightLedger
 
 export type RuntimeAbiV117LedgerFailureCode =
+  | "LEDGER_SCHEMA_INVALID"
+  | "RECEIPT_SCHEMA_INVALID"
+  | "LEDGER_CAPACITY_EXHAUSTED"
   | "LEDGER_DOMAIN_MISMATCH"
   | "LEDGER_PRESTATE_MISMATCH"
   | "LEDGER_IDENTITY_CONFLICT"
@@ -849,17 +860,394 @@ const identityPattern = /^sha256:[0-9a-f]{64}$/u
 const isNonnegativeSafeInteger = (value: number): boolean =>
   Number.isSafeInteger(value) && value >= 0
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  value !== null && typeof value === "object" && !Array.isArray(value)
+
+const hasOnlyKeys = (
+  value: Record<string, unknown>,
+  allowed: readonly string[],
+): boolean => Object.keys(value).every((key) => allowed.includes(key))
+
+const hasRequiredKeys = (
+  value: Record<string, unknown>,
+  required: readonly string[],
+): boolean => required.every((key) => Object.hasOwn(value, key))
+
+const isKnownExecutionMethod = (
+  value: unknown,
+): value is RuntimeAbiV117ExecutionMethod =>
+  value === "selectActivations" || value === "soldierBrain"
+
+const isKnownAttribution = (
+  value: unknown,
+): value is RuntimeAbiV117LedgerAttribution =>
+  value === "proven_strategy" || value === "host" || value === "ambiguous"
+
+const isKnownPreflightProfile = (
+  value: unknown,
+): value is RuntimeAbiV117PreflightProfile =>
+  typeof value === "string" && Object.hasOwn(preflightProfiles, value)
+
+const isUnavailableEvidenceShape = (value: unknown): boolean =>
+  isRecord(value) &&
+  exactKeys(value, ["status"]) &&
+  (value.status === "unavailable" || value.status === "ambiguous")
+
+const isCounterEvidenceShape = (value: unknown): boolean =>
+  isUnavailableEvidenceShape(value) ||
+  (isRecord(value) &&
+    exactKeys(value, ["status", "delta", "cumulative"]) &&
+    value.status === "measured" &&
+    typeof value.delta === "number" &&
+    isNonnegativeSafeInteger(value.delta) &&
+    typeof value.cumulative === "number" &&
+    isNonnegativeSafeInteger(value.cumulative))
+
+const isMemoryEvidenceShape = (value: unknown): boolean =>
+  isUnavailableEvidenceShape(value) ||
+  (isRecord(value) &&
+    exactKeys(value, ["status", "peakBytes", "cumulativePeakBytes"]) &&
+    value.status === "measured" &&
+    typeof value.peakBytes === "number" &&
+    isNonnegativeSafeInteger(value.peakBytes) &&
+    typeof value.cumulativePeakBytes === "number" &&
+    isNonnegativeSafeInteger(value.cumulativePeakBytes))
+
+const isProcessEvidenceShape = (value: unknown): boolean =>
+  isUnavailableEvidenceShape(value) ||
+  (isRecord(value) &&
+    exactKeys(value, ["status", "processes", "threads", "children"]) &&
+    value.status === "verified" &&
+    typeof value.processes === "number" &&
+    isNonnegativeSafeInteger(value.processes) &&
+    typeof value.threads === "number" &&
+    isNonnegativeSafeInteger(value.threads) &&
+    typeof value.children === "number" &&
+    isNonnegativeSafeInteger(value.children))
+
+const isExecutionCapabilityEvidenceShape = (value: unknown): boolean =>
+  isUnavailableEvidenceShape(value) ||
+  (isRecord(value) &&
+    exactKeys(value, [
+      "status",
+      "filesystem",
+      "network",
+      "environment",
+      "shell",
+    ]) &&
+    value.status === "verified" &&
+    typeof value.filesystem === "string" &&
+    typeof value.network === "string" &&
+    typeof value.environment === "string" &&
+    typeof value.shell === "string")
+
+const isPreflightCapabilityEvidenceShape = (value: unknown): boolean =>
+  isUnavailableEvidenceShape(value) ||
+  (isRecord(value) &&
+    exactKeys(value, ["status", "filesystem", "network"]) &&
+    value.status === "verified" &&
+    typeof value.filesystem === "string" &&
+    typeof value.network === "string")
+
+const isCancellationEvidenceShape = (value: unknown): boolean =>
+  isUnavailableEvidenceShape(value) ||
+  (isRecord(value) &&
+    exactKeys(value, [
+      "status",
+      "terminationRequired",
+      "receiptPresent",
+      "graceMilliseconds",
+    ]) &&
+    value.status === "verified" &&
+    typeof value.terminationRequired === "boolean" &&
+    typeof value.receiptPresent === "boolean" &&
+    typeof value.graceMilliseconds === "number" &&
+    isNonnegativeSafeInteger(value.graceMilliseconds))
+
+const isAccountingEvidenceShape = (value: unknown): boolean =>
+  isUnavailableEvidenceShape(value) ||
+  (isRecord(value) &&
+    exactKeys(value, ["status", "signatureVerified", "monotonic"]) &&
+    value.status === "verified" &&
+    typeof value.signatureVerified === "boolean" &&
+    typeof value.monotonic === "boolean")
+
+const hasClosedCounterEvidence = (
+  value: unknown,
+  allowedCounters: readonly string[],
+): boolean =>
+  isRecord(value) &&
+  hasOnlyKeys(value, allowedCounters) &&
+  Object.values(value).every(isCounterEvidenceShape)
+
+const EXECUTION_RECEIPT_KEYS = [
+  "domain",
+  "prestateRevision",
+  "invocationId",
+  "requestIdentity",
+  "evidenceIdentity",
+  "method",
+  "attribution",
+  "counters",
+  "memory",
+  "process",
+  "capabilities",
+  "cancellation",
+  "accountingEvidence",
+] as const
+
+const PREFLIGHT_RECEIPT_KEYS = [
+  "domain",
+  "profile",
+  "prestateRevision",
+  "operationId",
+  "requestIdentity",
+  "evidenceIdentity",
+  "attribution",
+  "counters",
+  "memory",
+  "process",
+  "capabilities",
+  "accountingEvidence",
+] as const
+
+const REQUIRED_EXECUTION_RECEIPT_KEYS = EXECUTION_RECEIPT_KEYS.slice(0, 8)
+const REQUIRED_PREFLIGHT_RECEIPT_KEYS = PREFLIGHT_RECEIPT_KEYS.slice(0, 8)
+
+const optionalEvidenceShape = (
+  value: Record<string, unknown>,
+  key: string,
+  validate: (candidate: unknown) => boolean,
+): boolean => !Object.hasOwn(value, key) || validate(value[key])
+
+const isExecutionReceiptShape = (
+  value: unknown,
+): value is RuntimeAbiV117ExecutionLedgerReceipt =>
+  isRecord(value) &&
+  hasOnlyKeys(value, EXECUTION_RECEIPT_KEYS) &&
+  hasRequiredKeys(value, REQUIRED_EXECUTION_RECEIPT_KEYS) &&
+  value.domain === "execution" &&
+  typeof value.prestateRevision === "number" &&
+  isNonnegativeSafeInteger(value.prestateRevision) &&
+  typeof value.invocationId === "string" &&
+  typeof value.requestIdentity === "string" &&
+  typeof value.evidenceIdentity === "string" &&
+  isKnownExecutionMethod(value.method) &&
+  isKnownAttribution(value.attribution) &&
+  hasClosedCounterEvidence(
+    value.counters,
+    Object.keys(executionCounterContract),
+  ) &&
+  optionalEvidenceShape(value, "memory", isMemoryEvidenceShape) &&
+  optionalEvidenceShape(value, "process", isProcessEvidenceShape) &&
+  optionalEvidenceShape(
+    value,
+    "capabilities",
+    isExecutionCapabilityEvidenceShape,
+  ) &&
+  optionalEvidenceShape(value, "cancellation", isCancellationEvidenceShape) &&
+  optionalEvidenceShape(value, "accountingEvidence", isAccountingEvidenceShape)
+
+const isPreflightReceiptShape = (
+  value: unknown,
+): value is RuntimeAbiV117PreflightLedgerReceipt =>
+  isRecord(value) &&
+  hasOnlyKeys(value, PREFLIGHT_RECEIPT_KEYS) &&
+  hasRequiredKeys(value, REQUIRED_PREFLIGHT_RECEIPT_KEYS) &&
+  value.domain === "preflight" &&
+  isKnownPreflightProfile(value.profile) &&
+  typeof value.prestateRevision === "number" &&
+  isNonnegativeSafeInteger(value.prestateRevision) &&
+  typeof value.operationId === "string" &&
+  typeof value.requestIdentity === "string" &&
+  typeof value.evidenceIdentity === "string" &&
+  isKnownAttribution(value.attribution) &&
+  hasClosedCounterEvidence(value.counters, [
+    "wallMilliseconds",
+    "computeFuel",
+    "inputBytes",
+    "outputBytes",
+    "stderrBytes",
+  ]) &&
+  optionalEvidenceShape(value, "memory", isMemoryEvidenceShape) &&
+  optionalEvidenceShape(value, "process", isProcessEvidenceShape) &&
+  optionalEvidenceShape(
+    value,
+    "capabilities",
+    isPreflightCapabilityEvidenceShape,
+  ) &&
+  optionalEvidenceShape(value, "accountingEvidence", isAccountingEvidenceShape)
+
+const isCommitmentShape = (
+  value: unknown,
+  domain: "execution" | "preflight",
+  profile?: RuntimeAbiV117PreflightProfile,
+): value is RuntimeAbiV117LedgerCommitment => {
+  if (
+    !isRecord(value) ||
+    !exactKeys(value, [
+      "identity",
+      "requestIdentity",
+      "evidenceIdentity",
+      "prestateRevision",
+      "scope",
+      "outcome",
+      "dimensions",
+    ]) ||
+    typeof value.identity !== "string" ||
+    value.identity.length === 0 ||
+    value.identity.includes("\0") ||
+    typeof value.requestIdentity !== "string" ||
+    !identityPattern.test(value.requestIdentity) ||
+    typeof value.evidenceIdentity !== "string" ||
+    !identityPattern.test(value.evidenceIdentity) ||
+    typeof value.prestateRevision !== "number" ||
+    !isNonnegativeSafeInteger(value.prestateRevision) ||
+    typeof value.scope !== "string" ||
+    (value.outcome !== "success" && value.outcome !== "player_violation") ||
+    !Array.isArray(value.dimensions) ||
+    value.dimensions.some(
+      (dimension) => typeof dimension !== "string" || dimension.length === 0,
+    ) ||
+    new Set(value.dimensions).size !== value.dimensions.length ||
+    (value.outcome === "success" && value.dimensions.length !== 0) ||
+    (value.outcome === "player_violation" && value.dimensions.length === 0)
+  ) {
+    return false
+  }
+  return domain === "execution"
+    ? isKnownExecutionMethod(value.scope)
+    : value.scope === profile
+}
+
+const hasValidCommitments = (
+  value: unknown,
+  domain: "execution" | "preflight",
+  profile?: RuntimeAbiV117PreflightProfile,
+): value is readonly RuntimeAbiV117LedgerCommitment[] =>
+  Array.isArray(value) &&
+  value.every(
+    (commitment, index) =>
+      isCommitmentShape(commitment, domain, profile) &&
+      commitment.prestateRevision === index,
+  ) &&
+  new Set(value.map((commitment) => commitment.identity)).size === value.length
+
+const EXECUTION_LEDGER_COUNTER_KEYS = [
+  "invocationCount",
+  "wallMilliseconds",
+  "computeFuel",
+  "payloadBytes",
+  "stdoutBytes",
+  "stderrBytes",
+  "memoryBytes",
+] as const
+
+const PREFLIGHT_LEDGER_COUNTER_KEYS = [
+  "operationCount",
+  "wallMilliseconds",
+  "computeFuel",
+  "inputBytes",
+  "outputBytes",
+  "stderrBytes",
+  "memoryBytes",
+] as const
+
+const isSafeCounterRecord = (
+  value: unknown,
+  keys: readonly string[],
+): value is Record<string, number> =>
+  isRecord(value) &&
+  exactKeys(value, keys) &&
+  Object.values(value).every(
+    (counter) =>
+      typeof counter === "number" && isNonnegativeSafeInteger(counter),
+  )
+
+const isExecutionLedgerShape = (
+  value: unknown,
+): value is RuntimeAbiV117ExecutionLedger => {
+  if (
+    !isRecord(value) ||
+    !exactKeys(value, [
+      "schemaVersion",
+      "domain",
+      "revision",
+      "methodInvocations",
+      "cumulative",
+      "commitments",
+    ]) ||
+    value.schemaVersion !== RUNTIME_ABI_V1_17_LEDGER_SCHEMA_VERSION ||
+    value.domain !== "execution" ||
+    typeof value.revision !== "number" ||
+    !isNonnegativeSafeInteger(value.revision) ||
+    !isSafeCounterRecord(value.methodInvocations, [
+      "selectActivations",
+      "soldierBrain",
+    ]) ||
+    !isSafeCounterRecord(value.cumulative, EXECUTION_LEDGER_COUNTER_KEYS) ||
+    !hasValidCommitments(value.commitments, "execution")
+  ) {
+    return false
+  }
+  const methodCount =
+    value.methodInvocations.selectActivations! +
+    value.methodInvocations.soldierBrain!
+  return (
+    Number.isSafeInteger(methodCount) &&
+    value.revision === value.commitments.length &&
+    value.cumulative.invocationCount === value.commitments.length &&
+    methodCount === value.cumulative.invocationCount &&
+    value.commitments.filter(({ scope }) => scope === "selectActivations")
+      .length === value.methodInvocations.selectActivations &&
+    value.commitments.filter(({ scope }) => scope === "soldierBrain").length ===
+      value.methodInvocations.soldierBrain
+  )
+}
+
+const isPreflightLedgerShape = (
+  value: unknown,
+): value is RuntimeAbiV117PreflightLedger => {
+  if (
+    !isRecord(value) ||
+    !exactKeys(value, [
+      "schemaVersion",
+      "domain",
+      "profile",
+      "revision",
+      "cumulative",
+      "commitments",
+    ]) ||
+    value.schemaVersion !== RUNTIME_ABI_V1_17_LEDGER_SCHEMA_VERSION ||
+    value.domain !== "preflight" ||
+    !isKnownPreflightProfile(value.profile) ||
+    typeof value.revision !== "number" ||
+    !isNonnegativeSafeInteger(value.revision) ||
+    !isSafeCounterRecord(value.cumulative, PREFLIGHT_LEDGER_COUNTER_KEYS) ||
+    !hasValidCommitments(value.commitments, "preflight", value.profile)
+  ) {
+    return false
+  }
+  return (
+    value.revision === value.commitments.length &&
+    value.cumulative.operationCount === value.commitments.length
+  )
+}
+
+const isLedgerShape = (value: unknown): value is RuntimeAbiV117Ledger =>
+  isExecutionLedgerShape(value) || isPreflightLedgerShape(value)
+
 const ledgerSystemFailure = <TLedger extends RuntimeAbiV117Ledger>(
   ledger: TLedger,
   code: RuntimeAbiV117LedgerFailureCode,
   dimension?: string,
 ): RuntimeAbiV117LedgerDebitResult<TLedger> =>
-  deepFreeze({
+  Object.freeze({
     kind: "system_failure" as const,
-    failure: {
+    failure: Object.freeze({
       code,
       ...(dimension === undefined ? {} : { dimension }),
-    },
+    }),
     ledger,
     committed: false as const,
     replayed: false as const,
@@ -898,10 +1286,7 @@ const validateCounterEvidence = (
     return { ok: false, code: "METER_ACCOUNTING_DECREASING" }
   }
   const expected = previous + evidence.delta
-  if (
-    !Number.isSafeInteger(expected) ||
-    evidence.cumulative !== expected
-  ) {
+  if (!Number.isSafeInteger(expected) || evidence.cumulative !== expected) {
     return { ok: false, code: "METER_ACCOUNTING_INCONSISTENT" }
   }
   return { ok: true, value: evidence.cumulative }
@@ -1114,6 +1499,36 @@ const debitExecutionLedger = (
   if (receipt.attribution === "ambiguous") {
     return ledgerSystemFailure(ledger, "METER_EVIDENCE_AMBIGUOUS")
   }
+  const methodMaximum =
+    RUNTIME_ABI_V1_17.budgets[receipt.method].invocationCountMaximum
+  if (ledger.methodInvocations[receipt.method] >= methodMaximum) {
+    return ledgerSystemFailure(
+      ledger,
+      "LEDGER_CAPACITY_EXHAUSTED",
+      `method.${receipt.method}.invocationCount`,
+    )
+  }
+  if (
+    ledger.cumulative.invocationCount >=
+    RUNTIME_ABI_V1_17.budgets.matchCumulative.invocationCountMaximum
+  ) {
+    return ledgerSystemFailure(
+      ledger,
+      "LEDGER_CAPACITY_EXHAUSTED",
+      "match.invocationCount",
+    )
+  }
+  if (
+    !Number.isSafeInteger(ledger.revision + 1) ||
+    !Number.isSafeInteger(ledger.methodInvocations[receipt.method] + 1) ||
+    !Number.isSafeInteger(ledger.cumulative.invocationCount + 1)
+  ) {
+    return ledgerSystemFailure(
+      ledger,
+      "LEDGER_CAPACITY_EXHAUSTED",
+      "ledger.safeIncrement",
+    )
+  }
 
   const nextCounters = {} as Record<RuntimeAbiV117ExecutionCounterName, number>
   const dimensions: string[] = []
@@ -1182,7 +1597,11 @@ const debitExecutionLedger = (
     receipt.process.threads > invocationVector.process.threads ||
     receipt.process.children > invocationVector.process.children
   ) {
-    dimensions.push("invocation.process")
+    return ledgerSystemFailure(
+      ledger,
+      "HOST_RESOURCE_EXCESS",
+      "invocation.process",
+    )
   }
 
   const capabilityFailure = evidenceShapeFailure(receipt.capabilities)
@@ -1204,7 +1623,11 @@ const debitExecutionLedger = (
       invocationVector.capabilities.environment ||
     receipt.capabilities.shell !== invocationVector.capabilities.shell
   ) {
-    dimensions.push("invocation.capabilities")
+    return ledgerSystemFailure(
+      ledger,
+      "ENFORCEMENT_EVIDENCE_INVALID",
+      "invocation.capabilities",
+    )
   }
 
   const cancellationFailure = evidenceShapeFailure(receipt.cancellation)
@@ -1250,18 +1673,6 @@ const debitExecutionLedger = (
 
   const nextMethodCount = ledger.methodInvocations[receipt.method] + 1
   const nextInvocationCount = ledger.cumulative.invocationCount + 1
-  if (
-    nextMethodCount >
-    RUNTIME_ABI_V1_17.budgets[receipt.method].invocationCountMaximum
-  ) {
-    dimensions.unshift(`method.${receipt.method}.invocationCount`)
-  }
-  if (
-    nextInvocationCount >
-    RUNTIME_ABI_V1_17.budgets.matchCumulative.invocationCountMaximum
-  ) {
-    dimensions.unshift("match.invocationCount")
-  }
   const finalDimensions = uniqueDimensions(dimensions)
   if (receipt.attribution === "host") {
     return ledgerSystemFailure(
@@ -1272,8 +1683,7 @@ const debitExecutionLedger = (
     )
   }
 
-  const outcome =
-    finalDimensions.length === 0 ? "success" : "player_violation"
+  const outcome = finalDimensions.length === 0 ? "success" : "player_violation"
   const commitment = deepFreeze({
     identity,
     requestIdentity: receipt.requestIdentity,
@@ -1324,13 +1734,13 @@ const preflightLimits = (profile: RuntimeAbiV117PreflightProfile) => {
       computeFuel: frozen.computeFuel,
       inputBytes: frozen.inputBytes,
       outputBytes: frozen.outputBytes,
-      stderrBytes: "stderrBytes" in frozen ? frozen.stderrBytes : 0,
+      stderrBytes: frozen.stderrBytes,
     },
     memoryBytes: frozen.memoryBytes,
     process: {
       processes: frozen.processes,
-      threads: "threads" in frozen ? frozen.threads : 1,
-      children: "children" in frozen ? frozen.children : 0,
+      threads: frozen.threads,
+      children: frozen.children,
     },
     capabilities: {
       network: frozen.network,
@@ -1356,9 +1766,7 @@ const preflightDimension = (
   return `preflight.${profile}.${suffix}`
 }
 
-const debitPreflightLedger = <
-  TProfile extends RuntimeAbiV117PreflightProfile,
->(
+const debitPreflightLedger = <TProfile extends RuntimeAbiV117PreflightProfile>(
   ledger: RuntimeAbiV117PreflightLedger<TProfile>,
   receipt: RuntimeAbiV117PreflightLedgerReceipt,
 ): RuntimeAbiV117LedgerDebitResult<RuntimeAbiV117PreflightLedger<TProfile>> => {
@@ -1389,6 +1797,16 @@ const debitPreflightLedger = <
   }
   if (receipt.attribution === "ambiguous") {
     return ledgerSystemFailure(ledger, "METER_EVIDENCE_AMBIGUOUS")
+  }
+  if (
+    !Number.isSafeInteger(ledger.revision + 1) ||
+    !Number.isSafeInteger(ledger.cumulative.operationCount + 1)
+  ) {
+    return ledgerSystemFailure(
+      ledger,
+      "LEDGER_CAPACITY_EXHAUSTED",
+      "preflight.operationCount",
+    )
   }
 
   const limits = preflightLimits(ledger.profile)
@@ -1444,7 +1862,11 @@ const debitPreflightLedger = <
     receipt.process.threads > limits.process.threads ||
     receipt.process.children > limits.process.children
   ) {
-    dimensions.push(`preflight.${ledger.profile}.process`)
+    return ledgerSystemFailure(
+      ledger,
+      "HOST_RESOURCE_EXCESS",
+      `preflight.${ledger.profile}.process`,
+    )
   }
 
   const capabilityFailure = evidenceShapeFailure(receipt.capabilities)
@@ -1462,7 +1884,11 @@ const debitPreflightLedger = <
     receipt.capabilities.network !== limits.capabilities.network ||
     receipt.capabilities.filesystem !== limits.capabilities.filesystem
   ) {
-    dimensions.push(`preflight.${ledger.profile}.capabilities`)
+    return ledgerSystemFailure(
+      ledger,
+      "ENFORCEMENT_EVIDENCE_INVALID",
+      `preflight.${ledger.profile}.capabilities`,
+    )
   }
 
   const accountingFailure = evidenceShapeFailure(receipt.accountingEvidence)
@@ -1496,8 +1922,7 @@ const debitPreflightLedger = <
         : "HOST_RESOURCE_ACCOUNTING",
     )
   }
-  const outcome =
-    finalDimensions.length === 0 ? "success" : "player_violation"
+  const outcome = finalDimensions.length === 0 ? "success" : "player_violation"
   const commitment = deepFreeze({
     identity,
     requestIdentity: receipt.requestIdentity,
@@ -1555,6 +1980,12 @@ export function debitRuntimeAbiV117Ledger(
   ledger: RuntimeAbiV117Ledger,
   receipt: RuntimeAbiV117LedgerReceipt,
 ): RuntimeAbiV117LedgerDebitResult {
+  if (!isLedgerShape(ledger)) {
+    return ledgerSystemFailure(ledger, "LEDGER_SCHEMA_INVALID")
+  }
+  if (!isExecutionReceiptShape(receipt) && !isPreflightReceiptShape(receipt)) {
+    return ledgerSystemFailure(ledger, "RECEIPT_SCHEMA_INVALID")
+  }
   if (ledger.domain !== receipt.domain) {
     return ledgerSystemFailure(ledger, "LEDGER_DOMAIN_MISMATCH")
   }

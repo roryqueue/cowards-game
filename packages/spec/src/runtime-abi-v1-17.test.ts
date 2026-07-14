@@ -55,6 +55,9 @@ interface ExecutionLedgerView {
 const ledgerHash = (character: string): `sha256:${string}` =>
   `sha256:${character.repeat(64)}`
 
+const cloneLedgerValue = <T>(value: T): T =>
+  JSON.parse(JSON.stringify(value)) as T
+
 const executionReceipt = (
   ledger: ExecutionLedgerView,
   input: Readonly<{
@@ -181,6 +184,16 @@ const preflightReceipt = (
     stderrBytes: 0,
     ...input.deltas,
   }
+  const profilePolicy = {
+    sourceValidation: { threads: 1, filesystem: "none" },
+    compilation: {
+      threads: 8,
+      filesystem: "isolated-read-write-build-root-only",
+    },
+    artifactValidation: { threads: 1, filesystem: "artifact-read-only" },
+    conformance: { threads: 1, filesystem: "closed-corpus-read-only" },
+  } as const
+  const policy = profilePolicy[ledger.profile]
   return {
     domain: "preflight" as const,
     profile: ledger.profile,
@@ -227,13 +240,13 @@ const preflightReceipt = (
     process: {
       status: "verified" as const,
       processes: 1,
-      threads: 8,
+      threads: policy.threads,
       children: 0,
     },
     capabilities: {
       status: "verified" as const,
       network: "disabled" as const,
-      filesystem: "isolated-read-write-build-root-only" as const,
+      filesystem: policy.filesystem,
     },
     accountingEvidence: {
       status: "verified" as const,
@@ -1030,20 +1043,26 @@ describe("runtime ABI v1.17 pure budget ledger", () => {
     const validReceipt = executionReceipt(validLedger)
 
     const malformedLedgers = [
-      { ...structuredClone(validLedger), unexpected: true },
+      { ...cloneLedgerValue(validLedger), unexpected: true },
       {
-        ...structuredClone(validLedger),
+        ...cloneLedgerValue(validLedger),
         revision: Number.MAX_SAFE_INTEGER,
       },
       {
-        ...structuredClone(validLedger),
+        ...cloneLedgerValue(validLedger),
         cumulative: {
           ...validLedger.cumulative,
           invocationCount: Number.MAX_SAFE_INTEGER,
         },
       },
       {
-        ...structuredClone(validLedger),
+        ...cloneLedgerValue(validLedger),
+        revision: 2,
+        methodInvocations: { selectActivations: 2, soldierBrain: 0 },
+        cumulative: {
+          ...validLedger.cumulative,
+          invocationCount: 2,
+        },
         commitments: [
           {
             identity: "duplicate",
@@ -1062,6 +1081,27 @@ describe("runtime ABI v1.17 pure budget ledger", () => {
             scope: "selectActivations",
             outcome: "success",
             dimensions: [],
+          },
+        ],
+      },
+      {
+        ...cloneLedgerValue(validLedger),
+        revision: 1,
+        methodInvocations: { selectActivations: 1, soldierBrain: 0 },
+        cumulative: {
+          ...validLedger.cumulative,
+          invocationCount: 1,
+        },
+        commitments: [
+          {
+            identity: "malformed",
+            requestIdentity: ledgerHash("5"),
+            evidenceIdentity: ledgerHash("6"),
+            prestateRevision: 0,
+            scope: "selectActivations",
+            outcome: "success",
+            dimensions: [],
+            unexpected: true,
           },
         ],
       },
@@ -1144,6 +1184,11 @@ describe("runtime ABI v1.17 pure budget ledger", () => {
       expect(ledger.profile).toBe(profile)
       expect(ledger.cumulative.stderrBytes).toBe(0)
       expect(ledger.cumulative.operationCount).toBe(0)
+      const debit = runtimeAbi.debitRuntimeAbiV117Ledger(
+        ledger,
+        preflightReceipt(ledger),
+      )
+      expect(debit.kind, profile).toBe("success")
     }
   })
 
