@@ -345,3 +345,29 @@ func TestPhase258RuntimeInvocationV117UsesFiniteGoOwnedSignedBudgetRetryPolicy(t
 		}
 	})
 }
+
+func TestPhase258RuntimeInvocationV117GeneratedAuthoritySnapshotsCannotMutateLookup(t *testing.T) {
+	historicalVersion := "runtime-execution-service-v1.16"
+	original, ok := runtimeInvocationContractForVersion(historicalVersion)
+	if !ok || !original.Historical || !original.Current {
+		t.Fatalf("historical contract missing before mutation: %+v ok=%v", original, ok)
+	}
+	contracts := runtimeInvocationContractsSnapshot()
+	contracts[historicalVersion] = runtimeInvocationContractDescriptor{}
+	delete(contracts, "runtime-invocation-v1.17")
+	after, ok := runtimeInvocationContractForVersion(historicalVersion)
+	if !ok || after != original {
+		t.Fatalf("caller mutation changed version dispatch: before=%+v after=%+v ok=%v", original, after, ok)
+	}
+
+	retryability := runtimeInvocationV117SystemFailureRetryabilitySnapshot()
+	retryability["ADAPTER_CRASH"] = false
+	delete(retryability, "OUTER_FRAME_MISSING")
+	retryable, known := runtimeInvocationV117SystemFailureRetryable("ADAPTER_CRASH")
+	if !known || !retryable {
+		t.Fatalf("caller mutation changed retryability lookup: retryable=%v known=%v", retryable, known)
+	}
+	if retryable, known := runtimeInvocationV117SystemFailureRetryable("UNKNOWN"); known || retryable {
+		t.Fatalf("unknown failure code did not fail closed: retryable=%v known=%v", retryable, known)
+	}
+}

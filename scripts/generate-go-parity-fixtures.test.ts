@@ -320,4 +320,20 @@ describe("versioned TypeScript-to-Go parity generator", () => {
       "runtimeInvocationV117SystemFailureRetryability[code]",
     )
   })
+
+  it("emits no package-global mutable authority maps", () => {
+    const generated = read(generatedRelative).toString("utf8")
+    expect(generated).not.toContain(
+      "var runtimeInvocationContracts = map[string]runtimeInvocationContractDescriptor",
+    )
+    expect(generated).not.toContain(
+      "var runtimeInvocationV117SystemFailureRetryability = map[string]bool",
+    )
+    expect(generated).toContain("switch version")
+    expect(generated).toContain("switch code")
+    expect(generated).toContain("runtimeInvocationContractsSnapshot")
+    expect(generated).toContain(
+      "runtimeInvocationV117SystemFailureRetryabilitySnapshot",
+    )
+  })
 })
