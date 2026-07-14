@@ -164,6 +164,11 @@ func TestPhase258SourceIdentityPostgres(t *testing.T) {
 		if err := json.Unmarshal(rec.Body.Bytes(), &response); err != nil {
 			t.Fatal(err)
 		}
+		for _, privateField := range []string{"readinessState", "readinessCategory"} {
+			if _, exposed := response[privateField]; exposed {
+				t.Fatalf("vector %d create response exposed internal field %s", i, privateField)
+			}
+		}
 		revisionID := stringValue(response, "strategyRevisionId")
 		var stored string
 		var hexBytes, version, originalHash, normalizedHash, policy string

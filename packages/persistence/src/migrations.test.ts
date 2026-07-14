@@ -45,7 +45,10 @@ describe("migrations", () => {
 
   it("defines an all-or-none immutable source identity v2 group without legacy backfill", async () => {
     const sql = await readFile(
-      new URL("0018_strategy_revision_source_identity.sql", migrationsDirectory),
+      new URL(
+        "0018_strategy_revision_source_identity.sql",
+        migrationsDirectory,
+      ),
       "utf8",
     )
     for (const column of [
@@ -61,8 +64,14 @@ describe("migrations", () => {
       expect(sql).toContain(column)
     }
     expect(sql).toContain("num_nonnulls")
+    expect(sql).toContain("source_line_endings - 'kind' - 'lf' - 'crlf' - 'cr'")
+    expect(sql).toContain("normalized_source_bytes = octet_length")
+    expect(sql).toContain("source_has_final_newline =")
+    expect(sql).toContain("old.source is distinct from new.source")
     expect(sql).toContain("source identity v2 is immutable")
-    expect(sql).not.toMatch(/update\s+strategy_revisions\s+set\s+source_identity_version/iu)
+    expect(sql).not.toMatch(
+      /update\s+strategy_revisions\s+set\s+source_identity_version/iu,
+    )
   })
 
   it("defines report deduplication and append-only governance audit", async () => {
@@ -124,7 +133,10 @@ describe("migrations", () => {
 
   it("binds MatchSets to exact installed authority receipts", async () => {
     const sql = await readFile(
-      new URL("0014_matchset_authority_install_receipts.sql", migrationsDirectory),
+      new URL(
+        "0014_matchset_authority_install_receipts.sql",
+        migrationsDirectory,
+      ),
       "utf8",
     )
 
@@ -135,7 +147,9 @@ describe("migrations", () => {
     expect(sql).toContain("authority_source_manifest_hash")
     expect(sql).toContain("authority_source_set")
     expect(sql).toContain("prevent_match_set_authority_receipt_rewrite")
-    expect(sql).toContain("alter column conformance_certificate_id drop not null")
+    expect(sql).toContain(
+      "alter column conformance_certificate_id drop not null",
+    )
     expect(sql).toContain("match_set_execution_entrants_purpose_floor")
   })
 })

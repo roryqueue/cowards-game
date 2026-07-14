@@ -22,26 +22,31 @@ describe("source identity v2", () => {
     ["crlf", "a\r\nb\r\n", { kind: "crlf", lf: 0, crlf: 2, cr: 0 }, true],
     ["cr", "a\rb\r", { kind: "cr", lf: 0, crlf: 0, cr: 2 }, true],
     ["mixed", "a\r\nb\nc\r", { kind: "mixed", lf: 1, crlf: 1, cr: 1 }, true],
-  ])("derives exact %s line facts and separate domain hashes", (_name, source, endings, finalNewline) => {
-    const identity = buildSourceIdentityV2(source)
-    const original = Buffer.from(source, "utf8")
-    const normalized = Buffer.from(source.replace(/\r\n?|\n/g, "\n"), "utf8")
+  ])(
+    "derives exact %s line facts and separate domain hashes",
+    (_name, source, endings, finalNewline) => {
+      const identity = buildSourceIdentityV2(source)
+      const original = Buffer.from(source, "utf8")
+      const normalized = Buffer.from(source.replace(/\r\n?|\n/g, "\n"), "utf8")
 
-    expect(identity).toEqual({
-      sourceIdentityVersion: SOURCE_IDENTITY_VERSION_V2,
-      originalSourceHash: hashCanonicalIdentity("originalSource", [original]),
-      originalSourceBytes: original.byteLength,
-      normalizedSourceHash: hashCanonicalIdentity("normalizedSource", [normalized]),
-      normalizedSourceBytes: normalized.byteLength,
-      sourceNormalizationPolicy: SOURCE_NORMALIZATION_POLICY_V1_17,
-      sourceLineEndings: endings,
-      sourceHasFinalNewline: finalNewline,
-      normalizedSource: normalized.toString("utf8"),
-    })
-    expect(createHash("sha256").update(original).digest("hex")).not.toBe(
-      identity.originalSourceHash,
-    )
-  })
+      expect(identity).toEqual({
+        sourceIdentityVersion: SOURCE_IDENTITY_VERSION_V2,
+        originalSourceHash: hashCanonicalIdentity("originalSource", [original]),
+        originalSourceBytes: original.byteLength,
+        normalizedSourceHash: hashCanonicalIdentity("normalizedSource", [
+          normalized,
+        ]),
+        normalizedSourceBytes: normalized.byteLength,
+        sourceNormalizationPolicy: SOURCE_NORMALIZATION_POLICY_V1_17,
+        sourceLineEndings: endings,
+        sourceHasFinalNewline: finalNewline,
+        normalizedSource: normalized.toString("utf8"),
+      })
+      expect(createHash("sha256").update(original).digest("hex")).not.toBe(
+        identity.originalSourceHash,
+      )
+    },
+  )
 })
 
 describeDatabase("source identity v2 persistence", () => {
@@ -59,8 +64,13 @@ describeDatabase("source identity v2 persistence", () => {
 
   afterAll(async () => {
     if (!pool) return
-    await pool.query("delete from strategy_revisions where strategy_id in (select id from strategies where owner_user_id = $1)", [userId])
-    await pool.query("delete from strategies where owner_user_id = $1", [userId])
+    await pool.query(
+      "delete from strategy_revisions where strategy_id in (select id from strategies where owner_user_id = $1)",
+      [userId],
+    )
+    await pool.query("delete from strategies where owner_user_id = $1", [
+      userId,
+    ])
     await pool.query("delete from users where id = $1", [userId])
     await pool.end()
   })
@@ -93,10 +103,32 @@ describeDatabase("source identity v2 persistence", () => {
        (id, strategy_id, source, source_hash, source_bytes, runtime, engine_compatibility, validation, metadata)
        select $1, strategy_id, 'legacy', $2, 6, runtime, engine_compatibility, validation, '{}'::jsonb
        from strategy_revisions where id = $3`,
-      [legacyId, createHash("sha256").update("legacy").digest("hex"), revision.id],
+      [
+        legacyId,
+        createHash("sha256").update("legacy").digest("hex"),
+        revision.id,
+      ],
     )
-    const legacy = await pool.query("select source_identity_version, original_source_hash from strategy_revisions where id = $1", [legacyId])
-    expect(legacy.rows[0]).toEqual({ source_identity_version: null, original_source_hash: null })
+    const legacy = await pool.query(
+      "select source_identity_version, original_source_hash from strategy_revisions where id = $1",
+      [legacyId],
+    )
+    expect(legacy.rows[0]).toEqual({
+      source_identity_version: null,
+      original_source_hash: null,
+    })
+
+    await expect(
+      pool.query(
+        "update strategy_revisions set source = 'manufactured-history' where id = $1",
+        [legacyId],
+      ),
+    ).rejects.toThrow(/immutable/i)
+    await expect(
+      pool.query("select source from strategy_revisions where id = $1", [
+        legacyId,
+      ]),
+    ).resolves.toMatchObject({ rows: [{ source: "legacy" }] })
   })
 
   it("rejects partial groups and every post-insert identity mutation", async () => {
@@ -105,7 +137,57 @@ describeDatabase("source identity v2 persistence", () => {
       source: "immutable\n",
     })
     await expect(
-      pool.query("update strategy_revisions set original_source_hash = $2 where id = $1", [revision.id, "f".repeat(64)]),
+      pool.query(
+        "update strategy_revisions set original_source_hash = $2 where id = $1",
+        [revision.id, "f".repeat(64)],
+      ),
     ).rejects.toThrow(/immutable/i)
   })
+
+  it.each([
+    ["missing keys", {}],
+    ["negative count", { kind: "lf", lf: -1, crlf: 0, cr: 0 }],
+    ["inconsistent kind", { kind: "none", lf: 1, crlf: 0, cr: 0 }],
+    ["extra key", { kind: "lf", lf: 1, crlf: 0, cr: 0, private: 1 }],
+  ])(
+    "rejects %s in source line-ending identity",
+    async (_name, lineEndings) => {
+      const template = await createAccountStrategyRevision(pool, {
+        userId: userId as never,
+        source: "template\n",
+      })
+      const source = "broken\n"
+      const sourceBytes = Buffer.byteLength(source)
+      const id = `strategy-revision:invalid-identity:${randomUUID()}`
+      await expect(
+        pool.query(
+          `insert into strategy_revisions (
+           id, strategy_id, source, source_hash, source_bytes, runtime,
+           engine_compatibility, validation, metadata,
+           source_identity_version, original_source_hash, original_source_bytes,
+           normalized_source_hash, normalized_source_bytes,
+           source_normalization_policy, source_line_endings,
+           source_has_final_newline
+         )
+         select $1, strategy_id, $2, $3, $4, runtime,
+                engine_compatibility, validation, '{}'::jsonb,
+                $5, $6, $4, $7, $4, $8, $9::jsonb, true
+           from strategy_revisions
+          where id = $10`,
+          [
+            id,
+            source,
+            createHash("sha256").update(source).digest("hex"),
+            sourceBytes,
+            SOURCE_IDENTITY_VERSION_V2,
+            "a".repeat(64),
+            "b".repeat(64),
+            SOURCE_NORMALIZATION_POLICY_V1_17,
+            JSON.stringify(lineEndings),
+            template.id,
+          ],
+        ),
+      ).rejects.toThrow(/source_identity_v2_shape/i)
+    },
+  )
 })

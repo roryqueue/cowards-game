@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto"
 import { Buffer } from "node:buffer"
 import { expect, test, type Page } from "@playwright/test"
 import { createDatabasePool } from "@cowards/persistence/db"
+import { hashCanonicalIdentity } from "@cowards/spec"
 
 const databaseUrl = process.env.DATABASE_URL
 const goBackendUrl = process.env.COWARDS_GO_BACKEND_URL
@@ -147,8 +148,12 @@ test("Workshop save preserves representable LF/no-final-newline source through G
       source_line_endings: { kind: "lf", crlf: 0, cr: 0 },
       source_has_final_newline: false,
     })
-    expect(stored.original_source_hash).toMatch(/^[0-9a-f]{64}$/u)
-    expect(stored.normalized_source_hash).toMatch(/^[0-9a-f]{64}$/u)
+    expect(stored.original_source_hash).toBe(
+      hashCanonicalIdentity("originalSource", [Buffer.from(source)]),
+    )
+    expect(stored.normalized_source_hash).toBe(
+      hashCanonicalIdentity("normalizedSource", [Buffer.from(source)]),
+    )
 
     const ownerSource = await page.request.get(
       `/api/account/revisions/${encodeURIComponent(stored.id)}/source`,
@@ -157,6 +162,66 @@ test("Workshop save preserves representable LF/no-final-newline source through G
     expect(ownerSource.headers()["cache-control"]).toBe("private, no-store")
     expect(ownerSource.headers()["content-type"]).toContain("text/plain")
     expect(await ownerSource.text()).toBe(source)
+
+    const mixedSource = `${source}\r\n// phase258-crlf\n// phase258-lf\r// phase258-cr`
+    const normalizedMixed = mixedSource.replace(/\r\n?/gu, "\n")
+    const mixedSave = await page.request.post("/api/account/revisions/save", {
+      data: {
+        source: mixedSource,
+        sourceFormat: "typescript",
+        label: `v1.37 mixed source identity ${suffix}`,
+      },
+    })
+    expect(mixedSave.status(), await mixedSave.text()).toBe(201)
+    const mixedBody = (await mixedSave.json()) as { revision: { id: string } }
+    const mixed = await pool.query<{
+      source: string
+      source_hex: string
+      original_source_hash: string
+      original_source_bytes: number
+      normalized_source_hash: string
+      normalized_source_bytes: number
+      source_line_endings: {
+        kind: string
+        lf: number
+        crlf: number
+        cr: number
+      }
+      source_has_final_newline: boolean
+    }>(
+      `select source, encode(convert_to(source, 'UTF8'), 'hex') source_hex,
+              original_source_hash, original_source_bytes,
+              normalized_source_hash, normalized_source_bytes,
+              source_line_endings, source_has_final_newline
+         from strategy_revisions
+        where id = $1`,
+      [mixedBody.revision.id],
+    )
+    expect(mixed.rowCount).toBe(1)
+    expect(mixed.rows[0]).toMatchObject({
+      source: mixedSource,
+      source_hex: Buffer.from(mixedSource).toString("hex"),
+      original_source_hash: hashCanonicalIdentity("originalSource", [
+        Buffer.from(mixedSource),
+      ]),
+      original_source_bytes: Buffer.byteLength(mixedSource),
+      normalized_source_hash: hashCanonicalIdentity("normalizedSource", [
+        Buffer.from(normalizedMixed),
+      ]),
+      normalized_source_bytes: Buffer.byteLength(normalizedMixed),
+      source_line_endings: {
+        kind: "mixed",
+        lf: (source.match(/\n/gu) ?? []).length + 1,
+        crlf: 1,
+        cr: 1,
+      },
+      source_has_final_newline: false,
+    })
+    const mixedOwnerSource = await page.request.get(
+      `/api/account/revisions/${encodeURIComponent(mixedBody.revision.id)}/source`,
+    )
+    expect(mixedOwnerSource.status(), await mixedOwnerSource.text()).toBe(200)
+    expect(await mixedOwnerSource.text()).toBe(mixedSource)
   } finally {
     if (userId) {
       await pool.query(

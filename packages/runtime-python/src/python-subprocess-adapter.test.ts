@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 import { Buffer } from "node:buffer"
 import {
+  admitPythonCandidateHostResponseV117,
   createPythonCandidateInvocationAdapterV117,
   createPythonRuntimeFromRevision,
   PYTHON_RUNTIME_ENVIRONMENT,
@@ -45,6 +46,7 @@ const candidateIdentity = {
 
 const candidateRequest = (
   revision = buildPythonStrategyRevision({ source: pythonSource }),
+  budget: { wallMilliseconds?: number; outputBytes?: number } = {},
 ): AuthenticatedRuntimeInvocationRequestV117 => {
   const identity = buildPythonSourceIdentityV117(revision.source)
   const artifact = revision.metadata.sourceArtifact!
@@ -70,13 +72,14 @@ const candidateRequest = (
       },
       budget: {
         profileId: "runtime-budget-profile-v1.17-candidate",
-        wallMilliseconds: 1_000,
+        wallMilliseconds: budget.wallMilliseconds ?? 1_000,
         computeFuel: 10_000_000,
         memoryBytes: 67_108_864,
-        outputBytes: 262_144,
+        outputBytes: budget.outputBytes ?? 262_144,
         processLimit: 1,
         matchCumulative: {
-          accounting: "signed-monotonic-per-invocation-deltas-plus-cumulative-total",
+          accounting:
+            "signed-monotonic-per-invocation-deltas-plus-cumulative-total",
           computeFuel: 2_600_000_000,
           invocationCountMaximum: 260,
           memoryBytes: 67_108_864,
@@ -111,12 +114,29 @@ describe("Python subprocess Strategy provider ABI", () => {
     const revision = buildPythonStrategyRevision({ source })
     const artifact = revision.metadata.sourceArtifact!
 
-    expect(identity.originalSourceSha256).not.toBe(identity.normalizedSourceSha256)
+    expect(identity.originalSourceSha256).not.toBe(
+      identity.normalizedSourceSha256,
+    )
     expect(Buffer.from(artifact.bytesBase64!, "base64").toString("utf8")).toBe(
       identity.normalizedSource,
     )
-    expect(identity.lineEndings).toEqual({ kind: "crlf", lf: 0, crlf: 13, cr: 0 })
+    expect(identity.lineEndings).toEqual({
+      kind: "crlf",
+      lf: 0,
+      crlf: 13,
+      cr: 0,
+    })
     expect(identity.hasFinalNewline).toBe(true)
+    expect(artifact.sourceIdentity).toEqual({
+      identityVersion: identity.identityVersion,
+      normalizationPolicy: identity.normalizationPolicy,
+      originalSourceSha256: identity.originalSourceSha256,
+      originalSourceBytes: Buffer.byteLength(source),
+      normalizedSourceSha256: identity.normalizedSourceSha256,
+      normalizedSourceBytes: Buffer.byteLength(identity.normalizedSource),
+      lineEndings: identity.lineEndings,
+      hasFinalNewline: true,
+    })
   })
 
   it("executes CRLF source through the authenticated candidate envelope", () => {
@@ -133,7 +153,9 @@ describe("Python subprocess Strategy provider ABI", () => {
       identity: candidateIdentity,
     })
 
-    const responseBytes = adapter(serializeRuntimeInvocationRequestV117(request))
+    const responseBytes = adapter(
+      serializeRuntimeInvocationRequestV117(request),
+    )
     const admitted = verifyRuntimeInvocationResponseV117(
       responseBytes,
       request,
@@ -154,38 +176,78 @@ describe("Python subprocess Strategy provider ABI", () => {
   })
 
   it.each([
-    ["duplicate payload", Buffer.from('{"activationOrders":[],"strategyMemory":{},"strategyMemory":[]}'), "player_violation", "INVALID_OUTPUT"],
-    ["truncated payload", Buffer.from('{"activationOrders":['), "player_violation", "INVALID_OUTPUT"],
-    ["deep payload", Buffer.from(`${"[".repeat(80)}0${"]".repeat(80)}`), "player_violation", "INVALID_OUTPUT"],
-  ] as const)("classifies %s as Strategy-owned invalid output", (_name, payloadBytes, kind, code) => {
-    const revision = buildPythonStrategyRevision({ source: pythonSource })
-    const request = candidateRequest(revision)
-    const adapter = createPythonCandidateInvocationAdapterV117({
-      revision,
-      identity: candidateIdentity,
-      hostRunner: () => ({ kind: "payload", payloadBytes }),
-    })
-    const response = verifyRuntimeInvocationResponseV117(
-      adapter(serializeRuntimeInvocationRequestV117(request)),
-      request,
-      candidateIdentity,
-    )
-    expect(response.kind).toBe("success")
-    if (response.kind === "success") {
-      expect(response.value.outcome.kind).toBe(kind)
-      expect(
-        response.value.outcome.kind === "player_violation"
-          ? response.value.outcome.violation.code
-          : undefined,
-      ).toBe(code)
-    }
-  })
+    [
+      "duplicate payload",
+      Buffer.from(
+        '{"activationOrders":[],"strategyMemory":{},"strategyMemory":[]}',
+      ),
+      "player_violation",
+      "INVALID_OUTPUT",
+    ],
+    [
+      "truncated payload",
+      Buffer.from('{"activationOrders":['),
+      "player_violation",
+      "INVALID_OUTPUT",
+    ],
+    [
+      "deep payload",
+      Buffer.from(`${"[".repeat(80)}0${"]".repeat(80)}`),
+      "player_violation",
+      "INVALID_OUTPUT",
+    ],
+  ] as const)(
+    "classifies %s as Strategy-owned invalid output",
+    (_name, payloadBytes, kind, code) => {
+      const revision = buildPythonStrategyRevision({ source: pythonSource })
+      const request = candidateRequest(revision)
+      const adapter = createPythonCandidateInvocationAdapterV117({
+        revision,
+        identity: candidateIdentity,
+        hostRunner: () => ({ kind: "payload", payloadBytes }),
+      })
+      const response = verifyRuntimeInvocationResponseV117(
+        adapter(serializeRuntimeInvocationRequestV117(request)),
+        request,
+        candidateIdentity,
+      )
+      expect(response.kind).toBe("success")
+      if (response.kind === "success") {
+        expect(response.value.outcome.kind).toBe(kind)
+        expect(
+          response.value.outcome.kind === "player_violation"
+            ? response.value.outcome.violation.code
+            : undefined,
+        ).toBe(code)
+      }
+    },
+  )
 
   it.each([
-    ["proven Strategy exception", { kind: "strategy_exception" } as const, "player_violation", "THROWN_EXCEPTION"],
-    ["host crash", { kind: "host_crash" } as const, "system_failure", "HOST_CRASH"],
-    ["transport ambiguity", { kind: "transport_crash" } as const, "system_failure", "TRANSPORT_CRASH"],
-    ["preflight unavailable", { kind: "preflight_unavailable" } as const, "system_failure", "AMBIGUOUS_ATTRIBUTION"],
+    [
+      "proven Strategy exception",
+      { kind: "strategy_exception" } as const,
+      "player_violation",
+      "THROWN_EXCEPTION",
+    ],
+    [
+      "host crash",
+      { kind: "host_crash" } as const,
+      "system_failure",
+      "HOST_CRASH",
+    ],
+    [
+      "transport ambiguity",
+      { kind: "transport_crash" } as const,
+      "system_failure",
+      "TRANSPORT_CRASH",
+    ],
+    [
+      "preflight unavailable",
+      { kind: "preflight_unavailable" } as const,
+      "system_failure",
+      "AMBIGUOUS_ATTRIBUTION",
+    ],
   ])("keeps %s in its exclusive owner", (_name, hostResult, kind, code) => {
     const revision = buildPythonStrategyRevision({ source: pythonSource })
     const request = candidateRequest(revision)
@@ -244,6 +306,234 @@ describe("Python subprocess Strategy provider ABI", () => {
         failure: { code: "OUTER_FRAME_WRONG_BINDING" },
       })
       expect(response.value.outcome).not.toHaveProperty("violation")
+    }
+  })
+
+  it("owns stale artifact source metadata as no-penalty system failure", () => {
+    const revision = buildPythonStrategyRevision({ source: pythonSource })
+    const request = candidateRequest(revision)
+    const stale = {
+      ...revision,
+      metadata: {
+        ...revision.metadata,
+        sourceArtifact: {
+          ...revision.metadata.sourceArtifact!,
+          sourceHash: "0".repeat(64),
+        },
+      },
+    }
+    const response = verifyRuntimeInvocationResponseV117(
+      createPythonCandidateInvocationAdapterV117({
+        revision: stale,
+        identity: candidateIdentity,
+      })(serializeRuntimeInvocationRequestV117(request)),
+      request,
+      candidateIdentity,
+    )
+    expect(response.kind).toBe("success")
+    if (response.kind === "success") {
+      expect(response.value.outcome).toMatchObject({
+        kind: "system_failure",
+        failure: { code: "OUTER_FRAME_WRONG_BINDING" },
+      })
+      expect(response.value.outcome).not.toHaveProperty("violation")
+    }
+  })
+
+  it("owns stale private normalization policy as no-penalty system failure", () => {
+    const revision = buildPythonStrategyRevision({ source: pythonSource })
+    const request = candidateRequest(revision)
+    const stale = {
+      ...revision,
+      metadata: {
+        ...revision.metadata,
+        sourceArtifact: {
+          ...revision.metadata.sourceArtifact!,
+          sourceIdentity: {
+            ...revision.metadata.sourceArtifact!.sourceIdentity!,
+            normalizationPolicy: "stale-policy" as never,
+          },
+        },
+      },
+    }
+    const response = verifyRuntimeInvocationResponseV117(
+      createPythonCandidateInvocationAdapterV117({
+        revision: stale,
+        identity: candidateIdentity,
+      })(serializeRuntimeInvocationRequestV117(request)),
+      request,
+      candidateIdentity,
+    )
+    expect(response.kind).toBe("success")
+    if (response.kind === "success") {
+      expect(response.value.outcome).toMatchObject({
+        kind: "system_failure",
+        failure: { code: "OUTER_FRAME_WRONG_BINDING" },
+      })
+      expect(response.value.outcome).not.toHaveProperty("violation")
+    }
+  })
+
+  it("owns malformed host base64 as transport failure without a player penalty", () => {
+    const revision = buildPythonStrategyRevision({ source: pythonSource })
+    const request = candidateRequest(revision)
+    const adapter = createPythonCandidateInvocationAdapterV117({
+      revision,
+      identity: candidateIdentity,
+      hostRunner: () =>
+        admitPythonCandidateHostResponseV117(
+          Buffer.from('{"kind":"payload","payloadBase64":"!!!!"}'),
+        ),
+    })
+    const response = verifyRuntimeInvocationResponseV117(
+      adapter(serializeRuntimeInvocationRequestV117(request)),
+      request,
+      candidateIdentity,
+    )
+    expect(response.kind).toBe("success")
+    if (response.kind === "success") {
+      expect(response.value.outcome).toMatchObject({
+        kind: "system_failure",
+        failure: { code: "TRANSPORT_CRASH" },
+      })
+      expect(response.value.outcome).not.toHaveProperty("violation")
+    }
+  })
+
+  it("fails a zero signed wall budget closed without launching the host", () => {
+    const revision = buildPythonStrategyRevision({ source: pythonSource })
+    const request = candidateRequest(revision, { wallMilliseconds: 0 })
+    let hostCalled = false
+    const response = verifyRuntimeInvocationResponseV117(
+      createPythonCandidateInvocationAdapterV117({
+        revision,
+        identity: candidateIdentity,
+        hostRunner: () => {
+          hostCalled = true
+          return { kind: "host_crash" }
+        },
+      })(serializeRuntimeInvocationRequestV117(request)),
+      request,
+      candidateIdentity,
+    )
+    expect(hostCalled).toBe(false)
+    expect(response.kind).toBe("success")
+    if (response.kind === "success") {
+      expect(response.value.outcome).toMatchObject({
+        kind: "system_failure",
+        failure: { code: "AMBIGUOUS_ATTRIBUTION" },
+      })
+      expect(response.value.outcome).not.toHaveProperty("violation")
+    }
+  })
+
+  it("applies the signed output budget to decoded raw payload bytes at N and N+1", () => {
+    const revision = buildPythonStrategyRevision({ source: pythonSource })
+    const prefix = '{"activationOrders":[],"strategyMemory":"'
+    const suffix = '"}'
+    const cap = 256
+    const exact = Buffer.from(
+      `${prefix}${"x".repeat(cap - prefix.length - suffix.length)}${suffix}`,
+    )
+    expect(exact.byteLength).toBe(cap)
+
+    for (const [payloadBytes, code] of [
+      [exact, "success"],
+      [
+        Buffer.concat([exact.subarray(0, -2), Buffer.from('x"}')]),
+        "OVERSIZED_OUTPUT",
+      ],
+    ] as const) {
+      const request = candidateRequest(revision, { outputBytes: cap })
+      const response = verifyRuntimeInvocationResponseV117(
+        createPythonCandidateInvocationAdapterV117({
+          revision,
+          identity: candidateIdentity,
+          hostRunner: () => ({ kind: "payload", payloadBytes }),
+        })(serializeRuntimeInvocationRequestV117(request)),
+        request,
+        candidateIdentity,
+      )
+      expect(response.kind).toBe("success")
+      if (response.kind === "success") {
+        expect(
+          response.value.outcome.kind === "player_violation"
+            ? response.value.outcome.violation.code
+            : response.value.outcome.kind,
+        ).toBe(code)
+      }
+    }
+  })
+
+  it("accepts a near-cap raw host payload without base64-envelope ENOBUFS drift", () => {
+    const source = `def select_activations(input):\n    return {"activationOrders": [], "strategyMemory": "x" * 249900}\n\ndef soldier_brain(input):\n    return {"action": {"type": "TURN_TO_STONE"}, "soldierMemory": None}\n`
+    const revision = buildPythonStrategyRevision({ source })
+    const request = candidateRequest(revision)
+    const host = runPythonCandidateHostV117(
+      request,
+      buildPythonSourceIdentityV117(source).normalizedSource,
+    )
+    expect(host.kind).toBe("payload")
+    if (host.kind === "payload") {
+      expect(host.payloadBytes.byteLength).toBeGreaterThan(249_900)
+      expect(host.payloadBytes.byteLength).toBeLessThanOrEqual(
+        request.budget.outputBytes,
+      )
+    }
+  })
+
+  it("classifies an actual-host non-serializable return as INVALID_OUTPUT", () => {
+    const source = `def select_activations(input):\n    return {"activationOrders": [], "strategyMemory": range(1)}\n\ndef soldier_brain(input):\n    return {"action": {"type": "TURN_TO_STONE"}, "soldierMemory": None}\n`
+    const revision = buildPythonStrategyRevision({ source })
+    expect(revision.validation.valid).toBe(true)
+    const request = candidateRequest(revision)
+    const response = verifyRuntimeInvocationResponseV117(
+      createPythonCandidateInvocationAdapterV117({
+        revision,
+        identity: candidateIdentity,
+      })(serializeRuntimeInvocationRequestV117(request)),
+      request,
+      candidateIdentity,
+    )
+    expect(response.kind).toBe("success")
+    if (response.kind === "success") {
+      expect(response.value.outcome).toMatchObject({
+        kind: "player_violation",
+        violation: { code: "INVALID_OUTPUT" },
+      })
+      expect(response.value.outcome).not.toHaveProperty("failure")
+    }
+  })
+
+  it("canonicalizes actual-host finite floats before payload admission", () => {
+    const source = `def select_activations(input):\n    return {"activationOrders": [], "strategyMemory": {"whole": 1.0}}\n\ndef soldier_brain(input):\n    return {"action": {"type": "TURN_TO_STONE"}, "soldierMemory": None}\n`
+    const revision = buildPythonStrategyRevision({ source })
+    expect(revision.validation.valid).toBe(true)
+    const request = candidateRequest(revision)
+    const host = runPythonCandidateHostV117(
+      request,
+      buildPythonSourceIdentityV117(source).normalizedSource,
+    )
+    expect(host.kind).toBe("payload")
+    if (host.kind === "payload") {
+      expect(Buffer.from(host.payloadBytes).toString("utf8")).toBe(
+        '{"activationOrders":[],"strategyMemory":{"whole":1}}',
+      )
+    }
+    const response = verifyRuntimeInvocationResponseV117(
+      createPythonCandidateInvocationAdapterV117({
+        revision,
+        identity: candidateIdentity,
+      })(serializeRuntimeInvocationRequestV117(request)),
+      request,
+      candidateIdentity,
+    )
+    expect(response.kind).toBe("success")
+    if (response.kind === "success") {
+      expect(response.value.outcome).toMatchObject({
+        kind: "success",
+        value: { strategyMemory: { whole: 1 } },
+      })
     }
   })
   it("runs selectActivations through the v1.7 JSON ABI", async () => {
