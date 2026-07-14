@@ -1,6 +1,6 @@
 #!/usr/bin/env -S pnpm exec tsx
 import net from "node:net"
-import { randomUUID } from "node:crypto"
+import { createHash, randomBytes, randomUUID } from "node:crypto"
 import path from "node:path"
 import { clearTimeout, setTimeout } from "node:timers"
 import { fileURLToPath } from "node:url"
@@ -22,14 +22,17 @@ import {
 /* eslint-disable-next-line no-restricted-imports -- Preflight needs the candidate contract before package build output exists. */
 import {
   RUNTIME_ABI_V1_17,
+  createAuthenticatedRuntimePreflightReceiptV117,
+  createAuthenticatedRuntimePreflightRequestV117,
   createRuntimeAbiV117PreflightLedger,
-  debitRuntimeAbiV117Ledger,
+  createRuntimePreflightObservedEvidenceV117,
+  serializeRuntimePreflightReceiptV117,
+  serializeRuntimePreflightRequestV117,
+  verifyRuntimePreflightReceiptV117,
+  verifyRuntimePreflightRequestV117,
   type Chronicle,
   type MatchId,
   type MatchSetId,
-  type RuntimeAbiV117LedgerDebitResult,
-  type RuntimeAbiV117PreflightLedger,
-  type RuntimeAbiV117PreflightLedgerReceipt,
   type RuntimeAbiV117PreflightProfile,
 } from "../packages/spec/src/index.ts"
 import { checkRuntimeBudgetCapabilitiesV117Artifact } from "./generate-runtime-budget-capabilities-v1-17.js"
@@ -63,34 +66,6 @@ interface Options {
 export const PREFLIGHT_NON_CERTIFICATION_NOTICE =
   "A passing contract-only validation and operational smoke does not certify toolchain identity, containment, executable conformance, or any counted runtime lane."
 
-export interface PreflightFoldResult<
-  TProfile extends RuntimeAbiV117PreflightProfile,
-> {
-  readonly ledger: RuntimeAbiV117PreflightLedger<TProfile>
-  readonly outcomes: readonly RuntimeAbiV117LedgerDebitResult<
-    RuntimeAbiV117PreflightLedger<TProfile>
-  >[]
-}
-
-export const foldPreflightLedgerV117 = <
-  TProfile extends RuntimeAbiV117PreflightProfile,
->(
-  profile: TProfile,
-  receipts: readonly RuntimeAbiV117PreflightLedgerReceipt[],
-): PreflightFoldResult<TProfile> => {
-  let ledger = createRuntimeAbiV117PreflightLedger(profile)
-  const outcomes: RuntimeAbiV117LedgerDebitResult<
-    RuntimeAbiV117PreflightLedger<TProfile>
-  >[] = []
-  for (const receipt of receipts) {
-    const outcome = debitRuntimeAbiV117Ledger(ledger, receipt)
-    outcomes.push(outcome)
-    ledger = outcome.ledger
-    if (outcome.kind === "system_failure") break
-  }
-  return Object.freeze({ ledger, outcomes: Object.freeze(outcomes) })
-}
-
 interface PreflightDependencies {
   readonly checkCapabilityArtifact: typeof checkRuntimeBudgetCapabilitiesV117Artifact
   readonly createPool: typeof createDatabasePool
@@ -116,6 +91,119 @@ const safeFailureDetail = (error: unknown): string =>
   error instanceof SafePreflightError
     ? error.message
     : "Preflight check failed; details are intentionally redacted."
+
+const diagnosticSha256 = (label: string): `sha256:${string}` =>
+  `sha256:${createHash("sha256").update(label, "utf8").digest("hex")}`
+
+const verifyAuthenticatedPreflightDiagnosticsV117 = (
+  profiles: readonly RuntimeAbiV117PreflightProfile[],
+): void => {
+  const identity = {
+    keyId: `preflight-ephemeral:${randomUUID()}`,
+    secret: randomBytes(32).toString("hex"),
+  }
+  const encoder = new TextEncoder()
+
+  for (const profile of profiles) {
+    const request = createAuthenticatedRuntimePreflightRequestV117(
+      {
+        requestId: `preflight-diagnostic-request:${profile}`,
+        operationId: `preflight-diagnostic-operation:${profile}`,
+        profile,
+        accounting: {
+          prestate: createRuntimeAbiV117PreflightLedger(profile),
+        },
+        input: {
+          inputId: `preflight-contract-profile:${profile}`,
+          kind: "manifest-bytes",
+          bytes: encoder.encode(`runtime-preflight-v1.17:${profile}`),
+        },
+        retryId: `preflight-diagnostic-retry:${profile}`,
+        evidenceContext: {
+          producer: {
+            producerId: "preflight-self-diagnostic-untrusted",
+            buildSha256: diagnosticSha256("preflight-self-diagnostic-build"),
+          },
+          toolchain: {
+            toolchainId: `node-${process.versions.node}`,
+            runtimeExecutableSha256: diagnosticSha256(
+              "preflight-runtime-identity-unavailable",
+            ),
+            compilerExecutableSha256: diagnosticSha256(
+              "preflight-compiler-identity-unavailable",
+            ),
+            sysrootStdlibSha256: diagnosticSha256(
+              "preflight-sysroot-identity-unavailable",
+            ),
+            adapterBuildSha256: diagnosticSha256(
+              "preflight-adapter-build-unavailable",
+            ),
+            reportedVersion: `node-${process.versions.node}`,
+            targetAbi: "strategy-runtime-abi-v1.17",
+          },
+          containment: {
+            policyId: "preflight-containment-evidence-unavailable",
+            policySha256: diagnosticSha256(
+              "preflight-containment-policy-unavailable",
+            ),
+            evidenceBundleSha256: diagnosticSha256(
+              "preflight-evidence-bundle-unavailable",
+            ),
+          },
+        },
+      },
+      identity,
+    )
+    const verifiedRequest = verifyRuntimePreflightRequestV117(
+      serializeRuntimePreflightRequestV117(request),
+      identity,
+    )
+    if (!verifiedRequest.ok) {
+      throw safePreflightError(
+        "Authenticated preflight request verification failed closed.",
+      )
+    }
+
+    const unavailable = { status: "unavailable" as const }
+    const evidence = createRuntimePreflightObservedEvidenceV117(request, {
+      operationResult: { kind: "valid" },
+      attribution: "ambiguous",
+      counters: {
+        wallMilliseconds: unavailable,
+        computeFuel: unavailable,
+        inputBytes: unavailable,
+        outputBytes: unavailable,
+        stderrBytes: unavailable,
+      },
+      memory: unavailable,
+      process: unavailable,
+      capabilities: unavailable,
+      accountingEvidence: unavailable,
+    })
+    const receipt = createAuthenticatedRuntimePreflightReceiptV117(
+      request,
+      evidence,
+      identity,
+    )
+    const verifiedReceipt = verifyRuntimePreflightReceiptV117(
+      serializeRuntimePreflightReceiptV117(receipt),
+      request,
+      identity,
+    )
+    if (
+      !verifiedReceipt.ok ||
+      verifiedReceipt.value.outcome.kind !== "system_failure" ||
+      verifiedReceipt.value.accounting.disposition !== "no_commit" ||
+      verifiedReceipt.value.accounting.poststate.revision !== 0 ||
+      verifiedReceipt.value.accounting.poststate.commitments.length !== 0 ||
+      verifiedReceipt.value.accounting.poststate.cumulative.operationCount !== 0
+    ) {
+      throw safePreflightError(
+        "Authenticated preflight no-commit receipt verification failed closed.",
+      )
+    }
+  }
+}
 
 const normalizeHttpOrigin = (
   value: string | undefined,
@@ -399,27 +487,8 @@ export const runPreflight = async (
         const profiles = Object.keys(
           RUNTIME_ABI_V1_17.budgets.preflight.profiles,
         ) as RuntimeAbiV117PreflightProfile[]
-        const ledgers = profiles.map((profile) =>
-          foldPreflightLedgerV117(profile, []),
-        )
-        if (
-          ledgers.some(
-            ({ ledger, outcomes }) =>
-              ledger.domain !== "preflight" ||
-              ledger.revision !== 0 ||
-              ledger.cumulative.operationCount !== 0 ||
-              ledger.commitments.length !== 0 ||
-              outcomes.length !== 0 ||
-              !Object.isFrozen(ledger),
-          ) ||
-          new Set(ledgers.map(({ ledger }) => ledger.profile)).size !==
-            profiles.length
-        ) {
-          throw safePreflightError(
-            "Separate preflight ledger initialization failed closed.",
-          )
-        }
-        return `exact contract-owned bytes accepted; initialized separate ${profiles.join(", ")} ledgers with zero candidate-resource receipts; candidate lanes remain uncertified`
+        verifyAuthenticatedPreflightDiagnosticsV117(profiles)
+        return `exact contract-owned bytes accepted; authenticated no-commit diagnostics verified for separate ${profiles.join(", ")} ledgers; candidate meters, containment, toolchain identity, and lanes remain uncertified`
       },
     ),
   )
