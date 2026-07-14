@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto"
 import { readFileSync, readdirSync } from "node:fs"
 import { join } from "node:path"
 import { describe, expect, it } from "vitest"
@@ -5,10 +6,22 @@ import {
   DEFAULT_RUNTIME_LIMITS,
   INITIAL_BOUNDS,
   RUNTIME_EXECUTION_SERVICE_VERSION,
+  RUNTIME_INVOCATION_V1_17_PLAYER_VIOLATIONS,
+  RUNTIME_INVOCATION_V1_17_TEST_KEY_ID,
   RuntimeExecutionServiceRequestSchema,
+  createAuthenticatedRuntimeInvocationRequestV117,
+  createAuthenticatedRuntimeInvocationResponseV117,
+  serializeRuntimeInvocationRequestV117,
+  serializeRuntimeInvocationResponseV117,
+  type AuthenticatedRuntimeInvocationRequestV117,
+  type RuntimeInvocationResultV117,
+  type RuntimeInvocationTraceV117,
   type RuntimeExecutionServiceRequest,
+  type SoldierBrainInput,
+  type SoldierBrainResult,
   type StrategyRevision,
 } from "@cowards/spec"
+import { MATCH_KERNEL, type GameState } from "@cowards/engine"
 import { buildStrategyRevision } from "@cowards/runtime-js"
 import { buildPythonStrategyRevision } from "@cowards/runtime-python"
 import {
@@ -19,6 +32,7 @@ import {
 } from "@cowards/runtime-wasm-wasi"
 import {
   executeRuntimeServiceRequest as executeRuntimeServiceRequestWithAuthority,
+  executeCandidateRuntimeInvocationV117,
   type RuntimeExecutionServiceDependencies,
 } from "./execute-match.js"
 import {
@@ -53,6 +67,141 @@ const executeRuntimeServiceRequest = (
           ),
         }
       : {}),
+  })
+}
+
+const candidateIdentity = {
+  keyId: RUNTIME_INVOCATION_V1_17_TEST_KEY_ID,
+  secret: "fixture-only:runtime-invocation-v1.17:service-secret",
+} as const
+
+const hash = (character: string): `sha256:${string}` =>
+  `sha256:${character.repeat(64)}`
+
+const sha256 = (bytes: Uint8Array): `sha256:${string}` =>
+  `sha256:${createHash("sha256").update(bytes).digest("hex")}`
+
+const candidateRequest = (): AuthenticatedRuntimeInvocationRequestV117 =>
+  createAuthenticatedRuntimeInvocationRequestV117(
+    {
+      requestId: "request:service-candidate:v1.17",
+      invocationId: "invocation:service-candidate:v1.17",
+      kernelRequestId: "kernel-request:service-candidate:v1.17",
+      method: "soldierBrain",
+      semanticTuple: {
+        rules: "cowards-rules-v1.4",
+        engine: "engine-kernel-v1.37-candidate-1",
+        runtimeAbi: "strategy-runtime-abi-v1.17",
+        chronicle: "chronicle-recorder-current-events-v1.37-candidate-1",
+        arenaCatalog: "semantic-arena-catalog-v1.37-candidate-1",
+        setPolicy: "canonical-set-policy-v1.4",
+      },
+      sourceIdentity: {
+        strategyRevisionId: "strategy-revision:service-candidate:v1.17",
+        originalSourceSha256: hash("a"),
+        normalizedSourceSha256: hash("b"),
+        artifactSha256: hash("c"),
+      },
+      budget: {
+        profileId: "runtime-budget-profile-v1.17-candidate",
+        wallMilliseconds: 50,
+        computeFuel: 10_000_000,
+        memoryBytes: 67_108_864,
+        outputBytes: 262_144,
+        processLimit: 1,
+        matchCumulative: {
+          invocationCountMaximum: 260,
+          wallMilliseconds: 13_000,
+          computeFuel: 2_600_000_000,
+          payloadBytes: 68_157_440,
+          stdoutBytes: 68_157_440,
+          stderrBytes: 17_039_360,
+          memoryBytes: 67_108_864,
+          accounting:
+            "signed-monotonic-per-invocation-deltas-plus-cumulative-total",
+          overflow:
+            "stop-before-next-invocation-and-classify-by-proven-cause",
+        },
+      },
+      input: { value: { soldierId: "bottom-0", cycleIndex: 0 } },
+      retry: {
+        retryId: "retry:service-candidate:v1.17",
+        attempt: 0,
+        previousRequestSha256: null,
+      },
+    },
+    candidateIdentity,
+  )
+
+const candidateTrace = (
+  request: AuthenticatedRuntimeInvocationRequestV117,
+  overrides: Partial<RuntimeInvocationTraceV117> = {},
+): RuntimeInvocationTraceV117 => ({
+  requestId: request.requestId,
+  invocationId: request.invocationId,
+  kernelRequestId: request.kernelRequestId,
+  method: request.method,
+  requestSha256: sha256(serializeRuntimeInvocationRequestV117(request)),
+  budgetProfileSha256: request.budget.profileSha256,
+  inputSha256: request.input.canonicalSha256,
+  retryIdentitySha256: request.retry.identitySha256,
+  safeCodes: ["ADAPTER_AUTHENTICATED", "PAYLOAD_CANONICAL"],
+  ...overrides,
+})
+
+const candidateState = (): GameState => {
+  const machine = MATCH_KERNEL.createMachine({
+    matchId: "match:service-candidate:v1.17",
+    seed: "seed:service-candidate:v1.17",
+    arenaVariant: {
+      id: "arena:service-candidate:v1.17",
+      name: "Service candidate v1.17",
+      initialBounds: INITIAL_BOUNDS,
+      terrainStones: [],
+    },
+    bottomPlayerId: "player:bottom",
+    topPlayerId: "player:top",
+    bottomStrategyRevisionId: "revision:bottom",
+    topStrategyRevisionId: "revision:top",
+  })
+  const state = globalThis.structuredClone(machine.state)
+  state.soldiers = state.soldiers.map((soldier, index) => ({
+    ...soldier,
+    soldierMemory: { retained: index, privateMarker: "never-public" },
+  }))
+  return state
+}
+
+const executeCandidateOutcome = (
+  outcome: RuntimeInvocationResultV117<SoldierBrainResult>,
+) => {
+  const state = candidateState()
+  const soldier = state.soldiers.find(
+    (candidate) => candidate.ownerPlayerId === state.players[0].id,
+  )
+  if (!soldier) throw new Error("missing candidate fixture soldier")
+  return MATCH_KERNEL.runActivationFromState({
+    state,
+    soldierId: soldier.id,
+    runtime: {
+      selectActivations() {
+        throw new Error("selection is unreachable in activation mode")
+      },
+      runSoldierBrain(
+        _input: SoldierBrainInput,
+        request,
+      ): RuntimeInvocationResultV117<SoldierBrainResult> {
+        if (!request) throw new Error("driver omitted request")
+        return {
+          ...outcome,
+          trace: {
+            ...outcome.trace,
+            kernelRequestId: request.requestId,
+            method: request.kind,
+          },
+        } as RuntimeInvocationResultV117<SoldierBrainResult>
+      },
+    },
   })
 }
 
@@ -693,5 +842,205 @@ describe("runtime execution service", () => {
       expect(productionText).not.toContain(forbiddenAuthority)
     }
     expect(importLines.join("\n")).not.toMatch(/\bscoring\b/)
+  })
+})
+
+describe("runtime execution service v1.17 candidate bridge", () => {
+  it("passes one exact authenticated request and success outcome to the kernel", () => {
+    const request = candidateRequest()
+    const requestBytes = serializeRuntimeInvocationRequestV117(request)
+    const outcome: RuntimeInvocationResultV117<SoldierBrainResult> = {
+      kind: "success",
+      value: {
+        action: { type: "TURN_TO_STONE" },
+        soldierMemory: { candidateCommitted: true },
+      },
+      trace: candidateTrace(request),
+    }
+    const responseBytes = serializeRuntimeInvocationResponseV117(
+      createAuthenticatedRuntimeInvocationResponseV117(
+        request,
+        outcome,
+        candidateIdentity,
+      ),
+    )
+    const observed: Uint8Array[] = []
+
+    const result = executeCandidateRuntimeInvocationV117({
+      request,
+      identity: candidateIdentity,
+      invoke(bytes) {
+        observed.push(Uint8Array.from(bytes))
+        return responseBytes
+      },
+      executeOutcome: executeCandidateOutcome,
+    })
+
+    expect(observed).toHaveLength(1)
+    expect(Buffer.from(observed[0] ?? []).equals(Buffer.from(requestBytes))).toBe(
+      true,
+    )
+    expect(result.internalExecution).toMatchObject({ kind: "completed" })
+    expect(result.publicResult).toEqual({
+      contractVersion: "runtime-invocation-v1.17",
+      candidateStatus: "inactive-candidate",
+      current: false,
+      requestId: request.requestId,
+      invocationId: request.invocationId,
+      kernelRequestId: request.kernelRequestId,
+      method: request.method,
+      classification: "success",
+    })
+  })
+
+  it("never retries a player violation or exposes discarded partial memory", () => {
+    const request = candidateRequest()
+    const outcome: RuntimeInvocationResultV117<SoldierBrainResult> = {
+      kind: "player_violation",
+      violation: RUNTIME_INVOCATION_V1_17_PLAYER_VIOLATIONS.INVALID_OUTPUT,
+      trace: candidateTrace(request),
+    }
+    const responseBytes = serializeRuntimeInvocationResponseV117(
+      createAuthenticatedRuntimeInvocationResponseV117(
+        request,
+        outcome,
+        candidateIdentity,
+      ),
+    )
+    let calls = 0
+
+    const result = executeCandidateRuntimeInvocationV117({
+      request,
+      identity: candidateIdentity,
+      invoke() {
+        calls += 1
+        return responseBytes
+      },
+      executeOutcome: executeCandidateOutcome,
+    })
+
+    expect(calls).toBe(1)
+    expect(result.internalExecution).toMatchObject({ kind: "completed" })
+    expect(result.publicResult).toMatchObject({
+      classification: "player_violation",
+      code: "INVALID_OUTPUT",
+    })
+    expect(JSON.stringify(result.publicResult)).not.toContain("never-public")
+    expect(JSON.stringify(result.publicResult)).not.toMatch(
+      /strategyMemory|soldierMemory|objective|source|artifact|diagnostics|host/u,
+    )
+  })
+
+  it("makes wrong binding a no-mutation system failure with safe output", () => {
+    const request = candidateRequest()
+    const otherRequest = createAuthenticatedRuntimeInvocationRequestV117(
+      {
+        requestId: request.requestId,
+        invocationId: request.invocationId,
+        kernelRequestId: `${request.kernelRequestId}:other`,
+        method: request.method,
+        semanticTuple: {
+          rules: request.semanticTuple.rules,
+          engine: request.semanticTuple.engine,
+          runtimeAbi: request.semanticTuple.runtimeAbi,
+          chronicle: request.semanticTuple.chronicle,
+          arenaCatalog: request.semanticTuple.arenaCatalog,
+          setPolicy: request.semanticTuple.setPolicy,
+        },
+        sourceIdentity: request.sourceIdentity,
+        budget: {
+          profileId: request.budget.profileId,
+          wallMilliseconds: request.budget.wallMilliseconds,
+          computeFuel: request.budget.computeFuel,
+          memoryBytes: request.budget.memoryBytes,
+          outputBytes: request.budget.outputBytes,
+          processLimit: request.budget.processLimit,
+          matchCumulative: request.budget.matchCumulative,
+        },
+        input: { value: request.input.value },
+        retry: {
+          retryId: request.retry.retryId,
+          attempt: request.retry.attempt,
+          previousRequestSha256: request.retry.previousRequestSha256,
+        },
+      },
+      candidateIdentity,
+    )
+    const responseBytes = serializeRuntimeInvocationResponseV117(
+      createAuthenticatedRuntimeInvocationResponseV117(
+        otherRequest,
+        {
+          kind: "success",
+          value: {
+            action: { type: "TURN_TO_STONE" },
+            soldierMemory: { forged: true },
+          },
+          trace: candidateTrace(otherRequest),
+        },
+        candidateIdentity,
+      ),
+    )
+
+    const result = executeCandidateRuntimeInvocationV117({
+      request,
+      identity: candidateIdentity,
+      invoke: () => responseBytes,
+      executeOutcome: executeCandidateOutcome,
+    })
+
+    expect(result.internalExecution).toMatchObject({
+      kind: "failure",
+      transitions: [],
+      failure: {
+        classification: "system_failure",
+        code: "OUTER_FRAME_WRONG_BINDING",
+      },
+    })
+    expect(result.publicResult).toMatchObject({
+      classification: "system_failure",
+      code: "OUTER_FRAME_WRONG_BINDING",
+      retryable: false,
+    })
+    expect(JSON.stringify(result.publicResult)).not.toContain("forged")
+  })
+
+  it("leaves retry to the caller and reuses byte-identical signed identity after adapter crash", () => {
+    const request = candidateRequest()
+    const expectedBytes = serializeRuntimeInvocationRequestV117(request)
+    const attempts: Uint8Array[] = []
+    const invoke = (bytes: Uint8Array): Uint8Array => {
+      attempts.push(Uint8Array.from(bytes))
+      throw new Error(
+        "private adapter stack /Users/owner source token=secret stderr",
+      )
+    }
+    const run = () =>
+      executeCandidateRuntimeInvocationV117({
+        request,
+        identity: candidateIdentity,
+        invoke,
+        executeOutcome: executeCandidateOutcome,
+      })
+
+    const first = run()
+    expect(attempts).toHaveLength(1)
+    expect(first.internalExecution).toMatchObject({
+      kind: "failure",
+      transitions: [],
+      failure: {
+        classification: "system_failure",
+        code: "ADAPTER_CRASH",
+        retryable: true,
+      },
+    })
+    const second = run()
+    expect(attempts).toHaveLength(2)
+    for (const attempt of attempts) {
+      expect(Buffer.from(attempt).equals(Buffer.from(expectedBytes))).toBe(true)
+    }
+    expect(first.publicResult).toEqual(second.publicResult)
+    expect(JSON.stringify(first.publicResult)).not.toMatch(
+      /Users|token=|stderr|stack|source|artifact|memory|objective|diagnostic/u,
+    )
   })
 })
