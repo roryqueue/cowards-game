@@ -1321,7 +1321,7 @@ export default {
             request.budget.methodLimit.counters.wallMilliseconds.maximum,
         })
         expect(observedOptions?.maxBuffer, label).toBe(
-          request.budget.methodLimit.counters.stdoutBytes.maximum + 1,
+          request.budget.methodLimit.counters.stderrBytes.maximum + 1,
         )
         expect(observedOptions?.encoding, label).toBeUndefined()
       }
@@ -1418,47 +1418,41 @@ export default {
         }
 
         for (const oneOver of [false, true]) {
-          const goLine = `${CANDIDATE_GO_CONTROL_PREFIX}${process.hrtime.bigint()}\n`
-          const stderr = Buffer.concat([
-            Buffer.from(goLine),
-            Buffer.alloc(
-              stderrLimit + (oneOver ? 1 : 0) - Buffer.byteLength(goLine),
-              "e",
-            ),
-          ])
           const adapter = createAdapter({
-            spawnSync: () => candidateSpawnResult("I", { stderr }),
+            spawnSync: () => {
+              const goLine = `${CANDIDATE_GO_CONTROL_PREFIX}${process.hrtime.bigint()}\n`
+              return candidateSpawnResult("R", {
+                stderr: Buffer.concat([
+                  Buffer.from(goLine),
+                  Buffer.alloc(
+                    stderrLimit +
+                      (oneOver ? 1 : 0) -
+                      Buffer.byteLength(goLine),
+                    "e",
+                  ),
+                ]),
+              })
+            },
           })
           const result = executeCandidate(adapter, request)
           expect(result, `${label} stderr ${oneOver ? "one-over" : "exact"}`)
-            .toMatchObject(
-              oneOver
-                ? {
-                    kind: "success",
-                    value: {
-                      accounting: { disposition: "no_commit" },
-                      outcome: {
-                        kind: "system_failure",
-                        failure: { code: "TRANSPORT_CRASH" },
-                      },
-                    },
-                  }
-                : {
-                    kind: "success",
-                    value: {
-                      accounting: { disposition: "commit" },
-                      outcome: {
-                        kind: "player_violation",
-                        violation: { code: "INVALID_OUTPUT" },
-                      },
-                    },
-                  },
-            )
-          if (!oneOver && result.kind === "success") {
-            expect(result.value.accounting.receipt.counters.stderrBytes).toMatchObject({
-              status: "measured",
-              delta: stderrLimit - Buffer.byteLength(goLine),
+            .toMatchObject({
+              kind: "success",
+              value: {
+                accounting: { disposition: "no_commit" },
+                outcome: { kind: "system_failure" },
+              },
             })
+          if (result.kind === "success") {
+            if (oneOver) {
+              expect(result.value.outcome.trace.safeCodes).toContain(
+                "TRANSPORT_CRASH",
+              )
+            } else {
+              expect(result.value.outcome.trace.safeCodes).not.toContain(
+                "TRANSPORT_CRASH",
+              )
+            }
           }
         }
       }

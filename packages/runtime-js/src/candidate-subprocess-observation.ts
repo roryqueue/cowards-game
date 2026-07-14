@@ -10,6 +10,8 @@ type RawSpawnResult = Readonly<{
   error?: Error | undefined
   signal: string | null
   status: number | null
+  stdoutOverflow?: boolean | undefined
+  stderrOverflow?: boolean | undefined
 }>
 
 const rawBytes = (value: unknown): Uint8Array | undefined =>
@@ -23,18 +25,44 @@ const fatalUtf8 = (bytes: Uint8Array): string | undefined => {
   }
 }
 
-const controlInteger = (
-  text: string,
-  prefix: string,
-): string | undefined => {
-  const matches = text
-    .split("\n")
-    .filter((line) => line.startsWith(prefix))
-  if (matches.length !== 1) return undefined
-  const value = matches[0]?.slice(prefix.length)
-  return value !== undefined && /^(0|[1-9][0-9]*)$/u.test(value)
-    ? value
-    : undefined
+const controlLine = (prefix: string): RegExp =>
+  new RegExp(`^${prefix}(0|[1-9][0-9]*)\\n$`, "u")
+
+const observeStderr = (text: string): Readonly<{
+  goText?: string | undefined
+  terminationText?: string | undefined
+  strategyBytes: number
+}> => {
+  const lines = text.match(/[^\n]*\n|[^\n]+$/gu) ?? []
+  const goPattern = controlLine(CANDIDATE_GO_CONTROL_PREFIX)
+  const terminationPattern = controlLine(
+    CANDIDATE_TERMINATION_CONTROL_PREFIX,
+  )
+  const goMatches = lines.flatMap((line) => {
+    const match = goPattern.exec(line)
+    return match?.[1] === undefined ? [] : [{ line, value: match[1] }]
+  })
+  const terminationMatches = lines.flatMap((line) => {
+    const match = terminationPattern.exec(line)
+    return match?.[1] === undefined ? [] : [{ line, value: match[1] }]
+  })
+  const controlsAreCanonical =
+    goMatches.length === 1 && terminationMatches.length <= 1
+  const recognizedBytes = controlsAreCanonical
+    ? Buffer.byteLength(goMatches[0]?.line ?? "") +
+      Buffer.byteLength(terminationMatches[0]?.line ?? "")
+    : 0
+  return {
+    ...(controlsAreCanonical
+      ? {
+          goText: goMatches[0]?.value,
+          ...(terminationMatches[0] === undefined
+            ? {}
+            : { terminationText: terminationMatches[0].value }),
+        }
+      : {}),
+    strategyBytes: Buffer.byteLength(text) - recognizedBytes,
+  }
 }
 
 const observedPayloadBytes = (
@@ -60,6 +88,18 @@ export const observeCandidateSubprocessV117 = (input: {
 }): RuntimeGuestObservationV117 => {
   const stdout = rawBytes(input.result.stdout)
   const stderr = rawBytes(input.result.stderr)
+  const outerLaunchElapsedMilliseconds =
+    Number(input.receivedAtNanoseconds - input.launchStartedNanoseconds) /
+    1_000_000
+  if (outerLaunchElapsedMilliseconds < 0) {
+    return {
+      kind: "system_failure",
+      code: "TRANSPORT_CRASH",
+      retryable: true,
+      stdoutBytes: stdout?.byteLength ?? 0,
+      stderrBytes: stderr?.byteLength ?? 0,
+    }
+  }
   if (input.result.error !== undefined) {
     return {
       kind: "system_failure",
@@ -83,6 +123,8 @@ export const observeCandidateSubprocessV117 = (input: {
   if (
     stdoutText === undefined ||
     stderrText === undefined ||
+    input.result.stdoutOverflow === true ||
+    input.result.stderrOverflow === true ||
     stderrBytes > input.stderrByteLimit ||
     stdoutBytes > input.stdoutByteLimit + 1
   ) {
@@ -95,7 +137,8 @@ export const observeCandidateSubprocessV117 = (input: {
     }
   }
 
-  const goText = controlInteger(stderrText, CANDIDATE_GO_CONTROL_PREFIX)
+  const stderrObservation = observeStderr(stderrText)
+  const goText = stderrObservation.goText
   const goNanoseconds = goText === undefined ? undefined : BigInt(goText)
   const cancellationWithoutReceipt = goNanoseconds === undefined
     ? undefined
@@ -104,6 +147,19 @@ export const observeCandidateSubprocessV117 = (input: {
         receiptPresent: false,
         graceMilliseconds: 0,
       }
+
+  if (
+    goNanoseconds === undefined &&
+    outerLaunchElapsedMilliseconds > input.startupTimeoutMilliseconds
+  ) {
+    return {
+      kind: "system_failure",
+      code: "HOST_CRASH",
+      retryable: true,
+      stdoutBytes,
+      stderrBytes,
+    }
+  }
 
   if (
     input.result.signal !== null ||
@@ -125,7 +181,7 @@ export const observeCandidateSubprocessV117 = (input: {
     return {
       kind: "raw_frame",
       bytes: stdout,
-      stderrBytes,
+      stderrBytes: stderrObservation.strategyBytes,
     }
   }
   if (
@@ -161,7 +217,7 @@ export const observeCandidateSubprocessV117 = (input: {
     return {
       kind: "raw_frame",
       bytes: stdout,
-      stderrBytes,
+      stderrBytes: stderrObservation.strategyBytes,
       cancellation: {
         terminationRequired: false,
         receiptPresent: false,
@@ -170,10 +226,7 @@ export const observeCandidateSubprocessV117 = (input: {
     }
   }
 
-  const terminationText = controlInteger(
-    stderrText,
-    CANDIDATE_TERMINATION_CONTROL_PREFIX,
-  )
+  const terminationText = stderrObservation.terminationText
   const terminationMilliseconds =
     terminationText === undefined ? undefined : Number(terminationText)
   const receiptGraceMilliseconds = Math.max(
@@ -205,7 +258,7 @@ export const observeCandidateSubprocessV117 = (input: {
     bytes: Uint8Array.of("D".charCodeAt(0)),
     payloadBytes: observedPayloadBytes(stdout, input.outputByteLimit),
     stdoutBytes,
-    stderrBytes,
+    stderrBytes: stderrObservation.strategyBytes,
     cancellation: {
       terminationRequired: true,
       receiptPresent: true,

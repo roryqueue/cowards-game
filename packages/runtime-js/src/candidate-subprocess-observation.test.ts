@@ -132,6 +132,37 @@ describe("candidate subprocess raw observation", () => {
     })
   })
 
+  it("does not charge a post-READY method interval to the startup watchdog", () => {
+    const launchStartedNanoseconds = 0n
+    const goNanoseconds = 4_990_000_000n
+    const result = observeCandidateSubprocessV117({
+      result: {
+        stdout: Buffer.from("I"),
+        stderr: Buffer.from(
+          `${CANDIDATE_GO_CONTROL_PREFIX}${goNanoseconds}\n`,
+        ),
+        status: 0,
+        signal: null,
+      },
+      launchStartedNanoseconds,
+      receivedAtNanoseconds: 5_040_000_000n,
+      startupTimeoutMilliseconds: 5_000,
+      methodWallMilliseconds: 50,
+      cancellationGraceMilliseconds: 100,
+      outputByteLimit: 262_144,
+      stdoutByteLimit: 262_144,
+      stderrByteLimit: 65_536,
+    })
+
+    expect(result).toMatchObject({
+      kind: "raw_frame",
+      stderrBytes: 0,
+    })
+    if (result.kind === "raw_frame") {
+      expect(Array.from(result.bytes)).toEqual(Array.from(Buffer.from("I")))
+    }
+  })
+
   it("rejects non-Buffer capture and malformed UTF-8 without replacement", () => {
     const stringCapture = observeCandidateSubprocessV117({
       result: { stdout: "S{}", stderr: "", status: 0, signal: null },

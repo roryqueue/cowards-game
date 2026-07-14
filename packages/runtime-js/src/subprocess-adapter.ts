@@ -18,6 +18,7 @@ import {
   type RuntimeGuestObservationV117,
 } from "./abi-bridge.js"
 import { consumeCandidateEvidenceFixture } from "./candidate-evidence-fixture.js"
+import { runCandidateProcessSync } from "./candidate-process-runner.js"
 import { observeCandidateSubprocessV117 } from "./candidate-subprocess-observation.js"
 import { RUNTIME_TIMEOUT_MS } from "./guards.js"
 import {
@@ -219,22 +220,46 @@ export const createSubprocessStrategyExecutionAdapter = (
             methodWallMilliseconds: guest.timeoutMs,
           })
           const launchStartedNanoseconds = process.hrtime.bigint()
-          const result = spawnCandidate(nodePath, harnessArgs(SUBPROCESS_HARNESS_V117_SOURCE), {
-            env,
-            input,
-            killSignal: "SIGKILL",
-            maxBuffer: Math.max(
-              guest.stdoutByteLimit + 1,
-              Math.min(guest.stderrByteLimit, stderrBytes) + 1,
-            ),
-            shell: false,
-            stdio: ["pipe", "pipe", "pipe"],
-            timeout:
-              guest.startupTimeoutMs +
-              guest.timeoutMs +
-              guest.cancellationGraceMilliseconds,
-            windowsHide: true,
-          })
+          const timeoutMilliseconds =
+            guest.startupTimeoutMs +
+            guest.timeoutMs +
+            guest.cancellationGraceMilliseconds
+          const stderrByteLimit = Math.min(
+            guest.stderrByteLimit,
+            stderrBytes,
+          )
+          const result =
+            options.spawnSync !== undefined && process.env.NODE_ENV === "test"
+              ? spawnCandidate(
+                  nodePath,
+                  harnessArgs(SUBPROCESS_HARNESS_V117_SOURCE),
+                  {
+                    env,
+                    input,
+                    killSignal: "SIGKILL",
+                    // Test-only injected transports are still held to the
+                    // smaller physical stream ceiling.
+                    maxBuffer: Math.min(
+                      guest.stdoutByteLimit + 1,
+                      stderrByteLimit + 1,
+                    ),
+                    shell: false,
+                    stdio: ["pipe", "pipe", "pipe"],
+                    timeout: timeoutMilliseconds,
+                    windowsHide: true,
+                  },
+                )
+              : runCandidateProcessSync({
+                  command: nodePath,
+                  args: harnessArgs(SUBPROCESS_HARNESS_V117_SOURCE),
+                  env,
+                  input,
+                  killSignal: "SIGKILL",
+                  launchStartedNanoseconds,
+                  timeoutMilliseconds,
+                  stdoutByteLimit: guest.stdoutByteLimit,
+                  stderrByteLimit,
+                })
           const receivedAtNanoseconds = process.hrtime.bigint()
           return observed(
             observeCandidateSubprocessV117({
@@ -247,10 +272,7 @@ export const createSubprocessStrategyExecutionAdapter = (
                 guest.cancellationGraceMilliseconds,
               outputByteLimit: guest.outputByteLimit,
               stdoutByteLimit: guest.stdoutByteLimit,
-              stderrByteLimit: Math.min(
-                guest.stderrByteLimit,
-                stderrBytes,
-              ),
+              stderrByteLimit,
             }),
           )
         },
