@@ -289,6 +289,31 @@ describe("v1.17 preflight contract", () => {
     }
   })
 
+  it("rejects unsafe origins in the exported Go helper before sending its token", async () => {
+    let calls = 0
+    const fetchImplementation: typeof globalThis.fetch = async () => {
+      calls += 1
+      throw new Error("must not send")
+    }
+    for (const goBackendUrl of [
+      "http://user:password@127.0.0.1:8087",
+      "file:///tmp/go.sock",
+      "http://127.0.0.1:8087/private?token=never-send",
+    ]) {
+      await expect(
+        runGoMatchJobOnce(
+          {
+            goBackendUrl,
+            goBackendInternalToken: "private-token",
+          },
+          ["match:allowed"],
+          fetchImplementation,
+        ),
+      ).rejects.toThrow(/HTTP\(S\) origin/iu)
+    }
+    expect(calls).toBe(0)
+  })
+
   it("redacts Go transport errors instead of echoing URL or token details", async () => {
     const secret = "private-token-never-print"
     const failingFetch: typeof globalThis.fetch = async () => {
