@@ -87,8 +87,7 @@ const executionReceipt = (
       wallMilliseconds: {
         status: "measured" as const,
         delta: delta.wallMilliseconds,
-        cumulative:
-          ledger.cumulative.wallMilliseconds + delta.wallMilliseconds,
+        cumulative: ledger.cumulative.wallMilliseconds + delta.wallMilliseconds,
       },
       computeFuel: {
         status: "measured" as const,
@@ -155,7 +154,11 @@ type PreflightCounterName =
 
 interface PreflightLedgerView {
   readonly revision: number
-  readonly profile: "compilation"
+  readonly profile:
+    | "sourceValidation"
+    | "compilation"
+    | "artifactValidation"
+    | "conformance"
   readonly cumulative: Readonly<
     Record<PreflightCounterName, number> & { memoryBytes: number }
   >
@@ -190,8 +193,7 @@ const preflightReceipt = (
       wallMilliseconds: {
         status: "measured" as const,
         delta: delta.wallMilliseconds,
-        cumulative:
-          ledger.cumulative.wallMilliseconds + delta.wallMilliseconds,
+        cumulative: ledger.cumulative.wallMilliseconds + delta.wallMilliseconds,
       },
       computeFuel: {
         status: "measured" as const,
@@ -373,6 +375,12 @@ describe("runtime ABI v1.17 frozen successor registry", () => {
       "artifactValidation",
       "conformance",
     ])
+    expect(budgets.preflight.profiles).toMatchObject({
+      sourceValidation: { stderrBytes: 0, threads: 1, children: 0 },
+      compilation: { stderrBytes: 65_536, threads: 8, children: 0 },
+      artifactValidation: { stderrBytes: 0, threads: 1, children: 0 },
+      conformance: { stderrBytes: 0, threads: 1, children: 0 },
+    })
   })
 
   it("fails counted certification closed when any equivalent meter or identity pin is missing", async () => {
@@ -388,8 +396,13 @@ describe("runtime ABI v1.17 frozen successor registry", () => {
       ),
     )
 
-    expect(runtimeAbi.assessRuntimeAbiV117Certification(complete, exactIdentity))
-      .toEqual({ status: "certifiable", missingMeters: [], missingIdentityPins: [] })
+    expect(
+      runtimeAbi.assessRuntimeAbiV117Certification(complete, exactIdentity),
+    ).toEqual({
+      status: "certifiable",
+      missingMeters: [],
+      missingIdentityPins: [],
+    })
     expect(
       runtimeAbi.assessRuntimeAbiV117Certification(
         { ...complete, compute: false },
@@ -438,7 +451,9 @@ describe("runtime ABI v1.17 frozen successor registry", () => {
       runtimeAbi.hashRuntimeAbiV117Identity("originalSource", [
         new TextEncoder().encode("abc"),
       ]),
-    ).toBe("sha256:3163bf2a551ff5b16867f88fea678eb09891ede5978a24aea2ef122ebe8d4985")
+    ).toBe(
+      "sha256:3163bf2a551ff5b16867f88fea678eb09891ede5978a24aea2ef122ebe8d4985",
+    )
     expect(identity.publicSafeFields).toEqual([
       "sourceRevisionId",
       "normalizedSourceId",
@@ -469,7 +484,10 @@ describe("runtime ABI v1.17 frozen successor registry", () => {
 
     expect(after).toEqual(before)
     expect(parsed.decisionMap.map((row: { id: string }) => row.id)).toEqual(
-      Array.from({ length: 16 }, (_, index) => `D-${String(index + 1).padStart(2, "0")}`),
+      Array.from(
+        { length: 16 },
+        (_, index) => `D-${String(index + 1).padStart(2, "0")}`,
+      ),
     )
     expect(parsed.historicalV116.protectedFiles).toEqual(protectedV116Files)
     expect(runtimeAbi.validateRuntimeAbiV117Contract()).toEqual([])
@@ -480,7 +498,8 @@ describe("runtime ABI v1.17 pure budget ledger", () => {
   it("creates closed immutable execution and preflight domains", async () => {
     const runtimeAbi = await subject()
     const execution = runtimeAbi.createRuntimeAbiV117ExecutionLedger()
-    const preflight = runtimeAbi.createRuntimeAbiV117PreflightLedger("compilation")
+    const preflight =
+      runtimeAbi.createRuntimeAbiV117PreflightLedger("compilation")
 
     expect(execution).toMatchObject({
       schemaVersion: "runtime-budget-ledger-v1",
@@ -594,7 +613,7 @@ describe("runtime ABI v1.17 pure budget ledger", () => {
     })
   })
 
-  it("covers process, capability, cancellation and accounting evidence without unit aliases", async () => {
+  it("treats process, capability, cancellation and accounting predicate drift as host enforcement failure", async () => {
     const runtimeAbi = await subject()
     const initial = runtimeAbi.createRuntimeAbiV117ExecutionLedger()
     const exactReceipt = executionReceipt(initial)
@@ -661,10 +680,12 @@ describe("runtime ABI v1.17 pure budget ledger", () => {
       ],
     ] as const) {
       const result = runtimeAbi.debitRuntimeAbiV117Ledger(initial, receipt)
-      expect(result.kind, dimension).toBe("player_violation")
-      if (result.kind === "player_violation") {
-        expect(result.violation.dimensions).toContain(dimension)
-      }
+      expect(result, dimension).toMatchObject({
+        kind: "system_failure",
+        committed: false,
+        failure: { dimension },
+      })
+      expect(result.ledger).toBe(initial)
     }
 
     for (const receipt of [
@@ -695,7 +716,7 @@ describe("runtime ABI v1.17 pure budget ledger", () => {
     }
   })
 
-  it("reaches exact method and Match maxima and classifies the next proven debit", async () => {
+  it("reaches exact method and Match maxima then stops before scheduling the next debit", async () => {
     const runtimeAbi = await subject()
     let ledger = runtimeAbi.createRuntimeAbiV117ExecutionLedger()
     const maxima = {
@@ -752,20 +773,16 @@ describe("runtime ABI v1.17 pure budget ledger", () => {
         },
       }),
     )
-    expect(over.kind).toBe("player_violation")
-    if (over.kind === "player_violation") {
-      expect(over.violation.dimensions).toEqual(
-        expect.arrayContaining([
-          "method.soldierBrain.invocationCount",
-          "match.invocationCount",
-          "match.wall",
-          "match.compute",
-          "match.payload",
-          "match.stdout",
-          "match.stderr",
-        ]),
-      )
-    }
+    expect(over).toMatchObject({
+      kind: "system_failure",
+      committed: false,
+      replayed: false,
+      failure: {
+        code: "LEDGER_CAPACITY_EXHAUSTED",
+        dimension: "method.soldierBrain.invocationCount",
+      },
+    })
+    expect(over.ledger).toBe(ledger)
   })
 
   it("fails missing, unavailable, ambiguous, decreasing and host-owned evidence without mutation", async () => {
@@ -925,9 +942,8 @@ describe("runtime ABI v1.17 pure budget ledger", () => {
     async (counter, maximum, dimension) => {
       const runtimeAbi = await subject()
       const execution = runtimeAbi.createRuntimeAbiV117ExecutionLedger()
-      const preflight = runtimeAbi.createRuntimeAbiV117PreflightLedger(
-        "compilation",
-      )
+      const preflight =
+        runtimeAbi.createRuntimeAbiV117PreflightLedger("compilation")
       const exact = runtimeAbi.debitRuntimeAbiV117Ledger(
         preflight,
         preflightReceipt(preflight, { deltas: { [counter]: maximum } }),
@@ -947,9 +963,10 @@ describe("runtime ABI v1.17 pure budget ledger", () => {
     },
   )
 
-  it("enforces preflight memory=max, process and capabilities", async () => {
+  it("enforces preflight memory but treats containment drift as a system failure", async () => {
     const runtimeAbi = await subject()
-    const initial = runtimeAbi.createRuntimeAbiV117PreflightLedger("compilation")
+    const initial =
+      runtimeAbi.createRuntimeAbiV117PreflightLedger("compilation")
     const exactReceipt = preflightReceipt(initial, {
       memoryBytes: 512 * 1024 * 1024,
     })
@@ -957,11 +974,16 @@ describe("runtime ABI v1.17 pure budget ledger", () => {
       runtimeAbi.debitRuntimeAbiV117Ledger(initial, exactReceipt).kind,
     ).toBe("success")
 
+    const memoryOver = runtimeAbi.debitRuntimeAbiV117Ledger(
+      initial,
+      preflightReceipt(initial, { memoryBytes: 512 * 1024 * 1024 + 1 }),
+    )
+    expect(memoryOver).toMatchObject({
+      kind: "player_violation",
+      violation: { dimensions: ["preflight.compilation.memory"] },
+    })
+
     for (const [dimension, receipt] of [
-      [
-        "preflight.compilation.memory",
-        preflightReceipt(initial, { memoryBytes: 512 * 1024 * 1024 + 1 }),
-      ],
       [
         "preflight.compilation.process",
         { ...exactReceipt, process: { ...exactReceipt.process, processes: 2 } },
@@ -993,17 +1015,143 @@ describe("runtime ABI v1.17 pure budget ledger", () => {
       ],
     ] as const) {
       const result = runtimeAbi.debitRuntimeAbiV117Ledger(initial, receipt)
-      expect(result.kind, dimension).toBe("player_violation")
-      if (result.kind === "player_violation") {
-        expect(result.violation.dimensions).toContain(dimension)
-      }
+      expect(result, dimension).toMatchObject({
+        kind: "system_failure",
+        committed: false,
+        failure: { dimension },
+      })
+      expect(result.ledger).toBe(initial)
+    }
+  })
+
+  it("runtime-validates closed ledger and receipt shapes without throwing", async () => {
+    const runtimeAbi = await subject()
+    const validLedger = runtimeAbi.createRuntimeAbiV117ExecutionLedger()
+    const validReceipt = executionReceipt(validLedger)
+
+    const malformedLedgers = [
+      { ...structuredClone(validLedger), unexpected: true },
+      {
+        ...structuredClone(validLedger),
+        revision: Number.MAX_SAFE_INTEGER,
+      },
+      {
+        ...structuredClone(validLedger),
+        cumulative: {
+          ...validLedger.cumulative,
+          invocationCount: Number.MAX_SAFE_INTEGER,
+        },
+      },
+      {
+        ...structuredClone(validLedger),
+        commitments: [
+          {
+            identity: "duplicate",
+            requestIdentity: ledgerHash("1"),
+            evidenceIdentity: ledgerHash("2"),
+            prestateRevision: 0,
+            scope: "selectActivations",
+            outcome: "success",
+            dimensions: [],
+          },
+          {
+            identity: "duplicate",
+            requestIdentity: ledgerHash("3"),
+            evidenceIdentity: ledgerHash("4"),
+            prestateRevision: 1,
+            scope: "selectActivations",
+            outcome: "success",
+            dimensions: [],
+          },
+        ],
+      },
+    ]
+    for (const ledger of malformedLedgers) {
+      let result: ReturnType<typeof runtimeAbi.debitRuntimeAbiV117Ledger>
+      expect(() => {
+        result = runtimeAbi.debitRuntimeAbiV117Ledger(
+          ledger as never,
+          validReceipt,
+        )
+      }).not.toThrow()
+      expect(result!).toMatchObject({
+        kind: "system_failure",
+        committed: false,
+        failure: { code: "LEDGER_SCHEMA_INVALID" },
+      })
+      expect(result!.ledger).toBe(ledger)
+    }
+
+    const malformedReceipts = [
+      { ...validReceipt, method: "unknownMethod" },
+      { ...validReceipt, attribution: "unknownAttribution" },
+      { ...validReceipt, unexpected: true },
+      {
+        ...validReceipt,
+        counters: {
+          ...validReceipt.counters,
+          wallMilliseconds: {
+            status: "measured",
+            delta: Number.MAX_SAFE_INTEGER + 1,
+            cumulative: Number.MAX_SAFE_INTEGER + 1,
+          },
+        },
+      },
+    ]
+    for (const receipt of malformedReceipts) {
+      let result: ReturnType<typeof runtimeAbi.debitRuntimeAbiV117Ledger>
+      expect(() => {
+        result = runtimeAbi.debitRuntimeAbiV117Ledger(
+          validLedger,
+          receipt as never,
+        )
+      }).not.toThrow()
+      expect(result!).toMatchObject({
+        kind: "system_failure",
+        committed: false,
+        failure: { code: "RECEIPT_SCHEMA_INVALID" },
+      })
+      expect(result!.ledger).toBe(validLedger)
+    }
+
+    const preflight =
+      runtimeAbi.createRuntimeAbiV117PreflightLedger("compilation")
+    const unknownProfile = {
+      ...preflightReceipt(preflight),
+      profile: "unknownProfile",
+    }
+    expect(() =>
+      runtimeAbi.debitRuntimeAbiV117Ledger(preflight, unknownProfile as never),
+    ).not.toThrow()
+    expect(
+      runtimeAbi.debitRuntimeAbiV117Ledger(preflight, unknownProfile as never),
+    ).toMatchObject({
+      kind: "system_failure",
+      committed: false,
+      failure: { code: "RECEIPT_SCHEMA_INVALID" },
+    })
+  })
+
+  it("covers explicit fixed limits for every preflight profile", async () => {
+    const runtimeAbi = await subject()
+    for (const profile of [
+      "sourceValidation",
+      "compilation",
+      "artifactValidation",
+      "conformance",
+    ] as const) {
+      const ledger = runtimeAbi.createRuntimeAbiV117PreflightLedger(profile)
+      expect(ledger.profile).toBe(profile)
+      expect(ledger.cumulative.stderrBytes).toBe(0)
+      expect(ledger.cumulative.operationCount).toBe(0)
     }
   })
 
   it("rejects cross-domain, profile drift and preflight refill attempts", async () => {
     const runtimeAbi = await subject()
     const execution = runtimeAbi.createRuntimeAbiV117ExecutionLedger()
-    const preflight = runtimeAbi.createRuntimeAbiV117PreflightLedger("compilation")
+    const preflight =
+      runtimeAbi.createRuntimeAbiV117PreflightLedger("compilation")
     const crossToExecution = runtimeAbi.debitRuntimeAbiV117Ledger(
       execution,
       preflightReceipt(preflight),
