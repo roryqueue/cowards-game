@@ -1,9 +1,21 @@
 #!/usr/bin/env python3
 import json
 import hashlib
+import base64
 import sys
 
 ABI_VERSION = "strategy-runtime-abi-v1.14"
+CANDIDATE_ABI_VERSION = "strategy-runtime-abi-v1.17"
+CANDIDATE_HOST_PROTOCOL = "python-runtime-host-v1.17"
+
+
+def reject_duplicate_pairs(pairs):
+    value = {}
+    for key, item in pairs:
+        if key in value:
+            raise ValueError("duplicate JSON key")
+        value[key] = item
+    return value
 
 
 def failure(kind, code, message, public_message):
@@ -20,8 +32,94 @@ def failure(kind, code, message, public_message):
     }
 
 
+def candidate_main(envelope):
+    source_info = envelope.get("source", {})
+    source = source_info.get("text")
+    if not isinstance(source, str):
+        sys.stdout.write(json.dumps({"kind": "host_failure"}, separators=(",", ":"), sort_keys=True))
+        return 0
+    source_bytes = source.encode("utf-8")
+    if (
+        hashlib.sha256(source_bytes).hexdigest() != source_info.get("hash")
+        or len(source_bytes) != source_info.get("bytes")
+    ):
+        sys.stdout.write(json.dumps({"kind": "host_failure"}, separators=(",", ":"), sort_keys=True))
+        return 0
+    safe_builtins = {
+        "abs": abs,
+        "bool": bool,
+        "dict": dict,
+        "enumerate": enumerate,
+        "int": int,
+        "len": len,
+        "list": list,
+        "max": max,
+        "min": min,
+        "range": range,
+        "round": round,
+        "str": str,
+        "sum": sum,
+    }
+    try:
+        namespace = {"__builtins__": safe_builtins}
+        exec(source, namespace, namespace)
+        function_name = (
+            "select_activations"
+            if envelope.get("methodName") == "selectActivations"
+            else "soldier_brain"
+        )
+        result = namespace[function_name](envelope.get("input"))
+        payload = json.dumps(
+            result,
+            allow_nan=False,
+            ensure_ascii=False,
+            separators=(",", ":"),
+            sort_keys=True,
+        ).encode("utf-8")
+        sys.stdout.write(
+            json.dumps(
+                {
+                    "kind": "payload",
+                    "payloadBase64": base64.b64encode(payload).decode("ascii"),
+                },
+                separators=(",", ":"),
+                sort_keys=True,
+            )
+        )
+    except Exception:
+        sys.stdout.write(
+            json.dumps(
+                {"kind": "strategy_exception"},
+                separators=(",", ":"),
+                sort_keys=True,
+            )
+        )
+    return 0
+
+
 def main():
-    envelope = json.loads(sys.stdin.read())
+    try:
+        raw = sys.stdin.buffer.read(8 * 1024 * 1024 + 1)
+        if len(raw) > 8 * 1024 * 1024:
+            raise ValueError("host request exceeds raw byte ceiling")
+        envelope = json.loads(
+            raw.decode("utf-8", errors="strict"),
+            object_pairs_hook=reject_duplicate_pairs,
+        )
+    except (UnicodeDecodeError, ValueError, json.JSONDecodeError):
+        sys.stdout.write(
+            json.dumps(
+                {"kind": "host_failure"},
+                separators=(",", ":"),
+                sort_keys=True,
+            )
+        )
+        return 0
+    if (
+        envelope.get("abiVersion") == CANDIDATE_ABI_VERSION
+        and envelope.get("hostProtocol") == CANDIDATE_HOST_PROTOCOL
+    ):
+        return candidate_main(envelope)
     if envelope.get("abiVersion") != ABI_VERSION:
         print(
             json.dumps(

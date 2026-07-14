@@ -8,6 +8,7 @@ import {
   pythonRuntimeHostArgs,
   runPythonStrategyMethod,
   runPythonStrategyMethodSync,
+  runPythonCandidateHostV117,
 } from "./python-subprocess-adapter.js"
 import {
   RUNTIME_INVOCATION_V1_17_TEST_KEY_ID,
@@ -69,7 +70,7 @@ const candidateRequest = (
       },
       budget: {
         profileId: "runtime-budget-profile-v1.17-candidate",
-        wallMilliseconds: 50,
+        wallMilliseconds: 1_000,
         computeFuel: 10_000_000,
         memoryBytes: 67_108_864,
         outputBytes: 262_144,
@@ -122,6 +123,11 @@ describe("Python subprocess Strategy provider ABI", () => {
     const source = pythonSource.trim().replace(/\n/gu, "\r\n") + "\r\n"
     const revision = buildPythonStrategyRevision({ source })
     const request = candidateRequest(revision)
+    const host = runPythonCandidateHostV117(
+      request,
+      buildPythonSourceIdentityV117(source).normalizedSource,
+    )
+    expect(host.kind, JSON.stringify(host)).toBe("payload")
     const adapter = createPythonCandidateInvocationAdapterV117({
       revision,
       identity: candidateIdentity,
@@ -136,6 +142,10 @@ describe("Python subprocess Strategy provider ABI", () => {
 
     expect(admitted.kind).toBe("success")
     if (admitted.kind === "success") {
+      expect(
+        admitted.value.outcome.kind,
+        JSON.stringify(admitted.value.outcome),
+      ).toBe("success")
       expect(admitted.value.outcome).toMatchObject({
         kind: "success",
         value: { activationOrders: [], strategyMemory: {} },

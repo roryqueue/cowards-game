@@ -4,11 +4,22 @@ import { createHash } from "node:crypto"
 import { clearTimeout, setTimeout } from "node:timers"
 import { fileURLToPath } from "node:url"
 import {
+  RUNTIME_INVOCATION_V1_17_PLAYER_VIOLATIONS,
   SoldierBrainResultSchema,
+  SoldierBrainResultV117Schema,
   STRATEGY_RUNTIME_ABI_VERSION,
   StrategyResultSchema,
+  StrategyResultV117Schema,
   StrategyRuntimeResponseEnvelopeSchema,
+  admitCanonicalJsonBytes,
+  createAuthenticatedRuntimeInvocationResponseV117,
+  serializeRuntimeInvocationResponseV117,
+  verifyRuntimeInvocationRequestV117,
+  type AuthenticatedRuntimeInvocationRequestV117,
   type JsonValue,
+  type RuntimeInvocationResultV117,
+  type RuntimeInvocationSigningIdentityV117,
+  type RuntimeInvocationTraceV117,
   type RuntimeViolation,
   type SoldierBrainResult,
   type StrategyRuntimeMetadata,
@@ -29,6 +40,7 @@ import {
   pythonIsolatedHostArgs,
 } from "./python-host-config.js"
 import { pythonExperimentalRuntimeMetadata } from "./metadata.js"
+import { buildPythonSourceIdentityV117 } from "./validation.js"
 
 const hostPath = fileURLToPath(
   new URL("./python_runtime_host.py", import.meta.url),
@@ -39,6 +51,243 @@ export const pythonRuntimeHostArgs = (): readonly string[] => [
 ]
 
 export { pythonExperimentalRuntimeMetadata }
+
+export type PythonCandidateHostResultV117 =
+  | { readonly kind: "payload"; readonly payloadBytes: Uint8Array }
+  | { readonly kind: "strategy_exception" }
+  | { readonly kind: "host_crash" }
+  | { readonly kind: "transport_crash" }
+  | { readonly kind: "preflight_unavailable" }
+
+export interface PythonCandidateInvocationAdapterOptionsV117 {
+  readonly revision: StrategyRevision
+  readonly identity: RuntimeInvocationSigningIdentityV117
+  readonly hostRunner?: (
+    request: AuthenticatedRuntimeInvocationRequestV117,
+    normalizedSource: string,
+  ) => PythonCandidateHostResultV117
+}
+
+const candidateTrace = (
+  request: AuthenticatedRuntimeInvocationRequestV117,
+  requestBytes: Uint8Array,
+  safeCodes: readonly string[],
+): RuntimeInvocationTraceV117 => ({
+  requestId: request.requestId,
+  invocationId: request.invocationId,
+  kernelRequestId: request.kernelRequestId,
+  method: request.method,
+  requestSha256: `sha256:${createHash("sha256").update(requestBytes).digest("hex")}`,
+  budgetProfileSha256: request.budget.profileSha256,
+  inputSha256: request.input.canonicalSha256,
+  retryIdentitySha256: request.retry.identitySha256,
+  safeCodes,
+})
+
+const pythonCandidateSystemFailure = (
+  request: AuthenticatedRuntimeInvocationRequestV117,
+  requestBytes: Uint8Array,
+  code:
+    | "OUTER_FRAME_WRONG_BINDING"
+    | "ADAPTER_CRASH"
+    | "HOST_CRASH"
+    | "TRANSPORT_CRASH"
+    | "AMBIGUOUS_ATTRIBUTION",
+): RuntimeInvocationResultV117 => ({
+  kind: "system_failure",
+  failure: {
+    code,
+    publicMessage: "Runtime system failure.",
+    retryable: true,
+  },
+  trace: candidateTrace(request, requestBytes, [code]),
+})
+
+const pythonCandidatePlayerViolation = (
+  request: AuthenticatedRuntimeInvocationRequestV117,
+  requestBytes: Uint8Array,
+  code: "INVALID_OUTPUT" | "THROWN_EXCEPTION",
+): RuntimeInvocationResultV117 => ({
+  kind: "player_violation",
+  violation: RUNTIME_INVOCATION_V1_17_PLAYER_VIOLATIONS[code],
+  trace: candidateTrace(request, requestBytes, [
+    "ADAPTER_AUTHENTICATED",
+    code,
+  ]),
+})
+
+export const runPythonCandidateHostV117 = (
+  request: AuthenticatedRuntimeInvocationRequestV117,
+  normalizedSource: string,
+): PythonCandidateHostResultV117 => {
+  const result = spawnSync(PYTHON_RUNTIME_EXECUTABLE, pythonRuntimeHostArgs(), {
+    input: JSON.stringify({
+      abiVersion: "strategy-runtime-abi-v1.17",
+      hostProtocol: "python-runtime-host-v1.17",
+      methodName: request.method,
+      source: {
+        text: normalizedSource,
+        hash: createHash("sha256").update(normalizedSource).digest("hex"),
+        bytes: Buffer.byteLength(normalizedSource),
+      },
+      input: request.input.value,
+    }),
+    env: PYTHON_RUNTIME_ENVIRONMENT,
+    shell: false,
+    timeout: request.budget.wallMilliseconds,
+    maxBuffer: request.budget.outputBytes + 64 * 1024,
+  })
+  if (result.error || result.signal || result.status !== 0) {
+    return { kind: "host_crash" }
+  }
+  const stdout = new Uint8Array(result.stdout ?? Buffer.alloc(0))
+  const admitted = admitCanonicalJsonBytes(stdout, {
+    profile: "authenticated-envelope",
+  })
+  if (!admitted.ok || admitted.value === null || Array.isArray(admitted.value)) {
+    return { kind: "transport_crash" }
+  }
+  const envelope = admitted.value as Record<string, JsonValue>
+  if (envelope.kind === "strategy_exception") {
+    return { kind: "strategy_exception" }
+  }
+  if (
+    envelope.kind !== "payload" ||
+    typeof envelope.payloadBase64 !== "string"
+  ) {
+    return { kind: "transport_crash" }
+  }
+  return {
+    kind: "payload",
+    payloadBytes: Buffer.from(envelope.payloadBase64, "base64"),
+  }
+}
+
+const candidatePythonArtifact = (
+  revision: StrategyRevision,
+): { ok: true; normalizedSource: string } | { ok: false } => {
+  const artifact = revision.metadata.sourceArtifact
+  if (
+    artifact === undefined ||
+    artifact.format !== "python-source-bundle" ||
+    artifact.validationStatus !== "valid" ||
+    artifact.bytesBase64 === undefined
+  ) {
+    return { ok: false }
+  }
+  const artifactBytes = Buffer.from(artifact.bytesBase64, "base64")
+  if (
+    artifactBytes.byteLength !== artifact.bytes ||
+    createHash("sha256").update(artifactBytes).digest("hex") !== artifact.hash
+  ) {
+    return { ok: false }
+  }
+  const identity = buildPythonSourceIdentityV117(revision.source)
+  if (
+    identity.normalizedSource !== artifactBytes.toString("utf8") ||
+    revision.sourceHash !==
+      createHash("sha256").update(revision.source).digest("hex") ||
+    revision.sourceBytes !== Buffer.byteLength(revision.source)
+  ) {
+    return { ok: false }
+  }
+  return { ok: true, normalizedSource: identity.normalizedSource }
+}
+
+export const createPythonCandidateInvocationAdapterV117 = (
+  options: PythonCandidateInvocationAdapterOptionsV117,
+): ((requestBytes: Uint8Array) => Uint8Array) =>
+  (requestBytes) => {
+    const admittedRequest = verifyRuntimeInvocationRequestV117(
+      requestBytes,
+      options.identity,
+    )
+    if (admittedRequest.kind !== "success") {
+      return new Uint8Array()
+    }
+    const request = admittedRequest.value
+    const artifact = candidatePythonArtifact(options.revision)
+    const sourceIdentity = buildPythonSourceIdentityV117(options.revision.source)
+    const recordedArtifact = options.revision.metadata.sourceArtifact
+    let outcome: RuntimeInvocationResultV117
+    if (
+      !artifact.ok ||
+      recordedArtifact === undefined ||
+      request.sourceIdentity.strategyRevisionId !== options.revision.id ||
+      request.sourceIdentity.originalSourceSha256 !==
+        sourceIdentity.originalSourceSha256 ||
+      request.sourceIdentity.normalizedSourceSha256 !==
+        sourceIdentity.normalizedSourceSha256 ||
+      request.sourceIdentity.artifactSha256 !==
+        `sha256:${recordedArtifact.hash}`
+    ) {
+      outcome = pythonCandidateSystemFailure(
+        request,
+        requestBytes,
+        "OUTER_FRAME_WRONG_BINDING",
+      )
+    } else {
+      try {
+        const host = (options.hostRunner ?? runPythonCandidateHostV117)(
+          request,
+          artifact.normalizedSource,
+        )
+        if (host.kind === "payload") {
+          const payload = admitCanonicalJsonBytes(host.payloadBytes, {
+            profile: "strategy-payload",
+          })
+          const schema =
+            request.method === "selectActivations"
+              ? StrategyResultV117Schema
+              : SoldierBrainResultV117Schema
+          const parsed = payload.ok ? schema.safeParse(payload.value) : null
+          outcome = parsed?.success
+            ? {
+                kind: "success",
+                value: parsed.data as JsonValue,
+                trace: candidateTrace(request, requestBytes, [
+                  "ADAPTER_AUTHENTICATED",
+                  "PAYLOAD_CANONICAL",
+                ]),
+              }
+            : pythonCandidatePlayerViolation(
+                request,
+                requestBytes,
+                "INVALID_OUTPUT",
+              )
+        } else if (host.kind === "strategy_exception") {
+          outcome = pythonCandidatePlayerViolation(
+            request,
+            requestBytes,
+            "THROWN_EXCEPTION",
+          )
+        } else {
+          outcome = pythonCandidateSystemFailure(
+            request,
+            requestBytes,
+            host.kind === "host_crash"
+              ? "HOST_CRASH"
+              : host.kind === "transport_crash"
+                ? "TRANSPORT_CRASH"
+                : "AMBIGUOUS_ATTRIBUTION",
+          )
+        }
+      } catch {
+        outcome = pythonCandidateSystemFailure(
+          request,
+          requestBytes,
+          "ADAPTER_CRASH",
+        )
+      }
+    }
+    return serializeRuntimeInvocationResponseV117(
+      createAuthenticatedRuntimeInvocationResponseV117(
+        request,
+        outcome,
+        options.identity,
+      ),
+    )
+  }
 
 export interface PythonStrategyRequestInput {
   sourceText?: string | undefined

@@ -17,6 +17,11 @@ export {
   hashCanonicalIdentity,
   hashCanonicalIdentityValue,
 } from "./canonical-identity-domains.js"
+export { admitCanonicalJsonBytes } from "./canonical-json.js"
+export {
+  SoldierBrainResultV117Schema,
+  StrategyResultV117Schema,
+} from "./runtime-payload-v1-17.js"
 export {
   AuthenticatedRuntimeInvocationRequestV117Schema,
   AuthenticatedRuntimeInvocationResponseV117Schema,
