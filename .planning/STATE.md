@@ -5,15 +5,15 @@ milestone_name: Rules Integrity and Strategy Evaluation Foundations — ACTIVE
 current_phase: 258
 current_phase_name: canonical-json-failure-semantics-and-artifact-identity
 status: in_progress
-stopped_at: Completed 258-03-PLAN.md; ready for 258-04 canonical encoder
-last_updated: "2026-07-14T04:15:13.000Z"
+stopped_at: Completed 258-04-PLAN.md; ready for 258-06 invocation ABI
+last_updated: "2026-07-14T04:39:07.000Z"
 last_activity: 2026-07-14
-last_activity_desc: Phase 258 Plan 03 iterative scanner/parser subset completed; exact both-missing RED preserved
+last_activity_desc: Phase 258 Plan 04 canonical encoder and successor identity domains completed; exact Go-only RED preserved
 progress:
   total_phases: 6
   completed_phases: 2
   total_plans: 55
-  completed_plans: 44
+  completed_plans: 45
   percent: 33
 ---
 
@@ -29,9 +29,9 @@ See: `.planning/PROJECT.md` (updated 2026-07-12)
 ## Current Position
 
 Phase: 258 (canonical-json-failure-semantics-and-artifact-identity) — IN PROGRESS
-Plan: 3 of 14
-Status: Plan 03 complete; iterative raw scanner and bounded receipt materializer green
-Last activity: 2026-07-14 — Completed Plan 258-03 canonical JSON scanner/parser subset
+Plan: 4 of 14
+Status: Plan 04 complete; TypeScript canonical codec and successor identity framing green
+Last activity: 2026-07-14 — Completed Plan 258-04 canonical encoder and identity domains
 
 Progress: [███░░░░░░░] 33%
 
@@ -61,8 +61,8 @@ Progress: [███░░░░░░░] 33%
 
 **Resume file:** None
 
-Last session: 2026-07-14T04:15:13.000Z
-Stopped at: Completed 258-03-PLAN.md; ready for 258-04 canonical encoder
+Last session: 2026-07-14T04:39:07.000Z
+Stopped at: Completed 258-04-PLAN.md; ready for 258-06 invocation ABI
 Next command: `$gsd-execute-phase 258`
 
 ## Performance Metrics
@@ -96,8 +96,14 @@ Next command: `$gsd-execute-phase 258`
 | Phase 258 P01 | 17min | 2 tasks | 8 calibration/contract files |
 | Phase 258 P02 | 11min | 2 tasks | 89 corpus/consumer/verifier files |
 | Phase 258 P03 | 15min | 2 tasks | 4 scanner/parser files |
+| Phase 258 P04 | 24min | 2 tasks | 15 implementation/fixture/receipt files |
 
 ## Decisions
+
+- [Phase 258]: Canonical JSON output is produced by one explicit bounded frame machine with unsigned UTF-8 key ordering, scalar-preserving escapes, negative-zero normalization, and shortest round-trip binary64 formatting. — Canonical bytes do not depend on insertion order, locale, JSON.stringify, recursion, or host JSON formatting.
+- [Phase 258]: Successor identities use one closed 15-domain registry with unsigned-64-bit big-endian length framing for the domain tag and every segment. — Cross-domain and concatenation ambiguity are impossible while immutable v1.16 helpers and proof bytes remain untouched.
+- [Phase 258]: The runtime identity manifest requires exactly one canonical binding for every registered domain and preserves separately validated public IDs. — Missing, extra, duplicate, reordered, and tampered bindings are deterministic and fail closed.
+- [Phase 258]: Plan 04 corrects only two insertion-ordered object-entry boundary derivatives while preserving all raw bytes, IDs, vector order, corpus root, and enumeration identity. — Derived canonical truth follows the frozen UTF-8 byte-order rule without rebaselining the raw corpus.
 
 - [Phase 258]: Raw-byte admission checks size first, then validates all UTF-8/scalars before iterative JSON grammar, duplicate, number, ordering, and ceiling state. — Invalid bytes cannot be normalized or mislabeled by a host parser, and depth 3,000 returns one typed error without recursion.
 - [Phase 258]: Materialization consumes only exact SHA-256-bound scan receipts and builds values with an explicit stack and null-prototype objects. — Changed bytes and impossible token disagreement are system failures, never player violations.

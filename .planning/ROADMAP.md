@@ -194,7 +194,7 @@ Plans:
 
 **Wave 4 — complete TypeScript codec and retire its RED**
 
-- [ ] 258-04-PLAN.md — Implement canonical encoding, domain-framed hashes, and the identity manifest.
+- [x] 258-04-PLAN.md — Implement canonical encoding, domain-framed hashes, and the identity manifest.
 
 **Wave 5 — ABI ownership**
 
@@ -298,7 +298,7 @@ Cycle-cap, inward-start, facing-only MOVE, reversal-history, attacker-facing/Adv
 |-------|----------------|--------|-----------|
 | 256. Counted Safety and Canonical Authority | 19/19 | Complete    | 2026-07-13 |
 | 257. Canonical Transition Kernel and v1.4 Semantic Integrity | 22/22 | Complete | 2026-07-13 |
-| 258. Canonical JSON, Failure Semantics, and Artifact Identity | 1/14 | In Progress | - |
+| 258. Canonical JSON, Failure Semantics, and Artifact Identity | 4/14 | In Progress | - |
 | 259. Executable Four-Language and Chronicle Conformance | 0/TBD | Not started | - |
 | 260. Truthful Strategy Inputs, Arena Authority, and Set Fairness | 0/TBD | Not started | - |
 | 261. Integrated Service Proof, Drift Guards, and Release | 0/TBD | Not started | - |
