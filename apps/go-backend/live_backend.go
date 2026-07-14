@@ -2525,10 +2525,7 @@ func (server *LiveServer) accountRevisionSummaries(ctx context.Context, userID s
 			SourceHash:          row.SourceHash,
 			SourceBytes:         row.SourceBytes,
 		})
-		readinessCategory := readiness.PublicCategory
-		if row.LockedAt == nil && readinessCategory == "provider_validated" {
-			readinessCategory = "mutable_draft"
-		}
+		readinessCategory := publicCountedEntryEligibilityCategory(readiness, row.LockedAt != nil)
 		summary := map[string]any{
 			"apiVersion":                      serviceAPIVersion,
 			"kind":                            "strategyRevisionSummary",
@@ -3322,7 +3319,7 @@ func wasmWasiRuntimeMetadata(languageID string) map[string]any {
 func engineCompatibility() map[string]any {
 	return map[string]any{
 		"spec":   "cowards-rules-v1.4",
-		"engine": "0.1.4",
+		"engine": "engine-kernel-v1.37-candidate-1",
 	}
 }
 

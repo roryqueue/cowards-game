@@ -118,6 +118,28 @@ func classifyRevisionReadiness(input revisionReadinessInput) revisionReadinessRe
 	}
 }
 
+func publicCountedEntryEligibilityCategory(readiness revisionReadinessResult, locked bool) string {
+	switch readiness.State {
+	case revisionReadinessExecutionReady:
+		if locked {
+			return "provider_validated"
+		}
+		return "mutable_draft"
+	case revisionReadinessExhibitionReady:
+		return "runtime_lane_exhibition_only"
+	case revisionReadinessExecutionDisabled:
+		return "runtime_lane_disabled"
+	case revisionReadinessNonExecutionDraft:
+		return "invalid_strategy_revision"
+	case revisionReadinessUnavailable:
+		return "runtime_service_unavailable"
+	case revisionReadinessInvalid:
+		return readiness.PublicCategory
+	default:
+		return "runtime_lane_disabled"
+	}
+}
+
 func hasRequiredCapabilities(value any) bool {
 	switch capabilities := value.(type) {
 	case []string:

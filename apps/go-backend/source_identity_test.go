@@ -59,6 +59,44 @@ func TestPhase258GoCompatibilityMatchesCanonicalEngine(t *testing.T) {
 	}
 }
 
+func TestPhase258PublicReadinessCategoriesHideInternalEvidenceReasons(t *testing.T) {
+	tests := []struct {
+		name       string
+		readiness  revisionReadinessResult
+		locked     bool
+		wantPublic string
+	}{
+		{
+			name:       "missing containment",
+			readiness:  revisionReadinessResult{State: revisionReadinessExecutionDisabled, PublicCategory: "containment_missing"},
+			wantPublic: "runtime_lane_disabled",
+		},
+		{
+			name:       "stale conformance",
+			readiness:  revisionReadinessResult{State: revisionReadinessExhibitionReady, PublicCategory: "conformance_stale"},
+			wantPublic: "runtime_lane_exhibition_only",
+		},
+		{
+			name:       "mutable counted candidate",
+			readiness:  revisionReadinessResult{State: revisionReadinessExecutionReady, PublicCategory: "evidence_current"},
+			wantPublic: "mutable_draft",
+		},
+		{
+			name:       "locked counted revision",
+			readiness:  revisionReadinessResult{State: revisionReadinessExecutionReady, PublicCategory: "evidence_current"},
+			locked:     true,
+			wantPublic: "provider_validated",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if got := publicCountedEntryEligibilityCategory(test.readiness, test.locked); got != test.wantPublic {
+				t.Fatalf("public category = %q, want %q", got, test.wantPublic)
+			}
+		})
+	}
+}
+
 func TestPhase258SourceIdentityPostgres(t *testing.T) {
 	databaseURL := os.Getenv("COWARDS_GO_BACKEND_TEST_DATABASE_URL")
 	if databaseURL == "" {
