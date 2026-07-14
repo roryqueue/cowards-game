@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest"
+/* eslint-disable-next-line no-restricted-imports -- Script tests exercise the source contract before package build output exists. */
 import {
   RUNTIME_ABI_V1_17,
   type RuntimeAbiV117PreflightLedgerReceipt,

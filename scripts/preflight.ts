@@ -1,21 +1,40 @@
 #!/usr/bin/env -S pnpm exec tsx
 import net from "node:net"
 import { randomUUID } from "node:crypto"
+import path from "node:path"
+import { clearTimeout, setTimeout } from "node:timers"
+import { fileURLToPath } from "node:url"
 import { setTimeout as sleep } from "node:timers/promises"
+/* eslint-disable-next-line no-restricted-imports -- Preflight intentionally composes workspace source entry points before packages are built. */
 import {
   createDatabasePool,
   migrate,
   runDevelopmentMatchSetSmoke,
   type DevelopmentMatchSetSmokeResult,
 } from "../packages/persistence/src/index.ts"
+/* eslint-disable-next-line no-restricted-imports -- Preflight intentionally composes workspace source entry points before packages are built. */
 import {
   createReplay,
   projectPublicChronicle,
 } from "../packages/replay/src/index.ts"
+/* eslint-disable-next-line no-restricted-imports -- Preflight intentionally invokes the source worker in the local operational smoke. */
 import { runWorkerOnce } from "../apps/worker/src/runner.ts"
-import type { Chronicle, MatchId, MatchSetId } from "@cowards/spec"
+/* eslint-disable-next-line no-restricted-imports -- Preflight needs the candidate contract before package build output exists. */
+import {
+  createRuntimeAbiV117PreflightLedger,
+  debitRuntimeAbiV117Ledger,
+  type Chronicle,
+  type MatchId,
+  type MatchSetId,
+  type RuntimeAbiV117LedgerDebitResult,
+  type RuntimeAbiV117PreflightLedger,
+  type RuntimeAbiV117PreflightLedgerReceipt,
+  type RuntimeAbiV117PreflightProfile,
+} from "../packages/spec/src/index.ts"
+import { checkRuntimeBudgetCapabilitiesV117Artifact } from "./generate-runtime-budget-capabilities-v1-17.js"
 
-type Layer =
+export type Layer =
+  | "contract_validation"
   | "service_startup"
   | "migration"
   | "seeding"
@@ -24,7 +43,7 @@ type Layer =
   | "replay_projection"
   | "ui_rendering"
 
-interface CheckResult {
+export interface CheckResult {
   layer: Layer
   name: string
   ok: boolean
@@ -36,6 +55,49 @@ interface Options {
   requireRedis: boolean
   requireWeb: boolean
   webUrl: string | undefined
+}
+
+export const PREFLIGHT_NON_CERTIFICATION_NOTICE =
+  "A passing contract-only validation and operational smoke does not certify toolchain identity, containment, executable conformance, or any counted runtime lane."
+
+export interface PreflightFoldResult<
+  TProfile extends RuntimeAbiV117PreflightProfile,
+> {
+  readonly ledger: RuntimeAbiV117PreflightLedger<TProfile>
+  readonly outcomes: readonly RuntimeAbiV117LedgerDebitResult<
+    RuntimeAbiV117PreflightLedger<TProfile>
+  >[]
+}
+
+export const foldPreflightLedgerV117 = <
+  TProfile extends RuntimeAbiV117PreflightProfile,
+>(
+  profile: TProfile,
+  receipts: readonly RuntimeAbiV117PreflightLedgerReceipt[],
+): PreflightFoldResult<TProfile> => {
+  let ledger = createRuntimeAbiV117PreflightLedger(profile)
+  const outcomes: RuntimeAbiV117LedgerDebitResult<
+    RuntimeAbiV117PreflightLedger<TProfile>
+  >[] = []
+  for (const receipt of receipts) {
+    const outcome = debitRuntimeAbiV117Ledger(ledger, receipt)
+    outcomes.push(outcome)
+    ledger = outcome.ledger
+    if (outcome.kind === "system_failure") break
+  }
+  return Object.freeze({ ledger, outcomes: Object.freeze(outcomes) })
+}
+
+interface PreflightDependencies {
+  readonly checkCapabilityArtifact: typeof checkRuntimeBudgetCapabilitiesV117Artifact
+  readonly createPool: typeof createDatabasePool
+  readonly writeLine: (line: string) => void
+}
+
+const defaultDependencies: PreflightDependencies = {
+  checkCapabilityArtifact: checkRuntimeBudgetCapabilitiesV117Artifact,
+  createPool: createDatabasePool,
+  writeLine: (line) => console.log(line),
 }
 
 const parseOptions = (argv: string[]): Options => {
@@ -147,11 +209,52 @@ const latestChronicle = async (
   return { matchId: row.match_id, chronicle: row.artifact }
 }
 
-const run = async (): Promise<number> => {
-  const options = parseOptions(process.argv.slice(2))
-  const pool = createDatabasePool()
+const writeResults = (
+  results: readonly CheckResult[],
+  writeLine: (line: string) => void,
+): void => {
+  writeLine("Coward's Game preflight")
+  for (const result of results) {
+    const marker = result.ok ? "PASS" : result.required ? "FAIL" : "WARN"
+    writeLine(
+      `[${marker}] [${result.layer}] ${result.name}: ${result.detail}`,
+    )
+  }
+  writeLine(`[NOTICE] ${PREFLIGHT_NON_CERTIFICATION_NOTICE}`)
+}
+
+export const runPreflight = async (
+  argv: readonly string[],
+  overrides: Partial<PreflightDependencies> = {},
+): Promise<number> => {
+  const dependencies = { ...defaultDependencies, ...overrides }
+  const options = parseOptions([...argv])
   const results: CheckResult[] = []
   let smokeResult: DevelopmentMatchSetSmokeResult | undefined
+
+  results.push(
+    await check(
+      "contract_validation",
+      "Runtime ABI v1.17 capability artifact",
+      true,
+      async () => {
+        const findings = dependencies.checkCapabilityArtifact()
+        if (findings.length > 0) {
+          throw new Error(
+            `capability artifact failed closed: ${findings.join(", ")}`,
+          )
+        }
+        return "exact contract-owned bytes accepted; candidate lanes remain uncertified"
+      },
+    ),
+  )
+
+  if (results.some((result) => result.required && !result.ok)) {
+    writeResults(results, dependencies.writeLine)
+    return 1
+  }
+
+  const pool = dependencies.createPool()
 
   results.push(
     await check("service_startup", "Postgres", true, async () => {
@@ -299,7 +402,7 @@ const run = async (): Promise<number> => {
           `/matches/${encodeURIComponent(matchId)}/replay`,
           options.webUrl,
         )
-        const response = await fetch(replayUrl)
+        const response = await globalThis.fetch(replayUrl)
         if (!response.ok) {
           throw new Error(`${replayUrl.href} returned HTTP ${response.status}`)
         }
@@ -314,24 +417,24 @@ const run = async (): Promise<number> => {
 
   await pool.end()
 
-  console.log("Coward's Game preflight")
-  for (const result of results) {
-    const marker = result.ok ? "PASS" : result.required ? "FAIL" : "WARN"
-    console.log(
-      `[${marker}] [${result.layer}] ${result.name}: ${result.detail}`,
-    )
-  }
+  writeResults(results, dependencies.writeLine)
 
   return results.some((result) => result.required && !result.ok) ? 1 : 0
 }
 
-run()
-  .then((code) => {
-    process.exitCode = code
-  })
-  .catch((error: unknown) => {
-    console.error(
-      `[FAIL] [service_startup] preflight crashed: ${errorMessage(error)}`,
-    )
-    process.exitCode = 1
-  })
+const isMain =
+  process.argv[1] !== undefined &&
+  path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)
+
+if (isMain) {
+  runPreflight(process.argv.slice(2))
+    .then((code) => {
+      process.exitCode = code
+    })
+    .catch((error: unknown) => {
+      console.error(
+        `[FAIL] [service_startup] preflight crashed: ${errorMessage(error)}`,
+      )
+      process.exitCode = 1
+    })
+}
