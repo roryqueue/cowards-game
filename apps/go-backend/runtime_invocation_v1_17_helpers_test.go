@@ -148,8 +148,11 @@ func runtimeInvocationV117JSONIntegerForTest(value int64) json.Number {
 }
 
 func runtimeInvocationV117ExecutionPrestateForTest(count int64) map[string]any {
-	selectCount := min(count, int64(20))
-	soldierCount := count - selectCount
+	return runtimeInvocationV117ExecutionPrestateForMethodsForTest(min(count, int64(20)), count-min(count, int64(20)))
+}
+
+func runtimeInvocationV117ExecutionPrestateForMethodsForTest(selectCount int64, soldierCount int64) map[string]any {
+	count := selectCount + soldierCount
 	commitments := make([]any, 0, count)
 	for index := int64(0); index < count; index++ {
 		scope := "selectActivations"

@@ -226,6 +226,39 @@ describe("versioned TypeScript-to-Go parity generator", () => {
     ).toEqual(firstHashes)
   }, 30_000)
 
+  it("binds candidate receipt bytes to the canonical success frame", () => {
+    const response = JSON.parse(
+      read(candidateResponseRelative).toString("utf8"),
+    ) as {
+      outcome: { value: unknown }
+      payloadBinding: { canonicalByteLength: number }
+      accounting: {
+        receipt: {
+          counters: Record<
+            "payloadBytes" | "stdoutBytes" | "stderrBytes",
+            { delta: number }
+          >
+        }
+      }
+    }
+    const payloadBytes = Buffer.from(JSON.stringify(response.outcome.value))
+    const observedFrameBytes = Buffer.concat([
+      Buffer.from("S", "utf8"),
+      payloadBytes,
+    ])
+
+    expect(response.payloadBinding.canonicalByteLength).toBe(
+      payloadBytes.byteLength,
+    )
+    expect(response.accounting.receipt.counters.payloadBytes.delta).toBe(
+      payloadBytes.byteLength,
+    )
+    expect(response.accounting.receipt.counters.stdoutBytes.delta).toBe(
+      observedFrameBytes.byteLength,
+    )
+    expect(response.accounting.receipt.counters.stderrBytes.delta).toBe(0)
+  })
+
   it("fails a stale generated table instead of silently regenerating it", () => {
     const root = makeVersionRoot()
     const written = runGenerator([

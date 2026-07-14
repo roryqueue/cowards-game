@@ -263,8 +263,10 @@ func TestPhase258RuntimeInvocationV117UsesFiniteGoOwnedSignedBudgetRetryPolicy(t
 
 	for _, candidate := range []struct {
 		name          string
+		method        string
 		attempt       int64
 		prestateCount int64
+		prestate      map[string]any
 		wantCalls     int
 		wantResult    bool
 	}{
@@ -274,12 +276,21 @@ func TestPhase258RuntimeInvocationV117UsesFiniteGoOwnedSignedBudgetRetryPolicy(t
 		{name: "attempt two hundred fifty nine exceeds the local retry policy", attempt: 259},
 		{name: "one remaining Match invocation limits calls", prestateCount: 259, wantCalls: 1, wantResult: true},
 		{name: "exhausted Match invocation budget rejects before transport", prestateCount: 260},
+		{name: "select exact method boundary permits one call", prestate: runtimeInvocationV117ExecutionPrestateForMethodsForTest(19, 0), wantCalls: 1, wantResult: true},
+		{name: "select one over method boundary rejects before transport", prestate: runtimeInvocationV117ExecutionPrestateForMethodsForTest(20, 0)},
+		{name: "soldier exact method boundary permits one call", method: "soldierBrain", prestate: runtimeInvocationV117ExecutionPrestateForMethodsForTest(0, 239), wantCalls: 1, wantResult: true},
+		{name: "soldier one over method boundary rejects before transport", method: "soldierBrain", prestate: runtimeInvocationV117ExecutionPrestateForMethodsForTest(0, 240)},
 	} {
 		candidate := candidate
 		t.Run(candidate.name, func(t *testing.T) {
 			signedRequest := signedMutatedRuntimeInvocationRequestV117ForTest(t, requestBytes, identity, func(envelope map[string]any) {
+				if candidate.method != "" {
+					envelope["method"] = candidate.method
+				}
 				envelope["retry"].(map[string]any)["attempt"] = runtimeInvocationV117JSONIntegerForTest(candidate.attempt)
-				if candidate.prestateCount > 0 {
+				if candidate.prestate != nil {
+					envelope["accounting"].(map[string]any)["prestate"] = candidate.prestate
+				} else if candidate.prestateCount > 0 {
 					envelope["accounting"].(map[string]any)["prestate"] = runtimeInvocationV117ExecutionPrestateForTest(candidate.prestateCount)
 				}
 			})
