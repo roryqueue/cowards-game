@@ -206,6 +206,13 @@ describe("runtime invocation v1.17 exclusive ownership", () => {
       { ...success, failure: system.failure },
       { ...player, failure: system.failure },
       { ...system, violation: player.violation },
+      {
+        ...player,
+        violation: {
+          code: "INVALID_OUTPUT",
+          publicMessage: "private Strategy output",
+        },
+      },
       { value: success.value, trace: trace() },
       { kind: "player_violation", trace: trace() },
       { kind: "system_failure", trace: trace() },
@@ -301,6 +308,26 @@ describe("runtime invocation v1.17 authenticated candidate wire", () => {
   })
 
   it("owns tamper, wrong binding, wrong key, and truncation as system failures", () => {
+    const missing = verifyRuntimeInvocationRequestV117(new Uint8Array(), {
+      keyId: RUNTIME_INVOCATION_V1_17_TEST_KEY_ID,
+      secret: fixtureSecret,
+    })
+    expect(missing.kind).toBe("system_failure")
+    if (missing.kind === "system_failure") {
+      expect(missing.failure.code).toBe("OUTER_FRAME_MISSING")
+    }
+    const undecodable = verifyRuntimeInvocationRequestV117(
+      Buffer.from("{}"),
+      {
+        keyId: RUNTIME_INVOCATION_V1_17_TEST_KEY_ID,
+        secret: fixtureSecret,
+      },
+    )
+    expect(undecodable.kind).toBe("system_failure")
+    if (undecodable.kind === "system_failure") {
+      expect(undecodable.failure.code).toBe("OUTER_FRAME_UNDECODABLE")
+    }
+
     const requestBytes = readFileSync(requestFixturePath)
     const tamperedRequest = Buffer.from(requestBytes)
     const budgetMarker = Buffer.from(requestBytes).indexOf(
@@ -333,6 +360,26 @@ describe("runtime invocation v1.17 authenticated candidate wire", () => {
     expect(wrongBinding.kind).toBe("system_failure")
     if (wrongBinding.kind === "system_failure") {
       expect(wrongBinding.failure.code).toBe("OUTER_FRAME_WRONG_BINDING")
+    }
+    expect(() => candidateResponse(wrongBudget)).toThrow(
+      "invalid candidate request",
+    )
+
+    const wrongRequest = {
+      ...request,
+      requestId: "request:candidate:v1.17:wrong",
+    }
+    const wrongRequestBinding = verifyRuntimeInvocationResponseV117(
+      readFileSync(responseFixturePath),
+      wrongRequest,
+      {
+        keyId: RUNTIME_INVOCATION_V1_17_TEST_KEY_ID,
+        secret: fixtureSecret,
+      },
+    )
+    expect(wrongRequestBinding.kind).toBe("system_failure")
+    if (wrongRequestBinding.kind === "system_failure") {
+      expect(wrongRequestBinding.failure.code).toBe("OUTER_FRAME_WRONG_BINDING")
     }
 
     const wrongKey = verifyRuntimeInvocationResponseV117(

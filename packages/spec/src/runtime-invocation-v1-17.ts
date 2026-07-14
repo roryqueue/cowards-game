@@ -28,6 +28,29 @@ export const RUNTIME_INVOCATION_V1_17_PLAYER_VIOLATION_CODES = [
 export type RuntimeInvocationPlayerViolationCodeV117 =
   (typeof RUNTIME_INVOCATION_V1_17_PLAYER_VIOLATION_CODES)[number]
 
+export const RUNTIME_INVOCATION_V1_17_PLAYER_VIOLATIONS = Object.freeze({
+  INVALID_OUTPUT: {
+    code: "INVALID_OUTPUT",
+    publicMessage: "Strategy returned an invalid payload.",
+  },
+  TIMEOUT: {
+    code: "TIMEOUT",
+    publicMessage: "Strategy exhausted its invocation budget.",
+  },
+  THROWN_EXCEPTION: {
+    code: "THROWN_EXCEPTION",
+    publicMessage: "Strategy threw an exception.",
+  },
+  FORBIDDEN_CAPABILITY: {
+    code: "FORBIDDEN_CAPABILITY",
+    publicMessage: "Strategy attempted a forbidden capability.",
+  },
+  OVERSIZED_OUTPUT: {
+    code: "OVERSIZED_OUTPUT",
+    publicMessage: "Strategy exceeded its output budget.",
+  },
+} as const)
+
 export const RUNTIME_INVOCATION_V1_17_SYSTEM_FAILURE_CODES = [
   "OUTER_FRAME_MISSING",
   "OUTER_FRAME_TRUNCATED",
@@ -60,14 +83,12 @@ export interface RuntimeInvocationTraceV117 {
   readonly safeCodes: readonly string[]
 }
 
-export interface RuntimeInvocationPlayerViolationV117 {
-  readonly code: RuntimeInvocationPlayerViolationCodeV117
-  readonly publicMessage: string
-}
+export type RuntimeInvocationPlayerViolationV117 =
+  (typeof RUNTIME_INVOCATION_V1_17_PLAYER_VIOLATIONS)[RuntimeInvocationPlayerViolationCodeV117]
 
 export interface RuntimeInvocationSystemFailureV117 {
   readonly code: RuntimeInvocationSystemFailureCodeV117
-  readonly publicMessage: string
+  readonly publicMessage: "Runtime system failure."
   readonly retryable: boolean
 }
 
@@ -109,12 +130,13 @@ const JsonValueSchema: z.ZodType<JsonValue> = z.lazy(() =>
 
 const Sha256Schema = z.string().regex(/^sha256:[0-9a-f]{64}$/u)
 const SafeCodeSchema = z.string().regex(/^[A-Z][A-Z0-9_]{0,63}$/u)
+const PublicIdSchema = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._:-]{0,255}$/u)
 
 export const RuntimeInvocationTraceV117Schema = z
   .object({
-    requestId: z.string().min(1).max(256),
-    invocationId: z.string().min(1).max(256),
-    kernelRequestId: z.string().min(1).max(256),
+    requestId: PublicIdSchema,
+    invocationId: PublicIdSchema,
+    kernelRequestId: PublicIdSchema,
     method: z.enum(["selectActivations", "soldierBrain"]),
     requestSha256: Sha256Schema,
     budgetProfileSha256: Sha256Schema,
@@ -133,17 +155,24 @@ const RuntimeInvocationSuccessV117Schema = z
   .strict()
 
 const RuntimeInvocationPlayerViolationV117Schema = z
-  .object({
-    kind: z.literal("player_violation"),
-    violation: z
-      .object({
-        code: z.enum(RUNTIME_INVOCATION_V1_17_PLAYER_VIOLATION_CODES),
-        publicMessage: z.string().min(1).max(256),
-      })
-      .strict(),
-    trace: RuntimeInvocationTraceV117Schema,
-  })
-  .strict()
+  .union(
+    RUNTIME_INVOCATION_V1_17_PLAYER_VIOLATION_CODES.map((code) =>
+      z
+        .object({
+          kind: z.literal("player_violation"),
+          violation: z
+            .object({
+              code: z.literal(code),
+              publicMessage: z.literal(
+                RUNTIME_INVOCATION_V1_17_PLAYER_VIOLATIONS[code].publicMessage,
+              ),
+            })
+            .strict(),
+          trace: RuntimeInvocationTraceV117Schema,
+        })
+        .strict(),
+    ) as unknown as readonly [z.ZodTypeAny, z.ZodTypeAny, ...z.ZodTypeAny[]],
+  )
 
 const RuntimeInvocationSystemFailureV117Schema = z
   .object({
@@ -159,7 +188,7 @@ const RuntimeInvocationSystemFailureV117Schema = z
   })
   .strict()
 
-export const RuntimeInvocationResultV117Schema = z.discriminatedUnion("kind", [
+export const RuntimeInvocationResultV117Schema = z.union([
   RuntimeInvocationSuccessV117Schema,
   RuntimeInvocationPlayerViolationV117Schema,
   RuntimeInvocationSystemFailureV117Schema,
@@ -170,32 +199,38 @@ export const RUNTIME_INVOCATION_V1_17_OWNERSHIP_MATRIX = Object.freeze({
   payload_duplicate_key: {
     kind: "player_violation",
     code: "INVALID_OUTPUT",
-    publicMessage: "Strategy returned an invalid payload.",
+    publicMessage:
+      RUNTIME_INVOCATION_V1_17_PLAYER_VIOLATIONS.INVALID_OUTPUT.publicMessage,
   },
   payload_non_canonical: {
     kind: "player_violation",
     code: "INVALID_OUTPUT",
-    publicMessage: "Strategy returned an invalid payload.",
+    publicMessage:
+      RUNTIME_INVOCATION_V1_17_PLAYER_VIOLATIONS.INVALID_OUTPUT.publicMessage,
   },
   payload_schema_invalid: {
     kind: "player_violation",
     code: "INVALID_OUTPUT",
-    publicMessage: "Strategy returned an invalid payload.",
+    publicMessage:
+      RUNTIME_INVOCATION_V1_17_PLAYER_VIOLATIONS.INVALID_OUTPUT.publicMessage,
   },
   payload_illegal: {
     kind: "player_violation",
     code: "INVALID_OUTPUT",
-    publicMessage: "Strategy returned an invalid payload.",
+    publicMessage:
+      RUNTIME_INVOCATION_V1_17_PLAYER_VIOLATIONS.INVALID_OUTPUT.publicMessage,
   },
   strategy_exception_proven: {
     kind: "player_violation",
     code: "THROWN_EXCEPTION",
-    publicMessage: "Strategy threw an exception.",
+    publicMessage:
+      RUNTIME_INVOCATION_V1_17_PLAYER_VIOLATIONS.THROWN_EXCEPTION.publicMessage,
   },
   strategy_exhaustion_proven: {
     kind: "player_violation",
     code: "TIMEOUT",
-    publicMessage: "Strategy exhausted its invocation budget.",
+    publicMessage:
+      RUNTIME_INVOCATION_V1_17_PLAYER_VIOLATIONS.TIMEOUT.publicMessage,
   },
   outer_frame_missing: {
     kind: "system_failure",
@@ -271,10 +306,9 @@ export const classifyRuntimeInvocationV117 = <
   if (classification.kind === "player_violation") {
     return {
       kind: "player_violation",
-      violation: {
-        code: classification.code,
-        publicMessage: classification.publicMessage,
-      },
+      violation: RUNTIME_INVOCATION_V1_17_PLAYER_VIOLATIONS[
+        classification.code
+      ],
       trace,
     }
   }
@@ -420,12 +454,12 @@ export type AuthenticatedRuntimeInvocationResponseV117<
 
 const SemanticTupleWithoutIdSchema = z
   .object({
-    rules: z.string().min(1).max(256),
-    engine: z.string().min(1).max(256),
+    rules: PublicIdSchema,
+    engine: PublicIdSchema,
     runtimeAbi: z.literal(RUNTIME_INVOCATION_V1_17_CANDIDATE.runtimeAbiVersion),
-    chronicle: z.string().min(1).max(256),
-    arenaCatalog: z.string().min(1).max(256),
-    setPolicy: z.string().min(1).max(256),
+    chronicle: PublicIdSchema,
+    arenaCatalog: PublicIdSchema,
+    setPolicy: PublicIdSchema,
   })
   .strict()
 
@@ -435,7 +469,7 @@ const RuntimeInvocationSemanticTupleV117Schema = SemanticTupleWithoutIdSchema.ex
 
 const RuntimeInvocationSourceIdentityV117Schema = z
   .object({
-    strategyRevisionId: z.string().min(1).max(256),
+    strategyRevisionId: PublicIdSchema,
     originalSourceSha256: Sha256Schema,
     normalizedSourceSha256: Sha256Schema,
     artifactSha256: Sha256Schema,
@@ -450,7 +484,7 @@ const NonnegativeSafeIntegerSchema = z
 
 const BudgetWithoutHashSchema = z
   .object({
-    profileId: z.string().min(1).max(256),
+    profileId: PublicIdSchema,
     wallMilliseconds: NonnegativeSafeIntegerSchema,
     computeFuel: NonnegativeSafeIntegerSchema,
     memoryBytes: NonnegativeSafeIntegerSchema,
@@ -473,7 +507,7 @@ const RuntimeInvocationInputV117Schema = z
 
 const RetryWithoutHashSchema = z
   .object({
-    retryId: z.string().min(1).max(256),
+    retryId: PublicIdSchema,
     attempt: NonnegativeSafeIntegerSchema,
     previousRequestSha256: Sha256Schema.nullable(),
   })
@@ -486,7 +520,7 @@ const RuntimeInvocationRetryV117Schema = RetryWithoutHashSchema.extend({
 const RuntimeInvocationAuthenticationV117Schema = z
   .object({
     algorithm: z.literal(RUNTIME_INVOCATION_V1_17_AUTH_ALGORITHM),
-    keyId: z.string().min(1).max(256),
+    keyId: PublicIdSchema,
     signatureInputSha256: Sha256Schema,
     signature: z.string().regex(/^hmac-sha256:[0-9a-f]{64}$/u),
   })
@@ -500,9 +534,9 @@ export const AuthenticatedRuntimeInvocationRequestV117Schema = z
     candidateStatus: z.literal(RUNTIME_INVOCATION_V1_17_CANDIDATE.lifecycle),
     current: z.literal(false),
     envelopeKind: z.literal("runtime-invocation-request"),
-    requestId: z.string().min(1).max(256),
-    invocationId: z.string().min(1).max(256),
-    kernelRequestId: z.string().min(1).max(256),
+    requestId: PublicIdSchema,
+    invocationId: PublicIdSchema,
+    kernelRequestId: PublicIdSchema,
     method: z.enum(["selectActivations", "soldierBrain"]),
     semanticTuple: RuntimeInvocationSemanticTupleV117Schema,
     sourceIdentity: RuntimeInvocationSourceIdentityV117Schema,
@@ -515,16 +549,16 @@ export const AuthenticatedRuntimeInvocationRequestV117Schema = z
 
 const RuntimeInvocationRequestBindingV117Schema = z
   .object({
-    requestId: z.string().min(1).max(256),
-    invocationId: z.string().min(1).max(256),
-    kernelRequestId: z.string().min(1).max(256),
+    requestId: PublicIdSchema,
+    invocationId: PublicIdSchema,
+    kernelRequestId: PublicIdSchema,
     method: z.enum(["selectActivations", "soldierBrain"]),
     requestSha256: Sha256Schema,
     semanticTupleId: Sha256Schema,
     runtimeAbiVersion: z.literal(
       RUNTIME_INVOCATION_V1_17_CANDIDATE.runtimeAbiVersion,
     ),
-    strategyRevisionId: z.string().min(1).max(256),
+    strategyRevisionId: PublicIdSchema,
     artifactSha256: Sha256Schema,
     budgetProfileSha256: Sha256Schema,
     inputSha256: Sha256Schema,
@@ -753,6 +787,12 @@ export const createAuthenticatedRuntimeInvocationResponseV117 = <
   outcome: RuntimeInvocationResultV117<TValue>,
   identity: RuntimeInvocationSigningIdentityV117,
 ): AuthenticatedRuntimeInvocationResponseV117<TValue> => {
+  if (
+    !authenticationMatches("request", request, identity) ||
+    !requestDerivedBindingsMatch(request)
+  ) {
+    throw new TypeError("Cannot authenticate a response for an invalid candidate request")
+  }
   const payloadBinding = outcome.kind === "success"
     ? {
         sha256: canonicalHash(outcome.value),
