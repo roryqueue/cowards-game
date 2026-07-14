@@ -259,19 +259,46 @@ export const buildWasmWasiSourceIdentityV117 = (
 
 export const wasmWasiSourceIdentityFingerprintV117 = (
   identity: WasmWasiSourceIdentityV117,
-): `sha256:${string}` =>
-  `sha256:${hashCanonicalIdentityValue(
+): `sha256:${string}` => {
+  if (!isWasmWasiSourceIdentityV117(identity)) {
+    throw new TypeError("WASM source identity is not a closed typed record")
+  }
+  return `sha256:${hashCanonicalIdentityValue(
     "artifactManifest",
     identity as unknown as JsonValue,
   )}`
+}
 
 export const isWasmWasiSourceIdentityV117 = (
   value: unknown,
 ): value is WasmWasiSourceIdentityV117 => {
   if (typeof value !== "object" || value === null) return false
   const identity = value as Partial<WasmWasiSourceIdentityV117>
+  const exactKeys = (record: object, expected: readonly string[]) => {
+    const actual = Object.keys(record).sort()
+    const sortedExpected = [...expected].sort()
+    return (
+      actual.length === sortedExpected.length &&
+      actual.every((key, index) => key === sortedExpected[index])
+    )
+  }
+  if (
+    !exactKeys(value, [
+      "hasFinalNewline",
+      "identityVersion",
+      "lineEndings",
+      "normalizationPolicy",
+      "normalizedSourceBytes",
+      "normalizedSourceSha256",
+      "originalSourceBytes",
+      "originalSourceSha256",
+    ])
+  ) {
+    return false
+  }
   const lineEndings = identity.lineEndings
   if (typeof lineEndings !== "object" || lineEndings === null) return false
+  if (!exactKeys(lineEndings, ["cr", "crlf", "kind", "lf"])) return false
   const counts = [lineEndings.lf, lineEndings.crlf, lineEndings.cr]
   const present = counts.filter(
     (count) => typeof count === "number" && count > 0,
