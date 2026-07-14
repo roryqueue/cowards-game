@@ -628,7 +628,9 @@ describe("Python subprocess Strategy provider ABI", () => {
     expect(exact.byteLength).toBe(cap)
 
     for (const [payloadBytes, code] of [
-      [exact, "success"],
+      // The decoded payload is within the transport cap but independently
+      // violates StrategyMemory's semantic field cap.
+      [exact, "INVALID_OUTPUT"],
       [
         Buffer.concat([exact.subarray(0, -2), Buffer.from('x"}')]),
         "OVERSIZED_OUTPUT",

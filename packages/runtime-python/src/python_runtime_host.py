@@ -11,6 +11,7 @@ import time
 ABI_VERSION = "strategy-runtime-abi-v1.14"
 CANDIDATE_ABI_VERSION = "strategy-runtime-abi-v1.17"
 CANDIDATE_HOST_PROTOCOL = "python-runtime-host-v1.17"
+MAX_SAFE_INTEGER = 9_007_199_254_740_991
 
 
 def reject_duplicate_pairs(pairs):
@@ -74,6 +75,17 @@ class BoundedCanonicalJsonWriter:
         self.output.extend(value)
 
     def write_string(self, value):
+        try:
+            encoded = value.encode("utf-8")
+        except UnicodeEncodeError:
+            raise InvalidCanonicalOutput()
+        if (
+            b'"' not in encoded
+            and b"\\" not in encoded
+            and not any(unit < 0x20 for unit in encoded)
+        ):
+            self.append(b'"' + encoded + b'"')
+            return
         self.append(b'"')
         for character in value:
             unit = ord(character)
@@ -266,7 +278,8 @@ def run_candidate_guest(
                     else:
                         try:
                             payload = bounded_canonical_json_bytes(
-                                result, budget["outputBytes"]
+                                result,
+                                budget["counters"]["payloadBytes"]["maximum"],
                             )
                             write_all(
                                 result_write,
@@ -300,7 +313,10 @@ def run_candidate_guest(
             return {"kind": "host_failure"}
         close_quietly(ready_read)
 
-        deadline = time.monotonic() + budget["wallMilliseconds"] / 1000
+        deadline = (
+            time.monotonic()
+            + budget["counters"]["wallMilliseconds"]["maximum"] / 1000
+        )
         try:
             write_all(go_write, b"G")
         except OSError:
@@ -311,7 +327,8 @@ def run_candidate_guest(
 
         chunks = []
         observed_bytes = 0
-        maximum_envelope_bytes = ((budget["outputBytes"] + 2) // 3) * 4 + 128
+        payload_limit = budget["counters"]["payloadBytes"]["maximum"]
+        maximum_envelope_bytes = ((payload_limit + 2) // 3) * 4 + 128
         while True:
             remaining = deadline - time.monotonic()
             if remaining <= 0:
@@ -360,6 +377,91 @@ def failure(kind, code, message, public_message):
     }
 
 
+def has_exact_keys(value, expected):
+    return type(value) is dict and set(value.keys()) == set(expected)
+
+
+def is_nonnegative_safe_integer(value):
+    return type(value) is int and 0 <= value <= MAX_SAFE_INTEGER
+
+
+def is_counter_limit(value):
+    return (
+        has_exact_keys(value, {"semantics", "maximum"})
+        and value.get("semantics") == "counter"
+        and is_nonnegative_safe_integer(value.get("maximum"))
+    )
+
+
+def valid_candidate_method_limit(method_limit, method_name):
+    if not has_exact_keys(
+        method_limit,
+        {
+            "method",
+            "invocationCountMaximum",
+            "counters",
+            "memory",
+            "process",
+            "capabilities",
+            "cancellation",
+            "accountingEvidence",
+        },
+    ):
+        return False
+    counters = method_limit.get("counters")
+    memory = method_limit.get("memory")
+    process = method_limit.get("process")
+    capabilities = method_limit.get("capabilities")
+    cancellation = method_limit.get("cancellation")
+    accounting_evidence = method_limit.get("accountingEvidence")
+    counter_names = {
+        "wallMilliseconds",
+        "computeFuel",
+        "payloadBytes",
+        "stdoutBytes",
+        "stderrBytes",
+    }
+    return (
+        method_limit.get("method") == method_name
+        and is_nonnegative_safe_integer(method_limit.get("invocationCountMaximum"))
+        and has_exact_keys(counters, counter_names)
+        and all(is_counter_limit(counters.get(name)) for name in counter_names)
+        and counters["wallMilliseconds"]["maximum"] > 0
+        and has_exact_keys(memory, {"semantics", "maximumBytes"})
+        and memory.get("semantics") == "peak"
+        and is_nonnegative_safe_integer(memory.get("maximumBytes"))
+        and has_exact_keys(
+            process,
+            {"semantics", "processes", "threads", "children"},
+        )
+        and process.get("semantics") == "predicate"
+        and is_nonnegative_safe_integer(process.get("processes"))
+        and is_nonnegative_safe_integer(process.get("threads"))
+        and is_nonnegative_safe_integer(process.get("children"))
+        and has_exact_keys(
+            capabilities,
+            {"semantics", "filesystem", "network", "environment", "shell"},
+        )
+        and capabilities.get("semantics") == "predicate"
+        and type(capabilities.get("filesystem")) is str
+        and type(capabilities.get("network")) is str
+        and type(capabilities.get("environment")) is str
+        and type(capabilities.get("shell")) is str
+        and has_exact_keys(
+            cancellation,
+            {"semantics", "terminationGraceMilliseconds", "evidence"},
+        )
+        and cancellation.get("semantics") == "predicate"
+        and is_nonnegative_safe_integer(
+            cancellation.get("terminationGraceMilliseconds")
+        )
+        and type(cancellation.get("evidence")) is str
+        and has_exact_keys(accounting_evidence, {"semantics", "required"})
+        and accounting_evidence.get("semantics") == "predicate"
+        and accounting_evidence.get("required") is True
+    )
+
+
 def candidate_main(envelope):
     if set(envelope.keys()) != {
         "abiVersion",
@@ -373,29 +475,18 @@ def candidate_main(envelope):
         return 0
     source_info = envelope.get("source", {})
     budget = envelope.get("budget", {})
+    method_name = envelope.get("methodName")
+    method_limit = budget.get("methodLimit", {}) if type(budget) is dict else {}
+    meter_status = budget.get("meterStatus", {}) if type(budget) is dict else {}
     if (
         type(source_info) is not dict
         or set(source_info.keys()) != {"text", "hash", "bytes"}
-        or type(budget) is not dict
-        or set(budget.keys()) != {
-            "wallMilliseconds",
-            "outputBytes",
-            "computeFuel",
-            "memoryBytes",
-            "computeEnforcement",
-            "memoryEnforcement",
-        }
-        or type(budget.get("wallMilliseconds")) is not int
-        or budget["wallMilliseconds"] <= 0
-        or type(budget.get("outputBytes")) is not int
-        or budget["outputBytes"] < 0
-        or type(budget.get("computeFuel")) is not int
-        or budget["computeFuel"] < 0
-        or type(budget.get("memoryBytes")) is not int
-        or budget["memoryBytes"] < 0
-        or budget.get("computeEnforcement") != "unavailable"
-        or budget.get("memoryEnforcement") != "unavailable"
-        or envelope.get("methodName") not in ("selectActivations", "soldierBrain")
+        or not has_exact_keys(budget, {"methodLimit", "meterStatus"})
+        or not has_exact_keys(meter_status, {"computeFuel", "memoryBytes"})
+        or meter_status.get("computeFuel") != "unavailable"
+        or meter_status.get("memoryBytes") != "unavailable"
+        or method_name not in ("selectActivations", "soldierBrain")
+        or not valid_candidate_method_limit(method_limit, method_name)
     ):
         sys.stdout.write('{"kind":"host_failure"}')
         return 0
@@ -434,7 +525,7 @@ def candidate_main(envelope):
         source,
         function_name,
         envelope.get("input"),
-        budget,
+        method_limit,
         safe_builtins,
     )
     if guest["kind"] == "forward":

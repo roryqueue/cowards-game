@@ -14,13 +14,15 @@ import {
   StrategyRuntimeResponseEnvelopeSchema,
   admitCanonicalJsonBytes,
   createAuthenticatedRuntimeInvocationResponseV117,
+  createRuntimeInvocationExecutionReceiptV117,
+  createRuntimeInvocationTraceV117,
   serializeRuntimeInvocationResponseV117,
   verifyRuntimeInvocationRequestV117,
   type AuthenticatedRuntimeInvocationRequestV117,
   type JsonValue,
+  type RuntimeInvocationExecutionReceiptEvidenceV117,
   type RuntimeInvocationResultV117,
   type RuntimeInvocationSigningIdentityV117,
-  type RuntimeInvocationTraceV117,
   type RuntimeViolation,
   type SoldierBrainResult,
   type StrategyRuntimeMetadata,
@@ -46,7 +48,6 @@ import { buildPythonSourceIdentityV117 } from "./validation.js"
 const hostPath = fileURLToPath(
   new URL("./python_runtime_host.py", import.meta.url),
 )
-const PYTHON_CANDIDATE_MAX_OUTPUT_BYTES = 262_144
 export { PYTHON_RUNTIME_ENVIRONMENT, PYTHON_RUNTIME_EXECUTABLE }
 export const pythonRuntimeHostArgs = (): readonly string[] => [
   ...pythonIsolatedHostArgs(hostPath),
@@ -54,7 +55,7 @@ export const pythonRuntimeHostArgs = (): readonly string[] => [
 
 export { pythonExperimentalRuntimeMetadata }
 
-export type PythonCandidateHostResultV117 =
+type PythonCandidateRawObservationV117 =
   | { readonly kind: "payload"; readonly payloadBytes: Uint8Array }
   | { readonly kind: "invalid_output" }
   | { readonly kind: "oversized_output" }
@@ -63,6 +64,12 @@ export type PythonCandidateHostResultV117 =
   | { readonly kind: "host_crash" }
   | { readonly kind: "transport_crash" }
   | { readonly kind: "preflight_unavailable" }
+
+export type PythonCandidateHostResultV117 =
+  PythonCandidateRawObservationV117 &
+    Readonly<{
+      receiptEvidence?: RuntimeInvocationExecutionReceiptEvidenceV117
+    }>
 
 export interface PythonCandidateInvocationAdapterOptionsV117 {
   readonly revision: StrategyRevision
@@ -75,33 +82,18 @@ export interface PythonCandidateInvocationAdapterOptionsV117 {
 
 const candidateTrace = (
   request: AuthenticatedRuntimeInvocationRequestV117,
-  requestBytes: Uint8Array,
   safeCodes: readonly string[],
-): RuntimeInvocationTraceV117 => ({
-  requestId: request.requestId,
-  invocationId: request.invocationId,
-  kernelRequestId: request.kernelRequestId,
-  method: request.method,
-  requestSha256: `sha256:${createHash("sha256").update(requestBytes).digest("hex")}`,
-  budgetProfileSha256: request.budget.profileSha256,
-  inputSha256: request.input.canonicalSha256,
-  retryIdentitySha256: request.retry.identitySha256,
-  safeCodes: [
-    ...safeCodes,
-    "COMPUTE_METER_UNAVAILABLE",
-    "MEMORY_METER_UNAVAILABLE",
-  ],
-})
+) => createRuntimeInvocationTraceV117(request, safeCodes)
 
 const pythonCandidateSystemFailure = (
   request: AuthenticatedRuntimeInvocationRequestV117,
-  requestBytes: Uint8Array,
   code:
     | "OUTER_FRAME_WRONG_BINDING"
     | "ADAPTER_CRASH"
     | "HOST_CRASH"
     | "TRANSPORT_CRASH"
     | "AMBIGUOUS_ATTRIBUTION",
+  safeCodes: readonly string[] = [],
 ): RuntimeInvocationResultV117 => ({
   kind: "system_failure",
   failure: {
@@ -111,12 +103,11 @@ const pythonCandidateSystemFailure = (
       code !== "OUTER_FRAME_WRONG_BINDING" &&
       code !== "AMBIGUOUS_ATTRIBUTION",
   },
-  trace: candidateTrace(request, requestBytes, [code]),
+  trace: candidateTrace(request, [...safeCodes, code]),
 })
 
 const pythonCandidatePlayerViolation = (
   request: AuthenticatedRuntimeInvocationRequestV117,
-  requestBytes: Uint8Array,
   code:
     | "INVALID_OUTPUT"
     | "OVERSIZED_OUTPUT"
@@ -125,8 +116,154 @@ const pythonCandidatePlayerViolation = (
 ): RuntimeInvocationResultV117 => ({
   kind: "player_violation",
   violation: RUNTIME_INVOCATION_V1_17_PLAYER_VIOLATIONS[code],
-  trace: candidateTrace(request, requestBytes, ["ADAPTER_AUTHENTICATED", code]),
+  trace: candidateTrace(request, ["ADAPTER_AUTHENTICATED", code]),
 })
+
+const unavailableExecutionEvidence =
+  (): RuntimeInvocationExecutionReceiptEvidenceV117 => ({
+    attribution: "ambiguous",
+    counters: {
+      wallMilliseconds: { status: "unavailable" },
+      computeFuel: { status: "unavailable" },
+      payloadBytes: { status: "unavailable" },
+      stdoutBytes: { status: "unavailable" },
+      stderrBytes: { status: "unavailable" },
+    },
+    memory: { status: "unavailable" },
+    process: { status: "unavailable" },
+    capabilities: { status: "unavailable" },
+    cancellation: { status: "unavailable" },
+    accountingEvidence: { status: "unavailable" },
+  })
+
+const rawObservationSafeCode = (
+  observation: PythonCandidateRawObservationV117,
+): string => {
+  switch (observation.kind) {
+    case "payload":
+      return "RAW_PAYLOAD_OBSERVED"
+    case "invalid_output":
+      return "RAW_INVALID_OUTPUT_OBSERVED"
+    case "oversized_output":
+      return "RAW_OVERSIZED_OUTPUT_OBSERVED"
+    case "strategy_exception":
+      return "RAW_STRATEGY_EXCEPTION_OBSERVED"
+    case "strategy_timeout":
+      return "RAW_STRATEGY_TIMEOUT_OBSERVED"
+    case "host_crash":
+      return "RAW_HOST_CRASH_OBSERVED"
+    case "transport_crash":
+      return "RAW_TRANSPORT_CRASH_OBSERVED"
+    case "preflight_unavailable":
+      return "RAW_PREFLIGHT_UNAVAILABLE_OBSERVED"
+  }
+}
+
+const rawOutcome = (
+  request: AuthenticatedRuntimeInvocationRequestV117,
+  observation: PythonCandidateRawObservationV117,
+): RuntimeInvocationResultV117 => {
+  if (observation.kind === "payload") {
+    if (
+      observation.payloadBytes.byteLength >
+      request.budget.methodLimit.counters.payloadBytes.maximum
+    ) {
+      return pythonCandidatePlayerViolation(request, "OVERSIZED_OUTPUT")
+    }
+    const payload = admitCanonicalJsonBytes(observation.payloadBytes, {
+      profile: "strategy-payload",
+    })
+    const schema =
+      request.method === "selectActivations"
+        ? StrategyResultV117Schema
+        : SoldierBrainResultV117Schema
+    const parsed = payload.ok ? schema.safeParse(payload.value) : null
+    return parsed?.success
+      ? {
+          kind: "success",
+          value: parsed.data as JsonValue,
+          trace: candidateTrace(request, [
+            "ADAPTER_AUTHENTICATED",
+            "PAYLOAD_CANONICAL",
+          ]),
+        }
+      : pythonCandidatePlayerViolation(request, "INVALID_OUTPUT")
+  }
+  if (observation.kind === "strategy_exception") {
+    return pythonCandidatePlayerViolation(request, "THROWN_EXCEPTION")
+  }
+  if (observation.kind === "strategy_timeout") {
+    return pythonCandidatePlayerViolation(request, "TIMEOUT")
+  }
+  if (observation.kind === "oversized_output") {
+    return pythonCandidatePlayerViolation(request, "OVERSIZED_OUTPUT")
+  }
+  if (observation.kind === "invalid_output") {
+    return pythonCandidatePlayerViolation(request, "INVALID_OUTPUT")
+  }
+  return pythonCandidateSystemFailure(
+    request,
+    observation.kind === "host_crash"
+      ? "HOST_CRASH"
+      : observation.kind === "transport_crash"
+        ? "TRANSPORT_CRASH"
+        : "AMBIGUOUS_ATTRIBUTION",
+  )
+}
+
+const failClosedResponse = (
+  request: AuthenticatedRuntimeInvocationRequestV117,
+  code: "OUTER_FRAME_WRONG_BINDING" | "AMBIGUOUS_ATTRIBUTION",
+  identity: RuntimeInvocationSigningIdentityV117,
+  safeCodes: readonly string[] = [],
+) => {
+  const outcome = pythonCandidateSystemFailure(request, code, [
+    ...safeCodes,
+    "COMPUTE_METER_UNAVAILABLE",
+    "MEMORY_METER_UNAVAILABLE",
+  ])
+  const receipt = createRuntimeInvocationExecutionReceiptV117(
+    request,
+    unavailableExecutionEvidence(),
+  )
+  return createAuthenticatedRuntimeInvocationResponseV117(
+    request,
+    outcome,
+    receipt,
+    identity,
+  )
+}
+
+const responseForObservation = (
+  request: AuthenticatedRuntimeInvocationRequestV117,
+  observation: PythonCandidateHostResultV117,
+  identity: RuntimeInvocationSigningIdentityV117,
+) => {
+  const safeCode = rawObservationSafeCode(observation)
+  if (observation.receiptEvidence !== undefined) {
+    try {
+      const outcome = rawOutcome(request, observation)
+      const receipt = createRuntimeInvocationExecutionReceiptV117(
+        request,
+        observation.receiptEvidence,
+      )
+      return createAuthenticatedRuntimeInvocationResponseV117(
+        request,
+        outcome,
+        receipt,
+        identity,
+      )
+    } catch {
+      return failClosedResponse(request, "AMBIGUOUS_ATTRIBUTION", identity, [
+        safeCode,
+        "ACCOUNTING_EVIDENCE_REJECTED",
+      ])
+    }
+  }
+  return failClosedResponse(request, "AMBIGUOUS_ATTRIBUTION", identity, [
+    safeCode,
+  ])
+}
 
 export const admitPythonCandidateHostResponseV117 = (
   stdout: Uint8Array,
@@ -206,12 +343,11 @@ export const runPythonCandidateHostV117 = (
       },
       input: request.input.value,
       budget: {
-        wallMilliseconds: request.budget.wallMilliseconds,
-        outputBytes: request.budget.outputBytes,
-        computeFuel: request.budget.computeFuel,
-        memoryBytes: request.budget.memoryBytes,
-        computeEnforcement: "unavailable",
-        memoryEnforcement: "unavailable",
+        methodLimit: request.budget.methodLimit,
+        meterStatus: {
+          computeFuel: "unavailable",
+          memoryBytes: "unavailable",
+        },
       },
     }),
     env: PYTHON_RUNTIME_ENVIRONMENT,
@@ -219,7 +355,11 @@ export const runPythonCandidateHostV117 = (
     // Infrastructure watchdog only. The signed wall budget begins immediately
     // before the Strategy method inside the Python host and is classified there.
     timeout: 30_000,
-    maxBuffer: Math.ceil((request.budget.outputBytes * 4) / 3) + 64 * 1024,
+    maxBuffer:
+      Math.ceil(
+        (request.budget.methodLimit.counters.payloadBytes.maximum * 4) / 3,
+      ) +
+      64 * 1024,
   })
   if (result.error || result.signal || result.status !== 0) {
     return { kind: "host_crash" }
@@ -316,7 +456,6 @@ export const createPythonCandidateInvocationAdapterV117 =
       options.revision.source,
     )
     const recordedArtifact = options.revision.metadata.sourceArtifact
-    let outcome: RuntimeInvocationResultV117
     if (
       !artifact.ok ||
       recordedArtifact === undefined ||
@@ -328,109 +467,31 @@ export const createPythonCandidateInvocationAdapterV117 =
       request.sourceIdentity.artifactSha256 !==
         `sha256:${recordedArtifact.hash}`
     ) {
-      outcome = pythonCandidateSystemFailure(
-        request,
-        requestBytes,
-        "OUTER_FRAME_WRONG_BINDING",
+      return serializeRuntimeInvocationResponseV117(
+        failClosedResponse(
+          request,
+          "OUTER_FRAME_WRONG_BINDING",
+          options.identity,
+        ),
       )
-    } else if (request.budget.outputBytes > PYTHON_CANDIDATE_MAX_OUTPUT_BYTES) {
-      outcome = pythonCandidateSystemFailure(
+    }
+    let response
+    try {
+      const host = (options.hostRunner ?? runPythonCandidateHostV117)(
         request,
-        requestBytes,
-        "OUTER_FRAME_WRONG_BINDING",
+        artifact.normalizedSource,
       )
-    } else if (request.budget.wallMilliseconds === 0) {
-      outcome = pythonCandidateSystemFailure(
+      response = responseForObservation(request, host, options.identity)
+    } catch {
+      response = failClosedResponse(
         request,
-        requestBytes,
         "AMBIGUOUS_ATTRIBUTION",
+        options.identity,
+        ["RAW_ADAPTER_CRASH_OBSERVED"],
       )
-    } else {
-      try {
-        const host = (options.hostRunner ?? runPythonCandidateHostV117)(
-          request,
-          artifact.normalizedSource,
-        )
-        if (host.kind === "payload") {
-          if (host.payloadBytes.byteLength > request.budget.outputBytes) {
-            outcome = pythonCandidatePlayerViolation(
-              request,
-              requestBytes,
-              "OVERSIZED_OUTPUT",
-            )
-          } else {
-            const payload = admitCanonicalJsonBytes(host.payloadBytes, {
-              profile: "strategy-payload",
-            })
-            const schema =
-              request.method === "selectActivations"
-                ? StrategyResultV117Schema
-                : SoldierBrainResultV117Schema
-            const parsed = payload.ok ? schema.safeParse(payload.value) : null
-            outcome = parsed?.success
-              ? {
-                  kind: "success",
-                  value: parsed.data as JsonValue,
-                  trace: candidateTrace(request, requestBytes, [
-                    "ADAPTER_AUTHENTICATED",
-                    "PAYLOAD_CANONICAL",
-                  ]),
-                }
-              : pythonCandidatePlayerViolation(
-                  request,
-                  requestBytes,
-                  "INVALID_OUTPUT",
-                )
-          }
-        } else if (host.kind === "strategy_exception") {
-          outcome = pythonCandidatePlayerViolation(
-            request,
-            requestBytes,
-            "THROWN_EXCEPTION",
-          )
-        } else if (host.kind === "strategy_timeout") {
-          outcome = pythonCandidatePlayerViolation(
-            request,
-            requestBytes,
-            "TIMEOUT",
-          )
-        } else if (host.kind === "oversized_output") {
-          outcome = pythonCandidatePlayerViolation(
-            request,
-            requestBytes,
-            "OVERSIZED_OUTPUT",
-          )
-        } else if (host.kind === "invalid_output") {
-          outcome = pythonCandidatePlayerViolation(
-            request,
-            requestBytes,
-            "INVALID_OUTPUT",
-          )
-        } else {
-          outcome = pythonCandidateSystemFailure(
-            request,
-            requestBytes,
-            host.kind === "host_crash"
-              ? "HOST_CRASH"
-              : host.kind === "transport_crash"
-                ? "TRANSPORT_CRASH"
-                : "AMBIGUOUS_ATTRIBUTION",
-          )
-        }
-      } catch {
-        outcome = pythonCandidateSystemFailure(
-          request,
-          requestBytes,
-          "ADAPTER_CRASH",
-        )
-      }
     }
     return serializeRuntimeInvocationResponseV117(
-      createAuthenticatedRuntimeInvocationResponseV117(
-        request,
-        outcome,
-        options.identity,
-      ),
+      response,
     )
   }
 
