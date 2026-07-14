@@ -1157,29 +1157,29 @@ describe("runtime invocation v1.17 authenticated candidate wire", () => {
     }
   })
 
-  it("preserves the retired candidate fixtures while the ledger wire is regenerated downstream", () => {
+  it("keeps the generated candidate fixtures on the exact ledger wire", () => {
     const request = candidateRequest()
     const response = candidateResponse(request)
     const requestBytes = serializeRuntimeInvocationRequestV117(request)
     const responseBytes = serializeRuntimeInvocationResponseV117(response)
-    const retiredRequestBytes = readFileSync(requestFixturePath)
-    const retiredResponseBytes = readFileSync(responseFixturePath)
-    expect(sha256(retiredRequestBytes)).toBe(
-      "sha256:94da776c5ef88992d126bd85ae325518303ba56fdf8d2b5568e0e0ce28db1fd7",
+    const fixtureRequestBytes = readFileSync(requestFixturePath)
+    const fixtureResponseBytes = readFileSync(responseFixturePath)
+    expect(sha256(fixtureRequestBytes)).toBe(
+      "sha256:76d4568f6b0e7f9760f9a0f72d1140212ff28e9a1b60897126f433d4a07f61ae",
     )
-    expect(sha256(retiredResponseBytes)).toBe(
-      "sha256:d4aa58745e3d4305cc09854478dc38e31313b1e803b89f65a990bd8c52a74ebf",
+    expect(sha256(fixtureResponseBytes)).toBe(
+      "sha256:6c09087800ff06fe168255d6c2344a09700e9600e25a273f6564fe96532ff7ca",
     )
-    expect(Buffer.from(requestBytes)).not.toEqual(retiredRequestBytes)
-    expect(Buffer.from(responseBytes)).not.toEqual(retiredResponseBytes)
+    expect(Buffer.from(requestBytes)).toEqual(fixtureRequestBytes)
+    expect(Buffer.from(responseBytes)).toEqual(fixtureResponseBytes)
     expect(
-      verifyRuntimeInvocationRequestV117(retiredRequestBytes, {
+      verifyRuntimeInvocationRequestV117(fixtureRequestBytes, {
         keyId: RUNTIME_INVOCATION_V1_17_TEST_KEY_ID,
         secret: fixtureSecret,
       }),
     ).toMatchObject({
-      kind: "system_failure",
-      failure: { code: "OUTER_FRAME_UNDECODABLE" },
+      kind: "success",
+      value: { accounting: request.accounting },
     })
     expect(request.authentication.signatureInputSha256).toMatch(
       /^sha256:[0-9a-f]{64}$/u,
@@ -1475,14 +1475,33 @@ describe("runtime invocation v1.17 authenticated execution accounting", () => {
   } as const
 
   it("rejects the old generic output alias and missing execution ledger", () => {
-    const verified = verifyRuntimeInvocationRequestV117(
-      readFileSync(requestFixturePath),
-      identity,
-    )
-    expect(verified).toMatchObject({
-      kind: "system_failure",
-      failure: { code: "OUTER_FRAME_UNDECODABLE" },
-    })
+    const current = futureRequestFixture()
+    const invalidFixtures = [
+      resignRawRequestFixture(current.envelope, (unsigned) => {
+        const budget = unsigned.budget as RawEnvelope
+        const methodLimit = budget.methodLimit as RawEnvelope
+        const counters = methodLimit.counters as RawEnvelope
+        delete counters.payloadBytes
+        delete counters.stdoutBytes
+        delete counters.stderrBytes
+        counters.outputBytes = {
+          semantics: "counter",
+          maximum: 262_144,
+        }
+      }),
+      resignRawRequestFixture(current.envelope, (unsigned) => {
+        delete unsigned.accounting
+      }),
+    ]
+
+    for (const invalid of invalidFixtures) {
+      expect(
+        verifyRuntimeInvocationRequestV117(invalid.bytes, identity),
+      ).toMatchObject({
+        kind: "system_failure",
+        failure: { code: "OUTER_FRAME_UNDECODABLE" },
+      })
+    }
   })
 
   it("accepts one exact signed methodLimit, matchLimit, and execution prestate", () => {
