@@ -5,15 +5,15 @@ milestone_name: Rules Integrity and Strategy Evaluation Foundations — ACTIVE
 current_phase: 258
 current_phase_name: canonical-json-failure-semantics-and-artifact-identity
 status: in_progress
-stopped_at: Completed 258-02-PLAN.md; ready for 258-03 bounded scanner/parser
-last_updated: "2026-07-14T03:57:18.000Z"
-last_activity: 2026-07-13
-last_activity_desc: Phase 258 second plan-check findings closed; 14 plans serialized across 12 waves
+stopped_at: Completed 258-03-PLAN.md; ready for 258-04 canonical encoder
+last_updated: "2026-07-14T04:15:13.000Z"
+last_activity: 2026-07-14
+last_activity_desc: Phase 258 Plan 03 iterative scanner/parser subset completed; exact both-missing RED preserved
 progress:
   total_phases: 6
   completed_phases: 2
   total_plans: 55
-  completed_plans: 43
+  completed_plans: 44
   percent: 33
 ---
 
@@ -29,9 +29,9 @@ See: `.planning/PROJECT.md` (updated 2026-07-12)
 ## Current Position
 
 Phase: 258 (canonical-json-failure-semantics-and-artifact-identity) — IN PROGRESS
-Plan: 2 of 14
-Status: Plan 02 complete; 70-vector raw corpus and exact TypeScript/Go expected RED frozen
-Last activity: 2026-07-13 — Completed Plan 258-02 canonical JSON raw corpus and qualified RED
+Plan: 3 of 14
+Status: Plan 03 complete; iterative raw scanner and bounded receipt materializer green
+Last activity: 2026-07-14 — Completed Plan 258-03 canonical JSON scanner/parser subset
 
 Progress: [███░░░░░░░] 33%
 
@@ -61,8 +61,8 @@ Progress: [███░░░░░░░] 33%
 
 **Resume file:** None
 
-Last session: 2026-07-14T03:33:40.000Z
-Stopped at: Completed 258-02-PLAN.md; ready for 258-03 bounded scanner/parser
+Last session: 2026-07-14T04:15:13.000Z
+Stopped at: Completed 258-03-PLAN.md; ready for 258-04 canonical encoder
 Next command: `$gsd-execute-phase 258`
 
 ## Performance Metrics
@@ -95,8 +95,13 @@ Next command: `$gsd-execute-phase 258`
 | Phase 257 P22 | 36min | 1 task | 8 implementation/test/proof files |
 | Phase 258 P01 | 17min | 2 tasks | 8 calibration/contract files |
 | Phase 258 P02 | 11min | 2 tasks | 89 corpus/consumer/verifier files |
+| Phase 258 P03 | 15min | 2 tasks | 4 scanner/parser files |
 
 ## Decisions
+
+- [Phase 258]: Raw-byte admission checks size first, then validates all UTF-8/scalars before iterative JSON grammar, duplicate, number, ordering, and ceiling state. — Invalid bytes cannot be normalized or mislabeled by a host parser, and depth 3,000 returns one typed error without recursion.
+- [Phase 258]: Materialization consumes only exact SHA-256-bound scan receipts and builds values with an explicit stack and null-prototype objects. — Changed bytes and impossible token disagreement are system failures, never player violations.
+- [Phase 258]: Plan 03 leaves both codec sentinels active at `both-missing`. — Scanner/parser subset success does not overclaim the absent TypeScript canonical encoder or Go codec.
 
 - [Phase 258]: Canonical JSON v1.1 corpus identity is the fixed domain plus unsigned-64-bit length frames over each ordered vector ID and its literal raw bytes. — Host parsing cannot normalize malformed UTF-8, duplicate keys, number lexemes, or ordering before identity is proved.
 - [Phase 258]: Expected RED is valid only after TypeScript and Go enumerate the same complete 70-vector root and identity, then exit exactly 1 with their own missing-codec sentinel. — Discovery, import, compile, configuration, timeout, generic nonzero, disabled tests, and counterfeit sentinels cannot represent progress.

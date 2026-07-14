@@ -190,7 +190,7 @@ Plans:
 
 **Wave 3 — bounded scanner/parser subsets with expected RED**
 
-- [ ] 258-03-PLAN.md — Implement the iterative raw scanner/parser with typed bounded failures.
+- [x] 258-03-PLAN.md — Implement the iterative raw scanner/parser with typed bounded failures.
 
 **Wave 4 — complete TypeScript codec and retire its RED**
 
