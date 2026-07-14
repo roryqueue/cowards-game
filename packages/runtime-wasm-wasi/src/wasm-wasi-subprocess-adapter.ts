@@ -501,6 +501,30 @@ export const runWasmWasiStrategyMethodV117Sync = (
       input.signingIdentity,
     )
   }
+  const compiledArtifact = input.revision.metadata.compiledArtifact!
+  const expectedCompiler =
+    input.revision.runtime.language.id === "rust" ? "rustc" : "zig"
+  const expectedCommandSummary =
+    input.revision.runtime.language.id === "rust"
+      ? "rustc --target wasm32-wasip1 -O strategy.rs -o strategy.wasm"
+      : "zig build-exe strategy.zig -target wasm32-wasi -O ReleaseSmall --cache-dir <temp> --global-cache-dir <temp> -femit-bin=strategy.wasm"
+  const observedCompilerVersion = observedIdentity.compiler.reportedVersion
+    .split("\n", 1)[0]
+  if (
+    compiledArtifact.toolchain.compiler !== expectedCompiler ||
+    compiledArtifact.toolchain.compilerVersion !== observedCompilerVersion ||
+    compiledArtifact.toolchain.targetTriple !==
+      observedIdentity.compiler.targetTriple ||
+    compiledArtifact.toolchain.commandSummary !== expectedCommandSummary
+  ) {
+    return authenticateCandidateOutcome(
+      input.request,
+      candidateOutcome("outer_frame_wrong_binding", input.request, null, [
+        "WASM_WASI_STALE_ARTIFACT_TOOLCHAIN_IDENTITY",
+      ]),
+      input.signingIdentity,
+    )
+  }
   const dir = mkdtempSync(join(tmpdir(), "cowards-wasmtime-v1-17-"))
   const artifactPath = join(dir, "strategy.wasm")
   try {

@@ -36,7 +36,7 @@
       ],
       "identity": {
         "adapter": {
-          "buildSha256": "sha256:c46beb9d65ff0b3f85c20b454956bcd6911024eb8f2401135b2ee3499a148cb4"
+          "buildSha256": "sha256:c1d1a64d86efdbf87185f7430873a4f6e05df26da180dda25e204b5f1411882c"
         },
         "artifact": {
           "bytes": 2012498,
@@ -69,7 +69,7 @@
           "sha256": "sha256:cfcfadf2f6e1888e2b44296844fc17087a3813239352e1fdfc46ab7f9ed6e9c9"
         },
         "countedCertification": "uncertified",
-        "identitySha256": "sha256:95fad77adf69014517db083e4f1acfdb6747d65244afbe1ab63ba2d45bdd82df",
+        "identitySha256": "sha256:98f1165894b1408137d69f5b095c3accdc7bfa88a1d289d4f61b01dc5562676d",
         "languageId": "rust",
         "metering": {
           "supported": [
@@ -183,7 +183,7 @@
       ],
       "identity": {
         "adapter": {
-          "buildSha256": "sha256:c46beb9d65ff0b3f85c20b454956bcd6911024eb8f2401135b2ee3499a148cb4"
+          "buildSha256": "sha256:c1d1a64d86efdbf87185f7430873a4f6e05df26da180dda25e204b5f1411882c"
         },
         "artifact": {
           "bytes": 258,
@@ -221,7 +221,7 @@
           "sha256": "sha256:cfcfadf2f6e1888e2b44296844fc17087a3813239352e1fdfc46ab7f9ed6e9c9"
         },
         "countedCertification": "uncertified",
-        "identitySha256": "sha256:99e463771be0544ed1dd80db9ba81ab0c439d6ccce46465cca8c5680f4103fe4",
+        "identitySha256": "sha256:fc558635e0d1f5a4622072b4f3dd643cc78300a4d628caa61b395d0174baa44f",
         "languageId": "zig",
         "metering": {
           "supported": [
