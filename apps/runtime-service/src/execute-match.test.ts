@@ -1020,6 +1020,82 @@ describe("runtime execution service v1.17 candidate bridge", () => {
     expect(JSON.stringify(result.publicResult)).not.toContain("forged")
   })
 
+  it("pins the admitted request against adapter-side retry mutation", () => {
+    const request = candidateRequest()
+    const originalBytes = serializeRuntimeInvocationRequestV117(request)
+    const mutated = createAuthenticatedRuntimeInvocationRequestV117(
+      {
+        requestId: request.requestId,
+        invocationId: request.invocationId,
+        kernelRequestId: request.kernelRequestId,
+        method: request.method,
+        semanticTuple: {
+          rules: request.semanticTuple.rules,
+          engine: request.semanticTuple.engine,
+          runtimeAbi: request.semanticTuple.runtimeAbi,
+          chronicle: request.semanticTuple.chronicle,
+          arenaCatalog: request.semanticTuple.arenaCatalog,
+          setPolicy: request.semanticTuple.setPolicy,
+        },
+        sourceIdentity: request.sourceIdentity,
+        budget: {
+          profileId: request.budget.profileId,
+          wallMilliseconds: request.budget.wallMilliseconds,
+          computeFuel: request.budget.computeFuel,
+          memoryBytes: request.budget.memoryBytes,
+          outputBytes: request.budget.outputBytes,
+          processLimit: request.budget.processLimit,
+          matchCumulative: request.budget.matchCumulative,
+        },
+        input: { value: request.input.value },
+        retry: {
+          retryId: request.retry.retryId,
+          attempt: 1,
+          previousRequestSha256: sha256(originalBytes),
+        },
+      },
+      candidateIdentity,
+    )
+    const mutatedResponse = serializeRuntimeInvocationResponseV117(
+      createAuthenticatedRuntimeInvocationResponseV117(
+        mutated,
+        {
+          kind: "success",
+          value: {
+            action: { type: "TURN_TO_STONE" },
+            soldierMemory: { mustNotCommit: true },
+          },
+          trace: candidateTrace(mutated),
+        },
+        candidateIdentity,
+      ),
+    )
+
+    const result = executeCandidateRuntimeInvocationV117({
+      request,
+      identity: candidateIdentity,
+      invoke(bytes) {
+        expect(Buffer.from(bytes).equals(Buffer.from(originalBytes))).toBe(true)
+        Object.assign(request, mutated)
+        return mutatedResponse
+      },
+      executeOutcome: executeCandidateOutcome,
+    })
+
+    expect(result.internalExecution).toMatchObject({
+      kind: "failure",
+      transitions: [],
+      failure: {
+        classification: "system_failure",
+        code: "OUTER_FRAME_WRONG_BINDING",
+      },
+    })
+    expect(result.publicResult).toMatchObject({
+      classification: "system_failure",
+      code: "OUTER_FRAME_WRONG_BINDING",
+    })
+  })
+
   it("leaves retry to the caller and reuses byte-identical signed identity after adapter crash", () => {
     const request = candidateRequest()
     const expectedBytes = serializeRuntimeInvocationRequestV117(request)
