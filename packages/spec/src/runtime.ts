@@ -13,6 +13,23 @@ import {
 } from "./runtime-evidence.js"
 
 export { STRATEGY_RUNTIME_ABI_VERSION } from "./versions.js"
+export {
+  RUNTIME_INVOCATION_V1_17_CANDIDATE,
+  RUNTIME_INVOCATION_V1_17_OWNERSHIP_MATRIX,
+  RUNTIME_INVOCATION_V1_17_PLAYER_VIOLATION_CODES,
+  RUNTIME_INVOCATION_V1_17_SYSTEM_FAILURE_CODES,
+  RuntimeInvocationResultV117Schema,
+  RuntimeInvocationTraceV117Schema,
+  classifyRuntimeInvocationV117,
+  type RuntimeInvocationBoundaryEventV117,
+  type RuntimeInvocationMethodV117,
+  type RuntimeInvocationPlayerViolationCodeV117,
+  type RuntimeInvocationPlayerViolationV117,
+  type RuntimeInvocationResultV117,
+  type RuntimeInvocationSystemFailureCodeV117,
+  type RuntimeInvocationSystemFailureV117,
+  type RuntimeInvocationTraceV117,
+} from "./runtime-invocation-v1-17.js"
 
 export const STRATEGY_LANGUAGE_IDS = [
   "javascript",
