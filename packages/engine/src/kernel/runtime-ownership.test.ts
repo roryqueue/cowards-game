@@ -26,7 +26,7 @@ const matchInput = {
   topPlayerId: "phase-258-top",
   bottomStrategyRevisionId: "phase-258-bottom-revision",
   topStrategyRevisionId: "phase-258-top-revision",
-} as const
+}
 
 const sha256 = (value: unknown): string =>
   createHash("sha256").update(JSON.stringify(value)).digest("hex")
@@ -166,6 +166,7 @@ describe("Phase 258 successor runtime ownership", () => {
       expect(memoryAfter).toBe(beforeMemory)
       expect(observations).toHaveLength(1)
       expect(execution.result.events.map(({ type }) => type)).toEqual([
+        "ACTIVATION_STARTED",
         "CYCLE_STARTED",
         "AWARENESS_GRID_OBSERVED",
         "RUNTIME_VIOLATION",
@@ -205,6 +206,8 @@ describe("Phase 258 successor runtime ownership", () => {
           ): RuntimeInvocationResultV117<SoldierBrainResult> {
             if (!request) throw new Error("driver omitted kernel request")
             observations.push(globalThis.structuredClone(input))
+            ;(input.soldierMemory as Record<string, unknown>).attemptMutation =
+              "must-not-reach-gameplay"
             return {
               kind: "system_failure",
               failure: { code, publicMessage: "Runtime system failure.", retryable },
@@ -226,9 +229,9 @@ describe("Phase 258 successor runtime ownership", () => {
       })
       expect(sha256(execution.unchangedState)).toBe(before)
       expect(observations).toHaveLength(1)
-      expect(sha256(observations[0])).toBe(sha256({
-        ...observations[0],
-      }))
+      expect(observations[0]?.soldierMemory).not.toHaveProperty(
+        "attemptMutation",
+      )
     },
   )
 

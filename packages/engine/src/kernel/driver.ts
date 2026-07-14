@@ -1,4 +1,10 @@
-import { COMPATIBILITY_VERSIONS, type JsonValue } from "@cowards/spec"
+import {
+  COMPATIBILITY_VERSIONS,
+  RuntimeInvocationResultV117Schema,
+  type JsonValue,
+  type RuntimeInvocationResultV117,
+  type RuntimeViolation,
+} from "@cowards/spec"
 import { createCandidateInitialGameState } from "./create-initial-state.js"
 import { stepCandidateMatch } from "./step.js"
 import type {
@@ -134,8 +140,69 @@ const runtimeResume = (
   try {
     const result =
       request.kind === "selectActivations"
-        ? runtime.selectActivations(request.input)
-        : runtime.runSoldierBrain(request.input)
+        ? runtime.selectActivations(request.input, request)
+        : runtime.runSoldierBrain(request.input, request)
+
+    if ("kind" in result) {
+      const parsed = RuntimeInvocationResultV117Schema.safeParse(result)
+      if (!parsed.success) {
+        return {
+          kind: "runtime_resume",
+          requestId: request.requestId,
+          effectKind: request.kind,
+          classification: "system_failure",
+          failure: { code: "RUNTIME_RESPONSE_INVALID", retryable: false },
+        }
+      }
+      const successor = parsed.data as RuntimeInvocationResultV117
+      if (
+        successor.trace.kernelRequestId !== request.requestId ||
+        successor.trace.method !== request.kind
+      ) {
+        return {
+          kind: "runtime_resume",
+          requestId: request.requestId,
+          effectKind: request.kind,
+          classification: "system_failure",
+          failure: {
+            code: "RUNTIME_RESPONSE_BINDING_MISMATCH",
+            retryable: false,
+          },
+        }
+      }
+      if (successor.kind === "success") {
+        return {
+          kind: "runtime_resume",
+          requestId: request.requestId,
+          effectKind: request.kind,
+          classification: "success",
+          value: successor.value,
+        }
+      }
+      if (successor.kind === "system_failure") {
+        return {
+          kind: "runtime_resume",
+          requestId: request.requestId,
+          effectKind: request.kind,
+          classification: "system_failure",
+          failure: {
+            code: successor.failure.code,
+            retryable: successor.failure.retryable,
+          },
+        }
+      }
+      const violation: RuntimeViolation = {
+        type: successor.violation.code,
+        message: successor.violation.publicMessage,
+      }
+      return {
+        kind: "runtime_resume",
+        requestId: request.requestId,
+        effectKind: request.kind,
+        classification: "player_violation",
+        violation,
+      }
+    }
     if (result.ok) {
       return {
         kind: "runtime_resume",

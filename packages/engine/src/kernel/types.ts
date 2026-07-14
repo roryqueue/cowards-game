@@ -4,12 +4,14 @@ import {
 } from "@cowards/spec"
 import type {
   ActivationOrder,
-  JsonValue,
   MatchOutcome,
+  RuntimeInvocationResultV117,
   RuntimeViolation,
   SemanticIntegrityIssue,
   SoldierBrainInput,
+  SoldierBrainResult,
   StrategyInput,
+  StrategyResult,
 } from "@cowards/spec"
 import type {
   ActivationSlotState,
@@ -234,6 +236,15 @@ export interface CandidateRuntimeSystemFailureResult {
   }
 }
 
+export type CandidateRuntimeInvocationResult<TValue> =
+  | {
+      readonly ok: true
+      readonly value: TValue
+    }
+  | { readonly ok: false; readonly violation: RuntimeViolation }
+  | CandidateRuntimeSystemFailureResult
+  | RuntimeInvocationResultV117<TValue>
+
 export interface CandidateActivationExecution {
   readonly kind: "completed" | "failure"
   readonly result?: TransitionResult | undefined
@@ -244,27 +255,12 @@ export interface CandidateActivationExecution {
 }
 
 export interface CandidateStrategyRuntime {
-  selectActivations(input: StrategyInput):
-    | {
-        readonly ok: true
-        readonly value: {
-          readonly activationOrders: readonly {
-            readonly soldierId: string
-            readonly objective?: JsonValue | undefined
-          }[]
-          readonly strategyMemory: JsonValue
-        }
-      }
-    | { readonly ok: false; readonly violation: RuntimeViolation }
-    | CandidateRuntimeSystemFailureResult
-  runSoldierBrain(input: SoldierBrainInput):
-    | {
-        readonly ok: true
-        readonly value: {
-          readonly action: unknown
-          readonly soldierMemory: JsonValue
-        }
-      }
-    | { readonly ok: false; readonly violation: RuntimeViolation }
-    | CandidateRuntimeSystemFailureResult
+  selectActivations(
+    input: StrategyInput,
+    request?: KernelSelectActivationsRequest,
+  ): CandidateRuntimeInvocationResult<StrategyResult>
+  runSoldierBrain(
+    input: SoldierBrainInput,
+    request?: KernelSoldierBrainRequest,
+  ): CandidateRuntimeInvocationResult<SoldierBrainResult>
 }
