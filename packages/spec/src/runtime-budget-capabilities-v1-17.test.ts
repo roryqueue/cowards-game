@@ -1,4 +1,9 @@
 import { describe, expect, it } from "vitest"
+import { encodeCanonicalJson } from "./canonical-json-encode.js"
+import {
+  RUNTIME_ABI_V1_17,
+  hashRuntimeAbiV117Identity,
+} from "./runtime-abi-v1-17.js"
 import {
   RUNTIME_BUDGET_CAPABILITIES_V1_17,
   RUNTIME_BUDGET_CAPABILITY_CONTRACT_V1_17,
@@ -7,11 +12,14 @@ import {
   RUNTIME_BUDGET_CAPABILITY_LANES_V1_17,
   RUNTIME_BUDGET_CAPABILITY_PINS_V1_17,
   RuntimeBudgetCapabilitiesV117Error,
+  type RuntimeBudgetCapabilityFindingV117,
   assertRuntimeBudgetCapabilitiesV117,
   buildRuntimeBudgetCapabilitiesV117,
   renderRuntimeBudgetCapabilitiesV117,
   validateRuntimeBudgetCapabilitiesV117,
 } from "./runtime-budget-capabilities-v1-17.js"
+import { RUNTIME_EVIDENCE_TRUSTED_PRODUCERS } from "./runtime-evidence-attestation.js"
+import type { JsonValue } from "./types.js"
 
 type MutableCapability = {
   dimension: string
@@ -83,7 +91,89 @@ const expectRejected = (mutate: (artifact: MutableArtifact) => void): void => {
   )
 }
 
+const expectRejectedWithCode = (
+  code: RuntimeBudgetCapabilityFindingV117["code"],
+  mutate: (artifact: MutableArtifact) => void,
+): void => {
+  const artifact = mutableArtifact()
+  mutate(artifact)
+  const findings = validateRuntimeBudgetCapabilitiesV117(artifact)
+  expect(findings.map((finding) => finding.code)).toContain(code)
+  expect(() => assertRuntimeBudgetCapabilitiesV117(artifact)).toThrow(
+    RuntimeBudgetCapabilitiesV117Error,
+  )
+}
+
+const expectedBudgetProfileSha256 = (): `sha256:${string}` => {
+  const encoded = encodeCanonicalJson(
+    RUNTIME_ABI_V1_17.budgets as unknown as JsonValue,
+    { context: "canonical-manifest" },
+  )
+  expect(encoded.ok).toBe(true)
+  if (!encoded.ok) throw new Error(encoded.error.code)
+  return hashRuntimeAbiV117Identity("budgetProfile", [encoded.bytes])
+}
+
 describe("runtime budget capabilities v1.17", () => {
+  it("derives ABI dimensions, pins, lanes, posture, budgets, and trust authority", () => {
+    const artifact = mutableArtifact()
+    const contract = RUNTIME_BUDGET_CAPABILITY_CONTRACT_V1_17 as unknown as {
+      runtimeAbiVersion: string
+      budgetProfileSha256: string
+      dimensions: Array<{ id: string }>
+      identityPins: Array<{ id: string }>
+      lanes: Array<{
+        laneId: string
+        countedCertification: string
+        reason: string
+      }>
+      policy: { productionTrustedProducers: unknown[] }
+    }
+
+    expect(contract.runtimeAbiVersion).toBe(
+      RUNTIME_ABI_V1_17.versions.runtimeAbi,
+    )
+    expect(contract.budgetProfileSha256).toBe(expectedBudgetProfileSha256())
+    expect(contract.dimensions.map(({ id }) => id)).toEqual(
+      RUNTIME_ABI_V1_17.budgets.requiredEquivalentMeters,
+    )
+    expect(contract.identityPins.map(({ id }) => id)).toEqual(
+      RUNTIME_ABI_V1_17.identity.requiredExecutablePins,
+    )
+    expect(
+      contract.lanes.map(
+        ({ laneId, countedCertification, reason }) => ({
+          laneId,
+          countedCertification,
+          reason,
+        }),
+      ),
+    ).toEqual(
+      Object.entries(RUNTIME_ABI_V1_17.lanePosture).map(
+        ([laneId, posture]) => ({
+          laneId,
+          countedCertification: posture.countedCertification,
+          reason: posture.reason,
+        }),
+      ),
+    )
+    expect(contract.policy.productionTrustedProducers).toEqual(
+      RUNTIME_EVIDENCE_TRUSTED_PRODUCERS,
+    )
+    expect(artifact.policy.productionTrustedProducers).toEqual(
+      RUNTIME_EVIDENCE_TRUSTED_PRODUCERS,
+    )
+    for (const lane of artifact.lanes) {
+      const budgetPin = lane.identityPins.find(
+        ({ pin }) => pin === "budgetProfileSha256",
+      )
+      expect(budgetPin?.bindingSafeId).toBe(expectedBudgetProfileSha256())
+      expect(lane.productionTrustedProducers).toEqual(
+        RUNTIME_EVIDENCE_TRUSTED_PRODUCERS,
+      )
+    }
+  })
+
   it("freezes the exact ordered ten dimensions, ten pins, and five lanes", () => {
     expect(RUNTIME_BUDGET_CAPABILITY_DIMENSIONS_V1_17).toEqual([
       "wall",
@@ -244,6 +334,44 @@ describe("runtime budget capabilities v1.17", () => {
     })
   })
 
+  it("recursively closes dimension and pin definitions with specific findings", () => {
+    expectRejectedWithCode("ORDERED_DIMENSIONS_INVALID", (artifact) => {
+      artifact.dimensions[0]!.equivalentUnit = "elapsed-seconds"
+    })
+    expectRejectedWithCode("ORDERED_PINS_INVALID", (artifact) => {
+      artifact.identityPins[0]!.exactRequirement = "floating-runtime-tag"
+    })
+    expectRejectedWithCode("STRICT_FIELDS_INVALID", (artifact) => {
+      ;(artifact.dimensions[0] as Record<string, unknown>).extra = true
+    })
+  })
+
+  it("validates every policy literal and exact lane role/entrant pairing", () => {
+    for (const [field, invalid] of [
+      ["allDimensionsRequiredInOrder", false],
+      ["allPinsRequiredInOrder", false],
+      ["allPinsMustBeExactDeployment", false],
+      ["productionTrustedProducerRequired", false],
+      ["localDiagnosticsCanCertify", true],
+      ["floatingPinsCanCertify", true],
+      ["missingPinsCanCertify", true],
+      ["phase259ConformanceRequired", false],
+    ] as const) {
+      expectRejectedWithCode("POLICY_INVALID", (artifact) => {
+        artifact.policy[field] = invalid
+      })
+    }
+    expectRejectedWithCode("LANE_SEMANTICS_INVALID", (artifact) => {
+      artifact.lanes[0]!.laneRole = "entrant-language"
+    })
+    expectRejectedWithCode("LANE_SEMANTICS_INVALID", (artifact) => {
+      artifact.lanes[1]!.entrant = false
+    })
+    expectRejectedWithCode("LANE_SEMANTICS_INVALID", (artifact) => {
+      artifact.lanes[1]!.languageId = "javascript"
+    })
+  })
+
   it("rejects empty mechanisms, evidence, and unregistered fields", () => {
     expectRejected((artifact) => {
       artifact.lanes[1]!.capabilities[0]!.measurement = ""
@@ -275,6 +403,25 @@ describe("runtime budget capabilities v1.17", () => {
         pin.bindingSafeId = bindingSafeId
       })
     }
+  })
+
+  it("requires every pin value and prefix to match its canonical binding kind", () => {
+    expectRejectedWithCode("PIN_ROWS_INVALID", (artifact) => {
+      const budget = artifact.lanes[1]!.identityPins[7]!
+      budget.bindingSafeId = `sha256:${"0".repeat(64)}`
+    })
+    expectRejectedWithCode("PIN_ROWS_INVALID", (artifact) => {
+      const canonicalJson = artifact.lanes[1]!.identityPins[8]!
+      canonicalJson.bindingSafeId = "canonical-json-latest"
+    })
+    expectRejectedWithCode("PIN_ROWS_INVALID", (artifact) => {
+      const floating = artifact.lanes[1]!.identityPins[0]!
+      floating.bindingSafeId = `sha256:${"1".repeat(64)}`
+    })
+    expectRejectedWithCode("PIN_ROWS_INVALID", (artifact) => {
+      const local = artifact.lanes[3]!.identityPins[0]!
+      local.bindingSafeId = "floating:wasmtime"
+    })
   })
 
   it("rejects certification, counted promotion, trusted producers, and probe promotion", () => {
@@ -318,6 +465,54 @@ describe("runtime budget capabilities v1.17", () => {
     expectRejected((artifact) => {
       artifact.generatedAt = new Date(0).toISOString()
     })
+  })
+
+  it("classifies absolute/home/temp paths and private or security fields as privacy leaks", () => {
+    for (const leaked of [
+      "/home/alice/private/runtime",
+      "/tmp/runtime-receipt.json",
+      "/var/tmp/cowards/runtime",
+      "~/private/runtime",
+      "D:\\workspace\\runtime.exe",
+      "C:\\Temp\\runtime.log",
+      "\\\\host\\share\\runtime",
+    ]) {
+      expectRejectedWithCode("PRIVACY_LEAK", (artifact) => {
+        artifact.lanes[2]!.capabilities[0]!.measurement = leaked
+      })
+    }
+    for (const key of [
+      "privateRuntimeDiagnostics",
+      "securityInternals",
+      "rawSourceBytes",
+      "hostEnvironment",
+    ]) {
+      expectRejectedWithCode("PRIVACY_LEAK", (artifact) => {
+        artifact.lanes[1]![key] = "redacted"
+      })
+    }
+  })
+
+  it("rejects toJSON and non-enumerable input drift before derivation", () => {
+    const contract = clone(
+      RUNTIME_BUDGET_CAPABILITY_CONTRACT_V1_17,
+    ) as unknown as Record<string, unknown>
+    contract.toJSON = () => RUNTIME_BUDGET_CAPABILITY_CONTRACT_V1_17
+    expect(() => buildRuntimeBudgetCapabilitiesV117({ contract })).toThrow(
+      RuntimeBudgetCapabilitiesV117Error,
+    )
+
+    const evidenceInputs = clone(
+      RUNTIME_BUDGET_CAPABILITY_EVIDENCE_INPUTS_V1_17,
+    ) as unknown as object
+    Object.defineProperty(evidenceInputs, "hiddenPrivateValue", {
+      configurable: true,
+      enumerable: false,
+      value: "/home/alice/private/runtime",
+    })
+    expect(() =>
+      buildRuntimeBudgetCapabilitiesV117({ evidenceInputs }),
+    ).toThrow(RuntimeBudgetCapabilitiesV117Error)
   })
 
   it("fails closed when frozen contract or evidence inputs drift", () => {
