@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"os"
 	"strings"
 	"testing"
@@ -62,7 +63,7 @@ func TestPhase258RuntimeInvocationV117RejectsUnsignedBudgetStaleIdentityAndMixed
 		to   []byte
 		code string
 	}{
-		{name: "unsigned budget", from: []byte(`"wallMilliseconds":50`), to: []byte(`"wallMilliseconds":51`), code: "OUTER_FRAME_UNAUTHENTICATED"},
+		{name: "unsigned budget", from: []byte(`"maximum":50`), to: []byte(`"maximum":51`), code: "OUTER_FRAME_UNAUTHENTICATED"},
 		{name: "stale artifact", from: []byte("sha256:dddddddd"), to: []byte("sha256:eeeeeeee"), code: "OUTER_FRAME_UNAUTHENTICATED"},
 	} {
 		t.Run(mutation.name, func(t *testing.T) {
@@ -73,6 +74,47 @@ func TestPhase258RuntimeInvocationV117RejectsUnsignedBudgetStaleIdentityAndMixed
 			_, failure := verifyRuntimeInvocationRequestV117(tampered, identity)
 			if failure == nil || failure.Code != mutation.code || failure.Retryable {
 				t.Fatalf("unexpected failure: %+v", failure)
+			}
+		})
+	}
+
+	for _, candidate := range []struct {
+		name   string
+		mutate func(map[string]any)
+	}{
+		{
+			name: "signed nested method budget drift",
+			mutate: func(envelope map[string]any) {
+				methodLimit := envelope["budget"].(map[string]any)["methodLimit"].(map[string]any)
+				methodLimit["counters"].(map[string]any)["wallMilliseconds"].(map[string]any)["maximum"] = json.Number("51")
+			},
+		},
+		{
+			name: "signed accounting idempotency drift",
+			mutate: func(envelope map[string]any) {
+				envelope["accounting"].(map[string]any)["idempotencyKeySha256"] = "sha256:" + strings.Repeat("e", 64)
+			},
+		},
+	} {
+		candidate := candidate
+		t.Run(candidate.name, func(t *testing.T) {
+			envelope, parseFailure := runtimeInvocationV117ParseCanonicalEnvelope(requestBytes)
+			if parseFailure != nil {
+				t.Fatal(parseFailure)
+			}
+			candidate.mutate(envelope)
+			authentication, err := runtimeInvocationV117Authenticate("request", runtimeInvocationV117WithoutProperty(envelope, "authentication"), identity)
+			if err != nil {
+				t.Fatal(err)
+			}
+			envelope["authentication"] = authentication
+			signed, err := runtimeInvocationV117CanonicalValue(envelope)
+			if err != nil {
+				t.Fatal(err)
+			}
+			request, failure := verifyRuntimeInvocationRequestV117(signed, identity)
+			if request != nil || failure == nil || failure.Code != "OUTER_FRAME_WRONG_BINDING" || failure.Retryable {
+				t.Fatalf("signed request drift was admitted: request=%+v failure=%+v", request, failure)
 			}
 		})
 	}
@@ -220,29 +262,26 @@ func TestPhase258RuntimeInvocationV117UsesFiniteGoOwnedSignedBudgetRetryPolicy(t
 	})
 
 	for _, candidate := range []struct {
-		name       string
-		maximum    int64
-		attempt    int64
-		wantCalls  int
-		wantResult bool
+		name          string
+		attempt       int64
+		prestateCount int64
+		wantCalls     int
+		wantResult    bool
 	}{
-		{name: "zero signed invocation maximum is rejected", maximum: 0, attempt: 0},
-		{name: "over policy signed invocation maximum is rejected", maximum: 261, attempt: 0},
-		{name: "maximum safe integer invocation maximum is rejected", maximum: 9_007_199_254_740_991, attempt: 0},
-		{name: "attempt at signed maximum is rejected", maximum: 260, attempt: 260},
-		{name: "maximum safe integer attempt is rejected", maximum: 260, attempt: 9_007_199_254_740_991},
-		{name: "remaining signed budget limits calls", maximum: 1, attempt: 0, wantCalls: 1, wantResult: true},
-		{name: "attempt two uses the final local retry", maximum: 260, attempt: 2, wantCalls: 1, wantResult: true},
-		{name: "attempt three exceeds the local retry policy", maximum: 260, attempt: 3},
-		{name: "attempt two hundred fifty nine exceeds the local retry policy", maximum: 260, attempt: 259},
-		{name: "cumulative remaining budget is independent", maximum: 2, attempt: 1, wantCalls: 1, wantResult: true},
+		{name: "maximum safe integer attempt is rejected", attempt: 9_007_199_254_740_991},
+		{name: "attempt two uses the final local retry", attempt: 2, wantCalls: 1, wantResult: true},
+		{name: "attempt three exceeds the local retry policy", attempt: 3},
+		{name: "attempt two hundred fifty nine exceeds the local retry policy", attempt: 259},
+		{name: "one remaining Match invocation limits calls", prestateCount: 259, wantCalls: 1, wantResult: true},
+		{name: "exhausted Match invocation budget rejects before transport", prestateCount: 260},
 	} {
 		candidate := candidate
 		t.Run(candidate.name, func(t *testing.T) {
 			signedRequest := signedMutatedRuntimeInvocationRequestV117ForTest(t, requestBytes, identity, func(envelope map[string]any) {
-				budget := envelope["budget"].(map[string]any)
-				budget["matchCumulative"].(map[string]any)["invocationCountMaximum"] = runtimeInvocationV117JSONIntegerForTest(candidate.maximum)
 				envelope["retry"].(map[string]any)["attempt"] = runtimeInvocationV117JSONIntegerForTest(candidate.attempt)
+				if candidate.prestateCount > 0 {
+					envelope["accounting"].(map[string]any)["prestate"] = runtimeInvocationV117ExecutionPrestateForTest(candidate.prestateCount)
+				}
 			})
 			request, verifyFailure := verifyRuntimeInvocationRequestV117(signedRequest, identity)
 			if verifyFailure != nil {

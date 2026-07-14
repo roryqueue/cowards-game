@@ -5,8 +5,10 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 )
@@ -23,15 +25,8 @@ func signedMutatedRuntimeInvocationRequestV117ForTest(
 		t.Fatal(failure)
 	}
 	mutate(envelope)
-	budget := envelope["budget"].(map[string]any)
-	budgetHash, err := runtimeInvocationV117IdentityHash(
-		runtimeInvocationV117IdentityBudgetProfile,
-		runtimeInvocationV117WithoutProperty(budget, "profileSha256"),
-	)
-	if err != nil {
-		t.Fatal(err)
-	}
-	budget["profileSha256"] = budgetHash
+	method := envelope["method"].(string)
+	envelope["budget"] = runtimeInvocationV117ExpectedBudgetMap(method)
 	retry := envelope["retry"].(map[string]any)
 	retryHash, err := runtimeInvocationV117RetryIdentityHash(
 		runtimeInvocationV117WithoutProperty(retry, "identitySha256"),
@@ -40,6 +35,38 @@ func signedMutatedRuntimeInvocationRequestV117ForTest(
 		t.Fatal(err)
 	}
 	retry["identitySha256"] = retryHash
+	accounting := envelope["accounting"].(map[string]any)
+	prestate := accounting["prestate"].(map[string]any)
+	prestateSHA256, err := runtimeInvocationV117FramedValueHash("runtime-invocation-v1.17:execution-ledger-prestate", prestate)
+	if err != nil {
+		t.Fatal(err)
+	}
+	accounting["prestateSha256"] = prestateSHA256
+	tuple := envelope["semanticTuple"].(map[string]any)
+	source := envelope["sourceIdentity"].(map[string]any)
+	budget := envelope["budget"].(map[string]any)
+	input := envelope["input"].(map[string]any)
+	requestIdentity, err := runtimeInvocationV117FramedValueHash("runtime-invocation-v1.17:execution-request-identity", map[string]any{
+		"invocationId": envelope["invocationId"], "kernelRequestId": envelope["kernelRequestId"], "method": method,
+		"semanticTupleId": tuple["tupleId"], "strategyRevisionId": source["strategyRevisionId"], "artifactSha256": source["artifactSha256"],
+		"budgetProfileSha256": budget["profileSha256"], "inputSha256": input["canonicalSha256"], "prestateSha256": prestateSHA256,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	accounting["requestIdentity"] = requestIdentity
+	idempotencyKey, err := runtimeInvocationV117FramedValueHash("runtime-invocation-v1.17:execution-idempotency", map[string]any{
+		"invocationId": envelope["invocationId"], "prestateRevision": prestate["revision"], "requestIdentity": requestIdentity,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	accounting["idempotencyKeySha256"] = idempotencyKey
+	accountingIdentity, err := runtimeInvocationV117FramedValueHash("runtime-invocation-v1.17:execution-accounting-request", runtimeInvocationV117WithoutProperty(accounting, "identitySha256"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	accounting["identitySha256"] = accountingIdentity
 	authentication, err := runtimeInvocationV117Authenticate(
 		"request",
 		runtimeInvocationV117WithoutProperty(envelope, "authentication"),
@@ -56,8 +83,95 @@ func signedMutatedRuntimeInvocationRequestV117ForTest(
 	return canonical
 }
 
+func runtimeInvocationV117ReceiptForTest(t *testing.T, request *runtimeInvocationRequestV117, outcome map[string]any) map[string]any {
+	t.Helper()
+	prestate := request.raw["accounting"].(map[string]any)["prestate"].(map[string]any)
+	cumulative := prestate["cumulative"].(map[string]any)
+	measured := map[string]any{}
+	for _, key := range []string{"wallMilliseconds", "computeFuel", "payloadBytes", "stdoutBytes", "stderrBytes"} {
+		previous, ok := runtimeInvocationV117Integer(cumulative[key])
+		if !ok {
+			t.Fatalf("invalid prestate counter %s", key)
+		}
+		measured[key] = map[string]any{"status": "measured", "delta": int64(1), "cumulative": previous + 1}
+	}
+	if outcome["kind"] == "player_violation" {
+		violation := outcome["violation"].(map[string]any)
+		key, delta := "", int64(0)
+		if violation["code"] == "TIMEOUT" {
+			key, delta = "wallMilliseconds", 51
+		} else if violation["code"] == "OVERSIZED_OUTPUT" {
+			key, delta = "payloadBytes", 262_145
+		}
+		if key != "" {
+			previous, _ := runtimeInvocationV117Integer(cumulative[key])
+			measured[key] = map[string]any{"status": "measured", "delta": delta, "cumulative": previous + delta}
+		}
+	}
+	previousMemory, _ := runtimeInvocationV117Integer(cumulative["memoryBytes"])
+	revision, _ := runtimeInvocationV117Integer(prestate["revision"])
+	attribution := "proven_strategy"
+	if outcome["kind"] == "system_failure" {
+		attribution = "ambiguous"
+	}
+	withoutIdentity := map[string]any{
+		"domain": "execution", "prestateRevision": revision, "invocationId": request.InvocationID,
+		"requestIdentity": request.Accounting.RequestIdentity, "method": request.Method, "attribution": attribution,
+		"counters":           measured,
+		"memory":             map[string]any{"status": "measured", "peakBytes": int64(1), "cumulativePeakBytes": max(previousMemory, int64(1))},
+		"process":            map[string]any{"status": "verified", "processes": int64(1), "threads": int64(1), "children": int64(0)},
+		"capabilities":       map[string]any{"status": "verified", "filesystem": "none", "network": "disabled", "environment": "empty", "shell": "disabled"},
+		"cancellation":       map[string]any{"status": "verified", "terminationRequired": false, "receiptPresent": false, "graceMilliseconds": int64(0)},
+		"accountingEvidence": map[string]any{"status": "verified", "signatureVerified": true, "monotonic": true},
+	}
+	evidenceIdentity, err := runtimeInvocationV117FramedValueHash("runtime-invocation-v1.17:execution-evidence", withoutIdentity)
+	if err != nil {
+		t.Fatal(err)
+	}
+	withoutIdentity["evidenceIdentity"] = evidenceIdentity
+	return withoutIdentity
+}
+
+func runtimeInvocationV117ResponseAccountingForTest(t *testing.T, request *runtimeInvocationRequestV117, outcome map[string]any) map[string]any {
+	t.Helper()
+	receipt := runtimeInvocationV117ReceiptForTest(t, request, outcome)
+	accounting, ok := runtimeInvocationV117DeriveResponseAccounting(request, outcome, receipt)
+	if !ok {
+		prestate := request.raw["accounting"].(map[string]any)["prestate"].(map[string]any)
+		t.Fatalf("failed to derive response accounting: receiptValid=%v debit=%+v outcome=%v receipt=%v", runtimeInvocationV117ReceiptValid(receipt), runtimeInvocationV117DebitExecutionLedger(prestate, receipt), outcome["kind"], receipt)
+	}
+	return accounting
+}
+
 func runtimeInvocationV117JSONIntegerForTest(value int64) json.Number {
 	return json.Number(strconv.FormatInt(value, 10))
+}
+
+func runtimeInvocationV117ExecutionPrestateForTest(count int64) map[string]any {
+	selectCount := min(count, int64(20))
+	soldierCount := count - selectCount
+	commitments := make([]any, 0, count)
+	for index := int64(0); index < count; index++ {
+		scope := "selectActivations"
+		if index >= selectCount {
+			scope = "soldierBrain"
+		}
+		commitments = append(commitments, map[string]any{
+			"identity":         fmt.Sprintf("prior-invocation:%03d", index),
+			"requestIdentity":  "sha256:" + strings.Repeat("a", 64),
+			"evidenceIdentity": "sha256:" + strings.Repeat("b", 64),
+			"prestateRevision": index, "scope": scope, "outcome": "success", "dimensions": []any{},
+		})
+	}
+	return map[string]any{
+		"schemaVersion": "runtime-budget-ledger-v1", "domain": "execution", "revision": count,
+		"methodInvocations": map[string]any{"selectActivations": selectCount, "soldierBrain": soldierCount},
+		"cumulative": map[string]any{
+			"invocationCount": count, "wallMilliseconds": int64(0), "computeFuel": int64(0), "payloadBytes": int64(0),
+			"stdoutBytes": int64(0), "stderrBytes": int64(0), "memoryBytes": int64(0),
+		},
+		"commitments": commitments,
+	}
 }
 
 func signedRuntimeInvocationResponseV117ForTest(
@@ -86,6 +200,7 @@ func signedRuntimeInvocationResponseV117ForTest(
 		"requestBinding":  runtimeInvocationV117RequestBindingMap(request),
 		"outcome":         outcome,
 		"payloadBinding":  payloadBinding,
+		"accounting":      runtimeInvocationV117ResponseAccountingForTest(t, request, outcome),
 	}
 	authentication, err := runtimeInvocationV117Authenticate("response", unsigned, identity)
 	if err != nil {
@@ -102,6 +217,56 @@ func signedRuntimeInvocationResponseV117ForTest(
 		t.Fatal(err)
 	}
 	return bytes
+}
+
+func TestPhase258RuntimeInvocationV117AccountingIsBoundNoCommitAndReplayStable(t *testing.T) {
+	requestBytes := readRuntimeInvocationV117Fixture(t, "runtime-execution-service-request.v1.17.candidate.json")
+	responseBytes := readRuntimeInvocationV117Fixture(t, "runtime-execution-service-response.v1.17.candidate.wire.json")
+	identity := runtimeInvocationV117SigningIdentity{KeyID: runtimeInvocationV117FixtureKeyID, Secret: runtimeInvocationV117FixtureSecret}
+	request, failure := verifyRuntimeInvocationRequestV117(requestBytes, identity)
+	if failure != nil {
+		t.Fatal(failure)
+	}
+
+	first, failure := verifyRuntimeInvocationResponseV117(responseBytes, request, identity)
+	if failure != nil {
+		t.Fatal(failure)
+	}
+	second, failure := verifyRuntimeInvocationResponseV117(responseBytes, request, identity)
+	if failure != nil || !runtimeInvocationV117CanonicalEqual(first.raw, second.raw) || !runtimeInvocationV117CanonicalEqual(first.Accounting, second.Accounting) {
+		t.Fatalf("exact response replay drifted: first=%+v second=%+v failure=%+v", first, second, failure)
+	}
+
+	systemOutcome := map[string]any{
+		"kind":    "system_failure",
+		"failure": map[string]any{"code": "AMBIGUOUS_ATTRIBUTION", "publicMessage": "Runtime system failure.", "retryable": false},
+		"trace":   runtimeInvocationTraceV117ForRequest(request),
+	}
+	systemBytes := signedRuntimeInvocationResponseV117ForTest(t, request, systemOutcome, identity)
+	system, failure := verifyRuntimeInvocationResponseV117(systemBytes, request, identity)
+	if failure != nil || system.Accounting["disposition"] != "no_commit" || !runtimeInvocationV117CanonicalEqual(system.Accounting["poststate"], request.raw["accounting"].(map[string]any)["prestate"]) {
+		t.Fatalf("system failure mutated signed execution prestate: response=%+v failure=%+v", system, failure)
+	}
+
+	tampered, parseFailure := runtimeInvocationV117ParseCanonicalEnvelope(responseBytes)
+	if parseFailure != nil {
+		t.Fatal(parseFailure)
+	}
+	poststate := tampered["accounting"].(map[string]any)["poststate"].(map[string]any)
+	poststate["cumulative"].(map[string]any)["wallMilliseconds"] = json.Number("2")
+	authentication, err := runtimeInvocationV117Authenticate("response", runtimeInvocationV117WithoutProperty(tampered, "authentication"), identity)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tampered["authentication"] = authentication
+	tamperedBytes, err := runtimeInvocationV117CanonicalValue(tampered)
+	if err != nil {
+		t.Fatal(err)
+	}
+	response, failure := verifyRuntimeInvocationResponseV117(tamperedBytes, request, identity)
+	if response != nil || failure == nil || failure.Code != "OUTER_FRAME_WRONG_BINDING" || failure.Retryable {
+		t.Fatalf("signed accounting drift was admitted: response=%+v failure=%+v", response, failure)
+	}
 }
 
 func TestPhase258RuntimeInvocationV117WrongBindingAndAmbiguousNeverRetry(t *testing.T) {
@@ -134,6 +299,9 @@ func TestPhase258RuntimeInvocationV117WrongBindingAndAmbiguousNeverRetry(t *test
 			"sha256":              runtimeInvocationV117SHA256Value(payloadBytes),
 			"canonicalByteLength": len(payloadBytes),
 		},
+		"accounting": runtimeInvocationV117ResponseAccountingForTest(t, request, map[string]any{
+			"kind": "success", "value": value, "trace": runtimeInvocationTraceV117ForRequest(request),
+		}),
 	}
 	authentication, err := runtimeInvocationV117Authenticate("response", unsigned, identity)
 	if err != nil {
