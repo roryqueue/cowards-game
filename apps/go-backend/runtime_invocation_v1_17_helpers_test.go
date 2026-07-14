@@ -95,6 +95,24 @@ func runtimeInvocationV117ReceiptForTest(t *testing.T, request *runtimeInvocatio
 		}
 		measured[key] = map[string]any{"status": "measured", "delta": int64(1), "cumulative": previous + 1}
 	}
+	if outcome["kind"] == "success" {
+		payloadBytes, err := runtimeInvocationV117CanonicalValue(outcome["value"])
+		if err != nil {
+			t.Fatal(err)
+		}
+		// Oversized malformed-payload fixtures must remain constructible so
+		// that the response schema, rather than this test helper, owns them.
+		if len(payloadBytes) <= 262_144 {
+			for key, delta := range map[string]int64{
+				"payloadBytes": int64(len(payloadBytes)),
+				"stdoutBytes":  int64(len(payloadBytes) + 1),
+				"stderrBytes":  0,
+			} {
+				previous, _ := runtimeInvocationV117Integer(cumulative[key])
+				measured[key] = map[string]any{"status": "measured", "delta": delta, "cumulative": previous + delta}
+			}
+		}
+	}
 	if outcome["kind"] == "player_violation" {
 		violation := outcome["violation"].(map[string]any)
 		key, delta := "", int64(0)
@@ -269,6 +287,87 @@ func TestPhase258RuntimeInvocationV117AccountingIsBoundNoCommitAndReplayStable(t
 	response, failure := verifyRuntimeInvocationResponseV117(tamperedBytes, request, identity)
 	if response != nil || failure == nil || failure.Code != "OUTER_FRAME_WRONG_BINDING" || failure.Retryable {
 		t.Fatalf("signed accounting drift was admitted: response=%+v failure=%+v", response, failure)
+	}
+}
+
+func TestPhase258RuntimeInvocationV117RejectsFullyReboundObservableByteDrift(t *testing.T) {
+	requestBytes := readRuntimeInvocationV117Fixture(t, "runtime-execution-service-request.v1.17.candidate.json")
+	identity := runtimeInvocationV117SigningIdentity{KeyID: runtimeInvocationV117FixtureKeyID, Secret: runtimeInvocationV117FixtureSecret}
+	request, failure := verifyRuntimeInvocationRequestV117(requestBytes, identity)
+	if failure != nil {
+		t.Fatal(failure)
+	}
+	value := map[string]any{"activationOrders": []any{}, "strategyMemory": map[string]any{}}
+	outcome := map[string]any{
+		"kind": "success", "value": value, "trace": runtimeInvocationTraceV117ForRequest(request),
+	}
+	responseBytes := signedRuntimeInvocationResponseV117ForTest(t, request, outcome, identity)
+	rebound, parseFailure := runtimeInvocationV117ParseCanonicalEnvelope(responseBytes)
+	if parseFailure != nil {
+		t.Fatal(parseFailure)
+	}
+	payloadBytes, err := runtimeInvocationV117CanonicalValue(value)
+	if err != nil {
+		t.Fatal(err)
+	}
+	accounting := rebound["accounting"].(map[string]any)
+	receipt := accounting["receipt"].(map[string]any)
+	counters := receipt["counters"].(map[string]any)
+	prestate := request.raw["accounting"].(map[string]any)["prestate"].(map[string]any)
+	prestateCumulative := prestate["cumulative"].(map[string]any)
+	wrongPayloadDelta := int64(len(payloadBytes) - 1)
+	wrongStdoutDelta := int64(len(payloadBytes))
+	for key, delta := range map[string]int64{"payloadBytes": wrongPayloadDelta, "stdoutBytes": wrongStdoutDelta} {
+		previous, _ := runtimeInvocationV117Integer(prestateCumulative[key])
+		counter := counters[key].(map[string]any)
+		counter["delta"] = delta
+		counter["cumulative"] = previous + delta
+	}
+	evidenceIdentity, err := runtimeInvocationV117FramedValueHash(
+		"runtime-invocation-v1.17:execution-evidence",
+		runtimeInvocationV117WithoutProperty(receipt, "evidenceIdentity"),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	receipt["evidenceIdentity"] = evidenceIdentity
+	poststate := accounting["poststate"].(map[string]any)
+	poststateCumulative := poststate["cumulative"].(map[string]any)
+	poststateCumulative["payloadBytes"] = wrongPayloadDelta
+	poststateCumulative["stdoutBytes"] = wrongStdoutDelta
+	commitments := poststate["commitments"].([]any)
+	commitments[len(commitments)-1].(map[string]any)["evidenceIdentity"] = evidenceIdentity
+	accounting["poststateSha256"], err = runtimeInvocationV117FramedValueHash(
+		"runtime-invocation-v1.17:execution-ledger-poststate",
+		poststate,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	accounting["identitySha256"], err = runtimeInvocationV117FramedValueHash(
+		"runtime-invocation-v1.17:execution-accounting-response",
+		runtimeInvocationV117WithoutProperty(accounting, "identitySha256"),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	authentication, err := runtimeInvocationV117Authenticate(
+		"response",
+		runtimeInvocationV117WithoutProperty(rebound, "authentication"),
+		identity,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rebound["authentication"] = authentication
+	reboundBytes, err := runtimeInvocationV117CanonicalValue(rebound)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	response, failure := verifyRuntimeInvocationResponseV117(reboundBytes, request, identity)
+	if response != nil || failure == nil || failure.Code != "OUTER_FRAME_WRONG_BINDING" || failure.Retryable {
+		t.Fatalf("fully rebound observable byte drift was admitted: response=%+v failure=%+v", response, failure)
 	}
 }
 

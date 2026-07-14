@@ -1101,10 +1101,7 @@ const retryIdentityHash = (value: JsonValue): `sha256:${string}` =>
     ]),
   )
 
-const framedValueHash = (
-  label: string,
-  value: JsonValue,
-): `sha256:${string}` =>
+const framedValueHash = (label: string, value: JsonValue): `sha256:${string}` =>
   sha256Bytes(
     frameCanonicalIdentity("evidenceBundle", [
       textEncoder.encode(label),
@@ -1302,7 +1299,9 @@ export const createAuthenticatedRuntimeInvocationRequestV117 = (
   if (
     !Buffer.from(
       canonicalBytes(budgetWithoutHash as unknown as JsonValue),
-    ).equals(Buffer.from(canonicalBytes(expectedBudget as unknown as JsonValue)))
+    ).equals(
+      Buffer.from(canonicalBytes(expectedBudget as unknown as JsonValue)),
+    )
   ) {
     throw new TypeError("Candidate request budget does not match its method")
   }
@@ -1513,9 +1512,8 @@ const deriveResponseAccounting = (
   outcome: RuntimeInvocationResultV117,
   receiptInput: RuntimeInvocationExecutionReceiptV117,
 ): RuntimeInvocationResponseAccountingV117 | undefined => {
-  const receipt = RuntimeAbiV117ExecutionLedgerReceiptSchema.safeParse(
-    receiptInput,
-  )
+  const receipt =
+    RuntimeAbiV117ExecutionLedgerReceiptSchema.safeParse(receiptInput)
   if (!receipt.success) return undefined
   const strictReceipt = receipt.data as RuntimeInvocationExecutionReceiptV117
   if (
@@ -1534,7 +1532,9 @@ const deriveResponseAccounting = (
   )
   if (!accountingDebitMatchesOutcome(debit, outcome)) return undefined
   const disposition =
-    outcome.kind === "system_failure" ? ("no_commit" as const) : ("commit" as const)
+    outcome.kind === "system_failure"
+      ? ("no_commit" as const)
+      : ("commit" as const)
   if (
     (disposition === "commit" && debit.kind === "system_failure") ||
     (disposition === "no_commit" &&
@@ -1569,6 +1569,17 @@ const deriveResponseAccounting = (
   }
 }
 
+const successReceiptMatchesCanonicalPayload = (
+  receipt: RuntimeInvocationExecutionReceiptV117,
+  payloadBytes: Uint8Array,
+): boolean => {
+  const payload = receipt.counters.payloadBytes
+  return (
+    payload.status === "measured" &&
+    payload.delta === payloadBytes.byteLength
+  )
+}
+
 export const createAuthenticatedRuntimeInvocationResponseV117 = <
   TValue extends JsonValue,
 >(
@@ -1591,6 +1602,17 @@ export const createAuthenticatedRuntimeInvocationResponseV117 = <
   if (!outcomeTraceMatchesRequest(parsedOutcome.trace, request)) {
     throw new TypeError(
       "Cannot authenticate a response with an outcome trace outside the request binding",
+    )
+  }
+  if (
+    parsedOutcome.kind === "success" &&
+    !successReceiptMatchesCanonicalPayload(
+      receipt,
+      canonicalBytes(parsedOutcome.value),
+    )
+  ) {
+    throw new TypeError(
+      "Cannot authenticate a success response whose receipt contradicts the canonical payload",
     )
   }
   const accounting = deriveResponseAccounting(
@@ -1655,8 +1677,7 @@ const verificationTrace = (
   retryIdentitySha256: partial?.retryIdentitySha256 ?? sha256Bytes(bytes),
   accountingIdentitySha256:
     partial?.accountingIdentitySha256 ?? sha256Bytes(bytes),
-  idempotencyKeySha256:
-    partial?.idempotencyKeySha256 ?? sha256Bytes(bytes),
+  idempotencyKeySha256: partial?.idempotencyKeySha256 ?? sha256Bytes(bytes),
   safeCodes: partial?.safeCodes ?? ["OUTER_ENVELOPE_REJECTED"],
 })
 
@@ -1735,14 +1756,16 @@ const requestDerivedBindingsMatch = (
     } as unknown as JsonValue,
   )
   return (
-    executionPrestateIsValid(request.accounting.prestate, request.invocationId) &&
+    executionPrestateIsValid(
+      request.accounting.prestate,
+      request.invocationId,
+    ) &&
     request.semanticTuple.tupleId ===
       identityHash("semanticTuple", semanticTuple as unknown as JsonValue) &&
     Buffer.from(canonicalBytes(budget as unknown as JsonValue)).equals(
       Buffer.from(canonicalBytes(expectedBudget as unknown as JsonValue)),
     ) &&
-    request.budget.profileSha256 ===
-      RUNTIME_ABI_V1_17_BUDGET_PROFILE_SHA256 &&
+    request.budget.profileSha256 === RUNTIME_ABI_V1_17_BUDGET_PROFILE_SHA256 &&
     request.input.canonicalSha256 === sha256Bytes(inputBytes) &&
     request.input.canonicalByteLength === inputBytes.byteLength &&
     request.retry.identitySha256 ===
@@ -1936,7 +1959,11 @@ const verifyRuntimeInvocationResponseV117Unsafe = (
     if (
       response.payloadBinding === null ||
       response.payloadBinding.sha256 !== sha256Bytes(payloadBytes) ||
-      response.payloadBinding.canonicalByteLength !== payloadBytes.byteLength
+      response.payloadBinding.canonicalByteLength !== payloadBytes.byteLength ||
+      !successReceiptMatchesCanonicalPayload(
+        response.accounting.receipt,
+        payloadBytes,
+      )
     ) {
       return verificationFailure("OUTER_FRAME_WRONG_BINDING", bytes, partial)
     }

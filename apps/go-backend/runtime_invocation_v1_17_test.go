@@ -274,7 +274,7 @@ func TestPhase258RuntimeInvocationV117UsesFiniteGoOwnedSignedBudgetRetryPolicy(t
 		{name: "attempt two uses the final local retry", attempt: 2, wantCalls: 1, wantResult: true},
 		{name: "attempt three exceeds the local retry policy", attempt: 3},
 		{name: "attempt two hundred fifty nine exceeds the local retry policy", attempt: 259},
-		{name: "one remaining Match invocation limits calls", prestateCount: 259, wantCalls: 1, wantResult: true},
+		{name: "one remaining Match invocation limits calls", method: "soldierBrain", prestateCount: 259, wantCalls: 1, wantResult: true},
 		{name: "exhausted Match invocation budget rejects before transport", prestateCount: 260},
 		{name: "select exact method boundary permits one call", prestate: runtimeInvocationV117ExecutionPrestateForMethodsForTest(19, 0), wantCalls: 1, wantResult: true},
 		{name: "select one over method boundary rejects before transport", prestate: runtimeInvocationV117ExecutionPrestateForMethodsForTest(20, 0)},

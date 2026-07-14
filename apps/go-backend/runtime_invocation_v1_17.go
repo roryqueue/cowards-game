@@ -1514,6 +1514,12 @@ func runtimeInvocationV117ResponseBindingsMatch(response map[string]any, request
 		if err != nil {
 			return false
 		}
+		counters := receipt["counters"].(map[string]any)
+		payloadCounter := counters["payloadBytes"].(map[string]any)
+		payloadDelta, payloadOK := runtimeInvocationV117Integer(payloadCounter["delta"])
+		if payloadCounter["status"] != "measured" || !payloadOK || payloadDelta != int64(len(payloadBytes)) {
+			return false
+		}
 		payloadBinding := response["payloadBinding"].(map[string]any)
 		length, ok := runtimeInvocationV117Integer(payloadBinding["canonicalByteLength"])
 		return ok && length == int64(len(payloadBytes)) && payloadBinding["sha256"] == runtimeInvocationV117SHA256Value(payloadBytes)
@@ -1554,9 +1560,16 @@ type runtimeInvocationV117Transport func(context.Context, []byte) ([]byte, error
 
 func runtimeInvocationV117RetryAttemptLimit(request *runtimeInvocationRequestV117) (int, *runtimeInvocationV117Failure) {
 	maximum := request.Budget.MatchLimit.Counters.InvocationCount.Maximum
+	methodLimit := request.raw["budget"].(map[string]any)["methodLimit"].(map[string]any)
+	methodMaximum, methodMaximumOK := runtimeInvocationV117Integer(methodLimit["invocationCountMaximum"])
+	methodConsumed := request.Accounting.Prestate.MethodInvocations.SelectActivations
+	if request.Method == "soldierBrain" {
+		methodConsumed = request.Accounting.Prestate.MethodInvocations.SoldierBrain
+	}
 	current := request.Retry.Attempt
 	consumed := request.Accounting.Prestate.Cumulative.InvocationCount
 	if maximum < 1 || maximum > runtimeInvocationV117CandidateInvocationCountMaximum ||
+		!methodMaximumOK || methodMaximum < 1 || methodConsumed < 0 || methodConsumed >= methodMaximum ||
 		current < 0 || current >= runtimeInvocationV117CandidateRetryAttemptMaximum || consumed < 0 || consumed >= maximum {
 		return 0, runtimeInvocationV117FailureFor("OUTER_FRAME_WRONG_BINDING")
 	}
@@ -1564,6 +1577,10 @@ func runtimeInvocationV117RetryAttemptLimit(request *runtimeInvocationRequestV11
 	cumulativeRemaining := maximum - consumed
 	if cumulativeRemaining < localRemaining {
 		localRemaining = cumulativeRemaining
+	}
+	methodRemaining := methodMaximum - methodConsumed
+	if methodRemaining < localRemaining {
+		localRemaining = methodRemaining
 	}
 	return int(localRemaining), nil
 }

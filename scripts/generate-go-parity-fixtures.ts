@@ -39,6 +39,7 @@ import {
   createRuntimeInvocationExecutionReceiptV117,
   createRuntimeInvocationBudgetV117,
   createRuntimeInvocationTraceV117,
+  encodeCanonicalJson,
   serviceHealthExample,
   SERVICE_API_VERSION,
   RUNTIME_EXECUTION_SERVICE_SYSTEM_FAILURE_CODES,
@@ -270,6 +271,18 @@ const createCandidateResponse = (
   request: ReturnType<typeof createCandidateRequest>,
 ) => {
   const prestate = request.accounting.prestate
+  const successValue = { activationOrders: [], strategyMemory: {} }
+  const canonicalPayload = encodeCanonicalJson(successValue, {
+    context: "authenticated-outer-envelope",
+  })
+  if (!canonicalPayload.ok) {
+    throw new TypeError(canonicalPayload.error.code)
+  }
+  const observedStdoutFrame = Buffer.concat([
+    Buffer.from("S", "utf8"),
+    Buffer.from(canonicalPayload.bytes),
+  ])
+  const observedStderr = Buffer.alloc(0)
   const measuredCounter = (
     name:
       | "wallMilliseconds"
@@ -277,19 +290,26 @@ const createCandidateResponse = (
       | "payloadBytes"
       | "stdoutBytes"
       | "stderrBytes",
+    delta = 1,
   ) => ({
     status: "measured" as const,
-    delta: 1,
-    cumulative: prestate.cumulative[name] + 1,
+    delta,
+    cumulative: prestate.cumulative[name] + delta,
   })
   const receipt = createRuntimeInvocationExecutionReceiptV117(request, {
     attribution: "proven_strategy",
     counters: {
       wallMilliseconds: measuredCounter("wallMilliseconds"),
       computeFuel: measuredCounter("computeFuel"),
-      payloadBytes: measuredCounter("payloadBytes"),
-      stdoutBytes: measuredCounter("stdoutBytes"),
-      stderrBytes: measuredCounter("stderrBytes"),
+      payloadBytes: measuredCounter(
+        "payloadBytes",
+        canonicalPayload.bytes.byteLength,
+      ),
+      stdoutBytes: measuredCounter(
+        "stdoutBytes",
+        observedStdoutFrame.byteLength,
+      ),
+      stderrBytes: measuredCounter("stderrBytes", observedStderr.byteLength),
     },
     memory: {
       status: "measured",
@@ -325,7 +345,7 @@ const createCandidateResponse = (
     request,
     {
       kind: "success",
-      value: { activationOrders: [], strategyMemory: {} },
+      value: successValue,
       trace: createRuntimeInvocationTraceV117(request, [
         "ADAPTER_AUTHENTICATED",
         "PAYLOAD_CANONICAL",

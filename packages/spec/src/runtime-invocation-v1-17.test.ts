@@ -99,8 +99,19 @@ const candidateRequest = (
 
 const measuredEvidenceFor = (
   request: AuthenticatedRuntimeInvocationRequestV117,
+  successValue?: JsonValue,
 ): RuntimeInvocationExecutionReceiptEvidenceV117 => {
   const prestate = request.accounting.prestate
+  const successPayloadBytes =
+    successValue === undefined
+      ? undefined
+      : canonicalFixtureBytes(successValue).byteLength
+  const observedDeltas = {
+    payloadBytes: successPayloadBytes ?? 1,
+    stdoutBytes:
+      successPayloadBytes === undefined ? 1 : successPayloadBytes + 1,
+    stderrBytes: successPayloadBytes === undefined ? 1 : 0,
+  }
   const counters = Object.fromEntries(
     [
       "wallMilliseconds",
@@ -108,17 +119,22 @@ const measuredEvidenceFor = (
       "payloadBytes",
       "stdoutBytes",
       "stderrBytes",
-    ].map((counter) => [
-      counter,
-      {
-        status: "measured" as const,
-        delta: 1,
-        cumulative:
-          prestate.cumulative[
-            counter as keyof typeof prestate.cumulative
-          ] + 1,
-      },
-    ]),
+    ].map((counter) => {
+      const delta =
+        counter in observedDeltas
+          ? observedDeltas[counter as keyof typeof observedDeltas]
+          : 1
+      return [
+        counter,
+        {
+          status: "measured" as const,
+          delta,
+          cumulative:
+            prestate.cumulative[counter as keyof typeof prestate.cumulative] +
+            delta,
+        },
+      ]
+    }),
   ) as RuntimeInvocationExecutionReceiptEvidenceV117["counters"]
   return {
     attribution: "proven_strategy" as const,
@@ -157,10 +173,11 @@ const measuredEvidenceFor = (
 
 const measuredReceiptFor = (
   request: AuthenticatedRuntimeInvocationRequestV117,
+  successValue?: JsonValue,
 ): RuntimeInvocationExecutionReceiptV117 =>
   createRuntimeInvocationExecutionReceiptV117(
     request,
-    measuredEvidenceFor(request),
+    measuredEvidenceFor(request, successValue),
   )
 
 const ambiguousReceiptFor = (
@@ -187,23 +204,25 @@ const unavailableReceiptFor = (
   })
 }
 
-const candidateResponse = (request = candidateRequest()) =>
-  createAuthenticatedRuntimeInvocationResponseV117(
+const candidateResponse = (request = candidateRequest()) => {
+  const value = { activationOrders: [], strategyMemory: {} }
+  return createAuthenticatedRuntimeInvocationResponseV117(
     request,
     {
       kind: "success",
-      value: { activationOrders: [], strategyMemory: {} },
+      value,
       trace: createRuntimeInvocationTraceV117(request, [
         "ADAPTER_AUTHENTICATED",
         "PAYLOAD_CANONICAL",
       ]),
     },
-    measuredReceiptFor(request),
+    measuredReceiptFor(request, value),
     {
       keyId: RUNTIME_INVOCATION_V1_17_TEST_KEY_ID,
       secret: fixtureSecret,
     },
   )
+}
 
 const signedSuccessResponseBytes = (
   method: "selectActivations" | "soldierBrain",
@@ -217,6 +236,13 @@ const signedSuccessResponseBytes = (
     "ADAPTER_AUTHENTICATED",
     "PAYLOAD_CANONICAL",
   ])
+  const validValue =
+    method === "selectActivations"
+      ? { activationOrders: [], strategyMemory: null }
+      : {
+          action: { type: "TURN_TO_STONE" as const },
+          soldierMemory: null,
+        }
   const valid =
     method === "selectActivations"
       ? createAuthenticatedRuntimeInvocationResponseV117(
@@ -226,7 +252,7 @@ const signedSuccessResponseBytes = (
             value: { activationOrders: [], strategyMemory: null },
             trace: requestTrace,
           },
-          measuredReceiptFor(request),
+          measuredReceiptFor(request, validValue),
           {
             keyId: RUNTIME_INVOCATION_V1_17_TEST_KEY_ID,
             secret: fixtureSecret,
@@ -242,7 +268,7 @@ const signedSuccessResponseBytes = (
             },
             trace: requestTrace,
           },
-          measuredReceiptFor(request),
+          measuredReceiptFor(request, validValue),
           {
             keyId: RUNTIME_INVOCATION_V1_17_TEST_KEY_ID,
             secret: fixtureSecret,
@@ -309,8 +335,7 @@ const signedSystemFailureResponseBytes = (
       failure: {
         code,
         publicMessage: "Runtime system failure.",
-        retryable:
-          RUNTIME_INVOCATION_V1_17_SYSTEM_FAILURE_RETRYABILITY[code],
+        retryable: RUNTIME_INVOCATION_V1_17_SYSTEM_FAILURE_RETRYABILITY[code],
       },
       trace: createRuntimeInvocationTraceV117(request, [
         "ADAPTER_AUTHENTICATED",
@@ -444,9 +469,7 @@ const executionPrestateFixture = (input?: {
   commitments: [...(input?.commitments ?? [])],
 })
 
-const methodLimitFixture = (
-  method: "selectActivations" | "soldierBrain",
-) => ({
+const methodLimitFixture = (method: "selectActivations" | "soldierBrain") => ({
   method,
   invocationCountMaximum: method === "selectActivations" ? 20 : 240,
   counters: {
@@ -597,6 +620,11 @@ const futureResponseFixture = (
   requestFixture: ReturnType<typeof futureRequestFixture>,
   kind: FutureOutcomeKind,
   mutate?: (unsigned: RawEnvelope) => void,
+  successByteDeltas?: Readonly<{
+    payloadBytes: number
+    stdoutBytes: number
+    stderrBytes: number
+  }>,
 ): Readonly<{ envelope: RawEnvelope; bytes: Uint8Array }> => {
   const request = requestFixture.envelope
   const requestAccounting = request.accounting as RawEnvelope
@@ -604,6 +632,15 @@ const futureResponseFixture = (
   const cumulative = prestate.cumulative as RawEnvelope
   const methods = prestate.methodInvocations as RawEnvelope
   const method = request.method as "selectActivations" | "soldierBrain"
+  const successValue = { activationOrders: [], strategyMemory: null }
+  const successPayload = canonicalFixtureBytes(successValue)
+  const observedSuccessDeltas =
+    successByteDeltas ??
+    ({
+      payloadBytes: successPayload.byteLength,
+      stdoutBytes: successPayload.byteLength + 1,
+      stderrBytes: 0,
+    } as const)
   const requestBinding = {
     requestId: request.requestId,
     invocationId: request.invocationId,
@@ -641,14 +678,20 @@ const futureResponseFixture = (
       "payloadBytes",
       "stdoutBytes",
       "stderrBytes",
-    ].map((counter) => [
-      counter,
-      {
-        status: "measured",
-        delta: 1,
-        cumulative: (cumulative[counter] as number) + 1,
-      },
-    ]),
+    ].map((counter) => {
+      const delta =
+        kind === "success" && counter in observedSuccessDeltas
+          ? observedSuccessDeltas[counter as keyof typeof observedSuccessDeltas]
+          : 1
+      return [
+        counter,
+        {
+          status: "measured",
+          delta,
+          cumulative: (cumulative[counter] as number) + delta,
+        },
+      ]
+    }),
   ) as RawEnvelope
   const receiptWithoutEvidenceIdentity = {
     domain: "execution",
@@ -713,12 +756,17 @@ const futureResponseFixture = (
         },
         cumulative: {
           invocationCount: (cumulative.invocationCount as number) + 1,
-          wallMilliseconds:
-            (cumulative.wallMilliseconds as number) + 1,
+          wallMilliseconds: (cumulative.wallMilliseconds as number) + 1,
           computeFuel: (cumulative.computeFuel as number) + 1,
-          payloadBytes: (cumulative.payloadBytes as number) + 1,
-          stdoutBytes: (cumulative.stdoutBytes as number) + 1,
-          stderrBytes: (cumulative.stderrBytes as number) + 1,
+          payloadBytes:
+            (cumulative.payloadBytes as number) +
+            ((measuredCounters.payloadBytes as RawEnvelope).delta as number),
+          stdoutBytes:
+            (cumulative.stdoutBytes as number) +
+            ((measuredCounters.stdoutBytes as RawEnvelope).delta as number),
+          stderrBytes:
+            (cumulative.stderrBytes as number) +
+            ((measuredCounters.stderrBytes as RawEnvelope).delta as number),
           memoryBytes: Math.max(cumulative.memoryBytes as number, 1),
         },
         commitments: [
@@ -759,7 +807,7 @@ const futureResponseFixture = (
     kind === "success"
       ? {
           kind,
-          value: { activationOrders: [], strategyMemory: null },
+          value: successValue,
           trace,
         }
       : kind === "player_violation"
@@ -780,12 +828,7 @@ const futureResponseFixture = (
             },
             trace,
           }
-  const payload =
-    kind === "success"
-      ? canonicalFixtureBytes(
-          (outcome as { value: JsonValue }).value,
-        )
-      : undefined
+  const payload = kind === "success" ? successPayload : undefined
   const unsigned = {
     contractVersion: request.contractVersion,
     candidateStatus: request.candidateStatus,
@@ -1055,24 +1098,27 @@ describe("runtime invocation v1.17 authenticated candidate wire", () => {
         soldierMemory: null,
       },
     ],
-  ] as const)("rejects signed unknown nested %s keys", (_label, method, value) => {
-    const signed = signedSuccessResponseBytes(
-      method,
-      value as unknown as JsonValue,
-    )
-    expect(
-      verifyRuntimeInvocationResponseV117(signed.bytes, signed.request, {
-        keyId: RUNTIME_INVOCATION_V1_17_TEST_KEY_ID,
-        secret: fixtureSecret,
-      }),
-    ).toMatchObject({
-      kind: "system_failure",
-      failure: {
-        code: "OUTER_FRAME_UNDECODABLE",
-        retryable: false,
-      },
-    })
-  })
+  ] as const)(
+    "rejects signed unknown nested %s keys",
+    (_label, method, value) => {
+      const signed = signedSuccessResponseBytes(
+        method,
+        value as unknown as JsonValue,
+      )
+      expect(
+        verifyRuntimeInvocationResponseV117(signed.bytes, signed.request, {
+          keyId: RUNTIME_INVOCATION_V1_17_TEST_KEY_ID,
+          secret: fixtureSecret,
+        }),
+      ).toMatchObject({
+        kind: "system_failure",
+        failure: {
+          code: "OUTER_FRAME_UNDECODABLE",
+          retryable: false,
+        },
+      })
+    },
+  )
 
   it("rejects a signed success payload over the 256 KiB invocation cap", () => {
     const value = {
@@ -1168,7 +1214,7 @@ describe("runtime invocation v1.17 authenticated candidate wire", () => {
       "sha256:76d4568f6b0e7f9760f9a0f72d1140212ff28e9a1b60897126f433d4a07f61ae",
     )
     expect(sha256(fixtureResponseBytes)).toBe(
-      "sha256:6c09087800ff06fe168255d6c2344a09700e9600e25a273f6564fe96532ff7ca",
+      "sha256:94dcf3bb2b3c7437cecf7cd59493e6be7d4d0c0de3475c747e8af888228f099e",
     )
     expect(Buffer.from(requestBytes)).toEqual(fixtureRequestBytes)
     expect(Buffer.from(responseBytes)).toEqual(fixtureResponseBytes)
@@ -1225,8 +1271,7 @@ describe("runtime invocation v1.17 authenticated candidate wire", () => {
         domain: "execution",
         disposition: "commit",
         prestateSha256: request.value.accounting.prestateSha256,
-        idempotencyKeySha256:
-          request.value.accounting.idempotencyKeySha256,
+        idempotencyKeySha256: request.value.accounting.idempotencyKeySha256,
         poststate: {
           revision: 1,
           cumulative: { invocationCount: 1 },
@@ -1519,9 +1564,9 @@ describe("runtime invocation v1.17 authenticated execution accounting", () => {
     expect(soldierRequest.budget.profileSha256).toBe(
       RUNTIME_ABI_V1_17_BUDGET_PROFILE_SHA256,
     )
-    expect(
-      RUNTIME_BUDGET_CAPABILITY_CONTRACT_V1_17.budgetProfileSha256,
-    ).toBe(RUNTIME_ABI_V1_17_BUDGET_PROFILE_SHA256)
+    expect(RUNTIME_BUDGET_CAPABILITY_CONTRACT_V1_17.budgetProfileSha256).toBe(
+      RUNTIME_ABI_V1_17_BUDGET_PROFILE_SHA256,
+    )
     const artifact = JSON.parse(
       readFileSync(
         path.join(
@@ -1540,9 +1585,8 @@ describe("runtime invocation v1.17 authenticated execution accounting", () => {
     }
     for (const lane of artifact.lanes) {
       expect(
-        lane.identityPins.find(
-          ({ pin }) => pin === "budgetProfileSha256",
-        )?.bindingSafeId,
+        lane.identityPins.find(({ pin }) => pin === "budgetProfileSha256")
+          ?.bindingSafeId,
       ).toBe(RUNTIME_ABI_V1_17_BUDGET_PROFILE_SHA256)
     }
   })
@@ -1609,38 +1653,50 @@ describe("runtime invocation v1.17 authenticated execution accounting", () => {
       retryIdentitySha256: request.retry.identitySha256,
       accountingIdentitySha256: request.accounting.identitySha256,
       idempotencyKeySha256: request.accounting.idempotencyKeySha256,
-      safeCodes: [
-        "ADAPTER_AUTHENTICATED",
-        "ACCOUNTING_EVIDENCE_BOUND",
-      ],
+      safeCodes: ["ADAPTER_AUTHENTICATED", "ACCOUNTING_EVIDENCE_BOUND"],
     })
   })
 
   it("fails closed on signed accounting drift and a preflight-domain request", () => {
     const fixture = futureRequestFixture()
     const cases = [
-      ["prestate", (root: RawEnvelope) => {
-        const accounting = root.accounting as RawEnvelope
-        const prestate = accounting.prestate as RawEnvelope
-        prestate.revision = 1
-      }],
-      ["idempotency", (root: RawEnvelope) => {
-        const accounting = root.accounting as RawEnvelope
-        accounting.idempotencyKeySha256 = hash("9")
-      }],
-      ["accounting identity", (root: RawEnvelope) => {
-        const accounting = root.accounting as RawEnvelope
-        accounting.identitySha256 = hash("8")
-      }],
-      ["method binding", (root: RawEnvelope) => {
-        const budget = root.budget as RawEnvelope
-        const methodLimit = budget.methodLimit as RawEnvelope
-        methodLimit.method = "soldierBrain"
-      }],
-      ["preflight domain", (root: RawEnvelope) => {
-        const accounting = root.accounting as RawEnvelope
-        accounting.domain = "preflight"
-      }],
+      [
+        "prestate",
+        (root: RawEnvelope) => {
+          const accounting = root.accounting as RawEnvelope
+          const prestate = accounting.prestate as RawEnvelope
+          prestate.revision = 1
+        },
+      ],
+      [
+        "idempotency",
+        (root: RawEnvelope) => {
+          const accounting = root.accounting as RawEnvelope
+          accounting.idempotencyKeySha256 = hash("9")
+        },
+      ],
+      [
+        "accounting identity",
+        (root: RawEnvelope) => {
+          const accounting = root.accounting as RawEnvelope
+          accounting.identitySha256 = hash("8")
+        },
+      ],
+      [
+        "method binding",
+        (root: RawEnvelope) => {
+          const budget = root.budget as RawEnvelope
+          const methodLimit = budget.methodLimit as RawEnvelope
+          methodLimit.method = "soldierBrain"
+        },
+      ],
+      [
+        "preflight domain",
+        (root: RawEnvelope) => {
+          const accounting = root.accounting as RawEnvelope
+          accounting.domain = "preflight"
+        },
+      ],
     ] as const
 
     for (const [name, mutate] of cases) {
@@ -1652,19 +1708,42 @@ describe("runtime invocation v1.17 authenticated execution accounting", () => {
     }
   })
 
-  it.each([
-    "success",
-    "player_violation",
-    "system_failure",
-  ] as const)("requires and accepts signed %s response accounting", (kind) => {
+  it.each(["success", "player_violation", "system_failure"] as const)(
+    "requires and accepts signed %s response accounting",
+    (kind) => {
+      const request = futureRequestFixture()
+      const response = futureResponseFixture(request, kind)
+      const verified = verifyRuntimeInvocationResponseV117(
+        response.bytes,
+        request.envelope as unknown as AuthenticatedRuntimeInvocationRequestV117,
+        identity,
+      )
+      expect(verified.kind).toBe("success")
+    },
+  )
+
+  it("rejects fully re-bound receipt accounting that contradicts the observed success frame", () => {
     const request = futureRequestFixture()
-    const response = futureResponseFixture(request, kind)
-    const verified = verifyRuntimeInvocationResponseV117(
-      response.bytes,
-      request.envelope as unknown as AuthenticatedRuntimeInvocationRequestV117,
-      identity,
-    )
-    expect(verified.kind).toBe("success")
+    const payloadBytes = canonicalFixtureBytes({
+      activationOrders: [],
+      strategyMemory: null,
+    }).byteLength
+    const response = futureResponseFixture(request, "success", undefined, {
+      payloadBytes: payloadBytes - 1,
+      stdoutBytes: payloadBytes,
+      stderrBytes: 0,
+    })
+
+    expect(
+      verifyRuntimeInvocationResponseV117(
+        response.bytes,
+        request.envelope as unknown as AuthenticatedRuntimeInvocationRequestV117,
+        identity,
+      ),
+    ).toMatchObject({
+      kind: "system_failure",
+      failure: { code: "OUTER_FRAME_WRONG_BINDING", retryable: false },
+    })
   })
 
   it("rejects a signed response with no accounting envelope", () => {
@@ -1684,68 +1763,98 @@ describe("runtime invocation v1.17 authenticated execution accounting", () => {
   it("rejects invalid counter, peak, predicate, evidence, and ownership combinations", () => {
     const request = futureRequestFixture()
     const invalidResponses = [
-      ["counter decrease", futureResponseFixture(request, "success", (root) => {
-        const accounting = root.accounting as RawEnvelope
-        const receipt = accounting.receipt as RawEnvelope
-        const counters = receipt.counters as RawEnvelope
-        const wall = counters.wallMilliseconds as RawEnvelope
-        wall.cumulative = -1
-      })],
-      ["counter wrong sum", futureResponseFixture(request, "success", (root) => {
-        const accounting = root.accounting as RawEnvelope
-        const receipt = accounting.receipt as RawEnvelope
-        const counters = receipt.counters as RawEnvelope
-        const wall = counters.wallMilliseconds as RawEnvelope
-        wall.delta = 2
-        wall.cumulative = 1
-      })],
-      ["unsafe counter addition", futureResponseFixture(request, "success", (root) => {
-        const accounting = root.accounting as RawEnvelope
-        const receipt = accounting.receipt as RawEnvelope
-        const counters = receipt.counters as RawEnvelope
-        const wall = counters.wallMilliseconds as RawEnvelope
-        wall.delta = Number.MAX_SAFE_INTEGER
-        wall.cumulative = Number.MAX_SAFE_INTEGER
-      })],
-      ["peak summed", futureResponseFixture(request, "success", (root) => {
-        const accounting = root.accounting as RawEnvelope
-        const receipt = accounting.receipt as RawEnvelope
-        const memory = receipt.memory as RawEnvelope
-        memory.peakBytes = 1
-        memory.cumulativePeakBytes = 2
-      })],
-      ["failed predicate with success", futureResponseFixture(request, "success", (root) => {
-        const accounting = root.accounting as RawEnvelope
-        const receipt = accounting.receipt as RawEnvelope
-        const process = receipt.process as RawEnvelope
-        process.threads = 2
-      })],
-      ["failed predicate with player violation", futureResponseFixture(request, "player_violation", (root) => {
-        const accounting = root.accounting as RawEnvelope
-        const receipt = accounting.receipt as RawEnvelope
-        const capabilities = receipt.capabilities as RawEnvelope
-        capabilities.network = "inherited"
-      })],
-      ["unavailable success", futureResponseFixture(request, "success", (root) => {
-        const accounting = root.accounting as RawEnvelope
-        const receipt = accounting.receipt as RawEnvelope
-        const counters = receipt.counters as RawEnvelope
-        counters.computeFuel = { status: "unavailable" }
-      })],
-      ["ambiguous player violation", futureResponseFixture(request, "player_violation", (root) => {
-        const accounting = root.accounting as RawEnvelope
-        const receipt = accounting.receipt as RawEnvelope
-        receipt.attribution = "ambiguous"
-      })],
-      ["system failure commit", futureResponseFixture(request, "system_failure", (root) => {
-        const accounting = root.accounting as RawEnvelope
-        accounting.disposition = "commit"
-      })],
-      ["system failure changed poststate", futureResponseFixture(request, "system_failure", (root) => {
-        const accounting = root.accounting as RawEnvelope
-        const poststate = accounting.poststate as RawEnvelope
-        poststate.revision = 1
-      })],
+      [
+        "counter decrease",
+        futureResponseFixture(request, "success", (root) => {
+          const accounting = root.accounting as RawEnvelope
+          const receipt = accounting.receipt as RawEnvelope
+          const counters = receipt.counters as RawEnvelope
+          const wall = counters.wallMilliseconds as RawEnvelope
+          wall.cumulative = -1
+        }),
+      ],
+      [
+        "counter wrong sum",
+        futureResponseFixture(request, "success", (root) => {
+          const accounting = root.accounting as RawEnvelope
+          const receipt = accounting.receipt as RawEnvelope
+          const counters = receipt.counters as RawEnvelope
+          const wall = counters.wallMilliseconds as RawEnvelope
+          wall.delta = 2
+          wall.cumulative = 1
+        }),
+      ],
+      [
+        "unsafe counter addition",
+        futureResponseFixture(request, "success", (root) => {
+          const accounting = root.accounting as RawEnvelope
+          const receipt = accounting.receipt as RawEnvelope
+          const counters = receipt.counters as RawEnvelope
+          const wall = counters.wallMilliseconds as RawEnvelope
+          wall.delta = Number.MAX_SAFE_INTEGER
+          wall.cumulative = Number.MAX_SAFE_INTEGER
+        }),
+      ],
+      [
+        "peak summed",
+        futureResponseFixture(request, "success", (root) => {
+          const accounting = root.accounting as RawEnvelope
+          const receipt = accounting.receipt as RawEnvelope
+          const memory = receipt.memory as RawEnvelope
+          memory.peakBytes = 1
+          memory.cumulativePeakBytes = 2
+        }),
+      ],
+      [
+        "failed predicate with success",
+        futureResponseFixture(request, "success", (root) => {
+          const accounting = root.accounting as RawEnvelope
+          const receipt = accounting.receipt as RawEnvelope
+          const process = receipt.process as RawEnvelope
+          process.threads = 2
+        }),
+      ],
+      [
+        "failed predicate with player violation",
+        futureResponseFixture(request, "player_violation", (root) => {
+          const accounting = root.accounting as RawEnvelope
+          const receipt = accounting.receipt as RawEnvelope
+          const capabilities = receipt.capabilities as RawEnvelope
+          capabilities.network = "inherited"
+        }),
+      ],
+      [
+        "unavailable success",
+        futureResponseFixture(request, "success", (root) => {
+          const accounting = root.accounting as RawEnvelope
+          const receipt = accounting.receipt as RawEnvelope
+          const counters = receipt.counters as RawEnvelope
+          counters.computeFuel = { status: "unavailable" }
+        }),
+      ],
+      [
+        "ambiguous player violation",
+        futureResponseFixture(request, "player_violation", (root) => {
+          const accounting = root.accounting as RawEnvelope
+          const receipt = accounting.receipt as RawEnvelope
+          receipt.attribution = "ambiguous"
+        }),
+      ],
+      [
+        "system failure commit",
+        futureResponseFixture(request, "system_failure", (root) => {
+          const accounting = root.accounting as RawEnvelope
+          accounting.disposition = "commit"
+        }),
+      ],
+      [
+        "system failure changed poststate",
+        futureResponseFixture(request, "system_failure", (root) => {
+          const accounting = root.accounting as RawEnvelope
+          const poststate = accounting.poststate as RawEnvelope
+          poststate.revision = 1
+        }),
+      ],
     ] as const
 
     for (const [name, response] of invalidResponses) {
