@@ -4,10 +4,7 @@ import { readFileSync } from "node:fs"
 import path from "node:path"
 import { describe, expect, expectTypeOf, it } from "vitest"
 import { encodeCanonicalJson } from "./canonical-json-encode.js"
-import {
-  frameCanonicalIdentity,
-  hashCanonicalIdentityValue,
-} from "./canonical-identity-domains.js"
+import { frameCanonicalIdentity } from "./canonical-identity-domains.js"
 import type { JsonValue } from "./types.js"
 import {
   RUNTIME_INVOCATION_V1_17_CANDIDATE,
@@ -21,19 +18,25 @@ import {
   createAuthenticatedRuntimeInvocationRequestV117,
   createAuthenticatedRuntimeInvocationResponseV117,
   createRuntimeInvocationBudgetV117,
+  createRuntimeInvocationExecutionReceiptV117,
+  createRuntimeInvocationTraceV117,
   serializeRuntimeInvocationRequestV117,
   serializeRuntimeInvocationResponseV117,
   verifyRuntimeInvocationRequestV117,
   verifyRuntimeInvocationResponseV117,
   type AuthenticatedRuntimeInvocationRequestV117,
+  type RuntimeInvocationExecutionReceiptEvidenceV117,
+  type RuntimeInvocationExecutionReceiptV117,
   type RuntimeInvocationResultV117,
   type RuntimeInvocationTraceV117,
 } from "./runtime-invocation-v1-17.js"
 import { RUNTIME_EXECUTION_SERVICE_VERSION } from "./runtime-execution-service.js"
+import { RUNTIME_ABI_V1_17_BUDGET_PROFILE_SHA256 } from "./runtime-budget-profile-v1-17.js"
+import { RUNTIME_BUDGET_CAPABILITY_CONTRACT_V1_17 } from "./runtime-budget-capabilities-v1-17.js"
 import {
   RUNTIME_ABI_V1_17,
   createRuntimeAbiV117ExecutionLedger,
-  type RuntimeAbiV117ExecutionLedgerReceipt,
+  debitRuntimeAbiV117Ledger,
 } from "./runtime-abi-v1-17.js"
 import * as publicRuntime from "./runtime.js"
 
@@ -94,9 +97,9 @@ const candidateRequest = (
     },
   )
 
-const measuredReceiptFor = (
+const measuredEvidenceFor = (
   request: AuthenticatedRuntimeInvocationRequestV117,
-): RuntimeAbiV117ExecutionLedgerReceipt => {
+): RuntimeInvocationExecutionReceiptEvidenceV117 => {
   const prestate = request.accounting.prestate
   const counters = Object.fromEntries(
     [
@@ -116,13 +119,8 @@ const measuredReceiptFor = (
           ] + 1,
       },
     ]),
-  ) as RuntimeAbiV117ExecutionLedgerReceipt["counters"]
-  const withoutEvidenceIdentity = {
-    domain: "execution" as const,
-    prestateRevision: prestate.revision,
-    invocationId: request.invocationId,
-    requestIdentity: request.accounting.requestIdentity,
-    method: request.method,
+  ) as RuntimeInvocationExecutionReceiptEvidenceV117["counters"]
+  return {
     attribution: "proven_strategy" as const,
     counters,
     memory: {
@@ -155,34 +153,38 @@ const measuredReceiptFor = (
       monotonic: true,
     },
   }
-  return {
-    ...withoutEvidenceIdentity,
-    evidenceIdentity: framedFixtureHash(
-      "runtime-invocation-v1.17:execution-evidence",
-      withoutEvidenceIdentity as unknown as JsonValue,
-    ),
-  }
 }
+
+const measuredReceiptFor = (
+  request: AuthenticatedRuntimeInvocationRequestV117,
+): RuntimeInvocationExecutionReceiptV117 =>
+  createRuntimeInvocationExecutionReceiptV117(
+    request,
+    measuredEvidenceFor(request),
+  )
 
 const ambiguousReceiptFor = (
   request: AuthenticatedRuntimeInvocationRequestV117,
-): RuntimeAbiV117ExecutionLedgerReceipt => {
-  const measured = measuredReceiptFor(request)
-  const {
-    evidenceIdentity: _evidenceIdentity,
-    ...measuredWithoutEvidenceIdentity
-  } = measured
-  const withoutEvidenceIdentity = {
-    ...measuredWithoutEvidenceIdentity,
+): RuntimeInvocationExecutionReceiptV117 => {
+  const evidence = {
+    ...measuredEvidenceFor(request),
     attribution: "ambiguous" as const,
   }
-  return {
-    ...withoutEvidenceIdentity,
-    evidenceIdentity: framedFixtureHash(
-      "runtime-invocation-v1.17:execution-evidence",
-      withoutEvidenceIdentity as unknown as JsonValue,
-    ),
-  }
+  return createRuntimeInvocationExecutionReceiptV117(request, evidence)
+}
+
+const unavailableReceiptFor = (
+  request: AuthenticatedRuntimeInvocationRequestV117,
+): RuntimeInvocationExecutionReceiptV117 => {
+  const measured = measuredEvidenceFor(request)
+  return createRuntimeInvocationExecutionReceiptV117(request, {
+    ...measured,
+    attribution: "host",
+    counters: {
+      ...measured.counters,
+      computeFuel: { status: "unavailable" },
+    },
+  })
 }
 
 const candidateResponse = (request = candidateRequest()) =>
@@ -191,19 +193,10 @@ const candidateResponse = (request = candidateRequest()) =>
     {
       kind: "success",
       value: { activationOrders: [], strategyMemory: {} },
-      trace: {
-        requestId: request.requestId,
-        invocationId: request.invocationId,
-        kernelRequestId: request.kernelRequestId,
-        method: request.method,
-        requestSha256: sha256(serializeRuntimeInvocationRequestV117(request)),
-        budgetProfileSha256: request.budget.profileSha256,
-        inputSha256: request.input.canonicalSha256,
-        retryIdentitySha256: request.retry.identitySha256,
-        accountingIdentitySha256: request.accounting.identitySha256,
-        idempotencyKeySha256: request.accounting.idempotencyKeySha256,
-        safeCodes: ["ADAPTER_AUTHENTICATED", "PAYLOAD_CANONICAL"],
-      },
+      trace: createRuntimeInvocationTraceV117(request, [
+        "ADAPTER_AUTHENTICATED",
+        "PAYLOAD_CANONICAL",
+      ]),
     },
     measuredReceiptFor(request),
     {
@@ -220,19 +213,10 @@ const signedSuccessResponseBytes = (
   bytes: Uint8Array
 }> => {
   const request = candidateRequest(method)
-  const requestTrace = {
-    requestId: request.requestId,
-    invocationId: request.invocationId,
-    kernelRequestId: request.kernelRequestId,
-    method: request.method,
-    requestSha256: sha256(serializeRuntimeInvocationRequestV117(request)),
-    budgetProfileSha256: request.budget.profileSha256,
-    inputSha256: request.input.canonicalSha256,
-    retryIdentitySha256: request.retry.identitySha256,
-    accountingIdentitySha256: request.accounting.identitySha256,
-    idempotencyKeySha256: request.accounting.idempotencyKeySha256,
-    safeCodes: ["ADAPTER_AUTHENTICATED", "PAYLOAD_CANONICAL"],
-  } as const
+  const requestTrace = createRuntimeInvocationTraceV117(request, [
+    "ADAPTER_AUTHENTICATED",
+    "PAYLOAD_CANONICAL",
+  ])
   const valid =
     method === "selectActivations"
       ? createAuthenticatedRuntimeInvocationResponseV117(
@@ -328,7 +312,10 @@ const signedSystemFailureResponseBytes = (
         retryable:
           RUNTIME_INVOCATION_V1_17_SYSTEM_FAILURE_RETRYABILITY[code],
       },
-      trace: candidateResponse(request).outcome.trace,
+      trace: createRuntimeInvocationTraceV117(request, [
+        "ADAPTER_AUTHENTICATED",
+        "PAYLOAD_CANONICAL",
+      ]),
     },
     ambiguousReceiptFor(request),
     {
@@ -540,11 +527,7 @@ const futureRequestFixture = (
   }
   const budget = {
     ...budgetWithoutHash,
-    profileSha256:
-      `sha256:${hashCanonicalIdentityValue(
-        "budgetProfile",
-        budgetWithoutHash as unknown as JsonValue,
-      )}` as const,
+    profileSha256: RUNTIME_ABI_V1_17_BUDGET_PROFILE_SHA256,
   }
   const prestate = options.prestate ?? executionPrestateFixture()
   const prestateSha256 = framedFixtureHash(
@@ -1468,6 +1451,12 @@ describe("runtime invocation v1.17 authenticated candidate wire", () => {
       "AuthenticatedRuntimeInvocationResponseV117Schema",
       "createAuthenticatedRuntimeInvocationRequestV117",
       "createAuthenticatedRuntimeInvocationResponseV117",
+      "createRuntimeInvocationBudgetV117",
+      "createRuntimeInvocationExecutionReceiptV117",
+      "createRuntimeInvocationTraceV117",
+      "createRuntimeAbiV117ExecutionLedger",
+      "createRuntimeAbiV117PreflightLedger",
+      "debitRuntimeAbiV117Ledger",
       "serializeRuntimeInvocationRequestV117",
       "serializeRuntimeInvocationResponseV117",
       "verifyRuntimeInvocationRequestV117",
@@ -1479,7 +1468,7 @@ describe("runtime invocation v1.17 authenticated candidate wire", () => {
   })
 })
 
-describe("runtime invocation v1.17 authenticated execution accounting RED", () => {
+describe("runtime invocation v1.17 authenticated execution accounting", () => {
   const identity = {
     keyId: RUNTIME_INVOCATION_V1_17_TEST_KEY_ID,
     secret: fixtureSecret,
@@ -1500,6 +1489,112 @@ describe("runtime invocation v1.17 authenticated execution accounting RED", () =
     const fixture = futureRequestFixture()
     const verified = verifyRuntimeInvocationRequestV117(fixture.bytes, identity)
     expect(verified.kind).toBe("success")
+  })
+
+  it("binds both methods and every capability lane to one full ABI budget profile", () => {
+    const selectRequest = candidateRequest("selectActivations")
+    const soldierRequest = candidateRequest("soldierBrain")
+    expect(selectRequest.budget.profileSha256).toBe(
+      RUNTIME_ABI_V1_17_BUDGET_PROFILE_SHA256,
+    )
+    expect(soldierRequest.budget.profileSha256).toBe(
+      RUNTIME_ABI_V1_17_BUDGET_PROFILE_SHA256,
+    )
+    expect(
+      RUNTIME_BUDGET_CAPABILITY_CONTRACT_V1_17.budgetProfileSha256,
+    ).toBe(RUNTIME_ABI_V1_17_BUDGET_PROFILE_SHA256)
+    const artifact = JSON.parse(
+      readFileSync(
+        path.join(
+          repoRoot,
+          "packages/spec/artifacts/runtime-abi-v1.17-budget-capabilities.json",
+        ),
+        "utf8",
+      ),
+    ) as {
+      lanes: Array<{
+        identityPins: Array<{
+          pin: string
+          bindingSafeId: string | null
+        }>
+      }>
+    }
+    for (const lane of artifact.lanes) {
+      expect(
+        lane.identityPins.find(
+          ({ pin }) => pin === "budgetProfileSha256",
+        )?.bindingSafeId,
+      ).toBe(RUNTIME_ABI_V1_17_BUDGET_PROFILE_SHA256)
+    }
+  })
+
+  it.each([
+    ["measured", measuredReceiptFor, "success", undefined],
+    [
+      "unavailable",
+      unavailableReceiptFor,
+      "system_failure",
+      "METER_EVIDENCE_UNAVAILABLE",
+    ],
+    [
+      "ambiguous",
+      ambiguousReceiptFor,
+      "system_failure",
+      "METER_EVIDENCE_AMBIGUOUS",
+    ],
+  ] as const)(
+    "constructs one strict request-bound %s receipt",
+    (_name, buildReceipt, expectedKind, expectedCode) => {
+      const request = candidateRequest()
+      const receipt = buildReceipt(request)
+      expect(receipt).toMatchObject({
+        domain: "execution",
+        prestateRevision: request.accounting.prestate.revision,
+        invocationId: request.invocationId,
+        requestIdentity: request.accounting.requestIdentity,
+        method: request.method,
+      })
+      const { evidenceIdentity, ...withoutEvidenceIdentity } = receipt
+      expect(evidenceIdentity).toBe(
+        framedFixtureHash(
+          "runtime-invocation-v1.17:execution-evidence",
+          withoutEvidenceIdentity as unknown as JsonValue,
+        ),
+      )
+      const debit = debitRuntimeAbiV117Ledger(
+        request.accounting.prestate,
+        receipt,
+      )
+      expect(debit.kind).toBe(expectedKind)
+      if (debit.kind === "system_failure") {
+        expect(debit.failure.code).toBe(expectedCode)
+      }
+    },
+  )
+
+  it("constructs the complete trace from the authenticated request binding", () => {
+    const request = candidateRequest()
+    expect(
+      createRuntimeInvocationTraceV117(request, [
+        "ADAPTER_AUTHENTICATED",
+        "ACCOUNTING_EVIDENCE_BOUND",
+      ]),
+    ).toEqual({
+      requestId: request.requestId,
+      invocationId: request.invocationId,
+      kernelRequestId: request.kernelRequestId,
+      method: request.method,
+      requestSha256: sha256(serializeRuntimeInvocationRequestV117(request)),
+      budgetProfileSha256: request.budget.profileSha256,
+      inputSha256: request.input.canonicalSha256,
+      retryIdentitySha256: request.retry.identitySha256,
+      accountingIdentitySha256: request.accounting.identitySha256,
+      idempotencyKeySha256: request.accounting.idempotencyKeySha256,
+      safeCodes: [
+        "ADAPTER_AUTHENTICATED",
+        "ACCOUNTING_EVIDENCE_BOUND",
+      ],
+    })
   })
 
   it("fails closed on signed accounting drift and a preflight-domain request", () => {

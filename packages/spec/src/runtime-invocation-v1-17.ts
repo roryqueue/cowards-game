@@ -15,11 +15,19 @@ import {
   SoldierBrainResultV117Schema,
   StrategyResultV117Schema,
 } from "./runtime-payload-v1-17.js"
+import { RUNTIME_ABI_V1_17_BUDGET_PROFILE_SHA256 } from "./runtime-budget-profile-v1-17.js"
 import {
   RUNTIME_ABI_V1_17,
   debitRuntimeAbiV117Ledger,
+  type RuntimeAbiV117AccountingEvidence,
+  type RuntimeAbiV117CancellationEvidence,
+  type RuntimeAbiV117CounterEvidence,
+  type RuntimeAbiV117ExecutionCapabilityEvidence,
+  type RuntimeAbiV117ExecutionCounterName,
   type RuntimeAbiV117ExecutionLedger,
-  type RuntimeAbiV117ExecutionLedgerReceipt,
+  type RuntimeAbiV117LedgerAttribution,
+  type RuntimeAbiV117MemoryEvidence,
+  type RuntimeAbiV117ProcessEvidence,
 } from "./runtime-abi-v1-17.js"
 import type { JsonValue } from "./types.js"
 
@@ -580,11 +588,33 @@ export interface RuntimeInvocationResponseAccountingV117 {
   readonly prestateSha256: `sha256:${string}`
   readonly idempotencyKeySha256: `sha256:${string}`
   readonly disposition: "commit" | "no_commit"
-  readonly receipt: RuntimeAbiV117ExecutionLedgerReceipt
+  readonly receipt: RuntimeInvocationExecutionReceiptV117
   readonly poststate: RuntimeAbiV117ExecutionLedger
   readonly poststateSha256: `sha256:${string}`
   readonly identitySha256: `sha256:${string}`
 }
+
+export interface RuntimeInvocationExecutionReceiptEvidenceV117 {
+  readonly attribution: RuntimeAbiV117LedgerAttribution
+  readonly counters: Readonly<
+    Record<RuntimeAbiV117ExecutionCounterName, RuntimeAbiV117CounterEvidence>
+  >
+  readonly memory: RuntimeAbiV117MemoryEvidence
+  readonly process: RuntimeAbiV117ProcessEvidence
+  readonly capabilities: RuntimeAbiV117ExecutionCapabilityEvidence
+  readonly cancellation: RuntimeAbiV117CancellationEvidence
+  readonly accountingEvidence: RuntimeAbiV117AccountingEvidence
+}
+
+export type RuntimeInvocationExecutionReceiptV117 = Readonly<{
+  domain: "execution"
+  prestateRevision: number
+  invocationId: string
+  requestIdentity: `sha256:${string}`
+  evidenceIdentity: `sha256:${string}`
+  method: RuntimeInvocationMethodV117
+}> &
+  RuntimeInvocationExecutionReceiptEvidenceV117
 
 type RuntimeInvocationResponseBaseV117 = Readonly<{
   contractVersion: typeof RUNTIME_INVOCATION_V1_17_CANDIDATE.contractVersion
@@ -915,6 +945,17 @@ const RuntimeAbiV117ExecutionLedgerReceiptSchema = z
   })
   .strict()
 
+const RuntimeInvocationExecutionReceiptEvidenceV117Schema =
+  RuntimeAbiV117ExecutionLedgerReceiptSchema.pick({
+    attribution: true,
+    counters: true,
+    memory: true,
+    process: true,
+    capabilities: true,
+    cancellation: true,
+    accountingEvidence: true,
+  })
+
 const RuntimeInvocationResponseAccountingV117Schema = z
   .object({
     schemaVersion: z.literal("runtime-invocation-accounting-v1.17"),
@@ -1048,7 +1089,7 @@ const sameCanonicalValue = (left: JsonValue, right: JsonValue): boolean =>
   Buffer.from(canonicalBytes(left)).equals(Buffer.from(canonicalBytes(right)))
 
 const identityHash = (
-  domain: "semanticTuple" | "budgetProfile",
+  domain: "semanticTuple",
   value: JsonValue,
 ): `sha256:${string}` => `sha256:${hashCanonicalIdentityValue(domain, value)}`
 
@@ -1277,10 +1318,7 @@ export const createAuthenticatedRuntimeInvocationRequestV117 = (
   }
   const budget = {
     ...budgetWithoutHash,
-    profileSha256: identityHash(
-      "budgetProfile",
-      budgetWithoutHash as unknown as JsonValue,
-    ),
+    profileSha256: RUNTIME_ABI_V1_17_BUDGET_PROFILE_SHA256,
   }
   const requestInput = {
     value: inputValue,
@@ -1413,7 +1451,7 @@ const outcomeTraceMatchesRequest = (
 }
 
 const receiptEvidenceIdentity = (
-  receipt: RuntimeAbiV117ExecutionLedgerReceipt,
+  receipt: RuntimeInvocationExecutionReceiptV117,
 ): `sha256:${string}` => {
   const { evidenceIdentity: _evidenceIdentity, ...withoutEvidenceIdentity } =
     receipt
@@ -1473,25 +1511,26 @@ const accountingDebitMatchesOutcome = (
 const deriveResponseAccounting = (
   request: AuthenticatedRuntimeInvocationRequestV117,
   outcome: RuntimeInvocationResultV117,
-  receiptInput: RuntimeAbiV117ExecutionLedgerReceipt,
+  receiptInput: RuntimeInvocationExecutionReceiptV117,
 ): RuntimeInvocationResponseAccountingV117 | undefined => {
   const receipt = RuntimeAbiV117ExecutionLedgerReceiptSchema.safeParse(
     receiptInput,
   )
   if (!receipt.success) return undefined
+  const strictReceipt = receipt.data as RuntimeInvocationExecutionReceiptV117
   if (
-    receipt.data.domain !== "execution" ||
-    receipt.data.prestateRevision !== request.accounting.prestate.revision ||
-    receipt.data.invocationId !== request.invocationId ||
-    receipt.data.requestIdentity !== request.accounting.requestIdentity ||
-    receipt.data.method !== request.method ||
-    receipt.data.evidenceIdentity !== receiptEvidenceIdentity(receipt.data)
+    strictReceipt.domain !== "execution" ||
+    strictReceipt.prestateRevision !== request.accounting.prestate.revision ||
+    strictReceipt.invocationId !== request.invocationId ||
+    strictReceipt.requestIdentity !== request.accounting.requestIdentity ||
+    strictReceipt.method !== request.method ||
+    strictReceipt.evidenceIdentity !== receiptEvidenceIdentity(strictReceipt)
   ) {
     return undefined
   }
   const debit = debitRuntimeAbiV117Ledger(
     request.accounting.prestate,
-    receipt.data,
+    strictReceipt,
   )
   if (!accountingDebitMatchesOutcome(debit, outcome)) return undefined
   const disposition =
@@ -1514,7 +1553,7 @@ const deriveResponseAccounting = (
     prestateSha256: request.accounting.prestateSha256,
     idempotencyKeySha256: request.accounting.idempotencyKeySha256,
     disposition,
-    receipt: receipt.data,
+    receipt: strictReceipt,
     poststate,
     poststateSha256: framedValueHash(
       "runtime-invocation-v1.17:execution-ledger-poststate",
@@ -1535,7 +1574,7 @@ export const createAuthenticatedRuntimeInvocationResponseV117 = <
 >(
   request: AuthenticatedRuntimeInvocationRequestV117,
   outcome: RuntimeInvocationResultV117<TValue>,
-  receipt: RuntimeAbiV117ExecutionLedgerReceipt,
+  receipt: RuntimeInvocationExecutionReceiptV117,
   identity: RuntimeInvocationSigningIdentityV117,
 ): AuthenticatedRuntimeInvocationResponseV117<TValue> => {
   if (
@@ -1703,7 +1742,7 @@ const requestDerivedBindingsMatch = (
       Buffer.from(canonicalBytes(expectedBudget as unknown as JsonValue)),
     ) &&
     request.budget.profileSha256 ===
-      identityHash("budgetProfile", budget as unknown as JsonValue) &&
+      RUNTIME_ABI_V1_17_BUDGET_PROFILE_SHA256 &&
     request.input.canonicalSha256 === sha256Bytes(inputBytes) &&
     request.input.canonicalByteLength === inputBytes.byteLength &&
     request.retry.identitySha256 ===
@@ -1717,6 +1756,86 @@ const requestDerivedBindingsMatch = (
         accounting as unknown as JsonValue,
       )
   )
+}
+
+const receiptBindingFailureCodes: ReadonlySet<string> = new Set([
+  "LEDGER_SCHEMA_INVALID",
+  "RECEIPT_SCHEMA_INVALID",
+  "LEDGER_DOMAIN_MISMATCH",
+  "LEDGER_PRESTATE_MISMATCH",
+  "LEDGER_IDENTITY_CONFLICT",
+] as const)
+
+export const createRuntimeInvocationExecutionReceiptV117 = (
+  requestInput: AuthenticatedRuntimeInvocationRequestV117,
+  evidenceInput: RuntimeInvocationExecutionReceiptEvidenceV117,
+): RuntimeInvocationExecutionReceiptV117 => {
+  const request = AuthenticatedRuntimeInvocationRequestV117Schema.parse(
+    requestInput,
+  ) as AuthenticatedRuntimeInvocationRequestV117
+  if (!requestDerivedBindingsMatch(request)) {
+    throw new TypeError(
+      "Cannot construct execution accounting for an invalid candidate request",
+    )
+  }
+  const evidence =
+    RuntimeInvocationExecutionReceiptEvidenceV117Schema.parse(evidenceInput)
+  const withoutEvidenceIdentity = {
+    domain: "execution" as const,
+    prestateRevision: request.accounting.prestate.revision,
+    invocationId: request.invocationId,
+    requestIdentity: request.accounting.requestIdentity,
+    method: request.method,
+    ...evidence,
+  }
+  const receipt = RuntimeAbiV117ExecutionLedgerReceiptSchema.parse({
+    ...withoutEvidenceIdentity,
+    evidenceIdentity: framedValueHash(
+      "runtime-invocation-v1.17:execution-evidence",
+      withoutEvidenceIdentity as unknown as JsonValue,
+    ),
+  }) as RuntimeInvocationExecutionReceiptV117
+  const validation = debitRuntimeAbiV117Ledger(
+    request.accounting.prestate,
+    receipt,
+  )
+  if (
+    validation.kind === "system_failure" &&
+    receiptBindingFailureCodes.has(validation.failure.code)
+  ) {
+    throw new TypeError(
+      `Cannot construct execution accounting: ${validation.failure.code}`,
+    )
+  }
+  return receipt
+}
+
+export const createRuntimeInvocationTraceV117 = (
+  requestInput: AuthenticatedRuntimeInvocationRequestV117,
+  safeCodes: readonly string[],
+): RuntimeInvocationTraceV117 => {
+  const request = AuthenticatedRuntimeInvocationRequestV117Schema.parse(
+    requestInput,
+  ) as AuthenticatedRuntimeInvocationRequestV117
+  if (!requestDerivedBindingsMatch(request)) {
+    throw new TypeError(
+      "Cannot construct an invocation trace for an invalid candidate request",
+    )
+  }
+  const binding = requestBinding(request)
+  return RuntimeInvocationTraceV117Schema.parse({
+    requestId: binding.requestId,
+    invocationId: binding.invocationId,
+    kernelRequestId: binding.kernelRequestId,
+    method: binding.method,
+    requestSha256: binding.requestSha256,
+    budgetProfileSha256: binding.budgetProfileSha256,
+    inputSha256: binding.inputSha256,
+    retryIdentitySha256: binding.retryIdentitySha256,
+    accountingIdentitySha256: binding.accountingIdentitySha256,
+    idempotencyKeySha256: binding.idempotencyKeySha256,
+    safeCodes: [...safeCodes],
+  }) as RuntimeInvocationTraceV117
 }
 
 function withoutProperty<T extends object, K extends keyof T>(
