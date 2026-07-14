@@ -3,8 +3,10 @@ import json
 import hashlib
 import base64
 import math
-import signal
+import os
+import select
 import sys
+import time
 
 ABI_VERSION = "strategy-runtime-abi-v1.14"
 CANDIDATE_ABI_VERSION = "strategy-runtime-abi-v1.17"
@@ -51,10 +53,6 @@ class OutputLimitExceeded(Exception):
 
 
 class InvalidCanonicalOutput(Exception):
-    pass
-
-
-class GuestWallExceeded(BaseException):
     pass
 
 
@@ -172,6 +170,160 @@ def bounded_canonical_json_bytes(value, output_limit):
     return writer.bytes()
 
 
+def close_quietly(descriptor):
+    try:
+        os.close(descriptor)
+    except OSError:
+        pass
+
+
+def write_all(descriptor, value):
+    offset = 0
+    while offset < len(value):
+        written = os.write(descriptor, value[offset:])
+        if written <= 0:
+            raise OSError("short pipe write")
+        offset += written
+
+
+def candidate_envelope_bytes(kind, payload=None):
+    value = {"kind": kind}
+    if payload is not None:
+        value["payloadBase64"] = base64.b64encode(payload).decode("ascii")
+    return json.dumps(value, separators=(",", ":"), sort_keys=True).encode("utf-8")
+
+
+def kill_and_reap(child_pid):
+    try:
+        os.kill(child_pid, 9)
+    except ProcessLookupError:
+        pass
+    try:
+        os.waitpid(child_pid, 0)
+    except ChildProcessError:
+        pass
+
+
+def run_candidate_guest(function, input_value, budget):
+    if not hasattr(os, "fork"):
+        return {"kind": "host_failure"}
+    ready_read, ready_write = os.pipe()
+    go_read, go_write = os.pipe()
+    result_read, result_write = os.pipe()
+    try:
+        child_pid = os.fork()
+    except OSError:
+        for descriptor in (
+            ready_read,
+            ready_write,
+            go_read,
+            go_write,
+            result_read,
+            result_write,
+        ):
+            close_quietly(descriptor)
+        return {"kind": "host_failure"}
+
+    if child_pid == 0:
+        close_quietly(ready_read)
+        close_quietly(go_write)
+        close_quietly(result_read)
+        try:
+            write_all(ready_write, b"R")
+            close_quietly(ready_write)
+            if os.read(go_read, 1) != b"G":
+                os._exit(2)
+            close_quietly(go_read)
+            try:
+                result = function(input_value)
+            except BaseException:
+                write_all(
+                    result_write,
+                    candidate_envelope_bytes("strategy_exception"),
+                )
+            else:
+                try:
+                    payload = bounded_canonical_json_bytes(
+                        result, budget["outputBytes"]
+                    )
+                    write_all(
+                        result_write,
+                        candidate_envelope_bytes("payload", payload),
+                    )
+                except OutputLimitExceeded:
+                    write_all(
+                        result_write,
+                        candidate_envelope_bytes("oversized_output"),
+                    )
+                except BaseException:
+                    write_all(
+                        result_write,
+                        candidate_envelope_bytes("invalid_output"),
+                    )
+        except BaseException:
+            os._exit(3)
+        finally:
+            close_quietly(ready_write)
+            close_quietly(go_read)
+            close_quietly(result_write)
+        os._exit(0)
+
+    close_quietly(ready_write)
+    close_quietly(go_read)
+    close_quietly(result_write)
+    try:
+        ready, _, _ = select.select([ready_read], [], [], 5.0)
+        if not ready or os.read(ready_read, 1) != b"R":
+            kill_and_reap(child_pid)
+            return {"kind": "host_failure"}
+        close_quietly(ready_read)
+
+        deadline = time.monotonic() + budget["wallMilliseconds"] / 1000
+        try:
+            write_all(go_write, b"G")
+        except OSError:
+            kill_and_reap(child_pid)
+            return {"kind": "host_failure"}
+        finally:
+            close_quietly(go_write)
+
+        chunks = []
+        observed_bytes = 0
+        maximum_envelope_bytes = ((budget["outputBytes"] + 2) // 3) * 4 + 128
+        while True:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                kill_and_reap(child_pid)
+                return {"kind": "strategy_timeout"}
+            readable, _, _ = select.select([result_read], [], [], remaining)
+            if not readable:
+                kill_and_reap(child_pid)
+                return {"kind": "strategy_timeout"}
+            chunk = os.read(result_read, 65_536)
+            if not chunk:
+                if time.monotonic() > deadline:
+                    kill_and_reap(child_pid)
+                    return {"kind": "strategy_timeout"}
+                break
+            observed_bytes += len(chunk)
+            if observed_bytes > maximum_envelope_bytes:
+                kill_and_reap(child_pid)
+                return {"kind": "host_failure"}
+            chunks.append(chunk)
+
+        _, status = os.waitpid(child_pid, 0)
+        if os.waitstatus_to_exitcode(status) != 0:
+            return {"kind": "host_failure"}
+        envelope_bytes = b"".join(chunks)
+        if not envelope_bytes:
+            return {"kind": "host_failure"}
+        return {"kind": "forward", "envelope": envelope_bytes}
+    finally:
+        close_quietly(ready_read)
+        close_quietly(go_write)
+        close_quietly(result_read)
+
+
 def failure(kind, code, message, public_message):
     key = "violation" if kind == "runtimeViolation" else "systemFailure"
     return {
@@ -263,45 +415,21 @@ def candidate_main(envelope):
         sys.stdout.write('{"kind":"host_failure"}')
         return 0
 
-    guest_wall_exceeded = False
-
-    def guest_wall_handler(_signal_number, _frame):
-        nonlocal guest_wall_exceeded
-        guest_wall_exceeded = True
-        raise GuestWallExceeded()
-
-    previous_handler = signal.signal(signal.SIGALRM, guest_wall_handler)
-    signal.setitimer(signal.ITIMER_REAL, budget["wallMilliseconds"] / 1000)
-    try:
-        result = namespace[function_name](envelope.get("input"))
-    except GuestWallExceeded:
+    function = namespace.get(function_name)
+    if not callable(function):
+        sys.stdout.write('{"kind":"host_failure"}')
+        return 0
+    guest = run_candidate_guest(function, envelope.get("input"), budget)
+    if guest["kind"] == "forward":
+        # The supervised child has already constructed and transferred the
+        # complete exact envelope before its deadline. This parent seam only
+        # forwards those observed bytes; it performs no output transformation.
+        sys.stdout.buffer.write(guest["envelope"])
+        sys.stdout.buffer.flush()
+    elif guest["kind"] == "strategy_timeout":
         sys.stdout.write('{"kind":"strategy_timeout"}')
-        return 0
-    except Exception:
-        sys.stdout.write('{"kind":"strategy_exception"}')
-        return 0
-    finally:
-        signal.setitimer(signal.ITIMER_REAL, 0)
-        signal.signal(signal.SIGALRM, previous_handler)
-    if guest_wall_exceeded:
-        sys.stdout.write('{"kind":"strategy_timeout"}')
-        return 0
-    try:
-        payload = bounded_canonical_json_bytes(result, budget["outputBytes"])
-        sys.stdout.write(
-            json.dumps(
-                {
-                    "kind": "payload",
-                    "payloadBase64": base64.b64encode(payload).decode("ascii"),
-                },
-                separators=(",", ":"),
-                sort_keys=True,
-            )
-        )
-    except OutputLimitExceeded:
-        sys.stdout.write('{"kind":"oversized_output"}')
-    except Exception:
-        sys.stdout.write('{"kind":"invalid_output"}')
+    else:
+        sys.stdout.write('{"kind":"host_failure"}')
     return 0
 
 

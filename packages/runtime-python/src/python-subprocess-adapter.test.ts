@@ -569,7 +569,7 @@ describe("Python subprocess Strategy provider ABI", () => {
       const source = `def select_activations(input):\n    while True:\n        try:\n            while True:\n                pass\n        except:\n            pass\n\ndef soldier_brain(input):\n    return {"action": {"type": "TURN_TO_STONE"}, "soldierMemory": None}\n`
       const revision = buildPythonStrategyRevision({ source })
       const request = candidateRequest(revision, { wallMilliseconds: 20 })
-      const started = performance.now()
+      const started = Date.now()
       const response = verifyRuntimeInvocationResponseV117(
         createPythonCandidateInvocationAdapterV117({
           revision,
@@ -578,7 +578,7 @@ describe("Python subprocess Strategy provider ABI", () => {
         request,
         candidateIdentity,
       )
-      const elapsedMilliseconds = performance.now() - started
+      const elapsedMilliseconds = Date.now() - started
 
       expect(elapsedMilliseconds).toBeLessThan(1_000)
       expect(response.kind).toBe("success")
@@ -592,6 +592,29 @@ describe("Python subprocess Strategy provider ABI", () => {
     },
     35_000,
   )
+
+  it("keeps serialization and complete-envelope observation inside the guest-entry wall", () => {
+    const source = `payload = [0] * 60000\n\ndef select_activations(input):\n    return {"activationOrders": [], "strategyMemory": payload}\n\ndef soldier_brain(input):\n    return {"action": {"type": "TURN_TO_STONE"}, "soldierMemory": None}\n`
+    const revision = buildPythonStrategyRevision({ source })
+    const request = candidateRequest(revision, { wallMilliseconds: 2 })
+    const response = verifyRuntimeInvocationResponseV117(
+      createPythonCandidateInvocationAdapterV117({
+        revision,
+        identity: candidateIdentity,
+      })(serializeRuntimeInvocationRequestV117(request)),
+      request,
+      candidateIdentity,
+    )
+
+    expect(response.kind).toBe("success")
+    if (response.kind === "success") {
+      expect(response.value.outcome).toMatchObject({
+        kind: "player_violation",
+        violation: { code: "TIMEOUT" },
+      })
+      expect(response.value.outcome).not.toHaveProperty("failure")
+    }
+  })
 
   it("accepts a near-cap raw host payload without base64-envelope ENOBUFS drift", () => {
     const source = `def select_activations(input):\n    return {"activationOrders": [], "strategyMemory": "x" * 249900}\n\ndef soldier_brain(input):\n    return {"action": {"type": "TURN_TO_STONE"}, "soldierMemory": None}\n`
