@@ -232,6 +232,10 @@ func TestPhase258RuntimeInvocationV117UsesFiniteGoOwnedSignedBudgetRetryPolicy(t
 		{name: "attempt at signed maximum is rejected", maximum: 260, attempt: 260},
 		{name: "maximum safe integer attempt is rejected", maximum: 260, attempt: 9_007_199_254_740_991},
 		{name: "remaining signed budget limits calls", maximum: 1, attempt: 0, wantCalls: 1, wantResult: true},
+		{name: "attempt two uses the final local retry", maximum: 260, attempt: 2, wantCalls: 1, wantResult: true},
+		{name: "attempt three exceeds the local retry policy", maximum: 260, attempt: 3},
+		{name: "attempt two hundred fifty nine exceeds the local retry policy", maximum: 260, attempt: 259},
+		{name: "cumulative remaining budget is independent", maximum: 2, attempt: 1, wantCalls: 1, wantResult: true},
 	} {
 		candidate := candidate
 		t.Run(candidate.name, func(t *testing.T) {
@@ -301,6 +305,43 @@ func TestPhase258RuntimeInvocationV117UsesFiniteGoOwnedSignedBudgetRetryPolicy(t
 		})
 		if calls != 1 || response != nil || failure == nil || failure.Code != "AMBIGUOUS_ATTRIBUTION" || failure.Retryable {
 			t.Fatalf("cancellation did not stop retry: response=%+v failure=%+v calls=%d", response, failure, calls)
+		}
+	})
+
+	t.Run("cancellation after transport rejects success and player results", func(t *testing.T) {
+		request, failure := verifyRuntimeInvocationRequestV117(requestBytes, identity)
+		if failure != nil {
+			t.Fatal(failure)
+		}
+		successBytes := readRuntimeInvocationV117Fixture(t, "runtime-execution-service-response.v1.17.candidate.wire.json")
+		playerBytes := signedRuntimeInvocationResponseV117ForTest(t, request, map[string]any{
+			"kind": "player_violation",
+			"violation": map[string]any{
+				"code":          "INVALID_OUTPUT",
+				"publicMessage": "Strategy returned an invalid payload.",
+			},
+			"trace": runtimeInvocationTraceV117ForRequest(request),
+		}, identity)
+		for _, candidate := range []struct {
+			name    string
+			payload []byte
+		}{
+			{name: "success", payload: successBytes},
+			{name: "player violation", payload: playerBytes},
+		} {
+			candidate := candidate
+			t.Run(candidate.name, func(t *testing.T) {
+				ctx, cancel := context.WithCancel(context.Background())
+				calls := 0
+				response, failure := executeRuntimeInvocationV117(ctx, requestBytes, identity, func(_ context.Context, _ []byte) ([]byte, error) {
+					calls++
+					cancel()
+					return candidate.payload, nil
+				})
+				if calls != 1 || response != nil || failure == nil || failure.Code != "AMBIGUOUS_ATTRIBUTION" || failure.Retryable {
+					t.Fatalf("post-transport cancellation classified a result: response=%+v failure=%+v calls=%d", response, failure, calls)
+				}
+			})
 		}
 	})
 }
