@@ -130,13 +130,14 @@ const responseSnapshot = (
 const builtMatch = (
   namespace: string,
   seed = `${namespace}:seed`,
+  runtimeOverride?: StrategyRuntime,
 ): {
   chronicle: Chronicle
   finalState: GameState
   execution: ChronicleRecorderExecution
   boundaryAnchors: readonly ChronicleBoundaryAnchor[]
 } => {
-  const runtime: StrategyRuntime = {
+  const runtime: StrategyRuntime = runtimeOverride ?? {
     selectActivations(input) {
       return {
         ok: true,
@@ -684,26 +685,24 @@ const seedCompletionMatch = async (
 const databaseUrl = process.env.DATABASE_URL
 const describePostgres = databaseUrl ? describe : describe.skip
 
-const canonicalMutationTables = [
-  "matches",
-  "match_jobs",
-  "match_job_attempts",
-  "chronicles",
-  "result_flags",
-  "trial_ladder_entries",
-] as const
-
 const snapshotCanonicalRows = async (pool: Pool) => {
   const snapshot: Record<string, readonly unknown[]> = {}
-  for (const table of canonicalMutationTables) {
-    const result = await pool.query<{ rows: readonly unknown[] }>(
+  const tables = await pool.query<{ tablename: string }>(`
+    select tablename
+      from pg_tables
+     where schemaname = current_schema()
+     order by tablename
+  `)
+  for (const { tablename } of tables.rows) {
+    const quotedTable = `"${tablename.replaceAll('"', '""')}"`
+    const result = await pool.query<{ snapshot: readonly unknown[] }>(
       `select coalesce(
          jsonb_agg(to_jsonb(row_data) order by to_jsonb(row_data)::text),
          '[]'::jsonb
-       ) as rows
-       from (select * from ${table}) row_data`,
+       ) as snapshot
+       from (select * from ${quotedTable}) row_data`,
     )
-    snapshot[table] = result.rows[0]!.rows
+    snapshot[tablename] = result.rows[0]!.snapshot
   }
   return snapshot
 }
@@ -930,17 +929,58 @@ describePostgres(
           where job_id = $1 and attempt_number = 1`,
         [`${namespace}:job`],
       )
-      const beforeLateFailure = await snapshotCanonicalRows(pool)
-      await pool.query(`
-      create function reject_completion_update() returns trigger language plpgsql as $$
-      begin raise exception 'forced late completion failure'; end; $$;
-      create trigger reject_completion_update before update on matches
-      for each row when (new.status = 'complete') execute function reject_completion_update();
-    `)
-      await expect(
-        completeMatch(pool, input(responseSnapshot(identity, pair))),
-      ).rejects.toThrow(/forced late completion failure/iu)
-      expect(await snapshotCanonicalRows(pool)).toEqual(beforeLateFailure)
+      const persistenceFaults = [
+        {
+          name: "after Chronicle",
+          table: "matches",
+          predicate: `new.id = '${namespace.replaceAll("'", "''")}:match'`,
+        },
+        {
+          name: "after Match",
+          table: "match_jobs",
+          predicate: `new.id = '${namespace.replaceAll("'", "''")}:job'`,
+        },
+        {
+          name: "after job",
+          table: "match_job_attempts",
+          predicate: `new.job_id = '${namespace.replaceAll("'", "''")}:job'`,
+        },
+        {
+          name: "at commit",
+          table: "match_job_attempts",
+          predicate: `new.job_id = '${namespace.replaceAll("'", "''")}:job'`,
+          deferred: true,
+        },
+      ] as const
+      for (const [index, fault] of persistenceFaults.entries()) {
+        const beforeLateFailure = await snapshotCanonicalRows(pool)
+        const functionName = `phase258_completion_fault_${index}`
+        const triggerName = `phase258_completion_fault_${index}`
+        const triggerKind = fault.deferred
+          ? `create constraint trigger ${triggerName} after update`
+          : `create trigger ${triggerName} before update`
+        const deferred = fault.deferred ? " deferrable initially deferred" : ""
+        await pool.query(`
+          create function ${functionName}() returns trigger language plpgsql as $$
+          begin
+            if ${fault.predicate} then
+              raise exception 'forced Phase 258 persistence fault: ${fault.name}';
+            end if;
+            return new;
+          end; $$;
+          ${triggerKind} on ${fault.table}${deferred}
+          for each row execute function ${functionName}();
+        `)
+        await expect(
+          completeMatch(pool, input(responseSnapshot(identity, pair))),
+        ).rejects.toThrow(
+          new RegExp(`forced Phase 258 persistence fault: ${fault.name}`, "iu"),
+        )
+        expect(await snapshotCanonicalRows(pool)).toEqual(beforeLateFailure)
+        await pool.query(
+          `drop trigger ${triggerName} on ${fault.table}; drop function ${functionName}()`,
+        )
+      }
       let rows = await pool.query(
         `select m.status as match_status, j.status as job_status,
               (select count(*)::integer from chronicles where match_id = m.id) as chronicles
@@ -952,9 +992,6 @@ describePostgres(
         job_status: "running",
         chronicles: 0,
       })
-      await pool.query("drop trigger reject_completion_update on matches")
-      await pool.query("drop function reject_completion_update()")
-
       await expect(
         completeMatch(pool, input(responseSnapshot(identity, pair))),
       ).resolves.toMatchObject({
@@ -1075,7 +1112,7 @@ describePostgres(
         playerPenalty: false,
       })
       expect(await snapshotCanonicalRows(pool)).toEqual(completed)
-    }, 15_000)
+    }, 30_000)
   },
 )
 

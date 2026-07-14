@@ -427,7 +427,6 @@ func TestMatchCompletionSemanticDatabase(t *testing.T) {
 
 	t.Run("late installed receipt drift leaves gameplay exact", func(t *testing.T) {
 		candidate := fixture.seedMatch(t, ctx, pool, "receipt-drift")
-		before := semanticCompletionSnapshot(t, ctx, pool)
 		receipt := semanticCurrentReceipt(fixture.identity)
 		if _, err := pool.Exec(ctx, `insert into runtime_evidence_authority_publication_events
 			(id,publication_id,event_kind,attempt_id,envelope_sha256,reason_code,receipt,occurred_at)
@@ -435,6 +434,7 @@ func TestMatchCompletionSemanticDatabase(t *testing.T) {
 			"candidate:event:uncertain", fixture.identity.PublicationID, fixture.identity.EnvelopeSHA256, receipt, now.Add(time.Minute)); err != nil {
 			t.Fatal(err)
 		}
+		before := semanticCompletionSnapshot(t, ctx, pool)
 		if _, err := service.completeMatch(ctx, candidate.input(fixture.identity)); err == nil {
 			t.Fatal("late installed receipt drift reached completion")
 		}
@@ -443,6 +443,153 @@ func TestMatchCompletionSemanticDatabase(t *testing.T) {
 			t.Fatalf("late receipt drift mutated gameplay rows: before=%s after=%s", before, after)
 		}
 	})
+}
+
+func TestPhase258CompletionRollbackPostgres(t *testing.T) {
+	databaseURL := os.Getenv("COWARDS_GO_BACKEND_TEST_DATABASE_URL")
+	if databaseURL == "" {
+		t.Fatal("COWARDS_GO_BACKEND_TEST_DATABASE_URL is required for TestPhase258CompletionRollbackPostgres")
+	}
+	ctx := context.Background()
+	pool := semanticCurrentIsolatedPool(t, ctx, databaseURL)
+	now := time.Date(2026, 7, 14, 16, 0, 0, 0, time.UTC)
+	fixture := seedSemanticCurrentAuthority(t, ctx, pool, now)
+	service := newMatchCompletionService(pool)
+	service.semanticReceiptSecret = "fixture-semantic-receipt-secret-v1"
+	service.loadAuthority = func() (*verifiedRuntimeEvidenceAuthority, error) { return fixture.authority, nil }
+	service.now = func() time.Time { return now }
+
+	faults := []struct {
+		name        string
+		table       string
+		deferred    bool
+		rowSelector func(semanticCurrentMatchFixture) string
+	}{
+		{name: "after Chronicle", table: "matches", rowSelector: func(candidate semanticCurrentMatchFixture) string {
+			return "new.id = " + semanticSQLLiteral(candidate.matchID)
+		}},
+		{name: "after Match", table: "match_jobs", rowSelector: func(candidate semanticCurrentMatchFixture) string {
+			return "new.id = " + semanticSQLLiteral(candidate.jobID)
+		}},
+		{name: "after job", table: "match_job_attempts", rowSelector: func(candidate semanticCurrentMatchFixture) string {
+			return "new.job_id = " + semanticSQLLiteral(candidate.jobID)
+		}},
+		{name: "after attempt", table: "match_sets", rowSelector: func(semanticCurrentMatchFixture) string { return "new.id = 'candidate:match-set'" }},
+		{name: "at commit", table: "match_job_attempts", deferred: true, rowSelector: func(candidate semanticCurrentMatchFixture) string {
+			return "new.job_id = " + semanticSQLLiteral(candidate.jobID)
+		}},
+	}
+	for index, fault := range faults {
+		fault := fault
+		t.Run("rolls back persistence fault "+fault.name, func(t *testing.T) {
+			candidate := fixture.seedMatch(t, ctx, pool, fmt.Sprintf("phase258-fault-%d", index))
+			before := semanticCompletionSnapshot(t, ctx, pool)
+			functionName := pgx.Identifier{fmt.Sprintf("phase258_fault_%d", index)}.Sanitize()
+			triggerName := pgx.Identifier{fmt.Sprintf("phase258_fault_%d", index)}.Sanitize()
+			triggerKind := "create trigger " + triggerName + " before update"
+			if fault.deferred {
+				triggerKind = "create constraint trigger " + triggerName + " after update"
+			}
+			deferred := ""
+			if fault.deferred {
+				deferred = " deferrable initially deferred"
+			}
+			if _, err := pool.Exec(ctx, fmt.Sprintf(`
+				create function %s() returns trigger language plpgsql as $$
+				begin
+				  if %s then
+				    raise exception 'forced Phase 258 persistence fault: %s';
+				  end if;
+				  return new;
+				end $$;
+				%s on %s%s for each row execute function %s()
+			`, functionName, fault.rowSelector(candidate), fault.name, triggerKind, pgx.Identifier{fault.table}.Sanitize(), deferred, functionName)); err != nil {
+				t.Fatal(err)
+			}
+			_, completionErr := service.completeMatch(ctx, candidate.input(fixture.identity))
+			if completionErr == nil {
+				t.Fatalf("forced persistence fault %s unexpectedly committed", fault.name)
+			}
+			after := semanticCompletionSnapshot(t, ctx, pool)
+			if !jsonValuesEqual(before, after) {
+				t.Fatalf("persistence fault %s escaped transaction: before=%s after=%s", fault.name, before, after)
+			}
+			if _, err := pool.Exec(ctx, fmt.Sprintf("drop trigger %s on %s; drop function %s()", triggerName, pgx.Identifier{fault.table}.Sanitize(), functionName)); err != nil {
+				t.Fatal(err)
+			}
+		})
+	}
+
+	drifts := []struct {
+		name       string
+		triggerSQL func(semanticCurrentMatchFixture, string, string) string
+		table      string
+	}{
+		{
+			name:  "Match status after Chronicle",
+			table: "chronicles",
+			triggerSQL: func(candidate semanticCurrentMatchFixture, functionName string, triggerName string) string {
+				return fmt.Sprintf(`
+					create function %s() returns trigger language plpgsql as $$
+					begin
+					  if new.match_id = %s then update matches set status='failed_system' where id=new.match_id; end if;
+					  return new;
+					end $$;
+					create trigger %s after insert on chronicles for each row execute function %s()
+				`, functionName, semanticSQLLiteral(candidate.matchID), triggerName, functionName)
+			},
+		},
+		{
+			name:  "job status after Match",
+			table: "matches",
+			triggerSQL: func(candidate semanticCurrentMatchFixture, functionName string, triggerName string) string {
+				return fmt.Sprintf(`
+					create function %s() returns trigger language plpgsql as $$
+					begin
+					  if new.id = %s and new.status='complete' then update match_jobs set status='failed_system' where id=%s; end if;
+					  return new;
+					end $$;
+					create trigger %s before update on matches for each row execute function %s()
+				`, functionName, semanticSQLLiteral(candidate.matchID), semanticSQLLiteral(candidate.jobID), triggerName, functionName)
+			},
+		},
+		{
+			name:  "attempt status after job",
+			table: "match_jobs",
+			triggerSQL: func(candidate semanticCurrentMatchFixture, functionName string, triggerName string) string {
+				return fmt.Sprintf(`
+					create function %s() returns trigger language plpgsql as $$
+					begin
+					  if new.id = %s and new.status='complete' then update match_job_attempts set status='failed_system' where job_id=new.id; end if;
+					  return new;
+					end $$;
+					create trigger %s before update on match_jobs for each row execute function %s()
+				`, functionName, semanticSQLLiteral(candidate.jobID), triggerName, functionName)
+			},
+		},
+	}
+	for index, drift := range drifts {
+		drift := drift
+		t.Run("fails closed on late "+drift.name, func(t *testing.T) {
+			candidate := fixture.seedMatch(t, ctx, pool, fmt.Sprintf("phase258-drift-%d", index))
+			before := semanticCompletionSnapshot(t, ctx, pool)
+			functionName := pgx.Identifier{fmt.Sprintf("phase258_drift_%d", index)}.Sanitize()
+			triggerName := pgx.Identifier{fmt.Sprintf("phase258_drift_%d", index)}.Sanitize()
+			if _, err := pool.Exec(ctx, drift.triggerSQL(candidate, functionName, triggerName)); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := service.completeMatch(ctx, candidate.input(fixture.identity)); err == nil {
+				t.Fatalf("late %s was overwritten by completion", drift.name)
+			}
+			after := semanticCompletionSnapshot(t, ctx, pool)
+			if !jsonValuesEqual(before, after) {
+				t.Fatalf("late %s escaped rollback: before=%s after=%s", drift.name, before, after)
+			}
+			if _, err := pool.Exec(ctx, fmt.Sprintf("drop trigger %s on %s; drop function %s()", triggerName, pgx.Identifier{drift.table}.Sanitize(), functionName)); err != nil {
+				t.Fatal(err)
+			}
+		})
+	}
 }
 
 type semanticCurrentAuthorityFixture struct {
@@ -761,22 +908,44 @@ func (fixture *semanticCurrentAuthorityFixture) seedMatch(t *testing.T, ctx cont
 
 func semanticCompletionSnapshot(t *testing.T, ctx context.Context, pool *pgxpool.Pool) map[string]any {
 	t.Helper()
-	var serialized []byte
-	if err := pool.QueryRow(ctx, `select jsonb_build_object(
-		'matches',coalesce((select jsonb_agg(to_jsonb(row) order by row.id) from matches row),'[]'::jsonb),
-		'jobs',coalesce((select jsonb_agg(to_jsonb(row) order by row.id) from match_jobs row),'[]'::jsonb),
-		'attempts',coalesce((select jsonb_agg(to_jsonb(row) order by row.id) from match_job_attempts row),'[]'::jsonb),
-		'chronicles',coalesce((select jsonb_agg(to_jsonb(row) order by row.id) from chronicles row),'[]'::jsonb),
-		'matchSets',coalesce((select jsonb_agg(to_jsonb(row) order by row.id) from match_sets row),'[]'::jsonb),
-		'matchSetMatches',coalesce((select jsonb_agg(to_jsonb(row) order by row.match_set_id,row.match_id) from match_set_matches row),'[]'::jsonb),
-		'resultFlags',coalesce((select jsonb_agg(to_jsonb(row) order by row.id) from result_flags row),'[]'::jsonb),
-		'standings',coalesce((select jsonb_agg(to_jsonb(row) order by row.id) from trial_ladder_entries row),'[]'::jsonb)
-	)`).Scan(&serialized); err != nil {
+	rows, err := pool.Query(ctx, `
+		select tablename
+		from pg_tables
+		where schemaname = current_schema()
+		order by tablename
+	`)
+	if err != nil {
 		t.Fatal(err)
 	}
-	var snapshot map[string]any
-	if err := decodeStrictJSONUseNumber(serialized, &snapshot); err != nil {
+	tables := []string{}
+	for rows.Next() {
+		var table string
+		if err := rows.Scan(&table); err != nil {
+			rows.Close()
+			t.Fatal(err)
+		}
+		tables = append(tables, table)
+	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
 		t.Fatal(err)
+	}
+	rows.Close()
+	snapshot := map[string]any{}
+	for _, table := range tables {
+		var serialized []byte
+		query := fmt.Sprintf(`select coalesce(
+			jsonb_agg(to_jsonb(row_data) order by to_jsonb(row_data)::text),
+			'[]'::jsonb
+		) from (select * from %s) row_data`, pgx.Identifier{table}.Sanitize())
+		if err := pool.QueryRow(ctx, query).Scan(&serialized); err != nil {
+			t.Fatal(err)
+		}
+		var tableRows any
+		if err := decodeStrictJSONUseNumber(serialized, &tableRows); err != nil {
+			t.Fatal(err)
+		}
+		snapshot[table] = tableRows
 	}
 	return snapshot
 }
