@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest"
 import {
   EXPECTED_GO_SENTINEL,
   EXPECTED_TS_SENTINEL,
+  assertCanonicalJsonConsumerSourceActive,
   createCanonicalJsonV11RedReceipt,
   evaluateCanonicalJsonV11Red,
   writeCanonicalJsonV11RedReceipt,
@@ -34,6 +35,14 @@ const result = (
 })
 
 describe("canonical JSON v1.1 exact RED verifier", () => {
+  it("forbids disabled or empty consumer tests at source", () => {
+    expect(() => assertCanonicalJsonConsumerSourceActive("TS", "it.skip('codec', run)")).toThrow()
+    expect(() => assertCanonicalJsonConsumerSourceActive("GO", "test.todo('codec')")).toThrow()
+    expect(() => assertCanonicalJsonConsumerSourceActive("TS", "passWithNoTests: true")).toThrow()
+    expect(() => assertCanonicalJsonConsumerSourceActive("GO", "const state = 'pending'")).toThrow()
+    expect(() => assertCanonicalJsonConsumerSourceActive("TS", "it('codec', run)")).not.toThrow()
+  })
+
   it.each<[RedStage, "missing" | "green", "missing" | "green"]>([
     ["both-missing", "missing", "missing"],
     ["go-missing", "green", "missing"],

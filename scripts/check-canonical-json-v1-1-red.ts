@@ -70,6 +70,15 @@ const infrastructureFailurePattern =
   /no test files|no tests found|cannot find module|failed to load|compile error|type error|configuration error|timed out|timeout|transform failed|syntaxerror|referenceerror/i
 const forbiddenEmptyTestPattern = /passWithNoTests|\.skip\b|\.todo\b|\bpending\b/i
 
+export const assertCanonicalJsonConsumerSourceActive = (
+  language: ConsumerLanguage,
+  source: string,
+): void => {
+  if (forbiddenEmptyTestPattern.test(source)) {
+    throw new Error(`${language} consumer source contains a forbidden empty-test mode`)
+  }
+}
+
 const expectedMode = (stage: RedStage, language: ConsumerLanguage): ConsumerMode => {
   if (stage === "both-missing") return "missing"
   if (stage === "go-missing") return language === "TS" ? "green" : "missing"
@@ -246,6 +255,20 @@ const loadCorpusIdentity = (): CorpusIdentity => {
 }
 
 const runCurrentConsumers = (stage: RedStage): CanonicalJsonV11RedReceipt => {
+  assertCanonicalJsonConsumerSourceActive(
+    "TS",
+    readFileSync(
+      path.join(repoRoot, "packages/spec/src/canonical-json-corpus.test.ts"),
+      "utf8",
+    ),
+  )
+  assertCanonicalJsonConsumerSourceActive(
+    "GO",
+    readFileSync(
+      path.join(repoRoot, "apps/go-backend/canonical_json_corpus_test.go"),
+      "utf8",
+    ),
+  )
   const identity = loadCorpusIdentity()
   return evaluateCanonicalJsonV11Red({
     stage,
