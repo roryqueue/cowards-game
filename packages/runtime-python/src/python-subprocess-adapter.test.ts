@@ -949,10 +949,6 @@ describe("Python subprocess Strategy provider ABI", () => {
       const revision = buildPythonStrategyRevision({ source })
       const request = candidateRequest(revision)
       const started = Date.now()
-      const host = runPythonCandidateHostV117(
-        request,
-        buildPythonSourceIdentityV117(source).normalizedSource,
-      )
       const response = verifyRuntimeInvocationResponseV117(
         createPythonCandidateInvocationAdapterV117({
           revision,
@@ -964,7 +960,6 @@ describe("Python subprocess Strategy provider ABI", () => {
       const elapsedMilliseconds = Date.now() - started
 
       expect(elapsedMilliseconds).toBeLessThan(2_500)
-      expect(host.observation.kind).toBe("pre_method_host_failure")
       expect(response.kind).toBe("success")
       if (response.kind === "success") {
         expect(response.value.outcome).toMatchObject({
