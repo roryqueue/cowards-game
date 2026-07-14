@@ -383,6 +383,46 @@ describe("WASM/WASI runtime v1.17 candidate host authority", () => {
       },
     })
   })
+
+  it("fails artifact toolchain metadata that does not match the observed compiler", () => {
+    const request = candidateRequest(revision)
+    const artifact = revision.metadata.compiledArtifact
+    expect(artifact).toBeDefined()
+    if (artifact === undefined) throw new Error("Candidate artifact is missing")
+    const staleRevision = {
+      ...revision,
+      metadata: {
+        ...revision.metadata,
+        compiledArtifact: {
+          ...artifact,
+          toolchain: {
+            ...artifact.toolchain,
+            compilerVersion: "rustc stale-floating-toolchain",
+          },
+        },
+      },
+    } as typeof revision
+    let executed = false
+    const response = runWasmWasiStrategyMethodV117Sync({
+      request,
+      revision: staleRevision,
+      signingIdentity: candidateSigningIdentity,
+      executionIdentity: candidateExecutionIdentity(revision),
+      executeGuest: () => {
+        executed = true
+        return completedObservation(
+          '{"action":{"type":"TURN_TO_STONE"},"soldierMemory":null}',
+        )
+      },
+    })
+
+    expect(executed).toBe(false)
+    expect(response.outcome).toMatchObject({
+      kind: "system_failure",
+      failure: { code: "OUTER_FRAME_WRONG_BINDING", retryable: false },
+      trace: { safeCodes: ["WASM_WASI_STALE_ARTIFACT_TOOLCHAIN_IDENTITY"] },
+    })
+  })
 })
 
 describe("WASM/WASI runtime v1.17 exact Rust/Zig identity", () => {
