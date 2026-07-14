@@ -318,7 +318,9 @@ describe("v1.17 preflight contract", () => {
       "utf8",
     )
     expect(source).not.toContain("replayUrl.href")
-    expect(source).not.toMatch(/preflight crashed: \$\{errorMessage\(error\)\}/u)
+    expect(source).not.toMatch(
+      /preflight crashed: \$\{errorMessage\(error\)\}/u,
+    )
     expect(source).toContain("dependencies.fetch")
   })
 })

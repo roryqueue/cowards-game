@@ -107,8 +107,19 @@ const defaultDependencies: PreflightDependencies = {
   writeLine: (line) => console.log(line),
 }
 
-const normalizeGoBackendOrigin = (
+class SafePreflightError extends Error {}
+
+const safePreflightError = (detail: string): SafePreflightError =>
+  new SafePreflightError(detail)
+
+const safeFailureDetail = (error: unknown): string =>
+  error instanceof SafePreflightError
+    ? error.message
+    : "Preflight check failed; details are intentionally redacted."
+
+const normalizeHttpOrigin = (
   value: string | undefined,
+  label: "COWARDS_GO_BACKEND_URL" | "COWARDS_WEB_URL",
 ): string | undefined => {
   if (value === undefined) return undefined
   const trimmed = value.trim()
@@ -117,7 +128,7 @@ const normalizeGoBackendOrigin = (
   try {
     parsed = new URL(trimmed)
   } catch {
-    throw new Error("COWARDS_GO_BACKEND_URL must be a valid HTTP(S) origin.")
+    throw safePreflightError(`${label} must be a valid HTTP(S) origin.`)
   }
   if (
     (parsed.protocol !== "http:" && parsed.protocol !== "https:") ||
@@ -127,12 +138,19 @@ const normalizeGoBackendOrigin = (
     parsed.search !== "" ||
     parsed.hash !== ""
   ) {
-    throw new Error(
-      "COWARDS_GO_BACKEND_URL must be an HTTP(S) origin without credentials, path, query, or fragment.",
+    throw safePreflightError(
+      `${label} must be an HTTP(S) origin without credentials, path, query, or fragment.`,
     )
   }
   return parsed.origin
 }
+
+const normalizeGoBackendOrigin = (
+  value: string | undefined,
+): string | undefined => normalizeHttpOrigin(value, "COWARDS_GO_BACKEND_URL")
+
+const normalizeWebOrigin = (value: string | undefined): string | undefined =>
+  normalizeHttpOrigin(value, "COWARDS_WEB_URL")
 
 const parseOptions = (
   argv: string[],
@@ -141,7 +159,7 @@ const parseOptions = (
   const options: Options = {
     requireRedis: true,
     requireWeb: environment.COWARDS_WEB_URL !== undefined,
-    webUrl: environment.COWARDS_WEB_URL,
+    webUrl: normalizeWebOrigin(environment.COWARDS_WEB_URL),
     goBackendUrl: normalizeGoBackendOrigin(environment.COWARDS_GO_BACKEND_URL),
     goBackendInternalToken:
       environment.COWARDS_GO_BACKEND_INTERNAL_TOKEN?.trim() || undefined,
@@ -169,7 +187,7 @@ const parseOptions = (
       case "--go-backend-url": {
         const value = argv[index + 1]
         if (!value || value.startsWith("--")) {
-          throw new Error("--go-backend-url requires a URL value")
+          throw safePreflightError("--go-backend-url requires a URL value")
         }
         options.goBackendUrl = normalizeGoBackendOrigin(value)
         index += 1
@@ -178,26 +196,23 @@ const parseOptions = (
       case "--web-url": {
         const value = argv[index + 1]
         if (!value || value.startsWith("--")) {
-          throw new Error("--web-url requires a URL value")
+          throw safePreflightError("--web-url requires a URL value")
         }
-        options.webUrl = value
+        options.webUrl = normalizeWebOrigin(value)
         options.requireWeb = true
         index += 1
         break
       }
       default:
-        throw new Error(`Unknown preflight option: ${arg}`)
+        throw safePreflightError("Unknown preflight option.")
     }
   }
 
   if (options.requireWeb && !options.webUrl?.trim()) {
-    throw new Error("Web preflight requires a non-empty web URL")
+    throw safePreflightError("Web preflight requires a non-empty web URL")
   }
   return options
 }
-
-const errorMessage = (error: unknown): string =>
-  error instanceof Error ? error.message : String(error)
 
 const check = async (
   layer: Layer,
@@ -208,7 +223,13 @@ const check = async (
   try {
     return { layer, name, ok: true, required, detail: await run() }
   } catch (error) {
-    return { layer, name, ok: false, required, detail: errorMessage(error) }
+    return {
+      layer,
+      name,
+      ok: false,
+      required,
+      detail: safeFailureDetail(error),
+    }
   }
 }
 
@@ -227,7 +248,7 @@ const checkTcp = (
     socket.once("connect", () => {
       clearTimeout(timeout)
       socket.end()
-      resolve(`${host}:${port} accepted TCP connection`)
+      resolve("Redis TCP connection accepted")
     })
     socket.once("error", (error) => {
       clearTimeout(timeout)
@@ -257,22 +278,23 @@ const latestChronicle = async (
   return { matchId: row.match_id, chronicle: row.artifact }
 }
 
-const GO_PREFLIGHT_HTTP_TIMEOUT_MS = 5_000
+const PREFLIGHT_HTTP_TIMEOUT_MS = 5_000
 
-const safeGoFetch = async (
+const safeHttpFetch = async (
   url: URL,
   init: RequestInit,
   fetchImplementation: typeof globalThis.fetch,
+  label: "Go-owned preflight" | "Web replay",
 ): Promise<Response> => {
   try {
     return await fetchImplementation(url, {
       ...init,
       redirect: "error",
-      signal: globalThis.AbortSignal.timeout(GO_PREFLIGHT_HTTP_TIMEOUT_MS),
+      signal: globalThis.AbortSignal.timeout(PREFLIGHT_HTTP_TIMEOUT_MS),
     })
   } catch {
-    throw new Error(
-      `Go-owned preflight transport failed or exceeded ${GO_PREFLIGHT_HTTP_TIMEOUT_MS} ms; transport details are intentionally redacted.`,
+    throw safePreflightError(
+      `${label} transport failed or exceeded ${PREFLIGHT_HTTP_TIMEOUT_MS} ms; transport details are intentionally redacted.`,
     )
   }
 }
@@ -283,11 +305,11 @@ export const runGoMatchJobOnce = async (
   fetchImplementation: typeof globalThis.fetch = globalThis.fetch,
 ): Promise<string> => {
   if (!options.goBackendUrl || !options.goBackendInternalToken) {
-    throw new Error(
+    throw safePreflightError(
       "Go-owned execution requires COWARDS_GO_BACKEND_URL and COWARDS_GO_BACKEND_INTERNAL_TOKEN.",
     )
   }
-  const response = await safeGoFetch(
+  const response = await safeHttpFetch(
     new URL("/internal/match-jobs/run-once", options.goBackendUrl),
     {
       method: "POST",
@@ -298,9 +320,10 @@ export const runGoMatchJobOnce = async (
       },
     },
     fetchImplementation,
+    "Go-owned preflight",
   )
   if (!response.ok) {
-    throw new Error(
+    throw safePreflightError(
       `Go-owned run-once returned HTTP ${response.status}; response body is intentionally not echoed.`,
     )
   }
@@ -311,23 +334,29 @@ export const runGoMatchJobOnce = async (
     Array.isArray(body) ||
     typeof (body as { status?: unknown }).status !== "string"
   ) {
-    throw new Error("Go-owned run-once returned an invalid status envelope.")
+    throw safePreflightError(
+      "Go-owned run-once returned an invalid status envelope.",
+    )
   }
   const status = (body as { status: string }).status
   const matchId = (body as { matchId?: unknown }).matchId
   if (
     !new Set(["idle", "complete", "retry_queued", "failed_system"]).has(status)
   ) {
-    throw new Error("Go-owned run-once returned an unknown status.")
+    throw safePreflightError("Go-owned run-once returned an unknown status.")
   }
   if (
     status !== "idle" &&
     (typeof matchId !== "string" || !matchIds.includes(matchId))
   ) {
-    throw new Error("Go-owned run-once returned a Match outside its allowlist.")
+    throw safePreflightError(
+      "Go-owned run-once returned a Match outside its allowlist.",
+    )
   }
   if (status === "failed_system") {
-    throw new Error("Go-owned run-once reported a terminal system failure.")
+    throw safePreflightError(
+      "Go-owned run-once reported a terminal system failure.",
+    )
   }
   return status
 }
@@ -361,8 +390,8 @@ export const runPreflight = async (
       async () => {
         const findings = dependencies.checkCapabilityArtifact()
         if (findings.length > 0) {
-          throw new Error(
-            `capability artifact failed closed: ${findings.join(", ")}`,
+          throw safePreflightError(
+            "Capability artifact failed closed; details are intentionally redacted.",
           )
         }
         const profiles = Object.keys(
@@ -384,7 +413,9 @@ export const runPreflight = async (
           new Set(ledgers.map(({ ledger }) => ledger.profile)).size !==
             profiles.length
         ) {
-          throw new Error("separate preflight ledger initialization drifted")
+          throw safePreflightError(
+            "Separate preflight ledger initialization failed closed.",
+          )
         }
         return `exact contract-owned bytes accepted; initialized separate ${profiles.join(", ")} ledgers with zero candidate-resource receipts; candidate lanes remain uncertified`
       },
@@ -403,7 +434,7 @@ export const runPreflight = async (
       true,
       async () => {
         if (!options.goBackendUrl || !options.goBackendInternalToken) {
-          throw new Error(
+          throw safePreflightError(
             "COWARDS_GO_BACKEND_URL and COWARDS_GO_BACKEND_INTERNAL_TOKEN are required; the retired TypeScript worker is never used as a fallback.",
           )
         }
@@ -419,15 +450,16 @@ export const runPreflight = async (
   results.push(
     await check("service_startup", "Go backend health", true, async () => {
       if (!options.goBackendUrl) {
-        throw new Error("Go backend origin is unavailable.")
+        throw safePreflightError("Go backend origin is unavailable.")
       }
-      const response = await safeGoFetch(
+      const response = await safeHttpFetch(
         new URL("/health", options.goBackendUrl),
         { method: "GET" },
         dependencies.fetch,
+        "Go-owned preflight",
       )
       if (!response.ok) {
-        throw new Error(
+        throw safePreflightError(
           `Go backend health returned HTTP ${response.status}; response body is intentionally not echoed.`,
         )
       }
@@ -506,8 +538,8 @@ export const runPreflight = async (
                 }
               }
               if (remaining.size > 0) {
-                throw new Error(
-                  `Go-owned orchestration did not complete preflight matches after ${maxAttempts} attempts: ${[...remaining].join(", ")}`,
+                throw safePreflightError(
+                  `Go-owned orchestration did not complete the allowed Match set after ${maxAttempts} attempts; Match identifiers are intentionally not echoed.`,
                 )
               }
             },
@@ -516,11 +548,11 @@ export const runPreflight = async (
             smokeResult.status !== "complete" ||
             smokeResult.chronicleCount < smokeResult.matchCount
           ) {
-            throw new Error(
-              `${smokeResult.matchSetId} ${smokeResult.status}; chronicles=${smokeResult.chronicleCount}/${smokeResult.matchCount}`,
+            throw safePreflightError(
+              `Development MatchSet smoke did not complete; chronicles=${smokeResult.chronicleCount}/${smokeResult.matchCount}.`,
             )
           }
-          return `${smokeResult.matchSetId} complete; chronicles=${smokeResult.chronicleCount}/${smokeResult.matchCount}`
+          return `MatchSet complete; chronicles=${smokeResult.chronicleCount}/${smokeResult.matchCount}`
         },
       ),
     )
@@ -544,7 +576,7 @@ export const runPreflight = async (
               replay.errors[0]?.message ?? "Chronicle could not be replayed.",
             )
           }
-          return `${smokeResult.matchSetId} ${chronicle.events.length} events accepted`
+          return `${chronicle.events.length} Chronicle events accepted`
         },
       ),
     )
@@ -563,7 +595,7 @@ export const runPreflight = async (
             smokeResult.matchSetId,
           )
           const projection = projectPublicChronicle(chronicle)
-          return `${smokeResult.matchSetId} ${projection.events.length} public events projected`
+          return `${projection.events.length} public events projected`
         },
       ),
     )
@@ -585,17 +617,24 @@ export const runPreflight = async (
             `/matches/${encodeURIComponent(matchId)}/replay`,
             options.webUrl,
           )
-          const response = await globalThis.fetch(replayUrl)
+          const response = await safeHttpFetch(
+            replayUrl,
+            { method: "GET" },
+            dependencies.fetch,
+            "Web replay",
+          )
           if (!response.ok) {
-            throw new Error(
-              `${replayUrl.href} returned HTTP ${response.status}`,
+            throw safePreflightError(
+              `Web replay route returned HTTP ${response.status}; response body is intentionally not echoed.`,
             )
           }
           const html = await response.text()
           if (!html.includes("Replay")) {
-            throw new Error(`${replayUrl.href} did not render replay content`)
+            throw safePreflightError(
+              "Web replay route did not render expected public content.",
+            )
           }
-          return `${replayUrl.href} returned replay content`
+          return "Web replay route returned public replay content"
         }),
       )
     }
@@ -631,9 +670,9 @@ if (isMain) {
     .then((code) => {
       process.exitCode = code
     })
-    .catch((error: unknown) => {
+    .catch(() => {
       console.error(
-        `[FAIL] [service_startup] preflight crashed: ${errorMessage(error)}`,
+        "[FAIL] [service_startup] preflight crashed; details are intentionally redacted.",
       )
       process.exitCode = 1
     })
