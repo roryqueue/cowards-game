@@ -32,29 +32,25 @@ export interface CanonicalJsonError {
 }
 
 type ValueToken =
-  | { readonly kind: "null"; readonly path: readonly (string | number)[] }
+  | { readonly kind: "null" }
   | {
       readonly kind: "boolean"
-      readonly path: readonly (string | number)[]
       readonly value: boolean
     }
   | {
       readonly kind: "number"
-      readonly path: readonly (string | number)[]
       readonly value: number
     }
   | {
       readonly kind: "string"
-      readonly path: readonly (string | number)[]
       readonly value: string
     }
-  | { readonly kind: "array-start"; readonly path: readonly (string | number)[] }
-  | { readonly kind: "array-end"; readonly path: readonly (string | number)[] }
-  | { readonly kind: "object-start"; readonly path: readonly (string | number)[] }
-  | { readonly kind: "object-end"; readonly path: readonly (string | number)[] }
+  | { readonly kind: "array-start" }
+  | { readonly kind: "array-end" }
+  | { readonly kind: "object-start" }
+  | { readonly kind: "object-end" }
   | {
       readonly kind: "key"
-      readonly path: readonly (string | number)[]
       readonly value: string
     }
 
@@ -388,10 +384,10 @@ export const scanCanonicalJson = (
       maximumDepth = Math.max(maximumDepth, depth)
       offset += 1
       if (byte === 0x5b) {
-        tokens.push({ kind: "array-start", path: [...path] })
+        tokens.push({ kind: "array-start" })
         stack.push({ kind: "array", path: [...path], entries: 0, state: "first-value-or-end" })
       } else {
-        tokens.push({ kind: "object-start", path: [...path] })
+        tokens.push({ kind: "object-start" })
         stack.push({
           kind: "object",
           path: [...path],
@@ -407,29 +403,29 @@ export const scanCanonicalJson = (
       const decoded = readString(offset, path)
       if (isFailure(decoded)) return { ok: false, error: decoded.error }
       offset = decoded.nextOffset
-      tokens.push({ kind: "string", path: [...path], value: decoded.value })
+      tokens.push({ kind: "string", value: decoded.value })
       return { container: false }
     }
     if (byte === 0x74 && textDecoder.decode(bytes.subarray(offset, offset + 4)) === "true") {
       offset += 4
-      tokens.push({ kind: "boolean", path: [...path], value: true })
+      tokens.push({ kind: "boolean", value: true })
       return { container: false }
     }
     if (byte === 0x66 && textDecoder.decode(bytes.subarray(offset, offset + 5)) === "false") {
       offset += 5
-      tokens.push({ kind: "boolean", path: [...path], value: false })
+      tokens.push({ kind: "boolean", value: false })
       return { container: false }
     }
     if (byte === 0x6e && textDecoder.decode(bytes.subarray(offset, offset + 4)) === "null") {
       offset += 4
-      tokens.push({ kind: "null", path: [...path] })
+      tokens.push({ kind: "null" })
       return { container: false }
     }
     if (byte === 0x2d || isDigit(byte)) {
       const number = readNumber(start, path)
       if (isFailure(number)) return { ok: false, error: number.error }
       offset = number.nextOffset
-      tokens.push({ kind: "number", path: [...path], value: number.value })
+      tokens.push({ kind: "number", value: number.value })
       return { container: false }
     }
     return failure("INVALID_GRAMMAR", offset, path)
@@ -467,7 +463,7 @@ export const scanCanonicalJson = (
     if (frame.kind === "array") {
       if (frame.state === "first-value-or-end" && bytes[offset] === 0x5d) {
         offset += 1
-        tokens.push({ kind: "array-end", path: frame.path })
+        tokens.push({ kind: "array-end" })
         stack.pop()
         if (stack.length === 0) rootComplete = true
         continue
@@ -475,7 +471,7 @@ export const scanCanonicalJson = (
       if (frame.state === "comma-or-end") {
         if (bytes[offset] === 0x5d) {
           offset += 1
-          tokens.push({ kind: "array-end", path: frame.path })
+          tokens.push({ kind: "array-end" })
           stack.pop()
           if (stack.length === 0) rootComplete = true
           continue
@@ -498,7 +494,7 @@ export const scanCanonicalJson = (
 
     if (frame.state === "first-key-or-end" && bytes[offset] === 0x7d) {
       offset += 1
-      tokens.push({ kind: "object-end", path: frame.path })
+      tokens.push({ kind: "object-end" })
       stack.pop()
       if (stack.length === 0) rootComplete = true
       continue
@@ -506,7 +502,7 @@ export const scanCanonicalJson = (
     if (frame.state === "comma-or-end") {
       if (bytes[offset] === 0x7d) {
         offset += 1
-        tokens.push({ kind: "object-end", path: frame.path })
+        tokens.push({ kind: "object-end" })
         stack.pop()
         if (stack.length === 0) rootComplete = true
         continue
@@ -539,7 +535,7 @@ export const scanCanonicalJson = (
       frame.pendingKey = key.value
       frame.state = "colon"
       offset = key.nextOffset
-      tokens.push({ kind: "key", path: keyPath, value: key.value })
+      tokens.push({ kind: "key", value: key.value })
       continue
     }
     if (frame.state === "colon") {
