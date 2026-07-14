@@ -822,6 +822,21 @@ const requestBinding = (
   retryIdentitySha256: request.retry.identitySha256,
 })
 
+const outcomeTraceMatchesRequest = (
+  trace: RuntimeInvocationTraceV117,
+  request: AuthenticatedRuntimeInvocationRequestV117,
+): boolean => {
+  const binding = requestBinding(request)
+  return trace.requestId === binding.requestId &&
+    trace.invocationId === binding.invocationId &&
+    trace.kernelRequestId === binding.kernelRequestId &&
+    trace.method === binding.method &&
+    trace.requestSha256 === binding.requestSha256 &&
+    trace.budgetProfileSha256 === binding.budgetProfileSha256 &&
+    trace.inputSha256 === binding.inputSha256 &&
+    trace.retryIdentitySha256 === binding.retryIdentitySha256
+}
+
 export const createAuthenticatedRuntimeInvocationResponseV117 = <
   TValue extends JsonValue,
 >(
@@ -835,10 +850,18 @@ export const createAuthenticatedRuntimeInvocationResponseV117 = <
   ) {
     throw new TypeError("Cannot authenticate a response for an invalid candidate request")
   }
-  const payloadBinding = outcome.kind === "success"
+  const parsedOutcome = RuntimeInvocationResultV117Schema.parse(
+    outcome,
+  ) as RuntimeInvocationResultV117<TValue>
+  if (!outcomeTraceMatchesRequest(parsedOutcome.trace, request)) {
+    throw new TypeError(
+      "Cannot authenticate a response with an outcome trace outside the request binding",
+    )
+  }
+  const payloadBinding = parsedOutcome.kind === "success"
     ? {
-        sha256: canonicalHash(outcome.value),
-        canonicalByteLength: canonicalBytes(outcome.value).byteLength,
+        sha256: canonicalHash(parsedOutcome.value),
+        canonicalByteLength: canonicalBytes(parsedOutcome.value).byteLength,
       }
     : null
   const unsigned = {
@@ -847,7 +870,7 @@ export const createAuthenticatedRuntimeInvocationResponseV117 = <
     current: false as const,
     envelopeKind: "runtime-invocation-response" as const,
     requestBinding: requestBinding(request),
-    outcome,
+    outcome: parsedOutcome,
     payloadBinding,
   }
   const response = {
@@ -995,20 +1018,31 @@ export const verifyRuntimeInvocationRequestV117 = (
 const sameCanonicalValue = (left: JsonValue, right: JsonValue): boolean =>
   Buffer.from(canonicalBytes(left)).equals(Buffer.from(canonicalBytes(right)))
 
-export const verifyRuntimeInvocationResponseV117 = (
+const verifyRuntimeInvocationResponseV117Unsafe = (
   bytes: Uint8Array,
   expectedRequest: AuthenticatedRuntimeInvocationRequestV117,
   identity: RuntimeInvocationSigningIdentityV117,
 ): RuntimeInvocationResultV117<AuthenticatedRuntimeInvocationResponseV117> => {
+  const parsedExpectedRequest =
+    AuthenticatedRuntimeInvocationRequestV117Schema.safeParse(expectedRequest)
+  if (!parsedExpectedRequest.success) {
+    return verificationFailure("OUTER_FRAME_WRONG_BINDING", bytes)
+  }
+  const request =
+    parsedExpectedRequest.data as AuthenticatedRuntimeInvocationRequestV117
+  if (!requestDerivedBindingsMatch(request)) {
+    return verificationFailure("OUTER_FRAME_WRONG_BINDING", bytes)
+  }
+  const expectedBinding = requestBinding(request)
   const partial = {
-    requestId: expectedRequest.requestId,
-    invocationId: expectedRequest.invocationId,
-    kernelRequestId: expectedRequest.kernelRequestId,
-    method: expectedRequest.method,
-    requestSha256: sha256Bytes(serializeRuntimeInvocationRequestV117(expectedRequest)),
-    budgetProfileSha256: expectedRequest.budget.profileSha256,
-    inputSha256: expectedRequest.input.canonicalSha256,
-    retryIdentitySha256: expectedRequest.retry.identitySha256,
+    requestId: expectedBinding.requestId,
+    invocationId: expectedBinding.invocationId,
+    kernelRequestId: expectedBinding.kernelRequestId,
+    method: expectedBinding.method,
+    requestSha256: expectedBinding.requestSha256,
+    budgetProfileSha256: expectedBinding.budgetProfileSha256,
+    inputSha256: expectedBinding.inputSha256,
+    retryIdentitySha256: expectedBinding.retryIdentitySha256,
   } as const
   const parsed = parseCanonicalEnvelope(
     bytes,
@@ -1022,9 +1056,12 @@ export const verifyRuntimeInvocationResponseV117 = (
   if (
     !sameCanonicalValue(
       response.requestBinding as unknown as JsonValue,
-      requestBinding(expectedRequest) as unknown as JsonValue,
+      expectedBinding as unknown as JsonValue,
     )
   ) {
+    return verificationFailure("OUTER_FRAME_WRONG_BINDING", bytes, partial)
+  }
+  if (!authenticationMatches("request", request, identity)) {
     return verificationFailure("OUTER_FRAME_WRONG_BINDING", bytes, partial)
   }
   if (response.outcome.kind === "success") {
@@ -1039,21 +1076,28 @@ export const verifyRuntimeInvocationResponseV117 = (
   } else if (response.payloadBinding !== null) {
     return verificationFailure("OUTER_FRAME_WRONG_BINDING", bytes, partial)
   }
-  if (
-    response.outcome.trace.requestId !== partial.requestId ||
-    response.outcome.trace.invocationId !== partial.invocationId ||
-    response.outcome.trace.kernelRequestId !== partial.kernelRequestId ||
-    response.outcome.trace.method !== partial.method ||
-    response.outcome.trace.requestSha256 !== partial.requestSha256 ||
-    response.outcome.trace.budgetProfileSha256 !== partial.budgetProfileSha256 ||
-    response.outcome.trace.inputSha256 !== partial.inputSha256 ||
-    response.outcome.trace.retryIdentitySha256 !== partial.retryIdentitySha256
-  ) {
+  if (!outcomeTraceMatchesRequest(response.outcome.trace, request)) {
     return verificationFailure("OUTER_FRAME_WRONG_BINDING", bytes, partial)
   }
   return {
     kind: "success",
     value: response,
     trace: { ...partial, safeCodes: ["ADAPTER_AUTHENTICATED", "OUTER_BINDINGS_VERIFIED"] },
+  }
+}
+
+export const verifyRuntimeInvocationResponseV117 = (
+  bytes: Uint8Array,
+  expectedRequest: AuthenticatedRuntimeInvocationRequestV117,
+  identity: RuntimeInvocationSigningIdentityV117,
+): RuntimeInvocationResultV117<AuthenticatedRuntimeInvocationResponseV117> => {
+  try {
+    return verifyRuntimeInvocationResponseV117Unsafe(
+      bytes,
+      expectedRequest,
+      identity,
+    )
+  } catch {
+    return verificationFailure("OUTER_FRAME_WRONG_BINDING", bytes)
   }
 }
