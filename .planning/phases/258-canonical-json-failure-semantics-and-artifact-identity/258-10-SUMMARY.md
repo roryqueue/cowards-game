@@ -99,6 +99,14 @@ status: complete
 8. **Independent review fix: Close WASM review boundary gaps** — `0f8161c`
 9. **External rereview RED: Expose remaining canonicality, provenance, and identity gaps** — `b021476`
 10. **External rereview fix: Close remaining WASM authority gaps** — `8c332fa`
+11. **Source-attestation RED: Expose unbound source bytes and overstated stderr metering** — `96315ea`
+12. **Source-attestation fix: Bind typed source evidence and report truthful stderr posture** — `a630e72`
+13. **Strict-schema RED: Expose open source-attestation records** — `6a9e0eb`
+14. **Strict-schema fix: Reject unknown source-attestation fields** — `995c8f8`
+15. **Semantic-identity RED: Expose impossible identities and post-attestation size gaps** — `f30d4e7`
+16. **Semantic-identity fix: Enforce normalization invariants and final artifact limits** — `ebc2fe1`
+17. **Final-newline RED: Expose the all-newline false-final counterexample** — `e83f50f`
+18. **Final-newline fix: Enforce final-newline identity consistency** — `e1a75a5`
 
 ## Verification
 
@@ -171,6 +179,18 @@ External rereview reopened Plan 258-10 with three High and three Medium findings
 6. Per-invocation stderr is independently capped at 16,384 bytes, records missing guest-stderr provenance as an unsupported meter, and is always system-owned without independent provenance—even for status zero or simultaneous stdout overflow.
 
 The final independent rereview also verified system-failure precedence when stdout and stderr overflow together and rejected claimed proven exception/fuel/memory attributions lacking structured host provenance. Final gates passed: **38/38** package tests, evaluator **19/19** in write and `--check` modes, package build and typecheck, focused ESLint, emitted-JavaScript/dependency-closure identity collection, `git diff --check`, and exact preservation of all six legacy v1.22 evidence hashes. Remaining external findings: **0**.
+
+## Source Attestation and Final External Review Closure
+
+A later source-identity review reopened Plan 258-10 and closed every finding without changing gameplay or activating either WASM lane:
+
+1. Rust and Zig candidate compilation now derives a typed v2 identity from the actual original and LF-normalized source bytes. The identity binds domain-framed hashes, byte counts, exact line-ending counts, and final-newline state into the artifact, revision, request, and execution identity.
+2. The compiler embeds that identity in the `cowards.source-identity.v1.17` WASM custom section. Runtime preflight reads exactly one canonical section and compares its fingerprint with the artifact, revision, and authenticated request, so coherent caller relabeling cannot substitute another source identity.
+3. Source-attestation records are closed at both levels. Unknown top-level or `lineEndings` fields fail, and semantic validation enforces exact CRLF byte normalization, sufficient bytes for declared line endings, consistent line-ending kind, and necessary final-newline relationships.
+4. Candidate compilation rechecks the final artifact after appending the attestation, and runtime preflight independently rejects decoded artifacts above the 4 MiB canonical cap before parsing or executing them.
+5. The lane no longer claims an independent host stderr byte meter. Its shared post-capture buffer is safety-only; guest stderr attribution and an independent host stderr ceiling remain explicit unsupported certification requirements. Both lanes remain `uncertified`, with no production-trusted producer.
+
+The final independent confirmation rejected the one-byte/one-LF `hasFinalNewline: false` counterexample, accepted derived valid final and non-final identities, and confirmed both compiler and runtime artifact caps. Superseding final gates passed: **44/44** package tests; evaluator **19/19** in write and `--check` modes; package build and typecheck; focused ESLint; emitted identity from three JavaScript files, three dependency digests, and typed source evidence; `git diff --check`; and exact preservation of all six legacy v1.22 hashes. The committed fixture SHA-256 is `fd9450d8c1eb685ae909e65084085824cb8628c75d6b24118a7b3b9b35dd8271`; final Rust and Zig identity IDs are `sha256:360169eb6f84128f93c454ec2fc557477eabd63f8226e6f44a12b87130f2ce5c` and `sha256:2fa0e95494f3ebf5d14b7125ca653ca44c39f5c487639e0744ed11d0de4e339a`. Final external findings: **0**.
 
 ## Self-Check: PASSED
 
