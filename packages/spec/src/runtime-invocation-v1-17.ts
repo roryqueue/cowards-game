@@ -1,4 +1,12 @@
+import { Buffer } from "node:buffer"
+import { createHash, createHmac, timingSafeEqual } from "node:crypto"
 import { z } from "zod"
+import {
+  frameCanonicalIdentity,
+  hashCanonicalIdentityValue,
+} from "./canonical-identity-domains.js"
+import { encodeCanonicalJson } from "./canonical-json-encode.js"
+import { parseCanonicalJson } from "./canonical-json-parse.js"
 import type { JsonValue } from "./types.js"
 
 export const RUNTIME_INVOCATION_V1_17_CANDIDATE = Object.freeze({
@@ -64,7 +72,7 @@ export interface RuntimeInvocationSystemFailureV117 {
 }
 
 export type RuntimeInvocationResultV117<
-  TValue extends JsonValue = JsonValue,
+  TValue = JsonValue,
 > =
   | Readonly<{
       kind: "success"
@@ -278,5 +286,685 @@ export const classifyRuntimeInvocationV117 = <
       retryable: classification.retryable,
     },
     trace,
+  }
+}
+
+export const RUNTIME_INVOCATION_V1_17_TEST_KEY_ID =
+  "fixture-only:runtime-adapter:v1.17-candidate" as const
+export const RUNTIME_INVOCATION_V1_17_AUTH_ALGORITHM =
+  "hmac-sha256" as const
+
+export interface RuntimeInvocationAuthenticationV117 {
+  readonly algorithm: typeof RUNTIME_INVOCATION_V1_17_AUTH_ALGORITHM
+  readonly keyId: string
+  readonly signatureInputSha256: `sha256:${string}`
+  readonly signature: `hmac-sha256:${string}`
+}
+
+export interface RuntimeInvocationSigningIdentityV117 {
+  readonly keyId: string
+  readonly secret: string
+}
+
+export interface RuntimeInvocationSemanticTupleV117 {
+  readonly tupleId: `sha256:${string}`
+  readonly rules: string
+  readonly engine: string
+  readonly runtimeAbi: typeof RUNTIME_INVOCATION_V1_17_CANDIDATE.runtimeAbiVersion
+  readonly chronicle: string
+  readonly arenaCatalog: string
+  readonly setPolicy: string
+}
+
+export interface RuntimeInvocationSourceIdentityV117 {
+  readonly strategyRevisionId: string
+  readonly originalSourceSha256: `sha256:${string}`
+  readonly normalizedSourceSha256: `sha256:${string}`
+  readonly artifactSha256: `sha256:${string}`
+}
+
+export interface RuntimeInvocationBudgetV117 {
+  readonly profileId: string
+  readonly profileSha256: `sha256:${string}`
+  readonly wallMilliseconds: number
+  readonly computeFuel: number
+  readonly memoryBytes: number
+  readonly outputBytes: number
+  readonly processLimit: number
+}
+
+export interface RuntimeInvocationInputV117 {
+  readonly value: JsonValue
+  readonly canonicalSha256: `sha256:${string}`
+  readonly canonicalByteLength: number
+}
+
+export interface RuntimeInvocationRetryV117 {
+  readonly retryId: string
+  readonly attempt: number
+  readonly previousRequestSha256: `sha256:${string}` | null
+  readonly identitySha256: `sha256:${string}`
+}
+
+export interface AuthenticatedRuntimeInvocationRequestV117 {
+  readonly contractVersion: typeof RUNTIME_INVOCATION_V1_17_CANDIDATE.contractVersion
+  readonly candidateStatus: typeof RUNTIME_INVOCATION_V1_17_CANDIDATE.lifecycle
+  readonly current: false
+  readonly envelopeKind: "runtime-invocation-request"
+  readonly requestId: string
+  readonly invocationId: string
+  readonly kernelRequestId: string
+  readonly method: RuntimeInvocationMethodV117
+  readonly semanticTuple: RuntimeInvocationSemanticTupleV117
+  readonly sourceIdentity: RuntimeInvocationSourceIdentityV117
+  readonly budget: RuntimeInvocationBudgetV117
+  readonly input: RuntimeInvocationInputV117
+  readonly retry: RuntimeInvocationRetryV117
+  readonly authentication: RuntimeInvocationAuthenticationV117
+}
+
+export interface CreateRuntimeInvocationRequestV117Input {
+  readonly requestId: string
+  readonly invocationId: string
+  readonly kernelRequestId: string
+  readonly method: RuntimeInvocationMethodV117
+  readonly semanticTuple: Omit<RuntimeInvocationSemanticTupleV117, "tupleId">
+  readonly sourceIdentity: RuntimeInvocationSourceIdentityV117
+  readonly budget: Omit<RuntimeInvocationBudgetV117, "profileSha256">
+  readonly input: Readonly<{ value: JsonValue }>
+  readonly retry: Omit<RuntimeInvocationRetryV117, "identitySha256">
+}
+
+export interface RuntimeInvocationRequestBindingV117 {
+  readonly requestId: string
+  readonly invocationId: string
+  readonly kernelRequestId: string
+  readonly method: RuntimeInvocationMethodV117
+  readonly requestSha256: `sha256:${string}`
+  readonly semanticTupleId: `sha256:${string}`
+  readonly runtimeAbiVersion: typeof RUNTIME_INVOCATION_V1_17_CANDIDATE.runtimeAbiVersion
+  readonly strategyRevisionId: string
+  readonly artifactSha256: `sha256:${string}`
+  readonly budgetProfileSha256: `sha256:${string}`
+  readonly inputSha256: `sha256:${string}`
+  readonly retryIdentitySha256: `sha256:${string}`
+}
+
+export interface RuntimeInvocationPayloadBindingV117 {
+  readonly sha256: `sha256:${string}`
+  readonly canonicalByteLength: number
+}
+
+type RuntimeInvocationResponseBaseV117 = Readonly<{
+  contractVersion: typeof RUNTIME_INVOCATION_V1_17_CANDIDATE.contractVersion
+  candidateStatus: typeof RUNTIME_INVOCATION_V1_17_CANDIDATE.lifecycle
+  current: false
+  envelopeKind: "runtime-invocation-response"
+  requestBinding: RuntimeInvocationRequestBindingV117
+  authentication: RuntimeInvocationAuthenticationV117
+}>
+
+export type AuthenticatedRuntimeInvocationResponseV117<
+  TValue extends JsonValue = JsonValue,
+> = RuntimeInvocationResponseBaseV117 &
+  (
+    | Readonly<{
+        outcome: Extract<RuntimeInvocationResultV117<TValue>, { kind: "success" }>
+        payloadBinding: RuntimeInvocationPayloadBindingV117
+      }>
+    | Readonly<{
+        outcome: Exclude<RuntimeInvocationResultV117<TValue>, { kind: "success" }>
+        payloadBinding: null
+      }>
+  )
+
+const SemanticTupleWithoutIdSchema = z
+  .object({
+    rules: z.string().min(1).max(256),
+    engine: z.string().min(1).max(256),
+    runtimeAbi: z.literal(RUNTIME_INVOCATION_V1_17_CANDIDATE.runtimeAbiVersion),
+    chronicle: z.string().min(1).max(256),
+    arenaCatalog: z.string().min(1).max(256),
+    setPolicy: z.string().min(1).max(256),
+  })
+  .strict()
+
+const RuntimeInvocationSemanticTupleV117Schema = SemanticTupleWithoutIdSchema.extend({
+  tupleId: Sha256Schema,
+}).strict()
+
+const RuntimeInvocationSourceIdentityV117Schema = z
+  .object({
+    strategyRevisionId: z.string().min(1).max(256),
+    originalSourceSha256: Sha256Schema,
+    normalizedSourceSha256: Sha256Schema,
+    artifactSha256: Sha256Schema,
+  })
+  .strict()
+
+const NonnegativeSafeIntegerSchema = z
+  .number()
+  .int()
+  .min(0)
+  .max(Number.MAX_SAFE_INTEGER)
+
+const BudgetWithoutHashSchema = z
+  .object({
+    profileId: z.string().min(1).max(256),
+    wallMilliseconds: NonnegativeSafeIntegerSchema,
+    computeFuel: NonnegativeSafeIntegerSchema,
+    memoryBytes: NonnegativeSafeIntegerSchema,
+    outputBytes: NonnegativeSafeIntegerSchema,
+    processLimit: NonnegativeSafeIntegerSchema,
+  })
+  .strict()
+
+const RuntimeInvocationBudgetV117Schema = BudgetWithoutHashSchema.extend({
+  profileSha256: Sha256Schema,
+}).strict()
+
+const RuntimeInvocationInputV117Schema = z
+  .object({
+    value: JsonValueSchema,
+    canonicalSha256: Sha256Schema,
+    canonicalByteLength: NonnegativeSafeIntegerSchema,
+  })
+  .strict()
+
+const RetryWithoutHashSchema = z
+  .object({
+    retryId: z.string().min(1).max(256),
+    attempt: NonnegativeSafeIntegerSchema,
+    previousRequestSha256: Sha256Schema.nullable(),
+  })
+  .strict()
+
+const RuntimeInvocationRetryV117Schema = RetryWithoutHashSchema.extend({
+  identitySha256: Sha256Schema,
+}).strict()
+
+const RuntimeInvocationAuthenticationV117Schema = z
+  .object({
+    algorithm: z.literal(RUNTIME_INVOCATION_V1_17_AUTH_ALGORITHM),
+    keyId: z.string().min(1).max(256),
+    signatureInputSha256: Sha256Schema,
+    signature: z.string().regex(/^hmac-sha256:[0-9a-f]{64}$/u),
+  })
+  .strict()
+
+export const AuthenticatedRuntimeInvocationRequestV117Schema = z
+  .object({
+    contractVersion: z.literal(
+      RUNTIME_INVOCATION_V1_17_CANDIDATE.contractVersion,
+    ),
+    candidateStatus: z.literal(RUNTIME_INVOCATION_V1_17_CANDIDATE.lifecycle),
+    current: z.literal(false),
+    envelopeKind: z.literal("runtime-invocation-request"),
+    requestId: z.string().min(1).max(256),
+    invocationId: z.string().min(1).max(256),
+    kernelRequestId: z.string().min(1).max(256),
+    method: z.enum(["selectActivations", "soldierBrain"]),
+    semanticTuple: RuntimeInvocationSemanticTupleV117Schema,
+    sourceIdentity: RuntimeInvocationSourceIdentityV117Schema,
+    budget: RuntimeInvocationBudgetV117Schema,
+    input: RuntimeInvocationInputV117Schema,
+    retry: RuntimeInvocationRetryV117Schema,
+    authentication: RuntimeInvocationAuthenticationV117Schema,
+  })
+  .strict()
+
+const RuntimeInvocationRequestBindingV117Schema = z
+  .object({
+    requestId: z.string().min(1).max(256),
+    invocationId: z.string().min(1).max(256),
+    kernelRequestId: z.string().min(1).max(256),
+    method: z.enum(["selectActivations", "soldierBrain"]),
+    requestSha256: Sha256Schema,
+    semanticTupleId: Sha256Schema,
+    runtimeAbiVersion: z.literal(
+      RUNTIME_INVOCATION_V1_17_CANDIDATE.runtimeAbiVersion,
+    ),
+    strategyRevisionId: z.string().min(1).max(256),
+    artifactSha256: Sha256Schema,
+    budgetProfileSha256: Sha256Schema,
+    inputSha256: Sha256Schema,
+    retryIdentitySha256: Sha256Schema,
+  })
+  .strict()
+
+const RuntimeInvocationPayloadBindingV117Schema = z
+  .object({
+    sha256: Sha256Schema,
+    canonicalByteLength: NonnegativeSafeIntegerSchema,
+  })
+  .strict()
+
+const responseShape = {
+  contractVersion: z.literal(
+    RUNTIME_INVOCATION_V1_17_CANDIDATE.contractVersion,
+  ),
+  candidateStatus: z.literal(RUNTIME_INVOCATION_V1_17_CANDIDATE.lifecycle),
+  current: z.literal(false),
+  envelopeKind: z.literal("runtime-invocation-response"),
+  requestBinding: RuntimeInvocationRequestBindingV117Schema,
+  authentication: RuntimeInvocationAuthenticationV117Schema,
+} as const
+
+export const AuthenticatedRuntimeInvocationResponseV117Schema = z.union([
+  z
+    .object({
+      ...responseShape,
+      outcome: RuntimeInvocationSuccessV117Schema,
+      payloadBinding: RuntimeInvocationPayloadBindingV117Schema,
+    })
+    .strict(),
+  z
+    .object({
+      ...responseShape,
+      outcome: RuntimeInvocationPlayerViolationV117Schema,
+      payloadBinding: z.null(),
+    })
+    .strict(),
+  z
+    .object({
+      ...responseShape,
+      outcome: RuntimeInvocationSystemFailureV117Schema,
+      payloadBinding: z.null(),
+    })
+    .strict(),
+])
+
+const textEncoder = new TextEncoder()
+
+const sha256Bytes = (bytes: Uint8Array): `sha256:${string}` =>
+  `sha256:${createHash("sha256").update(bytes).digest("hex")}`
+
+const canonicalBytes = (value: JsonValue): Uint8Array => {
+  const encoded = encodeCanonicalJson(value, {
+    context: "authenticated-outer-envelope",
+  })
+  if (!encoded.ok) {
+    throw new TypeError(`Candidate envelope is not canonical JSON: ${encoded.error.code}`)
+  }
+  return encoded.bytes
+}
+
+const canonicalHash = (value: JsonValue): `sha256:${string}` =>
+  sha256Bytes(canonicalBytes(value))
+
+const identityHash = (
+  domain: "semanticTuple" | "budgetProfile",
+  value: JsonValue,
+): `sha256:${string}` =>
+  `sha256:${hashCanonicalIdentityValue(domain, value)}`
+
+const retryIdentityHash = (value: JsonValue): `sha256:${string}` =>
+  sha256Bytes(
+    frameCanonicalIdentity("evidenceBundle", [
+      textEncoder.encode("runtime-invocation-v1.17:retry-identity"),
+      canonicalBytes(value),
+    ]),
+  )
+
+const withoutAuthentication = <T extends { authentication: unknown }>(
+  envelope: T,
+): Omit<T, "authentication"> => {
+  const { authentication: _authentication, ...unsigned } = envelope
+  return unsigned
+}
+
+const signatureInput = (
+  label: "request" | "response",
+  unsigned: JsonValue,
+): Uint8Array =>
+  frameCanonicalIdentity("evidenceBundle", [
+    textEncoder.encode(`runtime-invocation-v1.17:${label}`),
+    canonicalBytes(unsigned),
+  ])
+
+const authenticate = (
+  label: "request" | "response",
+  unsigned: JsonValue,
+  identity: RuntimeInvocationSigningIdentityV117,
+): RuntimeInvocationAuthenticationV117 => {
+  const input = signatureInput(label, unsigned)
+  return {
+    algorithm: RUNTIME_INVOCATION_V1_17_AUTH_ALGORITHM,
+    keyId: identity.keyId,
+    signatureInputSha256: sha256Bytes(input),
+    signature: `hmac-sha256:${createHmac("sha256", identity.secret)
+      .update(input)
+      .digest("hex")}`,
+  }
+}
+
+const authenticationMatches = (
+  label: "request" | "response",
+  envelope: { authentication: RuntimeInvocationAuthenticationV117 },
+  identity: RuntimeInvocationSigningIdentityV117,
+): boolean => {
+  if (envelope.authentication.keyId !== identity.keyId) return false
+  const unsigned = withoutAuthentication(envelope)
+  const expected = authenticate(label, unsigned as unknown as JsonValue, identity)
+  if (expected.signatureInputSha256 !== envelope.authentication.signatureInputSha256) {
+    return false
+  }
+  const actualBytes = Buffer.from(
+    envelope.authentication.signature.slice("hmac-sha256:".length),
+    "hex",
+  )
+  const expectedBytes = Buffer.from(
+    expected.signature.slice("hmac-sha256:".length),
+    "hex",
+  )
+  return actualBytes.byteLength === expectedBytes.byteLength &&
+    timingSafeEqual(actualBytes, expectedBytes)
+}
+
+export const createAuthenticatedRuntimeInvocationRequestV117 = (
+  input: CreateRuntimeInvocationRequestV117Input,
+  identity: RuntimeInvocationSigningIdentityV117,
+): AuthenticatedRuntimeInvocationRequestV117 => {
+  const semanticTupleWithoutId = SemanticTupleWithoutIdSchema.parse(input.semanticTuple)
+  const sourceIdentity = RuntimeInvocationSourceIdentityV117Schema.parse(
+    input.sourceIdentity,
+  )
+  const budgetWithoutHash = BudgetWithoutHashSchema.parse(input.budget)
+  const inputValue = JsonValueSchema.parse(input.input.value)
+  const inputBytes = canonicalBytes(inputValue)
+  const retryWithoutHash = RetryWithoutHashSchema.parse(input.retry)
+  const unsigned = {
+    contractVersion: RUNTIME_INVOCATION_V1_17_CANDIDATE.contractVersion,
+    candidateStatus: RUNTIME_INVOCATION_V1_17_CANDIDATE.lifecycle,
+    current: false as const,
+    envelopeKind: "runtime-invocation-request" as const,
+    requestId: input.requestId,
+    invocationId: input.invocationId,
+    kernelRequestId: input.kernelRequestId,
+    method: input.method,
+    semanticTuple: {
+      tupleId: identityHash(
+        "semanticTuple",
+        semanticTupleWithoutId as unknown as JsonValue,
+      ),
+      ...semanticTupleWithoutId,
+    },
+    sourceIdentity,
+    budget: {
+      ...budgetWithoutHash,
+      profileSha256: identityHash(
+        "budgetProfile",
+        budgetWithoutHash as unknown as JsonValue,
+      ),
+    },
+    input: {
+      value: inputValue,
+      canonicalSha256: sha256Bytes(inputBytes),
+      canonicalByteLength: inputBytes.byteLength,
+    },
+    retry: {
+      ...retryWithoutHash,
+      identitySha256: retryIdentityHash(
+        retryWithoutHash as unknown as JsonValue,
+      ),
+    },
+  }
+  const request = {
+    ...unsigned,
+    authentication: authenticate(
+      "request",
+      unsigned as unknown as JsonValue,
+      identity,
+    ),
+  }
+  return AuthenticatedRuntimeInvocationRequestV117Schema.parse(
+    request,
+  ) as AuthenticatedRuntimeInvocationRequestV117
+}
+
+export const serializeRuntimeInvocationRequestV117 = (
+  request: AuthenticatedRuntimeInvocationRequestV117,
+): Uint8Array => {
+  const parsed = AuthenticatedRuntimeInvocationRequestV117Schema.parse(request)
+  return canonicalBytes(parsed as unknown as JsonValue)
+}
+
+const requestBinding = (
+  request: AuthenticatedRuntimeInvocationRequestV117,
+): RuntimeInvocationRequestBindingV117 => ({
+  requestId: request.requestId,
+  invocationId: request.invocationId,
+  kernelRequestId: request.kernelRequestId,
+  method: request.method,
+  requestSha256: sha256Bytes(serializeRuntimeInvocationRequestV117(request)),
+  semanticTupleId: request.semanticTuple.tupleId,
+  runtimeAbiVersion: request.semanticTuple.runtimeAbi,
+  strategyRevisionId: request.sourceIdentity.strategyRevisionId,
+  artifactSha256: request.sourceIdentity.artifactSha256,
+  budgetProfileSha256: request.budget.profileSha256,
+  inputSha256: request.input.canonicalSha256,
+  retryIdentitySha256: request.retry.identitySha256,
+})
+
+export const createAuthenticatedRuntimeInvocationResponseV117 = <
+  TValue extends JsonValue,
+>(
+  request: AuthenticatedRuntimeInvocationRequestV117,
+  outcome: RuntimeInvocationResultV117<TValue>,
+  identity: RuntimeInvocationSigningIdentityV117,
+): AuthenticatedRuntimeInvocationResponseV117<TValue> => {
+  const payloadBinding = outcome.kind === "success"
+    ? {
+        sha256: canonicalHash(outcome.value),
+        canonicalByteLength: canonicalBytes(outcome.value).byteLength,
+      }
+    : null
+  const unsigned = {
+    contractVersion: RUNTIME_INVOCATION_V1_17_CANDIDATE.contractVersion,
+    candidateStatus: RUNTIME_INVOCATION_V1_17_CANDIDATE.lifecycle,
+    current: false as const,
+    envelopeKind: "runtime-invocation-response" as const,
+    requestBinding: requestBinding(request),
+    outcome,
+    payloadBinding,
+  }
+  const response = {
+    ...unsigned,
+    authentication: authenticate(
+      "response",
+      unsigned as unknown as JsonValue,
+      identity,
+    ),
+  }
+  return AuthenticatedRuntimeInvocationResponseV117Schema.parse(
+    response,
+  ) as AuthenticatedRuntimeInvocationResponseV117<TValue>
+}
+
+export const serializeRuntimeInvocationResponseV117 = (
+  response: AuthenticatedRuntimeInvocationResponseV117,
+): Uint8Array => {
+  const parsed = AuthenticatedRuntimeInvocationResponseV117Schema.parse(response)
+  return canonicalBytes(parsed as unknown as JsonValue)
+}
+
+const verificationTrace = (
+  bytes: Uint8Array,
+  partial?: Partial<RuntimeInvocationTraceV117>,
+): RuntimeInvocationTraceV117 => ({
+  requestId: partial?.requestId ?? "unavailable",
+  invocationId: partial?.invocationId ?? "unavailable",
+  kernelRequestId: partial?.kernelRequestId ?? "unavailable",
+  method: partial?.method ?? "selectActivations",
+  requestSha256: partial?.requestSha256 ?? sha256Bytes(bytes),
+  budgetProfileSha256: partial?.budgetProfileSha256 ?? sha256Bytes(bytes),
+  inputSha256: partial?.inputSha256 ?? sha256Bytes(bytes),
+  retryIdentitySha256: partial?.retryIdentitySha256 ?? sha256Bytes(bytes),
+  safeCodes: partial?.safeCodes ?? ["OUTER_ENVELOPE_REJECTED"],
+})
+
+const verificationFailure = (
+  code: RuntimeInvocationSystemFailureCodeV117,
+  bytes: Uint8Array,
+  partial?: Partial<RuntimeInvocationTraceV117>,
+): Extract<RuntimeInvocationResultV117, { kind: "system_failure" }> => ({
+  kind: "system_failure",
+  failure: {
+    code,
+    publicMessage: "Runtime system failure.",
+    retryable: RUNTIME_INVOCATION_V1_17_OWNERSHIP_MATRIX[
+      code === "OUTER_FRAME_MISSING"
+        ? "outer_frame_missing"
+        : code === "OUTER_FRAME_TRUNCATED"
+          ? "outer_frame_truncated"
+          : code === "OUTER_FRAME_UNAUTHENTICATED"
+            ? "outer_frame_unauthenticated"
+            : code === "OUTER_FRAME_WRONG_BINDING"
+              ? "outer_frame_wrong_binding"
+              : "outer_frame_undecodable"
+    ].retryable,
+  },
+  trace: verificationTrace(bytes, partial),
+})
+
+const parseCanonicalEnvelope = <T>(
+  bytes: Uint8Array,
+  schema: z.ZodType<T>,
+): { ok: true; value: T } | { ok: false; code: RuntimeInvocationSystemFailureCodeV117 } => {
+  if (bytes.byteLength === 0) return { ok: false, code: "OUTER_FRAME_MISSING" }
+  const parsed = parseCanonicalJson(bytes, {
+    context: "authenticated-outer-envelope",
+    operation: "require-canonical",
+  })
+  if (!parsed.ok) {
+    return {
+      ok: false,
+      code: parsed.error.byteOffset >= bytes.byteLength
+        ? "OUTER_FRAME_TRUNCATED"
+        : "OUTER_FRAME_UNDECODABLE",
+    }
+  }
+  const envelope = schema.safeParse(parsed.value)
+  return envelope.success
+    ? { ok: true, value: envelope.data }
+    : { ok: false, code: "OUTER_FRAME_UNDECODABLE" }
+}
+
+const requestDerivedBindingsMatch = (
+  request: AuthenticatedRuntimeInvocationRequestV117,
+): boolean => {
+  const semanticTuple = withoutProperty(request.semanticTuple, "tupleId")
+  const budget = withoutProperty(request.budget, "profileSha256")
+  const retry = withoutProperty(request.retry, "identitySha256")
+  const inputBytes = canonicalBytes(request.input.value)
+  return request.semanticTuple.tupleId ===
+      identityHash("semanticTuple", semanticTuple as unknown as JsonValue) &&
+    request.budget.profileSha256 ===
+      identityHash("budgetProfile", budget as unknown as JsonValue) &&
+    request.input.canonicalSha256 === sha256Bytes(inputBytes) &&
+    request.input.canonicalByteLength === inputBytes.byteLength &&
+    request.retry.identitySha256 ===
+      retryIdentityHash(retry as unknown as JsonValue)
+}
+
+function withoutProperty<
+  T extends object,
+  K extends keyof T,
+>(value: T, key: K): Omit<T, K> {
+  const { [key]: _removed, ...rest } = value
+  return rest
+}
+
+export const verifyRuntimeInvocationRequestV117 = (
+  bytes: Uint8Array,
+  identity: RuntimeInvocationSigningIdentityV117,
+): RuntimeInvocationResultV117<AuthenticatedRuntimeInvocationRequestV117> => {
+  const parsed = parseCanonicalEnvelope(
+    bytes,
+    AuthenticatedRuntimeInvocationRequestV117Schema,
+  )
+  if (!parsed.ok) return verificationFailure(parsed.code, bytes)
+  const request = parsed.value as AuthenticatedRuntimeInvocationRequestV117
+  const trace = verificationTrace(bytes, {
+    requestId: request.requestId,
+    invocationId: request.invocationId,
+    kernelRequestId: request.kernelRequestId,
+    method: request.method,
+    budgetProfileSha256: request.budget.profileSha256,
+    inputSha256: request.input.canonicalSha256,
+    retryIdentitySha256: request.retry.identitySha256,
+  })
+  if (!authenticationMatches("request", request, identity)) {
+    return verificationFailure("OUTER_FRAME_UNAUTHENTICATED", bytes, trace)
+  }
+  if (!requestDerivedBindingsMatch(request)) {
+    return verificationFailure("OUTER_FRAME_WRONG_BINDING", bytes, trace)
+  }
+  return { kind: "success", value: request, trace }
+}
+
+const sameCanonicalValue = (left: JsonValue, right: JsonValue): boolean =>
+  Buffer.from(canonicalBytes(left)).equals(Buffer.from(canonicalBytes(right)))
+
+export const verifyRuntimeInvocationResponseV117 = (
+  bytes: Uint8Array,
+  expectedRequest: AuthenticatedRuntimeInvocationRequestV117,
+  identity: RuntimeInvocationSigningIdentityV117,
+): RuntimeInvocationResultV117<AuthenticatedRuntimeInvocationResponseV117> => {
+  const partial = {
+    requestId: expectedRequest.requestId,
+    invocationId: expectedRequest.invocationId,
+    kernelRequestId: expectedRequest.kernelRequestId,
+    method: expectedRequest.method,
+    requestSha256: sha256Bytes(serializeRuntimeInvocationRequestV117(expectedRequest)),
+    budgetProfileSha256: expectedRequest.budget.profileSha256,
+    inputSha256: expectedRequest.input.canonicalSha256,
+    retryIdentitySha256: expectedRequest.retry.identitySha256,
+  } as const
+  const parsed = parseCanonicalEnvelope(
+    bytes,
+    AuthenticatedRuntimeInvocationResponseV117Schema,
+  )
+  if (!parsed.ok) return verificationFailure(parsed.code, bytes, partial)
+  const response = parsed.value as AuthenticatedRuntimeInvocationResponseV117
+  if (!authenticationMatches("response", response, identity)) {
+    return verificationFailure("OUTER_FRAME_UNAUTHENTICATED", bytes, partial)
+  }
+  if (
+    !sameCanonicalValue(
+      response.requestBinding as unknown as JsonValue,
+      requestBinding(expectedRequest) as unknown as JsonValue,
+    )
+  ) {
+    return verificationFailure("OUTER_FRAME_WRONG_BINDING", bytes, partial)
+  }
+  if (response.outcome.kind === "success") {
+    const payloadBytes = canonicalBytes(response.outcome.value)
+    if (
+      response.payloadBinding === null ||
+      response.payloadBinding.sha256 !== sha256Bytes(payloadBytes) ||
+      response.payloadBinding.canonicalByteLength !== payloadBytes.byteLength
+    ) {
+      return verificationFailure("OUTER_FRAME_WRONG_BINDING", bytes, partial)
+    }
+  } else if (response.payloadBinding !== null) {
+    return verificationFailure("OUTER_FRAME_WRONG_BINDING", bytes, partial)
+  }
+  if (
+    response.outcome.trace.requestId !== partial.requestId ||
+    response.outcome.trace.invocationId !== partial.invocationId ||
+    response.outcome.trace.kernelRequestId !== partial.kernelRequestId ||
+    response.outcome.trace.method !== partial.method ||
+    response.outcome.trace.requestSha256 !== partial.requestSha256 ||
+    response.outcome.trace.budgetProfileSha256 !== partial.budgetProfileSha256 ||
+    response.outcome.trace.inputSha256 !== partial.inputSha256 ||
+    response.outcome.trace.retryIdentitySha256 !== partial.retryIdentitySha256
+  ) {
+    return verificationFailure("OUTER_FRAME_WRONG_BINDING", bytes, partial)
+  }
+  return {
+    kind: "success",
+    value: response,
+    trace: { ...partial, safeCodes: ["ADAPTER_AUTHENTICATED", "OUTER_BINDINGS_VERIFIED"] },
   }
 }

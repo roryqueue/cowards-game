@@ -243,12 +243,24 @@ describe("runtime invocation v1.17 exclusive ownership", () => {
 
 describe("runtime invocation v1.17 authenticated candidate wire", () => {
   it("matches exact canonical request and response fixture bytes", () => {
-    const requestBytes = serializeRuntimeInvocationRequestV117(candidateRequest())
-    const responseBytes = serializeRuntimeInvocationResponseV117(candidateResponse())
+    const request = candidateRequest()
+    const response = candidateResponse(request)
+    const requestBytes = serializeRuntimeInvocationRequestV117(request)
+    const responseBytes = serializeRuntimeInvocationResponseV117(response)
     expect(Buffer.from(requestBytes)).toEqual(readFileSync(requestFixturePath))
     expect(Buffer.from(responseBytes)).toEqual(readFileSync(responseFixturePath))
-    expect(sha256(requestBytes)).toMatch(/^sha256:[0-9a-f]{64}$/u)
-    expect(sha256(responseBytes)).toMatch(/^sha256:[0-9a-f]{64}$/u)
+    expect(sha256(requestBytes)).toBe(
+      "sha256:df0a9e071fbcc8d3f1e2e95e13673b34946a5e556b046485dc7710fe09f57dd3",
+    )
+    expect(sha256(responseBytes)).toBe(
+      "sha256:7c86ad2bc60383635372ad29ee721812c5e5c375db9c660b475a762b186f2313",
+    )
+    expect(request.authentication.signatureInputSha256).toBe(
+      "sha256:c2c50c6c52190231745466011ab7ede4c3860180898b840e941f63354f5b8aa2",
+    )
+    expect(response.authentication.signatureInputSha256).toBe(
+      "sha256:34a02714c615d542cc4258b82ae728d73f151069d5fddd4e9d5b1012347a90ea",
+    )
   })
 
   it("authenticates complete request, payload, and retry bindings", () => {
@@ -269,15 +281,19 @@ describe("runtime invocation v1.17 authenticated candidate wire", () => {
     )
     expect(response.kind).toBe("success")
     if (response.kind === "success") {
-      expect(response.value.outcome.kind).toBe("success")
-      if (response.value.outcome.kind !== "success") return
-      const payload = encodeCanonicalJson(response.value.outcome.value, {
+      const responseValue = response.value
+      expect(responseValue.outcome.kind).toBe("success")
+      if (
+        responseValue.outcome.kind !== "success" ||
+        responseValue.payloadBinding === null
+      ) return
+      const payload = encodeCanonicalJson(responseValue.outcome.value, {
         context: "authenticated-outer-envelope",
       })
       expect(payload.ok).toBe(true)
       if (payload.ok) {
-        expect(response.value.payloadBinding.sha256).toBe(sha256(payload.bytes))
-        expect(response.value.payloadBinding.canonicalByteLength).toBe(
+        expect(responseValue.payloadBinding.sha256).toBe(sha256(payload.bytes))
+        expect(responseValue.payloadBinding.canonicalByteLength).toBe(
           payload.bytes.byteLength,
         )
       }
