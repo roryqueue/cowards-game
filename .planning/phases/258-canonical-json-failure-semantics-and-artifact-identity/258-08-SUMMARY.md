@@ -78,7 +78,7 @@ status: complete
 
 - **Duration:** 19 min
 - **Completed:** 2026-07-14
-- **Tasks:** 1 TDD task plus three adversarial review loops
+- **Tasks:** 1 TDD task plus four adversarial review loops
 - **Files modified:** 10 runtime and test files
 
 ## Accomplishments
@@ -102,11 +102,13 @@ status: complete
 8. **Review fix: Preserve successor failure ownership** — `f7cf7d1`
 9. **Independent-review RED: Expose zero-budget, allocation, and IPC ownership gaps** — `6b8beaf`
 10. **Independent-review fix: Close adapter boundary findings** — `a5a7df8`
+11. **Final-review RED: Expose bounded depth parity gap** — `1d5b0cb`
+12. **Final-review fix: Align bounded canonical depth** — `cccfe93`
 
 ## Verification
 
-- Plan-focused worker/subprocess/container/hostile matrix passed **103/103** across four files after the independent-review fixes.
-- Complete `@cowards/runtime-js` suite passed **201/201** across eleven files.
+- Plan-focused worker/subprocess/container/hostile matrix passed **106/106** across four files after the final-review fix.
+- Complete `@cowards/runtime-js` suite passed **204/204** across eleven files.
 - Runtime-js typecheck and ESLint passed.
 - Stable `@cowards/spec` suite passed **73/73**; successor ABI, canonical-boundary, runtime ABI, runtime-js integration, and legacy executor subset passed **61/61**.
 - Exact v1.16 hashes remained unchanged: request `5d04fa4d82eb814bb034ce9b5f1d5c80945e3d4e02c9124ca39a6670e9c0eab5`, response `9c870d57e0125eb80ab2ba941ecbbede8a9a775f61c0b278abec25c491374d97`, service `9a0a0411056d06ce4b426b7749256460369124fa752c6c2f81912b8b0bfb31fc`, semantic receipt `36052047a870068ab81ced8c78f3b7f4e8130034a57ee8d16bc3873a50507d1d`, Go client `8fdd3cbc206d2d7e1f77a3603a4f9ea5e664c5ab6f649c87d3e308d99556043f`, Go client test `4a52986d2a43598c0e9556504459143ab56d94d97b22b2296cf84067927e8185`, and migration `ac19e1d825217dfb72142685eb65e62933cea49541ceb39338235b32d2430a69`.
@@ -158,11 +160,16 @@ status: complete
    - Malformed and schema-invalid internal requests now emit the private `T` transport tag, which the host maps only to redacted retryable `TRANSPORT_CRASH`. Pre-method artifact-load failure uses `R` and remains system-owned as `RUNTIME_CRASH`; only an exception caught directly at the Strategy method call site uses the player-owned exception tag.
    - **Committed in:** RED `6b8beaf`, GREEN `a5a7df8`
 
-**Total deviations:** 7 correctness/security fixes. **Impact:** Stronger artifact authority, containment, allocation bounds, timeout consistency, and failure ownership with no current-runtime or gameplay activation.
+8. **[Medium — canonical depth parity] The bounded writer counted a primitive leaf as an additional container level.**
+   - A value with 64 nested containers and a primitive leaf is valid under the shared canonical encoder, but the embedded bounded writer rejected the leaf at depth 65.
+   - Depth admission now applies only when entering a container. Direct 63/64/65-depth vectors prove byte-identical success through 64 containers and matching rejection when the 65th value is itself a container.
+   - **Committed in:** RED `1d5b0cb`, GREEN `cccfe93`
+
+**Total deviations:** 8 correctness/security fixes. **Impact:** Stronger artifact authority, containment, allocation bounds, timeout consistency, failure ownership, and canonical encoder parity with no current-runtime or gameplay activation.
 
 ## Independent Review Addendum
 
-The post-completion independent review reproduced all three reported gaps before any fix. The final regression additionally proves canonical Unicode key ordering, escaping, exponent and negative-zero encoding, exact N/N+1 output behavior, no access to later values after overflow, zero runtime starts for zero wall budget, and system ownership for malformed request IPC and pre-method load failure. Active v1.14 execution and all pinned v1.16 proof bytes remain unchanged.
+The post-completion independent review reproduced all three reported gaps before any fix. Its regression proves canonical Unicode key ordering, escaping, exponent and negative-zero encoding, exact N/N+1 output behavior, no access to later values after overflow, zero runtime starts for zero wall budget, and system ownership for malformed request IPC and pre-method load failure. A final parity re-review then reproduced and closed the container-depth off-by-one with direct 63/64/65 comparisons against the shared encoder. Active v1.14 execution and all pinned v1.16 proof bytes remain unchanged.
 
 ## User Setup Required
 
