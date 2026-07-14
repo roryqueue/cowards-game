@@ -907,6 +907,8 @@ describePostgres(
       }
     })
 
+    // This transaction-heavy PostgreSQL matrix consistently needs 6-7 seconds,
+    // so Vitest's 5-second default can expire before its deterministic checks finish.
     it("rolls back attempt mismatch and late writes, then proves exact success, idempotence, and conflict refusal", async () => {
       await pool.query(
         `update match_job_attempts
@@ -1073,7 +1075,7 @@ describePostgres(
         playerPenalty: false,
       })
       expect(await snapshotCanonicalRows(pool)).toEqual(completed)
-    })
+    }, 15_000)
   },
 )
 
