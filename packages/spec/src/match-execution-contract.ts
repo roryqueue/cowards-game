@@ -1,4 +1,5 @@
 import { z } from "zod"
+import runtimeExecutionServiceResponseV116Wire from "../artifacts/runtime-execution-service-response.v1.16.wire.json" with { type: "json" }
 import type {
   PublicMatchEvidenceDto,
   PublicMatchSetResultDto,
@@ -10,6 +11,7 @@ import {
   PublicReplayEvidenceServiceDtoSchema,
   PublicReplayMetadataServiceDtoSchema,
   RuntimeExecutionCompatibilityIdentitySchema,
+  RuntimeExecutionServiceSuccessResponseSchema,
   RuntimeExecutionResolvedEvidenceSnapshotSchema,
 } from "./schemas.js"
 import {
@@ -19,11 +21,7 @@ import {
   type PublicReplayEvidenceServiceDto,
   type PublicReplayMetadataServiceDto,
 } from "./service.js"
-import {
-  publicMatchSetSummaryExample,
-  publicReplayEvidenceExample,
-  publicReplayMetadataExample,
-} from "./service-fixtures.js"
+import { publicMatchSetSummaryExample } from "./service-fixtures.js"
 import { describeStrategyRuntimeProductSemantics } from "./runtime.js"
 
 export const MATCH_EXECUTION_APP_CONTRACT_VERSION =
@@ -997,61 +995,96 @@ const completeSummary = createScenarioSummary(
   "complete",
   "complete",
 )
+
+/**
+ * Test-only service-contract fixture. These public DTOs are projections of the
+ * committed v1.16 semantic service receipt; they are not evidence that a live
+ * Go/runtime-service/Postgres topology executed during a browser test.
+ */
+const publicSafeReplayServiceReceipt =
+  RuntimeExecutionServiceSuccessResponseSchema.parse(
+    runtimeExecutionServiceResponseV116Wire,
+  )
+const publicSafeReplayChronicle =
+  publicSafeReplayServiceReceipt.result.chronicle
+const publicSafeReplayReceipt =
+  publicSafeReplayServiceReceipt.result.semanticReceipt
+const publicSafeReplayMatchId = publicSafeReplayServiceReceipt.matchId
+const publicSafeReplayArenaVariantId =
+  publicSafeReplayChronicle.reproducibility.arenaVariantId
+const publicSafeReplayHash = publicSafeReplayReceipt.chronicleWireBytesHash
+const publicSafeReplayOutcome =
+  publicSafeReplayServiceReceipt.result.finalState.outcome
+const publicSafeReplayChronicleId =
+  "chronicle:fixture:runtime-execution-service-v1.16"
+
+const publicSafeReplayMetadataFields = {
+  matchId: publicSafeReplayMatchId,
+  chronicleId: publicSafeReplayChronicleId,
+  hash: publicSafeReplayHash,
+  schemaVersion: publicSafeReplayChronicle.schemaVersion,
+  eventCount: publicSafeReplayChronicle.events.length,
+  snapshotCount: publicSafeReplayChronicle.snapshots.length,
+  outcome: clone(publicSafeReplayOutcome),
+  bottomPlayerId: "bottom",
+  topPlayerId: "top",
+  arenaVariantId: publicSafeReplayArenaVariantId,
+} as const
+
 const replayMetadata = PublicReplayMetadataServiceDtoSchema.parse({
-  ...(publicReplayMetadataExample as PublicReplayMetadataServiceDto),
-  matchId: "match:fixture:public-safe-replay",
-  metadata: {
-    ...(publicReplayMetadataExample as PublicReplayMetadataServiceDto).metadata,
-    matchId: "match:fixture:public-safe-replay",
-    arenaVariantId: "arena:fixture-public-safe",
-  },
-})
+  apiVersion: SERVICE_API_VERSION,
+  kind: "publicReplayMetadata",
+  matchId: publicSafeReplayMatchId,
+  metadata: publicSafeReplayMetadataFields,
+}) as PublicReplayMetadataServiceDto
+
 const replayEvidence = PublicReplayEvidenceServiceDtoSchema.parse({
-  ...(publicReplayEvidenceExample as PublicReplayEvidenceServiceDto),
-  matchId: "match:fixture:public-safe-replay",
-  metadata: {
-    ...(publicReplayEvidenceExample as PublicReplayEvidenceServiceDto).metadata,
-    matchId: "match:fixture:public-safe-replay",
-    arenaVariantId: "arena:fixture-public-safe",
-  },
+  apiVersion: SERVICE_API_VERSION,
+  kind: "publicReplayEvidence",
+  matchId: publicSafeReplayMatchId,
+  metadata: publicSafeReplayMetadataFields,
   projection: {
-    ...(publicReplayEvidenceExample as PublicReplayEvidenceServiceDto)
-      .projection,
-    reproducibility: {
-      ...(publicReplayEvidenceExample as PublicReplayEvidenceServiceDto)
-        .projection.reproducibility,
-      matchId: "match:fixture:public-safe-replay",
-      arenaVariantId: "arena:fixture-public-safe",
-    },
-    snapshots: (
-      publicReplayEvidenceExample as PublicReplayEvidenceServiceDto
-    ).projection.snapshots.map((snapshot) => ({
-      ...snapshot,
-      board: {
-        bounds: { minX: 0, maxX: 4, minY: 0, maxY: 4 },
-        soldiers: [
-          {
-            id: "fixture-bottom-soldier-1",
-            ownerPlayerId: "player:bottom",
-            status: "ACTIVE",
-            position: { x: 1, y: 3 },
-            facing: "UP",
-            lastSuccessfulMoveDirection: null,
-          },
-          {
-            id: "fixture-top-soldier-1",
-            ownerPlayerId: "player:top",
-            status: "ACTIVE",
-            position: { x: 3, y: 1 },
-            facing: "DOWN",
-            lastSuccessfulMoveDirection: null,
-          },
-        ],
-        terrainStones: [{ x: 2, y: 2 }],
-      },
-    })),
+    schemaVersion: publicSafeReplayChronicle.schemaVersion,
+    viewer: { access: "public" },
+    reproducibility: clone(publicSafeReplayChronicle.reproducibility),
+    events: publicSafeReplayChronicle.events.map(
+      ({ privacy: _privacy, privateRef: _privateRef, ...event }) =>
+        clone(event),
+    ),
+    snapshots: clone(publicSafeReplayChronicle.snapshots),
   },
 }) as PublicReplayEvidenceServiceDto
+
+const publicSafeReplaySummary = (() => {
+  const summary = createScenarioSummary(
+    "public-safe-replay",
+    "Service-contract-backed replay fixture",
+    "complete",
+    "complete",
+    {
+      publicMessageKey:
+        "match_execution.fixture.public_safe_replay.service_contract_backed",
+    },
+    undefined,
+    true,
+  )
+  const match = summary.result.matches[0]!
+  match.matchId = publicSafeReplayMatchId
+  match.chronicleHash = publicSafeReplayHash
+  match.arenaVariantId = publicSafeReplayArenaVariantId
+  summary.result.provenance.chronicleHashes = [publicSafeReplayHash]
+  for (const [index, entrant] of summary.result.entrants.entries()) {
+    entrant.strategyRevisionId =
+      publicSafeReplayChronicle.reproducibility.strategyRevisionIds[index]!
+    entrant.runtime.language.version =
+      publicSafeReplayChronicle.reproducibility.versions.runtimeJs
+    entrant.engineCompatibility = {
+      spec: publicSafeReplayChronicle.reproducibility.versions.spec,
+      engine: publicSafeReplayChronicle.reproducibility.versions.engine,
+    }
+  }
+  return PublicMatchSetSummaryServiceDtoSchema.parse(summary)
+})()
 
 export const MATCH_EXECUTION_CONTRACT_FIXTURES_V1 = [
   {
@@ -1185,18 +1218,10 @@ export const MATCH_EXECUTION_CONTRACT_FIXTURES_V1 = [
   },
   {
     id: "public-safe-replay",
-    label: "Public-safe replay evidence",
+    label: "Public service-contract fixture replay evidence",
     classification: "public",
     service: {
-      matchSetSummary: createScenarioSummary(
-        "public-safe-replay",
-        "Public safe replay fixture",
-        "complete",
-        "complete",
-        {},
-        undefined,
-        true,
-      ),
+      matchSetSummary: publicSafeReplaySummary,
       replayMetadata,
       replayEvidence,
     },

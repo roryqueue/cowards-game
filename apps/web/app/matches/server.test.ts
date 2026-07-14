@@ -635,12 +635,12 @@ describe("Match replay server facade", () => {
     ).resolves.toBeNull()
   })
 
-  it("serves Match execution replay fixtures through the public adapter gate", async () => {
+  it("resolves the legacy replay fixture route to the canonical service-contract evidence", async () => {
     const server = createMatchReplayServer({
       env: { COWARDS_ENABLE_MATCH_EXECUTION_FIXTURES: "1" },
     })
     const fixture = getMatchExecutionContractFixtureByMatchId(
-      "match:fixture:public-safe-replay",
+      "match:runtime-service:golden",
     )
 
     await expect(
@@ -649,8 +649,8 @@ describe("Match replay server facade", () => {
       ...fixture?.service.replayMetadata,
       metadata: {
         ...fixture?.service.replayMetadata?.metadata,
-        eventCount: 4,
-        snapshotCount: 4,
+        eventCount: 31,
+        snapshotCount: 12,
       },
     })
 
@@ -659,9 +659,9 @@ describe("Match replay server facade", () => {
     )
     expect(replay.status).toBe("ready")
     if (replay.status === "ready") {
-      expect(replay.metadata.matchId).toBe("match:fixture:public-safe-replay")
+      expect(replay.metadata.matchId).toBe("match:runtime-service:golden")
       expect(replay.projection.viewer.access).toBe("public")
-      expect(replay.states[0]?.board.soldiers.length).toBe(2)
+      expect(replay.states[0]?.board.soldiers.length).toBe(16)
       expect(replay.competition?.countedState.state).toBe("non_competitive")
     }
   })

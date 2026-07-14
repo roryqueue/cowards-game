@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs"
-import path from "node:path"
+import { fileURLToPath } from "node:url"
 import { describe, expect, it } from "vitest"
 import { assertPublicOutputLeakSafe } from "@cowards/spec"
 import { createRunWorkerOnceHandler } from "./route.js"
@@ -15,10 +15,7 @@ describe("retired run-worker-once test-support route", () => {
 
   it("contains no process, database, runtime, or worker execution route", () => {
     const source = readFileSync(
-      path.join(
-        process.cwd(),
-        "apps/web/app/api/test-support/run-worker-once/route.ts",
-      ),
+      fileURLToPath(new URL("./route.ts", import.meta.url)),
       "utf8",
     )
     for (const forbidden of [

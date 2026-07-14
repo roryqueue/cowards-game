@@ -60,7 +60,16 @@ describe("match execution fixture adapter", () => {
         eventCount: 31,
         snapshotCount: 12,
         arenaVariantId: "arena-empty-12x12",
-        outcome: { type: "DRAW" },
+      },
+    })
+    await expect(
+      client?.getPublicReplayMetadata("match:fixture:public-safe-replay"),
+    ).resolves.toMatchObject({
+      kind: "publicReplayMetadata",
+      matchId: "match:runtime-service:golden",
+      metadata: {
+        eventCount: 31,
+        snapshotCount: 12,
       },
     })
     await expect(
@@ -80,17 +89,20 @@ describe("match execution fixture adapter", () => {
           matchId: "match:runtime-service:golden",
           arenaVariantId: "arena-empty-12x12",
         },
-        events: expect.arrayContaining([
-          { type: "MATCH_STARTED", sequence: 0 },
-          { type: "CONTRACTION_RESOLVED", sequence: 13 },
-          { type: "MATCH_ENDED", sequence: 30 },
-        ]),
       },
     })
     const evidence = await client?.getPublicReplayEvidence(
       "match:runtime-service:golden",
     )
     expect(evidence?.projection.events).toHaveLength(31)
+    expect(evidence?.projection.events[0]).toMatchObject({
+      type: "MATCH_STARTED",
+      sequence: 0,
+    })
+    expect(evidence?.projection.events[13]).toMatchObject({
+      type: "CONTRACTION_RESOLVED",
+      sequence: 13,
+    })
     expect(evidence?.projection.snapshots).toHaveLength(12)
     expect(evidence?.projection.snapshots[0]?.board.soldiers).toHaveLength(16)
     expect(
@@ -99,9 +111,7 @@ describe("match execution fixture adapter", () => {
       ),
     ).toEqual([evidence?.projection.events.at(-1)])
     await expect(
-      client?.getPublicReplayCompetitionContext(
-        "match:runtime-service:golden",
-      ),
+      client?.getPublicReplayCompetitionContext("match:runtime-service:golden"),
     ).resolves.toMatchObject({
       matchSetId: "match-set:fixture:public-safe-replay",
       countedState: {

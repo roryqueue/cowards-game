@@ -148,7 +148,7 @@ const replayStateCoverage = [
     state: "available",
     proof:
       (await publicReadClient.getPublicReplayEvidence(
-        "match:fixture:public-safe-replay",
+        "match:runtime-service:golden",
       )) !== null,
   },
   {
@@ -192,7 +192,7 @@ const replayStateCoverage = [
 ]
 
 const replayEvidence = getMatchExecutionContractFixtureByMatchId(
-  "match:fixture:public-safe-replay",
+  "match:runtime-service:golden",
 )?.service.replayEvidence
 if (!replayEvidence) {
   throw new Error("missing public-safe replay evidence fixture")
