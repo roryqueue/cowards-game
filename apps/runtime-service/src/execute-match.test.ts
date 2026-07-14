@@ -12,10 +12,17 @@ import {
   RuntimeExecutionServiceRequestSchema,
   createAuthenticatedRuntimeInvocationRequestV117,
   createAuthenticatedRuntimeInvocationResponseV117,
+  createRuntimeAbiV117ExecutionLedger,
+  createRuntimeInvocationBudgetV117,
+  createRuntimeInvocationExecutionReceiptV117,
+  createRuntimeInvocationTraceV117,
+  debitRuntimeAbiV117Ledger,
   serializeRuntimeInvocationRequestV117,
   serializeRuntimeInvocationResponseV117,
   type AuthenticatedRuntimeInvocationRequestV117,
   type JsonValue,
+  type RuntimeAbiV117ExecutionLedger,
+  type RuntimeInvocationExecutionReceiptEvidenceV117,
   type RuntimeInvocationResultV117,
   type RuntimeInvocationTraceV117,
   type RuntimeExecutionServiceRequest,
@@ -84,13 +91,20 @@ const hash = (character: string): `sha256:${string}` =>
 const sha256 = (bytes: Uint8Array): `sha256:${string}` =>
   `sha256:${createHash("sha256").update(bytes).digest("hex")}`
 
-const candidateRequest = (): AuthenticatedRuntimeInvocationRequestV117 => {
+const candidateRequest = (
+  overrides: Partial<{
+    invocationId: string
+    kernelRequestId: string
+    prestate: RuntimeAbiV117ExecutionLedger
+  }> = {},
+): AuthenticatedRuntimeInvocationRequestV117 => {
   const kernelRequest = candidateKernelRequest()
   return createAuthenticatedRuntimeInvocationRequestV117(
     {
       requestId: "request:service-candidate:v1.17",
-      invocationId: "invocation:service-candidate:v1.17",
-      kernelRequestId: kernelRequest.requestId,
+      invocationId:
+        overrides.invocationId ?? "invocation:service-candidate:v1.17",
+      kernelRequestId: overrides.kernelRequestId ?? kernelRequest.requestId,
       method: "soldierBrain",
       semanticTuple: {
         rules: "cowards-rules-v1.4",
@@ -106,26 +120,10 @@ const candidateRequest = (): AuthenticatedRuntimeInvocationRequestV117 => {
         normalizedSourceSha256: hash("b"),
         artifactSha256: hash("c"),
       },
-      budget: {
-        profileId: "runtime-budget-profile-v1.17-candidate",
-        wallMilliseconds: 50,
-        computeFuel: 10_000_000,
-        memoryBytes: 67_108_864,
-        outputBytes: 262_144,
-        processLimit: 1,
-        matchCumulative: {
-          invocationCountMaximum: 260,
-          wallMilliseconds: 13_000,
-          computeFuel: 2_600_000_000,
-          payloadBytes: 68_157_440,
-          stdoutBytes: 68_157_440,
-          stderrBytes: 17_039_360,
-          memoryBytes: 67_108_864,
-          accounting:
-            "signed-monotonic-per-invocation-deltas-plus-cumulative-total",
-          overflow:
-            "stop-before-next-invocation-and-classify-by-proven-cause",
-        },
+      budget: createRuntimeInvocationBudgetV117("soldierBrain"),
+      accounting: {
+        prestate:
+          overrides.prestate ?? createRuntimeAbiV117ExecutionLedger(),
       },
       input: { value: kernelRequest.input as unknown as JsonValue },
       retry: {
@@ -142,17 +140,117 @@ const candidateTrace = (
   request: AuthenticatedRuntimeInvocationRequestV117,
   overrides: Partial<RuntimeInvocationTraceV117> = {},
 ): RuntimeInvocationTraceV117 => ({
-  requestId: request.requestId,
-  invocationId: request.invocationId,
-  kernelRequestId: request.kernelRequestId,
-  method: request.method,
-  requestSha256: sha256(serializeRuntimeInvocationRequestV117(request)),
-  budgetProfileSha256: request.budget.profileSha256,
-  inputSha256: request.input.canonicalSha256,
-  retryIdentitySha256: request.retry.identitySha256,
-  safeCodes: ["ADAPTER_AUTHENTICATED", "PAYLOAD_CANONICAL"],
+  ...createRuntimeInvocationTraceV117(request, [
+    "ADAPTER_AUTHENTICATED",
+    "PAYLOAD_CANONICAL",
+  ]),
   ...overrides,
 })
+
+const candidateEvidence = (
+  request: AuthenticatedRuntimeInvocationRequestV117,
+  overrides: Partial<{
+    attribution: RuntimeInvocationExecutionReceiptEvidenceV117["attribution"]
+    wallMilliseconds: number
+    computeFuel: number
+    payloadBytes: number
+    stdoutBytes: number
+    stderrBytes: number
+    memoryBytes: number
+  }> = {},
+): RuntimeInvocationExecutionReceiptEvidenceV117 => {
+  const prestate = request.accounting.prestate
+  const deltas = {
+    wallMilliseconds: overrides.wallMilliseconds ?? 1,
+    computeFuel: overrides.computeFuel ?? 1,
+    payloadBytes: overrides.payloadBytes ?? 1,
+    stdoutBytes: overrides.stdoutBytes ?? 1,
+    stderrBytes: overrides.stderrBytes ?? 0,
+  }
+  const counters = Object.fromEntries(
+    Object.entries(deltas).map(([counter, delta]) => [
+      counter,
+      {
+        status: "measured" as const,
+        delta,
+        cumulative:
+          prestate.cumulative[
+            counter as keyof typeof prestate.cumulative
+          ] + delta,
+      },
+    ]),
+  ) as RuntimeInvocationExecutionReceiptEvidenceV117["counters"]
+  const memoryBytes = overrides.memoryBytes ?? 1
+  return {
+    attribution: overrides.attribution ?? "proven_strategy",
+    counters,
+    memory: {
+      status: "measured",
+      peakBytes: memoryBytes,
+      cumulativePeakBytes: Math.max(
+        prestate.cumulative.memoryBytes,
+        memoryBytes,
+      ),
+    },
+    process: {
+      status: "verified",
+      processes: 1,
+      threads: 1,
+      children: 0,
+    },
+    capabilities: {
+      status: "verified",
+      filesystem: "none",
+      network: "disabled",
+      environment: "empty",
+      shell: "disabled",
+    },
+    cancellation: {
+      status: "verified",
+      terminationRequired: false,
+      receiptPresent: false,
+      graceMilliseconds: 0,
+    },
+    accountingEvidence: {
+      status: "verified",
+      signatureVerified: true,
+      monotonic: true,
+    },
+  }
+}
+
+const candidateReceipt = (
+  request: AuthenticatedRuntimeInvocationRequestV117,
+  evidence = candidateEvidence(request),
+) => createRuntimeInvocationExecutionReceiptV117(request, evidence)
+
+const candidatePrestateWithWallMilliseconds = (
+  wallMilliseconds: number,
+): RuntimeAbiV117ExecutionLedger => {
+  const request = candidateRequest({
+    invocationId: `invocation:service-candidate:prestate:${wallMilliseconds}`,
+    kernelRequestId: `kernel-request:service-candidate:prestate:${wallMilliseconds}`,
+  })
+  const receipt = candidateReceipt(
+    request,
+    candidateEvidence(request, {
+      wallMilliseconds,
+      computeFuel: 0,
+      payloadBytes: 0,
+      stdoutBytes: 0,
+      stderrBytes: 0,
+      memoryBytes: 0,
+    }),
+  )
+  const debit = debitRuntimeAbiV117Ledger(
+    request.accounting.prestate,
+    receipt,
+  )
+  if (debit.kind === "system_failure") {
+    throw new Error(debit.failure.code)
+  }
+  return debit.ledger
+}
 
 const candidateState = (): GameState => {
   const machine = MATCH_KERNEL.createMachine({
@@ -875,12 +973,15 @@ describe("runtime execution service v1.17 candidate bridge", () => {
       },
       trace: candidateTrace(request),
     }
-    const responseBytes = serializeRuntimeInvocationResponseV117(
+    const authenticatedResponse =
       createAuthenticatedRuntimeInvocationResponseV117(
         request,
         outcome as unknown as RuntimeInvocationResultV117<JsonValue>,
+        candidateReceipt(request),
         candidateIdentity,
-      ),
+      )
+    const responseBytes = serializeRuntimeInvocationResponseV117(
+      authenticatedResponse,
     )
     const observed: Uint8Array[] = []
 
@@ -899,6 +1000,9 @@ describe("runtime execution service v1.17 candidate bridge", () => {
       true,
     )
     expect(result.internalExecution).toMatchObject({ kind: "completed" })
+    expect(result.authenticatedAccounting).toEqual(
+      authenticatedResponse.accounting,
+    )
     expect(result.publicResult).toEqual({
       contractVersion: "runtime-invocation-v1.17",
       candidateStatus: "inactive-candidate",
@@ -909,6 +1013,216 @@ describe("runtime execution service v1.17 candidate bridge", () => {
       method: request.method,
       classification: "success",
     })
+  })
+
+  it.each([
+    {
+      name: "exact method wall boundary",
+      delta: 50,
+      expectedClassification: "success",
+      expectedCode: undefined,
+    },
+    {
+      name: "one over method wall boundary",
+      delta: 51,
+      expectedClassification: "player_violation",
+      expectedCode: "TIMEOUT",
+    },
+  ] as const)(
+    "verifies and exposes authenticated accounting at the $name",
+    ({ delta, expectedClassification, expectedCode }) => {
+      const request = candidateRequest()
+      const evidence = candidateEvidence(request, {
+        wallMilliseconds: delta,
+        computeFuel: 0,
+        payloadBytes: 0,
+        stdoutBytes: 0,
+        stderrBytes: 0,
+        memoryBytes: 0,
+      })
+      const outcome: RuntimeInvocationResultV117<SoldierBrainResult> =
+        expectedClassification === "success"
+          ? {
+              kind: "success",
+              value: {
+                action: { type: "TURN_TO_STONE" },
+                soldierMemory: null,
+              },
+              trace: candidateTrace(request),
+            }
+          : {
+              kind: "player_violation",
+              violation: RUNTIME_INVOCATION_V1_17_PLAYER_VIOLATIONS.TIMEOUT,
+              trace: candidateTrace(request),
+            }
+      const authenticatedResponse =
+        createAuthenticatedRuntimeInvocationResponseV117(
+          request,
+          outcome as RuntimeInvocationResultV117<JsonValue>,
+          candidateReceipt(request, evidence),
+          candidateIdentity,
+        )
+      const result = executeCandidateRuntimeInvocationV117({
+        request,
+        identity: candidateIdentity,
+        invoke: () =>
+          serializeRuntimeInvocationResponseV117(authenticatedResponse),
+        executeOutcome: executeCandidateOutcome,
+      })
+
+      expect(result.publicResult.classification).toBe(expectedClassification)
+      expect(result.publicResult.code).toBe(expectedCode)
+      expect(result.authenticatedAccounting).toEqual(
+        authenticatedResponse.accounting,
+      )
+      expect(result.authenticatedAccounting?.disposition).toBe("commit")
+      expect(
+        result.authenticatedAccounting?.poststate.cumulative.wallMilliseconds,
+      ).toBe(delta)
+    },
+  )
+
+  it.each([
+    { priorWallMilliseconds: 12_950, expectedCode: undefined },
+    { priorWallMilliseconds: 12_951, expectedCode: "TIMEOUT" },
+  ] as const)(
+    "honors signed cumulative prestate with prior wall $priorWallMilliseconds",
+    ({ priorWallMilliseconds, expectedCode }) => {
+      const prestate = candidatePrestateWithWallMilliseconds(
+        priorWallMilliseconds,
+      )
+      const request = candidateRequest({ prestate })
+      const evidence = candidateEvidence(request, {
+        wallMilliseconds: 50,
+        computeFuel: 0,
+        payloadBytes: 0,
+        stdoutBytes: 0,
+        stderrBytes: 0,
+        memoryBytes: 0,
+      })
+      const outcome: RuntimeInvocationResultV117<SoldierBrainResult> =
+        expectedCode === undefined
+          ? {
+              kind: "success",
+              value: {
+                action: { type: "TURN_TO_STONE" },
+                soldierMemory: null,
+              },
+              trace: candidateTrace(request),
+            }
+          : {
+              kind: "player_violation",
+              violation: RUNTIME_INVOCATION_V1_17_PLAYER_VIOLATIONS.TIMEOUT,
+              trace: candidateTrace(request),
+            }
+      const authenticatedResponse =
+        createAuthenticatedRuntimeInvocationResponseV117(
+          request,
+          outcome as RuntimeInvocationResultV117<JsonValue>,
+          candidateReceipt(request, evidence),
+          candidateIdentity,
+        )
+      const result = executeCandidateRuntimeInvocationV117({
+        request,
+        identity: candidateIdentity,
+        invoke: () =>
+          serializeRuntimeInvocationResponseV117(authenticatedResponse),
+        executeOutcome: executeCandidateOutcome,
+      })
+
+      expect(result.publicResult.code).toBe(expectedCode)
+      expect(result.authenticatedAccounting?.disposition).toBe("commit")
+      expect(
+        result.authenticatedAccounting?.poststate.cumulative.wallMilliseconds,
+      ).toBe(priorWallMilliseconds + 50)
+      expect(result.authenticatedAccounting?.prestateSha256).toBe(
+        request.accounting.prestateSha256,
+      )
+    },
+  )
+
+  it("keeps authenticated system failure accounting no-commit with exact prestate", () => {
+    const request = candidateRequest()
+    const measured = candidateEvidence(request)
+    const evidence = { ...measured, attribution: "ambiguous" as const }
+    const outcome: RuntimeInvocationResultV117 = {
+      kind: "system_failure",
+      failure: {
+        code: "AMBIGUOUS_ATTRIBUTION",
+        publicMessage: "Runtime system failure.",
+        retryable: false,
+      },
+      trace: candidateTrace(request),
+    }
+    const authenticatedResponse =
+      createAuthenticatedRuntimeInvocationResponseV117(
+        request,
+        outcome,
+        candidateReceipt(request, evidence),
+        candidateIdentity,
+      )
+    const result = executeCandidateRuntimeInvocationV117({
+      request,
+      identity: candidateIdentity,
+      invoke: () =>
+        serializeRuntimeInvocationResponseV117(authenticatedResponse),
+      executeOutcome: executeCandidateOutcome,
+    })
+
+    expect(result.internalExecution).toMatchObject({
+      kind: "failure",
+      transitions: [],
+      failure: {
+        classification: "system_failure",
+        code: "AMBIGUOUS_ATTRIBUTION",
+      },
+    })
+    expect(result.authenticatedAccounting).toMatchObject({
+      disposition: "no_commit",
+      poststate: request.accounting.prestate,
+      idempotencyKeySha256: request.accounting.idempotencyKeySha256,
+    })
+    expect(JSON.stringify(result.publicResult)).not.toMatch(
+      /accounting|receipt|prestate|poststate|idempotency/iu,
+    )
+  })
+
+  it("replays one authenticated receipt idempotently without double debit", () => {
+    const request = candidateRequest()
+    const outcome: RuntimeInvocationResultV117<SoldierBrainResult> = {
+      kind: "success",
+      value: {
+        action: { type: "TURN_TO_STONE" },
+        soldierMemory: null,
+      },
+      trace: candidateTrace(request),
+    }
+    const authenticatedResponse =
+      createAuthenticatedRuntimeInvocationResponseV117(
+        request,
+        outcome as RuntimeInvocationResultV117<JsonValue>,
+        candidateReceipt(request),
+        candidateIdentity,
+      )
+    const bytes = serializeRuntimeInvocationResponseV117(authenticatedResponse)
+    const run = () =>
+      executeCandidateRuntimeInvocationV117({
+        request,
+        identity: candidateIdentity,
+        invoke: () => bytes,
+        executeOutcome: executeCandidateOutcome,
+      })
+
+    const first = run()
+    const second = run()
+    expect(first.authenticatedAccounting).toEqual(
+      second.authenticatedAccounting,
+    )
+    expect(first.authenticatedAccounting?.poststate.revision).toBe(1)
+    expect(first.authenticatedAccounting?.poststate.commitments).toHaveLength(1)
+    expect(first.authenticatedAccounting?.idempotencyKeySha256).toBe(
+      request.accounting.idempotencyKeySha256,
+    )
   })
 
   it("never retries a player violation or exposes discarded partial memory", () => {
@@ -922,6 +1236,7 @@ describe("runtime execution service v1.17 candidate bridge", () => {
       createAuthenticatedRuntimeInvocationResponseV117(
         request,
         outcome,
+        candidateReceipt(request),
         candidateIdentity,
       ),
     )
@@ -1014,6 +1329,7 @@ describe("runtime execution service v1.17 candidate bridge", () => {
         createAuthenticatedRuntimeInvocationResponseV117(
           request,
           outcome,
+          candidateReceipt(request),
           candidateIdentity,
         ),
       )
@@ -1079,15 +1395,8 @@ describe("runtime execution service v1.17 candidate bridge", () => {
           setPolicy: request.semanticTuple.setPolicy,
         },
         sourceIdentity: request.sourceIdentity,
-        budget: {
-          profileId: request.budget.profileId,
-          wallMilliseconds: request.budget.wallMilliseconds,
-          computeFuel: request.budget.computeFuel,
-          memoryBytes: request.budget.memoryBytes,
-          outputBytes: request.budget.outputBytes,
-          processLimit: request.budget.processLimit,
-          matchCumulative: request.budget.matchCumulative,
-        },
+        budget: createRuntimeInvocationBudgetV117(request.method),
+        accounting: { prestate: request.accounting.prestate },
         input: { value: request.input.value },
         retry: {
           retryId: request.retry.retryId,
@@ -1108,6 +1417,7 @@ describe("runtime execution service v1.17 candidate bridge", () => {
           },
           trace: candidateTrace(otherRequest),
         },
+        candidateReceipt(otherRequest),
         candidateIdentity,
       ),
     )
@@ -1153,15 +1463,8 @@ describe("runtime execution service v1.17 candidate bridge", () => {
           setPolicy: request.semanticTuple.setPolicy,
         },
         sourceIdentity: request.sourceIdentity,
-        budget: {
-          profileId: request.budget.profileId,
-          wallMilliseconds: request.budget.wallMilliseconds,
-          computeFuel: request.budget.computeFuel,
-          memoryBytes: request.budget.memoryBytes,
-          outputBytes: request.budget.outputBytes,
-          processLimit: request.budget.processLimit,
-          matchCumulative: request.budget.matchCumulative,
-        },
+        budget: createRuntimeInvocationBudgetV117(request.method),
+        accounting: { prestate: request.accounting.prestate },
         input: { value: request.input.value },
         retry: {
           retryId: request.retry.retryId,
@@ -1182,6 +1485,7 @@ describe("runtime execution service v1.17 candidate bridge", () => {
           },
           trace: candidateTrace(mutated),
         },
+        candidateReceipt(mutated),
         candidateIdentity,
       ),
     )
