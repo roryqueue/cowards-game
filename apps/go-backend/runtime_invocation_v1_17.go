@@ -193,7 +193,7 @@ func runtimeInvocationV117SHA256Value(bytes []byte) string {
 }
 
 func runtimeInvocationV117FailureFor(code string) *runtimeInvocationV117Failure {
-	retryable := runtimeInvocationV117SystemFailureRetryability[code]
+	retryable, _ := runtimeInvocationV117SystemFailureRetryable(code)
 	return &runtimeInvocationV117Failure{Code: code, PublicMessage: "Runtime system failure.", Retryable: retryable}
 }
 
@@ -570,7 +570,7 @@ func runtimeInvocationV117OutcomeValid(value any, method string) bool {
 		code, codeOK := failure["code"].(string)
 		message, messageOK := failure["publicMessage"].(string)
 		retryable, retryableOK := failure["retryable"].(bool)
-		expectedRetryable, known := runtimeInvocationV117SystemFailureRetryability[code]
+		expectedRetryable, known := runtimeInvocationV117SystemFailureRetryable(code)
 		return codeOK && messageOK && retryableOK && known && message == "Runtime system failure." && retryable == expectedRetryable
 	default:
 		return false
@@ -872,14 +872,16 @@ type runtimeInvocationV117Transport func(context.Context, []byte) ([]byte, error
 func runtimeInvocationV117RetryAttemptLimit(request *runtimeInvocationRequestV117) (int, *runtimeInvocationV117Failure) {
 	maximum := request.Budget.MatchCumulative.InvocationCountMaximum
 	current := request.Retry.Attempt
-	if maximum < 1 || maximum > runtimeInvocationV117CandidateInvocationCountMaximum || current < 0 || current >= maximum {
+	if maximum < 1 || maximum > runtimeInvocationV117CandidateInvocationCountMaximum ||
+		current < 0 || current >= runtimeInvocationV117CandidateRetryAttemptMaximum || current >= maximum {
 		return 0, runtimeInvocationV117FailureFor("OUTER_FRAME_WRONG_BINDING")
 	}
-	remaining := maximum - current
-	if remaining > runtimeInvocationV117CandidateRetryAttemptMaximum {
-		remaining = runtimeInvocationV117CandidateRetryAttemptMaximum
+	localRemaining := runtimeInvocationV117CandidateRetryAttemptMaximum - current
+	cumulativeRemaining := maximum - current
+	if cumulativeRemaining < localRemaining {
+		localRemaining = cumulativeRemaining
 	}
-	return int(remaining), nil
+	return int(localRemaining), nil
 }
 
 func runtimeInvocationV117ContextFailure(ctx context.Context) *runtimeInvocationV117Failure {
@@ -909,10 +911,10 @@ func executeRuntimeInvocationV117(ctx context.Context, requestBytes []byte, iden
 			return nil, failure
 		}
 		responseBytes, err := transport(ctx, append([]byte(nil), pinnedBytes...))
+		if failure = runtimeInvocationV117ContextFailure(ctx); failure != nil {
+			return nil, failure
+		}
 		if err != nil {
-			if failure = runtimeInvocationV117ContextFailure(ctx); failure != nil {
-				return nil, failure
-			}
 			failure = runtimeInvocationV117FailureFor("TRANSPORT_CRASH")
 			if attempt+1 < maximumAttempts {
 				continue

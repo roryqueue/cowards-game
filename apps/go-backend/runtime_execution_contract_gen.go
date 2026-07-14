@@ -10,28 +10,38 @@ type runtimeInvocationContractDescriptor struct {
 	Current bool
 }
 
-var runtimeInvocationContracts = map[string]runtimeInvocationContractDescriptor{
-	"runtime-execution-service-v1.16": {
-		ContractVersion: "runtime-execution-service-v1.16",
-		RequestSHA256: "5d04fa4d82eb814bb034ce9b5f1d5c80945e3d4e02c9124ca39a6670e9c0eab5",
-		ResponseSHA256: "9c870d57e0125eb80ab2ba941ecbbede8a9a775f61c0b278abec25c491374d97",
-		Historical: true,
-		CanonicalJSON: false,
-		Current: true,
-	},
-	"runtime-invocation-v1.17": {
-		ContractVersion: "runtime-invocation-v1.17",
-		RequestSHA256: "94da776c5ef88992d126bd85ae325518303ba56fdf8d2b5568e0e0ce28db1fd7",
-		ResponseSHA256: "d4aa58745e3d4305cc09854478dc38e31313b1e803b89f65a990bd8c52a74ebf",
-		Historical: false,
-		CanonicalJSON: true,
-		Current: false,
-	},
+func runtimeInvocationContractForVersion(version string) (runtimeInvocationContractDescriptor, bool) {
+	switch version {
+	case "runtime-execution-service-v1.16":
+		return runtimeInvocationContractDescriptor{
+			ContractVersion: "runtime-execution-service-v1.16",
+			RequestSHA256: "5d04fa4d82eb814bb034ce9b5f1d5c80945e3d4e02c9124ca39a6670e9c0eab5",
+			ResponseSHA256: "9c870d57e0125eb80ab2ba941ecbbede8a9a775f61c0b278abec25c491374d97",
+			Historical: true,
+			CanonicalJSON: false,
+			Current: true,
+		}, true
+	case "runtime-invocation-v1.17":
+		return runtimeInvocationContractDescriptor{
+			ContractVersion: "runtime-invocation-v1.17",
+			RequestSHA256: "94da776c5ef88992d126bd85ae325518303ba56fdf8d2b5568e0e0ce28db1fd7",
+			ResponseSHA256: "d4aa58745e3d4305cc09854478dc38e31313b1e803b89f65a990bd8c52a74ebf",
+			Historical: false,
+			CanonicalJSON: true,
+			Current: false,
+		}, true
+	default:
+		return runtimeInvocationContractDescriptor{}, false
+	}
 }
 
-func runtimeInvocationContractForVersion(version string) (runtimeInvocationContractDescriptor, bool) {
-	descriptor, ok := runtimeInvocationContracts[version]
-	return descriptor, ok
+func runtimeInvocationContractsSnapshot() map[string]runtimeInvocationContractDescriptor {
+	historical, _ := runtimeInvocationContractForVersion("runtime-execution-service-v1.16")
+	candidate, _ := runtimeInvocationContractForVersion("runtime-invocation-v1.17")
+	return map[string]runtimeInvocationContractDescriptor{
+		historical.ContractVersion: historical,
+		candidate.ContractVersion: candidate,
+	}
 }
 
 var runtimeServiceContractFailureCodes = map[string]struct{}{
@@ -50,15 +60,44 @@ var runtimeServiceContractFailureCodes = map[string]struct{}{
 	"EVIDENCE_REGISTRY_DRIFT": {},
 }
 
-var runtimeInvocationV117SystemFailureRetryability = map[string]bool{
-	"OUTER_FRAME_MISSING": true,
-	"OUTER_FRAME_TRUNCATED": true,
-	"OUTER_FRAME_UNAUTHENTICATED": false,
-	"OUTER_FRAME_WRONG_BINDING": false,
-	"OUTER_FRAME_UNDECODABLE": false,
-	"ADAPTER_CRASH": true,
-	"RUNTIME_CRASH": true,
-	"HOST_CRASH": true,
-	"TRANSPORT_CRASH": true,
-	"AMBIGUOUS_ATTRIBUTION": false,
+func runtimeInvocationV117SystemFailureRetryable(code string) (bool, bool) {
+	switch code {
+	case "OUTER_FRAME_MISSING":
+		return true, true
+	case "OUTER_FRAME_TRUNCATED":
+		return true, true
+	case "OUTER_FRAME_UNAUTHENTICATED":
+		return false, true
+	case "OUTER_FRAME_WRONG_BINDING":
+		return false, true
+	case "OUTER_FRAME_UNDECODABLE":
+		return false, true
+	case "ADAPTER_CRASH":
+		return true, true
+	case "RUNTIME_CRASH":
+		return true, true
+	case "HOST_CRASH":
+		return true, true
+	case "TRANSPORT_CRASH":
+		return true, true
+	case "AMBIGUOUS_ATTRIBUTION":
+		return false, true
+	default:
+		return false, false
+	}
+}
+
+func runtimeInvocationV117SystemFailureRetryabilitySnapshot() map[string]bool {
+	return map[string]bool{
+		"OUTER_FRAME_MISSING": true,
+		"OUTER_FRAME_TRUNCATED": true,
+		"OUTER_FRAME_UNAUTHENTICATED": false,
+		"OUTER_FRAME_WRONG_BINDING": false,
+		"OUTER_FRAME_UNDECODABLE": false,
+		"ADAPTER_CRASH": true,
+		"RUNTIME_CRASH": true,
+		"HOST_CRASH": true,
+		"TRANSPORT_CRASH": true,
+		"AMBIGUOUS_ATTRIBUTION": false,
+	}
 }

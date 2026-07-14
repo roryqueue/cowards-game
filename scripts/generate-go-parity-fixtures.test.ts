@@ -281,10 +281,10 @@ describe("versioned TypeScript-to-Go parity generator", () => {
 
   it("rejects unknown and cross-version aliases in the generated dispatch source", () => {
     const generated = read(generatedRelative).toString("utf8")
+    expect(generated).toContain("switch version")
     expect(generated).toContain(
-      "descriptor, ok := runtimeInvocationContracts[version]",
+      "return runtimeInvocationContractDescriptor{}, false",
     )
-    expect(generated).toContain("return descriptor, ok")
     for (const forbidden of [
       '"strategy-runtime-abi-v1.14"',
       '"strategy-runtime-abi-v1.17"',
@@ -297,14 +297,12 @@ describe("versioned TypeScript-to-Go parity generator", () => {
 
   it("generates the exact complete TypeScript retryability matrix for Go consumers", () => {
     const generated = read(generatedRelative).toString("utf8")
-    const table = generated.match(
-      /var runtimeInvocationV117SystemFailureRetryability = map\[string\]bool\{([\s\S]*?)\n\}/,
-    )
-    expect(table).not.toBeNull()
     const entries = Object.fromEntries(
-      [...(table?.[1].matchAll(/\t"([A-Z0-9_]+)": (true|false),/g) ?? [])].map(
-        (match) => [match[1], match[2] === "true"],
-      ),
+      [
+        ...generated.matchAll(
+          /\tcase "([A-Z0-9_]+)":\n\t\treturn (true|false), true/g,
+        ),
+      ].map((match) => [match[1], match[2] === "true"]),
     )
     expect(entries).toEqual(
       RUNTIME_INVOCATION_V1_17_SYSTEM_FAILURE_RETRYABILITY,
@@ -317,7 +315,7 @@ describe("versioned TypeScript-to-Go parity generator", () => {
       "var runtimeInvocationV117SystemFailureCodes = map[string]bool",
     )
     expect(runtimeSource).toContain(
-      "runtimeInvocationV117SystemFailureRetryability[code]",
+      "runtimeInvocationV117SystemFailureRetryable(code)",
     )
   })
 
