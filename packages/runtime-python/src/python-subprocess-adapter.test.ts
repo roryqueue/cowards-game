@@ -563,6 +563,36 @@ describe("Python subprocess Strategy provider ABI", () => {
     }
   })
 
+  it(
+    "cannot catch the host-owned guest deadline with bare except",
+    () => {
+      const source = `def select_activations(input):\n    while True:\n        try:\n            while True:\n                pass\n        except:\n            pass\n\ndef soldier_brain(input):\n    return {"action": {"type": "TURN_TO_STONE"}, "soldierMemory": None}\n`
+      const revision = buildPythonStrategyRevision({ source })
+      const request = candidateRequest(revision, { wallMilliseconds: 20 })
+      const started = performance.now()
+      const response = verifyRuntimeInvocationResponseV117(
+        createPythonCandidateInvocationAdapterV117({
+          revision,
+          identity: candidateIdentity,
+        })(serializeRuntimeInvocationRequestV117(request)),
+        request,
+        candidateIdentity,
+      )
+      const elapsedMilliseconds = performance.now() - started
+
+      expect(elapsedMilliseconds).toBeLessThan(1_000)
+      expect(response.kind).toBe("success")
+      if (response.kind === "success") {
+        expect(response.value.outcome).toMatchObject({
+          kind: "player_violation",
+          violation: { code: "TIMEOUT" },
+        })
+        expect(response.value.outcome).not.toHaveProperty("failure")
+      }
+    },
+    35_000,
+  )
+
   it("accepts a near-cap raw host payload without base64-envelope ENOBUFS drift", () => {
     const source = `def select_activations(input):\n    return {"activationOrders": [], "strategyMemory": "x" * 249900}\n\ndef soldier_brain(input):\n    return {"action": {"type": "TURN_TO_STONE"}, "soldierMemory": None}\n`
     const revision = buildPythonStrategyRevision({ source })
