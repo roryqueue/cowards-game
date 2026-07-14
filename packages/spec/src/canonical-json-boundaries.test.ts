@@ -94,6 +94,56 @@ describe("successor canonical JSON boundaries", () => {
     expect(RuntimeInvocationResultV117Schema.safeParse(deepResult).success).toBe(false)
   })
 
+  it.each([
+    [
+      "selectActivations strategy memory",
+      "selectActivations",
+      {
+        activationOrders: [],
+        strategyMemory: "x".repeat(32 * 1024 + 1),
+      },
+    ],
+    [
+      "selectActivations objective",
+      "selectActivations",
+      {
+        activationOrders: [
+          {
+            soldierId: "soldier:1",
+            objective: "x".repeat(1024 + 1),
+          },
+        ],
+        strategyMemory: null,
+      },
+    ],
+    [
+      "soldierBrain memory",
+      "soldierBrain",
+      {
+        action: { type: "TURN_TO_STONE" },
+        soldierMemory: "x".repeat(2 * 1024 + 1),
+      },
+    ],
+  ] as const)("rejects over-cap %s in the authenticated success schema", (_label, method, value) => {
+    const result = {
+      kind: "success",
+      value,
+      trace: {
+        requestId: "request:field-cap",
+        invocationId: "invocation:field-cap",
+        kernelRequestId: "kernel-request:field-cap",
+        method,
+        requestSha256: `sha256:${"1".repeat(64)}`,
+        budgetProfileSha256: `sha256:${"2".repeat(64)}`,
+        inputSha256: `sha256:${"3".repeat(64)}`,
+        retryIdentitySha256: `sha256:${"4".repeat(64)}`,
+        safeCodes: [],
+      },
+    }
+
+    expect(RuntimeInvocationResultV117Schema.safeParse(result).success).toBe(false)
+  })
+
   it("never lets lower profiles loosen the frozen global ceilings", () => {
     const global = CANONICAL_JSON_BOUNDARY_PROFILES["authenticated-envelope"].limits
     for (const profile of Object.values(CANONICAL_JSON_BOUNDARY_PROFILES)) {
