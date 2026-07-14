@@ -44,20 +44,55 @@ func runtimeInvocationContractsSnapshot() map[string]runtimeInvocationContractDe
 	}
 }
 
-var runtimeServiceContractFailureCodes = map[string]struct{}{
-	"MALFORMED_REQUEST": {},
-	"SOURCE_HASH_MISMATCH": {},
-	"SOURCE_BYTES_MISMATCH": {},
-	"UNSUPPORTED_RUNTIME_ADAPTER": {},
-	"MATCH_EXECUTION_FAILED": {},
-	"CHRONICLE_INTEGRITY_FAILED": {},
-	"EXECUTION_EXCEPTION": {},
-	"RESPONSE_SCHEMA_INVALID": {},
-	"EVIDENCE_STALE": {},
-	"EVIDENCE_REVOKED": {},
-	"EVIDENCE_IDENTITY_MISMATCH": {},
-	"EVIDENCE_UNVERIFIABLE": {},
-	"EVIDENCE_REGISTRY_DRIFT": {},
+func runtimeServiceContractFailureCodeKnown(code string) bool {
+	switch code {
+	case "MALFORMED_REQUEST":
+		return true
+	case "SOURCE_HASH_MISMATCH":
+		return true
+	case "SOURCE_BYTES_MISMATCH":
+		return true
+	case "UNSUPPORTED_RUNTIME_ADAPTER":
+		return true
+	case "MATCH_EXECUTION_FAILED":
+		return true
+	case "CHRONICLE_INTEGRITY_FAILED":
+		return true
+	case "EXECUTION_EXCEPTION":
+		return true
+	case "RESPONSE_SCHEMA_INVALID":
+		return true
+	case "EVIDENCE_STALE":
+		return true
+	case "EVIDENCE_REVOKED":
+		return true
+	case "EVIDENCE_IDENTITY_MISMATCH":
+		return true
+	case "EVIDENCE_UNVERIFIABLE":
+		return true
+	case "EVIDENCE_REGISTRY_DRIFT":
+		return true
+	default:
+		return false
+	}
+}
+
+func runtimeServiceContractFailureCodesSnapshot() map[string]struct{} {
+	return map[string]struct{}{
+		"MALFORMED_REQUEST": {},
+		"SOURCE_HASH_MISMATCH": {},
+		"SOURCE_BYTES_MISMATCH": {},
+		"UNSUPPORTED_RUNTIME_ADAPTER": {},
+		"MATCH_EXECUTION_FAILED": {},
+		"CHRONICLE_INTEGRITY_FAILED": {},
+		"EXECUTION_EXCEPTION": {},
+		"RESPONSE_SCHEMA_INVALID": {},
+		"EVIDENCE_STALE": {},
+		"EVIDENCE_REVOKED": {},
+		"EVIDENCE_IDENTITY_MISMATCH": {},
+		"EVIDENCE_UNVERIFIABLE": {},
+		"EVIDENCE_REGISTRY_DRIFT": {},
+	}
 }
 
 func runtimeInvocationV117SystemFailureRetryable(code string) (bool, bool) {

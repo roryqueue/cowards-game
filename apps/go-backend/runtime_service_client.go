@@ -639,8 +639,7 @@ func sanitizeRuntimeServiceFailureCode(code string) string {
 }
 
 func isRuntimeServiceContractFailureCode(code string) bool {
-	_, ok := runtimeServiceContractFailureCodes[code]
-	return ok
+	return runtimeServiceContractFailureCodeKnown(code)
 }
 
 func sanitizeRuntimeServiceDetails(details map[string]any) map[string]any {

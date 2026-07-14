@@ -274,7 +274,7 @@ describe("successor canonical JSON boundaries", () => {
       "packages/spec/src/runtime-execution-service.ts":
         "9a0a0411056d06ce4b426b7749256460369124fa752c6c2f81912b8b0bfb31fc",
       "apps/go-backend/runtime_service_client.go":
-        "8fdd3cbc206d2d7e1f77a3603a4f9ea5e664c5ab6f649c87d3e308d99556043f",
+        "9c72e5b0ee3ddfb36a7aec51a5a1ead508b2fae29eace27a73b9fda7d55ce23c",
     } as const
     for (const [relativePath, expected] of Object.entries(protectedHashes)) {
       expect(

@@ -504,7 +504,7 @@ export const RUNTIME_ABI_V1_17 = deepFreeze({
       "apps/go-backend/runtime_semantic_receipt.go":
         "36052047a870068ab81ced8c78f3b7f4e8130034a57ee8d16bc3873a50507d1d",
       "apps/go-backend/runtime_service_client.go":
-        "8fdd3cbc206d2d7e1f77a3603a4f9ea5e664c5ab6f649c87d3e308d99556043f",
+        "9c72e5b0ee3ddfb36a7aec51a5a1ead508b2fae29eace27a73b9fda7d55ce23c",
       "apps/go-backend/runtime_service_client_test.go":
         "4a52986d2a43598c0e9556504459143ab56d94d97b22b2296cf84067927e8185",
       "packages/persistence/migrations/0017_runtime_semantic_receipts.sql":

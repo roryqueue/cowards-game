@@ -372,6 +372,29 @@ func TestPhase258RuntimeInvocationV117GeneratedAuthoritySnapshotsCannotMutateLoo
 	}
 
 	failureCodes := runtimeServiceContractFailureCodesSnapshot()
+	expectedFailureCodes := []string{
+		"MALFORMED_REQUEST",
+		"SOURCE_HASH_MISMATCH",
+		"SOURCE_BYTES_MISMATCH",
+		"UNSUPPORTED_RUNTIME_ADAPTER",
+		"MATCH_EXECUTION_FAILED",
+		"CHRONICLE_INTEGRITY_FAILED",
+		"EXECUTION_EXCEPTION",
+		"RESPONSE_SCHEMA_INVALID",
+		"EVIDENCE_STALE",
+		"EVIDENCE_REVOKED",
+		"EVIDENCE_IDENTITY_MISMATCH",
+		"EVIDENCE_UNVERIFIABLE",
+		"EVIDENCE_REGISTRY_DRIFT",
+	}
+	if len(failureCodes) != len(expectedFailureCodes) {
+		t.Fatalf("historical failure-code cardinality drifted: want=%d got=%d", len(expectedFailureCodes), len(failureCodes))
+	}
+	for _, code := range expectedFailureCodes {
+		if _, present := failureCodes[code]; !present || !isRuntimeServiceContractFailureCode(code) {
+			t.Fatalf("historical failure-code truth table lost %q", code)
+		}
+	}
 	delete(failureCodes, "MALFORMED_REQUEST")
 	failureCodes["UNKNOWN"] = struct{}{}
 	if !isRuntimeServiceContractFailureCode("MALFORMED_REQUEST") {
