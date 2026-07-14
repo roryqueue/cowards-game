@@ -339,7 +339,9 @@ export const isWasmWasiSourceIdentityV117 = (
     lineEndingCount <= normalizedSourceBytes &&
     lineEndings.kind === expectedKind &&
     typeof identity.hasFinalNewline === "boolean" &&
-    (!identity.hasFinalNewline || lineEndingCount > 0)
+    (identity.hasFinalNewline
+      ? lineEndingCount > 0
+      : lineEndingCount === 0 || lineEndingCount < normalizedSourceBytes)
   )
 }
 
