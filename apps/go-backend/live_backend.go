@@ -734,8 +734,6 @@ func (server *LiveServer) createStrategyRevision(writer http.ResponseWriter, req
 		"strategyId":         revision["strategyId"],
 		"strategyRevisionId": revision["strategyRevisionId"],
 		"validationStatus":   revision["validationStatus"],
-		"readinessState":     string(readiness.State),
-		"readinessCategory":  readiness.PublicCategory,
 		"entryEligible":      readiness.EntryEligible,
 		"countedEligible":    readiness.CountedEligible,
 	})

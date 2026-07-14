@@ -30,17 +30,58 @@ alter table strategy_revisions
       original_source_bytes = octet_length(source) and
       original_source_bytes >= 0 and
       normalized_source_hash ~ '^[0-9a-f]{64}$' and
-      normalized_source_bytes >= 0 and
+      normalized_source_bytes = octet_length(
+        replace(replace(source, E'\r\n', E'\n'), E'\r', E'\n')
+      ) and
       source_normalization_policy = 'source-line-endings-lf-v1.17' and
       jsonb_typeof(source_line_endings) = 'object' and
+      source_line_endings ?& array['kind', 'lf', 'crlf', 'cr'] and
+      source_line_endings - 'kind' - 'lf' - 'crlf' - 'cr' = '{}'::jsonb and
       source_line_endings ->> 'kind' in ('none', 'lf', 'crlf', 'cr', 'mixed') and
       jsonb_typeof(source_line_endings -> 'lf') = 'number' and
       jsonb_typeof(source_line_endings -> 'crlf') = 'number' and
-      jsonb_typeof(source_line_endings -> 'cr') = 'number'
+      jsonb_typeof(source_line_endings -> 'cr') = 'number' and
+      (source_line_endings ->> 'lf') ~ '^(0|[1-9][0-9]*)$' and
+      (source_line_endings ->> 'crlf') ~ '^(0|[1-9][0-9]*)$' and
+      (source_line_endings ->> 'cr') ~ '^(0|[1-9][0-9]*)$' and
+      (source_line_endings ->> 'crlf')::numeric =
+        (length(source) - length(replace(source, E'\r\n', ''))) / 2 and
+      (source_line_endings ->> 'lf')::numeric =
+        length(replace(source, E'\r\n', '')) -
+        length(replace(replace(source, E'\r\n', ''), E'\n', '')) and
+      (source_line_endings ->> 'cr')::numeric =
+        length(replace(source, E'\r\n', '')) -
+        length(replace(replace(source, E'\r\n', ''), E'\r', '')) and
+      case source_line_endings ->> 'kind'
+        when 'none' then
+          (source_line_endings ->> 'lf')::numeric = 0 and
+          (source_line_endings ->> 'crlf')::numeric = 0 and
+          (source_line_endings ->> 'cr')::numeric = 0
+        when 'lf' then
+          (source_line_endings ->> 'lf')::numeric > 0 and
+          (source_line_endings ->> 'crlf')::numeric = 0 and
+          (source_line_endings ->> 'cr')::numeric = 0
+        when 'crlf' then
+          (source_line_endings ->> 'lf')::numeric = 0 and
+          (source_line_endings ->> 'crlf')::numeric > 0 and
+          (source_line_endings ->> 'cr')::numeric = 0
+        when 'cr' then
+          (source_line_endings ->> 'lf')::numeric = 0 and
+          (source_line_endings ->> 'crlf')::numeric = 0 and
+          (source_line_endings ->> 'cr')::numeric > 0
+        when 'mixed' then
+          num_nonnulls(
+            nullif((source_line_endings ->> 'lf')::numeric, 0),
+            nullif((source_line_endings ->> 'crlf')::numeric, 0),
+            nullif((source_line_endings ->> 'cr')::numeric, 0)
+          ) >= 2
+        else false
+      end and
+      source_has_final_newline = (right(source, 1) in (E'\n', E'\r'))
     )
   );
 
-create function prevent_strategy_revision_source_identity_update()
+create or replace function prevent_strategy_revision_source_identity_update()
 returns trigger
 language plpgsql
 as $$
@@ -53,7 +94,7 @@ begin
      old.source_normalization_policy is distinct from new.source_normalization_policy or
      old.source_line_endings is distinct from new.source_line_endings or
      old.source_has_final_newline is distinct from new.source_has_final_newline or
-     (old.source_identity_version is not null and old.source is distinct from new.source)
+     old.source is distinct from new.source
   then
     raise exception 'source identity v2 is immutable';
   end if;

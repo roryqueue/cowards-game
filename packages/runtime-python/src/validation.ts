@@ -56,23 +56,23 @@ export const buildPythonSourceIdentityV117 = (source: string) => {
     }
   }
   const present = [lf > 0, crlf > 0, cr > 0].filter(Boolean).length
-  const kind = present === 0
-    ? "none"
-    : present > 1
-      ? "mixed"
-      : lf > 0
-        ? "lf"
-        : crlf > 0
-          ? "crlf"
-          : "cr"
+  const kind: "none" | "lf" | "crlf" | "cr" | "mixed" =
+    present === 0
+      ? "none"
+      : present > 1
+        ? "mixed"
+        : lf > 0
+          ? "lf"
+          : crlf > 0
+            ? "crlf"
+            : "cr"
   const normalizedSource = normalizePythonArtifactSource(source)
   return {
     identityVersion: "strategy-source-identity-v2" as const,
     normalizationPolicy: PYTHON_SOURCE_NORMALIZATION_POLICY_V1_17,
-    originalSourceSha256: `sha256:${hashCanonicalIdentity(
-      "originalSource",
-      [Buffer.from(source, "utf8")],
-    )}` as const,
+    originalSourceSha256: `sha256:${hashCanonicalIdentity("originalSource", [
+      Buffer.from(source, "utf8"),
+    ])}` as const,
     normalizedSourceSha256: `sha256:${hashCanonicalIdentity(
       "normalizedSource",
       [Buffer.from(normalizedSource, "utf8")],
@@ -87,7 +87,8 @@ export const buildPythonSourceArtifact = (input: {
   source: string
   validation: StrategyRevisionValidationReport
 }): SourceLanguageStrategyArtifact => {
-  const normalizedSource = normalizePythonArtifactSource(input.source)
+  const sourceIdentity = buildPythonSourceIdentityV117(input.source)
+  const normalizedSource = sourceIdentity.normalizedSource
   const bytes = Buffer.from(normalizedSource, "utf8")
   return {
     format: "python-source-bundle",
@@ -98,6 +99,16 @@ export const buildPythonSourceArtifact = (input: {
     sourceBytes: input.validation.sourceBytes,
     abiVersion: STRATEGY_RUNTIME_ABI_VERSION,
     validationStatus: input.validation.valid ? "valid" : "invalid",
+    sourceIdentity: {
+      identityVersion: sourceIdentity.identityVersion,
+      normalizationPolicy: sourceIdentity.normalizationPolicy,
+      originalSourceSha256: sourceIdentity.originalSourceSha256,
+      originalSourceBytes: Buffer.byteLength(input.source),
+      normalizedSourceSha256: sourceIdentity.normalizedSourceSha256,
+      normalizedSourceBytes: bytes.byteLength,
+      lineEndings: sourceIdentity.lineEndings,
+      hasFinalNewline: sourceIdentity.hasFinalNewline,
+    },
     createdAt: "deterministic-python-source-bundle-v1.33",
     toolchain: {
       language: "python",

@@ -770,6 +770,26 @@ export const SourceLanguageStrategyArtifactSchema = z.object({
   sourceBytes: z.number().int().positive().max(STRATEGY_SOURCE_BYTES),
   abiVersion: z.literal(STRATEGY_RUNTIME_ABI_VERSION),
   validationStatus: z.enum(["valid", "invalid"]),
+  sourceIdentity: z
+    .object({
+      identityVersion: z.literal("strategy-source-identity-v2"),
+      normalizationPolicy: z.literal("source-line-endings-lf-v1.17"),
+      originalSourceSha256: z.string().regex(/^sha256:[0-9a-f]{64}$/u),
+      originalSourceBytes: z.number().int().nonnegative(),
+      normalizedSourceSha256: z.string().regex(/^sha256:[0-9a-f]{64}$/u),
+      normalizedSourceBytes: z.number().int().nonnegative(),
+      lineEndings: z
+        .object({
+          kind: z.enum(["none", "lf", "crlf", "cr", "mixed"]),
+          lf: z.number().int().nonnegative(),
+          crlf: z.number().int().nonnegative(),
+          cr: z.number().int().nonnegative(),
+        })
+        .strict(),
+      hasFinalNewline: z.boolean(),
+    })
+    .strict()
+    .optional(),
   createdAt: z.string().min(1),
   toolchain: SourceLanguageStrategyArtifactToolchainEvidenceSchema,
   publicEvidence: z.object({
@@ -812,9 +832,10 @@ const CompiledStrategyArtifactPublicSchema =
     bytesBase64: true,
   })
 
-const SourceLanguageStrategyArtifactPublicSchema =
+export const SourceLanguageStrategyArtifactPublicSchema =
   SourceLanguageStrategyArtifactSchema.omit({
     bytesBase64: true,
+    sourceIdentity: true,
   })
 
 export const StrategyRevisionSchema = z

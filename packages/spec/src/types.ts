@@ -295,6 +295,23 @@ export interface SourceLanguageStrategyArtifact {
   sourceBytes: number
   abiVersion: string
   validationStatus: SourceLanguageStrategyArtifactValidationStatus
+  sourceIdentity?:
+    | {
+        identityVersion: "strategy-source-identity-v2"
+        normalizationPolicy: "source-line-endings-lf-v1.17"
+        originalSourceSha256: string
+        originalSourceBytes: number
+        normalizedSourceSha256: string
+        normalizedSourceBytes: number
+        lineEndings: {
+          kind: "none" | "lf" | "crlf" | "cr" | "mixed"
+          lf: number
+          crlf: number
+          cr: number
+        }
+        hasFinalNewline: boolean
+      }
+    | undefined
   createdAt: string
   toolchain: SourceLanguageStrategyArtifactToolchainEvidence
   publicEvidence: {

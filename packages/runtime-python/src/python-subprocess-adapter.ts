@@ -45,6 +45,7 @@ import { buildPythonSourceIdentityV117 } from "./validation.js"
 const hostPath = fileURLToPath(
   new URL("./python_runtime_host.py", import.meta.url),
 )
+const PYTHON_CANDIDATE_MAX_OUTPUT_BYTES = 262_144
 export { PYTHON_RUNTIME_ENVIRONMENT, PYTHON_RUNTIME_EXECUTABLE }
 export const pythonRuntimeHostArgs = (): readonly string[] => [
   ...pythonIsolatedHostArgs(hostPath),
@@ -54,6 +55,7 @@ export { pythonExperimentalRuntimeMetadata }
 
 export type PythonCandidateHostResultV117 =
   | { readonly kind: "payload"; readonly payloadBytes: Uint8Array }
+  | { readonly kind: "invalid_output" }
   | { readonly kind: "strategy_exception" }
   | { readonly kind: "host_crash" }
   | { readonly kind: "transport_crash" }
@@ -106,15 +108,48 @@ const pythonCandidateSystemFailure = (
 const pythonCandidatePlayerViolation = (
   request: AuthenticatedRuntimeInvocationRequestV117,
   requestBytes: Uint8Array,
-  code: "INVALID_OUTPUT" | "THROWN_EXCEPTION",
+  code: "INVALID_OUTPUT" | "OVERSIZED_OUTPUT" | "THROWN_EXCEPTION",
 ): RuntimeInvocationResultV117 => ({
   kind: "player_violation",
   violation: RUNTIME_INVOCATION_V1_17_PLAYER_VIOLATIONS[code],
-  trace: candidateTrace(request, requestBytes, [
-    "ADAPTER_AUTHENTICATED",
-    code,
-  ]),
+  trace: candidateTrace(request, requestBytes, ["ADAPTER_AUTHENTICATED", code]),
 })
+
+export const admitPythonCandidateHostResponseV117 = (
+  stdout: Uint8Array,
+): PythonCandidateHostResultV117 => {
+  const admitted = admitCanonicalJsonBytes(stdout, {
+    profile: "authenticated-envelope",
+  })
+  if (
+    !admitted.ok ||
+    admitted.value === null ||
+    Array.isArray(admitted.value)
+  ) {
+    return { kind: "transport_crash" }
+  }
+  const envelope = admitted.value as Record<string, JsonValue>
+  if (envelope.kind === "strategy_exception") {
+    return { kind: "strategy_exception" }
+  }
+  if (envelope.kind === "invalid_output") {
+    return { kind: "invalid_output" }
+  }
+  if (
+    envelope.kind !== "payload" ||
+    typeof envelope.payloadBase64 !== "string"
+  ) {
+    return { kind: "transport_crash" }
+  }
+  const payloadBytes = Buffer.from(envelope.payloadBase64, "base64")
+  if (
+    payloadBytes.byteLength === 0 ||
+    payloadBytes.toString("base64") !== envelope.payloadBase64
+  ) {
+    return { kind: "transport_crash" }
+  }
+  return { kind: "payload", payloadBytes }
+}
 
 export const runPythonCandidateHostV117 = (
   request: AuthenticatedRuntimeInvocationRequestV117,
@@ -135,32 +170,14 @@ export const runPythonCandidateHostV117 = (
     env: PYTHON_RUNTIME_ENVIRONMENT,
     shell: false,
     timeout: request.budget.wallMilliseconds,
-    maxBuffer: request.budget.outputBytes + 64 * 1024,
+    maxBuffer: Math.ceil((request.budget.outputBytes * 4) / 3) + 64 * 1024,
   })
   if (result.error || result.signal || result.status !== 0) {
     return { kind: "host_crash" }
   }
-  const stdout = new Uint8Array(result.stdout ?? Buffer.alloc(0))
-  const admitted = admitCanonicalJsonBytes(stdout, {
-    profile: "authenticated-envelope",
-  })
-  if (!admitted.ok || admitted.value === null || Array.isArray(admitted.value)) {
-    return { kind: "transport_crash" }
-  }
-  const envelope = admitted.value as Record<string, JsonValue>
-  if (envelope.kind === "strategy_exception") {
-    return { kind: "strategy_exception" }
-  }
-  if (
-    envelope.kind !== "payload" ||
-    typeof envelope.payloadBase64 !== "string"
-  ) {
-    return { kind: "transport_crash" }
-  }
-  return {
-    kind: "payload",
-    payloadBytes: Buffer.from(envelope.payloadBase64, "base64"),
-  }
+  return admitPythonCandidateHostResponseV117(
+    new Uint8Array(result.stdout ?? Buffer.alloc(0)),
+  )
 }
 
 const candidatePythonArtifact = (
@@ -170,6 +187,9 @@ const candidatePythonArtifact = (
   if (
     artifact === undefined ||
     artifact.format !== "python-source-bundle" ||
+    artifact.sourceHash !== revision.sourceHash ||
+    artifact.sourceBytes !== revision.sourceBytes ||
+    artifact.abiVersion !== STRATEGY_RUNTIME_ABI_VERSION ||
     artifact.validationStatus !== "valid" ||
     artifact.bytesBase64 === undefined
   ) {
@@ -183,20 +203,44 @@ const candidatePythonArtifact = (
     return { ok: false }
   }
   const identity = buildPythonSourceIdentityV117(revision.source)
+  const recordedIdentity = artifact.sourceIdentity
   if (
     identity.normalizedSource !== artifactBytes.toString("utf8") ||
     revision.sourceHash !==
       createHash("sha256").update(revision.source).digest("hex") ||
-    revision.sourceBytes !== Buffer.byteLength(revision.source)
+    revision.sourceBytes !== Buffer.byteLength(revision.source) ||
+    artifact.toolchain.language !== "python" ||
+    artifact.toolchain.runtime !== PYTHON_RUNTIME_EXECUTABLE ||
+    artifact.toolchain.runtimeVersion !==
+      pythonExperimentalRuntimeMetadata().language.version ||
+    artifact.toolchain.commandSummary !==
+      "python isolated validation host, no packages/imports" ||
+    artifact.toolchain.validationPolicy !== "python-source-validation-v1.33" ||
+    recordedIdentity === undefined ||
+    recordedIdentity.identityVersion !== identity.identityVersion ||
+    recordedIdentity.normalizationPolicy !== identity.normalizationPolicy ||
+    recordedIdentity.originalSourceSha256 !== identity.originalSourceSha256 ||
+    recordedIdentity.originalSourceBytes !==
+      Buffer.byteLength(revision.source) ||
+    recordedIdentity.normalizedSourceSha256 !==
+      identity.normalizedSourceSha256 ||
+    recordedIdentity.normalizedSourceBytes !==
+      Buffer.byteLength(identity.normalizedSource) ||
+    recordedIdentity.hasFinalNewline !== identity.hasFinalNewline ||
+    recordedIdentity.lineEndings.kind !== identity.lineEndings.kind ||
+    recordedIdentity.lineEndings.lf !== identity.lineEndings.lf ||
+    recordedIdentity.lineEndings.crlf !== identity.lineEndings.crlf ||
+    recordedIdentity.lineEndings.cr !== identity.lineEndings.cr
   ) {
     return { ok: false }
   }
   return { ok: true, normalizedSource: identity.normalizedSource }
 }
 
-export const createPythonCandidateInvocationAdapterV117 = (
-  options: PythonCandidateInvocationAdapterOptionsV117,
-): ((requestBytes: Uint8Array) => Uint8Array) =>
+export const createPythonCandidateInvocationAdapterV117 =
+  (
+    options: PythonCandidateInvocationAdapterOptionsV117,
+  ): ((requestBytes: Uint8Array) => Uint8Array) =>
   (requestBytes) => {
     const admittedRequest = verifyRuntimeInvocationRequestV117(
       requestBytes,
@@ -207,7 +251,9 @@ export const createPythonCandidateInvocationAdapterV117 = (
     }
     const request = admittedRequest.value
     const artifact = candidatePythonArtifact(options.revision)
-    const sourceIdentity = buildPythonSourceIdentityV117(options.revision.source)
+    const sourceIdentity = buildPythonSourceIdentityV117(
+      options.revision.source,
+    )
     const recordedArtifact = options.revision.metadata.sourceArtifact
     let outcome: RuntimeInvocationResultV117
     if (
@@ -226,6 +272,18 @@ export const createPythonCandidateInvocationAdapterV117 = (
         requestBytes,
         "OUTER_FRAME_WRONG_BINDING",
       )
+    } else if (request.budget.outputBytes > PYTHON_CANDIDATE_MAX_OUTPUT_BYTES) {
+      outcome = pythonCandidateSystemFailure(
+        request,
+        requestBytes,
+        "OUTER_FRAME_WRONG_BINDING",
+      )
+    } else if (request.budget.wallMilliseconds === 0) {
+      outcome = pythonCandidateSystemFailure(
+        request,
+        requestBytes,
+        "AMBIGUOUS_ATTRIBUTION",
+      )
     } else {
       try {
         const host = (options.hostRunner ?? runPythonCandidateHostV117)(
@@ -233,33 +291,47 @@ export const createPythonCandidateInvocationAdapterV117 = (
           artifact.normalizedSource,
         )
         if (host.kind === "payload") {
-          const payload = admitCanonicalJsonBytes(host.payloadBytes, {
-            profile: "strategy-payload",
-          })
-          const schema =
-            request.method === "selectActivations"
-              ? StrategyResultV117Schema
-              : SoldierBrainResultV117Schema
-          const parsed = payload.ok ? schema.safeParse(payload.value) : null
-          outcome = parsed?.success
-            ? {
-                kind: "success",
-                value: parsed.data as JsonValue,
-                trace: candidateTrace(request, requestBytes, [
-                  "ADAPTER_AUTHENTICATED",
-                  "PAYLOAD_CANONICAL",
-                ]),
-              }
-            : pythonCandidatePlayerViolation(
-                request,
-                requestBytes,
-                "INVALID_OUTPUT",
-              )
+          if (host.payloadBytes.byteLength > request.budget.outputBytes) {
+            outcome = pythonCandidatePlayerViolation(
+              request,
+              requestBytes,
+              "OVERSIZED_OUTPUT",
+            )
+          } else {
+            const payload = admitCanonicalJsonBytes(host.payloadBytes, {
+              profile: "strategy-payload",
+            })
+            const schema =
+              request.method === "selectActivations"
+                ? StrategyResultV117Schema
+                : SoldierBrainResultV117Schema
+            const parsed = payload.ok ? schema.safeParse(payload.value) : null
+            outcome = parsed?.success
+              ? {
+                  kind: "success",
+                  value: parsed.data as JsonValue,
+                  trace: candidateTrace(request, requestBytes, [
+                    "ADAPTER_AUTHENTICATED",
+                    "PAYLOAD_CANONICAL",
+                  ]),
+                }
+              : pythonCandidatePlayerViolation(
+                  request,
+                  requestBytes,
+                  "INVALID_OUTPUT",
+                )
+          }
         } else if (host.kind === "strategy_exception") {
           outcome = pythonCandidatePlayerViolation(
             request,
             requestBytes,
             "THROWN_EXCEPTION",
+          )
+        } else if (host.kind === "invalid_output") {
+          outcome = pythonCandidatePlayerViolation(
+            request,
+            requestBytes,
+            "INVALID_OUTPUT",
           )
         } else {
           outcome = pythonCandidateSystemFailure(
