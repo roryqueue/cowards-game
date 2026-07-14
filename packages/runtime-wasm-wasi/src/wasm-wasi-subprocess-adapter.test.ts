@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { readFileSync } from "node:fs"
+import { createHash } from "node:crypto"
 import {
   createAuthenticatedRuntimeInvocationRequestV117,
   serializeRuntimeInvocationResponseV117,
@@ -16,6 +17,7 @@ import {
   validateZigStrategySource,
   zigReadinessEvidence,
   collectWasmWasiCandidateIdentityV117,
+  resolveWasmWasiAdapterBuildFilesV117,
 } from "./validation.js"
 import { wasmWasiRuntimeMetadataV117 } from "./metadata.js"
 import {
@@ -94,6 +96,7 @@ const candidateSigningIdentity: RuntimeInvocationSigningIdentityV117 = {
 const candidateRequest = (
   revision: ReturnType<typeof buildRustStrategyRevision>,
   artifactSha256 = revision.metadata.compiledArtifact?.hash,
+  outputBytes = 262_144,
 ): AuthenticatedRuntimeInvocationRequestV117 => {
   if (artifactSha256 === undefined) {
     throw new Error("Rust candidate fixture did not compile")
@@ -123,7 +126,7 @@ const candidateRequest = (
         wallMilliseconds: 50,
         computeFuel: 10_000_000,
         memoryBytes: 67_108_864,
-        outputBytes: 262_144,
+        outputBytes,
         processLimit: 1,
         matchCumulative: {
           invocationCountMaximum: 260,
@@ -423,9 +426,176 @@ describe("WASM/WASI runtime v1.17 candidate host authority", () => {
       trace: { safeCodes: ["WASM_WASI_STALE_ARTIFACT_TOOLCHAIN_IDENTITY"] },
     })
   })
+
+  it("never throws when artifact preflight or temp-directory setup fails", () => {
+    const request = candidateRequest(revision)
+    const base = {
+      request,
+      revision,
+      signingIdentity: candidateSigningIdentity,
+      executionIdentity: candidateExecutionIdentity(revision),
+      executeGuest: () =>
+        completedObservation(
+          '{"action":{"type":"TURN_TO_STONE"},"soldierMemory":null}',
+        ),
+    }
+    for (const hostOperations of [
+      {
+        validateImports: () => {
+          throw new Error("preflight exploded")
+        },
+      },
+      {
+        makeTempDirectory: () => {
+          throw new Error("mkdtemp exploded")
+        },
+      },
+    ]) {
+      expect(() =>
+        runWasmWasiStrategyMethodV117Sync({
+          ...base,
+          hostOperations,
+        }),
+      ).not.toThrow()
+      expect(
+        runWasmWasiStrategyMethodV117Sync({
+          ...base,
+          hostOperations,
+        }).outcome,
+      ).toMatchObject({
+        kind: "system_failure",
+        failure: { code: "ADAPTER_CRASH" },
+      })
+    }
+  })
+
+  it("classifies malformed artifact import tables as system-owned preflight failure", () => {
+    const artifact = revision.metadata.compiledArtifact
+    expect(artifact).toBeDefined()
+    if (artifact === undefined) throw new Error("Candidate artifact is missing")
+    const malformedBytes = Buffer.from("not-a-wasm-module", "utf8")
+    const malformedHash = createHash("sha256")
+      .update(malformedBytes)
+      .digest("hex")
+    const malformedRevision = {
+      ...revision,
+      metadata: {
+        ...revision.metadata,
+        compiledArtifact: {
+          ...artifact,
+          bytes: malformedBytes.byteLength,
+          bytesBase64: malformedBytes.toString("base64"),
+          hash: malformedHash,
+        },
+      },
+    } as typeof revision
+    const request = candidateRequest(malformedRevision, malformedHash)
+    const response = runWasmWasiStrategyMethodV117Sync({
+      request,
+      revision: malformedRevision,
+      signingIdentity: candidateSigningIdentity,
+      executionIdentity: collectWasmWasiCandidateIdentityV117(
+        "rust",
+        malformedRevision.metadata.compiledArtifact!,
+      ),
+      executeGuest: () => {
+        throw new Error("malformed artifact reached execution")
+      },
+    })
+
+    expect(response.outcome).toMatchObject({
+      kind: "system_failure",
+      failure: { code: "OUTER_FRAME_WRONG_BINDING", retryable: false },
+    })
+  })
+
+  it("rejects a legacy v1.14 artifact instead of relabeling it as v1.17", () => {
+    const request = candidateRequest(revision)
+    const response = runCandidateObservation(
+      request,
+      revision,
+      completedObservation(
+        '{"action":{"type":"TURN_TO_STONE"},"soldierMemory":null}',
+      ),
+    )
+
+    expect(revision.metadata.compiledArtifact?.abiVersion).toBe(
+      "strategy-runtime-abi-v1.14",
+    )
+    expect(response.outcome).toMatchObject({
+      kind: "system_failure",
+      failure: { code: "OUTER_FRAME_WRONG_BINDING", retryable: false },
+    })
+  })
+
+  it("enforces stdout and proven guest stderr ceilings independently", () => {
+    const outputLimitedRequest = candidateRequest(
+      revision,
+      revision.metadata.compiledArtifact?.hash,
+      32,
+    )
+    const stdoutResponse = runCandidateObservation(
+      outputLimitedRequest,
+      revision,
+      completedObservation(
+        '{"action":{"type":"TURN_TO_STONE"},"soldierMemory":null}',
+      ),
+    )
+    const stderrObservation = completedObservation(
+      '{"action":{"type":"TURN_TO_STONE"},"soldierMemory":null}',
+    )
+    stderrObservation.stderr = new Uint8Array(
+      WASM_WASI_V1_17_EXECUTION_SETTINGS.stderrBytes + 1,
+    )
+    const stderrResponse = runCandidateObservation(
+      candidateRequest(revision),
+      revision,
+      stderrObservation,
+    )
+
+    for (const response of [stdoutResponse, stderrResponse]) {
+      expect(response.outcome).toMatchObject({
+        kind: "player_violation",
+        violation: { code: "OVERSIZED_OUTPUT" },
+      })
+    }
+  })
+
+  it("keeps ambiguous stderr overflow system-owned", () => {
+    const observation: WasmWasiGuestObservationV117 = {
+      kind: "failed",
+      status: null,
+      signal: null,
+      stdout: new Uint8Array(),
+      stderr: new Uint8Array(
+        WASM_WASI_V1_17_EXECUTION_SETTINGS.stderrBytes + 1,
+      ),
+      attribution: "transport_crash",
+    }
+    const response = runCandidateObservation(
+      candidateRequest(revision),
+      revision,
+      observation,
+    )
+
+    expect(response.outcome).toMatchObject({
+      kind: "system_failure",
+      failure: { code: "TRANSPORT_CRASH" },
+    })
+  })
 })
 
 describe("WASM/WASI runtime v1.17 exact Rust/Zig identity", () => {
+  it("resolves emitted JavaScript adapter-build inputs for built imports", () => {
+    const files = resolveWasmWasiAdapterBuildFilesV117(
+      new URL("../dist/validation.js", import.meta.url).href,
+    )
+
+    expect(files).toHaveLength(3)
+    expect(files.every((file) => file.endsWith(".js"))).toBe(true)
+    expect(files.every((file) => !file.endsWith(".ts"))).toBe(true)
+  })
+
   it("binds resolved compiler runtime target flags adapter stdlib and settings", () => {
     expect(rustCompileProbe.artifact).toBeDefined()
     expect(zigCompileProbe.artifact).toBeDefined()
