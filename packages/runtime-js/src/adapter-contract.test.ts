@@ -108,6 +108,7 @@ const candidateRequest = (
   overrides: Partial<{
     outputBytes: number
     input: StrategyInput
+    artifactSource: string
   }> = {},
 ): AuthenticatedRuntimeInvocationRequestV117 =>
   createAuthenticatedRuntimeInvocationRequestV117(
@@ -130,7 +131,11 @@ const candidateRequest = (
         normalizedSourceSha256: sha256(
           new TextEncoder().encode(validStrategySource),
         ),
-        artifactSha256: sha256(new TextEncoder().encode(transpiledSource())),
+        artifactSha256: sha256(
+          new TextEncoder().encode(
+            overrides.artifactSource ?? transpiledSource(),
+          ),
+        ),
       },
       budget: {
         profileId: "runtime-budget-profile-v1.17-candidate",
@@ -759,6 +764,46 @@ export default {
           },
         },
       })
+    })
+
+    it.each([
+      ["globalThis.process", "globalThis.process.cwd()"],
+      ["Math.random", "Math.random()"],
+      [
+        "Function constructor",
+        '[]["filter"]["con" + "structor"]("return process")()',
+      ],
+    ])("keeps successor guest capability %s forbidden", (_label, expression) => {
+      const source = transpileOrThrow(`
+export default {
+  selectActivations() {
+    ${expression}
+    return { activationOrders: [], strategyMemory: {} }
+  },
+  soldierBrain() {
+    return { action: { type: "TURN_TO_STONE" }, soldierMemory: {} }
+  },
+}
+`)
+      const request = candidateRequest({ artifactSource: source })
+      for (const adapter of [
+        createWorkerThreadStrategyExecutionAdapter(),
+        createSubprocessStrategyExecutionAdapter(),
+      ]) {
+        const result = executeCandidateWith(adapter, request, source)
+        expect(result.kind, adapter.metadata.id).toBe("success")
+        if (result.kind !== "success") continue
+        expect(result.value.outcome, adapter.metadata.id).toMatchObject({
+          kind: "player_violation",
+          violation: {
+            code: "FORBIDDEN_CAPABILITY",
+            publicMessage: "Strategy attempted a forbidden capability.",
+          },
+        })
+        expect(JSON.stringify(result.value.outcome)).not.toMatch(
+          /cwd|process|constructor|stack|source/iu,
+        )
+      }
     })
   })
 })
