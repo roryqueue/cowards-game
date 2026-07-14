@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs"
 import { describe, expect, it } from "vitest"
 /* eslint-disable-next-line no-restricted-imports -- Script tests exercise the source contract before package build output exists. */
 import {
@@ -127,5 +128,12 @@ describe("v1.17 preflight contract", () => {
     expect(PREFLIGHT_NON_CERTIFICATION_NOTICE).toMatch(
       /contract-only|operational smoke/iu,
     )
+  })
+
+  it("uses the Go-owned service path and never revives the retired TypeScript worker", () => {
+    const source = readFileSync(new URL("./preflight.ts", import.meta.url), "utf8")
+    expect(source).not.toMatch(/runWorkerOnce|apps\/worker\/src\/runner/iu)
+    expect(source).toContain("/internal/match-jobs/run-once")
+    expect(source).toContain("COWARDS_GO_BACKEND_INTERNAL_TOKEN")
   })
 })
