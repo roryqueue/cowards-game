@@ -9,6 +9,7 @@ import { pathToFileURL } from "node:url"
 import {
   createAuthenticatedRuntimeInvocationRequestV117,
   serializeRuntimeInvocationResponseV117,
+  STRATEGY_WASM_ARTIFACT_BYTES,
   verifyRuntimeInvocationResponseV117,
   type AuthenticatedRuntimeInvocationRequestV117,
   type RuntimeInvocationSigningIdentityV117,
@@ -219,6 +220,36 @@ const completedObservation = (
   attribution: "none",
   provenance: "none",
 })
+
+const encodeUnsignedLeb128 = (value: number): Buffer => {
+  const bytes: number[] = []
+  let remaining = value >>> 0
+  do {
+    let byte = remaining & 0x7f
+    remaining >>>= 7
+    if (remaining !== 0) byte |= 0x80
+    bytes.push(byte)
+  } while (remaining !== 0)
+  return Buffer.from(bytes)
+}
+
+const appendWasmPaddingSection = (
+  wasmBytes: Buffer,
+  paddingBytes: number,
+): Buffer => {
+  const name = Buffer.from("candidate-limit-regression", "utf8")
+  const payload = Buffer.concat([
+    encodeUnsignedLeb128(name.byteLength),
+    name,
+    Buffer.alloc(paddingBytes),
+  ])
+  return Buffer.concat([
+    wasmBytes,
+    Buffer.from([0]),
+    encodeUnsignedLeb128(payload.byteLength),
+    payload,
+  ])
+}
 
 const candidateIdentityCache = new Map<
   string,
@@ -592,6 +623,55 @@ describe("WASM/WASI runtime v1.17 candidate host authority", () => {
     })
   })
 
+  it("rejects an attested artifact above the canonical byte cap before execution", () => {
+    const artifact = revision.metadata.compiledArtifact
+    const originalBytes = Buffer.from(artifact.bytesBase64, "base64")
+    const oversizedBytes = appendWasmPaddingSection(
+      originalBytes,
+      STRATEGY_WASM_ARTIFACT_BYTES - originalBytes.byteLength + 1,
+    )
+    const oversizedHash = createHash("sha256")
+      .update(oversizedBytes)
+      .digest("hex")
+    const oversizedRevision = {
+      ...revision,
+      metadata: {
+        compiledArtifact: {
+          ...artifact,
+          bytes: oversizedBytes.byteLength,
+          bytesBase64: oversizedBytes.toString("base64"),
+          hash: oversizedHash,
+        },
+      },
+    } as typeof revision
+    const request = candidateRequest(oversizedRevision, oversizedHash)
+    let executed = false
+    const response = runWasmWasiStrategyMethodV117Sync({
+      request,
+      revision: oversizedRevision,
+      signingIdentity: candidateSigningIdentity,
+      executionIdentity: collectWasmWasiCandidateIdentityV117(
+        "rust",
+        oversizedRevision.metadata.compiledArtifact,
+      ),
+      executeGuest: () => {
+        executed = true
+        return completedObservation(
+          '{"action":{"type":"TURN_TO_STONE"},"soldierMemory":null}',
+        )
+      },
+    })
+
+    expect(oversizedBytes.byteLength).toBeGreaterThan(
+      STRATEGY_WASM_ARTIFACT_BYTES,
+    )
+    expect(executed).toBe(false)
+    expect(response.outcome).toMatchObject({
+      kind: "system_failure",
+      failure: { code: "OUTER_FRAME_WRONG_BINDING", retryable: false },
+    })
+  })
+
   it("rejects a legacy v1.14 artifact instead of relabeling it as v1.17", () => {
     const legacyRevision = buildRustStrategyRevision({ source: rustSource })
     const legacyCandidateRevision = {
@@ -806,6 +886,29 @@ describe("WASM/WASI runtime v1.17 exact Rust/Zig identity", () => {
       isWasmWasiSourceIdentityV117({
         ...identity,
         lineEndings: { ...identity.lineEndings, extra: 1 },
+      }),
+    ).toBe(false)
+  })
+
+  it("rejects closed source attestations with impossible normalization semantics", () => {
+    const identity =
+      buildRustWasmCandidateRevisionV117(candidateRustSource).sourceIdentity
+    expect(
+      isWasmWasiSourceIdentityV117({
+        ...identity,
+        originalSourceBytes: 0,
+        normalizedSourceBytes: 99,
+        lineEndings: { kind: "none", lf: 0, crlf: 0, cr: 0 },
+        hasFinalNewline: true,
+      }),
+    ).toBe(false)
+    expect(
+      isWasmWasiSourceIdentityV117({
+        ...identity,
+        originalSourceBytes: 10,
+        normalizedSourceBytes: 10,
+        lineEndings: { kind: "crlf", lf: 0, crlf: 1, cr: 0 },
+        hasFinalNewline: false,
       }),
     ).toBe(false)
   })
