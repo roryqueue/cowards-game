@@ -1,16 +1,10 @@
-import {
-  createHash,
-  createHmac,
-  randomUUID,
-  timingSafeEqual,
-} from "node:crypto"
+import { createHash, createHmac, randomUUID, timingSafeEqual } from "node:crypto"
 import { Buffer } from "node:buffer"
 import { buildStrategyRevision } from "@cowards/runtime-js"
 import {
   describeStrategyRuntimeProductSemantics,
   getSupportedStrategyLanguageRecord,
   normalizeStrategyRuntimeMetadata,
-  hashCanonicalIdentity,
   STRATEGY_RUNTIME_ABI_VERSION,
 } from "@cowards/spec"
 import type {
@@ -27,7 +21,10 @@ import {
   findAdvancedStrategy,
   type AdvancedStrategyId,
 } from "./advanced-strategies.js"
-import { createRepositories } from "./repositories.js"
+import {
+  buildSourceIdentityV2PersistenceRecord,
+  createRepositories,
+} from "./repositories.js"
 import {
   findStarterStrategy,
   type StarterStrategyId,
@@ -65,44 +62,9 @@ export interface StrategyRevisionSourceIdentityV2 {
 export const buildSourceIdentityV2 = (
   source: string,
 ): StrategyRevisionSourceIdentityV2 => {
-  const original = Buffer.from(source, "utf8")
-  let lf = 0
-  let crlf = 0
-  let cr = 0
-  for (let index = 0; index < source.length; index += 1) {
-    if (source[index] === "\r") {
-      if (source[index + 1] === "\n") {
-        crlf += 1
-        index += 1
-      } else {
-        cr += 1
-      }
-    } else if (source[index] === "\n") {
-      lf += 1
-    }
-  }
-  const present = [lf > 0, crlf > 0, cr > 0].filter(Boolean).length
-  const kind =
-    present === 0
-      ? "none"
-      : present > 1
-        ? "mixed"
-        : lf > 0
-          ? "lf"
-          : crlf > 0
-            ? "crlf"
-            : "cr"
   const normalizedSource = source.replace(/\r\n?/gu, "\n")
-  const normalized = Buffer.from(normalizedSource, "utf8")
   return {
-    sourceIdentityVersion: SOURCE_IDENTITY_VERSION_V2,
-    originalSourceHash: hashCanonicalIdentity("originalSource", [original]),
-    originalSourceBytes: original.byteLength,
-    normalizedSourceHash: hashCanonicalIdentity("normalizedSource", [normalized]),
-    normalizedSourceBytes: normalized.byteLength,
-    sourceNormalizationPolicy: SOURCE_NORMALIZATION_POLICY_V1_17,
-    sourceLineEndings: { kind, lf, crlf, cr },
-    sourceHasFinalNewline: source.endsWith("\n") || source.endsWith("\r"),
+    ...buildSourceIdentityV2PersistenceRecord(source),
     normalizedSource,
   }
 }

@@ -3,6 +3,7 @@ import { spawn, spawnSync } from "node:child_process"
 import { createHash } from "node:crypto"
 import { clearTimeout, setTimeout } from "node:timers"
 import { fileURLToPath } from "node:url"
+import { TextDecoder } from "node:util"
 import {
   RUNTIME_INVOCATION_V1_17_PLAYER_VIOLATIONS,
   SoldierBrainResultSchema,
@@ -106,7 +107,9 @@ const pythonCandidateSystemFailure = (
   failure: {
     code,
     publicMessage: "Runtime system failure.",
-    retryable: true,
+    retryable:
+      code !== "OUTER_FRAME_WRONG_BINDING" &&
+      code !== "AMBIGUOUS_ATTRIBUTION",
   },
   trace: candidateTrace(request, requestBytes, [code]),
 })
@@ -243,15 +246,27 @@ const candidatePythonArtifact = (
   }
   const artifactBytes = Buffer.from(artifact.bytesBase64, "base64")
   if (
+    artifactBytes.toString("base64") !== artifact.bytesBase64 ||
     artifactBytes.byteLength !== artifact.bytes ||
     createHash("sha256").update(artifactBytes).digest("hex") !== artifact.hash
   ) {
     return { ok: false }
   }
+  let artifactSource: string
+  try {
+    artifactSource = new TextDecoder("utf-8", { fatal: true }).decode(
+      artifactBytes,
+    )
+  } catch {
+    return { ok: false }
+  }
+  if (!Buffer.from(artifactSource, "utf8").equals(artifactBytes)) {
+    return { ok: false }
+  }
   const identity = buildPythonSourceIdentityV117(revision.source)
   const recordedIdentity = artifact.sourceIdentity
   if (
-    identity.normalizedSource !== artifactBytes.toString("utf8") ||
+    identity.normalizedSource !== artifactSource ||
     revision.sourceHash !==
       createHash("sha256").update(revision.source).digest("hex") ||
     revision.sourceBytes !== Buffer.byteLength(revision.source) ||

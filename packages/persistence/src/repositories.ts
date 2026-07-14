@@ -6,7 +6,11 @@ import type {
   StrategyRevision,
   StrategyRevisionId,
 } from "@cowards/spec"
-import { normalizeStrategyRuntimeMetadata } from "@cowards/spec"
+import {
+  hashCanonicalIdentity,
+  normalizeStrategyRuntimeMetadata,
+} from "@cowards/spec"
+import { Buffer } from "node:buffer"
 import type { Pool, PoolClient } from "pg"
 
 export type Queryable = Pick<Pool | PoolClient, "query">
@@ -26,6 +30,67 @@ export interface SourceIdentityV2PersistenceRecord {
   }
   sourceHasFinalNewline: boolean
 }
+
+export const buildSourceIdentityV2PersistenceRecord = (
+  source: string,
+): SourceIdentityV2PersistenceRecord => {
+  const original = Buffer.from(source, "utf8")
+  let lf = 0
+  let crlf = 0
+  let cr = 0
+  for (let index = 0; index < source.length; index += 1) {
+    if (source[index] === "\r") {
+      if (source[index + 1] === "\n") {
+        crlf += 1
+        index += 1
+      } else {
+        cr += 1
+      }
+    } else if (source[index] === "\n") {
+      lf += 1
+    }
+  }
+  const present = [lf > 0, crlf > 0, cr > 0].filter(Boolean).length
+  const kind =
+    present === 0
+      ? "none"
+      : present > 1
+        ? "mixed"
+        : lf > 0
+          ? "lf"
+          : crlf > 0
+            ? "crlf"
+            : "cr"
+  const normalized = Buffer.from(source.replace(/\r\n?/gu, "\n"), "utf8")
+  return {
+    sourceIdentityVersion: "strategy-source-identity-v2",
+    originalSourceHash: hashCanonicalIdentity("originalSource", [original]),
+    originalSourceBytes: original.byteLength,
+    normalizedSourceHash: hashCanonicalIdentity("normalizedSource", [
+      normalized,
+    ]),
+    normalizedSourceBytes: normalized.byteLength,
+    sourceNormalizationPolicy: "source-line-endings-lf-v1.17",
+    sourceLineEndings: { kind, lf, crlf, cr },
+    sourceHasFinalNewline: source.endsWith("\n") || source.endsWith("\r"),
+  }
+}
+
+const sourceIdentityMatches = (
+  actual: SourceIdentityV2PersistenceRecord,
+  expected: SourceIdentityV2PersistenceRecord,
+): boolean =>
+  actual.sourceIdentityVersion === expected.sourceIdentityVersion &&
+  actual.originalSourceHash === expected.originalSourceHash &&
+  actual.originalSourceBytes === expected.originalSourceBytes &&
+  actual.normalizedSourceHash === expected.normalizedSourceHash &&
+  actual.normalizedSourceBytes === expected.normalizedSourceBytes &&
+  actual.sourceNormalizationPolicy === expected.sourceNormalizationPolicy &&
+  actual.sourceLineEndings.kind === expected.sourceLineEndings.kind &&
+  actual.sourceLineEndings.lf === expected.sourceLineEndings.lf &&
+  actual.sourceLineEndings.crlf === expected.sourceLineEndings.crlf &&
+  actual.sourceLineEndings.cr === expected.sourceLineEndings.cr &&
+  actual.sourceHasFinalNewline === expected.sourceHasFinalNewline
 
 export const REVISION_CONTENT_COLUMNS = [
   "source",
@@ -96,6 +161,17 @@ export const createRepositories = (db: Queryable) => ({
     revision: StrategyRevision,
     sourceIdentity?: SourceIdentityV2PersistenceRecord,
   ): Promise<void> {
+    if (
+      sourceIdentity !== undefined &&
+      !sourceIdentityMatches(
+        sourceIdentity,
+        buildSourceIdentityV2PersistenceRecord(revision.source),
+      )
+    ) {
+      throw new Error(
+        "StrategyRevision source identity does not match revision source.",
+      )
+    }
     await db.query(
       `
         insert into strategy_revisions (
