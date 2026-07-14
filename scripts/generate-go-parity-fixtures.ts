@@ -35,6 +35,10 @@ import {
   assertPublicServiceDtoLeakSafe,
   createAuthenticatedRuntimeInvocationRequestV117,
   createAuthenticatedRuntimeInvocationResponseV117,
+  createRuntimeAbiV117ExecutionLedger,
+  createRuntimeInvocationExecutionReceiptV117,
+  createRuntimeInvocationBudgetV117,
+  createRuntimeInvocationTraceV117,
   serviceHealthExample,
   SERVICE_API_VERSION,
   RUNTIME_EXECUTION_SERVICE_SYSTEM_FAILURE_CODES,
@@ -59,7 +63,6 @@ import {
   serializeRuntimeInvocationRequestV117,
   serializeRuntimeInvocationResponseV117,
 } from "../packages/spec/src/index.ts"
-import { RUNTIME_ABI_V1_17 } from "../packages/spec/src/runtime-abi-v1-17.ts"
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const repoRoot = path.resolve(__dirname, "..")
@@ -248,15 +251,8 @@ const createCandidateRequest = () =>
         normalizedSourceSha256: fixtureHash("c"),
         artifactSha256: fixtureHash("d"),
       },
-      budget: {
-        profileId: "runtime-budget-profile-v1.17-candidate",
-        wallMilliseconds: 50,
-        computeFuel: 10_000_000,
-        memoryBytes: 67_108_864,
-        outputBytes: 262_144,
-        processLimit: 1,
-        matchCumulative: RUNTIME_ABI_V1_17.budgets.matchCumulative,
-      },
+      budget: createRuntimeInvocationBudgetV117("selectActivations"),
+      accounting: { prestate: createRuntimeAbiV117ExecutionLedger() },
       input: { value: { cycleIndex: 0, phase: "ROUND" } },
       retry: {
         retryId: "retry:candidate:v1.17:0001",
@@ -272,31 +268,76 @@ const createCandidateRequest = () =>
 
 const createCandidateResponse = (
   request: ReturnType<typeof createCandidateRequest>,
-) =>
-  createAuthenticatedRuntimeInvocationResponseV117(
+) => {
+  const prestate = request.accounting.prestate
+  const measuredCounter = (
+    name:
+      | "wallMilliseconds"
+      | "computeFuel"
+      | "payloadBytes"
+      | "stdoutBytes"
+      | "stderrBytes",
+  ) => ({
+    status: "measured" as const,
+    delta: 1,
+    cumulative: prestate.cumulative[name] + 1,
+  })
+  const receipt = createRuntimeInvocationExecutionReceiptV117(request, {
+    attribution: "proven_strategy",
+    counters: {
+      wallMilliseconds: measuredCounter("wallMilliseconds"),
+      computeFuel: measuredCounter("computeFuel"),
+      payloadBytes: measuredCounter("payloadBytes"),
+      stdoutBytes: measuredCounter("stdoutBytes"),
+      stderrBytes: measuredCounter("stderrBytes"),
+    },
+    memory: {
+      status: "measured",
+      peakBytes: 1,
+      cumulativePeakBytes: Math.max(prestate.cumulative.memoryBytes, 1),
+    },
+    process: {
+      status: "verified",
+      processes: 1,
+      threads: 1,
+      children: 0,
+    },
+    capabilities: {
+      status: "verified",
+      filesystem: "none",
+      network: "disabled",
+      environment: "empty",
+      shell: "disabled",
+    },
+    cancellation: {
+      status: "verified",
+      terminationRequired: false,
+      receiptPresent: false,
+      graceMilliseconds: 0,
+    },
+    accountingEvidence: {
+      status: "verified",
+      signatureVerified: true,
+      monotonic: true,
+    },
+  })
+  return createAuthenticatedRuntimeInvocationResponseV117(
     request,
     {
       kind: "success",
       value: { activationOrders: [], strategyMemory: {} },
-      trace: {
-        requestId: request.requestId,
-        invocationId: request.invocationId,
-        kernelRequestId: request.kernelRequestId,
-        method: request.method,
-        requestSha256: `sha256:${sha256Hex(
-          serializeRuntimeInvocationRequestV117(request),
-        )}`,
-        budgetProfileSha256: request.budget.profileSha256,
-        inputSha256: request.input.canonicalSha256,
-        retryIdentitySha256: request.retry.identitySha256,
-        safeCodes: ["ADAPTER_AUTHENTICATED", "PAYLOAD_CANONICAL"],
-      },
+      trace: createRuntimeInvocationTraceV117(request, [
+        "ADAPTER_AUTHENTICATED",
+        "PAYLOAD_CANONICAL",
+      ]),
     },
+    receipt,
     {
       keyId: RUNTIME_INVOCATION_V1_17_TEST_KEY_ID,
       secret: runtimeInvocationFixtureSecret,
     },
   )
+}
 
 const renderRuntimeInvocationContractSource = (
   requestSha256: string,

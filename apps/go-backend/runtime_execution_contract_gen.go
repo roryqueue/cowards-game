@@ -24,8 +24,8 @@ func runtimeInvocationContractForVersion(version string) (runtimeInvocationContr
 	case "runtime-invocation-v1.17":
 		return runtimeInvocationContractDescriptor{
 			ContractVersion: "runtime-invocation-v1.17",
-			RequestSHA256: "94da776c5ef88992d126bd85ae325518303ba56fdf8d2b5568e0e0ce28db1fd7",
-			ResponseSHA256: "d4aa58745e3d4305cc09854478dc38e31313b1e803b89f65a990bd8c52a74ebf",
+			RequestSHA256: "76d4568f6b0e7f9760f9a0f72d1140212ff28e9a1b60897126f433d4a07f61ae",
+			ResponseSHA256: "6c09087800ff06fe168255d6c2344a09700e9600e25a273f6564fe96532ff7ca",
 			Historical: false,
 			CanonicalJSON: true,
 			Current: false,
