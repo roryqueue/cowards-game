@@ -236,6 +236,7 @@ const completeExecutionEvidenceFor = (
   request: AuthenticatedRuntimeInvocationRequestV117,
   observation = completedObservation(""),
   attribution = accountingAttributionForObservation(observation),
+  canonicalSuccessFrame = false,
 ): RuntimeInvocationExecutionReceiptEvidenceV117 => {
   const prestate = request.accounting.prestate
   const limits = request.budget.methodLimit
@@ -246,7 +247,10 @@ const completeExecutionEvidenceFor = (
         ? limits.counters.computeFuel.maximum + 1
         : 1,
     payloadBytes: observation.stdout.byteLength,
-    stdoutBytes: observation.stdout.byteLength,
+    stdoutBytes:
+      canonicalSuccessFrame
+        ? observation.stdout.byteLength + 1
+        : observation.stdout.byteLength,
     stderrBytes: observation.stderr.byteLength,
   } as const
   const counter = (name: keyof typeof deltas) => ({
@@ -356,6 +360,7 @@ const runCandidateObservation = (
   request: AuthenticatedRuntimeInvocationRequestV117,
   revision: WasmWasiCandidateRevisionV117,
   observation: WasmWasiGuestObservationV117,
+  canonicalSuccessFrame = false,
 ) =>
   runWasmWasiStrategyMethodV117Sync({
     request,
@@ -374,6 +379,8 @@ const runCandidateObservation = (
         executionReceiptEvidence: completeExecutionEvidenceFor(
           request,
           observation,
+          accountingAttributionForObservation(observation),
+          canonicalSuccessFrame,
         ),
       }
     },
@@ -392,7 +399,7 @@ describe("WASM/WASI runtime v1.17 candidate host authority", () => {
     )
   })
 
-  it("treats guest stdout as raw Strategy payload and host-authenticates the outer response", () => {
+  it("frames raw guest stdout as one canonical success frame before host authentication", () => {
     const request = candidateRequest(revision)
     const response = runCandidateObservation(
       request,
@@ -400,6 +407,7 @@ describe("WASM/WASI runtime v1.17 candidate host authority", () => {
       completedObservation(
         '{"action":{"type":"TURN_TO_STONE"},"soldierMemory":null}',
       ),
+      true,
     )
     const verified = verifyRuntimeInvocationResponseV117(
       serializeRuntimeInvocationResponseV117(response),
@@ -422,6 +430,13 @@ describe("WASM/WASI runtime v1.17 candidate host authority", () => {
     })
     expect(response.accounting).toMatchObject({
       disposition: "commit",
+      receipt: {
+        counters: {
+          payloadBytes: { status: "measured", delta: 56 },
+          stdoutBytes: { status: "measured", delta: 57 },
+          stderrBytes: { status: "measured", delta: 0 },
+        },
+      },
       poststate: {
         revision: request.accounting.prestate.revision + 1,
         methodInvocations: { selectActivations: 0, soldierBrain: 1 },
@@ -532,7 +547,12 @@ describe("WASM/WASI runtime v1.17 candidate host authority", () => {
     const observation = completedObservation(
       '{"action":{"type":"TURN_TO_STONE"},"soldierMemory":null}',
     )
-    const completeEvidence = completeExecutionEvidenceFor(request, observation)
+    const completeEvidence = completeExecutionEvidenceFor(
+      request,
+      observation,
+      accountingAttributionForObservation(observation),
+      true,
+    )
     const response = runWasmWasiStrategyMethodV117Sync({
       request,
       revision,
@@ -605,7 +625,12 @@ describe("WASM/WASI runtime v1.17 candidate host authority", () => {
         '{"action":{"type":"TURN_TO_STONE"},"soldierMemory":null}',
       )
       observation.stderr = new TextEncoder().encode("fixture stderr")
-      const evidence = completeExecutionEvidenceFor(request, observation)
+      const evidence = completeExecutionEvidenceFor(
+        request,
+        observation,
+        accountingAttributionForObservation(observation),
+        true,
+      )
       const counter = evidence.counters[counterName]
       if (counter.status !== "measured") {
         throw new Error("Fixture counter must be measured")

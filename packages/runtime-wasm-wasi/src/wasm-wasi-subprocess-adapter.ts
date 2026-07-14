@@ -258,9 +258,13 @@ const authenticateCandidateOutcome = (
               observation.provenance !== "structured_host_memory_meter")
           ? "ambiguous"
           : "proven_strategy"
+    const canonicalStdoutFrameBytes =
+      outcome.kind === "success"
+        ? observation.stdout.byteLength + 1
+        : observation.stdout.byteLength
     const directlyObservedCounters = {
       payloadBytes: observation.stdout.byteLength,
-      stdoutBytes: observation.stdout.byteLength,
+      stdoutBytes: canonicalStdoutFrameBytes,
       stderrBytes: observation.stderr.byteLength,
     } as const
     const evidenceMatchesObservation =
