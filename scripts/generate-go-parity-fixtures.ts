@@ -1,8 +1,8 @@
 #!/usr/bin/env -S pnpm exec tsx
 import { createHash } from "node:crypto"
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs"
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs"
 import path from "node:path"
-import { fileURLToPath } from "node:url"
+import { fileURLToPath, pathToFileURL } from "node:url"
 import {
   MATCH_KERNEL,
   type StrategyRuntime,
@@ -32,9 +32,12 @@ import {
   ServiceHealthDtoSchema,
   assertAnalyticsPublicSummaryLeakSafe,
   assertPublicServiceDtoLeakSafe,
+  createAuthenticatedRuntimeInvocationRequestV117,
+  createAuthenticatedRuntimeInvocationResponseV117,
   serviceHealthExample,
   SERVICE_API_VERSION,
   RUNTIME_EXECUTION_SERVICE_SYSTEM_FAILURE_CODES,
+  RUNTIME_INVOCATION_V1_17_TEST_KEY_ID,
   RuntimeExecutionServiceRequestSchema,
   RuntimeExecutionServiceResponseSchema,
   RuntimeExecutionFinalStateSchema,
@@ -50,7 +53,10 @@ import {
   type StrategyInput,
   publicLadderPageExample,
   publicPlayerPageExample,
+  serializeRuntimeInvocationRequestV117,
+  serializeRuntimeInvocationResponseV117,
 } from "../packages/spec/src/index.ts"
+import { RUNTIME_ABI_V1_17 } from "../packages/spec/src/runtime-abi-v1-17.ts"
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const repoRoot = path.resolve(__dirname, "..")
@@ -62,22 +68,14 @@ const goChecksumSourcePath = path.join(
   repoRoot,
   "apps/go-backend/fixture_checksums_gen.go",
 )
-const goRuntimeExecutionContractPath = path.join(
-  repoRoot,
-  "apps/go-backend/runtime_execution_contract_gen.go",
-)
-const runtimeExecutionWireGoldenPath = path.join(
-  repoRoot,
-  "packages/spec/artifacts/runtime-execution-service-response.v1.16.wire.json",
-)
 const staleMessage = "Go parity fixtures are stale; run pnpm go:parity:generate"
 
-const createRuntimeExecutionWireGolden = (): string => {
+const createRuntimeExecutionWireGolden = (root = repoRoot): string => {
   const request = RuntimeExecutionServiceRequestSchema.parse(
     JSON.parse(
       readFileSync(
         path.join(
-          repoRoot,
+          root,
           "packages/spec/artifacts/runtime-execution-service-request.v1.16.json",
         ),
         "utf8",
@@ -190,6 +188,233 @@ const stableValue = (value: unknown): unknown => {
 
 const withTrailingNewline = (value: unknown): string =>
   `${JSON.stringify(stableValue(value), null, 2)}\n`
+
+const V1_16_REQUEST_SHA256 =
+  "5d04fa4d82eb814bb034ce9b5f1d5c80945e3d4e02c9124ca39a6670e9c0eab5"
+const V1_16_RESPONSE_SHA256 =
+  "9c870d57e0125eb80ab2ba941ecbbede8a9a775f61c0b278abec25c491374d97"
+const runtimeInvocationFixtureSecret =
+  "fixture-only:runtime-invocation-v1.17:secret"
+
+const sha256Hex = (bytes: Uint8Array | string): string =>
+  createHash("sha256").update(bytes).digest("hex")
+const fixtureHash = (character: string): `sha256:${string}` =>
+  `sha256:${character.repeat(64)}`
+
+const versionPaths = (root: string) => ({
+  v116Request: path.join(
+    root,
+    "packages/spec/artifacts/runtime-execution-service-request.v1.16.json",
+  ),
+  v116Response: path.join(
+    root,
+    "packages/spec/artifacts/runtime-execution-service-response.v1.16.wire.json",
+  ),
+  v117Request: path.join(
+    root,
+    "packages/spec/artifacts/runtime-execution-service-request.v1.17.candidate.json",
+  ),
+  v117Response: path.join(
+    root,
+    "packages/spec/artifacts/runtime-execution-service-response.v1.17.candidate.wire.json",
+  ),
+  goContract: path.join(
+    root,
+    "apps/go-backend/runtime_execution_contract_gen.go",
+  ),
+})
+
+const createCandidateRequest = () =>
+  createAuthenticatedRuntimeInvocationRequestV117(
+    {
+      requestId: "request:candidate:v1.17:0001",
+      invocationId: "invocation:candidate:v1.17:0001",
+      kernelRequestId: "kernel-request:candidate:v1.17:0001",
+      method: "selectActivations",
+      semanticTuple: {
+        rules: "cowards-rules-v1.4",
+        engine: "engine-kernel-v1.37-candidate-1",
+        runtimeAbi: "strategy-runtime-abi-v1.17",
+        chronicle: "chronicle-recorder-current-events-v1.37-candidate-1",
+        arenaCatalog: "semantic-arena-catalog-v1.37-candidate-1",
+        setPolicy: "canonical-set-policy-v1.4",
+      },
+      sourceIdentity: {
+        strategyRevisionId: "strategy-revision:candidate:v1.17:bottom",
+        originalSourceSha256: fixtureHash("b"),
+        normalizedSourceSha256: fixtureHash("c"),
+        artifactSha256: fixtureHash("d"),
+      },
+      budget: {
+        profileId: "runtime-budget-profile-v1.17-candidate",
+        wallMilliseconds: 50,
+        computeFuel: 10_000_000,
+        memoryBytes: 67_108_864,
+        outputBytes: 262_144,
+        processLimit: 1,
+        matchCumulative: RUNTIME_ABI_V1_17.budgets.matchCumulative,
+      },
+      input: { value: { cycleIndex: 0, phase: "ROUND" } },
+      retry: {
+        retryId: "retry:candidate:v1.17:0001",
+        attempt: 0,
+        previousRequestSha256: null,
+      },
+    },
+    {
+      keyId: RUNTIME_INVOCATION_V1_17_TEST_KEY_ID,
+      secret: runtimeInvocationFixtureSecret,
+    },
+  )
+
+const createCandidateResponse = (
+  request: ReturnType<typeof createCandidateRequest>,
+) =>
+  createAuthenticatedRuntimeInvocationResponseV117(
+    request,
+    {
+      kind: "success",
+      value: { activationOrders: [], strategyMemory: {} },
+      trace: {
+        requestId: request.requestId,
+        invocationId: request.invocationId,
+        kernelRequestId: request.kernelRequestId,
+        method: request.method,
+        requestSha256: `sha256:${sha256Hex(
+          serializeRuntimeInvocationRequestV117(request),
+        )}`,
+        budgetProfileSha256: request.budget.profileSha256,
+        inputSha256: request.input.canonicalSha256,
+        retryIdentitySha256: request.retry.identitySha256,
+        safeCodes: ["ADAPTER_AUTHENTICATED", "PAYLOAD_CANONICAL"],
+      },
+    },
+    {
+      keyId: RUNTIME_INVOCATION_V1_17_TEST_KEY_ID,
+      secret: runtimeInvocationFixtureSecret,
+    },
+  )
+
+const renderRuntimeInvocationContractSource = (
+  requestSha256: string,
+  responseSha256: string,
+): string =>
+  `${[
+    "// Code generated by scripts/generate-go-parity-fixtures.ts; DO NOT EDIT.",
+    "package main",
+    "",
+    "type runtimeInvocationContractDescriptor struct {",
+    "\tContractVersion string",
+    "\tRequestSHA256 string",
+    "\tResponseSHA256 string",
+    "\tHistorical bool",
+    "\tCanonicalJSON bool",
+    "\tCurrent bool",
+    "}",
+    "",
+    "var runtimeInvocationContracts = map[string]runtimeInvocationContractDescriptor{",
+    '\t"runtime-execution-service-v1.16": {',
+    '\t\tContractVersion: "runtime-execution-service-v1.16",',
+    `\t\tRequestSHA256: ${JSON.stringify(V1_16_REQUEST_SHA256)},`,
+    `\t\tResponseSHA256: ${JSON.stringify(V1_16_RESPONSE_SHA256)},`,
+    "\t\tHistorical: true,",
+    "\t\tCanonicalJSON: false,",
+    "\t\tCurrent: true,",
+    "\t},",
+    '\t"runtime-invocation-v1.17": {',
+    '\t\tContractVersion: "runtime-invocation-v1.17",',
+    `\t\tRequestSHA256: ${JSON.stringify(requestSha256)},`,
+    `\t\tResponseSHA256: ${JSON.stringify(responseSha256)},`,
+    "\t\tHistorical: false,",
+    "\t\tCanonicalJSON: true,",
+    "\t\tCurrent: false,",
+    "\t},",
+    "}",
+    "",
+    "func runtimeInvocationContractForVersion(version string) (runtimeInvocationContractDescriptor, bool) {",
+    "\tdescriptor, ok := runtimeInvocationContracts[version]",
+    "\treturn descriptor, ok",
+    "}",
+    "",
+    "var runtimeServiceContractFailureCodes = map[string]struct{}{",
+    ...RUNTIME_EXECUTION_SERVICE_SYSTEM_FAILURE_CODES.map(
+      (code) => `\t${JSON.stringify(code)}: {},`,
+    ),
+    "}",
+  ].join("\n")}\n`
+
+const createV117Artifacts = () => {
+  const request = createCandidateRequest()
+  const requestBytes = Buffer.from(
+    serializeRuntimeInvocationRequestV117(request),
+  )
+  const responseBytes = Buffer.from(
+    serializeRuntimeInvocationResponseV117(createCandidateResponse(request)),
+  )
+  return {
+    requestBytes,
+    responseBytes,
+    goSource: renderRuntimeInvocationContractSource(
+      sha256Hex(requestBytes),
+      sha256Hex(responseBytes),
+    ),
+  }
+}
+
+const verifyImmutableV116 = (root: string): void => {
+  const paths = versionPaths(root)
+  const requestBytes = readFileSync(paths.v116Request)
+  RuntimeExecutionServiceRequestSchema.parse(
+    JSON.parse(requestBytes.toString("utf8")),
+  )
+  const responseBytes = readFileSync(paths.v116Response)
+  const recomputedResponse = Buffer.from(createRuntimeExecutionWireGolden(root))
+  if (
+    sha256Hex(requestBytes) !== V1_16_REQUEST_SHA256 ||
+    sha256Hex(responseBytes) !== V1_16_RESPONSE_SHA256 ||
+    !responseBytes.equals(recomputedResponse)
+  ) {
+    throw new Error("Immutable v1.16 runtime execution fixture bytes changed")
+  }
+  console.log(
+    `[GO_PARITY:v1.16] request=${V1_16_REQUEST_SHA256} response=${V1_16_RESPONSE_SHA256} immutable=true`,
+  )
+}
+
+const writeV117Artifacts = (root: string): void => {
+  const paths = versionPaths(root)
+  const artifacts = createV117Artifacts()
+  for (const target of [
+    paths.v117Request,
+    paths.v117Response,
+    paths.goContract,
+  ]) {
+    mkdirSync(path.dirname(target), { recursive: true })
+  }
+  writeFileSync(paths.v117Request, artifacts.requestBytes)
+  writeFileSync(paths.v117Response, artifacts.responseBytes)
+  writeFileSync(paths.goContract, artifacts.goSource)
+}
+
+const verifyV117Artifacts = (root: string): void => {
+  const paths = versionPaths(root)
+  const targets = [paths.v117Request, paths.v117Response, paths.goContract]
+  if (!targets.some((target) => existsSync(target))) return
+  const artifacts = createV117Artifacts()
+  const expected = new Map<string, Uint8Array | string>([
+    [paths.v117Request, artifacts.requestBytes],
+    [paths.v117Response, artifacts.responseBytes],
+    [paths.goContract, artifacts.goSource],
+  ])
+  for (const [target, bytes] of expected) {
+    if (
+      !existsSync(target) ||
+      !readFileSync(target).equals(Buffer.from(bytes))
+    ) {
+      throw new Error(`${path.basename(target)} is stale`)
+    }
+  }
+}
 
 const runtime = {
   abiVersion: "strategy-runtime-abi-v1.14",
@@ -584,147 +809,148 @@ const forbiddenError: ServiceErrorDto = {
   publicSafe: true,
 }
 
-const serviceFixtures = await createServiceFixtures()
-const serviceFixturePayloads = {
-  "health.json": ServiceHealthDtoSchema.parse(serviceHealthExample),
-  "public-player-page.json": serviceFixtures.publicPlayerPage,
-  "public-ladder-page.json": serviceFixtures.publicLadderPage,
-  "public-match-set-summary.json": PublicMatchSetSummaryServiceDtoSchema.parse(
-    serviceFixtures.publicMatchSetSummary,
-  ),
-  "degraded-match-set-summary.json":
-    PublicMatchSetSummaryServiceDtoSchema.parse(
-      serviceFixtures.degradedMatchSetSummary,
+const runServiceFixtureGenerator = async (
+  checkMode: boolean,
+): Promise<void> => {
+  const serviceFixtures = await createServiceFixtures()
+  const serviceFixturePayloads = {
+    "health.json": ServiceHealthDtoSchema.parse(serviceHealthExample),
+    "public-player-page.json": serviceFixtures.publicPlayerPage,
+    "public-ladder-page.json": serviceFixtures.publicLadderPage,
+    "public-match-set-summary.json":
+      PublicMatchSetSummaryServiceDtoSchema.parse(
+        serviceFixtures.publicMatchSetSummary,
+      ),
+    "degraded-match-set-summary.json":
+      PublicMatchSetSummaryServiceDtoSchema.parse(
+        serviceFixtures.degradedMatchSetSummary,
+      ),
+    "public-replay-metadata.json": PublicReplayMetadataServiceDtoSchema.parse(
+      serviceFixtures.publicReplayMetadata,
     ),
-  "public-replay-metadata.json": PublicReplayMetadataServiceDtoSchema.parse(
-    serviceFixtures.publicReplayMetadata,
-  ),
-  "public-replay-evidence.json": PublicReplayEvidenceServiceDtoSchema.parse(
-    serviceFixtures.publicReplayEvidence,
-  ),
-  "public-strategy-page.json": serviceFixtures.publicStrategyPage,
-  "analytics-run-summary.json": serviceFixtures.analyticsRunSummary,
-  "not-found-error.json": ServiceErrorDtoSchema.parse(notFoundError),
-  "forbidden-error.json": ServiceErrorDtoSchema.parse(forbiddenError),
-  "route-manifest.json": routeManifest,
-} as const
+    "public-replay-evidence.json": PublicReplayEvidenceServiceDtoSchema.parse(
+      serviceFixtures.publicReplayEvidence,
+    ),
+    "public-strategy-page.json": serviceFixtures.publicStrategyPage,
+    "analytics-run-summary.json": serviceFixtures.analyticsRunSummary,
+    "not-found-error.json": ServiceErrorDtoSchema.parse(notFoundError),
+    "forbidden-error.json": ServiceErrorDtoSchema.parse(forbiddenError),
+    "route-manifest.json": routeManifest,
+  } as const
 
-const hashFixture = (value: unknown): string =>
-  `sha256:${createHash("sha256").update(withTrailingNewline(value)).digest("hex")}`
+  const hashFixture = (value: unknown): string =>
+    `sha256:${createHash("sha256").update(withTrailingNewline(value)).digest("hex")}`
 
-const fixtureManifest = {
-  schemaVersion: "go-parity-fixtures-v1.8",
-  files: Object.fromEntries(
-    Object.entries(serviceFixturePayloads)
-      .sort(([left], [right]) => left.localeCompare(right))
-      .map(([fileName, value]) => [fileName, hashFixture(value)]),
-  ),
-} as const
+  const fixtureManifest = {
+    schemaVersion: "go-parity-fixtures-v1.8",
+    files: Object.fromEntries(
+      Object.entries(serviceFixturePayloads)
+        .sort(([left], [right]) => left.localeCompare(right))
+        .map(([fileName, value]) => [fileName, hashFixture(value)]),
+    ),
+  } as const
 
-const goChecksumEntries = Object.entries(fixtureManifest.files)
-const goChecksumKeyWidth = Math.max(
-  ...goChecksumEntries.map(([fileName]) => JSON.stringify(fileName).length),
-)
-const goChecksumSource = `${[
-  "// Code generated by scripts/generate-go-parity-fixtures.ts; DO NOT EDIT.",
-  "package main",
-  "",
-  "var expectedFixtureChecksumManifest = fixtureChecksumManifest{",
-  `\tSchemaVersion: ${JSON.stringify(fixtureManifest.schemaVersion)},`,
-  "\tFiles: map[string]string{",
-  ...goChecksumEntries.map(
-    ([fileName, checksum]) =>
-      `\t\t${JSON.stringify(fileName).padEnd(goChecksumKeyWidth)}: ${JSON.stringify(checksum)},`,
-  ),
-  "\t},",
-  "}",
-].join("\n")}\n`
+  const goChecksumEntries = Object.entries(fixtureManifest.files)
+  const goChecksumKeyWidth = Math.max(
+    ...goChecksumEntries.map(([fileName]) => JSON.stringify(fileName).length),
+  )
+  const goChecksumSource = `${[
+    "// Code generated by scripts/generate-go-parity-fixtures.ts; DO NOT EDIT.",
+    "package main",
+    "",
+    "var expectedFixtureChecksumManifest = fixtureChecksumManifest{",
+    `\tSchemaVersion: ${JSON.stringify(fixtureManifest.schemaVersion)},`,
+    "\tFiles: map[string]string{",
+    ...goChecksumEntries.map(
+      ([fileName, checksum]) =>
+        `\t\t${JSON.stringify(fileName).padEnd(goChecksumKeyWidth)}: ${JSON.stringify(checksum)},`,
+    ),
+    "\t},",
+    "}",
+  ].join("\n")}\n`
 
-const goRuntimeExecutionContractSource = `${[
-  "// Code generated by scripts/generate-go-parity-fixtures.ts; DO NOT EDIT.",
-  "package main",
-  "",
-  "var runtimeServiceContractFailureCodes = map[string]struct{}{",
-  ...RUNTIME_EXECUTION_SERVICE_SYSTEM_FAILURE_CODES.map(
-    (code) => `\t${JSON.stringify(code)}: {},`,
-  ),
-  "}",
-].join("\n")}\n`
+  const fixtures = {
+    ...serviceFixturePayloads,
+    "fixture-manifest.json": fixtureManifest,
+  } as const
 
-const fixtures = {
-  ...serviceFixturePayloads,
-  "fixture-manifest.json": fixtureManifest,
-} as const
-
-for (const [fileName, value] of Object.entries(fixtures)) {
-  if (
-    fileName === "route-manifest.json" ||
-    fileName === "fixture-manifest.json"
-  ) {
-    continue
+  for (const [fileName, value] of Object.entries(fixtures)) {
+    if (
+      fileName === "route-manifest.json" ||
+      fileName === "fixture-manifest.json"
+    ) {
+      continue
+    }
+    assertPublicServiceDtoLeakSafe(value)
   }
-  assertPublicServiceDtoLeakSafe(value)
-}
 
-const checkMode = process.argv.includes("--check")
-const runtimeExecutionWireGolden = createRuntimeExecutionWireGolden()
-mkdirSync(fixtureDir, { recursive: true })
+  mkdirSync(fixtureDir, { recursive: true })
 
-let stale = false
-for (const [fileName, value] of Object.entries(fixtures)) {
-  const target = path.join(fixtureDir, fileName)
-  const next = withTrailingNewline(value)
+  let stale = false
+  for (const [fileName, value] of Object.entries(fixtures)) {
+    const target = path.join(fixtureDir, fileName)
+    const next = withTrailingNewline(value)
+    if (checkMode) {
+      let current = ""
+      try {
+        current = readFileSync(target, "utf8")
+      } catch {
+        stale = true
+        continue
+      }
+      if (current !== next) {
+        stale = true
+      }
+      continue
+    }
+    writeFileSync(target, next)
+  }
+
   if (checkMode) {
     let current = ""
     try {
-      current = readFileSync(target, "utf8")
+      current = readFileSync(goChecksumSourcePath, "utf8")
     } catch {
       stale = true
-      continue
     }
-    if (current !== next) {
+    if (current !== goChecksumSource) {
       stale = true
     }
-    continue
+  } else {
+    writeFileSync(goChecksumSourcePath, goChecksumSource)
   }
-  writeFileSync(target, next)
+
+  if (stale) {
+    throw new Error(staleMessage)
+  }
 }
 
-if (checkMode) {
-  let current = ""
-  try {
-    current = readFileSync(goChecksumSourcePath, "utf8")
-  } catch {
-    stale = true
+export const main = async (args = process.argv.slice(2)): Promise<void> => {
+  if (args.includes("--write-v1.16")) {
+    throw new Error("Refusing to rewrite immutable v1.16 artifacts")
   }
-  if (current !== goChecksumSource) {
-    stale = true
+  const hasRoot = args.includes("--root")
+  const rootIndex = args.indexOf("--root")
+  if (hasRoot && (rootIndex < 0 || !args[rootIndex + 1])) {
+    throw new Error("--root requires a path")
   }
-  try {
-    current = readFileSync(goRuntimeExecutionContractPath, "utf8")
-  } catch {
-    stale = true
-  }
-  if (current !== goRuntimeExecutionContractSource) {
-    stale = true
-  }
-  try {
-    current = readFileSync(runtimeExecutionWireGoldenPath, "utf8")
-  } catch {
-    stale = true
-  }
-  if (current !== runtimeExecutionWireGolden) {
-    stale = true
-  }
-} else {
-  writeFileSync(goChecksumSourcePath, goChecksumSource)
-  writeFileSync(
-    goRuntimeExecutionContractPath,
-    goRuntimeExecutionContractSource,
-  )
-  writeFileSync(runtimeExecutionWireGoldenPath, runtimeExecutionWireGolden)
+  const root = hasRoot ? path.resolve(args[rootIndex + 1]!) : repoRoot
+  const versionsOnly = args.includes("--versions-only")
+  const writeV117 = args.includes("--write-v1.17")
+  const checkMode = args.includes("--check")
+
+  verifyImmutableV116(root)
+  if (writeV117) writeV117Artifacts(root)
+  verifyV117Artifacts(root)
+  if (!versionsOnly) await runServiceFixtureGenerator(checkMode)
 }
 
-if (stale) {
-  throw new Error(staleMessage)
+if (
+  process.argv[1] &&
+  import.meta.url === pathToFileURL(process.argv[1]).href
+) {
+  main().catch((error: unknown) => {
+    console.error(error instanceof Error ? error.message : error)
+    process.exitCode = 1
+  })
 }

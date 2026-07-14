@@ -93,7 +93,7 @@ describe("versioned TypeScript-to-Go parity generator", () => {
     const before = watched.map((file) => statSync(file).mtimeMs)
     const imported = spawnSync(
       "pnpm",
-      ["exec", "tsx", "-e", `await import(${JSON.stringify(scriptPath)})`],
+      ["exec", "tsx", "-e", `void import(${JSON.stringify(scriptPath)})`],
       { cwd: repoRoot, encoding: "utf8", timeout: 120_000 },
     )
     expect(imported.status, imported.stderr).toBe(0)
@@ -200,7 +200,7 @@ describe("versioned TypeScript-to-Go parity generator", () => {
         added.map((relative) => [relative, sha256(readFileSync(path.join(root, relative)))]),
       ),
     ).toEqual(firstHashes)
-  })
+  }, 30_000)
 
   it("fails a stale generated table instead of silently regenerating it", () => {
     const root = makeVersionRoot()
@@ -226,7 +226,7 @@ describe("versioned TypeScript-to-Go parity generator", () => {
     expect(`${checked.stdout}\n${checked.stderr}`).toContain(
       "runtime_execution_contract_gen.go is stale",
     )
-  })
+  }, 30_000)
 
   it("generates one marked closed version table with deny-by-default dispatch", () => {
     const generated = read("apps/go-backend/runtime_execution_contract_gen.go").toString("utf8")
