@@ -178,7 +178,53 @@ Plans:
   4. Evidence binds explicit source-byte, normalized-byte, normalization, line-ending, artifact, manifest, provider, runtime, toolchain, ABI, policy, corpus, and evidence identities, with exact pins for counted use.
   5. TypeScript, Python, Rust, and Zig expose the same ABI envelope, resource-budget units, measurement boundaries, and failure semantics.
 
-**Plans:** TBD
+**Plans:** 14 plans
+
+**Wave 1 — calibration and contract freeze**
+
+- [ ] 258-01-PLAN.md — Calibrate and freeze exact JSON, budget, ownership, version, and identity limits.
+
+**Wave 2 — shared raw corpus**
+
+- [ ] 258-02-PLAN.md — Generate the byte-exact positive/negative corpus and named TypeScript/Go RED consumers.
+
+**Wave 3 — bounded codec primitives**
+
+- [ ] 258-03-PLAN.md — Implement the iterative raw scanner/parser with typed bounded failures.
+- [ ] 258-04-PLAN.md — Implement canonical encoding, domain-framed hashes, and the identity manifest.
+
+**Wave 4 — boundary and ABI integration**
+
+- [ ] 258-05-PLAN.md — Integrate bounded JSON into spec/service boundaries and the permanent deep audit.
+- [ ] 258-06-PLAN.md — Define the exclusive three-way invocation ABI and adapter-owned envelope.
+
+**Wave 5 — transition ownership**
+
+- [ ] 258-07-PLAN.md — Enforce engine-only penalties, no-mutation system failure, and identical system retry.
+
+**Wave 6 — language adapters**
+
+- [ ] 258-08-PLAN.md — Migrate TypeScript worker/subprocess/container paths to the common raw ABI.
+- [ ] 258-09-PLAN.md — Migrate Python and preserve original-versus-normalized source identity.
+- [ ] 258-10-PLAN.md — Migrate Rust/Zig/WASM with host-owned envelopes and exact toolchain/settings identity.
+
+**Wave 7 — Go and persistence**
+
+- [ ] 258-11-PLAN.md — Prove Go canonical parity, signed retry binding, rollback, and no mutation.
+
+**Wave 8 — exact budget posture**
+
+- [ ] 258-12-PLAN.md — Enforce runtime/preflight ledgers and publish fail-closed cross-lane capabilities.
+
+**Wave 9 — evidence graph and successor receipt**
+
+- [ ] 258-13-PLAN.md — Close the identity DAG and mint v1.17 while preserving immutable v1.16 dispatch.
+
+**Wave 10 — evaluator and atomic activation**
+
+- [ ] 258-14-PLAN.md — Run the integrated evaluator and prove privacy-safe, rollback-safe current activation.
+
+**Cross-cutting constraints:** no host JSON conversion before raw duplicate/limit checks; no adapter or transport gameplay penalties; no mutation on system failure; no manufactured legacy source bytes; no false resource-meter equivalence; no v1.16 serializer rewrite; no production trusted producer before Phase 259.
 
 ### Phase 259: Executable Four-Language and Chronicle Conformance
 
@@ -246,7 +292,7 @@ Cycle-cap, inward-start, facing-only MOVE, reversal-history, attacker-facing/Adv
 |-------|----------------|--------|-----------|
 | 256. Counted Safety and Canonical Authority | 19/19 | Complete    | 2026-07-13 |
 | 257. Canonical Transition Kernel and v1.4 Semantic Integrity | 22/22 | Complete | 2026-07-13 |
-| 258. Canonical JSON, Failure Semantics, and Artifact Identity | 0/TBD | Not started | - |
+| 258. Canonical JSON, Failure Semantics, and Artifact Identity | 0/14 | Planned | - |
 | 259. Executable Four-Language and Chronicle Conformance | 0/TBD | Not started | - |
 | 260. Truthful Strategy Inputs, Arena Authority, and Set Fairness | 0/TBD | Not started | - |
 | 261. Integrated Service Proof, Drift Guards, and Release | 0/TBD | Not started | - |

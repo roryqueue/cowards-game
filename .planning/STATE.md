@@ -4,15 +4,15 @@ milestone: v1.37
 milestone_name: Rules Integrity and Strategy Evaluation Foundations — ACTIVE
 current_phase: 258
 current_phase_name: canonical-json-failure-semantics-and-artifact-identity
-status: planning
-stopped_at: Phase 258 research complete; ready for plan generation
-last_updated: "2026-07-14T02:06:04.000Z"
+status: planned
+stopped_at: Phase 258 planned with 14 plans across 10 waves; ready for execution
+last_updated: "2026-07-14T02:32:08.000Z"
 last_activity: 2026-07-13
-last_activity_desc: Phase 258 research revalidated against completed Phase 257 cutover
+last_activity_desc: Phase 258 implementation plans and validation strategy completed
 progress:
   total_phases: 6
   completed_phases: 2
-  total_plans: 41
+  total_plans: 55
   completed_plans: 41
   percent: 33
 ---
@@ -24,14 +24,14 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-07-12)
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
-**Current focus:** Phase 258 — Canonical JSON, Failure Semantics, and Artifact Identity planning
+**Current focus:** Phase 258 — Canonical JSON, Failure Semantics, and Artifact Identity execution
 
 ## Current Position
 
-Phase: 258 (canonical-json-failure-semantics-and-artifact-identity) — RESEARCH COMPLETE
-Plan: Not started
-Status: Research complete; ready for plan generation
-Last activity: 2026-07-13 — Phase 258 research revalidated against completed Phase 257 cutover
+Phase: 258 (canonical-json-failure-semantics-and-artifact-identity) — PLANNED
+Plan: 0 of 14
+Status: Planned across 10 dependency-safe waves; ready for execution
+Last activity: 2026-07-13 — Phase 258 implementation plans and validation strategy completed
 
 Progress: [███░░░░░░░] 33%
 
@@ -61,9 +61,9 @@ Progress: [███░░░░░░░] 33%
 
 **Resume file:** None
 
-Last session: 2026-07-14T02:06:04.000Z
-Stopped at: Phase 258 research complete; ready for plan generation
-Next command: `$gsd-plan-phase 258`
+Last session: 2026-07-14T02:32:08.000Z
+Stopped at: Phase 258 planned with 14 plans across 10 waves; ready for execution
+Next command: `$gsd-execute-phase 258`
 
 ## Performance Metrics
 
