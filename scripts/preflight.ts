@@ -304,19 +304,21 @@ export const runGoMatchJobOnce = async (
   matchIds: readonly string[],
   fetchImplementation: typeof globalThis.fetch = globalThis.fetch,
 ): Promise<string> => {
-  if (!options.goBackendUrl || !options.goBackendInternalToken) {
+  const goBackendOrigin = normalizeGoBackendOrigin(options.goBackendUrl)
+  const internalToken = options.goBackendInternalToken?.trim()
+  if (!goBackendOrigin || !internalToken) {
     throw safePreflightError(
       "Go-owned execution requires COWARDS_GO_BACKEND_URL and COWARDS_GO_BACKEND_INTERNAL_TOKEN.",
     )
   }
   const response = await safeHttpFetch(
-    new URL("/internal/match-jobs/run-once", options.goBackendUrl),
+    new URL("/internal/match-jobs/run-once", goBackendOrigin),
     {
       method: "POST",
       body: JSON.stringify({ matchIds }),
       headers: {
         "Content-Type": "application/json",
-        "X-Cowards-Internal-Token": options.goBackendInternalToken,
+        "X-Cowards-Internal-Token": internalToken,
       },
     },
     fetchImplementation,
