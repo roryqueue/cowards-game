@@ -25,6 +25,7 @@ import {
   validateZigStrategySource,
   zigReadinessEvidence,
   collectWasmWasiCandidateIdentityV117,
+  isWasmWasiSourceIdentityV117,
   resolveWasmWasiAdapterBuildFilesV117,
   type WasmWasiCandidateRevisionV117,
 } from "./validation.js"
@@ -793,6 +794,20 @@ describe("WASM/WASI runtime v1.17 exact Rust/Zig identity", () => {
       sourceIdentity: (built as unknown as { sourceIdentity: unknown })
         .sourceIdentity,
     })
+  })
+
+  it("rejects canonical source attestations with unknown top-level or nested keys", () => {
+    const identity =
+      buildRustWasmCandidateRevisionV117(candidateRustSource).sourceIdentity
+    expect(isWasmWasiSourceIdentityV117({ ...identity, extra: true })).toBe(
+      false,
+    )
+    expect(
+      isWasmWasiSourceIdentityV117({
+        ...identity,
+        lineEndings: { ...identity.lineEndings, extra: 1 },
+      }),
+    ).toBe(false)
   })
 
   it("rejects coherent caller relabeling when artifact bytes retain the compiled source attestation", () => {

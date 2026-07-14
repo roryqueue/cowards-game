@@ -265,7 +265,7 @@ export const wasmWasiSourceIdentityFingerprintV117 = (
     identity as unknown as JsonValue,
   )}`
 
-const isWasmWasiSourceIdentityV117 = (
+export const isWasmWasiSourceIdentityV117 = (
   value: unknown,
 ): value is WasmWasiSourceIdentityV117 => {
   if (typeof value !== "object" || value === null) return false
