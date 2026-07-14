@@ -91,6 +91,7 @@ const observedEvidenceInput = (
 ): RuntimePreflightObservedEvidenceInputV117 => {
   const cumulative = candidate.accounting.prestate.cumulative
   return {
+    operationResult: { kind: "valid" },
     attribution: "proven_strategy",
     counters: {
       wallMilliseconds: {
@@ -555,6 +556,160 @@ describe("candidate v1.17 authenticated preflight contract", () => {
         disposition: "commit",
         poststate: { revision: 1 },
       },
+    })
+  })
+
+  it.each([-1, 1])(
+    "keeps input-byte accounting drift (%s) no-commit",
+    (difference) => {
+      const candidate = request()
+      const base = observedEvidenceInput(candidate)
+      const inputBytes = candidate.input.byteLength + difference
+      const evidence = createRuntimePreflightObservedEvidenceV117(candidate, {
+        ...base,
+        counters: {
+          ...base.counters,
+          inputBytes: {
+            status: "measured",
+            delta: inputBytes,
+            cumulative:
+              candidate.accounting.prestate.cumulative.inputBytes + inputBytes,
+          },
+        },
+      })
+      const receipt = createAuthenticatedRuntimePreflightReceiptV117(
+        candidate,
+        evidence,
+        signingIdentity,
+      )
+      expect(receipt).toMatchObject({
+        outcome: {
+          kind: "system_failure",
+          code: "METER_ACCOUNTING_INCONSISTENT",
+        },
+        accounting: {
+          disposition: "no_commit",
+          poststate: candidate.accounting.prestate,
+        },
+      })
+      expect(
+        verifyRuntimePreflightReceiptV117(
+          serializeRuntimePreflightReceiptV117(receipt),
+          candidate,
+          signingIdentity,
+        ),
+      ).toMatchObject({ ok: true })
+    },
+  )
+
+  it("executes frozen invalid-input and infrastructure ownership", () => {
+    const candidate = request()
+    const invalidEvidence = createRuntimePreflightObservedEvidenceV117(
+      candidate,
+      observedEvidenceInput(candidate, {
+        operationResult: {
+          kind: "invalid_input",
+          code: "PREFLIGHT_INPUT_INVALID",
+          owner: "submission_violation",
+        },
+      }),
+    )
+    const invalid = createAuthenticatedRuntimePreflightReceiptV117(
+      candidate,
+      invalidEvidence,
+      signingIdentity,
+    )
+    expect(invalid).toMatchObject({
+      outcome: {
+        kind: "submission_violation",
+        code: "PREFLIGHT_INPUT_INVALID",
+      },
+      accounting: { disposition: "commit", poststate: { revision: 1 } },
+    })
+    expect(
+      debitRuntimeAbiV117Ledger(
+        invalid.accounting.poststate,
+        invalid.accounting.receipt,
+      ),
+    ).toMatchObject({
+      kind: "success",
+      committed: false,
+      replayed: true,
+      ledger: invalid.accounting.poststate,
+    })
+
+    const unavailableEvidence = createRuntimePreflightObservedEvidenceV117(
+      candidate,
+      observedEvidenceInput(candidate, {
+        operationResult: {
+          kind: "infrastructure_failure",
+          code: "PREFLIGHT_INFRASTRUCTURE_UNAVAILABLE",
+          owner: "system_failure",
+        },
+      }),
+    )
+    const unavailable = createAuthenticatedRuntimePreflightReceiptV117(
+      candidate,
+      unavailableEvidence,
+      signingIdentity,
+    )
+    expect(unavailable).toMatchObject({
+      outcome: {
+        kind: "system_failure",
+        code: "PREFLIGHT_INFRASTRUCTURE_UNAVAILABLE",
+      },
+      accounting: {
+        disposition: "no_commit",
+        poststate: candidate.accounting.prestate,
+      },
+    })
+  })
+
+  it("rejects operation-result ownership tampering and rebinding", () => {
+    const candidate = request()
+    expect(() =>
+      createRuntimePreflightObservedEvidenceV117(
+        candidate,
+        observedEvidenceInput(candidate, {
+          operationResult: {
+            kind: "invalid_input",
+            code: "PREFLIGHT_INPUT_INVALID",
+            owner: "system_failure",
+          },
+        }),
+      ),
+    ).toThrow()
+
+    const evidence = createRuntimePreflightObservedEvidenceV117(
+      candidate,
+      observedEvidenceInput(candidate, {
+        operationResult: {
+          kind: "invalid_input",
+          code: "PREFLIGHT_INPUT_INVALID",
+          owner: "submission_violation",
+        },
+      }),
+    )
+    const receipt = createAuthenticatedRuntimePreflightReceiptV117(
+      candidate,
+      evidence,
+      signingIdentity,
+    )
+    const draft = globalThis.structuredClone(receipt) as Record<string, any>
+    draft.evidence.operationResult = { kind: "valid" }
+    const tampered = canonicalBytes(
+      resign(draft as typeof receipt, "receipt") as unknown as JsonValue,
+    )
+    expect(
+      verifyRuntimePreflightReceiptV117(
+        tampered,
+        candidate,
+        signingIdentity,
+      ),
+    ).toEqual({
+      ok: false,
+      disposition: "no_commit",
+      failure: { code: "BINDING_MISMATCH" },
     })
   })
 

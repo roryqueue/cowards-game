@@ -626,7 +626,48 @@ describe("runtime ABI v1.17 pure budget ledger", () => {
     })
   })
 
-  it("treats process, capability, cancellation and accounting predicate drift as host enforcement failure", async () => {
+  it("commits proven execution process excess but keeps host excess no-commit", async () => {
+    const runtimeAbi = await subject()
+    const initial = runtimeAbi.createRuntimeAbiV117ExecutionLedger()
+    const exactReceipt = executionReceipt(initial)
+
+    expect(
+      runtimeAbi.debitRuntimeAbiV117Ledger(initial, exactReceipt),
+    ).toMatchObject({ kind: "success", committed: true })
+
+    for (const process of [
+      { ...exactReceipt.process, processes: 2 },
+      { ...exactReceipt.process, threads: 2 },
+      { ...exactReceipt.process, children: 1 },
+    ]) {
+      const proven = runtimeAbi.debitRuntimeAbiV117Ledger(initial, {
+        ...exactReceipt,
+        process,
+      })
+      expect(proven).toMatchObject({
+        kind: "player_violation",
+        committed: true,
+        violation: { dimensions: ["invocation.process"] },
+        ledger: { revision: 1 },
+      })
+      const host = runtimeAbi.debitRuntimeAbiV117Ledger(initial, {
+        ...exactReceipt,
+        attribution: "host",
+        process,
+      })
+      expect(host).toMatchObject({
+        kind: "system_failure",
+        committed: false,
+        failure: {
+          code: "HOST_RESOURCE_EXCESS",
+          dimension: "invocation.process",
+        },
+      })
+      expect(host.ledger).toBe(initial)
+    }
+  })
+
+  it("treats capability, cancellation and accounting predicate drift as host enforcement failure", async () => {
     const runtimeAbi = await subject()
     const initial = runtimeAbi.createRuntimeAbiV117ExecutionLedger()
     const exactReceipt = executionReceipt(initial)
@@ -642,18 +683,6 @@ describe("runtime ABI v1.17 pure budget ledger", () => {
     expect(exact.kind).toBe("success")
 
     for (const [dimension, receipt] of [
-      [
-        "invocation.process",
-        { ...exactReceipt, process: { ...exactReceipt.process, processes: 2 } },
-      ],
-      [
-        "invocation.process",
-        { ...exactReceipt, process: { ...exactReceipt.process, threads: 2 } },
-      ],
-      [
-        "invocation.process",
-        { ...exactReceipt, process: { ...exactReceipt.process, children: 1 } },
-      ],
       [
         "invocation.capabilities",
         {
@@ -998,18 +1027,6 @@ describe("runtime ABI v1.17 pure budget ledger", () => {
 
     for (const [dimension, receipt] of [
       [
-        "preflight.compilation.process",
-        { ...exactReceipt, process: { ...exactReceipt.process, processes: 2 } },
-      ],
-      [
-        "preflight.compilation.process",
-        { ...exactReceipt, process: { ...exactReceipt.process, threads: 9 } },
-      ],
-      [
-        "preflight.compilation.process",
-        { ...exactReceipt, process: { ...exactReceipt.process, children: 1 } },
-      ],
-      [
         "preflight.compilation.capabilities",
         {
           ...exactReceipt,
@@ -1034,6 +1051,47 @@ describe("runtime ABI v1.17 pure budget ledger", () => {
         failure: { dimension },
       })
       expect(result.ledger).toBe(initial)
+    }
+  })
+
+  it("commits proven preflight process excess but keeps host excess no-commit", async () => {
+    const runtimeAbi = await subject()
+    const initial =
+      runtimeAbi.createRuntimeAbiV117PreflightLedger("compilation")
+    const exactReceipt = preflightReceipt(initial)
+    expect(
+      runtimeAbi.debitRuntimeAbiV117Ledger(initial, exactReceipt),
+    ).toMatchObject({ kind: "success", committed: true })
+
+    for (const process of [
+      { ...exactReceipt.process, processes: 2 },
+      { ...exactReceipt.process, threads: 9 },
+      { ...exactReceipt.process, children: 1 },
+    ]) {
+      const proven = runtimeAbi.debitRuntimeAbiV117Ledger(initial, {
+        ...exactReceipt,
+        process,
+      })
+      expect(proven).toMatchObject({
+        kind: "player_violation",
+        committed: true,
+        violation: { dimensions: ["preflight.compilation.process"] },
+        ledger: { revision: 1 },
+      })
+      const host = runtimeAbi.debitRuntimeAbiV117Ledger(initial, {
+        ...exactReceipt,
+        attribution: "host",
+        process,
+      })
+      expect(host).toMatchObject({
+        kind: "system_failure",
+        committed: false,
+        failure: {
+          code: "HOST_RESOURCE_EXCESS",
+          dimension: "preflight.compilation.process",
+        },
+      })
+      expect(host.ledger).toBe(initial)
     }
   })
 
