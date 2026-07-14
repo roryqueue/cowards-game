@@ -8,6 +8,7 @@ import {
   runPythonStrategyMethodSync,
 } from "./python-subprocess-adapter.js"
 import {
+  buildPythonSourceIdentityV117,
   buildPythonStrategyRevision,
   validatePythonStrategySource,
 } from "./validation.js"
@@ -28,6 +29,19 @@ def soldier_brain(input):
 `
 
 describe("Python subprocess Strategy provider ABI", () => {
+  it("binds original CRLF bytes separately from the normalized executable artifact", () => {
+    const source = `${pythonSource.trim()}\r\n# exact CRLF\r\n`
+    const identity = buildPythonSourceIdentityV117(source)
+    const revision = buildPythonStrategyRevision({ source })
+    const artifact = revision.metadata.sourceArtifact!
+
+    expect(identity.originalSourceSha256).not.toBe(identity.normalizedSourceSha256)
+    expect(Buffer.from(artifact.bytesBase64!, "base64").toString("utf8")).toBe(
+      identity.normalizedSource,
+    )
+    expect(identity.lineEndings).toEqual({ kind: "crlf", lf: 0, crlf: 2, cr: 0 })
+    expect(identity.hasFinalNewline).toBe(true)
+  })
   it("runs selectActivations through the v1.7 JSON ABI", async () => {
     const response = await runPythonStrategyMethod({
       sourceText: pythonSource,

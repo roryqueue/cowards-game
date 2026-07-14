@@ -39,7 +39,30 @@ describe("migrations", () => {
     expect(names).toContain("0012_integrity_authority.sql")
     expect(names).toContain("0013_runtime_evidence_authority_publication.sql")
     expect(names).toContain("0014_matchset_authority_install_receipts.sql")
+    expect(names).toContain("0018_strategy_revision_source_identity.sql")
     expect(names).toEqual([...names].sort())
+  })
+
+  it("defines an all-or-none immutable source identity v2 group without legacy backfill", async () => {
+    const sql = await readFile(
+      new URL("0018_strategy_revision_source_identity.sql", migrationsDirectory),
+      "utf8",
+    )
+    for (const column of [
+      "source_identity_version",
+      "original_source_hash",
+      "original_source_bytes",
+      "normalized_source_hash",
+      "normalized_source_bytes",
+      "source_normalization_policy",
+      "source_line_endings",
+      "source_has_final_newline",
+    ]) {
+      expect(sql).toContain(column)
+    }
+    expect(sql).toContain("num_nonnulls")
+    expect(sql).toContain("source identity v2 is immutable")
+    expect(sql).not.toMatch(/update\s+strategy_revisions\s+set\s+source_identity_version/iu)
   })
 
   it("defines report deduplication and append-only governance audit", async () => {
