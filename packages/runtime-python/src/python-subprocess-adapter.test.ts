@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { Buffer } from "node:buffer"
+import { createHash } from "node:crypto"
 import {
   admitPythonCandidateHostResponseV117,
   createPythonCandidateInvocationAdapterV117,
@@ -309,6 +310,71 @@ describe("Python subprocess Strategy provider ABI", () => {
     }
   })
 
+  it("rejects lossy or non-canonical artifact bytes before host invocation", () => {
+    const source = `${pythonSource}\n# replacement: \ufffd\n`
+    const revision = buildPythonStrategyRevision({ source })
+    const artifact = revision.metadata.sourceArtifact!
+    const validBytes = Buffer.from(artifact.bytesBase64!, "base64")
+    const replacement = Buffer.from("\ufffd", "utf8")
+    const offset = validBytes.indexOf(replacement)
+    expect(offset).toBeGreaterThanOrEqual(0)
+    const invalidBytes = Buffer.concat([
+      validBytes.subarray(0, offset),
+      Buffer.from([0xff]),
+      validBytes.subarray(offset + replacement.byteLength),
+    ])
+    const invalidUtf8 = {
+      ...revision,
+      metadata: {
+        ...revision.metadata,
+        sourceArtifact: {
+          ...artifact,
+          hash: createHash("sha256").update(invalidBytes).digest("hex"),
+          bytes: invalidBytes.byteLength,
+          bytesBase64: invalidBytes.toString("base64"),
+        },
+      },
+    }
+    const nonCanonicalBase64 = {
+      ...revision,
+      metadata: {
+        ...revision.metadata,
+        sourceArtifact: {
+          ...artifact,
+          bytesBase64: `${artifact.bytesBase64!}\n`,
+        },
+      },
+    }
+
+    for (const forged of [invalidUtf8, nonCanonicalBase64]) {
+      const request = candidateRequest(forged)
+      let hostCalled = false
+      const response = verifyRuntimeInvocationResponseV117(
+        createPythonCandidateInvocationAdapterV117({
+          revision: forged,
+          identity: candidateIdentity,
+          hostRunner: () => {
+            hostCalled = true
+            return { kind: "host_crash" }
+          },
+        })(serializeRuntimeInvocationRequestV117(request)),
+        request,
+        candidateIdentity,
+      )
+      expect(hostCalled).toBe(false)
+      expect(response.kind).toBe("success")
+      if (response.kind === "success") {
+        expect(response.value.outcome).toMatchObject({
+          kind: "system_failure",
+          failure: {
+            code: "OUTER_FRAME_WRONG_BINDING",
+            retryable: false,
+          },
+        })
+      }
+    }
+  })
+
   it("owns stale artifact source metadata as no-penalty system failure", () => {
     const revision = buildPythonStrategyRevision({ source: pythonSource })
     const request = candidateRequest(revision)
@@ -334,7 +400,7 @@ describe("Python subprocess Strategy provider ABI", () => {
     if (response.kind === "success") {
       expect(response.value.outcome).toMatchObject({
         kind: "system_failure",
-        failure: { code: "OUTER_FRAME_WRONG_BINDING" },
+        failure: { code: "OUTER_FRAME_WRONG_BINDING", retryable: false },
       })
       expect(response.value.outcome).not.toHaveProperty("violation")
     }
@@ -435,7 +501,7 @@ describe("Python subprocess Strategy provider ABI", () => {
     if (response.kind === "success") {
       expect(response.value.outcome).toMatchObject({
         kind: "system_failure",
-        failure: { code: "AMBIGUOUS_ATTRIBUTION" },
+        failure: { code: "AMBIGUOUS_ATTRIBUTION", retryable: false },
       })
       expect(response.value.outcome).not.toHaveProperty("violation")
     }

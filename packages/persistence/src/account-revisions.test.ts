@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from "node:crypto"
 import { Buffer } from "node:buffer"
-import { afterAll, beforeAll, describe, expect, it } from "vitest"
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest"
 import type { Pool } from "pg"
 import { hashCanonicalIdentity } from "@cowards/spec"
 import { createDatabasePool } from "./db.js"
@@ -9,8 +9,10 @@ import {
   SOURCE_IDENTITY_VERSION_V2,
   SOURCE_NORMALIZATION_POLICY_V1_17,
   buildSourceIdentityV2,
+  buildAccountStrategyRevision,
   createAccountStrategyRevision,
 } from "./account-revisions.js"
+import { createRepositories } from "./repositories.js"
 
 const databaseUrl = process.env.DATABASE_URL
 const describeDatabase = databaseUrl ? describe : describe.skip
@@ -47,6 +49,25 @@ describe("source identity v2", () => {
       )
     },
   )
+
+  it("rejects caller-supplied identity that does not match revision source", async () => {
+    const revision = buildAccountStrategyRevision({
+      userId: "user:phase258:repository-boundary" as never,
+      source: "exact\r\nsource\n",
+    })
+    const { normalizedSource: _normalizedSource, ...identity } =
+      buildSourceIdentityV2(revision.source)
+    const query = vi.fn().mockResolvedValue({ rows: [], rowCount: 1 })
+    const repositories = createRepositories({ query: query as never })
+
+    await expect(
+      repositories.insertStrategyRevision(revision, {
+        ...identity,
+        originalSourceHash: "f".repeat(64),
+      }),
+    ).rejects.toThrow(/source identity.*revision source/iu)
+    expect(query).not.toHaveBeenCalled()
+  })
 })
 
 describeDatabase("source identity v2 persistence", () => {
