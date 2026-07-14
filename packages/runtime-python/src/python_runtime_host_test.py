@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 import subprocess
 import sys
+import time
 import unittest
 
 
@@ -50,14 +51,14 @@ def method_limit():
     }
 
 
-def candidate_envelope(budget):
-    source_bytes = SOURCE.encode("utf-8")
+def candidate_envelope(budget, source=SOURCE):
+    source_bytes = source.encode("utf-8")
     return {
         "abiVersion": "strategy-runtime-abi-v1.17",
         "hostProtocol": "python-runtime-host-v1.17",
         "methodName": "selectActivations",
         "source": {
-            "text": SOURCE,
+            "text": source,
             "hash": hashlib.sha256(source_bytes).hexdigest(),
             "bytes": len(source_bytes),
         },
@@ -112,6 +113,50 @@ class PythonRuntimeHostV117Tests(unittest.TestCase):
             )
         )
         self.assertEqual(result, {"kind": "host_failure"})
+
+    def test_preflight_watchdog_is_distinct_from_signed_method_timeout(self):
+        source = (
+            "while True:\n"
+            "    pass\n\n"
+            "def select_activations(input):\n"
+            "    return {\"activationOrders\": [], \"strategyMemory\": None}\n"
+        )
+        started = time.monotonic()
+        result = run_host(
+            candidate_envelope(
+                {
+                    "methodLimit": method_limit(),
+                    "meterStatus": {
+                        "computeFuel": "unavailable",
+                        "memoryBytes": "unavailable",
+                    },
+                },
+                source,
+            )
+        )
+
+        self.assertEqual(result, {"kind": "pre_method_host_failure"})
+        self.assertLess(time.monotonic() - started, 2.5)
+
+    def test_missing_method_is_a_pre_method_host_failure(self):
+        source = (
+            "def soldier_brain(input):\n"
+            "    return {\"action\": {\"type\": \"TURN_TO_STONE\"}, \"soldierMemory\": None}\n"
+        )
+        result = run_host(
+            candidate_envelope(
+                {
+                    "methodLimit": method_limit(),
+                    "meterStatus": {
+                        "computeFuel": "unavailable",
+                        "memoryBytes": "unavailable",
+                    },
+                },
+                source,
+            )
+        )
+
+        self.assertEqual(result, {"kind": "pre_method_host_failure"})
 
 
 if __name__ == "__main__":

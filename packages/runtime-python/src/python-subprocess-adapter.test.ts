@@ -569,6 +569,14 @@ describe("Python subprocess Strategy provider ABI", () => {
     },
   )
 
+  it("admits the closed host-failure envelope as host-owned failure", () => {
+    expect(
+      admitPythonCandidateHostResponseV117(
+        Buffer.from('{"kind":"host_failure"}'),
+      ),
+    ).toMatchObject({ kind: "host_crash" })
+  })
+
   it("passes the exact nested v1.17 method limit to the Python host", () => {
     const revision = buildPythonStrategyRevision({ source: pythonSource })
     const request = candidateRequest(revision)
@@ -612,6 +620,47 @@ describe("Python subprocess Strategy provider ABI", () => {
         request.accounting.prestate,
       )
       expect(response.value.outcome).not.toHaveProperty("violation")
+    }
+  })
+
+  it("rejects signed evidence whose payload delta predates the observed payload", () => {
+    const revision = buildPythonStrategyRevision({ source: pythonSource })
+    const request = candidateRequest(revision)
+    const payloadBytes = Buffer.from(
+      '{"activationOrders":[],"strategyMemory":null}',
+    )
+    const response = verifyRuntimeInvocationResponseV117(
+      createPythonCandidateInvocationAdapterV117({
+        revision,
+        identity: candidateIdentity,
+        hostRunner: () => ({
+          kind: "payload",
+          payloadBytes,
+          receiptEvidence: trustedEvidenceFor(request, {
+            payloadBytes: payloadBytes.byteLength - 1,
+          }),
+        }),
+      })(serializeRuntimeInvocationRequestV117(request)),
+      request,
+      candidateIdentity,
+    )
+
+    expect(response.kind).toBe("success")
+    if (response.kind === "success") {
+      expect(response.value.outcome).toMatchObject({
+        kind: "system_failure",
+        failure: { code: "AMBIGUOUS_ATTRIBUTION" },
+        trace: {
+          safeCodes: expect.arrayContaining([
+            "RAW_PAYLOAD_OBSERVED",
+            "ACCOUNTING_EVIDENCE_REJECTED",
+          ]),
+        },
+      })
+      expect(response.value.accounting.disposition).toBe("no_commit")
+      expect(response.value.accounting.poststate).toEqual(
+        request.accounting.prestate,
+      )
     }
   })
 
@@ -789,12 +838,16 @@ describe("Python subprocess Strategy provider ABI", () => {
   )
 
   it(
-    "keeps top-level Strategy initialization inside the guest deadline",
+    "keeps top-level Strategy initialization outside the signed method wall under a bounded preflight watchdog",
     () => {
       const source = `while True:\n    pass\n\ndef select_activations(input):\n    return {"activationOrders": [], "strategyMemory": None}\n\ndef soldier_brain(input):\n    return {"action": {"type": "TURN_TO_STONE"}, "soldierMemory": None}\n`
       const revision = buildPythonStrategyRevision({ source })
       const request = candidateRequest(revision)
       const started = Date.now()
+      const host = runPythonCandidateHostV117(
+        request,
+        buildPythonSourceIdentityV117(source).normalizedSource,
+      )
       const response = verifyRuntimeInvocationResponseV117(
         createPythonCandidateInvocationAdapterV117({
           revision,
@@ -805,23 +858,31 @@ describe("Python subprocess Strategy provider ABI", () => {
       )
       const elapsedMilliseconds = Date.now() - started
 
-      expect(elapsedMilliseconds).toBeLessThan(1_000)
+      expect(elapsedMilliseconds).toBeLessThan(2_500)
+      expect(host.kind).toBe("pre_method_host_failure")
       expect(response.kind).toBe("success")
       if (response.kind === "success") {
         expect(response.value.outcome).toMatchObject({
           kind: "system_failure",
           failure: { code: "AMBIGUOUS_ATTRIBUTION" },
         })
+        expect(response.value.outcome.trace.safeCodes).toContain(
+          "RAW_PRE_METHOD_HOST_FAILURE_OBSERVED",
+        )
         expect(response.value.outcome).not.toHaveProperty("violation")
       }
     },
     35_000,
   )
 
-  it("keeps a top-level exception observable but unpenalized without meters", () => {
+  it("owns top-level exceptions as distinct pre-method host failures", () => {
     const source = `1 / 0\n\ndef select_activations(input):\n    return {"activationOrders": [], "strategyMemory": None}\n\ndef soldier_brain(input):\n    return {"action": {"type": "TURN_TO_STONE"}, "soldierMemory": None}\n`
     const revision = buildPythonStrategyRevision({ source })
     const request = candidateRequest(revision)
+    const host = runPythonCandidateHostV117(
+      request,
+      buildPythonSourceIdentityV117(source).normalizedSource,
+    )
     const response = verifyRuntimeInvocationResponseV117(
       createPythonCandidateInvocationAdapterV117({
         revision,
@@ -831,6 +892,7 @@ describe("Python subprocess Strategy provider ABI", () => {
       candidateIdentity,
     )
 
+    expect(host.kind).toBe("pre_method_host_failure")
     expect(response.kind).toBe("success")
     if (response.kind === "success") {
       expect(response.value.outcome).toMatchObject({
@@ -838,7 +900,7 @@ describe("Python subprocess Strategy provider ABI", () => {
         failure: { code: "AMBIGUOUS_ATTRIBUTION" },
       })
       expect(response.value.outcome.trace.safeCodes).toContain(
-        "RAW_STRATEGY_EXCEPTION_OBSERVED",
+        "RAW_PRE_METHOD_HOST_FAILURE_OBSERVED",
       )
       expect(response.value.outcome).not.toHaveProperty("violation")
     }
@@ -867,7 +929,7 @@ describe("Python subprocess Strategy provider ABI", () => {
     }
   })
 
-  it("accepts a near-cap raw host payload without base64-envelope ENOBUFS drift", () => {
+  it("enforces signed stdout transport bytes independently of decoded payload bytes", () => {
     const source = `def select_activations(input):\n    return {"activationOrders": [], "strategyMemory": "x" * 249900}\n\ndef soldier_brain(input):\n    return {"action": {"type": "TURN_TO_STONE"}, "soldierMemory": None}\n`
     const revision = buildPythonStrategyRevision({ source })
     const request = candidateRequest(revision)
@@ -875,13 +937,28 @@ describe("Python subprocess Strategy provider ABI", () => {
       request,
       buildPythonSourceIdentityV117(source).normalizedSource,
     )
-    expect(host.kind).toBe("payload")
-    if (host.kind === "payload") {
+    expect(host.kind).toBe("oversized_output")
+    expect(host.stdoutBytes).toBeGreaterThan(
+      request.budget.methodLimit.counters.stdoutBytes.maximum,
+    )
+    if (host.payloadBytes !== undefined) {
       expect(host.payloadBytes.byteLength).toBeGreaterThan(249_900)
       expect(host.payloadBytes.byteLength).toBeLessThanOrEqual(
         request.budget.methodLimit.counters.payloadBytes.maximum,
       )
     }
+  })
+
+  it("owns missing method lookup as a distinct pre-method host failure", () => {
+    const source = `def soldier_brain(input):\n    return {"action": {"type": "TURN_TO_STONE"}, "soldierMemory": None}\n`
+    const revision = buildPythonStrategyRevision({ source })
+    const request = candidateRequest(revision)
+    const host = runPythonCandidateHostV117(
+      request,
+      buildPythonSourceIdentityV117(source).normalizedSource,
+    )
+
+    expect(host.kind).toBe("pre_method_host_failure")
   })
 
   it("classifies an actual-host non-serializable return as INVALID_OUTPUT", () => {
