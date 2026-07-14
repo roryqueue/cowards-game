@@ -159,8 +159,22 @@ describe("v1.17 preflight contract", () => {
     expect(lines.join("\n")).toMatch(/Go-owned Match orchestration/iu)
     expect(lines.join("\n")).toMatch(/retired TypeScript worker/iu)
     expect(lines.join("\n")).toMatch(
-      /separate sourceValidation, compilation, artifactValidation, conformance ledgers with zero candidate-resource receipts/iu,
+      /authenticated.*no-commit.*sourceValidation.*compilation.*artifactValidation.*conformance/iu,
     )
+  })
+
+  it("operationally creates, verifies, and folds fail-closed signed preflight receipts", () => {
+    const source = readFileSync(
+      new URL("./preflight.ts", import.meta.url),
+      "utf8",
+    )
+    expect(source).toContain("createAuthenticatedRuntimePreflightRequestV117")
+    expect(source).toContain("createAuthenticatedRuntimePreflightReceiptV117")
+    expect(source).toContain("verifyRuntimePreflightRequestV117")
+    expect(source).toContain("verifyRuntimePreflightReceiptV117")
+    expect(source).toContain("serializeRuntimePreflightRequestV117")
+    expect(source).toContain("serializeRuntimePreflightReceiptV117")
+    expect(source).not.toContain("foldPreflightLedgerV117(profile, [])")
   })
 
   it("rejects credential-bearing or non-origin Go URLs before database access", async () => {
