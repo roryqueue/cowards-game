@@ -10,9 +10,17 @@ import {
   RUNTIME_EXECUTION_SERVICE_PUBLIC_NAME,
   RUNTIME_EXECUTION_SERVICE_TRANSPORT_BINDING,
   RUNTIME_EXECUTION_SERVICE_VERSION,
+  RUNTIME_INVOCATION_V1_17_PLAYER_VIOLATIONS,
   RuntimeExecutionServiceResponseSchema,
+  SoldierBrainResultSchema,
   STRATEGY_RUNTIME_ABI_VERSION,
+  StrategyResultSchema,
+  admitCanonicalJsonBytes,
   getStrategyLanguageProviderRecord,
+  verifyRuntimeInvocationRequestV117,
+  type JsonValue,
+  type RuntimeInvocationMethodV117,
+  type RuntimeInvocationSigningIdentityV117,
   type RuntimeExecutionServiceResponse,
 } from "@cowards/spec"
 import {
@@ -55,10 +63,10 @@ const writeJson = (
   response.end(JSON.stringify(payload))
 }
 
-export const readBody = async (
+export const readBodyBytes = async (
   request: IncomingMessage,
   limitBytes: number,
-): Promise<string> => {
+): Promise<Uint8Array> => {
   const chunks: Uint8Array[] = []
   let receivedBytes = 0
   for await (const chunk of request) {
@@ -69,12 +77,76 @@ export const readBody = async (
     }
     chunks.push(bytes)
   }
+  return Buffer.concat(chunks, receivedBytes)
+}
+
+export const readBody = async (
+  request: IncomingMessage,
+  limitBytes: number,
+): Promise<string> => {
+  const bytes = await readBodyBytes(request, limitBytes)
   try {
-    return new TextDecoder("utf-8", { fatal: true }).decode(
-      Buffer.concat(chunks, receivedBytes),
-    )
+    return new TextDecoder("utf-8", { fatal: true }).decode(bytes)
   } catch {
     throw new Error("Runtime execution request body is not valid UTF-8.")
+  }
+}
+
+export const admitRuntimeInvocationRequestBytesV117 = (
+  bytes: Uint8Array,
+  identity: RuntimeInvocationSigningIdentityV117,
+) => verifyRuntimeInvocationRequestV117(bytes, identity)
+
+export type RuntimeStrategyPayloadAdmissionV117 =
+  | Readonly<{
+      kind: "success"
+      value: JsonValue
+      canonicalSha256: `sha256:${string}`
+      canonicalByteLength: number
+    }>
+  | Readonly<{
+      kind: "player_violation"
+      violation: typeof RUNTIME_INVOCATION_V1_17_PLAYER_VIOLATIONS.INVALID_OUTPUT
+      canonicalError?: Readonly<{
+        code: string
+        byteOffset: number
+        owner: "player_violation"
+      }>
+    }>
+
+export const admitStrategyPayloadBytesV117 = (
+  bytes: Uint8Array,
+  method: RuntimeInvocationMethodV117,
+): RuntimeStrategyPayloadAdmissionV117 => {
+  const admitted = admitCanonicalJsonBytes(bytes, {
+    profile: "strategy-payload",
+  })
+  if (!admitted.ok) {
+    return {
+      kind: "player_violation",
+      violation: RUNTIME_INVOCATION_V1_17_PLAYER_VIOLATIONS.INVALID_OUTPUT,
+      canonicalError: {
+        code: admitted.error.code,
+        byteOffset: admitted.error.byteOffset,
+        owner: "player_violation",
+      },
+    }
+  }
+  const schema = method === "selectActivations"
+    ? StrategyResultSchema
+    : SoldierBrainResultSchema
+  const parsed = schema.safeParse(admitted.value)
+  if (!parsed.success) {
+    return {
+      kind: "player_violation",
+      violation: RUNTIME_INVOCATION_V1_17_PLAYER_VIOLATIONS.INVALID_OUTPUT,
+    }
+  }
+  return {
+    kind: "success",
+    value: parsed.data as JsonValue,
+    canonicalSha256: admitted.canonicalSha256,
+    canonicalByteLength: admitted.canonicalByteLength,
   }
 }
 

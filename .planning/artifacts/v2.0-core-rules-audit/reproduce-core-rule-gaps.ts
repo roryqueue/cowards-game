@@ -6,7 +6,7 @@
  */
 import {
   ChronicleEventSchema,
-  StrategyResultSchema,
+  admitCanonicalJsonBytes,
   type Soldier,
 } from "../../../packages/spec/src/index.ts"
 import {
@@ -150,18 +150,16 @@ if (excessMalformed.kind !== "transition") {
   throw new Error("candidate audit selection transition missing")
 }
 
-let deep: unknown = null
-for (let index = 0; index < 3_000; index += 1) deep = [deep]
-let deepValidation: string
-try {
-  const parsed = StrategyResultSchema.safeParse({
-    activationOrders: [],
-    strategyMemory: deep,
-  })
-  deepValidation = parsed.success ? "accepted" : "rejected"
-} catch (error) {
-  deepValidation = `threw:${error instanceof Error ? error.name : String(error)}`
-}
+const deepBytes = new TextEncoder().encode(
+  `${"[".repeat(3_000)}null${"]".repeat(3_000)}`,
+)
+const deepAdmission = admitCanonicalJsonBytes(deepBytes, {
+  profile: "strategy-memory",
+  operation: "parse-and-canonicalize",
+})
+const deepValidation = deepAdmission.ok
+  ? "accepted"
+  : `rejected:${deepAdmission.error.code}:${deepAdmission.error.owner}`
 
 let overlappingArenaAccepted = false
 try {
@@ -205,6 +203,28 @@ const pushed = resolveAction(
   { type: "MOVE", direction: "RIGHT" },
   { advanced: false },
 )
+
+const lifecycleCompatible =
+  noAdvance.state.soldiers.find(({ id }) => id === "last-bottom")?.status ===
+    "STONE" &&
+  noAdvance.state.outcome?.type === "WIN" &&
+  noAdvance.state.outcome.winnerPlayerId === "top" &&
+  noAdvance.events.filter(({ type }) => type === "MATCH_ENDED").length === 1 &&
+  postBackstab.state.soldiers.find(({ id }) => id === "actor")?.status ===
+    "STONE" &&
+  backstabClosure !== undefined &&
+  (backstabClosure.payload as { reason?: unknown }).reason === "BACKSTABBED" &&
+  excessMalformed.machine.selections.bottom.length === 1 &&
+  excessMalformed.record.events.filter(({ type }) => type === "RUNTIME_VIOLATION")
+      .length === 0 &&
+  overlappingArenaAccepted === false &&
+  legacyBoundaryAccepted === true &&
+  pushed.state.soldiers.find(({ id }) => id === "pusher")
+    ?.lastSuccessfulMoveDirection === "RIGHT"
+
+if (!lifecycleCompatible) {
+  throw new Error("VALID_V1_4_COMPATIBILITY_DELTA")
+}
 
 console.log(
   JSON.stringify(
