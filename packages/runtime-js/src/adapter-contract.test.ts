@@ -723,7 +723,7 @@ export default {
     })
 
     it.each(["ambiguous", "unavailable", "incomplete"] as const)(
-      "fails closed for %s injected accounting evidence before guest execution",
+      "observes the guest before failing closed for %s post-execution accounting evidence",
       (posture) => {
         const request = candidateRequest()
         const complete = completeCandidateEvidence(request)
@@ -748,7 +748,14 @@ export default {
         const adapter = createSubprocessStrategyExecutionAdapter({
           spawnSync: () => {
             calls += 1
-            throw new Error("unproved execution must not start")
+            return {
+              pid: 123,
+              output: ["", successFrame, ""],
+              stdout: successFrame,
+              stderr: "",
+              status: 0,
+              signal: null,
+            } as SpawnSyncReturns<string>
           },
         })
         const result = executeCandidateWith(
@@ -770,7 +777,17 @@ export default {
             },
           },
         })
-        expect(calls).toBe(0)
+        expect(result.kind).toBe("success")
+        if (result.kind === "success") {
+          expect(result.value.outcome.trace.safeCodes).toEqual(
+            expect.arrayContaining([
+              "PAYLOAD_SCHEMA_VALID",
+              "ACCOUNTING_EVIDENCE_REJECTED",
+              "AMBIGUOUS_ATTRIBUTION",
+            ]),
+          )
+        }
+        expect(calls).toBe(1)
       },
     )
 
@@ -928,6 +945,48 @@ export default {
         value: { outcome: { kind: "success" } },
       })
       expect(overCap).toMatchObject({
+        kind: "success",
+        value: {
+          accounting: { disposition: "commit" },
+          outcome: {
+            kind: "player_violation",
+            violation: { code: "OVERSIZED_OUTPUT" },
+          },
+        },
+      })
+    })
+
+    it("enforces the signed stdout frame cap independently from the payload cap", () => {
+      const request = candidateRequest()
+      const payloadBytes = new Uint8Array(
+        request.budget.methodLimit.counters.payloadBytes.maximum,
+      )
+      payloadBytes.fill(" ".charCodeAt(0))
+      const stdout = `S${new TextDecoder().decode(payloadBytes)}`
+      const evidence = completeCandidateEvidence(request, {
+        payloadBytes: payloadBytes.byteLength,
+        stdoutBytes: payloadBytes.byteLength + 1,
+      })
+      const adapter = createSubprocessStrategyExecutionAdapter({
+        spawnSync: () =>
+          ({
+            pid: 123,
+            output: ["", stdout, ""],
+            stdout,
+            stderr: "",
+            status: 0,
+            signal: null,
+          }) as SpawnSyncReturns<string>,
+      })
+
+      const result = executeCandidateWith(
+        adapter,
+        request,
+        transpiledSource(),
+        evidence,
+      )
+
+      expect(result).toMatchObject({
         kind: "success",
         value: {
           accounting: { disposition: "commit" },
