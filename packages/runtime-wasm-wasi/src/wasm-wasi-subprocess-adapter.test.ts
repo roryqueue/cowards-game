@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest"
+import { readFileSync } from "node:fs"
 import {
   createAuthenticatedRuntimeInvocationRequestV117,
   serializeRuntimeInvocationResponseV117,
@@ -14,7 +15,9 @@ import {
   validateRustStrategySource,
   validateZigStrategySource,
   zigReadinessEvidence,
+  collectWasmWasiCandidateIdentityV117,
 } from "./validation.js"
+import { wasmWasiRuntimeMetadataV117 } from "./metadata.js"
 import {
   WASM_WASI_V1_17_EXECUTION_SETTINGS,
   createWasmWasiRuntimeFromRevision,
@@ -321,6 +324,119 @@ describe("WASM/WASI runtime v1.17 candidate host authority", () => {
         retryable: false,
       },
     })
+  })
+})
+
+describe("WASM/WASI runtime v1.17 exact Rust/Zig identity", () => {
+  it("binds resolved compiler runtime target flags adapter stdlib and settings", () => {
+    expect(rustCompileProbe.artifact).toBeDefined()
+    expect(zigCompileProbe.artifact).toBeDefined()
+    if (rustCompileProbe.artifact === undefined || zigCompileProbe.artifact === undefined) {
+      throw new Error("Rust and Zig candidate toolchains are required")
+    }
+
+    const rustIdentity = collectWasmWasiCandidateIdentityV117(
+      "rust",
+      rustCompileProbe.artifact,
+    )
+    const zigIdentity = collectWasmWasiCandidateIdentityV117(
+      "zig",
+      zigCompileProbe.artifact,
+    )
+
+    for (const identity of [rustIdentity, zigIdentity]) {
+      expect(identity).toMatchObject({
+        schemaVersion: "runtime-wasm-wasi-identity-v1.17",
+        runtimeAbi: "strategy-runtime-abi-v1.17",
+        adapter: {
+          buildSha256: expect.stringMatching(/^sha256:[0-9a-f]{64}$/u),
+        },
+        compiler: {
+          executableSha256: expect.stringMatching(/^sha256:[0-9a-f]{64}$/u),
+          reportedVersion: expect.any(String),
+          resolvedPathSha256: expect.stringMatching(/^sha256:[0-9a-f]{64}$/u),
+          flags: expect.any(Array),
+        },
+        runtime: {
+          executableSha256: expect.stringMatching(/^sha256:[0-9a-f]{64}$/u),
+          reportedVersion: expect.stringContaining("wasmtime 45.0.0"),
+          resolvedPathSha256: expect.stringMatching(/^sha256:[0-9a-f]{64}$/u),
+        },
+        settings: {
+          sha256: expect.stringMatching(/^sha256:[0-9a-f]{64}$/u),
+          value: WASM_WASI_V1_17_EXECUTION_SETTINGS,
+        },
+        stdlibSysroot: {
+          sha256: expect.stringMatching(/^sha256:[0-9a-f]{64}$/u),
+        },
+        containment: {
+          profileId: "wasm-wasi-preview1-empty-env-no-preopen-v1.17",
+          sha256: expect.stringMatching(/^sha256:[0-9a-f]{64}$/u),
+        },
+        countedCertification: "uncertified",
+        productionTrustedProducers: [],
+      })
+      expect(identity.metering.unsupported).toEqual(
+        WASM_WASI_V1_17_EXECUTION_SETTINGS.unsupportedMeters,
+      )
+      expect(identity.certificationReasons.length).toBeGreaterThan(0)
+      expect(JSON.stringify(identity)).not.toContain("/Users/")
+    }
+    expect(rustIdentity.compiler.targetTriple).toBe("wasm32-wasip1")
+    expect(zigIdentity.compiler.targetTriple).toBe("wasm32-wasi")
+    expect(rustIdentity.identitySha256).not.toBe(zigIdentity.identitySha256)
+  })
+
+  it("keeps candidate metadata inactive and counted authority unavailable", () => {
+    for (const language of ["rust", "zig"] as const) {
+      expect(wasmWasiRuntimeMetadataV117(language)).toMatchObject({
+        abiVersion: "strategy-runtime-abi-v1.17",
+        candidateStatus: "inactive-candidate",
+        current: false,
+        countedCertification: "uncertified",
+        productionTrustedProducers: [],
+      })
+    }
+  })
+
+  it("commits schema-identical Rust and Zig guest envelopes with no trusted producer", () => {
+    const fixture = JSON.parse(
+      readFileSync(
+        new URL(
+          "../../spec/artifacts/runtime-abi-v1.17-wasm-language-envelopes.json",
+          import.meta.url,
+        ),
+        "utf8",
+      ),
+    ) as {
+      schemaVersion: string
+      candidateStatus: string
+      current: boolean
+      productionTrustedProducers: unknown[]
+      languages: Array<Record<string, unknown>>
+    }
+
+    expect(fixture).toMatchObject({
+      schemaVersion: "runtime-abi-v1.17-wasm-language-envelopes-v1",
+      candidateStatus: "inactive-candidate",
+      current: false,
+      productionTrustedProducers: [],
+    })
+    expect(fixture.languages.map((lane) => lane.languageId)).toEqual([
+      "rust",
+      "zig",
+    ])
+    const [rust, zig] = fixture.languages
+    for (const field of [
+      "guestRequestFields",
+      "guestPayloadFields",
+      "resultKinds",
+      "budgetFields",
+    ]) {
+      expect(rust?.[field]).toEqual(zig?.[field])
+    }
+    expect(rust?.countedCertification).toBe("uncertified")
+    expect(zig?.countedCertification).toBe("uncertified")
   })
 })
 
