@@ -3,11 +3,12 @@ import { existsSync, readFileSync } from "node:fs"
 import path from "node:path"
 import { pathToFileURL } from "node:url"
 import { describe, expect, it } from "vitest"
+import type * as SubjectModule from "./runtime-abi-v1-17.ts"
 
 const repoRoot = path.resolve(import.meta.dirname, "../../..")
 const subjectPath = path.join(import.meta.dirname, "runtime-abi-v1-17.ts")
 
-type Subject = typeof import("./runtime-abi-v1-17.ts")
+type Subject = typeof SubjectModule
 
 const subject = async (): Promise<Subject> => {
   expect(
