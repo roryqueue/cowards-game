@@ -9,6 +9,7 @@ import {
 import {
   PREFLIGHT_NON_CERTIFICATION_NOTICE,
   foldPreflightLedgerV117,
+  runGoMatchJobOnce,
   runPreflight,
 } from "./preflight.js"
 
@@ -160,5 +161,110 @@ describe("v1.17 preflight contract", () => {
     expect(lines.join("\n")).toMatch(
       /separate sourceValidation, compilation, artifactValidation, conformance ledgers with zero candidate-resource receipts/iu,
     )
+  })
+
+  it("rejects credential-bearing or non-origin Go URLs before database access", async () => {
+    for (const goBackendUrl of [
+      "http://user:password@127.0.0.1:8087",
+      "file:///tmp/go.sock",
+      "http://127.0.0.1:8087/internal?token=private",
+    ]) {
+      let databaseStarts = 0
+      await expect(
+        runPreflight(["--skip-redis", "--skip-web"], {
+          checkCapabilityArtifact: () => [],
+          environment: {
+            COWARDS_GO_BACKEND_URL: goBackendUrl,
+            COWARDS_GO_BACKEND_INTERNAL_TOKEN: "private-token",
+          },
+          createPool: () => {
+            databaseStarts += 1
+            throw new Error("database must not start")
+          },
+          writeLine: () => undefined,
+        }),
+      ).rejects.toThrow(/HTTP\(S\) origin/iu)
+      expect(databaseStarts).toBe(0)
+    }
+  })
+
+  it("sends an exact allowlist without redirects and rejects foreign or terminal results", async () => {
+    const calls: Array<{ url: string; init: RequestInit }> = []
+    const acceptedFetch: typeof globalThis.fetch = async (input, init) => {
+      calls.push({ url: String(input), init: init ?? {} })
+      return new globalThis.Response(
+        JSON.stringify({ status: "complete", matchId: "match:allowed" }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      )
+    }
+    await expect(
+      runGoMatchJobOnce(
+        {
+          goBackendUrl: "http://127.0.0.1:8087",
+          goBackendInternalToken: "private-token",
+        },
+        ["match:allowed"],
+        acceptedFetch,
+      ),
+    ).resolves.toBe("complete")
+    expect(calls).toHaveLength(1)
+    expect(calls[0]?.url).toBe(
+      "http://127.0.0.1:8087/internal/match-jobs/run-once",
+    )
+    expect(calls[0]?.init).toMatchObject({
+      method: "POST",
+      redirect: "error",
+      body: '{"matchIds":["match:allowed"]}',
+      headers: {
+        "Content-Type": "application/json",
+        "X-Cowards-Internal-Token": "private-token",
+      },
+    })
+    expect(calls[0]?.init.signal).toBeInstanceOf(globalThis.AbortSignal)
+
+    for (const responseBody of [
+      { status: "complete", matchId: "match:foreign" },
+      { status: "failed_system", matchId: "match:allowed" },
+      { status: "invented", matchId: "match:allowed" },
+    ]) {
+      const fetchResult: typeof globalThis.fetch = async () =>
+        new globalThis.Response(JSON.stringify(responseBody), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        })
+      await expect(
+        runGoMatchJobOnce(
+          {
+            goBackendUrl: "http://127.0.0.1:8087",
+            goBackendInternalToken: "private-token",
+          },
+          ["match:allowed"],
+          fetchResult,
+        ),
+      ).rejects.toThrow(/allowlist|terminal system failure|unknown status/iu)
+    }
+  })
+
+  it("redacts Go transport errors instead of echoing URL or token details", async () => {
+    const secret = "private-token-never-print"
+    const failingFetch: typeof globalThis.fetch = async () => {
+      throw new Error(`redirected token=${secret} to http://attacker.invalid`)
+    }
+    let message = ""
+    try {
+      await runGoMatchJobOnce(
+        {
+          goBackendUrl: "http://127.0.0.1:8087",
+          goBackendInternalToken: secret,
+        },
+        ["match:allowed"],
+        failingFetch,
+      )
+    } catch (error) {
+      message = error instanceof Error ? error.message : String(error)
+    }
+    expect(message).toMatch(/intentionally redacted/iu)
+    expect(message).not.toContain(secret)
+    expect(message).not.toContain("attacker.invalid")
   })
 })

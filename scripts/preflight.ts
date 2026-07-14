@@ -95,6 +95,7 @@ interface PreflightDependencies {
   readonly checkCapabilityArtifact: typeof checkRuntimeBudgetCapabilitiesV117Artifact
   readonly createPool: typeof createDatabasePool
   readonly environment: Readonly<Record<string, string | undefined>>
+  readonly fetch: typeof globalThis.fetch
   readonly writeLine: (line: string) => void
 }
 
@@ -102,7 +103,35 @@ const defaultDependencies: PreflightDependencies = {
   checkCapabilityArtifact: checkRuntimeBudgetCapabilitiesV117Artifact,
   createPool: createDatabasePool,
   environment: process.env,
+  fetch: globalThis.fetch,
   writeLine: (line) => console.log(line),
+}
+
+const normalizeGoBackendOrigin = (
+  value: string | undefined,
+): string | undefined => {
+  if (value === undefined) return undefined
+  const trimmed = value.trim()
+  if (trimmed.length === 0) return undefined
+  let parsed: URL
+  try {
+    parsed = new URL(trimmed)
+  } catch {
+    throw new Error("COWARDS_GO_BACKEND_URL must be a valid HTTP(S) origin.")
+  }
+  if (
+    (parsed.protocol !== "http:" && parsed.protocol !== "https:") ||
+    parsed.username !== "" ||
+    parsed.password !== "" ||
+    parsed.pathname !== "/" ||
+    parsed.search !== "" ||
+    parsed.hash !== ""
+  ) {
+    throw new Error(
+      "COWARDS_GO_BACKEND_URL must be an HTTP(S) origin without credentials, path, query, or fragment.",
+    )
+  }
+  return parsed.origin
 }
 
 const parseOptions = (
@@ -113,8 +142,9 @@ const parseOptions = (
     requireRedis: true,
     requireWeb: environment.COWARDS_WEB_URL !== undefined,
     webUrl: environment.COWARDS_WEB_URL,
-    goBackendUrl: environment.COWARDS_GO_BACKEND_URL,
-    goBackendInternalToken: environment.COWARDS_GO_BACKEND_INTERNAL_TOKEN,
+    goBackendUrl: normalizeGoBackendOrigin(environment.COWARDS_GO_BACKEND_URL),
+    goBackendInternalToken:
+      environment.COWARDS_GO_BACKEND_INTERNAL_TOKEN?.trim() || undefined,
   }
 
   for (let index = 0; index < argv.length; index += 1) {
@@ -141,16 +171,7 @@ const parseOptions = (
         if (!value || value.startsWith("--")) {
           throw new Error("--go-backend-url requires a URL value")
         }
-        options.goBackendUrl = value
-        index += 1
-        break
-      }
-      case "--go-backend-internal-token": {
-        const value = argv[index + 1]
-        if (!value || value.startsWith("--")) {
-          throw new Error("--go-backend-internal-token requires a value")
-        }
-        options.goBackendInternalToken = value
+        options.goBackendUrl = normalizeGoBackendOrigin(value)
         index += 1
         break
       }
@@ -172,10 +193,6 @@ const parseOptions = (
   if (options.requireWeb && !options.webUrl?.trim()) {
     throw new Error("Web preflight requires a non-empty web URL")
   }
-  if (options.goBackendUrl?.trim()) {
-    options.goBackendUrl = new URL(options.goBackendUrl).toString()
-  }
-
   return options
 }
 
@@ -240,20 +257,47 @@ const latestChronicle = async (
   return { matchId: row.match_id, chronicle: row.artifact }
 }
 
-const runGoMatchJobOnce = async (options: Options): Promise<string> => {
+const GO_PREFLIGHT_HTTP_TIMEOUT_MS = 5_000
+
+const safeGoFetch = async (
+  url: URL,
+  init: RequestInit,
+  fetchImplementation: typeof globalThis.fetch,
+): Promise<Response> => {
+  try {
+    return await fetchImplementation(url, {
+      ...init,
+      redirect: "error",
+      signal: globalThis.AbortSignal.timeout(GO_PREFLIGHT_HTTP_TIMEOUT_MS),
+    })
+  } catch {
+    throw new Error(
+      `Go-owned preflight transport failed or exceeded ${GO_PREFLIGHT_HTTP_TIMEOUT_MS} ms; transport details are intentionally redacted.`,
+    )
+  }
+}
+
+export const runGoMatchJobOnce = async (
+  options: Pick<Options, "goBackendUrl" | "goBackendInternalToken">,
+  matchIds: readonly string[],
+  fetchImplementation: typeof globalThis.fetch = globalThis.fetch,
+): Promise<string> => {
   if (!options.goBackendUrl || !options.goBackendInternalToken) {
     throw new Error(
       "Go-owned execution requires COWARDS_GO_BACKEND_URL and COWARDS_GO_BACKEND_INTERNAL_TOKEN.",
     )
   }
-  const response = await globalThis.fetch(
+  const response = await safeGoFetch(
     new URL("/internal/match-jobs/run-once", options.goBackendUrl),
     {
       method: "POST",
+      body: JSON.stringify({ matchIds }),
       headers: {
+        "Content-Type": "application/json",
         "X-Cowards-Internal-Token": options.goBackendInternalToken,
       },
     },
+    fetchImplementation,
   )
   if (!response.ok) {
     throw new Error(
@@ -269,7 +313,23 @@ const runGoMatchJobOnce = async (options: Options): Promise<string> => {
   ) {
     throw new Error("Go-owned run-once returned an invalid status envelope.")
   }
-  return (body as { status: string }).status
+  const status = (body as { status: string }).status
+  const matchId = (body as { matchId?: unknown }).matchId
+  if (
+    !new Set(["idle", "complete", "retry_queued", "failed_system"]).has(status)
+  ) {
+    throw new Error("Go-owned run-once returned an unknown status.")
+  }
+  if (
+    status !== "idle" &&
+    (typeof matchId !== "string" || !matchIds.includes(matchId))
+  ) {
+    throw new Error("Go-owned run-once returned a Match outside its allowlist.")
+  }
+  if (status === "failed_system") {
+    throw new Error("Go-owned run-once reported a terminal system failure.")
+  }
+  return status
 }
 
 const writeResults = (
@@ -356,157 +416,206 @@ export const runPreflight = async (
     return 1
   }
 
-  const pool = dependencies.createPool()
-
   results.push(
-    await check("service_startup", "Postgres", true, async () => {
-      await pool.query("select 1")
-      return "database query succeeded"
+    await check("service_startup", "Go backend health", true, async () => {
+      if (!options.goBackendUrl) {
+        throw new Error("Go backend origin is unavailable.")
+      }
+      const response = await safeGoFetch(
+        new URL("/health", options.goBackendUrl),
+        { method: "GET" },
+        dependencies.fetch,
+      )
+      if (!response.ok) {
+        throw new Error(
+          `Go backend health returned HTTP ${response.status}; response body is intentionally not echoed.`,
+        )
+      }
+      return "health endpoint accepted without forwarding the internal credential"
     }),
   )
-
-  if (options.requireRedis) {
-    results.push(
-      await check("service_startup", "Redis", true, () =>
-        checkTcp("localhost", 6379),
-      ),
-    )
-  } else {
-    results.push({
-      layer: "service_startup",
-      name: "Redis",
-      ok: true,
-      required: false,
-      detail: "skipped; Redis is not required for this path",
-    })
+  if (results.some((result) => result.required && !result.ok)) {
+    writeResults(results, dependencies.writeLine)
+    return 1
   }
 
-  results.push(
-    await check("migration", "Database migrations", true, async () => {
-      const result = await migrate(pool)
-      return `applied ${result.applied.length}, skipped ${result.skipped.length}`
-    }),
-  )
+  const pool = dependencies.createPool()
+  let cleanupFailed = false
 
-  results.push(
-    await check(
-      "seeding",
-      "Development seed and MatchSet smoke",
-      true,
-      async () => {
-        smokeResult = await runDevelopmentMatchSetSmoke(pool, {
-          matchSetId: `match-set:preflight:${randomUUID()}` as MatchSetId,
-          evidenceResolver: createFixtureMatchSetEvidenceResolver(),
-          runQueuedMatch: async (matchIds) => {
-            const remaining = new Set(matchIds)
-            const maxAttempts = matchIds.length + 16
-            for (let index = 0; index < maxAttempts; index += 1) {
-              const status = await runGoMatchJobOnce(options)
-              if (status === "idle") {
-                await sleep(100)
-              }
-              const completed = await pool.query<{ id: string }>(
-                "select id from matches where id = any($1) and status = 'complete'",
-                [matchIds],
-              )
-              for (const row of completed.rows) {
-                remaining.delete(row.id)
-              }
-              if (remaining.size === 0) {
-                break
-              }
-            }
-            if (remaining.size > 0) {
-              throw new Error(
-                `Go-owned orchestration did not complete preflight matches after ${maxAttempts} attempts: ${[...remaining].join(", ")}`,
-              )
-            }
-          },
-        })
-        if (
-          smokeResult.status !== "complete" ||
-          smokeResult.chronicleCount < smokeResult.matchCount
-        ) {
-          throw new Error(
-            `${smokeResult.matchSetId} ${smokeResult.status}; chronicles=${smokeResult.chronicleCount}/${smokeResult.matchCount}`,
-          )
-        }
-        return `${smokeResult.matchSetId} complete; chronicles=${smokeResult.chronicleCount}/${smokeResult.matchCount}`
-      },
-    ),
-  )
-
-  results.push(
-    await check(
-      "chronicle_validation",
-      "Preflight MatchSet Chronicle replay parse",
-      true,
-      async () => {
-        if (!smokeResult) {
-          throw new Error("Smoke MatchSet did not complete.")
-        }
-        const { chronicle } = await latestChronicle(
-          pool,
-          smokeResult.matchSetId,
-        )
-        const replay = createReplay(chronicle)
-        if (!replay.ok) {
-          throw new Error(
-            replay.errors[0]?.message ?? "Chronicle could not be replayed.",
-          )
-        }
-        return `${smokeResult.matchSetId} ${chronicle.events.length} events accepted`
-      },
-    ),
-  )
-
-  results.push(
-    await check(
-      "replay_projection",
-      "Preflight MatchSet public projection",
-      true,
-      async () => {
-        if (!smokeResult) {
-          throw new Error("Smoke MatchSet did not complete.")
-        }
-        const { chronicle } = await latestChronicle(
-          pool,
-          smokeResult.matchSetId,
-        )
-        const projection = projectPublicChronicle(chronicle)
-        return `${smokeResult.matchSetId} ${projection.events.length} public events projected`
-      },
-    ),
-  )
-
-  if (options.requireWeb) {
+  try {
     results.push(
-      await check("ui_rendering", "Web replay route", true, async () => {
-        if (!smokeResult) {
-          throw new Error("Smoke MatchSet did not complete.")
-        }
-        if (!options.webUrl) {
-          throw new Error("Web preflight requires a non-empty web URL")
-        }
-        const { matchId } = await latestChronicle(pool, smokeResult.matchSetId)
-        const replayUrl = new URL(
-          `/matches/${encodeURIComponent(matchId)}/replay`,
-          options.webUrl,
-        )
-        const response = await globalThis.fetch(replayUrl)
-        if (!response.ok) {
-          throw new Error(`${replayUrl.href} returned HTTP ${response.status}`)
-        }
-        const html = await response.text()
-        if (!html.includes("Replay")) {
-          throw new Error(`${replayUrl.href} did not render replay content`)
-        }
-        return `${replayUrl.href} returned replay content`
+      await check("service_startup", "Postgres", true, async () => {
+        await pool.query("select 1")
+        return "database query succeeded"
       }),
     )
+
+    if (options.requireRedis) {
+      results.push(
+        await check("service_startup", "Redis", true, () =>
+          checkTcp("localhost", 6379),
+        ),
+      )
+    } else {
+      results.push({
+        layer: "service_startup",
+        name: "Redis",
+        ok: true,
+        required: false,
+        detail: "skipped; Redis is not required for this path",
+      })
+    }
+
+    results.push(
+      await check("migration", "Database migrations", true, async () => {
+        const result = await migrate(pool)
+        return `applied ${result.applied.length}, skipped ${result.skipped.length}`
+      }),
+    )
+
+    results.push(
+      await check(
+        "seeding",
+        "Development seed and MatchSet smoke",
+        true,
+        async () => {
+          smokeResult = await runDevelopmentMatchSetSmoke(pool, {
+            matchSetId: `match-set:preflight:${randomUUID()}` as MatchSetId,
+            evidenceResolver: createFixtureMatchSetEvidenceResolver(),
+            runQueuedMatch: async (matchIds) => {
+              const remaining = new Set(matchIds)
+              const maxAttempts = matchIds.length + 16
+              for (let index = 0; index < maxAttempts; index += 1) {
+                const status = await runGoMatchJobOnce(
+                  options,
+                  matchIds,
+                  dependencies.fetch,
+                )
+                if (status === "idle") {
+                  await sleep(100)
+                }
+                const completed = await pool.query<{ id: string }>(
+                  "select id from matches where id = any($1) and status = 'complete'",
+                  [matchIds],
+                )
+                for (const row of completed.rows) {
+                  remaining.delete(row.id)
+                }
+                if (remaining.size === 0) {
+                  break
+                }
+              }
+              if (remaining.size > 0) {
+                throw new Error(
+                  `Go-owned orchestration did not complete preflight matches after ${maxAttempts} attempts: ${[...remaining].join(", ")}`,
+                )
+              }
+            },
+          })
+          if (
+            smokeResult.status !== "complete" ||
+            smokeResult.chronicleCount < smokeResult.matchCount
+          ) {
+            throw new Error(
+              `${smokeResult.matchSetId} ${smokeResult.status}; chronicles=${smokeResult.chronicleCount}/${smokeResult.matchCount}`,
+            )
+          }
+          return `${smokeResult.matchSetId} complete; chronicles=${smokeResult.chronicleCount}/${smokeResult.matchCount}`
+        },
+      ),
+    )
+
+    results.push(
+      await check(
+        "chronicle_validation",
+        "Preflight MatchSet Chronicle replay parse",
+        true,
+        async () => {
+          if (!smokeResult) {
+            throw new Error("Smoke MatchSet did not complete.")
+          }
+          const { chronicle } = await latestChronicle(
+            pool,
+            smokeResult.matchSetId,
+          )
+          const replay = createReplay(chronicle)
+          if (!replay.ok) {
+            throw new Error(
+              replay.errors[0]?.message ?? "Chronicle could not be replayed.",
+            )
+          }
+          return `${smokeResult.matchSetId} ${chronicle.events.length} events accepted`
+        },
+      ),
+    )
+
+    results.push(
+      await check(
+        "replay_projection",
+        "Preflight MatchSet public projection",
+        true,
+        async () => {
+          if (!smokeResult) {
+            throw new Error("Smoke MatchSet did not complete.")
+          }
+          const { chronicle } = await latestChronicle(
+            pool,
+            smokeResult.matchSetId,
+          )
+          const projection = projectPublicChronicle(chronicle)
+          return `${smokeResult.matchSetId} ${projection.events.length} public events projected`
+        },
+      ),
+    )
+
+    if (options.requireWeb) {
+      results.push(
+        await check("ui_rendering", "Web replay route", true, async () => {
+          if (!smokeResult) {
+            throw new Error("Smoke MatchSet did not complete.")
+          }
+          if (!options.webUrl) {
+            throw new Error("Web preflight requires a non-empty web URL")
+          }
+          const { matchId } = await latestChronicle(
+            pool,
+            smokeResult.matchSetId,
+          )
+          const replayUrl = new URL(
+            `/matches/${encodeURIComponent(matchId)}/replay`,
+            options.webUrl,
+          )
+          const response = await globalThis.fetch(replayUrl)
+          if (!response.ok) {
+            throw new Error(
+              `${replayUrl.href} returned HTTP ${response.status}`,
+            )
+          }
+          const html = await response.text()
+          if (!html.includes("Replay")) {
+            throw new Error(`${replayUrl.href} did not render replay content`)
+          }
+          return `${replayUrl.href} returned replay content`
+        }),
+      )
+    }
+  } finally {
+    try {
+      await pool.end()
+    } catch {
+      cleanupFailed = true
+    }
   }
 
-  await pool.end()
+  if (cleanupFailed) {
+    results.push({
+      layer: "service_startup",
+      name: "Postgres cleanup",
+      ok: false,
+      required: true,
+      detail: "Preflight database cleanup failed; details are redacted.",
+    })
+  }
 
   writeResults(results, dependencies.writeLine)
 
