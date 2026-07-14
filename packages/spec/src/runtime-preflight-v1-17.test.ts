@@ -171,7 +171,7 @@ const mutateAndResignRequest = (
   candidate: AuthenticatedRuntimePreflightRequestV117,
   mutate: (draft: Record<string, any>) => void,
 ): Uint8Array => {
-  const draft = structuredClone(candidate) as Record<string, any>
+  const draft = globalThis.structuredClone(candidate) as Record<string, any>
   mutate(draft)
   return canonicalBytes(
     resign(
@@ -196,10 +196,7 @@ describe("candidate v1.17 authenticated preflight contract", () => {
 
     const candidate = request()
     const bytes = serializeRuntimePreflightRequestV117(candidate)
-    const verified = verifyRuntimePreflightRequestV117(
-      bytes,
-      signingIdentity,
-    )
+    const verified = verifyRuntimePreflightRequestV117(bytes, signingIdentity)
     expect(verified).toMatchObject({ ok: true })
     expect(candidate.budget).toEqual(
       createRuntimePreflightBudgetV117("sourceValidation"),
@@ -233,7 +230,10 @@ describe("candidate v1.17 authenticated preflight contract", () => {
   })
 
   it.each([
-    ["profile", (draft: Record<string, any>) => (draft.profile = "compilation")],
+    [
+      "profile",
+      (draft: Record<string, any>) => (draft.profile = "compilation"),
+    ],
     [
       "limit",
       (draft: Record<string, any>) =>
@@ -244,10 +244,7 @@ describe("candidate v1.17 authenticated preflight contract", () => {
       (draft: Record<string, any>) =>
         (draft.accounting.prestate.cumulative.wallMilliseconds += 1),
     ],
-    [
-      "input",
-      (draft: Record<string, any>) => (draft.input.byteLength += 1),
-    ],
+    ["input", (draft: Record<string, any>) => (draft.input.byteLength += 1)],
     [
       "producer evidence",
       (draft: Record<string, any>) =>
@@ -268,10 +265,7 @@ describe("candidate v1.17 authenticated preflight contract", () => {
       (draft: Record<string, any>) =>
         (draft.operationId = "preflight-operation:other"),
     ],
-    [
-      "retry",
-      (draft: Record<string, any>) => (draft.retry.attempt = 1),
-    ],
+    ["retry", (draft: Record<string, any>) => (draft.retry.attempt = 1)],
     [
       "idempotency",
       (draft: Record<string, any>) =>
@@ -305,7 +299,10 @@ describe("candidate v1.17 authenticated preflight contract", () => {
       failure: { code: "NON_CANONICAL" },
     })
 
-    const badSignature = structuredClone(candidate)
+    const badSignature = globalThis.structuredClone(candidate) as Record<
+      string,
+      any
+    >
     badSignature.authentication.signature = `hmac-sha256:${"0".repeat(64)}`
     expect(
       verifyRuntimePreflightRequestV117(
@@ -361,9 +358,7 @@ describe("candidate v1.17 authenticated preflight contract", () => {
     expect(receipt).toMatchObject({
       envelopeKind: "runtime-preflight-receipt",
       requestBinding: {
-        requestSha256: sha256(
-          serializeRuntimePreflightRequestV117(candidate),
-        ),
+        requestSha256: sha256(serializeRuntimePreflightRequestV117(candidate)),
         operationId: candidate.operationId,
         profile: candidate.profile,
         profileSha256: candidate.budget.profileSha256,
@@ -399,8 +394,7 @@ describe("candidate v1.17 authenticated preflight contract", () => {
     ],
     [
       "evidence",
-      (draft: Record<string, any>) =>
-        (draft.evidence.inputSha256 = hash("d")),
+      (draft: Record<string, any>) => (draft.evidence.inputSha256 = hash("d")),
     ],
     [
       "accounting receipt",
@@ -423,7 +417,7 @@ describe("candidate v1.17 authenticated preflight contract", () => {
       evidence,
       signingIdentity,
     )
-    const draft = structuredClone(receipt) as Record<string, any>
+    const draft = globalThis.structuredClone(receipt) as Record<string, any>
     mutate(draft)
     const bytes = canonicalBytes(
       resign(draft as typeof receipt, "receipt") as unknown as JsonValue,
@@ -448,7 +442,10 @@ describe("candidate v1.17 authenticated preflight contract", () => {
       evidence,
       signingIdentity,
     )
-    const badSignature = structuredClone(receipt)
+    const badSignature = globalThis.structuredClone(receipt) as Record<
+      string,
+      any
+    >
     badSignature.authentication.signature = `hmac-sha256:${"0".repeat(64)}`
     for (const bytes of [
       canonicalBytes(badSignature as unknown as JsonValue),
