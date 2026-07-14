@@ -66,6 +66,13 @@ export type WasmWasiGuestAttributionV117 =
   | "host_crash"
   | "transport_crash"
 
+export type WasmWasiGuestProvenanceV117 =
+  | "none"
+  | "host_stdout_byte_meter"
+  | "structured_host_strategy_exception"
+  | "structured_host_fuel_meter"
+  | "structured_host_memory_meter"
+
 export interface WasmWasiGuestObservationV117 {
   kind: "completed" | "failed"
   status: number | null
@@ -73,6 +80,7 @@ export interface WasmWasiGuestObservationV117 {
   stdout: Uint8Array
   stderr: Uint8Array
   attribution: WasmWasiGuestAttributionV117
+  provenance: WasmWasiGuestProvenanceV117
 }
 
 export interface WasmWasiGuestExecutionInputV117 {
@@ -278,7 +286,6 @@ export const classifyWasmtimeProcessObservationV117 = (
 ): WasmWasiGuestObservationV117 => {
   const stdout = result.stdout ?? Buffer.alloc(0)
   const stderr = result.stderr ?? Buffer.alloc(0)
-  const stderrText = stderr.toString("utf8").toLowerCase()
   if (stdout.byteLength > outputBytes) {
     return {
       kind: "failed",
@@ -287,6 +294,7 @@ export const classifyWasmtimeProcessObservationV117 = (
       stdout,
       stderr,
       attribution: "proven_output_exhaustion",
+      provenance: "host_stdout_byte_meter",
     }
   }
   if (stderr.byteLength > stderrBytes) {
@@ -296,10 +304,8 @@ export const classifyWasmtimeProcessObservationV117 = (
       signal: result.signal,
       stdout,
       stderr,
-      attribution:
-        result.status === 0 && result.error === undefined
-          ? "proven_output_exhaustion"
-          : "transport_crash",
+      attribution: "transport_crash",
+      provenance: "none",
     }
   }
   if (
@@ -313,6 +319,7 @@ export const classifyWasmtimeProcessObservationV117 = (
       stdout,
       stderr,
       attribution: "transport_crash",
+      provenance: "none",
     }
   }
   if (result.error !== undefined) {
@@ -327,6 +334,7 @@ export const classifyWasmtimeProcessObservationV117 = (
         result.error.name === "TimeoutError"
           ? "accounting_unavailable"
           : "host_crash",
+      provenance: "none",
     }
   }
   if (result.status === 0) {
@@ -337,32 +345,17 @@ export const classifyWasmtimeProcessObservationV117 = (
       stdout,
       stderr,
       attribution: "none",
+      provenance: "none",
     }
   }
-  const attribution: WasmWasiGuestAttributionV117 =
-    stderrText.includes("all fuel consumed") ||
-    stderrText.includes("fuel has been consumed")
-      ? "proven_fuel_exhaustion"
-      : stderrText.includes("memory out of bounds") ||
-          stderrText.includes("failed to grow memory")
-        ? "proven_memory_exhaustion"
-        : result.signal !== null
-          ? "ambiguous_trap"
-          : stderrText.includes("wasm 'unreachable' instruction executed") ||
-              stderrText.includes("integer divide by zero") ||
-              stderrText.includes("integer overflow") ||
-              stderrText.includes("out of bounds memory access") ||
-              stderrText.includes("call stack exhausted") ||
-              stderrText.includes("panicked at")
-            ? "proven_strategy_exception"
-            : "ambiguous_trap"
   return {
     kind: "failed",
     status: result.status,
     signal: result.signal,
     stdout,
     stderr,
-    attribution,
+    attribution: "ambiguous_trap",
+    provenance: "none",
   }
 }
 
@@ -378,6 +371,7 @@ const executeCandidateGuest = (
       stdout: new Uint8Array(),
       stderr: new Uint8Array(),
       attribution: "host_crash",
+      provenance: "none",
     }
   }
   const result = spawnSync(
@@ -443,10 +437,16 @@ const outcomeForObservation = (
   observation: WasmWasiGuestObservationV117,
 ): RuntimeInvocationResultV117 => {
   if (
+    observation.stderr.byteLength >
+    WASM_WASI_V1_17_EXECUTION_SETTINGS.stderrBytes
+  ) {
+    return candidateOutcome("transport_crash", request, null, [
+      "WASM_WASI_STDERR_CAP_EXCEEDED_UNATTRIBUTED",
+    ])
+  }
+  if (
     observation.kind === "completed" &&
-    (observation.stdout.byteLength > request.budget.outputBytes ||
-      observation.stderr.byteLength >
-        WASM_WASI_V1_17_EXECUTION_SETTINGS.stderrBytes)
+    observation.stdout.byteLength > request.budget.outputBytes
   ) {
     return candidatePlayerViolation(request, "OVERSIZED_OUTPUT", [
       "WASM_WASI_HOST_OUTER_AUTHORITY",
@@ -454,7 +454,31 @@ const outcomeForObservation = (
     ])
   }
   if (observation.kind === "failed") {
+    if (
+      observation.attribution === "proven_strategy_exception" &&
+      observation.provenance !== "structured_host_strategy_exception"
+    ) {
+      return candidateOutcome("strategy_exception_ambiguous", request)
+    }
+    if (
+      observation.attribution === "proven_fuel_exhaustion" &&
+      observation.provenance !== "structured_host_fuel_meter"
+    ) {
+      return candidateOutcome("strategy_exhaustion_ambiguous", request)
+    }
+    if (
+      observation.attribution === "proven_memory_exhaustion" &&
+      observation.provenance !== "structured_host_memory_meter"
+    ) {
+      return candidateOutcome("strategy_exhaustion_ambiguous", request)
+    }
     if (observation.attribution === "proven_output_exhaustion") {
+      if (
+        observation.provenance !== "host_stdout_byte_meter" ||
+        observation.stdout.byteLength <= request.budget.outputBytes
+      ) {
+        return candidateOutcome("transport_crash", request)
+      }
       return candidatePlayerViolation(request, "OVERSIZED_OUTPUT", [
         "WASM_WASI_HOST_OUTER_AUTHORITY",
         "WASM_WASI_PROVEN_OUTPUT_EXHAUSTION",
@@ -469,6 +493,13 @@ const outcomeForObservation = (
     profile: "strategy-payload",
   })
   if (!admitted.ok) {
+    return candidateOutcome("payload_non_canonical", request)
+  }
+  if (
+    !Buffer.from(observation.stdout).equals(
+      Buffer.from(admitted.canonicalBytes),
+    )
+  ) {
     return candidateOutcome("payload_non_canonical", request)
   }
   const schema =

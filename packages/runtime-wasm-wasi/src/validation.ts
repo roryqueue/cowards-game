@@ -116,6 +116,10 @@ export interface WasmWasiCandidateIdentityV117 {
   compiler: {
     executableSha256: `sha256:${string}`
     resolvedPathSha256: `sha256:${string}`
+    invocationShim: {
+      executableSha256: `sha256:${string}`
+      resolvedPathSha256: `sha256:${string}`
+    } | null
     reportedVersion: string
     targetTriple: string
     flags: readonly string[]
@@ -130,7 +134,14 @@ export interface WasmWasiCandidateIdentityV117 {
     reportedVersion: string
     interface: "wasi-preview1-command"
   }
-  adapter: { buildSha256: `sha256:${string}` }
+  adapter: {
+    buildSha256: `sha256:${string}`
+    dependencies: {
+      engineSha256: `sha256:${string}`
+      specSha256: `sha256:${string}`
+      workspaceLockSha256: `sha256:${string}`
+    }
+  }
   settings: {
     sha256: `sha256:${string}`
     value: typeof WASM_WASI_V1_17_EXECUTION_SETTINGS
@@ -165,7 +176,6 @@ export interface WasmWasiCandidateArtifactV117 extends Omit<
 export interface WasmWasiCandidateRevisionV117 {
   id: string
   sourceHash: string
-  sourceBytes: number
   runtime: {
     abiVersion: "strategy-runtime-abi-v1.17"
     language: {
@@ -200,6 +210,33 @@ export const resolveWasmWasiAdapterBuildFilesV117 = (
   return files
 }
 
+const collectAdapterDependencyDigestsV117 = (
+  moduleUrl: string = import.meta.url,
+) => {
+  const moduleDirectory = dirname(fileURLToPath(moduleUrl))
+  const runtimePackageRoot = dirname(moduleDirectory)
+  const packagesRoot = dirname(runtimePackageRoot)
+  const workspaceRoot = dirname(packagesRoot)
+  const digestPackage = (packageName: "engine" | "spec") => {
+    const packageRoot = join(packagesRoot, packageName)
+    const packageManifest = join(packageRoot, "package.json")
+    const sourceRoot = join(packageRoot, "src")
+    accessSync(packageManifest, constants.R_OK)
+    accessSync(sourceRoot, constants.R_OK)
+    return `sha256:${hashCanonicalIdentity("adapterBuild", [
+      readFileSync(packageManifest),
+      new TextEncoder().encode(hashDirectoryTree(sourceRoot)),
+    ])}` as `sha256:${string}`
+  }
+  const workspaceLock = join(workspaceRoot, "pnpm-lock.yaml")
+  accessSync(workspaceLock, constants.R_OK)
+  return {
+    engineSha256: digestPackage("engine"),
+    specSha256: digestPackage("spec"),
+    workspaceLockSha256: prefixedSha256(readFileSync(workspaceLock)),
+  }
+}
+
 export const collectWasmWasiCandidateIdentityV117 = (
   languageId: "rust" | "zig",
   artifact: WasmWasiCandidateArtifactV117,
@@ -218,17 +255,37 @@ export const collectWasmWasiCandidateIdentityV117 = (
     )
   }
   const compilerName = languageId === "rust" ? "rustc" : "zig"
-  const compilerPath = resolveExactCommandPath(compilerName)
+  const compilerInvocationPath = resolveExactCommandPath(compilerName)
   const wasmtimePath = resolveExactCommandPath("wasmtime")
-  if (compilerPath === null || wasmtimePath === null) {
+  if (compilerInvocationPath === null || wasmtimePath === null) {
     throw new Error(
       "Exact WASM/WASI compiler or runtime executable is unavailable",
     )
   }
+  const compilerInvocationResolvedPath = realpathSync(compilerInvocationPath)
+  const rustupPath =
+    languageId === "rust" ? resolveExactCommandPath("rustup") : null
+  const rustupResolvedPath =
+    rustupPath === null ? null : realpathSync(rustupPath)
+  const compilerResolvedPath =
+    languageId === "rust" &&
+    rustupPath !== null &&
+    compilerInvocationResolvedPath === rustupResolvedPath
+      ? realpathSync(requireCommandOutput(rustupPath, ["which", "rustc"]))
+      : compilerInvocationResolvedPath
+  const compilerInvocationShim =
+    compilerResolvedPath === compilerInvocationResolvedPath
+      ? null
+      : {
+          executableSha256: prefixedSha256(
+            readFileSync(compilerInvocationResolvedPath),
+          ),
+          resolvedPathSha256: prefixedSha256(compilerInvocationResolvedPath),
+        }
   const reportedVersion =
     languageId === "rust"
-      ? requireCommandOutput(compilerPath, ["--version", "--verbose"])
-      : `zig ${requireCommandOutput(compilerPath, ["version"])}`
+      ? requireCommandOutput(compilerResolvedPath, ["--version", "--verbose"])
+      : `zig ${requireCommandOutput(compilerResolvedPath, ["version"])}`
   const wasmtimeVersion = requireCommandOutput(wasmtimePath, ["--version"])
   const targetTriple = languageId === "rust" ? "wasm32-wasip1" : "wasm32-wasi"
   if (artifact.targetTriple !== targetTriple) {
@@ -236,7 +293,6 @@ export const collectWasmWasiCandidateIdentityV117 = (
       "Candidate artifact target does not match the exact lane",
     )
   }
-  const compilerResolvedPath = realpathSync(compilerPath)
   const wasmtimeResolvedPath = realpathSync(wasmtimePath)
   const compilerBytes = readFileSync(compilerResolvedPath)
   const stdlibSysroot =
@@ -244,7 +300,7 @@ export const collectWasmWasiCandidateIdentityV117 = (
       ? {
           kind: "target-libdir" as const,
           sha256: hashDirectoryTree(
-            requireCommandOutput(compilerPath, [
+            requireCommandOutput(compilerResolvedPath, [
               "--print",
               "target-libdir",
               "--target",
@@ -259,10 +315,13 @@ export const collectWasmWasiCandidateIdentityV117 = (
             compilerBytes,
           ])}` as `sha256:${string}`,
         }
-  const adapterBuildSha256 = `sha256:${hashCanonicalIdentity(
-    "adapterBuild",
-    resolveWasmWasiAdapterBuildFilesV117().map((file) => readFileSync(file)),
-  )}` as `sha256:${string}`
+  const dependencyDigests = collectAdapterDependencyDigestsV117()
+  const adapterBuildSha256 = `sha256:${hashCanonicalIdentity("adapterBuild", [
+    ...resolveWasmWasiAdapterBuildFilesV117().map((file) => readFileSync(file)),
+    ...Object.values(dependencyDigests).map((digest) =>
+      new TextEncoder().encode(digest),
+    ),
+  ])}` as `sha256:${string}`
   const settingsSha256 = `sha256:${hashCanonicalIdentityValue(
     "runtimeExecutable",
     WASM_WASI_V1_17_EXECUTION_SETTINGS as unknown as JsonValue,
@@ -293,6 +352,7 @@ export const collectWasmWasiCandidateIdentityV117 = (
     compiler: {
       executableSha256: prefixedSha256(compilerBytes),
       resolvedPathSha256: prefixedSha256(compilerResolvedPath),
+      invocationShim: compilerInvocationShim,
       reportedVersion,
       targetTriple,
       flags:
@@ -319,7 +379,10 @@ export const collectWasmWasiCandidateIdentityV117 = (
       reportedVersion: wasmtimeVersion,
       interface: "wasi-preview1-command" as const,
     },
-    adapter: { buildSha256: adapterBuildSha256 },
+    adapter: {
+      buildSha256: adapterBuildSha256,
+      dependencies: dependencyDigests,
+    },
     settings: {
       sha256: settingsSha256,
       value: WASM_WASI_V1_17_EXECUTION_SETTINGS,
@@ -335,6 +398,7 @@ export const collectWasmWasiCandidateIdentityV117 = (
         "wasmtime-linear-memory-ceiling",
         "wasmtime-stack-ceiling",
         "host-stdout-byte-ceiling",
+        "host-stderr-byte-ceiling",
         "single-process-no-preopen-empty-env",
       ],
       unsupported: WASM_WASI_V1_17_EXECUTION_SETTINGS.unsupportedMeters,
@@ -1054,7 +1118,6 @@ const buildWasmWasiCandidateRevisionV117 = (
   return {
     id: `strategy-revision:${languageId}-wasi-v1.17:${sourceHash}:${compiled.artifact.hash.slice(0, 16)}`,
     sourceHash,
-    sourceBytes: Buffer.byteLength(source),
     runtime: {
       abiVersion: RUNTIME_INVOCATION_V1_17_CANDIDATE.runtimeAbiVersion,
       language: {

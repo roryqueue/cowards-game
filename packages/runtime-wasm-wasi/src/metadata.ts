@@ -19,7 +19,7 @@ export const WASM_WASI_V1_17_EXECUTION_SETTINGS = Object.freeze({
   wasmStackBytes: 1_048_576,
   trapOnGrowFailure: true,
   stdout: "raw-canonical-strategy-payload",
-  stderrBytes: 65_536,
+  stderrBytes: 16_384,
   processLimit: 1,
   cliArgumentTemplate: Object.freeze([
     "run",
@@ -40,6 +40,7 @@ export const WASM_WASI_V1_17_EXECUTION_SETTINGS = Object.freeze({
     "guest-process-tree-accounting",
     "per-invocation-peak-linear-memory-observation",
     "signed-match-cumulative-meter-readback",
+    "guest-stderr-provenance-attribution",
   ]),
   certification: "uncertified",
 } as const)
@@ -53,8 +54,7 @@ export const wasmWasiRuntimeMetadataV117 = (
     current: false as const,
     language: Object.freeze({
       id: languageId,
-      targetTriple:
-        languageId === "rust" ? "wasm32-wasip1" : "wasm32-wasi",
+      targetTriple: languageId === "rust" ? "wasm32-wasip1" : "wasm32-wasi",
     }),
     adapter: Object.freeze({
       id: "runtime-wasm-wasi-wasmtime-preview1",

@@ -36,7 +36,12 @@
       ],
       "identity": {
         "adapter": {
-          "buildSha256": "sha256:ef2dbcdae7dfae90c705898f422c3273cc274e3c0d1478ded6f15bbe84b79f4d"
+          "buildSha256": "sha256:41fa779724d36cc5a92a1a5d62427f2dc5879d42df16946c4ca2108f0a240121",
+          "dependencies": {
+            "engineSha256": "sha256:473782836561efa2a8f9b002e4472271a6e51ee2946e58638029cdfed32f0075",
+            "specSha256": "sha256:33fccc8694c7c6307f8f4f142fd5b50335b7cea64b2b5b8473cc4d758262860d",
+            "workspaceLockSha256": "sha256:9135a5456c35f7dc388087505d2fa485d74ea57e655c0cc2611b80c2dc29e992"
+          }
         },
         "artifact": {
           "bytes": 2012498,
@@ -51,7 +56,7 @@
           "This local executable observation is not a digest-addressed production deployment pin."
         ],
         "compiler": {
-          "executableSha256": "sha256:33cf85df9142bc6d29cbc62fa5ca1d4c29622cddb55213a4c1a43c457fb9b2d7",
+          "executableSha256": "sha256:fcf2ce6f5b55d90d29867767262ad179ed761a8b54d24b5c181c535fa05ced19",
           "flags": [
             "--target",
             "wasm32-wasip1",
@@ -60,8 +65,12 @@
             "-o",
             "<artifact>"
           ],
+          "invocationShim": {
+            "executableSha256": "sha256:33cf85df9142bc6d29cbc62fa5ca1d4c29622cddb55213a4c1a43c457fb9b2d7",
+            "resolvedPathSha256": "sha256:dbb0c9c09d58bd1e0108c56fac67e291805b1aae262949e0aab6d3b90647e35e"
+          },
           "reportedVersion": "rustc 1.95.0 (59807616e 2026-04-14)\nbinary: rustc\ncommit-hash: 59807616e1fa2540724bfbac14d7976d7e4a3860\ncommit-date: 2026-04-14\nhost: x86_64-apple-darwin\nrelease: 1.95.0\nLLVM version: 22.1.2",
-          "resolvedPathSha256": "sha256:dbb0c9c09d58bd1e0108c56fac67e291805b1aae262949e0aab6d3b90647e35e",
+          "resolvedPathSha256": "sha256:751941e4815752faab6ec866848ecc7bcdae99d939a9980f87eb7033046c1229",
           "targetTriple": "wasm32-wasip1"
         },
         "containment": {
@@ -69,7 +78,7 @@
           "sha256": "sha256:cfcfadf2f6e1888e2b44296844fc17087a3813239352e1fdfc46ab7f9ed6e9c9"
         },
         "countedCertification": "uncertified",
-        "identitySha256": "sha256:14a404f537954ebf4d9b6aa3ccbce383e6ad37f5665309642e828b01890e4a41",
+        "identitySha256": "sha256:1d0a3033ae126146280169d5f2827de1611b85e53879f704abde98b6699f6bbb",
         "languageId": "rust",
         "metering": {
           "supported": [
@@ -78,13 +87,15 @@
             "wasmtime-linear-memory-ceiling",
             "wasmtime-stack-ceiling",
             "host-stdout-byte-ceiling",
+            "host-stderr-byte-ceiling",
             "single-process-no-preopen-empty-env"
           ],
           "unsupported": [
             "portable-cross-runtime-compute-equivalence",
             "guest-process-tree-accounting",
             "per-invocation-peak-linear-memory-observation",
-            "signed-match-cumulative-meter-readback"
+            "signed-match-cumulative-meter-readback",
+            "guest-stderr-provenance-attribution"
           ]
         },
         "productionTrustedProducers": [],
@@ -97,7 +108,7 @@
         "runtimeAbi": "strategy-runtime-abi-v1.17",
         "schemaVersion": "runtime-wasm-wasi-identity-v1.17",
         "settings": {
-          "sha256": "sha256:ef46e2d028350b1442186144c79734d22ea08e48d25a0bb9e00e45f70b9affc6",
+          "sha256": "sha256:d57c5ed3c5e304e3484b6700d8e9a8a933526fd1dc29def7dfefef59cffb89be",
           "value": {
             "arguments": "none",
             "certification": "uncertified",
@@ -123,14 +134,15 @@
             "processLimit": 1,
             "runtime": "wasmtime-cli",
             "runtimeInterface": "wasi-preview1-command",
-            "stderrBytes": 65536,
+            "stderrBytes": 16384,
             "stdout": "raw-canonical-strategy-payload",
             "trapOnGrowFailure": true,
             "unsupportedMeters": [
               "portable-cross-runtime-compute-equivalence",
               "guest-process-tree-accounting",
               "per-invocation-peak-linear-memory-observation",
-              "signed-match-cumulative-meter-readback"
+              "signed-match-cumulative-meter-readback",
+              "guest-stderr-provenance-attribution"
             ],
             "wallTimeout": "request-budget-wallMilliseconds",
             "wasmStackBytes": 1048576
@@ -183,7 +195,12 @@
       ],
       "identity": {
         "adapter": {
-          "buildSha256": "sha256:ef2dbcdae7dfae90c705898f422c3273cc274e3c0d1478ded6f15bbe84b79f4d"
+          "buildSha256": "sha256:41fa779724d36cc5a92a1a5d62427f2dc5879d42df16946c4ca2108f0a240121",
+          "dependencies": {
+            "engineSha256": "sha256:473782836561efa2a8f9b002e4472271a6e51ee2946e58638029cdfed32f0075",
+            "specSha256": "sha256:33fccc8694c7c6307f8f4f142fd5b50335b7cea64b2b5b8473cc4d758262860d",
+            "workspaceLockSha256": "sha256:9135a5456c35f7dc388087505d2fa485d74ea57e655c0cc2611b80c2dc29e992"
+          }
         },
         "artifact": {
           "bytes": 258,
@@ -212,6 +229,7 @@
             "<ephemeral>",
             "-femit-bin=<artifact>"
           ],
+          "invocationShim": null,
           "reportedVersion": "zig 0.16.0",
           "resolvedPathSha256": "sha256:1fcc956237ac80de6b5f95a197e14950d7466ea218c1dba9a539a954723fc63a",
           "targetTriple": "wasm32-wasi"
@@ -221,7 +239,7 @@
           "sha256": "sha256:cfcfadf2f6e1888e2b44296844fc17087a3813239352e1fdfc46ab7f9ed6e9c9"
         },
         "countedCertification": "uncertified",
-        "identitySha256": "sha256:938060e6c52ad70da49f8b171b50a2b058a4faa308b8f9dadcd740ab9434dfc6",
+        "identitySha256": "sha256:a3dd1815362814df994db620388738e64a40575671f4fd74f7bd0ca497101ebe",
         "languageId": "zig",
         "metering": {
           "supported": [
@@ -230,13 +248,15 @@
             "wasmtime-linear-memory-ceiling",
             "wasmtime-stack-ceiling",
             "host-stdout-byte-ceiling",
+            "host-stderr-byte-ceiling",
             "single-process-no-preopen-empty-env"
           ],
           "unsupported": [
             "portable-cross-runtime-compute-equivalence",
             "guest-process-tree-accounting",
             "per-invocation-peak-linear-memory-observation",
-            "signed-match-cumulative-meter-readback"
+            "signed-match-cumulative-meter-readback",
+            "guest-stderr-provenance-attribution"
           ]
         },
         "productionTrustedProducers": [],
@@ -249,7 +269,7 @@
         "runtimeAbi": "strategy-runtime-abi-v1.17",
         "schemaVersion": "runtime-wasm-wasi-identity-v1.17",
         "settings": {
-          "sha256": "sha256:ef46e2d028350b1442186144c79734d22ea08e48d25a0bb9e00e45f70b9affc6",
+          "sha256": "sha256:d57c5ed3c5e304e3484b6700d8e9a8a933526fd1dc29def7dfefef59cffb89be",
           "value": {
             "arguments": "none",
             "certification": "uncertified",
@@ -275,14 +295,15 @@
             "processLimit": 1,
             "runtime": "wasmtime-cli",
             "runtimeInterface": "wasi-preview1-command",
-            "stderrBytes": 65536,
+            "stderrBytes": 16384,
             "stdout": "raw-canonical-strategy-payload",
             "trapOnGrowFailure": true,
             "unsupportedMeters": [
               "portable-cross-runtime-compute-equivalence",
               "guest-process-tree-accounting",
               "per-invocation-peak-linear-memory-observation",
-              "signed-match-cumulative-meter-readback"
+              "signed-match-cumulative-meter-readback",
+              "guest-stderr-provenance-attribution"
             ],
             "wallTimeout": "request-budget-wallMilliseconds",
             "wasmStackBytes": 1048576

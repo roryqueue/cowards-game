@@ -215,6 +215,7 @@ const completedObservation = (
   stdout: new TextEncoder().encode(stdout),
   stderr: new Uint8Array(),
   attribution: "none",
+  provenance: "none",
 })
 
 const candidateIdentityCache = new Map<
@@ -371,13 +372,27 @@ describe("WASM/WASI runtime v1.17 candidate host authority", () => {
     "maps %s to exclusive %s/%s ownership",
     (attribution, kind, code) => {
       const request = candidateRequest(revision)
+      const provenance =
+        attribution === "proven_strategy_exception"
+          ? "structured_host_strategy_exception"
+          : attribution === "proven_fuel_exhaustion"
+            ? "structured_host_fuel_meter"
+            : attribution === "proven_memory_exhaustion"
+              ? "structured_host_memory_meter"
+              : attribution === "proven_output_exhaustion"
+                ? "host_stdout_byte_meter"
+                : "none"
       const response = runCandidateObservation(request, revision, {
         kind: "failed",
         status: null,
         signal: null,
-        stdout: new Uint8Array(),
+        stdout:
+          attribution === "proven_output_exhaustion"
+            ? new Uint8Array(request.budget.outputBytes + 1)
+            : new Uint8Array(),
         stderr: new Uint8Array(),
         attribution,
+        provenance,
       })
 
       expect(response.outcome.kind).toBe(kind)
@@ -624,12 +639,28 @@ describe("WASM/WASI runtime v1.17 candidate host authority", () => {
       revision,
       stderrObservation,
     )
+    const bothObservation = completedObservation(
+      '{"action":{"type":"TURN_TO_STONE"},"soldierMemory":null}',
+    )
+    bothObservation.stdout = new Uint8Array(33)
+    bothObservation.stderr = new Uint8Array(
+      WASM_WASI_V1_17_EXECUTION_SETTINGS.stderrBytes + 1,
+    )
+    const bothResponse = runCandidateObservation(
+      outputLimitedRequest,
+      revision,
+      bothObservation,
+    )
 
     expect(stdoutResponse.outcome).toMatchObject({
       kind: "player_violation",
       violation: { code: "OVERSIZED_OUTPUT" },
     })
     expect(stderrResponse.outcome).toMatchObject({
+      kind: "system_failure",
+      failure: { code: "TRANSPORT_CRASH" },
+    })
+    expect(bothResponse.outcome).toMatchObject({
       kind: "system_failure",
       failure: { code: "TRANSPORT_CRASH" },
     })
@@ -645,6 +676,7 @@ describe("WASM/WASI runtime v1.17 candidate host authority", () => {
         WASM_WASI_V1_17_EXECUTION_SETTINGS.stderrBytes + 1,
       ),
       attribution: "transport_crash",
+      provenance: "none",
     }
     const response = runCandidateObservation(
       candidateRequest(revision),
@@ -672,7 +704,6 @@ describe("WASM/WASI runtime v1.17 candidate host authority", () => {
           stderr: Buffer.from(stderr),
           status: 1,
           signal: null,
-          error: undefined,
         },
         262_144,
         WASM_WASI_V1_17_EXECUTION_SETTINGS.stderrBytes,
@@ -681,6 +712,33 @@ describe("WASM/WASI runtime v1.17 candidate host authority", () => {
       expect(observation).toMatchObject({
         kind: "failed",
         attribution: "ambiguous_trap",
+      })
+    }
+  })
+
+  it("requires structured host provenance before assigning exception or meter blame", () => {
+    for (const attribution of [
+      "proven_strategy_exception",
+      "proven_fuel_exhaustion",
+      "proven_memory_exhaustion",
+    ] as const) {
+      const response = runCandidateObservation(
+        candidateRequest(revision),
+        revision,
+        {
+          kind: "failed",
+          status: 1,
+          signal: null,
+          stdout: new Uint8Array(),
+          stderr: new TextEncoder().encode("guest-controlled diagnostic"),
+          attribution,
+          provenance: "none",
+        },
+      )
+
+      expect(response.outcome).toMatchObject({
+        kind: "system_failure",
+        failure: { code: "AMBIGUOUS_ATTRIBUTION" },
       })
     }
   })
@@ -698,7 +756,6 @@ describe("WASM/WASI runtime v1.17 candidate host authority", () => {
         stderr,
         status: 0,
         signal: null,
-        error: undefined,
       },
       262_144,
       WASM_WASI_V1_17_EXECUTION_SETTINGS.stderrBytes,
