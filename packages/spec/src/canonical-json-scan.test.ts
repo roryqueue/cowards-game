@@ -1,3 +1,4 @@
+import { Buffer } from "node:buffer"
 import { readFileSync } from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
@@ -105,6 +106,23 @@ describe("canonical JSON v1.1 iterative raw-byte scanner", () => {
         code: "MAX_RAW_UTF8_BYTES_EXCEEDED",
         path: [],
         byteOffset: 3,
+        owner: "player_violation",
+      },
+    })
+  })
+
+  it("classifies malformed UTF-8 before grammar even outside a string", () => {
+    expect(
+      scanCanonicalJson(Uint8Array.from([0xff]), {
+        context: "decoded-strategy-payload",
+        operation: "parse-and-canonicalize",
+      }),
+    ).toEqual({
+      ok: false,
+      error: {
+        code: "INVALID_UTF8",
+        path: [],
+        byteOffset: 0,
         owner: "player_violation",
       },
     })

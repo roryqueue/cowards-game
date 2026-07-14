@@ -223,6 +223,11 @@ export const scanCanonicalJson = (
   if (bytes.byteLength > limits.rawUtf8Bytes) {
     return failure("MAX_RAW_UTF8_BYTES_EXCEEDED", limits.rawUtf8Bytes)
   }
+  for (let offset = 0; offset < bytes.byteLength; ) {
+    const decoded = utf8Width(bytes, offset)
+    if (!decoded) return failure("INVALID_UTF8", offset)
+    offset += decoded.width
+  }
 
   const readString = (start: number, path: readonly (string | number)[]): StringRead | ReadFailure => {
     const pieces: string[] = []
