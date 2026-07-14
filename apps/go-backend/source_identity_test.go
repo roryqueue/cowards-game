@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -13,6 +14,50 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
+
+func TestPhase258SourceIdentityE2EServer(t *testing.T) {
+	if os.Getenv("COWARDS_PHASE258_SOURCE_IDENTITY_E2E_SERVER") != "1" {
+		t.Skip("manual Playwright topology helper")
+	}
+	databaseURL := os.Getenv("COWARDS_GO_BACKEND_TEST_DATABASE_URL")
+	if databaseURL == "" {
+		t.Fatal("COWARDS_GO_BACKEND_TEST_DATABASE_URL is required")
+	}
+	if os.Getenv("COWARDS_PROVIDER_VALIDATION_SECRET") == "" {
+		t.Fatal("COWARDS_PROVIDER_VALIDATION_SECRET is required")
+	}
+	if os.Getenv("COWARDS_RUNTIME_SERVICE_PRIVATE_ARTIFACT_TOKEN") == "" {
+		t.Fatal("COWARDS_RUNTIME_SERVICE_PRIVATE_ARTIFACT_TOKEN is required")
+	}
+	ctx := context.Background()
+	pool, err := pgxpool.New(ctx, databaseURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer pool.Close()
+	server := &LiveServer{
+		pool:              pool,
+		now:               time.Now,
+		strategyArtifacts: map[string]strategyArtifact{},
+		orchestrator:      newGoMatchOrchestrator(pool, os.Getenv("COWARDS_RUNTIME_SERVICE_URL")),
+	}
+	listener, err := net.Listen("tcp", "127.0.0.1:8087")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Log("phase258 source identity E2E Go server ready on 127.0.0.1:8087")
+	if err := http.Serve(listener, server.routes()); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestPhase258GoCompatibilityMatchesCanonicalEngine(t *testing.T) {
+	compatibility := engineCompatibility()
+	if stringValue(compatibility, "spec") != "cowards-rules-v1.4" ||
+		stringValue(compatibility, "engine") != "engine-kernel-v1.37-candidate-1" {
+		t.Fatalf("Go compatibility tuple drifted from the canonical engine: %+v", compatibility)
+	}
+}
 
 func TestPhase258SourceIdentityPostgres(t *testing.T) {
 	databaseURL := os.Getenv("COWARDS_GO_BACKEND_TEST_DATABASE_URL")
