@@ -180,7 +180,7 @@ describe("runtime invocation v1.17 exclusive ownership", () => {
   it("accepts only exact success, player, and system result shapes", () => {
     const success = {
       kind: "success",
-      value: { activationOrders: [] },
+      value: { activationOrders: [], strategyMemory: null },
       trace: trace(),
     }
     const player = {
@@ -439,7 +439,7 @@ describe("runtime invocation v1.17 authenticated candidate wire", () => {
     const request = candidateRequest()
     const mismatchedOutcome = {
       kind: "success" as const,
-      value: { activationOrders: [] },
+      value: { activationOrders: [], strategyMemory: null },
       trace: {
         ...trace(),
         requestId: "request:candidate:v1.17:different",

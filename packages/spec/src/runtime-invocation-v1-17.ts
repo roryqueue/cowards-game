@@ -11,6 +11,10 @@ import {
   admitCanonicalJsonValue,
   type CanonicalJsonBoundaryProfileId,
 } from "./canonical-json.js"
+import {
+  SoldierBrainResultV117Schema,
+  StrategyResultV117Schema,
+} from "./runtime-payload-v1-17.js"
 import type { JsonValue } from "./types.js"
 
 const deepFreeze = <T>(value: T): Readonly<T> => {
@@ -145,8 +149,6 @@ const canonicalJsonValueSchema = (
   })
 
 const HostApiJsonValueSchema = canonicalJsonValueSchema("host-api-value")
-const StrategyPayloadJsonValueSchema = canonicalJsonValueSchema("strategy-payload")
-
 const Sha256Schema = z.string().regex(/^sha256:[0-9a-f]{64}$/u)
 const SafeCodeSchema = z.string().regex(/^[A-Z][A-Z0-9_]{0,63}$/u)
 const PublicIdSchema = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._:-]{0,255}$/u)
@@ -165,13 +167,26 @@ export const RuntimeInvocationTraceV117Schema = z
   })
   .strict()
 
-const RuntimeInvocationSuccessV117Schema = z
-  .object({
-    kind: z.literal("success"),
-    value: StrategyPayloadJsonValueSchema,
-    trace: RuntimeInvocationTraceV117Schema,
-  })
-  .strict()
+const RuntimeInvocationSuccessV117Schema = z.union([
+  z
+    .object({
+      kind: z.literal("success"),
+      value: StrategyResultV117Schema,
+      trace: RuntimeInvocationTraceV117Schema.extend({
+        method: z.literal("selectActivations"),
+      }),
+    })
+    .strict(),
+  z
+    .object({
+      kind: z.literal("success"),
+      value: SoldierBrainResultV117Schema,
+      trace: RuntimeInvocationTraceV117Schema.extend({
+        method: z.literal("soldierBrain"),
+      }),
+    })
+    .strict(),
+])
 
 const RuntimeInvocationPlayerViolationV117Schema = z
   .union(

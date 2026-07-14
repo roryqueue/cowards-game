@@ -12,9 +12,9 @@ import {
   RUNTIME_EXECUTION_SERVICE_VERSION,
   RUNTIME_INVOCATION_V1_17_PLAYER_VIOLATIONS,
   RuntimeExecutionServiceResponseSchema,
-  SoldierBrainResultSchema,
+  SoldierBrainResultV117Schema,
   STRATEGY_RUNTIME_ABI_VERSION,
-  StrategyResultSchema,
+  StrategyResultV117Schema,
   admitCanonicalJsonBytes,
   getStrategyLanguageProviderRecord,
   verifyRuntimeInvocationRequestV117,
@@ -133,8 +133,8 @@ export const admitStrategyPayloadBytesV117 = (
     }
   }
   const schema = method === "selectActivations"
-    ? StrategyResultSchema
-    : SoldierBrainResultSchema
+    ? StrategyResultV117Schema
+    : SoldierBrainResultV117Schema
   const parsed = schema.safeParse(admitted.value)
   if (!parsed.success) {
     return {

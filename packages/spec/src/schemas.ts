@@ -52,10 +52,14 @@ import {
 } from "./runtime.js"
 import { COUNTED_ENTRY_ELIGIBILITY_CATEGORIES } from "./competition-entry-eligibility.js"
 import { parseCanonicalJsonInstant } from "./canonical-instant.js"
-import {
-  admitCanonicalJsonValue,
-  type CanonicalJsonBoundaryProfileId,
-} from "./canonical-json.js"
+export {
+  CanonicalJsonValueV117Schema,
+  ObjectivePayloadV117Schema,
+  SoldierBrainResultV117Schema,
+  SoldierMemoryV117Schema,
+  StrategyMemoryV117Schema,
+  StrategyResultV117Schema,
+} from "./runtime-payload-v1-17.js"
 
 export const jsonByteLength = (value: unknown): number =>
   new TextEncoder().encode(JSON.stringify(value)).length
@@ -69,32 +73,6 @@ export const JsonValueSchema: z.ZodType<JsonValue> = z.lazy(() =>
     z.array(JsonValueSchema),
     z.record(z.string(), JsonValueSchema),
   ]),
-)
-
-const canonicalJsonValueV117Schema = (
-  profile: CanonicalJsonBoundaryProfileId,
-): z.ZodType<JsonValue> =>
-  z.custom<JsonValue>(() => true).superRefine((value, ctx) => {
-    const admitted = admitCanonicalJsonValue(value, { profile })
-    if (admitted.ok) return
-    ctx.addIssue({
-      code: "custom",
-      path: [...admitted.error.path],
-      message: `canonical-json-v1:${admitted.error.code}`,
-    })
-  })
-
-export const CanonicalJsonValueV117Schema = canonicalJsonValueV117Schema(
-  "host-api-value",
-)
-export const StrategyMemoryV117Schema = canonicalJsonValueV117Schema(
-  "strategy-memory",
-)
-export const SoldierMemoryV117Schema = canonicalJsonValueV117Schema(
-  "soldier-memory",
-)
-export const ObjectivePayloadV117Schema = canonicalJsonValueV117Schema(
-  "objective",
 )
 
 export const AnalyticsEvidenceBandSchema = z.enum(ANALYTICS_EVIDENCE_BANDS)
