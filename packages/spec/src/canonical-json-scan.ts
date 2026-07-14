@@ -106,13 +106,16 @@ const ownerFor = (context: CanonicalJsonContext): CanonicalJsonErrorOwner =>
     ? "player_violation"
     : "system_failure"
 
-const isFailure = (value: StringRead | NumberRead | ReadFailure): value is ReadFailure =>
-  "error" in value
+const isFailure = (
+  value: StringRead | NumberRead | ReadFailure,
+): value is ReadFailure => "error" in value
 
 const assertLimits = (limits: CanonicalJsonLimits): void => {
   for (const [name, value] of Object.entries(limits)) {
     if (!Number.isSafeInteger(value) || value < 0) {
-      throw new TypeError(`canonical JSON limit ${name} must be a nonnegative safe integer`)
+      throw new TypeError(
+        `canonical JSON limit ${name} must be a nonnegative safe integer`,
+      )
     }
   }
 }
@@ -151,7 +154,8 @@ const utf8Width = (
     }
     return {
       width: 3,
-      codePoint: ((first & 0x0f) << 12) | ((second & 0x3f) << 6) | (third & 0x3f),
+      codePoint:
+        ((first & 0x0f) << 12) | ((second & 0x3f) << 6) | (third & 0x3f),
     }
   }
   const fourth = bytes[offset + 3]
@@ -225,12 +229,18 @@ export const scanCanonicalJson = (
     offset += decoded.width
   }
 
-  const readString = (start: number, path: readonly (string | number)[]): StringRead | ReadFailure => {
+  const readString = (
+    start: number,
+    path: readonly (string | number)[],
+  ): StringRead | ReadFailure => {
     const pieces: string[] = []
     let decodedBytes = 0
     let offset = start + 1
     let segmentStart = offset
-    const addWidth = (width: number, errorOffset: number): ReadFailure | undefined => {
+    const addWidth = (
+      width: number,
+      errorOffset: number,
+    ): ReadFailure | undefined => {
       if (decodedBytes + width > limits.decodedStringUtf8Bytes) {
         return {
           error: failure(
@@ -246,11 +256,13 @@ export const scanCanonicalJson = (
     while (offset < bytes.byteLength) {
       const byte = bytes[offset]!
       if (byte === 0x22) {
-        if (segmentStart < offset) pieces.push(textDecoder.decode(bytes.subarray(segmentStart, offset)))
+        if (segmentStart < offset)
+          pieces.push(textDecoder.decode(bytes.subarray(segmentStart, offset)))
         return { value: pieces.join(""), nextOffset: offset + 1 }
       }
       if (byte === 0x5c) {
-        if (segmentStart < offset) pieces.push(textDecoder.decode(bytes.subarray(segmentStart, offset)))
+        if (segmentStart < offset)
+          pieces.push(textDecoder.decode(bytes.subarray(segmentStart, offset)))
         const escapeOffset = offset
         const escaped = bytes[offset + 1]
         const simpleEscapes: Readonly<Record<number, string>> = {
@@ -283,21 +295,37 @@ export const scanCanonicalJson = (
         if (firstUnit >= 0xd800 && firstUnit <= 0xdbff) {
           if (bytes[offset + 6] !== 0x5c || bytes[offset + 7] !== 0x75) {
             return {
-              error: failure("INVALID_UNICODE_SCALAR", escapeOffset, path).error,
+              error: failure("INVALID_UNICODE_SCALAR", escapeOffset, path)
+                .error,
             }
           }
           const secondUnit = readHexQuad(bytes, offset + 8)
-          if (secondUnit === undefined || secondUnit < 0xdc00 || secondUnit > 0xdfff) {
+          if (
+            secondUnit === undefined ||
+            secondUnit < 0xdc00 ||
+            secondUnit > 0xdfff
+          ) {
             return {
-              error: failure("INVALID_UNICODE_SCALAR", escapeOffset, path).error,
+              error: failure("INVALID_UNICODE_SCALAR", escapeOffset, path)
+                .error,
             }
           }
-          codePoint = 0x10000 + ((firstUnit - 0xd800) << 10) + (secondUnit - 0xdc00)
+          codePoint =
+            0x10000 + ((firstUnit - 0xd800) << 10) + (secondUnit - 0xdc00)
           consumed = 12
         } else if (firstUnit >= 0xdc00 && firstUnit <= 0xdfff) {
-          return { error: failure("INVALID_UNICODE_SCALAR", escapeOffset, path).error }
+          return {
+            error: failure("INVALID_UNICODE_SCALAR", escapeOffset, path).error,
+          }
         }
-        const width = codePoint <= 0x7f ? 1 : codePoint <= 0x7ff ? 2 : codePoint <= 0xffff ? 3 : 4
+        const width =
+          codePoint <= 0x7f
+            ? 1
+            : codePoint <= 0x7ff
+              ? 2
+              : codePoint <= 0xffff
+                ? 3
+                : 4
         const widthFailure = addWidth(width, escapeOffset)
         if (widthFailure) return widthFailure
         pieces.push(String.fromCodePoint(codePoint))
@@ -309,7 +337,8 @@ export const scanCanonicalJson = (
         return { error: failure("INVALID_GRAMMAR", offset, path).error }
       }
       const decoded = utf8Width(bytes, offset)
-      if (!decoded) return { error: failure("INVALID_UTF8", offset, path).error }
+      if (!decoded)
+        return { error: failure("INVALID_UTF8", offset, path).error }
       const widthFailure = addWidth(decoded.width, offset)
       if (widthFailure) return widthFailure
       offset += decoded.width
@@ -319,7 +348,10 @@ export const scanCanonicalJson = (
 
   const isDigit = (byte: number | undefined): boolean =>
     byte !== undefined && byte >= 0x30 && byte <= 0x39
-  const readNumber = (start: number, path: readonly (string | number)[]): NumberRead | ReadFailure => {
+  const readNumber = (
+    start: number,
+    path: readonly (string | number)[],
+  ): NumberRead | ReadFailure => {
     let offset = start
     if (bytes[offset] === 0x2d) offset += 1
     if (!isDigit(bytes[offset])) {
@@ -352,6 +384,8 @@ export const scanCanonicalJson = (
     if (!Number.isFinite(value)) {
       return { error: failure("NUMBER_OUT_OF_RANGE", start, path).error }
     }
+    // D-02 bounds JSON integer lexemes. Finite decimal/exponent binary64 values
+    // retain their round-trip domain, including 1e21 and max finite binary64.
     if (/^-?(?:0|[1-9][0-9]*)$/.test(lexical) && !Number.isSafeInteger(value)) {
       return { error: failure("NUMBER_OUT_OF_RANGE", start, path).error }
     }
@@ -367,7 +401,8 @@ export const scanCanonicalJson = (
   let rootComplete = false
 
   const skipWhitespace = (): void => {
-    while (offset < bytes.byteLength && whitespace.has(bytes[offset]!)) offset += 1
+    while (offset < bytes.byteLength && whitespace.has(bytes[offset]!))
+      offset += 1
   }
 
   const readValue = (
@@ -385,7 +420,12 @@ export const scanCanonicalJson = (
       offset += 1
       if (byte === 0x5b) {
         tokens.push({ kind: "array-start" })
-        stack.push({ kind: "array", path: [...path], entries: 0, state: "first-value-or-end" })
+        stack.push({
+          kind: "array",
+          path: [...path],
+          entries: 0,
+          state: "first-value-or-end",
+        })
       } else {
         tokens.push({ kind: "object-start" })
         stack.push({
@@ -406,17 +446,26 @@ export const scanCanonicalJson = (
       tokens.push({ kind: "string", value: decoded.value })
       return { container: false }
     }
-    if (byte === 0x74 && textDecoder.decode(bytes.subarray(offset, offset + 4)) === "true") {
+    if (
+      byte === 0x74 &&
+      textDecoder.decode(bytes.subarray(offset, offset + 4)) === "true"
+    ) {
       offset += 4
       tokens.push({ kind: "boolean", value: true })
       return { container: false }
     }
-    if (byte === 0x66 && textDecoder.decode(bytes.subarray(offset, offset + 5)) === "false") {
+    if (
+      byte === 0x66 &&
+      textDecoder.decode(bytes.subarray(offset, offset + 5)) === "false"
+    ) {
       offset += 5
       tokens.push({ kind: "boolean", value: false })
       return { container: false }
     }
-    if (byte === 0x6e && textDecoder.decode(bytes.subarray(offset, offset + 4)) === "null") {
+    if (
+      byte === 0x6e &&
+      textDecoder.decode(bytes.subarray(offset, offset + 4)) === "null"
+    ) {
       offset += 4
       tokens.push({ kind: "null" })
       return { container: false }
@@ -435,7 +484,8 @@ export const scanCanonicalJson = (
     skipWhitespace()
     if (stack.length === 0) {
       if (rootComplete) {
-        if (offset !== bytes.byteLength) return failure("INVALID_GRAMMAR", offset)
+        if (offset !== bytes.byteLength)
+          return failure("INVALID_GRAMMAR", offset)
         return {
           ok: true,
           receipt: {
@@ -476,7 +526,8 @@ export const scanCanonicalJson = (
           if (stack.length === 0) rootComplete = true
           continue
         }
-        if (bytes[offset] !== 0x2c) return failure("INVALID_GRAMMAR", offset, frame.path)
+        if (bytes[offset] !== 0x2c)
+          return failure("INVALID_GRAMMAR", offset, frame.path)
         offset += 1
         frame.state = "value"
         continue
@@ -507,7 +558,8 @@ export const scanCanonicalJson = (
         if (stack.length === 0) rootComplete = true
         continue
       }
-      if (bytes[offset] !== 0x2c) return failure("INVALID_GRAMMAR", offset, frame.path)
+      if (bytes[offset] !== 0x2c)
+        return failure("INVALID_GRAMMAR", offset, frame.path)
       offset += 1
       frame.state = "key"
       continue
@@ -516,12 +568,14 @@ export const scanCanonicalJson = (
       if (frame.entries >= limits.objectEntries) {
         return failure("MAX_OBJECT_ENTRIES_EXCEEDED", offset)
       }
-      if (bytes[offset] !== 0x22) return failure("INVALID_GRAMMAR", offset, frame.path)
+      if (bytes[offset] !== 0x22)
+        return failure("INVALID_GRAMMAR", offset, frame.path)
       const keyOffset = offset
       const key = readString(offset, frame.path)
       if (isFailure(key)) return { ok: false, error: key.error }
       const keyPath = [...frame.path, key.value]
-      if (frame.keys.has(key.value)) return failure("DUPLICATE_KEY", keyOffset, keyPath)
+      if (frame.keys.has(key.value))
+        return failure("DUPLICATE_KEY", keyOffset, keyPath)
       const keyBytes = textEncoder.encode(key.value)
       if (
         options.operation === "require-canonical" &&
@@ -539,7 +593,8 @@ export const scanCanonicalJson = (
       continue
     }
     if (frame.state === "colon") {
-      if (bytes[offset] !== 0x3a) return failure("INVALID_GRAMMAR", offset, frame.path)
+      if (bytes[offset] !== 0x3a)
+        return failure("INVALID_GRAMMAR", offset, frame.path)
       offset += 1
       frame.state = "value"
       continue

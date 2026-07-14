@@ -48,7 +48,9 @@ type CurrentValue = { value: JsonValue; path: readonly (string | number)[] }
 const textEncoder = new TextEncoder()
 const ascii = (value: string): Uint8Array => textEncoder.encode(value)
 
-const ownerFor = (context: CanonicalJsonContext): "player_violation" | "system_failure" =>
+const ownerFor = (
+  context: CanonicalJsonContext,
+): "player_violation" | "system_failure" =>
   context === "decoded-strategy-payload" || context === "host-api-value"
     ? "player_violation"
     : "system_failure"
@@ -90,7 +92,9 @@ export const encodeCanonicalJson = (
   }
   for (const [name, value] of Object.entries(limits)) {
     if (!Number.isSafeInteger(value) || value < 0) {
-      throw new TypeError(`canonical JSON limit ${name} must be a nonnegative safe integer`)
+      throw new TypeError(
+        `canonical JSON limit ${name} must be a nonnegative safe integer`,
+      )
     }
   }
   const owner = ownerFor(options.context)
@@ -105,7 +109,9 @@ export const encodeCanonicalJson = (
 
   const chunks: Uint8Array[] = []
   let outputBytes = 0
-  const append = (bytes: Uint8Array): CanonicalJsonEncodeResult & { ok: false } | undefined => {
+  const append = (
+    bytes: Uint8Array,
+  ): (CanonicalJsonEncodeResult & { ok: false }) | undefined => {
     if (outputBytes + bytes.byteLength > limits.rawUtf8Bytes) {
       return failure("MAX_RAW_UTF8_BYTES_EXCEEDED", [], limits.rawUtf8Bytes)
     }
@@ -168,7 +174,10 @@ export const encodeCanonicalJson = (
     }
     flush(value.length)
     pieces.push('"')
-    return { bytes: textEncoder.encode(pieces.join("")), sortBytes: textEncoder.encode(value) }
+    return {
+      bytes: textEncoder.encode(pieces.join("")),
+      sortBytes: textEncoder.encode(value),
+    }
   }
 
   const stack: Frame[] = []
@@ -212,8 +221,10 @@ export const encodeCanonicalJson = (
       }
       if (typeof value !== "object") return failure("INVALID_GRAMMAR", path)
       const depth = stack.length + 1
-      if (depth > limits.depth) return failure("MAX_DEPTH_EXCEEDED", path, outputBytes)
-      if (activeContainers.has(value)) return failure("INVALID_GRAMMAR", path, outputBytes)
+      if (depth > limits.depth)
+        return failure("MAX_DEPTH_EXCEEDED", path, outputBytes)
+      if (activeContainers.has(value))
+        return failure("INVALID_GRAMMAR", path, outputBytes)
 
       if (Array.isArray(value)) {
         if (value.length > limits.arrayEntries) {
@@ -261,7 +272,9 @@ export const encodeCanonicalJson = (
           value: descriptor.value as JsonValue,
         })
       }
-      entries.sort((left, right) => compareUnsignedBytes(left.sortBytes, right.sortBytes))
+      entries.sort((left, right) =>
+        compareUnsignedBytes(left.sortBytes, right.sortBytes),
+      )
       activeContainers.add(value)
       let error = append(ascii("{"))
       if (error) return error

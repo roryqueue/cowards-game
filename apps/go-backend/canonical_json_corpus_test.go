@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"math"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -27,9 +28,12 @@ type canonicalJSONCorpusExpectation struct {
 
 type canonicalJSONCorpusVector struct {
 	ID            string                         `json:"id"`
+	Context       canonicalJSONV11Context        `json:"context"`
+	Operation     string                         `json:"operation"`
 	RawPath       string                         `json:"rawPath"`
 	RawByteLength int                            `json:"rawByteLength"`
 	RawSHA256     string                         `json:"rawSha256"`
+	Limits        canonicalJSONV11Limits         `json:"limits"`
 	Expectation   canonicalJSONCorpusExpectation `json:"expectation"`
 }
 
@@ -97,8 +101,9 @@ func TestCanonicalJSONV11SharedCorpus(t *testing.T) {
 				t.Fatalf("canonical identity drift for %s", vector.ID)
 			}
 			decoded := decodeCanonicalJSONV11(raw, canonicalJSONV11Options{
-				Context:          canonicalJSONV11DecodedStrategyPayload,
+				Context:          vector.Context,
 				RequireCanonical: false,
+				Limits:           &vector.Limits,
 			})
 			if decoded.Error != nil {
 				t.Fatalf("%s unexpectedly rejected: %+v", vector.ID, decoded.Error)
@@ -107,8 +112,9 @@ func TestCanonicalJSONV11SharedCorpus(t *testing.T) {
 				t.Fatalf("%s canonical bytes differ\nwant=%q\n got=%q", vector.ID, canonical, decoded.CanonicalBytes)
 			}
 			strict := decodeCanonicalJSONV11(canonical, canonicalJSONV11Options{
-				Context:          canonicalJSONV11DecodedStrategyPayload,
+				Context:          vector.Context,
 				RequireCanonical: true,
+				Limits:           &vector.Limits,
 			})
 			if strict.Error != nil || !bytes.Equal(strict.CanonicalBytes, canonical) {
 				t.Fatalf("%s canonical form was not accepted exactly: %+v", vector.ID, strict.Error)
@@ -117,10 +123,22 @@ func TestCanonicalJSONV11SharedCorpus(t *testing.T) {
 			if !errorCode.MatchString(vector.Expectation.Code) || vector.Expectation.ByteOffset < 0 || (vector.Expectation.Owner != "player_violation" && vector.Expectation.Owner != "system_failure") || vector.Expectation.Path == nil {
 				t.Fatalf("incomplete error expectation for %s", vector.ID)
 			}
-			decoded := decodeCanonicalJSONV11(raw, canonicalJSONV11Options{
-				Context:          canonicalJSONV11DecodedStrategyPayload,
-				RequireCanonical: false,
-			})
+			decoded := canonicalJSONV11Result{}
+			if vector.Operation == "host-encode" {
+				hostValue := math.NaN()
+				if vector.ID == "number-host-positive-infinity" {
+					hostValue = math.Inf(1)
+				} else if vector.ID == "number-host-negative-infinity" {
+					hostValue = math.Inf(-1)
+				}
+				decoded = encodeCanonicalJSONV11(hostValue, canonicalJSONV11Options{Context: vector.Context, Limits: &vector.Limits})
+			} else {
+				decoded = decodeCanonicalJSONV11(raw, canonicalJSONV11Options{
+					Context:          vector.Context,
+					RequireCanonical: false,
+					Limits:           &vector.Limits,
+				})
+			}
 			if decoded.Error == nil {
 				t.Fatalf("%s unexpectedly succeeded", vector.ID)
 			}
@@ -135,4 +153,71 @@ func TestCanonicalJSONV11SharedCorpus(t *testing.T) {
 		t.Fatalf("vector root drift: want=%s got=%s", corpus.VectorRootSHA256, actual)
 	}
 	fmt.Printf("[CANONICAL_JSON_CORPUS:GO] count=%d root=%s enumeration=%s\n", corpus.VectorCount, corpus.VectorRootSHA256, hex.EncodeToString(enumeration.Sum(nil)))
+}
+
+func TestCanonicalJSONV11StrictAdmissionBoundaries(t *testing.T) {
+	tests := []struct {
+		name       string
+		raw        string
+		byteOffset int
+	}{
+		{name: "leading whitespace", raw: " 1", byteOffset: 0},
+		{name: "trailing whitespace", raw: "1 ", byteOffset: 1},
+		{name: "non-shortest decimal", raw: "1.2300", byteOffset: 4},
+		{name: "uppercase signed exponent", raw: "1E+21", byteOffset: 1},
+		{name: "escaped ASCII", raw: `"\u0061"`, byteOffset: 1},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			strict := decodeCanonicalJSONV11([]byte(test.raw), canonicalJSONV11Options{
+				Context:          canonicalJSONV11DecodedStrategyPayload,
+				RequireCanonical: true,
+			})
+			if strict.Error == nil {
+				t.Fatalf("strict admission unexpectedly accepted %q", test.raw)
+			}
+			if strict.Error.Code != "NON_CANONICAL_ENCODING" || strict.Error.ByteOffset != test.byteOffset || strict.Error.Owner != "player_violation" || !reflect.DeepEqual(strict.Error.Path, []any{}) {
+				t.Fatalf("strict error mismatch for %q: %+v", test.raw, strict.Error)
+			}
+
+			loose := decodeCanonicalJSONV11([]byte(test.raw), canonicalJSONV11Options{
+				Context: canonicalJSONV11DecodedStrategyPayload,
+			})
+			if loose.Error != nil {
+				t.Fatalf("non-strict admission unexpectedly rejected %q: %+v", test.raw, loose.Error)
+			}
+		})
+	}
+
+	keyOrder := decodeCanonicalJSONV11([]byte(`{"z":1,"a":2}`), canonicalJSONV11Options{
+		Context:          canonicalJSONV11CanonicalManifest,
+		RequireCanonical: true,
+	})
+	if keyOrder.Error == nil || keyOrder.Error.Code != "NON_CANONICAL_KEY_ORDER" || keyOrder.Error.ByteOffset != 7 || keyOrder.Error.Owner != "system_failure" || !reflect.DeepEqual(keyOrder.Error.Path, []any{"a"}) {
+		t.Fatalf("key-order precedence mismatch: %+v", keyOrder.Error)
+	}
+
+	authenticated := decodeCanonicalJSONV11([]byte(" 1"), canonicalJSONV11Options{
+		Context:          canonicalJSONV11AuthenticatedOuterEnvelope,
+		RequireCanonical: true,
+	})
+	if authenticated.Error == nil || authenticated.Error.Code != "NON_CANONICAL_ENCODING" || authenticated.Error.ByteOffset != 0 || authenticated.Error.Owner != "system_failure" || !reflect.DeepEqual(authenticated.Error.Path, []any{}) {
+		t.Fatalf("authenticated ownership mismatch: %+v", authenticated.Error)
+	}
+}
+
+func TestCanonicalJSONV11LexicalIntegerSafetyPreservesFiniteExponentNumbers(t *testing.T) {
+	for _, raw := range []string{"9007199254740992", "-9007199254740992"} {
+		decoded := decodeCanonicalJSONV11([]byte(raw), canonicalJSONV11Options{Context: canonicalJSONV11DecodedStrategyPayload})
+		if decoded.Error == nil || decoded.Error.Code != "NUMBER_OUT_OF_RANGE" || decoded.Error.ByteOffset != 0 || decoded.Error.Owner != "player_violation" || !reflect.DeepEqual(decoded.Error.Path, []any{}) {
+			t.Fatalf("unsafe integer lexeme %q mismatch: %+v", raw, decoded.Error)
+		}
+	}
+
+	for _, raw := range []string{"1e21", "1.7976931348623157e308"} {
+		decoded := decodeCanonicalJSONV11([]byte(raw), canonicalJSONV11Options{Context: canonicalJSONV11DecodedStrategyPayload})
+		if decoded.Error != nil {
+			t.Fatalf("finite exponent binary64 %q unexpectedly rejected: %+v", raw, decoded.Error)
+		}
+	}
 }

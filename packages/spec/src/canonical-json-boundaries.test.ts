@@ -80,39 +80,28 @@ describe("successor canonical JSON boundaries", () => {
     })
   })
 
-  it.each(["9007199254740992.0", "9.007199254740992e15"])(
-    "rejects unsafe integral decoded value %s independent of lexical form",
-    (raw) => {
+  it("applies safe-integer bounds to integer lexemes while preserving finite exponent binary64", () => {
+    expect(
+      admitCanonicalJsonBytes(text("9007199254740992"), {
+        profile: "strategy-payload",
+        operation: "parse-and-canonicalize",
+      }),
+    ).toMatchObject({
+      ok: false,
+      error: {
+        code: "NUMBER_OUT_OF_RANGE",
+        path: [],
+        byteOffset: 0,
+        owner: "player_violation",
+      },
+    })
+    for (const raw of ["1e21", "1.7976931348623157e308"]) {
       expect(
         admitCanonicalJsonBytes(text(raw), {
           profile: "strategy-payload",
           operation: "parse-and-canonicalize",
-        }),
-      ).toMatchObject({
-        ok: false,
-        error: {
-          code: "NUMBER_OUT_OF_RANGE",
-          path: [],
-          byteOffset: 0,
-          owner: "player_violation",
-        },
-      })
-    },
-  )
-
-  it("rejects unsafe integral host values on both signs", () => {
-    for (const value of [9_007_199_254_740_992, -9_007_199_254_740_992]) {
-      expect(
-        admitCanonicalJsonValue(value, { profile: "host-api-value" }),
-      ).toMatchObject({
-        ok: false,
-        error: {
-          code: "NON_CANONICAL_NUMBER",
-          path: [],
-          byteOffset: 0,
-          owner: "player_violation",
-        },
-      })
+        }).ok,
+      ).toBe(true)
     }
   })
 

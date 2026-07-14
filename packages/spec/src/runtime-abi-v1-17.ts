@@ -148,7 +148,8 @@ const identityDomains = deepFreeze({
   containmentPolicy: "cowards-game:runtime-identity:v1:containment-policy",
   conformanceCorpus: "cowards-game:runtime-identity:v1:conformance-corpus",
   budgetProfile: "cowards-game:runtime-identity:v1:budget-profile",
-  canonicalJsonProfile: "cowards-game:runtime-identity:v1:canonical-json-profile",
+  canonicalJsonProfile:
+    "cowards-game:runtime-identity:v1:canonical-json-profile",
   evidenceBundle: "cowards-game:runtime-identity:v1:evidence-bundle",
 } as const)
 
@@ -324,6 +325,7 @@ export const RUNTIME_ABI_V1_17 = deepFreeze({
       "INVALID_GRAMMAR",
       "DUPLICATE_KEY",
       "NON_CANONICAL_KEY_ORDER",
+      "NON_CANONICAL_ENCODING",
       "NON_CANONICAL_NUMBER",
       "NUMBER_OUT_OF_RANGE",
       "MAX_RAW_UTF8_BYTES_EXCEEDED",
@@ -351,7 +353,10 @@ export const RUNTIME_ABI_V1_17 = deepFreeze({
   outcomes: {
     discriminant: "kind",
     variants: {
-      success: { required: ["kind", "value", "trace"], forbidden: ["violation", "failure"] },
+      success: {
+        required: ["kind", "value", "trace"],
+        forbidden: ["violation", "failure"],
+      },
       player_violation: {
         required: ["kind", "violation", "trace"],
         forbidden: ["value", "failure"],
@@ -363,7 +368,8 @@ export const RUNTIME_ABI_V1_17 = deepFreeze({
     },
     outerEnvelopeOwner: "adapter",
     decodedPayloadOwner: "strategy",
-    playerViolationCommitPolicy: "discard-all-proposed-values-and-preserve-prior-memory",
+    playerViolationCommitPolicy:
+      "discard-all-proposed-values-and-preserve-prior-memory",
     systemFailureMutationPolicy: "no-gameplay-mutation",
     retryOwner: "go",
   },
@@ -392,7 +398,8 @@ export const RUNTIME_ABI_V1_17 = deepFreeze({
       stdoutBytes: 68_157_440,
       stderrBytes: 17_039_360,
       memoryBytes: 64 * MiB,
-      accounting: "signed-monotonic-per-invocation-deltas-plus-cumulative-total",
+      accounting:
+        "signed-monotonic-per-invocation-deltas-plus-cumulative-total",
       overflow: "stop-before-next-invocation-and-classify-by-proven-cause",
     },
     preflight: {
@@ -453,11 +460,13 @@ export const RUNTIME_ABI_V1_17 = deepFreeze({
   lanePosture: {
     javascript: {
       countedCertification: "uncertified",
-      reason: "equivalent compute, containing-memory, process, and accounting evidence not yet proven",
+      reason:
+        "equivalent compute, containing-memory, process, and accounting evidence not yet proven",
     },
     typescript: {
       countedCertification: "uncertified",
-      reason: "equivalent compute, containing-memory, process, and accounting evidence not yet proven",
+      reason:
+        "equivalent compute, containing-memory, process, and accounting evidence not yet proven",
     },
     python: {
       countedCertification: "uncertified",
@@ -465,11 +474,13 @@ export const RUNTIME_ABI_V1_17 = deepFreeze({
     },
     rust: {
       countedCertification: "uncertified",
-      reason: "WASM meters exist but equivalent complete v1.17 evidence is not yet proven",
+      reason:
+        "WASM meters exist but equivalent complete v1.17 evidence is not yet proven",
     },
     zig: {
       countedCertification: "uncertified",
-      reason: "WASM meters exist but equivalent complete v1.17 evidence is not yet proven",
+      reason:
+        "WASM meters exist but equivalent complete v1.17 evidence is not yet proven",
     },
   },
   migration: {
@@ -557,14 +568,20 @@ export const hashRuntimeAbiV117Identity = (
   return `sha256:${hash.digest("hex")}`
 }
 
-const exactKeys = (value: Record<string, unknown>, keys: readonly string[]): boolean => {
+const exactKeys = (
+  value: Record<string, unknown>,
+  keys: readonly string[],
+): boolean => {
   const actual = Object.keys(value).sort()
-  return actual.length === keys.length &&
+  return (
+    actual.length === keys.length &&
     actual.every((key, index) => key === [...keys].sort()[index])
+  )
 }
 
 export const isRuntimeAbiV117InvocationResult = (value: unknown): boolean => {
-  if (value === null || typeof value !== "object" || Array.isArray(value)) return false
+  if (value === null || typeof value !== "object" || Array.isArray(value))
+    return false
   const result = value as Record<string, unknown>
   const trace = result.trace
   if (
@@ -609,10 +626,13 @@ export const validateRuntimeAbiV117Contract = (): string[] => {
     { length: 16 },
     (_, index) => `D-${String(index + 1).padStart(2, "0")}`,
   )
-  if (decisionMap.map(({ id }) => id).join("|") !== expectedDecisions.join("|")) {
+  if (
+    decisionMap.map(({ id }) => id).join("|") !== expectedDecisions.join("|")
+  ) {
     errors.push("decision map must cover D-01 through D-16 exactly")
   }
-  if (RUNTIME_ABI_V1_17.lifecycle.active) errors.push("candidate must not be active")
+  if (RUNTIME_ABI_V1_17.lifecycle.active)
+    errors.push("candidate must not be active")
   if (RUNTIME_ABI_V1_17.migration.migration0017RewriteAllowed) {
     errors.push("migration 0017 rewrite must remain forbidden")
   }
@@ -623,8 +643,13 @@ export const validateRuntimeAbiV117Contract = (): string[] => {
   ) {
     errors.push("Plan 01 may not certify a counted lane")
   }
-  if (RUNTIME_ABI_V1_17.identity.evidenceGraph.productionTrustedProducers.length > 0) {
-    errors.push("production trusted producers must remain empty until Phase 259")
+  if (
+    RUNTIME_ABI_V1_17.identity.evidenceGraph.productionTrustedProducers.length >
+    0
+  ) {
+    errors.push(
+      "production trusted producers must remain empty until Phase 259",
+    )
   }
   return errors
 }

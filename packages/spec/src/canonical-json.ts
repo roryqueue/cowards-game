@@ -61,7 +61,9 @@ const deepFreeze = <T>(value: T): Readonly<T> => {
   return value
 }
 
-const boundedLimits = (fieldCapBytes: number | null): Readonly<CanonicalJsonLimits> =>
+const boundedLimits = (
+  fieldCapBytes: number | null,
+): Readonly<CanonicalJsonLimits> =>
   deepFreeze({
     ...CANONICAL_JSON_V1_LIMITS,
     ...(fieldCapBytes === null
@@ -146,13 +148,31 @@ export const CANONICAL_JSON_BOUNDARY_PROFILES = deepFreeze({
 const sha256 = (bytes: Uint8Array): `sha256:${string}` =>
   `sha256:${createHash("sha256").update(bytes).digest("hex")}`
 
+const firstDifference = (
+  left: Uint8Array,
+  right: Uint8Array,
+): number | undefined => {
+  const length = Math.min(left.byteLength, right.byteLength)
+  for (let index = 0; index < length; index += 1) {
+    if (left[index] !== right[index]) return index
+  }
+  return left.byteLength === right.byteLength ? undefined : length
+}
+
+const ownerFor = (
+  context: CanonicalJsonContext,
+): CanonicalJsonError["owner"] =>
+  context === "decoded-strategy-payload" || context === "host-api-value"
+    ? "player_violation"
+    : "system_failure"
+
 const fieldCapError = (
   error: CanonicalJsonError,
   boundary: CanonicalJsonBoundaryProfile,
 ): CanonicalJsonError =>
   boundary.fieldCapBytes !== null &&
-    (error.code === "MAX_RAW_UTF8_BYTES_EXCEEDED" ||
-      error.code === "MAX_DECODED_STRING_UTF8_BYTES_EXCEEDED")
+  (error.code === "MAX_RAW_UTF8_BYTES_EXCEEDED" ||
+    error.code === "MAX_DECODED_STRING_UTF8_BYTES_EXCEEDED")
     ? { ...error, code: "FIELD_CAP_EXCEEDED" }
     : error
 
@@ -161,9 +181,10 @@ export const admitCanonicalJsonBytes = (
   options: CanonicalJsonAdmissionOptions,
 ): CanonicalJsonAdmissionResult => {
   const boundary = CANONICAL_JSON_BOUNDARY_PROFILES[options.profile]
+  const operation = options.operation ?? boundary.defaultOperation
   const parsed = parseCanonicalJson(bytes, {
     context: boundary.context,
-    operation: options.operation ?? boundary.defaultOperation,
+    operation,
     limits: boundary.limits,
   })
   if (!parsed.ok) {
@@ -182,6 +203,21 @@ export const admitCanonicalJsonBytes = (
       ok: false,
       error: fieldCapError(encoded.error, boundary),
       profile: boundary.id,
+    }
+  }
+  if (operation === "require-canonical") {
+    const byteOffset = firstDifference(bytes, encoded.bytes)
+    if (byteOffset !== undefined) {
+      return {
+        ok: false,
+        error: {
+          code: "NON_CANONICAL_ENCODING",
+          path: [],
+          byteOffset,
+          owner: ownerFor(boundary.context),
+        },
+        profile: boundary.id,
+      }
     }
   }
   return {
@@ -217,11 +253,7 @@ export const admitCanonicalJsonValue = (
   })
 }
 
-export {
-  CANONICAL_JSON_V1_LIMITS,
-  encodeCanonicalJson,
-  parseCanonicalJson,
-}
+export { CANONICAL_JSON_V1_LIMITS, encodeCanonicalJson, parseCanonicalJson }
 export type {
   CanonicalJsonContext,
   CanonicalJsonError,
