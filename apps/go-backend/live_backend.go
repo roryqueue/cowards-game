@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -35,16 +36,19 @@ const normalizedSourceIdentityDomain = "cowards-game:runtime-identity:v1:normali
 const strategyWasmArtifactBytes = 4 * 1024 * 1024
 const exhibitionRateLimit = 5
 const exhibitionRateLimitWindow = time.Hour
+const runMatchJobOnceBodyBytes = 64 * 1024
+const runMatchJobOnceMatchIDLimit = 100
 
 type LiveServer struct {
-	pool              *pgxpool.Pool
-	now               func() time.Time
-	strategyArtifacts map[string]strategyArtifact
-	deploymentLanes   *goDeploymentLaneRegistry
-	authority         *verifiedRuntimeEvidenceAuthority
-	loadAuthority     func() (*verifiedRuntimeEvidenceAuthority, error)
-	orchestrator      *goMatchOrchestrator
-	stopOrchestrator  context.CancelFunc
+	pool                 *pgxpool.Pool
+	now                  func() time.Time
+	strategyArtifacts    map[string]strategyArtifact
+	deploymentLanes      *goDeploymentLaneRegistry
+	authority            *verifiedRuntimeEvidenceAuthority
+	loadAuthority        func() (*verifiedRuntimeEvidenceAuthority, error)
+	orchestrator         *goMatchOrchestrator
+	runOrchestrationOnce func(context.Context, []string) (*goMatchOrchestrationResult, error)
+	stopOrchestrator     context.CancelFunc
 }
 
 type liveServerDependencies struct {
@@ -176,13 +180,58 @@ func (server *LiveServer) runMatchJobOnce(writer http.ResponseWriter, request *h
 		writeServiceError(writer, http.StatusForbidden, "FORBIDDEN", "Forbidden.")
 		return
 	}
-	result, err := server.orchestrator.runOnce(request.Context(), nil)
+	matchIDs, ok := decodeRunMatchJobOnceAllowlist(writer, request)
+	if !ok {
+		return
+	}
+	runOnce := server.runOrchestrationOnce
+	if runOnce == nil {
+		if server.orchestrator == nil {
+			goOrchestrationHTTPError(writer, http.StatusBadGateway)
+			return
+		}
+		runOnce = server.orchestrator.runOnce
+	}
+	result, err := runOnce(request.Context(), matchIDs)
 	if err != nil {
-		server.orchestrator.logf("manual Go orchestration run failed: %v", err)
+		if server.orchestrator != nil {
+			server.orchestrator.logf("manual Go orchestration run failed: %v", err)
+		}
 		goOrchestrationHTTPError(writer, http.StatusBadGateway)
 		return
 	}
 	writeGoOrchestrationResult(writer, http.StatusOK, result)
+}
+
+func decodeRunMatchJobOnceAllowlist(writer http.ResponseWriter, request *http.Request) ([]string, bool) {
+	serialized, err := io.ReadAll(io.LimitReader(request.Body, runMatchJobOnceBodyBytes+1))
+	if err != nil || len(serialized) > runMatchJobOnceBodyBytes {
+		writeServiceError(writer, http.StatusBadRequest, "VALIDATION_FAILED", "Request body is invalid.")
+		return nil, false
+	}
+	if strings.TrimSpace(string(serialized)) == "" {
+		return nil, true
+	}
+	body := struct {
+		MatchIDs []string `json:"matchIds"`
+	}{}
+	if err := decodeStrictJSON(serialized, &body); err != nil || len(body.MatchIDs) == 0 || len(body.MatchIDs) > runMatchJobOnceMatchIDLimit {
+		writeServiceError(writer, http.StatusBadRequest, "VALIDATION_FAILED", "Request body is invalid.")
+		return nil, false
+	}
+	seen := make(map[string]struct{}, len(body.MatchIDs))
+	for _, matchID := range body.MatchIDs {
+		if strings.TrimSpace(matchID) == "" {
+			writeServiceError(writer, http.StatusBadRequest, "VALIDATION_FAILED", "Request body is invalid.")
+			return nil, false
+		}
+		if _, duplicated := seen[matchID]; duplicated {
+			writeServiceError(writer, http.StatusBadRequest, "VALIDATION_FAILED", "Request body is invalid.")
+			return nil, false
+		}
+		seen[matchID] = struct{}{}
+	}
+	return append([]string(nil), body.MatchIDs...), true
 }
 
 func (server *LiveServer) requeueMatchExecutionJob(writer http.ResponseWriter, request *http.Request) {

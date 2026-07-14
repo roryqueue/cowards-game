@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
@@ -66,7 +67,7 @@ func TestRunMatchJobOnceRejectsInvalidBodyBeforeOrchestration(t *testing.T) {
 	tooMany, err := json.Marshal(map[string]any{"matchIds": func() []string {
 		ids := make([]string, 101)
 		for index := range ids {
-			ids[index] = "match:phase258:limit:" + strings.Repeat("x", index%3+1) + string(rune('a'+index%26))
+			ids[index] = fmt.Sprintf("match:phase258:limit:%03d", index)
 		}
 		return ids
 	}()})
