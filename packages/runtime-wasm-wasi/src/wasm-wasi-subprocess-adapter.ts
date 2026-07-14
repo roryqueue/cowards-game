@@ -115,6 +115,11 @@ export interface WasmWasiStrategyRequestInput {
   stderrBytes?: number | undefined
 }
 
+export const wasmWasiSharedCaptureBufferBytesV117 = (
+  stdoutBytes: number,
+  stderrSafetyBytes: number,
+): number => Math.max(stdoutBytes, stderrSafetyBytes) + 1
+
 const hashBytes = (bytes: Buffer): string =>
   createHash("sha256").update(bytes).digest("hex")
 
@@ -396,9 +401,10 @@ const executeCandidateGuest = (
       env: {},
       shell: false,
       timeout: input.request.budget.wallMilliseconds + 250,
-      maxBuffer:
-        Math.max(input.request.budget.outputBytes, input.settings.stderrBytes) +
-        1,
+      maxBuffer: wasmWasiSharedCaptureBufferBytesV117(
+        input.request.budget.outputBytes,
+        input.settings.stderrBytes,
+      ),
     },
   )
   return classifyWasmtimeProcessObservationV117(

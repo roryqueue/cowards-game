@@ -34,6 +34,7 @@ import {
   classifyWasmtimeProcessObservationV117,
   createWasmWasiRuntimeFromRevision,
   runWasmWasiStrategyMethodV117Sync,
+  wasmWasiSharedCaptureBufferBytesV117,
   type WasmWasiGuestObservationV117,
 } from "./wasm-wasi-subprocess-adapter.js"
 
@@ -769,6 +770,96 @@ describe("WASM/WASI runtime v1.17 candidate host authority", () => {
 })
 
 describe("WASM/WASI runtime v1.17 exact Rust/Zig identity", () => {
+  it("attests typed source domains from actual source into artifact and execution identity", () => {
+    const built = buildRustWasmCandidateRevisionV117(candidateRustSource)
+    expect(built).toMatchObject({
+      sourceIdentity: {
+        identityVersion: "strategy-source-identity-v2",
+        normalizationPolicy: "source-line-endings-lf-v1.17",
+        originalSourceSha256: expect.stringMatching(/^sha256:[0-9a-f]{64}$/u),
+        normalizedSourceSha256: expect.stringMatching(/^sha256:[0-9a-f]{64}$/u),
+      },
+      metadata: {
+        compiledArtifact: {
+          sourceIdentity: {
+            identityVersion: "strategy-source-identity-v2",
+          },
+        },
+      },
+    })
+    expect(candidateExecutionIdentity(built)).toMatchObject({
+      sourceIdentity: (built as unknown as { sourceIdentity: unknown })
+        .sourceIdentity,
+    })
+  })
+
+  it("rejects coherent caller relabeling when artifact bytes retain the compiled source attestation", () => {
+    const revision = buildRustWasmCandidateRevisionV117(candidateRustSource)
+    const artifact = revision.metadata.compiledArtifact
+    const tamperedHash = "f".repeat(64)
+    const tamperedIdentity = {
+      identityVersion: "strategy-source-identity-v2" as const,
+      normalizationPolicy: "source-line-endings-lf-v1.17" as const,
+      originalSourceSha256: `sha256:${tamperedHash}` as const,
+      originalSourceBytes: candidateRustSource.length,
+      normalizedSourceSha256: `sha256:${tamperedHash}` as const,
+      normalizedSourceBytes: candidateRustSource.length,
+      lineEndings: { kind: "lf" as const, lf: 3, crlf: 0, cr: 0 },
+      hasFinalNewline: true,
+    }
+    const tamperedRevision = {
+      ...revision,
+      sourceHash: tamperedHash,
+      sourceIdentity: tamperedIdentity,
+      metadata: {
+        compiledArtifact: {
+          ...artifact,
+          sourceHash: tamperedHash,
+          sourceIdentity: tamperedIdentity,
+        },
+      },
+    } as unknown as WasmWasiCandidateRevisionV117
+    const request = candidateRequest(tamperedRevision)
+    const response = runWasmWasiStrategyMethodV117Sync({
+      request,
+      revision: tamperedRevision,
+      signingIdentity: candidateSigningIdentity,
+      executionIdentity: collectWasmWasiCandidateIdentityV117(
+        "rust",
+        tamperedRevision.metadata.compiledArtifact,
+      ),
+      executeGuest: () =>
+        completedObservation(
+          '{"action":{"type":"TURN_TO_STONE"},"soldierMemory":null}',
+        ),
+    })
+
+    expect(response.outcome).toMatchObject({
+      kind: "system_failure",
+      failure: { code: "OUTER_FRAME_WRONG_BINDING" },
+    })
+  })
+
+  it("reports shared stderr capture as unsupported rather than independently metered", () => {
+    const revision = buildRustWasmCandidateRevisionV117(candidateRustSource)
+    const identity = candidateExecutionIdentity(revision)
+    expect(
+      wasmWasiSharedCaptureBufferBytesV117(
+        262_144,
+        WASM_WASI_V1_17_EXECUTION_SETTINGS.stderrBytes,
+      ),
+    ).toBeGreaterThan(WASM_WASI_V1_17_EXECUTION_SETTINGS.stderrBytes + 1)
+    expect(identity.metering.supported).not.toContain(
+      "host-stderr-byte-ceiling",
+    )
+    expect(identity.metering.unsupported).toContain(
+      "independent-host-stderr-byte-ceiling",
+    )
+    expect(WASM_WASI_V1_17_EXECUTION_SETTINGS).toMatchObject({
+      stderrCapture: "shared-max-buffer-post-capture-safety-only",
+    })
+  })
+
   it("resolves emitted JavaScript adapter-build inputs for built imports", () => {
     const directory = mkdtempSync(join(tmpdir(), "cowards-wasm-built-inputs-"))
     try {
