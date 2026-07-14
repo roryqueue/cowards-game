@@ -375,12 +375,17 @@ const runtimeResume = (
       failure: { code: "RUNTIME_INVOCATION_THROWN", retryable: false },
     }
   } catch {
+    const candidate =
+      request.semanticTupleId ===
+      CANDIDATE_KERNEL_V117_SEMANTIC_TUPLE_ID
     return {
       kind: "runtime_resume",
       requestId: request.requestId,
       effectKind: request.kind,
       classification: "system_failure",
-      failure: { code: "RUNTIME_INVOCATION_THROWN", retryable: false },
+      failure: candidate
+        ? { code: "ADAPTER_CRASH", retryable: true }
+        : { code: "RUNTIME_INVOCATION_THROWN", retryable: false },
     }
   }
 }

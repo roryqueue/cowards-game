@@ -356,14 +356,9 @@ describe("Phase 258 successor runtime ownership", () => {
     ).toEqual({ committedOnlyAfterValidation: true })
   })
 
-  it.each([
-    "valid-prefix-invalid-tail",
-    "partial-nested-memory",
-    "oversized-nested-memory",
-    "illegal-action",
-  ] as const)(
-    "discards %s proposals and applies only the engine-owned v1.4 consequence",
-    (caseName) => {
+  it(
+    "applies only the engine-owned v1.4 consequence to an adapter-classified player violation",
+    () => {
       const state = withPrivateMemory()
       const soldier = state.soldiers.find(
         (candidate) => candidate.ownerPlayerId === state.players[0].id,
@@ -392,7 +387,9 @@ describe("Phase 258 successor runtime ownership", () => {
               kind: "player_violation",
               violation:
                 RUNTIME_INVOCATION_V1_17_PLAYER_VIOLATIONS.INVALID_OUTPUT,
-              trace: traceFor(request, { safeCodes: [caseName.toUpperCase().replaceAll("-", "_")] }),
+              trace: traceFor(request, {
+                safeCodes: ["ADAPTER_CLASSIFIED_INVALID_OUTPUT"],
+              }),
             })
           },
         },
@@ -480,6 +477,41 @@ describe("Phase 258 successor runtime ownership", () => {
       )
     },
   )
+
+  it("maps a thrown v1.17 runtime call to registered ADAPTER_CRASH without mutation", () => {
+    const state = withPrivateMemory()
+    const soldier = state.soldiers.find(
+      (candidate) => candidate.ownerPlayerId === state.players[0].id,
+    )
+    if (!soldier) throw new Error("missing fixture soldier")
+    const before = sha256(state)
+
+    const execution = MATCH_KERNEL.runActivationFromStateV117({
+      state,
+      soldierId: soldier.id,
+      runtime: {
+        selectActivations() {
+          throw new Error("selection is unreachable in activation mode")
+        },
+        runSoldierBrain() {
+          throw new Error("private adapter stack token=must-not-leak")
+        },
+      },
+    })
+
+    expect(execution).toMatchObject({
+      kind: "failure",
+      transitions: [],
+      failure: {
+        classification: "system_failure",
+        category: "RUNTIME_SYSTEM_FAILURE",
+        code: "ADAPTER_CRASH",
+        retryable: true,
+      },
+    })
+    expect(sha256(execution.unchangedState)).toBe(before)
+    expect(JSON.stringify(execution)).not.toContain("must-not-leak")
+  })
 
   it("rejects a v1.17 response bound to another kernel request without a player penalty", () => {
     const state = withPrivateMemory()

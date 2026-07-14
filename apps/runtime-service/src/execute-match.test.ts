@@ -46,6 +46,7 @@ import {
   createRuntimeServiceConfig,
   RuntimeServiceConfigError,
 } from "./runtime-config.js"
+import { admitStrategyPayloadBytesV117 } from "./server.js"
 
 const runtimeConfig = createRuntimeServiceConfig({
   strategyExecutionAdapter: "worker-thread",
@@ -947,6 +948,119 @@ describe("runtime execution service v1.17 candidate bridge", () => {
       /strategyMemory|soldierMemory|objective|source|artifact|diagnostics|host/u,
     )
   })
+
+  it.each([
+    {
+      name: "valid-prefix-invalid-tail",
+      bytes: () =>
+        Buffer.from(
+          '{"action":{"type":"TURN_TO_STONE"},"soldierMemory":{"retainedPrefix":true},"soldierMemory":null}',
+        ),
+      canonicalErrorCode: "DUPLICATE_KEY",
+    },
+    {
+      name: "partial-nested-memory",
+      bytes: () =>
+        Buffer.from(
+          '{"action":{"type":"TURN_TO_STONE"},"soldierMemory":{"nested":',
+        ),
+      canonicalErrorCode: "INVALID_GRAMMAR",
+    },
+    {
+      name: "oversized-nested-memory",
+      bytes: () =>
+        Buffer.from(
+          `{"action":{"type":"TURN_TO_STONE"},"soldierMemory":"${"x".repeat(2_049)}"}`,
+        ),
+      canonicalErrorCode: undefined,
+    },
+    {
+      name: "illegal-action",
+      bytes: () =>
+        Buffer.from(
+          '{"action":{"direction":"UP","type":"TELEPORT"},"soldierMemory":{"attempt":"illegal"}}',
+        ),
+      canonicalErrorCode: undefined,
+    },
+  ] as const)(
+    "carries the Plan-05 $name admission into one kernel-owned penalty",
+    ({ name, bytes, canonicalErrorCode }) => {
+      const admission = admitStrategyPayloadBytesV117(
+        bytes(),
+        "soldierBrain",
+      )
+      expect(admission).toMatchObject({
+        kind: "player_violation",
+        violation: { code: "INVALID_OUTPUT" },
+      })
+      if (admission.kind !== "player_violation") {
+        throw new Error("malformed proposal unexpectedly passed Plan-05 admission")
+      }
+      if (canonicalErrorCode === undefined) {
+        expect(admission).not.toHaveProperty("canonicalError")
+      } else {
+        expect(admission.canonicalError?.code).toBe(canonicalErrorCode)
+      }
+
+      const request = candidateRequest()
+      const outcome: RuntimeInvocationResultV117<SoldierBrainResult> = {
+        kind: "player_violation",
+        violation: admission.violation,
+        trace: candidateTrace(request, {
+          safeCodes: [`PLAN05_${name.toUpperCase().replaceAll("-", "_")}`],
+        }),
+      }
+      const responseBytes = serializeRuntimeInvocationResponseV117(
+        createAuthenticatedRuntimeInvocationResponseV117(
+          request,
+          outcome,
+          candidateIdentity,
+        ),
+      )
+      const before = candidateState()
+      const beforeMemories = {
+        players: before.players.map(({ strategyMemory }) => strategyMemory),
+        soldiers: before.soldiers.map(({ soldierMemory }) => soldierMemory),
+      }
+
+      const result = executeCandidateRuntimeInvocationV117({
+        request,
+        identity: candidateIdentity,
+        invoke: () => responseBytes,
+        executeOutcome: executeCandidateOutcome,
+      })
+
+      expect(result.internalExecution.kind).toBe("completed")
+      if (
+        result.internalExecution.kind !== "completed" ||
+        !result.internalExecution.result
+      ) {
+        return
+      }
+      expect({
+        players: result.internalExecution.result.state.players.map(
+          ({ strategyMemory }) => strategyMemory,
+        ),
+        soldiers: result.internalExecution.result.state.soldiers.map(
+          ({ soldierMemory }) => soldierMemory,
+        ),
+      }).toEqual(beforeMemories)
+      expect(
+        result.internalExecution.result.events.map(({ type }) => type),
+      ).toEqual([
+        "ACTIVATION_STARTED",
+        "CYCLE_STARTED",
+        "AWARENESS_GRID_OBSERVED",
+        "RUNTIME_VIOLATION",
+        "SOLDIER_STONED",
+        "ACTIVATION_ENDED",
+      ])
+      expect(result.publicResult).toMatchObject({
+        classification: "player_violation",
+        code: "INVALID_OUTPUT",
+      })
+    },
+  )
 
   it("makes wrong binding a no-mutation system failure with safe output", () => {
     const request = candidateRequest()
