@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest"
+import { spawnSync } from "node:child_process"
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import { createHash } from "node:crypto"
 import { Buffer } from "node:buffer"
@@ -30,6 +31,7 @@ import {
 import { wasmWasiRuntimeMetadataV117 } from "./metadata.js"
 import {
   WASM_WASI_V1_17_EXECUTION_SETTINGS,
+  classifyWasmtimeProcessObservationV117,
   createWasmWasiRuntimeFromRevision,
   runWasmWasiStrategyMethodV117Sync,
   type WasmWasiGuestObservationV117,
@@ -296,6 +298,21 @@ describe("WASM/WASI runtime v1.17 candidate host authority", () => {
     expect(response.payloadBinding).toMatchObject({
       canonicalByteLength: 56,
       sha256: expect.stringMatching(/^sha256:[0-9a-f]{64}$/u),
+    })
+  })
+
+  it("rejects parseable JSON whose raw bytes are not the admitted canonical bytes", () => {
+    const response = runCandidateObservation(
+      candidateRequest(revision),
+      revision,
+      completedObservation(
+        '{"action":{"type":"TURN_TO_STONE"},"soldierMemory":1.0}',
+      ),
+    )
+
+    expect(response.outcome).toMatchObject({
+      kind: "player_violation",
+      violation: { code: "INVALID_OUTPUT" },
     })
   })
 
@@ -583,7 +600,7 @@ describe("WASM/WASI runtime v1.17 candidate host authority", () => {
     })
   })
 
-  it("enforces stdout and proven guest stderr ceilings independently", () => {
+  it("enforces stdout and unproven stderr ceilings with exclusive ownership", () => {
     const outputLimitedRequest = candidateRequest(
       revision,
       revision.metadata.compiledArtifact?.hash,
@@ -608,12 +625,14 @@ describe("WASM/WASI runtime v1.17 candidate host authority", () => {
       stderrObservation,
     )
 
-    for (const response of [stdoutResponse, stderrResponse]) {
-      expect(response.outcome).toMatchObject({
-        kind: "player_violation",
-        violation: { code: "OVERSIZED_OUTPUT" },
-      })
-    }
+    expect(stdoutResponse.outcome).toMatchObject({
+      kind: "player_violation",
+      violation: { code: "OVERSIZED_OUTPUT" },
+    })
+    expect(stderrResponse.outcome).toMatchObject({
+      kind: "system_failure",
+      failure: { code: "TRANSPORT_CRASH" },
+    })
   })
 
   it("keeps ambiguous stderr overflow system-owned", () => {
@@ -636,6 +655,58 @@ describe("WASM/WASI runtime v1.17 candidate host authority", () => {
     expect(response.outcome).toMatchObject({
       kind: "system_failure",
       failure: { code: "TRANSPORT_CRASH" },
+    })
+  })
+
+  it("does not infer player provenance from Wasmtime stderr text or exit status", () => {
+    for (const stderr of [
+      "panicked at guest-controlled text",
+      "all fuel consumed",
+      "failed to grow memory",
+    ]) {
+      const observation = classifyWasmtimeProcessObservationV117(
+        {
+          pid: 1,
+          output: [null, Buffer.alloc(0), Buffer.from(stderr)],
+          stdout: Buffer.alloc(0),
+          stderr: Buffer.from(stderr),
+          status: 1,
+          signal: null,
+          error: undefined,
+        },
+        262_144,
+        WASM_WASI_V1_17_EXECUTION_SETTINGS.stderrBytes,
+      )
+
+      expect(observation).toMatchObject({
+        kind: "failed",
+        attribution: "ambiguous_trap",
+      })
+    }
+  })
+
+  it("keeps stderr capped below stdout without treating status zero as provenance", () => {
+    expect(WASM_WASI_V1_17_EXECUTION_SETTINGS.stderrBytes).toBe(16_384)
+    const stderr = Buffer.alloc(
+      WASM_WASI_V1_17_EXECUTION_SETTINGS.stderrBytes + 1,
+    )
+    const observation = classifyWasmtimeProcessObservationV117(
+      {
+        pid: 1,
+        output: [null, Buffer.alloc(0), stderr],
+        stdout: Buffer.alloc(0),
+        stderr,
+        status: 0,
+        signal: null,
+        error: undefined,
+      },
+      262_144,
+      WASM_WASI_V1_17_EXECUTION_SETTINGS.stderrBytes,
+    )
+
+    expect(observation).toMatchObject({
+      kind: "failed",
+      attribution: "transport_crash",
     })
   })
 })
@@ -722,8 +793,35 @@ describe("WASM/WASI runtime v1.17 exact Rust/Zig identity", () => {
     }
     expect(rustIdentity.compiler.targetTriple).toBe("wasm32-wasip1")
     expect(zigIdentity.compiler.targetTriple).toBe("wasm32-wasi")
+    const selectedRustc = spawnSync("rustup", ["which", "rustc"], {
+      encoding: "utf8",
+      shell: false,
+    }).stdout.trim()
+    expect(rustIdentity.compiler.executableSha256).toBe(
+      `sha256:${createHash("sha256")
+        .update(readFileSync(selectedRustc))
+        .digest("hex")}`,
+    )
+    expect(rustIdentity.compiler).toMatchObject({
+      invocationShim: {
+        executableSha256: expect.stringMatching(/^sha256:[0-9a-f]{64}$/u),
+        resolvedPathSha256: expect.stringMatching(/^sha256:[0-9a-f]{64}$/u),
+      },
+    })
+    expect(rustIdentity.adapter).toMatchObject({
+      dependencies: {
+        engineSha256: expect.stringMatching(/^sha256:[0-9a-f]{64}$/u),
+        specSha256: expect.stringMatching(/^sha256:[0-9a-f]{64}$/u),
+      },
+    })
     expect(rustIdentity.identitySha256).not.toBe(zigIdentity.identitySha256)
   }, 15_000)
+
+  it("does not expose an unbound revision source byte count as authority", () => {
+    expect(
+      "sourceBytes" in buildRustWasmCandidateRevisionV117(candidateRustSource),
+    ).toBe(false)
+  })
 
   it("keeps candidate metadata inactive and counted authority unavailable", () => {
     for (const language of ["rust", "zig"] as const) {

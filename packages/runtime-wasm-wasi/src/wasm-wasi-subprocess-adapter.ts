@@ -271,7 +271,7 @@ const guestRequestBytes = (
   return admitted.canonicalBytes
 }
 
-const wasmtimeObservation = (
+export const classifyWasmtimeProcessObservationV117 = (
   result: SpawnSyncReturns<Buffer>,
   outputBytes: number,
   stderrBytes: number,
@@ -407,7 +407,7 @@ const executeCandidateGuest = (
         1,
     },
   )
-  return wasmtimeObservation(
+  return classifyWasmtimeProcessObservationV117(
     result,
     input.request.budget.outputBytes,
     input.settings.stderrBytes,
