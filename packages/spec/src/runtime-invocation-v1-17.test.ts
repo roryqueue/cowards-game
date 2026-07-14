@@ -4,7 +4,10 @@ import { readFileSync } from "node:fs"
 import path from "node:path"
 import { describe, expect, expectTypeOf, it } from "vitest"
 import { encodeCanonicalJson } from "./canonical-json-encode.js"
-import { frameCanonicalIdentity } from "./canonical-identity-domains.js"
+import {
+  frameCanonicalIdentity,
+  hashCanonicalIdentityValue,
+} from "./canonical-identity-domains.js"
 import type { JsonValue } from "./types.js"
 import {
   RUNTIME_INVOCATION_V1_17_CANDIDATE,
@@ -261,6 +264,450 @@ const signedSystemFailureResponseBytes = (
   })
   if (!encoded.ok) throw new Error(encoded.error.code)
   return { request, bytes: encoded.bytes }
+}
+
+type RawEnvelope = Record<string, JsonValue>
+
+const canonicalFixtureBytes = (value: JsonValue): Uint8Array => {
+  const encoded = encodeCanonicalJson(value, {
+    context: "authenticated-outer-envelope",
+  })
+  if (!encoded.ok) throw new Error(encoded.error.code)
+  return encoded.bytes
+}
+
+const framedFixtureHash = (
+  label: string,
+  value: JsonValue,
+): `sha256:${string}` =>
+  sha256(
+    frameCanonicalIdentity("evidenceBundle", [
+      new TextEncoder().encode(label),
+      canonicalFixtureBytes(value),
+    ]),
+  )
+
+const signRawFixture = (
+  label: "request" | "response",
+  unsigned: RawEnvelope,
+): Readonly<{ envelope: RawEnvelope; bytes: Uint8Array }> => {
+  const signatureInput = frameCanonicalIdentity("evidenceBundle", [
+    new TextEncoder().encode(`runtime-invocation-v1.17:${label}`),
+    canonicalFixtureBytes(unsigned),
+  ])
+  const envelope = {
+    ...unsigned,
+    authentication: {
+      algorithm: "hmac-sha256",
+      keyId: RUNTIME_INVOCATION_V1_17_TEST_KEY_ID,
+      signatureInputSha256: sha256(signatureInput),
+      signature: `hmac-sha256:${createHmac("sha256", fixtureSecret)
+        .update(signatureInput)
+        .digest("hex")}`,
+    },
+  } as unknown as RawEnvelope
+  return {
+    envelope,
+    bytes: canonicalFixtureBytes(envelope),
+  }
+}
+
+const executionPrestateFixture = (input?: {
+  readonly revision?: number
+  readonly selectActivations?: number
+  readonly soldierBrain?: number
+  readonly invocationCount?: number
+  readonly wallMilliseconds?: number
+  readonly computeFuel?: number
+  readonly payloadBytes?: number
+  readonly stdoutBytes?: number
+  readonly stderrBytes?: number
+  readonly memoryBytes?: number
+  readonly commitments?: readonly JsonValue[]
+}) => ({
+  schemaVersion: "runtime-budget-ledger-v1",
+  domain: "execution",
+  revision: input?.revision ?? 0,
+  methodInvocations: {
+    selectActivations: input?.selectActivations ?? 0,
+    soldierBrain: input?.soldierBrain ?? 0,
+  },
+  cumulative: {
+    invocationCount: input?.invocationCount ?? 0,
+    wallMilliseconds: input?.wallMilliseconds ?? 0,
+    computeFuel: input?.computeFuel ?? 0,
+    payloadBytes: input?.payloadBytes ?? 0,
+    stdoutBytes: input?.stdoutBytes ?? 0,
+    stderrBytes: input?.stderrBytes ?? 0,
+    memoryBytes: input?.memoryBytes ?? 0,
+  },
+  commitments: [...(input?.commitments ?? [])],
+})
+
+const methodLimitFixture = (
+  method: "selectActivations" | "soldierBrain",
+) => ({
+  method,
+  invocationCountMaximum: method === "selectActivations" ? 20 : 240,
+  counters: {
+    wallMilliseconds: { semantics: "counter", maximum: 50 },
+    computeFuel: { semantics: "counter", maximum: 10_000_000 },
+    payloadBytes: { semantics: "counter", maximum: 262_144 },
+    stdoutBytes: { semantics: "counter", maximum: 262_144 },
+    stderrBytes: { semantics: "counter", maximum: 65_536 },
+  },
+  memory: { semantics: "peak", maximumBytes: 67_108_864 },
+  process: {
+    semantics: "predicate",
+    processes: 1,
+    threads: 1,
+    children: 0,
+  },
+  capabilities: {
+    semantics: "predicate",
+    filesystem: "none",
+    network: "disabled",
+    environment: "empty",
+    shell: "disabled",
+  },
+  cancellation: {
+    semantics: "predicate",
+    terminationGraceMilliseconds: 100,
+    evidence: "adapter-termination-receipt-required",
+  },
+  accountingEvidence: { semantics: "predicate", required: true },
+})
+
+const matchLimitFixture = () => ({
+  methodInvocations: { selectActivations: 20, soldierBrain: 240 },
+  counters: {
+    invocationCount: { semantics: "counter", maximum: 260 },
+    wallMilliseconds: { semantics: "counter", maximum: 13_000 },
+    computeFuel: { semantics: "counter", maximum: 2_600_000_000 },
+    payloadBytes: { semantics: "counter", maximum: 68_157_440 },
+    stdoutBytes: { semantics: "counter", maximum: 68_157_440 },
+    stderrBytes: { semantics: "counter", maximum: 17_039_360 },
+  },
+  memory: { semantics: "peak", maximumBytes: 67_108_864 },
+  overflow: "stop-before-next-invocation-and-classify-by-proven-cause",
+})
+
+interface FutureRequestFixtureOptions {
+  readonly method?: "selectActivations" | "soldierBrain"
+  readonly inputValue?: JsonValue
+  readonly prestate?: ReturnType<typeof executionPrestateFixture>
+}
+
+const futureRequestFixture = (
+  options: FutureRequestFixtureOptions = {},
+): Readonly<{
+  envelope: RawEnvelope
+  bytes: Uint8Array
+}> => {
+  const method = options.method ?? "selectActivations"
+  const current = candidateRequest(method) as unknown as RawEnvelope
+  const {
+    authentication: _authentication,
+    budget: _budget,
+    input: _input,
+    ...base
+  } = current
+  const inputValue =
+    options.inputValue ?? ({ cycleIndex: 0, phase: "ROUND" } as JsonValue)
+  const inputBytes = canonicalFixtureBytes(inputValue)
+  const input = {
+    value: inputValue,
+    canonicalSha256: sha256(inputBytes),
+    canonicalByteLength: inputBytes.byteLength,
+  }
+  const budgetWithoutHash = {
+    profileId: "runtime-budget-profile-v1.17-candidate",
+    methodLimit: methodLimitFixture(method),
+    matchLimit: matchLimitFixture(),
+  }
+  const budget = {
+    ...budgetWithoutHash,
+    profileSha256:
+      `sha256:${hashCanonicalIdentityValue(
+        "budgetProfile",
+        budgetWithoutHash as unknown as JsonValue,
+      )}` as const,
+  }
+  const prestate = options.prestate ?? executionPrestateFixture()
+  const prestateSha256 = framedFixtureHash(
+    "runtime-invocation-v1.17:execution-ledger-prestate",
+    prestate as unknown as JsonValue,
+  )
+  const requestIdentity = framedFixtureHash(
+    "runtime-invocation-v1.17:execution-request-identity",
+    {
+      invocationId: base.invocationId,
+      kernelRequestId: base.kernelRequestId,
+      method,
+      semanticTupleId: (base.semanticTuple as RawEnvelope).tupleId,
+      strategyRevisionId: (base.sourceIdentity as RawEnvelope)
+        .strategyRevisionId,
+      artifactSha256: (base.sourceIdentity as RawEnvelope).artifactSha256,
+      budgetProfileSha256: budget.profileSha256,
+      inputSha256: input.canonicalSha256,
+      prestateSha256,
+    } as unknown as JsonValue,
+  )
+  const idempotencyKeySha256 = framedFixtureHash(
+    "runtime-invocation-v1.17:execution-idempotency",
+    {
+      invocationId: base.invocationId,
+      prestateRevision: prestate.revision,
+      requestIdentity,
+    } as unknown as JsonValue,
+  )
+  const accountingWithoutIdentity = {
+    schemaVersion: "runtime-invocation-accounting-v1.17",
+    domain: "execution",
+    prestate,
+    prestateSha256,
+    requestIdentity,
+    idempotencyKeySha256,
+  }
+  const accounting = {
+    ...accountingWithoutIdentity,
+    identitySha256: framedFixtureHash(
+      "runtime-invocation-v1.17:execution-accounting-request",
+      accountingWithoutIdentity as unknown as JsonValue,
+    ),
+  }
+  return signRawFixture("request", {
+    ...base,
+    method,
+    budget: budget as unknown as JsonValue,
+    input: input as unknown as JsonValue,
+    accounting: accounting as unknown as JsonValue,
+  })
+}
+
+const resignRawRequestFixture = (
+  request: RawEnvelope,
+  mutate: (unsigned: RawEnvelope) => void,
+) => {
+  const copy = globalThis.structuredClone(request)
+  delete copy.authentication
+  mutate(copy)
+  return signRawFixture("request", copy)
+}
+
+type FutureOutcomeKind = "success" | "player_violation" | "system_failure"
+
+const futureResponseFixture = (
+  requestFixture: ReturnType<typeof futureRequestFixture>,
+  kind: FutureOutcomeKind,
+  mutate?: (unsigned: RawEnvelope) => void,
+): Readonly<{ envelope: RawEnvelope; bytes: Uint8Array }> => {
+  const request = requestFixture.envelope
+  const requestAccounting = request.accounting as RawEnvelope
+  const prestate = requestAccounting.prestate as RawEnvelope
+  const cumulative = prestate.cumulative as RawEnvelope
+  const methods = prestate.methodInvocations as RawEnvelope
+  const method = request.method as "selectActivations" | "soldierBrain"
+  const requestBinding = {
+    requestId: request.requestId,
+    invocationId: request.invocationId,
+    kernelRequestId: request.kernelRequestId,
+    method,
+    requestSha256: sha256(requestFixture.bytes),
+    semanticTupleId: (request.semanticTuple as RawEnvelope).tupleId,
+    runtimeAbiVersion: (request.semanticTuple as RawEnvelope).runtimeAbi,
+    strategyRevisionId: (request.sourceIdentity as RawEnvelope)
+      .strategyRevisionId,
+    artifactSha256: (request.sourceIdentity as RawEnvelope).artifactSha256,
+    budgetProfileSha256: (request.budget as RawEnvelope).profileSha256,
+    inputSha256: (request.input as RawEnvelope).canonicalSha256,
+    retryIdentitySha256: (request.retry as RawEnvelope).identitySha256,
+    accountingIdentitySha256: requestAccounting.identitySha256,
+    idempotencyKeySha256: requestAccounting.idempotencyKeySha256,
+  }
+  const trace = {
+    requestId: request.requestId,
+    invocationId: request.invocationId,
+    kernelRequestId: request.kernelRequestId,
+    method,
+    requestSha256: requestBinding.requestSha256,
+    budgetProfileSha256: requestBinding.budgetProfileSha256,
+    inputSha256: requestBinding.inputSha256,
+    retryIdentitySha256: requestBinding.retryIdentitySha256,
+    accountingIdentitySha256: requestBinding.accountingIdentitySha256,
+    idempotencyKeySha256: requestBinding.idempotencyKeySha256,
+    safeCodes: ["ADAPTER_AUTHENTICATED", "ACCOUNTING_EVIDENCE_BOUND"],
+  }
+  const measuredCounters = Object.fromEntries(
+    [
+      "wallMilliseconds",
+      "computeFuel",
+      "payloadBytes",
+      "stdoutBytes",
+      "stderrBytes",
+    ].map((counter) => [
+      counter,
+      {
+        status: "measured",
+        delta: 1,
+        cumulative: (cumulative[counter] as number) + 1,
+      },
+    ]),
+  ) as RawEnvelope
+  const receiptWithoutEvidenceIdentity = {
+    domain: "execution",
+    prestateRevision: prestate.revision,
+    invocationId: request.invocationId,
+    requestIdentity: requestAccounting.requestIdentity,
+    method,
+    attribution: kind === "system_failure" ? "ambiguous" : "proven_strategy",
+    counters:
+      kind === "system_failure"
+        ? {
+            ...measuredCounters,
+            computeFuel: { status: "unavailable" },
+          }
+        : measuredCounters,
+    memory: {
+      status: "measured",
+      peakBytes: 1,
+      cumulativePeakBytes: Math.max(cumulative.memoryBytes as number, 1),
+    },
+    process: {
+      status: "verified",
+      processes: 1,
+      threads: 1,
+      children: 0,
+    },
+    capabilities: {
+      status: "verified",
+      filesystem: "none",
+      network: "disabled",
+      environment: "empty",
+      shell: "disabled",
+    },
+    cancellation: {
+      status: "verified",
+      terminationRequired: false,
+      receiptPresent: false,
+      graceMilliseconds: 0,
+    },
+    accountingEvidence: {
+      status: "verified",
+      signatureVerified: true,
+      monotonic: true,
+    },
+  }
+  const evidenceIdentity = framedFixtureHash(
+    "runtime-invocation-v1.17:execution-evidence",
+    receiptWithoutEvidenceIdentity as unknown as JsonValue,
+  )
+  const receipt = {
+    ...receiptWithoutEvidenceIdentity,
+    evidenceIdentity,
+  }
+  const committed = kind !== "system_failure"
+  const poststate = committed
+    ? {
+        ...prestate,
+        revision: (prestate.revision as number) + 1,
+        methodInvocations: {
+          ...methods,
+          [method]: (methods[method] as number) + 1,
+        },
+        cumulative: {
+          invocationCount: (cumulative.invocationCount as number) + 1,
+          wallMilliseconds:
+            (cumulative.wallMilliseconds as number) + 1,
+          computeFuel: (cumulative.computeFuel as number) + 1,
+          payloadBytes: (cumulative.payloadBytes as number) + 1,
+          stdoutBytes: (cumulative.stdoutBytes as number) + 1,
+          stderrBytes: (cumulative.stderrBytes as number) + 1,
+          memoryBytes: Math.max(cumulative.memoryBytes as number, 1),
+        },
+        commitments: [
+          ...(prestate.commitments as JsonValue[]),
+          {
+            invocationId: request.invocationId,
+            prestateRevision: prestate.revision,
+            requestIdentity: requestAccounting.requestIdentity,
+            evidenceIdentity,
+            method,
+            outcome: "success",
+            dimensions: [],
+          },
+        ],
+      }
+    : prestate
+  const accountingWithoutIdentity = {
+    schemaVersion: "runtime-invocation-accounting-v1.17",
+    domain: "execution",
+    prestateSha256: requestAccounting.prestateSha256,
+    idempotencyKeySha256: requestAccounting.idempotencyKeySha256,
+    disposition: committed ? "commit" : "no_commit",
+    receipt,
+    poststate,
+    poststateSha256: framedFixtureHash(
+      "runtime-invocation-v1.17:execution-ledger-poststate",
+      poststate as unknown as JsonValue,
+    ),
+  }
+  const accounting = {
+    ...accountingWithoutIdentity,
+    identitySha256: framedFixtureHash(
+      "runtime-invocation-v1.17:execution-accounting-response",
+      accountingWithoutIdentity as unknown as JsonValue,
+    ),
+  }
+  const outcome =
+    kind === "success"
+      ? {
+          kind,
+          value: { activationOrders: [], strategyMemory: null },
+          trace,
+        }
+      : kind === "player_violation"
+        ? {
+            kind,
+            violation: {
+              code: "INVALID_OUTPUT",
+              publicMessage: "Strategy returned an invalid payload.",
+            },
+            trace,
+          }
+        : {
+            kind,
+            failure: {
+              code: "AMBIGUOUS_ATTRIBUTION",
+              publicMessage: "Runtime system failure.",
+              retryable: false,
+            },
+            trace,
+          }
+  const payload =
+    kind === "success"
+      ? canonicalFixtureBytes(
+          (outcome as { value: JsonValue }).value,
+        )
+      : undefined
+  const unsigned = {
+    contractVersion: request.contractVersion,
+    candidateStatus: request.candidateStatus,
+    current: false,
+    envelopeKind: "runtime-invocation-response",
+    requestBinding,
+    outcome,
+    payloadBinding:
+      payload === undefined
+        ? null
+        : {
+            sha256: sha256(payload),
+            canonicalByteLength: payload.byteLength,
+          },
+    accounting,
+  } as unknown as RawEnvelope
+  mutate?.(unsigned)
+  return signRawFixture("response", unsigned)
 }
 
 const trace = (): RuntimeInvocationTraceV117 => ({
@@ -882,6 +1329,211 @@ describe("runtime invocation v1.17 authenticated candidate wire", () => {
       "RUNTIME_INVOCATION_V1_17_SYSTEM_FAILURE_RETRYABILITY",
     ]) {
       expect(publicRuntime, name).toHaveProperty(name)
+    }
+  })
+})
+
+describe("runtime invocation v1.17 authenticated execution accounting RED", () => {
+  const identity = {
+    keyId: RUNTIME_INVOCATION_V1_17_TEST_KEY_ID,
+    secret: fixtureSecret,
+  } as const
+
+  it("rejects the old generic output alias and missing execution ledger", () => {
+    const verified = verifyRuntimeInvocationRequestV117(
+      serializeRuntimeInvocationRequestV117(candidateRequest()),
+      identity,
+    )
+    expect(verified).toMatchObject({
+      kind: "system_failure",
+      failure: { code: "OUTER_FRAME_UNDECODABLE" },
+    })
+  })
+
+  it("accepts one exact signed methodLimit, matchLimit, and execution prestate", () => {
+    const fixture = futureRequestFixture()
+    const verified = verifyRuntimeInvocationRequestV117(fixture.bytes, identity)
+    expect(verified.kind).toBe("success")
+  })
+
+  it("fails closed on signed accounting drift and a preflight-domain request", () => {
+    const fixture = futureRequestFixture()
+    const cases = [
+      ["prestate", (root: RawEnvelope) => {
+        const accounting = root.accounting as RawEnvelope
+        const prestate = accounting.prestate as RawEnvelope
+        prestate.revision = 1
+      }],
+      ["idempotency", (root: RawEnvelope) => {
+        const accounting = root.accounting as RawEnvelope
+        accounting.idempotencyKeySha256 = hash("9")
+      }],
+      ["accounting identity", (root: RawEnvelope) => {
+        const accounting = root.accounting as RawEnvelope
+        accounting.identitySha256 = hash("8")
+      }],
+      ["method binding", (root: RawEnvelope) => {
+        const budget = root.budget as RawEnvelope
+        const methodLimit = budget.methodLimit as RawEnvelope
+        methodLimit.method = "soldierBrain"
+      }],
+      ["preflight domain", (root: RawEnvelope) => {
+        const accounting = root.accounting as RawEnvelope
+        accounting.domain = "preflight"
+      }],
+    ] as const
+
+    for (const [name, mutate] of cases) {
+      const invalid = resignRawRequestFixture(fixture.envelope, mutate)
+      expect(
+        verifyRuntimeInvocationRequestV117(invalid.bytes, identity).kind,
+        name,
+      ).toBe("system_failure")
+    }
+  })
+
+  it.each([
+    "success",
+    "player_violation",
+    "system_failure",
+  ] as const)("requires and accepts signed %s response accounting", (kind) => {
+    const request = futureRequestFixture()
+    const response = futureResponseFixture(request, kind)
+    const verified = verifyRuntimeInvocationResponseV117(
+      response.bytes,
+      request.envelope as unknown as AuthenticatedRuntimeInvocationRequestV117,
+      identity,
+    )
+    expect(verified.kind).toBe("success")
+  })
+
+  it("rejects a signed response with no accounting envelope", () => {
+    const request = futureRequestFixture()
+    const response = futureResponseFixture(request, "success", (unsigned) => {
+      delete unsigned.accounting
+    })
+    expect(
+      verifyRuntimeInvocationResponseV117(
+        response.bytes,
+        request.envelope as unknown as AuthenticatedRuntimeInvocationRequestV117,
+        identity,
+      ).kind,
+    ).toBe("system_failure")
+  })
+
+  it("rejects invalid counter, peak, predicate, evidence, and ownership combinations", () => {
+    const request = futureRequestFixture()
+    const invalidResponses = [
+      ["counter decrease", futureResponseFixture(request, "success", (root) => {
+        const accounting = root.accounting as RawEnvelope
+        const receipt = accounting.receipt as RawEnvelope
+        const counters = receipt.counters as RawEnvelope
+        const wall = counters.wallMilliseconds as RawEnvelope
+        wall.cumulative = -1
+      })],
+      ["counter wrong sum", futureResponseFixture(request, "success", (root) => {
+        const accounting = root.accounting as RawEnvelope
+        const receipt = accounting.receipt as RawEnvelope
+        const counters = receipt.counters as RawEnvelope
+        const wall = counters.wallMilliseconds as RawEnvelope
+        wall.delta = 2
+        wall.cumulative = 1
+      })],
+      ["unsafe counter addition", futureResponseFixture(request, "success", (root) => {
+        const accounting = root.accounting as RawEnvelope
+        const receipt = accounting.receipt as RawEnvelope
+        const counters = receipt.counters as RawEnvelope
+        const wall = counters.wallMilliseconds as RawEnvelope
+        wall.delta = Number.MAX_SAFE_INTEGER
+        wall.cumulative = Number.MAX_SAFE_INTEGER
+      })],
+      ["peak summed", futureResponseFixture(request, "success", (root) => {
+        const accounting = root.accounting as RawEnvelope
+        const receipt = accounting.receipt as RawEnvelope
+        const memory = receipt.memory as RawEnvelope
+        memory.peakBytes = 1
+        memory.cumulativePeakBytes = 2
+      })],
+      ["failed predicate with success", futureResponseFixture(request, "success", (root) => {
+        const accounting = root.accounting as RawEnvelope
+        const receipt = accounting.receipt as RawEnvelope
+        const process = receipt.process as RawEnvelope
+        process.threads = 2
+      })],
+      ["failed predicate with player violation", futureResponseFixture(request, "player_violation", (root) => {
+        const accounting = root.accounting as RawEnvelope
+        const receipt = accounting.receipt as RawEnvelope
+        const capabilities = receipt.capabilities as RawEnvelope
+        capabilities.network = "inherited"
+      })],
+      ["unavailable success", futureResponseFixture(request, "success", (root) => {
+        const accounting = root.accounting as RawEnvelope
+        const receipt = accounting.receipt as RawEnvelope
+        const counters = receipt.counters as RawEnvelope
+        counters.computeFuel = { status: "unavailable" }
+      })],
+      ["ambiguous player violation", futureResponseFixture(request, "player_violation", (root) => {
+        const accounting = root.accounting as RawEnvelope
+        const receipt = accounting.receipt as RawEnvelope
+        receipt.attribution = "ambiguous"
+      })],
+      ["system failure commit", futureResponseFixture(request, "system_failure", (root) => {
+        const accounting = root.accounting as RawEnvelope
+        accounting.disposition = "commit"
+      })],
+      ["system failure changed poststate", futureResponseFixture(request, "system_failure", (root) => {
+        const accounting = root.accounting as RawEnvelope
+        const poststate = accounting.poststate as RawEnvelope
+        poststate.revision = 1
+      })],
+    ] as const
+
+    for (const [name, response] of invalidResponses) {
+      expect(
+        verifyRuntimeInvocationResponseV117(
+          response.bytes,
+          request.envelope as unknown as AuthenticatedRuntimeInvocationRequestV117,
+          identity,
+        ).kind,
+        name,
+      ).toBe("system_failure")
+    }
+  })
+
+  it("rejects response replay under another method, input, or ledger prestate", () => {
+    const original = futureRequestFixture()
+    const response = futureResponseFixture(original, "success")
+    const changedPrestate = executionPrestateFixture({
+      revision: 1,
+      selectActivations: 1,
+      invocationCount: 1,
+      wallMilliseconds: 1,
+      commitments: [
+        {
+          invocationId: "invocation:prior",
+          prestateRevision: 0,
+          requestIdentity: hash("1"),
+          evidenceIdentity: hash("2"),
+          method: "selectActivations",
+          outcome: "success",
+          dimensions: [],
+        },
+      ],
+    })
+    const replays = [
+      ["method", futureRequestFixture({ method: "soldierBrain" })],
+      ["input", futureRequestFixture({ inputValue: { different: true } })],
+      ["prestate", futureRequestFixture({ prestate: changedPrestate })],
+    ] as const
+    for (const [name, expectedRequest] of replays) {
+      expect(
+        verifyRuntimeInvocationResponseV117(
+          response.bytes,
+          expectedRequest.envelope as unknown as AuthenticatedRuntimeInvocationRequestV117,
+          identity,
+        ).kind,
+        name,
+      ).toBe("system_failure")
     }
   })
 })
