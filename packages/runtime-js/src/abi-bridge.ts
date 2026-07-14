@@ -268,6 +268,12 @@ const classifyGuestFrame = (
   }
   const tag = String.fromCharCode(frame[0] ?? 0)
   const payload = frame.subarray(1)
+  if (
+    tag !== RUNTIME_GUEST_FRAME_TAGS_V117.success &&
+    payload.byteLength !== 0
+  ) {
+    return systemFailure(request, requestBytes, "TRANSPORT_CRASH", true)
+  }
   switch (tag) {
     case RUNTIME_GUEST_FRAME_TAGS_V117.success:
       return successfulPayload(request, requestBytes, payload)
@@ -323,32 +329,42 @@ export const executeStrategyRuntimeAbiV117 = (
   if (admittedRequest.kind !== "success") return new Uint8Array()
   const request = admittedRequest.value
 
-  let observation: RuntimeGuestObservationV117
-  try {
-    observation = input.invokeGuest({
-      executableSource: input.executableSource,
-      methodName: request.method,
-      input: request.input.value,
-      timeoutMs: request.budget.wallMilliseconds,
-      outputByteLimit: request.budget.outputBytes,
-    })
-  } catch {
-    observation = {
-      kind: "system_failure",
-      code: "ADAPTER_CRASH",
-      retryable: true,
+  let outcome: RuntimeInvocationResultV117
+  const executableBytes = textEncoder.encode(input.executableSource)
+  if (sha256(executableBytes) !== request.sourceIdentity.artifactSha256) {
+    outcome = systemFailure(
+      request,
+      requestBytes,
+      "OUTER_FRAME_WRONG_BINDING",
+      false,
+    )
+  } else {
+    let observation: RuntimeGuestObservationV117
+    try {
+      observation = input.invokeGuest({
+        executableSource: input.executableSource,
+        methodName: request.method,
+        input: request.input.value,
+        timeoutMs: request.budget.wallMilliseconds,
+        outputByteLimit: request.budget.outputBytes,
+      })
+    } catch {
+      observation = {
+        kind: "system_failure",
+        code: "ADAPTER_CRASH",
+        retryable: true,
+      }
     }
+    outcome =
+      observation.kind === "raw_frame"
+        ? classifyGuestFrame(request, requestBytes, observation.bytes)
+        : systemFailure(
+            request,
+            requestBytes,
+            observation.code,
+            observation.retryable,
+          )
   }
-
-  const outcome =
-    observation.kind === "raw_frame"
-      ? classifyGuestFrame(request, requestBytes, observation.bytes)
-      : systemFailure(
-          request,
-          requestBytes,
-          observation.code,
-          observation.retryable,
-        )
   const response = createAuthenticatedRuntimeInvocationResponseV117(
     request,
     outcome,

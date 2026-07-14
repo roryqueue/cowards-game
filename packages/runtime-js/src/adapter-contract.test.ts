@@ -743,7 +743,7 @@ export default {
         candidateRequest({ outputBytes: exact }),
       )
       const overCap = executeCandidate(
-        adapterFor(`S${canonicalPayload}`),
+        adapterFor("O"),
         candidateRequest({ outputBytes: exact - 1 }),
       )
       expect(atCap).toMatchObject({

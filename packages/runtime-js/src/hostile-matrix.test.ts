@@ -1,9 +1,10 @@
 import type { SpawnSyncReturns } from "node:child_process"
-import { readFileSync } from "node:fs"
-import path from "node:path"
+import { createHash } from "node:crypto"
 import { describe, expect, it } from "vitest"
 import {
   RUNTIME_INVOCATION_V1_17_TEST_KEY_ID,
+  createAuthenticatedRuntimeInvocationRequestV117,
+  serializeRuntimeInvocationRequestV117,
   verifyRuntimeInvocationRequestV117,
   verifyRuntimeInvocationResponseV117,
   type AuthenticatedRuntimeInvocationRequestV117,
@@ -340,21 +341,67 @@ const candidateIdentity: RuntimeInvocationSigningIdentityV117 = {
   secret: "fixture-only:runtime-invocation-v1.17:secret",
 }
 
-const candidateRequestBytes = readFileSync(
-  path.resolve(
-    import.meta.dirname,
-    "../../spec/artifacts/runtime-execution-service-request.v1.17.candidate.json",
-  ),
-)
+const candidateHash = (value: string): `sha256:${string}` =>
+  `sha256:${createHash("sha256").update(value).digest("hex")}`
 
-const admittedCandidateRequest = verifyRuntimeInvocationRequestV117(
-  candidateRequestBytes,
+const expectedCandidateRequest = createAuthenticatedRuntimeInvocationRequestV117(
+  {
+    requestId: "request:runtime-js:hostile:v1.17",
+    invocationId: "invocation:runtime-js:hostile:v1.17",
+    kernelRequestId: "kernel-request:runtime-js:hostile:v1.17",
+    method: "selectActivations",
+    semanticTuple: {
+      rules: "cowards-rules-v1.4",
+      engine: "engine-kernel-v1.37-candidate-1",
+      runtimeAbi: "strategy-runtime-abi-v1.17",
+      chronicle: "chronicle-recorder-current-events-v1.37-candidate-1",
+      arenaCatalog: "semantic-arena-catalog-v1.37-candidate-1",
+      setPolicy: "canonical-set-policy-v1.4",
+    },
+    sourceIdentity: {
+      strategyRevisionId: "strategy-revision:runtime-js:hostile:v1.17",
+      originalSourceSha256: candidateHash(validSource),
+      normalizedSourceSha256: candidateHash(validSource),
+      artifactSha256: candidateHash(validSource),
+    },
+    budget: {
+      profileId: "runtime-budget-profile-v1.17-candidate",
+      wallMilliseconds: 50,
+      computeFuel: 10_000_000,
+      memoryBytes: 67_108_864,
+      outputBytes: 262_144,
+      processLimit: 1,
+      matchCumulative: {
+        invocationCountMaximum: 260,
+        wallMilliseconds: 13_000,
+        computeFuel: 2_600_000_000,
+        payloadBytes: 68_157_440,
+        stdoutBytes: 68_157_440,
+        stderrBytes: 17_039_360,
+        memoryBytes: 67_108_864,
+        accounting:
+          "signed-monotonic-per-invocation-deltas-plus-cumulative-total",
+        overflow: "stop-before-next-invocation-and-classify-by-proven-cause",
+      },
+    },
+    input: { value: { cycleIndex: 0, phase: "ROUND" } },
+    retry: {
+      retryId: "retry:runtime-js:hostile:v1.17",
+      attempt: 0,
+      previousRequestSha256: null,
+    },
+  },
   candidateIdentity,
 )
+
+const candidateRequestBytes = serializeRuntimeInvocationRequestV117(
+  expectedCandidateRequest,
+)
+const admittedCandidateRequest = verifyRuntimeInvocationRequestV117(candidateRequestBytes, candidateIdentity)
 if (admittedCandidateRequest.kind !== "success") {
   throw new Error("candidate request fixture failed runtime-js test admission")
 }
-const expectedCandidateRequest =
+const admittedExpectedCandidateRequest =
   admittedCandidateRequest.value as AuthenticatedRuntimeInvocationRequestV117
 
 type CandidateAdapter = StrategyExecutionAdapter & {
@@ -388,7 +435,7 @@ const executeCandidate = (
   })
   return verifyRuntimeInvocationResponseV117(
     responseBytes,
-    expectedCandidateRequest,
+    admittedExpectedCandidateRequest,
     candidateIdentity,
   )
 }
