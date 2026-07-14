@@ -77,7 +77,7 @@ coverage:
         ref: "git diff scope and pinned SHA-256 review"
         status: pass
     human_judgment: false
-duration: 17min
+duration: 32min
 completed: 2026-07-14
 status: complete
 ---
@@ -88,9 +88,9 @@ status: complete
 
 ## Performance
 
-- **Duration:** 17 min
+- **Duration:** 32 min
 - **Started:** 2026-07-14T00:48:14-04:00
-- **Completed:** 2026-07-14T01:04:44-04:00
+- **Completed:** 2026-07-14T01:19:56-04:00
 - **Tasks:** 2 TDD tasks
 - **Files created:** 4
 - **Files modified:** 1
@@ -100,7 +100,7 @@ status: complete
 - Added a strict compile-time and runtime-schema v1.17 result union: success carries only value/trace, player violation only canonical violation/trace, and system failure only redacted failure/trace.
 - Executed an 18-case ownership matrix covering success plus every frozen failure observation. Missing, truncated, unauthenticated, wrongly bound, undecodable, adapter, runtime, host, transport, and ambiguous-attribution cases remain system-owned; only proven decoded Strategy invalidity, exception, and exhaustion are player-owned.
 - Added canonical authenticated request and response helpers whose adapter-owned HMAC binds request/invocation/kernel IDs, method, semantic tuple and hash, ABI, revision/source/artifact identity, budget vector/profile hash, input identity, retry identity, signed-request identity, and response-payload identity.
-- Committed exact newline-free candidate fixtures: request SHA-256 `df0a9e071fbcc8d3f1e2e95e13673b34946a5e556b046485dc7710fe09f57dd3` and response SHA-256 `7c86ad2bc60383635372ad29ee721812c5e5c375db9c660b475a762b186f2313`.
+- Committed exact newline-free candidate fixtures: request SHA-256 `94da776c5ef88992d126bd85ae325518303ba56fdf8d2b5568e0e0ce28db1fd7` and response SHA-256 `d4aa58745e3d4305cc09854478dc38e31313b1e803b89f65a990bd8c52a74ebf`.
 - Kept `runtime-invocation-v1.17` / `strategy-runtime-abi-v1.17` explicitly `inactive-candidate`, with activation owned by Plan 258-14 and no current service-default or gameplay change.
 - Reproved immutable v1.16 request, response, TypeScript service, Go semantic receipt/client/client test, and migration hashes without modifying `runtime-execution-service.ts` or any historical artifact.
 
@@ -111,13 +111,18 @@ status: complete
 3. **Task 2 RED: Add failing authenticated wire gates** — `0cee40d` (test)
 4. **Task 2 GREEN: Authenticate candidate invocation envelopes** — `3739983` (feat)
 5. **Review fix: Harden candidate envelope ownership** — `0009514` (fix)
+6. **Review RED: Expose incomplete candidate envelope bindings** — `4fb21cb` (test)
+7. **Review fix: Bind the complete candidate envelope** — `fe08f04` (fix)
+8. **Final review RED: Expose trace and malformed-request gaps** — `1fccade` (test)
+9. **Final review fix: Fail closed on final envelope bindings** — `6286e75` (fix)
 
 ## Verification
 
-- Focused successor/dependency suite passed 39/39 across six files: invocation, service contract, runtime ABI, canonical encoder/parser, and identity domains.
-- Plan Task-2 invocation/service subset passed 14/14; the full `@cowards/spec` suite remained 73/73.
+- Focused successor/dependency suite passed 43/43 across six files: invocation, service contract, runtime ABI, canonical encoder/parser, and identity domains.
+- Plan Task-2 invocation/service subset passed 18/18; the full `@cowards/spec` suite remained 73/73.
+- The complete `packages/spec/src` suite passed 232/232 across 23 files after the final review fixes.
 - `pnpm --filter @cowards/spec typecheck` and focused ESLint over the successor module, test, and export surface passed.
-- Candidate request signature-input SHA-256 is `c2c50c6c52190231745466011ab7ede4c3860180898b840e941f63354f5b8aa2`; response signature-input SHA-256 is `34a02714c615d542cc4258b82ae728d73f151069d5fddd4e9d5b1012347a90ea`.
+- Candidate request signature-input SHA-256 is `7a2b2ce2c3b8fed0af22911fea9430a51487db83796d068478a0db851ac2b19d`; response signature-input SHA-256 is `0a0c97b4f762608139b0e413fef120eee35ca4ee0c221398b00f94e92f342bcc`.
 - Pinned v1.16 hashes remained exact: request `5d04fa4d82eb814bb034ce9b5f1d5c80945e3d4e02c9124ca39a6670e9c0eab5`, response wire `9c870d57e0125eb80ab2ba941ecbbede8a9a775f61c0b278abec25c491374d97`, service `9a0a0411056d06ce4b426b7749256460369124fa752c6c2f81912b8b0bfb31fc`, semantic receipt `36052047a870068ab81ced8c78f3b7f4e8130034a57ee8d16bc3873a50507d1d`, Go client `8fdd3cbc206d2d7e1f77a3603a4f9ea5e664c5ab6f649c87d3e308d99556043f`, Go client test `4a52986d2a43598c0e9556504459143ab56d94d97b22b2296cf84067927e8185`, and migration 0017 `ac19e1d825217dfb72142685eb65e62933cea49541ceb39338235b32d2430a69`.
 - The implementation diff is confined to the Plan-06 successor module, test, candidate artifacts, and aggregate export. No current service dispatch or gameplay file changed; protected config/spec bytes and binary diffs remained exactly unchanged.
 
@@ -150,7 +155,19 @@ status: complete
    - **Fix:** Used the bounded parser's EOF offset to classify incomplete canonical frames deterministically and retained system ownership.
    - **Committed in:** `3739983`
 
-**Total deviations:** 3 auto-fixed correctness and ownership issues. **Impact:** Stricter public safety, authentication authority, and deterministic system-owned failure classification; no scope or current-runtime expansion.
+4. **[Rule 1 - Complete response binding] The response constructor could sign a schema-valid trace that did not belong to its authenticated request.**
+   - **Found during:** Independent final re-review
+   - **Issue:** The constructor could emit a signed response that the verifier immediately rejected as `OUTER_FRAME_WRONG_BINDING`.
+   - **Fix:** Centralized the eight-field trace/request comparison, refused mismatched traces before signing, and reused the same comparison during verification.
+   - **Committed in:** RED `1fccade`, GREEN `6286e75`
+
+5. **[Rule 1 - Fail-closed verification] Malformed expected-request values could throw before response verification classified them.**
+   - **Found during:** Independent final re-review
+   - **Issue:** A malformed public identifier caused `verifyRuntimeInvocationResponseV117` to throw `ZodError`, violating the no-throw boundary contract.
+   - **Fix:** Added runtime schema and derived-binding admission for the expected request, authenticated it before accepting a response, and wrapped unexpected verifier faults as redacted `OUTER_FRAME_WRONG_BINDING` system failures.
+   - **Committed in:** RED `1fccade`, GREEN `6286e75`
+
+**Total deviations:** 5 auto-fixed correctness and ownership issues. **Impact:** Stricter public safety, complete adapter authority, and deterministic system-owned failure classification; no scope or current-runtime expansion.
 
 ## Issues Encountered
 
