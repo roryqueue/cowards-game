@@ -593,6 +593,59 @@ describe("Python subprocess Strategy provider ABI", () => {
     35_000,
   )
 
+  it(
+    "keeps top-level Strategy initialization inside the guest deadline",
+    () => {
+      const source = `while True:\n    pass\n\ndef select_activations(input):\n    return {"activationOrders": [], "strategyMemory": None}\n\ndef soldier_brain(input):\n    return {"action": {"type": "TURN_TO_STONE"}, "soldierMemory": None}\n`
+      const revision = buildPythonStrategyRevision({ source })
+      const request = candidateRequest(revision, { wallMilliseconds: 20 })
+      const started = Date.now()
+      const response = verifyRuntimeInvocationResponseV117(
+        createPythonCandidateInvocationAdapterV117({
+          revision,
+          identity: candidateIdentity,
+        })(serializeRuntimeInvocationRequestV117(request)),
+        request,
+        candidateIdentity,
+      )
+      const elapsedMilliseconds = Date.now() - started
+
+      expect(elapsedMilliseconds).toBeLessThan(1_000)
+      expect(response.kind).toBe("success")
+      if (response.kind === "success") {
+        expect(response.value.outcome).toMatchObject({
+          kind: "player_violation",
+          violation: { code: "TIMEOUT" },
+        })
+        expect(response.value.outcome).not.toHaveProperty("failure")
+      }
+    },
+    35_000,
+  )
+
+  it("keeps an attributed top-level Strategy exception player-owned", () => {
+    const source = `1 / 0\n\ndef select_activations(input):\n    return {"activationOrders": [], "strategyMemory": None}\n\ndef soldier_brain(input):\n    return {"action": {"type": "TURN_TO_STONE"}, "soldierMemory": None}\n`
+    const revision = buildPythonStrategyRevision({ source })
+    const request = candidateRequest(revision)
+    const response = verifyRuntimeInvocationResponseV117(
+      createPythonCandidateInvocationAdapterV117({
+        revision,
+        identity: candidateIdentity,
+      })(serializeRuntimeInvocationRequestV117(request)),
+      request,
+      candidateIdentity,
+    )
+
+    expect(response.kind).toBe("success")
+    if (response.kind === "success") {
+      expect(response.value.outcome).toMatchObject({
+        kind: "player_violation",
+        violation: { code: "THROWN_EXCEPTION" },
+      })
+      expect(response.value.outcome).not.toHaveProperty("failure")
+    }
+  })
+
   it("keeps serialization and complete-envelope observation inside the guest-entry wall", () => {
     const source = `payload = [0] * 60000\n\ndef select_activations(input):\n    return {"activationOrders": [], "strategyMemory": payload}\n\ndef soldier_brain(input):\n    return {"action": {"type": "TURN_TO_STONE"}, "soldierMemory": None}\n`
     const revision = buildPythonStrategyRevision({ source })
