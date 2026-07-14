@@ -15,9 +15,12 @@ import {
 import {
   RUNTIME_INVOCATION_V1_17_TEST_KEY_ID,
   createAuthenticatedRuntimeInvocationRequestV117,
+  createRuntimeAbiV117ExecutionLedger,
+  createRuntimeInvocationBudgetV117,
   serializeRuntimeInvocationRequestV117,
   verifyRuntimeInvocationResponseV117,
   type AuthenticatedRuntimeInvocationRequestV117,
+  type RuntimeInvocationExecutionReceiptEvidenceV117,
 } from "@cowards/spec"
 import {
   buildPythonSourceIdentityV117,
@@ -47,7 +50,6 @@ const candidateIdentity = {
 
 const candidateRequest = (
   revision = buildPythonStrategyRevision({ source: pythonSource }),
-  budget: { wallMilliseconds?: number; outputBytes?: number } = {},
 ): AuthenticatedRuntimeInvocationRequestV117 => {
   const identity = buildPythonSourceIdentityV117(revision.source)
   const artifact = revision.metadata.sourceArtifact!
@@ -71,26 +73,8 @@ const candidateRequest = (
         normalizedSourceSha256: identity.normalizedSourceSha256,
         artifactSha256: `sha256:${artifact.hash}`,
       },
-      budget: {
-        profileId: "runtime-budget-profile-v1.17-candidate",
-        wallMilliseconds: budget.wallMilliseconds ?? 1_000,
-        computeFuel: 10_000_000,
-        memoryBytes: 67_108_864,
-        outputBytes: budget.outputBytes ?? 262_144,
-        processLimit: 1,
-        matchCumulative: {
-          accounting:
-            "signed-monotonic-per-invocation-deltas-plus-cumulative-total",
-          computeFuel: 2_600_000_000,
-          invocationCountMaximum: 260,
-          memoryBytes: 67_108_864,
-          overflow: "stop-before-next-invocation-and-classify-by-proven-cause",
-          payloadBytes: 68_157_440,
-          stderrBytes: 17_039_360,
-          stdoutBytes: 68_157_440,
-          wallMilliseconds: 13_000,
-        },
-      },
+      budget: createRuntimeInvocationBudgetV117("selectActivations"),
+      accounting: { prestate: createRuntimeAbiV117ExecutionLedger() },
       input: {
         value: {
           activationCount: 0,
@@ -106,6 +90,74 @@ const candidateRequest = (
     },
     candidateIdentity,
   )
+}
+
+const trustedEvidenceFor = (
+  request: AuthenticatedRuntimeInvocationRequestV117,
+  deltas: Readonly<{
+    wallMilliseconds?: number
+    computeFuel?: number
+    payloadBytes?: number
+    stdoutBytes?: number
+    stderrBytes?: number
+    memoryBytes?: number
+  }> = {},
+): RuntimeInvocationExecutionReceiptEvidenceV117 => {
+  const prestate = request.accounting.prestate
+  const counter = (
+    name:
+      | "wallMilliseconds"
+      | "computeFuel"
+      | "payloadBytes"
+      | "stdoutBytes"
+      | "stderrBytes",
+    delta: number,
+  ) => ({
+    status: "measured" as const,
+    delta,
+    cumulative: prestate.cumulative[name] + delta,
+  })
+  const memoryBytes = deltas.memoryBytes ?? 1
+  return {
+    attribution: "proven_strategy",
+    counters: {
+      wallMilliseconds: counter(
+        "wallMilliseconds",
+        deltas.wallMilliseconds ?? 1,
+      ),
+      computeFuel: counter("computeFuel", deltas.computeFuel ?? 1),
+      payloadBytes: counter("payloadBytes", deltas.payloadBytes ?? 1),
+      stdoutBytes: counter("stdoutBytes", deltas.stdoutBytes ?? 1),
+      stderrBytes: counter("stderrBytes", deltas.stderrBytes ?? 0),
+    },
+    memory: {
+      status: "measured",
+      peakBytes: memoryBytes,
+      cumulativePeakBytes: Math.max(
+        prestate.cumulative.memoryBytes,
+        memoryBytes,
+      ),
+    },
+    process: { status: "verified", processes: 1, threads: 1, children: 0 },
+    capabilities: {
+      status: "verified",
+      filesystem: "none",
+      network: "disabled",
+      environment: "empty",
+      shell: "disabled",
+    },
+    cancellation: {
+      status: "verified",
+      terminationRequired: false,
+      receiptPresent: false,
+      graceMilliseconds: 0,
+    },
+    accountingEvidence: {
+      status: "verified",
+      signatureVerified: true,
+      monotonic: true,
+    },
+  }
 }
 
 describe("Python subprocess Strategy provider ABI", () => {
@@ -140,7 +192,7 @@ describe("Python subprocess Strategy provider ABI", () => {
     })
   })
 
-  it("executes CRLF source through the authenticated candidate envelope", () => {
+  it("preserves a CRLF payload observation but fails closed without complete meters", () => {
     const source = pythonSource.trim().replace(/\n/gu, "\r\n") + "\r\n"
     const revision = buildPythonStrategyRevision({ source })
     const request = candidateRequest(revision)
@@ -165,14 +217,21 @@ describe("Python subprocess Strategy provider ABI", () => {
 
     expect(admitted.kind).toBe("success")
     if (admitted.kind === "success") {
-      expect(
-        admitted.value.outcome.kind,
-        JSON.stringify(admitted.value.outcome),
-      ).toBe("success")
       expect(admitted.value.outcome).toMatchObject({
-        kind: "success",
-        value: { activationOrders: [], strategyMemory: {} },
+        kind: "system_failure",
+        failure: { code: "AMBIGUOUS_ATTRIBUTION", retryable: false },
+        trace: {
+          safeCodes: expect.arrayContaining([
+            "RAW_PAYLOAD_OBSERVED",
+            "COMPUTE_METER_UNAVAILABLE",
+            "MEMORY_METER_UNAVAILABLE",
+          ]),
+        },
       })
+      expect(admitted.value.accounting.disposition).toBe("no_commit")
+      expect(admitted.value.accounting.poststate).toEqual(
+        request.accounting.prestate,
+      )
     }
   })
 
@@ -205,7 +264,11 @@ describe("Python subprocess Strategy provider ABI", () => {
       const adapter = createPythonCandidateInvocationAdapterV117({
         revision,
         identity: candidateIdentity,
-        hostRunner: () => ({ kind: "payload", payloadBytes }),
+        hostRunner: () => ({
+          kind: "payload",
+          payloadBytes,
+          receiptEvidence: trustedEvidenceFor(request),
+        }),
       })
       const response = verifyRuntimeInvocationResponseV117(
         adapter(serializeRuntimeInvocationRequestV117(request)),
@@ -230,32 +293,58 @@ describe("Python subprocess Strategy provider ABI", () => {
       { kind: "strategy_exception" } as const,
       "player_violation",
       "THROWN_EXCEPTION",
+      true,
+    ],
+    [
+      "proven Strategy timeout",
+      { kind: "strategy_timeout" } as const,
+      "player_violation",
+      "TIMEOUT",
+      "timeout",
     ],
     [
       "host crash",
       { kind: "host_crash" } as const,
       "system_failure",
-      "HOST_CRASH",
+      "AMBIGUOUS_ATTRIBUTION",
+      false,
     ],
     [
       "transport ambiguity",
       { kind: "transport_crash" } as const,
       "system_failure",
-      "TRANSPORT_CRASH",
+      "AMBIGUOUS_ATTRIBUTION",
+      false,
     ],
     [
       "preflight unavailable",
       { kind: "preflight_unavailable" } as const,
       "system_failure",
       "AMBIGUOUS_ATTRIBUTION",
+      false,
     ],
-  ])("keeps %s in its exclusive owner", (_name, hostResult, kind, code) => {
+  ])("keeps %s in its exclusive owner", (_name, hostResult, kind, code, trusted) => {
     const revision = buildPythonStrategyRevision({ source: pythonSource })
     const request = candidateRequest(revision)
     const adapter = createPythonCandidateInvocationAdapterV117({
       revision,
       identity: candidateIdentity,
-      hostRunner: () => hostResult,
+      hostRunner: () =>
+        trusted
+          ? {
+              ...hostResult,
+              receiptEvidence: trustedEvidenceFor(
+                request,
+                trusted === "timeout"
+                  ? {
+                      wallMilliseconds:
+                        request.budget.methodLimit.counters.wallMilliseconds
+                          .maximum + 1,
+                    }
+                  : {},
+              ),
+            }
+          : hostResult,
     })
     const response = verifyRuntimeInvocationResponseV117(
       adapter(serializeRuntimeInvocationRequestV117(request)),
@@ -460,7 +549,7 @@ describe("Python subprocess Strategy provider ABI", () => {
     if (response.kind === "success") {
       expect(response.value.outcome).toMatchObject({
         kind: "system_failure",
-        failure: { code: "TRANSPORT_CRASH" },
+        failure: { code: "AMBIGUOUS_ATTRIBUTION" },
       })
       expect(response.value.outcome).not.toHaveProperty("violation")
     }
@@ -480,29 +569,48 @@ describe("Python subprocess Strategy provider ABI", () => {
     },
   )
 
-  it("fails a zero signed wall budget closed without launching the host", () => {
+  it("passes the exact nested v1.17 method limit to the Python host", () => {
     const revision = buildPythonStrategyRevision({ source: pythonSource })
-    const request = candidateRequest(revision, { wallMilliseconds: 0 })
-    let hostCalled = false
+    const request = candidateRequest(revision)
+    expect(request.budget).not.toHaveProperty("outputBytes")
+    expect(request.budget.methodLimit).toEqual(
+      createRuntimeInvocationBudgetV117("selectActivations").methodLimit,
+    )
+    expect(
+      runPythonCandidateHostV117(
+        request,
+        buildPythonSourceIdentityV117(pythonSource).normalizedSource,
+      ).kind,
+    ).toBe("payload")
+  })
+
+  it("fails incomplete injected accounting closed without signing player blame", () => {
+    const revision = buildPythonStrategyRevision({ source: pythonSource })
+    const request = candidateRequest(revision)
     const response = verifyRuntimeInvocationResponseV117(
       createPythonCandidateInvocationAdapterV117({
         revision,
         identity: candidateIdentity,
-        hostRunner: () => {
-          hostCalled = true
-          return { kind: "host_crash" }
-        },
+        hostRunner: () => ({
+          kind: "strategy_exception",
+          receiptEvidence: {
+            attribution: "proven_strategy",
+          } as RuntimeInvocationExecutionReceiptEvidenceV117,
+        }),
       })(serializeRuntimeInvocationRequestV117(request)),
       request,
       candidateIdentity,
     )
-    expect(hostCalled).toBe(false)
     expect(response.kind).toBe("success")
     if (response.kind === "success") {
       expect(response.value.outcome).toMatchObject({
         kind: "system_failure",
         failure: { code: "AMBIGUOUS_ATTRIBUTION", retryable: false },
       })
+      expect(response.value.accounting.disposition).toBe("no_commit")
+      expect(response.value.accounting.poststate).toEqual(
+        request.accounting.prestate,
+      )
       expect(response.value.outcome).not.toHaveProperty("violation")
     }
   })
@@ -511,7 +619,9 @@ describe("Python subprocess Strategy provider ABI", () => {
     const revision = buildPythonStrategyRevision({ source: pythonSource })
     const prefix = '{"activationOrders":[],"strategyMemory":"'
     const suffix = '"}'
-    const cap = 256
+    const cap =
+      createRuntimeInvocationBudgetV117("selectActivations").methodLimit
+        .counters.payloadBytes.maximum
     const exact = Buffer.from(
       `${prefix}${"x".repeat(cap - prefix.length - suffix.length)}${suffix}`,
     )
@@ -524,12 +634,18 @@ describe("Python subprocess Strategy provider ABI", () => {
         "OVERSIZED_OUTPUT",
       ],
     ] as const) {
-      const request = candidateRequest(revision, { outputBytes: cap })
+      const request = candidateRequest(revision)
       const response = verifyRuntimeInvocationResponseV117(
         createPythonCandidateInvocationAdapterV117({
           revision,
           identity: candidateIdentity,
-          hostRunner: () => ({ kind: "payload", payloadBytes }),
+          hostRunner: () => ({
+            kind: "payload",
+            payloadBytes,
+            receiptEvidence: trustedEvidenceFor(request, {
+              payloadBytes: payloadBytes.byteLength,
+            }),
+          }),
         })(serializeRuntimeInvocationRequestV117(request)),
         request,
         candidateIdentity,
@@ -546,9 +662,9 @@ describe("Python subprocess Strategy provider ABI", () => {
   })
 
   it("bounds real-host canonical output before transport and owns overflow", () => {
-    const source = `def select_activations(input):\n    return {"activationOrders": [], "strategyMemory": "x" * 70000}\n\ndef soldier_brain(input):\n    return {"action": {"type": "TURN_TO_STONE"}, "soldierMemory": None}\n`
+    const source = `def select_activations(input):\n    return {"activationOrders": [], "strategyMemory": "x" * 300000}\n\ndef soldier_brain(input):\n    return {"action": {"type": "TURN_TO_STONE"}, "soldierMemory": None}\n`
     const revision = buildPythonStrategyRevision({ source })
-    const request = candidateRequest(revision, { outputBytes: 256 })
+    const request = candidateRequest(revision)
     const host = runPythonCandidateHostV117(
       request,
       buildPythonSourceIdentityV117(source).normalizedSource,
@@ -566,16 +682,19 @@ describe("Python subprocess Strategy provider ABI", () => {
     expect(response.kind).toBe("success")
     if (response.kind === "success") {
       expect(response.value.outcome).toMatchObject({
-        kind: "player_violation",
-        violation: { code: "OVERSIZED_OUTPUT" },
+        kind: "system_failure",
+        failure: { code: "AMBIGUOUS_ATTRIBUTION" },
       })
-      expect(response.value.outcome).not.toHaveProperty("failure")
+      expect(response.value.outcome.trace.safeCodes).toContain(
+        "RAW_OVERSIZED_OUTPUT_OBSERVED",
+      )
+      expect(response.value.outcome).not.toHaveProperty("violation")
     }
   })
 
   it("starts the signed wall budget at guest entry and records unavailable meters", () => {
     const revision = buildPythonStrategyRevision({ source: pythonSource })
-    const request = candidateRequest(revision, { wallMilliseconds: 5 })
+    const request = candidateRequest(revision)
     const host = runPythonCandidateHostV117(
       request,
       buildPythonSourceIdentityV117(pythonSource).normalizedSource,
@@ -592,6 +711,11 @@ describe("Python subprocess Strategy provider ABI", () => {
     )
     expect(response.kind).toBe("success")
     if (response.kind === "success") {
+      expect(response.value.outcome).toMatchObject({
+        kind: "system_failure",
+        failure: { code: "AMBIGUOUS_ATTRIBUTION" },
+      })
+      expect(response.value.accounting.disposition).toBe("no_commit")
       expect(response.value.outcome.trace.safeCodes).toEqual(
         expect.arrayContaining([
           "COMPUTE_METER_UNAVAILABLE",
@@ -604,7 +728,7 @@ describe("Python subprocess Strategy provider ABI", () => {
   it("owns a real guest-entry wall overrun as a proven TIMEOUT", () => {
     const source = `def select_activations(input):\n    while True:\n        pass\n\ndef soldier_brain(input):\n    return {"action": {"type": "TURN_TO_STONE"}, "soldierMemory": None}\n`
     const revision = buildPythonStrategyRevision({ source })
-    const request = candidateRequest(revision, { wallMilliseconds: 20 })
+    const request = candidateRequest(revision)
     const host = runPythonCandidateHostV117(
       request,
       buildPythonSourceIdentityV117(source).normalizedSource,
@@ -622,10 +746,13 @@ describe("Python subprocess Strategy provider ABI", () => {
     expect(response.kind).toBe("success")
     if (response.kind === "success") {
       expect(response.value.outcome).toMatchObject({
-        kind: "player_violation",
-        violation: { code: "TIMEOUT" },
+        kind: "system_failure",
+        failure: { code: "AMBIGUOUS_ATTRIBUTION" },
       })
-      expect(response.value.outcome).not.toHaveProperty("failure")
+      expect(response.value.outcome.trace.safeCodes).toContain(
+        "RAW_STRATEGY_TIMEOUT_OBSERVED",
+      )
+      expect(response.value.outcome).not.toHaveProperty("violation")
     }
   })
 
@@ -634,7 +761,7 @@ describe("Python subprocess Strategy provider ABI", () => {
     () => {
       const source = `def select_activations(input):\n    while True:\n        try:\n            while True:\n                pass\n        except:\n            pass\n\ndef soldier_brain(input):\n    return {"action": {"type": "TURN_TO_STONE"}, "soldierMemory": None}\n`
       const revision = buildPythonStrategyRevision({ source })
-      const request = candidateRequest(revision, { wallMilliseconds: 20 })
+      const request = candidateRequest(revision)
       const started = Date.now()
       const response = verifyRuntimeInvocationResponseV117(
         createPythonCandidateInvocationAdapterV117({
@@ -650,10 +777,10 @@ describe("Python subprocess Strategy provider ABI", () => {
       expect(response.kind).toBe("success")
       if (response.kind === "success") {
         expect(response.value.outcome).toMatchObject({
-          kind: "player_violation",
-          violation: { code: "TIMEOUT" },
+          kind: "system_failure",
+          failure: { code: "AMBIGUOUS_ATTRIBUTION" },
         })
-        expect(response.value.outcome).not.toHaveProperty("failure")
+        expect(response.value.outcome).not.toHaveProperty("violation")
       }
     },
     35_000,
@@ -664,7 +791,7 @@ describe("Python subprocess Strategy provider ABI", () => {
     () => {
       const source = `while True:\n    pass\n\ndef select_activations(input):\n    return {"activationOrders": [], "strategyMemory": None}\n\ndef soldier_brain(input):\n    return {"action": {"type": "TURN_TO_STONE"}, "soldierMemory": None}\n`
       const revision = buildPythonStrategyRevision({ source })
-      const request = candidateRequest(revision, { wallMilliseconds: 20 })
+      const request = candidateRequest(revision)
       const started = Date.now()
       const response = verifyRuntimeInvocationResponseV117(
         createPythonCandidateInvocationAdapterV117({
@@ -680,16 +807,16 @@ describe("Python subprocess Strategy provider ABI", () => {
       expect(response.kind).toBe("success")
       if (response.kind === "success") {
         expect(response.value.outcome).toMatchObject({
-          kind: "player_violation",
-          violation: { code: "TIMEOUT" },
+          kind: "system_failure",
+          failure: { code: "AMBIGUOUS_ATTRIBUTION" },
         })
-        expect(response.value.outcome).not.toHaveProperty("failure")
+        expect(response.value.outcome).not.toHaveProperty("violation")
       }
     },
     35_000,
   )
 
-  it("keeps an attributed top-level Strategy exception player-owned", () => {
+  it("keeps a top-level exception observable but unpenalized without meters", () => {
     const source = `1 / 0\n\ndef select_activations(input):\n    return {"activationOrders": [], "strategyMemory": None}\n\ndef soldier_brain(input):\n    return {"action": {"type": "TURN_TO_STONE"}, "soldierMemory": None}\n`
     const revision = buildPythonStrategyRevision({ source })
     const request = candidateRequest(revision)
@@ -705,17 +832,20 @@ describe("Python subprocess Strategy provider ABI", () => {
     expect(response.kind).toBe("success")
     if (response.kind === "success") {
       expect(response.value.outcome).toMatchObject({
-        kind: "player_violation",
-        violation: { code: "THROWN_EXCEPTION" },
+        kind: "system_failure",
+        failure: { code: "AMBIGUOUS_ATTRIBUTION" },
       })
-      expect(response.value.outcome).not.toHaveProperty("failure")
+      expect(response.value.outcome.trace.safeCodes).toContain(
+        "RAW_STRATEGY_EXCEPTION_OBSERVED",
+      )
+      expect(response.value.outcome).not.toHaveProperty("violation")
     }
   })
 
   it("keeps serialization and complete-envelope observation inside the guest-entry wall", () => {
     const source = `payload = [0] * 60000\n\ndef select_activations(input):\n    return {"activationOrders": [], "strategyMemory": payload}\n\ndef soldier_brain(input):\n    return {"action": {"type": "TURN_TO_STONE"}, "soldierMemory": None}\n`
     const revision = buildPythonStrategyRevision({ source })
-    const request = candidateRequest(revision, { wallMilliseconds: 2 })
+    const request = candidateRequest(revision)
     const response = verifyRuntimeInvocationResponseV117(
       createPythonCandidateInvocationAdapterV117({
         revision,
@@ -728,10 +858,10 @@ describe("Python subprocess Strategy provider ABI", () => {
     expect(response.kind).toBe("success")
     if (response.kind === "success") {
       expect(response.value.outcome).toMatchObject({
-        kind: "player_violation",
-        violation: { code: "TIMEOUT" },
+        kind: "system_failure",
+        failure: { code: "AMBIGUOUS_ATTRIBUTION" },
       })
-      expect(response.value.outcome).not.toHaveProperty("failure")
+      expect(response.value.outcome).not.toHaveProperty("violation")
     }
   })
 
@@ -747,7 +877,7 @@ describe("Python subprocess Strategy provider ABI", () => {
     if (host.kind === "payload") {
       expect(host.payloadBytes.byteLength).toBeGreaterThan(249_900)
       expect(host.payloadBytes.byteLength).toBeLessThanOrEqual(
-        request.budget.outputBytes,
+        request.budget.methodLimit.counters.payloadBytes.maximum,
       )
     }
   })
@@ -768,10 +898,13 @@ describe("Python subprocess Strategy provider ABI", () => {
     expect(response.kind).toBe("success")
     if (response.kind === "success") {
       expect(response.value.outcome).toMatchObject({
-        kind: "player_violation",
-        violation: { code: "INVALID_OUTPUT" },
+        kind: "system_failure",
+        failure: { code: "AMBIGUOUS_ATTRIBUTION" },
       })
-      expect(response.value.outcome).not.toHaveProperty("failure")
+      expect(response.value.outcome.trace.safeCodes).toContain(
+        "RAW_INVALID_OUTPUT_OBSERVED",
+      )
+      expect(response.value.outcome).not.toHaveProperty("violation")
     }
   })
 
@@ -801,8 +934,8 @@ describe("Python subprocess Strategy provider ABI", () => {
     expect(response.kind).toBe("success")
     if (response.kind === "success") {
       expect(response.value.outcome).toMatchObject({
-        kind: "success",
-        value: { strategyMemory: { whole: 1 } },
+        kind: "system_failure",
+        failure: { code: "AMBIGUOUS_ATTRIBUTION" },
       })
     }
   })
