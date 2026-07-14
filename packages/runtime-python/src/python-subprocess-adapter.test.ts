@@ -177,6 +177,14 @@ const measuredDelta = (
 }
 
 describe("Python subprocess Strategy provider ABI", () => {
+  it("keeps fixture-only accounting injection outside the production package API", async () => {
+    const packageApi = (await import("./index.js")) as Record<string, unknown>
+
+    expect(packageApi).not.toHaveProperty(
+      "createPythonCandidateInvocationAdapterFixtureV117",
+    )
+  })
+
   it("binds original CRLF bytes separately from the normalized executable artifact", () => {
     const source = `${pythonSource.trim().replace(/\n/gu, "\r\n")}\r\n# exact CRLF\r\n`
     const identity = buildPythonSourceIdentityV117(source)
