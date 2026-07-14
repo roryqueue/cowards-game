@@ -298,6 +298,12 @@ describe("boundary drift monitors", () => {
     expect(packageJson.scripts["v1.37:integrity-boundaries:check"]).toBe(
       "pnpm exec tsx scripts/check-v1-37-integrity-boundaries.ts",
     )
+    expect(packageJson.scripts["v1.37:kernel-integrity:write"]).toBe(
+      "pnpm exec tsx scripts/evaluate-v1-37-kernel-integrity.ts --write --run-browser",
+    )
+    expect(packageJson.scripts["v1.37:kernel-integrity:check"]).toBe(
+      "pnpm exec tsx scripts/evaluate-v1-37-kernel-integrity.ts --check",
+    )
     expect(packageJson.scripts["boundary:monitors"]).not.toContain(
       "pnpm v1.36:competition-policy:check",
     )
@@ -308,7 +314,30 @@ describe("boundary drift monitors", () => {
       "pnpm v1.36:final-proof:check",
     )
     expect(packageJson.scripts["boundary:monitors"]).toContain(
-      "pnpm v1.36:historical-proof:check && pnpm v1.37:integrity-authority:check && pnpm v1.37:worker-retirement:check && pnpm v1.37:integrity-boundaries:check && pnpm exec tsx scripts/check-boundary-monitors.ts",
+      "pnpm v1.36:historical-proof:check && pnpm v1.37:integrity-authority:check && pnpm v1.37:worker-retirement:check && pnpm v1.37:integrity-boundaries:check && pnpm v1.37:kernel-integrity:check && pnpm exec tsx scripts/check-boundary-monitors.ts",
+    )
+    expect(
+      packageJson.scripts["boundary:monitors"].match(
+        /pnpm v1\.37:kernel-integrity:check/gu,
+      ),
+    ).toHaveLength(1)
+    expect(
+      packageJson.scripts["boundary:monitors"].indexOf(
+        "pnpm v1.37:integrity-boundaries:check",
+      ),
+    ).toBeLessThan(
+      packageJson.scripts["boundary:monitors"].indexOf(
+        "pnpm v1.37:kernel-integrity:check",
+      ),
+    )
+    expect(
+      packageJson.scripts["boundary:monitors"].indexOf(
+        "pnpm v1.37:kernel-integrity:check",
+      ),
+    ).toBeLessThan(
+      packageJson.scripts["boundary:monitors"].indexOf(
+        "pnpm exec tsx scripts/check-boundary-monitors.ts",
+      ),
     )
     expect(
       packageJson.scripts["boundary:monitors"].indexOf(

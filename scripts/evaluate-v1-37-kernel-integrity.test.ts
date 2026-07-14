@@ -5,11 +5,13 @@ import {
   projectV137BrowserPlaywrightReceipt,
   renderV137KernelIntegrityProofJson,
   renderV137KernelIntegrityProofMarkdown,
+  runV137KernelIntegrityCli,
   requiredV137DecisionIds,
   requiredV137GateIds,
   requiredV137KernelRequirements,
   validateV137BrowserPlaywrightReceipt,
   validateV137KernelIntegrityProof,
+  v137BrowserCommandContract,
   v137BrowserPlaywrightArtifactPath,
   v137KernelIntegrityArtifactPaths,
   type V137BrowserPlaywrightReceipt,
@@ -17,18 +19,13 @@ import {
 } from "./evaluate-v1-37-kernel-integrity.ts"
 
 const digest = "a".repeat(64)
-const targetFile =
-  "apps/web/e2e/v1-37-rules-integrity-proof.spec.ts" as const
+const targetFile = "apps/web/e2e/v1-37-rules-integrity-proof.spec.ts" as const
 const targetTitle =
   "result, APIs, and replay share one realistic public-safe terminal receipt"
 
 const rawPlaywrightReport = () => ({
   config: {
-    projects: [
-      { name: "desktop" },
-      { name: "tablet" },
-      { name: "mobile" },
-    ],
+    projects: [{ name: "desktop" }, { name: "tablet" }, { name: "mobile" }],
   },
   suites: [
     {
@@ -140,9 +137,10 @@ const workingCopyReceipt = (): V137WorkingCopyReceipt => ({
 
 describe("v1.37 Phase 257 kernel-integrity evaluator", () => {
   it("parses only explicit write-with-browser or pure-check modes", () => {
-    expect(parseV137KernelIntegrityArgs(["--write", "--run-browser"])).toEqual(
-      { mode: "write", runBrowser: true },
-    )
+    expect(parseV137KernelIntegrityArgs(["--write", "--run-browser"])).toEqual({
+      mode: "write",
+      runBrowser: true,
+    })
     expect(parseV137KernelIntegrityArgs(["--check"])).toEqual({
       mode: "check",
       runBrowser: false,
@@ -158,12 +156,51 @@ describe("v1.37 Phase 257 kernel-integrity evaluator", () => {
     }
   })
 
+  it("keeps check pure and gives write sole ownership of one fresh browser run", () => {
+    const checkEvents: string[] = []
+    expect(
+      runV137KernelIntegrityCli(["--check"], {
+        write: () => checkEvents.push("write"),
+        check: () => {
+          checkEvents.push("check")
+          return []
+        },
+      }),
+    ).toBe(0)
+    expect(checkEvents).toEqual(["check"])
+
+    const writeEvents: string[] = []
+    expect(
+      runV137KernelIntegrityCli(["--write", "--run-browser"], {
+        write: () => writeEvents.push("write-browser-once"),
+        check: () => {
+          writeEvents.push("check")
+          return []
+        },
+      }),
+    ).toBe(0)
+    expect(writeEvents).toEqual(["write-browser-once", "check"])
+    expect(v137BrowserCommandContract).toEqual({
+      command: "pnpm",
+      args: [
+        "exec",
+        "playwright",
+        "test",
+        "--config=playwright.config.ts",
+        "--workers=1",
+        targetFile,
+        "--reporter=json",
+      ],
+      ci: true,
+      workers: 1,
+      testFile: targetFile,
+    })
+  })
+
   it("projects exactly one clean target test from desktop, tablet, and mobile", () => {
     const receipt = browserReceipt()
 
-    expect(receipt.schemaVersion).toBe(
-      "v1.37-phase-257-browser-playwright-v1",
-    )
+    expect(receipt.schemaVersion).toBe("v1.37-phase-257-browser-playwright-v1")
     expect(receipt.run).toMatchObject({
       commandId: "phase257-root-playwright-one-worker",
       ci: true,
@@ -198,17 +235,66 @@ describe("v1.37 Phase 257 kernel-integrity evaluator", () => {
   })
 
   it.each([
-    ["global error", (report: ReturnType<typeof rawPlaywrightReport>) => report.errors.push({ message: "failed" } as never)],
-    ["skipped", (report: ReturnType<typeof rawPlaywrightReport>) => (report.stats.skipped = 1)],
-    ["unexpected", (report: ReturnType<typeof rawPlaywrightReport>) => (report.stats.unexpected = 1)],
-    ["flaky", (report: ReturnType<typeof rawPlaywrightReport>) => (report.stats.flaky = 1)],
-    ["wrong project", (report: ReturnType<typeof rawPlaywrightReport>) => (report.suites[0]!.specs[0]!.tests[0]!.projectName = "webkit")],
-    ["wrong file", (report: ReturnType<typeof rawPlaywrightReport>) => (report.suites[0]!.specs[0]!.file = "other.spec.ts")],
-    ["retry", (report: ReturnType<typeof rawPlaywrightReport>) => (report.suites[0]!.specs[0]!.tests[0]!.results[0]!.retry = 1)],
-    ["output", (report: ReturnType<typeof rawPlaywrightReport>) => report.suites[0]!.specs[0]!.tests[0]!.results[0]!.stdout.push("log" as never)],
-    ["attachment", (report: ReturnType<typeof rawPlaywrightReport>) => report.suites[0]!.specs[0]!.tests[0]!.results[0]!.attachments.push({ name: "trace" } as never)],
-    ["test error", (report: ReturnType<typeof rawPlaywrightReport>) => (report.suites[0]!.specs[0]!.tests[0]!.results[0]!.error = { message: "boom" } as never)],
-    ["empty suite", (report: ReturnType<typeof rawPlaywrightReport>) => (report.suites = [])],
+    [
+      "global error",
+      (report: ReturnType<typeof rawPlaywrightReport>) =>
+        report.errors.push({ message: "failed" } as never),
+    ],
+    [
+      "skipped",
+      (report: ReturnType<typeof rawPlaywrightReport>) =>
+        (report.stats.skipped = 1),
+    ],
+    [
+      "unexpected",
+      (report: ReturnType<typeof rawPlaywrightReport>) =>
+        (report.stats.unexpected = 1),
+    ],
+    [
+      "flaky",
+      (report: ReturnType<typeof rawPlaywrightReport>) =>
+        (report.stats.flaky = 1),
+    ],
+    [
+      "wrong project",
+      (report: ReturnType<typeof rawPlaywrightReport>) =>
+        (report.suites[0]!.specs[0]!.tests[0]!.projectName = "webkit"),
+    ],
+    [
+      "wrong file",
+      (report: ReturnType<typeof rawPlaywrightReport>) =>
+        (report.suites[0]!.specs[0]!.file = "other.spec.ts"),
+    ],
+    [
+      "retry",
+      (report: ReturnType<typeof rawPlaywrightReport>) =>
+        (report.suites[0]!.specs[0]!.tests[0]!.results[0]!.retry = 1),
+    ],
+    [
+      "output",
+      (report: ReturnType<typeof rawPlaywrightReport>) =>
+        report.suites[0]!.specs[0]!.tests[0]!.results[0]!.stdout.push(
+          "log" as never,
+        ),
+    ],
+    [
+      "attachment",
+      (report: ReturnType<typeof rawPlaywrightReport>) =>
+        report.suites[0]!.specs[0]!.tests[0]!.results[0]!.attachments.push({
+          name: "trace",
+        } as never),
+    ],
+    [
+      "test error",
+      (report: ReturnType<typeof rawPlaywrightReport>) =>
+        (report.suites[0]!.specs[0]!.tests[0]!.results[0]!.error = {
+          message: "boom",
+        } as never),
+    ],
+    [
+      "empty suite",
+      (report: ReturnType<typeof rawPlaywrightReport>) => (report.suites = []),
+    ],
   ])("rejects Playwright %s evidence", (_label, mutate) => {
     const report = rawPlaywrightReport()
     mutate(report)

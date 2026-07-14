@@ -11405,8 +11405,8 @@
         },
         {
           "line": 2,
-          "source": "node:path",
-          "statementText": "import path from \"node:path\""
+          "source": "node:url",
+          "statementText": "import { fileURLToPath } from \"node:url\""
         },
         {
           "line": 3,
