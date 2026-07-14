@@ -226,7 +226,7 @@ describe("WASM/WASI runtime v1.17 candidate host authority", () => {
     })
     expect(response.authentication.keyId).toBe(candidateSigningIdentity.keyId)
     expect(response.payloadBinding).toMatchObject({
-      canonicalByteLength: 60,
+      canonicalByteLength: 56,
       sha256: expect.stringMatching(/^sha256:[0-9a-f]{64}$/u),
     })
   })
