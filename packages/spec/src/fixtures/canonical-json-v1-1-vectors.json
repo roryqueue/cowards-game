@@ -1,0 +1,1765 @@
+{
+  "schemaVersion": "canonical-json-v1.1-corpus-v1",
+  "profile": "canonical-json-v1",
+  "contract": "runtime-abi-v1.17-contract-v1",
+  "generatedBy": "scripts/generate-canonical-json-v1-1-corpus.ts",
+  "rawByteDomain": "literal-unparsed-bytes",
+  "hashAlgorithm": "sha256",
+  "vectorRootDomain": "cowards-game:canonical-json-v1.1-corpus:v1",
+  "vectorRootFraming": "unsigned-64-bit-big-endian-length-then-bytes",
+  "vectorRootSha256": "f658a8bcb6bd4457b2eb52b6628f7fc6ff4ca36661f685ab28d7b60c8b2722c0",
+  "vectorCount": 70,
+  "limits": {
+    "rawUtf8Bytes": 8388608,
+    "depth": 64,
+    "nodes": 262144,
+    "decodedStringUtf8Bytes": 6291456,
+    "arrayEntries": 65536,
+    "objectEntries": 65536
+  },
+  "vectors": [
+    {
+      "id": "boundary-arrayEntries-00-n-minus-1",
+      "category": "limit-array-entries",
+      "context": "canonical-manifest",
+      "operation": "parse-and-canonicalize",
+      "rawPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/boundary-arrayEntries-00-n-minus-1.raw",
+      "rawByteLength": 327676,
+      "rawSha256": "718923cde5886df5553ba8f5acd8157600ae3b9a10ba3a5d413b5090acc6e6e1",
+      "limits": {
+        "rawUtf8Bytes": 8388608,
+        "depth": 64,
+        "nodes": 262144,
+        "decodedStringUtf8Bytes": 6291456,
+        "arrayEntries": 65536,
+        "objectEntries": 65536
+      },
+      "boundary": {
+        "limit": "arrayEntries",
+        "offset": -1,
+        "candidate": 65535
+      },
+      "expectation": {
+        "kind": "success",
+        "canonicalPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/boundary-arrayEntries-00-n-minus-1.raw",
+        "canonicalByteLength": 327676,
+        "canonicalSha256": "718923cde5886df5553ba8f5acd8157600ae3b9a10ba3a5d413b5090acc6e6e1"
+      }
+    },
+    {
+      "id": "boundary-arrayEntries-01-n",
+      "category": "limit-array-entries",
+      "context": "canonical-manifest",
+      "operation": "parse-and-canonicalize",
+      "rawPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/boundary-arrayEntries-01-n.raw",
+      "rawByteLength": 327681,
+      "rawSha256": "9247d7c19a2df4315685b9a2952ef4b19380da81e4f11a66339b885c6bc817b9",
+      "limits": {
+        "rawUtf8Bytes": 8388608,
+        "depth": 64,
+        "nodes": 262144,
+        "decodedStringUtf8Bytes": 6291456,
+        "arrayEntries": 65536,
+        "objectEntries": 65536
+      },
+      "boundary": {
+        "limit": "arrayEntries",
+        "offset": 0,
+        "candidate": 65536
+      },
+      "expectation": {
+        "kind": "success",
+        "canonicalPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/boundary-arrayEntries-01-n.raw",
+        "canonicalByteLength": 327681,
+        "canonicalSha256": "9247d7c19a2df4315685b9a2952ef4b19380da81e4f11a66339b885c6bc817b9"
+      }
+    },
+    {
+      "id": "boundary-arrayEntries-02-n-plus-1",
+      "category": "limit-array-entries",
+      "context": "canonical-manifest",
+      "operation": "parse-and-canonicalize",
+      "rawPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/boundary-arrayEntries-02-n-plus-1.raw",
+      "rawByteLength": 327686,
+      "rawSha256": "9c122360788fe49429ba5e153dde964b0dc9a1080705bcf1f612ff13f46545e1",
+      "limits": {
+        "rawUtf8Bytes": 8388608,
+        "depth": 64,
+        "nodes": 262144,
+        "decodedStringUtf8Bytes": 6291456,
+        "arrayEntries": 65536,
+        "objectEntries": 65536
+      },
+      "boundary": {
+        "limit": "arrayEntries",
+        "offset": 1,
+        "candidate": 65537
+      },
+      "expectation": {
+        "kind": "error",
+        "code": "MAX_ARRAY_ENTRIES_EXCEEDED",
+        "path": [],
+        "byteOffset": 327681,
+        "owner": "system_failure"
+      }
+    },
+    {
+      "id": "boundary-decodedStringUtf8Bytes-00-n-minus-1",
+      "category": "limit-string-bytes",
+      "context": "canonical-manifest",
+      "operation": "parse-and-canonicalize",
+      "rawPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/boundary-decodedStringUtf8Bytes-00-n-minus-1.raw",
+      "rawByteLength": 6291457,
+      "rawSha256": "8bb2c1e7b7ce2b7b9187f19e0a7985b4cc6d28a81a4a28664e604d40b5bc98ff",
+      "limits": {
+        "rawUtf8Bytes": 8388608,
+        "depth": 64,
+        "nodes": 262144,
+        "decodedStringUtf8Bytes": 6291456,
+        "arrayEntries": 65536,
+        "objectEntries": 65536
+      },
+      "boundary": {
+        "limit": "decodedStringUtf8Bytes",
+        "offset": -1,
+        "candidate": 6291455
+      },
+      "expectation": {
+        "kind": "success",
+        "canonicalPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/boundary-decodedStringUtf8Bytes-00-n-minus-1.raw",
+        "canonicalByteLength": 6291457,
+        "canonicalSha256": "8bb2c1e7b7ce2b7b9187f19e0a7985b4cc6d28a81a4a28664e604d40b5bc98ff"
+      }
+    },
+    {
+      "id": "boundary-decodedStringUtf8Bytes-01-n",
+      "category": "limit-string-bytes",
+      "context": "canonical-manifest",
+      "operation": "parse-and-canonicalize",
+      "rawPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/boundary-decodedStringUtf8Bytes-01-n.raw",
+      "rawByteLength": 6291458,
+      "rawSha256": "aaa0df5b136cc3a1b284ff2573f437accb9ae4f6967a423b2425a45ca9eaaa0b",
+      "limits": {
+        "rawUtf8Bytes": 8388608,
+        "depth": 64,
+        "nodes": 262144,
+        "decodedStringUtf8Bytes": 6291456,
+        "arrayEntries": 65536,
+        "objectEntries": 65536
+      },
+      "boundary": {
+        "limit": "decodedStringUtf8Bytes",
+        "offset": 0,
+        "candidate": 6291456
+      },
+      "expectation": {
+        "kind": "success",
+        "canonicalPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/boundary-decodedStringUtf8Bytes-01-n.raw",
+        "canonicalByteLength": 6291458,
+        "canonicalSha256": "aaa0df5b136cc3a1b284ff2573f437accb9ae4f6967a423b2425a45ca9eaaa0b"
+      }
+    },
+    {
+      "id": "boundary-decodedStringUtf8Bytes-02-n-plus-1",
+      "category": "limit-string-bytes",
+      "context": "canonical-manifest",
+      "operation": "parse-and-canonicalize",
+      "rawPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/boundary-decodedStringUtf8Bytes-02-n-plus-1.raw",
+      "rawByteLength": 6291459,
+      "rawSha256": "d1fcd5cb8bb746ef23a3846f05899a0b0edc94b1c8f234f6da7444d9b6299ac5",
+      "limits": {
+        "rawUtf8Bytes": 8388608,
+        "depth": 64,
+        "nodes": 262144,
+        "decodedStringUtf8Bytes": 6291456,
+        "arrayEntries": 65536,
+        "objectEntries": 65536
+      },
+      "boundary": {
+        "limit": "decodedStringUtf8Bytes",
+        "offset": 1,
+        "candidate": 6291457
+      },
+      "expectation": {
+        "kind": "error",
+        "code": "MAX_DECODED_STRING_UTF8_BYTES_EXCEEDED",
+        "path": [],
+        "byteOffset": 6291457,
+        "owner": "system_failure"
+      }
+    },
+    {
+      "id": "boundary-depth-00-n-minus-1",
+      "category": "limit-depth",
+      "context": "canonical-manifest",
+      "operation": "parse-and-canonicalize",
+      "rawPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/boundary-depth-00-n-minus-1.raw",
+      "rawByteLength": 130,
+      "rawSha256": "e7ff91611efa1af617b1716c090cf9c96823fc740d0fe853765281802994d47b",
+      "limits": {
+        "rawUtf8Bytes": 8388608,
+        "depth": 64,
+        "nodes": 262144,
+        "decodedStringUtf8Bytes": 6291456,
+        "arrayEntries": 65536,
+        "objectEntries": 65536
+      },
+      "boundary": {
+        "limit": "depth",
+        "offset": -1,
+        "candidate": 63
+      },
+      "expectation": {
+        "kind": "success",
+        "canonicalPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/boundary-depth-00-n-minus-1.raw",
+        "canonicalByteLength": 130,
+        "canonicalSha256": "e7ff91611efa1af617b1716c090cf9c96823fc740d0fe853765281802994d47b"
+      }
+    },
+    {
+      "id": "boundary-depth-01-n",
+      "category": "limit-depth",
+      "context": "canonical-manifest",
+      "operation": "parse-and-canonicalize",
+      "rawPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/boundary-depth-01-n.raw",
+      "rawByteLength": 132,
+      "rawSha256": "90446a22034badcd5eaf4de52f6f1572f844d27acfffb38bbdc8fa1a34e65429",
+      "limits": {
+        "rawUtf8Bytes": 8388608,
+        "depth": 64,
+        "nodes": 262144,
+        "decodedStringUtf8Bytes": 6291456,
+        "arrayEntries": 65536,
+        "objectEntries": 65536
+      },
+      "boundary": {
+        "limit": "depth",
+        "offset": 0,
+        "candidate": 64
+      },
+      "expectation": {
+        "kind": "success",
+        "canonicalPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/boundary-depth-01-n.raw",
+        "canonicalByteLength": 132,
+        "canonicalSha256": "90446a22034badcd5eaf4de52f6f1572f844d27acfffb38bbdc8fa1a34e65429"
+      }
+    },
+    {
+      "id": "boundary-depth-02-n-plus-1",
+      "category": "limit-depth",
+      "context": "canonical-manifest",
+      "operation": "parse-and-canonicalize",
+      "rawPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/boundary-depth-02-n-plus-1.raw",
+      "rawByteLength": 134,
+      "rawSha256": "7c08cf6ec587ddae9d57898dd0f4ec518c2ae13a6328e97932bfd9f4f38e6fe0",
+      "limits": {
+        "rawUtf8Bytes": 8388608,
+        "depth": 64,
+        "nodes": 262144,
+        "decodedStringUtf8Bytes": 6291456,
+        "arrayEntries": 65536,
+        "objectEntries": 65536
+      },
+      "boundary": {
+        "limit": "depth",
+        "offset": 1,
+        "candidate": 65
+      },
+      "expectation": {
+        "kind": "error",
+        "code": "MAX_DEPTH_EXCEEDED",
+        "path": [],
+        "byteOffset": 64,
+        "owner": "system_failure"
+      }
+    },
+    {
+      "id": "boundary-nodes-00-n-minus-1",
+      "category": "limit-nodes",
+      "context": "canonical-manifest",
+      "operation": "parse-and-canonicalize",
+      "rawPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/boundary-nodes-00-n-minus-1.raw",
+      "rawByteLength": 1310711,
+      "rawSha256": "55cb1942719b391b148ffcdb59a7a9d759793ccc1f202546472ace108e150622",
+      "limits": {
+        "rawUtf8Bytes": 8388608,
+        "depth": 64,
+        "nodes": 262144,
+        "decodedStringUtf8Bytes": 6291456,
+        "arrayEntries": 262144,
+        "objectEntries": 65536
+      },
+      "boundary": {
+        "limit": "nodes",
+        "offset": -1,
+        "candidate": 262143
+      },
+      "expectation": {
+        "kind": "success",
+        "canonicalPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/boundary-nodes-00-n-minus-1.raw",
+        "canonicalByteLength": 1310711,
+        "canonicalSha256": "55cb1942719b391b148ffcdb59a7a9d759793ccc1f202546472ace108e150622"
+      }
+    },
+    {
+      "id": "boundary-nodes-01-n",
+      "category": "limit-nodes",
+      "context": "canonical-manifest",
+      "operation": "parse-and-canonicalize",
+      "rawPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/boundary-nodes-01-n.raw",
+      "rawByteLength": 1310716,
+      "rawSha256": "3e4870cec835e2dcfe6b4efaf2f7af0ad82676ac5b9d30abdfdab7c4659cf30f",
+      "limits": {
+        "rawUtf8Bytes": 8388608,
+        "depth": 64,
+        "nodes": 262144,
+        "decodedStringUtf8Bytes": 6291456,
+        "arrayEntries": 262144,
+        "objectEntries": 65536
+      },
+      "boundary": {
+        "limit": "nodes",
+        "offset": 0,
+        "candidate": 262144
+      },
+      "expectation": {
+        "kind": "success",
+        "canonicalPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/boundary-nodes-01-n.raw",
+        "canonicalByteLength": 1310716,
+        "canonicalSha256": "3e4870cec835e2dcfe6b4efaf2f7af0ad82676ac5b9d30abdfdab7c4659cf30f"
+      }
+    },
+    {
+      "id": "boundary-nodes-02-n-plus-1",
+      "category": "limit-nodes",
+      "context": "canonical-manifest",
+      "operation": "parse-and-canonicalize",
+      "rawPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/boundary-nodes-02-n-plus-1.raw",
+      "rawByteLength": 1310721,
+      "rawSha256": "d95a5b1d3d33b81031905552dc9315fef1ba239abc444d5a0d57dfcaf829d240",
+      "limits": {
+        "rawUtf8Bytes": 8388608,
+        "depth": 64,
+        "nodes": 262144,
+        "decodedStringUtf8Bytes": 6291456,
+        "arrayEntries": 262144,
+        "objectEntries": 65536
+      },
+      "boundary": {
+        "limit": "nodes",
+        "offset": 1,
+        "candidate": 262145
+      },
+      "expectation": {
+        "kind": "error",
+        "code": "MAX_NODES_EXCEEDED",
+        "path": [],
+        "byteOffset": 1310716,
+        "owner": "system_failure"
+      }
+    },
+    {
+      "id": "boundary-objectEntries-00-n-minus-1",
+      "category": "limit-object-entries",
+      "context": "canonical-manifest",
+      "operation": "parse-and-canonicalize",
+      "rawPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/boundary-objectEntries-00-n-minus-1.raw",
+      "rawByteLength": 906381,
+      "rawSha256": "7c27e07f10a7b3433d03375d4cfd52e9983dcfd9518a2bba05508b792617da56",
+      "limits": {
+        "rawUtf8Bytes": 8388608,
+        "depth": 64,
+        "nodes": 262144,
+        "decodedStringUtf8Bytes": 6291456,
+        "arrayEntries": 65536,
+        "objectEntries": 65536
+      },
+      "boundary": {
+        "limit": "objectEntries",
+        "offset": -1,
+        "candidate": 65535
+      },
+      "expectation": {
+        "kind": "success",
+        "canonicalPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/boundary-objectEntries-00-n-minus-1.raw",
+        "canonicalByteLength": 906381,
+        "canonicalSha256": "7c27e07f10a7b3433d03375d4cfd52e9983dcfd9518a2bba05508b792617da56"
+      }
+    },
+    {
+      "id": "boundary-objectEntries-01-n",
+      "category": "limit-object-entries",
+      "context": "canonical-manifest",
+      "operation": "parse-and-canonicalize",
+      "rawPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/boundary-objectEntries-01-n.raw",
+      "rawByteLength": 906395,
+      "rawSha256": "feec980f2df017c1bde74accce101eac42ee4a6eb8306884e5338f631cf80e73",
+      "limits": {
+        "rawUtf8Bytes": 8388608,
+        "depth": 64,
+        "nodes": 262144,
+        "decodedStringUtf8Bytes": 6291456,
+        "arrayEntries": 65536,
+        "objectEntries": 65536
+      },
+      "boundary": {
+        "limit": "objectEntries",
+        "offset": 0,
+        "candidate": 65536
+      },
+      "expectation": {
+        "kind": "success",
+        "canonicalPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/boundary-objectEntries-01-n.raw",
+        "canonicalByteLength": 906395,
+        "canonicalSha256": "feec980f2df017c1bde74accce101eac42ee4a6eb8306884e5338f631cf80e73"
+      }
+    },
+    {
+      "id": "boundary-objectEntries-02-n-plus-1",
+      "category": "limit-object-entries",
+      "context": "canonical-manifest",
+      "operation": "parse-and-canonicalize",
+      "rawPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/boundary-objectEntries-02-n-plus-1.raw",
+      "rawByteLength": 906409,
+      "rawSha256": "347cffc66a34a432a150f95c8e0bb74f42f50373848e21f84fea806410727260",
+      "limits": {
+        "rawUtf8Bytes": 8388608,
+        "depth": 64,
+        "nodes": 262144,
+        "decodedStringUtf8Bytes": 6291456,
+        "arrayEntries": 65536,
+        "objectEntries": 65536
+      },
+      "boundary": {
+        "limit": "objectEntries",
+        "offset": 1,
+        "candidate": 65537
+      },
+      "expectation": {
+        "kind": "error",
+        "code": "MAX_OBJECT_ENTRIES_EXCEEDED",
+        "path": [],
+        "byteOffset": 906395,
+        "owner": "system_failure"
+      }
+    },
+    {
+      "id": "boundary-rawUtf8Bytes-00-n-minus-1",
+      "category": "limit-raw-bytes",
+      "context": "canonical-manifest",
+      "operation": "parse-and-canonicalize",
+      "rawPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/boundary-rawUtf8Bytes-00-n-minus-1.raw",
+      "rawByteLength": 8388607,
+      "rawSha256": "434e6dda8d0d5874790dadbb5b23120d6c0303fd883f4bcd6dd4b70536bc3584",
+      "limits": {
+        "rawUtf8Bytes": 8388608,
+        "depth": 64,
+        "nodes": 262144,
+        "decodedStringUtf8Bytes": 8388608,
+        "arrayEntries": 65536,
+        "objectEntries": 65536
+      },
+      "boundary": {
+        "limit": "rawUtf8Bytes",
+        "offset": -1,
+        "candidate": 8388607
+      },
+      "expectation": {
+        "kind": "success",
+        "canonicalPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/boundary-rawUtf8Bytes-00-n-minus-1.raw",
+        "canonicalByteLength": 8388607,
+        "canonicalSha256": "434e6dda8d0d5874790dadbb5b23120d6c0303fd883f4bcd6dd4b70536bc3584"
+      }
+    },
+    {
+      "id": "boundary-rawUtf8Bytes-01-n",
+      "category": "limit-raw-bytes",
+      "context": "canonical-manifest",
+      "operation": "parse-and-canonicalize",
+      "rawPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/boundary-rawUtf8Bytes-01-n.raw",
+      "rawByteLength": 8388608,
+      "rawSha256": "564d0af85856363855ee723d88bdf68e9d165c509a30132c6d97086226c04b42",
+      "limits": {
+        "rawUtf8Bytes": 8388608,
+        "depth": 64,
+        "nodes": 262144,
+        "decodedStringUtf8Bytes": 8388608,
+        "arrayEntries": 65536,
+        "objectEntries": 65536
+      },
+      "boundary": {
+        "limit": "rawUtf8Bytes",
+        "offset": 0,
+        "candidate": 8388608
+      },
+      "expectation": {
+        "kind": "success",
+        "canonicalPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/boundary-rawUtf8Bytes-01-n.raw",
+        "canonicalByteLength": 8388608,
+        "canonicalSha256": "564d0af85856363855ee723d88bdf68e9d165c509a30132c6d97086226c04b42"
+      }
+    },
+    {
+      "id": "boundary-rawUtf8Bytes-02-n-plus-1",
+      "category": "limit-raw-bytes",
+      "context": "canonical-manifest",
+      "operation": "parse-and-canonicalize",
+      "rawPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/boundary-rawUtf8Bytes-02-n-plus-1.raw",
+      "rawByteLength": 8388609,
+      "rawSha256": "1d7b3dfff5efccb0d4947755824636477aa666631639c9fdfb31bf3abc350e18",
+      "limits": {
+        "rawUtf8Bytes": 8388608,
+        "depth": 64,
+        "nodes": 262144,
+        "decodedStringUtf8Bytes": 8388608,
+        "arrayEntries": 65536,
+        "objectEntries": 65536
+      },
+      "boundary": {
+        "limit": "rawUtf8Bytes",
+        "offset": 1,
+        "candidate": 8388609
+      },
+      "expectation": {
+        "kind": "error",
+        "code": "MAX_RAW_UTF8_BYTES_EXCEEDED",
+        "path": [],
+        "byteOffset": 8388608,
+        "owner": "system_failure"
+      }
+    },
+    {
+      "id": "duplicate-decoded-payload-player",
+      "category": "duplicate-key",
+      "context": "decoded-strategy-payload",
+      "operation": "parse-and-canonicalize",
+      "rawPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/duplicate-decoded-payload-player.raw",
+      "rawByteLength": 32,
+      "rawSha256": "3bb9c33ec0c52a913fd6047992917229aa48fb76d908ac9575de811d53250f7d",
+      "limits": {
+        "rawUtf8Bytes": 8388608,
+        "depth": 64,
+        "nodes": 262144,
+        "decodedStringUtf8Bytes": 6291456,
+        "arrayEntries": 65536,
+        "objectEntries": 65536
+      },
+      "expectation": {
+        "kind": "error",
+        "code": "DUPLICATE_KEY",
+        "path": [
+          "memory"
+        ],
+        "byteOffset": 13,
+        "owner": "player_violation"
+      }
+    },
+    {
+      "id": "duplicate-manifest-system",
+      "category": "duplicate-key",
+      "context": "canonical-manifest",
+      "operation": "parse-and-canonicalize",
+      "rawPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/duplicate-manifest-system.raw",
+      "rawByteLength": 27,
+      "rawSha256": "38f433c4e5042f75313c5a9a0e0d4f6da48131444f74023cba87b230b6ed2720",
+      "limits": {
+        "rawUtf8Bytes": 8388608,
+        "depth": 64,
+        "nodes": 262144,
+        "decodedStringUtf8Bytes": 6291456,
+        "arrayEntries": 65536,
+        "objectEntries": 65536
+      },
+      "expectation": {
+        "kind": "error",
+        "code": "DUPLICATE_KEY",
+        "path": [
+          "sha256"
+        ],
+        "byteOffset": 14,
+        "owner": "system_failure"
+      }
+    },
+    {
+      "id": "duplicate-nested-literal",
+      "category": "duplicate-key",
+      "context": "decoded-strategy-payload",
+      "operation": "parse-and-canonicalize",
+      "rawPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/duplicate-nested-literal.raw",
+      "rawByteLength": 23,
+      "rawSha256": "6a6326e1e2a5378cb1ded9489bb633c97f840a185b7f24a2bc3b638ebc439231",
+      "limits": {
+        "rawUtf8Bytes": 8388608,
+        "depth": 64,
+        "nodes": 262144,
+        "decodedStringUtf8Bytes": 6291456,
+        "arrayEntries": 65536,
+        "objectEntries": 65536
+      },
+      "expectation": {
+        "kind": "error",
+        "code": "DUPLICATE_KEY",
+        "path": [
+          "outer",
+          "x"
+        ],
+        "byteOffset": 16,
+        "owner": "player_violation"
+      }
+    },
+    {
+      "id": "duplicate-outer-envelope-system",
+      "category": "duplicate-key",
+      "context": "authenticated-outer-envelope",
+      "operation": "parse-and-canonicalize",
+      "rawPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/duplicate-outer-envelope-system.raw",
+      "rawByteLength": 32,
+      "rawSha256": "d633fcd5813def32917ac23554e861a29ccc271d5d8cab7281e20b6101dcd5d0",
+      "limits": {
+        "rawUtf8Bytes": 8388608,
+        "depth": 64,
+        "nodes": 262144,
+        "decodedStringUtf8Bytes": 6291456,
+        "arrayEntries": 65536,
+        "objectEntries": 65536
+      },
+      "expectation": {
+        "kind": "error",
+        "code": "DUPLICATE_KEY",
+        "path": [
+          "ok"
+        ],
+        "byteOffset": 11,
+        "owner": "system_failure"
+      }
+    },
+    {
+      "id": "duplicate-root-escaped-equivalent",
+      "category": "duplicate-key",
+      "context": "decoded-strategy-payload",
+      "operation": "parse-and-canonicalize",
+      "rawPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/duplicate-root-escaped-equivalent.raw",
+      "rawByteLength": 18,
+      "rawSha256": "c95ba945b310a34906bbfc28ce1346b87741d5a2b3066d1d3ecfa0acbd86392c",
+      "limits": {
+        "rawUtf8Bytes": 8388608,
+        "depth": 64,
+        "nodes": 262144,
+        "decodedStringUtf8Bytes": 6291456,
+        "arrayEntries": 65536,
+        "objectEntries": 65536
+      },
+      "expectation": {
+        "kind": "error",
+        "code": "DUPLICATE_KEY",
+        "path": [
+          "a"
+        ],
+        "byteOffset": 7,
+        "owner": "player_violation"
+      }
+    },
+    {
+      "id": "duplicate-root-literal",
+      "category": "duplicate-key",
+      "context": "decoded-strategy-payload",
+      "operation": "parse-and-canonicalize",
+      "rawPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/duplicate-root-literal.raw",
+      "rawByteLength": 13,
+      "rawSha256": "1c53ee0df7b12fd4d65b976120c7fa6b847dc41dffd7f0331c3237a1ceab1756",
+      "limits": {
+        "rawUtf8Bytes": 8388608,
+        "depth": 64,
+        "nodes": 262144,
+        "decodedStringUtf8Bytes": 6291456,
+        "arrayEntries": 65536,
+        "objectEntries": 65536
+      },
+      "expectation": {
+        "kind": "error",
+        "code": "DUPLICATE_KEY",
+        "path": [
+          "a"
+        ],
+        "byteOffset": 7,
+        "owner": "player_violation"
+      }
+    },
+    {
+      "id": "hostile-array-100000",
+      "category": "hostile-allocation",
+      "context": "decoded-strategy-payload",
+      "operation": "parse-and-canonicalize",
+      "rawPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/hostile-array-100000.raw",
+      "rawByteLength": 500001,
+      "rawSha256": "931f19acc7d597aa935cf1788262a7851c59fae10006135b195a587f95c2cfd0",
+      "limits": {
+        "rawUtf8Bytes": 8388608,
+        "depth": 64,
+        "nodes": 262144,
+        "decodedStringUtf8Bytes": 6291456,
+        "arrayEntries": 65536,
+        "objectEntries": 65536
+      },
+      "expectation": {
+        "kind": "error",
+        "code": "MAX_ARRAY_ENTRIES_EXCEEDED",
+        "path": [],
+        "byteOffset": 327681,
+        "owner": "player_violation"
+      }
+    },
+    {
+      "id": "hostile-depth-3000",
+      "category": "hostile-allocation",
+      "context": "canonical-manifest",
+      "operation": "parse-and-canonicalize",
+      "rawPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/hostile-depth-3000.raw",
+      "rawByteLength": 6004,
+      "rawSha256": "f2eca32c1536c342a48f443365cb5599b29cb4165846fb36ea844ef8533eaafd",
+      "limits": {
+        "rawUtf8Bytes": 8388608,
+        "depth": 64,
+        "nodes": 262144,
+        "decodedStringUtf8Bytes": 6291456,
+        "arrayEntries": 65536,
+        "objectEntries": 65536
+      },
+      "expectation": {
+        "kind": "error",
+        "code": "MAX_DEPTH_EXCEEDED",
+        "path": [],
+        "byteOffset": 64,
+        "owner": "system_failure"
+      }
+    },
+    {
+      "id": "normalization-distinct-object-values",
+      "category": "unicode-normalization",
+      "context": "decoded-strategy-payload",
+      "operation": "parse-and-canonicalize",
+      "rawPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/normalization-distinct-object-values.raw",
+      "rawByteLength": 24,
+      "rawSha256": "79eae438d105e852f86ea598ffdda91643386fad0b4f336b941528d30fbf1558",
+      "limits": {
+        "rawUtf8Bytes": 8388608,
+        "depth": 64,
+        "nodes": 262144,
+        "decodedStringUtf8Bytes": 6291456,
+        "arrayEntries": 65536,
+        "objectEntries": 65536
+      },
+      "expectation": {
+        "kind": "success",
+        "canonicalPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/normalization-distinct-object-values.raw",
+        "canonicalByteLength": 24,
+        "canonicalSha256": "79eae438d105e852f86ea598ffdda91643386fad0b4f336b941528d30fbf1558"
+      }
+    },
+    {
+      "id": "normalization-nfc-preserved",
+      "category": "unicode-normalization",
+      "context": "decoded-strategy-payload",
+      "operation": "parse-and-canonicalize",
+      "rawPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/normalization-nfc-preserved.raw",
+      "rawByteLength": 4,
+      "rawSha256": "f2886017e9c7abacf804b54d64787dce2b611c9544ba21f3affdd126a6e50086",
+      "limits": {
+        "rawUtf8Bytes": 8388608,
+        "depth": 64,
+        "nodes": 262144,
+        "decodedStringUtf8Bytes": 6291456,
+        "arrayEntries": 65536,
+        "objectEntries": 65536
+      },
+      "expectation": {
+        "kind": "success",
+        "canonicalPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/normalization-nfc-preserved.raw",
+        "canonicalByteLength": 4,
+        "canonicalSha256": "f2886017e9c7abacf804b54d64787dce2b611c9544ba21f3affdd126a6e50086"
+      }
+    },
+    {
+      "id": "normalization-nfd-preserved",
+      "category": "unicode-normalization",
+      "context": "decoded-strategy-payload",
+      "operation": "parse-and-canonicalize",
+      "rawPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/normalization-nfd-preserved.raw",
+      "rawByteLength": 5,
+      "rawSha256": "3d68ce21f2899a475713cdbe7562ba9bdb6b1dfde8af1f221bdff4a0935b53b2",
+      "limits": {
+        "rawUtf8Bytes": 8388608,
+        "depth": 64,
+        "nodes": 262144,
+        "decodedStringUtf8Bytes": 6291456,
+        "arrayEntries": 65536,
+        "objectEntries": 65536
+      },
+      "expectation": {
+        "kind": "success",
+        "canonicalPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/normalization-nfd-preserved.raw",
+        "canonicalByteLength": 5,
+        "canonicalSha256": "3d68ce21f2899a475713cdbe7562ba9bdb6b1dfde8af1f221bdff4a0935b53b2"
+      }
+    },
+    {
+      "id": "number-exact-decimal",
+      "category": "number",
+      "context": "decoded-strategy-payload",
+      "operation": "parse-and-canonicalize",
+      "rawPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/number-exact-decimal.raw",
+      "rawByteLength": 4,
+      "rawSha256": "004a9e0878ff83e6b91f50d50dad439d2065c6cbb0d20f1f328b2fd75e085d6a",
+      "limits": {
+        "rawUtf8Bytes": 8388608,
+        "depth": 64,
+        "nodes": 262144,
+        "decodedStringUtf8Bytes": 6291456,
+        "arrayEntries": 65536,
+        "objectEntries": 65536
+      },
+      "expectation": {
+        "kind": "success",
+        "canonicalPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/number-exact-decimal.raw",
+        "canonicalByteLength": 4,
+        "canonicalSha256": "004a9e0878ff83e6b91f50d50dad439d2065c6cbb0d20f1f328b2fd75e085d6a"
+      }
+    },
+    {
+      "id": "number-exponent-minus-seven",
+      "category": "number",
+      "context": "decoded-strategy-payload",
+      "operation": "parse-and-canonicalize",
+      "rawPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/number-exponent-minus-seven.raw",
+      "rawByteLength": 4,
+      "rawSha256": "5b33e02f2c5103a05d32f6ba9cb058294452bfbf393967f68bb30c1bdcbbab22",
+      "limits": {
+        "rawUtf8Bytes": 8388608,
+        "depth": 64,
+        "nodes": 262144,
+        "decodedStringUtf8Bytes": 6291456,
+        "arrayEntries": 65536,
+        "objectEntries": 65536
+      },
+      "expectation": {
+        "kind": "success",
+        "canonicalPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/number-exponent-minus-seven.raw",
+        "canonicalByteLength": 4,
+        "canonicalSha256": "5b33e02f2c5103a05d32f6ba9cb058294452bfbf393967f68bb30c1bdcbbab22"
+      }
+    },
+    {
+      "id": "number-host-nan",
+      "category": "numeric-grammar",
+      "context": "host-api-value",
+      "operation": "host-encode",
+      "rawPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/number-host-nan.raw",
+      "rawByteLength": 3,
+      "rawSha256": "d5b592c05dc25b5032553f1b27f4139be95e881f73db33b02b05ab20c3f9981e",
+      "limits": {
+        "rawUtf8Bytes": 8388608,
+        "depth": 64,
+        "nodes": 262144,
+        "decodedStringUtf8Bytes": 6291456,
+        "arrayEntries": 65536,
+        "objectEntries": 65536
+      },
+      "expectation": {
+        "kind": "error",
+        "code": "NON_CANONICAL_NUMBER",
+        "path": [],
+        "byteOffset": 0,
+        "owner": "player_violation"
+      }
+    },
+    {
+      "id": "number-host-negative-infinity",
+      "category": "numeric-grammar",
+      "context": "host-api-value",
+      "operation": "host-encode",
+      "rawPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/number-host-negative-infinity.raw",
+      "rawByteLength": 9,
+      "rawSha256": "c64ddf11bcd45660f0cf66dd0c22d2b4570ef3d3fc6527a9a6f6c722aefa3c39",
+      "limits": {
+        "rawUtf8Bytes": 8388608,
+        "depth": 64,
+        "nodes": 262144,
+        "decodedStringUtf8Bytes": 6291456,
+        "arrayEntries": 65536,
+        "objectEntries": 65536
+      },
+      "expectation": {
+        "kind": "error",
+        "code": "NON_CANONICAL_NUMBER",
+        "path": [],
+        "byteOffset": 0,
+        "owner": "player_violation"
+      }
+    },
+    {
+      "id": "number-host-positive-infinity",
+      "category": "numeric-grammar",
+      "context": "host-api-value",
+      "operation": "host-encode",
+      "rawPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/number-host-positive-infinity.raw",
+      "rawByteLength": 8,
+      "rawSha256": "d0067cad9a63e0813759a2bb841051ca73570c0da2e08e840a8eb45db6a7a010",
+      "limits": {
+        "rawUtf8Bytes": 8388608,
+        "depth": 64,
+        "nodes": 262144,
+        "decodedStringUtf8Bytes": 6291456,
+        "arrayEntries": 65536,
+        "objectEntries": 65536
+      },
+      "expectation": {
+        "kind": "error",
+        "code": "NON_CANONICAL_NUMBER",
+        "path": [],
+        "byteOffset": 0,
+        "owner": "player_violation"
+      }
+    },
+    {
+      "id": "number-leading-plus",
+      "category": "numeric-grammar",
+      "context": "decoded-strategy-payload",
+      "operation": "parse-and-canonicalize",
+      "rawPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/number-leading-plus.raw",
+      "rawByteLength": 2,
+      "rawSha256": "c59dc4e44ff99288156d4dff2168f6ac7ddee6b1fc7ccc0754656ffaa6d351ea",
+      "limits": {
+        "rawUtf8Bytes": 8388608,
+        "depth": 64,
+        "nodes": 262144,
+        "decodedStringUtf8Bytes": 6291456,
+        "arrayEntries": 65536,
+        "objectEntries": 65536
+      },
+      "expectation": {
+        "kind": "error",
+        "code": "INVALID_GRAMMAR",
+        "path": [],
+        "byteOffset": 0,
+        "owner": "player_violation"
+      }
+    },
+    {
+      "id": "number-leading-zero",
+      "category": "numeric-grammar",
+      "context": "decoded-strategy-payload",
+      "operation": "parse-and-canonicalize",
+      "rawPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/number-leading-zero.raw",
+      "rawByteLength": 2,
+      "rawSha256": "938db8c9f82c8cb58d3f3ef4fd250036a48d26a712753d2fde5abd03a85cabf4",
+      "limits": {
+        "rawUtf8Bytes": 8388608,
+        "depth": 64,
+        "nodes": 262144,
+        "decodedStringUtf8Bytes": 6291456,
+        "arrayEntries": 65536,
+        "objectEntries": 65536
+      },
+      "expectation": {
+        "kind": "error",
+        "code": "INVALID_GRAMMAR",
+        "path": [],
+        "byteOffset": 1,
+        "owner": "player_violation"
+      }
+    },
+    {
+      "id": "number-max-finite-binary64",
+      "category": "number",
+      "context": "decoded-strategy-payload",
+      "operation": "parse-and-canonicalize",
+      "rawPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/number-max-finite-binary64.raw",
+      "rawByteLength": 22,
+      "rawSha256": "217ab4b30c6f536b285884e38da73315e3c6e694910dbbd5ae36f396b6f835bb",
+      "limits": {
+        "rawUtf8Bytes": 8388608,
+        "depth": 64,
+        "nodes": 262144,
+        "decodedStringUtf8Bytes": 6291456,
+        "arrayEntries": 65536,
+        "objectEntries": 65536
+      },
+      "expectation": {
+        "kind": "success",
+        "canonicalPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/number-max-finite-binary64.raw",
+        "canonicalByteLength": 22,
+        "canonicalSha256": "217ab4b30c6f536b285884e38da73315e3c6e694910dbbd5ae36f396b6f835bb"
+      }
+    },
+    {
+      "id": "number-max-safe-integer",
+      "category": "number",
+      "context": "decoded-strategy-payload",
+      "operation": "parse-and-canonicalize",
+      "rawPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/number-max-safe-integer.raw",
+      "rawByteLength": 16,
+      "rawSha256": "f40b423c2dd95ff2b2f027e22208f438cf7242862e5e746860e697308c9add26",
+      "limits": {
+        "rawUtf8Bytes": 8388608,
+        "depth": 64,
+        "nodes": 262144,
+        "decodedStringUtf8Bytes": 6291456,
+        "arrayEntries": 65536,
+        "objectEntries": 65536
+      },
+      "expectation": {
+        "kind": "success",
+        "canonicalPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/number-max-safe-integer.raw",
+        "canonicalByteLength": 16,
+        "canonicalSha256": "f40b423c2dd95ff2b2f027e22208f438cf7242862e5e746860e697308c9add26"
+      }
+    },
+    {
+      "id": "number-min-normal-binary64",
+      "category": "number",
+      "context": "decoded-strategy-payload",
+      "operation": "parse-and-canonicalize",
+      "rawPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/number-min-normal-binary64.raw",
+      "rawByteLength": 23,
+      "rawSha256": "8d51a73768cb59d15302f6b0a4c7147a04b0cce9df743b5bf50e31ab87b2d807",
+      "limits": {
+        "rawUtf8Bytes": 8388608,
+        "depth": 64,
+        "nodes": 262144,
+        "decodedStringUtf8Bytes": 6291456,
+        "arrayEntries": 65536,
+        "objectEntries": 65536
+      },
+      "expectation": {
+        "kind": "success",
+        "canonicalPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/number-min-normal-binary64.raw",
+        "canonicalByteLength": 23,
+        "canonicalSha256": "8d51a73768cb59d15302f6b0a4c7147a04b0cce9df743b5bf50e31ab87b2d807"
+      }
+    },
+    {
+      "id": "number-min-safe-integer",
+      "category": "number",
+      "context": "decoded-strategy-payload",
+      "operation": "parse-and-canonicalize",
+      "rawPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/number-min-safe-integer.raw",
+      "rawByteLength": 17,
+      "rawSha256": "4c933a456bb8f2e9894b2d0b26480439cd72d52fb8a27cbf8fd7f323f22c7815",
+      "limits": {
+        "rawUtf8Bytes": 8388608,
+        "depth": 64,
+        "nodes": 262144,
+        "decodedStringUtf8Bytes": 6291456,
+        "arrayEntries": 65536,
+        "objectEntries": 65536
+      },
+      "expectation": {
+        "kind": "success",
+        "canonicalPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/number-min-safe-integer.raw",
+        "canonicalByteLength": 17,
+        "canonicalSha256": "4c933a456bb8f2e9894b2d0b26480439cd72d52fb8a27cbf8fd7f323f22c7815"
+      }
+    },
+    {
+      "id": "number-min-subnormal-roundtrip",
+      "category": "number",
+      "context": "decoded-strategy-payload",
+      "operation": "parse-and-canonicalize",
+      "rawPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/number-min-subnormal-roundtrip.raw",
+      "rawByteLength": 23,
+      "rawSha256": "bf6ac664f467d7b49f9eba67be43367729d0fd07441a46b1a11d5387c430bc2e",
+      "limits": {
+        "rawUtf8Bytes": 8388608,
+        "depth": 64,
+        "nodes": 262144,
+        "decodedStringUtf8Bytes": 6291456,
+        "arrayEntries": 65536,
+        "objectEntries": 65536
+      },
+      "expectation": {
+        "kind": "success",
+        "canonicalPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/number-min-subnormal-roundtrip.canonical.raw",
+        "canonicalByteLength": 6,
+        "canonicalSha256": "c46e7ca1be4c8734f373a56530787288fa2058d73d07855e9247e949f811a42a"
+      }
+    },
+    {
+      "id": "number-negative-zero",
+      "category": "number",
+      "context": "decoded-strategy-payload",
+      "operation": "parse-and-canonicalize",
+      "rawPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/number-negative-zero.raw",
+      "rawByteLength": 2,
+      "rawSha256": "ed79f26d03f412bde3db206601a698e0bb451bea9e3cc25289636ac17ea74b0a",
+      "limits": {
+        "rawUtf8Bytes": 8388608,
+        "depth": 64,
+        "nodes": 262144,
+        "decodedStringUtf8Bytes": 6291456,
+        "arrayEntries": 65536,
+        "objectEntries": 65536
+      },
+      "expectation": {
+        "kind": "success",
+        "canonicalPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/number-negative-zero.canonical.raw",
+        "canonicalByteLength": 1,
+        "canonicalSha256": "5feceb66ffc86f38d952786c6d696c79c2dbc239dd4e91b46729d73a27fb57e9"
+      }
+    },
+    {
+      "id": "number-positive-exponent-threshold",
+      "category": "number",
+      "context": "decoded-strategy-payload",
+      "operation": "parse-and-canonicalize",
+      "rawPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/number-positive-exponent-threshold.raw",
+      "rawByteLength": 4,
+      "rawSha256": "61652a94a5432ce8e4b2b0fa3dd482a17a9fd564e36e145b4274e354b5a6d91f",
+      "limits": {
+        "rawUtf8Bytes": 8388608,
+        "depth": 64,
+        "nodes": 262144,
+        "decodedStringUtf8Bytes": 6291456,
+        "arrayEntries": 65536,
+        "objectEntries": 65536
+      },
+      "expectation": {
+        "kind": "success",
+        "canonicalPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/number-positive-exponent-threshold.canonical.raw",
+        "canonicalByteLength": 8,
+        "canonicalSha256": "fa95b43be4cf8bb030d85e663324ecc5247c2af6272672bfd4bbc1020b40582b"
+      }
+    },
+    {
+      "id": "number-trailing-decimal-point",
+      "category": "numeric-grammar",
+      "context": "decoded-strategy-payload",
+      "operation": "parse-and-canonicalize",
+      "rawPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/number-trailing-decimal-point.raw",
+      "rawByteLength": 2,
+      "rawSha256": "c977dbe785221d34114d345fdf8ff4e18bb4af66750751dbea29407f9738735f",
+      "limits": {
+        "rawUtf8Bytes": 8388608,
+        "depth": 64,
+        "nodes": 262144,
+        "decodedStringUtf8Bytes": 6291456,
+        "arrayEntries": 65536,
+        "objectEntries": 65536
+      },
+      "expectation": {
+        "kind": "error",
+        "code": "INVALID_GRAMMAR",
+        "path": [],
+        "byteOffset": 1,
+        "owner": "player_violation"
+      }
+    },
+    {
+      "id": "number-trailing-zero-canonicalizes",
+      "category": "number",
+      "context": "decoded-strategy-payload",
+      "operation": "parse-and-canonicalize",
+      "rawPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/number-trailing-zero-canonicalizes.raw",
+      "rawByteLength": 6,
+      "rawSha256": "8410f0402d0a3a770db9851714606f9803cb7833f20fc2f94dc8f2ef96d1be84",
+      "limits": {
+        "rawUtf8Bytes": 8388608,
+        "depth": 64,
+        "nodes": 262144,
+        "decodedStringUtf8Bytes": 6291456,
+        "arrayEntries": 65536,
+        "objectEntries": 65536
+      },
+      "expectation": {
+        "kind": "success",
+        "canonicalPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/number-trailing-zero-canonicalizes.canonical.raw",
+        "canonicalByteLength": 4,
+        "canonicalSha256": "5dcdf9da31212582fc88326231ab1f9aadc986cc710f5e2946989d5df3afa8d0"
+      }
+    },
+    {
+      "id": "number-unsafe-negative-integer",
+      "category": "numeric-grammar",
+      "context": "decoded-strategy-payload",
+      "operation": "parse-and-canonicalize",
+      "rawPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/number-unsafe-negative-integer.raw",
+      "rawByteLength": 17,
+      "rawSha256": "83e109bfd7fb4984b47a46f363627c18dbbd7e57e36b05a04cd162d304df72e9",
+      "limits": {
+        "rawUtf8Bytes": 8388608,
+        "depth": 64,
+        "nodes": 262144,
+        "decodedStringUtf8Bytes": 6291456,
+        "arrayEntries": 65536,
+        "objectEntries": 65536
+      },
+      "expectation": {
+        "kind": "error",
+        "code": "NUMBER_OUT_OF_RANGE",
+        "path": [],
+        "byteOffset": 0,
+        "owner": "player_violation"
+      }
+    },
+    {
+      "id": "number-unsafe-positive-integer",
+      "category": "numeric-grammar",
+      "context": "decoded-strategy-payload",
+      "operation": "parse-and-canonicalize",
+      "rawPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/number-unsafe-positive-integer.raw",
+      "rawByteLength": 16,
+      "rawSha256": "c681da39d7273a6a24c15c9cac3a75526ff2ecf8ba4ee60346a0c70c8163bdb2",
+      "limits": {
+        "rawUtf8Bytes": 8388608,
+        "depth": 64,
+        "nodes": 262144,
+        "decodedStringUtf8Bytes": 6291456,
+        "arrayEntries": 65536,
+        "objectEntries": 65536
+      },
+      "expectation": {
+        "kind": "error",
+        "code": "NUMBER_OUT_OF_RANGE",
+        "path": [],
+        "byteOffset": 0,
+        "owner": "player_violation"
+      }
+    },
+    {
+      "id": "number-uppercase-exponent-canonicalizes",
+      "category": "number",
+      "context": "decoded-strategy-payload",
+      "operation": "parse-and-canonicalize",
+      "rawPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/number-uppercase-exponent-canonicalizes.raw",
+      "rawByteLength": 5,
+      "rawSha256": "6cb7cbf66e33540b52adc0aa385e20d8453c33dca3176a4a6666b7754ba24be3",
+      "limits": {
+        "rawUtf8Bytes": 8388608,
+        "depth": 64,
+        "nodes": 262144,
+        "decodedStringUtf8Bytes": 6291456,
+        "arrayEntries": 65536,
+        "objectEntries": 65536
+      },
+      "expectation": {
+        "kind": "success",
+        "canonicalPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/number-uppercase-exponent-canonicalizes.canonical.raw",
+        "canonicalByteLength": 4,
+        "canonicalSha256": "e607aaf738f67fc2879a2a52672c599e9337b4cacd57582c6d3cf9526f5aa222"
+      }
+    },
+    {
+      "id": "number-zero",
+      "category": "number",
+      "context": "decoded-strategy-payload",
+      "operation": "parse-and-canonicalize",
+      "rawPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/number-zero.raw",
+      "rawByteLength": 1,
+      "rawSha256": "5feceb66ffc86f38d952786c6d696c79c2dbc239dd4e91b46729d73a27fb57e9",
+      "limits": {
+        "rawUtf8Bytes": 8388608,
+        "depth": 64,
+        "nodes": 262144,
+        "decodedStringUtf8Bytes": 6291456,
+        "arrayEntries": 65536,
+        "objectEntries": 65536
+      },
+      "expectation": {
+        "kind": "success",
+        "canonicalPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/number-zero.raw",
+        "canonicalByteLength": 1,
+        "canonicalSha256": "5feceb66ffc86f38d952786c6d696c79c2dbc239dd4e91b46729d73a27fb57e9"
+      }
+    },
+    {
+      "id": "order-already-canonical",
+      "category": "key-order",
+      "context": "decoded-strategy-payload",
+      "operation": "parse-and-canonicalize",
+      "rawPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/order-already-canonical.raw",
+      "rawByteLength": 29,
+      "rawSha256": "d627337df0b20c4b2356da7e7721b1e64f88f6c78a286a87f664f0420dae08bb",
+      "limits": {
+        "rawUtf8Bytes": 8388608,
+        "depth": 64,
+        "nodes": 262144,
+        "decodedStringUtf8Bytes": 6291456,
+        "arrayEntries": 65536,
+        "objectEntries": 65536
+      },
+      "expectation": {
+        "kind": "success",
+        "canonicalPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/order-already-canonical.raw",
+        "canonicalByteLength": 29,
+        "canonicalSha256": "d627337df0b20c4b2356da7e7721b1e64f88f6c78a286a87f664f0420dae08bb"
+      }
+    },
+    {
+      "id": "order-combining-key",
+      "category": "key-order",
+      "context": "decoded-strategy-payload",
+      "operation": "parse-and-canonicalize",
+      "rawPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/order-combining-key.raw",
+      "rawByteLength": 16,
+      "rawSha256": "f126472a603049b5f986bb8f35ba8b5fbace9e37c2d5b2abf5ad131a166835b6",
+      "limits": {
+        "rawUtf8Bytes": 8388608,
+        "depth": 64,
+        "nodes": 262144,
+        "decodedStringUtf8Bytes": 6291456,
+        "arrayEntries": 65536,
+        "objectEntries": 65536
+      },
+      "expectation": {
+        "kind": "success",
+        "canonicalPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/order-combining-key.canonical.raw",
+        "canonicalByteLength": 16,
+        "canonicalSha256": "a7962fb10dc1255be368ece9c22b2256605921dc6d0a8c9409d3ee406bcb86e5"
+      }
+    },
+    {
+      "id": "order-locale-compare-trap",
+      "category": "key-order",
+      "context": "decoded-strategy-payload",
+      "operation": "parse-and-canonicalize",
+      "rawPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/order-locale-compare-trap.raw",
+      "rawByteLength": 20,
+      "rawSha256": "c517d37f79b84cd519222618e0f1c2e21335145c8269450e03fd72479dd6c51a",
+      "limits": {
+        "rawUtf8Bytes": 8388608,
+        "depth": 64,
+        "nodes": 262144,
+        "decodedStringUtf8Bytes": 6291456,
+        "arrayEntries": 65536,
+        "objectEntries": 65536
+      },
+      "expectation": {
+        "kind": "success",
+        "canonicalPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/order-locale-compare-trap.canonical.raw",
+        "canonicalByteLength": 20,
+        "canonicalSha256": "f3b94ea66e33a3a3dae9b02aa5dc4b4f6c87b1a15f21cc2133210c110c8d99c0"
+      }
+    },
+    {
+      "id": "order-mixed-ascii",
+      "category": "key-order",
+      "context": "decoded-strategy-payload",
+      "operation": "parse-and-canonicalize",
+      "rawPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/order-mixed-ascii.raw",
+      "rawByteLength": 25,
+      "rawSha256": "a2802b9078d196b9212e74b7f440999a03a03601df459c3dfa36be1317e153e4",
+      "limits": {
+        "rawUtf8Bytes": 8388608,
+        "depth": 64,
+        "nodes": 262144,
+        "decodedStringUtf8Bytes": 6291456,
+        "arrayEntries": 65536,
+        "objectEntries": 65536
+      },
+      "expectation": {
+        "kind": "success",
+        "canonicalPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/order-mixed-ascii.canonical.raw",
+        "canonicalByteLength": 25,
+        "canonicalSha256": "52940d654c6a1a9e7ac0fa2f441f9d140e795cf063ad552ff1b5e8fe8058e879"
+      }
+    },
+    {
+      "id": "order-non-bmp",
+      "category": "key-order",
+      "context": "decoded-strategy-payload",
+      "operation": "parse-and-canonicalize",
+      "rawPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/order-non-bmp.raw",
+      "rawByteLength": 23,
+      "rawSha256": "01bbda07abcc1c5913da119b27ebf6eae16d97ac8d079e1cb5783690e3d1a975",
+      "limits": {
+        "rawUtf8Bytes": 8388608,
+        "depth": 64,
+        "nodes": 262144,
+        "decodedStringUtf8Bytes": 6291456,
+        "arrayEntries": 65536,
+        "objectEntries": 65536
+      },
+      "expectation": {
+        "kind": "success",
+        "canonicalPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/order-non-bmp.canonical.raw",
+        "canonicalByteLength": 23,
+        "canonicalSha256": "ba4a284bf4c4a58f3d0eb4155d97fd18d90e9da3aad886502deaa3ffdbbe742e"
+      }
+    },
+    {
+      "id": "unicode-escaped-ascii-canonicalizes",
+      "category": "unicode-scalar",
+      "context": "decoded-strategy-payload",
+      "operation": "parse-and-canonicalize",
+      "rawPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/unicode-escaped-ascii-canonicalizes.raw",
+      "rawByteLength": 8,
+      "rawSha256": "0aeb95f62766e68469af9ce64f77530be1109235683599a36a2186b9584cbf53",
+      "limits": {
+        "rawUtf8Bytes": 8388608,
+        "depth": 64,
+        "nodes": 262144,
+        "decodedStringUtf8Bytes": 6291456,
+        "arrayEntries": 65536,
+        "objectEntries": 65536
+      },
+      "expectation": {
+        "kind": "success",
+        "canonicalPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/unicode-escaped-ascii-canonicalizes.canonical.raw",
+        "canonicalByteLength": 3,
+        "canonicalSha256": "ac8d8342bbb2362d13f0a559a3621bb407011368895164b628a54f7fc33fc43c"
+      }
+    },
+    {
+      "id": "unicode-lone-high-surrogate",
+      "category": "unicode-scalar",
+      "context": "decoded-strategy-payload",
+      "operation": "parse-and-canonicalize",
+      "rawPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/unicode-lone-high-surrogate.raw",
+      "rawByteLength": 8,
+      "rawSha256": "8c0c59dd0d275aadcd462a5fe12eb352cbdfeaf961eae4f85a4660521df7d2f5",
+      "limits": {
+        "rawUtf8Bytes": 8388608,
+        "depth": 64,
+        "nodes": 262144,
+        "decodedStringUtf8Bytes": 6291456,
+        "arrayEntries": 65536,
+        "objectEntries": 65536
+      },
+      "expectation": {
+        "kind": "error",
+        "code": "INVALID_UNICODE_SCALAR",
+        "path": [],
+        "byteOffset": 1,
+        "owner": "player_violation"
+      }
+    },
+    {
+      "id": "unicode-lone-low-surrogate",
+      "category": "unicode-scalar",
+      "context": "decoded-strategy-payload",
+      "operation": "parse-and-canonicalize",
+      "rawPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/unicode-lone-low-surrogate.raw",
+      "rawByteLength": 8,
+      "rawSha256": "353c7370beca95e64c258c908edac60c2ab30d355ca1b5b7fc31c5bce4a4c65a",
+      "limits": {
+        "rawUtf8Bytes": 8388608,
+        "depth": 64,
+        "nodes": 262144,
+        "decodedStringUtf8Bytes": 6291456,
+        "arrayEntries": 65536,
+        "objectEntries": 65536
+      },
+      "expectation": {
+        "kind": "error",
+        "code": "INVALID_UNICODE_SCALAR",
+        "path": [],
+        "byteOffset": 1,
+        "owner": "player_violation"
+      }
+    },
+    {
+      "id": "unicode-surrogate-pair-canonicalizes",
+      "category": "unicode-scalar",
+      "context": "decoded-strategy-payload",
+      "operation": "parse-and-canonicalize",
+      "rawPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/unicode-surrogate-pair-canonicalizes.raw",
+      "rawByteLength": 14,
+      "rawSha256": "e30439cb87e140c0b998ad3095285abfec0294e2a8916f9a8f30d85734e6f82b",
+      "limits": {
+        "rawUtf8Bytes": 8388608,
+        "depth": 64,
+        "nodes": 262144,
+        "decodedStringUtf8Bytes": 6291456,
+        "arrayEntries": 65536,
+        "objectEntries": 65536
+      },
+      "expectation": {
+        "kind": "success",
+        "canonicalPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/unicode-surrogate-pair-canonicalizes.canonical.raw",
+        "canonicalByteLength": 6,
+        "canonicalSha256": "7a0c50b92434b015545fe93ab723db2d4b2cdd14a441405624a9ce8be29f1d5a"
+      }
+    },
+    {
+      "id": "utf8-above-unicode-maximum",
+      "category": "invalid-utf8",
+      "context": "decoded-strategy-payload",
+      "operation": "parse-and-canonicalize",
+      "rawPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/utf8-above-unicode-maximum.raw",
+      "rawByteLength": 6,
+      "rawSha256": "a0b68d72ba326dc7655b0da4c65889da62eda33c43e5b8aa7abccc3e80658ea6",
+      "limits": {
+        "rawUtf8Bytes": 8388608,
+        "depth": 64,
+        "nodes": 262144,
+        "decodedStringUtf8Bytes": 6291456,
+        "arrayEntries": 65536,
+        "objectEntries": 65536
+      },
+      "expectation": {
+        "kind": "error",
+        "code": "INVALID_UTF8",
+        "path": [],
+        "byteOffset": 1,
+        "owner": "player_violation"
+      }
+    },
+    {
+      "id": "utf8-encoded-surrogate",
+      "category": "invalid-utf8",
+      "context": "decoded-strategy-payload",
+      "operation": "parse-and-canonicalize",
+      "rawPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/utf8-encoded-surrogate.raw",
+      "rawByteLength": 5,
+      "rawSha256": "ee4a76500d4d714ca691afe56c1fd9e0a5fbcb42d6c8f8d7178aae4ddb683cf7",
+      "limits": {
+        "rawUtf8Bytes": 8388608,
+        "depth": 64,
+        "nodes": 262144,
+        "decodedStringUtf8Bytes": 6291456,
+        "arrayEntries": 65536,
+        "objectEntries": 65536
+      },
+      "expectation": {
+        "kind": "error",
+        "code": "INVALID_UTF8",
+        "path": [],
+        "byteOffset": 1,
+        "owner": "player_violation"
+      }
+    },
+    {
+      "id": "utf8-invalid-leading-byte",
+      "category": "invalid-utf8",
+      "context": "decoded-strategy-payload",
+      "operation": "parse-and-canonicalize",
+      "rawPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/utf8-invalid-leading-byte.raw",
+      "rawByteLength": 3,
+      "rawSha256": "2c1ba6ac713bfc21e74f3429be952fca3e7a796734394fd18a48eb6713880d89",
+      "limits": {
+        "rawUtf8Bytes": 8388608,
+        "depth": 64,
+        "nodes": 262144,
+        "decodedStringUtf8Bytes": 6291456,
+        "arrayEntries": 65536,
+        "objectEntries": 65536
+      },
+      "expectation": {
+        "kind": "error",
+        "code": "INVALID_UTF8",
+        "path": [],
+        "byteOffset": 1,
+        "owner": "player_violation"
+      }
+    },
+    {
+      "id": "utf8-overlong-slash",
+      "category": "invalid-utf8",
+      "context": "decoded-strategy-payload",
+      "operation": "parse-and-canonicalize",
+      "rawPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/utf8-overlong-slash.raw",
+      "rawByteLength": 4,
+      "rawSha256": "bfc25cfd85c49686ec04294e6de47c5dd57651e75084d1c08d3d124cd1dd471d",
+      "limits": {
+        "rawUtf8Bytes": 8388608,
+        "depth": 64,
+        "nodes": 262144,
+        "decodedStringUtf8Bytes": 6291456,
+        "arrayEntries": 65536,
+        "objectEntries": 65536
+      },
+      "expectation": {
+        "kind": "error",
+        "code": "INVALID_UTF8",
+        "path": [],
+        "byteOffset": 1,
+        "owner": "player_violation"
+      }
+    },
+    {
+      "id": "utf8-stray-continuation",
+      "category": "invalid-utf8",
+      "context": "decoded-strategy-payload",
+      "operation": "parse-and-canonicalize",
+      "rawPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/utf8-stray-continuation.raw",
+      "rawByteLength": 3,
+      "rawSha256": "0fd123b00f85e9b35ca0addf705a2f45e2b0b4a9944fe66457daeee1d4d16ca8",
+      "limits": {
+        "rawUtf8Bytes": 8388608,
+        "depth": 64,
+        "nodes": 262144,
+        "decodedStringUtf8Bytes": 6291456,
+        "arrayEntries": 65536,
+        "objectEntries": 65536
+      },
+      "expectation": {
+        "kind": "error",
+        "code": "INVALID_UTF8",
+        "path": [],
+        "byteOffset": 1,
+        "owner": "player_violation"
+      }
+    },
+    {
+      "id": "utf8-truncated-three-byte",
+      "category": "invalid-utf8",
+      "context": "decoded-strategy-payload",
+      "operation": "parse-and-canonicalize",
+      "rawPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/utf8-truncated-three-byte.raw",
+      "rawByteLength": 3,
+      "rawSha256": "04d07d17077b551814f8a654d0efa8d53015f6c6a95548d7945e0c2179a3dbcb",
+      "limits": {
+        "rawUtf8Bytes": 8388608,
+        "depth": 64,
+        "nodes": 262144,
+        "decodedStringUtf8Bytes": 6291456,
+        "arrayEntries": 65536,
+        "objectEntries": 65536
+      },
+      "expectation": {
+        "kind": "error",
+        "code": "INVALID_UTF8",
+        "path": [],
+        "byteOffset": 1,
+        "owner": "player_violation"
+      }
+    },
+    {
+      "id": "valid-ascii",
+      "category": "valid-utf8",
+      "context": "decoded-strategy-payload",
+      "operation": "parse-and-canonicalize",
+      "rawPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/valid-ascii.raw",
+      "rawByteLength": 9,
+      "rawSha256": "ac53b30e884b54ace9445eba0732e0012145f64d971a8e40bd7b43363f5e7e72",
+      "limits": {
+        "rawUtf8Bytes": 8388608,
+        "depth": 64,
+        "nodes": 262144,
+        "decodedStringUtf8Bytes": 6291456,
+        "arrayEntries": 65536,
+        "objectEntries": 65536
+      },
+      "expectation": {
+        "kind": "success",
+        "canonicalPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/valid-ascii.raw",
+        "canonicalByteLength": 9,
+        "canonicalSha256": "ac53b30e884b54ace9445eba0732e0012145f64d971a8e40bd7b43363f5e7e72"
+      }
+    },
+    {
+      "id": "valid-multilingual",
+      "category": "valid-utf8",
+      "context": "decoded-strategy-payload",
+      "operation": "parse-and-canonicalize",
+      "rawPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/valid-multilingual.raw",
+      "rawByteLength": 14,
+      "rawSha256": "426504faede4f2809fa4ac152e336b58d57ed0814559764bed463e8a71e75656",
+      "limits": {
+        "rawUtf8Bytes": 8388608,
+        "depth": 64,
+        "nodes": 262144,
+        "decodedStringUtf8Bytes": 6291456,
+        "arrayEntries": 65536,
+        "objectEntries": 65536
+      },
+      "expectation": {
+        "kind": "success",
+        "canonicalPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/valid-multilingual.raw",
+        "canonicalByteLength": 14,
+        "canonicalSha256": "426504faede4f2809fa4ac152e336b58d57ed0814559764bed463e8a71e75656"
+      }
+    },
+    {
+      "id": "valid-non-bmp-scalar",
+      "category": "valid-utf8",
+      "context": "decoded-strategy-payload",
+      "operation": "parse-and-canonicalize",
+      "rawPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/valid-non-bmp-scalar.raw",
+      "rawByteLength": 6,
+      "rawSha256": "7a0c50b92434b015545fe93ab723db2d4b2cdd14a441405624a9ce8be29f1d5a",
+      "limits": {
+        "rawUtf8Bytes": 8388608,
+        "depth": 64,
+        "nodes": 262144,
+        "decodedStringUtf8Bytes": 6291456,
+        "arrayEntries": 65536,
+        "objectEntries": 65536
+      },
+      "expectation": {
+        "kind": "success",
+        "canonicalPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/valid-non-bmp-scalar.raw",
+        "canonicalByteLength": 6,
+        "canonicalSha256": "7a0c50b92434b015545fe93ab723db2d4b2cdd14a441405624a9ce8be29f1d5a"
+      }
+    },
+    {
+      "id": "valid-null",
+      "category": "valid-utf8",
+      "context": "decoded-strategy-payload",
+      "operation": "parse-and-canonicalize",
+      "rawPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/valid-null.raw",
+      "rawByteLength": 4,
+      "rawSha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "limits": {
+        "rawUtf8Bytes": 8388608,
+        "depth": 64,
+        "nodes": 262144,
+        "decodedStringUtf8Bytes": 6291456,
+        "arrayEntries": 65536,
+        "objectEntries": 65536
+      },
+      "expectation": {
+        "kind": "success",
+        "canonicalPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/valid-null.raw",
+        "canonicalByteLength": 4,
+        "canonicalSha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b"
+      }
+    },
+    {
+      "id": "valid-true",
+      "category": "valid-utf8",
+      "context": "decoded-strategy-payload",
+      "operation": "parse-and-canonicalize",
+      "rawPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/valid-true.raw",
+      "rawByteLength": 4,
+      "rawSha256": "b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b",
+      "limits": {
+        "rawUtf8Bytes": 8388608,
+        "depth": 64,
+        "nodes": 262144,
+        "decodedStringUtf8Bytes": 6291456,
+        "arrayEntries": 65536,
+        "objectEntries": 65536
+      },
+      "expectation": {
+        "kind": "success",
+        "canonicalPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/valid-true.raw",
+        "canonicalByteLength": 4,
+        "canonicalSha256": "b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b"
+      }
+    },
+    {
+      "id": "valid-u2028-u2029",
+      "category": "valid-utf8",
+      "context": "decoded-strategy-payload",
+      "operation": "parse-and-canonicalize",
+      "rawPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/valid-u2028-u2029.raw",
+      "rawByteLength": 25,
+      "rawSha256": "1c7f66209b6d801378d939ac63d7492e910ae76b7dccdf7e03dad6a9a7a2e3eb",
+      "limits": {
+        "rawUtf8Bytes": 8388608,
+        "depth": 64,
+        "nodes": 262144,
+        "decodedStringUtf8Bytes": 6291456,
+        "arrayEntries": 65536,
+        "objectEntries": 65536
+      },
+      "expectation": {
+        "kind": "success",
+        "canonicalPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/valid-u2028-u2029.raw",
+        "canonicalByteLength": 25,
+        "canonicalSha256": "1c7f66209b6d801378d939ac63d7492e910ae76b7dccdf7e03dad6a9a7a2e3eb"
+      }
+    }
+  ]
+}
