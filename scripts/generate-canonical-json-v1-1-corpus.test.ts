@@ -88,6 +88,30 @@ describe("canonical JSON v1.1 corpus generator", () => {
     }
   })
 
+  it("keeps object-entry boundary input insertion order separate from canonical key order", async () => {
+    const generator = await subject()
+    const root = mkdtempSync(path.join(tmpdir(), "cowards-cjson-object-order-"))
+    tempRoots.push(root)
+    const corpus = generator.writeCanonicalJsonV11Corpus(root)
+    for (const id of [
+      "boundary-objectEntries-00-n-minus-1",
+      "boundary-objectEntries-01-n",
+    ]) {
+      const vector = corpus.vectors.find((candidate) => candidate.id === id)!
+      expect(vector.expectation.kind).toBe("success")
+      if (vector.expectation.kind !== "success") continue
+      expect(vector.expectation.canonicalPath).not.toBe(vector.rawPath)
+      const raw = readFileSync(path.join(root, vector.rawPath), "utf8")
+      const canonical = readFileSync(
+        path.join(root, vector.expectation.canonicalPath),
+        "utf8",
+      )
+      expect(raw.startsWith('{"k0":null,"k1":null,"k2":null')).toBe(true)
+      expect(canonical.startsWith('{"k0":null,"k1":null,"k10":null')).toBe(true)
+      expect(vector.expectation.canonicalSha256).not.toBe(vector.rawSha256)
+    }
+  })
+
   it("writes byte-deterministic index and literal raw fixtures whose hashes match", async () => {
     const generator = await subject()
     const root = mkdtempSync(path.join(tmpdir(), "cowards-cjson-corpus-"))

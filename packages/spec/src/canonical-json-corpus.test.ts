@@ -1,11 +1,17 @@
+import { Buffer } from "node:buffer"
 import { createHash } from "node:crypto"
 import { readFileSync } from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 import { describe, expect, it } from "vitest"
+import { encodeCanonicalJson } from "./canonical-json-encode.js"
+import { parseCanonicalJson } from "./canonical-json-parse.js"
+import type {
+  CanonicalJsonContext,
+  CanonicalJsonLimits,
+  CanonicalJsonScanOptions,
+} from "./canonical-json-scan.js"
 
-const MISSING_CODEC_SENTINEL =
-  "[EXPECTED_RED:MISSING_CANONICAL_JSON_TS_CODEC]" as const
 const repoRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   "../../..",
@@ -17,9 +23,12 @@ const indexPath = path.join(
 
 interface CorpusVector {
   id: string
+  context: CanonicalJsonContext
+  operation: CanonicalJsonScanOptions["operation"] | "host-encode"
   rawPath: string
   rawByteLength: number
   rawSha256: string
+  limits: CanonicalJsonLimits
   expectation:
     | {
         kind: "success"
@@ -54,7 +63,7 @@ const digest = (value: Uint8Array): string =>
   createHash("sha256").update(value).digest("hex")
 
 describe("canonical JSON v1.1 shared raw-byte corpus", () => {
-  it("enumerates every vector and expectation before the exact TypeScript codec RED", () => {
+  it("executes and enumerates every vector through the complete TypeScript codec", () => {
     const corpus = JSON.parse(readFileSync(indexPath, "utf8")) as CorpusIndex
     expect(corpus.schemaVersion).toBe("canonical-json-v1.1-corpus-v1")
     expect(corpus.vectors).toHaveLength(corpus.vectorCount)
@@ -91,6 +100,27 @@ describe("canonical JSON v1.1 shared raw-byte corpus", () => {
         expect(digest(canonical), `${vector.id} canonical hash`).toBe(
           vector.expectation.canonicalSha256,
         )
+        expect(vector.operation, `${vector.id} successful operation`).not.toBe("host-encode")
+        if (vector.operation === "host-encode") continue
+        const parsed = parseCanonicalJson(raw, {
+          context: vector.context,
+          operation: vector.operation,
+          limits: vector.limits,
+        })
+        expect(parsed.ok, `${vector.id} parse`).toBe(true)
+        if (!parsed.ok) continue
+        const encoded = encodeCanonicalJson(parsed.value, {
+          context: vector.context,
+          limits: vector.limits,
+        })
+        expect(encoded.ok, `${vector.id} encode`).toBe(true)
+        if (!encoded.ok) continue
+        expect(encoded.bytes.byteLength, `${vector.id} encoded length`).toBe(
+          vector.expectation.canonicalByteLength,
+        )
+        expect(digest(encoded.bytes), `${vector.id} encoded hash`).toBe(
+          vector.expectation.canonicalSha256,
+        )
       } else {
         expect(vector.expectation.code, `${vector.id} error code`).toMatch(/^[A-Z][A-Z0-9_]+$/)
         expect(Array.isArray(vector.expectation.path), `${vector.id} error path`).toBe(true)
@@ -98,6 +128,30 @@ describe("canonical JSON v1.1 shared raw-byte corpus", () => {
         expect(["player_violation", "system_failure"]).toContain(
           vector.expectation.owner,
         )
+        const { kind: _kind, ...expectedError } = vector.expectation
+        if (vector.operation === "host-encode") {
+          const value = vector.id === "number-host-nan"
+            ? Number.NaN
+            : vector.id === "number-host-positive-infinity"
+              ? Number.POSITIVE_INFINITY
+              : Number.NEGATIVE_INFINITY
+          expect(
+            encodeCanonicalJson(value, {
+              context: vector.context,
+              limits: vector.limits,
+            }),
+            vector.id,
+          ).toEqual({ ok: false, error: expectedError })
+        } else {
+          expect(
+            parseCanonicalJson(raw, {
+              context: vector.context,
+              operation: vector.operation,
+              limits: vector.limits,
+            }),
+            vector.id,
+          ).toEqual({ ok: false, error: expectedError })
+        }
       }
     }
 
@@ -107,6 +161,5 @@ describe("canonical JSON v1.1 shared raw-byte corpus", () => {
     console.log(
       `[CANONICAL_JSON_CORPUS:TS] count=${corpus.vectorCount} root=${corpus.vectorRootSha256} enumeration=${enumerationSha256}`,
     )
-    throw new Error(MISSING_CODEC_SENTINEL)
-  })
+  }, 20_000)
 })

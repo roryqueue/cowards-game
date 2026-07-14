@@ -40,7 +40,13 @@ const corpus = JSON.parse(
 
 describe("canonical JSON v1 iterative encoder", () => {
   it("emits exact canonical bytes for every successful corpus vector", () => {
-    const vectors = corpus.vectors.filter((vector) => vector.expectation.kind === "success")
+    const vectors = corpus.vectors.filter(
+      (
+        vector,
+      ): vector is typeof vector & {
+        expectation: Extract<typeof vector.expectation, { kind: "success" }>
+      } => vector.expectation.kind === "success",
+    )
     expect(vectors).toHaveLength(40)
     for (const vector of vectors) {
       if (vector.operation === "host-encode") throw new Error(`unexpected host success ${vector.id}`)
@@ -59,7 +65,9 @@ describe("canonical JSON v1 iterative encoder", () => {
       expect(encoded.ok, `${vector.id} encode`).toBe(true)
       if (!encoded.ok) continue
       const expected = readFileSync(path.join(repoRoot, vector.expectation.canonicalPath))
-      expect(Buffer.from(encoded.bytes), vector.id).toEqual(expected)
+      const actual = Buffer.from(encoded.bytes)
+      expect(actual.byteLength, `${vector.id} byte length`).toBe(expected.byteLength)
+      expect(actual.equals(expected), `${vector.id} canonical bytes`).toBe(true)
     }
   })
 

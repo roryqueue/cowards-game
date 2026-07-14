@@ -47,8 +47,8 @@ export interface CanonicalJsonV11RedReceipt {
   vectorCount: number
   vectorRootSha256: string
   ownerPlans: {
-    typescriptCodec: "258-03"
-    goCodec: "258-04"
+    typescriptCodec: "258-04"
+    goCodec: "258-11"
     greenRetirement: "258-11"
   }
   consumers: readonly ReceiptConsumer[]
@@ -183,8 +183,8 @@ export const evaluateCanonicalJsonV11Red = (
     vectorCount: input.vectorCount,
     vectorRootSha256: input.vectorRootSha256,
     ownerPlans: {
-      typescriptCodec: "258-03",
-      goCodec: "258-04",
+      typescriptCodec: "258-04",
+      goCodec: "258-11",
       greenRetirement: "258-11",
     },
     consumers: [ts, go],
@@ -275,7 +275,13 @@ const runCurrentConsumers = (stage: RedStage): CanonicalJsonV11RedReceipt => {
     ...identity,
     ts: run(
       "pnpm",
-      ["exec", "vitest", "run", "packages/spec/src/canonical-json-corpus.test.ts"],
+      [
+        "exec",
+        "vitest",
+        "run",
+        "packages/spec/src/canonical-json-corpus.test.ts",
+        "--reporter=verbose",
+      ],
       repoRoot,
     ),
     go: run(

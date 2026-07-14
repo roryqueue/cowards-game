@@ -397,6 +397,7 @@ const boundaryDefinition = (
     objectEntries: "limit-object-entries",
   }[limit] as Category
   let raw: () => Buffer
+  let canonical: (() => Buffer) | undefined
   let limits: Partial<Limits> | undefined
   let failureOffset = 0
   switch (limit) {
@@ -423,10 +424,14 @@ const boundaryDefinition = (
       failureOffset = 1 + baseLimits.arrayEntries * 5
       break
     case "objectEntries":
-      raw = () =>
-        Buffer.from(
-          `{${Array.from({ length: candidate }, (_, index) => `"k${index}":null`).join(",")}}`,
-        )
+      raw = () => {
+        const keys = Array.from({ length: candidate }, (_, index) => `k${index}`)
+        return Buffer.from(`{${keys.map((key) => `"${key}":null`).join(",")}}`)
+      }
+      canonical = () => {
+        const keys = Array.from({ length: candidate }, (_, index) => `k${index}`).sort()
+        return Buffer.from(`{${keys.map((key) => `"${key}":null`).join(",")}}`)
+      }
       failureOffset = -1
       break
   }
@@ -435,6 +440,7 @@ const boundaryDefinition = (
     category,
     context: "canonical-manifest",
     raw,
+    ...(canonical ? { canonical } : {}),
     limits,
     boundary: { limit, offset, candidate },
   }

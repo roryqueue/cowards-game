@@ -381,9 +381,9 @@
       },
       "expectation": {
         "kind": "success",
-        "canonicalPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/boundary-objectEntries-00-n-minus-1.raw",
+        "canonicalPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/boundary-objectEntries-00-n-minus-1.canonical.raw",
         "canonicalByteLength": 906381,
-        "canonicalSha256": "7c27e07f10a7b3433d03375d4cfd52e9983dcfd9518a2bba05508b792617da56"
+        "canonicalSha256": "3dd30eaa5bd06b51340b9fefd4cec98db918061cbf5e1707e08da8b04ff15a07"
       }
     },
     {
@@ -409,9 +409,9 @@
       },
       "expectation": {
         "kind": "success",
-        "canonicalPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/boundary-objectEntries-01-n.raw",
+        "canonicalPath": "packages/spec/src/fixtures/canonical-json-v1-1-raw/boundary-objectEntries-01-n.canonical.raw",
         "canonicalByteLength": 906395,
-        "canonicalSha256": "feec980f2df017c1bde74accce101eac42ee4a6eb8306884e5338f631cf80e73"
+        "canonicalSha256": "dc1705b7d0c5510d047641e7afd3004589dc4c92f8efe9d61705d73e821dbc21"
       }
     },
     {
