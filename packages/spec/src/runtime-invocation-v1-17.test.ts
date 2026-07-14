@@ -1722,29 +1722,36 @@ describe("runtime invocation v1.17 authenticated execution accounting", () => {
     },
   )
 
-  it("rejects fully re-bound receipt accounting that contradicts the observed success frame", () => {
-    const request = futureRequestFixture()
-    const payloadBytes = canonicalFixtureBytes({
-      activationOrders: [],
-      strategyMemory: null,
-    }).byteLength
-    const response = futureResponseFixture(request, "success", undefined, {
-      payloadBytes: payloadBytes - 1,
-      stdoutBytes: payloadBytes,
-      stderrBytes: 0,
-    })
+  it.each(["payloadBytes", "stdoutBytes", "stderrBytes"] as const)(
+    "rejects fully re-bound %s accounting that contradicts the observed success frame",
+    (counter) => {
+      const request = futureRequestFixture()
+      const payloadBytes = canonicalFixtureBytes({
+        activationOrders: [],
+        strategyMemory: null,
+      }).byteLength
+      const observed = {
+        payloadBytes,
+        stdoutBytes: payloadBytes + 1,
+        stderrBytes: 0,
+      }
+      const response = futureResponseFixture(request, "success", undefined, {
+        ...observed,
+        [counter]: counter === "stderrBytes" ? 1 : observed[counter] - 1,
+      })
 
-    expect(
-      verifyRuntimeInvocationResponseV117(
-        response.bytes,
-        request.envelope as unknown as AuthenticatedRuntimeInvocationRequestV117,
-        identity,
-      ),
-    ).toMatchObject({
-      kind: "system_failure",
-      failure: { code: "OUTER_FRAME_WRONG_BINDING", retryable: false },
-    })
-  })
+      expect(
+        verifyRuntimeInvocationResponseV117(
+          response.bytes,
+          request.envelope as unknown as AuthenticatedRuntimeInvocationRequestV117,
+          identity,
+        ),
+      ).toMatchObject({
+        kind: "system_failure",
+        failure: { code: "OUTER_FRAME_WRONG_BINDING", retryable: false },
+      })
+    },
+  )
 
   it("rejects a signed response with no accounting envelope", () => {
     const request = futureRequestFixture()
