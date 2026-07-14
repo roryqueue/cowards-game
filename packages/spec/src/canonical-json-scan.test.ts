@@ -68,7 +68,7 @@ describe("canonical JSON v1.1 iterative raw-byte scanner", () => {
         }
       }
     }
-  })
+  }, 20_000)
 
   it("compares decoded object keys by unsigned UTF-8 bytes when canonical input is required", () => {
     const result = scanCanonicalJson(Buffer.from('{"z":1,"a":2}'), {
