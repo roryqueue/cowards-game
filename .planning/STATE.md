@@ -4,16 +4,16 @@ milestone: v1.37
 milestone_name: Rules Integrity and Strategy Evaluation Foundations — ACTIVE
 current_phase: 258
 current_phase_name: canonical-json-failure-semantics-and-artifact-identity
-status: planned
-stopped_at: Phase 258 corrected and planned with 14 plans across 12 waves; ready for execution
-last_updated: "2026-07-14T03:04:32.000Z"
+status: in_progress
+stopped_at: Completed 258-01-PLAN.md; ready for 258-02 corpus generation
+last_updated: "2026-07-14T03:33:40.000Z"
 last_activity: 2026-07-13
 last_activity_desc: Phase 258 second plan-check findings closed; 14 plans serialized across 12 waves
 progress:
   total_phases: 6
   completed_phases: 2
   total_plans: 55
-  completed_plans: 41
+  completed_plans: 42
   percent: 33
 ---
 
@@ -28,10 +28,10 @@ See: `.planning/PROJECT.md` (updated 2026-07-12)
 
 ## Current Position
 
-Phase: 258 (canonical-json-failure-semantics-and-artifact-identity) — PLANNED
-Plan: 0 of 14
-Status: Planned across 12 dependency-safe waves; ready for execution
-Last activity: 2026-07-13 — Phase 258 second plan-check findings closed
+Phase: 258 (canonical-json-failure-semantics-and-artifact-identity) — IN PROGRESS
+Plan: 1 of 14
+Status: Plan 01 complete; exact v1.17 calibration and inactive successor contract frozen
+Last activity: 2026-07-13 — Completed Plan 258-01 calibration and contract freeze
 
 Progress: [███░░░░░░░] 33%
 
@@ -61,8 +61,8 @@ Progress: [███░░░░░░░] 33%
 
 **Resume file:** None
 
-Last session: 2026-07-14T03:04:32.000Z
-Stopped at: Phase 258 corrected and planned with 14 plans across 12 waves; ready for execution
+Last session: 2026-07-14T03:33:40.000Z
+Stopped at: Completed 258-01-PLAN.md; ready for 258-02 corpus generation
 Next command: `$gsd-execute-phase 258`
 
 ## Performance Metrics
@@ -93,6 +93,7 @@ Next command: `$gsd-execute-phase 258`
 | Phase 257 P20 | 113min | 1 task | 6 implementation/result/boundary files |
 | Phase 257 P21 | 23min | 1 task | 8 implementation/test/monitor files |
 | Phase 257 P22 | 36min | 1 task | 8 implementation/test/proof files |
+| Phase 258 P01 | 17min | 2 tasks | 8 calibration/contract files |
 
 ## Decisions
 
