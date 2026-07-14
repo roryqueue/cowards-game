@@ -5,6 +5,7 @@ import type { RuntimeResult } from "@cowards/engine"
 import {
   RUNTIME_INVOCATION_V1_17_TEST_KEY_ID,
   createAuthenticatedRuntimeInvocationRequestV117,
+  encodeCanonicalJson,
   serializeRuntimeInvocationRequestV117,
   verifyRuntimeInvocationResponseV117,
   type AuthenticatedRuntimeInvocationRequestV117,
@@ -27,6 +28,7 @@ import { hashStrategySource } from "./hash.js"
 import { createSubprocessStrategyExecutionAdapter } from "./subprocess-adapter.js"
 import { SubprocessSystemFailure } from "./subprocess-ipc.js"
 import { createContainerSubprocessStrategyExecutionAdapter } from "./container-subprocess-adapter.js"
+import { CANDIDATE_BOUNDED_CANONICAL_SOURCE } from "./candidate-bounded-canonical-source.js"
 
 const validStrategySource = `
 export default {
@@ -1030,5 +1032,44 @@ export default {
         })
       }
     })
+
+    it.each([63, 64, 65] as const)(
+      "matches shared canonical depth accounting at %i nested containers",
+      async (containerDepth) => {
+        let value: JsonValue = 0
+        for (let depth = 0; depth < containerDepth; depth += 1) {
+          value = [value]
+        }
+        const shared = encodeCanonicalJson(value, {
+          context: "decoded-strategy-payload",
+        })
+        const source = `
+const frame = (tag) => Uint8Array.of(tag.charCodeAt(0))
+${CANDIDATE_BOUNDED_CANONICAL_SOURCE}
+export { boundedCanonicalFrame }
+`
+        const module = (await import(
+          new URL(
+            `data:text/javascript;charset=utf-8,${encodeURIComponent(source)}`,
+          ).href
+        )) as {
+          boundedCanonicalFrame(
+            input: JsonValue,
+            outputByteLimit: number,
+          ): Uint8Array
+        }
+
+        if (shared.ok) {
+          const frame = module.boundedCanonicalFrame(value, 262_144)
+          expect(String.fromCharCode(frame[0] ?? 0)).toBe("S")
+          expect(frame.subarray(1)).toEqual(shared.bytes)
+        } else {
+          expect(shared.error.code).toBe("MAX_DEPTH_EXCEEDED")
+          expect(() =>
+            module.boundedCanonicalFrame(value, 262_144),
+          ).toThrow("INVALID_OUTPUT")
+        }
+      },
+    )
   })
 })
