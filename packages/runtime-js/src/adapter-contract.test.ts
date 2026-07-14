@@ -805,5 +805,49 @@ export default {
         )
       }
     })
+
+    it("keeps successor serialization faults distinct from Strategy exceptions", () => {
+      const invalidSource = transpileOrThrow(`
+export default {
+  selectActivations() {
+    return { activationOrders: [], strategyMemory: new ArrayBuffer(8) }
+  },
+  soldierBrain() {
+    return { action: { type: "TURN_TO_STONE" }, soldierMemory: {} }
+  },
+}
+`)
+      const thrownSource = transpileOrThrow(`
+export default {
+  selectActivations() {
+    throw new Error("private Strategy exception detail")
+  },
+  soldierBrain() {
+    return { action: { type: "TURN_TO_STONE" }, soldierMemory: {} }
+  },
+}
+`)
+      for (const [source, expectedCode] of [
+        [invalidSource, "INVALID_OUTPUT"],
+        [thrownSource, "THROWN_EXCEPTION"],
+      ] as const) {
+        const request = candidateRequest({ artifactSource: source })
+        for (const adapter of [
+          createWorkerThreadStrategyExecutionAdapter(),
+          createSubprocessStrategyExecutionAdapter(),
+        ]) {
+          const result = executeCandidateWith(adapter, request, source)
+          expect(result.kind, adapter.metadata.id).toBe("success")
+          if (result.kind !== "success") continue
+          expect(result.value.outcome).toMatchObject({
+            kind: "player_violation",
+            violation: { code: expectedCode },
+          })
+          expect(JSON.stringify(result.value.outcome)).not.toMatch(
+            /private Strategy|ArrayBuffer|stack|source/iu,
+          )
+        }
+      }
+    })
   })
 })
