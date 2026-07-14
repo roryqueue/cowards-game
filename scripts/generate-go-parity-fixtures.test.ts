@@ -327,11 +327,19 @@ describe("versioned TypeScript-to-Go parity generator", () => {
     expect(generated).not.toContain(
       "var runtimeInvocationV117SystemFailureRetryability = map[string]bool",
     )
+    expect(generated).not.toContain(
+      "var runtimeServiceContractFailureCodes = map[string]struct{}",
+    )
     expect(generated).toContain("switch version")
     expect(generated).toContain("switch code")
     expect(generated).toContain("runtimeInvocationContractsSnapshot")
     expect(generated).toContain(
       "runtimeInvocationV117SystemFailureRetryabilitySnapshot",
     )
+    expect(generated).toContain("runtimeServiceContractFailureCodeKnown")
+    expect(generated).toContain("runtimeServiceContractFailureCodesSnapshot")
+    expect(
+      read("apps/go-backend/runtime_service_client.go").toString("utf8"),
+    ).toContain("runtimeServiceContractFailureCodeKnown(code)")
   })
 })

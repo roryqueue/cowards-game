@@ -370,4 +370,14 @@ func TestPhase258RuntimeInvocationV117GeneratedAuthoritySnapshotsCannotMutateLoo
 	if retryable, known := runtimeInvocationV117SystemFailureRetryable("UNKNOWN"); known || retryable {
 		t.Fatalf("unknown failure code did not fail closed: retryable=%v known=%v", retryable, known)
 	}
+
+	failureCodes := runtimeServiceContractFailureCodesSnapshot()
+	delete(failureCodes, "MALFORMED_REQUEST")
+	failureCodes["UNKNOWN"] = struct{}{}
+	if !isRuntimeServiceContractFailureCode("MALFORMED_REQUEST") {
+		t.Fatal("caller mutation removed a historical v1.16 failure code")
+	}
+	if isRuntimeServiceContractFailureCode("UNKNOWN") {
+		t.Fatal("caller mutation admitted an unknown historical v1.16 failure code")
+	}
 }
