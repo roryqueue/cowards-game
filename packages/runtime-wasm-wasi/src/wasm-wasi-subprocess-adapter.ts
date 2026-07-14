@@ -17,6 +17,7 @@ import {
   SoldierBrainResultV117Schema,
   SoldierBrainResultSchema,
   STRATEGY_RUNTIME_ABI_VERSION,
+  STRATEGY_WASM_ARTIFACT_BYTES,
   StrategyResultV117Schema,
   StrategyResultSchema,
   StrategyRuntimeResponseEnvelopeSchema,
@@ -224,6 +225,13 @@ const candidateArtifactBytesFor = (
     }
   }
   const bytes = Buffer.from(artifact.bytesBase64, "base64")
+  if (bytes.byteLength > STRATEGY_WASM_ARTIFACT_BYTES) {
+    return {
+      ok: false,
+      event: "outer_frame_wrong_binding",
+      safeCode: "WASM_WASI_ARTIFACT_TOO_LARGE",
+    }
+  }
   let embeddedSourceIdentity
   try {
     embeddedSourceIdentity = readWasmWasiSourceIdentityAttestationV117(bytes)

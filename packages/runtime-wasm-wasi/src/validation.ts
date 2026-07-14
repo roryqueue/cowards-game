@@ -300,9 +300,24 @@ export const isWasmWasiSourceIdentityV117 = (
   if (typeof lineEndings !== "object" || lineEndings === null) return false
   if (!exactKeys(lineEndings, ["cr", "crlf", "kind", "lf"])) return false
   const counts = [lineEndings.lf, lineEndings.crlf, lineEndings.cr]
+  const countsAreValid = counts.every(
+    (count) =>
+      typeof count === "number" && Number.isSafeInteger(count) && count >= 0,
+  )
+  const originalSourceBytes = identity.originalSourceBytes
+  const normalizedSourceBytes = identity.normalizedSourceBytes
+  const byteCountsAreValid =
+    typeof originalSourceBytes === "number" &&
+    Number.isSafeInteger(originalSourceBytes) &&
+    originalSourceBytes >= 0 &&
+    typeof normalizedSourceBytes === "number" &&
+    Number.isSafeInteger(normalizedSourceBytes) &&
+    normalizedSourceBytes >= 0
+  if (!countsAreValid || !byteCountsAreValid) return false
   const present = counts.filter(
     (count) => typeof count === "number" && count > 0,
   ).length
+  const lineEndingCount = lineEndings.lf + lineEndings.crlf + lineEndings.cr
   const expectedKind =
     present === 0
       ? "none"
@@ -320,18 +335,11 @@ export const isWasmWasiSourceIdentityV117 = (
     /^sha256:[0-9a-f]{64}$/u.test(identity.originalSourceSha256) &&
     typeof identity.normalizedSourceSha256 === "string" &&
     /^sha256:[0-9a-f]{64}$/u.test(identity.normalizedSourceSha256) &&
-    typeof identity.originalSourceBytes === "number" &&
-    Number.isSafeInteger(identity.originalSourceBytes) &&
-    identity.originalSourceBytes >= 0 &&
-    typeof identity.normalizedSourceBytes === "number" &&
-    Number.isSafeInteger(identity.normalizedSourceBytes) &&
-    identity.normalizedSourceBytes >= 0 &&
-    counts.every(
-      (count) =>
-        typeof count === "number" && Number.isSafeInteger(count) && count >= 0,
-    ) &&
+    normalizedSourceBytes === originalSourceBytes - lineEndings.crlf &&
+    lineEndingCount <= normalizedSourceBytes &&
     lineEndings.kind === expectedKind &&
-    typeof identity.hasFinalNewline === "boolean"
+    typeof identity.hasFinalNewline === "boolean" &&
+    (!identity.hasFinalNewline || lineEndingCount > 0)
   )
 }
 
@@ -1299,6 +1307,39 @@ const attestCandidateArtifactV117 = (
   }
 }
 
+const finalizeCandidateCompileResultV117 = (
+  compiled: DeclaredWasmCompileResult<typeof CANDIDATE_WASM_ARTIFACT_ABI_V117>,
+  source: string,
+  language: "Rust" | "Zig",
+): WasmWasiCandidateCompileResultV117 => {
+  if (!compiled.ok || compiled.artifact === undefined) {
+    return {
+      ok: false,
+      errors: compiled.errors,
+      forbiddenPatterns: compiled.forbiddenPatterns,
+    }
+  }
+  const artifact = attestCandidateArtifactV117(compiled.artifact, source)
+  if (artifact.bytes > STRATEGY_WASM_ARTIFACT_BYTES) {
+    return {
+      ok: false,
+      forbiddenPatterns: compiled.forbiddenPatterns,
+      errors: [
+        issue(
+          "SOURCE_TOO_LARGE",
+          `Attested ${language} WASM artifact exceeds the artifact byte cap.`,
+          {
+            constraint: `Attested WASM artifacts must be ${STRATEGY_WASM_ARTIFACT_BYTES} bytes or less.`,
+            remediation: "Reduce the Strategy or compile helper footprint.",
+            reference: "runtime/limits",
+          },
+        ),
+      ],
+    }
+  }
+  return { ...compiled, artifact }
+}
+
 export const compileRustWasmArtifactV117 = (
   source: string,
 ): WasmWasiCandidateCompileResultV117 => {
@@ -1306,16 +1347,7 @@ export const compileRustWasmArtifactV117 = (
     source,
     CANDIDATE_WASM_ARTIFACT_ABI_V117,
   )
-  return !compiled.ok || compiled.artifact === undefined
-    ? {
-        ok: false,
-        errors: compiled.errors,
-        forbiddenPatterns: compiled.forbiddenPatterns,
-      }
-    : {
-        ...compiled,
-        artifact: attestCandidateArtifactV117(compiled.artifact, source),
-      }
+  return finalizeCandidateCompileResultV117(compiled, source, "Rust")
 }
 
 export const compileZigWasmArtifactV117 = (
@@ -1325,16 +1357,7 @@ export const compileZigWasmArtifactV117 = (
     source,
     CANDIDATE_WASM_ARTIFACT_ABI_V117,
   )
-  return !compiled.ok || compiled.artifact === undefined
-    ? {
-        ok: false,
-        errors: compiled.errors,
-        forbiddenPatterns: compiled.forbiddenPatterns,
-      }
-    : {
-        ...compiled,
-        artifact: attestCandidateArtifactV117(compiled.artifact, source),
-      }
+  return finalizeCandidateCompileResultV117(compiled, source, "Zig")
 }
 
 const buildWasmWasiCandidateRevisionV117 = (

@@ -625,6 +625,9 @@ describe("WASM/WASI runtime v1.17 candidate host authority", () => {
 
   it("rejects an attested artifact above the canonical byte cap before execution", () => {
     const artifact = revision.metadata.compiledArtifact
+    if (artifact.bytesBase64 === undefined) {
+      throw new Error("Candidate artifact bytes are missing")
+    }
     const originalBytes = Buffer.from(artifact.bytesBase64, "base64")
     const oversizedBytes = appendWasmPaddingSection(
       originalBytes,
