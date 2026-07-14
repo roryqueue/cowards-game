@@ -535,6 +535,34 @@ describe("Python subprocess Strategy provider ABI", () => {
     }
   })
 
+  it("owns a real guest-entry wall overrun as a proven TIMEOUT", () => {
+    const source = `def select_activations(input):\n    while True:\n        pass\n\ndef soldier_brain(input):\n    return {"action": {"type": "TURN_TO_STONE"}, "soldierMemory": None}\n`
+    const revision = buildPythonStrategyRevision({ source })
+    const request = candidateRequest(revision, { wallMilliseconds: 20 })
+    const host = runPythonCandidateHostV117(
+      request,
+      buildPythonSourceIdentityV117(source).normalizedSource,
+    )
+    expect(host.kind).toBe("strategy_timeout")
+
+    const response = verifyRuntimeInvocationResponseV117(
+      createPythonCandidateInvocationAdapterV117({
+        revision,
+        identity: candidateIdentity,
+      })(serializeRuntimeInvocationRequestV117(request)),
+      request,
+      candidateIdentity,
+    )
+    expect(response.kind).toBe("success")
+    if (response.kind === "success") {
+      expect(response.value.outcome).toMatchObject({
+        kind: "player_violation",
+        violation: { code: "TIMEOUT" },
+      })
+      expect(response.value.outcome).not.toHaveProperty("failure")
+    }
+  })
+
   it("accepts a near-cap raw host payload without base64-envelope ENOBUFS drift", () => {
     const source = `def select_activations(input):\n    return {"activationOrders": [], "strategyMemory": "x" * 249900}\n\ndef soldier_brain(input):\n    return {"action": {"type": "TURN_TO_STONE"}, "soldierMemory": None}\n`
     const revision = buildPythonStrategyRevision({ source })

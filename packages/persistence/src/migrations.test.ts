@@ -199,10 +199,14 @@ describe("migrations", () => {
 describeDatabase("source identity hardening migration upgrade", () => {
   it("applies 0019 when 0018 is already recorded and hardens legacy rows", async () => {
     const schema = `phase258_0019_${randomUUID().replaceAll("-", "")}`
-    const pool = new Pool({ connectionString: databaseUrl!, max: 1 })
+    const admin = new Pool({ connectionString: databaseUrl!, max: 1 })
+    await admin.query(`create schema ${schema}`)
+    const pool = new Pool({
+      connectionString: databaseUrl!,
+      max: 1,
+      options: `-c search_path=${schema}`,
+    })
     try {
-      await pool.query(`create schema ${schema}`)
-      await pool.query(`set search_path to ${schema}`)
       await pool.query(`
         create table strategy_revisions (
           id text primary key,
@@ -286,7 +290,12 @@ describeDatabase("source identity hardening migration upgrade", () => {
       ).rejects.toThrow(/immutable/iu)
       await expect(
         pool.query(
-          `insert into strategy_revisions values (
+          `insert into strategy_revisions (
+             id, source, source_identity_version, original_source_hash,
+             original_source_bytes, normalized_source_hash,
+             normalized_source_bytes, source_normalization_policy,
+             source_line_endings, source_has_final_newline
+           ) values (
              'bad', 'a\\nb', 'strategy-source-identity-v2', $1, 4, $2, 4,
              'source-line-endings-lf-v1.17',
              '{"kind":"lf","lf":0,"crlf":0,"cr":0,"extra":1}'::jsonb,
@@ -296,9 +305,9 @@ describeDatabase("source identity hardening migration upgrade", () => {
         ),
       ).rejects.toThrow(/source_identity_v2_shape/iu)
     } finally {
-      await pool.query("set search_path to public")
-      await pool.query(`drop schema if exists ${schema} cascade`)
       await pool.end()
+      await admin.query(`drop schema if exists ${schema} cascade`)
+      await admin.end()
     }
   })
 })

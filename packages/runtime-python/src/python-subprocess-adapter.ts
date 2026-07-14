@@ -56,7 +56,9 @@ export { pythonExperimentalRuntimeMetadata }
 export type PythonCandidateHostResultV117 =
   | { readonly kind: "payload"; readonly payloadBytes: Uint8Array }
   | { readonly kind: "invalid_output" }
+  | { readonly kind: "oversized_output" }
   | { readonly kind: "strategy_exception" }
+  | { readonly kind: "strategy_timeout" }
   | { readonly kind: "host_crash" }
   | { readonly kind: "transport_crash" }
   | { readonly kind: "preflight_unavailable" }
@@ -83,7 +85,11 @@ const candidateTrace = (
   budgetProfileSha256: request.budget.profileSha256,
   inputSha256: request.input.canonicalSha256,
   retryIdentitySha256: request.retry.identitySha256,
-  safeCodes,
+  safeCodes: [
+    ...safeCodes,
+    "COMPUTE_METER_UNAVAILABLE",
+    "MEMORY_METER_UNAVAILABLE",
+  ],
 })
 
 const pythonCandidateSystemFailure = (
@@ -108,7 +114,11 @@ const pythonCandidateSystemFailure = (
 const pythonCandidatePlayerViolation = (
   request: AuthenticatedRuntimeInvocationRequestV117,
   requestBytes: Uint8Array,
-  code: "INVALID_OUTPUT" | "OVERSIZED_OUTPUT" | "THROWN_EXCEPTION",
+  code:
+    | "INVALID_OUTPUT"
+    | "OVERSIZED_OUTPUT"
+    | "THROWN_EXCEPTION"
+    | "TIMEOUT",
 ): RuntimeInvocationResultV117 => ({
   kind: "player_violation",
   violation: RUNTIME_INVOCATION_V1_17_PLAYER_VIOLATIONS[code],
@@ -129,13 +139,39 @@ export const admitPythonCandidateHostResponseV117 = (
     return { kind: "transport_crash" }
   }
   const envelope = admitted.value as Record<string, JsonValue>
-  if (envelope.kind === "strategy_exception") {
+  const keys = Object.keys(envelope)
+  if (
+    keys.length === 1 &&
+    keys[0] === "kind" &&
+    envelope.kind === "strategy_exception"
+  ) {
     return { kind: "strategy_exception" }
   }
-  if (envelope.kind === "invalid_output") {
+  if (
+    keys.length === 1 &&
+    keys[0] === "kind" &&
+    envelope.kind === "invalid_output"
+  ) {
     return { kind: "invalid_output" }
   }
   if (
+    keys.length === 1 &&
+    keys[0] === "kind" &&
+    envelope.kind === "oversized_output"
+  ) {
+    return { kind: "oversized_output" }
+  }
+  if (
+    keys.length === 1 &&
+    keys[0] === "kind" &&
+    envelope.kind === "strategy_timeout"
+  ) {
+    return { kind: "strategy_timeout" }
+  }
+  if (
+    keys.length !== 2 ||
+    keys[0] !== "kind" ||
+    keys[1] !== "payloadBase64" ||
     envelope.kind !== "payload" ||
     typeof envelope.payloadBase64 !== "string"
   ) {
@@ -166,10 +202,20 @@ export const runPythonCandidateHostV117 = (
         bytes: Buffer.byteLength(normalizedSource),
       },
       input: request.input.value,
+      budget: {
+        wallMilliseconds: request.budget.wallMilliseconds,
+        outputBytes: request.budget.outputBytes,
+        computeFuel: request.budget.computeFuel,
+        memoryBytes: request.budget.memoryBytes,
+        computeEnforcement: "unavailable",
+        memoryEnforcement: "unavailable",
+      },
     }),
     env: PYTHON_RUNTIME_ENVIRONMENT,
     shell: false,
-    timeout: request.budget.wallMilliseconds,
+    // Infrastructure watchdog only. The signed wall budget begins immediately
+    // before the Strategy method inside the Python host and is classified there.
+    timeout: 30_000,
     maxBuffer: Math.ceil((request.budget.outputBytes * 4) / 3) + 64 * 1024,
   })
   if (result.error || result.signal || result.status !== 0) {
@@ -326,6 +372,18 @@ export const createPythonCandidateInvocationAdapterV117 =
             request,
             requestBytes,
             "THROWN_EXCEPTION",
+          )
+        } else if (host.kind === "strategy_timeout") {
+          outcome = pythonCandidatePlayerViolation(
+            request,
+            requestBytes,
+            "TIMEOUT",
+          )
+        } else if (host.kind === "oversized_output") {
+          outcome = pythonCandidatePlayerViolation(
+            request,
+            requestBytes,
+            "OVERSIZED_OUTPUT",
           )
         } else if (host.kind === "invalid_output") {
           outcome = pythonCandidatePlayerViolation(

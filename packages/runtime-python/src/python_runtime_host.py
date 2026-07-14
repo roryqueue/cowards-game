@@ -3,6 +3,7 @@ import json
 import hashlib
 import base64
 import math
+import signal
 import sys
 
 ABI_VERSION = "strategy-runtime-abi-v1.14"
@@ -45,36 +46,130 @@ def canonical_float(value):
     return ("-" if negative else "") + normalized_mantissa + "e" + str(exponent)
 
 
-class CanonicalJsonEncoder(json.JSONEncoder):
-    def iterencode(self, value, _one_shot=False):
-        markers = {} if self.check_circular else None
-        encoder = (
-            json.encoder.encode_basestring_ascii
-            if self.ensure_ascii
-            else json.encoder.encode_basestring
-        )
-        iterator = json.encoder._make_iterencode(
-            markers,
-            self.default,
-            encoder,
-            self.indent,
-            canonical_float,
-            self.key_separator,
-            self.item_separator,
-            self.sort_keys,
-            self.skipkeys,
-            _one_shot,
-        )
-        return iterator(value, 0)
+class OutputLimitExceeded(Exception):
+    pass
 
 
-def canonical_json_bytes(value):
-    return CanonicalJsonEncoder(
-        allow_nan=False,
-        ensure_ascii=False,
-        separators=(",", ":"),
-        sort_keys=True,
-    ).encode(value).encode("utf-8")
+class InvalidCanonicalOutput(Exception):
+    pass
+
+
+class GuestWallExceeded(BaseException):
+    pass
+
+
+class BoundedCanonicalJsonWriter:
+    MAX_DEPTH = 64
+    MAX_NODES = 262_144
+    MAX_ARRAY_ENTRIES = 65_536
+    MAX_OBJECT_ENTRIES = 65_536
+
+    def __init__(self, output_limit):
+        self.output_limit = output_limit
+        self.output = bytearray()
+        self.nodes = 0
+        self.active_containers = set()
+
+    def append(self, value):
+        if len(self.output) + len(value) > self.output_limit:
+            raise OutputLimitExceeded()
+        self.output.extend(value)
+
+    def write_string(self, value):
+        self.append(b'"')
+        for character in value:
+            unit = ord(character)
+            if 0xD800 <= unit <= 0xDFFF:
+                raise InvalidCanonicalOutput()
+            escape = {
+                0x22: b'\\"',
+                0x5C: b"\\\\",
+                0x08: b"\\b",
+                0x0C: b"\\f",
+                0x0A: b"\\n",
+                0x0D: b"\\r",
+                0x09: b"\\t",
+            }.get(unit)
+            if escape is not None:
+                self.append(escape)
+            elif unit < 0x20:
+                self.append(("\\u" + format(unit, "04x")).encode("ascii"))
+            else:
+                self.append(character.encode("utf-8"))
+        self.append(b'"')
+
+    def enter_container(self, value, depth, maximum_entries):
+        if depth >= self.MAX_DEPTH or len(value) > maximum_entries:
+            raise InvalidCanonicalOutput()
+        identity = id(value)
+        if identity in self.active_containers:
+            raise InvalidCanonicalOutput()
+        self.active_containers.add(identity)
+        return identity
+
+    def write(self, value, depth=0):
+        self.nodes += 1
+        if self.nodes > self.MAX_NODES:
+            raise InvalidCanonicalOutput()
+        if value is None:
+            self.append(b"null")
+        elif value is True:
+            self.append(b"true")
+        elif value is False:
+            self.append(b"false")
+        elif type(value) is int:
+            if value < -9_007_199_254_740_991 or value > 9_007_199_254_740_991:
+                raise InvalidCanonicalOutput()
+            self.append(str(value).encode("ascii"))
+        elif type(value) is float:
+            self.append(canonical_float(value).encode("ascii"))
+        elif type(value) is str:
+            self.write_string(value)
+        elif type(value) in (list, tuple):
+            identity = self.enter_container(value, depth, self.MAX_ARRAY_ENTRIES)
+            try:
+                self.append(b"[")
+                for index, item in enumerate(value):
+                    if index:
+                        self.append(b",")
+                    self.write(item, depth + 1)
+                self.append(b"]")
+            finally:
+                self.active_containers.remove(identity)
+        elif type(value) is dict:
+            identity = self.enter_container(value, depth, self.MAX_OBJECT_ENTRIES)
+            try:
+                entries = []
+                for key, item in value.items():
+                    if type(key) is not str:
+                        raise InvalidCanonicalOutput()
+                    try:
+                        sort_key = key.encode("utf-8")
+                    except UnicodeEncodeError:
+                        raise InvalidCanonicalOutput()
+                    entries.append((sort_key, key, item))
+                entries.sort(key=lambda entry: entry[0])
+                self.append(b"{")
+                for index, (_sort_key, key, item) in enumerate(entries):
+                    if index:
+                        self.append(b",")
+                    self.write_string(key)
+                    self.append(b":")
+                    self.write(item, depth + 1)
+                self.append(b"}")
+            finally:
+                self.active_containers.remove(identity)
+        else:
+            raise InvalidCanonicalOutput()
+
+    def bytes(self):
+        return bytes(self.output)
+
+
+def bounded_canonical_json_bytes(value, output_limit):
+    writer = BoundedCanonicalJsonWriter(output_limit)
+    writer.write(value)
+    return writer.bytes()
 
 
 def failure(kind, code, message, public_message):
@@ -92,7 +187,44 @@ def failure(kind, code, message, public_message):
 
 
 def candidate_main(envelope):
+    if set(envelope.keys()) != {
+        "abiVersion",
+        "hostProtocol",
+        "methodName",
+        "source",
+        "input",
+        "budget",
+    }:
+        sys.stdout.write('{"kind":"host_failure"}')
+        return 0
     source_info = envelope.get("source", {})
+    budget = envelope.get("budget", {})
+    if (
+        type(source_info) is not dict
+        or set(source_info.keys()) != {"text", "hash", "bytes"}
+        or type(budget) is not dict
+        or set(budget.keys()) != {
+            "wallMilliseconds",
+            "outputBytes",
+            "computeFuel",
+            "memoryBytes",
+            "computeEnforcement",
+            "memoryEnforcement",
+        }
+        or type(budget.get("wallMilliseconds")) is not int
+        or budget["wallMilliseconds"] <= 0
+        or type(budget.get("outputBytes")) is not int
+        or budget["outputBytes"] < 0
+        or type(budget.get("computeFuel")) is not int
+        or budget["computeFuel"] < 0
+        or type(budget.get("memoryBytes")) is not int
+        or budget["memoryBytes"] < 0
+        or budget.get("computeEnforcement") != "unavailable"
+        or budget.get("memoryEnforcement") != "unavailable"
+        or envelope.get("methodName") not in ("selectActivations", "soldierBrain")
+    ):
+        sys.stdout.write('{"kind":"host_failure"}')
+        return 0
     source = source_info.get("text")
     if not isinstance(source, str):
         sys.stdout.write(json.dumps({"kind": "host_failure"}, separators=(",", ":"), sort_keys=True))
@@ -127,18 +259,35 @@ def candidate_main(envelope):
             if envelope.get("methodName") == "selectActivations"
             else "soldier_brain"
         )
-        result = namespace[function_name](envelope.get("input"))
     except Exception:
-        sys.stdout.write(
-            json.dumps(
-                {"kind": "strategy_exception"},
-                separators=(",", ":"),
-                sort_keys=True,
-            )
-        )
+        sys.stdout.write('{"kind":"host_failure"}')
+        return 0
+
+    guest_wall_exceeded = False
+
+    def guest_wall_handler(_signal_number, _frame):
+        nonlocal guest_wall_exceeded
+        guest_wall_exceeded = True
+        raise GuestWallExceeded()
+
+    previous_handler = signal.signal(signal.SIGALRM, guest_wall_handler)
+    signal.setitimer(signal.ITIMER_REAL, budget["wallMilliseconds"] / 1000)
+    try:
+        result = namespace[function_name](envelope.get("input"))
+    except GuestWallExceeded:
+        sys.stdout.write('{"kind":"strategy_timeout"}')
+        return 0
+    except Exception:
+        sys.stdout.write('{"kind":"strategy_exception"}')
+        return 0
+    finally:
+        signal.setitimer(signal.ITIMER_REAL, 0)
+        signal.signal(signal.SIGALRM, previous_handler)
+    if guest_wall_exceeded:
+        sys.stdout.write('{"kind":"strategy_timeout"}')
         return 0
     try:
-        payload = canonical_json_bytes(result)
+        payload = bounded_canonical_json_bytes(result, budget["outputBytes"])
         sys.stdout.write(
             json.dumps(
                 {
@@ -149,14 +298,10 @@ def candidate_main(envelope):
                 sort_keys=True,
             )
         )
+    except OutputLimitExceeded:
+        sys.stdout.write('{"kind":"oversized_output"}')
     except Exception:
-        sys.stdout.write(
-            json.dumps(
-                {"kind": "invalid_output"},
-                separators=(",", ":"),
-                sort_keys=True,
-            )
-        )
+        sys.stdout.write('{"kind":"invalid_output"}')
     return 0
 
 
