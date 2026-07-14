@@ -5,15 +5,15 @@ milestone_name: Rules Integrity and Strategy Evaluation Foundations — ACTIVE
 current_phase: 258
 current_phase_name: canonical-json-failure-semantics-and-artifact-identity
 status: in_progress
-stopped_at: Completed 258-08-PLAN.md; ready for remaining language adapter migration
-last_updated: "2026-07-14T15:31:06.000Z"
+stopped_at: Completed 258-10-PLAN.md; Python Plan 09 remains in progress
+last_updated: "2026-07-14T15:40:00.000Z"
 last_activity: 2026-07-14
-last_activity_desc: Phase 258 Plan 08 unified TypeScript successor adapters completed; v1.14 behavior and v1.16 proof bytes unchanged
+last_activity_desc: Phase 258 Plan 10 migrated Rust and Zig to host-owned raw payloads with exact fail-closed identity
 progress:
   total_phases: 6
   completed_phases: 2
   total_plans: 55
-  completed_plans: 48
+  completed_plans: 49
   percent: 33
 ---
 
@@ -29,9 +29,9 @@ See: `.planning/PROJECT.md` (updated 2026-07-12)
 ## Current Position
 
 Phase: 258 (canonical-json-failure-semantics-and-artifact-identity) — IN PROGRESS
-Plan: 8 of 14
-Status: Plan 08 complete; TypeScript worker/subprocess/container successor bridge green
-Last activity: 2026-07-14 — Completed Plan 258-08 TypeScript raw ABI migration
+Plan: 10 of 14
+Status: Plan 10 complete; Rust/Zig/WASM candidate host authority and exact identity green
+Last activity: 2026-07-14 — Completed Plan 258-10 Rust/Zig/WASM candidate migration
 
 Progress: [███░░░░░░░] 33%
 
@@ -61,8 +61,8 @@ Progress: [███░░░░░░░] 33%
 
 **Resume file:** None
 
-Last session: 2026-07-14T15:08:59.000Z
-Stopped at: Completed 258-08-PLAN.md; ready for remaining language adapter migration
+Last session: 2026-07-14T15:40:00.000Z
+Stopped at: Completed 258-10-PLAN.md; Python Plan 09 remains in progress
 Next command: `$gsd-execute-phase 258`
 
 ## Performance Metrics
@@ -101,8 +101,14 @@ Next command: `$gsd-execute-phase 258`
 | Phase 258 P05 | 22min | 2 tasks + review | 10 implementation/test/audit files |
 | Phase 258 P07 | 46min | 2 tasks + review | 9 implementation/test files |
 | Phase 258 P08 | 19min | 1 task + 3 review loops | 10 runtime/test files |
+| Phase 258 P10 | 22min | 2 tasks + review | 6 runtime/evaluator/fixture files |
 
 ## Decisions
+
+- [Phase 258]: Rust and Zig guests emit only raw canonical method payloads; the WASM/WASI host owns the authenticated outer response and every failure classification. — Guest code cannot mint transport authority or blame infrastructure faults on a player.
+- [Phase 258]: Expected compiler, artifact, target, flags, sysroot, Wasmtime, adapter, settings, and containment identity is compared with a fresh exact observation before guest startup. — Stale artifact/toolchain/runtime/settings bindings fail closed as system failures and never reach gameplay.
+- [Phase 258]: Proven Strategy traps and fuel, memory, or output exhaustion are player-owned; generic traps, unavailable accounting, host faults, and transport faults are system-owned. — Positive attribution is required for a penalty, and incomparable or unavailable meters keep Rust/Zig uncertified.
+- [Phase 258]: The v1.17 Rust/Zig fixture has schema-identical request/payload/result/budget fields and no production trusted producer. — Real local contract probes do not promote a lane to counted use or rewrite v1.14/v1.22 evidence.
 
 - [Phase 258]: TypeScript worker, subprocess, and container successors share one host-only authenticated bridge; guest code receives source, method, input, and budgets but never signing material. — No guest or transport can mint adapter authority, and all three paths produce the same exclusive result and safe trace.
 - [Phase 258]: The adapter hashes the exact executable UTF-8 bytes against the authenticated artifact identity before guest startup. — Signed metadata cannot authorize different resolved code, and mismatch is a zero-invocation system failure.
