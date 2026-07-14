@@ -1,12 +1,20 @@
+import type { SpawnSyncReturns } from "node:child_process"
+import { readFileSync } from "node:fs"
+import path from "node:path"
 import { describe, expect, it } from "vitest"
-import type {
-  AwarenessCell,
-  RuntimeViolationType,
-  SoldierBrainInput,
-  SoldierSnapshot,
-  StrategyInput,
-  StrategyRevision,
-  StrategyRevisionValidationCode,
+import {
+  RUNTIME_INVOCATION_V1_17_TEST_KEY_ID,
+  verifyRuntimeInvocationRequestV117,
+  verifyRuntimeInvocationResponseV117,
+  type AuthenticatedRuntimeInvocationRequestV117,
+  type AwarenessCell,
+  type RuntimeViolationType,
+  type RuntimeInvocationSigningIdentityV117,
+  type SoldierBrainInput,
+  type SoldierSnapshot,
+  type StrategyInput,
+  type StrategyRevision,
+  type StrategyRevisionValidationCode,
 } from "@cowards/spec"
 import type { StrategyExecutionAdapter } from "./adapter.js"
 import { createRuntimeFromRevision } from "./executor.js"
@@ -327,6 +335,64 @@ const adapters: readonly {
   },
 ]
 
+const candidateIdentity: RuntimeInvocationSigningIdentityV117 = {
+  keyId: RUNTIME_INVOCATION_V1_17_TEST_KEY_ID,
+  secret: "fixture-only:runtime-invocation-v1.17:secret",
+}
+
+const candidateRequestBytes = readFileSync(
+  path.resolve(
+    import.meta.dirname,
+    "../../spec/artifacts/runtime-execution-service-request.v1.17.candidate.json",
+  ),
+)
+
+const admittedCandidateRequest = verifyRuntimeInvocationRequestV117(
+  candidateRequestBytes,
+  candidateIdentity,
+)
+if (admittedCandidateRequest.kind !== "success") {
+  throw new Error("candidate request fixture failed runtime-js test admission")
+}
+const expectedCandidateRequest =
+  admittedCandidateRequest.value as AuthenticatedRuntimeInvocationRequestV117
+
+type CandidateAdapter = StrategyExecutionAdapter & {
+  executeV117(input: {
+    requestBytes: Uint8Array
+    executableSource: string
+    signingIdentity: RuntimeInvocationSigningIdentityV117
+  }): Uint8Array
+}
+
+const executeCandidate = (
+  stdout: string,
+  resultOverrides: Partial<SpawnSyncReturns<string>> = {},
+) => {
+  const adapter = createSubprocessStrategyExecutionAdapter({
+    spawnSync: () =>
+      ({
+        pid: 123,
+        output: ["", stdout, ""],
+        stdout,
+        stderr: "",
+        status: 0,
+        signal: null,
+        ...resultOverrides,
+      }) as SpawnSyncReturns<string>,
+  }) as CandidateAdapter
+  const responseBytes = adapter.executeV117({
+    requestBytes: Uint8Array.from(candidateRequestBytes),
+    executableSource: validSource,
+    signingIdentity: candidateIdentity,
+  })
+  return verifyRuntimeInvocationResponseV117(
+    responseBytes,
+    expectedCandidateRequest,
+    candidateIdentity,
+  )
+}
+
 describe("hostile Strategy matrix", () => {
   it.each(hostileCases)(
     "validation posture is explicit for $label",
@@ -382,4 +448,67 @@ describe("hostile Strategy matrix", () => {
       })
     })
   }
+
+  describe("v1.17 hostile raw-byte ownership", () => {
+    it("classifies duplicate payload keys as one redacted player violation", () => {
+      const result = executeCandidate(
+        'S{"activationOrders":[],"strategyMemory":{},"strategyMemory":{"private":"source token stderr /Users/owner"}}',
+      )
+
+      expect(result.kind).toBe("success")
+      if (result.kind !== "success") return
+      expect(result.value.outcome).toMatchObject({
+        kind: "player_violation",
+        violation: {
+          code: "INVALID_OUTPUT",
+          publicMessage: "Strategy returned an invalid payload.",
+        },
+      })
+      expect(JSON.stringify(result.value.outcome)).not.toMatch(
+        /private|source token|stderr|\/Users\/owner/iu,
+      )
+      expect(Object.keys(result.value.outcome).sort()).toEqual([
+        "kind",
+        "trace",
+        "violation",
+      ])
+    })
+
+    it("keeps malformed IPC and ambiguous host timeout system-owned", () => {
+      const malformed = executeCandidate("not-a-successor-frame")
+      const timedOut = executeCandidate("", {
+        status: null,
+        error: Object.assign(new Error("private host timeout diagnostics"), {
+          code: "ETIMEDOUT",
+        }),
+      })
+
+      for (const [label, result] of [
+        ["malformed", malformed],
+        ["timed-out", timedOut],
+      ] as const) {
+        expect(result.kind, label).toBe("success")
+        if (result.kind !== "success") continue
+        expect(result.value.outcome.kind, label).toBe("system_failure")
+        expect(JSON.stringify(result.value.outcome), label).not.toMatch(
+          /private host|diagnostics|stderr|stack|source/iu,
+        )
+        expect(Object.keys(result.value.outcome).sort(), label).toEqual([
+          "failure",
+          "kind",
+          "trace",
+        ])
+      }
+      if (timedOut.kind === "success") {
+        expect(timedOut.value.outcome).toMatchObject({
+          kind: "system_failure",
+          failure: {
+            code: "AMBIGUOUS_ATTRIBUTION",
+            publicMessage: "Runtime system failure.",
+            retryable: false,
+          },
+        })
+      }
+    })
+  })
 })

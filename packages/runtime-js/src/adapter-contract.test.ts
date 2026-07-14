@@ -1,7 +1,17 @@
 import type { SpawnSyncReturns } from "node:child_process"
+import { createHash } from "node:crypto"
 import { describe, expect, it } from "vitest"
 import type { RuntimeResult } from "@cowards/engine"
-import type { StrategyInput } from "@cowards/spec"
+import {
+  RUNTIME_INVOCATION_V1_17_TEST_KEY_ID,
+  createAuthenticatedRuntimeInvocationRequestV117,
+  serializeRuntimeInvocationRequestV117,
+  verifyRuntimeInvocationResponseV117,
+  type AuthenticatedRuntimeInvocationRequestV117,
+  type JsonValue,
+  type RuntimeInvocationSigningIdentityV117,
+  type StrategyInput,
+} from "@cowards/spec"
 import type { StrategyExecutionAdapter } from "./adapter.js"
 import {
   activeStrategyExecutionAdapter,
@@ -16,6 +26,7 @@ import { buildStrategyRevision } from "./revision.js"
 import { hashStrategySource } from "./hash.js"
 import { createSubprocessStrategyExecutionAdapter } from "./subprocess-adapter.js"
 import { SubprocessSystemFailure } from "./subprocess-ipc.js"
+import { createContainerSubprocessStrategyExecutionAdapter } from "./container-subprocess-adapter.js"
 
 const validStrategySource = `
 export default {
@@ -83,6 +94,97 @@ const runtimeInput: StrategyInput = {
   ],
   enemySoldiers: [],
   strategyMemory: {},
+}
+
+const candidateIdentity: RuntimeInvocationSigningIdentityV117 = {
+  keyId: RUNTIME_INVOCATION_V1_17_TEST_KEY_ID,
+  secret: "fixture-only:runtime-js-v1.17:host-secret",
+}
+
+const sha256 = (bytes: Uint8Array): `sha256:${string}` =>
+  `sha256:${createHash("sha256").update(bytes).digest("hex")}`
+
+const candidateRequest = (
+  overrides: Partial<{
+    outputBytes: number
+    input: StrategyInput
+  }> = {},
+): AuthenticatedRuntimeInvocationRequestV117 =>
+  createAuthenticatedRuntimeInvocationRequestV117(
+    {
+      requestId: "request:runtime-js:v1.17:0001",
+      invocationId: "invocation:runtime-js:v1.17:0001",
+      kernelRequestId: "kernel-request:runtime-js:v1.17:0001",
+      method: "selectActivations",
+      semanticTuple: {
+        rules: "cowards-rules-v1.4",
+        engine: "engine-kernel-v1.37-candidate-1",
+        runtimeAbi: "strategy-runtime-abi-v1.17",
+        chronicle: "chronicle-recorder-current-events-v1.37-candidate-1",
+        arenaCatalog: "semantic-arena-catalog-v1.37-candidate-1",
+        setPolicy: "canonical-set-policy-v1.4",
+      },
+      sourceIdentity: {
+        strategyRevisionId: "strategy-revision:runtime-js:v1.17:bottom",
+        originalSourceSha256: sha256(new TextEncoder().encode(validStrategySource)),
+        normalizedSourceSha256: sha256(
+          new TextEncoder().encode(validStrategySource),
+        ),
+        artifactSha256: sha256(new TextEncoder().encode(transpiledSource())),
+      },
+      budget: {
+        profileId: "runtime-budget-profile-v1.17-candidate",
+        wallMilliseconds: 1_000,
+        computeFuel: 10_000_000,
+        memoryBytes: 67_108_864,
+        outputBytes: overrides.outputBytes ?? 262_144,
+        processLimit: 1,
+        matchCumulative: {
+          invocationCountMaximum: 260,
+          wallMilliseconds: 13_000,
+          computeFuel: 2_600_000_000,
+          payloadBytes: 68_157_440,
+          stdoutBytes: 68_157_440,
+          stderrBytes: 17_039_360,
+          memoryBytes: 67_108_864,
+          accounting:
+            "signed-monotonic-per-invocation-deltas-plus-cumulative-total",
+          overflow:
+            "stop-before-next-invocation-and-classify-by-proven-cause",
+        },
+      },
+      input: { value: (overrides.input ?? runtimeInput) as unknown as JsonValue },
+      retry: {
+        retryId: "retry:runtime-js:v1.17:0001",
+        attempt: 0,
+        previousRequestSha256: null,
+      },
+    },
+    candidateIdentity,
+  )
+
+type CandidateAdapter = {
+  executeV117(input: {
+    requestBytes: Uint8Array
+    executableSource: string
+    signingIdentity: RuntimeInvocationSigningIdentityV117
+  }): Uint8Array
+}
+
+const executeCandidate = (
+  adapter: StrategyExecutionAdapter,
+  request = candidateRequest(),
+) => {
+  const responseBytes = (adapter as unknown as CandidateAdapter).executeV117({
+    requestBytes: serializeRuntimeInvocationRequestV117(request),
+    executableSource: transpiledSource(),
+    signingIdentity: candidateIdentity,
+  })
+  return verifyRuntimeInvocationResponseV117(
+    responseBytes,
+    request,
+    candidateIdentity,
+  )
 }
 
 const invalidOutputStrategySource = `
@@ -467,5 +569,116 @@ export default {
     } catch (error) {
       expect((error as SubprocessSystemFailure).code).toBe("MALFORMED_IPC")
     }
+  })
+
+  describe("inactive v1.17 authenticated raw-byte contract", () => {
+    const successFrame = `S${JSON.stringify({
+      activationOrders: [
+        { soldierId: "bottom-1", objective: { target: "bottom-1" } },
+      ],
+      strategyMemory: { adapter: "worker-thread" },
+    })}`
+
+    const candidateAdapters = (): readonly {
+      label: string
+      adapter: StrategyExecutionAdapter
+    }[] => [
+      {
+        label: "worker-thread",
+        adapter: createWorkerThreadStrategyExecutionAdapter(),
+      },
+      {
+        label: "subprocess",
+        adapter: createSubprocessStrategyExecutionAdapter(),
+      },
+      {
+        label: "container",
+        adapter: createContainerSubprocessStrategyExecutionAdapter({
+          spawnSync: () =>
+            ({
+              pid: 123,
+              output: ["", successFrame, ""],
+              stdout: successFrame,
+              stderr: "",
+              status: 0,
+              signal: null,
+            }) as SpawnSyncReturns<string>,
+        }),
+      },
+    ]
+
+    it("produces one authenticated byte-identical success across every TypeScript path", () => {
+      const results = candidateAdapters().map(({ label, adapter }) => ({
+        label,
+        result: executeCandidate(adapter),
+      }))
+
+      for (const { label, result } of results) {
+        expect(result.kind, label).toBe("success")
+        if (result.kind !== "success") continue
+        expect(result.value.outcome, label).toEqual({
+          kind: "success",
+          value: {
+            activationOrders: [
+              {
+                soldierId: "bottom-1",
+                objective: { target: "bottom-1" },
+              },
+            ],
+            strategyMemory: { adapter: "worker-thread" },
+          },
+          trace: expect.objectContaining({
+            requestId: "request:runtime-js:v1.17:0001",
+            method: "selectActivations",
+            safeCodes: [
+              "ADAPTER_AUTHENTICATED",
+              "OUTER_BINDINGS_VERIFIED",
+              "PAYLOAD_CANONICAL",
+              "PAYLOAD_SCHEMA_VALID",
+            ],
+          }),
+        })
+        expect(Object.keys(result.value.outcome).sort(), label).toEqual([
+          "kind",
+          "trace",
+          "value",
+        ])
+      }
+      expect(
+        results.map(({ result }) =>
+          result.kind === "success"
+            ? result.value.outcome.trace
+            : result.trace,
+        ),
+      ).toEqual([
+        results[0]?.result.kind === "success"
+          ? results[0].result.value.outcome.trace
+          : results[0]?.result.trace,
+        results[0]?.result.kind === "success"
+          ? results[0].result.value.outcome.trace
+          : results[0]?.result.trace,
+        results[0]?.result.kind === "success"
+          ? results[0].result.value.outcome.trace
+          : results[0]?.result.trace,
+      ])
+    })
+
+    it("keeps the signing secret in the host bridge and out of both guest harnesses", async () => {
+      const workerHarness = await import("./worker-harness.js")
+      const subprocessHarness = await import("./subprocess-harness.js")
+      const successorSources = [
+        (workerHarness as Record<string, unknown>).WORKER_HARNESS_V117_SOURCE,
+        (subprocessHarness as Record<string, unknown>)
+          .SUBPROCESS_HARNESS_V117_SOURCE,
+      ]
+
+      expect(successorSources.every((source) => typeof source === "string")).toBe(
+        true,
+      )
+      for (const source of successorSources) {
+        expect(source).not.toContain(candidateIdentity.secret)
+        expect(source).not.toMatch(/hmac|signingIdentity|signature/iu)
+      }
+    })
   })
 })
