@@ -34,7 +34,7 @@ describe("canonical runtime identity manifest", () => {
     })
     expect(parsed.ok).toBe(true)
     if (parsed.ok) {
-      const value = parsed.value as { bindings: readonly unknown[] }
+      const value = parsed.value as unknown as { bindings: readonly unknown[] }
       expect(value.bindings).toHaveLength(15)
     }
   })
