@@ -704,7 +704,7 @@ const snapshotCanonicalRows = async (pool: Pool) => {
     )
     snapshot[tablename] = result.rows[0]!.snapshot
   }
-  return snapshot
+  return JSON.stringify(snapshot)
 }
 
 describePostgres(

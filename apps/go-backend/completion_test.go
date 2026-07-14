@@ -906,7 +906,7 @@ func (fixture *semanticCurrentAuthorityFixture) seedMatch(t *testing.T, ctx cont
 	}
 }
 
-func semanticCompletionSnapshot(t *testing.T, ctx context.Context, pool *pgxpool.Pool) map[string]any {
+func semanticCompletionSnapshot(t *testing.T, ctx context.Context, pool *pgxpool.Pool) string {
 	t.Helper()
 	rows, err := pool.Query(ctx, `
 		select tablename
@@ -947,7 +947,11 @@ func semanticCompletionSnapshot(t *testing.T, ctx context.Context, pool *pgxpool
 		}
 		snapshot[table] = tableRows
 	}
-	return snapshot
+	serialized, err := json.Marshal(snapshot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(serialized)
 }
 
 func semanticSQLLiteral(value string) string {
