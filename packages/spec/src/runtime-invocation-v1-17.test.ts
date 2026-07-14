@@ -511,7 +511,10 @@ describe("runtime invocation v1.17 authenticated candidate wire", () => {
       },
     ],
   ] as const)("rejects signed unknown nested %s keys", (_label, method, value) => {
-    const signed = signedSuccessResponseBytes(method, value)
+    const signed = signedSuccessResponseBytes(
+      method,
+      value as unknown as JsonValue,
+    )
     expect(
       verifyRuntimeInvocationResponseV117(signed.bytes, signed.request, {
         keyId: RUNTIME_INVOCATION_V1_17_TEST_KEY_ID,
