@@ -1,14 +1,17 @@
 import { Buffer } from "node:buffer"
-import { createHash } from "node:crypto"
+import { createHash, createHmac } from "node:crypto"
 import { readFileSync } from "node:fs"
 import path from "node:path"
 import { describe, expect, expectTypeOf, it } from "vitest"
 import { encodeCanonicalJson } from "./canonical-json-encode.js"
+import { frameCanonicalIdentity } from "./canonical-identity-domains.js"
 import type { JsonValue } from "./types.js"
 import {
   RUNTIME_INVOCATION_V1_17_CANDIDATE,
   RUNTIME_INVOCATION_V1_17_OWNERSHIP_MATRIX,
   RUNTIME_INVOCATION_V1_17_PLAYER_VIOLATIONS,
+  RUNTIME_INVOCATION_V1_17_SYSTEM_FAILURE_CODES,
+  RUNTIME_INVOCATION_V1_17_SYSTEM_FAILURE_RETRYABILITY,
   RUNTIME_INVOCATION_V1_17_TEST_KEY_ID,
   RuntimeInvocationResultV117Schema,
   classifyRuntimeInvocationV117,
@@ -112,6 +115,58 @@ const candidateResponse = (request = candidateRequest()) =>
     },
   )
 
+const signedSystemFailureResponseBytes = (
+  code: (typeof RUNTIME_INVOCATION_V1_17_SYSTEM_FAILURE_CODES)[number],
+  retryable: boolean,
+): Readonly<{
+  request: AuthenticatedRuntimeInvocationRequestV117
+  bytes: Uint8Array
+}> => {
+  const request = candidateRequest()
+  const valid = candidateResponse(request)
+  const { authentication: _authentication, ...validUnsigned } = valid
+  const unsigned = {
+    ...validUnsigned,
+    outcome: {
+      kind: "system_failure" as const,
+      failure: {
+        code,
+        publicMessage: "Runtime system failure." as const,
+        retryable,
+      },
+      trace: valid.outcome.trace,
+    },
+    payloadBinding: null,
+  }
+  const encodedUnsigned = encodeCanonicalJson(
+    unsigned as unknown as JsonValue,
+    {
+      context: "authenticated-outer-envelope",
+    },
+  )
+  if (!encodedUnsigned.ok) throw new Error(encodedUnsigned.error.code)
+  const signatureInput = frameCanonicalIdentity("evidenceBundle", [
+    new TextEncoder().encode("runtime-invocation-v1.17:response"),
+    encodedUnsigned.bytes,
+  ])
+  const envelope = {
+    ...unsigned,
+    authentication: {
+      algorithm: "hmac-sha256" as const,
+      keyId: RUNTIME_INVOCATION_V1_17_TEST_KEY_ID,
+      signatureInputSha256: sha256(signatureInput),
+      signature: `hmac-sha256:${createHmac("sha256", fixtureSecret)
+        .update(signatureInput)
+        .digest("hex")}` as const,
+    },
+  }
+  const encoded = encodeCanonicalJson(envelope as unknown as JsonValue, {
+    context: "authenticated-outer-envelope",
+  })
+  if (!encoded.ok) throw new Error(encoded.error.code)
+  return { request, bytes: encoded.bytes }
+}
+
 const trace = (): RuntimeInvocationTraceV117 => ({
   requestId: "request:v1.17:test",
   invocationId: "invocation:v1.17:test",
@@ -146,15 +201,24 @@ describe("runtime invocation v1.17 exclusive ownership", () => {
       strategy_exhaustion_proven: ["player_violation", "TIMEOUT"],
       outer_frame_missing: ["system_failure", "OUTER_FRAME_MISSING"],
       outer_frame_truncated: ["system_failure", "OUTER_FRAME_TRUNCATED"],
-      outer_frame_unauthenticated: ["system_failure", "OUTER_FRAME_UNAUTHENTICATED"],
-      outer_frame_wrong_binding: ["system_failure", "OUTER_FRAME_WRONG_BINDING"],
+      outer_frame_unauthenticated: [
+        "system_failure",
+        "OUTER_FRAME_UNAUTHENTICATED",
+      ],
+      outer_frame_wrong_binding: [
+        "system_failure",
+        "OUTER_FRAME_WRONG_BINDING",
+      ],
       outer_frame_undecodable: ["system_failure", "OUTER_FRAME_UNDECODABLE"],
       adapter_crash: ["system_failure", "ADAPTER_CRASH"],
       runtime_crash: ["system_failure", "RUNTIME_CRASH"],
       host_crash: ["system_failure", "HOST_CRASH"],
       transport_crash: ["system_failure", "TRANSPORT_CRASH"],
       strategy_exception_ambiguous: ["system_failure", "AMBIGUOUS_ATTRIBUTION"],
-      strategy_exhaustion_ambiguous: ["system_failure", "AMBIGUOUS_ATTRIBUTION"],
+      strategy_exhaustion_ambiguous: [
+        "system_failure",
+        "AMBIGUOUS_ATTRIBUTION",
+      ],
     } as const
     expect(Object.keys(RUNTIME_INVOCATION_V1_17_OWNERSHIP_MATRIX)).toEqual(
       Object.keys(expected),
@@ -200,9 +264,15 @@ describe("runtime invocation v1.17 exclusive ownership", () => {
       },
       trace: trace(),
     }
-    expect(RuntimeInvocationResultV117Schema.safeParse(success).success).toBe(true)
-    expect(RuntimeInvocationResultV117Schema.safeParse(player).success).toBe(true)
-    expect(RuntimeInvocationResultV117Schema.safeParse(system).success).toBe(true)
+    expect(RuntimeInvocationResultV117Schema.safeParse(success).success).toBe(
+      true,
+    )
+    expect(RuntimeInvocationResultV117Schema.safeParse(player).success).toBe(
+      true,
+    )
+    expect(RuntimeInvocationResultV117Schema.safeParse(system).success).toBe(
+      true,
+    )
 
     for (const invalid of [
       {},
@@ -223,7 +293,9 @@ describe("runtime invocation v1.17 exclusive ownership", () => {
       { ...system, failure: { ...system.failure, diagnostics: "private" } },
       { ...success, trace: { ...trace(), source: "private Strategy source" } },
     ]) {
-      expect(RuntimeInvocationResultV117Schema.safeParse(invalid).success).toBe(false)
+      expect(RuntimeInvocationResultV117Schema.safeParse(invalid).success).toBe(
+        false,
+      )
     }
   })
 
@@ -252,29 +324,107 @@ describe("runtime invocation v1.17 exclusive ownership", () => {
   })
 
   it("keeps every exported canonical ownership record deeply immutable", () => {
-    expect(Object.isFrozen(RUNTIME_INVOCATION_V1_17_OWNERSHIP_MATRIX)).toBe(true)
+    expect(Object.isFrozen(RUNTIME_INVOCATION_V1_17_OWNERSHIP_MATRIX)).toBe(
+      true,
+    )
     expect(
       Object.values(RUNTIME_INVOCATION_V1_17_OWNERSHIP_MATRIX).every((row) =>
         Object.isFrozen(row),
       ),
     ).toBe(true)
-    expect(Object.isFrozen(RUNTIME_INVOCATION_V1_17_PLAYER_VIOLATIONS)).toBe(true)
+    expect(Object.isFrozen(RUNTIME_INVOCATION_V1_17_PLAYER_VIOLATIONS)).toBe(
+      true,
+    )
     expect(
       Object.values(RUNTIME_INVOCATION_V1_17_PLAYER_VIOLATIONS).every((row) =>
         Object.isFrozen(row),
       ),
     ).toBe(true)
   })
+
+  it("freezes one complete retryability contract for every system failure code", () => {
+    expect(RUNTIME_INVOCATION_V1_17_SYSTEM_FAILURE_RETRYABILITY).toEqual({
+      OUTER_FRAME_MISSING: true,
+      OUTER_FRAME_TRUNCATED: true,
+      OUTER_FRAME_UNAUTHENTICATED: false,
+      OUTER_FRAME_WRONG_BINDING: false,
+      OUTER_FRAME_UNDECODABLE: false,
+      ADAPTER_CRASH: true,
+      RUNTIME_CRASH: true,
+      HOST_CRASH: true,
+      TRANSPORT_CRASH: true,
+      AMBIGUOUS_ATTRIBUTION: false,
+    })
+    expect(
+      Object.keys(RUNTIME_INVOCATION_V1_17_SYSTEM_FAILURE_RETRYABILITY),
+    ).toEqual([...RUNTIME_INVOCATION_V1_17_SYSTEM_FAILURE_CODES])
+    expect(
+      Object.isFrozen(RUNTIME_INVOCATION_V1_17_SYSTEM_FAILURE_RETRYABILITY),
+    ).toBe(true)
+  })
 })
 
 describe("runtime invocation v1.17 authenticated candidate wire", () => {
+  it("accepts only signed system-failure responses with exact retryability", () => {
+    for (const code of RUNTIME_INVOCATION_V1_17_SYSTEM_FAILURE_CODES) {
+      const signed = signedSystemFailureResponseBytes(
+        code,
+        RUNTIME_INVOCATION_V1_17_SYSTEM_FAILURE_RETRYABILITY[code],
+      )
+      const verified = verifyRuntimeInvocationResponseV117(
+        signed.bytes,
+        signed.request,
+        {
+          keyId: RUNTIME_INVOCATION_V1_17_TEST_KEY_ID,
+          secret: fixtureSecret,
+        },
+      )
+      expect(verified.kind, code).toBe("success")
+      if (verified.kind === "success") {
+        expect(verified.value.outcome).toMatchObject({
+          kind: "system_failure",
+          failure: {
+            code,
+            retryable:
+              RUNTIME_INVOCATION_V1_17_SYSTEM_FAILURE_RETRYABILITY[code],
+          },
+        })
+      }
+    }
+
+    for (const [code, retryable] of [
+      ["ADAPTER_CRASH", false],
+      ["OUTER_FRAME_WRONG_BINDING", true],
+      ["AMBIGUOUS_ATTRIBUTION", true],
+    ] as const) {
+      const signed = signedSystemFailureResponseBytes(code, retryable)
+      const verified = verifyRuntimeInvocationResponseV117(
+        signed.bytes,
+        signed.request,
+        {
+          keyId: RUNTIME_INVOCATION_V1_17_TEST_KEY_ID,
+          secret: fixtureSecret,
+        },
+      )
+      expect(verified, code).toMatchObject({
+        kind: "system_failure",
+        failure: {
+          code: "OUTER_FRAME_UNDECODABLE",
+          retryable: false,
+        },
+      })
+    }
+  })
+
   it("matches exact canonical request and response fixture bytes", () => {
     const request = candidateRequest()
     const response = candidateResponse(request)
     const requestBytes = serializeRuntimeInvocationRequestV117(request)
     const responseBytes = serializeRuntimeInvocationResponseV117(response)
     expect(Buffer.from(requestBytes)).toEqual(readFileSync(requestFixturePath))
-    expect(Buffer.from(responseBytes)).toEqual(readFileSync(responseFixturePath))
+    expect(Buffer.from(responseBytes)).toEqual(
+      readFileSync(responseFixturePath),
+    )
     expect(sha256(requestBytes)).toBe(
       "sha256:94da776c5ef88992d126bd85ae325518303ba56fdf8d2b5568e0e0ce28db1fd7",
     )
@@ -319,7 +469,8 @@ describe("runtime invocation v1.17 authenticated candidate wire", () => {
       if (
         responseValue.outcome.kind !== "success" ||
         responseValue.payloadBinding === null
-      ) return
+      )
+        return
       const payload = encodeCanonicalJson(responseValue.outcome.value, {
         context: "authenticated-outer-envelope",
       })
@@ -342,13 +493,10 @@ describe("runtime invocation v1.17 authenticated candidate wire", () => {
     if (missing.kind === "system_failure") {
       expect(missing.failure.code).toBe("OUTER_FRAME_MISSING")
     }
-    const undecodable = verifyRuntimeInvocationRequestV117(
-      Buffer.from("{}"),
-      {
-        keyId: RUNTIME_INVOCATION_V1_17_TEST_KEY_ID,
-        secret: fixtureSecret,
-      },
-    )
+    const undecodable = verifyRuntimeInvocationRequestV117(Buffer.from("{}"), {
+      keyId: RUNTIME_INVOCATION_V1_17_TEST_KEY_ID,
+      secret: fixtureSecret,
+    })
     expect(undecodable.kind).toBe("system_failure")
     if (undecodable.kind === "system_failure") {
       expect(undecodable.failure.code).toBe("OUTER_FRAME_UNDECODABLE")
@@ -470,7 +618,9 @@ describe("runtime invocation v1.17 authenticated candidate wire", () => {
       ...candidateRequest(),
       requestId: "private request id with spaces",
     } as AuthenticatedRuntimeInvocationRequestV117
-    let result: ReturnType<typeof verifyRuntimeInvocationResponseV117> | undefined
+    let result:
+      | ReturnType<typeof verifyRuntimeInvocationResponseV117>
+      | undefined
 
     expect(() => {
       result = verifyRuntimeInvocationResponseV117(
