@@ -1,7 +1,12 @@
 import { createHash } from "node:crypto"
 import { describe, expect, it } from "vitest"
 import {
+  RUNTIME_INVOCATION_V1_17_TEST_KEY_ID,
   RUNTIME_INVOCATION_V1_17_PLAYER_VIOLATIONS,
+  createAuthenticatedRuntimeInvocationRequestV117,
+  serializeRuntimeInvocationRequestV117,
+  type AuthenticatedRuntimeInvocationRequestV117,
+  type JsonValue,
   type RuntimeInvocationResultV117,
   type RuntimeInvocationTraceV117,
   type SoldierBrainInput,
@@ -12,6 +17,7 @@ import {
 import { MATCH_KERNEL } from "../index.js"
 import type { GameState } from "../types.js"
 import type { KernelEffectRequest } from "./types.js"
+import type { CandidateBoundRuntimeInvocationV117 } from "./types.js"
 
 const matchInput = {
   matchId: "phase-258-runtime-ownership",
@@ -31,20 +37,91 @@ const matchInput = {
 const sha256 = (value: unknown): string =>
   createHash("sha256").update(JSON.stringify(value)).digest("hex")
 
+const candidateRequestFor = (
+  request: KernelEffectRequest,
+): AuthenticatedRuntimeInvocationRequestV117 =>
+  createAuthenticatedRuntimeInvocationRequestV117(
+    {
+      requestId: "runtime-request:phase-258",
+      invocationId: `invocation:${request.requestId}`,
+      kernelRequestId: request.requestId,
+      method: request.kind,
+      semanticTuple: {
+        rules: "cowards-rules-v1.4",
+        engine: "engine-kernel-v1.37-candidate-1",
+        runtimeAbi: "strategy-runtime-abi-v1.17",
+        chronicle: "chronicle-recorder-current-events-v1.37-candidate-1",
+        arenaCatalog: "semantic-arena-catalog-v1.37-candidate-1",
+        setPolicy: "canonical-set-policy-v1.4",
+      },
+      sourceIdentity: {
+        strategyRevisionId: "strategy-revision:phase-258",
+        originalSourceSha256: `sha256:${"a".repeat(64)}`,
+        normalizedSourceSha256: `sha256:${"b".repeat(64)}`,
+        artifactSha256: `sha256:${"c".repeat(64)}`,
+      },
+      budget: {
+        profileId: "runtime-budget-profile-v1.17-candidate",
+        wallMilliseconds: 50,
+        computeFuel: 10_000_000,
+        memoryBytes: 67_108_864,
+        outputBytes: 262_144,
+        processLimit: 1,
+        matchCumulative: {
+          invocationCountMaximum: 260,
+          wallMilliseconds: 13_000,
+          computeFuel: 2_600_000_000,
+          payloadBytes: 68_157_440,
+          stdoutBytes: 68_157_440,
+          stderrBytes: 17_039_360,
+          memoryBytes: 67_108_864,
+          accounting:
+            "signed-monotonic-per-invocation-deltas-plus-cumulative-total",
+          overflow:
+            "stop-before-next-invocation-and-classify-by-proven-cause",
+        },
+      },
+      input: { value: request.input as unknown as JsonValue },
+      retry: {
+        retryId: `retry:${request.requestId}`,
+        attempt: 0,
+        previousRequestSha256: null,
+      },
+    },
+    {
+      keyId: RUNTIME_INVOCATION_V1_17_TEST_KEY_ID,
+      secret: "fixture-only:phase-258-engine-binding",
+    },
+  )
+
 const traceFor = (
   request: KernelEffectRequest,
   overrides: Partial<RuntimeInvocationTraceV117> = {},
-): RuntimeInvocationTraceV117 => ({
-  requestId: "runtime-request:phase-258",
-  invocationId: `invocation:${request.requestId}`,
-  kernelRequestId: request.requestId,
-  method: request.kind,
-  requestSha256: `sha256:${"1".repeat(64)}`,
-  budgetProfileSha256: `sha256:${"2".repeat(64)}`,
-  inputSha256: `sha256:${"3".repeat(64)}`,
-  retryIdentitySha256: `sha256:${"4".repeat(64)}`,
-  safeCodes: [],
-  ...overrides,
+): RuntimeInvocationTraceV117 => {
+  const candidate = candidateRequestFor(request)
+  return {
+    requestId: candidate.requestId,
+    invocationId: candidate.invocationId,
+    kernelRequestId: candidate.kernelRequestId,
+    method: candidate.method,
+    requestSha256: `sha256:${createHash("sha256")
+      .update(serializeRuntimeInvocationRequestV117(candidate))
+      .digest("hex")}`,
+    budgetProfileSha256: candidate.budget.profileSha256,
+    inputSha256: candidate.input.canonicalSha256,
+    retryIdentitySha256: candidate.retry.identitySha256,
+    safeCodes: [],
+    ...overrides,
+  }
+}
+
+const bindOutcome = <TValue,>(
+  request: KernelEffectRequest,
+  outcome: RuntimeInvocationResultV117<TValue>,
+): CandidateBoundRuntimeInvocationV117<TValue> => ({
+  kind: "v1_17_bound",
+  request: candidateRequestFor(request),
+  outcome,
 })
 
 const initialState = (): GameState =>
@@ -74,34 +151,34 @@ describe("Phase 258 successor runtime ownership", () => {
     )
     if (!soldier) throw new Error("missing fixture soldier")
 
-    const execution = MATCH_KERNEL.runActivationFromState({
+    const execution = MATCH_KERNEL.runActivationFromStateV117({
       state,
       soldierId: soldier.id,
       runtime: {
         selectActivations(
           _input: StrategyInput,
           request?: RuntimeRequestFor<"selectActivations">,
-        ): RuntimeInvocationResultV117<StrategyResult> {
+        ): CandidateBoundRuntimeInvocationV117<StrategyResult> {
           if (!request) throw new Error("driver omitted kernel request")
-          return {
+          return bindOutcome(request, {
             kind: "success",
             value: { activationOrders: [], strategyMemory: null },
             trace: traceFor(request),
-          }
+          })
         },
         runSoldierBrain(
           _input: SoldierBrainInput,
           request?: RuntimeRequestFor<"soldierBrain">,
-        ): RuntimeInvocationResultV117<SoldierBrainResult> {
+        ): CandidateBoundRuntimeInvocationV117<SoldierBrainResult> {
           if (!request) throw new Error("driver omitted kernel request")
-          return {
+          return bindOutcome(request, {
             kind: "success",
             value: {
               action: { type: "TURN_TO_STONE" },
               soldierMemory: { committedOnlyAfterValidation: true },
             },
             trace: traceFor(request),
-          }
+          })
         },
       },
     })
@@ -133,7 +210,7 @@ describe("Phase 258 successor runtime ownership", () => {
       })
       const observations: SoldierBrainInput[] = []
 
-      const execution = MATCH_KERNEL.runActivationFromState({
+      const execution = MATCH_KERNEL.runActivationFromStateV117({
         state,
         soldierId: soldier.id,
         runtime: {
@@ -143,15 +220,15 @@ describe("Phase 258 successor runtime ownership", () => {
           runSoldierBrain(
             input: SoldierBrainInput,
             request?: RuntimeRequestFor<"soldierBrain">,
-          ): RuntimeInvocationResultV117<SoldierBrainResult> {
+          ): CandidateBoundRuntimeInvocationV117<SoldierBrainResult> {
             if (!request) throw new Error("driver omitted kernel request")
             observations.push(globalThis.structuredClone(input))
-            return {
+            return bindOutcome(request, {
               kind: "player_violation",
               violation:
                 RUNTIME_INVOCATION_V1_17_PLAYER_VIOLATIONS.INVALID_OUTPUT,
               trace: traceFor(request, { safeCodes: [caseName.toUpperCase().replaceAll("-", "_")] }),
-            }
+            })
           },
         },
       })
@@ -193,7 +270,7 @@ describe("Phase 258 successor runtime ownership", () => {
       const before = sha256(state)
       const observations: SoldierBrainInput[] = []
 
-      const execution = MATCH_KERNEL.runActivationFromState({
+      const execution = MATCH_KERNEL.runActivationFromStateV117({
         state,
         soldierId: soldier.id,
         runtime: {
@@ -203,16 +280,20 @@ describe("Phase 258 successor runtime ownership", () => {
           runSoldierBrain(
             input: SoldierBrainInput,
             request?: RuntimeRequestFor<"soldierBrain">,
-          ): RuntimeInvocationResultV117<SoldierBrainResult> {
+          ): CandidateBoundRuntimeInvocationV117<SoldierBrainResult> {
             if (!request) throw new Error("driver omitted kernel request")
             observations.push(globalThis.structuredClone(input))
-            ;(input.soldierMemory as Record<string, unknown>).attemptMutation =
-              "must-not-reach-gameplay"
-            return {
+            expect(Object.isFrozen(input)).toBe(true)
+            expect(Object.isFrozen(input.soldierMemory)).toBe(true)
+            expect(() => {
+              ;(input.soldierMemory as Record<string, unknown>).attemptMutation =
+                "must-not-reach-gameplay"
+            }).toThrow()
+            return bindOutcome(request, {
               kind: "system_failure",
               failure: { code, publicMessage: "Runtime system failure.", retryable },
               trace: traceFor(request),
-            }
+            })
           },
         },
       })
@@ -242,7 +323,7 @@ describe("Phase 258 successor runtime ownership", () => {
     )
     if (!soldier) throw new Error("missing fixture soldier")
 
-    const execution = MATCH_KERNEL.runActivationFromState({
+    const execution = MATCH_KERNEL.runActivationFromStateV117({
       state,
       soldierId: soldier.id,
       runtime: {
@@ -252,16 +333,16 @@ describe("Phase 258 successor runtime ownership", () => {
         runSoldierBrain(
           _input: SoldierBrainInput,
           request?: RuntimeRequestFor<"soldierBrain">,
-        ): RuntimeInvocationResultV117<SoldierBrainResult> {
+        ): CandidateBoundRuntimeInvocationV117<SoldierBrainResult> {
           if (!request) throw new Error("driver omitted kernel request")
-          return {
+          return bindOutcome(request, {
             kind: "player_violation",
             violation:
               RUNTIME_INVOCATION_V1_17_PLAYER_VIOLATIONS.INVALID_OUTPUT,
             trace: traceFor(request, {
               kernelRequestId: `${request.requestId}:forged`,
             }),
-          }
+          })
         },
       },
     })
@@ -271,7 +352,7 @@ describe("Phase 258 successor runtime ownership", () => {
       transitions: [],
       failure: {
         classification: "system_failure",
-        code: "RUNTIME_RESPONSE_BINDING_MISMATCH",
+        code: "OUTER_FRAME_WRONG_BINDING",
       },
       unchangedState: state,
     })
@@ -286,7 +367,7 @@ describe("Phase 258 successor runtime ownership", () => {
     if (!soldier) throw new Error("missing fixture soldier")
     soldier.soldierMemory = { retainedSoldier: "different-prestate" }
 
-    const execution = MATCH_KERNEL.runActivationFromState({
+    const execution = MATCH_KERNEL.runActivationFromStateV117({
       state,
       soldierId: soldier.id,
       runtime: {
@@ -296,9 +377,9 @@ describe("Phase 258 successor runtime ownership", () => {
         runSoldierBrain(
           _input: SoldierBrainInput,
           request?: RuntimeRequestFor<"soldierBrain">,
-        ): RuntimeInvocationResultV117<SoldierBrainResult> {
+        ): CandidateBoundRuntimeInvocationV117<SoldierBrainResult> {
           if (!request) throw new Error("driver omitted kernel request")
-          return {
+          return bindOutcome(request, {
             kind: "success",
             value: {
               action: { type: "TURN_TO_STONE" },
@@ -307,7 +388,7 @@ describe("Phase 258 successor runtime ownership", () => {
             trace: traceFor(request, {
               inputSha256: `sha256:${"9".repeat(64)}`,
             }),
-          }
+          })
         },
       },
     })
@@ -317,7 +398,7 @@ describe("Phase 258 successor runtime ownership", () => {
       transitions: [],
       failure: {
         classification: "system_failure",
-        code: "RUNTIME_REQUEST_INPUT_MISMATCH",
+        code: "OUTER_FRAME_WRONG_BINDING",
       },
       unchangedState: state,
     })

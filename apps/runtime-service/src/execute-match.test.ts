@@ -83,14 +83,13 @@ const hash = (character: string): `sha256:${string}` =>
 const sha256 = (bytes: Uint8Array): `sha256:${string}` =>
   `sha256:${createHash("sha256").update(bytes).digest("hex")}`
 
-const candidateRequest = (
-  kernelRequestId = candidateKernelRequest().requestId,
-): AuthenticatedRuntimeInvocationRequestV117 =>
-  createAuthenticatedRuntimeInvocationRequestV117(
+const candidateRequest = (): AuthenticatedRuntimeInvocationRequestV117 => {
+  const kernelRequest = candidateKernelRequest()
+  return createAuthenticatedRuntimeInvocationRequestV117(
     {
       requestId: "request:service-candidate:v1.17",
       invocationId: "invocation:service-candidate:v1.17",
-      kernelRequestId,
+      kernelRequestId: kernelRequest.requestId,
       method: "soldierBrain",
       semanticTuple: {
         rules: "cowards-rules-v1.4",
@@ -127,7 +126,7 @@ const candidateRequest = (
             "stop-before-next-invocation-and-classify-by-proven-cause",
         },
       },
-      input: { value: { soldierId: "bottom-0", cycleIndex: 0 } },
+      input: { value: kernelRequest.input as unknown as JsonValue },
       retry: {
         retryId: "retry:service-candidate:v1.17",
         attempt: 0,
@@ -136,6 +135,7 @@ const candidateRequest = (
     },
     candidateIdentity,
   )
+}
 
 const candidateTrace = (
   request: AuthenticatedRuntimeInvocationRequestV117,
@@ -182,7 +182,7 @@ const candidateKernelRequest = () => {
     (candidate) => candidate.ownerPlayerId === state.players[0].id,
   )
   if (!soldier) throw new Error("missing candidate fixture soldier")
-  let machine = MATCH_KERNEL.createActivationMachine({
+  let machine = MATCH_KERNEL.createActivationMachineV117({
     state,
     soldierId: soldier.id,
   })
@@ -199,13 +199,14 @@ const candidateKernelRequest = () => {
 
 const executeCandidateOutcome = (
   outcome: RuntimeInvocationResultV117<SoldierBrainResult>,
+  request: AuthenticatedRuntimeInvocationRequestV117,
 ) => {
   const state = candidateState()
   const soldier = state.soldiers.find(
     (candidate) => candidate.ownerPlayerId === state.players[0].id,
   )
   if (!soldier) throw new Error("missing candidate fixture soldier")
-  return MATCH_KERNEL.runActivationFromState({
+  return MATCH_KERNEL.runActivationFromStateV117({
     state,
     soldierId: soldier.id,
     runtime: {
@@ -214,8 +215,8 @@ const executeCandidateOutcome = (
       },
       runSoldierBrain(
         _input: SoldierBrainInput,
-      ): RuntimeInvocationResultV117<SoldierBrainResult> {
-        return outcome
+      ) {
+        return { kind: "v1_17_bound" as const, request, outcome }
       },
     },
   })
@@ -1134,5 +1135,31 @@ describe("runtime execution service v1.17 candidate bridge", () => {
     expect(JSON.stringify(first.publicResult)).not.toMatch(
       /Users|token=|stderr|stack|source|artifact|memory|objective|diagnostic/u,
     )
+  })
+
+  it("turns a non-byte adapter response into a registered no-mutation system failure", () => {
+    const request = candidateRequest()
+
+    const result = executeCandidateRuntimeInvocationV117({
+      request,
+      identity: candidateIdentity,
+      invoke: () => null as unknown as Uint8Array,
+      executeOutcome: executeCandidateOutcome,
+    })
+
+    expect(result.internalExecution).toMatchObject({
+      kind: "failure",
+      transitions: [],
+      failure: {
+        classification: "system_failure",
+        code: "TRANSPORT_CRASH",
+        retryable: true,
+      },
+    })
+    expect(result.publicResult).toMatchObject({
+      classification: "system_failure",
+      code: "TRANSPORT_CRASH",
+      retryable: true,
+    })
   })
 })

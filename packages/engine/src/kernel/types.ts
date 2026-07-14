@@ -4,6 +4,7 @@ import {
 } from "@cowards/spec"
 import type {
   ActivationOrder,
+  AuthenticatedRuntimeInvocationRequestV117,
   MatchOutcome,
   RuntimeInvocationResultV117,
   RuntimeViolation,
@@ -36,6 +37,15 @@ export const CANDIDATE_KERNEL_SEMANTIC_TUPLE = Object.freeze({
 
 export const CANDIDATE_KERNEL_SEMANTIC_TUPLE_ID =
   `sha256:${hashCanonicalCompatibilityTuple(CANDIDATE_KERNEL_SEMANTIC_TUPLE)}` as const
+
+/** Additive inactive successor identity; current/default constructors stay v1.14. */
+export const CANDIDATE_KERNEL_V117_SEMANTIC_TUPLE = Object.freeze({
+  ...CANDIDATE_KERNEL_SEMANTIC_TUPLE,
+  runtimeAbi: "strategy-runtime-abi-v1.17",
+}) satisfies Readonly<CanonicalCompatibilityTuple>
+
+export const CANDIDATE_KERNEL_V117_SEMANTIC_TUPLE_ID =
+  "sha256:0d8a04fdfe49e3aa7261728ee51beb0a9049b661aad978277f2892c3a4bc54fe" as const
 
 export type KernelEffectKind = "selectActivations" | "soldierBrain"
 
@@ -243,7 +253,13 @@ export type CandidateRuntimeInvocationResult<TValue> =
     }
   | { readonly ok: false; readonly violation: RuntimeViolation }
   | CandidateRuntimeSystemFailureResult
-  | RuntimeInvocationResultV117<TValue>
+  | CandidateBoundRuntimeInvocationV117<TValue>
+
+export interface CandidateBoundRuntimeInvocationV117<TValue> {
+  readonly kind: "v1_17_bound"
+  readonly request: AuthenticatedRuntimeInvocationRequestV117
+  readonly outcome: RuntimeInvocationResultV117<TValue>
+}
 
 export interface CandidateActivationExecution {
   readonly kind: "completed" | "failure"

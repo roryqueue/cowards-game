@@ -1,6 +1,10 @@
+import { createHash } from "node:crypto"
 import {
+  AuthenticatedRuntimeInvocationRequestV117Schema,
   COMPATIBILITY_VERSIONS,
   RuntimeInvocationResultV117Schema,
+  admitCanonicalJsonValue,
+  serializeRuntimeInvocationRequestV117,
   type JsonValue,
   type RuntimeInvocationResultV117,
   type RuntimeViolation,
@@ -20,6 +24,8 @@ import type {
 import {
   CANDIDATE_KERNEL_SEMANTIC_TUPLE,
   CANDIDATE_KERNEL_SEMANTIC_TUPLE_ID,
+  CANDIDATE_KERNEL_V117_SEMANTIC_TUPLE,
+  CANDIDATE_KERNEL_V117_SEMANTIC_TUPLE_ID,
 } from "./types.js"
 import { hashKernelRecorderMaterial, validateMachine } from "./validate.js"
 import { issueCandidateExecutionEvidence } from "./recorder-evidence-authority.js"
@@ -56,13 +62,14 @@ const baseMachine = (
     executionMode: MatchMachine["executionMode"]
     stage: MatchMachine["cursor"]["stage"]
     maxPhases: number
+    semanticTuple?: MatchMachine["semanticTuple"] | undefined
     slots?: readonly ActivationSlotState[] | undefined
   },
 ): MatchMachine => ({
   executionMode: input.executionMode,
   state,
   initialState: state,
-  semanticTuple: {
+  semanticTuple: input.semanticTuple ?? {
     tupleId: CANDIDATE_KERNEL_SEMANTIC_TUPLE_ID,
     tuple: CANDIDATE_KERNEL_SEMANTIC_TUPLE,
   },
@@ -106,6 +113,24 @@ export const createCandidateMatchMachine = (
   )
 }
 
+export const createCandidateMatchMachineV117 = (
+  input: Omit<CandidateMatchInput, "runtime">,
+): MatchMachine => {
+  const created = createCandidateInitialGameState(input)
+  if (!created.ok) throw new Error("CANDIDATE_INITIAL_STATE_REJECTED")
+  return assertMachine(
+    baseMachine(created.state, {
+      executionMode: "match",
+      stage: "match_start",
+      maxPhases: input.maxPhases ?? 100,
+      semanticTuple: {
+        tupleId: CANDIDATE_KERNEL_V117_SEMANTIC_TUPLE_ID,
+        tuple: CANDIDATE_KERNEL_V117_SEMANTIC_TUPLE,
+      },
+    }),
+  )
+}
+
 export const createCandidateActivationMachine = (input: {
   readonly state: GameState
   readonly soldierId: string
@@ -133,31 +158,121 @@ export const createCandidateActivationMachine = (input: {
   )
 }
 
+export const createCandidateActivationMachineV117 = (input: {
+  readonly state: GameState
+  readonly soldierId: string
+  readonly objective?: JsonValue | undefined
+}): MatchMachine => {
+  const state = globalThis.structuredClone(input.state)
+  const soldier = getSoldier(state, input.soldierId)
+  const slot: ActivationSlotState = {
+    activationId: `${state.phaseNumber}:${state.roundNumber}:0`,
+    activationIndex: 0,
+    actingPlayerId: soldier?.ownerPlayerId ?? state.players[0].id,
+    soldierId: input.soldierId,
+    ...(input.objective === undefined ? {} : { objective: input.objective }),
+    cycleIndex: 0,
+    advanced: false,
+    ended: false,
+  }
+  return assertMachine(
+    baseMachine(state, {
+      executionMode: "activation",
+      stage: "prepare_slots",
+      maxPhases: 100,
+      slots: [slot],
+      semanticTuple: {
+        tupleId: CANDIDATE_KERNEL_V117_SEMANTIC_TUPLE_ID,
+        tuple: CANDIDATE_KERNEL_V117_SEMANTIC_TUPLE,
+      },
+    }),
+  )
+}
+
 const runtimeResume = (
   runtime: CandidateStrategyRuntime,
   request: KernelEffectRequest,
 ): KernelResume => {
   try {
+    const detachedRequest = globalThis.structuredClone(request)
+    const deepFreeze = (value: unknown): void => {
+      if (value === null || typeof value !== "object" || Object.isFrozen(value)) {
+        return
+      }
+      for (const child of Object.values(value as Record<string, unknown>)) {
+        deepFreeze(child)
+      }
+      Object.freeze(value)
+    }
+    deepFreeze(detachedRequest)
     const result =
-      request.kind === "selectActivations"
-        ? runtime.selectActivations(request.input, request)
-        : runtime.runSoldierBrain(request.input, request)
+      detachedRequest.kind === "selectActivations"
+        ? runtime.selectActivations(detachedRequest.input, detachedRequest)
+        : runtime.runSoldierBrain(detachedRequest.input, detachedRequest)
 
     if ("kind" in result) {
-      const parsed = RuntimeInvocationResultV117Schema.safeParse(result)
-      if (!parsed.success) {
+      const parsedRequest =
+        AuthenticatedRuntimeInvocationRequestV117Schema.safeParse(
+          result.request,
+        )
+      const parsedOutcome = RuntimeInvocationResultV117Schema.safeParse(
+        result.outcome,
+      )
+      if (!parsedRequest.success || !parsedOutcome.success) {
         return {
           kind: "runtime_resume",
           requestId: request.requestId,
           effectKind: request.kind,
           classification: "system_failure",
-          failure: { code: "RUNTIME_RESPONSE_INVALID", retryable: false },
+          failure: { code: "OUTER_FRAME_UNDECODABLE", retryable: false },
         }
       }
-      const successor = parsed.data as RuntimeInvocationResultV117
+      const boundRequest = parsedRequest.data as typeof result.request
+      const successor = parsedOutcome.data as RuntimeInvocationResultV117
+      const admittedInput = admitCanonicalJsonValue(request.input, {
+        profile: "host-api-value",
+      })
+      const expectedCandidateTuple = {
+        ...CANDIDATE_KERNEL_SEMANTIC_TUPLE,
+        runtimeAbi: "strategy-runtime-abi-v1.17",
+      }
+      const serializedRequest = serializeRuntimeInvocationRequestV117(
+        boundRequest,
+      )
+      const expectedRequestSha256 =
+        `sha256:${createHash("sha256").update(serializedRequest).digest("hex")}`
       if (
-        successor.trace.kernelRequestId !== request.requestId ||
-        successor.trace.method !== request.kind
+        !admittedInput.ok ||
+        request.semanticTupleId !==
+          CANDIDATE_KERNEL_V117_SEMANTIC_TUPLE_ID ||
+        boundRequest.kernelRequestId !== request.requestId ||
+        boundRequest.method !== request.kind ||
+        boundRequest.semanticTuple.tupleId !==
+          CANDIDATE_KERNEL_V117_SEMANTIC_TUPLE_ID ||
+        boundRequest.semanticTuple.rules !== expectedCandidateTuple.rules ||
+        boundRequest.semanticTuple.engine !== expectedCandidateTuple.engine ||
+        boundRequest.semanticTuple.runtimeAbi !==
+          expectedCandidateTuple.runtimeAbi ||
+        boundRequest.semanticTuple.chronicle !==
+          expectedCandidateTuple.chronicle ||
+        boundRequest.semanticTuple.arenaCatalog !==
+          expectedCandidateTuple.arenaCatalog ||
+        boundRequest.semanticTuple.setPolicy !==
+          expectedCandidateTuple.setPolicy ||
+        boundRequest.input.canonicalSha256 !==
+          admittedInput.canonicalSha256 ||
+        boundRequest.input.canonicalByteLength !==
+          admittedInput.canonicalByteLength ||
+        successor.trace.requestId !== boundRequest.requestId ||
+        successor.trace.invocationId !== boundRequest.invocationId ||
+        successor.trace.kernelRequestId !== boundRequest.kernelRequestId ||
+        successor.trace.method !== boundRequest.method ||
+        successor.trace.requestSha256 !== expectedRequestSha256 ||
+        successor.trace.budgetProfileSha256 !==
+          boundRequest.budget.profileSha256 ||
+        successor.trace.inputSha256 !== boundRequest.input.canonicalSha256 ||
+        successor.trace.retryIdentitySha256 !==
+          boundRequest.retry.identitySha256
       ) {
         return {
           kind: "runtime_resume",
@@ -165,7 +280,7 @@ const runtimeResume = (
           effectKind: request.kind,
           classification: "system_failure",
           failure: {
-            code: "RUNTIME_RESPONSE_BINDING_MISMATCH",
+            code: "OUTER_FRAME_WRONG_BINDING",
             retryable: false,
           },
         }
@@ -348,12 +463,56 @@ export const runCandidateMatch = (
   }
 }
 
+export const runCandidateMatchV117 = (
+  input: CandidateMatchInput,
+): CandidateExecution => {
+  let machine: MatchMachine
+  try {
+    machine = createCandidateMatchMachineV117(input)
+  } catch {
+    return failedExecution(
+      null,
+      restrictedIntegrityFailure("CANDIDATE_MATCH_ADMISSION_FAILED"),
+    )
+  }
+  try {
+    return drive(machine, input.runtime, "match")
+  } catch {
+    return failedExecution(
+      globalThis.structuredClone(machine.initialState),
+      restrictedIntegrityFailure("KERNEL_DRIVER_UNEXPECTED"),
+    )
+  }
+}
+
 export const runCandidateActivationFromState = (
   input: CandidateActivationInput,
 ): CandidateActivationExecution => {
   let machine: MatchMachine
   try {
     machine = createCandidateActivationMachine(input)
+  } catch {
+    return failedExecution(
+      globalThis.structuredClone(input.state),
+      restrictedIntegrityFailure("CANDIDATE_ACTIVATION_ADMISSION_FAILED"),
+    )
+  }
+  try {
+    return drive(machine, input.runtime, "activation")
+  } catch {
+    return failedExecution(
+      globalThis.structuredClone(machine.initialState),
+      restrictedIntegrityFailure("KERNEL_DRIVER_UNEXPECTED"),
+    )
+  }
+}
+
+export const runCandidateActivationFromStateV117 = (
+  input: CandidateActivationInput,
+): CandidateActivationExecution => {
+  let machine: MatchMachine
+  try {
+    machine = createCandidateActivationMachineV117(input)
   } catch {
     return failedExecution(
       globalThis.structuredClone(input.state),
@@ -413,6 +572,10 @@ export const MATCH_KERNEL = Object.freeze({
   createMachine: createCandidateMatchMachine,
   stepMatch: stepCandidateMatch,
   runMatch: runCandidateMatch,
+  createMachineV117: createCandidateMatchMachineV117,
+  runMatchV117: runCandidateMatchV117,
   createActivationMachine: createCandidateActivationMachine,
   runActivationFromState: runCandidateActivationFromState,
+  createActivationMachineV117: createCandidateActivationMachineV117,
+  runActivationFromStateV117: runCandidateActivationFromStateV117,
 })

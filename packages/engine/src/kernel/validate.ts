@@ -19,7 +19,17 @@ import type {
 import {
   CANDIDATE_KERNEL_SEMANTIC_TUPLE,
   CANDIDATE_KERNEL_SEMANTIC_TUPLE_ID,
+  CANDIDATE_KERNEL_V117_SEMANTIC_TUPLE,
+  CANDIDATE_KERNEL_V117_SEMANTIC_TUPLE_ID,
 } from "./types.js"
+
+const registeredKernelTuple = (tuple: KernelSemanticTuple): boolean =>
+  (tuple.tupleId === CANDIDATE_KERNEL_SEMANTIC_TUPLE_ID &&
+    JSON.stringify(projectTuple(tuple.tuple)) ===
+      JSON.stringify(CANDIDATE_KERNEL_SEMANTIC_TUPLE)) ||
+  (tuple.tupleId === CANDIDATE_KERNEL_V117_SEMANTIC_TUPLE_ID &&
+    JSON.stringify(projectTuple(tuple.tuple)) ===
+      JSON.stringify(CANDIDATE_KERNEL_V117_SEMANTIC_TUPLE))
 
 const MACHINE_HASH_DOMAIN =
   "cowards-game:candidate-match-machine-projection:v1" as const
@@ -170,7 +180,9 @@ export const hashKernelRecorderMaterial = (
     .update(`${RECORDER_HASH_DOMAIN}\0`, "utf8")
     .update(
       JSON.stringify({
-        semanticTupleId: CANDIDATE_KERNEL_SEMANTIC_TUPLE_ID,
+        semanticTupleId:
+          material.boundaries[0]?.semanticTupleId ??
+          CANDIDATE_KERNEL_SEMANTIC_TUPLE_ID,
         events: material.events,
         initialState: projectCanonicalStateForRecording(material.initialState),
         finalState: projectCanonicalStateForRecording(material.finalState),
@@ -232,11 +244,7 @@ export const validateMachine = (
   if (!semantic.ok && !isPreservedV14ActivationState(machine, semantic)) {
     return integrityFailure("KERNEL_STATE_INVALID", semantic)
   }
-  if (
-    machine.semanticTuple.tupleId !== CANDIDATE_KERNEL_SEMANTIC_TUPLE_ID ||
-    JSON.stringify(projectTuple(machine.semanticTuple.tuple)) !==
-      JSON.stringify(CANDIDATE_KERNEL_SEMANTIC_TUPLE)
-  ) {
+  if (!registeredKernelTuple(machine.semanticTuple)) {
     return integrityFailure("KERNEL_SEMANTIC_TUPLE_INVALID")
   }
   if (
@@ -360,9 +368,7 @@ export const validateTransitionRecord = (
   expectedTuple: KernelSemanticTuple,
 ): KernelRestrictedFailure | undefined => {
   if (
-    expectedTuple.tupleId !== CANDIDATE_KERNEL_SEMANTIC_TUPLE_ID ||
-    JSON.stringify(projectTuple(expectedTuple.tuple)) !==
-      JSON.stringify(CANDIDATE_KERNEL_SEMANTIC_TUPLE) ||
+    !registeredKernelTuple(expectedTuple) ||
     record.semanticTupleId !== expectedTuple.tupleId ||
     JSON.stringify(record.semanticTuple) !==
       JSON.stringify(expectedTuple.tuple) ||

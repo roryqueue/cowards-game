@@ -64,6 +64,7 @@ export interface CandidateRuntimeInvocationInputV117<
   readonly invoke: (requestBytes: Uint8Array) => Uint8Array
   readonly executeOutcome: (
     outcome: RuntimeInvocationResultV117<TValue>,
+    request: AuthenticatedRuntimeInvocationRequestV117,
   ) => TExecution
 }
 
@@ -149,7 +150,20 @@ export const executeCandidateRuntimeInvocationV117 = <
   } else {
     let responseBytes: Uint8Array | undefined
     try {
-      responseBytes = input.invoke(Uint8Array.from(requestBytes))
+      const adapterResponse = input.invoke(Uint8Array.from(requestBytes))
+      if (adapterResponse instanceof Uint8Array) {
+        responseBytes = adapterResponse
+      } else {
+        outcome = {
+          kind: "system_failure",
+          failure: {
+            code: "TRANSPORT_CRASH",
+            publicMessage: "Runtime system failure.",
+            retryable: true,
+          },
+          trace: candidateRequestTrace(expectedRequest, requestBytes),
+        }
+      }
     } catch {
       outcome = {
         kind: "system_failure",
@@ -186,7 +200,7 @@ export const executeCandidateRuntimeInvocationV117 = <
     }
   }
 
-  const internalExecution = input.executeOutcome(outcome)
+  const internalExecution = input.executeOutcome(outcome, expectedRequest)
   return {
     internalExecution,
     publicResult: candidatePublicResult(
