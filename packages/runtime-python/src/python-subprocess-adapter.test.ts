@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest"
+import { Buffer } from "node:buffer"
 import {
   createPythonRuntimeFromRevision,
   PYTHON_RUNTIME_ENVIRONMENT,
@@ -30,7 +31,7 @@ def soldier_brain(input):
 
 describe("Python subprocess Strategy provider ABI", () => {
   it("binds original CRLF bytes separately from the normalized executable artifact", () => {
-    const source = `${pythonSource.trim()}\r\n# exact CRLF\r\n`
+    const source = `${pythonSource.trim().replace(/\n/gu, "\r\n")}\r\n# exact CRLF\r\n`
     const identity = buildPythonSourceIdentityV117(source)
     const revision = buildPythonStrategyRevision({ source })
     const artifact = revision.metadata.sourceArtifact!
@@ -39,7 +40,7 @@ describe("Python subprocess Strategy provider ABI", () => {
     expect(Buffer.from(artifact.bytesBase64!, "base64").toString("utf8")).toBe(
       identity.normalizedSource,
     )
-    expect(identity.lineEndings).toEqual({ kind: "crlf", lf: 0, crlf: 2, cr: 0 })
+    expect(identity.lineEndings).toEqual({ kind: "crlf", lf: 0, crlf: 13, cr: 0 })
     expect(identity.hasFinalNewline).toBe(true)
   })
   it("runs selectActivations through the v1.7 JSON ABI", async () => {

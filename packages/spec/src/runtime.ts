@@ -13,7 +13,10 @@ import {
 } from "./runtime-evidence.js"
 
 export { STRATEGY_RUNTIME_ABI_VERSION } from "./versions.js"
-export { hashCanonicalIdentityValue } from "./canonical-identity-domains.js"
+export {
+  hashCanonicalIdentity,
+  hashCanonicalIdentityValue,
+} from "./canonical-identity-domains.js"
 export {
   AuthenticatedRuntimeInvocationRequestV117Schema,
   AuthenticatedRuntimeInvocationResponseV117Schema,

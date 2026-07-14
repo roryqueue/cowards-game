@@ -7,6 +7,7 @@ import {
   STRATEGY_SOURCE_BYTES,
   StrategyRevisionSchema,
   runtimeCompatibilityKey,
+  hashCanonicalIdentity,
   type SourceLanguageStrategyArtifact,
   type StrategyRevision,
   type StrategyRevisionMetadata,
@@ -34,6 +35,53 @@ const hashStrategySource = (source: string): string =>
 
 const normalizePythonArtifactSource = (source: string): string =>
   source.replace(/\r\n?/g, "\n")
+
+export const PYTHON_SOURCE_NORMALIZATION_POLICY_V1_17 =
+  "source-line-endings-lf-v1.17" as const
+
+export const buildPythonSourceIdentityV117 = (source: string) => {
+  let lf = 0
+  let crlf = 0
+  let cr = 0
+  for (let index = 0; index < source.length; index += 1) {
+    if (source[index] === "\r") {
+      if (source[index + 1] === "\n") {
+        crlf += 1
+        index += 1
+      } else {
+        cr += 1
+      }
+    } else if (source[index] === "\n") {
+      lf += 1
+    }
+  }
+  const present = [lf > 0, crlf > 0, cr > 0].filter(Boolean).length
+  const kind = present === 0
+    ? "none"
+    : present > 1
+      ? "mixed"
+      : lf > 0
+        ? "lf"
+        : crlf > 0
+          ? "crlf"
+          : "cr"
+  const normalizedSource = normalizePythonArtifactSource(source)
+  return {
+    identityVersion: "strategy-source-identity-v2" as const,
+    normalizationPolicy: PYTHON_SOURCE_NORMALIZATION_POLICY_V1_17,
+    originalSourceSha256: `sha256:${hashCanonicalIdentity(
+      "originalSource",
+      [Buffer.from(source, "utf8")],
+    )}` as const,
+    normalizedSourceSha256: `sha256:${hashCanonicalIdentity(
+      "normalizedSource",
+      [Buffer.from(normalizedSource, "utf8")],
+    )}` as const,
+    lineEndings: { kind, lf, crlf, cr },
+    hasFinalNewline: source.endsWith("\n") || source.endsWith("\r"),
+    normalizedSource,
+  }
+}
 
 export const buildPythonSourceArtifact = (input: {
   source: string

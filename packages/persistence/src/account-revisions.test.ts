@@ -1,4 +1,5 @@
 import { createHash, randomUUID } from "node:crypto"
+import { Buffer } from "node:buffer"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
 import type { Pool } from "pg"
 import { hashCanonicalIdentity } from "@cowards/spec"

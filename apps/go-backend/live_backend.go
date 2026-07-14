@@ -7,6 +7,7 @@ import (
 	"crypto/sha256"
 	"crypto/subtle"
 	"encoding/base64"
+	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -27,6 +28,10 @@ import (
 const sessionCookieName = "cowards_session"
 const sessionDuration = 30 * 24 * time.Hour
 const strategySourceBytes = 64 * 1024
+const sourceIdentityVersionV2 = "strategy-source-identity-v2"
+const sourceNormalizationPolicyV117 = "source-line-endings-lf-v1.17"
+const originalSourceIdentityDomain = "cowards-game:runtime-identity:v1:original-source"
+const normalizedSourceIdentityDomain = "cowards-game:runtime-identity:v1:normalized-source"
 const strategyWasmArtifactBytes = 4 * 1024 * 1024
 const exhibitionRateLimit = 5
 const exhibitionRateLimitWindow = time.Hour
@@ -2556,7 +2561,7 @@ func (server *LiveServer) insertAccountRevision(ctx context.Context, input accou
 	source := input.Source
 	label := input.Label
 	notes := input.Notes
-	if source == "" || utf8.RuneCountInString(source) == 0 || len([]byte(source)) > strategySourceBytes {
+	if source == "" || strings.TrimSpace(source) == "" || utf8.RuneCountInString(source) == 0 || len([]byte(source)) > strategySourceBytes {
 		return nil, errors.New("invalid source")
 	}
 	sourceHash := hashString(source)
@@ -2567,6 +2572,7 @@ func (server *LiveServer) insertAccountRevision(ctx context.Context, input accou
 	if input.SourceBytes > 0 {
 		sourceBytes = input.SourceBytes
 	}
+	sourceIdentity := sourceIdentityV2(source)
 	createStrategy := strategyID == ""
 	if createStrategy {
 		strategyID = "strategy:account:" + userID + ":" + randomID()
@@ -2641,11 +2647,19 @@ func (server *LiveServer) insertAccountRevision(ctx context.Context, input accou
 	if _, err := tx.Exec(ctx, `
 		insert into strategy_revisions (
 			id, strategy_id, source, source_hash, source_bytes,
-			runtime, engine_compatibility, validation, metadata, compiled_artifact
+			runtime, engine_compatibility, validation, metadata, compiled_artifact,
+			source_identity_version, original_source_hash, original_source_bytes,
+			normalized_source_hash, normalized_source_bytes,
+			source_normalization_policy, source_line_endings,
+			source_has_final_newline
 		)
-		values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+		values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+		        $11, $12, $13, $14, $15, $16, $17, $18)
 		on conflict (id) do nothing
-	`, revisionID, strategyID, source, sourceHash, sourceBytes, runtime, engine, validation, metadata, mapValue(metadata, "compiledArtifact")); err != nil {
+	`, revisionID, strategyID, source, sourceHash, sourceBytes, runtime, engine, validation, metadata, mapValue(metadata, "compiledArtifact"),
+		sourceIdentity.Version, sourceIdentity.OriginalHash, sourceIdentity.OriginalBytes,
+		sourceIdentity.NormalizedHash, sourceIdentity.NormalizedBytes,
+		sourceIdentity.Policy, sourceIdentity.LineEndings, sourceIdentity.HasFinalNewline); err != nil {
 		return nil, err
 	}
 	if err := tx.Commit(ctx); err != nil {
@@ -3096,6 +3110,66 @@ func hashSessionToken(token string) string {
 func hashString(value string) string {
 	sum := sha256.Sum256([]byte(value))
 	return hex.EncodeToString(sum[:])
+}
+
+type strategySourceIdentityV2 struct {
+	Version         string
+	OriginalHash    string
+	OriginalBytes   int
+	NormalizedHash  string
+	NormalizedBytes int
+	Policy          string
+	LineEndings     map[string]any
+	HasFinalNewline bool
+}
+
+func framedSourceIdentityHash(domain string, value []byte) string {
+	hasher := sha256.New()
+	for _, segment := range [][]byte{[]byte(domain), value} {
+		var length [8]byte
+		binary.BigEndian.PutUint64(length[:], uint64(len(segment)))
+		_, _ = hasher.Write(length[:])
+		_, _ = hasher.Write(segment)
+	}
+	return hex.EncodeToString(hasher.Sum(nil))
+}
+
+func normalizeSourceV117(source string) string {
+	return strings.ReplaceAll(strings.ReplaceAll(source, "\r\n", "\n"), "\r", "\n")
+}
+
+func sourceIdentityV2(source string) strategySourceIdentityV2 {
+	crlf := strings.Count(source, "\r\n")
+	withoutCRLF := strings.ReplaceAll(source, "\r\n", "")
+	cr := strings.Count(withoutCRLF, "\r")
+	lf := strings.Count(withoutCRLF, "\n")
+	present := 0
+	for _, count := range []int{lf, crlf, cr} {
+		if count > 0 {
+			present++
+		}
+	}
+	kind := "none"
+	if present > 1 {
+		kind = "mixed"
+	} else if lf > 0 {
+		kind = "lf"
+	} else if crlf > 0 {
+		kind = "crlf"
+	} else if cr > 0 {
+		kind = "cr"
+	}
+	normalized := normalizeSourceV117(source)
+	return strategySourceIdentityV2{
+		Version:         sourceIdentityVersionV2,
+		OriginalHash:    framedSourceIdentityHash(originalSourceIdentityDomain, []byte(source)),
+		OriginalBytes:   len([]byte(source)),
+		NormalizedHash:  framedSourceIdentityHash(normalizedSourceIdentityDomain, []byte(normalized)),
+		NormalizedBytes: len([]byte(normalized)),
+		Policy:          sourceNormalizationPolicyV117,
+		LineEndings:     map[string]any{"kind": kind, "lf": lf, "crlf": crlf, "cr": cr},
+		HasFinalNewline: strings.HasSuffix(source, "\n") || strings.HasSuffix(source, "\r"),
+	}
 }
 
 func randomToken() string {

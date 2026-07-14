@@ -58,6 +58,7 @@ import {
 } from "@cowards/spec"
 import { CompetitiveInputError } from "../../lib/competitive-errors.js"
 import { SESSION_COOKIE_NAME } from "../../lib/competitive-session.js"
+import { exactStrategySource } from "../../lib/account-revision-write-boundary.js"
 
 export type CompetitiveUser = PublicUserAccount
 export type CompetitiveRevisionSummary = AccountStrategyRevisionSummary
@@ -385,7 +386,7 @@ export const createCompetitiveServer = (deps: CompetitiveServerDeps = {}) => {
     ): Promise<CompetitiveRevisionSummary> {
       try {
         return await withPool(async (pool) => {
-          const source = normalizeText(input.source)
+          const source = exactStrategySource(input.source)
           const starter =
             typeof input.starterId === "string"
               ? findStarterStrategy(input.starterId)

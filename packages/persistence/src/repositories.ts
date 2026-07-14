@@ -11,6 +11,22 @@ import type { Pool, PoolClient } from "pg"
 
 export type Queryable = Pick<Pool | PoolClient, "query">
 
+export interface SourceIdentityV2PersistenceRecord {
+  sourceIdentityVersion: "strategy-source-identity-v2"
+  originalSourceHash: string
+  originalSourceBytes: number
+  normalizedSourceHash: string
+  normalizedSourceBytes: number
+  sourceNormalizationPolicy: "source-line-endings-lf-v1.17"
+  sourceLineEndings: {
+    kind: "none" | "lf" | "crlf" | "cr" | "mixed"
+    lf: number
+    crlf: number
+    cr: number
+  }
+  sourceHasFinalNewline: boolean
+}
+
 export const REVISION_CONTENT_COLUMNS = [
   "source",
   "source_hash",
@@ -76,14 +92,24 @@ export const createRepositories = (db: Queryable) => ({
     )
   },
 
-  async insertStrategyRevision(revision: StrategyRevision): Promise<void> {
+  async insertStrategyRevision(
+    revision: StrategyRevision,
+    sourceIdentity?: SourceIdentityV2PersistenceRecord,
+  ): Promise<void> {
     await db.query(
       `
         insert into strategy_revisions (
           id, strategy_id, source, source_hash, source_bytes, runtime,
-          engine_compatibility, validation, metadata, compiled_artifact
+          engine_compatibility, validation, metadata, compiled_artifact,
+          source_identity_version, original_source_hash, original_source_bytes,
+          normalized_source_hash, normalized_source_bytes,
+          source_normalization_policy, source_line_endings,
+          source_has_final_newline
         )
-        values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        values (
+          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+          $11, $12, $13, $14, $15, $16, $17, $18
+        )
         on conflict (id) do nothing
       `,
       [
@@ -97,6 +123,14 @@ export const createRepositories = (db: Queryable) => ({
         revision.validation,
         revision.metadata,
         revision.metadata.compiledArtifact ?? null,
+        sourceIdentity?.sourceIdentityVersion ?? null,
+        sourceIdentity?.originalSourceHash ?? null,
+        sourceIdentity?.originalSourceBytes ?? null,
+        sourceIdentity?.normalizedSourceHash ?? null,
+        sourceIdentity?.normalizedSourceBytes ?? null,
+        sourceIdentity?.sourceNormalizationPolicy ?? null,
+        sourceIdentity?.sourceLineEndings ?? null,
+        sourceIdentity?.sourceHasFinalNewline ?? null,
       ],
     )
   },
