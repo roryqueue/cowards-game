@@ -240,6 +240,7 @@ func (service *matchCompletionService) completeMatch(ctx context.Context, input 
 		    top_survival_turns = $8,
 		    completed_at = now()
 		where id = $9
+		  and status = 'running'
 	`, matchOutcome, fields.WinnerPlayerID, fields.SurvivingSoldiers, fields.BottomSurvivingSoldiers, fields.TopSurvivingSoldiers, fields.SurvivalTurns, fields.BottomSurvivalTurns, fields.TopSurvivalTurns, fields.MatchID)
 	if err != nil {
 		return nil, err
@@ -252,7 +253,9 @@ func (service *matchCompletionService) completeMatch(ctx context.Context, input 
 		set status = 'complete',
 		    updated_at = now()
 		where id = $1
-	`, input.JobID)
+		  and lease_token = $2
+		  and status = 'running'
+	`, input.JobID, input.LeaseToken)
 	if err != nil {
 		return nil, err
 	}
@@ -267,6 +270,7 @@ func (service *matchCompletionService) completeMatch(ctx context.Context, input 
 		  and attempt_number = (
 		    select attempts from match_jobs where id = $1
 		  )
+		  and status = 'running'
 	`, input.JobID)
 	if err != nil {
 		return nil, err

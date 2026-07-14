@@ -906,6 +906,145 @@ describePostgres(
       }
     })
 
+    it("persists only the engine-produced player-violation consequence and prior memory", async () => {
+      const violationNamespace = `${namespace}:player-violation`
+      const violationIdentity = completionIdentity(violationNamespace)
+      const soldierInvocations = new Map<string, number>()
+      const playerViolationRuntime: StrategyRuntime = {
+        selectActivations(input) {
+          return {
+            ok: true,
+            value: {
+              activationOrders: input.mySoldiers
+                .filter(({ status }) => status === "ACTIVE")
+                .slice(0, input.activationCount)
+                .map(({ id }) => ({ soldierId: id })),
+              strategyMemory: {
+                retainedStrategyMemory:
+                  input.mySoldiers[0]?.ownerPlayerId ?? "unknown",
+              },
+            },
+          }
+        },
+        runSoldierBrain(input) {
+          const invocation = soldierInvocations.get(input.self.id) ?? 0
+          soldierInvocations.set(input.self.id, invocation + 1)
+          return invocation === 0
+            ? {
+                ok: true,
+                value: {
+                  action: { type: "TURN", direction: "RIGHT" },
+                  soldierMemory: {
+                    retainedSoldierMemory: input.self.id,
+                  },
+                },
+              }
+            : {
+                ok: false,
+                violation: {
+                  type: "INVALID_OUTPUT",
+                  message: "fixture engine-owned player violation",
+                },
+              }
+        },
+      }
+      const violation = builtMatch(
+        violationNamespace,
+        `${violationNamespace}:seed`,
+        playerViolationRuntime,
+      )
+      expect(
+        violation.chronicle.events.some(
+          ({ type }) => type === "RUNTIME_VIOLATION",
+        ),
+      ).toBe(true)
+      expect(JSON.stringify(violation.finalState)).toContain(
+        "retainedStrategyMemory",
+      )
+      expect(JSON.stringify(violation.finalState)).toContain(
+        "retainedSoldierMemory",
+      )
+
+      const violationSchema = `completion_violation_${randomUUID().replaceAll("-", "")}`
+      await admin.query(`create schema ${violationSchema}`)
+      const violationPool = new Pool({
+        connectionString: databaseUrl!,
+        options: `-c search_path=${violationSchema}`,
+        max: 1,
+      })
+      try {
+        await migrate(violationPool)
+        await seedCompletionMatch(
+          violationPool,
+          violationNamespace,
+          violationIdentity.identity,
+          violationIdentity.pair,
+        )
+        const violationInput = {
+          jobId: `${violationNamespace}:job`,
+          leaseToken: `${violationNamespace}:lease`,
+          chronicle: violation.chronicle,
+          finalState: violation.finalState,
+          integrityIdentity: responseSnapshot(
+            violationIdentity.identity,
+            violationIdentity.pair,
+          ),
+          execution: violation.execution,
+          boundaryAnchors: violation.boundaryAnchors,
+        }
+        const adapterProposedState = structuredClone(violation.finalState)
+        adapterProposedState.players[0]!.strategyMemory = {
+          adapterProposedStrategyMemoryMustNotCommit: true,
+        }
+        adapterProposedState.soldiers[0]!.soldierMemory = {
+          adapterProposedSoldierMemoryMustNotCommit: true,
+        }
+        const beforeProposedMemory = await snapshotCanonicalRows(violationPool)
+        await expect(
+          completeMatch(violationPool, {
+            ...violationInput,
+            finalState: adapterProposedState,
+          }),
+        ).rejects.toMatchObject({
+          failureCategory: "system_failure",
+          playerPenalty: false,
+        })
+        expect(await snapshotCanonicalRows(violationPool)).toEqual(
+          beforeProposedMemory,
+        )
+
+        await expect(
+          completeMatch(violationPool, violationInput),
+        ).resolves.toMatchObject({
+          status: "complete",
+          matchId: `${violationNamespace}:match`,
+        })
+        const stored = await violationPool.query<{
+          artifact: Chronicle
+          match_status: string
+        }>(
+          `select c.artifact, m.status as match_status
+             from chronicles c
+             join matches m on m.id = c.match_id
+            where c.match_id = $1`,
+          [`${violationNamespace}:match`],
+        )
+        expect(stored.rows[0]).toEqual({
+          artifact: violation.chronicle,
+          match_status: "complete",
+        })
+        expect(JSON.stringify(stored.rows[0])).not.toContain(
+          "adapterProposedStrategyMemoryMustNotCommit",
+        )
+        expect(JSON.stringify(stored.rows[0])).not.toContain(
+          "adapterProposedSoldierMemoryMustNotCommit",
+        )
+      } finally {
+        await violationPool.end()
+        await admin.query(`drop schema ${violationSchema} cascade`)
+      }
+    }, 15_000)
+
     // This transaction-heavy PostgreSQL matrix consistently needs 6-7 seconds,
     // so Vitest's 5-second default can expire before its deterministic checks finish.
     it("rolls back attempt mismatch and late writes, then proves exact success, idempotence, and conflict refusal", async () => {
