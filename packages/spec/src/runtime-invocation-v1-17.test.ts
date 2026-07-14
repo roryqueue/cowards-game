@@ -435,6 +435,65 @@ describe("runtime invocation v1.17 authenticated candidate wire", () => {
     }
   })
 
+  it("refuses to authenticate an outcome trace outside the request binding", () => {
+    const request = candidateRequest()
+    const mismatchedOutcome = {
+      kind: "success" as const,
+      value: { activationOrders: [] },
+      trace: {
+        ...trace(),
+        requestId: "request:candidate:v1.17:different",
+        invocationId: request.invocationId,
+        kernelRequestId: request.kernelRequestId,
+        method: request.method,
+        requestSha256: sha256(serializeRuntimeInvocationRequestV117(request)),
+        budgetProfileSha256: request.budget.profileSha256,
+        inputSha256: request.input.canonicalSha256,
+        retryIdentitySha256: request.retry.identitySha256,
+      },
+    }
+
+    expect(() =>
+      createAuthenticatedRuntimeInvocationResponseV117(
+        request,
+        mismatchedOutcome,
+        {
+          keyId: RUNTIME_INVOCATION_V1_17_TEST_KEY_ID,
+          secret: fixtureSecret,
+        },
+      ),
+    ).toThrow("outcome trace outside the request binding")
+  })
+
+  it("fails closed without throwing for a malformed expected request", () => {
+    const malformedExpectedRequest = {
+      ...candidateRequest(),
+      requestId: "private request id with spaces",
+    } as AuthenticatedRuntimeInvocationRequestV117
+    let result: ReturnType<typeof verifyRuntimeInvocationResponseV117> | undefined
+
+    expect(() => {
+      result = verifyRuntimeInvocationResponseV117(
+        readFileSync(responseFixturePath),
+        malformedExpectedRequest,
+        {
+          keyId: RUNTIME_INVOCATION_V1_17_TEST_KEY_ID,
+          secret: fixtureSecret,
+        },
+      )
+    }).not.toThrow()
+    expect(result?.kind).toBe("system_failure")
+    if (result?.kind === "system_failure") {
+      expect(result.failure).toEqual({
+        code: "OUTER_FRAME_WRONG_BINDING",
+        publicMessage: "Runtime system failure.",
+        retryable: false,
+      })
+      expect(result.trace.requestId).toBe("unavailable")
+      expect(JSON.stringify(result)).not.toContain("private request id")
+    }
+  })
+
   it("preserves immutable v1.16 dispatch and protected verifier inputs", () => {
     expect(RUNTIME_EXECUTION_SERVICE_VERSION).toBe(
       "runtime-execution-service-v1.16",
