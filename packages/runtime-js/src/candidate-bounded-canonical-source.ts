@@ -111,7 +111,7 @@ const boundedCanonicalFrame = (root, outputByteLimit) => {
   const appendValue = (value, depth) => {
     if (overflow) return
     nodes += 1
-    if (nodes > 262144 || depth > 64) throw new Error("INVALID_OUTPUT")
+    if (nodes > 262144) throw new Error("INVALID_OUTPUT")
     if (value === null) {
       appendAscii("null")
       return
@@ -132,6 +132,7 @@ const boundedCanonicalFrame = (root, outputByteLimit) => {
     if (typeof value !== "object" || value === undefined || active.has(value)) {
       throw new Error("INVALID_OUTPUT")
     }
+    if (depth > 64) throw new Error("INVALID_OUTPUT")
     active.add(value)
     if (Array.isArray(value)) {
       if (value.length > 65536) throw new Error("INVALID_OUTPUT")
