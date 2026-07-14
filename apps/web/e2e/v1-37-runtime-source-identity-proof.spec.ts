@@ -155,16 +155,8 @@ test("Workshop save preserves representable LF/no-final-newline source through G
     )
     expect(ownerSource.status(), await ownerSource.text()).toBe(200)
     expect(ownerSource.headers()["cache-control"]).toBe("private, no-store")
-    const ownerBody = (await ownerSource.json()) as Record<string, unknown>
-    expect(ownerBody.source).toBe(source)
-    for (const privateField of [
-      "originalSourceHash",
-      "normalizedSourceHash",
-      "sourceLineEndings",
-      "sourceNormalizationPolicy",
-    ]) {
-      expect(ownerBody).not.toHaveProperty(privateField)
-    }
+    expect(ownerSource.headers()["content-type"]).toContain("text/plain")
+    expect(await ownerSource.text()).toBe(source)
   } finally {
     if (userId) {
       await pool.query(
