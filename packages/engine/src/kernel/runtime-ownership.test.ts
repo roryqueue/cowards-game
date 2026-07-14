@@ -277,4 +277,49 @@ describe("Phase 258 successor runtime ownership", () => {
     })
     expect(JSON.stringify(execution)).not.toContain("RUNTIME_VIOLATION")
   })
+
+  it("rejects a response whose signed input identity belongs to another prestate", () => {
+    const state = withPrivateMemory()
+    const soldier = state.soldiers.find(
+      (candidate) => candidate.ownerPlayerId === state.players[0].id,
+    )
+    if (!soldier) throw new Error("missing fixture soldier")
+    soldier.soldierMemory = { retainedSoldier: "different-prestate" }
+
+    const execution = MATCH_KERNEL.runActivationFromState({
+      state,
+      soldierId: soldier.id,
+      runtime: {
+        selectActivations() {
+          throw new Error("selection is unreachable in activation mode")
+        },
+        runSoldierBrain(
+          _input: SoldierBrainInput,
+          request?: RuntimeRequestFor<"soldierBrain">,
+        ): RuntimeInvocationResultV117<SoldierBrainResult> {
+          if (!request) throw new Error("driver omitted kernel request")
+          return {
+            kind: "success",
+            value: {
+              action: { type: "TURN_TO_STONE" },
+              soldierMemory: { mustNotCommit: true },
+            },
+            trace: traceFor(request, {
+              inputSha256: `sha256:${"9".repeat(64)}`,
+            }),
+          }
+        },
+      },
+    })
+
+    expect(execution).toMatchObject({
+      kind: "failure",
+      transitions: [],
+      failure: {
+        classification: "system_failure",
+        code: "RUNTIME_REQUEST_INPUT_MISMATCH",
+      },
+      unchangedState: state,
+    })
+  })
 })
