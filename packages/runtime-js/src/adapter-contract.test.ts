@@ -257,7 +257,18 @@ const executeCandidateWith = (
 const executeCandidateWithoutEvidence = (
   adapter: StrategyExecutionAdapter,
   request = candidateRequest(),
-) => executeCandidateWith(adapter, request, transpiledSource(), undefined)
+) => {
+  const responseBytes = (adapter as unknown as CandidateAdapter).executeV117({
+    requestBytes: serializeRuntimeInvocationRequestV117(request),
+    executableSource: transpiledSource(),
+    signingIdentity: candidateIdentity,
+  })
+  return verifyRuntimeInvocationResponseV117(
+    responseBytes,
+    request,
+    candidateIdentity,
+  )
+}
 
 const invalidOutputStrategySource = `
 export default {
@@ -661,7 +672,17 @@ export default {
       },
       {
         label: "subprocess",
-        adapter: createSubprocessStrategyExecutionAdapter(),
+        adapter: createSubprocessStrategyExecutionAdapter({
+          spawnSync: () =>
+            ({
+              pid: 123,
+              output: ["", successFrame, ""],
+              stdout: successFrame,
+              stderr: "",
+              status: 0,
+              signal: null,
+            }) as SpawnSyncReturns<string>,
+        }),
       },
       {
         label: "container",
@@ -700,6 +721,58 @@ export default {
       }
     })
 
+    it.each(["ambiguous", "unavailable", "incomplete"] as const)(
+      "fails closed for %s injected accounting evidence before guest execution",
+      (posture) => {
+        const request = candidateRequest()
+        const complete = completeCandidateEvidence(request)
+        const receiptEvidence =
+          posture === "ambiguous"
+            ? { ...complete, attribution: "ambiguous" as const }
+            : posture === "unavailable"
+              ? {
+                  ...complete,
+                  counters: {
+                    ...complete.counters,
+                    computeFuel: { status: "unavailable" as const },
+                  },
+                }
+              : ({
+                  ...complete,
+                  counters: {
+                    wallMilliseconds: complete.counters.wallMilliseconds,
+                  },
+                } as unknown as RuntimeInvocationExecutionReceiptEvidenceV117)
+        let calls = 0
+        const adapter = createSubprocessStrategyExecutionAdapter({
+          spawnSync: () => {
+            calls += 1
+            throw new Error("unproved execution must not start")
+          },
+        })
+        const result = executeCandidateWith(
+          adapter,
+          request,
+          transpiledSource(),
+          receiptEvidence,
+        )
+        expect(result).toMatchObject({
+          kind: "success",
+          value: {
+            outcome: {
+              kind: "system_failure",
+              failure: { code: "AMBIGUOUS_ATTRIBUTION", retryable: false },
+            },
+            accounting: {
+              disposition: "no_commit",
+              poststate: request.accounting.prestate,
+            },
+          },
+        })
+        expect(calls).toBe(0)
+      },
+    )
+
     it("produces one authenticated byte-identical success with complete host-observed evidence", () => {
       const results = candidateAdapters().map(({ label, adapter }) => ({
         label,
@@ -736,6 +809,13 @@ export default {
           "trace",
           "value",
         ])
+        expect(result.value.accounting.disposition, label).toBe("commit")
+        expect(result.value.accounting.poststate.revision, label).toBe(1)
+        expect(
+          result.value.accounting.poststate.methodInvocations
+            .selectActivations,
+          label,
+        ).toBe(1)
       }
       expect(
         results.map(({ result }) =>
@@ -849,6 +929,7 @@ export default {
       expect(overCap).toMatchObject({
         kind: "success",
         value: {
+          accounting: { disposition: "commit" },
           outcome: {
             kind: "player_violation",
             violation: { code: "OVERSIZED_OUTPUT" },
@@ -879,7 +960,17 @@ export default {
       const request = candidateRequest({ artifactSource: source })
       for (const adapter of [
         createWorkerThreadStrategyExecutionAdapter(),
-        createSubprocessStrategyExecutionAdapter(),
+        createSubprocessStrategyExecutionAdapter({
+          spawnSync: () =>
+            ({
+              pid: 123,
+              output: ["", "F", ""],
+              stdout: "F",
+              stderr: "",
+              status: 0,
+              signal: null,
+            }) as SpawnSyncReturns<string>,
+        }),
       ]) {
         const result = executeCandidateWith(adapter, request, source)
         expect(result.kind, adapter.metadata.id).toBe("success")
@@ -923,9 +1014,20 @@ export default {
         [thrownSource, "THROWN_EXCEPTION"],
       ] as const) {
         const request = candidateRequest({ artifactSource: source })
+        const tag = expectedCode === "INVALID_OUTPUT" ? "I" : "X"
         for (const adapter of [
           createWorkerThreadStrategyExecutionAdapter(),
-          createSubprocessStrategyExecutionAdapter(),
+          createSubprocessStrategyExecutionAdapter({
+            spawnSync: () =>
+              ({
+                pid: 123,
+                output: ["", tag, ""],
+                stdout: tag,
+                stderr: "",
+                status: 0,
+                signal: null,
+              }) as SpawnSyncReturns<string>,
+          }),
         ]) {
           const result = executeCandidateWith(adapter, request, source)
           expect(result.kind, adapter.metadata.id).toBe("success")
@@ -946,7 +1048,7 @@ export default {
       let observedOptions: Record<string, unknown> | undefined
       const adapter = createSubprocessStrategyExecutionAdapter({
         spawnSync: (_command, _args, options) => {
-          observedOptions = options as Record<string, unknown>
+          observedOptions = options as unknown as Record<string, unknown>
           return {
             pid: 123,
             output: ["", successFrame, ""],
@@ -971,7 +1073,7 @@ export default {
       )
     })
 
-    it("stops successor canonical output at N+1 before reading later values", () => {
+    it("commits a proven N+1 payload violation and never a host guess", () => {
       const source = transpileOrThrow(`
 export default {
   selectActivations() {
@@ -993,8 +1095,28 @@ export default {
           request.budget.methodLimit.counters.payloadBytes.maximum + 1,
       })
       for (const adapter of [
-        createWorkerThreadStrategyExecutionAdapter(),
-        createSubprocessStrategyExecutionAdapter(),
+        createSubprocessStrategyExecutionAdapter({
+          spawnSync: () =>
+            ({
+              pid: 123,
+              output: ["", "O", ""],
+              stdout: "O",
+              stderr: "",
+              status: 0,
+              signal: null,
+            }) as SpawnSyncReturns<string>,
+        }),
+        createContainerSubprocessStrategyExecutionAdapter({
+          spawnSync: () =>
+            ({
+              pid: 123,
+              output: ["", "O", ""],
+              stdout: "O",
+              stderr: "",
+              status: 0,
+              signal: null,
+            }) as SpawnSyncReturns<string>,
+        }),
       ]) {
         const result = executeCandidateWith(adapter, request, source, evidence)
         expect(result).toMatchObject({
@@ -1061,9 +1183,35 @@ export default {
 }
 `)
       const request = candidateRequest({ artifactSource: source })
+      const canonicalValue = {
+        activationOrders: [],
+        strategyMemory: {
+          "": {
+            escape: 'quote" slash\\ line\n',
+            exponent: 1e21,
+            negativeZero: 0,
+          },
+          "𐀀": 2,
+        },
+      }
+      const encoded = encodeCanonicalJson(canonicalValue, {
+        context: "decoded-strategy-payload",
+      })
+      if (!encoded.ok) throw new Error(encoded.error.code)
+      const canonicalFrame = `S${new TextDecoder().decode(encoded.bytes)}`
       for (const adapter of [
         createWorkerThreadStrategyExecutionAdapter(),
-        createSubprocessStrategyExecutionAdapter(),
+        createSubprocessStrategyExecutionAdapter({
+          spawnSync: () =>
+            ({
+              pid: 123,
+              output: ["", canonicalFrame, ""],
+              stdout: canonicalFrame,
+              stderr: "",
+              status: 0,
+              signal: null,
+            }) as SpawnSyncReturns<string>,
+        }),
       ]) {
         const result = executeCandidateWith(adapter, request, source)
         expect(result).toMatchObject({
@@ -1096,7 +1244,17 @@ export default {
       })
       for (const adapter of [
         createWorkerThreadStrategyExecutionAdapter(),
-        createSubprocessStrategyExecutionAdapter(),
+        createSubprocessStrategyExecutionAdapter({
+          spawnSync: () =>
+            ({
+              pid: 123,
+              output: ["", "R", ""],
+              stdout: "R",
+              stderr: "",
+              status: 0,
+              signal: null,
+            }) as SpawnSyncReturns<string>,
+        }),
       ]) {
         const result = executeCandidateWith(
           adapter,

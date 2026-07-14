@@ -8,11 +8,14 @@ import {
   StrategyResultV117Schema,
   admitCanonicalJsonBytes,
   createAuthenticatedRuntimeInvocationResponseV117,
+  createRuntimeInvocationExecutionReceiptV117,
+  createRuntimeInvocationTraceV117,
   serializeRuntimeInvocationResponseV117,
   verifyRuntimeInvocationRequestV117,
   type AuthenticatedRuntimeInvocationRequestV117,
   type JsonValue,
   type RuntimeInvocationPlayerViolationCodeV117,
+  type RuntimeInvocationExecutionReceiptEvidenceV117,
   type RuntimeInvocationResultV117,
   type RuntimeInvocationSigningIdentityV117,
   type RuntimeInvocationSystemFailureCodeV117,
@@ -148,6 +151,11 @@ export interface ExecuteStrategyRuntimeAbiBridgeInputV117 {
   readonly requestBytes: Uint8Array
   readonly executableSource: string
   readonly signingIdentity: RuntimeInvocationSigningIdentityV117
+  /**
+   * Complete host-observed execution evidence. Current JS adapters cannot
+   * produce equivalent evidence themselves, so omission fails closed.
+   */
+  readonly receiptEvidence?: RuntimeInvocationExecutionReceiptEvidenceV117
   readonly invokeGuest: (input: {
     readonly executableSource: string
     readonly methodName: AuthenticatedRuntimeInvocationRequestV117["method"]
@@ -162,29 +170,18 @@ const sha256 = (bytes: Uint8Array): `sha256:${string}` =>
 
 const traceFor = (
   request: AuthenticatedRuntimeInvocationRequestV117,
-  requestBytes: Uint8Array,
   safeCodes: readonly string[],
-): RuntimeInvocationTraceV117 => ({
-  requestId: request.requestId,
-  invocationId: request.invocationId,
-  kernelRequestId: request.kernelRequestId,
-  method: request.method,
-  requestSha256: sha256(requestBytes),
-  budgetProfileSha256: request.budget.profileSha256,
-  inputSha256: request.input.canonicalSha256,
-  retryIdentitySha256: request.retry.identitySha256,
-  safeCodes,
-})
+): RuntimeInvocationTraceV117 =>
+  createRuntimeInvocationTraceV117(request, safeCodes)
 
 const playerViolation = (
   request: AuthenticatedRuntimeInvocationRequestV117,
-  requestBytes: Uint8Array,
   code: RuntimeInvocationPlayerViolationCodeV117,
   safeCode: string,
 ): RuntimeInvocationResultV117 => ({
   kind: "player_violation",
   violation: RUNTIME_INVOCATION_V1_17_PLAYER_VIOLATIONS[code],
-  trace: traceFor(request, requestBytes, [
+  trace: traceFor(request, [
     "ADAPTER_AUTHENTICATED",
     "OUTER_BINDINGS_VERIFIED",
     safeCode,
@@ -193,7 +190,6 @@ const playerViolation = (
 
 const systemFailure = (
   request: AuthenticatedRuntimeInvocationRequestV117,
-  requestBytes: Uint8Array,
   code: RuntimeInvocationSystemFailureCodeV117,
   retryable: boolean,
 ): RuntimeInvocationResultV117 => ({
@@ -203,7 +199,7 @@ const systemFailure = (
     publicMessage: "Runtime system failure.",
     retryable,
   },
-  trace: traceFor(request, requestBytes, [
+  trace: traceFor(request, [
     "ADAPTER_AUTHENTICATED",
     "OUTER_BINDINGS_VERIFIED",
     code,
@@ -212,13 +208,14 @@ const systemFailure = (
 
 const successfulPayload = (
   request: AuthenticatedRuntimeInvocationRequestV117,
-  requestBytes: Uint8Array,
   payloadBytes: Uint8Array,
 ): RuntimeInvocationResultV117 => {
-  if (payloadBytes.byteLength > request.budget.outputBytes) {
+  if (
+    payloadBytes.byteLength >
+    request.budget.methodLimit.counters.payloadBytes.maximum
+  ) {
     return playerViolation(
       request,
-      requestBytes,
       "OVERSIZED_OUTPUT",
       "PAYLOAD_CAP_EXCEEDED",
     )
@@ -229,7 +226,6 @@ const successfulPayload = (
   if (!admitted.ok) {
     return playerViolation(
       request,
-      requestBytes,
       admitted.error.code === "FIELD_CAP_EXCEEDED"
         ? "OVERSIZED_OUTPUT"
         : "INVALID_OUTPUT",
@@ -244,7 +240,6 @@ const successfulPayload = (
   if (!parsed.success) {
     return playerViolation(
       request,
-      requestBytes,
       "INVALID_OUTPUT",
       "PAYLOAD_SCHEMA_REJECTED",
     )
@@ -252,7 +247,7 @@ const successfulPayload = (
   return {
     kind: "success",
     value: parsed.data as JsonValue,
-    trace: traceFor(request, requestBytes, [
+    trace: traceFor(request, [
       "ADAPTER_AUTHENTICATED",
       "OUTER_BINDINGS_VERIFIED",
       "PAYLOAD_CANONICAL",
@@ -263,11 +258,10 @@ const successfulPayload = (
 
 const classifyGuestFrame = (
   request: AuthenticatedRuntimeInvocationRequestV117,
-  requestBytes: Uint8Array,
   frame: Uint8Array,
 ): RuntimeInvocationResultV117 => {
   if (frame.byteLength === 0) {
-    return systemFailure(request, requestBytes, "TRANSPORT_CRASH", true)
+    return systemFailure(request, "TRANSPORT_CRASH", true)
   }
   const tag = String.fromCharCode(frame[0] ?? 0)
   const payload = frame.subarray(1)
@@ -275,47 +269,114 @@ const classifyGuestFrame = (
     tag !== RUNTIME_GUEST_FRAME_TAGS_V117.success &&
     payload.byteLength !== 0
   ) {
-    return systemFailure(request, requestBytes, "TRANSPORT_CRASH", true)
+    return systemFailure(request, "TRANSPORT_CRASH", true)
   }
   switch (tag) {
     case RUNTIME_GUEST_FRAME_TAGS_V117.success:
-      return successfulPayload(request, requestBytes, payload)
+      return successfulPayload(request, payload)
     case RUNTIME_GUEST_FRAME_TAGS_V117.invalidOutput:
       return playerViolation(
         request,
-        requestBytes,
         "INVALID_OUTPUT",
         "PAYLOAD_INVALID",
       )
     case RUNTIME_GUEST_FRAME_TAGS_V117.thrownException:
       return playerViolation(
         request,
-        requestBytes,
         "THROWN_EXCEPTION",
         "STRATEGY_EXCEPTION_PROVEN",
       )
     case RUNTIME_GUEST_FRAME_TAGS_V117.forbiddenCapability:
       return playerViolation(
         request,
-        requestBytes,
         "FORBIDDEN_CAPABILITY",
         "FORBIDDEN_CAPABILITY_PROVEN",
       )
     case RUNTIME_GUEST_FRAME_TAGS_V117.oversizedOutput:
       return playerViolation(
         request,
-        requestBytes,
         "OVERSIZED_OUTPUT",
         "PAYLOAD_CAP_EXCEEDED",
       )
     case RUNTIME_GUEST_FRAME_TAGS_V117.transportFailure:
-      return systemFailure(request, requestBytes, "TRANSPORT_CRASH", true)
+      return systemFailure(request, "TRANSPORT_CRASH", true)
     case RUNTIME_GUEST_FRAME_TAGS_V117.runtimeFailure:
-      return systemFailure(request, requestBytes, "RUNTIME_CRASH", true)
+      return systemFailure(request, "RUNTIME_CRASH", true)
     default:
-      return systemFailure(request, requestBytes, "TRANSPORT_CRASH", true)
+      return systemFailure(request, "TRANSPORT_CRASH", true)
   }
 }
+
+const ambiguousEvidence =
+  (): RuntimeInvocationExecutionReceiptEvidenceV117 => ({
+    attribution: "ambiguous",
+    counters: {
+      wallMilliseconds: { status: "ambiguous" },
+      computeFuel: { status: "ambiguous" },
+      payloadBytes: { status: "ambiguous" },
+      stdoutBytes: { status: "ambiguous" },
+      stderrBytes: { status: "ambiguous" },
+    },
+    memory: { status: "ambiguous" },
+    process: { status: "ambiguous" },
+    capabilities: { status: "ambiguous" },
+    cancellation: { status: "ambiguous" },
+    accountingEvidence: { status: "ambiguous" },
+  })
+
+const hasCompleteAccounting = (
+  evidence: RuntimeInvocationExecutionReceiptEvidenceV117 | undefined,
+): evidence is RuntimeInvocationExecutionReceiptEvidenceV117 => {
+  try {
+    return (
+      evidence !== undefined &&
+      evidence.attribution !== "ambiguous" &&
+      Object.values(evidence.counters).every(
+        (counter) => counter.status === "measured",
+      ) &&
+      evidence.memory.status === "measured" &&
+      evidence.process.status === "verified" &&
+      evidence.capabilities.status === "verified" &&
+      evidence.cancellation.status === "verified" &&
+      evidence.accountingEvidence.status === "verified" &&
+      evidence.accountingEvidence.signatureVerified &&
+      evidence.accountingEvidence.monotonic
+    )
+  } catch {
+    return false
+  }
+}
+
+const authenticatedResponse = (
+  request: AuthenticatedRuntimeInvocationRequestV117,
+  outcome: RuntimeInvocationResultV117,
+  evidence: RuntimeInvocationExecutionReceiptEvidenceV117,
+  signingIdentity: RuntimeInvocationSigningIdentityV117,
+): Uint8Array => {
+  const receipt = createRuntimeInvocationExecutionReceiptV117(
+    request,
+    evidence,
+  )
+  const response = createAuthenticatedRuntimeInvocationResponseV117(
+    request,
+    outcome,
+    receipt,
+    signingIdentity,
+  )
+  return serializeRuntimeInvocationResponseV117(response)
+}
+
+const ambiguousResponse = (
+  request: AuthenticatedRuntimeInvocationRequestV117,
+  signingIdentity: RuntimeInvocationSigningIdentityV117,
+  outcome = systemFailure(request, "AMBIGUOUS_ATTRIBUTION", false),
+): Uint8Array =>
+  authenticatedResponse(
+    request,
+    outcome,
+    ambiguousEvidence(),
+    signingIdentity,
+  )
 
 /**
  * Host-only successor bridge. It authenticates raw request bytes before
@@ -336,62 +397,69 @@ export const executeStrategyRuntimeAbiV117 = (
   if (admittedRequest.kind !== "success") return new Uint8Array()
   const request = admittedRequest.value
 
-  let outcome: RuntimeInvocationResultV117
   const executableBytes = textEncoder.encode(input.executableSource)
   if (sha256(executableBytes) !== request.sourceIdentity.artifactSha256) {
-    outcome = systemFailure(
+    return ambiguousResponse(
       request,
-      requestBytes,
-      "OUTER_FRAME_WRONG_BINDING",
-      false,
+      input.signingIdentity,
+      systemFailure(request, "OUTER_FRAME_WRONG_BINDING", false),
     )
-  } else if (request.budget.outputBytes > RUNTIME_OUTPUT_BYTES) {
-    outcome = systemFailure(
-      request,
-      requestBytes,
-      "OUTER_FRAME_WRONG_BINDING",
-      false,
-    )
-  } else if (request.budget.wallMilliseconds === 0) {
-    outcome = systemFailure(
-      request,
-      requestBytes,
-      "AMBIGUOUS_ATTRIBUTION",
-      false,
-    )
-  } else {
-    let observation: RuntimeGuestObservationV117
-    try {
-      observation = input.invokeGuest({
-        executableSource: input.executableSource,
-        methodName: request.method,
-        input: request.input.value,
-        timeoutMs: request.budget.wallMilliseconds,
-        outputByteLimit: request.budget.outputBytes,
-      })
-    } catch {
-      observation = {
-        kind: "system_failure",
-        code: "ADAPTER_CRASH",
-        retryable: true,
-      }
-    }
-    outcome =
-      observation.kind === "raw_frame"
-        ? classifyGuestFrame(request, requestBytes, observation.bytes)
-        : systemFailure(
-            request,
-            requestBytes,
-            observation.code,
-            observation.retryable,
-          )
   }
-  const response = createAuthenticatedRuntimeInvocationResponseV117(
-    request,
-    outcome,
-    input.signingIdentity,
-  )
-  return serializeRuntimeInvocationResponseV117(response)
+  const methodLimit = request.budget.methodLimit
+  const outputByteLimit = methodLimit.counters.payloadBytes.maximum
+  if (outputByteLimit > RUNTIME_OUTPUT_BYTES) {
+    return ambiguousResponse(
+      request,
+      input.signingIdentity,
+      systemFailure(request, "OUTER_FRAME_WRONG_BINDING", false),
+    )
+  }
+  if (!hasCompleteAccounting(input.receiptEvidence)) {
+    return ambiguousResponse(request, input.signingIdentity)
+  }
+  try {
+    createRuntimeInvocationExecutionReceiptV117(
+      request,
+      input.receiptEvidence,
+    )
+  } catch {
+    return ambiguousResponse(request, input.signingIdentity)
+  }
+
+  let outcome: RuntimeInvocationResultV117
+  let observation: RuntimeGuestObservationV117
+  try {
+    observation = input.invokeGuest({
+      executableSource: input.executableSource,
+      methodName: request.method,
+      input: request.input.value,
+      timeoutMs: methodLimit.counters.wallMilliseconds.maximum,
+      outputByteLimit,
+    })
+  } catch {
+    observation = {
+      kind: "system_failure",
+      code: "ADAPTER_CRASH",
+      retryable: true,
+    }
+  }
+  outcome =
+    observation.kind === "raw_frame"
+      ? classifyGuestFrame(request, observation.bytes)
+      : systemFailure(request, observation.code, observation.retryable)
+
+  try {
+    return authenticatedResponse(
+      request,
+      outcome,
+      input.receiptEvidence,
+      input.signingIdentity,
+    )
+  } catch {
+    // Invalid, unavailable, ambiguous, or outcome-inconsistent accounting can
+    // never be translated into a player penalty or committed gameplay state.
+    return ambiguousResponse(request, input.signingIdentity)
+  }
 }
 
 export const encodeRuntimeGuestSuccessFrameV117 = (

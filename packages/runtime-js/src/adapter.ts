@@ -1,5 +1,8 @@
 import type { RuntimeResult } from "@cowards/engine"
-import type { RuntimeInvocationSigningIdentityV117 } from "@cowards/spec"
+import type {
+  RuntimeInvocationExecutionReceiptEvidenceV117,
+  RuntimeInvocationSigningIdentityV117,
+} from "@cowards/spec"
 
 export type StrategyMethodName = "selectActivations" | "soldierBrain"
 
@@ -58,6 +61,11 @@ export interface StrategyExecutionRequestV117 {
   readonly executableSource: string
   /** Host-only authority. Successor guest harnesses never receive this value. */
   readonly signingIdentity: RuntimeInvocationSigningIdentityV117
+  /**
+   * Complete host-observed accounting. Omission is accepted only so current
+   * candidate adapters can return an authenticated fail-closed response.
+   */
+  readonly receiptEvidence?: RuntimeInvocationExecutionReceiptEvidenceV117
 }
 
 export interface StrategyExecutionAdapterV117 extends StrategyExecutionAdapter {
