@@ -9,7 +9,17 @@ import { encodeCanonicalJson } from "./canonical-json-encode.js"
 import { parseCanonicalJson } from "./canonical-json-parse.js"
 import type { JsonValue } from "./types.js"
 
-export const RUNTIME_INVOCATION_V1_17_CANDIDATE = Object.freeze({
+const deepFreeze = <T>(value: T): Readonly<T> => {
+  if (value !== null && typeof value === "object" && !Object.isFrozen(value)) {
+    for (const child of Object.values(value as Record<string, unknown>)) {
+      deepFreeze(child)
+    }
+    Object.freeze(value)
+  }
+  return value
+}
+
+export const RUNTIME_INVOCATION_V1_17_CANDIDATE = deepFreeze({
   contractVersion: "runtime-invocation-v1.17",
   runtimeAbiVersion: "strategy-runtime-abi-v1.17",
   lifecycle: "inactive-candidate",
@@ -17,18 +27,18 @@ export const RUNTIME_INVOCATION_V1_17_CANDIDATE = Object.freeze({
   current: false,
 } as const)
 
-export const RUNTIME_INVOCATION_V1_17_PLAYER_VIOLATION_CODES = [
+export const RUNTIME_INVOCATION_V1_17_PLAYER_VIOLATION_CODES = deepFreeze([
   "INVALID_OUTPUT",
   "TIMEOUT",
   "THROWN_EXCEPTION",
   "FORBIDDEN_CAPABILITY",
   "OVERSIZED_OUTPUT",
-] as const
+] as const)
 
 export type RuntimeInvocationPlayerViolationCodeV117 =
   (typeof RUNTIME_INVOCATION_V1_17_PLAYER_VIOLATION_CODES)[number]
 
-export const RUNTIME_INVOCATION_V1_17_PLAYER_VIOLATIONS = Object.freeze({
+export const RUNTIME_INVOCATION_V1_17_PLAYER_VIOLATIONS = deepFreeze({
   INVALID_OUTPUT: {
     code: "INVALID_OUTPUT",
     publicMessage: "Strategy returned an invalid payload.",
@@ -51,7 +61,7 @@ export const RUNTIME_INVOCATION_V1_17_PLAYER_VIOLATIONS = Object.freeze({
   },
 } as const)
 
-export const RUNTIME_INVOCATION_V1_17_SYSTEM_FAILURE_CODES = [
+export const RUNTIME_INVOCATION_V1_17_SYSTEM_FAILURE_CODES = deepFreeze([
   "OUTER_FRAME_MISSING",
   "OUTER_FRAME_TRUNCATED",
   "OUTER_FRAME_UNAUTHENTICATED",
@@ -62,7 +72,7 @@ export const RUNTIME_INVOCATION_V1_17_SYSTEM_FAILURE_CODES = [
   "HOST_CRASH",
   "TRANSPORT_CRASH",
   "AMBIGUOUS_ATTRIBUTION",
-] as const
+] as const)
 
 export type RuntimeInvocationSystemFailureCodeV117 =
   (typeof RUNTIME_INVOCATION_V1_17_SYSTEM_FAILURE_CODES)[number]
@@ -194,7 +204,7 @@ export const RuntimeInvocationResultV117Schema = z.union([
   RuntimeInvocationSystemFailureV117Schema,
 ])
 
-export const RUNTIME_INVOCATION_V1_17_OWNERSHIP_MATRIX = Object.freeze({
+export const RUNTIME_INVOCATION_V1_17_OWNERSHIP_MATRIX = deepFreeze({
   success: { kind: "success" },
   payload_duplicate_key: {
     kind: "player_violation",
@@ -365,6 +375,19 @@ export interface RuntimeInvocationBudgetV117 {
   readonly memoryBytes: number
   readonly outputBytes: number
   readonly processLimit: number
+  readonly matchCumulative: RuntimeInvocationMatchCumulativeBudgetV117
+}
+
+export interface RuntimeInvocationMatchCumulativeBudgetV117 {
+  readonly invocationCountMaximum: number
+  readonly wallMilliseconds: number
+  readonly computeFuel: number
+  readonly payloadBytes: number
+  readonly stdoutBytes: number
+  readonly stderrBytes: number
+  readonly memoryBytes: number
+  readonly accounting: "signed-monotonic-per-invocation-deltas-plus-cumulative-total"
+  readonly overflow: "stop-before-next-invocation-and-classify-by-proven-cause"
 }
 
 export interface RuntimeInvocationInputV117 {
@@ -482,6 +505,24 @@ const NonnegativeSafeIntegerSchema = z
   .min(0)
   .max(Number.MAX_SAFE_INTEGER)
 
+const RuntimeInvocationMatchCumulativeBudgetV117Schema = z
+  .object({
+    invocationCountMaximum: NonnegativeSafeIntegerSchema,
+    wallMilliseconds: NonnegativeSafeIntegerSchema,
+    computeFuel: NonnegativeSafeIntegerSchema,
+    payloadBytes: NonnegativeSafeIntegerSchema,
+    stdoutBytes: NonnegativeSafeIntegerSchema,
+    stderrBytes: NonnegativeSafeIntegerSchema,
+    memoryBytes: NonnegativeSafeIntegerSchema,
+    accounting: z.literal(
+      "signed-monotonic-per-invocation-deltas-plus-cumulative-total",
+    ),
+    overflow: z.literal(
+      "stop-before-next-invocation-and-classify-by-proven-cause",
+    ),
+  })
+  .strict()
+
 const BudgetWithoutHashSchema = z
   .object({
     profileId: PublicIdSchema,
@@ -490,6 +531,7 @@ const BudgetWithoutHashSchema = z
     memoryBytes: NonnegativeSafeIntegerSchema,
     outputBytes: NonnegativeSafeIntegerSchema,
     processLimit: NonnegativeSafeIntegerSchema,
+    matchCumulative: RuntimeInvocationMatchCumulativeBudgetV117Schema,
   })
   .strict()
 
@@ -940,7 +982,14 @@ export const verifyRuntimeInvocationRequestV117 = (
   if (!requestDerivedBindingsMatch(request)) {
     return verificationFailure("OUTER_FRAME_WRONG_BINDING", bytes, trace)
   }
-  return { kind: "success", value: request, trace }
+  return {
+    kind: "success",
+    value: request,
+    trace: {
+      ...trace,
+      safeCodes: ["ADAPTER_AUTHENTICATED", "OUTER_BINDINGS_VERIFIED"],
+    },
+  }
 }
 
 const sameCanonicalValue = (left: JsonValue, right: JsonValue): boolean =>

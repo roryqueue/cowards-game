@@ -71,6 +71,7 @@ const candidateRequest = (): AuthenticatedRuntimeInvocationRequestV117 =>
         memoryBytes: 67_108_864,
         outputBytes: 262_144,
         processLimit: 1,
+        matchCumulative: RUNTIME_ABI_V1_17.budgets.matchCumulative,
       },
       input: {
         value: { cycleIndex: 0, phase: "ROUND" },
@@ -275,16 +276,16 @@ describe("runtime invocation v1.17 authenticated candidate wire", () => {
     expect(Buffer.from(requestBytes)).toEqual(readFileSync(requestFixturePath))
     expect(Buffer.from(responseBytes)).toEqual(readFileSync(responseFixturePath))
     expect(sha256(requestBytes)).toBe(
-      "sha256:df0a9e071fbcc8d3f1e2e95e13673b34946a5e556b046485dc7710fe09f57dd3",
+      "sha256:94da776c5ef88992d126bd85ae325518303ba56fdf8d2b5568e0e0ce28db1fd7",
     )
     expect(sha256(responseBytes)).toBe(
-      "sha256:7c86ad2bc60383635372ad29ee721812c5e5c375db9c660b475a762b186f2313",
+      "sha256:d4aa58745e3d4305cc09854478dc38e31313b1e803b89f65a990bd8c52a74ebf",
     )
     expect(request.authentication.signatureInputSha256).toBe(
-      "sha256:c2c50c6c52190231745466011ab7ede4c3860180898b840e941f63354f5b8aa2",
+      "sha256:7a2b2ce2c3b8fed0af22911fea9430a51487db83796d068478a0db851ac2b19d",
     )
     expect(response.authentication.signatureInputSha256).toBe(
-      "sha256:34a02714c615d542cc4258b82ae728d73f151069d5fddd4e9d5b1012347a90ea",
+      "sha256:0a0c97b4f762608139b0e413fef120eee35ca4ee0c221398b00f94e92f342bcc",
     )
   })
 
