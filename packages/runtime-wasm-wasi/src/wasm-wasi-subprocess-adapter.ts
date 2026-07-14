@@ -25,12 +25,15 @@ import {
   admitCanonicalJsonValue,
   classifyRuntimeInvocationV117,
   createAuthenticatedRuntimeInvocationResponseV117,
+  createRuntimeInvocationExecutionReceiptV117,
+  createRuntimeInvocationTraceV117,
   serializeRuntimeInvocationRequestV117,
   verifyRuntimeInvocationRequestV117,
   type AuthenticatedRuntimeInvocationRequestV117,
   type AuthenticatedRuntimeInvocationResponseV117,
   type JsonValue,
   type RuntimeInvocationBoundaryEventV117,
+  type RuntimeInvocationExecutionReceiptEvidenceV117,
   type RuntimeInvocationPlayerViolationCodeV117,
   type RuntimeInvocationResultV117,
   type RuntimeInvocationSigningIdentityV117,
@@ -98,6 +101,9 @@ export interface WasmWasiStrategyRequestV117 {
   request: AuthenticatedRuntimeInvocationRequestV117
   signingIdentity: RuntimeInvocationSigningIdentityV117
   executionIdentity: WasmWasiCandidateIdentityV117
+  executionReceiptEvidence?:
+    | RuntimeInvocationExecutionReceiptEvidenceV117
+    | undefined
   executeGuest?:
     | ((input: WasmWasiGuestExecutionInputV117) => WasmWasiGuestObservationV117)
     | undefined
@@ -145,19 +151,8 @@ const resolveCommandPath = (command: string): string | null => {
 const candidateTrace = (
   request: AuthenticatedRuntimeInvocationRequestV117,
   safeCodes: readonly string[],
-): RuntimeInvocationTraceV117 => ({
-  requestId: request.requestId,
-  invocationId: request.invocationId,
-  kernelRequestId: request.kernelRequestId,
-  method: request.method,
-  requestSha256: `sha256:${createHash("sha256")
-    .update(serializeRuntimeInvocationRequestV117(request))
-    .digest("hex")}`,
-  budgetProfileSha256: request.budget.profileSha256,
-  inputSha256: request.input.canonicalSha256,
-  retryIdentitySha256: request.retry.identitySha256,
-  safeCodes,
-})
+): RuntimeInvocationTraceV117 =>
+  createRuntimeInvocationTraceV117(request, safeCodes)
 
 const candidateOutcome = (
   event: RuntimeInvocationBoundaryEventV117,
@@ -185,12 +180,68 @@ const authenticateCandidateOutcome = (
   request: AuthenticatedRuntimeInvocationRequestV117,
   outcome: RuntimeInvocationResultV117,
   signingIdentity: RuntimeInvocationSigningIdentityV117,
-): AuthenticatedRuntimeInvocationResponseV117 =>
-  createAuthenticatedRuntimeInvocationResponseV117(
-    request,
-    outcome,
-    signingIdentity,
-  )
+  evidence?: RuntimeInvocationExecutionReceiptEvidenceV117 | undefined,
+): AuthenticatedRuntimeInvocationResponseV117 => {
+  const unavailableEvidence = {
+    attribution: "ambiguous" as const,
+    counters: {
+      wallMilliseconds: { status: "unavailable" as const },
+      computeFuel: { status: "unavailable" as const },
+      payloadBytes: { status: "unavailable" as const },
+      stdoutBytes: { status: "unavailable" as const },
+      stderrBytes: { status: "unavailable" as const },
+    },
+    memory: { status: "unavailable" as const },
+    process: { status: "unavailable" as const },
+    capabilities: { status: "unavailable" as const },
+    cancellation: { status: "unavailable" as const },
+    accountingEvidence: { status: "unavailable" as const },
+  } satisfies RuntimeInvocationExecutionReceiptEvidenceV117
+  const failClosed = (): AuthenticatedRuntimeInvocationResponseV117 => {
+    const safeCodes = [
+      ...new Set([
+        ...outcome.trace.safeCodes,
+        "WASM_WASI_EQUIVALENT_ACCOUNTING_UNAVAILABLE",
+      ]),
+    ]
+    return createAuthenticatedRuntimeInvocationResponseV117(
+      request,
+      candidateOutcome(
+        "strategy_exhaustion_ambiguous",
+        request,
+        null,
+        safeCodes,
+      ),
+      createRuntimeInvocationExecutionReceiptV117(
+        request,
+        unavailableEvidence,
+      ),
+      signingIdentity,
+    )
+  }
+  if (evidence === undefined) return failClosed()
+  try {
+    const complete =
+      evidence.attribution !== "ambiguous" &&
+      Object.values(evidence.counters).every(
+        (counter) => counter.status === "measured",
+      ) &&
+      evidence.memory.status === "measured" &&
+      evidence.process.status === "verified" &&
+      evidence.capabilities.status === "verified" &&
+      evidence.cancellation.status === "verified" &&
+      evidence.accountingEvidence.status === "verified"
+    if (!complete) return failClosed()
+    return createAuthenticatedRuntimeInvocationResponseV117(
+      request,
+      outcome,
+      createRuntimeInvocationExecutionReceiptV117(request, evidence),
+      signingIdentity,
+    )
+  } catch {
+    return failClosed()
+  }
+}
 
 const candidateArtifactBytesFor = (
   revision: WasmWasiCandidateRevisionV117,
@@ -214,7 +265,7 @@ const candidateArtifactBytesFor = (
       RUNTIME_INVOCATION_V1_17_CANDIDATE.runtimeAbiVersion ||
     revision.runtime.adapter.id !== "runtime-wasm-wasi-wasmtime-preview1" ||
     revision.runtime.adapter.version !== "v1.17-candidate" ||
-    request.budget.processLimit !==
+    request.budget.methodLimit.process.processes !==
       WASM_WASI_V1_17_EXECUTION_SETTINGS.processLimit ||
     artifact?.bytesBase64 === undefined
   ) {
@@ -415,11 +466,11 @@ const executeCandidateGuest = (
     [
       "run",
       "-W",
-      `fuel=${input.request.budget.computeFuel}`,
+      `fuel=${input.request.budget.methodLimit.counters.computeFuel.maximum}`,
       "-W",
-      `timeout=${input.request.budget.wallMilliseconds}ms`,
+      `timeout=${input.request.budget.methodLimit.counters.wallMilliseconds.maximum}ms`,
       "-W",
-      `max-memory-size=${input.request.budget.memoryBytes}`,
+      `max-memory-size=${input.request.budget.methodLimit.memory.maximumBytes}`,
       "-W",
       `max-wasm-stack=${input.settings.wasmStackBytes}`,
       "-W",
@@ -431,16 +482,18 @@ const executeCandidateGuest = (
       encoding: "buffer",
       env: {},
       shell: false,
-      timeout: input.request.budget.wallMilliseconds + 250,
+      timeout:
+        input.request.budget.methodLimit.counters.wallMilliseconds.maximum +
+        250,
       maxBuffer: wasmWasiSharedCaptureBufferBytesV117(
-        input.request.budget.outputBytes,
+        input.request.budget.methodLimit.counters.stdoutBytes.maximum,
         input.settings.stderrBytes,
       ),
     },
   )
   return classifyWasmtimeProcessObservationV117(
     result,
-    input.request.budget.outputBytes,
+    input.request.budget.methodLimit.counters.stdoutBytes.maximum,
     input.settings.stderrBytes,
   )
 }
@@ -483,7 +536,8 @@ const outcomeForObservation = (
   }
   if (
     observation.kind === "completed" &&
-    observation.stdout.byteLength > request.budget.outputBytes
+    observation.stdout.byteLength >
+      request.budget.methodLimit.counters.stdoutBytes.maximum
   ) {
     return candidatePlayerViolation(request, "OVERSIZED_OUTPUT", [
       "WASM_WASI_HOST_OUTER_AUTHORITY",
@@ -512,7 +566,8 @@ const outcomeForObservation = (
     if (observation.attribution === "proven_output_exhaustion") {
       if (
         observation.provenance !== "host_stdout_byte_meter" ||
-        observation.stdout.byteLength <= request.budget.outputBytes
+        observation.stdout.byteLength <=
+          request.budget.methodLimit.counters.stdoutBytes.maximum
       ) {
         return candidateOutcome("transport_crash", request)
       }
@@ -531,6 +586,15 @@ const outcomeForObservation = (
   })
   if (!admitted.ok) {
     return candidateOutcome("payload_non_canonical", request)
+  }
+  if (
+    admitted.canonicalBytes.byteLength >
+    request.budget.methodLimit.counters.payloadBytes.maximum
+  ) {
+    return candidatePlayerViolation(request, "OVERSIZED_OUTPUT", [
+      "WASM_WASI_HOST_OUTER_AUTHORITY",
+      "WASM_WASI_PROVEN_PAYLOAD_EXHAUSTION",
+    ])
   }
   if (
     !Buffer.from(observation.stdout).equals(
@@ -592,6 +656,7 @@ export const runWasmWasiStrategyMethodV117Sync = (
         "WASM_WASI_ARTIFACT_PREFLIGHT_CRASH",
       ]),
       input.signingIdentity,
+      input.executionReceiptEvidence,
     )
   }
   if (!artifact.ok) {
@@ -607,6 +672,7 @@ export const runWasmWasiStrategyMethodV117Sync = (
       input.request,
       outcome,
       input.signingIdentity,
+      input.executionReceiptEvidence,
     )
   }
   let observedIdentity: WasmWasiCandidateIdentityV117
@@ -622,6 +688,7 @@ export const runWasmWasiStrategyMethodV117Sync = (
         "WASM_WASI_EXECUTION_IDENTITY_UNAVAILABLE",
       ]),
       input.signingIdentity,
+      input.executionReceiptEvidence,
     )
   }
   const expectedIdentity = admitCanonicalJsonValue(input.executionIdentity, {
@@ -645,6 +712,7 @@ export const runWasmWasiStrategyMethodV117Sync = (
         "WASM_WASI_STALE_RUNTIME_TOOLCHAIN_OR_SETTINGS_IDENTITY",
       ]),
       input.signingIdentity,
+      input.executionReceiptEvidence,
     )
   }
   const compiledArtifact = input.revision.metadata.compiledArtifact
@@ -669,6 +737,7 @@ export const runWasmWasiStrategyMethodV117Sync = (
         "WASM_WASI_STALE_ARTIFACT_TOOLCHAIN_IDENTITY",
       ]),
       input.signingIdentity,
+      input.executionReceiptEvidence,
     )
   }
   let dir: string | null = null
@@ -703,6 +772,7 @@ export const runWasmWasiStrategyMethodV117Sync = (
     input.request,
     outcome,
     input.signingIdentity,
+    input.executionReceiptEvidence,
   )
 }
 

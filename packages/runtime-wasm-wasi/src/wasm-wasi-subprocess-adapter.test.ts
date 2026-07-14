@@ -464,6 +464,66 @@ describe("WASM/WASI runtime v1.17 candidate host authority", () => {
     expect(response.accounting.poststate).toEqual(request.accounting.prestate)
   })
 
+  it("never converts unmetered Strategy-like observations into player blame", () => {
+    const seedRequest = candidateRequest(revision)
+    const failedObservation = (
+      attribution: WasmWasiGuestObservationV117["attribution"],
+      provenance: WasmWasiGuestObservationV117["provenance"],
+      stdout = new Uint8Array(),
+    ): WasmWasiGuestObservationV117 => ({
+      kind: "failed",
+      status: 1,
+      signal: null,
+      stdout,
+      stderr: new Uint8Array(),
+      attribution,
+      provenance,
+    })
+    const observations = [
+      completedObservation("not-json"),
+      failedObservation(
+        "proven_strategy_exception",
+        "structured_host_strategy_exception",
+      ),
+      failedObservation(
+        "proven_fuel_exhaustion",
+        "structured_host_fuel_meter",
+      ),
+      failedObservation(
+        "proven_memory_exhaustion",
+        "structured_host_memory_meter",
+      ),
+      failedObservation(
+        "proven_output_exhaustion",
+        "host_stdout_byte_meter",
+        new Uint8Array(
+          seedRequest.budget.methodLimit.counters.stdoutBytes.maximum + 1,
+        ),
+      ),
+    ]
+
+    for (const observation of observations) {
+      const request = candidateRequest(revision)
+      const response = runWasmWasiStrategyMethodV117Sync({
+        request,
+        revision,
+        signingIdentity: candidateSigningIdentity,
+        executionIdentity: candidateExecutionIdentity(revision),
+        executeGuest: () => observation,
+      })
+
+      expect(response.outcome).toMatchObject({
+        kind: "system_failure",
+        failure: { code: "AMBIGUOUS_ATTRIBUTION", retryable: false },
+      })
+      expect(response.outcome).not.toHaveProperty("violation")
+      expect(response.accounting.disposition).toBe("no_commit")
+      expect(response.accounting.poststate).toEqual(
+        request.accounting.prestate,
+      )
+    }
+  })
+
   it("does not preserve a success when any injected accounting dimension is unavailable", () => {
     const request = candidateRequest(revision)
     const observation = completedObservation(
