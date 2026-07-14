@@ -15,6 +15,12 @@ import {
   SoldierBrainResultV117Schema,
   StrategyResultV117Schema,
 } from "./runtime-payload-v1-17.js"
+import {
+  RUNTIME_ABI_V1_17,
+  debitRuntimeAbiV117Ledger,
+  type RuntimeAbiV117ExecutionLedger,
+  type RuntimeAbiV117ExecutionLedgerReceipt,
+} from "./runtime-abi-v1-17.js"
 import type { JsonValue } from "./types.js"
 
 const deepFreeze = <T>(value: T): Readonly<T> => {
@@ -109,6 +115,8 @@ export interface RuntimeInvocationTraceV117 {
   readonly budgetProfileSha256: `sha256:${string}`
   readonly inputSha256: `sha256:${string}`
   readonly retryIdentitySha256: `sha256:${string}`
+  readonly accountingIdentitySha256: `sha256:${string}`
+  readonly idempotencyKeySha256: `sha256:${string}`
   readonly safeCodes: readonly string[]
 }
 
@@ -174,6 +182,8 @@ export const RuntimeInvocationTraceV117Schema = z
     budgetProfileSha256: Sha256Schema,
     inputSha256: Sha256Schema,
     retryIdentitySha256: Sha256Schema,
+    accountingIdentitySha256: Sha256Schema,
+    idempotencyKeySha256: Sha256Schema,
     safeCodes: z.array(SafeCodeSchema).max(32),
   })
   .strict()
@@ -417,27 +427,85 @@ export interface RuntimeInvocationSourceIdentityV117 {
   readonly artifactSha256: `sha256:${string}`
 }
 
+export interface RuntimeInvocationCounterLimitV117 {
+  readonly semantics: "counter"
+  readonly maximum: number
+}
+
+export interface RuntimeInvocationMemoryLimitV117 {
+  readonly semantics: "peak"
+  readonly maximumBytes: number
+}
+
+export interface RuntimeInvocationMethodLimitV117 {
+  readonly method: RuntimeInvocationMethodV117
+  readonly invocationCountMaximum: number
+  readonly counters: Readonly<{
+    wallMilliseconds: RuntimeInvocationCounterLimitV117
+    computeFuel: RuntimeInvocationCounterLimitV117
+    payloadBytes: RuntimeInvocationCounterLimitV117
+    stdoutBytes: RuntimeInvocationCounterLimitV117
+    stderrBytes: RuntimeInvocationCounterLimitV117
+  }>
+  readonly memory: RuntimeInvocationMemoryLimitV117
+  readonly process: Readonly<{
+    semantics: "predicate"
+    processes: number
+    threads: number
+    children: number
+  }>
+  readonly capabilities: Readonly<{
+    semantics: "predicate"
+    filesystem: string
+    network: string
+    environment: string
+    shell: string
+  }>
+  readonly cancellation: Readonly<{
+    semantics: "predicate"
+    terminationGraceMilliseconds: number
+    evidence: string
+  }>
+  readonly accountingEvidence: Readonly<{
+    semantics: "predicate"
+    required: true
+  }>
+}
+
+export interface RuntimeInvocationMatchLimitV117 {
+  readonly methodInvocations: Readonly<
+    Record<RuntimeInvocationMethodV117, number>
+  >
+  readonly counters: Readonly<{
+    invocationCount: RuntimeInvocationCounterLimitV117
+    wallMilliseconds: RuntimeInvocationCounterLimitV117
+    computeFuel: RuntimeInvocationCounterLimitV117
+    payloadBytes: RuntimeInvocationCounterLimitV117
+    stdoutBytes: RuntimeInvocationCounterLimitV117
+    stderrBytes: RuntimeInvocationCounterLimitV117
+  }>
+  readonly memory: RuntimeInvocationMemoryLimitV117
+  readonly overflow: "stop-before-next-invocation-and-classify-by-proven-cause"
+}
+
 export interface RuntimeInvocationBudgetV117 {
   readonly profileId: string
   readonly profileSha256: `sha256:${string}`
-  readonly wallMilliseconds: number
-  readonly computeFuel: number
-  readonly memoryBytes: number
-  readonly outputBytes: number
-  readonly processLimit: number
-  readonly matchCumulative: RuntimeInvocationMatchCumulativeBudgetV117
+  readonly methodLimit: RuntimeInvocationMethodLimitV117
+  readonly matchLimit: RuntimeInvocationMatchLimitV117
 }
 
-export interface RuntimeInvocationMatchCumulativeBudgetV117 {
-  readonly invocationCountMaximum: number
-  readonly wallMilliseconds: number
-  readonly computeFuel: number
-  readonly payloadBytes: number
-  readonly stdoutBytes: number
-  readonly stderrBytes: number
-  readonly memoryBytes: number
-  readonly accounting: "signed-monotonic-per-invocation-deltas-plus-cumulative-total"
-  readonly overflow: "stop-before-next-invocation-and-classify-by-proven-cause"
+export type RuntimeInvocationMatchCumulativeBudgetV117 =
+  RuntimeInvocationMatchLimitV117
+
+export interface RuntimeInvocationRequestAccountingV117 {
+  readonly schemaVersion: "runtime-invocation-accounting-v1.17"
+  readonly domain: "execution"
+  readonly prestate: RuntimeAbiV117ExecutionLedger
+  readonly prestateSha256: `sha256:${string}`
+  readonly requestIdentity: `sha256:${string}`
+  readonly idempotencyKeySha256: `sha256:${string}`
+  readonly identitySha256: `sha256:${string}`
 }
 
 export interface RuntimeInvocationInputV117 {
@@ -465,6 +533,7 @@ export interface AuthenticatedRuntimeInvocationRequestV117 {
   readonly semanticTuple: RuntimeInvocationSemanticTupleV117
   readonly sourceIdentity: RuntimeInvocationSourceIdentityV117
   readonly budget: RuntimeInvocationBudgetV117
+  readonly accounting: RuntimeInvocationRequestAccountingV117
   readonly input: RuntimeInvocationInputV117
   readonly retry: RuntimeInvocationRetryV117
   readonly authentication: RuntimeInvocationAuthenticationV117
@@ -478,6 +547,7 @@ export interface CreateRuntimeInvocationRequestV117Input {
   readonly semanticTuple: Omit<RuntimeInvocationSemanticTupleV117, "tupleId">
   readonly sourceIdentity: RuntimeInvocationSourceIdentityV117
   readonly budget: Omit<RuntimeInvocationBudgetV117, "profileSha256">
+  readonly accounting: Readonly<{ prestate: RuntimeAbiV117ExecutionLedger }>
   readonly input: Readonly<{ value: JsonValue }>
   readonly retry: Omit<RuntimeInvocationRetryV117, "identitySha256">
 }
@@ -495,11 +565,25 @@ export interface RuntimeInvocationRequestBindingV117 {
   readonly budgetProfileSha256: `sha256:${string}`
   readonly inputSha256: `sha256:${string}`
   readonly retryIdentitySha256: `sha256:${string}`
+  readonly accountingIdentitySha256: `sha256:${string}`
+  readonly idempotencyKeySha256: `sha256:${string}`
 }
 
 export interface RuntimeInvocationPayloadBindingV117 {
   readonly sha256: `sha256:${string}`
   readonly canonicalByteLength: number
+}
+
+export interface RuntimeInvocationResponseAccountingV117 {
+  readonly schemaVersion: "runtime-invocation-accounting-v1.17"
+  readonly domain: "execution"
+  readonly prestateSha256: `sha256:${string}`
+  readonly idempotencyKeySha256: `sha256:${string}`
+  readonly disposition: "commit" | "no_commit"
+  readonly receipt: RuntimeAbiV117ExecutionLedgerReceipt
+  readonly poststate: RuntimeAbiV117ExecutionLedger
+  readonly poststateSha256: `sha256:${string}`
+  readonly identitySha256: `sha256:${string}`
 }
 
 type RuntimeInvocationResponseBaseV117 = Readonly<{
@@ -508,6 +592,7 @@ type RuntimeInvocationResponseBaseV117 = Readonly<{
   current: false
   envelopeKind: "runtime-invocation-response"
   requestBinding: RuntimeInvocationRequestBindingV117
+  accounting: RuntimeInvocationResponseAccountingV117
   authentication: RuntimeInvocationAuthenticationV117
 }>
 
@@ -562,18 +647,86 @@ const NonnegativeSafeIntegerSchema = z
   .min(0)
   .max(Number.MAX_SAFE_INTEGER)
 
-const RuntimeInvocationMatchCumulativeBudgetV117Schema = z
+const CounterLimitSchema = z
   .object({
+    semantics: z.literal("counter"),
+    maximum: NonnegativeSafeIntegerSchema,
+  })
+  .strict()
+
+const MemoryLimitSchema = z
+  .object({
+    semantics: z.literal("peak"),
+    maximumBytes: NonnegativeSafeIntegerSchema,
+  })
+  .strict()
+
+const MethodLimitSchema = z
+  .object({
+    method: z.enum(["selectActivations", "soldierBrain"]),
     invocationCountMaximum: NonnegativeSafeIntegerSchema,
-    wallMilliseconds: NonnegativeSafeIntegerSchema,
-    computeFuel: NonnegativeSafeIntegerSchema,
-    payloadBytes: NonnegativeSafeIntegerSchema,
-    stdoutBytes: NonnegativeSafeIntegerSchema,
-    stderrBytes: NonnegativeSafeIntegerSchema,
-    memoryBytes: NonnegativeSafeIntegerSchema,
-    accounting: z.literal(
-      "signed-monotonic-per-invocation-deltas-plus-cumulative-total",
-    ),
+    counters: z
+      .object({
+        wallMilliseconds: CounterLimitSchema,
+        computeFuel: CounterLimitSchema,
+        payloadBytes: CounterLimitSchema,
+        stdoutBytes: CounterLimitSchema,
+        stderrBytes: CounterLimitSchema,
+      })
+      .strict(),
+    memory: MemoryLimitSchema,
+    process: z
+      .object({
+        semantics: z.literal("predicate"),
+        processes: NonnegativeSafeIntegerSchema,
+        threads: NonnegativeSafeIntegerSchema,
+        children: NonnegativeSafeIntegerSchema,
+      })
+      .strict(),
+    capabilities: z
+      .object({
+        semantics: z.literal("predicate"),
+        filesystem: PublicIdSchema,
+        network: PublicIdSchema,
+        environment: PublicIdSchema,
+        shell: PublicIdSchema,
+      })
+      .strict(),
+    cancellation: z
+      .object({
+        semantics: z.literal("predicate"),
+        terminationGraceMilliseconds: NonnegativeSafeIntegerSchema,
+        evidence: PublicIdSchema,
+      })
+      .strict(),
+    accountingEvidence: z
+      .object({
+        semantics: z.literal("predicate"),
+        required: z.literal(true),
+      })
+      .strict(),
+  })
+  .strict()
+
+const MatchLimitSchema = z
+  .object({
+    methodInvocations: z
+      .object({
+        selectActivations: NonnegativeSafeIntegerSchema,
+        soldierBrain: NonnegativeSafeIntegerSchema,
+      })
+      .strict(),
+    counters: z
+      .object({
+        invocationCount: CounterLimitSchema,
+        wallMilliseconds: CounterLimitSchema,
+        computeFuel: CounterLimitSchema,
+        payloadBytes: CounterLimitSchema,
+        stdoutBytes: CounterLimitSchema,
+        stderrBytes: CounterLimitSchema,
+      })
+      .strict(),
+    memory: MemoryLimitSchema,
     overflow: z.literal(
       "stop-before-next-invocation-and-classify-by-proven-cause",
     ),
@@ -583,12 +736,8 @@ const RuntimeInvocationMatchCumulativeBudgetV117Schema = z
 const BudgetWithoutHashSchema = z
   .object({
     profileId: PublicIdSchema,
-    wallMilliseconds: NonnegativeSafeIntegerSchema,
-    computeFuel: NonnegativeSafeIntegerSchema,
-    memoryBytes: NonnegativeSafeIntegerSchema,
-    outputBytes: NonnegativeSafeIntegerSchema,
-    processLimit: NonnegativeSafeIntegerSchema,
-    matchCumulative: RuntimeInvocationMatchCumulativeBudgetV117Schema,
+    methodLimit: MethodLimitSchema,
+    matchLimit: MatchLimitSchema,
   })
   .strict()
 
@@ -616,6 +765,170 @@ const RuntimeInvocationRetryV117Schema = RetryWithoutHashSchema.extend({
   identitySha256: Sha256Schema,
 }).strict()
 
+const RuntimeAbiV117LedgerCommitmentSchema = z
+  .object({
+    identity: PublicIdSchema,
+    requestIdentity: Sha256Schema,
+    evidenceIdentity: Sha256Schema,
+    prestateRevision: NonnegativeSafeIntegerSchema,
+    scope: PublicIdSchema,
+    outcome: z.enum(["success", "player_violation"]),
+    dimensions: z.array(z.string().min(1).max(128)).max(32),
+  })
+  .strict()
+
+const RuntimeAbiV117ExecutionLedgerSchema = z
+  .object({
+    schemaVersion: z.literal("runtime-budget-ledger-v1"),
+    domain: z.literal("execution"),
+    revision: NonnegativeSafeIntegerSchema,
+    methodInvocations: z
+      .object({
+        selectActivations: NonnegativeSafeIntegerSchema,
+        soldierBrain: NonnegativeSafeIntegerSchema,
+      })
+      .strict(),
+    cumulative: z
+      .object({
+        invocationCount: NonnegativeSafeIntegerSchema,
+        wallMilliseconds: NonnegativeSafeIntegerSchema,
+        computeFuel: NonnegativeSafeIntegerSchema,
+        payloadBytes: NonnegativeSafeIntegerSchema,
+        stdoutBytes: NonnegativeSafeIntegerSchema,
+        stderrBytes: NonnegativeSafeIntegerSchema,
+        memoryBytes: NonnegativeSafeIntegerSchema,
+      })
+      .strict(),
+    commitments: z.array(RuntimeAbiV117LedgerCommitmentSchema).max(1024),
+  })
+  .strict()
+
+const RuntimeInvocationRequestAccountingV117Schema = z
+  .object({
+    schemaVersion: z.literal("runtime-invocation-accounting-v1.17"),
+    domain: z.literal("execution"),
+    prestate: RuntimeAbiV117ExecutionLedgerSchema,
+    prestateSha256: Sha256Schema,
+    requestIdentity: Sha256Schema,
+    idempotencyKeySha256: Sha256Schema,
+    identitySha256: Sha256Schema,
+  })
+  .strict()
+
+const UnavailableEvidenceSchema = z
+  .object({ status: z.enum(["unavailable", "ambiguous"]) })
+  .strict()
+
+const CounterEvidenceSchema = z.union([
+  z
+    .object({
+      status: z.literal("measured"),
+      delta: NonnegativeSafeIntegerSchema,
+      cumulative: NonnegativeSafeIntegerSchema,
+    })
+    .strict(),
+  UnavailableEvidenceSchema,
+])
+
+const MemoryEvidenceSchema = z.union([
+  z
+    .object({
+      status: z.literal("measured"),
+      peakBytes: NonnegativeSafeIntegerSchema,
+      cumulativePeakBytes: NonnegativeSafeIntegerSchema,
+    })
+    .strict(),
+  UnavailableEvidenceSchema,
+])
+
+const ProcessEvidenceSchema = z.union([
+  z
+    .object({
+      status: z.literal("verified"),
+      processes: NonnegativeSafeIntegerSchema,
+      threads: NonnegativeSafeIntegerSchema,
+      children: NonnegativeSafeIntegerSchema,
+    })
+    .strict(),
+  UnavailableEvidenceSchema,
+])
+
+const CapabilityEvidenceSchema = z.union([
+  z
+    .object({
+      status: z.literal("verified"),
+      filesystem: PublicIdSchema,
+      network: PublicIdSchema,
+      environment: PublicIdSchema,
+      shell: PublicIdSchema,
+    })
+    .strict(),
+  UnavailableEvidenceSchema,
+])
+
+const CancellationEvidenceSchema = z.union([
+  z
+    .object({
+      status: z.literal("verified"),
+      terminationRequired: z.boolean(),
+      receiptPresent: z.boolean(),
+      graceMilliseconds: NonnegativeSafeIntegerSchema,
+    })
+    .strict(),
+  UnavailableEvidenceSchema,
+])
+
+const AccountingEvidenceSchema = z.union([
+  z
+    .object({
+      status: z.literal("verified"),
+      signatureVerified: z.boolean(),
+      monotonic: z.boolean(),
+    })
+    .strict(),
+  UnavailableEvidenceSchema,
+])
+
+const RuntimeAbiV117ExecutionLedgerReceiptSchema = z
+  .object({
+    domain: z.literal("execution"),
+    prestateRevision: NonnegativeSafeIntegerSchema,
+    invocationId: PublicIdSchema,
+    requestIdentity: Sha256Schema,
+    evidenceIdentity: Sha256Schema,
+    method: z.enum(["selectActivations", "soldierBrain"]),
+    attribution: z.enum(["proven_strategy", "host", "ambiguous"]),
+    counters: z
+      .object({
+        wallMilliseconds: CounterEvidenceSchema,
+        computeFuel: CounterEvidenceSchema,
+        payloadBytes: CounterEvidenceSchema,
+        stdoutBytes: CounterEvidenceSchema,
+        stderrBytes: CounterEvidenceSchema,
+      })
+      .strict(),
+    memory: MemoryEvidenceSchema,
+    process: ProcessEvidenceSchema,
+    capabilities: CapabilityEvidenceSchema,
+    cancellation: CancellationEvidenceSchema,
+    accountingEvidence: AccountingEvidenceSchema,
+  })
+  .strict()
+
+const RuntimeInvocationResponseAccountingV117Schema = z
+  .object({
+    schemaVersion: z.literal("runtime-invocation-accounting-v1.17"),
+    domain: z.literal("execution"),
+    prestateSha256: Sha256Schema,
+    idempotencyKeySha256: Sha256Schema,
+    disposition: z.enum(["commit", "no_commit"]),
+    receipt: RuntimeAbiV117ExecutionLedgerReceiptSchema,
+    poststate: RuntimeAbiV117ExecutionLedgerSchema,
+    poststateSha256: Sha256Schema,
+    identitySha256: Sha256Schema,
+  })
+  .strict()
+
 const RuntimeInvocationAuthenticationV117Schema = z
   .object({
     algorithm: z.literal(RUNTIME_INVOCATION_V1_17_AUTH_ALGORITHM),
@@ -640,6 +953,7 @@ export const AuthenticatedRuntimeInvocationRequestV117Schema = z
     semanticTuple: RuntimeInvocationSemanticTupleV117Schema,
     sourceIdentity: RuntimeInvocationSourceIdentityV117Schema,
     budget: RuntimeInvocationBudgetV117Schema,
+    accounting: RuntimeInvocationRequestAccountingV117Schema,
     input: RuntimeInvocationInputV117Schema,
     retry: RuntimeInvocationRetryV117Schema,
     authentication: RuntimeInvocationAuthenticationV117Schema,
@@ -662,6 +976,8 @@ const RuntimeInvocationRequestBindingV117Schema = z
     budgetProfileSha256: Sha256Schema,
     inputSha256: Sha256Schema,
     retryIdentitySha256: Sha256Schema,
+    accountingIdentitySha256: Sha256Schema,
+    idempotencyKeySha256: Sha256Schema,
   })
   .strict()
 
@@ -680,6 +996,7 @@ const responseShape = {
   current: z.literal(false),
   envelopeKind: z.literal("runtime-invocation-response"),
   requestBinding: RuntimeInvocationRequestBindingV117Schema,
+  accounting: RuntimeInvocationResponseAccountingV117Schema,
   authentication: RuntimeInvocationAuthenticationV117Schema,
 } as const
 
@@ -727,6 +1044,9 @@ const canonicalBytes = (value: JsonValue): Uint8Array => {
 const canonicalHash = (value: JsonValue): `sha256:${string}` =>
   sha256Bytes(canonicalBytes(value))
 
+const sameCanonicalValue = (left: JsonValue, right: JsonValue): boolean =>
+  Buffer.from(canonicalBytes(left)).equals(Buffer.from(canonicalBytes(right)))
+
 const identityHash = (
   domain: "semanticTuple" | "budgetProfile",
   value: JsonValue,
@@ -739,6 +1059,84 @@ const retryIdentityHash = (value: JsonValue): `sha256:${string}` =>
       canonicalBytes(value),
     ]),
   )
+
+const framedValueHash = (
+  label: string,
+  value: JsonValue,
+): `sha256:${string}` =>
+  sha256Bytes(
+    frameCanonicalIdentity("evidenceBundle", [
+      textEncoder.encode(label),
+      canonicalBytes(value),
+    ]),
+  )
+
+export const createRuntimeInvocationBudgetV117 = (
+  method: RuntimeInvocationMethodV117,
+): Omit<RuntimeInvocationBudgetV117, "profileSha256"> => {
+  const profile = RUNTIME_ABI_V1_17.budgets[method]
+  const vector = profile.vector
+  const match = RUNTIME_ABI_V1_17.budgets.matchCumulative
+  return deepFreeze({
+    profileId: "runtime-budget-profile-v1.17-candidate",
+    methodLimit: {
+      method,
+      invocationCountMaximum: profile.invocationCountMaximum,
+      counters: {
+        wallMilliseconds: { semantics: "counter", maximum: vector.wall.value },
+        computeFuel: { semantics: "counter", maximum: vector.compute.value },
+        payloadBytes: { semantics: "counter", maximum: vector.payload.value },
+        stdoutBytes: { semantics: "counter", maximum: vector.stdout.value },
+        stderrBytes: { semantics: "counter", maximum: vector.stderr.value },
+      },
+      memory: { semantics: "peak", maximumBytes: vector.memory.value },
+      process: {
+        semantics: "predicate",
+        processes: vector.process.processes,
+        threads: vector.process.threads,
+        children: vector.process.children,
+      },
+      capabilities: {
+        semantics: "predicate",
+        filesystem: vector.capabilities.filesystem,
+        network: vector.capabilities.network,
+        environment: vector.capabilities.environment,
+        shell: vector.capabilities.shell,
+      },
+      cancellation: {
+        semantics: "predicate",
+        terminationGraceMilliseconds:
+          vector.cancellation.terminationGraceMilliseconds,
+        evidence: vector.cancellation.evidence,
+      },
+      accountingEvidence: { semantics: "predicate", required: true },
+    },
+    matchLimit: {
+      methodInvocations: {
+        selectActivations:
+          RUNTIME_ABI_V1_17.budgets.selectActivations.invocationCountMaximum,
+        soldierBrain:
+          RUNTIME_ABI_V1_17.budgets.soldierBrain.invocationCountMaximum,
+      },
+      counters: {
+        invocationCount: {
+          semantics: "counter",
+          maximum: match.invocationCountMaximum,
+        },
+        wallMilliseconds: {
+          semantics: "counter",
+          maximum: match.wallMilliseconds,
+        },
+        computeFuel: { semantics: "counter", maximum: match.computeFuel },
+        payloadBytes: { semantics: "counter", maximum: match.payloadBytes },
+        stdoutBytes: { semantics: "counter", maximum: match.stdoutBytes },
+        stderrBytes: { semantics: "counter", maximum: match.stderrBytes },
+      },
+      memory: { semantics: "peak", maximumBytes: match.memoryBytes },
+      overflow: match.overflow,
+    },
+  })
+}
 
 const withoutAuthentication = <T extends { authentication: unknown }>(
   envelope: T,
@@ -804,6 +1202,50 @@ const authenticationMatches = (
   )
 }
 
+const executionPrestateIsValid = (
+  prestate: RuntimeAbiV117ExecutionLedger,
+  nextInvocationId: string,
+): boolean => {
+  const match = RUNTIME_ABI_V1_17.budgets.matchCumulative
+  const uniqueCommitments = new Set(
+    prestate.commitments.map((commitment) => commitment.identity),
+  )
+  const selectCommitments = prestate.commitments.filter(
+    (commitment) => commitment.scope === "selectActivations",
+  ).length
+  const soldierCommitments = prestate.commitments.filter(
+    (commitment) => commitment.scope === "soldierBrain",
+  ).length
+  return (
+    prestate.revision === prestate.commitments.length &&
+    prestate.cumulative.invocationCount === prestate.revision &&
+    prestate.methodInvocations.selectActivations === selectCommitments &&
+    prestate.methodInvocations.soldierBrain === soldierCommitments &&
+    selectCommitments + soldierCommitments === prestate.revision &&
+    selectCommitments <=
+      RUNTIME_ABI_V1_17.budgets.selectActivations.invocationCountMaximum &&
+    soldierCommitments <=
+      RUNTIME_ABI_V1_17.budgets.soldierBrain.invocationCountMaximum &&
+    prestate.cumulative.invocationCount <= match.invocationCountMaximum &&
+    prestate.cumulative.wallMilliseconds <= match.wallMilliseconds &&
+    prestate.cumulative.computeFuel <= match.computeFuel &&
+    prestate.cumulative.payloadBytes <= match.payloadBytes &&
+    prestate.cumulative.stdoutBytes <= match.stdoutBytes &&
+    prestate.cumulative.stderrBytes <= match.stderrBytes &&
+    prestate.cumulative.memoryBytes <= match.memoryBytes &&
+    uniqueCommitments.size === prestate.commitments.length &&
+    !uniqueCommitments.has(nextInvocationId) &&
+    prestate.commitments.every(
+      (commitment, index) =>
+        commitment.prestateRevision === index &&
+        ((commitment.outcome === "success" &&
+          commitment.dimensions.length === 0) ||
+          (commitment.outcome === "player_violation" &&
+            commitment.dimensions.length > 0)),
+    )
+  )
+}
+
 export const createAuthenticatedRuntimeInvocationRequestV117 = (
   input: CreateRuntimeInvocationRequestV117Input,
   identity: RuntimeInvocationSigningIdentityV117,
@@ -815,9 +1257,87 @@ export const createAuthenticatedRuntimeInvocationRequestV117 = (
     input.sourceIdentity,
   )
   const budgetWithoutHash = BudgetWithoutHashSchema.parse(input.budget)
+  const expectedBudget = createRuntimeInvocationBudgetV117(input.method)
+  if (
+    !Buffer.from(
+      canonicalBytes(budgetWithoutHash as unknown as JsonValue),
+    ).equals(Buffer.from(canonicalBytes(expectedBudget as unknown as JsonValue)))
+  ) {
+    throw new TypeError("Candidate request budget does not match its method")
+  }
   const inputValue = HostApiJsonValueSchema.parse(input.input.value)
   const inputBytes = canonicalBytes(inputValue)
   const retryWithoutHash = RetryWithoutHashSchema.parse(input.retry)
+  const semanticTuple = {
+    tupleId: identityHash(
+      "semanticTuple",
+      semanticTupleWithoutId as unknown as JsonValue,
+    ),
+    ...semanticTupleWithoutId,
+  }
+  const budget = {
+    ...budgetWithoutHash,
+    profileSha256: identityHash(
+      "budgetProfile",
+      budgetWithoutHash as unknown as JsonValue,
+    ),
+  }
+  const requestInput = {
+    value: inputValue,
+    canonicalSha256: sha256Bytes(inputBytes),
+    canonicalByteLength: inputBytes.byteLength,
+  }
+  const retry = {
+    ...retryWithoutHash,
+    identitySha256: retryIdentityHash(retryWithoutHash as unknown as JsonValue),
+  }
+  const prestate = RuntimeAbiV117ExecutionLedgerSchema.parse(
+    input.accounting.prestate,
+  ) as RuntimeAbiV117ExecutionLedger
+  if (!executionPrestateIsValid(prestate, input.invocationId)) {
+    throw new TypeError("Candidate request execution prestate is invalid")
+  }
+  const prestateSha256 = framedValueHash(
+    "runtime-invocation-v1.17:execution-ledger-prestate",
+    prestate as unknown as JsonValue,
+  )
+  const requestIdentity = framedValueHash(
+    "runtime-invocation-v1.17:execution-request-identity",
+    {
+      invocationId: input.invocationId,
+      kernelRequestId: input.kernelRequestId,
+      method: input.method,
+      semanticTupleId: semanticTuple.tupleId,
+      strategyRevisionId: sourceIdentity.strategyRevisionId,
+      artifactSha256: sourceIdentity.artifactSha256,
+      budgetProfileSha256: budget.profileSha256,
+      inputSha256: requestInput.canonicalSha256,
+      prestateSha256,
+    } as unknown as JsonValue,
+  )
+  const idempotencyKeySha256 = framedValueHash(
+    "runtime-invocation-v1.17:execution-idempotency",
+    {
+      invocationId: input.invocationId,
+      prestateRevision: prestate.revision,
+      requestIdentity,
+    } as unknown as JsonValue,
+  )
+  const accountingWithoutIdentity = {
+    schemaVersion: "runtime-invocation-accounting-v1.17" as const,
+    domain: "execution" as const,
+    prestate,
+    prestateSha256,
+    requestIdentity,
+    idempotencyKeySha256,
+  }
+  const accounting = {
+    ...accountingWithoutIdentity,
+    identitySha256: framedValueHash(
+      "runtime-invocation-v1.17:execution-accounting-request",
+      accountingWithoutIdentity as unknown as JsonValue,
+    ),
+  }
   const unsigned = {
     contractVersion: RUNTIME_INVOCATION_V1_17_CANDIDATE.contractVersion,
     candidateStatus: RUNTIME_INVOCATION_V1_17_CANDIDATE.lifecycle,
@@ -827,32 +1347,12 @@ export const createAuthenticatedRuntimeInvocationRequestV117 = (
     invocationId: input.invocationId,
     kernelRequestId: input.kernelRequestId,
     method: input.method,
-    semanticTuple: {
-      tupleId: identityHash(
-        "semanticTuple",
-        semanticTupleWithoutId as unknown as JsonValue,
-      ),
-      ...semanticTupleWithoutId,
-    },
+    semanticTuple,
     sourceIdentity,
-    budget: {
-      ...budgetWithoutHash,
-      profileSha256: identityHash(
-        "budgetProfile",
-        budgetWithoutHash as unknown as JsonValue,
-      ),
-    },
-    input: {
-      value: inputValue,
-      canonicalSha256: sha256Bytes(inputBytes),
-      canonicalByteLength: inputBytes.byteLength,
-    },
-    retry: {
-      ...retryWithoutHash,
-      identitySha256: retryIdentityHash(
-        retryWithoutHash as unknown as JsonValue,
-      ),
-    },
+    budget,
+    accounting,
+    input: requestInput,
+    retry,
   }
   const request = {
     ...unsigned,
@@ -889,6 +1389,8 @@ const requestBinding = (
   budgetProfileSha256: request.budget.profileSha256,
   inputSha256: request.input.canonicalSha256,
   retryIdentitySha256: request.retry.identitySha256,
+  accountingIdentitySha256: request.accounting.identitySha256,
+  idempotencyKeySha256: request.accounting.idempotencyKeySha256,
 })
 
 const outcomeTraceMatchesRequest = (
@@ -904,8 +1406,128 @@ const outcomeTraceMatchesRequest = (
     trace.requestSha256 === binding.requestSha256 &&
     trace.budgetProfileSha256 === binding.budgetProfileSha256 &&
     trace.inputSha256 === binding.inputSha256 &&
-    trace.retryIdentitySha256 === binding.retryIdentitySha256
+    trace.retryIdentitySha256 === binding.retryIdentitySha256 &&
+    trace.accountingIdentitySha256 === binding.accountingIdentitySha256 &&
+    trace.idempotencyKeySha256 === binding.idempotencyKeySha256
   )
+}
+
+const receiptEvidenceIdentity = (
+  receipt: RuntimeAbiV117ExecutionLedgerReceipt,
+): `sha256:${string}` => {
+  const { evidenceIdentity: _evidenceIdentity, ...withoutEvidenceIdentity } =
+    receipt
+  return framedValueHash(
+    "runtime-invocation-v1.17:execution-evidence",
+    withoutEvidenceIdentity as unknown as JsonValue,
+  )
+}
+
+const budgetViolationCodeForDimensions = (
+  dimensions: readonly string[],
+): RuntimeInvocationPlayerViolationCodeV117 | undefined => {
+  const codes = new Set<RuntimeInvocationPlayerViolationCodeV117>()
+  for (const dimension of dimensions) {
+    if (
+      dimension.includes("payload") ||
+      dimension.includes("stdout") ||
+      dimension.includes("stderr")
+    ) {
+      codes.add("OVERSIZED_OUTPUT")
+    } else if (
+      dimension.includes("wall") ||
+      dimension.includes("compute") ||
+      dimension.includes("memory")
+    ) {
+      codes.add("TIMEOUT")
+    } else {
+      return undefined
+    }
+  }
+  return codes.size === 1 ? [...codes][0] : undefined
+}
+
+const accountingDebitMatchesOutcome = (
+  debit: ReturnType<typeof debitRuntimeAbiV117Ledger>,
+  outcome: RuntimeInvocationResultV117,
+): boolean => {
+  if (debit.kind === "system_failure") {
+    return outcome.kind === "system_failure"
+  }
+  if (debit.kind === "success") {
+    return (
+      outcome.kind === "success" ||
+      (outcome.kind === "player_violation" &&
+        (outcome.violation.code === "INVALID_OUTPUT" ||
+          outcome.violation.code === "THROWN_EXCEPTION" ||
+          outcome.violation.code === "FORBIDDEN_CAPABILITY"))
+    )
+  }
+  return (
+    outcome.kind === "player_violation" &&
+    budgetViolationCodeForDimensions(debit.violation.dimensions) ===
+      outcome.violation.code
+  )
+}
+
+const deriveResponseAccounting = (
+  request: AuthenticatedRuntimeInvocationRequestV117,
+  outcome: RuntimeInvocationResultV117,
+  receiptInput: RuntimeAbiV117ExecutionLedgerReceipt,
+): RuntimeInvocationResponseAccountingV117 | undefined => {
+  const receipt = RuntimeAbiV117ExecutionLedgerReceiptSchema.safeParse(
+    receiptInput,
+  )
+  if (!receipt.success) return undefined
+  if (
+    receipt.data.domain !== "execution" ||
+    receipt.data.prestateRevision !== request.accounting.prestate.revision ||
+    receipt.data.invocationId !== request.invocationId ||
+    receipt.data.requestIdentity !== request.accounting.requestIdentity ||
+    receipt.data.method !== request.method ||
+    receipt.data.evidenceIdentity !== receiptEvidenceIdentity(receipt.data)
+  ) {
+    return undefined
+  }
+  const debit = debitRuntimeAbiV117Ledger(
+    request.accounting.prestate,
+    receipt.data,
+  )
+  if (!accountingDebitMatchesOutcome(debit, outcome)) return undefined
+  const disposition =
+    outcome.kind === "system_failure" ? ("no_commit" as const) : ("commit" as const)
+  if (
+    (disposition === "commit" && debit.kind === "system_failure") ||
+    (disposition === "no_commit" &&
+      (debit.kind !== "system_failure" ||
+        !sameCanonicalValue(
+          debit.ledger as unknown as JsonValue,
+          request.accounting.prestate as unknown as JsonValue,
+        )))
+  ) {
+    return undefined
+  }
+  const poststate = debit.ledger
+  const accountingWithoutIdentity = {
+    schemaVersion: "runtime-invocation-accounting-v1.17" as const,
+    domain: "execution" as const,
+    prestateSha256: request.accounting.prestateSha256,
+    idempotencyKeySha256: request.accounting.idempotencyKeySha256,
+    disposition,
+    receipt: receipt.data,
+    poststate,
+    poststateSha256: framedValueHash(
+      "runtime-invocation-v1.17:execution-ledger-poststate",
+      poststate as unknown as JsonValue,
+    ),
+  }
+  return {
+    ...accountingWithoutIdentity,
+    identitySha256: framedValueHash(
+      "runtime-invocation-v1.17:execution-accounting-response",
+      accountingWithoutIdentity as unknown as JsonValue,
+    ),
+  }
 }
 
 export const createAuthenticatedRuntimeInvocationResponseV117 = <
@@ -913,6 +1535,7 @@ export const createAuthenticatedRuntimeInvocationResponseV117 = <
 >(
   request: AuthenticatedRuntimeInvocationRequestV117,
   outcome: RuntimeInvocationResultV117<TValue>,
+  receipt: RuntimeAbiV117ExecutionLedgerReceipt,
   identity: RuntimeInvocationSigningIdentityV117,
 ): AuthenticatedRuntimeInvocationResponseV117<TValue> => {
   if (
@@ -931,6 +1554,16 @@ export const createAuthenticatedRuntimeInvocationResponseV117 = <
       "Cannot authenticate a response with an outcome trace outside the request binding",
     )
   }
+  const accounting = deriveResponseAccounting(
+    request,
+    parsedOutcome as RuntimeInvocationResultV117,
+    receipt,
+  )
+  if (accounting === undefined) {
+    throw new TypeError(
+      "Cannot authenticate a response with invalid execution accounting",
+    )
+  }
   const payloadBinding =
     parsedOutcome.kind === "success"
       ? {
@@ -946,6 +1579,7 @@ export const createAuthenticatedRuntimeInvocationResponseV117 = <
     requestBinding: requestBinding(request),
     outcome: parsedOutcome,
     payloadBinding,
+    accounting,
   }
   const response = {
     ...unsigned,
@@ -980,6 +1614,10 @@ const verificationTrace = (
   budgetProfileSha256: partial?.budgetProfileSha256 ?? sha256Bytes(bytes),
   inputSha256: partial?.inputSha256 ?? sha256Bytes(bytes),
   retryIdentitySha256: partial?.retryIdentitySha256 ?? sha256Bytes(bytes),
+  accountingIdentitySha256:
+    partial?.accountingIdentitySha256 ?? sha256Bytes(bytes),
+  idempotencyKeySha256:
+    partial?.idempotencyKeySha256 ?? sha256Bytes(bytes),
   safeCodes: partial?.safeCodes ?? ["OUTER_ENVELOPE_REJECTED"],
 })
 
@@ -1028,16 +1666,56 @@ const requestDerivedBindingsMatch = (
   const semanticTuple = withoutProperty(request.semanticTuple, "tupleId")
   const budget = withoutProperty(request.budget, "profileSha256")
   const retry = withoutProperty(request.retry, "identitySha256")
+  const accounting = withoutProperty(request.accounting, "identitySha256")
   const inputBytes = canonicalBytes(request.input.value)
+  const expectedBudget = createRuntimeInvocationBudgetV117(request.method)
+  const prestateSha256 = framedValueHash(
+    "runtime-invocation-v1.17:execution-ledger-prestate",
+    request.accounting.prestate as unknown as JsonValue,
+  )
+  const requestIdentity = framedValueHash(
+    "runtime-invocation-v1.17:execution-request-identity",
+    {
+      invocationId: request.invocationId,
+      kernelRequestId: request.kernelRequestId,
+      method: request.method,
+      semanticTupleId: request.semanticTuple.tupleId,
+      strategyRevisionId: request.sourceIdentity.strategyRevisionId,
+      artifactSha256: request.sourceIdentity.artifactSha256,
+      budgetProfileSha256: request.budget.profileSha256,
+      inputSha256: request.input.canonicalSha256,
+      prestateSha256,
+    } as unknown as JsonValue,
+  )
+  const idempotencyKeySha256 = framedValueHash(
+    "runtime-invocation-v1.17:execution-idempotency",
+    {
+      invocationId: request.invocationId,
+      prestateRevision: request.accounting.prestate.revision,
+      requestIdentity,
+    } as unknown as JsonValue,
+  )
   return (
+    executionPrestateIsValid(request.accounting.prestate, request.invocationId) &&
     request.semanticTuple.tupleId ===
       identityHash("semanticTuple", semanticTuple as unknown as JsonValue) &&
+    Buffer.from(canonicalBytes(budget as unknown as JsonValue)).equals(
+      Buffer.from(canonicalBytes(expectedBudget as unknown as JsonValue)),
+    ) &&
     request.budget.profileSha256 ===
       identityHash("budgetProfile", budget as unknown as JsonValue) &&
     request.input.canonicalSha256 === sha256Bytes(inputBytes) &&
     request.input.canonicalByteLength === inputBytes.byteLength &&
     request.retry.identitySha256 ===
-      retryIdentityHash(retry as unknown as JsonValue)
+      retryIdentityHash(retry as unknown as JsonValue) &&
+    request.accounting.prestateSha256 === prestateSha256 &&
+    request.accounting.requestIdentity === requestIdentity &&
+    request.accounting.idempotencyKeySha256 === idempotencyKeySha256 &&
+    request.accounting.identitySha256 ===
+      framedValueHash(
+        "runtime-invocation-v1.17:execution-accounting-request",
+        accounting as unknown as JsonValue,
+      )
   )
 }
 
@@ -1067,6 +1745,8 @@ export const verifyRuntimeInvocationRequestV117 = (
     budgetProfileSha256: request.budget.profileSha256,
     inputSha256: request.input.canonicalSha256,
     retryIdentitySha256: request.retry.identitySha256,
+    accountingIdentitySha256: request.accounting.identitySha256,
+    idempotencyKeySha256: request.accounting.idempotencyKeySha256,
   })
   if (!authenticationMatches("request", request, identity)) {
     return verificationFailure("OUTER_FRAME_UNAUTHENTICATED", bytes, trace)
@@ -1083,9 +1763,6 @@ export const verifyRuntimeInvocationRequestV117 = (
     },
   }
 }
-
-const sameCanonicalValue = (left: JsonValue, right: JsonValue): boolean =>
-  Buffer.from(canonicalBytes(left)).equals(Buffer.from(canonicalBytes(right)))
 
 const verifyRuntimeInvocationResponseV117Unsafe = (
   bytes: Uint8Array,
@@ -1112,6 +1789,8 @@ const verifyRuntimeInvocationResponseV117Unsafe = (
     budgetProfileSha256: expectedBinding.budgetProfileSha256,
     inputSha256: expectedBinding.inputSha256,
     retryIdentitySha256: expectedBinding.retryIdentitySha256,
+    accountingIdentitySha256: expectedBinding.accountingIdentitySha256,
+    idempotencyKeySha256: expectedBinding.idempotencyKeySha256,
   } as const
   const parsed = parseCanonicalEnvelope(
     bytes,
@@ -1146,6 +1825,20 @@ const verifyRuntimeInvocationResponseV117Unsafe = (
     return verificationFailure("OUTER_FRAME_WRONG_BINDING", bytes, partial)
   }
   if (!outcomeTraceMatchesRequest(response.outcome.trace, request)) {
+    return verificationFailure("OUTER_FRAME_WRONG_BINDING", bytes, partial)
+  }
+  const expectedAccounting = deriveResponseAccounting(
+    request,
+    response.outcome,
+    response.accounting.receipt,
+  )
+  if (
+    expectedAccounting === undefined ||
+    !sameCanonicalValue(
+      response.accounting as unknown as JsonValue,
+      expectedAccounting as unknown as JsonValue,
+    )
+  ) {
     return verificationFailure("OUTER_FRAME_WRONG_BINDING", bytes, partial)
   }
   return {

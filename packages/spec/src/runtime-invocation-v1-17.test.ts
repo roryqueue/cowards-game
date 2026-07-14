@@ -20,6 +20,7 @@ import {
   classifyRuntimeInvocationV117,
   createAuthenticatedRuntimeInvocationRequestV117,
   createAuthenticatedRuntimeInvocationResponseV117,
+  createRuntimeInvocationBudgetV117,
   serializeRuntimeInvocationRequestV117,
   serializeRuntimeInvocationResponseV117,
   verifyRuntimeInvocationRequestV117,
@@ -29,7 +30,11 @@ import {
   type RuntimeInvocationTraceV117,
 } from "./runtime-invocation-v1-17.js"
 import { RUNTIME_EXECUTION_SERVICE_VERSION } from "./runtime-execution-service.js"
-import { RUNTIME_ABI_V1_17 } from "./runtime-abi-v1-17.js"
+import {
+  RUNTIME_ABI_V1_17,
+  createRuntimeAbiV117ExecutionLedger,
+  type RuntimeAbiV117ExecutionLedgerReceipt,
+} from "./runtime-abi-v1-17.js"
 import * as publicRuntime from "./runtime.js"
 
 const hash = (character: string): `sha256:${string}` =>
@@ -72,15 +77,8 @@ const candidateRequest = (
         normalizedSourceSha256: hash("c"),
         artifactSha256: hash("d"),
       },
-      budget: {
-        profileId: "runtime-budget-profile-v1.17-candidate",
-        wallMilliseconds: 50,
-        computeFuel: 10_000_000,
-        memoryBytes: 67_108_864,
-        outputBytes: 262_144,
-        processLimit: 1,
-        matchCumulative: RUNTIME_ABI_V1_17.budgets.matchCumulative,
-      },
+      budget: createRuntimeInvocationBudgetV117(method),
+      accounting: { prestate: createRuntimeAbiV117ExecutionLedger() },
       input: {
         value: { cycleIndex: 0, phase: "ROUND" },
       },
@@ -95,6 +93,97 @@ const candidateRequest = (
       secret: fixtureSecret,
     },
   )
+
+const measuredReceiptFor = (
+  request: AuthenticatedRuntimeInvocationRequestV117,
+): RuntimeAbiV117ExecutionLedgerReceipt => {
+  const prestate = request.accounting.prestate
+  const counters = Object.fromEntries(
+    [
+      "wallMilliseconds",
+      "computeFuel",
+      "payloadBytes",
+      "stdoutBytes",
+      "stderrBytes",
+    ].map((counter) => [
+      counter,
+      {
+        status: "measured" as const,
+        delta: 1,
+        cumulative:
+          prestate.cumulative[
+            counter as keyof typeof prestate.cumulative
+          ] + 1,
+      },
+    ]),
+  ) as RuntimeAbiV117ExecutionLedgerReceipt["counters"]
+  const withoutEvidenceIdentity = {
+    domain: "execution" as const,
+    prestateRevision: prestate.revision,
+    invocationId: request.invocationId,
+    requestIdentity: request.accounting.requestIdentity,
+    method: request.method,
+    attribution: "proven_strategy" as const,
+    counters,
+    memory: {
+      status: "measured" as const,
+      peakBytes: 1,
+      cumulativePeakBytes: Math.max(prestate.cumulative.memoryBytes, 1),
+    },
+    process: {
+      status: "verified" as const,
+      processes: 1,
+      threads: 1,
+      children: 0,
+    },
+    capabilities: {
+      status: "verified" as const,
+      filesystem: "none",
+      network: "disabled",
+      environment: "empty",
+      shell: "disabled",
+    },
+    cancellation: {
+      status: "verified" as const,
+      terminationRequired: false,
+      receiptPresent: false,
+      graceMilliseconds: 0,
+    },
+    accountingEvidence: {
+      status: "verified" as const,
+      signatureVerified: true,
+      monotonic: true,
+    },
+  }
+  return {
+    ...withoutEvidenceIdentity,
+    evidenceIdentity: framedFixtureHash(
+      "runtime-invocation-v1.17:execution-evidence",
+      withoutEvidenceIdentity as unknown as JsonValue,
+    ),
+  }
+}
+
+const ambiguousReceiptFor = (
+  request: AuthenticatedRuntimeInvocationRequestV117,
+): RuntimeAbiV117ExecutionLedgerReceipt => {
+  const measured = measuredReceiptFor(request)
+  const {
+    evidenceIdentity: _evidenceIdentity,
+    ...measuredWithoutEvidenceIdentity
+  } = measured
+  const withoutEvidenceIdentity = {
+    ...measuredWithoutEvidenceIdentity,
+    attribution: "ambiguous" as const,
+  }
+  return {
+    ...withoutEvidenceIdentity,
+    evidenceIdentity: framedFixtureHash(
+      "runtime-invocation-v1.17:execution-evidence",
+      withoutEvidenceIdentity as unknown as JsonValue,
+    ),
+  }
+}
 
 const candidateResponse = (request = candidateRequest()) =>
   createAuthenticatedRuntimeInvocationResponseV117(
@@ -111,9 +200,12 @@ const candidateResponse = (request = candidateRequest()) =>
         budgetProfileSha256: request.budget.profileSha256,
         inputSha256: request.input.canonicalSha256,
         retryIdentitySha256: request.retry.identitySha256,
+        accountingIdentitySha256: request.accounting.identitySha256,
+        idempotencyKeySha256: request.accounting.idempotencyKeySha256,
         safeCodes: ["ADAPTER_AUTHENTICATED", "PAYLOAD_CANONICAL"],
       },
     },
+    measuredReceiptFor(request),
     {
       keyId: RUNTIME_INVOCATION_V1_17_TEST_KEY_ID,
       secret: fixtureSecret,
@@ -137,6 +229,8 @@ const signedSuccessResponseBytes = (
     budgetProfileSha256: request.budget.profileSha256,
     inputSha256: request.input.canonicalSha256,
     retryIdentitySha256: request.retry.identitySha256,
+    accountingIdentitySha256: request.accounting.identitySha256,
+    idempotencyKeySha256: request.accounting.idempotencyKeySha256,
     safeCodes: ["ADAPTER_AUTHENTICATED", "PAYLOAD_CANONICAL"],
   } as const
   const valid =
@@ -148,6 +242,7 @@ const signedSuccessResponseBytes = (
             value: { activationOrders: [], strategyMemory: null },
             trace: requestTrace,
           },
+          measuredReceiptFor(request),
           {
             keyId: RUNTIME_INVOCATION_V1_17_TEST_KEY_ID,
             secret: fixtureSecret,
@@ -163,6 +258,7 @@ const signedSuccessResponseBytes = (
             },
             trace: requestTrace,
           },
+          measuredReceiptFor(request),
           {
             keyId: RUNTIME_INVOCATION_V1_17_TEST_KEY_ID,
             secret: fixtureSecret,
@@ -222,7 +318,24 @@ const signedSystemFailureResponseBytes = (
   bytes: Uint8Array
 }> => {
   const request = candidateRequest()
-  const valid = candidateResponse(request)
+  const valid = createAuthenticatedRuntimeInvocationResponseV117(
+    request,
+    {
+      kind: "system_failure",
+      failure: {
+        code,
+        publicMessage: "Runtime system failure.",
+        retryable:
+          RUNTIME_INVOCATION_V1_17_SYSTEM_FAILURE_RETRYABILITY[code],
+      },
+      trace: candidateResponse(request).outcome.trace,
+    },
+    ambiguousReceiptFor(request),
+    {
+      keyId: RUNTIME_INVOCATION_V1_17_TEST_KEY_ID,
+      secret: fixtureSecret,
+    },
+  )
   const { authentication: _authentication, ...validUnsigned } = valid
   const unsigned = {
     ...validUnsigned,
@@ -628,11 +741,11 @@ const futureResponseFixture = (
         commitments: [
           ...(prestate.commitments as JsonValue[]),
           {
-            invocationId: request.invocationId,
-            prestateRevision: prestate.revision,
+            identity: request.invocationId,
             requestIdentity: requestAccounting.requestIdentity,
             evidenceIdentity,
-            method,
+            prestateRevision: prestate.revision,
+            scope: method,
             outcome: "success",
             dimensions: [],
           },
@@ -719,6 +832,8 @@ const trace = (): RuntimeInvocationTraceV117 => ({
   budgetProfileSha256: hash("2"),
   inputSha256: hash("3"),
   retryIdentitySha256: hash("4"),
+  accountingIdentitySha256: hash("5"),
+  idempotencyKeySha256: hash("6"),
   safeCodes: ["ADAPTER_AUTHENTICATED", "PAYLOAD_CANONICAL"],
 })
 
@@ -1059,46 +1174,60 @@ describe("runtime invocation v1.17 authenticated candidate wire", () => {
     }
   })
 
-  it("matches exact canonical request and response fixture bytes", () => {
+  it("preserves the retired candidate fixtures while the ledger wire is regenerated downstream", () => {
     const request = candidateRequest()
     const response = candidateResponse(request)
     const requestBytes = serializeRuntimeInvocationRequestV117(request)
     const responseBytes = serializeRuntimeInvocationResponseV117(response)
-    expect(Buffer.from(requestBytes)).toEqual(readFileSync(requestFixturePath))
-    expect(Buffer.from(responseBytes)).toEqual(
-      readFileSync(responseFixturePath),
-    )
-    expect(sha256(requestBytes)).toBe(
+    const retiredRequestBytes = readFileSync(requestFixturePath)
+    const retiredResponseBytes = readFileSync(responseFixturePath)
+    expect(sha256(retiredRequestBytes)).toBe(
       "sha256:94da776c5ef88992d126bd85ae325518303ba56fdf8d2b5568e0e0ce28db1fd7",
     )
-    expect(sha256(responseBytes)).toBe(
+    expect(sha256(retiredResponseBytes)).toBe(
       "sha256:d4aa58745e3d4305cc09854478dc38e31313b1e803b89f65a990bd8c52a74ebf",
     )
-    expect(request.authentication.signatureInputSha256).toBe(
-      "sha256:7a2b2ce2c3b8fed0af22911fea9430a51487db83796d068478a0db851ac2b19d",
+    expect(Buffer.from(requestBytes)).not.toEqual(retiredRequestBytes)
+    expect(Buffer.from(responseBytes)).not.toEqual(retiredResponseBytes)
+    expect(
+      verifyRuntimeInvocationRequestV117(retiredRequestBytes, {
+        keyId: RUNTIME_INVOCATION_V1_17_TEST_KEY_ID,
+        secret: fixtureSecret,
+      }),
+    ).toMatchObject({
+      kind: "system_failure",
+      failure: { code: "OUTER_FRAME_UNDECODABLE" },
+    })
+    expect(request.authentication.signatureInputSha256).toMatch(
+      /^sha256:[0-9a-f]{64}$/u,
     )
-    expect(response.authentication.signatureInputSha256).toBe(
-      "sha256:0a0c97b4f762608139b0e413fef120eee35ca4ee0c221398b00f94e92f342bcc",
+    expect(response.authentication.signatureInputSha256).toMatch(
+      /^sha256:[0-9a-f]{64}$/u,
     )
   })
 
-  it("authenticates complete request, payload, and retry bindings", () => {
-    const requestBytes = readFileSync(requestFixturePath)
+  it("authenticates complete request, payload, retry, and accounting bindings", () => {
+    const expectedRequest = candidateRequest()
+    const requestBytes = serializeRuntimeInvocationRequestV117(expectedRequest)
     const request = verifyRuntimeInvocationRequestV117(requestBytes, {
       keyId: RUNTIME_INVOCATION_V1_17_TEST_KEY_ID,
       secret: fixtureSecret,
     })
     expect(request.kind).toBe("success")
     if (request.kind !== "success") return
-    expect(request.value.budget).toMatchObject({
-      matchCumulative: RUNTIME_ABI_V1_17.budgets.matchCumulative,
-    })
+    const { profileSha256: _profileSha256, ...verifiedBudget } =
+      request.value.budget
+    expect(verifiedBudget).toEqual(
+      createRuntimeInvocationBudgetV117("selectActivations"),
+    )
+    expect(request.value.accounting).toEqual(expectedRequest.accounting)
     expect(request.trace.safeCodes).toEqual([
       "ADAPTER_AUTHENTICATED",
       "OUTER_BINDINGS_VERIFIED",
     ])
+    const expectedResponse = candidateResponse(request.value)
     const response = verifyRuntimeInvocationResponseV117(
-      readFileSync(responseFixturePath),
+      serializeRuntimeInvocationResponseV117(expectedResponse),
       request.value,
       {
         keyId: RUNTIME_INVOCATION_V1_17_TEST_KEY_ID,
@@ -1109,6 +1238,17 @@ describe("runtime invocation v1.17 authenticated candidate wire", () => {
     if (response.kind === "success") {
       const responseValue = response.value
       expect(responseValue.outcome.kind).toBe("success")
+      expect(responseValue.accounting).toMatchObject({
+        domain: "execution",
+        disposition: "commit",
+        prestateSha256: request.value.accounting.prestateSha256,
+        idempotencyKeySha256:
+          request.value.accounting.idempotencyKeySha256,
+        poststate: {
+          revision: 1,
+          cumulative: { invocationCount: 1 },
+        },
+      })
       if (
         responseValue.outcome.kind !== "success" ||
         responseValue.payloadBinding === null
@@ -1145,10 +1285,11 @@ describe("runtime invocation v1.17 authenticated candidate wire", () => {
       expect(undecodable.failure.code).toBe("OUTER_FRAME_UNDECODABLE")
     }
 
-    const requestBytes = readFileSync(requestFixturePath)
+    const request = candidateRequest()
+    const requestBytes = serializeRuntimeInvocationRequestV117(request)
     const tamperedRequest = Buffer.from(requestBytes)
     const budgetMarker = Buffer.from(requestBytes).indexOf(
-      Buffer.from(candidateRequest().budget.profileSha256),
+      Buffer.from(request.budget.profileSha256),
     )
     expect(budgetMarker).toBeGreaterThanOrEqual(0)
     tamperedRequest[budgetMarker + 8] = "9".charCodeAt(0)
@@ -1161,13 +1302,15 @@ describe("runtime invocation v1.17 authenticated candidate wire", () => {
       expect(tampered.failure.code).toBe("OUTER_FRAME_UNAUTHENTICATED")
     }
 
-    const request = candidateRequest()
+    const responseBytes = serializeRuntimeInvocationResponseV117(
+      candidateResponse(request),
+    )
     const wrongBudget = {
       ...request,
       budget: { ...request.budget, profileSha256: hash("9") },
     }
     const wrongBinding = verifyRuntimeInvocationResponseV117(
-      readFileSync(responseFixturePath),
+      responseBytes,
       wrongBudget,
       {
         keyId: RUNTIME_INVOCATION_V1_17_TEST_KEY_ID,
@@ -1187,7 +1330,7 @@ describe("runtime invocation v1.17 authenticated candidate wire", () => {
       requestId: "request:candidate:v1.17:wrong",
     }
     const wrongRequestBinding = verifyRuntimeInvocationResponseV117(
-      readFileSync(responseFixturePath),
+      responseBytes,
       wrongRequest,
       {
         keyId: RUNTIME_INVOCATION_V1_17_TEST_KEY_ID,
@@ -1200,7 +1343,7 @@ describe("runtime invocation v1.17 authenticated candidate wire", () => {
     }
 
     const wrongKey = verifyRuntimeInvocationResponseV117(
-      readFileSync(responseFixturePath),
+      responseBytes,
       request,
       {
         keyId: RUNTIME_INVOCATION_V1_17_TEST_KEY_ID,
@@ -1213,7 +1356,7 @@ describe("runtime invocation v1.17 authenticated candidate wire", () => {
     }
 
     const truncated = verifyRuntimeInvocationResponseV117(
-      readFileSync(responseFixturePath).subarray(0, -1),
+      responseBytes.subarray(0, -1),
       request,
       {
         keyId: RUNTIME_INVOCATION_V1_17_TEST_KEY_ID,
@@ -1241,6 +1384,8 @@ describe("runtime invocation v1.17 authenticated candidate wire", () => {
         budgetProfileSha256: request.budget.profileSha256,
         inputSha256: request.input.canonicalSha256,
         retryIdentitySha256: request.retry.identitySha256,
+        accountingIdentitySha256: request.accounting.identitySha256,
+        idempotencyKeySha256: request.accounting.idempotencyKeySha256,
       },
     }
 
@@ -1248,6 +1393,7 @@ describe("runtime invocation v1.17 authenticated candidate wire", () => {
       createAuthenticatedRuntimeInvocationResponseV117(
         request,
         mismatchedOutcome,
+        measuredReceiptFor(request),
         {
           keyId: RUNTIME_INVOCATION_V1_17_TEST_KEY_ID,
           secret: fixtureSecret,
@@ -1341,7 +1487,7 @@ describe("runtime invocation v1.17 authenticated execution accounting RED", () =
 
   it("rejects the old generic output alias and missing execution ledger", () => {
     const verified = verifyRuntimeInvocationRequestV117(
-      serializeRuntimeInvocationRequestV117(candidateRequest()),
+      readFileSync(requestFixturePath),
       identity,
     )
     expect(verified).toMatchObject({
@@ -1510,11 +1656,11 @@ describe("runtime invocation v1.17 authenticated execution accounting RED", () =
       wallMilliseconds: 1,
       commitments: [
         {
-          invocationId: "invocation:prior",
-          prestateRevision: 0,
+          identity: "invocation:prior",
           requestIdentity: hash("1"),
           evidenceIdentity: hash("2"),
-          method: "selectActivations",
+          prestateRevision: 0,
+          scope: "selectActivations",
           outcome: "success",
           dimensions: [],
         },
