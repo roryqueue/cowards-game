@@ -100,7 +100,7 @@ Plans:
   4. Executable compatibility fixtures preserve same-direction collision, successful-push reversal history, blocked MOVE/PUSH, terminal timing, Backstab behavior, and every other audited valid v1.4 ruling.
   5. If any clarification or refactor would change a valid state, Action legality, event order, outcome, terminal timing/reason, or Strategy observation, work stops for an explicit compatibility ruling before expectations change.
 
-**Plans:** 20/22 plans executed
+**Plans:** 21/22 plans executed
 
 **Wave 1 — permanent RED and compatibility evidence**
 
@@ -157,7 +157,7 @@ Plans:
 
 **Wave 12 — browser realism and privacy**
 
-- [ ] 257-21-PLAN.md — Prove canonical board realism, terminal agreement, and public privacy in the root Playwright matrix.
+- [x] 257-21-PLAN.md — Prove canonical board realism, terminal agreement, and public privacy in the root Playwright matrix.
 
 **Wave 13 — final evaluator and default boundary chain**
 

@@ -5,16 +5,16 @@ milestone_name: Rules Integrity and Strategy Evaluation Foundations — ACTIVE
 current_phase: 257
 current_phase_name: canonical-transition-kernel-and-v1-4-semantic-integrity
 status: executing
-stopped_at: Completed 257-20-PLAN.md; Plan 21 browser realism and privacy proof next
-last_updated: "2026-07-13T23:54:00.000Z"
+stopped_at: Completed 257-21-PLAN.md; Plan 22 final evaluator and default boundary chain next
+last_updated: "2026-07-14T00:25:42.000Z"
 last_activity: 2026-07-13
-last_activity_desc: Phase 257 Plan 20 structural and audit convergence completed
+last_activity_desc: Phase 257 Plan 21 canonical replay realism and privacy proof completed
 progress:
   total_phases: 6
   completed_phases: 1
   total_plans: 41
-  completed_plans: 39
-  percent: 95
+  completed_plans: 40
+  percent: 98
 ---
 
 # State: Coward's Game
@@ -29,11 +29,11 @@ See: `.planning/PROJECT.md` (updated 2026-07-12)
 ## Current Position
 
 Phase: 257 (canonical-transition-kernel-and-v1-4-semantic-integrity) — EXECUTING
-Plan: 20 of 22 complete; browser realism and privacy proof next
-Status: Structural and audit convergence complete; preparing Wave 12 browser proof
-Last activity: 2026-07-13 — Phase 257 Plan 20 structural and audit convergence completed
+Plan: 21 of 22 complete; final evaluator and default boundary chain next
+Status: Canonical browser realism and privacy proof complete; preparing Wave 13 final evaluator
+Last activity: 2026-07-13 — Phase 257 Plan 21 canonical replay realism and privacy proof completed
 
-Progress: [█████████░] 95%
+Progress: [██████████] 98%
 
 ## Durable Decisions
 
@@ -62,7 +62,7 @@ Progress: [█████████░] 95%
 **Resume file:** None
 
 Last session: 2026-07-13T15:02:15.191Z
-Stopped at: Completed 257-20-PLAN.md; Plan 21 browser realism and privacy proof next
+Stopped at: Completed 257-21-PLAN.md; Plan 22 final evaluator and default boundary chain next
 Next command: `$gsd-execute-phase 257`
 
 ## Performance Metrics
@@ -91,6 +91,7 @@ Next command: `$gsd-execute-phase 257`
 | Phase 257 P03 | 17min | 3 tasks | 3 files |
 | Phase 257 P19 | 101min | 1 task | 93 source/artifact files |
 | Phase 257 P20 | 113min | 1 task | 6 implementation/result/boundary files |
+| Phase 257 P21 | 23min | 1 task | 8 implementation/test/monitor files |
 
 ## Decisions
 
@@ -153,3 +154,6 @@ Next command: `$gsd-execute-phase 257`
 - [Phase 257]: The v1.16 semantic receipt binds schema-normalized TypeScript JSON wire bytes and a fixed lowercase signature form verified independently by Go. — Semantically equivalent rewrites, forbidden Chronicle fields, and receipt-identity drift fail before completion mutation.
 - [Phase 257]: Exactly one production source consumes the kernel step primitive; replay, runtime-service, persistence, public lifecycle surfaces, and Go may not recreate scheduling authority. — AST/call-graph guards reject aliases, computed access, re-exports, reducers, recursion, and forbidden dependency edges.
 - [Phase 257]: Compact audit probes are claims only when bound to lifecycle tests, event coverage, tuple authority, executable inventory, Go AST, historical proof, and receipt evidence. — The seven observations do not independently overclaim event-order or cross-language conformance proof.
+- [Phase 257]: The committed v1.16 semantic service receipt is the sole public-safe browser fixture source; browser proof is service-contract-backed test evidence, not live Go/runtime-service/database topology proof. — Phase 261 retains live execution and persistence ownership.
+- [Phase 257]: The retired public-safe replay Match ID is accepted only as a test input alias and every response retains canonical golden Match identity. — Compatibility navigation cannot create a second Chronicle or response identity.
+- [Phase 257]: Public replay proof joins exact result/API identity, complete event and snapshot evidence, in-bounds board geometry, pixel ink, responsive screenshots, terminal agreement, and recursive privacy checks. — A plausible canvas alone cannot stand in for semantic or boundary proof.
