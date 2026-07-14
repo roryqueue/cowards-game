@@ -12,15 +12,16 @@ import {
   runDevelopmentMatchSetSmoke,
   type DevelopmentMatchSetSmokeResult,
 } from "../packages/persistence/src/index.ts"
+/* eslint-disable-next-line no-restricted-imports -- Local preflight must opt into fixture-domain authority explicitly and cannot use it in production. */
+import { createFixtureMatchSetEvidenceResolver } from "../packages/persistence/src/matchset-service.ts"
 /* eslint-disable-next-line no-restricted-imports -- Preflight intentionally composes workspace source entry points before packages are built. */
 import {
   createReplay,
   projectPublicChronicle,
 } from "../packages/replay/src/index.ts"
-/* eslint-disable-next-line no-restricted-imports -- Preflight intentionally invokes the source worker in the local operational smoke. */
-import { runWorkerOnce } from "../apps/worker/src/runner.ts"
 /* eslint-disable-next-line no-restricted-imports -- Preflight needs the candidate contract before package build output exists. */
 import {
+  RUNTIME_ABI_V1_17,
   createRuntimeAbiV117PreflightLedger,
   debitRuntimeAbiV117Ledger,
   type Chronicle,
@@ -55,6 +56,8 @@ interface Options {
   requireRedis: boolean
   requireWeb: boolean
   webUrl: string | undefined
+  goBackendUrl: string | undefined
+  goBackendInternalToken: string | undefined
 }
 
 export const PREFLIGHT_NON_CERTIFICATION_NOTICE =
@@ -91,20 +94,27 @@ export const foldPreflightLedgerV117 = <
 interface PreflightDependencies {
   readonly checkCapabilityArtifact: typeof checkRuntimeBudgetCapabilitiesV117Artifact
   readonly createPool: typeof createDatabasePool
+  readonly environment: Readonly<Record<string, string | undefined>>
   readonly writeLine: (line: string) => void
 }
 
 const defaultDependencies: PreflightDependencies = {
   checkCapabilityArtifact: checkRuntimeBudgetCapabilitiesV117Artifact,
   createPool: createDatabasePool,
+  environment: process.env,
   writeLine: (line) => console.log(line),
 }
 
-const parseOptions = (argv: string[]): Options => {
+const parseOptions = (
+  argv: string[],
+  environment: Readonly<Record<string, string | undefined>>,
+): Options => {
   const options: Options = {
     requireRedis: true,
-    requireWeb: process.env.COWARDS_WEB_URL !== undefined,
-    webUrl: process.env.COWARDS_WEB_URL,
+    requireWeb: environment.COWARDS_WEB_URL !== undefined,
+    webUrl: environment.COWARDS_WEB_URL,
+    goBackendUrl: environment.COWARDS_GO_BACKEND_URL,
+    goBackendInternalToken: environment.COWARDS_GO_BACKEND_INTERNAL_TOKEN,
   }
 
   for (let index = 0; index < argv.length; index += 1) {
@@ -126,6 +136,24 @@ const parseOptions = (argv: string[]): Options => {
         options.requireWeb = false
         options.webUrl = undefined
         break
+      case "--go-backend-url": {
+        const value = argv[index + 1]
+        if (!value || value.startsWith("--")) {
+          throw new Error("--go-backend-url requires a URL value")
+        }
+        options.goBackendUrl = value
+        index += 1
+        break
+      }
+      case "--go-backend-internal-token": {
+        const value = argv[index + 1]
+        if (!value || value.startsWith("--")) {
+          throw new Error("--go-backend-internal-token requires a value")
+        }
+        options.goBackendInternalToken = value
+        index += 1
+        break
+      }
       case "--web-url": {
         const value = argv[index + 1]
         if (!value || value.startsWith("--")) {
@@ -143,6 +171,9 @@ const parseOptions = (argv: string[]): Options => {
 
   if (options.requireWeb && !options.webUrl?.trim()) {
     throw new Error("Web preflight requires a non-empty web URL")
+  }
+  if (options.goBackendUrl?.trim()) {
+    options.goBackendUrl = new URL(options.goBackendUrl).toString()
   }
 
   return options
@@ -209,6 +240,38 @@ const latestChronicle = async (
   return { matchId: row.match_id, chronicle: row.artifact }
 }
 
+const runGoMatchJobOnce = async (options: Options): Promise<string> => {
+  if (!options.goBackendUrl || !options.goBackendInternalToken) {
+    throw new Error(
+      "Go-owned execution requires COWARDS_GO_BACKEND_URL and COWARDS_GO_BACKEND_INTERNAL_TOKEN.",
+    )
+  }
+  const response = await globalThis.fetch(
+    new URL("/internal/match-jobs/run-once", options.goBackendUrl),
+    {
+      method: "POST",
+      headers: {
+        "X-Cowards-Internal-Token": options.goBackendInternalToken,
+      },
+    },
+  )
+  if (!response.ok) {
+    throw new Error(
+      `Go-owned run-once returned HTTP ${response.status}; response body is intentionally not echoed.`,
+    )
+  }
+  const body: unknown = await response.json()
+  if (
+    body === null ||
+    typeof body !== "object" ||
+    Array.isArray(body) ||
+    typeof (body as { status?: unknown }).status !== "string"
+  ) {
+    throw new Error("Go-owned run-once returned an invalid status envelope.")
+  }
+  return (body as { status: string }).status
+}
+
 const writeResults = (
   results: readonly CheckResult[],
   writeLine: (line: string) => void,
@@ -216,9 +279,7 @@ const writeResults = (
   writeLine("Coward's Game preflight")
   for (const result of results) {
     const marker = result.ok ? "PASS" : result.required ? "FAIL" : "WARN"
-    writeLine(
-      `[${marker}] [${result.layer}] ${result.name}: ${result.detail}`,
-    )
+    writeLine(`[${marker}] [${result.layer}] ${result.name}: ${result.detail}`)
   }
   writeLine(`[NOTICE] ${PREFLIGHT_NON_CERTIFICATION_NOTICE}`)
 }
@@ -228,7 +289,7 @@ export const runPreflight = async (
   overrides: Partial<PreflightDependencies> = {},
 ): Promise<number> => {
   const dependencies = { ...defaultDependencies, ...overrides }
-  const options = parseOptions([...argv])
+  const options = parseOptions([...argv], dependencies.environment)
   const results: CheckResult[] = []
   let smokeResult: DevelopmentMatchSetSmokeResult | undefined
 
@@ -244,11 +305,52 @@ export const runPreflight = async (
             `capability artifact failed closed: ${findings.join(", ")}`,
           )
         }
-        return "exact contract-owned bytes accepted; candidate lanes remain uncertified"
+        const profiles = Object.keys(
+          RUNTIME_ABI_V1_17.budgets.preflight.profiles,
+        ) as RuntimeAbiV117PreflightProfile[]
+        const ledgers = profiles.map((profile) =>
+          foldPreflightLedgerV117(profile, []),
+        )
+        if (
+          ledgers.some(
+            ({ ledger, outcomes }) =>
+              ledger.domain !== "preflight" ||
+              ledger.revision !== 0 ||
+              ledger.cumulative.operationCount !== 0 ||
+              ledger.commitments.length !== 0 ||
+              outcomes.length !== 0 ||
+              !Object.isFrozen(ledger),
+          ) ||
+          new Set(ledgers.map(({ ledger }) => ledger.profile)).size !==
+            profiles.length
+        ) {
+          throw new Error("separate preflight ledger initialization drifted")
+        }
+        return `exact contract-owned bytes accepted; initialized separate ${profiles.join(", ")} ledgers with zero candidate-resource receipts; candidate lanes remain uncertified`
       },
     ),
   )
 
+  if (results.some((result) => result.required && !result.ok)) {
+    writeResults(results, dependencies.writeLine)
+    return 1
+  }
+
+  results.push(
+    await check(
+      "service_startup",
+      "Go-owned Match orchestration configuration",
+      true,
+      async () => {
+        if (!options.goBackendUrl || !options.goBackendInternalToken) {
+          throw new Error(
+            "COWARDS_GO_BACKEND_URL and COWARDS_GO_BACKEND_INTERNAL_TOKEN are required; the retired TypeScript worker is never used as a fallback.",
+          )
+        }
+        return "explicit Go backend URL and internal credential are configured"
+      },
+    ),
+  )
   if (results.some((result) => result.required && !result.ok)) {
     writeResults(results, dependencies.writeLine)
     return 1
@@ -294,25 +396,14 @@ export const runPreflight = async (
       async () => {
         smokeResult = await runDevelopmentMatchSetSmoke(pool, {
           matchSetId: `match-set:preflight:${randomUUID()}` as MatchSetId,
+          evidenceResolver: createFixtureMatchSetEvidenceResolver(),
           runQueuedMatch: async (matchIds) => {
             const remaining = new Set(matchIds)
-            const maxAttempts = matchIds.length + 8
+            const maxAttempts = matchIds.length + 16
             for (let index = 0; index < maxAttempts; index += 1) {
-              const status = await runWorkerOnce(pool, {
-                workerId: "worker:preflight",
-                once: true,
-                matchIds: matchIds as readonly MatchId[],
-                jobOwnership: {
-                  lifecycleOwner: "go",
-                  workerPurpose: "test",
-                },
-              })
+              const status = await runGoMatchJobOnce(options)
               if (status === "idle") {
                 await sleep(100)
-                continue
-              }
-              if (status !== "completed") {
-                throw new Error(`worker returned ${status}`)
               }
               const completed = await pool.query<{ id: string }>(
                 "select id from matches where id = any($1) and status = 'complete'",
@@ -327,7 +418,7 @@ export const runPreflight = async (
             }
             if (remaining.size > 0) {
               throw new Error(
-                `worker did not complete preflight matches after ${maxAttempts} attempts: ${[...remaining].join(", ")}`,
+                `Go-owned orchestration did not complete preflight matches after ${maxAttempts} attempts: ${[...remaining].join(", ")}`,
               )
             }
           },

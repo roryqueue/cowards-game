@@ -131,9 +131,34 @@ describe("v1.17 preflight contract", () => {
   })
 
   it("uses the Go-owned service path and never revives the retired TypeScript worker", () => {
-    const source = readFileSync(new URL("./preflight.ts", import.meta.url), "utf8")
+    const source = readFileSync(
+      new URL("./preflight.ts", import.meta.url),
+      "utf8",
+    )
     expect(source).not.toMatch(/runWorkerOnce|apps\/worker\/src\/runner/iu)
     expect(source).toContain("/internal/match-jobs/run-once")
     expect(source).toContain("COWARDS_GO_BACKEND_INTERNAL_TOKEN")
+  })
+
+  it("fails before database mutation when Go-owned orchestration is absent", async () => {
+    let databaseStarts = 0
+    const lines: string[] = []
+    const code = await runPreflight(["--skip-redis", "--skip-web"], {
+      checkCapabilityArtifact: () => [],
+      environment: {},
+      createPool: () => {
+        databaseStarts += 1
+        throw new Error("database must not start")
+      },
+      writeLine: (line) => lines.push(line),
+    })
+
+    expect(code).toBe(1)
+    expect(databaseStarts).toBe(0)
+    expect(lines.join("\n")).toMatch(/Go-owned Match orchestration/iu)
+    expect(lines.join("\n")).toMatch(/retired TypeScript worker/iu)
+    expect(lines.join("\n")).toMatch(
+      /separate sourceValidation, compilation, artifactValidation, conformance ledgers with zero candidate-resource receipts/iu,
+    )
   })
 })
