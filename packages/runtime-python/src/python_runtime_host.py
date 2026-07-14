@@ -204,7 +204,13 @@ def kill_and_reap(child_pid):
         pass
 
 
-def run_candidate_guest(function, input_value, budget):
+def run_candidate_guest(
+    source,
+    function_name,
+    input_value,
+    budget,
+    safe_builtins,
+):
     if not hasattr(os, "fork"):
         return {"kind": "host_failure"}
     ready_read, ready_write = os.pipe()
@@ -235,31 +241,47 @@ def run_candidate_guest(function, input_value, budget):
                 os._exit(2)
             close_quietly(go_read)
             try:
-                result = function(input_value)
+                namespace = {"__builtins__": safe_builtins}
+                exec(source, namespace, namespace)
             except BaseException:
                 write_all(
                     result_write,
                     candidate_envelope_bytes("strategy_exception"),
                 )
             else:
-                try:
-                    payload = bounded_canonical_json_bytes(
-                        result, budget["outputBytes"]
-                    )
-                    write_all(
-                        result_write,
-                        candidate_envelope_bytes("payload", payload),
-                    )
-                except OutputLimitExceeded:
-                    write_all(
-                        result_write,
-                        candidate_envelope_bytes("oversized_output"),
-                    )
-                except BaseException:
+                function = namespace.get(function_name)
+                if not callable(function):
                     write_all(
                         result_write,
                         candidate_envelope_bytes("invalid_output"),
                     )
+                else:
+                    try:
+                        result = function(input_value)
+                    except BaseException:
+                        write_all(
+                            result_write,
+                            candidate_envelope_bytes("strategy_exception"),
+                        )
+                    else:
+                        try:
+                            payload = bounded_canonical_json_bytes(
+                                result, budget["outputBytes"]
+                            )
+                            write_all(
+                                result_write,
+                                candidate_envelope_bytes("payload", payload),
+                            )
+                        except OutputLimitExceeded:
+                            write_all(
+                                result_write,
+                                candidate_envelope_bytes("oversized_output"),
+                            )
+                        except BaseException:
+                            write_all(
+                                result_write,
+                                candidate_envelope_bytes("invalid_output"),
+                            )
         except BaseException:
             os._exit(3)
         finally:
@@ -403,23 +425,18 @@ def candidate_main(envelope):
         "str": str,
         "sum": sum,
     }
-    try:
-        namespace = {"__builtins__": safe_builtins}
-        exec(source, namespace, namespace)
-        function_name = (
-            "select_activations"
-            if envelope.get("methodName") == "selectActivations"
-            else "soldier_brain"
-        )
-    except Exception:
-        sys.stdout.write('{"kind":"host_failure"}')
-        return 0
-
-    function = namespace.get(function_name)
-    if not callable(function):
-        sys.stdout.write('{"kind":"host_failure"}')
-        return 0
-    guest = run_candidate_guest(function, envelope.get("input"), budget)
+    function_name = (
+        "select_activations"
+        if envelope.get("methodName") == "selectActivations"
+        else "soldier_brain"
+    )
+    guest = run_candidate_guest(
+        source,
+        function_name,
+        envelope.get("input"),
+        budget,
+        safe_builtins,
+    )
     if guest["kind"] == "forward":
         # The supervised child has already constructed and transferred the
         # complete exact envelope before its deadline. This parent seam only
