@@ -1569,14 +1569,20 @@ const deriveResponseAccounting = (
   }
 }
 
-const successReceiptMatchesCanonicalPayload = (
+const successReceiptMatchesCanonicalGuestFrame = (
   receipt: RuntimeInvocationExecutionReceiptV117,
   payloadBytes: Uint8Array,
 ): boolean => {
   const payload = receipt.counters.payloadBytes
+  const stdout = receipt.counters.stdoutBytes
+  const stderr = receipt.counters.stderrBytes
   return (
     payload.status === "measured" &&
-    payload.delta === payloadBytes.byteLength
+    payload.delta === payloadBytes.byteLength &&
+    stdout.status === "measured" &&
+    stdout.delta === payloadBytes.byteLength + 1 &&
+    stderr.status === "measured" &&
+    stderr.delta === 0
   )
 }
 
@@ -1606,13 +1612,13 @@ export const createAuthenticatedRuntimeInvocationResponseV117 = <
   }
   if (
     parsedOutcome.kind === "success" &&
-    !successReceiptMatchesCanonicalPayload(
+    !successReceiptMatchesCanonicalGuestFrame(
       receipt,
       canonicalBytes(parsedOutcome.value),
     )
   ) {
     throw new TypeError(
-      "Cannot authenticate a success response whose receipt contradicts the canonical payload",
+      "Cannot authenticate a success response whose receipt contradicts the canonical guest frame",
     )
   }
   const accounting = deriveResponseAccounting(
@@ -1960,7 +1966,7 @@ const verifyRuntimeInvocationResponseV117Unsafe = (
       response.payloadBinding === null ||
       response.payloadBinding.sha256 !== sha256Bytes(payloadBytes) ||
       response.payloadBinding.canonicalByteLength !== payloadBytes.byteLength ||
-      !successReceiptMatchesCanonicalPayload(
+      !successReceiptMatchesCanonicalGuestFrame(
         response.accounting.receipt,
         payloadBytes,
       )

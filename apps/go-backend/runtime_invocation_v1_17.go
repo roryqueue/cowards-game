@@ -1516,8 +1516,14 @@ func runtimeInvocationV117ResponseBindingsMatch(response map[string]any, request
 		}
 		counters := receipt["counters"].(map[string]any)
 		payloadCounter := counters["payloadBytes"].(map[string]any)
+		stdoutCounter := counters["stdoutBytes"].(map[string]any)
+		stderrCounter := counters["stderrBytes"].(map[string]any)
 		payloadDelta, payloadOK := runtimeInvocationV117Integer(payloadCounter["delta"])
-		if payloadCounter["status"] != "measured" || !payloadOK || payloadDelta != int64(len(payloadBytes)) {
+		stdoutDelta, stdoutOK := runtimeInvocationV117Integer(stdoutCounter["delta"])
+		stderrDelta, stderrOK := runtimeInvocationV117Integer(stderrCounter["delta"])
+		if payloadCounter["status"] != "measured" || !payloadOK || payloadDelta != int64(len(payloadBytes)) ||
+			stdoutCounter["status"] != "measured" || !stdoutOK || stdoutDelta != int64(len(payloadBytes)+1) ||
+			stderrCounter["status"] != "measured" || !stderrOK || stderrDelta != 0 {
 			return false
 		}
 		payloadBinding := response["payloadBinding"].(map[string]any)
