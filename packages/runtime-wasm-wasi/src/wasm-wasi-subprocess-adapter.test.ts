@@ -452,7 +452,12 @@ describe("WASM/WASI runtime v1.17 candidate host authority", () => {
       trace: {
         accountingIdentitySha256: request.accounting.identitySha256,
         idempotencyKeySha256: request.accounting.idempotencyKeySha256,
-        safeCodes: ["WASM_WASI_EQUIVALENT_ACCOUNTING_UNAVAILABLE"],
+        safeCodes: expect.arrayContaining([
+          "WASM_WASI_HOST_OUTER_AUTHORITY",
+          "RAW_PAYLOAD_SCANNED",
+          "PAYLOAD_CANONICAL",
+          "WASM_WASI_EQUIVALENT_ACCOUNTING_UNAVAILABLE",
+        ]),
       },
     })
     expect(response.accounting.disposition).toBe("no_commit")
@@ -483,6 +488,39 @@ describe("WASM/WASI runtime v1.17 candidate host authority", () => {
     expect(response.outcome).toMatchObject({
       kind: "system_failure",
       failure: { code: "AMBIGUOUS_ATTRIBUTION" },
+    })
+    expect(response.accounting.disposition).toBe("no_commit")
+    expect(response.accounting.poststate).toEqual(request.accounting.prestate)
+  })
+
+  it("signs a no-commit system failure for structurally incomplete injected evidence", () => {
+    const request = candidateRequest(revision)
+    const observation = completedObservation(
+      '{"action":{"type":"TURN_TO_STONE"},"soldierMemory":null}',
+    )
+    const execute = () =>
+      runWasmWasiStrategyMethodV117Sync({
+        request,
+        revision,
+        signingIdentity: candidateSigningIdentity,
+        executionIdentity: candidateExecutionIdentity(revision),
+        executionReceiptEvidence: {
+          attribution: "proven_strategy",
+        } as RuntimeInvocationExecutionReceiptEvidenceV117,
+        executeGuest: () => observation,
+      })
+
+    expect(execute).not.toThrow()
+    const response = execute()
+    expect(response.outcome).toMatchObject({
+      kind: "system_failure",
+      failure: { code: "AMBIGUOUS_ATTRIBUTION", retryable: false },
+      trace: {
+        safeCodes: expect.arrayContaining([
+          "RAW_PAYLOAD_SCANNED",
+          "WASM_WASI_EQUIVALENT_ACCOUNTING_UNAVAILABLE",
+        ]),
+      },
     })
     expect(response.accounting.disposition).toBe("no_commit")
     expect(response.accounting.poststate).toEqual(request.accounting.prestate)
