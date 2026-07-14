@@ -1,3 +1,5 @@
+import { CANDIDATE_BOUNDED_CANONICAL_SOURCE } from "./candidate-bounded-canonical-source.js"
+
 export const SUBPROCESS_HARNESS_SOURCE = `
 import { exit, stderr, stdin, stdout } from "node:process"
 
@@ -310,7 +312,6 @@ void main()
 export const SUBPROCESS_HARNESS_V117_SOURCE = `
 import { stdin, stdout } from "node:process"
 
-const encoder = new TextEncoder()
 const forbidden = (name) => new Proxy(function blocked() {}, {
   apply() { throw new Error("FORBIDDEN_CAPABILITY:" + name) },
   construct() { throw new Error("FORBIDDEN_CAPABILITY:" + name) },
@@ -333,30 +334,6 @@ const installGlobalBlocks = () => {
   Object.defineProperty(Function.prototype, "constructor", {
     value: forbidden("Function.constructor"), writable: false, configurable: false,
   })
-}
-const compareBytes = (left, right) => {
-  const a = encoder.encode(left)
-  const b = encoder.encode(right)
-  for (let index = 0; index < Math.min(a.length, b.length); index += 1) {
-    if (a[index] !== b[index]) return a[index] - b[index]
-  }
-  return a.length - b.length
-}
-const canonical = (value) => {
-  if (value === null || typeof value === "string" || typeof value === "boolean") {
-    return JSON.stringify(value)
-  }
-  if (typeof value === "number") {
-    if (!Number.isFinite(value)) throw new Error("INVALID_OUTPUT")
-    return Object.is(value, -0) ? "0" : JSON.stringify(value).replace(/e\\+/u, "e")
-  }
-  if (Array.isArray(value)) return "[" + value.map(canonical).join(",") + "]"
-  if (typeof value !== "object" || value === undefined) throw new Error("INVALID_OUTPUT")
-  const prototype = Object.getPrototypeOf(value)
-  if (prototype !== Object.prototype && prototype !== null) throw new Error("INVALID_OUTPUT")
-  return "{" + Object.keys(value).sort(compareBytes).map((key) =>
-    JSON.stringify(key) + ":" + canonical(value[key])
-  ).join(",") + "}"
 }
 const moduleSource = (source) => [
   'const sanitizedGlobalThis = new Proxy(Object.freeze({}), { get(_target, property) { throw new Error("FORBIDDEN_CAPABILITY:" + String(property)) }, set(_target, property) { throw new Error("FORBIDDEN_CAPABILITY:" + String(property)) } })',
@@ -392,6 +369,7 @@ const frame = (tag, payload = new Uint8Array()) => {
   bytes.set(payload, 1)
   return bytes
 }
+${CANDIDATE_BOUNDED_CANONICAL_SOURCE}
 const caughtTag = (error, fallback) => {
   const message = error instanceof Error ? error.message : ""
   return message.startsWith("FORBIDDEN_CAPABILITY:") ? "F" : fallback
@@ -403,15 +381,25 @@ const readInput = async () => {
 }
 const main = async () => {
   let output
+  let request
+  installGlobalBlocks()
   try {
-    installGlobalBlocks()
-    const request = JSON.parse(await readInput())
-    if (!request || typeof request !== "object" ||
-      typeof request.source !== "string" ||
+    request = JSON.parse(await readInput())
+  } catch {
+    output = frame("T")
+  }
+  if (output === undefined &&
+    (!request || typeof request !== "object" || Array.isArray(request) ||
+      Object.keys(request).length !== 4 ||
+      typeof request.source !== "string" || request.source.length === 0 ||
       (request.methodName !== "selectActivations" && request.methodName !== "soldierBrain") ||
-      !Number.isSafeInteger(request.outputByteLimit) || request.outputByteLimit < 0) {
-      output = frame("I")
-    } else {
+      !Object.hasOwn(request, "input") ||
+      !Number.isSafeInteger(request.outputByteLimit) || request.outputByteLimit < 0 ||
+      request.outputByteLimit > 262144)) {
+    output = frame("T")
+  }
+  if (output === undefined) {
+    try {
       const imported = await import(moduleUrl(request.source).href)
       const strategy = imported.default
       const method = strategy && strategy[request.methodName]
@@ -429,19 +417,16 @@ const main = async () => {
             output = frame("I")
           } else {
             try {
-              const payload = encoder.encode(canonical(value))
-              output = payload.length > request.outputByteLimit
-                ? frame("O")
-                : frame("S", payload)
+              output = boundedCanonicalFrame(value, request.outputByteLimit)
             } catch (error) {
               output = frame(caughtTag(error, "I"))
             }
           }
         }
       }
+    } catch (error) {
+      output = frame(caughtTag(error, "R"))
     }
-  } catch (error) {
-    output = frame(caughtTag(error, "X"))
   }
   stdout.write(output)
 }

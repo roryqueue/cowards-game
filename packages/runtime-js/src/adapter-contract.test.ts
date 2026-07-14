@@ -960,5 +960,75 @@ export default {
         expect(result.stderr).toBe("")
       }
     })
+
+    it("emits bounded canonical Unicode, escapes, and numbers identically", () => {
+      const source = transpileOrThrow(`
+export default {
+  selectActivations() {
+    const strategyMemory = {}
+    strategyMemory["𐀀"] = 2
+    strategyMemory[""] = {
+      escape: 'quote" slash\\\\ line\\n',
+      exponent: 1e21,
+      negativeZero: -0,
+    }
+    return { activationOrders: [], strategyMemory }
+  },
+  soldierBrain() {
+    return { action: { type: "TURN_TO_STONE" }, soldierMemory: {} }
+  },
+}
+`)
+      const request = candidateRequest({ artifactSource: source })
+      for (const adapter of [
+        createWorkerThreadStrategyExecutionAdapter(),
+        createSubprocessStrategyExecutionAdapter(),
+      ]) {
+        const result = executeCandidateWith(adapter, request, source)
+        expect(result).toMatchObject({
+          kind: "success",
+          value: {
+            outcome: {
+              kind: "success",
+              value: {
+                activationOrders: [],
+                strategyMemory: {
+                  "": {
+                    escape: 'quote" slash\\ line\n',
+                    exponent: 1e21,
+                    negativeZero: 0,
+                  },
+                  "𐀀": 2,
+                },
+              },
+            },
+          },
+        })
+      }
+    })
+
+    it("keeps pre-method artifact load failure system-owned", () => {
+      const invalidArtifact = "this is not executable JavaScript {"
+      const request = candidateRequest({ artifactSource: invalidArtifact })
+      for (const adapter of [
+        createWorkerThreadStrategyExecutionAdapter(),
+        createSubprocessStrategyExecutionAdapter(),
+      ]) {
+        const result = executeCandidateWith(
+          adapter,
+          request,
+          invalidArtifact,
+        )
+        expect(result).toMatchObject({
+          kind: "success",
+          value: {
+            outcome: {
+              kind: "system_failure",
+              failure: { code: "RUNTIME_CRASH", retryable: true },
+            },
+          },
+        })
+      }
+    })
   })
 })

@@ -1,3 +1,5 @@
+import { CANDIDATE_BOUNDED_CANONICAL_SOURCE } from "./candidate-bounded-canonical-source.js"
+
 export const WORKER_HARNESS_SOURCE = `
 import { workerData } from "node:worker_threads"
 
@@ -241,7 +243,6 @@ void main()
 export const WORKER_HARNESS_V117_SOURCE = `
 import { workerData } from "node:worker_threads"
 
-const encoder = new TextEncoder()
 const forbidden = (name) => new Proxy(function blocked() {}, {
   apply() { throw new Error("FORBIDDEN_CAPABILITY:" + name) },
   construct() { throw new Error("FORBIDDEN_CAPABILITY:" + name) },
@@ -264,30 +265,6 @@ const installGlobalBlocks = () => {
   Object.defineProperty(Function.prototype, "constructor", {
     value: forbidden("Function.constructor"), writable: false, configurable: false,
   })
-}
-const compareBytes = (left, right) => {
-  const a = encoder.encode(left)
-  const b = encoder.encode(right)
-  for (let index = 0; index < Math.min(a.length, b.length); index += 1) {
-    if (a[index] !== b[index]) return a[index] - b[index]
-  }
-  return a.length - b.length
-}
-const canonical = (value) => {
-  if (value === null || typeof value === "string" || typeof value === "boolean") {
-    return JSON.stringify(value)
-  }
-  if (typeof value === "number") {
-    if (!Number.isFinite(value)) throw new Error("INVALID_OUTPUT")
-    return Object.is(value, -0) ? "0" : JSON.stringify(value).replace(/e\\+/u, "e")
-  }
-  if (Array.isArray(value)) return "[" + value.map(canonical).join(",") + "]"
-  if (typeof value !== "object" || value === undefined) throw new Error("INVALID_OUTPUT")
-  const prototype = Object.getPrototypeOf(value)
-  if (prototype !== Object.prototype && prototype !== null) throw new Error("INVALID_OUTPUT")
-  return "{" + Object.keys(value).sort(compareBytes).map((key) =>
-    JSON.stringify(key) + ":" + canonical(value[key])
-  ).join(",") + "}"
 }
 const moduleSource = (source) => [
   'const sanitizedGlobalThis = new Proxy(Object.freeze({}), { get(_target, property) { throw new Error("FORBIDDEN_CAPABILITY:" + String(property)) }, set(_target, property) { throw new Error("FORBIDDEN_CAPABILITY:" + String(property)) } })',
@@ -323,43 +300,50 @@ const frame = (tag, payload = new Uint8Array()) => {
   bytes.set(payload, 1)
   return bytes
 }
+${CANDIDATE_BOUNDED_CANONICAL_SOURCE}
 const caughtTag = (error, fallback) => {
   const message = error instanceof Error ? error.message : ""
   return message.startsWith("FORBIDDEN_CAPABILITY:") ? "F" : fallback
 }
 const main = async () => {
   let output
-  try {
-    installGlobalBlocks()
-    const imported = await import(moduleUrl(workerData.source).href)
-    const strategy = imported.default
-    const method = strategy && strategy[workerData.methodName]
-    if (typeof method !== "function") {
-      output = frame("I")
-    } else {
-      let value
-      try {
-        value = method.call(strategy, workerData.input)
-      } catch (error) {
-        output = frame(caughtTag(error, "X"))
-      }
-      if (output === undefined) {
-        if (value && typeof value.then === "function") {
-          output = frame("I")
-        } else {
-          try {
-            const payload = encoder.encode(canonical(value))
-            output = payload.length > workerData.outputByteLimit
-              ? frame("O")
-              : frame("S", payload)
-          } catch (error) {
-            output = frame(caughtTag(error, "I"))
+  if (!workerData || typeof workerData !== "object" ||
+    typeof workerData.source !== "string" || workerData.source.length === 0 ||
+    (workerData.methodName !== "selectActivations" && workerData.methodName !== "soldierBrain") ||
+    !Object.hasOwn(workerData, "input") ||
+    !Number.isSafeInteger(workerData.outputByteLimit) || workerData.outputByteLimit < 0 ||
+    workerData.outputByteLimit > 262144) {
+    output = frame("T")
+  } else {
+    try {
+      installGlobalBlocks()
+      const imported = await import(moduleUrl(workerData.source).href)
+      const strategy = imported.default
+      const method = strategy && strategy[workerData.methodName]
+      if (typeof method !== "function") {
+        output = frame("I")
+      } else {
+        let value
+        try {
+          value = method.call(strategy, workerData.input)
+        } catch (error) {
+          output = frame(caughtTag(error, "X"))
+        }
+        if (output === undefined) {
+          if (value && typeof value.then === "function") {
+            output = frame("I")
+          } else {
+            try {
+              output = boundedCanonicalFrame(value, workerData.outputByteLimit)
+            } catch (error) {
+              output = frame(caughtTag(error, "I"))
+            }
           }
         }
       }
+    } catch (error) {
+      output = frame(caughtTag(error, "R"))
     }
-  } catch (error) {
-    output = frame(caughtTag(error, "X"))
   }
   workerData.port.postMessage(output, [output.buffer])
   Atomics.store(new Int32Array(workerData.signalBuffer), 0, 1)

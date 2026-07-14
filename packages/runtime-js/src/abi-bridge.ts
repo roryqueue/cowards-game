@@ -25,6 +25,7 @@ import type {
   StrategyExecutionAdapterOptions,
   StrategyMethodName,
 } from "./adapter.js"
+import { RUNTIME_OUTPUT_BYTES } from "./guards.js"
 import { hashStrategySource } from "./hash.js"
 
 export interface ExecuteStrategyRuntimeAbiBridgeInput extends StrategyExecutionAdapterOptions {
@@ -122,6 +123,8 @@ export const RUNTIME_GUEST_FRAME_TAGS_V117 = Object.freeze({
   thrownException: "X",
   forbiddenCapability: "F",
   oversizedOutput: "O",
+  runtimeFailure: "R",
+  transportFailure: "T",
 } as const)
 
 export type RuntimeGuestSystemFailureV117 = Readonly<{
@@ -305,6 +308,10 @@ const classifyGuestFrame = (
         "OVERSIZED_OUTPUT",
         "PAYLOAD_CAP_EXCEEDED",
       )
+    case RUNTIME_GUEST_FRAME_TAGS_V117.transportFailure:
+      return systemFailure(request, requestBytes, "TRANSPORT_CRASH", true)
+    case RUNTIME_GUEST_FRAME_TAGS_V117.runtimeFailure:
+      return systemFailure(request, requestBytes, "RUNTIME_CRASH", true)
     default:
       return systemFailure(request, requestBytes, "TRANSPORT_CRASH", true)
   }
@@ -336,6 +343,20 @@ export const executeStrategyRuntimeAbiV117 = (
       request,
       requestBytes,
       "OUTER_FRAME_WRONG_BINDING",
+      false,
+    )
+  } else if (request.budget.outputBytes > RUNTIME_OUTPUT_BYTES) {
+    outcome = systemFailure(
+      request,
+      requestBytes,
+      "OUTER_FRAME_WRONG_BINDING",
+      false,
+    )
+  } else if (request.budget.wallMilliseconds === 0) {
+    outcome = systemFailure(
+      request,
+      requestBytes,
+      "AMBIGUOUS_ATTRIBUTION",
       false,
     )
   } else {
