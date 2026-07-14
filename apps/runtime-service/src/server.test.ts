@@ -5,10 +5,17 @@ import { Readable } from "node:stream"
 import { afterEach, describe, expect, it } from "vitest"
 import {
   RUNTIME_EXECUTION_SERVICE_VERSION,
+  RUNTIME_INVOCATION_V1_17_TEST_KEY_ID,
   RuntimeExecutionServiceResponseSchema,
 } from "@cowards/spec"
 import { createRuntimeServiceConfig } from "./runtime-config.js"
-import { createRuntimeExecutionHttpServer, readBody } from "./server.js"
+import {
+  admitRuntimeInvocationRequestBytesV117,
+  admitStrategyPayloadBytesV117,
+  createRuntimeExecutionHttpServer,
+  readBody,
+  readBodyBytes,
+} from "./server.js"
 
 process.env.COWARDS_PROVIDER_VALIDATION_SECRET =
   "cowards-provider-validation-test-secret-v1.33"
@@ -69,6 +76,67 @@ afterEach(async () => {
 })
 
 describe("runtime execution HTTP boundary", () => {
+  it("preserves successor raw bytes before any UTF-8 or host JSON conversion", async () => {
+    const raw = Buffer.from([0x7b, 0x22, 0x78, 0x22, 0x3a, 0xc3, 0x28, 0x7d])
+    const request = Readable.from([
+      raw.subarray(0, 5),
+      raw.subarray(5),
+    ]) as unknown as Parameters<typeof readBodyBytes>[0]
+
+    await expect(readBodyBytes(request, raw.byteLength)).resolves.toEqual(raw)
+  })
+
+  it("keeps outer corruption system-owned and redacted", () => {
+    const privateMarker = "private Strategy source /Users/owner token=secret"
+    const result = admitRuntimeInvocationRequestBytesV117(
+      Buffer.from(`{"private":"${privateMarker}","private":"duplicate"}`),
+      {
+        keyId: RUNTIME_INVOCATION_V1_17_TEST_KEY_ID,
+        secret: "fixture-only:runtime-invocation-v1.17:secret",
+      },
+    )
+
+    expect(result).toMatchObject({
+      kind: "system_failure",
+      failure: {
+        code: "OUTER_FRAME_UNDECODABLE",
+        publicMessage: "Runtime system failure.",
+      },
+    })
+    expect(JSON.stringify(result)).not.toContain(privateMarker)
+    expect(JSON.stringify(result)).not.toContain("/Users/")
+    expect(JSON.stringify(result)).not.toContain("token=secret")
+  })
+
+  it("keeps decoded payload canonical and schema failures player-owned", () => {
+    const duplicate = admitStrategyPayloadBytesV117(
+      Buffer.from('{"activationOrders":[],"strategyMemory":{},"strategyMemory":null}'),
+      "selectActivations",
+    )
+    const schemaInvalid = admitStrategyPayloadBytesV117(
+      Buffer.from('{"activationOrders":[]}'),
+      "selectActivations",
+    )
+    const valid = admitStrategyPayloadBytesV117(
+      Buffer.from('{"activationOrders":[],"strategyMemory":{}}'),
+      "selectActivations",
+    )
+
+    expect(duplicate).toMatchObject({
+      kind: "player_violation",
+      violation: { code: "INVALID_OUTPUT" },
+      canonicalError: { code: "DUPLICATE_KEY", owner: "player_violation" },
+    })
+    expect(schemaInvalid).toMatchObject({
+      kind: "player_violation",
+      violation: { code: "INVALID_OUTPUT" },
+    })
+    expect(valid).toMatchObject({
+      kind: "success",
+      value: { activationOrders: [], strategyMemory: {} },
+    })
+  })
+
   it("decodes bounded UTF-8 independently of transport chunk boundaries", async () => {
     const expected = {
       sourceFormat: "typescript",
