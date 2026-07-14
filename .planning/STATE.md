@@ -5,15 +5,15 @@ milestone_name: Rules Integrity and Strategy Evaluation Foundations — ACTIVE
 current_phase: 258
 current_phase_name: canonical-json-failure-semantics-and-artifact-identity
 status: in_progress
-stopped_at: Completed 258-10-PLAN.md; Python Plan 09 remains in progress
-last_updated: "2026-07-14T15:40:00.000Z"
+stopped_at: Completed 258-09 and 258-10; ready for 258-11
+last_updated: "2026-07-14T17:35:00.000Z"
 last_activity: 2026-07-14
-last_activity_desc: Phase 258 Plan 10 migrated Rust and Zig to host-owned raw payloads with exact fail-closed identity
+last_activity_desc: Phase 258 Plan 09 completed Python raw ABI and exact original-versus-normalized source identity
 progress:
   total_phases: 6
   completed_phases: 2
   total_plans: 55
-  completed_plans: 49
+  completed_plans: 50
   percent: 33
 ---
 
@@ -30,8 +30,8 @@ See: `.planning/PROJECT.md` (updated 2026-07-12)
 
 Phase: 258 (canonical-json-failure-semantics-and-artifact-identity) — IN PROGRESS
 Plan: 10 of 14
-Status: Plan 10 complete; Rust/Zig/WASM candidate host authority and exact identity green
-Last activity: 2026-07-14 — Completed Plan 258-10 Rust/Zig/WASM candidate migration
+Status: Plans 09 and 10 complete; all Wave 8 language and exact-source migrations green
+Last activity: 2026-07-14 — Completed Plan 258-09 Python candidate and exact source identity
 
 Progress: [███░░░░░░░] 33%
 
@@ -61,8 +61,8 @@ Progress: [███░░░░░░░] 33%
 
 **Resume file:** None
 
-Last session: 2026-07-14T15:40:00.000Z
-Stopped at: Completed 258-10-PLAN.md; Python Plan 09 remains in progress
+Last session: 2026-07-14T17:35:00.000Z
+Stopped at: Completed 258-09 and 258-10; ready for 258-11
 Next command: `$gsd-execute-phase 258`
 
 ## Performance Metrics
@@ -102,8 +102,15 @@ Next command: `$gsd-execute-phase 258`
 | Phase 258 P07 | 46min | 2 tasks + review | 9 implementation/test files |
 | Phase 258 P08 | 19min | 1 task + 3 review loops | 10 runtime/test files |
 | Phase 258 P10 | 22min | 2 tasks + review | 6 runtime/evaluator/fixture files |
+| Phase 258 P09 | 2h 18min | 2 tasks + adversarial rereview | 23 implementation/migration/proof files |
 
 ## Decisions
+
+- [Phase 258]: Original source bytes are immutable canonical evidence while normalized bytes are a separately identified derivative bound by an explicit policy, line-ending facts, and artifact manifest. — Normalization can never overwrite or impersonate the submitted source domain.
+- [Phase 258]: The repository recomputes every v2 source identity derivative from exact source and rejects caller drift before SQL; released migration 0018 remains byte-stable and 0019 performs forward-only hardening with no backfill. — Routes and services cannot mint semantic identity, and historical bytes are never fabricated or reinterpreted.
+- [Phase 258]: The Python signed wall begins at the child go signal and covers module initialization through complete response-envelope EOF under host-owned fork supervision; interpreter startup has a separate system watchdog. — Guest code cannot catch the deadline or move player-influenced serialization and transfer outside it.
+- [Phase 258]: Python compute and memory meters remain explicitly unavailable, and ambiguous or infrastructure-owned failure is always system-owned; only positively attributable Strategy invalidity, exception, or exhaustion is player-owned. — Candidate functionality cannot be mislabeled as counted conformance.
+- [Phase 258]: Go, web, repository, and PostgreSQL preserve exact source identity while public readiness output remains sanitized; current v1.4 dispatch and historical evidence remain unchanged. — Exact provenance and privacy repair do not activate successor runtime or gameplay semantics.
 
 - [Phase 258]: Rust and Zig guests emit only raw canonical method payloads; the WASM/WASI host owns the authenticated outer response and every failure classification. — Guest code cannot mint transport authority or blame infrastructure faults on a player.
 - [Phase 258]: Expected compiler, artifact, target, flags, sysroot, Wasmtime, adapter, settings, and containment identity is compared with a fresh exact observation before guest startup. — Stale artifact/toolchain/runtime/settings bindings fail closed as system failures and never reach gameplay.
