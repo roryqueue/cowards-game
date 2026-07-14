@@ -5,15 +5,15 @@ milestone_name: Rules Integrity and Strategy Evaluation Foundations — ACTIVE
 current_phase: 258
 current_phase_name: canonical-json-failure-semantics-and-artifact-identity
 status: in_progress
-stopped_at: Completed 258-04-PLAN.md; ready for 258-06 invocation ABI
-last_updated: "2026-07-14T04:39:07.000Z"
+stopped_at: Completed 258-06-PLAN.md; ready for 258-05 bounded admission integration
+last_updated: "2026-07-14T05:04:44.000Z"
 last_activity: 2026-07-14
-last_activity_desc: Phase 258 Plan 04 canonical encoder and successor identity domains completed; exact Go-only RED preserved
+last_activity_desc: Phase 258 Plan 06 exclusive successor invocation ABI and authenticated candidate envelope completed; v1.16 dispatch unchanged
 progress:
   total_phases: 6
   completed_phases: 2
   total_plans: 55
-  completed_plans: 45
+  completed_plans: 46
   percent: 33
 ---
 
@@ -29,9 +29,9 @@ See: `.planning/PROJECT.md` (updated 2026-07-12)
 ## Current Position
 
 Phase: 258 (canonical-json-failure-semantics-and-artifact-identity) — IN PROGRESS
-Plan: 4 of 14
-Status: Plan 04 complete; TypeScript canonical codec and successor identity framing green
-Last activity: 2026-07-14 — Completed Plan 258-04 canonical encoder and identity domains
+Plan: 5 of 14
+Status: Plan 06 complete; exclusive authenticated v1.17 candidate ABI green and non-current
+Last activity: 2026-07-14 — Completed Plan 258-06 successor invocation ABI and candidate envelope
 
 Progress: [███░░░░░░░] 33%
 
@@ -61,8 +61,8 @@ Progress: [███░░░░░░░] 33%
 
 **Resume file:** None
 
-Last session: 2026-07-14T04:39:07.000Z
-Stopped at: Completed 258-04-PLAN.md; ready for 258-06 invocation ABI
+Last session: 2026-07-14T05:04:44.000Z
+Stopped at: Completed 258-06-PLAN.md; ready for 258-05 bounded admission integration
 Next command: `$gsd-execute-phase 258`
 
 ## Performance Metrics
@@ -97,8 +97,14 @@ Next command: `$gsd-execute-phase 258`
 | Phase 258 P02 | 11min | 2 tasks | 89 corpus/consumer/verifier files |
 | Phase 258 P03 | 15min | 2 tasks | 4 scanner/parser files |
 | Phase 258 P04 | 24min | 2 tasks | 15 implementation/fixture/receipt files |
+| Phase 258 P06 | 17min | 2 tasks | 5 implementation/test/artifact files |
 
 ## Decisions
+
+- [Phase 258]: Every v1.17 candidate invocation result has exactly one strict kind: success owns value, player_violation owns a registered canonical violation, and system_failure owns a redacted failure. — Mixed ownership is unrepresentable in both TypeScript and the runtime schema.
+- [Phase 258]: The adapter authenticates canonical outer request and response envelopes after revalidating every derived identity binding; guest stdout is only untrusted payload material. — A Strategy cannot self-authenticate transport authority or convert malformed outer frames into player blame.
+- [Phase 258]: Missing, truncated, unauthenticated, wrongly bound, undecodable, ambiguous, adapter, runtime, host, and transport observations are system failures; only decoded attributable Strategy invalidity, exception, and exhaustion are player violations. — Penalties require positive attribution rather than absence of infrastructure proof.
+- [Phase 258]: The v1.17 runtime invocation ABI remains an inactive candidate until Plan 258-14, and current v1.16 service source, fixtures, Go clients, semantic receipt, and migration stay byte-identical. — Contract definition does not silently activate successor dispatch or rewrite historical proof.
 
 - [Phase 258]: Canonical JSON output is produced by one explicit bounded frame machine with unsigned UTF-8 key ordering, scalar-preserving escapes, negative-zero normalization, and shortest round-trip binary64 formatting. — Canonical bytes do not depend on insertion order, locale, JSON.stringify, recursion, or host JSON formatting.
 - [Phase 258]: Successor identities use one closed 15-domain registry with unsigned-64-bit big-endian length framing for the domain tag and every segment. — Cross-domain and concatenation ambiguity are impossible while immutable v1.16 helpers and proof bytes remain untouched.
