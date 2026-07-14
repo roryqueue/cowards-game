@@ -23,11 +23,14 @@ import {
   STRATEGY_WASM_ARTIFACT_BYTES,
   StrategyRuntimeResponseEnvelopeSchema,
   StrategyRevisionSchema,
+  admitCanonicalJsonBytes,
+  admitCanonicalJsonValue,
   hashCanonicalIdentity,
   hashCanonicalIdentityValue,
   runtimeCompatibilityKey,
   type CompiledStrategyArtifact,
   type JsonValue,
+  type SourceLanguageStrategyArtifact,
   type StrategyRevision,
   type StrategyRevisionMetadata,
   type StrategyRevisionValidationIssue,
@@ -106,6 +109,7 @@ export interface WasmWasiCandidateIdentityV117 {
   schemaVersion: "runtime-wasm-wasi-identity-v1.17"
   runtimeAbi: "strategy-runtime-abi-v1.17"
   languageId: "rust" | "zig"
+  sourceIdentity: WasmWasiSourceIdentityV117
   artifact: {
     sha256: `sha256:${string}`
     bytes: number
@@ -162,10 +166,12 @@ export interface WasmWasiCandidateIdentityV117 {
 
 export interface WasmWasiCandidateArtifactV117 extends Omit<
   CompiledStrategyArtifact,
-  "abiEnvelope" | "abiVersion" | "publicEvidence"
+  "abiEnvelope" | "abiVersion" | "publicEvidence" | "sourceHash"
 > {
   abiEnvelope: "stdin-canonical-request-stdout-raw-canonical-payload"
   abiVersion: "strategy-runtime-abi-v1.17"
+  sourceHash: `sha256:${string}`
+  sourceIdentity: WasmWasiSourceIdentityV117
   publicEvidence: {
     label: string
     nonCounted: true
@@ -175,7 +181,7 @@ export interface WasmWasiCandidateArtifactV117 extends Omit<
 
 export interface WasmWasiCandidateRevisionV117 {
   id: string
-  sourceHash: string
+  sourceIdentity: WasmWasiSourceIdentityV117
   runtime: {
     abiVersion: "strategy-runtime-abi-v1.17"
     language: {
@@ -190,6 +196,180 @@ export interface WasmWasiCandidateRevisionV117 {
   metadata: {
     compiledArtifact: WasmWasiCandidateArtifactV117
   }
+}
+
+export interface WasmWasiSourceIdentityV117 extends Omit<
+  NonNullable<SourceLanguageStrategyArtifact["sourceIdentity"]>,
+  "originalSourceSha256" | "normalizedSourceSha256"
+> {
+  originalSourceSha256: `sha256:${string}`
+  normalizedSourceSha256: `sha256:${string}`
+}
+
+const WASM_WASI_SOURCE_IDENTITY_SECTION_V117 = "cowards.source-identity.v1.17"
+
+export const buildWasmWasiSourceIdentityV117 = (
+  source: string,
+): WasmWasiSourceIdentityV117 => {
+  let lf = 0
+  let crlf = 0
+  let cr = 0
+  for (let index = 0; index < source.length; index += 1) {
+    if (source[index] === "\r") {
+      if (source[index + 1] === "\n") {
+        crlf += 1
+        index += 1
+      } else {
+        cr += 1
+      }
+    } else if (source[index] === "\n") {
+      lf += 1
+    }
+  }
+  const present = [lf > 0, crlf > 0, cr > 0].filter(Boolean).length
+  const kind: WasmWasiSourceIdentityV117["lineEndings"]["kind"] =
+    present === 0
+      ? "none"
+      : present > 1
+        ? "mixed"
+        : lf > 0
+          ? "lf"
+          : crlf > 0
+            ? "crlf"
+            : "cr"
+  const normalizedSource = source.replace(/\r\n?/gu, "\n")
+  const originalBytes = Buffer.from(source, "utf8")
+  const normalizedBytes = Buffer.from(normalizedSource, "utf8")
+  return {
+    identityVersion: "strategy-source-identity-v2",
+    normalizationPolicy: "source-line-endings-lf-v1.17",
+    originalSourceSha256: `sha256:${hashCanonicalIdentity("originalSource", [
+      originalBytes,
+    ])}`,
+    originalSourceBytes: originalBytes.byteLength,
+    normalizedSourceSha256: `sha256:${hashCanonicalIdentity(
+      "normalizedSource",
+      [normalizedBytes],
+    )}`,
+    normalizedSourceBytes: normalizedBytes.byteLength,
+    lineEndings: { kind, lf, crlf, cr },
+    hasFinalNewline: source.endsWith("\n") || source.endsWith("\r"),
+  }
+}
+
+export const wasmWasiSourceIdentityFingerprintV117 = (
+  identity: WasmWasiSourceIdentityV117,
+): `sha256:${string}` =>
+  `sha256:${hashCanonicalIdentityValue(
+    "artifactManifest",
+    identity as unknown as JsonValue,
+  )}`
+
+const isWasmWasiSourceIdentityV117 = (
+  value: unknown,
+): value is WasmWasiSourceIdentityV117 => {
+  if (typeof value !== "object" || value === null) return false
+  const identity = value as Partial<WasmWasiSourceIdentityV117>
+  const lineEndings = identity.lineEndings
+  if (typeof lineEndings !== "object" || lineEndings === null) return false
+  const counts = [lineEndings.lf, lineEndings.crlf, lineEndings.cr]
+  const present = counts.filter(
+    (count) => typeof count === "number" && count > 0,
+  ).length
+  const expectedKind =
+    present === 0
+      ? "none"
+      : present > 1
+        ? "mixed"
+        : lineEndings.lf! > 0
+          ? "lf"
+          : lineEndings.crlf! > 0
+            ? "crlf"
+            : "cr"
+  return (
+    identity.identityVersion === "strategy-source-identity-v2" &&
+    identity.normalizationPolicy === "source-line-endings-lf-v1.17" &&
+    typeof identity.originalSourceSha256 === "string" &&
+    /^sha256:[0-9a-f]{64}$/u.test(identity.originalSourceSha256) &&
+    typeof identity.normalizedSourceSha256 === "string" &&
+    /^sha256:[0-9a-f]{64}$/u.test(identity.normalizedSourceSha256) &&
+    typeof identity.originalSourceBytes === "number" &&
+    Number.isSafeInteger(identity.originalSourceBytes) &&
+    identity.originalSourceBytes >= 0 &&
+    typeof identity.normalizedSourceBytes === "number" &&
+    Number.isSafeInteger(identity.normalizedSourceBytes) &&
+    identity.normalizedSourceBytes >= 0 &&
+    counts.every(
+      (count) =>
+        typeof count === "number" && Number.isSafeInteger(count) && count >= 0,
+    ) &&
+    lineEndings.kind === expectedKind &&
+    typeof identity.hasFinalNewline === "boolean"
+  )
+}
+
+const encodeUnsignedLeb128 = (value: number): Buffer => {
+  const bytes: number[] = []
+  let remaining = value >>> 0
+  do {
+    let byte = remaining & 0x7f
+    remaining >>>= 7
+    if (remaining !== 0) byte |= 0x80
+    bytes.push(byte)
+  } while (remaining !== 0)
+  return Buffer.from(bytes)
+}
+
+const appendSourceIdentityAttestationV117 = (
+  wasmBytes: Buffer,
+  identity: WasmWasiSourceIdentityV117,
+): Buffer => {
+  const admitted = admitCanonicalJsonValue(identity as unknown as JsonValue, {
+    profile: "canonical-manifest",
+  })
+  if (!admitted.ok) throw new TypeError("Source identity is not canonical")
+  const name = Buffer.from(WASM_WASI_SOURCE_IDENTITY_SECTION_V117, "utf8")
+  const payload = Buffer.concat([
+    encodeUnsignedLeb128(name.byteLength),
+    name,
+    Buffer.from(admitted.canonicalBytes),
+  ])
+  return Buffer.concat([
+    wasmBytes,
+    Buffer.from([0]),
+    encodeUnsignedLeb128(payload.byteLength),
+    payload,
+  ])
+}
+
+export const readWasmWasiSourceIdentityAttestationV117 = (
+  wasmBytes: Uint8Array,
+): WasmWasiSourceIdentityV117 => {
+  const module = new WebAssembly.Module(new Uint8Array(wasmBytes))
+  const sections = WebAssembly.Module.customSections(
+    module,
+    WASM_WASI_SOURCE_IDENTITY_SECTION_V117,
+  )
+  if (sections.length !== 1) {
+    throw new TypeError(
+      "WASM source identity attestation is missing or duplicated",
+    )
+  }
+  const admitted = admitCanonicalJsonBytes(new Uint8Array(sections[0]!), {
+    profile: "canonical-manifest",
+  })
+  if (
+    !admitted.ok ||
+    typeof admitted.value !== "object" ||
+    admitted.value === null
+  ) {
+    throw new TypeError("WASM source identity attestation is invalid")
+  }
+  const identity = admitted.value as unknown
+  if (!isWasmWasiSourceIdentityV117(identity)) {
+    throw new TypeError("WASM source identity attestation is malformed")
+  }
+  return identity
 }
 
 export const resolveWasmWasiAdapterBuildFilesV117 = (
@@ -242,6 +422,7 @@ export const collectWasmWasiCandidateIdentityV117 = (
   artifact: WasmWasiCandidateArtifactV117,
 ): WasmWasiCandidateIdentityV117 => {
   if (
+    !isWasmWasiSourceIdentityV117(artifact.sourceIdentity) ||
     artifact.toolchain.language !== languageId ||
     artifact.hash.length !== 64 ||
     artifact.wasiProfile !== "preview1" ||
@@ -342,6 +523,7 @@ export const collectWasmWasiCandidateIdentityV117 = (
     schemaVersion: "runtime-wasm-wasi-identity-v1.17" as const,
     runtimeAbi: RUNTIME_INVOCATION_V1_17_CANDIDATE.runtimeAbiVersion,
     languageId,
+    sourceIdentity: artifact.sourceIdentity,
     artifact: {
       sha256: `sha256:${artifact.hash}` as `sha256:${string}`,
       bytes: artifact.bytes,
@@ -398,7 +580,6 @@ export const collectWasmWasiCandidateIdentityV117 = (
         "wasmtime-linear-memory-ceiling",
         "wasmtime-stack-ceiling",
         "host-stdout-byte-ceiling",
-        "host-stderr-byte-ceiling",
         "single-process-no-preopen-empty-env",
       ],
       unsupported: WASM_WASI_V1_17_EXECUTION_SETTINGS.unsupportedMeters,
@@ -1069,6 +1250,28 @@ export interface WasmWasiCandidateCompileResultV117 {
   forbiddenPatterns: string[]
 }
 
+const attestCandidateArtifactV117 = (
+  artifact: DeclaredWasmArtifact<typeof CANDIDATE_WASM_ARTIFACT_ABI_V117>,
+  source: string,
+): WasmWasiCandidateArtifactV117 => {
+  if (artifact.bytesBase64 === undefined) {
+    throw new TypeError("Candidate artifact bytes are unavailable")
+  }
+  const sourceIdentity = buildWasmWasiSourceIdentityV117(source)
+  const bytes = appendSourceIdentityAttestationV117(
+    Buffer.from(artifact.bytesBase64, "base64"),
+    sourceIdentity,
+  )
+  return {
+    ...artifact,
+    hash: hashBytes(bytes),
+    bytes: bytes.byteLength,
+    bytesBase64: bytes.toString("base64"),
+    sourceHash: sourceIdentity.normalizedSourceSha256,
+    sourceIdentity,
+  }
+}
+
 export const compileRustWasmArtifactV117 = (
   source: string,
 ): WasmWasiCandidateCompileResultV117 => {
@@ -1082,7 +1285,10 @@ export const compileRustWasmArtifactV117 = (
         errors: compiled.errors,
         forbiddenPatterns: compiled.forbiddenPatterns,
       }
-    : compiled
+    : {
+        ...compiled,
+        artifact: attestCandidateArtifactV117(compiled.artifact, source),
+      }
 }
 
 export const compileZigWasmArtifactV117 = (
@@ -1098,7 +1304,10 @@ export const compileZigWasmArtifactV117 = (
         errors: compiled.errors,
         forbiddenPatterns: compiled.forbiddenPatterns,
       }
-    : compiled
+    : {
+        ...compiled,
+        artifact: attestCandidateArtifactV117(compiled.artifact, source),
+      }
 }
 
 const buildWasmWasiCandidateRevisionV117 = (
@@ -1114,10 +1323,10 @@ const buildWasmWasiCandidateRevisionV117 = (
       `Cannot build ${languageId} WASM/WASI v1.17 candidate from invalid source`,
     )
   }
-  const sourceHash = hashSource(source)
+  const sourceIdentity = compiled.artifact.sourceIdentity
   return {
-    id: `strategy-revision:${languageId}-wasi-v1.17:${sourceHash}:${compiled.artifact.hash.slice(0, 16)}`,
-    sourceHash,
+    id: `strategy-revision:${languageId}-wasi-v1.17:${sourceIdentity.normalizedSourceSha256.slice(-16)}:${compiled.artifact.hash.slice(0, 16)}`,
+    sourceIdentity,
     runtime: {
       abiVersion: RUNTIME_INVOCATION_V1_17_CANDIDATE.runtimeAbiVersion,
       language: {

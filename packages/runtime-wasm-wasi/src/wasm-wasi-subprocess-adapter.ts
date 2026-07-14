@@ -48,7 +48,9 @@ import {
 } from "@cowards/engine"
 import {
   collectWasmWasiCandidateIdentityV117,
+  readWasmWasiSourceIdentityAttestationV117,
   validateWasmWasiImports,
+  wasmWasiSourceIdentityFingerprintV117,
   type WasmWasiCandidateRevisionV117,
   type WasmWasiCandidateIdentityV117,
 } from "./validation.js"
@@ -204,9 +206,9 @@ const candidateArtifactBytesFor = (
   if (
     request.sourceIdentity.strategyRevisionId !== revision.id ||
     request.sourceIdentity.originalSourceSha256 !==
-      `sha256:${revision.sourceHash}` ||
+      revision.sourceIdentity?.originalSourceSha256 ||
     request.sourceIdentity.normalizedSourceSha256 !==
-      `sha256:${revision.sourceHash}` ||
+      revision.sourceIdentity?.normalizedSourceSha256 ||
     revision.runtime.abiVersion !==
       RUNTIME_INVOCATION_V1_17_CANDIDATE.runtimeAbiVersion ||
     revision.runtime.adapter.id !== "runtime-wasm-wasi-wasmtime-preview1" ||
@@ -222,9 +224,30 @@ const candidateArtifactBytesFor = (
     }
   }
   const bytes = Buffer.from(artifact.bytesBase64, "base64")
+  let embeddedSourceIdentity
+  try {
+    embeddedSourceIdentity = readWasmWasiSourceIdentityAttestationV117(bytes)
+  } catch {
+    return {
+      ok: false,
+      event: "outer_frame_wrong_binding",
+      safeCode: "WASM_WASI_SOURCE_ATTESTATION_INVALID",
+    }
+  }
+  const embeddedSourceIdentitySha256 = wasmWasiSourceIdentityFingerprintV117(
+    embeddedSourceIdentity,
+  )
+  const artifactSourceIdentitySha256 = wasmWasiSourceIdentityFingerprintV117(
+    artifact.sourceIdentity,
+  )
+  const revisionSourceIdentitySha256 = wasmWasiSourceIdentityFingerprintV117(
+    revision.sourceIdentity,
+  )
   if (
     request.sourceIdentity.artifactSha256 !== `sha256:${artifact.hash}` ||
-    artifact.sourceHash !== revision.sourceHash ||
+    artifact.sourceHash !== artifact.sourceIdentity.normalizedSourceSha256 ||
+    embeddedSourceIdentitySha256 !== artifactSourceIdentitySha256 ||
+    artifactSourceIdentitySha256 !== revisionSourceIdentitySha256 ||
     bytes.byteLength !== artifact.bytes ||
     hashBytes(bytes) !== artifact.hash ||
     artifact.validationStatus !== "valid" ||

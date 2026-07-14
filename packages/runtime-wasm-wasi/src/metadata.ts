@@ -20,6 +20,7 @@ export const WASM_WASI_V1_17_EXECUTION_SETTINGS = Object.freeze({
   trapOnGrowFailure: true,
   stdout: "raw-canonical-strategy-payload",
   stderrBytes: 16_384,
+  stderrCapture: "shared-max-buffer-post-capture-safety-only",
   processLimit: 1,
   cliArgumentTemplate: Object.freeze([
     "run",
@@ -41,6 +42,7 @@ export const WASM_WASI_V1_17_EXECUTION_SETTINGS = Object.freeze({
     "per-invocation-peak-linear-memory-observation",
     "signed-match-cumulative-meter-readback",
     "guest-stderr-provenance-attribution",
+    "independent-host-stderr-byte-ceiling",
   ]),
   certification: "uncertified",
 } as const)

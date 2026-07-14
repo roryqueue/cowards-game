@@ -36,7 +36,7 @@
       ],
       "identity": {
         "adapter": {
-          "buildSha256": "sha256:41fa779724d36cc5a92a1a5d62427f2dc5879d42df16946c4ca2108f0a240121",
+          "buildSha256": "sha256:25c496aa26c8a4f27b6fed3e50b389ed07cad481eaf2259e78065dddfcb23c5b",
           "dependencies": {
             "engineSha256": "sha256:473782836561efa2a8f9b002e4472271a6e51ee2946e58638029cdfed32f0075",
             "specSha256": "sha256:33fccc8694c7c6307f8f4f142fd5b50335b7cea64b2b5b8473cc4d758262860d",
@@ -44,9 +44,9 @@
           }
         },
         "artifact": {
-          "bytes": 2012498,
+          "bytes": 2012955,
           "guestPayloadAbi": "raw-canonical-json-v1",
-          "sha256": "sha256:38a1175725f0950ff84fb711df82a685c88067f9eec94d87400855fa6a8fd6e0",
+          "sha256": "sha256:a19ab44ac1ad69ac0da0323032952d29bf5078471d562dc85fbc5d2630049bab",
           "targetTriple": "wasm32-wasip1",
           "wasiProfile": "preview1"
         },
@@ -78,7 +78,7 @@
           "sha256": "sha256:cfcfadf2f6e1888e2b44296844fc17087a3813239352e1fdfc46ab7f9ed6e9c9"
         },
         "countedCertification": "uncertified",
-        "identitySha256": "sha256:1d0a3033ae126146280169d5f2827de1611b85e53879f704abde98b6699f6bbb",
+        "identitySha256": "sha256:9f8db92e01d5a11d8048f9981612e132436bae7aa4a315f3ec930e4d4dc6debd",
         "languageId": "rust",
         "metering": {
           "supported": [
@@ -87,7 +87,6 @@
             "wasmtime-linear-memory-ceiling",
             "wasmtime-stack-ceiling",
             "host-stdout-byte-ceiling",
-            "host-stderr-byte-ceiling",
             "single-process-no-preopen-empty-env"
           ],
           "unsupported": [
@@ -95,7 +94,8 @@
             "guest-process-tree-accounting",
             "per-invocation-peak-linear-memory-observation",
             "signed-match-cumulative-meter-readback",
-            "guest-stderr-provenance-attribution"
+            "guest-stderr-provenance-attribution",
+            "independent-host-stderr-byte-ceiling"
           ]
         },
         "productionTrustedProducers": [],
@@ -108,7 +108,7 @@
         "runtimeAbi": "strategy-runtime-abi-v1.17",
         "schemaVersion": "runtime-wasm-wasi-identity-v1.17",
         "settings": {
-          "sha256": "sha256:d57c5ed3c5e304e3484b6700d8e9a8a933526fd1dc29def7dfefef59cffb89be",
+          "sha256": "sha256:7c86f671ac86ddd0fbbb8309921b3d3345a507a0a3bbaad000023b6cd1c3ba71",
           "value": {
             "arguments": "none",
             "certification": "uncertified",
@@ -135,6 +135,7 @@
             "runtime": "wasmtime-cli",
             "runtimeInterface": "wasi-preview1-command",
             "stderrBytes": 16384,
+            "stderrCapture": "shared-max-buffer-post-capture-safety-only",
             "stdout": "raw-canonical-strategy-payload",
             "trapOnGrowFailure": true,
             "unsupportedMeters": [
@@ -142,11 +143,27 @@
               "guest-process-tree-accounting",
               "per-invocation-peak-linear-memory-observation",
               "signed-match-cumulative-meter-readback",
-              "guest-stderr-provenance-attribution"
+              "guest-stderr-provenance-attribution",
+              "independent-host-stderr-byte-ceiling"
             ],
             "wallTimeout": "request-budget-wallMilliseconds",
             "wasmStackBytes": 1048576
           }
+        },
+        "sourceIdentity": {
+          "hasFinalNewline": true,
+          "identityVersion": "strategy-source-identity-v2",
+          "lineEndings": {
+            "cr": 0,
+            "crlf": 0,
+            "kind": "lf",
+            "lf": 4
+          },
+          "normalizationPolicy": "source-line-endings-lf-v1.17",
+          "normalizedSourceBytes": 96,
+          "normalizedSourceSha256": "sha256:494a20251040aca8b23791da40c35967af7a80b906764fdeaf23a5c412f6624c",
+          "originalSourceBytes": 96,
+          "originalSourceSha256": "sha256:f96bd72c293f32a1c68eb7905f7ad41af12bfbdf635a953c6d17d56f09b731ca"
         },
         "stdlibSysroot": {
           "kind": "target-libdir",
@@ -195,7 +212,7 @@
       ],
       "identity": {
         "adapter": {
-          "buildSha256": "sha256:41fa779724d36cc5a92a1a5d62427f2dc5879d42df16946c4ca2108f0a240121",
+          "buildSha256": "sha256:25c496aa26c8a4f27b6fed3e50b389ed07cad481eaf2259e78065dddfcb23c5b",
           "dependencies": {
             "engineSha256": "sha256:473782836561efa2a8f9b002e4472271a6e51ee2946e58638029cdfed32f0075",
             "specSha256": "sha256:33fccc8694c7c6307f8f4f142fd5b50335b7cea64b2b5b8473cc4d758262860d",
@@ -203,9 +220,9 @@
           }
         },
         "artifact": {
-          "bytes": 258,
+          "bytes": 718,
           "guestPayloadAbi": "raw-canonical-json-v1",
-          "sha256": "sha256:5e5614bf9ce3f7624aed9076fa6b0546c75d28cc30cb49f84eada629cad6f0ae",
+          "sha256": "sha256:78fdd330623a37e1b95190299fa193e3ae64c17df33a723da72750db643813b0",
           "targetTriple": "wasm32-wasi",
           "wasiProfile": "preview1"
         },
@@ -239,7 +256,7 @@
           "sha256": "sha256:cfcfadf2f6e1888e2b44296844fc17087a3813239352e1fdfc46ab7f9ed6e9c9"
         },
         "countedCertification": "uncertified",
-        "identitySha256": "sha256:a3dd1815362814df994db620388738e64a40575671f4fd74f7bd0ca497101ebe",
+        "identitySha256": "sha256:eaa531c2726045777d99f78adbcdfc4fbdabdec92a0f875bb22313e4acceaa42",
         "languageId": "zig",
         "metering": {
           "supported": [
@@ -248,7 +265,6 @@
             "wasmtime-linear-memory-ceiling",
             "wasmtime-stack-ceiling",
             "host-stdout-byte-ceiling",
-            "host-stderr-byte-ceiling",
             "single-process-no-preopen-empty-env"
           ],
           "unsupported": [
@@ -256,7 +272,8 @@
             "guest-process-tree-accounting",
             "per-invocation-peak-linear-memory-observation",
             "signed-match-cumulative-meter-readback",
-            "guest-stderr-provenance-attribution"
+            "guest-stderr-provenance-attribution",
+            "independent-host-stderr-byte-ceiling"
           ]
         },
         "productionTrustedProducers": [],
@@ -269,7 +286,7 @@
         "runtimeAbi": "strategy-runtime-abi-v1.17",
         "schemaVersion": "runtime-wasm-wasi-identity-v1.17",
         "settings": {
-          "sha256": "sha256:d57c5ed3c5e304e3484b6700d8e9a8a933526fd1dc29def7dfefef59cffb89be",
+          "sha256": "sha256:7c86f671ac86ddd0fbbb8309921b3d3345a507a0a3bbaad000023b6cd1c3ba71",
           "value": {
             "arguments": "none",
             "certification": "uncertified",
@@ -296,6 +313,7 @@
             "runtime": "wasmtime-cli",
             "runtimeInterface": "wasi-preview1-command",
             "stderrBytes": 16384,
+            "stderrCapture": "shared-max-buffer-post-capture-safety-only",
             "stdout": "raw-canonical-strategy-payload",
             "trapOnGrowFailure": true,
             "unsupportedMeters": [
@@ -303,11 +321,27 @@
               "guest-process-tree-accounting",
               "per-invocation-peak-linear-memory-observation",
               "signed-match-cumulative-meter-readback",
-              "guest-stderr-provenance-attribution"
+              "guest-stderr-provenance-attribution",
+              "independent-host-stderr-byte-ceiling"
             ],
             "wallTimeout": "request-budget-wallMilliseconds",
             "wasmStackBytes": 1048576
           }
+        },
+        "sourceIdentity": {
+          "hasFinalNewline": true,
+          "identityVersion": "strategy-source-identity-v2",
+          "lineEndings": {
+            "cr": 0,
+            "crlf": 0,
+            "kind": "lf",
+            "lf": 14
+          },
+          "normalizationPolicy": "source-line-endings-lf-v1.17",
+          "normalizedSourceBytes": 437,
+          "normalizedSourceSha256": "sha256:9a9002a209d5328a44199278aaed911a509df9c0137c1e309a5fc812d2b054a7",
+          "originalSourceBytes": 437,
+          "originalSourceSha256": "sha256:78bb03fe6da560811bf2ce0045b8567bf2a4a8682920597ac743656f20b5f2fa"
         },
         "stdlibSysroot": {
           "kind": "compiler-embedded-no-stdlib",

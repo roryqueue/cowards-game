@@ -132,7 +132,7 @@ const candidateSigningIdentity: RuntimeInvocationSigningIdentityV117 = {
 const candidateRequest = (
   revision: Pick<
     WasmWasiCandidateRevisionV117,
-    "id" | "sourceHash" | "metadata"
+    "id" | "sourceIdentity" | "metadata"
   >,
   artifactSha256 = revision.metadata.compiledArtifact?.hash,
   outputBytes = 262_144,
@@ -156,8 +156,8 @@ const candidateRequest = (
       },
       sourceIdentity: {
         strategyRevisionId: revision.id,
-        originalSourceSha256: `sha256:${revision.sourceHash}`,
-        normalizedSourceSha256: `sha256:${revision.sourceHash}`,
+        originalSourceSha256: revision.sourceIdentity.originalSourceSha256,
+        normalizedSourceSha256: revision.sourceIdentity.normalizedSourceSha256,
         artifactSha256: `sha256:${artifactSha256}`,
       },
       budget: {
@@ -593,12 +593,14 @@ describe("WASM/WASI runtime v1.17 candidate host authority", () => {
 
   it("rejects a legacy v1.14 artifact instead of relabeling it as v1.17", () => {
     const legacyRevision = buildRustStrategyRevision({ source: rustSource })
-    const request = candidateRequest(
-      legacyRevision as unknown as WasmWasiCandidateRevisionV117,
-    )
+    const legacyCandidateRevision = {
+      ...legacyRevision,
+      sourceIdentity: revision.sourceIdentity,
+    } as unknown as WasmWasiCandidateRevisionV117
+    const request = candidateRequest(legacyCandidateRevision)
     const response = runWasmWasiStrategyMethodV117Sync({
       request,
-      revision: legacyRevision as unknown as WasmWasiCandidateRevisionV117,
+      revision: legacyCandidateRevision,
       signingIdentity: candidateSigningIdentity,
       executionIdentity: candidateExecutionIdentity(revision),
       executeGuest: () =>
@@ -809,12 +811,11 @@ describe("WASM/WASI runtime v1.17 exact Rust/Zig identity", () => {
     }
     const tamperedRevision = {
       ...revision,
-      sourceHash: tamperedHash,
       sourceIdentity: tamperedIdentity,
       metadata: {
         compiledArtifact: {
           ...artifact,
-          sourceHash: tamperedHash,
+          sourceHash: tamperedIdentity.normalizedSourceSha256,
           sourceIdentity: tamperedIdentity,
         },
       },

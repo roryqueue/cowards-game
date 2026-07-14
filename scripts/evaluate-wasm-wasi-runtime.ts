@@ -637,8 +637,8 @@ const candidateRequestFor = (revision: WasmWasiCandidateRevisionV117) => {
       },
       sourceIdentity: {
         strategyRevisionId: revision.id,
-        originalSourceSha256: `sha256:${revision.sourceHash}`,
-        normalizedSourceSha256: `sha256:${revision.sourceHash}`,
+        originalSourceSha256: revision.sourceIdentity.originalSourceSha256,
+        normalizedSourceSha256: revision.sourceIdentity.normalizedSourceSha256,
         artifactSha256: `sha256:${artifact.hash}`,
       },
       budget: {
