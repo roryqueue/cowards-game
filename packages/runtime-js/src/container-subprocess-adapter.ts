@@ -5,6 +5,9 @@ import {
   type SpawnSyncReturns,
 } from "node:child_process"
 import type { Buffer } from "node:buffer"
+import { mkdtempSync, rmSync } from "node:fs"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
 import type { RuntimeResult } from "@cowards/engine"
 import {
   type StrategyExecutionAdapterV117,
@@ -18,6 +21,7 @@ import {
   type RuntimeGuestObservationV117,
 } from "./abi-bridge.js"
 import { consumeCandidateEvidenceFixture } from "./candidate-evidence-fixture.js"
+import { CANDIDATE_HOST_ENVELOPE_OVERHEAD_V117 } from "./candidate-host-envelope.js"
 import { runCandidateProcessSync } from "./candidate-process-runner.js"
 import { observeCandidateSubprocessV117 } from "./candidate-subprocess-observation.js"
 import { RUNTIME_TIMEOUT_MS } from "./guards.js"
@@ -108,9 +112,12 @@ const dockerArgs = (input: {
   memory: string
   cpus: string
   pidsLimit: number
+  cidFilePath?: string | undefined
 }): readonly string[] => [
   "run",
-  "--rm",
+  ...(input.cidFilePath === undefined
+    ? ["--rm"]
+    : ["--cidfile", input.cidFilePath]),
   "-i",
   "--network",
   "none",
@@ -273,17 +280,16 @@ export const createContainerSubprocessStrategyExecutionAdapter = (
             guest.stderrByteLimit,
             stderrBytes,
           )
-          const args = dockerArgs({
-            image,
-            harnessSource: SUBPROCESS_HARNESS_V117_SOURCE,
-            memory,
-            cpus,
-            pidsLimit,
-          })
           const candidateEnv = { PATH: process.env.PATH ?? "" }
           const result =
             options.spawnSync !== undefined && process.env.NODE_ENV === "test"
-              ? spawnCandidate(dockerPath, args, {
+              ? spawnCandidate(dockerPath, dockerArgs({
+                  image,
+                  harnessSource: SUBPROCESS_HARNESS_V117_SOURCE,
+                  memory,
+                  cpus,
+                  pidsLimit,
+                }), {
                   env: candidateEnv,
                   input,
                   killSignal: "SIGKILL",
@@ -298,17 +304,42 @@ export const createContainerSubprocessStrategyExecutionAdapter = (
                   timeout: timeoutMilliseconds,
                   windowsHide: true,
                 })
-              : runCandidateProcessSync({
-                  command: dockerPath,
-                  args,
-                  env: candidateEnv,
-                  input,
-                  killSignal: "SIGKILL",
-                  launchStartedNanoseconds,
-                  timeoutMilliseconds,
-                  stdoutByteLimit: guest.stdoutByteLimit,
-                  stderrByteLimit,
-                })
+              : (() => {
+                  const cleanupDirectory = mkdtempSync(
+                    join(tmpdir(), "cowards-runtime-container-"),
+                  )
+                  const cidFilePath = join(cleanupDirectory, "container.cid")
+                  try {
+                    return runCandidateProcessSync({
+                      command: dockerPath,
+                      args: dockerArgs({
+                        image,
+                        harnessSource: SUBPROCESS_HARNESS_V117_SOURCE,
+                        memory,
+                        cpus,
+                        pidsLimit,
+                        cidFilePath,
+                      }),
+                      env: candidateEnv,
+                      input,
+                      killSignal: "SIGKILL",
+                      launchStartedNanoseconds,
+                      timeoutMilliseconds,
+                      stdoutByteLimit:
+                        CANDIDATE_HOST_ENVELOPE_OVERHEAD_V117 +
+                        guest.stdoutByteLimit,
+                      stderrByteLimit,
+                      containerCleanup: {
+                        runtimeCommand: dockerPath,
+                        cidFilePath,
+                        cleanupDirectory,
+                      },
+                    })
+                  } catch (error) {
+                    rmSync(cleanupDirectory, { force: true, recursive: true })
+                    throw error
+                  }
+                })()
           const receivedAtNanoseconds = process.hrtime.bigint()
           return observed(
             observeCandidateSubprocessV117({

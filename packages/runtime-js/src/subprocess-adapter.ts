@@ -18,6 +18,7 @@ import {
   type RuntimeGuestObservationV117,
 } from "./abi-bridge.js"
 import { consumeCandidateEvidenceFixture } from "./candidate-evidence-fixture.js"
+import { CANDIDATE_HOST_ENVELOPE_OVERHEAD_V117 } from "./candidate-host-envelope.js"
 import { runCandidateProcessSync } from "./candidate-process-runner.js"
 import { observeCandidateSubprocessV117 } from "./candidate-subprocess-observation.js"
 import { RUNTIME_TIMEOUT_MS } from "./guards.js"
@@ -257,7 +258,9 @@ export const createSubprocessStrategyExecutionAdapter = (
                   killSignal: "SIGKILL",
                   launchStartedNanoseconds,
                   timeoutMilliseconds,
-                  stdoutByteLimit: guest.stdoutByteLimit,
+                  stdoutByteLimit:
+                    CANDIDATE_HOST_ENVELOPE_OVERHEAD_V117 +
+                    guest.stdoutByteLimit,
                   stderrByteLimit,
                 })
           const receivedAtNanoseconds = process.hrtime.bigint()

@@ -38,7 +38,10 @@ import { SubprocessSystemFailure } from "./subprocess-ipc.js"
 import { createContainerSubprocessStrategyExecutionAdapter } from "./container-subprocess-adapter.js"
 import { CANDIDATE_BOUNDED_CANONICAL_SOURCE } from "./candidate-bounded-canonical-source.js"
 import { registerCandidateEvidenceFixture } from "./candidate-evidence-fixture.js"
-import { CANDIDATE_GO_CONTROL_PREFIX } from "./candidate-subprocess-observation.js"
+import {
+  decodeCandidateHostEnvelopeV117,
+  encodeCandidateHostEnvelopeV117,
+} from "./candidate-host-envelope.js"
 
 const validStrategySource = `
 export default {
@@ -718,10 +721,32 @@ export default {
         status: number | null
         signal: string | null
         error: Error
+        goNanoseconds: bigint | null
+        terminationMilliseconds: number
+        receiptPresent: boolean
+        rawStdout: boolean
       }> = {},
     ): SpawnSyncReturns<string> => {
-      const stdoutBuffer = Buffer.from(stdout)
+      const frame = Buffer.from(stdout)
+      const goNanoseconds =
+        overrides.goNanoseconds === null
+          ? undefined
+          : (overrides.goNanoseconds ?? process.hrtime.bigint())
+      const stdoutBuffer = overrides.rawStdout
+        ? frame
+        : encodeCandidateHostEnvelopeV117({
+            frame,
+            ...(goNanoseconds === undefined ? {} : { goNanoseconds }),
+            ...(overrides.terminationMilliseconds === undefined &&
+            String.fromCharCode(frame[0] ?? 0) !== "D"
+              ? {}
+              : {
+                  terminationMilliseconds:
+                    overrides.terminationMilliseconds ?? 1,
+                }),
+          })
       const stderrBuffer = Buffer.from(overrides.stderr ?? "")
+      const receiptPresent = overrides.receiptPresent ?? true
       return {
         pid: 123,
         output: [Buffer.alloc(0), stdoutBuffer, stderrBuffer],
@@ -730,6 +755,11 @@ export default {
         status: overrides.status ?? 0,
         signal: overrides.signal ?? null,
         ...(overrides.error === undefined ? {} : { error: overrides.error }),
+        terminationReceiptPresent: receiptPresent,
+        stdoutEof: receiptPresent,
+        stderrEof: receiptPresent,
+        containerCleanupRequired: false,
+        containerCleanupVerified: true,
       } as unknown as SpawnSyncReturns<string>
     }
 
@@ -934,6 +964,7 @@ export default {
           candidateSpawnResult(stdout, {
             stderr,
             status: null,
+            rawStdout: true,
             error: Object.assign(new Error("private outer watchdog detail"), {
               code: "ETIMEDOUT",
             }),
@@ -1176,7 +1207,8 @@ export default {
         stdoutBytes: 1,
       })
       const adapter = createSubprocessStrategyExecutionAdapter({
-        spawnSync: () => candidateSpawnResult("D"),
+        spawnSync: () =>
+          candidateSpawnResult("D", { receiptPresent: false }),
       })
 
       const result = executeCandidateWith(
@@ -1343,7 +1375,8 @@ export default {
           try {
             result = executeCandidateWith(
               createAdapter({
-                spawnSync: () => candidateSpawnResult(tag),
+                spawnSync: () =>
+                  candidateSpawnResult(tag, { goNanoseconds: null }),
               }),
               request,
               transpiledSource(),
@@ -1386,10 +1419,7 @@ export default {
         for (const oneOver of [false, true]) {
           const stdout = `S${" ".repeat(stdoutLimit - (oneOver ? 0 : 1))}`
           const adapter = createAdapter({
-            spawnSync: () =>
-              candidateSpawnResult(stdout, {
-                stderr: `${CANDIDATE_GO_CONTROL_PREFIX}${process.hrtime.bigint()}\n`,
-              }),
+            spawnSync: () => candidateSpawnResult(stdout),
           })
           const result = executeCandidate(adapter, request)
           expect(result, `${label} stdout ${oneOver ? "one-over" : "exact"}`)
@@ -1419,20 +1449,13 @@ export default {
 
         for (const oneOver of [false, true]) {
           const adapter = createAdapter({
-            spawnSync: () => {
-              const goLine = `${CANDIDATE_GO_CONTROL_PREFIX}${process.hrtime.bigint()}\n`
-              return candidateSpawnResult("R", {
-                stderr: Buffer.concat([
-                  Buffer.from(goLine),
-                  Buffer.alloc(
-                    stderrLimit +
-                      (oneOver ? 1 : 0) -
-                      Buffer.byteLength(goLine),
-                    "e",
-                  ),
-                ]),
-              })
-            },
+            spawnSync: () =>
+              candidateSpawnResult("R", {
+                stderr: Buffer.alloc(
+                  stderrLimit + (oneOver ? 1 : 0),
+                  "e",
+                ),
+              }),
           })
           const result = executeCandidate(adapter, request)
           expect(result, `${label} stderr ${oneOver ? "one-over" : "exact"}`)
@@ -1603,15 +1626,22 @@ export default {
             subprocessHarness.SUBPROCESS_HARNESS_V117_SOURCE,
           ],
           {
-            encoding: "utf8",
             env: { NODE_ENV: "production" },
             input: malformed,
             shell: false,
           },
         )
         expect(result.status).toBe(0)
-        expect(result.stdout).toBe("T")
-        expect(result.stderr).toBe("")
+        const decoded = decodeCandidateHostEnvelopeV117(
+          Buffer.from(result.stdout ?? []),
+        )
+        expect(decoded).toMatchObject({ ok: true })
+        if (decoded.ok) {
+          expect(Array.from(decoded.value.frame)).toEqual(
+            Array.from(Buffer.from("T")),
+          )
+        }
+        expect(Buffer.from(result.stderr ?? [])).toHaveLength(0)
       }
     })
 

@@ -28,6 +28,7 @@ import { createSubprocessStrategyExecutionAdapter } from "./subprocess-adapter.j
 import { SubprocessSystemFailure } from "./subprocess-ipc.js"
 import { createWorkerThreadStrategyExecutionAdapter } from "./worker-thread-adapter.js"
 import { registerCandidateEvidenceFixture } from "./candidate-evidence-fixture.js"
+import { encodeCandidateHostEnvelopeV117 } from "./candidate-host-envelope.js"
 
 const bottomSoldier: SoldierSnapshot = {
   id: "bottom-1",
@@ -463,7 +464,14 @@ const executeCandidate = (
 ) => {
   const adapter = createSubprocessStrategyExecutionAdapter({
     spawnSync: () => {
-      const stdoutBuffer = Buffer.from(stdout)
+      const frame = Buffer.from(stdout)
+      const stdoutBuffer =
+        resultOverrides.error !== undefined || frame.byteLength === 0
+          ? frame
+          : encodeCandidateHostEnvelopeV117({
+              frame,
+              goNanoseconds: process.hrtime.bigint(),
+            })
       return {
         pid: 123,
         output: [Buffer.alloc(0), stdoutBuffer, Buffer.alloc(0)],
@@ -471,6 +479,11 @@ const executeCandidate = (
         stderr: Buffer.alloc(0),
         status: 0,
         signal: null,
+        terminationReceiptPresent: true,
+        stdoutEof: true,
+        stderrEof: true,
+        containerCleanupRequired: false,
+        containerCleanupVerified: true,
         ...resultOverrides,
       } as unknown as SpawnSyncReturns<string>
     },

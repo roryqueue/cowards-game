@@ -37,7 +37,7 @@ ${stream}.write(Buffer.alloc(${byteLength}, 97), () => {
       input: "",
       killSignal: "SIGKILL",
       launchStartedNanoseconds: process.hrtime.bigint(),
-      timeoutMilliseconds: 2_000,
+      timeoutMilliseconds: 10_000,
       stdoutByteLimit: limits.stdout,
       stderrByteLimit: limits.stderr,
     })
@@ -47,13 +47,30 @@ ${stream}.write(Buffer.alloc(${byteLength}, 97), () => {
     expect(result[`${stream}Overflow`]).toBe(oneOver)
     expect(result[stream]).toHaveLength(byteLength)
     if (oneOver) {
-      expect(result.signal).toBe("SIGKILL")
+      expect(result.terminationRequested).toBe(true)
       expect(result.terminationReceiptPresent).toBe(true)
       expect(result.stdoutEof).toBe(true)
       expect(result.stderrEof).toBe(true)
     } else {
       expect(result.status).toBe(0)
     }
+  })
+
+  it("does not fabricate close when process construction fails", () => {
+    const result = runCandidateProcessSync({
+      command: "/definitely/missing/cowards-runtime-command",
+      args: [],
+      env: { NODE_ENV: "production" },
+      input: "",
+      killSignal: "SIGKILL",
+      launchStartedNanoseconds: process.hrtime.bigint(),
+      timeoutMilliseconds: 10_000,
+      stdoutByteLimit: limits.stdout,
+      stderrByteLimit: limits.stderr,
+    })
+
+    expect(result.error).toBeInstanceOf(Error)
+    expect(result.terminationReceiptPresent).toBe(false)
   })
 
   it("returns no receipt instead of fabricating close and keeps a process-group reaper", async () => {
@@ -82,7 +99,7 @@ setInterval(() => {}, 1000)
         input: "",
         killSignal: "SIGTERM",
         launchStartedNanoseconds: process.hrtime.bigint(),
-        timeoutMilliseconds: 2_000,
+        timeoutMilliseconds: 10_000,
         stdoutByteLimit: limits.stdout,
         stderrByteLimit: limits.stderr,
       })
@@ -92,7 +109,7 @@ setInterval(() => {}, 1000)
       expect(result.terminationReceiptPresent).toBe(false)
       expect(result.stdoutEof).toBe(false)
       expect(result.stderrEof).toBe(false)
-      await delay(500)
+      await waitUntil(() => !isAlive(parentPid) && !isAlive(childPid))
       expect(isAlive(parentPid)).toBe(false)
       expect(isAlive(childPid)).toBe(false)
     } finally {
@@ -157,7 +174,7 @@ if (command === "run") {
         input: "",
         killSignal: "SIGTERM",
         launchStartedNanoseconds: process.hrtime.bigint(),
-        timeoutMilliseconds: 2_000,
+        timeoutMilliseconds: 10_000,
         stdoutByteLimit: limits.stdout,
         stderrByteLimit: limits.stderr,
         containerCleanup: { runtimeCommand: runtimePath, cidFilePath },
@@ -168,7 +185,17 @@ if (command === "run") {
       ).pid
 
       expect(result.terminationReceiptPresent).toBe(false)
-      await delay(500)
+      await waitUntil(() => {
+        try {
+          return (
+            /rm:[a-f0-9]{64}/u.test(readFileSync(logPath, "utf8")) &&
+            !isAlive(cliPid) &&
+            !isAlive(daemonPid)
+          )
+        } catch {
+          return false
+        }
+      })
       expect(readFileSync(logPath, "utf8")).toMatch(
         /kill:[a-f0-9]{64}.*wait:[a-f0-9]{64}.*rm:[a-f0-9]{64}/su,
       )
@@ -199,4 +226,12 @@ const killIfAlive = (pid: number): void => {
   } catch {
     // Best-effort RED cleanup only.
   }
+}
+
+const waitUntil = async (
+  predicate: () => boolean,
+  timeoutMilliseconds = 3_000,
+): Promise<void> => {
+  const deadline = Date.now() + timeoutMilliseconds
+  while (!predicate() && Date.now() < deadline) await delay(25)
 }

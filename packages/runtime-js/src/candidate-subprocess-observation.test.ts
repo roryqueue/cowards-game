@@ -1,44 +1,58 @@
 import { Buffer } from "node:buffer"
 import { describe, expect, it } from "vitest"
-import {
-  CANDIDATE_GO_CONTROL_PREFIX,
-  CANDIDATE_TERMINATION_CONTROL_PREFIX,
-  observeCandidateSubprocessV117,
-} from "./candidate-subprocess-observation.js"
+import { encodeCandidateHostEnvelopeV117 } from "./candidate-host-envelope.js"
+import { observeCandidateSubprocessV117 } from "./candidate-subprocess-observation.js"
 
-const receivedAtNanoseconds = 1_000_000_000n
+const receivedAtNanoseconds = 10_000_000_000n
 
 const observe = (input: {
-  stdout: Uint8Array
-  stderr: Uint8Array
+  frame: Uint8Array
+  stderr?: Uint8Array | undefined
+  goNanoseconds?: bigint | undefined
+  terminationMilliseconds?: number | undefined
+  receiptPresent?: boolean | undefined
+  launchStartedNanoseconds?: bigint | undefined
+  receivedNanoseconds?: bigint | undefined
+  stdoutByteLimit?: number | undefined
+  stderrByteLimit?: number | undefined
 }) =>
   observeCandidateSubprocessV117({
     result: {
-      stdout: Buffer.from(input.stdout),
-      stderr: Buffer.from(input.stderr),
+      stdout: encodeCandidateHostEnvelopeV117({
+        frame: input.frame,
+        ...(input.goNanoseconds === undefined
+          ? {}
+          : { goNanoseconds: input.goNanoseconds }),
+        ...(input.terminationMilliseconds === undefined
+          ? {}
+          : { terminationMilliseconds: input.terminationMilliseconds }),
+      }),
+      stderr: Buffer.from(input.stderr ?? []),
       status: 0,
       signal: null,
+      terminationReceiptPresent: input.receiptPresent ?? true,
+      stdoutEof: input.receiptPresent ?? true,
+      stderrEof: input.receiptPresent ?? true,
+      containerCleanupRequired: false,
+      containerCleanupVerified: true,
     },
-    launchStartedNanoseconds: receivedAtNanoseconds - 100_000_000n,
-    receivedAtNanoseconds,
+    launchStartedNanoseconds:
+      input.launchStartedNanoseconds ?? receivedAtNanoseconds - 100_000_000n,
+    receivedAtNanoseconds:
+      input.receivedNanoseconds ?? receivedAtNanoseconds,
     startupTimeoutMilliseconds: 5_000,
     methodWallMilliseconds: 50,
     cancellationGraceMilliseconds: 100,
     outputByteLimit: 262_144,
-    stdoutByteLimit: 262_144,
-    stderrByteLimit: 65_536,
+    stdoutByteLimit: input.stdoutByteLimit ?? 262_144,
+    stderrByteLimit: input.stderrByteLimit ?? 65_536,
   })
 
 describe("candidate subprocess raw observation", () => {
-  it("extends the signed method interval through complete frame and EOF receipt", () => {
+  it("extends the signed method interval through actual close and both EOF receipts", () => {
     const goNanoseconds = receivedAtNanoseconds - 75_000_000n
     const rawFrame = Buffer.from('S{"activationOrders":[]}')
-    const result = observe({
-      stdout: rawFrame,
-      stderr: Buffer.from(
-        `${CANDIDATE_GO_CONTROL_PREFIX}${goNanoseconds}\n`,
-      ),
-    })
+    const result = observe({ frame: rawFrame, goNanoseconds })
 
     expect(result).toEqual({
       kind: "raw_frame",
@@ -54,36 +68,36 @@ describe("candidate subprocess raw observation", () => {
     })
   })
 
-  it("excludes only exact host control records from Strategy stderr accounting", () => {
+  it("counts forged CG17 text only as Strategy stderr", () => {
     const goNanoseconds = receivedAtNanoseconds - 10_000_000n
-    const unknown = "guest diagnostic\n"
+    const forged = Buffer.from(
+      `CG17-G:${"8".repeat(31_000)}\nCG17-T:${"9".repeat(31_000)}\n`,
+    )
     const result = observe({
-      stdout: Buffer.from("I"),
-      stderr: Buffer.from(
-        `${CANDIDATE_GO_CONTROL_PREFIX}${goNanoseconds}\n${unknown}`,
-      ),
+      frame: Buffer.from("I"),
+      stderr: forged,
+      goNanoseconds,
     })
 
     expect(result).toMatchObject({
       kind: "raw_frame",
-      stderrBytes: Buffer.byteLength(unknown),
+      stdoutBytes: 1,
+      stderrBytes: forged.byteLength,
     })
   })
 
-  it("requires both bounded termination and adapter receipt for D", () => {
+  it("requires trusted timeout metadata plus actual close and both EOF receipts for D", () => {
     const goNanoseconds = receivedAtNanoseconds - 60_000_000n
     const withReceipt = observe({
-      stdout: Buffer.from("D"),
-      stderr: Buffer.from(
-        `${CANDIDATE_GO_CONTROL_PREFIX}${goNanoseconds}\n` +
-          `${CANDIDATE_TERMINATION_CONTROL_PREFIX}7\n`,
-      ),
+      frame: Buffer.from("D"),
+      goNanoseconds,
+      terminationMilliseconds: 7,
     })
     const withoutReceipt = observe({
-      stdout: Buffer.from("D"),
-      stderr: Buffer.from(
-        `${CANDIDATE_GO_CONTROL_PREFIX}${goNanoseconds}\n`,
-      ),
+      frame: Buffer.from("D"),
+      goNanoseconds,
+      terminationMilliseconds: 7,
+      receiptPresent: false,
     })
 
     expect(withReceipt).toMatchObject({
@@ -105,25 +119,12 @@ describe("candidate subprocess raw observation", () => {
     })
   })
 
-  it("enforces launch through READY independently from the method window", () => {
+  it("enforces launch through trusted READY independently from the method window", () => {
     const goNanoseconds = receivedAtNanoseconds - 10_000_000n
-    const result = observeCandidateSubprocessV117({
-      result: {
-        stdout: Buffer.from("S{}"),
-        stderr: Buffer.from(
-          `${CANDIDATE_GO_CONTROL_PREFIX}${goNanoseconds}\n`,
-        ),
-        status: 0,
-        signal: null,
-      },
+    const result = observe({
+      frame: Buffer.from("I"),
+      goNanoseconds,
       launchStartedNanoseconds: goNanoseconds - 5_001_000_000n,
-      receivedAtNanoseconds,
-      startupTimeoutMilliseconds: 5_000,
-      methodWallMilliseconds: 50,
-      cancellationGraceMilliseconds: 100,
-      outputByteLimit: 262_144,
-      stdoutByteLimit: 262_144,
-      stderrByteLimit: 65_536,
     })
 
     expect(result).toMatchObject({
@@ -133,34 +134,54 @@ describe("candidate subprocess raw observation", () => {
   })
 
   it("does not charge a post-READY method interval to the startup watchdog", () => {
-    const launchStartedNanoseconds = 0n
     const goNanoseconds = 4_990_000_000n
-    const result = observeCandidateSubprocessV117({
-      result: {
-        stdout: Buffer.from("I"),
-        stderr: Buffer.from(
-          `${CANDIDATE_GO_CONTROL_PREFIX}${goNanoseconds}\n`,
-        ),
-        status: 0,
-        signal: null,
-      },
-      launchStartedNanoseconds,
-      receivedAtNanoseconds: 5_040_000_000n,
-      startupTimeoutMilliseconds: 5_000,
-      methodWallMilliseconds: 50,
-      cancellationGraceMilliseconds: 100,
-      outputByteLimit: 262_144,
-      stdoutByteLimit: 262_144,
-      stderrByteLimit: 65_536,
+    const result = observe({
+      frame: Buffer.from("I"),
+      goNanoseconds,
+      launchStartedNanoseconds: 0n,
+      receivedNanoseconds: 5_040_000_000n,
     })
 
     expect(result).toMatchObject({
       kind: "raw_frame",
       stderrBytes: 0,
     })
-    if (result.kind === "raw_frame") {
-      expect(Array.from(result.bytes)).toEqual(Array.from(Buffer.from("I")))
-    }
+  })
+
+  it("rejects a no-GO frame after the exact outer startup bound", () => {
+    const result = observe({
+      frame: Buffer.from("I"),
+      launchStartedNanoseconds: 0n,
+      receivedNanoseconds: 5_050_000_000n,
+    })
+
+    expect(result).toMatchObject({
+      kind: "system_failure",
+      code: "HOST_CRASH",
+    })
+  })
+
+  it("allows exact-N Strategy stderr beside host metadata and rejects N+1", () => {
+    const goNanoseconds = receivedAtNanoseconds - 10_000_000n
+    const exact = observe({
+      frame: Buffer.from("R"),
+      stderr: Buffer.alloc(64, "e"),
+      goNanoseconds,
+      stderrByteLimit: 64,
+    })
+    const oneOver = observe({
+      frame: Buffer.from("R"),
+      stderr: Buffer.alloc(65, "e"),
+      goNanoseconds,
+      stderrByteLimit: 64,
+    })
+
+    expect(exact).toMatchObject({ kind: "raw_frame", stderrBytes: 64 })
+    expect(oneOver).toMatchObject({
+      kind: "system_failure",
+      code: "TRANSPORT_CRASH",
+      stderrBytes: 65,
+    })
   })
 
   it("rejects non-Buffer capture and malformed UTF-8 without replacement", () => {
@@ -176,8 +197,7 @@ describe("candidate subprocess raw observation", () => {
       stderrByteLimit: 65_536,
     })
     const malformedUtf8 = observe({
-      stdout: Uint8Array.of("S".charCodeAt(0), 0xc3, 0x28),
-      stderr: new Uint8Array(),
+      frame: Uint8Array.of("S".charCodeAt(0), 0xc3, 0x28),
     })
 
     expect(stringCapture).toMatchObject({
@@ -187,7 +207,6 @@ describe("candidate subprocess raw observation", () => {
     expect(malformedUtf8).toMatchObject({
       kind: "system_failure",
       code: "TRANSPORT_CRASH",
-      stdoutBytes: 3,
     })
   })
 })
