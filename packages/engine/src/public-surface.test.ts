@@ -36,9 +36,13 @@ describe("candidate and current engine public surfaces", () => {
     expect(Object.keys(enginePublic.MATCH_KERNEL).sort()).toEqual(
       [
         "createActivationMachine",
+        "createActivationMachineV117",
         "createMachine",
+        "createMachineV117",
         "runActivationFromState",
+        "runActivationFromStateV117",
         "runMatch",
+        "runMatchV117",
         "stepMatch",
         "tuple",
         "tupleId",
