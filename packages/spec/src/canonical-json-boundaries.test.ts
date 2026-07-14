@@ -19,6 +19,103 @@ const text = (value: string): Uint8Array => new TextEncoder().encode(value)
 const repoRoot = path.resolve(import.meta.dirname, "../../..")
 
 describe("successor canonical JSON boundaries", () => {
+  it.each([
+    ["leading whitespace", " 1", 0],
+    ["trailing whitespace", "1 ", 1],
+    ["non-shortest decimal", "1.2300", 4],
+    ["uppercase signed exponent", "1E+21", 1],
+    ["escaped ASCII", '"\\u0061"', 1],
+  ] as const)(
+    "rejects %s when exact canonical bytes are required",
+    (_label, raw, byteOffset) => {
+      expect(
+        admitCanonicalJsonBytes(text(raw), {
+          profile: "strategy-payload",
+        }),
+      ).toEqual({
+        ok: false,
+        error: {
+          code: "NON_CANONICAL_ENCODING",
+          path: [],
+          byteOffset,
+          owner: "player_violation",
+        },
+        profile: "strategy-payload",
+      })
+      expect(
+        admitCanonicalJsonBytes(text(raw), {
+          profile: "strategy-payload",
+          operation: "parse-and-canonicalize",
+        }).ok,
+      ).toBe(true)
+    },
+  )
+
+  it("preserves typed key-order precedence and system ownership", () => {
+    expect(
+      admitCanonicalJsonBytes(text('{"z":1,"a":2}'), {
+        profile: "canonical-manifest",
+      }),
+    ).toMatchObject({
+      ok: false,
+      error: {
+        code: "NON_CANONICAL_KEY_ORDER",
+        path: ["a"],
+        byteOffset: 7,
+        owner: "system_failure",
+      },
+    })
+    expect(
+      admitCanonicalJsonBytes(text(" 1"), {
+        profile: "authenticated-envelope",
+      }),
+    ).toMatchObject({
+      ok: false,
+      error: {
+        code: "NON_CANONICAL_ENCODING",
+        path: [],
+        byteOffset: 0,
+        owner: "system_failure",
+      },
+    })
+  })
+
+  it.each(["9007199254740992.0", "9.007199254740992e15"])(
+    "rejects unsafe integral decoded value %s independent of lexical form",
+    (raw) => {
+      expect(
+        admitCanonicalJsonBytes(text(raw), {
+          profile: "strategy-payload",
+          operation: "parse-and-canonicalize",
+        }),
+      ).toMatchObject({
+        ok: false,
+        error: {
+          code: "NUMBER_OUT_OF_RANGE",
+          path: [],
+          byteOffset: 0,
+          owner: "player_violation",
+        },
+      })
+    },
+  )
+
+  it("rejects unsafe integral host values on both signs", () => {
+    for (const value of [9_007_199_254_740_992, -9_007_199_254_740_992]) {
+      expect(
+        admitCanonicalJsonValue(value, { profile: "host-api-value" }),
+      ).toMatchObject({
+        ok: false,
+        error: {
+          code: "NON_CANONICAL_NUMBER",
+          path: [],
+          byteOffset: 0,
+          owner: "player_violation",
+        },
+      })
+    }
+  })
+
   it("keeps exact ownership before materialization", () => {
     const duplicate = text('{"memory":1,"memory":2}')
     const player = admitCanonicalJsonBytes(duplicate, {
@@ -30,11 +127,19 @@ describe("successor canonical JSON boundaries", () => {
 
     expect(player).toMatchObject({
       ok: false,
-      error: { code: "DUPLICATE_KEY", path: ["memory"], owner: "player_violation" },
+      error: {
+        code: "DUPLICATE_KEY",
+        path: ["memory"],
+        owner: "player_violation",
+      },
     })
     expect(system).toMatchObject({
       ok: false,
-      error: { code: "DUPLICATE_KEY", path: ["memory"], owner: "system_failure" },
+      error: {
+        code: "DUPLICATE_KEY",
+        path: ["memory"],
+        owner: "system_failure",
+      },
     })
   })
 
@@ -42,27 +147,34 @@ describe("successor canonical JSON boundaries", () => {
     ["strategy-memory", 32 * 1024],
     ["soldier-memory", 2 * 1024],
     ["objective", 1024],
-  ] as const)("enforces the %s canonical-byte cap at N and N+1", (profile, cap) => {
-    const exact = text(`"${"x".repeat(cap - 2)}"`)
-    const over = text(`"${"x".repeat(cap - 1)}"`)
+  ] as const)(
+    "enforces the %s canonical-byte cap at N and N+1",
+    (profile, cap) => {
+      const exact = text(`"${"x".repeat(cap - 2)}"`)
+      const over = text(`"${"x".repeat(cap - 1)}"`)
 
-    expect(admitCanonicalJsonBytes(exact, { profile }).ok).toBe(true)
-    expect(admitCanonicalJsonBytes(over, { profile })).toMatchObject({
-      ok: false,
-      error: {
-        code: "FIELD_CAP_EXCEEDED",
-        byteOffset: cap,
-        owner: "player_violation",
-      },
-    })
-  })
+      expect(admitCanonicalJsonBytes(exact, { profile }).ok).toBe(true)
+      expect(admitCanonicalJsonBytes(over, { profile })).toMatchObject({
+        ok: false,
+        error: {
+          code: "FIELD_CAP_EXCEEDED",
+          byteOffset: cap,
+          owner: "player_violation",
+        },
+      })
+    },
+  )
 
   it("rejects deep materialized values iteratively without a recursive schema throw", () => {
     let deep: unknown = null
     for (let index = 0; index < 3_000; index += 1) deep = [deep]
 
-    expect(() => admitCanonicalJsonValue(deep, { profile: "strategy-memory" })).not.toThrow()
-    expect(admitCanonicalJsonValue(deep, { profile: "strategy-memory" })).toMatchObject({
+    expect(() =>
+      admitCanonicalJsonValue(deep, { profile: "strategy-memory" }),
+    ).not.toThrow()
+    expect(
+      admitCanonicalJsonValue(deep, { profile: "strategy-memory" }),
+    ).toMatchObject({
       ok: false,
       error: { code: "MAX_DEPTH_EXCEEDED", owner: "player_violation" },
     })
@@ -90,8 +202,12 @@ describe("successor canonical JSON boundaries", () => {
         safeCodes: [],
       },
     }
-    expect(() => RuntimeInvocationResultV117Schema.safeParse(deepResult)).not.toThrow()
-    expect(RuntimeInvocationResultV117Schema.safeParse(deepResult).success).toBe(false)
+    expect(() =>
+      RuntimeInvocationResultV117Schema.safeParse(deepResult),
+    ).not.toThrow()
+    expect(
+      RuntimeInvocationResultV117Schema.safeParse(deepResult).success,
+    ).toBe(false)
   })
 
   it.each([
@@ -124,33 +240,40 @@ describe("successor canonical JSON boundaries", () => {
         soldierMemory: "x".repeat(2 * 1024 + 1),
       },
     ],
-  ] as const)("rejects over-cap %s in the authenticated success schema", (_label, method, value) => {
-    const result = {
-      kind: "success",
-      value,
-      trace: {
-        requestId: "request:field-cap",
-        invocationId: "invocation:field-cap",
-        kernelRequestId: "kernel-request:field-cap",
-        method,
-        requestSha256: `sha256:${"1".repeat(64)}`,
-        budgetProfileSha256: `sha256:${"2".repeat(64)}`,
-        inputSha256: `sha256:${"3".repeat(64)}`,
-        retryIdentitySha256: `sha256:${"4".repeat(64)}`,
-        safeCodes: [],
-      },
-    }
+  ] as const)(
+    "rejects over-cap %s in the authenticated success schema",
+    (_label, method, value) => {
+      const result = {
+        kind: "success",
+        value,
+        trace: {
+          requestId: "request:field-cap",
+          invocationId: "invocation:field-cap",
+          kernelRequestId: "kernel-request:field-cap",
+          method,
+          requestSha256: `sha256:${"1".repeat(64)}`,
+          budgetProfileSha256: `sha256:${"2".repeat(64)}`,
+          inputSha256: `sha256:${"3".repeat(64)}`,
+          retryIdentitySha256: `sha256:${"4".repeat(64)}`,
+          safeCodes: [],
+        },
+      }
 
-    expect(RuntimeInvocationResultV117Schema.safeParse(result).success).toBe(false)
-  })
+      expect(RuntimeInvocationResultV117Schema.safeParse(result).success).toBe(
+        false,
+      )
+    },
+  )
 
   it("never lets lower profiles loosen the frozen global ceilings", () => {
-    const global = CANONICAL_JSON_BOUNDARY_PROFILES["authenticated-envelope"].limits
+    const global =
+      CANONICAL_JSON_BOUNDARY_PROFILES["authenticated-envelope"].limits
     for (const profile of Object.values(CANONICAL_JSON_BOUNDARY_PROFILES)) {
       for (const name of Object.keys(global) as (keyof typeof global)[]) {
-        expect(profile.limits[name], `${profile.id}.${name}`).toBeLessThanOrEqual(
-          global[name],
-        )
+        expect(
+          profile.limits[name],
+          `${profile.id}.${name}`,
+        ).toBeLessThanOrEqual(global[name])
       }
     }
   })
