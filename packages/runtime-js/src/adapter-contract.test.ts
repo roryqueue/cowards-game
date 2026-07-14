@@ -174,10 +174,16 @@ type CandidateAdapter = {
 const executeCandidate = (
   adapter: StrategyExecutionAdapter,
   request = candidateRequest(),
+) => executeCandidateWith(adapter, request, transpiledSource())
+
+const executeCandidateWith = (
+  adapter: StrategyExecutionAdapter,
+  request: AuthenticatedRuntimeInvocationRequestV117,
+  executableSource: string,
 ) => {
   const responseBytes = (adapter as unknown as CandidateAdapter).executeV117({
     requestBytes: serializeRuntimeInvocationRequestV117(request),
-    executableSource: transpiledSource(),
+    executableSource,
     signingIdentity: candidateIdentity,
   })
   return verifyRuntimeInvocationResponseV117(
@@ -679,6 +685,80 @@ export default {
         expect(source).not.toContain(candidateIdentity.secret)
         expect(source).not.toMatch(/hmac|signingIdentity|signature/iu)
       }
+    })
+
+    it("binds the executable artifact and rejects mixed or over-cap guest frames", () => {
+      const canonicalPayload = JSON.stringify({
+        activationOrders: [],
+        strategyMemory: null,
+      })
+      const calls: unknown[] = []
+      const adapterFor = (stdout: string) =>
+        createSubprocessStrategyExecutionAdapter({
+          spawnSync: (...args) => {
+            calls.push(args)
+            return {
+              pid: 123,
+              output: ["", stdout, ""],
+              stdout,
+              stderr: "",
+              status: 0,
+              signal: null,
+            } as SpawnSyncReturns<string>
+          },
+        })
+
+      const wrongArtifact = executeCandidateWith(
+        adapterFor(`S${canonicalPayload}`),
+        candidateRequest(),
+        "module.exports.default = { selectActivations() { return {} } }",
+      )
+      expect(calls).toHaveLength(0)
+      expect(wrongArtifact).toMatchObject({
+        kind: "success",
+        value: {
+          outcome: {
+            kind: "system_failure",
+            failure: { code: "OUTER_FRAME_WRONG_BINDING" },
+          },
+        },
+      })
+
+      const mixed = executeCandidate(
+        adapterFor("Iprivate legacy violation tail"),
+      )
+      expect(mixed).toMatchObject({
+        kind: "success",
+        value: {
+          outcome: {
+            kind: "system_failure",
+            failure: { code: "TRANSPORT_CRASH" },
+          },
+        },
+      })
+
+      const exact = new TextEncoder().encode(canonicalPayload).byteLength
+      const atCap = executeCandidate(
+        adapterFor(`S${canonicalPayload}`),
+        candidateRequest({ outputBytes: exact }),
+      )
+      const overCap = executeCandidate(
+        adapterFor(`S${canonicalPayload}`),
+        candidateRequest({ outputBytes: exact - 1 }),
+      )
+      expect(atCap).toMatchObject({
+        kind: "success",
+        value: { outcome: { kind: "success" } },
+      })
+      expect(overCap).toMatchObject({
+        kind: "success",
+        value: {
+          outcome: {
+            kind: "player_violation",
+            violation: { code: "OVERSIZED_OUTPUT" },
+          },
+        },
+      })
     })
   })
 })
