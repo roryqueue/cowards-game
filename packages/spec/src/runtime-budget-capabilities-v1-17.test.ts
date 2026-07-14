@@ -68,14 +68,12 @@ type MutableArtifact = {
   [key: string]: unknown
 }
 
-const clone = <T>(value: T): T => structuredClone(value)
+const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T
 
 const mutableArtifact = (): MutableArtifact =>
   clone(RUNTIME_BUDGET_CAPABILITIES_V1_17) as unknown as MutableArtifact
 
-const expectRejected = (
-  mutate: (artifact: MutableArtifact) => void,
-): void => {
+const expectRejected = (mutate: (artifact: MutableArtifact) => void): void => {
   const artifact = mutableArtifact()
   mutate(artifact)
   const findings = validateRuntimeBudgetCapabilitiesV117(artifact)
@@ -122,7 +120,9 @@ describe("runtime budget capabilities v1.17", () => {
     const artifact = buildRuntimeBudgetCapabilitiesV117()
     expect(artifact).toEqual(RUNTIME_BUDGET_CAPABILITIES_V1_17)
     expect(Object.isFrozen(artifact)).toBe(true)
-    expect(Object.isFrozen((artifact as MutableArtifact).lanes)).toBe(true)
+    expect(
+      Object.isFrozen((artifact as unknown as MutableArtifact).lanes),
+    ).toBe(true)
     expect(validateRuntimeBudgetCapabilitiesV117(artifact)).toEqual([])
     expect(() => assertRuntimeBudgetCapabilitiesV117(artifact)).not.toThrow()
   })
@@ -159,9 +159,11 @@ describe("runtime budget capabilities v1.17", () => {
         expect(capability.scope).not.toBe("")
         expect(capability.measurement).not.toBe("")
         expect(capability.enforcement).not.toBe("")
-        expect(["equivalent-enforced", "diagnostic-only", "unsupported"]).toContain(
-          capability.status,
-        )
+        expect([
+          "equivalent-enforced",
+          "diagnostic-only",
+          "unsupported",
+        ]).toContain(capability.status)
         expect(capability.evidenceSafeDigest).toMatch(/^sha256:[0-9a-f]{64}$/u)
       }
     }
@@ -319,17 +321,17 @@ describe("runtime budget capabilities v1.17", () => {
   })
 
   it("fails closed when frozen contract or evidence inputs drift", () => {
-    const contract = clone(RUNTIME_BUDGET_CAPABILITY_CONTRACT_V1_17) as {
-      dimensions: unknown[]
-    }
+    const contract = clone(
+      RUNTIME_BUDGET_CAPABILITY_CONTRACT_V1_17,
+    ) as unknown as { dimensions: unknown[] }
     contract.dimensions.reverse()
-    expect(() =>
-      buildRuntimeBudgetCapabilitiesV117({ contract }),
-    ).toThrow(RuntimeBudgetCapabilitiesV117Error)
+    expect(() => buildRuntimeBudgetCapabilitiesV117({ contract })).toThrow(
+      RuntimeBudgetCapabilitiesV117Error,
+    )
 
     const evidenceInputs = clone(
       RUNTIME_BUDGET_CAPABILITY_EVIDENCE_INPUTS_V1_17,
-    ) as Array<{ laneId: string }>
+    ) as unknown as Array<{ laneId: string }>
     evidenceInputs[0]!.laneId = "typescript"
     expect(() =>
       buildRuntimeBudgetCapabilitiesV117({ evidenceInputs }),

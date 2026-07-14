@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 import { describe, expect, it } from "vitest"
+/* eslint-disable-next-line no-restricted-imports -- The generator test exercises the dedicated unexported spec contract. */
 import {
   RUNTIME_BUDGET_CAPABILITIES_V1_17,
   assertRuntimeBudgetCapabilitiesV117,
@@ -106,9 +107,8 @@ describe("runtime budget capability artifact generator", () => {
   })
 
   it("renders byte-identically across repeated builds", () => {
-    const values = Array.from(
-      { length: 5 },
-      () => renderRuntimeBudgetCapabilitiesV117Artifact(),
+    const values = Array.from({ length: 5 }, () =>
+      renderRuntimeBudgetCapabilitiesV117Artifact(),
     )
     expect(new Set(values).size).toBe(1)
   })
