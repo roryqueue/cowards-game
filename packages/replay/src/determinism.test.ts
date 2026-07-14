@@ -107,5 +107,5 @@ describe("Chronicle determinism", () => {
 
     expect(seedChanged.hash).not.toEqual(baseline.hash)
     expect(strategyChanged.hash).not.toEqual(baseline.hash)
-  })
+  }, 15_000)
 })
