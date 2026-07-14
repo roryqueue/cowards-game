@@ -8,10 +8,14 @@ import { join } from "node:path"
 import { pathToFileURL } from "node:url"
 import {
   createAuthenticatedRuntimeInvocationRequestV117,
+  createRuntimeAbiV117ExecutionLedger,
+  createRuntimeInvocationBudgetV117,
   serializeRuntimeInvocationResponseV117,
   STRATEGY_WASM_ARTIFACT_BYTES,
   verifyRuntimeInvocationResponseV117,
   type AuthenticatedRuntimeInvocationRequestV117,
+  type RuntimeAbiV117LedgerAttribution,
+  type RuntimeInvocationExecutionReceiptEvidenceV117,
   type RuntimeInvocationSigningIdentityV117,
 } from "@cowards/spec"
 import {
@@ -137,7 +141,6 @@ const candidateRequest = (
     "id" | "sourceIdentity" | "metadata"
   >,
   artifactSha256 = revision.metadata.compiledArtifact?.hash,
-  outputBytes = 262_144,
 ): AuthenticatedRuntimeInvocationRequestV117 => {
   if (artifactSha256 === undefined) {
     throw new Error("Rust candidate fixture did not compile")
@@ -162,26 +165,8 @@ const candidateRequest = (
         normalizedSourceSha256: revision.sourceIdentity.normalizedSourceSha256,
         artifactSha256: `sha256:${artifactSha256}`,
       },
-      budget: {
-        profileId: "runtime-budget-profile-v1.17-candidate",
-        wallMilliseconds: 50,
-        computeFuel: 10_000_000,
-        memoryBytes: 67_108_864,
-        outputBytes,
-        processLimit: 1,
-        matchCumulative: {
-          invocationCountMaximum: 260,
-          wallMilliseconds: 13_000,
-          computeFuel: 2_600_000_000,
-          payloadBytes: 68_157_440,
-          stdoutBytes: 68_157_440,
-          stderrBytes: 17_039_360,
-          memoryBytes: 67_108_864,
-          accounting:
-            "signed-monotonic-per-invocation-deltas-plus-cumulative-total",
-          overflow: "stop-before-next-invocation-and-classify-by-proven-cause",
-        },
-      },
+      budget: createRuntimeInvocationBudgetV117("soldierBrain"),
+      accounting: { prestate: createRuntimeAbiV117ExecutionLedger() },
       input: {
         value: {
           awarenessGrid: { cells: [] },
@@ -220,6 +205,102 @@ const completedObservation = (
   attribution: "none",
   provenance: "none",
 })
+
+const accountingAttributionForObservation = (
+  observation: WasmWasiGuestObservationV117,
+): RuntimeAbiV117LedgerAttribution => {
+  if (
+    observation.stderr.byteLength >
+      WASM_WASI_V1_17_EXECUTION_SETTINGS.stderrBytes ||
+    observation.attribution === "host_crash" ||
+    observation.attribution === "transport_crash"
+  ) {
+    return "host"
+  }
+  if (
+    observation.attribution === "ambiguous_trap" ||
+    observation.attribution === "accounting_unavailable" ||
+    (observation.attribution === "proven_strategy_exception" &&
+      observation.provenance !== "structured_host_strategy_exception") ||
+    (observation.attribution === "proven_fuel_exhaustion" &&
+      observation.provenance !== "structured_host_fuel_meter") ||
+    (observation.attribution === "proven_memory_exhaustion" &&
+      observation.provenance !== "structured_host_memory_meter")
+  ) {
+    return "ambiguous"
+  }
+  return "proven_strategy"
+}
+
+const completeExecutionEvidenceFor = (
+  request: AuthenticatedRuntimeInvocationRequestV117,
+  observation = completedObservation(""),
+  attribution = accountingAttributionForObservation(observation),
+): RuntimeInvocationExecutionReceiptEvidenceV117 => {
+  const prestate = request.accounting.prestate
+  const limits = request.budget.methodLimit
+  const deltas = {
+    wallMilliseconds: 1,
+    computeFuel:
+      observation.attribution === "proven_fuel_exhaustion"
+        ? limits.counters.computeFuel.maximum + 1
+        : 1,
+    payloadBytes: observation.stdout.byteLength,
+    stdoutBytes: observation.stdout.byteLength,
+    stderrBytes: observation.stderr.byteLength,
+  } as const
+  const counter = (name: keyof typeof deltas) => ({
+    status: "measured" as const,
+    delta: deltas[name],
+    cumulative: prestate.cumulative[name] + deltas[name],
+  })
+  const memoryPeak =
+    observation.attribution === "proven_memory_exhaustion"
+      ? limits.memory.maximumBytes + 1
+      : 1
+  return {
+    attribution,
+    counters: {
+      wallMilliseconds: counter("wallMilliseconds"),
+      computeFuel: counter("computeFuel"),
+      payloadBytes: counter("payloadBytes"),
+      stdoutBytes: counter("stdoutBytes"),
+      stderrBytes: counter("stderrBytes"),
+    },
+    memory: {
+      status: "measured",
+      peakBytes: memoryPeak,
+      cumulativePeakBytes: Math.max(
+        prestate.cumulative.memoryBytes,
+        memoryPeak,
+      ),
+    },
+    process: {
+      status: "verified",
+      processes: 1,
+      threads: 1,
+      children: 0,
+    },
+    capabilities: {
+      status: "verified",
+      filesystem: "none",
+      network: "disabled",
+      environment: "empty",
+      shell: "disabled",
+    },
+    cancellation: {
+      status: "verified",
+      terminationRequired: false,
+      receiptPresent: false,
+      graceMilliseconds: 0,
+    },
+    accountingEvidence: {
+      status: "verified",
+      signatureVerified: true,
+      monotonic: true,
+    },
+  }
+}
 
 const encodeUnsignedLeb128 = (value: number): Buffer => {
   const bytes: number[] = []
@@ -281,6 +362,10 @@ const runCandidateObservation = (
     revision,
     signingIdentity: candidateSigningIdentity,
     executionIdentity: candidateExecutionIdentity(revision),
+    executionReceiptEvidence: completeExecutionEvidenceFor(
+      request,
+      observation,
+    ),
     executeGuest: ({ stdin, settings }) => {
       expect(new TextDecoder().decode(stdin)).toBe(
         '{"input":' +
@@ -333,6 +418,74 @@ describe("WASM/WASI runtime v1.17 candidate host authority", () => {
       canonicalByteLength: 56,
       sha256: expect.stringMatching(/^sha256:[0-9a-f]{64}$/u),
     })
+    expect(response.accounting).toMatchObject({
+      disposition: "commit",
+      poststate: {
+        revision: request.accounting.prestate.revision + 1,
+        methodInvocations: { selectActivations: 0, soldierBrain: 1 },
+      },
+    })
+  })
+
+  it("fails closed when the actual Rust/Zig host has no equivalent accounting evidence", () => {
+    const request = candidateRequest(revision)
+    const response = runWasmWasiStrategyMethodV117Sync({
+      request,
+      revision,
+      signingIdentity: candidateSigningIdentity,
+      executionIdentity: candidateExecutionIdentity(revision),
+      executeGuest: () =>
+        completedObservation(
+          '{"action":{"type":"TURN_TO_STONE"},"soldierMemory":null}',
+        ),
+    })
+    const verified = verifyRuntimeInvocationResponseV117(
+      serializeRuntimeInvocationResponseV117(response),
+      request,
+      candidateSigningIdentity,
+    )
+
+    expect(verified.kind).toBe("success")
+    expect(response.outcome).toMatchObject({
+      kind: "system_failure",
+      failure: { code: "AMBIGUOUS_ATTRIBUTION" },
+      trace: {
+        accountingIdentitySha256: request.accounting.identitySha256,
+        idempotencyKeySha256: request.accounting.idempotencyKeySha256,
+        safeCodes: ["WASM_WASI_EQUIVALENT_ACCOUNTING_UNAVAILABLE"],
+      },
+    })
+    expect(response.accounting.disposition).toBe("no_commit")
+    expect(response.accounting.poststate).toEqual(request.accounting.prestate)
+  })
+
+  it("does not preserve a success when any injected accounting dimension is unavailable", () => {
+    const request = candidateRequest(revision)
+    const observation = completedObservation(
+      '{"action":{"type":"TURN_TO_STONE"},"soldierMemory":null}',
+    )
+    const completeEvidence = completeExecutionEvidenceFor(request, observation)
+    const response = runWasmWasiStrategyMethodV117Sync({
+      request,
+      revision,
+      signingIdentity: candidateSigningIdentity,
+      executionIdentity: candidateExecutionIdentity(revision),
+      executionReceiptEvidence: {
+        ...completeEvidence,
+        counters: {
+          ...completeEvidence.counters,
+          computeFuel: { status: "unavailable" },
+        },
+      },
+      executeGuest: () => observation,
+    })
+
+    expect(response.outcome).toMatchObject({
+      kind: "system_failure",
+      failure: { code: "AMBIGUOUS_ATTRIBUTION" },
+    })
+    expect(response.accounting.disposition).toBe("no_commit")
+    expect(response.accounting.poststate).toEqual(request.accounting.prestate)
   })
 
   it("rejects parseable JSON whose raw bytes are not the admitted canonical bytes", () => {
@@ -421,7 +574,9 @@ describe("WASM/WASI runtime v1.17 candidate host authority", () => {
         signal: null,
         stdout:
           attribution === "proven_output_exhaustion"
-            ? new Uint8Array(request.budget.outputBytes + 1)
+            ? new Uint8Array(
+                request.budget.methodLimit.counters.stdoutBytes.maximum + 1,
+              )
             : new Uint8Array(),
         stderr: new Uint8Array(),
         attribution,
@@ -448,6 +603,11 @@ describe("WASM/WASI runtime v1.17 candidate host authority", () => {
       revision,
       signingIdentity: candidateSigningIdentity,
       executionIdentity: candidateExecutionIdentity(revision),
+      executionReceiptEvidence: completeExecutionEvidenceFor(
+        request,
+        undefined,
+        "host",
+      ),
       executeGuest: () => {
         executed = true
         return completedObservation(
@@ -479,6 +639,11 @@ describe("WASM/WASI runtime v1.17 candidate host authority", () => {
         ...identity,
         identitySha256: `sha256:${"0".repeat(64)}`,
       },
+      executionReceiptEvidence: completeExecutionEvidenceFor(
+        request,
+        undefined,
+        "host",
+      ),
       executeGuest: () => {
         executed = true
         return completedObservation(
@@ -525,6 +690,11 @@ describe("WASM/WASI runtime v1.17 candidate host authority", () => {
       revision: staleRevision,
       signingIdentity: candidateSigningIdentity,
       executionIdentity: candidateExecutionIdentity(revision),
+      executionReceiptEvidence: completeExecutionEvidenceFor(
+        request,
+        undefined,
+        "host",
+      ),
       executeGuest: () => {
         executed = true
         return completedObservation(
@@ -548,6 +718,11 @@ describe("WASM/WASI runtime v1.17 candidate host authority", () => {
       revision,
       signingIdentity: candidateSigningIdentity,
       executionIdentity: candidateExecutionIdentity(revision),
+      executionReceiptEvidence: completeExecutionEvidenceFor(
+        request,
+        undefined,
+        "host",
+      ),
       executeGuest: () =>
         completedObservation(
           '{"action":{"type":"TURN_TO_STONE"},"soldierMemory":null}',
@@ -612,6 +787,11 @@ describe("WASM/WASI runtime v1.17 candidate host authority", () => {
         "rust",
         malformedRevision.metadata.compiledArtifact!,
       ),
+      executionReceiptEvidence: completeExecutionEvidenceFor(
+        request,
+        undefined,
+        "host",
+      ),
       executeGuest: () => {
         throw new Error("malformed artifact reached execution")
       },
@@ -657,6 +837,11 @@ describe("WASM/WASI runtime v1.17 candidate host authority", () => {
         "rust",
         oversizedRevision.metadata.compiledArtifact,
       ),
+      executionReceiptEvidence: completeExecutionEvidenceFor(
+        request,
+        undefined,
+        "host",
+      ),
       executeGuest: () => {
         executed = true
         return completedObservation(
@@ -687,6 +872,11 @@ describe("WASM/WASI runtime v1.17 candidate host authority", () => {
       revision: legacyCandidateRevision,
       signingIdentity: candidateSigningIdentity,
       executionIdentity: candidateExecutionIdentity(revision),
+      executionReceiptEvidence: completeExecutionEvidenceFor(
+        request,
+        undefined,
+        "host",
+      ),
       executeGuest: () =>
         completedObservation(
           '{"action":{"type":"TURN_TO_STONE"},"soldierMemory":null}',
@@ -703,17 +893,15 @@ describe("WASM/WASI runtime v1.17 candidate host authority", () => {
   })
 
   it("enforces stdout and unproven stderr ceilings with exclusive ownership", () => {
-    const outputLimitedRequest = candidateRequest(
-      revision,
-      revision.metadata.compiledArtifact?.hash,
-      32,
-    )
+    const outputLimitedRequest = candidateRequest(revision)
+    const stdoutMaximum =
+      outputLimitedRequest.budget.methodLimit.counters.stdoutBytes.maximum
+    const oversizedStdoutObservation = completedObservation("")
+    oversizedStdoutObservation.stdout = new Uint8Array(stdoutMaximum + 1)
     const stdoutResponse = runCandidateObservation(
       outputLimitedRequest,
       revision,
-      completedObservation(
-        '{"action":{"type":"TURN_TO_STONE"},"soldierMemory":null}',
-      ),
+      oversizedStdoutObservation,
     )
     const stderrObservation = completedObservation(
       '{"action":{"type":"TURN_TO_STONE"},"soldierMemory":null}',
@@ -729,7 +917,7 @@ describe("WASM/WASI runtime v1.17 candidate host authority", () => {
     const bothObservation = completedObservation(
       '{"action":{"type":"TURN_TO_STONE"},"soldierMemory":null}',
     )
-    bothObservation.stdout = new Uint8Array(33)
+    bothObservation.stdout = new Uint8Array(stdoutMaximum + 1)
     bothObservation.stderr = new Uint8Array(
       WASM_WASI_V1_17_EXECUTION_SETTINGS.stderrBytes + 1,
     )
@@ -958,6 +1146,11 @@ describe("WASM/WASI runtime v1.17 exact Rust/Zig identity", () => {
       executionIdentity: collectWasmWasiCandidateIdentityV117(
         "rust",
         tamperedRevision.metadata.compiledArtifact,
+      ),
+      executionReceiptEvidence: completeExecutionEvidenceFor(
+        request,
+        undefined,
+        "host",
       ),
       executeGuest: () =>
         completedObservation(
