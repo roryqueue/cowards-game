@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest"
 import {
+  createAuthenticatedRuntimeInvocationRequestV117,
+  serializeRuntimeInvocationResponseV117,
+  verifyRuntimeInvocationResponseV117,
+  type AuthenticatedRuntimeInvocationRequestV117,
+  type RuntimeInvocationSigningIdentityV117,
+} from "@cowards/spec"
+import {
   buildZigStrategyRevision,
   compileZigWasmArtifact,
   buildRustStrategyRevision,
@@ -8,7 +15,12 @@ import {
   validateZigStrategySource,
   zigReadinessEvidence,
 } from "./validation.js"
-import { createWasmWasiRuntimeFromRevision } from "./wasm-wasi-subprocess-adapter.js"
+import {
+  WASM_WASI_V1_17_EXECUTION_SETTINGS,
+  createWasmWasiRuntimeFromRevision,
+  runWasmWasiStrategyMethodV117Sync,
+  type WasmWasiGuestObservationV117,
+} from "./wasm-wasi-subprocess-adapter.js"
 
 const rustSource = `
 use std::io::{self, Read};
@@ -70,6 +82,247 @@ export fn _start() void {
 
 const rustCompileProbe = compileRustWasmArtifact(rustSource)
 const zigCompileProbe = compileZigWasmArtifact(zigSource)
+
+const candidateSigningIdentity: RuntimeInvocationSigningIdentityV117 = {
+  keyId: "fixture-only:wasm-wasi-adapter:v1.17",
+  secret: "fixture-only-wasm-wasi-v1.17-secret",
+}
+
+const candidateRequest = (
+  revision: ReturnType<typeof buildRustStrategyRevision>,
+  artifactSha256 = revision.metadata.compiledArtifact?.hash,
+): AuthenticatedRuntimeInvocationRequestV117 => {
+  if (artifactSha256 === undefined) {
+    throw new Error("Rust candidate fixture did not compile")
+  }
+  return createAuthenticatedRuntimeInvocationRequestV117(
+    {
+      requestId: "request:wasm-wasi:v1.17:1",
+      invocationId: "invocation:wasm-wasi:v1.17:1",
+      kernelRequestId: "kernel-request:wasm-wasi:v1.17:1",
+      method: "soldierBrain",
+      semanticTuple: {
+        rules: "cowards-rules-v1.4",
+        engine: "engine-kernel-v1.37-candidate-1",
+        runtimeAbi: "strategy-runtime-abi-v1.17",
+        chronicle: "chronicle-recorder-current-events-v1.37-candidate-1",
+        arenaCatalog: "semantic-arena-catalog-v1.37-candidate-1",
+        setPolicy: "canonical-set-policy-v1.4",
+      },
+      sourceIdentity: {
+        strategyRevisionId: revision.id,
+        originalSourceSha256: `sha256:${revision.sourceHash}`,
+        normalizedSourceSha256: `sha256:${revision.sourceHash}`,
+        artifactSha256: `sha256:${artifactSha256}`,
+      },
+      budget: {
+        profileId: "runtime-budget-profile-v1.17-candidate",
+        wallMilliseconds: 50,
+        computeFuel: 10_000_000,
+        memoryBytes: 67_108_864,
+        outputBytes: 262_144,
+        processLimit: 1,
+        matchCumulative: {
+          invocationCountMaximum: 260,
+          wallMilliseconds: 13_000,
+          computeFuel: 2_600_000_000,
+          payloadBytes: 68_157_440,
+          stdoutBytes: 68_157_440,
+          stderrBytes: 17_039_360,
+          memoryBytes: 67_108_864,
+          accounting:
+            "signed-monotonic-per-invocation-deltas-plus-cumulative-total",
+          overflow:
+            "stop-before-next-invocation-and-classify-by-proven-cause",
+        },
+      },
+      input: {
+        value: {
+          awarenessGrid: { cells: [] },
+          cycleIndex: 0,
+          hasAdvancedThisActivation: false,
+          maxCycles: 12,
+          self: {
+            facing: "UP",
+            id: "soldier:1",
+            lastSuccessfulMoveDirection: null,
+            ownerPlayerId: "player:1",
+            position: { x: 0, y: 0 },
+            status: "ACTIVE",
+          },
+          soldierMemory: null,
+        },
+      },
+      retry: {
+        retryId: "retry:wasm-wasi:v1.17:1",
+        attempt: 0,
+        previousRequestSha256: null,
+      },
+    },
+    candidateSigningIdentity,
+  )
+}
+
+const completedObservation = (
+  stdout: string,
+): WasmWasiGuestObservationV117 => ({
+  kind: "completed",
+  status: 0,
+  signal: null,
+  stdout: new TextEncoder().encode(stdout),
+  stderr: new Uint8Array(),
+  attribution: "none",
+})
+
+const runCandidateObservation = (
+  request: AuthenticatedRuntimeInvocationRequestV117,
+  revision: ReturnType<typeof buildRustStrategyRevision>,
+  observation: WasmWasiGuestObservationV117,
+) =>
+  runWasmWasiStrategyMethodV117Sync({
+    request,
+    revision,
+    signingIdentity: candidateSigningIdentity,
+    executeGuest: ({ stdin, settings }) => {
+      expect(new TextDecoder().decode(stdin)).toBe(
+        '{"input":' +
+          JSON.stringify(request.input.value) +
+          ',"method":"soldierBrain","runtimeAbi":"strategy-runtime-abi-v1.17"}',
+      )
+      expect(settings).toEqual(WASM_WASI_V1_17_EXECUTION_SETTINGS)
+      return observation
+    },
+  })
+
+describe("WASM/WASI runtime v1.17 candidate host authority", () => {
+  const revision = buildRustStrategyRevision({ source: rustSource })
+
+  it("requires the available Rust compiler instead of skipping candidate proof", () => {
+    expect(revision.metadata.compiledArtifact).toBeDefined()
+  })
+
+  it("treats guest stdout as raw Strategy payload and host-authenticates the outer response", () => {
+    const request = candidateRequest(revision)
+    const response = runCandidateObservation(
+      request,
+      revision,
+      completedObservation(
+        '{"action":{"type":"TURN_TO_STONE"},"soldierMemory":null}',
+      ),
+    )
+    const verified = verifyRuntimeInvocationResponseV117(
+      serializeRuntimeInvocationResponseV117(response),
+      request,
+      candidateSigningIdentity,
+    )
+
+    expect(verified.kind).toBe("success")
+    expect(response.outcome).toMatchObject({
+      kind: "success",
+      value: {
+        action: { type: "TURN_TO_STONE" },
+        soldierMemory: null,
+      },
+    })
+    expect(response.authentication.keyId).toBe(candidateSigningIdentity.keyId)
+    expect(response.payloadBinding).toMatchObject({
+      canonicalByteLength: 60,
+      sha256: expect.stringMatching(/^sha256:[0-9a-f]{64}$/u),
+    })
+  })
+
+  it.each([
+    {
+      label: "guest-written outer envelope",
+      stdout:
+        '{"candidateStatus":"inactive-candidate","current":false,"envelopeKind":"runtime-invocation-response"}',
+    },
+    {
+      label: "duplicate payload key",
+      stdout:
+        '{"action":{"type":"TURN_TO_STONE"},"soldierMemory":null,"soldierMemory":{}}',
+    },
+    { label: "non-canonical payload", stdout: '{"soldierMemory":null,"action":{"type":"TURN_TO_STONE"}}' },
+    { label: "invalid UTF-8 payload", stdout: new Uint8Array([0x7b, 0xff, 0x7d]) },
+  ])("classifies $label as one authenticated player violation", ({ stdout }) => {
+    const request = candidateRequest(revision)
+    const observation = completedObservation("")
+    observation.stdout = typeof stdout === "string" ? new TextEncoder().encode(stdout) : stdout
+    const response = runCandidateObservation(request, revision, observation)
+
+    expect(response.outcome).toEqual(
+      expect.objectContaining({
+        kind: "player_violation",
+        violation: {
+          code: "INVALID_OUTPUT",
+          publicMessage: "Strategy returned an invalid payload.",
+        },
+      }),
+    )
+    expect(response.payloadBinding).toBeNull()
+    expect("failure" in response.outcome).toBe(false)
+  })
+
+  it.each([
+    ["proven_strategy_exception", "player_violation", "THROWN_EXCEPTION"],
+    ["proven_fuel_exhaustion", "player_violation", "TIMEOUT"],
+    ["proven_memory_exhaustion", "player_violation", "TIMEOUT"],
+    ["proven_output_exhaustion", "player_violation", "OVERSIZED_OUTPUT"],
+    ["ambiguous_trap", "system_failure", "AMBIGUOUS_ATTRIBUTION"],
+    ["accounting_unavailable", "system_failure", "AMBIGUOUS_ATTRIBUTION"],
+    ["host_crash", "system_failure", "HOST_CRASH"],
+    ["transport_crash", "system_failure", "TRANSPORT_CRASH"],
+  ] as const)(
+    "maps %s to exclusive %s/%s ownership",
+    (attribution, kind, code) => {
+      const request = candidateRequest(revision)
+      const response = runCandidateObservation(request, revision, {
+        kind: "failed",
+        status: null,
+        signal: null,
+        stdout: new Uint8Array(),
+        stderr: new Uint8Array(),
+        attribution,
+      })
+
+      expect(response.outcome.kind).toBe(kind)
+      expect(
+        response.outcome.kind === "player_violation"
+          ? response.outcome.violation.code
+          : response.outcome.kind === "system_failure"
+            ? response.outcome.failure.code
+            : "success",
+      ).toBe(code)
+      expect(response.payloadBinding).toBeNull()
+    },
+  )
+
+  it("fails stale artifact identity as an authenticated system failure before execution", () => {
+    const request = candidateRequest(revision, "0".repeat(64))
+    let executed = false
+    const response = runWasmWasiStrategyMethodV117Sync({
+      request,
+      revision,
+      signingIdentity: candidateSigningIdentity,
+      executeGuest: () => {
+        executed = true
+        return completedObservation(
+          '{"action":{"type":"TURN_TO_STONE"},"soldierMemory":null}',
+        )
+      },
+    })
+
+    expect(executed).toBe(false)
+    expect(response.outcome).toMatchObject({
+      kind: "system_failure",
+      failure: {
+        code: "OUTER_FRAME_WRONG_BINDING",
+        publicMessage: "Runtime system failure.",
+        retryable: false,
+      },
+    })
+  })
+})
 
 describe("WASM/WASI runtime alpha", () => {
   it.skipIf(!rustCompileProbe.ok)(
