@@ -193,34 +193,37 @@ Plans:
 - [ ] 258-03-PLAN.md — Implement the iterative raw scanner/parser with typed bounded failures.
 - [ ] 258-04-PLAN.md — Implement canonical encoding, domain-framed hashes, and the identity manifest.
 
-**Wave 4 — boundary and ABI integration**
+**Wave 4 — ABI ownership**
 
-- [ ] 258-05-PLAN.md — Integrate bounded JSON into spec/service boundaries and the permanent deep audit.
 - [ ] 258-06-PLAN.md — Define the exclusive three-way invocation ABI and adapter-owned envelope.
 
-**Wave 5 — transition ownership**
+**Wave 5 — bounded boundary integration**
+
+- [ ] 258-05-PLAN.md — Integrate bounded JSON into the Plan-06 spec/service boundary and permanent deep audit.
+
+**Wave 6 — transition ownership**
 
 - [ ] 258-07-PLAN.md — Enforce engine-only penalties, no-mutation system failure, and identical system retry.
 
-**Wave 6 — language adapters**
+**Wave 7 — language adapters and exact source persistence**
 
 - [ ] 258-08-PLAN.md — Migrate TypeScript worker/subprocess/container paths to the common raw ABI.
 - [ ] 258-09-PLAN.md — Migrate Python and preserve original-versus-normalized source identity.
 - [ ] 258-10-PLAN.md — Migrate Rust/Zig/WASM with host-owned envelopes and exact toolchain/settings identity.
 
-**Wave 7 — Go and persistence**
+**Wave 8 — Go and persistence**
 
 - [ ] 258-11-PLAN.md — Prove Go canonical parity, signed retry binding, rollback, and no mutation.
 
-**Wave 8 — exact budget posture**
+**Wave 9 — exact budget posture**
 
 - [ ] 258-12-PLAN.md — Enforce runtime/preflight ledgers and publish fail-closed cross-lane capabilities.
 
-**Wave 9 — evidence graph and successor receipt**
+**Wave 10 — evidence graph and successor receipt**
 
 - [ ] 258-13-PLAN.md — Close the identity DAG and mint v1.17 while preserving immutable v1.16 dispatch.
 
-**Wave 10 — evaluator and atomic activation**
+**Wave 11 — evaluator and atomic production-default activation**
 
 - [ ] 258-14-PLAN.md — Run the integrated evaluator and prove privacy-safe, rollback-safe current activation.
 
