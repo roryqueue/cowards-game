@@ -711,6 +711,7 @@ const authenticationMatches = (
 ): boolean => {
   if (
     envelope.authentication.keyId !== identity.keyId ||
+    !PublicIdSchema.safeParse(identity.keyId).success ||
     identity.secret.length === 0
   ) {
     return false

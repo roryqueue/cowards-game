@@ -324,6 +324,16 @@ describe("candidate v1.17 authenticated preflight contract", () => {
       disposition: "no_commit",
       failure: { code: "AUTHENTICATION_FAILED" },
     })
+    expect(
+      verifyRuntimePreflightRequestV117(bytes, {
+        keyId: "invalid key id",
+        secret: signingIdentity.secret,
+      }),
+    ).toMatchObject({
+      ok: false,
+      disposition: "no_commit",
+      failure: { code: "AUTHENTICATION_FAILED" },
+    })
 
     const wrongDomain = resign(candidate, "receipt")
     expect(
