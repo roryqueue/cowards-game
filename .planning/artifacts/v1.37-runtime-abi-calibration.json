@@ -1,0 +1,1078 @@
+{
+  "schemaVersion": "runtime-abi-v1.17-calibration-v1",
+  "generatedBy": "scripts/calibrate-v1-37-runtime-abi.ts",
+  "generatedAt": "2026-07-13",
+  "candidateOnly": true,
+  "activation": "not-active",
+  "inputManifest": {
+    "schemaVersion": "runtime-abi-v1.17-calibration-inputs-v1",
+    "sha256": "d2219b06b215b1cfd9dc01d7710a54fb0af68e3d25bbcd2cb22c4bc73c02c13c",
+    "path": "packages/spec/artifacts/runtime-abi-v1.17-calibration-inputs.json",
+    "privacy": "internal-build-evidence-no-private-payload-copy",
+    "denylist": [
+      ".git/**",
+      "node_modules/**",
+      ".next/**",
+      "dist/**",
+      "coverage/**",
+      "tmp/**",
+      ".env*",
+      ".planning/config.json",
+      "CowardsGameSpec_Full_Consolidated_v1.md",
+      ".planning/phases/**",
+      ".planning/artifacts/v1.37-runtime-abi-calibration.json",
+      ".planning/artifacts/v1.37-runtime-abi-calibration.md",
+      "packages/spec/artifacts/runtime-abi-v1.17-contract.json",
+      "**/*.log",
+      "**/logs/**",
+      "**/private/**"
+    ],
+    "inputs": [
+      {
+        "path": ".planning/artifacts/v1.37-kernel-integrity-proof.json",
+        "sha256": "d75af6304699bddbe446a26a793d5117ce05522660e75bca35dadad79a57b904",
+        "byteLength": 25446,
+        "classification": "current-valid-fixture",
+        "inclusionReason": "Current Phase 257 kernel-integrity proof fixture exercised by the Phase 258 baseline.",
+        "expectedLimitDomains": [
+          "canonical-payload",
+          "evidence-manifest"
+        ]
+      },
+      {
+        "path": ".planning/artifacts/v1.37-v1.36-historical-proof-dispatch.json",
+        "sha256": "108e3df9c07ed3f99a4907a8ef455ee8653169dffd1a9e4797c10a3621745e12",
+        "byteLength": 4547,
+        "classification": "historical-valid-control",
+        "inclusionReason": "Immutable v1.36 dispatch control; compatibility evidence only and never a current maximum source.",
+        "expectedLimitDomains": [
+          "historical-compatibility-control"
+        ]
+      },
+      {
+        "path": "packages/spec/artifacts/runtime-execution-service-request.v1.16.json",
+        "sha256": "5d04fa4d82eb814bb034ce9b5f1d5c80945e3d4e02c9124ca39a6670e9c0eab5",
+        "byteLength": 8164,
+        "classification": "current-valid-contract",
+        "inclusionReason": "Current runtime-service request contract and lower runtime field caps.",
+        "expectedLimitDomains": [
+          "transport-frame",
+          "canonical-payload",
+          "strategy-source",
+          "strategy-memory",
+          "soldier-memory",
+          "objective-payload"
+        ]
+      },
+      {
+        "path": "packages/spec/artifacts/runtime-execution-service-response.v1.16.wire.json",
+        "sha256": "9c870d57e0125eb80ab2ba941ecbbede8a9a775f61c0b278abec25c491374d97",
+        "byteLength": 42025,
+        "classification": "historical-valid-control",
+        "inclusionReason": "Insertion-ordered TypeScript v1.16 wire golden; compatibility stop only, never canonicalized or used for maxima.",
+        "expectedLimitDomains": [
+          "historical-compatibility-control",
+          "transport-frame"
+        ]
+      },
+      {
+        "path": "packages/spec/artifacts/service-api-v1.8.openapi.json",
+        "sha256": "6bc82a632245c2ae440eeee5b2608ecabbc56a32e559195be0bac3ba623877a1",
+        "byteLength": 159050,
+        "classification": "current-valid-contract",
+        "inclusionReason": "Committed current service API contract.",
+        "expectedLimitDomains": [
+          "canonical-payload",
+          "service-contract"
+        ]
+      },
+      {
+        "path": "packages/spec/artifacts/strategy-artifacts.v1.14.json",
+        "sha256": "0f2879cae9695a7b1a73c837f444f45405821c1da3bf9fed0ada6ecf90c3dea3",
+        "byteLength": 210039,
+        "classification": "current-valid-contract",
+        "inclusionReason": "Committed current Strategy artifact contract with source and artifact field caps.",
+        "expectedLimitDomains": [
+          "canonical-payload",
+          "artifact-manifest",
+          "strategy-source",
+          "source-artifact",
+          "wasm-artifact"
+        ]
+      },
+      {
+        "path": "packages/spec/artifacts/v1.37-candidate-event-coverage.json",
+        "sha256": "84055ef93ed8c73c89bcf19087bbba8904c2f5bc62c1ec1ba8bd10aa632b9f96",
+        "byteLength": 38089,
+        "classification": "current-valid-fixture",
+        "inclusionReason": "Committed candidate event-coverage fixture consumed by current integrity checks.",
+        "expectedLimitDomains": [
+          "canonical-payload",
+          "evidence-manifest"
+        ]
+      },
+      {
+        "path": "packages/spec/artifacts/v1.37-current-event-coverage.json",
+        "sha256": "96be0ea4809c6b802142e6164dc9f10639cfe7a97f0918b822a191972b9c3a44",
+        "byteLength": 36257,
+        "classification": "current-valid-fixture",
+        "inclusionReason": "Committed current event-coverage fixture consumed by current integrity checks.",
+        "expectedLimitDomains": [
+          "canonical-payload",
+          "evidence-manifest"
+        ]
+      },
+      {
+        "path": "packages/spec/artifacts/v1.37-integrity-authority-hash-vectors.json",
+        "sha256": "59c548d29ac905a8834c7b52351abff7a6bc449c6176179c7240bbecea6848b2",
+        "byteLength": 12776,
+        "classification": "current-valid-fixture",
+        "inclusionReason": "Current cross-language integrity authority hash vectors.",
+        "expectedLimitDomains": [
+          "canonical-payload",
+          "identity-vector"
+        ]
+      },
+      {
+        "path": "packages/spec/artifacts/v1.37-integrity-authority.json",
+        "sha256": "afa81345bb2d697befa590a07e613649c7b759bb9a471887104c83bfeaea1b1e",
+        "byteLength": 1982,
+        "classification": "current-valid-contract",
+        "inclusionReason": "Current canonical integrity authority contract.",
+        "expectedLimitDomains": [
+          "canonical-payload",
+          "authority-contract"
+        ]
+      },
+      {
+        "path": "packages/spec/artifacts/v1.37-kernel-integrity-candidate-hash-vectors.json",
+        "sha256": "6af19cb7adb123fbd4eff74ebc66d184847153444b046565eeba870519ff2f60",
+        "byteLength": 6129,
+        "classification": "current-valid-fixture",
+        "inclusionReason": "Current candidate kernel integrity hash vectors.",
+        "expectedLimitDomains": [
+          "canonical-payload",
+          "identity-vector"
+        ]
+      },
+      {
+        "path": "packages/spec/artifacts/v1.37-kernel-integrity-candidate.json",
+        "sha256": "4234567bc758b6fcc27085b523d642ad765803ce5e97a301e272ab351a208d11",
+        "byteLength": 3922,
+        "classification": "current-valid-contract",
+        "inclusionReason": "Current inactive kernel integrity candidate contract.",
+        "expectedLimitDomains": [
+          "canonical-payload",
+          "authority-contract"
+        ]
+      },
+      {
+        "path": "packages/spec/artifacts/v1.37-runtime-evidence-authority-vectors.json",
+        "sha256": "a9edd0337e43535aad856159db552f3967326825b15c7b42ba9ea5adff64ec53",
+        "byteLength": 14676,
+        "classification": "current-valid-fixture",
+        "inclusionReason": "Current runtime-evidence authority validation vectors.",
+        "expectedLimitDomains": [
+          "canonical-payload",
+          "evidence-manifest",
+          "identity-vector"
+        ]
+      }
+    ]
+  },
+  "limits": {
+    "rawUtf8Bytes": {
+      "value": 8388608,
+      "unit": "raw-utf8-bytes",
+      "observedCurrentMaximum": 210039
+    },
+    "depth": {
+      "value": 64,
+      "unit": "container-levels",
+      "observedCurrentMaximum": 20
+    },
+    "nodes": {
+      "value": 262144,
+      "unit": "parsed-json-nodes",
+      "observedCurrentMaximum": 3436
+    },
+    "decodedStringUtf8Bytes": {
+      "value": 6291456,
+      "unit": "decoded-string-utf8-bytes",
+      "observedCurrentMaximum": 7935
+    },
+    "arrayEntries": {
+      "value": 65536,
+      "unit": "entries-per-array",
+      "observedCurrentMaximum": 26
+    },
+    "objectEntries": {
+      "value": 65536,
+      "unit": "entries-per-object",
+      "observedCurrentMaximum": 21
+    }
+  },
+  "fieldCaps": {
+    "strategySource": {
+      "value": 65536,
+      "unit": "raw-utf8-bytes"
+    },
+    "sourceArtifact": {
+      "value": 262144,
+      "unit": "raw-utf8-bytes"
+    },
+    "wasmArtifact": {
+      "value": 4194304,
+      "unit": "raw-utf8-bytes"
+    },
+    "strategyMemory": {
+      "value": 32768,
+      "unit": "canonical-payload-bytes"
+    },
+    "soldierMemory": {
+      "value": 2048,
+      "unit": "canonical-payload-bytes"
+    },
+    "objectivePayload": {
+      "value": 1024,
+      "unit": "canonical-payload-bytes"
+    },
+    "invocationOutput": {
+      "value": 262144,
+      "unit": "canonical-payload-bytes"
+    },
+    "stdout": {
+      "value": 262144,
+      "unit": "transport-frame-bytes"
+    },
+    "stderr": {
+      "value": 65536,
+      "unit": "raw-utf8-bytes"
+    },
+    "httpRequest": {
+      "value": 8388608,
+      "unit": "transport-frame-bytes"
+    },
+    "goResponse": {
+      "value": 8388608,
+      "unit": "transport-frame-bytes"
+    }
+  },
+  "observations": [
+    {
+      "path": ".planning/artifacts/v1.37-kernel-integrity-proof.json",
+      "sha256": "d75af6304699bddbe446a26a793d5117ce05522660e75bca35dadad79a57b904",
+      "byteLength": 25446,
+      "classification": "current-valid-fixture",
+      "inclusionReason": "Current Phase 257 kernel-integrity proof fixture exercised by the Phase 258 baseline.",
+      "expectedLimitDomains": [
+        "canonical-payload",
+        "evidence-manifest"
+      ],
+      "metrics": {
+        "rawUtf8Bytes": 25446,
+        "canonicalPayloadBytes": 20745,
+        "depth": 4,
+        "nodes": 471,
+        "decodedStringUtf8Bytes": 112,
+        "arrayEntries": 18,
+        "objectEntries": 10
+      }
+    },
+    {
+      "path": ".planning/artifacts/v1.37-v1.36-historical-proof-dispatch.json",
+      "sha256": "108e3df9c07ed3f99a4907a8ef455ee8653169dffd1a9e4797c10a3621745e12",
+      "byteLength": 4547,
+      "classification": "historical-valid-control",
+      "inclusionReason": "Immutable v1.36 dispatch control; compatibility evidence only and never a current maximum source.",
+      "expectedLimitDomains": [
+        "historical-compatibility-control"
+      ],
+      "metrics": {
+        "rawUtf8Bytes": 4547,
+        "canonicalPayloadBytes": 4197,
+        "depth": 3,
+        "nodes": 110,
+        "decodedStringUtf8Bytes": 64,
+        "arrayEntries": 11,
+        "objectEntries": 7
+      }
+    },
+    {
+      "path": "packages/spec/artifacts/runtime-execution-service-request.v1.16.json",
+      "sha256": "5d04fa4d82eb814bb034ce9b5f1d5c80945e3d4e02c9124ca39a6670e9c0eab5",
+      "byteLength": 8164,
+      "classification": "current-valid-contract",
+      "inclusionReason": "Current runtime-service request contract and lower runtime field caps.",
+      "expectedLimitDomains": [
+        "transport-frame",
+        "canonical-payload",
+        "strategy-source",
+        "strategy-memory",
+        "soldier-memory",
+        "objective-payload"
+      ],
+      "metrics": {
+        "rawUtf8Bytes": 8164,
+        "canonicalPayloadBytes": 6354,
+        "depth": 5,
+        "nodes": 176,
+        "decodedStringUtf8Bytes": 184,
+        "arrayEntries": 0,
+        "objectEntries": 12
+      }
+    },
+    {
+      "path": "packages/spec/artifacts/runtime-execution-service-response.v1.16.wire.json",
+      "sha256": "9c870d57e0125eb80ab2ba941ecbbede8a9a775f61c0b278abec25c491374d97",
+      "byteLength": 42025,
+      "classification": "historical-valid-control",
+      "inclusionReason": "Insertion-ordered TypeScript v1.16 wire golden; compatibility stop only, never canonicalized or used for maxima.",
+      "expectedLimitDomains": [
+        "historical-compatibility-control",
+        "transport-frame"
+      ],
+      "metrics": {
+        "rawUtf8Bytes": 42025,
+        "canonicalPayloadBytes": 42025,
+        "depth": 9,
+        "nodes": 2425,
+        "decodedStringUtf8Bytes": 82,
+        "arrayEntries": 31,
+        "objectEntries": 22
+      }
+    },
+    {
+      "path": "packages/spec/artifacts/service-api-v1.8.openapi.json",
+      "sha256": "6bc82a632245c2ae440eeee5b2608ecabbc56a32e559195be0bac3ba623877a1",
+      "byteLength": 159050,
+      "classification": "current-valid-contract",
+      "inclusionReason": "Committed current service API contract.",
+      "expectedLimitDomains": [
+        "canonical-payload",
+        "service-contract"
+      ],
+      "metrics": {
+        "rawUtf8Bytes": 159050,
+        "canonicalPayloadBytes": 58652,
+        "depth": 20,
+        "nodes": 3436,
+        "decodedStringUtf8Bytes": 261,
+        "arrayEntries": 21,
+        "objectEntries": 21
+      }
+    },
+    {
+      "path": "packages/spec/artifacts/strategy-artifacts.v1.14.json",
+      "sha256": "0f2879cae9695a7b1a73c837f444f45405821c1da3bf9fed0ada6ecf90c3dea3",
+      "byteLength": 210039,
+      "classification": "current-valid-contract",
+      "inclusionReason": "Committed current Strategy artifact contract with source and artifact field caps.",
+      "expectedLimitDomains": [
+        "canonical-payload",
+        "artifact-manifest",
+        "strategy-source",
+        "source-artifact",
+        "wasm-artifact"
+      ],
+      "metrics": {
+        "rawUtf8Bytes": 210039,
+        "canonicalPayloadBytes": 183428,
+        "depth": 5,
+        "nodes": 2199,
+        "decodedStringUtf8Bytes": 7935,
+        "arrayEntries": 26,
+        "objectEntries": 12
+      }
+    },
+    {
+      "path": "packages/spec/artifacts/v1.37-candidate-event-coverage.json",
+      "sha256": "84055ef93ed8c73c89bcf19087bbba8904c2f5bc62c1ec1ba8bd10aa632b9f96",
+      "byteLength": 38089,
+      "classification": "current-valid-fixture",
+      "inclusionReason": "Committed candidate event-coverage fixture consumed by current integrity checks.",
+      "expectedLimitDomains": [
+        "canonical-payload",
+        "evidence-manifest"
+      ],
+      "metrics": {
+        "rawUtf8Bytes": 38089,
+        "canonicalPayloadBytes": 25086,
+        "depth": 6,
+        "nodes": 928,
+        "decodedStringUtf8Bytes": 71,
+        "arrayEntries": 21,
+        "objectEntries": 17
+      }
+    },
+    {
+      "path": "packages/spec/artifacts/v1.37-current-event-coverage.json",
+      "sha256": "96be0ea4809c6b802142e6164dc9f10639cfe7a97f0918b822a191972b9c3a44",
+      "byteLength": 36257,
+      "classification": "current-valid-fixture",
+      "inclusionReason": "Committed current event-coverage fixture consumed by current integrity checks.",
+      "expectedLimitDomains": [
+        "canonical-payload",
+        "evidence-manifest"
+      ],
+      "metrics": {
+        "rawUtf8Bytes": 36257,
+        "canonicalPayloadBytes": 23460,
+        "depth": 6,
+        "nodes": 901,
+        "decodedStringUtf8Bytes": 71,
+        "arrayEntries": 21,
+        "objectEntries": 12
+      }
+    },
+    {
+      "path": "packages/spec/artifacts/v1.37-integrity-authority-hash-vectors.json",
+      "sha256": "59c548d29ac905a8834c7b52351abff7a6bc449c6176179c7240bbecea6848b2",
+      "byteLength": 12776,
+      "classification": "current-valid-fixture",
+      "inclusionReason": "Current cross-language integrity authority hash vectors.",
+      "expectedLimitDomains": [
+        "canonical-payload",
+        "identity-vector"
+      ],
+      "metrics": {
+        "rawUtf8Bytes": 12776,
+        "canonicalPayloadBytes": 11839,
+        "depth": 4,
+        "nodes": 104,
+        "decodedStringUtf8Bytes": 668,
+        "arrayEntries": 7,
+        "objectEntries": 6
+      }
+    },
+    {
+      "path": "packages/spec/artifacts/v1.37-integrity-authority.json",
+      "sha256": "afa81345bb2d697befa590a07e613649c7b759bb9a471887104c83bfeaea1b1e",
+      "byteLength": 1982,
+      "classification": "current-valid-contract",
+      "inclusionReason": "Current canonical integrity authority contract.",
+      "expectedLimitDomains": [
+        "canonical-payload",
+        "authority-contract"
+      ],
+      "metrics": {
+        "rawUtf8Bytes": 1982,
+        "canonicalPayloadBytes": 1551,
+        "depth": 4,
+        "nodes": 54,
+        "decodedStringUtf8Bytes": 71,
+        "arrayEntries": 6,
+        "objectEntries": 6
+      }
+    },
+    {
+      "path": "packages/spec/artifacts/v1.37-kernel-integrity-candidate-hash-vectors.json",
+      "sha256": "6af19cb7adb123fbd4eff74ebc66d184847153444b046565eeba870519ff2f60",
+      "byteLength": 6129,
+      "classification": "current-valid-fixture",
+      "inclusionReason": "Current candidate kernel integrity hash vectors.",
+      "expectedLimitDomains": [
+        "canonical-payload",
+        "identity-vector"
+      ],
+      "metrics": {
+        "rawUtf8Bytes": 6129,
+        "canonicalPayloadBytes": 5383,
+        "depth": 5,
+        "nodes": 76,
+        "decodedStringUtf8Bytes": 636,
+        "arrayEntries": 6,
+        "objectEntries": 7
+      }
+    },
+    {
+      "path": "packages/spec/artifacts/v1.37-kernel-integrity-candidate.json",
+      "sha256": "4234567bc758b6fcc27085b523d642ad765803ce5e97a301e272ab351a208d11",
+      "byteLength": 3922,
+      "classification": "current-valid-contract",
+      "inclusionReason": "Current inactive kernel integrity candidate contract.",
+      "expectedLimitDomains": [
+        "canonical-payload",
+        "authority-contract"
+      ],
+      "metrics": {
+        "rawUtf8Bytes": 3922,
+        "canonicalPayloadBytes": 3091,
+        "depth": 4,
+        "nodes": 96,
+        "decodedStringUtf8Bytes": 71,
+        "arrayEntries": 21,
+        "objectEntries": 12
+      }
+    },
+    {
+      "path": "packages/spec/artifacts/v1.37-runtime-evidence-authority-vectors.json",
+      "sha256": "a9edd0337e43535aad856159db552f3967326825b15c7b42ba9ea5adff64ec53",
+      "byteLength": 14676,
+      "classification": "current-valid-fixture",
+      "inclusionReason": "Current runtime-evidence authority validation vectors.",
+      "expectedLimitDomains": [
+        "canonical-payload",
+        "evidence-manifest",
+        "identity-vector"
+      ],
+      "metrics": {
+        "rawUtf8Bytes": 14676,
+        "canonicalPayloadBytes": 12350,
+        "depth": 4,
+        "nodes": 231,
+        "decodedStringUtf8Bytes": 600,
+        "arrayEntries": 6,
+        "objectEntries": 11
+      }
+    }
+  ],
+  "maximaSources": [
+    {
+      "path": ".planning/artifacts/v1.37-kernel-integrity-proof.json",
+      "classification": "current-valid-fixture",
+      "metrics": {
+        "rawUtf8Bytes": 25446,
+        "canonicalPayloadBytes": 20745,
+        "depth": 4,
+        "nodes": 471,
+        "decodedStringUtf8Bytes": 112,
+        "arrayEntries": 18,
+        "objectEntries": 10
+      }
+    },
+    {
+      "path": "packages/spec/artifacts/runtime-execution-service-request.v1.16.json",
+      "classification": "current-valid-contract",
+      "metrics": {
+        "rawUtf8Bytes": 8164,
+        "canonicalPayloadBytes": 6354,
+        "depth": 5,
+        "nodes": 176,
+        "decodedStringUtf8Bytes": 184,
+        "arrayEntries": 0,
+        "objectEntries": 12
+      }
+    },
+    {
+      "path": "packages/spec/artifacts/service-api-v1.8.openapi.json",
+      "classification": "current-valid-contract",
+      "metrics": {
+        "rawUtf8Bytes": 159050,
+        "canonicalPayloadBytes": 58652,
+        "depth": 20,
+        "nodes": 3436,
+        "decodedStringUtf8Bytes": 261,
+        "arrayEntries": 21,
+        "objectEntries": 21
+      }
+    },
+    {
+      "path": "packages/spec/artifacts/strategy-artifacts.v1.14.json",
+      "classification": "current-valid-contract",
+      "metrics": {
+        "rawUtf8Bytes": 210039,
+        "canonicalPayloadBytes": 183428,
+        "depth": 5,
+        "nodes": 2199,
+        "decodedStringUtf8Bytes": 7935,
+        "arrayEntries": 26,
+        "objectEntries": 12
+      }
+    },
+    {
+      "path": "packages/spec/artifacts/v1.37-candidate-event-coverage.json",
+      "classification": "current-valid-fixture",
+      "metrics": {
+        "rawUtf8Bytes": 38089,
+        "canonicalPayloadBytes": 25086,
+        "depth": 6,
+        "nodes": 928,
+        "decodedStringUtf8Bytes": 71,
+        "arrayEntries": 21,
+        "objectEntries": 17
+      }
+    },
+    {
+      "path": "packages/spec/artifacts/v1.37-current-event-coverage.json",
+      "classification": "current-valid-fixture",
+      "metrics": {
+        "rawUtf8Bytes": 36257,
+        "canonicalPayloadBytes": 23460,
+        "depth": 6,
+        "nodes": 901,
+        "decodedStringUtf8Bytes": 71,
+        "arrayEntries": 21,
+        "objectEntries": 12
+      }
+    },
+    {
+      "path": "packages/spec/artifacts/v1.37-integrity-authority-hash-vectors.json",
+      "classification": "current-valid-fixture",
+      "metrics": {
+        "rawUtf8Bytes": 12776,
+        "canonicalPayloadBytes": 11839,
+        "depth": 4,
+        "nodes": 104,
+        "decodedStringUtf8Bytes": 668,
+        "arrayEntries": 7,
+        "objectEntries": 6
+      }
+    },
+    {
+      "path": "packages/spec/artifacts/v1.37-integrity-authority.json",
+      "classification": "current-valid-contract",
+      "metrics": {
+        "rawUtf8Bytes": 1982,
+        "canonicalPayloadBytes": 1551,
+        "depth": 4,
+        "nodes": 54,
+        "decodedStringUtf8Bytes": 71,
+        "arrayEntries": 6,
+        "objectEntries": 6
+      }
+    },
+    {
+      "path": "packages/spec/artifacts/v1.37-kernel-integrity-candidate-hash-vectors.json",
+      "classification": "current-valid-fixture",
+      "metrics": {
+        "rawUtf8Bytes": 6129,
+        "canonicalPayloadBytes": 5383,
+        "depth": 5,
+        "nodes": 76,
+        "decodedStringUtf8Bytes": 636,
+        "arrayEntries": 6,
+        "objectEntries": 7
+      }
+    },
+    {
+      "path": "packages/spec/artifacts/v1.37-kernel-integrity-candidate.json",
+      "classification": "current-valid-contract",
+      "metrics": {
+        "rawUtf8Bytes": 3922,
+        "canonicalPayloadBytes": 3091,
+        "depth": 4,
+        "nodes": 96,
+        "decodedStringUtf8Bytes": 71,
+        "arrayEntries": 21,
+        "objectEntries": 12
+      }
+    },
+    {
+      "path": "packages/spec/artifacts/v1.37-runtime-evidence-authority-vectors.json",
+      "classification": "current-valid-fixture",
+      "metrics": {
+        "rawUtf8Bytes": 14676,
+        "canonicalPayloadBytes": 12350,
+        "depth": 4,
+        "nodes": 231,
+        "decodedStringUtf8Bytes": 600,
+        "arrayEntries": 6,
+        "objectEntries": 11
+      }
+    }
+  ],
+  "historicalControls": [
+    {
+      "path": ".planning/artifacts/v1.37-v1.36-historical-proof-dispatch.json",
+      "sha256": "108e3df9c07ed3f99a4907a8ef455ee8653169dffd1a9e4797c10a3621745e12",
+      "byteLength": 4547,
+      "classification": "historical-valid-control",
+      "inclusionReason": "Immutable v1.36 dispatch control; compatibility evidence only and never a current maximum source.",
+      "expectedLimitDomains": [
+        "historical-compatibility-control"
+      ],
+      "metrics": {
+        "rawUtf8Bytes": 4547,
+        "canonicalPayloadBytes": 4197,
+        "depth": 3,
+        "nodes": 110,
+        "decodedStringUtf8Bytes": 64,
+        "arrayEntries": 11,
+        "objectEntries": 7
+      }
+    },
+    {
+      "path": "packages/spec/artifacts/runtime-execution-service-response.v1.16.wire.json",
+      "sha256": "9c870d57e0125eb80ab2ba941ecbbede8a9a775f61c0b278abec25c491374d97",
+      "byteLength": 42025,
+      "classification": "historical-valid-control",
+      "inclusionReason": "Insertion-ordered TypeScript v1.16 wire golden; compatibility stop only, never canonicalized or used for maxima.",
+      "expectedLimitDomains": [
+        "historical-compatibility-control",
+        "transport-frame"
+      ],
+      "metrics": {
+        "rawUtf8Bytes": 42025,
+        "canonicalPayloadBytes": 42025,
+        "depth": 9,
+        "nodes": 2425,
+        "decodedStringUtf8Bytes": 82,
+        "arrayEntries": 31,
+        "objectEntries": 22
+      }
+    }
+  ],
+  "probes": {
+    "rawUtf8Bytes": [
+      {
+        "offset": -1,
+        "candidate": 8388607,
+        "result": {
+          "kind": "accepted",
+          "metrics": {
+            "rawUtf8Bytes": 8388607,
+            "canonicalPayloadBytes": 8388607,
+            "depth": 0,
+            "nodes": 1,
+            "decodedStringUtf8Bytes": 8388605,
+            "arrayEntries": 0,
+            "objectEntries": 0
+          }
+        }
+      },
+      {
+        "offset": 0,
+        "candidate": 8388608,
+        "result": {
+          "kind": "accepted",
+          "metrics": {
+            "rawUtf8Bytes": 8388608,
+            "canonicalPayloadBytes": 8388608,
+            "depth": 0,
+            "nodes": 1,
+            "decodedStringUtf8Bytes": 8388606,
+            "arrayEntries": 0,
+            "objectEntries": 0
+          }
+        }
+      },
+      {
+        "offset": 1,
+        "candidate": 8388609,
+        "result": {
+          "kind": "rejected",
+          "code": "MAX_RAW_UTF8_BYTES_EXCEEDED",
+          "limit": 8388608,
+          "observed": 8388609
+        }
+      }
+    ],
+    "depth": [
+      {
+        "offset": -1,
+        "candidate": 63,
+        "result": {
+          "kind": "accepted",
+          "metrics": {
+            "rawUtf8Bytes": 130,
+            "canonicalPayloadBytes": 130,
+            "depth": 63,
+            "nodes": 64,
+            "decodedStringUtf8Bytes": 0,
+            "arrayEntries": 1,
+            "objectEntries": 0
+          }
+        }
+      },
+      {
+        "offset": 0,
+        "candidate": 64,
+        "result": {
+          "kind": "accepted",
+          "metrics": {
+            "rawUtf8Bytes": 132,
+            "canonicalPayloadBytes": 132,
+            "depth": 64,
+            "nodes": 65,
+            "decodedStringUtf8Bytes": 0,
+            "arrayEntries": 1,
+            "objectEntries": 0
+          }
+        }
+      },
+      {
+        "offset": 1,
+        "candidate": 65,
+        "result": {
+          "kind": "rejected",
+          "code": "MAX_DEPTH_EXCEEDED",
+          "limit": 64,
+          "observed": 65
+        }
+      }
+    ],
+    "nodes": [
+      {
+        "offset": -1,
+        "candidate": 262143,
+        "result": {
+          "kind": "accepted",
+          "metrics": {
+            "rawUtf8Bytes": 1310711,
+            "canonicalPayloadBytes": 1310711,
+            "depth": 1,
+            "nodes": 262143,
+            "decodedStringUtf8Bytes": 0,
+            "arrayEntries": 262142,
+            "objectEntries": 0
+          }
+        }
+      },
+      {
+        "offset": 0,
+        "candidate": 262144,
+        "result": {
+          "kind": "accepted",
+          "metrics": {
+            "rawUtf8Bytes": 1310716,
+            "canonicalPayloadBytes": 1310716,
+            "depth": 1,
+            "nodes": 262144,
+            "decodedStringUtf8Bytes": 0,
+            "arrayEntries": 262143,
+            "objectEntries": 0
+          }
+        }
+      },
+      {
+        "offset": 1,
+        "candidate": 262145,
+        "result": {
+          "kind": "rejected",
+          "code": "MAX_NODES_EXCEEDED",
+          "limit": 262144,
+          "observed": 262145
+        }
+      }
+    ],
+    "decodedStringUtf8Bytes": [
+      {
+        "offset": -1,
+        "candidate": 6291455,
+        "result": {
+          "kind": "accepted",
+          "metrics": {
+            "rawUtf8Bytes": 6291457,
+            "canonicalPayloadBytes": 6291457,
+            "depth": 0,
+            "nodes": 1,
+            "decodedStringUtf8Bytes": 6291455,
+            "arrayEntries": 0,
+            "objectEntries": 0
+          }
+        }
+      },
+      {
+        "offset": 0,
+        "candidate": 6291456,
+        "result": {
+          "kind": "accepted",
+          "metrics": {
+            "rawUtf8Bytes": 6291458,
+            "canonicalPayloadBytes": 6291458,
+            "depth": 0,
+            "nodes": 1,
+            "decodedStringUtf8Bytes": 6291456,
+            "arrayEntries": 0,
+            "objectEntries": 0
+          }
+        }
+      },
+      {
+        "offset": 1,
+        "candidate": 6291457,
+        "result": {
+          "kind": "rejected",
+          "code": "MAX_DECODED_STRING_UTF8_BYTES_EXCEEDED",
+          "limit": 6291456,
+          "observed": 6291457
+        }
+      }
+    ],
+    "arrayEntries": [
+      {
+        "offset": -1,
+        "candidate": 65535,
+        "result": {
+          "kind": "accepted",
+          "metrics": {
+            "rawUtf8Bytes": 327676,
+            "canonicalPayloadBytes": 327676,
+            "depth": 1,
+            "nodes": 65536,
+            "decodedStringUtf8Bytes": 0,
+            "arrayEntries": 65535,
+            "objectEntries": 0
+          }
+        }
+      },
+      {
+        "offset": 0,
+        "candidate": 65536,
+        "result": {
+          "kind": "accepted",
+          "metrics": {
+            "rawUtf8Bytes": 327681,
+            "canonicalPayloadBytes": 327681,
+            "depth": 1,
+            "nodes": 65537,
+            "decodedStringUtf8Bytes": 0,
+            "arrayEntries": 65536,
+            "objectEntries": 0
+          }
+        }
+      },
+      {
+        "offset": 1,
+        "candidate": 65537,
+        "result": {
+          "kind": "rejected",
+          "code": "MAX_ARRAY_ENTRIES_EXCEEDED",
+          "limit": 65536,
+          "observed": 65537
+        }
+      }
+    ],
+    "objectEntries": [
+      {
+        "offset": -1,
+        "candidate": 65535,
+        "result": {
+          "kind": "accepted",
+          "metrics": {
+            "rawUtf8Bytes": 906381,
+            "canonicalPayloadBytes": 906381,
+            "depth": 1,
+            "nodes": 65536,
+            "decodedStringUtf8Bytes": 6,
+            "arrayEntries": 0,
+            "objectEntries": 65535
+          }
+        }
+      },
+      {
+        "offset": 0,
+        "candidate": 65536,
+        "result": {
+          "kind": "accepted",
+          "metrics": {
+            "rawUtf8Bytes": 906395,
+            "canonicalPayloadBytes": 906395,
+            "depth": 1,
+            "nodes": 65537,
+            "decodedStringUtf8Bytes": 6,
+            "arrayEntries": 0,
+            "objectEntries": 65536
+          }
+        }
+      },
+      {
+        "offset": 1,
+        "candidate": 65537,
+        "result": {
+          "kind": "rejected",
+          "code": "MAX_OBJECT_ENTRIES_EXCEEDED",
+          "limit": 65536,
+          "observed": 65537
+        }
+      }
+    ]
+  },
+  "hostileProbes": [
+    {
+      "id": "depth-3000",
+      "classification": "hostile-negative-probe",
+      "result": {
+        "kind": "rejected",
+        "code": "MAX_DEPTH_EXCEEDED",
+        "limit": 64,
+        "observed": 65
+      },
+      "expected": "MAX_DEPTH_EXCEEDED",
+      "processException": false
+    },
+    {
+      "id": "rawUtf8Bytes-n-plus-one",
+      "classification": "hostile-negative-probe",
+      "result": {
+        "kind": "rejected",
+        "code": "MAX_RAW_UTF8_BYTES_EXCEEDED",
+        "limit": 8388608,
+        "observed": 8388609
+      },
+      "expected": "typed-rejection",
+      "processException": false
+    },
+    {
+      "id": "depth-n-plus-one",
+      "classification": "hostile-negative-probe",
+      "result": {
+        "kind": "rejected",
+        "code": "MAX_DEPTH_EXCEEDED",
+        "limit": 64,
+        "observed": 65
+      },
+      "expected": "typed-rejection",
+      "processException": false
+    },
+    {
+      "id": "nodes-n-plus-one",
+      "classification": "hostile-negative-probe",
+      "result": {
+        "kind": "rejected",
+        "code": "MAX_NODES_EXCEEDED",
+        "limit": 262144,
+        "observed": 262145
+      },
+      "expected": "typed-rejection",
+      "processException": false
+    },
+    {
+      "id": "decodedStringUtf8Bytes-n-plus-one",
+      "classification": "hostile-negative-probe",
+      "result": {
+        "kind": "rejected",
+        "code": "MAX_DECODED_STRING_UTF8_BYTES_EXCEEDED",
+        "limit": 6291456,
+        "observed": 6291457
+      },
+      "expected": "typed-rejection",
+      "processException": false
+    },
+    {
+      "id": "arrayEntries-n-plus-one",
+      "classification": "hostile-negative-probe",
+      "result": {
+        "kind": "rejected",
+        "code": "MAX_ARRAY_ENTRIES_EXCEEDED",
+        "limit": 65536,
+        "observed": 65537
+      },
+      "expected": "typed-rejection",
+      "processException": false
+    },
+    {
+      "id": "objectEntries-n-plus-one",
+      "classification": "hostile-negative-probe",
+      "result": {
+        "kind": "rejected",
+        "code": "MAX_OBJECT_ENTRIES_EXCEEDED",
+        "limit": 65536,
+        "observed": 65537
+      },
+      "expected": "typed-rejection",
+      "processException": false
+    }
+  ],
+  "privacy": {
+    "rawInputPayloadsCopied": false,
+    "privateRuntimeLogsRead": false,
+    "denylistWinsOverAllowlist": true
+  },
+  "notes": [
+    "Only current-valid-contract and current-valid-fixture rows establish observed maxima.",
+    "Historical controls are immutable compatibility stops; hostile probes are rejection evidence only.",
+    "Observed local tool versions are deliberately excluded from counted executable identity pins."
+  ]
+}
