@@ -18,6 +18,7 @@ import {
   renderRuntimeBudgetCapabilitiesV117,
   validateRuntimeBudgetCapabilitiesV117,
 } from "./runtime-budget-capabilities-v1-17.js"
+import { RUNTIME_ABI_V1_17_BUDGET_PROFILE_SHA256 } from "./runtime-budget-profile-v1-17.js"
 import { RUNTIME_EVIDENCE_TRUSTED_PRODUCERS } from "./runtime-evidence-attestation.js"
 import type { JsonValue } from "./types.js"
 
@@ -134,6 +135,9 @@ describe("runtime budget capabilities v1.17", () => {
       RUNTIME_ABI_V1_17.versions.runtimeAbi,
     )
     expect(contract.budgetProfileSha256).toBe(expectedBudgetProfileSha256())
+    expect(RUNTIME_ABI_V1_17_BUDGET_PROFILE_SHA256).toBe(
+      expectedBudgetProfileSha256(),
+    )
     expect(contract.dimensions.map(({ id }) => id)).toEqual(
       RUNTIME_ABI_V1_17.budgets.requiredEquivalentMeters,
     )
@@ -141,13 +145,11 @@ describe("runtime budget capabilities v1.17", () => {
       RUNTIME_ABI_V1_17.identity.requiredExecutablePins,
     )
     expect(
-      contract.lanes.map(
-        ({ laneId, countedCertification, reason }) => ({
-          laneId,
-          countedCertification,
-          reason,
-        }),
-      ),
+      contract.lanes.map(({ laneId, countedCertification, reason }) => ({
+        laneId,
+        countedCertification,
+        reason,
+      })),
     ).toEqual(
       Object.entries(RUNTIME_ABI_V1_17.lanePosture).map(
         ([laneId, posture]) => ({
@@ -481,6 +483,16 @@ describe("runtime budget capabilities v1.17", () => {
         artifact.lanes[2]!.capabilities[0]!.measurement = leaked
       })
     }
+    const homeLeak = mutableArtifact()
+    homeLeak.lanes[2]!.capabilities[0]!.measurement =
+      "/home/alice/private/runtime"
+    const orderedCodes = validateRuntimeBudgetCapabilitiesV117(homeLeak).map(
+      ({ code }) => code,
+    )
+    expect(orderedCodes.indexOf("PRIVACY_LEAK")).toBeGreaterThanOrEqual(0)
+    expect(orderedCodes.indexOf("PRIVACY_LEAK")).toBeLessThan(
+      orderedCodes.indexOf("ARTIFACT_DRIFT"),
+    )
     for (const key of [
       "privateRuntimeDiagnostics",
       "securityInternals",

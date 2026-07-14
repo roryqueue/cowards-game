@@ -1,8 +1,9 @@
 {
   "schemaVersion": "runtime-abi-v1.17-budget-capabilities-v1",
   "runtimeAbiVersion": "strategy-runtime-abi-v1.17",
-  "contractDigest": "sha256:8e76072a3ad0ecdbc11d032b04f576f48c049e1509366e83c72d76218a9b22a4",
-  "evidenceInputsDigest": "sha256:d2e464846630ff253665d2b8b96edb68664fa26491fc414791495dff96c524af",
+  "budgetProfileSha256": "sha256:13c061efc6954b7734b967177f07300b4c3c0dd18651b55510158b9a3c29c49f",
+  "contractDigest": "sha256:78d3078bd04faeee72a600d3181dc02b489ee3c0cb40a13c39ce9deb66b9bc03",
+  "evidenceInputsDigest": "sha256:42a11d5e66a6b5dc93133aeac641b22dc1ef8fbf8efde98d24e831ed5049621d",
   "dimensions": [
     {
       "id": "wall",
@@ -97,8 +98,8 @@
     "floatingPinsCanCertify": false,
     "missingPinsCanCertify": false,
     "phase259ConformanceRequired": true,
-    "countedEligibleLaneIds": [],
-    "productionTrustedProducers": []
+    "productionTrustedProducers": [],
+    "countedEligibleLaneIds": []
   },
   "lanes": [
     {
@@ -109,6 +110,7 @@
       "certificationStatus": "uncertified",
       "countedEligible": false,
       "certificationReasons": [
+        "equivalent compute, containing-memory, process, and accounting evidence not yet proven",
         "javascript-is-a-host-substrate-not-a-Strategy-entrant-language",
         "substrate-observation-cannot-create-counted-language-authority"
       ],
@@ -250,8 +252,8 @@
         {
           "pin": "budgetProfileSha256",
           "status": "exact-deployment",
-          "bindingSafeId": "sha256:3111a34c275066d5155904539c96c6fdcb7d90eeeaf255fc0c8a090d953fa63a",
-          "evidenceSafeDigest": "sha256:832bb8e9cc38d0a2a38f281588d7a8f6b5056eef04326e838256b1d042175a13"
+          "bindingSafeId": "sha256:13c061efc6954b7734b967177f07300b4c3c0dd18651b55510158b9a3c29c49f",
+          "evidenceSafeDigest": "sha256:a09689134b242afe5b32384b60054d519e5d790d603395713a58ae8a25cac48f"
         },
         {
           "pin": "canonicalJsonProfileId",
@@ -280,6 +282,7 @@
       "certificationStatus": "uncertified",
       "countedEligible": false,
       "certificationReasons": [
+        "equivalent compute, containing-memory, process, and accounting evidence not yet proven",
         "language-neutral-compute-and-containing-memory-meters-are-unavailable",
         "process-capability-cancellation-and-accounting-evidence-are-not-exact-deployment-proof",
         "phase-259-full-conformance-and-production-producer-evidence-are-absent"
@@ -422,8 +425,8 @@
         {
           "pin": "budgetProfileSha256",
           "status": "exact-deployment",
-          "bindingSafeId": "sha256:3111a34c275066d5155904539c96c6fdcb7d90eeeaf255fc0c8a090d953fa63a",
-          "evidenceSafeDigest": "sha256:6af520c09aa96651a6f901213a9d6be96ab5456a13dee1881135beaac0c40343"
+          "bindingSafeId": "sha256:13c061efc6954b7734b967177f07300b4c3c0dd18651b55510158b9a3c29c49f",
+          "evidenceSafeDigest": "sha256:45a6837b18537493d3eb0dec5d6735fa0ef9f70a38f3693e6d8dfc4e13bb17f5"
         },
         {
           "pin": "canonicalJsonProfileId",
@@ -452,6 +455,7 @@
       "certificationStatus": "uncertified",
       "countedEligible": false,
       "certificationReasons": [
+        "equivalent compute and memory meters are unavailable",
         "compute-and-containing-memory-meters-are-unavailable",
         "local-runtime-and-containment-observation-is-not-an-exact-deployment-pin",
         "phase-259-full-conformance-and-production-producer-evidence-are-absent"
@@ -594,8 +598,8 @@
         {
           "pin": "budgetProfileSha256",
           "status": "exact-deployment",
-          "bindingSafeId": "sha256:3111a34c275066d5155904539c96c6fdcb7d90eeeaf255fc0c8a090d953fa63a",
-          "evidenceSafeDigest": "sha256:8325131851a5fdc80dd6e708140de93df8ee7f0e3037a37e6538a186b5579773"
+          "bindingSafeId": "sha256:13c061efc6954b7734b967177f07300b4c3c0dd18651b55510158b9a3c29c49f",
+          "evidenceSafeDigest": "sha256:f817f6e233810787dbf6815dad9cb11fad441a590ffe63a8b586089f9fcf292b"
         },
         {
           "pin": "canonicalJsonProfileId",
@@ -624,6 +628,7 @@
       "certificationStatus": "uncertified",
       "countedEligible": false,
       "certificationReasons": [
+        "WASM meters exist but equivalent complete v1.17 evidence is not yet proven",
         "wasmtime-fuel-and-linear-memory-units-are-not-cross-language-equivalent",
         "stderr-and-cumulative-accounting-evidence-are-unavailable",
         "all-runtime-toolchain-observations-are-local-diagnostic-only",
@@ -767,8 +772,8 @@
         {
           "pin": "budgetProfileSha256",
           "status": "exact-deployment",
-          "bindingSafeId": "sha256:3111a34c275066d5155904539c96c6fdcb7d90eeeaf255fc0c8a090d953fa63a",
-          "evidenceSafeDigest": "sha256:dbcc0534c2fb486b80ff3814fdb22ad477d8e412985b0696a22d8e40e131e96d"
+          "bindingSafeId": "sha256:13c061efc6954b7734b967177f07300b4c3c0dd18651b55510158b9a3c29c49f",
+          "evidenceSafeDigest": "sha256:304ff2de73bc7c2ae968a564d688df6534fb0b8494ca61f7aff115ab47c28d84"
         },
         {
           "pin": "canonicalJsonProfileId",
@@ -797,6 +802,7 @@
       "certificationStatus": "uncertified",
       "countedEligible": false,
       "certificationReasons": [
+        "WASM meters exist but equivalent complete v1.17 evidence is not yet proven",
         "wasmtime-fuel-and-linear-memory-units-are-not-cross-language-equivalent",
         "stderr-and-cumulative-accounting-evidence-are-unavailable",
         "all-runtime-toolchain-observations-are-local-diagnostic-only",
@@ -940,8 +946,8 @@
         {
           "pin": "budgetProfileSha256",
           "status": "exact-deployment",
-          "bindingSafeId": "sha256:3111a34c275066d5155904539c96c6fdcb7d90eeeaf255fc0c8a090d953fa63a",
-          "evidenceSafeDigest": "sha256:221eddfc03e05965dd7be528478de45cbbac1d9c7191e4f7999b226bd0b7692a"
+          "bindingSafeId": "sha256:13c061efc6954b7734b967177f07300b4c3c0dd18651b55510158b9a3c29c49f",
+          "evidenceSafeDigest": "sha256:a85eb9c68a2b2e266a3172a475602136293a394347dc5539c13c83c94b739f85"
         },
         {
           "pin": "canonicalJsonProfileId",

@@ -1,40 +1,24 @@
 import { createHash } from "node:crypto"
 import { encodeCanonicalJson } from "./canonical-json-encode.js"
+import { RUNTIME_ABI_V1_17 } from "./runtime-abi-v1-17.js"
+import { RUNTIME_ABI_V1_17_BUDGET_PROFILE_SHA256 } from "./runtime-budget-profile-v1-17.js"
+import {
+  RUNTIME_EVIDENCE_TRUSTED_PRODUCERS,
+  type RuntimeEvidenceTrustedProducer,
+} from "./runtime-evidence-attestation.js"
 import type { JsonValue } from "./types.js"
 
-export const RUNTIME_BUDGET_CAPABILITY_DIMENSIONS_V1_17 = [
-  "wall",
-  "compute",
-  "memory",
-  "payload",
-  "stdout",
-  "stderr",
-  "process",
-  "capabilities",
-  "cancellation",
-  "accountingEvidence",
-] as const
+export const RUNTIME_BUDGET_CAPABILITY_DIMENSIONS_V1_17 =
+  RUNTIME_ABI_V1_17.budgets.requiredEquivalentMeters
 
-export const RUNTIME_BUDGET_CAPABILITY_PINS_V1_17 = [
-  "runtimeExecutableDigest",
-  "reportedVersion",
-  "targetAbi",
-  "compilerFlags",
-  "adapterBuildDigest",
-  "standardLibraryOrSysrootDigest",
-  "containmentPolicyId",
-  "budgetProfileSha256",
-  "canonicalJsonProfileId",
-  "behaviorSettingsHash",
-] as const
+export const RUNTIME_BUDGET_CAPABILITY_PINS_V1_17 =
+  RUNTIME_ABI_V1_17.identity.requiredExecutablePins
 
-export const RUNTIME_BUDGET_CAPABILITY_LANES_V1_17 = [
-  "javascript",
-  "typescript",
-  "python",
-  "rust",
-  "zig",
-] as const
+export const RUNTIME_BUDGET_CAPABILITY_LANES_V1_17 = Object.freeze(
+  Object.keys(RUNTIME_ABI_V1_17.lanePosture) as Array<
+    keyof typeof RUNTIME_ABI_V1_17.lanePosture
+  >,
+)
 
 export type RuntimeBudgetCapabilityDimensionV117 =
   (typeof RUNTIME_BUDGET_CAPABILITY_DIMENSIONS_V1_17)[number]
@@ -75,98 +59,94 @@ const digestValue = (domain: string, value: unknown): `sha256:${string}` => {
   return `sha256:${createHash("sha256").update(encoded.bytes).digest("hex")}`
 }
 
-const DIMENSION_DEFINITIONS = [
-  { id: "wall", equivalentUnit: "monotonic-milliseconds" },
-  { id: "compute", equivalentUnit: "language-neutral-instruction-fuel" },
-  {
-    id: "memory",
-    equivalentUnit: "peak-guest-plus-containing-process-bytes",
-  },
-  { id: "payload", equivalentUnit: "canonical-payload-bytes" },
-  { id: "stdout", equivalentUnit: "transport-frame-bytes" },
-  { id: "stderr", equivalentUnit: "raw-utf8-bytes" },
-  { id: "process", equivalentUnit: "process-thread-child-counts" },
-  { id: "capabilities", equivalentUnit: "denied-capability-set" },
-  { id: "cancellation", equivalentUnit: "termination-receipt" },
-  {
-    id: "accountingEvidence",
-    equivalentUnit: "signed-monotonic-budget-delta",
-  },
-] as const
+const DIMENSION_EQUIVALENT_UNITS = {
+  wall: "monotonic-milliseconds",
+  compute: "language-neutral-instruction-fuel",
+  memory: "peak-guest-plus-containing-process-bytes",
+  payload: "canonical-payload-bytes",
+  stdout: "transport-frame-bytes",
+  stderr: "raw-utf8-bytes",
+  process: "process-thread-child-counts",
+  capabilities: "denied-capability-set",
+  cancellation: "termination-receipt",
+  accountingEvidence: "signed-monotonic-budget-delta",
+} as const satisfies Record<RuntimeBudgetCapabilityDimensionV117, string>
 
-const PIN_DEFINITIONS = [
-  {
-    id: "runtimeExecutableDigest",
-    exactRequirement: "immutable-runtime-executable-sha256",
-  },
-  {
-    id: "reportedVersion",
-    exactRequirement: "exact-runtime-or-toolchain-version",
-  },
-  { id: "targetAbi", exactRequirement: "exact-target-and-runtime-abi" },
-  { id: "compilerFlags", exactRequirement: "ordered-compiler-flags-digest" },
-  {
-    id: "adapterBuildDigest",
-    exactRequirement: "immutable-adapter-build-sha256",
-  },
-  {
-    id: "standardLibraryOrSysrootDigest",
-    exactRequirement: "immutable-standard-library-or-sysroot-sha256",
-  },
-  {
-    id: "containmentPolicyId",
-    exactRequirement: "exact-contained-deployment-policy-id",
-  },
-  {
-    id: "budgetProfileSha256",
-    exactRequirement: "exact-runtime-budget-profile-sha256",
-  },
-  {
-    id: "canonicalJsonProfileId",
-    exactRequirement: "canonical-json-v1",
-  },
-  {
-    id: "behaviorSettingsHash",
-    exactRequirement: "all-behavior-significant-settings-sha256",
-  },
-] as const
+const DIMENSION_DEFINITIONS = deepFreeze(
+  RUNTIME_BUDGET_CAPABILITY_DIMENSIONS_V1_17.map((id) => ({
+    id,
+    equivalentUnit: DIMENSION_EQUIVALENT_UNITS[id],
+  })),
+)
 
-const LANE_DEFINITIONS = [
-  {
-    laneId: "javascript",
+const PIN_EXACT_REQUIREMENTS = {
+  runtimeExecutableDigest: "immutable-runtime-executable-sha256",
+  reportedVersion: "exact-runtime-or-toolchain-version",
+  targetAbi: "exact-target-and-runtime-abi",
+  compilerFlags: "ordered-compiler-flags-digest",
+  adapterBuildDigest: "immutable-adapter-build-sha256",
+  standardLibraryOrSysrootDigest:
+    "immutable-standard-library-or-sysroot-sha256",
+  containmentPolicyId: "exact-contained-deployment-policy-id",
+  budgetProfileSha256: "exact-runtime-budget-profile-sha256",
+  canonicalJsonProfileId: RUNTIME_ABI_V1_17.versions.canonicalJson,
+  behaviorSettingsHash: "all-behavior-significant-settings-sha256",
+} as const satisfies Record<RuntimeBudgetCapabilityPinV117, string>
+
+const PIN_DEFINITIONS = deepFreeze(
+  RUNTIME_BUDGET_CAPABILITY_PINS_V1_17.map((id) => ({
+    id,
+    exactRequirement: PIN_EXACT_REQUIREMENTS[id],
+  })),
+)
+
+const LANE_SEMANTICS = {
+  javascript: {
     languageId: "javascript",
     laneRole: "substrate-only",
     entrant: false,
   },
-  {
-    laneId: "typescript",
+  typescript: {
     languageId: "typescript",
     laneRole: "entrant-language",
     entrant: true,
   },
-  {
-    laneId: "python",
+  python: {
     languageId: "python",
     laneRole: "entrant-language",
     entrant: true,
   },
-  {
-    laneId: "rust",
+  rust: {
     languageId: "rust",
     laneRole: "entrant-language",
     entrant: true,
   },
-  {
-    laneId: "zig",
+  zig: {
     languageId: "zig",
     laneRole: "entrant-language",
     entrant: true,
   },
-] as const
+} as const satisfies Record<
+  RuntimeBudgetCapabilityLaneV117,
+  {
+    languageId: string
+    laneRole: "substrate-only" | "entrant-language"
+    entrant: boolean
+  }
+>
+
+const LANE_DEFINITIONS = deepFreeze(
+  RUNTIME_BUDGET_CAPABILITY_LANES_V1_17.map((laneId) => ({
+    laneId,
+    ...LANE_SEMANTICS[laneId],
+    ...RUNTIME_ABI_V1_17.lanePosture[laneId],
+  })),
+)
 
 export const RUNTIME_BUDGET_CAPABILITY_CONTRACT_V1_17 = deepFreeze({
   schemaVersion: "runtime-budget-capability-contract-v1.17",
-  runtimeAbiVersion: "strategy-runtime-abi-v1.17",
+  runtimeAbiVersion: RUNTIME_ABI_V1_17.versions.runtimeAbi,
+  budgetProfileSha256: RUNTIME_ABI_V1_17_BUDGET_PROFILE_SHA256,
   dimensions: DIMENSION_DEFINITIONS,
   identityPins: PIN_DEFINITIONS,
   lanes: LANE_DEFINITIONS,
@@ -180,6 +160,7 @@ export const RUNTIME_BUDGET_CAPABILITY_CONTRACT_V1_17 = deepFreeze({
     floatingPinsCanCertify: false,
     missingPinsCanCertify: false,
     phase259ConformanceRequired: true,
+    productionTrustedProducers: RUNTIME_EVIDENCE_TRUSTED_PRODUCERS,
   },
 } as const)
 
@@ -204,7 +185,6 @@ interface EvidenceInputV117 {
   readonly capabilities: readonly CapabilityInputV117[]
   readonly identityPins: readonly PinInputV117[]
   readonly localProbeDisposition: "diagnostic-only"
-  readonly productionTrustedProducers: readonly []
 }
 
 const capability = (
@@ -242,13 +222,17 @@ const unavailableCapability = (
     "unsupported",
   )
 
-const BUDGET_PROFILE_DIGEST = digestValue("budget-profile", {
-  profileId: "runtime-budget-profile-v1.17-candidate",
-})
-
 const commonContractPins = (): readonly PinInputV117[] => [
-  pin("budgetProfileSha256", "exact-deployment", BUDGET_PROFILE_DIGEST),
-  pin("canonicalJsonProfileId", "exact-deployment", "canonical-json-v1"),
+  pin(
+    "budgetProfileSha256",
+    "exact-deployment",
+    RUNTIME_ABI_V1_17_BUDGET_PROFILE_SHA256,
+  ),
+  pin(
+    "canonicalJsonProfileId",
+    "exact-deployment",
+    RUNTIME_ABI_V1_17.versions.canonicalJson,
+  ),
 ]
 
 const pinsFor = (
@@ -555,7 +539,6 @@ const evidenceInput = (
   capabilities,
   identityPins,
   localProbeDisposition: "diagnostic-only",
-  productionTrustedProducers: [],
 })
 
 export const RUNTIME_BUDGET_CAPABILITY_EVIDENCE_INPUTS_V1_17 = deepFreeze([
@@ -668,6 +651,8 @@ export interface RuntimeBudgetCapabilityFindingV117 {
     | "PIN_ROWS_INVALID"
     | "EVIDENCE_INVALID"
     | "FALSE_PROMOTION"
+    | "POLICY_INVALID"
+    | "LANE_SEMANTICS_INVALID"
     | "TRUSTED_PRODUCER_FORBIDDEN"
     | "LOCAL_PROBE_PROMOTED"
     | "PRIVACY_LEAK"
@@ -702,6 +687,7 @@ interface PinArtifactRowV117 extends PinInputV117 {
 export interface RuntimeBudgetCapabilitiesArtifactV117 {
   readonly schemaVersion: "runtime-abi-v1.17-budget-capabilities-v1"
   readonly runtimeAbiVersion: "strategy-runtime-abi-v1.17"
+  readonly budgetProfileSha256: `sha256:${string}`
   readonly contractDigest: `sha256:${string}`
   readonly evidenceInputsDigest: `sha256:${string}`
   readonly dimensions: readonly {
@@ -723,7 +709,7 @@ export interface RuntimeBudgetCapabilitiesArtifactV117 {
     missingPinsCanCertify: false
     phase259ConformanceRequired: true
     countedEligibleLaneIds: readonly []
-    productionTrustedProducers: readonly []
+    productionTrustedProducers: readonly RuntimeEvidenceTrustedProducer[]
   }>
   readonly lanes: readonly Readonly<{
     laneId: RuntimeBudgetCapabilityLaneV117
@@ -739,7 +725,7 @@ export interface RuntimeBudgetCapabilitiesArtifactV117 {
       disposition: "diagnostic-only"
       evidenceSafeDigest: `sha256:${string}`
     }>
-    productionTrustedProducers: readonly []
+    productionTrustedProducers: readonly RuntimeEvidenceTrustedProducer[]
   }>[]
 }
 
@@ -748,7 +734,8 @@ const deriveArtifact = (
   evidenceInputs: readonly EvidenceInputV117[],
 ): RuntimeBudgetCapabilitiesArtifactV117 => ({
   schemaVersion: "runtime-abi-v1.17-budget-capabilities-v1",
-  runtimeAbiVersion: "strategy-runtime-abi-v1.17",
+  runtimeAbiVersion: contract.runtimeAbiVersion,
+  budgetProfileSha256: contract.budgetProfileSha256,
   contractDigest: digestValue("runtime-budget-capability-contract", contract),
   evidenceInputsDigest: digestValue(
     "runtime-budget-capability-evidence-inputs",
@@ -765,7 +752,6 @@ const deriveArtifact = (
   policy: {
     ...contract.policy,
     countedEligibleLaneIds: [],
-    productionTrustedProducers: [],
   },
   lanes: contract.lanes.map((lane) => {
     const input = evidenceInputs.find(({ laneId }) => laneId === lane.laneId)
@@ -778,11 +764,15 @@ const deriveArtifact = (
         },
       ])
     }
+    const { countedCertification, reason, ...publicLane } = lane
     return {
-      ...lane,
-      certificationStatus: "uncertified" as const,
+      ...publicLane,
+      certificationStatus: countedCertification,
       countedEligible: false as const,
-      certificationReasons: [...input.certificationReasons],
+      certificationReasons: [
+        reason,
+        ...input.certificationReasons.filter((entry) => entry !== reason),
+      ],
       capabilities: input.capabilities.map((row) => ({
         ...row,
         evidenceSafeDigest: digestValue("runtime-budget-capability-row", {
@@ -807,7 +797,7 @@ const deriveArtifact = (
           },
         ),
       },
-      productionTrustedProducers: [],
+      productionTrustedProducers: contract.policy.productionTrustedProducers,
     }
   }),
 })
@@ -818,11 +808,114 @@ const finding = (
   message: string,
 ): RuntimeBudgetCapabilityFindingV117 => ({ code, path, message })
 
-const jsonIdentity = (value: unknown): string | null => {
+const strictCanonicalIssue = (
+  value: unknown,
+  path = "$",
+  active = new Set<object>(),
+): string | undefined => {
+  if (
+    value === null ||
+    typeof value === "string" ||
+    typeof value === "boolean"
+  ) {
+    return undefined
+  }
+  if (typeof value === "number") {
+    return Number.isFinite(value) &&
+      (!Number.isInteger(value) || Number.isSafeInteger(value))
+      ? undefined
+      : `${path} contains a non-canonical number`
+  }
+  if (typeof value !== "object") {
+    return `${path} contains a non-JSON value`
+  }
+  if (active.has(value)) return `${path} contains a cycle`
+  active.add(value)
+
+  if (Array.isArray(value)) {
+    const ownKeys = Reflect.ownKeys(value)
+    const expectedKeys = [
+      ...Array.from({ length: value.length }, (_, index) => String(index)),
+      "length",
+    ]
+    if (
+      ownKeys.length !== expectedKeys.length ||
+      ownKeys.some((key, index) => key !== expectedKeys[index])
+    ) {
+      active.delete(value)
+      return `${path} contains sparse, symbolic, or hidden array fields`
+    }
+    for (let index = 0; index < value.length; index += 1) {
+      const descriptor = Object.getOwnPropertyDescriptor(value, String(index))
+      if (
+        descriptor === undefined ||
+        !("value" in descriptor) ||
+        !descriptor.enumerable
+      ) {
+        active.delete(value)
+        return `${path}[${index}] is not a public data field`
+      }
+      const issue = strictCanonicalIssue(
+        descriptor.value,
+        `${path}[${index}]`,
+        active,
+      )
+      if (issue !== undefined) {
+        active.delete(value)
+        return issue
+      }
+    }
+    active.delete(value)
+    return undefined
+  }
+
+  const prototype = Object.getPrototypeOf(value)
+  if (prototype !== null && prototype !== Object.prototype) {
+    active.delete(value)
+    return `${path} has a non-plain prototype`
+  }
+  for (const key of Reflect.ownKeys(value)) {
+    if (typeof key !== "string") {
+      active.delete(value)
+      return `${path} contains a symbolic field`
+    }
+    const descriptor = Object.getOwnPropertyDescriptor(value, key)
+    if (
+      descriptor === undefined ||
+      !("value" in descriptor) ||
+      !descriptor.enumerable
+    ) {
+      active.delete(value)
+      return `${path}.${key} is an accessor or hidden field`
+    }
+    const issue = strictCanonicalIssue(
+      descriptor.value,
+      `${path}.${key}`,
+      active,
+    )
+    if (issue !== undefined) {
+      active.delete(value)
+      return issue
+    }
+  }
+  active.delete(value)
+  return undefined
+}
+
+const strictCanonicalEqual = (left: unknown, right: unknown): boolean => {
+  if (
+    strictCanonicalIssue(left) !== undefined ||
+    strictCanonicalIssue(right) !== undefined
+  ) {
+    return false
+  }
   try {
-    return JSON.stringify(value)
+    return (
+      digestValue("runtime-budget-capability-strict-equality", left) ===
+      digestValue("runtime-budget-capability-strict-equality", right)
+    )
   } catch {
-    return null
+    return false
   }
 }
 
@@ -836,27 +929,34 @@ export const buildRuntimeBudgetCapabilitiesV117 = (
   const evidenceInputs =
     options.evidenceInputs ?? RUNTIME_BUDGET_CAPABILITY_EVIDENCE_INPUTS_V1_17
   const findings: RuntimeBudgetCapabilityFindingV117[] = []
+  const contractIssue = strictCanonicalIssue(contract)
   if (
-    jsonIdentity(contract) !==
-    jsonIdentity(RUNTIME_BUDGET_CAPABILITY_CONTRACT_V1_17)
+    contractIssue !== undefined ||
+    !strictCanonicalEqual(contract, RUNTIME_BUDGET_CAPABILITY_CONTRACT_V1_17)
   ) {
     findings.push(
       finding(
         "INPUT_DRIFT",
         "contract",
-        "contract input must equal the frozen capability contract exactly",
+        contractIssue ??
+          "contract input must equal the frozen capability contract exactly",
       ),
     )
   }
+  const evidenceIssue = strictCanonicalIssue(evidenceInputs)
   if (
-    jsonIdentity(evidenceInputs) !==
-    jsonIdentity(RUNTIME_BUDGET_CAPABILITY_EVIDENCE_INPUTS_V1_17)
+    evidenceIssue !== undefined ||
+    !strictCanonicalEqual(
+      evidenceInputs,
+      RUNTIME_BUDGET_CAPABILITY_EVIDENCE_INPUTS_V1_17,
+    )
   ) {
     findings.push(
       finding(
         "INPUT_DRIFT",
         "evidenceInputs",
-        "evidence inputs must equal the frozen diagnostic producers exactly",
+        evidenceIssue ??
+          "evidence inputs must equal the frozen diagnostic producers exactly",
       ),
     )
   }
@@ -907,10 +1007,58 @@ const orderedEqual = (
 const EVIDENCE_DIGEST_PATTERN = /^sha256:[0-9a-f]{64}$/u
 const EXACT_BINDING_FORBIDDEN =
   /(^|[:/._-])(floating|latest|path|local|current|default)([:/._-]|$)/iu
-const PRIVACY_PATTERNS = [
-  /\/Users\//u,
-  /[A-Za-z]:\\Users\\/u,
-  /token=/iu,
+const PRIVATE_FIELD_PATTERN =
+  /(?:private|security|internal|secret|credential|token|(?:raw|original|normalized)?sourcebytes|artifactbytes|(?:strategy|soldier)?memory|objectivepayload|diagnostic|host(?:data|environment|path)|toolchainpath|signingmaterial)/iu
+const PUBLIC_SAFE_FIELD_NAMES = new Set([
+  "schemaVersion",
+  "runtimeAbiVersion",
+  "budgetProfileSha256",
+  "contractDigest",
+  "evidenceInputsDigest",
+  "dimensions",
+  "identityPins",
+  "policy",
+  "lanes",
+  "id",
+  "equivalentUnit",
+  "exactRequirement",
+  "certificationStatus",
+  "allDimensionsRequiredInOrder",
+  "allPinsRequiredInOrder",
+  "allPinsMustBeExactDeployment",
+  "productionTrustedProducerRequired",
+  "localDiagnosticsCanCertify",
+  "floatingPinsCanCertify",
+  "missingPinsCanCertify",
+  "phase259ConformanceRequired",
+  "countedEligibleLaneIds",
+  "productionTrustedProducers",
+  "laneId",
+  "languageId",
+  "laneRole",
+  "entrant",
+  "countedEligible",
+  "certificationReasons",
+  "capabilities",
+  "localProbe",
+  "dimension",
+  "unit",
+  "scope",
+  "measurement",
+  "enforcement",
+  "status",
+  "evidenceSafeDigest",
+  "pin",
+  "bindingSafeId",
+  "disposition",
+])
+const PRIVATE_VALUE_PATTERNS = [
+  /(?:^|[\s"'=])\/(?!\/)[^\s"']+/u,
+  /(?:^|[\s"'=])~\/[^\s"']*/u,
+  /(?:^|[\s"'=])[A-Za-z]:[\\/][^\s"']*/u,
+  /(?:^|[\s"'=])\\\\[^\\\s]+\\[^\s"']*/u,
+  /%(?:TEMP|TMP|HOME|USERPROFILE)%/iu,
+  /(?:token|secret|credential|password)=/iu,
   /StrategyMemory/u,
   /SoldierMemory/u,
   /objectivePayload/u,
@@ -923,7 +1071,7 @@ const privacyFindings = (
   path = "$",
 ): RuntimeBudgetCapabilityFindingV117[] => {
   if (typeof value === "string") {
-    return PRIVACY_PATTERNS.some((pattern) => pattern.test(value))
+    return PRIVATE_VALUE_PATTERNS.some((pattern) => pattern.test(value))
       ? [finding("PRIVACY_LEAK", path, "private evidence is not public-safe")]
       : []
   }
@@ -933,9 +1081,32 @@ const privacyFindings = (
     )
   }
   if (isRecord(value)) {
-    return Object.entries(value).flatMap(([key, entry]) =>
-      privacyFindings(entry, `${path}.${key}`),
-    )
+    return Reflect.ownKeys(value).flatMap((key) => {
+      if (typeof key !== "string") {
+        return [
+          finding(
+            "PRIVACY_LEAK",
+            path,
+            "symbolic fields are outside the public-safe schema",
+          ),
+        ]
+      }
+      const fieldPath = `${path}.${key}`
+      const keyFindings =
+        !PUBLIC_SAFE_FIELD_NAMES.has(key) && PRIVATE_FIELD_PATTERN.test(key)
+          ? [
+              finding(
+                "PRIVACY_LEAK",
+                fieldPath,
+                "private or security field is outside the public-safe schema",
+              ),
+            ]
+          : []
+      const descriptor = Object.getOwnPropertyDescriptor(value, key)
+      return descriptor !== undefined && "value" in descriptor
+        ? [...keyFindings, ...privacyFindings(descriptor.value, fieldPath)]
+        : keyFindings
+    })
   }
   return []
 }
@@ -947,10 +1118,19 @@ export const validateRuntimeBudgetCapabilitiesV117 = (
     return [finding("INVALID_ROOT", "$", "artifact must be a strict object")]
   }
   const findings: RuntimeBudgetCapabilityFindingV117[] = []
+  const expected = deriveArtifact(
+    RUNTIME_BUDGET_CAPABILITY_CONTRACT_V1_17,
+    RUNTIME_BUDGET_CAPABILITY_EVIDENCE_INPUTS_V1_17,
+  )
+  const strictIssue = strictCanonicalIssue(value)
+  if (strictIssue !== undefined) {
+    findings.push(finding("STRICT_FIELDS_INVALID", "$", strictIssue))
+  }
   if (
     !exactKeys(value, [
       "schemaVersion",
       "runtimeAbiVersion",
+      "budgetProfileSha256",
       "contractDigest",
       "evidenceInputsDigest",
       "dimensions",
@@ -968,6 +1148,21 @@ export const validateRuntimeBudgetCapabilitiesV117 = (
     )
   }
   if (
+    value.schemaVersion !== expected.schemaVersion ||
+    value.runtimeAbiVersion !== expected.runtimeAbiVersion ||
+    value.budgetProfileSha256 !== expected.budgetProfileSha256 ||
+    value.contractDigest !== expected.contractDigest ||
+    value.evidenceInputsDigest !== expected.evidenceInputsDigest
+  ) {
+    findings.push(
+      finding(
+        "EVIDENCE_INVALID",
+        "$",
+        "schema, ABI, budget, contract and input digests must match canonical authority",
+      ),
+    )
+  }
+  if (
     !orderedEqual(
       orderedIds(value.dimensions, "id"),
       RUNTIME_BUDGET_CAPABILITY_DIMENSIONS_V1_17,
@@ -980,6 +1175,33 @@ export const validateRuntimeBudgetCapabilitiesV117 = (
         "dimensions must appear once in frozen order",
       ),
     )
+  }
+  if (Array.isArray(value.dimensions)) {
+    for (const [index, row] of value.dimensions.entries()) {
+      const path = `$.dimensions[${index}]`
+      const expectedRow = expected.dimensions[index]
+      if (!isRecord(row) || !exactKeys(row, ["id", "equivalentUnit"])) {
+        findings.push(
+          finding(
+            "STRICT_FIELDS_INVALID",
+            path,
+            "dimension definition fields must be closed and complete",
+          ),
+        )
+      } else if (
+        expectedRow === undefined ||
+        row.id !== expectedRow.id ||
+        row.equivalentUnit !== expectedRow.equivalentUnit
+      ) {
+        findings.push(
+          finding(
+            "ORDERED_DIMENSIONS_INVALID",
+            path,
+            "dimension id and equivalent unit must match ABI-derived authority",
+          ),
+        )
+      }
+    }
   }
   if (
     !orderedEqual(
@@ -994,6 +1216,33 @@ export const validateRuntimeBudgetCapabilitiesV117 = (
         "identity pins must appear once in frozen order",
       ),
     )
+  }
+  if (Array.isArray(value.identityPins)) {
+    for (const [index, row] of value.identityPins.entries()) {
+      const path = `$.identityPins[${index}]`
+      const expectedRow = expected.identityPins[index]
+      if (!isRecord(row) || !exactKeys(row, ["id", "exactRequirement"])) {
+        findings.push(
+          finding(
+            "STRICT_FIELDS_INVALID",
+            path,
+            "pin definition fields must be closed and complete",
+          ),
+        )
+      } else if (
+        expectedRow === undefined ||
+        row.id !== expectedRow.id ||
+        row.exactRequirement !== expectedRow.exactRequirement
+      ) {
+        findings.push(
+          finding(
+            "ORDERED_PINS_INVALID",
+            path,
+            "pin id and exact requirement must match ABI-derived authority",
+          ),
+        )
+      }
+    }
   }
   if (
     !orderedEqual(
@@ -1048,9 +1297,33 @@ export const validateRuntimeBudgetCapabilitiesV117 = (
         ),
       )
     }
+    const literalPolicy = RUNTIME_BUDGET_CAPABILITY_CONTRACT_V1_17.policy
+    for (const key of [
+      "allDimensionsRequiredInOrder",
+      "allPinsRequiredInOrder",
+      "allPinsMustBeExactDeployment",
+      "productionTrustedProducerRequired",
+      "localDiagnosticsCanCertify",
+      "floatingPinsCanCertify",
+      "missingPinsCanCertify",
+      "phase259ConformanceRequired",
+    ] as const) {
+      if (policy[key] !== literalPolicy[key]) {
+        findings.push(
+          finding(
+            "POLICY_INVALID",
+            `$.policy.${key}`,
+            "policy literal must match the frozen fail-closed contract",
+          ),
+        )
+      }
+    }
     if (
       !Array.isArray(policy.productionTrustedProducers) ||
-      policy.productionTrustedProducers.length !== 0
+      !strictCanonicalEqual(
+        policy.productionTrustedProducers,
+        RUNTIME_EVIDENCE_TRUSTED_PRODUCERS,
+      )
     ) {
       findings.push(
         finding(
@@ -1065,6 +1338,7 @@ export const validateRuntimeBudgetCapabilitiesV117 = (
   if (Array.isArray(value.lanes)) {
     for (const [laneIndex, lane] of value.lanes.entries()) {
       const lanePath = `$.lanes[${laneIndex}]`
+      const expectedLane = expected.lanes[laneIndex]
       if (!isRecord(lane)) {
         findings.push(
           finding("STRICT_FIELDS_INVALID", lanePath, "lane must be an object"),
@@ -1095,7 +1369,22 @@ export const validateRuntimeBudgetCapabilitiesV117 = (
         )
       }
       if (
-        lane.certificationStatus !== "uncertified" ||
+        expectedLane === undefined ||
+        lane.laneId !== expectedLane.laneId ||
+        lane.languageId !== expectedLane.languageId ||
+        lane.laneRole !== expectedLane.laneRole ||
+        lane.entrant !== expectedLane.entrant
+      ) {
+        findings.push(
+          finding(
+            "LANE_SEMANTICS_INVALID",
+            lanePath,
+            "lane identity, role and entrant status must match ABI-derived semantics",
+          ),
+        )
+      }
+      if (
+        lane.certificationStatus !== expectedLane?.certificationStatus ||
         lane.countedEligible !== false
       ) {
         findings.push(
@@ -1111,6 +1400,10 @@ export const validateRuntimeBudgetCapabilitiesV117 = (
         lane.certificationReasons.length === 0 ||
         lane.certificationReasons.some(
           (reason) => typeof reason !== "string" || reason.length === 0,
+        ) ||
+        !strictCanonicalEqual(
+          lane.certificationReasons,
+          expectedLane?.certificationReasons,
         )
       ) {
         findings.push(
@@ -1123,7 +1416,10 @@ export const validateRuntimeBudgetCapabilitiesV117 = (
       }
       if (
         !Array.isArray(lane.productionTrustedProducers) ||
-        lane.productionTrustedProducers.length !== 0
+        !strictCanonicalEqual(
+          lane.productionTrustedProducers,
+          RUNTIME_EVIDENCE_TRUSTED_PRODUCERS,
+        )
       ) {
         findings.push(
           finding(
@@ -1137,9 +1433,11 @@ export const validateRuntimeBudgetCapabilitiesV117 = (
       if (
         !isRecord(localProbe) ||
         !exactKeys(localProbe, ["disposition", "evidenceSafeDigest"]) ||
-        localProbe.disposition !== "diagnostic-only" ||
+        localProbe.disposition !== expectedLane?.localProbe.disposition ||
         typeof localProbe.evidenceSafeDigest !== "string" ||
-        !EVIDENCE_DIGEST_PATTERN.test(localProbe.evidenceSafeDigest)
+        !EVIDENCE_DIGEST_PATTERN.test(localProbe.evidenceSafeDigest) ||
+        localProbe.evidenceSafeDigest !==
+          expectedLane?.localProbe.evidenceSafeDigest
       ) {
         findings.push(
           finding(
@@ -1167,6 +1465,7 @@ export const validateRuntimeBudgetCapabilitiesV117 = (
       if (Array.isArray(lane.capabilities)) {
         for (const [rowIndex, row] of lane.capabilities.entries()) {
           const rowPath = `${lanePath}.capabilities[${rowIndex}]`
+          const expectedRow = expectedLane?.capabilities[rowIndex]
           if (
             !isRecord(row) ||
             !exactKeys(row, [
@@ -1234,6 +1533,18 @@ export const validateRuntimeBudgetCapabilitiesV117 = (
               ),
             )
           }
+          if (
+            expectedRow === undefined ||
+            !strictCanonicalEqual(row, expectedRow)
+          ) {
+            findings.push(
+              finding(
+                "EVIDENCE_INVALID",
+                rowPath,
+                "capability evidence must match its contract-derived public-safe row and digest",
+              ),
+            )
+          }
         }
       }
 
@@ -1254,6 +1565,7 @@ export const validateRuntimeBudgetCapabilitiesV117 = (
       if (Array.isArray(lane.identityPins)) {
         for (const [pinIndex, row] of lane.identityPins.entries()) {
           const rowPath = `${lanePath}.identityPins[${pinIndex}]`
+          const expectedRow = expectedLane?.identityPins[pinIndex]
           if (
             !isRecord(row) ||
             !exactKeys(row, [
@@ -1305,6 +1617,22 @@ export const validateRuntimeBudgetCapabilitiesV117 = (
             )
           }
           if (
+            (row.status === "floating" &&
+              (typeof row.bindingSafeId !== "string" ||
+                !row.bindingSafeId.startsWith("floating:"))) ||
+            (row.status === "local-diagnostic" &&
+              (typeof row.bindingSafeId !== "string" ||
+                !row.bindingSafeId.startsWith("local-diagnostic:")))
+          ) {
+            findings.push(
+              finding(
+                "PIN_ROWS_INVALID",
+                rowPath,
+                "floating and local bindings must use their registered public-safe prefix",
+              ),
+            )
+          }
+          if (
             row.status === "exact-deployment" &&
             typeof row.bindingSafeId === "string" &&
             EXACT_BINDING_FORBIDDEN.test(row.bindingSafeId)
@@ -1317,13 +1645,25 @@ export const validateRuntimeBudgetCapabilitiesV117 = (
               ),
             )
           }
+          if (
+            expectedRow === undefined ||
+            !strictCanonicalEqual(row, expectedRow)
+          ) {
+            findings.push(
+              finding(
+                "PIN_ROWS_INVALID",
+                rowPath,
+                "pin status, binding value and evidence digest must match canonical authority",
+              ),
+            )
+          }
         }
       }
     }
   }
 
   findings.push(...privacyFindings(value))
-  if (jsonIdentity(value) !== jsonIdentity(RUNTIME_BUDGET_CAPABILITIES_V1_17)) {
+  if (!strictCanonicalEqual(value, expected)) {
     findings.push(
       finding(
         "ARTIFACT_DRIFT",
