@@ -49,3 +49,16 @@ var runtimeServiceContractFailureCodes = map[string]struct{}{
 	"EVIDENCE_UNVERIFIABLE": {},
 	"EVIDENCE_REGISTRY_DRIFT": {},
 }
+
+var runtimeInvocationV117SystemFailureRetryability = map[string]bool{
+	"OUTER_FRAME_MISSING": true,
+	"OUTER_FRAME_TRUNCATED": true,
+	"OUTER_FRAME_UNAUTHENTICATED": false,
+	"OUTER_FRAME_WRONG_BINDING": false,
+	"OUTER_FRAME_UNDECODABLE": false,
+	"ADAPTER_CRASH": true,
+	"RUNTIME_CRASH": true,
+	"HOST_CRASH": true,
+	"TRANSPORT_CRASH": true,
+	"AMBIGUOUS_ATTRIBUTION": false,
+}

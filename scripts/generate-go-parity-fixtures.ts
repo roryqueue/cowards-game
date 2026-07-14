@@ -38,6 +38,8 @@ import {
   serviceHealthExample,
   SERVICE_API_VERSION,
   RUNTIME_EXECUTION_SERVICE_SYSTEM_FAILURE_CODES,
+  RUNTIME_INVOCATION_V1_17_SYSTEM_FAILURE_CODES,
+  RUNTIME_INVOCATION_V1_17_SYSTEM_FAILURE_RETRYABILITY,
   RUNTIME_INVOCATION_V1_17_TEST_KEY_ID,
   RuntimeExecutionServiceRequestSchema,
   RuntimeExecutionServiceResponseSchema,
@@ -340,6 +342,13 @@ const renderRuntimeInvocationContractSource = (
     "var runtimeServiceContractFailureCodes = map[string]struct{}{",
     ...RUNTIME_EXECUTION_SERVICE_SYSTEM_FAILURE_CODES.map(
       (code) => `\t${JSON.stringify(code)}: {},`,
+    ),
+    "}",
+    "",
+    "var runtimeInvocationV117SystemFailureRetryability = map[string]bool{",
+    ...RUNTIME_INVOCATION_V1_17_SYSTEM_FAILURE_CODES.map(
+      (code) =>
+        `\t${JSON.stringify(code)}: ${RUNTIME_INVOCATION_V1_17_SYSTEM_FAILURE_RETRYABILITY[code]},`,
     ),
     "}",
   ].join("\n")}\n`

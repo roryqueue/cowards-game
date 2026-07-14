@@ -193,7 +193,7 @@ func runtimeInvocationV117SHA256Value(bytes []byte) string {
 }
 
 func runtimeInvocationV117FailureFor(code string) *runtimeInvocationV117Failure {
-	retryable := code == "OUTER_FRAME_MISSING" || code == "OUTER_FRAME_TRUNCATED" || code == "ADAPTER_CRASH" || code == "RUNTIME_CRASH" || code == "HOST_CRASH" || code == "TRANSPORT_CRASH"
+	retryable := runtimeInvocationV117SystemFailureRetryability[code]
 	return &runtimeInvocationV117Failure{Code: code, PublicMessage: "Runtime system failure.", Retryable: retryable}
 }
 
@@ -465,19 +465,6 @@ var runtimeInvocationV117ViolationMessages = map[string]string{
 	"OVERSIZED_OUTPUT":     "Strategy exceeded its output budget.",
 }
 
-var runtimeInvocationV117SystemFailureCodes = map[string]bool{
-	"OUTER_FRAME_MISSING":         true,
-	"OUTER_FRAME_TRUNCATED":       true,
-	"OUTER_FRAME_UNAUTHENTICATED": false,
-	"OUTER_FRAME_WRONG_BINDING":   false,
-	"OUTER_FRAME_UNDECODABLE":     false,
-	"ADAPTER_CRASH":               true,
-	"RUNTIME_CRASH":               true,
-	"HOST_CRASH":                  true,
-	"TRANSPORT_CRASH":             true,
-	"AMBIGUOUS_ATTRIBUTION":       false,
-}
-
 func runtimeInvocationV117CanonicalWithin(value any, maximumBytes int) bool {
 	canonical, err := runtimeInvocationV117CanonicalValue(value)
 	return err == nil && len(canonical) <= maximumBytes
@@ -583,7 +570,7 @@ func runtimeInvocationV117OutcomeValid(value any, method string) bool {
 		code, codeOK := failure["code"].(string)
 		message, messageOK := failure["publicMessage"].(string)
 		retryable, retryableOK := failure["retryable"].(bool)
-		expectedRetryable, known := runtimeInvocationV117SystemFailureCodes[code]
+		expectedRetryable, known := runtimeInvocationV117SystemFailureRetryability[code]
 		return codeOK && messageOK && retryableOK && known && message == "Runtime system failure." && retryable == expectedRetryable
 	default:
 		return false
