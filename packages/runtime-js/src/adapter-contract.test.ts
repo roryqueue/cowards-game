@@ -1,7 +1,7 @@
 import { spawnSync, type SpawnSyncReturns } from "node:child_process"
 import { Buffer } from "node:buffer"
 import { createHash } from "node:crypto"
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 import type { RuntimeResult } from "@cowards/engine"
 import {
   RUNTIME_ABI_V1_17,
@@ -38,6 +38,7 @@ import { SubprocessSystemFailure } from "./subprocess-ipc.js"
 import { createContainerSubprocessStrategyExecutionAdapter } from "./container-subprocess-adapter.js"
 import { CANDIDATE_BOUNDED_CANONICAL_SOURCE } from "./candidate-bounded-canonical-source.js"
 import { registerCandidateEvidenceFixture } from "./candidate-evidence-fixture.js"
+import { CANDIDATE_GO_CONTROL_PREFIX } from "./candidate-subprocess-observation.js"
 
 const validStrategySource = `
 export default {
@@ -1323,6 +1324,143 @@ export default {
           request.budget.methodLimit.counters.stdoutBytes.maximum + 1,
         )
         expect(observedOptions?.encoding, label).toBeUndefined()
+      }
+    })
+
+    it.each(["I", "F"] as const)(
+      "rejects a late no-GO %s frame before either subprocess adapter can assign a player violation",
+      (tag) => {
+        const request = candidateRequest()
+        for (const [label, createAdapter] of [
+          ["subprocess", createSubprocessStrategyExecutionAdapter],
+          ["container", createContainerSubprocessStrategyExecutionAdapter],
+        ] as const) {
+          const clock = vi
+            .spyOn(process.hrtime, "bigint")
+            .mockReturnValueOnce(1_000_000_000n)
+            .mockReturnValueOnce(6_050_000_000n)
+          let result: ReturnType<typeof executeCandidateWith>
+          try {
+            result = executeCandidateWith(
+              createAdapter({
+                spawnSync: () => candidateSpawnResult(tag),
+              }),
+              request,
+              transpiledSource(),
+              completeCandidateEvidence(request, {
+                attribution: "host",
+                payloadBytes: 0,
+                stdoutBytes: 1,
+                stderrBytes: 0,
+              }),
+            )
+          } finally {
+            clock.mockRestore()
+          }
+
+          expect(result, label).toMatchObject({
+            kind: "success",
+            value: {
+              accounting: { disposition: "no_commit" },
+              outcome: {
+                kind: "system_failure",
+                failure: { code: "HOST_CRASH" },
+              },
+            },
+          })
+        }
+      },
+    )
+
+    it("keeps exact and one-over stdout/stderr boundaries independent in both subprocess adapters", () => {
+      const request = candidateRequest()
+      const stdoutLimit =
+        request.budget.methodLimit.counters.stdoutBytes.maximum
+      const stderrLimit =
+        request.budget.methodLimit.counters.stderrBytes.maximum
+
+      for (const [label, createAdapter] of [
+        ["subprocess", createSubprocessStrategyExecutionAdapter],
+        ["container", createContainerSubprocessStrategyExecutionAdapter],
+      ] as const) {
+        for (const oneOver of [false, true]) {
+          const stdout = `S${" ".repeat(stdoutLimit - (oneOver ? 0 : 1))}`
+          const adapter = createAdapter({
+            spawnSync: () =>
+              candidateSpawnResult(stdout, {
+                stderr: `${CANDIDATE_GO_CONTROL_PREFIX}${process.hrtime.bigint()}\n`,
+              }),
+          })
+          const result = executeCandidate(adapter, request)
+          expect(result, `${label} stdout ${oneOver ? "one-over" : "exact"}`)
+            .toMatchObject({
+              kind: "success",
+              value: {
+                accounting: { disposition: "commit" },
+                outcome: {
+                  kind: "player_violation",
+                  violation: {
+                    code: oneOver ? "OVERSIZED_OUTPUT" : "INVALID_OUTPUT",
+                  },
+                },
+              },
+            })
+          if (result.kind === "success") {
+            expect(result.value.accounting.receipt.counters.stdoutBytes).toMatchObject({
+              status: "measured",
+              delta: stdoutLimit + (oneOver ? 1 : 0),
+            })
+            expect(result.value.accounting.receipt.counters.stderrBytes).toMatchObject({
+              status: "measured",
+              delta: 0,
+            })
+          }
+        }
+
+        for (const oneOver of [false, true]) {
+          const goLine = `${CANDIDATE_GO_CONTROL_PREFIX}${process.hrtime.bigint()}\n`
+          const stderr = Buffer.concat([
+            Buffer.from(goLine),
+            Buffer.alloc(
+              stderrLimit + (oneOver ? 1 : 0) - Buffer.byteLength(goLine),
+              "e",
+            ),
+          ])
+          const adapter = createAdapter({
+            spawnSync: () => candidateSpawnResult("I", { stderr }),
+          })
+          const result = executeCandidate(adapter, request)
+          expect(result, `${label} stderr ${oneOver ? "one-over" : "exact"}`)
+            .toMatchObject(
+              oneOver
+                ? {
+                    kind: "success",
+                    value: {
+                      accounting: { disposition: "no_commit" },
+                      outcome: {
+                        kind: "system_failure",
+                        failure: { code: "TRANSPORT_CRASH" },
+                      },
+                    },
+                  }
+                : {
+                    kind: "success",
+                    value: {
+                      accounting: { disposition: "commit" },
+                      outcome: {
+                        kind: "player_violation",
+                        violation: { code: "INVALID_OUTPUT" },
+                      },
+                    },
+                  },
+            )
+          if (!oneOver && result.kind === "success") {
+            expect(result.value.accounting.receipt.counters.stderrBytes).toMatchObject({
+              status: "measured",
+              delta: stderrLimit - Buffer.byteLength(goLine),
+            })
+          }
+        }
       }
     })
 

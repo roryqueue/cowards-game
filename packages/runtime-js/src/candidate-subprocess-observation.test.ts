@@ -45,14 +45,28 @@ describe("candidate subprocess raw observation", () => {
       bytes: Uint8Array.of("D".charCodeAt(0)),
       payloadBytes: rawFrame.byteLength - 1,
       stdoutBytes: rawFrame.byteLength,
-      stderrBytes: Buffer.byteLength(
-        `${CANDIDATE_GO_CONTROL_PREFIX}${goNanoseconds}\n`,
-      ),
+      stderrBytes: 0,
       cancellation: {
         terminationRequired: true,
         receiptPresent: true,
         graceMilliseconds: 25,
       },
+    })
+  })
+
+  it("excludes only exact host control records from Strategy stderr accounting", () => {
+    const goNanoseconds = receivedAtNanoseconds - 10_000_000n
+    const unknown = "guest diagnostic\n"
+    const result = observe({
+      stdout: Buffer.from("I"),
+      stderr: Buffer.from(
+        `${CANDIDATE_GO_CONTROL_PREFIX}${goNanoseconds}\n${unknown}`,
+      ),
+    })
+
+    expect(result).toMatchObject({
+      kind: "raw_frame",
+      stderrBytes: Buffer.byteLength(unknown),
     })
   })
 
