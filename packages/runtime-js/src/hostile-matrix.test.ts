@@ -4,12 +4,15 @@ import { describe, expect, it } from "vitest"
 import {
   RUNTIME_INVOCATION_V1_17_TEST_KEY_ID,
   createAuthenticatedRuntimeInvocationRequestV117,
+  createRuntimeAbiV117ExecutionLedger,
+  createRuntimeInvocationBudgetV117,
   serializeRuntimeInvocationRequestV117,
   verifyRuntimeInvocationRequestV117,
   verifyRuntimeInvocationResponseV117,
   type AuthenticatedRuntimeInvocationRequestV117,
   type AwarenessCell,
   type RuntimeViolationType,
+  type RuntimeInvocationExecutionReceiptEvidenceV117,
   type RuntimeInvocationSigningIdentityV117,
   type SoldierBrainInput,
   type SoldierSnapshot,
@@ -364,26 +367,8 @@ const expectedCandidateRequest = createAuthenticatedRuntimeInvocationRequestV117
       normalizedSourceSha256: candidateHash(validSource),
       artifactSha256: candidateHash(validSource),
     },
-    budget: {
-      profileId: "runtime-budget-profile-v1.17-candidate",
-      wallMilliseconds: 50,
-      computeFuel: 10_000_000,
-      memoryBytes: 67_108_864,
-      outputBytes: 262_144,
-      processLimit: 1,
-      matchCumulative: {
-        invocationCountMaximum: 260,
-        wallMilliseconds: 13_000,
-        computeFuel: 2_600_000_000,
-        payloadBytes: 68_157_440,
-        stdoutBytes: 68_157_440,
-        stderrBytes: 17_039_360,
-        memoryBytes: 67_108_864,
-        accounting:
-          "signed-monotonic-per-invocation-deltas-plus-cumulative-total",
-        overflow: "stop-before-next-invocation-and-classify-by-proven-cause",
-      },
-    },
+    budget: createRuntimeInvocationBudgetV117("selectActivations"),
+    accounting: { prestate: createRuntimeAbiV117ExecutionLedger() },
     input: { value: { cycleIndex: 0, phase: "ROUND" } },
     retry: {
       retryId: "retry:runtime-js:hostile:v1.17",
@@ -409,12 +394,71 @@ type CandidateAdapter = StrategyExecutionAdapter & {
     requestBytes: Uint8Array
     executableSource: string
     signingIdentity: RuntimeInvocationSigningIdentityV117
+    receiptEvidence?: RuntimeInvocationExecutionReceiptEvidenceV117
   }): Uint8Array
 }
+
+const completeCandidateEvidence =
+  (): RuntimeInvocationExecutionReceiptEvidenceV117 => {
+    const prestate = admittedExpectedCandidateRequest.accounting.prestate
+    const counters = Object.fromEntries(
+      [
+        "wallMilliseconds",
+        "computeFuel",
+        "payloadBytes",
+        "stdoutBytes",
+        "stderrBytes",
+      ].map((counter) => [
+        counter,
+        {
+          status: "measured" as const,
+          delta: counter === "stderrBytes" ? 0 : 1,
+          cumulative:
+            prestate.cumulative[
+              counter as keyof typeof prestate.cumulative
+            ] + (counter === "stderrBytes" ? 0 : 1),
+        },
+      ]),
+    ) as RuntimeInvocationExecutionReceiptEvidenceV117["counters"]
+    return {
+      attribution: "proven_strategy",
+      counters,
+      memory: {
+        status: "measured",
+        peakBytes: 1,
+        cumulativePeakBytes: 1,
+      },
+      process: {
+        status: "verified",
+        processes: 1,
+        threads: 1,
+        children: 0,
+      },
+      capabilities: {
+        status: "verified",
+        filesystem: "none",
+        network: "disabled",
+        environment: "empty",
+        shell: "disabled",
+      },
+      cancellation: {
+        status: "verified",
+        terminationRequired: false,
+        receiptPresent: false,
+        graceMilliseconds: 0,
+      },
+      accountingEvidence: {
+        status: "verified",
+        signatureVerified: true,
+        monotonic: true,
+      },
+    }
+  }
 
 const executeCandidate = (
   stdout: string,
   resultOverrides: Partial<SpawnSyncReturns<string>> = {},
+  receiptEvidence?: RuntimeInvocationExecutionReceiptEvidenceV117,
 ) => {
   const adapter = createSubprocessStrategyExecutionAdapter({
     spawnSync: () =>
@@ -432,6 +476,7 @@ const executeCandidate = (
     requestBytes: Uint8Array.from(candidateRequestBytes),
     executableSource: validSource,
     signingIdentity: candidateIdentity,
+    ...(receiptEvidence === undefined ? {} : { receiptEvidence }),
   })
   return verifyRuntimeInvocationResponseV117(
     responseBytes,
@@ -497,9 +542,26 @@ describe("hostile Strategy matrix", () => {
   }
 
   describe("v1.17 hostile raw-byte ownership", () => {
-    it("classifies duplicate payload keys as one redacted player violation", () => {
+    it("requires complete accounting before assigning a duplicate payload to the player", () => {
+      const stdout =
+        'S{"activationOrders":[],"strategyMemory":{},"strategyMemory":{"private":"source token stderr /Users/owner"}}'
+      const unaccounted = executeCandidate(stdout)
+      expect(unaccounted.kind).toBe("success")
+      if (unaccounted.kind === "success") {
+        expect(unaccounted.value.outcome).toMatchObject({
+          kind: "system_failure",
+          failure: { code: "AMBIGUOUS_ATTRIBUTION" },
+        })
+        expect(unaccounted.value.accounting.disposition).toBe("no_commit")
+        expect(unaccounted.value.accounting.poststate).toEqual(
+          admittedExpectedCandidateRequest.accounting.prestate,
+        )
+      }
+
       const result = executeCandidate(
-        'S{"activationOrders":[],"strategyMemory":{},"strategyMemory":{"private":"source token stderr /Users/owner"}}',
+        stdout,
+        {},
+        completeCandidateEvidence(),
       )
 
       expect(result.kind).toBe("success")

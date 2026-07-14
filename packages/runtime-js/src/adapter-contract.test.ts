@@ -5,11 +5,14 @@ import type { RuntimeResult } from "@cowards/engine"
 import {
   RUNTIME_INVOCATION_V1_17_TEST_KEY_ID,
   createAuthenticatedRuntimeInvocationRequestV117,
+  createRuntimeAbiV117ExecutionLedger,
+  createRuntimeInvocationBudgetV117,
   encodeCanonicalJson,
   serializeRuntimeInvocationRequestV117,
   verifyRuntimeInvocationResponseV117,
   type AuthenticatedRuntimeInvocationRequestV117,
   type JsonValue,
+  type RuntimeInvocationExecutionReceiptEvidenceV117,
   type RuntimeInvocationSigningIdentityV117,
   type StrategyInput,
 } from "@cowards/spec"
@@ -108,8 +111,6 @@ const sha256 = (bytes: Uint8Array): `sha256:${string}` =>
 
 const candidateRequest = (
   overrides: Partial<{
-    outputBytes: number
-    wallMilliseconds: number
     input: StrategyInput
     artifactSource: string
   }> = {},
@@ -140,27 +141,8 @@ const candidateRequest = (
           ),
         ),
       },
-      budget: {
-        profileId: "runtime-budget-profile-v1.17-candidate",
-        wallMilliseconds: overrides.wallMilliseconds ?? 1_000,
-        computeFuel: 10_000_000,
-        memoryBytes: 67_108_864,
-        outputBytes: overrides.outputBytes ?? 262_144,
-        processLimit: 1,
-        matchCumulative: {
-          invocationCountMaximum: 260,
-          wallMilliseconds: 13_000,
-          computeFuel: 2_600_000_000,
-          payloadBytes: 68_157_440,
-          stdoutBytes: 68_157_440,
-          stderrBytes: 17_039_360,
-          memoryBytes: 67_108_864,
-          accounting:
-            "signed-monotonic-per-invocation-deltas-plus-cumulative-total",
-          overflow:
-            "stop-before-next-invocation-and-classify-by-proven-cause",
-        },
-      },
+      budget: createRuntimeInvocationBudgetV117("selectActivations"),
+      accounting: { prestate: createRuntimeAbiV117ExecutionLedger() },
       input: { value: (overrides.input ?? runtimeInput) as unknown as JsonValue },
       retry: {
         retryId: "retry:runtime-js:v1.17:0001",
@@ -176,7 +158,75 @@ type CandidateAdapter = {
     requestBytes: Uint8Array
     executableSource: string
     signingIdentity: RuntimeInvocationSigningIdentityV117
+    receiptEvidence?: RuntimeInvocationExecutionReceiptEvidenceV117
   }): Uint8Array
+}
+
+const completeCandidateEvidence = (
+  request: AuthenticatedRuntimeInvocationRequestV117,
+  overrides: Partial<{
+    attribution: RuntimeInvocationExecutionReceiptEvidenceV117["attribution"]
+    wallMilliseconds: number
+    computeFuel: number
+    payloadBytes: number
+    stdoutBytes: number
+    stderrBytes: number
+  }> = {},
+): RuntimeInvocationExecutionReceiptEvidenceV117 => {
+  const prestate = request.accounting.prestate
+  const deltas = {
+    wallMilliseconds: overrides.wallMilliseconds ?? 1,
+    computeFuel: overrides.computeFuel ?? 1,
+    payloadBytes: overrides.payloadBytes ?? 1,
+    stdoutBytes: overrides.stdoutBytes ?? 1,
+    stderrBytes: overrides.stderrBytes ?? 0,
+  }
+  const counters = Object.fromEntries(
+    Object.entries(deltas).map(([counter, delta]) => [
+      counter,
+      {
+        status: "measured" as const,
+        delta,
+        cumulative:
+          prestate.cumulative[
+            counter as keyof typeof prestate.cumulative
+          ] + delta,
+      },
+    ]),
+  ) as RuntimeInvocationExecutionReceiptEvidenceV117["counters"]
+  return {
+    attribution: overrides.attribution ?? "proven_strategy",
+    counters,
+    memory: {
+      status: "measured",
+      peakBytes: 1,
+      cumulativePeakBytes: Math.max(prestate.cumulative.memoryBytes, 1),
+    },
+    process: {
+      status: "verified",
+      processes: 1,
+      threads: 1,
+      children: 0,
+    },
+    capabilities: {
+      status: "verified",
+      filesystem: "none",
+      network: "disabled",
+      environment: "empty",
+      shell: "disabled",
+    },
+    cancellation: {
+      status: "verified",
+      terminationRequired: false,
+      receiptPresent: false,
+      graceMilliseconds: 0,
+    },
+    accountingEvidence: {
+      status: "verified",
+      signatureVerified: true,
+      monotonic: true,
+    },
+  }
 }
 
 const executeCandidate = (
@@ -188,11 +238,14 @@ const executeCandidateWith = (
   adapter: StrategyExecutionAdapter,
   request: AuthenticatedRuntimeInvocationRequestV117,
   executableSource: string,
+  receiptEvidence: RuntimeInvocationExecutionReceiptEvidenceV117 | undefined =
+    completeCandidateEvidence(request),
 ) => {
   const responseBytes = (adapter as unknown as CandidateAdapter).executeV117({
     requestBytes: serializeRuntimeInvocationRequestV117(request),
     executableSource,
     signingIdentity: candidateIdentity,
+    ...(receiptEvidence === undefined ? {} : { receiptEvidence }),
   })
   return verifyRuntimeInvocationResponseV117(
     responseBytes,
@@ -200,6 +253,11 @@ const executeCandidateWith = (
     candidateIdentity,
   )
 }
+
+const executeCandidateWithoutEvidence = (
+  adapter: StrategyExecutionAdapter,
+  request = candidateRequest(),
+) => executeCandidateWith(adapter, request, transpiledSource(), undefined)
 
 const invalidOutputStrategySource = `
 export default {
@@ -621,7 +679,28 @@ export default {
       },
     ]
 
-    it("produces one authenticated byte-identical success across every TypeScript path", () => {
+    it("fails closed without complete host-observed accounting on every TypeScript path", () => {
+      const request = candidateRequest()
+      for (const { label, adapter } of candidateAdapters()) {
+        const result = executeCandidateWithoutEvidence(adapter, request)
+        expect(result.kind, label).toBe("success")
+        if (result.kind !== "success") continue
+        expect(result.value.outcome, label).toMatchObject({
+          kind: "system_failure",
+          failure: {
+            code: "AMBIGUOUS_ATTRIBUTION",
+            publicMessage: "Runtime system failure.",
+            retryable: false,
+          },
+        })
+        expect(result.value.accounting.disposition, label).toBe("no_commit")
+        expect(result.value.accounting.poststate, label).toEqual(
+          request.accounting.prestate,
+        )
+      }
+    })
+
+    it("produces one authenticated byte-identical success with complete host-observed evidence", () => {
       const results = candidateAdapters().map(({ label, adapter }) => ({
         label,
         result: executeCandidate(adapter),
@@ -732,8 +811,12 @@ export default {
         },
       })
 
-      const mixed = executeCandidate(
+      const mixedRequest = candidateRequest()
+      const mixed = executeCandidateWith(
         adapterFor("Iprivate legacy violation tail"),
+        mixedRequest,
+        transpiledSource(),
+        completeCandidateEvidence(mixedRequest, { attribution: "host" }),
       )
       expect(mixed).toMatchObject({
         kind: "success",
@@ -745,14 +828,19 @@ export default {
         },
       })
 
-      const exact = new TextEncoder().encode(canonicalPayload).byteLength
       const atCap = executeCandidate(
         adapterFor(`S${canonicalPayload}`),
-        candidateRequest({ outputBytes: exact }),
       )
-      const overCap = executeCandidate(
+      const overCapRequest = candidateRequest()
+      const overCap = executeCandidateWith(
         adapterFor("O"),
-        candidateRequest({ outputBytes: exact - 1 }),
+        overCapRequest,
+        transpiledSource(),
+        completeCandidateEvidence(overCapRequest, {
+          payloadBytes:
+            overCapRequest.budget.methodLimit.counters.payloadBytes.maximum +
+            1,
+        }),
       )
       expect(atCap).toMatchObject({
         kind: "success",
@@ -853,51 +941,41 @@ export default {
       }
     })
 
-    it("short-circuits a zero wall budget before starting any runtime", () => {
-      const request = candidateRequest({ wallMilliseconds: 0 })
-      let subprocessCalls = 0
-      let containerCalls = 0
-      const adapters = [
-        createWorkerThreadStrategyExecutionAdapter(),
-        createSubprocessStrategyExecutionAdapter({
-          spawnSync: () => {
-            subprocessCalls += 1
-            throw new Error("zero-budget subprocess must not start")
-          },
-        }),
-        createContainerSubprocessStrategyExecutionAdapter({
-          spawnSync: () => {
-            containerCalls += 1
-            throw new Error("zero-budget container must not start")
-          },
-        }),
-      ]
+    it("passes only the signed nested method limits to the guest", () => {
+      const request = candidateRequest()
+      let observedOptions: Record<string, unknown> | undefined
+      const adapter = createSubprocessStrategyExecutionAdapter({
+        spawnSync: (_command, _args, options) => {
+          observedOptions = options as Record<string, unknown>
+          return {
+            pid: 123,
+            output: ["", successFrame, ""],
+            stdout: successFrame,
+            stderr: "",
+            status: 0,
+            signal: null,
+          } as SpawnSyncReturns<string>
+        },
+      })
 
-      for (const adapter of adapters) {
-        const result = executeCandidate(adapter, request)
-        expect(result).toMatchObject({
-          kind: "success",
-          value: {
-            outcome: {
-              kind: "system_failure",
-              failure: {
-                code: "AMBIGUOUS_ATTRIBUTION",
-                publicMessage: "Runtime system failure.",
-                retryable: false,
-              },
-            },
-          },
-        })
-      }
-      expect(subprocessCalls).toBe(0)
-      expect(containerCalls).toBe(0)
+      const result = executeCandidate(adapter, request)
+      expect(result).toMatchObject({
+        kind: "success",
+        value: { outcome: { kind: "success" } },
+      })
+      expect(observedOptions?.timeout).toBe(
+        request.budget.methodLimit.counters.wallMilliseconds.maximum,
+      )
+      expect(observedOptions?.maxBuffer).toBe(
+        request.budget.methodLimit.counters.payloadBytes.maximum + 1,
+      )
     })
 
     it("stops successor canonical output at N+1 before reading later values", () => {
       const source = transpileOrThrow(`
 export default {
   selectActivations() {
-    const strategyMemory = ["x".repeat(4096)]
+    const strategyMemory = ["x".repeat(262145)]
     Object.defineProperty(strategyMemory, 1, {
       enumerable: true,
       get() { throw new Error("later value must remain unread") },
@@ -909,15 +987,16 @@ export default {
   },
 }
 `)
-      const request = candidateRequest({
-        artifactSource: source,
-        outputBytes: 128,
+      const request = candidateRequest({ artifactSource: source })
+      const evidence = completeCandidateEvidence(request, {
+        payloadBytes:
+          request.budget.methodLimit.counters.payloadBytes.maximum + 1,
       })
       for (const adapter of [
         createWorkerThreadStrategyExecutionAdapter(),
         createSubprocessStrategyExecutionAdapter(),
       ]) {
-        const result = executeCandidateWith(adapter, request, source)
+        const result = executeCandidateWith(adapter, request, source, evidence)
         expect(result).toMatchObject({
           kind: "success",
           value: {
@@ -1012,6 +1091,9 @@ export default {
     it("keeps pre-method artifact load failure system-owned", () => {
       const invalidArtifact = "this is not executable JavaScript {"
       const request = candidateRequest({ artifactSource: invalidArtifact })
+      const evidence = completeCandidateEvidence(request, {
+        attribution: "host",
+      })
       for (const adapter of [
         createWorkerThreadStrategyExecutionAdapter(),
         createSubprocessStrategyExecutionAdapter(),
@@ -1020,6 +1102,7 @@ export default {
           adapter,
           request,
           invalidArtifact,
+          evidence,
         )
         expect(result).toMatchObject({
           kind: "success",
