@@ -14,18 +14,24 @@ import {
   CANONICAL_COMPATIBILITY_TUPLES,
   RUNTIME_EVIDENCE_AUTHORITY_HIGH_WATER_SCHEMA_VERSION,
   RUNTIME_EVIDENCE_AUTHORITY_PAYLOAD_SCHEMA_VERSION,
+  RUNTIME_EVIDENCE_AUTHORITY_PAYLOAD_SCHEMA_VERSION_V1_17,
   RUNTIME_EVIDENCE_AUTHORITY_TRUST_DOMAINS,
   buildRuntimeEvidenceAuthorityEnvelope,
   encodeRuntimeEvidenceAuthorityPayload,
+  encodeRuntimeEvidenceAuthorityPayloadV117,
   encodeRuntimeEvidenceAuthoritySignatureMessage,
+  hashRuntimeEvidenceCertificateRecordV117,
   hashRuntimeEvidenceAuthorityPayload,
+  type RuntimeEvidenceAuthorityBindingV117,
   type RuntimeEvidenceAuthorityPayload,
+  type RuntimeEvidenceAuthorityPayloadV117,
 } from "@cowards/spec"
 import {
   RUNTIME_EVIDENCE_AUTHORITY_PUBLIC_KEY_SCHEMA_VERSION,
   RuntimeEvidenceAuthorityLoadError,
   createNodeRuntimeEvidenceAuthorityFileSystem,
   createRuntimeEvidenceAuthorityLoader,
+  createRuntimeEvidenceAuthorityLoaderV117,
   runtimeEvidenceAuthorityConfigFromEnvironment,
   type RuntimeEvidenceAuthorityFileSystem,
 } from "./runtime-evidence-authority.js"
@@ -140,6 +146,132 @@ const createFixture = (input: {
   }
 }
 
+const createFixtureV117 = () => {
+  const root = mkdtempSync(join(tmpdir(), "cowards-runtime-authority-v117-"))
+  roots.push(root)
+  const bundlePath = join(root, "authority-v1.17.json")
+  const publicKeyPath = join(root, "authority-v1.17-public-key.json")
+  const highWaterPath = join(root, "authority-v1.17-high-water.json")
+  const keys = generateKeyPairSync("ed25519")
+  const keyId = "fixture-runtime-authority-ed25519-v1.17"
+  const trustDomain = RUNTIME_EVIDENCE_AUTHORITY_TRUST_DOMAINS.fixture
+  const binding: RuntimeEvidenceAuthorityBindingV117 = {
+    graphSchemaVersion: "runtime-evidence-graph-v1.17",
+    graphProfile: "runtime-identity-evidence-dag-v1",
+    identityManifestRoot: hash("1"),
+    evidenceGraphRoot: hash("2"),
+    exactPins: [
+      ["runtimeExecutableDigest", hash("3")],
+      ["reportedVersion", "node-v26.0.0"],
+      ["targetAbi", "linux-amd64-gnu"],
+      ["compilerFlags", hash("4")],
+      ["adapterBuildDigest", hash("5")],
+      ["standardLibraryOrSysrootDigest", hash("6")],
+      ["containmentPolicyId", "policy.containment.v1"],
+      ["budgetProfileSha256", hash("7")],
+      ["canonicalJsonProfileId", "canonical-json-v1.1"],
+      ["behaviorSettingsHash", hash("8")],
+    ],
+  }
+  const attestationId = "attestation:v1.17:mounted-fixture"
+  const certificateId = "certificate:v1.17:mounted-fixture"
+  const certificateVersion = "runtime-certificate-v1.17"
+  const payload: RuntimeEvidenceAuthorityPayloadV117 = {
+    schemaVersion: RUNTIME_EVIDENCE_AUTHORITY_PAYLOAD_SCHEMA_VERSION_V1_17,
+    bundleVersion: "bundle:v1.17:mounted-fixture",
+    registryGeneration: "7",
+    issuedAt: "2026-07-14T00:00:00.000Z",
+    validFrom: "2026-07-14T00:00:00.000Z",
+    validUntil: "2026-07-15T00:00:00.000Z",
+    semanticTupleManifestHash: CANONICAL_COMPATIBILITY_TUPLES[0]!.tupleId,
+    sourceManifestHash: hash("9"),
+    attestations: [
+      {
+        attestationId,
+        attestationHash: hash("a"),
+        producerId: "fixture-managed",
+        producerKeyId: "fixture-managed-key",
+        trustDomain: "fixture",
+        managedIdentity: true,
+        imports: [],
+        binding,
+      },
+    ],
+    certificates: [
+      {
+        certificateId,
+        certificateVersion,
+        certificateRecordHash: hashRuntimeEvidenceCertificateRecordV117({
+          certificateKind: "containment",
+          certificateId,
+          certificateVersion,
+          attestationId,
+          binding,
+        }),
+        certificateKind: "containment",
+        attestationId,
+        binding,
+      },
+    ],
+  }
+  const payloadBytes = encodeRuntimeEvidenceAuthorityPayloadV117(payload)
+  const payloadSha256 = hashRuntimeEvidenceAuthorityPayload(payloadBytes)
+  const makeEnvelope = (bytes: Uint8Array) =>
+    buildRuntimeEvidenceAuthorityEnvelope({
+      trustDomain,
+      keyId,
+      payloadBytes: bytes,
+      signature: sign(
+        null,
+        encodeRuntimeEvidenceAuthoritySignatureMessage({
+          trustDomain,
+          keyId,
+          payloadBytes: bytes,
+        }),
+        keys.privateKey,
+      ),
+    })
+  writeFileSync(bundlePath, `${JSON.stringify(makeEnvelope(payloadBytes))}\n`, {
+    mode: 0o600,
+  })
+  writeFileSync(
+    publicKeyPath,
+    `${JSON.stringify({
+      schemaVersion: RUNTIME_EVIDENCE_AUTHORITY_PUBLIC_KEY_SCHEMA_VERSION,
+      keyId,
+      algorithm: "Ed25519",
+      publicKeyPem: keys.publicKey.export({ type: "spki", format: "pem" }),
+    })}\n`,
+    { mode: 0o600 },
+  )
+  writeFileSync(
+    highWaterPath,
+    `${JSON.stringify({
+      schemaVersion: RUNTIME_EVIDENCE_AUTHORITY_HIGH_WATER_SCHEMA_VERSION,
+      registryGeneration: payload.registryGeneration,
+      payloadSha256,
+    })}\n`,
+    { mode: 0o600 },
+  )
+  return {
+    binding,
+    bundlePath,
+    payload,
+    payloadBytes,
+    makeEnvelope,
+    config: {
+      bundlePath,
+      publicKeyPath,
+      highWaterPath,
+      minimumRegistryGeneration: payload.registryGeneration,
+      minimumBundleHash: payloadSha256,
+      bootstrap: false,
+      expectedTrustDomain: trustDomain,
+      evaluationInstant: () => "2026-07-14T12:00:00.000Z",
+    },
+  }
+}
+
 const expectLoadCode = (run: () => unknown, code: string): void => {
   try {
     run()
@@ -152,6 +284,34 @@ const expectLoadCode = (run: () => unknown, code: string): void => {
 }
 
 describe("mounted runtime evidence authority", () => {
+  it("loads one signed v1.17 binding and rejects signed certificate-kind substitution", () => {
+    const fixture = createFixtureV117()
+    const loaded = createRuntimeEvidenceAuthorityLoaderV117(
+      fixture.config,
+    ).load()
+    expect(loaded.sourceManifestHash).toBe(fixture.payload.sourceManifestHash)
+    expect(loaded.payload.attestations[0]?.binding).toEqual(fixture.binding)
+    expect(loaded.payload.certificates[0]?.binding).toEqual(fixture.binding)
+
+    const tamperedPayloadBytes = new TextEncoder().encode(
+      new TextDecoder()
+        .decode(fixture.payloadBytes)
+        .replace(
+          '"certificateKind":"containment"',
+          '"certificateKind":"conformance"',
+        ),
+    )
+    writeFileSync(
+      fixture.bundlePath,
+      `${JSON.stringify(fixture.makeEnvelope(tamperedPayloadBytes))}\n`,
+      { mode: 0o600 },
+    )
+    expectLoadCode(
+      () => createRuntimeEvidenceAuthorityLoaderV117(fixture.config).load(),
+      "CERTIFICATE_HASH",
+    )
+  })
+
   it("independently verifies one bounded descriptor read, Ed25519 key, exact bytes, graph, and freshness", () => {
     const fixture = createFixture({})
     const operations: string[] = []

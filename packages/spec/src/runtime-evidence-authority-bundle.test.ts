@@ -25,6 +25,7 @@ import {
   inspectRuntimeEvidenceAuthorityBundleV117,
   type RuntimeEvidenceAuthorityBindingV117,
   type RuntimeEvidenceAuthorityPayload,
+  type RuntimeEvidenceAuthorityPayloadV117,
 } from "./runtime-evidence-authority-bundle.js"
 import { hashExecutableLaneIdentity } from "./runtime-evidence-attestation.js"
 
@@ -167,30 +168,34 @@ describe("runtime evidence authority bundle", () => {
       validUntil: "2026-07-15T00:00:00.000Z",
       semanticTupleManifestHash,
       sourceManifestHash: `sha256:${"9".repeat(64)}`,
-      attestations: [{
-        attestationId,
-        attestationHash: `sha256:${"a".repeat(64)}`,
-        producerId: "fixture-managed",
-        producerKeyId: "fixture-key",
-        trustDomain: "fixture" as const,
-        managedIdentity: true as const,
-        imports: [],
-        binding,
-      }],
-      certificates: [{
-        certificateId,
-        certificateVersion,
-        certificateRecordHash: hashRuntimeEvidenceCertificateRecordV117({
-          certificateKind: "containment",
+      attestations: [
+        {
+          attestationId,
+          attestationHash: `sha256:${"a".repeat(64)}`,
+          producerId: "fixture-managed",
+          producerKeyId: "fixture-key",
+          trustDomain: "fixture" as const,
+          managedIdentity: true as const,
+          imports: [],
+          binding,
+        },
+      ],
+      certificates: [
+        {
           certificateId,
           certificateVersion,
+          certificateRecordHash: hashRuntimeEvidenceCertificateRecordV117({
+            certificateKind: "containment",
+            certificateId,
+            certificateVersion,
+            attestationId,
+            binding,
+          }),
+          certificateKind: "containment" as const,
           attestationId,
           binding,
-        }),
-        certificateKind: "containment" as const,
-        attestationId,
-        binding,
-      }],
+        },
+      ],
     }
     const keys = generateKeyPairSync("ed25519")
     const payloadBytes = encodeRuntimeEvidenceAuthorityPayloadV117(payload)
@@ -202,7 +207,11 @@ describe("runtime evidence authority bundle", () => {
       payloadBytes,
       signature: sign(
         null,
-        encodeRuntimeEvidenceAuthoritySignatureMessage({ trustDomain, keyId, payloadBytes }),
+        encodeRuntimeEvidenceAuthoritySignatureMessage({
+          trustDomain,
+          keyId,
+          payloadBytes,
+        }),
         keys.privateKey,
       ),
     })
@@ -217,9 +226,11 @@ describe("runtime evidence authority bundle", () => {
       },
     )
     expect(inspected.payload.certificates[0]?.binding).toEqual(binding)
-    const confusedPayload = globalThis.structuredClone(payload)
+    const confusedPayload: RuntimeEvidenceAuthorityPayloadV117 =
+      globalThis.structuredClone(payload)
     confusedPayload.attestations[0]!.trustDomain = "production"
-    const confusedBytes = encodeRuntimeEvidenceAuthorityPayloadV117(confusedPayload)
+    const confusedBytes =
+      encodeRuntimeEvidenceAuthorityPayloadV117(confusedPayload)
     const confusedEnvelope = buildRuntimeEvidenceAuthorityEnvelope({
       trustDomain,
       keyId,
@@ -235,13 +246,16 @@ describe("runtime evidence authority bundle", () => {
       ),
     })
     expect(() =>
-      inspectRuntimeEvidenceAuthorityBundleV117(JSON.stringify(confusedEnvelope), {
-        expectedTrustDomain: trustDomain,
-        evaluationInstant: "2026-07-14T12:00:00.000Z",
-        trustedKeyIds: [keyId],
-        verifySignature: ({ signedMessageBytes, signature }) =>
-          verify(null, signedMessageBytes, keys.publicKey, signature),
-      }),
+      inspectRuntimeEvidenceAuthorityBundleV117(
+        JSON.stringify(confusedEnvelope),
+        {
+          expectedTrustDomain: trustDomain,
+          evaluationInstant: "2026-07-14T12:00:00.000Z",
+          trustedKeyIds: [keyId],
+          verifySignature: ({ signedMessageBytes, signature }) =>
+            verify(null, signedMessageBytes, keys.publicKey, signature),
+        },
+      ),
     ).toThrow(/trust domain/iu)
     const tampered = globalThis.structuredClone(payload)
     tampered.certificates[0]!.binding = {

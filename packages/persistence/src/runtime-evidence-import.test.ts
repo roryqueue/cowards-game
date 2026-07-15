@@ -1,19 +1,33 @@
 import { createHash, generateKeyPairSync, randomUUID, sign } from "node:crypto"
 import {
   CANONICAL_COMPATIBILITY_TUPLES,
+  RUNTIME_EVIDENCE_EDGE_SCHEMA_V1_17,
+  RUNTIME_EVIDENCE_GRAPH_NODE_KINDS_V1_17,
+  RUNTIME_EVIDENCE_GRAPH_PROFILE_V1_17,
+  RUNTIME_EVIDENCE_GRAPH_SCHEMA_VERSION_V1_17,
+  encodeRuntimeEvidenceAttestationPayloadV117,
   encodeRuntimeEvidenceAttestationPayload,
+  hashCanonicalIdentity,
+  hashCanonicalIdentityValue,
   hashExecutableLaneIdentity,
+  hashRuntimeEvidenceGraphV117,
   hashRuntimeEvidenceGraph,
+  type RuntimeEvidenceAttestationV117,
   type RuntimeEvidenceAttestation,
   type RuntimeEvidenceAttestationPayload,
   type RuntimeEvidenceBytes,
   type RuntimeEvidenceGraph,
   type RuntimeEvidenceTrustedProducer,
+  type RuntimeEvidenceTrustedProducerV117,
 } from "@cowards/spec"
 import { Pool } from "pg"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
 import { migrate } from "./migrations.js"
-import { importVerifiedRuntimeEvidenceAttestation } from "./runtime-evidence-import.js"
+import {
+  importVerifiedRuntimeEvidenceAttestation,
+  importVerifiedRuntimeEvidenceAttestationV117,
+} from "./runtime-evidence-import.js"
+import { prepareRuntimeEvidenceAuthorityPublicationV117 } from "./runtime-evidence-authority-publisher.js"
 
 const sha256 = (value: Uint8Array | string): string =>
   createHash("sha256").update(value).digest("hex")
@@ -32,13 +46,24 @@ const producer: RuntimeEvidenceTrustedProducer = {
   policyId: "fixture:policy:v1",
   policySha256: sha256("policy"),
   requiredGateIds: ["full-state"],
-  publicKeyPem: keys.publicKey.export({ type: "spki", format: "pem" }).toString(),
+  publicKeyPem: keys.publicKey
+    .export({ type: "spki", format: "pem" })
+    .toString(),
 }
 
 const evidenceBytes: RuntimeEvidenceBytes = Object.fromEntries(
-  ["root", "command", "corpus", "policy", "toolchain", "adapter", "artifact", "result", "trace", "gate"].map(
-    (id) => [id, new TextEncoder().encode(id)],
-  ),
+  [
+    "root",
+    "command",
+    "corpus",
+    "policy",
+    "toolchain",
+    "adapter",
+    "artifact",
+    "result",
+    "trace",
+    "gate",
+  ].map((id) => [id, new TextEncoder().encode(id)]),
 )
 
 const makePayload = (suffix = "success"): RuntimeEvidenceAttestationPayload => {
@@ -91,15 +116,44 @@ const makePayload = (suffix = "success"): RuntimeEvidenceAttestationPayload => {
     producerId: producer.producerId,
     producerKeyId: producer.keyId,
     trustDomain: "fixture",
-    command: { id: producer.commandId, sha256: producer.commandSha256, nodeId: "command" },
-    corpus: { id: producer.corpusId, sha256: producer.corpusSha256, nodeId: "corpus" },
-    policy: { id: producer.policyId, sha256: producer.policySha256, nodeId: "policy" },
+    command: {
+      id: producer.commandId,
+      sha256: producer.commandSha256,
+      nodeId: "command",
+    },
+    corpus: {
+      id: producer.corpusId,
+      sha256: producer.corpusSha256,
+      nodeId: "corpus",
+    },
+    policy: {
+      id: producer.policyId,
+      sha256: producer.policySha256,
+      nodeId: "policy",
+    },
     laneIdentity,
     laneIdentitySha256: hashExecutableLaneIdentity(laneIdentity),
-    runtime: { id: laneIdentity.runtimeId, version: laneIdentity.runtimeVersion },
-    toolchain: { id: laneIdentity.toolchainId, version: laneIdentity.toolchainVersion, nodeId: "toolchain", sha256: sha256(evidenceBytes.toolchain!) },
-    adapter: { id: laneIdentity.adapterId, version: laneIdentity.adapterVersion, nodeId: "adapter", sha256: sha256(evidenceBytes.adapter!) },
-    artifact: { id: laneIdentity.artifactId, sha256: laneIdentity.artifactSha256, nodeId: "artifact" },
+    runtime: {
+      id: laneIdentity.runtimeId,
+      version: laneIdentity.runtimeVersion,
+    },
+    toolchain: {
+      id: laneIdentity.toolchainId,
+      version: laneIdentity.toolchainVersion,
+      nodeId: "toolchain",
+      sha256: sha256(evidenceBytes.toolchain!),
+    },
+    adapter: {
+      id: laneIdentity.adapterId,
+      version: laneIdentity.adapterVersion,
+      nodeId: "adapter",
+      sha256: sha256(evidenceBytes.adapter!),
+    },
+    artifact: {
+      id: laneIdentity.artifactId,
+      sha256: laneIdentity.artifactSha256,
+      nodeId: "artifact",
+    },
     result: {
       manifestId: `fixture:manifest:${suffix}`,
       manifestNodeId: "result",
@@ -107,9 +161,22 @@ const makePayload = (suffix = "success"): RuntimeEvidenceAttestationPayload => {
       originalEvidenceNodeId: "trace",
       originalEvidenceSha256: sha256(evidenceBytes.trace!),
       graphSha256: hashRuntimeEvidenceGraph(graph),
-      digests: [{ id: "failure-trace", nodeId: "trace", sha256: sha256(evidenceBytes.trace!) }],
+      digests: [
+        {
+          id: "failure-trace",
+          nodeId: "trace",
+          sha256: sha256(evidenceBytes.trace!),
+        },
+      ],
     },
-    gateResults: [{ gateId: "full-state", passed: true, nodeId: "gate", sha256: sha256(evidenceBytes.gate!) }],
+    gateResults: [
+      {
+        gateId: "full-state",
+        passed: true,
+        nodeId: "gate",
+        sha256: sha256(evidenceBytes.gate!),
+      },
+    ],
     graph,
     issuedAt: "2026-07-12T12:00:00.000Z",
     validUntil: "2026-08-12T12:00:00.000Z",
@@ -118,7 +185,9 @@ const makePayload = (suffix = "success"): RuntimeEvidenceAttestationPayload => {
   }
 }
 
-const signPayload = (payload: RuntimeEvidenceAttestationPayload): RuntimeEvidenceAttestation => ({
+const signPayload = (
+  payload: RuntimeEvidenceAttestationPayload,
+): RuntimeEvidenceAttestation => ({
   ...payload,
   signatureBase64: sign(
     null,
@@ -141,6 +210,103 @@ const productionInput = (suffix = "success") => {
   return { ...withoutFixtureTrust, mode: "production" as const }
 }
 
+const makeInputV117 = () => {
+  const fixtureKeys = generateKeyPairSync("ed25519")
+  const evidenceBytesV117 = Object.fromEntries(
+    RUNTIME_EVIDENCE_GRAPH_NODE_KINDS_V1_17.map((kind) => [
+      `node:${kind}`,
+      new TextEncoder().encode(`fixture:${kind}:bytes:v1`),
+    ]),
+  )
+  const bindings = RUNTIME_EVIDENCE_GRAPH_NODE_KINDS_V1_17.map((kind) => ({
+    domain: kind,
+    publicId: `fixture.${kind}.v1`,
+    sha256: hashCanonicalIdentity(kind, [evidenceBytesV117[`node:${kind}`]!]),
+  }))
+  const identityManifest = {
+    schemaVersion: "runtime-identity-manifest-v1" as const,
+    profile: "runtime-identity-v1" as const,
+    bindings,
+  }
+  const graphWithoutHash = {
+    schemaVersion: RUNTIME_EVIDENCE_GRAPH_SCHEMA_VERSION_V1_17,
+    profile: RUNTIME_EVIDENCE_GRAPH_PROFILE_V1_17,
+    rootNodeId: "node:evidenceBundle",
+    identityManifestRoot: hashCanonicalIdentityValue(
+      "evidenceBundle",
+      identityManifest,
+    ),
+    nodes: bindings.map((binding) => ({
+      nodeId: `node:${binding.domain}`,
+      kind: binding.domain,
+      publicId: binding.publicId,
+      sha256: binding.sha256,
+    })),
+    edges: RUNTIME_EVIDENCE_EDGE_SCHEMA_V1_17.map((edge) => ({
+      fromNodeId: `node:${edge.from}`,
+      toNodeId: `node:${edge.to}`,
+      kind: edge.kind,
+    })),
+    exactPins: {
+      runtimeExecutableDigest: `sha256:${bindings.find((v) => v.domain === "runtimeExecutable")!.sha256}`,
+      reportedVersion: "node-v26.0.0",
+      targetAbi: "linux-amd64-gnu",
+      compilerFlags: `sha256:${"1".repeat(64)}`,
+      adapterBuildDigest: `sha256:${bindings.find((v) => v.domain === "adapterBuild")!.sha256}`,
+      standardLibraryOrSysrootDigest: `sha256:${bindings.find((v) => v.domain === "sysrootStdlib")!.sha256}`,
+      containmentPolicyId: bindings.find(
+        (v) => v.domain === "containmentPolicy",
+      )!.publicId,
+      budgetProfileSha256: `sha256:${bindings.find((v) => v.domain === "budgetProfile")!.sha256}`,
+      canonicalJsonProfileId: bindings.find(
+        (v) => v.domain === "canonicalJsonProfile",
+      )!.publicId,
+      behaviorSettingsHash: `sha256:${"2".repeat(64)}`,
+    },
+  }
+  const payload = {
+    schemaVersion: "runtime-evidence-attestation-v1.17" as const,
+    producerId: "fixture-managed-builder",
+    producerKeyId: "fixture-managed-builder-key",
+    trustDomain: "fixture" as const,
+    managedIdentity: true as const,
+    identityManifest,
+    graph: {
+      ...graphWithoutHash,
+      graphSha256: hashRuntimeEvidenceGraphV117(graphWithoutHash),
+    },
+    issuedAt: "2026-07-14T00:00:00.000Z",
+    validUntil: "2026-07-15T00:00:00.000Z",
+    registryGeneration: "7",
+  }
+  const attestation: RuntimeEvidenceAttestationV117 = {
+    ...payload,
+    signatureBase64: sign(
+      null,
+      encodeRuntimeEvidenceAttestationPayloadV117(payload),
+      fixtureKeys.privateKey,
+    ).toString("base64"),
+  }
+  const trustedProducer: RuntimeEvidenceTrustedProducerV117 = {
+    producerId: payload.producerId,
+    keyId: payload.producerKeyId,
+    trustDomain: "fixture",
+    managedIdentity: true,
+    publicKeyPem: fixtureKeys.publicKey
+      .export({ type: "spki", format: "pem" })
+      .toString(),
+  }
+  return {
+    mode: "fixture" as const,
+    attestation,
+    evidenceBytes: evidenceBytesV117,
+    verificationInstant: "2026-07-14T12:00:00.000Z",
+    trustedProducers: [trustedProducer],
+    certificateKind: "conformance" as const,
+    certificateVersion: "runtime-certificate-v1.17",
+  }
+}
+
 const fakePool = (failCertificate = false) => {
   const calls: string[] = []
   const rows = new Map<string, Record<string, unknown>>()
@@ -148,15 +314,24 @@ const fakePool = (failCertificate = false) => {
     async query(sql: string, values: readonly unknown[] = []) {
       const normalized = sql.replace(/\s+/gu, " ").trim()
       calls.push(normalized)
-      const insert = normalized.match(/^insert into (runtime_evidence_(?:verified_attestations|certificates)) \(([^)]+)\)/u)
+      const insert = normalized.match(
+        /^insert into (runtime_evidence_(?:verified_attestations|certificates)) \(([^)]+)\)/u,
+      )
       if (insert) {
         if (failCertificate && insert[1] === "runtime_evidence_certificates") {
           throw new Error("late certificate failure")
         }
         const columns = insert[2]!.split(",").map((column) => column.trim())
-        rows.set(insert[1]!, Object.fromEntries(columns.map((column, index) => [column, values[index]])))
+        rows.set(
+          insert[1]!,
+          Object.fromEntries(
+            columns.map((column, index) => [column, values[index]]),
+          ),
+        )
       }
-      const selected = normalized.match(/from (runtime_evidence_(?:verified_attestations|certificates)) where/u)
+      const selected = normalized.match(
+        /from (runtime_evidence_(?:verified_attestations|certificates)) where/u,
+      )
       return { rows: selected ? [rows.get(selected[1]!)].filter(Boolean) : [] }
     },
     release() {},
@@ -170,8 +345,14 @@ const fakePool = (failCertificate = false) => {
 describe("verified runtime evidence import", () => {
   it("appends one derived certificate transactionally and idempotently", async () => {
     const fake = fakePool()
-    const first = await importVerifiedRuntimeEvidenceAttestation(fake.pool, input())
-    const second = await importVerifiedRuntimeEvidenceAttestation(fake.pool, input())
+    const first = await importVerifiedRuntimeEvidenceAttestation(
+      fake.pool,
+      input(),
+    )
+    const second = await importVerifiedRuntimeEvidenceAttestation(
+      fake.pool,
+      input(),
+    )
     expect(second).toEqual(first)
     expect(first.certificate.kind).toBe("conformance")
     expect(first.certificate.certificateRecordHash).toMatch(/^[0-9a-f]{64}$/u)
@@ -182,7 +363,10 @@ describe("verified runtime evidence import", () => {
   it("writes zero rows for production fixtures, forged signatures, and late SQL failure", async () => {
     const production = fakePool()
     await expect(
-      importVerifiedRuntimeEvidenceAttestation(production.pool, productionInput()),
+      importVerifiedRuntimeEvidenceAttestation(
+        production.pool,
+        productionInput(),
+      ),
     ).rejects.toThrow(/trusted producer/iu)
     expect(production.calls).toEqual([])
 
@@ -204,13 +388,34 @@ describe("verified runtime evidence import", () => {
 
   it("rejects documentation, renamed gates, and missing artifact bytes before SQL", async () => {
     const cases = [
-      { ...input(), attestation: signPayload({ ...makePayload(), gateResults: [{ ...makePayload().gateResults[0]!, gateId: "documented-pass" }] }) },
-      { ...input(), attestation: signPayload({ ...makePayload(), artifact: { ...makePayload().artifact, nodeId: "root" } }) },
-      { ...input(), evidenceBytes: Object.fromEntries(Object.entries(evidenceBytes).filter(([id]) => id !== "artifact")) },
+      {
+        ...input(),
+        attestation: signPayload({
+          ...makePayload(),
+          gateResults: [
+            { ...makePayload().gateResults[0]!, gateId: "documented-pass" },
+          ],
+        }),
+      },
+      {
+        ...input(),
+        attestation: signPayload({
+          ...makePayload(),
+          artifact: { ...makePayload().artifact, nodeId: "root" },
+        }),
+      },
+      {
+        ...input(),
+        evidenceBytes: Object.fromEntries(
+          Object.entries(evidenceBytes).filter(([id]) => id !== "artifact"),
+        ),
+      },
     ]
     for (const candidate of cases) {
       const fake = fakePool()
-      await expect(importVerifiedRuntimeEvidenceAttestation(fake.pool, candidate)).rejects.toThrow()
+      await expect(
+        importVerifiedRuntimeEvidenceAttestation(fake.pool, candidate),
+      ).rejects.toThrow()
       expect(fake.calls).toEqual([])
     }
   })
@@ -242,7 +447,9 @@ describePostgres("PostgreSQL verified runtime evidence import", () => {
   })
 
   it("starts with empty production inventory and imports one exact fixture idempotently", async () => {
-    const before = await pool.query("select count(*)::integer as count from runtime_evidence_certificates")
+    const before = await pool.query(
+      "select count(*)::integer as count from runtime_evidence_certificates",
+    )
     expect(before.rows[0]?.count).toBe(0)
 
     await expect(
@@ -259,6 +466,46 @@ describePostgres("PostgreSQL verified runtime evidence import", () => {
          join runtime_evidence_verified_attestations a on a.id = c.verified_attestation_id`,
     )
     expect(inventory.rows[0]).toMatchObject({ count: 1, production_count: 0 })
+  })
+
+  it("round-trips one verified v1.17 binding through import and candidate publication", async () => {
+    const candidate = makeInputV117()
+    const first = await importVerifiedRuntimeEvidenceAttestationV117(
+      pool,
+      candidate,
+    )
+    expect(
+      await importVerifiedRuntimeEvidenceAttestationV117(pool, candidate),
+    ).toEqual(first)
+
+    const prepared = await prepareRuntimeEvidenceAuthorityPublicationV117(
+      pool,
+      {
+        mode: "fixture",
+        bundleVersion: "candidate:v1.17:fixture",
+        registryGeneration: "7",
+        issuedAt: "2026-07-14T00:00:00.000Z",
+        validFrom: "2026-07-14T00:00:00.000Z",
+        validUntil: "2026-07-15T00:00:00.000Z",
+        semanticTupleManifestHash: CANONICAL_COMPATIBILITY_TUPLES[0]!.tupleId,
+        sourceManifestHash: `sha256:${sha256("fixture-source-manifest-v1.17")}`,
+      },
+    )
+    expect(prepared.payload.attestations).toHaveLength(1)
+    expect(prepared.payload.certificates).toHaveLength(1)
+    expect(prepared.payload.attestations[0]?.binding).toEqual(first.binding)
+    expect(prepared.payload.certificates[0]).toMatchObject({
+      certificateId: first.certificateId,
+      certificateRecordHash: first.certificateRecordHash,
+      binding: first.binding,
+    })
+
+    await expect(
+      pool.query(
+        "update runtime_evidence_v1_17_candidates set evidence_graph_root = $1 where attestation_id = $2",
+        ["f".repeat(64), first.attestationId],
+      ),
+    ).rejects.toThrow(/append-only|immutable/iu)
   })
 
   it("rejects a forged direct certificate and rolls back a late certificate failure", async () => {
@@ -289,9 +536,13 @@ describePostgres("PostgreSQL verified runtime evidence import", () => {
     await expect(
       importVerifiedRuntimeEvidenceAttestation(pool, candidate),
     ).rejects.toThrow(/late certificate failure/iu)
-    await pool.query("drop trigger reject_test_certificate on runtime_evidence_certificates")
+    await pool.query(
+      "drop trigger reject_test_certificate on runtime_evidence_certificates",
+    )
     await pool.query("drop function reject_test_certificate()")
-    const hash = sha256(encodeRuntimeEvidenceAttestationPayload(makePayload("postgres-rollback")))
+    const hash = sha256(
+      encodeRuntimeEvidenceAttestationPayload(makePayload("postgres-rollback")),
+    )
     const rows = await pool.query(
       "select count(*)::integer as count from runtime_evidence_verified_attestations where attestation_sha256 = $1",
       [hash],

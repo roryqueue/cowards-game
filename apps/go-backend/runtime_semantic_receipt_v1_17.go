@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/binary"
@@ -67,10 +68,20 @@ func runtimeSemanticReceiptV117Message(receipt runtimeSemanticReceiptV117) ([]by
 		return nil, errors.New("runtime semantic receipt v1.17 unavailable")
 	}
 	delete(claims, "signature")
-	claimBytes, err := json.Marshal(claims)
-	if err != nil {
+	var loose bytes.Buffer
+	encoder := json.NewEncoder(&loose)
+	encoder.SetEscapeHTML(false)
+	if err := encoder.Encode(claims); err != nil {
 		return nil, errors.New("runtime semantic receipt v1.17 unavailable")
 	}
+	encodedClaims := bytes.TrimSuffix(loose.Bytes(), []byte("\n"))
+	canonical := decodeCanonicalJSONV11(encodedClaims, canonicalJSONV11Options{
+		Context: canonicalJSONV11CanonicalManifest,
+	})
+	if canonical.Error != nil {
+		return nil, errors.New("runtime semantic receipt v1.17 unavailable")
+	}
+	claimBytes := canonical.CanonicalBytes
 	domain := []byte(runtimeSemanticReceiptV117Domain)
 	result := make([]byte, 8+len(domain)+8+len(claimBytes))
 	binary.BigEndian.PutUint64(result[0:8], uint64(len(domain)))

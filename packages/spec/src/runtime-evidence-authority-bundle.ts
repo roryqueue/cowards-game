@@ -204,7 +204,11 @@ const exactBindingKeys = [
 export const parseRuntimeEvidenceAuthorityBindingV117 = (
   value: RuntimeEvidenceAuthorityBindingV117,
 ): Readonly<RuntimeEvidenceAuthorityBindingV117> => {
-  const record = requireRecord(value, "V117_BINDING", "Runtime evidence binding is invalid.")
+  const record = requireRecord(
+    value,
+    "V117_BINDING",
+    "Runtime evidence binding is invalid.",
+  )
   assertExactKeys(record, exactBindingKeys, "Runtime evidence binding")
   const identityManifestRoot = record.identityManifestRoot
   const evidenceGraphRoot = record.evidenceGraphRoot
@@ -265,14 +269,23 @@ const frameV117 = (parts: readonly string[]): Uint8Array => {
 }
 
 export const hashRuntimeEvidenceCertificateRecordV117 = (input: {
+  certificateKind: "containment" | "conformance"
   certificateId: string
   certificateVersion: string
   attestationId: string
   binding: RuntimeEvidenceAuthorityBindingV117
 }): string => {
   const binding = parseRuntimeEvidenceAuthorityBindingV117(input.binding)
-  for (const value of [input.certificateId, input.certificateVersion, input.attestationId]) {
-    if (typeof value !== "string" || value.length === 0 || value.includes("\0")) {
+  for (const value of [
+    input.certificateId,
+    input.certificateVersion,
+    input.attestationId,
+  ]) {
+    if (
+      typeof value !== "string" ||
+      value.length === 0 ||
+      value.includes("\0")
+    ) {
       fail("V117_CERTIFICATE", "Runtime evidence certificate is invalid.")
     }
   }
@@ -280,6 +293,7 @@ export const hashRuntimeEvidenceCertificateRecordV117 = (input: {
     .update(
       frameV117([
         "cowards-game:runtime-evidence-certificate-record:v1.17",
+        input.certificateKind,
         input.certificateId,
         input.certificateVersion,
         input.attestationId,
@@ -855,7 +869,11 @@ export const hashRuntimeEvidenceAuthorityPayload = (
 export const parseRuntimeEvidenceAuthorityPayloadV117 = (
   value: unknown,
 ): Readonly<RuntimeEvidenceAuthorityPayloadV117> => {
-  const record = requireRecord(value, "V117_PAYLOAD", "v1.17 authority payload is invalid.")
+  const record = requireRecord(
+    value,
+    "V117_PAYLOAD",
+    "v1.17 authority payload is invalid.",
+  )
   assertExactKeys(
     record,
     [
@@ -872,27 +890,42 @@ export const parseRuntimeEvidenceAuthorityPayloadV117 = (
     ],
     "v1.17 authority payload",
   )
-  if (record.schemaVersion !== RUNTIME_EVIDENCE_AUTHORITY_PAYLOAD_SCHEMA_VERSION_V1_17) {
+  if (
+    record.schemaVersion !==
+    RUNTIME_EVIDENCE_AUTHORITY_PAYLOAD_SCHEMA_VERSION_V1_17
+  ) {
     fail("PAYLOAD_VERSION", "v1.17 authority payload version is unknown.")
   }
-  const attestationValues = assertCollection(record.attestations, "attestations")
+  const attestationValues = assertCollection(
+    record.attestations,
+    "attestations",
+  )
   const attestations = attestationValues.map((value) => {
-    const candidate = requireRecord(value, "V117_ATTESTATION", "v1.17 attestation is invalid.")
-    assertExactKeys(candidate, [
-      "attestationId",
-      "attestationHash",
-      "producerId",
-      "producerKeyId",
-      "trustDomain",
-      "managedIdentity",
-      "imports",
-      "binding",
-    ], "v1.17 attestation")
+    const candidate = requireRecord(
+      value,
+      "V117_ATTESTATION",
+      "v1.17 attestation is invalid.",
+    )
+    assertExactKeys(
+      candidate,
+      [
+        "attestationId",
+        "attestationHash",
+        "producerId",
+        "producerKeyId",
+        "trustDomain",
+        "managedIdentity",
+        "imports",
+        "binding",
+      ],
+      "v1.17 attestation",
+    )
     if (candidate.managedIdentity !== true) {
       return fail("V117_ATTESTATION", "v1.17 attestation is invalid.")
     }
     const trustDomain: "fixture" | "production" =
-      candidate.trustDomain === "fixture" || candidate.trustDomain === "production"
+      candidate.trustDomain === "fixture" ||
+      candidate.trustDomain === "production"
         ? candidate.trustDomain
         : fail("V117_ATTESTATION", "v1.17 attestation is invalid.")
     return Object.freeze({
@@ -908,8 +941,11 @@ export const parseRuntimeEvidenceAuthorityPayloadV117 = (
       ),
     })
   })
-  const byAttestation = new Map(attestations.map((value) => [value.attestationId, value]))
-  if (byAttestation.size !== attestations.length) fail("DUPLICATE_ATTESTATION", "v1.17 authority graph is invalid.")
+  const byAttestation = new Map(
+    attestations.map((value) => [value.attestationId, value]),
+  )
+  if (byAttestation.size !== attestations.length)
+    fail("DUPLICATE_ATTESTATION", "v1.17 authority graph is invalid.")
   for (const attestation of attestations) {
     if (attestation.imports.some((id) => !byAttestation.has(id))) {
       fail("DANGLING_ATTESTATION", "v1.17 authority graph is invalid.")
@@ -917,32 +953,47 @@ export const parseRuntimeEvidenceAuthorityPayloadV117 = (
     const visiting = new Set<string>()
     const visited = new Set<string>()
     const visit = (id: string): void => {
-      if (visiting.has(id)) fail("ATTESTATION_CYCLE", "v1.17 authority graph is invalid.")
+      if (visiting.has(id))
+        fail("ATTESTATION_CYCLE", "v1.17 authority graph is invalid.")
       if (visited.has(id)) return
       visiting.add(id)
-      for (const dependency of byAttestation.get(id)?.imports ?? []) visit(dependency)
+      for (const dependency of byAttestation.get(id)?.imports ?? [])
+        visit(dependency)
       visiting.delete(id)
       visited.add(id)
     }
     visit(attestation.attestationId)
   }
-  const certificates = assertCollection(record.certificates, "certificates").map((value) => {
-    const candidate = requireRecord(value, "V117_CERTIFICATE", "v1.17 certificate is invalid.")
-    assertExactKeys(candidate, [
-      "certificateId",
-      "certificateVersion",
-      "certificateRecordHash",
-      "certificateKind",
-      "attestationId",
-      "binding",
-    ], "v1.17 certificate")
+  const certificates = assertCollection(
+    record.certificates,
+    "certificates",
+  ).map((value) => {
+    const candidate = requireRecord(
+      value,
+      "V117_CERTIFICATE",
+      "v1.17 certificate is invalid.",
+    )
+    assertExactKeys(
+      candidate,
+      [
+        "certificateId",
+        "certificateVersion",
+        "certificateRecordHash",
+        "certificateKind",
+        "attestationId",
+        "binding",
+      ],
+      "v1.17 certificate",
+    )
     const certificateKind: "containment" | "conformance" =
-      candidate.certificateKind === "containment" || candidate.certificateKind === "conformance"
+      candidate.certificateKind === "containment" ||
+      candidate.certificateKind === "conformance"
         ? candidate.certificateKind
         : fail("V117_CERTIFICATE", "v1.17 certificate is invalid.")
     const attestationId = assertString(candidate.attestationId, "attestationId")
     const attestation = byAttestation.get(attestationId)
-    if (!attestation) return fail("DANGLING_CERTIFICATE", "v1.17 authority graph is invalid.")
+    if (!attestation)
+      return fail("DANGLING_CERTIFICATE", "v1.17 authority graph is invalid.")
     const binding = parseRuntimeEvidenceAuthorityBindingV117(
       candidate.binding as RuntimeEvidenceAuthorityBindingV117,
     )
@@ -950,16 +1001,24 @@ export const parseRuntimeEvidenceAuthorityPayloadV117 = (
       fail("BINDING_MISMATCH", "v1.17 authority graph is invalid.")
     }
     const certificateId = assertString(candidate.certificateId, "certificateId")
-    const certificateVersion = assertString(candidate.certificateVersion, "certificateVersion")
-    const certificateRecordHash = assertHash(candidate.certificateRecordHash, "certificateRecordHash")
+    const certificateVersion = assertString(
+      candidate.certificateVersion,
+      "certificateVersion",
+    )
+    const certificateRecordHash = assertHash(
+      candidate.certificateRecordHash,
+      "certificateRecordHash",
+    )
     if (
       hashRuntimeEvidenceCertificateRecordV117({
+        certificateKind,
         certificateId,
         certificateVersion,
         attestationId,
         binding,
       }) !== certificateRecordHash
-    ) fail("CERTIFICATE_HASH", "v1.17 authority graph is invalid.")
+    )
+      fail("CERTIFICATE_HASH", "v1.17 authority graph is invalid.")
     return Object.freeze({
       certificateId,
       certificateVersion,
@@ -969,32 +1028,47 @@ export const parseRuntimeEvidenceAuthorityPayloadV117 = (
       binding,
     })
   })
-  if (new Set(certificates.map((value) => value.certificateId)).size !== certificates.length) {
+  if (
+    new Set(certificates.map((value) => value.certificateId)).size !==
+    certificates.length
+  ) {
     fail("DUPLICATE_CERTIFICATE", "v1.17 authority graph is invalid.")
   }
   const payload: RuntimeEvidenceAuthorityPayloadV117 = {
     schemaVersion: RUNTIME_EVIDENCE_AUTHORITY_PAYLOAD_SCHEMA_VERSION_V1_17,
     bundleVersion: assertString(record.bundleVersion, "bundleVersion"),
-    registryGeneration: assertGeneration(record.registryGeneration, "registryGeneration"),
+    registryGeneration: assertGeneration(
+      record.registryGeneration,
+      "registryGeneration",
+    ),
     issuedAt: parseInstant(record.issuedAt, "issuedAt"),
     validFrom: parseInstant(record.validFrom, "validFrom"),
     validUntil: parseInstant(record.validUntil, "validUntil"),
-    semanticTupleManifestHash: assertHash(record.semanticTupleManifestHash, "semanticTupleManifestHash"),
-    sourceManifestHash: assertHash(record.sourceManifestHash, "sourceManifestHash"),
+    semanticTupleManifestHash: assertHash(
+      record.semanticTupleManifestHash,
+      "semanticTupleManifestHash",
+    ),
+    sourceManifestHash: assertHash(
+      record.sourceManifestHash,
+      "sourceManifestHash",
+    ),
     attestations: Object.freeze(attestations),
     certificates: Object.freeze(certificates),
   }
   if (
     Date.parse(payload.issuedAt) > Date.parse(payload.validFrom) ||
     Date.parse(payload.validFrom) >= Date.parse(payload.validUntil)
-  ) fail("INVALID_VALIDITY", "v1.17 authority validity is incoherent.")
+  )
+    fail("INVALID_VALIDITY", "v1.17 authority validity is incoherent.")
   return Object.freeze(payload)
 }
 
 export const encodeRuntimeEvidenceAuthorityPayloadV117 = (
   payload: RuntimeEvidenceAuthorityPayloadV117,
 ): Uint8Array => {
-  const bytes = textEncoder.encode(JSON.stringify(parseRuntimeEvidenceAuthorityPayloadV117(payload)))
+  const bytes = textEncoder.encode(
+    JSON.stringify(parseRuntimeEvidenceAuthorityPayloadV117(payload)),
+  )
   if (bytes.byteLength > RUNTIME_EVIDENCE_AUTHORITY_LIMITS.payloadBytes) {
     fail("PAYLOAD_LIMIT", "v1.17 authority payload exceeds its limit.")
   }
@@ -1004,7 +1078,10 @@ export const encodeRuntimeEvidenceAuthorityPayloadV117 = (
 export const parseRuntimeEvidenceAuthorityPayloadBytesV117 = (
   bytes: Uint8Array,
 ): Readonly<RuntimeEvidenceAuthorityPayloadV117> => {
-  if (bytes.byteLength === 0 || bytes.byteLength > RUNTIME_EVIDENCE_AUTHORITY_LIMITS.payloadBytes) {
+  if (
+    bytes.byteLength === 0 ||
+    bytes.byteLength > RUNTIME_EVIDENCE_AUTHORITY_LIMITS.payloadBytes
+  ) {
     fail("PAYLOAD_LIMIT", "v1.17 authority payload byte length is invalid.")
   }
   try {
@@ -1264,7 +1341,10 @@ export const inspectRuntimeEvidenceAuthorityBundleV117 = (
 ) => {
   const envelope = parseRuntimeEvidenceAuthorityEnvelope(serialized)
   if (envelope.trustDomain !== options.expectedTrustDomain) {
-    fail("TRUST_DOMAIN", "Authority bundle trust domain does not match the consumer mode.")
+    fail(
+      "TRUST_DOMAIN",
+      "Authority bundle trust domain does not match the consumer mode.",
+    )
   }
   if (!options.trustedKeyIds.includes(envelope.keyId)) {
     fail("UNKNOWN_KEY", "Authority bundle uses an unknown key ID.")
@@ -1273,7 +1353,10 @@ export const inspectRuntimeEvidenceAuthorityBundleV117 = (
   const signature = decodeBase64(envelope.signatureBase64, "signatureBase64")
   const payloadSha256 = hashRuntimeEvidenceAuthorityPayload(payloadBytes)
   if (payloadSha256 !== envelope.payloadSha256) {
-    fail("PAYLOAD_HASH", "Authority bundle payload hash does not match exact bytes.")
+    fail(
+      "PAYLOAD_HASH",
+      "Authority bundle payload hash does not match exact bytes.",
+    )
   }
   let signatureValid = false
   try {
@@ -1292,19 +1375,45 @@ export const inspectRuntimeEvidenceAuthorityBundleV117 = (
   } catch {
     signatureValid = false
   }
-  if (!signatureValid) fail("SIGNATURE", "Authority bundle signature is invalid.")
+  if (!signatureValid)
+    fail("SIGNATURE", "Authority bundle signature is invalid.")
   const payload = parseRuntimeEvidenceAuthorityPayloadBytesV117(payloadBytes)
-  const evaluation = Date.parse(parseInstant(options.evaluationInstant, "evaluationInstant"))
+  const recordTrustDomain =
+    options.expectedTrustDomain ===
+    RUNTIME_EVIDENCE_AUTHORITY_TRUST_DOMAINS.fixture
+      ? "fixture"
+      : options.expectedTrustDomain ===
+          RUNTIME_EVIDENCE_AUTHORITY_TRUST_DOMAINS.production
+        ? "production"
+        : fail("TRUST_DOMAIN", "Authority bundle trust domain is unknown.")
+  if (
+    payload.attestations.some(
+      (attestation) => attestation.trustDomain !== recordTrustDomain,
+    )
+  ) {
+    fail(
+      "TRUST_DOMAIN",
+      "Authority record trust domain does not match its envelope.",
+    )
+  }
+  const evaluation = Date.parse(
+    parseInstant(options.evaluationInstant, "evaluationInstant"),
+  )
   if (
     evaluation < Date.parse(payload.issuedAt) ||
     evaluation < Date.parse(payload.validFrom) ||
     evaluation > Date.parse(payload.validUntil)
-  ) fail("VALIDITY", "Authority bundle is outside its validity interval.")
+  )
+    fail("VALIDITY", "Authority bundle is outside its validity interval.")
   if (
-    options.expectedTrustDomain === RUNTIME_EVIDENCE_AUTHORITY_TRUST_DOMAINS.production &&
+    options.expectedTrustDomain ===
+      RUNTIME_EVIDENCE_AUTHORITY_TRUST_DOMAINS.production &&
     payload.certificates.length > 0
   ) {
-    fail("V117_PRODUCTION_UNAVAILABLE", "Production v1.17 evidence authority is unavailable.")
+    fail(
+      "V117_PRODUCTION_UNAVAILABLE",
+      "Production v1.17 evidence authority is unavailable.",
+    )
   }
   return Object.freeze({ envelope, payload, payloadBytes, payloadSha256 })
 }

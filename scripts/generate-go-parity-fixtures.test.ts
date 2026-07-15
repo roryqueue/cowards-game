@@ -68,7 +68,10 @@ const makeVersionRoot = (): string => {
     path.join(repoRoot, "apps/go-backend/runtime_semantic_receipt.go"),
     path.join(repoRoot, "apps/go-backend/runtime_service_client.go"),
     path.join(repoRoot, "apps/go-backend/runtime_service_client_test.go"),
-    path.join(repoRoot, "packages/persistence/migrations/0017_runtime_semantic_receipts.sql"),
+    path.join(
+      repoRoot,
+      "packages/persistence/migrations/0017_runtime_semantic_receipts.sql",
+    ),
   ]) {
     const relative = path.relative(repoRoot, source)
     const target = path.join(root, relative)
@@ -173,6 +176,7 @@ describe("versioned TypeScript-to-Go parity generator", () => {
       "--root",
       root,
       "--versions-only",
+      "--historical-v1.16-only",
       "--check",
     ])
     expect(completed.status, completed.stderr).toBe(0)
@@ -340,6 +344,7 @@ describe("versioned TypeScript-to-Go parity generator", () => {
       root,
       "--versions-only",
       "--write-v1.17-invocation",
+      "--write-v1.17-service",
       "--check",
     ])
     expect(written.status, written.stderr).toBe(0)

@@ -429,21 +429,34 @@ const cloneInputV117 = (
   ),
   ...(input.trustedProducers === undefined
     ? {}
-    : { trustedProducers: input.trustedProducers.map((producer) => ({ ...producer })) }),
+    : {
+        trustedProducers: input.trustedProducers.map((producer) => ({
+          ...producer,
+        })),
+      }),
 })
 
 const persistVerifiedV117 = async (
   client: PoolClient,
   snapshot: Readonly<RuntimeEvidenceVerifiedSnapshotV117>,
-  input: Pick<ImportRuntimeEvidenceAttestationV117Input, "certificateKind" | "certificateVersion">,
+  input: Pick<
+    ImportRuntimeEvidenceAttestationV117Input,
+    "certificateKind" | "certificateVersion"
+  >,
 ): Promise<ImportedRuntimeEvidenceAttestationV117> => {
-  if (input.certificateVersion.length === 0 || input.certificateVersion.includes("\0")) {
-    throw new RuntimeEvidenceImportError("Candidate certificate version is invalid.")
+  if (
+    input.certificateVersion.length === 0 ||
+    input.certificateVersion.includes("\0")
+  ) {
+    throw new RuntimeEvidenceImportError(
+      "Candidate certificate version is invalid.",
+    )
   }
   const attestationId = `attestation:v1.17:${snapshot.attestationSha256}`
   const certificateId = `certificate:${input.certificateKind}:v1.17:${snapshot.attestationSha256}`
   const binding = runtimeEvidenceAuthorityBindingFromSnapshotV117(snapshot)
   const certificateRecordHash = hashRuntimeEvidenceCertificateRecordV117({
+    certificateKind: input.certificateKind,
     certificateId,
     certificateVersion: input.certificateVersion,
     attestationId,
@@ -493,7 +506,9 @@ const persistVerifiedV117 = async (
     client,
     "runtime_evidence_v1_17_candidates",
     columns,
-    values,
+    values.map((value, index) =>
+      columns[index] === "exact_pin_expansion" ? JSON.stringify(value) : value,
+    ),
     "attestation_sha256",
   )
   const persisted = await client.query(
@@ -502,7 +517,12 @@ const persistVerifiedV117 = async (
       where attestation_sha256 = $1`,
     [snapshot.attestationSha256],
   )
-  assertExactPersistedRow(persisted.rows[0], columns, values, "v1.17 evidence candidate")
+  assertExactPersistedRow(
+    persisted.rows[0],
+    columns,
+    values,
+    "v1.17 evidence candidate",
+  )
   return Object.freeze({
     attestationId,
     attestationSha256: snapshot.attestationSha256,

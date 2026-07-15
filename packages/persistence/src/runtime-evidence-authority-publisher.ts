@@ -1927,6 +1927,7 @@ export const prepareRuntimeEvidenceAuthorityPublicationV117 = async (
       exactPins: row.exact_pin_expansion as never,
     })
     const expectedRecordHash = hashRuntimeEvidenceCertificateRecordV117({
+      certificateKind: row.certificate_kind,
       certificateId: row.certificate_id,
       certificateVersion: row.certificate_version,
       attestationId: row.attestation_id,
@@ -1946,14 +1947,16 @@ export const prepareRuntimeEvidenceAuthorityPublicationV117 = async (
       binding,
     })
   })
-  const certificates = rows.rows.map((row, index) => Object.freeze({
-    certificateId: row.certificate_id,
-    certificateVersion: row.certificate_version,
-    certificateRecordHash: row.certificate_record_hash,
-    certificateKind: row.certificate_kind,
-    attestationId: row.attestation_id,
-    binding: attestations[index]!.binding,
-  }))
+  const certificates = rows.rows.map((row, index) =>
+    Object.freeze({
+      certificateId: row.certificate_id,
+      certificateVersion: row.certificate_version,
+      certificateRecordHash: row.certificate_record_hash,
+      certificateKind: row.certificate_kind,
+      attestationId: row.attestation_id,
+      binding: attestations[index]!.binding,
+    }),
+  )
   const payload: RuntimeEvidenceAuthorityPayloadV117 = {
     schemaVersion: RUNTIME_EVIDENCE_AUTHORITY_PAYLOAD_SCHEMA_VERSION_V1_17,
     bundleVersion: input.bundleVersion,

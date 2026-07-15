@@ -577,8 +577,12 @@ const createV117ServiceArtifacts = () => {
     },
   }
   return {
-    requestBytes: Buffer.from(serializeRuntimeExecutionServiceRequestV117(request)),
-    responseBytes: Buffer.from(serializeRuntimeExecutionServiceResponseV117(response)),
+    requestBytes: Buffer.from(
+      serializeRuntimeExecutionServiceRequestV117(request),
+    ),
+    responseBytes: Buffer.from(
+      serializeRuntimeExecutionServiceResponseV117(response),
+    ),
     receiptClaimSha256: sha256Hex(
       encodeRuntimeSemanticReceiptClaimsV117(receiptClaims),
     ),
@@ -664,7 +668,10 @@ const writeV117ServiceArtifacts = (root: string): void => {
   writeFileSync(paths.goContract, createV117GeneratedSource())
 }
 
-const verifyV117Artifacts = (root: string, families: readonly ("invocation" | "service")[]): void => {
+const verifyV117Artifacts = (
+  root: string,
+  families: readonly ("invocation" | "service")[],
+): void => {
   const paths = versionPaths(root)
   const invocation = createV117InvocationArtifacts()
   const service = createV117ServiceArtifacts()
@@ -677,7 +684,8 @@ const verifyV117Artifacts = (root: string, families: readonly ("invocation" | "s
     expected.set(paths.v117ServiceRequest, service.requestBytes)
     expected.set(paths.v117ServiceResponse, service.responseBytes)
   }
-  if (families.length > 0) expected.set(paths.goContract, createV117GeneratedSource())
+  if (families.length > 0)
+    expected.set(paths.goContract, createV117GeneratedSource())
   for (const [target, bytes] of expected) {
     if (
       !existsSync(target) ||
@@ -1211,15 +1219,25 @@ export const main = async (args = process.argv.slice(2)): Promise<void> => {
   const writeV117Invocation = args.includes("--write-v1.17-invocation")
   const writeV117Service = args.includes("--write-v1.17-service")
   const checkMode = args.includes("--check")
+  const historicalV116Only = args.includes("--historical-v1.16-only")
 
   verifyImmutableV116(root)
   if (writeV117Invocation) writeV117InvocationArtifacts(root)
   if (writeV117Service) writeV117ServiceArtifacts(root)
+  const requireAllV117 =
+    checkMode &&
+    !historicalV116Only &&
+    !writeV117Invocation &&
+    !writeV117Service
   const families = [
-    ...(writeV117Invocation || existsSync(versionPaths(root).v117InvocationRequest)
+    ...(requireAllV117 ||
+    writeV117Invocation ||
+    existsSync(versionPaths(root).v117InvocationRequest)
       ? (["invocation"] as const)
       : []),
-    ...(writeV117Service || existsSync(versionPaths(root).v117ServiceRequest)
+    ...(requireAllV117 ||
+    writeV117Service ||
+    existsSync(versionPaths(root).v117ServiceRequest)
       ? (["service"] as const)
       : []),
   ]
