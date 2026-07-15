@@ -224,7 +224,7 @@ Plans:
 
 **Wave 11 — evidence graph and successor receipt**
 
-- [ ] 258-13-PLAN.md — Close the identity DAG and mint v1.17 while preserving immutable v1.16 dispatch.
+- [x] 258-13-PLAN.md — Close the identity DAG and mint v1.17 while preserving immutable v1.16 dispatch.
 
 **Wave 12 — preactivation, small atomic flip, then final proof**
 
