@@ -57,9 +57,10 @@ describe("Phase 258 runtime ABI activation closure", () => {
     expect(() =>
       verifyImmutableRuntimeServiceV116Digests((path) => {
         const bytes = readFileSync(path)
-        return path === mutatedPath
-          ? Buffer.concat([bytes.subarray(0, -1), Buffer.from("\n")])
-          : bytes
+        if (path !== mutatedPath) return bytes
+        const mutated = Buffer.from(bytes)
+        mutated[0] = mutated[0]! ^ 1
+        return mutated
       }),
     ).toThrow(/Immutable v1\.16 digest changed/u)
   })

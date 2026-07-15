@@ -64,17 +64,41 @@ export const parseRuntimeAbiActivationAllowlist = (
   }
 }
 
-const fileSha256 = (path: string): string =>
-  createHash("sha256").update(readFileSync(path)).digest("hex")
+export const IMMUTABLE_RUNTIME_SERVICE_V116_DIGESTS = Object.freeze({
+  "packages/spec/src/runtime-execution-service.ts":
+    "9a0a0411056d06ce4b426b7749256460369124fa752c6c2f81912b8b0bfb31fc",
+  "packages/spec/artifacts/runtime-execution-service-request.v1.16.json":
+    "5d04fa4d82eb814bb034ce9b5f1d5c80945e3d4e02c9124ca39a6670e9c0eab5",
+  "packages/spec/artifacts/runtime-execution-service-response.v1.16.wire.json":
+    "9c870d57e0125eb80ab2ba941ecbbede8a9a775f61c0b278abec25c491374d97",
+  "apps/go-backend/runtime_service_client.go":
+    "9c72e5b0ee3ddfb36a7aec51a5a1ead508b2fae29eace27a73b9fda7d55ce23c",
+  "apps/go-backend/runtime_semantic_receipt.go":
+    "36052047a870068ab81ced8c78f3b7f4e8130034a57ee8d16bc3873a50507d1d",
+  "packages/persistence/migrations/0017_runtime_semantic_receipts.sql":
+    "ac19e1d825217dfb72142685eb65e62933cea49541ceb39338235b32d2430a69",
+} as const)
 
-const immutableV116 = [
-  "packages/spec/src/runtime-execution-service.ts",
-  "packages/spec/artifacts/runtime-execution-service-request.v1.16.json",
-  "packages/spec/artifacts/runtime-execution-service-response.v1.16.wire.json",
-  "apps/go-backend/runtime_service_client.go",
-  "apps/go-backend/runtime_semantic_receipt.go",
-  "packages/persistence/migrations/0017_runtime_semantic_receipts.sql",
-] as const
+export const verifyImmutableRuntimeServiceV116Digests = (
+  readBytes: (path: string) => Uint8Array = (path) => readFileSync(path),
+): void => {
+  for (const [path, expected] of Object.entries(
+    IMMUTABLE_RUNTIME_SERVICE_V116_DIGESTS,
+  )) {
+    let bytes: Uint8Array
+    try {
+      bytes = readBytes(path)
+    } catch {
+      throw new TypeError(`Immutable v1.16 path is unavailable: ${path}`)
+    }
+    const actual = createHash("sha256").update(bytes).digest("hex")
+    if (actual !== expected) {
+      throw new TypeError(
+        `Immutable v1.16 digest changed: ${path} expected=${expected} actual=${actual}`,
+      )
+    }
+  }
+}
 
 export const checkRuntimeAbiManifestClosure = (options: {
   final: boolean
@@ -87,11 +111,7 @@ export const checkRuntimeAbiManifestClosure = (options: {
       throw new TypeError(`Allowlisted update path is missing: ${path}`)
     }
   }
-  for (const path of immutableV116) {
-    if (!existsSync(path) || fileSha256(path).length !== 64) {
-      throw new TypeError(`Immutable v1.16 path is unavailable: ${path}`)
-    }
-  }
+  verifyImmutableRuntimeServiceV116Digests()
   if (!options.final && existsSync(RUNTIME_ABI_ACTIVATION_MANIFEST_PATH)) {
     throw new TypeError("Final activation manifest exists before activation.")
   }
