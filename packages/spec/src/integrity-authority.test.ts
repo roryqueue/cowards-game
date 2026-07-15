@@ -14,6 +14,7 @@ import {
   CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_ID,
   CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_RECORD,
   CURRENT_CANONICAL_COMPATIBILITY_TUPLE_ID,
+  CURRENT_CANONICAL_COMPATIBILITY_TUPLE_RECORD,
   HISTORICAL_RUNTIME_V114_SEMANTIC_TUPLE_ID,
   REGISTERED_CANONICAL_COMPATIBILITY_TUPLES,
   VERSIONED_RUNTIME_V114_SEMANTIC_TUPLE_RECORD,
@@ -28,6 +29,10 @@ import {
   resolveHistoricalRuntimeV114SemanticTuple,
   type CanonicalCompatibilityTuple,
 } from "./integrity-authority.js"
+import {
+  CURRENT_CANONICAL_COMPATIBILITY_TUPLE_KEY,
+  STRATEGY_RUNTIME_ABI_VERSION,
+} from "./versions.js"
 
 const repoRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -107,9 +112,25 @@ describe("v1.37 canonical integrity authority", () => {
     }
   })
 
-  it("owns the inactive v1.17 identity-domain tuple without changing v1.14 history", () => {
+  it("selects the exact current identity-domain tuple without changing v1.14 history", () => {
+    const selectedV117 =
+      STRATEGY_RUNTIME_ABI_VERSION === "strategy-runtime-abi-v1.17"
+    const expectedCurrent = selectedV117
+      ? VERSIONED_RUNTIME_V117_SEMANTIC_TUPLE_RECORD
+      : VERSIONED_RUNTIME_V114_SEMANTIC_TUPLE_RECORD
+
     expect(CANONICAL_COMPATIBILITY_TUPLES).toHaveLength(1)
-    expect(CANONICAL_COMPATIBILITY_TUPLES[0]!.tupleId).toBe(
+    expect(CURRENT_CANONICAL_COMPATIBILITY_TUPLE_KEY).toBe(
+      selectedV117 ? "runtime-v1.17" : "runtime-v1.14",
+    )
+    expect(CANONICAL_COMPATIBILITY_TUPLES[0]).toEqual(expectedCurrent)
+    expect(CURRENT_CANONICAL_COMPATIBILITY_TUPLE_RECORD).toEqual(
+      expectedCurrent,
+    )
+    expect(CURRENT_CANONICAL_COMPATIBILITY_TUPLE_ID).toBe(
+      expectedCurrent.tupleId,
+    )
+    expect(HISTORICAL_RUNTIME_V114_SEMANTIC_TUPLE_ID).toBe(
       "sha256:922a6857fdbc8354b744d6e766bff216f3fee85b5ed381355cb427f5a616b3ae",
     )
     expect(CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_ID).toBe(
@@ -119,7 +140,7 @@ describe("v1.37 canonical integrity authority", () => {
     expect(
       prepareCanonicalCompatibilityTupleRecord(
         {
-          ...CANONICAL_COMPATIBILITY_TUPLES[0]!.tuple,
+          ...VERSIONED_RUNTIME_V114_SEMANTIC_TUPLE_RECORD.tuple,
           runtimeAbi: "strategy-runtime-abi-v1.17",
         },
         CANONICAL_COMPATIBILITY_TUPLE_IDENTITY_PROFILES.successor
@@ -131,7 +152,9 @@ describe("v1.37 canonical integrity authority", () => {
         tupleId: CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_ID,
         tuple: { ...CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE },
       }),
-    ).toBeUndefined()
+    ).toEqual(
+      selectedV117 ? VERSIONED_RUNTIME_V117_SEMANTIC_TUPLE_RECORD : undefined,
+    )
     expect(
       resolveCandidateRuntimeV117SemanticTuple({
         tupleId: CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_ID,
@@ -150,8 +173,15 @@ describe("v1.37 canonical integrity authority", () => {
   })
 
   it("selects encodings by explicit record profile and keeps current separate from history", () => {
+    const selectedV117 =
+      STRATEGY_RUNTIME_ABI_VERSION === "strategy-runtime-abi-v1.17"
     expect(CURRENT_CANONICAL_COMPATIBILITY_TUPLE_ID).toBe(
-      HISTORICAL_RUNTIME_V114_SEMANTIC_TUPLE_ID,
+      selectedV117
+        ? CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_ID
+        : HISTORICAL_RUNTIME_V114_SEMANTIC_TUPLE_ID,
+    )
+    expect(HISTORICAL_RUNTIME_V114_SEMANTIC_TUPLE_ID).toBe(
+      "sha256:922a6857fdbc8354b744d6e766bff216f3fee85b5ed381355cb427f5a616b3ae",
     )
     expect(REGISTERED_CANONICAL_COMPATIBILITY_TUPLES).toEqual([
       VERSIONED_RUNTIME_V114_SEMANTIC_TUPLE_RECORD,

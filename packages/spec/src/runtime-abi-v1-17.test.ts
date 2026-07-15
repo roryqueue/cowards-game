@@ -261,18 +261,18 @@ describe("runtime ABI v1.17 frozen successor registry", () => {
   it("keeps the atomic successor lifecycle aligned with the selected pointer", async () => {
     const runtimeAbi = await subject()
     const contract = runtimeAbi.RUNTIME_ABI_V1_17
+    const selected =
+      String(STRATEGY_RUNTIME_ABI_VERSION) ===
+      String(contract.versions.runtimeAbi)
 
     expect(contract.versions).toEqual({
       runtimeAbi: "strategy-runtime-abi-v1.17",
       runtimeService: "runtime-execution-service-v1.17",
       semanticReceipt: "runtime-semantic-receipt-v1.17",
-      canonicalJson: "canonical-json-v1",
+      canonicalJson: selected ? "canonical-json-v1.1" : "canonical-json-v1",
       budget: "runtime-budget-v1",
       identity: "runtime-identity-v1",
     })
-    const selected =
-      String(STRATEGY_RUNTIME_ABI_VERSION) ===
-      String(contract.versions.runtimeAbi)
     expect(contract.lifecycle.active).toBe(selected)
     expect(contract.lifecycle.status).toBe(
       selected ? "current" : "candidate-only",
@@ -294,6 +294,41 @@ describe("runtime ABI v1.17 frozen successor registry", () => {
     expect(contract.migration.v116ReadDispatchRetained).toBe(true)
     expect(contract.migration.v116InsertionOrderedWireBytesRetained).toBe(true)
     expect(contract.migration.migration0017RewriteAllowed).toBe(false)
+    expect(contract.historicalV116).toMatchObject({
+      serializer: "typescript-json-stringify-insertion-order",
+      canonicalJsonV1Applied: false,
+    })
+    const lifecycle = (selected: boolean) => ({
+      canonicalJson: selected ? "canonical-json-v1.1" : "canonical-json-v1",
+      status: selected ? "current" : "candidate-only",
+      active: selected,
+      currentRuntimeAbi: selected
+        ? "strategy-runtime-abi-v1.17"
+        : "strategy-runtime-abi-v1.14",
+      currentRuntimeService: selected
+        ? "runtime-execution-service-v1.17"
+        : "runtime-execution-service-v1.16",
+      currentSemanticReceipt: selected
+        ? "runtime-semantic-receipt-v1.17"
+        : "runtime-semantic-receipt-v1",
+    })
+
+    expect(lifecycle(false)).toEqual({
+      canonicalJson: "canonical-json-v1",
+      status: "candidate-only",
+      active: false,
+      currentRuntimeAbi: "strategy-runtime-abi-v1.14",
+      currentRuntimeService: "runtime-execution-service-v1.16",
+      currentSemanticReceipt: "runtime-semantic-receipt-v1",
+    })
+    expect(lifecycle(true)).toEqual({
+      canonicalJson: "canonical-json-v1.1",
+      status: "current",
+      active: true,
+      currentRuntimeAbi: "strategy-runtime-abi-v1.17",
+      currentRuntimeService: "runtime-execution-service-v1.17",
+      currentSemanticReceipt: "runtime-semantic-receipt-v1.17",
+    })
   })
 
   it("freezes the D-01 through D-04 canonical JSON profile and exact calibrated limits", async () => {
