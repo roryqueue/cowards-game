@@ -57,6 +57,7 @@ let childClosed = false
 let childStatus = null
 let childSignal = null
 let childError
+let childSpawned = false
 let messageSent = false
 let terminationStarted = false
 let terminationDeadlineNanoseconds
@@ -69,6 +70,7 @@ let cleanupVerified = !cleanupRequired
 let containerId
 let containerRemoved = !cleanupRequired
 let containerReaperStarted = false
+let containerIdentityUnavailable = false
 
 const retainedChunk = (chunk, retainedBytes, byteLimit) => {
   const remaining = Math.max(0, byteLimit + 1 - retainedBytes)
@@ -126,6 +128,13 @@ const cleanupContainer = (includeKill, deadlineNanoseconds) => {
         "utf8",
       ).trim()
     } catch {
+      // Once the runtime command has closed, no conforming --cidfile writer
+      // remains. Preserve the no-receipt result, but do not pin a referenced
+      // collector forever waiting for identity that can no longer appear.
+      if (childClosed || (childError && !childSpawned)) {
+        containerIdentityUnavailable = true
+        cleanupDirectory()
+      }
       return
     }
   }
@@ -165,12 +174,19 @@ const cleanupContainer = (includeKill, deadlineNanoseconds) => {
 }
 
 const startContainerReaper = () => {
-  if (!cleanupRequired || containerRemoved || containerReaperStarted) return
+  if (
+    !cleanupRequired ||
+    containerRemoved ||
+    containerIdentityUnavailable ||
+    containerReaperStarted
+  ) return
   containerReaperStarted = true
   const reapContainer = () => {
     cleanupAttempted = false
     cleanupContainer(true, hrtime.bigint() + 5000000000n)
-    if (!containerRemoved) setTimeout(reapContainer, 250)
+    if (!containerRemoved && !containerIdentityUnavailable) {
+      setTimeout(reapContainer, 250)
+    }
   }
   reapContainer()
 }
@@ -264,6 +280,9 @@ try {
 }
 
 if (child) {
+  child.on("spawn", () => {
+    childSpawned = true
+  })
   child.stdout.on("data", (value) => {
     const chunk = Buffer.isBuffer(value) ? value : Buffer.from(value)
     const retained = retainedChunk(
