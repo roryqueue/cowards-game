@@ -41,8 +41,12 @@ const v116ResponsePath = path.join(
   "packages/spec/artifacts/runtime-execution-service-response.v1.16.wire.json",
 )
 const candidateRequestRelative =
-  "packages/spec/artifacts/runtime-execution-service-request.v1.17.candidate.json"
+  "packages/spec/artifacts/runtime-invocation-request.v1.17.candidate.json"
 const candidateResponseRelative =
+  "packages/spec/artifacts/runtime-invocation-response.v1.17.candidate.wire.json"
+const serviceRequestRelative =
+  "packages/spec/artifacts/runtime-execution-service-request.v1.17.candidate.json"
+const serviceResponseRelative =
   "packages/spec/artifacts/runtime-execution-service-response.v1.17.candidate.wire.json"
 const generatedRelative = "apps/go-backend/runtime_execution_contract_gen.go"
 const temporaryRoots: string[] = []
@@ -108,7 +112,8 @@ describe("versioned TypeScript-to-Go parity generator", () => {
     )
     expect(source).toContain('args.includes("--root")')
     expect(source).toContain('args.includes("--versions-only")')
-    expect(source).toContain('args.includes("--write-v1.17")')
+    expect(source).toContain('args.includes("--write-v1.17-invocation")')
+    expect(source).toContain('args.includes("--write-v1.17-service")')
     expect(source).toContain('args.includes("--write-v1.16")')
     expect(source).toContain("Refusing to rewrite immutable v1.16")
     expect(source).not.toContain("writeFileSync(runtimeExecutionWireGoldenPath")
@@ -180,7 +185,7 @@ describe("versioned TypeScript-to-Go parity generator", () => {
       "--root",
       root,
       "--versions-only",
-      "--write-v1.17",
+      "--write-v1.17-invocation",
       "--check",
     ])
     expect(first.status, first.stderr).toBe(0)
@@ -212,7 +217,7 @@ describe("versioned TypeScript-to-Go parity generator", () => {
       "--root",
       root,
       "--versions-only",
-      "--write-v1.17",
+      "--write-v1.17-invocation",
       "--check",
     ])
     expect(second.status, second.stderr).toBe(0)
@@ -258,6 +263,39 @@ describe("versioned TypeScript-to-Go parity generator", () => {
     )
     expect(response.accounting.receipt.counters.stderrBytes.delta).toBe(0)
   })
+
+  it("keeps per-invocation and full-service candidate namespaces disjoint", () => {
+    const root = makeVersionRoot()
+    const invocation = runGenerator([
+      "--root",
+      root,
+      "--versions-only",
+      "--write-v1.17-invocation",
+      "--check",
+    ])
+    expect(invocation.status, invocation.stderr).toBe(0)
+    expect(existsSync(path.join(root, candidateRequestRelative))).toBe(true)
+    expect(existsSync(path.join(root, candidateResponseRelative))).toBe(true)
+    expect(existsSync(path.join(root, serviceRequestRelative))).toBe(false)
+    expect(existsSync(path.join(root, serviceResponseRelative))).toBe(false)
+
+    const service = runGenerator([
+      "--root",
+      root,
+      "--versions-only",
+      "--write-v1.17-service",
+      "--check",
+    ])
+    expect(service.status, service.stderr).toBe(0)
+    expect(existsSync(path.join(root, serviceRequestRelative))).toBe(true)
+    expect(existsSync(path.join(root, serviceResponseRelative))).toBe(true)
+    expect(readFileSync(path.join(root, serviceRequestRelative))).not.toEqual(
+      readFileSync(path.join(root, candidateRequestRelative)),
+    )
+    expect(readFileSync(path.join(root, serviceResponseRelative))).not.toEqual(
+      readFileSync(path.join(root, candidateResponseRelative)),
+    )
+  }, 30_000)
 
   it("fails a stale generated table instead of silently regenerating it", () => {
     const root = makeVersionRoot()
