@@ -1,7 +1,16 @@
-import { readFileSync } from "node:fs"
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
 import { describe, expect, it } from "vitest"
 import {
   parseRuntimeAbiTestManifest,
+  validateGoTestSourceOwnership,
   validateRuntimeAbiTestResult,
 } from "./run-v1-37-runtime-abi-test-manifest.js"
 
@@ -127,5 +136,46 @@ describe("Phase 258 exact runtime ABI test manifest", () => {
         `${namedFiles}\n ✓ rejects all-skipped Vitest output\n Test Files  7 passed (7)\n Tests  19 passed (19)`,
       ),
     ).not.toThrow()
+  })
+
+  it("proves exact named Go test ownership from syntax, not verbose markers", () => {
+    const parsed = parseRuntimeAbiTestManifest(manifest())
+    const test = parsed.tests.find(
+      ({ id }) => id === "phase258.go.current-contract",
+    )
+    if (test === undefined) throw new Error("Go manifest entry missing")
+    const root = mkdtempSync(join(tmpdir(), "phase258-go-ownership-"))
+    const goDirectory = join(root, "apps/go-backend")
+    const ownedFile = join(goDirectory, "runtime_service_client_v1_17_test.go")
+    const decoyFile = join(goDirectory, "decoy_test.go")
+    mkdirSync(goDirectory, { recursive: true })
+    try {
+      writeFileSync(
+        ownedFile,
+        `package main\n\nimport "testing"\n\nfunc ${test.namedResult}(t *testing.T) {}\n`,
+      )
+      writeFileSync(decoyFile, "package main\n")
+      expect(() => validateGoTestSourceOwnership(test, root)).not.toThrow()
+      expect(() =>
+        validateRuntimeAbiTestResult(
+          test,
+          `=== RUN   ${test.namedResult}\n--- PASS: ${test.namedResult} (0.00s)\nPASS\nok example.test 0.001s`,
+        ),
+      ).not.toThrow()
+
+      writeFileSync(
+        ownedFile,
+        `package main\n\nconst marker = "func ${test.namedResult}"\n`,
+      )
+      writeFileSync(
+        decoyFile,
+        `package main\n\nimport "testing"\n\nfunc ${test.namedResult}(t *testing.T) {}\n`,
+      )
+      expect(() => validateGoTestSourceOwnership(test, root)).toThrow(
+        /owned Go source/u,
+      )
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
   })
 })
