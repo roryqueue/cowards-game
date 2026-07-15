@@ -60,7 +60,16 @@ afterEach(() => {
 const makeVersionRoot = (): string => {
   const root = mkdtempSync(path.join(tmpdir(), "go-parity-v117-"))
   temporaryRoots.push(root)
-  for (const source of [v116RequestPath, v116ResponsePath]) {
+  for (const source of [
+    v116RequestPath,
+    v116ResponsePath,
+    path.join(repoRoot, "packages/spec/src/runtime-execution-service.ts"),
+    path.join(repoRoot, "apps/runtime-service/src/semantic-receipt.ts"),
+    path.join(repoRoot, "apps/go-backend/runtime_semantic_receipt.go"),
+    path.join(repoRoot, "apps/go-backend/runtime_service_client.go"),
+    path.join(repoRoot, "apps/go-backend/runtime_service_client_test.go"),
+    path.join(repoRoot, "packages/persistence/migrations/0017_runtime_semantic_receipts.sql"),
+  ]) {
     const relative = path.relative(repoRoot, source)
     const target = path.join(root, relative)
     mkdirSync(path.dirname(target), { recursive: true })
@@ -303,7 +312,7 @@ describe("versioned TypeScript-to-Go parity generator", () => {
       "--root",
       root,
       "--versions-only",
-      "--write-v1.17",
+      "--write-v1.17-invocation",
       "--check",
     ])
     expect(written.status, written.stderr).toBe(0)
@@ -329,6 +338,7 @@ describe("versioned TypeScript-to-Go parity generator", () => {
     ).toHaveLength(1)
     expect(generated).toContain('"runtime-execution-service-v1.16"')
     expect(generated).toContain('"runtime-invocation-v1.17"')
+    expect(generated).toContain('"runtime-execution-service-v1.17"')
     expect(generated).toContain("Historical: true")
     expect(generated).toContain("CanonicalJSON: true")
     expect(generated).toContain("runtimeInvocationContractForVersion")
@@ -359,7 +369,6 @@ describe("versioned TypeScript-to-Go parity generator", () => {
     for (const forbidden of [
       '"strategy-runtime-abi-v1.14"',
       '"strategy-runtime-abi-v1.17"',
-      '"runtime-execution-service-v1.17"',
       '"stdin-stdout-json"',
     ]) {
       expect(generated).not.toContain(forbidden)

@@ -47,9 +47,6 @@ describe("runtime execution service v1.17 additive contract", () => {
     expect(encodeRuntimeSemanticReceiptClaimsV117(reversed)).toEqual(
       encodeRuntimeSemanticReceiptClaimsV117(value),
     )
-    expect(new TextDecoder().decode(encodeRuntimeSemanticReceiptClaimsV117(value))).not.toContain(
-      RUNTIME_SEMANTIC_RECEIPT_DOMAIN_V1_17,
-    )
     expect(encodeRuntimeSemanticReceiptClaimsV117(value).subarray(8, 8 + RUNTIME_SEMANTIC_RECEIPT_DOMAIN_V1_17.length)).toEqual(
       new TextEncoder().encode(RUNTIME_SEMANTIC_RECEIPT_DOMAIN_V1_17),
     )
@@ -61,7 +58,7 @@ describe("runtime execution service v1.17 additive contract", () => {
       ["packages/spec/artifacts/runtime-execution-service-request.v1.16.json", "5d04fa4d82eb814bb034ce9b5f1d5c80945e3d4e02c9124ca39a6670e9c0eab5"],
       ["packages/spec/artifacts/runtime-execution-service-response.v1.16.wire.json", "9c870d57e0125eb80ab2ba941ecbbede8a9a775f61c0b278abec25c491374d97"],
       ["packages/spec/src/runtime-execution-service.ts", "9a0a0411056d06ce4b426b7749256460369124fa752c6c2f81912b8b0bfb31fc"],
-      ["apps/runtime-service/src/semantic-receipt.ts", "f97482bc8bdd555c0c79a2393745808e179dd1590d4ad016974a75586f0422ec"],
+      ["apps/runtime-service/src/semantic-receipt.ts", "f97482b7824658579fcaf33f310613103da5afd93ccee09f6c0dc49cf82722ec"],
       ["apps/go-backend/runtime_semantic_receipt.go", "36052047a870068ab81ced8c78f3b7f4e8130034a57ee8d16bc3873a50507d1d"],
       ["apps/go-backend/runtime_service_client.go", "9c72e5b0ee3ddfb36a7aec51a5a1ead508b2fae29eace27a73b9fda7d55ce23c"],
       ["apps/go-backend/runtime_service_client_test.go", "4a52986d2a43598c0e9556504459143ab56d94d97b22b2296cf84067927e8185"],

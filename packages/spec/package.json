@@ -14,7 +14,7 @@
     "contract:generate": "pnpm exec tsx scripts/generate-service-openapi.ts",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run spec.test.ts service-contract.test.ts match-execution-contract.test.ts public-discovery.test.ts workshop-checker.test.ts runtime-abi-v1-17.test.ts runtime-invocation-v1-17.test.ts runtime-preflight-v1-17.test.ts runtime-budget-capabilities-v1-17.test.ts && pnpm --dir ../.. exec vitest run scripts/generate-runtime-budget-capabilities-v1-17.test.ts scripts/preflight-v1-17.test.ts"
+    "test": "vitest run spec.test.ts service-contract.test.ts match-execution-contract.test.ts public-discovery.test.ts workshop-checker.test.ts runtime-abi-v1-17.test.ts runtime-invocation-v1-17.test.ts runtime-preflight-v1-17.test.ts runtime-budget-capabilities-v1-17.test.ts runtime-evidence-attestation-v1-17.test.ts runtime-execution-service-v1-17.test.ts && pnpm --dir ../.. exec vitest run scripts/generate-runtime-budget-capabilities-v1-17.test.ts scripts/preflight-v1-17.test.ts"
   },
   "dependencies": {
     "zod": "^4.4.3"

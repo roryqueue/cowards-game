@@ -30,6 +30,15 @@ func runtimeInvocationContractForVersion(version string) (runtimeInvocationContr
 			CanonicalJSON: true,
 			Current: false,
 		}, true
+	case "runtime-execution-service-v1.17":
+		return runtimeInvocationContractDescriptor{
+			ContractVersion: "runtime-execution-service-v1.17",
+			RequestSHA256: "f11b7216621637d0329409ebf1c83fb1d448191fe1dc7c13cacedb90f6f78b00",
+			ResponseSHA256: "9fced608e25690f512f14db7357a358ad56dc8bcfe18ed1878a94da801d619f2",
+			Historical: false,
+			CanonicalJSON: true,
+			Current: false,
+		}, true
 	default:
 		return runtimeInvocationContractDescriptor{}, false
 	}
@@ -38,9 +47,11 @@ func runtimeInvocationContractForVersion(version string) (runtimeInvocationContr
 func runtimeInvocationContractsSnapshot() map[string]runtimeInvocationContractDescriptor {
 	historical, _ := runtimeInvocationContractForVersion("runtime-execution-service-v1.16")
 	candidate, _ := runtimeInvocationContractForVersion("runtime-invocation-v1.17")
+	serviceCandidate, _ := runtimeInvocationContractForVersion("runtime-execution-service-v1.17")
 	return map[string]runtimeInvocationContractDescriptor{
 		historical.ContractVersion: historical,
 		candidate.ContractVersion: candidate,
+		serviceCandidate.ContractVersion: serviceCandidate,
 	}
 }
 
