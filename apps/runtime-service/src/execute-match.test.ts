@@ -43,6 +43,7 @@ import {
 import {
   executeRuntimeServiceRequest as executeRuntimeServiceRequestWithAuthority,
   executeCandidateRuntimeInvocationV117,
+  executePreparedRuntimeServiceRequestV117,
   type RuntimeExecutionServiceDependencies,
 } from "./execute-match.js"
 import {
@@ -538,6 +539,114 @@ describe("runtime execution service", () => {
     expect(response).not.toHaveProperty("profile")
     expect(response).not.toHaveProperty("counted")
     expect(response).not.toHaveProperty("publishable")
+  })
+
+  it("prepares v1.17 by wrapping the actual current Match path with exact authority and ledger roots", () => {
+    const currentRequest = requestFor()
+    const match = JSON.parse(JSON.stringify(currentRequest)) as JsonValue
+    const bottomRoots = {
+      identityManifestRoot: `sha256:${"1".repeat(64)}`,
+      evidenceGraphRoot: `sha256:${"2".repeat(64)}`,
+    } as const
+    const topRoots = {
+      identityManifestRoot: `sha256:${"3".repeat(64)}`,
+      evidenceGraphRoot: `sha256:${"4".repeat(64)}`,
+    } as const
+    const budgetProfileSha256 = `sha256:${"5".repeat(64)}` as const
+    const ledgerPrestateRoot = `sha256:${"6".repeat(64)}` as const
+    const ledgerPoststateRoot = `sha256:${"7".repeat(64)}` as const
+    const candidateRequest = {
+      contractVersion: "runtime-execution-service-v1.17",
+      kind: "executeMatch",
+      requestId: "request:prepared-full-service:v1.17",
+      matchId: currentRequest.match.matchId,
+      compatibilityTupleId:
+        currentRequest.evidenceSnapshot.compatibility.tupleId,
+      authority: {
+        bundleHash: currentRequest.evidenceSnapshot.authorityBundleHash,
+        sourceManifestHash:
+          currentRequest.evidenceSnapshot.publication.sourceManifestHash,
+        registryGeneration:
+          currentRequest.evidenceSnapshot.registryGeneration,
+      },
+      entrants: { bottom: bottomRoots, top: topRoots },
+      accounting: { budgetProfileSha256, ledgerPrestateRoot },
+      match,
+    } as const
+    const bindings = [bottomRoots, topRoots].map((roots, index) => ({
+      attestationId: `attestation:prepared:${String(index)}`,
+      binding: roots,
+    }))
+    const mountedAuthority = {
+      authorityBundleHash: candidateRequest.authority.bundleHash,
+      registryGeneration: candidateRequest.authority.registryGeneration,
+      semanticTupleManifestHash: candidateRequest.compatibilityTupleId,
+      sourceManifestHash: candidateRequest.authority.sourceManifestHash,
+      payload: {
+        attestations: bindings,
+        certificates: bindings.map(({ attestationId, binding }) => ({
+          attestationId,
+          certificateKind: "containment",
+          binding,
+        })),
+      },
+    }
+    let executions = 0
+    const dependencies = {
+      authorityLoader: { load: () => mountedAuthority },
+      executeCurrentMatchWithAccounting: (nested: unknown) => {
+        executions += 1
+        return {
+          response: executeRuntimeServiceRequest(nested),
+          accounting: {
+            budgetProfileSha256,
+            ledgerPrestateRoot,
+            ledgerPoststateRoot,
+          },
+        }
+      },
+    }
+
+    const response = executePreparedRuntimeServiceRequestV117(
+      candidateRequest,
+      runtimeConfig,
+      dependencies,
+    )
+    expect(executions).toBe(1)
+    expect(response).toMatchObject({
+      contractVersion: "runtime-execution-service-v1.17",
+      ok: true,
+      kind: "executionResult",
+      result: {
+        ledgerPoststateRoot,
+        semanticReceipt: {
+          schemaVersion: "runtime-semantic-receipt-v1.17",
+          ledgerPrestateRoot,
+          ledgerPoststateRoot,
+        },
+      },
+    })
+
+    const mismatch = executePreparedRuntimeServiceRequestV117(
+      {
+        ...candidateRequest,
+        authority: {
+          ...candidateRequest.authority,
+          sourceManifestHash: `sha256:${"8".repeat(64)}`,
+        },
+      },
+      runtimeConfig,
+      dependencies,
+    )
+    expect(mismatch).toMatchObject({
+      ok: false,
+      kind: "systemFailure",
+      systemFailure: {
+        classification: "system_failure",
+        playerPenalty: false,
+      },
+    })
+    expect(executions).toBe(1)
   })
 
   it("requires an explicit adapter unless local fallback is enabled", () => {
