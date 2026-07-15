@@ -584,7 +584,7 @@ const outcomeForObservation = (
     observation.stdout.byteLength >
       request.budget.methodLimit.counters.stdoutBytes.maximum
   ) {
-    return candidatePlayerViolation(request, "RESOURCE_EXHAUSTION", [
+    return candidatePlayerViolation(request, "OVERSIZED_OUTPUT", [
       "WASM_WASI_HOST_OUTER_AUTHORITY",
       "WASM_WASI_PROVEN_OUTPUT_EXHAUSTION",
     ])
@@ -616,7 +616,7 @@ const outcomeForObservation = (
       ) {
         return candidateOutcome("transport_crash", request)
       }
-      return candidatePlayerViolation(request, "RESOURCE_EXHAUSTION", [
+      return candidatePlayerViolation(request, "OVERSIZED_OUTPUT", [
         "WASM_WASI_HOST_OUTER_AUTHORITY",
         "WASM_WASI_PROVEN_OUTPUT_EXHAUSTION",
       ])
@@ -636,7 +636,7 @@ const outcomeForObservation = (
     admitted.canonicalBytes.byteLength >
     request.budget.methodLimit.counters.payloadBytes.maximum
   ) {
-    return candidatePlayerViolation(request, "RESOURCE_EXHAUSTION", [
+    return candidatePlayerViolation(request, "OVERSIZED_OUTPUT", [
       "WASM_WASI_HOST_OUTER_AUTHORITY",
       "WASM_WASI_PROVEN_PAYLOAD_EXHAUSTION",
     ])

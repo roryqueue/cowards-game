@@ -131,7 +131,8 @@ const pythonCandidatePlayerViolation = (
   code:
     | "INVALID_OUTPUT"
     | "RESOURCE_EXHAUSTION"
-    | "THROWN_EXCEPTION",
+    | "THROWN_EXCEPTION"
+    | "OVERSIZED_OUTPUT",
 ): RuntimeInvocationResultV117 => ({
   kind: "player_violation",
   violation: RUNTIME_INVOCATION_V1_17_PLAYER_VIOLATIONS[code],
@@ -189,7 +190,7 @@ const rawOutcome = (
       observation.payloadBytes.byteLength >
       request.budget.methodLimit.counters.payloadBytes.maximum
     ) {
-      return pythonCandidatePlayerViolation(request, "RESOURCE_EXHAUSTION")
+      return pythonCandidatePlayerViolation(request, "OVERSIZED_OUTPUT")
     }
     const payload = admitCanonicalJsonBytes(observation.payloadBytes, {
       profile: "strategy-payload",
@@ -219,7 +220,7 @@ const rawOutcome = (
     ])
   }
   if (observation.kind === "oversized_output") {
-    return pythonCandidatePlayerViolation(request, "RESOURCE_EXHAUSTION")
+    return pythonCandidatePlayerViolation(request, "OVERSIZED_OUTPUT")
   }
   if (observation.kind === "invalid_output") {
     return pythonCandidatePlayerViolation(request, "INVALID_OUTPUT")
