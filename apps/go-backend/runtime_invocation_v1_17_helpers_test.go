@@ -505,8 +505,8 @@ func TestPhase258CanonicalRetryPostgres(t *testing.T) {
 	}
 	cases := []retryCase{
 		{
-			name: "proven timeout is one player-owned attempt", request: requestBytes,
-			steps:         []transportStep{{payload: signedPlayer("TIMEOUT", "Strategy exhausted its invocation budget.")}},
+			name: "proven resource exhaustion is one player-owned attempt", request: requestBytes,
+			steps:         []transportStep{{payload: signedPlayer("RESOURCE_EXHAUSTION", "Strategy exhausted a measured resource budget.")}},
 			expectedCalls: 1, expectedOutcome: "player_violation",
 		},
 		{
