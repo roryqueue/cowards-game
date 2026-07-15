@@ -56,7 +56,11 @@ func encodeRuntimeServiceResponseFixtureV117(t *testing.T, response runtimeServi
 	if err != nil {
 		t.Fatal(err)
 	}
-	return encoded
+	canonical := decodeCanonicalJSONV11(encoded, canonicalJSONV11Options{Context: canonicalJSONV11AuthenticatedOuterEnvelope})
+	if canonical.Error != nil {
+		t.Fatalf("response fixture is not canonicalizable: %s", canonical.Error.Code)
+	}
+	return canonical.CanonicalBytes
 }
 
 func TestPhase258RuntimeServiceV117WritesCanonicalRequestBytes(t *testing.T) {
@@ -93,19 +97,55 @@ func TestPhase258RuntimeServiceV117RejectsEveryReceiptBindingSubstitution(t *tes
 		name   string
 		mutate func(*runtimeServiceResponseV117)
 	}{
-		{"request hash", func(response *runtimeServiceResponseV117) { response.Result.SemanticReceipt.RequestSHA256 = hash('0'); signRuntimeServiceReceiptV117(t, &response.Result.SemanticReceipt) }},
-		{"registry generation", func(response *runtimeServiceResponseV117) { response.Result.SemanticReceipt.RegistryGeneration = "8"; signRuntimeServiceReceiptV117(t, &response.Result.SemanticReceipt) }},
-		{"bottom identity root", func(response *runtimeServiceResponseV117) { response.Result.SemanticReceipt.BottomIdentityManifestRoot = hash('0'); signRuntimeServiceReceiptV117(t, &response.Result.SemanticReceipt) }},
-		{"bottom graph root", func(response *runtimeServiceResponseV117) { response.Result.SemanticReceipt.BottomEvidenceGraphRoot = hash('0'); signRuntimeServiceReceiptV117(t, &response.Result.SemanticReceipt) }},
-		{"top identity root", func(response *runtimeServiceResponseV117) { response.Result.SemanticReceipt.TopIdentityManifestRoot = hash('0'); signRuntimeServiceReceiptV117(t, &response.Result.SemanticReceipt) }},
-		{"top graph root", func(response *runtimeServiceResponseV117) { response.Result.SemanticReceipt.TopEvidenceGraphRoot = hash('0'); signRuntimeServiceReceiptV117(t, &response.Result.SemanticReceipt) }},
-		{"budget profile", func(response *runtimeServiceResponseV117) { response.Result.SemanticReceipt.BudgetProfileSHA256 = hash('0'); signRuntimeServiceReceiptV117(t, &response.Result.SemanticReceipt) }},
-		{"chronicle", func(response *runtimeServiceResponseV117) { response.Result.Chronicle = json.RawMessage(`{"mutated":true}`) }},
-		{"chronicle hash", func(response *runtimeServiceResponseV117) { response.Result.SemanticReceipt.ChronicleCanonicalHash = hash('0'); signRuntimeServiceReceiptV117(t, &response.Result.SemanticReceipt) }},
-		{"final state", func(response *runtimeServiceResponseV117) { response.Result.FinalState = json.RawMessage(`{"mutated":true}`) }},
-		{"final state hash", func(response *runtimeServiceResponseV117) { response.Result.SemanticReceipt.FinalStateCanonicalHash = hash('0'); signRuntimeServiceReceiptV117(t, &response.Result.SemanticReceipt) }},
-		{"outcome", func(response *runtimeServiceResponseV117) { response.Result.Outcome = json.RawMessage(`{"mutated":true}`) }},
-		{"outcome hash", func(response *runtimeServiceResponseV117) { response.Result.SemanticReceipt.OutcomeCanonicalHash = hash('0'); signRuntimeServiceReceiptV117(t, &response.Result.SemanticReceipt) }},
+		{"request hash", func(response *runtimeServiceResponseV117) {
+			response.Result.SemanticReceipt.RequestSHA256 = hash('0')
+			signRuntimeServiceReceiptV117(t, &response.Result.SemanticReceipt)
+		}},
+		{"registry generation", func(response *runtimeServiceResponseV117) {
+			response.Result.SemanticReceipt.RegistryGeneration = "8"
+			signRuntimeServiceReceiptV117(t, &response.Result.SemanticReceipt)
+		}},
+		{"bottom identity root", func(response *runtimeServiceResponseV117) {
+			response.Result.SemanticReceipt.BottomIdentityManifestRoot = hash('0')
+			signRuntimeServiceReceiptV117(t, &response.Result.SemanticReceipt)
+		}},
+		{"bottom graph root", func(response *runtimeServiceResponseV117) {
+			response.Result.SemanticReceipt.BottomEvidenceGraphRoot = hash('0')
+			signRuntimeServiceReceiptV117(t, &response.Result.SemanticReceipt)
+		}},
+		{"top identity root", func(response *runtimeServiceResponseV117) {
+			response.Result.SemanticReceipt.TopIdentityManifestRoot = hash('0')
+			signRuntimeServiceReceiptV117(t, &response.Result.SemanticReceipt)
+		}},
+		{"top graph root", func(response *runtimeServiceResponseV117) {
+			response.Result.SemanticReceipt.TopEvidenceGraphRoot = hash('0')
+			signRuntimeServiceReceiptV117(t, &response.Result.SemanticReceipt)
+		}},
+		{"budget profile", func(response *runtimeServiceResponseV117) {
+			response.Result.SemanticReceipt.BudgetProfileSHA256 = hash('0')
+			signRuntimeServiceReceiptV117(t, &response.Result.SemanticReceipt)
+		}},
+		{"chronicle", func(response *runtimeServiceResponseV117) {
+			response.Result.Chronicle = json.RawMessage(`{"mutated":true}`)
+		}},
+		{"chronicle hash", func(response *runtimeServiceResponseV117) {
+			response.Result.SemanticReceipt.ChronicleCanonicalHash = hash('0')
+			signRuntimeServiceReceiptV117(t, &response.Result.SemanticReceipt)
+		}},
+		{"final state", func(response *runtimeServiceResponseV117) {
+			response.Result.FinalState = json.RawMessage(`{"mutated":true}`)
+		}},
+		{"final state hash", func(response *runtimeServiceResponseV117) {
+			response.Result.SemanticReceipt.FinalStateCanonicalHash = hash('0')
+			signRuntimeServiceReceiptV117(t, &response.Result.SemanticReceipt)
+		}},
+		{"outcome", func(response *runtimeServiceResponseV117) {
+			response.Result.Outcome = json.RawMessage(`{"mutated":true}`)
+		}},
+		{"outcome hash", func(response *runtimeServiceResponseV117) {
+			response.Result.SemanticReceipt.OutcomeCanonicalHash = hash('0')
+			signRuntimeServiceReceiptV117(t, &response.Result.SemanticReceipt)
+		}},
 		{"violation count", func(response *runtimeServiceResponseV117) { response.Result.RuntimeViolationEventCount++ }},
 	}
 	for _, test := range tests {

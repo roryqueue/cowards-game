@@ -93,7 +93,7 @@ func (client *runtimeServiceClientV117) executeMatch(
 	if failure := validateRuntimeServiceRequestV117(request); failure != nil {
 		return nil, failure
 	}
-	payload, err := json.Marshal(request)
+	payload, err := encodeRuntimeServiceRequestV117(request)
 	if err != nil {
 		return nil, newRuntimeServiceFailure("RuntimeServiceContractMismatch", "Runtime service v1.17 request is invalid", false, nil)
 	}
@@ -116,6 +116,10 @@ func (client *runtimeServiceClientV117) executeMatch(
 		return nil, newRuntimeServiceFailure("RuntimeServiceMalformedResponse", "Runtime service v1.17 response was unavailable", true, nil)
 	}
 	return decodeRuntimeServiceResponseV117(request, responseBytes, client.semanticReceiptSecret)
+}
+
+func encodeRuntimeServiceRequestV117(request runtimeServiceRequestV117) ([]byte, error) {
+	return runtimeInvocationV117CanonicalValue(request)
 }
 
 func validateRuntimeServiceRequestV117(request runtimeServiceRequestV117) *runtimeServiceFailure {
@@ -141,29 +145,105 @@ func decodeRuntimeServiceResponseV117(
 	payload []byte,
 	secret string,
 ) (*runtimeServiceResponseV117, *runtimeServiceFailure) {
+	canonical := decodeCanonicalJSONV11(payload, canonicalJSONV11Options{
+		Context:          canonicalJSONV11AuthenticatedOuterEnvelope,
+		RequireCanonical: true,
+	})
+	if canonical.Error != nil {
+		return nil, newRuntimeServiceFailure("RuntimeServiceMalformedResponse", "Runtime service v1.17 response was malformed", true, nil)
+	}
 	var response runtimeServiceResponseV117
-	if err := decodeStrictJSONUseNumber(payload, &response); err != nil {
+	if err := decodeStrictJSONUseNumber(canonical.CanonicalBytes, &response); err != nil {
 		return nil, newRuntimeServiceFailure("RuntimeServiceMalformedResponse", "Runtime service v1.17 response was malformed", true, nil)
 	}
 	if response.ContractVersion != runtimeExecutionServiceVersionV117 || response.RequestID != request.RequestID || response.MatchID != request.MatchID {
 		return nil, newRuntimeServiceFailure("RuntimeServiceContractMismatch", "Runtime service v1.17 response binding mismatch", true, nil)
 	}
-	if !response.OK || response.Kind != "executionResult" || response.Result == nil || response.SystemFailure != nil {
-		return nil, newRuntimeServiceFailure("RuntimeServiceSystemFailure", "Runtime service v1.17 did not return an admitted result", true, nil)
+	if !response.OK {
+		failure := response.SystemFailure
+		if response.Kind != "systemFailure" || response.Result != nil || failure == nil ||
+			failure.Classification != "system_failure" ||
+			(failure.Ownership != "runtime_system" && failure.Ownership != "system_integrity" && failure.Ownership != "system_operation") ||
+			!runtimeInvocationV117SafeCode.MatchString(failure.Code) ||
+			failure.PlayerPenalty || failure.PublicMessage == "" || len([]byte(failure.PublicMessage)) > 256 {
+			return nil, newRuntimeServiceFailure("RuntimeServiceMalformedResponse", "Runtime service v1.17 failure response was malformed", true, nil)
+		}
+		return nil, &runtimeServiceFailure{
+			Classification: failure.Classification,
+			Ownership:      failure.Ownership,
+			Code:           failure.Code,
+			ErrorClass:     failure.Code,
+			ErrorMessage:   failure.PublicMessage,
+			PublicMessage:  failure.PublicMessage,
+			Retryable:      failure.Retryable,
+			PlayerPenalty:  false,
+			Details:        map[string]any{},
+		}
+	}
+	if response.Kind != "executionResult" || response.Result == nil || response.SystemFailure != nil {
+		return nil, newRuntimeServiceFailure("RuntimeServiceMalformedResponse", "Runtime service v1.17 success response was malformed", true, nil)
 	}
 	result := response.Result
+	requestBytes, requestErr := encodeRuntimeServiceRequestV117(request)
+	chronicleHash, chronicleErr := hashRuntimeServiceCanonicalValueV117(
+		"cowards-game:runtime-semantic-chronicle-canonical-json:v1.17",
+		result.Chronicle,
+	)
+	finalStateHash, finalStateErr := hashRuntimeServiceCanonicalValueV117(
+		"cowards-game:runtime-semantic-final-state-canonical-json:v1.17",
+		result.FinalState,
+	)
+	outcomeHash, outcomeErr := hashRuntimeServiceCanonicalValueV117(
+		"cowards-game:runtime-semantic-outcome-canonical-json:v1.17",
+		result.Outcome,
+	)
+	receipt := result.SemanticReceipt
 	if result.Privacy != "internal_runtime_result" ||
 		!isPrefixedLowerSHA256(result.LedgerPoststateRoot) ||
 		result.RuntimeViolationEventCount < 0 ||
-		!validRuntimeSemanticReceiptV117(result.SemanticReceipt, secret) ||
-		result.SemanticReceipt.RequestID != request.RequestID ||
-		result.SemanticReceipt.MatchID != request.MatchID ||
-		result.SemanticReceipt.CompatibilityTupleID != request.CompatibilityTupleID ||
-		result.SemanticReceipt.AuthorityBundleHash != request.Authority.BundleHash ||
-		result.SemanticReceipt.AuthoritySourceManifestHash != request.Authority.SourceManifestHash ||
-		result.SemanticReceipt.LedgerPrestateRoot != request.Accounting.LedgerPrestateRoot ||
-		result.SemanticReceipt.LedgerPoststateRoot != result.LedgerPoststateRoot {
+		requestErr != nil || chronicleErr != nil || finalStateErr != nil || outcomeErr != nil ||
+		!validRuntimeSemanticReceiptV117(receipt, secret) ||
+		receipt.RequestSHA256 != runtimeInvocationV117SHA256Value(requestBytes) ||
+		receipt.RequestID != request.RequestID ||
+		receipt.MatchID != request.MatchID ||
+		receipt.CompatibilityTupleID != request.CompatibilityTupleID ||
+		receipt.AuthorityBundleHash != request.Authority.BundleHash ||
+		receipt.AuthoritySourceManifestHash != request.Authority.SourceManifestHash ||
+		receipt.RegistryGeneration != request.Authority.RegistryGeneration ||
+		receipt.BottomIdentityManifestRoot != request.Entrants.Bottom.IdentityManifestRoot ||
+		receipt.BottomEvidenceGraphRoot != request.Entrants.Bottom.EvidenceGraphRoot ||
+		receipt.TopIdentityManifestRoot != request.Entrants.Top.IdentityManifestRoot ||
+		receipt.TopEvidenceGraphRoot != request.Entrants.Top.EvidenceGraphRoot ||
+		receipt.BudgetProfileSHA256 != request.Accounting.BudgetProfileSHA256 ||
+		receipt.LedgerPrestateRoot != request.Accounting.LedgerPrestateRoot ||
+		receipt.LedgerPoststateRoot != result.LedgerPoststateRoot ||
+		receipt.ChronicleCanonicalHash != chronicleHash ||
+		receipt.FinalStateCanonicalHash != finalStateHash ||
+		receipt.OutcomeCanonicalHash != outcomeHash ||
+		receipt.RuntimeViolationEventCount != result.RuntimeViolationEventCount {
 		return nil, newRuntimeServiceFailure("RuntimeServiceSemanticIntegrity", "Runtime service v1.17 semantic receipt was rejected", true, nil)
 	}
 	return &response, nil
+}
+
+func hashRuntimeServiceCanonicalValueV117(domain string, payload json.RawMessage) (string, error) {
+	canonical := decodeCanonicalJSONV11(payload, canonicalJSONV11Options{
+		Context: canonicalJSONV11CanonicalManifest,
+	})
+	if canonical.Error != nil {
+		return "", canonicalJSONErrorAsError(canonical.Error)
+	}
+	return runtimeInvocationV117SHA256Value(
+		runtimeInvocationV117Frame(domain, canonical.CanonicalBytes),
+	), nil
+}
+
+func canonicalJSONErrorAsError(failure *canonicalJSONV11Error) error {
+	return &runtimeServiceCanonicalJSONError{code: failure.Code}
+}
+
+type runtimeServiceCanonicalJSONError struct{ code string }
+
+func (failure *runtimeServiceCanonicalJSONError) Error() string {
+	return "canonical JSON v1.1 rejected runtime service value: " + failure.code
 }
