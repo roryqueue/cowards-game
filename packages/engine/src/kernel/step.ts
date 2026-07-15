@@ -43,6 +43,15 @@ import {
 
 const privateJson = (value: unknown): JsonValue => value as JsonValue
 
+// v1.17 retains exact resource ownership in the private invocation evidence,
+// while the v1.4 gameplay consequence and Chronicle vocabulary remain TIMEOUT.
+// This translation belongs at the single engine consequence/event boundary;
+// adapters must not discard the more precise RESOURCE_EXHAUSTION evidence.
+const historicalGameplayViolationType = (
+  violation: KernelRuntimeViolation,
+) =>
+  violation.type === "RESOURCE_EXHAUSTION" ? "TIMEOUT" : violation.type
+
 const integrityFailure = (code: string): KernelRestrictedFailure => ({
   classification: "system_failure",
   category: "CANONICAL_INTEGRITY_FAILURE",
@@ -236,7 +245,7 @@ const runtimeViolationEvent = (
 ): TransitionEventSummary =>
   event(
     "RUNTIME_VIOLATION",
-    { playerId, type: violation.type },
+    { playerId, type: historicalGameplayViolationType(violation) },
     {
       context: { actingPlayerId: playerId },
       privacy: "owner",
@@ -256,7 +265,7 @@ const applySoldierRuntimeViolation = (
       {
         soldierId: soldier.id,
         ownerPlayerId: soldier.ownerPlayerId,
-        type: violation.type,
+        type: historicalGameplayViolationType(violation),
       },
       {
         context: {

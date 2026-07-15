@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto"
 import { describe, expect, it } from "vitest"
 import {
+  ChronicleEventSchema,
   RUNTIME_INVOCATION_V1_17_TEST_KEY_ID,
   RUNTIME_INVOCATION_V1_17_PLAYER_VIOLATIONS,
   createAuthenticatedRuntimeInvocationRequestV117,
@@ -485,7 +486,11 @@ describe("Phase 258 successor runtime ownership", () => {
     })
 
     expect(execution.kind).toBe("completed")
-    if (execution.kind !== "completed" || !execution.result) return
+    if (
+      execution.kind !== "completed" ||
+      !execution.result ||
+      !execution.recorderMaterial
+    ) return
     const after = execution.result.state
     const memoryAfter = sha256({
       players: after.players.map(({ strategyMemory }) => strategyMemory),
@@ -504,10 +509,17 @@ describe("Phase 258 successor runtime ownership", () => {
     expect(after.soldiers.find(({ id }) => id === soldier.id)?.status).toBe(
       "STONE",
     )
-    expect(
-      execution.result.events.find(({ type }) => type === "RUNTIME_VIOLATION")
-        ?.payload,
-    ).toMatchObject({ type: "RESOURCE_EXHAUSTION" })
+    const violationEvent = execution.result.events.find(
+      ({ type }) => type === "RUNTIME_VIOLATION",
+    )
+    expect(violationEvent?.payload).toMatchObject({ type: "TIMEOUT" })
+    const privateViolationEvent = execution.recorderMaterial.events.find(
+      ({ type }) => type === "RUNTIME_VIOLATION",
+    )
+    expect(privateViolationEvent?.privatePayload).toMatchObject({
+      violation: { type: "RESOURCE_EXHAUSTION" },
+    })
+    expect(ChronicleEventSchema.safeParse(violationEvent).success).toBe(true)
   })
 
   it.each([
