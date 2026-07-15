@@ -205,6 +205,94 @@ func TestPhase258SuccessorRuntimeLimitsRequireExactIntegersAfterJSONDecoding(t *
 	}
 }
 
+func TestPhase258SuccessorValidationIssuesUseExactGeneratedSpecAuthority(t *testing.T) {
+	fixture := loadRuntimeSuccessorAuthorityFixtureV117(t)
+	strategy := fixture.RevisionVectors[0].strategy(t, time.Date(2026, 7, 15, 12, 0, 0, 0, time.UTC))
+	validate := func(validation map[string]any) bool {
+		return validSuccessorStrategyValidationV117(
+			validation,
+			strategy.SourceHash,
+			strategy.SourceBytes,
+			strategy.Runtime,
+			strategy.EngineCompatibility,
+		)
+	}
+	if !validate(strategy.Validation) {
+		t.Fatal("exact generated successor validation report was rejected")
+	}
+
+	codes := runtimeSuccessorStrategyValidationCodesV117()
+	if len(codes) != 17 {
+		t.Fatalf("generated Strategy validation authority has %d codes, want 17", len(codes))
+	}
+	for _, code := range codes {
+		t.Run("accepts "+code, func(t *testing.T) {
+			if !runtimeSuccessorStrategyValidationCodeKnownV117(code) {
+				t.Fatalf("generated code %q is absent from its own authority", code)
+			}
+			candidate := cloneMap(strategy.Validation)
+			candidate["warnings"] = []any{map[string]any{
+				"code": code, "severity": "warning", "message": "warning",
+				"pattern": "pattern", "line": 1, "column": 0,
+				"constraint": "constraint", "remediation": "remediation", "reference": "reference",
+			}}
+			if !validate(candidate) {
+				t.Fatalf("spec-owned Strategy validation code %q was rejected", code)
+			}
+		})
+	}
+	if runtimeSuccessorStrategyValidationCodeKnownV117("UNKNOWN") {
+		t.Fatal("unknown Strategy validation code entered generated authority")
+	}
+	if !validSuccessorValidationIssueV117(map[string]any{"code": codes[0], "severity": "error", "message": "error"}, "error") {
+		t.Fatal("exact spec-owned error issue was rejected")
+	}
+
+	baseIssue := func() map[string]any {
+		return map[string]any{"code": codes[0], "severity": "warning", "message": "warning"}
+	}
+	rejections := []struct {
+		name   string
+		mutate func(map[string]any)
+	}{
+		{"unknown code", func(issue map[string]any) { issue["code"] = "UNKNOWN" }},
+		{"severity mismatch", func(issue map[string]any) { issue["severity"] = "error" }},
+		{"empty message", func(issue map[string]any) { issue["message"] = "" }},
+		{"missing message", func(issue map[string]any) { delete(issue, "message") }},
+		{"unknown key", func(issue map[string]any) { issue["detail"] = "private" }},
+		{"zero line", func(issue map[string]any) { issue["line"] = 0 }},
+		{"negative column", func(issue map[string]any) { issue["column"] = -1 }},
+		{"fractional column", func(issue map[string]any) { issue["column"] = json.Number("1.5") }},
+		{"empty optional string", func(issue map[string]any) { issue["reference"] = "" }},
+	}
+	for _, rejection := range rejections {
+		t.Run("rejects "+rejection.name, func(t *testing.T) {
+			issue := baseIssue()
+			rejection.mutate(issue)
+			candidate := cloneMap(strategy.Validation)
+			candidate["warnings"] = []any{issue}
+			if validate(candidate) {
+				t.Fatalf("invalid successor Strategy validation issue was accepted: %+v", issue)
+			}
+		})
+	}
+
+	t.Run("rejects valid errors parity mismatch", func(t *testing.T) {
+		candidate := cloneMap(strategy.Validation)
+		candidate["errors"] = []any{map[string]any{"code": codes[0], "severity": "error", "message": "error"}}
+		if validate(candidate) {
+			t.Fatal("valid=true was accepted with a nonempty errors array")
+		}
+	})
+	t.Run("rejects invalid empty errors parity mismatch", func(t *testing.T) {
+		candidate := cloneMap(strategy.Validation)
+		candidate["valid"] = false
+		if validate(candidate) {
+			t.Fatal("valid=false was accepted with an empty errors array")
+		}
+	})
+}
+
 func TestDeploymentLaneRegistryFileIsStrictAndAuthorityBound(t *testing.T) {
 	fixture := newDeploymentLaneFixture(t)
 	directory := t.TempDir()

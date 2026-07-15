@@ -38,6 +38,10 @@ func TestPhase258PersistedSuccessorValidationDriftStopsBeforeHTTPWithZeroGamepla
 			_, err := pool.Exec(ctx, `update strategy_revisions set validation=jsonb_set(validation,'{engineCompatibility,engine}',to_jsonb('drifted-engine'::text),true) where id=$1`, revisionID)
 			return err
 		}},
+		{"validation warning unknown code", func(ctx context.Context, pool *pgxpool.Pool, revisionID string) error {
+			_, err := pool.Exec(ctx, `update strategy_revisions set validation=jsonb_set(validation,'{warnings}','[{"code":"UNKNOWN","severity":"warning","message":"x"}]'::jsonb,true) where id=$1`, revisionID)
+			return err
+		}},
 		{"runtime adapter identity", func(ctx context.Context, pool *pgxpool.Pool, revisionID string) error {
 			_, err := pool.Exec(ctx, `update strategy_revisions set runtime=jsonb_set(runtime,'{adapter,version}',to_jsonb('drifted-adapter'::text),true) where id=$1`, revisionID)
 			return err
@@ -99,6 +103,13 @@ func TestPhase258PersistedSuccessorValidationDriftStopsBeforeHTTPWithZeroGamepla
 			}
 			if result.Status != "failed_system" || requests.Load() != 0 {
 				t.Fatalf("persisted validation drift escaped pre-HTTP fail-closed gate: result=%+v requests=%d", result, requests.Load())
+			}
+			var errorClass string
+			if err := pool.QueryRow(ctx, `select error_class from match_job_attempts where job_id=$1 and attempt_number=1`, seeded.jobID).Scan(&errorClass); err != nil {
+				t.Fatal(err)
+			}
+			if errorClass != "RuntimeServiceContractMismatch" {
+				t.Fatalf("persisted validation drift lost its typed system failure: %q", errorClass)
 			}
 			var chronicleCount int
 			if err := pool.QueryRow(ctx, `select count(*) from chronicles where match_id=$1`, seeded.matchID).Scan(&chronicleCount); err != nil {

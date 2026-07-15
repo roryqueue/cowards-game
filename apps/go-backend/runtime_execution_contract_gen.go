@@ -44,6 +44,69 @@ var runtimeSuccessorLaneProfileFieldsV117 = [...]string{
 	"semanticTuple",
 }
 
+func runtimeSuccessorStrategyValidationCodesV117() [17]string {
+	return [17]string{
+		"UNSUPPORTED_LANGUAGE",
+		"UNSUPPORTED_PACKAGE_METADATA",
+		"INCOMPATIBLE_ADAPTER",
+		"ABI_MISMATCH",
+		"SOURCE_TOO_LARGE",
+		"MEMORY_LIMIT_EXCEEDED",
+		"TIMEOUT",
+		"FORBIDDEN_CAPABILITY",
+		"NON_COUNTED_RUNTIME",
+		"FORBIDDEN_PATTERN",
+		"MISSING_DEFAULT_EXPORT",
+		"MISSING_SELECT_ACTIVATIONS",
+		"MISSING_SOLDIER_BRAIN",
+		"ASYNC_METHOD_NOT_ALLOWED",
+		"IMPORT_NOT_ALLOWED",
+		"TRANSPILE_FAILED",
+		"ENGINE_INCOMPATIBLE",
+	}
+}
+
+func runtimeSuccessorStrategyValidationCodeKnownV117(code string) bool {
+	switch code {
+	case "UNSUPPORTED_LANGUAGE":
+		return true
+	case "UNSUPPORTED_PACKAGE_METADATA":
+		return true
+	case "INCOMPATIBLE_ADAPTER":
+		return true
+	case "ABI_MISMATCH":
+		return true
+	case "SOURCE_TOO_LARGE":
+		return true
+	case "MEMORY_LIMIT_EXCEEDED":
+		return true
+	case "TIMEOUT":
+		return true
+	case "FORBIDDEN_CAPABILITY":
+		return true
+	case "NON_COUNTED_RUNTIME":
+		return true
+	case "FORBIDDEN_PATTERN":
+		return true
+	case "MISSING_DEFAULT_EXPORT":
+		return true
+	case "MISSING_SELECT_ACTIVATIONS":
+		return true
+	case "MISSING_SOLDIER_BRAIN":
+		return true
+	case "ASYNC_METHOD_NOT_ALLOWED":
+		return true
+	case "IMPORT_NOT_ALLOWED":
+		return true
+	case "TRANSPILE_FAILED":
+		return true
+	case "ENGINE_INCOMPATIBLE":
+		return true
+	default:
+		return false
+	}
+}
+
 var runtimeCanonicalIdentityDomainsV117 = [...]string{
 	"originalSource",
 	"normalizedSource",

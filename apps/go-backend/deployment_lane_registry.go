@@ -274,7 +274,7 @@ func validSuccessorStrategyRevisionV117(sourceHash string, sourceBytes int, runt
 
 func validSuccessorStrategyValidationV117(validation map[string]any, sourceHash string, sourceBytes int, runtime map[string]any, engine map[string]any) bool {
 	if !runtimeInvocationV117ExactKeys(validation, "valid", "errors", "warnings", "sourceBytes", "forbiddenPatterns", "sourceHash", "runtimeVersion", "engineCompatibility") ||
-		!boolValue(validation, "valid") || stringValue(validation, "sourceHash") != sourceHash || intValue(validation, "sourceBytes") != sourceBytes ||
+		stringValue(validation, "sourceHash") != sourceHash || intValue(validation, "sourceBytes") != sourceBytes ||
 		stringValue(validation, "runtimeVersion") != stringValue(mapValue(runtime, "adapter"), "version") {
 		return false
 	}
@@ -287,11 +287,17 @@ func validSuccessorStrategyValidationV117(validation map[string]any, sourceHash 
 	errors, errorsOK := validation["errors"].([]any)
 	warnings, warningsOK := validation["warnings"].([]any)
 	patterns, patternsOK := validation["forbiddenPatterns"].([]any)
-	if !errorsOK || len(errors) != 0 || !warningsOK || !patternsOK {
+	valid, validOK := validation["valid"].(bool)
+	if !validOK || !errorsOK || !warningsOK || !patternsOK {
 		return false
 	}
 	for _, pattern := range patterns {
 		if _, ok := pattern.(string); !ok {
+			return false
+		}
+	}
+	for _, validationError := range errors {
+		if !validSuccessorValidationIssueV117(validationError, "error") {
 			return false
 		}
 	}
@@ -300,32 +306,44 @@ func validSuccessorStrategyValidationV117(validation map[string]any, sourceHash 
 			return false
 		}
 	}
+	if valid != (len(errors) == 0) || !valid {
+		return false
+	}
 	return true
 }
 
 func validSuccessorValidationIssueV117(value any, severity string) bool {
 	issue, ok := value.(map[string]any)
-	if !ok || stringValue(issue, "severity") != severity || stringValue(issue, "code") == "" || stringValue(issue, "message") == "" {
+	if !ok || (severity != "error" && severity != "warning") || len(issue) < 3 || len(issue) > 9 ||
+		stringValue(issue, "severity") != severity ||
+		!runtimeSuccessorStrategyValidationCodeKnownV117(stringValue(issue, "code")) ||
+		stringValue(issue, "message") == "" {
 		return false
 	}
-	allowed := map[string]bool{"code": true, "severity": true, "message": true, "pattern": true, "line": true, "column": true, "constraint": true, "remediation": true, "reference": true}
 	for key, candidate := range issue {
-		if !allowed[key] {
-			return false
-		}
 		switch key {
+		case "code":
+			if code, ok := candidate.(string); !ok || !runtimeSuccessorStrategyValidationCodeKnownV117(code) {
+				return false
+			}
+		case "severity":
+			if issueSeverity, ok := candidate.(string); !ok || issueSeverity != severity {
+				return false
+			}
+		case "message", "pattern", "constraint", "remediation", "reference":
+			if text, ok := candidate.(string); !ok || text == "" {
+				return false
+			}
 		case "line":
 			if integer, ok := runtimeInvocationV117Integer(candidate); !ok || integer <= 0 {
 				return false
 			}
 		case "column":
-			if _, ok := runtimeInvocationV117Integer(candidate); !ok {
+			if integer, ok := runtimeInvocationV117Integer(candidate); !ok || integer < 0 {
 				return false
 			}
 		default:
-			if text, ok := candidate.(string); !ok || text == "" {
-				return false
-			}
+			return false
 		}
 	}
 	return true

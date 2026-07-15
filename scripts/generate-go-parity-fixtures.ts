@@ -103,6 +103,7 @@ import {
   serializeRuntimeInvocationRequestV117,
   serializeRuntimeInvocationResponseV117,
 } from "../packages/spec/src/index.ts"
+import { StrategyRevisionValidationCodeSchema } from "../packages/spec/src/schemas.ts"
 import {
   RUNTIME_EXECUTION_SERVICE_VERSION_V1_17,
   encodeRuntimeSemanticReceiptClaimsV117,
@@ -467,6 +468,24 @@ const renderRuntimeInvocationContractSource = (
     ...SUCCESSOR_RUNTIME_LANE_PROFILE_FIELDS_V117.map(
       (field) => `\t${JSON.stringify(field)},`,
     ),
+    "}",
+    "",
+    `func runtimeSuccessorStrategyValidationCodesV117() [${StrategyRevisionValidationCodeSchema.options.length}]string {`,
+    `\treturn [${StrategyRevisionValidationCodeSchema.options.length}]string{`,
+    ...StrategyRevisionValidationCodeSchema.options.map(
+      (code) => `\t\t${JSON.stringify(code)},`,
+    ),
+    "\t}",
+    "}",
+    "",
+    "func runtimeSuccessorStrategyValidationCodeKnownV117(code string) bool {",
+    "\tswitch code {",
+    ...StrategyRevisionValidationCodeSchema.options.map(
+      (code) => `\tcase ${JSON.stringify(code)}:\n\t\treturn true`,
+    ),
+    "\tdefault:",
+    "\t\treturn false",
+    "\t}",
     "}",
     "",
     "var runtimeCanonicalIdentityDomainsV117 = [...]string{",
