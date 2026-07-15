@@ -22,10 +22,13 @@ import {
   type ExecutableLaneIdentity,
   type RuntimeEvidenceAuthorityPayload,
   RUNTIME_EVIDENCE_AUTHORITY_PAYLOAD_SCHEMA_VERSION_V1_17,
+  encodeCanonicalJson,
   encodeRuntimeEvidenceAuthorityPayloadV117,
   hashRuntimeEvidenceCertificateRecordV117,
+  inspectRuntimeEvidenceAuthorityBundleV117,
   parseRuntimeEvidenceAuthorityBindingV117,
   type RuntimeEvidenceAuthorityPayloadV117,
+  type JsonValue,
 } from "@cowards/spec"
 import type { Pool, PoolClient, QueryResultRow } from "pg"
 
@@ -1998,5 +2001,238 @@ export const prepareRuntimeEvidenceAuthorityPublicationV117 = async (
     payload,
     payloadBytes,
     payloadSha256: hashRuntimeEvidenceAuthorityPayload(payloadBytes),
+  })
+}
+
+export interface RecordInstalledRuntimeEvidenceAuthorityV117Input {
+  envelopeBytes: Uint8Array
+  evaluationInstant: string
+  installedAt: string
+  expectedTrustDomain: string
+  signerKeyId: string
+  publicKeyPem: string
+}
+
+export interface InstalledRuntimeEvidenceAuthorityV117 {
+  installReceiptId: string
+  installReceiptHash: string
+  authorityBundleHash: string
+  sourceManifestHash: string
+  registryGeneration: string
+  semanticTupleManifestHash: string
+  envelopeSha256: string
+}
+
+const V117_INSTALL_RECEIPT_SCHEMA =
+  "v1.37-runtime-evidence-authority-install-receipt-v1.17" as const
+const V117_INSTALL_ID_DOMAIN =
+  "cowards-game:runtime-evidence-authority-install-id:v1.17"
+const V117_INSTALL_RECEIPT_DOMAIN =
+  "cowards-game:runtime-evidence-authority-install-receipt:v1.17"
+
+export const encodeRuntimeEvidenceAuthorityInstallReceiptV117 = (
+  value: JsonValue,
+): Uint8Array => {
+  const encoded = encodeCanonicalJson(value, {
+    context: "canonical-manifest",
+  })
+  if (!encoded.ok) {
+    return fail(
+      "INSTALL_RECEIPT_CANONICAL_JSON",
+      "v1.17 install receipt is not canonical JSON.",
+    )
+  }
+  return encoded.bytes
+}
+
+/**
+ * Records only a separately verified mounted v1.17 authority. Production is
+ * deliberately unavailable until Phase 259 authorizes executable producers.
+ */
+export const recordInstalledRuntimeEvidenceAuthorityV117 = async (
+  pool: Pool,
+  input: RecordInstalledRuntimeEvidenceAuthorityV117Input,
+): Promise<Readonly<InstalledRuntimeEvidenceAuthorityV117>> => {
+  const evaluationInstant = assertInstant(
+    input.evaluationInstant,
+    "evaluationInstant",
+  )
+  const installedAt = assertInstant(input.installedAt, "installedAt")
+  const expectedTrustDomain = assertString(
+    input.expectedTrustDomain,
+    "expectedTrustDomain",
+  )
+  const signerKeyId = assertString(input.signerKeyId, "signerKeyId")
+  if (expectedTrustDomain === RUNTIME_EVIDENCE_AUTHORITY_TRUST_DOMAINS.production) {
+    return fail(
+      "PRODUCTION_V117_UNAVAILABLE",
+      "Production v1.17 installed authority is unavailable until Phase 259.",
+    )
+  }
+  if (expectedTrustDomain !== RUNTIME_EVIDENCE_AUTHORITY_TRUST_DOMAINS.fixture) {
+    return fail("INSTALL_IDENTITY", "v1.17 authority trust domain is unknown.")
+  }
+  let publicKey: KeyObject
+  try {
+    publicKey = createPublicKey(input.publicKeyPem)
+  } catch {
+    return fail("INSTALL_KEY", "Configured v1.17 authority key is invalid.")
+  }
+  const inspected = inspectRuntimeEvidenceAuthorityBundleV117(
+    input.envelopeBytes,
+    {
+      expectedTrustDomain,
+      evaluationInstant,
+      trustedKeyIds: [signerKeyId],
+      verifySignature: ({ signedMessageBytes, signature }) =>
+        verifySignature(null, signedMessageBytes, publicKey, signature),
+    },
+  )
+  if (
+    inspected.envelope.keyId !== signerKeyId ||
+    installedAt !== evaluationInstant ||
+    Date.parse(installedAt) < Date.parse(inspected.payload.validFrom) ||
+    Date.parse(installedAt) > Date.parse(inspected.payload.validUntil) ||
+    !CANONICAL_COMPATIBILITY_TUPLES.some(
+      ({ tupleId }) =>
+        tupleId === inspected.payload.semanticTupleManifestHash,
+    )
+  ) {
+    return fail("INSTALL_IDENTITY", "v1.17 authority identity is unavailable.")
+  }
+  const authorityBundleHash = inspected.payloadSha256
+  const sourceManifestHash = inspected.payload.sourceManifestHash
+  const registryGeneration = inspected.payload.registryGeneration
+  const semanticTupleManifestHash =
+    inspected.payload.semanticTupleManifestHash
+  const envelopeSha256 = hashPublicationBytes(
+    "cowards-game:runtime-evidence-authority-envelope:v1.17",
+    input.envelopeBytes,
+  )
+  const attestationIds = inspected.payload.attestations
+    .map(({ attestationId }) => attestationId)
+    .sort((left, right) => left.localeCompare(right))
+  const certificateIds = inspected.payload.certificates
+    .map(({ certificateId }) => certificateId)
+    .sort((left, right) => left.localeCompare(right))
+  const installIdentity = {
+    schemaVersion: V117_INSTALL_RECEIPT_SCHEMA,
+    authorityBundleHash,
+    sourceManifestHash,
+    registryGeneration,
+    semanticTupleManifestHash,
+    envelopeSha256,
+    installedAt,
+    attestationIds,
+    certificateIds,
+  }
+  const installReceiptId = `runtime-authority-install:v1.17:${hashPublicationBytes(
+    V117_INSTALL_ID_DOMAIN,
+    encodeRuntimeEvidenceAuthorityInstallReceiptV117(installIdentity),
+  ).slice("sha256:".length)}`
+  const installReceipt = { ...installIdentity, installReceiptId }
+  const installReceiptHash = hashPublicationBytes(
+    V117_INSTALL_RECEIPT_DOMAIN,
+    encodeRuntimeEvidenceAuthorityInstallReceiptV117(installReceipt),
+  )
+  const values: unknown[] = [
+    installReceiptId,
+    authorityBundleHash,
+    sourceManifestHash,
+    registryGeneration,
+    semanticTupleManifestHash,
+    envelopeSha256,
+    expectedTrustDomain,
+    signerKeyId,
+    installReceiptHash,
+    inspected.payload.issuedAt,
+    inspected.payload.validFrom,
+    inspected.payload.validUntil,
+    installedAt,
+    Buffer.from(inspected.payloadBytes),
+    Buffer.from(input.envelopeBytes),
+    JSON.stringify(attestationIds),
+    JSON.stringify(certificateIds),
+    JSON.stringify(installReceipt),
+  ]
+  await pool.query(
+    `insert into runtime_evidence_v1_17_installed_authorities
+      (id, authority_bundle_hash, source_manifest_hash, registry_generation,
+       semantic_tuple_manifest_hash, envelope_sha256, trust_domain,
+       signer_key_id, install_receipt_id, install_receipt_hash, issued_at,
+       valid_from, valid_until, installed_at, payload_bytes, envelope_bytes,
+       attestation_ids, certificate_ids, install_receipt)
+     values ($1,$2,$3,$4,$5,$6,$7,$8,$1,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)
+     on conflict (id) do nothing`,
+    values,
+  )
+  const stored = await pool.query<{
+    authority_bundle_hash: string
+    source_manifest_hash: string
+    registry_generation: string
+    semantic_tuple_manifest_hash: string
+    envelope_sha256: string
+    trust_domain: string
+    signer_key_id: string
+    install_receipt_hash: string
+    payload_bytes: Buffer
+    envelope_bytes: Buffer
+    attestation_ids: unknown
+    certificate_ids: unknown
+    install_receipt: unknown
+  }>(
+    `select authority_bundle_hash, source_manifest_hash, registry_generation,
+            semantic_tuple_manifest_hash, envelope_sha256, trust_domain,
+            signer_key_id, install_receipt_hash, payload_bytes, envelope_bytes,
+            attestation_ids, certificate_ids, install_receipt
+       from runtime_evidence_v1_17_installed_authorities
+      where id = $1 and install_receipt_id = $1`,
+    [installReceiptId],
+  )
+  const row = stored.rows[0]
+  if (
+    row === undefined ||
+    row.authority_bundle_hash !== authorityBundleHash ||
+    row.source_manifest_hash !== sourceManifestHash ||
+    row.registry_generation !== registryGeneration ||
+    row.semantic_tuple_manifest_hash !== semanticTupleManifestHash ||
+    row.envelope_sha256 !== envelopeSha256 ||
+    row.trust_domain !== expectedTrustDomain ||
+    row.signer_key_id !== signerKeyId ||
+    row.install_receipt_hash !== installReceiptHash ||
+    !bytesEqual(row.payload_bytes, inspected.payloadBytes) ||
+    !bytesEqual(row.envelope_bytes, input.envelopeBytes) ||
+    !bytesEqual(
+      encodeRuntimeEvidenceAuthorityInstallReceiptV117(
+        row.attestation_ids as JsonValue,
+      ),
+      encodeRuntimeEvidenceAuthorityInstallReceiptV117(attestationIds),
+    ) ||
+    !bytesEqual(
+      encodeRuntimeEvidenceAuthorityInstallReceiptV117(
+        row.certificate_ids as JsonValue,
+      ),
+      encodeRuntimeEvidenceAuthorityInstallReceiptV117(certificateIds),
+    ) ||
+    !bytesEqual(
+      encodeRuntimeEvidenceAuthorityInstallReceiptV117(
+        row.install_receipt as JsonValue,
+      ),
+      encodeRuntimeEvidenceAuthorityInstallReceiptV117(installReceipt),
+    )
+  ) {
+    return fail(
+      "INSTALL_RECEIPT_CONFLICT",
+      "v1.17 installed authority identity collided.",
+    )
+  }
+  return Object.freeze({
+    installReceiptId,
+    installReceiptHash,
+    authorityBundleHash,
+    sourceManifestHash,
+    registryGeneration,
+    semanticTupleManifestHash,
+    envelopeSha256,
   })
 }

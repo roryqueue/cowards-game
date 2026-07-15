@@ -21,10 +21,17 @@ import { fileURLToPath } from "node:url"
 import {
   CANONICAL_COMPATIBILITY_TUPLES,
   RUNTIME_EVIDENCE_AUTHORITY_TRUST_DOMAINS,
+  RUNTIME_EVIDENCE_AUTHORITY_PAYLOAD_SCHEMA_VERSION_V1_17,
+  buildRuntimeEvidenceAuthorityEnvelope,
   encodeRuntimeEvidenceAuthorityPayload,
+  encodeRuntimeEvidenceAuthorityPayloadV117,
+  encodeRuntimeEvidenceAuthoritySignatureMessage,
+  hashRuntimeEvidenceCertificateRecordV117,
   hashExecutableLaneIdentity,
   inspectRuntimeEvidenceAuthorityBundle,
   type CanonicalCompatibilityTuple,
+  type RuntimeEvidenceAuthorityBindingV117,
+  type RuntimeEvidenceAuthorityPayloadV117,
 } from "@cowards/spec"
 import { Pool } from "pg"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
@@ -38,6 +45,8 @@ import {
   installRuntimeEvidenceAuthorityPublication,
   prepareRuntimeEvidenceAuthorityPublication,
   prepareRuntimeEvidenceAuthorityPublicationV117,
+  encodeRuntimeEvidenceAuthorityInstallReceiptV117,
+  recordInstalledRuntimeEvidenceAuthorityV117,
   type RuntimeEvidenceAuthorityInstallFileSystem,
   type RuntimeEvidenceAuthorityImportEnvelope,
   type RuntimeEvidenceAuthorityImportPayload,
@@ -249,7 +258,113 @@ describe("authenticated runtime evidence authority controls", () => {
 const databaseUrl = process.env.DATABASE_URL
 const describePostgres = databaseUrl ? describe : describe.skip
 
+const installedAuthorityFixtureV117 = () => {
+  const binding: RuntimeEvidenceAuthorityBindingV117 = {
+    graphSchemaVersion: "runtime-evidence-graph-v1.17",
+    graphProfile: "runtime-identity-evidence-dag-v1",
+    identityManifestRoot: sha256("v1.17-identity"),
+    evidenceGraphRoot: sha256("v1.17-evidence"),
+    exactPins: [
+      ["runtimeExecutableDigest", sha256("runtime")],
+      ["reportedVersion", "node-v26.0.0"],
+      ["targetAbi", "darwin-arm64"],
+      ["compilerFlags", sha256("flags")],
+      ["adapterBuildDigest", sha256("adapter")],
+      ["standardLibraryOrSysrootDigest", sha256("stdlib")],
+      ["containmentPolicyId", "containment-policy:v1.17"],
+      ["budgetProfileSha256", sha256("budget")],
+      ["canonicalJsonProfileId", "canonical-json-v1.1"],
+      ["behaviorSettingsHash", sha256("settings")],
+    ],
+  }
+  const attestationId = "attestation:installed:v1.17"
+  const certificateId = "certificate:installed:v1.17"
+  const certificateVersion = "certificate:v1.17"
+  const payload: RuntimeEvidenceAuthorityPayloadV117 = {
+    schemaVersion: RUNTIME_EVIDENCE_AUTHORITY_PAYLOAD_SCHEMA_VERSION_V1_17,
+    bundleVersion: "bundle:installed:v1.17",
+    registryGeneration: "7",
+    issuedAt: "2026-07-14T00:00:00.000Z",
+    validFrom: "2026-07-14T00:00:00.000Z",
+    validUntil: "2026-07-15T00:00:00.000Z",
+    semanticTupleManifestHash: CANONICAL_COMPATIBILITY_TUPLES[0]!.tupleId,
+    sourceManifestHash: sha256("v1.17-source-manifest"),
+    attestations: [
+      {
+        attestationId,
+        attestationHash: sha256("v1.17-attestation"),
+        producerId: "fixture:managed:v1.17",
+        producerKeyId: trustRoot.keyId,
+        trustDomain: "fixture",
+        managedIdentity: true,
+        imports: [],
+        binding,
+      },
+    ],
+    certificates: [
+      {
+        certificateId,
+        certificateVersion,
+        certificateRecordHash: hashRuntimeEvidenceCertificateRecordV117({
+          certificateKind: "containment",
+          certificateId,
+          certificateVersion,
+          attestationId,
+          binding,
+        }),
+        certificateKind: "containment",
+        attestationId,
+        binding,
+      },
+    ],
+  }
+  const payloadBytes = encodeRuntimeEvidenceAuthorityPayloadV117(payload)
+  const trustDomain = RUNTIME_EVIDENCE_AUTHORITY_TRUST_DOMAINS.fixture
+  const envelope = buildRuntimeEvidenceAuthorityEnvelope({
+    trustDomain,
+    keyId: trustRoot.keyId,
+    payloadBytes,
+    signature: sign(
+      null,
+      encodeRuntimeEvidenceAuthoritySignatureMessage({
+        trustDomain,
+        keyId: trustRoot.keyId,
+        payloadBytes,
+      }),
+      keys.privateKey,
+    ),
+  })
+  return {
+    envelopeBytes: new TextEncoder().encode(JSON.stringify(envelope)),
+    trustDomain,
+  }
+}
+
 describe("v1.17 installed authority persistence boundary", () => {
+  it("uses canonical-json-v1.1 bytes independent of insertion and non-ASCII host ordering", () => {
+    const first = {
+      z: "last ASCII",
+      "\uE000": "private-use",
+      "💩": "astral",
+      a: "first ASCII",
+    }
+    const second = {
+      a: "first ASCII",
+      "💩": "astral",
+      "\uE000": "private-use",
+      z: "last ASCII",
+    }
+    expect(
+      Buffer.from(
+        encodeRuntimeEvidenceAuthorityInstallReceiptV117(first),
+      ).equals(
+        Buffer.from(
+          encodeRuntimeEvidenceAuthorityInstallReceiptV117(second),
+        ),
+      ),
+    ).toBe(true)
+  })
+
   it("requires an independently verified signed bundle and derived install identity", async () => {
     const source = await readFile(
       new URL(
@@ -310,6 +425,77 @@ describePostgres(
       expect(prepared.payload.attestations).toEqual([])
       expect(prepared.payload.certificates).toEqual([])
       expect(prepared.payloadSha256).toMatch(/^sha256:[0-9a-f]{64}$/u)
+    })
+
+    it("records one distinct signed fixture install and keeps production installs empty", async () => {
+      const fixture = installedAuthorityFixtureV117()
+      const input = {
+        envelopeBytes: fixture.envelopeBytes,
+        evaluationInstant: "2026-07-14T12:00:00.000Z",
+        installedAt: "2026-07-14T12:00:00.000Z",
+        expectedTrustDomain: fixture.trustDomain,
+        signerKeyId: trustRoot.keyId,
+        publicKeyPem: trustRoot.publicKeyPem,
+      }
+      const installed = await recordInstalledRuntimeEvidenceAuthorityV117(
+        pool,
+        input,
+      )
+      await expect(
+        recordInstalledRuntimeEvidenceAuthorityV117(pool, input),
+      ).resolves.toEqual(installed)
+      const rows = await pool.query<{
+        authority_bundle_hash: string
+        install_receipt_hash: string
+        production_count: number
+      }>(
+        `select authority_bundle_hash, install_receipt_hash,
+                (select count(*)::integer
+                   from runtime_evidence_v1_17_installed_authorities
+                  where trust_domain = $2) as production_count
+           from runtime_evidence_v1_17_installed_authorities
+          where install_receipt_id = $1`,
+        [
+          installed.installReceiptId,
+          RUNTIME_EVIDENCE_AUTHORITY_TRUST_DOMAINS.production,
+        ],
+      )
+      expect(rows.rows).toEqual([
+        expect.objectContaining({
+          authority_bundle_hash: installed.authorityBundleHash,
+          install_receipt_hash: installed.installReceiptHash,
+          production_count: 0,
+        }),
+      ])
+      const forged = new Uint8Array(fixture.envelopeBytes)
+      forged[forged.byteLength - 2] = forged[forged.byteLength - 2]! ^ 1
+      await expect(
+        recordInstalledRuntimeEvidenceAuthorityV117(pool, {
+          ...input,
+          envelopeBytes: forged,
+        }),
+      ).rejects.toThrow()
+      await expect(
+        recordInstalledRuntimeEvidenceAuthorityV117(pool, {
+          ...input,
+          expectedTrustDomain:
+            RUNTIME_EVIDENCE_AUTHORITY_TRUST_DOMAINS.production,
+        }),
+      ).rejects.toThrow(/Phase 259/u)
+      await expect(
+        recordInstalledRuntimeEvidenceAuthorityV117(pool, {
+          ...input,
+          installedAt: "2026-07-14T12:00:00.001Z",
+        }),
+      ).rejects.toThrow(/identity/iu)
+      await expect(
+        pool.query(
+          `update runtime_evidence_v1_17_installed_authorities
+              set source_manifest_hash = $1
+            where install_receipt_id = $2`,
+          [sha256("mutated"), installed.installReceiptId],
+        ),
+      ).rejects.toThrow(/append-only/iu)
     })
 
     const seedCertificate = async (

@@ -81,7 +81,9 @@ describe("migrations", () => {
       "reject_integrity_authority_mutation",
     ])
       expect(sql).toContain(required)
-    expect(sql).toContain("trust_domain = 'production'")
+    expect(sql).toContain(
+      "trust_domain = 'cowards-game:runtime-evidence-authority:production:v1'",
+    )
     expect(sql).not.toMatch(/insert\s+into\s+runtime_evidence_v1_17_installed_authorities/iu)
   })
 
