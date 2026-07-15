@@ -129,6 +129,9 @@ const measuredReceiptFor = (
   const resourceExhaustion =
     outcome.kind === "player_violation" &&
     outcome.violation.code === "RESOURCE_EXHAUSTION"
+  const oversizedOutput =
+    outcome.kind === "player_violation" &&
+    outcome.violation.code === "OVERSIZED_OUTPUT"
   return createRuntimeInvocationExecutionReceiptV117(request, {
     attribution:
       outcome.kind === "system_failure"
@@ -140,8 +143,18 @@ const measuredReceiptFor = (
         "computeFuel",
         resourceExhaustion ? 10_000_001 : 1,
       ),
-      payloadBytes: measuredCounter("payloadBytes", payloadByteLength),
-      stdoutBytes: measuredCounter("stdoutBytes", stdoutByteLength),
+      payloadBytes: measuredCounter(
+        "payloadBytes",
+        oversizedOutput
+          ? request.budget.methodLimit.counters.payloadBytes.maximum + 1
+          : payloadByteLength,
+      ),
+      stdoutBytes: measuredCounter(
+        "stdoutBytes",
+        oversizedOutput
+          ? request.budget.methodLimit.counters.stdoutBytes.maximum + 1
+          : stdoutByteLength,
+      ),
       stderrBytes: measuredCounter("stderrBytes", stderrByteLength),
     },
     memory: {
@@ -520,6 +533,52 @@ describe("Phase 258 successor runtime ownership", () => {
       violation: { type: "RESOURCE_EXHAUSTION" },
     })
     expect(ChronicleEventSchema.safeParse(violationEvent).success).toBe(true)
+  })
+
+  it("preserves historical OVERSIZED_OUTPUT gameplay and Chronicle vocabulary", () => {
+    const state = withPrivateMemory()
+    const soldier = state.soldiers.find(
+      (candidate) => candidate.ownerPlayerId === state.players[0].id,
+    )
+    if (!soldier) throw new Error("missing fixture soldier")
+    const execution = MATCH_KERNEL.runActivationFromStateV117({
+      state,
+      soldierId: soldier.id,
+      runtime: {
+        selectActivations() {
+          throw new Error("selection is unreachable in activation mode")
+        },
+        runSoldierBrain(
+          _input: SoldierBrainInput,
+          request?: RuntimeRequestFor<"soldierBrain">,
+        ): CandidateBoundRuntimeInvocationV117<SoldierBrainResult> {
+          if (!request) throw new Error("driver omitted kernel request")
+          return bindOutcome(request, {
+            kind: "player_violation",
+            violation:
+              RUNTIME_INVOCATION_V1_17_PLAYER_VIOLATIONS.OVERSIZED_OUTPUT,
+            trace: traceFor(request, { safeCodes: ["PAYLOAD_CAP_EXCEEDED"] }),
+          })
+        },
+      },
+    })
+
+    expect(execution.kind).toBe("completed")
+    if (
+      execution.kind !== "completed" ||
+      !execution.result ||
+      !execution.recorderMaterial
+    ) return
+    const violationEvent = execution.result.events.find(
+      ({ type }) => type === "RUNTIME_VIOLATION",
+    )
+    expect(violationEvent?.payload).toMatchObject({ type: "OVERSIZED_OUTPUT" })
+    const privateViolationEvent = execution.recorderMaterial.events.find(
+      ({ type }) => type === "RUNTIME_VIOLATION",
+    )
+    expect(privateViolationEvent?.privatePayload).toMatchObject({
+      violation: { type: "OVERSIZED_OUTPUT" },
+    })
   })
 
   it.each([

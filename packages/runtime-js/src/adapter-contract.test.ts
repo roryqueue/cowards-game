@@ -1158,7 +1158,7 @@ export default {
           accounting: { disposition: "commit" },
           outcome: {
             kind: "player_violation",
-            violation: { code: "RESOURCE_EXHAUSTION" },
+            violation: { code: "OVERSIZED_OUTPUT" },
           },
         },
       })
@@ -1192,7 +1192,7 @@ export default {
           accounting: { disposition: "commit" },
           outcome: {
             kind: "player_violation",
-            violation: { code: "RESOURCE_EXHAUSTION" },
+            violation: { code: "OVERSIZED_OUTPUT" },
           },
         },
       })
@@ -1423,7 +1423,7 @@ export default {
                 outcome: {
                   kind: "player_violation",
                   violation: {
-                    code: oneOver ? "RESOURCE_EXHAUSTION" : "INVALID_OUTPUT",
+                    code: oneOver ? "OVERSIZED_OUTPUT" : "INVALID_OUTPUT",
                   },
                 },
               },
@@ -1591,7 +1591,7 @@ export default {
           value: {
             outcome: {
               kind: "player_violation",
-              violation: { code: "RESOURCE_EXHAUSTION" },
+              violation: { code: "OVERSIZED_OUTPUT" },
             },
           },
         })
