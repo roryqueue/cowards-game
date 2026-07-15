@@ -233,16 +233,19 @@ export const parseRuntimeEvidenceAuthorityBindingV117 = (
       return fail("V117_BINDING", "Runtime evidence binding is invalid.")
     }
     const expected = RUNTIME_EVIDENCE_REQUIRED_EXACT_PINS_V1_17[index]!
+    const pinValue = candidate[1]
     if (
       candidate[0] !== expected ||
-      typeof candidate[1] !== "string" ||
-      candidate[1].length === 0 ||
-      textEncoder.encode(candidate[1]).byteLength >
-        RUNTIME_EVIDENCE_AUTHORITY_LIMITS.identifierBytes
+      typeof pinValue !== "string" ||
+      pinValue.length === 0 ||
+      textEncoder.encode(pinValue).byteLength >
+        RUNTIME_EVIDENCE_AUTHORITY_LIMITS.identifierBytes ||
+      V117_FLOATING_PIN.test(pinValue) ||
+      (V117_HASH_PINS.has(expected) && !SHA256.test(pinValue))
     ) {
       return fail("V117_BINDING", "Runtime evidence binding is invalid.")
     }
-    return Object.freeze([expected, candidate[1]] as const)
+    return Object.freeze([expected, pinValue] as const)
   })
   return Object.freeze({
     graphSchemaVersion: RUNTIME_EVIDENCE_GRAPH_SCHEMA_VERSION_V1_17,
@@ -312,6 +315,16 @@ const fail = (code: string, message: string): never => {
 }
 
 const SHA256 = /^sha256:[0-9a-f]{64}$/u
+const V117_FLOATING_PIN =
+  /(?:^|[-_.:])(latest|current|default|any|stable|head)(?:$|[-_.:])|[*^~<>]/iu
+const V117_HASH_PINS = new Set<RuntimeEvidenceExactPinNameV117>([
+  "runtimeExecutableDigest",
+  "compilerFlags",
+  "adapterBuildDigest",
+  "standardLibraryOrSysrootDigest",
+  "budgetProfileSha256",
+  "behaviorSettingsHash",
+])
 const GENERATION = /^(?:0|[1-9][0-9]{0,15})$/u
 const BASE64 =
   /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/u

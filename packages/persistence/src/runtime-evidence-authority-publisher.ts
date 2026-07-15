@@ -1898,12 +1898,16 @@ export const prepareRuntimeEvidenceAuthorityPublicationV117 = async (
     identity_manifest_root: string
     evidence_graph_root: string
     exact_pin_expansion: unknown
+    registry_generation: string
+    issued_at: Date
+    valid_until: Date
   }>(
     `select attestation_id, attestation_sha256, certificate_kind,
             certificate_id, certificate_version, certificate_record_hash,
             producer_id, producer_key_id, trust_domain, managed_identity,
             graph_schema_version, graph_profile, identity_manifest_root,
-            evidence_graph_root, exact_pin_expansion
+            evidence_graph_root, exact_pin_expansion, registry_generation,
+            issued_at, valid_until
        from runtime_evidence_v1_17_candidates
       where trust_domain = $1
       order by attestation_id`,
@@ -1914,6 +1918,26 @@ export const prepareRuntimeEvidenceAuthorityPublicationV117 = async (
       "PRODUCTION_V117_UNAVAILABLE",
       "Production v1.17 evidence producers are not authorized.",
     )
+  }
+  const publicationIssuedAt = Date.parse(input.issuedAt)
+  const publicationValidFrom = Date.parse(input.validFrom)
+  const publicationValidUntil = Date.parse(input.validUntil)
+  if (
+    !Number.isFinite(publicationIssuedAt) ||
+    !Number.isFinite(publicationValidFrom) ||
+    !Number.isFinite(publicationValidUntil)
+  ) {
+    return fail("CANDIDATE_COVERAGE", "v1.17 candidate coverage is invalid.")
+  }
+  for (const row of rows.rows) {
+    if (
+      row.registry_generation !== input.registryGeneration ||
+      row.issued_at.getTime() > publicationIssuedAt ||
+      row.issued_at.getTime() > publicationValidFrom ||
+      row.valid_until.getTime() < publicationValidUntil
+    ) {
+      return fail("CANDIDATE_COVERAGE", "v1.17 candidate coverage is invalid.")
+    }
   }
   const attestations = rows.rows.map((row) => {
     if (!row.managed_identity) {

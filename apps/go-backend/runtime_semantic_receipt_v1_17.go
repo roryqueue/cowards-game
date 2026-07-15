@@ -9,6 +9,8 @@ import (
 	"encoding/json"
 	"errors"
 	"regexp"
+	"strings"
+	"unicode/utf8"
 )
 
 const runtimeSemanticReceiptV117SchemaVersion = "runtime-semantic-receipt-v1.17"
@@ -19,6 +21,7 @@ const runtimeSemanticReceiptV117KeyID = "runtime-service-semantic-receipt:v1.17"
 
 var runtimeSemanticReceiptV117Hash = regexp.MustCompile(`^sha256:[0-9a-f]{64}$`)
 var runtimeSemanticReceiptV117Signature = regexp.MustCompile(`^hmac-sha256:[0-9a-f]{64}$`)
+var runtimeSemanticReceiptV117Generation = regexp.MustCompile(`^(?:0|[1-9][0-9]{0,15})$`)
 
 type runtimeSemanticReceiptV117 struct {
 	SchemaVersion                  string `json:"schemaVersion"`
@@ -56,7 +59,12 @@ func runtimeSemanticReceiptV117Message(receipt runtimeSemanticReceiptV117) ([]by
 	if !runtimeSemanticReceiptV117SchemaKnown(receipt.SchemaVersion) ||
 		receipt.Profile != runtimeSemanticReceiptV117Profile ||
 		receipt.ServiceContractVersion != runtimeSemanticReceiptV117ServiceVersion ||
-		receipt.Algorithm != "hmac-sha256" || receipt.KeyID != runtimeSemanticReceiptV117KeyID {
+		receipt.Algorithm != "hmac-sha256" || receipt.KeyID != runtimeSemanticReceiptV117KeyID ||
+		!validRuntimeSemanticReceiptV117Identifier(receipt.RequestID) ||
+		!validRuntimeSemanticReceiptV117Identifier(receipt.MatchID) ||
+		!runtimeSemanticReceiptV117Generation.MatchString(receipt.RegistryGeneration) ||
+		receipt.RuntimeViolationEventCount < 0 ||
+		int64(receipt.RuntimeViolationEventCount) > 9_007_199_254_740_991 {
 		return nil, errors.New("runtime semantic receipt v1.17 unavailable")
 	}
 	encoded, err := json.Marshal(receipt)
@@ -93,7 +101,7 @@ func runtimeSemanticReceiptV117Message(receipt runtimeSemanticReceiptV117) ([]by
 }
 
 func validRuntimeSemanticReceiptV117(receipt runtimeSemanticReceiptV117, secret string) bool {
-	if secret == "" || !runtimeSemanticReceiptV117Signature.MatchString(receipt.Signature) {
+	if strings.TrimSpace(secret) == "" || !runtimeSemanticReceiptV117Signature.MatchString(receipt.Signature) {
 		return false
 	}
 	for _, value := range []string{
@@ -119,4 +127,8 @@ func validRuntimeSemanticReceiptV117(receipt runtimeSemanticReceiptV117, secret 
 	expected := mac.Sum(nil)
 	actual, err := hex.DecodeString(receipt.Signature[len("hmac-sha256:"):])
 	return err == nil && hmac.Equal(actual, expected)
+}
+
+func validRuntimeSemanticReceiptV117Identifier(value string) bool {
+	return value != "" && utf8.ValidString(value) && !strings.ContainsRune(value, '\x00') && len([]byte(value)) <= 512
 }
