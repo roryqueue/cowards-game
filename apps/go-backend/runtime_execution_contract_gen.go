@@ -35,13 +35,13 @@ func runtimeInvocationContractForVersion(version string) (runtimeInvocationContr
 	case "runtime-execution-service-v1.17":
 		return runtimeInvocationContractDescriptor{
 			ContractVersion: "runtime-execution-service-v1.17",
-			RequestSHA256: "f11b7216621637d0329409ebf1c83fb1d448191fe1dc7c13cacedb90f6f78b00",
-			ResponseSHA256: "ea702ef605111d542e8dd1dc445906c1affbd30c515071654f7ef448d9eea990",
+			RequestSHA256: "ad8ff3f50f36c9abe314cfcfa78e0bd6fe0bbce98805810d6bf129f73ba927cf",
+			ResponseSHA256: "2d6c99e31347e5eda3d20c841f35b3d564943589598900b8bc32f1246bf331e1",
 			Historical: false,
 			CanonicalJSON: true,
 			Current: false,
-			ReceiptClaimSHA256: "3fb1d76eebf9bce51646b47a59f4d34299761f3f8eab3434f39d4a9d6b08a2f6",
-			ReceiptSignature: "hmac-sha256:9329777daf84bc1d89c587125b86330b8d0886432172f790313c562e1beebf27",
+			ReceiptClaimSHA256: "9ee9f3c5dacce0b1144619ebd4e68e983db53e42f6f22c8bd28b63755fce357c",
+			ReceiptSignature: "hmac-sha256:f3a957338996f384238c74fb51d041f75888c19af9f30f47c5208bd0c1733bd5",
 		}, true
 	default:
 		return runtimeInvocationContractDescriptor{}, false
