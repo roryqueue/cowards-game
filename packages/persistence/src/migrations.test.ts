@@ -53,7 +53,22 @@ describe("migrations", () => {
       "0019_strategy_revision_source_identity_hardening.sql",
     )
     expect(names).toContain("0020_runtime_evidence_v1_17_graph.sql")
+    expect(names).toContain("0021_runtime_abi_v1_17_activation.sql")
     expect(names).toEqual([...names].sort())
+  })
+
+  it("binds new v1.17 receipts without rewriting v1.16 Chronicle evidence", async () => {
+    const sql = await readFile(
+      new URL("0021_runtime_abi_v1_17_activation.sql", migrationsDirectory),
+      "utf8",
+    )
+    expect(sql).toContain("runtime_semantic_receipt_version")
+    expect(sql).toContain("runtime-semantic-receipt-v1.17")
+    expect(sql).toContain("runtime_semantic_receipt ->> 'schemaVersion'")
+    expect(sql).toContain(
+      "persisted Chronicle runtime semantic receipt is immutable",
+    )
+    expect(sql).not.toMatch(/update\s+chronicles\s+set/iu)
   })
 
   it("adds an all-or-none immutable v1.17 graph binding without rewriting legacy rows", async () => {
@@ -67,7 +82,8 @@ describe("migrations", () => {
       "identity_manifest_root",
       "evidence_graph_root",
       "exact_pin_expansion",
-    ]) expect(sql).toContain(column)
+    ])
+      expect(sql).toContain(column)
     expect(sql).toContain("num_nonnulls")
     expect(sql).toContain("jsonb_array_length(exact_pin_expansion) = 10")
     expect(sql).not.toMatch(/update\s+runtime_evidence_/iu)
@@ -289,7 +305,9 @@ describeDatabase("source identity hardening migration upgrade", () => {
       `)
       const files = await readMigrationFiles()
       for (const file of files) {
-        if (file.name !== "0019_strategy_revision_source_identity_hardening.sql") {
+        if (
+          file.name !== "0019_strategy_revision_source_identity_hardening.sql"
+        ) {
           await pool.query(
             "insert into schema_migrations (filename) values ($1)",
             [file.name],
@@ -322,6 +340,90 @@ describeDatabase("source identity hardening migration upgrade", () => {
           ["a".repeat(64), "b".repeat(64)],
         ),
       ).rejects.toThrow(/source_identity_v2_shape/iu)
+    } finally {
+      await pool.end()
+      await admin.query(`drop schema if exists ${schema} cascade`)
+      await admin.end()
+    }
+  })
+})
+
+describeDatabase("runtime semantic receipt v1.17 migration", () => {
+  it("requires the exact version binding for new v1.17 receipts and preserves v1.16 rows", async () => {
+    const schema = `phase258_0021_${randomUUID().replaceAll("-", "")}`
+    const admin = new Pool({ connectionString: databaseUrl!, max: 1 })
+    await admin.query(`create schema ${schema}`)
+    const pool = new Pool({
+      connectionString: databaseUrl!,
+      max: 1,
+      options: `-c search_path=${schema}`,
+    })
+    try {
+      await pool.query(`
+        create table chronicles (
+          id text primary key,
+          runtime_semantic_receipt jsonb,
+          runtime_semantic_receipt_hash text
+        );
+        insert into chronicles (
+          id, runtime_semantic_receipt, runtime_semantic_receipt_hash
+        ) values (
+          'historical-v1.16',
+          '{"schemaVersion":"runtime-semantic-receipt-v1.16"}'::jsonb,
+          'sha256:${"1".repeat(64)}'
+        );
+        create table schema_migrations (
+          filename text primary key,
+          applied_at timestamptz not null default now()
+        );
+      `)
+      for (const file of await readMigrationFiles()) {
+        if (file.name !== "0021_runtime_abi_v1_17_activation.sql") {
+          await pool.query(
+            "insert into schema_migrations (filename) values ($1)",
+            [file.name],
+          )
+        }
+      }
+
+      const result = await migrate(pool)
+      expect(result.applied).toEqual(["0021_runtime_abi_v1_17_activation.sql"])
+      const historical = await pool.query<{
+        runtime_semantic_receipt_version: string | null
+      }>(
+        "select runtime_semantic_receipt_version from chronicles where id = 'historical-v1.16'",
+      )
+      expect(historical.rows[0]?.runtime_semantic_receipt_version).toBeNull()
+      await expect(
+        pool.query(
+          `insert into chronicles (
+             id, runtime_semantic_receipt, runtime_semantic_receipt_hash
+           ) values (
+             'unbound-v1.17',
+             '{"schemaVersion":"runtime-semantic-receipt-v1.17"}'::jsonb,
+             'sha256:${"2".repeat(64)}'
+           )`,
+        ),
+      ).rejects.toThrow(/runtime_semantic_receipt_v1_17_binding/iu)
+      await pool.query(
+        `insert into chronicles (
+           id, runtime_semantic_receipt, runtime_semantic_receipt_hash,
+           runtime_semantic_receipt_version
+         ) values (
+           'bound-v1.17',
+           '{"schemaVersion":"runtime-semantic-receipt-v1.17"}'::jsonb,
+           'sha256:${"3".repeat(64)}',
+           'runtime-semantic-receipt-v1.17'
+         )`,
+      )
+      await expect(
+        pool.query(
+          `update chronicles
+           set runtime_semantic_receipt = runtime_semantic_receipt || '{"changed":true}'::jsonb,
+               runtime_semantic_receipt_hash = 'sha256:${"4".repeat(64)}'
+           where id = 'bound-v1.17'`,
+        ),
+      ).rejects.toThrow(/immutable/iu)
     } finally {
       await pool.end()
       await admin.query(`drop schema if exists ${schema} cascade`)
