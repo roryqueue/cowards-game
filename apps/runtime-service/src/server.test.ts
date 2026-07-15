@@ -20,6 +20,7 @@ import {
   type PreparedRuntimeServiceDependenciesV117,
 } from "./execute-match.js"
 import {
+  createFixtureDeploymentLaneIdentity,
   createFixtureRuntimeEvidenceAuthorityLoader,
   createFixtureRuntimeExecutionEvidenceSnapshot,
 } from "./runtime-execution-evidence.test-support.js"
@@ -172,6 +173,11 @@ describe("runtime execution HTTP boundary", () => {
       binding,
     }))
     let currentMatchExecutions = 0
+    const routeRuntimeConfig = createRuntimeServiceConfig({
+      strategyExecutionAdapter: "worker-thread",
+      semanticReceiptSecret: "fixture-semantic-receipt-secret-v1",
+      resolveDeploymentLaneIdentity: createFixtureDeploymentLaneIdentity,
+    })
     const preparedV117Dependencies: PreparedRuntimeServiceDependenciesV117 = {
       authorityLoader: {
         load: () => ({
@@ -188,7 +194,7 @@ describe("runtime execution HTTP boundary", () => {
       executeCurrentMatchWithAccounting: (nested) => {
         currentMatchExecutions += 1
         return {
-          response: executeRuntimeServiceRequest(nested, runtimeConfig, {
+          response: executeRuntimeServiceRequest(nested, routeRuntimeConfig, {
             authorityLoader: createFixtureRuntimeEvidenceAuthorityLoader(
               nested.evidenceSnapshot,
               nested.strategies,
@@ -203,7 +209,7 @@ describe("runtime execution HTTP boundary", () => {
       },
     }
     const selectedV117Config = {
-      ...runtimeConfig,
+      ...routeRuntimeConfig,
       contractSelection: {
         runtimeAbiVersion: "strategy-runtime-abi-v1.17",
         runtimeServiceVersion: "runtime-execution-service-v1.17",
@@ -252,14 +258,20 @@ describe("runtime execution HTTP boundary", () => {
     const successor = await fetch(endpoint, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: canonical.bytes,
+      body: Buffer.from(canonical.bytes),
     })
     const successorBytes = new Uint8Array(await successor.arrayBuffer())
     expect(
       admitCanonicalJsonBytes(successorBytes, { profile: "service-response" })
         .ok,
     ).toBe(true)
-    expect(JSON.parse(Buffer.from(successorBytes).toString("utf8"))).toMatchObject({
+    const successorBody = JSON.parse(
+      Buffer.from(successorBytes).toString("utf8"),
+    ) as Record<string, unknown>
+    if (successorBody.ok !== true) {
+      throw new Error(JSON.stringify(successorBody))
+    }
+    expect(successorBody).toMatchObject({
       contractVersion: "runtime-execution-service-v1.17",
       ok: true,
       kind: "executionResult",

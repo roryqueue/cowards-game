@@ -1218,12 +1218,12 @@ export interface PreparedRuntimeServiceDependenciesV117 {
   ): PreparedRuntimeServiceExecutionV117
 }
 
-interface PreparedRuntimeEvidenceBindingV117 {
+export interface PreparedRuntimeEvidenceBindingV117 {
   identityManifestRoot: string
   evidenceGraphRoot: string
 }
 
-interface PreparedMountedRuntimeEvidenceAuthorityV117 {
+export interface PreparedMountedRuntimeEvidenceAuthorityV117 {
   authorityBundleHash: string
   registryGeneration: string
   semanticTupleManifestHash: string
@@ -1263,8 +1263,15 @@ const preparedV117Failure = (input: {
       retryable: input.retryable,
       playerPenalty: false,
     },
-  }) as RuntimeExecutionServiceResponseV117
+}) as RuntimeExecutionServiceResponseV117
 }
+
+export const failPreparedRuntimeServiceRequestV117 = (input: {
+  rawRequest: unknown
+  code: string
+  ownership: "runtime_system" | "system_integrity" | "system_operation"
+  retryable: boolean
+}): RuntimeExecutionServiceResponseV117 => preparedV117Failure(input)
 
 const rootsMatch = (
   binding: { identityManifestRoot: string; evidenceGraphRoot: string },

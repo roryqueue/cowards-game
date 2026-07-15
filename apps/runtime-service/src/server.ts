@@ -10,12 +10,14 @@ import {
   RUNTIME_EXECUTION_SERVICE_PUBLIC_NAME,
   RUNTIME_EXECUTION_SERVICE_TRANSPORT_BINDING,
   RUNTIME_EXECUTION_SERVICE_VERSION,
+  RUNTIME_EXECUTION_SERVICE_VERSION_V1_17,
   RUNTIME_INVOCATION_V1_17_PLAYER_VIOLATIONS,
   RuntimeExecutionServiceResponseSchema,
   SoldierBrainResultV117Schema,
   STRATEGY_RUNTIME_ABI_VERSION,
   StrategyResultV117Schema,
   admitCanonicalJsonBytes,
+  encodeCanonicalJson,
   getStrategyLanguageProviderRecord,
   verifyRuntimeInvocationRequestV117,
   type JsonValue,
@@ -39,7 +41,12 @@ import {
 } from "@cowards/runtime-js"
 import type { RuntimeServiceConfig } from "./runtime-config.js"
 import { runtimeServiceConfigFromEnvironment } from "./production-runtime-config.js"
-import { executeRuntimeServiceRequest } from "./execute-match.js"
+import {
+  executePreparedRuntimeServiceRequestV117,
+  executeRuntimeServiceRequest,
+  failPreparedRuntimeServiceRequestV117,
+  type PreparedRuntimeServiceDependenciesV117,
+} from "./execute-match.js"
 import { redactedErrorMessage } from "./redaction.js"
 import type { RuntimeEvidenceAuthorityLoader } from "./runtime-evidence-authority.js"
 
@@ -51,6 +58,7 @@ export interface RuntimeExecutionHttpServerOptions {
   bodyLimitBytes?: number | undefined
   privateArtifactToken?: string | undefined
   authorityLoader?: RuntimeEvidenceAuthorityLoader | undefined
+  preparedV117Dependencies?: PreparedRuntimeServiceDependenciesV117 | undefined
 }
 
 const writeJson = (
@@ -61,6 +69,100 @@ const writeJson = (
   response.statusCode = statusCode
   response.setHeader("content-type", "application/json; charset=utf-8")
   response.end(JSON.stringify(payload))
+}
+
+const writeCanonicalJsonV117 = (
+  response: ServerResponse,
+  statusCode: number,
+  payload: JsonValue,
+): void => {
+  const encoded = encodeCanonicalJson(payload, {
+    context: "authenticated-outer-envelope",
+  })
+  if (!encoded.ok) {
+    throw new Error("Runtime service v1.17 response could not be canonicalized.")
+  }
+  response.statusCode = statusCode
+  response.setHeader("content-type", "application/json; charset=utf-8")
+  response.end(Buffer.from(encoded.bytes))
+}
+
+const quotedStringEnd = (text: string, start: number): number | undefined => {
+  let escaped = false
+  for (let index = start + 1; index < text.length; index += 1) {
+    const character = text[index]!
+    if (escaped) {
+      escaped = false
+    } else if (character === "\\") {
+      escaped = true
+    } else if (character === '"') {
+      return index
+    }
+  }
+  return undefined
+}
+
+const skipWhitespace = (text: string, start: number): number => {
+  let index = start
+  while (index < text.length && /[\u0009\u000a\u000d\u0020]/u.test(text[index]!)) {
+    index += 1
+  }
+  return index
+}
+
+/**
+ * Detect the top-level successor contract without parsing or normalizing the
+ * body. This deliberately notices either occurrence of a duplicated contract
+ * key, so duplicate-key attacks enter canonical admission and fail there.
+ */
+export const claimsRuntimeExecutionServiceV117 = (
+  bytes: Uint8Array,
+): boolean => {
+  let text: string
+  try {
+    text = new TextDecoder("utf-8", { fatal: true }).decode(bytes)
+  } catch {
+    return false
+  }
+  let objectDepth = 0
+  let arrayDepth = 0
+  for (let index = 0; index < text.length; index += 1) {
+    const character = text[index]!
+    if (character === '"') {
+      const end = quotedStringEnd(text, index)
+      if (end === undefined) return false
+      if (objectDepth === 1 && arrayDepth === 0) {
+        const afterKey = skipWhitespace(text, end + 1)
+        if (text[afterKey] === ":") {
+          let key: unknown
+          try {
+            key = JSON.parse(text.slice(index, end + 1))
+          } catch {
+            return false
+          }
+          const valueStart = skipWhitespace(text, afterKey + 1)
+          if (key === "contractVersion" && text[valueStart] === '"') {
+            const valueEnd = quotedStringEnd(text, valueStart)
+            if (valueEnd === undefined) return false
+            let value: unknown
+            try {
+              value = JSON.parse(text.slice(valueStart, valueEnd + 1))
+            } catch {
+              return false
+            }
+            if (value === RUNTIME_EXECUTION_SERVICE_VERSION_V1_17) return true
+          }
+        }
+      }
+      index = end
+      continue
+    }
+    if (character === "{") objectDepth += 1
+    else if (character === "}") objectDepth -= 1
+    else if (character === "[") arrayDepth += 1
+    else if (character === "]") arrayDepth -= 1
+  }
+  return false
 }
 
 export const readBodyBytes = async (
@@ -462,7 +564,61 @@ export const createRuntimeExecutionHttpHandler = (
     }
 
     try {
-      const body = await readBody(request, bodyLimitBytes)
+      const bodyBytes = await readBodyBytes(request, bodyLimitBytes)
+      if (claimsRuntimeExecutionServiceV117(bodyBytes)) {
+        const admitted = admitCanonicalJsonBytes(bodyBytes, {
+          profile: "authenticated-envelope",
+        })
+        if (!admitted.ok) {
+          writeCanonicalJsonV117(
+            response,
+            400,
+            failPreparedRuntimeServiceRequestV117({
+              rawRequest: undefined,
+              code: "MALFORMED_REQUEST",
+              ownership: "system_integrity",
+              retryable: false,
+            }) as unknown as JsonValue,
+          )
+          return
+        }
+        if (
+          runtimeConfig.contractSelection.runtimeServiceVersion !==
+          RUNTIME_EXECUTION_SERVICE_VERSION_V1_17
+        ) {
+          writeCanonicalJsonV117(
+            response,
+            422,
+            failPreparedRuntimeServiceRequestV117({
+              rawRequest: admitted.value,
+              code: "CONTRACT_INACTIVE",
+              ownership: "system_integrity",
+              retryable: false,
+            }) as unknown as JsonValue,
+          )
+          return
+        }
+        const dependencies = options.preparedV117Dependencies
+        const result = dependencies === undefined
+          ? failPreparedRuntimeServiceRequestV117({
+              rawRequest: admitted.value,
+              code: "V117_ROUTE_UNAVAILABLE",
+              ownership: "system_operation",
+              retryable: true,
+            })
+          : executePreparedRuntimeServiceRequestV117(
+              admitted.value,
+              runtimeConfig,
+              dependencies,
+            )
+        writeCanonicalJsonV117(
+          response,
+          result.ok ? 200 : 422,
+          result as unknown as JsonValue,
+        )
+        return
+      }
+      const body = new TextDecoder("utf-8", { fatal: true }).decode(bodyBytes)
       const rawRequest = JSON.parse(body) as unknown
       const result = executeRuntimeServiceRequest(rawRequest, runtimeConfig, {
         authorityLoader: options.authorityLoader,
