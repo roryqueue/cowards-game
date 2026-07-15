@@ -6,6 +6,12 @@ import {
   type StrategyExecutionAdapterMetadata,
 } from "@cowards/runtime-js/worker"
 import type { ExecutableLaneIdentity, StrategyRevision } from "@cowards/spec"
+import {
+  RUNTIME_ABI_V1_17,
+  RUNTIME_EXECUTION_SERVICE_VERSION,
+  RUNTIME_SEMANTIC_RECEIPT_SCHEMA_VERSION,
+  STRATEGY_RUNTIME_ABI_VERSION,
+} from "@cowards/spec"
 
 const LOCAL_DEV_STRATEGY_EXECUTION_ADAPTER_ID = "worker-thread"
 
@@ -34,7 +40,31 @@ export interface RuntimeServiceConfig {
   ): ExecutableLaneIdentity | undefined
   deploymentLaneRegistryId?: string | undefined
   semanticReceiptSecret: string
+  contractSelection: RuntimeServiceContractSelection
 }
+
+export interface RuntimeServiceContractSelection {
+  runtimeAbiVersion: string
+  runtimeServiceVersion: string
+  semanticReceiptVersion: string
+  canonicalJsonVersion: string
+}
+
+export const selectedRuntimeServiceContract =
+  (): RuntimeServiceContractSelection =>
+    RUNTIME_ABI_V1_17.lifecycle.active
+      ? {
+          runtimeAbiVersion: RUNTIME_ABI_V1_17.versions.runtimeAbi,
+          runtimeServiceVersion: RUNTIME_ABI_V1_17.versions.runtimeService,
+          semanticReceiptVersion: RUNTIME_ABI_V1_17.versions.semanticReceipt,
+          canonicalJsonVersion: RUNTIME_ABI_V1_17.versions.canonicalJson,
+        }
+      : {
+          runtimeAbiVersion: STRATEGY_RUNTIME_ABI_VERSION,
+          runtimeServiceVersion: RUNTIME_EXECUTION_SERVICE_VERSION,
+          semanticReceiptVersion: RUNTIME_SEMANTIC_RECEIPT_SCHEMA_VERSION,
+          canonicalJsonVersion: "legacy-json-stringify-v1.16",
+        }
 
 export const createRuntimeServiceConfig = (
   input: RuntimeServiceConfigInput = {},
@@ -62,6 +92,7 @@ export const createRuntimeServiceConfig = (
 
   const resolveDeploymentLaneIdentity =
     input.resolveDeploymentLaneIdentity ?? (() => undefined)
+  const contractSelection = selectedRuntimeServiceContract()
 
   switch (selectedId) {
     case "worker-thread": {
@@ -72,6 +103,7 @@ export const createRuntimeServiceConfig = (
         resolveDeploymentLaneIdentity,
         deploymentLaneRegistryId: input.deploymentLaneRegistryId,
         semanticReceiptSecret,
+        contractSelection,
       }
     }
     case "subprocess": {
@@ -82,6 +114,7 @@ export const createRuntimeServiceConfig = (
         resolveDeploymentLaneIdentity,
         deploymentLaneRegistryId: input.deploymentLaneRegistryId,
         semanticReceiptSecret,
+        contractSelection,
       }
     }
     case "container-subprocess": {
@@ -92,6 +125,7 @@ export const createRuntimeServiceConfig = (
         resolveDeploymentLaneIdentity,
         deploymentLaneRegistryId: input.deploymentLaneRegistryId,
         semanticReceiptSecret,
+        contractSelection,
       }
     }
     default:
@@ -107,4 +141,5 @@ export const formatRuntimeServiceConfigLogLines = (
   `Strategy execution adapter: ${runtimeConfig.metadata.id} (${runtimeConfig.metadata.label})`,
   `Strategy isolation boundary: ${runtimeConfig.metadata.isolationBoundary}`,
   `Deployment lane registry: ${runtimeConfig.deploymentLaneRegistryId ?? "unconfigured (fail closed)"}`,
+  `Runtime contract tuple: ${runtimeConfig.contractSelection.runtimeAbiVersion} / ${runtimeConfig.contractSelection.runtimeServiceVersion} / ${runtimeConfig.contractSelection.semanticReceiptVersion} / ${runtimeConfig.contractSelection.canonicalJsonVersion}`,
 ]

@@ -123,8 +123,7 @@ const candidateRequest = (
       },
       budget: createRuntimeInvocationBudgetV117("soldierBrain"),
       accounting: {
-        prestate:
-          overrides.prestate ?? createRuntimeAbiV117ExecutionLedger(),
+        prestate: overrides.prestate ?? createRuntimeAbiV117ExecutionLedger(),
       },
       input: { value: kernelRequest.input as unknown as JsonValue },
       retry: {
@@ -175,9 +174,8 @@ const candidateEvidence = (
         status: "measured" as const,
         delta,
         cumulative:
-          prestate.cumulative[
-            counter as keyof typeof prestate.cumulative
-          ] + delta,
+          prestate.cumulative[counter as keyof typeof prestate.cumulative] +
+          delta,
       },
     ]),
   ) as RuntimeInvocationExecutionReceiptEvidenceV117["counters"]
@@ -252,10 +250,7 @@ const candidateReceiptForOutcome = (
     counters: {
       ...evidence.counters,
       payloadBytes: measuredCounter("payloadBytes", payload.bytes.byteLength),
-      stdoutBytes: measuredCounter(
-        "stdoutBytes",
-        payload.bytes.byteLength + 1,
-      ),
+      stdoutBytes: measuredCounter("stdoutBytes", payload.bytes.byteLength + 1),
       stderrBytes: measuredCounter("stderrBytes", 0),
     },
   })
@@ -279,10 +274,7 @@ const candidatePrestateWithWallMilliseconds = (
       memoryBytes: 0,
     }),
   )
-  const debit = debitRuntimeAbiV117Ledger(
-    request.accounting.prestate,
-    receipt,
-  )
+  const debit = debitRuntimeAbiV117Ledger(request.accounting.prestate, receipt)
   if (debit.kind === "system_failure") {
     throw new Error(debit.failure.code)
   }
@@ -349,9 +341,7 @@ const executeCandidateOutcome = (
       selectActivations() {
         throw new Error("selection is unreachable in activation mode")
       },
-      runSoldierBrain(
-        _input: SoldierBrainInput,
-      ) {
+      runSoldierBrain(_input: SoldierBrainInput) {
         return { kind: "v1_17_bound" as const, request, outcome }
       },
     },
@@ -554,12 +544,17 @@ describe("runtime execution service", () => {
     expect(() => createRuntimeServiceConfig()).toThrow(
       RuntimeServiceConfigError,
     )
-    expect(
-      createRuntimeServiceConfig({
-        allowLocalWorkerThreadFallback: true,
-        semanticReceiptSecret: "fixture-semantic-receipt-secret-v1",
-      }).metadata.id,
-    ).toBe("worker-thread")
+    const config = createRuntimeServiceConfig({
+      allowLocalWorkerThreadFallback: true,
+      semanticReceiptSecret: "fixture-semantic-receipt-secret-v1",
+    })
+    expect(config.metadata.id).toBe("worker-thread")
+    expect(config.contractSelection).toEqual({
+      runtimeAbiVersion: "strategy-runtime-abi-v1.14",
+      runtimeServiceVersion: "runtime-execution-service-v1.16",
+      semanticReceiptVersion: "runtime-semantic-receipt-v1",
+      canonicalJsonVersion: "legacy-json-stringify-v1.16",
+    })
   })
 
   it("validates and executes a complete request as a schema-valid success", () => {
@@ -1036,9 +1031,9 @@ describe("runtime execution service v1.17 candidate bridge", () => {
     })
 
     expect(observed).toHaveLength(1)
-    expect(Buffer.from(observed[0] ?? []).equals(Buffer.from(requestBytes))).toBe(
-      true,
-    )
+    expect(
+      Buffer.from(observed[0] ?? []).equals(Buffer.from(requestBytes)),
+    ).toBe(true)
     expect(result.internalExecution).toMatchObject({ kind: "completed" })
     expect(result.authenticatedAccounting).toEqual(
       authenticatedResponse.accounting,
@@ -1351,16 +1346,15 @@ describe("runtime execution service v1.17 candidate bridge", () => {
   ] as const)(
     "carries the Plan-05 $name admission into one kernel-owned penalty",
     ({ name, bytes, canonicalErrorCode }) => {
-      const admission = admitStrategyPayloadBytesV117(
-        bytes(),
-        "soldierBrain",
-      )
+      const admission = admitStrategyPayloadBytesV117(bytes(), "soldierBrain")
       expect(admission).toMatchObject({
         kind: "player_violation",
         violation: { code: "INVALID_OUTPUT" },
       })
       if (admission.kind !== "player_violation") {
-        throw new Error("malformed proposal unexpectedly passed Plan-05 admission")
+        throw new Error(
+          "malformed proposal unexpectedly passed Plan-05 admission",
+        )
       }
       if (canonicalErrorCode === undefined) {
         expect(admission).not.toHaveProperty("canonicalError")
