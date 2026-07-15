@@ -4,11 +4,25 @@ import type { AddressInfo } from "node:net"
 import { Readable } from "node:stream"
 import { afterEach, describe, expect, it } from "vitest"
 import {
+  DEFAULT_RUNTIME_LIMITS,
+  INITIAL_BOUNDS,
   RUNTIME_EXECUTION_SERVICE_VERSION,
   RUNTIME_INVOCATION_V1_17_TEST_KEY_ID,
   RuntimeExecutionServiceResponseSchema,
+  admitCanonicalJsonBytes,
+  encodeCanonicalJson,
+  type JsonValue,
 } from "@cowards/spec"
+import { buildStrategyRevision } from "@cowards/runtime-js"
 import { createRuntimeServiceConfig } from "./runtime-config.js"
+import {
+  executeRuntimeServiceRequest,
+  type PreparedRuntimeServiceDependenciesV117,
+} from "./execute-match.js"
+import {
+  createFixtureRuntimeEvidenceAuthorityLoader,
+  createFixtureRuntimeExecutionEvidenceSnapshot,
+} from "./runtime-execution-evidence.test-support.js"
 import {
   admitRuntimeInvocationRequestBytesV117,
   admitStrategyPayloadBytesV117,
@@ -84,6 +98,184 @@ describe("runtime execution HTTP boundary", () => {
     ]) as unknown as Parameters<typeof readBodyBytes>[0]
 
     await expect(readBodyBytes(request, raw.byteLength)).resolves.toEqual(raw)
+  })
+
+  it("admits v1.17 raw bytes before routing and exercises the real current Match path", async () => {
+    const source = `export default {
+      selectActivations() { return { activationOrders: [], strategyMemory: {} } },
+      soldierBrain() { return { action: { type: "TURN_TO_STONE" }, soldierMemory: {} } }
+    }`
+    const bottom = buildStrategyRevision({
+      source,
+      strategyId: "strategy:http-route:bottom",
+    })
+    const top = buildStrategyRevision({
+      source,
+      strategyId: "strategy:http-route:top",
+    })
+    const current = {
+      contractVersion: RUNTIME_EXECUTION_SERVICE_VERSION,
+      kind: "executeMatch" as const,
+      requestId: "runtime-request:http-route:v1.16",
+      match: {
+        matchId: "match:http-route:v1.16",
+        seed: "seed:http-route:v1.16",
+        arenaVariant: {
+          id: "runtime-service-http-route-arena",
+          name: "Runtime Service HTTP Route Arena",
+          initialBounds: INITIAL_BOUNDS,
+          terrainStones: [],
+        },
+        bottomPlayerId: "player:bottom",
+        topPlayerId: "player:top",
+        bottomStrategyRevisionId: bottom.id,
+        topStrategyRevisionId: top.id,
+        maxPhases: 1,
+      },
+      strategies: { bottom, top },
+      limits: DEFAULT_RUNTIME_LIMITS,
+      evidenceSnapshot: createFixtureRuntimeExecutionEvidenceSnapshot({
+        fixtureId: "server-http-route",
+        bottom,
+        top,
+      }),
+    }
+    const bottomRoots = {
+      identityManifestRoot: `sha256:${"1".repeat(64)}`,
+      evidenceGraphRoot: `sha256:${"2".repeat(64)}`,
+    } as const
+    const topRoots = {
+      identityManifestRoot: `sha256:${"3".repeat(64)}`,
+      evidenceGraphRoot: `sha256:${"4".repeat(64)}`,
+    } as const
+    const budgetProfileSha256 = `sha256:${"5".repeat(64)}` as const
+    const ledgerPrestateRoot = `sha256:${"6".repeat(64)}` as const
+    const ledgerPoststateRoot = `sha256:${"7".repeat(64)}` as const
+    const candidate = {
+      contractVersion: "runtime-execution-service-v1.17",
+      kind: "executeMatch",
+      requestId: "request:http-full-service:v1.17",
+      matchId: current.match.matchId,
+      compatibilityTupleId: current.evidenceSnapshot.compatibility.tupleId,
+      authority: {
+        bundleHash: current.evidenceSnapshot.authorityBundleHash,
+        sourceManifestHash:
+          current.evidenceSnapshot.publication.sourceManifestHash,
+        registryGeneration: current.evidenceSnapshot.registryGeneration,
+      },
+      entrants: { bottom: bottomRoots, top: topRoots },
+      accounting: { budgetProfileSha256, ledgerPrestateRoot },
+      match: current as unknown as JsonValue,
+    } as const
+    const bindings = [bottomRoots, topRoots].map((binding, index) => ({
+      attestationId: `attestation:http-route:${String(index)}`,
+      binding,
+    }))
+    let currentMatchExecutions = 0
+    const preparedV117Dependencies: PreparedRuntimeServiceDependenciesV117 = {
+      authorityLoader: {
+        load: () => ({
+          authorityBundleHash: candidate.authority.bundleHash,
+          registryGeneration: candidate.authority.registryGeneration,
+          semanticTupleManifestHash: candidate.compatibilityTupleId,
+          sourceManifestHash: candidate.authority.sourceManifestHash,
+          payload: {
+            attestations: bindings,
+            certificates: bindings,
+          },
+        }),
+      },
+      executeCurrentMatchWithAccounting: (nested) => {
+        currentMatchExecutions += 1
+        return {
+          response: executeRuntimeServiceRequest(nested, runtimeConfig, {
+            authorityLoader: createFixtureRuntimeEvidenceAuthorityLoader(
+              nested.evidenceSnapshot,
+              nested.strategies,
+            ),
+          }),
+          accounting: {
+            budgetProfileSha256,
+            ledgerPrestateRoot,
+            ledgerPoststateRoot,
+          },
+        }
+      },
+    }
+    const selectedV117Config = {
+      ...runtimeConfig,
+      contractSelection: {
+        runtimeAbiVersion: "strategy-runtime-abi-v1.17",
+        runtimeServiceVersion: "runtime-execution-service-v1.17",
+        semanticReceiptVersion: "runtime-semantic-receipt-v1.17",
+        canonicalJsonVersion: "canonical-json-v1.1",
+      },
+    }
+    const server = createRuntimeExecutionHttpServer({
+      runtimeConfig: selectedV117Config,
+      authorityLoader: createFixtureRuntimeEvidenceAuthorityLoader(
+        current.evidenceSnapshot,
+        current.strategies,
+      ),
+      preparedV117Dependencies,
+    })
+    servers.push(server)
+    server.listen(0, "127.0.0.1")
+    await once(server, "listening")
+    const address = server.address() as AddressInfo
+    const endpoint = `http://127.0.0.1:${address.port}/execute-match`
+    const canonical = encodeCanonicalJson(candidate as unknown as JsonValue, {
+      context: "authenticated-outer-envelope",
+    })
+    if (!canonical.ok) throw new Error(canonical.error.code)
+    const canonicalText = Buffer.from(canonical.bytes).toString("utf8")
+    const duplicated = canonicalText.replace(
+      `"matchId":"${candidate.matchId}"`,
+      `"matchId":"${candidate.matchId}","matchId":"${candidate.matchId}"`,
+    )
+
+    for (const body of [duplicated, JSON.stringify(candidate)]) {
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body,
+      })
+      expect(await response.json()).toMatchObject({
+        contractVersion: "runtime-execution-service-v1.17",
+        ok: false,
+        kind: "systemFailure",
+        systemFailure: { code: "MALFORMED_REQUEST", playerPenalty: false },
+      })
+    }
+    expect(currentMatchExecutions).toBe(0)
+
+    const successor = await fetch(endpoint, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: canonical.bytes,
+    })
+    const successorBytes = new Uint8Array(await successor.arrayBuffer())
+    expect(
+      admitCanonicalJsonBytes(successorBytes, { profile: "service-response" })
+        .ok,
+    ).toBe(true)
+    expect(JSON.parse(Buffer.from(successorBytes).toString("utf8"))).toMatchObject({
+      contractVersion: "runtime-execution-service-v1.17",
+      ok: true,
+      kind: "executionResult",
+    })
+    expect(currentMatchExecutions).toBe(1)
+
+    const historical = await fetch(endpoint, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(current),
+    })
+    expect(await historical.json()).toMatchObject({
+      contractVersion: RUNTIME_EXECUTION_SERVICE_VERSION,
+      ok: true,
+      kind: "executionResult",
+    })
   })
 
   it("keeps outer corruption system-owned and redacted", () => {
