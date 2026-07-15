@@ -1,6 +1,7 @@
 import { spawnSync } from "node:child_process"
 import { readFileSync } from "node:fs"
-import { basename } from "node:path"
+import { basename, resolve } from "node:path"
+import { fileURLToPath } from "node:url"
 
 export type RuntimeAbiTestStage =
   | "preactivation"
@@ -116,9 +117,11 @@ export const validateRuntimeAbiTestResult = (
   if (/\b(no tests|0 tests|zero tests)\b/iu.test(output)) {
     throw new TypeError(`${test.id} reported zero tests.`)
   }
-  for (const ownedFile of test.ownedFiles) {
-    if (!output.includes(basename(ownedFile))) {
-      throw new TypeError(`${test.id} omitted named file ${ownedFile}.`)
+  if (test.kind !== "go") {
+    for (const ownedFile of test.ownedFiles) {
+      if (!output.includes(basename(ownedFile))) {
+        throw new TypeError(`${test.id} omitted named file ${ownedFile}.`)
+      }
     }
   }
   if (test.expectedOutput.some((marker) => !output.includes(marker))) {
@@ -166,6 +169,47 @@ export const validateRuntimeAbiTestResult = (
       return
     case "command":
       throw new TypeError(`${test.id} used an unsupported generic command.`)
+  }
+}
+
+export const validateGoTestSourceOwnership = (
+  test: RuntimeAbiTestEntry,
+  repoRoot: string,
+): void => {
+  if (
+    test.kind !== "go" ||
+    test.workingDirectory === undefined ||
+    test.ownedFiles.length !== 1
+  ) {
+    throw new TypeError(`${test.id} lacks exact owned Go source.`)
+  }
+  const checkerPath = fileURLToPath(
+    new URL("./check-go-test-source-ownership.go", import.meta.url),
+  )
+  const result = spawnSync(
+    "go",
+    [
+      "run",
+      checkerPath,
+      "--working-directory",
+      resolve(repoRoot, test.workingDirectory),
+      "--test",
+      test.namedResult,
+      "--owned-file",
+      resolve(repoRoot, test.ownedFiles[0]!),
+    ],
+    {
+      cwd: repoRoot,
+      env: process.env,
+      encoding: "utf8",
+      maxBuffer: 1024 * 1024,
+    },
+  )
+  if (result.status !== 0) {
+    const detail = `${result.stderr ?? ""}${result.stdout ?? ""}`.trim()
+    throw new TypeError(
+      `${test.id} lacks exact owned Go source${detail === "" ? "." : `: ${detail}`}`,
+    )
   }
 }
 
@@ -275,6 +319,9 @@ export const runRuntimeAbiTestManifest = (options: {
           `${test.id} requires ${test.database.dsnEnvironmentVariable}.`,
         )
       }
+    }
+    if (test.kind === "go") {
+      validateGoTestSourceOwnership(test, process.cwd())
     }
     const [executable, ...args] = test.command
     const result = spawnSync(executable, args, {
