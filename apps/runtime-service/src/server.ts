@@ -88,7 +88,9 @@ const writeCanonicalJsonV117 = (
     context: "authenticated-outer-envelope",
   })
   if (!encoded.ok) {
-    throw new Error("Runtime service v1.17 response could not be canonicalized.")
+    throw new Error(
+      "Runtime service v1.17 response could not be canonicalized.",
+    )
   }
   response.statusCode = statusCode
   response.setHeader("content-type", "application/json; charset=utf-8")
@@ -112,7 +114,10 @@ const quotedStringEnd = (text: string, start: number): number | undefined => {
 
 const skipWhitespace = (text: string, start: number): number => {
   let index = start
-  while (index < text.length && /[\u0009\u000a\u000d\u0020]/u.test(text[index]!)) {
+  while (
+    index < text.length &&
+    /[\u0009\u000a\u000d\u0020]/u.test(text[index]!)
+  ) {
     index += 1
   }
   return index
@@ -242,9 +247,10 @@ export const admitStrategyPayloadBytesV117 = (
       },
     }
   }
-  const schema = method === "selectActivations"
-    ? StrategyResultV117Schema
-    : SoldierBrainResultV117Schema
+  const schema =
+    method === "selectActivations"
+      ? StrategyResultV117Schema
+      : SoldierBrainResultV117Schema
   const parsed = schema.safeParse(admitted.value)
   if (!parsed.success) {
     return {
@@ -503,15 +509,16 @@ export const createRuntimeExecutionHttpHandler = (
   const configuredPrivateArtifactToken = privateArtifactToken(
     options.privateArtifactToken,
   )
-  const preparedV117Dependencies = options.authorityLoaderV117 === undefined
-    ? undefined
-    : createPreparedRuntimeServiceDependenciesV117({
-        runtimeConfig,
-        authorityLoader: options.authorityLoaderV117,
-        currentAuthorityLoader: options.authorityLoader,
-        signingIdentity: options.signingIdentityV117,
-        candidateInvocationAdapter: options.candidateInvocationAdapterV117,
-      })
+  const preparedV117Dependencies =
+    options.authorityLoaderV117 === undefined
+      ? undefined
+      : createPreparedRuntimeServiceDependenciesV117({
+          runtimeConfig,
+          authorityLoader: options.authorityLoaderV117,
+          currentAuthorityLoader: options.authorityLoader,
+          signingIdentity: options.signingIdentityV117,
+          candidateInvocationAdapter: options.candidateInvocationAdapterV117,
+        })
 
   return async (
     request: IncomingMessage,
@@ -616,18 +623,19 @@ export const createRuntimeExecutionHttpHandler = (
           return
         }
         const dependencies = preparedV117Dependencies
-        const result = dependencies === undefined
-          ? failPreparedRuntimeServiceRequestV117({
-              rawRequest: admitted.value,
-              code: "V117_ROUTE_UNAVAILABLE",
-              ownership: "system_operation",
-              retryable: true,
-            })
-          : executePreparedRuntimeServiceRequestV117(
-              admitted.value,
-              runtimeConfig,
-              dependencies,
-            )
+        const result =
+          dependencies === undefined
+            ? failPreparedRuntimeServiceRequestV117({
+                rawRequest: admitted.value,
+                code: "V117_ROUTE_UNAVAILABLE",
+                ownership: "system_operation",
+                retryable: true,
+              })
+            : executePreparedRuntimeServiceRequestV117(
+                admitted.value,
+                runtimeConfig,
+                dependencies,
+              )
         writeCanonicalJsonV117(
           response,
           result.ok ? 200 : 422,
@@ -637,6 +645,22 @@ export const createRuntimeExecutionHttpHandler = (
       }
       const body = new TextDecoder("utf-8", { fatal: true }).decode(bodyBytes)
       const rawRequest = JSON.parse(body) as unknown
+      if (
+        runtimeConfig.contractSelection.runtimeServiceVersion !==
+        RUNTIME_EXECUTION_SERVICE_VERSION
+      ) {
+        writeCanonicalJsonV117(
+          response,
+          422,
+          failPreparedRuntimeServiceRequestV117({
+            rawRequest,
+            code: "CONTRACT_INACTIVE",
+            ownership: "system_integrity",
+            retryable: false,
+          }) as unknown as JsonValue,
+        )
+        return
+      }
       const result = executeRuntimeServiceRequest(rawRequest, runtimeConfig, {
         authorityLoader: options.authorityLoader,
       })

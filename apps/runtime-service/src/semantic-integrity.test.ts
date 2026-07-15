@@ -10,7 +10,7 @@ import {
 import type { StrategyRuntime } from "@cowards/engine"
 import { recordChronicleFromExecution } from "@cowards/replay"
 import { buildStrategyRevision } from "@cowards/runtime-js"
-import { executeRuntimeServiceRequest } from "./execute-match.js"
+import { executeNestedMatchServiceTestSupport as executeRuntimeServiceRequest } from "./runtime-execution-nested-match.test-support.js"
 import {
   createFixtureDeploymentLaneIdentity,
   createFixtureRuntimeExecutionAuthorityContext,
@@ -93,7 +93,10 @@ describe("runtime-service semantic integrity", () => {
       }),
       {
         authorityLoader: authority.authorityLoader,
-        createRuntimeForRevision: () => ({ ok: true, runtime: passiveRuntime }),
+        createAdmittedRuntimeForRevision: () => ({
+          ok: true,
+          runtime: passiveRuntime,
+        }),
       },
     )
 
@@ -126,7 +129,7 @@ describe("runtime-service semantic integrity", () => {
   })
 
   it("keeps the inactive v1.17 candidate outside historical v1.16 default dispatch", () => {
-    const createRuntimeForRevision = vi.fn()
+    const createAdmittedRuntimeForRevision = vi.fn()
     const response = executeRuntimeServiceRequest(
       {
         ...request,
@@ -139,7 +142,7 @@ describe("runtime-service semantic integrity", () => {
       }),
       {
         authorityLoader: authority.authorityLoader,
-        createRuntimeForRevision,
+        createAdmittedRuntimeForRevision,
       },
     )
 
@@ -149,7 +152,7 @@ describe("runtime-service semantic integrity", () => {
       kind: "systemFailure",
       systemFailure: { code: "MALFORMED_REQUEST", retryable: false },
     })
-    expect(createRuntimeForRevision).not.toHaveBeenCalled()
+    expect(createAdmittedRuntimeForRevision).not.toHaveBeenCalled()
   })
 
   it("fails closed when the recorded final state differs from canonical reconstruction", () => {
@@ -162,7 +165,10 @@ describe("runtime-service semantic integrity", () => {
       }),
       {
         authorityLoader: authority.authorityLoader,
-        createRuntimeForRevision: () => ({ ok: true, runtime: passiveRuntime }),
+        createAdmittedRuntimeForRevision: () => ({
+          ok: true,
+          runtime: passiveRuntime,
+        }),
         recordChronicle(input) {
           const recorded = recordChronicleFromExecution(input)
           if (!recorded.ok) return recorded
@@ -197,7 +203,10 @@ describe("runtime-service semantic integrity", () => {
       }),
       {
         authorityLoader: authority.authorityLoader,
-        createRuntimeForRevision: () => ({ ok: true, runtime: passiveRuntime }),
+        createAdmittedRuntimeForRevision: () => ({
+          ok: true,
+          runtime: passiveRuntime,
+        }),
         recordChronicle,
         validateChronicle: vi.fn(() => ({
           ok: false as const,

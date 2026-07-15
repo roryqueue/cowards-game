@@ -50,6 +50,36 @@ export const RUNTIME_INVOCATION_V1_17_CANDIDATE = deepFreeze({
   current: false,
 } as const)
 
+/**
+ * Activation-owned lifecycle projection for the selected v1.17 route. The
+ * immutable candidate record above continues to own the signed preactivation
+ * fixtures; Plan 258-14 changes only this projection when the current tuple is
+ * switched atomically.
+ */
+export const RUNTIME_INVOCATION_V1_17_SELECTED_LIFECYCLE = deepFreeze({
+  contractVersion: "runtime-invocation-v1.17",
+  runtimeAbiVersion: "strategy-runtime-abi-v1.17",
+  lifecycle: "inactive-candidate",
+  activationPlan: "258-14",
+  current: false,
+} as const satisfies RuntimeInvocationLifecycleV117)
+
+export type RuntimeInvocationLifecycleV117 =
+  | Readonly<{
+      contractVersion: "runtime-invocation-v1.17"
+      runtimeAbiVersion: "strategy-runtime-abi-v1.17"
+      lifecycle: "inactive-candidate"
+      activationPlan: "258-14"
+      current: false
+    }>
+  | Readonly<{
+      contractVersion: "runtime-invocation-v1.17"
+      runtimeAbiVersion: "strategy-runtime-abi-v1.17"
+      lifecycle: "active-current"
+      activationPlan: "258-14"
+      current: true
+    }>
+
 export const RUNTIME_INVOCATION_V1_17_PLAYER_VIOLATION_CODES = deepFreeze([
   "INVALID_OUTPUT",
   "RESOURCE_EXHAUSTION",
@@ -538,10 +568,8 @@ export interface RuntimeInvocationRetryV117 {
   readonly identitySha256: `sha256:${string}`
 }
 
-export interface AuthenticatedRuntimeInvocationRequestV117 {
+interface AuthenticatedRuntimeInvocationRequestBaseV117 {
   readonly contractVersion: typeof RUNTIME_INVOCATION_V1_17_CANDIDATE.contractVersion
-  readonly candidateStatus: typeof RUNTIME_INVOCATION_V1_17_CANDIDATE.lifecycle
-  readonly current: false
   readonly envelopeKind: "runtime-invocation-request"
   readonly requestId: string
   readonly invocationId: string
@@ -555,6 +583,19 @@ export interface AuthenticatedRuntimeInvocationRequestV117 {
   readonly retry: RuntimeInvocationRetryV117
   readonly authentication: RuntimeInvocationAuthenticationV117
 }
+
+export type AuthenticatedRuntimeInvocationRequestV117 =
+  AuthenticatedRuntimeInvocationRequestBaseV117 &
+    (
+      | Readonly<{
+          candidateStatus: "inactive-candidate"
+          current: false
+        }>
+      | Readonly<{
+          candidateStatus: "active-current"
+          current: true
+        }>
+    )
 
 export interface CreateRuntimeInvocationRequestV117Input {
   readonly requestId: string
@@ -627,13 +668,21 @@ export type RuntimeInvocationExecutionReceiptV117 = Readonly<{
 
 type RuntimeInvocationResponseBaseV117 = Readonly<{
   contractVersion: typeof RUNTIME_INVOCATION_V1_17_CANDIDATE.contractVersion
-  candidateStatus: typeof RUNTIME_INVOCATION_V1_17_CANDIDATE.lifecycle
-  current: false
   envelopeKind: "runtime-invocation-response"
   requestBinding: RuntimeInvocationRequestBindingV117
   accounting: RuntimeInvocationResponseAccountingV117
   authentication: RuntimeInvocationAuthenticationV117
-}>
+}> &
+  (
+    | Readonly<{
+        candidateStatus: "inactive-candidate"
+        current: false
+      }>
+    | Readonly<{
+        candidateStatus: "active-current"
+        current: true
+      }>
+  )
 
 export type AuthenticatedRuntimeInvocationResponseV117<
   TValue extends JsonValue = JsonValue,
@@ -988,13 +1037,35 @@ const RuntimeInvocationAuthenticationV117Schema = z
   })
   .strict()
 
+const runtimeInvocationLifecycleMatches = (value: {
+  readonly candidateStatus: "inactive-candidate" | "active-current"
+  readonly current: boolean
+}): boolean =>
+  (value.candidateStatus === "inactive-candidate" && value.current === false) ||
+  (value.candidateStatus === "active-current" && value.current === true)
+
+const enforceRuntimeInvocationLifecycle = (
+  value: {
+    readonly candidateStatus: "inactive-candidate" | "active-current"
+    readonly current: boolean
+  },
+  context: z.RefinementCtx,
+): void => {
+  if (runtimeInvocationLifecycleMatches(value)) return
+  context.addIssue({
+    code: "custom",
+    path: ["current"],
+    message: "runtime invocation lifecycle and current flag must agree",
+  })
+}
+
 export const AuthenticatedRuntimeInvocationRequestV117Schema = z
   .object({
     contractVersion: z.literal(
       RUNTIME_INVOCATION_V1_17_CANDIDATE.contractVersion,
     ),
-    candidateStatus: z.literal(RUNTIME_INVOCATION_V1_17_CANDIDATE.lifecycle),
-    current: z.literal(false),
+    candidateStatus: z.enum(["inactive-candidate", "active-current"]),
+    current: z.boolean(),
     envelopeKind: z.literal("runtime-invocation-request"),
     requestId: PublicIdSchema,
     invocationId: PublicIdSchema,
@@ -1009,6 +1080,7 @@ export const AuthenticatedRuntimeInvocationRequestV117Schema = z
     authentication: RuntimeInvocationAuthenticationV117Schema,
   })
   .strict()
+  .superRefine(enforceRuntimeInvocationLifecycle)
 
 const RuntimeInvocationRequestBindingV117Schema = z
   .object({
@@ -1042,8 +1114,8 @@ const responseShape = {
   contractVersion: z.literal(
     RUNTIME_INVOCATION_V1_17_CANDIDATE.contractVersion,
   ),
-  candidateStatus: z.literal(RUNTIME_INVOCATION_V1_17_CANDIDATE.lifecycle),
-  current: z.literal(false),
+  candidateStatus: z.enum(["inactive-candidate", "active-current"]),
+  current: z.boolean(),
   envelopeKind: z.literal("runtime-invocation-response"),
   requestBinding: RuntimeInvocationRequestBindingV117Schema,
   accounting: RuntimeInvocationResponseAccountingV117Schema,
@@ -1057,21 +1129,24 @@ export const AuthenticatedRuntimeInvocationResponseV117Schema = z.union([
       outcome: RuntimeInvocationSuccessV117Schema,
       payloadBinding: RuntimeInvocationPayloadBindingV117Schema,
     })
-    .strict(),
+    .strict()
+    .superRefine(enforceRuntimeInvocationLifecycle),
   z
     .object({
       ...responseShape,
       outcome: RuntimeInvocationPlayerViolationV117Schema,
       payloadBinding: z.null(),
     })
-    .strict(),
+    .strict()
+    .superRefine(enforceRuntimeInvocationLifecycle),
   z
     .object({
       ...responseShape,
       outcome: RuntimeInvocationSystemFailureV117Schema,
       payloadBinding: z.null(),
     })
-    .strict(),
+    .strict()
+    .superRefine(enforceRuntimeInvocationLifecycle),
 ])
 
 const textEncoder = new TextEncoder()
@@ -1314,9 +1389,10 @@ const executionPrestateIsValid = (
   )
 }
 
-export const createAuthenticatedRuntimeInvocationRequestV117 = (
+const createAuthenticatedRuntimeInvocationRequestForLifecycleV117 = (
   input: CreateRuntimeInvocationRequestV117Input,
   identity: RuntimeInvocationSigningIdentityV117,
+  lifecycle: RuntimeInvocationLifecycleV117,
 ): AuthenticatedRuntimeInvocationRequestV117 => {
   const semanticTupleWithoutId = SemanticTupleWithoutIdSchema.parse(
     input.semanticTuple,
@@ -1364,9 +1440,8 @@ export const createAuthenticatedRuntimeInvocationRequestV117 = (
   if (!executionPrestateIsValid(prestate, input.invocationId)) {
     throw new TypeError("Candidate request execution prestate is invalid")
   }
-  const prestateSha256 = runtimeInvocationExecutionLedgerPrestateRootV117(
-    prestate,
-  )
+  const prestateSha256 =
+    runtimeInvocationExecutionLedgerPrestateRootV117(prestate)
   const requestIdentity = framedValueHash(
     "runtime-invocation-v1.17:execution-request-identity",
     {
@@ -1405,9 +1480,9 @@ export const createAuthenticatedRuntimeInvocationRequestV117 = (
     ),
   }
   const unsigned = {
-    contractVersion: RUNTIME_INVOCATION_V1_17_CANDIDATE.contractVersion,
-    candidateStatus: RUNTIME_INVOCATION_V1_17_CANDIDATE.lifecycle,
-    current: false as const,
+    contractVersion: lifecycle.contractVersion,
+    candidateStatus: lifecycle.lifecycle,
+    current: lifecycle.current,
     envelopeKind: "runtime-invocation-request" as const,
     requestId: input.requestId,
     invocationId: input.invocationId,
@@ -1432,6 +1507,28 @@ export const createAuthenticatedRuntimeInvocationRequestV117 = (
     request,
   ) as AuthenticatedRuntimeInvocationRequestV117
 }
+
+/** Creates byte-stable inactive candidate evidence. */
+export const createAuthenticatedRuntimeInvocationRequestV117 = (
+  input: CreateRuntimeInvocationRequestV117Input,
+  identity: RuntimeInvocationSigningIdentityV117,
+): AuthenticatedRuntimeInvocationRequestV117 =>
+  createAuthenticatedRuntimeInvocationRequestForLifecycleV117(
+    input,
+    identity,
+    RUNTIME_INVOCATION_V1_17_CANDIDATE,
+  )
+
+/** Creates an invocation for the lifecycle selected by the atomic default. */
+export const createSelectedRuntimeInvocationRequestV117 = (
+  input: CreateRuntimeInvocationRequestV117Input,
+  identity: RuntimeInvocationSigningIdentityV117,
+): AuthenticatedRuntimeInvocationRequestV117 =>
+  createAuthenticatedRuntimeInvocationRequestForLifecycleV117(
+    input,
+    identity,
+    RUNTIME_INVOCATION_V1_17_SELECTED_LIFECYCLE,
+  )
 
 export const serializeRuntimeInvocationRequestV117 = (
   request: AuthenticatedRuntimeInvocationRequestV117,
@@ -1500,10 +1597,7 @@ const budgetViolationCodeForDimensions = (
       dimension.includes("stderr")
     ) {
       codes.add("OVERSIZED_OUTPUT")
-    } else if (
-      dimension.includes("compute") ||
-      dimension.includes("memory")
-    ) {
+    } else if (dimension.includes("compute") || dimension.includes("memory")) {
       codes.add("RESOURCE_EXHAUSTION")
     } else if (dimension.includes("wall")) {
       return undefined
@@ -1669,9 +1763,9 @@ export const createAuthenticatedRuntimeInvocationResponseV117 = <
         }
       : null
   const unsigned = {
-    contractVersion: RUNTIME_INVOCATION_V1_17_CANDIDATE.contractVersion,
-    candidateStatus: RUNTIME_INVOCATION_V1_17_CANDIDATE.lifecycle,
-    current: false as const,
+    contractVersion: request.contractVersion,
+    candidateStatus: request.candidateStatus,
+    current: request.current,
     envelopeKind: "runtime-invocation-response" as const,
     requestBinding: requestBinding(request),
     outcome: parsedOutcome,
@@ -1905,9 +1999,18 @@ function withoutProperty<T extends object, K extends keyof T>(
   return rest
 }
 
-export const verifyRuntimeInvocationRequestV117 = (
+const requestLifecycleMatches = (
+  request: AuthenticatedRuntimeInvocationRequestV117,
+  lifecycle: RuntimeInvocationLifecycleV117,
+): boolean =>
+  request.contractVersion === lifecycle.contractVersion &&
+  request.candidateStatus === lifecycle.lifecycle &&
+  request.current === lifecycle.current
+
+const verifyRuntimeInvocationRequestForLifecycleV117 = (
   bytes: Uint8Array,
   identity: RuntimeInvocationSigningIdentityV117,
+  lifecycle: RuntimeInvocationLifecycleV117,
 ): RuntimeInvocationResultV117<AuthenticatedRuntimeInvocationRequestV117> => {
   const parsed = parseCanonicalEnvelope(
     bytes,
@@ -1932,6 +2035,9 @@ export const verifyRuntimeInvocationRequestV117 = (
   if (!requestDerivedBindingsMatch(request)) {
     return verificationFailure("OUTER_FRAME_WRONG_BINDING", bytes, trace)
   }
+  if (!requestLifecycleMatches(request, lifecycle)) {
+    return verificationFailure("OUTER_FRAME_WRONG_BINDING", bytes, trace)
+  }
   return {
     kind: "success",
     value: request,
@@ -1941,6 +2047,28 @@ export const verifyRuntimeInvocationRequestV117 = (
     },
   }
 }
+
+/** Verification-only admission for immutable inactive candidate evidence. */
+export const verifyRuntimeInvocationRequestV117 = (
+  bytes: Uint8Array,
+  identity: RuntimeInvocationSigningIdentityV117,
+): RuntimeInvocationResultV117<AuthenticatedRuntimeInvocationRequestV117> =>
+  verifyRuntimeInvocationRequestForLifecycleV117(
+    bytes,
+    identity,
+    RUNTIME_INVOCATION_V1_17_CANDIDATE,
+  )
+
+/** Executable admission bound to the atomic selected lifecycle authority. */
+export const verifySelectedRuntimeInvocationRequestV117 = (
+  bytes: Uint8Array,
+  identity: RuntimeInvocationSigningIdentityV117,
+): RuntimeInvocationResultV117<AuthenticatedRuntimeInvocationRequestV117> =>
+  verifyRuntimeInvocationRequestForLifecycleV117(
+    bytes,
+    identity,
+    RUNTIME_INVOCATION_V1_17_SELECTED_LIFECYCLE,
+  )
 
 const verifyRuntimeInvocationResponseV117Unsafe = (
   bytes: Uint8Array,
@@ -1980,6 +2108,8 @@ const verifyRuntimeInvocationResponseV117Unsafe = (
     return verificationFailure("OUTER_FRAME_UNAUTHENTICATED", bytes, partial)
   }
   if (
+    response.candidateStatus !== request.candidateStatus ||
+    response.current !== request.current ||
     !sameCanonicalValue(
       response.requestBinding as unknown as JsonValue,
       expectedBinding as unknown as JsonValue,

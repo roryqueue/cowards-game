@@ -164,8 +164,7 @@ const PHASE_257_RED_BASELINE_SHA256 =
   "bd2a7575282ca7df86bf3a6fc2602a9797660b0ab27bdb0f2def203ddba58f0d"
 const PHASE_257_CURRENT_EVENT_COVERAGE_SHA256 =
   "96be0ea4809c6b802142e6164dc9f10639cfe7a97f0918b822a191972b9c3a44"
-const PHASE_19_ACTIVATION_COMMIT =
-  "3642493db803a8f68e3863777cc66dd6609ee93d"
+const PHASE_19_ACTIVATION_COMMIT = "3642493db803a8f68e3863777cc66dd6609ee93d"
 const PHASE_19_REVIEW_CORRECTION_COMMIT =
   "bd38bf249861f90c43c6eee97e2fcfd428fc5e6d"
 const PHASE_19_REVIEW_CLOSURE_COMMIT =
@@ -589,13 +588,7 @@ const commitSourceManifest = (
 ): { pathCount: number; sortedPathListSha256: string } => {
   const paths = spawnSync(
     "git",
-    [
-      "diff-tree",
-      "--no-commit-id",
-      "--name-only",
-      "-r",
-      commit,
-    ],
+    ["diff-tree", "--no-commit-id", "--name-only", "-r", commit],
     { cwd: repoRoot, encoding: "utf8", timeout: 10_000 },
   )
   if (paths.status !== 0) throw new Error("source commit is unavailable")
@@ -634,8 +627,7 @@ export const buildV137Phase257CoreRulesResult = (
     "packages/spec/artifacts/v1.37-current-event-coverage.json"
   const candidatePath =
     "packages/spec/artifacts/v1.37-kernel-integrity-candidate.json"
-  const receiptContractPath =
-    "packages/spec/src/runtime-execution-service.ts"
+  const receiptContractPath = "packages/spec/src/runtime-execution-service.ts"
   const receiptWireGoldenPath =
     "packages/spec/artifacts/runtime-execution-service-response.v1.16.wire.json"
   const receiptMigrationPath =
@@ -2088,7 +2080,8 @@ export const analyzeV137IntegritySources = (
         "createFixtureRuntimeExecutionEvidenceSnapshot",
         "createFixtureRuntimeEvidenceAuthorityLoader",
         "evidenceSnapshot",
-        "fourLanguageGoldenPairs",
+        "FOUR_LANGUAGE_CURRENT_CORPUS_VERSION",
+        "fourLanguageCurrentPairs",
       ],
       "RUNTIME_REQUEST_ENVELOPE_DRIFT",
     )

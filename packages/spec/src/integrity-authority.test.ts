@@ -114,7 +114,7 @@ describe("v1.37 canonical integrity authority", () => {
 
   it("selects the exact current identity-domain tuple without changing v1.14 history", () => {
     const selectedV117 =
-      STRATEGY_RUNTIME_ABI_VERSION === "strategy-runtime-abi-v1.17"
+      String(STRATEGY_RUNTIME_ABI_VERSION) === "strategy-runtime-abi-v1.17"
     const expectedCurrent = selectedV117
       ? VERSIONED_RUNTIME_V117_SEMANTIC_TUPLE_RECORD
       : VERSIONED_RUNTIME_V114_SEMANTIC_TUPLE_RECORD
@@ -174,7 +174,7 @@ describe("v1.37 canonical integrity authority", () => {
 
   it("selects encodings by explicit record profile and keeps current separate from history", () => {
     const selectedV117 =
-      STRATEGY_RUNTIME_ABI_VERSION === "strategy-runtime-abi-v1.17"
+      String(STRATEGY_RUNTIME_ABI_VERSION) === "strategy-runtime-abi-v1.17"
     expect(CURRENT_CANONICAL_COMPATIBILITY_TUPLE_ID).toBe(
       selectedV117
         ? CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_ID

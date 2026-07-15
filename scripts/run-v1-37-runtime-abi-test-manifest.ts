@@ -51,9 +51,7 @@ const sameStrings = (
   actual.length === expected.length &&
   actual.every((value, index) => value === expected[index])
 
-const assertExactRuntimeAbiTestCommand = (
-  test: RuntimeAbiTestEntry,
-): void => {
+const assertExactRuntimeAbiTestCommand = (test: RuntimeAbiTestEntry): void => {
   switch (test.kind) {
     case "vitest": {
       const prefix = ["pnpm", "exec", "vitest", "run", "--reporter=verbose"]
@@ -135,7 +133,9 @@ export const validateRuntimeAbiTestResult = (
         "u",
       )
       if (
-        /(?:^|\n)\s*(?:Test Files|Tests)\s+.*\b(?:skipped|todo)\b/iu.test(output)
+        /(?:^|\n)\s*(?:Test Files|Tests)\s+.*\b(?:skipped|todo)\b/iu.test(
+          output,
+        )
       ) {
         throw new TypeError(`${test.id} reported a skipped required result.`)
       }
@@ -164,7 +164,9 @@ export const validateRuntimeAbiTestResult = (
         throw new TypeError(`${test.id} reported a skipped required result.`)
       }
       if (!/\b[1-9][0-9]* passed\b/u.test(output)) {
-        throw new TypeError(`${test.id} did not report structured Playwright PASS.`)
+        throw new TypeError(
+          `${test.id} did not report structured Playwright PASS.`,
+        )
       }
       return
     case "command":
@@ -236,7 +238,9 @@ export const parseRuntimeAbiTestManifest = (value: unknown): TestManifest => {
         raw.kind !== "command") ||
       !Array.isArray(raw.command) ||
       raw.command.length < 3 ||
-      raw.command.some((part) => typeof part !== "string" || part.length === 0) ||
+      raw.command.some(
+        (part) => typeof part !== "string" || part.length === 0,
+      ) ||
       typeof raw.namedResult !== "string" ||
       raw.namedResult.length === 0 ||
       !Array.isArray(raw.expectedOutput) ||
@@ -253,7 +257,9 @@ export const parseRuntimeAbiTestManifest = (value: unknown): TestManifest => {
       command.length <= 3 &&
       command.some((part) => part === "test" || part.endsWith(":test"))
     ) {
-      throw new TypeError(`Generic package test command is forbidden: ${raw.id}`)
+      throw new TypeError(
+        `Generic package test command is forbidden: ${raw.id}`,
+      )
     }
     let database: RuntimeAbiTestEntry["database"]
     if (raw.database !== undefined) {
@@ -288,6 +294,13 @@ export const parseRuntimeAbiTestManifest = (value: unknown): TestManifest => {
   if (new Set(tests.map(({ id }) => id)).size !== tests.length) {
     throw new TypeError("Runtime ABI test manifest has duplicate ids.")
   }
+  for (const requiredStage of stages) {
+    if (!tests.some(({ stage }) => stage === requiredStage)) {
+      throw new TypeError(
+        `Runtime ABI test manifest has no ${requiredStage} test.`,
+      )
+    }
+  }
   return {
     schemaVersion: value.schemaVersion,
     activationPlan: value.activationPlan,
@@ -311,6 +324,7 @@ export const runRuntimeAbiTestManifest = (options: {
     ({ stage }) => stageRank[stage] <= stageRank[options.stage],
   )
   if (selected.length === 0) throw new TypeError("Zero tests selected.")
+  let completed = 0
   for (const test of selected) {
     if (test.database !== undefined) {
       const value = process.env[test.database.dsnEnvironmentVariable]
@@ -334,13 +348,14 @@ export const runRuntimeAbiTestManifest = (options: {
     process.stdout.write(result.stdout ?? "")
     process.stderr.write(result.stderr ?? "")
     if (result.status !== 0) {
-      throw new TypeError(`${test.id} failed with status ${String(result.status)}.`)
+      throw new TypeError(
+        `${test.id} failed with status ${String(result.status)}.`,
+      )
     }
     validateRuntimeAbiTestResult(test, output)
+    completed += 1
   }
-  if (options.requireAll && selected.length !== manifest.tests.filter(
-    ({ stage }) => stageRank[stage] <= stageRank[options.stage],
-  ).length) {
+  if (options.requireAll && completed !== selected.length) {
     throw new TypeError("Not every selected manifest test ran.")
   }
   console.log(
@@ -350,9 +365,13 @@ export const runRuntimeAbiTestManifest = (options: {
 
 const stageArgument = process.argv.indexOf("--stage")
 if (stageArgument >= 0) {
-  const stage = process.argv[stageArgument + 1] as RuntimeAbiTestStage | undefined
+  const stage = process.argv[stageArgument + 1] as
+    | RuntimeAbiTestStage
+    | undefined
   if (stage === undefined || !stages.has(stage)) {
-    throw new TypeError("Expected --stage preactivation|activation|postactivation.")
+    throw new TypeError(
+      "Expected --stage preactivation|activation|postactivation.",
+    )
   }
   runRuntimeAbiTestManifest({
     stage,

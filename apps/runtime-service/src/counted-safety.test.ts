@@ -20,10 +20,8 @@ import {
   type RuntimeExecutionServiceRequest,
 } from "@cowards/spec"
 import { buildStrategyRevision } from "@cowards/runtime-js"
-import {
-  executeRuntimeServiceRequest,
-  type RuntimeExecutionServiceDependencies,
-} from "./execute-match.js"
+import { executeNestedMatchServiceTestSupport as executeRuntimeServiceRequest } from "./runtime-execution-nested-match.test-support.js"
+import type { NestedMatchServiceTestOverrides } from "./runtime-execution-nested-match.test-support.js"
 import {
   createFixtureDeploymentLaneIdentity,
   createFixtureRuntimeExecutionAuthorityContext,
@@ -254,7 +252,7 @@ const authorityWith = (
 const executeWith = (
   request: RuntimeExecutionServiceRequest,
   authorityLoader: RuntimeEvidenceAuthorityLoader,
-  dependencies: Partial<RuntimeExecutionServiceDependencies> = {},
+  dependencies: NestedMatchServiceTestOverrides = {},
 ) =>
   executeRuntimeServiceRequest(request, runtimeConfig, {
     ...dependencies,
@@ -639,7 +637,7 @@ describe("runtime-service counted safety", () => {
     const response = executeWith(
       mutate(request) as RuntimeExecutionServiceRequest,
       context.authorityLoader,
-      { createRuntimeForRevision: runtimeFactory },
+      { createAdmittedRuntimeForRevision: runtimeFactory },
     )
 
     expectEvidenceFailure(response, "EVIDENCE_IDENTITY_MISMATCH")
@@ -680,7 +678,7 @@ describe("runtime-service counted safety", () => {
       })
       const response = executeRuntimeServiceRequest(request, mismatchedConfig, {
         authorityLoader: context.authorityLoader,
-        createRuntimeForRevision: runtimeFactory,
+        createAdmittedRuntimeForRevision: runtimeFactory,
       })
       expectEvidenceFailure(response, "EVIDENCE_IDENTITY_MISMATCH")
       expect(runtimeFactory).not.toHaveBeenCalled()
@@ -699,7 +697,7 @@ describe("runtime-service counted safety", () => {
       },
     })
     const response = executeWith(request, sequencedLoader([tupleMismatch]), {
-      createRuntimeForRevision: runtimeFactory,
+      createAdmittedRuntimeForRevision: runtimeFactory,
     })
 
     expectEvidenceFailure(response, "EVIDENCE_IDENTITY_MISMATCH")
@@ -760,7 +758,7 @@ describe("runtime-service counted safety", () => {
     const response = executeWith(
       request,
       sequencedLoader([context.authority, drifted]),
-      { createRuntimeForRevision: runtimeFactory },
+      { createAdmittedRuntimeForRevision: runtimeFactory },
     )
 
     expectEvidenceFailure(response, "EVIDENCE_REGISTRY_DRIFT")

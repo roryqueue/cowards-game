@@ -18,6 +18,7 @@ import {
   createRuntimeInvocationTraceV117,
   serializeRuntimeInvocationResponseV117,
   verifyRuntimeInvocationRequestV117,
+  verifySelectedRuntimeInvocationRequestV117,
   type AuthenticatedRuntimeInvocationRequestV117,
   type JsonValue,
   type RuntimeInvocationExecutionReceiptEvidenceV117,
@@ -57,6 +58,21 @@ export { pythonExperimentalRuntimeMetadata }
 
 const PYTHON_CANDIDATE_PREFLIGHT_WATCHDOG_MS = 1_000
 const PYTHON_CANDIDATE_HOST_SHUTDOWN_MARGIN_MS = 2_000
+const LEGACY_PYTHON_RUNTIME_ABI_VERSION = "strategy-runtime-abi-v1.14"
+
+const legacyPythonRuntimeIsSelected = (): boolean =>
+  String(STRATEGY_RUNTIME_ABI_VERSION) === LEGACY_PYTHON_RUNTIME_ABI_VERSION
+
+const legacyPythonRuntimeUnavailable = (): StrategyRuntimeResponseEnvelope => ({
+  ok: false,
+  abiVersion: STRATEGY_RUNTIME_ABI_VERSION,
+  failureKind: "systemFailure",
+  systemFailure: {
+    code: "MALFORMED_IPC",
+    message: "The legacy Python JSON runtime is not the selected ABI lane.",
+    publicMessage: "Runtime system failure.",
+  },
+})
 
 type PythonCandidateObservedByteDimensionsV117 = Readonly<{
   stdoutBytes: number
@@ -93,8 +109,7 @@ export interface PythonCandidateInvocationAdapterOptionsV117 {
   readonly identity: RuntimeInvocationSigningIdentityV117
 }
 
-export interface PythonCandidateInvocationAdapterFixtureOptionsV117
-  extends PythonCandidateInvocationAdapterOptionsV117 {
+export interface PythonCandidateInvocationAdapterFixtureOptionsV117 extends PythonCandidateInvocationAdapterOptionsV117 {
   readonly fixtureOnlyObservedExecution: () => PythonCandidateHostResultV117
 }
 
@@ -228,7 +243,7 @@ const rawOutcome = (
   return pythonCandidateSystemFailure(
     request,
     observation.kind === "host_crash" ||
-    observation.kind === "pre_method_host_failure"
+      observation.kind === "pre_method_host_failure"
       ? "HOST_CRASH"
       : observation.kind === "transport_crash"
         ? "TRANSPORT_CRASH"
@@ -305,7 +320,9 @@ const responseForObservation = (
           ? evidence.attribution !== "proven_strategy"
           : evidence.attribution !== "host")
       ) {
-        throw new TypeError("Observed execution does not match receipt evidence")
+        throw new TypeError(
+          "Observed execution does not match receipt evidence",
+        )
       }
       const outcome = rawOutcome(request, observation)
       const receipt = createRuntimeInvocationExecutionReceiptV117(
@@ -459,13 +476,11 @@ export const runPythonCandidateHostV117 = (
   }
   let observation = admitPythonCandidateHostResponseV117(stdout, stderr)
   if (
-    stderr.byteLength >
-    request.budget.methodLimit.counters.stderrBytes.maximum
+    stderr.byteLength > request.budget.methodLimit.counters.stderrBytes.maximum
   ) {
     observation = { kind: "host_crash", ...observedBytes }
   } else if (
-    stdout.byteLength >
-    request.budget.methodLimit.counters.stdoutBytes.maximum
+    stdout.byteLength > request.budget.methodLimit.counters.stdoutBytes.maximum
   ) {
     observation =
       observation.kind === "payload"
@@ -556,10 +571,11 @@ const createPythonCandidateInvocationAdapter =
       | undefined,
   ): ((requestBytes: Uint8Array) => Uint8Array) =>
   (requestBytes) => {
-    const admittedRequest = verifyRuntimeInvocationRequestV117(
-      requestBytes,
-      options.identity,
-    )
+    const verifyRequest =
+      fixtureOnlyObservedExecution === undefined
+        ? verifySelectedRuntimeInvocationRequestV117
+        : verifyRuntimeInvocationRequestV117
+    const admittedRequest = verifyRequest(requestBytes, options.identity)
     if (admittedRequest.kind !== "success") {
       return new Uint8Array()
     }
@@ -645,6 +661,9 @@ const hashStrategySource = (source: string): string =>
 export const runPythonStrategyMethod = async (
   request: PythonStrategyRequestInput,
 ): Promise<StrategyRuntimeResponseEnvelope> => {
+  if (!legacyPythonRuntimeIsSelected()) {
+    return legacyPythonRuntimeUnavailable()
+  }
   const runtime = pythonExperimentalRuntimeMetadata()
   const sourceText = request.sourceText ?? ""
   const envelope: StrategyRuntimeRequestEnvelope = {
@@ -791,9 +810,13 @@ export interface PythonStrategySyncRequestInput extends PythonStrategyRequestInp
   sourceHash: string
 }
 
-export const runPythonStrategyMethodSync = (
+const runPythonStrategyMethodSyncInternal = (
   request: PythonStrategySyncRequestInput,
+  allowNestedMatchTestSupport: boolean,
 ): StrategyRuntimeResponseEnvelope => {
+  if (!allowNestedMatchTestSupport && !legacyPythonRuntimeIsSelected()) {
+    return legacyPythonRuntimeUnavailable()
+  }
   const runtime = pythonExperimentalRuntimeMetadata()
   const envelope: StrategyRuntimeRequestEnvelope = {
     abiVersion: STRATEGY_RUNTIME_ABI_VERSION,
@@ -895,6 +918,17 @@ export const runPythonStrategyMethodSync = (
   }
 }
 
+export const runPythonStrategyMethodSync = (
+  request: PythonStrategySyncRequestInput,
+): StrategyRuntimeResponseEnvelope =>
+  runPythonStrategyMethodSyncInternal(request, false)
+
+/** Selected-pointer nested Match-shape test support; not historical evidence. */
+export const runPythonNestedMatchShapeMethodSyncTestSupport = (
+  request: PythonStrategySyncRequestInput,
+): StrategyRuntimeResponseEnvelope =>
+  runPythonStrategyMethodSyncInternal(request, true)
+
 const normalizeStrategyOutput = (
   envelope: StrategyRuntimeResponseEnvelope,
 ): RuntimeResult<StrategyResult> => {
@@ -983,6 +1017,7 @@ const pythonArtifactSource = (
     artifact.sourceHash !== revision.sourceHash ||
     artifact.sourceBytes !== revision.sourceBytes ||
     artifact.abiVersion !== revision.runtime.abiVersion ||
+    revision.runtime.abiVersion !== STRATEGY_RUNTIME_ABI_VERSION ||
     artifact.toolchain.language !== "python" ||
     artifact.bytesBase64 === undefined
   ) {
@@ -1008,13 +1043,18 @@ const pythonArtifactSource = (
   return { ok: true, sourceText: bytes.toString("utf8") }
 }
 
-export const createPythonRuntimeFromRevision = (
+type PythonSyncRunner = (
+  request: PythonStrategySyncRequestInput,
+) => StrategyRuntimeResponseEnvelope
+
+const createPythonRuntimeFromRevisionWithRunner = (
   revision: StrategyRevision,
   options: {
     timeoutMs?: number | undefined
     stdoutBytes?: number | undefined
     stderrBytes?: number | undefined
-  } = {},
+  },
+  runMethod: PythonSyncRunner,
 ): StrategyRuntime => ({
   selectActivations(input) {
     const artifact = pythonArtifactSource(revision)
@@ -1022,7 +1062,7 @@ export const createPythonRuntimeFromRevision = (
       return artifact
     }
     return normalizeStrategyOutput(
-      runPythonStrategyMethodSync({
+      runMethod({
         sourceText: artifact.sourceText,
         sourceHash: revision.sourceHash,
         methodName: "selectActivations",
@@ -1039,7 +1079,7 @@ export const createPythonRuntimeFromRevision = (
       return artifact
     }
     return normalizeSoldierBrainOutput(
-      runPythonStrategyMethodSync({
+      runMethod({
         sourceText: artifact.sourceText,
         sourceHash: revision.sourceHash,
         methodName: "soldierBrain",
@@ -1051,3 +1091,32 @@ export const createPythonRuntimeFromRevision = (
     )
   },
 })
+
+export const createPythonRuntimeFromRevision = (
+  revision: StrategyRevision,
+  options: {
+    timeoutMs?: number | undefined
+    stdoutBytes?: number | undefined
+    stderrBytes?: number | undefined
+  } = {},
+): StrategyRuntime =>
+  createPythonRuntimeFromRevisionWithRunner(
+    revision,
+    options,
+    runPythonStrategyMethodSync,
+  )
+
+/** Selected-pointer nested Match-shape test support; not historical evidence. */
+export const createPythonNestedMatchShapeRuntimeTestSupport = (
+  revision: StrategyRevision,
+  options: {
+    timeoutMs?: number | undefined
+    stdoutBytes?: number | undefined
+    stderrBytes?: number | undefined
+  } = {},
+): StrategyRuntime =>
+  createPythonRuntimeFromRevisionWithRunner(
+    revision,
+    options,
+    runPythonNestedMatchShapeMethodSyncTestSupport,
+  )

@@ -522,10 +522,21 @@ export const StrategyRuntimeMetadataSchema = z.object({
   limits: StrategyRuntimeLimitsSchema,
 })
 
-export const PublicStrategyRuntimeMetadataSchema =
+const CurrentPublicStrategyRuntimeMetadataSchema =
   StrategyRuntimeMetadataSchema.omit({
     limits: true,
   })
+
+export const HistoricalPublicStrategyRuntimeMetadataV114Schema =
+  CurrentPublicStrategyRuntimeMetadataSchema.extend({
+    abiVersion: z.literal("strategy-runtime-abi-v1.14"),
+  })
+
+/** Read-only public DTO admission; execution remains selected-current-only. */
+export const PublicStrategyRuntimeMetadataSchema = z.union([
+  CurrentPublicStrategyRuntimeMetadataSchema,
+  HistoricalPublicStrategyRuntimeMetadataV114Schema,
+])
 
 export const StrategyRuntimeViolationEnvelopeSchema = z.object({
   ok: z.literal(false),

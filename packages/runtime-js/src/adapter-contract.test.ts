@@ -6,7 +6,8 @@ import type { RuntimeResult } from "@cowards/engine"
 import {
   RUNTIME_ABI_V1_17,
   RUNTIME_INVOCATION_V1_17_TEST_KEY_ID,
-  createAuthenticatedRuntimeInvocationRequestV117,
+  STRATEGY_RUNTIME_ABI_VERSION,
+  createSelectedRuntimeInvocationRequestV117,
   createRuntimeAbiV117ExecutionLedger,
   createRuntimeInvocationBudgetV117,
   encodeCanonicalJson,
@@ -30,7 +31,7 @@ import {
 import { createWorkerThreadStrategyExecutionAdapter } from "./worker-thread-adapter.js"
 import { transpileStrategySource } from "./transpile.js"
 import { createRuntimeFromRevision } from "./executor.js"
-import { executeStrategyRuntimeAbiV114 } from "./abi-bridge.js"
+import { executeSelectedStrategyRuntimeAbi } from "./abi-bridge.js"
 import { buildStrategyRevision } from "./revision.js"
 import { hashStrategySource } from "./hash.js"
 import { createSubprocessStrategyExecutionAdapter } from "./subprocess-adapter.js"
@@ -62,6 +63,9 @@ export default {
   },
 }
 `
+
+const legacyRuntimeIsSelected =
+  String(STRATEGY_RUNTIME_ABI_VERSION) === "strategy-runtime-abi-v1.14"
 
 const transpiledSource = (): string => {
   const transpiled = transpileStrategySource(validStrategySource)
@@ -125,7 +129,7 @@ const candidateRequest = (
     artifactSource: string
   }> = {},
 ): AuthenticatedRuntimeInvocationRequestV117 =>
-  createAuthenticatedRuntimeInvocationRequestV117(
+  createSelectedRuntimeInvocationRequestV117(
     {
       requestId: "request:runtime-js:v1.17:0001",
       invocationId: "invocation:runtime-js:v1.17:0001",
@@ -141,7 +145,9 @@ const candidateRequest = (
       },
       sourceIdentity: {
         strategyRevisionId: "strategy-revision:runtime-js:v1.17:bottom",
-        originalSourceSha256: sha256(new TextEncoder().encode(validStrategySource)),
+        originalSourceSha256: sha256(
+          new TextEncoder().encode(validStrategySource),
+        ),
         normalizedSourceSha256: sha256(
           new TextEncoder().encode(validStrategySource),
         ),
@@ -153,7 +159,9 @@ const candidateRequest = (
       },
       budget: createRuntimeInvocationBudgetV117("selectActivations"),
       accounting: { prestate: createRuntimeAbiV117ExecutionLedger() },
-      input: { value: (overrides.input ?? runtimeInput) as unknown as JsonValue },
+      input: {
+        value: (overrides.input ?? runtimeInput) as unknown as JsonValue,
+      },
       retry: {
         retryId: "retry:runtime-js:v1.17:0001",
         attempt: 0,
@@ -197,9 +205,8 @@ const completeCandidateEvidence = (
         status: "measured" as const,
         delta,
         cumulative:
-          prestate.cumulative[
-            counter as keyof typeof prestate.cumulative
-          ] + delta,
+          prestate.cumulative[counter as keyof typeof prestate.cumulative] +
+          delta,
       },
     ]),
   ) as RuntimeInvocationExecutionReceiptEvidenceV117["counters"]
@@ -445,11 +452,13 @@ describe("StrategyExecutionAdapter contract", () => {
     expect(getStrategyExecutionAdapterMetadata(adapter)).toBe(adapter.metadata)
   })
 
-  it("runs adapter calls through the v1.14 ABI conformance bridge", () => {
+  it("runs adapter calls only through the selected ABI bridge", () => {
     const revision = buildStrategyRevision({ source: validStrategySource })
+    let adapterCalls = 0
     const adapter = {
       metadata: workerThreadStrategyExecutionAdapterMetadata,
       execute(request) {
+        adapterCalls += 1
         expect(request.methodName).toBe("selectActivations")
         expect(request.input).toEqual(runtimeInput)
         expect(request.source).toBe(transpileOrThrow(validStrategySource))
@@ -461,20 +470,31 @@ describe("StrategyExecutionAdapter contract", () => {
       },
     } satisfies StrategyExecutionAdapter
 
-    expect(
-      executeStrategyRuntimeAbiV114({
-        adapter,
-        revision,
-        executableSource: transpileOrThrow(validStrategySource),
-        methodName: "selectActivations",
-        input: runtimeInput,
-        timeoutMs: 25,
-        outputByteLimit: 512,
-      }),
-    ).toEqual({ ok: true, value: { activationOrders: [], strategyMemory: {} } })
+    const result = executeSelectedStrategyRuntimeAbi({
+      adapter,
+      revision,
+      executableSource: transpileOrThrow(validStrategySource),
+      methodName: "selectActivations",
+      input: runtimeInput,
+      timeoutMs: 25,
+      outputByteLimit: 512,
+    })
+    expect(result).toEqual(
+      legacyRuntimeIsSelected
+        ? { ok: true, value: { activationOrders: [], strategyMemory: {} } }
+        : {
+            ok: false,
+            violation: {
+              type: "INVALID_OUTPUT",
+              message: "Strategy runtime ABI is not selected",
+            },
+            systemFailure: { code: "MALFORMED_IPC", retryable: false },
+          },
+    )
+    expect(adapterCalls).toBe(legacyRuntimeIsSelected ? 1 : 0)
   })
 
-  it("preserves system failure classification through the v1.14 ABI bridge", () => {
+  it("preserves system failure classification through the selected ABI bridge", () => {
     const revision = buildStrategyRevision({ source: validStrategySource })
     const adapter = {
       metadata: workerThreadStrategyExecutionAdapterMetadata,
@@ -491,7 +511,7 @@ describe("StrategyExecutionAdapter contract", () => {
       }),
     } satisfies StrategyExecutionAdapter
 
-    const result = executeStrategyRuntimeAbiV114({
+    const result = executeSelectedStrategyRuntimeAbi({
       adapter,
       revision,
       executableSource: transpileOrThrow(validStrategySource),
@@ -503,7 +523,10 @@ describe("StrategyExecutionAdapter contract", () => {
 
     expect(result).toMatchObject({
       ok: false,
-      systemFailure: { code: "MALFORMED_IPC", retryable: true },
+      systemFailure: {
+        code: "MALFORMED_IPC",
+        retryable: legacyRuntimeIsSelected,
+      },
     })
   })
 
@@ -630,7 +653,7 @@ export default {
 
           expect(result.ok).toBe(false)
           expect(!result.ok && result.violation.type).toBe(
-            "FORBIDDEN_CAPABILITY",
+            legacyRuntimeIsSelected ? "FORBIDDEN_CAPABILITY" : "INVALID_OUTPUT",
           )
         },
       )
@@ -643,15 +666,29 @@ export default {
 
         const result = runtime.selectActivations(runtimeInput)
 
-        expect(result).toEqual({
-          ok: true,
-          value: {
-            activationOrders: [
-              { soldierId: "bottom-1", objective: { target: "bottom-1" } },
-            ],
-            strategyMemory: { adapter: "worker-thread" },
-          },
-        })
+        expect(result).toEqual(
+          legacyRuntimeIsSelected
+            ? {
+                ok: true,
+                value: {
+                  activationOrders: [
+                    {
+                      soldierId: "bottom-1",
+                      objective: { target: "bottom-1" },
+                    },
+                  ],
+                  strategyMemory: { adapter: "worker-thread" },
+                },
+              }
+            : {
+                ok: false,
+                violation: {
+                  type: "INVALID_OUTPUT",
+                  message: "Strategy runtime ABI is not selected",
+                },
+                systemFailure: { code: "MALFORMED_IPC", retryable: false },
+              },
+        )
       })
 
       it("returns player-caused invalid output as a RuntimeResult failure", () => {
@@ -675,7 +712,9 @@ export default {
         const result = runtime.selectActivations(runtimeInput)
 
         expect(result.ok).toBe(false)
-        expect(!result.ok && result.violation.type).toBe("TIMEOUT")
+        expect(!result.ok && result.violation.type).toBe(
+          legacyRuntimeIsSelected ? "TIMEOUT" : "INVALID_OUTPUT",
+        )
       })
     })
   }
@@ -697,6 +736,13 @@ export default {
       { adapter, timeoutMs: 5_000 },
     )
 
+    if (!legacyRuntimeIsSelected) {
+      expect(runtime.selectActivations(runtimeInput)).toMatchObject({
+        ok: false,
+        systemFailure: { code: "MALFORMED_IPC", retryable: false },
+      })
+      return
+    }
     expect(() => runtime.selectActivations(runtimeInput)).toThrow(
       SubprocessSystemFailure,
     )
@@ -1038,16 +1084,13 @@ export default {
         expect(result.value.accounting.disposition, label).toBe("commit")
         expect(result.value.accounting.poststate.revision, label).toBe(1)
         expect(
-          result.value.accounting.poststate.methodInvocations
-            .selectActivations,
+          result.value.accounting.poststate.methodInvocations.selectActivations,
           label,
         ).toBe(1)
       }
       expect(
         results.map(({ result }) =>
-          result.kind === "success"
-            ? result.value.outcome.trace
-            : result.trace,
+          result.kind === "success" ? result.value.outcome.trace : result.trace,
         ),
       ).toEqual([
         results[0]?.result.kind === "success"
@@ -1071,9 +1114,9 @@ export default {
           .SUBPROCESS_HARNESS_V117_SOURCE,
       ]
 
-      expect(successorSources.every((source) => typeof source === "string")).toBe(
-        true,
-      )
+      expect(
+        successorSources.every((source) => typeof source === "string"),
+      ).toBe(true)
       for (const source of successorSources) {
         expect(source).not.toContain(candidateIdentity.secret)
         expect(source).not.toMatch(/hmac|signingIdentity|signature/iu)
@@ -1133,9 +1176,7 @@ export default {
         },
       })
 
-      const atCap = executeCandidate(
-        adapterFor(`S${canonicalPayload}`),
-      )
+      const atCap = executeCandidate(adapterFor(`S${canonicalPayload}`))
       const overCapRequest = candidateRequest()
       const overCap = executeCandidateWith(
         adapterFor("O"),
@@ -1143,8 +1184,7 @@ export default {
         transpiledSource(),
         completeCandidateEvidence(overCapRequest, {
           payloadBytes:
-            overCapRequest.budget.methodLimit.counters.payloadBytes.maximum +
-            1,
+            overCapRequest.budget.methodLimit.counters.payloadBytes.maximum + 1,
           stdoutBytes: 1,
         }),
       )
@@ -1201,15 +1241,10 @@ export default {
     it("keeps wall TIMEOUT as a system failure even with bounded termination", () => {
       const request = candidateRequest()
       const adapter = createSubprocessStrategyExecutionAdapter({
-        spawnSync: () =>
-          candidateSpawnResult("D", { receiptPresent: true }),
+        spawnSync: () => candidateSpawnResult("D", { receiptPresent: true }),
       })
 
-      const result = executeCandidateWith(
-        adapter,
-        request,
-        transpiledSource(),
-      )
+      const result = executeCandidateWith(adapter, request, transpiledSource())
 
       expect(result).toMatchObject({
         kind: "success",
@@ -1230,8 +1265,10 @@ export default {
         "Function constructor",
         '[]["filter"]["con" + "structor"]("return process")()',
       ],
-    ])("keeps successor guest capability %s forbidden", (_label, expression) => {
-      const source = transpileOrThrow(`
+    ])(
+      "keeps successor guest capability %s forbidden",
+      (_label, expression) => {
+        const source = transpileOrThrow(`
 export default {
   selectActivations() {
     ${expression}
@@ -1242,28 +1279,29 @@ export default {
   },
 }
 `)
-      const request = candidateRequest({ artifactSource: source })
-      for (const adapter of [
-        createWorkerThreadStrategyExecutionAdapter(),
-        createSubprocessStrategyExecutionAdapter({
-          spawnSync: () => candidateSpawnResult("F"),
-        }),
-      ]) {
-        const result = executeCandidateWith(adapter, request, source)
-        expect(result.kind, adapter.metadata.id).toBe("success")
-        if (result.kind !== "success") continue
-        expect(result.value.outcome, adapter.metadata.id).toMatchObject({
-          kind: "player_violation",
-          violation: {
-            code: "FORBIDDEN_CAPABILITY",
-            publicMessage: "Strategy attempted a forbidden capability.",
-          },
-        })
-        expect(JSON.stringify(result.value.outcome)).not.toMatch(
-          /cwd|process|constructor|stack|source/iu,
-        )
-      }
-    })
+        const request = candidateRequest({ artifactSource: source })
+        for (const adapter of [
+          createWorkerThreadStrategyExecutionAdapter(),
+          createSubprocessStrategyExecutionAdapter({
+            spawnSync: () => candidateSpawnResult("F"),
+          }),
+        ]) {
+          const result = executeCandidateWith(adapter, request, source)
+          expect(result.kind, adapter.metadata.id).toBe("success")
+          if (result.kind !== "success") continue
+          expect(result.value.outcome, adapter.metadata.id).toMatchObject({
+            kind: "player_violation",
+            violation: {
+              code: "FORBIDDEN_CAPABILITY",
+              publicMessage: "Strategy attempted a forbidden capability.",
+            },
+          })
+          expect(JSON.stringify(result.value.outcome)).not.toMatch(
+            /cwd|process|constructor|stack|source/iu,
+          )
+        }
+      },
+    )
 
     it("keeps successor serialization faults distinct from Strategy exceptions", () => {
       const invalidSource = transpileOrThrow(`
@@ -1338,13 +1376,12 @@ export default {
             request.budget.methodLimit.cancellation
               .terminationGraceMilliseconds,
         )
-        expect(
-          JSON.parse(String(observedOptions?.input)),
-          label,
-        ).toMatchObject({
-          methodWallMilliseconds:
-            request.budget.methodLimit.counters.wallMilliseconds.maximum,
-        })
+        expect(JSON.parse(String(observedOptions?.input)), label).toMatchObject(
+          {
+            methodWallMilliseconds:
+              request.budget.methodLimit.counters.wallMilliseconds.maximum,
+          },
+        )
         expect(observedOptions?.maxBuffer, label).toBe(
           request.budget.methodLimit.counters.stderrBytes.maximum + 1,
         )
@@ -1415,25 +1452,31 @@ export default {
             spawnSync: () => candidateSpawnResult(stdout),
           })
           const result = executeCandidate(adapter, request)
-          expect(result, `${label} stdout ${oneOver ? "one-over" : "exact"}`)
-            .toMatchObject({
-              kind: "success",
-              value: {
-                accounting: { disposition: "commit" },
-                outcome: {
-                  kind: "player_violation",
-                  violation: {
-                    code: oneOver ? "OVERSIZED_OUTPUT" : "INVALID_OUTPUT",
-                  },
+          expect(
+            result,
+            `${label} stdout ${oneOver ? "one-over" : "exact"}`,
+          ).toMatchObject({
+            kind: "success",
+            value: {
+              accounting: { disposition: "commit" },
+              outcome: {
+                kind: "player_violation",
+                violation: {
+                  code: oneOver ? "OVERSIZED_OUTPUT" : "INVALID_OUTPUT",
                 },
               },
-            })
+            },
+          })
           if (result.kind === "success") {
-            expect(result.value.accounting.receipt.counters.stdoutBytes).toMatchObject({
+            expect(
+              result.value.accounting.receipt.counters.stdoutBytes,
+            ).toMatchObject({
               status: "measured",
               delta: stdoutLimit + (oneOver ? 1 : 0),
             })
-            expect(result.value.accounting.receipt.counters.stderrBytes).toMatchObject({
+            expect(
+              result.value.accounting.receipt.counters.stderrBytes,
+            ).toMatchObject({
               status: "measured",
               delta: 0,
             })
@@ -1444,21 +1487,20 @@ export default {
           const adapter = createAdapter({
             spawnSync: () =>
               candidateSpawnResult("R", {
-                stderr: Buffer.alloc(
-                  stderrLimit + (oneOver ? 1 : 0),
-                  "e",
-                ),
+                stderr: Buffer.alloc(stderrLimit + (oneOver ? 1 : 0), "e"),
               }),
           })
           const result = executeCandidate(adapter, request)
-          expect(result, `${label} stderr ${oneOver ? "one-over" : "exact"}`)
-            .toMatchObject({
-              kind: "success",
-              value: {
-                accounting: { disposition: "no_commit" },
-                outcome: { kind: "system_failure" },
-              },
-            })
+          expect(
+            result,
+            `${label} stderr ${oneOver ? "one-over" : "exact"}`,
+          ).toMatchObject({
+            kind: "success",
+            value: {
+              accounting: { disposition: "no_commit" },
+              outcome: { kind: "system_failure" },
+            },
+          })
           if (result.kind === "success") {
             if (oneOver) {
               expect(result.value.outcome.trace.safeCodes).toContain(
@@ -1474,10 +1516,8 @@ export default {
       }
     })
 
-    it(
-      "does not spend the signed method budget on valid module startup",
-      () => {
-        const source = transpileOrThrow(`
+    it("does not spend the signed method budget on valid module startup", () => {
+      const source = transpileOrThrow(`
 let startupAccumulator = 0
 for (let index = 0; index < 100_000_000; index += 1) {
   startupAccumulator += index
@@ -1491,26 +1531,24 @@ export default {
   },
 }
 `)
-        const request = candidateRequest({ artifactSource: source })
-        for (const adapter of [
-          createWorkerThreadStrategyExecutionAdapter(),
-          createSubprocessStrategyExecutionAdapter(),
-        ]) {
-          const result = executeCandidateWith(adapter, request, source)
+      const request = candidateRequest({ artifactSource: source })
+      for (const adapter of [
+        createWorkerThreadStrategyExecutionAdapter(),
+        createSubprocessStrategyExecutionAdapter(),
+      ]) {
+        const result = executeCandidateWith(adapter, request, source)
 
-          expect(result, adapter.metadata.id).toMatchObject({
-            kind: "success",
-            value: {
-              outcome: {
-                kind: "success",
-                value: { activationOrders: [], strategyMemory: {} },
-              },
+        expect(result, adapter.metadata.id).toMatchObject({
+          kind: "success",
+          value: {
+            outcome: {
+              kind: "success",
+              value: { activationOrders: [], strategyMemory: {} },
             },
-          })
-        }
-      },
-      15_000,
-    )
+          },
+        })
+      }
+    }, 15_000)
 
     it("starts the signed deadline at method entry in worker and subprocess lanes", () => {
       const source = transpileOrThrow(`
@@ -1766,9 +1804,9 @@ export { boundedCanonicalFrame }
           expect(frame.subarray(1)).toEqual(shared.bytes)
         } else {
           expect(shared.error.code).toBe("MAX_DEPTH_EXCEEDED")
-          expect(() =>
-            module.boundedCanonicalFrame(value, 262_144),
-          ).toThrow("INVALID_OUTPUT")
+          expect(() => module.boundedCanonicalFrame(value, 262_144)).toThrow(
+            "INVALID_OUTPUT",
+          )
         }
       },
     )

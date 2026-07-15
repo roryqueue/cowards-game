@@ -10,6 +10,7 @@ import {
   RUNTIME_EXECUTION_SERVICE_VERSION,
   RUNTIME_INVOCATION_V1_17_INITIAL_EXECUTION_LEDGER_ROOT,
   RUNTIME_INVOCATION_V1_17_TEST_KEY_ID,
+  STRATEGY_RUNTIME_ABI_VERSION,
   RuntimeExecutionServiceResponseSchema,
   admitCanonicalJsonBytes,
   createAuthenticatedRuntimeInvocationResponseV117,
@@ -26,7 +27,10 @@ import {
   type RuntimeInvocationResultV117,
 } from "@cowards/spec"
 import { buildStrategyRevision } from "@cowards/runtime-js"
-import { createRuntimeServiceConfig } from "./runtime-config.js"
+import {
+  createRuntimeServiceConfig,
+  selectedRuntimeServiceContract,
+} from "./runtime-config.js"
 import {
   createFixtureDeploymentLaneIdentity,
   createFixtureRuntimeEvidenceAuthorityLoader,
@@ -70,8 +74,9 @@ const successorTemplate = (() => {
             ]),
     }),
   )
-  const binding = (domain: (typeof SUCCESSOR_RUNTIME_IDENTITY_TEMPLATE_DOMAINS_V117)[number]) =>
-    bindings.find((candidate) => candidate.domain === domain)!
+  const binding = (
+    domain: (typeof SUCCESSOR_RUNTIME_IDENTITY_TEMPLATE_DOMAINS_V117)[number],
+  ) => bindings.find((candidate) => candidate.domain === domain)!
   const exactPins = [
     [
       "runtimeExecutableDigest",
@@ -80,10 +85,7 @@ const successorTemplate = (() => {
     ["reportedVersion", "node-v26.0.0"],
     ["targetAbi", "darwin-arm64"],
     ["compilerFlags", `sha256:${"6".repeat(64)}`],
-    [
-      "adapterBuildDigest",
-      `sha256:${binding("adapterBuild").sha256}`,
-    ],
+    ["adapterBuildDigest", `sha256:${binding("adapterBuild").sha256}`],
     [
       "standardLibraryOrSysrootDigest",
       `sha256:${binding("sysrootStdlib").sha256}`,
@@ -276,15 +278,25 @@ describe("runtime execution HTTP boundary", () => {
       resolveDeploymentLaneIdentity: createFixtureDeploymentLaneIdentity,
       resolveSuccessorRuntimeIdentityTemplate: () => successorTemplate,
     })
-    const selectedV117Config = {
-      ...routeRuntimeConfig,
-      contractSelection: {
-        runtimeAbiVersion: "strategy-runtime-abi-v1.17",
-        runtimeServiceVersion: "runtime-execution-service-v1.17",
-        semanticReceiptVersion: "runtime-semantic-receipt-v1.17",
-        canonicalJsonVersion: "canonical-json-v1.1",
-      },
-    }
+    const selectedV117Config =
+      routeRuntimeConfig.contractSelection.runtimeServiceVersion ===
+      "runtime-execution-service-v1.17"
+        ? routeRuntimeConfig
+        : {
+            ...routeRuntimeConfig,
+            contractSelection: {
+              runtimeAbiVersion: "strategy-runtime-abi-v1.17",
+              runtimeServiceVersion: "runtime-execution-service-v1.17",
+              semanticReceiptVersion: "runtime-semantic-receipt-v1.17",
+              canonicalJsonVersion: "canonical-json-v1.1",
+            },
+          }
+    expect(selectedV117Config.contractSelection).toEqual({
+      runtimeAbiVersion: "strategy-runtime-abi-v1.17",
+      runtimeServiceVersion: "runtime-execution-service-v1.17",
+      semanticReceiptVersion: "runtime-semantic-receipt-v1.17",
+      canonicalJsonVersion: "canonical-json-v1.1",
+    })
     const server = createRuntimeExecutionHttpServer({
       runtimeConfig: selectedV117Config,
       authorityLoader: createFixtureRuntimeEvidenceAuthorityLoader(
@@ -300,8 +312,7 @@ describe("runtime execution HTTP boundary", () => {
           trustDomain: "fixture",
           keyId: "fixture-v1.17-authority",
           payload: {
-            schemaVersion:
-              "v1.37-runtime-evidence-authority-payload-v1.17",
+            schemaVersion: "v1.37-runtime-evidence-authority-payload-v1.17",
             bundleVersion: "fixture-v1.17-authority",
             registryGeneration: candidate.authority.registryGeneration,
             issuedAt: "2026-07-15T00:00:00.000Z",
@@ -519,8 +530,7 @@ describe("runtime execution HTTP boundary", () => {
           ...candidate.entrants,
           bottom: {
             ...candidate.entrants.bottom,
-            identityManifestRoot:
-              candidate.entrants.top.identityManifestRoot,
+            identityManifestRoot: candidate.entrants.top.identityManifestRoot,
             evidenceGraphRoot: candidate.entrants.top.evidenceGraphRoot,
           },
         },
@@ -642,9 +652,13 @@ describe("runtime execution HTTP boundary", () => {
       body: JSON.stringify(current),
     })
     expect(await historical.json()).toMatchObject({
-      contractVersion: RUNTIME_EXECUTION_SERVICE_VERSION,
-      ok: true,
-      kind: "executionResult",
+      contractVersion: "runtime-execution-service-v1.17",
+      ok: false,
+      kind: "systemFailure",
+      systemFailure: {
+        code: "CONTRACT_INACTIVE",
+        playerPenalty: false,
+      },
     })
   })
 
@@ -672,7 +686,9 @@ describe("runtime execution HTTP boundary", () => {
 
   it("keeps decoded payload canonical and schema failures player-owned", () => {
     const duplicate = admitStrategyPayloadBytesV117(
-      Buffer.from('{"activationOrders":[],"strategyMemory":{},"strategyMemory":null}'),
+      Buffer.from(
+        '{"activationOrders":[],"strategyMemory":{},"strategyMemory":null}',
+      ),
       "selectActivations",
     )
     const schemaInvalid = admitStrategyPayloadBytesV117(
@@ -743,7 +759,7 @@ describe("runtime execution HTTP boundary", () => {
     expect(response.status).toBe(200)
     expect(body).toMatchObject({
       ok: true,
-      service: RUNTIME_EXECUTION_SERVICE_VERSION,
+      service: selectedRuntimeServiceContract().runtimeServiceVersion,
       boundaryName: "Strategy Execution Service / Runtime Broker",
       implementationLabel: "isolated JS/TS runtime service",
       transportBinding: "HTTP+JSON",
@@ -974,9 +990,9 @@ fn main() {
     let mut input = String::new();
     let _ = io::stdin().read_to_string(&mut input);
     if input.contains("\\"methodName\\":\\"soldierBrain\\"") {
-        println!(r#"{{"ok":true,"abiVersion":"strategy-runtime-abi-v1.14","value":{{"action":{{"type":"TURN_TO_STONE"}},"soldierMemory":null}}}}"#);
+        println!(r#"{{"ok":true,"abiVersion":"${STRATEGY_RUNTIME_ABI_VERSION}","value":{{"action":{{"type":"TURN_TO_STONE"}},"soldierMemory":null}}}}"#);
     } else {
-        println!(r#"{{"ok":true,"abiVersion":"strategy-runtime-abi-v1.14","value":{{"activationOrders":[],"strategyMemory":null}}}}"#);
+        println!(r#"{{"ok":true,"abiVersion":"${STRATEGY_RUNTIME_ABI_VERSION}","value":{{"activationOrders":[],"strategyMemory":null}}}}"#);
     }
 }
 `
@@ -1062,9 +1078,9 @@ export fn _start() void {
     var nread: usize = 0;
     _ = fd_read(0, &iov, 1, &nread);
     if (contains(input_buf[0..nread], "\\"methodName\\":\\"soldierBrain\\"")) {
-        writeAll("{\\"ok\\":true,\\"abiVersion\\":\\"strategy-runtime-abi-v1.14\\",\\"value\\":{\\"action\\":{\\"type\\":\\"TURN_TO_STONE\\"},\\"soldierMemory\\":null}}\\n");
+        writeAll("{\\"ok\\":true,\\"abiVersion\\":\\"${STRATEGY_RUNTIME_ABI_VERSION}\\",\\"value\\":{\\"action\\":{\\"type\\":\\"TURN_TO_STONE\\"},\\"soldierMemory\\":null}}\\n");
     } else {
-        writeAll("{\\"ok\\":true,\\"abiVersion\\":\\"strategy-runtime-abi-v1.14\\",\\"value\\":{\\"activationOrders\\":[],\\"strategyMemory\\":null}}\\n");
+        writeAll("{\\"ok\\":true,\\"abiVersion\\":\\"${STRATEGY_RUNTIME_ABI_VERSION}\\",\\"value\\":{\\"activationOrders\\":[],\\"strategyMemory\\":null}}\\n");
     }
 }
 `

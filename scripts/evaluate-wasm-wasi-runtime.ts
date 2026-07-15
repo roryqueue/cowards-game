@@ -11,6 +11,7 @@ import {
   validateRustStrategySource,
   validateZigStrategySource,
   zigReadinessEvidence,
+  zigReadinessEvidenceForRuntimeAbi,
   collectWasmWasiCandidateIdentityV117,
   buildRustWasmCandidateRevisionV117,
   buildZigWasmCandidateRevisionV117,
@@ -23,11 +24,17 @@ import {
 } from "../packages/runtime-wasm-wasi/src/wasm-wasi-subprocess-adapter.ts"
 import {
   createAuthenticatedRuntimeInvocationRequestV117,
+  createRuntimeAbiV117ExecutionLedger,
+  createRuntimeInvocationBudgetV117,
   serializeRuntimeInvocationResponseV117,
   verifyRuntimeInvocationResponseV117,
   type RuntimeInvocationSigningIdentityV117,
   type StrategyRevision,
 } from "../packages/spec/src/index.ts"
+import {
+  HISTORICAL_RUNTIME_ABI_V1_14,
+  projectSelectedRuntimeAbiSource,
+} from "./project-selected-runtime-abi-source.js"
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const repoRoot = path.resolve(__dirname, "..")
@@ -90,7 +97,7 @@ const stableValue = (value: unknown): unknown => {
 const serialize = (value: unknown): string =>
   `${JSON.stringify(stableValue(value), null, 2)}\n`
 
-const rustSource = `
+const rustSourceV114 = `
 use std::io::{self, Read};
 
 fn first_active_soldier_id(input: &str) -> Option<&str> {
@@ -118,7 +125,7 @@ fn main() {
 }
 `
 
-const zigSource = `
+const zigSourceV114 = `
 const Iovec = extern struct { buf: [*]u8, buf_len: usize };
 const Ciovec = extern struct { buf: [*]const u8, buf_len: usize };
 
@@ -161,6 +168,9 @@ export fn _start() void {
     }
 }
 `
+
+const rustSource = projectSelectedRuntimeAbiSource(rustSourceV114)
+const zigSource = projectSelectedRuntimeAbiSource(zigSourceV114)
 
 const candidateRustSource = `
 fn main() {
@@ -318,11 +328,15 @@ fn main() {
 }
 `
 
-const invalidActionSource = `
+const invalidActionSourceV114 = `
 fn main() {
     println!(r#"{{"ok":true,"abiVersion":"strategy-runtime-abi-v1.14","value":{{"action":{{"type":"NOT_AN_ACTION"}},"soldierMemory":null}}}}"#);
 }
 `
+
+const invalidActionSource = projectSelectedRuntimeAbiSource(
+  invalidActionSourceV114,
+)
 
 const panicSource = `
 fn main() {
@@ -641,26 +655,8 @@ const candidateRequestFor = (revision: WasmWasiCandidateRevisionV117) => {
         normalizedSourceSha256: revision.sourceIdentity.normalizedSourceSha256,
         artifactSha256: `sha256:${artifact.hash}`,
       },
-      budget: {
-        profileId: "runtime-budget-profile-v1.17-candidate",
-        wallMilliseconds: 1_000,
-        computeFuel: 10_000_000,
-        memoryBytes: 67_108_864,
-        outputBytes: 262_144,
-        processLimit: 1,
-        matchCumulative: {
-          invocationCountMaximum: 260,
-          wallMilliseconds: 13_000,
-          computeFuel: 2_600_000_000,
-          payloadBytes: 68_157_440,
-          stdoutBytes: 68_157_440,
-          stderrBytes: 17_039_360,
-          memoryBytes: 67_108_864,
-          accounting:
-            "signed-monotonic-per-invocation-deltas-plus-cumulative-total",
-          overflow: "stop-before-next-invocation-and-classify-by-proven-cause",
-        },
-      },
+      budget: createRuntimeInvocationBudgetV117("soldierBrain"),
+      accounting: { prestate: createRuntimeAbiV117ExecutionLedger() },
       input: {
         value: {
           awarenessGrid: { cells: [] },
@@ -767,8 +763,27 @@ const buildCandidateEnvelopeFixture = () => {
 }
 
 const report = buildReport()
-const candidateEnvelopeFixture = buildCandidateEnvelopeFixture()
-const rawZigEvidence = zigReadinessEvidence()
+// The Phase-258 candidate envelope is immutable evidence owned by its
+// dedicated generator/tests. This historical evaluator verifies and carries
+// those bytes without re-executing an unmetered candidate lane.
+void buildCandidateEnvelopeFixture
+const candidateEnvelopeJson = readFileSync(candidateEnvelopePath, "utf8")
+const candidateEnvelopeFixture = JSON.parse(candidateEnvelopeJson) as {
+  candidateStatus?: unknown
+  current?: unknown
+  productionTrustedProducers?: unknown
+}
+if (
+  candidateEnvelopeFixture.candidateStatus !== "inactive-candidate" ||
+  candidateEnvelopeFixture.current !== false ||
+  !Array.isArray(candidateEnvelopeFixture.productionTrustedProducers) ||
+  candidateEnvelopeFixture.productionTrustedProducers.length !== 0
+) {
+  throw new Error("WASM/WASI candidate envelope lifecycle drifted")
+}
+const rawZigEvidence = zigReadinessEvidenceForRuntimeAbi(
+  HISTORICAL_RUNTIME_ABI_V1_14,
+)
 const zigEvidence = {
   ...rawZigEvidence,
   message: rawZigEvidence.ok
@@ -787,7 +802,6 @@ const reportJson = serialize(report)
 const reportMarkdown = buildMarkdown(report)
 const zigJson = serialize(zig)
 const zigMarkdown = buildZigMarkdown(zig.evidence)
-const candidateEnvelopeJson = serialize(candidateEnvelopeFixture)
 
 if (checkMode) {
   const currentReportJson = readFileSync(artifactPath, "utf8")

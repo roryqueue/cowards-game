@@ -170,14 +170,14 @@ fn main() {
     let mut input = String::new();
     let _ = io::stdin().read_to_string(&mut input);
     if input.contains("\\"methodName\\":\\"soldierBrain\\"") {
-        println!(r#"{{"ok":true,"abiVersion":"strategy-runtime-abi-v1.14","value":{{"action":{{"type":"TURN_TO_STONE"}},"soldierMemory":null}}}}"#);
+        println!(r#"{{"ok":true,"abiVersion":"${STRATEGY_RUNTIME_ABI_VERSION}","value":{{"action":{{"type":"TURN_TO_STONE"}},"soldierMemory":null}}}}"#);
     } else if let Some(soldier_id) = first_active_soldier_id(&input) {
         println!(
-            r#"{{"ok":true,"abiVersion":"strategy-runtime-abi-v1.14","value":{{"activationOrders":[{{"soldierId":"{}","objective":{{"stance":"stone"}}}}],"strategyMemory":null}}}}"#,
+            r#"{{"ok":true,"abiVersion":"${STRATEGY_RUNTIME_ABI_VERSION}","value":{{"activationOrders":[{{"soldierId":"{}","objective":{{"stance":"stone"}}}}],"strategyMemory":null}}}}"#,
             soldier_id
         );
     } else {
-        println!(r#"{{"ok":true,"abiVersion":"strategy-runtime-abi-v1.14","value":{{"activationOrders":[],"strategyMemory":null}}}}"#);
+        println!(r#"{{"ok":true,"abiVersion":"${STRATEGY_RUNTIME_ABI_VERSION}","value":{{"activationOrders":[],"strategyMemory":null}}}}"#);
     }
 }
 `.trim()
@@ -242,17 +242,17 @@ fn writeAll(bytes: []const u8) void {
 }
 
 fn writeSoldierAction(action_json: []const u8) void {
-    writeAll("{\\"ok\\":true,\\"abiVersion\\":\\"strategy-runtime-abi-v1.14\\",\\"value\\":{\\"action\\":");
+    writeAll("{\\"ok\\":true,\\"abiVersion\\":\\"${STRATEGY_RUNTIME_ABI_VERSION}\\",\\"value\\":{\\"action\\":");
     writeAll(action_json);
     writeAll(",\\"soldierMemory\\":null}}\\n");
 }
 
 fn writeEmptyActivations() void {
-    writeAll("{\\"ok\\":true,\\"abiVersion\\":\\"strategy-runtime-abi-v1.14\\",\\"value\\":{\\"activationOrders\\":[],\\"strategyMemory\\":null}}\\n");
+    writeAll("{\\"ok\\":true,\\"abiVersion\\":\\"${STRATEGY_RUNTIME_ABI_VERSION}\\",\\"value\\":{\\"activationOrders\\":[],\\"strategyMemory\\":null}}\\n");
 }
 
 fn writeActivation(soldier_id: []const u8) void {
-    writeAll("{\\"ok\\":true,\\"abiVersion\\":\\"strategy-runtime-abi-v1.14\\",\\"value\\":{\\"activationOrders\\":[{\\"soldierId\\":\\"");
+    writeAll("{\\"ok\\":true,\\"abiVersion\\":\\"${STRATEGY_RUNTIME_ABI_VERSION}\\",\\"value\\":{\\"activationOrders\\":[{\\"soldierId\\":\\"");
     writeAll(soldier_id);
     writeAll("\\",\\"objective\\":{\\"stance\\":\\"stone\\"}}],\\"strategyMemory\\":null}}\\n");
 }

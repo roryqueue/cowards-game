@@ -452,14 +452,55 @@ func TestPhase258HistoricalV116Dispatch(t *testing.T) {
 	}))
 	defer server.Close()
 	router := newRuntimeServiceExecutionRouter(server.URL)
-	router.currentContractVersion = func() string { return runtimeExecutionServiceVersionV117 }
-	if response, failure := router.executeMatch(context.Background(), runtimeServiceExecutionRequest{
+	response, failure := router.executeMatch(context.Background(), runtimeServiceExecutionRequest{
 		ContractVersion: runtimeExecutionServiceVersion,
 		V116:            &request,
-	}); response != nil || failure == nil {
-		t.Fatalf("historical route was not executed: response=%+v failure=%+v", response, failure)
+	})
+	if selectedRuntimeServiceContractVersion() == runtimeExecutionServiceVersion {
+		if response != nil || failure == nil || observed != runtimeExecutionServiceVersion {
+			t.Fatalf("selected v1.16 route did not preserve its current behavior: response=%+v failure=%+v observed=%q", response, failure, observed)
+		}
+		return
 	}
-	if observed != runtimeExecutionServiceVersion {
-		t.Fatalf("historical dispatch drifted to %q", observed)
+	if response != nil || failure == nil || failure.ErrorClass != "RuntimeServiceContractMismatch" || observed != "" {
+		t.Fatalf("retired v1.16 Match execution was not rejected before HTTP: response=%+v failure=%+v observed=%q", response, failure, observed)
+	}
+}
+
+func TestPhase258ActivatedDefaultRoutes(t *testing.T) {
+	if selectedRuntimeServiceContractVersion() != runtimeExecutionServiceVersionV117 ||
+		strategyRuntimeABIVersionV117 != "strategy-runtime-abi-v1.17" ||
+		runtimeSemanticReceiptV117SchemaVersion != "runtime-semantic-receipt-v1.17" ||
+		canonicalJSONVersionV11 != "canonical-json-v1.1" {
+		t.Fatal("atomic runtime v1.17 default tuple is not fully selected")
+	}
+	request, responseFixture, _ := loadRuntimeServiceV117Fixture(t)
+	if request.CompatibilityTupleID != runtimeSuccessorSemanticTupleIDV117 {
+		t.Fatal("activated request did not use the exact successor semantic tuple")
+	}
+	observed := ""
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, incoming *http.Request) {
+		defer incoming.Body.Close()
+		payload, err := io.ReadAll(incoming.Body)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var envelope map[string]any
+		if err := json.Unmarshal(payload, &envelope); err != nil {
+			t.Fatal(err)
+		}
+		observed, _ = envelope["contractVersion"].(string)
+		writer.Header().Set("content-type", "application/json")
+		_, _ = writer.Write(encodeRuntimeServiceResponseFixtureV117(t, responseFixture))
+	}))
+	defer server.Close()
+	router := newRuntimeServiceExecutionRouter(server.URL)
+	router.semanticReceiptSecret = runtimeServiceV117FixtureSecret
+	response, failure := router.executeMatch(context.Background(), runtimeServiceExecutionRequest{
+		ContractVersion: runtimeExecutionServiceVersionV117,
+		V117:            &request,
+	})
+	if response == nil || failure != nil || observed != runtimeExecutionServiceVersionV117 {
+		t.Fatalf("activated route did not consume exact v1.17 service: response=%+v failure=%+v observed=%q", response, failure, observed)
 	}
 }

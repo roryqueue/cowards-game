@@ -2,11 +2,15 @@ import { Buffer } from "node:buffer"
 import { createHash } from "node:crypto"
 import { isDeepStrictEqual } from "node:util"
 import {
-  RUNTIME_INVOCATION_V1_17_CANDIDATE,
   RUNTIME_ABI_V1_17_BUDGET_PROFILE_SHA256,
   RUNTIME_INVOCATION_V1_17_INITIAL_EXECUTION_LEDGER_ROOT,
+  HISTORICAL_RUNTIME_EXECUTION_SERVICE_V1_16,
+  HistoricalRuntimeExecutionServiceRequestV116Schema,
+  HistoricalRuntimeExecutionServiceResponseV116Schema,
+  isExactCommittedRuntimeExecutionServiceRequestV116,
   RuntimeExecutionServiceRequestSchema,
   RuntimeExecutionServiceResponseSchema,
+  RUNTIME_EXECUTION_SERVICE_VERSION,
   RuntimeExecutionServiceRequestV117Schema,
   RuntimeExecutionServiceResponseV117Schema,
   RuntimeExecutionFinalStateSchema,
@@ -14,7 +18,7 @@ import {
   STRATEGY_RUNTIME_ABI_VERSION,
   findRuntimeBrokerRegistryEntry,
   createRuntimeInvocationTraceV117,
-  createAuthenticatedRuntimeInvocationRequestV117,
+  createSelectedRuntimeInvocationRequestV117,
   createRuntimeAbiV117ExecutionLedger,
   createRuntimeInvocationBudgetV117,
   hashExecutableLaneIdentity,
@@ -22,7 +26,7 @@ import {
   runtimeInvocationExecutionLedgerPoststateRootV117,
   serializeRuntimeInvocationRequestV117,
   validateStrategyLanguageProviderRuntimeCompatibility,
-  verifyRuntimeInvocationRequestV117,
+  verifySelectedRuntimeInvocationRequestV117,
   verifyRuntimeInvocationResponseV117,
   type AuthenticatedRuntimeInvocationRequestV117,
   type JsonValue,
@@ -91,9 +95,9 @@ export interface CandidateRuntimeInvocationInputV117<
 }
 
 export interface CandidateRuntimeInvocationPublicResultV117 {
-  readonly contractVersion: typeof RUNTIME_INVOCATION_V1_17_CANDIDATE.contractVersion
-  readonly candidateStatus: typeof RUNTIME_INVOCATION_V1_17_CANDIDATE.lifecycle
-  readonly current: false
+  readonly contractVersion: AuthenticatedRuntimeInvocationRequestV117["contractVersion"]
+  readonly candidateStatus: AuthenticatedRuntimeInvocationRequestV117["candidateStatus"]
+  readonly current: AuthenticatedRuntimeInvocationRequestV117["current"]
   readonly requestId: string
   readonly invocationId: string
   readonly kernelRequestId: string
@@ -121,9 +125,9 @@ const candidatePublicResult = (
   request: AuthenticatedRuntimeInvocationRequestV117,
   outcome: RuntimeInvocationResultV117,
 ): CandidateRuntimeInvocationPublicResultV117 => ({
-  contractVersion: RUNTIME_INVOCATION_V1_17_CANDIDATE.contractVersion,
-  candidateStatus: RUNTIME_INVOCATION_V1_17_CANDIDATE.lifecycle,
-  current: false,
+  contractVersion: request.contractVersion,
+  candidateStatus: request.candidateStatus,
+  current: request.current,
   requestId: request.requestId,
   invocationId: request.invocationId,
   kernelRequestId: request.kernelRequestId,
@@ -150,7 +154,7 @@ export const executeCandidateRuntimeInvocationV117 = <
   input: CandidateRuntimeInvocationInputV117<TValue, TExecution>,
 ): CandidateRuntimeInvocationExecutionV117<TExecution> => {
   const requestBytes = serializeRuntimeInvocationRequestV117(input.request)
-  const admittedRequest = verifyRuntimeInvocationRequestV117(
+  const admittedRequest = verifySelectedRuntimeInvocationRequestV117(
     requestBytes,
     input.identity,
   )
@@ -251,6 +255,25 @@ const requestIdentity = (
   }
 }
 
+const historicalRuntimeV116Request = (rawRequest: unknown): boolean =>
+  STRATEGY_RUNTIME_ABI_VERSION !==
+    HISTORICAL_RUNTIME_EXECUTION_SERVICE_V1_16.runtimeAbiVersion &&
+  isExactCommittedRuntimeExecutionServiceRequestV116(rawRequest)
+
+const runtimeAbiForResponse = (rawRequest: unknown): string =>
+  historicalRuntimeV116Request(rawRequest)
+    ? HISTORICAL_RUNTIME_EXECUTION_SERVICE_V1_16.runtimeAbiVersion
+    : STRATEGY_RUNTIME_ABI_VERSION
+
+const parseRuntimeServiceResponse = (
+  response: unknown,
+  rawRequest: unknown,
+): RuntimeExecutionServiceResponse =>
+  (historicalRuntimeV116Request(rawRequest)
+    ? HistoricalRuntimeExecutionServiceResponseV116Schema
+    : RuntimeExecutionServiceResponseSchema
+  ).parse(response) as RuntimeExecutionServiceResponse
+
 const systemFailureResponse = (input: {
   rawRequest: unknown
   code: RuntimeExecutionServiceSystemFailureCode
@@ -265,7 +288,7 @@ const systemFailureResponse = (input: {
     kind: "systemFailure",
     requestId: identity.requestId,
     ...(identity.matchId === undefined ? {} : { matchId: identity.matchId }),
-    runtimeAbiVersion: STRATEGY_RUNTIME_ABI_VERSION,
+    runtimeAbiVersion: runtimeAbiForResponse(input.rawRequest),
     systemFailure: {
       code: input.code,
       message: input.message,
@@ -275,11 +298,9 @@ const systemFailureResponse = (input: {
         ? {}
         : { diagnostics: redactedDiagnostics(input.diagnostics) }),
     },
-  } satisfies RuntimeExecutionServiceResponse
+  }
 
-  return RuntimeExecutionServiceResponseSchema.parse(
-    response,
-  ) as RuntimeExecutionServiceResponse
+  return parseRuntimeServiceResponse(response, input.rawRequest)
 }
 
 const framedSha256 = (domain: string, values: readonly string[]): string => {
@@ -597,6 +618,7 @@ const validateRevisionSource = (
 const validateRevisionArtifact = (
   slot: "bottom" | "top",
   revision: StrategyRevision,
+  expectedRuntimeAbi: string,
 ):
   | { ok: true }
   | {
@@ -626,7 +648,7 @@ const validateRevisionArtifact = (
     if (
       artifact.format !== expectedFormat ||
       artifact.validationStatus !== "valid" ||
-      artifact.abiVersion !== STRATEGY_RUNTIME_ABI_VERSION ||
+      artifact.abiVersion !== expectedRuntimeAbi ||
       artifact.sourceHash !== revision.sourceHash ||
       artifact.sourceBytes !== revision.sourceBytes ||
       artifact.toolchain.language !== revision.runtime.language.id
@@ -680,7 +702,7 @@ const validateRevisionArtifact = (
     revision.runtime.language.id === "zig" ? "wasm32-wasi" : "wasm32-wasip1"
   if (
     artifact.validationStatus !== "valid" ||
-    artifact.abiVersion !== STRATEGY_RUNTIME_ABI_VERSION ||
+    artifact.abiVersion !== expectedRuntimeAbi ||
     artifact.wasiProfile !== "preview1" ||
     artifact.abiEnvelope !== "stdin-stdout-json" ||
     artifact.targetTriple !== expectedTargetTriple
@@ -730,12 +752,27 @@ const createRuntimeForRevision = (
   revision: StrategyRevision,
   runtimeConfig: RuntimeServiceConfig,
   limits: RuntimeExecutionServiceRequest["limits"],
+  expectedRuntimeAbi = STRATEGY_RUNTIME_ABI_VERSION,
 ):
   | { ok: true; runtime: StrategyRuntime }
   | {
       ok: false
       diagnostics: Record<string, unknown>
     } => {
+  const historicalRuntime =
+    expectedRuntimeAbi ===
+      HISTORICAL_RUNTIME_EXECUTION_SERVICE_V1_16.runtimeAbiVersion &&
+    expectedRuntimeAbi !== STRATEGY_RUNTIME_ABI_VERSION
+  if (historicalRuntime) {
+    return {
+      ok: false,
+      diagnostics: {
+        reason: "historical-runtime-evidence-is-verification-only",
+        revisionId: revision.id,
+        languageId: revision.runtime.language.id,
+      },
+    }
+  }
   const providerIssues = validateStrategyLanguageProviderRuntimeCompatibility(
     revision.runtime,
   )
@@ -832,6 +869,20 @@ const createRuntimeForRevision = (
   }
 }
 
+/**
+ * Test-support admission for the nested Match-shaped executor. It reuses every
+ * production provider, registry, artifact, and service-adapter check while
+ * discarding the guarded runtime instance itself.
+ */
+export const validateNestedMatchRuntimeRevisionTestSupport = (
+  revision: StrategyRevision,
+  runtimeConfig: RuntimeServiceConfig,
+  limits: RuntimeExecutionServiceRequest["limits"],
+): { ok: true } | { ok: false; diagnostics: Record<string, unknown> } => {
+  const admitted = createRuntimeForRevision(revision, runtimeConfig, limits)
+  return admitted.ok ? { ok: true } : admitted
+}
+
 export interface RuntimeExecutionServiceDependencies {
   runMatch: typeof runMatch
   recordChronicle: typeof recordChronicleFromExecution
@@ -911,7 +962,11 @@ const executeParsedRequest = (
   request: RuntimeExecutionServiceRequest,
   runtimeConfig: RuntimeServiceConfig,
   dependencies: RuntimeExecutionServiceDependencies,
+  historicalV116: boolean,
 ): RuntimeExecutionServiceResponse => {
+  const expectedRuntimeAbi = historicalV116
+    ? HISTORICAL_RUNTIME_EXECUTION_SERVICE_V1_16.runtimeAbiVersion
+    : STRATEGY_RUNTIME_ABI_VERSION
   const acceptedAuthority = loadAndVerifyRequestAuthority({
     request,
     runtimeConfig,
@@ -919,6 +974,15 @@ const executeParsedRequest = (
   })
   if (!acceptedAuthority.ok) {
     return authorityFailureResponse(request, acceptedAuthority.code)
+  }
+  if (historicalV116) {
+    return systemFailureResponse({
+      rawRequest: request,
+      code: "UNSUPPORTED_RUNTIME_ADAPTER",
+      message:
+        "Historical v1.16 evidence is verification-only and cannot start new gameplay execution.",
+      retryable: false,
+    })
   }
 
   for (const slot of ["bottom", "top"] as const) {
@@ -935,6 +999,7 @@ const executeParsedRequest = (
     const artifactValidation = validateRevisionArtifact(
       slot,
       request.strategies[slot],
+      expectedRuntimeAbi,
     )
     if (!artifactValidation.ok) {
       return systemFailureResponse({
@@ -962,6 +1027,7 @@ const executeParsedRequest = (
     request.strategies.bottom,
     runtimeConfig,
     request.limits,
+    expectedRuntimeAbi,
   )
   if (!bottomRuntime.ok) {
     return systemFailureResponse({
@@ -976,6 +1042,7 @@ const executeParsedRequest = (
     request.strategies.top,
     runtimeConfig,
     request.limits,
+    expectedRuntimeAbi,
   )
   if (!topRuntime.ok) {
     return systemFailureResponse({
@@ -1148,7 +1215,7 @@ const executeParsedRequest = (
     kind: "executionResult",
     requestId: request.requestId,
     matchId: request.match.matchId,
-    runtimeAbiVersion: STRATEGY_RUNTIME_ABI_VERSION,
+    runtimeAbiVersion: expectedRuntimeAbi,
     result: {
       privacy: "internal_runtime_result",
       chronicle: responseChronicleData,
@@ -1156,9 +1223,13 @@ const executeParsedRequest = (
       runtimeViolationEventCount: violationCount,
       semanticReceipt,
     },
-  } satisfies RuntimeExecutionServiceResponse
+  }
 
-  const parsed = RuntimeExecutionServiceResponseSchema.safeParse(response)
+  const parsed = (
+    historicalV116
+      ? HistoricalRuntimeExecutionServiceResponseV116Schema
+      : RuntimeExecutionServiceResponseSchema
+  ).safeParse(response)
   if (!parsed.success) {
     return systemFailureResponse({
       rawRequest: request,
@@ -1175,13 +1246,21 @@ const executeParsedRequest = (
   return parsed.data as RuntimeExecutionServiceResponse
 }
 
-export const executeRuntimeServiceRequest = (
+const executeRuntimeServiceRequestInternal = (
   rawRequest: unknown,
   runtimeConfig: RuntimeServiceConfig,
   dependencyOverrides: Partial<RuntimeExecutionServiceDependencies> = {},
+  allowSelectedV117NestedMatch = false,
 ): RuntimeExecutionServiceResponse => {
-  const parsedRequest =
+  const selectedRequest =
     RuntimeExecutionServiceRequestSchema.safeParse(rawRequest)
+  const historicalV116 =
+    !selectedRequest.success && historicalRuntimeV116Request(rawRequest)
+  const parsedRequest = selectedRequest.success
+    ? selectedRequest
+    : historicalV116
+      ? HistoricalRuntimeExecutionServiceRequestV116Schema.safeParse(rawRequest)
+      : selectedRequest
   if (!parsedRequest.success) {
     return systemFailureResponse({
       rawRequest,
@@ -1195,11 +1274,31 @@ export const executeRuntimeServiceRequest = (
     })
   }
 
-  try {
-    return executeParsedRequest(parsedRequest.data, runtimeConfig, {
-      ...defaultDependencies,
-      ...dependencyOverrides,
+  if (
+    selectedRequest.success &&
+    runtimeConfig.contractSelection.runtimeServiceVersion !==
+      RUNTIME_EXECUTION_SERVICE_VERSION &&
+    !allowSelectedV117NestedMatch
+  ) {
+    return systemFailureResponse({
+      rawRequest: parsedRequest.data,
+      code: "UNSUPPORTED_RUNTIME_ADAPTER",
+      message:
+        "The v1.16 Match envelope is not a selected gameplay service route.",
+      retryable: false,
     })
+  }
+
+  try {
+    return executeParsedRequest(
+      parsedRequest.data,
+      runtimeConfig,
+      {
+        ...defaultDependencies,
+        ...dependencyOverrides,
+      },
+      historicalV116,
+    )
   } catch (error) {
     return systemFailureResponse({
       rawRequest: parsedRequest.data,
@@ -1213,6 +1312,36 @@ export const executeRuntimeServiceRequest = (
     })
   }
 }
+
+export const executeRuntimeServiceRequest = (
+  rawRequest: unknown,
+  runtimeConfig: RuntimeServiceConfig,
+  dependencyOverrides: Partial<RuntimeExecutionServiceDependencies> = {},
+): RuntimeExecutionServiceResponse =>
+  executeRuntimeServiceRequestInternal(
+    rawRequest,
+    runtimeConfig,
+    dependencyOverrides,
+    false,
+  )
+
+/**
+ * Test-support seam for the selected service's nested v1.16-shaped Match
+ * executor. This is not historical v1.14/v1.16 evidence. The symbol is
+ * consumed only by the adjacent `.test-support.ts` module and is never
+ * re-exported from a package or production barrel.
+ */
+export const executeNestedMatchServiceFixtureOnly = (
+  rawRequest: unknown,
+  runtimeConfig: RuntimeServiceConfig,
+  dependencyOverrides: Partial<RuntimeExecutionServiceDependencies> = {},
+): RuntimeExecutionServiceResponse =>
+  executeRuntimeServiceRequestInternal(
+    rawRequest,
+    runtimeConfig,
+    dependencyOverrides,
+    true,
+  )
 
 type Sha256IdentityV117 = `sha256:${string}`
 
@@ -1304,7 +1433,7 @@ const preparedV117Failure = (input: {
       retryable: input.retryable,
       playerPenalty: false,
     },
-}) as RuntimeExecutionServiceResponseV117
+  }) as RuntimeExecutionServiceResponseV117
 }
 
 export const failPreparedRuntimeServiceRequestV117 = (input: {
@@ -1689,7 +1818,7 @@ const createPreparedTypeScriptRuntimeV117 = (input: {
       method,
       String(sequence),
     ]
-    const request = createAuthenticatedRuntimeInvocationRequestV117(
+    const request = createSelectedRuntimeInvocationRequestV117(
       {
         requestId: invocationPublicIdV117("request", identityValues),
         invocationId: invocationPublicIdV117("invocation", identityValues),
@@ -1731,12 +1860,15 @@ const createPreparedTypeScriptRuntimeV117 = (input: {
             signingIdentity: input.signingIdentity,
           })
         }
-        const adapter = input.runtimeConfig.adapter as typeof input.runtimeConfig.adapter & {
-          executeV117?: ((adapterInput: {
-            requestBytes: Uint8Array
-            executableSource: string
-            signingIdentity: RuntimeInvocationSigningIdentityV117
-          }) => Uint8Array) | undefined
+        const adapter = input.runtimeConfig
+          .adapter as typeof input.runtimeConfig.adapter & {
+          executeV117?:
+            | ((adapterInput: {
+                requestBytes: Uint8Array
+                executableSource: string
+                signingIdentity: RuntimeInvocationSigningIdentityV117
+              }) => Uint8Array)
+            | undefined
         }
         if (adapter.executeV117 === undefined) {
           throw new Error("v1.17 runtime adapter is unavailable")
@@ -1820,28 +1952,34 @@ export const createPreparedRuntimeServiceDependenciesV117 = (
       current: createRuntimeAbiV117ExecutionLedger(),
       sequence: 0,
     }
-    const response = executeRuntimeServiceRequest(request, input.runtimeConfig, {
-      authorityLoader: input.currentAuthorityLoader,
-      createRuntimeForRevision: (revision) =>
-        createPreparedTypeScriptRuntimeV117({
-          request,
-          revision,
-          runtimeConfig: input.runtimeConfig,
-          signingIdentity:
-            input.signingIdentity ??
-            productionInvocationIdentityV117(input.runtimeConfig),
-          ledger,
-          candidateInvocationAdapter: input.candidateInvocationAdapter,
-        }),
-    })
+    const response = executeRuntimeServiceRequestInternal(
+      request,
+      input.runtimeConfig,
+      {
+        authorityLoader: input.currentAuthorityLoader,
+        createRuntimeForRevision: (revision) =>
+          createPreparedTypeScriptRuntimeV117({
+            request,
+            revision,
+            runtimeConfig: input.runtimeConfig,
+            signingIdentity:
+              input.signingIdentity ??
+              productionInvocationIdentityV117(input.runtimeConfig),
+            ledger,
+            candidateInvocationAdapter: input.candidateInvocationAdapter,
+          }),
+      },
+      true,
+    )
     return {
       response,
       accounting: {
         budgetProfileSha256: RUNTIME_ABI_V1_17_BUDGET_PROFILE_SHA256,
         ledgerPrestateRoot:
           RUNTIME_INVOCATION_V1_17_INITIAL_EXECUTION_LEDGER_ROOT,
-        ledgerPoststateRoot:
-          runtimeInvocationExecutionLedgerPoststateRootV117(ledger.current),
+        ledgerPoststateRoot: runtimeInvocationExecutionLedgerPoststateRootV117(
+          ledger.current,
+        ),
       },
     }
   },

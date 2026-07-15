@@ -3,6 +3,7 @@ import {
   SourceLanguageStrategyArtifactPublicSchema,
   SourceLanguageStrategyArtifactSchema,
 } from "./schemas.js"
+import { STRATEGY_RUNTIME_ABI_VERSION } from "./versions.js"
 
 const artifact = {
   format: "python-source-bundle",
@@ -11,7 +12,7 @@ const artifact = {
   bytesBase64: "cHJpdmF0ZS1ieXRlcw==",
   sourceHash: "b".repeat(64),
   sourceBytes: 13,
-  abiVersion: "strategy-runtime-abi-v1.14",
+  abiVersion: STRATEGY_RUNTIME_ABI_VERSION,
   validationStatus: "valid",
   sourceIdentity: {
     identityVersion: "strategy-source-identity-v2",

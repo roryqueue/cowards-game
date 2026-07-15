@@ -101,6 +101,12 @@ func TestPhase258RuntimeInvocationV117CanonicalParityAndClosedDispatch(t *testin
 	if candidate, ok := runtimeInvocationContractForVersion("runtime-invocation-v1.17"); !ok || candidate.Historical || !candidate.CanonicalJSON || candidate.Current {
 		t.Fatalf("candidate v1.17 dispatch drifted: %+v ok=%v", candidate, ok)
 	}
+	historical, _ := runtimeInvocationContractForVersion(runtimeExecutionServiceVersion)
+	service, ok := runtimeInvocationContractForVersion(runtimeExecutionServiceVersionV117)
+	selected := selectedRuntimeServiceContractVersion()
+	if !ok || historical.Current != (selected == runtimeExecutionServiceVersion) || service.Current != (selected == runtimeExecutionServiceVersionV117) || historical.Current == service.Current {
+		t.Fatalf("selected service lifecycle drifted: selected=%q historical=%+v successor=%+v ok=%v", selected, historical, service, ok)
+	}
 }
 
 func TestPhase258RuntimeInvocationV117RejectsUnsignedBudgetStaleIdentityAndMixedResult(t *testing.T) {

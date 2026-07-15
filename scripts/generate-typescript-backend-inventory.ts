@@ -1,4 +1,5 @@
 #!/usr/bin/env -S pnpm exec tsx
+import { createHash } from "node:crypto"
 import {
   existsSync,
   mkdirSync,
@@ -1302,6 +1303,200 @@ const artifactPaths = {
   markdown: ".planning/artifacts/v1.16-typescript-backend-inventory.md",
 } as const
 
+const runtimeSelectionOverlayArtifactPaths = {
+  json: ".planning/artifacts/v1.37-typescript-backend-runtime-selection-overlay.json",
+  markdown:
+    ".planning/artifacts/v1.37-typescript-backend-runtime-selection-overlay.md",
+} as const
+
+const immutableHistoricalArtifactSha256 = Object.freeze({
+  [artifactPaths.json]:
+    "ea45ff5b29c3b67c24d9c638c63936ec9f6c42159ae71aa189ce885ce4a25a09",
+  [artifactPaths.markdown]:
+    "31c8d96072fd24eecad76376b14408bdb4ff1c22f3b8b8cd425feb1d6a63377d",
+} as const)
+
+const selectedCurrentRuntimeOverlay = Object.freeze({
+  selectionAuthority: "packages/spec/src/versions.ts",
+  serviceSelectionAuthority: "apps/runtime-service/src/runtime-config.ts",
+  legacy: Object.freeze({
+    strategyRuntimeAbi: "strategy-runtime-abi-v1.14",
+    runtimeExecutionService: "runtime-execution-service-v1.16",
+  }),
+  successor: Object.freeze({
+    strategyRuntimeAbi: "strategy-runtime-abi-v1.17",
+    runtimeExecutionService: "runtime-execution-service-v1.17",
+  }),
+  invariant: "selected_current_must_follow_authoritative_activation_pointer",
+} as const)
+
+export interface TypeScriptBackendRuntimeSelectionOverlayV137 {
+  schemaVersion: "v1.37-typescript-backend-runtime-selection-overlay"
+  generatedBy: "scripts/generate-typescript-backend-inventory.ts"
+  historicalBaseline: {
+    scope: "immutable_v1_16_historical_evidence"
+    artifacts: readonly {
+      path: string
+      sha256: string
+    }[]
+  }
+  selectedCurrentRuntimeOverlay: typeof selectedCurrentRuntimeOverlay
+  runtimeSurfaces: readonly {
+    path: string
+    role: "runtime-service" | "runtime-adapter"
+    lifecycle: "selected_by_pointer" | "candidate_evidence"
+    gate: string
+    selectionAuthority: string | null
+  }[]
+}
+
+const sha256File = (absolutePath: string): string =>
+  createHash("sha256").update(readFileSync(absolutePath)).digest("hex")
+
+const checkImmutableHistoricalArtifacts = (root: string): readonly string[] =>
+  Object.entries(immutableHistoricalArtifactSha256).flatMap(
+    ([relativePath, expected]) => {
+      const absolutePath = path.join(root, relativePath)
+      if (!existsSync(absolutePath)) return [`${relativePath} is missing`]
+      return sha256File(absolutePath) === expected
+        ? []
+        : [`${relativePath} immutable historical bytes changed`]
+    },
+  )
+
+export const generateTypeScriptBackendRuntimeSelectionOverlayV137 = (
+  options: GenerateTypeScriptBackendInventoryOptions = {},
+): TypeScriptBackendRuntimeSelectionOverlayV137 => {
+  const root = options.repoRoot ?? repoRoot
+  const inventory = generateTypeScriptBackendInventory({ repoRoot: root })
+  const runtimeSurfaces = inventory.surfaces
+    .filter(
+      (
+        surface,
+      ): surface is TypeScriptBackendSurface & {
+        role: "runtime-service" | "runtime-adapter"
+      } =>
+        surface.role === "runtime-service" ||
+        surface.role === "runtime-adapter",
+    )
+    .map((surface) => {
+      const candidateEvidence =
+        surface.path.includes("/candidate-") ||
+        surface.path.includes("fixture") ||
+        surface.path.includes(".test-support.") ||
+        surface.path.endsWith(".test.ts") ||
+        surface.path.endsWith(".test.tsx")
+      return {
+        path: surface.path,
+        role: surface.role,
+        lifecycle: candidateEvidence
+          ? "candidate_evidence"
+          : "selected_by_pointer",
+        gate: candidateEvidence
+          ? "immutable candidate, fixture, or test evidence only; never current by declaration"
+          : surface.role === "runtime-service"
+            ? "selected-current runtime execution service schema from the authoritative activation pointer and DB-free boundary"
+            : "selected-current Strategy runtime ABI from the authoritative activation pointer",
+        selectionAuthority: candidateEvidence
+          ? null
+          : surface.role === "runtime-service"
+            ? selectedCurrentRuntimeOverlay.serviceSelectionAuthority
+            : selectedCurrentRuntimeOverlay.selectionAuthority,
+      }
+    })
+
+  return {
+    schemaVersion: "v1.37-typescript-backend-runtime-selection-overlay",
+    generatedBy: "scripts/generate-typescript-backend-inventory.ts",
+    historicalBaseline: {
+      scope: "immutable_v1_16_historical_evidence",
+      artifacts: Object.entries(immutableHistoricalArtifactSha256).map(
+        ([artifactPath, sha256]) => ({ path: artifactPath, sha256 }),
+      ),
+    },
+    selectedCurrentRuntimeOverlay,
+    runtimeSurfaces,
+  }
+}
+
+export const renderTypeScriptBackendRuntimeSelectionOverlayJsonV137 = (
+  overlay: TypeScriptBackendRuntimeSelectionOverlayV137,
+): string => `${JSON.stringify(overlay, null, 2)}\n`
+
+export const renderTypeScriptBackendRuntimeSelectionOverlayMarkdownV137 = (
+  overlay: TypeScriptBackendRuntimeSelectionOverlayV137,
+): string => `# TypeScript Backend Runtime Selection Overlay
+
+**Schema:** ${overlay.schemaVersion}
+**Historical scope:** ${overlay.historicalBaseline.scope}
+
+The committed v1.16 inventory remains immutable historical evidence. Selected-current runtime labels follow ${overlay.selectedCurrentRuntimeOverlay.selectionAuthority} and ${overlay.selectedCurrentRuntimeOverlay.serviceSelectionAuthority}; the inactive v1.17 candidate is not current by declaration.
+
+## Historical Baseline
+
+${overlay.historicalBaseline.artifacts.map((artifact) => `- ${artifact.path}: ${artifact.sha256}`).join("\n")}
+
+## Runtime Surfaces
+
+| Path | Role | Lifecycle | Gate | Selection Authority |
+| --- | --- | --- | --- | --- |
+${overlay.runtimeSurfaces.map((surface) => `| ${markdownEscape(surface.path)} | ${surface.role} | ${surface.lifecycle} | ${markdownEscape(surface.gate)} | ${surface.selectionAuthority ?? "none"} |`).join("\n")}
+`
+
+export const writeTypeScriptBackendRuntimeSelectionOverlayArtifactsV137 = (
+  options: GenerateTypeScriptBackendInventoryOptions = {},
+): TypeScriptBackendRuntimeSelectionOverlayV137 => {
+  const root = options.repoRoot ?? repoRoot
+  const historicalFailures = checkImmutableHistoricalArtifacts(root)
+  if (historicalFailures.length > 0) {
+    throw new Error(historicalFailures.join("\n"))
+  }
+  const overlay = generateTypeScriptBackendRuntimeSelectionOverlayV137({
+    repoRoot: root,
+  })
+  const jsonPath = path.join(root, runtimeSelectionOverlayArtifactPaths.json)
+  const markdownPath = path.join(
+    root,
+    runtimeSelectionOverlayArtifactPaths.markdown,
+  )
+  mkdirSync(path.dirname(jsonPath), { recursive: true })
+  writeFileSync(
+    jsonPath,
+    renderTypeScriptBackendRuntimeSelectionOverlayJsonV137(overlay),
+  )
+  writeFileSync(
+    markdownPath,
+    renderTypeScriptBackendRuntimeSelectionOverlayMarkdownV137(overlay),
+  )
+  return overlay
+}
+
+export const checkTypeScriptBackendRuntimeSelectionOverlayArtifactsV137 = (
+  options: GenerateTypeScriptBackendInventoryOptions = {},
+): readonly string[] => {
+  const root = options.repoRoot ?? repoRoot
+  const overlay = generateTypeScriptBackendRuntimeSelectionOverlayV137({
+    repoRoot: root,
+  })
+  const failures = [...checkImmutableHistoricalArtifacts(root)]
+  for (const [relativePath, expected] of [
+    [
+      runtimeSelectionOverlayArtifactPaths.json,
+      renderTypeScriptBackendRuntimeSelectionOverlayJsonV137(overlay),
+    ],
+    [
+      runtimeSelectionOverlayArtifactPaths.markdown,
+      renderTypeScriptBackendRuntimeSelectionOverlayMarkdownV137(overlay),
+    ],
+  ] as const) {
+    const absolutePath = path.join(root, relativePath)
+    if (!existsSync(absolutePath)) failures.push(`${relativePath} is missing`)
+    else if (readFileSync(absolutePath, "utf8") !== expected)
+      failures.push(`${relativePath} is stale`)
+  }
+  return failures
+}
+
 export const writeTypeScriptBackendInventoryArtifacts = (
   options: GenerateTypeScriptBackendInventoryOptions = {},
 ): TypeScriptBackendInventory => {
@@ -1348,23 +1543,24 @@ export const checkTypeScriptBackendInventoryArtifacts = (
 const runCli = () => {
   const args = new Set(process.argv.slice(2))
   if (args.has("--write")) {
-    const inventory = writeTypeScriptBackendInventoryArtifacts()
+    const overlay = writeTypeScriptBackendRuntimeSelectionOverlayArtifactsV137()
     console.log(
-      `Wrote ${artifactPaths.json} and ${artifactPaths.markdown} (${inventory.surfaces.length} surfaces)`,
+      `Wrote ${runtimeSelectionOverlayArtifactPaths.json} and ${runtimeSelectionOverlayArtifactPaths.markdown} (${overlay.runtimeSurfaces.length} runtime surfaces)`,
     )
     return
   }
   if (args.has("--check")) {
-    const failures = checkTypeScriptBackendInventoryArtifacts()
+    const failures =
+      checkTypeScriptBackendRuntimeSelectionOverlayArtifactsV137()
     if (failures.length > 0) {
-      console.error(`TypeScript backend inventory artifacts are stale:`)
+      console.error(`TypeScript backend runtime selection overlay is stale:`)
       for (const failure of failures) {
         console.error(`- ${failure}`)
       }
       process.exitCode = 1
       return
     }
-    console.log("TypeScript backend inventory artifacts are current")
+    console.log("TypeScript backend runtime selection overlay is current")
     return
   }
 

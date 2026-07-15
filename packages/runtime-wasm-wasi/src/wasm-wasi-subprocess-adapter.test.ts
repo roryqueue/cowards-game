@@ -7,10 +7,11 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { pathToFileURL } from "node:url"
 import {
-  createAuthenticatedRuntimeInvocationRequestV117,
+  createSelectedRuntimeInvocationRequestV117,
   createRuntimeAbiV117ExecutionLedger,
   createRuntimeInvocationBudgetV117,
   serializeRuntimeInvocationResponseV117,
+  STRATEGY_RUNTIME_ABI_VERSION,
   STRATEGY_WASM_ARTIFACT_BYTES,
   verifyRuntimeInvocationResponseV117,
   type AuthenticatedRuntimeInvocationRequestV117,
@@ -51,9 +52,9 @@ fn main() {
     let mut input = String::new();
     let _ = io::stdin().read_to_string(&mut input);
     if input.contains("\\"methodName\\":\\"soldierBrain\\"") {
-        println!(r#"{{"ok":true,"abiVersion":"strategy-runtime-abi-v1.14","value":{{"action":{{"type":"TURN_TO_STONE"}},"soldierMemory":null}}}}"#);
+        println!(r#"{{"ok":true,"abiVersion":"${STRATEGY_RUNTIME_ABI_VERSION}","value":{{"action":{{"type":"TURN_TO_STONE"}},"soldierMemory":null}}}}"#);
     } else {
-        println!(r#"{{"ok":true,"abiVersion":"strategy-runtime-abi-v1.14","value":{{"activationOrders":[],"strategyMemory":null}}}}"#);
+        println!(r#"{{"ok":true,"abiVersion":"${STRATEGY_RUNTIME_ABI_VERSION}","value":{{"activationOrders":[],"strategyMemory":null}}}}"#);
     }
 }
 `
@@ -95,9 +96,9 @@ export fn _start() void {
     var nread: usize = 0;
     _ = fd_read(0, &iov, 1, &nread);
     if (contains(input_buf[0..nread], "\\"methodName\\":\\"soldierBrain\\"")) {
-        writeAll("{\\"ok\\":true,\\"abiVersion\\":\\"strategy-runtime-abi-v1.14\\",\\"value\\":{\\"action\\":{\\"type\\":\\"TURN_TO_STONE\\"},\\"soldierMemory\\":null}}\\n");
+        writeAll("{\\"ok\\":true,\\"abiVersion\\":\\"${STRATEGY_RUNTIME_ABI_VERSION}\\",\\"value\\":{\\"action\\":{\\"type\\":\\"TURN_TO_STONE\\"},\\"soldierMemory\\":null}}\\n");
     } else {
-        writeAll("{\\"ok\\":true,\\"abiVersion\\":\\"strategy-runtime-abi-v1.14\\",\\"value\\":{\\"activationOrders\\":[],\\"strategyMemory\\":null}}\\n");
+        writeAll("{\\"ok\\":true,\\"abiVersion\\":\\"${STRATEGY_RUNTIME_ABI_VERSION}\\",\\"value\\":{\\"activationOrders\\":[],\\"strategyMemory\\":null}}\\n");
     }
 }
 `
@@ -126,6 +127,8 @@ export fn _start() void {
 
 const rustCompileProbe = compileRustWasmArtifact(rustSource)
 const zigCompileProbe = compileZigWasmArtifact(zigSource)
+const legacyRuntimeIsSelected =
+  String(STRATEGY_RUNTIME_ABI_VERSION) === "strategy-runtime-abi-v1.14"
 const candidateRustCompileProbe =
   compileRustWasmArtifactV117(candidateRustSource)
 const candidateZigCompileProbe = compileZigWasmArtifactV117(candidateZigSource)
@@ -145,7 +148,7 @@ const candidateRequest = (
   if (artifactSha256 === undefined) {
     throw new Error("Rust candidate fixture did not compile")
   }
-  return createAuthenticatedRuntimeInvocationRequestV117(
+  return createSelectedRuntimeInvocationRequestV117(
     {
       requestId: "request:wasm-wasi:v1.17:1",
       invocationId: "invocation:wasm-wasi:v1.17:1",
@@ -247,10 +250,9 @@ const completeExecutionEvidenceFor = (
         ? limits.counters.computeFuel.maximum + 1
         : 1,
     payloadBytes: observation.stdout.byteLength,
-    stdoutBytes:
-      canonicalSuccessFrame
-        ? observation.stdout.byteLength + 1
-        : observation.stdout.byteLength,
+    stdoutBytes: canonicalSuccessFrame
+      ? observation.stdout.byteLength + 1
+      : observation.stdout.byteLength,
     stderrBytes: observation.stderr.byteLength,
   } as const
   const counter = (name: keyof typeof deltas) => ({
@@ -503,10 +505,7 @@ describe("WASM/WASI runtime v1.17 candidate host authority", () => {
         "proven_strategy_exception",
         "structured_host_strategy_exception",
       ),
-      failedObservation(
-        "proven_fuel_exhaustion",
-        "structured_host_fuel_meter",
-      ),
+      failedObservation("proven_fuel_exhaustion", "structured_host_fuel_meter"),
       failedObservation(
         "proven_memory_exhaustion",
         "structured_host_memory_meter",
@@ -536,9 +535,7 @@ describe("WASM/WASI runtime v1.17 candidate host authority", () => {
       })
       expect(response.outcome).not.toHaveProperty("violation")
       expect(response.accounting.disposition).toBe("no_commit")
-      expect(response.accounting.poststate).toEqual(
-        request.accounting.prestate,
-      )
+      expect(response.accounting.poststate).toEqual(request.accounting.prestate)
     }
   })
 
@@ -613,11 +610,7 @@ describe("WASM/WASI runtime v1.17 candidate host authority", () => {
     expect(response.accounting.poststate).toEqual(request.accounting.prestate)
   })
 
-  it.each([
-    "payloadBytes",
-    "stdoutBytes",
-    "stderrBytes",
-  ] as const)(
+  it.each(["payloadBytes", "stdoutBytes", "stderrBytes"] as const)(
     "fails closed when signed %s accounting disagrees with the observed guest bytes",
     (counterName) => {
       const request = candidateRequest(revision)
@@ -667,9 +660,7 @@ describe("WASM/WASI runtime v1.17 candidate host authority", () => {
         },
       })
       expect(response.accounting.disposition).toBe("no_commit")
-      expect(response.accounting.poststate).toEqual(
-        request.accounting.prestate,
-      )
+      expect(response.accounting.poststate).toEqual(request.accounting.prestate)
     },
   )
 
@@ -1025,7 +1016,21 @@ describe("WASM/WASI runtime v1.17 candidate host authority", () => {
   })
 
   it("rejects a legacy v1.14 artifact instead of relabeling it as v1.17", () => {
-    const legacyRevision = buildRustStrategyRevision({ source: rustSource })
+    const selectedRevision = buildRustStrategyRevision({ source: rustSource })
+    const legacyRevision = {
+      ...selectedRevision,
+      runtime: {
+        ...selectedRevision.runtime,
+        abiVersion: "strategy-runtime-abi-v1.14",
+      },
+      metadata: {
+        ...selectedRevision.metadata,
+        compiledArtifact: {
+          ...selectedRevision.metadata.compiledArtifact!,
+          abiVersion: "strategy-runtime-abi-v1.14",
+        },
+      },
+    }
     const legacyCandidateRevision = {
       ...legacyRevision,
       sourceIdentity: revision.sourceIdentity,
@@ -1524,43 +1529,66 @@ describe("WASM/WASI runtime alpha", () => {
       const revision = buildRustStrategyRevision({ source: rustSource })
       const runtime = createWasmWasiRuntimeFromRevision(revision)
 
-      expect(
-        runtime.selectActivations({
-          phaseNumber: 1,
-          roundNumber: 1,
-          activationCount: 1,
-          board: {
-            bounds: { minX: 0, maxX: 11, minY: 0, maxY: 11 },
-            soldiers: [],
-            terrainStones: [],
-          },
-          mySoldiers: [],
-          enemySoldiers: [],
-          strategyMemory: null,
-        }),
-      ).toEqual({
-        ok: true,
-        value: { activationOrders: [], strategyMemory: null },
+      const selection = runtime.selectActivations({
+        phaseNumber: 1,
+        roundNumber: 1,
+        activationCount: 1,
+        board: {
+          bounds: { minX: 0, maxX: 11, minY: 0, maxY: 11 },
+          soldiers: [],
+          terrainStones: [],
+        },
+        mySoldiers: [],
+        enemySoldiers: [],
+        strategyMemory: null,
       })
-      expect(
-        runtime.runSoldierBrain({
-          self: {
-            id: "soldier:1",
-            ownerPlayerId: "player:1",
-            status: "ACTIVE",
-            position: { x: 0, y: 0 },
-            facing: "UP",
-            lastSuccessfulMoveDirection: null,
-          },
-          awarenessGrid: { cells: [] },
-          cycleIndex: 0,
-          maxCycles: 12,
-          soldierMemory: null,
-        }),
-      ).toEqual({
-        ok: true,
-        value: { action: { type: "TURN_TO_STONE" }, soldierMemory: null },
+      expect(selection).toEqual(
+        legacyRuntimeIsSelected
+          ? {
+              ok: true,
+              value: { activationOrders: [], strategyMemory: null },
+            }
+          : {
+              ok: false,
+              violation: {
+                type: "THROWN_EXCEPTION",
+                message: "Runtime system failure.",
+              },
+              systemFailure: { code: "MALFORMED_IPC", retryable: true },
+            },
+      )
+      const soldier = runtime.runSoldierBrain({
+        self: {
+          id: "soldier:1",
+          ownerPlayerId: "player:1",
+          status: "ACTIVE",
+          position: { x: 0, y: 0 },
+          facing: "UP",
+          lastSuccessfulMoveDirection: null,
+        },
+        awarenessGrid: { cells: [] },
+        cycleIndex: 0,
+        maxCycles: 12,
+        soldierMemory: null,
       })
+      expect(soldier).toEqual(
+        legacyRuntimeIsSelected
+          ? {
+              ok: true,
+              value: {
+                action: { type: "TURN_TO_STONE" },
+                soldierMemory: null,
+              },
+            }
+          : {
+              ok: false,
+              violation: {
+                type: "THROWN_EXCEPTION",
+                message: "Runtime system failure.",
+              },
+              systemFailure: { code: "MALFORMED_IPC", retryable: true },
+            },
+      )
     },
   )
 
@@ -1618,25 +1646,38 @@ describe("WASM/WASI runtime alpha", () => {
       const revision = buildZigStrategyRevision({ source: zigSource })
       const runtime = createWasmWasiRuntimeFromRevision(revision)
 
-      expect(
-        runtime.runSoldierBrain({
-          self: {
-            id: "soldier:1",
-            ownerPlayerId: "player:1",
-            status: "ACTIVE",
-            position: { x: 0, y: 0 },
-            facing: "UP",
-            lastSuccessfulMoveDirection: null,
-          },
-          awarenessGrid: { cells: [] },
-          cycleIndex: 0,
-          maxCycles: 12,
-          soldierMemory: null,
-        }),
-      ).toEqual({
-        ok: true,
-        value: { action: { type: "TURN_TO_STONE" }, soldierMemory: null },
+      const result = runtime.runSoldierBrain({
+        self: {
+          id: "soldier:1",
+          ownerPlayerId: "player:1",
+          status: "ACTIVE",
+          position: { x: 0, y: 0 },
+          facing: "UP",
+          lastSuccessfulMoveDirection: null,
+        },
+        awarenessGrid: { cells: [] },
+        cycleIndex: 0,
+        maxCycles: 12,
+        soldierMemory: null,
       })
+      expect(result).toEqual(
+        legacyRuntimeIsSelected
+          ? {
+              ok: true,
+              value: {
+                action: { type: "TURN_TO_STONE" },
+                soldierMemory: null,
+              },
+            }
+          : {
+              ok: false,
+              violation: {
+                type: "THROWN_EXCEPTION",
+                message: "Runtime system failure.",
+              },
+              systemFailure: { code: "MALFORMED_IPC", retryable: true },
+            },
+      )
     },
     20_000,
   )

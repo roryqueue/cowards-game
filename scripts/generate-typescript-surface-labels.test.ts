@@ -3,8 +3,10 @@ import { describe, expect, it } from "vitest"
 import { assertPublicOutputLeakSafe } from "../packages/spec/src/public-output-privacy.ts"
 import {
   generateFinalTypeScriptSurfaceLabels,
+  generateTypeScriptSurfaceRuntimeSelectionOverlayV137,
   validateFinalTypeScriptSurfaceLabels,
   checkFinalTypeScriptSurfaceLabelArtifacts,
+  checkTypeScriptSurfaceRuntimeSelectionOverlayArtifactsV137,
   renderFinalTypeScriptSurfaceLabelsJson,
   renderFinalTypeScriptSurfaceLabelsMarkdown,
 } from "./generate-typescript-surface-labels.ts"
@@ -85,6 +87,38 @@ describe("final v1.16 TypeScript surface labels", () => {
 
   it("labels ladder, governance, owner-debug, test, fixture, parity, rollback, runtime, and frontend groups", () => {
     const labels = generateFinalTypeScriptSurfaceLabels()
+    const runtimeOverlay =
+      generateTypeScriptSurfaceRuntimeSelectionOverlayV137()
+    expect(
+      checkTypeScriptSurfaceRuntimeSelectionOverlayArtifactsV137(),
+    ).toEqual([])
+    expect(runtimeOverlay.historicalBaseline).toMatchObject({
+      scope: "immutable_v1_16_historical_evidence",
+      artifacts: expect.arrayContaining([
+        {
+          path: ".planning/artifacts/v1.16-final-typescript-surface-labels.json",
+          sha256:
+            "58fe6083f173b7233c37bc1e8eab10a605bdf978810f5ff8f4001767bad958e4",
+        },
+        {
+          path: ".planning/artifacts/v1.16-final-typescript-surface-labels.md",
+          sha256:
+            "538b232b22284eb033bf5024382c84db99cd4a1c5c03a4cec77d378629f55498",
+        },
+      ]),
+    })
+    expect(
+      runtimeOverlay.surfaces.some(
+        (surface) =>
+          surface.surfaceLabel === "runtime-service-execution-boundary" &&
+          surface.selectedNormal,
+      ),
+    ).toBe(true)
+    for (const surface of runtimeOverlay.surfaces.filter(
+      (entry) => entry.selectedNormal,
+    )) {
+      expect(surface.gate).toContain("authoritative activation pointer")
+    }
     const surfaceLabels = new Set(
       labels.surfaces.map((surface) => surface.surfaceLabel),
     )

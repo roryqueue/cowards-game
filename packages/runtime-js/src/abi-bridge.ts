@@ -3,16 +3,16 @@ import {
   RUNTIME_ABI_V1_17,
   RUNTIME_INVOCATION_V1_17_PLAYER_VIOLATIONS,
   STRATEGY_RUNTIME_ABI_VERSION,
-  SoldierBrainResultV117Schema,
   StrategyRuntimeRequestEnvelopeSchema,
   StrategyRuntimeResponseEnvelopeSchema,
+  SoldierBrainResultV117Schema,
   StrategyResultV117Schema,
   admitCanonicalJsonBytes,
   createAuthenticatedRuntimeInvocationResponseV117,
   createRuntimeInvocationExecutionReceiptV117,
   createRuntimeInvocationTraceV117,
   serializeRuntimeInvocationResponseV117,
-  verifyRuntimeInvocationRequestV117,
+  verifySelectedRuntimeInvocationRequestV117,
   type AuthenticatedRuntimeInvocationRequestV117,
   type JsonValue,
   type RuntimeInvocationPlayerViolationCodeV117,
@@ -41,11 +41,26 @@ export interface ExecuteStrategyRuntimeAbiBridgeInput extends StrategyExecutionA
   input: unknown
 }
 
-export const executeStrategyRuntimeAbiV114 = (
+interface StrategyRuntimeAbiBridgeProfile {
+  readonly abiVersion: string
+  readonly parseRequest: (value: unknown) => {
+    readonly methodName: StrategyMethodName
+    readonly source: {
+      readonly text?: string | undefined
+      readonly hash: string
+      readonly bytes: number
+    }
+    readonly input: unknown
+  }
+  readonly parseResponse: (value: unknown) => unknown
+}
+
+const executeStrategyRuntimeAbi = (
   input: ExecuteStrategyRuntimeAbiBridgeInput,
+  profile: StrategyRuntimeAbiBridgeProfile,
 ): RuntimeResult<unknown> => {
-  const request = StrategyRuntimeRequestEnvelopeSchema.parse({
-    abiVersion: STRATEGY_RUNTIME_ABI_VERSION,
+  const request = profile.parseRequest({
+    abiVersion: profile.abiVersion,
     methodName: input.methodName,
     runtime: input.revision.runtime,
     source: {
@@ -87,37 +102,70 @@ export const executeStrategyRuntimeAbiV114 = (
     outputByteLimit: input.outputByteLimit,
   })
 
-  StrategyRuntimeResponseEnvelopeSchema.parse(
+  profile.parseResponse(
     result.ok
       ? {
           ok: true,
-          abiVersion: STRATEGY_RUNTIME_ABI_VERSION,
+          abiVersion: profile.abiVersion,
           value: result.value,
         }
-        : "systemFailure" in result
-          ? {
-              ok: false,
-              abiVersion: STRATEGY_RUNTIME_ABI_VERSION,
-              failureKind: "systemFailure",
-              systemFailure: {
-                code: result.systemFailure.code,
-                message: "Runtime system failure.",
-                publicMessage: "Runtime system failure.",
-              },
-            }
-          : {
-          ok: false,
-          abiVersion: STRATEGY_RUNTIME_ABI_VERSION,
-          failureKind: "runtimeViolation",
-          violation: {
-            code: result.violation.type,
-            message: result.violation.message,
-            publicMessage: result.violation.message,
+      : "systemFailure" in result
+        ? {
+            ok: false,
+            abiVersion: profile.abiVersion,
+            failureKind: "systemFailure",
+            systemFailure: {
+              code: result.systemFailure.code,
+              message: "Runtime system failure.",
+              publicMessage: "Runtime system failure.",
+            },
+          }
+        : {
+            ok: false,
+            abiVersion: profile.abiVersion,
+            failureKind: "runtimeViolation",
+            violation: {
+              code: result.violation.type,
+              message: result.violation.message,
+              publicMessage: result.violation.message,
+            },
           },
-        },
   )
 
   return result
+}
+
+/**
+ * Test-support seam for the v1.16-shaped nested Match executor carried inside
+ * the selected outer service. It follows the test process pointer and is not
+ * historical v1.14 evidence. It is deliberately absent from every package
+ * export map and production barrel.
+ */
+export const executeNestedMatchShapeRuntimeAbiTestSupport = (
+  input: ExecuteStrategyRuntimeAbiBridgeInput,
+): RuntimeResult<unknown> =>
+  executeStrategyRuntimeAbi(input, {
+    abiVersion: STRATEGY_RUNTIME_ABI_VERSION,
+    parseRequest: (value) => StrategyRuntimeRequestEnvelopeSchema.parse(value),
+    parseResponse: (value) =>
+      StrategyRuntimeResponseEnvelopeSchema.parse(value),
+  })
+
+/** Selected-current bridge for new writes; its ABI follows the current pointer. */
+export const executeSelectedStrategyRuntimeAbi = (
+  input: ExecuteStrategyRuntimeAbiBridgeInput,
+): RuntimeResult<unknown> => {
+  if (String(STRATEGY_RUNTIME_ABI_VERSION) !== "strategy-runtime-abi-v1.14") {
+    return {
+      ok: false,
+      violation: {
+        type: "INVALID_OUTPUT",
+        message: "Strategy runtime ABI is not selected",
+      },
+      systemFailure: { code: "MALFORMED_IPC", retryable: false },
+    }
+  }
+  return executeNestedMatchShapeRuntimeAbiTestSupport(input)
 }
 
 const textEncoder = new TextEncoder()
@@ -245,11 +293,7 @@ const successfulPayload = (
     payloadBytes.byteLength >
     request.budget.methodLimit.counters.payloadBytes.maximum
   ) {
-    return playerViolation(
-      request,
-      "OVERSIZED_OUTPUT",
-      "PAYLOAD_CAP_EXCEEDED",
-    )
+    return playerViolation(request, "OVERSIZED_OUTPUT", "PAYLOAD_CAP_EXCEEDED")
   }
   const admitted = admitCanonicalJsonBytes(payloadBytes, {
     profile: "strategy-payload",
@@ -269,11 +313,7 @@ const successfulPayload = (
       : SoldierBrainResultV117Schema
   const parsed = schema.safeParse(admitted.value)
   if (!parsed.success) {
-    return playerViolation(
-      request,
-      "INVALID_OUTPUT",
-      "PAYLOAD_SCHEMA_REJECTED",
-    )
+    return playerViolation(request, "INVALID_OUTPUT", "PAYLOAD_SCHEMA_REJECTED")
   }
   return {
     kind: "success",
@@ -306,11 +346,7 @@ const classifyGuestFrame = (
     case RUNTIME_GUEST_FRAME_TAGS_V117.success:
       return successfulPayload(request, payload)
     case RUNTIME_GUEST_FRAME_TAGS_V117.invalidOutput:
-      return playerViolation(
-        request,
-        "INVALID_OUTPUT",
-        "PAYLOAD_INVALID",
-      )
+      return playerViolation(request, "INVALID_OUTPUT", "PAYLOAD_INVALID")
     case RUNTIME_GUEST_FRAME_TAGS_V117.thrownException:
       return playerViolation(
         request,
@@ -376,7 +412,8 @@ export const observeRuntimeGuestAccountingV117 = (
     stderrBytes: observation.stderrBytes ?? 0,
     methodDeadlineExceeded:
       tag === RUNTIME_GUEST_FRAME_TAGS_V117.deadlineExceeded,
-    cancellation: observation.cancellation ??
+    cancellation:
+      observation.cancellation ??
       (tag === RUNTIME_GUEST_FRAME_TAGS_V117.deadlineExceeded
         ? {
             terminationRequired: true,
@@ -482,10 +519,7 @@ const authenticatedResponse = (
   evidence: RuntimeInvocationExecutionReceiptEvidenceV117,
   signingIdentity: RuntimeInvocationSigningIdentityV117,
 ): Uint8Array => {
-  const receipt = createRuntimeInvocationExecutionReceiptV117(
-    request,
-    evidence,
-  )
+  const receipt = createRuntimeInvocationExecutionReceiptV117(request, evidence)
   const response = createAuthenticatedRuntimeInvocationResponseV117(
     request,
     outcome,
@@ -500,20 +534,13 @@ const ambiguousResponse = (
   signingIdentity: RuntimeInvocationSigningIdentityV117,
   outcome = systemFailure(request, "AMBIGUOUS_ATTRIBUTION", false),
 ): Uint8Array =>
-  authenticatedResponse(
-    request,
-    outcome,
-    ambiguousEvidence(),
-    signingIdentity,
-  )
+  authenticatedResponse(request, outcome, ambiguousEvidence(), signingIdentity)
 
 const incompatibleEvidenceResponse = (
   request: AuthenticatedRuntimeInvocationRequestV117,
   signingIdentity: RuntimeInvocationSigningIdentityV117,
   observedOutcome: RuntimeInvocationResultV117,
-  reason:
-    | "ACCOUNTING_EVIDENCE_UNAVAILABLE"
-    | "ACCOUNTING_EVIDENCE_REJECTED",
+  reason: "ACCOUNTING_EVIDENCE_UNAVAILABLE" | "ACCOUNTING_EVIDENCE_REJECTED",
 ): Uint8Array =>
   ambiguousResponse(
     request,
@@ -533,7 +560,7 @@ export const executeStrategyRuntimeAbiV117 = (
   input: ExecuteStrategyRuntimeAbiBridgeInputV117,
 ): Uint8Array => {
   const requestBytes = Uint8Array.from(input.requestBytes)
-  const admittedRequest = verifyRuntimeInvocationRequestV117(
+  const admittedRequest = verifySelectedRuntimeInvocationRequestV117(
     requestBytes,
     input.signingIdentity,
   )
@@ -592,11 +619,7 @@ export const executeStrategyRuntimeAbiV117 = (
   outcome =
     observation.kind === "raw_frame"
       ? observation.bytes.byteLength > stdoutByteLimit
-          ? playerViolation(
-            request,
-            "OVERSIZED_OUTPUT",
-            "STDOUT_CAP_EXCEEDED",
-          )
+        ? playerViolation(request, "OVERSIZED_OUTPUT", "STDOUT_CAP_EXCEEDED")
         : String.fromCharCode(observation.bytes[0] ?? 0) ===
               RUNTIME_GUEST_FRAME_TAGS_V117.deadlineExceeded &&
             !hasBoundedTerminationReceipt(request, observation)
@@ -606,7 +629,7 @@ export const executeStrategyRuntimeAbiV117 = (
               "WALL_DEADLINE_EXCEEDED",
               "TERMINATION_RECEIPT_UNAVAILABLE",
             ])
-        : classifyGuestFrame(request, observation.bytes)
+          : classifyGuestFrame(request, observation.bytes)
       : systemFailure(request, observation.code, observation.retryable)
 
   if (!hasCompleteAccounting(execution.receiptEvidence)) {

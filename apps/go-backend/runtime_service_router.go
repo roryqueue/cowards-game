@@ -48,7 +48,7 @@ func (router *runtimeServiceExecutionRouter) executeMatch(
 	router.v117.semanticReceiptSecret = router.semanticReceiptSecret
 	switch request.ContractVersion {
 	case runtimeExecutionServiceVersion:
-		if request.V116 == nil || request.V117 != nil || request.V116.ContractVersion != runtimeExecutionServiceVersion {
+		if router.currentContractVersion() != runtimeExecutionServiceVersion || request.V116 == nil || request.V117 != nil || request.V116.ContractVersion != runtimeExecutionServiceVersion {
 			return nil, newRuntimeServiceFailure("RuntimeServiceContractMismatch", "Historical runtime service request binding is invalid", false, nil)
 		}
 		response, failure := router.v116.executeMatch(ctx, *request.V116)

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
 import {
+  CURRENT_CANONICAL_COMPATIBILITY_TUPLE_RECORD,
   validateCanonicalTransition,
   type CanonicalCompatibilityTuple,
   type CanonicalKernelSemanticTransition,
@@ -19,17 +20,11 @@ import type { MatchMachine } from "./types.js"
 const MISSING_AUTHORITY_MARKER =
   "[EXPECTED_RED:MISSING_KERNEL_AUTHORITY]" as const
 
-const EXPECTED_CANDIDATE_TUPLE = {
-  rules: "cowards-rules-v1.4",
-  engine: "engine-kernel-v1.37-candidate-1",
-  runtimeAbi: "strategy-runtime-abi-v1.14",
-  chronicle: "chronicle-recorder-current-events-v1.37-candidate-1",
-  arenaCatalog: "semantic-arena-catalog-v1.37-candidate-1",
-  setPolicy: "canonical-set-policy-v1.4",
-} as const satisfies CanonicalCompatibilityTuple
+const EXPECTED_CANDIDATE_TUPLE =
+  CURRENT_CANONICAL_COMPATIBILITY_TUPLE_RECORD.tuple satisfies Readonly<CanonicalCompatibilityTuple>
 
 const EXPECTED_CANDIDATE_TUPLE_ID =
-  "sha256:922a6857fdbc8354b744d6e766bff216f3fee85b5ed381355cb427f5a616b3ae" as const
+  CURRENT_CANONICAL_COMPATIBILITY_TUPLE_RECORD.tupleId
 
 const matchInput = {
   matchId: "phase-257-kernel-contract",

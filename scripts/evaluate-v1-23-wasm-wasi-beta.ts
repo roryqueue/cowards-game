@@ -2,10 +2,7 @@
 import { readFileSync, writeFileSync } from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
-import {
-  STRATEGY_RUNTIME_ABI_VERSION,
-  type StrategyRevision,
-} from "../packages/spec/src/index.ts"
+import { type StrategyRevision } from "../packages/spec/src/index.ts"
 import {
   buildRustStrategyRevision,
   buildZigStrategyRevision,
@@ -20,6 +17,7 @@ import {
   createWasmWasiRuntimeFromRevision,
   runWasmWasiStrategyMethodSync,
 } from "../packages/runtime-wasm-wasi/src/wasm-wasi-subprocess-adapter.ts"
+import { projectSelectedRuntimeAbiSource } from "./project-selected-runtime-abi-source.js"
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const repoRoot = path.resolve(__dirname, "..")
@@ -78,7 +76,7 @@ const stableValue = (value: unknown): unknown => {
 const serialize = (value: unknown): string =>
   `${JSON.stringify(stableValue(value), null, 2)}\n`
 
-const rustSource = `
+const rustSourceV114 = `
 use std::io::{self, Read};
 
 fn first_active_soldier_id(input: &str) -> Option<&str> {
@@ -106,7 +104,7 @@ fn main() {
 }
 `
 
-const zigHelperSource = `
+const zigHelperSourceV114 = `
 const Iovec = extern struct { buf: [*]u8, buf_len: usize };
 const Ciovec = extern struct { buf: [*]const u8, buf_len: usize };
 
@@ -173,12 +171,18 @@ export fn _start() void {
 }
 `
 
+const rustSource = projectSelectedRuntimeAbiSource(rustSourceV114)
+const zigHelperSource = projectSelectedRuntimeAbiSource(zigHelperSourceV114)
+
 const invalidJsonSource = `fn main() { println!("not-json"); }`
-const invalidActionSource = `
+const invalidActionSourceV114 = `
 fn main() {
     println!(r#"{{"ok":true,"abiVersion":"strategy-runtime-abi-v1.14","value":{{"action":{{"type":"NOT_AN_ACTION"}},"soldierMemory":null}}}}"#);
 }
 `
+const invalidActionSource = projectSelectedRuntimeAbiSource(
+  invalidActionSourceV114,
+)
 const panicSource = `fn main() { panic!("probe panic"); }`
 const infiniteLoopSource = `fn main() { loop {} }`
 const oversizedStdoutSource = `fn main() { println!("{}", "x".repeat(65536)); }`

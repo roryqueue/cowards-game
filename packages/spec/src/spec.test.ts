@@ -96,6 +96,7 @@ import {
   RUNTIME_SEMANTIC_RECEIPT_PROFILE,
   RUNTIME_SEMANTIC_RECEIPT_SCHEMA_VERSION,
 } from "./runtime-execution-service.js"
+import { HISTORICAL_RUNTIME_EXECUTION_SERVICE_V1_16 } from "./runtime-execution-service-v1-16-compat.js"
 import { CANONICAL_COMPATIBILITY_TUPLES } from "./integrity-authority.js"
 import { COMPATIBILITY_VERSIONS } from "./versions.js"
 import { STRATEGY_SOURCE_BYTES } from "./constants.js"
@@ -2334,15 +2335,23 @@ describe("Coward's Game spec contracts", () => {
     )
   })
 
-  it("publishes the v1.16 Strategy Execution Service / Runtime Broker boundary contract", () => {
+  it("publishes the immutable v1.16 Strategy Execution Service / Runtime Broker boundary contract", () => {
+    expect(HISTORICAL_RUNTIME_EXECUTION_SERVICE_V1_16).toMatchObject({
+      runtimeServiceVersion: "runtime-execution-service-v1.16",
+      runtimeAbiVersion: "strategy-runtime-abi-v1.14",
+      semanticReceiptVersion: "runtime-semantic-receipt-v1",
+      canonicalJsonVersion: "legacy-json-stringify-v1.16",
+      semanticTupleId:
+        "sha256:922a6857fdbc8354b744d6e766bff216f3fee85b5ed381355cb427f5a616b3ae",
+    })
     expect(RUNTIME_EXECUTION_SERVICE_VERSION).toBe(
-      "runtime-execution-service-v1.16",
+      HISTORICAL_RUNTIME_EXECUTION_SERVICE_V1_16.runtimeServiceVersion,
     )
     expect(RUNTIME_EXECUTION_SERVICE_BOUNDARY_CONTRACT).toMatchObject({
       publicName: "Strategy Execution Service / Runtime Broker",
       currentImplementationLabel: "isolated JS/TS runtime service",
-      contractVersion: "runtime-execution-service-v1.16",
-      runtimeAbiVersion: "strategy-runtime-abi-v1.14",
+      contractVersion:
+        HISTORICAL_RUNTIME_EXECUTION_SERVICE_V1_16.runtimeServiceVersion,
     })
     expect(RUNTIME_EXECUTION_SERVICE_CURRENT_IMPLEMENTATION).toMatchObject({
       label: "isolated JS/TS runtime service",

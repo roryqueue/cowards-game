@@ -4,11 +4,12 @@ import { createHash } from "node:crypto"
 import { describe, expect, it } from "vitest"
 import {
   RUNTIME_INVOCATION_V1_17_TEST_KEY_ID,
-  createAuthenticatedRuntimeInvocationRequestV117,
+  STRATEGY_RUNTIME_ABI_VERSION,
+  createSelectedRuntimeInvocationRequestV117,
   createRuntimeAbiV117ExecutionLedger,
   createRuntimeInvocationBudgetV117,
   serializeRuntimeInvocationRequestV117,
-  verifyRuntimeInvocationRequestV117,
+  verifySelectedRuntimeInvocationRequestV117,
   verifyRuntimeInvocationResponseV117,
   type AuthenticatedRuntimeInvocationRequestV117,
   type AwarenessCell,
@@ -29,6 +30,9 @@ import { SubprocessSystemFailure } from "./subprocess-ipc.js"
 import { createWorkerThreadStrategyExecutionAdapter } from "./worker-thread-adapter.js"
 import { registerCandidateEvidenceFixture } from "./candidate-evidence-fixture.js"
 import { encodeCandidateHostEnvelopeV117 } from "./candidate-host-envelope.js"
+
+const legacyRuntimeIsSelected =
+  String(STRATEGY_RUNTIME_ABI_VERSION) === "strategy-runtime-abi-v1.14"
 
 const bottomSoldier: SoldierSnapshot = {
   id: "bottom-1",
@@ -350,7 +354,7 @@ const candidateIdentity: RuntimeInvocationSigningIdentityV117 = {
 const candidateHash = (value: string): `sha256:${string}` =>
   `sha256:${createHash("sha256").update(value).digest("hex")}`
 
-const expectedCandidateRequest = createAuthenticatedRuntimeInvocationRequestV117(
+const expectedCandidateRequest = createSelectedRuntimeInvocationRequestV117(
   {
     requestId: "request:runtime-js:hostile:v1.17",
     invocationId: "invocation:runtime-js:hostile:v1.17",
@@ -385,7 +389,10 @@ const expectedCandidateRequest = createAuthenticatedRuntimeInvocationRequestV117
 const candidateRequestBytes = serializeRuntimeInvocationRequestV117(
   expectedCandidateRequest,
 )
-const admittedCandidateRequest = verifyRuntimeInvocationRequestV117(candidateRequestBytes, candidateIdentity)
+const admittedCandidateRequest = verifySelectedRuntimeInvocationRequestV117(
+  candidateRequestBytes,
+  candidateIdentity,
+)
 if (admittedCandidateRequest.kind !== "success") {
   throw new Error("candidate request fixture failed runtime-js test admission")
 }
@@ -416,9 +423,8 @@ const completeCandidateEvidence =
           status: "measured" as const,
           delta: counter === "stderrBytes" ? 0 : 1,
           cumulative:
-            prestate.cumulative[
-              counter as keyof typeof prestate.cumulative
-            ] + (counter === "stderrBytes" ? 0 : 1),
+            prestate.cumulative[counter as keyof typeof prestate.cumulative] +
+            (counter === "stderrBytes" ? 0 : 1),
         },
       ]),
     ) as RuntimeInvocationExecutionReceiptEvidenceV117["counters"]
@@ -507,8 +513,7 @@ const executeCandidate = (
           wallMilliseconds: {
             status: "measured" as const,
             delta: wallMilliseconds,
-            cumulative:
-              prestate.cumulative.wallMilliseconds + wallMilliseconds,
+            cumulative: prestate.cumulative.wallMilliseconds + wallMilliseconds,
           },
           payloadBytes: {
             status: "measured" as const,
@@ -593,6 +598,16 @@ describe("hostile Strategy matrix", () => {
           return
         }
         expect(result.ok).toBe(false)
+        if (
+          !legacyRuntimeIsSelected &&
+          revision.validation.valid &&
+          !hostileCase.forgeValidRevision
+        ) {
+          expect(result).toMatchObject({
+            systemFailure: { code: "MALFORMED_IPC", retryable: false },
+          })
+          return
+        }
         if (!result.ok) {
           expect(hostileCase.expectedViolations).toContain(
             result.violation.type,
@@ -619,11 +634,7 @@ describe("hostile Strategy matrix", () => {
         )
       }
 
-      const result = executeCandidate(
-        stdout,
-        {},
-        completeCandidateEvidence(),
-      )
+      const result = executeCandidate(stdout, {}, completeCandidateEvidence())
 
       expect(result.kind).toBe("success")
       if (result.kind !== "success") return

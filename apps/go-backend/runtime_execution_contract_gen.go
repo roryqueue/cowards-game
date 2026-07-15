@@ -166,7 +166,7 @@ func runtimeInvocationContractForVersion(version string) (runtimeInvocationContr
 			ResponseSHA256:  "9c870d57e0125eb80ab2ba941ecbbede8a9a775f61c0b278abec25c491374d97",
 			Historical:      true,
 			CanonicalJSON:   false,
-			Current:         true,
+			Current:         selectedRuntimeServiceContractVersion() == runtimeExecutionServiceVersion,
 		}, true
 	case "runtime-invocation-v1.17":
 		return runtimeInvocationContractDescriptor{
@@ -184,7 +184,7 @@ func runtimeInvocationContractForVersion(version string) (runtimeInvocationContr
 			ResponseSHA256:     "2d6c99e31347e5eda3d20c841f35b3d564943589598900b8bc32f1246bf331e1",
 			Historical:         false,
 			CanonicalJSON:      true,
-			Current:            false,
+			Current:            selectedRuntimeServiceContractVersion() == runtimeExecutionServiceVersionV117,
 			ReceiptClaimSHA256: "9ee9f3c5dacce0b1144619ebd4e68e983db53e42f6f22c8bd28b63755fce357c",
 			ReceiptSignature:   "hmac-sha256:f3a957338996f384238c74fb51d041f75888c19af9f30f47c5208bd0c1733bd5",
 		}, true

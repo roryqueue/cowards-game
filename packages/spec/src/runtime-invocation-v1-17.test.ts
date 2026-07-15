@@ -8,6 +8,7 @@ import { frameCanonicalIdentity } from "./canonical-identity-domains.js"
 import type { JsonValue } from "./types.js"
 import {
   RUNTIME_INVOCATION_V1_17_CANDIDATE,
+  RUNTIME_INVOCATION_V1_17_SELECTED_LIFECYCLE,
   RUNTIME_INVOCATION_V1_17_OWNERSHIP_MATRIX,
   RUNTIME_INVOCATION_V1_17_PLAYER_VIOLATIONS,
   RUNTIME_INVOCATION_V1_17_SYSTEM_FAILURE_CODES,
@@ -17,6 +18,7 @@ import {
   RuntimeInvocationResultV117Schema,
   classifyRuntimeInvocationV117,
   createAuthenticatedRuntimeInvocationRequestV117,
+  createSelectedRuntimeInvocationRequestV117,
   createAuthenticatedRuntimeInvocationResponseV117,
   createRuntimeInvocationBudgetV117,
   createRuntimeInvocationExecutionReceiptV117,
@@ -25,6 +27,7 @@ import {
   serializeRuntimeInvocationRequestV117,
   serializeRuntimeInvocationResponseV117,
   verifyRuntimeInvocationRequestV117,
+  verifySelectedRuntimeInvocationRequestV117,
   verifyRuntimeInvocationResponseV117,
   type AuthenticatedRuntimeInvocationRequestV117,
   type RuntimeInvocationExecutionReceiptEvidenceV117,
@@ -33,6 +36,7 @@ import {
   type RuntimeInvocationTraceV117,
 } from "./runtime-invocation-v1-17.js"
 import { RUNTIME_EXECUTION_SERVICE_VERSION } from "./runtime-execution-service.js"
+import { HistoricalStrategyRevisionV114Schema } from "./runtime-execution-service-v1-16-compat.js"
 import { STRATEGY_RUNTIME_ABI_VERSION } from "./versions.js"
 import { RUNTIME_ABI_V1_17_BUDGET_PROFILE_SHA256 } from "./runtime-budget-profile-v1-17.js"
 import { RUNTIME_BUDGET_CAPABILITY_CONTRACT_V1_17 } from "./runtime-budget-capabilities-v1-17.js"
@@ -99,6 +103,33 @@ const candidateRequest = (
       secret: fixtureSecret,
     },
   )
+
+const selectedRequest = (
+  method: "selectActivations" | "soldierBrain" = "selectActivations",
+): AuthenticatedRuntimeInvocationRequestV117 => {
+  const candidate = candidateRequest(method)
+  const { tupleId: _tupleId, ...semanticTuple } = candidate.semanticTuple
+  const { profileSha256: _profileSha256, ...budget } = candidate.budget
+  const { identitySha256: _identitySha256, ...retry } = candidate.retry
+  return createSelectedRuntimeInvocationRequestV117(
+    {
+      requestId: candidate.requestId,
+      invocationId: candidate.invocationId,
+      kernelRequestId: candidate.kernelRequestId,
+      method: candidate.method,
+      semanticTuple,
+      sourceIdentity: candidate.sourceIdentity,
+      budget,
+      accounting: { prestate: candidate.accounting.prestate },
+      input: { value: candidate.input.value },
+      retry,
+    },
+    {
+      keyId: RUNTIME_INVOCATION_V1_17_TEST_KEY_ID,
+      secret: fixtureSecret,
+    },
+  )
+}
 
 const measuredEvidenceFor = (
   request: AuthenticatedRuntimeInvocationRequestV117,
@@ -875,9 +906,52 @@ describe("runtime invocation v1.17 exclusive ownership", () => {
       contractVersion: "runtime-invocation-v1.17",
       runtimeAbiVersion: "strategy-runtime-abi-v1.17",
       activationPlan: "258-14",
+      current: false,
+      lifecycle: "inactive-candidate",
+    })
+    expect(RUNTIME_INVOCATION_V1_17_SELECTED_LIFECYCLE).toMatchObject({
+      contractVersion: "runtime-invocation-v1.17",
+      runtimeAbiVersion: "strategy-runtime-abi-v1.17",
+      activationPlan: "258-14",
       current: selected,
       lifecycle: selected ? "active-current" : "inactive-candidate",
     })
+  })
+
+  it("binds immutable candidate and executable selected admission separately", () => {
+    const identity = {
+      keyId: RUNTIME_INVOCATION_V1_17_TEST_KEY_ID,
+      secret: fixtureSecret,
+    } as const
+    const candidate = candidateRequest()
+    const selected = selectedRequest()
+    const candidateAsCandidate = verifyRuntimeInvocationRequestV117(
+      serializeRuntimeInvocationRequestV117(candidate),
+      identity,
+    )
+    const selectedAsSelected = verifySelectedRuntimeInvocationRequestV117(
+      serializeRuntimeInvocationRequestV117(selected),
+      identity,
+    )
+    expect(candidateAsCandidate.kind).toBe("success")
+    expect(selectedAsSelected.kind).toBe("success")
+
+    const candidateAsSelected = verifySelectedRuntimeInvocationRequestV117(
+      serializeRuntimeInvocationRequestV117(candidate),
+      identity,
+    )
+    const selectedAsCandidate = verifyRuntimeInvocationRequestV117(
+      serializeRuntimeInvocationRequestV117(selected),
+      identity,
+    )
+    const selectedIsCandidate =
+      RUNTIME_INVOCATION_V1_17_SELECTED_LIFECYCLE.current === false
+    expect(candidateAsSelected.kind).toBe(
+      selectedIsCandidate ? "success" : "system_failure",
+    )
+    expect(selectedAsCandidate.kind).toBe(
+      selectedIsCandidate ? "success" : "system_failure",
+    )
   })
 
   it("classifies the complete boundary matrix with one exact owner", () => {
@@ -1473,7 +1547,11 @@ describe("runtime invocation v1.17 authenticated candidate wire", () => {
     expect(RUNTIME_EXECUTION_SERVICE_VERSION).toBe(
       "runtime-execution-service-v1.16",
     )
-    expect(RUNTIME_INVOCATION_V1_17_CANDIDATE.current).toBe(
+    expect(RUNTIME_INVOCATION_V1_17_CANDIDATE).toMatchObject({
+      lifecycle: "inactive-candidate",
+      current: false,
+    })
+    expect(RUNTIME_INVOCATION_V1_17_SELECTED_LIFECYCLE.current).toBe(
       String(STRATEGY_RUNTIME_ABI_VERSION) ===
         String(RUNTIME_INVOCATION_V1_17_CANDIDATE.runtimeAbiVersion),
     )
@@ -1498,6 +1576,28 @@ describe("runtime invocation v1.17 authenticated candidate wire", () => {
           .digest("hex"),
         relativePath,
       ).toBe(expected)
+    }
+    const historicalRequest = JSON.parse(
+      readFileSync(
+        path.join(
+          repoRoot,
+          "packages/spec/artifacts/runtime-execution-service-request.v1.16.json",
+        ),
+        "utf8",
+      ),
+    ) as { strategies: { bottom: unknown; top: unknown } }
+    for (const revision of [
+      historicalRequest.strategies.bottom,
+      historicalRequest.strategies.top,
+    ]) {
+      const before = JSON.stringify(revision)
+      expect(
+        HistoricalStrategyRevisionV114Schema.safeParse(revision).success,
+      ).toBe(true)
+      expect(JSON.stringify(revision)).toBe(before)
+      expect(
+        (revision as { runtime: { abiVersion: string } }).runtime.abiVersion,
+      ).toBe("strategy-runtime-abi-v1.14")
     }
   })
 

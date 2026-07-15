@@ -183,10 +183,22 @@ export interface PublicStrategyCardDto {
   replayLinks: string[]
 }
 
-export type PublicStrategyRuntimeMetadata = Omit<
+type CurrentPublicStrategyRuntimeMetadata = Omit<
   StrategyRuntimeMetadata,
   "limits"
 >
+
+export type HistoricalPublicStrategyRuntimeMetadataV114 = Omit<
+  StrategyRuntimeMetadata,
+  "limits" | "abiVersion"
+> & {
+  abiVersion: "strategy-runtime-abi-v1.14"
+}
+
+/** Read-only public metadata may describe immutable v1.14 evidence. */
+export type PublicStrategyRuntimeMetadata =
+  | CurrentPublicStrategyRuntimeMetadata
+  | HistoricalPublicStrategyRuntimeMetadataV114
 
 export interface CompetitionScoringPolicy {
   id: "exhibition-points-v1"

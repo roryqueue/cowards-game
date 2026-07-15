@@ -22,12 +22,15 @@ import {
   validateZigStrategySource,
 } from "../packages/runtime-wasm-wasi/src/index.ts"
 import {
-  STRATEGY_RUNTIME_ABI_VERSION,
   STRATEGY_RUNTIME_ADAPTER_REGISTRY,
   STRATEGY_LANGUAGE_REGISTRY,
   assertPublicOutputLeakSafe,
   type StrategyRevision,
 } from "../packages/spec/src/index.ts"
+import {
+  HISTORICAL_RUNTIME_ABI_V1_14,
+  projectSelectedRuntimeAbiSource,
+} from "./project-selected-runtime-abi-source.js"
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const repoRoot = path.resolve(__dirname, "..")
@@ -269,7 +272,7 @@ def soldier_brain(input):
     }
 `
 
-const rustSource = `
+const rustSourceV114 = `
 use std::io::{self, Read};
 
 fn first_active_soldier_id(input: &str) -> Option<&str> {
@@ -297,7 +300,7 @@ fn main() {
 }
 `
 
-const zigSource = `
+const zigSourceV114 = `
 const Iovec = extern struct { buf: [*]u8, buf_len: usize };
 const Ciovec = extern struct { buf: [*]const u8, buf_len: usize };
 
@@ -340,6 +343,9 @@ export fn _start() void {
     }
 }
 `
+
+const rustSource = projectSelectedRuntimeAbiSource(rustSourceV114)
+const zigSource = projectSelectedRuntimeAbiSource(zigSourceV114)
 
 const runtimeFailureCode = (revision: StrategyRevision): string => {
   const response = runWasmWasiStrategyMethodSync({
@@ -985,7 +991,9 @@ const buildOutputs = () => {
     milestone: "v1.24",
     generatedAt,
     activeAbi: "wasi-preview1-stdin-stdout-json",
-    runtimeAbiVersion: STRATEGY_RUNTIME_ABI_VERSION,
+    // This serialized v1.24 report is immutable historical evidence. Live
+    // probes above execute the separately projected selected-current sources.
+    runtimeAbiVersion: HISTORICAL_RUNTIME_ABI_V1_14,
     languageRegistry: STRATEGY_LANGUAGE_REGISTRY.map((language) => ({
       id: language.id,
       enabledForNormalPlay: language.enabledForNormalPlay,

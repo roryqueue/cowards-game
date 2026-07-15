@@ -5,14 +5,20 @@ import { join } from "node:path"
 import { describe, expect, it } from "vitest"
 import {
   DEFAULT_RUNTIME_LIMITS,
+  HISTORICAL_RUNTIME_EXECUTION_SERVICE_V1_16,
   INITIAL_BOUNDS,
   RUNTIME_ABI_V1_17_BUDGET_PROFILE_SHA256,
   RUNTIME_EXECUTION_SERVICE_VERSION,
   RUNTIME_INVOCATION_V1_17_INITIAL_EXECUTION_LEDGER_ROOT,
   RUNTIME_INVOCATION_V1_17_PLAYER_VIOLATIONS,
   RUNTIME_INVOCATION_V1_17_TEST_KEY_ID,
+  STRATEGY_RUNTIME_ABI_VERSION,
   RuntimeExecutionServiceRequestSchema,
-  createAuthenticatedRuntimeInvocationRequestV117,
+  HistoricalRuntimeExecutionServiceRequestV116Schema,
+  HistoricalRuntimeExecutionServiceResponseV116Schema,
+  isExactCommittedRuntimeExecutionServiceRequestV116,
+  verifyHistoricalRuntimeExecutionServiceV116ProtectedBytes,
+  createSelectedRuntimeInvocationRequestV117,
   createAuthenticatedRuntimeInvocationResponseV117,
   createRuntimeAbiV117ExecutionLedger,
   createRuntimeInvocationBudgetV117,
@@ -47,8 +53,11 @@ import {
   executeRuntimeServiceRequest as executeRuntimeServiceRequestWithAuthority,
   executeCandidateRuntimeInvocationV117,
   executePreparedRuntimeServiceRequestV117,
-  type RuntimeExecutionServiceDependencies,
 } from "./execute-match.js"
+import {
+  executeNestedMatchServiceTestSupport,
+  type NestedMatchServiceTestOverrides,
+} from "./runtime-execution-nested-match.test-support.js"
 import {
   createFixtureRuntimeEvidenceAuthorityLoader,
   createFixtureRuntimeExecutionAuthorityContext,
@@ -58,6 +67,7 @@ import {
 import {
   createRuntimeServiceConfig,
   RuntimeServiceConfigError,
+  selectedRuntimeServiceContract,
 } from "./runtime-config.js"
 import { admitStrategyPayloadBytesV117 } from "./server.js"
 import {
@@ -76,10 +86,16 @@ const runtimeConfig = createRuntimeServiceConfig({
 const executeRuntimeServiceRequest = (
   rawRequest: unknown,
   config = runtimeConfig,
-  dependencies: Partial<RuntimeExecutionServiceDependencies> = {},
+  dependencies: NestedMatchServiceTestOverrides = {},
 ) => {
-  const parsed = RuntimeExecutionServiceRequestSchema.safeParse(rawRequest)
-  return executeRuntimeServiceRequestWithAuthority(rawRequest, config, {
+  const selected = RuntimeExecutionServiceRequestSchema.safeParse(rawRequest)
+  const historical = isExactCommittedRuntimeExecutionServiceRequestV116(
+    rawRequest,
+  )
+    ? HistoricalRuntimeExecutionServiceRequestV116Schema.safeParse(rawRequest)
+    : selected
+  const parsed = selected.success ? selected : historical
+  return executeNestedMatchServiceTestSupport(rawRequest, config, {
     ...dependencies,
     ...(parsed.success
       ? {
@@ -121,15 +137,22 @@ const preparedSuccessorTemplate = (() => {
             ]),
     }),
   )
-  const binding = (domain: (typeof SUCCESSOR_RUNTIME_IDENTITY_TEMPLATE_DOMAINS_V117)[number]) =>
-    bindings.find((candidate) => candidate.domain === domain)!
+  const binding = (
+    domain: (typeof SUCCESSOR_RUNTIME_IDENTITY_TEMPLATE_DOMAINS_V117)[number],
+  ) => bindings.find((candidate) => candidate.domain === domain)!
   const exactPins = [
-    ["runtimeExecutableDigest", `sha256:${binding("runtimeExecutable").sha256}`],
+    [
+      "runtimeExecutableDigest",
+      `sha256:${binding("runtimeExecutable").sha256}`,
+    ],
     ["reportedVersion", "fixture-runtime-v1"],
     ["targetAbi", "fixture-target-abi"],
     ["compilerFlags", hash("5")],
     ["adapterBuildDigest", `sha256:${binding("adapterBuild").sha256}`],
-    ["standardLibraryOrSysrootDigest", `sha256:${binding("sysrootStdlib").sha256}`],
+    [
+      "standardLibraryOrSysrootDigest",
+      `sha256:${binding("sysrootStdlib").sha256}`,
+    ],
     ["containmentPolicyId", binding("containmentPolicy").publicId],
     ["budgetProfileSha256", RUNTIME_ABI_V1_17_BUDGET_PROFILE_SHA256],
     ["canonicalJsonProfileId", "canonical-json-v1.1"],
@@ -204,7 +227,7 @@ const candidateRequest = (
     prestate: RuntimeAbiV117ExecutionLedger
   }> = {},
 ): AuthenticatedRuntimeInvocationRequestV117 => {
-  return createAuthenticatedRuntimeInvocationRequestV117(
+  return createSelectedRuntimeInvocationRequestV117(
     {
       requestId: "request:service-candidate:v1.17",
       invocationId:
@@ -438,14 +461,14 @@ fn main() {
     let mut input = String::new();
     let _ = io::stdin().read_to_string(&mut input);
     if input.contains("\\"methodName\\":\\"soldierBrain\\"") {
-        println!(r#"{{"ok":true,"abiVersion":"strategy-runtime-abi-v1.14","value":{{"action":{{"type":"TURN_TO_STONE"}},"soldierMemory":null}}}}"#);
+        println!(r#"{{"ok":true,"abiVersion":"${STRATEGY_RUNTIME_ABI_VERSION}","value":{{"action":{{"type":"TURN_TO_STONE"}},"soldierMemory":null}}}}"#);
     } else if let Some(soldier_id) = first_active_soldier_id(&input) {
         println!(
-            r#"{{"ok":true,"abiVersion":"strategy-runtime-abi-v1.14","value":{{"activationOrders":[{{"soldierId":"{}","objective":{{"stance":"stone"}}}}],"strategyMemory":null}}}}"#,
+            r#"{{"ok":true,"abiVersion":"${STRATEGY_RUNTIME_ABI_VERSION}","value":{{"activationOrders":[{{"soldierId":"{}","objective":{{"stance":"stone"}}}}],"strategyMemory":null}}}}"#,
             soldier_id
         );
     } else {
-        println!(r#"{{"ok":true,"abiVersion":"strategy-runtime-abi-v1.14","value":{{"activationOrders":[],"strategyMemory":null}}}}"#);
+        println!(r#"{{"ok":true,"abiVersion":"${STRATEGY_RUNTIME_ABI_VERSION}","value":{{"activationOrders":[],"strategyMemory":null}}}}"#);
     }
 }
 `
@@ -487,9 +510,9 @@ export fn _start() void {
     var nread: usize = 0;
     _ = fd_read(0, &iov, 1, &nread);
     if (contains(input_buf[0..nread], "\\"methodName\\":\\"soldierBrain\\"")) {
-        writeAll("{\\"ok\\":true,\\"abiVersion\\":\\"strategy-runtime-abi-v1.14\\",\\"value\\":{\\"action\\":{\\"type\\":\\"TURN_TO_STONE\\"},\\"soldierMemory\\":null}}\\n");
+        writeAll("{\\"ok\\":true,\\"abiVersion\\":\\"${STRATEGY_RUNTIME_ABI_VERSION}\\",\\"value\\":{\\"action\\":{\\"type\\":\\"TURN_TO_STONE\\"},\\"soldierMemory\\":null}}\\n");
     } else {
-        writeAll("{\\"ok\\":true,\\"abiVersion\\":\\"strategy-runtime-abi-v1.14\\",\\"value\\":{\\"activationOrders\\":[],\\"strategyMemory\\":null}}\\n");
+        writeAll("{\\"ok\\":true,\\"abiVersion\\":\\"${STRATEGY_RUNTIME_ABI_VERSION}\\",\\"value\\":{\\"activationOrders\\":[],\\"strategyMemory\\":null}}\\n");
     }
 }
 `
@@ -564,7 +587,9 @@ describe("runtime execution service", () => {
     const bottomSuccessor = preparedSuccessorIdentity(
       currentRequest.strategies.bottom,
     )
-    const topSuccessor = preparedSuccessorIdentity(currentRequest.strategies.top)
+    const topSuccessor = preparedSuccessorIdentity(
+      currentRequest.strategies.top,
+    )
     const bottomRoots = bottomSuccessor.request
     const topRoots = topSuccessor.request
     const preparedRuntimeConfig = createRuntimeServiceConfig({
@@ -765,12 +790,7 @@ describe("runtime execution service", () => {
       semanticReceiptSecret: "fixture-semantic-receipt-secret-v1",
     })
     expect(config.metadata.id).toBe("worker-thread")
-    expect(config.contractSelection).toEqual({
-      runtimeAbiVersion: "strategy-runtime-abi-v1.14",
-      runtimeServiceVersion: "runtime-execution-service-v1.16",
-      semanticReceiptVersion: "runtime-semantic-receipt-v1",
-      canonicalJsonVersion: "legacy-json-stringify-v1.16",
-    })
+    expect(config.contractSelection).toEqual(selectedRuntimeServiceContract())
   })
 
   it("validates and executes a complete request as a schema-valid success", () => {
@@ -813,18 +833,146 @@ describe("runtime execution service", () => {
     expect(response.result.privacy).toBe("internal_runtime_result")
   })
 
+  it("keeps nested Match-shape test support outside production imports", () => {
+    const sourceDirectory = new URL(".", import.meta.url).pathname
+    const productionSources = readdirSync(sourceDirectory).filter(
+      (name) =>
+        name.endsWith(".ts") &&
+        !name.endsWith(".test.ts") &&
+        !name.endsWith(".test-support.ts"),
+    )
+    for (const source of productionSources) {
+      expect(readFileSync(join(sourceDirectory, source), "utf8")).not.toContain(
+        "runtime-execution-nested-match.test-support",
+      )
+    }
+    const workerBarrel = readFileSync(
+      new URL("../../../packages/runtime-js/src/worker.ts", import.meta.url),
+      "utf8",
+    )
+    expect(workerBarrel).not.toContain(
+      "createNestedMatchShapeRuntimeFromRevisionTestSupport",
+    )
+    const pythonBarrel = readFileSync(
+      new URL("../../../packages/runtime-python/src/index.ts", import.meta.url),
+      "utf8",
+    )
+    expect(pythonBarrel).not.toContain(
+      "createPythonNestedMatchShapeRuntimeTestSupport",
+    )
+    expect(pythonBarrel).not.toContain(
+      "runPythonNestedMatchShapeMethodSyncTestSupport",
+    )
+    const wasmBarrel = readFileSync(
+      new URL(
+        "../../../packages/runtime-wasm-wasi/src/index.ts",
+        import.meta.url,
+      ),
+      "utf8",
+    )
+    expect(wasmBarrel).not.toContain(
+      "createWasmWasiNestedMatchShapeRuntimeTestSupport",
+    )
+    expect(wasmBarrel).not.toContain(
+      "runWasmWasiNestedMatchShapeMethodSyncTestSupport",
+    )
+  })
+
   it("parses the shared v1.16 golden request fixture", () => {
+    const repoRoot = new URL("../../..", import.meta.url).pathname
+    for (const relativePath of Object.keys(
+      HISTORICAL_RUNTIME_EXECUTION_SERVICE_V1_16.protectedFiles,
+    ) as Array<
+      keyof typeof HISTORICAL_RUNTIME_EXECUTION_SERVICE_V1_16.protectedFiles
+    >) {
+      expect(
+        verifyHistoricalRuntimeExecutionServiceV116ProtectedBytes(
+          relativePath,
+          readFileSync(join(repoRoot, relativePath)),
+        ),
+      ).toBe(true)
+    }
     const fixture = JSON.parse(
       readFileSync(
         join(
-          new URL("../../..", import.meta.url).pathname,
+          repoRoot,
           "packages/spec/artifacts/runtime-execution-service-request.v1.16.json",
         ),
         "utf8",
       ),
     ) as unknown
 
-    expect(RuntimeExecutionServiceRequestSchema.parse(fixture)).toEqual(fixture)
+    expect(
+      HistoricalRuntimeExecutionServiceRequestV116Schema.parse(fixture),
+    ).toEqual(fixture)
+    expect(isExactCommittedRuntimeExecutionServiceRequestV116(fixture)).toBe(
+      true,
+    )
+    const response = executeRuntimeServiceRequestWithAuthority(
+      fixture,
+      runtimeConfig,
+    )
+    expect(response.ok).toBe(false)
+    if (response.ok) throw new Error("historical evidence executed gameplay")
+    expect(response.runtimeAbiVersion).toBe(
+      HISTORICAL_RUNTIME_EXECUTION_SERVICE_V1_16.runtimeAbiVersion,
+    )
+    expect(response).toMatchObject({
+      contractVersion:
+        HISTORICAL_RUNTIME_EXECUTION_SERVICE_V1_16.runtimeServiceVersion,
+      systemFailure: {
+        code: "EVIDENCE_UNVERIFIABLE",
+        retryable: true,
+      },
+    })
+    expect(
+      HistoricalRuntimeExecutionServiceResponseV116Schema.parse(response),
+    ).toEqual(response)
+
+    const committedResponse = JSON.parse(
+      readFileSync(
+        join(
+          repoRoot,
+          "packages/spec/artifacts/runtime-execution-service-response.v1.16.wire.json",
+        ),
+        "utf8",
+      ),
+    ) as unknown
+    const verifiedCommittedResponse =
+      HistoricalRuntimeExecutionServiceResponseV116Schema.parse(
+        committedResponse,
+      )
+    expect(verifiedCommittedResponse.ok).toBe(true)
+    if (!verifiedCommittedResponse.ok) {
+      throw new Error("committed historical response is not successful")
+    }
+    expect(verifiedCommittedResponse.result.semanticReceipt).toMatchObject({
+      serviceContractVersion:
+        HISTORICAL_RUNTIME_EXECUTION_SERVICE_V1_16.runtimeServiceVersion,
+      runtimeAbiVersion:
+        HISTORICAL_RUNTIME_EXECUTION_SERVICE_V1_16.runtimeAbiVersion,
+      compatibilityTupleId:
+        HISTORICAL_RUNTIME_EXECUTION_SERVICE_V1_16.semanticTupleId,
+    })
+
+    const uncommittedOldRequest = {
+      ...(fixture as Record<string, unknown>),
+      requestId: "runtime-request:uncommitted-old-abi",
+    }
+    expect(
+      isExactCommittedRuntimeExecutionServiceRequestV116(uncommittedOldRequest),
+    ).toBe(false)
+    if (
+      STRATEGY_RUNTIME_ABI_VERSION !==
+      HISTORICAL_RUNTIME_EXECUTION_SERVICE_V1_16.runtimeAbiVersion
+    ) {
+      expect(executeRuntimeServiceRequest(uncommittedOldRequest)).toMatchObject(
+        {
+          ok: false,
+          systemFailure: { code: "MALFORMED_REQUEST" },
+        },
+      )
+    }
   })
 
   it("accepts self-play where both sides use the same immutable Strategy Revision", () => {
@@ -1139,7 +1287,7 @@ describe("runtime execution service", () => {
 
   it("redacts system failure diagnostics from execution exceptions", () => {
     const response = executeRuntimeServiceRequest(requestFor(), runtimeConfig, {
-      createRuntimeForRevision() {
+      createAdmittedRuntimeForRevision() {
         throw new Error(
           `boom export default ${passiveSource} token=secret /Users/local/app.ts`,
         )
@@ -1576,7 +1724,7 @@ describe("runtime execution service v1.17 candidate bridge", () => {
 
   it("makes wrong binding a no-mutation system failure with safe output", () => {
     const request = candidateRequest()
-    const otherRequest = createAuthenticatedRuntimeInvocationRequestV117(
+    const otherRequest = createSelectedRuntimeInvocationRequestV117(
       {
         requestId: request.requestId,
         invocationId: request.invocationId,
@@ -1649,7 +1797,7 @@ describe("runtime execution service v1.17 candidate bridge", () => {
     const request = candidateRequest()
     const admittedSnapshot = globalThis.structuredClone(request)
     const originalBytes = serializeRuntimeInvocationRequestV117(request)
-    const mutated = createAuthenticatedRuntimeInvocationRequestV117(
+    const mutated = createSelectedRuntimeInvocationRequestV117(
       {
         requestId: request.requestId,
         invocationId: request.invocationId,

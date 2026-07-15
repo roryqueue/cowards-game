@@ -16,7 +16,9 @@ import {
 } from "./python-subprocess-adapter.js"
 import {
   RUNTIME_INVOCATION_V1_17_TEST_KEY_ID,
+  STRATEGY_RUNTIME_ABI_VERSION,
   createAuthenticatedRuntimeInvocationRequestV117,
+  createSelectedRuntimeInvocationRequestV117,
   createRuntimeAbiV117ExecutionLedger,
   createRuntimeInvocationBudgetV117,
   serializeRuntimeInvocationRequestV117,
@@ -50,49 +52,65 @@ const candidateIdentity = {
   secret: "fixture-only:python-candidate-v1.17",
 } as const
 
-const candidateRequest = (
+const legacyPythonRuntimeIsSelected =
+  String(STRATEGY_RUNTIME_ABI_VERSION) === "strategy-runtime-abi-v1.14"
+
+const candidateRequestInput = (
   revision = buildPythonStrategyRevision({ source: pythonSource }),
-): AuthenticatedRuntimeInvocationRequestV117 => {
+): Parameters<typeof createSelectedRuntimeInvocationRequestV117>[0] => {
   const identity = buildPythonSourceIdentityV117(revision.source)
   const artifact = revision.metadata.sourceArtifact!
-  return createAuthenticatedRuntimeInvocationRequestV117(
-    {
-      requestId: "request:python:v1.17:1",
-      invocationId: "invocation:python:v1.17:1",
-      kernelRequestId: "kernel-request:python:v1.17:1",
-      method: "selectActivations",
-      semanticTuple: {
-        rules: "cowards-rules-v1.4",
-        engine: "engine-kernel-v1.37-candidate-1",
-        runtimeAbi: "strategy-runtime-abi-v1.17",
-        chronicle: "chronicle-recorder-current-events-v1.37-candidate-1",
-        arenaCatalog: "semantic-arena-catalog-v1.37-candidate-1",
-        setPolicy: "canonical-set-policy-v1.4",
-      },
-      sourceIdentity: {
-        strategyRevisionId: revision.id,
-        originalSourceSha256: identity.originalSourceSha256,
-        normalizedSourceSha256: identity.normalizedSourceSha256,
-        artifactSha256: `sha256:${artifact.hash}`,
-      },
-      budget: createRuntimeInvocationBudgetV117("selectActivations"),
-      accounting: { prestate: createRuntimeAbiV117ExecutionLedger() },
-      input: {
-        value: {
-          activationCount: 0,
-          mySoldiers: [],
-          strategyMemory: {},
-        },
-      },
-      retry: {
-        retryId: "retry:python:v1.17:1",
-        attempt: 0,
-        previousRequestSha256: null,
+  return {
+    requestId: "request:python:v1.17:1",
+    invocationId: "invocation:python:v1.17:1",
+    kernelRequestId: "kernel-request:python:v1.17:1",
+    method: "selectActivations",
+    semanticTuple: {
+      rules: "cowards-rules-v1.4",
+      engine: "engine-kernel-v1.37-candidate-1",
+      runtimeAbi: "strategy-runtime-abi-v1.17",
+      chronicle: "chronicle-recorder-current-events-v1.37-candidate-1",
+      arenaCatalog: "semantic-arena-catalog-v1.37-candidate-1",
+      setPolicy: "canonical-set-policy-v1.4",
+    },
+    sourceIdentity: {
+      strategyRevisionId: revision.id,
+      originalSourceSha256: identity.originalSourceSha256,
+      normalizedSourceSha256: identity.normalizedSourceSha256,
+      artifactSha256: `sha256:${artifact.hash}`,
+    },
+    budget: createRuntimeInvocationBudgetV117("selectActivations"),
+    accounting: { prestate: createRuntimeAbiV117ExecutionLedger() },
+    input: {
+      value: {
+        activationCount: 0,
+        mySoldiers: [],
+        strategyMemory: {},
       },
     },
+    retry: {
+      retryId: "retry:python:v1.17:1",
+      attempt: 0,
+      previousRequestSha256: null,
+    },
+  }
+}
+
+const candidateRequest = (
+  revision = buildPythonStrategyRevision({ source: pythonSource }),
+): AuthenticatedRuntimeInvocationRequestV117 =>
+  createSelectedRuntimeInvocationRequestV117(
+    candidateRequestInput(revision),
     candidateIdentity,
   )
-}
+
+const fixtureCandidateRequest = (
+  revision = buildPythonStrategyRevision({ source: pythonSource }),
+): AuthenticatedRuntimeInvocationRequestV117 =>
+  createAuthenticatedRuntimeInvocationRequestV117(
+    candidateRequestInput(revision),
+    candidateIdentity,
+  )
 
 const trustedEvidenceFor = (
   request: AuthenticatedRuntimeInvocationRequestV117,
@@ -284,7 +302,7 @@ describe("Python subprocess Strategy provider ABI", () => {
     "classifies %s as Strategy-owned invalid output",
     (_name, payloadBytes, kind, code) => {
       const revision = buildPythonStrategyRevision({ source: pythonSource })
-      const request = candidateRequest(revision)
+      const request = fixtureCandidateRequest(revision)
       const evidence = trustedEvidenceFor(request, {
         payloadBytes: payloadBytes.byteLength,
       })
@@ -355,61 +373,64 @@ describe("Python subprocess Strategy provider ABI", () => {
       "AMBIGUOUS_ATTRIBUTION",
       false,
     ],
-  ])("keeps %s in its exclusive owner", (_name, hostResult, kind, code, trusted) => {
-    const revision = buildPythonStrategyRevision({ source: pythonSource })
-    const request = candidateRequest(revision)
-    const evidence = trusted
-      ? trustedEvidenceFor(
-          request,
-          trusted === "timeout"
-            ? {
-                wallMilliseconds:
-                  request.budget.methodLimit.counters.wallMilliseconds.maximum +
-                  1,
-                payloadBytes: 0,
-              }
-            : { payloadBytes: 0 },
-        )
-      : undefined
-    const adapter = createPythonCandidateInvocationAdapterFixtureV117({
-      revision,
-      identity: candidateIdentity,
-      fixtureOnlyObservedExecution: () =>
-        fixtureExecution(
-          {
-            ...hostResult,
-            stdoutBytes:
-              evidence === undefined
-                ? 0
-                : measuredDelta(evidence.counters.stdoutBytes),
-            stderrBytes:
-              evidence === undefined
-                ? 0
-                : measuredDelta(evidence.counters.stderrBytes),
-          },
-          evidence,
-        ),
-    })
-    const response = verifyRuntimeInvocationResponseV117(
-      adapter(serializeRuntimeInvocationRequestV117(request)),
-      request,
-      candidateIdentity,
-    )
-    expect(response.kind).toBe("success")
-    if (response.kind === "success") {
-      expect(response.value.outcome.kind).toBe(kind)
-      expect(
-        response.value.outcome.kind === "player_violation"
-          ? response.value.outcome.violation.code
-          : response.value.outcome.kind === "system_failure"
-            ? response.value.outcome.failure.code
-            : undefined,
-      ).toBe(code)
-      expect(response.value.outcome).not.toHaveProperty(
-        kind === "system_failure" ? "violation" : "failure",
+  ])(
+    "keeps %s in its exclusive owner",
+    (_name, hostResult, kind, code, trusted) => {
+      const revision = buildPythonStrategyRevision({ source: pythonSource })
+      const request = fixtureCandidateRequest(revision)
+      const evidence = trusted
+        ? trustedEvidenceFor(
+            request,
+            trusted === "timeout"
+              ? {
+                  wallMilliseconds:
+                    request.budget.methodLimit.counters.wallMilliseconds
+                      .maximum + 1,
+                  payloadBytes: 0,
+                }
+              : { payloadBytes: 0 },
+          )
+        : undefined
+      const adapter = createPythonCandidateInvocationAdapterFixtureV117({
+        revision,
+        identity: candidateIdentity,
+        fixtureOnlyObservedExecution: () =>
+          fixtureExecution(
+            {
+              ...hostResult,
+              stdoutBytes:
+                evidence === undefined
+                  ? 0
+                  : measuredDelta(evidence.counters.stdoutBytes),
+              stderrBytes:
+                evidence === undefined
+                  ? 0
+                  : measuredDelta(evidence.counters.stderrBytes),
+            },
+            evidence,
+          ),
+      })
+      const response = verifyRuntimeInvocationResponseV117(
+        adapter(serializeRuntimeInvocationRequestV117(request)),
+        request,
+        candidateIdentity,
       )
-    }
-  })
+      expect(response.kind).toBe("success")
+      if (response.kind === "success") {
+        expect(response.value.outcome.kind).toBe(kind)
+        expect(
+          response.value.outcome.kind === "player_violation"
+            ? response.value.outcome.violation.code
+            : response.value.outcome.kind === "system_failure"
+              ? response.value.outcome.failure.code
+              : undefined,
+        ).toBe(code)
+        expect(response.value.outcome).not.toHaveProperty(
+          kind === "system_failure" ? "violation" : "failure",
+        )
+      }
+    },
+  )
 
   it("owns stale normalized artifact identity as no-penalty system failure", () => {
     const revision = buildPythonStrategyRevision({ source: pythonSource })
@@ -480,7 +501,7 @@ describe("Python subprocess Strategy provider ABI", () => {
     }
 
     for (const forged of [invalidUtf8, nonCanonicalBase64]) {
-      const request = candidateRequest(forged)
+      const request = fixtureCandidateRequest(forged)
       let hostCalled = false
       const response = verifyRuntimeInvocationResponseV117(
         createPythonCandidateInvocationAdapterFixtureV117({
@@ -579,7 +600,7 @@ describe("Python subprocess Strategy provider ABI", () => {
 
   it("owns malformed host base64 as transport failure without a player penalty", () => {
     const revision = buildPythonStrategyRevision({ source: pythonSource })
-    const request = candidateRequest(revision)
+    const request = fixtureCandidateRequest(revision)
     const adapter = createPythonCandidateInvocationAdapterFixtureV117({
       revision,
       identity: candidateIdentity,
@@ -621,7 +642,7 @@ describe("Python subprocess Strategy provider ABI", () => {
 
   it("admits the closed host-failure envelope as host-owned failure", () => {
     const revision = buildPythonStrategyRevision({ source: pythonSource })
-    const request = candidateRequest(revision)
+    const request = fixtureCandidateRequest(revision)
     const observation = admitPythonCandidateHostResponseV117(
       Buffer.from('{"kind":"host_failure"}'),
     )
@@ -650,7 +671,9 @@ describe("Python subprocess Strategy provider ABI", () => {
       expect(response.value.outcome).toMatchObject({
         kind: "system_failure",
         failure: { code: "HOST_CRASH" },
-        trace: { safeCodes: expect.arrayContaining(["RAW_HOST_CRASH_OBSERVED"]) },
+        trace: {
+          safeCodes: expect.arrayContaining(["RAW_HOST_CRASH_OBSERVED"]),
+        },
       })
       expect(response.value.accounting.disposition).toBe("no_commit")
     }
@@ -673,7 +696,7 @@ describe("Python subprocess Strategy provider ABI", () => {
 
   it("fails incomplete injected accounting closed without signing player blame", () => {
     const revision = buildPythonStrategyRevision({ source: pythonSource })
-    const request = candidateRequest(revision)
+    const request = fixtureCandidateRequest(revision)
     const response = verifyRuntimeInvocationResponseV117(
       createPythonCandidateInvocationAdapterFixtureV117({
         revision,
@@ -710,7 +733,7 @@ describe("Python subprocess Strategy provider ABI", () => {
     "rejects signed evidence whose %s delta predates direct observation",
     (dimension) => {
       const revision = buildPythonStrategyRevision({ source: pythonSource })
-      const request = candidateRequest(revision)
+      const request = fixtureCandidateRequest(revision)
       const payloadBytes = Buffer.from(
         '{"activationOrders":[],"strategyMemory":null}',
       )
@@ -783,7 +806,7 @@ describe("Python subprocess Strategy provider ABI", () => {
         "OVERSIZED_OUTPUT",
       ],
     ] as const) {
-      const request = candidateRequest(revision)
+      const request = fixtureCandidateRequest(revision)
       const response = verifyRuntimeInvocationResponseV117(
         createPythonCandidateInvocationAdapterFixtureV117({
           revision,
@@ -912,68 +935,60 @@ describe("Python subprocess Strategy provider ABI", () => {
     }
   })
 
-  it(
-    "cannot catch the host-owned guest deadline with bare except",
-    () => {
-      const source = `def select_activations(input):\n    while True:\n        try:\n            while True:\n                pass\n        except:\n            pass\n\ndef soldier_brain(input):\n    return {"action": {"type": "TURN_TO_STONE"}, "soldierMemory": None}\n`
-      const revision = buildPythonStrategyRevision({ source })
-      const request = candidateRequest(revision)
-      const started = Date.now()
-      const response = verifyRuntimeInvocationResponseV117(
-        createPythonCandidateInvocationAdapterV117({
-          revision,
-          identity: candidateIdentity,
-        })(serializeRuntimeInvocationRequestV117(request)),
-        request,
-        candidateIdentity,
+  it("cannot catch the host-owned guest deadline with bare except", () => {
+    const source = `def select_activations(input):\n    while True:\n        try:\n            while True:\n                pass\n        except:\n            pass\n\ndef soldier_brain(input):\n    return {"action": {"type": "TURN_TO_STONE"}, "soldierMemory": None}\n`
+    const revision = buildPythonStrategyRevision({ source })
+    const request = candidateRequest(revision)
+    const started = Date.now()
+    const response = verifyRuntimeInvocationResponseV117(
+      createPythonCandidateInvocationAdapterV117({
+        revision,
+        identity: candidateIdentity,
+      })(serializeRuntimeInvocationRequestV117(request)),
+      request,
+      candidateIdentity,
+    )
+    const elapsedMilliseconds = Date.now() - started
+
+    expect(elapsedMilliseconds).toBeLessThan(1_000)
+    expect(response.kind).toBe("success")
+    if (response.kind === "success") {
+      expect(response.value.outcome).toMatchObject({
+        kind: "system_failure",
+        failure: { code: "AMBIGUOUS_ATTRIBUTION" },
+      })
+      expect(response.value.outcome).not.toHaveProperty("violation")
+    }
+  }, 35_000)
+
+  it("keeps top-level Strategy initialization outside the signed method wall under a bounded preflight watchdog", () => {
+    const source = `while True:\n    pass\n\ndef select_activations(input):\n    return {"activationOrders": [], "strategyMemory": None}\n\ndef soldier_brain(input):\n    return {"action": {"type": "TURN_TO_STONE"}, "soldierMemory": None}\n`
+    const revision = buildPythonStrategyRevision({ source })
+    const request = candidateRequest(revision)
+    const started = Date.now()
+    const response = verifyRuntimeInvocationResponseV117(
+      createPythonCandidateInvocationAdapterV117({
+        revision,
+        identity: candidateIdentity,
+      })(serializeRuntimeInvocationRequestV117(request)),
+      request,
+      candidateIdentity,
+    )
+    const elapsedMilliseconds = Date.now() - started
+
+    expect(elapsedMilliseconds).toBeLessThan(2_500)
+    expect(response.kind).toBe("success")
+    if (response.kind === "success") {
+      expect(response.value.outcome).toMatchObject({
+        kind: "system_failure",
+        failure: { code: "AMBIGUOUS_ATTRIBUTION" },
+      })
+      expect(response.value.outcome.trace.safeCodes).toContain(
+        "RAW_PRE_METHOD_HOST_FAILURE_OBSERVED",
       )
-      const elapsedMilliseconds = Date.now() - started
-
-      expect(elapsedMilliseconds).toBeLessThan(1_000)
-      expect(response.kind).toBe("success")
-      if (response.kind === "success") {
-        expect(response.value.outcome).toMatchObject({
-          kind: "system_failure",
-          failure: { code: "AMBIGUOUS_ATTRIBUTION" },
-        })
-        expect(response.value.outcome).not.toHaveProperty("violation")
-      }
-    },
-    35_000,
-  )
-
-  it(
-    "keeps top-level Strategy initialization outside the signed method wall under a bounded preflight watchdog",
-    () => {
-      const source = `while True:\n    pass\n\ndef select_activations(input):\n    return {"activationOrders": [], "strategyMemory": None}\n\ndef soldier_brain(input):\n    return {"action": {"type": "TURN_TO_STONE"}, "soldierMemory": None}\n`
-      const revision = buildPythonStrategyRevision({ source })
-      const request = candidateRequest(revision)
-      const started = Date.now()
-      const response = verifyRuntimeInvocationResponseV117(
-        createPythonCandidateInvocationAdapterV117({
-          revision,
-          identity: candidateIdentity,
-        })(serializeRuntimeInvocationRequestV117(request)),
-        request,
-        candidateIdentity,
-      )
-      const elapsedMilliseconds = Date.now() - started
-
-      expect(elapsedMilliseconds).toBeLessThan(2_500)
-      expect(response.kind).toBe("success")
-      if (response.kind === "success") {
-        expect(response.value.outcome).toMatchObject({
-          kind: "system_failure",
-          failure: { code: "AMBIGUOUS_ATTRIBUTION" },
-        })
-        expect(response.value.outcome.trace.safeCodes).toContain(
-          "RAW_PRE_METHOD_HOST_FAILURE_OBSERVED",
-        )
-        expect(response.value.outcome).not.toHaveProperty("violation")
-      }
-    },
-    35_000,
-  )
+      expect(response.value.outcome).not.toHaveProperty("violation")
+    }
+  }, 35_000)
 
   it("owns top-level exceptions as distinct pre-method host failures", () => {
     const source = `1 / 0\n\ndef select_activations(input):\n    return {"activationOrders": [], "strategyMemory": None}\n\ndef soldier_brain(input):\n    return {"action": {"type": "TURN_TO_STONE"}, "soldierMemory": None}\n`
@@ -1054,7 +1069,7 @@ describe("Python subprocess Strategy provider ABI", () => {
 
   it("attributes complete base64 transport exhaustion to stdout in the signed receipt", () => {
     const revision = buildPythonStrategyRevision({ source: pythonSource })
-    const request = candidateRequest(revision)
+    const request = fixtureCandidateRequest(revision)
     const payloadBytes = Buffer.from(
       '{"activationOrders":[],"strategyMemory":null}',
     )
@@ -1276,10 +1291,17 @@ describe("Python subprocess Strategy provider ABI", () => {
       soldierMemory: {},
     })
 
-    expect(result.ok).toBe(true)
-    expect(result.ok ? result.value.action : undefined).toEqual({
-      type: "TURN_TO_STONE",
-    })
+    if (legacyPythonRuntimeIsSelected) {
+      expect(result.ok).toBe(true)
+      expect(result.ok ? result.value.action : undefined).toEqual({
+        type: "TURN_TO_STONE",
+      })
+    } else {
+      expect(result).toMatchObject({
+        ok: false,
+        systemFailure: { code: "MALFORMED_IPC", retryable: true },
+      })
+    }
   })
 
   it("maps timeout to a runtime violation", () => {
@@ -1308,8 +1330,15 @@ describe("Python subprocess Strategy provider ABI", () => {
 
     expect(response.ok).toBe(false)
     expect(response.ok ? undefined : response.failureKind).toBe(
-      "runtimeViolation",
+      legacyPythonRuntimeIsSelected ? "runtimeViolation" : "systemFailure",
     )
+    if (!legacyPythonRuntimeIsSelected) {
+      expect(
+        response.ok || response.failureKind !== "systemFailure"
+          ? undefined
+          : response.systemFailure.code,
+      ).toBe("MALFORMED_IPC")
+    }
   })
 
   it("maps stdio flood to a deterministic system failure", () => {
@@ -1342,7 +1371,9 @@ describe("Python subprocess Strategy provider ABI", () => {
       response.ok || response.failureKind !== "systemFailure"
         ? undefined
         : response.systemFailure.code,
-    ).toBe("STDIO_CAP_EXCEEDED")
+    ).toBe(
+      legacyPythonRuntimeIsSelected ? "STDIO_CAP_EXCEEDED" : "MALFORMED_IPC",
+    )
 
     const runtime = createPythonRuntimeFromRevision(revision, {
       stdoutBytes: 64,
@@ -1363,7 +1394,12 @@ describe("Python subprocess Strategy provider ABI", () => {
     })
     expect(normalized).toMatchObject({
       ok: false,
-      systemFailure: { code: "STDIO_CAP_EXCEEDED", retryable: true },
+      systemFailure: {
+        code: legacyPythonRuntimeIsSelected
+          ? "STDIO_CAP_EXCEEDED"
+          : "MALFORMED_IPC",
+        retryable: true,
+      },
     })
   })
 })

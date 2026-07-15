@@ -28,7 +28,7 @@ import {
   createRuntimeInvocationExecutionReceiptV117,
   createRuntimeInvocationTraceV117,
   serializeRuntimeInvocationRequestV117,
-  verifyRuntimeInvocationRequestV117,
+  verifySelectedRuntimeInvocationRequestV117,
   type AuthenticatedRuntimeInvocationRequestV117,
   type AuthenticatedRuntimeInvocationResponseV117,
   type JsonValue,
@@ -221,10 +221,7 @@ const authenticateCandidateOutcome = (
             null,
             safeCodes,
           ),
-      createRuntimeInvocationExecutionReceiptV117(
-        request,
-        unavailableEvidence,
-      ),
+      createRuntimeInvocationExecutionReceiptV117(request, unavailableEvidence),
       signingIdentity,
     )
   }
@@ -271,9 +268,7 @@ const authenticateCandidateOutcome = (
       evidence.attribution === expectedAttribution &&
       Object.entries(directlyObservedCounters).every(([name, delta]) => {
         const counter =
-          evidence.counters[
-            name as keyof typeof directlyObservedCounters
-          ]
+          evidence.counters[name as keyof typeof directlyObservedCounters]
         return counter.status === "measured" && counter.delta === delta
       })
     if (!evidenceMatchesObservation) return failClosed()
@@ -678,7 +673,7 @@ export const runWasmWasiStrategyMethodV117Sync = (
   input: WasmWasiStrategyRequestV117,
 ): AuthenticatedRuntimeInvocationResponseV117 => {
   const requestBytes = serializeRuntimeInvocationRequestV117(input.request)
-  const admittedRequest = verifyRuntimeInvocationRequestV117(
+  const admittedRequest = verifySelectedRuntimeInvocationRequestV117(
     requestBytes,
     input.signingIdentity,
   )
@@ -900,9 +895,25 @@ const artifactBytesFor = (
   return bytes
 }
 
-export const runWasmWasiStrategyMethodSync = (
+const runWasmWasiStrategyMethodSyncInternal = (
   request: WasmWasiStrategyRequestInput,
+  allowNestedMatchTestSupport: boolean,
 ): StrategyRuntimeResponseEnvelope => {
+  if (
+    !allowNestedMatchTestSupport &&
+    String(STRATEGY_RUNTIME_ABI_VERSION) !== "strategy-runtime-abi-v1.14"
+  ) {
+    return {
+      ok: false,
+      abiVersion: STRATEGY_RUNTIME_ABI_VERSION,
+      failureKind: "systemFailure",
+      systemFailure: {
+        code: "MALFORMED_IPC",
+        message: "The legacy WASM/WASI JSON runtime is not selected.",
+        publicMessage: "Runtime system failure.",
+      },
+    }
+  }
   const artifactBytes = artifactBytesFor(request.revision)
   if (!Buffer.isBuffer(artifactBytes)) {
     return artifactBytes
@@ -1074,6 +1085,17 @@ export const runWasmWasiStrategyMethodSync = (
   }
 }
 
+export const runWasmWasiStrategyMethodSync = (
+  request: WasmWasiStrategyRequestInput,
+): StrategyRuntimeResponseEnvelope =>
+  runWasmWasiStrategyMethodSyncInternal(request, false)
+
+/** Selected-pointer nested Match-shape test support; not historical evidence. */
+export const runWasmWasiNestedMatchShapeMethodSyncTestSupport = (
+  request: WasmWasiStrategyRequestInput,
+): StrategyRuntimeResponseEnvelope =>
+  runWasmWasiStrategyMethodSyncInternal(request, true)
+
 const normalizeStrategyOutput = (
   envelope: StrategyRuntimeResponseEnvelope,
 ): RuntimeResult<StrategyResult> => {
@@ -1150,17 +1172,22 @@ const normalizeSoldierBrainOutput = (
       }
 }
 
-export const createWasmWasiRuntimeFromRevision = (
+type WasmWasiSyncRunner = (
+  request: WasmWasiStrategyRequestInput,
+) => StrategyRuntimeResponseEnvelope
+
+const createWasmWasiRuntimeFromRevisionWithRunner = (
   revision: StrategyRevision,
   options: {
     timeoutMs?: number | undefined
     stdoutBytes?: number | undefined
     stderrBytes?: number | undefined
-  } = {},
+  },
+  runMethod: WasmWasiSyncRunner,
 ): StrategyRuntime => ({
   selectActivations(input) {
     return normalizeStrategyOutput(
-      runWasmWasiStrategyMethodSync({
+      runMethod({
         revision,
         methodName: "selectActivations",
         input: input as unknown as JsonValue,
@@ -1172,7 +1199,7 @@ export const createWasmWasiRuntimeFromRevision = (
   },
   runSoldierBrain(input) {
     return normalizeSoldierBrainOutput(
-      runWasmWasiStrategyMethodSync({
+      runMethod({
         revision,
         methodName: "soldierBrain",
         input: input as unknown as JsonValue,
@@ -1183,3 +1210,32 @@ export const createWasmWasiRuntimeFromRevision = (
     )
   },
 })
+
+export const createWasmWasiRuntimeFromRevision = (
+  revision: StrategyRevision,
+  options: {
+    timeoutMs?: number | undefined
+    stdoutBytes?: number | undefined
+    stderrBytes?: number | undefined
+  } = {},
+): StrategyRuntime =>
+  createWasmWasiRuntimeFromRevisionWithRunner(
+    revision,
+    options,
+    runWasmWasiStrategyMethodSync,
+  )
+
+/** Selected-pointer nested Match-shape test support; not historical evidence. */
+export const createWasmWasiNestedMatchShapeRuntimeTestSupport = (
+  revision: StrategyRevision,
+  options: {
+    timeoutMs?: number | undefined
+    stdoutBytes?: number | undefined
+    stderrBytes?: number | undefined
+  } = {},
+): StrategyRuntime =>
+  createWasmWasiRuntimeFromRevisionWithRunner(
+    revision,
+    options,
+    runWasmWasiNestedMatchShapeMethodSyncTestSupport,
+  )

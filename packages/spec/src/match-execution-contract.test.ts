@@ -305,6 +305,9 @@ describe("match execution app contract v1", () => {
     expect(summary?.result.provenance.chronicleHashes).toEqual([
       metadata?.metadata.hash,
     ])
+    expect(
+      summary?.result.entrants.map(({ runtime }) => runtime.abiVersion),
+    ).toEqual(["strategy-runtime-abi-v1.14", "strategy-runtime-abi-v1.14"])
     expect(match?.arenaVariantId).toBe("arena-empty-12x12")
     expect(metadata?.metadata.arenaVariantId).toBe(match?.arenaVariantId)
     expect(evidence?.metadata.arenaVariantId).toBe(match?.arenaVariantId)

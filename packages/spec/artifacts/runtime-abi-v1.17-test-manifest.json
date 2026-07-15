@@ -102,6 +102,26 @@
       "database": { "dsnEnvironmentVariable": "COWARDS_GO_BACKEND_TEST_DATABASE_URL", "skipAllowed": false }
     },
     {
+      "id": "phase258.activation-critical-contracts",
+      "stage": "activation",
+      "kind": "vitest",
+      "command": ["pnpm", "exec", "vitest", "run", "--reporter=verbose", "apps/runtime-service/src/server.test.ts", "packages/engine/src/kernel/kernel-contract.test.ts", "packages/spec/src/match-execution-contract.test.ts", "packages/spec/src/source-artifact-identity.test.ts", "packages/spec/src/spec.test.ts", "scripts/generate-typescript-backend-inventory.test.ts", "scripts/generate-typescript-surface-labels.test.ts"],
+      "namedResult": "phase258-activation-critical-contracts",
+      "expectedOutput": ["server.test.ts", "kernel-contract.test.ts", "match-execution-contract.test.ts", "source-artifact-identity.test.ts", "spec.test.ts", "generate-typescript-backend-inventory.test.ts", "generate-typescript-surface-labels.test.ts"],
+      "ownedFiles": ["apps/runtime-service/src/server.test.ts", "packages/engine/src/kernel/kernel-contract.test.ts", "packages/spec/src/match-execution-contract.test.ts", "packages/spec/src/source-artifact-identity.test.ts", "packages/spec/src/spec.test.ts", "scripts/generate-typescript-backend-inventory.test.ts", "scripts/generate-typescript-surface-labels.test.ts"]
+    },
+    {
+      "id": "phase258.go.activated-default-routes",
+      "stage": "activation",
+      "kind": "go",
+      "command": ["go", "test", ".", "-run", "^TestPhase258ActivatedDefaultRoutes$", "-v", "-count=1"],
+      "workingDirectory": "apps/go-backend",
+      "namedResult": "TestPhase258ActivatedDefaultRoutes",
+      "expectedOutput": ["--- PASS: TestPhase258ActivatedDefaultRoutes"],
+      "ownedFiles": ["apps/go-backend/runtime_service_client_v1_17_test.go"],
+      "database": { "dsnEnvironmentVariable": "COWARDS_GO_BACKEND_TEST_DATABASE_URL", "skipAllowed": false }
+    },
+    {
       "id": "phase258.web-source-identity",
       "stage": "postactivation",
       "kind": "playwright",

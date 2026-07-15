@@ -19,6 +19,13 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+func selectedStrategyRuntimeABIVersionForTest() string {
+	if selectedRuntimeServiceContractVersion() == runtimeExecutionServiceVersionV117 {
+		return strategyRuntimeABIVersionV117
+	}
+	return strategyRuntimeABIVersion
+}
+
 func TestNewLiveServerRejectsAuthorityBeforePoolOrOrchestrator(t *testing.T) {
 	poolCalls := 0
 	orchestratorCalls := 0
@@ -336,7 +343,7 @@ func TestPublicRuntimeMetadataOmitsPrivateLimits(t *testing.T) {
 	if _, ok := runtime["limits"]; !ok {
 		t.Fatalf("public runtime projection mutated source runtime")
 	}
-	if stringValue(publicRuntime, "abiVersion") != "strategy-runtime-abi-v1.14" {
+	if stringValue(publicRuntime, "abiVersion") != selectedStrategyRuntimeABIVersionForTest() {
 		t.Fatalf("public runtime lost ABI metadata")
 	}
 }
@@ -358,7 +365,7 @@ func TestPythonRuntimeMetadataIsCountedProviderEligible(t *testing.T) {
 			"bytesBase64":      base64.StdEncoding.EncodeToString(artifactPayload),
 			"sourceHash":       sourceHash,
 			"sourceBytes":      sourceBytes,
-			"abiVersion":       "strategy-runtime-abi-v1.14",
+			"abiVersion":       selectedStrategyRuntimeABIVersionForTest(),
 			"validationStatus": "valid",
 			"toolchain": map[string]any{
 				"language": "python",
@@ -450,7 +457,7 @@ func TestRustRuntimeMetadataRequiresArtifactProviderProofForCountedPlay(t *testi
 			"targetTriple":     "wasm32-wasip1",
 			"wasiProfile":      "preview1",
 			"abiEnvelope":      "stdin-stdout-json",
-			"abiVersion":       "strategy-runtime-abi-v1.14",
+			"abiVersion":       selectedStrategyRuntimeABIVersionForTest(),
 			"validationStatus": "valid",
 		},
 		"providerValidation": map[string]any{
@@ -498,7 +505,7 @@ func TestZigRuntimeMetadataRequiresArtifactProviderProofForCountedPlay(t *testin
 			"targetTriple":     "wasm32-wasi",
 			"wasiProfile":      "preview1",
 			"abiEnvelope":      "stdin-stdout-json",
-			"abiVersion":       "strategy-runtime-abi-v1.14",
+			"abiVersion":       selectedStrategyRuntimeABIVersionForTest(),
 			"validationStatus": "valid",
 		},
 		"providerValidation": map[string]any{

@@ -10,6 +10,10 @@ import time
 
 ABI_VERSION = "strategy-runtime-abi-v1.14"
 CANDIDATE_ABI_VERSION = "strategy-runtime-abi-v1.17"
+# The legacy JSON host is executable only while v1.14 is the selected lane.
+# v1.17 must use the authenticated candidate host protocol below; admitting it
+# here would create a second, unsigned ABI envelope after activation.
+SELECTABLE_LEGACY_ABI_VERSIONS = (ABI_VERSION,)
 CANDIDATE_HOST_PROTOCOL = "python-runtime-host-v1.17"
 CANDIDATE_PREFLIGHT_WATCHDOG_SECONDS = 1.0
 MAX_SAFE_INTEGER = 9_007_199_254_740_991
@@ -544,6 +548,7 @@ def candidate_main(envelope):
 
 
 def main():
+    global ABI_VERSION
     try:
         raw = sys.stdin.buffer.read(8 * 1024 * 1024 + 1)
         if len(raw) > 8 * 1024 * 1024:
@@ -566,7 +571,7 @@ def main():
         and envelope.get("hostProtocol") == CANDIDATE_HOST_PROTOCOL
     ):
         return candidate_main(envelope)
-    if envelope.get("abiVersion") != ABI_VERSION:
+    if envelope.get("abiVersion") not in SELECTABLE_LEGACY_ABI_VERSIONS:
         print(
             json.dumps(
                 failure(
@@ -578,6 +583,7 @@ def main():
             )
         )
         return 0
+    ABI_VERSION = envelope["abiVersion"]
 
     source_info = envelope["source"]
     source = source_info["text"]

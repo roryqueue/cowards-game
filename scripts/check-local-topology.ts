@@ -11,6 +11,7 @@ import {
 import { createCowardsLocalService } from "../packages/service/src/index.ts"
 import {
   SERVICE_API_VERSION,
+  RUNTIME_ABI_V1_17,
   STRATEGY_RUNTIME_ABI_VERSION,
   PublicLadderPageServiceDtoSchema,
   PublicPlayerPageServiceDtoSchema,
@@ -1565,7 +1566,9 @@ export const evaluateLocalTopology = async (
           )
           if (
             requireString(health, "service", "runtimeService.health") !==
-            "runtime-execution-service-v1.16"
+            (RUNTIME_ABI_V1_17.lifecycle.active
+              ? RUNTIME_ABI_V1_17.versions.runtimeService
+              : "runtime-execution-service-v1.16")
           ) {
             throw new Error("runtime service contract version drifted")
           }

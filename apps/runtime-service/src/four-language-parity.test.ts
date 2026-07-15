@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest"
 import {
-  fourLanguageConformanceGateIds,
-  fourLanguageConformanceRequirements,
-  fourLanguageGoldenPairs,
-  fourLanguageGoldenSources,
-  fourLanguagePrivateMarkers,
-  FOUR_LANGUAGE_GOLDEN_CORPUS_VERSION,
-  type FourLanguageGoldenLanguageId,
+  fourLanguageCurrentConformanceGateIds,
+  fourLanguageCurrentConformanceRequirements,
+  fourLanguageCurrentPairs,
+  fourLanguageCurrentSources,
+  fourLanguageCurrentPrivateMarkers,
+  FOUR_LANGUAGE_CURRENT_CORPUS_VERSION,
+  type FourLanguageCurrentLanguageId,
 } from "@cowards/golden"
 import {
   DEFAULT_RUNTIME_LIMITS,
@@ -53,9 +53,9 @@ const executeRuntimeServiceRequest = (
   })
 
 const sourceFor = (
-  languageId: FourLanguageGoldenLanguageId,
-): (typeof fourLanguageGoldenSources)[number] => {
-  const source = fourLanguageGoldenSources.find(
+  languageId: FourLanguageCurrentLanguageId,
+): (typeof fourLanguageCurrentSources)[number] => {
+  const source = fourLanguageCurrentSources.find(
     (candidate) => candidate.languageId === languageId,
   )
   if (!source) {
@@ -67,7 +67,7 @@ const sourceFor = (
 const rustCompileProbe = compileRustWasmArtifact(sourceFor("rust").source)
 const zigCompileProbe = compileZigWasmArtifact(sourceFor("zig").source)
 
-const availableLanguages = fourLanguageGoldenSources
+const availableLanguages = fourLanguageCurrentSources
   .filter((source) => {
     if (source.languageId === "rust") {
       return rustCompileProbe.ok
@@ -80,12 +80,12 @@ const availableLanguages = fourLanguageGoldenSources
   .map((source) => source.languageId)
 
 const builtRevisionCache = new Map<
-  FourLanguageGoldenLanguageId,
+  FourLanguageCurrentLanguageId,
   StrategyRevision
 >()
 
 const buildRevision = (
-  languageId: FourLanguageGoldenLanguageId,
+  languageId: FourLanguageCurrentLanguageId,
 ): StrategyRevision => {
   const cached = builtRevisionCache.get(languageId)
   if (cached !== undefined) return cached
@@ -126,13 +126,13 @@ const requestForPair = (input: {
 }): RuntimeExecutionServiceRequest => ({
   contractVersion: RUNTIME_EXECUTION_SERVICE_VERSION,
   kind: "executeMatch",
-  requestId: `runtime-request:golden:v1.32:${input.pairId}`,
+  requestId: `runtime-request:golden:v1.37:${input.pairId}`,
   match: {
-    matchId: `match:golden:v1.32:${input.pairId}`,
-    seed: "seed:golden:v1.32",
+    matchId: `match:golden:v1.37:${input.pairId}`,
+    seed: "seed:golden:v1.37",
     arenaVariant: {
-      id: "arena:golden:v1.32",
-      name: "v1.32 Four-Language Golden Arena",
+      id: "arena:golden:v1.37",
+      name: "v1.37 Current Four-Language Golden Arena",
       initialBounds: INITIAL_BOUNDS,
       terrainStones: [],
     },
@@ -154,26 +154,37 @@ const requestForPair = (input: {
   }),
 })
 
-const markerValues = Object.values(fourLanguagePrivateMarkers)
+const markerValues = Object.values(fourLanguageCurrentPrivateMarkers)
+const legacyMatchServiceIsSelected =
+  runtimeConfig.contractSelection.runtimeServiceVersion ===
+  RUNTIME_EXECUTION_SERVICE_VERSION
 
-describe("v1.32 four-language golden Strategy corpus", () => {
+describe("v1.37 current four-language golden Strategy corpus", () => {
   it("declares equivalent golden Strategy sources and all pairwise combinations", () => {
-    expect(FOUR_LANGUAGE_GOLDEN_CORPUS_VERSION).toBe(
-      "four-language-golden-corpus-v1.32",
+    expect(FOUR_LANGUAGE_CURRENT_CORPUS_VERSION).toBe(
+      "four-language-current-corpus-v1.37",
     )
     expect(
-      fourLanguageGoldenSources.map((source) => source.languageId),
+      fourLanguageCurrentSources.map((source) => source.languageId),
     ).toEqual(["typescript", "python", "rust", "zig"])
     expect(
-      new Set(fourLanguageGoldenSources.map((source) => source.behavior)),
+      new Set(fourLanguageCurrentSources.map((source) => source.behavior)),
     ).toEqual(new Set(["first-active-turn-to-stone"]))
-    expect(fourLanguageGoldenPairs).toHaveLength(
-      fourLanguageGoldenSources.length * fourLanguageGoldenSources.length,
+    expect(fourLanguageCurrentPairs).toHaveLength(
+      fourLanguageCurrentSources.length * fourLanguageCurrentSources.length,
     )
+    expect(Object.isFrozen(fourLanguageCurrentSources)).toBe(true)
+    expect(
+      fourLanguageCurrentSources.every((source) => Object.isFrozen(source)),
+    ).toBe(true)
+    expect(Object.isFrozen(fourLanguageCurrentPairs)).toBe(true)
+    expect(
+      fourLanguageCurrentPairs.every((pair) => Object.isFrozen(pair)),
+    ).toBe(true)
   })
 
   it("declares required conformance gates for every supported language", () => {
-    expect(fourLanguageConformanceGateIds).toEqual([
+    expect(fourLanguageCurrentConformanceGateIds).toEqual([
       "valid-behavior",
       "invalid-output",
       "timeout",
@@ -188,7 +199,9 @@ describe("v1.32 four-language golden Strategy corpus", () => {
       "public-result-replay-shape",
       "privacy-parity",
     ])
-    for (const gate of fourLanguageConformanceRequirements) {
+    for (const gate of fourLanguageCurrentConformanceRequirements) {
+      expect(Object.isFrozen(gate)).toBe(true)
+      expect(Object.isFrozen(gate.requiredLanguageIds)).toBe(true)
       expect(gate.status).toBe("required")
       expect(gate.requiredLanguageIds).toEqual([
         "typescript",
@@ -199,7 +212,7 @@ describe("v1.32 four-language golden Strategy corpus", () => {
     }
   })
 
-  it("executes locally available golden pairwise matrix with result/replay parity and public privacy", () => {
+  it("executes the pairwise matrix only through the selected service contract", () => {
     expect(availableLanguages).toEqual(["typescript", "python", "rust", "zig"])
     const revisions = new Map(
       availableLanguages.map((languageId) => [
@@ -207,11 +220,39 @@ describe("v1.32 four-language golden Strategy corpus", () => {
         buildRevision(languageId),
       ]),
     )
-    const expectedPairs = fourLanguageGoldenPairs.filter(
+    const expectedPairs = fourLanguageCurrentPairs.filter(
       (pair) =>
         revisions.has(pair.bottomLanguageId) &&
         revisions.has(pair.topLanguageId),
     )
+    if (!legacyMatchServiceIsSelected) {
+      const failures = expectedPairs.map((pair) => {
+        const bottom = revisions.get(pair.bottomLanguageId)
+        const top = revisions.get(pair.topLanguageId)
+        if (!bottom || !top) {
+          throw new Error(`Missing revisions for ${pair.pairId}.`)
+        }
+        return executeRuntimeServiceRequest(
+          requestForPair({ pairId: pair.pairId, bottom, top }),
+          runtimeConfig,
+        )
+      })
+      expect(failures).toHaveLength(availableLanguages.length ** 2)
+      for (const response of failures) {
+        expect(response).toMatchObject({
+          ok: false,
+          kind: "systemFailure",
+          systemFailure: {
+            code: "UNSUPPORTED_RUNTIME_ADAPTER",
+            retryable: false,
+          },
+        })
+        expect(JSON.stringify(response)).not.toMatch(
+          /source|artifact|memory|objective|diagnostics|\/Users\//u,
+        )
+      }
+      return
+    }
     const results = expectedPairs.map((pair) => {
       const bottom = revisions.get(pair.bottomLanguageId)
       const top = revisions.get(pair.topLanguageId)
@@ -288,7 +329,11 @@ describe("v1.32 four-language golden Strategy corpus", () => {
 
       expect(response.ok).toBe(false)
       if (!response.ok) {
-        expect(response.systemFailure.code).toBe("MALFORMED_REQUEST")
+        expect(response.systemFailure.code).toBe(
+          legacyMatchServiceIsSelected
+            ? "MALFORMED_REQUEST"
+            : "UNSUPPORTED_RUNTIME_ADAPTER",
+        )
         expect(JSON.stringify(response)).not.toContain(
           sourceFor(languageId).source,
         )

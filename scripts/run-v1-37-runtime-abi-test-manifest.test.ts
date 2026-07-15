@@ -55,9 +55,21 @@ describe("Phase 258 exact runtime ABI test manifest", () => {
       "TestPhase258CurrentDefaultRoutes",
       "TestPhase258MixedRuntimeContractFailsClosed",
       "TestPhase258HistoricalV116Dispatch",
+      "TestPhase258ActivatedDefaultRoutes",
     ]) {
       expect(names.has(name), name).toBe(true)
     }
+  })
+
+  it("requires a real activation-only assertion that fails before the flip", () => {
+    const parsed = parseRuntimeAbiTestManifest(manifest())
+    const activation = parsed.tests.filter(
+      ({ stage }) => stage === "activation",
+    )
+    expect(activation.map(({ namedResult }) => namedResult)).toEqual([
+      "phase258-activation-critical-contracts",
+      "TestPhase258ActivatedDefaultRoutes",
+    ])
   })
 
   it("requires exact commands and forbids skip for every named DB test", () => {

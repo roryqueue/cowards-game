@@ -11,7 +11,6 @@ import {
   PublicReplayEvidenceServiceDtoSchema,
   PublicReplayMetadataServiceDtoSchema,
   RuntimeExecutionCompatibilityIdentitySchema,
-  RuntimeExecutionServiceSuccessResponseSchema,
   RuntimeExecutionResolvedEvidenceSnapshotSchema,
 } from "./schemas.js"
 import {
@@ -22,7 +21,14 @@ import {
   type PublicReplayMetadataServiceDto,
 } from "./service.js"
 import { publicMatchSetSummaryExample } from "./service-fixtures.js"
-import { describeStrategyRuntimeProductSemantics } from "./runtime.js"
+import {
+  HISTORICAL_RUNTIME_EXECUTION_SERVICE_V1_16,
+  HistoricalRuntimeExecutionServiceResponseV116Schema,
+} from "./runtime-execution-service-v1-16-compat.js"
+import {
+  STRATEGY_RUNTIME_ABI_VERSION,
+  describeStrategyRuntimeProductSemantics,
+} from "./runtime.js"
 
 export const MATCH_EXECUTION_APP_CONTRACT_VERSION =
   "match-execution-app-v1" as const
@@ -862,7 +868,7 @@ const createScenarioSummary = (
   )
   const matchId = `match:fixture:${id}` as MatchId
   const runtime: PublicMatchSetResultDto["entrants"][number]["runtime"] = {
-    abiVersion: "strategy-runtime-abi-v1.14",
+    abiVersion: STRATEGY_RUNTIME_ABI_VERSION,
     language: { id: "typescript", version: "runtime-js-v1" },
     adapter: {
       id: "runtime-js-worker-thread",
@@ -1002,9 +1008,12 @@ const completeSummary = createScenarioSummary(
  * Go/runtime-service/Postgres topology executed during a browser test.
  */
 const publicSafeReplayServiceReceipt =
-  RuntimeExecutionServiceSuccessResponseSchema.parse(
+  HistoricalRuntimeExecutionServiceResponseV116Schema.parse(
     runtimeExecutionServiceResponseV116Wire,
   )
+if (!publicSafeReplayServiceReceipt.ok) {
+  throw new Error("Committed v1.16 replay receipt must be a success response.")
+}
 const publicSafeReplayChronicle =
   publicSafeReplayServiceReceipt.result.chronicle
 const publicSafeReplayReceipt =
@@ -1078,6 +1087,8 @@ const publicSafeReplaySummary = (() => {
       publicSafeReplayChronicle.reproducibility.strategyRevisionIds[index]!
     entrant.runtime.language.version =
       publicSafeReplayChronicle.reproducibility.versions.runtimeJs
+    entrant.runtime.abiVersion =
+      HISTORICAL_RUNTIME_EXECUTION_SERVICE_V1_16.runtimeAbiVersion
     entrant.engineCompatibility = {
       spec: publicSafeReplayChronicle.reproducibility.versions.spec,
       engine: publicSafeReplayChronicle.reproducibility.versions.engine,

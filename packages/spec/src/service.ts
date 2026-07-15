@@ -16,7 +16,10 @@ import type {
   PublicTrialLadderSeasonDto,
 } from "./competition.js"
 import type { AnalyticsGauntletRunSummary } from "./analytics.js"
-import type { StrategyRuntimeProductSemantics } from "./runtime.js"
+import {
+  STRATEGY_RUNTIME_ABI_VERSION,
+  type StrategyRuntimeProductSemantics,
+} from "./runtime.js"
 import type { CountedEntryEligibilityCategory } from "./competition-entry-eligibility.js"
 import type {
   WorkshopAnalyticsComparisonSchema,
@@ -777,7 +780,7 @@ export const SERVICE_API_ROUTES = {
             sourceHash: "sourcehash-demo",
             sourceBytes: 256,
             runtime: {
-              abiVersion: "strategy-runtime-abi-v1.14",
+              abiVersion: STRATEGY_RUNTIME_ABI_VERSION,
               language: { id: "typescript", version: "runtime-js-v1" },
               adapter: {
                 id: "runtime-js-worker-thread",

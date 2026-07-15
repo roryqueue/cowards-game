@@ -21,7 +21,6 @@ import {
   STRATEGY_RUNTIME_ABI_VERSION,
   STRATEGY_SOURCE_BYTES,
   STRATEGY_WASM_ARTIFACT_BYTES,
-  StrategyRuntimeResponseEnvelopeSchema,
   StrategyRevisionSchema,
   admitCanonicalJsonBytes,
   admitCanonicalJsonValue,
@@ -1549,7 +1548,9 @@ export interface ZigReadinessEvidence {
   message: string
 }
 
-export const zigReadinessEvidence = (): ZigReadinessEvidence => {
+export const zigReadinessEvidenceForRuntimeAbi = (
+  runtimeAbiVersion: string,
+): ZigReadinessEvidence => {
   const pathResult = spawnSync("sh", ["-lc", "command -v zig"], {
     encoding: "utf8",
     shell: false,
@@ -1614,9 +1615,9 @@ export fn _start() void {
     var nread: usize = 0;
     _ = fd_read(0, &iov, 1, &nread);
     if (contains(input_buf[0..nread], "\\"methodName\\":\\"soldierBrain\\"")) {
-        writeAll("{\\"ok\\":true,\\"abiVersion\\":\\"strategy-runtime-abi-v1.14\\",\\"value\\":{\\"action\\":{\\"type\\":\\"TURN_TO_STONE\\"},\\"soldierMemory\\":null}}\\n");
+        writeAll("{\\"ok\\":true,\\"abiVersion\\":\\"${runtimeAbiVersion}\\",\\"value\\":{\\"action\\":{\\"type\\":\\"TURN_TO_STONE\\"},\\"soldierMemory\\":null}}\\n");
     } else {
-        writeAll("{\\"ok\\":true,\\"abiVersion\\":\\"strategy-runtime-abi-v1.14\\",\\"value\\":{\\"activationOrders\\":[],\\"strategyMemory\\":null}}\\n");
+        writeAll("{\\"ok\\":true,\\"abiVersion\\":\\"${runtimeAbiVersion}\\",\\"value\\":{\\"activationOrders\\":[],\\"strategyMemory\\":null}}\\n");
     }
 }
 `
@@ -1664,7 +1665,7 @@ export fn _start() void {
         ],
         {
           input: JSON.stringify({
-            abiVersion: STRATEGY_RUNTIME_ABI_VERSION,
+            abiVersion: runtimeAbiVersion,
             methodName: "soldierBrain",
             runtime: wasmWasiRuntimeMetadata("zig"),
             source: {
@@ -1684,10 +1685,14 @@ export fn _start() void {
       if (result.error || result.status !== 0) {
         return false
       }
-      const parsed = StrategyRuntimeResponseEnvelopeSchema.safeParse(
-        JSON.parse(result.stdout ?? ""),
+      const parsed = JSON.parse(result.stdout ?? "") as unknown
+      return (
+        parsed !== null &&
+        typeof parsed === "object" &&
+        !Array.isArray(parsed) &&
+        (parsed as Record<string, unknown>).ok === true &&
+        (parsed as Record<string, unknown>).abiVersion === runtimeAbiVersion
       )
-      return parsed.success && parsed.data.ok === true
     } catch {
       return false
     } finally {
@@ -1709,3 +1714,6 @@ export fn _start() void {
         : "Zig toolchain detected but compile/runtime proof failed; counted Zig provider validation fails closed.",
   }
 }
+
+export const zigReadinessEvidence = (): ZigReadinessEvidence =>
+  zigReadinessEvidenceForRuntimeAbi(STRATEGY_RUNTIME_ABI_VERSION)
