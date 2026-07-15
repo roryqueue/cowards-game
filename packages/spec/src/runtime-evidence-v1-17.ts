@@ -5,6 +5,15 @@ export const RUNTIME_EVIDENCE_GRAPH_SCHEMA_VERSION_V1_17 =
 export const RUNTIME_EVIDENCE_GRAPH_PROFILE_V1_17 =
   "runtime-identity-evidence-dag-v1" as const
 
+const CANONICAL_SAFE_REGISTRY_GENERATION_V1_17 = /^(?:0|[1-9][0-9]{0,15})$/u
+
+export const isCanonicalSafeRegistryGenerationV117 = (
+  value: unknown,
+): value is string =>
+  typeof value === "string" &&
+  CANONICAL_SAFE_REGISTRY_GENERATION_V1_17.test(value) &&
+  Number.isSafeInteger(Number(value))
+
 export const RUNTIME_EVIDENCE_GRAPH_NODE_KINDS_V1_17 = Object.freeze([
   "originalSource",
   "normalizedSource",
@@ -30,7 +39,11 @@ const edge = <
   F extends RuntimeEvidenceGraphNodeKindV117,
   T extends RuntimeEvidenceGraphNodeKindV117,
   K extends string,
->(from: F, to: T, kind: K) => Object.freeze({ from, to, kind })
+>(
+  from: F,
+  to: T,
+  kind: K,
+) => Object.freeze({ from, to, kind })
 
 export const RUNTIME_EVIDENCE_EDGE_SCHEMA_V1_17 = Object.freeze([
   edge("normalizedSource", "originalSource", "normalized-from"),
@@ -58,11 +71,7 @@ export const RUNTIME_EVIDENCE_EDGE_SCHEMA_V1_17 = Object.freeze([
   edge("adapterBuild", "semanticTuple", "adapter-implements-abi"),
   edge("adapterBuild", "containmentPolicy", "adapter-enforces-containment"),
   edge("adapterBuild", "budgetProfile", "adapter-enforces-budget"),
-  edge(
-    "adapterBuild",
-    "canonicalJsonProfile",
-    "adapter-emits-canonical-json",
-  ),
+  edge("adapterBuild", "canonicalJsonProfile", "adapter-emits-canonical-json"),
   edge("evidenceBundle", "artifactManifest", "evidence-binds-manifest"),
   edge("evidenceBundle", "runtimeExecutable", "evidence-binds-runtime"),
   edge("evidenceBundle", "adapterBuild", "evidence-binds-adapter"),

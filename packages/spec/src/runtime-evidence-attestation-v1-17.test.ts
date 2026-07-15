@@ -242,8 +242,9 @@ describe("runtime evidence v1.17 frozen contract", () => {
     [
       "multibyte pin overflow",
       (attestation: RuntimeEvidenceAttestationV117) => {
-        attestation.graph.exactPins.reportedVersion = "é".repeat(512)
-        const { graphSha256: _old, ...graph } = attestation.graph
+        const mutableGraph = attestation.graph as MutableGraphV117
+        mutableGraph.exactPins.reportedVersion = "é".repeat(512)
+        const { graphSha256: _old, ...graph } = mutableGraph
         attestation.graph.graphSha256 = hashRuntimeEvidenceGraphV117(graph)
       },
     ],

@@ -8,6 +8,7 @@ import {
   encodeCanonicalJson,
   encodeRuntimeSemanticReceiptClaimsV117,
   hashRuntimeExecutionServiceRequestV117,
+  isCanonicalSafeRegistryGenerationV117,
   type JsonValue,
   type RuntimeExecutionServiceRequestV117,
   type RuntimeExecutionServiceSuccessResponseV117,
@@ -109,7 +110,7 @@ const parseRequest = (value: unknown): RuntimeExecutionServiceRequestV117 => {
     "ledgerPrestateRoot",
   ])
   const registryGeneration = boundedString(authority.registryGeneration)
-  if (!/^(?:0|[1-9][0-9]{0,15})$/u.test(registryGeneration)) return fail()
+  if (!isCanonicalSafeRegistryGenerationV117(registryGeneration)) return fail()
   return {
     contractVersion: RUNTIME_EXECUTION_SERVICE_VERSION_V1_17,
     kind: "executeMatch",
@@ -191,7 +192,7 @@ const parseReceipt = (value: unknown): RuntimeSemanticReceiptV117 => {
     ),
     registryGeneration: (() => {
       const value = boundedString(candidate.registryGeneration)
-      if (!/^(?:0|[1-9][0-9]{0,15})$/u.test(value)) return fail()
+      if (!isCanonicalSafeRegistryGenerationV117(value)) return fail()
       return value
     })(),
     bottomIdentityManifestRoot: sha256Identity(

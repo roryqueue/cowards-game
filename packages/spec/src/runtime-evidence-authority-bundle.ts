@@ -9,6 +9,7 @@ import {
   RUNTIME_EVIDENCE_GRAPH_PROFILE_V1_17,
   RUNTIME_EVIDENCE_GRAPH_SCHEMA_VERSION_V1_17,
   RUNTIME_EVIDENCE_REQUIRED_EXACT_PINS_V1_17,
+  isCanonicalSafeRegistryGenerationV117,
   type RuntimeEvidenceExactPinNameV117,
 } from "./runtime-evidence-v1-17.js"
 
@@ -325,7 +326,6 @@ const V117_HASH_PINS = new Set<RuntimeEvidenceExactPinNameV117>([
   "budgetProfileSha256",
   "behaviorSettingsHash",
 ])
-const GENERATION = /^(?:0|[1-9][0-9]{0,15})$/u
 const BASE64 =
   /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/u
 const textEncoder = new TextEncoder()
@@ -382,10 +382,7 @@ const assertHash = (value: unknown, label: string): string => {
 
 const assertGeneration = (value: unknown, label: string): string => {
   const generation = assertString(value, label)
-  if (
-    !GENERATION.test(generation) ||
-    !Number.isSafeInteger(Number(generation))
-  ) {
+  if (!isCanonicalSafeRegistryGenerationV117(generation)) {
     fail("INVALID_GENERATION", `${label} must be a canonical safe generation.`)
   }
   return generation

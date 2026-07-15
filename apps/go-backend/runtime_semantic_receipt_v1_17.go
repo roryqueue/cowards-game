@@ -21,7 +21,6 @@ const runtimeSemanticReceiptV117KeyID = "runtime-service-semantic-receipt:v1.17"
 
 var runtimeSemanticReceiptV117Hash = regexp.MustCompile(`^sha256:[0-9a-f]{64}$`)
 var runtimeSemanticReceiptV117Signature = regexp.MustCompile(`^hmac-sha256:[0-9a-f]{64}$`)
-var runtimeSemanticReceiptV117Generation = regexp.MustCompile(`^(?:0|[1-9][0-9]{0,15})$`)
 
 type runtimeSemanticReceiptV117 struct {
 	SchemaVersion                  string `json:"schemaVersion"`
@@ -62,7 +61,7 @@ func runtimeSemanticReceiptV117Message(receipt runtimeSemanticReceiptV117) ([]by
 		receipt.Algorithm != "hmac-sha256" || receipt.KeyID != runtimeSemanticReceiptV117KeyID ||
 		!validRuntimeSemanticReceiptV117Identifier(receipt.RequestID) ||
 		!validRuntimeSemanticReceiptV117Identifier(receipt.MatchID) ||
-		!runtimeSemanticReceiptV117Generation.MatchString(receipt.RegistryGeneration) ||
+		!validCanonicalGeneration(receipt.RegistryGeneration) ||
 		receipt.RuntimeViolationEventCount < 0 ||
 		int64(receipt.RuntimeViolationEventCount) > 9_007_199_254_740_991 {
 		return nil, errors.New("runtime semantic receipt v1.17 unavailable")

@@ -1,8 +1,6 @@
 import { Buffer } from "node:buffer"
 import { createHash, verify as verifySignature } from "node:crypto"
-import {
-  hashCanonicalIdentity,
-} from "./canonical-identity-domains.js"
+import { hashCanonicalIdentity } from "./canonical-identity-domains.js"
 import { encodeCanonicalJson } from "./canonical-json-encode.js"
 import {
   hashRuntimeIdentityManifest,
@@ -15,6 +13,7 @@ import {
   RUNTIME_EVIDENCE_GRAPH_PROFILE_V1_17,
   RUNTIME_EVIDENCE_GRAPH_SCHEMA_VERSION_V1_17,
   RUNTIME_EVIDENCE_REQUIRED_EXACT_PINS_V1_17,
+  isCanonicalSafeRegistryGenerationV117,
   type RuntimeEvidenceExactPinsV117,
   type RuntimeEvidenceGraphV117,
 } from "./runtime-evidence-v1-17.js"
@@ -25,9 +24,10 @@ const ATTESTATION_DOMAIN =
 const GRAPH_DOMAIN = "cowards-game:runtime-evidence-graph:v1.17" as const
 const SHA256 = /^[0-9a-f]{64}$/u
 const SHA256_ID = /^sha256:[0-9a-f]{64}$/u
-const GENERATION = /^(?:0|[1-9][0-9]{0,15})$/u
 const PUBLIC_ID = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,255}$/u
-const FLOATING = /(?:^|[-_.:])(latest|current|default|any|stable|head)(?:$|[-_.:])|[*^~<>]/iu
+const FLOATING =
+  /(?:^|[-_.:])(latest|current|default|any|stable|head)(?:$|[-_.:])|[*^~<>]/iu
+const textEncoder = new TextEncoder()
 
 export type RuntimeEvidenceVerificationModeV117 = "production" | "fixture"
 export type RuntimeEvidenceTrustDomainV117 = "production" | "fixture"
@@ -42,8 +42,8 @@ export interface RuntimeEvidenceTrustedProducerV117 {
 }
 
 /** Production remains deliberately empty until Phase 259 mints managed evidence. */
-export const RUNTIME_EVIDENCE_TRUSTED_PRODUCERS_V1_17:
-  readonly RuntimeEvidenceTrustedProducerV117[] = Object.freeze([])
+export const RUNTIME_EVIDENCE_TRUSTED_PRODUCERS_V1_17: readonly RuntimeEvidenceTrustedProducerV117[] =
+  Object.freeze([])
 
 export interface RuntimeEvidenceAttestationPayloadV117 {
   schemaVersion: "runtime-evidence-attestation-v1.17"
@@ -58,8 +58,7 @@ export interface RuntimeEvidenceAttestationPayloadV117 {
   registryGeneration: string
 }
 
-export interface RuntimeEvidenceAttestationV117
-  extends RuntimeEvidenceAttestationPayloadV117 {
+export interface RuntimeEvidenceAttestationV117 extends RuntimeEvidenceAttestationPayloadV117 {
   signatureBase64: string
 }
 
@@ -108,10 +107,14 @@ const exactKeys = (
   expected: readonly string[],
   code = "STRICT_SHAPE",
 ): Record<string, unknown> => {
-  if (value === null || typeof value !== "object" || Array.isArray(value)) fail(code)
+  if (value === null || typeof value !== "object" || Array.isArray(value))
+    fail(code)
   const record = value as Record<string, unknown>
   const keys = Object.keys(record)
-  if (keys.length !== expected.length || expected.some((key) => !Object.hasOwn(record, key))) {
+  if (
+    keys.length !== expected.length ||
+    expected.some((key) => !Object.hasOwn(record, key))
+  ) {
     fail(code)
   }
   return record
@@ -171,9 +174,11 @@ export const hashRuntimeEvidenceGraphV117 = (
     .digest("hex")
 
 const requireInstant = (value: string): number => {
-  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/u.test(value)) fail("VALIDITY")
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/u.test(value))
+    fail("VALIDITY")
   const parsed = Date.parse(value)
-  if (!Number.isFinite(parsed) || new Date(parsed).toISOString() !== value) fail("VALIDITY")
+  if (!Number.isFinite(parsed) || new Date(parsed).toISOString() !== value)
+    fail("VALIDITY")
   return parsed
 }
 
@@ -181,10 +186,19 @@ const validatePins = (
   pins: RuntimeEvidenceExactPinsV117,
   nodes: ReadonlyMap<string, RuntimeEvidenceGraphV117["nodes"][number]>,
 ): void => {
-  const record = exactKeys(pins, RUNTIME_EVIDENCE_REQUIRED_EXACT_PINS_V1_17, "EXACT_PIN")
+  const record = exactKeys(
+    pins,
+    RUNTIME_EVIDENCE_REQUIRED_EXACT_PINS_V1_17,
+    "EXACT_PIN",
+  )
   for (const name of RUNTIME_EVIDENCE_REQUIRED_EXACT_PINS_V1_17) {
     const value = record[name]
-    if (typeof value !== "string" || value.length === 0 || value.length > 512 || FLOATING.test(value)) {
+    if (
+      typeof value !== "string" ||
+      value.length === 0 ||
+      textEncoder.encode(value).byteLength > 512 ||
+      FLOATING.test(value)
+    ) {
       fail("EXACT_PIN")
     }
   }
@@ -234,14 +248,17 @@ const validateGraph = (
     !SHA256.test(graph.graphSha256) ||
     !Array.isArray(graph.nodes) ||
     !Array.isArray(graph.edges)
-  ) fail("GRAPH_SCHEMA")
+  )
+    fail("GRAPH_SCHEMA")
   try {
     serializeRuntimeIdentityManifest(manifest)
   } catch {
     fail("IDENTITY_MANIFEST")
   }
-  if (hashRuntimeIdentityManifest(manifest) !== graph.identityManifestRoot) fail("IDENTITY_MANIFEST")
-  if (graph.nodes.length !== RUNTIME_EVIDENCE_GRAPH_NODE_KINDS_V1_17.length) fail("GRAPH_SCHEMA")
+  if (hashRuntimeIdentityManifest(manifest) !== graph.identityManifestRoot)
+    fail("IDENTITY_MANIFEST")
+  if (graph.nodes.length !== RUNTIME_EVIDENCE_GRAPH_NODE_KINDS_V1_17.length)
+    fail("GRAPH_SCHEMA")
   const byKind = new Map<string, RuntimeEvidenceGraphV117["nodes"][number]>()
   const ids = new Set<string>()
   const publicIds = new Set<string>()
@@ -255,12 +272,20 @@ const validateGraph = (
       !SHA256.test(node.sha256) ||
       ids.has(node.nodeId) ||
       publicIds.has(node.publicId)
-    ) fail("GRAPH_SCHEMA")
+    )
+      fail("GRAPH_SCHEMA")
     const nodeBytes = evidenceBytes[node.nodeId]
     if (!(nodeBytes instanceof Uint8Array)) return fail("DOMAIN_DIGEST")
-    if (hashCanonicalIdentity(node.kind, [nodeBytes]) !== node.sha256) fail("DOMAIN_DIGEST")
-    const binding = manifest.bindings.find((candidate) => candidate.domain === node.kind)
-    if (!binding || binding.publicId !== node.publicId || binding.sha256 !== node.sha256) {
+    if (hashCanonicalIdentity(node.kind, [nodeBytes]) !== node.sha256)
+      fail("DOMAIN_DIGEST")
+    const binding = manifest.bindings.find(
+      (candidate) => candidate.domain === node.kind,
+    )
+    if (
+      !binding ||
+      binding.publicId !== node.publicId ||
+      binding.sha256 !== node.sha256
+    ) {
       fail("IDENTITY_MANIFEST")
     }
     ids.add(node.nodeId)
@@ -270,8 +295,10 @@ const validateGraph = (
   if (
     Object.keys(evidenceBytes).length !== graph.nodes.length ||
     Object.keys(evidenceBytes).some((nodeId) => !ids.has(nodeId))
-  ) fail("DOMAIN_DIGEST")
-  if (graph.edges.length !== RUNTIME_EVIDENCE_EDGE_SCHEMA_V1_17.length) fail("GRAPH_SCHEMA")
+  )
+    fail("DOMAIN_DIGEST")
+  if (graph.edges.length !== RUNTIME_EVIDENCE_EDGE_SCHEMA_V1_17.length)
+    fail("GRAPH_SCHEMA")
   const indegree = new Map(graph.nodes.map((node) => [node.nodeId, 0]))
   for (const [index, candidate] of graph.edges.entries()) {
     exactKeys(candidate, ["fromNodeId", "toNodeId", "kind"])
@@ -280,8 +307,12 @@ const validateGraph = (
       candidate.fromNodeId !== `node:${expected.from}` ||
       candidate.toNodeId !== `node:${expected.to}` ||
       candidate.kind !== expected.kind
-    ) fail("GRAPH_SCHEMA")
-    indegree.set(candidate.toNodeId, (indegree.get(candidate.toNodeId) ?? -1) + 1)
+    )
+      fail("GRAPH_SCHEMA")
+    indegree.set(
+      candidate.toNodeId,
+      (indegree.get(candidate.toNodeId) ?? -1) + 1,
+    )
   }
   if (indegree.get(graph.rootNodeId) !== 0) fail("GRAPH_SCHEMA")
   const children = new Map<string, string[]>()
@@ -304,7 +335,8 @@ const validateGraph = (
   if (visited.size !== graph.nodes.length) fail("GRAPH_SCHEMA")
   validatePins(graph.exactPins, byKind)
   const { graphSha256: _hash, ...unsignedGraph } = graph
-  if (hashRuntimeEvidenceGraphV117(unsignedGraph) !== graph.graphSha256) fail("GRAPH_HASH")
+  if (hashRuntimeEvidenceGraphV117(unsignedGraph) !== graph.graphSha256)
+    fail("GRAPH_HASH")
 }
 
 const verified = new WeakSet<object>()
@@ -332,15 +364,18 @@ export const verifyRuntimeEvidenceAttestationV117 = (
     attestation.managedIdentity !== true ||
     typeof attestation.producerId !== "string" ||
     typeof attestation.producerKeyId !== "string" ||
-    !GENERATION.test(attestation.registryGeneration)
-  ) fail("ATTESTATION")
+    !isCanonicalSafeRegistryGenerationV117(attestation.registryGeneration)
+  )
+    fail("ATTESTATION")
   const issued = requireInstant(attestation.issuedAt)
   const validUntil = requireInstant(attestation.validUntil)
   const instant = requireInstant(input.verificationInstant)
-  if (issued > instant || instant > validUntil || issued > validUntil) fail("VALIDITY")
-  const producers = input.mode === "production"
-    ? RUNTIME_EVIDENCE_TRUSTED_PRODUCERS_V1_17
-    : (input.trustedProducers ?? [])
+  if (issued > instant || instant > validUntil || issued > validUntil)
+    fail("VALIDITY")
+  const producers =
+    input.mode === "production"
+      ? RUNTIME_EVIDENCE_TRUSTED_PRODUCERS_V1_17
+      : (input.trustedProducers ?? [])
   const producer = producers.find(
     (candidate) =>
       candidate.producerId === attestation.producerId &&
@@ -349,14 +384,25 @@ export const verifyRuntimeEvidenceAttestationV117 = (
       candidate.managedIdentity === true,
   )
   if (!producer) return fail("UNTRUSTED_PRODUCER")
-  validateGraph(attestation.graph, attestation.identityManifest, input.evidenceBytes)
+  validateGraph(
+    attestation.graph,
+    attestation.identityManifest,
+    input.evidenceBytes,
+  )
   let valid = false
   try {
+    const signature = Buffer.from(attestation.signatureBase64, "base64")
+    if (
+      signature.byteLength !== 64 ||
+      signature.toString("base64") !== attestation.signatureBase64
+    ) {
+      fail("SIGNATURE")
+    }
     valid = verifySignature(
       null,
       encodeRuntimeEvidenceAttestationPayloadV117(attestation),
       producer.publicKeyPem,
-      Buffer.from(attestation.signatureBase64, "base64"),
+      signature,
     )
   } catch {
     fail("SIGNATURE")
