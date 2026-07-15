@@ -1,6 +1,7 @@
 import {
+  CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE,
+  CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_ID,
   hashCanonicalCompatibilityTuple,
-  hashCanonicalIdentityValue,
   type CanonicalCompatibilityTuple,
 } from "@cowards/spec"
 import type {
@@ -40,16 +41,10 @@ export const CANDIDATE_KERNEL_SEMANTIC_TUPLE_ID =
   `sha256:${hashCanonicalCompatibilityTuple(CANDIDATE_KERNEL_SEMANTIC_TUPLE)}` as const
 
 /** Additive inactive successor identity; current/default constructors stay v1.14. */
-export const CANDIDATE_KERNEL_V117_SEMANTIC_TUPLE = Object.freeze({
-  ...CANDIDATE_KERNEL_SEMANTIC_TUPLE,
-  runtimeAbi: "strategy-runtime-abi-v1.17",
-}) satisfies Readonly<CanonicalCompatibilityTuple>
-
-export const CANDIDATE_KERNEL_V117_SEMANTIC_TUPLE_ID =
-  `sha256:${hashCanonicalIdentityValue(
-    "semanticTuple",
-    CANDIDATE_KERNEL_V117_SEMANTIC_TUPLE,
-  )}` as const
+export {
+  CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE as CANDIDATE_KERNEL_V117_SEMANTIC_TUPLE,
+  CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_ID as CANDIDATE_KERNEL_V117_SEMANTIC_TUPLE_ID,
+}
 
 export type KernelEffectKind = "selectActivations" | "soldierBrain"
 

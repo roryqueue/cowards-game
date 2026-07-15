@@ -11,6 +11,7 @@ import path from "node:path"
 import {
   CANONICAL_COMPATIBILITY_TUPLES,
   CANONICAL_COMPATIBILITY_TUPLE_FIELDS,
+  CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_ID,
   RUNTIME_EVIDENCE_AUTHORITY_PAYLOAD_SCHEMA_VERSION,
   RUNTIME_EVIDENCE_AUTHORITY_TRUST_DOMAINS,
   buildRuntimeEvidenceAuthorityEnvelope,
@@ -2023,6 +2024,21 @@ export interface InstalledRuntimeEvidenceAuthorityV117 {
   envelopeSha256: string
 }
 
+export interface VerifiedInstalledRuntimeEvidenceAuthorityV117
+  extends InstalledRuntimeEvidenceAuthorityV117 {
+  trustDomain: string
+  signerKeyId: string
+  issuedAt: string
+  validFrom: string
+  validUntil: string
+  installedAt: string
+  payloadBytes: Uint8Array
+  envelopeBytes: Uint8Array
+  attestationIds: readonly string[]
+  certificateIds: readonly string[]
+  installReceipt: JsonValue
+}
+
 const V117_INSTALL_RECEIPT_SCHEMA =
   "v1.37-runtime-evidence-authority-install-receipt-v1.17" as const
 const V117_INSTALL_ID_DOMAIN =
@@ -2061,14 +2077,9 @@ export const encodeRuntimeEvidenceAuthorityInstallReceiptV117 = (
   return encoded.bytes
 }
 
-/**
- * Records only a separately verified mounted v1.17 authority. Production is
- * deliberately unavailable until Phase 259 authorizes executable producers.
- */
-export const recordInstalledRuntimeEvidenceAuthorityV117 = async (
-  pool: Pool,
+export const verifyInstalledRuntimeEvidenceAuthorityV117 = (
   input: RecordInstalledRuntimeEvidenceAuthorityV117Input,
-): Promise<Readonly<InstalledRuntimeEvidenceAuthorityV117>> => {
+): Readonly<VerifiedInstalledRuntimeEvidenceAuthorityV117> => {
   const evaluationInstant = assertInstant(
     input.evaluationInstant,
     "evaluationInstant",
@@ -2109,9 +2120,15 @@ export const recordInstalledRuntimeEvidenceAuthorityV117 = async (
     installedAt !== evaluationInstant ||
     Date.parse(installedAt) < Date.parse(inspected.payload.validFrom) ||
     Date.parse(installedAt) > Date.parse(inspected.payload.validUntil) ||
-    !CANONICAL_COMPATIBILITY_TUPLES.some(
-      ({ tupleId }) =>
-        tupleId === inspected.payload.semanticTupleManifestHash,
+    !(
+      CANONICAL_COMPATIBILITY_TUPLES.some(
+        ({ tupleId }) =>
+          tupleId === inspected.payload.semanticTupleManifestHash,
+      ) ||
+      (expectedTrustDomain ===
+        RUNTIME_EVIDENCE_AUTHORITY_TRUST_DOMAINS.fixture &&
+        inspected.payload.semanticTupleManifestHash ===
+          CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_ID)
     )
   ) {
     return fail("INSTALL_IDENTITY", "v1.17 authority identity is unavailable.")
@@ -2139,8 +2156,8 @@ export const recordInstalledRuntimeEvidenceAuthorityV117 = async (
     semanticTupleManifestHash,
     envelopeSha256,
     installedAt,
-    attestationIds,
-    certificateIds,
+    attestationIds: [...attestationIds],
+    certificateIds: [...certificateIds],
   }
   const installReceiptId = `runtime-authority-install:v1.17:${hashPublicationBytes(
     V117_INSTALL_ID_DOMAIN,
@@ -2151,6 +2168,52 @@ export const recordInstalledRuntimeEvidenceAuthorityV117 = async (
     V117_INSTALL_RECEIPT_DOMAIN,
     encodeRuntimeEvidenceAuthorityInstallReceiptV117(installReceipt),
   )
+  return Object.freeze({
+    installReceiptId,
+    installReceiptHash,
+    authorityBundleHash,
+    sourceManifestHash,
+    registryGeneration,
+    semanticTupleManifestHash,
+    envelopeSha256,
+    trustDomain: expectedTrustDomain,
+    signerKeyId,
+    issuedAt: inspected.payload.issuedAt,
+    validFrom: inspected.payload.validFrom,
+    validUntil: inspected.payload.validUntil,
+    installedAt,
+    payloadBytes: inspected.payloadBytes,
+    envelopeBytes: new Uint8Array(input.envelopeBytes),
+    attestationIds,
+    certificateIds,
+    installReceipt: installReceipt as unknown as JsonValue,
+  })
+}
+
+/**
+ * Records only a separately verified mounted v1.17 authority. Production is
+ * deliberately unavailable until Phase 259 authorizes executable producers.
+ */
+export const recordInstalledRuntimeEvidenceAuthorityV117 = async (
+  pool: Pool,
+  input: RecordInstalledRuntimeEvidenceAuthorityV117Input,
+): Promise<Readonly<InstalledRuntimeEvidenceAuthorityV117>> => {
+  const verified = verifyInstalledRuntimeEvidenceAuthorityV117(input)
+  const {
+    installReceiptId,
+    installReceiptHash,
+    authorityBundleHash,
+    sourceManifestHash,
+    registryGeneration,
+    semanticTupleManifestHash,
+    envelopeSha256,
+    trustDomain: expectedTrustDomain,
+    signerKeyId,
+    installedAt,
+    attestationIds,
+    certificateIds,
+    installReceipt,
+  } = verified
   const values: unknown[] = [
     installReceiptId,
     authorityBundleHash,
@@ -2161,12 +2224,12 @@ export const recordInstalledRuntimeEvidenceAuthorityV117 = async (
     expectedTrustDomain,
     signerKeyId,
     installReceiptHash,
-    inspected.payload.issuedAt,
-    inspected.payload.validFrom,
-    inspected.payload.validUntil,
+    verified.issuedAt,
+    verified.validFrom,
+    verified.validUntil,
     installedAt,
-    Buffer.from(inspected.payloadBytes),
-    Buffer.from(input.envelopeBytes),
+    Buffer.from(verified.payloadBytes),
+    Buffer.from(verified.envelopeBytes),
     JSON.stringify(attestationIds),
     JSON.stringify(certificateIds),
     JSON.stringify(installReceipt),
@@ -2216,19 +2279,19 @@ export const recordInstalledRuntimeEvidenceAuthorityV117 = async (
     row.trust_domain !== expectedTrustDomain ||
     row.signer_key_id !== signerKeyId ||
     row.install_receipt_hash !== installReceiptHash ||
-    !bytesEqual(row.payload_bytes, inspected.payloadBytes) ||
-    !bytesEqual(row.envelope_bytes, input.envelopeBytes) ||
+    !bytesEqual(row.payload_bytes, verified.payloadBytes) ||
+    !bytesEqual(row.envelope_bytes, verified.envelopeBytes) ||
     !bytesEqual(
       encodeRuntimeEvidenceAuthorityInstallReceiptV117(
         row.attestation_ids as JsonValue,
       ),
-      encodeRuntimeEvidenceAuthorityInstallReceiptV117(attestationIds),
+      encodeRuntimeEvidenceAuthorityInstallReceiptV117([...attestationIds]),
     ) ||
     !bytesEqual(
       encodeRuntimeEvidenceAuthorityInstallReceiptV117(
         row.certificate_ids as JsonValue,
       ),
-      encodeRuntimeEvidenceAuthorityInstallReceiptV117(certificateIds),
+      encodeRuntimeEvidenceAuthorityInstallReceiptV117([...certificateIds]),
     ) ||
     !bytesEqual(
       encodeRuntimeEvidenceAuthorityInstallReceiptV117(

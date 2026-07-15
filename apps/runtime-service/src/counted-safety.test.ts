@@ -5,6 +5,8 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { describe, expect, it, vi } from "vitest"
 import {
+  CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE,
+  CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_ID,
   DEFAULT_RUNTIME_LIMITS,
   INITIAL_BOUNDS,
   RUNTIME_ABI_V1_17_BUDGET_PROFILE_SHA256,
@@ -315,10 +317,50 @@ describe("runtime-service counted safety", () => {
         ["behaviorSettingsHash", `sha256:${"b".repeat(64)}`],
       ],
     }
+    expect(() =>
+      parseDeploymentLaneRegistry({
+        ...registry,
+        lanes: [
+          { ...registry.lanes[0]!, successorRuntimeIdentityTemplate: template },
+        ],
+      }),
+    ).toThrow(/successor identity does not match/iu)
+    const successorLane = {
+      ...registry.lanes[0]!,
+      semanticTupleId: CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_ID,
+      semanticTuple: { ...CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE },
+    }
+    expect(() =>
+      parseDeploymentLaneRegistry({
+        ...registry,
+        lanes: [successorLane],
+      }),
+    ).toThrow(/successor identity does not match/iu)
     const parsed = parseDeploymentLaneRegistry({
       ...registry,
-      lanes: [{ ...registry.lanes[0]!, successorRuntimeIdentityTemplate: template }],
+      lanes: [
+        { ...successorLane, successorRuntimeIdentityTemplate: template },
+      ],
     })
+    for (const mismatched of [
+      {
+        ...successorLane,
+        semanticTupleId: `sha256:${"0".repeat(64)}`,
+        successorRuntimeIdentityTemplate: template,
+      },
+      {
+        ...successorLane,
+        semanticTuple: {
+          ...successorLane.semanticTuple,
+          runtimeAbi: "strategy-runtime-abi-v1.17-mismatched",
+        },
+        successorRuntimeIdentityTemplate: template,
+      },
+    ]) {
+      expect(() =>
+        parseDeploymentLaneRegistry({ ...registry, lanes: [mismatched] }),
+      ).toThrow(/semantic tuple is invalid/iu)
+    }
     const installed = parsed.lanes[0]!.successorRuntimeIdentityTemplate!
     expect(Object.isFrozen(installed)).toBe(true)
     expect(Object.isFrozen(installed.bindings)).toBe(true)
@@ -327,7 +369,7 @@ describe("runtime-service counted safety", () => {
     expect(() =>
       parseDeploymentLaneRegistry({
         ...registry,
-        lanes: [{ ...registry.lanes[0]!, successorRuntimeIdentity: template }],
+        lanes: [{ ...successorLane, successorRuntimeIdentity: template }],
       }),
     ).toThrow("invalid fields")
   })

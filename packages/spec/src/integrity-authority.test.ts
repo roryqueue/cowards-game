@@ -8,9 +8,14 @@ import {
   CANONICAL_AUTHORITY_DOMAINS,
   CANONICAL_AUTHORITY_REGISTRY,
   CANONICAL_COMPATIBILITY_TUPLES,
+  CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE,
+  CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_ID,
+  CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_RECORD,
   assertCanonicalAuthorityRegistry,
   encodeCanonicalCompatibilityTuple,
   hashCanonicalCompatibilityTuple,
+  prepareCanonicalCompatibilityTupleRecord,
+  resolveCandidateRuntimeV117SemanticTuple,
   resolveCanonicalCompatibilityTuple,
   type CanonicalCompatibilityTuple,
 } from "./integrity-authority.js"
@@ -87,6 +92,47 @@ describe("v1.37 canonical integrity authority", () => {
         registered.sha256,
       )
     }
+  })
+
+  it("owns the inactive v1.17 identity-domain tuple without changing v1.14 history", () => {
+    expect(CANONICAL_COMPATIBILITY_TUPLES).toHaveLength(1)
+    expect(CANONICAL_COMPATIBILITY_TUPLES[0]!.tupleId).toBe(
+      "sha256:922a6857fdbc8354b744d6e766bff216f3fee85b5ed381355cb427f5a616b3ae",
+    )
+    expect(CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_ID).toBe(
+      "sha256:0d8a04fdfe49e3aa7261728ee51beb0a9049b661aad978277f2892c3a4bc54fe",
+    )
+    expect(Object.isFrozen(CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE)).toBe(true)
+    expect(
+      prepareCanonicalCompatibilityTupleRecord({
+        ...CANONICAL_COMPATIBILITY_TUPLES[0]!.tuple,
+        runtimeAbi: "strategy-runtime-abi-v1.17",
+      }),
+    ).toEqual(CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_RECORD)
+    expect(
+      resolveCanonicalCompatibilityTuple({
+        tupleId: CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_ID,
+        tuple: { ...CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE },
+      }),
+    ).toBeUndefined()
+    expect(
+      resolveCandidateRuntimeV117SemanticTuple({
+        tupleId: CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_ID,
+        tuple: { ...CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE },
+      }),
+    ).toEqual({
+      tupleId: CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_ID,
+      algorithm: "sha256",
+      sha256: CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_ID.slice("sha256:".length),
+      tuple: CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE,
+    })
+
+    const engineSource = readFileSync(
+      path.join(repoRoot, "packages/engine/src/kernel/types.ts"),
+      "utf8",
+    )
+    expect(engineSource).toContain("CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE")
+    expect(engineSource).not.toContain('runtimeAbi: "strategy-runtime-abi-v1.17"')
   })
 
   it("resolves only an exact registered id and matching complete expansion", () => {

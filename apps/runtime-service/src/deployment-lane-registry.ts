@@ -2,6 +2,8 @@ import { Buffer } from "node:buffer"
 import { createHash } from "node:crypto"
 import { readFileSync } from "node:fs"
 import {
+  CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_ID,
+  resolveCandidateRuntimeV117SemanticTuple,
   resolveCanonicalCompatibilityTuple,
   type CanonicalCompatibilityTuple,
   type ExecutableLaneIdentity,
@@ -115,10 +117,13 @@ const parseProfile = (value: unknown, index: number): DeploymentLaneProfile => {
       `Deployment lane registry profile ${index} artifactKind is invalid.`,
     )
   }
-  const resolved = resolveCanonicalCompatibilityTuple({
+  const selector = {
     tupleId: value.semanticTupleId as string,
     tuple: value.semanticTuple,
-  })
+  }
+  const current = resolveCanonicalCompatibilityTuple(selector)
+  const candidate = resolveCandidateRuntimeV117SemanticTuple(selector)
+  const resolved = current ?? candidate
   if (!resolved) {
     throw new RuntimeServiceConfigError(
       `Deployment lane registry profile ${index} semantic tuple is invalid.`,
@@ -138,6 +143,16 @@ const parseProfile = (value: unknown, index: number): DeploymentLaneProfile => {
         `Deployment lane registry profile ${index} successor identity is invalid.`,
       )
     }
+  }
+  const isSuccessor =
+    resolved.tupleId === CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_ID
+  if (
+    (isSuccessor && successorRuntimeIdentityTemplate === undefined) ||
+    (!isSuccessor && successorRuntimeIdentityTemplate !== undefined)
+  ) {
+    throw new RuntimeServiceConfigError(
+      `Deployment lane registry profile ${index} successor identity does not match its semantic tuple.`,
+    )
   }
   return Object.freeze({
     ...Object.fromEntries(

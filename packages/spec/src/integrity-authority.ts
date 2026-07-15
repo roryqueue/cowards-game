@@ -3,6 +3,7 @@ import {
   COMPATIBILITY_VERSIONS,
   STRATEGY_RUNTIME_ABI_VERSION,
 } from "./versions.js"
+import { hashCanonicalIdentityValue } from "./canonical-identity-domains.js"
 
 /**
  * Canonical ownership and semantic identity for v1.37 integrity decisions.
@@ -216,11 +217,14 @@ const freezeTuple = (
   tuple: CanonicalCompatibilityTuple,
 ): Readonly<CanonicalCompatibilityTuple> => Object.freeze({ ...tuple })
 
-const makeTupleRecord = (
+export const prepareCanonicalCompatibilityTupleRecord = (
   tuple: CanonicalCompatibilityTuple,
 ): Readonly<CanonicalCompatibilityTupleRecord> => {
   const frozenTuple = freezeTuple(tuple)
-  const sha256 = hashCanonicalCompatibilityTuple({ ...frozenTuple })
+  const sha256 =
+    frozenTuple.runtimeAbi === "strategy-runtime-abi-v1.17"
+      ? hashCanonicalIdentityValue("semanticTuple", { ...frozenTuple })
+      : hashCanonicalCompatibilityTuple({ ...frozenTuple })
   return Object.freeze({
     tupleId: `sha256:${sha256}`,
     algorithm: "sha256" as const,
@@ -238,8 +242,26 @@ const canonicalV14Tuple: CanonicalCompatibilityTuple = {
   setPolicy: "canonical-set-policy-v1.4",
 }
 
+const candidateRuntimeV117Tuple: CanonicalCompatibilityTuple = {
+  rules: COMPATIBILITY_VERSIONS.spec,
+  engine: COMPATIBILITY_VERSIONS.engine,
+  runtimeAbi: "strategy-runtime-abi-v1.17",
+  chronicle: COMPATIBILITY_VERSIONS.chronicle,
+  arenaCatalog: COMPATIBILITY_VERSIONS.arenaVariant,
+  setPolicy: "canonical-set-policy-v1.4",
+}
+
+export const CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_RECORD =
+  prepareCanonicalCompatibilityTupleRecord(candidateRuntimeV117Tuple)
+
+export const CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE =
+  CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_RECORD.tuple
+
+export const CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_ID =
+  CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_RECORD.tupleId
+
 export const CANONICAL_COMPATIBILITY_TUPLES: readonly Readonly<CanonicalCompatibilityTupleRecord>[] =
-  Object.freeze([makeTupleRecord(canonicalV14Tuple)])
+  Object.freeze([prepareCanonicalCompatibilityTupleRecord(canonicalV14Tuple)])
 
 const cloneFrozenTupleRecord = (
   record: CanonicalCompatibilityTupleRecord,
@@ -251,8 +273,9 @@ const cloneFrozenTupleRecord = (
     tuple: freezeTuple({ ...record.tuple }),
   })
 
-export const resolveCanonicalCompatibilityTuple = (
+const resolveCompatibilityTupleFrom = (
   selector: unknown,
+  allowed: readonly Readonly<CanonicalCompatibilityTupleRecord>[],
 ): Readonly<CanonicalCompatibilityTupleRecord> | undefined => {
   if (!selector || typeof selector !== "object" || Array.isArray(selector)) {
     return undefined
@@ -273,10 +296,13 @@ export const resolveCanonicalCompatibilityTuple = (
     return undefined
   }
   const tuple = record.tuple
-  const sha256 = hashCanonicalCompatibilityTuple(tuple)
+  const sha256 =
+    tuple.runtimeAbi === CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE.runtimeAbi
+      ? hashCanonicalIdentityValue("semanticTuple", { ...tuple })
+      : hashCanonicalCompatibilityTuple(tuple)
   if (record.tupleId !== `sha256:${sha256}`) return undefined
 
-  const registered = CANONICAL_COMPATIBILITY_TUPLES.find(
+  const registered = allowed.find(
     (entry) => entry.tupleId === record.tupleId && entry.sha256 === sha256,
   )
   if (!registered) return undefined
@@ -289,3 +315,15 @@ export const resolveCanonicalCompatibilityTuple = (
   }
   return cloneFrozenTupleRecord(registered)
 }
+
+export const resolveCanonicalCompatibilityTuple = (
+  selector: unknown,
+): Readonly<CanonicalCompatibilityTupleRecord> | undefined =>
+  resolveCompatibilityTupleFrom(selector, CANONICAL_COMPATIBILITY_TUPLES)
+
+export const resolveCandidateRuntimeV117SemanticTuple = (
+  selector: unknown,
+): Readonly<CanonicalCompatibilityTupleRecord> | undefined =>
+  resolveCompatibilityTupleFrom(selector, [
+    CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_RECORD,
+  ])

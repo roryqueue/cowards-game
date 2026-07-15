@@ -15,7 +15,17 @@ import {
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { afterEach, describe, expect, it } from "vitest"
-import { RUNTIME_INVOCATION_V1_17_SYSTEM_FAILURE_RETRYABILITY } from "../packages/spec/src/index.ts"
+import { createStrategyRevisionId } from "../packages/runtime-js/src/index.ts"
+import {
+  CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE,
+  CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_ID,
+  COMPATIBILITY_VERSIONS,
+  RUNTIME_INVOCATION_V1_17_SYSTEM_FAILURE_RETRYABILITY,
+  hashExecutableLaneIdentity,
+  runtimeCompatibilityKey,
+  type ExecutableLaneIdentity,
+  type StrategyRevision,
+} from "../packages/spec/src/index.ts"
 
 const repoRoot = path.resolve(import.meta.dirname, "..")
 const read = (relativePath: string): Buffer =>
@@ -48,6 +58,8 @@ const serviceRequestRelative =
   "packages/spec/artifacts/runtime-execution-service-request.v1.17.candidate.json"
 const serviceResponseRelative =
   "packages/spec/artifacts/runtime-execution-service-response.v1.17.candidate.wire.json"
+const successorAuthorityFixtureRelative =
+  "packages/spec/artifacts/runtime-successor-authority-v1.17.fixture.json"
 const generatedRelative = "apps/go-backend/runtime_execution_contract_gen.go"
 const temporaryRoots: string[] = []
 
@@ -291,6 +303,9 @@ describe("versioned TypeScript-to-Go parity generator", () => {
     expect(existsSync(path.join(root, candidateResponseRelative))).toBe(true)
     expect(existsSync(path.join(root, serviceRequestRelative))).toBe(false)
     expect(existsSync(path.join(root, serviceResponseRelative))).toBe(false)
+    expect(existsSync(path.join(root, successorAuthorityFixtureRelative))).toBe(
+      false,
+    )
 
     const service = runGenerator([
       "--root",
@@ -302,12 +317,18 @@ describe("versioned TypeScript-to-Go parity generator", () => {
     expect(service.status, service.stderr).toBe(0)
     expect(existsSync(path.join(root, serviceRequestRelative))).toBe(true)
     expect(existsSync(path.join(root, serviceResponseRelative))).toBe(true)
+    expect(existsSync(path.join(root, successorAuthorityFixtureRelative))).toBe(
+      true,
+    )
     expect(readFileSync(path.join(root, serviceRequestRelative))).not.toEqual(
       readFileSync(path.join(root, candidateRequestRelative)),
     )
     expect(readFileSync(path.join(root, serviceResponseRelative))).not.toEqual(
       readFileSync(path.join(root, candidateResponseRelative)),
     )
+    expect(
+      readFileSync(path.join(root, successorAuthorityFixtureRelative)),
+    ).toEqual(readFileSync(path.join(repoRoot, successorAuthorityFixtureRelative)))
   }, 30_000)
 
   it("fails check mode when either complete v1.17 fixture family is absent", () => {
@@ -335,6 +356,28 @@ describe("versioned TypeScript-to-Go parity generator", () => {
       "--check",
     ])
     expect(missingInvocation.status).toBe(1)
+
+    const serviceOnly = makeVersionRoot()
+    const serviceWritten = runGenerator([
+      "--root",
+      serviceOnly,
+      "--versions-only",
+      "--write-v1.17-service",
+      "--check",
+    ])
+    expect(serviceWritten.status, serviceWritten.stderr).toBe(0)
+    rmSync(path.join(serviceOnly, successorAuthorityFixtureRelative))
+    const missingAuthority = runGenerator([
+      "--root",
+      serviceOnly,
+      "--versions-only",
+      "--write-v1.17-invocation",
+      "--check",
+    ])
+    expect(missingAuthority.status).toBe(1)
+    expect(`${missingAuthority.stdout}\n${missingAuthority.stderr}`).toContain(
+      "runtime-successor-authority-v1.17.fixture.json is stale",
+    )
   }, 30_000)
 
   it("fails a stale generated table instead of silently regenerating it", () => {
@@ -359,6 +402,99 @@ describe("versioned TypeScript-to-Go parity generator", () => {
     )
   }, 30_000)
 
+  it("locks actual v1.17 revisions, deployed lanes, and the spec-owned tuple", () => {
+    const fixture = JSON.parse(
+      read(successorAuthorityFixtureRelative).toString("utf8"),
+    ) as {
+      semanticTupleId: string
+      semanticTuple: typeof CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE
+      revisionVectors: Array<{
+        strategyRevisionId: string
+        laneIdentityHash: string
+        revision: StrategyRevision
+        deployed: ExecutableLaneIdentity
+      }>
+    }
+    expect(fixture.semanticTupleId).toBe(
+      CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_ID,
+    )
+    expect(fixture.semanticTuple).toEqual(
+      CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE,
+    )
+
+    const revisionId = (input: {
+      revision: StrategyRevision
+      source?: string
+      abiVersion?: string
+      artifactHash?: string
+    }): string => {
+      const source = input.source ?? input.revision.source
+      const sourceHash = sha256(Buffer.from(source, "utf8"))
+      const runtime = {
+        ...input.revision.runtime,
+        abiVersion: input.abiVersion ?? input.revision.runtime.abiVersion,
+      }
+      const artifactHash =
+        input.artifactHash ?? input.revision.metadata.sourceArtifact!.hash
+      return createStrategyRevisionId({
+        sourceHash,
+        runtimeVersion: runtime.adapter.version,
+        specVersion: CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE.rules,
+        engineVersion: CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE.engine,
+        strategyRevisionVersion: COMPATIBILITY_VERSIONS.strategyRevision,
+        strategyId: input.revision.strategyId,
+        runtimeCompatibility: runtimeCompatibilityKey({
+          runtime,
+          sourceHash,
+          artifactHash,
+          specVersion: CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE.rules,
+          engineVersion: CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE.engine,
+        }),
+      })
+    }
+
+    for (const vector of fixture.revisionVectors) {
+      expect(vector.revision.id).toBe(vector.strategyRevisionId)
+      expect(vector.revision.runtime.abiVersion).toBe(
+        CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE.runtimeAbi,
+      )
+      expect(vector.revision.metadata.sourceArtifact!.abiVersion).toBe(
+        CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE.runtimeAbi,
+      )
+      expect(vector.deployed.semanticTupleId).toBe(
+        CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_ID,
+      )
+      expect(vector.deployed.semanticTuple).toEqual(
+        CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE,
+      )
+      expect(vector.deployed.toolchainId).toBe(
+        vector.revision.metadata.sourceArtifact!.toolchain.language,
+      )
+      expect(vector.deployed.toolchainVersion).toBe(
+        vector.revision.metadata.sourceArtifact!.toolchain.runtimeVersion,
+      )
+      expect(vector.laneIdentityHash).toBe(
+        `sha256:${hashExecutableLaneIdentity(vector.deployed)}`,
+      )
+      expect(revisionId({ revision: vector.revision })).toBe(vector.revision.id)
+      expect(
+        revisionId({
+          revision: vector.revision,
+          abiVersion: "strategy-runtime-abi-v1.17-mutated",
+        }),
+      ).not.toBe(vector.revision.id)
+      expect(
+        revisionId({ revision: vector.revision, artifactHash: "0".repeat(64) }),
+      ).not.toBe(vector.revision.id)
+      expect(
+        revisionId({
+          revision: vector.revision,
+          source: `${vector.revision.source}// changed\n`,
+        }),
+      ).not.toBe(vector.revision.id)
+    }
+  })
+
   it("generates one marked closed version table with deny-by-default dispatch", () => {
     const generated = read(
       "apps/go-backend/runtime_execution_contract_gen.go",
@@ -374,6 +510,19 @@ describe("versioned TypeScript-to-Go parity generator", () => {
     expect(generated).toContain("Historical: true")
     expect(generated).toContain("CanonicalJSON: true")
     expect(generated).toContain("runtimeInvocationContractForVersion")
+    expect(generated).toContain(
+      `const runtimeSuccessorSemanticTupleIDV117 = ${JSON.stringify(CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_ID)}`,
+    )
+    expect(generated).toContain(
+      `const runtimeSuccessorSemanticTupleV117 = ${JSON.stringify(JSON.stringify(CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE))}`,
+    )
+    const successorAuthorityFixture = read(successorAuthorityFixtureRelative)
+    expect(generated).toContain(
+      `const runtimeSuccessorAuthorityFixtureV117JSON = ${JSON.stringify(successorAuthorityFixture.toString("utf8"))}`,
+    )
+    expect(generated).toContain(
+      `const runtimeSuccessorAuthorityFixtureV117SHA256 = ${JSON.stringify(sha256(successorAuthorityFixture))}`,
+    )
     expect(generated).not.toMatch(
       /defaultRuntime|fallbackRuntime|return\s+runtimeInvocationContracts\[/,
     )
@@ -392,6 +541,26 @@ describe("versioned TypeScript-to-Go parity generator", () => {
     ])
   })
 
+  it("keeps the successor authority artifact under one explicit writer", () => {
+    const owners = [
+      "scripts/generate-go-parity-fixtures.ts",
+      "scripts/generate-go-parity-fixtures.test.ts",
+    ].filter((relativePath) =>
+      read(relativePath)
+        .toString("utf8")
+        .includes("runtime-successor-authority-v1.17.fixture.json"),
+    )
+    expect(owners).toEqual([
+      "scripts/generate-go-parity-fixtures.ts",
+      "scripts/generate-go-parity-fixtures.test.ts",
+    ])
+    const source = read("scripts/generate-go-parity-fixtures.ts").toString(
+      "utf8",
+    )
+    expect(source).toContain('args.includes("--write-v1.17-service")')
+    expect(source).toContain("paths.v117SuccessorAuthorityFixture")
+  })
+
   it("rejects unknown and cross-version aliases in the generated dispatch source", () => {
     const generated = read(generatedRelative).toString("utf8")
     expect(generated).toContain("switch version")
@@ -400,7 +569,6 @@ describe("versioned TypeScript-to-Go parity generator", () => {
     )
     for (const forbidden of [
       '"strategy-runtime-abi-v1.14"',
-      '"strategy-runtime-abi-v1.17"',
       '"stdin-stdout-json"',
     ]) {
       expect(generated).not.toContain(forbidden)

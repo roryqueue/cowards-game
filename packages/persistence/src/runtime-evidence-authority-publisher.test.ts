@@ -374,7 +374,7 @@ describe("v1.17 installed authority persistence boundary", () => {
       createHash("sha256")
         .update(
           encodeRuntimeEvidenceAuthorityInstallReceiptV117({
-            sourceIds: ordered,
+            sourceIds: [...ordered],
           }),
         )
         .digest("hex"),
@@ -397,6 +397,107 @@ describe("v1.17 installed authority persistence boundary", () => {
       "runtime_evidence_v1_17_installed_authorities",
     ])
       expect(source).toContain(required)
+  })
+
+  it("accepts the sole-writer successor fixture bytes and persists their exact derived row", async () => {
+    const fixture = JSON.parse(
+      await readFile(
+        new URL(
+          "../../spec/artifacts/runtime-successor-authority-v1.17.fixture.json",
+          import.meta.url,
+        ),
+        "utf8",
+      ),
+    ) as {
+      installFixture: {
+        trustDomain: string
+        signerKeyId: string
+        publicKeyPem: string
+        evaluationInstant: string
+        installedAt: string
+        payloadBytesBase64: string
+        envelopeBytesBase64: string
+        expected: {
+          installReceiptId: string
+          installReceiptHash: string
+          authorityBundleHash: string
+          sourceManifestHash: string
+          registryGeneration: string
+          semanticTupleManifestHash: string
+          envelopeSha256: string
+          attestationIds: string[]
+          certificateIds: string[]
+          installReceipt: unknown
+        }
+      }
+    }
+    const { installFixture } = fixture
+    let inserted: readonly unknown[] | undefined
+    const fixturePool = {
+      async query(sql: string, values?: readonly unknown[]) {
+        if (/insert into runtime_evidence_v1_17_installed_authorities/iu.test(sql)) {
+          inserted = values
+          return { rows: [], rowCount: 1 }
+        }
+        if (/select authority_bundle_hash/iu.test(sql)) {
+          if (inserted === undefined)
+            throw new Error("fixture select occurred before insert")
+          return {
+            rows: [
+              {
+                authority_bundle_hash: inserted[1],
+                source_manifest_hash: inserted[2],
+                registry_generation: inserted[3],
+                semantic_tuple_manifest_hash: inserted[4],
+                envelope_sha256: inserted[5],
+                trust_domain: inserted[6],
+                signer_key_id: inserted[7],
+                install_receipt_hash: inserted[8],
+                payload_bytes: inserted[13],
+                envelope_bytes: inserted[14],
+                attestation_ids: JSON.parse(inserted[15] as string),
+                certificate_ids: JSON.parse(inserted[16] as string),
+                install_receipt: JSON.parse(inserted[17] as string),
+              },
+            ],
+            rowCount: 1,
+          }
+        }
+        throw new Error(`unexpected fixture query: ${sql}`)
+      },
+    } as unknown as Pool
+
+    const installed = await recordInstalledRuntimeEvidenceAuthorityV117(
+      fixturePool,
+      {
+        envelopeBytes: Buffer.from(
+          installFixture.envelopeBytesBase64,
+          "base64",
+        ),
+        evaluationInstant: installFixture.evaluationInstant,
+        installedAt: installFixture.installedAt,
+        expectedTrustDomain: installFixture.trustDomain,
+        signerKeyId: installFixture.signerKeyId,
+        publicKeyPem: installFixture.publicKeyPem,
+      },
+    )
+    const {
+      attestationIds,
+      certificateIds,
+      installReceipt,
+      ...expectedInstalled
+    } = installFixture.expected
+    expect(installed).toEqual(expectedInstalled)
+    expect(inserted).toBeDefined()
+    expect(Buffer.from(inserted![13] as Uint8Array).toString("base64")).toBe(
+      installFixture.payloadBytesBase64,
+    )
+    expect(Buffer.from(inserted![14] as Uint8Array).toString("base64")).toBe(
+      installFixture.envelopeBytesBase64,
+    )
+    expect(JSON.parse(inserted![15] as string)).toEqual(attestationIds)
+    expect(JSON.parse(inserted![16] as string)).toEqual(certificateIds)
+    expect(JSON.parse(inserted![17] as string)).toEqual(installReceipt)
   })
 })
 
