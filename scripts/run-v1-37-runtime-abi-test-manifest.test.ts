@@ -121,5 +121,11 @@ describe("Phase 258 exact runtime ABI test manifest", () => {
         `${namedFiles}\n Test Files  7 passed (7)\n Tests  19 passed (19)`,
       ),
     ).not.toThrow()
+    expect(() =>
+      validateRuntimeAbiTestResult(
+        test,
+        `${namedFiles}\n ✓ rejects all-skipped Vitest output\n Test Files  7 passed (7)\n Tests  19 passed (19)`,
+      ),
+    ).not.toThrow()
   })
 })

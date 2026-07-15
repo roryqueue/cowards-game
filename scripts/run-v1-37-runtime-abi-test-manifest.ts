@@ -124,9 +124,6 @@ export const validateRuntimeAbiTestResult = (
   if (test.expectedOutput.some((marker) => !output.includes(marker))) {
     throw new TypeError(`${test.id} omitted an exact output marker.`)
   }
-  if (/\b(skip|skipped|todo)\b/iu.test(output) || /--- SKIP:/u.test(output)) {
-    throw new TypeError(`${test.id} reported a skipped required result.`)
-  }
   switch (test.kind) {
     case "vitest": {
       const fileCount = test.ownedFiles.length
@@ -134,12 +131,23 @@ export const validateRuntimeAbiTestResult = (
         `Test Files\\s+${String(fileCount)} passed \\(${String(fileCount)}\\)`,
         "u",
       )
-      if (!testFiles.test(output) || !/Tests\s+[1-9][0-9]* passed \([1-9][0-9]*\)/u.test(output)) {
+      if (
+        /(?:^|\n)\s*(?:Test Files|Tests)\s+.*\b(?:skipped|todo)\b/iu.test(output)
+      ) {
+        throw new TypeError(`${test.id} reported a skipped required result.`)
+      }
+      if (
+        !testFiles.test(output) ||
+        !/Tests\s+[1-9][0-9]* passed \([1-9][0-9]*\)/u.test(output)
+      ) {
         throw new TypeError(`${test.id} did not report structured Vitest PASS.`)
       }
       return
     }
     case "go":
+      if (/--- SKIP:/u.test(output)) {
+        throw new TypeError(`${test.id} reported a skipped required result.`)
+      }
       if (
         !output.includes(`=== RUN   ${test.namedResult}`) ||
         !output.includes(`--- PASS: ${test.namedResult}`) ||
@@ -149,6 +157,9 @@ export const validateRuntimeAbiTestResult = (
       }
       return
     case "playwright":
+      if (/(?:^|\n)\s*[1-9][0-9]*\s+(?:skipped|did not run)\b/iu.test(output)) {
+        throw new TypeError(`${test.id} reported a skipped required result.`)
+      }
       if (!/\b[1-9][0-9]* passed\b/u.test(output)) {
         throw new TypeError(`${test.id} did not report structured Playwright PASS.`)
       }
