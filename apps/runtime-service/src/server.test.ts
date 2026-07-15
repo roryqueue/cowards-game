@@ -1,4 +1,5 @@
 import { Buffer } from "node:buffer"
+import { createHash } from "node:crypto"
 import { once } from "node:events"
 import type { AddressInfo } from "node:net"
 import { Readable } from "node:stream"
@@ -16,6 +17,8 @@ import {
   createRuntimeInvocationExecutionReceiptV117,
   createRuntimeInvocationTraceV117,
   encodeCanonicalJson,
+  hashCanonicalIdentity,
+  hashExecutableLaneIdentity,
   runtimeInvocationExecutionLedgerPoststateRootV117,
   serializeRuntimeInvocationResponseV117,
   type JsonValue,
@@ -42,6 +45,92 @@ process.env.COWARDS_PROVIDER_VALIDATION_SECRET =
   "cowards-provider-validation-test-secret-v1.33"
 
 const PRIVATE_ARTIFACT_TOKEN = "cowards-private-artifact-test-token-v1.35"
+
+const IDENTITY_DOMAINS_V117 = [
+  "originalSource",
+  "normalizedSource",
+  "normalizationPolicy",
+  "artifact",
+  "artifactManifest",
+  "runtimeExecutable",
+  "compilerExecutable",
+  "sysrootStdlib",
+  "adapterBuild",
+  "semanticTuple",
+  "containmentPolicy",
+  "conformanceCorpus",
+  "budgetProfile",
+  "canonicalJsonProfile",
+  "evidenceBundle",
+] as const
+
+const rawSha256 = (bytes: Uint8Array): `sha256:${string}` =>
+  `sha256:${createHash("sha256").update(bytes).digest("hex")}`
+
+const successorEntrant = (
+  revision: ReturnType<typeof buildStrategyRevision>,
+  graphDigit: string,
+) => {
+  const sourceBytes = Buffer.from(revision.source, "utf8")
+  const normalizedBytes = Buffer.from(
+    revision.source.replaceAll("\r\n", "\n").replaceAll("\r", "\n"),
+    "utf8",
+  )
+  const artifactBytes = Buffer.from(
+    revision.metadata.sourceArtifact!.bytesBase64!,
+    "base64",
+  )
+  const identityManifest = {
+    schemaVersion: "runtime-identity-manifest-v1" as const,
+    profile: "runtime-identity-v1" as const,
+    bindings: IDENTITY_DOMAINS_V117.map((domain) => {
+      const bytes =
+        domain === "originalSource"
+          ? sourceBytes
+          : domain === "normalizedSource"
+            ? normalizedBytes
+            : domain === "artifact"
+              ? artifactBytes
+              : Buffer.from(`fixture:${domain}:v1.17`, "utf8")
+      return {
+        domain,
+        publicId: `fixture.${domain}.v1.17`,
+        sha256: hashCanonicalIdentity(domain, [bytes]),
+      }
+    }),
+  }
+  const encoded = encodeCanonicalJson(identityManifest, {
+    context: "canonical-manifest",
+  })
+  if (!encoded.ok) throw new Error(encoded.error.code)
+  const exactPins = [
+    ["runtimeExecutableDigest", `sha256:${"5".repeat(64)}`],
+    ["reportedVersion", "node-v26.0.0"],
+    ["targetAbi", "darwin-arm64"],
+    ["compilerFlags", `sha256:${"6".repeat(64)}`],
+    ["adapterBuildDigest", `sha256:${"7".repeat(64)}`],
+    ["standardLibraryOrSysrootDigest", `sha256:${"8".repeat(64)}`],
+    ["containmentPolicyId", "fixture.containment.v1.17"],
+    ["budgetProfileSha256", RUNTIME_ABI_V1_17_BUDGET_PROFILE_SHA256],
+    ["canonicalJsonProfileId", "canonical-json-v1.1"],
+    ["behaviorSettingsHash", `sha256:${"9".repeat(64)}`],
+  ] as const
+  return {
+    strategyRevisionId: revision.id,
+    laneIdentityHash:
+      `sha256:${hashExecutableLaneIdentity(createFixtureDeploymentLaneIdentity(revision))}` as const,
+    sourceIdentity: {
+      originalSourceSha256: rawSha256(sourceBytes),
+      normalizedSourceSha256: rawSha256(normalizedBytes),
+      artifactSha256: rawSha256(artifactBytes),
+    },
+    identityManifest,
+    identityManifestRoot:
+      `sha256:${hashCanonicalIdentity("evidenceBundle", [encoded.bytes])}` as const,
+    evidenceGraphRoot: `sha256:${graphDigit.repeat(64)}` as const,
+    exactPins,
+  }
+}
 
 const runtimeConfig = createRuntimeServiceConfig({
   strategyExecutionAdapter: "worker-thread",
@@ -147,14 +236,8 @@ describe("runtime execution HTTP boundary", () => {
         top,
       }),
     }
-    const bottomRoots = {
-      identityManifestRoot: `sha256:${"1".repeat(64)}`,
-      evidenceGraphRoot: `sha256:${"2".repeat(64)}`,
-    } as const
-    const topRoots = {
-      identityManifestRoot: `sha256:${"3".repeat(64)}`,
-      evidenceGraphRoot: `sha256:${"4".repeat(64)}`,
-    } as const
+    const bottomBinding = successorEntrant(bottom, "2")
+    const topBinding = successorEntrant(top, "4")
     const budgetProfileSha256 = RUNTIME_ABI_V1_17_BUDGET_PROFILE_SHA256
     const ledgerPrestateRoot =
       RUNTIME_INVOCATION_V1_17_INITIAL_EXECUTION_LEDGER_ROOT
@@ -165,18 +248,27 @@ describe("runtime execution HTTP boundary", () => {
       matchId: current.match.matchId,
       compatibilityTupleId: current.evidenceSnapshot.compatibility.tupleId,
       authority: {
+        bundleHash: `sha256:${"a".repeat(64)}`,
+        sourceManifestHash: `sha256:${"b".repeat(64)}`,
+        registryGeneration: "17",
+      },
+      legacyAuthority: {
         bundleHash: current.evidenceSnapshot.authorityBundleHash,
         sourceManifestHash:
           current.evidenceSnapshot.publication.sourceManifestHash,
         registryGeneration: current.evidenceSnapshot.registryGeneration,
       },
-      entrants: { bottom: bottomRoots, top: topRoots },
+      entrants: { bottom: bottomBinding, top: topBinding },
       accounting: { budgetProfileSha256, ledgerPrestateRoot },
       match: current as unknown as JsonValue,
     } as const
-    const bindings = [bottomRoots, topRoots].map((binding, index) => ({
+    const bindings = [bottomBinding, topBinding].map((entrant, index) => ({
       attestationId: `attestation:http-route:${String(index)}`,
-      binding,
+      binding: {
+        identityManifestRoot: entrant.identityManifestRoot,
+        evidenceGraphRoot: entrant.evidenceGraphRoot,
+        exactPins: entrant.exactPins,
+      },
     }))
     const signingIdentityV117 = {
       keyId: RUNTIME_INVOCATION_V1_17_TEST_KEY_ID,
@@ -408,6 +500,64 @@ describe("runtime execution HTTP boundary", () => {
       },
     })
     expect(candidateInvocations).toBe(0)
+    const rejectedSuccessorBindings = [
+      {
+        ...candidate,
+        entrants: {
+          ...candidate.entrants,
+          bottom: {
+            ...candidate.entrants.bottom,
+            laneIdentityHash: `sha256:${"f".repeat(64)}`,
+          },
+        },
+      },
+      {
+        ...candidate,
+        entrants: {
+          ...candidate.entrants,
+          bottom: {
+            ...candidate.entrants.bottom,
+            sourceIdentity: {
+              ...candidate.entrants.bottom.sourceIdentity,
+              artifactSha256: `sha256:${"f".repeat(64)}`,
+            },
+          },
+        },
+      },
+      {
+        ...candidate,
+        entrants: {
+          ...candidate.entrants,
+          bottom: {
+            ...candidate.entrants.bottom,
+            exactPins: candidate.entrants.bottom.exactPins.map((pin, index) =>
+              index === 1 ? ([pin[0], "node-v99.0.0"] as const) : pin,
+            ),
+          },
+        },
+      },
+    ]
+    for (const rejectedCandidate of rejectedSuccessorBindings) {
+      const rejectedBytes = encodeCanonicalJson(
+        rejectedCandidate as unknown as JsonValue,
+        { context: "authenticated-outer-envelope" },
+      )
+      if (!rejectedBytes.ok) throw new Error(rejectedBytes.error.code)
+      const rejected = await fetch(endpoint, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: Buffer.from(rejectedBytes.bytes),
+      })
+      expect(await rejected.json()).toMatchObject({
+        ok: false,
+        kind: "systemFailure",
+        systemFailure: {
+          code: "AUTHORITY_BINDING_MISMATCH",
+          playerPenalty: false,
+        },
+      })
+      expect(candidateInvocations).toBe(0)
+    }
     const successor = await fetch(endpoint, {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -432,6 +582,13 @@ describe("runtime execution HTTP boundary", () => {
         semanticReceipt: {
           budgetProfileSha256,
           ledgerPrestateRoot,
+          authorityBundleHash: candidate.authority.bundleHash,
+          legacyAuthorityBundleHash: candidate.legacyAuthority.bundleHash,
+          bottomLaneIdentityHash: candidate.entrants.bottom.laneIdentityHash,
+          bottomOriginalSourceSha256:
+            candidate.entrants.bottom.sourceIdentity.originalSourceSha256,
+          bottomArtifactSha256:
+            candidate.entrants.bottom.sourceIdentity.artifactSha256,
         },
       },
     })
@@ -453,6 +610,9 @@ describe("runtime execution HTTP boundary", () => {
     ).toMatchObject({
       ledgerPrestateRoot,
       ledgerPoststateRoot: expectedLedgerPoststateRoot,
+      authorityBundleHash: candidate.authority.bundleHash,
+      legacyAuthorityBundleHash: candidate.legacyAuthority.bundleHash,
+      bottomLaneIdentityHash: candidate.entrants.bottom.laneIdentityHash,
     })
 
     forceMissingReceipt = true

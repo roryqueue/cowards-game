@@ -285,6 +285,27 @@ const expectLoadCode = (run: () => unknown, code: string): void => {
 }
 
 describe("mounted runtime evidence authority", () => {
+  it("loads distinct signed legacy and v1.17 envelope bytes without conflating authorities", () => {
+    const legacyFixture = createFixture({})
+    const successorFixture = createFixtureV117()
+
+    const legacy = createRuntimeEvidenceAuthorityLoader(
+      legacyFixture.config,
+    ).load()
+    const successor = createRuntimeEvidenceAuthorityLoaderV117(
+      successorFixture.config,
+    ).load()
+
+    expect(legacy.authorityBundleHash).toBe(legacyFixture.payloadSha256)
+    expect(successor.authorityBundleHash).toBe(successorFixture.payloadSha256)
+    expect(successor.sourceManifestHash).toBe(
+      successorFixture.payload.sourceManifestHash,
+    )
+    expect(legacy.authorityBundleHash).not.toBe(successor.authorityBundleHash)
+    expect(legacyFixture.payloadBytes).not.toEqual(successorFixture.payloadBytes)
+    expect(legacyFixture.bundlePath).not.toBe(successorFixture.bundlePath)
+  })
+
   it("loads one signed v1.17 binding and rejects signed certificate-kind substitution", () => {
     const fixture = createFixtureV117()
     const loaded = createRuntimeEvidenceAuthorityLoaderV117(
