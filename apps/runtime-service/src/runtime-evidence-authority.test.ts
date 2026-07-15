@@ -310,6 +310,24 @@ describe("mounted runtime evidence authority", () => {
       () => createRuntimeEvidenceAuthorityLoaderV117(fixture.config).load(),
       "CERTIFICATE_HASH",
     )
+
+    const floatingPinBytes = new TextEncoder().encode(
+      new TextDecoder()
+        .decode(fixture.payloadBytes)
+        .replace(
+          '"reportedVersion","node-v26.0.0"',
+          '"reportedVersion","latest"',
+        ),
+    )
+    writeFileSync(
+      fixture.bundlePath,
+      `${JSON.stringify(fixture.makeEnvelope(floatingPinBytes))}\n`,
+      { mode: 0o600 },
+    )
+    expectLoadCode(
+      () => createRuntimeEvidenceAuthorityLoaderV117(fixture.config).load(),
+      "V117_BINDING",
+    )
   })
 
   it("independently verifies one bounded descriptor read, Ed25519 key, exact bytes, graph, and freshness", () => {

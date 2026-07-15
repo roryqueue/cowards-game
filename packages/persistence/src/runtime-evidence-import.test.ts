@@ -500,6 +500,63 @@ describePostgres("PostgreSQL verified runtime evidence import", () => {
       binding: first.binding,
     })
 
+    const publication = {
+      mode: "fixture" as const,
+      bundleVersion: "candidate:v1.17:fixture",
+      registryGeneration: "7",
+      issuedAt: "2026-07-14T00:00:00.000Z",
+      validFrom: "2026-07-14T00:00:00.000Z",
+      validUntil: "2026-07-15T00:00:00.000Z",
+      semanticTupleManifestHash: CANONICAL_COMPATIBILITY_TUPLES[0]!.tupleId,
+      sourceManifestHash: `sha256:${sha256("fixture-source-manifest-v1.17")}`,
+    }
+    await expect(
+      prepareRuntimeEvidenceAuthorityPublicationV117(pool, {
+        ...publication,
+        registryGeneration: "8",
+      }),
+    ).rejects.toMatchObject({ code: "CANDIDATE_COVERAGE" })
+    await expect(
+      prepareRuntimeEvidenceAuthorityPublicationV117(pool, {
+        ...publication,
+        validUntil: "2026-07-16T00:00:00.000Z",
+      }),
+    ).rejects.toMatchObject({ code: "CANDIDATE_COVERAGE" })
+    await expect(
+      prepareRuntimeEvidenceAuthorityPublicationV117(pool, {
+        ...publication,
+        issuedAt: "2026-07-13T00:00:00.000Z",
+        validFrom: "2026-07-13T00:00:00.000Z",
+      }),
+    ).rejects.toMatchObject({ code: "CANDIDATE_COVERAGE" })
+
+    await pool.query("begin")
+    try {
+      await pool.query(
+        `insert into runtime_evidence_v1_17_candidates
+          (attestation_id, attestation_sha256, certificate_kind, certificate_id,
+           certificate_version, certificate_record_hash, producer_id,
+           producer_key_id, trust_domain, managed_identity, graph_schema_version,
+           graph_profile, identity_manifest_root, evidence_graph_root,
+           exact_pin_expansion, registry_generation, issued_at, valid_until)
+         select attestation_id || ':floating', repeat('e', 64), certificate_kind,
+                certificate_id || ':floating', certificate_version,
+                'sha256:' || repeat('d', 64), producer_id, producer_key_id,
+                trust_domain, managed_identity, graph_schema_version, graph_profile,
+                identity_manifest_root, evidence_graph_root,
+                jsonb_set(exact_pin_expansion, '{1,1}', to_jsonb('latest'::text)),
+                registry_generation, issued_at, valid_until
+           from runtime_evidence_v1_17_candidates
+          where attestation_id = $1`,
+        [first.attestationId],
+      )
+      await expect(
+        prepareRuntimeEvidenceAuthorityPublicationV117(pool, publication),
+      ).rejects.toMatchObject({ code: "V117_BINDING" })
+    } finally {
+      await pool.query("rollback")
+    }
+
     await expect(
       pool.query(
         "update runtime_evidence_v1_17_candidates set evidence_graph_root = $1 where attestation_id = $2",

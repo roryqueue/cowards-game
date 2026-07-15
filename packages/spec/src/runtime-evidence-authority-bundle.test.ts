@@ -154,6 +154,27 @@ describe("runtime evidence authority bundle", () => {
     ).not.toBe(first)
   })
 
+  it.each([
+    ["runtimeExecutableDigest", "not-a-hash"],
+    ["reportedVersion", "latest"],
+    ["targetAbi", "*"],
+    ["compilerFlags", "x"],
+    ["containmentPolicyId", "default"],
+    ["canonicalJsonProfileId", "current"],
+  ] as const)(
+    "rejects floating or malformed %s authority pins",
+    (name, value) => {
+      const binding = fixtureBindingV117()
+      const exactPins = binding.exactPins.map(
+        ([pinName, pinValue]) =>
+          [pinName, pinName === name ? value : pinValue] as const,
+      )
+      expect(() =>
+        parseRuntimeEvidenceAuthorityBindingV117({ ...binding, exactPins }),
+      ).toThrow(/binding/iu)
+    },
+  )
+
   it("signs and revalidates the exact v1.17 binding through the mounted envelope", () => {
     const binding = fixtureBindingV117()
     const attestationId = "attestation:v1.17:fixture"

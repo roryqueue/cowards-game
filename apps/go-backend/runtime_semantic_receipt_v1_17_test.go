@@ -2,12 +2,67 @@ package main
 
 import (
 	"bytes"
+	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"os"
 	"testing"
 )
+
+func TestPhase258RuntimeSemanticReceiptV117RejectsIncompleteSignedClaims(t *testing.T) {
+	fixtureBytes, err := os.ReadFile("../../packages/spec/artifacts/runtime-execution-service-response.v1.17.candidate.wire.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var wire struct {
+		Result struct {
+			SemanticReceipt runtimeSemanticReceiptV117 `json:"semanticReceipt"`
+		} `json:"result"`
+	}
+	if err := json.Unmarshal(fixtureBytes, &wire); err != nil {
+		t.Fatal(err)
+	}
+	mutations := []struct {
+		name   string
+		mutate func(*runtimeSemanticReceiptV117)
+	}{
+		{"empty request id", func(receipt *runtimeSemanticReceiptV117) { receipt.RequestID = "" }},
+		{"empty match id", func(receipt *runtimeSemanticReceiptV117) { receipt.MatchID = "" }},
+		{"floating generation", func(receipt *runtimeSemanticReceiptV117) { receipt.RegistryGeneration = "01" }},
+		{"negative count", func(receipt *runtimeSemanticReceiptV117) { receipt.RuntimeViolationEventCount = -1 }},
+		{"unsafe count", func(receipt *runtimeSemanticReceiptV117) { receipt.RuntimeViolationEventCount = 9_007_199_254_740_992 }},
+	}
+	for _, test := range mutations {
+		t.Run(test.name, func(t *testing.T) {
+			candidate := wire.Result.SemanticReceipt
+			test.mutate(&candidate)
+			candidate.Signature = ""
+			message, messageErr := runtimeSemanticReceiptV117Message(candidate)
+			if messageErr == nil {
+				mac := hmac.New(sha256.New, []byte("invalid-claim-secret"))
+				_, _ = mac.Write(message)
+				candidate.Signature = "hmac-sha256:" + hex.EncodeToString(mac.Sum(nil))
+				if validRuntimeSemanticReceiptV117(candidate, "invalid-claim-secret") {
+					t.Fatal("invalid signed claims accepted")
+				}
+			}
+		})
+	}
+
+	candidate := wire.Result.SemanticReceipt
+	candidate.Signature = ""
+	message, err := runtimeSemanticReceiptV117Message(candidate)
+	if err != nil {
+		t.Fatal(err)
+	}
+	mac := hmac.New(sha256.New, []byte(" \t"))
+	_, _ = mac.Write(message)
+	candidate.Signature = "hmac-sha256:" + hex.EncodeToString(mac.Sum(nil))
+	if validRuntimeSemanticReceiptV117(candidate, " \t") {
+		t.Fatal("blank signing secret accepted")
+	}
+}
 
 func TestPhase258RuntimeSemanticReceiptV117CanonicalHTMLAndUnicode(t *testing.T) {
 	receipt := runtimeSemanticReceiptV117{
