@@ -33,6 +33,7 @@ import {
   createRuntimeEvidenceAuthorityLoader,
   createRuntimeEvidenceAuthorityLoaderV117,
   runtimeEvidenceAuthorityConfigFromEnvironment,
+  runtimeEvidenceAuthorityConfigV117FromEnvironment,
   type RuntimeEvidenceAuthorityFileSystem,
 } from "./runtime-evidence-authority.js"
 
@@ -468,6 +469,36 @@ describe("mounted runtime evidence authority", () => {
         COWARDS_RUNTIME_EVIDENCE_AUTHORITY_BUNDLE_PATH: fixture.bundlePath,
       }),
     ).toThrow(RuntimeEvidenceAuthorityLoadError)
+  })
+
+  it("keeps legacy and v1.17 production authority paths independently configured", () => {
+    const environment = {
+      COWARDS_RUNTIME_EVIDENCE_AUTHORITY_BUNDLE_PATH: "/authority/legacy.json",
+      COWARDS_RUNTIME_EVIDENCE_AUTHORITY_PUBLIC_KEY_PATH: "/authority/legacy-key.json",
+      COWARDS_RUNTIME_EVIDENCE_AUTHORITY_HIGH_WATER_PATH: "/authority/legacy-high-water.json",
+      COWARDS_RUNTIME_EVIDENCE_AUTHORITY_MIN_GENERATION: "7",
+      COWARDS_RUNTIME_EVIDENCE_AUTHORITY_MIN_BUNDLE_HASH: `sha256:${"1".repeat(64)}`,
+      COWARDS_RUNTIME_EVIDENCE_AUTHORITY_BOOTSTRAP: "0",
+      COWARDS_RUNTIME_EVIDENCE_AUTHORITY_V117_BUNDLE_PATH: "/authority/v1.17.json",
+      COWARDS_RUNTIME_EVIDENCE_AUTHORITY_V117_PUBLIC_KEY_PATH: "/authority/v1.17-key.json",
+      COWARDS_RUNTIME_EVIDENCE_AUTHORITY_V117_HIGH_WATER_PATH: "/authority/v1.17-high-water.json",
+      COWARDS_RUNTIME_EVIDENCE_AUTHORITY_V117_MIN_GENERATION: "8",
+      COWARDS_RUNTIME_EVIDENCE_AUTHORITY_V117_MIN_BUNDLE_HASH: `sha256:${"2".repeat(64)}`,
+      COWARDS_RUNTIME_EVIDENCE_AUTHORITY_V117_BOOTSTRAP: "0",
+    }
+
+    expect(runtimeEvidenceAuthorityConfigFromEnvironment(environment)).toMatchObject({
+      bundlePath: "/authority/legacy.json",
+      highWaterPath: "/authority/legacy-high-water.json",
+    })
+    expect(
+      runtimeEvidenceAuthorityConfigV117FromEnvironment(environment),
+    ).toMatchObject({
+      bundlePath: "/authority/v1.17.json",
+      highWaterPath: "/authority/v1.17-high-water.json",
+      minimumRegistryGeneration: "8",
+      minimumBundleHash: `sha256:${"2".repeat(64)}`,
+    })
   })
 
   it("fails the production entrypoint safely before server creation or listen", () => {

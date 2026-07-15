@@ -528,6 +528,10 @@ describe("runtime execution service", () => {
       payload: {
         attestations: bindings,
         certificates: bindings.map(({ attestationId, binding }) => ({
+          certificateId:
+            currentRequest.evidenceSnapshot.entrants[
+              attestationId.endsWith(":0") ? "bottom" : "top"
+            ].containmentCertificateId!,
           attestationId,
           certificateKind: "containment",
           binding,
@@ -549,6 +553,43 @@ describe("runtime execution service", () => {
         }
       },
     }
+
+    const swappedRootsRequest = {
+      ...candidateRequest,
+      entrants: { bottom: topRoots, top: bottomRoots },
+    }
+    expect(
+      executePreparedRuntimeServiceRequestV117(
+        swappedRootsRequest,
+        runtimeConfig,
+        dependencies,
+      ),
+    ).toMatchObject({
+      ok: false,
+      systemFailure: { code: "AUTHORITY_BINDING_MISMATCH" },
+    })
+    expect(executions).toBe(0)
+
+    const countedMatch = globalThis.structuredClone(currentRequest)
+    for (const side of ["bottom", "top"] as const) {
+      countedMatch.evidenceSnapshot.entrants[side] = {
+        ...countedMatch.evidenceSnapshot.entrants[side],
+        effectiveStatus: "counted",
+        conformanceCertificateId: `certificate:counted:${side}`,
+        conformanceCertificateHash: `sha256:${"e".repeat(64)}`,
+      }
+    }
+    expect(
+      executePreparedRuntimeServiceRequestV117(
+        { ...candidateRequest, match: countedMatch as unknown as JsonValue },
+        runtimeConfig,
+        dependencies,
+      ),
+    ).toMatchObject({
+      ok: false,
+      systemFailure: { code: "AUTHORITY_BINDING_MISMATCH" },
+    })
+    expect(executions).toBe(0)
 
     const response = executePreparedRuntimeServiceRequestV117(
       candidateRequest,

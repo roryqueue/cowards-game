@@ -239,7 +239,10 @@ describe("runtime execution HTTP boundary", () => {
               },
             })),
             certificates: bindings.map(({ attestationId, binding }, index) => ({
-              certificateId: `certificate:http-route:${String(index)}`,
+              certificateId:
+                current.evidenceSnapshot.entrants[
+                  index === 0 ? "bottom" : "top"
+                ].containmentCertificateId!,
               certificateVersion: "runtime-certificate-v1.17",
               certificateRecordHash: `sha256:${"9".repeat(64)}`,
               certificateKind: "containment" as const,
