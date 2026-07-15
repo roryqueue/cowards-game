@@ -156,12 +156,13 @@ func decodeRuntimeServiceResponseV117(
 	if err := decodeStrictJSONUseNumber(canonical.CanonicalBytes, &response); err != nil {
 		return nil, newRuntimeServiceFailure("RuntimeServiceMalformedResponse", "Runtime service v1.17 response was malformed", true, nil)
 	}
-	if response.ContractVersion != runtimeExecutionServiceVersionV117 || response.RequestID != request.RequestID || response.MatchID != request.MatchID {
+	if response.ContractVersion != runtimeExecutionServiceVersionV117 || response.RequestID != request.RequestID {
 		return nil, newRuntimeServiceFailure("RuntimeServiceContractMismatch", "Runtime service v1.17 response binding mismatch", true, nil)
 	}
 	if !response.OK {
 		failure := response.SystemFailure
 		if response.Kind != "systemFailure" || response.Result != nil || failure == nil ||
+			(response.MatchID != "" && response.MatchID != request.MatchID) ||
 			failure.Classification != "system_failure" ||
 			(failure.Ownership != "runtime_system" && failure.Ownership != "system_integrity" && failure.Ownership != "system_operation") ||
 			!runtimeInvocationV117SafeCode.MatchString(failure.Code) ||
@@ -180,7 +181,7 @@ func decodeRuntimeServiceResponseV117(
 			Details:        map[string]any{},
 		}
 	}
-	if response.Kind != "executionResult" || response.Result == nil || response.SystemFailure != nil {
+	if response.Kind != "executionResult" || response.MatchID != request.MatchID || response.Result == nil || response.SystemFailure != nil {
 		return nil, newRuntimeServiceFailure("RuntimeServiceMalformedResponse", "Runtime service v1.17 success response was malformed", true, nil)
 	}
 	result := response.Result

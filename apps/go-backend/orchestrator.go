@@ -20,7 +20,7 @@ const (
 type goMatchOrchestrator struct {
 	lifecycle       *matchJobLifecycle
 	completion      *matchCompletionService
-	runtime         *runtimeServiceClient
+	runtime         *runtimeServiceExecutionRouter
 	deploymentLanes *goDeploymentLaneRegistry
 	workerID        string
 	pollInterval    time.Duration
@@ -50,7 +50,7 @@ func newGoMatchOrchestrator(pool *pgxpool.Pool, runtimeServiceURL string) *goMat
 	return &goMatchOrchestrator{
 		lifecycle:    newMatchJobLifecycle(pool),
 		completion:   newMatchCompletionService(pool),
-		runtime:      newRuntimeServiceClient(runtimeServiceURL),
+		runtime:      newRuntimeServiceExecutionRouter(runtimeServiceURL),
 		workerID:     defaultGoOrchestratorWorkerID,
 		pollInterval: defaultGoOrchestratorPollInterval,
 		logger:       log.Default(),
@@ -108,7 +108,7 @@ func (orchestrator *goMatchOrchestrator) runOnce(ctx context.Context, matchIDs [
 		return &goMatchOrchestrationResult{Status: status, JobID: claimed.JobID, MatchID: claimed.MatchID}, nil
 	}
 
-	request, err := buildRuntimeServiceRequestForClaimedJob(ctx, orchestrator.lifecycle.pool, claimed, orchestrator.deploymentLanes)
+	request, err := buildRuntimeServiceExecutionRequestForClaimedJob(ctx, orchestrator.lifecycle.pool, claimed, orchestrator.deploymentLanes)
 	if err != nil {
 		status, recordErr := orchestrator.lifecycle.recordAttemptFailure(ctx, recordAttemptFailureInput{
 			JobID:        claimed.JobID,
@@ -162,7 +162,10 @@ func (orchestrator *goMatchOrchestrator) runOnce(ctx context.Context, matchIDs [
 		}
 		return &goMatchOrchestrationResult{Status: status, JobID: claimed.JobID, MatchID: claimed.MatchID}, nil
 	}
-	chronicle, finalState, semanticReceipt, semanticWireEvidence, err := runtimeServiceCompletionPayload(response)
+	if response.ContractVersion != runtimeExecutionServiceVersion || response.V116 == nil || response.V117 != nil {
+		return nil, errors.New("runtime service completion contract is not active")
+	}
+	chronicle, finalState, semanticReceipt, semanticWireEvidence, err := runtimeServiceCompletionPayload(response.V116)
 	if err != nil {
 		return nil, err
 	}
@@ -184,6 +187,30 @@ func (orchestrator *goMatchOrchestrator) runOnce(ctx context.Context, matchIDs [
 		MatchID:     completed.MatchID,
 		ChronicleID: completed.ChronicleID,
 	}, nil
+}
+
+func buildRuntimeServiceExecutionRequestForClaimedJob(ctx context.Context, pool *pgxpool.Pool, claimed *claimedMatchJob, registry *goDeploymentLaneRegistry) (*runtimeServiceExecutionRequest, error) {
+	request, err := buildRuntimeServiceRequestForClaimedJob(ctx, pool, claimed, registry)
+	if err != nil {
+		return nil, err
+	}
+	if claimed == nil || claimed.Integrity == nil {
+		return nil, errors.New("claimed Match integrity identity is unavailable")
+	}
+	switch claimed.Integrity.CompatibilityTuple.RuntimeABI {
+	case strategyRuntimeABIVersion:
+		return &runtimeServiceExecutionRequest{
+			ContractVersion: runtimeExecutionServiceVersion,
+			V116:            request,
+		}, nil
+	case strategyRuntimeABIVersionV117:
+		if selectedRuntimeServiceContractVersion() != runtimeExecutionServiceVersionV117 {
+			return nil, errors.New("successor runtime service contract is not current")
+		}
+		return nil, errors.New("successor runtime evidence roots and accounting are unavailable")
+	default:
+		return nil, errors.New("claimed Match runtime ABI has no service dispatch")
+	}
 }
 
 func matchJobLeaseForRuntimeService() time.Duration {

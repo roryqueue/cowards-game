@@ -167,6 +167,11 @@ func TestPhase258RuntimeServiceV117PreservesTypedSystemFailure(t *testing.T) {
 	if response != nil || failure == nil || failure.Code != "EVIDENCE_UNVERIFIABLE" || failure.Retryable || failure.PlayerPenalty {
 		t.Fatalf("typed system failure collapsed: response=%+v failure=%+v", response, failure)
 	}
+	withoutOptionalMatchID := []byte(`{"contractVersion":"runtime-execution-service-v1.17","kind":"systemFailure","ok":false,"requestId":"request:full-service:v1.17:0001","systemFailure":{"classification":"system_failure","code":"EVIDENCE_UNVERIFIABLE","ownership":"system_integrity","playerPenalty":false,"publicMessage":"Runtime execution failed before completion.","retryable":false}}`)
+	response, failure = decodeRuntimeServiceResponseV117(request, withoutOptionalMatchID, runtimeServiceV117FixtureSecret)
+	if response != nil || failure == nil || failure.Code != "EVIDENCE_UNVERIFIABLE" || failure.Retryable || failure.PlayerPenalty {
+		t.Fatalf("optional failure Match id collapsed: response=%+v failure=%+v", response, failure)
+	}
 }
 
 func TestPhase258CurrentDefaultRuntimeServiceContract(t *testing.T) {
@@ -232,7 +237,7 @@ func TestPhase258MixedRuntimeContractFailsClosed(t *testing.T) {
 		RequestID:       "request:phase258:mixed",
 		MatchID:         "match:phase258:mixed",
 	}
-	payload := []byte(`{"contractVersion":"runtime-execution-service-v1.16","ok":true,"kind":"executionResult","requestId":"request:phase258:mixed","matchId":"match:phase258:mixed"}`)
+	payload := []byte(`{"contractVersion":"runtime-execution-service-v1.16","kind":"executionResult","matchId":"match:phase258:mixed","ok":true,"requestId":"request:phase258:mixed"}`)
 	response, failure := decodeRuntimeServiceResponseV117(request, payload, "fixture-secret")
 	if response != nil || failure == nil || failure.ErrorClass != "RuntimeServiceContractMismatch" {
 		t.Fatalf("mixed v1.16/v1.17 response did not fail closed: response=%+v failure=%+v", response, failure)

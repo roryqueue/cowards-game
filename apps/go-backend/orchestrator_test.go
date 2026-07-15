@@ -189,7 +189,7 @@ func TestPhase258OrchestratorConsumesVersionedRuntimeServiceRouter(t *testing.T)
 	}
 	text := string(source)
 	for _, required := range []string{
-		"runtime *runtimeServiceExecutionRouter",
+		"*runtimeServiceExecutionRouter",
 		"newRuntimeServiceExecutionRouter(runtimeServiceURL)",
 		"buildRuntimeServiceExecutionRequestForClaimedJob",
 		"runtime.executeMatch",
