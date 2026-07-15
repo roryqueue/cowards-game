@@ -469,9 +469,9 @@ describe("Phase 258 successor runtime ownership", () => {
           return bindOutcome(request, {
             kind: "player_violation",
             violation:
-              RUNTIME_INVOCATION_V1_17_PLAYER_VIOLATIONS.INVALID_OUTPUT,
+              RUNTIME_INVOCATION_V1_17_PLAYER_VIOLATIONS.RESOURCE_EXHAUSTION,
             trace: traceFor(request, {
-              safeCodes: ["ADAPTER_CLASSIFIED_INVALID_OUTPUT"],
+              safeCodes: ["STRATEGY_RESOURCE_EXHAUSTION_PROVEN"],
             }),
           })
         },
@@ -498,6 +498,10 @@ describe("Phase 258 successor runtime ownership", () => {
     expect(after.soldiers.find(({ id }) => id === soldier.id)?.status).toBe(
       "STONE",
     )
+    expect(
+      execution.result.events.find(({ type }) => type === "RUNTIME_VIOLATION")
+        ?.payload,
+    ).toMatchObject({ type: "RESOURCE_EXHAUSTION" })
   })
 
   it.each([

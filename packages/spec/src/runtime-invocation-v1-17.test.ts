@@ -1662,7 +1662,7 @@ describe("runtime invocation v1.17 authenticated execution accounting", () => {
     })
   })
 
-  it("authenticates proven process excess as a committed forbidden-capability violation", () => {
+  it("authenticates proven process excess as committed resource exhaustion", () => {
     const request = candidateRequest()
     const measured = measuredEvidenceFor(request)
     const receipt = createRuntimeInvocationExecutionReceiptV117(request, {
@@ -1679,7 +1679,7 @@ describe("runtime invocation v1.17 authenticated execution accounting", () => {
       {
         kind: "player_violation",
         violation:
-          RUNTIME_INVOCATION_V1_17_PLAYER_VIOLATIONS.FORBIDDEN_CAPABILITY,
+          RUNTIME_INVOCATION_V1_17_PLAYER_VIOLATIONS.RESOURCE_EXHAUSTION,
         trace: createRuntimeInvocationTraceV117(request, [
           "ADAPTER_AUTHENTICATED",
           "ACCOUNTING_EVIDENCE_BOUND",
@@ -1691,7 +1691,7 @@ describe("runtime invocation v1.17 authenticated execution accounting", () => {
     expect(response).toMatchObject({
       outcome: {
         kind: "player_violation",
-        violation: { code: "FORBIDDEN_CAPABILITY" },
+        violation: { code: "RESOURCE_EXHAUSTION" },
       },
       accounting: {
         disposition: "commit",

@@ -7,9 +7,59 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"os"
+	"reflect"
 	"strings"
 	"testing"
 )
+
+func TestPhase258RuntimeInvocationV117ResourceAndTimeoutOwnership(t *testing.T) {
+	requestBytes := readRuntimeInvocationV117Fixture(t, "runtime-invocation-request.v1.17.candidate.json")
+	request, failure := verifyRuntimeInvocationRequestV117(requestBytes, runtimeInvocationV117SigningIdentity{KeyID: runtimeInvocationV117FixtureKeyID, Secret: runtimeInvocationV117FixtureSecret})
+	if failure != nil {
+		t.Fatal(failure)
+	}
+	baseOutcome := map[string]any{
+		"kind": "success", "value": map[string]any{"activationOrders": []any{}, "strategyMemory": nil},
+		"trace": runtimeInvocationTraceV117ForRequest(request),
+	}
+	base := runtimeInvocationV117ReceiptForTest(t, request, baseOutcome)
+	prestate := request.raw["accounting"].(map[string]any)["prestate"].(map[string]any)
+
+	wall := semanticCloneValue(t, base).(map[string]any)
+	wall["counters"].(map[string]any)["wallMilliseconds"] = map[string]any{"status": "measured", "delta": int64(51), "cumulative": int64(51)}
+	wallDebit := runtimeInvocationV117DebitExecutionLedger(prestate, wall)
+	if wallDebit.kind != "system_failure" || !reflect.DeepEqual(wallDebit.ledger, prestate) {
+		t.Fatalf("wall timeout mutated or blamed player: %+v", wallDebit)
+	}
+
+	for _, test := range []struct {
+		name   string
+		mutate func(map[string]any)
+	}{
+		{name: "compute", mutate: func(receipt map[string]any) {
+			receipt["counters"].(map[string]any)["computeFuel"] = map[string]any{"status": "measured", "delta": int64(10_000_001), "cumulative": int64(10_000_001)}
+		}},
+		{name: "output", mutate: func(receipt map[string]any) {
+			receipt["counters"].(map[string]any)["stdoutBytes"] = map[string]any{"status": "measured", "delta": int64(262_145), "cumulative": int64(262_145)}
+		}},
+		{name: "memory", mutate: func(receipt map[string]any) {
+			receipt["memory"] = map[string]any{"status": "measured", "peakBytes": int64(67_108_865), "cumulativePeakBytes": int64(67_108_865)}
+		}},
+		{name: "process", mutate: func(receipt map[string]any) {
+			receipt["process"] = map[string]any{"status": "verified", "processes": int64(2), "threads": int64(1), "children": int64(0)}
+		}},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			receipt := semanticCloneValue(t, base).(map[string]any)
+			test.mutate(receipt)
+			debit := runtimeInvocationV117DebitExecutionLedger(prestate, receipt)
+			outcome := map[string]any{"kind": "player_violation", "violation": map[string]any{"code": "RESOURCE_EXHAUSTION"}}
+			if debit.kind != "player_violation" || !runtimeInvocationV117DebitMatchesOutcome(debit, outcome) {
+				t.Fatalf("%s exhaustion was not one resource violation: %+v", test.name, debit)
+			}
+		})
+	}
+}
 
 const runtimeInvocationV117FixtureKeyID = "fixture-only:runtime-adapter:v1.17-candidate"
 const runtimeInvocationV117FixtureSecret = "fixture-only:runtime-invocation-v1.17:secret"
