@@ -1,5 +1,9 @@
 import { readFileSync } from "node:fs"
 import { describe, expect, it } from "vitest"
+import {
+  parseRuntimeAbiTestManifest,
+  validateRuntimeAbiTestResult,
+} from "./run-v1-37-runtime-abi-test-manifest.js"
 
 type TestManifest = {
   schemaVersion?: string
@@ -64,5 +68,58 @@ describe("Phase 258 exact runtime ABI test manifest", () => {
         expect(test.database.skipAllowed).toBe(false)
       }
     }
+  })
+
+  it("rejects fake filters and marker-only shell commands", () => {
+    const raw = manifest() as unknown as {
+      tests: Array<Record<string, unknown>>
+    }
+    const fakeFilter = structuredClone(raw)
+    fakeFilter.tests[0]!.command = [
+      "pnpm",
+      "test",
+      "--",
+      "--filter=fake",
+    ]
+    expect(() => parseRuntimeAbiTestManifest(fakeFilter)).toThrow(
+      /exact command/u,
+    )
+
+    const markerOnly = structuredClone(raw)
+    markerOnly.tests[0]!.command = [
+      "node",
+      "-e",
+      "console.log('canonical-identity-domains.test.ts')",
+    ]
+    expect(() => parseRuntimeAbiTestManifest(markerOnly)).toThrow(
+      /exact command/u,
+    )
+  })
+
+  it("requires structured PASS and rejects all-skipped Vitest output", () => {
+    const parsed = parseRuntimeAbiTestManifest(manifest())
+    const test = parsed.tests.find(({ id }) => id === "phase258.scripts")
+    if (test === undefined) throw new Error("scripts manifest entry missing")
+    const namedFiles = test.ownedFiles
+      .map((path) => ` ✓ ${path}`)
+      .join("\n")
+    expect(() =>
+      validateRuntimeAbiTestResult(
+        test,
+        `${namedFiles}\n Test Files  7 skipped (7)\n Tests  7 skipped (7)`,
+      ),
+    ).toThrow(/skipped/u)
+    expect(() =>
+      validateRuntimeAbiTestResult(
+        test,
+        `canonical-identity-domains.test.ts\n Test Files  7 passed (7)\n Tests  7 passed (7)`,
+      ),
+    ).toThrow(/named file/u)
+    expect(() =>
+      validateRuntimeAbiTestResult(
+        test,
+        `${namedFiles}\n Test Files  7 passed (7)\n Tests  19 passed (19)`,
+      ),
+    ).not.toThrow()
   })
 })
