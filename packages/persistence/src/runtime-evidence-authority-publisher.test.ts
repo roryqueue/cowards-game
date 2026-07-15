@@ -249,6 +249,26 @@ describe("authenticated runtime evidence authority controls", () => {
 const databaseUrl = process.env.DATABASE_URL
 const describePostgres = databaseUrl ? describe : describe.skip
 
+describe("v1.17 installed authority persistence boundary", () => {
+  it("requires an independently verified signed bundle and derived install identity", async () => {
+    const source = await readFile(
+      new URL(
+        "runtime-evidence-authority-publisher.ts",
+        import.meta.url,
+      ),
+      "utf8",
+    )
+    for (const required of [
+      "recordInstalledRuntimeEvidenceAuthorityV117",
+      "inspectRuntimeEvidenceAuthorityBundleV117",
+      "installReceiptId",
+      "installReceiptHash",
+      "runtime_evidence_v1_17_installed_authorities",
+    ])
+      expect(source).toContain(required)
+  })
+})
+
 describePostgres(
   "PostgreSQL append-only runtime evidence authority schema",
   () => {

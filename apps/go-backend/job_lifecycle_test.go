@@ -124,7 +124,17 @@ func TestMatchJobLifecycleIntegrityClaimContract(t *testing.T) {
 		"runtimeServiceV117",
 		"identity_manifest_root",
 		"evidence_graph_root",
+		"exact_pin_expansion",
 		"graph_schema_version",
+		"runtime_evidence_v1_17_installed_authorities",
+		"successor_authority.authority_bundle_hash",
+		"successor_authority.source_manifest_hash",
+		"successor_authority.registry_generation",
+		"successor_authority.semantic_tuple_manifest_hash",
+		"successor_authority.install_receipt_id",
+		"successor_authority.install_receipt_hash",
+		"bottom_containment.certificate_kind",
+		"top_containment.certificate_kind",
 	} {
 		if !strings.Contains(claimNextMatchJobSQL, required) {
 			t.Fatalf("integrity claim SQL is missing %q", required)
@@ -136,8 +146,14 @@ func TestMatchJobLifecycleIntegrityClaimContract(t *testing.T) {
 		t.Fatal("integrity rejection must precede lifecycle mutation")
 	}
 	if !strings.Contains(recheckClaimedMatchIntegritySQL, "runtime_evidence_authority_installed_head") ||
-		!strings.Contains(recheckClaimedMatchIntegritySQL, "installed_head.install_receipt_id = ms.authority_install_receipt_id") {
+		!strings.Contains(recheckClaimedMatchIntegritySQL, "installed_head.install_receipt_id = ms.authority_install_receipt_id") ||
+		!strings.Contains(recheckClaimedMatchIntegritySQL, "runtime_evidence_v1_17_installed_authorities") ||
+		!strings.Contains(recheckClaimedMatchIntegritySQL, "successor_authority.install_receipt_hash") {
 		t.Fatal("in-flight recheck must require the canonical installed authority head")
+	}
+	if !strings.Contains(claimNextMatchJobSQL, "successor_authority.authority_bundle_hash <> ms.authority_bundle_hash") ||
+		!strings.Contains(recheckClaimedMatchIntegritySQL, "successor_authority.authority_bundle_hash <> ms.authority_bundle_hash") {
+		t.Fatal("successor and nested legacy authority identities must be distinct")
 	}
 }
 

@@ -54,7 +54,35 @@ describe("migrations", () => {
     )
     expect(names).toContain("0020_runtime_evidence_v1_17_graph.sql")
     expect(names).toContain("0021_runtime_abi_v1_17_activation.sql")
+    expect(names).toContain("0022_runtime_evidence_v1_17_installed_authority.sql")
     expect(names).toEqual([...names].sort())
+  })
+
+  it("stores v1.17 installed authority independently from legacy publication bytes", async () => {
+    const sql = await readFile(
+      new URL(
+        "0022_runtime_evidence_v1_17_installed_authority.sql",
+        migrationsDirectory,
+      ),
+      "utf8",
+    )
+    for (const required of [
+      "runtime_evidence_v1_17_installed_authorities",
+      "authority_bundle_hash",
+      "source_manifest_hash",
+      "registry_generation",
+      "semantic_tuple_manifest_hash",
+      "envelope_sha256",
+      "install_receipt_id",
+      "install_receipt_hash",
+      "payload_bytes",
+      "envelope_bytes",
+      "certificate_ids",
+      "reject_integrity_authority_mutation",
+    ])
+      expect(sql).toContain(required)
+    expect(sql).toContain("trust_domain = 'production'")
+    expect(sql).not.toMatch(/insert\s+into\s+runtime_evidence_v1_17_installed_authorities/iu)
   })
 
   it("binds new v1.17 receipts without rewriting v1.16 Chronicle evidence", async () => {
