@@ -649,6 +649,71 @@ func TestPhase258RuntimeServiceV117CompletionAdmissionBindsClaimedEvidence(t *te
 	if err := validateVersionedRuntimeSemanticReceiptForCompletion(input, integrity, runtimeServiceV117FixtureSecret); err == nil {
 		t.Fatal("v1.17 completion admitted a mutated accounting receipt")
 	}
+
+	t.Run("rejects a re-signed reconstructed terminal hash substitution", func(t *testing.T) {
+		candidate := response.Result.SemanticReceipt
+		candidate.ReconstructedTerminalStateHash = "sha256:" + strings.Repeat("9", 64)
+		signRuntimeServiceReceiptV117(t, &candidate)
+		candidateInput := completeMatchInput{
+			Chronicle: chronicle, FinalState: finalState, Integrity: integrity,
+			RuntimeRequestV117: &request, SemanticReceiptV117: &candidate,
+		}
+		if err := validateVersionedRuntimeSemanticReceiptForCompletion(candidateInput, integrity, runtimeServiceV117FixtureSecret); err == nil {
+			t.Fatal("v1.17 completion admitted a re-signed reconstructed terminal hash substitution")
+		}
+	})
+
+	t.Run("rejects re-signed Chronicle terminal state divergence", func(t *testing.T) {
+		candidateChronicle := semanticCloneValue(t, chronicle).(map[string]any)
+		for _, raw := range candidateChronicle["snapshots"].([]any) {
+			snapshot := raw.(map[string]any)
+			board := snapshot["board"].(map[string]any)
+			bottom := board["soldiers"].([]any)[0].(map[string]any)
+			bottom["position"] = map[string]any{"x": 1, "y": 2}
+		}
+		chronicleBytes, err := runtimeInvocationV117CanonicalValue(candidateChronicle)
+		if err != nil {
+			t.Fatal(err)
+		}
+		chronicleHash, err := hashRuntimeServiceCanonicalValueV117("cowards-game:runtime-semantic-chronicle-canonical-json:v1.17", chronicleBytes)
+		if err != nil {
+			t.Fatal(err)
+		}
+		candidate := response.Result.SemanticReceipt
+		candidate.ChronicleCanonicalHash = chronicleHash
+		signRuntimeServiceReceiptV117(t, &candidate)
+		candidateInput := completeMatchInput{
+			Chronicle: candidateChronicle, FinalState: finalState, Integrity: integrity,
+			RuntimeRequestV117: &request, SemanticReceiptV117: &candidate,
+		}
+		if err := validateVersionedRuntimeSemanticReceiptForCompletion(candidateInput, integrity, runtimeServiceV117FixtureSecret); err == nil {
+			t.Fatal("v1.17 completion admitted Chronicle state that diverged from final state")
+		}
+	})
+
+	t.Run("rejects re-signed final state divergence", func(t *testing.T) {
+		candidateFinalState := semanticCloneValue(t, finalState).(map[string]any)
+		bottom := candidateFinalState["soldiers"].([]any)[0].(map[string]any)
+		bottom["position"] = map[string]any{"x": 1, "y": 2}
+		finalStateBytes, err := runtimeInvocationV117CanonicalValue(candidateFinalState)
+		if err != nil {
+			t.Fatal(err)
+		}
+		finalStateHash, err := hashRuntimeServiceCanonicalValueV117("cowards-game:runtime-semantic-final-state-canonical-json:v1.17", finalStateBytes)
+		if err != nil {
+			t.Fatal(err)
+		}
+		candidate := response.Result.SemanticReceipt
+		candidate.FinalStateCanonicalHash = finalStateHash
+		signRuntimeServiceReceiptV117(t, &candidate)
+		candidateInput := completeMatchInput{
+			Chronicle: chronicle, FinalState: candidateFinalState, Integrity: integrity,
+			RuntimeRequestV117: &request, SemanticReceiptV117: &candidate,
+		}
+		if err := validateVersionedRuntimeSemanticReceiptForCompletion(candidateInput, integrity, runtimeServiceV117FixtureSecret); err == nil {
+			t.Fatal("v1.17 completion admitted final state that diverged from Chronicle reconstruction")
+		}
+	})
 }
 
 type semanticCurrentMatchFixture struct {

@@ -143,6 +143,34 @@ func TestPhase258RuntimeSemanticReceiptV117GoldenParity(t *testing.T) {
 	}
 }
 
+func TestPhase258RuntimeSemanticReceiptV117ReconstructsCanonicalTerminalStateHash(t *testing.T) {
+	wireBytes, err := os.ReadFile("../../packages/spec/artifacts/runtime-execution-service-response.v1.16.wire.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var wire struct {
+		Result struct {
+			Chronicle       map[string]any `json:"chronicle"`
+			FinalState      map[string]any `json:"finalState"`
+			SemanticReceipt struct {
+				ReconstructedTerminalStateHash string `json:"reconstructedTerminalStateHash"`
+			} `json:"semanticReceipt"`
+		} `json:"result"`
+	}
+	decoder := json.NewDecoder(bytes.NewReader(wireBytes))
+	decoder.UseNumber()
+	if err := decoder.Decode(&wire); err != nil {
+		t.Fatal(err)
+	}
+	actual, err := runtimeSemanticReconstructedTerminalStateHashV117(wire.Result.Chronicle, wire.Result.FinalState)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if actual != wire.Result.SemanticReceipt.ReconstructedTerminalStateHash {
+		t.Fatalf("Go replay projection hash drifted from canonical TS evidence: got %s want %s", actual, wire.Result.SemanticReceipt.ReconstructedTerminalStateHash)
+	}
+}
+
 func TestPhase258RuntimeSemanticReceiptV117ClosedVersionDispatch(t *testing.T) {
 	for _, schema := range []string{"", "runtime-semantic-receipt-v1", "runtime-semantic-receipt-v1.16", "runtime-semantic-receipt-v1.18"} {
 		if runtimeSemanticReceiptV117SchemaKnown(schema) {

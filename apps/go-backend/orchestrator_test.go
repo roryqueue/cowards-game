@@ -380,8 +380,8 @@ func orchestratorChronicleForRequest(request runtimeServiceRequest, includeRunti
 	board := map[string]any{
 		"bounds": mapValue(request.Match.ArenaVariant, "initialBounds"),
 		"soldiers": []any{
-			map[string]any{"id": "soldier:bottom:" + request.Match.MatchID, "ownerPlayerId": request.Match.BottomPlayerID, "status": "ACTIVE", "position": map[string]any{"x": 1, "y": 1}},
-			map[string]any{"id": "soldier:top:" + request.Match.MatchID, "ownerPlayerId": request.Match.TopPlayerID, "status": "FALLEN", "position": map[string]any{"x": 2, "y": 2}},
+			map[string]any{"id": "soldier:bottom:" + request.Match.MatchID, "ownerPlayerId": request.Match.BottomPlayerID, "status": "ACTIVE", "position": map[string]any{"x": 1, "y": 1}, "facing": "UP", "lastSuccessfulMoveDirection": nil},
+			map[string]any{"id": "soldier:top:" + request.Match.MatchID, "ownerPlayerId": request.Match.TopPlayerID, "status": "FALLEN", "position": nil, "facing": nil, "lastSuccessfulMoveDirection": nil},
 		},
 		"terrainStones": []any{},
 	}

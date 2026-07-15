@@ -12,7 +12,6 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 )
 
@@ -109,6 +108,10 @@ func signedRuntimeServiceSuccessResponseV117ForTest(
 	if err != nil {
 		t.Fatal(err)
 	}
+	reconstructedTerminalStateHash, err := runtimeSemanticReconstructedTerminalStateHashV117(chronicle, finalState)
+	if err != nil {
+		t.Fatal(err)
+	}
 	receipt := runtimeSemanticReceiptV117{
 		SchemaVersion: runtimeSemanticReceiptV117SchemaVersion, Profile: runtimeSemanticReceiptV117Profile,
 		ServiceContractVersion: runtimeSemanticReceiptV117ServiceVersion,
@@ -127,7 +130,7 @@ func signedRuntimeServiceSuccessResponseV117ForTest(
 		TopArtifactSHA256: request.Entrants.Top.SourceIdentity.ArtifactSHA256, TopExactPinsSHA256: topExactPinsHash,
 		BudgetProfileSHA256: request.Accounting.BudgetProfileSHA256, LedgerPrestateRoot: request.Accounting.LedgerPrestateRoot,
 		LedgerPoststateRoot: ledgerPoststateRoot, ChronicleCanonicalHash: chronicleHash, FinalStateCanonicalHash: finalStateHash,
-		ReconstructedTerminalStateHash: "sha256:" + strings.Repeat("7", 64), OutcomeCanonicalHash: outcomeHash,
+		ReconstructedTerminalStateHash: reconstructedTerminalStateHash, OutcomeCanonicalHash: outcomeHash,
 		RuntimeViolationEventCount: runtimeSemanticViolationCount(chronicle), Algorithm: "hmac-sha256", KeyID: runtimeSemanticReceiptV117KeyID,
 	}
 	previousSecret := runtimeServiceV117FixtureSecret
