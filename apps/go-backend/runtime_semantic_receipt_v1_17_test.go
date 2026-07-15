@@ -1,12 +1,49 @@
 package main
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"os"
 	"testing"
 )
+
+func TestPhase258RuntimeSemanticReceiptV117CanonicalHTMLAndUnicode(t *testing.T) {
+	receipt := runtimeSemanticReceiptV117{
+		SchemaVersion:                  runtimeSemanticReceiptV117SchemaVersion,
+		Profile:                        runtimeSemanticReceiptV117Profile,
+		ServiceContractVersion:         runtimeSemanticReceiptV117ServiceVersion,
+		RequestSHA256:                  "sha256:" + string(bytes.Repeat([]byte("1"), 64)),
+		RequestID:                      "request:<>&\u2028\u2029",
+		MatchID:                        "match:<>&\u2028\u2029",
+		CompatibilityTupleID:           "sha256:" + string(bytes.Repeat([]byte("2"), 64)),
+		AuthorityBundleHash:            "sha256:" + string(bytes.Repeat([]byte("3"), 64)),
+		AuthoritySourceManifestHash:    "sha256:" + string(bytes.Repeat([]byte("4"), 64)),
+		RegistryGeneration:             "7",
+		BottomIdentityManifestRoot:     "sha256:" + string(bytes.Repeat([]byte("5"), 64)),
+		BottomEvidenceGraphRoot:        "sha256:" + string(bytes.Repeat([]byte("6"), 64)),
+		TopIdentityManifestRoot:        "sha256:" + string(bytes.Repeat([]byte("7"), 64)),
+		TopEvidenceGraphRoot:           "sha256:" + string(bytes.Repeat([]byte("8"), 64)),
+		BudgetProfileSHA256:            "sha256:" + string(bytes.Repeat([]byte("9"), 64)),
+		LedgerPrestateRoot:             "sha256:" + string(bytes.Repeat([]byte("a"), 64)),
+		LedgerPoststateRoot:            "sha256:" + string(bytes.Repeat([]byte("b"), 64)),
+		ChronicleCanonicalHash:         "sha256:" + string(bytes.Repeat([]byte("c"), 64)),
+		FinalStateCanonicalHash:        "sha256:" + string(bytes.Repeat([]byte("d"), 64)),
+		ReconstructedTerminalStateHash: "sha256:" + string(bytes.Repeat([]byte("e"), 64)),
+		OutcomeCanonicalHash:           "sha256:" + string(bytes.Repeat([]byte("f"), 64)),
+		RuntimeViolationEventCount:     0,
+		Algorithm:                      "hmac-sha256",
+		KeyID:                          runtimeSemanticReceiptV117KeyID,
+	}
+	message, err := runtimeSemanticReceiptV117Message(receipt)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if bytes.Contains(message, []byte(`\u003c`)) || bytes.Contains(message, []byte(`\u2028`)) || !bytes.Contains(message, []byte("<>&\u2028\u2029")) {
+		t.Fatalf("receipt claims are not canonical JSON: %q", message)
+	}
+}
 
 func TestPhase258RuntimeSemanticReceiptV117GoldenParity(t *testing.T) {
 	bytes, err := os.ReadFile("../../packages/spec/artifacts/runtime-execution-service-response.v1.17.candidate.wire.json")

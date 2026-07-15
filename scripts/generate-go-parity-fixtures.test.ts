@@ -306,6 +306,33 @@ describe("versioned TypeScript-to-Go parity generator", () => {
     )
   }, 30_000)
 
+  it("fails check mode when either complete v1.17 fixture family is absent", () => {
+    const empty = makeVersionRoot()
+    const first = runGenerator(["--root", empty, "--versions-only", "--check"])
+    expect(first.status).toBe(1)
+    expect(`${first.stdout}\n${first.stderr}`).toMatch(/v1\.17|stale/iu)
+
+    const root = makeVersionRoot()
+    const written = runGenerator([
+      "--root",
+      root,
+      "--versions-only",
+      "--write-v1.17-invocation",
+      "--write-v1.17-service",
+      "--check",
+    ])
+    expect(written.status, written.stderr).toBe(0)
+    rmSync(path.join(root, candidateRequestRelative))
+    rmSync(path.join(root, candidateResponseRelative))
+    const missingInvocation = runGenerator([
+      "--root",
+      root,
+      "--versions-only",
+      "--check",
+    ])
+    expect(missingInvocation.status).toBe(1)
+  }, 30_000)
+
   it("fails a stale generated table instead of silently regenerating it", () => {
     const root = makeVersionRoot()
     const written = runGenerator([

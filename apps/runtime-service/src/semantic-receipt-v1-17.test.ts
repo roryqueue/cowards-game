@@ -83,4 +83,28 @@ describe("runtime semantic receipt v1.17", () => {
       verifyRuntimeSemanticReceiptV117({ request, response: invocation, secret }),
     ).toThrow(/unavailable/iu)
   })
+
+  it("fails safely on partial input and rejects unbound private response fields", () => {
+    expect(() =>
+      verifyRuntimeSemanticReceiptV117({
+        request: {
+          contractVersion: "runtime-execution-service-v1.17",
+          kind: "executeMatch",
+          requestId: request.requestId,
+          matchId: request.matchId,
+        } as RuntimeExecutionServiceRequestV117,
+        response,
+        secret,
+      }),
+    ).toThrow("Runtime semantic receipt v1.17 is unavailable.")
+    const extra = globalThis.structuredClone(response) as RuntimeExecutionServiceSuccessResponseV117 & {
+      result: RuntimeExecutionServiceSuccessResponseV117["result"] & {
+        diagnostics: { hostPath: string }
+      }
+    }
+    extra.result.diagnostics = { hostPath: "/private/host/path" }
+    expect(() =>
+      verifyRuntimeSemanticReceiptV117({ request, response: extra, secret }),
+    ).toThrow("Runtime semantic receipt v1.17 is unavailable.")
+  })
 })
