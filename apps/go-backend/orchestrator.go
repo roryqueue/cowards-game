@@ -221,8 +221,13 @@ func buildRuntimeServiceExecutionRequestForClaimedJob(ctx context.Context, pool 
 		}, nil
 	case strategyRuntimeABIVersionV117:
 		binding := claimed.Integrity.RuntimeServiceV117
-		if !validClaimedRuntimeServiceV117(binding) {
+		if !validClaimedRuntimeServiceV117(binding, claimed.Integrity) {
 			return nil, errors.New("successor runtime evidence roots and accounting are unavailable")
+		}
+		bottom, bottomOK := projectRuntimeServiceEntrantV117(request.Strategies.Bottom, claimed.Integrity.Bottom, binding.Bottom, registry)
+		top, topOK := projectRuntimeServiceEntrantV117(request.Strategies.Top, claimed.Integrity.Top, binding.Top, registry)
+		if !bottomOK || !topOK {
+			return nil, errors.New("successor runtime source and artifact identity are unavailable")
 		}
 		matchBytes, err := runtimeInvocationV117CanonicalValue(request)
 		if err != nil {
@@ -236,11 +241,14 @@ func buildRuntimeServiceExecutionRequestForClaimedJob(ctx context.Context, pool 
 			CompatibilityTupleID: claimed.Integrity.CompatibilityTupleID,
 			Match:                matchBytes,
 		}
-		successor.Authority.BundleHash = claimed.Integrity.AuthorityBundleHash
-		successor.Authority.SourceManifestHash = claimed.Integrity.SourceManifestHash
-		successor.Authority.RegistryGeneration = claimed.Integrity.RegistryGeneration
-		successor.Entrants.Bottom = binding.Bottom
-		successor.Entrants.Top = binding.Top
+		successor.Authority.BundleHash = binding.Authority.BundleHash
+		successor.Authority.SourceManifestHash = binding.Authority.SourceManifestHash
+		successor.Authority.RegistryGeneration = binding.Authority.RegistryGeneration
+		successor.LegacyAuthority.BundleHash = claimed.Integrity.AuthorityBundleHash
+		successor.LegacyAuthority.SourceManifestHash = claimed.Integrity.SourceManifestHash
+		successor.LegacyAuthority.RegistryGeneration = claimed.Integrity.RegistryGeneration
+		successor.Entrants.Bottom = bottom
+		successor.Entrants.Top = top
 		successor.Accounting.BudgetProfileSHA256 = binding.BudgetProfileSHA256
 		successor.Accounting.LedgerPrestateRoot = binding.LedgerPrestateRoot
 		if failure := validateRuntimeServiceRequestV117(successor); failure != nil {
@@ -308,6 +316,7 @@ func buildRuntimeServiceRequestForClaimedJob(ctx context.Context, pool *pgxpool.
 	request.EvidenceSnapshot = snapshot
 	var failure *runtimeServiceFailure
 	if claimed.Integrity.CompatibilityTuple.RuntimeABI == strategyRuntimeABIVersionV117 {
+		request.Limits = defaultRuntimeServiceLimitsV117()
 		failure = validateNestedRuntimeServiceRequestV117(*request)
 	} else {
 		failure = validateRuntimeServiceRequest(*request)
@@ -323,6 +332,9 @@ func buildRuntimeServiceRequestForClaimedJob(ctx context.Context, pool *pgxpool.
 // Normalize only those already-checked ABI pins on a private clone so the
 // immutable historical validator can continue to own every shared field.
 func validateNestedRuntimeServiceRequestV117(request runtimeServiceRequest) *runtimeServiceFailure {
+	if !validSuccessorRuntimeLimitsV117(request.Limits) {
+		return newRuntimeServiceFailure("RuntimeServiceContractMismatch", "Successor runtime request limits are invalid", false, nil)
+	}
 	normalized := request
 	normalize := func(revision runtimeServiceStrategyRevision) (runtimeServiceStrategyRevision, bool) {
 		if stringValue(revision.Runtime, "abiVersion") != strategyRuntimeABIVersionV117 {
@@ -535,6 +547,23 @@ func defaultRuntimeServiceLimits() map[string]any {
 		"environment":           "minimal",
 		"filesystem":            "host",
 		"network":               "inherited",
+		"shell":                 "disabled",
+		"packagePolicy":         "none",
+	}
+}
+
+func defaultRuntimeServiceLimitsV117() map[string]any {
+	return map[string]any{
+		"timeoutMs":             1000,
+		"stdoutBytes":           262144,
+		"stderrBytes":           65536,
+		"sourceBytes":           65536,
+		"strategyMemoryBytes":   32768,
+		"soldierMemoryBytes":    2048,
+		"objectivePayloadBytes": 1024,
+		"environment":           "empty",
+		"filesystem":            "none",
+		"network":               "disabled",
 		"shell":                 "disabled",
 		"packagePolicy":         "none",
 	}

@@ -17,6 +17,7 @@ import (
 
 const integrityAuthoritySchemaVersion = "v1.37-integrity-authority-v1"
 const integrityAuthorityGeneratorVersion = "generate-v1-37-integrity-authority-v1"
+const canonicalCompatibilityTupleDomainTag = "cowards-game:canonical-compatibility-tuple:v1"
 
 var canonicalCompatibilityTupleFields = []string{
 	"rules",
@@ -589,7 +590,7 @@ func parseIntegrityAuthorityManifest(serialized []byte) (*integrityAuthorityMani
 	if manifest.SchemaVersion != integrityAuthoritySchemaVersion ||
 		manifest.GeneratorVersion != integrityAuthorityGeneratorVersion ||
 		manifest.GeneratedBy == "" ||
-		manifest.TupleEncoding.DomainTag == "" ||
+		manifest.TupleEncoding.DomainTag != canonicalCompatibilityTupleDomainTag ||
 		manifest.TupleEncoding.Separator != "NUL" ||
 		manifest.TupleEncoding.LengthUnit != "UTF-8 bytes" ||
 		manifest.TupleEncoding.HashAlgorithm != "sha256" ||

@@ -210,6 +210,10 @@ func TestPhase258ClaimBuildServiceCompleteV117Postgres(t *testing.T) {
 	pool := semanticCurrentIsolatedPool(t, ctx, databaseURL)
 	now := time.Date(2026, 7, 15, 13, 45, 0, 0, time.UTC)
 	fixture, registry := preparePhase258V117ClaimFixture(t, ctx, pool, now)
+	var productionSuccessorAuthorities int
+	if err := pool.QueryRow(ctx, `select count(*) from runtime_evidence_v1_17_installed_authorities where trust_domain=$1`, runtimeEvidenceAuthorityProductionTrustDomain).Scan(&productionSuccessorAuthorities); err != nil || productionSuccessorAuthorities != 0 {
+		t.Fatalf("pre-Phase-259 production successor authority is not empty: count=%d error=%v", productionSuccessorAuthorities, err)
+	}
 	seeded := fixture.seedMatch(t, ctx, pool, "claimed-v117")
 	if _, err := pool.Exec(ctx, `delete from match_job_attempts where job_id=$1`, seeded.jobID); err != nil {
 		t.Fatal(err)
@@ -222,6 +226,7 @@ func TestPhase258ClaimBuildServiceCompleteV117Postgres(t *testing.T) {
 	}
 
 	var observed runtimeServiceRequestV117
+	var observedNested runtimeServiceRequest
 	runtimeServer := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, incoming *http.Request) {
 		defer incoming.Body.Close()
 		payload, err := io.ReadAll(incoming.Body)
@@ -232,12 +237,11 @@ func TestPhase258ClaimBuildServiceCompleteV117Postgres(t *testing.T) {
 		if canonical.Error != nil || json.Unmarshal(canonical.CanonicalBytes, &observed) != nil {
 			t.Fatal("Go did not send a canonical v1.17 service request")
 		}
-		var nested runtimeServiceRequest
-		if err := decodeStrictJSONUseNumber(observed.Match, &nested); err != nil {
+		if err := decodeStrictJSONUseNumber(observed.Match, &observedNested); err != nil {
 			t.Fatal(err)
 		}
-		chronicle := orchestratorChronicleForRequest(nested, false)
-		finalState := orchestratorFinalStateForRequest(nested)
+		chronicle := orchestratorChronicleForRequest(observedNested, false)
+		finalState := orchestratorFinalStateForRequest(observedNested)
 		response := signedRuntimeServiceSuccessResponseV117ForTest(
 			t, observed, chronicle, finalState,
 			"sha256:"+strings.Repeat("8", 64), runtimeServiceV117FixtureSecret,
@@ -253,8 +257,10 @@ func TestPhase258ClaimBuildServiceCompleteV117Postgres(t *testing.T) {
 	orchestrator.lifecycle.now = func() time.Time { return now }
 	orchestrator.lifecycle.newLeaseToken = func() (string, error) { return "phase258:lease:v117", nil }
 	orchestrator.lifecycle.loadAuthority = func() (*verifiedRuntimeEvidenceAuthority, error) { return fixture.authority, nil }
+	orchestrator.lifecycle.successorAuthorityTrustDomain = runtimeEvidenceAuthorityFixtureTrustDomain
 	orchestrator.completion.now = func() time.Time { return now }
 	orchestrator.completion.loadAuthority = func() (*verifiedRuntimeEvidenceAuthority, error) { return fixture.authority, nil }
+	orchestrator.completion.successorAuthorityTrustDomain = runtimeEvidenceAuthorityFixtureTrustDomain
 	orchestrator.completion.semanticReceiptSecret = runtimeServiceV117FixtureSecret
 	orchestrator.runtime.currentContractVersion = func() string { return runtimeExecutionServiceVersionV117 }
 	orchestrator.runtime.semanticReceiptSecret = runtimeServiceV117FixtureSecret
@@ -264,12 +270,32 @@ func TestPhase258ClaimBuildServiceCompleteV117Postgres(t *testing.T) {
 		t.Fatal(err)
 	}
 	if result.Status != "complete" || result.MatchID != seeded.matchID || result.ChronicleID == "" {
-		t.Fatalf("v1.17 claimed job did not complete: %+v", result)
+		var errorClass, errorMessage *string
+		_ = pool.QueryRow(ctx, `select last_error_class,last_error_message from match_jobs where id=$1`, seeded.jobID).Scan(&errorClass, &errorMessage)
+		t.Fatalf("v1.17 claimed job did not complete: %+v errorClass=%v errorMessage=%v", result, errorClass, errorMessage)
 	}
 	if observed.ContractVersion != runtimeExecutionServiceVersionV117 ||
 		observed.Accounting.BudgetProfileSHA256 != runtimeServiceV117BudgetProfileSHA256 ||
 		observed.Accounting.LedgerPrestateRoot != runtimeServiceV117EmptyLedgerRoot {
 		t.Fatalf("v1.17 service request lost exact accounting: %+v", observed.Accounting)
+	}
+	if !validSuccessorRuntimeLimitsV117(observedNested.Limits) {
+		t.Fatalf("v1.17 nested Match request exposed noncanonical runtime limits: %+v", observedNested.Limits)
+	}
+	if observed.Authority.BundleHash != fixture.identity.RuntimeServiceV117.Authority.BundleHash ||
+		observed.Authority.SourceManifestHash != fixture.identity.RuntimeServiceV117.Authority.SourceManifestHash ||
+		observed.Authority.RegistryGeneration != fixture.identity.RuntimeServiceV117.Authority.RegistryGeneration ||
+		observed.LegacyAuthority.BundleHash != fixture.identity.AuthorityBundleHash ||
+		observed.LegacyAuthority.SourceManifestHash != fixture.identity.SourceManifestHash ||
+		observed.LegacyAuthority.RegistryGeneration != fixture.identity.RegistryGeneration {
+		t.Fatalf("v1.17 service request collapsed successor and historical authorities: successor=%+v legacy=%+v", observed.Authority, observed.LegacyAuthority)
+	}
+	wantBottomSource, bottomOK := runtimeServiceSourceIdentityFromPersistedRevisionV117(fixture.request.Strategies.Bottom, fixture.identity.Bottom)
+	wantTopSource, topOK := runtimeServiceSourceIdentityFromPersistedRevisionV117(fixture.request.Strategies.Top, fixture.identity.Top)
+	if !bottomOK || !topOK || observed.Entrants.Bottom.SourceIdentity != wantBottomSource || observed.Entrants.Top.SourceIdentity != wantTopSource ||
+		observed.Entrants.Bottom.IdentityManifestRoot != fixture.identity.RuntimeServiceV117.Bottom.IdentityManifestRoot ||
+		observed.Entrants.Top.IdentityManifestRoot != fixture.identity.RuntimeServiceV117.Top.IdentityManifestRoot {
+		t.Fatalf("v1.17 request did not derive exact persisted per-revision identities: bottom=%+v top=%+v", observed.Entrants.Bottom, observed.Entrants.Top)
 	}
 	var receiptVersion string
 	var receiptSchema string

@@ -23,31 +23,46 @@ var runtimeSemanticReceiptV117Hash = regexp.MustCompile(`^sha256:[0-9a-f]{64}$`)
 var runtimeSemanticReceiptV117Signature = regexp.MustCompile(`^hmac-sha256:[0-9a-f]{64}$`)
 
 type runtimeSemanticReceiptV117 struct {
-	SchemaVersion                  string `json:"schemaVersion"`
-	Profile                        string `json:"profile"`
-	ServiceContractVersion         string `json:"serviceContractVersion"`
-	RequestSHA256                  string `json:"requestSha256"`
-	RequestID                      string `json:"requestId"`
-	MatchID                        string `json:"matchId"`
-	CompatibilityTupleID           string `json:"compatibilityTupleId"`
-	AuthorityBundleHash            string `json:"authorityBundleHash"`
-	AuthoritySourceManifestHash    string `json:"authoritySourceManifestHash"`
-	RegistryGeneration             string `json:"registryGeneration"`
-	BottomIdentityManifestRoot     string `json:"bottomIdentityManifestRoot"`
-	BottomEvidenceGraphRoot        string `json:"bottomEvidenceGraphRoot"`
-	TopIdentityManifestRoot        string `json:"topIdentityManifestRoot"`
-	TopEvidenceGraphRoot           string `json:"topEvidenceGraphRoot"`
-	BudgetProfileSHA256            string `json:"budgetProfileSha256"`
-	LedgerPrestateRoot             string `json:"ledgerPrestateRoot"`
-	LedgerPoststateRoot            string `json:"ledgerPoststateRoot"`
-	ChronicleCanonicalHash         string `json:"chronicleCanonicalHash"`
-	FinalStateCanonicalHash        string `json:"finalStateCanonicalHash"`
-	ReconstructedTerminalStateHash string `json:"reconstructedTerminalStateHash"`
-	OutcomeCanonicalHash           string `json:"outcomeCanonicalHash"`
-	RuntimeViolationEventCount     int    `json:"runtimeViolationEventCount"`
-	Algorithm                      string `json:"algorithm"`
-	KeyID                          string `json:"keyId"`
-	Signature                      string `json:"signature"`
+	SchemaVersion                     string `json:"schemaVersion"`
+	Profile                           string `json:"profile"`
+	ServiceContractVersion            string `json:"serviceContractVersion"`
+	RequestSHA256                     string `json:"requestSha256"`
+	RequestID                         string `json:"requestId"`
+	MatchID                           string `json:"matchId"`
+	CompatibilityTupleID              string `json:"compatibilityTupleId"`
+	AuthorityBundleHash               string `json:"authorityBundleHash"`
+	AuthoritySourceManifestHash       string `json:"authoritySourceManifestHash"`
+	RegistryGeneration                string `json:"registryGeneration"`
+	LegacyAuthorityBundleHash         string `json:"legacyAuthorityBundleHash"`
+	LegacyAuthoritySourceManifestHash string `json:"legacyAuthoritySourceManifestHash"`
+	LegacyRegistryGeneration          string `json:"legacyRegistryGeneration"`
+	BottomIdentityManifestRoot        string `json:"bottomIdentityManifestRoot"`
+	BottomEvidenceGraphRoot           string `json:"bottomEvidenceGraphRoot"`
+	BottomStrategyRevisionID          string `json:"bottomStrategyRevisionId"`
+	BottomLaneIdentityHash            string `json:"bottomLaneIdentityHash"`
+	BottomOriginalSourceSHA256        string `json:"bottomOriginalSourceSha256"`
+	BottomNormalizedSourceSHA256      string `json:"bottomNormalizedSourceSha256"`
+	BottomArtifactSHA256              string `json:"bottomArtifactSha256"`
+	BottomExactPinsSHA256             string `json:"bottomExactPinsSha256"`
+	TopIdentityManifestRoot           string `json:"topIdentityManifestRoot"`
+	TopEvidenceGraphRoot              string `json:"topEvidenceGraphRoot"`
+	TopStrategyRevisionID             string `json:"topStrategyRevisionId"`
+	TopLaneIdentityHash               string `json:"topLaneIdentityHash"`
+	TopOriginalSourceSHA256           string `json:"topOriginalSourceSha256"`
+	TopNormalizedSourceSHA256         string `json:"topNormalizedSourceSha256"`
+	TopArtifactSHA256                 string `json:"topArtifactSha256"`
+	TopExactPinsSHA256                string `json:"topExactPinsSha256"`
+	BudgetProfileSHA256               string `json:"budgetProfileSha256"`
+	LedgerPrestateRoot                string `json:"ledgerPrestateRoot"`
+	LedgerPoststateRoot               string `json:"ledgerPoststateRoot"`
+	ChronicleCanonicalHash            string `json:"chronicleCanonicalHash"`
+	FinalStateCanonicalHash           string `json:"finalStateCanonicalHash"`
+	ReconstructedTerminalStateHash    string `json:"reconstructedTerminalStateHash"`
+	OutcomeCanonicalHash              string `json:"outcomeCanonicalHash"`
+	RuntimeViolationEventCount        int    `json:"runtimeViolationEventCount"`
+	Algorithm                         string `json:"algorithm"`
+	KeyID                             string `json:"keyId"`
+	Signature                         string `json:"signature"`
 }
 
 func runtimeSemanticReceiptV117SchemaKnown(schema string) bool {
@@ -62,6 +77,9 @@ func runtimeSemanticReceiptV117Message(receipt runtimeSemanticReceiptV117) ([]by
 		!validRuntimeSemanticReceiptV117Identifier(receipt.RequestID) ||
 		!validRuntimeSemanticReceiptV117Identifier(receipt.MatchID) ||
 		!validCanonicalGeneration(receipt.RegistryGeneration) ||
+		!validCanonicalGeneration(receipt.LegacyRegistryGeneration) ||
+		!validRuntimeSemanticReceiptV117Identifier(receipt.BottomStrategyRevisionID) ||
+		!validRuntimeSemanticReceiptV117Identifier(receipt.TopStrategyRevisionID) ||
 		receipt.RuntimeViolationEventCount < 0 ||
 		int64(receipt.RuntimeViolationEventCount) > 9_007_199_254_740_991 {
 		return nil, errors.New("runtime semantic receipt v1.17 unavailable")
@@ -106,8 +124,15 @@ func validRuntimeSemanticReceiptV117(receipt runtimeSemanticReceiptV117, secret 
 	for _, value := range []string{
 		receipt.RequestSHA256, receipt.CompatibilityTupleID,
 		receipt.AuthorityBundleHash, receipt.AuthoritySourceManifestHash,
+		receipt.LegacyAuthorityBundleHash, receipt.LegacyAuthoritySourceManifestHash,
 		receipt.BottomIdentityManifestRoot, receipt.BottomEvidenceGraphRoot,
+		receipt.BottomLaneIdentityHash, receipt.BottomOriginalSourceSHA256,
+		receipt.BottomNormalizedSourceSHA256, receipt.BottomArtifactSHA256,
+		receipt.BottomExactPinsSHA256,
 		receipt.TopIdentityManifestRoot, receipt.TopEvidenceGraphRoot,
+		receipt.TopLaneIdentityHash, receipt.TopOriginalSourceSHA256,
+		receipt.TopNormalizedSourceSHA256, receipt.TopArtifactSHA256,
+		receipt.TopExactPinsSHA256,
 		receipt.BudgetProfileSHA256, receipt.LedgerPrestateRoot,
 		receipt.LedgerPoststateRoot, receipt.ChronicleCanonicalHash,
 		receipt.FinalStateCanonicalHash, receipt.ReconstructedTerminalStateHash,
@@ -170,15 +195,19 @@ func validateRuntimeSemanticReceiptV117ForCompletion(input completeMatchInput, i
 	request := input.RuntimeRequestV117
 	receipt := input.SemanticReceiptV117
 	binding := integrity.RuntimeServiceV117
-	if request == nil || receipt == nil || !validClaimedRuntimeServiceV117(binding) || strings.TrimSpace(secret) == "" {
+	if request == nil || receipt == nil || !validClaimedRuntimeServiceV117(binding, integrity) || strings.TrimSpace(secret) == "" {
 		return errors.New("runtime semantic receipt v1.17 completion admission unavailable")
 	}
 	if failure := validateRuntimeServiceRequestV117(*request); failure != nil ||
 		request.CompatibilityTupleID != integrity.CompatibilityTupleID ||
-		request.Authority.BundleHash != integrity.AuthorityBundleHash ||
-		request.Authority.SourceManifestHash != integrity.SourceManifestHash ||
-		request.Authority.RegistryGeneration != integrity.RegistryGeneration ||
-		request.Entrants.Bottom != binding.Bottom || request.Entrants.Top != binding.Top ||
+		request.Authority.BundleHash != binding.Authority.BundleHash ||
+		request.Authority.SourceManifestHash != binding.Authority.SourceManifestHash ||
+		request.Authority.RegistryGeneration != binding.Authority.RegistryGeneration ||
+		request.LegacyAuthority.BundleHash != integrity.AuthorityBundleHash ||
+		request.LegacyAuthority.SourceManifestHash != integrity.SourceManifestHash ||
+		request.LegacyAuthority.RegistryGeneration != integrity.RegistryGeneration ||
+		!runtimeServiceEntrantMatchesClaimedV117(request.Entrants.Bottom, binding.Bottom) ||
+		!runtimeServiceEntrantMatchesClaimedV117(request.Entrants.Top, binding.Top) ||
 		request.Accounting.BudgetProfileSHA256 != binding.BudgetProfileSHA256 ||
 		request.Accounting.LedgerPrestateRoot != binding.LedgerPrestateRoot {
 		return errors.New("runtime semantic receipt v1.17 request binding changed")
@@ -190,6 +219,8 @@ func validateRuntimeSemanticReceiptV117ForCompletion(input completeMatchInput, i
 		return errors.New("runtime semantic receipt v1.17 Match binding changed")
 	}
 	requestBytes, requestErr := encodeRuntimeServiceRequestV117(*request)
+	bottomExactPinsHash, bottomExactPinsErr := hashRuntimeServiceExactPinsV117(request.Entrants.Bottom.ExactPins)
+	topExactPinsHash, topExactPinsErr := hashRuntimeServiceExactPinsV117(request.Entrants.Top.ExactPins)
 	chronicleBytes, chronicleErr := runtimeInvocationV117CanonicalValue(input.Chronicle)
 	finalStateBytes, finalStateErr := runtimeInvocationV117CanonicalValue(input.FinalState)
 	outcomeBytes, outcomeErr := runtimeInvocationV117CanonicalValue(input.FinalState["outcome"])
@@ -202,7 +233,7 @@ func validateRuntimeSemanticReceiptV117ForCompletion(input completeMatchInput, i
 	outcomeHash, outcomeHashErr := hashRuntimeServiceCanonicalValueV117(
 		"cowards-game:runtime-semantic-outcome-canonical-json:v1.17", outcomeBytes,
 	)
-	if requestErr != nil || chronicleErr != nil || finalStateErr != nil || outcomeErr != nil ||
+	if requestErr != nil || bottomExactPinsErr != nil || topExactPinsErr != nil || chronicleErr != nil || finalStateErr != nil || outcomeErr != nil ||
 		chronicleHashErr != nil || finalStateHashErr != nil || outcomeHashErr != nil ||
 		!validRuntimeSemanticReceiptV117(*receipt, secret) ||
 		receipt.RequestSHA256 != runtimeInvocationV117SHA256Value(requestBytes) ||
@@ -211,10 +242,25 @@ func validateRuntimeSemanticReceiptV117ForCompletion(input completeMatchInput, i
 		receipt.AuthorityBundleHash != request.Authority.BundleHash ||
 		receipt.AuthoritySourceManifestHash != request.Authority.SourceManifestHash ||
 		receipt.RegistryGeneration != request.Authority.RegistryGeneration ||
+		receipt.LegacyAuthorityBundleHash != request.LegacyAuthority.BundleHash ||
+		receipt.LegacyAuthoritySourceManifestHash != request.LegacyAuthority.SourceManifestHash ||
+		receipt.LegacyRegistryGeneration != request.LegacyAuthority.RegistryGeneration ||
 		receipt.BottomIdentityManifestRoot != request.Entrants.Bottom.IdentityManifestRoot ||
 		receipt.BottomEvidenceGraphRoot != request.Entrants.Bottom.EvidenceGraphRoot ||
+		receipt.BottomStrategyRevisionID != request.Entrants.Bottom.StrategyRevisionID ||
+		receipt.BottomLaneIdentityHash != request.Entrants.Bottom.LaneIdentityHash ||
+		receipt.BottomOriginalSourceSHA256 != request.Entrants.Bottom.SourceIdentity.OriginalSourceSHA256 ||
+		receipt.BottomNormalizedSourceSHA256 != request.Entrants.Bottom.SourceIdentity.NormalizedSourceSHA256 ||
+		receipt.BottomArtifactSHA256 != request.Entrants.Bottom.SourceIdentity.ArtifactSHA256 ||
+		receipt.BottomExactPinsSHA256 != bottomExactPinsHash ||
 		receipt.TopIdentityManifestRoot != request.Entrants.Top.IdentityManifestRoot ||
 		receipt.TopEvidenceGraphRoot != request.Entrants.Top.EvidenceGraphRoot ||
+		receipt.TopStrategyRevisionID != request.Entrants.Top.StrategyRevisionID ||
+		receipt.TopLaneIdentityHash != request.Entrants.Top.LaneIdentityHash ||
+		receipt.TopOriginalSourceSHA256 != request.Entrants.Top.SourceIdentity.OriginalSourceSHA256 ||
+		receipt.TopNormalizedSourceSHA256 != request.Entrants.Top.SourceIdentity.NormalizedSourceSHA256 ||
+		receipt.TopArtifactSHA256 != request.Entrants.Top.SourceIdentity.ArtifactSHA256 ||
+		receipt.TopExactPinsSHA256 != topExactPinsHash ||
 		receipt.BudgetProfileSHA256 != request.Accounting.BudgetProfileSHA256 ||
 		receipt.LedgerPrestateRoot != request.Accounting.LedgerPrestateRoot ||
 		!isPrefixedLowerSHA256(receipt.LedgerPoststateRoot) ||
@@ -235,4 +281,12 @@ func validateRuntimeSemanticReceiptV117ForCompletion(input completeMatchInput, i
 		return errors.New("runtime semantic receipt v1.17 completion outcome changed")
 	}
 	return nil
+}
+
+func runtimeServiceEntrantMatchesClaimedV117(request runtimeServiceEntrantV117, claimed claimedRuntimeServiceEntrantV117) bool {
+	return request.StrategyRevisionID == claimed.StrategyRevisionID &&
+		request.LaneIdentityHash == claimed.LaneIdentityHash &&
+		request.IdentityManifestRoot == claimed.IdentityManifestRoot &&
+		request.EvidenceGraphRoot == claimed.EvidenceGraphRoot &&
+		request.ExactPins == claimed.ExactPins
 }

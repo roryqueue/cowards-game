@@ -17,11 +17,12 @@ import (
 )
 
 type matchCompletionService struct {
-	pool                      *pgxpool.Pool
-	loadAuthority             func() (*verifiedRuntimeEvidenceAuthority, error)
-	now                       func() time.Time
-	allowLegacyTestCompletion bool
-	semanticReceiptSecret     string
+	pool                          *pgxpool.Pool
+	loadAuthority                 func() (*verifiedRuntimeEvidenceAuthority, error)
+	now                           func() time.Time
+	allowLegacyTestCompletion     bool
+	semanticReceiptSecret         string
+	successorAuthorityTrustDomain string
 }
 
 type completeMatchInput struct {
@@ -78,7 +79,7 @@ type matchCompletionOwnershipRow struct {
 }
 
 func newMatchCompletionService(pool *pgxpool.Pool) *matchCompletionService {
-	return &matchCompletionService{pool: pool, loadAuthority: loadProductionRuntimeEvidenceAuthorityFromEnvironment, now: time.Now, semanticReceiptSecret: runtimeServiceSemanticReceiptSecret()}
+	return &matchCompletionService{pool: pool, loadAuthority: loadProductionRuntimeEvidenceAuthorityFromEnvironment, now: time.Now, semanticReceiptSecret: runtimeServiceSemanticReceiptSecret(), successorAuthorityTrustDomain: runtimeEvidenceAuthorityProductionTrustDomain}
 }
 
 func (service *matchCompletionService) completeMatch(ctx context.Context, input completeMatchInput) (*completeMatchResult, error) {
@@ -305,15 +306,16 @@ func (service *matchCompletionService) lockCompletionIntegrity(ctx context.Conte
 	if err != nil || authority == nil {
 		return nil, errors.New("completion integrity identity is unavailable")
 	}
-	var serialized []byte
-	if err := tx.QueryRow(ctx, recheckClaimedMatchIntegritySQL, jobID, leaseToken).Scan(&serialized); err != nil {
-		return nil, errors.New("completion integrity identity changed")
-	}
-	var current claimedMatchIntegrityIdentity
 	now := time.Now()
 	if service.now != nil {
 		now = service.now()
 	}
+	var serialized []byte
+	query := runtimeServiceV117AuthoritySQL(recheckClaimedMatchIntegritySQLTemplate, normalizedSuccessorAuthorityTrustDomain(service.successorAuthorityTrustDomain))
+	if err := tx.QueryRow(ctx, query, jobID, leaseToken, now).Scan(&serialized); err != nil {
+		return nil, errors.New("completion integrity identity changed")
+	}
+	var current claimedMatchIntegrityIdentity
 	if err := decodeStrictJSON(serialized, &current); err != nil || validateClaimedMatchIntegrity(authority, &current, now) != nil || !jsonValuesEqual(current, *expected) {
 		return nil, errors.New("completion integrity identity changed")
 	}

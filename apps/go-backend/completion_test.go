@@ -607,27 +607,30 @@ func TestPhase258RuntimeServiceV117CompletionAdmissionBindsClaimedEvidence(t *te
 	if err != nil {
 		t.Fatal(err)
 	}
-	binding := &claimedRuntimeServiceV117{
-		BudgetProfileSHA256: runtimeServiceV117BudgetProfileSHA256,
-		LedgerPrestateRoot:  runtimeServiceV117EmptyLedgerRoot,
-		Bottom:              runtimeServiceEntrantV117{IdentityManifestRoot: "sha256:" + strings.Repeat("1", 64), EvidenceGraphRoot: "sha256:" + strings.Repeat("2", 64)},
-		Top:                 runtimeServiceEntrantV117{IdentityManifestRoot: "sha256:" + strings.Repeat("3", 64), EvidenceGraphRoot: "sha256:" + strings.Repeat("4", 64)},
-	}
-	integrity := &claimedMatchIntegrityIdentity{
-		CompatibilityTupleID: "sha256:" + strings.Repeat("a", 64),
-		CompatibilityTuple:   canonicalCompatibilityTuple{RuntimeABI: strategyRuntimeABIVersionV117},
-		AuthorityBundleHash:  "sha256:" + strings.Repeat("b", 64), RegistryGeneration: "1",
-		SourceManifestHash: "sha256:" + strings.Repeat("c", 64), RuntimeServiceV117: binding,
-	}
+	_, integrity := claimedIntegrityFixture(t, time.Date(2026, 7, 15, 13, 30, 0, 0, time.UTC))
+	integrity.CompatibilityTupleID = runtimeSuccessorSemanticTupleIDV117
+	integrity.CompatibilityTuple = runtimeSuccessorCanonicalTupleV117
+	integrity.Bottom.LaneIdentity.SemanticTupleID = runtimeSuccessorSemanticTupleIDV117
+	integrity.Bottom.LaneIdentity.SemanticTuple = runtimeSuccessorCanonicalTupleV117
+	integrity.Top.LaneIdentity.SemanticTupleID = runtimeSuccessorSemanticTupleIDV117
+	integrity.Top.LaneIdentity.SemanticTuple = runtimeSuccessorCanonicalTupleV117
+	integrity.Bottom.StrategyRevisionID = nested.Match.BottomStrategyRevisionID
+	integrity.Top.StrategyRevisionID = nested.Match.TopStrategyRevisionID
+	binding := claimedRuntimeServiceFixtureV117(integrity)
+	integrity.RuntimeServiceV117 = binding
 	request := runtimeServiceRequestV117{
 		ContractVersion: runtimeExecutionServiceVersionV117, Kind: "executeMatch",
 		RequestID: nested.RequestID, MatchID: nested.Match.MatchID,
 		CompatibilityTupleID: integrity.CompatibilityTupleID, Match: nestedBytes,
 	}
-	request.Authority.BundleHash = integrity.AuthorityBundleHash
-	request.Authority.SourceManifestHash = integrity.SourceManifestHash
-	request.Authority.RegistryGeneration = integrity.RegistryGeneration
-	request.Entrants.Bottom, request.Entrants.Top = binding.Bottom, binding.Top
+	request.Authority.BundleHash = binding.Authority.BundleHash
+	request.Authority.SourceManifestHash = binding.Authority.SourceManifestHash
+	request.Authority.RegistryGeneration = binding.Authority.RegistryGeneration
+	request.LegacyAuthority.BundleHash = integrity.AuthorityBundleHash
+	request.LegacyAuthority.SourceManifestHash = integrity.SourceManifestHash
+	request.LegacyAuthority.RegistryGeneration = integrity.RegistryGeneration
+	request.Entrants.Bottom = runtimeServiceEntrantFixtureFromClaimedV117(binding.Bottom, "1")
+	request.Entrants.Top = runtimeServiceEntrantFixtureFromClaimedV117(binding.Top, "2")
 	request.Accounting.BudgetProfileSHA256 = binding.BudgetProfileSHA256
 	request.Accounting.LedgerPrestateRoot = binding.LedgerPrestateRoot
 	chronicle := orchestratorChronicleForRequest(nested, false)
@@ -721,10 +724,10 @@ func seedSemanticSuccessorAuthority(t *testing.T, ctx context.Context, pool *pgx
 
 func seedSemanticAuthorityFixture(t *testing.T, ctx context.Context, pool *pgxpool.Pool, now time.Time, successor bool) (*semanticCurrentAuthorityFixture, *goDeploymentLaneRegistry) {
 	t.Helper()
-	tuple := registeredCompatibilityTuple{TupleID: currentCanonicalTupleID, Tuple: currentCanonicalTuple}
 	if successor {
-		tuple.Tuple.RuntimeABI = strategyRuntimeABIVersionV117
+		return seedExactSemanticSuccessorAuthorityFixtureV117(t, ctx, pool, now)
 	}
+	tuple := registeredCompatibilityTuple{TupleID: currentCanonicalTupleID, Tuple: currentCanonicalTuple}
 	authority := &verifiedRuntimeEvidenceAuthority{
 		AuthorityBundleHash: "sha256:" + strings.Repeat("b", 64), EnvelopeSHA256: "sha256:" + strings.Repeat("c", 64),
 		RegistryGeneration: "1", SemanticTupleManifestHash: tuple.TupleID, CompatibilityTuple: tuple,
@@ -744,28 +747,6 @@ func seedSemanticAuthorityFixture(t *testing.T, ctx context.Context, pool *pgxpo
 	baseRequest.Strategies.Top.ID = baseRequest.Match.TopStrategyRevisionID
 	baseRequest.Match.ArenaVariant["id"] = "candidate:arena"
 	baseRequest.Match.ArenaVariant["name"] = "Candidate isolated arena"
-	var successorRegistry *goDeploymentLaneRegistry
-	var successorLanes [2]goExecutableLaneIdentity
-	if successor {
-		deployment := newDeploymentLaneFixture(t)
-		deployment.Tuple = tuple
-		deployment.Registry.Lanes[0].SemanticTupleID = tuple.TupleID
-		deployment.Registry.Lanes[0].SemanticTuple = tuple.Tuple
-		bottom := deployment.Strategy
-		bottom.ID = baseRequest.Match.BottomStrategyRevisionID
-		bottom.Runtime = cloneMap(bottom.Runtime)
-		bottom.Runtime["abiVersion"] = strategyRuntimeABIVersionV117
-		top := bottom
-		top.ID = baseRequest.Match.TopStrategyRevisionID
-		bottomLane, bottomOK := deployment.Registry.resolveRevision(bottom.ID, bottom.SourceHash, bottom.SourceBytes, bottom.Runtime, bottom.EngineCompatibility, bottom.Metadata, tuple)
-		topLane, topOK := deployment.Registry.resolveRevision(top.ID, top.SourceHash, top.SourceBytes, top.Runtime, top.EngineCompatibility, top.Metadata, tuple)
-		if !bottomOK || bottomLane == nil || !topOK || topLane == nil {
-			t.Fatal("successor deployment lanes did not resolve")
-		}
-		baseRequest.Strategies.Bottom, baseRequest.Strategies.Top = bottom, top
-		successorLanes = [2]goExecutableLaneIdentity{*bottomLane, *topLane}
-		successorRegistry = deployment.Registry
-	}
 
 	if _, err := pool.Exec(ctx, `insert into users(id,display_name) values ('candidate:user','Candidate')`); err != nil {
 		t.Fatal(err)
@@ -788,10 +769,6 @@ func seedSemanticAuthorityFixture(t *testing.T, ctx context.Context, pool *pgxpo
 	attestationIDs := make([]string, 0, 2)
 	certificateIDs := make([]string, 0, 2)
 	sourceHashes := map[string]string{}
-	successorBindings := [2]runtimeServiceEntrantV117{
-		{IdentityManifestRoot: "sha256:" + strings.Repeat("1", 64), EvidenceGraphRoot: "sha256:" + strings.Repeat("2", 64)},
-		{IdentityManifestRoot: "sha256:" + strings.Repeat("3", 64), EvidenceGraphRoot: "sha256:" + strings.Repeat("4", 64)},
-	}
 	for index, revisionID := range []string{baseRequest.Match.BottomStrategyRevisionID, baseRequest.Match.TopStrategyRevisionID} {
 		lane := goExecutableLaneIdentity{
 			ProviderID: "candidate:provider", LanguageID: []string{"typescript", "python"}[index], RuntimeID: "candidate:runtime", RuntimeVersion: "1",
@@ -800,9 +777,6 @@ func seedSemanticAuthorityFixture(t *testing.T, ctx context.Context, pool *pgxpo
 			ArtifactID: fmt.Sprintf("candidate:artifact:%d", index), ArtifactSHA256: fmt.Sprintf("%064x", index+10),
 			ImplementationID: "candidate:implementation", BuildID: fmt.Sprintf("candidate:build:%d", index),
 			SemanticTupleID: tuple.TupleID, SemanticTuple: tuple.Tuple,
-		}
-		if successor {
-			lane = successorLanes[index]
 		}
 		laneHash := hashCreationLaneIdentity(lane)
 		attestationID := fmt.Sprintf("candidate:attestation:%d", index)
@@ -814,35 +788,17 @@ func seedSemanticAuthorityFixture(t *testing.T, ctx context.Context, pool *pgxpo
 		certificateIDs = append(certificateIDs, certificateID)
 		sourceHashes[attestationID] = "sha256:" + attestationHash
 		sourceHashes[certificateID] = "sha256:" + certificateHash
-		if successor {
-			exactPins := []any{"a", "b", "c", "d", "e", "f", "g", "h", "i", "j"}
-			identityRoot := strings.TrimPrefix(successorBindings[index].IdentityManifestRoot, "sha256:")
-			evidenceRoot := strings.TrimPrefix(successorBindings[index].EvidenceGraphRoot, "sha256:")
-			if _, err := pool.Exec(ctx, `insert into runtime_evidence_verified_attestations
-				(id,attestation_sha256,verification_status,certificate_kind,producer_id,producer_key_id,trust_domain,schema_version,command_id,command_digest,corpus_id,corpus_hash,policy_id,policy_hash,runtime_id,runtime_version,toolchain_id,toolchain_version,adapter_id,adapter_version,artifact_id,artifact_hash,lane_identity_hash,semantic_tuple_id,result_manifest_hash,result_graph_hash,original_evidence_hash,derived_certificate_version,derived_certificate_record_hash,registry_generation,lane_identity,issued_at,valid_until,graph_schema_version,graph_profile,identity_manifest_root,evidence_graph_root,exact_pin_expansion)
-				values ($1,$2,'passed','containment','candidate:producer','candidate:key','production','candidate:schema','candidate:command',$3,'candidate:corpus',$3,'candidate:policy',$3,'candidate:runtime','1','candidate:toolchain','1','candidate:adapter','1',$4,$5,$6,$7,$3,$8,$3,'candidate:certificate-v1',$9,'1',$10,$11,$12,'runtime-evidence-graph-v1.17','runtime-identity-evidence-dag-v1',$13,$14,$15)`,
-				attestationID, attestationHash, strings.Repeat("d", 64), lane.ArtifactID, lane.ArtifactSHA256, laneHash, tuple.TupleID, graphHash, certificateHash, lane, now.Add(-time.Hour), now.Add(time.Hour), identityRoot, evidenceRoot, exactPins); err != nil {
-				t.Fatal(err)
-			}
-			if _, err := pool.Exec(ctx, `insert into runtime_evidence_certificates
-				(id,certificate_kind,certificate_version,certificate_record_hash,certificate_status,verified_attestation_id,verified_attestation_status,producer_id,schema_version,command_id,command_digest,corpus_id,corpus_hash,policy_id,policy_hash,toolchain_id,toolchain_version,artifact_id,artifact_hash,lane_identity_hash,lane_identity,result_graph_hash,registry_generation,issued_at,fresh_until,graph_schema_version,graph_profile,identity_manifest_root,evidence_graph_root,exact_pin_expansion)
-				values ($1,'containment','candidate:certificate-v1',$2,'passed',$3,'passed','candidate:producer','candidate:schema','candidate:command',$4,'candidate:corpus',$4,'candidate:policy',$4,'candidate:toolchain','1',$5,$6,$7,$8,$9,'1',$10,$11,'runtime-evidence-graph-v1.17','runtime-identity-evidence-dag-v1',$12,$13,$14)`,
-				certificateID, certificateHash, attestationID, strings.Repeat("d", 64), lane.ArtifactID, lane.ArtifactSHA256, laneHash, lane, graphHash, now.Add(-time.Hour), now.Add(time.Hour), identityRoot, evidenceRoot, exactPins); err != nil {
-				t.Fatal(err)
-			}
-		} else {
-			if _, err := pool.Exec(ctx, `insert into runtime_evidence_verified_attestations
+		if _, err := pool.Exec(ctx, `insert into runtime_evidence_verified_attestations
 				(id,attestation_sha256,verification_status,certificate_kind,producer_id,producer_key_id,trust_domain,schema_version,command_id,command_digest,corpus_id,corpus_hash,policy_id,policy_hash,runtime_id,runtime_version,toolchain_id,toolchain_version,adapter_id,adapter_version,artifact_id,artifact_hash,lane_identity_hash,semantic_tuple_id,result_manifest_hash,result_graph_hash,original_evidence_hash,derived_certificate_version,derived_certificate_record_hash,registry_generation,lane_identity,issued_at,valid_until)
 				values ($1,$2,'passed','containment','candidate:producer','candidate:key','production','candidate:schema','candidate:command',$3,'candidate:corpus',$3,'candidate:policy',$3,'candidate:runtime','1','candidate:toolchain','1','candidate:adapter','1',$4,$5,$6,$7,$3,$8,$3,'candidate:certificate-v1',$9,'1',$10,$11,$12)`,
-				attestationID, attestationHash, strings.Repeat("d", 64), lane.ArtifactID, lane.ArtifactSHA256, laneHash, tuple.TupleID, graphHash, certificateHash, lane, now.Add(-time.Hour), now.Add(time.Hour)); err != nil {
-				t.Fatal(err)
-			}
-			if _, err := pool.Exec(ctx, `insert into runtime_evidence_certificates
+			attestationID, attestationHash, strings.Repeat("d", 64), lane.ArtifactID, lane.ArtifactSHA256, laneHash, tuple.TupleID, graphHash, certificateHash, lane, now.Add(-time.Hour), now.Add(time.Hour)); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := pool.Exec(ctx, `insert into runtime_evidence_certificates
 				(id,certificate_kind,certificate_version,certificate_record_hash,certificate_status,verified_attestation_id,verified_attestation_status,producer_id,schema_version,command_id,command_digest,corpus_id,corpus_hash,policy_id,policy_hash,toolchain_id,toolchain_version,artifact_id,artifact_hash,lane_identity_hash,lane_identity,result_graph_hash,registry_generation,issued_at,fresh_until)
 				values ($1,'containment','candidate:certificate-v1',$2,'passed',$3,'passed','candidate:producer','candidate:schema','candidate:command',$4,'candidate:corpus',$4,'candidate:policy',$4,'candidate:toolchain','1',$5,$6,$7,$8,$9,'1',$10,$11)`,
-				certificateID, certificateHash, attestationID, strings.Repeat("d", 64), lane.ArtifactID, lane.ArtifactSHA256, laneHash, lane, graphHash, now.Add(-time.Hour), now.Add(time.Hour)); err != nil {
-				t.Fatal(err)
-			}
+			certificateID, certificateHash, attestationID, strings.Repeat("d", 64), lane.ArtifactID, lane.ArtifactSHA256, laneHash, lane, graphHash, now.Add(-time.Hour), now.Add(time.Hour)); err != nil {
+			t.Fatal(err)
 		}
 		certificate := runtimeEvidenceAuthorityCertificate{
 			Kind: "containment", CertificateID: certificateID, CertificateVersion: "candidate:certificate-v1",
@@ -872,13 +828,6 @@ func seedSemanticAuthorityFixture(t *testing.T, ctx context.Context, pool *pgxpo
 		PublicationID: "candidate:publication", InstallReceiptID: "candidate:event:installed", PayloadSHA256: authority.AuthorityBundleHash,
 		EnvelopeSHA256: authority.EnvelopeSHA256, SourceManifestHash: "sha256:" + strings.Repeat("e", 64), SourceSet: sourceSet,
 		Bottom: entrants[0], Top: entrants[1],
-	}
-	if successor {
-		identity.RuntimeServiceV117 = &claimedRuntimeServiceV117{
-			BudgetProfileSHA256: runtimeServiceV117BudgetProfileSHA256,
-			LedgerPrestateRoot:  runtimeServiceV117EmptyLedgerRoot,
-			Bottom:              successorBindings[0], Top: successorBindings[1],
-		}
 	}
 	receipt := semanticCurrentReceipt(identity)
 	if _, err := pool.Exec(ctx, `insert into runtime_evidence_authority_publications
@@ -919,7 +868,7 @@ func seedSemanticAuthorityFixture(t *testing.T, ctx context.Context, pool *pgxpo
 			t.Fatal(err)
 		}
 	}
-	return &semanticCurrentAuthorityFixture{authority: authority, identity: identity, request: baseRequest}, successorRegistry
+	return &semanticCurrentAuthorityFixture{authority: authority, identity: identity, request: baseRequest}, nil
 }
 
 func semanticCurrentReceipt(identity *claimedMatchIntegrityIdentity) map[string]any {

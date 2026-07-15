@@ -45,15 +45,37 @@ const claimNextMatchJobSQLTemplate = `
       'runtimeServiceV117', case
         when ms.compatibility_runtime_abi_version = 'strategy-runtime-abi-v1.17'
         then jsonb_build_object(
+          'authority', jsonb_build_object(
+            'bundleHash', successor_authority.authority_bundle_hash,
+            'sourceManifestHash', successor_authority.source_manifest_hash,
+            'registryGeneration', successor_authority.registry_generation,
+            'semanticTupleManifestHash', successor_authority.semantic_tuple_manifest_hash,
+            'installReceiptId', successor_authority.install_receipt_id,
+            'installReceiptHash', successor_authority.install_receipt_hash
+          ),
           'budgetProfileSha256', '__RUNTIME_V117_BUDGET_PROFILE_SHA256__',
           'ledgerPrestateRoot', '__RUNTIME_V117_EMPTY_LEDGER_ROOT__',
           'bottom', jsonb_build_object(
+            'strategyRevisionId', bottom_execution_entrant.strategy_revision_id,
+            'laneIdentityHash', 'sha256:' || bottom_containment.lane_identity_hash,
+            'containmentCertificateId', bottom_containment.id,
+            'containmentCertificateKind', bottom_containment.certificate_kind,
+            'conformanceCertificateId', bottom_conformance.id,
+            'conformanceCertificateKind', bottom_conformance.certificate_kind,
             'identityManifestRoot', 'sha256:' || bottom_containment.identity_manifest_root,
-            'evidenceGraphRoot', 'sha256:' || bottom_containment.evidence_graph_root
+            'evidenceGraphRoot', 'sha256:' || bottom_containment.evidence_graph_root,
+            'exactPins', bottom_containment.exact_pin_expansion
           ),
           'top', jsonb_build_object(
+            'strategyRevisionId', top_execution_entrant.strategy_revision_id,
+            'laneIdentityHash', 'sha256:' || top_containment.lane_identity_hash,
+            'containmentCertificateId', top_containment.id,
+            'containmentCertificateKind', top_containment.certificate_kind,
+            'conformanceCertificateId', top_conformance.id,
+            'conformanceCertificateKind', top_conformance.certificate_kind,
             'identityManifestRoot', 'sha256:' || top_containment.identity_manifest_root,
-            'evidenceGraphRoot', 'sha256:' || top_containment.evidence_graph_root
+            'evidenceGraphRoot', 'sha256:' || top_containment.evidence_graph_root,
+            'exactPins', top_containment.exact_pin_expansion
           )
         )
         else null
@@ -125,6 +147,12 @@ const claimNextMatchJobSQLTemplate = `
    and top_conformance.certificate_record_hash = top_execution_entrant.conformance_certificate_hash
    and top_conformance.registry_generation = top_execution_entrant.authority_registry_generation
    and top_conformance.lane_identity_hash = top_execution_entrant.lane_identity_hash
+  left join runtime_evidence_v1_17_installed_authorities successor_authority
+    on successor_authority.semantic_tuple_manifest_hash = ms.compatibility_tuple_id
+   and successor_authority.certificate_ids ? bottom_containment.id
+   and successor_authority.certificate_ids ? top_containment.id
+   and (bottom_conformance.id is null or successor_authority.certificate_ids ? bottom_conformance.id)
+   and (top_conformance.id is null or successor_authority.certificate_ids ? top_conformance.id)
   where (
       (j.status = 'queued' and j.run_after <= $1)
       or (j.status = 'running' and j.lease_expires_at < $1)
@@ -157,6 +185,27 @@ const claimNextMatchJobSQLTemplate = `
         and top_containment.graph_profile = 'runtime-identity-evidence-dag-v1'
         and top_containment.identity_manifest_root is not null
         and top_containment.evidence_graph_root is not null
+        and successor_authority.id is not null
+        and successor_authority.trust_domain = '__RUNTIME_V117_AUTHORITY_TRUST_DOMAIN__'
+        and successor_authority.issued_at <= $1
+        and successor_authority.valid_from <= $1
+        and successor_authority.valid_until >= $1
+        and successor_authority.installed_at <= $1
+        and successor_authority.authority_bundle_hash <> 'sha256:' || ms.authority_bundle_hash
+        and not exists (
+          select 1 from runtime_evidence_v1_17_installed_authorities competing_successor
+          where competing_successor.id <> successor_authority.id
+            and competing_successor.semantic_tuple_manifest_hash = ms.compatibility_tuple_id
+            and competing_successor.trust_domain = '__RUNTIME_V117_AUTHORITY_TRUST_DOMAIN__'
+            and competing_successor.issued_at <= $1
+            and competing_successor.valid_from <= $1
+            and competing_successor.valid_until >= $1
+            and competing_successor.installed_at <= $1
+            and competing_successor.certificate_ids ? bottom_containment.id
+            and competing_successor.certificate_ids ? top_containment.id
+            and (bottom_conformance.id is null or competing_successor.certificate_ids ? bottom_conformance.id)
+            and (top_conformance.id is null or competing_successor.certificate_ids ? top_conformance.id)
+        )
         and (
           bottom_conformance.id is null
           or (
@@ -243,10 +292,18 @@ const claimNextMatchJobSQLTemplate = `
   limit 1
 `
 
-var claimNextMatchJobSQL = strings.NewReplacer(
-	"__RUNTIME_V117_BUDGET_PROFILE_SHA256__", runtimeServiceV117BudgetProfileSHA256,
-	"__RUNTIME_V117_EMPTY_LEDGER_ROOT__", runtimeServiceV117EmptyLedgerRoot,
-).Replace(claimNextMatchJobSQLTemplate)
+func runtimeServiceV117AuthoritySQL(template string, trustDomain string) string {
+	if trustDomain != runtimeEvidenceAuthorityProductionTrustDomain && trustDomain != runtimeEvidenceAuthorityFixtureTrustDomain {
+		return ""
+	}
+	return strings.NewReplacer(
+		"__RUNTIME_V117_BUDGET_PROFILE_SHA256__", runtimeServiceV117BudgetProfileSHA256,
+		"__RUNTIME_V117_EMPTY_LEDGER_ROOT__", runtimeServiceV117EmptyLedgerRoot,
+		"__RUNTIME_V117_AUTHORITY_TRUST_DOMAIN__", trustDomain,
+	).Replace(template)
+}
+
+var claimNextMatchJobSQL = runtimeServiceV117AuthoritySQL(claimNextMatchJobSQLTemplate, runtimeEvidenceAuthorityProductionTrustDomain)
 
 var claimNextMatchJobWithAllowlistSQL = strings.Replace(
 	claimNextMatchJobSQL,
@@ -301,15 +358,37 @@ const recheckClaimedMatchIntegritySQLTemplate = `
     'runtimeServiceV117', case
       when ms.compatibility_runtime_abi_version = 'strategy-runtime-abi-v1.17'
       then jsonb_build_object(
+        'authority', jsonb_build_object(
+          'bundleHash', successor_authority.authority_bundle_hash,
+          'sourceManifestHash', successor_authority.source_manifest_hash,
+          'registryGeneration', successor_authority.registry_generation,
+          'semanticTupleManifestHash', successor_authority.semantic_tuple_manifest_hash,
+          'installReceiptId', successor_authority.install_receipt_id,
+          'installReceiptHash', successor_authority.install_receipt_hash
+        ),
         'budgetProfileSha256', '__RUNTIME_V117_BUDGET_PROFILE_SHA256__',
         'ledgerPrestateRoot', '__RUNTIME_V117_EMPTY_LEDGER_ROOT__',
         'bottom', jsonb_build_object(
+          'strategyRevisionId', bottom.strategy_revision_id,
+          'laneIdentityHash', 'sha256:' || bottom_containment.lane_identity_hash,
+          'containmentCertificateId', bottom_containment.id,
+          'containmentCertificateKind', bottom_containment.certificate_kind,
+          'conformanceCertificateId', bottom_conformance.id,
+          'conformanceCertificateKind', bottom_conformance.certificate_kind,
           'identityManifestRoot', 'sha256:' || bottom_containment.identity_manifest_root,
-          'evidenceGraphRoot', 'sha256:' || bottom_containment.evidence_graph_root
+          'evidenceGraphRoot', 'sha256:' || bottom_containment.evidence_graph_root,
+          'exactPins', bottom_containment.exact_pin_expansion
         ),
         'top', jsonb_build_object(
+          'strategyRevisionId', top.strategy_revision_id,
+          'laneIdentityHash', 'sha256:' || top_containment.lane_identity_hash,
+          'containmentCertificateId', top_containment.id,
+          'containmentCertificateKind', top_containment.certificate_kind,
+          'conformanceCertificateId', top_conformance.id,
+          'conformanceCertificateKind', top_conformance.certificate_kind,
           'identityManifestRoot', 'sha256:' || top_containment.identity_manifest_root,
-          'evidenceGraphRoot', 'sha256:' || top_containment.evidence_graph_root
+          'evidenceGraphRoot', 'sha256:' || top_containment.evidence_graph_root,
+          'exactPins', top_containment.exact_pin_expansion
         )
       )
       else null
@@ -344,6 +423,12 @@ const recheckClaimedMatchIntegritySQLTemplate = `
     on top_conformance.id = top.conformance_certificate_id
    and top_conformance.certificate_kind = 'conformance'
    and top_conformance.certificate_status = 'passed'
+  left join runtime_evidence_v1_17_installed_authorities successor_authority
+    on successor_authority.semantic_tuple_manifest_hash = ms.compatibility_tuple_id
+   and successor_authority.certificate_ids ? bottom_containment.id
+   and successor_authority.certificate_ids ? top_containment.id
+   and (bottom_conformance.id is null or successor_authority.certificate_ids ? bottom_conformance.id)
+   and (top_conformance.id is null or successor_authority.certificate_ids ? top_conformance.id)
   where j.id = $1 and j.lease_token = $2 and j.status = 'running'
     and m.status = 'running'
     and j.execution_evidence_pair_hash = m.execution_evidence_pair_hash
@@ -362,6 +447,27 @@ const recheckClaimedMatchIntegritySQLTemplate = `
         and top_containment.graph_profile = 'runtime-identity-evidence-dag-v1'
         and top_containment.identity_manifest_root is not null
         and top_containment.evidence_graph_root is not null
+        and successor_authority.id is not null
+        and successor_authority.trust_domain = '__RUNTIME_V117_AUTHORITY_TRUST_DOMAIN__'
+        and successor_authority.issued_at <= $3
+        and successor_authority.valid_from <= $3
+        and successor_authority.valid_until >= $3
+        and successor_authority.installed_at <= $3
+        and successor_authority.authority_bundle_hash <> 'sha256:' || ms.authority_bundle_hash
+        and not exists (
+          select 1 from runtime_evidence_v1_17_installed_authorities competing_successor
+          where competing_successor.id <> successor_authority.id
+            and competing_successor.semantic_tuple_manifest_hash = ms.compatibility_tuple_id
+            and competing_successor.trust_domain = '__RUNTIME_V117_AUTHORITY_TRUST_DOMAIN__'
+            and competing_successor.issued_at <= $3
+            and competing_successor.valid_from <= $3
+            and competing_successor.valid_until >= $3
+            and competing_successor.installed_at <= $3
+            and competing_successor.certificate_ids ? bottom_containment.id
+            and competing_successor.certificate_ids ? top_containment.id
+            and (bottom_conformance.id is null or competing_successor.certificate_ids ? bottom_conformance.id)
+            and (top_conformance.id is null or competing_successor.certificate_ids ? top_conformance.id)
+        )
         and (
           bottom_conformance.id is null
           or (
@@ -394,17 +500,15 @@ const recheckClaimedMatchIntegritySQLTemplate = `
   for share of j, m, ms, bottom, top
 `
 
-var recheckClaimedMatchIntegritySQL = strings.NewReplacer(
-	"__RUNTIME_V117_BUDGET_PROFILE_SHA256__", runtimeServiceV117BudgetProfileSHA256,
-	"__RUNTIME_V117_EMPTY_LEDGER_ROOT__", runtimeServiceV117EmptyLedgerRoot,
-).Replace(recheckClaimedMatchIntegritySQLTemplate)
+var recheckClaimedMatchIntegritySQL = runtimeServiceV117AuthoritySQL(recheckClaimedMatchIntegritySQLTemplate, runtimeEvidenceAuthorityProductionTrustDomain)
 
 type matchJobLifecycle struct {
-	pool                  *pgxpool.Pool
-	now                   func() time.Time
-	newLeaseToken         func() (string, error)
-	loadAuthority         func() (*verifiedRuntimeEvidenceAuthority, error)
-	allowLegacyTestClaims bool
+	pool                          *pgxpool.Pool
+	now                           func() time.Time
+	newLeaseToken                 func() (string, error)
+	loadAuthority                 func() (*verifiedRuntimeEvidenceAuthority, error)
+	allowLegacyTestClaims         bool
+	successorAuthorityTrustDomain string
 }
 
 type claimMatchJobInput struct {
@@ -442,10 +546,32 @@ type claimedMatchIntegrityIdentity struct {
 }
 
 type claimedRuntimeServiceV117 struct {
-	BudgetProfileSHA256 string                    `json:"budgetProfileSha256"`
-	LedgerPrestateRoot  string                    `json:"ledgerPrestateRoot"`
-	Bottom              runtimeServiceEntrantV117 `json:"bottom"`
-	Top                 runtimeServiceEntrantV117 `json:"top"`
+	Authority           claimedRuntimeServiceAuthorityV117 `json:"authority"`
+	BudgetProfileSHA256 string                             `json:"budgetProfileSha256"`
+	LedgerPrestateRoot  string                             `json:"ledgerPrestateRoot"`
+	Bottom              claimedRuntimeServiceEntrantV117   `json:"bottom"`
+	Top                 claimedRuntimeServiceEntrantV117   `json:"top"`
+}
+
+type claimedRuntimeServiceAuthorityV117 struct {
+	BundleHash                string `json:"bundleHash"`
+	SourceManifestHash        string `json:"sourceManifestHash"`
+	RegistryGeneration        string `json:"registryGeneration"`
+	SemanticTupleManifestHash string `json:"semanticTupleManifestHash"`
+	InstallReceiptID          string `json:"installReceiptId"`
+	InstallReceiptHash        string `json:"installReceiptHash"`
+}
+
+type claimedRuntimeServiceEntrantV117 struct {
+	StrategyRevisionID         string                      `json:"strategyRevisionId"`
+	LaneIdentityHash           string                      `json:"laneIdentityHash"`
+	ContainmentCertificateID   string                      `json:"containmentCertificateId"`
+	ContainmentCertificateKind string                      `json:"containmentCertificateKind"`
+	ConformanceCertificateID   *string                     `json:"conformanceCertificateId"`
+	ConformanceCertificateKind *string                     `json:"conformanceCertificateKind"`
+	IdentityManifestRoot       string                      `json:"identityManifestRoot"`
+	EvidenceGraphRoot          string                      `json:"evidenceGraphRoot"`
+	ExactPins                  runtimeServiceExactPinsV117 `json:"exactPins"`
 }
 
 type recordAttemptFailureInput struct {
@@ -460,11 +586,19 @@ type recordAttemptFailureInput struct {
 
 func newMatchJobLifecycle(pool *pgxpool.Pool) *matchJobLifecycle {
 	return &matchJobLifecycle{
-		pool:          pool,
-		now:           time.Now,
-		newLeaseToken: createGoLeaseToken,
-		loadAuthority: loadProductionRuntimeEvidenceAuthorityFromEnvironment,
+		pool:                          pool,
+		now:                           time.Now,
+		newLeaseToken:                 createGoLeaseToken,
+		loadAuthority:                 loadProductionRuntimeEvidenceAuthorityFromEnvironment,
+		successorAuthorityTrustDomain: runtimeEvidenceAuthorityProductionTrustDomain,
 	}
+}
+
+func normalizedSuccessorAuthorityTrustDomain(value string) string {
+	if value == runtimeEvidenceAuthorityFixtureTrustDomain {
+		return value
+	}
+	return runtimeEvidenceAuthorityProductionTrustDomain
 }
 
 func createGoLeaseToken() (string, error) {
@@ -521,16 +655,25 @@ func (lifecycle *matchJobLifecycle) claimNextMatchJob(ctx context.Context, input
 		attempts      int
 		integrityJSON []byte
 	}
-	query := claimNextMatchJobSQL
+	trustDomain := normalizedSuccessorAuthorityTrustDomain(lifecycle.successorAuthorityTrustDomain)
+	query := runtimeServiceV117AuthoritySQL(claimNextMatchJobSQLTemplate, trustDomain)
 	args := []any{now}
 	if lifecycle.allowLegacyTestClaims {
 		query = claimNextLegacyMatchJobSQL
 	}
 	if input.MatchIDs != nil {
-		query = claimNextMatchJobWithAllowlistSQL
+		restrictedQuery := strings.Replace(
+			query,
+			"where (\n      (j.status = 'queued' and j.run_after <= $1)",
+			"where j.match_id = any($2::text[]) and (\n      (j.status = 'queued' and j.run_after <= $1)",
+			1,
+		)
 		if lifecycle.allowLegacyTestClaims {
-			query = claimNextLegacyMatchJobWithAllowlistSQL
+			restrictedQuery = claimNextLegacyMatchJobWithAllowlistSQL
+		} else if restrictedQuery == query {
+			return nil, errors.New("match job claim allowlist is unavailable")
 		}
+		query = restrictedQuery
 		args = []any{now, input.MatchIDs}
 	}
 	if err := tx.QueryRow(ctx, query, args...).Scan(&row.id, &row.matchID, &row.attempts, &row.integrityJSON); err != nil {
@@ -600,7 +743,7 @@ func validateClaimedMatchIntegrity(authority *verifiedRuntimeEvidenceAuthority, 
 		return errors.New("claimed Match integrity identity is unavailable")
 	}
 	if identity.CompatibilityTuple.RuntimeABI == strategyRuntimeABIVersionV117 {
-		if !validClaimedRuntimeServiceV117(identity.RuntimeServiceV117) {
+		if !validClaimedRuntimeServiceV117(identity.RuntimeServiceV117, identity) {
 			return errors.New("claimed Match successor runtime identity is unavailable")
 		}
 	} else if identity.RuntimeServiceV117 != nil {
@@ -623,13 +766,42 @@ func validateClaimedMatchIntegrity(authority *verifiedRuntimeEvidenceAuthority, 
 	return nil
 }
 
-func validClaimedRuntimeServiceV117(binding *claimedRuntimeServiceV117) bool {
+func validClaimedRuntimeServiceV117(binding *claimedRuntimeServiceV117, identity *claimedMatchIntegrityIdentity) bool {
 	if binding == nil || binding.BudgetProfileSHA256 != runtimeServiceV117BudgetProfileSHA256 ||
-		binding.LedgerPrestateRoot != runtimeServiceV117EmptyLedgerRoot {
+		binding.LedgerPrestateRoot != runtimeServiceV117EmptyLedgerRoot || identity == nil ||
+		!isPrefixedLowerSHA256(binding.Authority.BundleHash) ||
+		binding.Authority.BundleHash == identity.AuthorityBundleHash ||
+		!isPrefixedLowerSHA256(binding.Authority.SourceManifestHash) ||
+		!validCanonicalGeneration(binding.Authority.RegistryGeneration) ||
+		binding.Authority.SemanticTupleManifestHash != identity.CompatibilityTupleID ||
+		!validRuntimeSemanticReceiptV117Identifier(binding.Authority.InstallReceiptID) ||
+		!isPrefixedLowerSHA256(binding.Authority.InstallReceiptHash) {
 		return false
 	}
-	for _, entrant := range []runtimeServiceEntrantV117{binding.Bottom, binding.Top} {
-		if !isPrefixedLowerSHA256(entrant.IdentityManifestRoot) || !isPrefixedLowerSHA256(entrant.EvidenceGraphRoot) {
+	entrants := []struct {
+		claimed  claimedRuntimeServiceEntrantV117
+		evidence goEntrantExecutionEvidence
+	}{{binding.Bottom, identity.Bottom}, {binding.Top, identity.Top}}
+	for _, candidate := range entrants {
+		entrant, evidence := candidate.claimed, candidate.evidence
+		if entrant.StrategyRevisionID != evidence.StrategyRevisionID ||
+			entrant.LaneIdentityHash != "sha256:"+hashCreationLaneIdentity(evidence.LaneIdentity) ||
+			entrant.ContainmentCertificateID != evidence.ContainmentCertificateRef.CertificateID ||
+			entrant.ContainmentCertificateKind != evidence.ContainmentCertificateRef.Kind ||
+			!isPrefixedLowerSHA256(entrant.IdentityManifestRoot) ||
+			!isPrefixedLowerSHA256(entrant.EvidenceGraphRoot) ||
+			!validRuntimeServiceExactPinsV117(entrant.ExactPins) ||
+			entrant.ExactPins[7][1] != runtimeServiceV117BudgetProfileSHA256 ||
+			entrant.ExactPins[8][1] != canonicalJSONVersionV11 {
+			return false
+		}
+		if evidence.ConformanceCertificateRef == nil {
+			if entrant.ConformanceCertificateID != nil || entrant.ConformanceCertificateKind != nil {
+				return false
+			}
+		} else if entrant.ConformanceCertificateID == nil || entrant.ConformanceCertificateKind == nil ||
+			*entrant.ConformanceCertificateID != evidence.ConformanceCertificateRef.CertificateID ||
+			*entrant.ConformanceCertificateKind != evidence.ConformanceCertificateRef.Kind {
 			return false
 		}
 	}
@@ -716,15 +888,17 @@ func (lifecycle *matchJobLifecycle) recheckClaimedMatchIntegrity(ctx context.Con
 	if err := lockAuthorityPublicationTransitions(ctx, tx); err != nil {
 		return err
 	}
+	now := lifecycle.currentTime()
+	query := runtimeServiceV117AuthoritySQL(recheckClaimedMatchIntegritySQLTemplate, normalizedSuccessorAuthorityTrustDomain(lifecycle.successorAuthorityTrustDomain))
 	var serialized []byte
-	if err := tx.QueryRow(ctx, recheckClaimedMatchIntegritySQL, claimed.JobID, claimed.LeaseToken).Scan(&serialized); err != nil {
+	if err := tx.QueryRow(ctx, query, claimed.JobID, claimed.LeaseToken, now).Scan(&serialized); err != nil {
 		return errors.New("claimed Match integrity changed in flight")
 	}
 	var current claimedMatchIntegrityIdentity
-	if err := decodeStrictJSON(serialized, &current); err != nil || validateClaimedMatchIntegrity(authority, &current, lifecycle.currentTime()) != nil || !jsonValuesEqual(current, *claimed.Integrity) {
+	if err := decodeStrictJSON(serialized, &current); err != nil || validateClaimedMatchIntegrity(authority, &current, now) != nil || !jsonValuesEqual(current, *claimed.Integrity) {
 		return errors.New("claimed Match integrity changed in flight")
 	}
-	receipt, err := (&LiveServer{}).lockInstalledAuthorityReceipt(ctx, tx, authority, lifecycle.currentTime())
+	receipt, err := (&LiveServer{}).lockInstalledAuthorityReceipt(ctx, tx, authority, now)
 	if err != nil || receipt.PublicationID != current.PublicationID || receipt.ReceiptID != current.InstallReceiptID ||
 		receipt.PayloadSHA256 != current.PayloadSHA256 || receipt.EnvelopeSHA256 != current.EnvelopeSHA256 ||
 		receipt.SourceManifestHash != current.SourceManifestHash || !jsonValuesEqual(receipt.SourceSet, current.SourceSet) {

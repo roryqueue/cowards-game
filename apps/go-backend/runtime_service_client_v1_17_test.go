@@ -101,14 +101,30 @@ func signedRuntimeServiceSuccessResponseV117ForTest(
 	if err != nil {
 		t.Fatal(err)
 	}
+	bottomExactPinsHash, err := hashRuntimeServiceExactPinsV117(request.Entrants.Bottom.ExactPins)
+	if err != nil {
+		t.Fatal(err)
+	}
+	topExactPinsHash, err := hashRuntimeServiceExactPinsV117(request.Entrants.Top.ExactPins)
+	if err != nil {
+		t.Fatal(err)
+	}
 	receipt := runtimeSemanticReceiptV117{
 		SchemaVersion: runtimeSemanticReceiptV117SchemaVersion, Profile: runtimeSemanticReceiptV117Profile,
 		ServiceContractVersion: runtimeSemanticReceiptV117ServiceVersion,
 		RequestSHA256:          runtimeInvocationV117SHA256Value(requestBytes), RequestID: request.RequestID, MatchID: request.MatchID,
 		CompatibilityTupleID: request.CompatibilityTupleID, AuthorityBundleHash: request.Authority.BundleHash,
 		AuthoritySourceManifestHash: request.Authority.SourceManifestHash, RegistryGeneration: request.Authority.RegistryGeneration,
+		LegacyAuthorityBundleHash: request.LegacyAuthority.BundleHash, LegacyAuthoritySourceManifestHash: request.LegacyAuthority.SourceManifestHash,
+		LegacyRegistryGeneration:   request.LegacyAuthority.RegistryGeneration,
 		BottomIdentityManifestRoot: request.Entrants.Bottom.IdentityManifestRoot, BottomEvidenceGraphRoot: request.Entrants.Bottom.EvidenceGraphRoot,
+		BottomStrategyRevisionID: request.Entrants.Bottom.StrategyRevisionID, BottomLaneIdentityHash: request.Entrants.Bottom.LaneIdentityHash,
+		BottomOriginalSourceSHA256: request.Entrants.Bottom.SourceIdentity.OriginalSourceSHA256, BottomNormalizedSourceSHA256: request.Entrants.Bottom.SourceIdentity.NormalizedSourceSHA256,
+		BottomArtifactSHA256: request.Entrants.Bottom.SourceIdentity.ArtifactSHA256, BottomExactPinsSHA256: bottomExactPinsHash,
 		TopIdentityManifestRoot: request.Entrants.Top.IdentityManifestRoot, TopEvidenceGraphRoot: request.Entrants.Top.EvidenceGraphRoot,
+		TopStrategyRevisionID: request.Entrants.Top.StrategyRevisionID, TopLaneIdentityHash: request.Entrants.Top.LaneIdentityHash,
+		TopOriginalSourceSHA256: request.Entrants.Top.SourceIdentity.OriginalSourceSHA256, TopNormalizedSourceSHA256: request.Entrants.Top.SourceIdentity.NormalizedSourceSHA256,
+		TopArtifactSHA256: request.Entrants.Top.SourceIdentity.ArtifactSHA256, TopExactPinsSHA256: topExactPinsHash,
 		BudgetProfileSHA256: request.Accounting.BudgetProfileSHA256, LedgerPrestateRoot: request.Accounting.LedgerPrestateRoot,
 		LedgerPoststateRoot: ledgerPoststateRoot, ChronicleCanonicalHash: chronicleHash, FinalStateCanonicalHash: finalStateHash,
 		ReconstructedTerminalStateHash: "sha256:" + strings.Repeat("7", 64), OutcomeCanonicalHash: outcomeHash,
@@ -179,6 +195,26 @@ func TestPhase258RuntimeServiceV117RejectsEveryReceiptBindingSubstitution(t *tes
 			response.Result.SemanticReceipt.RegistryGeneration = "8"
 			signRuntimeServiceReceiptV117(t, &response.Result.SemanticReceipt)
 		}},
+		{"authority bundle", func(response *runtimeServiceResponseV117) {
+			response.Result.SemanticReceipt.AuthorityBundleHash = hash('0')
+			signRuntimeServiceReceiptV117(t, &response.Result.SemanticReceipt)
+		}},
+		{"authority source manifest", func(response *runtimeServiceResponseV117) {
+			response.Result.SemanticReceipt.AuthoritySourceManifestHash = hash('0')
+			signRuntimeServiceReceiptV117(t, &response.Result.SemanticReceipt)
+		}},
+		{"legacy authority bundle", func(response *runtimeServiceResponseV117) {
+			response.Result.SemanticReceipt.LegacyAuthorityBundleHash = hash('0')
+			signRuntimeServiceReceiptV117(t, &response.Result.SemanticReceipt)
+		}},
+		{"legacy authority source manifest", func(response *runtimeServiceResponseV117) {
+			response.Result.SemanticReceipt.LegacyAuthoritySourceManifestHash = hash('0')
+			signRuntimeServiceReceiptV117(t, &response.Result.SemanticReceipt)
+		}},
+		{"legacy registry generation", func(response *runtimeServiceResponseV117) {
+			response.Result.SemanticReceipt.LegacyRegistryGeneration = "8"
+			signRuntimeServiceReceiptV117(t, &response.Result.SemanticReceipt)
+		}},
 		{"bottom identity root", func(response *runtimeServiceResponseV117) {
 			response.Result.SemanticReceipt.BottomIdentityManifestRoot = hash('0')
 			signRuntimeServiceReceiptV117(t, &response.Result.SemanticReceipt)
@@ -187,12 +223,60 @@ func TestPhase258RuntimeServiceV117RejectsEveryReceiptBindingSubstitution(t *tes
 			response.Result.SemanticReceipt.BottomEvidenceGraphRoot = hash('0')
 			signRuntimeServiceReceiptV117(t, &response.Result.SemanticReceipt)
 		}},
+		{"bottom strategy revision", func(response *runtimeServiceResponseV117) {
+			response.Result.SemanticReceipt.BottomStrategyRevisionID += ":mutated"
+			signRuntimeServiceReceiptV117(t, &response.Result.SemanticReceipt)
+		}},
+		{"bottom lane identity", func(response *runtimeServiceResponseV117) {
+			response.Result.SemanticReceipt.BottomLaneIdentityHash = hash('0')
+			signRuntimeServiceReceiptV117(t, &response.Result.SemanticReceipt)
+		}},
+		{"bottom original source", func(response *runtimeServiceResponseV117) {
+			response.Result.SemanticReceipt.BottomOriginalSourceSHA256 = hash('0')
+			signRuntimeServiceReceiptV117(t, &response.Result.SemanticReceipt)
+		}},
+		{"bottom normalized source", func(response *runtimeServiceResponseV117) {
+			response.Result.SemanticReceipt.BottomNormalizedSourceSHA256 = hash('0')
+			signRuntimeServiceReceiptV117(t, &response.Result.SemanticReceipt)
+		}},
+		{"bottom artifact", func(response *runtimeServiceResponseV117) {
+			response.Result.SemanticReceipt.BottomArtifactSHA256 = hash('0')
+			signRuntimeServiceReceiptV117(t, &response.Result.SemanticReceipt)
+		}},
+		{"bottom exact pins", func(response *runtimeServiceResponseV117) {
+			response.Result.SemanticReceipt.BottomExactPinsSHA256 = hash('0')
+			signRuntimeServiceReceiptV117(t, &response.Result.SemanticReceipt)
+		}},
 		{"top identity root", func(response *runtimeServiceResponseV117) {
 			response.Result.SemanticReceipt.TopIdentityManifestRoot = hash('0')
 			signRuntimeServiceReceiptV117(t, &response.Result.SemanticReceipt)
 		}},
 		{"top graph root", func(response *runtimeServiceResponseV117) {
 			response.Result.SemanticReceipt.TopEvidenceGraphRoot = hash('0')
+			signRuntimeServiceReceiptV117(t, &response.Result.SemanticReceipt)
+		}},
+		{"top strategy revision", func(response *runtimeServiceResponseV117) {
+			response.Result.SemanticReceipt.TopStrategyRevisionID += ":mutated"
+			signRuntimeServiceReceiptV117(t, &response.Result.SemanticReceipt)
+		}},
+		{"top lane identity", func(response *runtimeServiceResponseV117) {
+			response.Result.SemanticReceipt.TopLaneIdentityHash = hash('0')
+			signRuntimeServiceReceiptV117(t, &response.Result.SemanticReceipt)
+		}},
+		{"top original source", func(response *runtimeServiceResponseV117) {
+			response.Result.SemanticReceipt.TopOriginalSourceSHA256 = hash('f')
+			signRuntimeServiceReceiptV117(t, &response.Result.SemanticReceipt)
+		}},
+		{"top normalized source", func(response *runtimeServiceResponseV117) {
+			response.Result.SemanticReceipt.TopNormalizedSourceSHA256 = hash('0')
+			signRuntimeServiceReceiptV117(t, &response.Result.SemanticReceipt)
+		}},
+		{"top artifact", func(response *runtimeServiceResponseV117) {
+			response.Result.SemanticReceipt.TopArtifactSHA256 = hash('0')
+			signRuntimeServiceReceiptV117(t, &response.Result.SemanticReceipt)
+		}},
+		{"top exact pins", func(response *runtimeServiceResponseV117) {
+			response.Result.SemanticReceipt.TopExactPinsSHA256 = hash('0')
 			signRuntimeServiceReceiptV117(t, &response.Result.SemanticReceipt)
 		}},
 		{"budget profile", func(response *runtimeServiceResponseV117) {

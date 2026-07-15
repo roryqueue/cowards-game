@@ -1,6 +1,9 @@
 package main
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"os"
 	"strings"
@@ -8,26 +11,33 @@ import (
 
 const deploymentLaneRegistrySchemaVersion = "runtime-deployment-lane-registry-v1.37"
 
+var runtimeSuccessorCanonicalTupleV117 = func() canonicalCompatibilityTuple {
+	var tuple canonicalCompatibilityTuple
+	_ = json.Unmarshal([]byte(runtimeSuccessorSemanticTupleV117), &tuple)
+	return tuple
+}()
+
 type goDeploymentLaneProfile struct {
-	ProviderID       string                      `json:"providerId"`
-	LanguageID       string                      `json:"languageId"`
-	LanguageVersion  string                      `json:"languageVersion"`
-	RuntimeID        string                      `json:"runtimeId"`
-	RuntimeVersion   string                      `json:"runtimeVersion"`
-	ToolchainID      string                      `json:"toolchainId"`
-	ToolchainVersion string                      `json:"toolchainVersion"`
-	AdapterID        string                      `json:"adapterId"`
-	AdapterVersion   string                      `json:"adapterVersion"`
-	PolicyID         string                      `json:"policyId"`
-	PolicyVersion    string                      `json:"policyVersion"`
-	CorpusID         string                      `json:"corpusId"`
-	CorpusVersion    string                      `json:"corpusVersion"`
-	ArtifactKind     string                      `json:"artifactKind"`
-	ArtifactIDPrefix string                      `json:"artifactIdPrefix"`
-	ImplementationID string                      `json:"implementationId"`
-	BuildID          string                      `json:"buildId"`
-	SemanticTupleID  string                      `json:"semanticTupleId"`
-	SemanticTuple    canonicalCompatibilityTuple `json:"semanticTuple"`
+	ProviderID                       string                                `json:"providerId"`
+	LanguageID                       string                                `json:"languageId"`
+	LanguageVersion                  string                                `json:"languageVersion"`
+	RuntimeID                        string                                `json:"runtimeId"`
+	RuntimeVersion                   string                                `json:"runtimeVersion"`
+	ToolchainID                      string                                `json:"toolchainId"`
+	ToolchainVersion                 string                                `json:"toolchainVersion"`
+	AdapterID                        string                                `json:"adapterId"`
+	AdapterVersion                   string                                `json:"adapterVersion"`
+	PolicyID                         string                                `json:"policyId"`
+	PolicyVersion                    string                                `json:"policyVersion"`
+	CorpusID                         string                                `json:"corpusId"`
+	CorpusVersion                    string                                `json:"corpusVersion"`
+	ArtifactKind                     string                                `json:"artifactKind"`
+	ArtifactIDPrefix                 string                                `json:"artifactIdPrefix"`
+	ImplementationID                 string                                `json:"implementationId"`
+	BuildID                          string                                `json:"buildId"`
+	SemanticTupleID                  string                                `json:"semanticTupleId"`
+	SemanticTuple                    canonicalCompatibilityTuple           `json:"semanticTuple"`
+	SuccessorRuntimeIdentityTemplate *runtimeSuccessorIdentityTemplateV117 `json:"successorRuntimeIdentityTemplate,omitempty"`
 }
 
 type goDeploymentLaneRegistry struct {
@@ -59,6 +69,17 @@ func loadDeploymentLaneRegistry(path string) (*goDeploymentLaneRegistry, error) 
 		if lane.ArtifactKind != "source" && lane.ArtifactKind != "compiled" {
 			return nil, errors.New("deployment lane registry artifact kind is invalid")
 		}
+		if !validDeploymentLaneSemanticTuple(lane.SemanticTupleID, lane.SemanticTuple) {
+			return nil, errors.New("deployment lane registry semantic tuple identity is invalid")
+		}
+		if lane.SemanticTupleID == runtimeSuccessorSemanticTupleIDV117 {
+			if lane.SuccessorRuntimeIdentityTemplate == nil || !normalizeRuntimeSuccessorIdentityTemplateV117(lane.SuccessorRuntimeIdentityTemplate) ||
+				!successorIdentityTemplateMatchesLaneProfileV117(lane.SuccessorRuntimeIdentityTemplate, lane) {
+				return nil, errors.New("deployment lane registry successor identity template is invalid")
+			}
+		} else if lane.SuccessorRuntimeIdentityTemplate != nil {
+			return nil, errors.New("deployment lane registry successor identity template is mixed-version")
+		}
 		key := strings.Join([]string{lane.LanguageID, lane.LanguageVersion, lane.AdapterID, lane.AdapterVersion}, "\x00")
 		if keys[key] {
 			return nil, errors.New("deployment lane registry profile is ambiguous")
@@ -66,6 +87,31 @@ func loadDeploymentLaneRegistry(path string) (*goDeploymentLaneRegistry, error) 
 		keys[key] = true
 	}
 	return &registry, nil
+}
+
+func (registry *goDeploymentLaneRegistry) successorIdentityTemplateForRevision(strategy runtimeServiceStrategyRevision) (*runtimeSuccessorIdentityTemplateV117, bool) {
+	if registry == nil {
+		return nil, false
+	}
+	language := mapValue(strategy.Runtime, "language")
+	adapter := mapValue(strategy.Runtime, "adapter")
+	languageID, languageVersion := stringValue(language, "id"), stringValue(language, "version")
+	adapterID, adapterVersion := stringValue(adapter, "id"), stringValue(adapter, "version")
+	var resolved *runtimeSuccessorIdentityTemplateV117
+	for index := range registry.Lanes {
+		profile := &registry.Lanes[index]
+		if profile.LanguageID == languageID && profile.LanguageVersion == languageVersion && profile.AdapterID == adapterID && profile.AdapterVersion == adapterVersion {
+			if resolved != nil || profile.SuccessorRuntimeIdentityTemplate == nil ||
+				!successorIdentityTemplateMatchesLaneProfileV117(profile.SuccessorRuntimeIdentityTemplate, *profile) {
+				return nil, false
+			}
+			resolved = profile.SuccessorRuntimeIdentityTemplate
+		}
+	}
+	if resolved == nil {
+		return nil, false
+	}
+	return cloneRuntimeSuccessorIdentityTemplateV117(resolved), true
 }
 
 func loadProductionDeploymentLaneRegistryFromEnvironment() (*goDeploymentLaneRegistry, error) {
@@ -77,7 +123,9 @@ func (registry *goDeploymentLaneRegistry) matchesAuthority(authority *verifiedRu
 		return false
 	}
 	for _, profile := range registry.Lanes {
-		if profile.SemanticTupleID != authority.CompatibilityTuple.TupleID || profile.SemanticTuple != authority.CompatibilityTuple.Tuple {
+		if !validDeploymentLaneSemanticTuple(profile.SemanticTupleID, profile.SemanticTuple) ||
+			!validDeploymentLaneSemanticTuple(authority.CompatibilityTuple.TupleID, authority.CompatibilityTuple.Tuple) ||
+			profile.SemanticTupleID != authority.CompatibilityTuple.TupleID || profile.SemanticTuple != authority.CompatibilityTuple.Tuple {
 			return false
 		}
 	}
@@ -102,15 +150,22 @@ func (registry *goDeploymentLaneRegistry) resolveRevision(id string, sourceHash 
 			profile = candidate
 		}
 	}
-	if profile == nil || profile.SemanticTupleID != tuple.TupleID || profile.SemanticTuple != tuple.Tuple || stringValue(runtime, "abiVersion") != tuple.Tuple.RuntimeABI || stringValue(engine, "spec") != tuple.Tuple.Rules || stringValue(engine, "engine") != tuple.Tuple.Engine {
+	if profile == nil || !validDeploymentLaneSemanticTuple(profile.SemanticTupleID, profile.SemanticTuple) || !validDeploymentLaneSemanticTuple(tuple.TupleID, tuple.Tuple) || profile.SemanticTupleID != tuple.TupleID || profile.SemanticTuple != tuple.Tuple || stringValue(runtime, "abiVersion") != tuple.Tuple.RuntimeABI || stringValue(engine, "spec") != tuple.Tuple.Rules || stringValue(engine, "engine") != tuple.Tuple.Engine {
 		return nil, false
+	}
+	if profile.SemanticTupleID == runtimeSuccessorSemanticTupleIDV117 {
+		if !validSuccessorStrategyRevisionV117(sourceHash, sourceBytes, runtime, engine, metadata) ||
+			profile.SuccessorRuntimeIdentityTemplate == nil ||
+			!successorIdentityTemplateMatchesLaneProfileV117(profile.SuccessorRuntimeIdentityTemplate, *profile) {
+			return nil, false
+		}
 	}
 	provider := mapValue(metadata, "providerValidation")
 	if stringValue(provider, "providerId") != profile.ProviderID {
 		return nil, false
 	}
 	artifact := mapValue(metadata, "sourceArtifact")
-	providerValid := sourceArtifactProviderValidationMatches(metadata, sourceHash, sourceBytes, profile.ProviderID, profile.LanguageID)
+	providerValid := sourceArtifactProviderValidationMatchesABI(metadata, sourceHash, sourceBytes, profile.ProviderID, profile.LanguageID, tuple.Tuple.RuntimeABI)
 	if profile.ArtifactKind == "compiled" {
 		artifact = mapValue(metadata, "compiledArtifact")
 		providerValid = rustProviderValidationMatches(metadata, sourceHash, sourceBytes, profile.LanguageID)
@@ -120,7 +175,11 @@ func (registry *goDeploymentLaneRegistry) resolveRevision(id string, sourceHash 
 	}
 	toolchain := mapValue(artifact, "toolchain")
 	if profile.ArtifactKind == "source" {
-		if stringValue(toolchain, "language") != profile.ToolchainID || stringValue(toolchain, "runtime") != profile.RuntimeID || stringValue(toolchain, "runtimeVersion") != profile.ToolchainVersion || profile.RuntimeVersion != profile.ToolchainVersion {
+		if profile.SemanticTupleID == runtimeSuccessorSemanticTupleIDV117 {
+			if stringValue(toolchain, "language") != profile.LanguageID || stringValue(toolchain, "runtime") != profile.ToolchainID || stringValue(toolchain, "runtimeVersion") != profile.ToolchainVersion {
+				return nil, false
+			}
+		} else if stringValue(toolchain, "language") != profile.ToolchainID || stringValue(toolchain, "runtime") != profile.RuntimeID || stringValue(toolchain, "runtimeVersion") != profile.ToolchainVersion || profile.RuntimeVersion != profile.ToolchainVersion {
 			return nil, false
 		}
 	} else if stringValue(toolchain, "compiler") != profile.ToolchainID || stringValue(toolchain, "compilerVersion") != profile.ToolchainVersion {
@@ -138,4 +197,99 @@ func (registry *goDeploymentLaneRegistry) resolveRevision(id string, sourceHash 
 		SemanticTupleID: profile.SemanticTupleID, SemanticTuple: profile.SemanticTuple,
 	}
 	return identity, true
+}
+
+func successorIdentityTemplateMatchesLaneProfileV117(template *runtimeSuccessorIdentityTemplateV117, profile goDeploymentLaneProfile) bool {
+	if !validNormalizedRuntimeSuccessorIdentityTemplateV117(template) || template.ExactPins[1][1] != profile.RuntimeVersion {
+		return false
+	}
+	bindings := runtimeIdentityBindingMapV117(template.Bindings)
+	laneProfileHash, ok := hashSuccessorRuntimeLaneProfileV117(profile)
+	return ok && template.LaneProfileSHA256 == laneProfileHash &&
+		bindings["containmentPolicy"].PublicID == profile.PolicyID &&
+		bindings["conformanceCorpus"].PublicID == profile.CorpusID
+}
+
+func hashSuccessorRuntimeLaneProfileV117(profile goDeploymentLaneProfile) (string, bool) {
+	values := map[string]any{
+		"providerId": profile.ProviderID, "languageId": profile.LanguageID, "languageVersion": profile.LanguageVersion,
+		"runtimeId": profile.RuntimeID, "runtimeVersion": profile.RuntimeVersion,
+		"toolchainId": profile.ToolchainID, "toolchainVersion": profile.ToolchainVersion,
+		"adapterId": profile.AdapterID, "adapterVersion": profile.AdapterVersion,
+		"policyId": profile.PolicyID, "policyVersion": profile.PolicyVersion,
+		"corpusId": profile.CorpusID, "corpusVersion": profile.CorpusVersion,
+		"artifactKind": profile.ArtifactKind, "artifactIdPrefix": profile.ArtifactIDPrefix,
+		"implementationId": profile.ImplementationID, "buildId": profile.BuildID,
+		"semanticTupleId": profile.SemanticTupleID, "semanticTuple": profile.SemanticTuple,
+	}
+	if len(runtimeSuccessorLaneProfileFieldsV117) != len(values) {
+		return "", false
+	}
+	exact := make(map[string]any, len(values))
+	for _, field := range runtimeSuccessorLaneProfileFieldsV117 {
+		value, exists := values[field]
+		if !exists {
+			return "", false
+		}
+		exact[field] = value
+	}
+	encoded, err := runtimeInvocationV117CanonicalValue(exact)
+	if err != nil {
+		return "", false
+	}
+	hash := sha256.New()
+	_, _ = hash.Write([]byte(runtimeSuccessorLaneProfileDomainV117))
+	_, _ = hash.Write([]byte{0})
+	_, _ = hash.Write(encoded)
+	return "sha256:" + hex.EncodeToString(hash.Sum(nil)), true
+}
+
+func validSuccessorStrategyRevisionV117(sourceHash string, sourceBytes int, runtime map[string]any, engine map[string]any, metadata map[string]any) bool {
+	if stringValue(runtime, "abiVersion") != strategyRuntimeABIVersionV117 || sourceHash == "" || sourceBytes <= 0 {
+		return false
+	}
+	pkg := mapValue(runtime, "package")
+	if !runtimeInvocationV117ExactKeys(pkg, "entrypoint", "mode") || stringValue(pkg, "entrypoint") != "default" || stringValue(pkg, "mode") != "none" || !emptyRuntimeCapabilities(runtime["requiredCapabilities"]) {
+		return false
+	}
+	limits := mapValue(runtime, "limits")
+	if !validSuccessorRuntimeLimitsV117(limits) {
+		return false
+	}
+	validation := mapValue(metadata, "providerValidation")
+	artifact := mapValue(metadata, "sourceArtifact")
+	return stringValue(validation, "contractVersion") == "runtime-provider-validation-v1.17" &&
+		stringValue(validation, "sourceHash") == sourceHash && intValue(validation, "sourceBytes") == sourceBytes &&
+		stringValue(validation, "artifactHash") == stringValue(artifact, "hash") &&
+		intValue(validation, "artifactBytes") == intValue(artifact, "bytes") &&
+		stringValue(artifact, "abiVersion") == strategyRuntimeABIVersionV117 &&
+		stringValue(engine, "spec") == runtimeSuccessorCanonicalTupleV117.Rules &&
+		stringValue(engine, "engine") == runtimeSuccessorCanonicalTupleV117.Engine
+}
+
+func validSuccessorRuntimeLimitsV117(limits map[string]any) bool {
+	return runtimeInvocationV117ExactKeys(limits,
+		"timeoutMs", "stdoutBytes", "stderrBytes", "sourceBytes", "strategyMemoryBytes", "soldierMemoryBytes", "objectivePayloadBytes",
+		"environment", "filesystem", "network", "shell", "packagePolicy",
+	) && intValue(limits, "timeoutMs") == 1000 && intValue(limits, "stdoutBytes") == 262144 &&
+		intValue(limits, "stderrBytes") == 65536 && intValue(limits, "sourceBytes") == 65536 &&
+		intValue(limits, "strategyMemoryBytes") == 32768 && intValue(limits, "soldierMemoryBytes") == 2048 &&
+		intValue(limits, "objectivePayloadBytes") == 1024 && stringValue(limits, "environment") == "empty" &&
+		stringValue(limits, "filesystem") == "none" && stringValue(limits, "network") == "disabled" &&
+		stringValue(limits, "shell") == "disabled" && stringValue(limits, "packagePolicy") == "none"
+}
+
+func emptyRuntimeCapabilities(value any) bool {
+	switch typed := value.(type) {
+	case []any:
+		return len(typed) == 0
+	case []string:
+		return len(typed) == 0
+	default:
+		return false
+	}
+}
+
+func validDeploymentLaneSemanticTuple(tupleID string, tuple canonicalCompatibilityTuple) bool {
+	return validKnownVersionedCompatibilityTuple(tupleID, tuple)
 }

@@ -135,6 +135,7 @@ func TestMatchJobLifecycleIntegrityClaimContract(t *testing.T) {
 		"successor_authority.install_receipt_hash",
 		"bottom_containment.certificate_kind",
 		"top_containment.certificate_kind",
+		"competing_successor.id <> successor_authority.id",
 	} {
 		if !strings.Contains(claimNextMatchJobSQL, required) {
 			t.Fatalf("integrity claim SQL is missing %q", required)
@@ -151,19 +152,141 @@ func TestMatchJobLifecycleIntegrityClaimContract(t *testing.T) {
 		!strings.Contains(recheckClaimedMatchIntegritySQL, "successor_authority.install_receipt_hash") {
 		t.Fatal("in-flight recheck must require the canonical installed authority head")
 	}
-	if !strings.Contains(claimNextMatchJobSQL, "successor_authority.authority_bundle_hash <> ms.authority_bundle_hash") ||
-		!strings.Contains(recheckClaimedMatchIntegritySQL, "successor_authority.authority_bundle_hash <> ms.authority_bundle_hash") {
+	if !strings.Contains(claimNextMatchJobSQL, "successor_authority.authority_bundle_hash <> 'sha256:' || ms.authority_bundle_hash") ||
+		!strings.Contains(recheckClaimedMatchIntegritySQL, "successor_authority.authority_bundle_hash <> 'sha256:' || ms.authority_bundle_hash") {
 		t.Fatal("successor and nested legacy authority identities must be distinct")
+	}
+}
+
+func TestPhase258SuccessorAuthorityTrustSelectionDefaultsProductionAndScopesFixtures(t *testing.T) {
+	if !strings.Contains(claimNextMatchJobSQL, "successor_authority.trust_domain = '"+runtimeEvidenceAuthorityProductionTrustDomain+"'") {
+		t.Fatal("live successor authority claim is not production-only")
+	}
+	fixtureSQL := runtimeServiceV117AuthoritySQL(claimNextMatchJobSQLTemplate, runtimeEvidenceAuthorityFixtureTrustDomain)
+	if !strings.Contains(fixtureSQL, "successor_authority.trust_domain = '"+runtimeEvidenceAuthorityFixtureTrustDomain+"'") {
+		t.Fatal("fixture successor authority claim did not use its explicit isolated trust domain")
+	}
+	if runtimeServiceV117AuthoritySQL(claimNextMatchJobSQLTemplate, "caller-selected") != "" ||
+		normalizedSuccessorAuthorityTrustDomain("caller-selected") != runtimeEvidenceAuthorityProductionTrustDomain {
+		t.Fatal("untrusted successor authority trust-domain selection did not fail closed")
+	}
+}
+
+func runtimeServiceExactPinsFixtureV117(seed byte) runtimeServiceExactPinsV117 {
+	hash := func(offset byte) string {
+		return "sha256:" + strings.Repeat(string("0123456789abcdef"[(seed+offset)%16]), 64)
+	}
+	return runtimeServiceExactPinsV117{
+		{"runtimeExecutableDigest", hash(0)},
+		{"reportedVersion", "fixture-v1.17"},
+		{"targetAbi", "fixture-abi-v1.17"},
+		{"compilerFlags", hash(1)},
+		{"adapterBuildDigest", hash(2)},
+		{"standardLibraryOrSysrootDigest", hash(3)},
+		{"containmentPolicyId", "fixture-containment-v1.17"},
+		{"budgetProfileSha256", runtimeServiceV117BudgetProfileSHA256},
+		{"canonicalJsonProfileId", canonicalJSONVersionV11},
+		{"behaviorSettingsHash", hash(4)},
+	}
+}
+
+func runtimeSuccessorIdentityTemplateFixtureV117(pins runtimeServiceExactPinsV117) *runtimeSuccessorIdentityTemplateV117 {
+	hashes := map[string]string{
+		"runtimeExecutable":    strings.TrimPrefix(pins[0][1], "sha256:"),
+		"compilerExecutable":   strings.Repeat("a", 64),
+		"sysrootStdlib":        strings.TrimPrefix(pins[5][1], "sha256:"),
+		"adapterBuild":         strings.TrimPrefix(pins[4][1], "sha256:"),
+		"semanticTuple":        strings.TrimPrefix(runtimeSuccessorSemanticTupleIDV117, "sha256:"),
+		"containmentPolicy":    strings.Repeat("c", 64),
+		"conformanceCorpus":    strings.Repeat("d", 64),
+		"budgetProfile":        strings.TrimPrefix(pins[7][1], "sha256:"),
+		"canonicalJsonProfile": strings.Repeat("e", 64),
+	}
+	publicIDs := map[string]string{
+		"containmentPolicy":    pins[6][1],
+		"canonicalJsonProfile": pins[8][1],
+		"semanticTuple":        runtimeSuccessorSemanticTupleIDV117,
+	}
+	bindings := make([]runtimeIdentityBindingV117, 0, len(runtimeSuccessorIdentityTemplateDomainsV117))
+	for _, domain := range runtimeSuccessorIdentityTemplateDomainsV117 {
+		publicID := publicIDs[domain]
+		if publicID == "" {
+			publicID = "fixture." + domain + ".v1.17"
+		}
+		bindings = append(bindings, runtimeIdentityBindingV117{Domain: domain, PublicID: publicID, SHA256: hashes[domain]})
+	}
+	return &runtimeSuccessorIdentityTemplateV117{
+		SchemaVersion:     runtimeSuccessorIdentityTemplateSchemaV117,
+		Profile:           runtimeSuccessorIdentityTemplateProfileV117,
+		Bindings:          bindings,
+		ExactPins:         pins,
+		LaneProfileSHA256: "sha256:" + strings.Repeat("f", 64),
+	}
+}
+
+func claimedRuntimeServiceFixtureV117(identity *claimedMatchIntegrityIdentity) *claimedRuntimeServiceV117 {
+	entrant := func(evidence goEntrantExecutionEvidence, seed byte) claimedRuntimeServiceEntrantV117 {
+		value := claimedRuntimeServiceEntrantV117{
+			StrategyRevisionID:         evidence.StrategyRevisionID,
+			LaneIdentityHash:           "sha256:" + hashCreationLaneIdentity(evidence.LaneIdentity),
+			ContainmentCertificateID:   evidence.ContainmentCertificateRef.CertificateID,
+			ContainmentCertificateKind: evidence.ContainmentCertificateRef.Kind,
+			IdentityManifestRoot:       "sha256:" + strings.Repeat(string("123456789abcdef0"[seed%16]), 64),
+			EvidenceGraphRoot:          "sha256:" + strings.Repeat(string("23456789abcdef01"[seed%16]), 64),
+			ExactPins:                  runtimeServiceExactPinsFixtureV117(seed),
+		}
+		if evidence.ConformanceCertificateRef != nil {
+			id, kind := evidence.ConformanceCertificateRef.CertificateID, evidence.ConformanceCertificateRef.Kind
+			value.ConformanceCertificateID, value.ConformanceCertificateKind = &id, &kind
+		}
+		return value
+	}
+	return &claimedRuntimeServiceV117{
+		Authority: claimedRuntimeServiceAuthorityV117{
+			BundleHash:                "sha256:" + strings.Repeat("e", 64),
+			SourceManifestHash:        "sha256:" + strings.Repeat("f", 64),
+			RegistryGeneration:        "2",
+			SemanticTupleManifestHash: identity.CompatibilityTupleID,
+			InstallReceiptID:          "install-receipt:v1.17:fixture",
+			InstallReceiptHash:        "sha256:" + strings.Repeat("9", 64),
+		},
+		BudgetProfileSHA256: runtimeServiceV117BudgetProfileSHA256,
+		LedgerPrestateRoot:  runtimeServiceV117EmptyLedgerRoot,
+		Bottom:              entrant(identity.Bottom, 1),
+		Top:                 entrant(identity.Top, 3),
+	}
+}
+
+func runtimeServiceEntrantFixtureFromClaimedV117(claimed claimedRuntimeServiceEntrantV117, seed string) runtimeServiceEntrantV117 {
+	return runtimeServiceEntrantV117{
+		StrategyRevisionID: claimed.StrategyRevisionID,
+		LaneIdentityHash:   claimed.LaneIdentityHash,
+		SourceIdentity: runtimeServiceSourceIdentityV117{
+			OriginalSourceSHA256:   "sha256:" + strings.Repeat(seed, 64),
+			NormalizedSourceSHA256: "sha256:" + strings.Repeat(seed, 64),
+			ArtifactSHA256:         "sha256:" + strings.Repeat(seed, 64),
+		},
+		IdentityManifestRoot: claimed.IdentityManifestRoot,
+		EvidenceGraphRoot:    claimed.EvidenceGraphRoot,
+		ExactPins:            claimed.ExactPins,
 	}
 }
 
 func TestPhase258ClaimedV117IntegrityRequiresExactGraphAndAccountingSnapshot(t *testing.T) {
 	now := time.Date(2026, 7, 15, 13, 30, 0, 0, time.UTC)
 	authority, identity := claimedIntegrityFixture(t, now)
-	authority.CompatibilityTuple.Tuple.RuntimeABI = strategyRuntimeABIVersionV117
-	identity.CompatibilityTuple.RuntimeABI = strategyRuntimeABIVersionV117
-	identity.Bottom.LaneIdentity.SemanticTuple.RuntimeABI = strategyRuntimeABIVersionV117
-	identity.Top.LaneIdentity.SemanticTuple.RuntimeABI = strategyRuntimeABIVersionV117
+	authority.SemanticTupleManifestHash = runtimeSuccessorSemanticTupleIDV117
+	authority.CompatibilityTuple = registeredCompatibilityTuple{
+		TupleID: runtimeSuccessorSemanticTupleIDV117,
+		Tuple:   runtimeSuccessorCanonicalTupleV117,
+	}
+	authority.Payload.SemanticTupleManifestHash = runtimeSuccessorSemanticTupleIDV117
+	identity.CompatibilityTupleID = runtimeSuccessorSemanticTupleIDV117
+	identity.CompatibilityTuple = runtimeSuccessorCanonicalTupleV117
+	identity.Bottom.LaneIdentity.SemanticTupleID = runtimeSuccessorSemanticTupleIDV117
+	identity.Bottom.LaneIdentity.SemanticTuple = runtimeSuccessorCanonicalTupleV117
+	identity.Top.LaneIdentity.SemanticTupleID = runtimeSuccessorSemanticTupleIDV117
+	identity.Top.LaneIdentity.SemanticTuple = runtimeSuccessorCanonicalTupleV117
 	for index, entrant := range []goEntrantExecutionEvidence{identity.Bottom, identity.Top} {
 		authority.Payload.Certificates[index].LaneIdentityHash = "sha256:" + hashCreationLaneIdentity(entrant.LaneIdentity)
 	}
@@ -180,18 +303,7 @@ func TestPhase258ClaimedV117IntegrityRequiresExactGraphAndAccountingSnapshot(t *
 	if err := validateClaimedMatchIntegrity(authority, identity, now); err == nil {
 		t.Fatal("v1.17 claim without exact graph roots, budget profile, and ledger prestate was admitted")
 	}
-	identity.RuntimeServiceV117 = &claimedRuntimeServiceV117{
-		BudgetProfileSHA256: runtimeServiceV117BudgetProfileSHA256,
-		LedgerPrestateRoot:  runtimeServiceV117EmptyLedgerRoot,
-		Bottom: runtimeServiceEntrantV117{
-			IdentityManifestRoot: "sha256:" + strings.Repeat("1", 64),
-			EvidenceGraphRoot:    "sha256:" + strings.Repeat("2", 64),
-		},
-		Top: runtimeServiceEntrantV117{
-			IdentityManifestRoot: "sha256:" + strings.Repeat("3", 64),
-			EvidenceGraphRoot:    "sha256:" + strings.Repeat("4", 64),
-		},
-	}
+	identity.RuntimeServiceV117 = claimedRuntimeServiceFixtureV117(identity)
 	if err := validateClaimedMatchIntegrity(authority, identity, now); err != nil {
 		t.Fatalf("exact v1.17 claim snapshot was rejected: %v", err)
 	}
@@ -207,6 +319,8 @@ func TestPhase258ClaimedV117IntegrityRequiresExactGraphAndAccountingSnapshot(t *
 		{"bottom evidence root", func(value *claimedRuntimeServiceV117) { value.Bottom.EvidenceGraphRoot = "" }},
 		{"top identity root", func(value *claimedRuntimeServiceV117) { value.Top.IdentityManifestRoot = "" }},
 		{"top evidence root", func(value *claimedRuntimeServiceV117) { value.Top.EvidenceGraphRoot = "" }},
+		{"successor authority equals legacy", func(value *claimedRuntimeServiceV117) { value.Authority.BundleHash = identity.AuthorityBundleHash }},
+		{"floating exact pin", func(value *claimedRuntimeServiceV117) { value.Bottom.ExactPins[1][1] = "latest" }},
 	}
 	for _, mutation := range mutations {
 		t.Run(mutation.name, func(t *testing.T) {

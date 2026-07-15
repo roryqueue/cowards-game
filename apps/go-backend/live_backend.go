@@ -3622,6 +3622,10 @@ func pythonProviderValidationMatches(metadata map[string]any, sourceHash string,
 }
 
 func sourceArtifactProviderValidationMatches(metadata map[string]any, sourceHash string, sourceBytes int, providerID string, languageID string) bool {
+	return sourceArtifactProviderValidationMatchesABI(metadata, sourceHash, sourceBytes, providerID, languageID, strategyRuntimeABIVersion)
+}
+
+func sourceArtifactProviderValidationMatchesABI(metadata map[string]any, sourceHash string, sourceBytes int, providerID string, languageID string, runtimeABI string) bool {
 	if sourceHash == "" || sourceBytes <= 0 {
 		return false
 	}
@@ -3651,24 +3655,61 @@ func sourceArtifactProviderValidationMatches(metadata map[string]any, sourceHash
 	if stringValue(artifact, "format") != expectedFormat ||
 		stringValue(artifact, "sourceHash") != sourceHash ||
 		intValue(artifact, "sourceBytes") != sourceBytes ||
-		stringValue(artifact, "abiVersion") != "strategy-runtime-abi-v1.14" ||
+		stringValue(artifact, "abiVersion") != runtimeABI ||
 		stringValue(artifact, "validationStatus") != "valid" ||
 		stringValue(toolchain, "language") != languageID {
 		return false
 	}
 	providerValidation := mapValue(metadata, "providerValidation")
+	contractVersion := stringValue(providerValidation, "contractVersion")
 	if stringValue(providerValidation, "providerId") != providerID ||
-		stringValue(providerValidation, "contractVersion") != "strategy-language-provider-contract-v1.33" ||
 		stringValue(providerValidation, "sourceHash") != sourceHash ||
 		intValue(providerValidation, "sourceBytes") != sourceBytes ||
 		stringValue(providerValidation, "artifactHash") != artifactHash ||
 		intValue(providerValidation, "artifactBytes") != artifactBytes {
 		return false
 	}
+	expectedProof := ""
+	switch runtimeABI {
+	case strategyRuntimeABIVersion:
+		if contractVersion != "strategy-language-provider-contract-v1.33" {
+			return false
+		}
+		expectedProof = providerValidationProof(providerID, sourceHash, sourceBytes, artifactHash, artifactBytes)
+	case strategyRuntimeABIVersionV117:
+		if contractVersion != "runtime-provider-validation-v1.17" {
+			return false
+		}
+		expectedProof = providerValidationProofV117(providerID, contractVersion, sourceHash, sourceBytes, artifactHash, artifactBytes)
+	default:
+		return false
+	}
 	return subtle.ConstantTimeCompare(
 		[]byte(stringValue(providerValidation, "proof")),
-		[]byte(providerValidationProof(providerID, sourceHash, sourceBytes, artifactHash, artifactBytes)),
+		[]byte(expectedProof),
 	) == 1
+}
+
+func providerValidationProofV117(providerID string, contractVersion string, sourceHash string, sourceBytes int, artifactHash string, artifactBytes int) string {
+	payload, err := json.Marshal(struct {
+		ProviderID      string `json:"providerId"`
+		ContractVersion string `json:"contractVersion"`
+		SourceHash      string `json:"sourceHash"`
+		SourceBytes     int    `json:"sourceBytes"`
+		ArtifactHash    string `json:"artifactHash"`
+		ArtifactBytes   int    `json:"artifactBytes"`
+	}{
+		ProviderID: providerID, ContractVersion: contractVersion,
+		SourceHash: sourceHash, SourceBytes: sourceBytes,
+		ArtifactHash: artifactHash, ArtifactBytes: artifactBytes,
+	})
+	if err != nil {
+		return ""
+	}
+	hash := sha256.New()
+	_, _ = hash.Write([]byte("cowards-game:strategy-provider-validation:v1.17\x00"))
+	_, _ = hash.Write(payload)
+	return "sha256:" + hex.EncodeToString(hash.Sum(nil))
 }
 
 func rustProviderValidationMatches(metadata map[string]any, sourceHash string, sourceBytes int, languageID string) bool {
@@ -4065,7 +4106,17 @@ func intValue(value map[string]any, key string) int {
 	case int:
 		return item
 	case float64:
-		return int(item)
+		parsed := int(item)
+		if float64(parsed) == item {
+			return parsed
+		}
+		return 0
+	case json.Number:
+		parsed, err := item.Int64()
+		if err == nil && int64(int(parsed)) == parsed {
+			return int(parsed)
+		}
+		return 0
 	default:
 		return 0
 	}

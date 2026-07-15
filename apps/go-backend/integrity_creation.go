@@ -287,8 +287,52 @@ func creationCertificateHashValues(reference *goExecutionCertificateReference) [
 }
 
 func hashCreationLaneIdentity(lane goExecutableLaneIdentity) string {
-	values := creationEntrantHashValues(goEntrantExecutionEvidence{LaneIdentity: lane})[2:25]
-	return framedCreationHash(creationLaneIdentityDomain, values)
+	values := []struct {
+		name  string
+		value string
+	}{
+		{"providerId", lane.ProviderID},
+		{"languageId", lane.LanguageID},
+		{"runtimeId", lane.RuntimeID},
+		{"runtimeVersion", lane.RuntimeVersion},
+		{"toolchainId", lane.ToolchainID},
+		{"toolchainVersion", lane.ToolchainVersion},
+		{"adapterId", lane.AdapterID},
+		{"adapterVersion", lane.AdapterVersion},
+		{"policyId", lane.PolicyID},
+		{"policyVersion", lane.PolicyVersion},
+		{"corpusId", lane.CorpusID},
+		{"corpusVersion", lane.CorpusVersion},
+		{"artifactId", lane.ArtifactID},
+		{"artifactSha256", lane.ArtifactSHA256},
+		{"implementationId", lane.ImplementationID},
+		{"buildId", lane.BuildID},
+		{"semanticTupleId", lane.SemanticTupleID},
+		{"rules", lane.SemanticTuple.Rules},
+		{"engine", lane.SemanticTuple.Engine},
+		{"runtimeAbi", lane.SemanticTuple.RuntimeABI},
+		{"chronicle", lane.SemanticTuple.Chronicle},
+		{"arenaCatalog", lane.SemanticTuple.ArenaCatalog},
+		{"setPolicy", lane.SemanticTuple.SetPolicy},
+	}
+	parts := make([]string, 1, 1+2*len(values))
+	parts[0] = creationLaneIdentityDomain
+	for _, value := range values {
+		parts = append(parts, value.name, value.value)
+	}
+	return framedStringPartsHash(parts)
+}
+
+func framedStringPartsHash(parts []string) string {
+	hash := sha256.New()
+	for _, part := range parts {
+		bytes := []byte(part)
+		_, _ = hash.Write([]byte(fmt.Sprintf("%d", len(bytes))))
+		_, _ = hash.Write([]byte{0})
+		_, _ = hash.Write(bytes)
+		_, _ = hash.Write([]byte{0})
+	}
+	return hex.EncodeToString(hash.Sum(nil))
 }
 
 func framedCreationHash(domain string, values []string) string {

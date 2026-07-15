@@ -3,9 +3,11 @@ package main
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"io"
 	"net/http"
+	"regexp"
 	"strings"
 )
 
@@ -23,17 +25,14 @@ func selectedRuntimeServiceContractVersion() string {
 }
 
 type runtimeServiceRequestV117 struct {
-	ContractVersion      string `json:"contractVersion"`
-	Kind                 string `json:"kind"`
-	RequestID            string `json:"requestId"`
-	MatchID              string `json:"matchId"`
-	CompatibilityTupleID string `json:"compatibilityTupleId"`
-	Authority            struct {
-		BundleHash         string `json:"bundleHash"`
-		SourceManifestHash string `json:"sourceManifestHash"`
-		RegistryGeneration string `json:"registryGeneration"`
-	} `json:"authority"`
-	Entrants struct {
+	ContractVersion      string                      `json:"contractVersion"`
+	Kind                 string                      `json:"kind"`
+	RequestID            string                      `json:"requestId"`
+	MatchID              string                      `json:"matchId"`
+	CompatibilityTupleID string                      `json:"compatibilityTupleId"`
+	Authority            runtimeServiceAuthorityV117 `json:"authority"`
+	LegacyAuthority      runtimeServiceAuthorityV117 `json:"legacyAuthority"`
+	Entrants             struct {
 		Bottom runtimeServiceEntrantV117 `json:"bottom"`
 		Top    runtimeServiceEntrantV117 `json:"top"`
 	} `json:"entrants"`
@@ -44,9 +43,27 @@ type runtimeServiceRequestV117 struct {
 	Match json.RawMessage `json:"match"`
 }
 
+type runtimeServiceAuthorityV117 struct {
+	BundleHash         string `json:"bundleHash"`
+	SourceManifestHash string `json:"sourceManifestHash"`
+	RegistryGeneration string `json:"registryGeneration"`
+}
+
+type runtimeServiceSourceIdentityV117 struct {
+	OriginalSourceSHA256   string `json:"originalSourceSha256"`
+	NormalizedSourceSHA256 string `json:"normalizedSourceSha256"`
+	ArtifactSHA256         string `json:"artifactSha256"`
+}
+
+type runtimeServiceExactPinsV117 [10][2]string
+
 type runtimeServiceEntrantV117 struct {
-	IdentityManifestRoot string `json:"identityManifestRoot"`
-	EvidenceGraphRoot    string `json:"evidenceGraphRoot"`
+	StrategyRevisionID   string                           `json:"strategyRevisionId"`
+	LaneIdentityHash     string                           `json:"laneIdentityHash"`
+	SourceIdentity       runtimeServiceSourceIdentityV117 `json:"sourceIdentity"`
+	IdentityManifestRoot string                           `json:"identityManifestRoot"`
+	EvidenceGraphRoot    string                           `json:"evidenceGraphRoot"`
+	ExactPins            runtimeServiceExactPinsV117      `json:"exactPins"`
 }
 
 type runtimeServiceSuccessResultV117 struct {
@@ -131,15 +148,120 @@ func validateRuntimeServiceRequestV117(request runtimeServiceRequestV117) *runti
 		!isPrefixedLowerSHA256(request.Authority.BundleHash) ||
 		!isPrefixedLowerSHA256(request.Authority.SourceManifestHash) ||
 		!validCanonicalGeneration(request.Authority.RegistryGeneration) ||
-		!isPrefixedLowerSHA256(request.Entrants.Bottom.IdentityManifestRoot) ||
-		!isPrefixedLowerSHA256(request.Entrants.Bottom.EvidenceGraphRoot) ||
-		!isPrefixedLowerSHA256(request.Entrants.Top.IdentityManifestRoot) ||
-		!isPrefixedLowerSHA256(request.Entrants.Top.EvidenceGraphRoot) ||
+		!isPrefixedLowerSHA256(request.LegacyAuthority.BundleHash) ||
+		!isPrefixedLowerSHA256(request.LegacyAuthority.SourceManifestHash) ||
+		!validCanonicalGeneration(request.LegacyAuthority.RegistryGeneration) ||
+		request.Authority.BundleHash == request.LegacyAuthority.BundleHash ||
+		!validRuntimeServiceEntrantV117(request.Entrants.Bottom) ||
+		!validRuntimeServiceEntrantV117(request.Entrants.Top) ||
 		!isPrefixedLowerSHA256(request.Accounting.BudgetProfileSHA256) ||
 		!isPrefixedLowerSHA256(request.Accounting.LedgerPrestateRoot) || len(request.Match) == 0 {
 		return newRuntimeServiceFailure("RuntimeServiceContractMismatch", "Runtime service v1.17 request contract is not supported", false, nil)
 	}
 	return nil
+}
+
+var runtimeServiceExactPinNamesV117 = [10]string{
+	"runtimeExecutableDigest",
+	"reportedVersion",
+	"targetAbi",
+	"compilerFlags",
+	"adapterBuildDigest",
+	"standardLibraryOrSysrootDigest",
+	"containmentPolicyId",
+	"budgetProfileSha256",
+	"canonicalJsonProfileId",
+	"behaviorSettingsHash",
+}
+
+var runtimeServiceFloatingPinV117 = regexp.MustCompile(`(?i)(?:^|[-_.:])(latest|current|default|any|stable|head)(?:$|[-_.:])|[*^~<>]`)
+
+var runtimeServiceHashPinIndexesV117 = map[int]bool{0: true, 3: true, 4: true, 5: true, 7: true, 9: true}
+
+func validRuntimeServiceExactPinsV117(pins runtimeServiceExactPinsV117) bool {
+	for index, pin := range pins {
+		if pin[0] != runtimeServiceExactPinNamesV117[index] || !validRuntimeSemanticReceiptV117Identifier(pin[1]) ||
+			runtimeServiceFloatingPinV117.MatchString(pin[1]) || (runtimeServiceHashPinIndexesV117[index] && !isPrefixedLowerSHA256(pin[1])) {
+			return false
+		}
+	}
+	return true
+}
+
+func validRuntimeServiceEntrantV117(entrant runtimeServiceEntrantV117) bool {
+	return validRuntimeSemanticReceiptV117Identifier(entrant.StrategyRevisionID) &&
+		isPrefixedLowerSHA256(entrant.LaneIdentityHash) &&
+		isPrefixedLowerSHA256(entrant.SourceIdentity.OriginalSourceSHA256) &&
+		isPrefixedLowerSHA256(entrant.SourceIdentity.NormalizedSourceSHA256) &&
+		isPrefixedLowerSHA256(entrant.SourceIdentity.ArtifactSHA256) &&
+		isPrefixedLowerSHA256(entrant.IdentityManifestRoot) &&
+		isPrefixedLowerSHA256(entrant.EvidenceGraphRoot) &&
+		validRuntimeServiceExactPinsV117(entrant.ExactPins)
+}
+
+func hashRuntimeServiceExactPinsV117(pins runtimeServiceExactPinsV117) (string, error) {
+	encoded, err := runtimeInvocationV117CanonicalValue(pins)
+	if err != nil {
+		return "", err
+	}
+	return runtimeInvocationV117SHA256Value(encoded), nil
+}
+
+func runtimeServiceSourceIdentityFromPersistedRevisionV117(strategy runtimeServiceStrategyRevision, evidence goEntrantExecutionEvidence) (runtimeServiceSourceIdentityV117, bool) {
+	if strategy.LockedAt == nil || strategy.ID != evidence.StrategyRevisionID ||
+		strategy.SourceBytes != len([]byte(strategy.Source)) || strategy.SourceHash != hashString(strategy.Source) {
+		return runtimeServiceSourceIdentityV117{}, false
+	}
+	var artifact map[string]any
+	for _, key := range []string{"sourceArtifact", "compiledArtifact"} {
+		candidate := mapValue(strategy.Metadata, key)
+		if stringValue(candidate, "hash") == evidence.LaneIdentity.ArtifactSHA256 {
+			if artifact != nil {
+				return runtimeServiceSourceIdentityV117{}, false
+			}
+			artifact = candidate
+		}
+	}
+	encodedArtifact := stringValue(artifact, "bytesBase64")
+	artifactBytes, err := base64.StdEncoding.Strict().DecodeString(encodedArtifact)
+	if err != nil || len(artifactBytes) == 0 || runtimeInvocationV117SHA256Value(artifactBytes) != "sha256:"+evidence.LaneIdentity.ArtifactSHA256 {
+		return runtimeServiceSourceIdentityV117{}, false
+	}
+	originalBytes := []byte(strategy.Source)
+	normalizedBytes := []byte(strings.ReplaceAll(strings.ReplaceAll(strategy.Source, "\r\n", "\n"), "\r", "\n"))
+	identity := runtimeServiceSourceIdentityV117{
+		OriginalSourceSHA256:   runtimeInvocationV117SHA256Value(originalBytes),
+		NormalizedSourceSHA256: runtimeInvocationV117SHA256Value(normalizedBytes),
+		ArtifactSHA256:         runtimeInvocationV117SHA256Value(artifactBytes),
+	}
+	if declaredValue, exists := artifact["sourceIdentity"]; exists {
+		declared, ok := declaredValue.(map[string]any)
+		if !ok || stringValue(declared, "originalSourceSha256") != identity.OriginalSourceSHA256 ||
+			stringValue(declared, "normalizedSourceSha256") != identity.NormalizedSourceSHA256 {
+			return runtimeServiceSourceIdentityV117{}, false
+		}
+	}
+	return identity, true
+}
+
+func projectRuntimeServiceEntrantV117(strategy runtimeServiceStrategyRevision, evidence goEntrantExecutionEvidence, claimed claimedRuntimeServiceEntrantV117, registry *goDeploymentLaneRegistry) (runtimeServiceEntrantV117, bool) {
+	template, ok := registry.successorIdentityTemplateForRevision(strategy)
+	if !ok || template.ExactPins != claimed.ExactPins {
+		return runtimeServiceEntrantV117{}, false
+	}
+	identityManifestRoot, sourceIdentity, ok := composeRuntimeSuccessorIdentityV117(strategy, evidence, template)
+	if !ok || identityManifestRoot != claimed.IdentityManifestRoot || claimed.StrategyRevisionID != strategy.ID ||
+		claimed.LaneIdentityHash != "sha256:"+hashCreationLaneIdentity(evidence.LaneIdentity) {
+		return runtimeServiceEntrantV117{}, false
+	}
+	return runtimeServiceEntrantV117{
+		StrategyRevisionID:   claimed.StrategyRevisionID,
+		LaneIdentityHash:     claimed.LaneIdentityHash,
+		SourceIdentity:       sourceIdentity,
+		IdentityManifestRoot: claimed.IdentityManifestRoot,
+		EvidenceGraphRoot:    claimed.EvidenceGraphRoot,
+		ExactPins:            claimed.ExactPins,
+	}, true
 }
 
 func decodeRuntimeServiceResponseV117(
@@ -188,6 +310,8 @@ func decodeRuntimeServiceResponseV117(
 	}
 	result := response.Result
 	requestBytes, requestErr := encodeRuntimeServiceRequestV117(request)
+	bottomExactPinsHash, bottomExactPinsErr := hashRuntimeServiceExactPinsV117(request.Entrants.Bottom.ExactPins)
+	topExactPinsHash, topExactPinsErr := hashRuntimeServiceExactPinsV117(request.Entrants.Top.ExactPins)
 	chronicleHash, chronicleErr := hashRuntimeServiceCanonicalValueV117(
 		"cowards-game:runtime-semantic-chronicle-canonical-json:v1.17",
 		result.Chronicle,
@@ -204,7 +328,7 @@ func decodeRuntimeServiceResponseV117(
 	if result.Privacy != "internal_runtime_result" ||
 		!isPrefixedLowerSHA256(result.LedgerPoststateRoot) ||
 		result.RuntimeViolationEventCount < 0 ||
-		requestErr != nil || chronicleErr != nil || finalStateErr != nil || outcomeErr != nil ||
+		requestErr != nil || bottomExactPinsErr != nil || topExactPinsErr != nil || chronicleErr != nil || finalStateErr != nil || outcomeErr != nil ||
 		!validRuntimeSemanticReceiptV117(receipt, secret) ||
 		receipt.RequestSHA256 != runtimeInvocationV117SHA256Value(requestBytes) ||
 		receipt.RequestID != request.RequestID ||
@@ -213,10 +337,25 @@ func decodeRuntimeServiceResponseV117(
 		receipt.AuthorityBundleHash != request.Authority.BundleHash ||
 		receipt.AuthoritySourceManifestHash != request.Authority.SourceManifestHash ||
 		receipt.RegistryGeneration != request.Authority.RegistryGeneration ||
+		receipt.LegacyAuthorityBundleHash != request.LegacyAuthority.BundleHash ||
+		receipt.LegacyAuthoritySourceManifestHash != request.LegacyAuthority.SourceManifestHash ||
+		receipt.LegacyRegistryGeneration != request.LegacyAuthority.RegistryGeneration ||
 		receipt.BottomIdentityManifestRoot != request.Entrants.Bottom.IdentityManifestRoot ||
 		receipt.BottomEvidenceGraphRoot != request.Entrants.Bottom.EvidenceGraphRoot ||
+		receipt.BottomStrategyRevisionID != request.Entrants.Bottom.StrategyRevisionID ||
+		receipt.BottomLaneIdentityHash != request.Entrants.Bottom.LaneIdentityHash ||
+		receipt.BottomOriginalSourceSHA256 != request.Entrants.Bottom.SourceIdentity.OriginalSourceSHA256 ||
+		receipt.BottomNormalizedSourceSHA256 != request.Entrants.Bottom.SourceIdentity.NormalizedSourceSHA256 ||
+		receipt.BottomArtifactSHA256 != request.Entrants.Bottom.SourceIdentity.ArtifactSHA256 ||
+		receipt.BottomExactPinsSHA256 != bottomExactPinsHash ||
 		receipt.TopIdentityManifestRoot != request.Entrants.Top.IdentityManifestRoot ||
 		receipt.TopEvidenceGraphRoot != request.Entrants.Top.EvidenceGraphRoot ||
+		receipt.TopStrategyRevisionID != request.Entrants.Top.StrategyRevisionID ||
+		receipt.TopLaneIdentityHash != request.Entrants.Top.LaneIdentityHash ||
+		receipt.TopOriginalSourceSHA256 != request.Entrants.Top.SourceIdentity.OriginalSourceSHA256 ||
+		receipt.TopNormalizedSourceSHA256 != request.Entrants.Top.SourceIdentity.NormalizedSourceSHA256 ||
+		receipt.TopArtifactSHA256 != request.Entrants.Top.SourceIdentity.ArtifactSHA256 ||
+		receipt.TopExactPinsSHA256 != topExactPinsHash ||
 		receipt.BudgetProfileSHA256 != request.Accounting.BudgetProfileSHA256 ||
 		receipt.LedgerPrestateRoot != request.Accounting.LedgerPrestateRoot ||
 		receipt.LedgerPoststateRoot != result.LedgerPoststateRoot ||
