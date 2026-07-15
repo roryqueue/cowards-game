@@ -121,6 +121,10 @@ func TestMatchJobLifecycleIntegrityClaimContract(t *testing.T) {
 		"scheduling_status = 'counted'",
 		"bottom_containment.fresh_until >= $1",
 		"bottom_execution_entrant.scheduling_fresh_until >= $1",
+		"runtimeServiceV117",
+		"identity_manifest_root",
+		"evidence_graph_root",
+		"graph_schema_version",
 	} {
 		if !strings.Contains(claimNextMatchJobSQL, required) {
 			t.Fatalf("integrity claim SQL is missing %q", required)
@@ -134,6 +138,31 @@ func TestMatchJobLifecycleIntegrityClaimContract(t *testing.T) {
 	if !strings.Contains(recheckClaimedMatchIntegritySQL, "runtime_evidence_authority_installed_head") ||
 		!strings.Contains(recheckClaimedMatchIntegritySQL, "installed_head.install_receipt_id = ms.authority_install_receipt_id") {
 		t.Fatal("in-flight recheck must require the canonical installed authority head")
+	}
+}
+
+func TestPhase258ClaimedV117IntegrityRequiresExactGraphAndAccountingSnapshot(t *testing.T) {
+	now := time.Date(2026, 7, 15, 13, 30, 0, 0, time.UTC)
+	authority, identity := claimedIntegrityFixture(t, now)
+	authority.CompatibilityTuple.Tuple.RuntimeABI = strategyRuntimeABIVersionV117
+	identity.CompatibilityTuple.RuntimeABI = strategyRuntimeABIVersionV117
+	identity.Bottom.LaneIdentity.SemanticTuple.RuntimeABI = strategyRuntimeABIVersionV117
+	identity.Top.LaneIdentity.SemanticTuple.RuntimeABI = strategyRuntimeABIVersionV117
+	for index, entrant := range []goEntrantExecutionEvidence{identity.Bottom, identity.Top} {
+		authority.Payload.Certificates[index].LaneIdentityHash = "sha256:" + hashCreationLaneIdentity(entrant.LaneIdentity)
+	}
+	recomputed, err := createGoMatchSetIntegrityIdentity(authority, []goEntrantExecutionEvidence{identity.Bottom, identity.Top})
+	if err != nil {
+		t.Fatal(err)
+	}
+	pair, err := recomputed.pair(identity.Bottom.EntrantKey, identity.Top.EntrantKey, identity.Bottom.StrategyRevisionID, identity.Top.StrategyRevisionID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	identity.EvidenceSetHash = recomputed.EvidenceSetHash
+	identity.PairHash = pair.PairHash
+	if err := validateClaimedMatchIntegrity(authority, identity, now); err == nil {
+		t.Fatal("v1.17 claim without exact graph roots, budget profile, and ledger prestate was admitted")
 	}
 }
 

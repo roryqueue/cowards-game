@@ -201,16 +201,18 @@ func TestPhase258CurrentDefaultRoutes(t *testing.T) {
 		}
 		observed, _ = envelope["contractVersion"].(string)
 		writer.Header().Set("content-type", "application/json")
-		writer.WriteHeader(http.StatusUnprocessableEntity)
 		if observed == runtimeExecutionServiceVersionV117 {
-			_, _ = writer.Write([]byte(`{"contractVersion":"runtime-execution-service-v1.17","kind":"systemFailure","matchId":"match:full-service:v1.17:0001","ok":false,"requestId":"request:full-service:v1.17:0001","systemFailure":{"classification":"system_failure","code":"EVIDENCE_UNVERIFIABLE","ownership":"system_integrity","playerPenalty":false,"publicMessage":"Runtime execution failed before completion.","retryable":false}}`))
+			_, responseV117, _ := loadRuntimeServiceV117Fixture(t)
+			_, _ = writer.Write(encodeRuntimeServiceResponseFixtureV117(t, responseV117))
 			return
 		}
+		chronicle := orchestratorChronicleForRequest(requestV116, false)
+		finalState := orchestratorFinalStateForRequest(requestV116)
 		writeRuntimeServiceTestJSON(t, writer, runtimeServiceResponse{
 			ContractVersion: runtimeExecutionServiceVersion,
-			OK: false, Kind: "systemFailure", RequestID: requestV116.RequestID,
+			OK: true, Kind: "executionResult", RequestID: requestV116.RequestID,
 			MatchID: requestV116.Match.MatchID, RuntimeABIVersion: strategyRuntimeABIVersion,
-			SystemFailure: &runtimeServiceFailure{Code: "EVIDENCE_UNVERIFIABLE", Retryable: false},
+			Result: signedRuntimeServiceSuccessResultForTest(t, requestV116, chronicle, finalState, runtimeServiceV117FixtureSecret),
 		})
 	}))
 	defer server.Close()
@@ -222,7 +224,7 @@ func TestPhase258CurrentDefaultRoutes(t *testing.T) {
 	} else {
 		routedRequest.V116 = &requestV116
 	}
-	if response, failure := router.executeMatch(context.Background(), routedRequest); response != nil || failure == nil {
+	if response, failure := router.executeMatch(context.Background(), routedRequest); response == nil || failure != nil {
 		t.Fatalf("current route did not consume the real service client: response=%+v failure=%+v", response, failure)
 	}
 	if observed != selected {
