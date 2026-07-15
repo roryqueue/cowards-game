@@ -8,6 +8,7 @@ import { parseCanonicalJson } from "./canonical-json-parse.js"
 import {
   RuntimeIdentityManifestError,
   hashRuntimeIdentityManifest,
+  parseRuntimeIdentityManifest,
   serializeRuntimeIdentityManifest,
   type RuntimeIdentityManifest,
 } from "./runtime-identity-manifest.js"
@@ -50,6 +51,26 @@ describe("canonical runtime identity manifest", () => {
       Buffer.from(serializeRuntimeIdentityManifest(reordered)),
     )
     expect(hashRuntimeIdentityManifest(first)).toBe(hashRuntimeIdentityManifest(reordered))
+  })
+
+  it("returns a canonical deeply immutable clone independent of caller mutation", () => {
+    const input = manifest()
+    const parsed = parseRuntimeIdentityManifest({
+      ...input,
+      bindings: [...input.bindings].reverse(),
+    })
+    const firstHash = hashRuntimeIdentityManifest(parsed)
+    ;(input.bindings[0] as { publicId: string }).publicId = "mutated:caller"
+
+    expect(parsed.bindings.map((binding) => binding.domain)).toEqual(
+      CANONICAL_IDENTITY_DOMAIN_NAMES,
+    )
+    expect(hashRuntimeIdentityManifest(parsed)).toBe(firstHash)
+    expect(Object.isFrozen(parsed)).toBe(true)
+    expect(Object.isFrozen(parsed.bindings)).toBe(true)
+    expect(parsed.bindings.every((binding) => Object.isFrozen(binding))).toBe(
+      true,
+    )
   })
 
   it("rejects missing, unknown, duplicate, and extra semantic bindings", () => {

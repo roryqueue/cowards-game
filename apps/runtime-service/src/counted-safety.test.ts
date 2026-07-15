@@ -298,6 +298,7 @@ describe("runtime-service counted safety", () => {
           | "languageVersion"
           | "semanticTupleId"
           | "semanticTuple"
+          | "successorRuntimeIdentity"
         >,
       ]
     > = [

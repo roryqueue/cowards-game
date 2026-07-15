@@ -5,7 +5,12 @@ import {
   type StrategyExecutionAdapter,
   type StrategyExecutionAdapterMetadata,
 } from "@cowards/runtime-js/worker"
-import type { ExecutableLaneIdentity, StrategyRevision } from "@cowards/spec"
+import type {
+  ExecutableLaneIdentity,
+  RuntimeEvidenceAuthorityExactPinV117,
+  RuntimeIdentityManifest,
+  StrategyRevision,
+} from "@cowards/spec"
 import {
   RUNTIME_ABI_V1_17,
   RUNTIME_EXECUTION_SERVICE_VERSION,
@@ -28,8 +33,16 @@ export interface RuntimeServiceConfigInput {
   resolveDeploymentLaneIdentity?:
     | ((revision: StrategyRevision) => ExecutableLaneIdentity | undefined)
     | undefined
+  resolveSuccessorRuntimeIdentity?:
+    | ((revision: StrategyRevision) => SuccessorRuntimeIdentityV117 | undefined)
+    | undefined
   deploymentLaneRegistryId?: string | undefined
   semanticReceiptSecret?: string | undefined
+}
+
+export interface SuccessorRuntimeIdentityV117 {
+  identityManifest: RuntimeIdentityManifest
+  exactPins: readonly RuntimeEvidenceAuthorityExactPinV117[]
 }
 
 export interface RuntimeServiceConfig {
@@ -38,6 +51,9 @@ export interface RuntimeServiceConfig {
   resolveDeploymentLaneIdentity(
     revision: StrategyRevision,
   ): ExecutableLaneIdentity | undefined
+  resolveSuccessorRuntimeIdentity(
+    revision: StrategyRevision,
+  ): SuccessorRuntimeIdentityV117 | undefined
   deploymentLaneRegistryId?: string | undefined
   semanticReceiptSecret: string
   contractSelection: RuntimeServiceContractSelection
@@ -92,6 +108,8 @@ export const createRuntimeServiceConfig = (
 
   const resolveDeploymentLaneIdentity =
     input.resolveDeploymentLaneIdentity ?? (() => undefined)
+  const resolveSuccessorRuntimeIdentity =
+    input.resolveSuccessorRuntimeIdentity ?? (() => undefined)
   const contractSelection = selectedRuntimeServiceContract()
 
   switch (selectedId) {
@@ -101,6 +119,7 @@ export const createRuntimeServiceConfig = (
         adapter,
         metadata: adapter.metadata,
         resolveDeploymentLaneIdentity,
+        resolveSuccessorRuntimeIdentity,
         deploymentLaneRegistryId: input.deploymentLaneRegistryId,
         semanticReceiptSecret,
         contractSelection,
@@ -112,6 +131,7 @@ export const createRuntimeServiceConfig = (
         adapter,
         metadata: adapter.metadata,
         resolveDeploymentLaneIdentity,
+        resolveSuccessorRuntimeIdentity,
         deploymentLaneRegistryId: input.deploymentLaneRegistryId,
         semanticReceiptSecret,
         contractSelection,
@@ -123,6 +143,7 @@ export const createRuntimeServiceConfig = (
         adapter,
         metadata: adapter.metadata,
         resolveDeploymentLaneIdentity,
+        resolveSuccessorRuntimeIdentity,
         deploymentLaneRegistryId: input.deploymentLaneRegistryId,
         semanticReceiptSecret,
         contractSelection,

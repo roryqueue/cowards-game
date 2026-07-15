@@ -47,6 +47,9 @@ import {
   RUNTIME_INVOCATION_V1_17_SYSTEM_FAILURE_CODES,
   RUNTIME_INVOCATION_V1_17_SYSTEM_FAILURE_RETRYABILITY,
   RUNTIME_INVOCATION_V1_17_TEST_KEY_ID,
+  RUNTIME_EVIDENCE_GRAPH_NODE_KINDS_V1_17,
+  RUNTIME_ABI_V1_17_BUDGET_PROFILE_SHA256,
+  hashRuntimeIdentityManifest,
   RuntimeExecutionServiceRequestSchema,
   RuntimeExecutionServiceResponseSchema,
   RuntimeExecutionFinalStateSchema,
@@ -518,6 +521,53 @@ const createV117InvocationArtifacts = () => {
 
 const createV117ServiceArtifacts = () => {
   const identity = (character: string) => fixtureHash(character)
+  const entrant = (side: "bottom" | "top", character: string) => {
+    const identityManifest = {
+      schemaVersion: "runtime-identity-manifest-v1" as const,
+      profile: "runtime-identity-v1" as const,
+      bindings: RUNTIME_EVIDENCE_GRAPH_NODE_KINDS_V1_17.map(
+        (domain, index) => ({
+          domain,
+          publicId:
+            domain === "canonicalJsonProfile"
+              ? "canonical-json-v1.1"
+              : domain === "containmentPolicy"
+                ? `fixture.containment.${side}.v1.17`
+                : `fixture.${side}.${domain}.v1.17`,
+          sha256:
+            domain === "budgetProfile"
+              ? RUNTIME_ABI_V1_17_BUDGET_PROFILE_SHA256.slice("sha256:".length)
+              : ((index + (side === "bottom" ? 1 : 16)) % 16).toString(16).repeat(64),
+        }),
+      ),
+    }
+    const binding = (domain: (typeof RUNTIME_EVIDENCE_GRAPH_NODE_KINDS_V1_17)[number]) =>
+      identityManifest.bindings.find((candidate) => candidate.domain === domain)!
+    return {
+      strategyRevisionId: `strategy-revision:fixture:${side}:v1.17`,
+      laneIdentityHash: identity(character),
+      sourceIdentity: {
+        originalSourceSha256: `sha256:${binding("originalSource").sha256}` as const,
+        normalizedSourceSha256: `sha256:${binding("normalizedSource").sha256}` as const,
+        artifactSha256: `sha256:${binding("artifact").sha256}` as const,
+      },
+      identityManifestRoot:
+        `sha256:${hashRuntimeIdentityManifest(identityManifest)}` as const,
+      evidenceGraphRoot: identity(side === "bottom" ? "5" : "7"),
+      exactPins: [
+        ["runtimeExecutableDigest", `sha256:${binding("runtimeExecutable").sha256}`],
+        ["reportedVersion", "node-v26.0.0"],
+        ["targetAbi", "linux-amd64-gnu"],
+        ["compilerFlags", identity("a")],
+        ["adapterBuildDigest", `sha256:${binding("adapterBuild").sha256}`],
+        ["standardLibraryOrSysrootDigest", `sha256:${binding("sysrootStdlib").sha256}`],
+        ["containmentPolicyId", binding("containmentPolicy").publicId],
+        ["budgetProfileSha256", RUNTIME_ABI_V1_17_BUDGET_PROFILE_SHA256],
+        ["canonicalJsonProfileId", "canonical-json-v1.1"],
+        ["behaviorSettingsHash", identity("b")],
+      ] as const,
+    }
+  }
   const request: RuntimeExecutionServiceRequestV117 = {
     contractVersion: RUNTIME_EXECUTION_SERVICE_VERSION_V1_17,
     kind: "executeMatch",
@@ -529,15 +579,14 @@ const createV117ServiceArtifacts = () => {
       sourceManifestHash: identity("3"),
       registryGeneration: "7",
     },
+    legacyAuthority: {
+      bundleHash: identity("c"),
+      sourceManifestHash: identity("d"),
+      registryGeneration: "6",
+    },
     entrants: {
-      bottom: {
-        identityManifestRoot: identity("4"),
-        evidenceGraphRoot: identity("5"),
-      },
-      top: {
-        identityManifestRoot: identity("6"),
-        evidenceGraphRoot: identity("7"),
-      },
+      bottom: entrant("bottom", "4"),
+      top: entrant("top", "6"),
     },
     accounting: {
       budgetProfileSha256: identity("8"),

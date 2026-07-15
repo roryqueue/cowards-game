@@ -17,7 +17,9 @@ import {
   createAuthenticatedRuntimeInvocationRequestV117,
   createRuntimeAbiV117ExecutionLedger,
   createRuntimeInvocationBudgetV117,
+  hashCanonicalIdentity,
   hashExecutableLaneIdentity,
+  hashRuntimeIdentityManifest,
   runtimeInvocationExecutionLedgerPoststateRootV117,
   serializeRuntimeInvocationRequestV117,
   validateStrategyLanguageProviderRuntimeCompatibility,
@@ -31,6 +33,8 @@ import {
   type RuntimeExecutionServiceResponse,
   type RuntimeExecutionServiceSystemFailureCode,
   type RuntimeExecutionServiceResponseV117,
+  type RuntimeExecutionEntrantV117,
+  type RuntimeEvidenceAuthorityExactPinV117,
   type RuntimeInvocationResultV117,
   type RuntimeInvocationResponseAccountingV117,
   type RuntimeInvocationSigningIdentityV117,
@@ -38,6 +42,7 @@ import {
   type RuntimeInvocationTraceV117,
   type RuntimeEntrantAuthorityReference,
   type Chronicle,
+  type ExecutableLaneIdentity,
   type StrategyRevision,
 } from "@cowards/spec"
 import { hashStrategySource } from "@cowards/runtime-js"
@@ -60,6 +65,7 @@ import {
   type StrategyRuntime,
 } from "@cowards/engine"
 import type { RuntimeServiceConfig } from "./runtime-config.js"
+import type { SuccessorRuntimeIdentityV117 } from "./runtime-config.js"
 import { publicSystemFailureMessage, redactedDiagnostics } from "./redaction.js"
 import type {
   RuntimeEvidenceAuthorityLoader,
@@ -1251,6 +1257,7 @@ export interface PreparedRuntimeServiceFactoryInputV117 {
 export interface PreparedRuntimeEvidenceBindingV117 {
   identityManifestRoot: string
   evidenceGraphRoot: string
+  exactPins?: readonly RuntimeEvidenceAuthorityExactPinV117[] | undefined
 }
 
 export interface PreparedMountedRuntimeEvidenceAuthorityV117 {
@@ -1306,11 +1313,86 @@ export const failPreparedRuntimeServiceRequestV117 = (input: {
 }): RuntimeExecutionServiceResponseV117 => preparedV117Failure(input)
 
 const rootsMatch = (
-  binding: { identityManifestRoot: string; evidenceGraphRoot: string },
-  expected: { identityManifestRoot: string; evidenceGraphRoot: string },
+  binding: PreparedRuntimeEvidenceBindingV117,
+  expected: RuntimeExecutionEntrantV117,
 ): boolean =>
   binding.identityManifestRoot === expected.identityManifestRoot &&
-  binding.evidenceGraphRoot === expected.evidenceGraphRoot
+  binding.evidenceGraphRoot === expected.evidenceGraphRoot &&
+  isDeepStrictEqual(binding.exactPins ?? [], expected.exactPins)
+
+const actualEntrantBindingMatchesV117 = (input: {
+  requested: RuntimeExecutionEntrantV117
+  revision: StrategyRevision
+  deployed: ExecutableLaneIdentity
+  successorIdentity: SuccessorRuntimeIdentityV117 | undefined
+}): boolean => {
+  const { requested, revision, deployed, successorIdentity } = input
+  const artifact = [
+    revision.metadata.sourceArtifact,
+    revision.metadata.compiledArtifact,
+  ].find(
+    (candidate) =>
+      candidate !== undefined && candidate.hash === deployed.artifactSha256,
+  )
+  if (
+    requested.strategyRevisionId !== revision.id ||
+    requested.laneIdentityHash !==
+      `sha256:${hashExecutableLaneIdentity(deployed)}` ||
+    successorIdentity === undefined ||
+    !isDeepStrictEqual(requested.exactPins, successorIdentity.exactPins) ||
+    artifact === undefined ||
+    artifact.bytesBase64 === undefined
+  ) {
+    return false
+  }
+  try {
+    const originalBytes = new TextEncoder().encode(revision.source)
+    const normalizedBytes = new TextEncoder().encode(
+      normalizeSourceV117(revision.source),
+    )
+    const artifactBytes = Buffer.from(artifact.bytesBase64, "base64")
+    const sourceIdentity = {
+      originalSourceSha256: sha256IdentityV117(originalBytes),
+      normalizedSourceSha256: sha256IdentityV117(normalizedBytes),
+      artifactSha256: sha256IdentityV117(artifactBytes),
+    }
+    const bindings = new Map(
+      successorIdentity.identityManifest.bindings.map((binding) => [
+        binding.domain,
+        binding,
+      ]),
+    )
+    const pins = new Map(requested.exactPins)
+    return (
+      isDeepStrictEqual(requested.sourceIdentity, sourceIdentity) &&
+      requested.identityManifestRoot ===
+        `sha256:${hashRuntimeIdentityManifest(successorIdentity.identityManifest)}` &&
+      bindings.get("originalSource")?.sha256 ===
+        hashCanonicalIdentity("originalSource", [originalBytes]) &&
+      bindings.get("normalizedSource")?.sha256 ===
+        hashCanonicalIdentity("normalizedSource", [normalizedBytes]) &&
+      bindings.get("artifact")?.sha256 ===
+        hashCanonicalIdentity("artifact", [artifactBytes]) &&
+      pins.get("runtimeExecutableDigest") ===
+        `sha256:${bindings.get("runtimeExecutable")?.sha256}` &&
+      pins.get("adapterBuildDigest") ===
+        `sha256:${bindings.get("adapterBuild")?.sha256}` &&
+      pins.get("standardLibraryOrSysrootDigest") ===
+        `sha256:${bindings.get("sysrootStdlib")?.sha256}` &&
+      pins.get("containmentPolicyId") ===
+        bindings.get("containmentPolicy")?.publicId &&
+      pins.get("budgetProfileSha256") ===
+        `sha256:${bindings.get("budgetProfile")?.sha256}` &&
+      pins.get("budgetProfileSha256") ===
+        RUNTIME_ABI_V1_17_BUDGET_PROFILE_SHA256 &&
+      pins.get("canonicalJsonProfileId") ===
+        bindings.get("canonicalJsonProfile")?.publicId &&
+      pins.get("canonicalJsonProfileId") === "canonical-json-v1.1"
+    )
+  } catch {
+    return false
+  }
+}
 
 /**
  * Prepared but inactive v1.17 full-service path. The injected execution must
@@ -1359,11 +1441,11 @@ export const executePreparedRuntimeServiceRequestV117 = (
     request.matchId !== nestedRequest.match.matchId ||
     request.compatibilityTupleId !==
       nestedRequest.evidenceSnapshot.compatibility.tupleId ||
-    request.authority.bundleHash !==
+    request.legacyAuthority.bundleHash !==
       nestedRequest.evidenceSnapshot.authorityBundleHash ||
-    request.authority.sourceManifestHash !==
+    request.legacyAuthority.sourceManifestHash !==
       nestedRequest.evidenceSnapshot.publication.sourceManifestHash ||
-    request.authority.registryGeneration !==
+    request.legacyAuthority.registryGeneration !==
       nestedRequest.evidenceSnapshot.registryGeneration
   ) {
     return preparedV117Failure({
@@ -1398,7 +1480,14 @@ export const executePreparedRuntimeServiceRequestV117 = (
       entrant.strategyRevisionId !== revision.id ||
       deployed === undefined ||
       `sha256:${hashExecutableLaneIdentity(deployed)}` !==
-        entrant.laneIdentityHash
+        entrant.laneIdentityHash ||
+      !actualEntrantBindingMatchesV117({
+        requested: request.entrants[side],
+        revision,
+        deployed,
+        successorIdentity:
+          runtimeConfig.resolveSuccessorRuntimeIdentity(revision),
+      })
     ) {
       return false
     }

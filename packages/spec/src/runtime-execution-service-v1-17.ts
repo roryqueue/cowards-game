@@ -2,6 +2,7 @@ import { createHash } from "node:crypto"
 import { z } from "zod"
 import { encodeCanonicalJson } from "./canonical-json-encode.js"
 import { CanonicalJsonValueV117Schema } from "./runtime-payload-v1-17.js"
+import { RUNTIME_EVIDENCE_REQUIRED_EXACT_PINS_V1_17 } from "./runtime-evidence-v1-17.js"
 import type { JsonValue } from "./types.js"
 
 export const RUNTIME_EXECUTION_SERVICE_VERSION_V1_17 =
@@ -28,10 +29,25 @@ export interface RuntimeSemanticReceiptClaimsV117 {
   authorityBundleHash: Sha256Identity
   authoritySourceManifestHash: Sha256Identity
   registryGeneration: string
+  legacyAuthorityBundleHash: Sha256Identity
+  legacyAuthoritySourceManifestHash: Sha256Identity
+  legacyRegistryGeneration: string
   bottomIdentityManifestRoot: Sha256Identity
   bottomEvidenceGraphRoot: Sha256Identity
+  bottomStrategyRevisionId: string
+  bottomLaneIdentityHash: Sha256Identity
+  bottomOriginalSourceSha256: Sha256Identity
+  bottomNormalizedSourceSha256: Sha256Identity
+  bottomArtifactSha256: Sha256Identity
+  bottomExactPinsSha256: Sha256Identity
   topIdentityManifestRoot: Sha256Identity
   topEvidenceGraphRoot: Sha256Identity
+  topStrategyRevisionId: string
+  topLaneIdentityHash: Sha256Identity
+  topOriginalSourceSha256: Sha256Identity
+  topNormalizedSourceSha256: Sha256Identity
+  topArtifactSha256: Sha256Identity
+  topExactPinsSha256: Sha256Identity
   budgetProfileSha256: Sha256Identity
   ledgerPrestateRoot: Sha256Identity
   ledgerPoststateRoot: Sha256Identity
@@ -48,6 +64,19 @@ export interface RuntimeSemanticReceiptV117 extends RuntimeSemanticReceiptClaims
   signature: `hmac-sha256:${string}`
 }
 
+export interface RuntimeExecutionEntrantV117 {
+  strategyRevisionId: string
+  laneIdentityHash: Sha256Identity
+  sourceIdentity: {
+    originalSourceSha256: Sha256Identity
+    normalizedSourceSha256: Sha256Identity
+    artifactSha256: Sha256Identity
+  }
+  identityManifestRoot: Sha256Identity
+  evidenceGraphRoot: Sha256Identity
+  exactPins: readonly (readonly [string, string])[]
+}
+
 export interface RuntimeExecutionServiceRequestV117 {
   contractVersion: typeof RUNTIME_EXECUTION_SERVICE_VERSION_V1_17
   kind: "executeMatch"
@@ -59,15 +88,14 @@ export interface RuntimeExecutionServiceRequestV117 {
     sourceManifestHash: Sha256Identity
     registryGeneration: string
   }
+  legacyAuthority: {
+    bundleHash: Sha256Identity
+    sourceManifestHash: Sha256Identity
+    registryGeneration: string
+  }
   entrants: {
-    bottom: {
-      identityManifestRoot: Sha256Identity
-      evidenceGraphRoot: Sha256Identity
-    }
-    top: {
-      identityManifestRoot: Sha256Identity
-      evidenceGraphRoot: Sha256Identity
-    }
+    bottom: RuntimeExecutionEntrantV117
+    top: RuntimeExecutionEntrantV117
   }
   accounting: {
     budgetProfileSha256: Sha256Identity
@@ -124,10 +152,36 @@ const RegistryGenerationV117Schema = z
   .string()
   .regex(/^(?:0|[1-9][0-9]{0,15})$/u)
 
+const RuntimeEvidenceExactPinsV117Schema = z
+  .array(z.tuple([z.string(), BoundedIdentityV117Schema]))
+  .length(RUNTIME_EVIDENCE_REQUIRED_EXACT_PINS_V1_17.length)
+  .superRefine((pins, context) => {
+    for (const [index, expected] of
+      RUNTIME_EVIDENCE_REQUIRED_EXACT_PINS_V1_17.entries()) {
+      if (pins[index]?.[0] !== expected) {
+        context.addIssue({
+          code: "custom",
+          path: [index, 0],
+          message: "Runtime evidence exact pins are out of order.",
+        })
+      }
+    }
+  })
+
 const RuntimeExecutionEntrantV117Schema = z
   .object({
+    strategyRevisionId: BoundedIdentityV117Schema,
+    laneIdentityHash: Sha256IdentityV117Schema,
+    sourceIdentity: z
+      .object({
+        originalSourceSha256: Sha256IdentityV117Schema,
+        normalizedSourceSha256: Sha256IdentityV117Schema,
+        artifactSha256: Sha256IdentityV117Schema,
+      })
+      .strict(),
     identityManifestRoot: Sha256IdentityV117Schema,
     evidenceGraphRoot: Sha256IdentityV117Schema,
+    exactPins: RuntimeEvidenceExactPinsV117Schema,
   })
   .strict()
 
@@ -139,6 +193,13 @@ export const RuntimeExecutionServiceRequestV117Schema = z
     matchId: BoundedIdentityV117Schema,
     compatibilityTupleId: Sha256IdentityV117Schema,
     authority: z
+      .object({
+        bundleHash: Sha256IdentityV117Schema,
+        sourceManifestHash: Sha256IdentityV117Schema,
+        registryGeneration: RegistryGenerationV117Schema,
+      })
+      .strict(),
+    legacyAuthority: z
       .object({
         bundleHash: Sha256IdentityV117Schema,
         sourceManifestHash: Sha256IdentityV117Schema,
@@ -173,10 +234,25 @@ export const RuntimeSemanticReceiptV117Schema = z
     authorityBundleHash: Sha256IdentityV117Schema,
     authoritySourceManifestHash: Sha256IdentityV117Schema,
     registryGeneration: RegistryGenerationV117Schema,
+    legacyAuthorityBundleHash: Sha256IdentityV117Schema,
+    legacyAuthoritySourceManifestHash: Sha256IdentityV117Schema,
+    legacyRegistryGeneration: RegistryGenerationV117Schema,
     bottomIdentityManifestRoot: Sha256IdentityV117Schema,
     bottomEvidenceGraphRoot: Sha256IdentityV117Schema,
+    bottomStrategyRevisionId: BoundedIdentityV117Schema,
+    bottomLaneIdentityHash: Sha256IdentityV117Schema,
+    bottomOriginalSourceSha256: Sha256IdentityV117Schema,
+    bottomNormalizedSourceSha256: Sha256IdentityV117Schema,
+    bottomArtifactSha256: Sha256IdentityV117Schema,
+    bottomExactPinsSha256: Sha256IdentityV117Schema,
     topIdentityManifestRoot: Sha256IdentityV117Schema,
     topEvidenceGraphRoot: Sha256IdentityV117Schema,
+    topStrategyRevisionId: BoundedIdentityV117Schema,
+    topLaneIdentityHash: Sha256IdentityV117Schema,
+    topOriginalSourceSha256: Sha256IdentityV117Schema,
+    topNormalizedSourceSha256: Sha256IdentityV117Schema,
+    topArtifactSha256: Sha256IdentityV117Schema,
+    topExactPinsSha256: Sha256IdentityV117Schema,
     budgetProfileSha256: Sha256IdentityV117Schema,
     ledgerPrestateRoot: Sha256IdentityV117Schema,
     ledgerPoststateRoot: Sha256IdentityV117Schema,
@@ -272,6 +348,13 @@ const canonicalBytes = (value: JsonValue): Uint8Array => {
     throw new TypeError("Runtime v1.17 value is not canonical JSON.")
   return encoded.bytes
 }
+
+export const hashRuntimeExecutionExactPinsV117 = (
+  exactPins: RuntimeExecutionEntrantV117["exactPins"],
+): Sha256Identity =>
+  `sha256:${createHash("sha256")
+    .update(canonicalBytes(exactPins as unknown as JsonValue))
+    .digest("hex")}`
 
 export const encodeRuntimeSemanticReceiptClaimsV117 = (
   claims: RuntimeSemanticReceiptClaimsV117,

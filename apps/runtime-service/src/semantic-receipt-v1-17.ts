@@ -5,9 +5,11 @@ import {
   RUNTIME_SEMANTIC_RECEIPT_KEY_ID_V1_17,
   RUNTIME_SEMANTIC_RECEIPT_PROFILE_V1_17,
   RUNTIME_SEMANTIC_RECEIPT_SCHEMA_VERSION_V1_17,
+  RuntimeExecutionServiceRequestV117Schema,
   encodeCanonicalJson,
   encodeRuntimeSemanticReceiptClaimsV117,
   hashRuntimeExecutionServiceRequestV117,
+  hashRuntimeExecutionExactPinsV117,
   isCanonicalSafeRegistryGenerationV117,
   type JsonValue,
   type RuntimeExecutionServiceRequestV117,
@@ -72,66 +74,10 @@ const jsonValue = (value: unknown): JsonValue => {
   return value as JsonValue
 }
 
-const parseEntrant = (
-  value: unknown,
-): RuntimeExecutionServiceRequestV117["entrants"]["bottom"] => {
-  const candidate = record(value, ["identityManifestRoot", "evidenceGraphRoot"])
-  return {
-    identityManifestRoot: sha256Identity(candidate.identityManifestRoot),
-    evidenceGraphRoot: sha256Identity(candidate.evidenceGraphRoot),
-  }
-}
-
 const parseRequest = (value: unknown): RuntimeExecutionServiceRequestV117 => {
-  const candidate = record(value, [
-    "contractVersion",
-    "kind",
-    "requestId",
-    "matchId",
-    "compatibilityTupleId",
-    "authority",
-    "entrants",
-    "accounting",
-    "match",
-  ])
-  if (
-    candidate.contractVersion !== RUNTIME_EXECUTION_SERVICE_VERSION_V1_17 ||
-    candidate.kind !== "executeMatch"
-  )
-    return fail()
-  const authority = record(candidate.authority, [
-    "bundleHash",
-    "sourceManifestHash",
-    "registryGeneration",
-  ])
-  const entrants = record(candidate.entrants, ["bottom", "top"])
-  const accounting = record(candidate.accounting, [
-    "budgetProfileSha256",
-    "ledgerPrestateRoot",
-  ])
-  const registryGeneration = boundedString(authority.registryGeneration)
-  if (!isCanonicalSafeRegistryGenerationV117(registryGeneration)) return fail()
-  return {
-    contractVersion: RUNTIME_EXECUTION_SERVICE_VERSION_V1_17,
-    kind: "executeMatch",
-    requestId: boundedString(candidate.requestId),
-    matchId: boundedString(candidate.matchId),
-    compatibilityTupleId: sha256Identity(candidate.compatibilityTupleId),
-    authority: {
-      bundleHash: sha256Identity(authority.bundleHash),
-      sourceManifestHash: sha256Identity(authority.sourceManifestHash),
-      registryGeneration,
-    },
-    entrants: {
-      bottom: parseEntrant(entrants.bottom),
-      top: parseEntrant(entrants.top),
-    },
-    accounting: {
-      budgetProfileSha256: sha256Identity(accounting.budgetProfileSha256),
-      ledgerPrestateRoot: sha256Identity(accounting.ledgerPrestateRoot),
-    },
-    match: jsonValue(candidate.match),
-  }
+  const parsed = RuntimeExecutionServiceRequestV117Schema.safeParse(value)
+  if (!parsed.success) return fail()
+  return parsed.data
 }
 
 const receiptKeys = [
@@ -145,10 +91,25 @@ const receiptKeys = [
   "authorityBundleHash",
   "authoritySourceManifestHash",
   "registryGeneration",
+  "legacyAuthorityBundleHash",
+  "legacyAuthoritySourceManifestHash",
+  "legacyRegistryGeneration",
   "bottomIdentityManifestRoot",
   "bottomEvidenceGraphRoot",
+  "bottomStrategyRevisionId",
+  "bottomLaneIdentityHash",
+  "bottomOriginalSourceSha256",
+  "bottomNormalizedSourceSha256",
+  "bottomArtifactSha256",
+  "bottomExactPinsSha256",
   "topIdentityManifestRoot",
   "topEvidenceGraphRoot",
+  "topStrategyRevisionId",
+  "topLaneIdentityHash",
+  "topOriginalSourceSha256",
+  "topNormalizedSourceSha256",
+  "topArtifactSha256",
+  "topExactPinsSha256",
   "budgetProfileSha256",
   "ledgerPrestateRoot",
   "ledgerPoststateRoot",
@@ -195,12 +156,41 @@ const parseReceipt = (value: unknown): RuntimeSemanticReceiptV117 => {
       if (!isCanonicalSafeRegistryGenerationV117(value)) return fail()
       return value
     })(),
+    legacyAuthorityBundleHash: sha256Identity(
+      candidate.legacyAuthorityBundleHash,
+    ),
+    legacyAuthoritySourceManifestHash: sha256Identity(
+      candidate.legacyAuthoritySourceManifestHash,
+    ),
+    legacyRegistryGeneration: (() => {
+      const value = boundedString(candidate.legacyRegistryGeneration)
+      if (!isCanonicalSafeRegistryGenerationV117(value)) return fail()
+      return value
+    })(),
     bottomIdentityManifestRoot: sha256Identity(
       candidate.bottomIdentityManifestRoot,
     ),
     bottomEvidenceGraphRoot: sha256Identity(candidate.bottomEvidenceGraphRoot),
+    bottomStrategyRevisionId: boundedString(candidate.bottomStrategyRevisionId),
+    bottomLaneIdentityHash: sha256Identity(candidate.bottomLaneIdentityHash),
+    bottomOriginalSourceSha256: sha256Identity(
+      candidate.bottomOriginalSourceSha256,
+    ),
+    bottomNormalizedSourceSha256: sha256Identity(
+      candidate.bottomNormalizedSourceSha256,
+    ),
+    bottomArtifactSha256: sha256Identity(candidate.bottomArtifactSha256),
+    bottomExactPinsSha256: sha256Identity(candidate.bottomExactPinsSha256),
     topIdentityManifestRoot: sha256Identity(candidate.topIdentityManifestRoot),
     topEvidenceGraphRoot: sha256Identity(candidate.topEvidenceGraphRoot),
+    topStrategyRevisionId: boundedString(candidate.topStrategyRevisionId),
+    topLaneIdentityHash: sha256Identity(candidate.topLaneIdentityHash),
+    topOriginalSourceSha256: sha256Identity(candidate.topOriginalSourceSha256),
+    topNormalizedSourceSha256: sha256Identity(
+      candidate.topNormalizedSourceSha256,
+    ),
+    topArtifactSha256: sha256Identity(candidate.topArtifactSha256),
+    topExactPinsSha256: sha256Identity(candidate.topExactPinsSha256),
     budgetProfileSha256: sha256Identity(candidate.budgetProfileSha256),
     ledgerPrestateRoot: sha256Identity(candidate.ledgerPrestateRoot),
     ledgerPoststateRoot: sha256Identity(candidate.ledgerPoststateRoot),
@@ -320,10 +310,35 @@ export const issueRuntimeSemanticReceiptV117 = (input: {
     authorityBundleHash: request.authority.bundleHash,
     authoritySourceManifestHash: request.authority.sourceManifestHash,
     registryGeneration: request.authority.registryGeneration,
+    legacyAuthorityBundleHash: request.legacyAuthority.bundleHash,
+    legacyAuthoritySourceManifestHash:
+      request.legacyAuthority.sourceManifestHash,
+    legacyRegistryGeneration: request.legacyAuthority.registryGeneration,
     bottomIdentityManifestRoot: request.entrants.bottom.identityManifestRoot,
     bottomEvidenceGraphRoot: request.entrants.bottom.evidenceGraphRoot,
+    bottomStrategyRevisionId: request.entrants.bottom.strategyRevisionId,
+    bottomLaneIdentityHash: request.entrants.bottom.laneIdentityHash,
+    bottomOriginalSourceSha256:
+      request.entrants.bottom.sourceIdentity.originalSourceSha256,
+    bottomNormalizedSourceSha256:
+      request.entrants.bottom.sourceIdentity.normalizedSourceSha256,
+    bottomArtifactSha256:
+      request.entrants.bottom.sourceIdentity.artifactSha256,
+    bottomExactPinsSha256: hashRuntimeExecutionExactPinsV117(
+      request.entrants.bottom.exactPins,
+    ),
     topIdentityManifestRoot: request.entrants.top.identityManifestRoot,
     topEvidenceGraphRoot: request.entrants.top.evidenceGraphRoot,
+    topStrategyRevisionId: request.entrants.top.strategyRevisionId,
+    topLaneIdentityHash: request.entrants.top.laneIdentityHash,
+    topOriginalSourceSha256:
+      request.entrants.top.sourceIdentity.originalSourceSha256,
+    topNormalizedSourceSha256:
+      request.entrants.top.sourceIdentity.normalizedSourceSha256,
+    topArtifactSha256: request.entrants.top.sourceIdentity.artifactSha256,
+    topExactPinsSha256: hashRuntimeExecutionExactPinsV117(
+      request.entrants.top.exactPins,
+    ),
     budgetProfileSha256: request.accounting.budgetProfileSha256,
     ledgerPrestateRoot: request.accounting.ledgerPrestateRoot,
     ledgerPoststateRoot: input.ledgerPoststateRoot,

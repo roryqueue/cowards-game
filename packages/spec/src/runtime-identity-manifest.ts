@@ -107,10 +107,23 @@ const normalizedManifest = (input: RuntimeIdentityManifest): RuntimeIdentityMani
   }
 }
 
+export const parseRuntimeIdentityManifest = (
+  input: RuntimeIdentityManifest,
+): Readonly<RuntimeIdentityManifest> => {
+  const normalized = normalizedManifest(input)
+  return Object.freeze({
+    schemaVersion: normalized.schemaVersion,
+    profile: normalized.profile,
+    bindings: Object.freeze(
+      normalized.bindings.map((binding) => Object.freeze({ ...binding })),
+    ),
+  })
+}
+
 export const serializeRuntimeIdentityManifest = (
   manifest: RuntimeIdentityManifest,
 ): Uint8Array => {
-  const normalized = normalizedManifest(manifest)
+  const normalized = parseRuntimeIdentityManifest(manifest)
   const encoded = encodeCanonicalJson({
     schemaVersion: normalized.schemaVersion,
     profile: normalized.profile,

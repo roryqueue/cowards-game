@@ -1,5 +1,6 @@
 import {
   createDeploymentLaneIdentityResolver,
+  createSuccessorRuntimeIdentityResolver,
   loadDeploymentLaneRegistry,
 } from "./deployment-lane-registry.js"
 import { createRuntimeServiceConfig } from "./runtime-config.js"
@@ -16,6 +17,8 @@ export const runtimeServiceConfigFromEnvironment = (
       environment.COWARDS_RUNTIME_SERVICE_ALLOW_LOCAL_WORKER_THREAD === "1",
     resolveDeploymentLaneIdentity:
       createDeploymentLaneIdentityResolver(registry),
+    resolveSuccessorRuntimeIdentity:
+      createSuccessorRuntimeIdentityResolver(registry),
     deploymentLaneRegistryId: registry.registryId,
     semanticReceiptSecret:
       environment.COWARDS_RUNTIME_SERVICE_SEMANTIC_RECEIPT_SECRET,

@@ -3,9 +3,13 @@ import { createHash } from "node:crypto"
 import { readFileSync } from "node:fs"
 import {
   resolveCanonicalCompatibilityTuple,
+  parseRuntimeEvidenceAuthorityBindingV117,
+  parseRuntimeIdentityManifest,
   type CanonicalCompatibilityTuple,
   type ExecutableLaneIdentity,
   type StrategyRevision,
+  type RuntimeEvidenceAuthorityExactPinV117,
+  type RuntimeIdentityManifest,
 } from "@cowards/spec"
 import { RuntimeServiceConfigError } from "./runtime-config.js"
 
@@ -54,6 +58,10 @@ export interface DeploymentLaneProfile {
   buildId: string
   semanticTupleId: string
   semanticTuple: CanonicalCompatibilityTuple
+  successorRuntimeIdentity?: {
+    identityManifest: RuntimeIdentityManifest
+    exactPins: readonly RuntimeEvidenceAuthorityExactPinV117[]
+  }
 }
 
 export interface DeploymentLaneRegistry {
@@ -88,7 +96,14 @@ const parseProfile = (value: unknown, index: number): DeploymentLaneProfile => {
   }
   exactKeys(
     value,
-    [...PROFILE_STRING_FIELDS, "artifactKind", "semanticTuple"],
+    [
+      ...PROFILE_STRING_FIELDS,
+      "artifactKind",
+      "semanticTuple",
+      ...(Object.hasOwn(value, "successorRuntimeIdentity")
+        ? (["successorRuntimeIdentity"] as const)
+        : []),
+    ],
     `Deployment lane registry profile ${index}`,
   )
   for (const field of PROFILE_STRING_FIELDS) {
@@ -112,12 +127,51 @@ const parseProfile = (value: unknown, index: number): DeploymentLaneProfile => {
       `Deployment lane registry profile ${index} semantic tuple is invalid.`,
     )
   }
+  let successorRuntimeIdentity:
+    | DeploymentLaneProfile["successorRuntimeIdentity"]
+    | undefined
+  if (Object.hasOwn(value, "successorRuntimeIdentity")) {
+    const candidate = value.successorRuntimeIdentity
+    if (!isRecord(candidate)) {
+      throw new RuntimeServiceConfigError(
+        `Deployment lane registry profile ${index} successor identity is invalid.`,
+      )
+    }
+    exactKeys(
+      candidate,
+      ["identityManifest", "exactPins"],
+      `Deployment lane registry profile ${index} successor identity`,
+    )
+    try {
+      const identityManifest = parseRuntimeIdentityManifest(
+        candidate.identityManifest as RuntimeIdentityManifest,
+      )
+      const binding = parseRuntimeEvidenceAuthorityBindingV117({
+        graphSchemaVersion: "runtime-evidence-graph-v1.17",
+        graphProfile: "runtime-identity-evidence-dag-v1",
+        identityManifestRoot: `sha256:${"0".repeat(64)}`,
+        evidenceGraphRoot: `sha256:${"0".repeat(64)}`,
+        exactPins: candidate.exactPins as readonly RuntimeEvidenceAuthorityExactPinV117[],
+      })
+      successorRuntimeIdentity = Object.freeze({
+        identityManifest,
+        exactPins: binding.exactPins,
+      })
+    } catch {
+      throw new RuntimeServiceConfigError(
+        `Deployment lane registry profile ${index} successor identity is invalid.`,
+      )
+    }
+  }
   return Object.freeze({
     ...Object.fromEntries(
       PROFILE_STRING_FIELDS.map((field) => [field, value[field]]),
     ),
     artifactKind: value.artifactKind,
     semanticTuple: Object.freeze({ ...resolved.tuple }),
+    ...(successorRuntimeIdentity === undefined
+      ? {}
+      : { successorRuntimeIdentity }),
   }) as unknown as DeploymentLaneProfile
 }
 
@@ -266,3 +320,21 @@ export const createDeploymentLaneIdentityResolver = (
       semanticTuple: Object.freeze({ ...profile.semanticTuple }),
     })
   }
+
+export const createSuccessorRuntimeIdentityResolver = (
+  registry: Readonly<DeploymentLaneRegistry>,
+): ((revision: StrategyRevision) =>
+  | DeploymentLaneProfile["successorRuntimeIdentity"]
+  | undefined) => {
+  const resolveLane = createDeploymentLaneIdentityResolver(registry)
+  return (revision) => {
+    if (resolveLane(revision) === undefined) return undefined
+    return registry.lanes.find(
+      (candidate) =>
+        candidate.languageId === revision.runtime.language.id &&
+        candidate.languageVersion === revision.runtime.language.version &&
+        candidate.adapterId === revision.runtime.adapter.id &&
+        candidate.adapterVersion === revision.runtime.adapter.version,
+    )?.successorRuntimeIdentity
+  }
+}

@@ -259,6 +259,7 @@ const createFixtureV117 = () => {
     bundlePath,
     payload,
     payloadBytes,
+    payloadSha256,
     makeEnvelope,
     config: {
       bundlePath,

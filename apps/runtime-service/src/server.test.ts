@@ -94,8 +94,16 @@ const successorEntrant = (
               : Buffer.from(`fixture:${domain}:v1.17`, "utf8")
       return {
         domain,
-        publicId: `fixture.${domain}.v1.17`,
-        sha256: hashCanonicalIdentity(domain, [bytes]),
+        publicId:
+          domain === "canonicalJsonProfile"
+            ? "canonical-json-v1.1"
+            : domain === "containmentPolicy"
+              ? "fixture.containment.v1.17"
+              : `fixture.${domain}.v1.17`,
+        sha256:
+          domain === "budgetProfile"
+            ? RUNTIME_ABI_V1_17_BUDGET_PROFILE_SHA256.slice("sha256:".length)
+            : hashCanonicalIdentity(domain, [bytes]),
       }
     }),
   }
@@ -103,16 +111,27 @@ const successorEntrant = (
     context: "canonical-manifest",
   })
   if (!encoded.ok) throw new Error(encoded.error.code)
+  const manifestBinding = (domain: (typeof IDENTITY_DOMAINS_V117)[number]) =>
+    identityManifest.bindings.find((binding) => binding.domain === domain)!
   const exactPins = [
-    ["runtimeExecutableDigest", `sha256:${"5".repeat(64)}`],
+    [
+      "runtimeExecutableDigest",
+      `sha256:${manifestBinding("runtimeExecutable").sha256}`,
+    ],
     ["reportedVersion", "node-v26.0.0"],
     ["targetAbi", "darwin-arm64"],
     ["compilerFlags", `sha256:${"6".repeat(64)}`],
-    ["adapterBuildDigest", `sha256:${"7".repeat(64)}`],
-    ["standardLibraryOrSysrootDigest", `sha256:${"8".repeat(64)}`],
-    ["containmentPolicyId", "fixture.containment.v1.17"],
+    [
+      "adapterBuildDigest",
+      `sha256:${manifestBinding("adapterBuild").sha256}`,
+    ],
+    [
+      "standardLibraryOrSysrootDigest",
+      `sha256:${manifestBinding("sysrootStdlib").sha256}`,
+    ],
+    ["containmentPolicyId", manifestBinding("containmentPolicy").publicId],
     ["budgetProfileSha256", RUNTIME_ABI_V1_17_BUDGET_PROFILE_SHA256],
-    ["canonicalJsonProfileId", "canonical-json-v1.1"],
+    ["canonicalJsonProfileId", manifestBinding("canonicalJsonProfile").publicId],
     ["behaviorSettingsHash", `sha256:${"9".repeat(64)}`],
   ] as const
   return {
@@ -236,8 +255,12 @@ describe("runtime execution HTTP boundary", () => {
         top,
       }),
     }
-    const bottomBinding = successorEntrant(bottom, "2")
-    const topBinding = successorEntrant(top, "4")
+    const bottomSuccessorIdentity = successorEntrant(bottom, "2")
+    const topSuccessorIdentity = successorEntrant(top, "4")
+    const { identityManifest: _bottomManifest, ...bottomBinding } =
+      bottomSuccessorIdentity
+    const { identityManifest: _topManifest, ...topBinding } =
+      topSuccessorIdentity
     const budgetProfileSha256 = RUNTIME_ABI_V1_17_BUDGET_PROFILE_SHA256
     const ledgerPrestateRoot =
       RUNTIME_INVOCATION_V1_17_INITIAL_EXECUTION_LEDGER_ROOT
@@ -281,6 +304,13 @@ describe("runtime execution HTTP boundary", () => {
       strategyExecutionAdapter: "worker-thread",
       semanticReceiptSecret: "fixture-semantic-receipt-secret-v1",
       resolveDeploymentLaneIdentity: createFixtureDeploymentLaneIdentity,
+      resolveSuccessorRuntimeIdentity: (revision) => {
+        const entrant = successorEntrant(revision, "0")
+        return {
+          identityManifest: entrant.identityManifest,
+          exactPins: entrant.exactPins,
+        }
+      },
     })
     const selectedV117Config = {
       ...routeRuntimeConfig,
@@ -326,7 +356,6 @@ describe("runtime execution HTTP boundary", () => {
               binding: {
                 graphSchemaVersion: "runtime-evidence-graph-v1.17",
                 graphProfile: "runtime-identity-evidence-dag-v1",
-                exactPins: [],
                 ...binding,
               },
             })),
@@ -342,7 +371,6 @@ describe("runtime execution HTTP boundary", () => {
               binding: {
                 graphSchemaVersion: "runtime-evidence-graph-v1.17",
                 graphProfile: "runtime-identity-evidence-dag-v1",
-                exactPins: [],
                 ...binding,
               },
             })),
