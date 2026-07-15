@@ -14,6 +14,7 @@ import {
 
 export { STRATEGY_RUNTIME_ABI_VERSION } from "./versions.js"
 export {
+  CANONICAL_IDENTITY_DOMAINS,
   CANONICAL_IDENTITY_DOMAIN_NAMES,
   hashCanonicalIdentity,
   hashCanonicalIdentityValue,

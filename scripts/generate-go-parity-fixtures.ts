@@ -22,6 +22,8 @@ import { createGoldenMatchInput } from "../packages/golden/src/index.ts"
 import {
   AnalyticsRunSummaryServiceDtoSchema,
   ChronicleSchema,
+  CANONICAL_IDENTITY_DOMAINS,
+  CANONICAL_IDENTITY_DOMAIN_NAMES,
   EXHIBITION_SCORING_POLICY_V1,
   PublicLadderPageServiceDtoSchema,
   PublicMatchSetSummaryServiceDtoSchema,
@@ -417,6 +419,16 @@ const renderRuntimeInvocationContractSource = (
     "var runtimeSuccessorIdentityTemplateDomainsV117 = [...]string{",
     ...SUCCESSOR_RUNTIME_IDENTITY_TEMPLATE_DOMAINS_V117.map(
       (domain) => `\t${JSON.stringify(domain)},`,
+    ),
+    "}",
+    "",
+    "var runtimeCanonicalIdentityDomainsV117 = [...]string{",
+    ...CANONICAL_IDENTITY_DOMAIN_NAMES.map((name) => `\t${JSON.stringify(name)},`),
+    "}",
+    "",
+    "var runtimeCanonicalIdentityDomainTagsV117 = [...]string{",
+    ...CANONICAL_IDENTITY_DOMAIN_NAMES.map(
+      (name) => `\t${JSON.stringify(CANONICAL_IDENTITY_DOMAINS[name])},`,
     ),
     "}",
     "",
