@@ -39,6 +39,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest"
 import { migrate } from "./migrations.js"
 import {
   RUNTIME_EVIDENCE_AUTHORITY_IMPORT_SCHEMA_VERSION,
+  RUNTIME_EVIDENCE_V117_INSTALLED_AUTHORITY_HEAD_LOCK_SQL,
   encodeRuntimeEvidenceAuthorityImportPayload,
   importAuthenticatedCertificateRevocation,
   importAuthenticatedCertificateSupersession,
@@ -460,9 +461,21 @@ describe("v1.17 installed authority persistence boundary", () => {
       }
     }
     const { installFixture } = fixture
+    const queries: string[] = []
     let inserted: readonly unknown[] | undefined
-    const fixturePool = {
+    const fixtureClient = {
       async query(sql: string, values?: readonly unknown[]) {
+        const normalized = sql.replace(/\s+/gu, " ").trim()
+        queries.push(normalized)
+        if (
+          normalized === "begin isolation level serializable" ||
+          normalized ===
+            RUNTIME_EVIDENCE_V117_INSTALLED_AUTHORITY_HEAD_LOCK_SQL ||
+          normalized === "commit" ||
+          normalized === "rollback"
+        ) {
+          return { rows: [], rowCount: 0 }
+        }
         if (
           /insert into runtime_evidence_v1_17_installed_authorities/iu.test(sql)
         ) {
@@ -494,6 +507,14 @@ describe("v1.17 installed authority persistence boundary", () => {
           }
         }
         throw new Error(`unexpected fixture query: ${sql}`)
+      },
+      release() {
+        queries.push("release")
+      },
+    }
+    const fixturePool = {
+      async connect() {
+        return fixtureClient
       },
     } as unknown as Pool
 
@@ -528,6 +549,15 @@ describe("v1.17 installed authority persistence boundary", () => {
     expect(JSON.parse(inserted![15] as string)).toEqual(attestationIds)
     expect(JSON.parse(inserted![16] as string)).toEqual(certificateIds)
     expect(JSON.parse(inserted![17] as string)).toEqual(installReceipt)
+    expect(queries[0]).toBe("begin isolation level serializable")
+    expect(queries[1]).toBe(
+      RUNTIME_EVIDENCE_V117_INSTALLED_AUTHORITY_HEAD_LOCK_SQL,
+    )
+    expect(queries[2]).toMatch(
+      /^insert into runtime_evidence_v1_17_installed_authorities/iu,
+    )
+    expect(queries[3]).toMatch(/^select authority_bundle_hash/iu)
+    expect(queries.slice(4)).toEqual(["commit", "release"])
   })
 })
 
@@ -584,13 +614,11 @@ describePostgres(
         signerKeyId: trustRoot.keyId,
         publicKeyPem: trustRoot.publicKeyPem,
       }
-      const installed = await recordInstalledRuntimeEvidenceAuthorityV117(
-        pool,
-        input,
-      )
-      await expect(
+      const [installed, concurrentDuplicate] = await Promise.all([
         recordInstalledRuntimeEvidenceAuthorityV117(pool, input),
-      ).resolves.toEqual(installed)
+        recordInstalledRuntimeEvidenceAuthorityV117(pool, input),
+      ])
+      expect(concurrentDuplicate).toEqual(installed)
       const rows = await pool.query<{
         authority_bundle_hash: string
         install_receipt_hash: string

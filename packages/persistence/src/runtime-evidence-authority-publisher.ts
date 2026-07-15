@@ -2046,6 +2046,9 @@ const V117_INSTALL_ID_DOMAIN =
 const V117_INSTALL_RECEIPT_DOMAIN =
   "cowards-game:runtime-evidence-authority-install-receipt:v1.17"
 
+export const RUNTIME_EVIDENCE_V117_INSTALLED_AUTHORITY_HEAD_LOCK_SQL =
+  "select pg_advisory_xact_lock(hashtext('cowards-game:runtime-evidence-v1.17-installed-authority-head:v1'))" as const
+
 const compareUnsignedUTF8V117 = (left: string, right: string): number => {
   const encoder = new TextEncoder()
   const leftBytes = encoder.encode(left)
@@ -2226,84 +2229,87 @@ export const recordInstalledRuntimeEvidenceAuthorityV117 = async (
     JSON.stringify(certificateIds),
     JSON.stringify(installReceipt),
   ]
-  await pool.query(
-    `insert into runtime_evidence_v1_17_installed_authorities
-      (id, authority_bundle_hash, source_manifest_hash, registry_generation,
-       semantic_tuple_manifest_hash, envelope_sha256, trust_domain,
-       signer_key_id, install_receipt_id, install_receipt_hash, issued_at,
-       valid_from, valid_until, installed_at, payload_bytes, envelope_bytes,
-       attestation_ids, certificate_ids, install_receipt)
-     values ($1,$2,$3,$4,$5,$6,$7,$8,$1,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)
-     on conflict (id) do nothing`,
-    values,
-  )
-  const stored = await pool.query<{
-    authority_bundle_hash: string
-    source_manifest_hash: string
-    registry_generation: string
-    semantic_tuple_manifest_hash: string
-    envelope_sha256: string
-    trust_domain: string
-    signer_key_id: string
-    install_receipt_hash: string
-    payload_bytes: Buffer
-    envelope_bytes: Buffer
-    attestation_ids: unknown
-    certificate_ids: unknown
-    install_receipt: unknown
-  }>(
-    `select authority_bundle_hash, source_manifest_hash, registry_generation,
-            semantic_tuple_manifest_hash, envelope_sha256, trust_domain,
-            signer_key_id, install_receipt_hash, payload_bytes, envelope_bytes,
-            attestation_ids, certificate_ids, install_receipt
-       from runtime_evidence_v1_17_installed_authorities
-      where id = $1 and install_receipt_id = $1`,
-    [installReceiptId],
-  )
-  const row = stored.rows[0]
-  if (
-    row === undefined ||
-    row.authority_bundle_hash !== authorityBundleHash ||
-    row.source_manifest_hash !== sourceManifestHash ||
-    row.registry_generation !== registryGeneration ||
-    row.semantic_tuple_manifest_hash !== semanticTupleManifestHash ||
-    row.envelope_sha256 !== envelopeSha256 ||
-    row.trust_domain !== expectedTrustDomain ||
-    row.signer_key_id !== signerKeyId ||
-    row.install_receipt_hash !== installReceiptHash ||
-    !bytesEqual(row.payload_bytes, verified.payloadBytes) ||
-    !bytesEqual(row.envelope_bytes, verified.envelopeBytes) ||
-    !bytesEqual(
-      encodeRuntimeEvidenceAuthorityInstallReceiptV117(
-        row.attestation_ids as JsonValue,
-      ),
-      encodeRuntimeEvidenceAuthorityInstallReceiptV117([...attestationIds]),
-    ) ||
-    !bytesEqual(
-      encodeRuntimeEvidenceAuthorityInstallReceiptV117(
-        row.certificate_ids as JsonValue,
-      ),
-      encodeRuntimeEvidenceAuthorityInstallReceiptV117([...certificateIds]),
-    ) ||
-    !bytesEqual(
-      encodeRuntimeEvidenceAuthorityInstallReceiptV117(
-        row.install_receipt as JsonValue,
-      ),
-      encodeRuntimeEvidenceAuthorityInstallReceiptV117(installReceipt),
+  return withSerializableTransaction(pool, async (client) => {
+    await client.query(RUNTIME_EVIDENCE_V117_INSTALLED_AUTHORITY_HEAD_LOCK_SQL)
+    await client.query(
+      `insert into runtime_evidence_v1_17_installed_authorities
+        (id, authority_bundle_hash, source_manifest_hash, registry_generation,
+         semantic_tuple_manifest_hash, envelope_sha256, trust_domain,
+         signer_key_id, install_receipt_id, install_receipt_hash, issued_at,
+         valid_from, valid_until, installed_at, payload_bytes, envelope_bytes,
+         attestation_ids, certificate_ids, install_receipt)
+       values ($1,$2,$3,$4,$5,$6,$7,$8,$1,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)
+       on conflict (id) do nothing`,
+      values,
     )
-  ) {
-    return fail(
-      "INSTALL_RECEIPT_CONFLICT",
-      "v1.17 installed authority identity collided.",
+    const stored = await client.query<{
+      authority_bundle_hash: string
+      source_manifest_hash: string
+      registry_generation: string
+      semantic_tuple_manifest_hash: string
+      envelope_sha256: string
+      trust_domain: string
+      signer_key_id: string
+      install_receipt_hash: string
+      payload_bytes: Buffer
+      envelope_bytes: Buffer
+      attestation_ids: unknown
+      certificate_ids: unknown
+      install_receipt: unknown
+    }>(
+      `select authority_bundle_hash, source_manifest_hash, registry_generation,
+              semantic_tuple_manifest_hash, envelope_sha256, trust_domain,
+              signer_key_id, install_receipt_hash, payload_bytes, envelope_bytes,
+              attestation_ids, certificate_ids, install_receipt
+         from runtime_evidence_v1_17_installed_authorities
+        where id = $1 and install_receipt_id = $1`,
+      [installReceiptId],
     )
-  }
-  return Object.freeze({
-    installReceiptId,
-    installReceiptHash,
-    authorityBundleHash,
-    sourceManifestHash,
-    registryGeneration,
-    semanticTupleManifestHash,
-    envelopeSha256,
+    const row = stored.rows[0]
+    if (
+      row === undefined ||
+      row.authority_bundle_hash !== authorityBundleHash ||
+      row.source_manifest_hash !== sourceManifestHash ||
+      row.registry_generation !== registryGeneration ||
+      row.semantic_tuple_manifest_hash !== semanticTupleManifestHash ||
+      row.envelope_sha256 !== envelopeSha256 ||
+      row.trust_domain !== expectedTrustDomain ||
+      row.signer_key_id !== signerKeyId ||
+      row.install_receipt_hash !== installReceiptHash ||
+      !bytesEqual(row.payload_bytes, verified.payloadBytes) ||
+      !bytesEqual(row.envelope_bytes, verified.envelopeBytes) ||
+      !bytesEqual(
+        encodeRuntimeEvidenceAuthorityInstallReceiptV117(
+          row.attestation_ids as JsonValue,
+        ),
+        encodeRuntimeEvidenceAuthorityInstallReceiptV117([...attestationIds]),
+      ) ||
+      !bytesEqual(
+        encodeRuntimeEvidenceAuthorityInstallReceiptV117(
+          row.certificate_ids as JsonValue,
+        ),
+        encodeRuntimeEvidenceAuthorityInstallReceiptV117([...certificateIds]),
+      ) ||
+      !bytesEqual(
+        encodeRuntimeEvidenceAuthorityInstallReceiptV117(
+          row.install_receipt as JsonValue,
+        ),
+        encodeRuntimeEvidenceAuthorityInstallReceiptV117(installReceipt),
+      )
+    ) {
+      return fail(
+        "INSTALL_RECEIPT_CONFLICT",
+        "v1.17 installed authority identity collided.",
+      )
+    }
+    return Object.freeze({
+      installReceiptId,
+      installReceiptHash,
+      authorityBundleHash,
+      sourceManifestHash,
+      registryGeneration,
+      semanticTupleManifestHash,
+      envelopeSha256,
+    })
   })
 }
