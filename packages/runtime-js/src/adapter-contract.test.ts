@@ -1198,7 +1198,7 @@ export default {
       })
     })
 
-    it("does not commit TIMEOUT without a bounded termination receipt", () => {
+    it("keeps wall TIMEOUT as a system failure even with bounded termination", () => {
       const request = candidateRequest()
       const evidence = completeCandidateEvidence(request, {
         wallMilliseconds:
@@ -1208,7 +1208,7 @@ export default {
       })
       const adapter = createSubprocessStrategyExecutionAdapter({
         spawnSync: () =>
-          candidateSpawnResult("D", { receiptPresent: false }),
+          candidateSpawnResult("D", { receiptPresent: true }),
       })
 
       const result = executeCandidateWith(
@@ -1224,7 +1224,7 @@ export default {
           accounting: { disposition: "no_commit" },
           outcome: {
             kind: "system_failure",
-            failure: { code: "AMBIGUOUS_ATTRIBUTION" },
+            failure: { code: "TIMEOUT" },
           },
         },
       })

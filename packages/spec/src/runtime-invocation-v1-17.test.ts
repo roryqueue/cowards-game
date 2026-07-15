@@ -882,7 +882,11 @@ describe("runtime invocation v1.17 exclusive ownership", () => {
       payload_schema_invalid: ["player_violation", "INVALID_OUTPUT"],
       payload_illegal: ["player_violation", "INVALID_OUTPUT"],
       strategy_exception_proven: ["player_violation", "THROWN_EXCEPTION"],
-      strategy_exhaustion_proven: ["player_violation", "TIMEOUT"],
+      strategy_exhaustion_proven: [
+        "player_violation",
+        "RESOURCE_EXHAUSTION",
+      ],
+      strategy_timeout: ["system_failure", "TIMEOUT"],
       outer_frame_missing: ["system_failure", "OUTER_FRAME_MISSING"],
       outer_frame_truncated: ["system_failure", "OUTER_FRAME_TRUNCATED"],
       outer_frame_unauthenticated: [

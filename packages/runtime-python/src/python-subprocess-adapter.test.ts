@@ -330,7 +330,7 @@ describe("Python subprocess Strategy provider ABI", () => {
     [
       "proven Strategy timeout",
       { kind: "strategy_timeout" } as const,
-      "player_violation",
+      "system_failure",
       "TIMEOUT",
       "timeout",
     ],
@@ -881,7 +881,7 @@ describe("Python subprocess Strategy provider ABI", () => {
     }
   })
 
-  it("owns a real guest-entry wall overrun as a proven TIMEOUT", () => {
+  it("keeps a real guest-entry wall overrun as a no-commit system TIMEOUT", () => {
     const source = `def select_activations(input):\n    while True:\n        pass\n\ndef soldier_brain(input):\n    return {"action": {"type": "TURN_TO_STONE"}, "soldierMemory": None}\n`
     const revision = buildPythonStrategyRevision({ source })
     const request = candidateRequest(revision)

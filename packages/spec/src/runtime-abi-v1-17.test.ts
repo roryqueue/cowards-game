@@ -578,14 +578,24 @@ describe("runtime ABI v1.17 pure budget ledger", () => {
         initial,
         executionReceipt(initial, { deltas: { [counter]: maximum + 1 } }),
       )
-      expect(over).toMatchObject({
-        kind: "player_violation",
-        committed: true,
-        replayed: false,
-        violation: { code: "RUNTIME_BUDGET_EXCEEDED" },
-      })
-      if (over.kind === "player_violation") {
-        expect(over.violation.dimensions).toContain(dimension)
+      if (counter === "wallMilliseconds") {
+        expect(over).toMatchObject({
+          kind: "system_failure",
+          committed: false,
+          replayed: false,
+          failure: { code: "STRATEGY_TIMEOUT", dimension },
+        })
+        expect(over.ledger).toBe(initial)
+      } else {
+        expect(over).toMatchObject({
+          kind: "player_violation",
+          committed: true,
+          replayed: false,
+          violation: { code: "RUNTIME_BUDGET_EXCEEDED" },
+        })
+        if (over.kind === "player_violation") {
+          expect(over.violation.dimensions).toContain(dimension)
+        }
       }
       expect(over.ledger.cumulative[counter]).toBe(maximum + 1)
     },

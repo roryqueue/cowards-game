@@ -732,8 +732,8 @@ describe("WASM/WASI runtime v1.17 candidate host authority", () => {
 
   it.each([
     ["proven_strategy_exception", "player_violation", "THROWN_EXCEPTION"],
-    ["proven_fuel_exhaustion", "player_violation", "TIMEOUT"],
-    ["proven_memory_exhaustion", "player_violation", "TIMEOUT"],
+    ["proven_fuel_exhaustion", "player_violation", "RESOURCE_EXHAUSTION"],
+    ["proven_memory_exhaustion", "player_violation", "RESOURCE_EXHAUSTION"],
     ["proven_output_exhaustion", "player_violation", "OVERSIZED_OUTPUT"],
     ["ambiguous_trap", "system_failure", "AMBIGUOUS_ATTRIBUTION"],
     ["accounting_unavailable", "system_failure", "AMBIGUOUS_ATTRIBUTION"],
