@@ -182,6 +182,24 @@ func TestGoMatchOrchestratorIntegrityPostResponseContract(t *testing.T) {
 	}
 }
 
+func TestPhase258OrchestratorConsumesVersionedRuntimeServiceRouter(t *testing.T) {
+	source, err := os.ReadFile("orchestrator.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := string(source)
+	for _, required := range []string{
+		"runtime *runtimeServiceExecutionRouter",
+		"newRuntimeServiceExecutionRouter(runtimeServiceURL)",
+		"buildRuntimeServiceExecutionRequestForClaimedJob",
+		"runtime.executeMatch",
+	} {
+		if !strings.Contains(text, required) {
+			t.Fatalf("production orchestration route is not versioned: missing %q", required)
+		}
+	}
+}
+
 func TestGoMatchOrchestratorHasNoCandidateCompletionRoute(t *testing.T) {
 	source, err := os.ReadFile("orchestrator.go")
 	if err != nil {

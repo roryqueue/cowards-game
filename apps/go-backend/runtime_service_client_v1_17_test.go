@@ -181,17 +181,47 @@ func TestPhase258CurrentDefaultRuntimeServiceContract(t *testing.T) {
 
 func TestPhase258CurrentDefaultRoutes(t *testing.T) {
 	selected := selectedRuntimeServiceContractVersion()
-	switch selected {
-	case runtimeExecutionServiceVersion:
-		if newRuntimeServiceClient("http://runtime.invalid") == nil {
-			t.Fatal("current v1.16 route client is unavailable")
+	requestV116 := validRuntimeServiceRequestForTest()
+	requestV117, _, _ := loadRuntimeServiceV117Fixture(t)
+	observed := ""
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, incoming *http.Request) {
+		defer incoming.Body.Close()
+		payload, err := io.ReadAll(incoming.Body)
+		if err != nil {
+			t.Fatal(err)
 		}
-	case runtimeExecutionServiceVersionV117:
-		if newRuntimeServiceClientV117("http://runtime.invalid") == nil {
-			t.Fatal("current v1.17 route client is unavailable")
+		var envelope map[string]any
+		if err := json.Unmarshal(payload, &envelope); err != nil {
+			t.Fatal(err)
 		}
-	default:
-		t.Fatalf("current route has no exact client: %s", selected)
+		observed, _ = envelope["contractVersion"].(string)
+		writer.Header().Set("content-type", "application/json")
+		writer.WriteHeader(http.StatusUnprocessableEntity)
+		if observed == runtimeExecutionServiceVersionV117 {
+			_, _ = writer.Write([]byte(`{"contractVersion":"runtime-execution-service-v1.17","kind":"systemFailure","matchId":"match:full-service:v1.17:0001","ok":false,"requestId":"request:full-service:v1.17:0001","systemFailure":{"classification":"system_failure","code":"EVIDENCE_UNVERIFIABLE","ownership":"system_integrity","playerPenalty":false,"publicMessage":"Runtime execution failed before completion.","retryable":false}}`))
+			return
+		}
+		writeRuntimeServiceTestJSON(t, writer, runtimeServiceResponse{
+			ContractVersion: runtimeExecutionServiceVersion,
+			OK: false, Kind: "systemFailure", RequestID: requestV116.RequestID,
+			MatchID: requestV116.Match.MatchID, RuntimeABIVersion: strategyRuntimeABIVersion,
+			SystemFailure: &runtimeServiceFailure{Code: "EVIDENCE_UNVERIFIABLE", Retryable: false},
+		})
+	}))
+	defer server.Close()
+	router := newRuntimeServiceExecutionRouter(server.URL)
+	router.semanticReceiptSecret = runtimeServiceV117FixtureSecret
+	routedRequest := runtimeServiceExecutionRequest{ContractVersion: selected}
+	if selected == runtimeExecutionServiceVersionV117 {
+		routedRequest.V117 = &requestV117
+	} else {
+		routedRequest.V116 = &requestV116
+	}
+	if response, failure := router.executeMatch(context.Background(), routedRequest); response != nil || failure == nil {
+		t.Fatalf("current route did not consume the real service client: response=%+v failure=%+v", response, failure)
+	}
+	if observed != selected {
+		t.Fatalf("current route used %q, want %q", observed, selected)
 	}
 }
 
@@ -230,5 +260,38 @@ func TestPhase258HistoricalV116Dispatch(t *testing.T) {
 		if actual := hex.EncodeToString(sum[:]); actual != expectedSHA256 {
 			t.Fatalf("historical v1.16 bytes changed for %s: %s", path, actual)
 		}
+	}
+
+	request := validRuntimeServiceRequestForTest()
+	observed := ""
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, incoming *http.Request) {
+		defer incoming.Body.Close()
+		payload, err := io.ReadAll(incoming.Body)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var envelope map[string]any
+		if err := json.Unmarshal(payload, &envelope); err != nil {
+			t.Fatal(err)
+		}
+		observed, _ = envelope["contractVersion"].(string)
+		writeRuntimeServiceTestJSON(t, writer, runtimeServiceResponse{
+			ContractVersion: runtimeExecutionServiceVersion,
+			OK: false, Kind: "systemFailure", RequestID: request.RequestID,
+			MatchID: request.Match.MatchID, RuntimeABIVersion: strategyRuntimeABIVersion,
+			SystemFailure: &runtimeServiceFailure{Code: "EVIDENCE_UNVERIFIABLE", Retryable: false},
+		})
+	}))
+	defer server.Close()
+	router := newRuntimeServiceExecutionRouter(server.URL)
+	router.currentContractVersion = func() string { return runtimeExecutionServiceVersionV117 }
+	if response, failure := router.executeMatch(context.Background(), runtimeServiceExecutionRequest{
+		ContractVersion: runtimeExecutionServiceVersion,
+		V116:            &request,
+	}); response != nil || failure == nil {
+		t.Fatalf("historical route was not executed: response=%+v failure=%+v", response, failure)
+	}
+	if observed != runtimeExecutionServiceVersion {
+		t.Fatalf("historical dispatch drifted to %q", observed)
 	}
 }
