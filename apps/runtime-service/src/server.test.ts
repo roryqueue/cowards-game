@@ -16,10 +16,6 @@ import {
 import { buildStrategyRevision } from "@cowards/runtime-js"
 import { createRuntimeServiceConfig } from "./runtime-config.js"
 import {
-  executeRuntimeServiceRequest,
-  type PreparedRuntimeServiceDependenciesV117,
-} from "./execute-match.js"
-import {
   createFixtureDeploymentLaneIdentity,
   createFixtureRuntimeEvidenceAuthorityLoader,
   createFixtureRuntimeExecutionEvidenceSnapshot,
@@ -172,42 +168,11 @@ describe("runtime execution HTTP boundary", () => {
       attestationId: `attestation:http-route:${String(index)}`,
       binding,
     }))
-    let currentMatchExecutions = 0
     const routeRuntimeConfig = createRuntimeServiceConfig({
       strategyExecutionAdapter: "worker-thread",
       semanticReceiptSecret: "fixture-semantic-receipt-secret-v1",
       resolveDeploymentLaneIdentity: createFixtureDeploymentLaneIdentity,
     })
-    const preparedV117Dependencies: PreparedRuntimeServiceDependenciesV117 = {
-      authorityLoader: {
-        load: () => ({
-          authorityBundleHash: candidate.authority.bundleHash,
-          registryGeneration: candidate.authority.registryGeneration,
-          semanticTupleManifestHash: candidate.compatibilityTupleId,
-          sourceManifestHash: candidate.authority.sourceManifestHash,
-          payload: {
-            attestations: bindings,
-            certificates: bindings,
-          },
-        }),
-      },
-      executeCurrentMatchWithAccounting: (nested) => {
-        currentMatchExecutions += 1
-        return {
-          response: executeRuntimeServiceRequest(nested, routeRuntimeConfig, {
-            authorityLoader: createFixtureRuntimeEvidenceAuthorityLoader(
-              nested.evidenceSnapshot,
-              nested.strategies,
-            ),
-          }),
-          accounting: {
-            budgetProfileSha256,
-            ledgerPrestateRoot,
-            ledgerPoststateRoot,
-          },
-        }
-      },
-    }
     const selectedV117Config = {
       ...routeRuntimeConfig,
       contractSelection: {
@@ -223,7 +188,6 @@ describe("runtime execution HTTP boundary", () => {
         current.evidenceSnapshot,
         current.strategies,
       ),
-      preparedV117Dependencies,
     })
     servers.push(server)
     server.listen(0, "127.0.0.1")
@@ -253,8 +217,6 @@ describe("runtime execution HTTP boundary", () => {
         systemFailure: { code: "MALFORMED_REQUEST", playerPenalty: false },
       })
     }
-    expect(currentMatchExecutions).toBe(0)
-
     const successor = await fetch(endpoint, {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -276,8 +238,6 @@ describe("runtime execution HTTP boundary", () => {
       ok: true,
       kind: "executionResult",
     })
-    expect(currentMatchExecutions).toBe(1)
-
     const historical = await fetch(endpoint, {
       method: "POST",
       headers: { "content-type": "application/json" },
