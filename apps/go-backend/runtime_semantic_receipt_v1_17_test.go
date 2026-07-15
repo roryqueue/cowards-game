@@ -30,6 +30,7 @@ func TestPhase258RuntimeSemanticReceiptV117RejectsIncompleteSignedClaims(t *test
 		{"empty request id", func(receipt *runtimeSemanticReceiptV117) { receipt.RequestID = "" }},
 		{"empty match id", func(receipt *runtimeSemanticReceiptV117) { receipt.MatchID = "" }},
 		{"floating generation", func(receipt *runtimeSemanticReceiptV117) { receipt.RegistryGeneration = "01" }},
+		{"unsafe generation", func(receipt *runtimeSemanticReceiptV117) { receipt.RegistryGeneration = "9999999999999999" }},
 		{"negative count", func(receipt *runtimeSemanticReceiptV117) { receipt.RuntimeViolationEventCount = -1 }},
 		{"unsafe count", func(receipt *runtimeSemanticReceiptV117) { receipt.RuntimeViolationEventCount = 9_007_199_254_740_992 }},
 	}

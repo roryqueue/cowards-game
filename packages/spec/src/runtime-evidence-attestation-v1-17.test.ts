@@ -234,6 +234,34 @@ describe("runtime evidence v1.17 frozen contract", () => {
 
   it.each([
     [
+      "unsafe generation",
+      (attestation: RuntimeEvidenceAttestationV117) => {
+        attestation.registryGeneration = "9999999999999999"
+      },
+    ],
+    [
+      "multibyte pin overflow",
+      (attestation: RuntimeEvidenceAttestationV117) => {
+        attestation.graph.exactPins.reportedVersion = "é".repeat(512)
+        const { graphSha256: _old, ...graph } = attestation.graph
+        attestation.graph.graphSha256 = hashRuntimeEvidenceGraphV117(graph)
+      },
+    ],
+  ] as const)("rejects %s before import", (_name, mutate) => {
+    const source = buildFixture()
+    const attacked = resign(source, mutate)
+    expect(() =>
+      verifyRuntimeEvidenceAttestationV117({
+        mode: "fixture",
+        ...attacked,
+        verificationInstant: "2026-07-14T12:00:00.000Z",
+        trustedProducers: [attacked.producer],
+      }),
+    ).toThrowError(RuntimeEvidenceAttestationV117Error)
+  })
+
+  it.each([
+    [
       "cycle",
       "GRAPH_SCHEMA",
       (graph: MutableGraphV117) =>

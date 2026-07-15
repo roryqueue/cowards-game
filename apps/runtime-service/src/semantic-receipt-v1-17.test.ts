@@ -14,13 +14,19 @@ import {
 const root = path.resolve(import.meta.dirname, "../../..")
 const request = JSON.parse(
   readFileSync(
-    path.join(root, "packages/spec/artifacts/runtime-execution-service-request.v1.17.candidate.json"),
+    path.join(
+      root,
+      "packages/spec/artifacts/runtime-execution-service-request.v1.17.candidate.json",
+    ),
     "utf8",
   ),
 ) as RuntimeExecutionServiceRequestV117
 const response = JSON.parse(
   readFileSync(
-    path.join(root, "packages/spec/artifacts/runtime-execution-service-response.v1.17.candidate.wire.json"),
+    path.join(
+      root,
+      "packages/spec/artifacts/runtime-execution-service-response.v1.17.candidate.wire.json",
+    ),
     "utf8",
   ),
 ) as RuntimeExecutionServiceSuccessResponseV117
@@ -47,7 +53,8 @@ describe("runtime semantic receipt v1.17", () => {
       finalState: response.result.finalState,
       outcome: response.result.outcome,
       ledgerPoststateRoot: response.result.ledgerPoststateRoot,
-      reconstructedTerminalStateHash: response.result.semanticReceipt.reconstructedTerminalStateHash,
+      reconstructedTerminalStateHash:
+        response.result.semanticReceipt.reconstructedTerminalStateHash,
       runtimeViolationEventCount: response.result.runtimeViolationEventCount,
       secret,
     })
@@ -55,8 +62,18 @@ describe("runtime semantic receipt v1.17", () => {
   })
 
   it.each([
-    ["request graph", (candidate: RuntimeExecutionServiceRequestV117) => { candidate.entrants.bottom.evidenceGraphRoot = `sha256:${"f".repeat(64)}` }],
-    ["request budget", (candidate: RuntimeExecutionServiceRequestV117) => { candidate.accounting.budgetProfileSha256 = `sha256:${"f".repeat(64)}` }],
+    [
+      "request graph",
+      (candidate: RuntimeExecutionServiceRequestV117) => {
+        candidate.entrants.bottom.evidenceGraphRoot = `sha256:${"f".repeat(64)}`
+      },
+    ],
+    [
+      "request budget",
+      (candidate: RuntimeExecutionServiceRequestV117) => {
+        candidate.accounting.budgetProfileSha256 = `sha256:${"f".repeat(64)}`
+      },
+    ],
   ] as const)("rejects a signed-looking %s substitution", (_name, mutate) => {
     const tampered = globalThis.structuredClone(request)
     mutate(tampered)
@@ -75,12 +92,19 @@ describe("runtime semantic receipt v1.17", () => {
 
     const invocation = JSON.parse(
       readFileSync(
-        path.join(root, "packages/spec/artifacts/runtime-invocation-response.v1.17.candidate.wire.json"),
+        path.join(
+          root,
+          "packages/spec/artifacts/runtime-invocation-response.v1.17.candidate.wire.json",
+        ),
         "utf8",
       ),
     )
     expect(() =>
-      verifyRuntimeSemanticReceiptV117({ request, response: invocation, secret }),
+      verifyRuntimeSemanticReceiptV117({
+        request,
+        response: invocation,
+        secret,
+      }),
     ).toThrow(/unavailable/iu)
   })
 
@@ -97,7 +121,9 @@ describe("runtime semantic receipt v1.17", () => {
         secret,
       }),
     ).toThrow("Runtime semantic receipt v1.17 is unavailable.")
-    const extra = globalThis.structuredClone(response) as RuntimeExecutionServiceSuccessResponseV117 & {
+    const extra = globalThis.structuredClone(
+      response,
+    ) as RuntimeExecutionServiceSuccessResponseV117 & {
       result: RuntimeExecutionServiceSuccessResponseV117["result"] & {
         diagnostics: { hostPath: string }
       }
@@ -106,5 +132,31 @@ describe("runtime semantic receipt v1.17", () => {
     expect(() =>
       verifyRuntimeSemanticReceiptV117({ request, response: extra, secret }),
     ).toThrow("Runtime semantic receipt v1.17 is unavailable.")
+  })
+
+  it("rejects an unsafe registry generation at issue and verification boundaries", () => {
+    const unsafeRequest = globalThis.structuredClone(request)
+    unsafeRequest.authority.registryGeneration = "9999999999999999"
+    expect(() => {
+      const semanticReceipt = issueRuntimeSemanticReceiptV117({
+        request: unsafeRequest,
+        chronicle: response.result.chronicle,
+        finalState: response.result.finalState,
+        outcome: response.result.outcome,
+        ledgerPoststateRoot: response.result.ledgerPoststateRoot,
+        reconstructedTerminalStateHash:
+          response.result.semanticReceipt.reconstructedTerminalStateHash,
+        runtimeViolationEventCount: response.result.runtimeViolationEventCount,
+        secret,
+      })
+      verifyRuntimeSemanticReceiptV117({
+        request: unsafeRequest,
+        response: {
+          ...response,
+          result: { ...response.result, semanticReceipt },
+        },
+        secret,
+      })
+    }).toThrow("Runtime semantic receipt v1.17 is unavailable.")
   })
 })

@@ -247,6 +247,12 @@ describe("runtime evidence authority bundle", () => {
       },
     )
     expect(inspected.payload.certificates[0]?.binding).toEqual(binding)
+    expect(() =>
+      encodeRuntimeEvidenceAuthorityPayloadV117({
+        ...payload,
+        registryGeneration: "9999999999999999",
+      }),
+    ).toThrow(/generation/iu)
     const confusedPayload: RuntimeEvidenceAuthorityPayloadV117 =
       globalThis.structuredClone(payload)
     confusedPayload.attestations[0]!.trustDomain = "production"
