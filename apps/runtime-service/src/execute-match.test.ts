@@ -19,6 +19,9 @@ import {
   createRuntimeInvocationExecutionReceiptV117,
   createRuntimeInvocationTraceV117,
   encodeCanonicalJson,
+  hashCanonicalIdentity,
+  hashExecutableLaneIdentity,
+  hashRuntimeIdentityManifest,
   serializeRuntimeInvocationRequestV117,
   serializeRuntimeInvocationResponseV117,
   type AuthenticatedRuntimeInvocationRequestV117,
@@ -57,6 +60,12 @@ import {
   RuntimeServiceConfigError,
 } from "./runtime-config.js"
 import { admitStrategyPayloadBytesV117 } from "./server.js"
+import {
+  SUCCESSOR_RUNTIME_IDENTITY_TEMPLATE_DOMAINS_V117,
+  SUCCESSOR_RUNTIME_IDENTITY_TEMPLATE_PROFILE_V117,
+  SUCCESSOR_RUNTIME_IDENTITY_TEMPLATE_SCHEMA_V117,
+  composeSuccessorRuntimeIdentityV117,
+} from "./successor-runtime-identity.js"
 
 const runtimeConfig = createRuntimeServiceConfig({
   strategyExecutionAdapter: "worker-thread",
@@ -93,6 +102,69 @@ const hash = (character: string): `sha256:${string}` =>
 
 const sha256 = (bytes: Uint8Array): `sha256:${string}` =>
   `sha256:${createHash("sha256").update(bytes).digest("hex")}`
+
+const preparedSuccessorTemplate = (() => {
+  const bindings = SUCCESSOR_RUNTIME_IDENTITY_TEMPLATE_DOMAINS_V117.map(
+    (domain) => ({
+      domain,
+      publicId:
+        domain === "canonicalJsonProfile"
+          ? "canonical-json-v1.1"
+          : domain === "containmentPolicy"
+            ? "fixture-package-none-policy"
+            : `fixture.${domain}.v1.17`,
+      sha256:
+        domain === "budgetProfile"
+          ? RUNTIME_ABI_V1_17_BUDGET_PROFILE_SHA256.slice("sha256:".length)
+          : hashCanonicalIdentity(domain, [
+              Buffer.from(`fixture:${domain}:v1.17`, "utf8"),
+            ]),
+    }),
+  )
+  const binding = (domain: (typeof SUCCESSOR_RUNTIME_IDENTITY_TEMPLATE_DOMAINS_V117)[number]) =>
+    bindings.find((candidate) => candidate.domain === domain)!
+  const exactPins = [
+    ["runtimeExecutableDigest", `sha256:${binding("runtimeExecutable").sha256}`],
+    ["reportedVersion", "fixture-runtime-v1"],
+    ["targetAbi", "fixture-target-abi"],
+    ["compilerFlags", hash("5")],
+    ["adapterBuildDigest", `sha256:${binding("adapterBuild").sha256}`],
+    ["standardLibraryOrSysrootDigest", `sha256:${binding("sysrootStdlib").sha256}`],
+    ["containmentPolicyId", binding("containmentPolicy").publicId],
+    ["budgetProfileSha256", RUNTIME_ABI_V1_17_BUDGET_PROFILE_SHA256],
+    ["canonicalJsonProfileId", "canonical-json-v1.1"],
+    ["behaviorSettingsHash", hash("6")],
+  ] as const
+  return {
+    schemaVersion: SUCCESSOR_RUNTIME_IDENTITY_TEMPLATE_SCHEMA_V117,
+    profile: SUCCESSOR_RUNTIME_IDENTITY_TEMPLATE_PROFILE_V117,
+    bindings,
+    exactPins,
+  }
+})()
+
+const preparedSuccessorIdentity = (revision: StrategyRevision) => {
+  const deployed = createFixtureDeploymentLaneIdentity(revision)
+  const composed = composeSuccessorRuntimeIdentityV117({
+    revision,
+    deployed,
+    template: preparedSuccessorTemplate,
+  })
+  if (composed === undefined) throw new Error("successor identity unavailable")
+  return {
+    template: preparedSuccessorTemplate,
+    request: {
+      strategyRevisionId: revision.id,
+      laneIdentityHash:
+        `sha256:${hashExecutableLaneIdentity(deployed)}` as const,
+      sourceIdentity: composed.sourceIdentity,
+      identityManifestRoot:
+        `sha256:${hashRuntimeIdentityManifest(composed.identityManifest)}` as const,
+      evidenceGraphRoot: hash(revision.id.endsWith("bottom") ? "2" : "4"),
+      exactPins: preparedSuccessorTemplate.exactPins,
+    },
+  }
+}
 
 const candidateBrainInput = (): SoldierBrainInput => {
   const self = {
@@ -488,14 +560,23 @@ describe("runtime execution service", () => {
   it("prepares v1.17 by wrapping the actual current Match path with exact authority and ledger roots", () => {
     const currentRequest = requestFor()
     const match = JSON.parse(JSON.stringify(currentRequest)) as JsonValue
-    const bottomRoots = {
-      identityManifestRoot: `sha256:${"1".repeat(64)}`,
-      evidenceGraphRoot: `sha256:${"2".repeat(64)}`,
-    } as const
-    const topRoots = {
-      identityManifestRoot: `sha256:${"3".repeat(64)}`,
-      evidenceGraphRoot: `sha256:${"4".repeat(64)}`,
-    } as const
+    const bottomSuccessor = preparedSuccessorIdentity(
+      currentRequest.strategies.bottom,
+    )
+    const topSuccessor = preparedSuccessorIdentity(currentRequest.strategies.top)
+    const bottomRoots = bottomSuccessor.request
+    const topRoots = topSuccessor.request
+    const preparedRuntimeConfig = createRuntimeServiceConfig({
+      strategyExecutionAdapter: "worker-thread",
+      semanticReceiptSecret: "fixture-semantic-receipt-secret-v1",
+      resolveDeploymentLaneIdentity: createFixtureDeploymentLaneIdentity,
+      resolveSuccessorRuntimeIdentityTemplate: (revision) =>
+        revision.id === currentRequest.strategies.bottom.id
+          ? bottomSuccessor.template
+          : revision.id === currentRequest.strategies.top.id
+            ? topSuccessor.template
+            : undefined,
+    })
     const budgetProfileSha256 = RUNTIME_ABI_V1_17_BUDGET_PROFILE_SHA256
     const ledgerPrestateRoot =
       RUNTIME_INVOCATION_V1_17_INITIAL_EXECUTION_LEDGER_ROOT
@@ -508,6 +589,11 @@ describe("runtime execution service", () => {
       compatibilityTupleId:
         currentRequest.evidenceSnapshot.compatibility.tupleId,
       authority: {
+        bundleHash: hash("a"),
+        sourceManifestHash: hash("b"),
+        registryGeneration: "17",
+      },
+      legacyAuthority: {
         bundleHash: currentRequest.evidenceSnapshot.authorityBundleHash,
         sourceManifestHash:
           currentRequest.evidenceSnapshot.publication.sourceManifestHash,
@@ -519,7 +605,11 @@ describe("runtime execution service", () => {
     } as const
     const bindings = [bottomRoots, topRoots].map((roots, index) => ({
       attestationId: `attestation:prepared:${String(index)}`,
-      binding: roots,
+      binding: {
+        identityManifestRoot: roots.identityManifestRoot,
+        evidenceGraphRoot: roots.evidenceGraphRoot,
+        exactPins: roots.exactPins,
+      },
     }))
     const mountedAuthority = {
       authorityBundleHash: candidateRequest.authority.bundleHash,
@@ -562,7 +652,7 @@ describe("runtime execution service", () => {
     expect(
       executePreparedRuntimeServiceRequestV117(
         swappedRootsRequest,
-        runtimeConfig,
+        preparedRuntimeConfig,
         dependencies,
       ),
     ).toMatchObject({
@@ -605,7 +695,7 @@ describe("runtime execution service", () => {
       executePreparedRuntimeServiceRequestV117(
         {
           ...candidateRequest,
-          authority: {
+          legacyAuthority: {
             bundleHash: countedContext.evidenceSnapshot.authorityBundleHash,
             sourceManifestHash:
               countedContext.evidenceSnapshot.publication.sourceManifestHash,
@@ -614,7 +704,7 @@ describe("runtime execution service", () => {
           },
           match: countedMatch as unknown as JsonValue,
         },
-        runtimeConfig,
+        preparedRuntimeConfig,
         countedDependencies,
       ),
     ).toMatchObject({
@@ -625,7 +715,7 @@ describe("runtime execution service", () => {
 
     const response = executePreparedRuntimeServiceRequestV117(
       candidateRequest,
-      runtimeConfig,
+      preparedRuntimeConfig,
       dependencies,
     )
     expect(executions).toBe(1)
@@ -651,7 +741,7 @@ describe("runtime execution service", () => {
           sourceManifestHash: `sha256:${"8".repeat(64)}`,
         },
       },
-      runtimeConfig,
+      preparedRuntimeConfig,
       dependencies,
     )
     expect(mismatch).toMatchObject({

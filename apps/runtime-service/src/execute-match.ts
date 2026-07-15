@@ -17,7 +17,6 @@ import {
   createAuthenticatedRuntimeInvocationRequestV117,
   createRuntimeAbiV117ExecutionLedger,
   createRuntimeInvocationBudgetV117,
-  hashCanonicalIdentity,
   hashExecutableLaneIdentity,
   hashRuntimeIdentityManifest,
   runtimeInvocationExecutionLedgerPoststateRootV117,
@@ -65,7 +64,6 @@ import {
   type StrategyRuntime,
 } from "@cowards/engine"
 import type { RuntimeServiceConfig } from "./runtime-config.js"
-import type { SuccessorRuntimeIdentityV117 } from "./runtime-config.js"
 import { publicSystemFailureMessage, redactedDiagnostics } from "./redaction.js"
 import type {
   RuntimeEvidenceAuthorityLoader,
@@ -74,6 +72,10 @@ import type {
 } from "./runtime-evidence-authority.js"
 import { issueRuntimeSemanticReceipt } from "./semantic-receipt.js"
 import { issueRuntimeSemanticReceiptV117 } from "./semantic-receipt-v1-17.js"
+import {
+  composeSuccessorRuntimeIdentityV117,
+  type SuccessorRuntimeIdentityTemplateV117,
+} from "./successor-runtime-identity.js"
 
 export interface CandidateRuntimeInvocationInputV117<
   TValue = JsonValue,
@@ -1324,70 +1326,29 @@ const actualEntrantBindingMatchesV117 = (input: {
   requested: RuntimeExecutionEntrantV117
   revision: StrategyRevision
   deployed: ExecutableLaneIdentity
-  successorIdentity: SuccessorRuntimeIdentityV117 | undefined
+  template: SuccessorRuntimeIdentityTemplateV117 | undefined
 }): boolean => {
-  const { requested, revision, deployed, successorIdentity } = input
-  const artifact = [
-    revision.metadata.sourceArtifact,
-    revision.metadata.compiledArtifact,
-  ].find(
-    (candidate) =>
-      candidate !== undefined && candidate.hash === deployed.artifactSha256,
-  )
+  const { requested, revision, deployed, template } = input
   if (
     requested.strategyRevisionId !== revision.id ||
     requested.laneIdentityHash !==
       `sha256:${hashExecutableLaneIdentity(deployed)}` ||
-    successorIdentity === undefined ||
-    !isDeepStrictEqual(requested.exactPins, successorIdentity.exactPins) ||
-    artifact === undefined ||
-    artifact.bytesBase64 === undefined
+    template === undefined ||
+    !isDeepStrictEqual(requested.exactPins, template.exactPins)
   ) {
     return false
   }
   try {
-    const originalBytes = new TextEncoder().encode(revision.source)
-    const normalizedBytes = new TextEncoder().encode(
-      normalizeSourceV117(revision.source),
-    )
-    const artifactBytes = Buffer.from(artifact.bytesBase64, "base64")
-    const sourceIdentity = {
-      originalSourceSha256: sha256IdentityV117(originalBytes),
-      normalizedSourceSha256: sha256IdentityV117(normalizedBytes),
-      artifactSha256: sha256IdentityV117(artifactBytes),
-    }
-    const bindings = new Map(
-      successorIdentity.identityManifest.bindings.map((binding) => [
-        binding.domain,
-        binding,
-      ]),
-    )
-    const pins = new Map(requested.exactPins)
+    const composed = composeSuccessorRuntimeIdentityV117({
+      revision,
+      deployed,
+      template,
+    })
     return (
-      isDeepStrictEqual(requested.sourceIdentity, sourceIdentity) &&
+      composed !== undefined &&
+      isDeepStrictEqual(requested.sourceIdentity, composed.sourceIdentity) &&
       requested.identityManifestRoot ===
-        `sha256:${hashRuntimeIdentityManifest(successorIdentity.identityManifest)}` &&
-      bindings.get("originalSource")?.sha256 ===
-        hashCanonicalIdentity("originalSource", [originalBytes]) &&
-      bindings.get("normalizedSource")?.sha256 ===
-        hashCanonicalIdentity("normalizedSource", [normalizedBytes]) &&
-      bindings.get("artifact")?.sha256 ===
-        hashCanonicalIdentity("artifact", [artifactBytes]) &&
-      pins.get("runtimeExecutableDigest") ===
-        `sha256:${bindings.get("runtimeExecutable")?.sha256}` &&
-      pins.get("adapterBuildDigest") ===
-        `sha256:${bindings.get("adapterBuild")?.sha256}` &&
-      pins.get("standardLibraryOrSysrootDigest") ===
-        `sha256:${bindings.get("sysrootStdlib")?.sha256}` &&
-      pins.get("containmentPolicyId") ===
-        bindings.get("containmentPolicy")?.publicId &&
-      pins.get("budgetProfileSha256") ===
-        `sha256:${bindings.get("budgetProfile")?.sha256}` &&
-      pins.get("budgetProfileSha256") ===
-        RUNTIME_ABI_V1_17_BUDGET_PROFILE_SHA256 &&
-      pins.get("canonicalJsonProfileId") ===
-        bindings.get("canonicalJsonProfile")?.publicId &&
-      pins.get("canonicalJsonProfileId") === "canonical-json-v1.1"
+        `sha256:${hashRuntimeIdentityManifest(composed.identityManifest)}`
     )
   } catch {
     return false
@@ -1485,8 +1446,8 @@ export const executePreparedRuntimeServiceRequestV117 = (
         requested: request.entrants[side],
         revision,
         deployed,
-        successorIdentity:
-          runtimeConfig.resolveSuccessorRuntimeIdentity(revision),
+        template:
+          runtimeConfig.resolveSuccessorRuntimeIdentityTemplate(revision),
       })
     ) {
       return false

@@ -1,5 +1,4 @@
 import { Buffer } from "node:buffer"
-import { createHash } from "node:crypto"
 import { once } from "node:events"
 import type { AddressInfo } from "node:net"
 import { Readable } from "node:stream"
@@ -19,6 +18,7 @@ import {
   encodeCanonicalJson,
   hashCanonicalIdentity,
   hashExecutableLaneIdentity,
+  hashRuntimeIdentityManifest,
   runtimeInvocationExecutionLedgerPoststateRootV117,
   serializeRuntimeInvocationResponseV117,
   type JsonValue,
@@ -40,114 +40,87 @@ import {
   readBodyBytes,
 } from "./server.js"
 import { verifyRuntimeSemanticReceiptV117 } from "./semantic-receipt-v1-17.js"
+import {
+  SUCCESSOR_RUNTIME_IDENTITY_TEMPLATE_DOMAINS_V117,
+  SUCCESSOR_RUNTIME_IDENTITY_TEMPLATE_PROFILE_V117,
+  SUCCESSOR_RUNTIME_IDENTITY_TEMPLATE_SCHEMA_V117,
+  composeSuccessorRuntimeIdentityV117,
+} from "./successor-runtime-identity.js"
 
 process.env.COWARDS_PROVIDER_VALIDATION_SECRET =
   "cowards-provider-validation-test-secret-v1.33"
 
 const PRIVATE_ARTIFACT_TOKEN = "cowards-private-artifact-test-token-v1.35"
 
-const IDENTITY_DOMAINS_V117 = [
-  "originalSource",
-  "normalizedSource",
-  "normalizationPolicy",
-  "artifact",
-  "artifactManifest",
-  "runtimeExecutable",
-  "compilerExecutable",
-  "sysrootStdlib",
-  "adapterBuild",
-  "semanticTuple",
-  "containmentPolicy",
-  "conformanceCorpus",
-  "budgetProfile",
-  "canonicalJsonProfile",
-  "evidenceBundle",
-] as const
-
-const rawSha256 = (bytes: Uint8Array): `sha256:${string}` =>
-  `sha256:${createHash("sha256").update(bytes).digest("hex")}`
-
-const successorEntrant = (
-  revision: ReturnType<typeof buildStrategyRevision>,
-  graphDigit: string,
-) => {
-  const sourceBytes = Buffer.from(revision.source, "utf8")
-  const normalizedBytes = Buffer.from(
-    revision.source.replaceAll("\r\n", "\n").replaceAll("\r", "\n"),
-    "utf8",
-  )
-  const artifactBytes = Buffer.from(
-    revision.metadata.sourceArtifact!.bytesBase64!,
-    "base64",
-  )
-  const identityManifest = {
-    schemaVersion: "runtime-identity-manifest-v1" as const,
-    profile: "runtime-identity-v1" as const,
-    bindings: IDENTITY_DOMAINS_V117.map((domain) => {
-      const bytes =
-        domain === "originalSource"
-          ? sourceBytes
-          : domain === "normalizedSource"
-            ? normalizedBytes
-            : domain === "artifact"
-              ? artifactBytes
-              : Buffer.from(`fixture:${domain}:v1.17`, "utf8")
-      return {
-        domain,
-        publicId:
-          domain === "canonicalJsonProfile"
-            ? "canonical-json-v1.1"
-            : domain === "containmentPolicy"
-              ? "fixture.containment.v1.17"
-              : `fixture.${domain}.v1.17`,
-        sha256:
-          domain === "budgetProfile"
-            ? RUNTIME_ABI_V1_17_BUDGET_PROFILE_SHA256.slice("sha256:".length)
-            : hashCanonicalIdentity(domain, [bytes]),
-      }
+const successorTemplate = (() => {
+  const bindings = SUCCESSOR_RUNTIME_IDENTITY_TEMPLATE_DOMAINS_V117.map(
+    (domain) => ({
+      domain,
+      publicId:
+        domain === "canonicalJsonProfile"
+          ? "canonical-json-v1.1"
+          : domain === "containmentPolicy"
+            ? "fixture-package-none-policy"
+            : `fixture.${domain}.v1.17`,
+      sha256:
+        domain === "budgetProfile"
+          ? RUNTIME_ABI_V1_17_BUDGET_PROFILE_SHA256.slice("sha256:".length)
+          : hashCanonicalIdentity(domain, [
+              Buffer.from(`fixture:${domain}:v1.17`, "utf8"),
+            ]),
     }),
-  }
-  const encoded = encodeCanonicalJson(identityManifest, {
-    context: "canonical-manifest",
-  })
-  if (!encoded.ok) throw new Error(encoded.error.code)
-  const manifestBinding = (domain: (typeof IDENTITY_DOMAINS_V117)[number]) =>
-    identityManifest.bindings.find((binding) => binding.domain === domain)!
+  )
+  const binding = (domain: (typeof SUCCESSOR_RUNTIME_IDENTITY_TEMPLATE_DOMAINS_V117)[number]) =>
+    bindings.find((candidate) => candidate.domain === domain)!
   const exactPins = [
     [
       "runtimeExecutableDigest",
-      `sha256:${manifestBinding("runtimeExecutable").sha256}`,
+      `sha256:${binding("runtimeExecutable").sha256}`,
     ],
     ["reportedVersion", "node-v26.0.0"],
     ["targetAbi", "darwin-arm64"],
     ["compilerFlags", `sha256:${"6".repeat(64)}`],
     [
       "adapterBuildDigest",
-      `sha256:${manifestBinding("adapterBuild").sha256}`,
+      `sha256:${binding("adapterBuild").sha256}`,
     ],
     [
       "standardLibraryOrSysrootDigest",
-      `sha256:${manifestBinding("sysrootStdlib").sha256}`,
+      `sha256:${binding("sysrootStdlib").sha256}`,
     ],
-    ["containmentPolicyId", manifestBinding("containmentPolicy").publicId],
+    ["containmentPolicyId", binding("containmentPolicy").publicId],
     ["budgetProfileSha256", RUNTIME_ABI_V1_17_BUDGET_PROFILE_SHA256],
-    ["canonicalJsonProfileId", manifestBinding("canonicalJsonProfile").publicId],
+    ["canonicalJsonProfileId", binding("canonicalJsonProfile").publicId],
     ["behaviorSettingsHash", `sha256:${"9".repeat(64)}`],
   ] as const
+  return {
+    schemaVersion: SUCCESSOR_RUNTIME_IDENTITY_TEMPLATE_SCHEMA_V117,
+    profile: SUCCESSOR_RUNTIME_IDENTITY_TEMPLATE_PROFILE_V117,
+    bindings,
+    exactPins,
+  }
+})()
+
+const successorEntrant = (
+  revision: ReturnType<typeof buildStrategyRevision>,
+  graphDigit: string,
+) => {
+  const deployed = createFixtureDeploymentLaneIdentity(revision)
+  const composed = composeSuccessorRuntimeIdentityV117({
+    revision,
+    deployed,
+    template: successorTemplate,
+  })
+  if (composed === undefined) throw new Error("successor identity unavailable")
   return {
     strategyRevisionId: revision.id,
     laneIdentityHash:
       `sha256:${hashExecutableLaneIdentity(createFixtureDeploymentLaneIdentity(revision))}` as const,
-    sourceIdentity: {
-      originalSourceSha256: rawSha256(sourceBytes),
-      normalizedSourceSha256: rawSha256(normalizedBytes),
-      artifactSha256: rawSha256(artifactBytes),
-    },
-    identityManifest,
+    sourceIdentity: composed.sourceIdentity,
     identityManifestRoot:
-      `sha256:${hashCanonicalIdentity("evidenceBundle", [encoded.bytes])}` as const,
+      `sha256:${hashRuntimeIdentityManifest(composed.identityManifest)}` as const,
     evidenceGraphRoot: `sha256:${graphDigit.repeat(64)}` as const,
-    exactPins,
+    exactPins: successorTemplate.exactPins,
   }
 }
 
@@ -221,11 +194,11 @@ describe("runtime execution HTTP boundary", () => {
       soldierBrain() { return { action: { type: "TURN_TO_STONE" }, soldierMemory: {} } }
     }`
     const bottom = buildStrategyRevision({
-      source,
+      source: `${source}\n// entrant:bottom`,
       strategyId: "strategy:http-route:bottom",
     })
     const top = buildStrategyRevision({
-      source,
+      source: `${source}\n// entrant:top`,
       strategyId: "strategy:http-route:top",
     })
     const current = {
@@ -255,12 +228,8 @@ describe("runtime execution HTTP boundary", () => {
         top,
       }),
     }
-    const bottomSuccessorIdentity = successorEntrant(bottom, "2")
-    const topSuccessorIdentity = successorEntrant(top, "4")
-    const { identityManifest: _bottomManifest, ...bottomBinding } =
-      bottomSuccessorIdentity
-    const { identityManifest: _topManifest, ...topBinding } =
-      topSuccessorIdentity
+    const bottomBinding = successorEntrant(bottom, "2")
+    const topBinding = successorEntrant(top, "4")
     const budgetProfileSha256 = RUNTIME_ABI_V1_17_BUDGET_PROFILE_SHA256
     const ledgerPrestateRoot =
       RUNTIME_INVOCATION_V1_17_INITIAL_EXECUTION_LEDGER_ROOT
@@ -304,13 +273,7 @@ describe("runtime execution HTTP boundary", () => {
       strategyExecutionAdapter: "worker-thread",
       semanticReceiptSecret: "fixture-semantic-receipt-secret-v1",
       resolveDeploymentLaneIdentity: createFixtureDeploymentLaneIdentity,
-      resolveSuccessorRuntimeIdentity: (revision) => {
-        const entrant = successorEntrant(revision, "0")
-        return {
-          identityManifest: entrant.identityManifest,
-          exactPins: entrant.exactPins,
-        }
-      },
+      resolveSuccessorRuntimeIdentityTemplate: () => successorTemplate,
     })
     const selectedV117Config = {
       ...routeRuntimeConfig,
@@ -545,10 +508,19 @@ describe("runtime execution HTTP boundary", () => {
           ...candidate.entrants,
           bottom: {
             ...candidate.entrants.bottom,
-            sourceIdentity: {
-              ...candidate.entrants.bottom.sourceIdentity,
-              artifactSha256: `sha256:${"f".repeat(64)}`,
-            },
+            sourceIdentity: candidate.entrants.top.sourceIdentity,
+          },
+        },
+      },
+      {
+        ...candidate,
+        entrants: {
+          ...candidate.entrants,
+          bottom: {
+            ...candidate.entrants.bottom,
+            identityManifestRoot:
+              candidate.entrants.top.identityManifestRoot,
+            evidenceGraphRoot: candidate.entrants.top.evidenceGraphRoot,
           },
         },
       },

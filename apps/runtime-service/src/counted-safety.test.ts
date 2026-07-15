@@ -7,7 +7,11 @@ import { describe, expect, it, vi } from "vitest"
 import {
   DEFAULT_RUNTIME_LIMITS,
   INITIAL_BOUNDS,
+  RUNTIME_ABI_V1_17_BUDGET_PROFILE_SHA256,
   RUNTIME_EXECUTION_SERVICE_VERSION,
+  SUCCESSOR_RUNTIME_IDENTITY_TEMPLATE_DOMAINS_V117,
+  SUCCESSOR_RUNTIME_IDENTITY_TEMPLATE_PROFILE_V117,
+  SUCCESSOR_RUNTIME_IDENTITY_TEMPLATE_SCHEMA_V117,
   type ExecutableLaneIdentity,
   type RuntimeExecutionServiceRequest,
 } from "@cowards/spec"
@@ -29,6 +33,7 @@ import {
 import { createRuntimeServiceConfig } from "./runtime-config.js"
 import {
   DEPLOYMENT_LANE_REGISTRY_SCHEMA_VERSION,
+  parseDeploymentLaneRegistry,
   type DeploymentLaneProfile,
 } from "./deployment-lane-registry.js"
 import { runtimeServiceConfigFromEnvironment } from "./production-runtime-config.js"
@@ -272,6 +277,61 @@ const expectEvidenceFailure = (
 }
 
 describe("runtime-service counted safety", () => {
+  it("migrates successor registry identity to one immutable lane template and rejects the retired manifest key", () => {
+    const context = requestContext()
+    const request = requestWithProviderIdentity(context.request)
+    const registry = registryForRequest(request)
+    const bindings = SUCCESSOR_RUNTIME_IDENTITY_TEMPLATE_DOMAINS_V117.map(
+      (domain, index) => ({
+        domain,
+        publicId:
+          domain === "canonicalJsonProfile"
+            ? "canonical-json-v1.1"
+            : domain === "containmentPolicy"
+              ? registry.lanes[0]!.policyId
+              : `fixture.${domain}.v1.17`,
+        sha256:
+          domain === "budgetProfile"
+            ? RUNTIME_ABI_V1_17_BUDGET_PROFILE_SHA256.slice("sha256:".length)
+            : ((index + 1) % 16).toString(16).repeat(64),
+      }),
+    )
+    const binding = (domain: (typeof SUCCESSOR_RUNTIME_IDENTITY_TEMPLATE_DOMAINS_V117)[number]) =>
+      bindings.find((candidate) => candidate.domain === domain)!
+    const template = {
+      schemaVersion: SUCCESSOR_RUNTIME_IDENTITY_TEMPLATE_SCHEMA_V117,
+      profile: SUCCESSOR_RUNTIME_IDENTITY_TEMPLATE_PROFILE_V117,
+      bindings,
+      exactPins: [
+        ["runtimeExecutableDigest", `sha256:${binding("runtimeExecutable").sha256}`],
+        ["reportedVersion", "fixture-runtime-v1"],
+        ["targetAbi", "fixture-target-abi"],
+        ["compilerFlags", `sha256:${"a".repeat(64)}`],
+        ["adapterBuildDigest", `sha256:${binding("adapterBuild").sha256}`],
+        ["standardLibraryOrSysrootDigest", `sha256:${binding("sysrootStdlib").sha256}`],
+        ["containmentPolicyId", binding("containmentPolicy").publicId],
+        ["budgetProfileSha256", RUNTIME_ABI_V1_17_BUDGET_PROFILE_SHA256],
+        ["canonicalJsonProfileId", "canonical-json-v1.1"],
+        ["behaviorSettingsHash", `sha256:${"b".repeat(64)}`],
+      ],
+    }
+    const parsed = parseDeploymentLaneRegistry({
+      ...registry,
+      lanes: [{ ...registry.lanes[0]!, successorRuntimeIdentityTemplate: template }],
+    })
+    const installed = parsed.lanes[0]!.successorRuntimeIdentityTemplate!
+    expect(Object.isFrozen(installed)).toBe(true)
+    expect(Object.isFrozen(installed.bindings)).toBe(true)
+    expect(installed.bindings.every((candidate) => Object.isFrozen(candidate))).toBe(true)
+    expect(Object.isFrozen(installed.exactPins)).toBe(true)
+    expect(() =>
+      parseDeploymentLaneRegistry({
+        ...registry,
+        lanes: [{ ...registry.lanes[0]!, successorRuntimeIdentity: template }],
+      }),
+    ).toThrow("invalid fields")
+  })
+
   it("uses the production startup registry path for exact HTTP execution and rejects every identity component", async () => {
     expect(() =>
       runtimeServiceConfigFromEnvironment({
@@ -298,7 +358,7 @@ describe("runtime-service counted safety", () => {
           | "languageVersion"
           | "semanticTupleId"
           | "semanticTuple"
-          | "successorRuntimeIdentity"
+          | "successorRuntimeIdentityTemplate"
         >,
       ]
     > = [

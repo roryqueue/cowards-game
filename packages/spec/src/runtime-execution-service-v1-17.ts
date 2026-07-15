@@ -3,6 +3,9 @@ import { z } from "zod"
 import { encodeCanonicalJson } from "./canonical-json-encode.js"
 import { CanonicalJsonValueV117Schema } from "./runtime-payload-v1-17.js"
 import { RUNTIME_EVIDENCE_REQUIRED_EXACT_PINS_V1_17 } from "./runtime-evidence-v1-17.js"
+import type { CanonicalIdentityDomain } from "./canonical-identity-domains.js"
+import type { RuntimeEvidenceAuthorityExactPinV117 } from "./runtime-evidence-authority-bundle.js"
+import type { RuntimeIdentityBinding } from "./runtime-identity-manifest.js"
 import type { JsonValue } from "./types.js"
 
 export const RUNTIME_EXECUTION_SERVICE_VERSION_V1_17 =
@@ -15,6 +18,28 @@ export const RUNTIME_SEMANTIC_RECEIPT_PROFILE_V1_17 =
   "canonical-full-service-v1" as const
 export const RUNTIME_SEMANTIC_RECEIPT_KEY_ID_V1_17 =
   "runtime-service-semantic-receipt:v1.17" as const
+export const SUCCESSOR_RUNTIME_IDENTITY_TEMPLATE_SCHEMA_V117 =
+  "runtime-successor-identity-template-v1" as const
+export const SUCCESSOR_RUNTIME_IDENTITY_TEMPLATE_PROFILE_V117 =
+  "runtime-successor-lane-bindings-v1" as const
+export const SUCCESSOR_RUNTIME_IDENTITY_TEMPLATE_DOMAINS_V117 = Object.freeze([
+  "runtimeExecutable",
+  "compilerExecutable",
+  "sysrootStdlib",
+  "adapterBuild",
+  "semanticTuple",
+  "containmentPolicy",
+  "conformanceCorpus",
+  "budgetProfile",
+  "canonicalJsonProfile",
+] as const satisfies readonly CanonicalIdentityDomain[])
+
+export interface SuccessorRuntimeIdentityTemplateV117 {
+  schemaVersion: typeof SUCCESSOR_RUNTIME_IDENTITY_TEMPLATE_SCHEMA_V117
+  profile: typeof SUCCESSOR_RUNTIME_IDENTITY_TEMPLATE_PROFILE_V117
+  bindings: readonly RuntimeIdentityBinding[]
+  exactPins: readonly RuntimeEvidenceAuthorityExactPinV117[]
+}
 
 type Sha256Identity = `sha256:${string}`
 

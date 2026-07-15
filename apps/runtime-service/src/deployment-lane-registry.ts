@@ -3,15 +3,15 @@ import { createHash } from "node:crypto"
 import { readFileSync } from "node:fs"
 import {
   resolveCanonicalCompatibilityTuple,
-  parseRuntimeEvidenceAuthorityBindingV117,
-  parseRuntimeIdentityManifest,
   type CanonicalCompatibilityTuple,
   type ExecutableLaneIdentity,
   type StrategyRevision,
-  type RuntimeEvidenceAuthorityExactPinV117,
-  type RuntimeIdentityManifest,
 } from "@cowards/spec"
 import { RuntimeServiceConfigError } from "./runtime-config.js"
+import {
+  parseSuccessorRuntimeIdentityTemplateV117,
+  type SuccessorRuntimeIdentityTemplateV117,
+} from "./successor-runtime-identity.js"
 
 export const DEPLOYMENT_LANE_REGISTRY_SCHEMA_VERSION =
   "runtime-deployment-lane-registry-v1.37"
@@ -58,10 +58,7 @@ export interface DeploymentLaneProfile {
   buildId: string
   semanticTupleId: string
   semanticTuple: CanonicalCompatibilityTuple
-  successorRuntimeIdentity?: {
-    identityManifest: RuntimeIdentityManifest
-    exactPins: readonly RuntimeEvidenceAuthorityExactPinV117[]
-  }
+  successorRuntimeIdentityTemplate?: SuccessorRuntimeIdentityTemplateV117
 }
 
 export interface DeploymentLaneRegistry {
@@ -100,8 +97,8 @@ const parseProfile = (value: unknown, index: number): DeploymentLaneProfile => {
       ...PROFILE_STRING_FIELDS,
       "artifactKind",
       "semanticTuple",
-      ...(Object.hasOwn(value, "successorRuntimeIdentity")
-        ? (["successorRuntimeIdentity"] as const)
+      ...(Object.hasOwn(value, "successorRuntimeIdentityTemplate")
+        ? (["successorRuntimeIdentityTemplate"] as const)
         : []),
     ],
     `Deployment lane registry profile ${index}`,
@@ -127,36 +124,15 @@ const parseProfile = (value: unknown, index: number): DeploymentLaneProfile => {
       `Deployment lane registry profile ${index} semantic tuple is invalid.`,
     )
   }
-  let successorRuntimeIdentity:
-    | DeploymentLaneProfile["successorRuntimeIdentity"]
+  let successorRuntimeIdentityTemplate:
+    | DeploymentLaneProfile["successorRuntimeIdentityTemplate"]
     | undefined
-  if (Object.hasOwn(value, "successorRuntimeIdentity")) {
-    const candidate = value.successorRuntimeIdentity
-    if (!isRecord(candidate)) {
-      throw new RuntimeServiceConfigError(
-        `Deployment lane registry profile ${index} successor identity is invalid.`,
-      )
-    }
-    exactKeys(
-      candidate,
-      ["identityManifest", "exactPins"],
-      `Deployment lane registry profile ${index} successor identity`,
-    )
+  if (Object.hasOwn(value, "successorRuntimeIdentityTemplate")) {
     try {
-      const identityManifest = parseRuntimeIdentityManifest(
-        candidate.identityManifest as RuntimeIdentityManifest,
-      )
-      const binding = parseRuntimeEvidenceAuthorityBindingV117({
-        graphSchemaVersion: "runtime-evidence-graph-v1.17",
-        graphProfile: "runtime-identity-evidence-dag-v1",
-        identityManifestRoot: `sha256:${"0".repeat(64)}`,
-        evidenceGraphRoot: `sha256:${"0".repeat(64)}`,
-        exactPins: candidate.exactPins as readonly RuntimeEvidenceAuthorityExactPinV117[],
-      })
-      successorRuntimeIdentity = Object.freeze({
-        identityManifest,
-        exactPins: binding.exactPins,
-      })
+      successorRuntimeIdentityTemplate =
+        parseSuccessorRuntimeIdentityTemplateV117(
+          value.successorRuntimeIdentityTemplate as SuccessorRuntimeIdentityTemplateV117,
+        )
     } catch {
       throw new RuntimeServiceConfigError(
         `Deployment lane registry profile ${index} successor identity is invalid.`,
@@ -169,9 +145,9 @@ const parseProfile = (value: unknown, index: number): DeploymentLaneProfile => {
     ),
     artifactKind: value.artifactKind,
     semanticTuple: Object.freeze({ ...resolved.tuple }),
-    ...(successorRuntimeIdentity === undefined
+    ...(successorRuntimeIdentityTemplate === undefined
       ? {}
-      : { successorRuntimeIdentity }),
+      : { successorRuntimeIdentityTemplate }),
   }) as unknown as DeploymentLaneProfile
 }
 
@@ -321,10 +297,10 @@ export const createDeploymentLaneIdentityResolver = (
     })
   }
 
-export const createSuccessorRuntimeIdentityResolver = (
+export const createSuccessorRuntimeIdentityTemplateResolver = (
   registry: Readonly<DeploymentLaneRegistry>,
 ): ((revision: StrategyRevision) =>
-  | DeploymentLaneProfile["successorRuntimeIdentity"]
+  | DeploymentLaneProfile["successorRuntimeIdentityTemplate"]
   | undefined) => {
   const resolveLane = createDeploymentLaneIdentityResolver(registry)
   return (revision) => {
@@ -335,6 +311,6 @@ export const createSuccessorRuntimeIdentityResolver = (
         candidate.languageVersion === revision.runtime.language.version &&
         candidate.adapterId === revision.runtime.adapter.id &&
         candidate.adapterVersion === revision.runtime.adapter.version,
-    )?.successorRuntimeIdentity
+    )?.successorRuntimeIdentityTemplate
   }
 }
