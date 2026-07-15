@@ -52,7 +52,25 @@ describe("migrations", () => {
     expect(names).toContain(
       "0019_strategy_revision_source_identity_hardening.sql",
     )
+    expect(names).toContain("0020_runtime_evidence_v1_17_graph.sql")
     expect(names).toEqual([...names].sort())
+  })
+
+  it("adds an all-or-none immutable v1.17 graph binding without rewriting legacy rows", async () => {
+    const sql = await readFile(
+      new URL("0020_runtime_evidence_v1_17_graph.sql", migrationsDirectory),
+      "utf8",
+    )
+    for (const column of [
+      "graph_schema_version",
+      "graph_profile",
+      "identity_manifest_root",
+      "evidence_graph_root",
+      "exact_pin_expansion",
+    ]) expect(sql).toContain(column)
+    expect(sql).toContain("num_nonnulls")
+    expect(sql).toContain("jsonb_array_length(exact_pin_expansion) = 10")
+    expect(sql).not.toMatch(/update\s+runtime_evidence_/iu)
   })
 
   it("defines the additive all-or-none source identity v2 group without legacy backfill", async () => {

@@ -18,6 +18,9 @@ import {
   hashRuntimeEvidenceAuthorityPayload,
   inspectRuntimeEvidenceAuthorityBundle,
   parseRuntimeEvidenceAuthorityHighWaterRecord,
+  hashRuntimeEvidenceCertificateRecordV117,
+  parseRuntimeEvidenceAuthorityBindingV117,
+  type RuntimeEvidenceAuthorityBindingV117,
   type RuntimeEvidenceAuthorityPayload,
 } from "./runtime-evidence-authority-bundle.js"
 import { hashExecutableLaneIdentity } from "./runtime-evidence-attestation.js"
@@ -90,6 +93,44 @@ const signedBundle = (
 }
 
 describe("runtime evidence authority bundle", () => {
+  it("recomputes the complete public-safe v1.17 binding instead of trusting a shallow reference", () => {
+    const binding: RuntimeEvidenceAuthorityBindingV117 = {
+      graphSchemaVersion: "runtime-evidence-graph-v1.17",
+      graphProfile: "runtime-identity-evidence-dag-v1",
+      identityManifestRoot: `sha256:${"1".repeat(64)}`,
+      evidenceGraphRoot: `sha256:${"2".repeat(64)}`,
+      exactPins: [
+        ["runtimeExecutableDigest", `sha256:${"3".repeat(64)}`],
+        ["reportedVersion", "node-v26.0.0"],
+        ["targetAbi", "linux-amd64-gnu"],
+        ["compilerFlags", `sha256:${"4".repeat(64)}`],
+        ["adapterBuildDigest", `sha256:${"5".repeat(64)}`],
+        ["standardLibraryOrSysrootDigest", `sha256:${"6".repeat(64)}`],
+        ["containmentPolicyId", "policy.containment.v1"],
+        ["budgetProfileSha256", `sha256:${"7".repeat(64)}`],
+        ["canonicalJsonProfileId", "canonical-json-v1.1"],
+        ["behaviorSettingsHash", `sha256:${"8".repeat(64)}`],
+      ],
+    }
+    expect(parseRuntimeEvidenceAuthorityBindingV117(binding)).toEqual(binding)
+    const first = hashRuntimeEvidenceCertificateRecordV117({
+      certificateId: "certificate:v1.17:fixture",
+      certificateVersion: "runtime-certificate-v1.17",
+      attestationId: "attestation:v1.17:fixture",
+      binding,
+    })
+    expect(first).toMatch(/^sha256:[0-9a-f]{64}$/u)
+    const tampered = structuredClone(binding)
+    tampered.exactPins[0]![1] = `sha256:${"f".repeat(64)}`
+    expect(
+      hashRuntimeEvidenceCertificateRecordV117({
+        certificateId: "certificate:v1.17:fixture",
+        certificateVersion: "runtime-certificate-v1.17",
+        attestationId: "attestation:v1.17:fixture",
+        binding: tampered,
+      }),
+    ).not.toBe(first)
+  })
   it("rejects impossible canonical instants and accepts real leap days", () => {
     expect(() =>
       encodeRuntimeEvidenceAuthorityPayload(
