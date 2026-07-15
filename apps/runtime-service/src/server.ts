@@ -42,13 +42,17 @@ import {
 import type { RuntimeServiceConfig } from "./runtime-config.js"
 import { runtimeServiceConfigFromEnvironment } from "./production-runtime-config.js"
 import {
+  createPreparedRuntimeServiceDependenciesV117,
   executePreparedRuntimeServiceRequestV117,
   executeRuntimeServiceRequest,
   failPreparedRuntimeServiceRequestV117,
-  type PreparedRuntimeServiceDependenciesV117,
+  type PreparedRuntimeInvocationAdapterV117,
 } from "./execute-match.js"
 import { redactedErrorMessage } from "./redaction.js"
-import type { RuntimeEvidenceAuthorityLoader } from "./runtime-evidence-authority.js"
+import type {
+  RuntimeEvidenceAuthorityLoader,
+  RuntimeEvidenceAuthorityLoaderV117,
+} from "./runtime-evidence-authority.js"
 
 const DEFAULT_BODY_LIMIT_BYTES = 8 * 1024 * 1024
 const PRIVATE_ARTIFACT_TOKEN_HEADER = "x-cowards-private-artifact-token"
@@ -58,7 +62,11 @@ export interface RuntimeExecutionHttpServerOptions {
   bodyLimitBytes?: number | undefined
   privateArtifactToken?: string | undefined
   authorityLoader?: RuntimeEvidenceAuthorityLoader | undefined
-  preparedV117Dependencies?: PreparedRuntimeServiceDependenciesV117 | undefined
+  authorityLoaderV117?: RuntimeEvidenceAuthorityLoaderV117 | undefined
+  signingIdentityV117?: RuntimeInvocationSigningIdentityV117 | undefined
+  candidateInvocationAdapterV117?:
+    | PreparedRuntimeInvocationAdapterV117
+    | undefined
 }
 
 const writeJson = (
@@ -495,6 +503,15 @@ export const createRuntimeExecutionHttpHandler = (
   const configuredPrivateArtifactToken = privateArtifactToken(
     options.privateArtifactToken,
   )
+  const preparedV117Dependencies = options.authorityLoaderV117 === undefined
+    ? undefined
+    : createPreparedRuntimeServiceDependenciesV117({
+        runtimeConfig,
+        authorityLoader: options.authorityLoaderV117,
+        currentAuthorityLoader: options.authorityLoader,
+        signingIdentity: options.signingIdentityV117,
+        candidateInvocationAdapter: options.candidateInvocationAdapterV117,
+      })
 
   return async (
     request: IncomingMessage,
@@ -598,7 +615,7 @@ export const createRuntimeExecutionHttpHandler = (
           )
           return
         }
-        const dependencies = options.preparedV117Dependencies
+        const dependencies = preparedV117Dependencies
         const result = dependencies === undefined
           ? failPreparedRuntimeServiceRequestV117({
               rawRequest: admitted.value,

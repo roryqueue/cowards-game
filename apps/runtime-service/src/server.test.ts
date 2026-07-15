@@ -6,12 +6,21 @@ import { afterEach, describe, expect, it } from "vitest"
 import {
   DEFAULT_RUNTIME_LIMITS,
   INITIAL_BOUNDS,
+  RUNTIME_ABI_V1_17_BUDGET_PROFILE_SHA256,
   RUNTIME_EXECUTION_SERVICE_VERSION,
+  RUNTIME_INVOCATION_V1_17_INITIAL_EXECUTION_LEDGER_ROOT,
   RUNTIME_INVOCATION_V1_17_TEST_KEY_ID,
   RuntimeExecutionServiceResponseSchema,
   admitCanonicalJsonBytes,
+  createAuthenticatedRuntimeInvocationResponseV117,
+  createRuntimeInvocationExecutionReceiptV117,
+  createRuntimeInvocationTraceV117,
   encodeCanonicalJson,
+  runtimeInvocationExecutionLedgerPoststateRootV117,
+  serializeRuntimeInvocationResponseV117,
   type JsonValue,
+  type RuntimeInvocationExecutionReceiptEvidenceV117,
+  type RuntimeInvocationResultV117,
 } from "@cowards/spec"
 import { buildStrategyRevision } from "@cowards/runtime-js"
 import { createRuntimeServiceConfig } from "./runtime-config.js"
@@ -27,6 +36,7 @@ import {
   readBody,
   readBodyBytes,
 } from "./server.js"
+import { verifyRuntimeSemanticReceiptV117 } from "./semantic-receipt-v1-17.js"
 
 process.env.COWARDS_PROVIDER_VALIDATION_SECRET =
   "cowards-provider-validation-test-secret-v1.33"
@@ -145,9 +155,9 @@ describe("runtime execution HTTP boundary", () => {
       identityManifestRoot: `sha256:${"3".repeat(64)}`,
       evidenceGraphRoot: `sha256:${"4".repeat(64)}`,
     } as const
-    const budgetProfileSha256 = `sha256:${"5".repeat(64)}` as const
-    const ledgerPrestateRoot = `sha256:${"6".repeat(64)}` as const
-    const ledgerPoststateRoot = `sha256:${"7".repeat(64)}` as const
+    const budgetProfileSha256 = RUNTIME_ABI_V1_17_BUDGET_PROFILE_SHA256
+    const ledgerPrestateRoot =
+      RUNTIME_INVOCATION_V1_17_INITIAL_EXECUTION_LEDGER_ROOT
     const candidate = {
       contractVersion: "runtime-execution-service-v1.17",
       kind: "executeMatch",
@@ -168,6 +178,13 @@ describe("runtime execution HTTP boundary", () => {
       attestationId: `attestation:http-route:${String(index)}`,
       binding,
     }))
+    const signingIdentityV117 = {
+      keyId: RUNTIME_INVOCATION_V1_17_TEST_KEY_ID,
+      secret: "fixture-only:runtime-service-production-path:v1.17",
+    } as const
+    let candidateInvocations = 0
+    let forceMissingReceipt = false
+    let expectedLedgerPoststateRoot: `sha256:${string}` | undefined
     const routeRuntimeConfig = createRuntimeServiceConfig({
       strategyExecutionAdapter: "worker-thread",
       semanticReceiptSecret: "fixture-semantic-receipt-secret-v1",
@@ -188,6 +205,150 @@ describe("runtime execution HTTP boundary", () => {
         current.evidenceSnapshot,
         current.strategies,
       ),
+      authorityLoaderV117: {
+        load: () => ({
+          authorityBundleHash: candidate.authority.bundleHash,
+          registryGeneration: candidate.authority.registryGeneration,
+          semanticTupleManifestHash: candidate.compatibilityTupleId,
+          sourceManifestHash: candidate.authority.sourceManifestHash,
+          trustDomain: "fixture",
+          keyId: "fixture-v1.17-authority",
+          payload: {
+            schemaVersion:
+              "v1.37-runtime-evidence-authority-payload-v1.17",
+            bundleVersion: "fixture-v1.17-authority",
+            registryGeneration: candidate.authority.registryGeneration,
+            issuedAt: "2026-07-15T00:00:00.000Z",
+            validFrom: "2026-07-15T00:00:00.000Z",
+            validUntil: "2026-07-16T00:00:00.000Z",
+            semanticTupleManifestHash: candidate.compatibilityTupleId,
+            sourceManifestHash: candidate.authority.sourceManifestHash,
+            attestations: bindings.map(({ attestationId, binding }) => ({
+              attestationId,
+              attestationHash: `sha256:${"8".repeat(64)}`,
+              producerId: "fixture-managed",
+              producerKeyId: "fixture-key",
+              trustDomain: "fixture" as const,
+              managedIdentity: true as const,
+              imports: [],
+              binding: {
+                graphSchemaVersion: "runtime-evidence-graph-v1.17",
+                graphProfile: "runtime-identity-evidence-dag-v1",
+                exactPins: [],
+                ...binding,
+              },
+            })),
+            certificates: bindings.map(({ attestationId, binding }, index) => ({
+              certificateId: `certificate:http-route:${String(index)}`,
+              certificateVersion: "runtime-certificate-v1.17",
+              certificateRecordHash: `sha256:${"9".repeat(64)}`,
+              certificateKind: "containment" as const,
+              attestationId,
+              binding: {
+                graphSchemaVersion: "runtime-evidence-graph-v1.17",
+                graphProfile: "runtime-identity-evidence-dag-v1",
+                exactPins: [],
+                ...binding,
+              },
+            })),
+          },
+        }),
+        current: () => undefined,
+      },
+      signingIdentityV117,
+      candidateInvocationAdapterV117: ({ request, signingIdentity }) => {
+        candidateInvocations += 1
+        if (forceMissingReceipt) return new Uint8Array()
+        const value: JsonValue = {
+          activationOrders: [],
+          strategyMemory: {},
+        }
+        const encoded = encodeCanonicalJson(value, {
+          context: "authenticated-outer-envelope",
+        })
+        if (!encoded.ok) throw new Error(encoded.error.code)
+        const prestate = request.accounting.prestate
+        const evidence: RuntimeInvocationExecutionReceiptEvidenceV117 = {
+          attribution: "proven_strategy",
+          counters: {
+            wallMilliseconds: {
+              status: "measured",
+              delta: 1,
+              cumulative: prestate.cumulative.wallMilliseconds + 1,
+            },
+            computeFuel: {
+              status: "measured",
+              delta: 1,
+              cumulative: prestate.cumulative.computeFuel + 1,
+            },
+            payloadBytes: {
+              status: "measured",
+              delta: encoded.bytes.byteLength,
+              cumulative:
+                prestate.cumulative.payloadBytes + encoded.bytes.byteLength,
+            },
+            stdoutBytes: {
+              status: "measured",
+              delta: encoded.bytes.byteLength + 1,
+              cumulative:
+                prestate.cumulative.stdoutBytes + encoded.bytes.byteLength + 1,
+            },
+            stderrBytes: {
+              status: "measured",
+              delta: 0,
+              cumulative: prestate.cumulative.stderrBytes,
+            },
+          },
+          memory: {
+            status: "measured",
+            peakBytes: 1,
+            cumulativePeakBytes: Math.max(prestate.cumulative.memoryBytes, 1),
+          },
+          process: {
+            status: "verified",
+            processes: 1,
+            threads: 1,
+            children: 0,
+          },
+          capabilities: {
+            status: "verified",
+            filesystem: "none",
+            network: "disabled",
+            environment: "empty",
+            shell: "disabled",
+          },
+          cancellation: {
+            status: "verified",
+            terminationRequired: false,
+            receiptPresent: false,
+            graceMilliseconds: 0,
+          },
+          accountingEvidence: {
+            status: "verified",
+            signatureVerified: true,
+            monotonic: true,
+          },
+        }
+        const outcome: RuntimeInvocationResultV117<JsonValue> = {
+          kind: "success",
+          value,
+          trace: createRuntimeInvocationTraceV117(request, [
+            "ADAPTER_AUTHENTICATED",
+            "PAYLOAD_CANONICAL",
+          ]),
+        }
+        const authenticated = createAuthenticatedRuntimeInvocationResponseV117(
+          request,
+          outcome,
+          createRuntimeInvocationExecutionReceiptV117(request, evidence),
+          signingIdentity,
+        )
+        expectedLedgerPoststateRoot =
+          runtimeInvocationExecutionLedgerPoststateRootV117(
+            authenticated.accounting.poststate,
+          )
+        return serializeRuntimeInvocationResponseV117(authenticated)
+      },
     })
     servers.push(server)
     server.listen(0, "127.0.0.1")
@@ -217,6 +378,33 @@ describe("runtime execution HTTP boundary", () => {
         systemFailure: { code: "MALFORMED_REQUEST", playerPenalty: false },
       })
     }
+    expect(candidateInvocations).toBe(0)
+    const tamperedAccounting = {
+      ...candidate,
+      accounting: {
+        ...candidate.accounting,
+        ledgerPrestateRoot: `sha256:${"f".repeat(64)}`,
+      },
+    }
+    const tamperedBytes = encodeCanonicalJson(
+      tamperedAccounting as unknown as JsonValue,
+      { context: "authenticated-outer-envelope" },
+    )
+    if (!tamperedBytes.ok) throw new Error(tamperedBytes.error.code)
+    const tampered = await fetch(endpoint, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: Buffer.from(tamperedBytes.bytes),
+    })
+    expect(await tampered.json()).toMatchObject({
+      ok: false,
+      kind: "systemFailure",
+      systemFailure: {
+        code: "ACCOUNTING_BINDING_MISMATCH",
+        playerPenalty: false,
+      },
+    })
+    expect(candidateInvocations).toBe(0)
     const successor = await fetch(endpoint, {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -237,7 +425,53 @@ describe("runtime execution HTTP boundary", () => {
       contractVersion: "runtime-execution-service-v1.17",
       ok: true,
       kind: "executionResult",
+      result: {
+        semanticReceipt: {
+          budgetProfileSha256,
+          ledgerPrestateRoot,
+        },
+      },
     })
+    expect(candidateInvocations).toBe(8)
+    expect(successorBody).toMatchObject({
+      result: {
+        ledgerPoststateRoot: expectedLedgerPoststateRoot,
+        semanticReceipt: {
+          ledgerPoststateRoot: expectedLedgerPoststateRoot,
+        },
+      },
+    })
+    expect(
+      verifyRuntimeSemanticReceiptV117({
+        request: candidate,
+        response: successorBody,
+        secret: routeRuntimeConfig.semanticReceiptSecret,
+      }),
+    ).toMatchObject({
+      ledgerPrestateRoot,
+      ledgerPoststateRoot: expectedLedgerPoststateRoot,
+    })
+
+    forceMissingReceipt = true
+    const failed = await fetch(endpoint, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: Buffer.from(canonical.bytes),
+    })
+    const failedBody = (await failed.json()) as Record<string, unknown>
+    expect(failedBody).toMatchObject({
+      ok: false,
+      kind: "systemFailure",
+      systemFailure: {
+        code: "CURRENT_MATCH_EXECUTION_FAILED",
+        playerPenalty: false,
+      },
+    })
+    expect(candidateInvocations).toBe(9)
+    expect(JSON.stringify(failedBody)).not.toMatch(
+      /chronicle|finalState|outcome|source|artifact|memory|objective|diagnostics|\/Users\//u,
+    )
+    forceMissingReceipt = false
     const historical = await fetch(endpoint, {
       method: "POST",
       headers: { "content-type": "application/json" },

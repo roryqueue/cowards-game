@@ -3,6 +3,8 @@ import { createHash } from "node:crypto"
 import { isDeepStrictEqual } from "node:util"
 import {
   RUNTIME_INVOCATION_V1_17_CANDIDATE,
+  RUNTIME_ABI_V1_17_BUDGET_PROFILE_SHA256,
+  RUNTIME_INVOCATION_V1_17_INITIAL_EXECUTION_LEDGER_ROOT,
   RuntimeExecutionServiceRequestSchema,
   RuntimeExecutionServiceResponseSchema,
   RuntimeExecutionServiceRequestV117Schema,
@@ -12,7 +14,11 @@ import {
   STRATEGY_RUNTIME_ABI_VERSION,
   findRuntimeBrokerRegistryEntry,
   createRuntimeInvocationTraceV117,
+  createAuthenticatedRuntimeInvocationRequestV117,
+  createRuntimeAbiV117ExecutionLedger,
+  createRuntimeInvocationBudgetV117,
   hashExecutableLaneIdentity,
+  runtimeInvocationExecutionLedgerPoststateRootV117,
   serializeRuntimeInvocationRequestV117,
   validateStrategyLanguageProviderRuntimeCompatibility,
   verifyRuntimeInvocationRequestV117,
@@ -28,6 +34,7 @@ import {
   type RuntimeInvocationResultV117,
   type RuntimeInvocationResponseAccountingV117,
   type RuntimeInvocationSigningIdentityV117,
+  type RuntimeAbiV117ExecutionLedger,
   type RuntimeInvocationTraceV117,
   type RuntimeEntrantAuthorityReference,
   type Chronicle,
@@ -56,6 +63,7 @@ import type { RuntimeServiceConfig } from "./runtime-config.js"
 import { publicSystemFailureMessage, redactedDiagnostics } from "./redaction.js"
 import type {
   RuntimeEvidenceAuthorityLoader,
+  RuntimeEvidenceAuthorityLoaderV117,
   VerifiedMountedRuntimeEvidenceAuthority,
 } from "./runtime-evidence-authority.js"
 import { issueRuntimeSemanticReceipt } from "./semantic-receipt.js"
@@ -1218,6 +1226,28 @@ export interface PreparedRuntimeServiceDependenciesV117 {
   ): PreparedRuntimeServiceExecutionV117
 }
 
+export interface PreparedRuntimeInvocationAdapterInputV117 {
+  readonly request: AuthenticatedRuntimeInvocationRequestV117
+  readonly requestBytes: Uint8Array
+  readonly executableSource: string
+  readonly revision: StrategyRevision
+  readonly signingIdentity: RuntimeInvocationSigningIdentityV117
+}
+
+export type PreparedRuntimeInvocationAdapterV117 = (
+  input: PreparedRuntimeInvocationAdapterInputV117,
+) => Uint8Array
+
+export interface PreparedRuntimeServiceFactoryInputV117 {
+  readonly runtimeConfig: RuntimeServiceConfig
+  readonly authorityLoader: RuntimeEvidenceAuthorityLoaderV117
+  readonly currentAuthorityLoader?: RuntimeEvidenceAuthorityLoader | undefined
+  readonly signingIdentity?: RuntimeInvocationSigningIdentityV117 | undefined
+  readonly candidateInvocationAdapter?:
+    | PreparedRuntimeInvocationAdapterV117
+    | undefined
+}
+
 export interface PreparedRuntimeEvidenceBindingV117 {
   identityManifestRoot: string
   evidenceGraphRoot: string
@@ -1310,6 +1340,19 @@ export const executePreparedRuntimeServiceRequestV117 = (
     })
   }
   const nestedRequest = nested.data
+  if (
+    request.accounting.budgetProfileSha256 !==
+      RUNTIME_ABI_V1_17_BUDGET_PROFILE_SHA256 ||
+    request.accounting.ledgerPrestateRoot !==
+      RUNTIME_INVOCATION_V1_17_INITIAL_EXECUTION_LEDGER_ROOT
+  ) {
+    return preparedV117Failure({
+      rawRequest: request,
+      code: "ACCOUNTING_BINDING_MISMATCH",
+      ownership: "system_integrity",
+      retryable: false,
+    })
+  }
   if (
     request.matchId !== nestedRequest.match.matchId ||
     request.compatibilityTupleId !==
@@ -1451,3 +1494,259 @@ export const executePreparedRuntimeServiceRequestV117 = (
     })
   }
 }
+
+const sha256IdentityV117 = (bytes: Uint8Array): Sha256IdentityV117 =>
+  `sha256:${createHash("sha256").update(bytes).digest("hex")}`
+
+const normalizeSourceV117 = (source: string): string =>
+  source.replaceAll("\r\n", "\n").replaceAll("\r", "\n")
+
+const productionInvocationIdentityV117 = (
+  runtimeConfig: RuntimeServiceConfig,
+): RuntimeInvocationSigningIdentityV117 => ({
+  keyId: "runtime-service:v1.17:host",
+  secret: `runtime-invocation-v1.17\0${runtimeConfig.semanticReceiptSecret}`,
+})
+
+const invocationPublicIdV117 = (
+  kind: "request" | "invocation" | "retry" | "kernel-request",
+  values: readonly string[],
+): string => {
+  const digest = createHash("sha256")
+    .update(values.join("\0"), "utf8")
+    .digest("hex")
+  return `${kind}:v1.17:${digest}`
+}
+
+const createPreparedTypeScriptRuntimeV117 = (input: {
+  request: RuntimeExecutionServiceRequest
+  revision: StrategyRevision
+  runtimeConfig: RuntimeServiceConfig
+  signingIdentity: RuntimeInvocationSigningIdentityV117
+  ledger: {
+    current: RuntimeAbiV117ExecutionLedger
+    sequence: number
+  }
+  candidateInvocationAdapter?: PreparedRuntimeInvocationAdapterV117 | undefined
+}): ReturnType<typeof createRuntimeForRevision> => {
+  if (input.revision.runtime.language.id !== "typescript") {
+    return {
+      ok: false,
+      diagnostics: { reason: "v1.17-runtime-lane-not-production-capable" },
+    }
+  }
+  const artifact = input.revision.metadata.sourceArtifact
+  if (
+    artifact?.format !== "transpiled-javascript" ||
+    artifact.bytesBase64 === undefined
+  ) {
+    return {
+      ok: false,
+      diagnostics: { reason: "v1.17-executable-artifact-missing" },
+    }
+  }
+  let executableSource: string
+  try {
+    executableSource = new TextDecoder("utf-8", { fatal: true }).decode(
+      Buffer.from(artifact.bytesBase64, "base64"),
+    )
+  } catch {
+    return {
+      ok: false,
+      diagnostics: { reason: "v1.17-executable-artifact-invalid" },
+    }
+  }
+  const originalBytes = new TextEncoder().encode(input.revision.source)
+  const normalizedBytes = new TextEncoder().encode(
+    normalizeSourceV117(input.revision.source),
+  )
+  const executableBytes = new TextEncoder().encode(executableSource)
+  const sourceIdentity = {
+    strategyRevisionId: input.revision.id,
+    originalSourceSha256: sha256IdentityV117(originalBytes),
+    normalizedSourceSha256: sha256IdentityV117(normalizedBytes),
+    artifactSha256: sha256IdentityV117(executableBytes),
+  } as const
+  if (
+    sourceIdentity.artifactSha256 !== `sha256:${artifact.hash}` ||
+    (artifact.sourceIdentity !== undefined &&
+      (artifact.sourceIdentity.originalSourceSha256 !==
+        sourceIdentity.originalSourceSha256 ||
+        artifact.sourceIdentity.normalizedSourceSha256 !==
+          sourceIdentity.normalizedSourceSha256))
+  ) {
+    return {
+      ok: false,
+      diagnostics: { reason: "v1.17-source-artifact-identity-mismatch" },
+    }
+  }
+
+  const invoke = <TValue extends JsonValue>(
+    method: "selectActivations" | "soldierBrain",
+    value: TValue,
+  ) => {
+    const sequence = input.ledger.sequence
+    input.ledger.sequence += 1
+    const identityValues = [
+      input.request.match.matchId,
+      input.revision.id,
+      method,
+      String(sequence),
+    ]
+    const request = createAuthenticatedRuntimeInvocationRequestV117(
+      {
+        requestId: invocationPublicIdV117("request", identityValues),
+        invocationId: invocationPublicIdV117("invocation", identityValues),
+        kernelRequestId: invocationPublicIdV117(
+          "kernel-request",
+          identityValues,
+        ),
+        method,
+        semanticTuple: {
+          rules: "cowards-rules-v1.4",
+          engine: "engine-kernel-v1.37-candidate-1",
+          runtimeAbi: "strategy-runtime-abi-v1.17",
+          chronicle: "chronicle-recorder-current-events-v1.37-candidate-1",
+          arenaCatalog: "semantic-arena-catalog-v1.37-candidate-1",
+          setPolicy: "canonical-set-policy-v1.4",
+        },
+        sourceIdentity,
+        budget: createRuntimeInvocationBudgetV117(method),
+        accounting: { prestate: input.ledger.current },
+        input: { value },
+        retry: {
+          retryId: invocationPublicIdV117("retry", identityValues),
+          attempt: 0,
+          previousRequestSha256: null,
+        },
+      },
+      input.signingIdentity,
+    )
+    const executed = executeCandidateRuntimeInvocationV117({
+      request,
+      identity: input.signingIdentity,
+      invoke: (requestBytes) => {
+        if (input.candidateInvocationAdapter !== undefined) {
+          return input.candidateInvocationAdapter({
+            request,
+            requestBytes,
+            executableSource,
+            revision: input.revision,
+            signingIdentity: input.signingIdentity,
+          })
+        }
+        const adapter = input.runtimeConfig.adapter as typeof input.runtimeConfig.adapter & {
+          executeV117?: ((adapterInput: {
+            requestBytes: Uint8Array
+            executableSource: string
+            signingIdentity: RuntimeInvocationSigningIdentityV117
+          }) => Uint8Array) | undefined
+        }
+        if (adapter.executeV117 === undefined) {
+          throw new Error("v1.17 runtime adapter is unavailable")
+        }
+        return adapter.executeV117({
+          requestBytes,
+          executableSource,
+          signingIdentity: input.signingIdentity,
+        })
+      },
+      executeOutcome: (outcome) => outcome,
+    })
+    const outcome = executed.internalExecution
+    const accounting = executed.authenticatedAccounting
+    if (
+      accounting?.disposition === "commit" &&
+      outcome.kind !== "system_failure"
+    ) {
+      input.ledger.current = accounting.poststate
+    } else if (
+      outcome.kind !== "system_failure" ||
+      (accounting !== undefined && accounting.disposition !== "no_commit")
+    ) {
+      return {
+        ok: false as const,
+        violation: {
+          type: "INVALID_OUTPUT" as const,
+          message: "Runtime system failure.",
+        },
+        systemFailure: {
+          code: "ACCOUNTING_EVIDENCE_REJECTED",
+          retryable: false,
+        },
+      }
+    }
+    if (outcome.kind === "success") {
+      return { ok: true as const, value: outcome.value }
+    }
+    if (outcome.kind === "system_failure") {
+      return {
+        ok: false as const,
+        violation: {
+          type: "INVALID_OUTPUT" as const,
+          message: "Runtime system failure.",
+        },
+        systemFailure: {
+          code: outcome.failure.code,
+          retryable: outcome.failure.retryable,
+        },
+      }
+    }
+    return violation(
+      outcome.violation.code === "RESOURCE_EXHAUSTION"
+        ? "TIMEOUT"
+        : outcome.violation.code,
+      outcome.violation.publicMessage,
+    )
+  }
+
+  return {
+    ok: true,
+    runtime: {
+      selectActivations: (value) =>
+        invoke("selectActivations", value as unknown as JsonValue),
+      runSoldierBrain: (value) =>
+        invoke("soldierBrain", value as unknown as JsonValue),
+    } as StrategyRuntime,
+  }
+}
+
+/**
+ * Production dependency authority for the selected v1.17 service route. The
+ * Match owns one fresh ledger; HTTP callers can neither provide nor reset it.
+ */
+export const createPreparedRuntimeServiceDependenciesV117 = (
+  input: PreparedRuntimeServiceFactoryInputV117,
+): PreparedRuntimeServiceDependenciesV117 => ({
+  authorityLoader: input.authorityLoader,
+  executeCurrentMatchWithAccounting: (request) => {
+    const ledger = {
+      current: createRuntimeAbiV117ExecutionLedger(),
+      sequence: 0,
+    }
+    const response = executeRuntimeServiceRequest(request, input.runtimeConfig, {
+      authorityLoader: input.currentAuthorityLoader,
+      createRuntimeForRevision: (revision) =>
+        createPreparedTypeScriptRuntimeV117({
+          request,
+          revision,
+          runtimeConfig: input.runtimeConfig,
+          signingIdentity:
+            input.signingIdentity ??
+            productionInvocationIdentityV117(input.runtimeConfig),
+          ledger,
+          candidateInvocationAdapter: input.candidateInvocationAdapter,
+        }),
+    })
+    return {
+      response,
+      accounting: {
+        budgetProfileSha256: RUNTIME_ABI_V1_17_BUDGET_PROFILE_SHA256,
+        ledgerPrestateRoot:
+          RUNTIME_INVOCATION_V1_17_INITIAL_EXECUTION_LEDGER_ROOT,
+        ledgerPoststateRoot:
+          runtimeInvocationExecutionLedgerPoststateRootV117(ledger.current),
+      },
+    }
+  },
+})

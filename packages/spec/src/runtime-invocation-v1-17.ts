@@ -18,6 +18,7 @@ import {
 import { RUNTIME_ABI_V1_17_BUDGET_PROFILE_SHA256 } from "./runtime-budget-profile-v1-17.js"
 import {
   RUNTIME_ABI_V1_17,
+  createRuntimeAbiV117ExecutionLedger,
   debitRuntimeAbiV117Ledger,
   type RuntimeAbiV117AccountingEvidence,
   type RuntimeAbiV117CancellationEvidence,
@@ -1117,6 +1118,27 @@ const framedValueHash = (label: string, value: JsonValue): `sha256:${string}` =>
     ]),
   )
 
+export const runtimeInvocationExecutionLedgerPrestateRootV117 = (
+  ledger: RuntimeAbiV117ExecutionLedger,
+): `sha256:${string}` =>
+  framedValueHash(
+    "runtime-invocation-v1.17:execution-ledger-prestate",
+    ledger as unknown as JsonValue,
+  )
+
+export const runtimeInvocationExecutionLedgerPoststateRootV117 = (
+  ledger: RuntimeAbiV117ExecutionLedger,
+): `sha256:${string}` =>
+  framedValueHash(
+    "runtime-invocation-v1.17:execution-ledger-poststate",
+    ledger as unknown as JsonValue,
+  )
+
+export const RUNTIME_INVOCATION_V1_17_INITIAL_EXECUTION_LEDGER_ROOT =
+  runtimeInvocationExecutionLedgerPrestateRootV117(
+    createRuntimeAbiV117ExecutionLedger(),
+  )
+
 export const createRuntimeInvocationBudgetV117 = (
   method: RuntimeInvocationMethodV117,
 ): Omit<RuntimeInvocationBudgetV117, "profileSha256"> => {
@@ -1342,9 +1364,8 @@ export const createAuthenticatedRuntimeInvocationRequestV117 = (
   if (!executionPrestateIsValid(prestate, input.invocationId)) {
     throw new TypeError("Candidate request execution prestate is invalid")
   }
-  const prestateSha256 = framedValueHash(
-    "runtime-invocation-v1.17:execution-ledger-prestate",
-    prestate as unknown as JsonValue,
+  const prestateSha256 = runtimeInvocationExecutionLedgerPrestateRootV117(
+    prestate,
   )
   const requestIdentity = framedValueHash(
     "runtime-invocation-v1.17:execution-request-identity",
@@ -1566,10 +1587,8 @@ const deriveResponseAccounting = (
     disposition,
     receipt: strictReceipt,
     poststate,
-    poststateSha256: framedValueHash(
-      "runtime-invocation-v1.17:execution-ledger-poststate",
-      poststate as unknown as JsonValue,
-    ),
+    poststateSha256:
+      runtimeInvocationExecutionLedgerPoststateRootV117(poststate),
   }
   return {
     ...accountingWithoutIdentity,

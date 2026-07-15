@@ -4,13 +4,15 @@ import { formatRuntimeServiceConfigLogLines } from "./runtime-config.js"
 import { runtimeServiceConfigFromEnvironment } from "./production-runtime-config.js"
 import {
   createRuntimeEvidenceAuthorityLoader,
+  createRuntimeEvidenceAuthorityLoaderV117,
   runtimeEvidenceAuthorityConfigFromEnvironment,
 } from "./runtime-evidence-authority.js"
 
 const startRuntimeExecutionService = (): void => {
-  const authorityLoader = createRuntimeEvidenceAuthorityLoader(
-    runtimeEvidenceAuthorityConfigFromEnvironment(),
-  )
+  const authorityConfig = runtimeEvidenceAuthorityConfigFromEnvironment()
+  const authorityLoader = createRuntimeEvidenceAuthorityLoader(authorityConfig)
+  const authorityLoaderV117 =
+    createRuntimeEvidenceAuthorityLoaderV117(authorityConfig)
   authorityLoader.load()
   const runtimeConfig = runtimeServiceConfigFromEnvironment()
   const port = Number.parseInt(process.env.RUNTIME_SERVICE_PORT ?? "3107", 10)
@@ -18,6 +20,7 @@ const startRuntimeExecutionService = (): void => {
   const server = createRuntimeExecutionHttpServer({
     runtimeConfig,
     authorityLoader,
+    authorityLoaderV117,
   })
 
   console.log("Coward's Game runtime execution service ready")

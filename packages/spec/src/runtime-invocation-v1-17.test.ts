@@ -13,6 +13,7 @@ import {
   RUNTIME_INVOCATION_V1_17_SYSTEM_FAILURE_CODES,
   RUNTIME_INVOCATION_V1_17_SYSTEM_FAILURE_RETRYABILITY,
   RUNTIME_INVOCATION_V1_17_TEST_KEY_ID,
+  RUNTIME_INVOCATION_V1_17_INITIAL_EXECUTION_LEDGER_ROOT,
   RuntimeInvocationResultV117Schema,
   classifyRuntimeInvocationV117,
   createAuthenticatedRuntimeInvocationRequestV117,
@@ -20,6 +21,7 @@ import {
   createRuntimeInvocationBudgetV117,
   createRuntimeInvocationExecutionReceiptV117,
   createRuntimeInvocationTraceV117,
+  runtimeInvocationExecutionLedgerPrestateRootV117,
   serializeRuntimeInvocationRequestV117,
   serializeRuntimeInvocationResponseV117,
   verifyRuntimeInvocationRequestV117,
@@ -1523,6 +1525,17 @@ describe("runtime invocation v1.17 authenticated candidate wire", () => {
 })
 
 describe("runtime invocation v1.17 authenticated execution accounting", () => {
+  it("owns the exact empty Match-ledger prestate root", () => {
+    expect(RUNTIME_INVOCATION_V1_17_INITIAL_EXECUTION_LEDGER_ROOT).toBe(
+      "sha256:2ca3c0a9b5cd9ce685dfccf846334e4980931ea85d11852290952ae4f6fb8e6b",
+    )
+    expect(
+      runtimeInvocationExecutionLedgerPrestateRootV117(
+        createRuntimeAbiV117ExecutionLedger(),
+      ),
+    ).toBe(RUNTIME_INVOCATION_V1_17_INITIAL_EXECUTION_LEDGER_ROOT)
+  })
+
   const identity = {
     keyId: RUNTIME_INVOCATION_V1_17_TEST_KEY_ID,
     secret: fixtureSecret,

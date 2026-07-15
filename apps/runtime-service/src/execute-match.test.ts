@@ -6,7 +6,9 @@ import { describe, expect, it } from "vitest"
 import {
   DEFAULT_RUNTIME_LIMITS,
   INITIAL_BOUNDS,
+  RUNTIME_ABI_V1_17_BUDGET_PROFILE_SHA256,
   RUNTIME_EXECUTION_SERVICE_VERSION,
+  RUNTIME_INVOCATION_V1_17_INITIAL_EXECUTION_LEDGER_ROOT,
   RUNTIME_INVOCATION_V1_17_PLAYER_VIOLATIONS,
   RUNTIME_INVOCATION_V1_17_TEST_KEY_ID,
   RuntimeExecutionServiceRequestSchema,
@@ -16,7 +18,6 @@ import {
   createRuntimeInvocationBudgetV117,
   createRuntimeInvocationExecutionReceiptV117,
   createRuntimeInvocationTraceV117,
-  debitRuntimeAbiV117Ledger,
   encodeCanonicalJson,
   serializeRuntimeInvocationRequestV117,
   serializeRuntimeInvocationResponseV117,
@@ -494,8 +495,9 @@ describe("runtime execution service", () => {
       identityManifestRoot: `sha256:${"3".repeat(64)}`,
       evidenceGraphRoot: `sha256:${"4".repeat(64)}`,
     } as const
-    const budgetProfileSha256 = `sha256:${"5".repeat(64)}` as const
-    const ledgerPrestateRoot = `sha256:${"6".repeat(64)}` as const
+    const budgetProfileSha256 = RUNTIME_ABI_V1_17_BUDGET_PROFILE_SHA256
+    const ledgerPrestateRoot =
+      RUNTIME_INVOCATION_V1_17_INITIAL_EXECUTION_LEDGER_ROOT
     const ledgerPoststateRoot = `sha256:${"7".repeat(64)}` as const
     const candidateRequest = {
       contractVersion: "runtime-execution-service-v1.17",
