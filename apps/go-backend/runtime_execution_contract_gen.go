@@ -8,6 +8,8 @@ type runtimeInvocationContractDescriptor struct {
 	Historical bool
 	CanonicalJSON bool
 	Current bool
+	ReceiptClaimSHA256 string
+	ReceiptSignature string
 }
 
 func runtimeInvocationContractForVersion(version string) (runtimeInvocationContractDescriptor, bool) {
@@ -34,10 +36,12 @@ func runtimeInvocationContractForVersion(version string) (runtimeInvocationContr
 		return runtimeInvocationContractDescriptor{
 			ContractVersion: "runtime-execution-service-v1.17",
 			RequestSHA256: "f11b7216621637d0329409ebf1c83fb1d448191fe1dc7c13cacedb90f6f78b00",
-			ResponseSHA256: "9fced608e25690f512f14db7357a358ad56dc8bcfe18ed1878a94da801d619f2",
+			ResponseSHA256: "ea702ef605111d542e8dd1dc445906c1affbd30c515071654f7ef448d9eea990",
 			Historical: false,
 			CanonicalJSON: true,
 			Current: false,
+			ReceiptClaimSHA256: "3fb1d76eebf9bce51646b47a59f4d34299761f3f8eab3434f39d4a9d6b08a2f6",
+			ReceiptSignature: "hmac-sha256:9329777daf84bc1d89c587125b86330b8d0886432172f790313c562e1beebf27",
 		}, true
 	default:
 		return runtimeInvocationContractDescriptor{}, false

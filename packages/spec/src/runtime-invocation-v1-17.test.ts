@@ -47,11 +47,11 @@ const repoRoot = path.resolve(import.meta.dirname, "../../..")
 const fixtureSecret = "fixture-only:runtime-invocation-v1.17:secret"
 const requestFixturePath = path.join(
   repoRoot,
-  "packages/spec/artifacts/runtime-execution-service-request.v1.17.candidate.json",
+  "packages/spec/artifacts/runtime-invocation-request.v1.17.candidate.json",
 )
 const responseFixturePath = path.join(
   repoRoot,
-  "packages/spec/artifacts/runtime-execution-service-response.v1.17.candidate.wire.json",
+  "packages/spec/artifacts/runtime-invocation-response.v1.17.candidate.wire.json",
 )
 
 const sha256 = (bytes: Uint8Array): `sha256:${string}` =>

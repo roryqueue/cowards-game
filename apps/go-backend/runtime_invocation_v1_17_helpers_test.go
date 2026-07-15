@@ -241,8 +241,8 @@ func signedRuntimeInvocationResponseV117ForTest(
 }
 
 func TestPhase258RuntimeInvocationV117AccountingIsBoundNoCommitAndReplayStable(t *testing.T) {
-	requestBytes := readRuntimeInvocationV117Fixture(t, "runtime-execution-service-request.v1.17.candidate.json")
-	responseBytes := readRuntimeInvocationV117Fixture(t, "runtime-execution-service-response.v1.17.candidate.wire.json")
+	requestBytes := readRuntimeInvocationV117Fixture(t, "runtime-invocation-request.v1.17.candidate.json")
+	responseBytes := readRuntimeInvocationV117Fixture(t, "runtime-invocation-response.v1.17.candidate.wire.json")
 	identity := runtimeInvocationV117SigningIdentity{KeyID: runtimeInvocationV117FixtureKeyID, Secret: runtimeInvocationV117FixtureSecret}
 	request, failure := verifyRuntimeInvocationRequestV117(requestBytes, identity)
 	if failure != nil {
@@ -291,7 +291,7 @@ func TestPhase258RuntimeInvocationV117AccountingIsBoundNoCommitAndReplayStable(t
 }
 
 func TestPhase258RuntimeInvocationV117RejectsFullyReboundObservableByteDrift(t *testing.T) {
-	requestBytes := readRuntimeInvocationV117Fixture(t, "runtime-execution-service-request.v1.17.candidate.json")
+	requestBytes := readRuntimeInvocationV117Fixture(t, "runtime-invocation-request.v1.17.candidate.json")
 	identity := runtimeInvocationV117SigningIdentity{KeyID: runtimeInvocationV117FixtureKeyID, Secret: runtimeInvocationV117FixtureSecret}
 	request, failure := verifyRuntimeInvocationRequestV117(requestBytes, identity)
 	if failure != nil {
@@ -384,7 +384,7 @@ func TestPhase258RuntimeInvocationV117RejectsFullyReboundObservableByteDrift(t *
 }
 
 func TestPhase258RuntimeInvocationV117WrongBindingAndAmbiguousNeverRetry(t *testing.T) {
-	requestBytes := readRuntimeInvocationV117Fixture(t, "runtime-execution-service-request.v1.17.candidate.json")
+	requestBytes := readRuntimeInvocationV117Fixture(t, "runtime-invocation-request.v1.17.candidate.json")
 	identity := runtimeInvocationV117SigningIdentity{KeyID: runtimeInvocationV117FixtureKeyID, Secret: runtimeInvocationV117FixtureSecret}
 	request, failure := verifyRuntimeInvocationRequestV117(requestBytes, identity)
 	if failure != nil {
@@ -463,8 +463,8 @@ func TestPhase258CanonicalRetryPostgres(t *testing.T) {
 	ctx := context.Background()
 	pool := semanticCurrentIsolatedPool(t, ctx, databaseURL)
 	fixture := seedSemanticCurrentAuthority(t, ctx, pool, time.Date(2026, 7, 14, 16, 30, 0, 0, time.UTC))
-	requestBytes := readRuntimeInvocationV117Fixture(t, "runtime-execution-service-request.v1.17.candidate.json")
-	successBytes := readRuntimeInvocationV117Fixture(t, "runtime-execution-service-response.v1.17.candidate.wire.json")
+	requestBytes := readRuntimeInvocationV117Fixture(t, "runtime-invocation-request.v1.17.candidate.json")
+	successBytes := readRuntimeInvocationV117Fixture(t, "runtime-invocation-response.v1.17.candidate.wire.json")
 	identity := runtimeInvocationV117SigningIdentity{KeyID: runtimeInvocationV117FixtureKeyID, Secret: runtimeInvocationV117FixtureSecret}
 	request, failure := verifyRuntimeInvocationRequestV117(requestBytes, identity)
 	if failure != nil {

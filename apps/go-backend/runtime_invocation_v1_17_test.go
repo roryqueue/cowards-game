@@ -24,8 +24,8 @@ func readRuntimeInvocationV117Fixture(t *testing.T, name string) []byte {
 }
 
 func TestPhase258RuntimeInvocationV117CanonicalParityAndClosedDispatch(t *testing.T) {
-	requestBytes := readRuntimeInvocationV117Fixture(t, "runtime-execution-service-request.v1.17.candidate.json")
-	responseBytes := readRuntimeInvocationV117Fixture(t, "runtime-execution-service-response.v1.17.candidate.wire.json")
+	requestBytes := readRuntimeInvocationV117Fixture(t, "runtime-invocation-request.v1.17.candidate.json")
+	responseBytes := readRuntimeInvocationV117Fixture(t, "runtime-invocation-response.v1.17.candidate.wire.json")
 	identity := runtimeInvocationV117SigningIdentity{KeyID: runtimeInvocationV117FixtureKeyID, Secret: runtimeInvocationV117FixtureSecret}
 
 	request, failure := verifyRuntimeInvocationRequestV117(requestBytes, identity)
@@ -54,7 +54,7 @@ func TestPhase258RuntimeInvocationV117CanonicalParityAndClosedDispatch(t *testin
 }
 
 func TestPhase258RuntimeInvocationV117RejectsUnsignedBudgetStaleIdentityAndMixedResult(t *testing.T) {
-	requestBytes := readRuntimeInvocationV117Fixture(t, "runtime-execution-service-request.v1.17.candidate.json")
+	requestBytes := readRuntimeInvocationV117Fixture(t, "runtime-invocation-request.v1.17.candidate.json")
 	identity := runtimeInvocationV117SigningIdentity{KeyID: runtimeInvocationV117FixtureKeyID, Secret: runtimeInvocationV117FixtureSecret}
 
 	for _, mutation := range []struct {
@@ -136,7 +136,7 @@ func TestPhase258RuntimeInvocationV117RejectsUnsignedBudgetStaleIdentityAndMixed
 }
 
 func TestPhase258RuntimeInvocationV117RejectsSignedMalformedAndOversizeSuccessPayloads(t *testing.T) {
-	requestBytes := readRuntimeInvocationV117Fixture(t, "runtime-execution-service-request.v1.17.candidate.json")
+	requestBytes := readRuntimeInvocationV117Fixture(t, "runtime-invocation-request.v1.17.candidate.json")
 	identity := runtimeInvocationV117SigningIdentity{KeyID: runtimeInvocationV117FixtureKeyID, Secret: runtimeInvocationV117FixtureSecret}
 
 	type payloadCase struct {
@@ -186,8 +186,8 @@ func TestPhase258RuntimeInvocationV117RejectsSignedMalformedAndOversizeSuccessPa
 }
 
 func TestPhase258RuntimeInvocationV117RetriesOnlySystemFailureWithPinnedBytes(t *testing.T) {
-	requestBytes := readRuntimeInvocationV117Fixture(t, "runtime-execution-service-request.v1.17.candidate.json")
-	successBytes := readRuntimeInvocationV117Fixture(t, "runtime-execution-service-response.v1.17.candidate.wire.json")
+	requestBytes := readRuntimeInvocationV117Fixture(t, "runtime-invocation-request.v1.17.candidate.json")
+	successBytes := readRuntimeInvocationV117Fixture(t, "runtime-invocation-response.v1.17.candidate.wire.json")
 	identity := runtimeInvocationV117SigningIdentity{KeyID: runtimeInvocationV117FixtureKeyID, Secret: runtimeInvocationV117FixtureSecret}
 	request, failure := verifyRuntimeInvocationRequestV117(requestBytes, identity)
 	if failure != nil {
@@ -238,7 +238,7 @@ func TestPhase258RuntimeInvocationV117RetriesOnlySystemFailureWithPinnedBytes(t 
 }
 
 func TestPhase258RuntimeInvocationV117UsesFiniteGoOwnedSignedBudgetRetryPolicy(t *testing.T) {
-	requestBytes := readRuntimeInvocationV117Fixture(t, "runtime-execution-service-request.v1.17.candidate.json")
+	requestBytes := readRuntimeInvocationV117Fixture(t, "runtime-invocation-request.v1.17.candidate.json")
 	identity := runtimeInvocationV117SigningIdentity{KeyID: runtimeInvocationV117FixtureKeyID, Secret: runtimeInvocationV117FixtureSecret}
 
 	t.Run("candidate policy caps repeated system retries", func(t *testing.T) {
@@ -363,7 +363,7 @@ func TestPhase258RuntimeInvocationV117UsesFiniteGoOwnedSignedBudgetRetryPolicy(t
 		if failure != nil {
 			t.Fatal(failure)
 		}
-		successBytes := readRuntimeInvocationV117Fixture(t, "runtime-execution-service-response.v1.17.candidate.wire.json")
+		successBytes := readRuntimeInvocationV117Fixture(t, "runtime-invocation-response.v1.17.candidate.wire.json")
 		playerBytes := signedRuntimeInvocationResponseV117ForTest(t, request, map[string]any{
 			"kind": "player_violation",
 			"violation": map[string]any{
