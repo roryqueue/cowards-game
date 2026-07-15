@@ -17,6 +17,7 @@ import {
   createRuntimeInvocationExecutionReceiptV117,
   createRuntimeInvocationTraceV117,
   debitRuntimeAbiV117Ledger,
+  encodeCanonicalJson,
   serializeRuntimeInvocationRequestV117,
   serializeRuntimeInvocationResponseV117,
   type AuthenticatedRuntimeInvocationRequestV117,
@@ -223,6 +224,42 @@ const candidateReceipt = (
   request: AuthenticatedRuntimeInvocationRequestV117,
   evidence = candidateEvidence(request),
 ) => createRuntimeInvocationExecutionReceiptV117(request, evidence)
+
+const candidateReceiptForOutcome = (
+  request: AuthenticatedRuntimeInvocationRequestV117,
+  outcome: RuntimeInvocationResultV117<JsonValue>,
+  evidence = candidateEvidence(request),
+) => {
+  if (outcome.kind !== "success") {
+    return candidateReceipt(request, evidence)
+  }
+  const payload = encodeCanonicalJson(outcome.value, {
+    context: "authenticated-outer-envelope",
+  })
+  if (!payload.ok) {
+    throw new Error("runtime-service success fixture payload is not canonical")
+  }
+  const measuredCounter = (
+    counter: "payloadBytes" | "stdoutBytes" | "stderrBytes",
+    delta: number,
+  ) => ({
+    status: "measured" as const,
+    delta,
+    cumulative: request.accounting.prestate.cumulative[counter] + delta,
+  })
+  return candidateReceipt(request, {
+    ...evidence,
+    counters: {
+      ...evidence.counters,
+      payloadBytes: measuredCounter("payloadBytes", payload.bytes.byteLength),
+      stdoutBytes: measuredCounter(
+        "stdoutBytes",
+        payload.bytes.byteLength + 1,
+      ),
+      stderrBytes: measuredCounter("stderrBytes", 0),
+    },
+  })
+}
 
 const candidatePrestateWithWallMilliseconds = (
   wallMilliseconds: number,
@@ -977,7 +1014,10 @@ describe("runtime execution service v1.17 candidate bridge", () => {
       createAuthenticatedRuntimeInvocationResponseV117(
         request,
         outcome as unknown as RuntimeInvocationResultV117<JsonValue>,
-        candidateReceipt(request),
+        candidateReceiptForOutcome(
+          request,
+          outcome as unknown as RuntimeInvocationResultV117<JsonValue>,
+        ),
         candidateIdentity,
       )
     const responseBytes = serializeRuntimeInvocationResponseV117(
@@ -1059,7 +1099,11 @@ describe("runtime execution service v1.17 candidate bridge", () => {
         createAuthenticatedRuntimeInvocationResponseV117(
           request,
           outcome as RuntimeInvocationResultV117<JsonValue>,
-          candidateReceipt(request, evidence),
+          candidateReceiptForOutcome(
+            request,
+            outcome as RuntimeInvocationResultV117<JsonValue>,
+            evidence,
+          ),
           candidateIdentity,
         )
       const result = executeCandidateRuntimeInvocationV117({
@@ -1119,7 +1163,11 @@ describe("runtime execution service v1.17 candidate bridge", () => {
         createAuthenticatedRuntimeInvocationResponseV117(
           request,
           outcome as RuntimeInvocationResultV117<JsonValue>,
-          candidateReceipt(request, evidence),
+          candidateReceiptForOutcome(
+            request,
+            outcome as RuntimeInvocationResultV117<JsonValue>,
+            evidence,
+          ),
           candidateIdentity,
         )
       const result = executeCandidateRuntimeInvocationV117({
@@ -1201,7 +1249,10 @@ describe("runtime execution service v1.17 candidate bridge", () => {
       createAuthenticatedRuntimeInvocationResponseV117(
         request,
         outcome as unknown as RuntimeInvocationResultV117<JsonValue>,
-        candidateReceipt(request),
+        candidateReceiptForOutcome(
+          request,
+          outcome as unknown as RuntimeInvocationResultV117<JsonValue>,
+        ),
         candidateIdentity,
       )
     const bytes = serializeRuntimeInvocationResponseV117(authenticatedResponse)
@@ -1406,18 +1457,22 @@ describe("runtime execution service v1.17 candidate bridge", () => {
       },
       candidateIdentity,
     )
+    const otherOutcome: RuntimeInvocationResultV117<SoldierBrainResult> = {
+      kind: "success",
+      value: {
+        action: { type: "TURN_TO_STONE" },
+        soldierMemory: { forged: true },
+      },
+      trace: candidateTrace(otherRequest),
+    }
     const responseBytes = serializeRuntimeInvocationResponseV117(
       createAuthenticatedRuntimeInvocationResponseV117(
         otherRequest,
-        {
-          kind: "success",
-          value: {
-            action: { type: "TURN_TO_STONE" },
-            soldierMemory: { forged: true },
-          },
-          trace: candidateTrace(otherRequest),
-        },
-        candidateReceipt(otherRequest),
+        otherOutcome as unknown as RuntimeInvocationResultV117<JsonValue>,
+        candidateReceiptForOutcome(
+          otherRequest,
+          otherOutcome as unknown as RuntimeInvocationResultV117<JsonValue>,
+        ),
         candidateIdentity,
       ),
     )
@@ -1474,18 +1529,22 @@ describe("runtime execution service v1.17 candidate bridge", () => {
       },
       candidateIdentity,
     )
+    const mutatedOutcome: RuntimeInvocationResultV117<SoldierBrainResult> = {
+      kind: "success",
+      value: {
+        action: { type: "TURN_TO_STONE" },
+        soldierMemory: { mustNotCommit: true },
+      },
+      trace: candidateTrace(mutated),
+    }
     const mutatedResponse = serializeRuntimeInvocationResponseV117(
       createAuthenticatedRuntimeInvocationResponseV117(
         mutated,
-        {
-          kind: "success",
-          value: {
-            action: { type: "TURN_TO_STONE" },
-            soldierMemory: { mustNotCommit: true },
-          },
-          trace: candidateTrace(mutated),
-        },
-        candidateReceipt(mutated),
+        mutatedOutcome as unknown as RuntimeInvocationResultV117<JsonValue>,
+        candidateReceiptForOutcome(
+          mutated,
+          mutatedOutcome as unknown as RuntimeInvocationResultV117<JsonValue>,
+        ),
         candidateIdentity,
       ),
     )
