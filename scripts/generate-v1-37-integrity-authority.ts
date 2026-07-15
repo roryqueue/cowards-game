@@ -6,26 +6,42 @@ import {
   CANONICAL_AUTHORITY_REGISTRY,
   CANONICAL_COMPATIBILITY_TUPLE_DOMAIN_TAG,
   CANONICAL_COMPATIBILITY_TUPLE_FIELDS,
-  CANONICAL_COMPATIBILITY_TUPLES,
+  CANONICAL_COMPATIBILITY_TUPLE_IDENTITY_PROFILES,
+  HISTORICAL_RUNTIME_V114_SEMANTIC_TUPLE_RECORD,
+  VERSIONED_RUNTIME_V114_SEMANTIC_TUPLE_RECORD,
+  VERSIONED_RUNTIME_V117_SEMANTIC_TUPLE_RECORD,
   encodeCanonicalCompatibilityTuple,
   hashCanonicalCompatibilityTuple,
   type CanonicalCompatibilityTuple,
 } from "../packages/spec/src/integrity-authority.js"
+import { encodeCanonicalJson } from "../packages/spec/src/canonical-json-encode.js"
+import { frameCanonicalIdentity } from "../packages/spec/src/canonical-identity-domains.js"
 
-const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
+const repoRoot = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "..",
+)
 
 export const authorityArtifactPath =
   "packages/spec/artifacts/v1.37-integrity-authority.json" as const
 export const hashVectorsArtifactPath =
   "packages/spec/artifacts/v1.37-integrity-authority-hash-vectors.json" as const
+export const successorAuthorityArtifactPath =
+  "packages/spec/artifacts/v1.37-integrity-authority-v1.17.json" as const
+export const successorHashVectorsArtifactPath =
+  "packages/spec/artifacts/v1.37-integrity-authority-v1.17-hash-vectors.json" as const
 
 export const schemaVersion = "v1.37-integrity-authority-v1" as const
 export const hashVectorSchemaVersion =
   "v1.37-integrity-authority-hash-vectors-v1" as const
-export const generatorVersion =
-  "generate-v1-37-integrity-authority-v1" as const
+export const generatorVersion = "generate-v1-37-integrity-authority-v1" as const
 export const generatedBy =
   "scripts/generate-v1-37-integrity-authority.ts" as const
+export const successorSchemaVersion = "v1.37-integrity-authority-v2" as const
+export const successorHashVectorSchemaVersion =
+  "v1.37-integrity-authority-hash-vectors-v2" as const
+export const successorGeneratorVersion =
+  "generate-v1-37-integrity-authority-v2" as const
 
 export const buildV137IntegrityAuthorityArtifact = () => ({
   schemaVersion,
@@ -40,7 +56,7 @@ export const buildV137IntegrityAuthorityArtifact = () => ({
     tupleIdFormat: "sha256:<lowercase-hex>",
   },
   authorityRegistry: CANONICAL_AUTHORITY_REGISTRY,
-  compatibilityTuples: CANONICAL_COMPATIBILITY_TUPLES,
+  compatibilityTuples: [HISTORICAL_RUNTIME_V114_SEMANTIC_TUPLE_RECORD],
 })
 
 const makeVector = (name: string, tuple: CanonicalCompatibilityTuple) => {
@@ -57,7 +73,7 @@ const makeVector = (name: string, tuple: CanonicalCompatibilityTuple) => {
 }
 
 export const buildV137IntegrityAuthorityHashVectorsArtifact = () => {
-  const registered = CANONICAL_COMPATIBILITY_TUPLES[0]!
+  const registered = HISTORICAL_RUNTIME_V114_SEMANTIC_TUPLE_RECORD
   const baseTuple: CanonicalCompatibilityTuple = { ...registered.tuple }
   const vectors = [makeVector("registered-v1.4", baseTuple)]
 
@@ -80,7 +96,93 @@ export const buildV137IntegrityAuthorityHashVectorsArtifact = () => {
   }
 }
 
-const renderJson = (value: unknown): string => `${JSON.stringify(value, null, 2)}\n`
+const successorIdentityProfiles = Object.freeze([
+  {
+    ...CANONICAL_COMPATIBILITY_TUPLE_IDENTITY_PROFILES.legacy,
+    fieldOrder: CANONICAL_COMPATIBILITY_TUPLE_FIELDS,
+    separator: "NUL",
+    lengthUnit: "UTF-8 bytes",
+    lengthEncoding: "decimal",
+    hashAlgorithm: "sha256",
+    tupleIdFormat: "sha256:<lowercase-hex>",
+  },
+  {
+    ...CANONICAL_COMPATIBILITY_TUPLE_IDENTITY_PROFILES.successor,
+    canonicalJsonProfile: "canonical-json-v1.1",
+    canonicalJsonContext: "canonical-manifest",
+    framing: "u64be-length-prefixed-segments",
+    segments: ["domainTag", "canonicalJsonTuple"],
+    hashAlgorithm: "sha256",
+    tupleIdFormat: "sha256:<lowercase-hex>",
+  },
+] as const)
+
+export const buildV137SuccessorIntegrityAuthorityArtifact = () => ({
+  schemaVersion: successorSchemaVersion,
+  generatorVersion: successorGeneratorVersion,
+  generatedBy,
+  identityProfiles: successorIdentityProfiles,
+  authorityRegistry: CANONICAL_AUTHORITY_REGISTRY,
+  compatibilityTuples: [
+    VERSIONED_RUNTIME_V114_SEMANTIC_TUPLE_RECORD,
+    VERSIONED_RUNTIME_V117_SEMANTIC_TUPLE_RECORD,
+  ],
+})
+
+const makeSuccessorVector = (
+  name: string,
+  record:
+    | typeof VERSIONED_RUNTIME_V114_SEMANTIC_TUPLE_RECORD
+    | typeof VERSIONED_RUNTIME_V117_SEMANTIC_TUPLE_RECORD,
+) => {
+  let encoded: Uint8Array
+  if (
+    record.identityProfile ===
+    CANONICAL_COMPATIBILITY_TUPLE_IDENTITY_PROFILES.legacy.identityProfile
+  ) {
+    encoded = encodeCanonicalCompatibilityTuple({ ...record.tuple })
+  } else {
+    const canonical = encodeCanonicalJson(
+      { ...record.tuple },
+      { context: "canonical-manifest" },
+    )
+    if (!canonical.ok) {
+      throw new Error(
+        `Successor tuple vector is not canonical: ${canonical.error.code}`,
+      )
+    }
+    encoded = frameCanonicalIdentity("semanticTuple", [canonical.bytes])
+  }
+  return {
+    name,
+    identityProfile: record.identityProfile,
+    encodingId: record.encodingId,
+    tuple: record.tuple,
+    encodedBytesHex: Buffer.from(encoded).toString("hex"),
+    encodedBytesBase64: Buffer.from(encoded).toString("base64"),
+    sha256: record.sha256,
+    tupleId: record.tupleId,
+  }
+}
+
+export const buildV137SuccessorIntegrityAuthorityHashVectorsArtifact = () => ({
+  schemaVersion: successorHashVectorSchemaVersion,
+  generatorVersion: successorGeneratorVersion,
+  generatedBy,
+  vectors: [
+    makeSuccessorVector(
+      "registered-v1.14-legacy",
+      VERSIONED_RUNTIME_V114_SEMANTIC_TUPLE_RECORD,
+    ),
+    makeSuccessorVector(
+      "candidate-v1.17-canonical",
+      VERSIONED_RUNTIME_V117_SEMANTIC_TUPLE_RECORD,
+    ),
+  ],
+})
+
+const renderJson = (value: unknown): string =>
+  `${JSON.stringify(value, null, 2)}\n`
 
 export const renderV137IntegrityAuthorityArtifact = (
   artifact = buildV137IntegrityAuthorityArtifact(),
@@ -88,6 +190,14 @@ export const renderV137IntegrityAuthorityArtifact = (
 
 export const renderV137IntegrityAuthorityHashVectorsArtifact = (
   artifact = buildV137IntegrityAuthorityHashVectorsArtifact(),
+): string => renderJson(artifact)
+
+export const renderV137SuccessorIntegrityAuthorityArtifact = (
+  artifact = buildV137SuccessorIntegrityAuthorityArtifact(),
+): string => renderJson(artifact)
+
+export const renderV137SuccessorIntegrityAuthorityHashVectorsArtifact = (
+  artifact = buildV137SuccessorIntegrityAuthorityHashVectorsArtifact(),
 ): string => renderJson(artifact)
 
 const outputs = () => [
@@ -98,6 +208,14 @@ const outputs = () => [
   {
     relativePath: hashVectorsArtifactPath,
     content: renderV137IntegrityAuthorityHashVectorsArtifact(),
+  },
+  {
+    relativePath: successorAuthorityArtifactPath,
+    content: renderV137SuccessorIntegrityAuthorityArtifact(),
+  },
+  {
+    relativePath: successorHashVectorsArtifactPath,
+    content: renderV137SuccessorIntegrityAuthorityHashVectorsArtifact(),
   },
 ]
 
@@ -135,14 +253,18 @@ const main = (): void => {
   if (args.has("--check")) {
     const stale = checkV137IntegrityAuthorityArtifacts()
     if (stale.length > 0) {
-      console.error(`v1.37 integrity authority artifacts are stale: ${stale.join(", ")}`)
+      console.error(
+        `v1.37 integrity authority artifacts are stale: ${stale.join(", ")}`,
+      )
       process.exitCode = 1
       return
     }
     console.log("v1.37 integrity authority artifacts are current")
     return
   }
-  console.error("Usage: generate-v1-37-integrity-authority.ts --write | --check")
+  console.error(
+    "Usage: generate-v1-37-integrity-authority.ts --write | --check",
+  )
   process.exitCode = 1
 }
 

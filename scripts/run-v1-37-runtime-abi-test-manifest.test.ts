@@ -84,12 +84,7 @@ describe("Phase 258 exact runtime ABI test manifest", () => {
       tests: Array<Record<string, unknown>>
     }
     const fakeFilter = structuredClone(raw)
-    fakeFilter.tests[0]!.command = [
-      "pnpm",
-      "test",
-      "--",
-      "--filter=fake",
-    ]
+    fakeFilter.tests[0]!.command = ["pnpm", "test", "--", "--filter=fake"]
     expect(() => parseRuntimeAbiTestManifest(fakeFilter)).toThrow(
       /exact command/u,
     )
@@ -109,31 +104,32 @@ describe("Phase 258 exact runtime ABI test manifest", () => {
     const parsed = parseRuntimeAbiTestManifest(manifest())
     const test = parsed.tests.find(({ id }) => id === "phase258.scripts")
     if (test === undefined) throw new Error("scripts manifest entry missing")
-    const namedFiles = test.ownedFiles
-      .map((path) => ` ✓ ${path}`)
-      .join("\n")
+    const namedFiles = test.ownedFiles.map((path) => ` ✓ ${path}`).join("\n")
+    const fileCount = test.command.filter((argument) =>
+      argument.endsWith(".test.ts"),
+    ).length
     expect(() =>
       validateRuntimeAbiTestResult(
         test,
-        `${namedFiles}\n Test Files  7 skipped (7)\n Tests  7 skipped (7)`,
+        `${namedFiles}\n Test Files  ${fileCount} skipped (${fileCount})\n Tests  ${fileCount} skipped (${fileCount})`,
       ),
     ).toThrow(/skipped/u)
     expect(() =>
       validateRuntimeAbiTestResult(
         test,
-        `canonical-identity-domains.test.ts\n Test Files  7 passed (7)\n Tests  7 passed (7)`,
+        `canonical-identity-domains.test.ts\n Test Files  ${fileCount} passed (${fileCount})\n Tests  ${fileCount} passed (${fileCount})`,
       ),
     ).toThrow(/named file/u)
     expect(() =>
       validateRuntimeAbiTestResult(
         test,
-        `${namedFiles}\n Test Files  7 passed (7)\n Tests  19 passed (19)`,
+        `${namedFiles}\n Test Files  ${fileCount} passed (${fileCount})\n Tests  19 passed (19)`,
       ),
     ).not.toThrow()
     expect(() =>
       validateRuntimeAbiTestResult(
         test,
-        `${namedFiles}\n ✓ rejects all-skipped Vitest output\n Test Files  7 passed (7)\n Tests  19 passed (19)`,
+        `${namedFiles}\n ✓ rejects all-skipped Vitest output\n Test Files  ${fileCount} passed (${fileCount})\n Tests  19 passed (19)`,
       ),
     ).not.toThrow()
   })

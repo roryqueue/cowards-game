@@ -6,6 +6,7 @@ import {
 } from "@cowards/replay"
 import type { StoredChronicle } from "@cowards/persistence/quarantine-lifecycle"
 import type {
+  CanonicalCompatibilityTupleLifecycle,
   Chronicle,
   ChronicleEvent,
   ChronicleEventType,
@@ -16,6 +17,7 @@ import {
   BOTTOM_STARTING_POSITIONS,
   INITIAL_BOUNDS,
   TOP_STARTING_POSITIONS,
+  classifyCanonicalCompatibilityTupleId,
 } from "@cowards/spec"
 import type {
   GetMatchReplayOptions,
@@ -28,8 +30,6 @@ import type {
   ReplayViewMode,
 } from "./types.js"
 
-const V1_37_CURRENT_TUPLE_ID =
-  "sha256:922a6857fdbc8354b744d6e766bff216f3fee85b5ed381355cb427f5a616b3ae"
 const V1_37_CURRENT_REPLAY_READY_EVENT_TYPES = new Set<string>([
   "MATCH_STARTED",
   "ROUND_STARTED",
@@ -57,11 +57,9 @@ const V1_37_CURRENT_REPLAY_READY_EVENT_TYPES = new Set<string>([
 export const resolveReplayReadyEventContract = (
   semanticTupleId: string,
   eventType: string,
-): "current-exact" | "historical-or-unknown" =>
-  semanticTupleId === V1_37_CURRENT_TUPLE_ID
-    ? V1_37_CURRENT_REPLAY_READY_EVENT_TYPES.has(eventType)
-      ? "current-exact"
-      : "historical-or-unknown"
+): CanonicalCompatibilityTupleLifecycle =>
+  V1_37_CURRENT_REPLAY_READY_EVENT_TYPES.has(eventType)
+    ? classifyCanonicalCompatibilityTupleId(semanticTupleId)
     : "historical-or-unknown"
 
 const eventLabels = {

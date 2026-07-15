@@ -2120,16 +2120,8 @@ export const verifyInstalledRuntimeEvidenceAuthorityV117 = (
     installedAt !== evaluationInstant ||
     Date.parse(installedAt) < Date.parse(inspected.payload.validFrom) ||
     Date.parse(installedAt) > Date.parse(inspected.payload.validUntil) ||
-    !(
-      CANONICAL_COMPATIBILITY_TUPLES.some(
-        ({ tupleId }) =>
-          tupleId === inspected.payload.semanticTupleManifestHash,
-      ) ||
-      (expectedTrustDomain ===
-        RUNTIME_EVIDENCE_AUTHORITY_TRUST_DOMAINS.fixture &&
-        inspected.payload.semanticTupleManifestHash ===
-          CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_ID)
-    )
+    inspected.payload.semanticTupleManifestHash !==
+      CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_ID
   ) {
     return fail("INSTALL_IDENTITY", "v1.17 authority identity is unavailable.")
   }

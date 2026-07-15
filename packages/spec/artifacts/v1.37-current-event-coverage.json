@@ -73,31 +73,31 @@
       "name": "chronicle-grammar",
       "relativePath": "packages/replay/src/grammar.ts",
       "disposition": "semantic-validator",
-      "sourceSha256": "19938808428d274665565b3a8cc09a878997ef143f4acb29dfbbec4f6a06ddb3"
+      "sourceSha256": "5c8d95b416733083aff6cc782f9b1372b43a04c3759fa88571514722a3d1ec99"
     },
     {
       "name": "replay-transition",
       "relativePath": "packages/replay/src/replay-transition.ts",
       "disposition": "state-reconstructor-or-explicit-no-op",
-      "sourceSha256": "c7e0eadc1bbedc1ae7eb8c24b4d0e1bc0af60fe9d5dd17c07dbf65ebd23f241b"
+      "sourceSha256": "73521239d6240fcc21f7a3b03a00db608ed9cba20784834a6af180bf50e62b42"
     },
     {
       "name": "match-intelligence",
       "relativePath": "apps/web/app/match-intelligence.ts",
       "disposition": "annotation-consumer-or-no-special-annotation",
-      "sourceSha256": "25e23535ffa8cb9be119f805de4cb001523d6d0c1646acf348297f47f4b00d2a"
+      "sourceSha256": "69b1630ba697384e3b8c1341903ebe496f9494268a9e522e841f0dbe6003642f"
     },
     {
       "name": "replay-ready",
       "relativePath": "apps/web/app/matches/replay-ready.ts",
       "disposition": "timeline-consumer-or-generic-label",
-      "sourceSha256": "eddc4dab2cd5915dce70345eafbd1168f429f59f3ece3afc210b14ce52e25412"
+      "sourceSha256": "fa7c3b21e2677195a3e066fd42978ef15e577e8b62cc16e0db398d523d22a0d4"
     },
     {
       "name": "replay-board",
       "relativePath": "apps/web/app/matches/[matchId]/replay/replay-board-model.ts",
       "disposition": "board-consumer-or-no-callout",
-      "sourceSha256": "1da6d8a085df8f043fa145f1c7e481336cae6c93a389ea09190f69a9f828a769"
+      "sourceSha256": "da9467fe2727fa979ae728c86d1a0ce489119ab2984d717f104384d92ec2376f"
     }
   ],
   "coverage": [
@@ -115,7 +115,7 @@
           "disposition": "semantic-validator",
           "evidence": {
             "relativePath": "packages/replay/src/grammar.ts",
-            "line": 13
+            "line": 15
           }
         },
         {
@@ -123,7 +123,7 @@
           "disposition": "state-reconstructor-or-explicit-no-op",
           "evidence": {
             "relativePath": "packages/replay/src/replay-transition.ts",
-            "line": 31
+            "line": 33
           }
         },
         {
@@ -166,7 +166,7 @@
           "disposition": "semantic-validator",
           "evidence": {
             "relativePath": "packages/replay/src/grammar.ts",
-            "line": 14
+            "line": 16
           }
         },
         {
@@ -174,7 +174,7 @@
           "disposition": "state-reconstructor-or-explicit-no-op",
           "evidence": {
             "relativePath": "packages/replay/src/replay-transition.ts",
-            "line": 32
+            "line": 34
           }
         },
         {
@@ -217,7 +217,7 @@
           "disposition": "semantic-validator",
           "evidence": {
             "relativePath": "packages/replay/src/grammar.ts",
-            "line": 15
+            "line": 17
           }
         },
         {
@@ -225,7 +225,7 @@
           "disposition": "state-reconstructor-or-explicit-no-op",
           "evidence": {
             "relativePath": "packages/replay/src/replay-transition.ts",
-            "line": 33
+            "line": 35
           }
         },
         {
@@ -268,7 +268,7 @@
           "disposition": "semantic-validator",
           "evidence": {
             "relativePath": "packages/replay/src/grammar.ts",
-            "line": 16
+            "line": 18
           }
         },
         {
@@ -276,7 +276,7 @@
           "disposition": "state-reconstructor-or-explicit-no-op",
           "evidence": {
             "relativePath": "packages/replay/src/replay-transition.ts",
-            "line": 34
+            "line": 36
           }
         },
         {
@@ -319,7 +319,7 @@
           "disposition": "semantic-validator",
           "evidence": {
             "relativePath": "packages/replay/src/grammar.ts",
-            "line": 17
+            "line": 19
           }
         },
         {
@@ -327,7 +327,7 @@
           "disposition": "state-reconstructor-or-explicit-no-op",
           "evidence": {
             "relativePath": "packages/replay/src/replay-transition.ts",
-            "line": 35
+            "line": 37
           }
         },
         {
@@ -370,7 +370,7 @@
           "disposition": "semantic-validator",
           "evidence": {
             "relativePath": "packages/replay/src/grammar.ts",
-            "line": 18
+            "line": 20
           }
         },
         {
@@ -378,7 +378,7 @@
           "disposition": "state-reconstructor-or-explicit-no-op",
           "evidence": {
             "relativePath": "packages/replay/src/replay-transition.ts",
-            "line": 36
+            "line": 38
           }
         },
         {
@@ -421,7 +421,7 @@
           "disposition": "semantic-validator",
           "evidence": {
             "relativePath": "packages/replay/src/grammar.ts",
-            "line": 19
+            "line": 21
           }
         },
         {
@@ -429,7 +429,7 @@
           "disposition": "state-reconstructor-or-explicit-no-op",
           "evidence": {
             "relativePath": "packages/replay/src/replay-transition.ts",
-            "line": 37
+            "line": 39
           }
         },
         {
@@ -472,7 +472,7 @@
           "disposition": "semantic-validator",
           "evidence": {
             "relativePath": "packages/replay/src/grammar.ts",
-            "line": 20
+            "line": 22
           }
         },
         {
@@ -480,7 +480,7 @@
           "disposition": "state-reconstructor-or-explicit-no-op",
           "evidence": {
             "relativePath": "packages/replay/src/replay-transition.ts",
-            "line": 38
+            "line": 40
           }
         },
         {
@@ -523,7 +523,7 @@
           "disposition": "semantic-validator",
           "evidence": {
             "relativePath": "packages/replay/src/grammar.ts",
-            "line": 21
+            "line": 23
           }
         },
         {
@@ -531,7 +531,7 @@
           "disposition": "state-reconstructor-or-explicit-no-op",
           "evidence": {
             "relativePath": "packages/replay/src/replay-transition.ts",
-            "line": 39
+            "line": 41
           }
         },
         {
@@ -574,7 +574,7 @@
           "disposition": "semantic-validator",
           "evidence": {
             "relativePath": "packages/replay/src/grammar.ts",
-            "line": 22
+            "line": 24
           }
         },
         {
@@ -582,7 +582,7 @@
           "disposition": "state-reconstructor-or-explicit-no-op",
           "evidence": {
             "relativePath": "packages/replay/src/replay-transition.ts",
-            "line": 40
+            "line": 42
           }
         },
         {
@@ -629,7 +629,7 @@
           "disposition": "semantic-validator",
           "evidence": {
             "relativePath": "packages/replay/src/grammar.ts",
-            "line": 23
+            "line": 25
           }
         },
         {
@@ -637,7 +637,7 @@
           "disposition": "state-reconstructor-or-explicit-no-op",
           "evidence": {
             "relativePath": "packages/replay/src/replay-transition.ts",
-            "line": 41
+            "line": 43
           }
         },
         {
@@ -696,7 +696,7 @@
           "disposition": "semantic-validator",
           "evidence": {
             "relativePath": "packages/replay/src/grammar.ts",
-            "line": 24
+            "line": 26
           }
         },
         {
@@ -704,7 +704,7 @@
           "disposition": "state-reconstructor-or-explicit-no-op",
           "evidence": {
             "relativePath": "packages/replay/src/replay-transition.ts",
-            "line": 42
+            "line": 44
           }
         },
         {
@@ -747,7 +747,7 @@
           "disposition": "semantic-validator",
           "evidence": {
             "relativePath": "packages/replay/src/grammar.ts",
-            "line": 25
+            "line": 27
           }
         },
         {
@@ -755,7 +755,7 @@
           "disposition": "state-reconstructor-or-explicit-no-op",
           "evidence": {
             "relativePath": "packages/replay/src/replay-transition.ts",
-            "line": 43
+            "line": 45
           }
         },
         {
@@ -798,7 +798,7 @@
           "disposition": "semantic-validator",
           "evidence": {
             "relativePath": "packages/replay/src/grammar.ts",
-            "line": 26
+            "line": 28
           }
         },
         {
@@ -806,7 +806,7 @@
           "disposition": "state-reconstructor-or-explicit-no-op",
           "evidence": {
             "relativePath": "packages/replay/src/replay-transition.ts",
-            "line": 44
+            "line": 46
           }
         },
         {
@@ -849,7 +849,7 @@
           "disposition": "semantic-validator",
           "evidence": {
             "relativePath": "packages/replay/src/grammar.ts",
-            "line": 27
+            "line": 29
           }
         },
         {
@@ -857,7 +857,7 @@
           "disposition": "state-reconstructor-or-explicit-no-op",
           "evidence": {
             "relativePath": "packages/replay/src/replay-transition.ts",
-            "line": 45
+            "line": 47
           }
         },
         {
@@ -900,7 +900,7 @@
           "disposition": "semantic-validator",
           "evidence": {
             "relativePath": "packages/replay/src/grammar.ts",
-            "line": 28
+            "line": 30
           }
         },
         {
@@ -908,7 +908,7 @@
           "disposition": "state-reconstructor-or-explicit-no-op",
           "evidence": {
             "relativePath": "packages/replay/src/replay-transition.ts",
-            "line": 46
+            "line": 48
           }
         },
         {
@@ -963,7 +963,7 @@
           "disposition": "semantic-validator",
           "evidence": {
             "relativePath": "packages/replay/src/grammar.ts",
-            "line": 29
+            "line": 31
           }
         },
         {
@@ -971,7 +971,7 @@
           "disposition": "state-reconstructor-or-explicit-no-op",
           "evidence": {
             "relativePath": "packages/replay/src/replay-transition.ts",
-            "line": 47
+            "line": 49
           }
         },
         {
@@ -1022,7 +1022,7 @@
           "disposition": "semantic-validator",
           "evidence": {
             "relativePath": "packages/replay/src/grammar.ts",
-            "line": 30
+            "line": 32
           }
         },
         {
@@ -1030,7 +1030,7 @@
           "disposition": "state-reconstructor-or-explicit-no-op",
           "evidence": {
             "relativePath": "packages/replay/src/replay-transition.ts",
-            "line": 48
+            "line": 50
           }
         },
         {
@@ -1073,7 +1073,7 @@
           "disposition": "semantic-validator",
           "evidence": {
             "relativePath": "packages/replay/src/grammar.ts",
-            "line": 31
+            "line": 33
           }
         },
         {
@@ -1081,7 +1081,7 @@
           "disposition": "state-reconstructor-or-explicit-no-op",
           "evidence": {
             "relativePath": "packages/replay/src/replay-transition.ts",
-            "line": 49
+            "line": 51
           }
         },
         {
@@ -1132,7 +1132,7 @@
           "disposition": "semantic-validator",
           "evidence": {
             "relativePath": "packages/replay/src/grammar.ts",
-            "line": 32
+            "line": 34
           }
         },
         {
@@ -1140,7 +1140,7 @@
           "disposition": "state-reconstructor-or-explicit-no-op",
           "evidence": {
             "relativePath": "packages/replay/src/replay-transition.ts",
-            "line": 50
+            "line": 52
           }
         },
         {
@@ -1187,7 +1187,7 @@
           "disposition": "semantic-validator",
           "evidence": {
             "relativePath": "packages/replay/src/grammar.ts",
-            "line": 33
+            "line": 35
           }
         },
         {
@@ -1195,7 +1195,7 @@
           "disposition": "state-reconstructor-or-explicit-no-op",
           "evidence": {
             "relativePath": "packages/replay/src/replay-transition.ts",
-            "line": 51
+            "line": 53
           }
         },
         {

@@ -18,6 +18,7 @@ import {
   type RuntimeIdentityManifest,
   type SuccessorRuntimeIdentityTemplateV117,
   type StrategyRevision,
+  type StrategyRevisionV117,
 } from "@cowards/spec"
 
 export {
@@ -129,7 +130,7 @@ const derivedBinding = (
 })
 
 export const composeSuccessorRuntimeIdentityV117 = (input: {
-  revision: StrategyRevision
+  revision: StrategyRevision | StrategyRevisionV117
   deployed: ExecutableLaneIdentity
   template: SuccessorRuntimeIdentityTemplateV117
 }):

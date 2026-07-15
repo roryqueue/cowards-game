@@ -21,10 +21,14 @@ import {
   CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_ID,
   COMPATIBILITY_VERSIONS,
   RUNTIME_INVOCATION_V1_17_SYSTEM_FAILURE_RETRYABILITY,
+  StrategyRevisionSchema,
+  StrategyRevisionV117Schema,
+  VERSIONED_RUNTIME_V117_SEMANTIC_TUPLE_RECORD,
   hashExecutableLaneIdentity,
   runtimeCompatibilityKey,
   type ExecutableLaneIdentity,
-  type StrategyRevision,
+  type StrategyRevisionV117,
+  type SuccessorRuntimeIdentityTemplateV117,
 } from "../packages/spec/src/index.ts"
 
 const repoRoot = path.resolve(import.meta.dirname, "..")
@@ -328,7 +332,9 @@ describe("versioned TypeScript-to-Go parity generator", () => {
     )
     expect(
       readFileSync(path.join(root, successorAuthorityFixtureRelative)),
-    ).toEqual(readFileSync(path.join(repoRoot, successorAuthorityFixtureRelative)))
+    ).toEqual(
+      readFileSync(path.join(repoRoot, successorAuthorityFixtureRelative)),
+    )
   }, 30_000)
 
   it("fails check mode when either complete v1.17 fixture family is absent", () => {
@@ -408,22 +414,75 @@ describe("versioned TypeScript-to-Go parity generator", () => {
     ) as {
       semanticTupleId: string
       semanticTuple: typeof CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE
+      template: SuccessorRuntimeIdentityTemplateV117
+      installFixture: {
+        payloadBytesBase64: string
+        expected: {
+          attestationIds: string[]
+          certificateIds: string[]
+        }
+      }
       revisionVectors: Array<{
         strategyRevisionId: string
         laneIdentityHash: string
-        revision: StrategyRevision
+        revision: StrategyRevisionV117
         deployed: ExecutableLaneIdentity
       }>
     }
     expect(fixture.semanticTupleId).toBe(
       CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_ID,
     )
-    expect(fixture.semanticTuple).toEqual(
-      CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE,
+    expect(fixture.semanticTuple).toEqual(CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE)
+    const payload = JSON.parse(
+      Buffer.from(fixture.installFixture.payloadBytesBase64, "base64").toString(
+        "utf8",
+      ),
+    ) as {
+      attestations: Array<{ attestationId: string }>
+      certificates: Array<{
+        certificateId: string
+        certificateKind: "containment" | "conformance"
+        attestationId: string
+      }>
+    }
+    expect(payload.attestations).toHaveLength(4)
+    expect(payload.certificates).toHaveLength(4)
+    expect(
+      new Set(payload.attestations.map(({ attestationId }) => attestationId))
+        .size,
+    ).toBe(4)
+    expect(
+      payload.certificates.map(({ certificateKind, attestationId }) => ({
+        certificateKind,
+        attestationId,
+      })),
+    ).toEqual([
+      {
+        certificateKind: "containment",
+        attestationId: "attestation:successor-parity:bottom:containment:v1.17",
+      },
+      {
+        certificateKind: "conformance",
+        attestationId: "attestation:successor-parity:bottom:conformance:v1.17",
+      },
+      {
+        certificateKind: "containment",
+        attestationId: "attestation:successor-parity:top:containment:v1.17",
+      },
+      {
+        certificateKind: "conformance",
+        attestationId: "attestation:successor-parity:top:conformance:v1.17",
+      },
+    ])
+    expect(fixture.installFixture.expected.attestationIds).toEqual(
+      payload.attestations.map(({ attestationId }) => attestationId).sort(),
+    )
+    expect(fixture.installFixture.expected.certificateIds).toEqual(
+      payload.certificates.map(({ certificateId }) => certificateId).sort(),
     )
 
     const revisionId = (input: {
-      revision: StrategyRevision
+      revision: StrategyRevisionV117
       source?: string
       abiVersion?: string
       artifactHash?: string
@@ -455,6 +514,12 @@ describe("versioned TypeScript-to-Go parity generator", () => {
 
     for (const vector of fixture.revisionVectors) {
       expect(vector.revision.id).toBe(vector.strategyRevisionId)
+      expect(
+        StrategyRevisionV117Schema.safeParse(vector.revision).success,
+      ).toBe(true)
+      expect(StrategyRevisionSchema.safeParse(vector.revision).success).toBe(
+        false,
+      )
       expect(vector.revision.runtime.abiVersion).toBe(
         CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE.runtimeAbi,
       )
@@ -468,11 +533,31 @@ describe("versioned TypeScript-to-Go parity generator", () => {
         CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE,
       )
       expect(vector.deployed.toolchainId).toBe(
-        vector.revision.metadata.sourceArtifact!.toolchain.language,
+        vector.revision.metadata.sourceArtifact!.toolchain.runtime,
       )
       expect(vector.deployed.toolchainVersion).toBe(
         vector.revision.metadata.sourceArtifact!.toolchain.runtimeVersion,
       )
+      expect(vector.deployed.runtimeId).toBe("node")
+      expect(vector.deployed.runtimeVersion).toBe("node-v26.0.0")
+      expect(new Map(fixture.template.exactPins).get("reportedVersion")).toBe(
+        vector.deployed.runtimeVersion,
+      )
+      expect(vector.revision.runtime.limits).toMatchObject({
+        environment: "empty",
+        filesystem: "none",
+        network: "disabled",
+        shell: "disabled",
+        packagePolicy: "none",
+      })
+      expect(vector.revision.metadata.providerValidation).toMatchObject({
+        providerId: vector.deployed.providerId,
+        sourceHash: vector.revision.sourceHash,
+        sourceBytes: vector.revision.sourceBytes,
+        artifactHash: vector.revision.metadata.sourceArtifact.hash,
+        artifactBytes: vector.revision.metadata.sourceArtifact.bytes,
+        proof: expect.stringMatching(/^sha256:[0-9a-f]{64}$/u),
+      })
       expect(vector.laneIdentityHash).toBe(
         `sha256:${hashExecutableLaneIdentity(vector.deployed)}`,
       )
@@ -483,6 +568,30 @@ describe("versioned TypeScript-to-Go parity generator", () => {
           abiVersion: "strategy-runtime-abi-v1.17-mutated",
         }),
       ).not.toBe(vector.revision.id)
+      expect(
+        StrategyRevisionV117Schema.safeParse({
+          ...vector.revision,
+          runtime: {
+            ...vector.revision.runtime,
+            limits: {
+              ...vector.revision.runtime.limits,
+              filesystem: "host",
+            },
+          },
+        }).success,
+      ).toBe(false)
+      expect(
+        StrategyRevisionV117Schema.safeParse({
+          ...vector.revision,
+          metadata: {
+            ...vector.revision.metadata,
+            providerValidation: {
+              ...vector.revision.metadata.providerValidation,
+              artifactHash: "0".repeat(64),
+            },
+          },
+        }).success,
+      ).toBe(false)
       expect(
         revisionId({ revision: vector.revision, artifactHash: "0".repeat(64) }),
       ).not.toBe(vector.revision.id)
@@ -515,6 +624,12 @@ describe("versioned TypeScript-to-Go parity generator", () => {
     )
     expect(generated).toContain(
       `const runtimeSuccessorSemanticTupleV117 = ${JSON.stringify(JSON.stringify(CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE))}`,
+    )
+    expect(generated).toContain(
+      `const runtimeSuccessorSemanticTupleIdentityProfileV117 = ${JSON.stringify(VERSIONED_RUNTIME_V117_SEMANTIC_TUPLE_RECORD.identityProfile)}`,
+    )
+    expect(generated).toContain(
+      `const runtimeSuccessorSemanticTupleEncodingIDV117 = ${JSON.stringify(VERSIONED_RUNTIME_V117_SEMANTIC_TUPLE_RECORD.encodingId)}`,
     )
     const successorAuthorityFixture = read(successorAuthorityFixtureRelative)
     expect(generated).toContain(

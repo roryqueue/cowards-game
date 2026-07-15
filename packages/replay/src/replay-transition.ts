@@ -11,12 +11,14 @@ import type {
   Position,
   SoldierSnapshot,
 } from "@cowards/spec"
-import { MatchOutcomeSchema } from "@cowards/spec"
+import {
+  MatchOutcomeSchema,
+  classifyCanonicalCompatibilityTupleId,
+  type CanonicalCompatibilityTupleLifecycle,
+} from "@cowards/spec"
 import { stableStringify } from "./hash.js"
 import type { ChronicleRecorderExecution } from "./record.js"
 
-const V1_37_CURRENT_TUPLE_ID =
-  "sha256:922a6857fdbc8354b744d6e766bff216f3fee85b5ed381355cb427f5a616b3ae"
 const CURRENT_STATE_HASH_DOMAIN =
   "cowards-game:candidate-game-state-projection:v1" as const
 
@@ -54,11 +56,9 @@ const V1_37_CURRENT_REPLAY_TRANSITION_EVENT_TYPES = new Set<string>([
 export const resolveReplayTransitionEventContract = (
   semanticTupleId: string,
   eventType: string,
-): "current-exact" | "historical-or-unknown" =>
-  semanticTupleId === V1_37_CURRENT_TUPLE_ID
-    ? V1_37_CURRENT_REPLAY_TRANSITION_EVENT_TYPES.has(eventType)
-      ? "current-exact"
-      : "historical-or-unknown"
+): CanonicalCompatibilityTupleLifecycle =>
+  V1_37_CURRENT_REPLAY_TRANSITION_EVENT_TYPES.has(eventType)
+    ? classifyCanonicalCompatibilityTupleId(semanticTupleId)
     : "historical-or-unknown"
 
 export interface ReplayState {

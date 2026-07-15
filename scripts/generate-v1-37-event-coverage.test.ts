@@ -12,6 +12,7 @@ import {
   ChronicleEventTypeSchema,
   HistoricalV14ChronicleEventTypeSchema,
 } from "../packages/spec/src/schemas.js"
+import { CURRENT_CANONICAL_COMPATIBILITY_TUPLE_ID } from "../packages/spec/src/integrity-authority.js"
 import {
   CURRENT_CONSUMER_SURFACES,
   CurrentEventCoverageError,
@@ -36,17 +37,14 @@ const findingCodes = (operation: () => unknown): string[] => {
     operation()
   } catch (error) {
     expect(error).toBeInstanceOf(CurrentEventCoverageError)
-    return (error as CurrentEventCoverageError).findings.map(
-      ({ code }) => code,
-    )
+    return (error as CurrentEventCoverageError).findings.map(({ code }) => code)
   }
   throw new Error("Expected current event coverage to fail closed")
 }
 
 describe("v1.37 current event coverage generator", () => {
   it("routes only exact-current vocabulary while retaining historical PUSH", () => {
-    const tupleId =
-      "sha256:922a6857fdbc8354b744d6e766bff216f3fee85b5ed381355cb427f5a616b3ae"
+    const tupleId = CURRENT_CANONICAL_COMPATIBILITY_TUPLE_ID
     const resolvers = [
       resolveGrammarEventContract,
       resolveReplayTransitionEventContract,
@@ -82,8 +80,7 @@ describe("v1.37 current event coverage generator", () => {
     expect(checkRetainedCandidateEventCoverageProvenance()).toEqual([])
     expect(artifact).toMatchObject({
       status: "current-exact",
-      tupleId:
-        "sha256:922a6857fdbc8354b744d6e766bff216f3fee85b5ed381355cb427f5a616b3ae",
+      tupleId: CURRENT_CANONICAL_COMPATIBILITY_TUPLE_ID,
       historicalOnly: ["PUSH_ATTEMPTED"],
       retainedCandidateEvidence: {
         relativePath: candidateEventCoverageArtifactPath,
@@ -122,6 +119,18 @@ describe("v1.37 current event coverage generator", () => {
         }),
       ),
     ).toContain("STALE_CONSUMER_DISPOSITION")
+    expect(
+      findingCodes(() =>
+        buildV137CurrentEventCoverage({
+          sourceOverrides: {
+            [surface.relativePath]: source.replace(
+              "classifyCanonicalCompatibilityTupleId(semanticTupleId)",
+              "String(semanticTupleId)",
+            ),
+          },
+        }),
+      ),
+    ).toContain("TUPLE_ROUTE_INVALID")
   })
 
   it("fails undeclared producers and unproduced declarations", () => {

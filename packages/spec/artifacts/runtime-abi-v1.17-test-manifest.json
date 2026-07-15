@@ -6,19 +6,19 @@
       "id": "phase258.spec-and-codecs",
       "stage": "preactivation",
       "kind": "vitest",
-      "command": ["pnpm", "exec", "vitest", "run", "--reporter=verbose", "packages/spec/src/canonical-identity-domains.test.ts", "packages/spec/src/canonical-json-boundaries.test.ts", "packages/spec/src/canonical-json-corpus.test.ts", "packages/spec/src/canonical-json-encode.test.ts", "packages/spec/src/canonical-json-parse.test.ts", "packages/spec/src/canonical-json-scan.test.ts", "packages/spec/src/runtime-abi-v1-17.test.ts", "packages/spec/src/runtime-evidence-attestation-v1-17.test.ts", "packages/spec/src/runtime-evidence-authority-bundle.test.ts", "packages/spec/src/runtime-execution-service-v1-17.test.ts", "packages/spec/src/runtime-identity-manifest.test.ts", "packages/spec/src/runtime-invocation-v1-17.test.ts"],
+      "command": ["pnpm", "exec", "vitest", "run", "--reporter=verbose", "packages/spec/src/canonical-identity-domains.test.ts", "packages/spec/src/canonical-json-boundaries.test.ts", "packages/spec/src/canonical-json-corpus.test.ts", "packages/spec/src/canonical-json-encode.test.ts", "packages/spec/src/canonical-json-parse.test.ts", "packages/spec/src/canonical-json-scan.test.ts", "packages/spec/src/integrity-authority.test.ts", "packages/spec/src/runtime-abi-v1-17.test.ts", "packages/spec/src/runtime-evidence-attestation-v1-17.test.ts", "packages/spec/src/runtime-evidence-authority-bundle.test.ts", "packages/spec/src/runtime-execution-service-v1-17.test.ts", "packages/spec/src/runtime-identity-manifest.test.ts", "packages/spec/src/runtime-invocation-v1-17.test.ts"],
       "namedResult": "phase258-spec-and-codecs",
-      "expectedOutput": ["canonical-identity-domains.test.ts", "runtime-abi-v1-17.test.ts", "runtime-invocation-v1-17.test.ts", "runtime-execution-service-v1-17.test.ts"],
-      "ownedFiles": ["packages/spec/src/canonical-identity-domains.test.ts", "packages/spec/src/canonical-json-boundaries.test.ts", "packages/spec/src/canonical-json-corpus.test.ts", "packages/spec/src/canonical-json-encode.test.ts", "packages/spec/src/canonical-json-parse.test.ts", "packages/spec/src/canonical-json-scan.test.ts", "packages/spec/src/runtime-abi-v1-17.test.ts", "packages/spec/src/runtime-evidence-attestation-v1-17.test.ts", "packages/spec/src/runtime-evidence-authority-bundle.test.ts", "packages/spec/src/runtime-execution-service-v1-17.test.ts", "packages/spec/src/runtime-identity-manifest.test.ts", "packages/spec/src/runtime-invocation-v1-17.test.ts"]
+      "expectedOutput": ["canonical-identity-domains.test.ts", "integrity-authority.test.ts", "runtime-abi-v1-17.test.ts", "runtime-invocation-v1-17.test.ts", "runtime-execution-service-v1-17.test.ts"],
+      "ownedFiles": ["packages/spec/src/canonical-identity-domains.test.ts", "packages/spec/src/canonical-json-boundaries.test.ts", "packages/spec/src/canonical-json-corpus.test.ts", "packages/spec/src/canonical-json-encode.test.ts", "packages/spec/src/canonical-json-parse.test.ts", "packages/spec/src/canonical-json-scan.test.ts", "packages/spec/src/integrity-authority.test.ts", "packages/spec/src/runtime-abi-v1-17.test.ts", "packages/spec/src/runtime-evidence-attestation-v1-17.test.ts", "packages/spec/src/runtime-evidence-authority-bundle.test.ts", "packages/spec/src/runtime-execution-service-v1-17.test.ts", "packages/spec/src/runtime-identity-manifest.test.ts", "packages/spec/src/runtime-invocation-v1-17.test.ts"]
     },
     {
       "id": "phase258.runtime-lanes",
       "stage": "preactivation",
       "kind": "vitest",
-      "command": ["pnpm", "exec", "vitest", "run", "--reporter=verbose", "--maxWorkers=1", "packages/runtime-js/src/adapter-contract.test.ts", "packages/runtime-js/src/hostile-matrix.test.ts", "packages/runtime-python/src/python-subprocess-adapter.test.ts", "packages/runtime-wasm-wasi/src/wasm-wasi-subprocess-adapter.test.ts"],
+      "command": ["pnpm", "exec", "vitest", "run", "--reporter=verbose", "--maxWorkers=1", "packages/runtime-js/src/adapter-contract.test.ts", "packages/runtime-js/src/hostile-matrix.test.ts", "packages/runtime-js/src/revision.test.ts", "packages/runtime-python/src/python-subprocess-adapter.test.ts", "packages/runtime-wasm-wasi/src/wasm-wasi-subprocess-adapter.test.ts"],
       "namedResult": "phase258-runtime-lanes",
-      "expectedOutput": ["adapter-contract.test.ts", "hostile-matrix.test.ts", "python-subprocess-adapter.test.ts", "wasm-wasi-subprocess-adapter.test.ts"],
-      "ownedFiles": ["packages/runtime-js/src/adapter-contract.test.ts", "packages/runtime-js/src/hostile-matrix.test.ts", "packages/runtime-python/src/python-subprocess-adapter.test.ts", "packages/runtime-wasm-wasi/src/wasm-wasi-subprocess-adapter.test.ts"]
+      "expectedOutput": ["adapter-contract.test.ts", "hostile-matrix.test.ts", "revision.test.ts", "python-subprocess-adapter.test.ts", "wasm-wasi-subprocess-adapter.test.ts"],
+      "ownedFiles": ["packages/runtime-js/src/adapter-contract.test.ts", "packages/runtime-js/src/hostile-matrix.test.ts", "packages/runtime-js/src/revision.test.ts", "packages/runtime-python/src/python-subprocess-adapter.test.ts", "packages/runtime-wasm-wasi/src/wasm-wasi-subprocess-adapter.test.ts"]
     },
     {
       "id": "phase258.service-and-engine",
@@ -30,13 +30,22 @@
       "ownedFiles": ["apps/runtime-service/src/counted-safety.test.ts", "apps/runtime-service/src/execute-match.test.ts", "apps/runtime-service/src/runtime-evidence-authority.test.ts", "apps/runtime-service/src/semantic-integrity.test.ts", "apps/runtime-service/src/semantic-receipt-v1-17.test.ts", "apps/runtime-service/src/server.test.ts", "packages/engine/src/kernel/runtime-ownership.test.ts"]
     },
     {
+      "id": "phase258.replay-and-web",
+      "stage": "preactivation",
+      "kind": "vitest",
+      "command": ["pnpm", "exec", "vitest", "run", "--reporter=verbose", "packages/replay/src/grammar.test.ts", "packages/replay/src/replay-transition.test.ts", "packages/replay/src/validate.test.ts", "apps/web/app/tuple-classification.test.ts"],
+      "namedResult": "phase258-replay-and-web",
+      "expectedOutput": ["grammar.test.ts", "replay-transition.test.ts", "validate.test.ts", "tuple-classification.test.ts"],
+      "ownedFiles": ["packages/replay/src/grammar.test.ts", "packages/replay/src/replay-transition.test.ts", "packages/replay/src/validate.test.ts", "apps/web/app/tuple-classification.test.ts"]
+    },
+    {
       "id": "phase258.scripts",
       "stage": "preactivation",
       "kind": "vitest",
-      "command": ["pnpm", "exec", "vitest", "run", "--reporter=verbose", "scripts/calibrate-v1-37-runtime-abi.test.ts", "scripts/check-canonical-json-v1-1-red.test.ts", "scripts/check-v1-37-integrity-boundaries.test.ts", "scripts/check-v1-37-runtime-abi-manifest-closure.test.ts", "scripts/generate-canonical-json-v1-1-corpus.test.ts", "scripts/generate-go-parity-fixtures.test.ts", "scripts/run-v1-37-runtime-abi-test-manifest.test.ts"],
+      "command": ["pnpm", "exec", "vitest", "run", "--reporter=verbose", "scripts/calibrate-v1-37-runtime-abi.test.ts", "scripts/check-canonical-json-v1-1-red.test.ts", "scripts/check-v1-37-integrity-boundaries.test.ts", "scripts/check-v1-37-runtime-abi-manifest-closure.test.ts", "scripts/generate-canonical-json-v1-1-corpus.test.ts", "scripts/generate-go-parity-fixtures.test.ts", "scripts/generate-v1-37-event-coverage.test.ts", "scripts/prove-v1-37-atomic-activation.test.ts", "scripts/run-v1-37-runtime-abi-test-manifest.test.ts"],
       "namedResult": "phase258-scripts",
-      "expectedOutput": ["calibrate-v1-37-runtime-abi.test.ts", "check-v1-37-runtime-abi-manifest-closure.test.ts", "run-v1-37-runtime-abi-test-manifest.test.ts"],
-      "ownedFiles": ["scripts/calibrate-v1-37-runtime-abi.test.ts", "scripts/check-canonical-json-v1-1-red.test.ts", "scripts/check-v1-37-integrity-boundaries.test.ts", "scripts/check-v1-37-runtime-abi-manifest-closure.test.ts", "scripts/generate-canonical-json-v1-1-corpus.test.ts", "scripts/generate-go-parity-fixtures.test.ts", "scripts/run-v1-37-runtime-abi-test-manifest.test.ts"]
+      "expectedOutput": ["calibrate-v1-37-runtime-abi.test.ts", "check-v1-37-runtime-abi-manifest-closure.test.ts", "generate-v1-37-event-coverage.test.ts", "prove-v1-37-atomic-activation.test.ts", "run-v1-37-runtime-abi-test-manifest.test.ts"],
+      "ownedFiles": ["scripts/calibrate-v1-37-runtime-abi.test.ts", "scripts/check-canonical-json-v1-1-red.test.ts", "scripts/check-v1-37-integrity-boundaries.test.ts", "scripts/check-v1-37-runtime-abi-manifest-closure.test.ts", "scripts/generate-canonical-json-v1-1-corpus.test.ts", "scripts/generate-go-parity-fixtures.test.ts", "scripts/generate-v1-37-event-coverage.test.ts", "scripts/prove-v1-37-atomic-activation.test.ts", "scripts/run-v1-37-runtime-abi-test-manifest.test.ts"]
     },
     {
       "id": "phase258.database",
@@ -44,7 +53,7 @@
       "kind": "vitest",
       "command": ["pnpm", "exec", "vitest", "run", "--reporter=verbose", "packages/persistence/src/account-revisions.test.ts", "packages/persistence/src/complete-match.test.ts", "packages/persistence/src/migrations.test.ts", "packages/persistence/src/runtime-evidence-authority-publisher.test.ts", "packages/persistence/src/runtime-evidence-import.test.ts"],
       "namedResult": "phase258-required-database",
-      "expectedOutput": ["account-revisions.test.ts", "complete-match.test.ts", "migrations.test.ts", "runtime-evidence-import.test.ts"],
+      "expectedOutput": ["account-revisions.test.ts", "complete-match.test.ts", "migrations.test.ts", "runtime-evidence-authority-publisher.test.ts", "runtime-evidence-import.test.ts"],
       "ownedFiles": ["packages/persistence/src/account-revisions.test.ts", "packages/persistence/src/complete-match.test.ts", "packages/persistence/src/migrations.test.ts", "packages/persistence/src/runtime-evidence-authority-publisher.test.ts", "packages/persistence/src/runtime-evidence-import.test.ts"],
       "database": { "dsnEnvironmentVariable": "DATABASE_URL", "skipAllowed": false }
     },

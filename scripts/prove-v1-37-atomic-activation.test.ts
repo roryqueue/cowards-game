@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest"
+import { CURRENT_CANONICAL_COMPATIBILITY_TUPLE_ID } from "../packages/spec/src/integrity-authority.js"
 import {
   parseAtomicActivationProofArgs,
   proveV137AtomicActivation,
@@ -7,7 +8,9 @@ import {
 describe("v1.37 atomic activation proof", () => {
   it("requires the explicit disposable write/check contract", () => {
     expect(() =>
-      parseAtomicActivationProofArgs([], { DATABASE_URL: "postgresql://proof" }),
+      parseAtomicActivationProofArgs([], {
+        DATABASE_URL: "postgresql://proof",
+      }),
     ).toThrow(/--write --check/u)
     expect(() =>
       parseAtomicActivationProofArgs(["--write", "--check", "--unknown"], {
@@ -34,8 +37,7 @@ describe("v1.37 atomic activation proof", () => {
         databaseUrl: process.env.DATABASE_URL!,
       })
       expect(report).toMatchObject({
-        tupleId:
-          "sha256:922a6857fdbc8354b744d6e766bff216f3fee85b5ed381355cb427f5a616b3ae",
+        tupleId: CURRENT_CANONICAL_COMPATIBILITY_TUPLE_ID,
         selectedCertificateIds: ["certificate:atomic:exact-current"],
         rollbackCode: "ROLLBACK",
         productionReceiptCount: 0,

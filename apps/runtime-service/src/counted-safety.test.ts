@@ -291,26 +291,37 @@ describe("runtime-service counted safety", () => {
             ? "canonical-json-v1.1"
             : domain === "containmentPolicy"
               ? registry.lanes[0]!.policyId
-              : `fixture.${domain}.v1.17`,
+              : domain === "semanticTuple"
+                ? CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_ID
+                : `fixture.${domain}.v1.17`,
         sha256:
           domain === "budgetProfile"
             ? RUNTIME_ABI_V1_17_BUDGET_PROFILE_SHA256.slice("sha256:".length)
-            : ((index + 1) % 16).toString(16).repeat(64),
+            : domain === "semanticTuple"
+              ? CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_ID.slice("sha256:".length)
+              : ((index + 1) % 16).toString(16).repeat(64),
       }),
     )
-    const binding = (domain: (typeof SUCCESSOR_RUNTIME_IDENTITY_TEMPLATE_DOMAINS_V117)[number]) =>
-      bindings.find((candidate) => candidate.domain === domain)!
+    const binding = (
+      domain: (typeof SUCCESSOR_RUNTIME_IDENTITY_TEMPLATE_DOMAINS_V117)[number],
+    ) => bindings.find((candidate) => candidate.domain === domain)!
     const template = {
       schemaVersion: SUCCESSOR_RUNTIME_IDENTITY_TEMPLATE_SCHEMA_V117,
       profile: SUCCESSOR_RUNTIME_IDENTITY_TEMPLATE_PROFILE_V117,
       bindings,
       exactPins: [
-        ["runtimeExecutableDigest", `sha256:${binding("runtimeExecutable").sha256}`],
+        [
+          "runtimeExecutableDigest",
+          `sha256:${binding("runtimeExecutable").sha256}`,
+        ],
         ["reportedVersion", "fixture-runtime-v1"],
         ["targetAbi", "fixture-target-abi"],
         ["compilerFlags", `sha256:${"a".repeat(64)}`],
         ["adapterBuildDigest", `sha256:${binding("adapterBuild").sha256}`],
-        ["standardLibraryOrSysrootDigest", `sha256:${binding("sysrootStdlib").sha256}`],
+        [
+          "standardLibraryOrSysrootDigest",
+          `sha256:${binding("sysrootStdlib").sha256}`,
+        ],
         ["containmentPolicyId", binding("containmentPolicy").publicId],
         ["budgetProfileSha256", RUNTIME_ABI_V1_17_BUDGET_PROFILE_SHA256],
         ["canonicalJsonProfileId", "canonical-json-v1.1"],
@@ -327,6 +338,14 @@ describe("runtime-service counted safety", () => {
     ).toThrow(/successor identity does not match/iu)
     const successorLane = {
       ...registry.lanes[0]!,
+      runtimeId: "fixture-runtime-node",
+      runtimeVersion: "fixture-runtime-v1",
+      toolchainId:
+        request.strategies.bottom.metadata.sourceArtifact!.toolchain.runtime,
+      toolchainVersion:
+        request.strategies.bottom.metadata.sourceArtifact!.toolchain
+          .runtimeVersion,
+      corpusId: binding("conformanceCorpus").publicId,
       semanticTupleId: CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_ID,
       semanticTuple: { ...CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE },
     }
@@ -338,9 +357,7 @@ describe("runtime-service counted safety", () => {
     ).toThrow(/successor identity does not match/iu)
     const parsed = parseDeploymentLaneRegistry({
       ...registry,
-      lanes: [
-        { ...successorLane, successorRuntimeIdentityTemplate: template },
-      ],
+      lanes: [{ ...successorLane, successorRuntimeIdentityTemplate: template }],
     })
     for (const mismatched of [
       {
@@ -364,8 +381,66 @@ describe("runtime-service counted safety", () => {
     const installed = parsed.lanes[0]!.successorRuntimeIdentityTemplate!
     expect(Object.isFrozen(installed)).toBe(true)
     expect(Object.isFrozen(installed.bindings)).toBe(true)
-    expect(installed.bindings.every((candidate) => Object.isFrozen(candidate))).toBe(true)
+    expect(
+      installed.bindings.every((candidate) => Object.isFrozen(candidate)),
+    ).toBe(true)
     expect(Object.isFrozen(installed.exactPins)).toBe(true)
+    const mismatchedTupleTemplate = (field: "publicId" | "sha256") => ({
+      ...template,
+      bindings: template.bindings.map((entry) =>
+        entry.domain === "semanticTuple"
+          ? {
+              ...entry,
+              [field]:
+                field === "publicId"
+                  ? `sha256:${"1".repeat(64)}`
+                  : "1".repeat(64),
+            }
+          : entry,
+      ),
+    })
+    for (const field of ["publicId", "sha256"] as const) {
+      expect(() =>
+        parseDeploymentLaneRegistry({
+          ...registry,
+          lanes: [
+            {
+              ...successorLane,
+              successorRuntimeIdentityTemplate: mismatchedTupleTemplate(field),
+            },
+          ],
+        }),
+      ).toThrow(/does not bind its semantic tuple/iu)
+    }
+    expect(() =>
+      parseDeploymentLaneRegistry({
+        ...registry,
+        lanes: [
+          {
+            ...successorLane,
+            runtimeVersion: "fixture-runtime-v2",
+            successorRuntimeIdentityTemplate: template,
+          },
+        ],
+      }),
+    ).toThrow(/does not bind its runtime version/iu)
+    for (const [field, value] of [
+      ["policyId", "fixture-other-policy"],
+      ["corpusId", "fixture-other-corpus"],
+    ] as const) {
+      expect(() =>
+        parseDeploymentLaneRegistry({
+          ...registry,
+          lanes: [
+            {
+              ...successorLane,
+              [field]: value,
+              successorRuntimeIdentityTemplate: template,
+            },
+          ],
+        }),
+      ).toThrow(/does not bind its policy and corpus/iu)
+    }
     expect(() =>
       parseDeploymentLaneRegistry({
         ...registry,

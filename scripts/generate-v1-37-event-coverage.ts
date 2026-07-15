@@ -4,7 +4,7 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 import ts from "typescript"
-import { CANONICAL_COMPATIBILITY_TUPLES } from "../packages/spec/src/integrity-authority.js"
+import { CURRENT_CANONICAL_COMPATIBILITY_TUPLE_ID } from "../packages/spec/src/integrity-authority.js"
 import { ChronicleEventTypeSchema } from "../packages/spec/src/schemas.js"
 
 const repoRoot = path.resolve(
@@ -224,6 +224,36 @@ const extractStringConstant = (
   return initializer && ts.isStringLiteralLike(initializer)
     ? initializer.text
     : null
+}
+
+const hasNamedImport = (sourceFile: ts.SourceFile, symbol: string): boolean =>
+  sourceFile.statements.some(
+    (statement) =>
+      ts.isImportDeclaration(statement) &&
+      statement.importClause?.namedBindings !== undefined &&
+      ts.isNamedImports(statement.importClause.namedBindings) &&
+      statement.importClause.namedBindings.elements.some(
+        (element) => element.name.text === symbol,
+      ),
+  )
+
+const resolverUsesCurrentClassifier = (
+  sourceFile: ts.SourceFile,
+  resolverSymbol: string,
+  currentSetSymbol: string,
+  classifierSymbol: string,
+): boolean => {
+  const resolver = findVariable(sourceFile, resolverSymbol)?.initializer
+  if (resolver === undefined || !ts.isArrowFunction(resolver)) return false
+  const identifiers = new Set<string>()
+  visit(resolver, (node) => {
+    if (ts.isIdentifier(node)) identifiers.add(node.text)
+  })
+  return (
+    hasNamedImport(sourceFile, classifierSymbol) &&
+    identifiers.has(currentSetSymbol) &&
+    identifiers.has(classifierSymbol)
+  )
 }
 
 const resolverIsTupleRouted = (
@@ -552,35 +582,40 @@ export const CURRENT_CONSUMER_SURFACES = [
     name: "chronicle-grammar",
     relativePath: "packages/replay/src/grammar.ts",
     currentSetSymbol: "V1_37_CURRENT_GRAMMAR_EVENT_TYPES",
-    tupleSymbol: "V1_37_CURRENT_TUPLE_ID",
+    resolverSymbol: "resolveGrammarEventContract",
+    classifierSymbol: "classifyCanonicalCompatibilityTupleId",
     disposition: "semantic-validator",
   },
   {
     name: "replay-transition",
     relativePath: "packages/replay/src/replay-transition.ts",
     currentSetSymbol: "V1_37_CURRENT_REPLAY_TRANSITION_EVENT_TYPES",
-    tupleSymbol: "V1_37_CURRENT_TUPLE_ID",
+    resolverSymbol: "resolveReplayTransitionEventContract",
+    classifierSymbol: "classifyCanonicalCompatibilityTupleId",
     disposition: "state-reconstructor-or-explicit-no-op",
   },
   {
     name: "match-intelligence",
     relativePath: "apps/web/app/match-intelligence.ts",
     currentSetSymbol: "V1_37_CURRENT_MATCH_INTELLIGENCE_EVENT_TYPES",
-    tupleSymbol: "V1_37_CURRENT_TUPLE_ID",
+    resolverSymbol: "resolveMatchIntelligenceEventContract",
+    classifierSymbol: "classifyCanonicalCompatibilityTupleId",
     disposition: "annotation-consumer-or-no-special-annotation",
   },
   {
     name: "replay-ready",
     relativePath: "apps/web/app/matches/replay-ready.ts",
     currentSetSymbol: "V1_37_CURRENT_REPLAY_READY_EVENT_TYPES",
-    tupleSymbol: "V1_37_CURRENT_TUPLE_ID",
+    resolverSymbol: "resolveReplayReadyEventContract",
+    classifierSymbol: "classifyCanonicalCompatibilityTupleId",
     disposition: "timeline-consumer-or-generic-label",
   },
   {
     name: "replay-board",
     relativePath: "apps/web/app/matches/[matchId]/replay/replay-board-model.ts",
     currentSetSymbol: "V1_37_CURRENT_REPLAY_BOARD_EVENT_TYPES",
-    tupleSymbol: "V1_37_CURRENT_TUPLE_ID",
+    resolverSymbol: "resolveReplayBoardEventContract",
+    classifierSymbol: "classifyCanonicalCompatibilityTupleId",
     disposition: "board-consumer-or-no-callout",
   },
 ] as const
@@ -626,9 +661,7 @@ const currentVocabulary = (): readonly string[] =>
   ChronicleEventTypeSchema.options
 
 const retainedCandidateHash = (): string =>
-  sha256(
-    readFileSync(path.join(repoRoot, candidateEventCoverageArtifactPath)),
-  )
+  sha256(readFileSync(path.join(repoRoot, candidateEventCoverageArtifactPath)))
 
 export const checkRetainedCandidateEventCoverageProvenance = (): string[] =>
   retainedCandidateHash() === RETAINED_CANDIDATE_EVENT_ARTIFACT_HASH
@@ -641,11 +674,8 @@ export const buildV137CurrentEventCoverage = (
   const findings: CurrentEventCoverageFinding[] = []
   const sourceOverrides = options.sourceOverrides ?? {}
   const tupleId =
-    options.currentTupleId ?? CANONICAL_COMPATIBILITY_TUPLES[0]?.tupleId
-  if (
-    tupleId !==
-    "sha256:922a6857fdbc8354b744d6e766bff216f3fee85b5ed381355cb427f5a616b3ae"
-  ) {
+    options.currentTupleId ?? CURRENT_CANONICAL_COMPATIBILITY_TUPLE_ID
+  if (tupleId !== CURRENT_CANONICAL_COMPATIBILITY_TUPLE_ID) {
     findings.push({
       code: "CURRENT_TUPLE_INVALID",
       message: "Current event coverage requires the exact activated tuple.",
@@ -724,10 +754,17 @@ export const buildV137CurrentEventCoverage = (
         }
       }
     }
-    if (extractStringConstant(sourceFile, surface.tupleSymbol) !== tupleId) {
+    if (
+      !resolverUsesCurrentClassifier(
+        sourceFile,
+        surface.resolverSymbol,
+        surface.currentSetSymbol,
+        surface.classifierSymbol,
+      )
+    ) {
       findings.push({
         code: "TUPLE_ROUTE_INVALID",
-        message: `${surface.name} is not pinned to the exact current tuple.`,
+        message: `${surface.name} is not routed through the spec current classifier.`,
         relativePath: surface.relativePath,
       })
     }
@@ -786,11 +823,7 @@ export const renderV137CurrentEventCoverageArtifact = (
 export const writeV137CurrentEventCoverageArtifact = (): void => {
   const absolutePath = path.join(repoRoot, currentEventCoverageArtifactPath)
   mkdirSync(path.dirname(absolutePath), { recursive: true })
-  writeFileSync(
-    absolutePath,
-    renderV137CurrentEventCoverageArtifact(),
-    "utf8",
-  )
+  writeFileSync(absolutePath, renderV137CurrentEventCoverageArtifact(), "utf8")
 }
 
 export const checkV137CurrentEventCoverageArtifact = (): string[] => {
@@ -812,7 +845,8 @@ const main = (): void => {
   try {
     if (args.has("--candidate") && args.has("--check")) {
       const stale = checkRetainedCandidateEventCoverageProvenance()
-      if (stale.length > 0) throw new Error("Retained candidate evidence drifted.")
+      if (stale.length > 0)
+        throw new Error("Retained candidate evidence drifted.")
       console.log("v1.37 retained candidate event evidence is byte-exact")
       return
     }

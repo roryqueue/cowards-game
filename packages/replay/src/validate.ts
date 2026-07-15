@@ -3,10 +3,12 @@ import { verifyCandidateExecutionEvidence as verifyCurrentExecutionEvidence } fr
 import {
   ChronicleSchema,
   COMPATIBILITY_VERSIONS,
+  CURRENT_CANONICAL_COMPATIBILITY_TUPLE_RECORD,
   HistoricalV14ChronicleSchema,
   MatchExecutionExactEvidenceV137Schema,
   RuntimeExecutionFinalStateSchema,
   resolveCanonicalCompatibilityTuple,
+  resolveHistoricalRuntimeV114SemanticTuple,
   validateCanonicalArena,
   validateCanonicalGameState,
   validateCanonicalInitialGameState,
@@ -47,15 +49,9 @@ const HISTORICAL_V14_VERSIONS = Object.freeze({
 })
 
 export const V1_37_CURRENT_REPLAY_TUPLE = Object.freeze({
-  tupleId:
-    "sha256:922a6857fdbc8354b744d6e766bff216f3fee85b5ed381355cb427f5a616b3ae",
+  tupleId: CURRENT_CANONICAL_COMPATIBILITY_TUPLE_RECORD.tupleId,
   tuple: Object.freeze({
-    rules: "cowards-rules-v1.4",
-    engine: "engine-kernel-v1.37-candidate-1",
-    runtimeAbi: "strategy-runtime-abi-v1.14",
-    chronicle: "chronicle-recorder-current-events-v1.37-candidate-1",
-    arenaCatalog: "semantic-arena-catalog-v1.37-candidate-1",
-    setPolicy: "canonical-set-policy-v1.4",
+    ...CURRENT_CANONICAL_COMPATIBILITY_TUPLE_RECORD.tuple,
   }),
 }) satisfies Readonly<{
   tupleId: string
@@ -176,6 +172,11 @@ export type ReplayCompatibilityIdentityResolution =
       tupleResolution: "unresolved_legacy"
     }
   | {
+      status: "historical_v1_16_exact"
+      tupleId: string
+      tupleResolution: "resolved_v1.16"
+    }
+  | {
       status: "invalid"
       reason:
         | "missing_or_mixed_current_tuple"
@@ -196,6 +197,21 @@ export const resolveReplayCompatibilityIdentity = (
           tupleResolution: "unresolved_legacy",
         }
       : { status: "invalid", reason: "unsupported_profile" }
+  }
+  if (input.profile === "historical-v1.16") {
+    if (!hasExactKeys(input, ["profile", "compatibility", "chronicle"])) {
+      return { status: "invalid", reason: "unsupported_profile" }
+    }
+    const resolved = resolveHistoricalRuntimeV114SemanticTuple(
+      input.compatibility,
+    )
+    return resolved === undefined
+      ? { status: "invalid", reason: "missing_or_mixed_current_tuple" }
+      : {
+          status: "historical_v1_16_exact",
+          tupleId: resolved.tupleId,
+          tupleResolution: "resolved_v1.16",
+        }
   }
   if (
     input.profile !== "current-exact" ||
@@ -968,10 +984,7 @@ export const validateCurrentChronicle = (
     stableStringify((input.chronicle as Chronicle).private ?? null) !==
       stableStringify(trustedRecording.chronicle.private ?? null)
   ) {
-    return currentCodeFailure("CURRENT_EVENT_INVALID", [
-      "chronicle",
-      "events",
-    ])
+    return currentCodeFailure("CURRENT_EVENT_INVALID", ["chronicle", "events"])
   }
 
   const eventErrors = [
@@ -1032,10 +1045,7 @@ export const validateCurrentChronicle = (
       )
     })
   ) {
-    return currentCodeFailure("CURRENT_EVENT_INVALID", [
-      "chronicle",
-      "events",
-    ])
+    return currentCodeFailure("CURRENT_EVENT_INVALID", ["chronicle", "events"])
   }
 
   const parsedInitial = RuntimeExecutionFinalStateSchema.safeParse(

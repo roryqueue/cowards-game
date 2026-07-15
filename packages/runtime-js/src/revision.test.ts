@@ -1,12 +1,16 @@
 import { describe, expect, it } from "vitest"
 import {
   buildStrategyRevision,
+  buildStrategyRevisionV117,
   createStrategyRevisionId,
   hashStrategySource,
   isValidStrategyRevision,
 } from "./index.js"
 import { stableStringify } from "./hash.js"
-import { StrategyRevisionSchema } from "@cowards/spec"
+import {
+  StrategyRevisionSchema,
+  StrategyRevisionV117Schema,
+} from "@cowards/spec"
 
 const validSource = `
 export default {
@@ -89,6 +93,40 @@ describe("Strategy Revision hashing", () => {
     })
 
     expect(first.id).not.toBe(second.id)
+  })
+
+  it("builds a genuine contained v1.17 candidate without activating current admission", () => {
+    const candidate = buildStrategyRevisionV117({
+      source: validSource,
+      strategyId: "strategy-candidate-v1.17",
+    })
+
+    expect(StrategyRevisionV117Schema.parse(candidate)).toEqual(candidate)
+    expect(StrategyRevisionSchema.safeParse(candidate).success).toBe(false)
+    expect(candidate.runtime.abiVersion).toBe("strategy-runtime-abi-v1.17")
+    expect(candidate.runtime.limits).toMatchObject({
+      environment: "empty",
+      filesystem: "none",
+      network: "disabled",
+      shell: "disabled",
+      packagePolicy: "none",
+    })
+    expect(candidate.metadata.providerValidation).toMatchObject({
+      sourceHash: candidate.sourceHash,
+      sourceBytes: candidate.sourceBytes,
+      artifactHash: candidate.metadata.sourceArtifact.hash,
+      artifactBytes: candidate.metadata.sourceArtifact.bytes,
+      proof: expect.stringMatching(/^sha256:[0-9a-f]{64}$/u),
+    })
+    expect(
+      StrategyRevisionV117Schema.safeParse({
+        ...candidate,
+        runtime: {
+          ...candidate.runtime,
+          limits: { ...candidate.runtime.limits, network: "inherited" },
+        },
+      }).success,
+    ).toBe(false)
   })
 
   it("returns invalid artifacts for normal validation failures without throwing", () => {

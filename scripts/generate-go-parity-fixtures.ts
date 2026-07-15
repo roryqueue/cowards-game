@@ -26,19 +26,16 @@ import { verifyInstalledRuntimeEvidenceAuthorityV117 } from "../packages/persist
 import { createWorkshopAnalyticsDemoSnapshot } from "../packages/persistence/src/workshop-analytics.ts"
 import { createCowardsLocalService } from "../packages/service/src/index.ts"
 import { createGoldenMatchInput } from "../packages/golden/src/index.ts"
-import {
-  buildStrategyRevision,
-  createStrategyRevisionId,
-} from "../packages/runtime-js/src/index.ts"
+import { buildStrategyRevisionV117 } from "../packages/runtime-js/src/index.ts"
 import {
   AnalyticsRunSummaryServiceDtoSchema,
   ChronicleSchema,
   CANONICAL_COMPATIBILITY_TUPLES,
   CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE,
   CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_ID,
+  VERSIONED_RUNTIME_V117_SEMANTIC_TUPLE_RECORD,
   CANONICAL_IDENTITY_DOMAINS,
   CANONICAL_IDENTITY_DOMAIN_NAMES,
-  COMPATIBILITY_VERSIONS,
   EXHIBITION_SCORING_POLICY_V1,
   PublicLadderPageServiceDtoSchema,
   PublicMatchSetSummaryServiceDtoSchema,
@@ -92,14 +89,13 @@ import {
   type ServiceErrorDto,
   type SoldierBrainInput,
   type StrategyInput,
-  type StrategyRevision,
+  type StrategyRevisionV117,
   type ExecutableLaneIdentity,
   type RuntimeEvidenceAuthorityBindingV117,
   type RuntimeEvidenceAuthorityPayloadV117,
   type SuccessorRuntimeIdentityTemplateV117,
   publicLadderPageExample,
   publicPlayerPageExample,
-  runtimeCompatibilityKey,
   serializeRuntimeInvocationRequestV117,
   serializeRuntimeInvocationResponseV117,
 } from "../packages/spec/src/index.ts"
@@ -236,15 +232,6 @@ const stableValue = (value: unknown): unknown => {
         .sort(([left], [right]) => left.localeCompare(right))
         .map(([key, entryValue]) => [key, stableValue(entryValue)]),
     )
-  }
-  return value
-}
-
-const deepFreezeFixture = <T>(value: T): T => {
-  if (value !== null && typeof value === "object" && !Object.isFrozen(value)) {
-    for (const child of Object.values(value as Record<string, unknown>))
-      deepFreezeFixture(child)
-    Object.freeze(value)
   }
   return value
 }
@@ -459,6 +446,8 @@ const renderRuntimeInvocationContractSource = (
     "",
     `const runtimeSuccessorSemanticTupleIDV117 = ${JSON.stringify(CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_ID)}`,
     `const runtimeSuccessorSemanticTupleV117 = ${JSON.stringify(JSON.stringify(CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE))}`,
+    `const runtimeSuccessorSemanticTupleIdentityProfileV117 = ${JSON.stringify(VERSIONED_RUNTIME_V117_SEMANTIC_TUPLE_RECORD.identityProfile)}`,
+    `const runtimeSuccessorSemanticTupleEncodingIDV117 = ${JSON.stringify(VERSIONED_RUNTIME_V117_SEMANTIC_TUPLE_RECORD.encodingId)}`,
     "",
     `const runtimeSuccessorIdentityTemplateSchemaV117 = ${JSON.stringify(SUCCESSOR_RUNTIME_IDENTITY_TEMPLATE_SCHEMA_V117)}`,
     `const runtimeSuccessorIdentityTemplateProfileV117 = ${JSON.stringify(SUCCESSOR_RUNTIME_IDENTITY_TEMPLATE_PROFILE_V117)}`,
@@ -470,7 +459,9 @@ const renderRuntimeInvocationContractSource = (
     "}",
     "",
     "var runtimeCanonicalIdentityDomainsV117 = [...]string{",
-    ...CANONICAL_IDENTITY_DOMAIN_NAMES.map((name) => `\t${JSON.stringify(name)},`),
+    ...CANONICAL_IDENTITY_DOMAIN_NAMES.map(
+      (name) => `\t${JSON.stringify(name)},`,
+    ),
     "}",
     "",
     "var runtimeCanonicalIdentityDomainTagsV117 = [...]string{",
@@ -611,30 +602,44 @@ const createV117ServiceArtifacts = () => {
           sha256:
             domain === "budgetProfile"
               ? RUNTIME_ABI_V1_17_BUDGET_PROFILE_SHA256.slice("sha256:".length)
-              : ((index + (side === "bottom" ? 1 : 16)) % 16).toString(16).repeat(64),
+              : ((index + (side === "bottom" ? 1 : 16)) % 16)
+                  .toString(16)
+                  .repeat(64),
         }),
       ),
     }
-    const binding = (domain: (typeof RUNTIME_EVIDENCE_GRAPH_NODE_KINDS_V1_17)[number]) =>
-      identityManifest.bindings.find((candidate) => candidate.domain === domain)!
+    const binding = (
+      domain: (typeof RUNTIME_EVIDENCE_GRAPH_NODE_KINDS_V1_17)[number],
+    ) =>
+      identityManifest.bindings.find(
+        (candidate) => candidate.domain === domain,
+      )!
     return {
       strategyRevisionId: `strategy-revision:fixture:${side}:v1.17`,
       laneIdentityHash: identity(character),
       sourceIdentity: {
-        originalSourceSha256: `sha256:${binding("originalSource").sha256}` as const,
-        normalizedSourceSha256: `sha256:${binding("normalizedSource").sha256}` as const,
+        originalSourceSha256:
+          `sha256:${binding("originalSource").sha256}` as const,
+        normalizedSourceSha256:
+          `sha256:${binding("normalizedSource").sha256}` as const,
         artifactSha256: `sha256:${binding("artifact").sha256}` as const,
       },
       identityManifestRoot:
         `sha256:${hashRuntimeIdentityManifest(identityManifest)}` as const,
       evidenceGraphRoot: identity(side === "bottom" ? "5" : "7"),
       exactPins: [
-        ["runtimeExecutableDigest", `sha256:${binding("runtimeExecutable").sha256}`],
+        [
+          "runtimeExecutableDigest",
+          `sha256:${binding("runtimeExecutable").sha256}`,
+        ],
         ["reportedVersion", "node-v26.0.0"],
         ["targetAbi", "linux-amd64-gnu"],
         ["compilerFlags", identity("a")],
         ["adapterBuildDigest", `sha256:${binding("adapterBuild").sha256}`],
-        ["standardLibraryOrSysrootDigest", `sha256:${binding("sysrootStdlib").sha256}`],
+        [
+          "standardLibraryOrSysrootDigest",
+          `sha256:${binding("sysrootStdlib").sha256}`,
+        ],
         ["containmentPolicyId", binding("containmentPolicy").publicId],
         ["budgetProfileSha256", RUNTIME_ABI_V1_17_BUDGET_PROFILE_SHA256],
         ["canonicalJsonProfileId", "canonical-json-v1.1"],
@@ -719,8 +724,8 @@ const fixturePrivateKeyPkcs8Base64 =
 const createV117SuccessorAuthorityFixture = () => {
   const digest = (value: string): `sha256:${string}` =>
     `sha256:${sha256Hex(value)}`
-  const templateBindings =
-    SUCCESSOR_RUNTIME_IDENTITY_TEMPLATE_DOMAINS_V117.map((domain) => ({
+  const templateBindings = SUCCESSOR_RUNTIME_IDENTITY_TEMPLATE_DOMAINS_V117.map(
+    (domain) => ({
       domain,
       publicId:
         domain === "canonicalJsonProfile"
@@ -738,7 +743,8 @@ const createV117SuccessorAuthorityFixture = () => {
             : hashCanonicalIdentity(domain, [
                 Buffer.from(`fixture:same-lane:${domain}:v1.17`, "utf8"),
               ]),
-    }))
+    }),
+  )
   const templateBinding = (
     domain: (typeof SUCCESSOR_RUNTIME_IDENTITY_TEMPLATE_DOMAINS_V117)[number],
   ) => templateBindings.find((candidate) => candidate.domain === domain)!
@@ -762,10 +768,7 @@ const createV117SuccessorAuthorityFixture = () => {
         "standardLibraryOrSysrootDigest",
         `sha256:${templateBinding("sysrootStdlib").sha256}`,
       ],
-      [
-        "containmentPolicyId",
-        templateBinding("containmentPolicy").publicId,
-      ],
+      ["containmentPolicyId", templateBinding("containmentPolicy").publicId],
       ["budgetProfileSha256", RUNTIME_ABI_V1_17_BUDGET_PROFILE_SHA256],
       ["canonicalJsonProfileId", "canonical-json-v1.1"],
       ["behaviorSettingsHash", digest("fixture:behavior-settings:v1.17")],
@@ -775,48 +778,12 @@ const createV117SuccessorAuthorityFixture = () => {
   selectActivations() { return { activationOrders: [], strategyMemory: { side: "${side}" } } },
   soldierBrain() { return { action: { type: "TURN_TO_STONE" }, soldierMemory: { side: "${side}" } } }
 }\n`
-  const revisionFor = (side: "bottom" | "top"): StrategyRevision => {
-    const legacy = buildStrategyRevision({
+  const revisionFor = (side: "bottom" | "top"): StrategyRevisionV117 =>
+    buildStrategyRevisionV117({
       source: sourceFor(side),
       strategyId: `strategy:successor-parity:${side}`,
+      providerId: "strategy-language-provider-js-ts",
     })
-    const legacyArtifact = legacy.metadata.sourceArtifact
-    if (legacyArtifact === undefined)
-      throw new Error("Successor fixture source artifact is unavailable.")
-    const runtime = {
-      ...legacy.runtime,
-      abiVersion: CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE.runtimeAbi,
-    }
-    const sourceArtifact = {
-      ...legacyArtifact,
-      abiVersion: CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE.runtimeAbi,
-    }
-    const runtimeCompatibility = runtimeCompatibilityKey({
-      runtime,
-      sourceHash: legacy.sourceHash,
-      artifactHash: sourceArtifact.hash,
-      specVersion: CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE.rules,
-      engineVersion: CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE.engine,
-    })
-    return deepFreezeFixture({
-      ...legacy,
-      id: createStrategyRevisionId({
-        sourceHash: legacy.sourceHash,
-        runtimeVersion: runtime.adapter.version,
-        specVersion: CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE.rules,
-        engineVersion: CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE.engine,
-        strategyRevisionVersion: COMPATIBILITY_VERSIONS.strategyRevision,
-        strategyId: legacy.strategyId,
-        runtimeCompatibility,
-      }),
-      runtime,
-      engineCompatibility: {
-        spec: CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE.rules,
-        engine: CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE.engine,
-      },
-      metadata: { ...legacy.metadata, sourceArtifact },
-    })
-  }
   const laneFor = (
     revision: ReturnType<typeof revisionFor>,
   ): ExecutableLaneIdentity => ({
@@ -824,17 +791,16 @@ const createV117SuccessorAuthorityFixture = () => {
     languageId: revision.runtime.language.id,
     runtimeId: "node",
     runtimeVersion: "node-v26.0.0",
-    toolchainId: revision.metadata.sourceArtifact!.toolchain.language,
-    toolchainVersion:
-      revision.metadata.sourceArtifact!.toolchain.runtimeVersion,
+    toolchainId: revision.metadata.sourceArtifact.toolchain.runtime,
+    toolchainVersion: revision.metadata.sourceArtifact.toolchain.runtimeVersion,
     adapterId: revision.runtime.adapter.id,
     adapterVersion: revision.runtime.adapter.version,
     policyId: "fixture.containment.package-none.v1.17",
     policyVersion: "v1.17",
-    corpusId: "fixture-four-language-conformance-v1.17",
+    corpusId: templateBinding("conformanceCorpus").publicId,
     corpusVersion: "v1.17",
     artifactId: `artifact:${revision.id}`,
-    artifactSha256: revision.metadata.sourceArtifact!.hash,
+    artifactSha256: revision.metadata.sourceArtifact.hash,
     implementationId: "runtime-service-successor-parity",
     buildId: "runtime-service-successor-parity-build-v1",
     semanticTupleId: CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_ID,
@@ -859,7 +825,7 @@ const createV117SuccessorAuthorityFixture = () => {
       originalSourceBytesBase64: Buffer.from(revision.source, "utf8").toString(
         "base64",
       ),
-      artifactBytesBase64: revision.metadata.sourceArtifact!.bytesBase64!,
+      artifactBytesBase64: revision.metadata.sourceArtifact.bytesBase64!,
       deployedArtifactSha256: deployed.artifactSha256,
       expected: {
         sourceIdentity: composed.sourceIdentity,
@@ -881,15 +847,33 @@ const createV117SuccessorAuthorityFixture = () => {
       exactPins: template.exactPins,
     }),
   )
-  const attestationIds = [
-    "attestation:successor-parity:bottom:v1.17",
-    "attestation:successor-parity:top:v1.17",
-  ] as const
-  const certificates = bindings.flatMap((binding, index) =>
-    (["containment", "conformance"] as const).map((certificateKind) => {
-      const certificateId = `certificate:successor-parity:${index === 0 ? "bottom" : "top"}:${certificateKind}:v1.17`
+  const evidenceRecords = bindings.flatMap((binding, index) => {
+    const side = index === 0 ? "bottom" : "top"
+    return (["containment", "conformance"] as const).map((certificateKind) => {
+      const attestationId = `attestation:successor-parity:${side}:${certificateKind}:v1.17`
+      return {
+        side,
+        certificateKind,
+        binding,
+        attestation: {
+          attestationId,
+          attestationHash: digest(
+            `fixture:attestation:${side}:${certificateKind}:v1.17`,
+          ),
+          producerId: "fixture-only-successor-parity-producer",
+          producerKeyId: "fixture-only-ed25519-key-v1",
+          trustDomain: "fixture",
+          managedIdentity: true,
+          imports: [],
+          binding,
+        },
+      }
+    })
+  })
+  const certificates = evidenceRecords.map(
+    ({ side, attestation, binding, certificateKind }) => {
+      const certificateId = `certificate:successor-parity:${side}:${certificateKind}:v1.17`
       const certificateVersion = "runtime-certificate-v1.17"
-      const attestationId = attestationIds[index]!
       return {
         certificateId,
         certificateVersion,
@@ -897,14 +881,14 @@ const createV117SuccessorAuthorityFixture = () => {
           certificateKind,
           certificateId,
           certificateVersion,
-          attestationId,
+          attestationId: attestation.attestationId,
           binding,
         }),
         certificateKind,
-        attestationId,
+        attestationId: attestation.attestationId,
         binding,
       }
-    }),
+    },
   )
   const payload: RuntimeEvidenceAuthorityPayloadV117 = {
     schemaVersion: RUNTIME_EVIDENCE_AUTHORITY_PAYLOAD_SCHEMA_VERSION_V1_17,
@@ -914,17 +898,10 @@ const createV117SuccessorAuthorityFixture = () => {
     validFrom: "2026-07-15T00:00:00.000Z",
     validUntil: "2026-07-16T00:00:00.000Z",
     semanticTupleManifestHash: CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_ID,
-    sourceManifestHash: digest("fixture:source-manifest:successor-parity:v1.17"),
-    attestations: bindings.map((binding, index) => ({
-      attestationId: attestationIds[index]!,
-      attestationHash: digest(`fixture:attestation:${index}:v1.17`),
-      producerId: "fixture-only-successor-parity-producer",
-      producerKeyId: "fixture-only-ed25519-key-v1",
-      trustDomain: "fixture",
-      managedIdentity: true,
-      imports: [],
-      binding,
-    })),
+    sourceManifestHash: digest(
+      "fixture:source-manifest:successor-parity:v1.17",
+    ),
+    attestations: evidenceRecords.map(({ attestation }) => attestation),
     certificates,
   }
   const privateKey = createPrivateKey({
@@ -980,8 +957,7 @@ const createV117SuccessorAuthorityFixture = () => {
       },
       {
         name: "swap-manifest-roots",
-        bottomIdentityManifestRoot:
-          vectors[1].expected.identityManifestRoot,
+        bottomIdentityManifestRoot: vectors[1].expected.identityManifestRoot,
         topIdentityManifestRoot: vectors[0].expected.identityManifestRoot,
         expectedCode: "AUTHORITY_BINDING_MISMATCH",
       },
@@ -1094,10 +1070,7 @@ const writeV117ServiceArtifacts = (root: string): void => {
   }
   writeFileSync(paths.v117ServiceRequest, artifacts.requestBytes)
   writeFileSync(paths.v117ServiceResponse, artifacts.responseBytes)
-  writeFileSync(
-    paths.v117SuccessorAuthorityFixture,
-    successorAuthorityFixture,
-  )
+  writeFileSync(paths.v117SuccessorAuthorityFixture, successorAuthorityFixture)
   writeFileSync(paths.goContract, createV117GeneratedSource())
 }
 

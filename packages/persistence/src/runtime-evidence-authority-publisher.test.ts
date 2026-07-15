@@ -20,6 +20,7 @@ import path from "node:path"
 import { fileURLToPath } from "node:url"
 import {
   CANONICAL_COMPATIBILITY_TUPLES,
+  CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_ID,
   RUNTIME_EVIDENCE_AUTHORITY_TRUST_DOMAINS,
   RUNTIME_EVIDENCE_AUTHORITY_PAYLOAD_SCHEMA_VERSION_V1_17,
   buildRuntimeEvidenceAuthorityEnvelope,
@@ -48,6 +49,7 @@ import {
   encodeRuntimeEvidenceAuthorityInstallReceiptV117,
   recordInstalledRuntimeEvidenceAuthorityV117,
   sortRuntimeEvidenceAuthoritySourceIdsV117,
+  verifyInstalledRuntimeEvidenceAuthorityV117,
   type RuntimeEvidenceAuthorityInstallFileSystem,
   type RuntimeEvidenceAuthorityImportEnvelope,
   type RuntimeEvidenceAuthorityImportPayload,
@@ -259,7 +261,9 @@ describe("authenticated runtime evidence authority controls", () => {
 const databaseUrl = process.env.DATABASE_URL
 const describePostgres = databaseUrl ? describe : describe.skip
 
-const installedAuthorityFixtureV117 = () => {
+const installedAuthorityFixtureV117 = (
+  semanticTupleManifestHash = CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_ID,
+) => {
   const binding: RuntimeEvidenceAuthorityBindingV117 = {
     graphSchemaVersion: "runtime-evidence-graph-v1.17",
     graphProfile: "runtime-identity-evidence-dag-v1",
@@ -288,7 +292,7 @@ const installedAuthorityFixtureV117 = () => {
     issuedAt: "2026-07-14T00:00:00.000Z",
     validFrom: "2026-07-14T00:00:00.000Z",
     validUntil: "2026-07-15T00:00:00.000Z",
-    semanticTupleManifestHash: CANONICAL_COMPATIBILITY_TUPLES[0]!.tupleId,
+    semanticTupleManifestHash,
     sourceManifestHash: sha256("v1.17-source-manifest"),
     attestations: [
       {
@@ -342,6 +346,35 @@ const installedAuthorityFixtureV117 = () => {
 }
 
 describe("v1.17 installed authority persistence boundary", () => {
+  it("trusts only the exact v1.17 successor tuple, never the preactivation current tuple", () => {
+    const inputFor = (
+      fixture: ReturnType<typeof installedAuthorityFixtureV117>,
+    ) => ({
+      envelopeBytes: fixture.envelopeBytes,
+      evaluationInstant: "2026-07-14T12:00:00.000Z",
+      installedAt: "2026-07-14T12:00:00.000Z",
+      expectedTrustDomain: fixture.trustDomain,
+      signerKeyId: trustRoot.keyId,
+      publicKeyPem: keys.publicKey
+        .export({ type: "spki", format: "pem" })
+        .toString(),
+    })
+    expect(
+      verifyInstalledRuntimeEvidenceAuthorityV117(
+        inputFor(installedAuthorityFixtureV117()),
+      ).semanticTupleManifestHash,
+    ).toBe(CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_ID)
+    expect(() =>
+      verifyInstalledRuntimeEvidenceAuthorityV117(
+        inputFor(
+          installedAuthorityFixtureV117(
+            CANONICAL_COMPATIBILITY_TUPLES[0]!.tupleId,
+          ),
+        ),
+      ),
+    ).toThrow(/identity is unavailable/iu)
+  })
+
   it("uses canonical-json-v1.1 bytes independent of insertion and non-ASCII host ordering", () => {
     const first = {
       z: "last ASCII",
@@ -359,9 +392,7 @@ describe("v1.17 installed authority persistence boundary", () => {
       Buffer.from(
         encodeRuntimeEvidenceAuthorityInstallReceiptV117(first),
       ).equals(
-        Buffer.from(
-          encodeRuntimeEvidenceAuthorityInstallReceiptV117(second),
-        ),
+        Buffer.from(encodeRuntimeEvidenceAuthorityInstallReceiptV117(second)),
       ),
     ).toBe(true)
     const ordered = sortRuntimeEvidenceAuthoritySourceIdsV117([
@@ -383,10 +414,7 @@ describe("v1.17 installed authority persistence boundary", () => {
 
   it("requires an independently verified signed bundle and derived install identity", async () => {
     const source = await readFile(
-      new URL(
-        "runtime-evidence-authority-publisher.ts",
-        import.meta.url,
-      ),
+      new URL("runtime-evidence-authority-publisher.ts", import.meta.url),
       "utf8",
     )
     for (const required of [
@@ -435,7 +463,9 @@ describe("v1.17 installed authority persistence boundary", () => {
     let inserted: readonly unknown[] | undefined
     const fixturePool = {
       async query(sql: string, values?: readonly unknown[]) {
-        if (/insert into runtime_evidence_v1_17_installed_authorities/iu.test(sql)) {
+        if (
+          /insert into runtime_evidence_v1_17_installed_authorities/iu.test(sql)
+        ) {
           inserted = values
           return { rows: [], rowCount: 1 }
         }
@@ -535,7 +565,7 @@ describePostgres(
           issuedAt: "2026-07-14T00:00:00.000Z",
           validFrom: "2026-07-14T00:00:00.000Z",
           validUntil: "2026-07-15T00:00:00.000Z",
-          semanticTupleManifestHash: CANONICAL_COMPATIBILITY_TUPLES[0]!.tupleId,
+          semanticTupleManifestHash: CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_ID,
           sourceManifestHash: sha256("candidate-source-manifest"),
         },
       )

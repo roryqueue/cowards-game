@@ -1,5 +1,6 @@
 import { Buffer } from "node:buffer"
 import { spawnSync } from "node:child_process"
+import { createHash } from "node:crypto"
 import { readFileSync } from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
@@ -8,10 +9,17 @@ import {
   CANONICAL_AUTHORITY_DOMAINS,
   CANONICAL_AUTHORITY_REGISTRY,
   CANONICAL_COMPATIBILITY_TUPLES,
+  CANONICAL_COMPATIBILITY_TUPLE_IDENTITY_PROFILES,
   CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE,
   CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_ID,
   CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_RECORD,
+  CURRENT_CANONICAL_COMPATIBILITY_TUPLE_ID,
+  HISTORICAL_RUNTIME_V114_SEMANTIC_TUPLE_ID,
+  REGISTERED_CANONICAL_COMPATIBILITY_TUPLES,
+  VERSIONED_RUNTIME_V114_SEMANTIC_TUPLE_RECORD,
+  VERSIONED_RUNTIME_V117_SEMANTIC_TUPLE_RECORD,
   assertCanonicalAuthorityRegistry,
+  classifyCanonicalCompatibilityTupleIdAgainstCurrent,
   encodeCanonicalCompatibilityTuple,
   hashCanonicalCompatibilityTuple,
   prepareCanonicalCompatibilityTupleRecord,
@@ -28,6 +36,10 @@ const authorityArtifactPath =
   "packages/spec/artifacts/v1.37-integrity-authority.json"
 const hashVectorsArtifactPath =
   "packages/spec/artifacts/v1.37-integrity-authority-hash-vectors.json"
+const successorAuthorityArtifactPath =
+  "packages/spec/artifacts/v1.37-integrity-authority-v1.17.json"
+const successorHashVectorsArtifactPath =
+  "packages/spec/artifacts/v1.37-integrity-authority-v1.17-hash-vectors.json"
 
 const cloneTuple = (
   tuple: CanonicalCompatibilityTuple,
@@ -104,10 +116,14 @@ describe("v1.37 canonical integrity authority", () => {
     )
     expect(Object.isFrozen(CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE)).toBe(true)
     expect(
-      prepareCanonicalCompatibilityTupleRecord({
-        ...CANONICAL_COMPATIBILITY_TUPLES[0]!.tuple,
-        runtimeAbi: "strategy-runtime-abi-v1.17",
-      }),
+      prepareCanonicalCompatibilityTupleRecord(
+        {
+          ...CANONICAL_COMPATIBILITY_TUPLES[0]!.tuple,
+          runtimeAbi: "strategy-runtime-abi-v1.17",
+        },
+        CANONICAL_COMPATIBILITY_TUPLE_IDENTITY_PROFILES.successor
+          .identityProfile,
+      ),
     ).toEqual(CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_RECORD)
     expect(
       resolveCanonicalCompatibilityTuple({
@@ -120,19 +136,64 @@ describe("v1.37 canonical integrity authority", () => {
         tupleId: CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_ID,
         tuple: { ...CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE },
       }),
-    ).toEqual({
-      tupleId: CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_ID,
-      algorithm: "sha256",
-      sha256: CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_ID.slice("sha256:".length),
-      tuple: CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE,
-    })
+    ).toEqual(VERSIONED_RUNTIME_V117_SEMANTIC_TUPLE_RECORD)
 
     const engineSource = readFileSync(
       path.join(repoRoot, "packages/engine/src/kernel/types.ts"),
       "utf8",
     )
     expect(engineSource).toContain("CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE")
-    expect(engineSource).not.toContain('runtimeAbi: "strategy-runtime-abi-v1.17"')
+    expect(engineSource).not.toContain(
+      'runtimeAbi: "strategy-runtime-abi-v1.17"',
+    )
+  })
+
+  it("selects encodings by explicit record profile and keeps current separate from history", () => {
+    expect(CURRENT_CANONICAL_COMPATIBILITY_TUPLE_ID).toBe(
+      HISTORICAL_RUNTIME_V114_SEMANTIC_TUPLE_ID,
+    )
+    expect(REGISTERED_CANONICAL_COMPATIBILITY_TUPLES).toEqual([
+      VERSIONED_RUNTIME_V114_SEMANTIC_TUPLE_RECORD,
+      VERSIONED_RUNTIME_V117_SEMANTIC_TUPLE_RECORD,
+    ])
+    expect(
+      prepareCanonicalCompatibilityTupleRecord(
+        { ...CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE },
+        CANONICAL_COMPATIBILITY_TUPLE_IDENTITY_PROFILES.legacy.identityProfile,
+      ).tupleId,
+    ).toBe(
+      "sha256:0a3c2f168cd9d4c7eeb6b22bd438b150e4a3e983c5580b841b0bc41921c242fc",
+    )
+    const sortedCandidate = Object.fromEntries(
+      Object.entries(CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE).sort(
+        ([left], [right]) => left.localeCompare(right),
+      ),
+    ) as unknown as CanonicalCompatibilityTuple
+    expect(
+      prepareCanonicalCompatibilityTupleRecord(
+        sortedCandidate,
+        CANONICAL_COMPATIBILITY_TUPLE_IDENTITY_PROFILES.successor
+          .identityProfile,
+      ),
+    ).toEqual(CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_RECORD)
+    expect(
+      classifyCanonicalCompatibilityTupleIdAgainstCurrent(
+        CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_ID,
+        CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_ID,
+      ),
+    ).toBe("current-exact")
+    expect(
+      classifyCanonicalCompatibilityTupleIdAgainstCurrent(
+        HISTORICAL_RUNTIME_V114_SEMANTIC_TUPLE_ID,
+        CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_ID,
+      ),
+    ).toBe("historical-v1.16-exact")
+    expect(
+      classifyCanonicalCompatibilityTupleIdAgainstCurrent(
+        `sha256:${"f".repeat(64)}`,
+        CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_ID,
+      ),
+    ).toBe("historical-or-unknown")
   })
 
   it("resolves only an exact registered id and matching complete expansion", () => {
@@ -223,6 +284,81 @@ describe("v1.37 canonical integrity authority", () => {
       { cwd: repoRoot, encoding: "utf8" },
     )
     expect(checked.status, checked.stderr).toBe(0)
+  })
+
+  it("preserves legacy artifact bytes and publishes explicit successor identity profiles", () => {
+    const legacyHashes = {
+      [authorityArtifactPath]:
+        "afa81345bb2d697befa590a07e613649c7b759bb9a471887104c83bfeaea1b1e",
+      [hashVectorsArtifactPath]:
+        "59c548d29ac905a8834c7b52351abff7a6bc449c6176179c7240bbecea6848b2",
+    }
+    for (const [relativePath, expected] of Object.entries(legacyHashes)) {
+      expect(
+        createHash("sha256")
+          .update(readFileSync(path.join(repoRoot, relativePath)))
+          .digest("hex"),
+        relativePath,
+      ).toBe(expected)
+    }
+
+    const authority = JSON.parse(
+      readFileSync(path.join(repoRoot, successorAuthorityArtifactPath), "utf8"),
+    ) as {
+      schemaVersion: string
+      identityProfiles: Array<{ identityProfile: string; encodingId: string }>
+      compatibilityTuples: Array<{
+        identityProfile: string
+        encodingId: string
+        tupleId: string
+      }>
+    }
+    expect(authority.schemaVersion).toBe("v1.37-integrity-authority-v2")
+    expect(authority.identityProfiles).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining(
+          CANONICAL_COMPATIBILITY_TUPLE_IDENTITY_PROFILES.legacy,
+        ),
+        expect.objectContaining(
+          CANONICAL_COMPATIBILITY_TUPLE_IDENTITY_PROFILES.successor,
+        ),
+      ]),
+    )
+    expect(authority.compatibilityTuples).toEqual([
+      expect.objectContaining({
+        identityProfile:
+          CANONICAL_COMPATIBILITY_TUPLE_IDENTITY_PROFILES.legacy
+            .identityProfile,
+        encodingId:
+          CANONICAL_COMPATIBILITY_TUPLE_IDENTITY_PROFILES.legacy.encodingId,
+        tupleId: HISTORICAL_RUNTIME_V114_SEMANTIC_TUPLE_ID,
+      }),
+      expect.objectContaining({
+        identityProfile:
+          CANONICAL_COMPATIBILITY_TUPLE_IDENTITY_PROFILES.successor
+            .identityProfile,
+        encodingId:
+          CANONICAL_COMPATIBILITY_TUPLE_IDENTITY_PROFILES.successor.encodingId,
+        tupleId: CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_ID,
+      }),
+    ])
+
+    const vectors = JSON.parse(
+      readFileSync(
+        path.join(repoRoot, successorHashVectorsArtifactPath),
+        "utf8",
+      ),
+    ) as { vectors: Array<{ name: string; tupleId: string }> }
+    expect(vectors.vectors).toEqual([
+      expect.objectContaining({
+        name: "registered-v1.14-legacy",
+        tupleId: HISTORICAL_RUNTIME_V114_SEMANTIC_TUPLE_ID,
+      }),
+      expect.objectContaining({
+        name: "candidate-v1.17-canonical",
+        tupleId: CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_ID,
+      }),
+    ])
   })
 
   it("publishes directly consumable base and per-component hash vectors", () => {

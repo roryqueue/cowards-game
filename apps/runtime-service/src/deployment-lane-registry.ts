@@ -3,11 +3,13 @@ import { createHash } from "node:crypto"
 import { readFileSync } from "node:fs"
 import {
   CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_ID,
+  StrategyRevisionV117Schema,
   resolveCandidateRuntimeV117SemanticTuple,
   resolveCanonicalCompatibilityTuple,
   type CanonicalCompatibilityTuple,
   type ExecutableLaneIdentity,
   type StrategyRevision,
+  type StrategyRevisionV117,
 } from "@cowards/spec"
 import { RuntimeServiceConfigError } from "./runtime-config.js"
 import {
@@ -154,6 +156,47 @@ const parseProfile = (value: unknown, index: number): DeploymentLaneProfile => {
       `Deployment lane registry profile ${index} successor identity does not match its semantic tuple.`,
     )
   }
+  const semanticTupleBinding = successorRuntimeIdentityTemplate?.bindings.find(
+    ({ domain }) => domain === "semanticTuple",
+  )
+  const containmentPolicyBinding =
+    successorRuntimeIdentityTemplate?.bindings.find(
+      ({ domain }) => domain === "containmentPolicy",
+    )
+  const conformanceCorpusBinding =
+    successorRuntimeIdentityTemplate?.bindings.find(
+      ({ domain }) => domain === "conformanceCorpus",
+    )
+  if (
+    isSuccessor &&
+    (semanticTupleBinding?.publicId !== resolved.tupleId ||
+      semanticTupleBinding.sha256 !== resolved.sha256)
+  ) {
+    throw new RuntimeServiceConfigError(
+      `Deployment lane registry profile ${index} successor identity does not bind its semantic tuple.`,
+    )
+  }
+  const successorPins =
+    successorRuntimeIdentityTemplate === undefined
+      ? undefined
+      : new Map(successorRuntimeIdentityTemplate.exactPins)
+  if (
+    isSuccessor &&
+    successorPins?.get("reportedVersion") !== value.runtimeVersion
+  ) {
+    throw new RuntimeServiceConfigError(
+      `Deployment lane registry profile ${index} successor identity does not bind its runtime version.`,
+    )
+  }
+  if (
+    isSuccessor &&
+    (containmentPolicyBinding?.publicId !== value.policyId ||
+      conformanceCorpusBinding?.publicId !== value.corpusId)
+  ) {
+    throw new RuntimeServiceConfigError(
+      `Deployment lane registry profile ${index} successor identity does not bind its policy and corpus.`,
+    )
+  }
   return Object.freeze({
     ...Object.fromEntries(
       PROFILE_STRING_FIELDS.map((field) => [field, value[field]]),
@@ -172,7 +215,11 @@ export const parseDeploymentLaneRegistry = (
   if (!isRecord(value)) {
     throw new RuntimeServiceConfigError("Deployment lane registry is invalid.")
   }
-  exactKeys(value, ["schemaVersion", "registryId", "lanes"], "Deployment lane registry")
+  exactKeys(
+    value,
+    ["schemaVersion", "registryId", "lanes"],
+    "Deployment lane registry",
+  )
   if (
     value.schemaVersion !== DEPLOYMENT_LANE_REGISTRY_SCHEMA_VERSION ||
     typeof value.registryId !== "string" ||
@@ -226,7 +273,7 @@ export const loadDeploymentLaneRegistry = (
 }
 
 const artifactBytesAndHash = (
-  revision: StrategyRevision,
+  revision: StrategyRevision | StrategyRevisionV117,
   profile: DeploymentLaneProfile,
 ): { hash: string } | undefined => {
   const sourceArtifact = revision.metadata.sourceArtifact
@@ -249,12 +296,19 @@ const artifactBytesAndHash = (
     return undefined
   }
   if (profile.artifactKind === "source") {
+    const successor =
+      profile.semanticTupleId === CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_ID
     if (
       !sourceArtifact ||
-      sourceArtifact.toolchain.language !== profile.toolchainId ||
-      sourceArtifact.toolchain.runtime !== profile.runtimeId ||
-      sourceArtifact.toolchain.runtimeVersion !== profile.toolchainVersion ||
-      profile.runtimeVersion !== sourceArtifact.toolchain.runtimeVersion
+      (successor
+        ? sourceArtifact.toolchain.language !== profile.languageId ||
+          sourceArtifact.toolchain.runtime !== profile.toolchainId ||
+          sourceArtifact.toolchain.runtimeVersion !== profile.toolchainVersion
+        : sourceArtifact.toolchain.language !== profile.toolchainId ||
+          sourceArtifact.toolchain.runtime !== profile.runtimeId ||
+          sourceArtifact.toolchain.runtimeVersion !==
+            profile.toolchainVersion ||
+          profile.runtimeVersion !== sourceArtifact.toolchain.runtimeVersion)
     ) {
       return undefined
     }
@@ -268,9 +322,12 @@ const artifactBytesAndHash = (
   return { hash: artifact.hash }
 }
 
-export const createDeploymentLaneIdentityResolver = (
-  registry: Readonly<DeploymentLaneRegistry>,
-): ((revision: StrategyRevision) => ExecutableLaneIdentity | undefined) =>
+export const createDeploymentLaneIdentityResolver =
+  (
+    registry: Readonly<DeploymentLaneRegistry>,
+  ): ((
+    revision: StrategyRevision | StrategyRevisionV117,
+  ) => ExecutableLaneIdentity | undefined) =>
   (revision) => {
     const profile = registry.lanes.find(
       (candidate) =>
@@ -281,7 +338,14 @@ export const createDeploymentLaneIdentityResolver = (
     )
     if (
       !profile ||
+      (profile.semanticTupleId === CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_ID &&
+        !StrategyRevisionV117Schema.safeParse(revision).success) ||
       revision.metadata.providerValidation?.providerId !== profile.providerId ||
+      revision.metadata.providerValidation.contractVersion.length === 0 ||
+      revision.metadata.providerValidation.sourceHash !== revision.sourceHash ||
+      revision.metadata.providerValidation.sourceBytes !==
+        revision.sourceBytes ||
+      revision.metadata.providerValidation.proof.length === 0 ||
       revision.runtime.abiVersion !== profile.semanticTuple.runtimeAbi ||
       revision.engineCompatibility.spec !== profile.semanticTuple.rules ||
       revision.engineCompatibility.engine !== profile.semanticTuple.engine
@@ -290,6 +354,19 @@ export const createDeploymentLaneIdentityResolver = (
     }
     const artifact = artifactBytesAndHash(revision, profile)
     if (!artifact) return undefined
+    const revisionArtifact =
+      profile.artifactKind === "source"
+        ? revision.metadata.sourceArtifact
+        : revision.metadata.compiledArtifact
+    if (
+      revisionArtifact === undefined ||
+      revision.metadata.providerValidation.artifactHash !==
+        revisionArtifact?.hash ||
+      revision.metadata.providerValidation.artifactBytes !==
+        revisionArtifact.bytes
+    ) {
+      return undefined
+    }
     return Object.freeze({
       providerId: profile.providerId,
       languageId: profile.languageId,
@@ -314,9 +391,9 @@ export const createDeploymentLaneIdentityResolver = (
 
 export const createSuccessorRuntimeIdentityTemplateResolver = (
   registry: Readonly<DeploymentLaneRegistry>,
-): ((revision: StrategyRevision) =>
-  | DeploymentLaneProfile["successorRuntimeIdentityTemplate"]
-  | undefined) => {
+): ((
+  revision: StrategyRevision | StrategyRevisionV117,
+) => DeploymentLaneProfile["successorRuntimeIdentityTemplate"] | undefined) => {
   const resolveLane = createDeploymentLaneIdentityResolver(registry)
   return (revision) => {
     if (resolveLane(revision) === undefined) return undefined

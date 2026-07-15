@@ -1986,7 +1986,7 @@ export const defaultRuntimeMetadata = (
 }
 
 export const runtimeCompatibilityKey = (input: {
-  runtime: StrategyRuntimeMetadata
+  runtime: Omit<StrategyRuntimeMetadata, "abiVersion"> & { abiVersion: string }
   sourceHash: string
   artifactHash?: string | undefined
   artifactTargetTriple?: string | undefined

@@ -9,6 +9,7 @@ export {
 export { transpileStrategySource } from "./transpile.js"
 export { buildTypeScriptSourceArtifact } from "./source-artifact.js"
 export { buildStrategyRevision, isValidStrategyRevision } from "./revision.js"
+export { buildStrategyRevisionV117 } from "./revision-v1-17.js"
 export type {
   StrategyRevision,
   StrategyRevisionValidationReport,

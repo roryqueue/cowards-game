@@ -1,0 +1,105 @@
+{
+  "schemaVersion": "v1.37-integrity-authority-v2",
+  "generatorVersion": "generate-v1-37-integrity-authority-v2",
+  "generatedBy": "scripts/generate-v1-37-integrity-authority.ts",
+  "identityProfiles": [
+    {
+      "identityProfile": "legacy-compatibility-tuple-v1",
+      "encodingId": "nul-delimited-decimal-length-utf8-v1",
+      "kind": "legacy-nul-field-tuple",
+      "domainTag": "cowards-game:canonical-compatibility-tuple:v1",
+      "fieldOrder": [
+        "rules",
+        "engine",
+        "runtimeAbi",
+        "chronicle",
+        "arenaCatalog",
+        "setPolicy"
+      ],
+      "separator": "NUL",
+      "lengthUnit": "UTF-8 bytes",
+      "lengthEncoding": "decimal",
+      "hashAlgorithm": "sha256",
+      "tupleIdFormat": "sha256:<lowercase-hex>"
+    },
+    {
+      "identityProfile": "runtime-identity-semantic-tuple-v1",
+      "encodingId": "canonical-json-v1.1-u64be-domain-frame-v1",
+      "kind": "canonical-json-domain-frame",
+      "domainTag": "cowards-game:runtime-identity:v1:semantic-tuple",
+      "canonicalJsonProfile": "canonical-json-v1.1",
+      "canonicalJsonContext": "canonical-manifest",
+      "framing": "u64be-length-prefixed-segments",
+      "segments": [
+        "domainTag",
+        "canonicalJsonTuple"
+      ],
+      "hashAlgorithm": "sha256",
+      "tupleIdFormat": "sha256:<lowercase-hex>"
+    }
+  ],
+  "authorityRegistry": [
+    {
+      "domain": "rules",
+      "packageName": "@cowards/spec",
+      "symbol": "COMPATIBILITY_VERSIONS"
+    },
+    {
+      "domain": "transition-semantics",
+      "packageName": "@cowards/engine",
+      "symbol": "runMatch"
+    },
+    {
+      "domain": "runtime-classification",
+      "packageName": "@cowards/spec",
+      "symbol": "evaluateStrategyRuntimeCountedEligibility"
+    },
+    {
+      "domain": "chronicle-validation",
+      "packageName": "@cowards/replay",
+      "symbol": "validateCurrentChronicle"
+    },
+    {
+      "domain": "arena-authority",
+      "packageName": "@cowards/spec",
+      "symbol": "validateCanonicalArena"
+    },
+    {
+      "domain": "set-scheduling-policy",
+      "packageName": "@cowards/persistence",
+      "symbol": "scheduleTrialLadderSeason"
+    }
+  ],
+  "compatibilityTuples": [
+    {
+      "identityProfile": "legacy-compatibility-tuple-v1",
+      "encodingId": "nul-delimited-decimal-length-utf8-v1",
+      "tupleId": "sha256:922a6857fdbc8354b744d6e766bff216f3fee85b5ed381355cb427f5a616b3ae",
+      "algorithm": "sha256",
+      "sha256": "922a6857fdbc8354b744d6e766bff216f3fee85b5ed381355cb427f5a616b3ae",
+      "tuple": {
+        "rules": "cowards-rules-v1.4",
+        "engine": "engine-kernel-v1.37-candidate-1",
+        "runtimeAbi": "strategy-runtime-abi-v1.14",
+        "chronicle": "chronicle-recorder-current-events-v1.37-candidate-1",
+        "arenaCatalog": "semantic-arena-catalog-v1.37-candidate-1",
+        "setPolicy": "canonical-set-policy-v1.4"
+      }
+    },
+    {
+      "identityProfile": "runtime-identity-semantic-tuple-v1",
+      "encodingId": "canonical-json-v1.1-u64be-domain-frame-v1",
+      "tupleId": "sha256:0d8a04fdfe49e3aa7261728ee51beb0a9049b661aad978277f2892c3a4bc54fe",
+      "algorithm": "sha256",
+      "sha256": "0d8a04fdfe49e3aa7261728ee51beb0a9049b661aad978277f2892c3a4bc54fe",
+      "tuple": {
+        "rules": "cowards-rules-v1.4",
+        "engine": "engine-kernel-v1.37-candidate-1",
+        "runtimeAbi": "strategy-runtime-abi-v1.17",
+        "chronicle": "chronicle-recorder-current-events-v1.37-candidate-1",
+        "arenaCatalog": "semantic-arena-catalog-v1.37-candidate-1",
+        "setPolicy": "canonical-set-policy-v1.4"
+      }
+    }
+  ]
+}

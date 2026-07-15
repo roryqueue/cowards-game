@@ -10,6 +10,8 @@ import type {
 } from "@cowards/spec"
 import {
   CANONICAL_COMPATIBILITY_TUPLES,
+  HISTORICAL_RUNTIME_V114_SEMANTIC_TUPLE,
+  HISTORICAL_RUNTIME_V114_SEMANTIC_TUPLE_ID,
   ChronicleValidationErrorCodeSchema,
   COMPATIBILITY_VERSIONS,
   createMatchExecutionExactEvidenceV137,
@@ -324,14 +326,14 @@ describe("validateChronicle", () => {
       issues: [],
       truncated: false,
     })
-    expect(validateReplayInput(input)).toEqual(
-      validateCurrentChronicle(input),
-    )
-    expect(resolveReplayCompatibilityIdentity({
-      profile: "current-exact",
-      compatibility: input.compatibility,
-      chronicle: input.chronicle,
-    })).toEqual({
+    expect(validateReplayInput(input)).toEqual(validateCurrentChronicle(input))
+    expect(
+      resolveReplayCompatibilityIdentity({
+        profile: "current-exact",
+        compatibility: input.compatibility,
+        chronicle: input.chronicle,
+      }),
+    ).toEqual({
       status: "current_exact",
       tupleId: MATCH_KERNEL.tupleId,
     })
@@ -688,6 +690,36 @@ describe("validateChronicle", () => {
       tupleResolution: "unresolved_legacy",
     })
     expect(JSON.stringify(historical)).toBe(before)
+
+    const historicalV116 = {
+      profile: "historical-v1.16" as const,
+      compatibility: {
+        tupleId: HISTORICAL_RUNTIME_V114_SEMANTIC_TUPLE_ID,
+        tuple: { ...HISTORICAL_RUNTIME_V114_SEMANTIC_TUPLE },
+      },
+      chronicle,
+    }
+    expect(validateReplayInput(historicalV116)).toEqual({ ok: true })
+    expect(resolveReplayCompatibilityIdentity(historicalV116)).toEqual({
+      status: "historical_v1_16_exact",
+      tupleId: HISTORICAL_RUNTIME_V114_SEMANTIC_TUPLE_ID,
+      tupleResolution: "resolved_v1.16",
+    })
+    expect(
+      validateReplayInput({
+        ...historicalV116,
+        compatibility: {
+          ...historicalV116.compatibility,
+          tuple: {
+            ...historicalV116.compatibility.tuple,
+            runtimeAbi: "strategy-runtime-abi-v1.17",
+          },
+        },
+      }),
+    ).toMatchObject({
+      ok: false,
+      errors: [expect.objectContaining({ code: "VERSION_INCOMPATIBLE" })],
+    })
   })
   it("accepts a valid Chronicle with matching integrity", () => {
     const chronicle = createChronicle()

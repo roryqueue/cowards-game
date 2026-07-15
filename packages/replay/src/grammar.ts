@@ -6,9 +6,11 @@ import type {
   JsonValue,
 } from "@cowards/spec"
 import { MAX_ACTIVATION_CYCLES, ROUND_ACTIVATION_COUNTS } from "@cowards/spec"
+import {
+  classifyCanonicalCompatibilityTupleId,
+  type CanonicalCompatibilityTupleLifecycle,
+} from "@cowards/spec"
 
-const V1_37_CURRENT_TUPLE_ID =
-  "sha256:922a6857fdbc8354b744d6e766bff216f3fee85b5ed381355cb427f5a616b3ae"
 const V1_37_CURRENT_GRAMMAR_EVENT_TYPES = new Set<string>([
   "MATCH_STARTED",
   "ROUND_STARTED",
@@ -36,11 +38,9 @@ const V1_37_CURRENT_GRAMMAR_EVENT_TYPES = new Set<string>([
 export const resolveGrammarEventContract = (
   semanticTupleId: string,
   eventType: string,
-): "current-exact" | "historical-or-unknown" =>
-  semanticTupleId === V1_37_CURRENT_TUPLE_ID
-    ? V1_37_CURRENT_GRAMMAR_EVENT_TYPES.has(eventType)
-      ? "current-exact"
-      : "historical-or-unknown"
+): CanonicalCompatibilityTupleLifecycle =>
+  V1_37_CURRENT_GRAMMAR_EVENT_TYPES.has(eventType)
+    ? classifyCanonicalCompatibilityTupleId(semanticTupleId)
     : "historical-or-unknown"
 
 type GrammarState = {

@@ -1,9 +1,11 @@
 import type {
+  CanonicalCompatibilityTupleLifecycle,
   MatchExecutionFailureCategoryV1,
   MatchExecutionLifecycleStateV1,
   Position,
   SoldierSnapshot,
 } from "@cowards/spec"
+import { classifyCanonicalCompatibilityTupleId } from "@cowards/spec"
 import type { PublicReadMatchSetResultDto } from "../lib/public-service-boundary.js"
 import type {
   ReplayPageData,
@@ -12,8 +14,6 @@ import type {
   ReplayTimelineEntryDto,
 } from "./matches/types.js"
 
-const V1_37_CURRENT_TUPLE_ID =
-  "sha256:922a6857fdbc8354b744d6e766bff216f3fee85b5ed381355cb427f5a616b3ae"
 const V1_37_CURRENT_MATCH_INTELLIGENCE_EVENT_TYPES = new Set<string>([
   "MATCH_STARTED",
   "ROUND_STARTED",
@@ -41,11 +41,9 @@ const V1_37_CURRENT_MATCH_INTELLIGENCE_EVENT_TYPES = new Set<string>([
 export const resolveMatchIntelligenceEventContract = (
   semanticTupleId: string,
   eventType: string,
-): "current-exact" | "historical-or-unknown" =>
-  semanticTupleId === V1_37_CURRENT_TUPLE_ID
-    ? V1_37_CURRENT_MATCH_INTELLIGENCE_EVENT_TYPES.has(eventType)
-      ? "current-exact"
-      : "historical-or-unknown"
+): CanonicalCompatibilityTupleLifecycle =>
+  V1_37_CURRENT_MATCH_INTELLIGENCE_EVENT_TYPES.has(eventType)
+    ? classifyCanonicalCompatibilityTupleId(semanticTupleId)
     : "historical-or-unknown"
 
 export type IntelligenceAvailabilityBand =

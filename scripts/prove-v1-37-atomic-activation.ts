@@ -7,6 +7,7 @@ import { createRequire } from "node:module"
 import { fileURLToPath } from "node:url"
 import {
   CANONICAL_COMPATIBILITY_TUPLES,
+  CURRENT_CANONICAL_COMPATIBILITY_TUPLE_ID,
   RUNTIME_EVIDENCE_AUTHORITY_TRUST_DOMAINS,
   hashExecutableLaneIdentity,
   type CanonicalCompatibilityTuple,
@@ -29,8 +30,7 @@ import {
   createRuntimeEvidenceAuthorityLoader,
 } from "../apps/runtime-service/src/runtime-evidence-authority.js"
 
-const EXPECTED_CURRENT_TUPLE_ID =
-  "sha256:922a6857fdbc8354b744d6e766bff216f3fee85b5ed381355cb427f5a616b3ae"
+const EXPECTED_CURRENT_TUPLE_ID = CURRENT_CANONICAL_COMPATIBILITY_TUPLE_ID
 const HISTORICAL_V14_TUPLE_ID =
   "sha256:be54eb5317af0a87190433f649f9beef4490493d8c2a8815a323b082651b514c"
 const PROOF_INSTANT = "2026-07-13T12:00:00.000Z"
