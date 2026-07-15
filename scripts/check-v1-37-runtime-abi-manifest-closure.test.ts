@@ -1,5 +1,9 @@
 import { readFileSync } from "node:fs"
 import { describe, expect, it } from "vitest"
+import {
+  IMMUTABLE_RUNTIME_SERVICE_V116_DIGESTS,
+  verifyImmutableRuntimeServiceV116Digests,
+} from "./check-v1-37-runtime-abi-manifest-closure.js"
 
 const readJson = (path: string): unknown =>
   JSON.parse(readFileSync(path, "utf8")) as unknown
@@ -43,5 +47,20 @@ describe("Phase 258 runtime ABI activation closure", () => {
     ]) {
       expect(paths.has(path), path).toBe(true)
     }
+  })
+
+  it("pins exact v1.16 bytes and rejects a one-byte historical mutation", () => {
+    expect(Object.keys(IMMUTABLE_RUNTIME_SERVICE_V116_DIGESTS)).toHaveLength(6)
+    expect(() => verifyImmutableRuntimeServiceV116Digests()).not.toThrow()
+    const mutatedPath =
+      "packages/spec/artifacts/runtime-execution-service-request.v1.16.json"
+    expect(() =>
+      verifyImmutableRuntimeServiceV116Digests((path) => {
+        const bytes = readFileSync(path)
+        return path === mutatedPath
+          ? Buffer.concat([bytes.subarray(0, -1), Buffer.from("\n")])
+          : bytes
+      }),
+    ).toThrow(/Immutable v1\.16 digest changed/u)
   })
 })
