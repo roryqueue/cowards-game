@@ -1,5 +1,6 @@
 import { Buffer } from "node:buffer"
 import { createHash } from "node:crypto"
+import { STRATEGY_RUNTIME_ABI_VERSION } from "./versions.js"
 
 const KiB = 1024
 const MiB = 1024 * KiB
@@ -1684,11 +1685,7 @@ const debitExecutionLedger = (
     dimension.includes("wall"),
   )
   if (wallDimension !== undefined) {
-    return ledgerSystemFailure(
-      ledger,
-      "STRATEGY_TIMEOUT",
-      wallDimension,
-    )
+    return ledgerSystemFailure(ledger, "STRATEGY_TIMEOUT", wallDimension)
   }
 
   const outcome = finalDimensions.length === 0 ? "success" : "player_violation"
@@ -1931,11 +1928,7 @@ const debitPreflightLedger = <TProfile extends RuntimeAbiV117PreflightProfile>(
     dimension.includes("wall"),
   )
   if (wallDimension !== undefined) {
-    return ledgerSystemFailure(
-      ledger,
-      "STRATEGY_TIMEOUT",
-      wallDimension,
-    )
+    return ledgerSystemFailure(ledger, "STRATEGY_TIMEOUT", wallDimension)
   }
   const outcome = finalDimensions.length === 0 ? "success" : "player_violation"
   const commitment = deepFreeze({
@@ -2023,8 +2016,31 @@ export const validateRuntimeAbiV117Contract = (): string[] => {
   ) {
     errors.push("decision map must cover D-01 through D-16 exactly")
   }
-  if (RUNTIME_ABI_V1_17.lifecycle.active)
-    errors.push("candidate must not be active")
+  const selectedAsCurrent =
+    String(STRATEGY_RUNTIME_ABI_VERSION) ===
+    String(RUNTIME_ABI_V1_17.versions.runtimeAbi)
+  if (RUNTIME_ABI_V1_17.lifecycle.active !== selectedAsCurrent) {
+    errors.push("successor lifecycle must match the selected runtime ABI")
+  }
+  if (
+    RUNTIME_ABI_V1_17.lifecycle.status !==
+    (selectedAsCurrent ? "current" : "candidate-only")
+  ) {
+    errors.push("successor status must match the selected runtime ABI")
+  }
+  if (
+    selectedAsCurrent &&
+    (String(RUNTIME_ABI_V1_17.lifecycle.currentRuntimeAbi) !==
+      String(RUNTIME_ABI_V1_17.versions.runtimeAbi) ||
+      String(RUNTIME_ABI_V1_17.lifecycle.currentRuntimeService) !==
+        String(RUNTIME_ABI_V1_17.versions.runtimeService) ||
+      String(RUNTIME_ABI_V1_17.lifecycle.currentSemanticReceipt) !==
+        String(RUNTIME_ABI_V1_17.versions.semanticReceipt) ||
+      String(RUNTIME_ABI_V1_17.versions.canonicalJson) !==
+        "canonical-json-v1.1")
+  ) {
+    errors.push("active successor tuple is incomplete")
+  }
   if (RUNTIME_ABI_V1_17.migration.migration0017RewriteAllowed) {
     errors.push("migration 0017 rewrite must remain forbidden")
   }

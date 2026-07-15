@@ -21,6 +21,18 @@ const manifest = (): TestManifest =>
   ) as TestManifest
 
 describe("Phase 258 exact runtime ABI test manifest", () => {
+  it("exposes exact package entry points for closure and staged execution", () => {
+    const packageJson = JSON.parse(readFileSync("package.json", "utf8")) as {
+      scripts?: Record<string, string>
+    }
+    expect(packageJson.scripts).toMatchObject({
+      "v1.37:runtime-abi-manifest:check":
+        "pnpm exec tsx scripts/check-v1-37-runtime-abi-manifest-closure.ts --check",
+      "v1.37:runtime-abi-tests":
+        "pnpm exec tsx scripts/run-v1-37-runtime-abi-test-manifest.ts",
+    })
+  })
+
   it("owns exact named Go default, route, mixed, and historical cases", () => {
     const document = manifest()
     expect(document.schemaVersion).toBe("runtime-abi-v1.17-test-manifest-v1")

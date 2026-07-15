@@ -31,6 +31,7 @@ import {
   type RuntimeInvocationTraceV117,
 } from "./runtime-invocation-v1-17.js"
 import { RUNTIME_EXECUTION_SERVICE_VERSION } from "./runtime-execution-service.js"
+import { STRATEGY_RUNTIME_ABI_VERSION } from "./versions.js"
 import { RUNTIME_ABI_V1_17_BUDGET_PROFILE_SHA256 } from "./runtime-budget-profile-v1-17.js"
 import { RUNTIME_BUDGET_CAPABILITY_CONTRACT_V1_17 } from "./runtime-budget-capabilities-v1-17.js"
 import {
@@ -864,13 +865,16 @@ const trace = (): RuntimeInvocationTraceV117 => ({
 })
 
 describe("runtime invocation v1.17 exclusive ownership", () => {
-  it("keeps the successor candidate inactive until Plan 14", () => {
-    expect(RUNTIME_INVOCATION_V1_17_CANDIDATE).toEqual({
+  it("keeps the successor invocation registry aligned with the selected pointer", () => {
+    const selected =
+      String(STRATEGY_RUNTIME_ABI_VERSION) ===
+      String(RUNTIME_INVOCATION_V1_17_CANDIDATE.runtimeAbiVersion)
+    expect(RUNTIME_INVOCATION_V1_17_CANDIDATE).toMatchObject({
       contractVersion: "runtime-invocation-v1.17",
       runtimeAbiVersion: "strategy-runtime-abi-v1.17",
-      lifecycle: "inactive-candidate",
       activationPlan: "258-14",
-      current: false,
+      current: selected,
+      lifecycle: selected ? "active-current" : "inactive-candidate",
     })
   })
 
@@ -882,10 +886,7 @@ describe("runtime invocation v1.17 exclusive ownership", () => {
       payload_schema_invalid: ["player_violation", "INVALID_OUTPUT"],
       payload_illegal: ["player_violation", "INVALID_OUTPUT"],
       strategy_exception_proven: ["player_violation", "THROWN_EXCEPTION"],
-      strategy_exhaustion_proven: [
-        "player_violation",
-        "RESOURCE_EXHAUSTION",
-      ],
+      strategy_exhaustion_proven: ["player_violation", "RESOURCE_EXHAUSTION"],
       strategy_timeout: ["system_failure", "TIMEOUT"],
       outer_frame_missing: ["system_failure", "OUTER_FRAME_MISSING"],
       outer_frame_truncated: ["system_failure", "OUTER_FRAME_TRUNCATED"],
@@ -1470,7 +1471,10 @@ describe("runtime invocation v1.17 authenticated candidate wire", () => {
     expect(RUNTIME_EXECUTION_SERVICE_VERSION).toBe(
       "runtime-execution-service-v1.16",
     )
-    expect(RUNTIME_INVOCATION_V1_17_CANDIDATE.current).toBe(false)
+    expect(RUNTIME_INVOCATION_V1_17_CANDIDATE.current).toBe(
+      String(STRATEGY_RUNTIME_ABI_VERSION) ===
+        String(RUNTIME_INVOCATION_V1_17_CANDIDATE.runtimeAbiVersion),
+    )
     const protectedHashes = {
       "packages/spec/artifacts/runtime-execution-service-response.v1.16.wire.json":
         "9c870d57e0125eb80ab2ba941ecbbede8a9a775f61c0b278abec25c491374d97",

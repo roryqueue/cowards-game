@@ -56,6 +56,8 @@
     "v1.37:kernel-integrity:check": "pnpm exec tsx scripts/evaluate-v1-37-kernel-integrity.ts --check",
     "v1.37:worker-retirement:check": "pnpm exec tsx scripts/check-v1-37-worker-retirement.ts",
     "v1.37:runtime-authority:publish": "pnpm exec tsx scripts/publish-v1-37-runtime-evidence-authority.ts",
+    "v1.37:runtime-abi-manifest:check": "pnpm exec tsx scripts/check-v1-37-runtime-abi-manifest-closure.ts --check",
+    "v1.37:runtime-abi-tests": "pnpm exec tsx scripts/run-v1-37-runtime-abi-test-manifest.ts",
     "v1.37:runtime-budget-capabilities:check": "pnpm exec tsx scripts/generate-runtime-budget-capabilities-v1-17.ts --check",
     "wasm-wasi:beta-evaluate": "pnpm exec tsx scripts/evaluate-v1-23-wasm-wasi-beta.ts",
     "wasm-wasi:beta-evaluate:check": "pnpm exec tsx scripts/evaluate-v1-23-wasm-wasi-beta.ts --check",

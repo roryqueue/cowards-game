@@ -4,6 +4,7 @@ import path from "node:path"
 import { pathToFileURL } from "node:url"
 import { describe, expect, it } from "vitest"
 import type * as SubjectModule from "./runtime-abi-v1-17.ts"
+import { STRATEGY_RUNTIME_ABI_VERSION } from "./versions.js"
 
 const repoRoot = path.resolve(import.meta.dirname, "../../..")
 const subjectPath = path.join(import.meta.dirname, "runtime-abi-v1-17.ts")
@@ -257,7 +258,7 @@ const preflightReceipt = (
 }
 
 describe("runtime ABI v1.17 frozen successor registry", () => {
-  it("mints a separate atomic successor without activating or rewriting v1.16", async () => {
+  it("keeps the atomic successor lifecycle aligned with the selected pointer", async () => {
     const runtimeAbi = await subject()
     const contract = runtimeAbi.RUNTIME_ABI_V1_17
 
@@ -269,14 +270,27 @@ describe("runtime ABI v1.17 frozen successor registry", () => {
       budget: "runtime-budget-v1",
       identity: "runtime-identity-v1",
     })
-    expect(contract.lifecycle).toEqual({
-      status: "candidate-only",
-      active: false,
-      currentRuntimeAbi: "strategy-runtime-abi-v1.14",
-      currentRuntimeService: "runtime-execution-service-v1.16",
-      currentSemanticReceipt: "runtime-semantic-receipt-v1",
-      activationOwner: "Phase-258-Plan-14",
-    })
+    const selected =
+      String(STRATEGY_RUNTIME_ABI_VERSION) ===
+      String(contract.versions.runtimeAbi)
+    expect(contract.lifecycle.active).toBe(selected)
+    expect(contract.lifecycle.status).toBe(
+      selected ? "current" : "candidate-only",
+    )
+    expect(contract.lifecycle.currentRuntimeAbi).toBe(
+      selected ? contract.versions.runtimeAbi : STRATEGY_RUNTIME_ABI_VERSION,
+    )
+    expect(contract.lifecycle.currentRuntimeService).toBe(
+      selected
+        ? contract.versions.runtimeService
+        : "runtime-execution-service-v1.16",
+    )
+    expect(contract.lifecycle.currentSemanticReceipt).toBe(
+      selected
+        ? contract.versions.semanticReceipt
+        : "runtime-semantic-receipt-v1",
+    )
+    expect(contract.lifecycle.activationOwner).toBe("Phase-258-Plan-14")
     expect(contract.migration.v116ReadDispatchRetained).toBe(true)
     expect(contract.migration.v116InsertionOrderedWireBytesRetained).toBe(true)
     expect(contract.migration.migration0017RewriteAllowed).toBe(false)
