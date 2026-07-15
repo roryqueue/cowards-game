@@ -19,7 +19,7 @@
   "calibration": {
     "receipt": ".planning/artifacts/v1.37-runtime-abi-calibration.json",
     "inputManifest": "packages/spec/artifacts/runtime-abi-v1.17-calibration-inputs.json",
-    "inputManifestSha256": "c0dddd207bd6e16dad8c67dc97dcb27c4e14907184776e39a1ecd6895c0827d5",
+    "inputManifestSha256": "76f9af3d0f46fee34e02853d9925172c26e79816609c45091a1a88c3cd369aa8",
     "onlyCurrentValidClassesEstablishMaxima": true,
     "localToolVersionsAreCountedPins": false
   },

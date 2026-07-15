@@ -6,7 +6,7 @@
   "activation": "not-active",
   "inputManifest": {
     "schemaVersion": "runtime-abi-v1.17-calibration-inputs-v1",
-    "sha256": "c0dddd207bd6e16dad8c67dc97dcb27c4e14907184776e39a1ecd6895c0827d5",
+    "sha256": "76f9af3d0f46fee34e02853d9925172c26e79816609c45091a1a88c3cd369aa8",
     "path": "packages/spec/artifacts/runtime-abi-v1.17-calibration-inputs.json",
     "privacy": "internal-build-evidence-no-private-payload-copy",
     "denylist": [
@@ -113,7 +113,7 @@
       },
       {
         "path": "packages/spec/artifacts/v1.37-current-event-coverage.json",
-        "sha256": "03b86be71dc2cce4a555b52bdf5fc424cc1743bf8d8c0f3ab5863cbc013a7d05",
+        "sha256": "ef2b9b57e31b6fe0d12ac78b8077e8510e180ca4e7260c01291a8f7498c67397",
         "byteLength": 36257,
         "classification": "current-valid-fixture",
         "inclusionReason": "Committed current event-coverage fixture consumed by current integrity checks.",
@@ -407,7 +407,7 @@
     },
     {
       "path": "packages/spec/artifacts/v1.37-current-event-coverage.json",
-      "sha256": "03b86be71dc2cce4a555b52bdf5fc424cc1743bf8d8c0f3ab5863cbc013a7d05",
+      "sha256": "ef2b9b57e31b6fe0d12ac78b8077e8510e180ca4e7260c01291a8f7498c67397",
       "byteLength": 36257,
       "classification": "current-valid-fixture",
       "inclusionReason": "Committed current event-coverage fixture consumed by current integrity checks.",
