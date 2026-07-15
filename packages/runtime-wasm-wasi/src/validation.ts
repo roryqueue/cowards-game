@@ -881,12 +881,17 @@ const CANDIDATE_WASM_ARTIFACT_ABI_V117 = {
   },
 } as const satisfies WasmArtifactAbiDeclaration
 
+// Toolchain discovery is outside every signed Strategy method budget. Keep it
+// bounded, but allow the same host-load tolerance as the exact identity probes
+// so a busy compiler is not misclassified as an absent runtime lane.
+const TOOLCHAIN_IDENTITY_PROBE_TIMEOUT_MS = 5_000
+
 const rustcVersion = (): string => {
   const result = spawnSync("rustc", ["--version"], {
     encoding: "utf8",
     shell: false,
     env: { PATH: process.env.PATH ?? "" },
-    timeout: 1_000,
+    timeout: TOOLCHAIN_IDENTITY_PROBE_TIMEOUT_MS,
     maxBuffer: 32 * 1024,
   })
   return result.status === 0
@@ -899,7 +904,7 @@ const zigVersion = (): string => {
     encoding: "utf8",
     shell: false,
     env: { PATH: process.env.PATH ?? "" },
-    timeout: 1_000,
+    timeout: TOOLCHAIN_IDENTITY_PROBE_TIMEOUT_MS,
     maxBuffer: 32 * 1024,
   })
   return result.status === 0
@@ -1549,14 +1554,14 @@ export const zigReadinessEvidence = (): ZigReadinessEvidence => {
     encoding: "utf8",
     shell: false,
     env: { PATH: process.env.PATH ?? "" },
-    timeout: 1_000,
+    timeout: TOOLCHAIN_IDENTITY_PROBE_TIMEOUT_MS,
     maxBuffer: 32 * 1024,
   })
   const result = spawnSync("zig", ["version"], {
     encoding: "utf8",
     shell: false,
     env: { PATH: process.env.PATH ?? "" },
-    timeout: 1_000,
+    timeout: TOOLCHAIN_IDENTITY_PROBE_TIMEOUT_MS,
     maxBuffer: 32 * 1024,
   })
   if (result.error || result.status !== 0) {
@@ -1624,7 +1629,7 @@ export fn _start() void {
       encoding: "utf8",
       shell: false,
       env: { PATH: process.env.PATH ?? "" },
-      timeout: 1_000,
+      timeout: TOOLCHAIN_IDENTITY_PROBE_TIMEOUT_MS,
       maxBuffer: 32 * 1024,
     })
     const wasmtimePath =
