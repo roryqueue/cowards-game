@@ -4,6 +4,7 @@ import { encodeCanonicalJson } from "./canonical-json-encode.js"
 import { CanonicalJsonValueV117Schema } from "./runtime-payload-v1-17.js"
 import { RUNTIME_EVIDENCE_REQUIRED_EXACT_PINS_V1_17 } from "./runtime-evidence-v1-17.js"
 import type { CanonicalIdentityDomain } from "./canonical-identity-domains.js"
+import type { CanonicalCompatibilityTuple } from "./integrity-authority.js"
 import type { RuntimeEvidenceAuthorityExactPinV117 } from "./runtime-evidence-authority-bundle.js"
 import type { RuntimeIdentityBinding } from "./runtime-identity-manifest.js"
 import type { JsonValue } from "./types.js"
@@ -22,6 +23,8 @@ export const SUCCESSOR_RUNTIME_IDENTITY_TEMPLATE_SCHEMA_V117 =
   "runtime-successor-identity-template-v1" as const
 export const SUCCESSOR_RUNTIME_IDENTITY_TEMPLATE_PROFILE_V117 =
   "runtime-successor-lane-bindings-v1" as const
+export const SUCCESSOR_RUNTIME_LANE_PROFILE_DOMAIN_V117 =
+  "cowards-game:runtime-successor-lane-profile:v1.17" as const
 export const SUCCESSOR_RUNTIME_IDENTITY_TEMPLATE_DOMAINS_V117 = Object.freeze([
   "runtimeExecutable",
   "compilerExecutable",
@@ -34,11 +37,71 @@ export const SUCCESSOR_RUNTIME_IDENTITY_TEMPLATE_DOMAINS_V117 = Object.freeze([
   "canonicalJsonProfile",
 ] as const satisfies readonly CanonicalIdentityDomain[])
 
+export const SUCCESSOR_RUNTIME_LANE_PROFILE_FIELDS_V117 = Object.freeze([
+  "providerId",
+  "languageId",
+  "languageVersion",
+  "runtimeId",
+  "runtimeVersion",
+  "toolchainId",
+  "toolchainVersion",
+  "adapterId",
+  "adapterVersion",
+  "policyId",
+  "policyVersion",
+  "corpusId",
+  "corpusVersion",
+  "artifactKind",
+  "artifactIdPrefix",
+  "implementationId",
+  "buildId",
+  "semanticTupleId",
+  "semanticTuple",
+] as const)
+
+export interface SuccessorRuntimeLaneProfileV117 {
+  providerId: string
+  languageId: string
+  languageVersion: string
+  runtimeId: string
+  runtimeVersion: string
+  toolchainId: string
+  toolchainVersion: string
+  adapterId: string
+  adapterVersion: string
+  policyId: string
+  policyVersion: string
+  corpusId: string
+  corpusVersion: string
+  artifactKind: "source" | "compiled"
+  artifactIdPrefix: string
+  implementationId: string
+  buildId: string
+  semanticTupleId: string
+  semanticTuple: CanonicalCompatibilityTuple
+}
+
+export const hashSuccessorRuntimeLaneProfileV117 = (
+  input: SuccessorRuntimeLaneProfileV117,
+): `sha256:${string}` => {
+  const exactProfile = Object.fromEntries(
+    SUCCESSOR_RUNTIME_LANE_PROFILE_FIELDS_V117.map((field) => [
+      field,
+      field === "semanticTuple" ? { ...input.semanticTuple } : input[field],
+    ]),
+  )
+  return `sha256:${createHash("sha256")
+    .update(`${SUCCESSOR_RUNTIME_LANE_PROFILE_DOMAIN_V117}\0`, "utf8")
+    .update(canonicalBytes(exactProfile as JsonValue))
+    .digest("hex")}`
+}
+
 export interface SuccessorRuntimeIdentityTemplateV117 {
   schemaVersion: typeof SUCCESSOR_RUNTIME_IDENTITY_TEMPLATE_SCHEMA_V117
   profile: typeof SUCCESSOR_RUNTIME_IDENTITY_TEMPLATE_PROFILE_V117
   bindings: readonly RuntimeIdentityBinding[]
   exactPins: readonly RuntimeEvidenceAuthorityExactPinV117[]
+  laneProfileSha256: `sha256:${string}`
 }
 
 type Sha256Identity = `sha256:${string}`

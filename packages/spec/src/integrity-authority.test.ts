@@ -25,6 +25,7 @@ import {
   prepareCanonicalCompatibilityTupleRecord,
   resolveCandidateRuntimeV117SemanticTuple,
   resolveCanonicalCompatibilityTuple,
+  resolveHistoricalRuntimeV114SemanticTuple,
   type CanonicalCompatibilityTuple,
 } from "./integrity-authority.js"
 
@@ -188,6 +189,18 @@ describe("v1.37 canonical integrity authority", () => {
         CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_ID,
       ),
     ).toBe("historical-v1.16-exact")
+    expect(
+      resolveHistoricalRuntimeV114SemanticTuple({
+        tupleId: HISTORICAL_RUNTIME_V114_SEMANTIC_TUPLE_ID,
+        tuple: { ...VERSIONED_RUNTIME_V114_SEMANTIC_TUPLE_RECORD.tuple },
+      }),
+    ).toEqual(VERSIONED_RUNTIME_V114_SEMANTIC_TUPLE_RECORD)
+    expect(
+      resolveHistoricalRuntimeV114SemanticTuple({
+        tupleId: CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_ID,
+        tuple: { ...CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE },
+      }),
+    ).toBeUndefined()
     expect(
       classifyCanonicalCompatibilityTupleIdAgainstCurrent(
         `sha256:${"f".repeat(64)}`,

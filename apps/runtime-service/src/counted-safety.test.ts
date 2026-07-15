@@ -14,6 +14,8 @@ import {
   SUCCESSOR_RUNTIME_IDENTITY_TEMPLATE_DOMAINS_V117,
   SUCCESSOR_RUNTIME_IDENTITY_TEMPLATE_PROFILE_V117,
   SUCCESSOR_RUNTIME_IDENTITY_TEMPLATE_SCHEMA_V117,
+  SUCCESSOR_RUNTIME_LANE_PROFILE_FIELDS_V117,
+  hashSuccessorRuntimeLaneProfileV117,
   type ExecutableLaneIdentity,
   type RuntimeExecutionServiceRequest,
 } from "@cowards/spec"
@@ -305,7 +307,7 @@ describe("runtime-service counted safety", () => {
     const binding = (
       domain: (typeof SUCCESSOR_RUNTIME_IDENTITY_TEMPLATE_DOMAINS_V117)[number],
     ) => bindings.find((candidate) => candidate.domain === domain)!
-    const template = {
+    const templateBase = {
       schemaVersion: SUCCESSOR_RUNTIME_IDENTITY_TEMPLATE_SCHEMA_V117,
       profile: SUCCESSOR_RUNTIME_IDENTITY_TEMPLATE_PROFILE_V117,
       bindings,
@@ -328,14 +330,6 @@ describe("runtime-service counted safety", () => {
         ["behaviorSettingsHash", `sha256:${"b".repeat(64)}`],
       ],
     }
-    expect(() =>
-      parseDeploymentLaneRegistry({
-        ...registry,
-        lanes: [
-          { ...registry.lanes[0]!, successorRuntimeIdentityTemplate: template },
-        ],
-      }),
-    ).toThrow(/successor identity does not match/iu)
     const successorLane = {
       ...registry.lanes[0]!,
       runtimeId: "fixture-runtime-node",
@@ -349,6 +343,18 @@ describe("runtime-service counted safety", () => {
       semanticTupleId: CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_ID,
       semanticTuple: { ...CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE },
     }
+    const template = {
+      ...templateBase,
+      laneProfileSha256: hashSuccessorRuntimeLaneProfileV117(successorLane),
+    }
+    expect(() =>
+      parseDeploymentLaneRegistry({
+        ...registry,
+        lanes: [
+          { ...registry.lanes[0]!, successorRuntimeIdentityTemplate: template },
+        ],
+      }),
+    ).toThrow(/successor identity does not match/iu)
     expect(() =>
       parseDeploymentLaneRegistry({
         ...registry,
@@ -385,6 +391,7 @@ describe("runtime-service counted safety", () => {
       installed.bindings.every((candidate) => Object.isFrozen(candidate)),
     ).toBe(true)
     expect(Object.isFrozen(installed.exactPins)).toBe(true)
+    expect(installed.laneProfileSha256).toBe(template.laneProfileSha256)
     const mismatchedTupleTemplate = (field: "publicId" | "sha256") => ({
       ...template,
       bindings: template.bindings.map((entry) =>
@@ -440,6 +447,25 @@ describe("runtime-service counted safety", () => {
           ],
         }),
       ).toThrow(/does not bind its policy and corpus/iu)
+    }
+    expect(SUCCESSOR_RUNTIME_LANE_PROFILE_FIELDS_V117).toHaveLength(19)
+    for (const field of SUCCESSOR_RUNTIME_LANE_PROFILE_FIELDS_V117) {
+      const mutated = {
+        ...successorLane,
+        [field]:
+          field === "artifactKind"
+            ? "compiled"
+            : field === "semanticTuple"
+              ? { ...successorLane.semanticTuple, engine: "mixed-engine" }
+              : `${String(successorLane[field])}-drifted`,
+        successorRuntimeIdentityTemplate: template,
+      }
+      expect(
+        () => parseDeploymentLaneRegistry({ ...registry, lanes: [mutated] }),
+        field,
+      ).toThrow(
+        /semantic tuple is invalid|does not bind its runtime version|does not bind its policy and corpus|does not bind its exact deployment profile/iu,
+      )
     }
     expect(() =>
       parseDeploymentLaneRegistry({

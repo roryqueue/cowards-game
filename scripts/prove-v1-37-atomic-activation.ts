@@ -7,9 +7,14 @@ import { createRequire } from "node:module"
 import { fileURLToPath } from "node:url"
 import {
   CANONICAL_COMPATIBILITY_TUPLES,
+  CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_ID,
   CURRENT_CANONICAL_COMPATIBILITY_TUPLE_ID,
+  HISTORICAL_RUNTIME_V114_SEMANTIC_TUPLE,
+  HISTORICAL_RUNTIME_V114_SEMANTIC_TUPLE_ID,
   RUNTIME_EVIDENCE_AUTHORITY_TRUST_DOMAINS,
+  classifyCanonicalCompatibilityTupleIdAgainstCurrent,
   hashExecutableLaneIdentity,
+  resolveHistoricalRuntimeV114SemanticTuple,
   type CanonicalCompatibilityTuple,
 } from "../packages/spec/src/index.js"
 import type { Pool as PgPool } from "../packages/persistence/node_modules/@types/pg/index.d.ts"
@@ -31,7 +36,7 @@ import {
 } from "../apps/runtime-service/src/runtime-evidence-authority.js"
 
 const EXPECTED_CURRENT_TUPLE_ID = CURRENT_CANONICAL_COMPATIBILITY_TUPLE_ID
-const HISTORICAL_V14_TUPLE_ID =
+const RETAINED_HISTORICAL_V14_TUPLE_ID =
   "sha256:be54eb5317af0a87190433f649f9beef4490493d8c2a8815a323b082651b514c"
 const PROOF_INSTANT = "2026-07-13T12:00:00.000Z"
 const PROOF_VALID_UNTIL = "2026-07-14T12:00:00.000Z"
@@ -86,6 +91,11 @@ export interface AtomicActivationProofReport {
   restartGeneration: string
   rollbackCode: string
   productionReceiptCount: number
+  immediatePredecessorTupleId: string
+  immediatePredecessorDisposition:
+    | "current-before-cutover"
+    | "historical-only"
+  historicalExclusionTupleId: string
   disposable: true
 }
 
@@ -290,6 +300,31 @@ export const proveV137AtomicActivation = async (
     current.tupleId === EXPECTED_CURRENT_TUPLE_ID,
     "current tuple id drifted",
   )
+  const cutoverActive =
+    current.tupleId === CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_ID
+  assert(
+    classifyCanonicalCompatibilityTupleIdAgainstCurrent(
+      HISTORICAL_RUNTIME_V114_SEMANTIC_TUPLE_ID,
+      CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_ID,
+    ) === "historical-v1.16-exact",
+    "immediate predecessor is not historical-only after cutover",
+  )
+  assert(
+    resolveHistoricalRuntimeV114SemanticTuple({
+      tupleId: HISTORICAL_RUNTIME_V114_SEMANTIC_TUPLE_ID,
+      tuple: { ...HISTORICAL_RUNTIME_V114_SEMANTIC_TUPLE },
+    }) !== undefined,
+    "immediate predecessor historical resolver drifted",
+  )
+  const historicalExclusionIdentity: SemanticIdentity = cutoverActive
+    ? {
+        tupleId: HISTORICAL_RUNTIME_V114_SEMANTIC_TUPLE_ID,
+        tuple: { ...HISTORICAL_RUNTIME_V114_SEMANTIC_TUPLE },
+      }
+    : {
+        tupleId: RETAINED_HISTORICAL_V14_TUPLE_ID,
+        tuple: historicalV14Tuple,
+      }
 
   const schema = `atomic_activation_${randomUUID().replaceAll("-", "")}`
   const admin = new Pool({ connectionString: options.databaseUrl })
@@ -320,10 +355,7 @@ export const proveV137AtomicActivation = async (
     const historicalLaneIdentityHash = await seedCertificate(pool, {
       id: excludedCertificateIds[0],
       suffix: "historical",
-      semanticIdentity: {
-        tupleId: HISTORICAL_V14_TUPLE_ID,
-        tuple: historicalV14Tuple,
-      },
+      semanticIdentity: historicalExclusionIdentity,
     })
     const partialLaneIdentityHash = await seedCertificate(pool, {
       id: excludedCertificateIds[1],
@@ -590,6 +622,12 @@ export const proveV137AtomicActivation = async (
       restartGeneration: restart.registryGeneration,
       rollbackCode,
       productionReceiptCount,
+      immediatePredecessorTupleId:
+        HISTORICAL_RUNTIME_V114_SEMANTIC_TUPLE_ID,
+      immediatePredecessorDisposition: cutoverActive
+        ? "historical-only"
+        : "current-before-cutover",
+      historicalExclusionTupleId: historicalExclusionIdentity.tupleId,
       disposable: true,
     }
   } finally {

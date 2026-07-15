@@ -11,6 +11,7 @@
     { "path": "packages/spec/artifacts/runtime-execution-service-response.v1.17.wire.json", "operation": "create" },
     { "path": "packages/engine/src/kernel/types.ts", "operation": "update" },
     { "path": "packages/replay/src/validate.ts", "operation": "update" },
+    { "path": "packages/spec/artifacts/v1.37-current-event-coverage.json", "operation": "update" },
     { "path": "apps/runtime-service/src/index.ts", "operation": "update" },
     { "path": "apps/runtime-service/src/server.ts", "operation": "update" },
     { "path": "apps/runtime-service/src/execute-match.ts", "operation": "update" },

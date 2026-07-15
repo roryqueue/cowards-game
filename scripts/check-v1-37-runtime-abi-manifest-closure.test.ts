@@ -1,7 +1,12 @@
+import { Buffer } from "node:buffer"
 import { readFileSync } from "node:fs"
 import { describe, expect, it } from "vitest"
 import {
   IMMUTABLE_RUNTIME_SERVICE_V116_DIGESTS,
+  RUNTIME_ABI_PREPARED_LIFECYCLE_CONSUMERS,
+  parseRuntimeAbiActivationAllowlist,
+  runtimeAbiActivationDiffArguments,
+  verifyRuntimeAbiActivationNameStatus,
   verifyImmutableRuntimeServiceV116Digests,
 } from "./check-v1-37-runtime-abi-manifest-closure.js"
 
@@ -40,12 +45,78 @@ describe("Phase 258 runtime ABI activation closure", () => {
       "packages/spec/src/runtime.ts",
       "packages/engine/src/kernel/types.ts",
       "packages/replay/src/validate.ts",
+      "packages/spec/artifacts/v1.37-current-event-coverage.json",
       "apps/runtime-service/src/server.ts",
       "apps/go-backend/orchestrator.go",
       "apps/go-backend/completion.go",
       "packages/persistence/src/complete-match.ts",
     ]) {
       expect(paths.has(path), path).toBe(true)
+    }
+    expect(RUNTIME_ABI_PREPARED_LIFECYCLE_CONSUMERS).toContain(
+      "scripts/check-boundary-monitors.ts",
+    )
+    const boundarySource = readFileSync(
+      "scripts/check-boundary-monitors.ts",
+      "utf8",
+    )
+    expect(boundarySource).toContain(
+      "CURRENT_CANONICAL_COMPATIBILITY_TUPLE_RECORD.tuple.runtimeAbi",
+    )
+    expect(boundarySource).not.toMatch(
+      /STRATEGY_RUNTIME_ABI_VERSION\s*!==\s*["']strategy-runtime-abi-v1\.14["']/u,
+    )
+  })
+
+  it("enforces the exact staged and recorded-commit activation name-status set", () => {
+    const allowlist = parseRuntimeAbiActivationAllowlist(
+      readJson(
+        "packages/spec/artifacts/runtime-abi-v1.17-activation-allowlist.json",
+      ),
+    )
+    const exact = allowlist.operations
+      .map(({ path, operation }) => `${operation === "create" ? "A" : "M"}\t${path}`)
+      .join("\n")
+    expect(() =>
+      verifyRuntimeAbiActivationNameStatus(allowlist, exact),
+    ).not.toThrow()
+    expect(runtimeAbiActivationDiffArguments({ mode: "staged" })).toEqual([
+      "diff",
+      "--cached",
+      "--name-status",
+      "--no-renames",
+    ])
+    const activationCommit = "a".repeat(40)
+    expect(
+      runtimeAbiActivationDiffArguments({
+        mode: "committed",
+        activationCommit,
+      }),
+    ).toEqual([
+      "diff",
+      "--name-status",
+      "--no-renames",
+      `${activationCommit}^`,
+      activationCommit,
+    ])
+    expect(() =>
+      runtimeAbiActivationDiffArguments({ mode: "committed" }),
+    ).toThrow(/explicit 40-character activation commit/iu)
+
+    const lines = exact.split("\n")
+    const maliciousDiffs = [
+      lines.slice(1).join("\n"),
+      `${exact}\nM\tscripts/arbitrary-extra.ts`,
+      [`A\t${allowlist.operations[0]!.path}`, ...lines.slice(1)].join("\n"),
+      [`D\t${allowlist.operations[0]!.path}`, ...lines.slice(1)].join("\n"),
+      `R100\t${allowlist.operations[0]!.path}\tscripts/renamed.ts\n${lines
+        .slice(1)
+        .join("\n")}`,
+    ]
+    for (const nameStatus of maliciousDiffs) {
+      expect(() =>
+        verifyRuntimeAbiActivationNameStatus(allowlist, nameStatus),
+      ).toThrow(/activation diff/iu)
     }
   })
 

@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto"
+import { spawnSync } from "node:child_process"
 import { existsSync, readFileSync } from "node:fs"
 
 export const RUNTIME_ABI_ACTIVATION_ALLOWLIST_PATH =
@@ -6,16 +7,23 @@ export const RUNTIME_ABI_ACTIVATION_ALLOWLIST_PATH =
 export const RUNTIME_ABI_ACTIVATION_MANIFEST_PATH =
   "packages/spec/artifacts/runtime-abi-v1.17-activation-manifest.json"
 
-type AllowlistOperation = Readonly<{
+export type AllowlistOperation = Readonly<{
   path: string
   operation: "create" | "update"
 }>
 
-type Allowlist = Readonly<{
+export type RuntimeAbiActivationAllowlist = Readonly<{
   schemaVersion: "runtime-abi-v1.17-activation-allowlist-v1"
   activationPlan: "258-14"
   operations: readonly AllowlistOperation[]
 }>
+
+export type RuntimeAbiActivationDiffMode = "none" | "staged" | "committed"
+
+export const RUNTIME_ABI_PREPARED_LIFECYCLE_CONSUMERS = Object.freeze([
+  "scripts/check-boundary-monitors.ts",
+  "scripts/generate-v1-37-event-coverage.ts",
+] as const)
 
 const readJson = (path: string): unknown =>
   JSON.parse(readFileSync(path, "utf8")) as unknown
@@ -25,7 +33,7 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 
 export const parseRuntimeAbiActivationAllowlist = (
   value: unknown,
-): Allowlist => {
+): RuntimeAbiActivationAllowlist => {
   if (
     !isRecord(value) ||
     value.schemaVersion !== "runtime-abi-v1.17-activation-allowlist-v1" ||
@@ -61,6 +69,133 @@ export const parseRuntimeAbiActivationAllowlist = (
     schemaVersion: value.schemaVersion,
     activationPlan: value.activationPlan,
     operations,
+  }
+}
+
+const parseActivationNameStatus = (
+  nameStatus: string,
+): ReadonlyMap<string, "A" | "M"> => {
+  const entries = new Map<string, "A" | "M">()
+  for (const line of nameStatus.split(/\r?\n/u).filter((entry) => entry !== "")) {
+    const fields = line.split("\t")
+    if (
+      fields.length !== 2 ||
+      (fields[0] !== "A" && fields[0] !== "M") ||
+      fields[1] === undefined ||
+      fields[1].length === 0 ||
+      entries.has(fields[1])
+    ) {
+      throw new TypeError(`Activation diff contains a forbidden name-status entry: ${line}`)
+    }
+    entries.set(fields[1], fields[0])
+  }
+  return entries
+}
+
+export const verifyRuntimeAbiActivationNameStatus = (
+  allowlist: RuntimeAbiActivationAllowlist,
+  nameStatus: string,
+): void => {
+  const actual = parseActivationNameStatus(nameStatus)
+  if (actual.size !== allowlist.operations.length) {
+    throw new TypeError(
+      `Activation diff is not exact: expected ${String(allowlist.operations.length)} paths, received ${String(actual.size)}.`,
+    )
+  }
+  for (const { path, operation } of allowlist.operations) {
+    const expected = operation === "create" ? "A" : "M"
+    const received = actual.get(path)
+    if (received !== expected) {
+      throw new TypeError(
+        `Activation diff operation mismatch: ${path} expected=${expected} received=${received ?? "missing"}.`,
+      )
+    }
+  }
+  const allowed = new Set(allowlist.operations.map(({ path }) => path))
+  for (const path of actual.keys()) {
+    if (!allowed.has(path)) {
+      throw new TypeError(`Activation diff contains an unallowlisted path: ${path}`)
+    }
+  }
+}
+
+export const runtimeAbiActivationDiffArguments = (options: {
+  mode: Exclude<RuntimeAbiActivationDiffMode, "none">
+  activationCommit?: string | undefined
+}): readonly string[] =>
+  options.mode === "staged"
+    ? ["diff", "--cached", "--name-status", "--no-renames"]
+    : (() => {
+        if (!/^[0-9a-f]{40}$/u.test(options.activationCommit ?? "")) {
+          throw new TypeError(
+            "Committed activation closure requires an explicit 40-character activation commit.",
+          )
+        }
+        return [
+          "diff",
+          "--name-status",
+          "--no-renames",
+          `${options.activationCommit!}^`,
+          options.activationCommit!,
+        ]
+      })()
+
+const readRuntimeAbiActivationNameStatus = (options: {
+  mode: Exclude<RuntimeAbiActivationDiffMode, "none">
+  activationCommit?: string | undefined
+}): string => {
+  const args = runtimeAbiActivationDiffArguments(options)
+  const result = spawnSync("git", args, { encoding: "utf8" })
+  if (result.status !== 0) {
+    throw new TypeError(
+      `Activation diff is unavailable: ${String(result.stderr ?? "").trim()}`,
+    )
+  }
+  return result.stdout
+}
+
+export const verifyRuntimeAbiActivationDiff = (
+  allowlist: RuntimeAbiActivationAllowlist,
+  options: {
+    mode: Exclude<RuntimeAbiActivationDiffMode, "none">
+    activationCommit?: string | undefined
+  },
+): void => {
+  verifyRuntimeAbiActivationNameStatus(
+    allowlist,
+    readRuntimeAbiActivationNameStatus(options),
+  )
+}
+
+const verifyPreparedLifecycleConsumers = (
+  allowlist: RuntimeAbiActivationAllowlist,
+): void => {
+  for (const path of RUNTIME_ABI_PREPARED_LIFECYCLE_CONSUMERS) {
+    if (!existsSync(path)) {
+      throw new TypeError(`Prepared lifecycle consumer is missing: ${path}`)
+    }
+  }
+  const boundarySource = readFileSync(
+    "scripts/check-boundary-monitors.ts",
+    "utf8",
+  )
+  if (
+    !boundarySource.includes("CURRENT_CANONICAL_COMPATIBILITY_TUPLE_RECORD") ||
+    /STRATEGY_RUNTIME_ABI_VERSION\s*!==\s*["']strategy-runtime-abi-v1\.14["']/u.test(
+      boundarySource,
+    )
+  ) {
+    throw new TypeError(
+      "Boundary monitor is not bound to the spec-owned current lifecycle alias.",
+    )
+  }
+  const eventArtifact =
+    "packages/spec/artifacts/v1.37-current-event-coverage.json"
+  const operation = allowlist.operations.find(({ path }) => path === eventArtifact)
+  if (operation?.operation !== "update") {
+    throw new TypeError(
+      "Current-event evidence is missing from the exact activation allowlist.",
+    )
   }
 }
 
@@ -102,6 +237,8 @@ export const verifyImmutableRuntimeServiceV116Digests = (
 
 export const checkRuntimeAbiManifestClosure = (options: {
   final: boolean
+  diffMode?: RuntimeAbiActivationDiffMode | undefined
+  activationCommit?: string | undefined
 }): void => {
   const allowlist = parseRuntimeAbiActivationAllowlist(
     readJson(RUNTIME_ABI_ACTIVATION_ALLOWLIST_PATH),
@@ -111,12 +248,20 @@ export const checkRuntimeAbiManifestClosure = (options: {
       throw new TypeError(`Allowlisted update path is missing: ${path}`)
     }
   }
+  verifyPreparedLifecycleConsumers(allowlist)
   verifyImmutableRuntimeServiceV116Digests()
   if (!options.final && existsSync(RUNTIME_ABI_ACTIVATION_MANIFEST_PATH)) {
     throw new TypeError("Final activation manifest exists before activation.")
   }
   if (options.final && !existsSync(RUNTIME_ABI_ACTIVATION_MANIFEST_PATH)) {
     throw new TypeError("Final activation manifest is unavailable.")
+  }
+  const diffMode = options.final ? "committed" : (options.diffMode ?? "none")
+  if (diffMode !== "none") {
+    verifyRuntimeAbiActivationDiff(allowlist, {
+      mode: diffMode,
+      activationCommit: options.activationCommit,
+    })
   }
 }
 
@@ -131,6 +276,21 @@ if (isMain) {
       "Final manifest generation is available only after the activation commit.",
     )
   }
-  checkRuntimeAbiManifestClosure({ final: false })
+  const staged = process.argv.includes("--check-staged-activation")
+  const committed = process.argv.includes("--check-committed-activation")
+  if (staged && committed) {
+    throw new TypeError("Activation closure accepts exactly one diff mode.")
+  }
+  const activationCommitArgument = process.argv.find((argument) =>
+    argument.startsWith("--activation-commit="),
+  )
+  const activationCommit = activationCommitArgument?.slice(
+    "--activation-commit=".length,
+  )
+  checkRuntimeAbiManifestClosure({
+    final: false,
+    diffMode: staged ? "staged" : committed ? "committed" : "none",
+    activationCommit,
+  })
   console.log("runtime-abi-v1.17 manifest closure: PASS")
 }

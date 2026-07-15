@@ -140,6 +140,7 @@ const preparedSuccessorTemplate = (() => {
     profile: SUCCESSOR_RUNTIME_IDENTITY_TEMPLATE_PROFILE_V117,
     bindings,
     exactPins,
+    laneProfileSha256: hash("7"),
   }
 })()
 

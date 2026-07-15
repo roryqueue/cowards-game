@@ -23,8 +23,11 @@ import {
   RUNTIME_INVOCATION_V1_17_SYSTEM_FAILURE_RETRYABILITY,
   StrategyRevisionSchema,
   StrategyRevisionV117Schema,
+  SUCCESSOR_RUNTIME_LANE_PROFILE_DOMAIN_V117,
+  SUCCESSOR_RUNTIME_LANE_PROFILE_FIELDS_V117,
   VERSIONED_RUNTIME_V117_SEMANTIC_TUPLE_RECORD,
   hashExecutableLaneIdentity,
+  hashSuccessorRuntimeLaneProfileV117,
   runtimeCompatibilityKey,
   type ExecutableLaneIdentity,
   type StrategyRevisionV117,
@@ -540,6 +543,29 @@ describe("versioned TypeScript-to-Go parity generator", () => {
       )
       expect(vector.deployed.runtimeId).toBe("node")
       expect(vector.deployed.runtimeVersion).toBe("node-v26.0.0")
+      expect(fixture.template.laneProfileSha256).toBe(
+        hashSuccessorRuntimeLaneProfileV117({
+          providerId: vector.deployed.providerId,
+          languageId: vector.deployed.languageId,
+          languageVersion: vector.revision.runtime.language.version,
+          runtimeId: vector.deployed.runtimeId,
+          runtimeVersion: vector.deployed.runtimeVersion,
+          toolchainId: vector.deployed.toolchainId,
+          toolchainVersion: vector.deployed.toolchainVersion,
+          adapterId: vector.deployed.adapterId,
+          adapterVersion: vector.deployed.adapterVersion,
+          policyId: vector.deployed.policyId,
+          policyVersion: vector.deployed.policyVersion,
+          corpusId: vector.deployed.corpusId,
+          corpusVersion: vector.deployed.corpusVersion,
+          artifactKind: "source",
+          artifactIdPrefix: "artifact:",
+          implementationId: vector.deployed.implementationId,
+          buildId: vector.deployed.buildId,
+          semanticTupleId: vector.deployed.semanticTupleId,
+          semanticTuple: { ...vector.deployed.semanticTuple },
+        }),
+      )
       expect(new Map(fixture.template.exactPins).get("reportedVersion")).toBe(
         vector.deployed.runtimeVersion,
       )
@@ -616,8 +642,8 @@ describe("versioned TypeScript-to-Go parity generator", () => {
     expect(generated).toContain('"runtime-execution-service-v1.16"')
     expect(generated).toContain('"runtime-invocation-v1.17"')
     expect(generated).toContain('"runtime-execution-service-v1.17"')
-    expect(generated).toContain("Historical: true")
-    expect(generated).toContain("CanonicalJSON: true")
+    expect(generated).toMatch(/Historical:\s+true/u)
+    expect(generated).toMatch(/CanonicalJSON:\s+true/u)
     expect(generated).toContain("runtimeInvocationContractForVersion")
     expect(generated).toContain(
       `const runtimeSuccessorSemanticTupleIDV117 = ${JSON.stringify(CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_ID)}`,
@@ -631,6 +657,12 @@ describe("versioned TypeScript-to-Go parity generator", () => {
     expect(generated).toContain(
       `const runtimeSuccessorSemanticTupleEncodingIDV117 = ${JSON.stringify(VERSIONED_RUNTIME_V117_SEMANTIC_TUPLE_RECORD.encodingId)}`,
     )
+    expect(generated).toContain(
+      `const runtimeSuccessorLaneProfileDomainV117 = ${JSON.stringify(SUCCESSOR_RUNTIME_LANE_PROFILE_DOMAIN_V117)}`,
+    )
+    for (const field of SUCCESSOR_RUNTIME_LANE_PROFILE_FIELDS_V117) {
+      expect(generated).toContain(`\t${JSON.stringify(field)},`)
+    }
     const successorAuthorityFixture = read(successorAuthorityFixtureRelative)
     expect(generated).toContain(
       `const runtimeSuccessorAuthorityFixtureV117JSON = ${JSON.stringify(successorAuthorityFixture.toString("utf8"))}`,

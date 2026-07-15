@@ -37,6 +37,7 @@ export { validateV116NoTypeScriptBackendTopologyArtifact }
 import {
   SERVICE_API_ROUTES,
   STRATEGY_RUNTIME_ABI_VERSION,
+  CURRENT_CANONICAL_COMPATIBILITY_TUPLE_RECORD,
   RUNTIME_EXECUTION_SERVICE_VERSION,
   COMPATIBILITY_VERSIONS,
   assertAnalyticsPublicSummaryLeakSafe,
@@ -2882,8 +2883,13 @@ const checkRuntimeAdapters = (): string => {
       )
     }
   }
-  if (STRATEGY_RUNTIME_ABI_VERSION !== "strategy-runtime-abi-v1.14") {
-    throw new Error(`runtime ABI drifted to ${STRATEGY_RUNTIME_ABI_VERSION}`)
+  if (
+    STRATEGY_RUNTIME_ABI_VERSION !==
+    CURRENT_CANONICAL_COMPATIBILITY_TUPLE_RECORD.tuple.runtimeAbi
+  ) {
+    throw new Error(
+      `runtime ABI ${STRATEGY_RUNTIME_ABI_VERSION} split from current tuple ${CURRENT_CANONICAL_COMPATIBILITY_TUPLE_RECORD.tuple.runtimeAbi}`,
+    )
   }
   return `${runtimeAdapterBridges.length} JS/TS adapters and ${SUPPORTED_STRATEGY_LANGUAGES.length} supported provider default adapters checked`
 }

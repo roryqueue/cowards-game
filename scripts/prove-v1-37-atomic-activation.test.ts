@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest"
-import { CURRENT_CANONICAL_COMPATIBILITY_TUPLE_ID } from "../packages/spec/src/integrity-authority.js"
+import {
+  CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_ID,
+  CURRENT_CANONICAL_COMPATIBILITY_TUPLE_ID,
+  HISTORICAL_RUNTIME_V114_SEMANTIC_TUPLE_ID,
+} from "../packages/spec/src/integrity-authority.js"
 import {
   parseAtomicActivationProofArgs,
   proveV137AtomicActivation,
@@ -41,8 +45,23 @@ describe("v1.37 atomic activation proof", () => {
         selectedCertificateIds: ["certificate:atomic:exact-current"],
         rollbackCode: "ROLLBACK",
         productionReceiptCount: 0,
+        immediatePredecessorTupleId:
+          HISTORICAL_RUNTIME_V114_SEMANTIC_TUPLE_ID,
+        immediatePredecessorDisposition:
+          CURRENT_CANONICAL_COMPATIBILITY_TUPLE_ID ===
+          CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_ID
+            ? "historical-only"
+            : "current-before-cutover",
         disposable: true,
       })
+      if (
+        CURRENT_CANONICAL_COMPATIBILITY_TUPLE_ID ===
+        CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_ID
+      ) {
+        expect(report.historicalExclusionTupleId).toBe(
+          HISTORICAL_RUNTIME_V114_SEMANTIC_TUPLE_ID,
+        )
+      }
       expect(report.excludedCertificateIds).toEqual([
         "certificate:atomic:historical",
         "certificate:atomic:partial",

@@ -31,6 +31,8 @@ export {
 const hash = (bytes: Uint8Array): `sha256:${string}` =>
   `sha256:${createHash("sha256").update(bytes).digest("hex")}`
 
+const SHA256_IDENTITY_PATTERN = /^sha256:[0-9a-f]{64}$/u
+
 const templateValidationManifest = (
   bindings: readonly RuntimeIdentityBinding[],
 ): RuntimeIdentityManifest => ({
@@ -53,13 +55,14 @@ export const parseSuccessorRuntimeIdentityTemplateV117 = (
     input === null ||
     typeof input !== "object" ||
     Array.isArray(input) ||
-    Object.keys(input).length !== 4 ||
+    Object.keys(input).length !== 5 ||
     input.schemaVersion !== SUCCESSOR_RUNTIME_IDENTITY_TEMPLATE_SCHEMA_V117 ||
     input.profile !== SUCCESSOR_RUNTIME_IDENTITY_TEMPLATE_PROFILE_V117 ||
     !Array.isArray(input.bindings) ||
     input.bindings.length !==
       SUCCESSOR_RUNTIME_IDENTITY_TEMPLATE_DOMAINS_V117.length ||
-    !Array.isArray(input.exactPins)
+    !Array.isArray(input.exactPins) ||
+    !SHA256_IDENTITY_PATTERN.test(input.laneProfileSha256)
   ) {
     throw new TypeError("Successor runtime identity template is invalid.")
   }
@@ -93,6 +96,7 @@ export const parseSuccessorRuntimeIdentityTemplateV117 = (
       ),
     ),
     exactPins,
+    laneProfileSha256: input.laneProfileSha256,
   })
   const pins = new Map(template.exactPins)
   const binding = (domain: CanonicalIdentityDomain) =>
@@ -219,6 +223,7 @@ export const composeSuccessorRuntimeIdentityV117 = (input: {
         (domain) => domain !== "evidenceBundle",
       ).map((domain) => byDomain.get(domain)!),
       exactPins: template.exactPins,
+      laneProfileSha256: template.laneProfileSha256,
     } as unknown as JsonValue,
   )
   byDomain.set("evidenceBundle", evidenceBundle)

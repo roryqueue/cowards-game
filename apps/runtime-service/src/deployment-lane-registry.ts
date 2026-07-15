@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs"
 import {
   CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_ID,
   StrategyRevisionV117Schema,
+  hashSuccessorRuntimeLaneProfileV117,
   resolveCandidateRuntimeV117SemanticTuple,
   resolveCanonicalCompatibilityTuple,
   type CanonicalCompatibilityTuple,
@@ -195,6 +196,35 @@ const parseProfile = (value: unknown, index: number): DeploymentLaneProfile => {
   ) {
     throw new RuntimeServiceConfigError(
       `Deployment lane registry profile ${index} successor identity does not bind its policy and corpus.`,
+    )
+  }
+  if (
+    isSuccessor &&
+    successorRuntimeIdentityTemplate?.laneProfileSha256 !==
+      hashSuccessorRuntimeLaneProfileV117({
+        providerId: value.providerId as string,
+        languageId: value.languageId as string,
+        languageVersion: value.languageVersion as string,
+        runtimeId: value.runtimeId as string,
+        runtimeVersion: value.runtimeVersion as string,
+        toolchainId: value.toolchainId as string,
+        toolchainVersion: value.toolchainVersion as string,
+        adapterId: value.adapterId as string,
+        adapterVersion: value.adapterVersion as string,
+        policyId: value.policyId as string,
+        policyVersion: value.policyVersion as string,
+        corpusId: value.corpusId as string,
+        corpusVersion: value.corpusVersion as string,
+        artifactKind: value.artifactKind,
+        artifactIdPrefix: value.artifactIdPrefix as string,
+        implementationId: value.implementationId as string,
+        buildId: value.buildId as string,
+        semanticTupleId: resolved.tupleId,
+        semanticTuple: { ...resolved.tuple },
+      })
+  ) {
+    throw new RuntimeServiceConfigError(
+      `Deployment lane registry profile ${index} successor identity does not bind its exact deployment profile.`,
     )
   }
   return Object.freeze({
