@@ -328,6 +328,24 @@ export const runtimeEvidenceAuthorityConfigFromEnvironment = (
   }
 }
 
+export const runtimeEvidenceAuthorityConfigV117FromEnvironment = (
+  environment: Record<string, string | undefined> = process.env,
+): RuntimeEvidenceAuthorityLoaderConfig =>
+  runtimeEvidenceAuthorityConfigFromEnvironment({
+    COWARDS_RUNTIME_EVIDENCE_AUTHORITY_BUNDLE_PATH:
+      environment.COWARDS_RUNTIME_EVIDENCE_AUTHORITY_V117_BUNDLE_PATH,
+    COWARDS_RUNTIME_EVIDENCE_AUTHORITY_PUBLIC_KEY_PATH:
+      environment.COWARDS_RUNTIME_EVIDENCE_AUTHORITY_V117_PUBLIC_KEY_PATH,
+    COWARDS_RUNTIME_EVIDENCE_AUTHORITY_HIGH_WATER_PATH:
+      environment.COWARDS_RUNTIME_EVIDENCE_AUTHORITY_V117_HIGH_WATER_PATH,
+    COWARDS_RUNTIME_EVIDENCE_AUTHORITY_MIN_GENERATION:
+      environment.COWARDS_RUNTIME_EVIDENCE_AUTHORITY_V117_MIN_GENERATION,
+    COWARDS_RUNTIME_EVIDENCE_AUTHORITY_MIN_BUNDLE_HASH:
+      environment.COWARDS_RUNTIME_EVIDENCE_AUTHORITY_V117_MIN_BUNDLE_HASH,
+    COWARDS_RUNTIME_EVIDENCE_AUTHORITY_BOOTSTRAP:
+      environment.COWARDS_RUNTIME_EVIDENCE_AUTHORITY_V117_BOOTSTRAP,
+  })
+
 export const createRuntimeEvidenceAuthorityLoader = (
   config: RuntimeEvidenceAuthorityLoaderConfig,
 ): RuntimeEvidenceAuthorityLoader => {

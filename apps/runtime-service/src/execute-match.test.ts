@@ -48,6 +48,7 @@ import {
 } from "./execute-match.js"
 import {
   createFixtureRuntimeEvidenceAuthorityLoader,
+  createFixtureRuntimeExecutionAuthorityContext,
   createFixtureDeploymentLaneIdentity,
   createFixtureRuntimeExecutionEvidenceSnapshot,
 } from "./runtime-execution-evidence.test-support.js"
@@ -533,7 +534,7 @@ describe("runtime execution service", () => {
               attestationId.endsWith(":0") ? "bottom" : "top"
             ].containmentCertificateId!,
           attestationId,
-          certificateKind: "containment",
+          certificateKind: "containment" as const,
           binding,
         })),
       },
@@ -570,20 +571,51 @@ describe("runtime execution service", () => {
     })
     expect(executions).toBe(0)
 
-    const countedMatch = globalThis.structuredClone(currentRequest)
-    for (const side of ["bottom", "top"] as const) {
-      countedMatch.evidenceSnapshot.entrants[side] = {
-        ...countedMatch.evidenceSnapshot.entrants[side],
-        effectiveStatus: "counted",
-        conformanceCertificateId: `certificate:counted:${side}`,
-        conformanceCertificateHash: `sha256:${"e".repeat(64)}`,
-      }
+    const countedContext = createFixtureRuntimeExecutionAuthorityContext({
+      fixtureId: "prepared-counted-v1.17",
+      bottom: currentRequest.strategies.bottom,
+      top: currentRequest.strategies.top,
+      effectiveStatus: "counted",
+    })
+    const countedMatch = {
+      ...currentRequest,
+      evidenceSnapshot: countedContext.evidenceSnapshot,
+    }
+    const countedDependencies = {
+      ...dependencies,
+      authorityLoader: {
+        load: () => ({
+          ...mountedAuthority,
+          payload: {
+            attestations: bindings,
+            certificates: bindings.map(({ attestationId, binding }, index) => ({
+              certificateId:
+                countedContext.evidenceSnapshot.entrants[
+                  index === 0 ? "bottom" : "top"
+                ].containmentCertificateId!,
+              attestationId,
+              certificateKind: "containment" as const,
+              binding,
+            })),
+          },
+        }),
+      },
     }
     expect(
       executePreparedRuntimeServiceRequestV117(
-        { ...candidateRequest, match: countedMatch as unknown as JsonValue },
+        {
+          ...candidateRequest,
+          authority: {
+            bundleHash: countedContext.evidenceSnapshot.authorityBundleHash,
+            sourceManifestHash:
+              countedContext.evidenceSnapshot.publication.sourceManifestHash,
+            registryGeneration:
+              countedContext.evidenceSnapshot.registryGeneration,
+          },
+          match: countedMatch as unknown as JsonValue,
+        },
         runtimeConfig,
-        dependencies,
+        countedDependencies,
       ),
     ).toMatchObject({
       ok: false,

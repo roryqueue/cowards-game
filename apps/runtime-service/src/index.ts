@@ -6,13 +6,25 @@ import {
   createRuntimeEvidenceAuthorityLoader,
   createRuntimeEvidenceAuthorityLoaderV117,
   runtimeEvidenceAuthorityConfigFromEnvironment,
+  runtimeEvidenceAuthorityConfigV117FromEnvironment,
+  type RuntimeEvidenceAuthorityLoaderV117,
 } from "./runtime-evidence-authority.js"
 
 const startRuntimeExecutionService = (): void => {
   const authorityConfig = runtimeEvidenceAuthorityConfigFromEnvironment()
   const authorityLoader = createRuntimeEvidenceAuthorityLoader(authorityConfig)
-  const authorityLoaderV117 =
-    createRuntimeEvidenceAuthorityLoaderV117(authorityConfig)
+  let mountedAuthorityLoaderV117:
+    | RuntimeEvidenceAuthorityLoaderV117
+    | undefined
+  const authorityLoaderV117: RuntimeEvidenceAuthorityLoaderV117 = {
+    load: () => {
+      mountedAuthorityLoaderV117 ??= createRuntimeEvidenceAuthorityLoaderV117(
+        runtimeEvidenceAuthorityConfigV117FromEnvironment(),
+      )
+      return mountedAuthorityLoaderV117.load()
+    },
+    current: () => mountedAuthorityLoaderV117?.current(),
+  }
   authorityLoader.load()
   const runtimeConfig = runtimeServiceConfigFromEnvironment()
   const port = Number.parseInt(process.env.RUNTIME_SERVICE_PORT ?? "3107", 10)

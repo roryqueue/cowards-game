@@ -1264,6 +1264,8 @@ export interface PreparedMountedRuntimeEvidenceAuthorityV117 {
       binding: PreparedRuntimeEvidenceBindingV117
     }[]
     certificates: readonly {
+      certificateId: string
+      certificateKind: "containment" | "conformance"
       attestationId: string
       binding: PreparedRuntimeEvidenceBindingV117
     }[]
@@ -1389,15 +1391,59 @@ export const executePreparedRuntimeServiceRequestV117 = (
     mounted.registryGeneration === request.authority.registryGeneration &&
     mounted.semanticTupleManifestHash === request.compatibilityTupleId
   const rootsCertified = (["bottom", "top"] as const).every((side) => {
-    const attestation = mounted.payload.attestations.find(({ binding }) =>
-      rootsMatch(binding, request.entrants[side]),
+    const entrant = nestedRequest.evidenceSnapshot.entrants[side]
+    const revision = nestedRequest.strategies[side]
+    const deployed = runtimeConfig.resolveDeploymentLaneIdentity(revision)
+    if (
+      entrant.strategyRevisionId !== revision.id ||
+      deployed === undefined ||
+      `sha256:${hashExecutableLaneIdentity(deployed)}` !==
+        entrant.laneIdentityHash
+    ) {
+      return false
+    }
+    const binding = request.entrants[side]
+    const certificate = (
+      kind: "containment" | "conformance",
+      certificateId: string | undefined,
+    ) =>
+      certificateId === undefined
+        ? undefined
+        : mounted.payload.certificates.find(
+            (candidate) =>
+              candidate.certificateId === certificateId &&
+              candidate.certificateKind === kind &&
+              rootsMatch(candidate.binding, binding),
+          )
+    const containment = certificate(
+      "containment",
+      entrant.containmentCertificateId,
     )
+    if (containment === undefined) return false
+    const attestation = mounted.payload.attestations.find(
+      (candidate) =>
+        candidate.attestationId === containment.attestationId &&
+        rootsMatch(candidate.binding, binding),
+    )
+    if (attestation === undefined) return false
+    const conformance = certificate(
+      "conformance",
+      entrant.conformanceCertificateId,
+    )
+    if (entrant.effectiveStatus === "counted") {
+      return (
+        conformance !== undefined &&
+        conformance.attestationId === attestation.attestationId
+      )
+    }
     return (
-      attestation !== undefined &&
-      mounted.payload.certificates.some(
-        (certificate) =>
-          certificate.attestationId === attestation.attestationId &&
-          rootsMatch(certificate.binding, request.entrants[side]),
+      entrant.effectiveStatus === "exhibition_only" &&
+      conformance === undefined &&
+      !mounted.payload.certificates.some(
+        (candidate) =>
+          candidate.certificateKind === "conformance" &&
+          candidate.attestationId === attestation.attestationId &&
+          rootsMatch(candidate.binding, binding),
       )
     )
   })
