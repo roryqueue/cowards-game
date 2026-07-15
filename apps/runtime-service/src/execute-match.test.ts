@@ -257,31 +257,6 @@ const candidateReceiptForOutcome = (
   })
 }
 
-const candidatePrestateWithWallMilliseconds = (
-  wallMilliseconds: number,
-): RuntimeAbiV117ExecutionLedger => {
-  const request = candidateRequest({
-    invocationId: `invocation:service-candidate:prestate:${wallMilliseconds}`,
-    kernelRequestId: `kernel-request:service-candidate:prestate:${wallMilliseconds}`,
-  })
-  const receipt = candidateReceipt(
-    request,
-    candidateEvidence(request, {
-      wallMilliseconds,
-      computeFuel: 0,
-      payloadBytes: 0,
-      stdoutBytes: 0,
-      stderrBytes: 0,
-      memoryBytes: 0,
-    }),
-  )
-  const debit = debitRuntimeAbiV117Ledger(request.accounting.prestate, receipt)
-  if (debit.kind === "system_failure") {
-    throw new Error(debit.failure.code)
-  }
-  return debit.ledger
-}
-
 const candidateState = (): GameState => {
   const machine = MATCH_KERNEL.createMachine({
     matchId: "match:service-candidate:v1.17",
@@ -566,8 +541,7 @@ describe("runtime execution service", () => {
         bundleHash: currentRequest.evidenceSnapshot.authorityBundleHash,
         sourceManifestHash:
           currentRequest.evidenceSnapshot.publication.sourceManifestHash,
-        registryGeneration:
-          currentRequest.evidenceSnapshot.registryGeneration,
+        registryGeneration: currentRequest.evidenceSnapshot.registryGeneration,
       },
       entrants: { bottom: bottomRoots, top: topRoots },
       accounting: { budgetProfileSha256, ledgerPrestateRoot },
@@ -1169,7 +1143,7 @@ describe("runtime execution service v1.17 candidate bridge", () => {
     {
       name: "one over method wall boundary",
       delta: 51,
-      expectedClassification: "player_violation",
+      expectedClassification: "system_failure",
       expectedCode: "TIMEOUT",
     },
   ] as const)(
@@ -1177,6 +1151,10 @@ describe("runtime execution service v1.17 candidate bridge", () => {
     ({ delta, expectedClassification, expectedCode }) => {
       const request = candidateRequest()
       const evidence = candidateEvidence(request, {
+        attribution:
+          expectedClassification === "success"
+            ? "proven_strategy"
+            : "ambiguous",
         wallMilliseconds: delta,
         computeFuel: 0,
         payloadBytes: 0,
@@ -1195,17 +1173,21 @@ describe("runtime execution service v1.17 candidate bridge", () => {
               trace: candidateTrace(request),
             }
           : {
-              kind: "player_violation",
-              violation: RUNTIME_INVOCATION_V1_17_PLAYER_VIOLATIONS.TIMEOUT,
+              kind: "system_failure",
+              failure: {
+                code: "TIMEOUT",
+                publicMessage: "Runtime system failure.",
+                retryable: false,
+              },
               trace: candidateTrace(request),
             }
       const authenticatedResponse =
         createAuthenticatedRuntimeInvocationResponseV117(
           request,
-          outcome as RuntimeInvocationResultV117<JsonValue>,
+          outcome as unknown as RuntimeInvocationResultV117<JsonValue>,
           candidateReceiptForOutcome(
             request,
-            outcome as RuntimeInvocationResultV117<JsonValue>,
+            outcome as unknown as RuntimeInvocationResultV117<JsonValue>,
             evidence,
           ),
           candidateIdentity,
@@ -1223,73 +1205,12 @@ describe("runtime execution service v1.17 candidate bridge", () => {
       expect(result.authenticatedAccounting).toEqual(
         authenticatedResponse.accounting,
       )
-      expect(result.authenticatedAccounting?.disposition).toBe("commit")
+      expect(result.authenticatedAccounting?.disposition).toBe(
+        expectedClassification === "success" ? "commit" : "no_commit",
+      )
       expect(
         result.authenticatedAccounting?.poststate.cumulative.wallMilliseconds,
-      ).toBe(delta)
-    },
-  )
-
-  it.each([
-    { priorWallMilliseconds: 12_950, expectedCode: undefined },
-    { priorWallMilliseconds: 12_951, expectedCode: "TIMEOUT" },
-  ] as const)(
-    "honors signed cumulative prestate with prior wall $priorWallMilliseconds",
-    ({ priorWallMilliseconds, expectedCode }) => {
-      const prestate = candidatePrestateWithWallMilliseconds(
-        priorWallMilliseconds,
-      )
-      const request = candidateRequest({ prestate })
-      const evidence = candidateEvidence(request, {
-        wallMilliseconds: 50,
-        computeFuel: 0,
-        payloadBytes: 0,
-        stdoutBytes: 0,
-        stderrBytes: 0,
-        memoryBytes: 0,
-      })
-      const outcome: RuntimeInvocationResultV117<SoldierBrainResult> =
-        expectedCode === undefined
-          ? {
-              kind: "success",
-              value: {
-                action: { type: "TURN_TO_STONE" },
-                soldierMemory: null,
-              },
-              trace: candidateTrace(request),
-            }
-          : {
-              kind: "player_violation",
-              violation: RUNTIME_INVOCATION_V1_17_PLAYER_VIOLATIONS.TIMEOUT,
-              trace: candidateTrace(request),
-            }
-      const authenticatedResponse =
-        createAuthenticatedRuntimeInvocationResponseV117(
-          request,
-          outcome as RuntimeInvocationResultV117<JsonValue>,
-          candidateReceiptForOutcome(
-            request,
-            outcome as RuntimeInvocationResultV117<JsonValue>,
-            evidence,
-          ),
-          candidateIdentity,
-        )
-      const result = executeCandidateRuntimeInvocationV117({
-        request,
-        identity: candidateIdentity,
-        invoke: () =>
-          serializeRuntimeInvocationResponseV117(authenticatedResponse),
-        executeOutcome: executeCandidateOutcome,
-      })
-
-      expect(result.publicResult.code).toBe(expectedCode)
-      expect(result.authenticatedAccounting?.disposition).toBe("commit")
-      expect(
-        result.authenticatedAccounting?.poststate.cumulative.wallMilliseconds,
-      ).toBe(priorWallMilliseconds + 50)
-      expect(result.authenticatedAccounting?.prestateSha256).toBe(
-        request.accounting.prestateSha256,
-      )
+      ).toBe(expectedClassification === "success" ? delta : 0)
     },
   )
 

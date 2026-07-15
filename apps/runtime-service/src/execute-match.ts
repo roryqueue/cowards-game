@@ -5,6 +5,8 @@ import {
   RUNTIME_INVOCATION_V1_17_CANDIDATE,
   RuntimeExecutionServiceRequestSchema,
   RuntimeExecutionServiceResponseSchema,
+  RuntimeExecutionServiceRequestV117Schema,
+  RuntimeExecutionServiceResponseV117Schema,
   RuntimeExecutionFinalStateSchema,
   ChronicleSchema,
   STRATEGY_RUNTIME_ABI_VERSION,
@@ -22,6 +24,7 @@ import {
   type RuntimeExecutionServiceRequest,
   type RuntimeExecutionServiceResponse,
   type RuntimeExecutionServiceSystemFailureCode,
+  type RuntimeExecutionServiceResponseV117,
   type RuntimeInvocationResultV117,
   type RuntimeInvocationResponseAccountingV117,
   type RuntimeInvocationSigningIdentityV117,
@@ -56,6 +59,7 @@ import type {
   VerifiedMountedRuntimeEvidenceAuthority,
 } from "./runtime-evidence-authority.js"
 import { issueRuntimeSemanticReceipt } from "./semantic-receipt.js"
+import { issueRuntimeSemanticReceiptV117 } from "./semantic-receipt-v1-17.js"
 
 export interface CandidateRuntimeInvocationInputV117<
   TValue = JsonValue,
@@ -135,9 +139,7 @@ export const executeCandidateRuntimeInvocationV117 = <
     input.identity,
   )
   const expectedRequest =
-    admittedRequest.kind === "success"
-      ? admittedRequest.value
-      : input.request
+    admittedRequest.kind === "success" ? admittedRequest.value : input.request
   let outcome: RuntimeInvocationResultV117<TValue> | undefined
   let authenticatedAccounting:
     | RuntimeInvocationResponseAccountingV117
@@ -1192,6 +1194,253 @@ export const executeRuntimeServiceRequest = (
         reason: "execution-exception",
         errorName: error instanceof Error ? error.name : "UnknownError",
       },
+    })
+  }
+}
+
+type Sha256IdentityV117 = `sha256:${string}`
+
+export interface PreparedRuntimeServiceExecutionV117 {
+  response: RuntimeExecutionServiceResponse
+  accounting: {
+    budgetProfileSha256: Sha256IdentityV117
+    ledgerPrestateRoot: Sha256IdentityV117
+    ledgerPoststateRoot: Sha256IdentityV117
+  }
+}
+
+export interface PreparedRuntimeServiceDependenciesV117 {
+  authorityLoader: {
+    load(): PreparedMountedRuntimeEvidenceAuthorityV117
+  }
+  executeCurrentMatchWithAccounting(
+    request: RuntimeExecutionServiceRequest,
+  ): PreparedRuntimeServiceExecutionV117
+}
+
+interface PreparedRuntimeEvidenceBindingV117 {
+  identityManifestRoot: string
+  evidenceGraphRoot: string
+}
+
+interface PreparedMountedRuntimeEvidenceAuthorityV117 {
+  authorityBundleHash: string
+  registryGeneration: string
+  semanticTupleManifestHash: string
+  sourceManifestHash: string
+  payload: {
+    attestations: readonly {
+      attestationId: string
+      binding: PreparedRuntimeEvidenceBindingV117
+    }[]
+    certificates: readonly {
+      attestationId: string
+      binding: PreparedRuntimeEvidenceBindingV117
+    }[]
+  }
+}
+
+const preparedV117Failure = (input: {
+  rawRequest: unknown
+  code: string
+  ownership: "runtime_system" | "system_integrity" | "system_operation"
+  retryable: boolean
+}): RuntimeExecutionServiceResponseV117 => {
+  const root = readRecord(input.rawRequest)
+  const requestId = readString(root?.requestId) ?? "runtime-request:unknown"
+  const matchId = readString(root?.matchId)
+  return RuntimeExecutionServiceResponseV117Schema.parse({
+    contractVersion: "runtime-execution-service-v1.17",
+    ok: false,
+    kind: "systemFailure",
+    requestId,
+    ...(matchId === undefined ? {} : { matchId }),
+    systemFailure: {
+      classification: "system_failure",
+      ownership: input.ownership,
+      code: input.code,
+      publicMessage: "Runtime execution failed before completion.",
+      retryable: input.retryable,
+      playerPenalty: false,
+    },
+  }) as RuntimeExecutionServiceResponseV117
+}
+
+const rootsMatch = (
+  binding: { identityManifestRoot: string; evidenceGraphRoot: string },
+  expected: { identityManifestRoot: string; evidenceGraphRoot: string },
+): boolean =>
+  binding.identityManifestRoot === expected.identityManifestRoot &&
+  binding.evidenceGraphRoot === expected.evidenceGraphRoot
+
+/**
+ * Prepared but inactive v1.17 full-service path. The injected execution must
+ * be the accounting-aware adapter around the actual current Match service;
+ * no success can be minted from a caller-provided Chronicle or ledger root.
+ */
+export const executePreparedRuntimeServiceRequestV117 = (
+  rawRequest: unknown,
+  runtimeConfig: RuntimeServiceConfig,
+  dependencies: PreparedRuntimeServiceDependenciesV117,
+): RuntimeExecutionServiceResponseV117 => {
+  const parsed = RuntimeExecutionServiceRequestV117Schema.safeParse(rawRequest)
+  if (!parsed.success) {
+    return preparedV117Failure({
+      rawRequest,
+      code: "MALFORMED_REQUEST",
+      ownership: "system_integrity",
+      retryable: false,
+    })
+  }
+  const request = parsed.data
+  const nested = RuntimeExecutionServiceRequestSchema.safeParse(request.match)
+  if (!nested.success) {
+    return preparedV117Failure({
+      rawRequest: request,
+      code: "MATCH_ENVELOPE_INVALID",
+      ownership: "system_integrity",
+      retryable: false,
+    })
+  }
+  const nestedRequest = nested.data
+  if (
+    request.matchId !== nestedRequest.match.matchId ||
+    request.compatibilityTupleId !==
+      nestedRequest.evidenceSnapshot.compatibility.tupleId ||
+    request.authority.bundleHash !==
+      nestedRequest.evidenceSnapshot.authorityBundleHash ||
+    request.authority.sourceManifestHash !==
+      nestedRequest.evidenceSnapshot.publication.sourceManifestHash ||
+    request.authority.registryGeneration !==
+      nestedRequest.evidenceSnapshot.registryGeneration
+  ) {
+    return preparedV117Failure({
+      rawRequest: request,
+      code: "REQUEST_BINDING_MISMATCH",
+      ownership: "system_integrity",
+      retryable: false,
+    })
+  }
+
+  let mounted: PreparedMountedRuntimeEvidenceAuthorityV117
+  try {
+    mounted = dependencies.authorityLoader.load()
+  } catch {
+    return preparedV117Failure({
+      rawRequest: request,
+      code: "AUTHORITY_UNAVAILABLE",
+      ownership: "system_integrity",
+      retryable: true,
+    })
+  }
+  const authorityMatches =
+    mounted.authorityBundleHash === request.authority.bundleHash &&
+    mounted.sourceManifestHash === request.authority.sourceManifestHash &&
+    mounted.registryGeneration === request.authority.registryGeneration &&
+    mounted.semanticTupleManifestHash === request.compatibilityTupleId
+  const rootsCertified = (["bottom", "top"] as const).every((side) => {
+    const attestation = mounted.payload.attestations.find(({ binding }) =>
+      rootsMatch(binding, request.entrants[side]),
+    )
+    return (
+      attestation !== undefined &&
+      mounted.payload.certificates.some(
+        (certificate) =>
+          certificate.attestationId === attestation.attestationId &&
+          rootsMatch(certificate.binding, request.entrants[side]),
+      )
+    )
+  })
+  if (!authorityMatches || !rootsCertified) {
+    return preparedV117Failure({
+      rawRequest: request,
+      code: "AUTHORITY_BINDING_MISMATCH",
+      ownership: "system_integrity",
+      retryable: false,
+    })
+  }
+
+  let executed: PreparedRuntimeServiceExecutionV117
+  try {
+    executed = dependencies.executeCurrentMatchWithAccounting(nestedRequest)
+  } catch {
+    return preparedV117Failure({
+      rawRequest: request,
+      code: "EXECUTION_EXCEPTION",
+      ownership: "runtime_system",
+      retryable: true,
+    })
+  }
+  if (!executed.response.ok) {
+    return preparedV117Failure({
+      rawRequest: request,
+      code: "CURRENT_MATCH_EXECUTION_FAILED",
+      ownership: "runtime_system",
+      retryable: executed.response.systemFailure.retryable,
+    })
+  }
+  if (
+    executed.accounting.budgetProfileSha256 !==
+      request.accounting.budgetProfileSha256 ||
+    executed.accounting.ledgerPrestateRoot !==
+      request.accounting.ledgerPrestateRoot
+  ) {
+    return preparedV117Failure({
+      rawRequest: request,
+      code: "ACCOUNTING_BINDING_MISMATCH",
+      ownership: "system_integrity",
+      retryable: false,
+    })
+  }
+  const finalState = executed.response.result.finalState
+  const outcome = finalState.outcome
+  if (outcome === undefined) {
+    return preparedV117Failure({
+      rawRequest: request,
+      code: "TERMINAL_OUTCOME_MISSING",
+      ownership: "system_integrity",
+      retryable: false,
+    })
+  }
+  try {
+    const chronicle = executed.response.result.chronicle as unknown as JsonValue
+    const canonicalFinalState = finalState as unknown as JsonValue
+    const canonicalOutcome = outcome as unknown as JsonValue
+    const runtimeViolationEventCount =
+      executed.response.result.runtimeViolationEventCount
+    const semanticReceipt = issueRuntimeSemanticReceiptV117({
+      request,
+      chronicle,
+      finalState: canonicalFinalState,
+      outcome: canonicalOutcome,
+      ledgerPoststateRoot: executed.accounting.ledgerPoststateRoot,
+      reconstructedTerminalStateHash: executed.response.result.semanticReceipt
+        .reconstructedTerminalStateHash as Sha256IdentityV117,
+      runtimeViolationEventCount,
+      secret: runtimeConfig.semanticReceiptSecret,
+    })
+    return RuntimeExecutionServiceResponseV117Schema.parse({
+      contractVersion: "runtime-execution-service-v1.17",
+      ok: true,
+      kind: "executionResult",
+      requestId: request.requestId,
+      matchId: request.matchId,
+      result: {
+        privacy: "internal_runtime_result",
+        chronicle,
+        finalState: canonicalFinalState,
+        outcome: canonicalOutcome,
+        ledgerPoststateRoot: executed.accounting.ledgerPoststateRoot,
+        runtimeViolationEventCount,
+        semanticReceipt,
+      },
+    }) as RuntimeExecutionServiceResponseV117
+  } catch {
+    return preparedV117Failure({
+      rawRequest: request,
+      code: "RESPONSE_SCHEMA_INVALID",
+      ownership: "system_integrity",
+      retryable: false,
     })
   }
 }
