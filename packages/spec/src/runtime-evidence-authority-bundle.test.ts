@@ -205,7 +205,7 @@ describe("runtime evidence authority bundle", () => {
       },
     )
     expect(inspected.payload.certificates[0]?.binding).toEqual(binding)
-    const tampered = structuredClone(payload)
+    const tampered = globalThis.structuredClone(payload)
     tampered.certificates[0]!.binding = {
       ...tampered.certificates[0]!.binding,
       exactPins: tampered.certificates[0]!.binding.exactPins.map(

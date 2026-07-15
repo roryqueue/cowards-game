@@ -418,7 +418,7 @@ const cloneInputV117 = (
   input: ImportRuntimeEvidenceAttestationV117Input,
 ): ImportRuntimeEvidenceAttestationV117Input => ({
   ...input,
-  attestation: structuredClone(input.attestation),
+  attestation: globalThis.structuredClone(input.attestation),
   evidenceBytes: Object.freeze(
     Object.fromEntries(
       Object.entries(input.evidenceBytes).map(([nodeId, bytes]) => [

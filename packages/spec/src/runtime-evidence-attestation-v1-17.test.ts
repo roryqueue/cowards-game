@@ -114,7 +114,7 @@ const resign = (
   source: ReturnType<typeof buildFixture>,
   mutate: (attestation: RuntimeEvidenceAttestationV117) => void,
 ) => {
-  const cloned = structuredClone(source.attestation)
+  const cloned = globalThis.structuredClone(source.attestation)
   mutate(cloned)
   const keys = generateKeyPairSync("ed25519")
   cloned.producerKeyId = "mutation-key"

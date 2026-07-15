@@ -58,7 +58,7 @@ describe("runtime semantic receipt v1.17", () => {
     ["request graph", (candidate: RuntimeExecutionServiceRequestV117) => { candidate.entrants.bottom.evidenceGraphRoot = `sha256:${"f".repeat(64)}` }],
     ["request budget", (candidate: RuntimeExecutionServiceRequestV117) => { candidate.accounting.budgetProfileSha256 = `sha256:${"f".repeat(64)}` }],
   ] as const)("rejects a signed-looking %s substitution", (_name, mutate) => {
-    const tampered = structuredClone(request)
+    const tampered = globalThis.structuredClone(request)
     mutate(tampered)
     expect(() =>
       verifyRuntimeSemanticReceiptV117({ request: tampered, response, secret }),
@@ -66,7 +66,7 @@ describe("runtime semantic receipt v1.17", () => {
   })
 
   it("rejects v1.16 relabeling, unknown versions, and invocation/service confusion", () => {
-    const tampered = structuredClone(response)
+    const tampered = globalThis.structuredClone(response)
     tampered.result.semanticReceipt.schemaVersion =
       "runtime-semantic-receipt-v1" as typeof RUNTIME_SEMANTIC_RECEIPT_SCHEMA_VERSION_V1_17
     expect(() =>
