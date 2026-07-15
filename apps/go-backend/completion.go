@@ -31,6 +31,8 @@ type completeMatchInput struct {
 	FinalState           map[string]any
 	SemanticReceipt      runtimeSemanticReceipt
 	SemanticWireEvidence runtimeSemanticWireEvidence
+	RuntimeRequestV117   *runtimeServiceRequestV117
+	SemanticReceiptV117  *runtimeSemanticReceiptV117
 	Integrity            *claimedMatchIntegrityIdentity
 }
 
@@ -84,19 +86,27 @@ func (service *matchCompletionService) completeMatch(ctx context.Context, input 
 		return nil, errors.New("match completion requires a database pool")
 	}
 	if !service.allowLegacyTestCompletion {
-		if err := validateRuntimeSemanticReceiptForCompletion(input, input.Integrity, service.semanticReceiptSecret); err != nil {
+		if err := validateVersionedRuntimeSemanticReceiptForCompletion(input, input.Integrity, service.semanticReceiptSecret); err != nil {
 			return nil, err
 		}
 	}
 	semanticReceiptHash := ""
 	var semanticReceiptJSON []byte
+	var semanticReceiptVersion any
 	var err error
 	if !service.allowLegacyTestCompletion {
-		semanticReceiptHash, err = runtimeSemanticReceiptHash(input.SemanticReceipt)
-		if err != nil {
-			return nil, err
+		if input.SemanticReceiptV117 != nil {
+			semanticReceiptHash, err = runtimeSemanticReceiptHashV117(*input.SemanticReceiptV117)
+			if err == nil {
+				semanticReceiptJSON, err = runtimeSemanticReceiptRecordJSONV117(*input.SemanticReceiptV117)
+			}
+			semanticReceiptVersion = runtimeSemanticReceiptV117SchemaVersion
+		} else {
+			semanticReceiptHash, err = runtimeSemanticReceiptHash(input.SemanticReceipt)
+			if err == nil {
+				semanticReceiptJSON, err = runtimeSemanticReceiptRecordJSON(input.SemanticReceipt)
+			}
 		}
-		semanticReceiptJSON, err = runtimeSemanticReceiptRecordJSON(input.SemanticReceipt)
 		if err != nil {
 			return nil, err
 		}
@@ -175,7 +185,7 @@ func (service *matchCompletionService) completeMatch(ctx context.Context, input 
 		if err != nil {
 			return nil, err
 		}
-		if err := validateRuntimeSemanticReceiptForCompletion(input, lockedIntegrity, service.semanticReceiptSecret); err != nil {
+		if err := validateVersionedRuntimeSemanticReceiptForCompletion(input, lockedIntegrity, service.semanticReceiptSecret); err != nil {
 			return nil, err
 		}
 	}
@@ -208,11 +218,11 @@ func (service *matchCompletionService) completeMatch(ctx context.Context, input 
 		  bottom_execution_entrant_key, top_execution_entrant_key,
 		  bottom_execution_evidence, top_execution_evidence,
 		  execution_evidence_pair_hash, runtime_semantic_receipt,
-		  runtime_semantic_receipt_hash
+		  runtime_semantic_receipt_hash, runtime_semantic_receipt_version
 		)
 		values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,
 		        $14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,
-		        $29,$30,$31,$32,$33,$34,$35,$36)
+		        $29,$30,$31,$32,$33,$34,$35,$36,$37)
 	`, metadata.ID, metadata.MatchID, metadata.SchemaVersion, metadata.Hash, outcome,
 		metadata.EventCount, metadata.SnapshotCount, metadata.BottomPlayerID, metadata.TopPlayerID,
 		metadata.BottomStrategyRevisionID, metadata.TopStrategyRevisionID, metadata.ArenaVariantID, artifact,
@@ -224,7 +234,7 @@ func (service *matchCompletionService) completeMatch(ctx context.Context, input 
 		lockedIntegrity.PayloadSHA256, lockedIntegrity.EnvelopeSHA256, lockedIntegrity.SourceManifestHash,
 		lockedIntegrity.SourceSet, lockedIntegrity.MatchSetID, lockedIntegrity.Bottom.EntrantKey,
 		lockedIntegrity.Top.EntrantKey, lockedIntegrity.Bottom, lockedIntegrity.Top, lockedIntegrity.PairHash,
-		semanticReceiptJSON, semanticReceiptHash); err != nil {
+		semanticReceiptJSON, semanticReceiptHash, semanticReceiptVersion); err != nil {
 		return nil, err
 	}
 	tag, err := tx.Exec(ctx, `

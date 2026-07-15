@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -198,6 +199,91 @@ func TestPhase258OrchestratorConsumesVersionedRuntimeServiceRouter(t *testing.T)
 			t.Fatalf("production orchestration route is not versioned: missing %q", required)
 		}
 	}
+}
+
+func TestPhase258ClaimBuildServiceCompleteV117Postgres(t *testing.T) {
+	databaseURL := os.Getenv("COWARDS_GO_BACKEND_TEST_DATABASE_URL")
+	if databaseURL == "" {
+		t.Fatal("COWARDS_GO_BACKEND_TEST_DATABASE_URL is required")
+	}
+	ctx := context.Background()
+	pool := semanticCurrentIsolatedPool(t, ctx, databaseURL)
+	now := time.Date(2026, 7, 15, 13, 45, 0, 0, time.UTC)
+	fixture, registry := preparePhase258V117ClaimFixture(t, ctx, pool, now)
+	seeded := fixture.seedMatch(t, ctx, pool, "claimed-v117")
+	if _, err := pool.Exec(ctx, `delete from match_job_attempts where job_id=$1`, seeded.jobID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := pool.Exec(ctx, `update match_jobs set status='queued',attempts=0,worker_id=null,lease_token=null,lease_expires_at=null,run_after=$2 where id=$1`, seeded.jobID, now); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := pool.Exec(ctx, `update matches set status='pending' where id=$1`, seeded.matchID); err != nil {
+		t.Fatal(err)
+	}
+
+	var observed runtimeServiceRequestV117
+	runtimeServer := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, incoming *http.Request) {
+		defer incoming.Body.Close()
+		payload, err := io.ReadAll(incoming.Body)
+		if err != nil {
+			t.Fatal(err)
+		}
+		canonical := decodeCanonicalJSONV11(payload, canonicalJSONV11Options{Context: canonicalJSONV11AuthenticatedOuterEnvelope, RequireCanonical: true})
+		if canonical.Error != nil || json.Unmarshal(canonical.CanonicalBytes, &observed) != nil {
+			t.Fatal("Go did not send a canonical v1.17 service request")
+		}
+		var nested runtimeServiceRequest
+		if err := decodeStrictJSONUseNumber(observed.Match, &nested); err != nil {
+			t.Fatal(err)
+		}
+		chronicle := orchestratorChronicleForRequest(nested, false)
+		finalState := orchestratorFinalStateForRequest(nested)
+		response := signedRuntimeServiceSuccessResponseV117ForTest(
+			t, observed, chronicle, finalState,
+			"sha256:"+strings.Repeat("8", 64), runtimeServiceV117FixtureSecret,
+		)
+		writer.Header().Set("content-type", "application/json")
+		_, _ = writer.Write(encodeRuntimeServiceResponseFixtureV117(t, response))
+	}))
+	defer runtimeServer.Close()
+
+	orchestrator := newGoMatchOrchestrator(pool, runtimeServer.URL)
+	orchestrator.deploymentLanes = registry
+	orchestrator.workerID = "phase258:worker:v117"
+	orchestrator.lifecycle.now = func() time.Time { return now }
+	orchestrator.lifecycle.newLeaseToken = func() (string, error) { return "phase258:lease:v117", nil }
+	orchestrator.lifecycle.loadAuthority = func() (*verifiedRuntimeEvidenceAuthority, error) { return fixture.authority, nil }
+	orchestrator.completion.now = func() time.Time { return now }
+	orchestrator.completion.loadAuthority = func() (*verifiedRuntimeEvidenceAuthority, error) { return fixture.authority, nil }
+	orchestrator.completion.semanticReceiptSecret = runtimeServiceV117FixtureSecret
+	orchestrator.runtime.currentContractVersion = func() string { return runtimeExecutionServiceVersionV117 }
+	orchestrator.runtime.semanticReceiptSecret = runtimeServiceV117FixtureSecret
+
+	result, err := orchestrator.runOnce(ctx, []string{seeded.matchID})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Status != "complete" || result.MatchID != seeded.matchID || result.ChronicleID == "" {
+		t.Fatalf("v1.17 claimed job did not complete: %+v", result)
+	}
+	if observed.ContractVersion != runtimeExecutionServiceVersionV117 ||
+		observed.Accounting.BudgetProfileSHA256 != runtimeServiceV117BudgetProfileSHA256 ||
+		observed.Accounting.LedgerPrestateRoot != runtimeServiceV117EmptyLedgerRoot {
+		t.Fatalf("v1.17 service request lost exact accounting: %+v", observed.Accounting)
+	}
+	var receiptVersion string
+	var receiptSchema string
+	if err := pool.QueryRow(ctx, `select runtime_semantic_receipt_version,runtime_semantic_receipt->>'schemaVersion' from chronicles where match_id=$1`, seeded.matchID).Scan(&receiptVersion, &receiptSchema); err != nil {
+		t.Fatal(err)
+	}
+	if receiptVersion != runtimeSemanticReceiptV117SchemaVersion || receiptSchema != receiptVersion {
+		t.Fatalf("persisted v1.17 receipt version drifted: version=%q schema=%q", receiptVersion, receiptSchema)
+	}
+}
+
+func preparePhase258V117ClaimFixture(t *testing.T, ctx context.Context, pool *pgxpool.Pool, now time.Time) (*semanticCurrentAuthorityFixture, *goDeploymentLaneRegistry) {
+	t.Helper()
+	return seedSemanticSuccessorAuthority(t, ctx, pool, now)
 }
 
 func TestGoMatchOrchestratorHasNoCandidateCompletionRoute(t *testing.T) {

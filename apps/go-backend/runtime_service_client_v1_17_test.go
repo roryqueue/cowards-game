@@ -12,6 +12,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -61,6 +62,79 @@ func encodeRuntimeServiceResponseFixtureV117(t *testing.T, response runtimeServi
 		t.Fatalf("response fixture is not canonicalizable: %s", canonical.Error.Code)
 	}
 	return canonical.CanonicalBytes
+}
+
+func signedRuntimeServiceSuccessResponseV117ForTest(
+	t *testing.T,
+	request runtimeServiceRequestV117,
+	chronicle map[string]any,
+	finalState map[string]any,
+	ledgerPoststateRoot string,
+	secret string,
+) runtimeServiceResponseV117 {
+	t.Helper()
+	chronicleBytes, err := runtimeInvocationV117CanonicalValue(chronicle)
+	if err != nil {
+		t.Fatal(err)
+	}
+	finalStateBytes, err := runtimeInvocationV117CanonicalValue(finalState)
+	if err != nil {
+		t.Fatal(err)
+	}
+	outcomeBytes, err := runtimeInvocationV117CanonicalValue(finalState["outcome"])
+	if err != nil {
+		t.Fatal(err)
+	}
+	requestBytes, err := encodeRuntimeServiceRequestV117(request)
+	if err != nil {
+		t.Fatal(err)
+	}
+	chronicleHash, err := hashRuntimeServiceCanonicalValueV117("cowards-game:runtime-semantic-chronicle-canonical-json:v1.17", chronicleBytes)
+	if err != nil {
+		t.Fatal(err)
+	}
+	finalStateHash, err := hashRuntimeServiceCanonicalValueV117("cowards-game:runtime-semantic-final-state-canonical-json:v1.17", finalStateBytes)
+	if err != nil {
+		t.Fatal(err)
+	}
+	outcomeHash, err := hashRuntimeServiceCanonicalValueV117("cowards-game:runtime-semantic-outcome-canonical-json:v1.17", outcomeBytes)
+	if err != nil {
+		t.Fatal(err)
+	}
+	receipt := runtimeSemanticReceiptV117{
+		SchemaVersion: runtimeSemanticReceiptV117SchemaVersion, Profile: runtimeSemanticReceiptV117Profile,
+		ServiceContractVersion: runtimeSemanticReceiptV117ServiceVersion,
+		RequestSHA256:          runtimeInvocationV117SHA256Value(requestBytes), RequestID: request.RequestID, MatchID: request.MatchID,
+		CompatibilityTupleID: request.CompatibilityTupleID, AuthorityBundleHash: request.Authority.BundleHash,
+		AuthoritySourceManifestHash: request.Authority.SourceManifestHash, RegistryGeneration: request.Authority.RegistryGeneration,
+		BottomIdentityManifestRoot: request.Entrants.Bottom.IdentityManifestRoot, BottomEvidenceGraphRoot: request.Entrants.Bottom.EvidenceGraphRoot,
+		TopIdentityManifestRoot: request.Entrants.Top.IdentityManifestRoot, TopEvidenceGraphRoot: request.Entrants.Top.EvidenceGraphRoot,
+		BudgetProfileSHA256: request.Accounting.BudgetProfileSHA256, LedgerPrestateRoot: request.Accounting.LedgerPrestateRoot,
+		LedgerPoststateRoot: ledgerPoststateRoot, ChronicleCanonicalHash: chronicleHash, FinalStateCanonicalHash: finalStateHash,
+		ReconstructedTerminalStateHash: "sha256:" + strings.Repeat("7", 64), OutcomeCanonicalHash: outcomeHash,
+		RuntimeViolationEventCount: runtimeSemanticViolationCount(chronicle), Algorithm: "hmac-sha256", KeyID: runtimeSemanticReceiptV117KeyID,
+	}
+	previousSecret := runtimeServiceV117FixtureSecret
+	if secret != previousSecret {
+		receipt.Signature = ""
+		message, messageErr := runtimeSemanticReceiptV117Message(receipt)
+		if messageErr != nil {
+			t.Fatal(messageErr)
+		}
+		mac := hmac.New(sha256.New, []byte(secret))
+		_, _ = mac.Write(message)
+		receipt.Signature = "hmac-sha256:" + hex.EncodeToString(mac.Sum(nil))
+	} else {
+		signRuntimeServiceReceiptV117(t, &receipt)
+	}
+	return runtimeServiceResponseV117{
+		ContractVersion: runtimeExecutionServiceVersionV117, OK: true, Kind: "executionResult",
+		RequestID: request.RequestID, MatchID: request.MatchID,
+		Result: &runtimeServiceSuccessResultV117{
+			Privacy: "internal_runtime_result", Chronicle: chronicleBytes, FinalState: finalStateBytes, Outcome: outcomeBytes,
+			LedgerPoststateRoot: ledgerPoststateRoot, RuntimeViolationEventCount: receipt.RuntimeViolationEventCount, SemanticReceipt: receipt,
+		},
+	}
 }
 
 func TestPhase258RuntimeServiceV117WritesCanonicalRequestBytes(t *testing.T) {
@@ -210,7 +284,7 @@ func TestPhase258CurrentDefaultRoutes(t *testing.T) {
 		finalState := orchestratorFinalStateForRequest(requestV116)
 		writeRuntimeServiceTestJSON(t, writer, runtimeServiceResponse{
 			ContractVersion: runtimeExecutionServiceVersion,
-			OK: true, Kind: "executionResult", RequestID: requestV116.RequestID,
+			OK:              true, Kind: "executionResult", RequestID: requestV116.RequestID,
 			MatchID: requestV116.Match.MatchID, RuntimeABIVersion: strategyRuntimeABIVersion,
 			Result: signedRuntimeServiceSuccessResultForTest(t, requestV116, chronicle, finalState, runtimeServiceV117FixtureSecret),
 		})
@@ -284,7 +358,7 @@ func TestPhase258HistoricalV116Dispatch(t *testing.T) {
 		observed, _ = envelope["contractVersion"].(string)
 		writeRuntimeServiceTestJSON(t, writer, runtimeServiceResponse{
 			ContractVersion: runtimeExecutionServiceVersion,
-			OK: false, Kind: "systemFailure", RequestID: request.RequestID,
+			OK:              false, Kind: "systemFailure", RequestID: request.RequestID,
 			MatchID: request.Match.MatchID, RuntimeABIVersion: strategyRuntimeABIVersion,
 			SystemFailure: &runtimeServiceFailure{Code: "EVIDENCE_UNVERIFIABLE", Retryable: false},
 		})

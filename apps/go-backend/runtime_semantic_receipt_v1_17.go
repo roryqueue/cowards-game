@@ -131,3 +131,108 @@ func validRuntimeSemanticReceiptV117(receipt runtimeSemanticReceiptV117, secret 
 func validRuntimeSemanticReceiptV117Identifier(value string) bool {
 	return value != "" && utf8.ValidString(value) && !strings.ContainsRune(value, '\x00') && len([]byte(value)) <= 512
 }
+
+func runtimeSemanticReceiptRecordJSONV117(receipt runtimeSemanticReceiptV117) ([]byte, error) {
+	if !runtimeSemanticReceiptV117SchemaKnown(receipt.SchemaVersion) {
+		return nil, errors.New("runtime semantic receipt v1.17 record is unavailable")
+	}
+	return runtimeInvocationV117CanonicalValue(receipt)
+}
+
+func runtimeSemanticReceiptHashV117(receipt runtimeSemanticReceiptV117) (string, error) {
+	encoded, err := runtimeSemanticReceiptRecordJSONV117(receipt)
+	if err != nil {
+		return "", err
+	}
+	return hashRuntimeServiceCanonicalValueV117(
+		"cowards-game:runtime-semantic-receipt-record:v1.17",
+		encoded,
+	)
+}
+
+func validateVersionedRuntimeSemanticReceiptForCompletion(input completeMatchInput, integrity *claimedMatchIntegrityIdentity, secret string) error {
+	if integrity == nil {
+		return errors.New("runtime semantic receipt completion admission unavailable")
+	}
+	if integrity.CompatibilityTuple.RuntimeABI == strategyRuntimeABIVersionV117 {
+		if input.RuntimeRequestV117 == nil || input.SemanticReceiptV117 == nil {
+			return errors.New("runtime semantic receipt v1.17 completion admission unavailable")
+		}
+		return validateRuntimeSemanticReceiptV117ForCompletion(input, integrity, secret)
+	}
+	if input.RuntimeRequestV117 != nil || input.SemanticReceiptV117 != nil {
+		return errors.New("runtime semantic receipt completion contract is mixed-version")
+	}
+	return validateRuntimeSemanticReceiptForCompletion(input, integrity, secret)
+}
+
+func validateRuntimeSemanticReceiptV117ForCompletion(input completeMatchInput, integrity *claimedMatchIntegrityIdentity, secret string) error {
+	request := input.RuntimeRequestV117
+	receipt := input.SemanticReceiptV117
+	binding := integrity.RuntimeServiceV117
+	if request == nil || receipt == nil || !validClaimedRuntimeServiceV117(binding) || strings.TrimSpace(secret) == "" {
+		return errors.New("runtime semantic receipt v1.17 completion admission unavailable")
+	}
+	if failure := validateRuntimeServiceRequestV117(*request); failure != nil ||
+		request.CompatibilityTupleID != integrity.CompatibilityTupleID ||
+		request.Authority.BundleHash != integrity.AuthorityBundleHash ||
+		request.Authority.SourceManifestHash != integrity.SourceManifestHash ||
+		request.Authority.RegistryGeneration != integrity.RegistryGeneration ||
+		request.Entrants.Bottom != binding.Bottom || request.Entrants.Top != binding.Top ||
+		request.Accounting.BudgetProfileSHA256 != binding.BudgetProfileSHA256 ||
+		request.Accounting.LedgerPrestateRoot != binding.LedgerPrestateRoot {
+		return errors.New("runtime semantic receipt v1.17 request binding changed")
+	}
+	var nested runtimeServiceRequest
+	if err := decodeStrictJSONUseNumber(request.Match, &nested); err != nil ||
+		nested.RequestID != request.RequestID || nested.Match.MatchID != request.MatchID ||
+		stringValue(input.FinalState, "matchId") != request.MatchID {
+		return errors.New("runtime semantic receipt v1.17 Match binding changed")
+	}
+	requestBytes, requestErr := encodeRuntimeServiceRequestV117(*request)
+	chronicleBytes, chronicleErr := runtimeInvocationV117CanonicalValue(input.Chronicle)
+	finalStateBytes, finalStateErr := runtimeInvocationV117CanonicalValue(input.FinalState)
+	outcomeBytes, outcomeErr := runtimeInvocationV117CanonicalValue(input.FinalState["outcome"])
+	chronicleHash, chronicleHashErr := hashRuntimeServiceCanonicalValueV117(
+		"cowards-game:runtime-semantic-chronicle-canonical-json:v1.17", chronicleBytes,
+	)
+	finalStateHash, finalStateHashErr := hashRuntimeServiceCanonicalValueV117(
+		"cowards-game:runtime-semantic-final-state-canonical-json:v1.17", finalStateBytes,
+	)
+	outcomeHash, outcomeHashErr := hashRuntimeServiceCanonicalValueV117(
+		"cowards-game:runtime-semantic-outcome-canonical-json:v1.17", outcomeBytes,
+	)
+	if requestErr != nil || chronicleErr != nil || finalStateErr != nil || outcomeErr != nil ||
+		chronicleHashErr != nil || finalStateHashErr != nil || outcomeHashErr != nil ||
+		!validRuntimeSemanticReceiptV117(*receipt, secret) ||
+		receipt.RequestSHA256 != runtimeInvocationV117SHA256Value(requestBytes) ||
+		receipt.RequestID != request.RequestID || receipt.MatchID != request.MatchID ||
+		receipt.CompatibilityTupleID != request.CompatibilityTupleID ||
+		receipt.AuthorityBundleHash != request.Authority.BundleHash ||
+		receipt.AuthoritySourceManifestHash != request.Authority.SourceManifestHash ||
+		receipt.RegistryGeneration != request.Authority.RegistryGeneration ||
+		receipt.BottomIdentityManifestRoot != request.Entrants.Bottom.IdentityManifestRoot ||
+		receipt.BottomEvidenceGraphRoot != request.Entrants.Bottom.EvidenceGraphRoot ||
+		receipt.TopIdentityManifestRoot != request.Entrants.Top.IdentityManifestRoot ||
+		receipt.TopEvidenceGraphRoot != request.Entrants.Top.EvidenceGraphRoot ||
+		receipt.BudgetProfileSHA256 != request.Accounting.BudgetProfileSHA256 ||
+		receipt.LedgerPrestateRoot != request.Accounting.LedgerPrestateRoot ||
+		!isPrefixedLowerSHA256(receipt.LedgerPoststateRoot) ||
+		receipt.ChronicleCanonicalHash != chronicleHash ||
+		receipt.FinalStateCanonicalHash != finalStateHash ||
+		receipt.OutcomeCanonicalHash != outcomeHash ||
+		receipt.RuntimeViolationEventCount != runtimeSemanticViolationCount(input.Chronicle) {
+		return errors.New("runtime semantic receipt v1.17 completion evidence changed")
+	}
+	if validation := validateGoCanonicalGameState(input.FinalState); !validation.OK {
+		return errors.New("runtime semantic receipt v1.17 completion state is invalid")
+	}
+	if err := validateGoChronicleShape(input.Chronicle); err != nil {
+		return errors.New("runtime semantic receipt v1.17 completion Chronicle is invalid")
+	}
+	terminalOutcome, err := terminalChronicleOutcome(sliceValue(input.Chronicle, "snapshots"))
+	if err != nil || !jsonValuesEqual(terminalOutcome, input.FinalState["outcome"]) {
+		return errors.New("runtime semantic receipt v1.17 completion outcome changed")
+	}
+	return nil
+}

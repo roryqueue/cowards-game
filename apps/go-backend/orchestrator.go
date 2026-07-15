@@ -162,22 +162,38 @@ func (orchestrator *goMatchOrchestrator) runOnce(ctx context.Context, matchIDs [
 		}
 		return &goMatchOrchestrationResult{Status: status, JobID: claimed.JobID, MatchID: claimed.MatchID}, nil
 	}
-	if response.ContractVersion != runtimeExecutionServiceVersion || response.V116 == nil || response.V117 != nil {
+	completionInput := completeMatchInput{
+		JobID: claimed.JobID, LeaseToken: claimed.LeaseToken, Integrity: claimed.Integrity,
+	}
+	switch response.ContractVersion {
+	case runtimeExecutionServiceVersion:
+		if response.V116 == nil || response.V117 != nil {
+			return nil, errors.New("runtime service completion contract is mixed-version")
+		}
+		chronicle, finalState, semanticReceipt, semanticWireEvidence, err := runtimeServiceCompletionPayload(response.V116)
+		if err != nil {
+			return nil, err
+		}
+		completionInput.Chronicle = chronicle
+		completionInput.FinalState = finalState
+		completionInput.SemanticReceipt = semanticReceipt
+		completionInput.SemanticWireEvidence = semanticWireEvidence
+	case runtimeExecutionServiceVersionV117:
+		if response.V117 == nil || response.V116 != nil || request.V117 == nil {
+			return nil, errors.New("runtime service completion contract is mixed-version")
+		}
+		chronicle, finalState, semanticReceipt, err := runtimeServiceCompletionPayloadV117(response.V117)
+		if err != nil {
+			return nil, err
+		}
+		completionInput.Chronicle = chronicle
+		completionInput.FinalState = finalState
+		completionInput.RuntimeRequestV117 = request.V117
+		completionInput.SemanticReceiptV117 = &semanticReceipt
+	default:
 		return nil, errors.New("runtime service completion contract is not active")
 	}
-	chronicle, finalState, semanticReceipt, semanticWireEvidence, err := runtimeServiceCompletionPayload(response.V116)
-	if err != nil {
-		return nil, err
-	}
-	completed, err := orchestrator.completion.completeMatch(ctx, completeMatchInput{
-		JobID:                claimed.JobID,
-		LeaseToken:           claimed.LeaseToken,
-		Chronicle:            chronicle,
-		FinalState:           finalState,
-		SemanticReceipt:      semanticReceipt,
-		SemanticWireEvidence: semanticWireEvidence,
-		Integrity:            claimed.Integrity,
-	})
+	completed, err := orchestrator.completion.completeMatch(ctx, completionInput)
 	if err != nil {
 		return nil, err
 	}
@@ -204,10 +220,36 @@ func buildRuntimeServiceExecutionRequestForClaimedJob(ctx context.Context, pool 
 			V116:            request,
 		}, nil
 	case strategyRuntimeABIVersionV117:
-		if selectedRuntimeServiceContractVersion() != runtimeExecutionServiceVersionV117 {
-			return nil, errors.New("successor runtime service contract is not current")
+		binding := claimed.Integrity.RuntimeServiceV117
+		if !validClaimedRuntimeServiceV117(binding) {
+			return nil, errors.New("successor runtime evidence roots and accounting are unavailable")
 		}
-		return nil, errors.New("successor runtime evidence roots and accounting are unavailable")
+		matchBytes, err := runtimeInvocationV117CanonicalValue(request)
+		if err != nil {
+			return nil, errors.New("successor runtime Match envelope is not canonical")
+		}
+		successor := runtimeServiceRequestV117{
+			ContractVersion:      runtimeExecutionServiceVersionV117,
+			Kind:                 "executeMatch",
+			RequestID:            request.RequestID,
+			MatchID:              request.Match.MatchID,
+			CompatibilityTupleID: claimed.Integrity.CompatibilityTupleID,
+			Match:                matchBytes,
+		}
+		successor.Authority.BundleHash = claimed.Integrity.AuthorityBundleHash
+		successor.Authority.SourceManifestHash = claimed.Integrity.SourceManifestHash
+		successor.Authority.RegistryGeneration = claimed.Integrity.RegistryGeneration
+		successor.Entrants.Bottom = binding.Bottom
+		successor.Entrants.Top = binding.Top
+		successor.Accounting.BudgetProfileSHA256 = binding.BudgetProfileSHA256
+		successor.Accounting.LedgerPrestateRoot = binding.LedgerPrestateRoot
+		if failure := validateRuntimeServiceRequestV117(successor); failure != nil {
+			return nil, errors.New("claimed Match successor runtime request is invalid")
+		}
+		return &runtimeServiceExecutionRequest{
+			ContractVersion: runtimeExecutionServiceVersionV117,
+			V117:            &successor,
+		}, nil
 	default:
 		return nil, errors.New("claimed Match runtime ABI has no service dispatch")
 	}
@@ -264,10 +306,54 @@ func buildRuntimeServiceRequestForClaimedJob(ctx context.Context, pool *pgxpool.
 		return nil, err
 	}
 	request.EvidenceSnapshot = snapshot
-	if failure := validateRuntimeServiceRequest(*request); failure != nil {
+	var failure *runtimeServiceFailure
+	if claimed.Integrity.CompatibilityTuple.RuntimeABI == strategyRuntimeABIVersionV117 {
+		failure = validateNestedRuntimeServiceRequestV117(*request)
+	} else {
+		failure = validateRuntimeServiceRequest(*request)
+	}
+	if failure != nil {
 		return nil, errors.New("claimed Match integrity request is invalid")
 	}
 	return request, nil
+}
+
+// The successor full-service envelope carries the actual current Match input.
+// Its nested shape is v1.16-compatible, while its Strategy ABI pins are v1.17.
+// Normalize only those already-checked ABI pins on a private clone so the
+// immutable historical validator can continue to own every shared field.
+func validateNestedRuntimeServiceRequestV117(request runtimeServiceRequest) *runtimeServiceFailure {
+	normalized := request
+	normalize := func(revision runtimeServiceStrategyRevision) (runtimeServiceStrategyRevision, bool) {
+		if stringValue(revision.Runtime, "abiVersion") != strategyRuntimeABIVersionV117 {
+			return revision, false
+		}
+		revision.Runtime = cloneMap(revision.Runtime)
+		revision.Metadata = cloneMap(revision.Metadata)
+		if revision.Runtime == nil || revision.Metadata == nil {
+			return revision, false
+		}
+		revision.Runtime["abiVersion"] = strategyRuntimeABIVersion
+		if runtimeAdapterID(revision.Runtime) == "runtime-wasm-wasi-wasmtime-preview1" {
+			artifact := mapValue(revision.Metadata, "compiledArtifact")
+			if stringValue(artifact, "abiVersion") != strategyRuntimeABIVersionV117 {
+				return revision, false
+			}
+			artifact["abiVersion"] = strategyRuntimeABIVersion
+			revision.Metadata["compiledArtifact"] = artifact
+		}
+		return revision, true
+	}
+	var ok bool
+	normalized.Strategies.Bottom, ok = normalize(request.Strategies.Bottom)
+	if !ok {
+		return newRuntimeServiceFailure("RuntimeServiceContractMismatch", "Successor runtime request bottom Strategy ABI is invalid", false, nil)
+	}
+	normalized.Strategies.Top, ok = normalize(request.Strategies.Top)
+	if !ok {
+		return newRuntimeServiceFailure("RuntimeServiceContractMismatch", "Successor runtime request top Strategy ABI is invalid", false, nil)
+	}
+	return validateRuntimeServiceRequest(normalized)
 }
 
 func runtimeServiceStrategyMatchesClaim(strategy runtimeServiceStrategyRevision, evidence goEntrantExecutionEvidence, tuple registeredCompatibilityTuple, registry *goDeploymentLaneRegistry) bool {
@@ -416,6 +502,25 @@ func runtimeServiceCompletionPayload(response *runtimeServiceResponse) (map[stri
 		return nil, nil, runtimeSemanticReceipt{}, runtimeSemanticWireEvidence{}, errors.New("runtime service result missing final state")
 	}
 	return response.Result.Chronicle, response.Result.FinalState, response.Result.SemanticReceipt, response.Result.SemanticWireEvidence.clone(), nil
+}
+
+func runtimeServiceCompletionPayloadV117(response *runtimeServiceResponseV117) (map[string]any, map[string]any, runtimeSemanticReceiptV117, error) {
+	if response == nil || !response.OK || response.Result == nil {
+		return nil, nil, runtimeSemanticReceiptV117{}, errors.New("runtime service v1.17 response did not include a completion result")
+	}
+	var chronicle map[string]any
+	if err := decodeStrictJSONUseNumber(response.Result.Chronicle, &chronicle); err != nil || chronicle == nil {
+		return nil, nil, runtimeSemanticReceiptV117{}, errors.New("runtime service v1.17 result missing Chronicle")
+	}
+	var finalState map[string]any
+	if err := decodeStrictJSONUseNumber(response.Result.FinalState, &finalState); err != nil || finalState == nil {
+		return nil, nil, runtimeSemanticReceiptV117{}, errors.New("runtime service v1.17 result missing final state")
+	}
+	var outcome any
+	if err := decodeStrictJSONUseNumber(response.Result.Outcome, &outcome); err != nil || !jsonValuesEqual(outcome, finalState["outcome"]) {
+		return nil, nil, runtimeSemanticReceiptV117{}, errors.New("runtime service v1.17 result outcome changed")
+	}
+	return chronicle, finalState, response.Result.SemanticReceipt, nil
 }
 
 func defaultRuntimeServiceLimits() map[string]any {
