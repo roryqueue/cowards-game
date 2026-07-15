@@ -20,6 +20,9 @@ import {
   parseRuntimeEvidenceAuthorityHighWaterRecord,
   hashRuntimeEvidenceCertificateRecordV117,
   parseRuntimeEvidenceAuthorityBindingV117,
+  RUNTIME_EVIDENCE_AUTHORITY_PAYLOAD_SCHEMA_VERSION_V1_17,
+  encodeRuntimeEvidenceAuthorityPayloadV117,
+  inspectRuntimeEvidenceAuthorityBundleV117,
   type RuntimeEvidenceAuthorityBindingV117,
   type RuntimeEvidenceAuthorityPayload,
 } from "./runtime-evidence-authority-bundle.js"
@@ -49,6 +52,25 @@ const laneIdentity = {
 const laneIdentityHash = `sha256:${hashExecutableLaneIdentity(laneIdentity)}`
 const attestationHash = `sha256:${"3".repeat(64)}`
 const certificateRecordHash = `sha256:${"4".repeat(64)}`
+
+const fixtureBindingV117 = (): RuntimeEvidenceAuthorityBindingV117 => ({
+  graphSchemaVersion: "runtime-evidence-graph-v1.17",
+  graphProfile: "runtime-identity-evidence-dag-v1",
+  identityManifestRoot: `sha256:${"1".repeat(64)}`,
+  evidenceGraphRoot: `sha256:${"2".repeat(64)}`,
+  exactPins: [
+    ["runtimeExecutableDigest", `sha256:${"3".repeat(64)}`],
+    ["reportedVersion", "node-v26.0.0"],
+    ["targetAbi", "linux-amd64-gnu"],
+    ["compilerFlags", `sha256:${"4".repeat(64)}`],
+    ["adapterBuildDigest", `sha256:${"5".repeat(64)}`],
+    ["standardLibraryOrSysrootDigest", `sha256:${"6".repeat(64)}`],
+    ["containmentPolicyId", "policy.containment.v1"],
+    ["budgetProfileSha256", `sha256:${"7".repeat(64)}`],
+    ["canonicalJsonProfileId", "canonical-json-v1.1"],
+    ["behaviorSettingsHash", `sha256:${"8".repeat(64)}`],
+  ],
+})
 
 const fixturePayload = (
   overrides: Partial<RuntimeEvidenceAuthorityPayload> = {},
@@ -94,24 +116,7 @@ const signedBundle = (
 
 describe("runtime evidence authority bundle", () => {
   it("recomputes the complete public-safe v1.17 binding instead of trusting a shallow reference", () => {
-    const binding: RuntimeEvidenceAuthorityBindingV117 = {
-      graphSchemaVersion: "runtime-evidence-graph-v1.17",
-      graphProfile: "runtime-identity-evidence-dag-v1",
-      identityManifestRoot: `sha256:${"1".repeat(64)}`,
-      evidenceGraphRoot: `sha256:${"2".repeat(64)}`,
-      exactPins: [
-        ["runtimeExecutableDigest", `sha256:${"3".repeat(64)}`],
-        ["reportedVersion", "node-v26.0.0"],
-        ["targetAbi", "linux-amd64-gnu"],
-        ["compilerFlags", `sha256:${"4".repeat(64)}`],
-        ["adapterBuildDigest", `sha256:${"5".repeat(64)}`],
-        ["standardLibraryOrSysrootDigest", `sha256:${"6".repeat(64)}`],
-        ["containmentPolicyId", "policy.containment.v1"],
-        ["budgetProfileSha256", `sha256:${"7".repeat(64)}`],
-        ["canonicalJsonProfileId", "canonical-json-v1.1"],
-        ["behaviorSettingsHash", `sha256:${"8".repeat(64)}`],
-      ],
-    }
+    const binding = fixtureBindingV117()
     expect(parseRuntimeEvidenceAuthorityBindingV117(binding)).toEqual(binding)
     const first = hashRuntimeEvidenceCertificateRecordV117({
       certificateId: "certificate:v1.17:fixture",
@@ -120,7 +125,12 @@ describe("runtime evidence authority bundle", () => {
       binding,
     })
     expect(first).toMatch(/^sha256:[0-9a-f]{64}$/u)
-    const tampered = structuredClone(binding)
+    const tampered = {
+      ...binding,
+      exactPins: binding.exactPins.map(
+        ([name, value]) => [name, value] as [typeof name, string],
+      ),
+    }
     tampered.exactPins[0]![1] = `sha256:${"f".repeat(64)}`
     expect(
       hashRuntimeEvidenceCertificateRecordV117({
@@ -130,6 +140,82 @@ describe("runtime evidence authority bundle", () => {
         binding: tampered,
       }),
     ).not.toBe(first)
+  })
+
+  it("signs and revalidates the exact v1.17 binding through the mounted envelope", () => {
+    const binding = fixtureBindingV117()
+    const attestationId = "attestation:v1.17:fixture"
+    const certificateId = "certificate:v1.17:fixture"
+    const certificateVersion = "runtime-certificate-v1.17"
+    const payload = {
+      schemaVersion: RUNTIME_EVIDENCE_AUTHORITY_PAYLOAD_SCHEMA_VERSION_V1_17,
+      bundleVersion: "bundle:v1.17:fixture",
+      registryGeneration: "7",
+      issuedAt: "2026-07-14T00:00:00.000Z",
+      validFrom: "2026-07-14T00:00:00.000Z",
+      validUntil: "2026-07-15T00:00:00.000Z",
+      semanticTupleManifestHash,
+      sourceManifestHash: `sha256:${"9".repeat(64)}`,
+      attestations: [{
+        attestationId,
+        attestationHash: `sha256:${"a".repeat(64)}`,
+        producerId: "fixture-managed",
+        producerKeyId: "fixture-key",
+        trustDomain: "fixture" as const,
+        managedIdentity: true as const,
+        imports: [],
+        binding,
+      }],
+      certificates: [{
+        certificateId,
+        certificateVersion,
+        certificateRecordHash: hashRuntimeEvidenceCertificateRecordV117({
+          certificateId,
+          certificateVersion,
+          attestationId,
+          binding,
+        }),
+        certificateKind: "containment" as const,
+        attestationId,
+        binding,
+      }],
+    }
+    const keys = generateKeyPairSync("ed25519")
+    const payloadBytes = encodeRuntimeEvidenceAuthorityPayloadV117(payload)
+    const trustDomain = RUNTIME_EVIDENCE_AUTHORITY_TRUST_DOMAINS.fixture
+    const keyId = "fixture-v1.17-key"
+    const envelope = buildRuntimeEvidenceAuthorityEnvelope({
+      trustDomain,
+      keyId,
+      payloadBytes,
+      signature: sign(
+        null,
+        encodeRuntimeEvidenceAuthoritySignatureMessage({ trustDomain, keyId, payloadBytes }),
+        keys.privateKey,
+      ),
+    })
+    const inspected = inspectRuntimeEvidenceAuthorityBundleV117(
+      JSON.stringify(envelope),
+      {
+        expectedTrustDomain: trustDomain,
+        evaluationInstant: "2026-07-14T12:00:00.000Z",
+        trustedKeyIds: [keyId],
+        verifySignature: ({ signedMessageBytes, signature }) =>
+          verify(null, signedMessageBytes, keys.publicKey, signature),
+      },
+    )
+    expect(inspected.payload.certificates[0]?.binding).toEqual(binding)
+    const tampered = structuredClone(payload)
+    tampered.certificates[0]!.binding = {
+      ...tampered.certificates[0]!.binding,
+      exactPins: tampered.certificates[0]!.binding.exactPins.map(
+        ([name, value], index) =>
+          [name, index === 9 ? `sha256:${"f".repeat(64)}` : value] as const,
+      ),
+    }
+    expect(() => encodeRuntimeEvidenceAuthorityPayloadV117(tampered)).toThrow(
+      /authority graph|certificate/iu,
+    )
   })
   it("rejects impossible canonical instants and accepts real leap days", () => {
     expect(() =>

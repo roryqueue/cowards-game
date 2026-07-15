@@ -10,6 +10,16 @@ import {
   type RuntimeEvidenceVerificationMode,
   type RuntimeEvidenceVerifiedSnapshot,
   type VerifyRuntimeEvidenceAttestationInput,
+  RUNTIME_EVIDENCE_REQUIRED_EXACT_PINS_V1_17,
+  getVerifiedRuntimeEvidenceAttestationSnapshotV117,
+  hashRuntimeEvidenceCertificateRecordV117,
+  verifyRuntimeEvidenceAttestationV117,
+  type RuntimeEvidenceAttestationV117,
+  type RuntimeEvidenceBytesV117,
+  type RuntimeEvidenceTrustedProducerV117,
+  type RuntimeEvidenceVerificationModeV117,
+  type RuntimeEvidenceVerifiedSnapshotV117,
+  type RuntimeEvidenceAuthorityBindingV117,
 } from "@cowards/spec"
 import type { Pool, PoolClient, QueryResultRow } from "pg"
 import { withTransaction } from "./db.js"
@@ -368,5 +378,153 @@ export const importVerifiedRuntimeEvidenceAttestation = async (
     const verified = verifyRuntimeEvidenceAttestation(immutableInput)
     const snapshot = getVerifiedRuntimeEvidenceAttestationSnapshot(verified)
     return persistVerified(client, snapshot)
+  })
+}
+
+export interface ImportRuntimeEvidenceAttestationV117Input {
+  mode: RuntimeEvidenceVerificationModeV117
+  attestation: RuntimeEvidenceAttestationV117
+  evidenceBytes: RuntimeEvidenceBytesV117
+  verificationInstant: string
+  trustedProducers?: readonly RuntimeEvidenceTrustedProducerV117[]
+  certificateKind: "containment" | "conformance"
+  certificateVersion: string
+}
+
+export interface ImportedRuntimeEvidenceAttestationV117 {
+  attestationId: string
+  attestationSha256: string
+  certificateId: string
+  certificateRecordHash: string
+  binding: Readonly<RuntimeEvidenceAuthorityBindingV117>
+}
+
+export const runtimeEvidenceAuthorityBindingFromSnapshotV117 = (
+  snapshot: Readonly<RuntimeEvidenceVerifiedSnapshotV117>,
+): Readonly<RuntimeEvidenceAuthorityBindingV117> =>
+  Object.freeze({
+    graphSchemaVersion: snapshot.graphSchemaVersion,
+    graphProfile: snapshot.graphProfile,
+    identityManifestRoot: `sha256:${snapshot.identityManifestRoot}`,
+    evidenceGraphRoot: `sha256:${snapshot.graphSha256}`,
+    exactPins: Object.freeze(
+      RUNTIME_EVIDENCE_REQUIRED_EXACT_PINS_V1_17.map((name) =>
+        Object.freeze([name, snapshot.exactPins[name]] as const),
+      ),
+    ),
+  })
+
+const cloneInputV117 = (
+  input: ImportRuntimeEvidenceAttestationV117Input,
+): ImportRuntimeEvidenceAttestationV117Input => ({
+  ...input,
+  attestation: structuredClone(input.attestation),
+  evidenceBytes: Object.freeze(
+    Object.fromEntries(
+      Object.entries(input.evidenceBytes).map(([nodeId, bytes]) => [
+        nodeId,
+        new Uint8Array(bytes),
+      ]),
+    ),
+  ),
+  ...(input.trustedProducers === undefined
+    ? {}
+    : { trustedProducers: input.trustedProducers.map((producer) => ({ ...producer })) }),
+})
+
+const persistVerifiedV117 = async (
+  client: PoolClient,
+  snapshot: Readonly<RuntimeEvidenceVerifiedSnapshotV117>,
+  input: Pick<ImportRuntimeEvidenceAttestationV117Input, "certificateKind" | "certificateVersion">,
+): Promise<ImportedRuntimeEvidenceAttestationV117> => {
+  if (input.certificateVersion.length === 0 || input.certificateVersion.includes("\0")) {
+    throw new RuntimeEvidenceImportError("Candidate certificate version is invalid.")
+  }
+  const attestationId = `attestation:v1.17:${snapshot.attestationSha256}`
+  const certificateId = `certificate:${input.certificateKind}:v1.17:${snapshot.attestationSha256}`
+  const binding = runtimeEvidenceAuthorityBindingFromSnapshotV117(snapshot)
+  const certificateRecordHash = hashRuntimeEvidenceCertificateRecordV117({
+    certificateId,
+    certificateVersion: input.certificateVersion,
+    attestationId,
+    binding,
+  })
+  const columns = [
+    "attestation_id",
+    "attestation_sha256",
+    "certificate_kind",
+    "certificate_id",
+    "certificate_version",
+    "certificate_record_hash",
+    "producer_id",
+    "producer_key_id",
+    "trust_domain",
+    "managed_identity",
+    "graph_schema_version",
+    "graph_profile",
+    "identity_manifest_root",
+    "evidence_graph_root",
+    "exact_pin_expansion",
+    "registry_generation",
+    "issued_at",
+    "valid_until",
+  ] as const
+  const values = [
+    attestationId,
+    snapshot.attestationSha256,
+    input.certificateKind,
+    certificateId,
+    input.certificateVersion,
+    certificateRecordHash,
+    snapshot.producerId,
+    snapshot.producerKeyId,
+    snapshot.trustDomain,
+    true,
+    snapshot.graphSchemaVersion,
+    snapshot.graphProfile,
+    snapshot.identityManifestRoot,
+    snapshot.graphSha256,
+    binding.exactPins,
+    snapshot.registryGeneration,
+    snapshot.issuedAt,
+    snapshot.validUntil,
+  ] as const
+  await insertImmutableRow(
+    client,
+    "runtime_evidence_v1_17_candidates",
+    columns,
+    values,
+    "attestation_sha256",
+  )
+  const persisted = await client.query(
+    `select ${columns.join(",")}
+       from runtime_evidence_v1_17_candidates
+      where attestation_sha256 = $1`,
+    [snapshot.attestationSha256],
+  )
+  assertExactPersistedRow(persisted.rows[0], columns, values, "v1.17 evidence candidate")
+  return Object.freeze({
+    attestationId,
+    attestationSha256: snapshot.attestationSha256,
+    certificateId,
+    certificateRecordHash,
+    binding,
+  })
+}
+
+/** Candidate-only writer. The production registry is empty, so it cannot certify a counted lane. */
+export const importVerifiedRuntimeEvidenceAttestationV117 = async (
+  pool: Pool,
+  input: ImportRuntimeEvidenceAttestationV117Input,
+): Promise<ImportedRuntimeEvidenceAttestationV117> => {
+  const immutable = cloneInputV117(input)
+  getVerifiedRuntimeEvidenceAttestationSnapshotV117(
+    verifyRuntimeEvidenceAttestationV117(immutable),
+  )
+  return withTransaction(pool, async (client) => {
+    const snapshot = getVerifiedRuntimeEvidenceAttestationSnapshotV117(
+      verifyRuntimeEvidenceAttestationV117(immutable),
+    )
+    return persistVerifiedV117(client, snapshot, immutable)
   })
 }

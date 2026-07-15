@@ -21,6 +21,11 @@ import {
   parseExecutableLaneIdentity,
   type ExecutableLaneIdentity,
   type RuntimeEvidenceAuthorityPayload,
+  RUNTIME_EVIDENCE_AUTHORITY_PAYLOAD_SCHEMA_VERSION_V1_17,
+  encodeRuntimeEvidenceAuthorityPayloadV117,
+  hashRuntimeEvidenceCertificateRecordV117,
+  parseRuntimeEvidenceAuthorityBindingV117,
+  type RuntimeEvidenceAuthorityPayloadV117,
 } from "@cowards/spec"
 import type { Pool, PoolClient, QueryResultRow } from "pg"
 
@@ -1853,4 +1858,118 @@ export const installRuntimeEvidenceAuthorityPublication = async (
     }
     client.release()
   }
+}
+
+export interface PrepareRuntimeEvidenceAuthorityPublicationV117Input {
+  mode: "production" | "fixture"
+  bundleVersion: string
+  registryGeneration: string
+  issuedAt: string
+  validFrom: string
+  validUntil: string
+  semanticTupleManifestHash: string
+  sourceManifestHash: string
+}
+
+export interface PreparedRuntimeEvidenceAuthorityPublicationV117 {
+  payload: Readonly<RuntimeEvidenceAuthorityPayloadV117>
+  payloadBytes: Uint8Array
+  payloadSha256: string
+}
+
+/** Candidate-only v1.17 publisher. The production path stays empty until Phase 259. */
+export const prepareRuntimeEvidenceAuthorityPublicationV117 = async (
+  pool: Pool,
+  input: PrepareRuntimeEvidenceAuthorityPublicationV117Input,
+): Promise<Readonly<PreparedRuntimeEvidenceAuthorityPublicationV117>> => {
+  const rows = await pool.query<{
+    attestation_id: string
+    attestation_sha256: string
+    certificate_kind: "containment" | "conformance"
+    certificate_id: string
+    certificate_version: string
+    certificate_record_hash: string
+    producer_id: string
+    producer_key_id: string
+    trust_domain: "production" | "fixture"
+    managed_identity: boolean
+    graph_schema_version: "runtime-evidence-graph-v1.17"
+    graph_profile: "runtime-identity-evidence-dag-v1"
+    identity_manifest_root: string
+    evidence_graph_root: string
+    exact_pin_expansion: unknown
+  }>(
+    `select attestation_id, attestation_sha256, certificate_kind,
+            certificate_id, certificate_version, certificate_record_hash,
+            producer_id, producer_key_id, trust_domain, managed_identity,
+            graph_schema_version, graph_profile, identity_manifest_root,
+            evidence_graph_root, exact_pin_expansion
+       from runtime_evidence_v1_17_candidates
+      where trust_domain = $1
+      order by attestation_id`,
+    [input.mode],
+  )
+  if (input.mode === "production" && rows.rows.length !== 0) {
+    return fail(
+      "PRODUCTION_V117_UNAVAILABLE",
+      "Production v1.17 evidence producers are not authorized.",
+    )
+  }
+  const attestations = rows.rows.map((row) => {
+    if (!row.managed_identity) {
+      return fail("CLOSED_GRAPH", "v1.17 evidence binding is invalid.")
+    }
+    const binding = parseRuntimeEvidenceAuthorityBindingV117({
+      graphSchemaVersion: row.graph_schema_version,
+      graphProfile: row.graph_profile,
+      identityManifestRoot: `sha256:${row.identity_manifest_root}`,
+      evidenceGraphRoot: `sha256:${row.evidence_graph_root}`,
+      exactPins: row.exact_pin_expansion as never,
+    })
+    const expectedRecordHash = hashRuntimeEvidenceCertificateRecordV117({
+      certificateId: row.certificate_id,
+      certificateVersion: row.certificate_version,
+      attestationId: row.attestation_id,
+      binding,
+    })
+    if (expectedRecordHash !== row.certificate_record_hash) {
+      return fail("CLOSED_GRAPH", "v1.17 certificate binding is invalid.")
+    }
+    return Object.freeze({
+      attestationId: row.attestation_id,
+      attestationHash: `sha256:${row.attestation_sha256}`,
+      producerId: row.producer_id,
+      producerKeyId: row.producer_key_id,
+      trustDomain: row.trust_domain,
+      managedIdentity: true as const,
+      imports: Object.freeze([] as string[]),
+      binding,
+    })
+  })
+  const certificates = rows.rows.map((row, index) => Object.freeze({
+    certificateId: row.certificate_id,
+    certificateVersion: row.certificate_version,
+    certificateRecordHash: row.certificate_record_hash,
+    certificateKind: row.certificate_kind,
+    attestationId: row.attestation_id,
+    binding: attestations[index]!.binding,
+  }))
+  const payload: RuntimeEvidenceAuthorityPayloadV117 = {
+    schemaVersion: RUNTIME_EVIDENCE_AUTHORITY_PAYLOAD_SCHEMA_VERSION_V1_17,
+    bundleVersion: input.bundleVersion,
+    registryGeneration: input.registryGeneration,
+    issuedAt: input.issuedAt,
+    validFrom: input.validFrom,
+    validUntil: input.validUntil,
+    semanticTupleManifestHash: input.semanticTupleManifestHash,
+    sourceManifestHash: input.sourceManifestHash,
+    attestations,
+    certificates,
+  }
+  const payloadBytes = encodeRuntimeEvidenceAuthorityPayloadV117(payload)
+  return Object.freeze({
+    payload,
+    payloadBytes,
+    payloadSha256: hashRuntimeEvidenceAuthorityPayload(payloadBytes),
+  })
 }

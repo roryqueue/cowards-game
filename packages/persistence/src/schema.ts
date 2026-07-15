@@ -27,3 +27,11 @@ export type MatchSetStatus = (typeof MATCH_SET_STATUSES)[number]
 export type MatchJobStatus = (typeof MATCH_JOB_STATUSES)[number]
 
 export const DEFAULT_MAX_JOB_ATTEMPTS = 3
+
+export const RUNTIME_EVIDENCE_V1_17_BINDING_COLUMNS = Object.freeze([
+  "graph_schema_version",
+  "graph_profile",
+  "identity_manifest_root",
+  "evidence_graph_root",
+  "exact_pin_expansion",
+] as const)

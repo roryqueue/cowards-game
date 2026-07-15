@@ -289,7 +289,7 @@ describeDatabase("source identity hardening migration upgrade", () => {
       `)
       const files = await readMigrationFiles()
       for (const file of files) {
-        if (file.name < "0019_strategy_revision_source_identity_hardening.sql") {
+        if (file.name !== "0019_strategy_revision_source_identity_hardening.sql") {
           await pool.query(
             "insert into schema_migrations (filename) values ($1)",
             [file.name],

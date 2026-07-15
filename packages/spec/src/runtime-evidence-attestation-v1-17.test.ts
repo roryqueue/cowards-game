@@ -12,6 +12,9 @@ import {
   RUNTIME_EVIDENCE_GRAPH_SCHEMA_VERSION_V1_17,
   RUNTIME_EVIDENCE_REQUIRED_EXACT_PINS_V1_17,
   type RuntimeEvidenceGraphV117,
+  type RuntimeEvidenceGraphEdgeV117,
+  type RuntimeEvidenceGraphNodeV117,
+  type RuntimeEvidenceExactPinNameV117,
 } from "./runtime-evidence-v1-17.js"
 import {
   RUNTIME_EVIDENCE_TRUSTED_PRODUCERS_V1_17,
@@ -131,6 +134,15 @@ const resign = (
   }
 }
 
+type MutableGraphV117 = Omit<
+  RuntimeEvidenceGraphV117,
+  "edges" | "nodes" | "exactPins"
+> & {
+  edges: RuntimeEvidenceGraphEdgeV117[]
+  nodes: RuntimeEvidenceGraphNodeV117[]
+  exactPins: Record<RuntimeEvidenceExactPinNameV117, string>
+}
+
 describe("runtime evidence v1.17 frozen contract", () => {
   it("freezes fifteen identity domains and the complete twenty-six-edge schema", () => {
     expect(RUNTIME_EVIDENCE_GRAPH_SCHEMA_VERSION_V1_17).toBe(
@@ -194,15 +206,15 @@ describe("runtime evidence v1.17 frozen contract", () => {
   })
 
   it.each([
-    ["cycle", "GRAPH_SCHEMA", (graph: RuntimeEvidenceGraphV117) => graph.edges.push({ fromNodeId: "node:originalSource", toNodeId: "node:evidenceBundle", kind: "normalized-from" })],
-    ["missing edge", "GRAPH_SCHEMA", (graph: RuntimeEvidenceGraphV117) => graph.edges.pop()],
-    ["reversed edge", "GRAPH_SCHEMA", (graph: RuntimeEvidenceGraphV117) => { const candidate = graph.edges[0]!; graph.edges[0] = { ...candidate, fromNodeId: candidate.toNodeId, toNodeId: candidate.fromNodeId } }],
-    ["swapped digest", "DOMAIN_DIGEST", (graph: RuntimeEvidenceGraphV117) => { const left = graph.nodes[0]!; const right = graph.nodes[1]!; const digest = left.sha256; left.sha256 = right.sha256; right.sha256 = digest }],
-    ["floating pin", "EXACT_PIN", (graph: RuntimeEvidenceGraphV117) => { graph.exactPins.reportedVersion = "latest" }],
+    ["cycle", "GRAPH_SCHEMA", (graph: MutableGraphV117) => graph.edges.push({ fromNodeId: "node:originalSource", toNodeId: "node:evidenceBundle", kind: "normalized-from" })],
+    ["missing edge", "GRAPH_SCHEMA", (graph: MutableGraphV117) => graph.edges.pop()],
+    ["reversed edge", "GRAPH_SCHEMA", (graph: MutableGraphV117) => { const candidate = graph.edges[0]!; graph.edges[0] = { ...candidate, fromNodeId: candidate.toNodeId, toNodeId: candidate.fromNodeId } }],
+    ["swapped digest", "DOMAIN_DIGEST", (graph: MutableGraphV117) => { const left = graph.nodes[0]!; const right = graph.nodes[1]!; const digest = left.sha256; left.sha256 = right.sha256; right.sha256 = digest }],
+    ["floating pin", "EXACT_PIN", (graph: MutableGraphV117) => { graph.exactPins.reportedVersion = "latest" }],
   ] as const)("rejects %s after attacker recomputation and resigning", (_name, code, attack) => {
     const source = buildFixture()
     const attacked = resign(source, (attestation) => {
-      attack(attestation.graph as RuntimeEvidenceGraphV117 & { edges: Array<RuntimeEvidenceGraphV117["edges"][number]>; nodes: Array<RuntimeEvidenceGraphV117["nodes"][number]>; exactPins: Record<string, string> })
+      attack(attestation.graph as MutableGraphV117)
       const { graphSha256: _old, ...graph } = attestation.graph
       attestation.graph.graphSha256 = hashRuntimeEvidenceGraphV117(graph)
     })

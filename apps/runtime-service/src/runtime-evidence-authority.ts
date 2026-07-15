@@ -21,9 +21,11 @@ import {
   assertRuntimeEvidenceAuthorityAnchorInstalled,
   evaluateRuntimeEvidenceAuthorityAntiRollback,
   inspectRuntimeEvidenceAuthorityBundle,
+  inspectRuntimeEvidenceAuthorityBundleV117,
   parseRuntimeEvidenceAuthorityHighWaterRecord,
   type RuntimeEvidenceAuthorityHighWaterRecord,
   type RuntimeEvidenceAuthorityPayload,
+  type RuntimeEvidenceAuthorityPayloadV117,
 } from "@cowards/spec"
 
 export const RUNTIME_EVIDENCE_AUTHORITY_PUBLIC_KEY_SCHEMA_VERSION =
@@ -453,4 +455,129 @@ export const createRuntimeEvidenceAuthorityLoader = (
     load,
     current: () => lastGood,
   })
+}
+
+export interface VerifiedMountedRuntimeEvidenceAuthorityV117 {
+  authorityBundleHash: string
+  registryGeneration: string
+  semanticTupleManifestHash: string
+  sourceManifestHash: string
+  trustDomain: string
+  keyId: string
+  payload: Readonly<RuntimeEvidenceAuthorityPayloadV117>
+}
+
+export interface RuntimeEvidenceAuthorityLoaderV117 {
+  load(): Readonly<VerifiedMountedRuntimeEvidenceAuthorityV117>
+  current(): Readonly<VerifiedMountedRuntimeEvidenceAuthorityV117> | undefined
+}
+
+/** Explicit candidate loader; the legacy/current loader is unchanged until Plan 14. */
+export const createRuntimeEvidenceAuthorityLoaderV117 = (
+  config: RuntimeEvidenceAuthorityLoaderConfig,
+): RuntimeEvidenceAuthorityLoaderV117 => {
+  const fileSystem = config.fileSystem ?? createNodeRuntimeEvidenceAuthorityFileSystem()
+  let lastGood: Readonly<VerifiedMountedRuntimeEvidenceAuthorityV117> | undefined
+  let anchorUncertain = false
+
+  const load = (): Readonly<VerifiedMountedRuntimeEvidenceAuthorityV117> => {
+    if (anchorUncertain) throw new RuntimeEvidenceAuthorityLoadError("ANCHOR_IO")
+    try {
+      const bundleBytes = readBoundedDescriptor({
+        fileSystem,
+        path: config.bundlePath,
+        limitBytes: RUNTIME_EVIDENCE_AUTHORITY_LIMITS.envelopeBytes,
+        invalidCode: "ENVELOPE_LIMIT",
+      })
+      const publicKeyDescriptor = parsePublicKeyDescriptor(
+        readBoundedDescriptor({
+          fileSystem,
+          path: config.publicKeyPath,
+          limitBytes: PUBLIC_KEY_LIMIT_BYTES,
+          invalidCode: "PUBLIC_KEY",
+        }),
+      )
+      const inspected = inspectRuntimeEvidenceAuthorityBundleV117(bundleBytes, {
+        expectedTrustDomain: config.expectedTrustDomain,
+        evaluationInstant: config.evaluationInstant(),
+        trustedKeyIds: [publicKeyDescriptor.keyId],
+        verifySignature: ({ signedMessageBytes, signature }) =>
+          verify(null, signedMessageBytes, publicKeyDescriptor.publicKey, signature),
+      })
+      if (
+        !CANONICAL_COMPATIBILITY_TUPLES.some(
+          (tuple) => tuple.tupleId === inspected.payload.semanticTupleManifestHash,
+        )
+      ) throw new RuntimeEvidenceAuthorityLoadError("TUPLE_MANIFEST")
+      const candidate = {
+        registryGeneration: inspected.payload.registryGeneration,
+        payloadSha256: inspected.payloadSha256,
+      }
+      const deploymentPin = {
+        schemaVersion: RUNTIME_EVIDENCE_AUTHORITY_BOOTSTRAP_SCHEMA_VERSION,
+        minimumRegistryGeneration: config.minimumRegistryGeneration,
+        minimumPayloadSha256: config.minimumBundleHash,
+      } as const
+      const initial = evaluateRuntimeEvidenceAuthorityAntiRollback({
+        candidate,
+        bootstrapMode: config.bootstrap,
+        deploymentPin,
+        durableHighWater: readHighWater(fileSystem, config.highWaterPath),
+      })
+      if (initial.durableInstallRequired) {
+        const lockPath = `${config.highWaterPath}.lock`
+        let lockAcquired = false
+        try {
+          fileSystem.makeLock(lockPath)
+          lockAcquired = true
+          const locked = evaluateRuntimeEvidenceAuthorityAntiRollback({
+            candidate,
+            bootstrapMode: config.bootstrap,
+            deploymentPin,
+            durableHighWater: readHighWater(fileSystem, config.highWaterPath),
+          })
+          if (locked.durableInstallRequired) {
+            installHighWater({
+              fileSystem,
+              path: config.highWaterPath,
+              record: locked.nextHighWater,
+            })
+          }
+        } catch (error) {
+          anchorUncertain = true
+          return asLoadError(error, "ANCHOR_IO")
+        } finally {
+          if (lockAcquired) {
+            try {
+              fileSystem.removeLock(lockPath)
+            } catch {
+              anchorUncertain = true
+            }
+          }
+        }
+      }
+      const installed = evaluateRuntimeEvidenceAuthorityAntiRollback({
+        candidate,
+        bootstrapMode: false,
+        deploymentPin,
+        durableHighWater: readHighWater(fileSystem, config.highWaterPath),
+      })
+      assertRuntimeEvidenceAuthorityAnchorInstalled(installed)
+      if (anchorUncertain) throw new RuntimeEvidenceAuthorityLoadError("ANCHOR_IO")
+      const verified = Object.freeze({
+        authorityBundleHash: inspected.payloadSha256,
+        registryGeneration: inspected.payload.registryGeneration,
+        semanticTupleManifestHash: inspected.payload.semanticTupleManifestHash,
+        sourceManifestHash: inspected.payload.sourceManifestHash,
+        trustDomain: inspected.envelope.trustDomain,
+        keyId: inspected.envelope.keyId,
+        payload: inspected.payload,
+      })
+      lastGood = verified
+      return verified
+    } catch (error) {
+      return asLoadError(error, "AUTHORITY_IO")
+    }
+  }
+  return Object.freeze({ load, current: () => lastGood })
 }

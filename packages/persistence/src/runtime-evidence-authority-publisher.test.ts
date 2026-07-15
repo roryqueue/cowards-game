@@ -37,6 +37,7 @@ import {
   importAuthenticatedRuntimeLaneControl,
   installRuntimeEvidenceAuthorityPublication,
   prepareRuntimeEvidenceAuthorityPublication,
+  prepareRuntimeEvidenceAuthorityPublicationV117,
   type RuntimeEvidenceAuthorityInstallFileSystem,
   type RuntimeEvidenceAuthorityImportEnvelope,
   type RuntimeEvidenceAuthorityImportPayload,
@@ -270,6 +271,25 @@ describePostgres(
       await pool.end()
       await admin.query(`drop schema ${schema} cascade`)
       await admin.end()
+    })
+
+    it("keeps production v1.17 candidate publication empty before Phase 259", async () => {
+      const prepared = await prepareRuntimeEvidenceAuthorityPublicationV117(
+        pool,
+        {
+          mode: "production",
+          bundleVersion: "candidate:v1.17",
+          registryGeneration: "1",
+          issuedAt: "2026-07-14T00:00:00.000Z",
+          validFrom: "2026-07-14T00:00:00.000Z",
+          validUntil: "2026-07-15T00:00:00.000Z",
+          semanticTupleManifestHash: CANONICAL_COMPATIBILITY_TUPLES[0]!.tupleId,
+          sourceManifestHash: sha256("candidate-source-manifest"),
+        },
+      )
+      expect(prepared.payload.attestations).toEqual([])
+      expect(prepared.payload.certificates).toEqual([])
+      expect(prepared.payloadSha256).toMatch(/^sha256:[0-9a-f]{64}$/u)
     })
 
     const seedCertificate = async (
