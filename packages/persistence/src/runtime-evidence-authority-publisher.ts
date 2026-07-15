@@ -2030,6 +2030,22 @@ const V117_INSTALL_ID_DOMAIN =
 const V117_INSTALL_RECEIPT_DOMAIN =
   "cowards-game:runtime-evidence-authority-install-receipt:v1.17"
 
+const compareUnsignedUTF8V117 = (left: string, right: string): number => {
+  const encoder = new TextEncoder()
+  const leftBytes = encoder.encode(left)
+  const rightBytes = encoder.encode(right)
+  const length = Math.min(leftBytes.byteLength, rightBytes.byteLength)
+  for (let index = 0; index < length; index += 1) {
+    const difference = leftBytes[index]! - rightBytes[index]!
+    if (difference !== 0) return difference
+  }
+  return leftBytes.byteLength - rightBytes.byteLength
+}
+
+export const sortRuntimeEvidenceAuthoritySourceIdsV117 = (
+  values: readonly string[],
+): readonly string[] => Object.freeze([...values].sort(compareUnsignedUTF8V117))
+
 export const encodeRuntimeEvidenceAuthorityInstallReceiptV117 = (
   value: JsonValue,
 ): Uint8Array => {
@@ -2109,12 +2125,12 @@ export const recordInstalledRuntimeEvidenceAuthorityV117 = async (
     "cowards-game:runtime-evidence-authority-envelope:v1.17",
     input.envelopeBytes,
   )
-  const attestationIds = inspected.payload.attestations
-    .map(({ attestationId }) => attestationId)
-    .sort((left, right) => left.localeCompare(right))
-  const certificateIds = inspected.payload.certificates
-    .map(({ certificateId }) => certificateId)
-    .sort((left, right) => left.localeCompare(right))
+  const attestationIds = sortRuntimeEvidenceAuthoritySourceIdsV117(
+    inspected.payload.attestations.map(({ attestationId }) => attestationId),
+  )
+  const certificateIds = sortRuntimeEvidenceAuthoritySourceIdsV117(
+    inspected.payload.certificates.map(({ certificateId }) => certificateId),
+  )
   const installIdentity = {
     schemaVersion: V117_INSTALL_RECEIPT_SCHEMA,
     authorityBundleHash,

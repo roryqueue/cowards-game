@@ -47,6 +47,7 @@ import {
   prepareRuntimeEvidenceAuthorityPublicationV117,
   encodeRuntimeEvidenceAuthorityInstallReceiptV117,
   recordInstalledRuntimeEvidenceAuthorityV117,
+  sortRuntimeEvidenceAuthoritySourceIdsV117,
   type RuntimeEvidenceAuthorityInstallFileSystem,
   type RuntimeEvidenceAuthorityImportEnvelope,
   type RuntimeEvidenceAuthorityImportPayload,
@@ -363,6 +364,21 @@ describe("v1.17 installed authority persistence boundary", () => {
         ),
       ),
     ).toBe(true)
+    const ordered = sortRuntimeEvidenceAuthoritySourceIdsV117([
+      "source:💩",
+      "source:\uE000",
+      "source:a",
+    ])
+    expect(ordered).toEqual(["source:a", "source:\uE000", "source:💩"])
+    expect(
+      createHash("sha256")
+        .update(
+          encodeRuntimeEvidenceAuthorityInstallReceiptV117({
+            sourceIds: ordered,
+          }),
+        )
+        .digest("hex"),
+    ).toBe("3483db81bfeee0f491ace709fb08a2ab08105c91e18068653ba7e17ab3af0366")
   })
 
   it("requires an independently verified signed bundle and derived install identity", async () => {
