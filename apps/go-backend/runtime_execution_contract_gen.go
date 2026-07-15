@@ -130,6 +130,8 @@ func runtimeInvocationV117SystemFailureRetryable(code string) (bool, bool) {
 		return true, true
 	case "TRANSPORT_CRASH":
 		return true, true
+	case "TIMEOUT":
+		return false, true
 	case "AMBIGUOUS_ATTRIBUTION":
 		return false, true
 	default:
@@ -148,6 +150,7 @@ func runtimeInvocationV117SystemFailureRetryabilitySnapshot() map[string]bool {
 		"RUNTIME_CRASH": true,
 		"HOST_CRASH": true,
 		"TRANSPORT_CRASH": true,
+		"TIMEOUT": false,
 		"AMBIGUOUS_ATTRIBUTION": false,
 	}
 }

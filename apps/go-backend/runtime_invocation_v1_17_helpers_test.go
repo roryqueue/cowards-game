@@ -116,9 +116,7 @@ func runtimeInvocationV117ReceiptForTest(t *testing.T, request *runtimeInvocatio
 	if outcome["kind"] == "player_violation" {
 		violation := outcome["violation"].(map[string]any)
 		key, delta := "", int64(0)
-		if violation["code"] == "TIMEOUT" {
-			key, delta = "wallMilliseconds", 51
-		} else if violation["code"] == "OVERSIZED_OUTPUT" {
+		if violation["code"] == "RESOURCE_EXHAUSTION" {
 			key, delta = "payloadBytes", 262_145
 		}
 		if key != "" {

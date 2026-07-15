@@ -247,7 +247,7 @@ const successfulPayload = (
   ) {
     return playerViolation(
       request,
-      "OVERSIZED_OUTPUT",
+      "RESOURCE_EXHAUSTION",
       "PAYLOAD_CAP_EXCEEDED",
     )
   }
@@ -326,7 +326,7 @@ const classifyGuestFrame = (
     case RUNTIME_GUEST_FRAME_TAGS_V117.oversizedOutput:
       return playerViolation(
         request,
-        "OVERSIZED_OUTPUT",
+        "RESOURCE_EXHAUSTION",
         "PAYLOAD_CAP_EXCEEDED",
       )
     case RUNTIME_GUEST_FRAME_TAGS_V117.transportFailure:
@@ -592,9 +592,9 @@ export const executeStrategyRuntimeAbiV117 = (
   outcome =
     observation.kind === "raw_frame"
       ? observation.bytes.byteLength > stdoutByteLimit
-        ? playerViolation(
+          ? playerViolation(
             request,
-            "OVERSIZED_OUTPUT",
+            "RESOURCE_EXHAUSTION",
             "STDOUT_CAP_EXCEEDED",
           )
         : String.fromCharCode(observation.bytes[0] ?? 0) ===

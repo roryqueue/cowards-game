@@ -1478,7 +1478,7 @@ const budgetViolationCodeForDimensions = (
       dimension.includes("stdout") ||
       dimension.includes("stderr")
     ) {
-      codes.add("OVERSIZED_OUTPUT")
+      codes.add("RESOURCE_EXHAUSTION")
     } else if (
       dimension.includes("compute") ||
       dimension.includes("memory")
@@ -1487,7 +1487,7 @@ const budgetViolationCodeForDimensions = (
     } else if (dimension.includes("wall")) {
       return undefined
     } else if (dimension.includes("process")) {
-      codes.add("FORBIDDEN_CAPABILITY")
+      codes.add("RESOURCE_EXHAUSTION")
     } else {
       return undefined
     }

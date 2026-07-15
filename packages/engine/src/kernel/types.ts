@@ -122,8 +122,15 @@ export interface KernelSuccessResume extends KernelResumeBase {
 
 export interface KernelPlayerViolationResume extends KernelResumeBase {
   readonly classification: "player_violation"
-  readonly violation: RuntimeViolation
+  readonly violation: KernelRuntimeViolation
 }
+
+export type KernelRuntimeViolation =
+  | RuntimeViolation
+  | Readonly<{
+      type: "RESOURCE_EXHAUSTION"
+      message: string
+    }>
 
 export interface KernelSystemFailureResume extends KernelResumeBase {
   readonly classification: "system_failure"

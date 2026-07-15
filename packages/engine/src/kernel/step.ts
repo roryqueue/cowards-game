@@ -6,7 +6,6 @@ import {
   type ActivationOrder,
   type JsonValue,
   type PlayerId,
-  type RuntimeViolation,
   type Soldier,
 } from "@cowards/spec"
 import { activationStartedEvent, createActivationSlots } from "../activation.js"
@@ -30,6 +29,7 @@ import type {
   KernelEffectRequest,
   KernelInput,
   KernelRestrictedFailure,
+  KernelRuntimeViolation,
   KernelStepResult,
   MatchMachine,
 } from "./types.js"
@@ -232,7 +232,7 @@ const parseRetainedStrategyResult = (
 
 const runtimeViolationEvent = (
   playerId: PlayerId,
-  violation: RuntimeViolation,
+  violation: KernelRuntimeViolation,
 ): TransitionEventSummary =>
   event(
     "RUNTIME_VIOLATION",
@@ -247,7 +247,7 @@ const runtimeViolationEvent = (
 const applySoldierRuntimeViolation = (
   state: GameState,
   soldier: Soldier,
-  violation: RuntimeViolation,
+  violation: KernelRuntimeViolation,
   advanced: boolean,
 ): { state: GameState; events: TransitionEventSummary[] } => {
   const events = [
@@ -693,7 +693,7 @@ const resolveSoldierEffect = (
   let state = machine.state
   let events: TransitionEventSummary[] = []
   let classification = input.classification
-  let violation: RuntimeViolation | undefined
+  let violation: KernelRuntimeViolation | undefined
   let parsed: ReturnType<typeof SoldierBrainResultSchema.safeParse> | undefined
   if (input.classification === "player_violation") {
     violation = input.violation

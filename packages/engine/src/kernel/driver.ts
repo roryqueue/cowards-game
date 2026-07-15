@@ -7,7 +7,6 @@ import {
   serializeRuntimeInvocationRequestV117,
   type JsonValue,
   type RuntimeInvocationResultV117,
-  type RuntimeViolation,
 } from "@cowards/spec"
 import { createCandidateInitialGameState } from "./create-initial-state.js"
 import { stepCandidateMatch } from "./step.js"
@@ -328,7 +327,7 @@ const runtimeResume = (
           },
         }
       }
-      const violation: RuntimeViolation = {
+      const violation = {
         type: successor.violation.code,
         message: successor.violation.publicMessage,
       }

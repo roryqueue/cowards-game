@@ -13,6 +13,7 @@ import (
 	"io"
 	"regexp"
 	"strconv"
+	"strings"
 )
 
 const runtimeInvocationV117ContractVersion = "runtime-invocation-v1.17"
@@ -754,7 +755,7 @@ func runtimeInvocationV117TraceValid(value any) bool {
 
 var runtimeInvocationV117ViolationMessages = map[string]string{
 	"INVALID_OUTPUT":       "Strategy returned an invalid payload.",
-	"TIMEOUT":              "Strategy exhausted its invocation budget.",
+	"RESOURCE_EXHAUSTION":  "Strategy exhausted a measured resource budget.",
 	"THROWN_EXCEPTION":     "Strategy threw an exception.",
 	"FORBIDDEN_CAPABILITY": "Strategy attempted a forbidden capability.",
 	"OVERSIZED_OUTPUT":     "Strategy exceeded its output budget.",
@@ -1373,8 +1374,11 @@ func runtimeInvocationV117DebitExecutionLedger(prestate map[string]any, receipt 
 	processes, processOK := runtimeInvocationV117Integer(process["processes"])
 	threads, threadsOK := runtimeInvocationV117Integer(process["threads"])
 	children, childrenOK := runtimeInvocationV117Integer(process["children"])
-	if process["status"] != "verified" || !processOK || !threadsOK || !childrenOK || processes == 0 || threads == 0 || processes > 1 || threads > 1 || children > 0 {
+	if process["status"] != "verified" || !processOK || !threadsOK || !childrenOK || processes == 0 || threads == 0 {
 		return system()
+	}
+	if processes > 1 || threads > 1 || children > 0 {
+		dimensions = append(dimensions, "invocation.process")
 	}
 	capabilities := receipt["capabilities"].(map[string]any)
 	if capabilities["status"] != "verified" || capabilities["filesystem"] != "none" || capabilities["network"] != "disabled" || capabilities["environment"] != "empty" || capabilities["shell"] != "disabled" {
@@ -1392,6 +1396,11 @@ func runtimeInvocationV117DebitExecutionLedger(prestate map[string]any, receipt 
 	monotonic, monotonicOK := accountingEvidence["monotonic"].(bool)
 	if accountingEvidence["status"] != "verified" || !signatureOK || !monotonicOK || !signatureVerified || !monotonic || receipt["attribution"] == "host" {
 		return system()
+	}
+	for _, dimension := range dimensions {
+		if strings.Contains(dimension, "wall") {
+			return system()
+		}
 	}
 	next, ok := runtimeInvocationV117CloneObject(prestate)
 	if !ok {
@@ -1438,18 +1447,7 @@ func runtimeInvocationV117DebitMatchesOutcome(debit runtimeInvocationV117DebitRe
 		return false
 	}
 	violation := outcome["violation"].(map[string]any)
-	want := ""
-	for _, dimension := range debit.dimensions {
-		candidate := "TIMEOUT"
-		if regexp.MustCompile(`payload|stdout|stderr`).MatchString(dimension) {
-			candidate = "OVERSIZED_OUTPUT"
-		}
-		if want != "" && want != candidate {
-			return false
-		}
-		want = candidate
-	}
-	return want != "" && violation["code"] == want
+	return len(debit.dimensions) > 0 && violation["code"] == "RESOURCE_EXHAUSTION"
 }
 
 func runtimeInvocationV117DeriveResponseAccounting(request *runtimeInvocationRequestV117, outcome map[string]any, receipt map[string]any) (map[string]any, bool) {

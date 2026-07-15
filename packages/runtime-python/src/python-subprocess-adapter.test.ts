@@ -780,7 +780,7 @@ describe("Python subprocess Strategy provider ABI", () => {
       [exact, "INVALID_OUTPUT"],
       [
         Buffer.concat([exact.subarray(0, -2), Buffer.from('x"}')]),
-        "OVERSIZED_OUTPUT",
+        "RESOURCE_EXHAUSTION",
       ],
     ] as const) {
       const request = candidateRequest(revision)
@@ -1088,7 +1088,7 @@ describe("Python subprocess Strategy provider ABI", () => {
     if (response.kind === "success") {
       expect(response.value.outcome).toMatchObject({
         kind: "player_violation",
-        violation: { code: "OVERSIZED_OUTPUT" },
+        violation: { code: "RESOURCE_EXHAUSTION" },
       })
       expect(response.value.accounting.disposition).toBe("commit")
       expect(response.value.accounting.receipt.counters).toMatchObject({

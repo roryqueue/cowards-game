@@ -125,6 +125,9 @@ const measuredReceiptFor = (
     ? successPayload.bytes.byteLength + 1
     : 1
   const stderrByteLength = successPayload === undefined ? 1 : 0
+  const resourceExhaustion =
+    outcome.kind === "player_violation" &&
+    outcome.violation.code === "RESOURCE_EXHAUSTION"
   return createRuntimeInvocationExecutionReceiptV117(request, {
     attribution:
       outcome.kind === "system_failure"
@@ -132,7 +135,10 @@ const measuredReceiptFor = (
         : ("proven_strategy" as const),
     counters: {
       wallMilliseconds: measuredCounter("wallMilliseconds"),
-      computeFuel: measuredCounter("computeFuel"),
+      computeFuel: measuredCounter(
+        "computeFuel",
+        resourceExhaustion ? 10_000_001 : 1,
+      ),
       payloadBytes: measuredCounter("payloadBytes", payloadByteLength),
       stdoutBytes: measuredCounter("stdoutBytes", stdoutByteLength),
       stderrBytes: measuredCounter("stderrBytes", stderrByteLength),

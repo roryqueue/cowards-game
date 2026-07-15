@@ -1089,7 +1089,7 @@ describe("WASM/WASI runtime v1.17 candidate host authority", () => {
 
     expect(stdoutResponse.outcome).toMatchObject({
       kind: "player_violation",
-      violation: { code: "OVERSIZED_OUTPUT" },
+      violation: { code: "RESOURCE_EXHAUSTION" },
     })
     expect(stderrResponse.outcome).toMatchObject({
       kind: "system_failure",
