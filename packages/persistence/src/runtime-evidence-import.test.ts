@@ -474,9 +474,22 @@ describePostgres("PostgreSQL verified runtime evidence import", () => {
       pool,
       candidate,
     )
+    await expect(
+      importVerifiedRuntimeEvidenceAttestationV117(pool, {
+        ...candidate,
+        attestation: {
+          ...candidate.attestation,
+          signatureBase64: `${candidate.attestation.signatureBase64}\n`,
+        },
+      }),
+    ).rejects.toThrow()
     expect(
       await importVerifiedRuntimeEvidenceAttestationV117(pool, candidate),
     ).toEqual(first)
+    const candidateRows = await pool.query(
+      "select count(*)::integer as count from runtime_evidence_v1_17_candidates",
+    )
+    expect(candidateRows.rows[0]?.count).toBe(1)
 
     const prepared = await prepareRuntimeEvidenceAuthorityPublicationV117(
       pool,

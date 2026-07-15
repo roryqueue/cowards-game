@@ -70,9 +70,13 @@ const buildFixture = () => {
       compilerFlags: `sha256:${"1".repeat(64)}`,
       adapterBuildDigest: `sha256:${bindings.find((v) => v.domain === "adapterBuild")!.sha256}`,
       standardLibraryOrSysrootDigest: `sha256:${bindings.find((v) => v.domain === "sysrootStdlib")!.sha256}`,
-      containmentPolicyId: bindings.find((v) => v.domain === "containmentPolicy")!.publicId,
+      containmentPolicyId: bindings.find(
+        (v) => v.domain === "containmentPolicy",
+      )!.publicId,
       budgetProfileSha256: `sha256:${bindings.find((v) => v.domain === "budgetProfile")!.sha256}`,
-      canonicalJsonProfileId: bindings.find((v) => v.domain === "canonicalJsonProfile")!.publicId,
+      canonicalJsonProfileId: bindings.find(
+        (v) => v.domain === "canonicalJsonProfile",
+      )!.publicId,
       behaviorSettingsHash: `sha256:${"2".repeat(64)}`,
     },
   }
@@ -105,7 +109,9 @@ const buildFixture = () => {
     keyId: payload.producerKeyId,
     trustDomain: "fixture",
     managedIdentity: true,
-    publicKeyPem: keys.publicKey.export({ type: "spki", format: "pem" }).toString(),
+    publicKeyPem: keys.publicKey
+      .export({ type: "spki", format: "pem" })
+      .toString(),
   }
   return { attestation, producer, evidenceBytes: bytes }
 }
@@ -129,7 +135,9 @@ const resign = (
     producer: {
       ...source.producer,
       keyId: "mutation-key",
-      publicKeyPem: keys.publicKey.export({ type: "spki", format: "pem" }).toString(),
+      publicKeyPem: keys.publicKey
+        .export({ type: "spki", format: "pem" })
+        .toString(),
     },
   }
 }
@@ -154,7 +162,9 @@ describe("runtime evidence v1.17 frozen contract", () => {
     expect(RUNTIME_EVIDENCE_GRAPH_NODE_KINDS_V1_17).toHaveLength(15)
     expect(new Set(RUNTIME_EVIDENCE_GRAPH_NODE_KINDS_V1_17).size).toBe(15)
     expect(RUNTIME_EVIDENCE_EDGE_SCHEMA_V1_17).toHaveLength(26)
-    expect(new Set(RUNTIME_EVIDENCE_EDGE_SCHEMA_V1_17.map((edge) => edge.kind)).size).toBe(26)
+    expect(
+      new Set(RUNTIME_EVIDENCE_EDGE_SCHEMA_V1_17.map((edge) => edge.kind)).size,
+    ).toBe(26)
     expect(RUNTIME_EVIDENCE_EDGE_SCHEMA_V1_17).toContainEqual({
       from: "evidenceBundle",
       to: "artifactManifest",
@@ -205,33 +215,93 @@ describe("runtime evidence v1.17 frozen contract", () => {
     expect(verified.exactPins).toEqual(fixture.attestation.graph.exactPins)
   })
 
-  it.each([
-    ["cycle", "GRAPH_SCHEMA", (graph: MutableGraphV117) => graph.edges.push({ fromNodeId: "node:originalSource", toNodeId: "node:evidenceBundle", kind: "normalized-from" })],
-    ["missing edge", "GRAPH_SCHEMA", (graph: MutableGraphV117) => graph.edges.pop()],
-    ["reversed edge", "GRAPH_SCHEMA", (graph: MutableGraphV117) => { const candidate = graph.edges[0]!; graph.edges[0] = { ...candidate, fromNodeId: candidate.toNodeId, toNodeId: candidate.fromNodeId } }],
-    ["swapped digest", "DOMAIN_DIGEST", (graph: MutableGraphV117) => { const left = graph.nodes[0]!; const right = graph.nodes[1]!; const digest = left.sha256; left.sha256 = right.sha256; right.sha256 = digest }],
-    ["floating pin", "EXACT_PIN", (graph: MutableGraphV117) => { graph.exactPins.reportedVersion = "latest" }],
-  ] as const)("rejects %s after attacker recomputation and resigning", (_name, code, attack) => {
-    const source = buildFixture()
-    const attacked = resign(source, (attestation) => {
-      attack(attestation.graph as MutableGraphV117)
-      const { graphSha256: _old, ...graph } = attestation.graph
-      attestation.graph.graphSha256 = hashRuntimeEvidenceGraphV117(graph)
-    })
-    try {
+  it("rejects alternate Base64 spellings of the same Ed25519 signature", () => {
+    const fixture = buildFixture()
+    const attestation = {
+      ...fixture.attestation,
+      signatureBase64: `${fixture.attestation.signatureBase64}\n`,
+    }
+    expect(() =>
       verifyRuntimeEvidenceAttestationV117({
         mode: "fixture",
-        ...attacked,
+        attestation,
+        evidenceBytes: fixture.evidenceBytes,
         verificationInstant: "2026-07-14T12:00:00.000Z",
-        trustedProducers: [attacked.producer],
-      })
-      throw new Error("attack accepted")
-    } catch (error) {
-      expect(error).toBeInstanceOf(RuntimeEvidenceAttestationV117Error)
-      expect((error as RuntimeEvidenceAttestationV117Error).code).toBe(code)
-      expect((error as Error).message).not.toContain("fixture.")
-    }
+        trustedProducers: [fixture.producer],
+      }),
+    ).toThrowError(RuntimeEvidenceAttestationV117Error)
   })
+
+  it.each([
+    [
+      "cycle",
+      "GRAPH_SCHEMA",
+      (graph: MutableGraphV117) =>
+        graph.edges.push({
+          fromNodeId: "node:originalSource",
+          toNodeId: "node:evidenceBundle",
+          kind: "normalized-from",
+        }),
+    ],
+    [
+      "missing edge",
+      "GRAPH_SCHEMA",
+      (graph: MutableGraphV117) => graph.edges.pop(),
+    ],
+    [
+      "reversed edge",
+      "GRAPH_SCHEMA",
+      (graph: MutableGraphV117) => {
+        const candidate = graph.edges[0]!
+        graph.edges[0] = {
+          ...candidate,
+          fromNodeId: candidate.toNodeId,
+          toNodeId: candidate.fromNodeId,
+        }
+      },
+    ],
+    [
+      "swapped digest",
+      "DOMAIN_DIGEST",
+      (graph: MutableGraphV117) => {
+        const left = graph.nodes[0]!
+        const right = graph.nodes[1]!
+        const digest = left.sha256
+        left.sha256 = right.sha256
+        right.sha256 = digest
+      },
+    ],
+    [
+      "floating pin",
+      "EXACT_PIN",
+      (graph: MutableGraphV117) => {
+        graph.exactPins.reportedVersion = "latest"
+      },
+    ],
+  ] as const)(
+    "rejects %s after attacker recomputation and resigning",
+    (_name, code, attack) => {
+      const source = buildFixture()
+      const attacked = resign(source, (attestation) => {
+        attack(attestation.graph as MutableGraphV117)
+        const { graphSha256: _old, ...graph } = attestation.graph
+        attestation.graph.graphSha256 = hashRuntimeEvidenceGraphV117(graph)
+      })
+      try {
+        verifyRuntimeEvidenceAttestationV117({
+          mode: "fixture",
+          ...attacked,
+          verificationInstant: "2026-07-14T12:00:00.000Z",
+          trustedProducers: [attacked.producer],
+        })
+        throw new Error("attack accepted")
+      } catch (error) {
+        expect(error).toBeInstanceOf(RuntimeEvidenceAttestationV117Error)
+        expect((error as RuntimeEvidenceAttestationV117Error).code).toBe(code)
+        expect((error as Error).message).not.toContain("fixture.")
+      }
+    },
+  )
 
   it("keeps the production managed-producer registry empty and rejects caller trust", () => {
     const fixture = buildFixture()
