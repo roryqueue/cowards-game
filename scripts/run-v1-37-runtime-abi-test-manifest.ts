@@ -1,12 +1,13 @@
 import { spawnSync } from "node:child_process"
 import { readFileSync } from "node:fs"
+import { basename } from "node:path"
 
 export type RuntimeAbiTestStage =
   | "preactivation"
   | "activation"
   | "postactivation"
 
-type TestEntry = Readonly<{
+export type RuntimeAbiTestEntry = Readonly<{
   id: string
   stage: RuntimeAbiTestStage
   kind: "vitest" | "go" | "playwright" | "command"
@@ -24,7 +25,7 @@ type TestEntry = Readonly<{
 type TestManifest = Readonly<{
   schemaVersion: "runtime-abi-v1.17-test-manifest-v1"
   activationPlan: "258-14"
-  tests: readonly TestEntry[]
+  tests: readonly RuntimeAbiTestEntry[]
 }>
 
 const stageRank: Readonly<Record<RuntimeAbiTestStage, number>> = {
@@ -42,6 +43,121 @@ const stages = new Set<RuntimeAbiTestStage>([
   "postactivation",
 ])
 
+const sameStrings = (
+  actual: readonly string[],
+  expected: readonly string[],
+): boolean =>
+  actual.length === expected.length &&
+  actual.every((value, index) => value === expected[index])
+
+const assertExactRuntimeAbiTestCommand = (
+  test: RuntimeAbiTestEntry,
+): void => {
+  switch (test.kind) {
+    case "vitest": {
+      const prefix = ["pnpm", "exec", "vitest", "run", "--reporter=verbose"]
+      let fileIndex = prefix.length
+      if (!sameStrings(test.command.slice(0, prefix.length), prefix)) {
+        throw new TypeError(`Runtime ABI test lacks exact command: ${test.id}`)
+      }
+      if (test.command[fileIndex] === "--maxWorkers=1") fileIndex += 1
+      if (
+        test.workingDirectory !== undefined ||
+        !sameStrings(test.command.slice(fileIndex), test.ownedFiles)
+      ) {
+        throw new TypeError(`Runtime ABI test lacks exact command: ${test.id}`)
+      }
+      return
+    }
+    case "go": {
+      const expected = [
+        "go",
+        "test",
+        ".",
+        "-run",
+        `^${test.namedResult}$`,
+        "-v",
+        "-count=1",
+      ]
+      if (
+        test.workingDirectory !== "apps/go-backend" ||
+        !sameStrings(test.command, expected)
+      ) {
+        throw new TypeError(`Runtime ABI test lacks exact command: ${test.id}`)
+      }
+      return
+    }
+    case "playwright": {
+      if (
+        test.workingDirectory !== undefined ||
+        test.ownedFiles.length !== 1 ||
+        !sameStrings(test.command, [
+          "pnpm",
+          "exec",
+          "playwright",
+          "test",
+          test.ownedFiles[0]!,
+          "--project=desktop",
+        ])
+      ) {
+        throw new TypeError(`Runtime ABI test lacks exact command: ${test.id}`)
+      }
+      return
+    }
+    case "command":
+      throw new TypeError(`Runtime ABI test lacks exact command: ${test.id}`)
+  }
+}
+
+export const validateRuntimeAbiTestResult = (
+  test: RuntimeAbiTestEntry,
+  output: string,
+): void => {
+  if (/\b(no tests|0 tests|zero tests)\b/iu.test(output)) {
+    throw new TypeError(`${test.id} reported zero tests.`)
+  }
+  for (const ownedFile of test.ownedFiles) {
+    if (!output.includes(basename(ownedFile))) {
+      throw new TypeError(`${test.id} omitted named file ${ownedFile}.`)
+    }
+  }
+  if (test.expectedOutput.some((marker) => !output.includes(marker))) {
+    throw new TypeError(`${test.id} omitted an exact output marker.`)
+  }
+  if (/\b(skip|skipped|todo)\b/iu.test(output) || /--- SKIP:/u.test(output)) {
+    throw new TypeError(`${test.id} reported a skipped required result.`)
+  }
+  switch (test.kind) {
+    case "vitest": {
+      const fileCount = test.ownedFiles.length
+      const testFiles = new RegExp(
+        `Test Files\\s+${String(fileCount)} passed \\(${String(fileCount)}\\)`,
+        "u",
+      )
+      if (!testFiles.test(output) || !/Tests\s+[1-9][0-9]* passed \([1-9][0-9]*\)/u.test(output)) {
+        throw new TypeError(`${test.id} did not report structured Vitest PASS.`)
+      }
+      return
+    }
+    case "go":
+      if (
+        !output.includes(`=== RUN   ${test.namedResult}`) ||
+        !output.includes(`--- PASS: ${test.namedResult}`) ||
+        !/(?:^|\n)PASS(?:\n|$)/u.test(output)
+      ) {
+        throw new TypeError(`${test.id} did not report structured Go PASS.`)
+      }
+      return
+    case "playwright":
+      if (!/\b[1-9][0-9]* passed\b/u.test(output)) {
+        throw new TypeError(`${test.id} did not report structured Playwright PASS.`)
+      }
+      return
+    case "command":
+      throw new TypeError(`${test.id} used an unsupported generic command.`)
+  }
+}
+
 export const parseRuntimeAbiTestManifest = (value: unknown): TestManifest => {
   if (
     !isRecord(value) ||
@@ -52,7 +168,7 @@ export const parseRuntimeAbiTestManifest = (value: unknown): TestManifest => {
   ) {
     throw new TypeError("Runtime ABI test manifest is malformed.")
   }
-  const tests = value.tests.map((raw): TestEntry => {
+  const tests = value.tests.map((raw): RuntimeAbiTestEntry => {
     if (
       !isRecord(raw) ||
       typeof raw.id !== "string" ||
@@ -84,7 +200,7 @@ export const parseRuntimeAbiTestManifest = (value: unknown): TestManifest => {
     ) {
       throw new TypeError(`Generic package test command is forbidden: ${raw.id}`)
     }
-    let database: TestEntry["database"]
+    let database: RuntimeAbiTestEntry["database"]
     if (raw.database !== undefined) {
       if (
         !isRecord(raw.database) ||
@@ -98,7 +214,7 @@ export const parseRuntimeAbiTestManifest = (value: unknown): TestManifest => {
         skipAllowed: false,
       }
     }
-    return {
+    const test: RuntimeAbiTestEntry = {
       id: raw.id,
       stage: raw.stage as RuntimeAbiTestStage,
       kind: raw.kind,
@@ -111,6 +227,8 @@ export const parseRuntimeAbiTestManifest = (value: unknown): TestManifest => {
       ownedFiles: raw.ownedFiles as string[],
       ...(database === undefined ? {} : { database }),
     }
+    assertExactRuntimeAbiTestCommand(test)
+    return test
   })
   if (new Set(tests.map(({ id }) => id)).size !== tests.length) {
     throw new TypeError("Runtime ABI test manifest has duplicate ids.")
@@ -160,18 +278,7 @@ export const runRuntimeAbiTestManifest = (options: {
     if (result.status !== 0) {
       throw new TypeError(`${test.id} failed with status ${String(result.status)}.`)
     }
-    if (
-      /\b(no tests|0 tests|zero tests)\b/iu.test(output) ||
-      test.expectedOutput.some((marker) => !output.includes(marker))
-    ) {
-      throw new TypeError(`${test.id} did not report every named result.`)
-    }
-    if (
-      test.database !== undefined &&
-      (/\bskip(?:ped)?\b/iu.test(output) || /--- SKIP:/u.test(output))
-    ) {
-      throw new TypeError(`${test.id} skipped a required database result.`)
-    }
+    validateRuntimeAbiTestResult(test, output)
   }
   if (options.requireAll && selected.length !== manifest.tests.filter(
     ({ stage }) => stageRank[stage] <= stageRank[options.stage],
