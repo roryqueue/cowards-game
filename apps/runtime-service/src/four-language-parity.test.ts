@@ -79,32 +79,44 @@ const availableLanguages = fourLanguageGoldenSources
   })
   .map((source) => source.languageId)
 
+const builtRevisionCache = new Map<
+  FourLanguageGoldenLanguageId,
+  StrategyRevision
+>()
+
 const buildRevision = (
   languageId: FourLanguageGoldenLanguageId,
 ): StrategyRevision => {
+  const cached = builtRevisionCache.get(languageId)
+  if (cached !== undefined) return cached
+
   const source = sourceFor(languageId).source
-  switch (languageId) {
-    case "typescript":
-      return buildStrategyRevision({
-        source,
-        strategyId: "strategy:golden:typescript",
-      })
-    case "python":
-      return buildPythonStrategyRevision({
-        source,
-        strategyId: "strategy:golden:python",
-      })
-    case "rust":
-      return buildRustStrategyRevision({
-        source,
-        strategyId: "strategy:golden:rust",
-      })
-    case "zig":
-      return buildZigStrategyRevision({
-        source,
-        strategyId: "strategy:golden:zig",
-      })
-  }
+  const revision = (() => {
+    switch (languageId) {
+      case "typescript":
+        return buildStrategyRevision({
+          source,
+          strategyId: "strategy:golden:typescript",
+        })
+      case "python":
+        return buildPythonStrategyRevision({
+          source,
+          strategyId: "strategy:golden:python",
+        })
+      case "rust":
+        return buildRustStrategyRevision({
+          source,
+          strategyId: "strategy:golden:rust",
+        })
+      case "zig":
+        return buildZigStrategyRevision({
+          source,
+          strategyId: "strategy:golden:zig",
+        })
+    }
+  })()
+  builtRevisionCache.set(languageId, revision)
+  return revision
 }
 
 const requestForPair = (input: {
