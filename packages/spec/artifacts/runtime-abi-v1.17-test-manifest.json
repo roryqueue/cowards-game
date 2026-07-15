@@ -1,0 +1,105 @@
+{
+  "schemaVersion": "runtime-abi-v1.17-test-manifest-v1",
+  "activationPlan": "258-14",
+  "tests": [
+    {
+      "id": "phase258.spec-and-codecs",
+      "stage": "preactivation",
+      "kind": "vitest",
+      "command": ["pnpm", "exec", "vitest", "run", "packages/spec/src/canonical-identity-domains.test.ts", "packages/spec/src/canonical-json-boundaries.test.ts", "packages/spec/src/canonical-json-corpus.test.ts", "packages/spec/src/canonical-json-encode.test.ts", "packages/spec/src/canonical-json-parse.test.ts", "packages/spec/src/canonical-json-scan.test.ts", "packages/spec/src/runtime-abi-v1-17.test.ts", "packages/spec/src/runtime-evidence-attestation-v1-17.test.ts", "packages/spec/src/runtime-evidence-authority-bundle.test.ts", "packages/spec/src/runtime-execution-service-v1-17.test.ts", "packages/spec/src/runtime-identity-manifest.test.ts", "packages/spec/src/runtime-invocation-v1-17.test.ts"],
+      "namedResult": "phase258-spec-and-codecs",
+      "expectedOutput": ["canonical-identity-domains.test.ts", "runtime-abi-v1-17.test.ts", "runtime-invocation-v1-17.test.ts", "runtime-execution-service-v1-17.test.ts"],
+      "ownedFiles": ["packages/spec/src/canonical-identity-domains.test.ts", "packages/spec/src/canonical-json-boundaries.test.ts", "packages/spec/src/canonical-json-corpus.test.ts", "packages/spec/src/canonical-json-encode.test.ts", "packages/spec/src/canonical-json-parse.test.ts", "packages/spec/src/canonical-json-scan.test.ts", "packages/spec/src/runtime-abi-v1-17.test.ts", "packages/spec/src/runtime-evidence-attestation-v1-17.test.ts", "packages/spec/src/runtime-evidence-authority-bundle.test.ts", "packages/spec/src/runtime-execution-service-v1-17.test.ts", "packages/spec/src/runtime-identity-manifest.test.ts", "packages/spec/src/runtime-invocation-v1-17.test.ts"]
+    },
+    {
+      "id": "phase258.runtime-lanes",
+      "stage": "preactivation",
+      "kind": "vitest",
+      "command": ["pnpm", "exec", "vitest", "run", "--maxWorkers=1", "packages/runtime-js/src/adapter-contract.test.ts", "packages/runtime-js/src/hostile-matrix.test.ts", "packages/runtime-python/src/python-subprocess-adapter.test.ts", "packages/runtime-wasm-wasi/src/wasm-wasi-subprocess-adapter.test.ts"],
+      "namedResult": "phase258-runtime-lanes",
+      "expectedOutput": ["adapter-contract.test.ts", "hostile-matrix.test.ts", "python-subprocess-adapter.test.ts", "wasm-wasi-subprocess-adapter.test.ts"],
+      "ownedFiles": ["packages/runtime-js/src/adapter-contract.test.ts", "packages/runtime-js/src/hostile-matrix.test.ts", "packages/runtime-python/src/python-subprocess-adapter.test.ts", "packages/runtime-wasm-wasi/src/wasm-wasi-subprocess-adapter.test.ts"]
+    },
+    {
+      "id": "phase258.service-and-engine",
+      "stage": "preactivation",
+      "kind": "vitest",
+      "command": ["pnpm", "exec", "vitest", "run", "apps/runtime-service/src/counted-safety.test.ts", "apps/runtime-service/src/execute-match.test.ts", "apps/runtime-service/src/runtime-evidence-authority.test.ts", "apps/runtime-service/src/semantic-integrity.test.ts", "apps/runtime-service/src/semantic-receipt-v1-17.test.ts", "apps/runtime-service/src/server.test.ts", "packages/engine/src/kernel/runtime-ownership.test.ts"],
+      "namedResult": "phase258-service-and-engine",
+      "expectedOutput": ["counted-safety.test.ts", "execute-match.test.ts", "server.test.ts", "runtime-ownership.test.ts"],
+      "ownedFiles": ["apps/runtime-service/src/counted-safety.test.ts", "apps/runtime-service/src/execute-match.test.ts", "apps/runtime-service/src/runtime-evidence-authority.test.ts", "apps/runtime-service/src/semantic-integrity.test.ts", "apps/runtime-service/src/semantic-receipt-v1-17.test.ts", "apps/runtime-service/src/server.test.ts", "packages/engine/src/kernel/runtime-ownership.test.ts"]
+    },
+    {
+      "id": "phase258.scripts",
+      "stage": "preactivation",
+      "kind": "vitest",
+      "command": ["pnpm", "exec", "vitest", "run", "scripts/calibrate-v1-37-runtime-abi.test.ts", "scripts/check-canonical-json-v1-1-red.test.ts", "scripts/check-v1-37-integrity-boundaries.test.ts", "scripts/check-v1-37-runtime-abi-manifest-closure.test.ts", "scripts/generate-canonical-json-v1-1-corpus.test.ts", "scripts/generate-go-parity-fixtures.test.ts", "scripts/run-v1-37-runtime-abi-test-manifest.test.ts"],
+      "namedResult": "phase258-scripts",
+      "expectedOutput": ["calibrate-v1-37-runtime-abi.test.ts", "check-v1-37-runtime-abi-manifest-closure.test.ts", "run-v1-37-runtime-abi-test-manifest.test.ts"],
+      "ownedFiles": ["scripts/calibrate-v1-37-runtime-abi.test.ts", "scripts/check-canonical-json-v1-1-red.test.ts", "scripts/check-v1-37-integrity-boundaries.test.ts", "scripts/check-v1-37-runtime-abi-manifest-closure.test.ts", "scripts/generate-canonical-json-v1-1-corpus.test.ts", "scripts/generate-go-parity-fixtures.test.ts", "scripts/run-v1-37-runtime-abi-test-manifest.test.ts"]
+    },
+    {
+      "id": "phase258.database",
+      "stage": "preactivation",
+      "kind": "vitest",
+      "command": ["pnpm", "exec", "vitest", "run", "packages/persistence/src/account-revisions.test.ts", "packages/persistence/src/complete-match.test.ts", "packages/persistence/src/migrations.test.ts", "packages/persistence/src/runtime-evidence-authority-publisher.test.ts", "packages/persistence/src/runtime-evidence-import.test.ts"],
+      "namedResult": "phase258-required-database",
+      "expectedOutput": ["account-revisions.test.ts", "complete-match.test.ts", "migrations.test.ts", "runtime-evidence-import.test.ts"],
+      "ownedFiles": ["packages/persistence/src/account-revisions.test.ts", "packages/persistence/src/complete-match.test.ts", "packages/persistence/src/migrations.test.ts", "packages/persistence/src/runtime-evidence-authority-publisher.test.ts", "packages/persistence/src/runtime-evidence-import.test.ts"],
+      "database": { "dsnEnvironmentVariable": "DATABASE_URL", "skipAllowed": false }
+    },
+    {
+      "id": "phase258.go.current-contract",
+      "stage": "preactivation",
+      "kind": "go",
+      "command": ["go", "test", ".", "-run", "^TestPhase258CurrentDefaultRuntimeServiceContract$", "-v", "-count=1"],
+      "workingDirectory": "apps/go-backend",
+      "namedResult": "TestPhase258CurrentDefaultRuntimeServiceContract",
+      "expectedOutput": ["--- PASS: TestPhase258CurrentDefaultRuntimeServiceContract"],
+      "ownedFiles": ["apps/go-backend/runtime_service_client_v1_17_test.go"],
+      "database": { "dsnEnvironmentVariable": "COWARDS_GO_BACKEND_TEST_DATABASE_URL", "skipAllowed": false }
+    },
+    {
+      "id": "phase258.go.current-routes",
+      "stage": "preactivation",
+      "kind": "go",
+      "command": ["go", "test", ".", "-run", "^TestPhase258CurrentDefaultRoutes$", "-v", "-count=1"],
+      "workingDirectory": "apps/go-backend",
+      "namedResult": "TestPhase258CurrentDefaultRoutes",
+      "expectedOutput": ["--- PASS: TestPhase258CurrentDefaultRoutes"],
+      "ownedFiles": ["apps/go-backend/runtime_service_client_v1_17_test.go"],
+      "database": { "dsnEnvironmentVariable": "COWARDS_GO_BACKEND_TEST_DATABASE_URL", "skipAllowed": false }
+    },
+    {
+      "id": "phase258.go.mixed-fails-closed",
+      "stage": "preactivation",
+      "kind": "go",
+      "command": ["go", "test", ".", "-run", "^TestPhase258MixedRuntimeContractFailsClosed$", "-v", "-count=1"],
+      "workingDirectory": "apps/go-backend",
+      "namedResult": "TestPhase258MixedRuntimeContractFailsClosed",
+      "expectedOutput": ["--- PASS: TestPhase258MixedRuntimeContractFailsClosed"],
+      "ownedFiles": ["apps/go-backend/runtime_service_client_v1_17_test.go"],
+      "database": { "dsnEnvironmentVariable": "COWARDS_GO_BACKEND_TEST_DATABASE_URL", "skipAllowed": false }
+    },
+    {
+      "id": "phase258.go.historical-v116",
+      "stage": "preactivation",
+      "kind": "go",
+      "command": ["go", "test", ".", "-run", "^TestPhase258HistoricalV116Dispatch$", "-v", "-count=1"],
+      "workingDirectory": "apps/go-backend",
+      "namedResult": "TestPhase258HistoricalV116Dispatch",
+      "expectedOutput": ["--- PASS: TestPhase258HistoricalV116Dispatch"],
+      "ownedFiles": ["apps/go-backend/runtime_service_client_v1_17_test.go"],
+      "database": { "dsnEnvironmentVariable": "COWARDS_GO_BACKEND_TEST_DATABASE_URL", "skipAllowed": false }
+    },
+    {
+      "id": "phase258.web-source-identity",
+      "stage": "postactivation",
+      "kind": "playwright",
+      "command": ["pnpm", "exec", "playwright", "test", "apps/web/e2e/v1-37-runtime-source-identity-proof.spec.ts", "--project=desktop"],
+      "namedResult": "v1-37-runtime-source-identity-proof.spec.ts",
+      "expectedOutput": ["passed"],
+      "ownedFiles": ["apps/web/e2e/v1-37-runtime-source-identity-proof.spec.ts"]
+    }
+  ]
+}

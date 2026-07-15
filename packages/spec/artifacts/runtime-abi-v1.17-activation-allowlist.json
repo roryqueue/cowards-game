@@ -1,0 +1,23 @@
+{
+  "schemaVersion": "runtime-abi-v1.17-activation-allowlist-v1",
+  "activationPlan": "258-14",
+  "operations": [
+    { "path": "packages/spec/src/versions.ts", "operation": "update" },
+    { "path": "packages/spec/src/runtime.ts", "operation": "update" },
+    { "path": "packages/spec/src/index.ts", "operation": "update" },
+    { "path": "packages/spec/src/runtime-abi-v1-17.ts", "operation": "update" },
+    { "path": "packages/spec/src/runtime-invocation-v1-17.ts", "operation": "update" },
+    { "path": "packages/spec/artifacts/runtime-execution-service-request.v1.17.json", "operation": "create" },
+    { "path": "packages/spec/artifacts/runtime-execution-service-response.v1.17.wire.json", "operation": "create" },
+    { "path": "packages/engine/src/kernel/types.ts", "operation": "update" },
+    { "path": "packages/replay/src/validate.ts", "operation": "update" },
+    { "path": "apps/runtime-service/src/index.ts", "operation": "update" },
+    { "path": "apps/runtime-service/src/server.ts", "operation": "update" },
+    { "path": "apps/runtime-service/src/execute-match.ts", "operation": "update" },
+    { "path": "apps/go-backend/runtime_service_client_v1_17.go", "operation": "update" },
+    { "path": "apps/go-backend/orchestrator.go", "operation": "update" },
+    { "path": "apps/go-backend/completion.go", "operation": "update" },
+    { "path": "apps/go-backend/live_backend.go", "operation": "update" },
+    { "path": "packages/persistence/src/complete-match.ts", "operation": "update" }
+  ]
+}

@@ -42,7 +42,10 @@ describe("Phase 258 exact runtime ABI test manifest", () => {
       expect(test.id).toMatch(/^[a-z0-9][a-z0-9._:-]+$/u)
       expect(test.stage).toMatch(/^(preactivation|activation|postactivation)$/u)
       expect(test.command?.length).toBeGreaterThan(2)
-      expect(test.command).not.toEqual(expect.arrayContaining(["test"]))
+      expect(test.command?.join(" ")).not.toMatch(/^pnpm (?:run )?test$/u)
+      if (test.command?.[0] === "go" && test.command[1] === "test") {
+        expect(test.command).toEqual(expect.arrayContaining(["-run"]))
+      }
       expect(test.namedResult).toBeTruthy()
       if (test.database !== undefined) {
         expect(test.database.dsnEnvironmentVariable).toBeTruthy()
