@@ -162,6 +162,8 @@ const PHASE_256_AUDIT_MARKDOWN_SHA256 =
   "4ebee5c0be4cdb4b554ce8f56483b8c5a11a3e3630c80e3f30460021ad09bdf2"
 const PHASE_257_RED_BASELINE_SHA256 =
   "bd2a7575282ca7df86bf3a6fc2602a9797660b0ab27bdb0f2def203ddba58f0d"
+const PHASE_257_CURRENT_EVENT_COVERAGE_SHA256 =
+  "96be0ea4809c6b802142e6164dc9f10639cfe7a97f0918b822a191972b9c3a44"
 const PHASE_19_ACTIVATION_COMMIT =
   "3642493db803a8f68e3863777cc66dd6609ee93d"
 const PHASE_19_REVIEW_CORRECTION_COMMIT =
@@ -554,6 +556,11 @@ const exactPhase257Observations = {
   successfulPushPusherHistory: "RIGHT",
 } as const
 
+const exactPhase258CurrentObservations = {
+  ...exactPhase257Observations,
+  deepValidation: "rejected:MAX_DEPTH_EXCEEDED:player_violation",
+} as const
+
 const readJson = (repoRoot: string, repoPath: string): unknown =>
   JSON.parse(readFileSync(path.join(repoRoot, repoPath), "utf8")) as unknown
 
@@ -608,7 +615,7 @@ export const buildV137Phase257CoreRulesResult = (
     throw new Error("immutable audit baseline drifted")
   }
   const reproduced = reproduceCurrentAudit(repoRoot)
-  if (stableJson(reproduced) !== stableJson(exactPhase257Observations)) {
+  if (stableJson(reproduced) !== stableJson(exactPhase258CurrentObservations)) {
     throw new Error("current audit observations drifted")
   }
   const inventory = checkV137ExecutableReferenceInventory("current", repoRoot)
@@ -830,7 +837,9 @@ export const buildV137Phase257CoreRulesResult = (
       {
         id: "current-event-coverage",
         path: eventCoveragePath,
-        sha256: fileSha256(repoRoot, eventCoveragePath),
+        // Phase-257 evidence is immutable even though the current coverage
+        // artifact is regenerated when later phases move producer lines.
+        sha256: PHASE_257_CURRENT_EVENT_COVERAGE_SHA256,
       },
       {
         id: "current-authority",

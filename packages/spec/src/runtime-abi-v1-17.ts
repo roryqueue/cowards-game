@@ -295,7 +295,7 @@ export const RUNTIME_ABI_V1_17 = deepFreeze({
     inputManifest:
       "packages/spec/artifacts/runtime-abi-v1.17-calibration-inputs.json",
     inputManifestSha256:
-      "d2219b06b215b1cfd9dc01d7710a54fb0af68e3d25bbcd2cb22c4bc73c02c13c",
+      "c0dddd207bd6e16dad8c67dc97dcb27c4e14907184776e39a1ecd6895c0827d5",
     onlyCurrentValidClassesEstablishMaxima: true,
     localToolVersionsAreCountedPins: false,
   },

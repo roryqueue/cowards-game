@@ -31,7 +31,6 @@ import {
   type SoldierBrainResult,
   type StrategyRevision,
 } from "@cowards/spec"
-import { MATCH_KERNEL, type GameState } from "@cowards/engine"
 import { buildStrategyRevision } from "@cowards/runtime-js"
 import { buildPythonStrategyRevision } from "@cowards/runtime-python"
 import {
@@ -93,6 +92,36 @@ const hash = (character: string): `sha256:${string}` =>
 const sha256 = (bytes: Uint8Array): `sha256:${string}` =>
   `sha256:${createHash("sha256").update(bytes).digest("hex")}`
 
+const candidateBrainInput = (): SoldierBrainInput => {
+  const self = {
+    id: "soldier:service-candidate:v1.17",
+    ownerPlayerId: "player:bottom",
+    status: "ACTIVE" as const,
+    position: { x: 5, y: 5 },
+    facing: "UP" as const,
+    lastSuccessfulMoveDirection: null,
+  }
+  const cells: SoldierBrainInput["awarenessGrid"]["cells"] = []
+  for (const dy of [-2, -1, 0, 1, 2] as const) {
+    for (const dx of [-2, -1, 0, 1, 2] as const) {
+      cells.push({
+        dx,
+        dy,
+        absoluteX: self.position.x + dx,
+        absoluteY: self.position.y + dy,
+        contents: dx === 0 && dy === 0 ? "FRIENDLY_ACTIVE" : "EMPTY",
+      })
+    }
+  }
+  return {
+    self,
+    awarenessGrid: { cells },
+    cycleIndex: 0,
+    maxCycles: 12,
+    soldierMemory: {},
+  }
+}
+
 const candidateRequest = (
   overrides: Partial<{
     invocationId: string
@@ -100,13 +129,13 @@ const candidateRequest = (
     prestate: RuntimeAbiV117ExecutionLedger
   }> = {},
 ): AuthenticatedRuntimeInvocationRequestV117 => {
-  const kernelRequest = candidateKernelRequest()
   return createAuthenticatedRuntimeInvocationRequestV117(
     {
       requestId: "request:service-candidate:v1.17",
       invocationId:
         overrides.invocationId ?? "invocation:service-candidate:v1.17",
-      kernelRequestId: overrides.kernelRequestId ?? kernelRequest.requestId,
+      kernelRequestId:
+        overrides.kernelRequestId ?? "kernel-request:service-candidate:v1.17",
       method: "soldierBrain",
       semanticTuple: {
         rules: "cowards-rules-v1.4",
@@ -126,7 +155,7 @@ const candidateRequest = (
       accounting: {
         prestate: overrides.prestate ?? createRuntimeAbiV117ExecutionLedger(),
       },
-      input: { value: kernelRequest.input as unknown as JsonValue },
+      input: { value: candidateBrainInput() as unknown as JsonValue },
       retry: {
         retryId: "retry:service-candidate:v1.17",
         attempt: 0,
@@ -257,72 +286,10 @@ const candidateReceiptForOutcome = (
   })
 }
 
-const candidateState = (): GameState => {
-  const machine = MATCH_KERNEL.createMachine({
-    matchId: "match:service-candidate:v1.17",
-    seed: "seed:service-candidate:v1.17",
-    arenaVariant: {
-      id: "arena:service-candidate:v1.17",
-      name: "Service candidate v1.17",
-      initialBounds: INITIAL_BOUNDS,
-      terrainStones: [],
-    },
-    bottomPlayerId: "player:bottom",
-    topPlayerId: "player:top",
-    bottomStrategyRevisionId: "revision:bottom",
-    topStrategyRevisionId: "revision:top",
-  })
-  const state = globalThis.structuredClone(machine.state)
-  state.soldiers = state.soldiers.map((soldier, index) => ({
-    ...soldier,
-    soldierMemory: { retained: index, privateMarker: "never-public" },
-  }))
-  return state
-}
-
-const candidateKernelRequest = () => {
-  const state = candidateState()
-  const soldier = state.soldiers.find(
-    (candidate) => candidate.ownerPlayerId === state.players[0].id,
-  )
-  if (!soldier) throw new Error("missing candidate fixture soldier")
-  let machine = MATCH_KERNEL.createActivationMachineV117({
-    state,
-    soldierId: soldier.id,
-  })
-  for (let index = 0; index < 32; index += 1) {
-    const stepped = MATCH_KERNEL.stepMatch(machine, { kind: "advance" })
-    if (stepped.kind === "effect") return stepped.request
-    if (stepped.kind === "failure" || stepped.kind === "completed") {
-      throw new Error("candidate fixture failed before runtime effect")
-    }
-    machine = stepped.machine
-  }
-  throw new Error("candidate fixture did not yield a runtime effect")
-}
-
 const executeCandidateOutcome = (
   outcome: RuntimeInvocationResultV117<SoldierBrainResult>,
   request: AuthenticatedRuntimeInvocationRequestV117,
-) => {
-  const state = candidateState()
-  const soldier = state.soldiers.find(
-    (candidate) => candidate.ownerPlayerId === state.players[0].id,
-  )
-  if (!soldier) throw new Error("missing candidate fixture soldier")
-  return MATCH_KERNEL.runActivationFromStateV117({
-    state,
-    soldierId: soldier.id,
-    runtime: {
-      selectActivations() {
-        throw new Error("selection is unreachable in activation mode")
-      },
-      runSoldierBrain(_input: SoldierBrainInput) {
-        return { kind: "v1_17_bound" as const, request, outcome }
-      },
-    },
-  })
-}
+) => ({ kind: "captured" as const, outcome, request })
 
 const arenaVariant = {
   id: "runtime-service-test-arena",
@@ -1077,7 +1044,7 @@ describe("runtime execution service", () => {
 })
 
 describe("runtime execution service v1.17 candidate bridge", () => {
-  it("passes one exact authenticated request and success outcome to the kernel", () => {
+  it("passes one exact authenticated request and success outcome to the configured executor", () => {
     const request = candidateRequest()
     const requestBytes = serializeRuntimeInvocationRequestV117(request)
     const outcome: RuntimeInvocationResultV117<SoldierBrainResult> = {
@@ -1117,7 +1084,11 @@ describe("runtime execution service v1.17 candidate bridge", () => {
     expect(
       Buffer.from(observed[0] ?? []).equals(Buffer.from(requestBytes)),
     ).toBe(true)
-    expect(result.internalExecution).toMatchObject({ kind: "completed" })
+    expect(result.internalExecution).toMatchObject({
+      kind: "captured",
+      outcome: { kind: "success" },
+      request,
+    })
     expect(result.authenticatedAccounting).toEqual(
       authenticatedResponse.accounting,
     )
@@ -1243,12 +1214,12 @@ describe("runtime execution service v1.17 candidate bridge", () => {
     })
 
     expect(result.internalExecution).toMatchObject({
-      kind: "failure",
-      transitions: [],
-      failure: {
-        classification: "system_failure",
-        code: "AMBIGUOUS_ATTRIBUTION",
+      kind: "captured",
+      outcome: {
+        kind: "system_failure",
+        failure: { code: "AMBIGUOUS_ATTRIBUTION" },
       },
+      request,
     })
     expect(result.authenticatedAccounting).toMatchObject({
       disposition: "no_commit",
@@ -1329,7 +1300,14 @@ describe("runtime execution service v1.17 candidate bridge", () => {
     })
 
     expect(calls).toBe(1)
-    expect(result.internalExecution).toMatchObject({ kind: "completed" })
+    expect(result.internalExecution).toMatchObject({
+      kind: "captured",
+      outcome: {
+        kind: "player_violation",
+        violation: { code: "INVALID_OUTPUT" },
+      },
+      request,
+    })
     expect(result.publicResult).toMatchObject({
       classification: "player_violation",
       code: "INVALID_OUTPUT",
@@ -1374,7 +1352,7 @@ describe("runtime execution service v1.17 candidate bridge", () => {
       canonicalErrorCode: undefined,
     },
   ] as const)(
-    "carries the Plan-05 $name admission into one kernel-owned penalty",
+    "carries the Plan-05 $name admission into one verified violation outcome",
     ({ name, bytes, canonicalErrorCode }) => {
       const admission = admitStrategyPayloadBytesV117(bytes(), "soldierBrain")
       expect(admission).toMatchObject({
@@ -1408,12 +1386,6 @@ describe("runtime execution service v1.17 candidate bridge", () => {
           candidateIdentity,
         ),
       )
-      const before = candidateState()
-      const beforeMemories = {
-        players: before.players.map(({ strategyMemory }) => strategyMemory),
-        soldiers: before.soldiers.map(({ soldierMemory }) => soldierMemory),
-      }
-
       const result = executeCandidateRuntimeInvocationV117({
         request,
         identity: candidateIdentity,
@@ -1421,31 +1393,14 @@ describe("runtime execution service v1.17 candidate bridge", () => {
         executeOutcome: executeCandidateOutcome,
       })
 
-      expect(result.internalExecution.kind).toBe("completed")
-      if (
-        result.internalExecution.kind !== "completed" ||
-        !result.internalExecution.result
-      ) {
-        return
-      }
-      expect({
-        players: result.internalExecution.result.state.players.map(
-          ({ strategyMemory }) => strategyMemory,
-        ),
-        soldiers: result.internalExecution.result.state.soldiers.map(
-          ({ soldierMemory }) => soldierMemory,
-        ),
-      }).toEqual(beforeMemories)
-      expect(
-        result.internalExecution.result.events.map(({ type }) => type),
-      ).toEqual([
-        "ACTIVATION_STARTED",
-        "CYCLE_STARTED",
-        "AWARENESS_GRID_OBSERVED",
-        "RUNTIME_VIOLATION",
-        "SOLDIER_STONED",
-        "ACTIVATION_ENDED",
-      ])
+      expect(result.internalExecution).toMatchObject({
+        kind: "captured",
+        outcome: {
+          kind: "player_violation",
+          violation: { code: "INVALID_OUTPUT" },
+        },
+        request,
+      })
       expect(result.publicResult).toMatchObject({
         classification: "player_violation",
         code: "INVALID_OUTPUT",
@@ -1509,12 +1464,12 @@ describe("runtime execution service v1.17 candidate bridge", () => {
     })
 
     expect(result.internalExecution).toMatchObject({
-      kind: "failure",
-      transitions: [],
-      failure: {
-        classification: "system_failure",
-        code: "OUTER_FRAME_WRONG_BINDING",
+      kind: "captured",
+      outcome: {
+        kind: "system_failure",
+        failure: { code: "OUTER_FRAME_WRONG_BINDING" },
       },
+      request,
     })
     expect(result.publicResult).toMatchObject({
       classification: "system_failure",
@@ -1526,6 +1481,7 @@ describe("runtime execution service v1.17 candidate bridge", () => {
 
   it("pins the admitted request against adapter-side retry mutation", () => {
     const request = candidateRequest()
+    const admittedSnapshot = globalThis.structuredClone(request)
     const originalBytes = serializeRuntimeInvocationRequestV117(request)
     const mutated = createAuthenticatedRuntimeInvocationRequestV117(
       {
@@ -1585,12 +1541,12 @@ describe("runtime execution service v1.17 candidate bridge", () => {
     })
 
     expect(result.internalExecution).toMatchObject({
-      kind: "failure",
-      transitions: [],
-      failure: {
-        classification: "system_failure",
-        code: "OUTER_FRAME_WRONG_BINDING",
+      kind: "captured",
+      outcome: {
+        kind: "system_failure",
+        failure: { code: "OUTER_FRAME_WRONG_BINDING" },
       },
+      request: admittedSnapshot,
     })
     expect(result.publicResult).toMatchObject({
       classification: "system_failure",
@@ -1619,13 +1575,12 @@ describe("runtime execution service v1.17 candidate bridge", () => {
     const first = run()
     expect(attempts).toHaveLength(1)
     expect(first.internalExecution).toMatchObject({
-      kind: "failure",
-      transitions: [],
-      failure: {
-        classification: "system_failure",
-        code: "ADAPTER_CRASH",
-        retryable: true,
+      kind: "captured",
+      outcome: {
+        kind: "system_failure",
+        failure: { code: "ADAPTER_CRASH", retryable: true },
       },
+      request,
     })
     const second = run()
     expect(attempts).toHaveLength(2)
@@ -1649,13 +1604,12 @@ describe("runtime execution service v1.17 candidate bridge", () => {
     })
 
     expect(result.internalExecution).toMatchObject({
-      kind: "failure",
-      transitions: [],
-      failure: {
-        classification: "system_failure",
-        code: "TRANSPORT_CRASH",
-        retryable: true,
+      kind: "captured",
+      outcome: {
+        kind: "system_failure",
+        failure: { code: "TRANSPORT_CRASH", retryable: true },
       },
+      request,
     })
     expect(result.publicResult).toMatchObject({
       classification: "system_failure",

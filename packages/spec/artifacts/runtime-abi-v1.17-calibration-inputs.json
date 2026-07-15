@@ -79,7 +79,7 @@
     },
     {
       "path": "packages/spec/artifacts/v1.37-current-event-coverage.json",
-      "sha256": "96be0ea4809c6b802142e6164dc9f10639cfe7a97f0918b822a191972b9c3a44",
+      "sha256": "03b86be71dc2cce4a555b52bdf5fc424cc1743bf8d8c0f3ab5863cbc013a7d05",
       "byteLength": 36257,
       "classification": "current-valid-fixture",
       "inclusionReason": "Committed current event-coverage fixture consumed by current integrity checks.",

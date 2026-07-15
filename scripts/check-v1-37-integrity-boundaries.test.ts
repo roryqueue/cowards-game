@@ -433,7 +433,7 @@ describe("v1.37 creation inventory and caller bypass monitor", () => {
     expectRepositoryContractFinding(
       {
         ...sources,
-        [specPath]: sources[specPath]!.replace(
+        [specPath]: sources[specPath]!.replaceAll(
           "signedMessageBytes: encodeRuntimeEvidenceAuthoritySignatureMessage({",
           "signedMessageBytes: payloadBytes, void ({",
         ),
@@ -446,7 +446,7 @@ describe("v1.37 creation inventory and caller bypass monitor", () => {
     expectRepositoryContractFinding(
       {
         ...sources,
-        [runtimePath]: sources[runtimePath]!.replace(
+        [runtimePath]: sources[runtimePath]!.replaceAll(
           "publicKeyDescriptor.publicKey,",
           "createPublicKey('removed-pinned-key'),",
         ),

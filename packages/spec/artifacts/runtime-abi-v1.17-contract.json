@@ -19,7 +19,7 @@
   "calibration": {
     "receipt": ".planning/artifacts/v1.37-runtime-abi-calibration.json",
     "inputManifest": "packages/spec/artifacts/runtime-abi-v1.17-calibration-inputs.json",
-    "inputManifestSha256": "d2219b06b215b1cfd9dc01d7710a54fb0af68e3d25bbcd2cb22c4bc73c02c13c",
+    "inputManifestSha256": "c0dddd207bd6e16dad8c67dc97dcb27c4e14907184776e39a1ecd6895c0827d5",
     "onlyCurrentValidClassesEstablishMaxima": true,
     "localToolVersionsAreCountedPins": false
   },
@@ -63,6 +63,7 @@
       "INVALID_GRAMMAR",
       "DUPLICATE_KEY",
       "NON_CANONICAL_KEY_ORDER",
+      "NON_CANONICAL_ENCODING",
       "NON_CANONICAL_NUMBER",
       "NUMBER_OUT_OF_RANGE",
       "MAX_RAW_UTF8_BYTES_EXCEEDED",
@@ -323,7 +324,10 @@
           "memoryBytes": 67108864,
           "inputBytes": 65536,
           "outputBytes": 32768,
+          "stderrBytes": 0,
           "processes": 1,
+          "threads": 1,
+          "children": 0,
           "network": "disabled",
           "filesystem": "none",
           "failureOwnership": {
@@ -354,7 +358,10 @@
           "memoryBytes": 134217728,
           "inputBytes": 4194304,
           "outputBytes": 262144,
+          "stderrBytes": 0,
           "processes": 1,
+          "threads": 1,
+          "children": 0,
           "network": "disabled",
           "filesystem": "artifact-read-only",
           "failureOwnership": {
@@ -368,7 +375,10 @@
           "memoryBytes": 536870912,
           "inputBytes": 8388608,
           "outputBytes": 8388608,
+          "stderrBytes": 0,
           "processes": 1,
+          "threads": 1,
+          "children": 0,
           "network": "disabled",
           "filesystem": "closed-corpus-read-only",
           "failureOwnership": {
