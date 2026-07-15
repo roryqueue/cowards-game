@@ -254,6 +254,10 @@ var integrityEvidenceReasonPolicy = map[string]integrityEvidenceReasonCopy{
 		Category: "competitive_evidence_pending", Message: "This Strategy lane is available for exhibitions while competitive evidence is verified.",
 		Remediation: "Repair the trusted conformance evidence path and publish a verifiable reference.",
 	},
+	"FIXTURE_NON_PRODUCTION": {
+		Category: "competitive_evidence_pending", Message: "This Strategy lane is available only in an isolated non-production fixture environment.",
+		Remediation: "Publish independently verified production evidence before requesting production execution.",
+	},
 	"IDENTITY_MISMATCH": {
 		Category: "safety_evidence_unavailable", Message: "This Strategy lane is temporarily unavailable while its current identity is verified.",
 		Remediation: "Rebuild evidence for the exact active provider, toolchain, adapter, artifact, build, and tuple identity.",
@@ -696,9 +700,12 @@ func classifyExecutableLaneEvidence(input executableLaneEvidenceInput) executabl
 		return executableLaneEvidenceResult{Status: executableLaneEvidenceDisabled, ReasonCode: reason}
 	}
 	authority := input.Authority
-	if authority == nil || authority.TrustDomain != runtimeEvidenceAuthorityProductionTrustDomain || !isPrefixedLowerSHA256(authority.AuthorityBundleHash) {
+	if authority == nil ||
+		(authority.TrustDomain != runtimeEvidenceAuthorityProductionTrustDomain && authority.TrustDomain != runtimeEvidenceAuthorityFixtureTrustDomain) ||
+		!isPrefixedLowerSHA256(authority.AuthorityBundleHash) {
 		return disabled("EVIDENCE_UNVERIFIABLE")
 	}
+	fixtureAuthority := authority.TrustDomain == runtimeEvidenceAuthorityFixtureTrustDomain
 	if !isPrefixedLowerSHA256(input.ExpectedLaneIdentityHash) {
 		return disabled("IDENTITY_MISMATCH")
 	}
@@ -725,6 +732,9 @@ func classifyExecutableLaneEvidence(input executableLaneEvidenceInput) executabl
 	containment, reason := resolveRuntimeEvidenceCertificate(authority, input.ExpectedLaneIdentityHash, "containment", input.ContainmentCertificate)
 	if reason != "" {
 		return disabled(reason)
+	}
+	if fixtureAuthority {
+		return executableLaneEvidenceResult{Status: executableLaneEvidenceExhibitionOnly, ReasonCode: "FIXTURE_NON_PRODUCTION"}
 	}
 	conformance, reason := resolveRuntimeEvidenceCertificate(authority, input.ExpectedLaneIdentityHash, "conformance", input.ConformanceCertificate)
 	if reason != "" {

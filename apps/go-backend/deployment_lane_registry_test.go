@@ -76,7 +76,7 @@ func newDeploymentLaneFixture(t *testing.T) deploymentLaneFixture {
 	registry := &goDeploymentLaneRegistry{SchemaVersion: deploymentLaneRegistrySchemaVersion, RegistryID: "test:deployment-lanes", Lanes: []goDeploymentLaneProfile{profile}}
 	revisionID := "strategy-revision:test:typescript"
 	runtime := defaultRuntimeMetadata()
-	lane, ok := registry.resolveRevision(revisionID, sourceHash, sourceBytes, runtime, engine, metadata, tuple)
+	lane, ok := registry.resolveRevision(revisionID, sourceHash, sourceBytes, runtime, engine, nil, metadata, tuple)
 	if !ok || lane == nil {
 		t.Fatal("deployment registry did not resolve exact fixture revision")
 	}
@@ -86,7 +86,7 @@ func newDeploymentLaneFixture(t *testing.T) deploymentLaneFixture {
 		Entrant: map[string]any{
 			"strategyRevisionId": revisionID, "sourceHash": sourceHash, "sourceBytes": sourceBytes,
 			"runtime": runtime, "engineCompatibility": engine,
-			"_creationRuntime": runtime, "_creationMetadata": metadata,
+			"_creationRuntime": runtime, "_creationValidation": map[string]any{"valid": true, "sourceHash": sourceHash, "sourceBytes": sourceBytes}, "_creationMetadata": metadata,
 		},
 		Strategy: runtimeServiceStrategyRevision{
 			ID: revisionID, Source: source, SourceHash: sourceHash, SourceBytes: sourceBytes,
@@ -113,7 +113,7 @@ func TestDeploymentLaneRegistryOwnsNormalValidationToCreationIdentity(t *testing
 	}
 	lane, ok := fixture.Registry.resolveRevision(
 		fixture.Strategy.ID, insert.SourceHash, insert.SourceBytes, insert.Runtime,
-		insert.EngineCompatibility, insert.Metadata, fixture.Tuple,
+		insert.EngineCompatibility, insert.Validation, insert.Metadata, fixture.Tuple,
 	)
 	if !ok || lane == nil || *lane != fixture.Lane {
 		t.Fatalf("saved provider validation did not resolve through backend registry: %+v", lane)
@@ -123,6 +123,7 @@ func TestDeploymentLaneRegistryOwnsNormalValidationToCreationIdentity(t *testing
 	savedEntrant["sourceBytes"] = insert.SourceBytes
 	savedEntrant["engineCompatibility"] = insert.EngineCompatibility
 	savedEntrant["_creationRuntime"] = insert.Runtime
+	savedEntrant["_creationValidation"] = insert.Validation
 	savedEntrant["_creationMetadata"] = insert.Metadata
 	if !creationLaneMatchesEntrant(fixture.Lane, savedEntrant, fixture.Tuple, fixture.Registry) {
 		t.Fatal("normal saved revision could not bind to certified creation lane")
@@ -148,7 +149,7 @@ func TestDeploymentLaneRegistryOwnsNormalValidationToCreationIdentity(t *testing
 		t.Run(drift.name, func(t *testing.T) {
 			candidate := newDeploymentLaneFixture(t)
 			drift.mutate(&candidate)
-			resolved, ok := candidate.Registry.resolveRevision(candidate.Strategy.ID, candidate.Strategy.SourceHash, candidate.Strategy.SourceBytes, candidate.Strategy.Runtime, candidate.Strategy.EngineCompatibility, candidate.Strategy.Metadata, candidate.Tuple)
+			resolved, ok := candidate.Registry.resolveRevision(candidate.Strategy.ID, candidate.Strategy.SourceHash, candidate.Strategy.SourceBytes, candidate.Strategy.Runtime, candidate.Strategy.EngineCompatibility, candidate.Strategy.Validation, candidate.Strategy.Metadata, candidate.Tuple)
 			if ok && resolved != nil && *resolved == fixture.Lane {
 				t.Fatal("manifest/revision drift retained certified executable identity")
 			}
@@ -180,6 +181,7 @@ func TestPhase258DeploymentLaneRegistryKeepsRuntimeAndToolchainVersionsDistinct(
 		strategy.SourceBytes,
 		strategy.Runtime,
 		strategy.EngineCompatibility,
+		strategy.Validation,
 		strategy.Metadata,
 		registeredCompatibilityTuple{TupleID: authorityFixture.SemanticTupleID, Tuple: authorityFixture.SemanticTuple},
 	)
@@ -377,6 +379,7 @@ func TestPhase258DeploymentLaneRegistryRejectsTupleIdentityExpansionMismatch(t *
 		fixture.Strategy.SourceBytes,
 		fixture.Strategy.Runtime,
 		fixture.Strategy.EngineCompatibility,
+		fixture.Strategy.Validation,
 		fixture.Strategy.Metadata,
 		fixture.Tuple,
 	); ok {

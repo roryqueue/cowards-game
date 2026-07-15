@@ -109,7 +109,7 @@ const claimNextMatchJobSQLTemplate = `
    and publication.payload_sha256 = ms.authority_payload_sha256
    and publication.envelope_sha256 = ms.authority_envelope_sha256
    and publication.source_manifest_hash = ms.authority_source_manifest_hash
-   and publication.trust_domain = 'cowards-game:runtime-evidence-authority:production:v1'
+   and publication.trust_domain = '__RUNTIME_AUTHORITY_TRUST_DOMAIN__'
   join runtime_evidence_authority_installed_head installed_head
     on installed_head.publication_id = publication.id
    and installed_head.install_receipt_id = ms.authority_install_receipt_id
@@ -299,6 +299,7 @@ func runtimeServiceV117AuthoritySQL(template string, trustDomain string) string 
 	return strings.NewReplacer(
 		"__RUNTIME_V117_BUDGET_PROFILE_SHA256__", runtimeServiceV117BudgetProfileSHA256,
 		"__RUNTIME_V117_EMPTY_LEDGER_ROOT__", runtimeServiceV117EmptyLedgerRoot,
+		"__RUNTIME_AUTHORITY_TRUST_DOMAIN__", trustDomain,
 		"__RUNTIME_V117_AUTHORITY_TRUST_DOMAIN__", trustDomain,
 	).Replace(template)
 }

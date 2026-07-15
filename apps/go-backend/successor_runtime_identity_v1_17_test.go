@@ -209,7 +209,7 @@ func TestPhase258GeneratedSuccessorAuthorityFixtureHasExactGoIdentityParity(t *t
 				SuccessorRuntimeIdentityTemplate: cloneRuntimeSuccessorIdentityTemplateV117(&template),
 			}},
 		}
-		if !validSuccessorStrategyRevisionV117(strategy.SourceHash, strategy.SourceBytes, strategy.Runtime, strategy.EngineCompatibility, strategy.Metadata) {
+		if !validSuccessorStrategyRevisionV117(strategy.SourceHash, strategy.SourceBytes, strategy.Runtime, strategy.EngineCompatibility, strategy.Validation, strategy.Metadata) {
 			t.Fatalf("generated %s revision failed the Go v1.17 revision contract", vector.Side)
 		}
 		if !sourceArtifactProviderValidationMatchesABI(strategy.Metadata, strategy.SourceHash, strategy.SourceBytes, vector.Deployed.ProviderID, vector.Deployed.LanguageID, strategyRuntimeABIVersionV117) {
@@ -218,7 +218,7 @@ func TestPhase258GeneratedSuccessorAuthorityFixtureHasExactGoIdentityParity(t *t
 		if !successorIdentityTemplateMatchesLaneProfileV117(registry.Lanes[0].SuccessorRuntimeIdentityTemplate, registry.Lanes[0]) {
 			t.Fatalf("generated %s revision failed the Go v1.17 template/lane binding", vector.Side)
 		}
-		resolved, ok := registry.resolveRevision(strategy.ID, strategy.SourceHash, strategy.SourceBytes, strategy.Runtime, strategy.EngineCompatibility, strategy.Metadata, registeredCompatibilityTuple{
+		resolved, ok := registry.resolveRevision(strategy.ID, strategy.SourceHash, strategy.SourceBytes, strategy.Runtime, strategy.EngineCompatibility, strategy.Validation, strategy.Metadata, registeredCompatibilityTuple{
 			TupleID: fixture.SemanticTupleID, Tuple: fixture.SemanticTuple,
 		})
 		if !ok || resolved == nil || *resolved != vector.Deployed {
@@ -226,7 +226,7 @@ func TestPhase258GeneratedSuccessorAuthorityFixtureHasExactGoIdentityParity(t *t
 		}
 		driftedRuntime := cloneMap(strategy.Runtime)
 		mapValue(driftedRuntime, "limits")["filesystem"] = "host"
-		if resolved, ok := registry.resolveRevision(strategy.ID, strategy.SourceHash, strategy.SourceBytes, driftedRuntime, strategy.EngineCompatibility, strategy.Metadata, registeredCompatibilityTuple{
+		if resolved, ok := registry.resolveRevision(strategy.ID, strategy.SourceHash, strategy.SourceBytes, driftedRuntime, strategy.EngineCompatibility, strategy.Validation, strategy.Metadata, registeredCompatibilityTuple{
 			TupleID: fixture.SemanticTupleID, Tuple: fixture.SemanticTuple,
 		}); ok || resolved != nil {
 			t.Fatalf("generated %s revision admitted unsafe successor runtime limits", vector.Side)

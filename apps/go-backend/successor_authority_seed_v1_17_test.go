@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"crypto/ed25519"
 	"encoding/base64"
 	"encoding/json"
 	"os"
@@ -111,20 +112,13 @@ func seedExactSemanticSuccessorAuthorityFixtureV117(t *testing.T, ctx context.Co
 	certificatesByID := map[string]runtimeEvidenceAuthorityCertificate{}
 	attestationSourceHashes := map[string]string{}
 	certificateSourceHashes := map[string]string{}
-	authority := &verifiedRuntimeEvidenceAuthority{
-		AuthorityBundleHash: runtimeInvocationV117SHA256Value([]byte("fixture:legacy-projection:" + fixture.InstallFixture.Expected.AuthorityBundleHash)),
-		EnvelopeSHA256:      runtimeInvocationV117SHA256Value([]byte("fixture:legacy-envelope:" + fixture.InstallFixture.Expected.EnvelopeSHA256)),
-		RegistryGeneration:  payload.RegistryGeneration, SemanticTupleManifestHash: fixture.SemanticTupleID,
-		CompatibilityTuple: registeredCompatibilityTuple{TupleID: fixture.SemanticTupleID, Tuple: fixture.SemanticTuple},
-		TrustDomain:        runtimeEvidenceAuthorityProductionTrustDomain,
-		KeyID:              fixture.InstallFixture.SignerKeyID,
-		Payload: runtimeEvidenceAuthorityPayload{
-			SchemaVersion: "v1.37-runtime-evidence-authority-payload-v1", BundleVersion: "fixture-legacy-projection-v1.17",
-			RegistryGeneration: payload.RegistryGeneration, IssuedAt: payload.IssuedAt, ValidFrom: payload.ValidFrom,
-			ValidUntil: payload.ValidUntil, SemanticTupleManifestHash: fixture.SemanticTupleID,
-			Revocations: []runtimeEvidenceAuthorityRevocation{}, Supersessions: []runtimeEvidenceAuthoritySupersession{},
-			OperatorLaneDisables: []runtimeEvidenceAuthorityLaneDisable{},
-		},
+	legacyPayload := runtimeEvidenceAuthorityPayload{
+		SchemaVersion: runtimeEvidenceAuthorityPayloadSchemaVersion, BundleVersion: "fixture-legacy-projection-v1.17",
+		RegistryGeneration: payload.RegistryGeneration, IssuedAt: payload.IssuedAt, ValidFrom: payload.ValidFrom,
+		ValidUntil: payload.ValidUntil, SemanticTupleManifestHash: fixture.SemanticTupleID,
+		Attestations: []runtimeEvidenceAuthorityAttestation{}, Certificates: []runtimeEvidenceAuthorityCertificate{},
+		Revocations: []runtimeEvidenceAuthorityRevocation{}, Supersessions: []runtimeEvidenceAuthoritySupersession{},
+		OperatorLaneDisables: []runtimeEvidenceAuthorityLaneDisable{},
 	}
 	for _, attestation := range payload.Attestations {
 		certificate, ok := certificateForFixtureAttestationV117(payload.Certificates, attestation.AttestationID)
@@ -173,7 +167,7 @@ func seedExactSemanticSuccessorAuthorityFixtureV117(t *testing.T, ctx context.Co
 			t.Fatal(err)
 		}
 
-		authority.Payload.Attestations = append(authority.Payload.Attestations, runtimeEvidenceAuthorityAttestation{
+		legacyPayload.Attestations = append(legacyPayload.Attestations, runtimeEvidenceAuthorityAttestation{
 			AttestationID: attestation.AttestationID, AttestationHash: attestation.AttestationHash, Verified: true,
 			Imports: append([]string{}, attestation.Imports...),
 		})
@@ -182,37 +176,29 @@ func seedExactSemanticSuccessorAuthorityFixtureV117(t *testing.T, ctx context.Co
 			CertificateRecordHash: certificate.CertificateRecordHash, LaneIdentityHash: vector.LaneIdentityHash, LaneIdentity: lane,
 			IssuedAt: payload.IssuedAt, FreshUntil: payload.ValidUntil, AttestationIDs: []string{attestation.AttestationID},
 		}
-		authority.Payload.Certificates = append(authority.Payload.Certificates, projectedCertificate)
+		legacyPayload.Certificates = append(legacyPayload.Certificates, projectedCertificate)
 		certificatesByID[certificate.CertificateID] = projectedCertificate
 		attestationSourceHashes[attestation.AttestationID] = attestation.AttestationHash
 		certificateSourceHashes[certificate.CertificateID] = certificate.CertificateRecordHash
 	}
-	if err := validateRuntimeEvidenceAuthorityGraph(authority.Payload); err != nil {
-		if detail, ok := err.(*runtimeEvidenceAuthorityError); ok {
-			t.Fatalf("exact successor evidence could not project into current claim validation: %s", detail.Code)
-		}
-		t.Fatalf("exact successor evidence could not project into current claim validation: %v", err)
-	}
+	authority, legacyPayloadBytes, legacyEnvelopeBytes := signedLegacyAuthorityFixtureV117(t, legacyPayload, fixture.SemanticTuple, now)
 
 	entrants := make([]goEntrantExecutionEvidence, 0, len(fixture.RevisionVectors))
 	for _, vector := range fixture.RevisionVectors {
 		containment := certificateForFixtureSideAndKindV117(t, payload, vector, "containment")
-		conformance := certificateForFixtureSideAndKindV117(t, payload, vector, "conformance")
 		containmentRuntimeReference := runtimeEvidenceCertificateReferenceFor(certificatesByID[containment.CertificateID], payload.RegistryGeneration)
-		conformanceRuntimeReference := runtimeEvidenceCertificateReferenceFor(certificatesByID[conformance.CertificateID], payload.RegistryGeneration)
 		decision := classifyExecutableLaneEvidence(executableLaneEvidenceInput{
 			Authority: authority, ExpectedLaneIdentityHash: vector.LaneIdentityHash,
 			EvaluationInstant: now.Format(canonicalJSONInstantLayout), ActiveRegistryGeneration: payload.RegistryGeneration,
-			ContainmentCertificate: &containmentRuntimeReference, ConformanceCertificate: &conformanceRuntimeReference,
+			ContainmentCertificate: &containmentRuntimeReference,
 		})
-		if decision.Status != executableLaneEvidenceCounted {
-			t.Fatalf("exact successor %s lane is not counted: %+v", vector.Side, decision)
+		if decision.Status != executableLaneEvidenceExhibitionOnly || decision.ReasonCode != "FIXTURE_NON_PRODUCTION" {
+			t.Fatalf("fixture successor %s lane escaped non-counted fixture isolation: %+v", vector.Side, decision)
 		}
 		containmentReference := creationCertificateSnapshot(containmentRuntimeReference)
-		conformanceReference := creationCertificateSnapshot(conformanceRuntimeReference)
 		entrants = append(entrants, goEntrantExecutionEvidence{
 			EntrantKey: "fixture:entrant:" + vector.Side + ":v1.17", StrategyRevisionID: vector.StrategyRevisionID, LaneIdentity: vector.Deployed,
-			ContainmentCertificateRef: containmentReference, ConformanceCertificateRef: &conformanceReference,
+			ContainmentCertificateRef: containmentReference,
 			SchedulingDecision: goSchedulingDecision{
 				Status: decision.Status, ReasonCode: decision.ReasonCode, EvaluatedAt: now.Format(canonicalJSONInstantLayout),
 				FreshUntil: payload.ValidUntil, RegistryGeneration: payload.RegistryGeneration,
@@ -253,8 +239,8 @@ func seedExactSemanticSuccessorAuthorityFixtureV117(t *testing.T, ctx context.Co
 		(id,generation,semantic_tuple_manifest_hash,source_manifest_hash,payload_sha256,envelope_sha256,signer_key_id,trust_domain,issued_at,valid_from,valid_until,payload_bytes,envelope_bytes,attestation_ids,certificate_ids,revocation_ids,supersession_ids,lane_control_ids)
 		values ($1,$2::bigint,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,'[]','[]','[]')`,
 		identity.PublicationID, payload.RegistryGeneration, identity.CompatibilityTupleID, identity.SourceManifestHash, identity.PayloadSHA256,
-		identity.EnvelopeSHA256, fixture.InstallFixture.SignerKeyID, runtimeEvidenceAuthorityProductionTrustDomain,
-		issuedAt, validFrom, validUntil, []byte("fixture legacy projection "+identity.PayloadSHA256), []byte("fixture legacy envelope "+identity.EnvelopeSHA256), attestationIDs, certificateIDs); err != nil {
+		identity.EnvelopeSHA256, authority.KeyID, runtimeEvidenceAuthorityFixtureTrustDomain,
+		issuedAt, validFrom, validUntil, legacyPayloadBytes, legacyEnvelopeBytes, attestationIDs, certificateIDs); err != nil {
 		t.Fatal(err)
 	}
 	for _, sourceID := range attestationIDs {
@@ -295,20 +281,53 @@ func seedExactSemanticSuccessorAuthorityFixtureV117(t *testing.T, ctx context.Co
 		t.Fatal(err)
 	}
 	for _, entrant := range entrants {
-		if entrant.ConformanceCertificateRef == nil {
-			t.Fatal("exact successor entrant lacks conformance evidence")
-		}
 		if _, err := pool.Exec(ctx, `insert into match_set_execution_entrants
-			(match_set_id,entrant_key,strategy_revision_id,lane_identity,lane_identity_hash,containment_certificate_kind,containment_certificate_id,containment_certificate_version,containment_certificate_hash,conformance_certificate_kind,conformance_certificate_id,conformance_certificate_version,conformance_certificate_hash,scheduling_status,scheduling_reason_code,scheduling_evaluated_at,scheduling_fresh_until,authority_bundle_hash,authority_registry_generation,execution_snapshot)
-			values ($1,$2,$3,$4,$5,'containment',$6,$7,$8,'conformance',$9,$10,$11,'counted',$12,$13,$14,$15,$16,$17)`,
+			(match_set_id,entrant_key,strategy_revision_id,lane_identity,lane_identity_hash,containment_certificate_kind,containment_certificate_id,containment_certificate_version,containment_certificate_hash,scheduling_status,scheduling_reason_code,scheduling_evaluated_at,scheduling_fresh_until,authority_bundle_hash,authority_registry_generation,execution_snapshot)
+			values ($1,$2,$3,$4,$5,'containment',$6,$7,$8,'exhibition_only','FIXTURE_NON_PRODUCTION',$9,$10,$11,$12,$13)`,
 			identity.MatchSetID, entrant.EntrantKey, entrant.StrategyRevisionID, entrant.LaneIdentity, hashCreationLaneIdentity(entrant.LaneIdentity),
 			entrant.ContainmentCertificateRef.CertificateID, entrant.ContainmentCertificateRef.CertificateVersion, entrant.ContainmentCertificateRef.CertificateRecordHash,
-			entrant.ConformanceCertificateRef.CertificateID, entrant.ConformanceCertificateRef.CertificateVersion, entrant.ConformanceCertificateRef.CertificateRecordHash,
-			entrant.SchedulingDecision.ReasonCode, now, validUntil, strings.TrimPrefix(identity.AuthorityBundleHash, "sha256:"), payload.RegistryGeneration, entrant); err != nil {
+			now, validUntil, strings.TrimPrefix(identity.AuthorityBundleHash, "sha256:"), payload.RegistryGeneration, entrant); err != nil {
 			t.Fatal(err)
 		}
 	}
 	return &semanticCurrentAuthorityFixture{authority: authority, identity: identity, request: baseRequest}, registry
+}
+
+func signedLegacyAuthorityFixtureV117(t *testing.T, payload runtimeEvidenceAuthorityPayload, tuple canonicalCompatibilityTuple, now time.Time) (*verifiedRuntimeEvidenceAuthority, []byte, []byte) {
+	t.Helper()
+	publicKey, privateKey, err := ed25519.GenerateKey(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	payloadBytes, err := json.Marshal(payload)
+	if err != nil {
+		t.Fatal(err)
+	}
+	envelope := runtimeEvidenceAuthorityEnvelope{
+		SchemaVersion: runtimeEvidenceAuthorityEnvelopeSchemaVersion,
+		TrustDomain:   runtimeEvidenceAuthorityFixtureTrustDomain,
+		KeyID:         "fixture:legacy-authority-signer:v1.17",
+		Algorithm:     "Ed25519",
+		PayloadBase64: base64.StdEncoding.EncodeToString(payloadBytes),
+		PayloadSHA256: hashRuntimeEvidenceAuthorityPayload(payloadBytes),
+	}
+	envelope.SignatureBase64 = base64.StdEncoding.EncodeToString(ed25519.Sign(privateKey, encodeRuntimeEvidenceAuthoritySignatureMessage(envelope, payloadBytes)))
+	envelopeBytes, err := json.Marshal(envelope)
+	if err != nil {
+		t.Fatal(err)
+	}
+	registered := registeredCompatibilityTuple{TupleID: payload.SemanticTupleManifestHash, SHA256: strings.TrimPrefix(payload.SemanticTupleManifestHash, "sha256:"), Algorithm: "sha256", Tuple: tuple}
+	manifest := &integrityAuthorityManifest{byTupleID: map[string]registeredCompatibilityTuple{registered.TupleID: registered}}
+	authority, err := inspectRuntimeEvidenceAuthorityBundle(envelopeBytes, runtimeEvidenceAuthorityInspectOptions{
+		ExpectedTrustDomain: runtimeEvidenceAuthorityFixtureTrustDomain,
+		EvaluationInstant:   now.Format(canonicalJSONInstantLayout),
+		TrustedKeys:         map[string]ed25519.PublicKey{envelope.KeyID: publicKey},
+		IntegrityManifest:   manifest,
+	})
+	if err != nil {
+		t.Fatalf("signed fixture-domain legacy authority was not independently verified: %v", err)
+	}
+	return authority, payloadBytes, envelopeBytes
 }
 
 func mustParseFixtureInstantV117(t *testing.T, value string) time.Time {
@@ -362,14 +381,12 @@ func exactClaimedRuntimeServiceFixtureV117(t *testing.T, fixture runtimeSuccesso
 				break
 			}
 		}
-		if vector == nil || evidence.ConformanceCertificateRef == nil {
+		if vector == nil {
 			t.Fatal("exact claimed successor entrant is incomplete")
 		}
-		conformanceID, conformanceKind := evidence.ConformanceCertificateRef.CertificateID, evidence.ConformanceCertificateRef.Kind
 		return claimedRuntimeServiceEntrantV117{
 			StrategyRevisionID: evidence.StrategyRevisionID, LaneIdentityHash: vector.LaneIdentityHash,
 			ContainmentCertificateID: evidence.ContainmentCertificateRef.CertificateID, ContainmentCertificateKind: evidence.ContainmentCertificateRef.Kind,
-			ConformanceCertificateID: &conformanceID, ConformanceCertificateKind: &conformanceKind,
 			IdentityManifestRoot: vector.Expected.IdentityManifestRoot,
 			EvidenceGraphRoot:    certificateForFixtureSideAndKindV117(t, payload, *vector, "containment").Binding.EvidenceGraphRoot,
 			ExactPins:            vector.Expected.ExactPins,

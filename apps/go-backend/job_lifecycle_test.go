@@ -159,12 +159,16 @@ func TestMatchJobLifecycleIntegrityClaimContract(t *testing.T) {
 }
 
 func TestPhase258SuccessorAuthorityTrustSelectionDefaultsProductionAndScopesFixtures(t *testing.T) {
-	if !strings.Contains(claimNextMatchJobSQL, "successor_authority.trust_domain = '"+runtimeEvidenceAuthorityProductionTrustDomain+"'") {
-		t.Fatal("live successor authority claim is not production-only")
+	for _, relation := range []string{"publication", "successor_authority"} {
+		if !strings.Contains(claimNextMatchJobSQL, relation+".trust_domain = '"+runtimeEvidenceAuthorityProductionTrustDomain+"'") {
+			t.Fatalf("live %s authority claim is not production-only", relation)
+		}
 	}
 	fixtureSQL := runtimeServiceV117AuthoritySQL(claimNextMatchJobSQLTemplate, runtimeEvidenceAuthorityFixtureTrustDomain)
-	if !strings.Contains(fixtureSQL, "successor_authority.trust_domain = '"+runtimeEvidenceAuthorityFixtureTrustDomain+"'") {
-		t.Fatal("fixture successor authority claim did not use its explicit isolated trust domain")
+	for _, relation := range []string{"publication", "successor_authority"} {
+		if !strings.Contains(fixtureSQL, relation+".trust_domain = '"+runtimeEvidenceAuthorityFixtureTrustDomain+"'") {
+			t.Fatalf("fixture %s authority claim did not use its explicit isolated trust domain", relation)
+		}
 	}
 	if runtimeServiceV117AuthoritySQL(claimNextMatchJobSQLTemplate, "caller-selected") != "" ||
 		normalizedSuccessorAuthorityTrustDomain("caller-selected") != runtimeEvidenceAuthorityProductionTrustDomain {

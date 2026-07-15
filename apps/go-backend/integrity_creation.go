@@ -17,6 +17,7 @@ import (
 const creationEvidenceSetDomain = "cowards-game:match-set-execution-evidence-set:v1"
 const creationEvidencePairDomain = "cowards-game:match-execution-evidence-pair:v1"
 const creationLaneIdentityDomain = "cowards-game:executable-lane-identity:v1"
+const runtimeEvidenceV117InstalledAuthorityHeadLockSQL = "select pg_advisory_xact_lock(hashtext('cowards-game:runtime-evidence-v1.17-installed-authority-head:v1'))"
 
 type exhibitionCreationDependencies struct {
 	loadEntrants    func(context.Context, pgx.Tx, string, []string, time.Time) ([]map[string]any, error)
@@ -249,7 +250,7 @@ func creationLaneMatchesEntrant(lane goExecutableLaneIdentity, entrant map[strin
 	}
 	expected, ok := registry.resolveRevision(
 		stringValue(entrant, "strategyRevisionId"), stringValue(entrant, "sourceHash"), intValue(entrant, "sourceBytes"),
-		mapValue(entrant, "_creationRuntime"), mapValue(entrant, "engineCompatibility"), mapValue(entrant, "_creationMetadata"), tuple,
+		mapValue(entrant, "_creationRuntime"), mapValue(entrant, "engineCompatibility"), mapValue(entrant, "_creationValidation"), mapValue(entrant, "_creationMetadata"), tuple,
 	)
 	return ok && expected != nil && *expected == lane && hashCreationLaneIdentity(*expected) == hashCreationLaneIdentity(lane)
 }
@@ -359,6 +360,9 @@ func (identity *goMatchSetIntegrityIdentity) pair(bottomKey string, topKey strin
 }
 
 func lockAuthorityPublicationTransitions(ctx context.Context, tx pgx.Tx) error {
+	if _, err := tx.Exec(ctx, runtimeEvidenceV117InstalledAuthorityHeadLockSQL); err != nil {
+		return errors.New("runtime evidence successor authority head is unavailable")
+	}
 	var nextGeneration int64
 	if err := tx.QueryRow(ctx, `
 		select next_generation
@@ -372,6 +376,9 @@ func lockAuthorityPublicationTransitions(ctx context.Context, tx pgx.Tx) error {
 }
 
 func (server *LiveServer) lockInstalledAuthorityReceipt(ctx context.Context, tx pgx.Tx, authority *verifiedRuntimeEvidenceAuthority, now time.Time) (*installedAuthorityReceipt, error) {
+	if authority == nil || (authority.TrustDomain != runtimeEvidenceAuthorityProductionTrustDomain && authority.TrustDomain != runtimeEvidenceAuthorityFixtureTrustDomain) {
+		return nil, errors.New("creation integrity unavailable")
+	}
 	if err := lockAuthorityPublicationTransitions(ctx, tx); err != nil {
 		return nil, errors.New("creation integrity unavailable")
 	}
@@ -391,7 +398,7 @@ func (server *LiveServer) lockInstalledAuthorityReceipt(ctx context.Context, tx 
 		   and p.issued_at <= $2 and p.valid_from <= $2 and p.valid_until >= $2
 		 for share of p
 	`, authority.RegistryGeneration, now).Scan(&publicationID, &generation, &tupleID, &sourceHash, &payloadHash, &envelopeHash, &trustDomain, &attestationIDs, &certificateIDs, &revocationIDs, &supersessionIDs, &laneControlIDs, &receiptID, &receiptJSON)
-	if err != nil || generation != authority.RegistryGeneration || tupleID != authority.SemanticTupleManifestHash || payloadHash != authority.AuthorityBundleHash || envelopeHash != authority.EnvelopeSHA256 || trustDomain != runtimeEvidenceAuthorityProductionTrustDomain {
+	if err != nil || generation != authority.RegistryGeneration || tupleID != authority.SemanticTupleManifestHash || payloadHash != authority.AuthorityBundleHash || envelopeHash != authority.EnvelopeSHA256 || trustDomain != authority.TrustDomain {
 		return nil, errors.New("creation integrity unavailable")
 	}
 	var receipt map[string]any

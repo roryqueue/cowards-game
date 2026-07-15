@@ -378,6 +378,7 @@ func runtimeServiceStrategyMatchesClaim(strategy runtimeServiceStrategyRevision,
 		"sourceBytes":         strategy.SourceBytes,
 		"engineCompatibility": strategy.EngineCompatibility,
 		"_creationRuntime":    strategy.Runtime,
+		"_creationValidation": strategy.Validation,
 		"_creationMetadata":   strategy.Metadata,
 	}, tuple, registry)
 }

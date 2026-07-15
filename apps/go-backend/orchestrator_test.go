@@ -224,6 +224,29 @@ func TestPhase258ClaimBuildServiceCompleteV117Postgres(t *testing.T) {
 	if _, err := pool.Exec(ctx, `update matches set status='pending' where id=$1`, seeded.matchID); err != nil {
 		t.Fatal(err)
 	}
+	var fixtureEntrants, countedEntrants int
+	if err := pool.QueryRow(ctx, `select count(*), count(*) filter (where scheduling_status='counted') from match_set_execution_entrants where match_set_id=$1`, fixture.identity.MatchSetID).Scan(&fixtureEntrants, &countedEntrants); err != nil {
+		t.Fatal(err)
+	}
+	if fixtureEntrants != 2 || countedEntrants != 0 {
+		t.Fatalf("successor fixture escaped exhibition-only scheduling: entrants=%d counted=%d", fixtureEntrants, countedEntrants)
+	}
+	productionLifecycle := newMatchJobLifecycle(pool)
+	productionLifecycle.now = func() time.Time { return now }
+	productionLifecycle.newLeaseToken = func() (string, error) { return "phase258:production-probe:v117", nil }
+	productionLifecycle.loadAuthority = func() (*verifiedRuntimeEvidenceAuthority, error) { return fixture.authority, nil }
+	claimedProduction, err := productionLifecycle.claimNextMatchJob(ctx, claimMatchJobInput{WorkerID: "phase258:production-probe", MatchIDs: []string{seeded.matchID}})
+	if err != nil || claimedProduction != nil {
+		t.Fatalf("fixture authority became production-claimable before Phase 259: claimed=%+v error=%v", claimedProduction, err)
+	}
+	var attempts int
+	var jobStatus, matchStatus string
+	if err := pool.QueryRow(ctx, `select j.attempts,j.status,m.status from match_jobs j join matches m on m.id=j.match_id where j.id=$1`, seeded.jobID).Scan(&attempts, &jobStatus, &matchStatus); err != nil {
+		t.Fatal(err)
+	}
+	if attempts != 0 || jobStatus != "queued" || matchStatus != "pending" {
+		t.Fatalf("production fail-closed probe mutated gameplay: attempts=%d job=%s match=%s", attempts, jobStatus, matchStatus)
+	}
 
 	var observed runtimeServiceRequestV117
 	var observedNested runtimeServiceRequest
@@ -271,8 +294,11 @@ func TestPhase258ClaimBuildServiceCompleteV117Postgres(t *testing.T) {
 	}
 	if result.Status != "complete" || result.MatchID != seeded.matchID || result.ChronicleID == "" {
 		var errorClass, errorMessage *string
+		var attemptClass, attemptMessage *string
+		var attemptDetails map[string]any
 		_ = pool.QueryRow(ctx, `select last_error_class,last_error_message from match_jobs where id=$1`, seeded.jobID).Scan(&errorClass, &errorMessage)
-		t.Fatalf("v1.17 claimed job did not complete: %+v errorClass=%v errorMessage=%v", result, errorClass, errorMessage)
+		_ = pool.QueryRow(ctx, `select error_class,error_message,details from match_job_attempts where job_id=$1 order by attempt_number desc limit 1`, seeded.jobID).Scan(&attemptClass, &attemptMessage, &attemptDetails)
+		t.Fatalf("v1.17 fixture-domain exhibition job did not complete: %+v observedContract=%q errorClass=%v errorMessage=%v attemptClass=%v attemptMessage=%v details=%+v", result, observed.ContractVersion, errorClass, errorMessage, attemptClass, attemptMessage, attemptDetails)
 	}
 	if observed.ContractVersion != runtimeExecutionServiceVersionV117 ||
 		observed.Accounting.BudgetProfileSHA256 != runtimeServiceV117BudgetProfileSHA256 ||

@@ -132,7 +132,7 @@ func (registry *goDeploymentLaneRegistry) matchesAuthority(authority *verifiedRu
 	return true
 }
 
-func (registry *goDeploymentLaneRegistry) resolveRevision(id string, sourceHash string, sourceBytes int, runtime map[string]any, engine map[string]any, metadata map[string]any, tuple registeredCompatibilityTuple) (*goExecutableLaneIdentity, bool) {
+func (registry *goDeploymentLaneRegistry) resolveRevision(id string, sourceHash string, sourceBytes int, runtime map[string]any, engine map[string]any, validation map[string]any, metadata map[string]any, tuple registeredCompatibilityTuple) (*goExecutableLaneIdentity, bool) {
 	if registry == nil || id == "" || sourceHash == "" || sourceBytes <= 0 {
 		return nil, false
 	}
@@ -154,7 +154,7 @@ func (registry *goDeploymentLaneRegistry) resolveRevision(id string, sourceHash 
 		return nil, false
 	}
 	if profile.SemanticTupleID == runtimeSuccessorSemanticTupleIDV117 {
-		if !validSuccessorStrategyRevisionV117(sourceHash, sourceBytes, runtime, engine, metadata) ||
+		if !validSuccessorStrategyRevisionV117(sourceHash, sourceBytes, runtime, engine, validation, metadata) ||
 			profile.SuccessorRuntimeIdentityTemplate == nil ||
 			!successorIdentityTemplateMatchesLaneProfileV117(profile.SuccessorRuntimeIdentityTemplate, *profile) {
 			return nil, false
@@ -244,8 +244,13 @@ func hashSuccessorRuntimeLaneProfileV117(profile goDeploymentLaneProfile) (strin
 	return "sha256:" + hex.EncodeToString(hash.Sum(nil)), true
 }
 
-func validSuccessorStrategyRevisionV117(sourceHash string, sourceBytes int, runtime map[string]any, engine map[string]any, metadata map[string]any) bool {
-	if stringValue(runtime, "abiVersion") != strategyRuntimeABIVersionV117 || sourceHash == "" || sourceBytes <= 0 {
+func validSuccessorStrategyRevisionV117(sourceHash string, sourceBytes int, runtime map[string]any, engine map[string]any, validation map[string]any, metadata map[string]any) bool {
+	if sourceHash == "" || sourceBytes <= 0 ||
+		!runtimeInvocationV117ExactKeys(runtime, "abiVersion", "language", "adapter", "package", "requiredCapabilities", "limits") ||
+		stringValue(runtime, "abiVersion") != strategyRuntimeABIVersionV117 ||
+		!runtimeInvocationV117ExactKeys(mapValue(runtime, "language"), "id", "version") ||
+		!runtimeInvocationV117ExactKeys(mapValue(runtime, "adapter"), "id", "version") ||
+		!runtimeInvocationV117ExactKeys(engine, "spec", "engine") {
 		return false
 	}
 	pkg := mapValue(runtime, "package")
@@ -253,18 +258,77 @@ func validSuccessorStrategyRevisionV117(sourceHash string, sourceBytes int, runt
 		return false
 	}
 	limits := mapValue(runtime, "limits")
-	if !validSuccessorRuntimeLimitsV117(limits) {
+	if !validSuccessorRuntimeLimitsV117(limits) || !validSuccessorStrategyValidationV117(validation, sourceHash, sourceBytes, runtime, engine) {
 		return false
 	}
-	validation := mapValue(metadata, "providerValidation")
+	providerValidation := mapValue(metadata, "providerValidation")
 	artifact := mapValue(metadata, "sourceArtifact")
-	return stringValue(validation, "contractVersion") == "runtime-provider-validation-v1.17" &&
-		stringValue(validation, "sourceHash") == sourceHash && intValue(validation, "sourceBytes") == sourceBytes &&
-		stringValue(validation, "artifactHash") == stringValue(artifact, "hash") &&
-		intValue(validation, "artifactBytes") == intValue(artifact, "bytes") &&
+	return stringValue(providerValidation, "contractVersion") == "runtime-provider-validation-v1.17" &&
+		stringValue(providerValidation, "sourceHash") == sourceHash && intValue(providerValidation, "sourceBytes") == sourceBytes &&
+		stringValue(providerValidation, "artifactHash") == stringValue(artifact, "hash") &&
+		intValue(providerValidation, "artifactBytes") == intValue(artifact, "bytes") &&
 		stringValue(artifact, "abiVersion") == strategyRuntimeABIVersionV117 &&
 		stringValue(engine, "spec") == runtimeSuccessorCanonicalTupleV117.Rules &&
 		stringValue(engine, "engine") == runtimeSuccessorCanonicalTupleV117.Engine
+}
+
+func validSuccessorStrategyValidationV117(validation map[string]any, sourceHash string, sourceBytes int, runtime map[string]any, engine map[string]any) bool {
+	if !runtimeInvocationV117ExactKeys(validation, "valid", "errors", "warnings", "sourceBytes", "forbiddenPatterns", "sourceHash", "runtimeVersion", "engineCompatibility") ||
+		!boolValue(validation, "valid") || stringValue(validation, "sourceHash") != sourceHash || intValue(validation, "sourceBytes") != sourceBytes ||
+		stringValue(validation, "runtimeVersion") != stringValue(mapValue(runtime, "adapter"), "version") {
+		return false
+	}
+	validationEngine := mapValue(validation, "engineCompatibility")
+	if !runtimeInvocationV117ExactKeys(validationEngine, "spec", "engine") ||
+		stringValue(validationEngine, "spec") != stringValue(engine, "spec") ||
+		stringValue(validationEngine, "engine") != stringValue(engine, "engine") {
+		return false
+	}
+	errors, errorsOK := validation["errors"].([]any)
+	warnings, warningsOK := validation["warnings"].([]any)
+	patterns, patternsOK := validation["forbiddenPatterns"].([]any)
+	if !errorsOK || len(errors) != 0 || !warningsOK || !patternsOK {
+		return false
+	}
+	for _, pattern := range patterns {
+		if _, ok := pattern.(string); !ok {
+			return false
+		}
+	}
+	for _, warning := range warnings {
+		if !validSuccessorValidationIssueV117(warning, "warning") {
+			return false
+		}
+	}
+	return true
+}
+
+func validSuccessorValidationIssueV117(value any, severity string) bool {
+	issue, ok := value.(map[string]any)
+	if !ok || stringValue(issue, "severity") != severity || stringValue(issue, "code") == "" || stringValue(issue, "message") == "" {
+		return false
+	}
+	allowed := map[string]bool{"code": true, "severity": true, "message": true, "pattern": true, "line": true, "column": true, "constraint": true, "remediation": true, "reference": true}
+	for key, candidate := range issue {
+		if !allowed[key] {
+			return false
+		}
+		switch key {
+		case "line":
+			if integer, ok := runtimeInvocationV117Integer(candidate); !ok || integer <= 0 {
+				return false
+			}
+		case "column":
+			if _, ok := runtimeInvocationV117Integer(candidate); !ok {
+				return false
+			}
+		default:
+			if text, ok := candidate.(string); !ok || text == "" {
+				return false
+			}
+		}
+	}
+	return true
 }
 
 func validSuccessorRuntimeLimitsV117(limits map[string]any) bool {

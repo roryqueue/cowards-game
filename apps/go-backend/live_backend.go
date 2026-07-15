@@ -2765,6 +2765,7 @@ func (server *LiveServer) createExhibitionMatchSetWithDependencies(ctx context.C
 	}
 	for _, entrant := range entrants {
 		delete(entrant, "_creationRuntime")
+		delete(entrant, "_creationValidation")
 		delete(entrant, "_creationMetadata")
 	}
 	matches := generatePairwiseMatches(matchSetID, matchSetPresetID, entrants)
@@ -2978,6 +2979,7 @@ func (server *LiveServer) loadOwnedEntrants(ctx context.Context, tx pgx.Tx, user
 			"sourceBytes":         sourceBytes,
 			"runtime":             publicRuntimeMetadata(runtime),
 			"_creationRuntime":    runtime,
+			"_creationValidation": validation,
 			"_creationMetadata":   metadata,
 			"runtimeSemantics":    runtimeSemanticsForRevision(runtime, metadata, sourceHash, sourceBytes),
 			"engineCompatibility": jsonMap(engineRaw),

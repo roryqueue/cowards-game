@@ -200,6 +200,12 @@ func TestIntegrityEvidenceClassifierMatchesCanonicalStatusFloor(t *testing.T) {
 			}
 		})
 	}
+	fixtureAuthority := *authority
+	fixtureAuthority.TrustDomain = runtimeEvidenceAuthorityFixtureTrustDomain
+	fixtureResult := classifyExecutableLaneEvidence(executableLaneEvidenceInput{Authority: &fixtureAuthority, ExpectedLaneIdentityHash: laneHash, EvaluationInstant: "2026-07-13T00:00:00.000Z", ActiveRegistryGeneration: "9", ContainmentCertificate: &containmentRef, ConformanceCertificate: &conformanceRef})
+	if fixtureResult.Status != executableLaneEvidenceExhibitionOnly || fixtureResult.ReasonCode != "FIXTURE_NON_PRODUCTION" {
+		t.Fatalf("fixture-domain evidence became countable: %+v", fixtureResult)
+	}
 
 	revoked := *authority
 	revoked.Payload = authority.Payload
