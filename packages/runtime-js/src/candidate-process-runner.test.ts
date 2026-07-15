@@ -1,6 +1,8 @@
 import { Buffer } from "node:buffer"
+import { spawnSync } from "node:child_process"
 import {
   chmodSync,
+  existsSync,
   mkdtempSync,
   readFileSync,
   rmSync,
@@ -71,6 +73,58 @@ ${stream}.write(Buffer.alloc(${byteLength}, 97), () => {
 
     expect(result.error).toBeInstanceOf(Error)
     expect(result.terminationReceiptPresent).toBe(false)
+  })
+
+  it("settles a container launch failure that never creates a CID", () => {
+    const directory = mkdtempSync(join(tmpdir(), "cowards-runner-no-cid-"))
+    const cidFilePath = join(directory, "container.cid")
+    const script = `
+import { runCandidateProcessSync } from "./src/candidate-process-runner.ts"
+const result = runCandidateProcessSync({
+  command: "/definitely/missing/cowards-container-runtime",
+  args: ["run"],
+  env: { NODE_ENV: "production" },
+  input: "",
+  killSignal: "SIGKILL",
+  launchStartedNanoseconds: process.hrtime.bigint(),
+  timeoutMilliseconds: 100,
+  stdoutByteLimit: ${limits.stdout},
+  stderrByteLimit: ${limits.stderr},
+  containerCleanup: {
+    runtimeCommand: "/definitely/missing/cowards-container-runtime",
+    cidFilePath: ${JSON.stringify(cidFilePath)},
+    cleanupDirectory: ${JSON.stringify(directory)},
+  },
+})
+process.stdout.write(JSON.stringify({
+  errorCode: result.error && "code" in result.error ? result.error.code : null,
+  receiptPresent: result.terminationReceiptPresent,
+}))
+`
+
+    try {
+      const child = spawnSync(
+        process.execPath,
+        ["--import", "tsx", "--input-type=module", "--eval", script],
+        {
+          cwd: process.cwd(),
+          encoding: "utf8",
+          env: { ...process.env, NODE_ENV: "production" },
+          shell: false,
+          timeout: 2_000,
+        },
+      )
+
+      expect(child.error).toBeUndefined()
+      expect(child.status).toBe(0)
+      expect(JSON.parse(child.stdout)).toEqual({
+        errorCode: "ENOENT",
+        receiptPresent: false,
+      })
+      expect(existsSync(directory)).toBe(false)
+    } finally {
+      rmSync(directory, { force: true, recursive: true })
+    }
   })
 
   it("returns no receipt instead of fabricating close and keeps a process-group reaper", async () => {
