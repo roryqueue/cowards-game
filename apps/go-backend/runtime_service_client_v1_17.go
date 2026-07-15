@@ -12,6 +12,8 @@ import (
 const runtimeExecutionServiceVersionV117 = "runtime-execution-service-v1.17"
 const strategyRuntimeABIVersionV117 = "strategy-runtime-abi-v1.17"
 const canonicalJSONVersionV11 = "canonical-json-v1.1"
+const runtimeServiceV117BudgetProfileSHA256 = "sha256:13c061efc6954b7734b967177f07300b4c3c0dd18651b55510158b9a3c29c49f"
+const runtimeServiceV117EmptyLedgerRoot = "sha256:2ca3c0a9b5cd9ce685dfccf846334e4980931ea85d11852290952ae4f6fb8e6b"
 
 // selectedRuntimeServiceContractVersion is the single Go-side activation
 // pointer. Plan 258-14 prepares both clients while keeping production on v1.16;

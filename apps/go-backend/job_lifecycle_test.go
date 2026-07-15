@@ -164,6 +164,45 @@ func TestPhase258ClaimedV117IntegrityRequiresExactGraphAndAccountingSnapshot(t *
 	if err := validateClaimedMatchIntegrity(authority, identity, now); err == nil {
 		t.Fatal("v1.17 claim without exact graph roots, budget profile, and ledger prestate was admitted")
 	}
+	identity.RuntimeServiceV117 = &claimedRuntimeServiceV117{
+		BudgetProfileSHA256: runtimeServiceV117BudgetProfileSHA256,
+		LedgerPrestateRoot:  runtimeServiceV117EmptyLedgerRoot,
+		Bottom: runtimeServiceEntrantV117{
+			IdentityManifestRoot: "sha256:" + strings.Repeat("1", 64),
+			EvidenceGraphRoot:    "sha256:" + strings.Repeat("2", 64),
+		},
+		Top: runtimeServiceEntrantV117{
+			IdentityManifestRoot: "sha256:" + strings.Repeat("3", 64),
+			EvidenceGraphRoot:    "sha256:" + strings.Repeat("4", 64),
+		},
+	}
+	if err := validateClaimedMatchIntegrity(authority, identity, now); err != nil {
+		t.Fatalf("exact v1.17 claim snapshot was rejected: %v", err)
+	}
+	mutations := []struct {
+		name   string
+		mutate func(*claimedRuntimeServiceV117)
+	}{
+		{"budget profile", func(value *claimedRuntimeServiceV117) {
+			value.BudgetProfileSHA256 = "sha256:" + strings.Repeat("5", 64)
+		}},
+		{"ledger prestate", func(value *claimedRuntimeServiceV117) { value.LedgerPrestateRoot = "sha256:" + strings.Repeat("6", 64) }},
+		{"bottom identity root", func(value *claimedRuntimeServiceV117) { value.Bottom.IdentityManifestRoot = "" }},
+		{"bottom evidence root", func(value *claimedRuntimeServiceV117) { value.Bottom.EvidenceGraphRoot = "" }},
+		{"top identity root", func(value *claimedRuntimeServiceV117) { value.Top.IdentityManifestRoot = "" }},
+		{"top evidence root", func(value *claimedRuntimeServiceV117) { value.Top.EvidenceGraphRoot = "" }},
+	}
+	for _, mutation := range mutations {
+		t.Run(mutation.name, func(t *testing.T) {
+			candidate := *identity
+			binding := *identity.RuntimeServiceV117
+			candidate.RuntimeServiceV117 = &binding
+			mutation.mutate(candidate.RuntimeServiceV117)
+			if err := validateClaimedMatchIntegrity(authority, &candidate, now); err == nil {
+				t.Fatal("mutated v1.17 claim snapshot was admitted")
+			}
+		})
+	}
 }
 
 func TestMatchJobLifecycleIntegrityValidation(t *testing.T) {

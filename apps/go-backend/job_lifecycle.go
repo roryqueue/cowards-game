@@ -16,7 +16,7 @@ import (
 
 const defaultMatchJobLease = 30 * time.Second
 
-const claimNextMatchJobSQL = `
+const claimNextMatchJobSQLTemplate = `
   select
     j.id,
     j.match_id,
@@ -42,6 +42,22 @@ const claimNextMatchJobSQL = `
       'envelopeSha256', ms.authority_envelope_sha256,
       'sourceManifestHash', ms.authority_source_manifest_hash,
       'sourceSet', ms.authority_source_set,
+      'runtimeServiceV117', case
+        when ms.compatibility_runtime_abi_version = 'strategy-runtime-abi-v1.17'
+        then jsonb_build_object(
+          'budgetProfileSha256', '__RUNTIME_V117_BUDGET_PROFILE_SHA256__',
+          'ledgerPrestateRoot', '__RUNTIME_V117_EMPTY_LEDGER_ROOT__',
+          'bottom', jsonb_build_object(
+            'identityManifestRoot', 'sha256:' || bottom_containment.identity_manifest_root,
+            'evidenceGraphRoot', 'sha256:' || bottom_containment.evidence_graph_root
+          ),
+          'top', jsonb_build_object(
+            'identityManifestRoot', 'sha256:' || top_containment.identity_manifest_root,
+            'evidenceGraphRoot', 'sha256:' || top_containment.evidence_graph_root
+          )
+        )
+        else null
+      end,
       'bottom', bottom_execution_entrant.execution_snapshot,
       'top', top_execution_entrant.execution_snapshot
     ) as integrity_identity
@@ -131,6 +147,39 @@ const claimNextMatchJobSQL = `
     and bottom_execution_entrant.scheduling_fresh_until >= $1
     and top_execution_entrant.scheduling_fresh_until >= $1
     and (
+      ms.compatibility_runtime_abi_version <> 'strategy-runtime-abi-v1.17'
+      or (
+        bottom_containment.graph_schema_version = 'runtime-evidence-graph-v1.17'
+        and bottom_containment.graph_profile = 'runtime-identity-evidence-dag-v1'
+        and bottom_containment.identity_manifest_root is not null
+        and bottom_containment.evidence_graph_root is not null
+        and top_containment.graph_schema_version = 'runtime-evidence-graph-v1.17'
+        and top_containment.graph_profile = 'runtime-identity-evidence-dag-v1'
+        and top_containment.identity_manifest_root is not null
+        and top_containment.evidence_graph_root is not null
+        and (
+          bottom_conformance.id is null
+          or (
+            bottom_conformance.graph_schema_version = bottom_containment.graph_schema_version
+            and bottom_conformance.graph_profile = bottom_containment.graph_profile
+            and bottom_conformance.identity_manifest_root = bottom_containment.identity_manifest_root
+            and bottom_conformance.evidence_graph_root = bottom_containment.evidence_graph_root
+            and bottom_conformance.exact_pin_expansion = bottom_containment.exact_pin_expansion
+          )
+        )
+        and (
+          top_conformance.id is null
+          or (
+            top_conformance.graph_schema_version = top_containment.graph_schema_version
+            and top_conformance.graph_profile = top_containment.graph_profile
+            and top_conformance.identity_manifest_root = top_containment.identity_manifest_root
+            and top_conformance.evidence_graph_root = top_containment.evidence_graph_root
+            and top_conformance.exact_pin_expansion = top_containment.exact_pin_expansion
+          )
+        )
+      )
+    )
+    and (
       (bottom_execution_entrant.scheduling_status = 'counted' and bottom_conformance.id is not null and bottom_conformance.issued_at <= $1 and bottom_conformance.fresh_until >= $1)
       or (bottom_execution_entrant.scheduling_status = 'exhibition_only' and bottom_execution_entrant.conformance_certificate_id is null)
     )
@@ -194,6 +243,11 @@ const claimNextMatchJobSQL = `
   limit 1
 `
 
+var claimNextMatchJobSQL = strings.NewReplacer(
+	"__RUNTIME_V117_BUDGET_PROFILE_SHA256__", runtimeServiceV117BudgetProfileSHA256,
+	"__RUNTIME_V117_EMPTY_LEDGER_ROOT__", runtimeServiceV117EmptyLedgerRoot,
+).Replace(claimNextMatchJobSQLTemplate)
+
 var claimNextMatchJobWithAllowlistSQL = strings.Replace(
 	claimNextMatchJobSQL,
 	"  where (\n",
@@ -225,7 +279,7 @@ const claimNextLegacyMatchJobWithAllowlistSQL = `
   limit 1
 `
 
-const recheckClaimedMatchIntegritySQL = `
+const recheckClaimedMatchIntegritySQLTemplate = `
   select jsonb_build_object(
     'matchSetId', ms.id,
     'compatibilityTupleId', ms.compatibility_tuple_id,
@@ -244,6 +298,22 @@ const recheckClaimedMatchIntegritySQL = `
     'envelopeSha256', ms.authority_envelope_sha256,
     'sourceManifestHash', ms.authority_source_manifest_hash,
     'sourceSet', ms.authority_source_set,
+    'runtimeServiceV117', case
+      when ms.compatibility_runtime_abi_version = 'strategy-runtime-abi-v1.17'
+      then jsonb_build_object(
+        'budgetProfileSha256', '__RUNTIME_V117_BUDGET_PROFILE_SHA256__',
+        'ledgerPrestateRoot', '__RUNTIME_V117_EMPTY_LEDGER_ROOT__',
+        'bottom', jsonb_build_object(
+          'identityManifestRoot', 'sha256:' || bottom_containment.identity_manifest_root,
+          'evidenceGraphRoot', 'sha256:' || bottom_containment.evidence_graph_root
+        ),
+        'top', jsonb_build_object(
+          'identityManifestRoot', 'sha256:' || top_containment.identity_manifest_root,
+          'evidenceGraphRoot', 'sha256:' || top_containment.evidence_graph_root
+        )
+      )
+      else null
+    end,
     'bottom', bottom.execution_snapshot,
     'top', top.execution_snapshot
   )
@@ -258,6 +328,22 @@ const recheckClaimedMatchIntegritySQL = `
     on top.match_set_id = ms.id and top.entrant_key = j.top_execution_entrant_key
    and top.entrant_key = m.top_execution_entrant_key and top.strategy_revision_id = m.top_strategy_revision_id
    and top.execution_snapshot = j.top_execution_evidence and top.execution_snapshot = m.top_execution_evidence
+  left join runtime_evidence_certificates bottom_containment
+    on bottom_containment.id = bottom.containment_certificate_id
+   and bottom_containment.certificate_kind = 'containment'
+   and bottom_containment.certificate_status = 'passed'
+  left join runtime_evidence_certificates top_containment
+    on top_containment.id = top.containment_certificate_id
+   and top_containment.certificate_kind = 'containment'
+   and top_containment.certificate_status = 'passed'
+  left join runtime_evidence_certificates bottom_conformance
+    on bottom_conformance.id = bottom.conformance_certificate_id
+   and bottom_conformance.certificate_kind = 'conformance'
+   and bottom_conformance.certificate_status = 'passed'
+  left join runtime_evidence_certificates top_conformance
+    on top_conformance.id = top.conformance_certificate_id
+   and top_conformance.certificate_kind = 'conformance'
+   and top_conformance.certificate_status = 'passed'
   where j.id = $1 and j.lease_token = $2 and j.status = 'running'
     and m.status = 'running'
     and j.execution_evidence_pair_hash = m.execution_evidence_pair_hash
@@ -265,6 +351,39 @@ const recheckClaimedMatchIntegritySQL = `
     and ms.authority_bundle_hash = top.authority_bundle_hash
     and ms.authority_registry_generation = bottom.authority_registry_generation
     and ms.authority_registry_generation = top.authority_registry_generation
+    and (
+      ms.compatibility_runtime_abi_version <> 'strategy-runtime-abi-v1.17'
+      or (
+        bottom_containment.graph_schema_version = 'runtime-evidence-graph-v1.17'
+        and bottom_containment.graph_profile = 'runtime-identity-evidence-dag-v1'
+        and bottom_containment.identity_manifest_root is not null
+        and bottom_containment.evidence_graph_root is not null
+        and top_containment.graph_schema_version = 'runtime-evidence-graph-v1.17'
+        and top_containment.graph_profile = 'runtime-identity-evidence-dag-v1'
+        and top_containment.identity_manifest_root is not null
+        and top_containment.evidence_graph_root is not null
+        and (
+          bottom_conformance.id is null
+          or (
+            bottom_conformance.graph_schema_version = bottom_containment.graph_schema_version
+            and bottom_conformance.graph_profile = bottom_containment.graph_profile
+            and bottom_conformance.identity_manifest_root = bottom_containment.identity_manifest_root
+            and bottom_conformance.evidence_graph_root = bottom_containment.evidence_graph_root
+            and bottom_conformance.exact_pin_expansion = bottom_containment.exact_pin_expansion
+          )
+        )
+        and (
+          top_conformance.id is null
+          or (
+            top_conformance.graph_schema_version = top_containment.graph_schema_version
+            and top_conformance.graph_profile = top_containment.graph_profile
+            and top_conformance.identity_manifest_root = top_containment.identity_manifest_root
+            and top_conformance.evidence_graph_root = top_containment.evidence_graph_root
+            and top_conformance.exact_pin_expansion = top_containment.exact_pin_expansion
+          )
+        )
+      )
+    )
     and exists (
       select 1
         from runtime_evidence_authority_installed_head installed_head
@@ -274,6 +393,11 @@ const recheckClaimedMatchIntegritySQL = `
     )
   for share of j, m, ms, bottom, top
 `
+
+var recheckClaimedMatchIntegritySQL = strings.NewReplacer(
+	"__RUNTIME_V117_BUDGET_PROFILE_SHA256__", runtimeServiceV117BudgetProfileSHA256,
+	"__RUNTIME_V117_EMPTY_LEDGER_ROOT__", runtimeServiceV117EmptyLedgerRoot,
+).Replace(recheckClaimedMatchIntegritySQLTemplate)
 
 type matchJobLifecycle struct {
 	pool                  *pgxpool.Pool
@@ -312,8 +436,16 @@ type claimedMatchIntegrityIdentity struct {
 	EnvelopeSHA256       string                      `json:"envelopeSha256"`
 	SourceManifestHash   string                      `json:"sourceManifestHash"`
 	SourceSet            map[string]any              `json:"sourceSet"`
+	RuntimeServiceV117   *claimedRuntimeServiceV117  `json:"runtimeServiceV117"`
 	Bottom               goEntrantExecutionEvidence  `json:"bottom"`
 	Top                  goEntrantExecutionEvidence  `json:"top"`
+}
+
+type claimedRuntimeServiceV117 struct {
+	BudgetProfileSHA256 string                    `json:"budgetProfileSha256"`
+	LedgerPrestateRoot  string                    `json:"ledgerPrestateRoot"`
+	Bottom              runtimeServiceEntrantV117 `json:"bottom"`
+	Top                 runtimeServiceEntrantV117 `json:"top"`
 }
 
 type recordAttemptFailureInput struct {
@@ -467,6 +599,13 @@ func validateClaimedMatchIntegrity(authority *verifiedRuntimeEvidenceAuthority, 
 		!isLowerSHA256(identity.EvidenceSetHash) || !isLowerSHA256(identity.PairHash) {
 		return errors.New("claimed Match integrity identity is unavailable")
 	}
+	if identity.CompatibilityTuple.RuntimeABI == strategyRuntimeABIVersionV117 {
+		if !validClaimedRuntimeServiceV117(identity.RuntimeServiceV117) {
+			return errors.New("claimed Match successor runtime identity is unavailable")
+		}
+	} else if identity.RuntimeServiceV117 != nil {
+		return errors.New("claimed Match runtime identity is mixed-version")
+	}
 	if err := validateClaimedEntrantIntegrity(authority, identity.Bottom, now); err != nil {
 		return err
 	}
@@ -482,6 +621,19 @@ func validateClaimedMatchIntegrity(authority *verifiedRuntimeEvidenceAuthority, 
 		return errors.New("claimed Match ordered evidence pair does not match authority")
 	}
 	return nil
+}
+
+func validClaimedRuntimeServiceV117(binding *claimedRuntimeServiceV117) bool {
+	if binding == nil || binding.BudgetProfileSHA256 != runtimeServiceV117BudgetProfileSHA256 ||
+		binding.LedgerPrestateRoot != runtimeServiceV117EmptyLedgerRoot {
+		return false
+	}
+	for _, entrant := range []runtimeServiceEntrantV117{binding.Bottom, binding.Top} {
+		if !isPrefixedLowerSHA256(entrant.IdentityManifestRoot) || !isPrefixedLowerSHA256(entrant.EvidenceGraphRoot) {
+			return false
+		}
+	}
+	return true
 }
 
 func validateClaimedEntrantIntegrity(authority *verifiedRuntimeEvidenceAuthority, entrant goEntrantExecutionEvidence, now time.Time) error {
