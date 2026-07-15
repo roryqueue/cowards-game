@@ -5,15 +5,15 @@ milestone_name: Rules Integrity and Strategy Evaluation Foundations — ACTIVE
 current_phase: 258
 current_phase_name: canonical-json-failure-semantics-and-artifact-identity
 status: in_progress
-stopped_at: Completed 258-11; ready for 258-12
-last_updated: "2026-07-14T19:13:20.000Z"
+stopped_at: Completed 258-12; ready for 258-13
+last_updated: "2026-07-15T00:26:15.000Z"
 last_activity: 2026-07-14
-last_activity_desc: Phase 258 Plan 11 completed Go canonical retry and PostgreSQL rollback authority with zero review findings
+last_activity_desc: Phase 258 Plan 12 completed exact runtime ledgers and fail-closed capability authority with zero review findings
 progress:
   total_phases: 6
   completed_phases: 2
   total_plans: 55
-  completed_plans: 51
+  completed_plans: 52
   percent: 33
 ---
 
@@ -29,9 +29,9 @@ See: `.planning/PROJECT.md` (updated 2026-07-12)
 ## Current Position
 
 Phase: 258 (canonical-json-failure-semantics-and-artifact-identity) — IN PROGRESS
-Plan: 11 of 14
-Status: Plan 11 complete with zero review findings; Go canonical retry and persistence rollback proofs green
-Last activity: 2026-07-14 — Completed Plan 258-11 Go retry and persistence authority
+Plan: 12 of 14
+Status: Plan 12 complete with zero review findings; exact ledgers, observed receipts, and fail-closed capability evidence green
+Last activity: 2026-07-14 — Completed Plan 258-12 runtime ledger and capability authority
 
 Progress: [███░░░░░░░] 33%
 
@@ -61,8 +61,8 @@ Progress: [███░░░░░░░] 33%
 
 **Resume file:** None
 
-Last session: 2026-07-14T19:13:20.000Z
-Stopped at: Completed 258-11; ready for 258-12
+Last session: 2026-07-15T00:26:15.000Z
+Stopped at: Completed 258-12; ready for 258-13
 Next command: `$gsd-execute-phase 258`
 
 ## Performance Metrics
@@ -104,8 +104,15 @@ Next command: `$gsd-execute-phase 258`
 | Phase 258 P10 | 22min | 2 tasks + review | 6 runtime/evaluator/fixture files |
 | Phase 258 P09 | 2h 18min | 2 tasks + adversarial rereview | 23 implementation/migration/proof files |
 | Phase 258 P11 | 1h 2min | 2 tasks + 3 review loops | 24 implementation/test/artifact files |
+| Phase 258 P12 | 5h 05min | 2 tasks + deep review convergence | 61 implementation/test/artifact/planning files |
 
 ## Decisions
+
+- [Phase 258]: Method, cumulative Match, and preflight ledgers are signed and disjoint; retry reuses exact prestate and cannot reset, refill, merge, or double-debit accounting. — Resource policy remains deterministic across service and language boundaries.
+- [Phase 258]: A success receipt binds canonical payload bytes, exact host-owned S-framed stdout, zero stderr, and actual lifecycle completion. — Declared counters, parseable output, or process death alone cannot manufacture causal evidence.
+- [Phase 258]: Only positively proven Strategy-owned exhaustion is a player violation; unavailable meters, host overload, accounting faults, ambiguous attribution, and infrastructure failure are no-commit system failures. — Failure never mutates gameplay or becomes a player penalty by inference.
+- [Phase 258]: Operational preflight authenticates exact request/receipt pairs but remains explicitly uncertified with empty production trusted-producer authority. — Documentation, gate names, or signed no-commit diagnostics cannot promote a counted lane.
+- [Phase 258]: Toolchain discovery is separately bounded and load-tolerant outside every signed Strategy method wall. — Host load cannot falsely erase a supported lane or consume player budget.
 
 - [Phase 258]: Go v1.17 admits the same bounded canonical JSON profile and complete 70-vector corpus as TypeScript while v1.16 retains its historical dispatch and immutable wire bytes. — The Go control plane cannot hide duplicate keys, numeric drift, Unicode faults, ordering changes, or limit violations behind map conversion.
 - [Phase 258]: Retry is Go-owned, limited to three total attempts and the signed cumulative budget, and allowed only for generated retryable system failures using identical request bytes and prestate. — Caller input, cancellation, player violations, and changed bytes cannot expand or redirect retry authority.
