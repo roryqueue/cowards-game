@@ -139,6 +139,10 @@ const cleanupContainer = (includeKill, deadlineNanoseconds) => {
     }
   }
   if (!/^[a-f0-9]{64}$/.test(containerId)) {
+    if (childClosed || (childError && !childSpawned)) {
+      containerIdentityUnavailable = true
+      cleanupDirectory()
+    }
     return
   }
   const commands = [
