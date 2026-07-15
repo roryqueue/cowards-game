@@ -336,11 +336,11 @@ const classifyGuestFrame = (
     case RUNTIME_GUEST_FRAME_TAGS_V117.hostFailure:
       return systemFailure(request, "HOST_CRASH", true)
     case RUNTIME_GUEST_FRAME_TAGS_V117.deadlineExceeded:
-      return playerViolation(
-        request,
-        "TIMEOUT",
+      return systemFailure(request, "TIMEOUT", false, [
+        "ADAPTER_AUTHENTICATED",
+        "OUTER_BINDINGS_VERIFIED",
         "WALL_DEADLINE_EXCEEDED",
-      )
+      ])
     default:
       return systemFailure(request, "TRANSPORT_CRASH", true)
   }

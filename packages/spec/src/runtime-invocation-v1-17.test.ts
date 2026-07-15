@@ -1064,6 +1064,7 @@ describe("runtime invocation v1.17 exclusive ownership", () => {
       RUNTIME_CRASH: true,
       HOST_CRASH: true,
       TRANSPORT_CRASH: true,
+      TIMEOUT: false,
       AMBIGUOUS_ATTRIBUTION: false,
     })
     expect(

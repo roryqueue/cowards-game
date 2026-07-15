@@ -823,6 +823,7 @@ export type RuntimeAbiV117LedgerFailureCode =
   | "METER_ACCOUNTING_INCONSISTENT"
   | "HOST_RESOURCE_EXCESS"
   | "HOST_RESOURCE_ACCOUNTING"
+  | "STRATEGY_TIMEOUT"
   | "ENFORCEMENT_EVIDENCE_INVALID"
 
 export type RuntimeAbiV117LedgerDebitResult<
@@ -1679,6 +1680,16 @@ const debitExecutionLedger = (
       finalDimensions.length === 1 ? finalDimensions[0] : undefined,
     )
   }
+  const wallDimension = finalDimensions.find((dimension) =>
+    dimension.includes("wall"),
+  )
+  if (wallDimension !== undefined) {
+    return ledgerSystemFailure(
+      ledger,
+      "STRATEGY_TIMEOUT",
+      wallDimension,
+    )
+  }
 
   const outcome = finalDimensions.length === 0 ? "success" : "player_violation"
   const commitment = deepFreeze({
@@ -1914,6 +1925,16 @@ const debitPreflightLedger = <TProfile extends RuntimeAbiV117PreflightProfile>(
         ? "HOST_RESOURCE_EXCESS"
         : "HOST_RESOURCE_ACCOUNTING",
       finalDimensions.length === 1 ? finalDimensions[0] : undefined,
+    )
+  }
+  const wallDimension = finalDimensions.find((dimension) =>
+    dimension.includes("wall"),
+  )
+  if (wallDimension !== undefined) {
+    return ledgerSystemFailure(
+      ledger,
+      "STRATEGY_TIMEOUT",
+      wallDimension,
     )
   }
   const outcome = finalDimensions.length === 0 ? "success" : "player_violation"

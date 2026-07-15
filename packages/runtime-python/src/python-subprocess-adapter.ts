@@ -110,6 +110,7 @@ const pythonCandidateSystemFailure = (
     | "ADAPTER_CRASH"
     | "HOST_CRASH"
     | "TRANSPORT_CRASH"
+    | "TIMEOUT"
     | "AMBIGUOUS_ATTRIBUTION",
   safeCodes: readonly string[] = [],
 ): RuntimeInvocationResultV117 => ({
@@ -119,6 +120,7 @@ const pythonCandidateSystemFailure = (
     publicMessage: "Runtime system failure.",
     retryable:
       code !== "OUTER_FRAME_WRONG_BINDING" &&
+      code !== "TIMEOUT" &&
       code !== "AMBIGUOUS_ATTRIBUTION",
   },
   trace: candidateTrace(request, [...safeCodes, code]),
@@ -213,7 +215,9 @@ const rawOutcome = (
     return pythonCandidatePlayerViolation(request, "THROWN_EXCEPTION")
   }
   if (observation.kind === "strategy_timeout") {
-    return pythonCandidatePlayerViolation(request, "TIMEOUT")
+    return pythonCandidateSystemFailure(request, "TIMEOUT", [
+      "RAW_STRATEGY_TIMEOUT_OBSERVED",
+    ])
   }
   if (observation.kind === "oversized_output") {
     return pythonCandidatePlayerViolation(request, "OVERSIZED_OUTPUT")

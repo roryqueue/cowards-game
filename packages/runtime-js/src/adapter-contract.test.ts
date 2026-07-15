@@ -1200,12 +1200,6 @@ export default {
 
     it("keeps wall TIMEOUT as a system failure even with bounded termination", () => {
       const request = candidateRequest()
-      const evidence = completeCandidateEvidence(request, {
-        wallMilliseconds:
-          request.budget.methodLimit.counters.wallMilliseconds.maximum + 1,
-        payloadBytes: 0,
-        stdoutBytes: 1,
-      })
       const adapter = createSubprocessStrategyExecutionAdapter({
         spawnSync: () =>
           candidateSpawnResult("D", { receiptPresent: true }),
@@ -1215,7 +1209,6 @@ export default {
         adapter,
         request,
         transpiledSource(),
-        evidence,
       )
 
       expect(result).toMatchObject({
@@ -1551,10 +1544,10 @@ export default {
             : {
                 kind: "success",
                 value: {
-                  accounting: { disposition: "commit" },
+                  accounting: { disposition: "no_commit" },
                   outcome: {
-                    kind: "player_violation",
-                    violation: { code: "TIMEOUT" },
+                    kind: "system_failure",
+                    failure: { code: "TIMEOUT" },
                   },
                 },
               },

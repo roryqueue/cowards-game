@@ -597,7 +597,9 @@ describe("runtime ABI v1.17 pure budget ledger", () => {
           expect(over.violation.dimensions).toContain(dimension)
         }
       }
-      expect(over.ledger.cumulative[counter]).toBe(maximum + 1)
+      expect(over.ledger.cumulative[counter]).toBe(
+        counter === "wallMilliseconds" ? 0 : maximum + 1,
+      )
     },
   )
 
@@ -952,7 +954,7 @@ describe("runtime ABI v1.17 pure budget ledger", () => {
 
     const violationReceipt = executionReceipt(initial, {
       invocationId: "invocation:idempotent:violation",
-      deltas: { wallMilliseconds: 51 },
+      deltas: { computeFuel: 10_000_001 },
     })
     const violation = runtimeAbi.debitRuntimeAbiV117Ledger(
       initial,
@@ -1019,9 +1021,18 @@ describe("runtime ABI v1.17 pure budget ledger", () => {
         preflight,
         preflightReceipt(preflight, { deltas: { [counter]: maximum + 1 } }),
       )
-      expect(over.kind).toBe("player_violation")
-      if (over.kind === "player_violation") {
-        expect(over.violation.dimensions).toContain(dimension)
+      if (counter === "wallMilliseconds") {
+        expect(over).toMatchObject({
+          kind: "system_failure",
+          committed: false,
+          failure: { code: "STRATEGY_TIMEOUT", dimension },
+        })
+        expect(over.ledger).toBe(preflight)
+      } else {
+        expect(over.kind).toBe("player_violation")
+        if (over.kind === "player_violation") {
+          expect(over.violation.dimensions).toContain(dimension)
+        }
       }
     },
   )

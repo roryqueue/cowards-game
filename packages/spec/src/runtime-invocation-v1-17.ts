@@ -51,7 +51,7 @@ export const RUNTIME_INVOCATION_V1_17_CANDIDATE = deepFreeze({
 
 export const RUNTIME_INVOCATION_V1_17_PLAYER_VIOLATION_CODES = deepFreeze([
   "INVALID_OUTPUT",
-  "TIMEOUT",
+  "RESOURCE_EXHAUSTION",
   "THROWN_EXCEPTION",
   "FORBIDDEN_CAPABILITY",
   "OVERSIZED_OUTPUT",
@@ -65,9 +65,9 @@ export const RUNTIME_INVOCATION_V1_17_PLAYER_VIOLATIONS = deepFreeze({
     code: "INVALID_OUTPUT",
     publicMessage: "Strategy returned an invalid payload.",
   },
-  TIMEOUT: {
-    code: "TIMEOUT",
-    publicMessage: "Strategy exhausted its invocation budget.",
+  RESOURCE_EXHAUSTION: {
+    code: "RESOURCE_EXHAUSTION",
+    publicMessage: "Strategy exhausted a measured resource budget.",
   },
   THROWN_EXCEPTION: {
     code: "THROWN_EXCEPTION",
@@ -93,6 +93,7 @@ export const RUNTIME_INVOCATION_V1_17_SYSTEM_FAILURE_CODES = deepFreeze([
   "RUNTIME_CRASH",
   "HOST_CRASH",
   "TRANSPORT_CRASH",
+  "TIMEOUT",
   "AMBIGUOUS_ATTRIBUTION",
 ] as const)
 
@@ -109,6 +110,7 @@ export const RUNTIME_INVOCATION_V1_17_SYSTEM_FAILURE_RETRYABILITY = deepFreeze({
   RUNTIME_CRASH: true,
   HOST_CRASH: true,
   TRANSPORT_CRASH: true,
+  TIMEOUT: false,
   AMBIGUOUS_ATTRIBUTION: false,
 } as const satisfies Record<RuntimeInvocationSystemFailureCodeV117, boolean>)
 
@@ -300,9 +302,15 @@ export const RUNTIME_INVOCATION_V1_17_OWNERSHIP_MATRIX = deepFreeze({
   },
   strategy_exhaustion_proven: {
     kind: "player_violation",
-    code: "TIMEOUT",
+    code: "RESOURCE_EXHAUSTION",
     publicMessage:
-      RUNTIME_INVOCATION_V1_17_PLAYER_VIOLATIONS.TIMEOUT.publicMessage,
+      RUNTIME_INVOCATION_V1_17_PLAYER_VIOLATIONS.RESOURCE_EXHAUSTION
+        .publicMessage,
+  },
+  strategy_timeout: {
+    kind: "system_failure",
+    code: "TIMEOUT",
+    retryable: RUNTIME_INVOCATION_V1_17_SYSTEM_FAILURE_RETRYABILITY.TIMEOUT,
   },
   outer_frame_missing: {
     kind: "system_failure",
@@ -1472,11 +1480,12 @@ const budgetViolationCodeForDimensions = (
     ) {
       codes.add("OVERSIZED_OUTPUT")
     } else if (
-      dimension.includes("wall") ||
       dimension.includes("compute") ||
       dimension.includes("memory")
     ) {
-      codes.add("TIMEOUT")
+      codes.add("RESOURCE_EXHAUSTION")
+    } else if (dimension.includes("wall")) {
+      return undefined
     } else if (dimension.includes("process")) {
       codes.add("FORBIDDEN_CAPABILITY")
     } else {
