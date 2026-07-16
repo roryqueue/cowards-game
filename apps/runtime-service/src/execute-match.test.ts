@@ -967,7 +967,7 @@ describe("runtime execution service", () => {
       isExactCommittedRuntimeExecutionServiceRequestV116(uncommittedOldRequest),
     ).toBe(false)
     if (
-      STRATEGY_RUNTIME_ABI_VERSION !==
+      String(STRATEGY_RUNTIME_ABI_VERSION) !==
       HISTORICAL_RUNTIME_EXECUTION_SERVICE_V1_16.runtimeAbiVersion
     ) {
       expect(executeRuntimeServiceRequest(uncommittedOldRequest)).toMatchObject(

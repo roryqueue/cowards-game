@@ -1,4 +1,7 @@
-import type { StrategyRuntime } from "@cowards/engine"
+import type {
+  CanonicalStrategyRuntime,
+  StrategyRuntime,
+} from "@cowards/engine"
 import { createNestedMatchShapeRuntimeFromRevisionTestSupport } from "../../../packages/runtime-js/src/executor.js"
 import { createPythonNestedMatchShapeRuntimeTestSupport } from "../../../packages/runtime-python/src/python-subprocess-adapter.js"
 import { createWasmWasiNestedMatchShapeRuntimeTestSupport } from "../../../packages/runtime-wasm-wasi/src/wasm-wasi-subprocess-adapter.js"
@@ -19,8 +22,9 @@ export type CurrentMatchServiceTestOverrides = Omit<
     | undefined
 }
 
-const adaptRuntime = (runtime: StrategyRuntime): StrategyRuntime =>
-  adaptRuntimeForCurrentKernel(runtime) as unknown as StrategyRuntime
+const adaptRuntime = (
+  runtime: StrategyRuntime | CanonicalStrategyRuntime,
+): CanonicalStrategyRuntime => adaptRuntimeForCurrentKernel(runtime)
 
 /**
  * Selected-pointer test support for service tests that execute the canonical

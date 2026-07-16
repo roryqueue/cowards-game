@@ -5,7 +5,11 @@ import type {
   StrategyInput,
 } from "@cowards/spec"
 import { describe, expect, it } from "vitest"
-import { MATCH_KERNEL, type StrategyRuntime } from "@cowards/engine"
+import {
+  MATCH_KERNEL,
+  type CanonicalStrategyRuntime,
+  type StrategyRuntime,
+} from "@cowards/engine"
 import { adaptRuntimeForCurrentKernel } from "@cowards/engine/test/current-kernel-runtime"
 import { recordChronicleFromExecution } from "./record.js"
 
@@ -46,7 +50,7 @@ const createRecordingRuntime = (
   },
 })
 
-const createMatchInput = (runtime: StrategyRuntime) => ({
+const createMatchInput = (runtime: CanonicalStrategyRuntime) => ({
   matchId: "chronicle-build-match",
   seed: "chronicle-seed",
   arenaVariant: {

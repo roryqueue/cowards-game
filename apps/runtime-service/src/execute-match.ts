@@ -65,6 +65,7 @@ import {
   runMatch,
   violation,
   type GameState,
+  type CanonicalStrategyRuntime,
   type RunMatchInput,
   type StrategyRuntime,
 } from "@cowards/engine"
@@ -257,7 +258,7 @@ const requestIdentity = (
 }
 
 const historicalRuntimeV116Request = (rawRequest: unknown): boolean =>
-  STRATEGY_RUNTIME_ABI_VERSION !==
+  String(STRATEGY_RUNTIME_ABI_VERSION) !==
     HISTORICAL_RUNTIME_EXECUTION_SERVICE_V1_16.runtimeAbiVersion &&
   isExactCommittedRuntimeExecutionServiceRequestV116(rawRequest)
 
@@ -755,7 +756,7 @@ const createRuntimeForRevision = (
   limits: RuntimeExecutionServiceRequest["limits"],
   expectedRuntimeAbi = STRATEGY_RUNTIME_ABI_VERSION,
 ):
-  | { ok: true; runtime: StrategyRuntime }
+  | { ok: true; runtime: CanonicalStrategyRuntime }
   | {
       ok: false
       diagnostics: Record<string, unknown>
@@ -763,7 +764,7 @@ const createRuntimeForRevision = (
   const historicalRuntime =
     expectedRuntimeAbi ===
       HISTORICAL_RUNTIME_EXECUTION_SERVICE_V1_16.runtimeAbiVersion &&
-    expectedRuntimeAbi !== STRATEGY_RUNTIME_ABI_VERSION
+    String(expectedRuntimeAbi) !== String(STRATEGY_RUNTIME_ABI_VERSION)
   if (historicalRuntime) {
     return {
       ok: false,
@@ -904,28 +905,28 @@ const defaultDependencies: RuntimeExecutionServiceDependencies = {
 }
 
 export const createSideDispatchRuntime = (
-  bottomRuntime: StrategyRuntime,
-  topRuntime: StrategyRuntime,
+  bottomRuntime: CanonicalStrategyRuntime,
+  topRuntime: CanonicalStrategyRuntime,
   playerIds: { bottomPlayerId: PlayerId; topPlayerId: PlayerId },
-): StrategyRuntime => ({
-  selectActivations(input) {
+): CanonicalStrategyRuntime => ({
+  selectActivations(input, kernelRequest) {
     const playerId = input.mySoldiers[0]?.ownerPlayerId
     if (playerId === playerIds.bottomPlayerId) {
-      return bottomRuntime.selectActivations(input)
+      return bottomRuntime.selectActivations(input, kernelRequest)
     }
     if (playerId === playerIds.topPlayerId) {
-      return topRuntime.selectActivations(input)
+      return topRuntime.selectActivations(input, kernelRequest)
     }
     return violation("INVALID_OUTPUT", "Cannot resolve player runtime")
   },
 
-  runSoldierBrain(input) {
+  runSoldierBrain(input, kernelRequest) {
     const playerId = input.self.ownerPlayerId
     if (playerId === playerIds.bottomPlayerId) {
-      return bottomRuntime.runSoldierBrain(input)
+      return bottomRuntime.runSoldierBrain(input, kernelRequest)
     }
     if (playerId === playerIds.topPlayerId) {
-      return topRuntime.runSoldierBrain(input)
+      return topRuntime.runSoldierBrain(input, kernelRequest)
     }
     return violation("INVALID_OUTPUT", "Cannot resolve soldier runtime")
   },
@@ -1941,7 +1942,7 @@ const createPreparedTypeScriptRuntimeV117 = (input: {
         invoke("selectActivations", value as unknown as JsonValue),
       runSoldierBrain: (value) =>
         invoke("soldierBrain", value as unknown as JsonValue),
-    } as StrategyRuntime,
+    } as CanonicalStrategyRuntime,
   }
 }
 

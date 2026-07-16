@@ -21,6 +21,7 @@ import type {
   StrategyResult,
   StrategyRevisionId,
 } from "@cowards/spec"
+import type { CandidateStrategyRuntime } from "./kernel/types.js"
 
 export type PlayerSide = "bottom" | "top"
 export type MatchPhase = "ROUND" | "CONTRACTION" | "COMPLETE"
@@ -86,6 +87,13 @@ export interface StrategyRuntime {
   runSoldierBrain(input: SoldierBrainInput): RuntimeResult<SoldierBrainResult>
 }
 
+/**
+ * Runtime boundary accepted by the canonical kernel. Legacy StrategyRuntime
+ * implementations are a structural subset; current adapters may return an
+ * authenticated response bound to the optional kernel request.
+ */
+export type CanonicalStrategyRuntime = CandidateStrategyRuntime
+
 export type ActivationTerminalReason =
   | "BACKSTABBED"
   | "CYCLE_EXHAUSTED"
@@ -119,7 +127,7 @@ export interface CreateInitialGameStateInput {
 }
 
 export interface RunMatchInput extends CreateInitialGameStateInput {
-  runtime: StrategyRuntime
+  runtime: CanonicalStrategyRuntime
   maxPhases?: number | undefined
 }
 

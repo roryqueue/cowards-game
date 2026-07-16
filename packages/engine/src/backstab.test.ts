@@ -6,7 +6,8 @@ import { resolveAction } from "./movement.js"
 import { checkImmediateMatchEnd } from "./outcome.js"
 import { createInitialGameState } from "./state.js"
 import { createFakeRuntime } from "./test/fake-runtime.js"
-import type { GameState, StrategyRuntime } from "./types.js"
+import { adaptRuntimeForCurrentKernel } from "./test/current-kernel-runtime.js"
+import type { CanonicalStrategyRuntime, GameState } from "./types.js"
 
 const baseInput = {
   matchId: "match-backstab",
@@ -40,12 +41,12 @@ const stateWith = (soldiers: Soldier[]): GameState => ({
 
 const runActivation = (
   state: GameState,
-  runtime: StrategyRuntime,
+  runtime: CanonicalStrategyRuntime,
   soldierId: string,
 ) => {
   const execution = MATCH_KERNEL.runActivationFromState({
     state,
-    runtime,
+    runtime: adaptRuntimeForCurrentKernel(runtime),
     soldierId,
   })
   expect(execution.kind).toBe("completed")

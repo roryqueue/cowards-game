@@ -2,10 +2,11 @@ import { describe, expect, it } from "vitest"
 import type { Soldier } from "@cowards/spec"
 import { MATCH_KERNEL } from "./kernel/driver.js"
 import { createInitialGameState } from "./state.js"
+import { adaptRuntimeForCurrentKernel } from "./test/current-kernel-runtime.js"
 import {
   success,
   type GameState,
-  type StrategyRuntime,
+  type CanonicalStrategyRuntime,
   type TransitionResult,
 } from "./types.js"
 
@@ -48,12 +49,12 @@ const publicEventContract = (events: TransitionResult["events"]) =>
 
 const runActivation = (
   state: GameState,
-  runtime: StrategyRuntime,
+  runtime: CanonicalStrategyRuntime,
   soldierId: string,
 ): TransitionResult => {
   const execution = MATCH_KERNEL.runActivationFromState({
     state,
-    runtime,
+    runtime: adaptRuntimeForCurrentKernel(runtime),
     soldierId,
   })
   expect(execution.kind).toBe("completed")
@@ -122,7 +123,7 @@ describe("approved lifecycle behavior through the candidate authority", () => {
       }),
     ])
     const observedCycles: number[] = []
-    const runtime: StrategyRuntime = {
+    const runtime: CanonicalStrategyRuntime = {
       selectActivations: () =>
         success({ activationOrders: [], strategyMemory: {} }),
       runSoldierBrain: (input) => {
@@ -219,7 +220,7 @@ describe("approved lifecycle behavior through the candidate authority", () => {
       }),
     ])
     const observedCycles: number[] = []
-    const runtime: StrategyRuntime = {
+    const runtime: CanonicalStrategyRuntime = {
       selectActivations: () =>
         success({ activationOrders: [], strategyMemory: {} }),
       runSoldierBrain: (input) => {

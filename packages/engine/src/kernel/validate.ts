@@ -1,5 +1,7 @@
 import { createHash } from "node:crypto"
 import {
+  HISTORICAL_RUNTIME_V114_SEMANTIC_TUPLE,
+  HISTORICAL_RUNTIME_V114_SEMANTIC_TUPLE_ID,
   encodeCanonicalJson,
   projectRestrictedSemanticIntegrityFailure,
   validateCanonicalGameState,
@@ -26,6 +28,9 @@ import {
 } from "./types.js"
 
 const registeredKernelTuple = (tuple: KernelSemanticTuple): boolean =>
+  (tuple.tupleId === HISTORICAL_RUNTIME_V114_SEMANTIC_TUPLE_ID &&
+    JSON.stringify(projectTuple(tuple.tuple)) ===
+      JSON.stringify(HISTORICAL_RUNTIME_V114_SEMANTIC_TUPLE)) ||
   (tuple.tupleId === CANDIDATE_KERNEL_SEMANTIC_TUPLE_ID &&
     JSON.stringify(projectTuple(tuple.tuple)) ===
       JSON.stringify(CANDIDATE_KERNEL_SEMANTIC_TUPLE)) ||

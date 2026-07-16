@@ -10,7 +10,12 @@ import {
   createSoldierBrainInput,
 } from "./runtime-inputs.js"
 import { createFakeRuntime } from "./test/fake-runtime.js"
-import { violation, type GameState, type StrategyRuntime } from "./types.js"
+import { adaptRuntimeForCurrentKernel } from "./test/current-kernel-runtime.js"
+import {
+  violation,
+  type CanonicalStrategyRuntime,
+  type GameState,
+} from "./types.js"
 
 const baseInput = {
   matchId: "match-activation",
@@ -34,12 +39,12 @@ const stateWithSoldiers = (soldiers: Soldier[]): GameState => ({
 
 const runActivation = (
   state: GameState,
-  runtime: StrategyRuntime,
+  runtime: CanonicalStrategyRuntime,
   soldierId: string,
 ) => {
   const execution = MATCH_KERNEL.runActivationFromState({
     state,
-    runtime,
+    runtime: adaptRuntimeForCurrentKernel(runtime),
     soldierId,
   })
   expect(execution.kind).toBe("completed")
@@ -151,7 +156,7 @@ describe("activation selection and runtime inputs", () => {
 
   it("stones a Soldier after a RuntimeViolation with no-advance", () => {
     const state = createInitialGameState(baseInput)
-    const runtime: StrategyRuntime = {
+    const runtime: CanonicalStrategyRuntime = {
       selectActivations: createFakeRuntime().selectActivations,
       runSoldierBrain: () => violation("TIMEOUT", "RuntimeViolation timeout"),
     }
