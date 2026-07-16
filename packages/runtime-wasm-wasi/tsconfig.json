@@ -6,6 +6,10 @@
     "outDir": "dist",
     "types": ["node"]
   },
-  "references": [{ "path": "../spec" }, { "path": "../engine" }],
+  "references": [
+    { "path": "../spec" },
+    { "path": "../engine" },
+    { "path": "../runtime-supervisor" }
+  ],
   "include": ["src"]
 }

@@ -225,6 +225,9 @@ importers:
       '@cowards/engine':
         specifier: workspace:*
         version: link:../engine
+      '@cowards/runtime-supervisor':
+        specifier: workspace:*
+        version: link:../runtime-supervisor
       '@cowards/spec':
         specifier: workspace:*
         version: link:../spec
@@ -244,6 +247,9 @@ importers:
       '@cowards/engine':
         specifier: workspace:*
         version: link:../engine
+      '@cowards/runtime-supervisor':
+        specifier: workspace:*
+        version: link:../runtime-supervisor
       '@cowards/spec':
         specifier: workspace:*
         version: link:../spec
@@ -252,11 +258,20 @@ importers:
         specifier: ^24.10.1
         version: 24.12.4
 
+  packages/runtime-supervisor:
+    dependencies:
+      '@cowards/spec':
+        specifier: workspace:*
+        version: link:../spec
+
   packages/runtime-wasm-wasi:
     dependencies:
       '@cowards/engine':
         specifier: workspace:*
         version: link:../engine
+      '@cowards/runtime-supervisor':
+        specifier: workspace:*
+        version: link:../runtime-supervisor
       '@cowards/spec':
         specifier: workspace:*
         version: link:../spec
