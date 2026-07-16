@@ -651,7 +651,9 @@ const validateEvent = (
       parsed.data.context as unknown as JsonValue,
       context,
     ) ||
-    (event.privacy === "public" && event.privatePayloadHash !== null)
+    (event.privacy === "public"
+      ? event.privatePayloadHash !== null
+      : event.privatePayloadHash === null)
   ) {
     fail("TRACE_EVENT_INVALID")
   }
@@ -731,6 +733,106 @@ const validateTransition = (
   }
 }
 
+const validateTransitionEventStream = (
+  input: ProjectCanonicalConformanceTraceInput,
+): void => {
+  let expectedSequence = 0
+  const matchEndedEvents: Array<{
+    readonly transitionOrdinal: number
+    readonly event: RecordedCanonicalTransitionV137["orderedEvents"][number]
+  }> = []
+  for (const transition of input.transitions) {
+    if (
+      transition.terminalStatus !== null &&
+      transition.ordinal !== input.transitions.length - 1
+    ) {
+      fail("TRACE_RESULT_INVALID")
+    }
+    for (const event of transition.orderedEvents) {
+      if (event.sequence !== expectedSequence) fail("TRACE_ORDER_INVALID")
+      expectedSequence += 1
+      if (event.type === "MATCH_ENDED") {
+        matchEndedEvents.push({
+          transitionOrdinal: transition.ordinal,
+          event,
+        })
+      }
+    }
+  }
+
+  const finalTransition = input.transitions.at(-1)
+  if (input.resultClass === "success" && finalTransition === undefined) {
+    fail("TRACE_RESULT_INVALID")
+  }
+  const finalTerminalStatus = finalTransition?.terminalStatus ?? null
+  if (input.resultClass === "success" && finalTerminalStatus === null) {
+    fail("TRACE_RESULT_INVALID")
+  }
+  if (finalTerminalStatus === null) {
+    if (matchEndedEvents.length !== 0) fail("TRACE_RESULT_INVALID")
+    return
+  }
+  const finalEvent = finalTransition?.orderedEvents.at(-1)
+  if (
+    matchEndedEvents.length !== 1 ||
+    matchEndedEvents[0]!.transitionOrdinal !== finalTransition!.ordinal ||
+    matchEndedEvents[0]!.event !== finalEvent ||
+    finalEvent?.type !== "MATCH_ENDED" ||
+    !canonicalValuesEqual(
+      finalEvent.payload as JsonValue,
+      finalTerminalStatus as unknown as JsonValue,
+    )
+  ) {
+    fail("TRACE_RESULT_INVALID")
+  }
+}
+
+const transitionViolationStableCode = (
+  transition: RecordedCanonicalTransitionV137,
+): string => {
+  const violationEvents = transition.orderedEvents.filter(
+    ({ type }) => type === "RUNTIME_VIOLATION",
+  )
+  if (violationEvents.length !== 1) fail("TRACE_RESULT_INVALID")
+  const payload = violationEvents[0]!.payload
+  if (
+    payload === null ||
+    typeof payload !== "object" ||
+    Array.isArray(payload)
+  ) {
+    return fail("TRACE_RESULT_INVALID")
+  }
+  return requireStableCode(payload.type)
+}
+
+const validatePlayerViolationFailureOwnership = (
+  input: ProjectCanonicalConformanceTraceInput,
+): void => {
+  if (input.resultClass !== "player_violation") return
+  const failure = input.failure
+  if (failure === null) return fail("TRACE_RESULT_INVALID")
+  if (
+    failure.invocationOrdinal === null &&
+    failure.transitionOrdinal === null
+  ) {
+    fail("TRACE_RESULT_INVALID")
+  }
+  if (failure.transitionOrdinal === null) return
+  const transition = input.transitions[failure.transitionOrdinal]!
+  if (
+    transition.resultClass !== "player_violation" ||
+    transitionViolationStableCode(transition) !== failure.stableCode ||
+    transition.kind !== failure.failingBoundary ||
+    (transition.beforeStateHash !== transition.afterStateHash) !==
+      failure.gameplayMutation ||
+    failure.memoryMutation ||
+    transition.terminalHash !== failure.terminalEffectHash ||
+    failure.retryable
+  ) {
+    fail("TRACE_RESULT_INVALID")
+  }
+}
+
 const validateSystemFailureInvocationOwnership = (
   input: ProjectCanonicalConformanceTraceInput,
 ): void => {
@@ -766,6 +868,7 @@ const validateInput = (input: ProjectCanonicalConformanceTraceInput): void => {
   input.transitions.forEach((transition, index) =>
     validateTransition(transition, index, input.semanticTupleId),
   )
+  validateTransitionEventStream(input)
   const transitionRoots = validateRecordedTransitionTraceRootsV137(
     input.transitions,
   )
@@ -782,6 +885,7 @@ const validateInput = (input: ProjectCanonicalConformanceTraceInput): void => {
       fail("TRACE_RESULT_INVALID")
     }
   }
+  validatePlayerViolationFailureOwnership(input)
   validateSystemFailureInvocationOwnership(input)
 }
 

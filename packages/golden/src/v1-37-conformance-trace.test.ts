@@ -288,6 +288,32 @@ const transitionOwnedPlayerViolationInput =
     return input
   }
 
+const twoTransitionSuccessfulInput =
+  (): ProjectCanonicalConformanceTraceInput => {
+    const input = globalThis.structuredClone(
+      successfulInput(),
+    ) as DeepMutable<ProjectCanonicalConformanceTraceInput>
+    const original = input.transitions[0]!
+    const first: DeepMutable<RecordedCanonicalTransitionV137> = {
+      ...globalThis.structuredClone(original),
+      ordinal: 0,
+      coordinates: { ...original.coordinates, ordinal: 0 },
+      orderedEvents: [globalThis.structuredClone(original.orderedEvents[0]!)],
+      terminalStatus: null,
+      terminalHash: null,
+    }
+    const second: DeepMutable<RecordedCanonicalTransitionV137> = {
+      ...globalThis.structuredClone(original),
+      ordinal: 1,
+      coordinates: { ...original.coordinates, ordinal: 1 },
+      orderedEvents: [globalThis.structuredClone(original.orderedEvents[1]!)],
+    }
+    input.transitions = [first, second]
+    input.finalStateHash = second.afterStateHash
+    rebuildTransitionEvidence(input)
+    return input
+  }
+
 const mutableTrace = (
   trace: CanonicalConformanceTrace,
 ): DeepMutable<CanonicalConformanceTrace> =>
@@ -529,7 +555,7 @@ describe("v1.37 canonical conformance trace", () => {
 
   it("requires exact public and owner-private event commitments", () => {
     const ownerWithoutCommitment = globalThis.structuredClone(
-      successfulInput({ fullTrace: true }),
+      transitionOwnedPlayerViolationInput(),
     ) as DeepMutable<ProjectCanonicalConformanceTraceInput>
     const ownerEvent = ownerWithoutCommitment.transitions
       .flatMap(({ orderedEvents }) => orderedEvents)
@@ -555,7 +581,7 @@ describe("v1.37 canonical conformance trace", () => {
 
   it("requires one global event sequence and exact final terminal evidence", () => {
     const discontinuous = globalThis.structuredClone(
-      successfulInput({ fullTrace: true }),
+      twoTransitionSuccessfulInput(),
     ) as DeepMutable<ProjectCanonicalConformanceTraceInput>
     const laterTransition = discontinuous.transitions.find(
       ({ ordinal, orderedEvents }) => ordinal > 0 && orderedEvents.length > 0,
@@ -569,11 +595,12 @@ describe("v1.37 canonical conformance trace", () => {
     )
 
     const earlyTerminal = globalThis.structuredClone(
-      successfulInput({ fullTrace: true }),
+      twoTransitionSuccessfulInput(),
     ) as DeepMutable<ProjectCanonicalConformanceTraceInput>
     const terminal = earlyTerminal.transitions.at(-1)!
-    earlyTerminal.transitions[0]!.terminalStatus =
-      globalThis.structuredClone(terminal.terminalStatus)
+    earlyTerminal.transitions[0]!.terminalStatus = globalThis.structuredClone(
+      terminal.terminalStatus,
+    )
     earlyTerminal.transitions[0]!.terminalHash = terminal.terminalHash
     rebuildTransitionEvidence(earlyTerminal)
     expect(() => projectCanonicalConformanceTrace(earlyTerminal)).toThrowError(
@@ -1275,8 +1302,7 @@ describe("v1.37 canonical conformance trace", () => {
         input.failure!.failingBoundary = "different-boundary"
       },
       (input) => {
-        input.failure!.gameplayMutation =
-          !input.failure!.gameplayMutation
+        input.failure!.gameplayMutation = !input.failure!.gameplayMutation
       },
       (input) => {
         input.failure!.memoryMutation = true
