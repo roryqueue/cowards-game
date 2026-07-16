@@ -40,7 +40,7 @@ key-files:
 
 key-decisions:
   - "Counted supervision is Linux cgroup-v2 only; native non-Linux attempts fail before child launch with a stable unsupported result."
-  - "The supervisor runs as host UID/GID 65532 with every capability dropped, then maps the guest into a user namespace as UID/GID 65534 and hides the delegated cgroup through a private mount namespace plus Landlock."
+  - "The supervisor monitor runs as host UID/GID 65532 with every capability dropped; Docker launches the guest separately as the genuinely distinct host UID/GID 65534 in its own private PID namespace."
   - "The exact Docker 29.4.0, cgroupfs-v2, pinned kernel, pinned Alpine image, pinned Rust builder, custom digest-bound seccomp profile, controller set, UID tuple, source, lock, and binary identity are all admission requirements."
   - "No workspace wiring, build manifest, or documentation label grants counted authority; only executable conformance through the exact controller does."
 
@@ -98,7 +98,7 @@ status: complete
 - Implemented a zero-dependency Rust supervisor that creates one nonce-bound invocation cgroup, installs exact CPU/memory/PID limits, moves the session leader into it before guest execution, captures bounded exact output, reads aggregate counters, terminates the process group and cgroup on deadline, and emits no receipt until every member is reaped.
 - Added source/lock/seccomp/toolchain/target/settings/binary identity verification. The pinned manifest currently binds Rust 1.95.0, Cargo 1.95.0, `x86_64-unknown-linux-musl`, the official digest-addressed Rust builder, and the digest-addressed custom seccomp profile.
 - Added a two-stage Docker controller: a short-lived trusted bootstrap provisions only `/cowards/<run-id>`, the supervisor runs unprivileged with a subtree-only bind and no network/capabilities, and a trusted finalizer proves the root empty and removes it.
-- Executably proved guest UID 65534, supervisor host UID 65532, all guest capability sets zero, `NoNewPrivs=1`, cgroup path denial across a nested user/mount namespace, short-lived descendant inclusion (`pidsPeak >= 2`), receipt production only after empty-cgroup proof, and final delegation removal.
+- Executably proved distinct kernel guest UID 65534 versus supervisor UID 65532, all guest capability sets zero, `NoNewPrivs=1`, a private guest PID/proc view, no guest cgroup/control mount, short-lived descendant inclusion (`pidsPeak >= 2`), receipt production only after empty-cgroup proof, and final delegation removal.
 - Closed the final adversarial review blockers: counted launch now requires a branded observed controller context; executable bytes are hashed from an `O_NOFOLLOW` descriptor and executed through the same descriptor; authenticated environment entries reach the guest exactly; kernel, Docker, cgroup, UID, settings, and toolchain observations replace caller assertions; and every timeout/cancellation/error path owns verified descendant cleanup.
 - Preserved private boundaries: no Strategy source/artifact mount enters bootstrap, no host-wide cgroup mount enters the supervisor, no raw host path or diagnostic is added to public/default output, and no production lane is activated.
 
@@ -119,21 +119,23 @@ status: complete
 ### Auto-fixed execution details
 
 1. Docker automatically enabled `cpuset` and `io` alongside the requested cgroup parent. The supervisor removes those extras from its delegated root and rechecks the exact `cpu memory pids` set before any guest launch.
-2. Because a capability-free host process cannot safely perform a host-namespace `setuid`, the approved containment design uses a new user namespace mapping the supervisor's host UID 65532 to guest namespace UID 65534, a private mount namespace, a mode-000 overlay hiding the delegated cgroup, Landlock path restrictions, all capability sets zero, and no-new-privileges. The real probe proves those properties instead of accepting them by declaration.
-3. The seccomp policy is derived from pinned Moby default profile `seccomp/v0.2.1`, retains default-deny behavior, and adds only the masked user/mount namespace setup syscalls required by the trusted pre-exec path. `seccomp=unconfined` and added supervisor capabilities are absent.
+2. A nested user namespace cannot create a distinct kernel UID while the long-lived supervisor remains capability-free and no-new-privileges. The trusted Docker controller therefore launches a separate guest container directly under the nonce invocation cgroup as host UID/GID 65534, while the native monitor remains host UID/GID 65532 outside that cgroup.
+3. The seccomp policy is derived from pinned Moby default profile `seccomp/v0.2.1`, retains default-deny behavior, removes the prior trusted mount/unshare exceptions, and leaves ptrace/process-VM or mount namespace operations unavailable because both containers explicitly drop every capability.
 4. The pinned Docker cargo-test proof initially placed the build target on a `noexec` tmpfs, correctly preventing the test binary from starting. The harness was rerun with only that isolated target tmpfs marked executable; the container remained read-only elsewhere, networkless, capability-free, and no-new-privileges.
 5. Adversarial review found that the original public native seam trusted a platform string and request-provided environment identities, did not bind the exact executable at exec, discarded the authenticated guest environment, and could suppress cleanup failures. The seam now accepts only a weak-authority hardened-controller context whose exact kernel/Docker/cgroup observations are recomputed; direct caller declarations cannot activate counted execution.
 6. The native controller now uses built-in package-free SHA-256, opens the guest executable with `O_NOFOLLOW`, executes through `/proc/self/fd/<fd>`, reapplies the exact authenticated environment after `env_clear`, becomes a child subreaper, polls the authenticated cancellation channel, rejects cancellation races, requires process-group plus `cgroup.kill`, waits on the recursive populated state, reaps adopted children, reads back exact cgroup settings, and treats failed removal as a system failure.
-7. The real Docker proof now covers successful execution, environment delivery, guest inability to forge cancellation, deadline/hang cleanup, live host cancellation, executable substitution, cancellation-before-launch, recursive empty-cgroup proof, and final delegation removal.
+7. The real Docker proof now covers successful execution, exact environment delivery, distinct host UID, private PID/proc visibility, zero capabilities, no-new-privileges, aggregate descendant accounting, recursive empty-cgroup proof, staged-binary revalidation, and final delegation removal. Timeout, cancellation, substitution, and binding-mismatch failure branches remain covered by focused native/controller regression tests.
+8. Final independent review removed public authority minting, executes the native supervisor through the same `O_NOFOLLOW` descriptor that was hashed, requires trusted cleanup for every post-launch mismatch, pins `linux/amd64` plus the explicit `x86_64-unknown-linux-musl` target and observed ELF identity, and stages Docker-mounted supervisor bytes in a private exclusive path with post-use revalidation.
+9. The native monitor proves the invocation recursively empty and emits `cleanupComplete=false`; the trusted descriptor-bound finalizer then verifies and removes the one exact empty invocation and run root before the composite certification proof returns.
 
 These corrections preserve the approved behavior and tighten executable evidence; they do not change gameplay, ABI semantics, or production activation.
 
 ## Verification
 
-- Native Rust tests — 7/7 passed locally and 7/7 passed in the exact pinned Rust Linux builder.
+- Native Rust tests — 9/9 passed locally and 12/12 passed in the exact pinned Linux/amd64 Rust builder.
 - `cargo tree --locked --depth 1` — only `cowards-runtime-supervisor`; zero crate dependencies.
-- Focused review regression tests — 13/13 passed.
-- `@cowards/runtime-supervisor` package tests — 20/20 passed.
+- Focused final-review regression tests — 19/19 passed.
+- `@cowards/runtime-supervisor` package tests — 25/25 passed.
 - Package build, typecheck, and lint — passed.
 - Exact `--build --check` manifest reproduction — passed.
 - Real `--build-linux-container --check` cgroupfs-v2 success, environment, timeout, live-cancellation, substitution, prelaunch-cancellation, and cleanup certification — passed.

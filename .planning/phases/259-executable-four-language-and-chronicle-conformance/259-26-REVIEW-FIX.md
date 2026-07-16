@@ -1,8 +1,8 @@
 ---
 phase: 259-executable-four-language-and-chronicle-conformance
 plan: "26"
-fixed_at: 2026-07-16T16:13:10Z
-iteration: 1
+fixed_at: 2026-07-16T16:48:00Z
+iteration: 2
 findings_in_scope: 5
 fixed: 5
 skipped: 0
@@ -53,3 +53,40 @@ The native process is a subreaper, polls the authenticated cancellation channel,
 - Protected planning/specification and lock files: unchanged
 
 No production lane was activated.
+
+## Final Independent Review Remediation
+
+### CR-01: Public controller authority minting
+
+The package root now exports only safe public contracts and execution/probe entry points. Controller branding and declaration-shaped context factories remain package-internal; public consumers cannot mint counted authority.
+
+### CR-02: Supervisor binary hash/exec race
+
+Native launch opens the supervisor with `O_NOFOLLOW`, hashes that descriptor, inherits it as child fd 3, and executes `/proc/self/fd/3`. The Docker path stages verified bytes into an exclusive private file and revalidates them after use.
+
+### CR-03: Binding mismatch cleanup bypass
+
+Every post-launch failure now routes through one mandatory trusted cleanup function. A receipt binding mismatch cannot return before empty-and-removed cleanup succeeds.
+
+### CR-04: False distinct-UID claim and process introspection
+
+The legacy nested-user-namespace launcher is explicitly not counted. Docker launches the guest separately as host UID/GID 65534 while the capability-free monitor remains host UID/GID 65532. The guest receives a private PID/proc view, no cgroup/control mount, no network, no capabilities, and no-new-privileges.
+
+### CR-05: Declared rather than measured target
+
+The build pins `--platform linux/amd64`, verifies `uname -m`, exact Rust and Cargo versions, uses the explicit `x86_64-unknown-linux-musl` target, and rejects any non-x86-64 or dynamically linked ELF before manifest issuance.
+
+## Final Commits
+
+- `de44ca0` — reproduce final supervisor authority blockers
+- `cd3996f` — close final supervisor authority gaps
+- `b7c62fb` — finalize controller-owned cgroup cleanup
+
+## Final Verification
+
+- Focused regression matrix: 19/19
+- Runtime-supervisor package: 25/25
+- Rust: 9/9 local, 12/12 pinned Linux/amd64, zero dependencies
+- Exact build manifest reproduction: passed
+- Real Docker bootstrap, distinct-UID guest, private proc view, aggregate receipt, empty proof, and final removal: passed
+- Package build, typecheck, lint, formatting, and protected-file checks: passed
