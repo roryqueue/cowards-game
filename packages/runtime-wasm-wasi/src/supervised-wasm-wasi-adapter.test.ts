@@ -1,4 +1,3 @@
-import { Buffer } from "node:buffer"
 import {
   createHash,
   generateKeyPairSync,
@@ -18,6 +17,7 @@ import {
   createSupervisorRawReceiptEnvelopeV118,
   deriveSupervisorExecutionIdentityV118,
   serializeSupervisorRawReceiptEnvelopeV118,
+  type SupervisorExecutionDescriptorV118,
   type SupervisorInvocationRequestV118,
 } from "@cowards/runtime-supervisor"
 import { describe, expect, it } from "vitest"
@@ -261,19 +261,24 @@ const publicKeyPem = keys.publicKey
   .export({ format: "pem", type: "spki" })
   .toString()
 
-const signEvidence = (bytes: Uint8Array, privateKey: KeyObject = keys.privateKey) => ({
+const signEvidence = (
+  bytes: Uint8Array,
+  privateKey: KeyObject = keys.privateKey,
+) => ({
   algorithm: "Ed25519" as const,
   keyId,
   signatureBase64: sign(null, bytes, privateKey).toString("base64"),
 })
 
-const fixture = (overrides: {
-  languageIdentity?: WasmWasiLanguageIdentityObservationV118
-  localDefense?: WasmWasiLocalDefenseObservationV118
-  mutateReceipt?: (receipt: RuntimeSupervisorRawReceiptV118) => void
-  execution?: typeof executionBase
-  signEvidence?: typeof signEvidence
-} = {}) => {
+const fixture = (
+  overrides: {
+    languageIdentity?: WasmWasiLanguageIdentityObservationV118
+    localDefense?: WasmWasiLocalDefenseObservationV118
+    mutateReceipt?: (receipt: RuntimeSupervisorRawReceiptV118) => void
+    execution?: SupervisorExecutionDescriptorV118
+    signEvidence?: typeof signEvidence
+  } = {},
+) => {
   const adapter = createCountedWasmWasiSupervisedAdapterV118({
     languageId: "rust",
     execution: overrides.execution ?? executionBase,
@@ -382,6 +387,18 @@ describe("supervised Rust/Zig Wasmtime adapter v1.18", () => {
     ).toMatchObject({
       kind: "system_failure",
       code: "LANGUAGE_IDENTITY_MISMATCH",
+    })
+    expect(
+      fixture({
+        localDefense: {
+          ...localDefense,
+          diagnostics: "PRIVATE_DIAGNOSTICS_POISON",
+        } as WasmWasiLocalDefenseObservationV118,
+      }),
+    ).toEqual({
+      kind: "system_failure",
+      gameplayDisposition: "no_mutation",
+      code: "WASMTIME_DEFENSE_INCOMPLETE",
     })
   })
 
@@ -510,6 +527,6 @@ describe("supervised Rust/Zig Wasmtime adapter v1.18", () => {
     expect(JSON.stringify(result)).not.toContain("rawReceiptBytes")
     expect(JSON.stringify(result)).not.toContain(artifactPath)
     expect(JSON.stringify(result)).not.toContain("sourceOriginal")
-    expect(JSON.stringify(result)).not.toContain("stderrBytes")
+    expect(JSON.stringify(result)).not.toContain("PRIVATE_")
   })
 })

@@ -1,4 +1,5 @@
 export * from "./metadata.js"
+export * from "./supervised-wasm-wasi-adapter.js"
 export * from "./validation.js"
 export {
   WASM_WASI_V1_17_EXECUTION_SETTINGS,
