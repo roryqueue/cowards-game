@@ -516,6 +516,83 @@ describe("validateChronicleGrammar", () => {
     ).toBe(true)
   })
 
+  it("rejects an actor sequence that cannot follow canonical Round initiative and snake order", () => {
+    const base = createChronicle()
+    const firstRoundStarts = base.events
+      .filter(
+        (event) =>
+          event.type === "ACTIVATION_STARTED" &&
+          event.context.phaseNumber === 1 &&
+          event.context.roundNumber === 1,
+      )
+      .slice(0, 2)
+    expect(firstRoundStarts).toHaveLength(2)
+    const targetActivationId = firstRoundStarts[0]!.context.activationId!
+    const duplicateActor = firstRoundStarts[1]!.context.actingPlayerId!
+    const chronicle = {
+      ...base,
+      events: base.events.map((event) =>
+        event.context.activationId === targetActivationId
+          ? {
+              ...event,
+              context: {
+                ...event.context,
+                actingPlayerId: duplicateActor,
+              },
+            }
+          : event,
+      ),
+    }
+
+    expect(validateChronicleGrammar(chronicle)[0]).toEqual(
+      expect.objectContaining({
+        code: "CONTEXT_MISMATCH",
+        sequence: firstRoundStarts[1]!.sequence,
+      }),
+    )
+  })
+
+  it("rejects the first Round boundary that would discard an unclosed retained slot", () => {
+    const base = createChronicle()
+    const targetActivationId = base.events.find(
+      (event) =>
+        event.type === "ACTIVATION_STARTED" &&
+        event.context.phaseNumber === 1 &&
+        event.context.roundNumber === 1,
+    )!.context.activationId!
+    const nextRoundIndex = base.events.findIndex(
+      (event) =>
+        event.type === "ROUND_STARTED" &&
+        event.context.phaseNumber === 1 &&
+        event.context.roundNumber === 2,
+    )
+    expect(nextRoundIndex).toBeGreaterThan(0)
+    const events = resequenceEvents(
+      base.events.filter(
+        (event, index) =>
+          !(
+            index < nextRoundIndex &&
+            event.context.activationId === targetActivationId &&
+            (event.type === "ACTIVATION_ENDED" ||
+              event.type === "ACTIVATION_SKIPPED")
+          ),
+      ),
+    )
+    const roundBoundary = events.find(
+      (event) =>
+        event.type === "ROUND_STARTED" &&
+        event.context.phaseNumber === 1 &&
+        event.context.roundNumber === 2,
+    )!
+
+    expect(validateChronicleGrammar({ ...base, events })[0]).toEqual(
+      expect.objectContaining({
+        code: "EVENT_WINDOW_INVALID",
+        sequence: roundBoundary.sequence,
+      }),
+    )
+  })
+
   it.each([
     {
       name: "duplicate Activation start",

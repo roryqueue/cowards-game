@@ -68,8 +68,12 @@ export interface CurrentOpenCycleGrammarState {
 export interface CurrentChronicleGrammarState {
   readonly matchStarted: boolean
   readonly matchEnded: boolean
+  readonly matchSeed: string | null
   readonly activePhaseNumber: number | null
   readonly activeRoundNumber: number | null
+  readonly roundSelectionPlayerIds: readonly string[]
+  readonly initiativePlayerId: string | null
+  readonly roundActivationActors: readonly string[]
   readonly contractionOpen: boolean
   readonly activationSlots: readonly CurrentActivationSlotGrammarState[]
   readonly openCycle: CurrentOpenCycleGrammarState | null
@@ -559,6 +563,119 @@ const slotOrder = (
       ? 1
       : 0)
 
+const seedHash = (seed: string): number => {
+  let hash = 0
+  for (const character of seed) {
+    hash = (hash * 31 + character.charCodeAt(0)) >>> 0
+  }
+  return hash
+}
+
+const roundInitiativePlayerId = (
+  seed: string,
+  selectionPlayerIds: readonly [string, string],
+  roundNumber: number,
+): string => {
+  const initial =
+    seedHash(seed) % 2 === 0 ? selectionPlayerIds[0] : selectionPlayerIds[1]
+  return roundNumber % 2 === 1
+    ? initial
+    : selectionPlayerIds.find((playerId) => playerId !== initial)!
+}
+
+const canonicalSnakeOpportunities = (
+  initiativePlayerId: string,
+  secondPlayerId: string,
+  activationCount: number,
+): readonly string[] => {
+  const actors: string[] = []
+  for (let pairIndex = 0; pairIndex < activationCount; pairIndex += 1) {
+    actors.push(
+      ...(pairIndex % 2 === 0
+        ? [initiativePlayerId, secondPlayerId]
+        : [secondPlayerId, initiativePlayerId]),
+    )
+  }
+  return actors
+}
+
+const canonicalRoundActorSequences = (
+  playerIds: readonly [string, string],
+  initiativePlayerId: string | null,
+  activationCount: number,
+): readonly (readonly string[])[] => {
+  const initiatives =
+    initiativePlayerId === null ? playerIds : ([initiativePlayerId] as const)
+  const sequences: string[][] = []
+  for (const initiative of initiatives) {
+    const second = playerIds.find((playerId) => playerId !== initiative)!
+    const opportunities = canonicalSnakeOpportunities(
+      initiative,
+      second,
+      activationCount,
+    )
+    for (let firstCount = 0; firstCount <= activationCount; firstCount += 1) {
+      for (
+        let secondCount = 0;
+        secondCount <= activationCount;
+        secondCount += 1
+      ) {
+        const selected = new Map<string, number>([
+          [playerIds[0], firstCount],
+          [playerIds[1], secondCount],
+        ])
+        const emitted = new Map<string, number>()
+        sequences.push(
+          opportunities.filter((actor) => {
+            const used = emitted.get(actor) ?? 0
+            if (used >= (selected.get(actor) ?? 0)) return false
+            emitted.set(actor, used + 1)
+            return true
+          }),
+        )
+      }
+    }
+  }
+  return sequences
+}
+
+const actorsMatch = (
+  actual: readonly string[],
+  expected: readonly string[],
+): boolean =>
+  actual.length === expected.length &&
+  actual.every((actor, index) => actor === expected[index])
+
+const actorSequenceIsCanonical = (
+  actors: readonly string[],
+  playerIds: readonly string[],
+  initiativePlayerId: string | null,
+  roundNumber: number,
+  mode: "prefix" | "complete",
+): boolean => {
+  const firstPlayerId = playerIds[0]
+  const secondPlayerId = playerIds[1]
+  if (
+    playerIds.length !== 2 ||
+    firstPlayerId === undefined ||
+    secondPlayerId === undefined ||
+    firstPlayerId === secondPlayerId
+  ) {
+    return false
+  }
+  const activationCount =
+    ROUND_ACTIVATION_COUNTS[roundNumber as keyof typeof ROUND_ACTIVATION_COUNTS]
+  return canonicalRoundActorSequences(
+    [firstPlayerId, secondPlayerId],
+    initiativePlayerId,
+    activationCount,
+  ).some((expected) =>
+    mode === "complete"
+      ? actorsMatch(actors, expected)
+      : actors.every((actor, index) => actor === expected[index]),
+  )
+}
+
 const freezeGrammarState = (
   input: CurrentChronicleGrammarState,
 ): CurrentChronicleGrammarState => {
@@ -569,6 +686,8 @@ const freezeGrammarState = (
   )
   return Object.freeze({
     ...input,
+    roundSelectionPlayerIds: Object.freeze([...input.roundSelectionPlayerIds]),
+    roundActivationActors: Object.freeze([...input.roundActivationActors]),
     activationSlots,
     openCycle:
       input.openCycle === null ? null : Object.freeze({ ...input.openCycle }),
@@ -580,8 +699,12 @@ export const createCurrentChronicleGrammarState =
     freezeGrammarState({
       matchStarted: false,
       matchEnded: false,
+      matchSeed: null,
       activePhaseNumber: null,
       activeRoundNumber: null,
+      roundSelectionPlayerIds: [],
+      initiativePlayerId: null,
+      roundActivationActors: [],
       contractionOpen: false,
       activationSlots: [],
       openCycle: null,
@@ -683,8 +806,12 @@ export const advanceCurrentChronicleGrammar = (
   )
   let matchStarted = input.matchStarted
   let matchEnded = input.matchEnded
+  let matchSeed = input.matchSeed
   let activePhaseNumber = input.activePhaseNumber
   let activeRoundNumber = input.activeRoundNumber
+  let roundSelectionPlayerIds = [...input.roundSelectionPlayerIds]
+  let initiativePlayerId = input.initiativePlayerId
+  let roundActivationActors = [...input.roundActivationActors]
   let contractionOpen = input.contractionOpen
   let openCycle =
     input.openCycle === null ? null : ({ ...input.openCycle } as const)
@@ -698,8 +825,12 @@ export const advanceCurrentChronicleGrammar = (
     freezeGrammarState({
       matchStarted,
       matchEnded,
+      matchSeed,
       activePhaseNumber,
       activeRoundNumber,
+      roundSelectionPlayerIds,
+      initiativePlayerId,
+      roundActivationActors,
       contractionOpen,
       activationSlots: [...slots.values()],
       openCycle,
@@ -774,7 +905,94 @@ export const advanceCurrentChronicleGrammar = (
       )
       return false
     }
-    return true
+      return true
+  }
+  const registerRoundPlayer = (playerId: string): void => {
+    if (slots.size > 0 || roundActivationActors.length > 0) {
+      errors.push(
+        error(
+          "EVENT_WINDOW_INVALID",
+          `${event.type} cannot select a Round player after Activations started.`,
+          event,
+          { expected: "Round selection before Activations" },
+        ),
+      )
+      return
+    }
+    if (
+      roundSelectionPlayerIds.includes(playerId) ||
+      roundSelectionPlayerIds.length >= 2
+    ) {
+      errors.push(
+        error(
+          "EVENT_WINDOW_INVALID",
+          `${event.type} cannot duplicate or exceed the two Round selection players.`,
+          event,
+          { expected: "two distinct Round selection players" },
+        ),
+      )
+      return
+    }
+    roundSelectionPlayerIds = [...roundSelectionPlayerIds, playerId]
+    if (
+      roundSelectionPlayerIds.length === 2 &&
+      matchSeed !== null &&
+      activeRoundNumber !== null
+    ) {
+      initiativePlayerId = roundInitiativePlayerId(
+        matchSeed,
+        [roundSelectionPlayerIds[0]!, roundSelectionPlayerIds[1]!],
+        activeRoundNumber,
+      )
+    }
+  }
+  const requireClosedRoundSlots = (): boolean => {
+    const unclosed = [...slots.values()].sort(slotOrder).find((slot) => !slot.closed)
+    if (unclosed === undefined) return true
+    errors.push(
+      error(
+        "EVENT_WINDOW_INVALID",
+        `${event.type} cannot discard an unclosed Activation slot.`,
+        event,
+        {
+          expected: {
+            activationId: unclosed.activationId,
+            state: "closed",
+          },
+          actual: {
+            activationId: unclosed.activationId,
+            state: "open",
+          },
+        },
+      ),
+    )
+    return false
+  }
+  const requireCanonicalRoundActors = (): boolean => {
+    if (
+      activeRoundNumber === null ||
+      actorSequenceIsCanonical(
+        roundActivationActors,
+        roundSelectionPlayerIds,
+        initiativePlayerId,
+        activeRoundNumber,
+        "complete",
+      )
+    ) {
+      return true
+    }
+    errors.push(
+      error(
+        "CONTEXT_MISMATCH",
+        `${event.type} cannot close a Round with a noncanonical initiative/snake actor sequence.`,
+        event,
+        {
+          expected: "canonical Round initiative/snake actor sequence",
+          actual: [...roundActivationActors],
+        },
+      ),
+    )
+    return false
   }
 
   if (matchEnded) {
@@ -831,14 +1049,23 @@ export const advanceCurrentChronicleGrammar = (
       }
       matchStarted = true
       matchEnded = false
+      matchSeed = readPayloadString(event, "seed") ?? null
       activePhaseNumber = null
       activeRoundNumber = null
+      roundSelectionPlayerIds = []
+      initiativePlayerId = null
+      roundActivationActors = []
       contractionOpen = false
       slots.clear()
       openCycle = null
       break
     case "ROUND_STARTED": {
-      if (openCycle !== null) {
+      if (
+        openCycle !== null ||
+        (activeRoundNumber !== null &&
+          (!requireClosedRoundSlots() || !requireCanonicalRoundActors()))
+      ) {
+        if (errors.length > 0) return reject()
         errors.push(
           error(
             "EVENT_WINDOW_INVALID",
@@ -855,18 +1082,28 @@ export const advanceCurrentChronicleGrammar = (
       if (errors.length > 0) return reject()
       activePhaseNumber = phaseNumber ?? null
       activeRoundNumber = payloadRoundNumber ?? contextRoundNumber ?? null
+      roundSelectionPlayerIds = []
+      initiativePlayerId = null
+      roundActivationActors = []
       contractionOpen = false
       slots.clear()
       break
     }
-    case "STRATEGY_EVALUATED":
+    case "STRATEGY_EVALUATED": {
       requireRound()
       validatePhaseContext(errors, event, activePhaseNumber)
       requireRoundContext(errors, event, activeRoundNumber ?? undefined)
-      requireStringContext(errors, event, "actingPlayerId")
+      const actingPlayerId = requireStringContext(
+        errors,
+        event,
+        "actingPlayerId",
+      )
       validatePlayerPayload(errors, event)
       if (errors.length > 0) return reject()
+      registerRoundPlayer(actingPlayerId!)
+      if (errors.length > 0) return reject()
       break
+    }
     case "ACTIVATION_STARTED": {
       requireRound()
       const phaseNumber = validatePhaseContext(errors, event, activePhaseNumber)
@@ -907,8 +1144,48 @@ export const advanceCurrentChronicleGrammar = (
             ),
           )
         }
+        if (identity.activationIndex !== roundActivationActors.length) {
+          errors.push(
+            error(
+              "CONTEXT_MISMATCH",
+              "ACTIVATION_STARTED context.activationIndex must be the next retained Round slot.",
+              event,
+              {
+                expected: roundActivationActors.length,
+                actual: identity.activationIndex,
+              },
+            ),
+          )
+        }
+        const nextActors = [...roundActivationActors, identity.actingPlayerId]
+        if (
+          activeRoundNumber !== null &&
+          !actorSequenceIsCanonical(
+            nextActors,
+            roundSelectionPlayerIds,
+            initiativePlayerId,
+            activeRoundNumber,
+            "prefix",
+          )
+        ) {
+          errors.push(
+            error(
+              "CONTEXT_MISMATCH",
+              "ACTIVATION_STARTED actor does not match canonical Round initiative/snake order.",
+              event,
+              {
+                expected: "canonical Round initiative/snake actor",
+                actual: identity.actingPlayerId,
+              },
+            ),
+          )
+        }
       }
       if (errors.length > 0 || identity === undefined) return reject()
+      roundActivationActors = [
+        ...roundActivationActors,
+        identity.actingPlayerId,
+      ]
       slots.set(identity.activationId, {
         ...identity,
         selected: true,
@@ -1116,7 +1393,11 @@ export const advanceCurrentChronicleGrammar = (
       requireRound()
       validatePhaseContext(errors, event, activePhaseNumber)
       requireRoundContext(errors, event, activeRoundNumber ?? undefined)
-      requireStringContext(errors, event, "actingPlayerId")
+      const actingPlayerId = requireStringContext(
+        errors,
+        event,
+        "actingPlayerId",
+      )
       const soldierId = readPayloadString(event, "soldierId")
       if (soldierId !== undefined) {
         const slot = slotForEvent()
@@ -1145,6 +1426,10 @@ export const advanceCurrentChronicleGrammar = (
       }
       validatePlayerPayload(errors, event)
       if (errors.length > 0) return reject()
+      if (soldierId === undefined) {
+        registerRoundPlayer(actingPlayerId!)
+        if (errors.length > 0) return reject()
+      }
       break
     }
     case "CYCLE_ENDED": {
@@ -1340,7 +1625,12 @@ export const advanceCurrentChronicleGrammar = (
       break
     }
     case "CONTRACTION_RESOLVED":
-      if (openCycle !== null) {
+      if (
+        openCycle !== null ||
+        !requireClosedRoundSlots() ||
+        !requireCanonicalRoundActors()
+      ) {
+        if (errors.length > 0) return reject()
         errors.push(
           error(
             "EVENT_WINDOW_INVALID",
@@ -1355,6 +1645,9 @@ export const advanceCurrentChronicleGrammar = (
       if (errors.length > 0) return reject()
       activePhaseNumber = null
       activeRoundNumber = null
+      roundSelectionPlayerIds = []
+      initiativePlayerId = null
+      roundActivationActors = []
       contractionOpen = true
       slots.clear()
       break
