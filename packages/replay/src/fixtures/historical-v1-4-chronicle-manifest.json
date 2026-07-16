@@ -1,0 +1,88 @@
+{
+  "schemaVersion": "historical-v1-4-chronicle-manifest-v1",
+  "profile": "historical-v1.4",
+  "archive": {
+    "tag": "v1.4",
+    "tagObject": "f3bceff1bd1516c8d66c95152d5f19e69458a6cd",
+    "peeledCommit": "0d056506bb53fe898addb11b2cc96a3f38c794d7"
+  },
+  "resolution": {
+    "original": "unresolved_legacy",
+    "exactTupleProfile": "historical-v1.16"
+  },
+  "originalCompatibility": {
+    "spec": "cowards-rules-v1.4",
+    "engine": "0.1.4",
+    "runtimeJs": "0.1.0",
+    "chronicle": "chronicle-v1.4",
+    "strategyRevision": "0.1.4",
+    "arenaVariant": "0.1.0"
+  },
+  "authoritativeTuple": {
+    "tupleId": "sha256:922a6857fdbc8354b744d6e766bff216f3fee85b5ed381355cb427f5a616b3ae",
+    "tuple": {
+      "rules": "cowards-rules-v1.4",
+      "engine": "engine-kernel-v1.37-candidate-1",
+      "runtimeAbi": "strategy-runtime-abi-v1.14",
+      "chronicle": "chronicle-recorder-current-events-v1.37-candidate-1",
+      "arenaCatalog": "semantic-arena-catalog-v1.37-candidate-1",
+      "setPolicy": "canonical-set-policy-v1.4"
+    }
+  },
+  "fixtures": [
+    {
+      "path": "packages/replay/src/reconstruct.test.ts",
+      "blob": "bf445ce3f476661ec6dc7ccbb3044f137050019f",
+      "sha256": "705dac1b7346f5cfbb6f51e99589d36c9d01037354020522208e349a1d0c8bfd",
+      "bytes": 9505
+    },
+    {
+      "path": "packages/test-utils/src/replay-scenarios.ts",
+      "blob": "51196c8fa1d788ee15e48819527fe30d41d110c2",
+      "sha256": "a424cfdda4d335ad5555cad18e44ee24122e93f498ba2fbcf3b603a7f55e20ab",
+      "bytes": 13185
+    }
+  ],
+  "originalSources": [
+    {
+      "path": "packages/replay/src/grammar.ts",
+      "blob": "827c0b26d09135abdda4ccd9e64a3a8bff412aad",
+      "sha256": "9600420b68061015d20a0d3720ed3f967a39435a840e756457d3702801c55866",
+      "bytes": 24207
+    },
+    {
+      "path": "packages/replay/src/replay-transition.ts",
+      "blob": "4d0c1e6c86547b025a02db9a446871fbf2aca63b",
+      "sha256": "e1bd8aeb86c883602c6b2c9052193f2ae51bb5787aa473c7c9ce285c48441586",
+      "bytes": 14937
+    },
+    {
+      "path": "packages/spec/src/schemas.ts",
+      "blob": "a4076e06cea5a5930d6a9cf51f5d5617062a3b3c",
+      "sha256": "0fef103deb9015e95ae25b300613e59f355ac310b8bd54228d0db567ba4e08ea",
+      "bytes": 17795
+    }
+  ],
+  "frozenSources": {
+    "commit": "9b59d05b08f39e6835dead14edc082cd498aef81",
+    "entries": [
+      {
+        "path": "packages/replay/src/historical-v1-4-grammar.ts",
+        "blob": "4cedf3eadb73e1fa687016075d159086031fd711",
+        "sha256": "6c3d23252c81c53bbb8476482a190b55b9a75ecc17187d60f3e7a5829dbd4b2a",
+        "bytes": 26333
+      },
+      {
+        "path": "packages/replay/src/historical-v1-4-transition.ts",
+        "blob": "d06eb4f87509f2ebf3c2ec95c723a1309b4eb51a",
+        "sha256": "72bf94f9d579705fd11c3db3fec703d0307a3f18635b46e5df6373ab94c6fd98",
+        "bytes": 14517
+      }
+    ]
+  },
+  "interpretation": {
+    "vectorId": "historical-v1.4-push-backstab-vector-v1",
+    "algorithm": "sha256",
+    "root": "sha256:f202d7cb429a284683207cab5d514af324371a00b2b54b7bce416dd64fc94026"
+  }
+}

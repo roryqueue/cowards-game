@@ -255,10 +255,16 @@ const sha256 = (bytes: Uint8Array): string =>
   createHash("sha256").update(bytes).digest("hex")
 
 const gitText = (args: readonly string[]): string =>
-  execFileSync("git", [...args], { encoding: "utf8" }).trim()
+  execFileSync("git", [...args], {
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+  }).trim()
 
-const gitBytes = (args: readonly string[]): Buffer =>
-  execFileSync("git", [...args], { encoding: "buffer" })
+const gitBytes = (args: readonly string[]): Uint8Array =>
+  execFileSync("git", [...args], {
+    encoding: "buffer",
+    stdio: ["ignore", "pipe", "pipe"],
+  })
 
 const readManifest = (): HistoricalManifest =>
   JSON.parse(readFileSync(manifestPath, "utf8")) as HistoricalManifest
