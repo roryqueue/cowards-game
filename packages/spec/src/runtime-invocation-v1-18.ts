@@ -90,6 +90,18 @@ const ExecutableIdentityV118Schema = z
   })
   .strict()
 
+export interface RuntimeInvocationCgroupBindingV118 {
+  readonly pathIdentitySha256: `sha256:${string}`
+  readonly settingsSha256: `sha256:${string}`
+}
+
+const RuntimeInvocationCgroupBindingV118Schema = z
+  .object({
+    pathIdentitySha256: Sha256Schema,
+    settingsSha256: Sha256Schema,
+  })
+  .strict()
+
 export interface CreateRuntimeInvocationRequestV118Input {
   readonly requestId: string
   readonly invocationId: string
@@ -128,8 +140,25 @@ export interface RuntimeInvocationRequestV118 {
   readonly limits: Readonly<RuntimeInvocationLimitsV118>
   readonly executable: CreateRuntimeInvocationRequestV118Input["executable"]
   readonly expectedIdentity: Readonly<RuntimeSupervisorIdentityV118>
+  readonly expectedCgroup: Readonly<RuntimeInvocationCgroupBindingV118>
   readonly requestSha256: `sha256:${string}`
 }
+
+const RuntimeCgroupPathIdentitySourceV118Schema = z
+  .object({
+    schemaVersion: z.literal("runtime-invocation-request-v1.18"),
+    runtimeAbiVersion: z.literal("strategy-runtime-abi-v1.18"),
+    requestId: PublicIdSchema,
+    invocationId: PublicIdSchema,
+    method: RuntimeInvocationMethodV118Schema,
+    hostNonce: HostNonceSchema,
+    budgetProfileSha256: z.literal(RUNTIME_BUDGET_PROFILE_V1_18_SHA256),
+    monotonicDeadlineNanoseconds: PositiveSafeIntegerSchema,
+    limits: RuntimeInvocationLimitsV118Schema,
+    executable: ExecutableIdentityV118Schema,
+    expectedIdentity: RuntimeSupervisorIdentityV118Schema,
+  })
+  .strict()
 
 const RuntimeInvocationRequestWithoutHashV118Schema =
   CreateRuntimeInvocationRequestV118InputSchema.extend({
@@ -137,6 +166,7 @@ const RuntimeInvocationRequestWithoutHashV118Schema =
     runtimeAbiVersion: z.literal("strategy-runtime-abi-v1.18"),
     budgetProfileSha256: z.literal(RUNTIME_BUDGET_PROFILE_V1_18_SHA256),
     limits: RuntimeInvocationLimitsV118Schema,
+    expectedCgroup: RuntimeInvocationCgroupBindingV118Schema,
   }).strict()
 
 export const RuntimeInvocationRequestV118Schema =
@@ -147,17 +177,28 @@ export const RuntimeInvocationRequestV118Schema =
     .superRefine((request, context) => {
       const { requestSha256, ...withoutHash } = request
       if (
-        requestSha256 ===
+        requestSha256 !==
         sha256(canonicalBytes(withoutHash as unknown as JsonValue))
       ) {
-        return
+        context.addIssue({
+          code: "custom",
+          path: ["requestSha256"],
+          message:
+            "runtime invocation v1.18 request hash does not match its body",
+        })
       }
-      context.addIssue({
-        code: "custom",
-        path: ["requestSha256"],
-        message:
-          "runtime invocation v1.18 request hash does not match its body",
-      })
+      if (
+        !cgroupBindingMatchesRequestV118(
+          request as RuntimeInvocationRequestV118,
+        )
+      ) {
+        context.addIssue({
+          code: "custom",
+          path: ["expectedCgroup"],
+          message:
+            "runtime invocation v1.18 cgroup binding does not match its request",
+        })
+      }
     })
 
 const canonicalBytes = (value: JsonValue): Uint8Array => {
@@ -186,11 +227,72 @@ const canonicalEqual = (left: unknown, right: unknown): boolean => {
   }
 }
 
+export const deriveRuntimeCgroupSettingsSha256V118 = (
+  limitsInput: RuntimeInvocationLimitsV118,
+): `sha256:${string}` => {
+  const limits = RuntimeInvocationLimitsV118Schema.parse(limitsInput)
+  return sha256(
+    canonicalBytes({
+      identityDomain: "cowards-game:runtime-cgroup-settings:v1.18",
+      cpuMax: limits.cpuMax,
+      memoryMaxBytes: limits.memoryMaxBytes,
+      pidsMax: limits.pidsMax,
+    }),
+  )
+}
+
+export const deriveRuntimeCgroupPathIdentityV118 = (
+  request: Pick<
+    RuntimeInvocationRequestV118,
+    | "schemaVersion"
+    | "runtimeAbiVersion"
+    | "requestId"
+    | "invocationId"
+    | "method"
+    | "hostNonce"
+    | "budgetProfileSha256"
+    | "monotonicDeadlineNanoseconds"
+    | "limits"
+    | "executable"
+    | "expectedIdentity"
+  >,
+): `sha256:${string}` => {
+  const source = RuntimeCgroupPathIdentitySourceV118Schema.parse({
+    schemaVersion: request.schemaVersion,
+    runtimeAbiVersion: request.runtimeAbiVersion,
+    requestId: request.requestId,
+    invocationId: request.invocationId,
+    method: request.method,
+    hostNonce: request.hostNonce,
+    budgetProfileSha256: request.budgetProfileSha256,
+    monotonicDeadlineNanoseconds: request.monotonicDeadlineNanoseconds,
+    limits: request.limits,
+    executable: request.executable,
+    expectedIdentity: request.expectedIdentity,
+  })
+  return sha256(
+    canonicalBytes({
+      identityDomain: "cowards-game:runtime-cgroup-path-identity:v1.18",
+      request: source,
+    }),
+  )
+}
+
+const cgroupBindingMatchesRequestV118 = (
+  request: RuntimeInvocationRequestV118,
+): boolean =>
+  request.expectedCgroup.pathIdentitySha256 ===
+    deriveRuntimeCgroupPathIdentityV118(request) &&
+  request.expectedCgroup.settingsSha256 ===
+    deriveRuntimeCgroupSettingsSha256V118(request.limits)
+
 export const createRuntimeInvocationRequestV118 = (
   inputValue: CreateRuntimeInvocationRequestV118Input,
 ): RuntimeInvocationRequestV118 => {
-  const input = CreateRuntimeInvocationRequestV118InputSchema.parse(inputValue)
-  const withoutHash = {
+  const input = CreateRuntimeInvocationRequestV118InputSchema.parse(
+    inputValue,
+  ) as CreateRuntimeInvocationRequestV118Input
+  const withoutCgroupBinding = {
     schemaVersion: "runtime-invocation-request-v1.18" as const,
     runtimeAbiVersion: "strategy-runtime-abi-v1.18" as const,
     requestId: input.requestId,
@@ -202,6 +304,16 @@ export const createRuntimeInvocationRequestV118 = (
     limits: getRuntimeInvocationLimitsV118(input.method),
     executable: input.executable,
     expectedIdentity: input.expectedIdentity,
+  }
+  const withoutHash = {
+    ...withoutCgroupBinding,
+    expectedCgroup: {
+      pathIdentitySha256:
+        deriveRuntimeCgroupPathIdentityV118(withoutCgroupBinding),
+      settingsSha256: deriveRuntimeCgroupSettingsSha256V118(
+        withoutCgroupBinding.limits,
+      ),
+    },
   }
   const request = RuntimeInvocationRequestV118Schema.parse({
     ...withoutHash,
@@ -402,6 +514,7 @@ export type RuntimeInvocationEvidenceFailureCodeV118 =
   | "RAW_RECEIPT_INVALID"
   | "REQUEST_BINDING_MISMATCH"
   | "LIMIT_MISMATCH"
+  | "CGROUP_BINDING_MISMATCH"
   | "COUNTED_PLATFORM_UNAVAILABLE"
   | "CONTROLLERS_UNAVAILABLE"
   | "IDENTITY_MISMATCH"
@@ -540,13 +653,16 @@ export const evaluateRuntimeSupervisorReceiptV118 = (
   if (!canonicalEqual(receipt.limits, request.limits)) {
     return systemFailure("LIMIT_MISMATCH")
   }
+  if (
+    receipt.cgroup.pathIdentitySha256 !==
+      request.expectedCgroup.pathIdentitySha256 ||
+    receipt.cgroup.settingsSha256 !== request.expectedCgroup.settingsSha256
+  ) {
+    return systemFailure("CGROUP_BINDING_MISMATCH")
+  }
   const platformFailure = exactPlatform(receipt)
   if (platformFailure !== undefined) return systemFailure(platformFailure)
-  if (
-    !canonicalEqual(receipt.identity, request.expectedIdentity) ||
-    receipt.cgroup.settingsSha256 !==
-      request.expectedIdentity.cgroupDelegationSha256
-  ) {
+  if (!canonicalEqual(receipt.identity, request.expectedIdentity)) {
     return systemFailure("IDENTITY_MISMATCH")
   }
   let expectedWall: number

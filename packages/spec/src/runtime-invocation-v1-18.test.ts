@@ -7,6 +7,8 @@ import {
   RuntimeInvocationRequestV118Schema,
   RuntimeSupervisorRawReceiptV118Schema,
   createRuntimeInvocationRequestV118,
+  deriveRuntimeCgroupPathIdentityV118,
+  deriveRuntimeCgroupSettingsSha256V118,
   evaluateRuntimeSupervisorReceiptV118,
   serializeRuntimeInvocationRequestV118,
   type CreateRuntimeInvocationRequestV118Input,
@@ -66,8 +68,8 @@ const validReceipt = (
     },
     limits,
     cgroup: {
-      pathIdentitySha256: hash("d"),
-      settingsSha256: identity.cgroupDelegationSha256,
+      pathIdentitySha256: request.expectedCgroup.pathIdentitySha256,
+      settingsSha256: request.expectedCgroup.settingsSha256,
     },
     wall: {
       supervisedSpawnMonotonicNanoseconds: 1_000_000,
@@ -145,13 +147,21 @@ describe("runtime invocation v1.18", () => {
       budgetProfileSha256: RUNTIME_BUDGET_PROFILE_V1_18_SHA256,
       limits: getRuntimeInvocationLimitsV118("soldierBrain"),
       expectedIdentity: identity,
+      expectedCgroup: {
+        pathIdentitySha256: deriveRuntimeCgroupPathIdentityV118(request),
+        settingsSha256: deriveRuntimeCgroupSettingsSha256V118(request.limits),
+      },
     })
+    expect(request.expectedCgroup.settingsSha256).not.toBe(
+      request.expectedIdentity.cgroupDelegationSha256,
+    )
     expect(request.requestSha256).toMatch(/^sha256:[0-9a-f]{64}$/u)
     expect(serializeRuntimeInvocationRequestV118(request)).toEqual(
       serializeRuntimeInvocationRequestV118(request),
     )
     expect(Object.isFrozen(request)).toBe(true)
     expect(Object.isFrozen(request.expectedIdentity)).toBe(true)
+    expect(Object.isFrozen(request.expectedCgroup)).toBe(true)
   })
 
   it("rejects a cloned request whose canonical body or self-hash changed", () => {
@@ -320,6 +330,12 @@ describe("runtime invocation v1.18", () => {
           receipt.containment.cgroupEmpty = false
           receipt.containment.lingeringProcessCount = 1
         },
+        (receipt) => {
+          receipt.cgroup.pathIdentitySha256 = hash("d")
+        },
+        (receipt) => {
+          receipt.cgroup.settingsSha256 = hash("e")
+        },
       ]
     for (const mutate of mutations) {
       const receipt = clone(validReceipt())
@@ -328,6 +344,27 @@ describe("runtime invocation v1.18", () => {
       expect(result).toMatchObject({
         kind: "system_failure",
         gameplayDisposition: "no_mutation",
+      })
+    }
+  })
+
+  it("binds cgroup path identity to the exact request and nonce", () => {
+    const request = createRuntimeInvocationRequestV118(requestInput())
+    const changedNonce = createRuntimeInvocationRequestV118({
+      ...requestInput(),
+      hostNonce: "nonce-v1-18-substituted-00000000000001",
+    })
+    expect(request.expectedCgroup.pathIdentitySha256).not.toBe(
+      changedNonce.expectedCgroup.pathIdentitySha256,
+    )
+
+    for (const field of ["pathIdentitySha256", "settingsSha256"] as const) {
+      const receipt = clone(validReceipt())
+      receipt.cgroup[field] = hash(field === "pathIdentitySha256" ? "d" : "e")
+      expect(evaluateRuntimeSupervisorReceiptV118(request, receipt)).toEqual({
+        kind: "system_failure",
+        gameplayDisposition: "no_mutation",
+        code: "CGROUP_BINDING_MISMATCH",
       })
     }
   })
