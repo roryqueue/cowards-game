@@ -526,7 +526,7 @@ describe("candidate v1.17 authenticated preflight contract", () => {
     },
   )
 
-  it("commits only proven submission excess as a submission violation", () => {
+  it("keeps a measured wall timeout system-owned and no-commit", () => {
     const candidate = request()
     const base = observedEvidenceInput(candidate)
     const wallMaximum = candidate.budget.limits.wallMilliseconds
@@ -548,13 +548,12 @@ describe("candidate v1.17 authenticated preflight contract", () => {
     )
     expect(receipt).toMatchObject({
       outcome: {
-        kind: "submission_violation",
-        code: "PREFLIGHT_BUDGET_EXCEEDED",
-        dimensions: ["preflight.sourceValidation.wall"],
+        kind: "system_failure",
+        code: "STRATEGY_TIMEOUT",
       },
       accounting: {
-        disposition: "commit",
-        poststate: { revision: 1 },
+        disposition: "no_commit",
+        poststate: candidate.accounting.prestate,
       },
     })
   })
