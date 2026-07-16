@@ -72,7 +72,7 @@ status: complete
 ## Accomplishments
 
 - Added strict canonical JSON v1.1 parsing with exact generated field presence for the receipt, claim, tuple, both certificate references, both source identities, terminal, accounting, and result.
-- Recomputed the successor semantic tuple identity, enforced generation/freshness/side/source closure, and verified the exact framed claim through Ed25519.
+- Recomputed the canonical successor v1.17 gameplay semantic tuple identity, enforced generation/freshness/side/source closure, and verified the additive v1.18 service claim through Ed25519.
 - Bound the receipt to an independently supplied exact expected claim and returned authenticated receipt/claim hashes plus a privacy-safe projection.
 - Preserved v1.16/v1.17 descriptors and dispatch and added source guards against Chronicle event parsing, replay, Strategy execution, or Match rules.
 
@@ -90,6 +90,7 @@ status: complete
 
 - Used the generated v1.18 claim/reference/source field arrays as runtime shape authority instead of relying on Go zero values to detect missing fields.
 - Matched the spec generation grammar exactly as a string; the older Go safe-integer ceiling is not valid for this additive contract.
+- Bound the additive v1.18 service/receipt envelope to the canonical v1.17 gameplay tuple (`sha256:0d8a04fdfe49e3aa7261728ee51beb0a9049b661aad978277f2892c3a4bc54fe`); v1.18 is execution evidence, not a second gameplay semantic version.
 - Kept all rejection detail internal and returned the fixed `SEMANTIC_RECEIPT_INVALID` system-integrity/no-mutation failure.
 
 ## Deviations from Plan

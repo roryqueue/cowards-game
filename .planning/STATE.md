@@ -5,16 +5,16 @@ milestone_name: Rules Integrity and Strategy Evaluation Foundations — ACTIVE
 current_phase: 259
 current_phase_name: executable-four-language-and-chronicle-conformance
 status: ready
-stopped_at: Phase 259 Wave 7 complete; Wave 8 ready
-last_updated: "2026-07-16T17:08:00-04:00"
+stopped_at: Phase 259 Wave 8 complete; Wave 9 ready
+last_updated: "2026-07-16T17:46:00-04:00"
 last_activity: 2026-07-16
-last_activity_desc: Phase 259 Wave 7 extended the append-only certificate authority and added exact independent Go v1.18 receipt verification
+last_activity_desc: Phase 259 Wave 8 added authenticated structural Go completion and a non-circular plural import trust-root bootstrap
 progress:
   total_phases: 6
   completed_phases: 3
   total_plans: 86
-  completed_plans: 82
-  percent: 95
+  completed_plans: 84
+  percent: 98
 ---
 
 # State: Coward's Game
@@ -29,11 +29,11 @@ See: `.planning/PROJECT.md` (updated 2026-07-12)
 ## Current Position
 
 Phase: 259 (executable-four-language-and-chronicle-conformance) — IN PROGRESS
-Plan: 27 of 31
-Status: Waves 1-7 complete after append-only certificate import and independent Go v1.18 receipt verification; Wave 8 ready
-Last activity: 2026-07-16 — Closed Phase 259 Wave 7 with exact three-run certificate provenance, plural operator import authentication, strict generated-field parsing, and Ed25519 Go parity
+Plan: 29 of 31
+Status: Waves 1-8 complete after authenticated structural Go completion and exact plural import-root bootstrap; Wave 9 ready
+Last activity: 2026-07-16 — Closed Phase 259 Wave 8 with protected import-root high-water, token-protected completion documents, strict v1.18 receipts, and no Go Chronicle semantic reimplementation
 
-Progress: [██████████] 95%
+Progress: [██████████] 98%
 
 ## Durable Decisions
 
@@ -50,6 +50,9 @@ Progress: [██████████] 95%
 - Fresh-run equality persists deterministic proof facts after validating complete raw receipts; platform-variable exit details cannot manufacture evidence drift or weaken the underlying fail-closed checks.
 - Phase-259 conformance certificates extend the existing append-only runtime evidence authority with exactly three immutable run records; runtime-producer trust and plural operator-import trust remain distinct.
 - Go v1.18 receipt admission follows the spec's exact 1-16 digit generation string grammar, authenticates the complete two-sided claim, and contains no Chronicle event, replay, Strategy, or Match-rule authority.
+- The additive v1.18 service/receipt envelope binds the canonical v1.17 gameplay tuple; execution evidence does not invent a second semantic version.
+- Default v1.18 service output remains receipt-only, while Chronicle/final-state documents cross only the constant-time token-protected internal completion envelope and must match signed canonical hashes.
+- The existing plural operator import descriptor is canonical-hashed, independently pinned, opened without symlink following, reread inside a serializable transaction, and installed under an append-only monotonic generation.
 
 ## Deferred Items
 
@@ -66,9 +69,9 @@ Progress: [██████████] 95%
 
 **Resume file:** None
 
-Last session: 2026-07-16T17:08:00-04:00
-Stopped at: Phase 259 Wave 7 complete; Wave 8 ready
-Next command: `$gsd-execute-phase 259` Wave 8 for plans 259-21 and 259-28.
+Last session: 2026-07-16T17:46:00-04:00
+Stopped at: Phase 259 Wave 8 complete; Wave 9 ready
+Next command: `$gsd-execute-phase 259` Wave 9 for plan 259-22.
 
 ## Performance Metrics
 
@@ -114,12 +117,17 @@ Next command: `$gsd-execute-phase 259` Wave 8 for plans 259-21 and 259-28.
 | Phase 258 P14 | 18h 27min elapsed | 3 tasks + review/proof convergence | 394 authoritative inventory files; 18 commands / 1,238 tests |
 | Phase 259 P19 | resumed | 2 tasks | 5 migration/schema/publisher files; 40 PostgreSQL tests |
 | Phase 259 P20 | 18min | 1 TDD task + inline review | 2 Go files; full Go/parity gates |
+| Phase 259 P21 | 31min | 2 tasks + review | authenticated Go/service/persistence completion; full Go/parity/typecheck/lint |
+| Phase 259 P28 | 23min | 2 TDD tasks + review | plural import-root bootstrap; 46 PostgreSQL/CLI tests |
 
 ## Decisions
 
 - [Phase 259]: Reviewed conformance certificates extend the existing append-only runtime evidence ledger with exactly three immutable run rows and an independently authenticated plural operator import envelope. — No parallel certificate registry, singular trust root, or runtime-producer key can authorize import.
 - [Phase 259]: Go v1.18 validates generation as the exact spec-owned 1-16 digit string rather than reusing the older safe-integer cap. — Cross-language receipt acceptance must follow the language-neutral wire contract, not host numeric limits.
 - [Phase 259]: Go v1.18 authenticates canonical receipt bytes, the exact expected claim, tuple, trace/common-meter roots, and both certificate/source identities while projecting only public-safe roots. — Go remains structural admission and persistence authority, not Chronicle/replay/gameplay authority.
+- [Phase 259]: The additive v1.18 service envelope remains bound to the canonical v1.17 gameplay tuple. — Service evidence can advance without fabricating a new rules/engine/Chronicle semantic identity.
+- [Phase 259]: Default v1.18 output is receipt-only and exact completion documents require the protected internal envelope; Go persists signed hashes without event, terminal, transition, or replay interpretation. — Structural persistence cannot drift into a second semantic engine or expose documents by default.
+- [Phase 259]: Existing plural operator import trust is bootstrapped from exact protected canonical bytes, independent pins, no-follow file identity, and a monotonic append-only database generation. — First import is non-circular and cannot substitute runtime producer trust.
 
 - [Phase 258]: The complete current default set is `canonical-json-v1.1`, `strategy-runtime-abi-v1.17`, `runtime-execution-service-v1.17`, and `runtime-semantic-receipt-v1.17`; explicit v1.16 dispatch and protected historical bytes remain independently immutable. — A partial or mixed activation is not a valid current runtime.
 - [Phase 258]: Authoritative completion evidence is receipt v2 bound to a clean execution commit/tree, exact command definitions, exit status, and privacy-safe named evidence digests, and the evaluator must rerun those commands. — PASS labels or committed receipt structure alone cannot prove execution.

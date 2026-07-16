@@ -297,8 +297,8 @@ Plans:
 
 **Wave 8 — Go completion authority and import trust bootstrap**
 
-- [ ] 259-21-PLAN.md — Route Go completion through authenticated shared semantic admission.
-- [ ] 259-28-PLAN.md — Bootstrap the existing plural operator import trust roots.
+- [x] 259-21-PLAN.md — Route Go completion through authenticated shared semantic admission.
+- [x] 259-28-PLAN.md — Bootstrap the existing plural operator import trust roots.
 
 **Wave 9 — managed signing and reviewed trust activation**
 
