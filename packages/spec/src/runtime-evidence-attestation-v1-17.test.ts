@@ -1,10 +1,20 @@
 import { generateKeyPairSync, sign } from "node:crypto"
 import { describe, expect, it } from "vitest"
 import { hashCanonicalIdentity } from "./canonical-identity-domains.js"
+import { encodeCanonicalJson } from "./canonical-json-encode.js"
 import {
   hashRuntimeIdentityManifest,
   type RuntimeIdentityManifest,
 } from "./runtime-identity-manifest.js"
+import { RUNTIME_BUDGET_PROFILE_V1_18_SHA256 } from "./runtime-budget-profile-v1-18.js"
+import {
+  RUNTIME_CONFORMANCE_TRUSTED_PRODUCERS_V1_17,
+  encodeRuntimeConformanceCertificatePayloadV117,
+  verifyRuntimeConformanceCertificateV117,
+  type RuntimeConformanceCertificateV117,
+  type RuntimeConformanceIdentityBindingsV117,
+  type RuntimeConformanceTrustedProducerV117,
+} from "./runtime-conformance-certificate-v1-17.js"
 import {
   RUNTIME_EVIDENCE_EDGE_SCHEMA_V1_17,
   RUNTIME_EVIDENCE_GRAPH_NODE_KINDS_V1_17,
@@ -15,12 +25,15 @@ import {
   type RuntimeEvidenceGraphEdgeV117,
   type RuntimeEvidenceGraphNodeV117,
   type RuntimeEvidenceExactPinNameV117,
+  type RuntimeConformanceEvidenceSourceV117,
 } from "./runtime-evidence-v1-17.js"
 import {
   RUNTIME_EVIDENCE_TRUSTED_PRODUCERS_V1_17,
+  RuntimeConformanceEvidenceBindingV117Error,
   RuntimeEvidenceAttestationV117Error,
   encodeRuntimeEvidenceAttestationPayloadV117,
   hashRuntimeEvidenceGraphV117,
+  verifyRuntimeConformanceEvidenceBindingV117,
   verifyRuntimeEvidenceAttestationV117,
   type RuntimeEvidenceAttestationV117,
   type RuntimeEvidenceTrustedProducerV117,
@@ -33,12 +46,16 @@ const bytes = Object.fromEntries(
   ]),
 )
 
-const buildFixture = () => {
+const buildFixture = (evidenceBundleBytes = bytes["node:evidenceBundle"]!) => {
+  const evidenceBytes = {
+    ...bytes,
+    "node:evidenceBundle": evidenceBundleBytes,
+  }
   const keys = generateKeyPairSync("ed25519")
   const bindings = RUNTIME_EVIDENCE_GRAPH_NODE_KINDS_V1_17.map((kind) => ({
     domain: kind,
     publicId: `fixture.${kind}.v1`,
-    sha256: hashCanonicalIdentity(kind, [bytes[`node:${kind}`]!]),
+    sha256: hashCanonicalIdentity(kind, [evidenceBytes[`node:${kind}`]!]),
   }))
   const manifest: RuntimeIdentityManifest = {
     schemaVersion: "runtime-identity-manifest-v1",
@@ -93,7 +110,7 @@ const buildFixture = () => {
     identityManifest: manifest,
     graph,
     issuedAt: "2026-07-14T00:00:00.000Z",
-    validUntil: "2026-07-15T00:00:00.000Z",
+    validUntil: "2026-08-10T00:00:00.000Z",
     registryGeneration: "7",
   }
   const attestation: RuntimeEvidenceAttestationV117 = {
@@ -113,7 +130,151 @@ const buildFixture = () => {
       .export({ type: "spki", format: "pem" })
       .toString(),
   }
-  return { attestation, producer, evidenceBytes: bytes }
+  return { attestation, producer, evidenceBytes }
+}
+
+const hash = (character: string): `sha256:${string}` =>
+  `sha256:${character.repeat(64)}`
+
+const canonicalSourceBytes = (
+  source: RuntimeConformanceEvidenceSourceV117,
+): Uint8Array => {
+  const encoded = encodeCanonicalJson(source as never, {
+    context: "canonical-manifest",
+  })
+  if (!encoded.ok) throw new Error(encoded.error.code)
+  return encoded.bytes
+}
+
+const fixedNodeHash = (
+  kind: RuntimeEvidenceGraphNodeV117["kind"],
+): `sha256:${string}` =>
+  `sha256:${hashCanonicalIdentity(kind, [bytes[`node:${kind}`]!] as const)}`
+
+const buildConformanceBindingFixture = () => {
+  const source: RuntimeConformanceEvidenceSourceV117 = {
+    schemaVersion: "runtime-conformance-evidence-source-v1.17",
+    runtimeAbiVersion: "strategy-runtime-abi-v1.18",
+    runtimeAbiEnvelopeSha256: hash("6"),
+    additiveBudgetProfileSha256: RUNTIME_BUDGET_PROFILE_V1_18_SHA256,
+    supervisorOperatingSystemSha256: hash("7"),
+    supervisorSettingsSha256: hash("8"),
+    aggregateReceiptSchemaSha256: hash("9"),
+    supervisorIdentity: {
+      supervisorBinarySha256: hash("a"),
+      supervisorToolchainSha256: hash("b"),
+      linuxKernelSha256: hash("c"),
+      dockerEngineSha256: hash("d"),
+      dockerImageDigest: hash("e"),
+      cgroupDelegationSha256: hash("f"),
+      adapterBuildSha256: fixedNodeHash("adapterBuild"),
+      runtimeCompilerSha256: fixedNodeHash("compilerExecutable"),
+      artifactSha256: fixedNodeHash("artifact"),
+    },
+    caseInventorySha256: hash("4"),
+    resultRootSha256: hash("5"),
+    evidenceRootSha256: hash("6"),
+    runReceipts: [1, 2, 3].map((index) => ({
+      runId: `run:typescript:${index}`,
+      receiptSha256: hash(String(index)),
+    })),
+  }
+  const evidenceFixture = buildFixture(canonicalSourceBytes(source))
+  const binding = (kind: RuntimeEvidenceGraphNodeV117["kind"]) =>
+    evidenceFixture.attestation.graph.nodes.find((node) => node.kind === kind)!
+  const identity: RuntimeConformanceIdentityBindingsV117 = {
+    languageId: "typescript",
+    laneId: "lane:typescript:linux-cgroup-v2",
+    corpusRootSha256: `sha256:${binding("conformanceCorpus").sha256}`,
+    caseInventorySha256: source.caseInventorySha256,
+    fixtureSourceSha256: `sha256:${binding("originalSource").sha256}`,
+    artifactSha256: `sha256:${binding("artifact").sha256}`,
+    adapterBuildSha256: `sha256:${binding("adapterBuild").sha256}`,
+    runtimeExecutableSha256: `sha256:${binding("runtimeExecutable").sha256}`,
+    toolchainSha256: `sha256:${binding("compilerExecutable").sha256}`,
+    sysrootStdlibSha256: `sha256:${binding("sysrootStdlib").sha256}`,
+    runtimeAbiVersion: source.runtimeAbiVersion,
+    canonicalJsonProfileId: binding("canonicalJsonProfile").publicId,
+    budgetPolicySha256: `sha256:${binding("budgetProfile").sha256}`,
+    containmentPolicySha256: `sha256:${binding("containmentPolicy").sha256}`,
+    semanticTupleSha256: `sha256:${binding("semanticTuple").sha256}`,
+    identityManifestRoot: `sha256:${evidenceFixture.attestation.graph.identityManifestRoot}`,
+    evidenceGraphRoot: `sha256:${evidenceFixture.attestation.graph.graphSha256}`,
+    behaviorSettingsSha256:
+      evidenceFixture.attestation.graph.exactPins.behaviorSettingsHash,
+  }
+
+  const certificateKeys = generateKeyPairSync("ed25519")
+  const certificatePayload = {
+    schemaVersion: "runtime-conformance-certificate-v1.17" as const,
+    certificateId: "certificate:typescript:generation-7",
+    certificateVersion: "runtime-conformance-certificate-v1.17" as const,
+    producerId: "fixture-managed-conformance-builder",
+    producerKeyId: "fixture-managed-conformance-key",
+    trustDomain: "fixture" as const,
+    managedIdentity: true as const,
+    registryGeneration: "7",
+    issuedAt: "2026-07-16T00:00:00.000Z",
+    requestedValidUntil: "2026-09-01T00:00:00.000Z",
+    freshUntil: "2026-08-10T00:00:00.000Z",
+    identity,
+    runs: source.runReceipts.map((receipt, index) => ({
+      runId: receipt.runId,
+      workspaceId: `workspace:typescript:${index + 1}`,
+      processId: `process:typescript:${index + 1}`,
+      status: "passed" as const,
+      complete: true,
+      freshWorkspace: true,
+      freshProcess: true,
+      skippedCaseCount: 0,
+      unsupportedCaseCount: 0,
+      fallbackUsed: false,
+      syntheticEvidence: false,
+      caseCount: 64,
+      startedAt: `2026-07-15T0${index}:00:00.000Z`,
+      completedAt: `2026-07-15T0${index}:10:00.000Z`,
+      validUntil: "2026-08-10T00:00:00.000Z",
+      identity: globalThis.structuredClone(identity),
+      resultRootSha256: source.resultRootSha256,
+      evidenceRootSha256: source.evidenceRootSha256,
+    })),
+  }
+  const certificate: RuntimeConformanceCertificateV117 = {
+    ...certificatePayload,
+    signatureBase64: sign(
+      null,
+      encodeRuntimeConformanceCertificatePayloadV117(certificatePayload),
+      certificateKeys.privateKey,
+    ).toString("base64"),
+  }
+  const certificateProducer: RuntimeConformanceTrustedProducerV117 = {
+    producerId: certificate.producerId,
+    keyId: certificate.producerKeyId,
+    trustDomain: "fixture",
+    managedIdentity: true,
+    publicKeyPem: certificateKeys.publicKey
+      .export({ type: "spki", format: "pem" })
+      .toString(),
+  }
+  const evidence = verifyRuntimeEvidenceAttestationV117({
+    mode: "fixture",
+    ...evidenceFixture,
+    verificationInstant: "2026-07-20T00:00:00.000Z",
+    trustedProducers: [evidenceFixture.producer],
+  })
+  const conformance = verifyRuntimeConformanceCertificateV117({
+    mode: "fixture",
+    certificate,
+    currentIdentity: identity,
+    expectedRunBinding: {
+      caseInventorySha256: source.caseInventorySha256,
+      requiredCaseCount: 64,
+      resultRootSha256: source.resultRootSha256,
+    },
+    verificationInstant: "2026-07-20T00:00:00.000Z",
+    trustedProducers: [certificateProducer],
+  })
+  return { source, currentIdentity: identity, evidence, conformance }
 }
 
 const resign = (
@@ -332,9 +493,134 @@ describe("runtime evidence v1.17 frozen contract", () => {
     },
   )
 
+  it("joins one verified certificate to the exact evidence DAG and additive supervisor source", () => {
+    const fixture = buildConformanceBindingFixture()
+    const verified = verifyRuntimeConformanceEvidenceBindingV117({
+      evidence: fixture.evidence,
+      certificate: fixture.conformance,
+      currentIdentity: fixture.currentIdentity,
+      source: fixture.source,
+      verificationInstant: "2026-07-20T00:00:00.000Z",
+    })
+
+    expect(verified).toMatchObject({
+      schemaVersion: "runtime-conformance-evidence-binding-v1.17",
+      certificateId: fixture.conformance.certificateId,
+      certificateSha256: fixture.conformance.certificateSha256,
+      attestationSha256: fixture.evidence.attestationSha256,
+      languageId: "typescript",
+      laneId: "lane:typescript:linux-cgroup-v2",
+      corpusRootSha256: fixture.currentIdentity.corpusRootSha256,
+      caseInventorySha256: fixture.source.caseInventorySha256,
+      runtimeAbiVersion: "strategy-runtime-abi-v1.18",
+      additiveBudgetProfileSha256: RUNTIME_BUDGET_PROFILE_V1_18_SHA256,
+      runReceiptSha256s: fixture.source.runReceipts.map(
+        ({ receiptSha256 }) => receiptSha256,
+      ),
+    })
+    expect(Object.isFrozen(verified)).toBe(true)
+    expect(Object.isFrozen(verified.supervisorIdentity)).toBe(true)
+    expect(Object.isFrozen(verified.runReceiptSha256s)).toBe(true)
+  })
+
+  it.each([
+    [
+      "runtime ABI envelope",
+      (source: RuntimeConformanceEvidenceSourceV117) => {
+        source.runtimeAbiEnvelopeSha256 = hash("0")
+      },
+    ],
+    [
+      "additive budget profile",
+      (source: RuntimeConformanceEvidenceSourceV117) => {
+        source.additiveBudgetProfileSha256 = hash("0")
+      },
+    ],
+    [
+      "common supervisor binary",
+      (source: RuntimeConformanceEvidenceSourceV117) => {
+        source.supervisorIdentity.supervisorBinarySha256 = hash("0")
+      },
+    ],
+    [
+      "Docker image",
+      (source: RuntimeConformanceEvidenceSourceV117) => {
+        source.supervisorIdentity.dockerImageDigest = hash("0")
+      },
+    ],
+    [
+      "cgroup settings",
+      (source: RuntimeConformanceEvidenceSourceV117) => {
+        source.supervisorSettingsSha256 = hash("0")
+      },
+    ],
+    [
+      "run receipt",
+      (source: RuntimeConformanceEvidenceSourceV117) => {
+        source.runReceipts[1]!.receiptSha256 = hash("0")
+      },
+    ],
+  ] as const)("rejects %s substitution immediately", (_name, mutate) => {
+    const fixture = buildConformanceBindingFixture()
+    const source = globalThis.structuredClone(fixture.source)
+    mutate(source)
+    expect(() =>
+      verifyRuntimeConformanceEvidenceBindingV117({
+        evidence: fixture.evidence,
+        certificate: fixture.conformance,
+        currentIdentity: fixture.currentIdentity,
+        source,
+        verificationInstant: "2026-07-20T00:00:00.000Z",
+      }),
+    ).toThrowError(RuntimeConformanceEvidenceBindingV117Error)
+  })
+
+  it("rejects stale identity, unverified snapshots, and incomplete three-run receipt bindings", () => {
+    const fixture = buildConformanceBindingFixture()
+    const changed = globalThis.structuredClone(fixture.currentIdentity)
+    changed.artifactSha256 = hash("0")
+    for (const input of [
+      {
+        evidence: fixture.evidence,
+        certificate: fixture.conformance,
+        currentIdentity: changed,
+        source: fixture.source,
+      },
+      {
+        evidence: globalThis.structuredClone(fixture.evidence),
+        certificate: fixture.conformance,
+        currentIdentity: fixture.currentIdentity,
+        source: fixture.source,
+      },
+      {
+        evidence: fixture.evidence,
+        certificate: globalThis.structuredClone(fixture.conformance),
+        currentIdentity: fixture.currentIdentity,
+        source: fixture.source,
+      },
+      {
+        evidence: fixture.evidence,
+        certificate: fixture.conformance,
+        currentIdentity: fixture.currentIdentity,
+        source: {
+          ...fixture.source,
+          runReceipts: fixture.source.runReceipts.slice(0, 2),
+        },
+      },
+    ]) {
+      expect(() =>
+        verifyRuntimeConformanceEvidenceBindingV117({
+          ...input,
+          verificationInstant: "2026-07-20T00:00:00.000Z",
+        }),
+      ).toThrowError()
+    }
+  })
+
   it("keeps the production managed-producer registry empty and rejects caller trust", () => {
     const fixture = buildFixture()
     expect(RUNTIME_EVIDENCE_TRUSTED_PRODUCERS_V1_17).toEqual([])
+    expect(RUNTIME_CONFORMANCE_TRUSTED_PRODUCERS_V1_17).toEqual([])
     expect(() =>
       verifyRuntimeEvidenceAttestationV117({
         mode: "production",
