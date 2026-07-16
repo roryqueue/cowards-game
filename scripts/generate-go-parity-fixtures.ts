@@ -10,17 +10,12 @@ import {
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs"
 import path from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
-import {
-  MATCH_KERNEL,
-  type StrategyRuntime,
-} from "../packages/engine/src/index.ts"
+import { MATCH_KERNEL } from "../packages/engine/src/index.ts"
 import { adaptRuntimeForCurrentKernel } from "../packages/engine/src/test/current-kernel-runtime.ts"
 import {
   projectPublicChronicle,
   recordChronicleFromExecution,
-  validateCurrentReplayReconstruction,
 } from "../packages/replay/src/index.ts"
-import { issueRuntimeSemanticReceipt } from "../apps/runtime-service/src/semantic-receipt.ts"
 import { issueRuntimeSemanticReceiptV117 } from "../apps/runtime-service/src/semantic-receipt-v1-17.ts"
 import { composeSuccessorRuntimeIdentityV117 } from "../apps/runtime-service/src/successor-runtime-identity.ts"
 import { createChronicleMetadata } from "../packages/persistence/src/chronicle-store.ts"
@@ -31,7 +26,6 @@ import { createGoldenMatchInput } from "../packages/golden/src/index.ts"
 import { buildStrategyRevisionV117 } from "../packages/runtime-js/src/index.ts"
 import {
   AnalyticsRunSummaryServiceDtoSchema,
-  ChronicleSchema,
   CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE,
   CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_ID,
   VERSIONED_RUNTIME_V117_SEMANTIC_TUPLE_RECORD,
@@ -81,9 +75,6 @@ import {
   encodeRuntimeEvidenceAuthoritySignatureMessage,
   HistoricalRuntimeExecutionServiceRequestV116Schema,
   HistoricalRuntimeExecutionServiceResponseV116Schema,
-  RuntimeExecutionServiceRequestSchema,
-  RuntimeExecutionServiceResponseSchema,
-  RuntimeExecutionFinalStateSchema,
   encodeRuntimeSemanticReceiptClaims,
   type AnalyticsRunSummaryServiceDto,
   type PublicLadderPageServiceDto,
@@ -93,8 +84,6 @@ import {
   type PublicStrategyCardDto,
   type PublicStrategyPageServiceDto,
   type ServiceErrorDto,
-  type SoldierBrainInput,
-  type StrategyInput,
   type StrategyRevisionV117,
   type ExecutableLaneIdentity,
   type RuntimeEvidenceAuthorityBindingV117,
@@ -127,108 +116,6 @@ const goChecksumSourcePath = path.join(
   "apps/go-backend/fixture_checksums_gen.go",
 )
 const staleMessage = "Go parity fixtures are stale; run pnpm go:parity:generate"
-
-const createRuntimeExecutionWireGolden = (root = repoRoot): string => {
-  const request = RuntimeExecutionServiceRequestSchema.parse(
-    JSON.parse(
-      readFileSync(
-        path.join(
-          root,
-          "packages/spec/artifacts/runtime-execution-service-request.v1.16.json",
-        ),
-        "utf8",
-      ),
-    ),
-  )
-  const wireValues = () => ({
-    zLower: "<>&",
-    AUpper: "日本語",
-    lineSeparators: "before\u2028middle\u2029after",
-    maxSafeInteger: Number.MAX_SAFE_INTEGER,
-    minSafeInteger: Number.MIN_SAFE_INTEGER,
-    negativeZero: -0,
-    tinyDecimal: 1e-7,
-    exactDecimal: 1.25,
-  })
-  const wireRuntime: StrategyRuntime = {
-    selectActivations(_input: StrategyInput) {
-      return {
-        ok: true,
-        value: { activationOrders: [], strategyMemory: wireValues() },
-      }
-    },
-    runSoldierBrain(_input: SoldierBrainInput) {
-      return {
-        ok: true,
-        value: {
-          action: { type: "TURN_TO_STONE" },
-          soldierMemory: wireValues(),
-        },
-      }
-    },
-  }
-  const execution = MATCH_KERNEL.runMatch({
-    ...request.match,
-    runtime: wireRuntime,
-  })
-  if (execution.kind !== "completed") {
-    throw new Error("Runtime execution wire golden did not complete")
-  }
-  const recorded = recordChronicleFromExecution({
-    execution,
-    metadata: {
-      schemaVersion: "chronicle-v1.4",
-      semanticTupleId: request.evidenceSnapshot.compatibility.tupleId,
-      semanticTuple: request.evidenceSnapshot.compatibility.tuple,
-    },
-  })
-  if (!recorded.ok) {
-    throw new Error(recorded.failure.code)
-  }
-  const reconstructed = validateCurrentReplayReconstruction({
-    chronicle: recorded.chronicle,
-    execution,
-  })
-  if (!reconstructed.ok) {
-    throw new Error("Runtime execution wire golden did not reconstruct")
-  }
-  const runtimeViolationEventCount = recorded.chronicle.events.filter(
-    (event) => event.type === "RUNTIME_VIOLATION",
-  ).length
-  const responseChronicle = ChronicleSchema.omit({
-    integrity: true,
-    storageMetadata: true,
-  })
-    .strict()
-    .parse(recorded.chronicle)
-  const responseFinalState = RuntimeExecutionFinalStateSchema.parse(
-    recorded.finalState,
-  )
-  const semanticReceipt = issueRuntimeSemanticReceipt({
-    request,
-    chronicle: responseChronicle,
-    finalState: responseFinalState,
-    reconstructedTerminalStateHash: reconstructed.terminalStateHash,
-    runtimeViolationEventCount,
-    secret: "fixture-v1.16-wire-golden-secret",
-  })
-  const response = RuntimeExecutionServiceResponseSchema.parse({
-    contractVersion: request.contractVersion,
-    ok: true,
-    kind: "executionResult",
-    requestId: request.requestId,
-    matchId: request.match.matchId,
-    runtimeAbiVersion: request.evidenceSnapshot.compatibility.tuple.runtimeAbi,
-    result: {
-      privacy: "internal_runtime_result",
-      chronicle: responseChronicle,
-      finalState: responseFinalState,
-      runtimeViolationEventCount,
-      semanticReceipt,
-    },
-  })
-  return JSON.stringify(response)
-}
 
 const stableValue = (value: unknown): unknown => {
   if (Array.isArray(value)) {
