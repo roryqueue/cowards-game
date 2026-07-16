@@ -267,9 +267,7 @@ const evidenceShapeIsClosed = (
     }
   }
   if (
-    Object.values(value.containment).some(
-      (entry) => typeof entry !== "boolean",
-    )
+    Object.values(value.containment).some((entry) => typeof entry !== "boolean")
   ) {
     return false
   }
@@ -357,9 +355,7 @@ export const evaluateRuntimeBudgetCapabilityV118 = (
     return failure(laneId, "EVIDENCE_SHAPE_INVALID")
   }
   const evidence = evidenceInput
-  if (
-    evidence.budgetProfileSha256 !== RUNTIME_BUDGET_PROFILE_V1_18_SHA256
-  ) {
+  if (evidence.budgetProfileSha256 !== RUNTIME_BUDGET_PROFILE_V1_18_SHA256) {
     return failure(laneId, "BUDGET_PROFILE_MISMATCH")
   }
   if (
@@ -372,7 +368,10 @@ export const evaluateRuntimeBudgetCapabilityV118 = (
   if (!exactControllers(evidence.platform.delegatedControllers)) {
     return failure(laneId, "CONTROLLERS_UNAVAILABLE")
   }
-  if (!evidence.containment.delegated || !evidence.containment.settingsApplied) {
+  if (
+    !evidence.containment.delegated ||
+    !evidence.containment.settingsApplied
+  ) {
     return failure(laneId, "DELEGATION_UNAVAILABLE")
   }
   if (!commonMetersComplete(evidence)) {
@@ -397,9 +396,7 @@ export const evaluateRuntimeBudgetCapabilityV118 = (
     ) {
       return failure(laneId, "DEFENSE_IN_DEPTH_INCOMPLETE")
     }
-    if (
-      evidence.wasmtimeDefenseInDepth.usedAsCommonQuantitativeMeter
-    ) {
+    if (evidence.wasmtimeDefenseInDepth.usedAsCommonQuantitativeMeter) {
       return failure(laneId, "WASMTIME_METER_SUBSTITUTION")
     }
   } else if (evidence.wasmtimeDefenseInDepth !== null) {
