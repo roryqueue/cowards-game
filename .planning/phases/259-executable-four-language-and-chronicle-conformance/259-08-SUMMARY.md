@@ -42,6 +42,7 @@ key-decisions:
   - "validateCurrentChronicle remains the sole public semantic admission API, while validateCurrentChronicleSemantics is module-internal to replay validation and reconstruction."
   - "Semantic admission and reconstruction each call the same pure transition-postcondition comparator exactly once."
   - "Candidate snapshots and boundary anchors must equal the trusted recorder's exact ordered output; self-consistency is only defense in depth."
+  - "Exact current tuple identity is resolved canonically and never depends on JSON object insertion order."
 
 patterns-established:
   - "Version-first admission: unresolved or unsupported identity fails before Chronicle bytes are read."
@@ -112,6 +113,8 @@ status: complete
 - Added one pure, acyclic current transition-postcondition comparator used by both semantic admission and reconstruction to prove ordered events produce every exact after-state and terminal status.
 - Routed historical replay execution through only the frozen v1.4 transition interpreter.
 - Bound current snapshots and boundary anchors to the trusted recorder's exact order, rejecting swapped or renumbered self-consistent pairs.
+- Routed exact historical-v1.16 admission through the same frozen v1.4 validator rather than the mutable current schema and grammar.
+- Made current compatibility and every recorded transition tuple comparison canonical and key-order independent.
 - Kept only `validateCurrentChronicle` in the package public admission surface; the semantic core remains an internal replay implementation seam.
 
 ## Task Commits
@@ -124,6 +127,8 @@ status: complete
 6. **Review BL-02: Shared transition postcondition and terminal proof** — `cc3359a` (fix)
 7. **Review BL-03: Exact trusted-recorder snapshot and anchor order** — `09b4cb3` (fix)
 8. **Review gate formatting correction** — `d7f21df` (style)
+9. **Final review RED: Historical isolation and canonical tuple order** — `6bb0207` (test)
+10. **Final review GREEN: Frozen exact-history dispatch and canonical tuple resolution** — `8706d4b` (fix)
 
 ## Files Created/Modified
 
@@ -141,6 +146,8 @@ status: complete
 
 - Historical admission intentionally does not require current snapshot structure. Original v1.4 grammar and vocabulary are the frozen authority for original evidence.
 - Historical replay execution intentionally uses only `applyHistoricalV14Transition`; current `applyReplayEvent` and current validated-replay construction are excluded from the historical route.
+- Both unresolved original v1.4 and exact historical-v1.16 admission use the frozen historical validator; the exact tuple never selects mutable current parsing.
+- Current compatibility and transition tuple equality uses the canonical resolver, so equivalent language-neutral JSON objects are independent of property insertion order.
 - The semantic core is exported only from its implementation module for reconstruction composition; the package barrel exposes the stable public wrapper instead.
 - Transition reconstruction and terminal-status comparison have one internal implementation called independently by admission and reconstruction without an import cycle.
 - Boundary anchors are deterministically derived from the same snapshot descriptors used during recording, avoiding a second independently implemented boundary schedule.
@@ -174,9 +181,19 @@ status: complete
 - **Fix:** Required exact ordered equality with trusted recorder snapshots and boundary anchors before defense-in-depth boundary checks.
 - **Committed in:** `09b4cb3`
 
+**5. [Final code review blocker] Exact historical-v1.16 evidence used mutable current parsing**
+
+- **Fix:** Added an explicit exact-historical dispatch branch to the frozen v1.4 validator and a historical-only vocabulary regression that current schema rejects.
+- **Committed in:** `8706d4b`
+
+**6. [Final code review blocker] Exact current tuple checks depended on JSON key insertion order**
+
+- **Fix:** Replaced raw tuple `JSON.stringify` comparisons in admission and recording with the canonical tuple resolver; added a reordered-key regression.
+- **Committed in:** `8706d4b`
+
 ---
 
-**Total deviations:** 4 auto-fixed (1 missing critical boundary control, 3 code-review blockers).
+**Total deviations:** 6 auto-fixed (1 missing critical boundary control, 5 code-review blockers).
 **Impact on plan:** The correction narrows the API surface without changing valid Match state, Action legality, event order, outcome, Strategy observation, historical interpretation, or public output.
 
 ## Issues Encountered
@@ -185,8 +202,8 @@ status: complete
 
 ## Verification
 
-- Focused current, historical, and reconstruction suites: 78/78 passed.
-- Full replay package suite with one worker: 14 files / 201 tests passed in 164.99 seconds.
+- Focused exact current and historical dispatch suites: 59/59 passed.
+- Full replay package suite with one worker: 14 files / 203 tests passed in 171.86 seconds.
 - `@cowards/replay` typecheck and lint passed.
 - Focused Prettier check and `git diff --check` passed.
 - Frozen historical hashes remain `c331055e4aadba3fa01142bf764247c961d1b45483a310a11af5d66ce214d108` for grammar and `ff90b9938b9a6c85cafacf1d9b7856af70b4d87234819a50e60ab8666c37b477` for transition interpretation.
