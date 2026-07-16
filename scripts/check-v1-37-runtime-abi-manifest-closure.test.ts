@@ -62,6 +62,14 @@ describe("Phase 258 runtime ABI activation closure", () => {
       "scripts/check-v1-37-runtime-abi-manifest-closure.ts",
     )
     expect(paths).toContain("scripts/evaluate-v1-37-runtime-abi.ts")
+    const allowlist = parseRuntimeAbiActivationAllowlist(
+      readJson(
+        "packages/spec/artifacts/runtime-abi-v1.17-activation-allowlist.json",
+      ),
+    )
+    for (const operation of allowlist.operations) {
+      expect(paths, operation.path).toContain(operation.path)
+    }
     expect(paths).not.toContain(RUNTIME_ABI_ACTIVATION_MANIFEST_PATH)
     for (const path of RUNTIME_ABI_DERIVED_VALIDATION_OUTPUTS) {
       expect(paths).not.toContain(path)
@@ -94,12 +102,17 @@ describe("Phase 258 runtime ABI activation closure", () => {
         /symlink/iu,
       )
 
-      const fifoPath = path.join(root, "special")
-      const fifo = spawnSync("mkfifo", [fifoPath])
-      expect(fifo.status).toBe(0)
-      expect(() => expandPhase258InventoryPaths(["special"], root)).toThrow(
-        /not a regular file/iu,
-      )
+      if (process.platform !== "win32") {
+        const fifoPath = path.join(root, "special")
+        const fifo = spawnSync("mkfifo", [fifoPath])
+        expect(fifo.status).toBe(0)
+        expect(() => expandPhase258InventoryPaths(["special"], root)).toThrow(
+          /not a regular file/iu,
+        )
+        expect(() => expandPhase258InventoryPaths([fifoPath], root)).toThrow(
+          /not normalized/iu,
+        )
+      }
 
       expect(() => expandPhase258InventoryPaths(["../escape"], root)).toThrow(
         /not normalized|escapes repository/iu,
@@ -107,9 +120,6 @@ describe("Phase 258 runtime ABI activation closure", () => {
       expect(() =>
         expandPhase258InventoryPaths(["tree/../tree/a.txt"], root),
       ).toThrow(/not normalized/iu)
-      expect(() => expandPhase258InventoryPaths([fifoPath], root)).toThrow(
-        /not normalized/iu,
-      )
     } finally {
       rmSync(root, { recursive: true, force: true })
     }
