@@ -255,13 +255,13 @@ func runtimeInvocationContractForVersion(version string) (runtimeInvocationContr
 	case "runtime-execution-service-v1.18":
 		return runtimeInvocationContractDescriptor{
 			ContractVersion:     "runtime-execution-service-v1.18",
-			RequestSHA256:       "ca740755015abe9f99bc7ac3564a641ebc262f3d872fb160927c9eee16fe6958",
-			ResponseSHA256:      "fd8f8c9ea13692121005c45e846ed0cc2ce5293b5c3c233d70bb8ad0a1a6fa1a",
+			RequestSHA256:       "344e0a90b42618b80bfeb9efb8e528fdad338de6208c933b89d6e08a9be89548",
+			ResponseSHA256:      "ea05a63c02f6b3f8ef30b46a911c539b82fccfdae2ab48efa5a55b2512eeb58f",
 			Historical:          false,
 			CanonicalJSON:       true,
 			Current:             false,
-			ReceiptClaimSHA256:  "b9f990fbdc3e546ba82a5271e7989dff6c1c905e982275e9f824fbf01697495f",
-			ReceiptSignature:    "YvfKmIY7OeWL+trWfLmCb60NqbscjUG2gk+UurDnE7nLnt1EbEsU6Jl1qSjVOAexVHduhUXvRdOyu7vvUV6ZDw==",
+			ReceiptClaimSHA256:  "1fee766d8d301553dd95729bf8772d3d95e12bef07e1ae7fd621461b98e66bc5",
+			ReceiptSignature:    "gctyIKYPGuVvDlPBA+RjLfsSw/Au/DoNYSS6d/AREpsdplRxTh7vMyBjXvlZzXVMdW2Icg4knLJ1SzjZSc0eBw==",
 			ReceiptAlgorithm:    "Ed25519",
 			ReceiptKeyID:        "fixture-only:runtime-semantic-receipt:v1.18",
 			ReceiptPublicKeyPEM: "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAXgrWpdGHFNO5Z+VoS28vWLcygYyLwCv4Ovkfyf4Z610=\n-----END PUBLIC KEY-----\n",

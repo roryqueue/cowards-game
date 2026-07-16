@@ -811,12 +811,7 @@ const createV118ServiceArtifacts = () => {
     requestId: "request:full-service:v1.18:0001",
     matchId: "match:full-service:v1.18:0001",
     semanticTuple: createRuntimeSemanticTupleV118({
-      rules: "cowards-rules-v1.4",
-      engine: "engine-kernel-v1.37-candidate-1",
-      runtimeAbi: "strategy-runtime-abi-v1.18",
-      chronicle: "chronicle-recorder-current-events-v1.37-candidate-1",
-      arenaCatalog: "semantic-arena-catalog-v1.37-candidate-1",
-      setPolicy: "canonical-set-policy-v1.4",
+      ...CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE,
     }),
     authorityGeneration: "23",
     evaluationInstant: "2026-07-16T12:00:00.000Z",

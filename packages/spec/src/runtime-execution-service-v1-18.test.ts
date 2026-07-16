@@ -2,6 +2,7 @@ import { createHash } from "node:crypto"
 import { readFileSync } from "node:fs"
 import path from "node:path"
 import { describe, expect, it } from "vitest"
+import { CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE } from "./integrity-authority.js"
 import {
   RUNTIME_EXECUTION_SERVICE_VERSION_V1_18,
   RuntimeExecutionServiceRequestV118Schema,
@@ -40,12 +41,7 @@ const request = (): RuntimeExecutionServiceRequestV118 => ({
   requestId: "request:fixture:v1.18",
   matchId: "match:fixture:v1.18",
   semanticTuple: createRuntimeSemanticTupleV118({
-    rules: "cowards-rules-v1.4",
-    engine: "engine-kernel-v1.37-candidate-1",
-    runtimeAbi: "strategy-runtime-abi-v1.18",
-    chronicle: "chronicle-recorder-current-events-v1.37-candidate-1",
-    arenaCatalog: "semantic-arena-catalog-v1.37-candidate-1",
-    setPolicy: "canonical-set-policy-v1.4",
+    ...CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE,
   }),
   authorityGeneration: "19",
   evaluationInstant: "2026-07-16T00:00:00.000Z",
@@ -85,6 +81,14 @@ describe("runtime execution service v1.18 additive contract", () => {
   it("strictly admits a trace-complete two-certificate request and response", () => {
     const value = request()
     expect(RuntimeExecutionServiceRequestV118Schema.parse(value)).toEqual(value)
+    expect(value.semanticTuple).toEqual(
+      createRuntimeSemanticTupleV118({
+        ...CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE,
+      }),
+    )
+    expect(value.semanticTuple.components.runtimeAbi).toBe(
+      "strategy-runtime-abi-v1.17",
+    )
     const admissionClaim = claim()
     const response = {
       contractVersion: RUNTIME_EXECUTION_SERVICE_VERSION_V1_18,

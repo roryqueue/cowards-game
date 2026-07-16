@@ -1,5 +1,6 @@
 import { generateKeyPairSync, sign, type KeyObject } from "node:crypto"
 import {
+  CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE,
   RUNTIME_EXECUTION_SERVICE_VERSION_V1_18,
   createRuntimeSemanticTupleV118,
   verifyRuntimeSemanticReceiptV118,
@@ -20,12 +21,7 @@ const request = (): RuntimeExecutionServiceRequestV118 => ({
   requestId: "request:issuer:v1.18",
   matchId: "match:issuer:v1.18",
   semanticTuple: createRuntimeSemanticTupleV118({
-    rules: "cowards-rules-v1.4",
-    engine: "engine-kernel-v1.37-candidate-1",
-    runtimeAbi: "strategy-runtime-abi-v1.18",
-    chronicle: "chronicle-recorder-current-events-v1.37-candidate-1",
-    arenaCatalog: "semantic-arena-catalog-v1.37-candidate-1",
-    setPolicy: "canonical-set-policy-v1.4",
+    ...CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE,
   }),
   authorityGeneration: "23",
   evaluationInstant: "2026-07-16T12:00:00.000Z",
