@@ -101,6 +101,7 @@ status: complete
 - Exported the pure v1.37 corpus/projector/root/comparator surface without exposing golden-writing or promotion authority.
 - Closed three adversarial review gaps: caller-owned shallow freezes can no longer create stale-root false equality, event payloads/contexts must survive the canonical public Chronicle schema without stripped fields, and system-failure summaries must prove no mutation while matching their referenced invocation.
 - Closed three independent rereview gaps: self-rehashed invalid prefix/derived roots cannot become an equal oracle, system-failure invocations are unique and reference-strict across result classes, and transition stage/outcome/event/terminal hashes are replay-owned and semantically revalidated before equality.
+- Closed the final independent blocker set: owner-private events require commitments while public events forbid them, event sequences are globally contiguous across transitions, terminal evidence is final-only and exactly matches the final `MATCH_ENDED`, and every player violation is bound to exact invocation or transition evidence.
 
 ## Task Commits
 
@@ -114,6 +115,8 @@ status: complete
 8. **Rereview RED: Reproduce semantic-admission gaps** — `368c82e` (test)
 9. **Rereview CR-04/CR-05/CR-06: Close projected trace admission** — `8289633` (fix)
 10. **Rereview CR-04: Quarantine structurally malformed candidates safely** — `b79f709` (fix)
+11. **Final rereview RED: Reproduce owner, chronology, terminal, and violation-ownership gaps** — `4417707` (test)
+12. **Final rereview CR-07/CR-08/CR-09: Close final trace admission gaps** — `0fd55f1` (fix)
 
 ## Files Created/Modified
 
@@ -132,6 +135,10 @@ status: complete
 - Admit recorded events only when their payload and context are unchanged by the canonical current Chronicle event schema; schema-stripped unknown data is a typed trace rejection.
 - Require referenced failure summaries to agree with invocation class, stable code, boundary, mutation flags, terminal effect, and retryability; system failures additionally prove unchanged state, memory, and objective hashes.
 - Revalidate the complete closed projected trace before comparator equality, including exact stage vocabulary, event/output hashes, outcome schema, terminal hash coherence, prefix roots, derived transition root, and failure ownership.
+- Require every owner-private event to carry a private-payload commitment and every public event to carry none.
+- Treat Chronicle event sequence as one flattened global stream beginning at zero; a transition-local ordering claim cannot mask a cross-transition gap or duplicate.
+- Admit terminal evidence only on the final transition, with exactly one final `MATCH_ENDED` whose public payload canonically equals the terminal status.
+- Bind transition-owned player violations to one exact `RUNTIME_VIOLATION` stable code, the referenced transition kind, derived gameplay mutation, rejected private-memory mutation, terminal effect, and non-retryability; invocation-owned violations retain the same exact field-by-field check.
 - Return a bounded `traceSemantics` quarantine result for structurally malformed candidate objects instead of hashing or traversing unsafe shapes.
 - Carry before/after objective hashes alongside memory hashes so system failure proves no objective mutation rather than relying on a single unpaired digest.
 
@@ -149,6 +156,7 @@ status: complete
 - Repeating the complete Match transition stream for every one-field mutation exceeded Vitest's default per-test budget. The projection test still exercises the entire recorded Match, while the exhaustive mutation table uses a valid compact `RecordedCanonicalTransitionV137` prefix with the same complete field surface. Focused runtime fell from more than 20 seconds with timeouts to 2.85 seconds with all assertions passing.
 - Adversarial review showed that shallow freezing is not a safe cache eligibility signal and that closed top-level event keys do not make nested payloads closed. Both assumptions were replaced with executable fail-closed checks.
 - Independent rereview showed that an outer self-hash is not semantic admission: derived roots, stage/outcome schemas, terminal coherence, and unique failure ownership must all pass before equal-root short-circuiting.
+- Final rereview showed that transition-local event monotonicity was insufficient for Chronicle reconstruction and that a nullable private commitment made owner evidence indistinguishable from missing evidence. Both are now closed at projection admission.
 
 ## User Setup Required
 
@@ -164,9 +172,9 @@ None.
 
 - All three planned source/test/export files and both review-owned shared authority updates exist.
 - RED/GREEN commits `a34ccfa`, `8a9227c`, `69cf415`, and `5a7ff21` exist in order.
-- Focused trace suite passes: 1 file, 12 tests.
-- Full `@cowards/golden` package suite passes: 3 files, 21 tests.
-- Joined replay recorder and trace regression passes: 2 files, 30 tests.
+- Focused trace suite passes: 1 file, 15 tests.
+- Full `@cowards/golden` package suite passes: 3 files, 24 tests.
+- Joined replay recorder and trace regression passes: 2 files, 33 tests.
 - Golden package typecheck, focused ESLint, Prettier check, and `git diff --check` pass.
 - Protected milestone, project-state, and v1.4 specification files are unchanged.
 
