@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest"
-import type { WorkshopCheckerResponse } from "@cowards/spec"
+import {
+  STRATEGY_LANGUAGE_PROVIDER_CONTRACT_VERSION,
+  STRATEGY_RUNTIME_ABI_VERSION,
+  type WorkshopCheckerResponse,
+} from "@cowards/spec"
 import type { WorkshopRevisionSummary } from "./types.js"
 import {
   canSubmitRevision,
@@ -67,7 +71,7 @@ const validChecker: WorkshopCheckerResponse = {
     id: "typescript",
     label: "TypeScript",
     providerId: "strategy-language-provider-js-ts",
-    contractVersion: "strategy-language-provider-contract-v1.33",
+    contractVersion: STRATEGY_LANGUAGE_PROVIDER_CONTRACT_VERSION,
   },
   owners: {
     validationOwner: "runtime-service",
@@ -106,8 +110,8 @@ const validChecker: WorkshopCheckerResponse = {
     sourceBytes: validReport.sourceBytes,
     artifactHash: "artifact-hash",
     artifactBytes: 456,
-    providerContractVersion: "strategy-language-provider-contract-v1.33",
-    runtimeAbiVersion: "strategy-runtime-abi-v1.14",
+    providerContractVersion: STRATEGY_LANGUAGE_PROVIDER_CONTRACT_VERSION,
+    runtimeAbiVersion: STRATEGY_RUNTIME_ABI_VERSION,
     validationPolicy: "workshop-provider-checker-policy-v1.34",
     toolchainKey: null,
   },
@@ -237,7 +241,7 @@ describe("Strategy Workshop validation helpers", () => {
             id: "python",
             label: "Python",
             providerId: "strategy-language-provider-python",
-            contractVersion: "strategy-language-provider-contract-v1.33",
+            contractVersion: STRATEGY_LANGUAGE_PROVIDER_CONTRACT_VERSION,
           },
           owners: {
             validationOwner: "runtime-service",
@@ -275,8 +279,8 @@ describe("Strategy Workshop validation helpers", () => {
             artifactHash: null,
             artifactBytes: null,
             providerContractVersion:
-              "strategy-language-provider-contract-v1.33",
-            runtimeAbiVersion: "strategy-runtime-abi-v1.14",
+              STRATEGY_LANGUAGE_PROVIDER_CONTRACT_VERSION,
+            runtimeAbiVersion: STRATEGY_RUNTIME_ABI_VERSION,
             validationPolicy: "workshop-provider-checker-policy-v1.34",
             toolchainKey: null,
           },

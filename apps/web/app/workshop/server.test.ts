@@ -5,9 +5,11 @@ import { createWorkshopServer, isStorageUnavailableError } from "./server.js"
 import {
   COMPATIBILITY_VERSIONS,
   STRATEGY_LANGUAGE_PROVIDER_CONTRACT_VERSION,
+  STRATEGY_RUNTIME_ABI_VERSION,
   type StrategyRevision,
   type StrategyRevisionMetadata,
 } from "@cowards/spec"
+import { buildPythonStrategyRevisionV117 } from "@cowards/runtime-python/validation"
 
 const TEST_PROVIDER_VALIDATION_SECRET =
   "cowards-provider-validation-test-secret-v1.33"
@@ -53,6 +55,16 @@ const pythonProviderMetadata = (
   StrategyRevision,
   "runtime" | "validation" | "engineCompatibility" | "metadata" | "sourceHash"
 > => {
+  if (String(STRATEGY_RUNTIME_ABI_VERSION) === "strategy-runtime-abi-v1.17") {
+    return buildPythonStrategyRevisionV117({ source }) as unknown as Pick<
+      StrategyRevision,
+      | "runtime"
+      | "validation"
+      | "engineCompatibility"
+      | "metadata"
+      | "sourceHash"
+    >
+  }
   const sourceBytes = new TextEncoder().encode(source).length
   const sourceHash = createHash("sha256").update(source).digest("hex")
   const artifactPayload = Buffer.from(source.replace(/\r\n?/g, "\n"), "utf8")
@@ -61,7 +73,7 @@ const pythonProviderMetadata = (
     .digest("hex")
   const artifactBytes = artifactPayload.byteLength
   const runtime: StrategyRevision["runtime"] = {
-    abiVersion: "strategy-runtime-abi-v1.14",
+    abiVersion: STRATEGY_RUNTIME_ABI_VERSION,
     language: { id: "python", version: "3.9" },
     adapter: {
       id: "runtime-python-subprocess-experimental",
@@ -93,7 +105,7 @@ const pythonProviderMetadata = (
       bytesBase64: artifactPayload.toString("base64"),
       sourceHash,
       sourceBytes,
-      abiVersion: "strategy-runtime-abi-v1.14",
+      abiVersion: STRATEGY_RUNTIME_ABI_VERSION,
       validationStatus: "valid",
       createdAt: "test",
       toolchain: {

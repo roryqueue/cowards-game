@@ -15,6 +15,8 @@ import {
   describeStrategyRuntimeProductSemantics,
   getSupportedStrategyLanguageRecord,
   STRATEGY_RUNTIME_ABI_VERSION,
+  STRATEGY_RUNTIME_ABI_VERSION_V1_17,
+  StrategyRevisionV117Schema,
 } from "@cowards/spec"
 import type {
   MatchId,
@@ -1139,6 +1141,56 @@ export const getWorkshopRevisionSource = async (
   return result.rows[0]?.source ?? null
 }
 
+type CurrentRuntimeServiceWorkshopFormat =
+  | "typescript"
+  | "python"
+  | "rust"
+  | "zig"
+
+const currentRuntimeUsesV117 = (): boolean =>
+  String(STRATEGY_RUNTIME_ABI_VERSION) ===
+  String(STRATEGY_RUNTIME_ABI_VERSION_V1_17)
+
+const buildCurrentRuntimeServiceWorkshopRevision = (
+  input: {
+    source: string
+    runtime?: StrategyRevision["runtime"] | undefined
+    validation?: StrategyRevisionValidationReport | undefined
+    engineCompatibility?: StrategyRevision["engineCompatibility"] | undefined
+    runtimeServiceValidated?: boolean | undefined
+  },
+  metadata: StrategyRevision["metadata"],
+  sourceFormat: CurrentRuntimeServiceWorkshopFormat,
+): StrategyRevision | null => {
+  if (
+    !currentRuntimeUsesV117() ||
+    !input.runtimeServiceValidated ||
+    !input.runtime ||
+    !input.validation ||
+    !input.engineCompatibility ||
+    input.runtime.language.id !== sourceFormat
+  ) {
+    return null
+  }
+  const sourceHash = createHash("sha256").update(input.source).digest("hex")
+  const sourceBytes = new TextEncoder().encode(input.source).length
+  const revision: StrategyRevision = {
+    id: `strategy-revision:workshop:${sourceFormat}:${sourceHash}` as StrategyRevisionId,
+    strategyId: WORKSHOP_STRATEGY_ID,
+    source: input.source,
+    sourceHash,
+    sourceBytes,
+    runtime: input.runtime,
+    engineCompatibility: input.engineCompatibility,
+    validation: input.validation,
+    metadata,
+  }
+  const admitted = StrategyRevisionV117Schema.safeParse(revision)
+  return admitted.success
+    ? (admitted.data as unknown as StrategyRevision)
+    : null
+}
+
 export const buildWorkshopRevision = (input: {
   source: string
   sourceFormat?: StrategyArtifactSourceFormat | undefined
@@ -1169,6 +1221,17 @@ export const buildWorkshopRevision = (input: {
     const sourceHash = createHash("sha256").update(input.source).digest("hex")
     const sourceBytes = new TextEncoder().encode(input.source).length
     const artifact = input.metadata?.sourceArtifact
+    if (currentRuntimeUsesV117()) {
+      const revision = buildCurrentRuntimeServiceWorkshopRevision(
+        input,
+        metadata,
+        "typescript",
+      )
+      if (revision !== null) return revision
+      throw new WorkshopInputError(
+        "TypeScript Workshop revisions require runtime-service provider validation.",
+      )
+    }
     if (
       !input.runtimeServiceValidated ||
       !input.runtime ||
@@ -1211,6 +1274,17 @@ export const buildWorkshopRevision = (input: {
   if (input.sourceFormat === "python") {
     const sourceHash = createHash("sha256").update(input.source).digest("hex")
     const sourceBytes = new TextEncoder().encode(input.source).length
+    if (currentRuntimeUsesV117()) {
+      const revision = buildCurrentRuntimeServiceWorkshopRevision(
+        input,
+        metadata,
+        "python",
+      )
+      if (revision !== null) return revision
+      throw new WorkshopInputError(
+        "Python Workshop revisions require runtime-service provider validation.",
+      )
+    }
     if (
       !input.runtimeServiceValidated ||
       !input.runtime ||
@@ -1247,6 +1321,17 @@ export const buildWorkshopRevision = (input: {
     const sourceHash = createHash("sha256").update(input.source).digest("hex")
     const sourceBytes = new TextEncoder().encode(input.source).length
     const artifact = input.metadata?.compiledArtifact
+    if (currentRuntimeUsesV117()) {
+      const revision = buildCurrentRuntimeServiceWorkshopRevision(
+        input,
+        metadata,
+        "rust",
+      )
+      if (revision !== null) return revision
+      throw new WorkshopInputError(
+        "Rust Workshop revisions require runtime-service provider validation.",
+      )
+    }
     if (
       !input.runtimeServiceValidated ||
       !input.runtime ||
@@ -1290,6 +1375,17 @@ export const buildWorkshopRevision = (input: {
     const sourceHash = createHash("sha256").update(input.source).digest("hex")
     const sourceBytes = new TextEncoder().encode(input.source).length
     const artifact = input.metadata?.compiledArtifact
+    if (currentRuntimeUsesV117()) {
+      const revision = buildCurrentRuntimeServiceWorkshopRevision(
+        input,
+        metadata,
+        "zig",
+      )
+      if (revision !== null) return revision
+      throw new WorkshopInputError(
+        "Zig Workshop revisions require runtime-service provider validation.",
+      )
+    }
     if (
       !input.runtimeServiceValidated ||
       !input.runtime ||
