@@ -132,9 +132,41 @@ export const runRuntimeAuthorityImportTrustRootBootstrapCli = async (
     const projected = safeReceipt(receipt)
     const encoded = Buffer.from(JSON.stringify(projected))
     if (receiptPath !== undefined) {
-      await writeFile(receiptPath, encoded, { mode: 0o644 })
-      const written = await readFile(receiptPath)
-      if (!written.equals(encoded)) {
+      let written: Buffer
+      try {
+        written = await readFile(receiptPath)
+        const existing = JSON.parse(written.toString("utf8")) as Record<
+          string,
+          unknown
+        >
+        if (
+          (existing.status !== "installed" &&
+            existing.status !== "idempotent") ||
+          JSON.stringify({ ...existing, status: projected.status }) !==
+            encoded.toString("utf8")
+        ) {
+          throw new Error("safe receipt identity conflict")
+        }
+      } catch (error) {
+        if (
+          typeof error !== "object" ||
+          error === null ||
+          !("code" in error) ||
+          error.code !== "ENOENT"
+        ) {
+          throw error
+        }
+        await writeFile(receiptPath, encoded, { mode: 0o644, flag: "wx" })
+        written = await readFile(receiptPath)
+      }
+      const verified = JSON.parse(written.toString("utf8")) as Record<
+        string,
+        unknown
+      >
+      if (
+        JSON.stringify({ ...verified, status: projected.status }) !==
+        encoded.toString("utf8")
+      ) {
         throw new Error("safe receipt verification failed")
       }
     }

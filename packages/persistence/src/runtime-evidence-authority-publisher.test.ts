@@ -1751,4 +1751,61 @@ describePostgres("Phase-259 import trust-root bootstrap", () => {
       ),
     ).rejects.toThrow(/append-only/iu)
   })
+
+  it("rejects noncanonical, duplicate, poisoned, mismatched, and invalid roots without writes", async () => {
+    const attempt = (
+      bytes: Uint8Array,
+      changes: Partial<{
+        expectedDescriptorSha256: string
+        producerId: string
+        keyId: string
+        trustDomain: string
+      }> = {},
+    ) =>
+      bootstrapRuntimeEvidenceAuthorityImportTrustRoots(pool, {
+        expectedDescriptorSha256: `sha256:${createHash("sha256")
+          .update(bytes)
+          .digest("hex")}`,
+        producerId: trustRoot.producerId,
+        keyId: trustRoot.keyId,
+        trustDomain: trustRoot.trustDomain,
+        readDescriptorBytes: async () => bytes,
+        ...changes,
+      })
+
+    const duplicate = descriptorBytes([trustRoot, trustRoot])
+    await expect(attempt(duplicate)).rejects.toMatchObject({
+      code: "IMPORT_ROOT_DUPLICATE",
+    })
+    const poisoned = descriptorBytes([
+      { ...trustRoot, runtimeProducerTrust: true, privateKeyPem: "poison" },
+    ])
+    await expect(attempt(poisoned)).rejects.toMatchObject({
+      code: "IMPORT_ROOT_DESCRIPTOR_SCHEMA",
+    })
+    const canonical = descriptorBytes([trustRoot])
+    const noncanonical = Buffer.from(
+      JSON.stringify([trustRoot], undefined, 2),
+      "utf8",
+    )
+    await expect(attempt(noncanonical)).rejects.toMatchObject({
+      code: "IMPORT_ROOT_DESCRIPTOR_CANONICAL",
+    })
+    await expect(
+      attempt(canonical, { expectedDescriptorSha256: sha256("wrong") }),
+    ).rejects.toMatchObject({ code: "IMPORT_ROOT_DESCRIPTOR_HASH" })
+    await expect(
+      attempt(canonical, { producerId: "runtime-producer:substitution" }),
+    ).rejects.toMatchObject({ code: "IMPORT_ROOT_PIN" })
+    const invalidKey = descriptorBytes([
+      { ...trustRoot, publicKeyPem: "not a public key" },
+    ])
+    await expect(attempt(invalidKey)).rejects.toMatchObject({
+      code: "IMPORT_ROOT_PUBLIC_KEY",
+    })
+    const count = await pool.query<{ count: number }>(
+      "select count(*)::integer as count from runtime_evidence_authority_import_trust_root_deployments",
+    )
+    expect(count.rows[0]?.count).toBe(1)
+  })
 })
