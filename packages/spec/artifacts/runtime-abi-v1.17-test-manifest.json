@@ -142,6 +142,15 @@
       "ownedFiles": ["packages/replay/src/build.test.ts", "packages/replay/src/debug-explanations.test.ts", "packages/replay/src/determinism.test.ts", "packages/replay/src/grammar.test.ts", "packages/replay/src/integration.test.ts", "packages/replay/src/integrity.test.ts", "packages/replay/src/project.test.ts", "packages/replay/src/reconstruct.test.ts", "packages/replay/src/record.test.ts", "packages/replay/src/replay-transition.test.ts", "packages/replay/src/semantic-integrity.test.ts", "packages/replay/src/snapshot-boundaries.test.ts", "packages/replay/src/validate.test.ts"]
     },
     {
+      "id": "phase258.cross-package-current-callers",
+      "stage": "activation",
+      "kind": "vitest",
+      "command": ["pnpm", "exec", "vitest", "run", "--reporter=verbose", "--maxWorkers=1", "packages/runtime-js/src/integration.test.ts", "packages/persistence/src/semantic-integrity.test.ts", "packages/persistence/src/workshop.test.ts", "packages/golden/src/parity.test.ts"],
+      "namedResult": "phase258-cross-package-current-callers",
+      "expectedOutput": ["runtime-js/src/integration.test.ts", "persistence/src/semantic-integrity.test.ts", "persistence/src/workshop.test.ts", "golden/src/parity.test.ts"],
+      "ownedFiles": ["packages/runtime-js/src/integration.test.ts", "packages/persistence/src/semantic-integrity.test.ts", "packages/persistence/src/workshop.test.ts", "packages/golden/src/parity.test.ts"]
+    },
+    {
       "id": "phase258.activation-critical-contracts",
       "stage": "activation",
       "kind": "vitest",

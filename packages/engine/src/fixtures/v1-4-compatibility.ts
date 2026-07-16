@@ -15,8 +15,10 @@ import {
 } from "./v1-4-legacy-activation.js"
 import { resolveBackstabBoundary } from "../backstab.js"
 import { resolveContraction } from "../contraction.js"
-import { MATCH_KERNEL } from "../kernel/driver.js"
-import { runHistoricalV14RoundFromState } from "../kernel/driver.js"
+import {
+  runHistoricalV14ActivationFromState,
+  runHistoricalV14RoundFromState,
+} from "../kernel/driver.js"
 import { resolveAction } from "../movement.js"
 import { createInitialGameState } from "../state.js"
 import {
@@ -239,7 +241,7 @@ const runCompatibilityActivation = (
   runtime: StrategyRuntime,
   soldierId: string,
 ): TransitionResult => {
-  const execution = MATCH_KERNEL.runActivationFromState({
+  const execution = runHistoricalV14ActivationFromState({
     state: { ...state, versions: { ...COMPATIBILITY_VERSIONS } },
     runtime,
     soldierId,

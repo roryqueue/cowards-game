@@ -4,6 +4,7 @@ import {
   runMatch,
   type RunMatchInput,
 } from "@cowards/engine"
+import { adaptRuntimeForCurrentKernel } from "@cowards/engine/test/current-kernel-runtime"
 import {
   projectOwnerChronicle,
   projectPublicChronicle,
@@ -32,7 +33,7 @@ const createInput = (
     topPlayerId: "top",
     bottomStrategyRevisionId: revision.id,
     topStrategyRevisionId: revision.id,
-    runtime: createRuntimeFromRevision(revision),
+    runtime: adaptRuntimeForCurrentKernel(createRuntimeFromRevision(revision)),
     maxPhases: 1,
     ...overrides,
   }

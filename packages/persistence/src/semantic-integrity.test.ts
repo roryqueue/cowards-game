@@ -4,6 +4,7 @@ import {
   type GameState,
   type StrategyRuntime,
 } from "@cowards/engine"
+import { adaptRuntimeForCurrentKernel } from "@cowards/engine/test/current-kernel-runtime"
 import { recordChronicleFromExecution } from "@cowards/replay"
 import {
   CANONICAL_COMPATIBILITY_TUPLES,
@@ -141,7 +142,7 @@ describe("current persistence semantic integrity", () => {
       topPlayerId: `${namespace}:player:top`,
       bottomStrategyRevisionId: `${namespace}:revision:bottom`,
       topStrategyRevisionId: `${namespace}:revision:top`,
-      runtime,
+      runtime: adaptRuntimeForCurrentKernel(runtime),
     })
     const recorded = recordChronicleFromExecution({
       execution,

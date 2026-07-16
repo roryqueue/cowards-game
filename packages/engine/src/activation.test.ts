@@ -158,7 +158,8 @@ describe("activation selection and runtime inputs", () => {
     const state = createInitialGameState(baseInput)
     const runtime: CanonicalStrategyRuntime = {
       selectActivations: createFakeRuntime().selectActivations,
-      runSoldierBrain: () => violation("TIMEOUT", "RuntimeViolation timeout"),
+      runSoldierBrain: () =>
+        violation("INVALID_OUTPUT", "RuntimeViolation invalid output"),
     }
     const result = runActivation(state, runtime, state.soldiers[0]!.id)
     expect(

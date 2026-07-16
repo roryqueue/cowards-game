@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 import type { Soldier } from "@cowards/spec"
 import { createFakeRuntime } from "../test/fake-runtime.js"
+import { adaptRuntimeForCurrentKernel } from "../test/current-kernel-runtime.js"
 import type { GameState, TransitionEventSummary } from "../types.js"
 import {
   createCandidateActivationMachine,
@@ -308,16 +309,19 @@ describe("candidate-only approved lifecycle repairs", () => {
       runCandidateActivationFromState({
         state,
         soldierId: "last-bottom",
-        runtime: {
+        runtime: adaptRuntimeForCurrentKernel({
           selectActivations: () => ({
             ok: true,
             value: { activationOrders: [], strategyMemory: {} },
           }),
           runSoldierBrain: () => ({
             ok: false,
-            violation: { type: "TIMEOUT", message: "fixture timeout" },
+            violation: {
+              type: "INVALID_OUTPUT",
+              message: "fixture invalid output",
+            },
           }),
-        },
+        }),
       }),
     )
 

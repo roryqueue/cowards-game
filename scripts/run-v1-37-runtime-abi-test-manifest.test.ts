@@ -70,6 +70,7 @@ describe("Phase 258 exact runtime ABI test manifest", () => {
     expect(activation.map(({ namedResult }) => namedResult)).toEqual([
       "phase258-full-engine-compatibility",
       "phase258-full-replay-compatibility",
+      "phase258-cross-package-current-callers",
       "phase258-activation-critical-contracts",
       "TestPhase258ActivatedDefaultRoutes",
     ])

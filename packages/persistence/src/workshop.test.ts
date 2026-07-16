@@ -5,6 +5,7 @@ import {
   type RuntimeResult,
   type StrategyRuntime,
 } from "@cowards/engine"
+import { adaptRuntimeForCurrentKernel } from "@cowards/engine/test/current-kernel-runtime"
 import {
   transpileStrategySource,
   validateStrategySource,
@@ -324,7 +325,7 @@ describe("Workshop service contracts", () => {
         topPlayerId: "player:top",
         bottomStrategyRevisionId: `revision:${bottom.id}`,
         topStrategyRevisionId: `revision:${top.id}`,
-        runtime,
+        runtime: adaptRuntimeForCurrentKernel(runtime),
         maxPhases: 100,
       })
 
@@ -446,7 +447,7 @@ describe("Workshop service contracts", () => {
         topPlayerId: "player:starter",
         bottomStrategyRevisionId: `revision:${advanced.id}`,
         topStrategyRevisionId: `revision:${starter.id}`,
-        runtime,
+        runtime: adaptRuntimeForCurrentKernel(runtime),
         maxPhases: 100,
       })
 

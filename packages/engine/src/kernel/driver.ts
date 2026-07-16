@@ -544,6 +544,35 @@ export const runCandidateActivationFromState = (
   }
 }
 
+/** Explicit immutable v1.4 activation dispatch over the canonical scheduler. */
+export const runHistoricalV14ActivationFromState = (
+  input: CandidateActivationInput,
+): CandidateActivationExecution => {
+  let machine: MatchMachine
+  try {
+    machine = assertMachine({
+      ...createCandidateActivationMachine(input),
+      semanticTuple: {
+        tupleId: HISTORICAL_RUNTIME_V114_SEMANTIC_TUPLE_ID,
+        tuple: HISTORICAL_RUNTIME_V114_SEMANTIC_TUPLE,
+      },
+    })
+  } catch {
+    return failedExecution(
+      globalThis.structuredClone(input.state),
+      restrictedIntegrityFailure("HISTORICAL_V14_ACTIVATION_ADMISSION_FAILED"),
+    )
+  }
+  try {
+    return drive(machine, input.runtime, "activation")
+  } catch {
+    return failedExecution(
+      globalThis.structuredClone(machine.initialState),
+      restrictedIntegrityFailure("KERNEL_DRIVER_UNEXPECTED"),
+    )
+  }
+}
+
 export const runCandidateActivationFromStateV117 = (
   input: CandidateActivationInput,
 ): CandidateActivationExecution => {

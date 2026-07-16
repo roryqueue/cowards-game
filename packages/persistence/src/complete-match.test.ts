@@ -5,6 +5,7 @@ import {
   type GameState,
   type StrategyRuntime,
 } from "@cowards/engine"
+import { adaptRuntimeForCurrentKernel } from "@cowards/engine/test/current-kernel-runtime"
 import {
   recordChronicleFromExecution,
   type ChronicleBoundaryAnchor,
@@ -173,7 +174,7 @@ const builtMatch = (
     topPlayerId: "player:top",
     bottomStrategyRevisionId: `${namespace}:revision:bottom`,
     topStrategyRevisionId: `${namespace}:revision:top`,
-    runtime,
+    runtime: adaptRuntimeForCurrentKernel(runtime),
   })
   const recorded = recordChronicleFromExecution({
     execution,
