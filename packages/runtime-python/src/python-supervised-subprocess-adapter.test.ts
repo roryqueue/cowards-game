@@ -20,6 +20,7 @@ import {
   createCountedPythonSupervisedAdapterV118,
   createPythonAdapterBuildIdentityV118,
   createPythonRuntimeCompilerIdentityV118,
+  type PythonLanguageIdentityObservationV118,
   type PythonSupervisorHostLaunchV118,
 } from "./python-supervised-subprocess-adapter.js"
 
@@ -181,24 +182,27 @@ const rawReceipt = (
   attribution: "proven_strategy",
 })
 
-const launch = (
-  mutate?: (
-    receipt: RuntimeSupervisorRawReceiptV118,
-    request: SupervisorInvocationRequestV118,
-  ) => void,
-): PythonSupervisorHostLaunchV118 => (request) => {
-  const receipt = rawReceipt(request)
-  mutate?.(receipt, request)
-  const envelope = createSupervisorRawReceiptEnvelopeV118({
-    request,
-    receipt,
-    observed: { payloadBytes, stdoutBytes, stderrBytes },
-  })
-  return {
-    rawReceiptBytes: serializeSupervisorRawReceiptEnvelopeV118(envelope),
-    observed: { payloadBytes, stdoutBytes, stderrBytes },
+const launch =
+  (
+    mutate?: (
+      receipt: RuntimeSupervisorRawReceiptV118,
+      request: SupervisorInvocationRequestV118,
+    ) => void,
+  ): PythonSupervisorHostLaunchV118 =>
+  (request) => {
+    const receipt = rawReceipt(request)
+    mutate?.(receipt, request)
+    const envelope = createSupervisorRawReceiptEnvelopeV118({
+      request,
+      receipt,
+      observed: { payloadBytes, stdoutBytes, stderrBytes },
+    })
+    return {
+      rawReceiptBytes: serializeSupervisorRawReceiptEnvelopeV118(envelope),
+      observed: { payloadBytes, stdoutBytes, stderrBytes },
+      languageIdentity: executableIdentity,
+    }
   }
-}
 
 const signature = Buffer.alloc(64, 0x6b).toString("base64")
 
@@ -210,7 +214,7 @@ const execute = (input?: {
     keyId: string
     signatureBase64: string
   }
-  identityOverride?: Partial<typeof executableIdentity>
+  identityOverride?: Partial<PythonLanguageIdentityObservationV118>
 }) => {
   const signEvidence =
     input?.signer ??
@@ -318,28 +322,43 @@ describe("Python supervised subprocess adapter v1.18", () => {
   })
 
   it.each([
-    ["wall", (receipt: RuntimeSupervisorRawReceiptV118) => {
-      receipt.wall.elapsedNanoseconds = 51_000_000
-      receipt.wall.processGroupReapedMonotonicNanoseconds = 52_000_000
-      receipt.wall.wallMilliseconds = 51
-    }],
-    ["compute", (receipt: RuntimeSupervisorRawReceiptV118) => {
-      receipt.cpu.finalUsageMicroseconds = 100_201
-      receipt.cpu.computeFuel = 100_001_000
-    }],
-    ["memory", (receipt: RuntimeSupervisorRawReceiptV118) => {
-      receipt.memory.peakBytes = receipt.limits.memoryMaxBytes + 1
-    }],
-    ["pids", (receipt: RuntimeSupervisorRawReceiptV118) => {
-      receipt.pids.currentPeak = receipt.limits.pidsMax + 1
-    }],
-  ] as const)("classifies proven Python N+1 %s as player-owned", (_name, mutate) => {
-    expect(execute({ launch: launch(mutate) }).result).toMatchObject({
-      kind: "player_violation",
-      gameplayDisposition: "apply_player_violation",
-      code: "RESOURCE_EXHAUSTION",
-    })
-  })
+    [
+      "wall",
+      (receipt: RuntimeSupervisorRawReceiptV118) => {
+        receipt.wall.elapsedNanoseconds = 51_000_000
+        receipt.wall.processGroupReapedMonotonicNanoseconds = 52_000_000
+        receipt.wall.wallMilliseconds = 51
+      },
+    ],
+    [
+      "compute",
+      (receipt: RuntimeSupervisorRawReceiptV118) => {
+        receipt.cpu.finalUsageMicroseconds = 100_201
+        receipt.cpu.computeFuel = 100_001_000
+      },
+    ],
+    [
+      "memory",
+      (receipt: RuntimeSupervisorRawReceiptV118) => {
+        receipt.memory.peakBytes = receipt.limits.memoryMaxBytes + 1
+      },
+    ],
+    [
+      "pids",
+      (receipt: RuntimeSupervisorRawReceiptV118) => {
+        receipt.pids.currentPeak = receipt.limits.pidsMax + 1
+      },
+    ],
+  ] as const)(
+    "classifies proven Python N+1 %s as player-owned",
+    (_name, mutate) => {
+      expect(execute({ launch: launch(mutate) }).result).toMatchObject({
+        kind: "player_violation",
+        gameplayDisposition: "apply_player_violation",
+        code: "RESOURCE_EXHAUSTION",
+      })
+    },
+  )
 
   it.each([
     ["Python executable", { pythonExecutableSha256: hash("0") }],
@@ -348,18 +367,40 @@ describe("Python supervised subprocess adapter v1.18", () => {
     ["adapter", { adapterModuleSha256: hash("0") }],
     ["host", { pythonHostSha256: hash("0") }],
     ["source artifact", { artifactSha256: hash("0") }],
-  ] as const)("rejects stale or substituted %s identity before launch", (_name, identityOverride) => {
-    const launchSupervisor = vi.fn(launch())
+  ] as const)(
+    "rejects stale or substituted %s identity before launch",
+    (_name, identityOverride) => {
+      const launchSupervisor = vi.fn(launch())
+      const { result, signEvidence } = execute({
+        launch: launchSupervisor,
+        identityOverride,
+      })
+      expect(result).toEqual({
+        kind: "system_failure",
+        gameplayDisposition: "no_mutation",
+        code: "LANGUAGE_IDENTITY_MISMATCH",
+      })
+      expect(launchSupervisor).not.toHaveBeenCalled()
+      expect(signEvidence).not.toHaveBeenCalled()
+    },
+  )
+
+  it("rejects launch-time Python and stdlib observation drift before receipt signing", () => {
+    const observedLaunch = launch()
     const { result, signEvidence } = execute({
-      launch: launchSupervisor,
-      identityOverride,
+      launch: (request) => ({
+        ...observedLaunch(request),
+        languageIdentity: {
+          ...executableIdentity,
+          stdlibSha256: hash("0"),
+        },
+      }),
     })
     expect(result).toEqual({
       kind: "system_failure",
       gameplayDisposition: "no_mutation",
       code: "LANGUAGE_IDENTITY_MISMATCH",
     })
-    expect(launchSupervisor).not.toHaveBeenCalled()
     expect(signEvidence).not.toHaveBeenCalled()
   })
 
@@ -400,6 +441,7 @@ describe("Python supervised subprocess adapter v1.18", () => {
       return {
         rawReceiptBytes: serializeSupervisorRawReceiptEnvelopeV118(envelope),
         observed: { payloadBytes, stdoutBytes, stderrBytes },
+        languageIdentity: executableIdentity,
       }
     }
     execute({ launch: replay })
@@ -433,6 +475,7 @@ describe("Python supervised subprocess adapter v1.18", () => {
       () => ({
         rawReceiptBytes: new TextEncoder().encode("{malformed"),
         observed: { payloadBytes, stdoutBytes, stderrBytes },
+        languageIdentity: executableIdentity,
       }),
       (request) => {
         const receipt = rawReceipt(request)
@@ -448,13 +491,13 @@ describe("Python supervised subprocess adapter v1.18", () => {
           },
         })
         return {
-          rawReceiptBytes:
-            serializeSupervisorRawReceiptEnvelopeV118(envelope),
+          rawReceiptBytes: serializeSupervisorRawReceiptEnvelopeV118(envelope),
           observed: {
             payloadBytes: invalidPayload,
             stdoutBytes: invalidPayload,
             stderrBytes,
           },
+          languageIdentity: executableIdentity,
         }
       },
     ]
@@ -508,10 +551,7 @@ describe("Python supervised subprocess adapter v1.18", () => {
       expect(publicPythonRuntime).not.toHaveProperty(forbidden)
     }
     const source = readFileSync(
-      new URL(
-        "./python-supervised-subprocess-adapter.ts",
-        import.meta.url,
-      ),
+      new URL("./python-supervised-subprocess-adapter.ts", import.meta.url),
       "utf8",
     )
     expect(source).not.toMatch(
