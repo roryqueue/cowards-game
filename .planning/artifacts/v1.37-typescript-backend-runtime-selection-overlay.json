@@ -295,6 +295,13 @@
       "selectionAuthority": "apps/runtime-service/src/runtime-config.ts"
     },
     {
+      "path": "apps/runtime-service/src/source-identity-proof-server.test-support.ts",
+      "role": "runtime-service",
+      "lifecycle": "candidate_evidence",
+      "gate": "immutable candidate, fixture, or test evidence only; never current by declaration",
+      "selectionAuthority": null
+    },
+    {
       "path": "apps/runtime-service/src/successor-runtime-identity.ts",
       "role": "runtime-service",
       "lifecycle": "selected_by_pointer",

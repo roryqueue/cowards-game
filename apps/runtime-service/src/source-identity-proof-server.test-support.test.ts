@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it } from "vitest"
 import {
   PHASE258_SOURCE_IDENTITY_PROOF_HOST,
   createPhase258SourceIdentityProofRuntimeService,
-} from "./source-identity-proof-server.js"
+} from "./source-identity-proof-server.test-support.js"
 
 const environment = {
   COWARDS_PHASE258_SOURCE_IDENTITY_E2E_SERVER: "1",

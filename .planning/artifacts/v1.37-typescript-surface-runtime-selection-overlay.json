@@ -334,6 +334,14 @@
       "publicOutputPrivacy": "not-public-output"
     },
     {
+      "path": "apps/runtime-service/src/source-identity-proof-server.test-support.ts",
+      "taxonomyRole": "runtime-service",
+      "surfaceLabel": "runtime-evidence-only",
+      "selectedNormal": false,
+      "gate": "candidate, fixture, or test evidence only; never selected normal runtime traffic",
+      "publicOutputPrivacy": "not-public-output"
+    },
+    {
       "path": "apps/runtime-service/src/successor-runtime-identity.ts",
       "taxonomyRole": "runtime-service",
       "surfaceLabel": "runtime-service-execution-boundary",

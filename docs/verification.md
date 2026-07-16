@@ -18,7 +18,7 @@ The proof-only runtime service never mounts production authority or execution, b
 export COWARDS_PHASE258_SOURCE_IDENTITY_E2E_SERVER=1
 export COWARDS_PROVIDER_VALIDATION_SECRET=phase258-provider-validation-proof
 export COWARDS_RUNTIME_SERVICE_PRIVATE_ARTIFACT_TOKEN=phase258-private-artifact-proof
-pnpm exec tsx apps/runtime-service/src/source-identity-proof-server.ts
+pnpm exec tsx apps/runtime-service/src/source-identity-proof-server.test-support.ts
 ```
 
 Start the committed Go/PostgreSQL proof helper in a second terminal. Its extended timeout keeps it alive through the complete exact manifest:
