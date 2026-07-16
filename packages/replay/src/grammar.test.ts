@@ -7,6 +7,7 @@ import type {
   StrategyInput,
 } from "@cowards/spec"
 import { MATCH_KERNEL, type StrategyRuntime } from "@cowards/engine"
+import { adaptRuntimeForCurrentKernel } from "@cowards/engine/test/current-kernel-runtime"
 import { describe, expect, it } from "vitest"
 import { validateChronicleGrammar } from "./grammar.js"
 import { recordChronicleFromExecution } from "./record.js"
@@ -49,7 +50,7 @@ const createChronicle = (): Chronicle => {
     topPlayerId: "top",
     bottomStrategyRevisionId: "bottom-rev",
     topStrategyRevisionId: "top-rev",
-    runtime,
+    runtime: adaptRuntimeForCurrentKernel(runtime),
   })
   const recorded = recordChronicleFromExecution({
     execution,

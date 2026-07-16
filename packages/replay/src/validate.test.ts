@@ -18,6 +18,7 @@ import {
 } from "@cowards/spec"
 import { describe, expect, it } from "vitest"
 import { MATCH_KERNEL, type StrategyRuntime } from "@cowards/engine"
+import { adaptRuntimeForCurrentKernel } from "@cowards/engine/test/current-kernel-runtime"
 import { createChronicleContentHash } from "./hash.js"
 import { projectOwnerChronicle } from "./project.js"
 import { recordChronicleFromExecution } from "./record.js"
@@ -116,7 +117,7 @@ const createCurrentReplayInput = (
     topPlayerId: "top",
     bottomStrategyRevisionId: "bottom-rev",
     topStrategyRevisionId: "top-rev",
-    runtime: candidateRuntime,
+    runtime: adaptRuntimeForCurrentKernel(candidateRuntime),
     ...(overrides.maxPhases === undefined
       ? {}
       : { maxPhases: overrides.maxPhases }),

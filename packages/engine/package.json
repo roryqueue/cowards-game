@@ -7,7 +7,8 @@
   "types": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts",
-    "./recorder-evidence": "./src/recorder-evidence.ts"
+    "./recorder-evidence": "./src/recorder-evidence.ts",
+    "./test/current-kernel-runtime": "./src/test/current-kernel-runtime.ts"
   },
   "scripts": {
     "build": "tsc -b",

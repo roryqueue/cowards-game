@@ -7,6 +7,7 @@ import type {
   StrategyInput,
 } from "@cowards/spec"
 import { MATCH_KERNEL, type StrategyRuntime } from "@cowards/engine"
+import { adaptRuntimeForCurrentKernel } from "@cowards/engine/test/current-kernel-runtime"
 import { describe, expect, it } from "vitest"
 import { createCurrentReplay } from "./reconstruct.js"
 import { recordChronicleFromExecution } from "./record.js"
@@ -294,7 +295,7 @@ const candidateInput = () => {
     topPlayerId: "top",
     bottomStrategyRevisionId: "bottom-revision",
     topStrategyRevisionId: "top-revision",
-    runtime,
+    runtime: adaptRuntimeForCurrentKernel(runtime),
   })
   const recorded = recordChronicleFromExecution({
     execution,
