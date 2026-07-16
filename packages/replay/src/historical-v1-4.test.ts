@@ -1,8 +1,14 @@
+import { createHash } from "node:crypto"
+import { execFileSync } from "node:child_process"
 import { readFileSync } from "node:fs"
 import type {
   Chronicle,
   ChronicleEvent,
   FullBoardSnapshot,
+} from "@cowards/spec"
+import {
+  HISTORICAL_RUNTIME_V114_SEMANTIC_TUPLE,
+  HISTORICAL_RUNTIME_V114_SEMANTIC_TUPLE_ID,
 } from "@cowards/spec"
 import { describe, expect, it } from "vitest"
 import {
@@ -205,6 +211,185 @@ const initialState = (): HistoricalV14ReplayState => ({
   board: initialBoard(),
 })
 
+const manifestPath =
+  "packages/replay/src/fixtures/historical-v1-4-chronicle-manifest.json"
+
+interface HistoricalPin {
+  readonly path: string
+  readonly blob: string
+  readonly sha256: string
+  readonly bytes: number
+}
+
+interface HistoricalManifest {
+  readonly schemaVersion: string
+  readonly profile: string
+  readonly archive: {
+    readonly tag: string
+    readonly tagObject: string
+    readonly peeledCommit: string
+  }
+  readonly resolution: {
+    readonly original: string
+    readonly exactTupleProfile: string
+  }
+  readonly originalCompatibility: typeof historicalVersions
+  readonly authoritativeTuple: {
+    readonly tupleId: string
+    readonly tuple: typeof HISTORICAL_RUNTIME_V114_SEMANTIC_TUPLE
+  }
+  readonly fixtures: readonly HistoricalPin[]
+  readonly originalSources: readonly HistoricalPin[]
+  readonly frozenSources: {
+    readonly commit: string
+    readonly entries: readonly HistoricalPin[]
+  }
+  readonly interpretation: {
+    readonly vectorId: string
+    readonly algorithm: string
+    readonly root: string
+  }
+}
+
+const sha256 = (bytes: Uint8Array): string =>
+  createHash("sha256").update(bytes).digest("hex")
+
+const gitText = (args: readonly string[]): string =>
+  execFileSync("git", [...args], { encoding: "utf8" }).trim()
+
+const gitBytes = (args: readonly string[]): Buffer =>
+  execFileSync("git", [...args], { encoding: "buffer" })
+
+const readManifest = (): HistoricalManifest =>
+  JSON.parse(readFileSync(manifestPath, "utf8")) as HistoricalManifest
+
+const expectedFixturePaths = Object.freeze([
+  "packages/replay/src/reconstruct.test.ts",
+  "packages/test-utils/src/replay-scenarios.ts",
+])
+
+const expectedOriginalSourcePaths = Object.freeze([
+  "packages/replay/src/grammar.ts",
+  "packages/replay/src/replay-transition.ts",
+  "packages/spec/src/schemas.ts",
+])
+
+const expectedFrozenSourcePaths = Object.freeze([
+  "packages/replay/src/historical-v1-4-grammar.ts",
+  "packages/replay/src/historical-v1-4-transition.ts",
+])
+
+const sameOrderedPaths = (
+  pins: readonly HistoricalPin[],
+  expected: readonly string[],
+): boolean =>
+  pins.length === expected.length &&
+  pins.every((pin, index) => pin.path === expected[index])
+
+const verifyPins = (
+  commit: string,
+  pins: readonly HistoricalPin[],
+  mismatchCode: string,
+): string[] => {
+  const findings: string[] = []
+  for (const pin of pins) {
+    try {
+      const blob = gitText(["rev-parse", `${commit}:${pin.path}`])
+      const bytes = gitBytes(["cat-file", "blob", blob])
+      if (
+        blob !== pin.blob ||
+        bytes.length !== pin.bytes ||
+        sha256(bytes) !== pin.sha256
+      ) {
+        findings.push(`${mismatchCode}:${pin.path}`)
+      }
+    } catch {
+      findings.push(`${mismatchCode}:${pin.path}`)
+    }
+  }
+  return findings
+}
+
+const auditHistoricalManifest = (
+  manifest: HistoricalManifest,
+): readonly string[] => {
+  const findings: string[] = []
+  const exactTopLevelKeys = [
+    "archive",
+    "authoritativeTuple",
+    "fixtures",
+    "frozenSources",
+    "interpretation",
+    "originalCompatibility",
+    "originalSources",
+    "profile",
+    "resolution",
+    "schemaVersion",
+  ]
+  if (
+    JSON.stringify(Object.keys(manifest).sort()) !==
+      JSON.stringify(exactTopLevelKeys) ||
+    manifest.schemaVersion !== "historical-v1-4-chronicle-manifest-v1" ||
+    manifest.profile !== "historical-v1.4" ||
+    manifest.archive.tag !== "v1.4" ||
+    manifest.resolution.original !== "unresolved_legacy" ||
+    manifest.resolution.exactTupleProfile !== "historical-v1.16" ||
+    JSON.stringify(manifest.originalCompatibility) !==
+      JSON.stringify(historicalVersions) ||
+    manifest.authoritativeTuple.tupleId !==
+      HISTORICAL_RUNTIME_V114_SEMANTIC_TUPLE_ID ||
+    JSON.stringify(manifest.authoritativeTuple.tuple) !==
+      JSON.stringify(HISTORICAL_RUNTIME_V114_SEMANTIC_TUPLE) ||
+    manifest.interpretation.vectorId !==
+      "historical-v1.4-push-backstab-vector-v1" ||
+    manifest.interpretation.algorithm !== "sha256"
+  ) {
+    findings.push("MANIFEST_INVALID")
+  }
+  if (
+    !sameOrderedPaths(manifest.fixtures, expectedFixturePaths) ||
+    !sameOrderedPaths(manifest.originalSources, expectedOriginalSourcePaths) ||
+    !sameOrderedPaths(manifest.frozenSources.entries, expectedFrozenSourcePaths)
+  ) {
+    findings.push("ENTRY_SET_MISMATCH")
+  }
+  if (gitText(["rev-parse", "refs/tags/v1.4"]) !== manifest.archive.tagObject) {
+    findings.push("TAG_OBJECT_MISMATCH")
+  }
+  if (gitText(["rev-parse", "v1.4^{}"]) !== manifest.archive.peeledCommit) {
+    findings.push("PEELED_COMMIT_MISMATCH")
+  }
+  findings.push(
+    ...verifyPins(
+      manifest.archive.peeledCommit,
+      [...manifest.fixtures, ...manifest.originalSources],
+      "ARCHIVED_BLOB_MISMATCH",
+    ),
+    ...verifyPins(
+      manifest.frozenSources.commit,
+      manifest.frozenSources.entries,
+      "FROZEN_SOURCE_MISMATCH",
+    ),
+  )
+  for (const pin of manifest.frozenSources.entries) {
+    const working = readFileSync(pin.path)
+    if (working.length !== pin.bytes || sha256(working) !== pin.sha256) {
+      findings.push(`WORKING_SOURCE_MISMATCH:${pin.path}`)
+    }
+  }
+  const interpreted = interpretHistoricalV14Transitions({
+    initialState: initialState(),
+    events: historicalEvents(),
+  })
+  if (
+    !interpreted.ok ||
+    interpreted.interpretationRoot !== manifest.interpretation.root
+  ) {
+    findings.push("INTERPRETATION_ROOT_MISMATCH")
+  }
+  return findings.sort()
+}
+
 describe("frozen historical v1.4 interpretation", () => {
   it("accepts original vocabulary, payloads, order, and boundaries", () => {
     expect(validateHistoricalV14Grammar(historicalChronicle())).toEqual([])
@@ -339,5 +524,94 @@ describe("frozen historical v1.4 interpretation", () => {
       expect(source).not.toContain("applyReplayEvent(")
       expect(source).not.toContain("migrateChronicle(")
     }
+  })
+
+  it("pins the strict archived and frozen source identity manifest", () => {
+    expect(auditHistoricalManifest(readManifest())).toEqual([])
+  })
+
+  it("rejects missing, extra, changed, or relabeled manifest evidence", () => {
+    const manifest = readManifest()
+    expect(
+      auditHistoricalManifest({
+        ...manifest,
+        fixtures: manifest.fixtures.slice(1),
+      }),
+    ).toContain("ENTRY_SET_MISMATCH")
+    expect(
+      auditHistoricalManifest({
+        ...manifest,
+        originalSources: [
+          ...manifest.originalSources,
+          { ...manifest.originalSources[0]!, path: "extra-source.ts" },
+        ],
+      }),
+    ).toContain("ENTRY_SET_MISMATCH")
+    expect(
+      auditHistoricalManifest({
+        ...manifest,
+        fixtures: manifest.fixtures.map((pin, index) =>
+          index === 0 ? { ...pin, sha256: "0".repeat(64) } : pin,
+        ),
+      }),
+    ).toContain(`ARCHIVED_BLOB_MISMATCH:${expectedFixturePaths[0]}`)
+    expect(
+      auditHistoricalManifest({
+        ...manifest,
+        frozenSources: {
+          ...manifest.frozenSources,
+          entries: manifest.frozenSources.entries.map((pin, index) =>
+            index === 0 ? { ...pin, bytes: pin.bytes + 1 } : pin,
+          ),
+        },
+      }),
+    ).toContain(`FROZEN_SOURCE_MISMATCH:${expectedFrozenSourcePaths[0]}`)
+    expect(
+      auditHistoricalManifest({
+        ...manifest,
+        resolution: { ...manifest.resolution, original: "current_exact" },
+      }),
+    ).toContain("MANIFEST_INVALID")
+  })
+
+  it("leaves archived inputs and frozen sources byte-identical after reads", () => {
+    const manifest = readManifest()
+    const observedPaths = [
+      manifestPath,
+      ...manifest.frozenSources.entries.map(({ path }) => path),
+    ]
+    const before = observedPaths.map((path) => ({
+      path,
+      bytes: readFileSync(path),
+    }))
+    const archiveBefore = [
+      ...manifest.fixtures,
+      ...manifest.originalSources,
+    ].map((pin) => ({
+      path: pin.path,
+      bytes: gitBytes(["cat-file", "blob", pin.blob]),
+    }))
+
+    expect(validateHistoricalV14Grammar(historicalChronicle())).toEqual([])
+    expect(
+      interpretHistoricalV14Transitions({
+        initialState: initialState(),
+        events: historicalEvents(),
+      }),
+    ).toMatchObject({ ok: true })
+    expect(auditHistoricalManifest(manifest)).toEqual([])
+
+    expect(
+      observedPaths.map((path) => ({
+        path,
+        bytes: readFileSync(path),
+      })),
+    ).toEqual(before)
+    expect(
+      [...manifest.fixtures, ...manifest.originalSources].map((pin) => ({
+        path: pin.path,
+        bytes: gitBytes(["cat-file", "blob", pin.blob]),
+      })),
+    ).toEqual(archiveBefore)
   })
 })
