@@ -88,6 +88,7 @@ status: complete
 
 1. **RED: Specify transition-complete traces and root mutation behavior** — `d3c84ab` (test)
 2. **GREEN: Record canonical transition traces** — `7cf5e90` (feat)
+3. **Compatibility fix: Normalize optional private trace fields** — `1097b76` (fix)
 
 ## Files Created/Modified
 
@@ -102,11 +103,26 @@ status: complete
 
 ## Deviations from Plan
 
-None - plan executed exactly as written.
+### Auto-fixed Issues
+
+**1. [Rule 1 - Bug] Optional internal objective fields were not normalized before canonical hashing**
+
+- **Found during:** Plan 259-05 baseline Chronicle generation.
+- **Issue:** A valid current Match with objective-free activation orders retains an optional internal `objectivePayload: undefined` field. The new trace encoder passed that internal representation directly to canonical JSON, which correctly rejected it even though Chronicle recording had historically accepted and omitted the optional field.
+- **Fix:** Normalize accepted internal trace material through its existing JSON representation before canonical encoding and add the objective-free full-Match regression.
+- **Files modified:** `packages/replay/src/record.ts`, `packages/replay/src/record.test.ts`
+- **Verification:** Recorder and grammar tests passed 40/40; replay typecheck and lint passed.
+- **Committed in:** `1097b76`
+
+---
+
+**Total deviations:** 1 auto-fixed bug.
+**Impact on plan:** The fix restores the pre-existing valid Chronicle path and changes no gameplay, event, public/private projection, or historical evidence.
 
 ## Issues Encountered
 
 - The first transition has one event, so the ordering mutation test was refined to reverse the first multi-event transition. This changed only the test vector and exposed no product or semantic issue.
+- The wider grammar fixture exposed the optional internal-field hashing bug above before per-slot grammar implementation began.
 
 ## User Setup Required
 
@@ -121,8 +137,8 @@ None.
 ## Self-Check: PASSED
 
 - Both modified replay files exist.
-- RED commit `d3c84ab` and GREEN commit `7cf5e90` exist.
-- Recorder tests passed 14/14; replay typecheck and lint passed.
+- RED commit `d3c84ab`, GREEN commit `7cf5e90`, and compatibility fix `1097b76` exist.
+- Recorder plus grammar tests passed 40/40; replay typecheck and lint passed.
 - Phase-257 compatibility and kernel-contract tests passed 31/31.
 
 ---
