@@ -281,8 +281,8 @@ Plans:
 
 **Wave 5 — all-lane differential execution and public spec contract**
 
-- [ ] 259-13-PLAN.md — Execute the complete corpus through all four real adapters.
-- [ ] 259-30-PLAN.md — Publish the v1.18 service/receipt contract as the sole public spec API.
+- [x] 259-13-PLAN.md — Execute the complete corpus through all four real adapters.
+- [x] 259-30-PLAN.md — Publish the v1.18 service/receipt contract as the sole public spec API.
 
 **Wave 6 — certificate production and shared semantic admission**
 
@@ -360,6 +360,6 @@ Cycle-cap, inward-start, facing-only MOVE, reversal-history, attacker-facing/Adv
 | 256. Counted Safety and Canonical Authority | 19/19 | Complete    | 2026-07-13 |
 | 257. Canonical Transition Kernel and v1.4 Semantic Integrity | 22/22 | Complete | 2026-07-13 |
 | 258. Canonical JSON, Failure Semantics, and Artifact Identity | 14/14 | Complete | 2026-07-16 |
-| 259. Executable Four-Language and Chronicle Conformance | 20/31 | In progress | - |
+| 259. Executable Four-Language and Chronicle Conformance | 22/31 | In progress | - |
 | 260. Truthful Strategy Inputs, Arena Authority, and Set Fairness | 0/TBD | Not started | - |
 | 261. Integrated Service Proof, Drift Guards, and Release | 0/TBD | Not started | - |
