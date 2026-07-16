@@ -137,8 +137,7 @@ const RuntimeInvocationRequestWithoutHashV118Schema =
     runtimeAbiVersion: z.literal("strategy-runtime-abi-v1.18"),
     budgetProfileSha256: z.literal(RUNTIME_BUDGET_PROFILE_V1_18_SHA256),
     limits: RuntimeInvocationLimitsV118Schema,
-  })
-    .strict()
+  }).strict()
 
 export const RuntimeInvocationRequestV118Schema =
   RuntimeInvocationRequestWithoutHashV118Schema.extend({
@@ -156,7 +155,8 @@ export const RuntimeInvocationRequestV118Schema =
       context.addIssue({
         code: "custom",
         path: ["requestSha256"],
-        message: "runtime invocation v1.18 request hash does not match its body",
+        message:
+          "runtime invocation v1.18 request hash does not match its body",
       })
     })
 
@@ -578,10 +578,7 @@ export const evaluateRuntimeSupervisorReceiptV118 = (
       receipt.memory.eventsBefore,
       receipt.memory.eventsAfter,
     ) ||
-    !countersNondecreasing(
-      receipt.pids.eventsBefore,
-      receipt.pids.eventsAfter,
-    )
+    !countersNondecreasing(receipt.pids.eventsBefore, receipt.pids.eventsAfter)
   ) {
     return systemFailure("EVENT_COUNTER_DECREASED")
   }
@@ -618,21 +615,9 @@ export const evaluateRuntimeSupervisorReceiptV118 = (
       request.limits.memoryMaxBytes,
     ],
     ["pids", receipt.pids.currentPeak, request.limits.pidsMax],
-    [
-      "payloadBytes",
-      receipt.bytes.payloadBytes,
-      request.limits.payloadBytes,
-    ],
-    [
-      "stdoutBytes",
-      receipt.bytes.stdoutBytes,
-      request.limits.stdoutBytes,
-    ],
-    [
-      "stderrBytes",
-      receipt.bytes.stderrBytes,
-      request.limits.stderrBytes,
-    ],
+    ["payloadBytes", receipt.bytes.payloadBytes, request.limits.payloadBytes],
+    ["stdoutBytes", receipt.bytes.stdoutBytes, request.limits.stdoutBytes],
+    ["stderrBytes", receipt.bytes.stderrBytes, request.limits.stderrBytes],
   ] as const
   for (const [dimension, observed, maximum] of comparisons) {
     if (

@@ -67,8 +67,7 @@ interface V137ProtectedBaselineUnsigned {
     rawBytesStored: false
     rawBytesBoundBy: "sha256-byte-length-and-mode"
     headIdentity: "git-blob-id-and-mode-or-absence"
-    diffBytes:
-      "exact-binary-unstaged-and-cached-diff-bytes-with-sha256-and-length"
+    diffBytes: "exact-binary-unstaged-and-cached-diff-bytes-with-sha256-and-length"
     existingDirt: "accepted-only-when-byte-identical-to-phase-start"
     writePolicy: "write-once-identical-only"
   }>
@@ -95,7 +94,7 @@ const canonicalBytes = (value: unknown): Uint8Array => {
   const encoded = encodeCanonicalJson(
     value as Parameters<typeof encodeCanonicalJson>[0],
     {
-    context: "canonical-manifest",
+      context: "canonical-manifest",
     },
   )
   if (!encoded.ok) {
@@ -116,8 +115,7 @@ const exactProtectedInventory = (
   if (
     protectedPaths.length !== V137_PROTECTED_PATHS.length ||
     protectedPaths.some(
-      (protectedPath, index) =>
-        protectedPath !== V137_PROTECTED_PATHS[index],
+      (protectedPath, index) => protectedPath !== V137_PROTECTED_PATHS[index],
     )
   ) {
     throw new TypeError(
@@ -230,7 +228,9 @@ const capturePath = (
   }
   const stat = lstatSync(absolutePath)
   if (!stat.isFile() || stat.isSymbolicLink()) {
-    throw new TypeError(`Protected path is not a regular file: ${protectedPath}`)
+    throw new TypeError(
+      `Protected path is not a regular file: ${protectedPath}`,
+    )
   }
   const rawBytes = readFileSync(absolutePath)
   const unstaged = runGit(repoRoot, [
@@ -401,12 +401,7 @@ export const parseV137ProtectedBaseline = (
       ]) ||
       entry.path !== expectedPath ||
       typeof entry.porcelainStatus !== "string" ||
-      !exactKeys(entry.raw, [
-        "exists",
-        "byteLength",
-        "sha256",
-        "mode",
-      ]) ||
+      !exactKeys(entry.raw, ["exists", "byteLength", "sha256", "mode"]) ||
       entry.raw.exists !== true ||
       !Number.isSafeInteger(entry.raw.byteLength) ||
       (entry.raw.byteLength as number) < 0 ||
@@ -448,7 +443,9 @@ export const parseV137ProtectedBaseline = (
     paths,
     baselineSha256: value.baselineSha256,
   } as V137ProtectedBaseline
-  if (baselineSelfHash(unsignedProjection(baseline)) !== baseline.baselineSha256) {
+  if (
+    baselineSelfHash(unsignedProjection(baseline)) !== baseline.baselineSha256
+  ) {
     throw new TypeError("Protected baseline self-hash is invalid.")
   }
   if (renderV137ProtectedBaseline(baseline) !== source) {
@@ -518,8 +515,11 @@ const defaultObservedRepoRoot = (): string => {
   const currentRoot = assertRepositoryRoot(defaultExecutionRepoRoot)
   const dotGit = lstatSync(path.join(currentRoot, ".git"))
   if (dotGit.isDirectory()) return currentRoot
-  const worktrees = runGit(currentRoot, ["worktree", "list", "--porcelain"])
-    .stdout.toString("utf8")
+  const worktrees = runGit(currentRoot, [
+    "worktree",
+    "list",
+    "--porcelain",
+  ]).stdout.toString("utf8")
   const primary = /^worktree (.+)$/mu.exec(worktrees)?.[1]
   if (primary === undefined) {
     throw new TypeError("Protected baseline primary worktree is unavailable.")
@@ -529,10 +529,7 @@ const defaultObservedRepoRoot = (): string => {
 
 const runCli = (): void => {
   const args = process.argv.slice(2)
-  if (
-    args.length !== 1 ||
-    (args[0] !== "--write" && args[0] !== "--check")
-  ) {
+  if (args.length !== 1 || (args[0] !== "--write" && args[0] !== "--check")) {
     throw new TypeError(
       "Usage: capture-v1-37-protected-baseline.ts --write|--check",
     )

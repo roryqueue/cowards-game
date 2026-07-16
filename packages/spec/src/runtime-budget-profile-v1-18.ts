@@ -53,9 +53,7 @@ const frame = (segments: readonly Uint8Array[]): Uint8Array => {
   return output
 }
 
-export type RuntimeInvocationMethodV118 =
-  | "selectActivations"
-  | "soldierBrain"
+export type RuntimeInvocationMethodV118 = "selectActivations" | "soldierBrain"
 
 export interface RuntimeInvocationLimitsV118 {
   readonly wallMilliseconds: number
@@ -148,8 +146,7 @@ export const RUNTIME_BUDGET_PROFILE_V1_18 = deepFreeze({
       payload: "exact-canonical-payload-bytes-at-request-write-boundary",
       stdout: "exact-raw-captured-stdout-bytes",
       stderr: "exact-raw-captured-stderr-bytes",
-      overflow:
-        "accept-exact-N-reject-N-plus-1-never-accept-truncated-success",
+      overflow: "accept-exact-N-reject-N-plus-1-never-accept-truncated-success",
     },
     cancellation: {
       boundary: "process-group-plus-cgroup-kill-through-empty-cgroup",
@@ -192,15 +189,16 @@ if (!encodedProfile.ok) {
   )
 }
 
-export const RUNTIME_BUDGET_PROFILE_V1_18_SHA256 =
-  `sha256:${createHash("sha256")
-    .update(
-      frame([
-        new TextEncoder().encode(RUNTIME_BUDGET_PROFILE_V1_18_DOMAIN),
-        encodedProfile.bytes,
-      ]),
-    )
-    .digest("hex")}` as const
+export const RUNTIME_BUDGET_PROFILE_V1_18_SHA256 = `sha256:${createHash(
+  "sha256",
+)
+  .update(
+    frame([
+      new TextEncoder().encode(RUNTIME_BUDGET_PROFILE_V1_18_DOMAIN),
+      encodedProfile.bytes,
+    ]),
+  )
+  .digest("hex")}` as const
 
 export const computeFuelFromCpuUsageUsecV118 = (
   baselineUsageMicroseconds: number,
@@ -265,5 +263,6 @@ export const classifyRuntimeLimitComparisonV118 = (
   })
 }
 
-export const cloneRuntimeBudgetProfileV118 = (): typeof RUNTIME_BUDGET_PROFILE_V1_18 =>
-  globalThis.structuredClone(RUNTIME_BUDGET_PROFILE_V1_18)
+export const cloneRuntimeBudgetProfileV118 =
+  (): typeof RUNTIME_BUDGET_PROFILE_V1_18 =>
+    globalThis.structuredClone(RUNTIME_BUDGET_PROFILE_V1_18)
