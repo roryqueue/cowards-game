@@ -92,6 +92,7 @@ status: complete
 - Added a compact authority source derived only from that branded binding, with exact certificate, attestation, binding, corpus, inventory, DAG, supervisor, result, evidence, and receipt roots.
 - Extended the existing v1.17 certificate record hash and signed payload parser for the exact Phase-259 conformance certificate version without adding a registry or changing legacy containment records.
 - Closed the review-found structural-source bypass: in-memory encoding now requires the verifier-derived source object, while signed-byte inspection requires an independently resolved verifier-derived source and exact equality across every compact root.
+- Closed the final certificate-alias path by retaining the exact certificate ID/version in that branded compact source and comparing both against the signed certificate record before record-hash acceptance.
 - Kept both production trusted-producer registries exactly empty; documentation, gate names, fixture trust, and request-shaped status remain non-promoting.
 
 ## Task Commits
@@ -137,9 +138,18 @@ status: complete
 - **Verification:** Fully rehashed/re-signed language-lane, budget, attestation, certificate, binding, supervisor, and run-root substitutions reject; unresolved and cloned sources reject; the exact branded source passes; legacy containment coverage remains green.
 - **Committed in:** post-plan code-review fix commit
 
+**3. [Independent Rereview - Critical] Bound branded sources to the requested certificate record**
+
+- **Found during:** Final independent authority rereview
+- **Issue:** The resolver received a certificate ID, but the branded compact source discarded that ID. A fully rehashed and re-signed record could therefore rename certificate A to certificate B while resolving source A.
+- **Fix:** Retained the exact certificate ID and certificate version in the verifier-derived source, included both in the certificate-record hash, and rejected any mismatch with the record before source or hash acceptance.
+- **Files modified:** `packages/spec/src/runtime-evidence-authority-bundle.ts`, `packages/spec/src/runtime-evidence-authority-bundle.test.ts`, `packages/spec/src/runtime-evidence-attestation-v1-17.test.ts`
+- **Verification:** A fully rehashed and re-signed certificate-ID alias now rejects while the exact branded source and legacy containment records remain valid.
+- **Committed in:** final rereview fix commit
+
 ---
 
-**Total deviations:** 2 auto-fixed (2 critical trust-boundary controls).
+**Total deviations:** 3 auto-fixed (3 critical trust-boundary controls).
 **Impact on plan:** Stronger non-promotion guarantees with no gameplay, runtime failure ownership, public-output, historical, or prior-certificate behavior change.
 
 ## Issues Encountered
@@ -148,7 +158,7 @@ status: complete
 
 ## Verification
 
-- Focused evidence, certificate, and authority suites: 3 files / 75 tests passed.
+- Focused authority and attestation suites: 2 files / 49 tests passed in the final rereview cycle.
 - Full `@cowards/spec` package suite: 15 files / 287 tests passed.
 - Root supplemental spec suites: 3 files / 33 tests passed.
 - `@cowards/spec` typecheck, lint, focused formatting, and `git diff --check` passed.

@@ -103,7 +103,7 @@ status: complete
 - Added a separate strict host raw-receipt envelope that binds the supervisor request, input, cancellation channel, output hashes, public v1.18 raw receipt, platform, cgroup path/settings, counters, lifecycle, containment, and exact supervisor identities.
 - Reused public `@cowards/spec` canonical JSON, request schema, counter conversions, resource classification, and three-way failure contract rather than importing source paths or creating a second quantitative policy.
 - Added verifier-known immutable evidence. Guest output can be observed and hash-bound but cannot construct the host receipt, sign evidence, or carry source, artifacts, memories, objectives, diagnostics, host paths, raw stderr, or key material into the verified projection.
-- Closed five post-plan review blockers: independently bound the actual private launch descriptor, replaced path-text identity with an independently measured executable-byte digest, bound the receipt's process-group identity to the exact request/session/launch, kept timeout/cancellation/crash/null-result/incomplete-reap system-owned before player classification, and rejected impossible zero-process evidence before success or penalty.
+- Closed six post-plan review blockers: independently bound the actual private launch descriptor, replaced path-text identity with an independently measured executable-byte digest, bound the receipt's process-group identity to the exact request/session/launch, kept timeout/cancellation/crash/null-result/incomplete-reap system-owned before player classification in both the shared evaluator and wrapper, and rejected impossible zero-process evidence before success or penalty.
 - Registered `@cowards/runtime-supervisor` under the existing `packages/*` workspace and root TypeScript graph while preserving Plan 31's sole ownership of the lockfile update.
 
 ## Task Commits
@@ -197,9 +197,18 @@ status: complete
 - **Verification:** Zero-process ordinary and over-limit evidence remains `system_failure` with `no_mutation`.
 - **Committed in:** `95f29ae`
 
+**7. [Final independent rereview BL-06] Preserved system-failure precedence in the public evaluator**
+
+- **Found during:** Final independent rereview after wrapper remediation
+- **Issue:** The public v1.18 evaluator still compared resource limits before resolving nonzero/null exit, signal, or cancellation. A direct adapter consumer could therefore classify a combined system failure as a player resource violation even though the supervisor wrapper corrected the result.
+- **Fix:** Moved unresolved process-result classification before every resource comparison in `evaluateRuntimeSupervisorReceiptV118`; retained the wrapper check as defense in depth.
+- **Files modified:** `packages/spec/src/runtime-invocation-v1-18.ts`, `packages/spec/src/runtime-invocation-v1-18.test.ts`
+- **Verification:** Direct public-evaluator regressions combine N+1 wall evidence with nonzero exit, null result, signal, host cancellation, and incomplete reap; every case remains `system_failure` with `no_mutation`.
+- **Committed in:** final rereview fix commit
+
 ---
 
-**Total deviations:** 6 fixed issues (1 implementation-time test issue, 5 post-plan review blockers).
+**Total deviations:** 7 fixed issues (1 implementation-time test issue, 6 post-plan review blockers).
 **Impact on plan:** The protocol is more exact and fail-closed without native Plan-26 work, dependency additions, lockfile changes, public output expansion, or gameplay mutation.
 
 ## Issues Encountered
@@ -219,7 +228,7 @@ status: complete
 - `pnpm typecheck` — 26/26 Turbo tasks passed across 15 packages.
 - `pnpm lint` — 15/15 packages passed.
 - `pnpm boundary:imports` — zero strict offenses.
-- `pnpm exec vitest run packages/spec/src/runtime-budget-profile-v1-18.test.ts packages/spec/src/runtime-invocation-v1-18.test.ts packages/runtime-supervisor/src/supervisor-contract.test.ts --maxWorkers=1` — 37/37 passed.
+- Final focused public-invocation and supervisor suites — 2 files / 32 tests passed.
 - Prettier check for every created/modified source, manifest, and tsconfig — passed.
 - Source-import scan, lockfile diff, forbidden-file diff, and `git diff --check` — passed.
 
