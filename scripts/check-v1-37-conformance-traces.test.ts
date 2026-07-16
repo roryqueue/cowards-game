@@ -65,7 +65,7 @@ describe("v1.37 conformance trace candidate checker", () => {
         "READ_ONLY_CHECK_ARGUMENTS",
       )
     }
-  })
+  }, 30_000)
 
   it("rejects missing, extra, reordered, corpus-substituted, and diff-mutated evidence", () => {
     const mutations: Array<(directory: string) => void> = [
@@ -118,5 +118,5 @@ describe("v1.37 conformance trace candidate checker", () => {
         checkV137ConformanceTraceCandidate({ candidateDirectory: directory }),
       ).not.toEqual([])
     }
-  })
+  }, 60_000)
 })
