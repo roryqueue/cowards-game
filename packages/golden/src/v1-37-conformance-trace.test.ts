@@ -346,7 +346,6 @@ const twoTransitionSuccessfulInput =
       coordinates: { ...original.coordinates, ordinal: 1 },
       orderedEvents: [globalThis.structuredClone(original.orderedEvents[1]!)],
       beforeStateHash: first.afterStateHash,
-      beforeMachineHash: first.afterMachineHash,
     }
     input.transitions = [first, second]
     input.finalStateHash = second.afterStateHash
@@ -361,13 +360,56 @@ const mutableTrace = (
 
 const rehash = (
   trace: DeepMutable<CanonicalConformanceTrace>,
+  {
+    preserveTransitionRoots = false,
+  }: { readonly preserveTransitionRoots?: boolean } = {},
 ): CanonicalConformanceTrace => {
+  if (!preserveTransitionRoots) {
+    const prefix: DeepMutable<RecordedCanonicalTransitionV137>[] = []
+    for (const transition of trace.transitions) {
+      prefix.push(transition)
+      transition.accumulatedTraceRoot =
+        computeRecordedTransitionTraceRootV137(prefix)
+    }
+  }
   trace.transitionTraceRoot = computeRecordedTransitionTraceRootV137(
     trace.transitions,
   )
   trace.traceRoot = hashCanonicalConformanceTrace(trace)
   return trace as CanonicalConformanceTrace
 }
+
+const semanticallyInvalidMutationFields = new Set([
+  "semanticTupleId",
+  "invocation.ordinal",
+  "invocation.resultClass",
+  "invocation.stableCode",
+  "invocation.retryable",
+  "transition.ordinal",
+  "transition.semanticTupleId",
+  "transition.coordinates",
+  "transition.resultClass",
+  "transition.canonicalOutputHash",
+  "transition.orderedEvents",
+  "transition.orderedEventsHash",
+  "transition.afterStateHash",
+  "transition.terminalStatus",
+  "transition.failureStatus",
+  "transition.terminalHash",
+  "transition.accumulatedTraceRoot",
+  "transitions.length",
+  "finalStateHash",
+  "transitionTraceRoot",
+  "failure.resultClass",
+  "failure.stableCode",
+  "failure.failingBoundary",
+  "failure.invocationOrdinal",
+  "failure.transitionOrdinal",
+  "failure.gameplayMutation",
+  "failure.memoryMutation",
+  "failure.terminalEffectHash",
+  "failure.retryable",
+])
 
 const expectDivergence = (
   expected: CanonicalConformanceTrace,
@@ -380,15 +422,20 @@ const expectDivergence = (
 ): void => {
   expect(actual.traceRoot).not.toBe(expected.traceRoot)
   const comparison = compareCanonicalConformanceTrace({ expected, actual })
+  const semanticRejection = semanticallyInvalidMutationFields.has(field)
   expect(comparison).toMatchObject({
     status: "diverged",
     disposition: "quarantine",
     divergence: {
       code: "CANONICAL_CONFORMANCE_TRACE_DIVERGENCE",
       caseId: expected.caseId,
-      field,
-      invocationOrdinal: coordinate.invocationOrdinal ?? null,
-      transitionOrdinal: coordinate.transitionOrdinal ?? null,
+      field: semanticRejection ? "traceSemantics" : field,
+      invocationOrdinal: semanticRejection
+        ? null
+        : (coordinate.invocationOrdinal ?? null),
+      transitionOrdinal: semanticRejection
+        ? null
+        : (coordinate.transitionOrdinal ?? null),
     },
   })
   expect(JSON.stringify(comparison)).not.toMatch(
@@ -1126,9 +1173,17 @@ describe("v1.37 canonical conformance trace", () => {
     for (const { field, index = 0, mutate } of transitionMutations) {
       const actual = mutableTrace(expected)
       mutate(actual.transitions[index]!)
-      expectDivergence(expected, rehash(actual), field, {
+      expectDivergence(
+        expected,
+        rehash(actual, {
+          preserveTransitionRoots:
+            field === "transition.accumulatedTraceRoot",
+        }),
+        field,
+        {
         transitionOrdinal: index,
-      })
+        },
+      )
     }
 
     const aggregateMutations: Array<{
@@ -1492,9 +1547,6 @@ describe("v1.37 canonical conformance trace", () => {
     for (const mutate of [
       (input: DeepMutable<ProjectCanonicalConformanceTraceInput>) => {
         input.transitions[1]!.beforeStateHash = hash("f")
-      },
-      (input: DeepMutable<ProjectCanonicalConformanceTraceInput>) => {
-        input.transitions[1]!.beforeMachineHash = hash("f")
       },
       (input: DeepMutable<ProjectCanonicalConformanceTraceInput>) => {
         input.finalStateHash = hash("f")

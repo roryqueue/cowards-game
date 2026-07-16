@@ -873,6 +873,35 @@ const validateResultOwnership = (
   }
 }
 
+const validateStateChronology = (
+  input: ProjectCanonicalConformanceTraceInput,
+): void => {
+  for (let index = 1; index < input.transitions.length; index += 1) {
+    const previous = input.transitions[index - 1]!
+    const current = input.transitions[index]!
+    if (previous.afterStateHash !== current.beforeStateHash) {
+      fail("TRACE_RESULT_INVALID")
+    }
+  }
+
+  const finalTransition = input.transitions.at(-1)
+  if (finalTransition !== undefined) {
+    if (input.finalStateHash !== finalTransition.afterStateHash) {
+      fail("TRACE_RESULT_INVALID")
+    }
+    return
+  }
+
+  const invocationOrdinal = input.failure?.invocationOrdinal
+  if (
+    invocationOrdinal === null ||
+    invocationOrdinal === undefined ||
+    input.finalStateHash !== input.invocations[invocationOrdinal]!.afterStateHash
+  ) {
+    fail("TRACE_RESULT_INVALID")
+  }
+}
+
 const validateInput = (input: ProjectCanonicalConformanceTraceInput): void => {
   exactKeys(input, inputKeys)
   requireIdentifier(input.corpusVersion)
@@ -905,6 +934,7 @@ const validateInput = (input: ProjectCanonicalConformanceTraceInput): void => {
     }
   }
   validateResultOwnership(input)
+  validateStateChronology(input)
 }
 
 const traceInput = (
