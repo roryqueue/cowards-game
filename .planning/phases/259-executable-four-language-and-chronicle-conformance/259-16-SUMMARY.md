@@ -29,6 +29,7 @@ TypeScript, Python, Rust, and Zig now each have an independently reviewable unsi
 - Selected and bound Wasmtime Winch with disabled cache/parallel compilation and bounded memory reservations after default Cranelift execution exceeded the v1.18 64 MiB lane ceiling.
 - Normalized persisted resource/timeout evidence to deterministic authoritative kernel/runtime facts while retaining full ephemeral receipt validation; Linux exit-detail variation can no longer create false cross-run drift.
 - Kept all failures safe by default: diagnostic detail exists only behind the explicit local `COWARDS_CERTIFICATION_DEBUG=1` switch and is never written to reviewed artifacts.
+- Corrected candidate issuance so `issuedAt` is captured only after all three fresh runs complete; every persisted candidate now satisfies `completedAt <= issuedAt` under the real spec verifier.
 
 ## Verification
 
@@ -43,6 +44,7 @@ TypeScript, Python, Rust, and Zig now each have an independently reviewable unsi
 ## Commit
 
 - `1494159` — certify real four-language lanes
+- `16cbc41` — issue candidates only after fresh runs complete
 
 ## Next Readiness
 
