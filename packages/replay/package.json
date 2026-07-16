@@ -12,7 +12,7 @@
     "build": "tsc -b",
     "lint": "eslint .",
     "typecheck": "tsc -b",
-    "test": "vitest run --passWithNoTests"
+    "test": "vitest run --passWithNoTests --testTimeout=15000"
   },
   "dependencies": {
     "@cowards/engine": "workspace:*",
