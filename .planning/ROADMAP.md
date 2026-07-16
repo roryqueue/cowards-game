@@ -266,10 +266,10 @@ Plans:
 
 **Wave 3 — review gates, service API, workspace wiring, and native meter**
 
-- [ ] 259-04-PLAN.md — Separate golden candidates, semantic diffs, and independent review.
-- [ ] 259-14-PLAN.md — Prove transition-by-transition reconstruction equality and historical compatibility.
-- [ ] 259-26-PLAN.md — Build the pinned Linux cgroup-v2 native supervisor and hardened Docker delegation path.
-- [ ] 259-31-PLAN.md — Wire counted runtime packages to public supervisor/spec workspace boundaries.
+- [x] 259-04-PLAN.md — Separate golden candidates, semantic diffs, and independent review.
+- [x] 259-14-PLAN.md — Prove transition-by-transition reconstruction equality and historical compatibility.
+- [x] 259-26-PLAN.md — Build the pinned Linux cgroup-v2 native supervisor and hardened Docker delegation path.
+- [x] 259-31-PLAN.md — Wire counted runtime packages to public supervisor/spec workspace boundaries.
 
 **Wave 4 — real language adapters and authenticated service receipt**
 
@@ -360,6 +360,6 @@ Cycle-cap, inward-start, facing-only MOVE, reversal-history, attacker-facing/Adv
 | 256. Counted Safety and Canonical Authority | 19/19 | Complete    | 2026-07-13 |
 | 257. Canonical Transition Kernel and v1.4 Semantic Integrity | 22/22 | Complete | 2026-07-13 |
 | 258. Canonical JSON, Failure Semantics, and Artifact Identity | 14/14 | Complete | 2026-07-16 |
-| 259. Executable Four-Language and Chronicle Conformance | 0/31 | Planned | - |
+| 259. Executable Four-Language and Chronicle Conformance | 15/31 | In progress | - |
 | 260. Truthful Strategy Inputs, Arena Authority, and Set Fairness | 0/TBD | Not started | - |
 | 261. Integrated Service Proof, Drift Guards, and Release | 0/TBD | Not started | - |
