@@ -724,6 +724,13 @@ export const evaluateRuntimeSupervisorReceiptV118 = (
   ) {
     return systemFailure("TRUNCATED_CAPTURE")
   }
+  if (
+    receipt.lifecycle.exitCode !== 0 ||
+    receipt.lifecycle.signal !== null ||
+    receipt.lifecycle.cancellationRequested
+  ) {
+    return systemFailure("PROCESS_RESULT_UNRESOLVED")
+  }
 
   const dimensions: RuntimeInvocationResourceDimensionV118[] = []
   const comparisons = [
@@ -776,13 +783,6 @@ export const evaluateRuntimeSupervisorReceiptV118 = (
       code: "RESOURCE_EXHAUSTION" as const,
       dimensions,
     }) as RuntimeInvocationEvidenceResultV118
-  }
-  if (
-    receipt.lifecycle.exitCode !== 0 ||
-    receipt.lifecycle.signal !== null ||
-    receipt.lifecycle.cancellationRequested
-  ) {
-    return systemFailure("PROCESS_RESULT_UNRESOLVED")
   }
   const evidence = {
     requestSha256: request.requestSha256,
