@@ -5,6 +5,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { afterEach, describe, expect, it } from "vitest"
+// eslint-disable-next-line no-restricted-imports -- repo-root governance test uses the canonical JSON codec directly.
 import {
   encodeCanonicalJson,
   type JsonValue,
@@ -82,7 +83,7 @@ describe("v1.37 independent conformance trace review", () => {
       /sourceBytes|strategyMemory|soldierMemory|objectivePayload|hostPath/iu,
     )
 
-    const outputPath = path.join(temporaryRoot(), "review.json")
+    const outputPath = path.join(directory, "independent-review.json")
     const written = writeV137ConformanceTraceIndependentReview({
       candidateDirectory: directory,
       outputPath,
@@ -194,6 +195,13 @@ describe("v1.37 independent conformance trace review", () => {
       manifest.compatibilityEvidence.protectedCategories[category] =
         `sha256:${"f".repeat(64)}`
       writeFileSync(manifestPath, render(manifest))
+      const diffPath = path.join(directory, "semantic-diff.json")
+      const diff = JSON.parse(readFileSync(diffPath, "utf8"))
+      diff.protectedCategories[category].candidateHash =
+        manifest.compatibilityEvidence.protectedCategories[category]
+      diff.protectedCategories[category].changeCount = 1
+      writeFileSync(diffPath, render(diff))
+      rehash(directory)
 
       const review = reviewV137ConformanceTraceDiff({
         candidateDirectory: directory,

@@ -2,7 +2,18 @@
 /// <reference types="node" />
 
 import { createHash } from "node:crypto"
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs"
+import {
+  closeSync,
+  constants,
+  existsSync,
+  fsyncSync,
+  lstatSync,
+  openSync,
+  readFileSync,
+  readdirSync,
+  realpathSync,
+  writeFileSync,
+} from "node:fs"
 import path from "node:path"
 import { pathToFileURL } from "node:url"
 // eslint-disable-next-line no-restricted-imports -- the independent reviewer recomputes locked/current compatibility roots directly.
@@ -29,6 +40,7 @@ import {
 } from "../packages/golden/src/v1-37-conformance-trace.ts"
 // eslint-disable-next-line no-restricted-imports -- use the existing canonical JSON codec.
 import {
+  CURRENT_CANONICAL_COMPATIBILITY_TUPLE_RECORD,
   encodeCanonicalJson,
   type JsonValue,
 } from "../packages/spec/src/index.ts"
@@ -37,6 +49,7 @@ import type {
   V137ConformanceTraceProtectedCategory,
   V137ConformanceTraceSemanticDiff,
 } from "./generate-v1-37-conformance-traces.js"
+import { V137_CONFORMANCE_TRACE_REVIEW_ARTIFACT } from "./generate-v1-37-conformance-traces.js"
 
 export const PROTECTED_V137_COMPATIBILITY_CATEGORIES = Object.freeze([
   "validV14State",
@@ -88,6 +101,7 @@ const fail = (code: string): never => {
   throw new V137ConformanceTraceReviewError(code)
 }
 const HASH = /^sha256:[0-9a-f]{64}$/u
+const VERSION = /^v[1-9][0-9A-Za-z.-]{0,127}$/u
 const BASELINE_VERSION = "v1.4-locked-compatibility-v1" as const
 const renderJson = (value: unknown): string =>
   `${JSON.stringify(value, null, 2)}\n`
@@ -243,9 +257,14 @@ const validateManifestShape = (
     manifest.schemaVersion !== "v1.37-conformance-trace-candidate-v1" ||
     manifest.generatedBy !== "scripts/generate-v1-37-conformance-traces.ts" ||
     manifest.authoritySource !== "canonical-engine-kernel-recording" ||
+    manifest.recordingApi !== "RecordedCanonicalTransitionV137" ||
+    manifest.projectorApi !== "projectCanonicalConformanceTrace" ||
     manifest.policy !== "candidate-only-no-live-lane-oracle-no-promotion" ||
+    !VERSION.test(manifest.candidateVersion) ||
     manifest.corpusVersion !== V1_37_CONFORMANCE_CORPUS.version ||
     manifest.corpusRootSha256 !== V1_37_CONFORMANCE_CORPUS_ROOT ||
+    manifest.semanticTupleId !==
+      CURRENT_CANONICAL_COMPATIBILITY_TUPLE_RECORD.tupleId ||
     !HASH.test(manifest.candidateRootSha256) ||
     !exactKeys(manifest.compatibilityEvidence, [
       "baselineVersion",
@@ -253,12 +272,98 @@ const validateManifestShape = (
       "protectedCategories",
     ]) ||
     manifest.compatibilityEvidence.baselineVersion !== BASELINE_VERSION ||
+    manifest.compatibilityEvidence.candidateCorpusVersion !==
+      V1_4_COMPATIBILITY_CORPUS_VERSION ||
     !exactKeys(
       manifest.compatibilityEvidence.protectedCategories,
       PROTECTED_V137_COMPATIBILITY_CATEGORIES,
     )
   ) {
     fail("MANIFEST_SHAPE_INVALID")
+  }
+}
+
+const expectedSemanticDiff = (
+  manifest: V137ConformanceTraceCandidateManifest,
+): V137ConformanceTraceSemanticDiff => {
+  const compatibility = recomputeCompatibility()
+  const protectedCategories = Object.fromEntries(
+    PROTECTED_V137_COMPATIBILITY_CATEGORIES.map((category) => [
+      category,
+      {
+        baselineHash: compatibility.baseline[category],
+        candidateHash:
+          manifest.compatibilityEvidence.protectedCategories[category],
+        changeCount:
+          compatibility.baseline[category] ===
+          manifest.compatibilityEvidence.protectedCategories[category]
+            ? 0
+            : 1,
+      },
+    ]),
+  ) as V137ConformanceTraceSemanticDiff["protectedCategories"]
+  const material = {
+    schemaVersion: "v1.37-conformance-trace-semantic-diff-v1" as const,
+    generatedBy: "scripts/generate-v1-37-conformance-traces.ts" as const,
+    baselineVersion: BASELINE_VERSION,
+    candidateVersion: manifest.candidateVersion,
+    corpusVersion: manifest.corpusVersion,
+    corpusRootSha256: manifest.corpusRootSha256,
+    candidateRootSha256: manifest.candidateRootSha256,
+    caseDiffs: manifest.cases.map((entry) => ({
+      ordinal: entry.ordinal,
+      caseId: entry.caseId,
+      baselineTraceRef: entry.traceRef,
+      candidateTraceRoot: entry.traceRoot,
+      resultClass: entry.resultClass,
+    })),
+    protectedCategories,
+  }
+  return {
+    ...material,
+    semanticDiffRootSha256: canonicalHash(
+      "cowards-game:v1.37:conformance-trace-semantic-diff:v1",
+      material as unknown as JsonValue,
+    ),
+  }
+}
+
+const validateCaseTracePolicy = ({
+  testCase,
+  trace,
+}: {
+  readonly testCase: (typeof V1_37_CONFORMANCE_CORPUS.cases)[number]
+  readonly trace: CanonicalConformanceTrace
+}): void => {
+  const expectation = testCase.expectation
+  if (trace.resultClass !== expectation.resultClass) {
+    return fail("CASE_RESULT_IDENTITY_INVALID")
+  }
+  if (expectation.resultClass === "success") {
+    if (
+      trace.failure !== null ||
+      (testCase.executionMode === "raw-envelope"
+        ? trace.transitions.length !== 0 ||
+          trace.invocations.length === 0 ||
+          trace.invocations.some(
+            ({ gameplayMutation }) => gameplayMutation !== false,
+          )
+        : trace.transitions.length === 0)
+    ) {
+      return fail("CASE_EXECUTION_MODE_INVALID")
+    }
+    return
+  }
+  const failure = trace.failure
+  if (
+    failure === null ||
+    failure.resultClass !== expectation.resultClass ||
+    failure.stableCode !== expectation.reasonCode ||
+    failure.failingBoundary !== expectation.failingBoundary ||
+    failure.gameplayMutation !== expectation.gameplayMutation ||
+    failure.retryable !== expectation.retryable
+  ) {
+    return fail("CASE_FAILURE_IDENTITY_INVALID")
   }
 }
 
@@ -303,6 +408,12 @@ export const reviewV137ConformanceTraceDiff = ({
   const diff = readJson<V137ConformanceTraceSemanticDiff>(diffPath)
   validateManifestShape(manifest)
   validateDiffShape(diff)
+  if (
+    readFileSync(manifestPath, "utf8") !== renderJson(manifest) ||
+    readFileSync(diffPath, "utf8") !== renderJson(diff)
+  ) {
+    return fail("CANDIDATE_EXACT_TEXT_INVALID")
+  }
   const compatibility = recomputeCompatibility()
   const protectedCategories = Object.fromEntries(
     PROTECTED_V137_COMPATIBILITY_CATEGORIES.map((category) => {
@@ -340,40 +451,65 @@ export const reviewV137ConformanceTraceDiff = ({
   ) {
     return fail("CASE_INVENTORY_INVALID")
   }
+  if (
+    JSON.stringify(readdirSync(path.join(directory, "traces")).sort()) !==
+    JSON.stringify(expectedCaseIds.map((caseId) => `${caseId}.json`))
+  ) {
+    return fail("CASE_FILE_INVENTORY_INVALID")
+  }
   const traceRoots: string[] = []
   for (const [ordinal, entry] of manifest.cases.entries()) {
+    const testCase = V1_37_CONFORMANCE_CORPUS.cases[ordinal]!
     const tracePath = path.join(directory, entry.tracePath)
     if (
+      !exactKeys(entry, [
+        "ordinal",
+        "caseId",
+        "traceRef",
+        "resultClass",
+        "tracePath",
+        "traceFileSha256",
+        "traceRoot",
+      ]) ||
       entry.ordinal !== ordinal ||
       entry.caseId !== expectedCaseIds[ordinal] ||
+      entry.traceRef !== testCase.expectation.traceRef ||
+      entry.resultClass !== testCase.expectation.resultClass ||
+      entry.tracePath !== path.posix.join("traces", `${entry.caseId}.json`) ||
+      !HASH.test(entry.traceFileSha256) ||
+      !HASH.test(entry.traceRoot) ||
       !existsSync(tracePath)
     ) {
       return fail("CASE_TRACE_MISSING")
     }
     const trace = readJson<CanonicalConformanceTrace>(tracePath)
+    const traceBytes = readFileSync(tracePath)
     if (
+      traceBytes.toString("utf8") !== renderJson(trace) ||
+      sha256(traceBytes) !== entry.traceFileSha256 ||
       hashCanonicalConformanceTrace(trace) !== trace.traceRoot ||
       trace.traceRoot !== entry.traceRoot ||
       trace.caseId !== entry.caseId ||
+      trace.corpusVersion !== manifest.corpusVersion ||
+      trace.corpusRootSha256 !== manifest.corpusRootSha256 ||
+      trace.semanticTupleId !== manifest.semanticTupleId ||
+      trace.resultClass !== entry.resultClass ||
       compareCanonicalConformanceTrace({ expected: trace, actual: trace })
         .status !== "equal"
     ) {
       return fail("CASE_TRACE_INVALID")
     }
+    validateCaseTracePolicy({ testCase, trace })
     traceRoots.push(trace.traceRoot)
   }
 
   const computedCandidateRootSha256 = computedManifestRoot(manifest)
   const computedSemanticDiffRootSha256 = computedDiffRoot(diff)
+  const expectedDiff = expectedSemanticDiff(manifest)
   if (
-    status === "no_semantic_delta" &&
-    (computedCandidateRootSha256 !== manifest.candidateRootSha256 ||
-      computedSemanticDiffRootSha256 !== diff.semanticDiffRootSha256 ||
-      diff.candidateRootSha256 !== manifest.candidateRootSha256 ||
-      diff.candidateVersion !== manifest.candidateVersion ||
-      diff.corpusVersion !== manifest.corpusVersion ||
-      diff.corpusRootSha256 !== manifest.corpusRootSha256 ||
-      diff.caseDiffs.length !== manifest.cases.length)
+    computedCandidateRootSha256 !== manifest.candidateRootSha256 ||
+    computedSemanticDiffRootSha256 !== diff.semanticDiffRootSha256 ||
+    JSON.stringify(diff) !== JSON.stringify(expectedDiff)
   ) {
     return fail("INDEPENDENT_ROOT_RECOMPUTATION_FAILED")
   }
@@ -409,9 +545,50 @@ export const writeV137ConformanceTraceIndependentReview = ({
   readonly outputPath: string
 }): V137ConformanceTraceIndependentReview => {
   const review = reviewV137ConformanceTraceDiff({ candidateDirectory })
+  const candidateRealPath = realpathSync(path.resolve(candidateDirectory))
   const absoluteOutput = path.resolve(outputPath)
-  mkdirSync(path.dirname(absoluteOutput), { recursive: true })
-  writeFileSync(absoluteOutput, renderJson(review))
+  const normalizedOutput = path.join(
+    realpathSync(path.dirname(absoluteOutput)),
+    path.basename(absoluteOutput),
+  )
+  const candidateLocalOutput = path.join(
+    candidateRealPath,
+    "independent-review.json",
+  )
+  const artifactOutput = path.join(
+    realpathSync(path.dirname(V137_CONFORMANCE_TRACE_REVIEW_ARTIFACT)),
+    path.basename(V137_CONFORMANCE_TRACE_REVIEW_ARTIFACT),
+  )
+  if (
+    normalizedOutput !== artifactOutput &&
+    normalizedOutput !== candidateLocalOutput
+  ) {
+    return fail("REVIEW_OUTPUT_PATH_FORBIDDEN")
+  }
+  const bytes = renderJson(review)
+  if (existsSync(normalizedOutput)) {
+    if (lstatSync(normalizedOutput).isSymbolicLink()) {
+      return fail("REVIEW_OUTPUT_PATH_FORBIDDEN")
+    }
+    if (readFileSync(normalizedOutput, "utf8") !== bytes) {
+      return fail("REVIEW_OUTPUT_IMMUTABLE")
+    }
+    return review
+  }
+  const descriptor = openSync(
+    normalizedOutput,
+    constants.O_CREAT |
+      constants.O_EXCL |
+      constants.O_WRONLY |
+      constants.O_NOFOLLOW,
+    0o600,
+  )
+  try {
+    writeFileSync(descriptor, bytes)
+    fsyncSync(descriptor)
+  } finally {
+    closeSync(descriptor)
+  }
   return review
 }
 

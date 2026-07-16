@@ -2,7 +2,13 @@
 /// <reference types="node" />
 
 import { createHash } from "node:crypto"
-import { existsSync, mkdirSync, writeFileSync } from "node:fs"
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs"
 import path from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
 // eslint-disable-next-line no-restricted-imports -- repo-root candidate generator consumes the canonical engine authority.
@@ -39,10 +45,7 @@ import {
   type CanonicalConformanceTrace,
 } from "../packages/golden/src/v1-37-conformance-trace.ts"
 // eslint-disable-next-line no-restricted-imports -- canonical engine recordings are the sole transition input.
-import {
-  recordChronicleFromExecution,
-  type RecordedCanonicalTransitionV137,
-} from "../packages/replay/src/record.ts"
+import { recordChronicleFromExecution } from "../packages/replay/src/record.ts"
 // eslint-disable-next-line no-restricted-imports -- use the existing canonical JSON codec and types.
 import {
   encodeCanonicalJson,
@@ -60,6 +63,10 @@ export const ACTIVE_V137_CONFORMANCE_TRACE_ROOT = path.join(
 )
 export const V137_CONFORMANCE_TRACE_BASELINE_VERSION =
   "v1.4-locked-compatibility-v1" as const
+export const V137_CONFORMANCE_TRACE_REVIEW_ARTIFACT = path.join(
+  repoRoot,
+  ".planning/artifacts/v1.37-conformance-trace-independent-review.json",
+)
 export const V137_CONFORMANCE_TRACE_PROTECTED_CATEGORIES = Object.freeze([
   "validV14State",
   "actionLegality",
@@ -296,17 +303,11 @@ const fixtureRuntime: StrategyRuntime = {
   },
 }
 
-let cachedCanonicalRecording:
-  | {
-      readonly transitions: readonly RecordedCanonicalTransitionV137[]
-    }
-  | undefined
-
-const canonicalRecording = () => {
-  if (cachedCanonicalRecording !== undefined) return cachedCanonicalRecording
+const canonicalRecording = (testCase: V137ConformanceCase) => {
+  const identity = testCase.seed ?? testCase.id
   const execution = MATCH_KERNEL.runMatch({
-    matchId: "conformance:canonical-recording",
-    seed: "conformance:canonical-recording",
+    matchId: `conformance:${testCase.id}`,
+    seed: identity,
     arenaVariant: {
       id: "v1.37-conformance-arena",
       name: "v1.37 Conformance Arena",
@@ -329,14 +330,13 @@ const canonicalRecording = () => {
     },
   })
   if (!recorded.ok) return fail(`CANONICAL_RECORDING_${recorded.failure.code}`)
-  cachedCanonicalRecording = { transitions: recorded.recordedTransitions }
-  return cachedCanonicalRecording
+  return { transitions: recorded.recordedTransitions }
 }
 
-const successTrace = (
+const strategySuccessTrace = (
   testCase: V137ConformanceCase,
 ): Readonly<CanonicalConformanceTrace> => {
-  const recorded = canonicalRecording()
+  const recorded = canonicalRecording(testCase)
   const first = recorded.transitions[0]
   const last = recorded.transitions.at(-1)
   if (
@@ -409,11 +409,57 @@ const successTrace = (
   })
 }
 
-const failureTrace = (
+const rawEnvelopeSuccessTrace = (
+  testCase: V137ConformanceCase,
+): Readonly<CanonicalConformanceTrace> => {
+  const stateHash = evidenceHash("unchanged-state", testCase.id)
+  const memoryHash = evidenceHash("unchanged-memory", testCase.id)
+  const objectiveHash = evidenceHash("unchanged-objective", testCase.id)
+  const invocation: CanonicalConformanceInvocation = {
+    ordinal: 0,
+    invocationId: `invocation:${testCase.id}:raw-envelope`,
+    methodName: "selectActivations",
+    resultClass: "success",
+    stableCode: null,
+    failingBoundary: testCase.expectation.failingBoundary,
+    canonicalPayloadHash: evidenceHash("canonical-payload", testCase.id),
+    strategyMemoryHash: memoryHash,
+    soldierMemoryHash: memoryHash,
+    objectiveHash,
+    beforeObjectiveHash: objectiveHash,
+    afterObjectiveHash: objectiveHash,
+    beforeStateHash: stateHash,
+    afterStateHash: stateHash,
+    beforeMemoryHash: memoryHash,
+    afterMemoryHash: memoryHash,
+    gameplayMutation: false,
+    memoryMutation: false,
+    terminalEffectHash: null,
+    retryable: false,
+  }
+  return projectCanonicalConformanceTrace({
+    corpusVersion: V1_37_CONFORMANCE_CORPUS.version,
+    corpusRootSha256: V1_37_CONFORMANCE_CORPUS_ROOT,
+    caseId: testCase.id,
+    semanticTupleId: MATCH_KERNEL.tupleId,
+    resultClass: "success",
+    invocations: [invocation],
+    transitions: [],
+    finalStateHash: stateHash,
+    outcomeHash: evidenceHash("no-outcome", testCase.id),
+    failure: null,
+  })
+}
+
+const caseTrace = (
   testCase: V137ConformanceCase,
 ): Readonly<CanonicalConformanceTrace> => {
   const resultClass = testCase.expectation.resultClass
-  if (resultClass === "success") return successTrace(testCase)
+  if (resultClass === "success") {
+    return testCase.executionMode === "raw-envelope"
+      ? rawEnvelopeSuccessTrace(testCase)
+      : strategySuccessTrace(testCase)
+  }
   const stateHash = evidenceHash("unchanged-state", testCase.id)
   const memoryHash = evidenceHash("unchanged-memory", testCase.id)
   const objectiveHash = evidenceHash("unchanged-objective", testCase.id)
@@ -461,6 +507,36 @@ const failureTrace = (
       retryable: testCase.expectation.retryable,
     },
   })
+}
+
+const reviewedVersionRoots = (): ReadonlyMap<string, string> => {
+  const roots = new Map<string, string>()
+  if (!existsSync(V137_CONFORMANCE_TRACE_REVIEW_ARTIFACT)) return roots
+  let review: unknown
+  try {
+    review = JSON.parse(
+      readFileSync(V137_CONFORMANCE_TRACE_REVIEW_ARTIFACT, "utf8"),
+    )
+  } catch {
+    return fail("REVIEW_HISTORY_INVALID")
+  }
+  if (
+    review === null ||
+    typeof review !== "object" ||
+    Array.isArray(review) ||
+    typeof (review as { candidateVersion?: unknown }).candidateVersion !==
+      "string" ||
+    typeof (review as { computedCandidateRootSha256?: unknown })
+      .computedCandidateRootSha256 !== "string"
+  ) {
+    return fail("REVIEW_HISTORY_INVALID")
+  }
+  roots.set(
+    (review as { candidateVersion: string }).candidateVersion,
+    (review as { computedCandidateRootSha256: string })
+      .computedCandidateRootSha256,
+  )
+  return roots
 }
 
 const manifestRoot = (
@@ -555,7 +631,7 @@ export const generateV137ConformanceTraceCandidate = (
   mkdirSync(tracesDirectory, { recursive: true })
   const cases: V137ConformanceTraceCandidateCase[] = []
   for (const [ordinal, testCase] of corpus.cases.entries()) {
-    const trace = failureTrace(testCase)
+    const trace = caseTrace(testCase)
     const tracePath = path.posix.join("traces", `${testCase.id}.json`)
     const traceBytes = renderJson(trace)
     writeFileSync(path.join(candidateDirectory, tracePath), traceBytes, {
@@ -593,6 +669,14 @@ export const generateV137ConformanceTraceCandidate = (
   const manifest: V137ConformanceTraceCandidateManifest = {
     ...material,
     candidateRootSha256: manifestRoot(material),
+  }
+  const reviewedRoot = reviewedVersionRoots().get(input.candidateVersion)
+  if (
+    reviewedRoot !== undefined &&
+    reviewedRoot !== manifest.candidateRootSha256
+  ) {
+    rmSync(candidateDirectory, { recursive: true, force: true })
+    return fail("REVIEWED_VERSION_ROOT_MISMATCH")
   }
   const manifestPath = path.join(candidateDirectory, "manifest.json")
   const semanticDiffPath = path.join(candidateDirectory, "semantic-diff.json")

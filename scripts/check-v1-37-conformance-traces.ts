@@ -5,6 +5,8 @@ import { createHash } from "node:crypto"
 import { existsSync, readFileSync, readdirSync } from "node:fs"
 import path from "node:path"
 import { pathToFileURL } from "node:url"
+// eslint-disable-next-line no-restricted-imports -- checker binds the exact immutable compatibility corpus identity.
+import { V1_4_COMPATIBILITY_CORPUS_VERSION } from "../packages/engine/src/fixtures/v1-4-compatibility.ts"
 // eslint-disable-next-line no-restricted-imports -- repo-root checker binds the exact corpus authority.
 import {
   V1_37_CONFORMANCE_CORPUS,
@@ -18,6 +20,7 @@ import {
 } from "../packages/golden/src/v1-37-conformance-trace.ts"
 // eslint-disable-next-line no-restricted-imports -- use the existing canonical JSON codec.
 import {
+  CURRENT_CANONICAL_COMPATIBILITY_TUPLE_RECORD,
   encodeCanonicalJson,
   type JsonValue,
 } from "../packages/spec/src/index.ts"
@@ -41,6 +44,7 @@ const fail = (code: string): never => {
   throw new V137ConformanceTraceCheckError(code)
 }
 const HASH = /^sha256:[0-9a-f]{64}$/u
+const VERSION = /^v[1-9][0-9A-Za-z.-]{0,127}$/u
 const renderJson = (value: unknown): string =>
   `${JSON.stringify(value, null, 2)}\n`
 const sha256 = (value: Uint8Array | string): string =>
@@ -136,6 +140,10 @@ const manifestShapeValid = (
     manifest.recordingApi !== "RecordedCanonicalTransitionV137" ||
     manifest.projectorApi !== "projectCanonicalConformanceTrace" ||
     manifest.policy !== "candidate-only-no-live-lane-oracle-no-promotion" ||
+    !VERSION.test(manifest.candidateVersion) ||
+    manifest.candidateVersion === V137_CONFORMANCE_TRACE_BASELINE_VERSION ||
+    manifest.semanticTupleId !==
+      CURRENT_CANONICAL_COMPATIBILITY_TUPLE_RECORD.tupleId ||
     !Array.isArray(manifest.cases) ||
     !HASH.test(manifest.candidateRootSha256)
   ) {
@@ -149,6 +157,7 @@ const manifestShapeValid = (
       "protectedCategories",
     ]) &&
     evidence.baselineVersion === V137_CONFORMANCE_TRACE_BASELINE_VERSION &&
+    evidence.candidateCorpusVersion === V1_4_COMPATIBILITY_CORPUS_VERSION &&
     exactKeys(
       evidence.protectedCategories,
       V137_CONFORMANCE_TRACE_PROTECTED_CATEGORIES,
@@ -211,7 +220,9 @@ export const checkV137ConformanceTraceCandidate = ({
   }
 
   for (const [ordinal, entry] of manifest.cases.entries()) {
+    const testCase = V1_37_CONFORMANCE_CORPUS.cases[ordinal]
     if (
+      testCase === undefined ||
       !exactKeys(entry, [
         "ordinal",
         "caseId",
@@ -223,6 +234,8 @@ export const checkV137ConformanceTraceCandidate = ({
       ]) ||
       entry.ordinal !== ordinal ||
       entry.caseId !== expectedCaseIds[ordinal] ||
+      entry.traceRef !== testCase.expectation.traceRef ||
+      entry.resultClass !== testCase.expectation.resultClass ||
       entry.tracePath !== path.posix.join("traces", `${entry.caseId}.json`) ||
       !HASH.test(entry.traceFileSha256) ||
       !HASH.test(entry.traceRoot)
@@ -251,6 +264,31 @@ export const checkV137ConformanceTraceCandidate = ({
           .status !== "equal"
       ) {
         errors.push(`trace ${entry.caseId} identity or semantics mismatch`)
+      }
+      if (testCase.expectation.resultClass === "success") {
+        if (
+          trace.failure !== null ||
+          (testCase.executionMode === "raw-envelope"
+            ? trace.transitions.length !== 0 ||
+              trace.invocations.length === 0 ||
+              trace.invocations.some(
+                ({ gameplayMutation }) => gameplayMutation !== false,
+              )
+            : trace.transitions.length === 0)
+        ) {
+          errors.push(`trace ${entry.caseId} execution mode mismatch`)
+        }
+      } else if (
+        trace.failure === null ||
+        trace.failure.resultClass !== testCase.expectation.resultClass ||
+        trace.failure.stableCode !== testCase.expectation.reasonCode ||
+        trace.failure.failingBoundary !==
+          testCase.expectation.failingBoundary ||
+        trace.failure.gameplayMutation !==
+          testCase.expectation.gameplayMutation ||
+        trace.failure.retryable !== testCase.expectation.retryable
+      ) {
+        errors.push(`trace ${entry.caseId} failure identity mismatch`)
       }
     } catch {
       errors.push(`trace ${entry.caseId} is invalid`)

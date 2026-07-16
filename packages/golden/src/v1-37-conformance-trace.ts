@@ -761,11 +761,12 @@ const validateTransitionEventStream = (
   }
 
   const finalTransition = input.transitions.at(-1)
-  if (input.resultClass === "success" && finalTransition === undefined) {
-    fail("TRACE_RESULT_INVALID")
-  }
   const finalTerminalStatus = finalTransition?.terminalStatus ?? null
-  if (input.resultClass === "success" && finalTerminalStatus === null) {
+  if (
+    input.resultClass === "success" &&
+    finalTransition !== undefined &&
+    finalTerminalStatus === null
+  ) {
     fail("TRACE_RESULT_INVALID")
   }
   if (finalTerminalStatus === null) {
@@ -893,6 +894,16 @@ const validateStateChronology = (
   }
 
   const invocationOrdinal = input.failure?.invocationOrdinal
+  if (input.resultClass === "success") {
+    const finalInvocation = input.invocations.at(-1)
+    if (
+      finalInvocation === undefined ||
+      input.finalStateHash !== finalInvocation.afterStateHash
+    ) {
+      fail("TRACE_RESULT_INVALID")
+    }
+    return
+  }
   if (
     invocationOrdinal === null ||
     invocationOrdinal === undefined ||

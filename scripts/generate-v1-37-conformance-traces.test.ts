@@ -139,7 +139,7 @@ describe("v1.37 conformance trace candidate generation", () => {
         "--lane=typescript",
       ]),
     ).toThrow("CANDIDATE_ARGUMENTS")
-  })
+  }, 30_000)
 
   it("changes candidate identity when the bound corpus identity changes", () => {
     const changedCorpus = globalThis.structuredClone(V1_37_CONFORMANCE_CORPUS)

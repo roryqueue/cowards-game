@@ -397,7 +397,6 @@ const semanticallyInvalidMutationFields = new Set([
   "transition.failureStatus",
   "transition.terminalHash",
   "transition.accumulatedTraceRoot",
-  "transitions.length",
   "finalStateHash",
   "transitionTraceRoot",
   "failure.resultClass",
@@ -444,6 +443,33 @@ const expectDivergence = (
 }
 
 describe("v1.37 canonical conformance trace", () => {
+  it("represents a successful raw-envelope admission without gameplay transitions", () => {
+    const input = successfulInput()
+    const invocation = {
+      ...input.invocations[0]!,
+      beforeStateHash: hash("a"),
+      afterStateHash: hash("a"),
+      beforeMemoryHash: hash("b"),
+      afterMemoryHash: hash("b"),
+      beforeObjectiveHash: hash("c"),
+      afterObjectiveHash: hash("c"),
+      gameplayMutation: false,
+      memoryMutation: false,
+    }
+    const trace = projectCanonicalConformanceTrace({
+      ...input,
+      caseId: "boundary-numeric-negative-zero",
+      invocations: [invocation],
+      transitions: [],
+      finalStateHash: invocation.afterStateHash,
+      outcomeHash: hash("d"),
+    })
+
+    expect(trace.resultClass).toBe("success")
+    expect(trace.transitions).toEqual([])
+    expect(trace.invocations).toEqual([invocation])
+  })
+
   it("projects one immutable transition-complete hash-only success trace", () => {
     const trace = projectCanonicalConformanceTrace(
       successfulInput({ fullTrace: true }),
