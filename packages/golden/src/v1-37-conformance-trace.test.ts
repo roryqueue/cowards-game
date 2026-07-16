@@ -868,4 +868,31 @@ describe("v1.37 canonical conformance trace", () => {
       )
     }
   })
+
+  it("exports one read-only corpus and trace contract without golden-writing authority", async () => {
+    const entrypoint = await import("./index.js")
+
+    expect(entrypoint).toMatchObject({
+      V1_37_CONFORMANCE_CORPUS,
+      V1_37_CONFORMANCE_CORPUS_ROOT,
+      projectCanonicalConformanceTrace,
+      hashCanonicalConformanceTrace,
+      compareCanonicalConformanceTrace,
+    })
+    expect(Object.keys(entrypoint)).not.toEqual(
+      expect.arrayContaining([
+        "approveGolden",
+        "generateGolden",
+        "promoteGolden",
+        "updateGolden",
+        "writeGolden",
+        "sourceBytes",
+        "artifactBytes",
+        "strategyMemory",
+        "soldierMemory",
+        "objective",
+        "diagnostics",
+      ]),
+    )
+  })
 })
