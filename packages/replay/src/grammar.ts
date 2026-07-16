@@ -905,7 +905,7 @@ export const advanceCurrentChronicleGrammar = (
       )
       return false
     }
-      return true
+    return true
   }
   const registerRoundPlayer = (playerId: string): void => {
     if (slots.size > 0 || roundActivationActors.length > 0) {
@@ -947,7 +947,9 @@ export const advanceCurrentChronicleGrammar = (
     }
   }
   const requireClosedRoundSlots = (): boolean => {
-    const unclosed = [...slots.values()].sort(slotOrder).find((slot) => !slot.closed)
+    const unclosed = [...slots.values()]
+      .sort(slotOrder)
+      .find((slot) => !slot.closed)
     if (unclosed === undefined) return true
     errors.push(
       error(
