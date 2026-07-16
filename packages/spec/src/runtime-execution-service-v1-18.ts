@@ -476,7 +476,13 @@ const RuntimeExecutionServiceSuccessResponseV118Schema = z
       canonicalSha256(response.result.terminal) !==
         canonicalSha256(claim.terminal) ||
       canonicalSha256(response.result.accounting) !==
-        canonicalSha256(claim.accounting)
+        canonicalSha256(claim.accounting) ||
+      canonicalSha256({
+        resultClass: response.result.resultClass,
+        ownership: response.result.ownership,
+        retryable: response.result.retryable,
+        mutationStatus: response.result.mutationStatus,
+      }) !== canonicalSha256(claim.result)
     ) {
       context.addIssue({
         code: "custom",

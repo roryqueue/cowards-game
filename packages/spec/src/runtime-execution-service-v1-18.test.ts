@@ -114,6 +114,26 @@ describe("runtime execution service v1.18 additive contract", () => {
     expect(RuntimeExecutionServiceResponseV118Schema.parse(response)).toEqual(
       response,
     )
+    expect(
+      RuntimeExecutionServiceResponseV118Schema.safeParse({
+        ...response,
+        result: {
+          ...response.result,
+          semanticReceipt: {
+            ...response.result.semanticReceipt,
+            claim: {
+              ...response.result.semanticReceipt.claim,
+              result: {
+                resultClass: "system_failure",
+                ownership: "system",
+                retryable: true,
+                mutationStatus: "none",
+              },
+            },
+          },
+        },
+      }).success,
+    ).toBe(false)
   })
 
   it("rejects omissions, additions, singular certificate fields, and cross-version relabeling", () => {
