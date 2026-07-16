@@ -171,7 +171,11 @@ describe("recordChronicleFromExecution", () => {
     const terminalIndex = original.findIndex(
       ({ terminalStatus }) => terminalStatus !== null,
     )
+    const multiEventIndex = original.findIndex(
+      ({ orderedEvents }) => orderedEvents.length > 1,
+    )
     expect(terminalIndex).toBeGreaterThanOrEqual(0)
+    expect(multiEventIndex).toBeGreaterThanOrEqual(0)
     const terminal = original[terminalIndex]!
     const differentHash = `sha256:${"f".repeat(64)}`
 
@@ -198,7 +202,7 @@ describe("recordChronicleFromExecution", () => {
           : transition,
       ),
       original.map((transition, index) =>
-        index === 0
+        index === multiEventIndex
           ? {
               ...transition,
               orderedEvents: [...transition.orderedEvents].reverse(),

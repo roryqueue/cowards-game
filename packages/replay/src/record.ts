@@ -18,7 +18,10 @@ import type {
   MatchOutcome,
   PlayerId,
 } from "@cowards/spec"
-import { resolveCanonicalCompatibilityTuple } from "@cowards/spec"
+import {
+  encodeCanonicalJson,
+  resolveCanonicalCompatibilityTuple,
+} from "@cowards/spec"
 
 const STATE_HASH_DOMAIN =
   "cowards-game:candidate-game-state-projection:v1" as const
@@ -26,8 +29,14 @@ const HASH_PATTERN = /^sha256:[0-9a-f]{64}$/u
 const TRANSITION_KIND_PATTERN = /^[A-Z][A-Z0-9_:-]{0,63}$/u
 const RECORDER_HASH_DOMAIN =
   "cowards-game:candidate-recorder-material:v1" as const
+const RECORDED_TRANSITION_FIELD_HASH_DOMAIN =
+  "cowards-game:recorded-canonical-transition-v1.37:field:v1" as const
+const RECORDED_TRANSITION_EMPTY_ROOT_DOMAIN =
+  "cowards-game:recorded-canonical-transition-v1.37:empty:v1" as const
+const RECORDED_TRANSITION_STEP_ROOT_DOMAIN =
+  "cowards-game:recorded-canonical-transition-v1.37:step:v1" as const
 
-interface RecorderCoordinates {
+export interface RecordedCanonicalTransitionCoordinatesV137 {
   readonly phaseNumber: number
   readonly roundNumber: 1 | 2 | 3 | 4
   readonly stage: string
@@ -39,11 +48,47 @@ interface RecorderCoordinates {
   readonly soldierId?: string | undefined
 }
 
+export interface RecordedCanonicalEventV137 {
+  readonly type: string
+  readonly sequence: number
+  readonly payload: JsonValue
+  readonly context?: ChronicleEventContext | undefined
+  readonly privacy: "public" | "owner"
+  readonly privatePayloadHash: string | null
+}
+
+export interface RecordedCanonicalTransitionV137 {
+  readonly ordinal: number
+  readonly kind: string
+  readonly semanticTupleId: string
+  readonly coordinates: RecordedCanonicalTransitionCoordinatesV137
+  readonly resultClass: "success" | "player_violation"
+  readonly canonicalOutputHash: string
+  readonly strategyMemoryHash: string
+  readonly soldierMemoryHash: string
+  readonly objectiveHash: string
+  readonly orderedEvents: readonly RecordedCanonicalEventV137[]
+  readonly orderedEventsHash: string
+  readonly beforeStateHash: string
+  readonly afterStateHash: string
+  readonly beforeMachineHash: string
+  readonly afterMachineHash: string
+  readonly terminalStatus: MatchOutcome | null
+  readonly failureStatus: null
+  readonly terminalHash: string | null
+  readonly accumulatedTraceRoot: string
+}
+
+type RecordedCanonicalTransitionMaterialV137 = Omit<
+  RecordedCanonicalTransitionV137,
+  "accumulatedTraceRoot"
+>
+
 interface RecorderTransition {
   readonly transitionKind: string
   readonly semanticTupleId: string
   readonly semanticTuple: Readonly<CanonicalCompatibilityTuple>
-  readonly coordinates: RecorderCoordinates
+  readonly coordinates: RecordedCanonicalTransitionCoordinatesV137
   readonly classification: string
   readonly events: readonly TransitionEventSummary[]
   readonly beforeState: Readonly<Record<string, unknown>>
@@ -120,6 +165,8 @@ export type RecordChronicleFromExecutionResult =
         readonly tuple: Readonly<CanonicalCompatibilityTuple>
       }
       readonly boundaryAnchors: readonly ChronicleBoundaryAnchor[]
+      readonly recordedTransitions: readonly RecordedCanonicalTransitionV137[]
+      readonly transitionTraceRoot: string
     }
   | {
       readonly ok: false
@@ -152,6 +199,85 @@ const codePointCompare = (left: string, right: string): number => {
     if (difference !== 0) return difference
   }
   return leftPoints.length - rightPoints.length
+}
+
+const hashCanonicalTraceField = (label: string, value: JsonValue): string => {
+  const encoded = encodeCanonicalJson(value, { context: "canonical-manifest" })
+  if (!encoded.ok) {
+    throw new Error(
+      `RECORDED_TRANSITION_CANONICAL_JSON_INVALID:${label}:${encoded.error.code}`,
+    )
+  }
+  return `sha256:${createHash("sha256")
+    .update(`${RECORDED_TRANSITION_FIELD_HASH_DOMAIN}\0${label}\0`, "utf8")
+    .update(encoded.bytes)
+    .digest("hex")}`
+}
+
+const freezeClone = <T>(value: T): Readonly<T> => {
+  const clone = globalThis.structuredClone(value)
+  const pending: object[] =
+    typeof clone === "object" && clone !== null ? [clone] : []
+  while (pending.length > 0) {
+    const current = pending.pop()!
+    for (const child of Object.values(current)) {
+      if (
+        typeof child === "object" &&
+        child !== null &&
+        !Object.isFrozen(child)
+      ) {
+        pending.push(child)
+      }
+    }
+    Object.freeze(current)
+  }
+  return clone
+}
+
+const emptyRecordedTransitionTraceRootV137 = (): string =>
+  `sha256:${createHash("sha256")
+    .update(`${RECORDED_TRANSITION_EMPTY_ROOT_DOMAIN}\0`, "utf8")
+    .digest("hex")}`
+
+const recordedTransitionMaterial = (
+  transition: RecordedCanonicalTransitionV137,
+): RecordedCanonicalTransitionMaterialV137 => {
+  const { accumulatedTraceRoot: _accumulatedTraceRoot, ...material } =
+    transition
+  return material
+}
+
+const extendRecordedTransitionTraceRootV137 = (
+  previousTraceRoot: string,
+  material: RecordedCanonicalTransitionMaterialV137,
+): string => {
+  const encoded = encodeCanonicalJson(
+    {
+      previousTraceRoot,
+      transition: material,
+    } as unknown as JsonValue,
+    { context: "canonical-manifest" },
+  )
+  if (!encoded.ok) {
+    throw new Error(`RECORDED_TRANSITION_TRACE_INVALID:${encoded.error.code}`)
+  }
+  return `sha256:${createHash("sha256")
+    .update(`${RECORDED_TRANSITION_STEP_ROOT_DOMAIN}\0`, "utf8")
+    .update(encoded.bytes)
+    .digest("hex")}`
+}
+
+export const computeRecordedTransitionTraceRootV137 = (
+  transitions: readonly RecordedCanonicalTransitionV137[],
+): string => {
+  let root = emptyRecordedTransitionTraceRootV137()
+  for (const transition of transitions) {
+    root = extendRecordedTransitionTraceRootV137(
+      root,
+      recordedTransitionMaterial(transition),
+    )
+  }
+  return root
 }
 
 const projectState = (state: GameState) => ({
@@ -302,6 +428,120 @@ const readObject = (
   !Array.isArray(value)
     ? value
     : undefined
+
+const privateValues = (
+  events: readonly TransitionEventSummary[],
+  keys: readonly string[],
+): JsonValue[] =>
+  events.flatMap((event) => {
+    const payload = readObject(event.privatePayload)
+    if (payload === undefined) return []
+    return keys.flatMap((key) =>
+      Object.hasOwn(payload, key) ? [payload[key]!] : [],
+    )
+  })
+
+const recordedEvents = (
+  transition: RecorderTransition,
+  privateEventsBySequence: ReadonlyMap<number, TransitionEventSummary>,
+): readonly RecordedCanonicalEventV137[] =>
+  Object.freeze(
+    transition.events.map((event) => {
+      const privateEvent = privateEventsBySequence.get(event.sequence)
+      const context =
+        event.context === undefined
+          ? undefined
+          : (freezeClone(event.context) as ChronicleEventContext)
+      return freezeClone({
+        type: event.type,
+        sequence: event.sequence,
+        payload: cloneControlledJson(event.payload),
+        ...(context === undefined ? {} : { context }),
+        privacy: event.privacy ?? "public",
+        privatePayloadHash:
+          privateEvent?.privatePayload === undefined
+            ? null
+            : hashCanonicalTraceField(
+                "private-event-payload",
+                privateEvent.privatePayload,
+              ),
+      }) as RecordedCanonicalEventV137
+    }),
+  )
+
+const projectRecordedTransitions = (
+  execution: CompletedRecorderExecution,
+): readonly RecordedCanonicalTransitionV137[] => {
+  const privateEventsBySequence = new Map(
+    execution.recorderMaterial.events.map((event) => [event.sequence, event]),
+  )
+  let accumulatedTraceRoot = emptyRecordedTransitionTraceRootV137()
+  const transitions = execution.transitions.map((transition) => {
+    const orderedEvents = recordedEvents(transition, privateEventsBySequence)
+    const rawPrivateEvents = transition.events.map(
+      ({ sequence }) => privateEventsBySequence.get(sequence)!,
+    )
+    const terminalHash =
+      transition.terminalStatus === null && transition.failureStatus === null
+        ? null
+        : hashCanonicalTraceField("terminal", {
+            terminalStatus: transition.terminalStatus,
+            failureStatus: transition.failureStatus,
+          } as JsonValue)
+    const material: RecordedCanonicalTransitionMaterialV137 = {
+      ordinal: transition.coordinates.ordinal,
+      kind: transition.transitionKind,
+      semanticTupleId: transition.semanticTupleId,
+      coordinates: freezeClone(
+        transition.coordinates,
+      ) as RecordedCanonicalTransitionCoordinatesV137,
+      resultClass: transition.classification as "success" | "player_violation",
+      canonicalOutputHash: hashCanonicalTraceField(
+        "canonical-output",
+        orderedEvents.map(({ type, payload, privatePayloadHash }) => ({
+          type,
+          payload,
+          privatePayloadHash,
+        })) as JsonValue,
+      ),
+      strategyMemoryHash: hashCanonicalTraceField(
+        "strategy-memory",
+        privateValues(rawPrivateEvents, ["strategyMemory"]),
+      ),
+      soldierMemoryHash: hashCanonicalTraceField(
+        "soldier-memory",
+        privateValues(rawPrivateEvents, ["soldierMemory"]),
+      ),
+      objectiveHash: hashCanonicalTraceField(
+        "objective",
+        privateValues(rawPrivateEvents, ["objective", "objectivePayload"]),
+      ),
+      orderedEvents,
+      orderedEventsHash: hashCanonicalTraceField("ordered-events", [
+        ...orderedEvents,
+      ] as unknown as JsonValue),
+      beforeStateHash: transition.beforeStateHash,
+      afterStateHash: transition.afterStateHash,
+      beforeMachineHash: transition.beforeMachineHash,
+      afterMachineHash: transition.afterMachineHash,
+      terminalStatus:
+        transition.terminalStatus === null
+          ? null
+          : (freezeClone(transition.terminalStatus) as MatchOutcome),
+      failureStatus: null,
+      terminalHash,
+    }
+    accumulatedTraceRoot = extendRecordedTransitionTraceRootV137(
+      accumulatedTraceRoot,
+      material,
+    )
+    return freezeClone({
+      ...material,
+      accumulatedTraceRoot,
+    }) as RecordedCanonicalTransitionV137
+  })
+  return Object.freeze(transitions)
+}
 
 const explicitOwner = (
   privatePayload: JsonValue | undefined,
@@ -690,6 +930,9 @@ export const recordChronicleFromExecution = ({
 
   const finalState = execution.recorderMaterial.finalState
   const { snapshots, anchors } = createSnapshots(execution.transitions)
+  const recordedTransitions = projectRecordedTransitions(execution)
+  const transitionTraceRoot =
+    computeRecordedTransitionTraceRootV137(recordedTransitions)
   const privateSections: ChroniclePrivateSections | undefined =
     Object.keys(byPlayerId).length === 0 ? undefined : { byPlayerId }
   const chronicle: Chronicle = {
@@ -719,5 +962,7 @@ export const recordChronicleFromExecution = ({
       tuple: globalThis.structuredClone(first.semanticTuple),
     },
     boundaryAnchors: anchors,
+    recordedTransitions,
+    transitionTraceRoot,
   }
 }
