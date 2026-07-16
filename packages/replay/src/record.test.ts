@@ -4,7 +4,10 @@ import { MATCH_KERNEL, type StrategyRuntime } from "@cowards/engine"
 import { adaptRuntimeForCurrentKernel } from "@cowards/engine/test/current-kernel-runtime"
 import type { SoldierBrainInput, StrategyInput } from "@cowards/spec"
 import { describe, expect, it } from "vitest"
-import { recordChronicleFromExecution } from "./record.js"
+import {
+  computeRecordedTransitionTraceRootV137,
+  recordChronicleFromExecution,
+} from "./record.js"
 
 const runtime: StrategyRuntime = {
   selectActivations(input: StrategyInput) {
@@ -105,6 +108,121 @@ describe("recordChronicleFromExecution", () => {
       tupleId: MATCH_KERNEL.tupleId,
       tuple: MATCH_KERNEL.tuple,
     })
+  })
+
+  it("records a transition-complete immutable D-06/D-14 stream with hash-only private evidence", () => {
+    const recorded = recordChronicleFromExecution({
+      execution: run(),
+      metadata,
+    })
+
+    expect(recorded.ok).toBe(true)
+    if (!recorded.ok) return
+
+    expect(recorded.recordedTransitions.length).toBeGreaterThan(0)
+    expect(recorded.transitionTraceRoot).toMatch(/^sha256:[0-9a-f]{64}$/u)
+    expect(
+      computeRecordedTransitionTraceRootV137(recorded.recordedTransitions),
+    ).toBe(recorded.transitionTraceRoot)
+
+    recorded.recordedTransitions.forEach((transition, ordinal) => {
+      expect(transition.ordinal).toBe(ordinal)
+      expect(transition.kind.length).toBeGreaterThan(0)
+      expect(transition.coordinates.ordinal).toBe(ordinal)
+      expect(transition.beforeStateHash).toMatch(/^sha256:[0-9a-f]{64}$/u)
+      expect(transition.afterStateHash).toMatch(/^sha256:[0-9a-f]{64}$/u)
+      expect(transition.orderedEvents.length).toBeGreaterThan(0)
+      expect(transition.orderedEventsHash).toMatch(/^sha256:[0-9a-f]{64}$/u)
+      expect(transition.canonicalOutputHash).toMatch(/^sha256:[0-9a-f]{64}$/u)
+      expect(transition.strategyMemoryHash).toMatch(/^sha256:[0-9a-f]{64}$/u)
+      expect(transition.soldierMemoryHash).toMatch(/^sha256:[0-9a-f]{64}$/u)
+      expect(transition.objectiveHash).toMatch(/^sha256:[0-9a-f]{64}$/u)
+      expect(transition.accumulatedTraceRoot).toMatch(/^sha256:[0-9a-f]{64}$/u)
+      expect(Object.isFrozen(transition)).toBe(true)
+      expect(Object.isFrozen(transition.coordinates)).toBe(true)
+      expect(Object.isFrozen(transition.orderedEvents)).toBe(true)
+      expect(
+        transition.orderedEvents.every(
+          (event) =>
+            Object.isFrozen(event) &&
+            (event.context === undefined || Object.isFrozen(event.context)),
+        ),
+      ).toBe(true)
+    })
+
+    const serialized = JSON.stringify(recorded.recordedTransitions)
+    expect(serialized).not.toContain('"strategyMemory"')
+    expect(serialized).not.toContain('"soldierMemory"')
+    expect(serialized).not.toContain('"objectivePayload"')
+    expect(serialized).not.toContain('"awarenessGrid"')
+  })
+
+  it("changes the D-14 root for every one-field and ordering mutation", () => {
+    const recorded = recordChronicleFromExecution({
+      execution: run(),
+      metadata,
+    })
+    expect(recorded.ok).toBe(true)
+    if (!recorded.ok) return
+
+    const original = recorded.recordedTransitions
+    const root = recorded.transitionTraceRoot
+    const first = original[0]!
+    const terminalIndex = original.findIndex(
+      ({ terminalStatus }) => terminalStatus !== null,
+    )
+    expect(terminalIndex).toBeGreaterThanOrEqual(0)
+    const terminal = original[terminalIndex]!
+    const differentHash = `sha256:${"f".repeat(64)}`
+
+    const mutations = [
+      original.map((transition, index) =>
+        index === 0
+          ? { ...transition, kind: `${first.kind}:MUTATED` }
+          : transition,
+      ),
+      original.map((transition, index) =>
+        index === 0
+          ? {
+              ...transition,
+              coordinates: {
+                ...transition.coordinates,
+                stage: `${transition.coordinates.stage}:mutated`,
+              },
+            }
+          : transition,
+      ),
+      original.map((transition, index) =>
+        index === 0
+          ? { ...transition, beforeStateHash: differentHash }
+          : transition,
+      ),
+      original.map((transition, index) =>
+        index === 0
+          ? {
+              ...transition,
+              orderedEvents: [...transition.orderedEvents].reverse(),
+            }
+          : transition,
+      ),
+      original.map((transition, index) =>
+        index === 0
+          ? { ...transition, orderedEventsHash: differentHash }
+          : transition,
+      ),
+      original.map((transition, index) =>
+        index === terminalIndex
+          ? { ...transition, terminalStatus: null, terminalHash: null }
+          : transition,
+      ),
+      original.slice(1),
+      [...original, terminal],
+      [...original].reverse(),
+    ]
+
+    for (const mutated of mutations) {
+      expect(computeRecordedTransitionTraceRootV137(mutated)).not.toBe(root)
+    }
   })
 
   it("stores private payloads only under an explicit owner and exposes only a reference", () => {
