@@ -302,7 +302,7 @@ Plans:
 
 **Wave 9 — managed signing and reviewed trust activation**
 
-- [ ] 259-22-PLAN.md — Sign, verify, import, and promote artifact-derived certificates.
+- [x] 259-22-PLAN.md — Sign, verify, import, and promote artifact-derived certificates.
 
 **Wave 10 — integrated conformance closure**
 

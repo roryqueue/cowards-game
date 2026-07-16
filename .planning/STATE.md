@@ -5,16 +5,16 @@ milestone_name: Rules Integrity and Strategy Evaluation Foundations — ACTIVE
 current_phase: 259
 current_phase_name: executable-four-language-and-chronicle-conformance
 status: ready
-stopped_at: Phase 259 Wave 8 complete; Wave 9 ready
-last_updated: "2026-07-16T17:46:00-04:00"
+stopped_at: Phase 259 Wave 9 complete; Wave 10 ready
+last_updated: "2026-07-16T18:11:00-04:00"
 last_activity: 2026-07-16
-last_activity_desc: Phase 259 Wave 8 added authenticated structural Go completion and a non-circular plural import trust-root bootstrap
+last_activity_desc: Phase 259 Wave 9 installed four managed signed certificates under a distinct bootstrapped operator root
 progress:
   total_phases: 6
   completed_phases: 3
   total_plans: 86
-  completed_plans: 84
-  percent: 98
+  completed_plans: 85
+  percent: 99
 ---
 
 # State: Coward's Game
@@ -29,9 +29,9 @@ See: `.planning/PROJECT.md` (updated 2026-07-12)
 ## Current Position
 
 Phase: 259 (executable-four-language-and-chronicle-conformance) — IN PROGRESS
-Plan: 29 of 31
-Status: Waves 1-8 complete after authenticated structural Go completion and exact plural import-root bootstrap; Wave 9 ready
-Last activity: 2026-07-16 — Closed Phase 259 Wave 8 with protected import-root high-water, token-protected completion documents, strict v1.18 receipts, and no Go Chronicle semantic reimplementation
+Plan: 30 of 31
+Status: Waves 1-9 complete after distinct managed producer signing, bootstrapped operator authorization, four exact imports, and independent promotion; Wave 10 ready
+Last activity: 2026-07-16 — Closed Phase 259 Wave 9 with four signed/imported real-language certificates and exact all-four closure
 
 Progress: [██████████] 98%
 
@@ -45,7 +45,7 @@ Progress: [██████████] 98%
 - Public/default output remains source, artifact, memory, objective, diagnostics, runtime-internal, dispute-internal, recovery-sensitive, and operator-detail safe.
 - v1.37 preserves valid v1.4 gameplay and immutable historical evidence; any semantic delta requires explicit compatibility approval.
 - Optional Cycle-start Backstab removal and post-Advance HOLD/END_ACTIVATION are not required for v1.37 and proceed only after equivalence proof and approval.
-- TypeScript, Python, Rust, and Zig reviewed candidates remain unsigned and non-promoting until managed signing, immediate verification, append-only import, and all-four closure complete.
+- TypeScript, Python, Rust, and Zig have one exact reviewed, managed-signed, append-only imported certificate each; promotion still requires current identity, freshness, revocation, lane control, and all-four closure.
 - Counted Rust/Zig conformance uses the exact pinned Wasmtime Winch low-memory settings because default Cranelift execution exceeds the v1.18 64 MiB lane ceiling.
 - Fresh-run equality persists deterministic proof facts after validating complete raw receipts; platform-variable exit details cannot manufacture evidence drift or weaken the underlying fail-closed checks.
 - Phase-259 conformance certificates extend the existing append-only runtime evidence authority with exactly three immutable run records; runtime-producer trust and plural operator-import trust remain distinct.
@@ -53,6 +53,7 @@ Progress: [██████████] 98%
 - The additive v1.18 service/receipt envelope binds the canonical v1.17 gameplay tuple; execution evidence does not invent a second semantic version.
 - Default v1.18 service output remains receipt-only, while Chronicle/final-state documents cross only the constant-time token-protected internal completion envelope and must match signed canonical hashes.
 - The existing plural operator import descriptor is canonical-hashed, independently pinned, opened without symlink following, reread inside a serializable transaction, and installed under an append-only monotonic generation.
+- The conformance producer key and operator import key are distinct; the import envelope signer must equal the unique current bootstrapped high-water root inside the serializable import transaction.
 
 ## Deferred Items
 
@@ -70,8 +71,8 @@ Progress: [██████████] 98%
 **Resume file:** None
 
 Last session: 2026-07-16T17:46:00-04:00
-Stopped at: Phase 259 Wave 8 complete; Wave 9 ready
-Next command: `$gsd-execute-phase 259` Wave 9 for plan 259-22.
+Stopped at: Phase 259 Wave 9 complete; Wave 10 ready
+Next command: `$gsd-execute-phase 259` Wave 10 for plan 259-23.
 
 ## Performance Metrics
 
@@ -119,6 +120,7 @@ Next command: `$gsd-execute-phase 259` Wave 9 for plan 259-22.
 | Phase 259 P20 | 18min | 1 TDD task + inline review | 2 Go files; full Go/parity gates |
 | Phase 259 P21 | 31min | 2 tasks + review | authenticated Go/service/persistence completion; full Go/parity/typecheck/lint |
 | Phase 259 P28 | 23min | 2 TDD tasks + review | plural import-root bootstrap; 46 PostgreSQL/CLI tests |
+| Phase 259 P22 | 28min | 3 tasks + review | four managed signatures/imports, production trust activation, independent promotion |
 
 ## Decisions
 

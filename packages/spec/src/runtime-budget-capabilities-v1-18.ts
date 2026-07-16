@@ -2,6 +2,11 @@ import {
   RUNTIME_BUDGET_PROFILE_V1_18,
   RUNTIME_BUDGET_PROFILE_V1_18_SHA256,
 } from "./runtime-budget-profile-v1-18.js"
+import {
+  evaluateRuntimeConformanceFreshnessV117,
+  type RuntimeConformanceIdentityBindingsV117,
+  type RuntimeConformanceVerifiedSnapshotV117,
+} from "./runtime-conformance-certificate-v1-17.js"
 
 const deepFreeze = <T>(value: T): Readonly<T> => {
   if (value !== null && typeof value === "object" && !Object.isFrozen(value)) {
@@ -127,6 +132,11 @@ export type RuntimeBudgetCapabilitySystemFailureCodeV118 =
   | "IDENTITY_INCOMPLETE"
   | "DEFENSE_IN_DEPTH_INCOMPLETE"
   | "WASMTIME_METER_SUBSTITUTION"
+  | "CONFORMANCE_CERTIFICATE_NOT_INSTALLED"
+  | "CONFORMANCE_CERTIFICATE_STALE"
+  | "CONFORMANCE_CERTIFICATE_REVOKED"
+  | "CONFORMANCE_LANE_DISABLED"
+  | "CONFORMANCE_IDENTITY_MISMATCH"
 
 export type RuntimeBudgetCapabilityLaneSnapshotV118 =
   | Readonly<{
@@ -413,10 +423,113 @@ export const evaluateRuntimeBudgetCapabilityV118 = (
   })
 }
 
+const installedConformanceCertificates = Object.freeze({
+  typescript: Object.freeze({
+    certificateId:
+      "certificate:v1.37:typescript:bf2a1f23828f6f8763a08000",
+    certificateSha256:
+      "sha256:1cad2c408f870e74b79d38262f764b2df633b34d6de7cd099d31fa0f198441e5",
+    authorityGeneration: "2",
+  }),
+  python: Object.freeze({
+    certificateId: "certificate:v1.37:python:bf2a1f23828f6f8763a08000",
+    certificateSha256:
+      "sha256:355fb579bb9549387fc1e4707001c7228045932cd9cd72fd3f1d3ffea404f49b",
+    authorityGeneration: "2",
+  }),
+  rust: Object.freeze({
+    certificateId: "certificate:v1.37:rust:bf2a1f23828f6f8763a08000",
+    certificateSha256:
+      "sha256:fac4293f1e402de92a53690946247614ac6d992d760af2e803b7877107cce92c",
+    authorityGeneration: "2",
+  }),
+  zig: Object.freeze({
+    certificateId: "certificate:v1.37:zig:bf2a1f23828f6f8763a08000",
+    certificateSha256:
+      "sha256:c1783e06d9db67aa564893f12372371e9d73383bdd7d412640650b0169724d9f",
+    authorityGeneration: "2",
+  }),
+} as const)
+
+export interface CertifyRuntimeBudgetCapabilityV118Input {
+  evidence: RuntimeBudgetCapabilityEvidenceV118
+  certificate: Readonly<RuntimeConformanceVerifiedSnapshotV117>
+  currentIdentity: RuntimeConformanceIdentityBindingsV117
+  verificationInstant: string
+  authorityGeneration: string
+  certificateRevoked: boolean
+  laneEnabled: boolean
+}
+
 /**
- * Plan 24 deliberately cannot promote a lane. Plan 22 will admit exact verified
- * certificate snapshots into this same predicate; candidate declarations and
- * cloned objects are rejected by the verifier-known snapshot boundary.
+ * Promotes only a verifier-issued, current certificate whose exact installed
+ * ID/hash/generation was produced by the reviewed Plan-22 import. Database
+ * revocation and lane-control state remain mandatory live inputs.
+ */
+export const certifyRuntimeBudgetCapabilityV118 = (
+  input: CertifyRuntimeBudgetCapabilityV118Input,
+): RuntimeBudgetCapabilityLaneSnapshotV118 => {
+  const candidate = evaluateRuntimeBudgetCapabilityV118(input.evidence)
+  const laneId = candidate.laneId
+  if (candidate.kind !== "certificate_candidate") return candidate
+  const installed = installedConformanceCertificates[laneId]
+  if (
+    input.certificate.certificateId !== installed.certificateId ||
+    input.certificate.certificateSha256 !== installed.certificateSha256 ||
+    input.authorityGeneration !== installed.authorityGeneration
+  ) {
+    return failure(laneId, "CONFORMANCE_CERTIFICATE_NOT_INSTALLED")
+  }
+  if (
+    input.certificate.identity.languageId !== laneId ||
+    input.certificate.identity.laneId !== input.currentIdentity.laneId ||
+    input.certificate.identity.artifactSha256 !==
+      input.evidence.identityPins.artifactSha256 ||
+    input.certificate.identity.adapterBuildSha256 !==
+      input.evidence.identityPins.adapterBuildSha256 ||
+    input.certificate.identity.toolchainSha256 !==
+      input.evidence.identityPins.runtimeCompilerSha256 ||
+    input.certificate.identity.budgetPolicySha256 !==
+      RUNTIME_BUDGET_PROFILE_V1_18_SHA256
+  ) {
+    return failure(laneId, "CONFORMANCE_IDENTITY_MISMATCH")
+  }
+  let current = false
+  try {
+    current =
+      evaluateRuntimeConformanceFreshnessV117({
+        certificate: input.certificate,
+        currentIdentity: input.currentIdentity,
+        verificationInstant: input.verificationInstant,
+      }).status === "current"
+  } catch {
+    return failure(laneId, "CONFORMANCE_CERTIFICATE_NOT_INSTALLED")
+  }
+  if (!current) return failure(laneId, "CONFORMANCE_CERTIFICATE_STALE")
+  if (input.certificateRevoked) {
+    return failure(laneId, "CONFORMANCE_CERTIFICATE_REVOKED")
+  }
+  if (!input.laneEnabled) {
+    return failure(laneId, "CONFORMANCE_LANE_DISABLED")
+  }
+  return registerSnapshot({
+    kind: "counted_current",
+    laneId,
+    supervisorEligible: true,
+    certificateEligible: true,
+    countedEligible: true,
+    safeCode: "CONFORMANCE_CERTIFICATE_CURRENT",
+    budgetProfileSha256: RUNTIME_BUDGET_PROFILE_V1_18_SHA256,
+    certificateId: input.certificate.certificateId,
+    certificateSha256: input.certificate
+      .certificateSha256 as `sha256:${string}`,
+    authorityGeneration: input.authorityGeneration,
+  })
+}
+
+/**
+ * Candidate declarations and cloned objects are rejected by the
+ * verifier-known snapshot boundary.
  */
 export const requireAllFourConformanceLanesV118 = (
   snapshots: readonly RuntimeBudgetCapabilityLaneSnapshotV118[],

@@ -30,7 +30,7 @@ key-files:
 key-decisions:
   - "Bootstrap extends RuntimeEvidenceAuthorityImportTrustRoot[]; it does not add a singular root or allow a runtime producer key to authorize imports."
   - "The selected root is pinned by canonical descriptor bytes, descriptor SHA-256, producer ID, key ID, trust domain, Ed25519 SPKI fingerprint, and monotonic generation."
-  - "The committed receipt is a public fixture proof; production installation still requires operator-supplied protected descriptor bytes and independent expected pins."
+  - "Plan 22 advanced the append-only ledger to production root generation 2; the committed receipt remains public-key-only while production use still requires protected descriptor bytes and independent expected pins."
 patterns-established:
   - "First-use trust is authenticated outside the database and reread inside one serializable locked transaction before append-only installation."
 requirements-completed: [CONF-04, CONF-05]
@@ -91,17 +91,16 @@ status: complete
 - PostgreSQL migration, publisher, and bootstrap suites: 46/46 passed.
 - Persistence typecheck and focused formatting: passed.
 - Protected working-tree baseline: exact.
-- Repeated real bootstrap against the local PostgreSQL authority ledger: idempotent with the committed receipt unchanged.
+- Repeated real bootstrap against the local PostgreSQL authority ledger: idempotent at production generation `2` after Plan-22 root activation.
 
 ## Historical and Authority Boundaries
 
 - No gameplay, Chronicle, Strategy observation, Action legality, event order, or outcome changed.
 - v1.4 evidence and current runtime dispatch remain untouched.
-- The fixture receipt proves the mechanism only; it does not promote a production lane or substitute for the external operator configuration required by Plan 22.
+- The receipt contains public root identity only and cannot substitute for either the protected operator signer or the separately protected runtime producer signer.
 
 ## Self-Check: PASSED
 
 - All declared files exist.
 - RED, GREEN, review-fix, database, and artifact evidence exist.
 - Only the two pre-existing protected working-tree files remain dirty.
-

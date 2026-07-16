@@ -2,7 +2,10 @@ import { Buffer } from "node:buffer"
 import { createHash, verify as verifySignature } from "node:crypto"
 import { encodeCanonicalJson } from "./canonical-json-encode.js"
 import { isCanonicalSafeRegistryGenerationV117 } from "./runtime-evidence-v1-17.js"
+import { RUNTIME_CONFORMANCE_TRUSTED_PRODUCERS_V1_17 } from "./runtime-conformance-trusted-producers-v1-17.js"
 import type { JsonValue } from "./types.js"
+
+export { RUNTIME_CONFORMANCE_TRUSTED_PRODUCERS_V1_17 } from "./runtime-conformance-trusted-producers-v1-17.js"
 
 export const RUNTIME_CONFORMANCE_LANGUAGES_V1_17 = Object.freeze([
   "typescript",
@@ -164,10 +167,6 @@ export class RuntimeConformanceCertificateV117Error extends Error {
 const fail = (code: string): never => {
   throw new RuntimeConformanceCertificateV117Error(code)
 }
-
-/** Production stays empty until later Phase-259 plans install reviewed producer trust. */
-export const RUNTIME_CONFORMANCE_TRUSTED_PRODUCERS_V1_17: readonly RuntimeConformanceTrustedProducerV117[] =
-  Object.freeze([])
 
 const CERTIFICATE_DOMAIN =
   "cowards-game:runtime-conformance-certificate:v1.17" as const

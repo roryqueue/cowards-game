@@ -1054,6 +1054,7 @@ export interface ImportRuntimeConformanceCertificateV117Input {
   trustedProducers?: readonly RuntimeConformanceTrustedProducerV117[]
   importEnvelope: RuntimeEvidenceAuthorityImportEnvelope
   trustedImportAuthorities: readonly RuntimeEvidenceAuthorityImportTrustRoot[]
+  requiredTrustRootBootstrap?: RuntimeEvidenceAuthorityImportTrustRootBootstrapReceipt
 }
 
 export interface ImportedRuntimeConformanceCertificateV117 {
@@ -1105,6 +1106,29 @@ export const importRuntimeConformanceCertificateV117 = async (
     input.expectedRunBinding,
   )
   const importEnvelope = globalThis.structuredClone(input.importEnvelope)
+  const requiredTrustRootBootstrap =
+    input.requiredTrustRootBootstrap === undefined
+      ? undefined
+      : globalThis.structuredClone(input.requiredTrustRootBootstrap)
+  if (input.mode === "production" && requiredTrustRootBootstrap === undefined) {
+    return fail(
+      "IMPORT_ROOT_BOOTSTRAP_REQUIRED",
+      "Production conformance import requires a bootstrapped trust-root high-water receipt.",
+    )
+  }
+  if (
+    requiredTrustRootBootstrap !== undefined &&
+    ((requiredTrustRootBootstrap.status !== "installed" &&
+      requiredTrustRootBootstrap.status !== "idempotent") ||
+      !SHA256.test(requiredTrustRootBootstrap.descriptorSha256) ||
+      !SHA256.test(requiredTrustRootBootstrap.publicKeyFingerprint) ||
+      !/^(0|[1-9][0-9]*)$/u.test(requiredTrustRootBootstrap.generation))
+  ) {
+    return fail(
+      "IMPORT_ROOT_BOOTSTRAP_MISMATCH",
+      "Import trust-root bootstrap receipt is invalid.",
+    )
+  }
   const snapshot = verifyRuntimeConformanceCertificateV117({
     mode: input.mode,
     certificate,
@@ -1134,6 +1158,13 @@ export const importRuntimeConformanceCertificateV117 = async (
     input.trustedImportAuthorities,
   )
   if (
+    (requiredTrustRootBootstrap !== undefined &&
+      (preflightImport.payload.producerId !==
+        requiredTrustRootBootstrap.producerId ||
+        preflightImport.payload.producerKeyId !==
+          requiredTrustRootBootstrap.keyId ||
+        preflightImport.payload.trustDomain !==
+          requiredTrustRootBootstrap.trustDomain)) ||
     preflightImport.payload.targetCertificateId !== snapshot.certificateId ||
     preflightImport.payload.targetCertificateRecordHash !==
       snapshot.certificateSha256 ||
@@ -1375,6 +1406,77 @@ export const importRuntimeConformanceCertificateV117 = async (
     await client.query(
       "select pg_advisory_xact_lock(hashtext('cowards-game:runtime-conformance-certificate-import:v1.17'))",
     )
+    if (requiredTrustRootBootstrap !== undefined) {
+      const selectedRoots = input.trustedImportAuthorities.filter(
+        (root) =>
+          root.producerId === requiredTrustRootBootstrap.producerId &&
+          root.keyId === requiredTrustRootBootstrap.keyId &&
+          root.trustDomain === requiredTrustRootBootstrap.trustDomain,
+      )
+      const selectedRoot = selectedRoots[0]
+      if (selectedRoots.length !== 1 || selectedRoot === undefined) {
+        return fail(
+          "IMPORT_ROOT_BOOTSTRAP_MISMATCH",
+          "Selected import root does not match the bootstrapped high-water receipt.",
+        )
+      }
+      let selectedFingerprint: string
+      try {
+        selectedFingerprint = `sha256:${createHash("sha256")
+          .update(
+            createPublicKey(selectedRoot.publicKeyPem).export({
+              type: "spki",
+              format: "der",
+            }),
+          )
+          .digest("hex")}`
+      } catch {
+        return fail(
+          "IMPORT_ROOT_BOOTSTRAP_MISMATCH",
+          "Selected import root public key is invalid.",
+        )
+      }
+      const deployment = await client.query<{
+        descriptor_sha256: string
+        public_key_fingerprint: string
+        generation: string
+        current_generation: string
+      }>(
+        `select d.descriptor_sha256, d.public_key_fingerprint,
+                d.generation::text,
+                (h.next_generation - 1)::text as current_generation
+           from runtime_evidence_authority_import_trust_root_deployments d
+           cross join runtime_evidence_authority_import_trust_root_head h
+          where h.singleton = true
+            and d.producer_id = $1
+            and d.key_id = $2
+            and d.trust_domain = $3
+            and d.generation = $4::bigint
+          for share of d, h`,
+        [
+          requiredTrustRootBootstrap.producerId,
+          requiredTrustRootBootstrap.keyId,
+          requiredTrustRootBootstrap.trustDomain,
+          requiredTrustRootBootstrap.generation,
+        ],
+      )
+      const deployed = deployment.rows[0]
+      if (
+        deployed === undefined ||
+        deployed.generation !== requiredTrustRootBootstrap.generation ||
+        deployed.current_generation !== requiredTrustRootBootstrap.generation ||
+        deployed.descriptor_sha256 !==
+          requiredTrustRootBootstrap.descriptorSha256 ||
+        deployed.public_key_fingerprint !==
+          requiredTrustRootBootstrap.publicKeyFingerprint ||
+        selectedFingerprint !== requiredTrustRootBootstrap.publicKeyFingerprint
+      ) {
+        return fail(
+          "IMPORT_ROOT_BOOTSTRAP_MISMATCH",
+          "Import root is not the exact bootstrapped high-water deployment.",
+        )
+      }
+    }
     await insertStaticRecord(
       client,
       "runtime_evidence_verified_attestations",

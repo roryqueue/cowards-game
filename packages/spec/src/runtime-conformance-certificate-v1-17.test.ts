@@ -440,7 +440,19 @@ describe("runtime conformance certificate v1.17", () => {
       }),
     ).toThrow("STRICT_SHAPE")
 
-    expect(RUNTIME_CONFORMANCE_TRUSTED_PRODUCERS_V1_17).toEqual([])
+    expect(RUNTIME_CONFORMANCE_TRUSTED_PRODUCERS_V1_17).toHaveLength(1)
+    expect(RUNTIME_CONFORMANCE_TRUSTED_PRODUCERS_V1_17[0]).toMatchObject({
+      producerId: "cowards-runtime-conformance-producer-v1.37",
+      keyId: "cowards-runtime-conformance-key-v1.37",
+      trustDomain: "production",
+      managedIdentity: true,
+    })
+    expect(Object.isFrozen(RUNTIME_CONFORMANCE_TRUSTED_PRODUCERS_V1_17)).toBe(
+      true,
+    )
+    expect(
+      Object.isFrozen(RUNTIME_CONFORMANCE_TRUSTED_PRODUCERS_V1_17[0]),
+    ).toBe(true)
     const production = signFixture((value) => {
       value.trustDomain = "production"
     })

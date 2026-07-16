@@ -640,10 +640,19 @@ describe("runtime evidence v1.17 frozen contract", () => {
     }
   })
 
-  it("keeps the production managed-producer registry empty and rejects caller trust", () => {
+  it("uses only immutable managed production trust and rejects caller substitution", () => {
     const fixture = buildFixture()
-    expect(RUNTIME_EVIDENCE_TRUSTED_PRODUCERS_V1_17).toEqual([])
-    expect(RUNTIME_CONFORMANCE_TRUSTED_PRODUCERS_V1_17).toEqual([])
+    expect(RUNTIME_EVIDENCE_TRUSTED_PRODUCERS_V1_17).toHaveLength(1)
+    expect(RUNTIME_CONFORMANCE_TRUSTED_PRODUCERS_V1_17).toHaveLength(1)
+    expect(RUNTIME_EVIDENCE_TRUSTED_PRODUCERS_V1_17[0]).toEqual(
+      RUNTIME_CONFORMANCE_TRUSTED_PRODUCERS_V1_17[0],
+    )
+    expect(Object.isFrozen(RUNTIME_EVIDENCE_TRUSTED_PRODUCERS_V1_17)).toBe(
+      true,
+    )
+    expect(Object.isFrozen(RUNTIME_EVIDENCE_TRUSTED_PRODUCERS_V1_17[0])).toBe(
+      true,
+    )
     expect(() =>
       verifyRuntimeEvidenceAttestationV117({
         mode: "production",

@@ -13,6 +13,7 @@ import {
   type RuntimeConformanceIdentityBindingsV117,
   type RuntimeConformanceVerifiedSnapshotV117,
 } from "./runtime-conformance-certificate-v1-17.js"
+import { RUNTIME_CONFORMANCE_TRUSTED_PRODUCERS_V1_17 } from "./runtime-conformance-trusted-producers-v1-17.js"
 import {
   RUNTIME_EVIDENCE_EDGE_SCHEMA_V1_17,
   RUNTIME_EVIDENCE_GRAPH_NODE_KINDS_V1_17,
@@ -49,9 +50,12 @@ export interface RuntimeEvidenceTrustedProducerV117 {
   publicKeyPem: string
 }
 
-/** Production remains deliberately empty until Phase 259 mints managed evidence. */
 export const RUNTIME_EVIDENCE_TRUSTED_PRODUCERS_V1_17: readonly RuntimeEvidenceTrustedProducerV117[] =
-  Object.freeze([])
+  Object.freeze(
+    RUNTIME_CONFORMANCE_TRUSTED_PRODUCERS_V1_17.map((producer) =>
+      Object.freeze({ ...producer }),
+    ),
+  )
 
 export interface RuntimeEvidenceAttestationPayloadV117 {
   schemaVersion: "runtime-evidence-attestation-v1.17"
