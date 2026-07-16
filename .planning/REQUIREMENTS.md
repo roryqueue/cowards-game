@@ -47,20 +47,20 @@
 
 ### Executable Four-Language Conformance
 
-- [ ] **CONF-01**: The real TypeScript, Python, Rust, and Zig adapters execute the same versioned, hash-addressed positive and negative conformance corpus.
-- [ ] **CONF-02**: Conformance compares canonical full state, event sequence, StrategyMemory, SoldierMemory, objectives, terminal data, and failure trace rather than final outcome alone.
-- [ ] **CONF-03**: The corpus executes boundary JSON, numeric, Unicode, depth, malformed-output, timeout, resource, stale-artifact, transport, deterministic-repeat, differential, property, and mutation cases across every supported lane.
-- [ ] **CONF-04**: A relevant engine, adapter, runtime, toolchain, ABI, policy, corpus, or artifact identity change automatically makes prior conformance evidence stale.
-- [ ] **CONF-05**: Counted eligibility is derived from a current passing conformance artifact hash; documentation, readiness flags, registry metadata, and gate names alone cannot promote a lane.
+- [x] **CONF-01**: The real TypeScript, Python, Rust, and Zig adapters execute the same versioned, hash-addressed positive and negative conformance corpus.
+- [x] **CONF-02**: Conformance compares canonical full state, event sequence, StrategyMemory, SoldierMemory, objectives, terminal data, and failure trace rather than final outcome alone.
+- [x] **CONF-03**: The corpus executes boundary JSON, numeric, Unicode, depth, malformed-output, timeout, resource, stale-artifact, transport, deterministic-repeat, differential, property, and mutation cases across every supported lane.
+- [x] **CONF-04**: A relevant engine, adapter, runtime, toolchain, ABI, policy, corpus, or artifact identity change automatically makes prior conformance evidence stale.
+- [x] **CONF-05**: Counted eligibility is derived from a current passing conformance artifact hash; documentation, readiness flags, registry metadata, and gate names alone cannot promote a lane.
 
 ### Chronicle and Replay Trust
 
-- [ ] **CHRN-01**: Chronicle grammar tracks lifecycle and next-Cycle state independently for every `activationId` in interleaved play.
-- [ ] **CHRN-02**: Newly produced evidence accepts only event types, boundaries, payloads, and ordering valid for its exact Chronicle and rules versions.
-- [ ] **CHRN-03**: Chronicle validation checks semantic subject/state agreement, slot lifecycle, versions, outcome, and transition postconditions in addition to schema shape.
-- [ ] **CHRN-04**: Runtime-service and persistence invoke the full semantic Chronicle validator before accepting successful evidence.
-- [ ] **CHRN-05**: Replay reconstruction produces the same canonical transition and trace hashes as engine execution.
-- [ ] **CHRN-06**: Historical v1.4 evidence remains byte-immutable and readable through explicit historical dispatch without being relabeled, normalized, or reinterpreted as current evidence.
+- [x] **CHRN-01**: Chronicle grammar tracks lifecycle and next-Cycle state independently for every `activationId` in interleaved play.
+- [x] **CHRN-02**: Newly produced evidence accepts only event types, boundaries, payloads, and ordering valid for its exact Chronicle and rules versions.
+- [x] **CHRN-03**: Chronicle validation checks semantic subject/state agreement, slot lifecycle, versions, outcome, and transition postconditions in addition to schema shape.
+- [x] **CHRN-04**: Runtime-service and persistence invoke the full semantic Chronicle validator before accepting successful evidence.
+- [x] **CHRN-05**: Replay reconstruction produces the same canonical transition and trace hashes as engine execution.
+- [x] **CHRN-06**: Historical v1.4 evidence remains byte-immutable and readable through explicit historical dispatch without being relabeled, normalized, or reinterpreted as current evidence.
 
 ### Strategy Evaluation Inputs and Conditions
 
@@ -149,17 +149,17 @@ These candidates are optional and are not required for v1.37 completion.
 | RABI-06 | Phase 258 | Complete |
 | RABI-07 | Phase 258 | Complete |
 | RABI-08 | Phase 258 | Complete |
-| CONF-01 | Phase 259 | Pending |
-| CONF-02 | Phase 259 | Pending |
-| CONF-03 | Phase 259 | Pending |
-| CONF-04 | Phase 259 | Pending |
-| CONF-05 | Phase 259 | Pending |
-| CHRN-01 | Phase 259 | Pending |
-| CHRN-02 | Phase 259 | Pending |
-| CHRN-03 | Phase 259 | Pending |
-| CHRN-04 | Phase 259 | Pending |
-| CHRN-05 | Phase 259 | Pending |
-| CHRN-06 | Phase 259 | Pending |
+| CONF-01 | Phase 259 | Complete |
+| CONF-02 | Phase 259 | Complete |
+| CONF-03 | Phase 259 | Complete |
+| CONF-04 | Phase 259 | Complete |
+| CONF-05 | Phase 259 | Complete |
+| CHRN-01 | Phase 259 | Complete |
+| CHRN-02 | Phase 259 | Complete |
+| CHRN-03 | Phase 259 | Complete |
+| CHRN-04 | Phase 259 | Complete |
+| CHRN-05 | Phase 259 | Complete |
+| CHRN-06 | Phase 259 | Complete |
 | STRAT-01 | Phase 260 | Pending |
 | STRAT-02 | Phase 260 | Pending |
 | STRAT-03 | Phase 260 | Pending |

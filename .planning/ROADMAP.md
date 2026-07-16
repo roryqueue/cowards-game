@@ -306,7 +306,7 @@ Plans:
 
 **Wave 10 — integrated conformance closure**
 
-- [ ] 259-23-PLAN.md — Close CONF-01..05 and CHRN-01..06 with one exact executable proof.
+- [x] 259-23-PLAN.md — Close CONF-01..05 and CHRN-01..06 with one exact executable proof.
 
 ### Phase 260: Truthful Strategy Inputs, Arena Authority, and Set Fairness
 

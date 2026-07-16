@@ -2,19 +2,19 @@
 gsd_state_version: 1.0
 milestone: v1.37
 milestone_name: Rules Integrity and Strategy Evaluation Foundations — ACTIVE
-current_phase: 259
-current_phase_name: executable-four-language-and-chronicle-conformance
+current_phase: 260
+current_phase_name: truthful-strategy-inputs-arena-authority-and-set-fairness
 status: ready
-stopped_at: Phase 259 Wave 9 complete; Wave 10 ready
-last_updated: "2026-07-16T18:11:00-04:00"
+stopped_at: Phase 259 complete; Phase 260 research and planning ready
+last_updated: "2026-07-16T19:45:00-04:00"
 last_activity: 2026-07-16
-last_activity_desc: Phase 259 Wave 9 installed four managed signed certificates under a distinct bootstrapped operator root
+last_activity_desc: Phase 259 closed with exact four-language, Chronicle, service, database, Go, privacy, and boundary proof
 progress:
   total_phases: 6
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 86
-  completed_plans: 85
-  percent: 99
+  completed_plans: 86
+  percent: 67
 ---
 
 # State: Coward's Game
@@ -24,16 +24,16 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-07-12)
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
-**Current focus:** Phase 259 — Executable Four-Language and Chronicle Conformance execution
+**Current focus:** Phase 260 — Truthful Strategy Inputs, Arena Authority, and Set Fairness planning
 
 ## Current Position
 
-Phase: 259 (executable-four-language-and-chronicle-conformance) — IN PROGRESS
-Plan: 30 of 31
-Status: Waves 1-9 complete after distinct managed producer signing, bootstrapped operator authorization, four exact imports, and independent promotion; Wave 10 ready
-Last activity: 2026-07-16 — Closed Phase 259 Wave 9 with four signed/imported real-language certificates and exact all-four closure
+Phase: 260 (truthful-strategy-inputs-arena-authority-and-set-fairness) — READY
+Plan: Research and planning not yet materialized
+Status: Phase 259 complete; Phase 260 context and discussion decisions are ready for research-first planning
+Last activity: 2026-07-16 — Closed Phase 259 with a current exact executable proof and passing database-backed default boundary chain
 
-Progress: [██████████] 98%
+Progress: [███████░░░] 67%
 
 ## Durable Decisions
 
@@ -54,6 +54,11 @@ Progress: [██████████] 98%
 - Default v1.18 service output remains receipt-only, while Chronicle/final-state documents cross only the constant-time token-protected internal completion envelope and must match signed canonical hashes.
 - The existing plural operator import descriptor is canonical-hashed, independently pinned, opened without symlink following, reread inside a serializable transaction, and installed under an append-only monotonic generation.
 - The conformance producer key and operator import key are distinct; the import envelope signer must equal the unique current bootstrapped high-water root inside the serializable import transaction.
+- One exact executable proof binds four current installed certificates, twelve fresh independent runs, one Chronicle transition authority, eight real gates, and the protected working-tree baseline.
+- The legacy nested-Match runtime bridge is explicit test support only; selected v1.17 production execution remains fail-closed.
+- Current Chronicle evidence requires phase and independent per-activation-slot lifecycle semantics, while tuple-less v1.4 evidence remains immutable under explicit historical dispatch.
+- Missing bounded termination receipt is a system ambiguity that fails closed without gameplay mutation or player penalty.
+- Docker certification probes receive only the explicit minimal `NODE_ENV` and `PATH` environment required by the production contract.
 
 ## Deferred Items
 
@@ -71,8 +76,8 @@ Progress: [██████████] 98%
 **Resume file:** None
 
 Last session: 2026-07-16T17:46:00-04:00
-Stopped at: Phase 259 Wave 9 complete; Wave 10 ready
-Next command: `$gsd-execute-phase 259` Wave 10 for plan 259-23.
+Stopped at: Phase 259 complete; Phase 260 research and planning ready
+Next command: `$gsd-plan-phase 260`.
 
 ## Performance Metrics
 
@@ -121,6 +126,7 @@ Next command: `$gsd-execute-phase 259` Wave 10 for plan 259-23.
 | Phase 259 P21 | 31min | 2 tasks + review | authenticated Go/service/persistence completion; full Go/parity/typecheck/lint |
 | Phase 259 P28 | 23min | 2 TDD tasks + review | plural import-root bootstrap; 46 PostgreSQL/CLI tests |
 | Phase 259 P22 | 28min | 3 tasks + review | four managed signatures/imports, production trust activation, independent promotion |
+| Phase 259 P23 | multi-session resumed | 3 tasks + 11 finding convergence | exact four-language/Chronicle/service/DB/Go/privacy proof and default drift guard |
 
 ## Decisions
 
@@ -130,6 +136,10 @@ Next command: `$gsd-execute-phase 259` Wave 10 for plan 259-23.
 - [Phase 259]: The additive v1.18 service envelope remains bound to the canonical v1.17 gameplay tuple. — Service evidence can advance without fabricating a new rules/engine/Chronicle semantic identity.
 - [Phase 259]: Default v1.18 output is receipt-only and exact completion documents require the protected internal envelope; Go persists signed hashes without event, terminal, transition, or replay interpretation. — Structural persistence cannot drift into a second semantic engine or expose documents by default.
 - [Phase 259]: Existing plural operator import trust is bootstrapped from exact protected canonical bytes, independent pins, no-follow file identity, and a monotonic append-only database generation. — First import is non-circular and cannot substitute runtime producer trust.
+- [Phase 259]: The final executable proof binds four installed current certificates, twelve fresh independent lane runs, one Chronicle transition authority, eight executable gates, and the exact protected baseline. — Documentation or partial evidence cannot independently promote a lane.
+- [Phase 259]: The selected production executor rejects the retired nested-Match bridge; only explicit test support may exercise that historical shape. — Compatibility tests cannot reopen a stale public/default execution path.
+- [Phase 259]: Current Chronicle fixtures require phase and independent activation-slot lifecycle closure, while tuple-less v1.4 evidence remains byte-immutable under explicit historical dispatch. — Strict current validation cannot silently rewrite history.
+- [Phase 259]: A missing bounded termination receipt is a system ambiguity and fails closed without gameplay mutation or player penalty. — Load-dependent receipt timing cannot manufacture success or player fault.
 
 - [Phase 258]: The complete current default set is `canonical-json-v1.1`, `strategy-runtime-abi-v1.17`, `runtime-execution-service-v1.17`, and `runtime-semantic-receipt-v1.17`; explicit v1.16 dispatch and protected historical bytes remain independently immutable. — A partial or mixed activation is not a valid current runtime.
 - [Phase 258]: Authoritative completion evidence is receipt v2 bound to a clean execution commit/tree, exact command definitions, exit status, and privacy-safe named evidence digests, and the evaluator must rerun those commands. — PASS labels or committed receipt structure alone cannot prove execution.
