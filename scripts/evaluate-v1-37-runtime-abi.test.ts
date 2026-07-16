@@ -28,6 +28,12 @@ import {
   writeV137RuntimeAbiValidationArtifacts,
   type V137RuntimeAbiValidation,
 } from "./evaluate-v1-37-runtime-abi.js"
+import {
+  createRuntimeAbiTestReceipt,
+  parseRuntimeAbiTestManifest,
+  projectRuntimeAbiTestExecutionResult,
+  runtimeAbiCommandDefinitionsSha256,
+} from "./run-v1-37-runtime-abi-test-manifest.js"
 
 const repoRoot = path.resolve(import.meta.dirname, "..")
 
@@ -383,17 +389,62 @@ describe("Phase 258 integrated runtime ABI evaluator", () => {
     )
     mkdirSync(artifactDirectory, { recursive: true })
     try {
-      for (const name of [
-        "runtime-abi-v1.17-test-manifest.json",
-        "runtime-abi-v1.17-test-receipt.json",
-      ]) {
-        writeFileSync(
-          path.join(artifactDirectory, name),
-          readFileSync(
-            path.join(repoRoot, "packages/spec/artifacts", name),
-          ),
+      const manifestBytes = readFileSync(
+        path.join(
+          repoRoot,
+          "packages/spec/artifacts/runtime-abi-v1.17-test-manifest.json",
+        ),
+      )
+      const manifest = parseRuntimeAbiTestManifest(
+        JSON.parse(manifestBytes.toString("utf8")) as unknown,
+      )
+      const results = manifest.tests.map((test) => {
+        const stdout =
+          test.kind === "go"
+            ? `=== RUN   ${test.namedResult}\n--- PASS: ${test.namedResult} (0.00s)\nPASS\n`
+            : test.kind === "playwright"
+              ? `${test.ownedFiles.join("\n")}\n${test.expectedOutput.join("\n")}\n1 passed\n`
+              : `${test.ownedFiles.join("\n")}\n${test.expectedOutput.join("\n")}\n Test Files  ${test.ownedFiles.length} passed (${test.ownedFiles.length})\n Tests  1 passed (1)\n`
+        return projectRuntimeAbiTestExecutionResult(
+          test,
+          { status: 0, stdout, stderr: "" },
+          test.database !== undefined,
         )
-      }
+      })
+      const receipt = createRuntimeAbiTestReceipt({
+        stage: "postactivation",
+        manifestBytes,
+        manifest,
+        provenance: {
+          mode: "local-authoritative-rerun-v1",
+          git: {
+            executionCommit: "a".repeat(40),
+            executionTree: "b".repeat(40),
+            worktreeStateSha256:
+              "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            worktreeClean: true,
+          },
+          commandDefinitionsSha256: runtimeAbiCommandDefinitionsSha256(
+            manifest.tests,
+          ),
+          outputDigestProfile: "runtime-abi-named-evidence-v1",
+        },
+        results,
+      })
+      writeFileSync(
+        path.join(
+          artifactDirectory,
+          "runtime-abi-v1.17-test-manifest.json",
+        ),
+        manifestBytes,
+      )
+      writeFileSync(
+        path.join(
+          artifactDirectory,
+          "runtime-abi-v1.17-test-receipt.json",
+        ),
+        `${JSON.stringify(receipt, null, 2)}\n`,
+      )
       const calls: string[] = []
       const summary = evaluateV137RuntimeAbiTestReceipt(temporaryRoot, {
         verifyProvenance: () => calls.push("provenance"),
