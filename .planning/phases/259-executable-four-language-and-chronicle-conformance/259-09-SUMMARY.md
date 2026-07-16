@@ -91,6 +91,7 @@ status: complete
 - Added a branded verifier that joins only current verified evidence and certificate snapshots, checks every graph node/pin and certificate identity field, enforces shared generation/trust/freshness, and rejects cloned snapshots.
 - Added a compact authority source derived only from that branded binding, with exact certificate, attestation, binding, corpus, inventory, DAG, supervisor, result, evidence, and receipt roots.
 - Extended the existing v1.17 certificate record hash and signed payload parser for the exact Phase-259 conformance certificate version without adding a registry or changing legacy containment records.
+- Closed the review-found structural-source bypass: in-memory encoding now requires the verifier-derived source object, while signed-byte inspection requires an independently resolved verifier-derived source and exact equality across every compact root.
 - Kept both production trusted-producer registries exactly empty; documentation, gate names, fixture trust, and request-shaped status remain non-promoting.
 
 ## Task Commits
@@ -127,9 +128,18 @@ status: complete
 - **Verification:** Clone rejection and positive branded-source tests pass.
 - **Committed in:** `3110e81`
 
+**2. [Code Review - Critical] Rejected structurally valid self-certified authority sources**
+
+- **Found during:** Post-implementation adversarial code review
+- **Issue:** The compact source constructor required a verifier-branded binding, but the public payload hash/encode/parse path still accepted any structurally valid plain source. A fully rehashed and re-signed payload could therefore disagree with the referenced attestation, use a language-confused lane, substitute a noncanonical additive budget, or self-declare certificate/supervisor/run roots.
+- **Fix:** Branded every source produced from a verified binding. Current conformance payload construction accepts only that branded object; signed-byte inspection requires an independent resolver returning the branded expected source and compares all source fields before certificate-record hash acceptance. Parsing also enforces the exact additive v1.18 budget root, canonical language/lane pair, attestation hash, graph/manifest roots, generation, freshness, and forbids attaching the current source shape to legacy certificate versions.
+- **Files modified:** `packages/spec/src/runtime-evidence-authority-bundle.ts`, `packages/spec/src/runtime-evidence-authority-bundle.test.ts`
+- **Verification:** Fully rehashed/re-signed language-lane, budget, attestation, certificate, binding, supervisor, and run-root substitutions reject; unresolved and cloned sources reject; the exact branded source passes; legacy containment coverage remains green.
+- **Committed in:** post-plan code-review fix commit
+
 ---
 
-**Total deviations:** 1 auto-fixed (1 missing critical trust-boundary control).
+**Total deviations:** 2 auto-fixed (2 critical trust-boundary controls).
 **Impact on plan:** Stronger non-promotion guarantees with no gameplay, runtime failure ownership, public-output, historical, or prior-certificate behavior change.
 
 ## Issues Encountered
@@ -138,8 +148,8 @@ status: complete
 
 ## Verification
 
-- Focused evidence, certificate, and authority suites: 3 files / 67 tests passed.
-- Full `@cowards/spec` package suite: 15 files / 279 tests passed.
+- Focused evidence, certificate, and authority suites: 3 files / 75 tests passed.
+- Full `@cowards/spec` package suite: 15 files / 287 tests passed.
 - Root supplemental spec suites: 3 files / 33 tests passed.
 - `@cowards/spec` typecheck, lint, focused formatting, and `git diff --check` passed.
 - Production evidence and conformance trusted-producer registries remain exactly empty.
@@ -152,6 +162,7 @@ None.
 ## Next Phase Readiness
 
 - Plan 259-22 can transactionally import reviewed production evidence using the existing publisher and high-water path without inventing a new authority format.
+- Plan 259-22 import and runtime-service mounting must resolve each compact conformance source back to the verifier-derived expected source before signed bundle inspection; unresolved or cloned references fail closed.
 - Runtime-service can later require exact certificate ID/hash plus the signed source roots; request-echoed bodies still cannot promote.
 - Phase closure remains false until all four independently current production-trusted lane certificates exist.
 

@@ -1,8 +1,22 @@
 import { Buffer } from "node:buffer"
-import { generateKeyPairSync, sign, verify } from "node:crypto"
+import { createHash, generateKeyPairSync, sign, verify } from "node:crypto"
 import { readFileSync } from "node:fs"
 import { describe, expect, it } from "vitest"
+import { hashCanonicalIdentity } from "./canonical-identity-domains.js"
+import { encodeCanonicalJson } from "./canonical-json-encode.js"
 import { CANONICAL_COMPATIBILITY_TUPLES } from "./integrity-authority.js"
+import {
+  hashRuntimeIdentityManifest,
+  type RuntimeIdentityManifest,
+} from "./runtime-identity-manifest.js"
+import { RUNTIME_BUDGET_PROFILE_V1_18_SHA256 } from "./runtime-budget-profile-v1-18.js"
+import {
+  encodeRuntimeConformanceCertificatePayloadV117,
+  verifyRuntimeConformanceCertificateV117,
+  type RuntimeConformanceCertificateV117,
+  type RuntimeConformanceIdentityBindingsV117,
+  type RuntimeConformanceTrustedProducerV117,
+} from "./runtime-conformance-certificate-v1-17.js"
 import { RuntimeExecutionEvidenceSnapshotSchema } from "./schemas.js"
 import {
   RUNTIME_EVIDENCE_AUTHORITY_ATOMIC_REFRESH_CONTRACT,
@@ -18,6 +32,7 @@ import {
   hashRuntimeEvidenceAuthorityPayload,
   inspectRuntimeEvidenceAuthorityBundle,
   parseRuntimeEvidenceAuthorityHighWaterRecord,
+  createRuntimeEvidenceAuthorityConformanceSourceV117,
   hashRuntimeEvidenceCertificateRecordV117,
   parseRuntimeEvidenceAuthorityBindingV117,
   parseRuntimeEvidenceAuthorityConformanceSourceV117,
@@ -30,6 +45,22 @@ import {
   type RuntimeEvidenceAuthorityPayloadV117,
 } from "./runtime-evidence-authority-bundle.js"
 import { hashExecutableLaneIdentity } from "./runtime-evidence-attestation.js"
+import {
+  encodeRuntimeEvidenceAttestationPayloadV117,
+  hashRuntimeEvidenceGraphV117,
+  verifyRuntimeConformanceEvidenceBindingV117,
+  verifyRuntimeEvidenceAttestationV117,
+  type RuntimeEvidenceAttestationV117,
+  type RuntimeEvidenceTrustedProducerV117,
+} from "./runtime-evidence-attestation-v1-17.js"
+import {
+  RUNTIME_EVIDENCE_EDGE_SCHEMA_V1_17,
+  RUNTIME_EVIDENCE_GRAPH_NODE_KINDS_V1_17,
+  RUNTIME_EVIDENCE_GRAPH_PROFILE_V1_17,
+  RUNTIME_EVIDENCE_GRAPH_SCHEMA_VERSION_V1_17,
+  type RuntimeConformanceEvidenceSourceV117,
+  type RuntimeEvidenceGraphV117,
+} from "./runtime-evidence-v1-17.js"
 
 const semanticTupleManifestHash = CANONICAL_COMPATIBILITY_TUPLES[0]!.tupleId
 const laneIdentity = {
@@ -89,7 +120,7 @@ const fixtureConformanceSourceV117 =
     evidenceGraphRoot: `sha256:${"2".repeat(64)}`,
     runtimeAbiVersion: "strategy-runtime-abi-v1.18",
     runtimeAbiEnvelopeSha256: `sha256:${"e".repeat(64)}`,
-    additiveBudgetProfileSha256: `sha256:${"f".repeat(64)}`,
+    additiveBudgetProfileSha256: RUNTIME_BUDGET_PROFILE_V1_18_SHA256,
     supervisorIdentityRootSha256: `sha256:${"3".repeat(64)}`,
     resultRootSha256: `sha256:${"4".repeat(64)}`,
     evidenceRootSha256: `sha256:${"5".repeat(64)}`,
@@ -97,6 +128,233 @@ const fixtureConformanceSourceV117 =
     registryGeneration: "7",
     freshUntil: "2026-08-10T00:00:00.000Z",
   })
+
+const canonicalSourceBytes = (
+  source: RuntimeConformanceEvidenceSourceV117,
+): Uint8Array => {
+  const encoded = encodeCanonicalJson(source as never, {
+    context: "canonical-manifest",
+  })
+  if (!encoded.ok) throw new Error(encoded.error.code)
+  return encoded.bytes
+}
+
+const buildVerifiedAuthoritySourceV117 = () => {
+  const hash = (character: string): `sha256:${string}` =>
+    `sha256:${character.repeat(64)}`
+  const nodeBytes = Object.fromEntries(
+    RUNTIME_EVIDENCE_GRAPH_NODE_KINDS_V1_17.map((kind) => [
+      `node:${kind}`,
+      new TextEncoder().encode(`fixture:${kind}:bytes:v1`),
+    ]),
+  ) as Record<string, Uint8Array>
+  const fixedNodeHash = (
+    kind: (typeof RUNTIME_EVIDENCE_GRAPH_NODE_KINDS_V1_17)[number],
+  ): `sha256:${string}` =>
+    `sha256:${hashCanonicalIdentity(kind, [nodeBytes[`node:${kind}`]!] as const)}`
+  const source: RuntimeConformanceEvidenceSourceV117 = {
+    schemaVersion: "runtime-conformance-evidence-source-v1.17",
+    runtimeAbiVersion: "strategy-runtime-abi-v1.18",
+    runtimeAbiEnvelopeSha256: hash("6"),
+    additiveBudgetProfileSha256: RUNTIME_BUDGET_PROFILE_V1_18_SHA256,
+    supervisorOperatingSystemSha256: hash("7"),
+    supervisorSettingsSha256: hash("8"),
+    aggregateReceiptSchemaSha256: hash("9"),
+    supervisorIdentity: {
+      supervisorBinarySha256: hash("a"),
+      supervisorToolchainSha256: hash("b"),
+      linuxKernelSha256: hash("c"),
+      dockerEngineSha256: hash("d"),
+      dockerImageDigest: hash("e"),
+      cgroupDelegationSha256: hash("f"),
+      adapterBuildSha256: fixedNodeHash("adapterBuild"),
+      runtimeCompilerSha256: fixedNodeHash("compilerExecutable"),
+      artifactSha256: fixedNodeHash("artifact"),
+    },
+    caseInventorySha256: hash("4"),
+    resultRootSha256: hash("5"),
+    evidenceRootSha256: hash("6"),
+    runReceipts: [1, 2, 3].map((index) => ({
+      runId: `run:typescript:${index}`,
+      receiptSha256: hash(String(index)),
+    })),
+  }
+  nodeBytes["node:evidenceBundle"] = canonicalSourceBytes(source)
+  const bindings = RUNTIME_EVIDENCE_GRAPH_NODE_KINDS_V1_17.map((kind) => ({
+    domain: kind,
+    publicId: `fixture.${kind}.v1`,
+    sha256: hashCanonicalIdentity(kind, [nodeBytes[`node:${kind}`]!]),
+  }))
+  const manifest: RuntimeIdentityManifest = {
+    schemaVersion: "runtime-identity-manifest-v1",
+    profile: "runtime-identity-v1",
+    bindings,
+  }
+  const graphWithoutHash = {
+    schemaVersion: RUNTIME_EVIDENCE_GRAPH_SCHEMA_VERSION_V1_17,
+    profile: RUNTIME_EVIDENCE_GRAPH_PROFILE_V1_17,
+    rootNodeId: "node:evidenceBundle",
+    identityManifestRoot: hashRuntimeIdentityManifest(manifest),
+    nodes: bindings.map((binding) => ({
+      nodeId: `node:${binding.domain}`,
+      kind: binding.domain,
+      publicId: binding.publicId,
+      sha256: binding.sha256,
+    })),
+    edges: RUNTIME_EVIDENCE_EDGE_SCHEMA_V1_17.map((edge) => ({
+      fromNodeId: `node:${edge.from}`,
+      toNodeId: `node:${edge.to}`,
+      kind: edge.kind,
+    })),
+    exactPins: {
+      runtimeExecutableDigest: fixedNodeHash("runtimeExecutable"),
+      reportedVersion: "node-v26.0.0",
+      targetAbi: "linux-amd64-gnu",
+      compilerFlags: hash("1"),
+      adapterBuildDigest: fixedNodeHash("adapterBuild"),
+      standardLibraryOrSysrootDigest: fixedNodeHash("sysrootStdlib"),
+      containmentPolicyId: "fixture.containmentPolicy.v1",
+      budgetProfileSha256: fixedNodeHash("budgetProfile"),
+      canonicalJsonProfileId: "fixture.canonicalJsonProfile.v1",
+      behaviorSettingsHash: hash("2"),
+    },
+  }
+  const graph: RuntimeEvidenceGraphV117 = {
+    ...graphWithoutHash,
+    graphSha256: hashRuntimeEvidenceGraphV117(graphWithoutHash),
+  }
+  const evidenceKeys = generateKeyPairSync("ed25519")
+  const evidencePayload = {
+    schemaVersion: "runtime-evidence-attestation-v1.17" as const,
+    producerId: "fixture-managed-builder",
+    producerKeyId: "fixture-managed-builder-key",
+    trustDomain: "fixture" as const,
+    managedIdentity: true as const,
+    identityManifest: manifest,
+    graph,
+    issuedAt: "2026-07-14T00:00:00.000Z",
+    validUntil: "2026-08-10T00:00:00.000Z",
+    registryGeneration: "7",
+  }
+  const attestation: RuntimeEvidenceAttestationV117 = {
+    ...evidencePayload,
+    signatureBase64: sign(
+      null,
+      encodeRuntimeEvidenceAttestationPayloadV117(evidencePayload),
+      evidenceKeys.privateKey,
+    ).toString("base64"),
+  }
+  const evidenceProducer: RuntimeEvidenceTrustedProducerV117 = {
+    producerId: evidencePayload.producerId,
+    keyId: evidencePayload.producerKeyId,
+    trustDomain: "fixture",
+    managedIdentity: true,
+    publicKeyPem: evidenceKeys.publicKey
+      .export({ type: "spki", format: "pem" })
+      .toString(),
+  }
+  const byKind = (kind: (typeof bindings)[number]["domain"]) =>
+    graph.nodes.find((node) => node.kind === kind)!
+  const identity: RuntimeConformanceIdentityBindingsV117 = {
+    languageId: "typescript",
+    laneId: "lane:typescript:linux-cgroup-v2",
+    corpusRootSha256: `sha256:${byKind("conformanceCorpus").sha256}`,
+    caseInventorySha256: source.caseInventorySha256,
+    fixtureSourceSha256: `sha256:${byKind("originalSource").sha256}`,
+    artifactSha256: `sha256:${byKind("artifact").sha256}`,
+    adapterBuildSha256: `sha256:${byKind("adapterBuild").sha256}`,
+    runtimeExecutableSha256: `sha256:${byKind("runtimeExecutable").sha256}`,
+    toolchainSha256: `sha256:${byKind("compilerExecutable").sha256}`,
+    sysrootStdlibSha256: `sha256:${byKind("sysrootStdlib").sha256}`,
+    runtimeAbiVersion: source.runtimeAbiVersion,
+    canonicalJsonProfileId: byKind("canonicalJsonProfile").publicId,
+    budgetPolicySha256: `sha256:${byKind("budgetProfile").sha256}`,
+    containmentPolicySha256: `sha256:${byKind("containmentPolicy").sha256}`,
+    semanticTupleSha256: `sha256:${byKind("semanticTuple").sha256}`,
+    identityManifestRoot: `sha256:${graph.identityManifestRoot}`,
+    evidenceGraphRoot: `sha256:${graph.graphSha256}`,
+    behaviorSettingsSha256: graph.exactPins.behaviorSettingsHash,
+  }
+  const certificateKeys = generateKeyPairSync("ed25519")
+  const certificatePayload = {
+    schemaVersion: "runtime-conformance-certificate-v1.17" as const,
+    certificateId: "certificate:typescript:generation-7",
+    certificateVersion: "runtime-conformance-certificate-v1.17" as const,
+    producerId: "fixture-managed-conformance-builder",
+    producerKeyId: "fixture-managed-conformance-key",
+    trustDomain: "fixture" as const,
+    managedIdentity: true as const,
+    registryGeneration: "7",
+    issuedAt: "2026-07-16T00:00:00.000Z",
+    requestedValidUntil: "2026-09-01T00:00:00.000Z",
+    freshUntil: "2026-08-10T00:00:00.000Z",
+    identity,
+    runs: source.runReceipts.map((receipt, index) => ({
+      runId: receipt.runId,
+      workspaceId: `workspace:typescript:${index + 1}`,
+      processId: `process:typescript:${index + 1}`,
+      status: "passed" as const,
+      complete: true,
+      freshWorkspace: true,
+      freshProcess: true,
+      skippedCaseCount: 0,
+      unsupportedCaseCount: 0,
+      fallbackUsed: false,
+      syntheticEvidence: false,
+      caseCount: 64,
+      startedAt: `2026-07-15T0${index}:00:00.000Z`,
+      completedAt: `2026-07-15T0${index}:10:00.000Z`,
+      validUntil: "2026-08-10T00:00:00.000Z",
+      identity: globalThis.structuredClone(identity),
+      resultRootSha256: source.resultRootSha256,
+      evidenceRootSha256: source.evidenceRootSha256,
+    })),
+  }
+  const certificate: RuntimeConformanceCertificateV117 = {
+    ...certificatePayload,
+    signatureBase64: sign(
+      null,
+      encodeRuntimeConformanceCertificatePayloadV117(certificatePayload),
+      certificateKeys.privateKey,
+    ).toString("base64"),
+  }
+  const certificateProducer: RuntimeConformanceTrustedProducerV117 = {
+    producerId: certificate.producerId,
+    keyId: certificate.producerKeyId,
+    trustDomain: "fixture",
+    managedIdentity: true,
+    publicKeyPem: certificateKeys.publicKey
+      .export({ type: "spki", format: "pem" })
+      .toString(),
+  }
+  const evidence = verifyRuntimeEvidenceAttestationV117({
+    mode: "fixture",
+    attestation,
+    evidenceBytes: nodeBytes,
+    verificationInstant: "2026-07-20T00:00:00.000Z",
+    trustedProducers: [evidenceProducer],
+  })
+  const conformance = verifyRuntimeConformanceCertificateV117({
+    mode: "fixture",
+    certificate,
+    currentIdentity: identity,
+    expectedRunBinding: {
+      caseInventorySha256: source.caseInventorySha256,
+      requiredCaseCount: 64,
+      resultRootSha256: source.resultRootSha256,
+    },
+    verificationInstant: "2026-07-20T00:00:00.000Z",
+    trustedProducers: [certificateProducer],
+  })
+  const verifiedBinding = verifyRuntimeConformanceEvidenceBindingV117({
+    evidence,
+    certificate: conformance,
+    currentIdentity: identity,
+    source,
+    verificationInstant: "2026-07-20T00:00:00.000Z",
+  })
+  return createRuntimeEvidenceAuthorityConformanceSourceV117(verifiedBinding)
+}
 
 const fixturePayload = (
   overrides: Partial<RuntimeEvidenceAuthorityPayload> = {},
@@ -138,6 +396,88 @@ const signedBundle = (
     payloadBytes,
     serialized: `${JSON.stringify(envelope)}\n`,
   }
+}
+
+const signRawV117Payload = (payload: RuntimeEvidenceAuthorityPayloadV117) => {
+  const keys = generateKeyPairSync("ed25519")
+  const payloadBytes = new TextEncoder().encode(JSON.stringify(payload))
+  const trustDomain = RUNTIME_EVIDENCE_AUTHORITY_TRUST_DOMAINS.fixture
+  const keyId = "fixture-v1.17-adversarial-key"
+  const envelope = buildRuntimeEvidenceAuthorityEnvelope({
+    trustDomain,
+    keyId,
+    payloadBytes,
+    signature: sign(
+      null,
+      encodeRuntimeEvidenceAuthoritySignatureMessage({
+        trustDomain,
+        keyId,
+        payloadBytes,
+      }),
+      keys.privateKey,
+    ),
+  })
+  return { keys, keyId, serialized: JSON.stringify(envelope) }
+}
+
+const hashRawConformanceRecordV117 = (input: {
+  certificateId: string
+  certificateVersion: string
+  attestationId: string
+  binding: RuntimeEvidenceAuthorityBindingV117
+  conformanceSource: RuntimeEvidenceAuthorityConformanceSourceV117
+}): string => {
+  const parts = [
+    "cowards-game:runtime-evidence-certificate-record:v1.17",
+    "conformance",
+    input.certificateId,
+    input.certificateVersion,
+    input.attestationId,
+    input.binding.graphSchemaVersion,
+    input.binding.graphProfile,
+    input.binding.identityManifestRoot,
+    input.binding.evidenceGraphRoot,
+    ...input.binding.exactPins.flatMap(([name, value]) => [name, value]),
+    ...[
+      "schemaVersion",
+      "certificateSha256",
+      "attestationSha256",
+      "conformanceBindingSha256",
+      "languageId",
+      "laneId",
+      "corpusRootSha256",
+      "caseInventorySha256",
+      "identityManifestRoot",
+      "evidenceGraphRoot",
+      "runtimeAbiVersion",
+      "runtimeAbiEnvelopeSha256",
+      "additiveBudgetProfileSha256",
+      "supervisorIdentityRootSha256",
+      "resultRootSha256",
+      "evidenceRootSha256",
+      "runReceiptRootSha256",
+      "registryGeneration",
+      "freshUntil",
+    ].map((key) =>
+      String(
+        input.conformanceSource[
+          key as keyof RuntimeEvidenceAuthorityConformanceSourceV117
+        ],
+      ),
+    ),
+  ]
+  const encoded = parts.map((part) => new TextEncoder().encode(part))
+  const framed = Buffer.alloc(
+    encoded.reduce((total, part) => total + 8 + part.byteLength, 0),
+  )
+  let offset = 0
+  for (const part of encoded) {
+    framed.writeBigUInt64BE(BigInt(part.byteLength), offset)
+    offset += 8
+    framed.set(part, offset)
+    offset += part.byteLength
+  }
+  return `sha256:${createHash("sha256").update(framed).digest("hex")}`
 }
 
 describe("runtime evidence authority bundle", () => {
@@ -200,7 +540,6 @@ describe("runtime evidence authority bundle", () => {
       "corpusRootSha256",
       "caseInventorySha256",
       "runtimeAbiEnvelopeSha256",
-      "additiveBudgetProfileSha256",
       "supervisorIdentityRootSha256",
       "resultRootSha256",
       "evidenceRootSha256",
@@ -222,6 +561,19 @@ describe("runtime evidence authority bundle", () => {
         key,
       ).not.toBe(first)
     }
+    expect(() =>
+      hashRuntimeEvidenceCertificateRecordV117({
+        certificateKind: "conformance",
+        certificateId: "certificate:typescript:generation-7",
+        certificateVersion: "runtime-conformance-certificate-v1.17",
+        attestationId: "attestation:v1.17:fixture",
+        binding,
+        conformanceSource: {
+          ...source,
+          additiveBudgetProfileSha256: `sha256:${"0".repeat(64)}`,
+        },
+      }),
+    ).toThrow(/source/iu)
     expect(() =>
       hashRuntimeEvidenceCertificateRecordV117({
         certificateKind: "conformance",
@@ -378,7 +730,9 @@ describe("runtime evidence authority bundle", () => {
 
   it("signs the exact conformance source without trusting caller-shaped request status", () => {
     const binding = fixtureBindingV117()
-    const conformanceSource = fixtureConformanceSourceV117()
+    const conformanceSource = buildVerifiedAuthoritySourceV117()
+    binding.identityManifestRoot = conformanceSource.identityManifestRoot
+    binding.evidenceGraphRoot = conformanceSource.evidenceGraphRoot
     const attestationId = "attestation:v1.17:conformance"
     const certificateId = "certificate:typescript:generation-7"
     const certificateVersion = "runtime-conformance-certificate-v1.17"
@@ -447,6 +801,7 @@ describe("runtime evidence authority bundle", () => {
         expectedTrustDomain: trustDomain,
         evaluationInstant: "2026-07-16T12:00:00.000Z",
         trustedKeyIds: [keyId],
+        resolveConformanceSource: () => conformanceSource,
         verifySignature: ({ signedMessageBytes, signature }) =>
           verify(null, signedMessageBytes, keys.publicKey, signature),
       },
@@ -475,6 +830,195 @@ describe("runtime evidence authority bundle", () => {
       mutate(changed)
       expect(() => encodeRuntimeEvidenceAuthorityPayloadV117(changed)).toThrow()
     }
+  })
+
+  it.each([
+    [
+      "language/lane confusion",
+      (source: RuntimeEvidenceAuthorityConformanceSourceV117) => {
+        source.laneId = "lane:python:linux-cgroup-v2"
+      },
+    ],
+    [
+      "noncanonical additive budget",
+      (source: RuntimeEvidenceAuthorityConformanceSourceV117) => {
+        source.additiveBudgetProfileSha256 = `sha256:${"0".repeat(64)}`
+      },
+    ],
+    [
+      "mismatched attestation reference",
+      (source: RuntimeEvidenceAuthorityConformanceSourceV117) => {
+        source.attestationSha256 = `sha256:${"0".repeat(64)}`
+      },
+    ],
+    [
+      "self-certified certificate root",
+      (source: RuntimeEvidenceAuthorityConformanceSourceV117) => {
+        source.certificateSha256 = `sha256:${"0".repeat(64)}`
+      },
+    ],
+    [
+      "shallow conformance binding root",
+      (source: RuntimeEvidenceAuthorityConformanceSourceV117) => {
+        source.conformanceBindingSha256 = `sha256:${"0".repeat(64)}`
+      },
+    ],
+    [
+      "shallow supervisor root",
+      (source: RuntimeEvidenceAuthorityConformanceSourceV117) => {
+        source.supervisorIdentityRootSha256 = `sha256:${"0".repeat(64)}`
+      },
+    ],
+    [
+      "shallow run receipt root",
+      (source: RuntimeEvidenceAuthorityConformanceSourceV117) => {
+        source.runReceiptRootSha256 = `sha256:${"0".repeat(64)}`
+      },
+    ],
+  ] as const)("rejects fully rehashed and resigned %s", (_name, mutate) => {
+    const expectedSource = buildVerifiedAuthoritySourceV117()
+    const conformanceSource = globalThis.structuredClone(expectedSource)
+    mutate(conformanceSource)
+    const binding = fixtureBindingV117()
+    binding.identityManifestRoot = conformanceSource.identityManifestRoot
+    binding.evidenceGraphRoot = conformanceSource.evidenceGraphRoot
+    const attestationId = "attestation:v1.17:conformance"
+    const certificateId = "certificate:typescript:generation-7"
+    const certificateVersion = "runtime-conformance-certificate-v1.17"
+    const payload: RuntimeEvidenceAuthorityPayloadV117 = {
+      schemaVersion: RUNTIME_EVIDENCE_AUTHORITY_PAYLOAD_SCHEMA_VERSION_V1_17,
+      bundleVersion: "bundle:v1.17:adversarial",
+      registryGeneration: "7",
+      issuedAt: "2026-07-16T00:00:00.000Z",
+      validFrom: "2026-07-16T00:00:00.000Z",
+      validUntil: "2026-07-17T00:00:00.000Z",
+      semanticTupleManifestHash,
+      sourceManifestHash: `sha256:${"7".repeat(64)}`,
+      attestations: [
+        {
+          attestationId,
+          attestationHash: expectedSource.attestationSha256,
+          producerId: "fixture-managed",
+          producerKeyId: "fixture-key",
+          trustDomain: "fixture",
+          managedIdentity: true,
+          imports: [],
+          binding,
+        },
+      ],
+      certificates: [
+        {
+          certificateId,
+          certificateVersion,
+          certificateRecordHash: hashRawConformanceRecordV117({
+            certificateId,
+            certificateVersion,
+            attestationId,
+            binding,
+            conformanceSource,
+          }),
+          certificateKind: "conformance",
+          attestationId,
+          binding,
+          conformanceSource,
+        },
+      ],
+    }
+    const signed = signRawV117Payload(payload)
+    expect(() =>
+      inspectRuntimeEvidenceAuthorityBundleV117(signed.serialized, {
+        expectedTrustDomain: RUNTIME_EVIDENCE_AUTHORITY_TRUST_DOMAINS.fixture,
+        evaluationInstant: "2026-07-16T12:00:00.000Z",
+        trustedKeyIds: [signed.keyId],
+        resolveConformanceSource: () => expectedSource,
+        verifySignature: ({ signedMessageBytes, signature }) =>
+          verify(null, signedMessageBytes, signed.keys.publicKey, signature),
+      }),
+    ).toThrow(/source|authority|certificate/iu)
+  })
+
+  it("rejects unbranded construction and unresolved or clone-resolved signed sources", () => {
+    const expectedSource = buildVerifiedAuthoritySourceV117()
+    const binding = fixtureBindingV117()
+    binding.identityManifestRoot = expectedSource.identityManifestRoot
+    binding.evidenceGraphRoot = expectedSource.evidenceGraphRoot
+    const attestationId = "attestation:v1.17:conformance"
+    const certificateId = "certificate:typescript:generation-7"
+    const certificateVersion = "runtime-conformance-certificate-v1.17"
+    const certificateRecordHash = hashRuntimeEvidenceCertificateRecordV117({
+      certificateKind: "conformance",
+      certificateId,
+      certificateVersion,
+      attestationId,
+      binding,
+      conformanceSource: expectedSource,
+    })
+    const payload: RuntimeEvidenceAuthorityPayloadV117 = {
+      schemaVersion: RUNTIME_EVIDENCE_AUTHORITY_PAYLOAD_SCHEMA_VERSION_V1_17,
+      bundleVersion: "bundle:v1.17:source-resolution",
+      registryGeneration: "7",
+      issuedAt: "2026-07-16T00:00:00.000Z",
+      validFrom: "2026-07-16T00:00:00.000Z",
+      validUntil: "2026-07-17T00:00:00.000Z",
+      semanticTupleManifestHash,
+      sourceManifestHash: `sha256:${"7".repeat(64)}`,
+      attestations: [
+        {
+          attestationId,
+          attestationHash: expectedSource.attestationSha256,
+          producerId: "fixture-managed",
+          producerKeyId: "fixture-key",
+          trustDomain: "fixture",
+          managedIdentity: true,
+          imports: [],
+          binding,
+        },
+      ],
+      certificates: [
+        {
+          certificateId,
+          certificateVersion,
+          certificateRecordHash,
+          certificateKind: "conformance",
+          attestationId,
+          binding,
+          conformanceSource: expectedSource,
+        },
+      ],
+    }
+    expect(() =>
+      encodeRuntimeEvidenceAuthorityPayloadV117({
+        ...payload,
+        certificates: [
+          {
+            ...payload.certificates[0]!,
+            conformanceSource: globalThis.structuredClone(expectedSource),
+          },
+        ],
+      }),
+    ).toThrow(/source/iu)
+
+    const signed = signRawV117Payload(payload)
+    const inspect = (
+      resolveConformanceSource?:
+        | (() => RuntimeEvidenceAuthorityConformanceSourceV117)
+        | undefined,
+    ) =>
+      inspectRuntimeEvidenceAuthorityBundleV117(signed.serialized, {
+        expectedTrustDomain: RUNTIME_EVIDENCE_AUTHORITY_TRUST_DOMAINS.fixture,
+        evaluationInstant: "2026-07-16T12:00:00.000Z",
+        trustedKeyIds: [signed.keyId],
+        ...(resolveConformanceSource === undefined
+          ? {}
+          : { resolveConformanceSource }),
+        verifySignature: ({ signedMessageBytes, signature }) =>
+          verify(null, signedMessageBytes, signed.keys.publicKey, signature),
+      })
+    expect(() => inspect()).toThrow(/source/iu)
+    expect(() =>
+      inspect(() => globalThis.structuredClone(expectedSource)),
+    ).toThrow(/source/iu)
+    expect(inspect(() => expectedSource).payload.certificates).toHaveLength(1)
   })
 
   it("rejects impossible canonical instants and accepts real leap days", () => {

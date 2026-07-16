@@ -6,6 +6,7 @@ import {
   parseExecutableLaneIdentity,
 } from "./runtime-evidence-attestation.js"
 import { getVerifiedRuntimeConformanceEvidenceBindingV117 } from "./runtime-evidence-attestation-v1-17.js"
+import { RUNTIME_BUDGET_PROFILE_V1_18_SHA256 } from "./runtime-budget-profile-v1-18.js"
 import type { ExecutableLaneIdentity } from "./runtime-evidence.js"
 import {
   RUNTIME_EVIDENCE_GRAPH_PROFILE_V1_17,
@@ -208,6 +209,14 @@ export interface RuntimeEvidenceAuthorityConformanceSourceV117 {
   freshUntil: string
 }
 
+export interface RuntimeEvidenceAuthorityConformanceSourceResolverV117 {
+  resolveConformanceSource(input: {
+    certificateId: string
+    certificateVersion: "runtime-conformance-certificate-v1.17"
+    attestationId: string
+  }): Readonly<RuntimeEvidenceAuthorityConformanceSourceV117> | undefined
+}
+
 export interface RuntimeEvidenceAuthorityPayloadV117 {
   schemaVersion: typeof RUNTIME_EVIDENCE_AUTHORITY_PAYLOAD_SCHEMA_VERSION_V1_17
   bundleVersion: string
@@ -322,6 +331,20 @@ const hashCanonicalAuthoritySourceV117 = (
   return `sha256:${createHash("sha256").update(output).digest("hex")}`
 }
 
+const verifiedAuthorityConformanceSourcesV117 = new WeakSet<object>()
+
+const requireVerifiedAuthorityConformanceSourceV117 = (
+  value: Readonly<RuntimeEvidenceAuthorityConformanceSourceV117>,
+): Readonly<RuntimeEvidenceAuthorityConformanceSourceV117> => {
+  if (!verifiedAuthorityConformanceSourcesV117.has(value as object)) {
+    return fail(
+      "V117_CONFORMANCE_SOURCE",
+      "Runtime conformance authority source is not verifier-derived.",
+    )
+  }
+  return value
+}
+
 export const createRuntimeEvidenceAuthorityConformanceSourceV117 = (
   value: Readonly<RuntimeConformanceEvidenceBindingV117>,
 ): Readonly<RuntimeEvidenceAuthorityConformanceSourceV117> => {
@@ -348,7 +371,7 @@ export const createRuntimeEvidenceAuthorityConformanceSourceV117 = (
     "cowards-game:runtime-evidence-authority-conformance-binding:v1.17",
     binding as unknown as JsonValue,
   )
-  return Object.freeze({
+  const source = Object.freeze({
     schemaVersion: "runtime-evidence-authority-conformance-source-v1.17",
     certificateSha256: binding.certificateSha256,
     attestationSha256: `sha256:${binding.attestationSha256}`,
@@ -369,6 +392,8 @@ export const createRuntimeEvidenceAuthorityConformanceSourceV117 = (
     registryGeneration: binding.registryGeneration,
     freshUntil: binding.freshUntil,
   })
+  verifiedAuthorityConformanceSourcesV117.add(source)
+  return source
 }
 
 const CONFORMANCE_SOURCE_KEYS_V1_17 = [
@@ -421,7 +446,10 @@ export const parseRuntimeEvidenceAuthorityConformanceSourceV117 = (
   if (
     record.schemaVersion !==
       "runtime-evidence-authority-conformance-source-v1.17" ||
-    record.runtimeAbiVersion !== "strategy-runtime-abi-v1.18"
+    record.runtimeAbiVersion !== "strategy-runtime-abi-v1.18" ||
+    record.additiveBudgetProfileSha256 !==
+      RUNTIME_BUDGET_PROFILE_V1_18_SHA256 ||
+    record.laneId !== `lane:${String(languageId)}:linux-cgroup-v2`
   ) {
     fail(
       "V117_CONFORMANCE_SOURCE",
@@ -1102,6 +1130,7 @@ export const hashRuntimeEvidenceAuthorityPayload = (
 
 export const parseRuntimeEvidenceAuthorityPayloadV117 = (
   value: unknown,
+  options: Partial<RuntimeEvidenceAuthorityConformanceSourceResolverV117> = {},
 ): Readonly<RuntimeEvidenceAuthorityPayloadV117> => {
   const record = requireRecord(
     value,
@@ -1243,26 +1272,62 @@ export const parseRuntimeEvidenceAuthorityPayloadV117 = (
       candidate.certificateVersion,
       "certificateVersion",
     )
-    const conformanceSource = hasConformanceSource
-      ? parseRuntimeEvidenceAuthorityConformanceSourceV117(
-          candidate.conformanceSource as RuntimeEvidenceAuthorityConformanceSourceV117,
-        )
+    const sourceCandidate = hasConformanceSource
+      ? (candidate.conformanceSource as RuntimeEvidenceAuthorityConformanceSourceV117)
       : undefined
+    const conformanceSource = sourceCandidate
+      ? parseRuntimeEvidenceAuthorityConformanceSourceV117(sourceCandidate)
+      : undefined
+    const currentConformance =
+      certificateKind === "conformance" &&
+      certificateVersion === "runtime-conformance-certificate-v1.17"
     if (
       (certificateKind === "containment" && conformanceSource !== undefined) ||
       (certificateKind === "conformance" &&
-        certificateVersion === "runtime-conformance-certificate-v1.17" &&
-        conformanceSource === undefined) ||
+        certificateVersion !== "runtime-conformance-certificate-v1.17" &&
+        conformanceSource !== undefined) ||
+      (currentConformance && conformanceSource === undefined) ||
       (conformanceSource !== undefined &&
         (conformanceSource.identityManifestRoot !==
           binding.identityManifestRoot ||
           conformanceSource.evidenceGraphRoot !== binding.evidenceGraphRoot ||
+          conformanceSource.attestationSha256 !== attestation.attestationHash ||
           conformanceSource.registryGeneration !==
             assertGeneration(record.registryGeneration, "registryGeneration") ||
           Date.parse(conformanceSource.freshUntil) <
             Date.parse(parseInstant(record.validUntil, "validUntil"))))
     ) {
       fail("V117_CONFORMANCE_SOURCE", "v1.17 certificate source is invalid.")
+    }
+    if (currentConformance && conformanceSource !== undefined) {
+      const resolved =
+        sourceCandidate !== undefined &&
+        verifiedAuthorityConformanceSourcesV117.has(sourceCandidate as object)
+          ? sourceCandidate
+          : options.resolveConformanceSource?.({
+              certificateId,
+              certificateVersion,
+              attestationId,
+            })
+      const verifiedResolved =
+        resolved ??
+        fail(
+          "V117_CONFORMANCE_SOURCE",
+          "v1.17 certificate source cannot be independently resolved.",
+        )
+      const expected = parseRuntimeEvidenceAuthorityConformanceSourceV117(
+        requireVerifiedAuthorityConformanceSourceV117(verifiedResolved),
+      )
+      if (
+        CONFORMANCE_SOURCE_KEYS_V1_17.some(
+          (key) => expected[key] !== conformanceSource[key],
+        )
+      ) {
+        fail(
+          "V117_CONFORMANCE_SOURCE",
+          "v1.17 certificate source does not match verified evidence.",
+        )
+      }
     }
     const certificateRecordHash = assertHash(
       candidate.certificateRecordHash,
@@ -1338,6 +1403,7 @@ export const encodeRuntimeEvidenceAuthorityPayloadV117 = (
 
 export const parseRuntimeEvidenceAuthorityPayloadBytesV117 = (
   bytes: Uint8Array,
+  options: Partial<RuntimeEvidenceAuthorityConformanceSourceResolverV117> = {},
 ): Readonly<RuntimeEvidenceAuthorityPayloadV117> => {
   if (
     bytes.byteLength === 0 ||
@@ -1348,6 +1414,7 @@ export const parseRuntimeEvidenceAuthorityPayloadBytesV117 = (
   try {
     return parseRuntimeEvidenceAuthorityPayloadV117(
       JSON.parse(strictTextDecoder.decode(bytes)),
+      options,
     )
   } catch (error) {
     if (error instanceof RuntimeEvidenceAuthorityBundleError) throw error
@@ -1592,6 +1659,9 @@ export const inspectRuntimeEvidenceAuthorityBundleV117 = (
     expectedTrustDomain: string
     evaluationInstant: string
     trustedKeyIds: readonly string[]
+    resolveConformanceSource?:
+      | RuntimeEvidenceAuthorityConformanceSourceResolverV117["resolveConformanceSource"]
+      | undefined
     verifySignature(input: {
       algorithm: "Ed25519"
       keyId: string
@@ -1638,7 +1708,11 @@ export const inspectRuntimeEvidenceAuthorityBundleV117 = (
   }
   if (!signatureValid)
     fail("SIGNATURE", "Authority bundle signature is invalid.")
-  const payload = parseRuntimeEvidenceAuthorityPayloadBytesV117(payloadBytes)
+  const payload = parseRuntimeEvidenceAuthorityPayloadBytesV117(payloadBytes, {
+    ...(options.resolveConformanceSource === undefined
+      ? {}
+      : { resolveConformanceSource: options.resolveConformanceSource }),
+  })
   const recordTrustDomain =
     options.expectedTrustDomain ===
     RUNTIME_EVIDENCE_AUTHORITY_TRUST_DOMAINS.fixture
