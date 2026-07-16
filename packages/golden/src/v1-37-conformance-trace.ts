@@ -1,11 +1,16 @@
 import { createHash } from "node:crypto"
+import type { KernelStage } from "@cowards/engine"
 import {
+  computeRecordedCanonicalOutputHashV137,
+  computeRecordedOrderedEventsHashV137,
+  computeRecordedTerminalHashV137,
   computeRecordedTransitionTraceRootV137,
   validateRecordedTransitionTraceRootsV137,
   type RecordedCanonicalTransitionV137,
 } from "@cowards/replay"
 import {
   ChronicleEventSchema,
+  MatchOutcomeSchema,
   encodeCanonicalJson,
   type JsonValue,
 } from "@cowards/spec"
@@ -29,6 +34,8 @@ export interface CanonicalConformanceInvocation {
   readonly strategyMemoryHash: string
   readonly soldierMemoryHash: string
   readonly objectiveHash: string
+  readonly beforeObjectiveHash: string
+  readonly afterObjectiveHash: string
   readonly beforeStateHash: string
   readonly afterStateHash: string
   readonly beforeMemoryHash: string
@@ -88,6 +95,8 @@ export type CanonicalConformanceDivergenceField =
   | "invocation.strategyMemoryHash"
   | "invocation.soldierMemoryHash"
   | "invocation.objectiveHash"
+  | "invocation.beforeObjectiveHash"
+  | "invocation.afterObjectiveHash"
   | "invocation.beforeStateHash"
   | "invocation.afterStateHash"
   | "invocation.beforeMemoryHash"
@@ -129,6 +138,7 @@ export type CanonicalConformanceDivergenceField =
   | "failure.terminalEffectHash"
   | "failure.retryable"
   | "transitionTraceRoot"
+  | "traceSemantics"
   | "traceRoot"
 
 export interface CanonicalConformanceDivergence {
@@ -152,12 +162,19 @@ export type CanonicalConformanceTraceComparison =
       readonly divergence: Readonly<CanonicalConformanceDivergence>
     }
   | {
-      readonly status: "oracle_disputed"
+      readonly status: "oracle_suspended"
       readonly disposition: "suspend_oracle"
       readonly code: "REVIEWED_ORACLE_ROOT_MISMATCH"
       readonly caseId: string
       readonly claimedRootHash: string
       readonly computedRootHash: string
+    }
+  | {
+      readonly status: "oracle_suspended"
+      readonly disposition: "suspend_oracle"
+      readonly code: "REVIEWED_ORACLE_SEMANTICS_INVALID"
+      readonly caseId: string
+      readonly errorHash: string
     }
 
 export type CanonicalConformanceTraceErrorCode =
@@ -190,6 +207,21 @@ const TRACE_ROOT_DOMAIN =
 const DIVERGENCE_FIELD_DOMAIN =
   "cowards-game:v1.37:canonical-conformance-divergence:v1" as const
 const textEncoder = new TextEncoder()
+const KERNEL_STAGES: Readonly<Record<KernelStage, true>> = Object.freeze({
+  match_start: true,
+  round_start: true,
+  select_bottom: true,
+  select_top: true,
+  prepare_slots: true,
+  cycle_slot_start: true,
+  soldier_observation: true,
+  soldier_effect: true,
+  cycle_slot_finish: true,
+  round_finish: true,
+  contraction: true,
+  max_phases: true,
+  completed: true,
+})
 
 const inputKeys = [
   "corpusVersion",
@@ -204,6 +236,13 @@ const inputKeys = [
   "failure",
 ] as const
 
+const traceKeys = [
+  "schemaVersion",
+  ...inputKeys,
+  "transitionTraceRoot",
+  "traceRoot",
+] as const
+
 const invocationKeys = [
   "ordinal",
   "invocationId",
@@ -215,6 +254,8 @@ const invocationKeys = [
   "strategyMemoryHash",
   "soldierMemoryHash",
   "objectiveHash",
+  "beforeObjectiveHash",
+  "afterObjectiveHash",
   "beforeStateHash",
   "afterStateHash",
   "beforeMemoryHash",
@@ -452,6 +493,8 @@ const validateInvocation = (
   requireHash(value.strategyMemoryHash)
   requireHash(value.soldierMemoryHash)
   requireHash(value.objectiveHash)
+  requireHash(value.beforeObjectiveHash)
+  requireHash(value.afterObjectiveHash)
   requireHash(value.beforeStateHash)
   requireHash(value.afterStateHash)
   requireHash(value.beforeMemoryHash)
@@ -472,6 +515,17 @@ const validateInvocation = (
   } else {
     requireStableCode(value.stableCode)
     if (value.canonicalPayloadHash !== null) fail("TRACE_RESULT_INVALID")
+  }
+  if (
+    value.resultClass === "system_failure" &&
+    (value.gameplayMutation ||
+      value.memoryMutation ||
+      value.terminalEffectHash !== null ||
+      value.beforeStateHash !== value.afterStateHash ||
+      value.beforeMemoryHash !== value.afterMemoryHash ||
+      value.beforeObjectiveHash !== value.afterObjectiveHash)
+  ) {
+    fail("TRACE_RESULT_INVALID")
   }
 }
 
@@ -525,6 +579,7 @@ const validateFailure = (
       value.resultClass === "system_failure" &&
       (invocation.beforeStateHash !== invocation.afterStateHash ||
         invocation.beforeMemoryHash !== invocation.afterMemoryHash ||
+        invocation.beforeObjectiveHash !== invocation.afterObjectiveHash ||
         input.finalStateHash !== invocation.beforeStateHash)
     ) {
       fail("TRACE_RESULT_INVALID")
@@ -547,11 +602,15 @@ const validateCoordinates = (
     (coordinates.phaseNumber as number) < 1 ||
     !Number.isSafeInteger(coordinates.roundNumber) ||
     (coordinates.roundNumber as number) < 1 ||
-    (coordinates.roundNumber as number) > 4 ||
-    typeof coordinates.stage !== "string" ||
-    coordinates.stage.length === 0
+    (coordinates.roundNumber as number) > 4
   ) {
     fail("TRACE_ORDER_INVALID")
+  }
+  if (
+    typeof coordinates.stage !== "string" ||
+    !Object.hasOwn(KERNEL_STAGES, coordinates.stage)
+  ) {
+    fail("TRACE_TRANSITION_IDENTITY_INVALID")
   }
   if (coordinates.cycleIndex !== undefined) {
     requireOrdinal(coordinates.cycleIndex)
@@ -631,10 +690,66 @@ const validateTransition = (
     requireHash(digest)
   }
   if (!Array.isArray(value.orderedEvents)) fail("TRACE_SHAPE_INVALID")
-  value.orderedEvents.forEach(validateEvent)
+  value.orderedEvents.forEach((event, eventIndex) => {
+    validateEvent(event)
+    if (
+      eventIndex > 0 &&
+      event.sequence <= value.orderedEvents[eventIndex - 1]!.sequence
+    ) {
+      fail("TRACE_ORDER_INVALID")
+    }
+  })
+  if (
+    value.canonicalOutputHash !==
+      computeRecordedCanonicalOutputHashV137(value.orderedEvents) ||
+    value.orderedEventsHash !==
+      computeRecordedOrderedEventsHashV137(value.orderedEvents)
+  ) {
+    fail("TRACE_EVENT_INVALID")
+  }
   if (value.failureStatus !== null) fail("TRACE_RESULT_INVALID")
   requireNullableHash(value.terminalHash)
-  canonicalBytes(value.terminalStatus as unknown as JsonValue)
+  if (value.terminalStatus === null) {
+    if (value.terminalHash !== null) fail("TRACE_RESULT_INVALID")
+    return
+  }
+  const parsedOutcome = MatchOutcomeSchema.safeParse(value.terminalStatus)
+  if (
+    !parsedOutcome.success ||
+    !canonicalValuesEqual(
+      parsedOutcome.data as unknown as JsonValue,
+      value.terminalStatus as unknown as JsonValue,
+    ) ||
+    (parsedOutcome.data.type === "FAILED" &&
+      !STABLE_CODE.test(parsedOutcome.data.reason)) ||
+    value.terminalHash !==
+      computeRecordedTerminalHashV137(
+        parsedOutcome.data as RecordedCanonicalTransitionV137["terminalStatus"],
+      )
+  ) {
+    fail("TRACE_RESULT_INVALID")
+  }
+}
+
+const validateSystemFailureInvocationOwnership = (
+  input: ProjectCanonicalConformanceTraceInput,
+): void => {
+  const systemFailureOrdinals = input.invocations
+    .filter(({ resultClass }) => resultClass === "system_failure")
+    .map(({ ordinal }) => ordinal)
+  if (input.resultClass !== "system_failure") {
+    if (systemFailureOrdinals.length > 0) fail("TRACE_RESULT_INVALID")
+    return
+  }
+  if (
+    input.failure === null ||
+    input.failure.invocationOrdinal === null ||
+    input.failure.transitionOrdinal !== null ||
+    systemFailureOrdinals.length !== 1 ||
+    systemFailureOrdinals[0] !== input.failure.invocationOrdinal
+  ) {
+    fail("TRACE_RESULT_INVALID")
+  }
 }
 
 const validateInput = (input: ProjectCanonicalConformanceTraceInput): void => {
@@ -666,6 +781,57 @@ const validateInput = (input: ProjectCanonicalConformanceTraceInput): void => {
     } else {
       fail("TRACE_RESULT_INVALID")
     }
+  }
+  validateSystemFailureInvocationOwnership(input)
+}
+
+const traceInput = (
+  trace: CanonicalConformanceTrace,
+): ProjectCanonicalConformanceTraceInput => ({
+  corpusVersion: trace.corpusVersion,
+  corpusRootSha256: trace.corpusRootSha256,
+  caseId: trace.caseId,
+  semanticTupleId: trace.semanticTupleId,
+  resultClass: trace.resultClass,
+  invocations: trace.invocations,
+  transitions: trace.transitions,
+  finalStateHash: trace.finalStateHash,
+  outcomeHash: trace.outcomeHash,
+  failure: trace.failure,
+})
+
+const validateProjectedTrace = (trace: CanonicalConformanceTrace): void => {
+  exactKeys(trace, traceKeys)
+  if (trace.schemaVersion !== CANONICAL_CONFORMANCE_TRACE_SCHEMA_VERSION) {
+    fail("TRACE_SHAPE_INVALID")
+  }
+  validateInput(traceInput(trace))
+  requireHash(trace.transitionTraceRoot)
+  requireHash(trace.traceRoot)
+  if (
+    trace.transitionTraceRoot !==
+    computeRecordedTransitionTraceRootV137(trace.transitions)
+  ) {
+    fail("TRACE_TRANSITION_ROOT_INVALID")
+  }
+}
+
+const projectedTraceValidation = (
+  trace: CanonicalConformanceTrace,
+):
+  | Readonly<{ ok: true }>
+  | Readonly<{ ok: false; code: CanonicalConformanceTraceErrorCode }> => {
+  try {
+    validateProjectedTrace(trace)
+    return Object.freeze({ ok: true })
+  } catch (error) {
+    return Object.freeze({
+      ok: false,
+      code:
+        error instanceof CanonicalConformanceTraceError
+          ? error.code
+          : "TRACE_SHAPE_INVALID",
+    })
   }
 }
 
@@ -751,6 +917,8 @@ const invocationFields = [
   "strategyMemoryHash",
   "soldierMemoryHash",
   "objectiveHash",
+  "beforeObjectiveHash",
+  "afterObjectiveHash",
   "beforeStateHash",
   "afterStateHash",
   "beforeMemoryHash",
@@ -802,10 +970,23 @@ export const compareCanonicalConformanceTrace = ({
   readonly expected: CanonicalConformanceTrace
   readonly actual: CanonicalConformanceTrace
 }): Readonly<CanonicalConformanceTraceComparison> => {
+  const expectedValidation = projectedTraceValidation(expected)
+  if (!expectedValidation.ok) {
+    return freezeClone({
+      status: "oracle_suspended",
+      disposition: "suspend_oracle",
+      code: "REVIEWED_ORACLE_SEMANTICS_INVALID",
+      caseId:
+        typeof expected.caseId === "string" && IDENTIFIER.test(expected.caseId)
+          ? expected.caseId
+          : "invalid-reviewed-case",
+      errorHash: digestDivergenceValue(expectedValidation.code),
+    }) as Readonly<CanonicalConformanceTraceComparison>
+  }
   const computedExpectedRoot = hashCanonicalConformanceTrace(expected)
   if (expected.traceRoot !== computedExpectedRoot) {
     return freezeClone({
-      status: "oracle_disputed",
+      status: "oracle_suspended",
       disposition: "suspend_oracle",
       code: "REVIEWED_ORACLE_ROOT_MISMATCH",
       caseId: expected.caseId,
@@ -813,6 +994,7 @@ export const compareCanonicalConformanceTrace = ({
       computedRootHash: digestDivergenceValue(computedExpectedRoot),
     }) as Readonly<CanonicalConformanceTraceComparison>
   }
+  const actualValidation = projectedTraceValidation(actual)
   const computedActualRoot = hashCanonicalConformanceTrace(actual)
   if (actual.traceRoot !== computedActualRoot) {
     return divergence(
@@ -823,6 +1005,14 @@ export const compareCanonicalConformanceTrace = ({
     )
   }
   if (expected.traceRoot === actual.traceRoot) {
+    if (!actualValidation.ok) {
+      return divergence(
+        expected,
+        "traceSemantics",
+        "valid",
+        actualValidation.code,
+      )
+    }
     return Object.freeze({ status: "equal", traceRoot: expected.traceRoot })
   }
 

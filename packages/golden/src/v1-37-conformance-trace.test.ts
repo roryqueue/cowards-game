@@ -1,6 +1,8 @@
 import { MATCH_KERNEL, type StrategyRuntime } from "@cowards/engine"
 import { adaptRuntimeForCurrentKernel } from "@cowards/engine/test/current-kernel-runtime"
 import {
+  computeRecordedCanonicalOutputHashV137,
+  computeRecordedOrderedEventsHashV137,
   computeRecordedTransitionTraceRootV137,
   recordChronicleFromExecution,
   type RecordedCanonicalTransitionV137,
@@ -117,10 +119,8 @@ const compactTransitions = (): readonly RecordedCanonicalTransitionV137[] => {
     ordinal: 0,
     coordinates: { ...terminal.coordinates, ordinal: 0 },
     orderedEvents,
-    orderedEventsHash:
-      orderedEvents === terminal.orderedEvents
-        ? terminal.orderedEventsHash
-        : hash("e"),
+    canonicalOutputHash: computeRecordedCanonicalOutputHashV137(orderedEvents),
+    orderedEventsHash: computeRecordedOrderedEventsHashV137(orderedEvents),
     accumulatedTraceRoot: hash("0"),
   }
   cachedCompactTransitions = [

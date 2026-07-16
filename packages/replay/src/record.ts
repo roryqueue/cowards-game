@@ -217,6 +217,35 @@ const hashCanonicalTraceField = (label: string, value: JsonValue): string => {
     .digest("hex")}`
 }
 
+export const computeRecordedCanonicalOutputHashV137 = (
+  orderedEvents: readonly RecordedCanonicalEventV137[],
+): string =>
+  hashCanonicalTraceField(
+    "canonical-output",
+    orderedEvents.map(({ type, payload, privatePayloadHash }) => ({
+      type,
+      payload,
+      privatePayloadHash,
+    })) as JsonValue,
+  )
+
+export const computeRecordedOrderedEventsHashV137 = (
+  orderedEvents: readonly RecordedCanonicalEventV137[],
+): string =>
+  hashCanonicalTraceField("ordered-events", [
+    ...orderedEvents,
+  ] as unknown as JsonValue)
+
+export const computeRecordedTerminalHashV137 = (
+  terminalStatus: MatchOutcome | null,
+): string | null =>
+  terminalStatus === null
+    ? null
+    : hashCanonicalTraceField("terminal", {
+        terminalStatus,
+        failureStatus: null,
+      } as JsonValue)
+
 const freezeClone = <T>(value: T): Readonly<T> => {
   const clone = globalThis.structuredClone(value)
   const pending: object[] =
@@ -520,13 +549,9 @@ const projectRecordedTransitions = (
     const rawPrivateEvents = transition.events.map(
       ({ sequence }) => privateEventsBySequence.get(sequence)!,
     )
-    const terminalHash =
-      transition.terminalStatus === null && transition.failureStatus === null
-        ? null
-        : hashCanonicalTraceField("terminal", {
-            terminalStatus: transition.terminalStatus,
-            failureStatus: transition.failureStatus,
-          } as JsonValue)
+    const terminalHash = computeRecordedTerminalHashV137(
+      transition.terminalStatus,
+    )
     const material: RecordedCanonicalTransitionMaterialV137 = {
       ordinal: transition.coordinates.ordinal,
       kind: transition.transitionKind,
@@ -535,14 +560,8 @@ const projectRecordedTransitions = (
         transition.coordinates,
       ) as RecordedCanonicalTransitionCoordinatesV137,
       resultClass: transition.classification as "success" | "player_violation",
-      canonicalOutputHash: hashCanonicalTraceField(
-        "canonical-output",
-        orderedEvents.map(({ type, payload, privatePayloadHash }) => ({
-          type,
-          payload,
-          privatePayloadHash,
-        })) as JsonValue,
-      ),
+      canonicalOutputHash:
+        computeRecordedCanonicalOutputHashV137(orderedEvents),
       strategyMemoryHash: hashCanonicalTraceField(
         "strategy-memory",
         privateValues(rawPrivateEvents, ["strategyMemory"]),
@@ -556,9 +575,7 @@ const projectRecordedTransitions = (
         privateValues(rawPrivateEvents, ["objective", "objectivePayload"]),
       ),
       orderedEvents,
-      orderedEventsHash: hashCanonicalTraceField("ordered-events", [
-        ...orderedEvents,
-      ] as unknown as JsonValue),
+      orderedEventsHash: computeRecordedOrderedEventsHashV137(orderedEvents),
       beforeStateHash: transition.beforeStateHash,
       afterStateHash: transition.afterStateHash,
       beforeMachineHash: transition.beforeMachineHash,
