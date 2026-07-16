@@ -73,7 +73,7 @@
       "name": "chronicle-grammar",
       "relativePath": "packages/replay/src/grammar.ts",
       "disposition": "semantic-validator",
-      "sourceSha256": "93c7eadd40006b14c9701d5b301329525ec3494b9263df52260eb007a3eb8814"
+      "sourceSha256": "c47696ddb29a55dca21252243f7f2111b5287bbc442ae69eedfcb5f5b88df289"
     },
     {
       "name": "replay-transition",
