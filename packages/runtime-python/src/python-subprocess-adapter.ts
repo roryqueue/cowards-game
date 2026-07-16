@@ -9,6 +9,7 @@ import {
   SoldierBrainResultSchema,
   SoldierBrainResultV117Schema,
   STRATEGY_RUNTIME_ABI_VERSION,
+  STRATEGY_RUNTIME_ABI_VERSION_V1_17,
   StrategyResultSchema,
   StrategyResultV117Schema,
   StrategyRuntimeResponseEnvelopeSchema,
@@ -31,6 +32,7 @@ import {
   type StrategyRuntimeRequestEnvelope,
   type StrategyRuntimeResponseEnvelope,
   type StrategyRevision,
+  type StrategyRevisionV117,
   type StrategyResult,
 } from "@cowards/spec"
 import {
@@ -44,7 +46,10 @@ import {
   pythonIsolatedHostArgs,
 } from "./python-host-config.js"
 import { pythonExperimentalRuntimeMetadata } from "./metadata.js"
-import { buildPythonSourceIdentityV117 } from "./validation.js"
+import {
+  buildPythonRequestSourceIdentityV117,
+  buildPythonSourceIdentityV117,
+} from "./validation.js"
 
 const hostPath = fileURLToPath(
   new URL("./python_runtime_host.py", import.meta.url),
@@ -105,7 +110,7 @@ export type PythonCandidateHostResultV117 = Readonly<{
 }>
 
 export interface PythonCandidateInvocationAdapterOptionsV117 {
-  readonly revision: StrategyRevision
+  readonly revision: StrategyRevision | StrategyRevisionV117
   readonly identity: RuntimeInvocationSigningIdentityV117
 }
 
@@ -495,7 +500,7 @@ export const runPythonCandidateHostV117 = (
 }
 
 const candidatePythonArtifact = (
-  revision: StrategyRevision,
+  revision: StrategyRevision | StrategyRevisionV117,
 ): { ok: true; normalizedSource: string } | { ok: false } => {
   const artifact = revision.metadata.sourceArtifact
   if (
@@ -503,7 +508,7 @@ const candidatePythonArtifact = (
     artifact.format !== "python-source-bundle" ||
     artifact.sourceHash !== revision.sourceHash ||
     artifact.sourceBytes !== revision.sourceBytes ||
-    artifact.abiVersion !== STRATEGY_RUNTIME_ABI_VERSION ||
+    artifact.abiVersion !== STRATEGY_RUNTIME_ABI_VERSION_V1_17 ||
     artifact.validationStatus !== "valid" ||
     artifact.bytesBase64 === undefined
   ) {
@@ -541,7 +546,7 @@ const candidatePythonArtifact = (
       pythonExperimentalRuntimeMetadata().language.version ||
     artifact.toolchain.commandSummary !==
       "python isolated validation host, no packages/imports" ||
-    artifact.toolchain.validationPolicy !== "python-source-validation-v1.33" ||
+    artifact.toolchain.validationPolicy !== "python-source-validation-v1.17" ||
     recordedIdentity === undefined ||
     recordedIdentity.identityVersion !== identity.identityVersion ||
     recordedIdentity.normalizationPolicy !== identity.normalizationPolicy ||
@@ -581,7 +586,7 @@ const createPythonCandidateInvocationAdapter =
     }
     const request = admittedRequest.value
     const artifact = candidatePythonArtifact(options.revision)
-    const sourceIdentity = buildPythonSourceIdentityV117(
+    const sourceIdentity = buildPythonRequestSourceIdentityV117(
       options.revision.source,
     )
     const recordedArtifact = options.revision.metadata.sourceArtifact

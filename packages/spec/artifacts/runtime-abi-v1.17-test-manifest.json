@@ -15,19 +15,19 @@
       "id": "phase258.runtime-lanes",
       "stage": "preactivation",
       "kind": "vitest",
-      "command": ["pnpm", "exec", "vitest", "run", "--reporter=verbose", "--maxWorkers=1", "packages/runtime-js/src/adapter-contract.test.ts", "packages/runtime-js/src/hostile-matrix.test.ts", "packages/runtime-js/src/revision.test.ts", "packages/runtime-python/src/python-subprocess-adapter.test.ts", "packages/runtime-wasm-wasi/src/wasm-wasi-subprocess-adapter.test.ts"],
+      "command": ["pnpm", "exec", "vitest", "run", "--reporter=verbose", "--maxWorkers=1", "packages/runtime-js/src/adapter-contract.test.ts", "packages/runtime-js/src/hostile-matrix.test.ts", "packages/runtime-js/src/revision-v1-17.test.ts", "packages/runtime-js/src/revision.test.ts", "packages/runtime-python/src/python-subprocess-adapter.test.ts", "packages/runtime-python/src/revision-v1-17.test.ts", "packages/runtime-wasm-wasi/src/revision-v1-17.test.ts", "packages/runtime-wasm-wasi/src/wasm-wasi-subprocess-adapter.test.ts"],
       "namedResult": "phase258-runtime-lanes",
-      "expectedOutput": ["adapter-contract.test.ts", "hostile-matrix.test.ts", "revision.test.ts", "python-subprocess-adapter.test.ts", "wasm-wasi-subprocess-adapter.test.ts"],
-      "ownedFiles": ["packages/runtime-js/src/adapter-contract.test.ts", "packages/runtime-js/src/hostile-matrix.test.ts", "packages/runtime-js/src/revision.test.ts", "packages/runtime-python/src/python-subprocess-adapter.test.ts", "packages/runtime-wasm-wasi/src/wasm-wasi-subprocess-adapter.test.ts"]
+      "expectedOutput": ["adapter-contract.test.ts", "hostile-matrix.test.ts", "revision-v1-17.test.ts", "revision.test.ts", "python-subprocess-adapter.test.ts", "wasm-wasi-subprocess-adapter.test.ts"],
+      "ownedFiles": ["packages/runtime-js/src/adapter-contract.test.ts", "packages/runtime-js/src/hostile-matrix.test.ts", "packages/runtime-js/src/revision-v1-17.test.ts", "packages/runtime-js/src/revision.test.ts", "packages/runtime-python/src/python-subprocess-adapter.test.ts", "packages/runtime-python/src/revision-v1-17.test.ts", "packages/runtime-wasm-wasi/src/revision-v1-17.test.ts", "packages/runtime-wasm-wasi/src/wasm-wasi-subprocess-adapter.test.ts"]
     },
     {
       "id": "phase258.service-and-engine",
       "stage": "preactivation",
       "kind": "vitest",
-      "command": ["pnpm", "exec", "vitest", "run", "--reporter=verbose", "apps/runtime-service/src/counted-safety.test.ts", "apps/runtime-service/src/execute-match.test.ts", "apps/runtime-service/src/runtime-evidence-authority.test.ts", "apps/runtime-service/src/semantic-integrity.test.ts", "apps/runtime-service/src/semantic-receipt-v1-17.test.ts", "apps/runtime-service/src/server.test.ts", "packages/engine/src/kernel/runtime-ownership.test.ts"],
+      "command": ["pnpm", "exec", "vitest", "run", "--reporter=verbose", "apps/runtime-service/src/counted-safety.test.ts", "apps/runtime-service/src/deployment-lane-registry-v1-17.test.ts", "apps/runtime-service/src/execute-match.test.ts", "apps/runtime-service/src/runtime-evidence-authority.test.ts", "apps/runtime-service/src/semantic-integrity.test.ts", "apps/runtime-service/src/semantic-receipt-v1-17.test.ts", "apps/runtime-service/src/server.test.ts", "packages/engine/src/kernel/runtime-ownership.test.ts"],
       "namedResult": "phase258-service-and-engine",
-      "expectedOutput": ["counted-safety.test.ts", "execute-match.test.ts", "server.test.ts", "runtime-ownership.test.ts"],
-      "ownedFiles": ["apps/runtime-service/src/counted-safety.test.ts", "apps/runtime-service/src/execute-match.test.ts", "apps/runtime-service/src/runtime-evidence-authority.test.ts", "apps/runtime-service/src/semantic-integrity.test.ts", "apps/runtime-service/src/semantic-receipt-v1-17.test.ts", "apps/runtime-service/src/server.test.ts", "packages/engine/src/kernel/runtime-ownership.test.ts"]
+      "expectedOutput": ["counted-safety.test.ts", "deployment-lane-registry-v1-17.test.ts", "execute-match.test.ts", "server.test.ts", "runtime-ownership.test.ts"],
+      "ownedFiles": ["apps/runtime-service/src/counted-safety.test.ts", "apps/runtime-service/src/deployment-lane-registry-v1-17.test.ts", "apps/runtime-service/src/execute-match.test.ts", "apps/runtime-service/src/runtime-evidence-authority.test.ts", "apps/runtime-service/src/semantic-integrity.test.ts", "apps/runtime-service/src/semantic-receipt-v1-17.test.ts", "apps/runtime-service/src/server.test.ts", "packages/engine/src/kernel/runtime-ownership.test.ts"]
     },
     {
       "id": "phase258.replay-and-web",
@@ -56,6 +56,17 @@
       "expectedOutput": ["account-revisions.test.ts", "complete-match.test.ts", "migrations.test.ts", "runtime-evidence-authority-publisher.test.ts", "runtime-evidence-import.test.ts"],
       "ownedFiles": ["packages/persistence/src/account-revisions.test.ts", "packages/persistence/src/complete-match.test.ts", "packages/persistence/src/migrations.test.ts", "packages/persistence/src/runtime-evidence-authority-publisher.test.ts", "packages/persistence/src/runtime-evidence-import.test.ts"],
       "database": { "dsnEnvironmentVariable": "DATABASE_URL", "skipAllowed": false }
+    },
+    {
+      "id": "phase258.go.provider-validation-v117",
+      "stage": "preactivation",
+      "kind": "go",
+      "command": ["go", "test", ".", "-run", "^TestPhase258ProviderValidationV117Admission$", "-v", "-count=1"],
+      "workingDirectory": "apps/go-backend",
+      "namedResult": "TestPhase258ProviderValidationV117Admission",
+      "expectedOutput": ["--- PASS: TestPhase258ProviderValidationV117Admission"],
+      "ownedFiles": ["apps/go-backend/runtime_service_client_v1_17_test.go"],
+      "database": { "dsnEnvironmentVariable": "COWARDS_GO_BACKEND_TEST_DATABASE_URL", "skipAllowed": false }
     },
     {
       "id": "phase258.go.current-contract",

@@ -33,6 +33,10 @@ type revisionReadinessInput struct {
 }
 
 func classifyRevisionReadiness(input revisionReadinessInput) revisionReadinessResult {
+	return classifyRevisionReadinessForSelectedABI(input, selectedStrategyRuntimeABIVersion())
+}
+
+func classifyRevisionReadinessForSelectedABI(input revisionReadinessInput, selectedRuntimeABI string) revisionReadinessResult {
 	if input.Failure != nil {
 		return revisionReadinessResult{
 			State:          revisionReadinessUnavailable,
@@ -65,7 +69,8 @@ func classifyRevisionReadiness(input revisionReadinessInput) revisionReadinessRe
 			PublicCategory: "invalid_strategy_revision",
 		}
 	}
-	if stringValue(runtime, "abiVersion") != strategyRuntimeABIVersion {
+	runtimeABI := stringValue(runtime, "abiVersion")
+	if runtimeABI != selectedRuntimeABI {
 		return revisionReadinessResult{
 			State:          revisionReadinessInvalid,
 			PublicCategory: "incompatible_runtime_metadata",
@@ -93,6 +98,12 @@ func classifyRevisionReadiness(input revisionReadinessInput) revisionReadinessRe
 		return revisionReadinessResult{
 			State:          revisionReadinessExecutionDisabled,
 			PublicCategory: "containment_missing",
+		}
+	}
+	if !providerProofMatches(input.Metadata, input.SourceHash, input.SourceBytes, languageID, runtimeABI) {
+		return revisionReadinessResult{
+			State:          revisionReadinessInvalid,
+			PublicCategory: "incompatible_runtime_metadata",
 		}
 	}
 	evidence := classifyExecutableLaneEvidence(*input.ExecutionEvidence)
@@ -202,14 +213,14 @@ func providerProofIsStale(metadata map[string]any, sourceHash string, sourceByte
 	return false
 }
 
-func providerProofMatches(metadata map[string]any, sourceHash string, sourceBytes int, languageID string) bool {
+func providerProofMatches(metadata map[string]any, sourceHash string, sourceBytes int, languageID string, runtimeABI string) bool {
 	switch languageID {
 	case "typescript":
-		return sourceArtifactProviderValidationMatches(metadata, sourceHash, sourceBytes, "strategy-language-provider-js-ts", "typescript")
+		return sourceArtifactProviderValidationMatchesABI(metadata, sourceHash, sourceBytes, "strategy-language-provider-js-ts", "typescript", runtimeABI)
 	case "python":
-		return pythonProviderValidationMatches(metadata, sourceHash, sourceBytes)
+		return pythonProviderValidationMatchesABI(metadata, sourceHash, sourceBytes, runtimeABI)
 	case "rust", "zig":
-		return rustProviderValidationMatches(metadata, sourceHash, sourceBytes, languageID)
+		return rustProviderValidationMatchesABI(metadata, sourceHash, sourceBytes, languageID, runtimeABI)
 	default:
 		return false
 	}

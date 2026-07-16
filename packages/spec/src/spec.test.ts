@@ -713,11 +713,15 @@ describe("Coward's Game spec contracts", () => {
       )
       expect(provider?.migrationNotes.length).toBeGreaterThan(0)
     }
+    const expectedWasmProviderPosture =
+      String(STRATEGY_RUNTIME_ABI_VERSION) === "strategy-runtime-abi-v1.17"
+        ? "wasi-preview1-stdin-canonical-request-stdout-raw-canonical-payload"
+        : "wasi-preview1-stdin-stdout-json"
     expect(getStrategyLanguageProviderRecord("rust")?.abiPosture).toBe(
-      "wasi-preview1-stdin-stdout-json",
+      expectedWasmProviderPosture,
     )
     expect(getStrategyLanguageProviderRecord("zig")?.abiPosture).toBe(
-      "wasi-preview1-stdin-stdout-json",
+      expectedWasmProviderPosture,
     )
     expect(
       validateStrategyLanguageProviderRuntimeCompatibility(

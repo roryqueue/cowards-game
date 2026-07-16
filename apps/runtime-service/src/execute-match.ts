@@ -22,6 +22,7 @@ import {
   createRuntimeAbiV117ExecutionLedger,
   createRuntimeInvocationBudgetV117,
   hashExecutableLaneIdentity,
+  hashCanonicalIdentity,
   hashRuntimeIdentityManifest,
   runtimeInvocationExecutionLedgerPoststateRootV117,
   serializeRuntimeInvocationRequestV117,
@@ -1792,13 +1793,18 @@ const createPreparedTypeScriptRuntimeV117 = (input: {
     normalizedSourceSha256: sha256IdentityV117(normalizedBytes),
     artifactSha256: sha256IdentityV117(executableBytes),
   } as const
+  const declaredArtifactSourceIdentity = artifact.sourceIdentity
+  const expectedArtifactOriginalSourceSha256 =
+    `sha256:${hashCanonicalIdentity("originalSource", [originalBytes])}`
+  const expectedArtifactNormalizedSourceSha256 =
+    `sha256:${hashCanonicalIdentity("normalizedSource", [normalizedBytes])}`
   if (
     sourceIdentity.artifactSha256 !== `sha256:${artifact.hash}` ||
-    (artifact.sourceIdentity !== undefined &&
-      (artifact.sourceIdentity.originalSourceSha256 !==
-        sourceIdentity.originalSourceSha256 ||
-        artifact.sourceIdentity.normalizedSourceSha256 !==
-          sourceIdentity.normalizedSourceSha256))
+    (declaredArtifactSourceIdentity !== undefined &&
+      (declaredArtifactSourceIdentity.originalSourceSha256 !==
+        expectedArtifactOriginalSourceSha256 ||
+        declaredArtifactSourceIdentity.normalizedSourceSha256 !==
+          expectedArtifactNormalizedSourceSha256))
   ) {
     return {
       ok: false,

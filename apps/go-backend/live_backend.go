@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"crypto/hmac"
 	"crypto/rand"
@@ -789,6 +790,10 @@ func (server *LiveServer) createStrategyRevision(writer http.ResponseWriter, req
 }
 
 func accountRevisionInsertFromProviderValidation(userID string, body strategyRevisionCreateBody, validation *runtimeServiceValidationResponse) (accountRevisionInsert, revisionReadinessResult) {
+	return accountRevisionInsertFromProviderValidationForSelectedABI(userID, body, validation, selectedStrategyRuntimeABIVersion())
+}
+
+func accountRevisionInsertFromProviderValidationForSelectedABI(userID string, body strategyRevisionCreateBody, validation *runtimeServiceValidationResponse, selectedRuntimeABI string) (accountRevisionInsert, revisionReadinessResult) {
 	input := accountRevisionInsert{
 		UserID:     userID,
 		StrategyID: body.StrategyID,
@@ -808,7 +813,7 @@ func accountRevisionInsertFromProviderValidation(userID string, body strategyRev
 		SourceHash:          hashString(body.Source),
 		SourceBytes:         len([]byte(body.Source)),
 	}
-	if validation != nil {
+	if validation != nil && validation.OK {
 		if validation.Runtime != nil {
 			input.Runtime = validation.Runtime
 		}
@@ -831,7 +836,28 @@ func accountRevisionInsertFromProviderValidation(userID string, body strategyRev
 	if input.Metadata == nil {
 		input.Metadata = map[string]any{}
 	}
-	readiness := classifyRevisionReadiness(revisionReadinessInput{
+	if validationStatus(input.Validation) == "valid" {
+		runtimeABI := stringValue(input.Runtime, "abiVersion")
+		languageID := stringValue(mapValue(input.Runtime, "language"), "id")
+		if runtimeABI != selectedRuntimeABI ||
+			input.SourceHash != hashString(body.Source) ||
+			input.SourceBytes != len([]byte(body.Source)) ||
+			stringValue(input.Validation, "sourceHash") != hashString(body.Source) ||
+			intValue(input.Validation, "sourceBytes") != len([]byte(body.Source)) ||
+			!providerArtifactSourceIdentityMatchesWrite(body.Source, languageID, runtimeABI, input.Metadata) ||
+			!providerProofMatches(input.Metadata, input.SourceHash, input.SourceBytes, languageID, runtimeABI) {
+			readiness := revisionReadinessResult{
+				State:          revisionReadinessInvalid,
+				PublicCategory: "incompatible_runtime_metadata",
+			}
+			input.Metadata["readinessState"] = string(readiness.State)
+			input.Metadata["readinessCategory"] = readiness.PublicCategory
+			input.Metadata["entryEligible"] = false
+			input.Metadata["countedEligible"] = false
+			return input, readiness
+		}
+	}
+	readiness := classifyRevisionReadinessForSelectedABI(revisionReadinessInput{
 		SourceFormat:        body.SourceFormat,
 		Runtime:             input.Runtime,
 		Validation:          input.Validation,
@@ -839,7 +865,7 @@ func accountRevisionInsertFromProviderValidation(userID string, body strategyRev
 		EngineCompatibility: input.EngineCompatibility,
 		SourceHash:          input.SourceHash,
 		SourceBytes:         input.SourceBytes,
-	})
+	}, selectedRuntimeABI)
 	input.Metadata["readinessState"] = string(readiness.State)
 	input.Metadata["readinessCategory"] = readiness.PublicCategory
 	input.Metadata["entryEligible"] = readiness.EntryEligible
@@ -3218,6 +3244,159 @@ func sourceIdentityV2(source string) strategySourceIdentityV2 {
 	}
 }
 
+func sourceIdentityMetadataV2(source string) map[string]any {
+	identity := sourceIdentityV2(source)
+	return map[string]any{
+		"identityVersion":        identity.Version,
+		"normalizationPolicy":    identity.Policy,
+		"originalSourceSha256":   "sha256:" + identity.OriginalHash,
+		"originalSourceBytes":    identity.OriginalBytes,
+		"normalizedSourceSha256": "sha256:" + identity.NormalizedHash,
+		"normalizedSourceBytes":  identity.NormalizedBytes,
+		"lineEndings":            identity.LineEndings,
+		"hasFinalNewline":        identity.HasFinalNewline,
+	}
+}
+
+func sourceIdentityInteger(value any) (int64, bool) {
+	switch number := value.(type) {
+	case int:
+		return int64(number), number >= 0
+	case int64:
+		return number, number >= 0
+	case float64:
+		parsed := int64(number)
+		return parsed, number >= 0 && float64(parsed) == number
+	case json.Number:
+		parsed, err := number.Int64()
+		return parsed, err == nil && parsed >= 0
+	default:
+		return 0, false
+	}
+}
+
+func sourceIdentityMetadataV2MatchesSource(value any, source string) bool {
+	identity, ok := value.(map[string]any)
+	if !ok || !runtimeInvocationV117ExactKeys(identity,
+		"identityVersion", "normalizationPolicy", "originalSourceSha256", "originalSourceBytes",
+		"normalizedSourceSha256", "normalizedSourceBytes", "lineEndings", "hasFinalNewline",
+	) {
+		return false
+	}
+	expected := sourceIdentityMetadataV2(source)
+	if stringValue(identity, "identityVersion") != stringValue(expected, "identityVersion") ||
+		stringValue(identity, "normalizationPolicy") != stringValue(expected, "normalizationPolicy") ||
+		stringValue(identity, "originalSourceSha256") != stringValue(expected, "originalSourceSha256") ||
+		stringValue(identity, "normalizedSourceSha256") != stringValue(expected, "normalizedSourceSha256") ||
+		boolValue(identity, "hasFinalNewline") != boolValue(expected, "hasFinalNewline") {
+		return false
+	}
+	for _, key := range []string{"originalSourceBytes", "normalizedSourceBytes"} {
+		actualValue, actualOK := sourceIdentityInteger(identity[key])
+		expectedValue, expectedOK := sourceIdentityInteger(expected[key])
+		if !actualOK || !expectedOK || actualValue != expectedValue {
+			return false
+		}
+	}
+	actualLineEndings := mapValue(identity, "lineEndings")
+	expectedLineEndings := mapValue(expected, "lineEndings")
+	if !runtimeInvocationV117ExactKeys(actualLineEndings, "kind", "lf", "crlf", "cr") ||
+		stringValue(actualLineEndings, "kind") != stringValue(expectedLineEndings, "kind") {
+		return false
+	}
+	for _, key := range []string{"lf", "crlf", "cr"} {
+		actualValue, actualOK := sourceIdentityInteger(actualLineEndings[key])
+		expectedValue, expectedOK := sourceIdentityInteger(expectedLineEndings[key])
+		if !actualOK || !expectedOK || actualValue != expectedValue {
+			return false
+		}
+	}
+	_, finalNewlineOK := identity["hasFinalNewline"].(bool)
+	return finalNewlineOK
+}
+
+func sourceIdentityMetadataV2IsComplete(value any, originalSourceBytes int) bool {
+	identity, ok := value.(map[string]any)
+	if !ok || !runtimeInvocationV117ExactKeys(identity,
+		"identityVersion", "normalizationPolicy", "originalSourceSha256", "originalSourceBytes",
+		"normalizedSourceSha256", "normalizedSourceBytes", "lineEndings", "hasFinalNewline",
+	) || stringValue(identity, "identityVersion") != sourceIdentityVersionV2 ||
+		stringValue(identity, "normalizationPolicy") != sourceNormalizationPolicyV117 ||
+		!isPrefixedLowerSHA256(stringValue(identity, "originalSourceSha256")) ||
+		!isPrefixedLowerSHA256(stringValue(identity, "normalizedSourceSha256")) {
+		return false
+	}
+	originalBytes, originalOK := sourceIdentityInteger(identity["originalSourceBytes"])
+	normalizedBytes, normalizedOK := sourceIdentityInteger(identity["normalizedSourceBytes"])
+	if !originalOK || !normalizedOK || originalBytes != int64(originalSourceBytes) || normalizedBytes > originalBytes {
+		return false
+	}
+	lineEndings := mapValue(identity, "lineEndings")
+	if !runtimeInvocationV117ExactKeys(lineEndings, "kind", "lf", "crlf", "cr") {
+		return false
+	}
+	counts := make([]int64, 3)
+	for index, key := range []string{"lf", "crlf", "cr"} {
+		value, valid := sourceIdentityInteger(lineEndings[key])
+		if !valid {
+			return false
+		}
+		counts[index] = value
+	}
+	present := 0
+	for _, count := range counts {
+		if count > 0 {
+			present++
+		}
+	}
+	expectedKind := "none"
+	if present > 1 {
+		expectedKind = "mixed"
+	} else if counts[0] > 0 {
+		expectedKind = "lf"
+	} else if counts[1] > 0 {
+		expectedKind = "crlf"
+	} else if counts[2] > 0 {
+		expectedKind = "cr"
+	}
+	_, finalNewlineOK := identity["hasFinalNewline"].(bool)
+	return finalNewlineOK && stringValue(lineEndings, "kind") == expectedKind &&
+		normalizedBytes == originalBytes-counts[1]
+}
+
+func providerArtifactSourceIdentityMatchesWrite(source string, languageID string, runtimeABI string, metadata map[string]any) bool {
+	if runtimeABI == strategyRuntimeABIVersion {
+		return true
+	}
+	if runtimeABI != strategyRuntimeABIVersionV117 {
+		return false
+	}
+	artifactKey := "sourceArtifact"
+	if languageID == "rust" || languageID == "zig" {
+		artifactKey = "compiledArtifact"
+	} else if languageID != "typescript" && languageID != "python" {
+		return false
+	}
+	artifact := mapValue(metadata, artifactKey)
+	declaredIdentity, exists := artifact["sourceIdentity"]
+	if !exists || !sourceIdentityMetadataV2MatchesSource(declaredIdentity, source) {
+		return false
+	}
+	canonicalIdentity := sourceIdentityMetadataV2(source)
+	if languageID == "rust" || languageID == "zig" {
+		return stringValue(artifact, "sourceHash") == stringValue(canonicalIdentity, "normalizedSourceSha256")
+	}
+	if languageID == "python" {
+		encodedArtifact := stringValue(artifact, "bytesBase64")
+		artifactBytes, err := base64.StdEncoding.Strict().DecodeString(encodedArtifact)
+		normalizedBytes := []byte(normalizeSourceV117(source))
+		return err == nil && bytes.Equal(artifactBytes, normalizedBytes) &&
+			intValue(artifact, "bytes") == len(normalizedBytes) &&
+			stringValue(artifact, "hash") == hashString(string(normalizedBytes))
+	}
+	return true
+}
+
 func randomToken() string {
 	return randomTokenN(32)
 }
@@ -3260,7 +3439,7 @@ func validUsername(value string) bool {
 
 func defaultRuntimeMetadata() map[string]any {
 	return map[string]any{
-		"abiVersion": "strategy-runtime-abi-v1.14",
+		"abiVersion": selectedStrategyRuntimeABIVersion(),
 		"language": map[string]any{
 			"id":      "typescript",
 			"version": "0.1.0",
@@ -3292,8 +3471,12 @@ func defaultRuntimeMetadata() map[string]any {
 }
 
 func pythonRuntimeMetadata() map[string]any {
+	entrypoint := "module"
+	if selectedStrategyRuntimeABIVersion() == strategyRuntimeABIVersionV117 {
+		entrypoint = "default"
+	}
 	return map[string]any{
-		"abiVersion": "strategy-runtime-abi-v1.14",
+		"abiVersion": selectedStrategyRuntimeABIVersion(),
 		"language": map[string]any{
 			"id":      "python",
 			"version": "3.9",
@@ -3304,7 +3487,7 @@ func pythonRuntimeMetadata() map[string]any {
 		},
 		"package": map[string]any{
 			"mode":       "none",
-			"entrypoint": "module",
+			"entrypoint": entrypoint,
 		},
 		"requiredCapabilities": []string{},
 		"limits": map[string]any{
@@ -3334,7 +3517,7 @@ func wasmWasiRuntimeMetadata(languageID string) map[string]any {
 		languageVersion = "0.16.0-wasm32-wasi"
 	}
 	return map[string]any{
-		"abiVersion": "strategy-runtime-abi-v1.14",
+		"abiVersion": selectedStrategyRuntimeABIVersion(),
 		"language": map[string]any{
 			"id":      languageID,
 			"version": languageVersion,
@@ -3537,6 +3720,7 @@ func publicRuntimeMetadata(runtime map[string]any) map[string]any {
 func runtimeSemanticsForRevision(runtime map[string]any, metadata map[string]any, sourceHash string, sourceBytes int) map[string]any {
 	semantics := runtimeSemantics(runtime)
 	languageID := stringValue(mapValue(runtime, "language"), "id")
+	runtimeABI := stringValue(runtime, "abiVersion")
 	if stringValue(mapValue(runtime, "package"), "mode") != "none" {
 		semantics["countedPlayEligible"] = false
 		semantics["countedPlayLabel"] = "Not counted"
@@ -3544,17 +3728,17 @@ func runtimeSemanticsForRevision(runtime map[string]any, metadata map[string]any
 		return semantics
 	}
 	if languageID != "python" && languageID != "rust" && languageID != "zig" {
-		if languageID == "typescript" && !providerProofMatches(metadata, sourceHash, sourceBytes, languageID) {
+		if languageID == "typescript" && !providerProofMatches(metadata, sourceHash, sourceBytes, languageID, runtimeABI) {
 			semantics["countedPlayEligible"] = false
 			semantics["countedPlayLabel"] = "Not counted"
 			semantics["countedPlayReason"] = "TypeScript counted play requires provider-validated revision provenance."
 		}
 		return semantics
 	}
-	if languageID == "python" && pythonProviderValidationMatches(metadata, sourceHash, sourceBytes) {
+	if languageID == "python" && pythonProviderValidationMatchesABI(metadata, sourceHash, sourceBytes, runtimeABI) {
 		return semantics
 	}
-	if (languageID == "rust" || languageID == "zig") && rustProviderValidationMatches(metadata, sourceHash, sourceBytes, languageID) {
+	if (languageID == "rust" || languageID == "zig") && rustProviderValidationMatchesABI(metadata, sourceHash, sourceBytes, languageID, runtimeABI) {
 		return semantics
 	}
 	languageLabel := "Python"
@@ -3577,7 +3761,8 @@ func validationStatus(validation map[string]any) string {
 }
 
 func runtimeAllowsCountedPlay(runtime map[string]any, metadata map[string]any, sourceHash string, sourceBytes int) bool {
-	if stringValue(runtime, "abiVersion") != "strategy-runtime-abi-v1.14" {
+	runtimeABI := stringValue(runtime, "abiVersion")
+	if runtimeABI != selectedStrategyRuntimeABIVersion() {
 		return false
 	}
 	language := mapValue(runtime, "language")
@@ -3589,21 +3774,21 @@ func runtimeAllowsCountedPlay(runtime map[string]any, metadata map[string]any, s
 		if adapterID != "runtime-python-subprocess-experimental" {
 			return false
 		}
-		if !pythonProviderValidationMatches(metadata, sourceHash, sourceBytes) {
+		if !pythonProviderValidationMatchesABI(metadata, sourceHash, sourceBytes, runtimeABI) {
 			return false
 		}
 	} else if languageID == "rust" || languageID == "zig" {
 		if adapterID != "runtime-wasm-wasi-wasmtime-preview1" {
 			return false
 		}
-		if !rustProviderValidationMatches(metadata, sourceHash, sourceBytes, languageID) {
+		if !rustProviderValidationMatchesABI(metadata, sourceHash, sourceBytes, languageID, runtimeABI) {
 			return false
 		}
 	} else if languageID == "typescript" {
 		if adapterID != "runtime-js-worker-thread" && adapterID != "runtime-js-subprocess" {
 			return false
 		}
-		if !sourceArtifactProviderValidationMatches(metadata, sourceHash, sourceBytes, "strategy-language-provider-js-ts", "typescript") {
+		if !sourceArtifactProviderValidationMatchesABI(metadata, sourceHash, sourceBytes, "strategy-language-provider-js-ts", "typescript", runtimeABI) {
 			return false
 		}
 	} else if languageID == "javascript" {
@@ -3620,7 +3805,11 @@ func runtimeAllowsCountedPlay(runtime map[string]any, metadata map[string]any, s
 }
 
 func pythonProviderValidationMatches(metadata map[string]any, sourceHash string, sourceBytes int) bool {
-	return sourceArtifactProviderValidationMatches(metadata, sourceHash, sourceBytes, "strategy-language-provider-python", "python")
+	return pythonProviderValidationMatchesABI(metadata, sourceHash, sourceBytes, strategyRuntimeABIVersion)
+}
+
+func pythonProviderValidationMatchesABI(metadata map[string]any, sourceHash string, sourceBytes int, runtimeABI string) bool {
+	return sourceArtifactProviderValidationMatchesABI(metadata, sourceHash, sourceBytes, "strategy-language-provider-python", "python", runtimeABI)
 }
 
 func sourceArtifactProviderValidationMatches(metadata map[string]any, sourceHash string, sourceBytes int, providerID string, languageID string) bool {
@@ -3641,8 +3830,8 @@ func sourceArtifactProviderValidationMatchesABI(metadata map[string]any, sourceH
 	if artifactBytesBase64 == "" {
 		return false
 	}
-	artifactBytesRaw, err := base64.StdEncoding.DecodeString(artifactBytesBase64)
-	if err != nil || len(artifactBytesRaw) != artifactBytes {
+	artifactBytesRaw, err := base64.StdEncoding.Strict().DecodeString(artifactBytesBase64)
+	if err != nil || len(artifactBytesRaw) != artifactBytes || base64.StdEncoding.EncodeToString(artifactBytesRaw) != artifactBytesBase64 {
 		return false
 	}
 	artifactDigest := sha256.Sum256(artifactBytesRaw)
@@ -3715,6 +3904,10 @@ func providerValidationProofV117(providerID string, contractVersion string, sour
 }
 
 func rustProviderValidationMatches(metadata map[string]any, sourceHash string, sourceBytes int, languageID string) bool {
+	return rustProviderValidationMatchesABI(metadata, sourceHash, sourceBytes, languageID, strategyRuntimeABIVersion)
+}
+
+func rustProviderValidationMatchesABI(metadata map[string]any, sourceHash string, sourceBytes int, languageID string, runtimeABI string) bool {
 	if sourceHash == "" || sourceBytes <= 0 {
 		return false
 	}
@@ -3728,8 +3921,8 @@ func rustProviderValidationMatches(metadata map[string]any, sourceHash string, s
 	if artifactBytesBase64 == "" {
 		return false
 	}
-	artifactBytesRaw, err := base64.StdEncoding.DecodeString(artifactBytesBase64)
-	if err != nil || len(artifactBytesRaw) != artifactBytes {
+	artifactBytesRaw, err := base64.StdEncoding.Strict().DecodeString(artifactBytesBase64)
+	if err != nil || len(artifactBytesRaw) != artifactBytes || base64.StdEncoding.EncodeToString(artifactBytesRaw) != artifactBytesBase64 {
 		return false
 	}
 	artifactDigest := sha256.Sum256(artifactBytesRaw)
@@ -3742,26 +3935,55 @@ func rustProviderValidationMatches(metadata map[string]any, sourceHash string, s
 		providerID = "strategy-language-provider-zig-wasi"
 		targetTriple = "wasm32-wasi"
 	}
-	if stringValue(artifact, "sourceHash") != sourceHash ||
+	abiEnvelope := ""
+	artifactSourceHash := sourceHash
+	switch runtimeABI {
+	case strategyRuntimeABIVersion:
+		abiEnvelope = "stdin-stdout-json"
+	case strategyRuntimeABIVersionV117:
+		abiEnvelope = "stdin-canonical-request-stdout-raw-canonical-payload"
+		artifactSourceHash = stringValue(mapValue(artifact, "sourceIdentity"), "normalizedSourceSha256")
+		if !isPrefixedLowerSHA256(artifactSourceHash) {
+			return false
+		}
+	default:
+		return false
+	}
+	if stringValue(artifact, "sourceHash") != artifactSourceHash ||
 		stringValue(artifact, "targetTriple") != targetTriple ||
 		stringValue(artifact, "wasiProfile") != "preview1" ||
-		stringValue(artifact, "abiEnvelope") != "stdin-stdout-json" ||
-		stringValue(artifact, "abiVersion") != "strategy-runtime-abi-v1.14" ||
+		stringValue(artifact, "abiEnvelope") != abiEnvelope ||
+		stringValue(artifact, "abiVersion") != runtimeABI ||
 		stringValue(artifact, "validationStatus") != "valid" {
 		return false
 	}
 	providerValidation := mapValue(metadata, "providerValidation")
 	if stringValue(providerValidation, "providerId") != providerID ||
-		stringValue(providerValidation, "contractVersion") != "strategy-language-provider-contract-v1.33" ||
 		stringValue(providerValidation, "sourceHash") != sourceHash ||
 		intValue(providerValidation, "sourceBytes") != sourceBytes ||
 		stringValue(providerValidation, "artifactHash") != artifactHash ||
 		intValue(providerValidation, "artifactBytes") != artifactBytes {
 		return false
 	}
+	contractVersion := stringValue(providerValidation, "contractVersion")
+	expectedProof := ""
+	switch runtimeABI {
+	case strategyRuntimeABIVersion:
+		if contractVersion != "strategy-language-provider-contract-v1.33" {
+			return false
+		}
+		expectedProof = providerValidationProof(providerID, sourceHash, sourceBytes, artifactHash, artifactBytes)
+	case strategyRuntimeABIVersionV117:
+		if contractVersion != "runtime-provider-validation-v1.17" {
+			return false
+		}
+		expectedProof = providerValidationProofV117(providerID, contractVersion, sourceHash, sourceBytes, artifactHash, artifactBytes)
+	default:
+		return false
+	}
 	return subtle.ConstantTimeCompare(
 		[]byte(stringValue(providerValidation, "proof")),
-		[]byte(providerValidationProof(providerID, sourceHash, sourceBytes, artifactHash, artifactBytes)),
+		[]byte(expectedProof),
 	) == 1
 }
 
@@ -3797,7 +4019,8 @@ func providerValidationProof(providerID string, sourceHash string, sourceBytes i
 }
 
 func runtimeAllowsNonCountedExhibition(runtime map[string]any, metadata map[string]any, sourceHash string, sourceBytes int) bool {
-	if stringValue(runtime, "abiVersion") != "strategy-runtime-abi-v1.14" {
+	runtimeABI := stringValue(runtime, "abiVersion")
+	if runtimeABI != selectedStrategyRuntimeABIVersion() {
 		return false
 	}
 	language := mapValue(runtime, "language")
@@ -3813,15 +4036,15 @@ func runtimeAllowsNonCountedExhibition(runtime map[string]any, metadata map[stri
 	}
 	if languageID == "typescript" {
 		return (adapterID == "runtime-js-worker-thread" || adapterID == "runtime-js-subprocess") &&
-			sourceArtifactProviderValidationMatches(metadata, sourceHash, sourceBytes, "strategy-language-provider-js-ts", "typescript")
+			sourceArtifactProviderValidationMatchesABI(metadata, sourceHash, sourceBytes, "strategy-language-provider-js-ts", "typescript", runtimeABI)
 	}
 	if languageID == "python" {
 		return adapterID == "runtime-python-subprocess-experimental" &&
-			pythonProviderValidationMatches(metadata, sourceHash, sourceBytes)
+			pythonProviderValidationMatchesABI(metadata, sourceHash, sourceBytes, runtimeABI)
 	}
 	if languageID == "rust" || languageID == "zig" {
 		return adapterID == "runtime-wasm-wasi-wasmtime-preview1" &&
-			rustProviderValidationMatches(metadata, sourceHash, sourceBytes, languageID)
+			rustProviderValidationMatchesABI(metadata, sourceHash, sourceBytes, languageID, runtimeABI)
 	}
 	return runtimeAllowsCountedPlay(runtime, nil, "", 0)
 }

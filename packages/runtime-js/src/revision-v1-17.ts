@@ -8,11 +8,11 @@ import {
   hashStrategyProviderValidationV117,
   runtimeCompatibilityKey,
   type StrategyRevisionMetadata,
-  type StrategyRevisionV117,
+  type SourceLanguageStrategyRevisionV117,
   type StrategyRuntimeMetadataV117,
 } from "@cowards/spec"
 import { createStrategyRevisionId, hashStrategySource } from "./hash.js"
-import { buildTypeScriptSourceArtifact } from "./source-artifact.js"
+import { buildTypeScriptSourceArtifactV117 } from "./source-artifact.js"
 import { validateStrategySource } from "./validation.js"
 
 const deepFreeze = <T>(value: T): T => {
@@ -31,7 +31,7 @@ export const buildStrategyRevisionV117 = (input: {
     StrategyRevisionMetadata,
     "providerValidation" | "sourceArtifact" | "compiledArtifact"
   >
-}): StrategyRevisionV117 => {
+}): SourceLanguageStrategyRevisionV117 => {
   const currentRuntime = defaultRuntimeMetadata("typescript")
   const runtime: StrategyRuntimeMetadataV117 = {
     ...currentRuntime,
@@ -53,18 +53,14 @@ export const buildStrategyRevisionV117 = (input: {
   if (!validation.valid) {
     throw new TypeError("v1.17 candidate Strategy source is invalid.")
   }
-  const currentArtifact = buildTypeScriptSourceArtifact({
+  const sourceArtifact = buildTypeScriptSourceArtifactV117({
     source: input.source,
     validation,
     runtime: currentRuntime,
   })
-  if (currentArtifact === null) {
+  if (sourceArtifact === null) {
     throw new TypeError("v1.17 candidate Strategy artifact is unavailable.")
   }
-  const sourceArtifact = {
-    ...currentArtifact,
-    abiVersion: STRATEGY_RUNTIME_ABI_VERSION_V1_17,
-  } as const
   const sourceHash = hashStrategySource(input.source)
   const compatibility = runtimeCompatibilityKey({
     runtime,
@@ -112,5 +108,7 @@ export const buildStrategyRevisionV117 = (input: {
       sourceArtifact,
     },
   }
-  return deepFreeze(StrategyRevisionV117Schema.parse(revision))
+  return deepFreeze(
+    StrategyRevisionV117Schema.parse(revision),
+  ) as SourceLanguageStrategyRevisionV117
 }

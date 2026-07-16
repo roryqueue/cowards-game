@@ -259,7 +259,7 @@
             "abiVersion": "strategy-runtime-abi-v1.17",
             "bytes": 302,
             "bytesBase64": "InVzZSBzdHJpY3QiOwpPYmplY3QuZGVmaW5lUHJvcGVydHkoZXhwb3J0cywgIl9fZXNNb2R1bGUiLCB7IHZhbHVlOiB0cnVlIH0pOwpleHBvcnRzLmRlZmF1bHQgPSB7CiAgICBzZWxlY3RBY3RpdmF0aW9ucygpIHsgcmV0dXJuIHsgYWN0aXZhdGlvbk9yZGVyczogW10sIHN0cmF0ZWd5TWVtb3J5OiB7IHNpZGU6ICJib3R0b20iIH0gfTsgfSwKICAgIHNvbGRpZXJCcmFpbigpIHsgcmV0dXJuIHsgYWN0aW9uOiB7IHR5cGU6ICJUVVJOX1RPX1NUT05FIiB9LCBzb2xkaWVyTWVtb3J5OiB7IHNpZGU6ICJib3R0b20iIH0gfTsgfQp9Owo=",
-            "createdAt": "deterministic-typescript-transpile-v1.33",
+            "createdAt": "deterministic-typescript-transpile-v1.17",
             "format": "transpiled-javascript",
             "hash": "764c315ea86e63fa29d9ac1121c460f95cf0f74c8e1fa4156fcbec48ea4c5053",
             "publicEvidence": {
@@ -269,12 +269,27 @@
             },
             "sourceBytes": 215,
             "sourceHash": "555f88455e3f22066c0e072c28b85ebf0c73a121e3ea4923e7a747cde82d7903",
+            "sourceIdentity": {
+              "hasFinalNewline": true,
+              "identityVersion": "strategy-source-identity-v2",
+              "lineEndings": {
+                "cr": 0,
+                "crlf": 0,
+                "kind": "lf",
+                "lf": 4
+              },
+              "normalizationPolicy": "source-line-endings-lf-v1.17",
+              "normalizedSourceBytes": 215,
+              "normalizedSourceSha256": "sha256:d28b360bcc88a62d6569a1b3687765f19aeecd87af2592f36d15fbdc70be2a79",
+              "originalSourceBytes": 215,
+              "originalSourceSha256": "sha256:18a912c55301e4388cae34b78eb982bee31d2ffc8f1a597125218b28c31cf813"
+            },
             "toolchain": {
               "commandSummary": "ts.transpileModule isolatedModules CommonJS ES2022",
               "language": "typescript",
               "runtime": "typescript-transpileModule",
               "runtimeVersion": "6.0.3",
-              "validationPolicy": "runtime-js-validation-v1.33"
+              "validationPolicy": "runtime-js-validation-v1.17"
             },
             "validationStatus": "valid"
           }
@@ -513,7 +528,7 @@
             "abiVersion": "strategy-runtime-abi-v1.17",
             "bytes": 296,
             "bytesBase64": "InVzZSBzdHJpY3QiOwpPYmplY3QuZGVmaW5lUHJvcGVydHkoZXhwb3J0cywgIl9fZXNNb2R1bGUiLCB7IHZhbHVlOiB0cnVlIH0pOwpleHBvcnRzLmRlZmF1bHQgPSB7CiAgICBzZWxlY3RBY3RpdmF0aW9ucygpIHsgcmV0dXJuIHsgYWN0aXZhdGlvbk9yZGVyczogW10sIHN0cmF0ZWd5TWVtb3J5OiB7IHNpZGU6ICJ0b3AiIH0gfTsgfSwKICAgIHNvbGRpZXJCcmFpbigpIHsgcmV0dXJuIHsgYWN0aW9uOiB7IHR5cGU6ICJUVVJOX1RPX1NUT05FIiB9LCBzb2xkaWVyTWVtb3J5OiB7IHNpZGU6ICJ0b3AiIH0gfTsgfQp9Owo=",
-            "createdAt": "deterministic-typescript-transpile-v1.33",
+            "createdAt": "deterministic-typescript-transpile-v1.17",
             "format": "transpiled-javascript",
             "hash": "f5fb8041c5a7d04d9ddb526866144e0f9e6916547bb8a9897db0a902e5f5e412",
             "publicEvidence": {
@@ -523,12 +538,27 @@
             },
             "sourceBytes": 209,
             "sourceHash": "00611ad8092c20ca1389e3d4652274c2b2032f3acda1c70e86aacef8910ac86c",
+            "sourceIdentity": {
+              "hasFinalNewline": true,
+              "identityVersion": "strategy-source-identity-v2",
+              "lineEndings": {
+                "cr": 0,
+                "crlf": 0,
+                "kind": "lf",
+                "lf": 4
+              },
+              "normalizationPolicy": "source-line-endings-lf-v1.17",
+              "normalizedSourceBytes": 209,
+              "normalizedSourceSha256": "sha256:a34f1df8ca5e67c1084be9710d9d9c6e9db08bdce2b3a92fdb6ab66dcbab1891",
+              "originalSourceBytes": 209,
+              "originalSourceSha256": "sha256:b996fcfd197164c9936fa34a309902f339a49ce5bd62b61fb08c881c355abe20"
+            },
             "toolchain": {
               "commandSummary": "ts.transpileModule isolatedModules CommonJS ES2022",
               "language": "typescript",
               "runtime": "typescript-transpileModule",
               "runtimeVersion": "6.0.3",
-              "validationPolicy": "runtime-js-validation-v1.33"
+              "validationPolicy": "runtime-js-validation-v1.17"
             },
             "validationStatus": "valid"
           }

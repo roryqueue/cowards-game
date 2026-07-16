@@ -168,7 +168,7 @@ func (registry *goDeploymentLaneRegistry) resolveRevision(id string, sourceHash 
 	providerValid := sourceArtifactProviderValidationMatchesABI(metadata, sourceHash, sourceBytes, profile.ProviderID, profile.LanguageID, tuple.Tuple.RuntimeABI)
 	if profile.ArtifactKind == "compiled" {
 		artifact = mapValue(metadata, "compiledArtifact")
-		providerValid = rustProviderValidationMatches(metadata, sourceHash, sourceBytes, profile.LanguageID)
+		providerValid = rustProviderValidationMatchesABI(metadata, sourceHash, sourceBytes, profile.LanguageID, tuple.Tuple.RuntimeABI)
 	}
 	if !providerValid || !isLowerSHA256(stringValue(artifact, "hash")) {
 		return nil, false
@@ -253,8 +253,49 @@ func validSuccessorStrategyRevisionV117(sourceHash string, sourceBytes int, runt
 		!runtimeInvocationV117ExactKeys(engine, "spec", "engine") {
 		return false
 	}
+	languageID := stringValue(mapValue(runtime, "language"), "id")
+	adapterID := stringValue(mapValue(runtime, "adapter"), "id")
+	entrypoint := "default"
+	expectedProviderID := ""
+	expectedArtifactKind := "source"
+	expectedFormat := ""
+	expectedTargetTriple := ""
+	switch languageID {
+	case "typescript":
+		if adapterID != "runtime-js-worker-thread" {
+			return false
+		}
+		expectedProviderID = "strategy-language-provider-js-ts"
+		expectedFormat = "transpiled-javascript"
+	case "python":
+		if adapterID != "runtime-python-subprocess-experimental" {
+			return false
+		}
+		expectedProviderID = "strategy-language-provider-python"
+		expectedFormat = "python-source-bundle"
+	case "rust":
+		if adapterID != "runtime-wasm-wasi-wasmtime-preview1" {
+			return false
+		}
+		entrypoint = "_start"
+		expectedProviderID = "strategy-language-provider-rust-wasi"
+		expectedArtifactKind = "compiled"
+		expectedFormat = "wasm"
+		expectedTargetTriple = "wasm32-wasip1"
+	case "zig":
+		if adapterID != "runtime-wasm-wasi-wasmtime-preview1" {
+			return false
+		}
+		entrypoint = "_start"
+		expectedProviderID = "strategy-language-provider-zig-wasi"
+		expectedArtifactKind = "compiled"
+		expectedFormat = "wasm"
+		expectedTargetTriple = "wasm32-wasi"
+	default:
+		return false
+	}
 	pkg := mapValue(runtime, "package")
-	if !runtimeInvocationV117ExactKeys(pkg, "entrypoint", "mode") || stringValue(pkg, "entrypoint") != "default" || stringValue(pkg, "mode") != "none" || !emptyRuntimeCapabilities(runtime["requiredCapabilities"]) {
+	if !runtimeInvocationV117ExactKeys(pkg, "entrypoint", "mode") || stringValue(pkg, "entrypoint") != entrypoint || stringValue(pkg, "mode") != "none" || !emptyRuntimeCapabilities(runtime["requiredCapabilities"]) {
 		return false
 	}
 	limits := mapValue(runtime, "limits")
@@ -262,12 +303,44 @@ func validSuccessorStrategyRevisionV117(sourceHash string, sourceBytes int, runt
 		return false
 	}
 	providerValidation := mapValue(metadata, "providerValidation")
-	artifact := mapValue(metadata, "sourceArtifact")
-	return stringValue(providerValidation, "contractVersion") == "runtime-provider-validation-v1.17" &&
+	sourceArtifactValue, sourceArtifactExists := metadata["sourceArtifact"]
+	compiledArtifactValue, compiledArtifactExists := metadata["compiledArtifact"]
+	if expectedArtifactKind == "source" && (!sourceArtifactExists || compiledArtifactExists) ||
+		expectedArtifactKind == "compiled" && (!compiledArtifactExists || sourceArtifactExists) {
+		return false
+	}
+	artifactValue := sourceArtifactValue
+	if expectedArtifactKind == "compiled" {
+		artifactValue = compiledArtifactValue
+	}
+	artifact, artifactOK := artifactValue.(map[string]any)
+	if !artifactOK || len(artifact) == 0 || stringValue(artifact, "format") != expectedFormat ||
+		stringValue(artifact, "abiVersion") != strategyRuntimeABIVersionV117 ||
+		stringValue(artifact, "validationStatus") != "valid" {
+		return false
+	}
+	declaredIdentity, identityExists := artifact["sourceIdentity"]
+	if !identityExists || !sourceIdentityMetadataV2IsComplete(declaredIdentity, sourceBytes) {
+		return false
+	}
+	if expectedArtifactKind == "source" {
+		if stringValue(artifact, "sourceHash") != sourceHash || intValue(artifact, "sourceBytes") != sourceBytes {
+			return false
+		}
+	} else {
+		identity := mapValue(artifact, "sourceIdentity")
+		if stringValue(artifact, "abiEnvelope") != "stdin-canonical-request-stdout-raw-canonical-payload" ||
+			stringValue(artifact, "wasiProfile") != "preview1" ||
+			stringValue(artifact, "targetTriple") != expectedTargetTriple ||
+			stringValue(artifact, "sourceHash") != stringValue(identity, "normalizedSourceSha256") {
+			return false
+		}
+	}
+	return stringValue(providerValidation, "providerId") == expectedProviderID &&
+		stringValue(providerValidation, "contractVersion") == "runtime-provider-validation-v1.17" &&
 		stringValue(providerValidation, "sourceHash") == sourceHash && intValue(providerValidation, "sourceBytes") == sourceBytes &&
 		stringValue(providerValidation, "artifactHash") == stringValue(artifact, "hash") &&
 		intValue(providerValidation, "artifactBytes") == intValue(artifact, "bytes") &&
-		stringValue(artifact, "abiVersion") == strategyRuntimeABIVersionV117 &&
 		stringValue(engine, "spec") == runtimeSuccessorCanonicalTupleV117.Rules &&
 		stringValue(engine, "engine") == runtimeSuccessorCanonicalTupleV117.Engine
 }

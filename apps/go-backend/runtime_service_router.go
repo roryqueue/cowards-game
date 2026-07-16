@@ -19,9 +19,9 @@ type runtimeServiceExecutionResponse struct {
 	V117            *runtimeServiceResponseV117
 }
 
-// runtimeServiceExecutionRouter is the production execution seam consumed by
-// the orchestrator. Validation remains on the immutable v1.16 client; Match
-// execution is dispatched here by the exact request contract.
+// runtimeServiceExecutionRouter is the production execution and validation
+// seam consumed by the orchestrator. Both operations are selected by the one
+// service-contract pointer while the immutable v1.16 client remains explicit.
 type runtimeServiceExecutionRouter struct {
 	v116                   *runtimeServiceClient
 	v117                   *runtimeServiceClientV117
@@ -76,8 +76,22 @@ func (router *runtimeServiceExecutionRouter) validateStrategy(
 	source string,
 	strategyID string,
 ) (*runtimeServiceValidationResponse, *runtimeServiceFailure) {
-	if router == nil || router.v116 == nil {
+	if router == nil || router.v116 == nil || router.v117 == nil || router.currentContractVersion == nil {
 		return nil, newRuntimeServiceFailure("RuntimeServiceStopped", "Runtime execution service router is not configured", true, nil)
 	}
-	return router.v116.validateStrategy(ctx, sourceFormat, source, strategyID)
+	switch router.currentContractVersion() {
+	case runtimeExecutionServiceVersion:
+		response, failure := router.v116.validateStrategy(ctx, sourceFormat, source, strategyID)
+		if failure != nil || response == nil || !response.OK {
+			return response, failure
+		}
+		if stringValue(response.Runtime, "abiVersion") != strategyRuntimeABIVersion {
+			return nil, newRuntimeServiceFailure("RuntimeServiceContractMismatch", "Legacy validation response did not match the selected v1.16 runtime authority", true, nil)
+		}
+		return response, nil
+	case runtimeExecutionServiceVersionV117:
+		return router.v117.validateStrategy(ctx, sourceFormat, source, strategyID)
+	default:
+		return nil, newRuntimeServiceFailure("RuntimeServiceContractMismatch", "Runtime service validation contract is not registered", false, nil)
+	}
 }

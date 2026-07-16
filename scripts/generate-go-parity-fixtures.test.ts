@@ -65,6 +65,10 @@ const serviceRequestRelative =
   "packages/spec/artifacts/runtime-execution-service-request.v1.17.candidate.json"
 const serviceResponseRelative =
   "packages/spec/artifacts/runtime-execution-service-response.v1.17.candidate.wire.json"
+const currentServiceRequestRelative =
+  "packages/spec/artifacts/runtime-execution-service-request.v1.17.json"
+const currentServiceResponseRelative =
+  "packages/spec/artifacts/runtime-execution-service-response.v1.17.wire.json"
 const successorAuthorityFixtureRelative =
   "packages/spec/artifacts/runtime-successor-authority-v1.17.fixture.json"
 const generatedRelative = "apps/go-backend/runtime_execution_contract_gen.go"
@@ -145,6 +149,7 @@ describe("versioned TypeScript-to-Go parity generator", () => {
     expect(source).toContain('args.includes("--versions-only")')
     expect(source).toContain('args.includes("--write-v1.17-invocation")')
     expect(source).toContain('args.includes("--write-v1.17-service")')
+    expect(source).toContain('"--write-v1.17-current-service"')
     expect(source).toContain('args.includes("--write-v1.16")')
     expect(source).toContain("Refusing to rewrite immutable v1.16")
     expect(source).not.toContain("writeFileSync(runtimeExecutionWireGoldenPath")
@@ -338,6 +343,36 @@ describe("versioned TypeScript-to-Go parity generator", () => {
     ).toEqual(
       readFileSync(path.join(repoRoot, successorAuthorityFixtureRelative)),
     )
+    expect(
+      JSON.parse(
+        readFileSync(path.join(root, serviceRequestRelative), "utf8"),
+      ).compatibilityTupleId,
+    ).toBe(CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_ID)
+  }, 30_000)
+
+  it("writes only the exact canonical current service pair for activation", () => {
+    const root = makeVersionRoot()
+    const beforeFiles = listFiles(root)
+    const written = runGenerator([
+      "--root",
+      root,
+      "--versions-only",
+      "--write-v1.17-current-service",
+    ])
+    expect(written.status, written.stderr).toBe(0)
+    expect(
+      listFiles(root).filter((relative) => !beforeFiles.includes(relative)),
+    ).toEqual(
+      [currentServiceRequestRelative, currentServiceResponseRelative].sort(),
+    )
+    const request = readFileSync(path.join(root, currentServiceRequestRelative))
+    const response = readFileSync(
+      path.join(root, currentServiceResponseRelative),
+    )
+    expect(request).toEqual(read(serviceRequestRelative))
+    expect(response).toEqual(read(serviceResponseRelative))
+    expect(request.at(-1)).toBe("}".charCodeAt(0))
+    expect(response.at(-1)).toBe("}".charCodeAt(0))
   }, 30_000)
 
   it("fails check mode when either complete v1.17 fixture family is absent", () => {

@@ -2599,7 +2599,9 @@ const checkTypeScriptWorkerQuarantineSource = (): string => {
       indexSource.includes("runWorkerOnce(") ||
       indexSource.includes("runWorkerLoop(")
     ) {
-      throw new Error("retired worker entrypoint regained lifecycle reachability")
+      throw new Error(
+        "retired worker entrypoint regained lifecycle reachability",
+      )
     }
     return "worker entrypoint is permanently retired before lifecycle setup"
   }
@@ -3089,7 +3091,10 @@ const checkV132SupportedLanguageProviders = (): string => {
     if (
       (language.id === "rust" || language.id === "zig") &&
       (language.buildBehavior !== "compile-immutable-artifact" ||
-        provider.abiPosture !== "wasi-preview1-stdin-stdout-json" ||
+        provider.abiPosture !==
+          (String(STRATEGY_RUNTIME_ABI_VERSION) === "strategy-runtime-abi-v1.17"
+            ? "wasi-preview1-stdin-canonical-request-stdout-raw-canonical-payload"
+            : "wasi-preview1-stdin-stdout-json") ||
         language.artifactPolicyLabel !== "Immutable WASM/WASI artifact" ||
         !provider.evidenceRequirements.includes("immutable-artifact-metadata"))
     ) {
@@ -5538,19 +5543,23 @@ export const runBoundaryMonitorChecks = async (): Promise<
     }
     return "direct TypeScript worker remains unreachable for every purpose"
   }),
-  await check("contract_drift", "v1.36 immutable historical proof", async () => {
-    const result = await checkV136HistoricalProof()
-    if (result.findings.length > 0) {
-      throw new Error(
-        result.findings
-          .map((finding) =>
-            finding.path ? `${finding.code} ${finding.path}` : finding.code,
-          )
-          .join("; "),
-      )
-    }
-    return `validated ${result.artifactCount} artifacts against ${result.sourceCount} archived source blobs`
-  }),
+  await check(
+    "contract_drift",
+    "v1.36 immutable historical proof",
+    async () => {
+      const result = await checkV136HistoricalProof()
+      if (result.findings.length > 0) {
+        throw new Error(
+          result.findings
+            .map((finding) =>
+              finding.path ? `${finding.code} ${finding.path}` : finding.code,
+            )
+            .join("; "),
+        )
+      }
+      return `validated ${result.artifactCount} artifacts against ${result.sourceCount} archived source blobs`
+    },
+  ),
   await check("contract_drift", "OpenAPI public route artifact", () =>
     checkOpenApiContract(),
   ),

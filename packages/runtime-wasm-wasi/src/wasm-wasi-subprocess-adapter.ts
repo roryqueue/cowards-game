@@ -51,6 +51,8 @@ import {
   type StrategyRuntime,
 } from "@cowards/engine"
 import {
+  buildWasmWasiRequestSourceIdentityV117,
+  buildWasmWasiSourceIdentityV117,
   collectWasmWasiCandidateIdentityV117,
   readWasmWasiSourceIdentityAttestationV117,
   validateWasmWasiImports,
@@ -295,12 +297,15 @@ const candidateArtifactBytesFor = (
       safeCode: string
     } => {
   const artifact = revision.metadata.compiledArtifact
+  const requestSourceIdentity = buildWasmWasiRequestSourceIdentityV117(
+    revision.source,
+  )
   if (
     request.sourceIdentity.strategyRevisionId !== revision.id ||
     request.sourceIdentity.originalSourceSha256 !==
-      revision.sourceIdentity?.originalSourceSha256 ||
+      requestSourceIdentity.originalSourceSha256 ||
     request.sourceIdentity.normalizedSourceSha256 !==
-      revision.sourceIdentity?.normalizedSourceSha256 ||
+      requestSourceIdentity.normalizedSourceSha256 ||
     revision.runtime.abiVersion !==
       RUNTIME_INVOCATION_V1_17_CANDIDATE.runtimeAbiVersion ||
     revision.runtime.adapter.id !== "runtime-wasm-wasi-wasmtime-preview1" ||
@@ -340,7 +345,7 @@ const candidateArtifactBytesFor = (
     artifact.sourceIdentity,
   )
   const revisionSourceIdentitySha256 = wasmWasiSourceIdentityFingerprintV117(
-    revision.sourceIdentity,
+    buildWasmWasiSourceIdentityV117(revision.source),
   )
   if (
     request.sourceIdentity.artifactSha256 !== `sha256:${artifact.hash}` ||

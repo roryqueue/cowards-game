@@ -16,22 +16,29 @@ import { tmpdir } from "node:os"
 import { delimiter, dirname, extname, join, relative } from "node:path"
 import { fileURLToPath } from "node:url"
 import {
+  CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE,
   COMPATIBILITY_VERSIONS,
   RUNTIME_INVOCATION_V1_17_CANDIDATE,
   STRATEGY_RUNTIME_ABI_VERSION,
+  STRATEGY_RUNTIME_ABI_VERSION_V1_17,
+  STRATEGY_PROVIDER_VALIDATION_CONTRACT_V1_17,
   STRATEGY_SOURCE_BYTES,
   STRATEGY_WASM_ARTIFACT_BYTES,
   StrategyRevisionSchema,
+  StrategyRevisionV117Schema,
   admitCanonicalJsonBytes,
   admitCanonicalJsonValue,
   hashCanonicalIdentity,
   hashCanonicalIdentityValue,
+  hashStrategyProviderValidationV117,
   runtimeCompatibilityKey,
   type CompiledStrategyArtifact,
+  type CompiledStrategyRevisionV117,
   type JsonValue,
   type SourceLanguageStrategyArtifact,
   type StrategyRevision,
   type StrategyRevisionMetadata,
+  type StrategyRuntimeMetadataV117,
   type StrategyRevisionValidationIssue,
   type StrategyRevisionValidationReport,
 } from "@cowards/spec"
@@ -180,7 +187,7 @@ export interface WasmWasiCandidateArtifactV117 extends Omit<
 
 export interface WasmWasiCandidateRevisionV117 {
   id: string
-  sourceIdentity: WasmWasiSourceIdentityV117
+  source: string
   runtime: {
     abiVersion: "strategy-runtime-abi-v1.17"
     language: {
@@ -201,6 +208,11 @@ export interface WasmWasiSourceIdentityV117 extends Omit<
   NonNullable<SourceLanguageStrategyArtifact["sourceIdentity"]>,
   "originalSourceSha256" | "normalizedSourceSha256"
 > {
+  originalSourceSha256: `sha256:${string}`
+  normalizedSourceSha256: `sha256:${string}`
+}
+
+export interface WasmWasiRequestSourceIdentityV117 {
   originalSourceSha256: `sha256:${string}`
   normalizedSourceSha256: `sha256:${string}`
 }
@@ -254,6 +266,19 @@ export const buildWasmWasiSourceIdentityV117 = (
     lineEndings: { kind, lf, crlf, cr },
     hasFinalNewline: source.endsWith("\n") || source.endsWith("\r"),
   }
+}
+
+/** Direct byte identities for the signed language-neutral request envelope. */
+export const buildWasmWasiRequestSourceIdentityV117 = (
+  source: string,
+): Readonly<WasmWasiRequestSourceIdentityV117> => {
+  const normalizedSource = source.replace(/\r\n?/gu, "\n")
+  return Object.freeze({
+    originalSourceSha256: prefixedSha256(Buffer.from(source, "utf8")),
+    normalizedSourceSha256: prefixedSha256(
+      Buffer.from(normalizedSource, "utf8"),
+    ),
+  })
 }
 
 export const wasmWasiSourceIdentityFingerprintV117 = (
@@ -1382,7 +1407,7 @@ const buildWasmWasiCandidateRevisionV117 = (
   const sourceIdentity = compiled.artifact.sourceIdentity
   return {
     id: `strategy-revision:${languageId}-wasi-v1.17:${sourceIdentity.normalizedSourceSha256.slice(-16)}:${compiled.artifact.hash.slice(0, 16)}`,
-    sourceIdentity,
+    source,
     runtime: {
       abiVersion: RUNTIME_INVOCATION_V1_17_CANDIDATE.runtimeAbiVersion,
       language: {
@@ -1404,6 +1429,135 @@ export const buildRustWasmCandidateRevisionV117 = (source: string) =>
 
 export const buildZigWasmCandidateRevisionV117 = (source: string) =>
   buildWasmWasiCandidateRevisionV117("zig", source)
+
+const deepFreeze = <T>(value: T): T => {
+  if (value !== null && typeof value === "object" && !Object.isFrozen(value)) {
+    for (const entry of Object.values(value)) deepFreeze(entry)
+    Object.freeze(value)
+  }
+  return value
+}
+
+const buildWasmWasiStrategyRevisionV117 = (
+  languageId: "rust" | "zig",
+  input: {
+    source: string
+    strategyId?: string | undefined
+    providerId?: string | undefined
+    metadata?: Omit<
+      StrategyRevisionMetadata,
+      "compiledArtifact" | "providerValidation" | "sourceArtifact"
+    >
+  },
+): CompiledStrategyRevisionV117 => {
+  const compiled =
+    languageId === "rust"
+      ? compileRustWasmArtifactV117(input.source)
+      : compileZigWasmArtifactV117(input.source)
+  if (!compiled.ok || compiled.artifact === undefined) {
+    throw new TypeError(
+      `v1.17 ${languageId} WASM/WASI Strategy source is invalid.`,
+    )
+  }
+  const currentRuntime = wasmWasiRuntimeMetadata(languageId)
+  const runtime: StrategyRuntimeMetadataV117 = {
+    ...currentRuntime,
+    abiVersion: STRATEGY_RUNTIME_ABI_VERSION_V1_17,
+    adapter: { ...currentRuntime.adapter, version: "v1.17-candidate" },
+    limits: {
+      ...currentRuntime.limits,
+      environment: "empty",
+      filesystem: "none",
+      network: "disabled",
+      shell: "disabled",
+      packagePolicy: "none",
+    },
+  }
+  const validation: StrategyRevisionValidationReport = {
+    valid: true,
+    errors: [],
+    warnings: [],
+    sourceBytes: Buffer.byteLength(input.source),
+    forbiddenPatterns: compiled.forbiddenPatterns,
+    sourceHash: hashSource(input.source),
+    runtimeVersion: runtime.adapter.version,
+    engineCompatibility: {
+      spec: CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE.rules,
+      engine: CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE.engine,
+    },
+  }
+  const artifact = compiled.artifact
+  const compatibility = runtimeCompatibilityKey({
+    runtime,
+    sourceHash: validation.sourceHash,
+    artifactHash: artifact.hash,
+    artifactTargetTriple: artifact.targetTriple,
+    artifactWasiProfile: artifact.wasiProfile,
+    specVersion: validation.engineCompatibility.spec,
+    engineVersion: validation.engineCompatibility.engine,
+  })
+  const compatibilityHash = createHash("sha256")
+    .update(JSON.stringify(compatibility))
+    .digest("hex")
+  const providerValidationInput = {
+    providerId:
+      input.providerId ?? `strategy-language-provider-${languageId}-wasi`,
+    contractVersion: STRATEGY_PROVIDER_VALIDATION_CONTRACT_V1_17,
+    sourceHash: validation.sourceHash,
+    sourceBytes: validation.sourceBytes,
+    artifactHash: artifact.hash,
+    artifactBytes: artifact.bytes,
+  } as const
+  const revision = {
+    id: `strategy-revision:${languageId}-wasi-v1.17:${validation.sourceHash}:${compatibilityHash.slice(0, 16)}`,
+    ...(input.strategyId === undefined ? {} : { strategyId: input.strategyId }),
+    source: input.source,
+    sourceHash: validation.sourceHash,
+    sourceBytes: validation.sourceBytes,
+    runtime,
+    engineCompatibility: validation.engineCompatibility,
+    validation,
+    metadata: {
+      ...input.metadata,
+      tags: [
+        ...new Set([
+          ...(input.metadata?.tags ?? []),
+          languageId,
+          "wasm-wasi",
+          "v1.17",
+        ]),
+      ],
+      providerValidation: {
+        ...providerValidationInput,
+        proof: hashStrategyProviderValidationV117(providerValidationInput),
+      },
+      compiledArtifact: artifact,
+    },
+  }
+  return deepFreeze(
+    StrategyRevisionV117Schema.parse(revision),
+  ) as CompiledStrategyRevisionV117
+}
+
+export const buildRustStrategyRevisionV117 = (input: {
+  source: string
+  strategyId?: string | undefined
+  providerId?: string | undefined
+  metadata?: Omit<
+    StrategyRevisionMetadata,
+    "compiledArtifact" | "providerValidation" | "sourceArtifact"
+  >
+}) => buildWasmWasiStrategyRevisionV117("rust", input)
+
+export const buildZigStrategyRevisionV117 = (input: {
+  source: string
+  strategyId?: string | undefined
+  providerId?: string | undefined
+  metadata?: Omit<
+    StrategyRevisionMetadata,
+    "compiledArtifact" | "providerValidation" | "sourceArtifact"
+  >
+}) => buildWasmWasiStrategyRevisionV117("zig", input)
 
 export const validateRustStrategySource = (
   source: string,

@@ -51,6 +51,7 @@ describe("Phase 258 exact runtime ABI test manifest", () => {
     expect(document.schemaVersion).toBe("runtime-abi-v1.17-test-manifest-v1")
     const names = new Set(document.tests?.map(({ namedResult }) => namedResult))
     for (const name of [
+      "TestPhase258ProviderValidationV117Admission",
       "TestPhase258CurrentDefaultRuntimeServiceContract",
       "TestPhase258CurrentDefaultRoutes",
       "TestPhase258MixedRuntimeContractFailsClosed",

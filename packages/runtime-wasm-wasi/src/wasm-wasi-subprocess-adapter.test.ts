@@ -25,6 +25,7 @@ import {
   buildRustStrategyRevision,
   compileRustWasmArtifact,
   buildRustWasmCandidateRevisionV117,
+  buildWasmWasiRequestSourceIdentityV117,
   compileRustWasmArtifactV117,
   compileZigWasmArtifactV117,
   validateRustStrategySource,
@@ -139,15 +140,13 @@ const candidateSigningIdentity: RuntimeInvocationSigningIdentityV117 = {
 }
 
 const candidateRequest = (
-  revision: Pick<
-    WasmWasiCandidateRevisionV117,
-    "id" | "sourceIdentity" | "metadata"
-  >,
+  revision: Pick<WasmWasiCandidateRevisionV117, "id" | "metadata" | "source">,
   artifactSha256 = revision.metadata.compiledArtifact?.hash,
 ): AuthenticatedRuntimeInvocationRequestV117 => {
   if (artifactSha256 === undefined) {
     throw new Error("Rust candidate fixture did not compile")
   }
+  const sourceIdentity = buildWasmWasiRequestSourceIdentityV117(revision.source)
   return createSelectedRuntimeInvocationRequestV117(
     {
       requestId: "request:wasm-wasi:v1.17:1",
@@ -164,8 +163,8 @@ const candidateRequest = (
       },
       sourceIdentity: {
         strategyRevisionId: revision.id,
-        originalSourceSha256: revision.sourceIdentity.originalSourceSha256,
-        normalizedSourceSha256: revision.sourceIdentity.normalizedSourceSha256,
+        originalSourceSha256: sourceIdentity.originalSourceSha256,
+        normalizedSourceSha256: sourceIdentity.normalizedSourceSha256,
         artifactSha256: `sha256:${artifactSha256}`,
       },
       budget: createRuntimeInvocationBudgetV117("soldierBrain"),
@@ -1033,7 +1032,6 @@ describe("WASM/WASI runtime v1.17 candidate host authority", () => {
     }
     const legacyCandidateRevision = {
       ...legacyRevision,
-      sourceIdentity: revision.sourceIdentity,
     } as unknown as WasmWasiCandidateRevisionV117
     const request = candidateRequest(legacyCandidateRevision)
     const response = runWasmWasiStrategyMethodV117Sync({
@@ -1212,29 +1210,30 @@ describe("WASM/WASI runtime v1.17 exact Rust/Zig identity", () => {
   it("attests typed source domains from actual source into artifact and execution identity", () => {
     const built = buildRustWasmCandidateRevisionV117(candidateRustSource)
     expect(built).toMatchObject({
-      sourceIdentity: {
-        identityVersion: "strategy-source-identity-v2",
-        normalizationPolicy: "source-line-endings-lf-v1.17",
-        originalSourceSha256: expect.stringMatching(/^sha256:[0-9a-f]{64}$/u),
-        normalizedSourceSha256: expect.stringMatching(/^sha256:[0-9a-f]{64}$/u),
-      },
       metadata: {
         compiledArtifact: {
           sourceIdentity: {
             identityVersion: "strategy-source-identity-v2",
+            normalizationPolicy: "source-line-endings-lf-v1.17",
+            originalSourceSha256: expect.stringMatching(
+              /^sha256:[0-9a-f]{64}$/u,
+            ),
+            normalizedSourceSha256: expect.stringMatching(
+              /^sha256:[0-9a-f]{64}$/u,
+            ),
           },
         },
       },
     })
     expect(candidateExecutionIdentity(built)).toMatchObject({
-      sourceIdentity: (built as unknown as { sourceIdentity: unknown })
-        .sourceIdentity,
+      sourceIdentity: built.metadata.compiledArtifact.sourceIdentity,
     })
   })
 
   it("rejects canonical source attestations with unknown top-level or nested keys", () => {
     const identity =
-      buildRustWasmCandidateRevisionV117(candidateRustSource).sourceIdentity
+      buildRustWasmCandidateRevisionV117(candidateRustSource).metadata
+        .compiledArtifact.sourceIdentity
     expect(isWasmWasiSourceIdentityV117({ ...identity, extra: true })).toBe(
       false,
     )
@@ -1248,7 +1247,8 @@ describe("WASM/WASI runtime v1.17 exact Rust/Zig identity", () => {
 
   it("rejects closed source attestations with impossible normalization semantics", () => {
     const identity =
-      buildRustWasmCandidateRevisionV117(candidateRustSource).sourceIdentity
+      buildRustWasmCandidateRevisionV117(candidateRustSource).metadata
+        .compiledArtifact.sourceIdentity
     expect(
       isWasmWasiSourceIdentityV117({
         ...identity,
@@ -1294,7 +1294,6 @@ describe("WASM/WASI runtime v1.17 exact Rust/Zig identity", () => {
     }
     const tamperedRevision = {
       ...revision,
-      sourceIdentity: tamperedIdentity,
       metadata: {
         compiledArtifact: {
           ...artifact,

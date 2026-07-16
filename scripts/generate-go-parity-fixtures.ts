@@ -297,6 +297,14 @@ const versionPaths = (root: string) => ({
     root,
     "packages/spec/artifacts/runtime-execution-service-response.v1.17.candidate.wire.json",
   ),
+  v117CurrentServiceRequest: path.join(
+    root,
+    "packages/spec/artifacts/runtime-execution-service-request.v1.17.json",
+  ),
+  v117CurrentServiceResponse: path.join(
+    root,
+    "packages/spec/artifacts/runtime-execution-service-response.v1.17.wire.json",
+  ),
   v117SuccessorAuthorityFixture: path.join(
     root,
     "packages/spec/artifacts/runtime-successor-authority-v1.17.fixture.json",
@@ -694,7 +702,7 @@ const createV117ServiceArtifacts = () => {
     kind: "executeMatch",
     requestId: "request:full-service:v1.17:0001",
     matchId: "match:full-service:v1.17:0001",
-    compatibilityTupleId: identity("1"),
+    compatibilityTupleId: CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_ID,
     authority: {
       bundleHash: identity("2"),
       sourceManifestHash: identity("3"),
@@ -1136,6 +1144,22 @@ const writeV117ServiceArtifacts = (root: string): void => {
   writeFileSync(paths.v117ServiceResponse, artifacts.responseBytes)
   writeFileSync(paths.v117SuccessorAuthorityFixture, successorAuthorityFixture)
   writeFileSync(paths.goContract, createV117GeneratedSource())
+}
+
+// Activation writes only the already-proved current service pair. Candidate
+// authority, generated Go tables, and immutable v1.16 evidence remain Task-1
+// inputs and are deliberately not regenerated after the pointer flip.
+const writeV117CurrentServiceArtifacts = (root: string): void => {
+  const paths = versionPaths(root)
+  const artifacts = createV117ServiceArtifacts()
+  for (const target of [
+    paths.v117CurrentServiceRequest,
+    paths.v117CurrentServiceResponse,
+  ]) {
+    mkdirSync(path.dirname(target), { recursive: true })
+  }
+  writeFileSync(paths.v117CurrentServiceRequest, artifacts.requestBytes)
+  writeFileSync(paths.v117CurrentServiceResponse, artifacts.responseBytes)
 }
 
 const verifyV117Artifacts = (
@@ -1692,12 +1716,16 @@ export const main = async (args = process.argv.slice(2)): Promise<void> => {
   const versionsOnly = args.includes("--versions-only")
   const writeV117Invocation = args.includes("--write-v1.17-invocation")
   const writeV117Service = args.includes("--write-v1.17-service")
+  const writeV117CurrentService = args.includes(
+    "--write-v1.17-current-service",
+  )
   const checkMode = args.includes("--check")
   const historicalV116Only = args.includes("--historical-v1.16-only")
 
   verifyImmutableV116(root)
   if (writeV117Invocation) writeV117InvocationArtifacts(root)
   if (writeV117Service) writeV117ServiceArtifacts(root)
+  if (writeV117CurrentService) writeV117CurrentServiceArtifacts(root)
   const requireAllV117 =
     checkMode &&
     !historicalV116Only &&

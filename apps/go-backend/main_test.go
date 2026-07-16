@@ -3,8 +3,6 @@ package main
 import (
 	"context"
 	"crypto/sha256"
-	"encoding/base64"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -20,10 +18,7 @@ import (
 )
 
 func selectedStrategyRuntimeABIVersionForTest() string {
-	if selectedRuntimeServiceContractVersion() == runtimeExecutionServiceVersionV117 {
-		return strategyRuntimeABIVersionV117
-	}
-	return strategyRuntimeABIVersion
+	return selectedStrategyRuntimeABIVersion()
 }
 
 func TestNewLiveServerRejectsAuthorityBeforePoolOrOrchestrator(t *testing.T) {
@@ -353,34 +348,7 @@ func TestPythonRuntimeMetadataIsCountedProviderEligible(t *testing.T) {
 	runtime := pythonRuntimeMetadata()
 	sourceHash := "sourcehash:python"
 	sourceBytes := 123
-	artifactPayload := []byte("python-artifact")
-	artifactDigest := sha256.Sum256(artifactPayload)
-	artifactHash := hex.EncodeToString(artifactDigest[:])
-	artifactBytes := len(artifactPayload)
-	metadata := map[string]any{
-		"sourceArtifact": map[string]any{
-			"format":           "python-source-bundle",
-			"hash":             artifactHash,
-			"bytes":            artifactBytes,
-			"bytesBase64":      base64.StdEncoding.EncodeToString(artifactPayload),
-			"sourceHash":       sourceHash,
-			"sourceBytes":      sourceBytes,
-			"abiVersion":       selectedStrategyRuntimeABIVersionForTest(),
-			"validationStatus": "valid",
-			"toolchain": map[string]any{
-				"language": "python",
-			},
-		},
-		"providerValidation": map[string]any{
-			"providerId":      "strategy-language-provider-python",
-			"contractVersion": "strategy-language-provider-contract-v1.33",
-			"sourceHash":      sourceHash,
-			"sourceBytes":     sourceBytes,
-			"artifactHash":    artifactHash,
-			"artifactBytes":   artifactBytes,
-			"proof":           providerValidationProof("strategy-language-provider-python", sourceHash, sourceBytes, artifactHash, artifactBytes),
-		},
-	}
+	metadata := providerReadinessSourceArtifactMetadata(t, "python", "strategy-language-provider-python", sourceHash, sourceBytes, true)
 	semantics := runtimeSemantics(runtime)
 
 	if stringValue(mapValue(runtime, "language"), "id") != "python" {
@@ -444,32 +412,7 @@ func TestRustRuntimeMetadataRequiresArtifactProviderProofForCountedPlay(t *testi
 	runtime := rustWasmRuntimeMetadata()
 	sourceHash := "sourcehash:rust"
 	sourceBytes := 456
-	artifactPayload := []byte("rust-artifact")
-	artifactDigest := sha256.Sum256(artifactPayload)
-	artifactHash := hex.EncodeToString(artifactDigest[:])
-	artifactBytes := len(artifactPayload)
-	metadata := map[string]any{
-		"compiledArtifact": map[string]any{
-			"hash":             artifactHash,
-			"bytes":            artifactBytes,
-			"bytesBase64":      base64.StdEncoding.EncodeToString(artifactPayload),
-			"sourceHash":       sourceHash,
-			"targetTriple":     "wasm32-wasip1",
-			"wasiProfile":      "preview1",
-			"abiEnvelope":      "stdin-stdout-json",
-			"abiVersion":       selectedStrategyRuntimeABIVersionForTest(),
-			"validationStatus": "valid",
-		},
-		"providerValidation": map[string]any{
-			"providerId":      "strategy-language-provider-rust-wasi",
-			"contractVersion": "strategy-language-provider-contract-v1.33",
-			"sourceHash":      sourceHash,
-			"sourceBytes":     sourceBytes,
-			"artifactHash":    artifactHash,
-			"artifactBytes":   artifactBytes,
-			"proof":           providerValidationProof("strategy-language-provider-rust-wasi", sourceHash, sourceBytes, artifactHash, artifactBytes),
-		},
-	}
+	metadata := providerReadinessCompiledArtifactMetadata(t, "rust", sourceHash, sourceBytes)
 
 	if runtimeSemantics(runtime)["countedPlayEligible"] != true {
 		t.Fatalf("Rust runtime semantics should be counted provider eligible")
@@ -492,32 +435,7 @@ func TestZigRuntimeMetadataRequiresArtifactProviderProofForCountedPlay(t *testin
 	runtime := wasmWasiRuntimeMetadata("zig")
 	sourceHash := "sourcehash:zig"
 	sourceBytes := 345
-	artifactPayload := []byte("zig-artifact")
-	artifactDigest := sha256.Sum256(artifactPayload)
-	artifactHash := hex.EncodeToString(artifactDigest[:])
-	artifactBytes := len(artifactPayload)
-	metadata := map[string]any{
-		"compiledArtifact": map[string]any{
-			"hash":             artifactHash,
-			"bytes":            artifactBytes,
-			"bytesBase64":      base64.StdEncoding.EncodeToString(artifactPayload),
-			"sourceHash":       sourceHash,
-			"targetTriple":     "wasm32-wasi",
-			"wasiProfile":      "preview1",
-			"abiEnvelope":      "stdin-stdout-json",
-			"abiVersion":       selectedStrategyRuntimeABIVersionForTest(),
-			"validationStatus": "valid",
-		},
-		"providerValidation": map[string]any{
-			"providerId":      "strategy-language-provider-zig-wasi",
-			"contractVersion": "strategy-language-provider-contract-v1.33",
-			"sourceHash":      sourceHash,
-			"sourceBytes":     sourceBytes,
-			"artifactHash":    artifactHash,
-			"artifactBytes":   artifactBytes,
-			"proof":           providerValidationProof("strategy-language-provider-zig-wasi", sourceHash, sourceBytes, artifactHash, artifactBytes),
-		},
-	}
+	metadata := providerReadinessCompiledArtifactMetadata(t, "zig", sourceHash, sourceBytes)
 
 	if runtimeSemantics(runtime)["countedPlayEligible"] != true {
 		t.Fatalf("Zig runtime semantics should be counted provider eligible")

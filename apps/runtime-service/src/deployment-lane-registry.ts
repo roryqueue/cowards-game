@@ -310,10 +310,21 @@ const artifactBytesAndHash = (
   const compiledArtifact = revision.metadata.compiledArtifact
   const artifact =
     profile.artifactKind === "source" ? sourceArtifact : compiledArtifact
+  const successor =
+    profile.semanticTupleId === CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_ID
+  const compiledSourceIdentity =
+    compiledArtifact !== undefined && "sourceIdentity" in compiledArtifact
+      ? compiledArtifact.sourceIdentity
+      : undefined
+  const expectedArtifactSourceHash =
+    successor && profile.artifactKind === "compiled"
+      ? compiledSourceIdentity?.normalizedSourceSha256
+      : revision.sourceHash
   if (
     !artifact?.bytesBase64 ||
     !SHA256_PATTERN.test(artifact.hash) ||
-    artifact.sourceHash !== revision.sourceHash ||
+    expectedArtifactSourceHash === undefined ||
+    artifact.sourceHash !== expectedArtifactSourceHash ||
     artifact.abiVersion !== profile.semanticTuple.runtimeAbi
   ) {
     return undefined
@@ -326,8 +337,6 @@ const artifactBytesAndHash = (
     return undefined
   }
   if (profile.artifactKind === "source") {
-    const successor =
-      profile.semanticTupleId === CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_ID
     if (
       !sourceArtifact ||
       (successor

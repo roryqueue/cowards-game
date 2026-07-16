@@ -191,6 +191,98 @@ func TestPhase258DeploymentLaneRegistryKeepsRuntimeAndToolchainVersionsDistinct(
 	}
 }
 
+func successorCompiledDeploymentRegistryForTest(t *testing.T, languageID string, runtime map[string]any, metadata map[string]any) (*goDeploymentLaneRegistry, registeredCompatibilityTuple) {
+	t.Helper()
+	authorityFixture := loadRuntimeSuccessorAuthorityFixtureV117(t)
+	template := cloneRuntimeSuccessorIdentityTemplateV117(&authorityFixture.Template)
+	artifact := mapValue(metadata, "compiledArtifact")
+	toolchain := mapValue(artifact, "toolchain")
+	bindings := runtimeIdentityBindingMapV117(template.Bindings)
+	profile := goDeploymentLaneProfile{
+		ProviderID: stringValue(mapValue(metadata, "providerValidation"), "providerId"),
+		LanguageID: languageID, LanguageVersion: stringValue(mapValue(runtime, "language"), "version"),
+		RuntimeID: "wasmtime", RuntimeVersion: "wasmtime-v1.17-test",
+		ToolchainID: stringValue(toolchain, "compiler"), ToolchainVersion: stringValue(toolchain, "compilerVersion"),
+		AdapterID: stringValue(mapValue(runtime, "adapter"), "id"), AdapterVersion: stringValue(mapValue(runtime, "adapter"), "version"),
+		PolicyID: bindings["containmentPolicy"].PublicID, PolicyVersion: "v1.17",
+		CorpusID: bindings["conformanceCorpus"].PublicID, CorpusVersion: "v1.17",
+		ArtifactKind: "compiled", ArtifactIDPrefix: "strategy-revision-artifact:",
+		ImplementationID: "runtime-execution-service", BuildID: "runtime-execution-service-v1.17-test",
+		SemanticTupleID: runtimeSuccessorSemanticTupleIDV117, SemanticTuple: runtimeSuccessorCanonicalTupleV117,
+	}
+	template.ExactPins[1][1] = profile.RuntimeVersion
+	laneProfileSHA256, ok := hashSuccessorRuntimeLaneProfileV117(profile)
+	if !ok {
+		t.Fatal("compiled successor lane profile did not hash")
+	}
+	template.LaneProfileSHA256 = laneProfileSHA256
+	profile.SuccessorRuntimeIdentityTemplate = template
+	return &goDeploymentLaneRegistry{
+		SchemaVersion: deploymentLaneRegistrySchemaVersion,
+		RegistryID:    "test:compiled-successor:" + languageID,
+		Lanes:         []goDeploymentLaneProfile{profile},
+	}, registeredCompatibilityTuple{TupleID: runtimeSuccessorSemanticTupleIDV117, Tuple: runtimeSuccessorCanonicalTupleV117}
+}
+
+func TestPhase258DeploymentLaneRegistryResolvesPersistedV117RustAndZigArtifacts(t *testing.T) {
+	source := "pub fn main() {}\r\n"
+	for _, languageID := range []string{"rust", "zig"} {
+		t.Run(languageID, func(t *testing.T) {
+			validation := providerReadinessV117ValidationResponse(t, languageID, source)
+			wire, err := json.Marshal(validation)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var roundTripped runtimeServiceValidationResponse
+			if err := decodeStrictJSONUseNumber(wire, &roundTripped); err != nil {
+				t.Fatal(err)
+			}
+			insert, readiness := accountRevisionInsertFromProviderValidationForSelectedABI(
+				"user:compiled-successor", strategyRevisionCreateBody{Source: source, SourceFormat: languageID},
+				&roundTripped, strategyRuntimeABIVersionV117,
+			)
+			if readiness.State != revisionReadinessExecutionDisabled || readiness.PublicCategory != "containment_missing" {
+				t.Fatalf("valid %s account write did not reach containment gate: %+v", languageID, readiness)
+			}
+			persistedWire, err := json.Marshal(insert)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var persisted accountRevisionInsert
+			if err := decodeStrictJSONUseNumber(persistedWire, &persisted); err != nil {
+				t.Fatal(err)
+			}
+			registry, tuple := successorCompiledDeploymentRegistryForTest(t, languageID, persisted.Runtime, persisted.Metadata)
+			resolved, ok := registry.resolveRevision(
+				"strategy-revision:persisted:"+languageID, persisted.SourceHash, persisted.SourceBytes,
+				persisted.Runtime, persisted.EngineCompatibility, persisted.Validation, persisted.Metadata, tuple,
+			)
+			if !ok || resolved == nil || resolved.LanguageID != languageID || resolved.ArtifactSHA256 != stringValue(mapValue(persisted.Metadata, "compiledArtifact"), "hash") {
+				t.Fatalf("persisted %s compiled revision did not resolve exactly: %+v", languageID, resolved)
+			}
+
+			mixed := cloneMap(persisted.Metadata)
+			mixed["sourceArtifact"] = cloneMap(mapValue(mixed, "compiledArtifact"))
+			if resolved, ok := registry.resolveRevision(
+				"strategy-revision:mixed:"+languageID, persisted.SourceHash, persisted.SourceBytes,
+				persisted.Runtime, persisted.EngineCompatibility, persisted.Validation, mixed, tuple,
+			); ok || resolved != nil {
+				t.Fatalf("%s accepted an extra source artifact beside the compiled artifact", languageID)
+			}
+
+			swapped := cloneMap(persisted.Metadata)
+			swapped["sourceArtifact"] = cloneMap(mapValue(swapped, "compiledArtifact"))
+			delete(swapped, "compiledArtifact")
+			if resolved, ok := registry.resolveRevision(
+				"strategy-revision:swapped:"+languageID, persisted.SourceHash, persisted.SourceBytes,
+				persisted.Runtime, persisted.EngineCompatibility, persisted.Validation, swapped, tuple,
+			); ok || resolved != nil {
+				t.Fatalf("%s accepted a source artifact in the compiled lane", languageID)
+			}
+		})
+	}
+}
+
 func TestPhase258SuccessorRuntimeLimitsRequireExactIntegersAfterJSONDecoding(t *testing.T) {
 	limits := defaultRuntimeServiceLimitsV117()
 	limits["timeoutMs"] = json.Number("1000")

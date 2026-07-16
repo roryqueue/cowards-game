@@ -24,6 +24,19 @@ func selectedRuntimeServiceContractVersion() string {
 	return runtimeExecutionServiceVersion
 }
 
+// selectedStrategyRuntimeABIVersion derives ABI ownership from the same
+// indivisible service pointer used by orchestration and routing.
+func selectedStrategyRuntimeABIVersion() string {
+	switch selectedRuntimeServiceContractVersion() {
+	case runtimeExecutionServiceVersion:
+		return strategyRuntimeABIVersion
+	case runtimeExecutionServiceVersionV117:
+		return strategyRuntimeABIVersionV117
+	default:
+		return ""
+	}
+}
+
 type runtimeServiceRequestV117 struct {
 	ContractVersion      string                      `json:"contractVersion"`
 	Kind                 string                      `json:"kind"`
@@ -94,6 +107,27 @@ type runtimeServiceClientV117 struct {
 	semanticReceiptSecret string
 }
 
+type runtimeServiceValidationProviderV117 struct {
+	ID                string `json:"id"`
+	ContractVersion   string `json:"contractVersion"`
+	RuntimeABIVersion string `json:"runtimeAbiVersion"`
+	ABIPosture        string `json:"abiPosture"`
+}
+
+type runtimeServiceValidationWireResponseV117 struct {
+	OK                  bool                                  `json:"ok"`
+	Kind                string                                `json:"kind"`
+	SourceFormat        string                                `json:"sourceFormat"`
+	Provider            *runtimeServiceValidationProviderV117 `json:"provider,omitempty"`
+	Runtime             map[string]any                        `json:"runtime,omitempty"`
+	Validation          map[string]any                        `json:"validation,omitempty"`
+	EngineCompatibility map[string]any                        `json:"engineCompatibility,omitempty"`
+	Metadata            map[string]any                        `json:"metadata,omitempty"`
+	SourceHash          string                                `json:"sourceHash,omitempty"`
+	SourceBytes         int                                   `json:"sourceBytes,omitempty"`
+	Error               string                                `json:"error,omitempty"`
+}
+
 func newRuntimeServiceClientV117(endpoint string) *runtimeServiceClientV117 {
 	legacy := newRuntimeServiceClient(endpoint)
 	return &runtimeServiceClientV117{
@@ -103,6 +137,207 @@ func newRuntimeServiceClientV117(endpoint string) *runtimeServiceClientV117 {
 		privateArtifactToken:  legacy.privateArtifactToken,
 		semanticReceiptSecret: legacy.semanticReceiptSecret,
 	}
+}
+
+func expectedRuntimeServiceValidationProviderIDV117(sourceFormat string) string {
+	switch sourceFormat {
+	case "typescript":
+		return "strategy-language-provider-js-ts"
+	case "python":
+		return "strategy-language-provider-python"
+	case "rust":
+		return "strategy-language-provider-rust-wasi"
+	case "zig":
+		return "strategy-language-provider-zig-wasi"
+	default:
+		return ""
+	}
+}
+
+func expectedRuntimeServiceValidationABIPostureV117(sourceFormat string) string {
+	switch sourceFormat {
+	case "typescript":
+		return "runtime-js-source-artifact"
+	case "python":
+		return "python-source-provenance-json"
+	case "rust", "zig":
+		return "wasi-preview1-stdin-canonical-request-stdout-raw-canonical-payload"
+	default:
+		return ""
+	}
+}
+
+func validRuntimeServiceValidationArtifactAuthorityV117(sourceFormat string, runtime map[string]any, metadata map[string]any) bool {
+	language := mapValue(runtime, "language")
+	adapter := mapValue(runtime, "adapter")
+	artifactKey := "sourceArtifact"
+	expectedLanguageVersion := ""
+	expectedAdapterID := ""
+	expectedAdapterVersion := ""
+	expectedToolchain := map[string]string{}
+	switch sourceFormat {
+	case "typescript":
+		expectedLanguageVersion = "0.1.0"
+		expectedAdapterID = "runtime-js-worker-thread"
+		expectedAdapterVersion = "0.1.0"
+		expectedToolchain = map[string]string{
+			"language": "typescript", "runtime": "typescript-transpileModule", "runtimeVersion": "6.0.3",
+			"commandSummary": "ts.transpileModule isolatedModules CommonJS ES2022", "validationPolicy": "runtime-js-validation-v1.17",
+		}
+	case "python":
+		expectedLanguageVersion = "3.9"
+		expectedAdapterID = "runtime-python-subprocess-experimental"
+		expectedAdapterVersion = "0.1.0-experimental"
+		expectedToolchain = map[string]string{
+			"language": "python", "runtime": "python3", "runtimeVersion": "3.9",
+			"commandSummary": "python isolated validation host, no packages/imports", "validationPolicy": "python-source-validation-v1.17",
+		}
+	case "rust":
+		artifactKey = "compiledArtifact"
+		expectedLanguageVersion = "1.95.0-wasm32-wasip1"
+		expectedAdapterID = "runtime-wasm-wasi-wasmtime-preview1"
+		expectedAdapterVersion = "v1.17-candidate"
+		expectedToolchain = map[string]string{
+			"language": "rust", "compiler": "rustc", "targetTriple": "wasm32-wasip1",
+			"commandSummary": "rustc --target wasm32-wasip1 -O strategy.rs -o strategy.wasm",
+		}
+	case "zig":
+		artifactKey = "compiledArtifact"
+		expectedLanguageVersion = "0.16.0-wasm32-wasi"
+		expectedAdapterID = "runtime-wasm-wasi-wasmtime-preview1"
+		expectedAdapterVersion = "v1.17-candidate"
+		expectedToolchain = map[string]string{
+			"language": "zig", "compiler": "zig", "targetTriple": "wasm32-wasi",
+			"commandSummary": "zig build-exe strategy.zig -target wasm32-wasi -O ReleaseSmall --cache-dir <temp> --global-cache-dir <temp> -femit-bin=strategy.wasm",
+		}
+	default:
+		return false
+	}
+	if stringValue(language, "id") != sourceFormat || stringValue(language, "version") != expectedLanguageVersion ||
+		stringValue(adapter, "id") != expectedAdapterID || stringValue(adapter, "version") != expectedAdapterVersion {
+		return false
+	}
+	artifact := mapValue(metadata, artifactKey)
+	toolchain := mapValue(artifact, "toolchain")
+	publicEvidence := mapValue(artifact, "publicEvidence")
+	if artifactKey == "sourceArtifact" {
+		if !runtimeInvocationV117ExactKeys(toolchain, "language", "runtime", "runtimeVersion", "commandSummary", "validationPolicy") ||
+			!runtimeInvocationV117ExactKeys(publicEvidence, "label", "nonCounted", "sandboxClaim") ||
+			strings.TrimSpace(stringValue(publicEvidence, "label")) == "" || boolValue(publicEvidence, "nonCounted") ||
+			stringValue(publicEvidence, "sandboxClaim") != "provenance-only" {
+			return false
+		}
+	} else {
+		if !runtimeInvocationV117ExactKeys(toolchain, "language", "compiler", "compilerVersion", "targetTriple", "commandSummary") ||
+			strings.TrimSpace(stringValue(toolchain, "compilerVersion")) == "" ||
+			!runtimeInvocationV117ExactKeys(publicEvidence, "label", "nonCounted", "sandboxClaim") ||
+			strings.TrimSpace(stringValue(publicEvidence, "label")) == "" || !boolValue(publicEvidence, "nonCounted") ||
+			stringValue(publicEvidence, "sandboxClaim") != "candidate-readiness-only" {
+			return false
+		}
+	}
+	for key, expected := range expectedToolchain {
+		if stringValue(toolchain, key) != expected {
+			return false
+		}
+	}
+	return true
+}
+
+func (client *runtimeServiceClientV117) validateStrategy(
+	ctx context.Context,
+	sourceFormat string,
+	source string,
+	strategyID string,
+) (*runtimeServiceValidationResponse, *runtimeServiceFailure) {
+	expectedProviderID := expectedRuntimeServiceValidationProviderIDV117(sourceFormat)
+	if client == nil || expectedProviderID == "" {
+		return nil, newRuntimeServiceFailure("RuntimeServiceContractMismatch", "Runtime service v1.17 validation source format is not registered", false, nil)
+	}
+	requestBody := map[string]any{
+		"sourceFormat": sourceFormat, "source": source, "includePrivateArtifact": true,
+	}
+	if strings.TrimSpace(strategyID) != "" {
+		requestBody["strategyId"] = strategyID
+	}
+	body, err := json.Marshal(requestBody)
+	if err != nil {
+		return nil, newRuntimeServiceFailure("RuntimeServiceRequestEncode", "Runtime service v1.17 validation request could not be encoded", false, nil)
+	}
+	request, err := http.NewRequestWithContext(ctx, http.MethodPost, client.endpoint+"/validate-strategy", bytes.NewReader(body))
+	if err != nil {
+		return nil, newRuntimeServiceFailure("RuntimeServiceRequestCreate", "Runtime service v1.17 validation request could not be created", false, nil)
+	}
+	request.Header.Set("content-type", "application/json")
+	if token := strings.TrimSpace(client.privateArtifactToken); token != "" {
+		request.Header.Set(runtimeServicePrivateArtifactTokenHeader, token)
+	}
+	httpClient := client.httpClient
+	if httpClient == nil {
+		httpClient = http.DefaultClient
+	}
+	response, err := httpClient.Do(request)
+	if err != nil {
+		return nil, newRuntimeServiceFailure("RuntimeServiceTransport", "Runtime execution service v1.17 validation is unavailable", true, nil)
+	}
+	defer response.Body.Close()
+	maxBytes := client.maxResponseBytes
+	if maxBytes <= 0 {
+		maxBytes = defaultRuntimeServiceResponseBytes
+	}
+	payload, err := io.ReadAll(io.LimitReader(response.Body, maxBytes+1))
+	if err != nil {
+		return nil, newRuntimeServiceFailure("RuntimeServiceRead", "Runtime service v1.17 validation response could not be read", true, nil)
+	}
+	if int64(len(payload)) > maxBytes {
+		return nil, newRuntimeServiceFailure("RuntimeServiceOversizedResponse", "Runtime service v1.17 validation response exceeded the configured byte limit", true, nil)
+	}
+	if response.StatusCode == http.StatusForbidden {
+		return nil, newRuntimeServiceFailure("RuntimeServicePrivateArtifactUnauthorized", "Runtime service v1.17 private validation evidence is not authorized", false, nil)
+	}
+	var wire runtimeServiceValidationWireResponseV117
+	if err := decodeStrictJSONUseNumber(payload, &wire); err != nil {
+		return nil, newRuntimeServiceFailure("RuntimeServiceMalformedResponse", "Runtime service v1.17 validation response was malformed", true, nil)
+	}
+	decoded := &runtimeServiceValidationResponse{
+		OK: wire.OK, Kind: wire.Kind, SourceFormat: wire.SourceFormat,
+		Runtime: wire.Runtime, Validation: wire.Validation, EngineCompatibility: wire.EngineCompatibility,
+		Metadata: wire.Metadata, SourceHash: wire.SourceHash, SourceBytes: wire.SourceBytes, Error: wire.Error,
+	}
+	if wire.Kind != "strategyValidation" || wire.SourceFormat != sourceFormat {
+		return nil, newRuntimeServiceFailure("RuntimeServiceContractMismatch", "Runtime service v1.17 validation response binding mismatch", true, nil)
+	}
+	if !wire.OK {
+		validationValid, validationHasValid := wire.Validation["valid"].(bool)
+		if response.StatusCode != http.StatusUnprocessableEntity || wire.Provider != nil || wire.Runtime != nil ||
+			wire.EngineCompatibility != nil || wire.Metadata != nil || wire.SourceHash != "" || wire.SourceBytes != 0 ||
+			(wire.Validation != nil && (!validationHasValid || validationValid)) {
+			return nil, newRuntimeServiceFailure("RuntimeServiceContractMismatch", "Runtime service v1.17 validation failure carried contradictory success authority", true, nil)
+		}
+		return decoded, nil
+	}
+	if response.StatusCode != http.StatusOK {
+		return nil, newRuntimeServiceFailure("RuntimeServiceContractMismatch", "Runtime service v1.17 validation success used a non-success HTTP status", true, nil)
+	}
+	rawSourceHash := hashStrategySourceForGo(source)
+	rawSourceBytes := len([]byte(source))
+	providerValidation := mapValue(wire.Metadata, "providerValidation")
+	if wire.Error != "" || wire.Provider == nil || wire.Provider.ID != expectedProviderID ||
+		wire.Provider.ContractVersion != "runtime-provider-validation-v1.17" ||
+		wire.Provider.RuntimeABIVersion != strategyRuntimeABIVersionV117 ||
+		wire.Provider.ABIPosture != expectedRuntimeServiceValidationABIPostureV117(sourceFormat) ||
+		wire.SourceHash != rawSourceHash || wire.SourceBytes != rawSourceBytes ||
+		stringValue(wire.Runtime, "abiVersion") != strategyRuntimeABIVersionV117 ||
+		stringValue(mapValue(wire.Runtime, "language"), "id") != sourceFormat ||
+		stringValue(providerValidation, "providerId") != expectedProviderID ||
+		stringValue(providerValidation, "contractVersion") != wire.Provider.ContractVersion ||
+		!validSuccessorStrategyRevisionV117(rawSourceHash, rawSourceBytes, wire.Runtime, wire.EngineCompatibility, wire.Validation, wire.Metadata) ||
+		!validRuntimeServiceValidationArtifactAuthorityV117(sourceFormat, wire.Runtime, wire.Metadata) ||
+		!providerArtifactSourceIdentityMatchesWrite(source, sourceFormat, strategyRuntimeABIVersionV117, wire.Metadata) ||
+		!providerProofMatches(wire.Metadata, rawSourceHash, rawSourceBytes, sourceFormat, strategyRuntimeABIVersionV117) {
+		return nil, newRuntimeServiceFailure("RuntimeServiceContractMismatch", "Runtime service v1.17 validation evidence did not match the selected runtime authority", true, nil)
+	}
+	return decoded, nil
 }
 
 func (client *runtimeServiceClientV117) executeMatch(
@@ -228,16 +463,21 @@ func runtimeServiceSourceIdentityFromPersistedRevisionV117(strategy runtimeServi
 		return runtimeServiceSourceIdentityV117{}, false
 	}
 	originalBytes := []byte(strategy.Source)
-	normalizedBytes := []byte(strings.ReplaceAll(strings.ReplaceAll(strategy.Source, "\r\n", "\n"), "\r", "\n"))
+	normalizedBytes := []byte(normalizeSourceV117(strategy.Source))
 	identity := runtimeServiceSourceIdentityV117{
 		OriginalSourceSHA256:   runtimeInvocationV117SHA256Value(originalBytes),
 		NormalizedSourceSHA256: runtimeInvocationV117SHA256Value(normalizedBytes),
 		ArtifactSHA256:         runtimeInvocationV117SHA256Value(artifactBytes),
 	}
-	if declaredValue, exists := artifact["sourceIdentity"]; exists {
-		declared, ok := declaredValue.(map[string]any)
-		if !ok || stringValue(declared, "originalSourceSha256") != identity.OriginalSourceSHA256 ||
-			stringValue(declared, "normalizedSourceSha256") != identity.NormalizedSourceSHA256 {
+	declaredValue, exists := artifact["sourceIdentity"]
+	languageID := stringValue(mapValue(strategy.Runtime, "language"), "id")
+	requiresDeclaredIdentity := stringValue(strategy.Runtime, "abiVersion") == strategyRuntimeABIVersionV117 &&
+		(languageID == "typescript" || languageID == "python" || languageID == "rust" || languageID == "zig")
+	if requiresDeclaredIdentity && !exists {
+		return runtimeServiceSourceIdentityV117{}, false
+	}
+	if exists {
+		if !sourceIdentityMetadataV2MatchesSource(declaredValue, strategy.Source) {
 			return runtimeServiceSourceIdentityV117{}, false
 		}
 	}

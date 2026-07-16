@@ -27,8 +27,10 @@ import {
   type RuntimeInvocationExecutionReceiptEvidenceV117,
 } from "@cowards/spec"
 import {
+  buildPythonRequestSourceIdentityV117,
   buildPythonSourceIdentityV117,
-  buildPythonStrategyRevision,
+  buildPythonStrategyRevision as buildPythonLegacyStrategyRevision,
+  buildPythonStrategyRevisionV117 as buildPythonStrategyRevision,
   validatePythonStrategySource,
 } from "./validation.js"
 
@@ -58,7 +60,7 @@ const legacyPythonRuntimeIsSelected =
 const candidateRequestInput = (
   revision = buildPythonStrategyRevision({ source: pythonSource }),
 ): Parameters<typeof createSelectedRuntimeInvocationRequestV117>[0] => {
-  const identity = buildPythonSourceIdentityV117(revision.source)
+  const identity = buildPythonRequestSourceIdentityV117(revision.source)
   const artifact = revision.metadata.sourceArtifact!
   return {
     requestId: "request:python:v1.17:1",
@@ -1119,7 +1121,9 @@ describe("Python subprocess Strategy provider ABI", () => {
 
   it("owns missing method lookup as a distinct pre-method host failure", () => {
     const source = `def soldier_brain(input):\n    return {"action": {"type": "TURN_TO_STONE"}, "soldierMemory": None}\n`
-    const revision = buildPythonStrategyRevision({ source })
+    // Host classification is below revision admission; use an admitted request
+    // while injecting source that deliberately lacks the selected method.
+    const revision = buildPythonStrategyRevision({ source: pythonSource })
     const request = candidateRequest(revision)
     const host = runPythonCandidateHostV117(
       request,
@@ -1270,7 +1274,9 @@ describe("Python subprocess Strategy provider ABI", () => {
   })
 
   it("runs synchronously for the runtime-service broker adapter", () => {
-    const revision = buildPythonStrategyRevision({ source: pythonSource })
+    const revision = buildPythonLegacyStrategyRevision({
+      source: pythonSource,
+    })
     const runtime = createPythonRuntimeFromRevision(revision, {
       timeoutMs: 1_000,
       stdoutBytes: 32 * 1024,
@@ -1306,7 +1312,7 @@ describe("Python subprocess Strategy provider ABI", () => {
 
   it("maps timeout to a runtime violation", () => {
     const source = `${pythonSource}\ndef soldier_brain(input):\n    while True:\n        pass\n`
-    const revision = buildPythonStrategyRevision({ source })
+    const revision = buildPythonLegacyStrategyRevision({ source })
     const response = runPythonStrategyMethodSync({
       sourceText: revision.source,
       sourceHash: revision.sourceHash,
@@ -1343,7 +1349,7 @@ describe("Python subprocess Strategy provider ABI", () => {
 
   it("maps stdio flood to a deterministic system failure", () => {
     const source = `${pythonSource}\ndef soldier_brain(input):\n    return {"action": {"type": "TURN_TO_STONE"}, "soldierMemory": {"flood": "x" * 200000}}\n`
-    const revision = buildPythonStrategyRevision({ source })
+    const revision = buildPythonLegacyStrategyRevision({ source })
     const response = runPythonStrategyMethodSync({
       sourceText: revision.source,
       sourceHash: revision.sourceHash,

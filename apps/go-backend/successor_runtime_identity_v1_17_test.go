@@ -305,7 +305,9 @@ func successorIdentitySameLaneRevisionsForTest(t *testing.T) (
 	first.Runtime = cloneMap(first.Runtime)
 	first.Runtime["abiVersion"] = strategyRuntimeABIVersionV117
 	first.Metadata = cloneMap(first.Metadata)
-	mapValue(first.Metadata, "sourceArtifact")["abiVersion"] = strategyRuntimeABIVersionV117
+	firstArtifact := mapValue(first.Metadata, "sourceArtifact")
+	firstArtifact["abiVersion"] = strategyRuntimeABIVersionV117
+	firstArtifact["sourceIdentity"] = sourceIdentityMetadataV2(first.Source)
 	firstEvidence := goEntrantExecutionEvidence{StrategyRevisionID: first.ID, LaneIdentity: fixture.Lane}
 	firstEvidence.LaneIdentity.RuntimeID = fixture.Registry.Lanes[0].RuntimeID
 	firstEvidence.LaneIdentity.RuntimeVersion = fixture.Registry.Lanes[0].RuntimeVersion
@@ -328,7 +330,7 @@ func successorIdentitySameLaneRevisionsForTest(t *testing.T) (
 	sourceArtifact["bytesBase64"] = base64.StdEncoding.EncodeToString(secondArtifact)
 	sourceArtifact["sourceHash"] = second.SourceHash
 	sourceArtifact["sourceBytes"] = second.SourceBytes
-	delete(sourceArtifact, "sourceIdentity")
+	sourceArtifact["sourceIdentity"] = sourceIdentityMetadataV2(second.Source)
 	second.Metadata["sourceArtifact"] = sourceArtifact
 	secondLane := firstEvidence.LaneIdentity
 	secondLane.ArtifactID += ":second"

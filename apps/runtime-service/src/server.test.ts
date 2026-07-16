@@ -10,6 +10,7 @@ import {
   RUNTIME_EXECUTION_SERVICE_VERSION,
   RUNTIME_INVOCATION_V1_17_INITIAL_EXECUTION_LEDGER_ROOT,
   RUNTIME_INVOCATION_V1_17_TEST_KEY_ID,
+  STRATEGY_LANGUAGE_PROVIDER_CONTRACT_VERSION,
   STRATEGY_RUNTIME_ABI_VERSION,
   RuntimeExecutionServiceResponseSchema,
   admitCanonicalJsonBytes,
@@ -20,6 +21,7 @@ import {
   hashCanonicalIdentity,
   hashExecutableLaneIdentity,
   hashRuntimeIdentityManifest,
+  hashStrategyProviderValidationV117,
   runtimeInvocationExecutionLedgerPoststateRootV117,
   serializeRuntimeInvocationResponseV117,
   type JsonValue,
@@ -55,6 +57,71 @@ process.env.COWARDS_PROVIDER_VALIDATION_SECRET =
   "cowards-provider-validation-test-secret-v1.33"
 
 const PRIVATE_ARTIFACT_TOKEN = "cowards-private-artifact-test-token-v1.35"
+
+const selectedProviderProofPattern = new RegExp(
+  `^${String(STRATEGY_LANGUAGE_PROVIDER_CONTRACT_VERSION).startsWith("runtime-provider-validation-") ? "sha256" : "hmac-sha256"}:[0-9a-f]{64}$`,
+)
+
+const expectExactSelectedProviderProof = (
+  body: Record<string, unknown>,
+): void => {
+  if (
+    !String(STRATEGY_LANGUAGE_PROVIDER_CONTRACT_VERSION).startsWith(
+      "runtime-provider-validation-",
+    )
+  ) {
+    return
+  }
+  const metadata = body.metadata as Record<string, unknown>
+  const validation = metadata.providerValidation as Record<string, unknown>
+  expect(validation.proof).toBe(
+    hashStrategyProviderValidationV117({
+      providerId: String(validation.providerId),
+      contractVersion: "runtime-provider-validation-v1.17",
+      sourceHash: String(validation.sourceHash),
+      sourceBytes: Number(validation.sourceBytes),
+      artifactHash: String(validation.artifactHash),
+      artifactBytes: Number(validation.artifactBytes),
+    }),
+  )
+}
+
+const expectSelectedProviderAuthority = (
+  body: Record<string, unknown>,
+): void => {
+  const provider = body.provider as Record<string, unknown>
+  const runtime = body.runtime as Record<string, unknown>
+  const metadata = body.metadata as Record<string, unknown>
+  const validation = metadata.providerValidation as Record<string, unknown>
+  const artifact = (metadata.sourceArtifact ??
+    metadata.compiledArtifact) as Record<string, unknown>
+  expect(provider.contractVersion).toBe(
+    STRATEGY_LANGUAGE_PROVIDER_CONTRACT_VERSION,
+  )
+  expect(provider.runtimeAbiVersion).toBe(STRATEGY_RUNTIME_ABI_VERSION)
+  expect(runtime.abiVersion).toBe(STRATEGY_RUNTIME_ABI_VERSION)
+  expect(validation.contractVersion).toBe(
+    STRATEGY_LANGUAGE_PROVIDER_CONTRACT_VERSION,
+  )
+  expect(artifact.abiVersion).toBe(STRATEGY_RUNTIME_ABI_VERSION)
+  const sourceFormat = String(body.sourceFormat)
+  const expectedAbiPosture =
+    sourceFormat === "typescript"
+      ? "runtime-js-source-artifact"
+      : sourceFormat === "python"
+        ? "python-source-provenance-json"
+        : String(STRATEGY_RUNTIME_ABI_VERSION) === "strategy-runtime-abi-v1.17"
+          ? "wasi-preview1-stdin-canonical-request-stdout-raw-canonical-payload"
+          : "wasi-preview1-stdin-stdout-json"
+  expect(provider.abiPosture).toBe(expectedAbiPosture)
+  if (metadata.compiledArtifact !== undefined) {
+    expect(artifact.abiEnvelope).toBe(
+      String(STRATEGY_RUNTIME_ABI_VERSION) === "strategy-runtime-abi-v1.17"
+        ? "stdin-canonical-request-stdout-raw-canonical-payload"
+        : "stdin-stdout-json",
+    )
+  }
+}
 
 const successorTemplate = (() => {
   const bindings = SUCCESSOR_RUNTIME_IDENTITY_TEMPLATE_DOMAINS_V117.map(
@@ -767,6 +834,46 @@ describe("runtime execution HTTP boundary", () => {
     })
   })
 
+  it("fails closed when validation selection drifts from provider authority", async () => {
+    const driftedRuntimeAbi =
+      String(STRATEGY_RUNTIME_ABI_VERSION) === "strategy-runtime-abi-v1.17"
+        ? "strategy-runtime-abi-v1.14"
+        : "strategy-runtime-abi-v1.17"
+    const server = createRuntimeExecutionHttpServer({
+      runtimeConfig: {
+        ...runtimeConfig,
+        contractSelection: {
+          ...runtimeConfig.contractSelection,
+          runtimeAbiVersion: driftedRuntimeAbi,
+        },
+      },
+      bodyLimitBytes: 8 * 1024,
+    })
+    servers.push(server)
+    server.listen(0, "127.0.0.1")
+    await once(server, "listening")
+    const address = server.address() as AddressInfo
+    const source = `export default {
+  selectActivations() { return [] },
+  soldierBrain() { return { action: { type: "TURN_TO_STONE" }, soldierMemory: null } },
+}`
+    const response = await fetch(
+      `http://127.0.0.1:${address.port}/validate-strategy`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ sourceFormat: "typescript", source }),
+      },
+    )
+    const body = (await response.json()) as Record<string, unknown>
+
+    expect(response.status).toBe(400)
+    expect(body.ok).toBe(false)
+    expect(JSON.stringify(body)).not.toContain(source)
+    expect(JSON.stringify(body)).not.toContain("bytesBase64")
+    expect(JSON.stringify(body)).not.toContain("sourceIdentity")
+  })
+
   it("validates TypeScript through provider proof without exposing private artifacts", async () => {
     const server = await withServer(8 * 1024)
     const source = `
@@ -810,12 +917,12 @@ export default {
         },
         providerValidation: {
           providerId: "strategy-language-provider-js-ts",
-          contractVersion: "strategy-language-provider-contract-v1.33",
+          contractVersion: STRATEGY_LANGUAGE_PROVIDER_CONTRACT_VERSION,
           sourceHash: expect.any(String),
           sourceBytes: expect.any(Number),
           artifactHash: expect.any(String),
           artifactBytes: expect.any(Number),
-          proof: expect.stringMatching(/^hmac-sha256:[0-9a-f]{64}$/),
+          proof: expect.stringMatching(selectedProviderProofPattern),
         },
       },
       sourceHash: expect.any(String),
@@ -823,12 +930,15 @@ export default {
     })
     expect(serialized).not.toContain(source)
     expect(serialized).not.toContain("bytesBase64")
+    expect(serialized).not.toContain("sourceIdentity")
     expect(serialized).not.toContain("/Users/")
     expect(serialized).not.toContain("process.env")
     expect(serialized).not.toContain("StrategyMemory")
     expect(serialized).not.toContain("SoldierMemory")
     expect(serialized).not.toContain('"objectivePayload":')
     expect(serialized).not.toContain("postgres://")
+    expectSelectedProviderAuthority(body)
+    expectExactSelectedProviderProof(body)
   })
 
   it("rejects private TypeScript artifact requests without the internal token", async () => {
@@ -906,10 +1016,20 @@ export default {
         },
         providerValidation: {
           providerId: "strategy-language-provider-js-ts",
-          proof: expect.stringMatching(/^hmac-sha256:[0-9a-f]{64}$/),
+          proof: expect.stringMatching(selectedProviderProofPattern),
         },
       },
     })
+    const sourceArtifact = (body.metadata as Record<string, unknown>)
+      .sourceArtifact as Record<string, unknown>
+    if (String(STRATEGY_RUNTIME_ABI_VERSION) === "strategy-runtime-abi-v1.17") {
+      expect(sourceArtifact.sourceIdentity).toMatchObject({
+        identityVersion: "strategy-source-identity-v2",
+        normalizationPolicy: "source-line-endings-lf-v1.17",
+        originalSourceSha256: expect.stringMatching(/^sha256:[0-9a-f]{64}$/u),
+        normalizedSourceSha256: expect.stringMatching(/^sha256:[0-9a-f]{64}$/u),
+      })
+    }
     expect(JSON.stringify(body)).not.toContain(source)
   })
 
@@ -945,14 +1065,18 @@ def soldier_brain(input):
         tags: ["python", "counted", "provider"],
         providerValidation: {
           providerId: "strategy-language-provider-python",
-          contractVersion: "strategy-language-provider-contract-v1.33",
+          contractVersion: STRATEGY_LANGUAGE_PROVIDER_CONTRACT_VERSION,
           sourceHash: expect.any(String),
           sourceBytes: expect.any(Number),
-          proof: expect.stringMatching(/^hmac-sha256:[0-9a-f]{64}$/),
+          proof: expect.stringMatching(selectedProviderProofPattern),
         },
       },
     })
     expect(JSON.stringify(validBody)).not.toContain("NON_COUNTED_RUNTIME")
+    expect(JSON.stringify(validBody)).not.toContain("bytesBase64")
+    expect(JSON.stringify(validBody)).not.toContain("sourceIdentity")
+    expectSelectedProviderAuthority(validBody)
+    expectExactSelectedProviderProof(validBody)
 
     const invalid = await fetch(`${server.url}/validate-strategy`, {
       method: "POST",
@@ -1019,24 +1143,34 @@ fn main() {
         tags: ["rust", "wasm-wasi", "counted", "provider"],
         providerValidation: {
           providerId: "strategy-language-provider-rust-wasi",
-          contractVersion: "strategy-language-provider-contract-v1.33",
+          contractVersion: STRATEGY_LANGUAGE_PROVIDER_CONTRACT_VERSION,
           sourceHash: expect.any(String),
           sourceBytes: expect.any(Number),
           artifactHash: expect.any(String),
           artifactBytes: expect.any(Number),
-          proof: expect.stringMatching(/^hmac-sha256:[0-9a-f]{64}$/),
+          proof: expect.stringMatching(selectedProviderProofPattern),
         },
         compiledArtifact: {
           format: "wasm",
           targetTriple: "wasm32-wasip1",
-          abiEnvelope: "stdin-stdout-json",
+          abiEnvelope:
+            String(STRATEGY_RUNTIME_ABI_VERSION) ===
+            "strategy-runtime-abi-v1.17"
+              ? "stdin-canonical-request-stdout-raw-canonical-payload"
+              : "stdin-stdout-json",
           publicEvidence: {
-            nonCounted: false,
+            nonCounted:
+              String(STRATEGY_RUNTIME_ABI_VERSION) ===
+              "strategy-runtime-abi-v1.17",
           },
         },
       },
     })
     expect(JSON.stringify(body)).not.toContain("NON_COUNTED_RUNTIME")
+    expect(JSON.stringify(body)).not.toContain("bytesBase64")
+    expect(JSON.stringify(body)).not.toContain("sourceIdentity")
+    expectSelectedProviderAuthority(body)
+    expectExactSelectedProviderProof(body)
   })
 
   it("validates Zig through the provider compiler and returns artifact-bound provenance", async () => {
@@ -1107,24 +1241,34 @@ export fn _start() void {
         tags: ["zig", "wasm-wasi", "counted", "provider"],
         providerValidation: {
           providerId: "strategy-language-provider-zig-wasi",
-          contractVersion: "strategy-language-provider-contract-v1.33",
+          contractVersion: STRATEGY_LANGUAGE_PROVIDER_CONTRACT_VERSION,
           sourceHash: expect.any(String),
           sourceBytes: expect.any(Number),
           artifactHash: expect.any(String),
           artifactBytes: expect.any(Number),
-          proof: expect.stringMatching(/^hmac-sha256:[0-9a-f]{64}$/),
+          proof: expect.stringMatching(selectedProviderProofPattern),
         },
         compiledArtifact: {
           format: "wasm",
           targetTriple: "wasm32-wasi",
-          abiEnvelope: "stdin-stdout-json",
+          abiEnvelope:
+            String(STRATEGY_RUNTIME_ABI_VERSION) ===
+            "strategy-runtime-abi-v1.17"
+              ? "stdin-canonical-request-stdout-raw-canonical-payload"
+              : "stdin-stdout-json",
           publicEvidence: {
-            nonCounted: false,
+            nonCounted:
+              String(STRATEGY_RUNTIME_ABI_VERSION) ===
+              "strategy-runtime-abi-v1.17",
           },
         },
       },
     })
     expect(JSON.stringify(body)).not.toContain("NON_COUNTED_RUNTIME")
+    expect(JSON.stringify(body)).not.toContain("bytesBase64")
+    expect(JSON.stringify(body)).not.toContain("sourceIdentity")
+    expectSelectedProviderAuthority(body)
+    expectExactSelectedProviderProof(body)
   }, 20_000)
 
   it("exposes no product API routes outside health and execute-match", async () => {

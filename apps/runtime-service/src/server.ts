@@ -14,11 +14,14 @@ import {
   RUNTIME_INVOCATION_V1_17_PLAYER_VIOLATIONS,
   RuntimeExecutionServiceResponseSchema,
   SoldierBrainResultV117Schema,
+  STRATEGY_PROVIDER_VALIDATION_CONTRACT_V1_17,
   STRATEGY_RUNTIME_ABI_VERSION,
+  STRATEGY_RUNTIME_ABI_VERSION_V1_17,
   StrategyResultV117Schema,
   admitCanonicalJsonBytes,
   encodeCanonicalJson,
   getStrategyLanguageProviderRecord,
+  hashStrategyProviderValidationV117,
   verifyRuntimeInvocationRequestV117,
   type JsonValue,
   type RuntimeInvocationMethodV117,
@@ -27,16 +30,20 @@ import {
 } from "@cowards/spec"
 import {
   buildZigStrategyRevision,
+  buildZigStrategyRevisionV117,
   buildRustStrategyRevision,
+  buildRustStrategyRevisionV117,
   validateZigStrategySource,
   validateRustStrategySource,
 } from "@cowards/runtime-wasm-wasi/validation"
 import {
   buildPythonStrategyRevision,
+  buildPythonStrategyRevisionV117,
   validatePythonStrategySource,
 } from "@cowards/runtime-python/validation"
 import {
   buildStrategyRevision,
+  buildStrategyRevisionV117,
   validateStrategySource,
 } from "@cowards/runtime-js"
 import type { RuntimeServiceConfig } from "./runtime-config.js"
@@ -322,6 +329,21 @@ const providerValidationProof = (input: {
   artifactHash?: string | undefined
   artifactBytes?: number | undefined
 }): string => {
+  if (input.contractVersion === STRATEGY_PROVIDER_VALIDATION_CONTRACT_V1_17) {
+    if (input.artifactHash === undefined || input.artifactBytes === undefined) {
+      throw new Error(
+        "Runtime provider validation v1.17 requires exact artifact identity.",
+      )
+    }
+    return hashStrategyProviderValidationV117({
+      providerId: input.providerId,
+      contractVersion: STRATEGY_PROVIDER_VALIDATION_CONTRACT_V1_17,
+      sourceHash: input.sourceHash,
+      sourceBytes: input.sourceBytes,
+      artifactHash: input.artifactHash,
+      artifactBytes: input.artifactBytes,
+    })
+  }
   const secret = providerValidationSecret()
   if (!secret) {
     throw new Error("Provider validation signing secret is not configured.")
@@ -346,10 +368,11 @@ const publicValidationMetadata = (
     if (artifact === null || typeof artifact !== "object") {
       return artifact
     }
-    const { bytesBase64: _bytesBase64, ...publicArtifact } = artifact as Record<
-      string,
-      unknown
-    >
+    const {
+      bytesBase64: _bytesBase64,
+      sourceIdentity: _sourceIdentity,
+      ...publicArtifact
+    } = artifact as Record<string, unknown>
     return publicArtifact
   }
 
@@ -366,7 +389,10 @@ const publicValidationMetadata = (
 
 const validateStrategyRequest = (
   rawRequest: unknown,
-  options: { includePrivateArtifact?: boolean } = {},
+  options: {
+    includePrivateArtifact?: boolean
+    selectedRuntimeAbiVersion?: string
+  } = {},
 ) => {
   const body =
     rawRequest !== null && typeof rawRequest === "object"
@@ -405,15 +431,7 @@ const validateStrategyRequest = (
       validation,
     }
   }
-  const revisionBuilder =
-    sourceFormat === "typescript"
-      ? buildStrategyRevision
-      : sourceFormat === "python"
-        ? buildPythonStrategyRevision
-        : sourceFormat === "zig"
-          ? buildZigStrategyRevision
-          : buildRustStrategyRevision
-  const revision = revisionBuilder({
+  const revisionInput = {
     source: body.source,
     ...(typeof body.strategyId === "string" && body.strategyId.trim().length > 0
       ? { strategyId: body.strategyId }
@@ -426,7 +444,26 @@ const validateStrategyRequest = (
             ? ["python", "counted", "provider"]
             : [sourceFormat, "wasm-wasi", "counted", "provider"],
     },
-  })
+  }
+  const useV117Provider =
+    (options.selectedRuntimeAbiVersion ??
+      String(STRATEGY_RUNTIME_ABI_VERSION)) ===
+    STRATEGY_RUNTIME_ABI_VERSION_V1_17
+  const revision = useV117Provider
+    ? sourceFormat === "typescript"
+      ? buildStrategyRevisionV117(revisionInput)
+      : sourceFormat === "python"
+        ? buildPythonStrategyRevisionV117(revisionInput)
+        : sourceFormat === "zig"
+          ? buildZigStrategyRevisionV117(revisionInput)
+          : buildRustStrategyRevisionV117(revisionInput)
+    : sourceFormat === "typescript"
+      ? buildStrategyRevision(revisionInput)
+      : sourceFormat === "python"
+        ? buildPythonStrategyRevision(revisionInput)
+        : sourceFormat === "zig"
+          ? buildZigStrategyRevision(revisionInput)
+          : buildRustStrategyRevision(revisionInput)
   const contractVersion =
     provider?.contractVersion ?? "strategy-language-provider-contract-v1.33"
   const artifact =
@@ -443,8 +480,26 @@ const validateStrategyRequest = (
           : sourceFormat === "zig"
             ? "strategy-language-provider-zig-wasi"
             : null
-  const metadata =
-    providerId === null
+  if (
+    provider === null ||
+    providerId === null ||
+    provider.id !== providerId ||
+    String(provider.runtimeAbiVersion) !==
+      String(revision.runtime.abiVersion) ||
+    (useV117Provider
+      ? String(provider.contractVersion) !==
+          STRATEGY_PROVIDER_VALIDATION_CONTRACT_V1_17 ||
+        revision.runtime.abiVersion !== STRATEGY_RUNTIME_ABI_VERSION_V1_17
+      : String(provider.contractVersion) ===
+        STRATEGY_PROVIDER_VALIDATION_CONTRACT_V1_17)
+  ) {
+    throw new Error(
+      "Runtime provider validation v1.17 authority is not selected atomically.",
+    )
+  }
+  const metadata = useV117Provider
+    ? revision.metadata
+    : providerId === null
       ? revision.metadata
       : {
           ...revision.metadata,
@@ -527,12 +582,12 @@ export const createRuntimeExecutionHttpHandler = (
     if (request.method === "GET" && request.url === "/health") {
       writeJson(response, 200, {
         ok: true,
-        service: RUNTIME_EXECUTION_SERVICE_VERSION,
+        service: runtimeConfig.contractSelection.runtimeServiceVersion,
         boundaryName: RUNTIME_EXECUTION_SERVICE_PUBLIC_NAME,
         implementationLabel: RUNTIME_EXECUTION_SERVICE_IMPLEMENTATION_LABEL,
         transportBinding: RUNTIME_EXECUTION_SERVICE_TRANSPORT_BINDING.current,
         backendAuthority: false,
-        runtimeAbiVersion: STRATEGY_RUNTIME_ABI_VERSION,
+        runtimeAbiVersion: runtimeConfig.contractSelection.runtimeAbiVersion,
         adapter: runtimeConfig.metadata.id,
       })
       return
@@ -567,6 +622,8 @@ export const createRuntimeExecutionHttpHandler = (
         }
         const result = validateStrategyRequest(rawRequest, {
           includePrivateArtifact,
+          selectedRuntimeAbiVersion:
+            runtimeConfig.contractSelection.runtimeAbiVersion,
         })
         writeJson(response, result.ok ? 200 : 422, result)
       } catch (error) {
