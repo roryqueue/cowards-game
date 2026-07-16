@@ -137,6 +137,18 @@ const validReceipt = (
 
 const clone = <T>(value: T): T => globalThis.structuredClone(value)
 
+const setOverLimitWall = (
+  receipt: RuntimeSupervisorRawReceiptV118,
+  request: ReturnType<typeof createRuntimeInvocationRequestV118>,
+): void => {
+  receipt.wall.elapsedNanoseconds =
+    (request.limits.wallMilliseconds + 1) * 1_000_000
+  receipt.wall.processGroupReapedMonotonicNanoseconds =
+    receipt.wall.supervisedSpawnMonotonicNanoseconds +
+    receipt.wall.elapsedNanoseconds
+  receipt.wall.wallMilliseconds = request.limits.wallMilliseconds + 1
+}
+
 describe("runtime invocation v1.18", () => {
   it("creates one closed canonical request bound to exact limits and identity", () => {
     const request = createRuntimeInvocationRequestV118(requestInput())
@@ -408,6 +420,64 @@ describe("runtime invocation v1.18", () => {
     }
   })
 
+  it("keeps unresolved process results and incomplete reap system-owned before resource comparison", () => {
+    const request = createRuntimeInvocationRequestV118(requestInput())
+    const cases: Array<
+      Readonly<{
+        expectedCode: string
+        mutate: (receipt: RuntimeSupervisorRawReceiptV118) => void
+      }>
+    > = [
+      {
+        expectedCode: "PROCESS_RESULT_UNRESOLVED",
+        mutate: (receipt) => {
+          receipt.lifecycle.exitCode = 1
+        },
+      },
+      {
+        expectedCode: "PROCESS_RESULT_UNRESOLVED",
+        mutate: (receipt) => {
+          receipt.lifecycle.exitCode = null
+        },
+      },
+      {
+        expectedCode: "PROCESS_RESULT_UNRESOLVED",
+        mutate: (receipt) => {
+          receipt.lifecycle.exitCode = null
+          receipt.lifecycle.signal = "SIGSEGV"
+        },
+      },
+      {
+        expectedCode: "PROCESS_RESULT_UNRESOLVED",
+        mutate: (receipt) => {
+          receipt.lifecycle.exitCode = null
+          receipt.lifecycle.signal = "SIGKILL"
+          receipt.lifecycle.cancellationRequested = true
+          receipt.lifecycle.cancellationWinner = "host"
+          receipt.lifecycle.cgroupKillUsed = true
+          receipt.lifecycle.lateResultDiscarded = true
+        },
+      },
+      {
+        expectedCode: "CONTAINMENT_INCOMPLETE",
+        mutate: (receipt) => {
+          receipt.containment.cgroupEmpty = false
+          receipt.containment.lingeringProcessCount = 1
+        },
+      },
+    ]
+    for (const testCase of cases) {
+      const receipt = clone(validReceipt())
+      setOverLimitWall(receipt, request)
+      testCase.mutate(receipt)
+      expect(evaluateRuntimeSupervisorReceiptV118(request, receipt)).toEqual({
+        kind: "system_failure",
+        gameplayDisposition: "no_mutation",
+        code: testCase.expectedCode,
+      })
+    }
+  })
+
   it("rejects non-empty or internally impossible pids snapshots", () => {
     const request = createRuntimeInvocationRequestV118(requestInput())
     const snapshots = [
@@ -431,12 +501,7 @@ describe("runtime invocation v1.18", () => {
     const request = createRuntimeInvocationRequestV118(requestInput())
     const receipt = clone(validReceipt())
     receipt.pids.currentPeak = 0
-    receipt.wall.elapsedNanoseconds =
-      (request.limits.wallMilliseconds + 1) * 1_000_000
-    receipt.wall.processGroupReapedMonotonicNanoseconds =
-      receipt.wall.supervisedSpawnMonotonicNanoseconds +
-      receipt.wall.elapsedNanoseconds
-    receipt.wall.wallMilliseconds = request.limits.wallMilliseconds + 1
+    setOverLimitWall(receipt, request)
 
     expect(evaluateRuntimeSupervisorReceiptV118(request, receipt)).toEqual({
       kind: "system_failure",

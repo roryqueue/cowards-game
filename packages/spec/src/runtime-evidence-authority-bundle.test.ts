@@ -811,6 +811,35 @@ describe("runtime evidence authority bundle", () => {
       certificateRecordHash,
       conformanceSource,
     })
+
+    const aliased = globalThis.structuredClone(payload)
+    const aliasedCertificateId = "certificate:typescript:aliased-generation-7"
+    aliased.certificates[0]!.certificateId = aliasedCertificateId
+    aliased.certificates[0]!.certificateRecordHash =
+      hashRawConformanceRecordV117({
+        certificateId: aliasedCertificateId,
+        certificateVersion,
+        attestationId,
+        binding,
+        conformanceSource: aliased.certificates[0]!.conformanceSource!,
+      })
+    const signedAlias = signRawV117Payload(aliased)
+    expect(() =>
+      inspectRuntimeEvidenceAuthorityBundleV117(signedAlias.serialized, {
+        expectedTrustDomain: trustDomain,
+        evaluationInstant: "2026-07-16T12:00:00.000Z",
+        trustedKeyIds: [signedAlias.keyId],
+        resolveConformanceSource: () => conformanceSource,
+        verifySignature: ({ signedMessageBytes, signature }) =>
+          verify(
+            null,
+            signedMessageBytes,
+            signedAlias.keys.publicKey,
+            signature,
+          ),
+      }),
+    ).toThrow(/source|certificate/iu)
+
     for (const mutate of [
       (value: RuntimeEvidenceAuthorityPayloadV117) => {
         delete value.certificates[0]!.conformanceSource
