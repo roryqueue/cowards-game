@@ -78,6 +78,12 @@ const isNonnegativeSafeInteger = (value: unknown): value is number =>
 
 export interface SupervisorExecutionDescriptorV118 {
   readonly executablePath: string
+  /**
+   * Trusted-host SHA-256 of the exact resolved executable bytes. The native
+   * launcher must rehash those bytes immediately before exec and fail closed
+   * if they no longer match.
+   */
+  readonly executableBytesSha256: `sha256:${string}`
   readonly argv: readonly string[]
   readonly environment: readonly Readonly<{
     name: string
@@ -225,9 +231,16 @@ const validateExecutionDescriptor = (
   value: unknown,
 ): SupervisorExecutionDescriptorV118 | undefined => {
   if (
-    !exactKeys(value, ["executablePath", "argv", "environment"]) ||
+    !exactKeys(value, [
+      "executablePath",
+      "executableBytesSha256",
+      "argv",
+      "environment",
+    ]) ||
     !isBoundedText(value.executablePath, EXECUTABLE_PATH_MAX_BYTES) ||
     !value.executablePath.startsWith("/") ||
+    typeof value.executableBytesSha256 !== "string" ||
+    !SHA256.test(value.executableBytesSha256) ||
     !Array.isArray(value.argv) ||
     value.argv.length > ARGUMENT_COUNT_MAX ||
     !value.argv.every((argument) =>
@@ -262,6 +275,8 @@ const validateExecutionDescriptor = (
   }
   return {
     executablePath: value.executablePath,
+    executableBytesSha256:
+      value.executableBytesSha256 as `sha256:${string}`,
     argv: [...value.argv],
     environment,
   }
@@ -275,12 +290,7 @@ export const deriveSupervisorExecutionIdentityV118 = (
     throw new TypeError("Supervisor execution descriptor is invalid")
   }
   return deepFreeze({
-    executableSha256: sha256(
-      canonicalBytes({
-        identityDomain: "cowards-game:runtime-executable-path:v1.18",
-        executablePath: execution.executablePath,
-      }),
-    ),
+    executableSha256: execution.executableBytesSha256,
     argvSha256: sha256(
       canonicalBytes({
         identityDomain: "cowards-game:runtime-argv:v1.18",

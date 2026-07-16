@@ -26,6 +26,7 @@ const hash = (character: string): `sha256:${string}` =>
 
 const execution = {
   executablePath: "/usr/local/bin/node",
+  executableBytesSha256: hash("a"),
   argv: ["--no-warnings", "/runtime/strategy-runner.mjs"],
   environment: [
     { name: "LANG", value: "C.UTF-8" },
@@ -391,6 +392,16 @@ describe("shared runtime supervisor v1.18 contract", () => {
   })
 
   it("binds actual executable, argv, and environment values to public identities", () => {
+    expect(executionIdentity.executableSha256).toBe(
+      execution.executableBytesSha256,
+    )
+    expect(
+      deriveSupervisorExecutionIdentityV118({
+        ...execution,
+        executableBytesSha256: hash("b"),
+      }).executableSha256,
+    ).not.toBe(executionIdentity.executableSha256)
+
     const mutations: Array<(request: SupervisorInvocationRequestV118) => void> =
       [
         (request) => {
@@ -399,6 +410,13 @@ describe("shared runtime supervisor v1.18 contract", () => {
               executablePath: string
             }
           ).executablePath = "/tmp/substituted-runtime"
+        },
+        (request) => {
+          ;(
+            request.execution as {
+              executableBytesSha256: `sha256:${string}`
+            }
+          ).executableBytesSha256 = hash("b")
         },
         (request) => {
           ;(request.execution.argv as string[])[0] = "--inspect"
