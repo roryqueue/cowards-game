@@ -217,6 +217,40 @@ describe("v1.37 protected working-tree baseline", () => {
     ).toThrow(/self-hash/u)
   })
 
+  it("rejects recursively noncanonical JSON key order and missing final newline", () => {
+    const { root } = fixture()
+    const baseline = captureV137ProtectedBaseline({ observedRepoRoot: root })
+    const canonical = renderV137ProtectedBaseline(baseline)
+    const reorderedPolicy = JSON.parse(canonical) as V137ProtectedBaselineJson
+    reorderedPolicy.capturePolicy = {
+      writePolicy: reorderedPolicy.capturePolicy.writePolicy,
+      existingDirt: reorderedPolicy.capturePolicy.existingDirt,
+      diffBytes: reorderedPolicy.capturePolicy.diffBytes,
+      headIdentity: reorderedPolicy.capturePolicy.headIdentity,
+      rawBytesBoundBy: reorderedPolicy.capturePolicy.rawBytesBoundBy,
+      rawBytesStored: reorderedPolicy.capturePolicy.rawBytesStored,
+      protectedPaths: reorderedPolicy.capturePolicy.protectedPaths,
+    }
+    expect(() =>
+      parseV137ProtectedBaseline(`${JSON.stringify(reorderedPolicy, null, 2)}\n`),
+    ).toThrow(/not canonical/u)
+
+    const reorderedRaw = JSON.parse(canonical) as V137ProtectedBaselineJson
+    const raw = reorderedRaw.paths[0]!.raw
+    reorderedRaw.paths[0]!.raw = {
+      mode: raw.mode,
+      sha256: raw.sha256,
+      byteLength: raw.byteLength,
+      exists: raw.exists,
+    }
+    expect(() =>
+      parseV137ProtectedBaseline(`${JSON.stringify(reorderedRaw, null, 2)}\n`),
+    ).toThrow(/not canonical/u)
+    expect(() =>
+      parseV137ProtectedBaseline(canonical.slice(0, -1)),
+    ).toThrow(/not canonical/u)
+  })
+
   it("stores exact binary diff bytes as Base64 with matching hashes and lengths", () => {
     const { root } = fixture()
     writeFileSync(path.join(root, ".planning", "config.json"), '{"changed":true}\n')
@@ -230,3 +264,23 @@ describe("v1.37 protected working-tree baseline", () => {
     )
   })
 })
+
+interface V137ProtectedBaselineJson {
+  capturePolicy: {
+    protectedPaths: string[]
+    rawBytesStored: boolean
+    rawBytesBoundBy: string
+    headIdentity: string
+    diffBytes: string
+    existingDirt: string
+    writePolicy: string
+  }
+  paths: Array<{
+    raw: {
+      exists: boolean
+      byteLength: number
+      sha256: string
+      mode: string
+    }
+  }>
+}

@@ -342,6 +342,59 @@ const unsignedProjection = (
   paths: baseline.paths,
 })
 
+const orderedDiffEvidence = (
+  evidence: ProtectedDiffEvidence,
+): ProtectedDiffEvidence => ({
+  command: evidence.command,
+  byteLength: evidence.byteLength,
+  sha256: evidence.sha256,
+  bytesBase64: evidence.bytesBase64,
+})
+
+const orderedPathBaseline = (
+  baseline: ProtectedPathBaseline,
+): ProtectedPathBaseline => ({
+  path: baseline.path,
+  raw: {
+    exists: true,
+    byteLength: baseline.raw.byteLength,
+    sha256: baseline.raw.sha256,
+    mode: baseline.raw.mode,
+  },
+  head: baseline.head.exists
+    ? {
+        exists: true,
+        blobId: baseline.head.blobId,
+        mode: baseline.head.mode,
+      }
+    : {
+        exists: false,
+        blobId: null,
+        mode: null,
+      },
+  unstagedDiff: orderedDiffEvidence(baseline.unstagedDiff),
+  stagedDiff: orderedDiffEvidence(baseline.stagedDiff),
+  porcelainStatus: baseline.porcelainStatus,
+})
+
+const orderedBaseline = (
+  baseline: V137ProtectedBaseline,
+): V137ProtectedBaseline => ({
+  schemaVersion: baseline.schemaVersion,
+  milestone: baseline.milestone,
+  capturePolicy: {
+    protectedPaths: baseline.capturePolicy.protectedPaths,
+    rawBytesStored: baseline.capturePolicy.rawBytesStored,
+    rawBytesBoundBy: baseline.capturePolicy.rawBytesBoundBy,
+    headIdentity: baseline.capturePolicy.headIdentity,
+    diffBytes: baseline.capturePolicy.diffBytes,
+    existingDirt: baseline.capturePolicy.existingDirt,
+    writePolicy: baseline.capturePolicy.writePolicy,
+  },
+  paths: baseline.paths.map(orderedPathBaseline),
+  baselineSha256: baseline.baselineSha256,
+})
+
 export const parseV137ProtectedBaseline = (
   source: string,
 ): V137ProtectedBaseline => {
@@ -433,16 +486,25 @@ export const parseV137ProtectedBaseline = (
       entry.stagedDiff,
       "git diff --binary --no-ext-diff --cached -- <path>",
     )
-    return entry as unknown as ProtectedPathBaseline
+    return orderedPathBaseline(entry as unknown as ProtectedPathBaseline)
   })
 
-  const baseline = {
+  const baseline = orderedBaseline({
     schemaVersion: value.schemaVersion,
     milestone: value.milestone,
-    capturePolicy: value.capturePolicy,
+    capturePolicy: {
+      protectedPaths: V137_PROTECTED_PATHS,
+      rawBytesStored: false,
+      rawBytesBoundBy: "sha256-byte-length-and-mode",
+      headIdentity: "git-blob-id-and-mode-or-absence",
+      diffBytes:
+        "exact-binary-unstaged-and-cached-diff-bytes-with-sha256-and-length",
+      existingDirt: "accepted-only-when-byte-identical-to-phase-start",
+      writePolicy: "write-once-identical-only",
+    },
     paths,
     baselineSha256: value.baselineSha256,
-  } as V137ProtectedBaseline
+  } as V137ProtectedBaseline)
   if (
     baselineSelfHash(unsignedProjection(baseline)) !== baseline.baselineSha256
   ) {
@@ -456,7 +518,7 @@ export const parseV137ProtectedBaseline = (
 
 export const renderV137ProtectedBaseline = (
   baseline: V137ProtectedBaseline,
-): string => `${JSON.stringify(baseline, null, 2)}\n`
+): string => `${JSON.stringify(orderedBaseline(baseline), null, 2)}\n`
 
 const baselineDrifted = (
   expected: V137ProtectedBaseline,
