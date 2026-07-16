@@ -460,7 +460,7 @@ func TestPhase258CanonicalRetryPostgres(t *testing.T) {
 	}
 	ctx := context.Background()
 	pool := semanticCurrentIsolatedPool(t, ctx, databaseURL)
-	fixture := seedSemanticCurrentAuthority(t, ctx, pool, time.Date(2026, 7, 14, 16, 30, 0, 0, time.UTC))
+	fixture := seedSemanticCurrentAuthority(t, ctx, pool, selectedSemanticAuthorityInstantForTest(t, time.Date(2026, 7, 14, 16, 30, 0, 0, time.UTC)))
 	requestBytes := readRuntimeInvocationV117Fixture(t, "runtime-invocation-request.v1.17.candidate.json")
 	successBytes := readRuntimeInvocationV117Fixture(t, "runtime-invocation-response.v1.17.candidate.wire.json")
 	identity := runtimeInvocationV117SigningIdentity{KeyID: runtimeInvocationV117FixtureKeyID, Secret: runtimeInvocationV117FixtureSecret}

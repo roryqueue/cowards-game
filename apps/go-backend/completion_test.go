@@ -274,10 +274,11 @@ func TestMatchCompletionSemanticDatabase(t *testing.T) {
 	}
 	ctx := context.Background()
 	pool := semanticCurrentIsolatedPool(t, ctx, databaseURL)
-	now := time.Date(2026, 7, 13, 16, 0, 0, 0, time.UTC)
+	now := selectedSemanticAuthorityInstantForTest(t, time.Date(2026, 7, 13, 16, 0, 0, 0, time.UTC))
 	fixture := seedSemanticCurrentAuthority(t, ctx, pool, now)
 	service := newMatchCompletionService(pool)
-	service.semanticReceiptSecret = "fixture-semantic-receipt-secret-v1"
+	service.semanticReceiptSecret = selectedCompletionSemanticReceiptSecretForTest()
+	service.successorAuthorityTrustDomain = selectedCompletionSuccessorTrustDomainForTest()
 	service.loadAuthority = func() (*verifiedRuntimeEvidenceAuthority, error) { return fixture.authority, nil }
 	service.now = func() time.Time { return now }
 
@@ -285,7 +286,11 @@ func TestMatchCompletionSemanticDatabase(t *testing.T) {
 		current := fixture.seedMatch(t, ctx, pool, "null-receipt")
 		before := semanticCompletionSnapshot(t, ctx, pool)
 		input := current.input(fixture.identity)
-		input.SemanticReceipt = runtimeSemanticReceipt{}
+		if input.SemanticReceiptV117 != nil {
+			input.SemanticReceiptV117 = nil
+		} else {
+			input.SemanticReceipt = runtimeSemanticReceipt{}
+		}
 		if _, err := service.completeMatch(ctx, input); err == nil {
 			t.Fatal("current completion persisted without a semantic receipt")
 		}
@@ -317,7 +322,11 @@ func TestMatchCompletionSemanticDatabase(t *testing.T) {
 		current := fixture.seedMatch(t, ctx, pool, "uppercase-signature")
 		before := semanticCompletionSnapshot(t, ctx, pool)
 		input := current.input(fixture.identity)
-		input.SemanticReceipt.Signature = "hmac-sha256:" + strings.ToUpper(strings.TrimPrefix(input.SemanticReceipt.Signature, "hmac-sha256:"))
+		if input.SemanticReceiptV117 != nil {
+			input.SemanticReceiptV117.Signature = "hmac-sha256:" + strings.ToUpper(strings.TrimPrefix(input.SemanticReceiptV117.Signature, "hmac-sha256:"))
+		} else {
+			input.SemanticReceipt.Signature = "hmac-sha256:" + strings.ToUpper(strings.TrimPrefix(input.SemanticReceipt.Signature, "hmac-sha256:"))
+		}
 		if _, err := service.completeMatch(ctx, input); err == nil {
 			t.Fatal("current completion admitted an uppercase semantic receipt signature")
 		}
@@ -400,7 +409,7 @@ func TestMatchCompletionSemanticDatabase(t *testing.T) {
 		if err := pool.QueryRow(ctx, `select compatibility_tuple_id,compatibility_engine_version,authority_publication_id from chronicles where match_id=$1`, candidate.matchID).Scan(&tupleID, &engine, &publicationID); err != nil {
 			t.Fatal(err)
 		}
-		if tupleID != currentCanonicalTupleID || engine != currentCanonicalTuple.Engine || publicationID != fixture.identity.PublicationID {
+		if tupleID != fixture.identity.CompatibilityTupleID || engine != fixture.identity.CompatibilityTuple.Engine || publicationID != fixture.identity.PublicationID {
 			t.Fatalf("persisted Chronicle lost locked current identity: %q %q %q", tupleID, engine, publicationID)
 		}
 		var receipt map[string]any
@@ -452,10 +461,11 @@ func TestPhase258CompletionRollbackPostgres(t *testing.T) {
 	}
 	ctx := context.Background()
 	pool := semanticCurrentIsolatedPool(t, ctx, databaseURL)
-	now := time.Date(2026, 7, 14, 16, 0, 0, 0, time.UTC)
+	now := selectedSemanticAuthorityInstantForTest(t, time.Date(2026, 7, 14, 16, 0, 0, 0, time.UTC))
 	fixture := seedSemanticCurrentAuthority(t, ctx, pool, now)
 	service := newMatchCompletionService(pool)
-	service.semanticReceiptSecret = "fixture-semantic-receipt-secret-v1"
+	service.semanticReceiptSecret = selectedCompletionSemanticReceiptSecretForTest()
+	service.successorAuthorityTrustDomain = selectedCompletionSuccessorTrustDomainForTest()
 	service.loadAuthority = func() (*verifiedRuntimeEvidenceAuthority, error) { return fixture.authority, nil }
 	service.now = func() time.Time { return now }
 
@@ -474,7 +484,9 @@ func TestPhase258CompletionRollbackPostgres(t *testing.T) {
 		{name: "after job", table: "match_job_attempts", rowSelector: func(candidate semanticCurrentMatchFixture) string {
 			return "new.job_id = " + semanticSQLLiteral(candidate.jobID)
 		}},
-		{name: "after attempt", table: "match_sets", rowSelector: func(semanticCurrentMatchFixture) string { return "new.id = 'candidate:match-set'" }},
+		{name: "after attempt", table: "match_sets", rowSelector: func(candidate semanticCurrentMatchFixture) string {
+			return "new.id = " + semanticSQLLiteral(candidate.matchSetID)
+		}},
 		{name: "at commit", table: "match_job_attempts", deferred: true, rowSelector: func(candidate semanticCurrentMatchFixture) string {
 			return "new.job_id = " + semanticSQLLiteral(candidate.jobID)
 		}},
@@ -718,20 +730,35 @@ func TestPhase258RuntimeServiceV117CompletionAdmissionBindsClaimedEvidence(t *te
 
 type semanticCurrentMatchFixture struct {
 	matchID              string
+	matchSetID           string
 	jobID                string
 	leaseToken           string
 	chronicle            map[string]any
 	finalState           map[string]any
 	semanticReceipt      runtimeSemanticReceipt
 	semanticWireEvidence runtimeSemanticWireEvidence
+	runtimeRequestV117   *runtimeServiceRequestV117
+	semanticReceiptV117  *runtimeSemanticReceiptV117
 }
 
 func (current semanticCurrentMatchFixture) input(identity *claimedMatchIntegrityIdentity) completeMatchInput {
+	var runtimeRequestV117 *runtimeServiceRequestV117
+	if current.runtimeRequestV117 != nil {
+		request := *current.runtimeRequestV117
+		runtimeRequestV117 = &request
+	}
+	var semanticReceiptV117 *runtimeSemanticReceiptV117
+	if current.semanticReceiptV117 != nil {
+		receipt := *current.semanticReceiptV117
+		semanticReceiptV117 = &receipt
+	}
 	return completeMatchInput{
 		JobID: current.jobID, LeaseToken: current.leaseToken,
 		Chronicle: current.chronicle, FinalState: current.finalState,
 		SemanticReceipt:      current.semanticReceipt,
 		SemanticWireEvidence: current.semanticWireEvidence.clone(),
+		RuntimeRequestV117:   runtimeRequestV117,
+		SemanticReceiptV117:  semanticReceiptV117,
 		Integrity:            identity,
 	}
 }
@@ -779,8 +806,37 @@ func semanticCurrentIsolatedPool(t *testing.T, ctx context.Context, databaseURL 
 }
 
 func seedSemanticCurrentAuthority(t *testing.T, ctx context.Context, pool *pgxpool.Pool, now time.Time) *semanticCurrentAuthorityFixture {
-	fixture, _ := seedSemanticAuthorityFixture(t, ctx, pool, now, false)
+	fixture, _ := seedSemanticAuthorityFixture(
+		t,
+		ctx,
+		pool,
+		now,
+		selectedRuntimeServiceContractVersion() == runtimeExecutionServiceVersionV117,
+	)
 	return fixture
+}
+
+func selectedCompletionSemanticReceiptSecretForTest() string {
+	if selectedRuntimeServiceContractVersion() == runtimeExecutionServiceVersionV117 {
+		return runtimeServiceV117FixtureSecret
+	}
+	return "fixture-semantic-receipt-secret-v1"
+}
+
+func selectedCompletionSuccessorTrustDomainForTest() string {
+	if selectedRuntimeServiceContractVersion() == runtimeExecutionServiceVersionV117 {
+		return runtimeEvidenceAuthorityFixtureTrustDomain
+	}
+	return runtimeEvidenceAuthorityProductionTrustDomain
+}
+
+func selectedSemanticAuthorityInstantForTest(t *testing.T, legacy time.Time) time.Time {
+	t.Helper()
+	if selectedRuntimeServiceContractVersion() != runtimeExecutionServiceVersionV117 {
+		return legacy
+	}
+	fixture := loadRuntimeSuccessorAuthorityFixtureV117(t)
+	return mustParseFixtureInstantV117(t, fixture.InstallFixture.EvaluationInstant)
 }
 
 func seedSemanticSuccessorAuthority(t *testing.T, ctx context.Context, pool *pgxpool.Pool, now time.Time) (*semanticCurrentAuthorityFixture, *goDeploymentLaneRegistry) {
@@ -996,6 +1052,7 @@ func (fixture *semanticCurrentAuthorityFixture) seedMatch(t *testing.T, ctx cont
 	}
 	request.Match.MatchID = matchID
 	request.Match.Seed = seed
+	request.RequestID = "runtime-request:" + matchID
 	request.EvidenceSnapshot.Compatibility = runtimeServiceCompatibilityReference{
 		TupleID: fixture.identity.CompatibilityTupleID,
 		Tuple:   fixture.identity.CompatibilityTuple,
@@ -1004,9 +1061,55 @@ func (fixture *semanticCurrentAuthorityFixture) seedMatch(t *testing.T, ctx cont
 	request.EvidenceSnapshot.RegistryGeneration = fixture.identity.RegistryGeneration
 	finalState = orchestratorFinalStateForRequest(request)
 	chronicle = orchestratorChronicleForRequest(request, false)
-	const semanticReceiptSecret = "fixture-semantic-receipt-secret-v1"
-	signedResult := signedRuntimeServiceSuccessResultForTest(t, request, chronicle, finalState, semanticReceiptSecret)
-	semanticReceipt := signedResult.SemanticReceipt
+	var semanticReceipt runtimeSemanticReceipt
+	var semanticWireEvidence runtimeSemanticWireEvidence
+	var runtimeRequestV117 *runtimeServiceRequestV117
+	var semanticReceiptV117 *runtimeSemanticReceiptV117
+	if binding := fixture.identity.RuntimeServiceV117; binding != nil {
+		nestedBytes, err := runtimeInvocationV117CanonicalValue(request)
+		if err != nil {
+			t.Fatal(err)
+		}
+		currentRequest := runtimeServiceRequestV117{
+			ContractVersion:      runtimeExecutionServiceVersionV117,
+			Kind:                 "executeMatch",
+			RequestID:            request.RequestID,
+			MatchID:              request.Match.MatchID,
+			CompatibilityTupleID: fixture.identity.CompatibilityTupleID,
+			Match:                nestedBytes,
+		}
+		currentRequest.Authority.BundleHash = binding.Authority.BundleHash
+		currentRequest.Authority.SourceManifestHash = binding.Authority.SourceManifestHash
+		currentRequest.Authority.RegistryGeneration = binding.Authority.RegistryGeneration
+		currentRequest.LegacyAuthority.BundleHash = fixture.identity.AuthorityBundleHash
+		currentRequest.LegacyAuthority.SourceManifestHash = fixture.identity.SourceManifestHash
+		currentRequest.LegacyAuthority.RegistryGeneration = fixture.identity.RegistryGeneration
+		currentRequest.Entrants.Bottom = runtimeServiceEntrantFixtureFromClaimedV117(binding.Bottom, "1")
+		currentRequest.Entrants.Top = runtimeServiceEntrantFixtureFromClaimedV117(binding.Top, "2")
+		currentRequest.Accounting.BudgetProfileSHA256 = binding.BudgetProfileSHA256
+		currentRequest.Accounting.LedgerPrestateRoot = binding.LedgerPrestateRoot
+		response := signedRuntimeServiceSuccessResponseV117ForTest(
+			t,
+			currentRequest,
+			chronicle,
+			finalState,
+			runtimeInvocationV117SHA256Value([]byte("ledger-poststate:"+suffix)),
+			runtimeServiceV117FixtureSecret,
+		)
+		runtimeRequestV117 = &currentRequest
+		receipt := response.Result.SemanticReceipt
+		semanticReceiptV117 = &receipt
+	} else {
+		signedResult := signedRuntimeServiceSuccessResultForTest(
+			t,
+			request,
+			chronicle,
+			finalState,
+			selectedCompletionSemanticReceiptSecretForTest(),
+		)
+		semanticReceipt = signedResult.SemanticReceipt
+		semanticWireEvidence = signedResult.SemanticWireEvidence.clone()
+	}
 	if _, err := pool.Exec(ctx, `insert into matches
 		(id,bottom_strategy_revision_id,top_strategy_revision_id,arena_variant_id,seed,status,bottom_player_id,top_player_id,integrity_match_set_id,bottom_execution_entrant_key,top_execution_entrant_key,bottom_execution_evidence,top_execution_evidence,execution_evidence_pair_hash)
 		values ($1,$2,$3,$4,$5,'running',$6,$7,$8,$9,$10,$11,$12,$13)`,
@@ -1030,8 +1133,9 @@ func (fixture *semanticCurrentAuthorityFixture) seedMatch(t *testing.T, ctx cont
 		t.Fatal(err)
 	}
 	return semanticCurrentMatchFixture{
-		matchID: matchID, jobID: jobID, leaseToken: leaseToken, chronicle: chronicle, finalState: finalState,
-		semanticReceipt: semanticReceipt, semanticWireEvidence: signedResult.SemanticWireEvidence.clone(),
+		matchID: matchID, matchSetID: fixture.identity.MatchSetID, jobID: jobID, leaseToken: leaseToken, chronicle: chronicle, finalState: finalState,
+		semanticReceipt: semanticReceipt, semanticWireEvidence: semanticWireEvidence,
+		runtimeRequestV117: runtimeRequestV117, semanticReceiptV117: semanticReceiptV117,
 	}
 }
 
