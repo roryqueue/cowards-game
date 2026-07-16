@@ -1,5 +1,11 @@
 import { Buffer } from "node:buffer"
-import { createHash } from "node:crypto"
+import {
+  createHash,
+  createPublicKey,
+  verify as verifySignature,
+  type KeyObject,
+} from "node:crypto"
+import path from "node:path"
 import {
   RUNTIME_BUDGET_PROFILE_V1_18_SHA256,
   SoldierBrainResultV117Schema,
@@ -21,20 +27,28 @@ import {
   type SupervisorVerificationFailureCodeV118,
   type VerifiedSupervisorEvidenceV118,
 } from "@cowards/runtime-supervisor"
-import { COUNTED_TYPESCRIPT_RUNTIME_V1_18 } from "./revision-v1-18.js"
+import {
+  COUNTED_TYPESCRIPT_RUNTIME_V1_18,
+  createTypeScriptAdapterBuildIdentityV118,
+  createTypeScriptRuntimeCompilerIdentityV118,
+} from "./revision-v1-18.js"
 
 const SHA256 = /^sha256:[0-9a-f]{64}$/u
 const PUBLIC_ID = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,255}$/u
 
-export interface TypeScriptLanguageIdentityV118 {
-  readonly adapterBuildSha256: `sha256:${string}`
-  readonly runtimeCompilerSha256: `sha256:${string}`
+export interface TypeScriptLanguageIdentityObservationV118 {
+  readonly nodeExecutableSha256: `sha256:${string}`
+  readonly nodeVersion: string
+  readonly v8Version: string
+  readonly adapterModuleSha256: `sha256:${string}`
+  readonly harnessSha256: `sha256:${string}`
   readonly artifactSha256: `sha256:${string}`
 }
 
 export interface TypeScriptSupervisorHostLaunchResultV118 {
   readonly rawReceiptBytes: Uint8Array
   readonly observed: SupervisorObservedOutputV118
+  readonly languageIdentity: TypeScriptLanguageIdentityObservationV118
 }
 
 export type TypeScriptSupervisorHostLaunchV118 = (
@@ -110,7 +124,6 @@ export type CountedTypeScriptSupervisedResultV118 =
 export interface CountedTypeScriptSupervisedExecutionInputV118 {
   readonly invocation: RuntimeInvocationRequestV118
   readonly inputBytes: Uint8Array
-  readonly execution: SupervisorExecutionDescriptorV118
   readonly cancellationChannel: Readonly<{
     channelId: string
     channelNonce: string
@@ -159,16 +172,63 @@ const systemFailure = (
 
 const languageIdentityMatches = (
   invocation: RuntimeInvocationRequestV118,
-  expected: TypeScriptLanguageIdentityV118,
+  observation: TypeScriptLanguageIdentityObservationV118,
+): boolean => {
+  try {
+    return (
+      invocation.expectedIdentity.adapterBuildSha256 ===
+        createTypeScriptAdapterBuildIdentityV118({
+          adapterModuleSha256: observation.adapterModuleSha256,
+          harnessSha256: observation.harnessSha256,
+        }) &&
+      invocation.expectedIdentity.runtimeCompilerSha256 ===
+        createTypeScriptRuntimeCompilerIdentityV118({
+          nodeExecutableSha256: observation.nodeExecutableSha256,
+          nodeVersion: observation.nodeVersion,
+          v8Version: observation.v8Version,
+        }) &&
+      SHA256.test(observation.artifactSha256) &&
+      invocation.expectedIdentity.artifactSha256 === observation.artifactSha256
+    )
+  } catch {
+    return false
+  }
+}
+
+const sameLanguageObservation = (
+  left: TypeScriptLanguageIdentityObservationV118,
+  right: TypeScriptLanguageIdentityObservationV118,
+): boolean => {
+  try {
+    return (
+      left.nodeExecutableSha256 === right.nodeExecutableSha256 &&
+      left.nodeVersion === right.nodeVersion &&
+      left.v8Version === right.v8Version &&
+      left.adapterModuleSha256 === right.adapterModuleSha256 &&
+      left.harnessSha256 === right.harnessSha256 &&
+      left.artifactSha256 === right.artifactSha256
+    )
+  } catch {
+    return false
+  }
+}
+
+const executionIsExactNodeHarness = (
+  execution: SupervisorExecutionDescriptorV118,
+  observation: TypeScriptLanguageIdentityObservationV118,
 ): boolean =>
-  SHA256.test(expected.adapterBuildSha256) &&
-  SHA256.test(expected.runtimeCompilerSha256) &&
-  SHA256.test(expected.artifactSha256) &&
-  invocation.expectedIdentity.adapterBuildSha256 ===
-    expected.adapterBuildSha256 &&
-  invocation.expectedIdentity.runtimeCompilerSha256 ===
-    expected.runtimeCompilerSha256 &&
-  invocation.expectedIdentity.artifactSha256 === expected.artifactSha256
+  path.isAbsolute(execution.executablePath) &&
+  execution.executableBytesSha256 === observation.nodeExecutableSha256 &&
+  execution.argv.length === 3 &&
+  execution.argv[0] === "--input-type=module" &&
+  execution.argv[1] === "--eval" &&
+  typeof execution.argv[2] === "string" &&
+  execution.argv[2].length > 0 &&
+  sha256(new TextEncoder().encode(execution.argv[2])) ===
+    observation.harnessSha256 &&
+  execution.environment.every(({ name }) =>
+    ["LANG", "NODE_ENV", "TZ"].includes(name),
+  )
 
 const guestPayloadIsValid = (
   invocation: RuntimeInvocationRequestV118,
@@ -246,13 +306,18 @@ const capabilityFor = (
 
 const validSignature = (
   value: RuntimeEvidenceSignatureV118,
+  evidenceBytes: Uint8Array,
+  publicKey: KeyObject | undefined,
+  expectedKeyId: string,
 ): value is RuntimeEvidenceSignatureV118 => {
   if (
+    publicKey === undefined ||
     value === null ||
     typeof value !== "object" ||
     value.algorithm !== "Ed25519" ||
     typeof value.keyId !== "string" ||
     !PUBLIC_ID.test(value.keyId) ||
+    value.keyId !== expectedKeyId ||
     typeof value.signatureBase64 !== "string"
   ) {
     return false
@@ -260,7 +325,8 @@ const validSignature = (
   const bytes = Buffer.from(value.signatureBase64, "base64")
   return (
     bytes.byteLength === 64 &&
-    bytes.toString("base64") === value.signatureBase64
+    bytes.toString("base64") === value.signatureBase64 &&
+    verifySignature(null, evidenceBytes, publicKey, bytes)
   )
 }
 
@@ -269,6 +335,8 @@ const signedEvidence = (
   invocation: RuntimeInvocationRequestV118,
   capability: RuntimeBudgetCapabilityLaneSnapshotV118,
   signEvidence: (bytes: Uint8Array) => RuntimeEvidenceSignatureV118,
+  publicKey: KeyObject | undefined,
+  expectedKeyId: string,
 ): TypeScriptSignedEvidenceV118 | undefined => {
   if (
     capability.kind !== "certificate_candidate" ||
@@ -298,7 +366,9 @@ const signedEvidence = (
   try {
     const bytes = canonicalBytes(evidence as unknown as JsonValue)
     const signature = signEvidence(Uint8Array.from(bytes))
-    if (!validSignature(signature)) return undefined
+    if (!validSignature(signature, bytes, publicKey, expectedKeyId)) {
+      return undefined
+    }
     return deepFreeze({
       schemaVersion: "runtime-language-evidence-signature-v1.18" as const,
       evidence,
@@ -319,17 +389,41 @@ export const createCountedTypeScriptSupervisedAdapterV118 = (options: {
   readonly signEvidence: (
     canonicalEvidenceBytes: Uint8Array,
   ) => RuntimeEvidenceSignatureV118
-  readonly expectedLanguageIdentity: TypeScriptLanguageIdentityV118
-}): CountedTypeScriptSupervisedAdapterV118 =>
-  Object.freeze({
+  readonly execution: SupervisorExecutionDescriptorV118
+  readonly expectedLanguageIdentity: TypeScriptLanguageIdentityObservationV118
+  readonly evidenceSigningPublicKeyPem: string
+  readonly expectedSigningKeyId: string
+}): CountedTypeScriptSupervisedAdapterV118 => {
+  const launchSupervisor = options.launchSupervisor
+  const signEvidence = options.signEvidence
+  const execution = deepFreeze(
+    globalThis.structuredClone(options.execution),
+  ) as SupervisorExecutionDescriptorV118
+  const expectedLanguageIdentity = deepFreeze(
+    globalThis.structuredClone(options.expectedLanguageIdentity),
+  ) as TypeScriptLanguageIdentityObservationV118
+  const expectedSigningKeyId = options.expectedSigningKeyId
+  let publicKey: KeyObject | undefined
+  try {
+    const candidate = createPublicKey(options.evidenceSigningPublicKeyPem)
+    if (
+      candidate.asymmetricKeyType === "ed25519" &&
+      PUBLIC_ID.test(expectedSigningKeyId)
+    ) {
+      publicKey = candidate
+    }
+  } catch {
+    publicKey = undefined
+  }
+  return Object.freeze({
     lane: COUNTED_TYPESCRIPT_RUNTIME_V1_18,
     execute(input: CountedTypeScriptSupervisedExecutionInputV118) {
       if (
-        !languageIdentityMatches(
-          input.invocation,
-          options.expectedLanguageIdentity,
-        )
+        !languageIdentityMatches(input.invocation, expectedLanguageIdentity)
       ) {
+        return systemFailure("LANGUAGE_IDENTITY_MISMATCH")
+      }
+      if (!executionIsExactNodeHarness(execution, expectedLanguageIdentity)) {
         return systemFailure("LANGUAGE_IDENTITY_MISMATCH")
       }
       let request: SupervisorInvocationRequestV118
@@ -337,7 +431,7 @@ export const createCountedTypeScriptSupervisedAdapterV118 = (options: {
         request = createSupervisorInvocationRequestV118({
           invocation: input.invocation,
           inputBytes: input.inputBytes,
-          execution: input.execution,
+          execution,
           cancellationChannel: input.cancellationChannel,
         })
       } catch {
@@ -345,9 +439,18 @@ export const createCountedTypeScriptSupervisedAdapterV118 = (options: {
       }
       let launched: TypeScriptSupervisorHostLaunchResultV118
       try {
-        launched = options.launchSupervisor(request)
+        launched = launchSupervisor(request)
       } catch {
         return systemFailure("SUPERVISOR_LAUNCH_FAILED")
+      }
+      if (
+        !sameLanguageObservation(
+          launched.languageIdentity,
+          expectedLanguageIdentity,
+        ) ||
+        !languageIdentityMatches(input.invocation, launched.languageIdentity)
+      ) {
+        return systemFailure("LANGUAGE_IDENTITY_MISMATCH")
       }
       let verified: ReturnType<typeof verifySupervisorRawReceiptV118>
       try {
@@ -374,7 +477,9 @@ export const createCountedTypeScriptSupervisedAdapterV118 = (options: {
         verified.value,
         input.invocation,
         capability,
-        options.signEvidence,
+        signEvidence,
+        publicKey,
+        expectedSigningKeyId,
       )
       if (signature === undefined) {
         return systemFailure("EVIDENCE_SIGNING_FAILED")
@@ -398,3 +503,4 @@ export const createCountedTypeScriptSupervisedAdapterV118 = (options: {
       })
     },
   })
+}

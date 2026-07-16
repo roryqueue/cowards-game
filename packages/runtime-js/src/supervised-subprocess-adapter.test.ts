@@ -1,4 +1,5 @@
 import { Buffer } from "node:buffer"
+import { createHash, generateKeyPairSync, sign as signBytes } from "node:crypto"
 import { readFileSync } from "node:fs"
 import {
   RUNTIME_BUDGET_PROFILE_V1_18_SHA256,
@@ -18,8 +19,13 @@ import { describe, expect, it, vi } from "vitest"
 import * as publicRuntimeJs from "./index.js"
 import {
   createCountedTypeScriptSupervisedAdapterV118,
+  type TypeScriptLanguageIdentityObservationV118,
   type TypeScriptSupervisorHostLaunchV118,
 } from "./supervised-subprocess-adapter.js"
+import {
+  createTypeScriptAdapterBuildIdentityV118,
+  createTypeScriptRuntimeCompilerIdentityV118,
+} from "./revision-v1-18.js"
 
 const hash = (character: string): `sha256:${string}` =>
   `sha256:${character.repeat(64)}`
@@ -42,6 +48,17 @@ const execution = {
   ],
 } as const
 
+const languageIdentity: TypeScriptLanguageIdentityObservationV118 = {
+  nodeExecutableSha256: execution.executableBytesSha256,
+  nodeVersion: "v24.4.1",
+  v8Version: "13.6.233.10-node.17",
+  adapterModuleSha256: hash("c"),
+  harnessSha256: `sha256:${createHash("sha256")
+    .update(execution.argv[2], "utf8")
+    .digest("hex")}`,
+  artifactSha256: hash("9"),
+}
+
 const identity = {
   supervisorBinarySha256: hash("1"),
   supervisorToolchainSha256: hash("2"),
@@ -49,9 +66,11 @@ const identity = {
   dockerEngineSha256: hash("4"),
   dockerImageDigest: hash("5"),
   cgroupDelegationSha256: hash("6"),
-  adapterBuildSha256: hash("7"),
-  runtimeCompilerSha256: hash("8"),
-  artifactSha256: hash("9"),
+  adapterBuildSha256:
+    createTypeScriptAdapterBuildIdentityV118(languageIdentity),
+  runtimeCompilerSha256:
+    createTypeScriptRuntimeCompilerIdentityV118(languageIdentity),
+  artifactSha256: languageIdentity.artifactSha256,
 } as const
 
 const inputBytes = canonicalBytes({
@@ -184,10 +203,16 @@ const launch =
     return {
       rawReceiptBytes: serializeSupervisorRawReceiptEnvelopeV118(envelope),
       observed: { payloadBytes, stdoutBytes, stderrBytes },
+      languageIdentity,
     }
   }
 
-const signature = Buffer.alloc(64, 0x5a).toString("base64")
+const signingKeys = generateKeyPairSync("ed25519")
+const signingKeyId = "runtime-evidence-key:test:typescript"
+const signingPublicKeyPem = signingKeys.publicKey.export({
+  type: "spki",
+  format: "pem",
+}) as string
 
 const execute = (input?: {
   launch?: TypeScriptSupervisorHostLaunchV118
@@ -197,28 +222,39 @@ const execute = (input?: {
     keyId: string
     signatureBase64: string
   }
+  identityOverride?: Partial<TypeScriptLanguageIdentityObservationV118>
 }) => {
   const signEvidence =
     input?.signer ??
     vi.fn(() => ({
       algorithm: "Ed25519" as const,
-      keyId: "runtime-evidence-key:test:typescript",
-      signatureBase64: signature,
+      keyId: signingKeyId,
+      signatureBase64: "",
     }))
+  if (input?.signer === undefined) {
+    vi.mocked(signEvidence).mockImplementation((bytes) => ({
+      algorithm: "Ed25519",
+      keyId: signingKeyId,
+      signatureBase64: signBytes(null, bytes, signingKeys.privateKey).toString(
+        "base64",
+      ),
+    }))
+  }
   const adapter = createCountedTypeScriptSupervisedAdapterV118({
     launchSupervisor: input?.launch ?? launch(),
     signEvidence,
+    execution,
     expectedLanguageIdentity: {
-      adapterBuildSha256: identity.adapterBuildSha256,
-      runtimeCompilerSha256: identity.runtimeCompilerSha256,
-      artifactSha256: identity.artifactSha256,
+      ...languageIdentity,
+      ...input?.identityOverride,
     },
+    evidenceSigningPublicKeyPem: signingPublicKeyPem,
+    expectedSigningKeyId: signingKeyId,
   })
   return {
     result: adapter.execute({
       invocation: input?.invocation ?? invocation(),
       inputBytes,
-      execution,
       cancellationChannel: {
         channelId: "cancel-channel:v1.18:typescript:test:0001",
         channelNonce: "cancel-nonce-v1-18-typescript-000000001",
@@ -350,6 +386,7 @@ describe("TypeScript supervised subprocess adapter v1.18", () => {
       return {
         rawReceiptBytes: serializeSupervisorRawReceiptEnvelopeV118(envelope),
         observed: { payloadBytes, stdoutBytes, stderrBytes },
+        languageIdentity,
       }
     }
     execute({ launch: replayLaunch })
@@ -418,6 +455,7 @@ describe("TypeScript supervised subprocess adapter v1.18", () => {
       () => ({
         rawReceiptBytes: new TextEncoder().encode("{malformed"),
         observed: { payloadBytes, stdoutBytes, stderrBytes },
+        languageIdentity,
       }),
     ]
     for (const candidate of cases) {
@@ -455,6 +493,7 @@ describe("TypeScript supervised subprocess adapter v1.18", () => {
           stdoutBytes: invalidPayload,
           stderrBytes,
         },
+        languageIdentity,
       }
     }
     const { result, signEvidence } = execute({ launch: invalidLaunch })
@@ -484,6 +523,23 @@ describe("TypeScript supervised subprocess adapter v1.18", () => {
           algorithm: "Ed25519",
           keyId: "runtime-evidence-key:test:typescript",
           signatureBase64: "not-canonical",
+        }),
+      }).result,
+    ).toEqual({
+      kind: "system_failure",
+      gameplayDisposition: "no_mutation",
+      code: "EVIDENCE_SIGNING_FAILED",
+    })
+    expect(
+      execute({
+        signer: () => ({
+          algorithm: "Ed25519",
+          keyId: signingKeyId,
+          signatureBase64: signBytes(
+            null,
+            new TextEncoder().encode("different evidence"),
+            signingKeys.privateKey,
+          ).toString("base64"),
         }),
       }).result,
     ).toEqual({
@@ -523,19 +579,20 @@ describe("TypeScript supervised subprocess adapter v1.18", () => {
       launchSupervisor,
       signEvidence: () => ({
         algorithm: "Ed25519",
-        keyId: "runtime-evidence-key:test:typescript",
-        signatureBase64: signature,
+        keyId: signingKeyId,
+        signatureBase64: Buffer.alloc(64, 0x5a).toString("base64"),
       }),
       expectedLanguageIdentity: {
-        adapterBuildSha256: hash("0"),
-        runtimeCompilerSha256: identity.runtimeCompilerSha256,
-        artifactSha256: identity.artifactSha256,
+        ...languageIdentity,
+        adapterModuleSha256: hash("0"),
       },
+      execution,
+      evidenceSigningPublicKeyPem: signingPublicKeyPem,
+      expectedSigningKeyId: signingKeyId,
     })
     const result = adapter.execute({
       invocation: invocation(),
       inputBytes,
-      execution,
       cancellationChannel: {
         channelId: "cancel-channel:v1.18:typescript:test:0001",
         channelNonce: "cancel-nonce-v1-18-typescript-000000001",
@@ -547,5 +604,24 @@ describe("TypeScript supervised subprocess adapter v1.18", () => {
       code: "LANGUAGE_IDENTITY_MISMATCH",
     })
     expect(launchSupervisor).not.toHaveBeenCalled()
+  })
+
+  it("rejects launch-time Node, harness, or artifact observation drift before signing", () => {
+    const observedLaunch = launch()
+    const { result, signEvidence } = execute({
+      launch: (request) => ({
+        ...observedLaunch(request),
+        languageIdentity: {
+          ...languageIdentity,
+          harnessSha256: hash("0"),
+        },
+      }),
+    })
+    expect(result).toEqual({
+      kind: "system_failure",
+      gameplayDisposition: "no_mutation",
+      code: "LANGUAGE_IDENTITY_MISMATCH",
+    })
+    expect(signEvidence).not.toHaveBeenCalled()
   })
 })
