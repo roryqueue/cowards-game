@@ -82,6 +82,7 @@ status: complete
 - Added `RecordedCanonicalTransitionV137` with exact ordinal, kind, lifecycle coordinates, result class, state and machine hashes, ordered events, terminal material, and prefix trace root.
 - Added canonical hashes for output, StrategyMemory, SoldierMemory, objective, private-event, ordered-event, and terminal material without returning any private preimage.
 - Added `computeRecordedTransitionTraceRootV137` and mutation coverage proving field changes, omission, duplication, and reordering change the deterministic root.
+- Added `validateRecordedTransitionTraceRootsV137`, which recomputes every exact prefix and rejects the first stored accumulated-root mismatch.
 - Deep-cloned and froze each returned record and nested event/coordinate structure.
 
 ## Task Commits
@@ -89,6 +90,7 @@ status: complete
 1. **RED: Specify transition-complete traces and root mutation behavior** — `d3c84ab` (test)
 2. **GREEN: Record canonical transition traces** — `7cf5e90` (feat)
 3. **Compatibility fix: Normalize optional private trace fields** — `1097b76` (fix)
+4. **Review fix CR-04: Verify every stored prefix root** — `1d35cd3` (fix)
 
 ## Files Created/Modified
 
@@ -99,6 +101,7 @@ status: complete
 
 - Used the Phase-258 canonical JSON encoder for trace field bytes so root identity is independent of host object insertion order.
 - Bound private evidence with explicit hashes while keeping the Chronicle's existing owner-private sections unchanged.
+- Treat stored prefix roots as claims rather than authority: recorder admission now independently recomputes and checks every first, middle, and final prefix.
 - Kept the new trace additive to the current Chronicle result; no historical schema, event, state, legality, order, outcome, or Strategy observation changed.
 
 ## Deviations from Plan
@@ -138,7 +141,8 @@ None.
 
 - Both modified replay files exist.
 - RED commit `d3c84ab`, GREEN commit `7cf5e90`, and compatibility fix `1097b76` exist.
-- Recorder plus grammar tests passed 40/40; replay typecheck and lint passed.
+- Focused recorder/grammar/historical tests passed 69/69; the full replay suite passed 194/194 serially.
+- Replay typecheck and lint passed.
 - Phase-257 compatibility and kernel-contract tests passed 31/31.
 
 ---

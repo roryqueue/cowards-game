@@ -87,7 +87,10 @@ status: complete
 - Added a historical-only transition interpreter preserving original no-op, MOVE, TURN, PUSH, Backstab, stone, fall, Contraction, and outcome behavior.
 - Added a domain-separated, order-sensitive historical interpretation root over exact events plus before/after replay state.
 - Added import-isolation proof that neither frozen module calls current grammar, transition, validation, reconstruction, or migration helpers.
-- Added a strict manifest pinning original v1.4 fixture/source blobs from the annotated `v1.4` tag, frozen interpreter blobs from commit `9b59d05`, literal historical versions, the authoritative exact tuple, and interpretation root.
+- Replaced live spec schemas, outcome parsing, scheduling constants, and Cycle limits with literal frozen v1.4 implementations in the pinned historical modules.
+- Added a strict manifest pinning original v1.4 fixture/source blobs from the annotated `v1.4` tag, frozen interpreter blobs from commit `4fab0af`, literal historical versions, the authoritative exact tuple, and interpretation root.
+- Independently anchored the expected frozen commit, blobs, SHA-256 digests, and byte lengths so a self-consistent manifest relabel or substitution fails closed.
+- Routed historical validation through the frozen grammar so current initiative/snake checks cannot reinterpret valid v1.4 evidence.
 - Proved archived and working frozen bytes are unchanged before and after parsing, validation, transition interpretation, and manifest audit.
 
 ## Task Commits
@@ -96,6 +99,9 @@ status: complete
 2. **GREEN: Implement frozen historical grammar and transition interpretation** — `9b59d05` (feat)
 3. **RED: Specify strict byte/source/interpretation manifest proof** — `00ee3e9` (test)
 4. **GREEN: Pin immutable historical evidence** — `e86cbaa` (test)
+5. **Review fix CR-03: Freeze historical runtime dependencies** — `4fab0af` (fix)
+6. **Review fix WR-01: Anchor historical source identities** — `4d647b4` (fix)
+7. **Review fix CR-03: Route history through frozen grammar** — `8f7b3be` (fix)
 
 ## Files Created
 
@@ -108,7 +114,7 @@ status: complete
 
 - Used the annotated `v1.4` tag as the immutable original-byte authority. The pinned fixture sources are the original inline movement Chronicle and canonical replay-scenario source; no historical file is copied, normalized, or regenerated.
 - Preserved `historical-v1.4` as `unresolved_legacy`, matching D-15. The exact Phase-256 authoritative tuple is recorded separately under the `historical-v1.16` profile rather than guessed onto original bytes.
-- Kept Plan 06 focused on frozen APIs and evidence. Plan 259-08 owns tuple-first validation routing, and Plan 259-14 owns historical reconstruction routing.
+- Kept original bytes and semantics immutable while routing historical admission immediately through the frozen grammar; later plans can extend exact tuple and reconstruction routing without depending on current grammar.
 
 ## Deviations from Plan
 
@@ -131,9 +137,9 @@ None.
 
 ## Self-Check: PASSED
 
-- Historical focused tests passed 9/9.
-- Historical plus current validate/reconstruct tests passed 53/53 serially.
-- Full replay package tests passed 185/185 serially with `--maxWorkers=1`.
+- Historical focused tests passed 13/13.
+- Historical plus current validate/reconstruct tests passed 57/57 serially.
+- Full replay package tests passed 194/194 serially with `--maxWorkers=1`.
 - Replay typecheck, lint, formatting, and diff checks passed.
 - Phase-257 compatibility and kernel-contract tests passed 31/31.
 - Current event-coverage tests passed 4/4 and the artifact check is byte-exact.

@@ -74,6 +74,8 @@ status: complete
 - Replaced the singleton Activation/Cycle cursor with frozen per-slot records tracking exact identity, next Cycle, successful Advance history, terminal reason, close state, and last accepted event.
 - Added one exact open-Cycle coordinate with start, observation, and action-emitted boundaries.
 - Added stable rejection coverage for duplicate lifecycle events, wrong actor/slot, skipped Cycles, after-close events, terminal mismatches, and Advance/no-Advance contradictions.
+- Added exact seed-derived initial initiative, Round-parity initiative alternation, sparse-selection canonical snake order, and contiguous retained-slot actor validation.
+- Rejects the first unclosed retained slot before a later `ROUND_STARTED` or `CONTRACTION_RESOLVED` boundary.
 - Kept public diagnostics deterministic by returning sorted arrays and never exposing the internal Map.
 - Made advancement copy-on-accept: a rejected event returns the identical prior state object.
 
@@ -82,6 +84,8 @@ status: complete
 1. **RED: Specify per-slot lifecycle, boundary, and immutability behavior** — `14b30ce` (test)
 2. **GREEN: Implement immutable per-slot Chronicle grammar** — `02a9a22` (feat)
 3. **Proof refresh: Bind the current event-coverage artifact to the new grammar bytes** — `266020c` (test)
+4. **Review fixes CR-01/CR-02: Enforce canonical scheduling and closure** — `2edf2b9` (fix)
+5. **Review proof refresh: Bind event coverage to reviewed grammar bytes** — `15f80d8` (test)
 
 ## Files Modified
 
@@ -93,6 +97,7 @@ status: complete
 - Preserved `PUSH_ATTEMPTED` acceptance in this current grammar step until the historical/current vocabulary split in Plan 259-06 can separate it without changing old evidence.
 - Preserved canonical v1.4 `NO_ADVANCE` cleanup as an Activation-close event without `cycleIndex`; successful Advance history still makes that reason invalid.
 - Reset active Phase ownership after Contraction so the next Phase can establish its own exact coordinate.
+- Derived Round actors from the frozen v1.4 seed hash and selection evidence; no actor label is trusted by declaration.
 
 ## Deviations from Plan
 
@@ -136,7 +141,7 @@ None.
 - RED commit `14b30ce` precedes GREEN commit `02a9a22`.
 - Focused grammar tests passed 36/36.
 - Replay typecheck, lint, and formatting checks passed.
-- All replay tests passed 176/176 with one worker.
+- All replay tests passed 194/194 with one worker.
 - Phase-257 compatibility and kernel-contract tests passed 31/31.
 - Current event-coverage generator tests passed 4/4 and the persisted artifact is byte-exact.
 
