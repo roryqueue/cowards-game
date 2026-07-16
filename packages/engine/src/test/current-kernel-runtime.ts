@@ -9,7 +9,9 @@ import {
   createSelectedRuntimeInvocationRequestV117,
   type JsonValue,
   type RuntimeInvocationResultV117,
+  type SoldierBrainInput,
   type SoldierBrainResult,
+  type StrategyInput,
   type StrategyResult,
 } from "@cowards/spec"
 import {
@@ -18,7 +20,10 @@ import {
   type CandidateRuntimeInvocationResult,
   type CandidateStrategyRuntime,
   type KernelEffectRequest,
+  type KernelSelectActivationsRequest,
+  type KernelSoldierBrainRequest,
 } from "../kernel/types.js"
+import type { CanonicalStrategyRuntime } from "../types.js"
 
 const signingIdentity = {
   keyId: RUNTIME_INVOCATION_V1_17_TEST_KEY_ID,
@@ -114,15 +119,43 @@ const boundResult = <TValue extends StrategyResult | SoldierBrainResult>(
  * provides a current request. Production adapters must authenticate through
  * their own containment boundary and must not import this fixture-only helper.
  */
+export type CurrentKernelTestRuntime = CandidateStrategyRuntime &
+  CanonicalStrategyRuntime
+
 export const adaptRuntimeForCurrentKernel = (
   runtime: CandidateStrategyRuntime,
-): CandidateStrategyRuntime => ({
-  selectActivations(input, request) {
+): CurrentKernelTestRuntime => {
+  function selectActivations(
+    input: StrategyInput,
+    request: KernelSelectActivationsRequest,
+  ): CandidateBoundRuntimeInvocationV117<StrategyResult>
+  function selectActivations(
+    input: StrategyInput,
+    request?: KernelSelectActivationsRequest,
+  ): CandidateRuntimeInvocationResult<StrategyResult>
+  function selectActivations(
+    input: StrategyInput,
+    request?: KernelSelectActivationsRequest,
+  ): CandidateRuntimeInvocationResult<StrategyResult> {
     const legacy = runtime.selectActivations(input)
     return request === undefined ? legacy : boundResult(request, legacy)
-  },
-  runSoldierBrain(input, request) {
+  }
+
+  function runSoldierBrain(
+    input: SoldierBrainInput,
+    request: KernelSoldierBrainRequest,
+  ): CandidateBoundRuntimeInvocationV117<SoldierBrainResult>
+  function runSoldierBrain(
+    input: SoldierBrainInput,
+    request?: KernelSoldierBrainRequest,
+  ): CandidateRuntimeInvocationResult<SoldierBrainResult>
+  function runSoldierBrain(
+    input: SoldierBrainInput,
+    request?: KernelSoldierBrainRequest,
+  ): CandidateRuntimeInvocationResult<SoldierBrainResult> {
     const legacy = runtime.runSoldierBrain(input)
     return request === undefined ? legacy : boundResult(request, legacy)
-  },
-})
+  }
+
+  return { selectActivations, runSoldierBrain }
+}

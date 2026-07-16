@@ -1,7 +1,4 @@
-import type {
-  CanonicalStrategyRuntime,
-  StrategyRuntime,
-} from "@cowards/engine"
+import type { CanonicalStrategyRuntime, StrategyRuntime } from "@cowards/engine"
 import { createNestedMatchShapeRuntimeFromRevisionTestSupport } from "../../../packages/runtime-js/src/executor.js"
 import { createPythonNestedMatchShapeRuntimeTestSupport } from "../../../packages/runtime-python/src/python-subprocess-adapter.js"
 import { createWasmWasiNestedMatchShapeRuntimeTestSupport } from "../../../packages/runtime-wasm-wasi/src/wasm-wasi-subprocess-adapter.js"
@@ -15,16 +12,15 @@ import type { RuntimeServiceConfig } from "./runtime-config.js"
 
 export type CurrentMatchServiceTestOverrides = Omit<
   Partial<RuntimeExecutionServiceDependencies>,
-  "createRuntimeForRevision"
+  "adaptRuntimeForCurrentMatch" | "createRuntimeForRevision"
 > & {
   createAdmittedRuntimeForRevision?:
     | RuntimeExecutionServiceDependencies["createRuntimeForRevision"]
     | undefined
 }
 
-const adaptRuntime = (
-  runtime: StrategyRuntime | CanonicalStrategyRuntime,
-): CanonicalStrategyRuntime => adaptRuntimeForCurrentKernel(runtime)
+const adaptRuntime = (runtime: StrategyRuntime): CanonicalStrategyRuntime =>
+  adaptRuntimeForCurrentKernel(runtime)
 
 /**
  * Selected-pointer test support for service tests that execute the canonical
@@ -41,6 +37,7 @@ export const executeCurrentMatchServiceTestSupport = (
     dependencyOverrides
   return executeNestedMatchServiceFixtureOnly(rawRequest, runtimeConfig, {
     ...guardedOverrides,
+    adaptRuntimeForCurrentMatch: adaptRuntime,
     createRuntimeForRevision: (revision, config, limits) => {
       const admitted = validateNestedMatchRuntimeRevisionTestSupport(
         revision,
@@ -54,9 +51,7 @@ export const executeCurrentMatchServiceTestSupport = (
           config,
           limits,
         )
-        return created.ok
-          ? { ...created, runtime: adaptRuntime(created.runtime) }
-          : created
+        return created
       }
       const timeoutMs = Math.min(
         limits.timeoutMs,
@@ -89,7 +84,7 @@ export const executeCurrentMatchServiceTestSupport = (
                 timeoutMs,
                 outputByteLimit: stdoutBytes,
               })
-      return { ok: true, runtime: adaptRuntime(runtime) }
+      return { ok: true, runtime }
     },
   })
 }

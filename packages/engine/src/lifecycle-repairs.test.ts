@@ -1,14 +1,10 @@
 import { describe, expect, it } from "vitest"
 import type { Soldier } from "@cowards/spec"
 import { MATCH_KERNEL } from "./kernel/driver.js"
+import type { CandidateStrategyRuntime } from "./kernel/types.js"
 import { createInitialGameState } from "./state.js"
 import { adaptRuntimeForCurrentKernel } from "./test/current-kernel-runtime.js"
-import {
-  success,
-  type GameState,
-  type CanonicalStrategyRuntime,
-  type TransitionResult,
-} from "./types.js"
+import { success, type GameState, type TransitionResult } from "./types.js"
 
 const baseInput = {
   matchId: "match-lifecycle-repairs",
@@ -49,7 +45,7 @@ const publicEventContract = (events: TransitionResult["events"]) =>
 
 const runActivation = (
   state: GameState,
-  runtime: CanonicalStrategyRuntime,
+  runtime: CandidateStrategyRuntime,
   soldierId: string,
 ): TransitionResult => {
   const execution = MATCH_KERNEL.runActivationFromState({
@@ -74,16 +70,14 @@ describe("approved lifecycle behavior through the candidate authority", () => {
     })
     expect(matchStarted.kind).toBe("transition")
     if (matchStarted.kind !== "transition") return
-    const roundStarted = MATCH_KERNEL.stepMatch(
-      matchStarted.machine,
-      { kind: "advance" },
-    )
+    const roundStarted = MATCH_KERNEL.stepMatch(matchStarted.machine, {
+      kind: "advance",
+    })
     expect(roundStarted.kind).toBe("transition")
     if (roundStarted.kind !== "transition") return
-    const selectionEffect = MATCH_KERNEL.stepMatch(
-      roundStarted.machine,
-      { kind: "advance" },
-    )
+    const selectionEffect = MATCH_KERNEL.stepMatch(roundStarted.machine, {
+      kind: "advance",
+    })
     expect(selectionEffect.kind).toBe("effect")
     if (selectionEffect.kind !== "effect") return
 
@@ -123,7 +117,7 @@ describe("approved lifecycle behavior through the candidate authority", () => {
       }),
     ])
     const observedCycles: number[] = []
-    const runtime: CanonicalStrategyRuntime = {
+    const runtime: CandidateStrategyRuntime = {
       selectActivations: () =>
         success({ activationOrders: [], strategyMemory: {} }),
       runSoldierBrain: (input) => {
@@ -220,7 +214,7 @@ describe("approved lifecycle behavior through the candidate authority", () => {
       }),
     ])
     const observedCycles: number[] = []
-    const runtime: CanonicalStrategyRuntime = {
+    const runtime: CandidateStrategyRuntime = {
       selectActivations: () =>
         success({ activationOrders: [], strategyMemory: {} }),
       runSoldierBrain: (input) => {

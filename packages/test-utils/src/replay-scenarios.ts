@@ -170,7 +170,7 @@ const createMatchInput = (
   seed: string,
   runtime: StrategyRuntime,
   maxPhases = 1,
-): RunMatchInput => ({
+): Omit<RunMatchInput, "runtime"> & { runtime: StrategyRuntime } => ({
   matchId: `canonical-replay-${id}`,
   seed,
   arenaVariant: {
@@ -203,7 +203,7 @@ const sequenceOf = (
 const buildScenario = (
   id: CanonicalReplayScenarioId,
   title: string,
-  input: RunMatchInput,
+  input: Omit<RunMatchInput, "runtime"> & { runtime: StrategyRuntime },
   expectedEventTypes: ChronicleEventType[],
   checkpoints: Array<{
     name: string

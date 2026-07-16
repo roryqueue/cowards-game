@@ -2,12 +2,13 @@ import { describe, expect, it } from "vitest"
 import type { Soldier } from "@cowards/spec"
 import { findBackstabPairs, resolveBackstabBoundary } from "./backstab.js"
 import { MATCH_KERNEL } from "./kernel/driver.js"
+import type { CandidateStrategyRuntime } from "./kernel/types.js"
 import { resolveAction } from "./movement.js"
 import { checkImmediateMatchEnd } from "./outcome.js"
 import { createInitialGameState } from "./state.js"
 import { createFakeRuntime } from "./test/fake-runtime.js"
 import { adaptRuntimeForCurrentKernel } from "./test/current-kernel-runtime.js"
-import type { CanonicalStrategyRuntime, GameState } from "./types.js"
+import type { GameState } from "./types.js"
 
 const baseInput = {
   matchId: "match-backstab",
@@ -41,7 +42,7 @@ const stateWith = (soldiers: Soldier[]): GameState => ({
 
 const runActivation = (
   state: GameState,
-  runtime: CanonicalStrategyRuntime,
+  runtime: CandidateStrategyRuntime,
   soldierId: string,
 ) => {
   const execution = MATCH_KERNEL.runActivationFromState({

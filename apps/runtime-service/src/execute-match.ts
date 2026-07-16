@@ -756,7 +756,7 @@ const createRuntimeForRevision = (
   limits: RuntimeExecutionServiceRequest["limits"],
   expectedRuntimeAbi = STRATEGY_RUNTIME_ABI_VERSION,
 ):
-  | { ok: true; runtime: CanonicalStrategyRuntime }
+  | { ok: true; runtime: StrategyRuntime }
   | {
       ok: false
       diagnostics: Record<string, unknown>
@@ -892,6 +892,19 @@ export interface RuntimeExecutionServiceDependencies {
   reconstructChronicle: typeof validateCurrentReplayReconstruction
   createReplay: typeof createCurrentReplay
   createRuntimeForRevision: typeof createRuntimeForRevision
+  createCanonicalRuntimeForRevision?:
+    | ((
+        revision: StrategyRevision,
+        runtimeConfig: RuntimeServiceConfig,
+        limits: RuntimeExecutionServiceRequest["limits"],
+        expectedRuntimeAbi?: string,
+      ) =>
+        | { ok: true; runtime: CanonicalStrategyRuntime }
+        | { ok: false; diagnostics: Record<string, unknown> })
+    | undefined
+  adaptRuntimeForCurrentMatch?:
+    | ((runtime: StrategyRuntime) => CanonicalStrategyRuntime)
+    | undefined
   authorityLoader?: RuntimeEvidenceAuthorityLoader | undefined
 }
 
@@ -917,7 +930,7 @@ export const createSideDispatchRuntime = (
     if (playerId === playerIds.topPlayerId) {
       return topRuntime.selectActivations(input, kernelRequest)
     }
-    return violation("INVALID_OUTPUT", "Cannot resolve player runtime")
+    throw new Error("Cannot resolve player runtime")
   },
 
   runSoldierBrain(input, kernelRequest) {
@@ -928,7 +941,7 @@ export const createSideDispatchRuntime = (
     if (playerId === playerIds.topPlayerId) {
       return topRuntime.runSoldierBrain(input, kernelRequest)
     }
-    return violation("INVALID_OUTPUT", "Cannot resolve soldier runtime")
+    throw new Error("Cannot resolve soldier runtime")
   },
 })
 
@@ -1025,12 +1038,42 @@ const executeParsedRequest = (
     return authorityFailureResponse(request, invocationAuthority.code)
   }
 
-  const bottomRuntime = dependencies.createRuntimeForRevision(
-    request.strategies.bottom,
-    runtimeConfig,
-    request.limits,
-    expectedRuntimeAbi,
-  )
+  const createAdmittedCurrentRuntime = (revision: StrategyRevision) => {
+    if (dependencies.createCanonicalRuntimeForRevision !== undefined) {
+      return dependencies.createCanonicalRuntimeForRevision(
+        revision,
+        runtimeConfig,
+        request.limits,
+        expectedRuntimeAbi,
+      )
+    }
+    const created = dependencies.createRuntimeForRevision(
+      revision,
+      runtimeConfig,
+      request.limits,
+      expectedRuntimeAbi,
+    )
+    if (!created.ok) return created
+    if (dependencies.adaptRuntimeForCurrentMatch === undefined) {
+      if (
+        String(STRATEGY_RUNTIME_ABI_VERSION) !== "strategy-runtime-abi-v1.17"
+      ) {
+        return created
+      }
+      return {
+        ok: false as const,
+        diagnostics: {
+          reason: "authenticated-current-runtime-adapter-missing",
+        },
+      }
+    }
+    return {
+      ok: true as const,
+      runtime: dependencies.adaptRuntimeForCurrentMatch(created.runtime),
+    }
+  }
+
+  const bottomRuntime = createAdmittedCurrentRuntime(request.strategies.bottom)
   if (!bottomRuntime.ok) {
     return systemFailureResponse({
       rawRequest: request,
@@ -1040,12 +1083,7 @@ const executeParsedRequest = (
       diagnostics: bottomRuntime.diagnostics,
     })
   }
-  const topRuntime = dependencies.createRuntimeForRevision(
-    request.strategies.top,
-    runtimeConfig,
-    request.limits,
-    expectedRuntimeAbi,
-  )
+  const topRuntime = createAdmittedCurrentRuntime(request.strategies.top)
   if (!topRuntime.ok) {
     return systemFailureResponse({
       rawRequest: request,
@@ -1795,10 +1833,8 @@ const createPreparedTypeScriptRuntimeV117 = (input: {
     artifactSha256: sha256IdentityV117(executableBytes),
   } as const
   const declaredArtifactSourceIdentity = artifact.sourceIdentity
-  const expectedArtifactOriginalSourceSha256 =
-    `sha256:${hashCanonicalIdentity("originalSource", [originalBytes])}`
-  const expectedArtifactNormalizedSourceSha256 =
-    `sha256:${hashCanonicalIdentity("normalizedSource", [normalizedBytes])}`
+  const expectedArtifactOriginalSourceSha256 = `sha256:${hashCanonicalIdentity("originalSource", [originalBytes])}`
+  const expectedArtifactNormalizedSourceSha256 = `sha256:${hashCanonicalIdentity("normalizedSource", [normalizedBytes])}`
   if (
     sourceIdentity.artifactSha256 !== `sha256:${artifact.hash}` ||
     (declaredArtifactSourceIdentity !== undefined &&
@@ -1942,7 +1978,7 @@ const createPreparedTypeScriptRuntimeV117 = (input: {
         invoke("selectActivations", value as unknown as JsonValue),
       runSoldierBrain: (value) =>
         invoke("soldierBrain", value as unknown as JsonValue),
-    } as CanonicalStrategyRuntime,
+    } as StrategyRuntime,
   }
 }
 

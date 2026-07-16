@@ -58,14 +58,14 @@ const createMatchInput = (
   topPlayerId: "top",
   bottomStrategyRevisionId: "bottom-rev",
   topStrategyRevisionId: "top-rev",
-  runtime: deterministicRuntime,
+  runtime: adaptRuntimeForCurrentKernel(deterministicRuntime),
   ...overrides,
 })
 
 const buildNormalized = (input: RunMatchInput) => {
   const execution = MATCH_KERNEL.runMatch({
     ...input,
-    runtime: adaptRuntimeForCurrentKernel(input.runtime),
+    runtime: input.runtime,
   })
   const recorded = recordChronicleFromExecution({
     execution,

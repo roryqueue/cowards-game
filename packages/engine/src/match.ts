@@ -1,8 +1,14 @@
-import type { KernelRestrictedFailure, CandidateExecution } from "./kernel/types.js"
+import type {
+  KernelRestrictedFailure,
+  CandidateExecution,
+} from "./kernel/types.js"
 import { MATCH_KERNEL } from "./kernel/driver.js"
 import type { GameState, RunMatchInput, TransitionResult } from "./types.js"
 
-type CompletedMatchExecution = Extract<CandidateExecution, { kind: "completed" }>
+type CompletedMatchExecution = Extract<
+  CandidateExecution,
+  { kind: "completed" }
+>
 
 export interface CanonicalMatchResult extends TransitionResult {
   readonly execution: CompletedMatchExecution

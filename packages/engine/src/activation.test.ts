@@ -3,7 +3,7 @@ import type { Soldier } from "@cowards/spec"
 import * as enginePackage from "./index.js"
 import { getRoundPlayerOrder } from "./activation.js"
 import { MATCH_KERNEL } from "./kernel/driver.js"
-import type { MatchMachine } from "./kernel/types.js"
+import type { CandidateStrategyRuntime, MatchMachine } from "./kernel/types.js"
 import { createInitialGameState } from "./state.js"
 import {
   createStrategyInput,
@@ -11,11 +11,7 @@ import {
 } from "./runtime-inputs.js"
 import { createFakeRuntime } from "./test/fake-runtime.js"
 import { adaptRuntimeForCurrentKernel } from "./test/current-kernel-runtime.js"
-import {
-  violation,
-  type CanonicalStrategyRuntime,
-  type GameState,
-} from "./types.js"
+import { violation, type GameState } from "./types.js"
 
 const baseInput = {
   matchId: "match-activation",
@@ -39,7 +35,7 @@ const stateWithSoldiers = (soldiers: Soldier[]): GameState => ({
 
 const runActivation = (
   state: GameState,
-  runtime: CanonicalStrategyRuntime,
+  runtime: CandidateStrategyRuntime,
   soldierId: string,
 ) => {
   const execution = MATCH_KERNEL.runActivationFromState({
@@ -156,7 +152,7 @@ describe("activation selection and runtime inputs", () => {
 
   it("stones a Soldier after a RuntimeViolation with no-advance", () => {
     const state = createInitialGameState(baseInput)
-    const runtime: CanonicalStrategyRuntime = {
+    const runtime: CandidateStrategyRuntime = {
       selectActivations: createFakeRuntime().selectActivations,
       runSoldierBrain: () =>
         violation("INVALID_OUTPUT", "RuntimeViolation invalid output"),

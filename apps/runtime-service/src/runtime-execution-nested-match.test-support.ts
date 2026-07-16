@@ -1,6 +1,7 @@
 import { createNestedMatchShapeRuntimeFromRevisionTestSupport } from "../../../packages/runtime-js/src/executor.js"
 import { createPythonNestedMatchShapeRuntimeTestSupport } from "../../../packages/runtime-python/src/python-subprocess-adapter.js"
 import { createWasmWasiNestedMatchShapeRuntimeTestSupport } from "../../../packages/runtime-wasm-wasi/src/wasm-wasi-subprocess-adapter.js"
+import { adaptRuntimeForCurrentKernel } from "../../../packages/engine/src/test/current-kernel-runtime.js"
 import {
   executeNestedMatchServiceFixtureOnly,
   validateNestedMatchRuntimeRevisionTestSupport,
@@ -10,7 +11,7 @@ import type { RuntimeServiceConfig } from "./runtime-config.js"
 
 export type NestedMatchServiceTestOverrides = Omit<
   Partial<RuntimeExecutionServiceDependencies>,
-  "createRuntimeForRevision"
+  "adaptRuntimeForCurrentMatch" | "createRuntimeForRevision"
 > & {
   createAdmittedRuntimeForRevision?:
     | RuntimeExecutionServiceDependencies["createRuntimeForRevision"]
@@ -31,6 +32,7 @@ export const executeNestedMatchServiceTestSupport = (
     dependencyOverrides
   return executeNestedMatchServiceFixtureOnly(rawRequest, runtimeConfig, {
     ...guardedOverrides,
+    adaptRuntimeForCurrentMatch: adaptRuntimeForCurrentKernel,
     createRuntimeForRevision: (revision, config, limits) => {
       const admitted = validateNestedMatchRuntimeRevisionTestSupport(
         revision,

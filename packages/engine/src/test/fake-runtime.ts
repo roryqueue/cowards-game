@@ -5,9 +5,11 @@ import type {
   SoldierSnapshot,
   StrategyInput,
 } from "@cowards/spec"
-import type { CandidateStrategyRuntime } from "../kernel/types.js"
 import { success } from "../types.js"
-import { adaptRuntimeForCurrentKernel } from "./current-kernel-runtime.js"
+import {
+  adaptRuntimeForCurrentKernel,
+  type CurrentKernelTestRuntime,
+} from "./current-kernel-runtime.js"
 
 export interface FakeRuntimeOptions {
   selectActivations?: (input: StrategyInput) => ActivationOrder[]
@@ -16,7 +18,7 @@ export interface FakeRuntimeOptions {
 
 export const createFakeRuntime = (
   options: FakeRuntimeOptions = {},
-): CandidateStrategyRuntime =>
+): CurrentKernelTestRuntime =>
   adaptRuntimeForCurrentKernel({
     selectActivations: (input) =>
       success({
