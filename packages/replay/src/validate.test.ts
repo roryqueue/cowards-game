@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto"
+import { readFileSync } from "node:fs"
 import type {
   Chronicle,
   ChronicleBoundarySnapshot,
@@ -26,6 +27,7 @@ import {
   migrateChronicle,
   resolveReplayCompatibilityIdentity,
   validateCurrentChronicle,
+  validateCurrentChronicleSemantics,
   validateChronicle,
   validateHistoricalV14Chronicle,
   validateReplayInput,
@@ -316,6 +318,29 @@ const withHistoricalPushAttempt = (chronicle: Chronicle): Chronicle => {
 }
 
 describe("validateChronicle", () => {
+  it("keeps current semantic admission acyclic and single-invocation", () => {
+    const input = createCurrentReplayInput()
+    const validateSource = readFileSync(
+      new URL("./validate.ts", import.meta.url),
+      "utf8",
+    )
+    const reconstructSource = readFileSync(
+      new URL("./reconstruct.ts", import.meta.url),
+      "utf8",
+    )
+
+    expect(validateCurrentChronicleSemantics(input)).toEqual(
+      validateCurrentChronicle(input),
+    )
+    expect(validateSource).not.toContain("validateCurrentReplayReconstruction")
+    expect(
+      validateSource.match(/validateCurrentChronicleSemantics\(/gu) ?? [],
+    ).toHaveLength(1)
+    expect(
+      reconstructSource.match(/validateCurrentChronicleSemantics\(/gu) ?? [],
+    ).toHaveLength(1)
+  })
+
   it("routes exact current evidence as current and publishable", () => {
     const input = createCurrentReplayInput()
 
