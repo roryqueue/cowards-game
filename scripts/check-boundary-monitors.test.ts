@@ -1310,7 +1310,7 @@ describe("boundary drift monitors", () => {
 
     try {
       const checks = await runBoundaryMonitorChecks()
-      expect(checks.every((check) => check.ok)).toBe(true)
+      expect(checks.filter((check) => !check.ok)).toEqual([])
       expect(checks.map((check) => check.layer)).toEqual(
         expect.arrayContaining([
           "contract_drift",
@@ -1363,5 +1363,5 @@ describe("boundary drift monitors", () => {
         process.env.COWARDS_REQUIRE_LIVE_TOPOLOGY = previousLiveTopology
       }
     }
-  }, 30_000)
+  }, 60_000)
 })

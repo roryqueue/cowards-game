@@ -175,6 +175,78 @@ const PHASE_19_RECEIPT_REREVIEW_CLOSURE_COMMIT =
   "f5741fb726828a507d4e7e1dd7dfac4a05902ab9"
 const CURRENT_TUPLE_ID =
   "sha256:922a6857fdbc8354b744d6e766bff216f3fee85b5ed381355cb427f5a616b3ae"
+const PHASE_257_HISTORICAL_EVIDENCE = [
+  [
+    "lifecycle-repairs",
+    "packages/engine/src/kernel/lifecycle-repairs.test.ts",
+    "eeb9e3a5c7682ac47b1d8ba19a1bb89d588b371ee25fc9ceee5fe408a6f8aaee",
+  ],
+  [
+    "v1.4-compatibility",
+    "packages/engine/src/compatibility-fixtures.test.ts",
+    "754a94eedd9c310d73be63eb3be76b8bbee409f4bda78303ba8228b6ac3055f5",
+  ],
+  [
+    "current-event-coverage",
+    "packages/spec/artifacts/v1.37-current-event-coverage.json",
+    PHASE_257_CURRENT_EVENT_COVERAGE_SHA256,
+  ],
+  [
+    "current-authority",
+    "packages/spec/artifacts/v1.37-integrity-authority.json",
+    "afa81345bb2d697befa590a07e613649c7b759bb9a471887104c83bfeaea1b1e",
+  ],
+  [
+    "executable-reference-inventory",
+    "scripts/check-v1-37-executable-reference-inventory.ts",
+    "d8953add4704512604a394309495496f7ed0581b51098257e792509f82476066",
+  ],
+  [
+    "go-no-scheduler-ast",
+    "apps/go-backend/semantic_integrity_test.go",
+    "ce31dd73e569f22c53ec127589d380ce7f14cfeb2e1060d15aa86c47ec021637",
+  ],
+  [
+    "historical-read-only-dispatch",
+    ".planning/artifacts/v1.37-v1.36-historical-proof-dispatch.json",
+    "108e3df9c07ed3f99a4907a8ef455ee8653169dffd1a9e4797c10a3621745e12",
+  ],
+  [
+    "inactive-candidate-provenance",
+    "packages/spec/artifacts/v1.37-kernel-integrity-candidate.json",
+    "4234567bc758b6fcc27085b523d642ad765803ce5e97a301e272ab351a208d11",
+  ],
+  [
+    "activation-review-closure",
+    ".planning/phases/257-canonical-transition-kernel-and-v1-4-semantic-integrity/257-19-ACTIVATION-REVIEW-CLOSURE.md",
+    "67d39bca990ff583d52ac114c808edc3fa57ddb573bc183035dbe11e3463efa5",
+  ],
+  [
+    "v1.16-semantic-receipt-contract",
+    "packages/spec/src/runtime-execution-service.ts",
+    "9a0a0411056d06ce4b426b7749256460369124fa752c6c2f81912b8b0bfb31fc",
+  ],
+  [
+    "v1.16-typescript-semantic-receipt",
+    "apps/runtime-service/src/semantic-receipt.ts",
+    "f97482b7824658579fcaf33f310613103da5afd93ccee09f6c0dc49cf82722ec",
+  ],
+  [
+    "v1.16-go-semantic-receipt",
+    "apps/go-backend/runtime_semantic_receipt.go",
+    "36052047a870068ab81ced8c78f3b7f4e8130034a57ee8d16bc3873a50507d1d",
+  ],
+  [
+    "v1.16-semantic-receipt-migration",
+    "packages/persistence/migrations/0017_runtime_semantic_receipts.sql",
+    "ac19e1d825217dfb72142685eb65e62933cea49541ceb39338235b32d2430a69",
+  ],
+  [
+    "v1.16-semantic-receipt-wire-golden",
+    "packages/spec/artifacts/runtime-execution-service-response.v1.16.wire.json",
+    "9c870d57e0125eb80ab2ba941ecbbede8a9a775f61c0b278abec25c491374d97",
+  ],
+] as const
 
 const exactAuditObservations = {
   noAdvanceLastSoldier: {
@@ -560,12 +632,6 @@ const exactPhase258CurrentObservations = {
   deepValidation: "rejected:MAX_DEPTH_EXCEEDED:player_violation",
 } as const
 
-const readJson = (repoRoot: string, repoPath: string): unknown =>
-  JSON.parse(readFileSync(path.join(repoRoot, repoPath), "utf8")) as unknown
-
-const fileSha256 = (repoRoot: string, repoPath: string): string =>
-  sha256(readFileSync(path.join(repoRoot, repoPath), "utf8"))
-
 const reproduceCurrentAudit = (repoRoot: string): unknown => {
   const reproduction = spawnSync(
     "pnpm",
@@ -600,6 +666,22 @@ const commitSourceManifest = (
   }
 }
 
+const verifyPhase257HistoricalEvidence = (repoRoot: string): void => {
+  for (const [, repoPath, expectedSha256] of PHASE_257_HISTORICAL_EVIDENCE) {
+    const historical = spawnSync(
+      "git",
+      ["show", `${PHASE_19_RECEIPT_REREVIEW_CLOSURE_COMMIT}:${repoPath}`],
+      { cwd: repoRoot, encoding: "utf8", timeout: 10_000 },
+    )
+    if (
+      historical.status !== 0 ||
+      sha256(historical.stdout) !== expectedSha256
+    ) {
+      throw new Error(`Phase-257 historical evidence drifted: ${repoPath}`)
+    }
+  }
+}
+
 export const buildV137Phase257CoreRulesResult = (
   repoRoot = defaultRepoRoot,
 ): Record<string, unknown> => {
@@ -607,6 +689,7 @@ export const buildV137Phase257CoreRulesResult = (
   if (baseline.findings.length > 0) {
     throw new Error("immutable audit baseline drifted")
   }
+  verifyPhase257HistoricalEvidence(repoRoot)
   const reproduced = reproduceCurrentAudit(repoRoot)
   if (stableJson(reproduced) !== stableJson(exactPhase258CurrentObservations)) {
     throw new Error("current audit observations drifted")
@@ -620,88 +703,6 @@ export const buildV137Phase257CoreRulesResult = (
     checkRetainedCandidateEventCoverageProvenance().length > 0
   ) {
     throw new Error("current event coverage drifted")
-  }
-
-  const authorityPath = "packages/spec/artifacts/v1.37-integrity-authority.json"
-  const eventCoveragePath =
-    "packages/spec/artifacts/v1.37-current-event-coverage.json"
-  const candidatePath =
-    "packages/spec/artifacts/v1.37-kernel-integrity-candidate.json"
-  const receiptContractPath = "packages/spec/src/runtime-execution-service.ts"
-  const receiptWireGoldenPath =
-    "packages/spec/artifacts/runtime-execution-service-response.v1.16.wire.json"
-  const receiptMigrationPath =
-    "packages/persistence/migrations/0017_runtime_semantic_receipts.sql"
-  const receiptContract = readFileSync(
-    path.join(repoRoot, receiptContractPath),
-    "utf8",
-  )
-  const receiptMigration = readFileSync(
-    path.join(repoRoot, receiptMigrationPath),
-    "utf8",
-  )
-  const receiptWireGolden = readJson(repoRoot, receiptWireGoldenPath)
-  const receiptWireGoldenResult =
-    isRecord(receiptWireGolden) && isRecord(receiptWireGolden.result)
-      ? receiptWireGolden.result
-      : undefined
-  const receiptWireGoldenClaims =
-    isRecord(receiptWireGoldenResult) &&
-    isRecord(receiptWireGoldenResult.semanticReceipt)
-      ? receiptWireGoldenResult.semanticReceipt
-      : undefined
-  const authority = readJson(repoRoot, authorityPath)
-  const eventCoverage = readJson(repoRoot, eventCoveragePath)
-  const candidate = readJson(repoRoot, candidatePath)
-  const authorityTuple =
-    isRecord(authority) && Array.isArray(authority.compatibilityTuples)
-      ? authority.compatibilityTuples[0]
-      : undefined
-  const candidateRecord =
-    isRecord(candidate) && isRecord(candidate.candidate)
-      ? candidate.candidate
-      : undefined
-  if (
-    !isRecord(authorityTuple) ||
-    authorityTuple.tupleId !== CURRENT_TUPLE_ID ||
-    !isRecord(candidateRecord) ||
-    candidateRecord.candidateTupleId !== CURRENT_TUPLE_ID ||
-    candidateRecord.status !== "inactive-candidate" ||
-    !isRecord(eventCoverage) ||
-    eventCoverage.status !== "current-exact" ||
-    eventCoverage.tupleId !== CURRENT_TUPLE_ID ||
-    !Array.isArray(eventCoverage.currentEventVocabulary) ||
-    eventCoverage.currentEventVocabulary.includes("PUSH_ATTEMPTED") ||
-    stableJson(eventCoverage.historicalOnly) !== stableJson(["PUSH_ATTEMPTED"])
-  ) {
-    throw new Error("current tuple, event, or candidate provenance drifted")
-  }
-  if (
-    !receiptContract.includes("runtime-execution-service-v1.16") ||
-    !receiptContract.includes("runtime-semantic-receipt-v1") ||
-    !receiptContract.includes(
-      "cowards-game:runtime-semantic-chronicle-json-wire:v1",
-    ) ||
-    !receiptContract.includes(
-      "cowards-game:runtime-semantic-final-state-json-wire:v1",
-    ) ||
-    !receiptContract.includes(
-      "cowards-game:runtime-semantic-outcome-json-wire:v1",
-    ) ||
-    !receiptMigration.includes("runtime_semantic_receipt") ||
-    !receiptMigration.includes("runtime_semantic_receipt_hash") ||
-    !isRecord(receiptWireGolden) ||
-    receiptWireGolden.contractVersion !== "runtime-execution-service-v1.16" ||
-    receiptWireGolden.ok !== true ||
-    !isRecord(receiptWireGoldenClaims) ||
-    receiptWireGoldenClaims.schemaVersion !== "runtime-semantic-receipt-v1" ||
-    typeof receiptWireGoldenClaims.chronicleWireBytesHash !== "string" ||
-    typeof receiptWireGoldenClaims.finalStateWireBytesHash !== "string" ||
-    typeof receiptWireGoldenClaims.outcomeWireBytesHash !== "string" ||
-    typeof receiptWireGoldenClaims.signature !== "string" ||
-    !/^hmac-sha256:[0-9a-f]{64}$/u.test(receiptWireGoldenClaims.signature)
-  ) {
-    throw new Error("v1.16 semantic receipt or migration drifted")
   }
 
   return {
@@ -809,104 +810,13 @@ export const buildV137Phase257CoreRulesResult = (
         },
       ],
     },
-    evidence: [
-      {
-        id: "lifecycle-repairs",
-        path: "packages/engine/src/kernel/lifecycle-repairs.test.ts",
-        sha256: fileSha256(
-          repoRoot,
-          "packages/engine/src/kernel/lifecycle-repairs.test.ts",
-        ),
-      },
-      {
-        id: "v1.4-compatibility",
-        path: "packages/engine/src/compatibility-fixtures.test.ts",
-        sha256: fileSha256(
-          repoRoot,
-          "packages/engine/src/compatibility-fixtures.test.ts",
-        ),
-      },
-      {
-        id: "current-event-coverage",
-        path: eventCoveragePath,
-        // Phase-257 evidence is immutable even though the current coverage
-        // artifact is regenerated when later phases move producer lines.
-        sha256: PHASE_257_CURRENT_EVENT_COVERAGE_SHA256,
-      },
-      {
-        id: "current-authority",
-        path: authorityPath,
-        sha256: fileSha256(repoRoot, authorityPath),
-      },
-      {
-        id: "executable-reference-inventory",
-        path: "scripts/check-v1-37-executable-reference-inventory.ts",
-        sha256: fileSha256(
-          repoRoot,
-          "scripts/check-v1-37-executable-reference-inventory.ts",
-        ),
-      },
-      {
-        id: "go-no-scheduler-ast",
-        path: "apps/go-backend/semantic_integrity_test.go",
-        sha256: fileSha256(
-          repoRoot,
-          "apps/go-backend/semantic_integrity_test.go",
-        ),
-      },
-      {
-        id: "historical-read-only-dispatch",
-        path: ".planning/artifacts/v1.37-v1.36-historical-proof-dispatch.json",
-        sha256: fileSha256(
-          repoRoot,
-          ".planning/artifacts/v1.37-v1.36-historical-proof-dispatch.json",
-        ),
-      },
-      {
-        id: "inactive-candidate-provenance",
-        path: candidatePath,
-        sha256: fileSha256(repoRoot, candidatePath),
-      },
-      {
-        id: "activation-review-closure",
-        path: ".planning/phases/257-canonical-transition-kernel-and-v1-4-semantic-integrity/257-19-ACTIVATION-REVIEW-CLOSURE.md",
-        sha256: fileSha256(
-          repoRoot,
-          ".planning/phases/257-canonical-transition-kernel-and-v1-4-semantic-integrity/257-19-ACTIVATION-REVIEW-CLOSURE.md",
-        ),
-      },
-      {
-        id: "v1.16-semantic-receipt-contract",
-        path: receiptContractPath,
-        sha256: fileSha256(repoRoot, receiptContractPath),
-      },
-      {
-        id: "v1.16-typescript-semantic-receipt",
-        path: "apps/runtime-service/src/semantic-receipt.ts",
-        sha256: fileSha256(
-          repoRoot,
-          "apps/runtime-service/src/semantic-receipt.ts",
-        ),
-      },
-      {
-        id: "v1.16-go-semantic-receipt",
-        path: "apps/go-backend/runtime_semantic_receipt.go",
-        sha256: fileSha256(
-          repoRoot,
-          "apps/go-backend/runtime_semantic_receipt.go",
-        ),
-      },
-      {
-        id: "v1.16-semantic-receipt-migration",
-        path: receiptMigrationPath,
-        sha256: fileSha256(repoRoot, receiptMigrationPath),
-      },
-      {
-        id: "v1.16-semantic-receipt-wire-golden",
-        path: receiptWireGoldenPath,
-        sha256: fileSha256(repoRoot, receiptWireGoldenPath),
-      },
-    ],
+    evidence: PHASE_257_HISTORICAL_EVIDENCE.map(
+      ([id, evidencePath, evidenceSha256]) => ({
+        id,
+        path: evidencePath,
+        sha256: evidenceSha256,
+      }),
+    ),
     checks: [
       "phase256-baseline-immutable",
       "phase257-pre-refactor-baseline-immutable",

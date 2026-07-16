@@ -3,15 +3,11 @@ import {
   RUNTIME_INVOCATION_V1_17_SYSTEM_FAILURE_CODES,
   RUNTIME_INVOCATION_V1_17_SYSTEM_FAILURE_RETRYABILITY,
   RUNTIME_INVOCATION_V1_17_TEST_KEY_ID,
-  createAuthenticatedRuntimeInvocationResponseV117,
   createRuntimeAbiV117ExecutionLedger,
   createRuntimeInvocationBudgetV117,
-  createRuntimeInvocationExecutionReceiptV117,
   createRuntimeInvocationTraceV117,
   createSelectedRuntimeInvocationRequestV117,
-  encodeCanonicalJson,
   type JsonValue,
-  type RuntimeInvocationExecutionReceiptEvidenceV117,
   type RuntimeInvocationResultV117,
   type SoldierBrainResult,
   type StrategyResult,
@@ -57,90 +53,6 @@ const requestFor = (request: KernelEffectRequest) =>
     },
     signingIdentity,
   )
-
-const receiptFor = (
-  request: ReturnType<typeof requestFor>,
-  outcome: RuntimeInvocationResultV117<JsonValue>,
-) => {
-  const prestate = request.accounting.prestate
-  const encoded =
-    outcome.kind === "success"
-      ? encodeCanonicalJson(outcome.value, {
-          context: "authenticated-outer-envelope",
-        })
-      : undefined
-  if (encoded !== undefined && !encoded.ok) {
-    throw new Error(
-      "current kernel runtime fixture produced non-canonical JSON",
-    )
-  }
-  const payloadBytes = encoded?.bytes.byteLength ?? 1
-  const evidence: RuntimeInvocationExecutionReceiptEvidenceV117 = {
-    attribution:
-      outcome.kind === "system_failure" ? "ambiguous" : "proven_strategy",
-    counters: {
-      wallMilliseconds: {
-        status: "measured",
-        delta: 1,
-        cumulative: prestate.cumulative.wallMilliseconds + 1,
-      },
-      computeFuel: {
-        status: "measured",
-        delta: 1,
-        cumulative: prestate.cumulative.computeFuel + 1,
-      },
-      payloadBytes: {
-        status: "measured",
-        delta: payloadBytes,
-        cumulative: prestate.cumulative.payloadBytes + payloadBytes,
-      },
-      stdoutBytes: {
-        status: "measured",
-        delta: outcome.kind === "success" ? payloadBytes + 1 : 1,
-        cumulative:
-          prestate.cumulative.stdoutBytes +
-          (outcome.kind === "success" ? payloadBytes + 1 : 1),
-      },
-      stderrBytes: {
-        status: "measured",
-        delta: outcome.kind === "success" ? 0 : 1,
-        cumulative:
-          prestate.cumulative.stderrBytes +
-          (outcome.kind === "success" ? 0 : 1),
-      },
-    },
-    memory: {
-      status: "measured",
-      peakBytes: 1,
-      cumulativePeakBytes: Math.max(prestate.cumulative.memoryBytes, 1),
-    },
-    process: {
-      status: "verified",
-      processes: 1,
-      threads: 1,
-      children: 0,
-    },
-    capabilities: {
-      status: "verified",
-      filesystem: "none",
-      network: "disabled",
-      environment: "empty",
-      shell: "disabled",
-    },
-    cancellation: {
-      status: "verified",
-      terminationRequired: false,
-      receiptPresent: false,
-      graceMilliseconds: 0,
-    },
-    accountingEvidence: {
-      status: "verified",
-      signatureVerified: true,
-      monotonic: true,
-    },
-  }
-  return createRuntimeInvocationExecutionReceiptV117(request, evidence)
-}
 
 const boundResult = <TValue extends StrategyResult | SoldierBrainResult>(
   request: KernelEffectRequest,
@@ -189,24 +101,18 @@ const boundResult = <TValue extends StrategyResult | SoldierBrainResult>(
       ] ?? RUNTIME_INVOCATION_V1_17_PLAYER_VIOLATIONS.INVALID_OUTPUT
     outcome = { kind: "player_violation", violation, trace }
   }
-  const authenticated = createAuthenticatedRuntimeInvocationResponseV117(
-    authenticatedRequest,
-    outcome,
-    receiptFor(authenticatedRequest, outcome),
-    signingIdentity,
-  )
   return {
     kind: "v1_17_bound",
     request: authenticatedRequest,
-    outcome: authenticated.outcome as RuntimeInvocationResultV117<TValue>,
+    outcome: outcome as RuntimeInvocationResultV117<TValue>,
   }
 }
 
 /**
  * Keeps a test runtime usable through explicit historical dispatch while
- * supplying the authenticated v1.17 envelope whenever the kernel provides a
- * current request. Production adapters must authenticate through their own
- * containment boundary and must not import this fixture-only helper.
+ * supplying the canonical v1.17 request/outcome binding whenever the kernel
+ * provides a current request. Production adapters must authenticate through
+ * their own containment boundary and must not import this fixture-only helper.
  */
 export const adaptRuntimeForCurrentKernel = (
   runtime: CandidateStrategyRuntime,

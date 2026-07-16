@@ -1,5 +1,6 @@
 #!/usr/bin/env -S pnpm exec tsx
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs"
+import { createHash } from "node:crypto"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 import ts from "typescript"
@@ -51,9 +52,7 @@ import {
   getStrategyRuntimeAdapterRecord,
   NON_JS_RUNTIME_PROMOTION_CRITERIA,
   NON_JS_RUNTIME_SUPPORT_POLICY,
-  RUNTIME_BROKER_REGISTRY,
   RUNTIME_BROKER_REGISTRY_VERSION,
-  validateRuntimeBrokerRegistryMatch,
   STRATEGY_LANGUAGE_IDS,
   STRATEGY_LANGUAGE_PROVIDER_CONTRACT_VERSION,
   STRATEGY_LANGUAGE_PROVIDER_REGISTRY,
@@ -318,6 +317,8 @@ const v116TypeScriptBackendInventoryPath =
   ".planning/artifacts/v1.16-typescript-backend-inventory.json"
 const v117RuntimeBrokerRegistryArtifactPath =
   ".planning/artifacts/v1.17-runtime-broker-registry.json"
+const v117HistoricalRuntimeBrokerRegistrySha256 =
+  "aa9c754ad2ab29c62b99a23928255e22df47aab8636e8841ac39eedf2633f259"
 const v124RuntimeAbuseLabEvidencePath =
   ".planning/artifacts/v1.24-runtime-abuse-lab-evidence.json"
 const v124RuntimeAbuseLabEvidenceMarkdownPath =
@@ -1721,7 +1722,7 @@ export const validateV115LifecycleOwnershipManifest = (
   }
   if (
     manifest.globalPolicies.runtimeAbiVersion !==
-      HISTORICAL_RUNTIME_V114_SEMANTIC_TUPLE.runtimeAbi
+    HISTORICAL_RUNTIME_V114_SEMANTIC_TUPLE.runtimeAbi
   ) {
     throw new Error("v1.15 runtime ABI drifted")
   }
@@ -2907,24 +2908,16 @@ const checkRuntimeAdapters = (): string => {
   return `${runtimeAdapterBridges.length} JS/TS adapters and ${SUPPORTED_STRATEGY_LANGUAGES.length} supported provider default adapters checked`
 }
 
-const brokerEntryKey = (entry: {
-  abiVersion: string
-  languageId: string
-  languageVersion: string
-  adapterId: string
-  adapterVersion: string
-  packagePolicy: string
-}): string =>
-  [
-    entry.abiVersion,
-    entry.languageId,
-    entry.languageVersion,
-    entry.adapterId,
-    entry.adapterVersion,
-    entry.packagePolicy,
-  ].join("|")
-
 const checkRuntimeBrokerRegistryArtifact = (): string => {
+  const artifactBytes = readFileSync(
+    path.join(repoRoot, v117RuntimeBrokerRegistryArtifactPath),
+  )
+  if (
+    createHash("sha256").update(artifactBytes).digest("hex") !==
+    v117HistoricalRuntimeBrokerRegistrySha256
+  ) {
+    throw new Error("v1.17 historical runtime broker registry bytes drifted")
+  }
   const artifact = readJson<{
     schemaVersion?: unknown
     baseline?: Record<string, unknown>
@@ -2939,7 +2932,7 @@ const checkRuntimeBrokerRegistryArtifact = (): string => {
   }
   if (
     artifact.contract?.strategyRuntimeAbiVersion !==
-      STRATEGY_RUNTIME_ABI_VERSION ||
+      HISTORICAL_RUNTIME_V114_SEMANTIC_TUPLE.runtimeAbi ||
     artifact.contract?.selectionPolicy !==
       "exact-language-runtime-adapter-abi-package-match" ||
     artifact.contract?.fallbackPolicy !== "fail-closed-no-js-ts-or-go-fallback"
@@ -2949,86 +2942,16 @@ const checkRuntimeBrokerRegistryArtifact = (): string => {
   if (!Array.isArray(artifact.entries)) {
     throw new Error("v1.17 runtime broker registry entries missing")
   }
-
-  const registryByKey = new Map(
-    RUNTIME_BROKER_REGISTRY.map((entry) => [brokerEntryKey(entry), entry]),
-  )
-  const artifactKeys = new Set<string>()
   for (const rawEntry of artifact.entries) {
     const entry = requireRecord(rawEntry, "v1.17 runtime broker entry")
-    const key = brokerEntryKey({
-      abiVersion: String(entry.abiVersion),
-      languageId: String(entry.languageId),
-      languageVersion: String(entry.languageVersion),
-      adapterId: String(entry.adapterId),
-      adapterVersion: String(entry.adapterVersion),
-      packagePolicy: String(entry.packagePolicy),
-    })
-    const registryEntry = registryByKey.get(key)
-    if (!registryEntry) {
-      throw new Error(`v1.17 runtime broker artifact has unknown entry ${key}`)
-    }
-    artifactKeys.add(key)
     if (
-      entry.runtimeTarget !== registryEntry.runtimeTarget ||
-      entry.readiness !== registryEntry.readiness ||
-      entry.enabledForNormalPlay !== registryEntry.enabledForNormalPlay ||
-      entry.countedResultsAllowed !== registryEntry.countedResultsAllowed
+      entry.abiVersion !== HISTORICAL_RUNTIME_V114_SEMANTIC_TUPLE.runtimeAbi ||
+      entry.countedResultsAllowed !== false
     ) {
-      throw new Error(`v1.17 runtime broker artifact drifted for ${key}`)
-    }
-    const issues = validateRuntimeBrokerRegistryMatch({
-      abiVersion: entry.abiVersion,
-      language: {
-        id: entry.languageId,
-        version: entry.languageVersion,
-      },
-      adapter: {
-        id: entry.adapterId,
-        version: entry.adapterVersion,
-      },
-      package: {
-        mode: entry.packagePolicy,
-        entrypoint: "default",
-      },
-      requiredCapabilities: [],
-      limits: registryEntry.limits,
-    })
-    if (issues.length > 0) {
-      throw new Error(`v1.17 runtime broker cannot validate ${key}`)
+      throw new Error("v1.17 historical runtime broker entry drifted")
     }
   }
-
-  const missing = [...registryByKey.keys()].filter(
-    (key) => !artifactKeys.has(key),
-  )
-  if (missing.length > 0) {
-    throw new Error(
-      `v1.17 runtime broker artifact missing registry entries ${missing.join(", ")}`,
-    )
-  }
-  for (const language of SUPPORTED_STRATEGY_LANGUAGES) {
-    const entry = [...registryByKey.values()].find(
-      (candidate) =>
-        candidate.languageId === language.id &&
-        candidate.adapterId === language.defaultAdapterId,
-    )
-    if (!entry) {
-      throw new Error(`runtime broker registry missing ${language.id}`)
-    }
-    if (
-      language.countedEligibility === "eligible" &&
-      !entry.enabledForNormalPlay
-    ) {
-      throw new Error(`${language.id} runtime broker entry is unavailable`)
-    }
-    if (entry.countedResultsAllowed) {
-      throw new Error(
-        `${language.id} runtime broker declaration promoted without evidence`,
-      )
-    }
-  }
-  return `${artifact.entries.length} v1.17 runtime broker registry entries checked`
+  return `${artifact.entries.length} immutable v1.17 historical runtime broker registry entries checked`
 }
 
 const checkV132SupportedLanguageProviders = (): string => {
