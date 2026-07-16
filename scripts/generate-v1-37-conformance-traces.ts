@@ -67,6 +67,10 @@ export const V137_CONFORMANCE_TRACE_REVIEW_ARTIFACT = path.join(
   repoRoot,
   ".planning/artifacts/v1.37-conformance-trace-independent-review.json",
 )
+const RETIRED_V137_CONFORMANCE_TRACE_REVIEWED_ROOTS = Object.freeze({
+  "v1.37-conformance-trace-v1":
+    "sha256:e22fc0cf69acedc35723e1253c060332e389b3e4993c3fc2a87cf904a1e5f50f",
+} as const)
 export const V137_CONFORMANCE_TRACE_PROTECTED_CATEGORIES = Object.freeze([
   "validV14State",
   "actionLegality",
@@ -510,7 +514,9 @@ const caseTrace = (
 }
 
 const reviewedVersionRoots = (): ReadonlyMap<string, string> => {
-  const roots = new Map<string, string>()
+  const roots = new Map<string, string>(
+    Object.entries(RETIRED_V137_CONFORMANCE_TRACE_REVIEWED_ROOTS),
+  )
   if (!existsSync(V137_CONFORMANCE_TRACE_REVIEW_ARTIFACT)) return roots
   let review: unknown
   try {
