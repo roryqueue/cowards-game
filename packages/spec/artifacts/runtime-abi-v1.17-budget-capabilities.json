@@ -2,8 +2,8 @@
   "schemaVersion": "runtime-abi-v1.17-budget-capabilities-v1",
   "runtimeAbiVersion": "strategy-runtime-abi-v1.17",
   "budgetProfileSha256": "sha256:13c061efc6954b7734b967177f07300b4c3c0dd18651b55510158b9a3c29c49f",
-  "contractDigest": "sha256:78d3078bd04faeee72a600d3181dc02b489ee3c0cb40a13c39ce9deb66b9bc03",
-  "evidenceInputsDigest": "sha256:42a11d5e66a6b5dc93133aeac641b22dc1ef8fbf8efde98d24e831ed5049621d",
+  "contractDigest": "sha256:4bb404544b47a530051df2643d03a5afd25b421e35c9fc4d068e2083fa7cafb4",
+  "evidenceInputsDigest": "sha256:5b6a07b34e42a91523b8a5de67828dd8848c4412c5ffe4ec9502c517149acd24",
   "dimensions": [
     {
       "id": "wall",
@@ -81,7 +81,7 @@
     },
     {
       "id": "canonicalJsonProfileId",
-      "exactRequirement": "canonical-json-v1"
+      "exactRequirement": "canonical-json-v1.1"
     },
     {
       "id": "behaviorSettingsHash",
@@ -258,8 +258,8 @@
         {
           "pin": "canonicalJsonProfileId",
           "status": "exact-deployment",
-          "bindingSafeId": "canonical-json-v1",
-          "evidenceSafeDigest": "sha256:c3d67dce1543d162ec7399ffe839d61491c5e04f0ec3a95f8bd1a33289fcb119"
+          "bindingSafeId": "canonical-json-v1.1",
+          "evidenceSafeDigest": "sha256:5466bd98d1e19b230aa048f97ae43b6e3c3df676a5dc6bde4940acfef0c7ea3a"
         },
         {
           "pin": "behaviorSettingsHash",
@@ -431,8 +431,8 @@
         {
           "pin": "canonicalJsonProfileId",
           "status": "exact-deployment",
-          "bindingSafeId": "canonical-json-v1",
-          "evidenceSafeDigest": "sha256:38703f40b777ffa3a01eb6ee05a8de4fad223bd52de9df84a19f729e0d28b740"
+          "bindingSafeId": "canonical-json-v1.1",
+          "evidenceSafeDigest": "sha256:5daf0f1b1bdc57012144676efac99297f404785c238bc71e22d8ba8044b08103"
         },
         {
           "pin": "behaviorSettingsHash",
@@ -604,8 +604,8 @@
         {
           "pin": "canonicalJsonProfileId",
           "status": "exact-deployment",
-          "bindingSafeId": "canonical-json-v1",
-          "evidenceSafeDigest": "sha256:5339ddb6595f45761dff7d1e5b7c76881a9c526ea203761099e8098407645b53"
+          "bindingSafeId": "canonical-json-v1.1",
+          "evidenceSafeDigest": "sha256:6f65968b69db39d40f05ba77bbb645e7f9332a5a0da4c0736237919720d503e4"
         },
         {
           "pin": "behaviorSettingsHash",
@@ -778,8 +778,8 @@
         {
           "pin": "canonicalJsonProfileId",
           "status": "exact-deployment",
-          "bindingSafeId": "canonical-json-v1",
-          "evidenceSafeDigest": "sha256:b4308f48391bc8e611b4b1329cf6f86df3203b8d89139d0d8d18c282c796438c"
+          "bindingSafeId": "canonical-json-v1.1",
+          "evidenceSafeDigest": "sha256:8306c4feb7a5926bb06cf9de6b57a5ebaaccce0486d676105061ec3e1167957a"
         },
         {
           "pin": "behaviorSettingsHash",
@@ -952,8 +952,8 @@
         {
           "pin": "canonicalJsonProfileId",
           "status": "exact-deployment",
-          "bindingSafeId": "canonical-json-v1",
-          "evidenceSafeDigest": "sha256:5ebe6bfab4e4db46c82551b77011d66c5914f4f178920eab13dcc9e4fdcc825f"
+          "bindingSafeId": "canonical-json-v1.1",
+          "evidenceSafeDigest": "sha256:18321107c8be7ea1b695bde922f39ba171d78d9e1131897ca8c45209cb24784a"
         },
         {
           "pin": "behaviorSettingsHash",

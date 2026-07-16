@@ -4,16 +4,16 @@
     "runtimeAbi": "strategy-runtime-abi-v1.17",
     "runtimeService": "runtime-execution-service-v1.17",
     "semanticReceipt": "runtime-semantic-receipt-v1.17",
-    "canonicalJson": "canonical-json-v1",
+    "canonicalJson": "canonical-json-v1.1",
     "budget": "runtime-budget-v1",
     "identity": "runtime-identity-v1"
   },
   "lifecycle": {
-    "status": "candidate-only",
-    "active": false,
-    "currentRuntimeAbi": "strategy-runtime-abi-v1.14",
-    "currentRuntimeService": "runtime-execution-service-v1.16",
-    "currentSemanticReceipt": "runtime-semantic-receipt-v1",
+    "status": "current",
+    "active": true,
+    "currentRuntimeAbi": "strategy-runtime-abi-v1.17",
+    "currentRuntimeService": "runtime-execution-service-v1.17",
+    "currentSemanticReceipt": "runtime-semantic-receipt-v1.17",
     "activationOwner": "Phase-258-Plan-14"
   },
   "calibration": {
