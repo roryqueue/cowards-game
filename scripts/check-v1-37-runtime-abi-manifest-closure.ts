@@ -2,10 +2,12 @@ import { createHash } from "node:crypto"
 import { spawnSync } from "node:child_process"
 import {
   existsSync,
+  lstatSync,
   readFileSync,
   readdirSync,
   writeFileSync,
 } from "node:fs"
+import { isAbsolute, posix, relative, resolve } from "node:path"
 // eslint-disable-next-line no-restricted-imports -- This repository gate verifies the source-owned tuple without a built workspace package.
 import {
   CURRENT_CANONICAL_COMPATIBILITY_TUPLE_RECORD,
@@ -119,6 +121,60 @@ export const parsePlanFilesModified = (source: string): readonly string[] => {
   return paths
 }
 
+const normalizedInventoryPath = (candidate: string): string => {
+  if (
+    candidate.length === 0 ||
+    candidate.includes("\\") ||
+    isAbsolute(candidate) ||
+    posix.normalize(candidate) !== candidate ||
+    candidate === "." ||
+    candidate.startsWith("../")
+  ) {
+    throw new TypeError(`Phase inventory path is not normalized: ${candidate}`)
+  }
+  return candidate
+}
+
+export const expandPhase258InventoryPaths = (
+  candidates: readonly string[],
+  repoRoot: string = process.cwd(),
+): readonly string[] => {
+  const absoluteRoot = resolve(repoRoot)
+  const expand = (candidate: string): readonly string[] => {
+    const repoPath = normalizedInventoryPath(candidate)
+    const absolutePath = resolve(absoluteRoot, repoPath)
+    const relativePath = relative(absoluteRoot, absolutePath)
+    if (
+      relativePath === "" ||
+      relativePath.startsWith("..") ||
+      isAbsolute(relativePath)
+    ) {
+      throw new TypeError(`Phase inventory path escapes repository: ${repoPath}`)
+    }
+    const stat = lstatSync(absolutePath)
+    if (stat.isSymbolicLink()) {
+      throw new TypeError(`Phase inventory path is a symlink: ${repoPath}`)
+    }
+    if (stat.isFile()) return [repoPath]
+    if (!stat.isDirectory()) {
+      throw new TypeError(`Phase inventory path is not a regular file: ${repoPath}`)
+    }
+    const entries = readdirSync(absolutePath, { withFileTypes: true })
+      .map(({ name }) => name)
+      .sort()
+    if (entries.length === 0) {
+      throw new TypeError(`Phase inventory directory is empty: ${repoPath}`)
+    }
+    return entries.flatMap((name) => expand(posix.join(repoPath, name)))
+  }
+
+  const expanded = candidates.flatMap(expand).sort()
+  if (new Set(expanded).size !== expanded.length) {
+    throw new TypeError("Phase inventory contains a duplicate expanded path.")
+  }
+  return expanded
+}
+
 export const collectPhase258InventoryPaths = (): readonly string[] => {
   const phaseDirectory =
     ".planning/phases/258-canonical-json-failure-semantics-and-artifact-identity"
@@ -142,7 +198,7 @@ export const collectPhase258InventoryPaths = (): readonly string[] => {
       if (!excluded.has(path)) inventory.add(path)
     }
   }
-  const paths = [...inventory].sort()
+  const paths = expandPhase258InventoryPaths([...inventory])
   if (
     paths.includes(RUNTIME_ABI_ACTIVATION_MANIFEST_PATH) ||
     RUNTIME_ABI_DERIVED_VALIDATION_OUTPUTS.some((path) => paths.includes(path))

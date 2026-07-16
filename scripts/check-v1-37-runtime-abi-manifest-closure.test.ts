@@ -1,5 +1,15 @@
 import { Buffer } from "node:buffer"
-import { readFileSync } from "node:fs"
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs"
+import { tmpdir } from "node:os"
+import path from "node:path"
+import { spawnSync } from "node:child_process"
 import { describe, expect, it } from "vitest"
 import {
   IMMUTABLE_RUNTIME_SERVICE_V116_DIGESTS,
@@ -9,6 +19,7 @@ import {
   RUNTIME_ABI_PREPARED_LIFECYCLE_CONSUMERS,
   RUNTIME_ABI_TEST_RECEIPT_PATH,
   collectPhase258InventoryPaths,
+  expandPhase258InventoryPaths,
   parsePlanFilesModified,
   parseRuntimeAbiActivationManifest,
   parseRuntimeAbiActivationAllowlist,
@@ -40,6 +51,12 @@ describe("Phase 258 runtime ABI activation closure", () => {
     ).toEqual(["z.ts", "a.ts"])
     const paths = collectPhase258InventoryPaths()
     expect(paths).toEqual([...paths].sort())
+    expect(paths).not.toContain(
+      "packages/spec/src/fixtures/canonical-json-v1-1-raw",
+    )
+    expect(paths).toContain(
+      "packages/spec/src/fixtures/canonical-json-v1-1-raw/valid-null.raw",
+    )
     expect(paths).toContain(RUNTIME_ABI_TEST_RECEIPT_PATH)
     expect(paths).toContain(
       "scripts/check-v1-37-runtime-abi-manifest-closure.ts",
@@ -51,6 +68,51 @@ describe("Phase 258 runtime ABI activation closure", () => {
     }
     expect(() => parsePlanFilesModified("files_modified:\nautonomous: true"))
       .toThrow(/empty or duplicated/iu)
+  })
+
+  it("expands directories into exact regular files and rejects unsafe filesystem entries", () => {
+    const root = mkdtempSync(path.join(tmpdir(), "phase258-inventory-"))
+    try {
+      mkdirSync(path.join(root, "tree", "nested"), { recursive: true })
+      writeFileSync(path.join(root, "tree", "a.txt"), "a")
+      writeFileSync(path.join(root, "tree", "nested", "b.txt"), "b")
+      expect(expandPhase258InventoryPaths(["tree"], root)).toEqual([
+        "tree/a.txt",
+        "tree/nested/b.txt",
+      ])
+      expect(() =>
+        expandPhase258InventoryPaths(["tree", "tree/a.txt"], root),
+      ).toThrow(/duplicate expanded path/iu)
+
+      mkdirSync(path.join(root, "empty"))
+      expect(() => expandPhase258InventoryPaths(["empty"], root)).toThrow(
+        /directory is empty/iu,
+      )
+
+      symlinkSync("tree/a.txt", path.join(root, "linked.txt"))
+      expect(() => expandPhase258InventoryPaths(["linked.txt"], root)).toThrow(
+        /symlink/iu,
+      )
+
+      const fifoPath = path.join(root, "special")
+      const fifo = spawnSync("mkfifo", [fifoPath])
+      expect(fifo.status).toBe(0)
+      expect(() => expandPhase258InventoryPaths(["special"], root)).toThrow(
+        /not a regular file/iu,
+      )
+
+      expect(() => expandPhase258InventoryPaths(["../escape"], root)).toThrow(
+        /not normalized|escapes repository/iu,
+      )
+      expect(() =>
+        expandPhase258InventoryPaths(["tree/../tree/a.txt"], root),
+      ).toThrow(/not normalized/iu)
+      expect(() => expandPhase258InventoryPaths([fifoPath], root)).toThrow(
+        /not normalized/iu,
+      )
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
   })
 
   it("rejects partial or differently committed postactivation manifests", () => {
