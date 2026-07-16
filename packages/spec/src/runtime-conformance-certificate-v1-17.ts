@@ -105,8 +105,15 @@ export interface VerifyRuntimeConformanceCertificateInputV117 {
   mode: "production" | "fixture"
   certificate: RuntimeConformanceCertificateV117
   currentIdentity: RuntimeConformanceIdentityBindingsV117
+  expectedRunBinding: RuntimeConformanceExpectedRunBindingV117
   verificationInstant: string
   trustedProducers?: readonly RuntimeConformanceTrustedProducerV117[]
+}
+
+export interface RuntimeConformanceExpectedRunBindingV117 {
+  caseInventorySha256: string
+  requiredCaseCount: number
+  resultRootSha256: string
 }
 
 export interface RuntimeConformanceFreshnessDecisionV117 {
@@ -228,6 +235,12 @@ const runKeys = [
   "identity",
   "resultRootSha256",
   "evidenceRootSha256",
+] as const
+
+const expectedRunBindingKeys = [
+  "caseInventorySha256",
+  "requiredCaseCount",
+  "resultRootSha256",
 ] as const
 
 const exactKeys = (
@@ -408,9 +421,35 @@ const sameIdentity = (
   right: RuntimeConformanceIdentityBindingsV117,
 ): boolean => identityKeys.every((key) => left[key] === right[key])
 
+const parseExpectedRunBinding = (
+  value: unknown,
+): Readonly<RuntimeConformanceExpectedRunBindingV117> => {
+  const binding = exactKeys(
+    value,
+    expectedRunBindingKeys,
+    "RUN_CASE_INVENTORY_MISMATCH",
+  )
+  return Object.freeze({
+    caseInventorySha256: requireHash(
+      binding.caseInventorySha256,
+      "RUN_CASE_INVENTORY_MISMATCH",
+    ),
+    requiredCaseCount: requireSafeInteger(
+      binding.requiredCaseCount,
+      1,
+      "RUN_CASE_INVENTORY_MISMATCH",
+    ),
+    resultRootSha256: requireHash(
+      binding.resultRootSha256,
+      "RUN_RESULT_ROOT_MISMATCH",
+    ),
+  })
+}
+
 const parseRuns = (
   value: unknown,
   identity: RuntimeConformanceIdentityBindingsV117,
+  expectedRunBinding: RuntimeConformanceExpectedRunBindingV117,
   issuedAt: number,
 ): {
   runs: RuntimeConformanceRunV117[]
@@ -469,6 +508,9 @@ const parseRuns = (
     const caseCount = run.caseCount as number
     expectedCaseCount ??= caseCount
     if (caseCount !== expectedCaseCount) fail("RUN_CASE_COUNT_MISMATCH")
+    if (caseCount !== expectedRunBinding.requiredCaseCount) {
+      fail("RUN_CASE_INVENTORY_MISMATCH")
+    }
     const startedAt = requireInstant(run.startedAt, "RUN_VALIDITY")
     const completedAt = requireInstant(run.completedAt, "RUN_VALIDITY")
     const validUntil = requireInstant(run.validUntil, "RUN_VALIDITY")
@@ -495,6 +537,9 @@ const parseRuns = (
       evidenceRootSha256 !== expectedEvidenceRoot
     ) {
       fail("RUN_ROOT_MISMATCH")
+    }
+    if (resultRootSha256 !== expectedRunBinding.resultRootSha256) {
+      fail("RUN_RESULT_ROOT_MISMATCH")
     }
     parsed.push({
       runId,
@@ -551,7 +596,20 @@ export const verifyRuntimeConformanceCertificateV117 = (
   if (issuedAt >= requestedValidUntil) fail("VALIDITY")
   const identity = parseIdentity(certificate.identity)
   const currentIdentity = parseIdentity(input.currentIdentity)
-  const runEvidence = parseRuns(certificate.runs, identity, issuedAt)
+  const expectedRunBinding = parseExpectedRunBinding(input.expectedRunBinding)
+  if (
+    expectedRunBinding.caseInventorySha256 !==
+      currentIdentity.caseInventorySha256 ||
+    expectedRunBinding.caseInventorySha256 !== identity.caseInventorySha256
+  ) {
+    fail("RUN_CASE_INVENTORY_MISMATCH")
+  }
+  const runEvidence = parseRuns(
+    certificate.runs,
+    identity,
+    expectedRunBinding,
+    issuedAt,
+  )
   const computedFreshUntil = Math.min(
     requestedValidUntil,
     issuedAt + MAX_VALIDITY_MILLISECONDS,

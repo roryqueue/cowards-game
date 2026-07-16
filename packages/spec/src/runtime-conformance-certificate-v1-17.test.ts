@@ -51,6 +51,12 @@ const baseIdentity = (
   behaviorSettingsSha256: hash("3"),
 })
 
+const expectedRunBinding = {
+  caseInventorySha256: hash("2"),
+  requiredCaseCount: 64,
+  resultRootSha256: hash("4"),
+} as const
+
 const buildUnsigned = (
   languageId: RuntimeConformanceLanguageIdV117 = "typescript",
 ): RuntimeConformanceCertificatePayloadV117 => {
@@ -127,6 +133,7 @@ const verifyFixture = (
     mode: "fixture",
     certificate: fixture.certificate,
     currentIdentity,
+    expectedRunBinding,
     verificationInstant,
     trustedProducers: [fixture.producer],
   })
@@ -261,6 +268,15 @@ describe("runtime conformance certificate v1.17", () => {
       "RUN_INCOMPLETE",
     ],
     [
+      "partial but self-declared complete inventory",
+      (value: RuntimeConformanceCertificatePayloadV117) => {
+        value.runs.forEach((run) => {
+          run.caseCount = 1
+        })
+      },
+      "RUN_CASE_INVENTORY_MISMATCH",
+    ],
+    [
       "different case count",
       (value: RuntimeConformanceCertificatePayloadV117) => {
         value.runs[1]!.caseCount = 65
@@ -324,6 +340,15 @@ describe("runtime conformance certificate v1.17", () => {
       })
       expect(() => verifyFixture(fixture)).toThrow("RUN_ROOT_MISMATCH")
     }
+
+    const substitutedResult = resignMutation((value) => {
+      value.runs.forEach((run) => {
+        run.resultRootSha256 = hash("6")
+      })
+    })
+    expect(() => verifyFixture(substitutedResult)).toThrow(
+      "RUN_RESULT_ROOT_MISMATCH",
+    )
   })
 
   it("stales immediately on current binding drift and after the minimum 30-day-capped validity", () => {
@@ -374,6 +399,7 @@ describe("runtime conformance certificate v1.17", () => {
         mode: "fixture",
         certificate: badSignature,
         currentIdentity: fixture.certificate.identity,
+        expectedRunBinding,
         verificationInstant: "2026-07-20T00:00:00.000Z",
         trustedProducers: [fixture.producer],
       }),
@@ -388,6 +414,7 @@ describe("runtime conformance certificate v1.17", () => {
         mode: "fixture",
         certificate: open,
         currentIdentity: fixture.certificate.identity,
+        expectedRunBinding,
         verificationInstant: "2026-07-20T00:00:00.000Z",
         trustedProducers: [fixture.producer],
       }),
@@ -402,6 +429,7 @@ describe("runtime conformance certificate v1.17", () => {
         mode: "production",
         certificate: production.certificate,
         currentIdentity: production.certificate.identity,
+        expectedRunBinding,
         verificationInstant: "2026-07-20T00:00:00.000Z",
         trustedProducers: [production.producer],
       }),
@@ -466,6 +494,7 @@ describe("runtime conformance certificate v1.17", () => {
           mode: "fixture",
           certificate,
           currentIdentity: fixture.certificate.identity,
+          expectedRunBinding,
           verificationInstant: "2026-07-20T00:00:00.000Z",
           trustedProducers: [fixture.producer],
         }),
