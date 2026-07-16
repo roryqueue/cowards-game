@@ -1099,11 +1099,7 @@ export const compareCanonicalConformanceTrace = ({
     }) as Readonly<CanonicalConformanceTraceComparison>
   }
   const actualValidation = projectedTraceValidation(actual)
-  if (
-    !actualValidation.ok &&
-    (actualValidation.code === "TRACE_SHAPE_INVALID" ||
-      actualValidation.code === "TRACE_CANONICAL_JSON_INVALID")
-  ) {
+  if (!actualValidation.ok) {
     return divergence(
       expected,
       "traceSemantics",
@@ -1121,14 +1117,6 @@ export const compareCanonicalConformanceTrace = ({
     )
   }
   if (expected.traceRoot === actual.traceRoot) {
-    if (!actualValidation.ok) {
-      return divergence(
-        expected,
-        "traceSemantics",
-        "valid",
-        actualValidation.code,
-      )
-    }
     return Object.freeze({ status: "equal", traceRoot: expected.traceRoot })
   }
 
