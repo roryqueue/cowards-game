@@ -90,3 +90,22 @@ The build pins `--platform linux/amd64`, verifies `uname -m`, exact Rust and Car
 - Exact build manifest reproduction: passed
 - Real Docker bootstrap, distinct-UID guest, private proc view, aggregate receipt, empty proof, and final removal: passed
 - Package build, typecheck, lint, formatting, and protected-file checks: passed
+
+## Wave 3 Combined-Gate Remediation
+
+The independent combined gate exposed two non-semantic reproducibility defects after the security review had passed:
+
+- a clean pinned `linux/amd64` Docker build could exceed the wrapper's 120-second process timeout even though compilation completed successfully; and
+- the committed digest-bound seccomp profile was valid JSON but failed the repository formatting gate.
+
+The wrapper now exports and tests a five-minute build timeout. The seccomp profile is formatter-clean, and its changed exact bytes are reflected in the regenerated supervisor manifest and toolchain identity.
+
+Verification after remediation:
+
+- clean local target removal followed by the exact pinned Docker build/check passed;
+- the real hardened Linux/cgroup-v2 certification command passed;
+- supervisor/build regression tests passed 19/19;
+- focused Prettier and `git diff --check` passed; and
+- the protected planning configuration and consolidated specification hashes remained exact.
+
+Remediation commit: `9039598`.
