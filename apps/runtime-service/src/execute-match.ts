@@ -13,11 +13,14 @@ import {
   HISTORICAL_RUNTIME_EXECUTION_SERVICE_VERSION_V1_16,
   RuntimeExecutionServiceRequestV117Schema,
   RuntimeExecutionServiceResponseV117Schema,
+  RuntimeExecutionServiceRequestV118Schema,
+  RuntimeExecutionServiceResponseV118Schema,
   RuntimeExecutionFinalStateSchema,
   ChronicleSchema,
   STRATEGY_RUNTIME_ABI_VERSION,
   findRuntimeBrokerRegistryEntry,
   createRuntimeInvocationTraceV117,
+  encodeCanonicalJson,
   createSelectedRuntimeInvocationRequestV117,
   createRuntimeAbiV117ExecutionLedger,
   createRuntimeInvocationBudgetV117,
@@ -37,6 +40,9 @@ import {
   type RuntimeExecutionServiceResponse,
   type RuntimeExecutionServiceSystemFailureCode,
   type RuntimeExecutionServiceResponseV117,
+  type RuntimeExecutionServiceRequestV118,
+  type RuntimeExecutionServiceResponseV118,
+  type RuntimeCertificateReferenceV118,
   type RuntimeExecutionEntrantV117,
   type RuntimeEvidenceAuthorityExactPinV117,
   type RuntimeInvocationResultV117,
@@ -60,6 +66,8 @@ import {
   recordChronicleFromExecution,
   validateCurrentChronicle,
   validateCurrentReplayReconstruction,
+  type ChronicleBoundaryAnchor,
+  type ChronicleRecorderExecution,
   type ReplayState,
 } from "@cowards/replay"
 import {
@@ -79,6 +87,10 @@ import type {
 } from "./runtime-evidence-authority.js"
 import { issueRuntimeSemanticReceipt } from "./semantic-receipt.js"
 import { issueRuntimeSemanticReceiptV117 } from "./semantic-receipt-v1-17.js"
+import {
+  issueRuntimeSemanticReceiptV118,
+  type RuntimeSemanticReceiptSignerV118,
+} from "./semantic-receipt-v1-18-issuer.js"
 import {
   composeSuccessorRuntimeIdentityV117,
   type SuccessorRuntimeIdentityTemplateV117,
@@ -1753,6 +1765,343 @@ export const executePreparedRuntimeServiceRequestV117 = (
     return preparedV117Failure({
       rawRequest: request,
       code: "RESPONSE_SCHEMA_INVALID",
+      ownership: "system_integrity",
+      retryable: false,
+    })
+  }
+}
+
+type Sha256IdentityV118 = `sha256:${string}`
+
+export interface PreparedRuntimeCertificateAdmissionV118 {
+  readonly certificateRecordHash: Sha256IdentityV118
+  readonly commonSupervisorEvidenceRoot: Sha256IdentityV118
+  readonly sourceIdentity: RuntimeCertificateReferenceV118["sourceIdentity"]
+}
+
+export interface PreparedRuntimeServiceExecutionV118 {
+  readonly response: RuntimeExecutionServiceResponse
+  readonly execution: ChronicleRecorderExecution
+  readonly boundaryAnchors: readonly ChronicleBoundaryAnchor[]
+  readonly transitionTraceRoot: Sha256IdentityV118
+  readonly accounting: {
+    readonly budgetProfileRoot: Sha256IdentityV118
+    readonly ledgerPrestateRoot: Sha256IdentityV118
+    readonly ledgerPoststateRoot: Sha256IdentityV118
+  }
+  readonly commonSupervisorEvidenceRoots: {
+    readonly bottom: Sha256IdentityV118
+    readonly top: Sha256IdentityV118
+  }
+}
+
+export interface PreparedRuntimeServiceDependenciesV118 {
+  readonly signer: RuntimeSemanticReceiptSignerV118
+  admitCertificateReference(input: {
+    readonly side: "bottom" | "top"
+    readonly reference: RuntimeCertificateReferenceV118
+    readonly nestedRequest: RuntimeExecutionServiceRequest
+  }): PreparedRuntimeCertificateAdmissionV118 | undefined
+  executeCurrentMatchWithAccounting(
+    request: RuntimeExecutionServiceRequest,
+  ): PreparedRuntimeServiceExecutionV118
+}
+
+const preparedV118Failure = (input: {
+  readonly rawRequest: unknown
+  readonly code: string
+  readonly ownership: "runtime_system" | "system_integrity" | "system_operation"
+  readonly retryable: boolean
+}): RuntimeExecutionServiceResponseV118 => {
+  const root = readRecord(input.rawRequest)
+  const requestId = readString(root?.requestId) ?? "runtime-request:unknown"
+  const matchId = readString(root?.matchId)
+  return RuntimeExecutionServiceResponseV118Schema.parse({
+    contractVersion: "runtime-execution-service-v1.18",
+    ok: false,
+    kind: "systemFailure",
+    requestId,
+    ...(matchId === undefined ? {} : { matchId }),
+    systemFailure: {
+      classification: "system_failure",
+      ownership: input.ownership,
+      code: input.code,
+      publicMessage: "Runtime execution failed before completion.",
+      retryable: input.retryable,
+      playerPenalty: false,
+      mutationStatus: "none",
+    },
+  })
+}
+
+const canonicalSha256V118 = (value: JsonValue): Sha256IdentityV118 => {
+  const encoded = encodeCanonicalJson(value, {
+    context: "canonical-manifest",
+  })
+  if (!encoded.ok) {
+    throw new TypeError("Runtime semantic value is not canonical")
+  }
+  return `sha256:${createHash("sha256").update(encoded.bytes).digest("hex")}`
+}
+
+const sourceIdentityMatchesV118 = (input: {
+  readonly side: "bottom" | "top"
+  readonly reference: RuntimeCertificateReferenceV118
+  readonly nestedRequest: RuntimeExecutionServiceRequest
+}): boolean => {
+  const revision = input.nestedRequest.strategies[input.side]
+  const sourceIdentity = input.reference.sourceIdentity
+  const originalBytes = new TextEncoder().encode(revision.source)
+  const normalizedBytes = new TextEncoder().encode(
+    revision.source.replaceAll("\r\n", "\n").replaceAll("\r", "\n"),
+  )
+  const artifact =
+    revision.metadata.sourceArtifact ?? revision.metadata.compiledArtifact
+  const artifactHash =
+    artifact === undefined
+      ? undefined
+      : (`sha256:${artifact.hash.replace(/^sha256:/u, "")}` as const)
+  return (
+    sourceIdentity.side === input.side &&
+    sourceIdentity.strategyRevisionId === revision.id &&
+    sourceIdentity.originalSourceSha256 ===
+      `sha256:${createHash("sha256").update(originalBytes).digest("hex")}` &&
+    sourceIdentity.normalizedSourceSha256 ===
+      `sha256:${createHash("sha256").update(normalizedBytes).digest("hex")}` &&
+    artifactHash !== undefined &&
+    sourceIdentity.artifactSha256 === artifactHash
+  )
+}
+
+const semanticTupleMatchesV118 = (
+  request: RuntimeExecutionServiceRequestV118,
+  nestedRequest: RuntimeExecutionServiceRequest,
+): boolean =>
+  request.semanticTuple.tupleId ===
+    nestedRequest.evidenceSnapshot.compatibility.tupleId &&
+  isDeepStrictEqual(
+    request.semanticTuple.components,
+    nestedRequest.evidenceSnapshot.compatibility.tuple,
+  )
+
+const terminalV118 = (
+  outcome: NonNullable<GameState["outcome"]>,
+): { status: string; reason: string } => ({
+  status: "complete",
+  reason:
+    outcome.type === "WIN"
+      ? "win"
+      : outcome.type === "DRAW"
+        ? "draw"
+        : "failed",
+})
+
+/**
+ * Additive v1.18 service admission. The injected execution is private engine
+ * material; only exact canonical hashes and the self-verified Ed25519 receipt
+ * cross the public response boundary.
+ */
+export const executePreparedRuntimeServiceRequestV118 = (
+  rawRequest: unknown,
+  dependencies: PreparedRuntimeServiceDependenciesV118,
+): RuntimeExecutionServiceResponseV118 => {
+  const parsed = RuntimeExecutionServiceRequestV118Schema.safeParse(rawRequest)
+  if (!parsed.success) {
+    return preparedV118Failure({
+      rawRequest,
+      code: "MALFORMED_REQUEST",
+      ownership: "system_integrity",
+      retryable: false,
+    })
+  }
+  const request = parsed.data
+  const nested = RuntimeExecutionServiceRequestSchema.safeParse(request.match)
+  if (!nested.success) {
+    return preparedV118Failure({
+      rawRequest: request,
+      code: "MATCH_ENVELOPE_INVALID",
+      ownership: "system_integrity",
+      retryable: false,
+    })
+  }
+  const nestedRequest = nested.data
+  if (
+    request.matchId !== nestedRequest.match.matchId ||
+    request.authorityGeneration !==
+      nestedRequest.evidenceSnapshot.registryGeneration ||
+    !semanticTupleMatchesV118(request, nestedRequest)
+  ) {
+    return preparedV118Failure({
+      rawRequest: request,
+      code: "REQUEST_BINDING_MISMATCH",
+      ownership: "system_integrity",
+      retryable: false,
+    })
+  }
+  const certificateAdmissions = {
+    bottom: dependencies.admitCertificateReference({
+      side: "bottom",
+      reference: request.certificateReferences.bottom,
+      nestedRequest,
+    }),
+    top: dependencies.admitCertificateReference({
+      side: "top",
+      reference: request.certificateReferences.top,
+      nestedRequest,
+    }),
+  }
+  if (
+    !sourceIdentityMatchesV118({
+      side: "bottom",
+      reference: request.certificateReferences.bottom,
+      nestedRequest,
+    }) ||
+    !sourceIdentityMatchesV118({
+      side: "top",
+      reference: request.certificateReferences.top,
+      nestedRequest,
+    }) ||
+    certificateAdmissions.bottom === undefined ||
+    certificateAdmissions.top === undefined ||
+    certificateAdmissions.bottom.certificateRecordHash !==
+      request.certificateReferences.bottom.certificateRecordHash ||
+    certificateAdmissions.top.certificateRecordHash !==
+      request.certificateReferences.top.certificateRecordHash ||
+    !isDeepStrictEqual(
+      certificateAdmissions.bottom.sourceIdentity,
+      request.certificateReferences.bottom.sourceIdentity,
+    ) ||
+    !isDeepStrictEqual(
+      certificateAdmissions.top.sourceIdentity,
+      request.certificateReferences.top.sourceIdentity,
+    )
+  ) {
+    return preparedV118Failure({
+      rawRequest: request,
+      code: "CERTIFICATE_BINDING_MISMATCH",
+      ownership: "system_integrity",
+      retryable: false,
+    })
+  }
+
+  let executed: PreparedRuntimeServiceExecutionV118
+  try {
+    executed = dependencies.executeCurrentMatchWithAccounting(nestedRequest)
+  } catch {
+    return preparedV118Failure({
+      rawRequest: request,
+      code: "EXECUTION_EXCEPTION",
+      ownership: "runtime_system",
+      retryable: true,
+    })
+  }
+  if (!executed.response.ok) {
+    return preparedV118Failure({
+      rawRequest: request,
+      code: "CURRENT_MATCH_EXECUTION_FAILED",
+      ownership: "runtime_system",
+      retryable: executed.response.systemFailure.retryable,
+    })
+  }
+  if (
+    executed.accounting.budgetProfileRoot !==
+      request.accounting.budgetProfileRoot ||
+    executed.accounting.ledgerPrestateRoot !==
+      request.accounting.ledgerPrestateRoot ||
+    executed.commonSupervisorEvidenceRoots.bottom !==
+      certificateAdmissions.bottom.commonSupervisorEvidenceRoot ||
+    executed.commonSupervisorEvidenceRoots.top !==
+      certificateAdmissions.top.commonSupervisorEvidenceRoot
+  ) {
+    return preparedV118Failure({
+      rawRequest: request,
+      code: "EVIDENCE_BINDING_MISMATCH",
+      ownership: "system_integrity",
+      retryable: false,
+    })
+  }
+
+  const chronicle = executed.response.result.chronicle
+  const finalState = executed.response.result.finalState
+  const outcome = finalState.outcome
+  const semanticEnvelope = {
+    profile: "current-exact" as const,
+    compatibility: nestedRequest.evidenceSnapshot.compatibility,
+    chronicle,
+    execution: executed.execution,
+    boundaryAnchors: executed.boundaryAnchors,
+  }
+  const validation = validateCurrentChronicle(semanticEnvelope)
+  const reconstruction = validateCurrentReplayReconstruction({
+    chronicle,
+    execution: executed.execution,
+    transitionTraceRoot: executed.transitionTraceRoot,
+  })
+  const terminalAnchor = executed.boundaryAnchors.at(-1)
+  if (
+    executed.execution.kind !== "completed" ||
+    !validation.ok ||
+    !reconstruction.ok ||
+    outcome === undefined ||
+    terminalAnchor?.kind !== "TERMINAL" ||
+    terminalAnchor.stateHash !== reconstruction.terminalStateHash ||
+    !isDeepStrictEqual(executed.execution.result.state, finalState) ||
+    !isDeepStrictEqual(
+      executed.execution.recorderMaterial.finalState,
+      finalState,
+    ) ||
+    !isDeepStrictEqual(reconstruction.outcome, outcome)
+  ) {
+    return preparedV118Failure({
+      rawRequest: request,
+      code: "CHRONICLE_INTEGRITY_FAILED",
+      ownership: "system_integrity",
+      retryable: false,
+    })
+  }
+
+  try {
+    const anchors = {
+      chronicleCanonicalHash: canonicalSha256V118(
+        chronicle as unknown as JsonValue,
+      ),
+      transitionTraceRoot: executed.transitionTraceRoot,
+      finalStateCanonicalHash: canonicalSha256V118(
+        finalState as unknown as JsonValue,
+      ),
+      outcomeCanonicalHash: canonicalSha256V118(
+        outcome as unknown as JsonValue,
+      ),
+      terminal: terminalV118(outcome),
+      accounting: executed.accounting,
+    }
+    const issued = issueRuntimeSemanticReceiptV118({
+      admission: {
+        request,
+        ...anchors,
+      },
+      signer: dependencies.signer,
+    })
+    return RuntimeExecutionServiceResponseV118Schema.parse({
+      contractVersion: "runtime-execution-service-v1.18",
+      ok: true,
+      kind: "executionResult",
+      requestId: request.requestId,
+      matchId: request.matchId,
+      result: {
+        privacy: "public_receipt",
+        ...anchors,
+        resultClass: "success",
+        ownership: "gameplay",
+        retryable: false,
+        mutationStatus: "committed",
+        semanticReceipt: issued.receipt,
+      },
+    })
+  } catch {
+    return preparedV118Failure({
+      rawRequest: request,
+      code: "SEMANTIC_RECEIPT_INVALID",
       ownership: "system_integrity",
       retryable: false,
     })
