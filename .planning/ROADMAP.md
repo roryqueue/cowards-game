@@ -245,7 +245,68 @@ Plans:
   4. Current Chronicles are version-strict and semantically validated per activation slot by runtime-service and persistence, including subject/state agreement, lifecycle, outcome, ordering, and transition postconditions.
   5. Replay reconstruction matches engine transition and trace hashes while historical v1.4 evidence remains byte-immutable and readable only through explicit historical dispatch; any discovered semantic delta stops for compatibility approval.
 
-**Plans:** TBD
+**Plans:** 31 plans in 10 waves
+
+**Wave 1 — immutable inputs and protected baseline**
+
+- [ ] 259-01-PLAN.md — Freeze the mandatory executable corpus and audited four-language fixtures.
+- [ ] 259-02-PLAN.md — Record the canonical transition stream for trace and reconstruction proof.
+- [ ] 259-05-PLAN.md — Replace the singleton Chronicle cursor with per-activation-slot lifecycle state.
+- [ ] 259-06-PLAN.md — Freeze immutable v1.4 Chronicle interpretation and explicit historical dispatch.
+- [ ] 259-07-PLAN.md — Define fail-closed per-lane conformance certificates.
+- [ ] 259-24-PLAN.md — Define additive v1.18 budget, ABI, and evidence policy.
+- [ ] 259-29-PLAN.md — Capture the exact protected working-tree baseline.
+
+**Wave 2 — trace, Chronicle semantics, identity, and supervisor protocol**
+
+- [ ] 259-03-PLAN.md — Install the language-neutral full-trace oracle and safe divergence contract.
+- [ ] 259-08-PLAN.md — Make Chronicle admission version-strict, per-slot, and semantic.
+- [ ] 259-09-PLAN.md — Join Phase-259 certificates to the Phase-258 identity DAG.
+- [ ] 259-25-PLAN.md — Create the package-free shared supervisor protocol and verifier.
+
+**Wave 3 — review gates, service API, workspace wiring, and native meter**
+
+- [ ] 259-04-PLAN.md — Separate golden candidates, semantic diffs, and independent review.
+- [ ] 259-14-PLAN.md — Prove transition-by-transition reconstruction equality and historical compatibility.
+- [ ] 259-26-PLAN.md — Build the pinned Linux cgroup-v2 native supervisor and hardened Docker delegation path.
+- [ ] 259-31-PLAN.md — Wire counted runtime packages to public supervisor/spec workspace boundaries.
+
+**Wave 4 — real language adapters and authenticated service receipt**
+
+- [ ] 259-10-PLAN.md — Make supervised subprocess execution the sole counted TypeScript path.
+- [ ] 259-11-PLAN.md — Run Python under the same quantitative and failure-safe boundary.
+- [ ] 259-12-PLAN.md — Run real Rust and Zig artifacts under the common supervisor.
+- [ ] 259-15-PLAN.md — Create the additive Chronicle/certificate-bound service receipt.
+- [ ] 259-27-PLAN.md — Apply the compatibility gate to reviewed golden candidates.
+
+**Wave 5 — all-lane differential execution and public spec contract**
+
+- [ ] 259-13-PLAN.md — Execute the complete corpus through all four real adapters.
+- [ ] 259-30-PLAN.md — Publish the v1.18 service/receipt contract as the sole public spec API.
+
+**Wave 6 — certificate production and shared semantic admission**
+
+- [ ] 259-16-PLAN.md — Produce fresh-process certificates for all four real languages.
+- [ ] 259-17-PLAN.md — Require Chronicle semantics and reconstruction at runtime-service success.
+- [ ] 259-18-PLAN.md — Require the same evidence for durable Match completion.
+
+**Wave 7 — evidence ledger and independent Go verification**
+
+- [ ] 259-19-PLAN.md — Extend the append-only evidence ledger and publisher.
+- [ ] 259-20-PLAN.md — Add independent Go v1.18 receipt verification.
+
+**Wave 8 — Go completion authority and import trust bootstrap**
+
+- [ ] 259-21-PLAN.md — Route Go completion through authenticated shared semantic admission.
+- [ ] 259-28-PLAN.md — Bootstrap the existing plural operator import trust roots.
+
+**Wave 9 — managed signing and reviewed trust activation**
+
+- [ ] 259-22-PLAN.md — Sign, verify, import, and promote artifact-derived certificates.
+
+**Wave 10 — integrated conformance closure**
+
+- [ ] 259-23-PLAN.md — Close CONF-01..05 and CHRN-01..06 with one exact executable proof.
 
 ### Phase 260: Truthful Strategy Inputs, Arena Authority, and Set Fairness
 
@@ -299,6 +360,6 @@ Cycle-cap, inward-start, facing-only MOVE, reversal-history, attacker-facing/Adv
 | 256. Counted Safety and Canonical Authority | 19/19 | Complete    | 2026-07-13 |
 | 257. Canonical Transition Kernel and v1.4 Semantic Integrity | 22/22 | Complete | 2026-07-13 |
 | 258. Canonical JSON, Failure Semantics, and Artifact Identity | 12/14 | In Progress | - |
-| 259. Executable Four-Language and Chronicle Conformance | 0/TBD | Not started | - |
+| 259. Executable Four-Language and Chronicle Conformance | 0/31 | Planned | - |
 | 260. Truthful Strategy Inputs, Arena Authority, and Set Fairness | 0/TBD | Not started | - |
 | 261. Integrated Service Proof, Drift Guards, and Release | 0/TBD | Not started | - |

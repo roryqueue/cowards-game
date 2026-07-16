@@ -43,7 +43,7 @@ None — discussion stayed within phase scope.
 
 | ID | Required result | Research implication |
 |---|---|---|
-| CONF-01 | Real TypeScript, Python, Rust, and Zig execute one versioned hash-addressed positive/negative corpus | Replace declarations and one-behavior pairings with one immutable case manifest consumed by the real v1.17 adapters. |
+| CONF-01 | Real TypeScript, Python, Rust, and Zig execute one versioned hash-addressed positive/negative corpus | Replace declarations and one-behavior pairings with one immutable case manifest consumed by supervised additive v1.18 adapters through the counted Linux cgroup-v2 controller. |
 | CONF-02 | Compare full state, events, memories, objectives, terminal data, and failure trace | Commit canonical expected traces; compare their canonical bytes/hashes, not selected assertions or outcome alone. |
 | CONF-03 | Execute JSON, numeric, Unicode, depth, malformed-output, timeout, resource, stale-artifact, transport, repeat, differential, property, and mutation cases on every lane | Generate one mandatory lane-by-case matrix; an unavailable capability is a failed certification, never a skip. |
 | CONF-04 | Relevant identity changes stale prior evidence | Bind certificate validity to the complete Phase-258 identity DAG, semantic tuple, policy, corpus root, fixture bytes, generator, adapter, and result root. |
@@ -71,16 +71,20 @@ The remaining conformance gap is still substantive. `v1-37-current-language-corp
 | Responsibility | Canonical owner | Inputs | Output/consumer |
 |---|---|---|---|
 | Corpus manifest, fixture bytes, case generators, reviewed expected traces | `packages/golden` | Exact tuple, Phase-258 ABI/policy/identity, audited fixture sources | Lane runners and certificate verifier |
-| TypeScript execution | `packages/runtime-js` real v1.17 adapter | Authenticated request bytes, exact executable source, host signing identity | Authenticated exclusive result and execution receipt |
-| Python execution | `packages/runtime-python` candidate host/adapter | Same ABI request, revision identity, exact host/tool identity | Same authenticated result classes and receipt evidence |
-| Rust/Zig execution | `packages/runtime-wasm-wasi` plus language-specific build identity | Same ABI request, exact WASI artifact/toolchain/Wasmtime identity | Same authenticated result classes and receipt evidence |
+| Quantitative subprocess supervision | new `@cowards/runtime-supervisor` using package-free Rust in a pinned Linux Docker controller | Public v1.18 spec request, delegated cgroup-v2 cpu/memory/pids controllers, exact image/engine/kernel/settings | Nonce/request-bound aggregate raw receipt; no native-macOS counted equivalence |
+| TypeScript execution | `packages/runtime-js` supervised v1.18 adapter | Public spec/supervisor APIs, exact executable source, host signing callback | Authenticated exclusive result and cgroup aggregate receipt |
+| Python execution | `packages/runtime-python` supervised v1.18 adapter | Same public ABI/supervisor request, revision/runtime/stdlib identity | Same authenticated result classes and cgroup aggregate receipt |
+| Rust/Zig execution | `packages/runtime-wasm-wasi` supervised v1.18 adapter plus language-specific build identity | Same public ABI, exact WASI artifact/toolchain/Wasmtime and supervisor identity | Same aggregate receipt; Wasmtime fuel/linear evidence remains separate defense in depth |
 | Match transitions and gameplay consequences | `packages/engine` transition kernel | Validated runtime result and canonical prestate | Recorded transition stream; no corpus code reimplements rules |
 | Canonical full-trace projection and comparison | `packages/golden` using spec/replay types | Runtime invocation traces plus engine transition stream | Private result root, restricted diff, run manifest |
 | Certificate verification and counted eligibility | `packages/spec` and Phase-256 authority/persistence seams | Three identical complete run roots and exact identity graph | Per-lane current certificate or fail-closed status |
+| Additive service/receipt contract | `@cowards/spec` public exports | Two entrant certificate references, trace/common-meter roots, Ed25519 public key | Canonical encoding, strict parsing, pure verification for service/persistence/Go |
 | Current Chronicle grammar and semantic validation | `packages/replay` | Exact current tuple, Chronicle, execution transitions, anchors | Typed success or stable first-failure code |
 | Historical v1.4 interpretation | Frozen historical replay modules | Exact persisted historical tuple and original bytes | Historical validation/replay only |
 | Service admission | `apps/runtime-service` | Completed kernel execution and Chronicle recording | Validated internal result or no-mutation system failure |
 | Persistence admission | `packages/persistence` parity/quarantine path and normal Go-owned boundary | Validated Chronicle, final state, exact execution evidence | Atomic persist or rollback/system failure |
+| Import-root bootstrap | Existing plural `RuntimeEvidenceAuthorityImportTrustRoot[]` publisher path | Protected descriptor, expected hash/producer/key/domain pins | Append-only high-water receipt before first sign/import |
+| Protected working-tree baseline | Repo-root baseline checker | Raw bytes/modes plus staged/unstaged binary diffs for the two protected files | Exact final equality without requiring a clean worktree |
 | Public projection | Existing Go/web public boundaries | Safe IDs, classifications, status, hashes | No source, artifact, memory, objective, raw diagnostic, or host detail |
 
 All ownership assignments above extend existing package boundaries; none authorizes Strategy execution in Go, web, or API code. [VERIFIED: repository `AGENTS.md`, package imports, Phase-256/258 context]
@@ -108,9 +112,10 @@ No dependency addition is warranted. Use the existing workspace and standard-lib
 | Validation/tests | Zod 4, Vitest 4 | Trusted shape validation after raw admission; unit, property, mutation, adapter, replay suites |
 | Browser/E2E | Playwright 1.60 | Only if a public/operator projection changes; no UI work is required by this phase |
 | Python | Python 3.9 isolated subprocess host | Real Python fixture and raw-envelope lane |
-| Rust | rustc/cargo 1.95 | Build exact WASI fixture artifact and bind compiler/toolchain identity |
+| Rust | rustc/cargo 1.95 | Build exact WASI fixtures and zero-dependency Linux cgroup-v2 supervisor; bind compiler/toolchain identity |
 | Zig | Zig 0.16 | Build exact WASI fixture artifact and bind compiler/toolchain identity |
 | WASI host | Wasmtime 45 | Execute Rust/Zig artifacts through the shared bounded host adapter |
+| Counted quantitative platform | Linux cgroup v2 inside pinned Docker on macOS development hosts | Aggregate `cpu.stat usage_usec`, `memory.peak`, pids/events, cancellation, and empty-cgroup proof |
 | Control plane | Go 1.26 | Verify installed current authority and preserve no-Strategy-execution boundary |
 | Persistence | PostgreSQL 16 client and existing migrations/repositories | Store and enforce exact certificates/publication identity and atomic Chronicle acceptance |
 | Identity/crypto | Existing SHA-256, Ed25519, HMAC, canonical JSON, domain-framed helpers | Hash/sign exact trace and certificate material; do not invent new cryptography |
@@ -173,11 +178,13 @@ type CanonicalConformanceTrace = Readonly<{
 
 The exact concrete names are discretionary, but equality must cover the D-06/D-07 fields. Hashing memories/objectives does not make them public: private trace material remains restricted evidence, while public/operator projections expose only approved safe identifiers and classifications. [VERIFIED basis: repository Phase-258 canonical identity/privacy contracts and `packages/replay/src/record.ts` transition material]
 
-### 3. One lane runner, four real executors
+### 3. One lane runner, four real supervised executors
 
-Use a registry whose lane implementations translate one canonical case into the already-authenticated v1.17 adapter request. TypeScript executes `executeV117`; Python executes `createPythonCandidateInvocationAdapterV117`/the real host; Rust and Zig execute separate exact artifacts through `runWasmWasiStrategyMethodV117Sync`. Raw-envelope cases call the adapter admission seam with controlled raw observations rather than embedding malformed behavior in fixture Strategy logic. [VERIFIED: repository adapter exports in `packages/runtime-js`, `packages/runtime-python`, and `packages/runtime-wasm-wasi`]
+Use additive v1.18 public spec/supervisor APIs. TypeScript, Python, and each Rust/Zig Wasmtime command execute beneath the same zero-dependency Rust supervisor in one delegated Linux cgroup-v2 subtree. Counted CPU is aggregate `cpu.stat usage_usec * 1000`; memory is `memory.peak`; pids/events and exact output bytes are required. The macOS development host obtains this Linux evidence only through the existing Docker engine using an exact digest-addressed image and engine/kernel/cgroup/settings identity with read-only root, no network, dropped capabilities, and no-new-privileges. Native macOS execution is proof-only/non-counted. Raw-envelope cases call adapter admission seams, never fixture Strategy logic. [VERIFIED basis: existing Docker adapter/identity patterns; corrected Phase-259 architecture]
 
-The runner must report an unavailable compiler/runtime as a typed system failure and a failed certificate. It must never fall back to a legacy adapter, accept the current `UNSUPPORTED_RUNTIME_ADAPTER` matrix as success, or silently reduce case coverage. [VERIFIED basis: repository current parity branch and locked D-04/D-10]
+The macOS-hosted Linux path uses an exact cgroupfs-v2 delegation protocol. A pinned trusted bootstrap/finalizer container runs with host cgroup namespace, no network, read-only root, a daemon-host `/sys/fs/cgroup` bind, all capabilities dropped except `SYS_ADMIN`, `CHOWN`, and `DAC_OVERRIDE`, and no Strategy source/artifact input. It creates mode-0700 `/cowards/<run-id>`, enables cpu/memory/pids, delegates only the required control files to the fixed supervisor UID, and emits a nonce-bound descriptor. The long-lived supervisor container is unprivileged, has `--cgroup-parent=/cowards/<run-id>`, receives only that subtree as a writable bind, and runs guest children under a distinct UID. The finalizer verifies the descriptor and empty subtree before removal. A real macOS-engine preflight must prove this lifecycle; systemd/unknown cgroup drivers, extra capabilities/mounts, cleanup failure, or any ownership/identity drift are unsupported. [VERIFIED locally: Docker server Linux/cgroup-v2/cgroupfs; bootstrap create/chown/remove and unprivileged subtree create/write/remove probes passed 2026-07-16]
+
+The runner must report unavailable Docker/image/Linux cgroup controllers/delegation/supervisor/compiler/runtime as typed system failure and a failed certificate. It must never fall back to native macOS, per-process rusage, a legacy adapter, the current `UNSUPPORTED_RUNTIME_ADAPTER` matrix, or reduced case coverage. [VERIFIED basis: repository current parity/container branches and locked D-04/D-10]
 
 ### 4. Deterministic three-run certification
 
@@ -212,9 +219,11 @@ Keep `validateCurrentChronicle` and `validateCurrentReplayReconstruction` in `@c
 |---|---|---|
 | `packages/golden/src/v1-37-current-language-corpus.ts` | Immutable v1.32 source projection as historical readiness source | Add a new immutable conformance corpus owner; do not mutate old source bytes/goldens |
 | `apps/runtime-service/src/four-language-parity.test.ts` | Pairing/readiness regression and privacy assertions | Replace any promotion significance with a real mandatory lane-by-case runner and full-trace assertions |
-| `packages/runtime-js/src/{adapter,worker-thread-adapter,subprocess-adapter}.ts` | Authenticated outer response and host-only signing material | Expose/use one exact real v1.17 executor selected by certified containment identity |
-| `packages/runtime-python/src/python-subprocess-adapter.ts` | Candidate host admission, typed failure ownership, receipts | Drive real fixture and raw-probe corpus through the exact source/tool identity |
-| `packages/runtime-wasm-wasi/src/wasm-wasi-subprocess-adapter.ts` | Shared host classification and exact artifact/runtime identity | Run distinct Rust/Zig artifacts and bind each build/toolchain identity |
+| new `packages/runtime-supervisor` workspace package/native binary/Docker controller | Existing workspace/Docker hardening and Phase-258 exact identities | Public spec imports, delegated Linux cgroup-v2 aggregate accounting, empty-cgroup cancellation proof, exact image/engine/kernel identity |
+| `packages/runtime-js` manifest/tsconfig and supervised v1.18 adapter | Authenticated outer response and host-only signing material | Depend on public supervisor/spec packages; counted TypeScript only through Linux controller |
+| `packages/runtime-python` manifest/tsconfig and supervised v1.18 adapter | Candidate host admission, typed failure ownership, receipts | Depend on public supervisor/spec packages; aggregate real Python threads/descendants |
+| `packages/runtime-wasm-wasi` manifest/tsconfig and supervised v1.18 adapter | Shared host classification and exact artifact/runtime identity | Aggregate real Wasmtime execution while keeping fuel/linear evidence separate |
+| `packages/spec/src/index.ts` and package test script | Explicit public barrel and enumerated tests | Export/test additive budget, service, and two-entrant receipt APIs before consumers |
 | `packages/spec/src/runtime-evidence-{v1-17,attestation-v1-17}.ts` | Closed 15-node/26-edge DAG, ten exact pins, production-empty trust | Add reviewed conformance artifact/certificate bindings and managed production producer only after proof |
 | `packages/replay/src/record.ts` | Transition material, state hashes, events, terminal/failure fields | Supply canonical full-trace projection inputs/root |
 | `packages/replay/src/grammar.ts` | Existing event/error helpers | Split current/historical vocabulary and replace singleton activation state with per-slot state |
@@ -223,7 +232,9 @@ Keep `validateCurrentChronicle` and `validateCurrentReplayReconstruction` in `@c
 | `apps/runtime-service/src/execute-match.ts` | Shared replay validator dependency seam | Prove full semantic rejection before a success result leaves the service |
 | `packages/persistence/src/complete-match.ts` | Pre-transaction current admission and reconstruction check | Bind exact trace root and add negative rollback/admission proof |
 | `packages/persistence/src/runtime-evidence-authority-publisher.ts` | Append-only signed install and source manifests | Admit only complete reviewed per-lane Phase-259 conformance certificates |
-| `apps/go-backend/runtime_service_client_v1_17.go` and orchestrator | Exact wire/semantic receipt verification and normal lifecycle ownership | Verify the new bound trace/certificate fields without implementing rules or Strategy runtime |
+| new `apps/go-backend/runtime_service_client_v1_18.go` and orchestrator | Immutable v1.16/v1.17 dispatch and normal lifecycle ownership | Independently verify public spec-derived two-entrant receipt fields without rules or Strategy runtime |
+| existing plural authority import path plus bootstrap/high-water | `RuntimeEvidenceAuthorityImportTrustRoot[]` verification | Authenticate protected public roots before first sign/import; keep runtime producer trust separate |
+| protected config/spec working tree | Existing user-owned bytes/diffs | Capture exact baseline and compare later rather than clean/restore |
 
 ## Validation Architecture
 
@@ -379,9 +390,10 @@ A certification attempt may legitimately leave an individual lane uncertified wh
 
 - `packages/golden/src/v1-37-current-language-corpus.ts`
 - `apps/runtime-service/src/four-language-parity.test.ts`
-- `packages/runtime-js/src/adapter.ts` and real v1.17 adapter implementations
-- `packages/runtime-python/src/python-subprocess-adapter.ts`
-- `packages/runtime-wasm-wasi/src/wasm-wasi-subprocess-adapter.ts`
+- existing v1.17 runtime adapters as immutable baseline plus planned public supervised v1.18 adapters in runtime-js/runtime-python/runtime-wasm-wasi
+- planned `packages/runtime-supervisor` manifest/project/public contract, zero-dependency Rust Linux cgroup-v2 binary, and pinned Docker controller
+- root/runtime package manifests, TypeScript project references, and sole final lockfile closure
+- planned public spec v1.18 budget/invocation/capability/service/two-entrant-receipt exports and enumerated tests
 - `packages/spec/src/runtime-evidence-v1-17.ts`
 - `packages/spec/src/runtime-evidence-attestation-v1-17.ts`
 - `packages/replay/src/grammar.ts`
@@ -392,7 +404,9 @@ A certification attempt may legitimately leave an individual lane uncertified wh
 - `apps/runtime-service/src/execute-match.ts`
 - `packages/persistence/src/complete-match.ts`
 - `packages/persistence/src/runtime-evidence-authority-publisher.ts`
-- `apps/go-backend/runtime_service_client_v1_17.go`
+- immutable `apps/go-backend/runtime_service_client_v1_17.go` plus planned independent v1.18 verifier
+- existing plural import trust-root publisher path plus planned bootstrap/high-water
+- planned protected working-tree baseline checker
 - `AGENTS.md`
 
 ## Research Metadata

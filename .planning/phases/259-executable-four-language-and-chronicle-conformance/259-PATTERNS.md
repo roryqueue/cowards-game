@@ -1,16 +1,18 @@
 # Phase 259: Executable Four-Language and Chronicle Conformance - Pattern Map
 
 **Mapped:** 2026-07-16
-**Concrete files covered:** 37 across 25 implementation/test groups
-**Analog families:** 5
+**Revised:** 2026-07-16 — additive v1.18 public exports, supervisor workspace wiring, Linux cgroup-v2/Docker counted execution, two-entrant receipts, plural trust bootstrap, and protected baseline
+**Concrete files covered:** 55 across 34 implementation/test groups
+**Analog families:** 6
 
 ## Placement Rules
 
 1. `packages/golden` owns immutable corpus descriptions and pure canonical trace projection/comparison. It does not import runtime adapters.
-2. `apps/runtime-service` owns real TypeScript/Python/Rust/Zig executors because it already depends on all runtime packages, golden, engine, replay, and spec.
-3. Repo-root scripts own candidate generation, committed-byte checks, and fresh-process certification.
-4. `packages/spec` owns closed certificate types and pure verification; `packages/persistence` owns append-only publication/installation.
-5. `packages/replay` owns per-slot grammar, frozen historical interpretation, reconstruction, and the shared semantic admission API. Go verifies bound evidence but does not implement Chronicle rules.
+2. `@cowards/runtime-supervisor` owns the public supervisor contract, package-free Rust Linux cgroup-v2 binary, and pinned Docker certification controller; runtime-js/python/wasm-wasi own their supervised adapters.
+3. `apps/runtime-service` composes the real TypeScript/Python/Rust/Zig executors because it already depends on all runtime packages, golden, engine, replay, and spec.
+4. Repo-root scripts own candidate generation, committed-byte checks, fresh-process certification, plural trust-root bootstrap, and protected working-tree baseline checks.
+5. `packages/spec` public exports own additive v1.18 budget/invocation/capability/service/two-entrant-receipt contracts and pure verification; `packages/persistence` owns append-only publication/installation.
+6. `packages/replay` owns per-slot grammar, frozen historical interpretation, reconstruction, and shared semantic admission. Runtime-service owns receipt issuance only; persistence and Go verify public spec claims without implementing Chronicle rules.
 
 These placements preserve the dependency graph and keep Strategy execution out of Go, web, and API processes.
 
@@ -26,6 +28,10 @@ Paths marked **new** are the recommended concrete split implied by research. A p
 | **new** `scripts/generate-v1-37-conformance-corpus.ts` and `.test.ts` | generator/test | file-I/O/batch | A | exact |
 | **new** `scripts/check-v1-37-conformance-corpus.ts` and `.test.ts` | checker/test | file-I/O/batch | A | exact |
 | **new** `apps/runtime-service/src/four-language-conformance-runner.ts` and `.test.ts` | service/test | request-response/batch | B/E | role-match |
+| **new** `packages/runtime-supervisor/{package.json,tsconfig.json,src/index.ts}` plus root/runtime package references | provider/config | build/import boundary | F | exact |
+| **new** `packages/runtime-supervisor/native/src/main.rs`; `native/Cargo.toml`; Linux container wrapper/tests | runtime/test | process/cgroup/file-I/O | F | composite |
+| **new** `packages/spec/src/runtime-{budget-profile,invocation,budget-capabilities}-v1-18.ts` and tests; modified public index/package test script | model/validator/provider | transform/build | F | exact |
+| **new** `packages/spec/src/runtime-{execution-service,semantic-receipt}-v1-18.ts` and tests; modified public index/package test script | model/validator/provider | transform | E/F | exact |
 | modified `apps/runtime-service/src/four-language-parity.test.ts` | test | request-response/batch | A/B; readiness only | exact |
 | **new** `scripts/certify-v1-37-language-lane.ts` and `.test.ts` | certifier/test | process/file-I/O/batch | B | composite |
 | **new** `packages/spec/src/runtime-conformance-certificate-v1-17.ts` and `.test.ts` | model/validator/test | transform | B | exact |
@@ -44,12 +50,14 @@ Paths marked **new** are the recommended concrete split implied by research. A p
 | modified `apps/runtime-service/src/execute-match.ts` and `.test.ts` | service/test | request-response | E | exact |
 | modified `packages/persistence/src/complete-match.ts` and `.test.ts` | service/store/test | CRUD/transactional | E | exact |
 | modified `packages/persistence/src/semantic-integrity.test.ts` | integration test | CRUD/transactional | E | exact |
-| modified `apps/go-backend/runtime_service_client_v1_17.go` and `_test.go` | client/test | request-response | E | role-match |
+| **new** `apps/go-backend/runtime_service_client_v1_18.go` and `_test.go`; immutable prior clients retained | client/test | request-response | E/F | role-match |
+| **new** plural import-root bootstrap/high-water script/migration/tests | operator/store/test | file-I/O/transactional | B/F | composite |
+| **new** protected working-tree baseline script/test/artifact | checker/test | git/file-I/O | A/F | exact |
 
 ### Retain rather than repurpose
 
 - `packages/golden/src/v1-37-current-language-corpus.ts` remains the readiness projection. The conformance corpus receives a new version/root.
-- Runtime adapters remain thin real executors. Modify them only if an exact v1.17 executor lacks an approved export; do not add conformance meaning inside adapters.
+- Runtime adapters remain thin real executors. Add supervised v1.18 seams through public `@cowards/spec` and `@cowards/runtime-supervisor` exports; never import another workspace's `src` tree or add conformance meaning inside adapters.
 - Historical v1.4 Chronicle bytes and historical receipts remain unchanged.
 - No UI file is implied.
 
@@ -163,6 +171,28 @@ Run the complete corpus three times in separate child processes/workspaces with 
 The existing snapshot query selects only passed certificates joined to passed attestations, current over the full validity interval, and matching the exact semantic tuple. Publication then uses a serializable transaction, advisory lock, signed payload, source-manifest hash, append-only source edges, and generation head. Add Phase-259 certificate bindings to this source graph; do not create a parallel `passedLanguages` flag or publisher.
 
 `packages/spec/src/runtime-execution-service.ts:250-303` already carries optional `conformanceCertificateRef` IDs/hashes per entrant. Populate those fields from verified artifacts.
+
+## Family F — Public Workspace Wiring and Linux Cgroup-v2 Supervision
+
+**Apply to:** supervisor package/manifests, root/runtime project references, public spec barrels/test enumeration, Rust binary, Docker certification controller, and adapter imports.
+
+### Workspace/project-reference closure
+
+**Analogs:** root `tsconfig.json`; runtime package `package.json`/`tsconfig.json`; explicitly enumerated `packages/spec/package.json` test script.
+
+Register `@cowards/runtime-supervisor` under the existing `packages/*` workspace glob, depend on `@cowards/spec: workspace:*`, add build/test/lint/typecheck scripts and a composite reference to spec, add the root project reference, then add `@cowards/runtime-supervisor: workspace:*` plus project references to all three runtime packages. One later wiring plan owns the offline lockfile update after every manifest exists. Production code imports only `@cowards/spec` and `@cowards/runtime-supervisor`.
+
+### Counted aggregate meter and macOS-hosted Linux proof
+
+**Analogs:** `packages/runtime-js/src/container-subprocess-adapter.ts` Docker hardening/argument validation; `scripts/evaluate-runtime-sandbox.ts` fail-loud Docker/image preflight; Phase-258 exact executable/image/settings identity.
+
+The zero-dependency Rust supervisor runs only on Linux for counted evidence. For each invocation it creates one delegated cgroup-v2 subtree, sets `cpu.max`, `memory.max`, and `pids.max`, moves the session leader into it, drops the guest to a distinct UID, and reads baseline/final `cpu.stat usage_usec`, `memory.peak`, `pids.current/events`, and `memory.events`. Cancellation uses the process group plus `cgroup.kill`, rejects late output, and waits for an empty cgroup. Missing controllers/delegation, escape, lingering descendant, or ambiguous read/write fails with no certificate.
+
+On a macOS development host, required four-language certification runs only inside the existing Docker engine with an exact digest-addressed Linux image, engine/server version, Linux kernel/cgroup identity, read-only root, no network, bounded tmpfs, dropped capabilities, and no-new-privileges. Delegation is explicit and two-stage: a pinned trusted bootstrap/finalizer container has only `SYS_ADMIN`, `CHOWN`, and `DAC_OVERRIDE`, host cgroup namespace, and a daemon-host `/sys/fs/cgroup` bind long enough to create/chown/remove `/cowards/<run-id>` without any Strategy input; the long-lived unprivileged supervisor uses `--cgroup-parent=/cowards/<run-id>` and receives only that subtree as a writable bind. The first implementation requires the pinned `cgroupfs` driver and fails closed on systemd/unknown drivers. Native macOS measurement is non-counted proof-only; do not use `wait4`/rusage as a parity claim.
+
+### Two-entrant public receipt and operator bootstrap
+
+The public spec receipt contains separate closed bottom/top certificate references and Ed25519 verification. Runtime-service owns only the signing callback; persistence and Go verify independently through public exports. Certificate import reuses the existing plural `RuntimeEvidenceAuthorityImportTrustRoot[]` mechanism after protected descriptor/high-water bootstrap. The protected baseline checker records existing config/spec bytes and diffs rather than demanding a clean tree.
 
 ## Family C — Per-Slot Chronicle Grammar and Transition Coordinates
 
@@ -310,6 +340,7 @@ Use closed safe codes/coordinates and bounded issue projections. Keep full trace
 ### Import boundaries
 
 - Package implementation imports workspace entrypoints (`@cowards/spec`, `@cowards/replay`, etc.).
+- Supervisor consumers import `@cowards/runtime-supervisor`; project references and the final lockfile enforce build order.
 - Repo-root generators may use direct source imports only with the established narrow ESLint suppression.
 - Test-only executor seams remain adjacent test support and do not enter production barrels.
 
@@ -319,6 +350,7 @@ Use closed safe codes/coordinates and bounded issue projections. Keep full trace
 |---|---|---|
 | Three complete real-language runs becoming one certificate | Historical fresh-workspace runner + runtime evidence verifier + existing authority publisher | Compose a new certifier; never reduce to one run, skip a case, or synthesize evidence. |
 | Per-`activationId` Chronicle map | Engine slot collection/coordinates + replay bounded error model | Implement a new internal state map; preserve deterministic event order and version-specific semantics. |
+| Aggregate multi-language quantitative meter | Docker containment analog + Phase-258 identity + Linux cgroup-v2 controller files | Count only pinned Linux cgroup-v2 aggregate evidence; native macOS/per-process rusage never satisfies parity. |
 
 These are composite patterns, not unresolved design choices; `259-CONTEXT.md` and `259-RESEARCH.md` lock their semantics.
 
@@ -326,15 +358,15 @@ These are composite patterns, not unresolved design choices; `259-CONTEXT.md` an
 
 1. immutable corpus, schema, generator, and checker;
 2. canonical full-trace projection/comparator;
-3. real four-lane executors and mandatory case matrix;
+3. public additive spec APIs, supervisor workspace wiring, Linux cgroup-v2/Docker controller, and real four-lane executors;
 4. fresh-process certifier and pure certificate verifier;
 5. evidence DAG/trusted producer/publication integration;
 6. current per-slot grammar;
 7. frozen historical grammar/transition/byte manifest;
 8. transition-by-transition reconstruction equality;
-9. runtime-service semantic receipt binding;
+9. public two-entrant receipt verification plus runtime-service issuance binding;
 10. persistence/Go admission and rollback;
-11. complete three-run, privacy, and boundary gate.
+11. plural trust-root bootstrap, protected baseline, complete three-run, privacy, and boundary gate.
 
 ## Metadata
 

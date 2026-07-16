@@ -12,7 +12,7 @@ last_activity_desc: Phase 258 Plan 13 completed the exact evidence DAG and succe
 progress:
   total_phases: 6
   completed_phases: 2
-  total_plans: 55
+  total_plans: 86
   completed_plans: 53
   percent: 33
 ---
@@ -63,7 +63,7 @@ Progress: [███░░░░░░░] 33%
 
 Last session: 2026-07-15T15:06:34.000Z
 Stopped at: Completed 258-13; ready for 258-14
-Next command: `$gsd-execute-phase 258`
+Next command: Complete Phase 258 closure, then `$gsd-execute-phase 259` using the approved 31-plan/10-wave plan.
 
 ## Performance Metrics
 
