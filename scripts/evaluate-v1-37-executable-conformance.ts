@@ -59,6 +59,7 @@ const INPUT_PATHS = Object.freeze([
   "packages/persistence/src/complete-match.ts",
   "packages/persistence/src/complete-match.test.ts",
   "packages/replay/src/reconstruct.ts",
+  "packages/replay/src/grammar.ts",
   "packages/replay/package.json",
   "packages/spec/artifacts/strategy-artifacts.v1.14.json",
   "packages/spec/artifacts/v1.37-current-event-coverage.json",

@@ -1554,11 +1554,11 @@ export const advanceCurrentChronicleGrammar = (
             ),
           )
         }
-        if (cycleIndex !== undefined && cycleIndex !== slot.nextCycleIndex) {
+        if (cycleIndex !== undefined && cycleIndex < slot.nextCycleIndex) {
           errors.push(
             error(
               "CONTEXT_MISMATCH",
-              "ACTIVATION_SKIPPED context.cycleIndex must be the slot's next Cycle.",
+              "ACTIVATION_SKIPPED context.cycleIndex must not regress behind the slot's next Cycle.",
               event,
               {
                 expected: expectedField("cycleIndex", slot.nextCycleIndex),
