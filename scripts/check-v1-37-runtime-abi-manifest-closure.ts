@@ -31,6 +31,7 @@ export const RUNTIME_ABI_PHASE258_INTERLEAVED_COMMITS = Object.freeze([
   "becf9929da14aec8bffde4b36be95492cb949db1",
   "4d488ed897f90eaf4bf3cb691ae00a0c57998b17",
   "7098750bcdbb4418e96945a7baca737c7a193344",
+  "5bddb034e7239e8f32a7061174d275cfef393848",
 ] as const)
 export const RUNTIME_ABI_PHASE258_PLAN_DIRECTORY =
   ".planning/phases/258-canonical-json-failure-semantics-and-artifact-identity"
@@ -51,6 +52,37 @@ const RUNTIME_ABI_PHASE258_DECLARATION_ONLY_PATHS = Object.freeze([
   "packages/spec/src/runtime-execution-service.ts",
   "scripts/evaluate-runtime-sandbox.ts",
 ] as const)
+
+const RUNTIME_ABI_PHASE259_DIRECTORY =
+  ".planning/phases/259-executable-four-language-and-chronicle-conformance"
+const RUNTIME_ABI_PHASE258_INTERLEAVED_COMMIT_PATHS: Readonly<
+  Record<string, readonly string[]>
+> = Object.freeze({
+  "5aff16be897ec34cfa6a104c890a8eb520a8d7e5": Object.freeze([
+    `${RUNTIME_ABI_PHASE259_DIRECTORY}/259-RESEARCH.md`,
+  ]),
+  "becf9929da14aec8bffde4b36be95492cb949db1": Object.freeze([
+    `${RUNTIME_ABI_PHASE259_DIRECTORY}/259-RESEARCH.md`,
+  ]),
+  "4d488ed897f90eaf4bf3cb691ae00a0c57998b17": Object.freeze([
+    `${RUNTIME_ABI_PHASE259_DIRECTORY}/259-VALIDATION.md`,
+  ]),
+  "7098750bcdbb4418e96945a7baca737c7a193344": Object.freeze([
+    `${RUNTIME_ABI_PHASE259_DIRECTORY}/259-PATTERNS.md`,
+  ]),
+  "5bddb034e7239e8f32a7061174d275cfef393848": Object.freeze([
+    ".planning/ROADMAP.md",
+    ".planning/STATE.md",
+    ...Array.from(
+      { length: 31 },
+      (_, index) =>
+        `${RUNTIME_ABI_PHASE259_DIRECTORY}/259-${String(index + 1).padStart(2, "0")}-PLAN.md`,
+    ),
+    `${RUNTIME_ABI_PHASE259_DIRECTORY}/259-PATTERNS.md`,
+    `${RUNTIME_ABI_PHASE259_DIRECTORY}/259-RESEARCH.md`,
+    `${RUNTIME_ABI_PHASE259_DIRECTORY}/259-VALIDATION.md`,
+  ]),
+})
 
 export const RUNTIME_ABI_DERIVED_VALIDATION_OUTPUTS = Object.freeze([
   ".planning/artifacts/v1.37-runtime-abi-validation.md",
@@ -288,17 +320,20 @@ const verifyPhase258InterleavedCommit = (
   ])
     .stdout.split(/\r?\n/u)
     .filter(Boolean)
+  verifyPhase258ApprovedInterleavedCommitPaths(commit, paths)
+}
+
+export const verifyPhase258ApprovedInterleavedCommitPaths = (
+  commit: string,
+  paths: readonly string[],
+): void => {
+  const expected = RUNTIME_ABI_PHASE258_INTERLEAVED_COMMIT_PATHS[commit]
   if (
-    paths.length === 0 ||
-    paths.some(
-      (path) =>
-        !path.startsWith(
-          ".planning/phases/259-executable-four-language-and-chronicle-conformance/",
-        ),
-    )
+    expected === undefined ||
+    !exactSortedStrings([...paths].sort(), [...expected].sort())
   ) {
     throw new TypeError(
-      `Pinned interleaved commit escaped Phase 259 planning: ${commit}`,
+      `Pinned interleaved commit escaped its exact planning paths: ${commit}`,
     )
   }
 }
@@ -359,13 +394,6 @@ export const verifyPhase258GitClosureAncestry = (options: {
     if (!/^[a-z]+\(258(?:-\d{2})?\): /u.test(subject)) {
       throw new TypeError(
         `Phase 258 git closure contains an unowned commit: ${commit} ${subject}`,
-      )
-    }
-  }
-  for (const commit of interleaved) {
-    if (!commits.includes(commit)) {
-      throw new TypeError(
-        `Phase 258 git closure omitted pinned interleaved commit: ${commit}`,
       )
     }
   }

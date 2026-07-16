@@ -29,6 +29,7 @@ import {
   parseRuntimeAbiActivationAllowlist,
   runtimeAbiActivationDiffArguments,
   verifyPhase258AuthoritativeRegularFiles,
+  verifyPhase258ApprovedInterleavedCommitPaths,
   verifyPhase258GitClosureAncestry,
   verifyPhase258PlanFilesMatchGit,
   verifyPhase258PlanInventoryMatchesGit,
@@ -171,6 +172,42 @@ describe("Phase 258 runtime ABI activation closure", () => {
         headCommit: `${RUNTIME_ABI_ACTIVATION_COMMIT.slice(0, 39)}0`,
       }),
     ).toThrow()
+  })
+
+  it("admits the exact later Phase 259 planning commit without adding its paths to Phase 258", () => {
+    const phase259Directory =
+      ".planning/phases/259-executable-four-language-and-chronicle-conformance"
+    const commit = "5bddb034e7239e8f32a7061174d275cfef393848"
+    const exactPaths = [
+      ".planning/ROADMAP.md",
+      ".planning/STATE.md",
+      ...Array.from(
+        { length: 31 },
+        (_, index) =>
+          `${phase259Directory}/259-${String(index + 1).padStart(2, "0")}-PLAN.md`,
+      ),
+      `${phase259Directory}/259-PATTERNS.md`,
+      `${phase259Directory}/259-RESEARCH.md`,
+      `${phase259Directory}/259-VALIDATION.md`,
+    ]
+    expect(() =>
+      verifyPhase258ApprovedInterleavedCommitPaths(commit, exactPaths),
+    ).not.toThrow()
+    for (const attacked of [
+      exactPaths.slice(1),
+      [...exactPaths, "scripts/phase259-source.ts"],
+      exactPaths.filter((path) => path !== ".planning/STATE.md"),
+    ]) {
+      expect(() =>
+        verifyPhase258ApprovedInterleavedCommitPaths(commit, attacked),
+      ).toThrow(/exact planning paths/iu)
+    }
+    const inventory = collectPhase258InventoryPaths({
+      headCommit: currentHead(),
+    })
+    for (const path of exactPaths) {
+      expect(inventory).not.toContain(path)
+    }
   })
 
   it("expands directories into exact regular files and rejects unsafe filesystem entries", () => {
