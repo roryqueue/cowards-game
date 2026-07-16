@@ -327,24 +327,35 @@ export const verifyPhase258GitClosureAncestry = (options: {
       )
     }
   }
-  const commits = runGit([
-    "rev-list",
+  const history = runGit([
+    "log",
     "--first-parent",
     "--reverse",
+    "--format=%H%x09%s",
     `${baselineCommit}..${headCommit}`,
   ])
     .stdout.split(/\r?\n/u)
     .filter(Boolean)
+    .map((line) => {
+      const separator = line.indexOf("\t")
+      if (separator <= 0) {
+        throw new TypeError(`Phase 258 git history entry is malformed: ${line}`)
+      }
+      return {
+        commit: line.slice(0, separator),
+        subject: line.slice(separator + 1),
+      }
+    })
+  const commits = history.map(({ commit }) => commit)
   if (commits.at(-1) !== headCommit) {
     throw new TypeError("Phase 258 git closure head is not on first-parent ancestry.")
   }
   const interleaved = new Set<string>(RUNTIME_ABI_PHASE258_INTERLEAVED_COMMITS)
-  for (const commit of commits) {
+  for (const { commit, subject } of history) {
     if (interleaved.has(commit)) {
       verifyPhase258InterleavedCommit(commit, runGit)
       continue
     }
-    const subject = runGit(["show", "-s", "--format=%s", commit]).stdout.trim()
     if (!/^[a-z]+\(258(?:-\d{2})?\): /u.test(subject)) {
       throw new TypeError(
         `Phase 258 git closure contains an unowned commit: ${commit} ${subject}`,

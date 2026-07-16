@@ -101,9 +101,13 @@ describe("Phase 258 runtime ABI activation closure", () => {
     const headCommit = currentHead()
     const gitPaths = collectPhase258GitChangedPaths({ headCommit })
     const declaredPaths = expandPhase258InventoryPaths(
-      RUNTIME_ABI_PHASE258_PLAN_PATHS.flatMap((planPath) =>
-        parsePlanFilesModified(readFileSync(planPath, "utf8")),
-      ),
+      [
+        ...new Set(
+          RUNTIME_ABI_PHASE258_PLAN_PATHS.flatMap((planPath) =>
+            parsePlanFilesModified(readFileSync(planPath, "utf8")),
+          ),
+        ),
+      ],
     ).filter(
       (path) =>
         path !== RUNTIME_ABI_ACTIVATION_MANIFEST_PATH &&
