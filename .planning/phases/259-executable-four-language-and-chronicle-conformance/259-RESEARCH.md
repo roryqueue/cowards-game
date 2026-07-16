@@ -355,7 +355,7 @@ No planning-blocking user decision remains. The locked choices determine corpus 
 
 Implementation must stop for explicit compatibility approval if a proposed Chronicle “clarification,” current grammar repair, replay comparator, or corpus expectation changes any valid v1.4 Match state, action legality, event order, outcome, Strategy observation, or historical interpretation. If a committed oracle is disputed, suspend that case/tuple rather than regenerating it. [VERIFIED: milestone approval gate and D-08]
 
-A lane may legitimately finish Phase 259 uncertified if it cannot provide every required capability or comparable resource evidence in the exact environment. That is not a reason to weaken the corpus, fabricate evidence, or block independent promotion of a different complete lane. [VERIFIED: D-04, D-10, D-12]
+A certification attempt may legitimately leave an individual lane uncertified when it cannot provide every required capability or comparable resource evidence in the exact environment. Phase 259 and the milestone do **not** finish in that state: CONF-01 through CONF-05 and the milestone definition of done require executable conformance for TypeScript, Python, Rust, and Zig unless the user explicitly approves a scope or compatibility ruling. The failure is never a reason to weaken the corpus, fabricate evidence, or block independent promotion of a different complete lane while remediation continues. [VERIFIED: milestone definition of done, CONF-01 through CONF-05, D-04, D-10, D-12]
 
 ## Sources
 
