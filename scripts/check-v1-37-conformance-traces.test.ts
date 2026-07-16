@@ -2,9 +2,11 @@
 
 import {
   cpSync,
+  mkdirSync,
   mkdtempSync,
   readFileSync,
   rmSync,
+  symlinkSync,
   writeFileSync,
 } from "node:fs"
 import { tmpdir } from "node:os"
@@ -121,5 +123,31 @@ describe("v1.37 conformance trace candidate checker", () => {
         checkV137ConformanceTraceCandidate({ candidateDirectory: directory }),
       ).not.toEqual([])
     }
+  }, 60_000)
+
+  it("rejects dangling symlink and non-regular trace entries", () => {
+    const dangling = candidate()
+    const danglingPath = path.join(
+      dangling,
+      "traces",
+      `${V1_37_CONFORMANCE_CORPUS.cases[0]!.id}.json`,
+    )
+    rmSync(danglingPath)
+    symlinkSync(path.join(dangling, "missing.json"), danglingPath)
+    expect(
+      checkV137ConformanceTraceCandidate({ candidateDirectory: dangling }),
+    ).not.toEqual([])
+
+    const nonRegular = candidate()
+    const nonRegularPath = path.join(
+      nonRegular,
+      "traces",
+      `${V1_37_CONFORMANCE_CORPUS.cases[0]!.id}.json`,
+    )
+    rmSync(nonRegularPath)
+    mkdirSync(nonRegularPath)
+    expect(
+      checkV137ConformanceTraceCandidate({ candidateDirectory: nonRegular }),
+    ).not.toEqual([])
   }, 60_000)
 })

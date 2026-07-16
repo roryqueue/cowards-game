@@ -10,6 +10,7 @@ import {
   encodeCanonicalJson,
   type JsonValue,
 } from "../packages/spec/src/index.js"
+import { hashCanonicalConformanceTrace } from "../packages/golden/src/v1-37-conformance-trace.js"
 import {
   computeV137ConformanceTraceCandidateRoot,
   generateV137ConformanceTraceCandidate,
@@ -62,6 +63,38 @@ const rehash = (directory: string): void => {
     .update(encoded.bytes)
     .digest("hex")}`
   writeFileSync(diffPath, render(diff))
+}
+
+const mutateTraceAndRehash = (
+  directory: string,
+  caseId: string,
+  mutate: (trace: Record<string, any>) => void,
+): void => {
+  const tracePath = path.join(directory, "traces", `${caseId}.json`)
+  const trace = JSON.parse(readFileSync(tracePath, "utf8"))
+  mutate(trace)
+  trace.traceRoot = hashCanonicalConformanceTrace(trace)
+  const traceBytes = render(trace)
+  writeFileSync(tracePath, traceBytes)
+
+  const manifestPath = path.join(directory, "manifest.json")
+  const manifest = JSON.parse(readFileSync(manifestPath, "utf8"))
+  const entry = manifest.cases.find(
+    ({ caseId: entryCaseId }: { caseId: string }) => entryCaseId === caseId,
+  )
+  entry.traceRoot = trace.traceRoot
+  entry.traceFileSha256 = `sha256:${createHash("sha256")
+    .update(traceBytes)
+    .digest("hex")}`
+  writeFileSync(manifestPath, render(manifest))
+
+  const diffPath = path.join(directory, "semantic-diff.json")
+  const diff = JSON.parse(readFileSync(diffPath, "utf8"))
+  diff.caseDiffs.find(
+    ({ caseId: entryCaseId }: { caseId: string }) => entryCaseId === caseId,
+  ).candidateTraceRoot = trace.traceRoot
+  writeFileSync(diffPath, render(diff))
+  rehash(directory)
 }
 
 describe("v1.37 independent conformance trace review", () => {
@@ -212,4 +245,26 @@ describe("v1.37 independent conformance trace review", () => {
       )
     }
   }, 120_000)
+
+  it("derives protected changes from independently reconstructed trace semantics", () => {
+    const directory = candidate()
+    mutateTraceAndRehash(
+      directory,
+      "boundary-numeric-negative-zero",
+      (trace) => {
+        trace.invocations[0].canonicalPayloadHash =
+          `sha256:${"f".repeat(64)}`
+      },
+    )
+
+    const review = reviewV137ConformanceTraceDiff({
+      candidateDirectory: directory,
+    })
+    expect(review.status).toBe("suspended_pending_approval")
+    expect(review.protectedCategories.strategyObservation.changeCount).toBe(1)
+    expect(
+      review.protectedCategories.historicalInterpretation.changeCount,
+    ).toBe(1)
+    expect(review.protectedCategories.validV14State.changeCount).toBe(0)
+  }, 30_000)
 })
