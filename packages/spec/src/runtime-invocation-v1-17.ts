@@ -59,9 +59,9 @@ export const RUNTIME_INVOCATION_V1_17_CANDIDATE = deepFreeze({
 export const RUNTIME_INVOCATION_V1_17_SELECTED_LIFECYCLE = deepFreeze({
   contractVersion: "runtime-invocation-v1.17",
   runtimeAbiVersion: "strategy-runtime-abi-v1.17",
-  lifecycle: "inactive-candidate",
+  lifecycle: "active-current",
   activationPlan: "258-14",
-  current: false,
+  current: true,
 } as const satisfies RuntimeInvocationLifecycleV117)
 
 export type RuntimeInvocationLifecycleV117 =

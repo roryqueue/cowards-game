@@ -10,7 +10,7 @@ import {
   isExactCommittedRuntimeExecutionServiceRequestV116,
   RuntimeExecutionServiceRequestSchema,
   RuntimeExecutionServiceResponseSchema,
-  RUNTIME_EXECUTION_SERVICE_VERSION,
+  HISTORICAL_RUNTIME_EXECUTION_SERVICE_VERSION_V1_16,
   RuntimeExecutionServiceRequestV117Schema,
   RuntimeExecutionServiceResponseV117Schema,
   RuntimeExecutionFinalStateSchema,
@@ -47,6 +47,8 @@ import {
   type RuntimeEntrantAuthorityReference,
   type Chronicle,
   type ExecutableLaneIdentity,
+  type SoldierBrainResult,
+  type StrategyResult,
   type StrategyRevision,
 } from "@cowards/spec"
 import { hashStrategySource } from "@cowards/runtime-js"
@@ -63,7 +65,6 @@ import {
 import {
   MatchExecutionFailure,
   runMatch,
-  violation,
   type GameState,
   type CanonicalStrategyRuntime,
   type RunMatchInput,
@@ -145,7 +146,7 @@ const candidatePublicResult = (
 })
 
 /**
- * Inactive v1.17 candidate bridge. It performs exactly one adapter attempt,
+ * Selected v1.17 authenticated bridge. It performs exactly one adapter attempt,
  * verifies the complete authenticated response binding, and delegates every
  * gameplay consequence or rollback to the canonical engine driver. Retry is
  * deliberately absent: the Go authority may call this bridge again only with
@@ -1058,11 +1059,6 @@ const executeParsedRequest = (
     )
     if (!created.ok) return created
     if (dependencies.adaptRuntimeForCurrentMatch === undefined) {
-      if (
-        String(STRATEGY_RUNTIME_ABI_VERSION) !== "strategy-runtime-abi-v1.17"
-      ) {
-        return created
-      }
       return {
         ok: false as const,
         diagnostics: {
@@ -1320,7 +1316,7 @@ const executeRuntimeServiceRequestInternal = (
   if (
     selectedRequest.success &&
     runtimeConfig.contractSelection.runtimeServiceVersion !==
-      RUNTIME_EXECUTION_SERVICE_VERSION &&
+      HISTORICAL_RUNTIME_EXECUTION_SERVICE_VERSION_V1_16 &&
     !allowSelectedV117NestedMatch
   ) {
     return systemFailureResponse({
@@ -1528,7 +1524,7 @@ const actualEntrantBindingMatchesV117 = (input: {
 }
 
 /**
- * Prepared but inactive v1.17 full-service path. The injected execution must
+ * Selected current v1.17 full-service path. The injected execution must
  * be the accounting-aware adapter around the actual current Match service;
  * no success can be minted from a caller-provided Chronicle or ledger root.
  */
@@ -1796,7 +1792,9 @@ const createPreparedTypeScriptRuntimeV117 = (input: {
     sequence: number
   }
   candidateInvocationAdapter?: PreparedRuntimeInvocationAdapterV117 | undefined
-}): ReturnType<typeof createRuntimeForRevision> => {
+}):
+  | { ok: true; runtime: CanonicalStrategyRuntime }
+  | { ok: false; diagnostics: Record<string, unknown> } => {
   if (input.revision.runtime.language.id !== "typescript") {
     return {
       ok: false,
@@ -1852,9 +1850,10 @@ const createPreparedTypeScriptRuntimeV117 = (input: {
     }
   }
 
-  const invoke = <TValue extends JsonValue>(
+  const invoke = <TOutput>(
     method: "selectActivations" | "soldierBrain",
-    value: TValue,
+    value: JsonValue,
+    kernelRequest?: { readonly requestId: string } | undefined,
   ) => {
     const sequence = input.ledger.sequence
     input.ledger.sequence += 1
@@ -1868,10 +1867,9 @@ const createPreparedTypeScriptRuntimeV117 = (input: {
       {
         requestId: invocationPublicIdV117("request", identityValues),
         invocationId: invocationPublicIdV117("invocation", identityValues),
-        kernelRequestId: invocationPublicIdV117(
-          "kernel-request",
-          identityValues,
-        ),
+        kernelRequestId:
+          kernelRequest?.requestId ??
+          invocationPublicIdV117("kernel-request", identityValues),
         method,
         semanticTuple: {
           rules: "cowards-rules-v1.4",
@@ -1893,7 +1891,10 @@ const createPreparedTypeScriptRuntimeV117 = (input: {
       },
       input.signingIdentity,
     )
-    const executed = executeCandidateRuntimeInvocationV117({
+    const executed = executeCandidateRuntimeInvocationV117<
+      TOutput,
+      RuntimeInvocationResultV117<TOutput>
+    >({
       request,
       identity: input.signingIdentity,
       invoke: (requestBytes) => {
@@ -1927,62 +1928,47 @@ const createPreparedTypeScriptRuntimeV117 = (input: {
       },
       executeOutcome: (outcome) => outcome,
     })
-    const outcome = executed.internalExecution
+    let outcome = executed.internalExecution
     const accounting = executed.authenticatedAccounting
-    if (
-      accounting?.disposition === "commit" &&
-      outcome.kind !== "system_failure"
-    ) {
-      input.ledger.current = accounting.poststate
-    } else if (
-      outcome.kind !== "system_failure" ||
-      (accounting !== undefined && accounting.disposition !== "no_commit")
-    ) {
-      return {
-        ok: false as const,
-        violation: {
-          type: "INVALID_OUTPUT" as const,
-          message: "Runtime system failure.",
-        },
-        systemFailure: {
-          code: "ACCOUNTING_EVIDENCE_REJECTED",
+    const accountingValid =
+      outcome.kind === "system_failure"
+        ? accounting === undefined || accounting.disposition === "no_commit"
+        : accounting?.disposition === "commit"
+    if (!accountingValid) {
+      outcome = {
+        kind: "system_failure",
+        failure: {
+          code: "AMBIGUOUS_ATTRIBUTION",
+          publicMessage: "Runtime system failure.",
           retryable: false,
         },
+        trace: candidateRequestTrace(request, "AMBIGUOUS_ATTRIBUTION"),
       }
+    } else if (accounting?.disposition === "commit") {
+      input.ledger.current = accounting.poststate
     }
-    if (outcome.kind === "success") {
-      return { ok: true as const, value: outcome.value }
+    return {
+      kind: "v1_17_bound" as const,
+      request: executed.admittedRequest,
+      outcome,
     }
-    if (outcome.kind === "system_failure") {
-      return {
-        ok: false as const,
-        violation: {
-          type: "INVALID_OUTPUT" as const,
-          message: "Runtime system failure.",
-        },
-        systemFailure: {
-          code: outcome.failure.code,
-          retryable: outcome.failure.retryable,
-        },
-      }
-    }
-    return violation(
-      outcome.violation.code === "RESOURCE_EXHAUSTION"
-        ? "TIMEOUT"
-        : outcome.violation.code,
-      outcome.violation.publicMessage,
-    )
   }
 
-  return {
-    ok: true,
-    runtime: {
-      selectActivations: (value) =>
-        invoke("selectActivations", value as unknown as JsonValue),
-      runSoldierBrain: (value) =>
-        invoke("soldierBrain", value as unknown as JsonValue),
-    } as StrategyRuntime,
+  const runtime: CanonicalStrategyRuntime = {
+    selectActivations: (value, kernelRequest) =>
+      invoke<StrategyResult>(
+        "selectActivations",
+        value as unknown as JsonValue,
+        kernelRequest,
+      ),
+    runSoldierBrain: (value, kernelRequest) =>
+      invoke<SoldierBrainResult>(
+        "soldierBrain",
+        value as unknown as JsonValue,
+        kernelRequest,
+      ),
   }
+  return { ok: true, runtime }
 }
 
 /**
@@ -2003,7 +1989,7 @@ export const createPreparedRuntimeServiceDependenciesV117 = (
       input.runtimeConfig,
       {
         authorityLoader: input.currentAuthorityLoader,
-        createRuntimeForRevision: (revision) =>
+        createCanonicalRuntimeForRevision: (revision) =>
           createPreparedTypeScriptRuntimeV117({
             request,
             revision,

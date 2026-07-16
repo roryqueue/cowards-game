@@ -1,7 +1,7 @@
 import {
   CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE,
   CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_ID,
-  hashCanonicalCompatibilityTuple,
+  CURRENT_CANONICAL_COMPATIBILITY_TUPLE_RECORD,
   type CanonicalCompatibilityTuple,
 } from "@cowards/spec"
 import type {
@@ -24,23 +24,17 @@ import type {
 } from "../types.js"
 
 /**
- * Single executable identity for the inactive v1.37 candidate kernel. Every
+ * Single executable identity for the active v1.37 current kernel. Every
  * request, machine, transition, and recorder boundary is checked against this
  * exact six-component tuple and its recomputed identifier.
  */
-export const CANDIDATE_KERNEL_SEMANTIC_TUPLE = Object.freeze({
-  rules: "cowards-rules-v1.4",
-  engine: "engine-kernel-v1.37-candidate-1",
-  runtimeAbi: "strategy-runtime-abi-v1.14",
-  chronicle: "chronicle-recorder-current-events-v1.37-candidate-1",
-  arenaCatalog: "semantic-arena-catalog-v1.37-candidate-1",
-  setPolicy: "canonical-set-policy-v1.4",
-}) satisfies Readonly<CanonicalCompatibilityTuple>
+export const CANDIDATE_KERNEL_SEMANTIC_TUPLE =
+  CURRENT_CANONICAL_COMPATIBILITY_TUPLE_RECORD.tuple satisfies Readonly<CanonicalCompatibilityTuple>
 
 export const CANDIDATE_KERNEL_SEMANTIC_TUPLE_ID =
-  `sha256:${hashCanonicalCompatibilityTuple(CANDIDATE_KERNEL_SEMANTIC_TUPLE)}` as const
+  CURRENT_CANONICAL_COMPATIBILITY_TUPLE_RECORD.tupleId
 
-/** Additive inactive successor identity; current/default constructors stay v1.14. */
+/** Retained successor aliases now resolve to the selected current v1.17 identity. */
 export {
   CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE as CANDIDATE_KERNEL_V117_SEMANTIC_TUPLE,
   CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_ID as CANDIDATE_KERNEL_V117_SEMANTIC_TUPLE_ID,

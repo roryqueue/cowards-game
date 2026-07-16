@@ -256,7 +256,7 @@ export type SupportedStrategyLanguageCountedEligibility =
   | "pending-evidence"
 
 export const STRATEGY_LANGUAGE_PROVIDER_CONTRACT_VERSION =
-  "strategy-language-provider-contract-v1.33" as const
+  "runtime-provider-validation-v1.17" as const
 
 export interface SupportedStrategyLanguageRecord {
   id: StrategyLanguageId
@@ -294,6 +294,7 @@ export type StrategyRuntimeAbiPosture =
   | "runtime-js-source-artifact"
   | "python-source-provenance-json"
   | "wasi-preview1-stdin-stdout-json"
+  | "wasi-preview1-stdin-canonical-request-stdout-raw-canonical-payload"
 
 export interface StrategyLanguageProviderRecord {
   id: SupportedStrategyLanguageProviderId
@@ -719,7 +720,7 @@ export const SUPPORTED_STRATEGY_LANGUAGES = [
     ],
     notes: [
       "Counted play requires runtime-service provider validation, immutable WASM/WASI artifact metadata, import audit, and provider proof bound to source and artifact hashes.",
-      "WASI Preview 1 stdin/stdout JSON remains the active Rust ABI; direct exports and Component Model/WIT stay deferred.",
+      "WASI Preview 1 reads one canonical v1.17 request from stdin and writes one raw canonical payload to stdout; direct exports and Component Model/WIT stay deferred.",
     ],
   },
   {
@@ -1102,7 +1103,8 @@ export const STRATEGY_LANGUAGE_PROVIDER_REGISTRY = [
     runtimeTarget: "runtime-wasm-wasi",
     adapterIds: ["runtime-wasm-wasi-wasmtime-preview1"],
     runtimeAbiVersion: STRATEGY_RUNTIME_ABI_VERSION,
-    abiPosture: "wasi-preview1-stdin-stdout-json",
+    abiPosture:
+      "wasi-preview1-stdin-canonical-request-stdout-raw-canonical-payload",
     validationOwner: "runtime-service",
     buildOwner: "runtime-service",
     executionOwner: "runtime-service",
@@ -1126,7 +1128,7 @@ export const STRATEGY_LANGUAGE_PROVIDER_REGISTRY = [
       "runtime-output-schema-validation-required",
     ],
     migrationNotes: [
-      "WASI Preview 1 stdin/stdout JSON remains active for Rust in Phase 224; direct exports and Component Model/WIT stay deferred.",
+      "Rust retains WASI Preview 1 while adopting the canonical v1.17 stdin request and raw canonical stdout payload envelope; direct exports and Component Model/WIT stay deferred.",
     ],
   },
   {
@@ -1136,7 +1138,8 @@ export const STRATEGY_LANGUAGE_PROVIDER_REGISTRY = [
     runtimeTarget: "runtime-wasm-wasi",
     adapterIds: ["runtime-wasm-wasi-wasmtime-preview1"],
     runtimeAbiVersion: STRATEGY_RUNTIME_ABI_VERSION,
-    abiPosture: "wasi-preview1-stdin-stdout-json",
+    abiPosture:
+      "wasi-preview1-stdin-canonical-request-stdout-raw-canonical-payload",
     validationOwner: "runtime-service",
     buildOwner: "runtime-service",
     executionOwner: "runtime-service",
@@ -1160,7 +1163,7 @@ export const STRATEGY_LANGUAGE_PROVIDER_REGISTRY = [
       "runtime-output-schema-validation-required",
     ],
     migrationNotes: [
-      "WASI Preview 1 stdin/stdout JSON remains active for Zig in Phase 224; direct exports and Component Model/WIT stay deferred.",
+      "Zig retains WASI Preview 1 while adopting the canonical v1.17 stdin request and raw canonical stdout payload envelope; direct exports and Component Model/WIT stay deferred.",
     ],
   },
 ] as const satisfies readonly StrategyLanguageProviderRecord[]
@@ -1850,16 +1853,18 @@ export const evaluateStrategyRuntimeCountedEligibility = (
   value: unknown,
   evidence?: EvaluateExecutableLaneEligibilityInput | undefined,
 ): StrategyRuntimeCountedEligibility => {
+  const issues = validateStrategyRuntimeMetadataPolicy(value)
   const issue =
-    validateStrategyRuntimeMetadataPolicy(value).find((candidate) =>
+    issues.find((candidate) => candidate.code === "NON_COUNTED_RUNTIME") ??
+    issues.find((candidate) =>
       [
         "ABI_MISMATCH",
         "UNSUPPORTED_LANGUAGE",
         "INCOMPATIBLE_ADAPTER",
         "UNSUPPORTED_PACKAGE_METADATA",
-        "NON_COUNTED_RUNTIME",
       ].includes(candidate.code),
-    ) ?? null
+    ) ??
+    null
 
   if (issue) {
     return {

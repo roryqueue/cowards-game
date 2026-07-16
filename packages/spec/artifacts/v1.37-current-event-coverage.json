@@ -3,7 +3,7 @@
   "generatorVersion": "generate-v1-37-event-coverage-v2",
   "generatedBy": "scripts/generate-v1-37-event-coverage.ts",
   "status": "current-exact",
-  "tupleId": "sha256:922a6857fdbc8354b744d6e766bff216f3fee85b5ed381355cb427f5a616b3ae",
+  "tupleId": "sha256:0d8a04fdfe49e3aa7261728ee51beb0a9049b661aad978277f2892c3a4bc54fe",
   "currentEventVocabulary": [
     "MATCH_STARTED",
     "ROUND_STARTED",

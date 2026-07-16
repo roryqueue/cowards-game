@@ -9,7 +9,7 @@ import {
   RUNTIME_EXECUTION_SERVICE_IMPLEMENTATION_LABEL,
   RUNTIME_EXECUTION_SERVICE_PUBLIC_NAME,
   RUNTIME_EXECUTION_SERVICE_TRANSPORT_BINDING,
-  RUNTIME_EXECUTION_SERVICE_VERSION,
+  HISTORICAL_RUNTIME_EXECUTION_SERVICE_VERSION_V1_16,
   RUNTIME_EXECUTION_SERVICE_VERSION_V1_17,
   RUNTIME_INVOCATION_V1_17_PLAYER_VIOLATIONS,
   RuntimeExecutionServiceResponseSchema,
@@ -277,7 +277,7 @@ const malformedRequestResponse = (
   message: string,
 ): RuntimeExecutionServiceResponse =>
   RuntimeExecutionServiceResponseSchema.parse({
-    contractVersion: RUNTIME_EXECUTION_SERVICE_VERSION,
+    contractVersion: HISTORICAL_RUNTIME_EXECUTION_SERVICE_VERSION_V1_16,
     ok: false,
     kind: "systemFailure",
     requestId: "runtime-request:unknown",
@@ -704,7 +704,7 @@ export const createRuntimeExecutionHttpHandler = (
       const rawRequest = JSON.parse(body) as unknown
       if (
         runtimeConfig.contractSelection.runtimeServiceVersion !==
-        RUNTIME_EXECUTION_SERVICE_VERSION
+        HISTORICAL_RUNTIME_EXECUTION_SERVICE_VERSION_V1_16
       ) {
         writeCanonicalJsonV117(
           response,
@@ -723,15 +723,31 @@ export const createRuntimeExecutionHttpHandler = (
       })
       writeJson(response, result.ok ? 200 : 422, result)
     } catch (error) {
-      writeJson(
-        response,
-        400,
-        malformedRequestResponse(
-          error instanceof Error
-            ? redactedErrorMessage(error)
-            : "Runtime execution request was malformed.",
-        ),
-      )
+      if (
+        runtimeConfig.contractSelection.runtimeServiceVersion ===
+        RUNTIME_EXECUTION_SERVICE_VERSION_V1_17
+      ) {
+        writeCanonicalJsonV117(
+          response,
+          400,
+          failPreparedRuntimeServiceRequestV117({
+            rawRequest: undefined,
+            code: "MALFORMED_REQUEST",
+            ownership: "system_integrity",
+            retryable: false,
+          }) as unknown as JsonValue,
+        )
+      } else {
+        writeJson(
+          response,
+          400,
+          malformedRequestResponse(
+            error instanceof Error
+              ? redactedErrorMessage(error)
+              : "Runtime execution request was malformed.",
+          ),
+        )
+      }
     }
   }
 }

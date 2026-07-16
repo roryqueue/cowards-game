@@ -4,6 +4,7 @@ import {
   ChronicleSchema,
   COMPATIBILITY_VERSIONS,
   CURRENT_CANONICAL_COMPATIBILITY_TUPLE_RECORD,
+  STRATEGY_RUNTIME_ABI_VERSION,
   HistoricalV14ChronicleSchema,
   MatchExecutionExactEvidenceV137Schema,
   RuntimeExecutionFinalStateSchema,
@@ -57,6 +58,12 @@ export const V1_37_CURRENT_REPLAY_TUPLE = Object.freeze({
   tupleId: string
   tuple: Readonly<CanonicalCompatibilityTuple>
 }>
+
+if (
+  V1_37_CURRENT_REPLAY_TUPLE.tuple.runtimeAbi !== STRATEGY_RUNTIME_ABI_VERSION
+) {
+  throw new Error("Current replay authority is not the activated v1.17 tuple.")
+}
 
 export const CURRENT_REPLAY_ADMISSION_CODE_ORDER = Object.freeze([
   "CURRENT_ROUTE_INVALID",

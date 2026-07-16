@@ -21,7 +21,11 @@ import type {
   StrategyResult,
   StrategyRevisionId,
 } from "@cowards/spec"
-import type { CandidateStrategyRuntime } from "./kernel/types.js"
+import type {
+  CandidateBoundRuntimeInvocationV117,
+  KernelSelectActivationsRequest,
+  KernelSoldierBrainRequest,
+} from "./kernel/types.js"
 
 export type PlayerSide = "bottom" | "top"
 export type MatchPhase = "ROUND" | "CONTRACTION" | "COMPLETE"
@@ -88,11 +92,21 @@ export interface StrategyRuntime {
 }
 
 /**
- * Runtime boundary accepted by the canonical kernel. Legacy StrategyRuntime
- * implementations are a structural subset; current adapters may return an
- * authenticated response bound to the optional kernel request.
+ * Current public runtime boundary accepted by the canonical kernel. Every
+ * invocation is bound to the required kernel effect request and returns the
+ * authenticated v1.17 request/outcome envelope. CandidateStrategyRuntime
+ * remains the broader internal boundary for explicit historical dispatch.
  */
-export type CanonicalStrategyRuntime = CandidateStrategyRuntime
+export interface CanonicalStrategyRuntime {
+  selectActivations(
+    input: StrategyInput,
+    request: KernelSelectActivationsRequest,
+  ): CandidateBoundRuntimeInvocationV117<StrategyResult>
+  runSoldierBrain(
+    input: SoldierBrainInput,
+    request: KernelSoldierBrainRequest,
+  ): CandidateBoundRuntimeInvocationV117<SoldierBrainResult>
+}
 
 export type ActivationTerminalReason =
   | "BACKSTABBED"

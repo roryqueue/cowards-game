@@ -78,6 +78,25 @@ type matchCompletionOwnershipRow struct {
 	TopPlayerID              string
 }
 
+func validateSelectedRuntimeCompletionAuthority(input completeMatchInput, integrity *claimedMatchIntegrityIdentity) error {
+	if integrity == nil || integrity.CompatibilityTuple.RuntimeABI != selectedStrategyRuntimeABIVersion() {
+		return errors.New("match completion runtime ABI is not the selected authority")
+	}
+	switch selectedRuntimeServiceContractVersion() {
+	case runtimeExecutionServiceVersionV117:
+		if input.RuntimeRequestV117 == nil || input.SemanticReceiptV117 == nil {
+			return errors.New("match completion is not bound to the selected v1.17 runtime authority")
+		}
+	case runtimeExecutionServiceVersion:
+		if input.RuntimeRequestV117 != nil || input.SemanticReceiptV117 != nil {
+			return errors.New("match completion mixed current and historical runtime authority")
+		}
+	default:
+		return errors.New("match completion runtime authority is unavailable")
+	}
+	return nil
+}
+
 func newMatchCompletionService(pool *pgxpool.Pool) *matchCompletionService {
 	return &matchCompletionService{pool: pool, loadAuthority: loadProductionRuntimeEvidenceAuthorityFromEnvironment, now: time.Now, semanticReceiptSecret: runtimeServiceSemanticReceiptSecret(), successorAuthorityTrustDomain: runtimeEvidenceAuthorityProductionTrustDomain}
 }
@@ -87,6 +106,9 @@ func (service *matchCompletionService) completeMatch(ctx context.Context, input 
 		return nil, errors.New("match completion requires a database pool")
 	}
 	if !service.allowLegacyTestCompletion {
+		if err := validateSelectedRuntimeCompletionAuthority(input, input.Integrity); err != nil {
+			return nil, err
+		}
 		if err := validateVersionedRuntimeSemanticReceiptForCompletion(input, input.Integrity, service.semanticReceiptSecret); err != nil {
 			return nil, err
 		}
@@ -184,6 +206,9 @@ func (service *matchCompletionService) completeMatch(ctx context.Context, input 
 	if !service.allowLegacyTestCompletion {
 		lockedIntegrity, err = service.lockCompletionIntegrity(ctx, tx, input.JobID, input.LeaseToken, input.Integrity)
 		if err != nil {
+			return nil, err
+		}
+		if err := validateSelectedRuntimeCompletionAuthority(input, lockedIntegrity); err != nil {
 			return nil, err
 		}
 		if err := validateVersionedRuntimeSemanticReceiptForCompletion(input, lockedIntegrity, service.semanticReceiptSecret); err != nil {

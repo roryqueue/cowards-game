@@ -16,6 +16,14 @@ export * from "./public-discovery.js"
 export * from "./runtime-execution-service.js"
 export * from "./runtime-execution-service-v1-16-compat.js"
 export * from "./runtime-execution-service-v1-17.js"
+export {
+  RUNTIME_EXECUTION_SERVICE_VERSION as HISTORICAL_RUNTIME_EXECUTION_SERVICE_VERSION_V1_16,
+  RUNTIME_SEMANTIC_RECEIPT_SCHEMA_VERSION as HISTORICAL_RUNTIME_SEMANTIC_RECEIPT_SCHEMA_VERSION_V1_16,
+} from "./runtime-execution-service.js"
+export {
+  RUNTIME_EXECUTION_SERVICE_VERSION_V1_17 as CURRENT_RUNTIME_EXECUTION_SERVICE_VERSION,
+  RUNTIME_SEMANTIC_RECEIPT_SCHEMA_VERSION_V1_17 as CURRENT_RUNTIME_SEMANTIC_RECEIPT_SCHEMA_VERSION,
+} from "./runtime-execution-service-v1-17.js"
 export * from "./runtime-identity-manifest.js"
 export * from "./runtime-evidence-v1-17.js"
 export * from "./runtime-evidence-authority-bundle.js"

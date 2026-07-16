@@ -206,6 +206,9 @@ func (orchestrator *goMatchOrchestrator) runOnce(ctx context.Context, matchIDs [
 }
 
 func buildRuntimeServiceExecutionRequestForClaimedJob(ctx context.Context, pool *pgxpool.Pool, claimed *claimedMatchJob, registry *goDeploymentLaneRegistry) (*runtimeServiceExecutionRequest, error) {
+	if claimed == nil || claimed.Integrity == nil || claimed.Integrity.CompatibilityTuple.RuntimeABI != selectedStrategyRuntimeABIVersion() {
+		return nil, errors.New("claimed Match runtime ABI is not the selected execution authority")
+	}
 	request, err := buildRuntimeServiceRequestForClaimedJob(ctx, pool, claimed, registry)
 	if err != nil {
 		return nil, err

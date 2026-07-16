@@ -181,6 +181,10 @@ func (server *LiveServer) runMatchJobOnce(writer http.ResponseWriter, request *h
 		writeServiceError(writer, http.StatusForbidden, "FORBIDDEN", "Forbidden.")
 		return
 	}
+	if !selectedRuntimeExecutionAuthorityCoherent() {
+		goOrchestrationHTTPError(writer, http.StatusServiceUnavailable)
+		return
+	}
 	matchIDs, ok := decodeRunMatchJobOnceAllowlist(writer, request)
 	if !ok {
 		return
@@ -247,6 +251,10 @@ func (server *LiveServer) recoverMatchExecutionJob(writer http.ResponseWriter, r
 	token := os.Getenv("COWARDS_GO_BACKEND_INTERNAL_TOKEN")
 	if token == "" || request.Header.Get("X-Cowards-Internal-Token") != token {
 		writeServiceError(writer, http.StatusForbidden, "FORBIDDEN", "Forbidden.")
+		return
+	}
+	if !selectedRuntimeExecutionAuthorityCoherent() {
+		goOrchestrationHTTPError(writer, http.StatusServiceUnavailable)
 		return
 	}
 	var body struct {

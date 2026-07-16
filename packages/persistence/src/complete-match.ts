@@ -11,6 +11,7 @@ import {
   CANONICAL_COMPATIBILITY_TUPLES,
   RuntimeExecutionFinalStateSchema,
   RuntimeExecutionResolvedEvidenceSnapshotSchema,
+  STRATEGY_RUNTIME_ABI_VERSION,
   validateCanonicalGameState,
   type Chronicle,
   type MatchId,
@@ -127,6 +128,7 @@ export const admitCurrentMatchCompletion = (input: {
   const activeCurrent = CANONICAL_COMPATIBILITY_TUPLES[0]
   if (
     !activeCurrent ||
+    activeCurrent.tuple.runtimeAbi !== STRATEGY_RUNTIME_ABI_VERSION ||
     !exactTupleMatches(input.compatibility, activeCurrent) ||
     input.execution === undefined ||
     input.execution.kind !== "completed" ||
@@ -136,14 +138,14 @@ export const admitCurrentMatchCompletion = (input: {
       "CURRENT_EXECUTION_BOUNDARY_MISSING",
     )
   }
-  const candidate = {
+  const currentEnvelope = {
     profile: "current-exact" as const,
     compatibility: input.compatibility,
     chronicle: input.chronicle,
     execution: input.execution,
     boundaryAnchors: input.boundaryAnchors,
   }
-  const validation = validateCurrentChronicle(candidate)
+  const validation = validateCurrentChronicle(currentEnvelope)
   const reconstruction = validateCurrentReplayReconstruction({
     chronicle: input.chronicle,
     execution: input.execution,
@@ -213,6 +215,7 @@ const prepareCompletion = (input: CompleteMatchRequest): PreparedCompletion => {
     const activeCurrent = CANONICAL_COMPATIBILITY_TUPLES[0]
     if (
       !activeCurrent ||
+      activeCurrent.tuple.runtimeAbi !== STRATEGY_RUNTIME_ABI_VERSION ||
       !exactTupleMatches(integrityIdentity.compatibility, activeCurrent)
     ) {
       throw new MatchCompletionSemanticSystemFailure(

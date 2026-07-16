@@ -2,7 +2,7 @@ import type { CompatibilityVersions } from "./types.js"
 
 // Kept with other compatibility constants so the canonical tuple and runtime
 // facade can depend on it without creating an integrity-authority/runtime cycle.
-export const STRATEGY_RUNTIME_ABI_VERSION = "strategy-runtime-abi-v1.14"
+export const STRATEGY_RUNTIME_ABI_VERSION = "strategy-runtime-abi-v1.17"
 
 /**
  * The atomic semantic-tuple selector is deliberately separate from the ABI
@@ -10,7 +10,7 @@ export const STRATEGY_RUNTIME_ABI_VERSION = "strategy-runtime-abi-v1.14"
  * inferred from a version-shaped value. Plan 258-14 flips this key together
  * with the runtime defaults after both records and encodings are proved.
  */
-export const CURRENT_CANONICAL_COMPATIBILITY_TUPLE_KEY = "runtime-v1.14"
+export const CURRENT_CANONICAL_COMPATIBILITY_TUPLE_KEY = "runtime-v1.17"
 
 export const COMPATIBILITY_VERSIONS = {
   spec: "cowards-rules-v1.4",
