@@ -48,6 +48,78 @@ const V117_EFFECT_REQUEST_HASH_DOMAIN =
   "cowards-game:kernel-effect-request:v1.17" as const
 const HASH_PATTERN = /^sha256:[0-9a-f]{64}$/u
 
+const kernelOwnedEventHistories = new WeakSet<object>()
+const kernelOwnedEventSummaries = new WeakSet<object>()
+const kernelEventHistoryExtensions = new WeakMap<
+  object,
+  Readonly<{
+    before: readonly TransitionEventSummary[]
+    appended: readonly TransitionEventSummary[]
+  }>
+>()
+const kernelOwnedRequestIdHistories = new WeakSet<object>()
+const kernelRequestIdHistoryExtensions = new WeakMap<
+  object,
+  Readonly<{ before: readonly string[]; appended: string }>
+>()
+
+const deepFreezeDetached = <T>(value: T): T => {
+  if (value !== null && typeof value === "object" && !Object.isFrozen(value)) {
+    for (const child of Object.values(value as Record<string, unknown>)) {
+      deepFreezeDetached(child)
+    }
+    Object.freeze(value)
+  }
+  return value
+}
+
+export const createKernelEventHistory =
+  (): readonly TransitionEventSummary[] => {
+    const history = Object.freeze([]) as readonly TransitionEventSummary[]
+    kernelOwnedEventHistories.add(history)
+    return history
+  }
+
+export const appendKernelEventHistory = (
+  before: readonly TransitionEventSummary[],
+  appended: readonly TransitionEventSummary[],
+): Readonly<{
+  events: readonly TransitionEventSummary[]
+  fullEvents: readonly TransitionEventSummary[]
+}> => {
+  if (!kernelOwnedEventHistories.has(before)) {
+    return { events: appended, fullEvents: [...before, ...appended] }
+  }
+  const events = Object.freeze(
+    appended.map((summary) => {
+      const detached = deepFreezeDetached(globalThis.structuredClone(summary))
+      kernelOwnedEventSummaries.add(detached)
+      return detached
+    }),
+  )
+  const fullEvents = Object.freeze([...before, ...events])
+  kernelOwnedEventHistories.add(fullEvents)
+  kernelEventHistoryExtensions.set(fullEvents, { before, appended: events })
+  return { events, fullEvents }
+}
+
+export const createKernelRequestIdHistory = (): readonly string[] => {
+  const history = Object.freeze([]) as readonly string[]
+  kernelOwnedRequestIdHistories.add(history)
+  return history
+}
+
+export const appendKernelRequestIdHistory = (
+  before: readonly string[],
+  appended: string,
+): readonly string[] => {
+  if (!kernelOwnedRequestIdHistories.has(before)) return [...before, appended]
+  const history = Object.freeze([...before, appended])
+  kernelOwnedRequestIdHistories.add(history)
+  kernelRequestIdHistoryExtensions.set(history, { before, appended })
+  return history
+}
+
 const codePointCompare = (left: string, right: string): number => {
   const leftPoints = Array.from(left, (value) => value.codePointAt(0)!)
   const rightPoints = Array.from(right, (value) => value.codePointAt(0)!)
@@ -173,7 +245,14 @@ export const projectMatchMachineForHash = (machine: MatchMachine) => ({
     ended: slot.ended,
     terminalReason: slot.terminalReason ?? null,
   })),
-  consumedRequestIds: [...machine.consumedRequestIds].sort(codePointCompare),
+  consumedRequestIds:
+    machine.semanticTuple.tupleId ===
+    CANDIDATE_KERNEL_V117_SEMANTIC_TUPLE_ID
+      ? {
+          commitment: requestIdHistoryCommitment(machine.consumedRequestIds),
+          count: machine.consumedRequestIds.length,
+        }
+      : [...machine.consumedRequestIds].sort(codePointCompare),
 })
 
 export const hashMatchMachine = (machine: MatchMachine): string =>
@@ -390,87 +469,92 @@ const normalizeEffectIdentityJson = (value: unknown): JsonValue => {
   return root
 }
 
-export const expectedEffectRequestId = (
+const privateEffectIdentityState = (state: GameState) => ({
+  matchId: state.matchId,
+  seed: state.seed,
+  versions: {
+    spec: state.versions.spec,
+    engine: state.versions.engine,
+    runtimeJs: state.versions.runtimeJs,
+    chronicle: state.versions.chronicle,
+    strategyRevision: state.versions.strategyRevision,
+    arenaVariant: state.versions.arenaVariant,
+  },
+  arenaVariant: {
+    id: state.arenaVariant.id,
+    name: state.arenaVariant.name,
+    initialBounds: {
+      minX: state.arenaVariant.initialBounds.minX,
+      maxX: state.arenaVariant.initialBounds.maxX,
+      minY: state.arenaVariant.initialBounds.minY,
+      maxY: state.arenaVariant.initialBounds.maxY,
+    },
+    terrainStones: [...state.arenaVariant.terrainStones]
+      .map(({ x, y }) => ({ x, y }))
+      .sort((left, right) => left.x - right.x || left.y - right.y),
+  },
+  players: [...state.players]
+    .map((player) => ({
+      id: player.id,
+      side: player.side,
+      strategyRevisionId: player.strategyRevisionId,
+      strategyMemory: normalizeEffectIdentityJson(player.strategyMemory),
+    }))
+    .sort((left, right) => codePointCompare(left.id, right.id)),
+  soldiers: [...state.soldiers]
+    .map((soldier) => ({
+      id: soldier.id,
+      ownerPlayerId: soldier.ownerPlayerId,
+      status: soldier.status,
+      position:
+        soldier.position === null
+          ? null
+          : { x: soldier.position.x, y: soldier.position.y },
+      facing: soldier.facing ?? null,
+      lastSuccessfulMoveDirection: soldier.lastSuccessfulMoveDirection ?? null,
+      soldierMemory: normalizeEffectIdentityJson(soldier.soldierMemory),
+    }))
+    .sort((left, right) => codePointCompare(left.id, right.id)),
+  phase: state.phase,
+  phaseNumber: state.phaseNumber,
+  roundNumber: state.roundNumber,
+  activationCount: state.activationCount,
+  initiativePlayerId: state.initiativePlayerId,
+  bounds: {
+    minX: state.bounds.minX,
+    maxX: state.bounds.maxX,
+    minY: state.bounds.minY,
+    maxY: state.bounds.maxY,
+  },
+  terrainStones: [...state.terrainStones]
+    .map(({ x, y }) => ({ x, y }))
+    .sort((left, right) => left.x - right.x || left.y - right.y),
+  outcome: state.outcome ?? null,
+})
+
+const effectEventIdentityMaterial = (
+  summary: TransitionEventSummary,
+): JsonValue => ({
+  type: summary.type,
+  sequence: summary.sequence,
+  payload: normalizeEffectIdentityJson(summary.payload),
+  context: normalizeEffectIdentityJson(summary.context),
+  privacy: summary.privacy ?? null,
+  privatePayload: normalizeEffectIdentityJson(summary.privatePayload),
+})
+
+const effectIdentityMaterial = (
   machine: MatchMachine,
   kind: KernelEffectRequest["kind"],
   suffix: string,
-): string => {
-  if (
-    machine.semanticTuple.tupleId !==
-    CANDIDATE_KERNEL_V117_SEMANTIC_TUPLE_ID
-  ) {
-    return `effect:${machine.cursor.ordinal}:${machine.cursor.stage}:${kind}:${suffix}`
-  }
-  const privateState = (state: GameState) => ({
-    matchId: state.matchId,
-    seed: state.seed,
-    versions: {
-      spec: state.versions.spec,
-      engine: state.versions.engine,
-      runtimeJs: state.versions.runtimeJs,
-      chronicle: state.versions.chronicle,
-      strategyRevision: state.versions.strategyRevision,
-      arenaVariant: state.versions.arenaVariant,
-    },
-    arenaVariant: {
-      id: state.arenaVariant.id,
-      name: state.arenaVariant.name,
-      initialBounds: {
-        minX: state.arenaVariant.initialBounds.minX,
-        maxX: state.arenaVariant.initialBounds.maxX,
-        minY: state.arenaVariant.initialBounds.minY,
-        maxY: state.arenaVariant.initialBounds.maxY,
-      },
-      terrainStones: [...state.arenaVariant.terrainStones]
-        .map(({ x, y }) => ({ x, y }))
-        .sort((left, right) => left.x - right.x || left.y - right.y),
-    },
-    players: [...state.players]
-      .map((player) => ({
-        id: player.id,
-        side: player.side,
-        strategyRevisionId: player.strategyRevisionId,
-        strategyMemory: normalizeEffectIdentityJson(player.strategyMemory),
-      }))
-      .sort((left, right) => codePointCompare(left.id, right.id)),
-    soldiers: [...state.soldiers]
-      .map((soldier) => ({
-        id: soldier.id,
-        ownerPlayerId: soldier.ownerPlayerId,
-        status: soldier.status,
-        position:
-          soldier.position === null
-            ? null
-            : { x: soldier.position.x, y: soldier.position.y },
-        facing: soldier.facing ?? null,
-        lastSuccessfulMoveDirection:
-          soldier.lastSuccessfulMoveDirection ?? null,
-        soldierMemory: normalizeEffectIdentityJson(soldier.soldierMemory),
-      }))
-      .sort((left, right) => codePointCompare(left.id, right.id)),
-    phase: state.phase,
-    phaseNumber: state.phaseNumber,
-    roundNumber: state.roundNumber,
-    activationCount: state.activationCount,
-    initiativePlayerId: state.initiativePlayerId,
-    bounds: {
-      minX: state.bounds.minX,
-      maxX: state.bounds.maxX,
-      minY: state.bounds.minY,
-      maxY: state.bounds.maxY,
-    },
-    terrainStones: [...state.terrainStones]
-      .map(({ x, y }) => ({ x, y }))
-      .sort((left, right) => left.x - right.x || left.y - right.y),
-    outcome: state.outcome ?? null,
-  })
-  const material = {
+): JsonValue =>
+  ({
     kind,
     suffix,
     executionMode: machine.executionMode,
     semanticTupleId: machine.semanticTuple.tupleId,
-    state: privateState(machine.state),
-    initialState: privateState(machine.initialState),
+    state: privateEffectIdentityState(machine.state),
+    initialState: privateEffectIdentityState(machine.initialState),
     cursor: {
       stage: machine.cursor.stage,
       ordinal: machine.cursor.ordinal,
@@ -503,16 +587,15 @@ export const expectedEffectRequestId = (
       ended: slot.ended,
       terminalReason: slot.terminalReason ?? null,
     })),
-    fullEvents: machine.fullEvents.map((summary) => ({
-      type: summary.type,
-      sequence: summary.sequence,
-      payload: normalizeEffectIdentityJson(summary.payload),
-      context: normalizeEffectIdentityJson(summary.context),
-      privacy: summary.privacy ?? null,
-      privatePayload: normalizeEffectIdentityJson(summary.privatePayload),
-    })),
-    consumedRequestIds: [...machine.consumedRequestIds].sort(codePointCompare),
-  } as JsonValue
+    fullEventsCommitment: fullEventHistoryCommitment(machine.fullEvents),
+    fullEventsCount: machine.fullEvents.length,
+    consumedRequestIdsCommitment: requestIdHistoryCommitment(
+      machine.consumedRequestIds,
+    ),
+    consumedRequestIdsCount: machine.consumedRequestIds.length,
+  }) as JsonValue
+
+const encodeEffectIdentityReference = (material: JsonValue): Uint8Array => {
   const encoded = encodeCanonicalJson(material, {
     context: "canonical-manifest",
   })
@@ -521,13 +604,125 @@ export const expectedEffectRequestId = (
       `KERNEL_EFFECT_IDENTITY_INVALID:${encoded.error.code}:${encoded.error.path.join(".")}`,
     )
   }
-  const digest = createHash("sha256")
-    .update(`${V117_EFFECT_REQUEST_HASH_DOMAIN}\0`, "utf8")
-    .update(encoded.bytes)
-    .digest("hex")
-  return `effect:v1.17:${digest}`
+  return encoded.bytes
 }
 
+type Sha256Commitment = `sha256:${string}`
+
+const FULL_EVENT_COMMITMENT_DOMAIN =
+  "cowards-game:kernel-effect-full-events-commitment:v1.17" as const
+const REQUEST_ID_COMMITMENT_DOMAIN =
+  "cowards-game:kernel-effect-consumed-request-ids-commitment:v1.17" as const
+const effectEventBytesCache = new WeakMap<object, Uint8Array>()
+const fullEventCommitmentCache = new WeakMap<object, Sha256Commitment>()
+const requestIdCommitmentCache = new WeakMap<object, Sha256Commitment>()
+
+const emptyCommitment = (domain: string): Sha256Commitment =>
+  `sha256:${createHash("sha256")
+    .update(`${domain}\0empty`, "utf8")
+    .digest("hex")}`
+
+const extendCommitment = (
+  domain: string,
+  previous: Sha256Commitment,
+  canonicalBytes: Uint8Array,
+): Sha256Commitment =>
+  `sha256:${createHash("sha256")
+    .update(
+      `${domain}\0step\0${previous}\0${canonicalBytes.byteLength}\0`,
+      "utf8",
+    )
+    .update(canonicalBytes)
+    .digest("hex")}`
+
+const effectEventBytes = (summary: TransitionEventSummary): Uint8Array => {
+  if (kernelOwnedEventSummaries.has(summary)) {
+    const cached = effectEventBytesCache.get(summary)
+    if (cached !== undefined) return cached
+  }
+  const bytes = encodeEffectIdentityReference(
+    effectEventIdentityMaterial(summary),
+  )
+  if (kernelOwnedEventSummaries.has(summary)) {
+    effectEventBytesCache.set(summary, bytes)
+  }
+  return bytes
+}
+
+const fullEventHistoryCommitment = (
+  history: readonly TransitionEventSummary[],
+): Sha256Commitment => {
+  if (kernelOwnedEventHistories.has(history)) {
+    const cached = fullEventCommitmentCache.get(history)
+    if (cached !== undefined) return cached
+  }
+  const extension = kernelEventHistoryExtensions.get(history)
+  let commitment =
+    extension === undefined
+      ? emptyCommitment(FULL_EVENT_COMMITMENT_DOMAIN)
+      : fullEventHistoryCommitment(extension.before)
+  const appended = extension?.appended ?? history
+  for (const summary of appended) {
+    commitment = extendCommitment(
+      FULL_EVENT_COMMITMENT_DOMAIN,
+      commitment,
+      effectEventBytes(summary),
+    )
+  }
+  if (kernelOwnedEventHistories.has(history)) {
+    fullEventCommitmentCache.set(history, commitment)
+  }
+  return commitment
+}
+
+const requestIdBytes = (requestId: string): Uint8Array =>
+  encodeEffectIdentityReference(requestId)
+
+const requestIdHistoryCommitment = (
+  history: readonly string[],
+): Sha256Commitment => {
+  if (kernelOwnedRequestIdHistories.has(history)) {
+    const cached = requestIdCommitmentCache.get(history)
+    if (cached !== undefined) return cached
+  }
+  const extension = kernelRequestIdHistoryExtensions.get(history)
+  let commitment =
+    extension === undefined
+      ? emptyCommitment(REQUEST_ID_COMMITMENT_DOMAIN)
+      : requestIdHistoryCommitment(extension.before)
+  const appended = extension === undefined ? history : [extension.appended]
+  for (const requestId of appended) {
+    commitment = extendCommitment(
+      REQUEST_ID_COMMITMENT_DOMAIN,
+      commitment,
+      requestIdBytes(requestId),
+    )
+  }
+  if (kernelOwnedRequestIdHistories.has(history)) {
+    requestIdCommitmentCache.set(history, commitment)
+  }
+  return commitment
+}
+
+export const expectedEffectRequestId = (
+  machine: MatchMachine,
+  kind: KernelEffectRequest["kind"],
+  suffix: string,
+): string => {
+  if (
+    machine.semanticTuple.tupleId !==
+    CANDIDATE_KERNEL_V117_SEMANTIC_TUPLE_ID
+  ) {
+    return `effect:${machine.cursor.ordinal}:${machine.cursor.stage}:${kind}:${suffix}`
+  }
+  const encoded = encodeEffectIdentityReference(
+    effectIdentityMaterial(machine, kind, suffix),
+  )
+  return `effect:v1.17:${createHash("sha256")
+    .update(`${V117_EFFECT_REQUEST_HASH_DOMAIN}\0`, "utf8")
+    .update(encoded)
+    .digest("hex")}`
+}
 export const createTransitionRecord = (input: {
   before: MatchMachine
   after: MatchMachine

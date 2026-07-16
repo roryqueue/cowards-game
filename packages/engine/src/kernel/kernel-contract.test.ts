@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest"
 import {
   CURRENT_CANONICAL_COMPATIBILITY_TUPLE_RECORD,
+  HISTORICAL_RUNTIME_V114_SEMANTIC_TUPLE,
+  HISTORICAL_RUNTIME_V114_SEMANTIC_TUPLE_ID,
   validateCanonicalTransition,
   type CanonicalCompatibilityTuple,
   type CanonicalKernelSemanticTransition,
@@ -11,12 +13,21 @@ import { adaptRuntimeForCurrentKernel } from "../test/current-kernel-runtime.js"
 import { createCandidateInitialGameState } from "./create-initial-state.js"
 import { stepCandidateMatch } from "./step.js"
 import {
+  appendKernelEventHistory,
+  appendKernelRequestIdHistory,
+  createKernelEventHistory,
+  createKernelRequestIdHistory,
   createTransitionRecord,
+  expectedEffectRequestId,
   hashMatchMachine,
   projectMatchMachineForHash,
   validateMachine,
 } from "./validate.js"
-import type { MatchMachine } from "./types.js"
+import {
+  CANDIDATE_KERNEL_V117_SEMANTIC_TUPLE,
+  CANDIDATE_KERNEL_V117_SEMANTIC_TUPLE_ID,
+  type MatchMachine,
+} from "./types.js"
 
 const MISSING_AUTHORITY_MARKER =
   "[EXPECTED_RED:MISSING_KERNEL_AUTHORITY]" as const
@@ -300,6 +311,265 @@ const expectRecordContract = (record: KernelTransitionRecord): void => {
 }
 
 describe("Phase 257 canonical Match kernel contract", () => {
+  it("keeps the historical consumed-request projection and machine hash byte-identical", () => {
+    const historical: MatchMachine = {
+      ...createDirectMachine(),
+      semanticTuple: {
+        tupleId: HISTORICAL_RUNTIME_V114_SEMANTIC_TUPLE_ID,
+        tuple: HISTORICAL_RUNTIME_V114_SEMANTIC_TUPLE,
+      },
+      consumedRequestIds: ["request:z", "request:a"],
+    }
+    expect(projectMatchMachineForHash(historical).consumedRequestIds).toEqual([
+      "request:a",
+      "request:z",
+    ])
+    expect(hashMatchMachine(historical)).toBe(
+      "sha256:5385ca95e3173fdb71f60878183adda324245924ac7eff021e43544dd58a0f8d",
+    )
+  })
+
+  it("binds v1.17 machine hashes to consumed-request content, order, and count", () => {
+    const base: MatchMachine = {
+      ...createDirectMachine(),
+      semanticTuple: {
+        tupleId: CANDIDATE_KERNEL_V117_SEMANTIC_TUPLE_ID,
+        tuple: CANDIDATE_KERNEL_V117_SEMANTIC_TUPLE,
+      },
+    }
+    const first = appendKernelRequestIdHistory(
+      createKernelRequestIdHistory(),
+      "request:first",
+    )
+    const ordered: MatchMachine = {
+      ...base,
+      consumedRequestIds: appendKernelRequestIdHistory(
+        first,
+        "request:second",
+      ),
+    }
+    const reordered: MatchMachine = {
+      ...base,
+      consumedRequestIds: ["request:second", "request:first"],
+    }
+    const differentContent: MatchMachine = {
+      ...base,
+      consumedRequestIds: ["request:first", "request:other"],
+    }
+    const differentCount: MatchMachine = {
+      ...base,
+      consumedRequestIds: ["request:first"],
+    }
+    expect(projectMatchMachineForHash(ordered).consumedRequestIds).toMatchObject(
+      {
+        commitment: expect.stringMatching(/^sha256:[0-9a-f]{64}$/u),
+        count: 2,
+      },
+    )
+    expect(
+      new Set(
+        [ordered, reordered, differentContent, differentCount].map(
+          hashMatchMachine,
+        ),
+      ).size,
+    ).toBe(4)
+
+    const after: MatchMachine = {
+      ...ordered,
+      cursor: { ...ordered.cursor, ordinal: ordered.cursor.ordinal + 1 },
+    }
+    const input = {
+      before: ordered,
+      after,
+      transitionKind: "COMMITMENT_HASH_FIXTURE",
+      classification: "success",
+      events: [
+        { type: "MATCH_STARTED", sequence: 0, payload: { fixture: true } },
+      ],
+    } as const
+    expect(createTransitionRecord(input)).toEqual(createTransitionRecord(input))
+  })
+
+  it("matches content-recomputed v1.17 commitments across growing owned histories", () => {
+    let fullEvents = createKernelEventHistory()
+    let consumedRequestIds = createKernelRequestIdHistory()
+    const checkpoints = new Set([0, 1, 2, 8, 32, 96])
+
+    for (let index = 0; index <= 96; index += 1) {
+      const machine: MatchMachine = {
+        ...createDirectMachine(),
+        semanticTuple: {
+          tupleId: CANDIDATE_KERNEL_V117_SEMANTIC_TUPLE_ID,
+          tuple: CANDIDATE_KERNEL_V117_SEMANTIC_TUPLE,
+        },
+        cursor: {
+          ...createDirectMachine().cursor,
+          stage: "soldier_effect",
+          ordinal: index + 3,
+          cycleLayer: index % 4,
+        },
+        fullEvents,
+        consumedRequestIds,
+      }
+
+      if (checkpoints.has(index)) {
+        const suffix = `activation:test:${index}`
+        const mutableClone: MatchMachine = {
+          ...machine,
+          fullEvents: globalThis.structuredClone(machine.fullEvents),
+          consumedRequestIds: globalThis.structuredClone(
+            machine.consumedRequestIds,
+          ),
+        }
+        expect(expectedEffectRequestId(machine, "soldierBrain", suffix)).toBe(
+          expectedEffectRequestId(mutableClone, "soldierBrain", suffix),
+        )
+      }
+
+      if (index < 96) {
+        fullEvents = appendKernelEventHistory(fullEvents, [
+          {
+            type: "ACTION_EMITTED",
+            sequence: index,
+            payload: {
+              soldierId: `soldier:${index % 6}`,
+              action: { type: "TURN", direction: index % 2 ? "LEFT" : "RIGHT" },
+            },
+            context: {
+              activationId: `activation:${Math.floor(index / 4)}`,
+              cycleIndex: index % 4,
+            },
+            privacy: "owner",
+            privatePayload: {
+              objective: { nested: { index, retained: index % 3 === 0 } },
+            },
+          },
+        ]).fullEvents
+        consumedRequestIds = appendKernelRequestIdHistory(
+          consumedRequestIds,
+          `effect:consumed:${index}`,
+        )
+      }
+    }
+  })
+
+  it("never trusts mutable or mutated event history cache inputs", () => {
+    const owned = appendKernelEventHistory(createKernelEventHistory(), [
+      {
+        type: "ACTION_EMITTED",
+        sequence: 0,
+        payload: { soldierId: "soldier:cache-negative", value: 1 },
+        privacy: "owner",
+        privatePayload: { secret: { value: "before" } },
+      },
+    ]).fullEvents
+    const base: MatchMachine = {
+      ...createDirectMachine(),
+      semanticTuple: {
+        tupleId: CANDIDATE_KERNEL_V117_SEMANTIC_TUPLE_ID,
+        tuple: CANDIDATE_KERNEL_V117_SEMANTIC_TUPLE,
+      },
+      fullEvents: owned,
+    }
+    expect(Object.isFrozen(owned)).toBe(true)
+    expect(Object.isFrozen(owned[0]?.privatePayload)).toBe(true)
+
+    const mutableEvents = globalThis.structuredClone(owned)
+    const mutable: MatchMachine = { ...base, fullEvents: mutableEvents }
+    expect(expectedEffectRequestId(base, "selectActivations", "player:bottom")).toBe(
+      expectedEffectRequestId(mutable, "selectActivations", "player:bottom"),
+    )
+    const before = expectedEffectRequestId(
+      mutable,
+      "selectActivations",
+      "player:bottom",
+    )
+    const privatePayload = mutableEvents[0]?.privatePayload as {
+      secret: { value: string }
+    }
+    privatePayload.secret.value = "after"
+    const after = expectedEffectRequestId(
+      mutable,
+      "selectActivations",
+      "player:bottom",
+    )
+    expect(after).not.toBe(before)
+
+    const secondEvent = {
+      ...globalThis.structuredClone(owned[0]!),
+      sequence: 1,
+      payload: { soldierId: "soldier:cache-negative", value: 2 },
+    }
+    const ordered: MatchMachine = {
+      ...base,
+      fullEvents: [globalThis.structuredClone(owned[0]!), secondEvent],
+      consumedRequestIds: ["request:first", "request:second"],
+    }
+    const reorderedEvents: MatchMachine = {
+      ...ordered,
+      fullEvents: [...ordered.fullEvents].reverse(),
+    }
+    const reorderedRequests: MatchMachine = {
+      ...ordered,
+      consumedRequestIds: [...ordered.consumedRequestIds].reverse(),
+    }
+    const orderedId = expectedEffectRequestId(
+      ordered,
+      "selectActivations",
+      "player:bottom",
+    )
+    expect(
+      expectedEffectRequestId(
+        reorderedEvents,
+        "selectActivations",
+        "player:bottom",
+      ),
+    ).not.toBe(orderedId)
+    expect(
+      expectedEffectRequestId(
+        reorderedRequests,
+        "selectActivations",
+        "player:bottom",
+      ),
+    ).not.toBe(orderedId)
+
+    const differentPrestate: MatchMachine = {
+      ...ordered,
+      state: {
+        ...ordered.state,
+        players: ordered.state.players.map((player, index) =>
+          index === 0
+            ? { ...player, strategyMemory: { proof: "different-prestate" } }
+            : player,
+        ) as typeof ordered.state.players,
+      },
+    }
+    expect(
+      expectedEffectRequestId(
+        differentPrestate,
+        "selectActivations",
+        "player:bottom",
+      ),
+    ).not.toBe(orderedId)
+
+    const historical: MatchMachine = {
+      ...ordered,
+      semanticTuple: {
+        tupleId: HISTORICAL_RUNTIME_V114_SEMANTIC_TUPLE_ID,
+        tuple: HISTORICAL_RUNTIME_V114_SEMANTIC_TUPLE,
+      },
+    }
+    expect(
+      expectedEffectRequestId(
+        historical,
+        "selectActivations",
+        "player:bottom",
+      ),
+    ).toBe(
+      `effect:${historical.cursor.ordinal}:${historical.cursor.stage}:selectActivations:player:bottom`,
+    )
+  })
+
   it("hashes a finite safe machine projection with cursor and tuple identity", () => {
     const machine = createDirectMachine()
     const hash = hashMatchMachine(machine)

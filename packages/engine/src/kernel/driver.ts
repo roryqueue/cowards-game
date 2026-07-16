@@ -27,7 +27,12 @@ import {
   CANDIDATE_KERNEL_V117_SEMANTIC_TUPLE,
   CANDIDATE_KERNEL_V117_SEMANTIC_TUPLE_ID,
 } from "./types.js"
-import { hashKernelRecorderMaterial, validateMachine } from "./validate.js"
+import {
+  createKernelEventHistory,
+  createKernelRequestIdHistory,
+  hashKernelRecorderMaterial,
+  validateMachine,
+} from "./validate.js"
 import { issueCandidateExecutionEvidence } from "./recorder-evidence-authority.js"
 import type {
   ActivationSlotState,
@@ -85,8 +90,8 @@ const baseMachine = (
   phasesRun: 0,
   selections: { bottom: [], top: [] },
   slots: input.slots ?? [],
-  fullEvents: [],
-  consumedRequestIds: [],
+  fullEvents: createKernelEventHistory(),
+  consumedRequestIds: createKernelRequestIdHistory(),
 })
 
 const assertMachine = (machine: MatchMachine): MatchMachine => {

@@ -34,6 +34,8 @@ import type {
   MatchMachine,
 } from "./types.js"
 import {
+  appendKernelEventHistory,
+  appendKernelRequestIdHistory,
   createTransitionRecord,
   expectedEffectRequestId,
   validateKernelInput,
@@ -98,10 +100,12 @@ const finishTransition = (
   if (rawEvents.length === 0) {
     return fail(before, integrityFailure("KERNEL_ZERO_EVENT_TRANSITION"))
   }
-  const events = sequenceEvents(before, rawEvents)
+  const sequenced = sequenceEvents(before, rawEvents)
+  const history = appendKernelEventHistory(before.fullEvents, sequenced)
+  const events = history.events
   const after: MatchMachine = {
     ...afterWithoutEvents,
-    fullEvents: [...before.fullEvents, ...events],
+    fullEvents: history.fullEvents,
   }
   const machineFailure = validateMachine(after)
   if (machineFailure !== undefined) return fail(before, machineFailure)
@@ -440,7 +444,10 @@ const resolveSelection = (
     })
   }
 
-  const consumed = [...machine.consumedRequestIds, input.requestId]
+  const consumed = appendKernelRequestIdHistory(
+    machine.consumedRequestIds,
+    input.requestId,
+  )
   if (side === "bottom") {
     const after = withCursor(
       {
@@ -840,7 +847,10 @@ const resolveSoldierEffect = (
     ...machine,
     state,
     pendingEffect: undefined,
-    consumedRequestIds: [...machine.consumedRequestIds, input.requestId],
+    consumedRequestIds: appendKernelRequestIdHistory(
+      machine.consumedRequestIds,
+      input.requestId,
+    ),
     slots,
   }
   const after =
