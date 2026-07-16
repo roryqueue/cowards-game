@@ -24,6 +24,33 @@ export const RUNTIME_ABI_TEST_RECEIPT_PATH =
   "packages/spec/artifacts/runtime-abi-v1.17-test-receipt.json"
 export const RUNTIME_ABI_ACTIVATION_COMMIT =
   "ba05038f5d9b232afa1cb6c24eef1079524ffcc8"
+export const RUNTIME_ABI_PHASE258_BASELINE_COMMIT =
+  "4b633f2f1fc7e01a9bc12a0245982069b100c3bf"
+export const RUNTIME_ABI_PHASE258_INTERLEAVED_COMMITS = Object.freeze([
+  "5aff16be897ec34cfa6a104c890a8eb520a8d7e5",
+  "becf9929da14aec8bffde4b36be95492cb949db1",
+  "4d488ed897f90eaf4bf3cb691ae00a0c57998b17",
+  "7098750bcdbb4418e96945a7baca737c7a193344",
+] as const)
+export const RUNTIME_ABI_PHASE258_PLAN_DIRECTORY =
+  ".planning/phases/258-canonical-json-failure-semantics-and-artifact-identity"
+export const RUNTIME_ABI_PHASE258_PLAN_PATHS = Object.freeze(
+  Array.from(
+    { length: 14 },
+    (_, index) =>
+      `${RUNTIME_ABI_PHASE258_PLAN_DIRECTORY}/258-${String(index + 1).padStart(2, "0")}-PLAN.md`,
+  ),
+)
+
+const RUNTIME_ABI_PHASE258_DECLARATION_ONLY_PATHS = Object.freeze([
+  "apps/go-backend/runtime_service_client_test.go",
+  "apps/web/app/api/account/revisions/save/route.ts",
+  "apps/web/app/workshop/workshop-client.tsx",
+  "packages/runtime-js/src/subprocess-ipc.ts",
+  "packages/runtime-python/src/python_validation_host.py",
+  "packages/spec/src/runtime-execution-service.ts",
+  "scripts/evaluate-runtime-sandbox.ts",
+] as const)
 
 export const RUNTIME_ABI_DERIVED_VALIDATION_OUTPUTS = Object.freeze([
   ".planning/artifacts/v1.37-runtime-abi-validation.md",
@@ -62,7 +89,13 @@ export type RuntimeAbiActivationManifest = Readonly<{
   }>
   testReceipt: RuntimeAbiManifestDigest
   inventoryPolicy: Readonly<{
-    source: "Phase 258 PLAN files_modified plus the exact postactivation test receipt"
+    source: "Pinned Phase 258 git closure cross-checked against PLAN files_modified plus exact PLAN bytes and the postactivation test receipt"
+    baselineCommit: typeof RUNTIME_ABI_PHASE258_BASELINE_COMMIT
+    closureHeadCommit: string
+    activationCommit: typeof RUNTIME_ABI_ACTIVATION_COMMIT
+    excludedInterleavedCommits: typeof RUNTIME_ABI_PHASE258_INTERLEAVED_COMMITS
+    planFileCount: 14
+    declarationOnlyPaths: typeof RUNTIME_ABI_PHASE258_DECLARATION_ONLY_PATHS
     excludedSelf: typeof RUNTIME_ABI_ACTIVATION_MANIFEST_PATH
     derivedValidationOutputs: typeof RUNTIME_ABI_DERIVED_VALIDATION_OUTPUTS
     validationDependency: "validation-consumes-manifest"
@@ -102,6 +135,31 @@ const digestPath = (
   readBytes: (path: string) => Uint8Array = (candidate) =>
     readFileSync(candidate),
 ): RuntimeAbiManifestDigest => ({ path, sha256: sha256(readBytes(path)) })
+
+type RunGit = (
+  args: readonly string[],
+  options?: { readonly allowFailure?: boolean },
+) => Readonly<{ status: number; stdout: string; stderr: string }>
+
+const runGitAt = (repoRoot: string): RunGit => (args, options = {}) => {
+  const result = spawnSync("git", args, {
+    cwd: repoRoot,
+    encoding: "utf8",
+    maxBuffer: 16 * 1024 * 1024,
+  })
+  const status = result.status ?? 1
+  const response = {
+    status,
+    stdout: String(result.stdout ?? ""),
+    stderr: String(result.stderr ?? ""),
+  }
+  if (status !== 0 && !options.allowFailure) {
+    throw new TypeError(
+      `Phase 258 git closure is unavailable: git ${args.join(" ")}: ${response.stderr.trim()}`,
+    )
+  }
+  return response
+}
 
 export const parsePlanFilesModified = (source: string): readonly string[] => {
   const lines = source.split(/\r?\n/u)
@@ -175,30 +233,306 @@ export const expandPhase258InventoryPaths = (
   return expanded
 }
 
-export const collectPhase258InventoryPaths = (): readonly string[] => {
-  const phaseDirectory =
-    ".planning/phases/258-canonical-json-failure-semantics-and-artifact-identity"
-  const planPaths = readdirSync(phaseDirectory)
-    .filter((name) => /^258-\d{2}-PLAN\.md$/u.test(name))
-    .sort()
-  if (planPaths.length !== 14) {
+const exactSortedStrings = (
+  actual: readonly string[],
+  expected: readonly string[],
+): boolean =>
+  actual.length === expected.length &&
+  actual.every((value, index) => value === expected[index])
+
+const phase258WorkflowPath = (path: string): boolean =>
+  path === ".planning/ROADMAP.md" ||
+  path === ".planning/STATE.md" ||
+  path.startsWith(`${RUNTIME_ABI_PHASE258_PLAN_DIRECTORY}/`) ||
+  path.startsWith(
+    ".planning/phases/259-executable-four-language-and-chronicle-conformance/",
+  )
+
+const phase258HashCyclePath = (path: string): boolean =>
+  path === RUNTIME_ABI_ACTIVATION_MANIFEST_PATH ||
+  RUNTIME_ABI_DERIVED_VALIDATION_OUTPUTS.some(
+    (candidate) => candidate === path,
+  )
+
+const parsePhase258GitNameStatus = (source: string): readonly string[] => {
+  const paths: string[] = []
+  for (const line of source.split(/\r?\n/u).filter(Boolean)) {
+    const fields = line.split("\t")
+    if (
+      fields.length !== 2 ||
+      (fields[0] !== "A" && fields[0] !== "M") ||
+      fields[1] === undefined
+    ) {
+      throw new TypeError(
+        `Phase 258 git closure contains a forbidden name-status entry: ${line}`,
+      )
+    }
+    paths.push(normalizedInventoryPath(fields[1]))
+  }
+  if (paths.length === 0 || new Set(paths).size !== paths.length) {
+    throw new TypeError("Phase 258 git closure is empty or duplicated.")
+  }
+  return paths.sort()
+}
+
+const verifyPhase258InterleavedCommit = (
+  commit: string,
+  runGit: RunGit,
+): void => {
+  const paths = runGit([
+    "diff-tree",
+    "--no-commit-id",
+    "--name-only",
+    "-r",
+    commit,
+  ])
+    .stdout.split(/\r?\n/u)
+    .filter(Boolean)
+  if (
+    paths.length === 0 ||
+    paths.some(
+      (path) =>
+        !path.startsWith(
+          ".planning/phases/259-executable-four-language-and-chronicle-conformance/",
+        ),
+    )
+  ) {
     throw new TypeError(
-      `Phase 258 plan inventory is incomplete: expected 14 plans, received ${String(planPaths.length)}.`,
+      `Pinned interleaved commit escaped Phase 259 planning: ${commit}`,
     )
   }
+}
+
+export const verifyPhase258GitClosureAncestry = (options: {
+  baselineCommit: string
+  headCommit: string
+  runGit?: RunGit | undefined
+}): void => {
+  const { baselineCommit, headCommit } = options
+  if (
+    baselineCommit !== RUNTIME_ABI_PHASE258_BASELINE_COMMIT ||
+    !/^[0-9a-f]{40}$/u.test(headCommit)
+  ) {
+    throw new TypeError("Phase 258 git closure has the wrong baseline or head.")
+  }
+  const runGit = options.runGit ?? runGitAt(process.cwd())
+  for (const ancestor of [baselineCommit, RUNTIME_ABI_ACTIVATION_COMMIT]) {
+    const result = runGit(
+      ["merge-base", "--is-ancestor", ancestor, headCommit],
+      { allowFailure: true },
+    )
+    if (result.status !== 0) {
+      throw new TypeError(
+        `Phase 258 git closure head does not descend from ${ancestor}.`,
+      )
+    }
+  }
+  const commits = runGit([
+    "rev-list",
+    "--first-parent",
+    "--reverse",
+    `${baselineCommit}..${headCommit}`,
+  ])
+    .stdout.split(/\r?\n/u)
+    .filter(Boolean)
+  if (commits.at(-1) !== headCommit) {
+    throw new TypeError("Phase 258 git closure head is not on first-parent ancestry.")
+  }
+  const interleaved = new Set<string>(RUNTIME_ABI_PHASE258_INTERLEAVED_COMMITS)
+  for (const commit of commits) {
+    if (interleaved.has(commit)) {
+      verifyPhase258InterleavedCommit(commit, runGit)
+      continue
+    }
+    const subject = runGit(["show", "-s", "--format=%s", commit]).stdout.trim()
+    if (!/^[a-z]+\(258(?:-\d{2})?\): /u.test(subject)) {
+      throw new TypeError(
+        `Phase 258 git closure contains an unowned commit: ${commit} ${subject}`,
+      )
+    }
+  }
+  for (const commit of interleaved) {
+    if (!commits.includes(commit)) {
+      throw new TypeError(
+        `Phase 258 git closure omitted pinned interleaved commit: ${commit}`,
+      )
+    }
+  }
+}
+
+export const collectPhase258GitChangedPaths = (options: {
+  baselineCommit?: string | undefined
+  headCommit: string
+  repoRoot?: string | undefined
+  runGit?: RunGit | undefined
+}): readonly string[] => {
+  const repoRoot = options.repoRoot ?? process.cwd()
+  const baselineCommit =
+    options.baselineCommit ?? RUNTIME_ABI_PHASE258_BASELINE_COMMIT
+  const runGit = options.runGit ?? runGitAt(repoRoot)
+  verifyPhase258GitClosureAncestry({
+    baselineCommit,
+    headCommit: options.headCommit,
+    runGit,
+  })
+  const paths = parsePhase258GitNameStatus(
+    runGit([
+      "diff",
+      "--name-status",
+      "--no-renames",
+      baselineCommit,
+      options.headCommit,
+    ]).stdout,
+  ).filter((path) => !phase258WorkflowPath(path) && !phase258HashCyclePath(path))
+  return verifyPhase258AuthoritativeRegularFiles(paths, repoRoot)
+}
+
+export const verifyPhase258AuthoritativeRegularFiles = (
+  paths: readonly string[],
+  repoRoot: string = process.cwd(),
+): readonly string[] => {
+  const absoluteRoot = resolve(repoRoot)
+  for (const candidate of paths) {
+    const path = normalizedInventoryPath(candidate)
+    const absolutePath = resolve(absoluteRoot, path)
+    const relativePath = relative(absoluteRoot, absolutePath)
+    if (
+      relativePath === "" ||
+      relativePath.startsWith("..") ||
+      isAbsolute(relativePath)
+    ) {
+      throw new TypeError(`Phase 258 authoritative path escapes repository: ${path}`)
+    }
+    const stat = lstatSync(absolutePath)
+    if (stat.isSymbolicLink()) {
+      throw new TypeError(`Phase 258 authoritative path is a symlink: ${path}`)
+    }
+    if (!stat.isFile()) {
+      throw new TypeError(
+        `Phase 258 authoritative path is not a regular file: ${path}`,
+      )
+    }
+  }
+  const sorted = [...paths].sort()
+  if (new Set(sorted).size !== sorted.length) {
+    throw new TypeError("Phase 258 authoritative paths are duplicated.")
+  }
+  return sorted
+}
+
+const readPhase258ClosureHeadCommit = (): string => {
+  const receipt = readJson(RUNTIME_ABI_TEST_RECEIPT_PATH)
+  if (
+    !isRecord(receipt) ||
+    receipt.schemaVersion !== "runtime-abi-v1.17-test-receipt-v2" ||
+    !isRecord(receipt.provenance) ||
+    !isRecord(receipt.provenance.git) ||
+    typeof receipt.provenance.git.executionCommit !== "string"
+  ) {
+    throw new TypeError(
+      "Phase 258 closure requires a provenance-bound v2 test receipt.",
+    )
+  }
+  return receipt.provenance.git.executionCommit
+}
+
+const readPhase258PlanSources = (
+  repoRoot: string,
+): ReadonlyMap<string, string> => {
+  const sources = new Map<string, string>()
+  for (const path of RUNTIME_ABI_PHASE258_PLAN_PATHS) {
+    sources.set(path, readFileSync(resolve(repoRoot, path), "utf8"))
+  }
+  return sources
+}
+
+export const verifyPhase258PlanFilesMatchGit = (options: {
+  headCommit: string
+  planSources: ReadonlyMap<string, string>
+  runGit?: RunGit | undefined
+}): void => {
+  const runGit = options.runGit ?? runGitAt(process.cwd())
+  if (options.planSources.size !== RUNTIME_ABI_PHASE258_PLAN_PATHS.length) {
+    throw new TypeError("Phase 258 plan byte set is incomplete.")
+  }
+  for (const path of RUNTIME_ABI_PHASE258_PLAN_PATHS) {
+    const current = options.planSources.get(path)
+    const committed = runGit(["show", `${options.headCommit}:${path}`]).stdout
+    if (current === undefined || current !== committed) {
+      throw new TypeError(`Phase 258 plan bytes do not match closure git: ${path}`)
+    }
+  }
+}
+
+export const verifyPhase258PlanInventoryMatchesGit = (options: {
+  gitPaths: readonly string[]
+  declaredPaths: readonly string[]
+  declarationOnlyPaths?: readonly string[] | undefined
+}): void => {
+  const git = new Set(options.gitPaths)
+  const declared = new Set(
+    options.declaredPaths.filter((path) => !phase258HashCyclePath(path)),
+  )
+  const missing = [...git].filter((path) => !declared.has(path)).sort()
+  if (missing.length > 0) {
+    throw new TypeError(
+      `Phase 258 plan inventory omitted git path: ${missing.join(", ")}`,
+    )
+  }
+  const extra = [...declared].filter((path) => !git.has(path)).sort()
+  const expectedExtra = [
+    ...(options.declarationOnlyPaths ??
+      RUNTIME_ABI_PHASE258_DECLARATION_ONLY_PATHS),
+  ].sort()
+  if (!exactSortedStrings(extra, expectedExtra)) {
+    throw new TypeError(
+      `Phase 258 plan inventory does not match git closure: expected declaration-only [${expectedExtra.join(", ")}], received [${extra.join(", ")}].`,
+    )
+  }
+}
+
+export const collectPhase258InventoryPaths = (options: {
+  repoRoot?: string | undefined
+  headCommit?: string | undefined
+  runGit?: RunGit | undefined
+  planSources?: ReadonlyMap<string, string> | undefined
+} = {}): readonly string[] => {
+  const repoRoot = options.repoRoot ?? process.cwd()
+  const headCommit = options.headCommit ?? readPhase258ClosureHeadCommit()
+  const runGit = options.runGit ?? runGitAt(repoRoot)
+  const planSources = options.planSources ?? readPhase258PlanSources(repoRoot)
+  verifyPhase258PlanFilesMatchGit({ headCommit, planSources, runGit })
+  const planCandidates = RUNTIME_ABI_PHASE258_PLAN_PATHS.flatMap((path) => {
+    const source = planSources.get(path)
+    if (source === undefined) {
+      throw new TypeError(`Phase 258 plan source is missing: ${path}`)
+    }
+    return parsePlanFilesModified(source)
+  })
   const excluded = new Set<string>([
     RUNTIME_ABI_ACTIVATION_MANIFEST_PATH,
     ...RUNTIME_ABI_DERIVED_VALIDATION_OUTPUTS,
   ])
-  const inventory = new Set<string>([RUNTIME_ABI_TEST_RECEIPT_PATH])
-  for (const name of planPaths) {
-    for (const path of parsePlanFilesModified(
-      readFileSync(`${phaseDirectory}/${name}`, "utf8"),
-    )) {
-      if (!excluded.has(path)) inventory.add(path)
-    }
-  }
-  const paths = expandPhase258InventoryPaths([...inventory])
+  const declaredPaths = expandPhase258InventoryPaths(
+    [...new Set(planCandidates)].filter((path) => !excluded.has(path)),
+    repoRoot,
+  )
+  const gitPaths = collectPhase258GitChangedPaths({
+    headCommit,
+    repoRoot,
+    runGit,
+  })
+  verifyPhase258PlanInventoryMatchesGit({ gitPaths, declaredPaths })
+  const paths = verifyPhase258AuthoritativeRegularFiles(
+    [
+      ...new Set([
+        ...gitPaths,
+        ...RUNTIME_ABI_PHASE258_PLAN_PATHS,
+        RUNTIME_ABI_TEST_RECEIPT_PATH,
+      ]),
+    ],
+    repoRoot,
+  )
   if (
     paths.includes(RUNTIME_ABI_ACTIVATION_MANIFEST_PATH) ||
     RUNTIME_ABI_DERIVED_VALIDATION_OUTPUTS.some((path) => paths.includes(path))
@@ -285,6 +619,7 @@ export const buildRuntimeAbiActivationManifest = (
   const fixturePath =
     "packages/spec/artifacts/runtime-successor-authority-v1.17.fixture.json"
   const testReceipt = digestPath(RUNTIME_ABI_TEST_RECEIPT_PATH, readBytes)
+  const closureHeadCommit = readPhase258ClosureHeadCommit()
   return Object.freeze({
     schemaVersion: "runtime-abi-v1.17-activation-manifest-v1",
     activationPlan: "258-14",
@@ -316,7 +651,13 @@ export const buildRuntimeAbiActivationManifest = (
     testReceipt,
     inventoryPolicy: Object.freeze({
       source:
-        "Phase 258 PLAN files_modified plus the exact postactivation test receipt",
+        "Pinned Phase 258 git closure cross-checked against PLAN files_modified plus exact PLAN bytes and the postactivation test receipt",
+      baselineCommit: RUNTIME_ABI_PHASE258_BASELINE_COMMIT,
+      closureHeadCommit,
+      activationCommit: RUNTIME_ABI_ACTIVATION_COMMIT,
+      excludedInterleavedCommits: RUNTIME_ABI_PHASE258_INTERLEAVED_COMMITS,
+      planFileCount: 14,
+      declarationOnlyPaths: RUNTIME_ABI_PHASE258_DECLARATION_ONLY_PATHS,
       excludedSelf: RUNTIME_ABI_ACTIVATION_MANIFEST_PATH,
       derivedValidationOutputs: RUNTIME_ABI_DERIVED_VALIDATION_OUTPUTS,
       validationDependency: "validation-consumes-manifest",
@@ -373,6 +714,18 @@ export const parseRuntimeAbiActivationManifest = (
     !isDigest(value.testReceipt) ||
     value.testReceipt.path !== RUNTIME_ABI_TEST_RECEIPT_PATH ||
     !isRecord(value.inventoryPolicy) ||
+    value.inventoryPolicy.source !==
+      "Pinned Phase 258 git closure cross-checked against PLAN files_modified plus exact PLAN bytes and the postactivation test receipt" ||
+    value.inventoryPolicy.baselineCommit !==
+      RUNTIME_ABI_PHASE258_BASELINE_COMMIT ||
+    typeof value.inventoryPolicy.closureHeadCommit !== "string" ||
+    !/^[0-9a-f]{40}$/u.test(value.inventoryPolicy.closureHeadCommit) ||
+    value.inventoryPolicy.activationCommit !== RUNTIME_ABI_ACTIVATION_COMMIT ||
+    JSON.stringify(value.inventoryPolicy.excludedInterleavedCommits) !==
+      JSON.stringify(RUNTIME_ABI_PHASE258_INTERLEAVED_COMMITS) ||
+    value.inventoryPolicy.planFileCount !== 14 ||
+    JSON.stringify(value.inventoryPolicy.declarationOnlyPaths) !==
+      JSON.stringify(RUNTIME_ABI_PHASE258_DECLARATION_ONLY_PATHS) ||
     value.inventoryPolicy.excludedSelf !== RUNTIME_ABI_ACTIVATION_MANIFEST_PATH ||
     value.inventoryPolicy.validationDependency !==
       "validation-consumes-manifest" ||
@@ -386,6 +739,9 @@ export const parseRuntimeAbiActivationManifest = (
     new Set(inventoryPaths).size !== inventoryPaths.length ||
     inventoryPaths.join("\n") !== [...inventoryPaths].sort().join("\n") ||
     !inventoryPaths.includes(RUNTIME_ABI_TEST_RECEIPT_PATH) ||
+    RUNTIME_ABI_PHASE258_PLAN_PATHS.some(
+      (path) => !inventoryPaths.includes(path),
+    ) ||
     inventoryPaths.includes(RUNTIME_ABI_ACTIVATION_MANIFEST_PATH) ||
     RUNTIME_ABI_DERIVED_VALIDATION_OUTPUTS.some((path) =>
       inventoryPaths.includes(path),

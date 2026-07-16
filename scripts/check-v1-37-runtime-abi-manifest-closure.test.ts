@@ -16,15 +16,22 @@ import {
   RUNTIME_ABI_ACTIVATION_COMMIT,
   RUNTIME_ABI_ACTIVATION_MANIFEST_PATH,
   RUNTIME_ABI_DERIVED_VALIDATION_OUTPUTS,
+  RUNTIME_ABI_PHASE258_BASELINE_COMMIT,
+  RUNTIME_ABI_PHASE258_PLAN_PATHS,
   RUNTIME_ABI_PREPARED_LIFECYCLE_CONSUMERS,
   RUNTIME_ABI_TEST_RECEIPT_PATH,
   buildRuntimeAbiActivationManifest,
+  collectPhase258GitChangedPaths,
   collectPhase258InventoryPaths,
   expandPhase258InventoryPaths,
   parsePlanFilesModified,
   parseRuntimeAbiActivationManifest,
   parseRuntimeAbiActivationAllowlist,
   runtimeAbiActivationDiffArguments,
+  verifyPhase258AuthoritativeRegularFiles,
+  verifyPhase258GitClosureAncestry,
+  verifyPhase258PlanFilesMatchGit,
+  verifyPhase258PlanInventoryMatchesGit,
   verifyRuntimeAbiActivationNameStatus,
   verifyImmutableRuntimeServiceV116Digests,
 } from "./check-v1-37-runtime-abi-manifest-closure.js"
@@ -44,7 +51,7 @@ describe("Phase 258 runtime ABI activation closure", () => {
     expect(JSON.stringify(allowlist)).not.toMatch(/sha256|hash/iu)
   })
 
-  it("derives a sorted, cycle-free final inventory from all fourteen plans", () => {
+  it("derives a sorted, cycle-free final inventory from pinned git closure and hashes all fourteen plans", () => {
     expect(
       parsePlanFilesModified(
         "---\nfiles_modified:\n  - z.ts\n  - a.ts\nautonomous: true\n---\n",
@@ -63,6 +70,9 @@ describe("Phase 258 runtime ABI activation closure", () => {
       "scripts/check-v1-37-runtime-abi-manifest-closure.ts",
     )
     expect(paths).toContain("scripts/evaluate-v1-37-runtime-abi.ts")
+    for (const planPath of RUNTIME_ABI_PHASE258_PLAN_PATHS) {
+      expect(paths).toContain(planPath)
+    }
     const allowlist = parseRuntimeAbiActivationAllowlist(
       readJson(
         "packages/spec/artifacts/runtime-abi-v1.17-activation-allowlist.json",
@@ -77,6 +87,85 @@ describe("Phase 258 runtime ABI activation closure", () => {
     }
     expect(() => parsePlanFilesModified("files_modified:\nautonomous: true"))
       .toThrow(/empty or duplicated/iu)
+  })
+
+  it("rejects plan inventory removal, unplanned git paths, plan tamper, and wrong ancestry pins", () => {
+    const headCommit = (
+      readJson(
+        "packages/spec/artifacts/runtime-abi-v1.17-test-receipt.json",
+      ) as {
+        provenance?: { git?: { executionCommit?: string } }
+      }
+    ).provenance?.git?.executionCommit
+    if (headCommit === undefined) throw new Error("receipt provenance missing")
+    const gitPaths = collectPhase258GitChangedPaths({ headCommit })
+    const declaredPaths = expandPhase258InventoryPaths(
+      RUNTIME_ABI_PHASE258_PLAN_PATHS.flatMap((planPath) =>
+        parsePlanFilesModified(readFileSync(planPath, "utf8")),
+      ),
+    ).filter(
+      (path) =>
+        path !== RUNTIME_ABI_ACTIVATION_MANIFEST_PATH &&
+        !RUNTIME_ABI_DERIVED_VALIDATION_OUTPUTS.includes(path as never),
+    )
+    expect(() =>
+      verifyPhase258PlanInventoryMatchesGit({
+        gitPaths,
+        declaredPaths,
+      }),
+    ).not.toThrow()
+    const required = gitPaths.find(
+      (path) =>
+        ![
+          "apps/go-backend/runtime_service_client_test.go",
+          "apps/web/app/api/account/revisions/save/route.ts",
+          "apps/web/app/workshop/workshop-client.tsx",
+          "packages/runtime-js/src/subprocess-ipc.ts",
+          "packages/runtime-python/src/python_validation_host.py",
+          "packages/spec/src/runtime-execution-service.ts",
+          "scripts/evaluate-runtime-sandbox.ts",
+        ].includes(path),
+    )
+    if (required === undefined) throw new Error("required git path missing")
+    expect(() =>
+      verifyPhase258PlanInventoryMatchesGit({
+        gitPaths,
+        declaredPaths: declaredPaths.filter((path) => path !== required),
+      }),
+    ).toThrow(/omitted git path/iu)
+    expect(() =>
+      verifyPhase258PlanInventoryMatchesGit({
+        gitPaths: [...gitPaths, "scripts/fabricated-extra-diff.ts"],
+        declaredPaths,
+      }),
+    ).toThrow(/omitted git path/iu)
+
+    const planSources = new Map(
+      RUNTIME_ABI_PHASE258_PLAN_PATHS.map((planPath) => [
+        planPath,
+        readFileSync(planPath, "utf8"),
+      ]),
+    )
+    const tamperedPath = RUNTIME_ABI_PHASE258_PLAN_PATHS[0]!
+    planSources.set(tamperedPath, `${planSources.get(tamperedPath)!}\n# tamper\n`)
+    expect(() =>
+      verifyPhase258PlanFilesMatchGit({
+        headCommit,
+        planSources,
+      }),
+    ).toThrow(/plan bytes do not match closure git/iu)
+    expect(() =>
+      verifyPhase258GitClosureAncestry({
+        baselineCommit: "0".repeat(40),
+        headCommit,
+      }),
+    ).toThrow(/wrong baseline or head/iu)
+    expect(() =>
+      verifyPhase258GitClosureAncestry({
+        baselineCommit: RUNTIME_ABI_PHASE258_BASELINE_COMMIT,
+        headCommit: `${RUNTIME_ABI_ACTIVATION_COMMIT.slice(0, 39)}0`,
+      }),
+    ).toThrow()
   })
 
   it("expands directories into exact regular files and rejects unsafe filesystem entries", () => {
@@ -121,6 +210,18 @@ describe("Phase 258 runtime ABI activation closure", () => {
       expect(() =>
         expandPhase258InventoryPaths(["tree/../tree/a.txt"], root),
       ).toThrow(/not normalized/iu)
+
+      expect(() =>
+        verifyPhase258AuthoritativeRegularFiles(["tree"], root),
+      ).toThrow(/not a regular file/iu)
+      expect(() =>
+        verifyPhase258AuthoritativeRegularFiles(["linked.txt"], root),
+      ).toThrow(/symlink/iu)
+      if (process.platform !== "win32") {
+        expect(() =>
+          verifyPhase258AuthoritativeRegularFiles(["special"], root),
+        ).toThrow(/not a regular file/iu)
+      }
     } finally {
       rmSync(root, { recursive: true, force: true })
     }
@@ -149,11 +250,25 @@ describe("Phase 258 runtime ABI activation closure", () => {
   })
 
   it("reads the fail-closed counted-lane posture from the canonical policy", () => {
-    expect(buildRuntimeAbiActivationManifest().posture).toMatchObject({
+    const manifest = buildRuntimeAbiActivationManifest()
+    expect(manifest.posture).toMatchObject({
       countedEligibleLaneIds: [],
       productionTrustedProducers: [],
       certificationOwner: "Phase 259",
     })
+    expect(manifest.inventoryPolicy).toMatchObject({
+      baselineCommit: RUNTIME_ABI_PHASE258_BASELINE_COMMIT,
+      activationCommit: RUNTIME_ABI_ACTIVATION_COMMIT,
+      planFileCount: 14,
+    })
+    expect(manifest.inventoryPolicy.closureHeadCommit).toMatch(
+      /^[0-9a-f]{40}$/u,
+    )
+    expect(
+      manifest.phase258Inventory.filter(({ path }) =>
+        RUNTIME_ABI_PHASE258_PLAN_PATHS.includes(path),
+      ),
+    ).toHaveLength(14)
   })
 
   it("keeps every v1.17 current/default consumer in the atomic allowlist", () => {
