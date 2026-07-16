@@ -18,6 +18,7 @@ import {
   RUNTIME_ABI_DERIVED_VALIDATION_OUTPUTS,
   RUNTIME_ABI_PREPARED_LIFECYCLE_CONSUMERS,
   RUNTIME_ABI_TEST_RECEIPT_PATH,
+  buildRuntimeAbiActivationManifest,
   collectPhase258InventoryPaths,
   expandPhase258InventoryPaths,
   parsePlanFilesModified,
@@ -145,6 +146,14 @@ describe("Phase 258 runtime ABI activation closure", () => {
         activationCommit: "a".repeat(40),
       }),
     ).toThrow(/malformed/iu)
+  })
+
+  it("reads the fail-closed counted-lane posture from the canonical policy", () => {
+    expect(buildRuntimeAbiActivationManifest().posture).toMatchObject({
+      countedEligibleLaneIds: [],
+      productionTrustedProducers: [],
+      certificationOwner: "Phase 259",
+    })
   })
 
   it("keeps every v1.17 current/default consumer in the atomic allowlist", () => {

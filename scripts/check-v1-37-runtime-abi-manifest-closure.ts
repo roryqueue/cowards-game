@@ -212,10 +212,10 @@ const readCountedEligibleLaneIds = (): readonly string[] => {
   const value = readJson(
     "packages/spec/artifacts/runtime-abi-v1.17-budget-capabilities.json",
   )
-  if (!isRecord(value) || !isRecord(value.production)) {
+  if (!isRecord(value) || !isRecord(value.policy)) {
     throw new TypeError("Runtime budget capability artifact is malformed.")
   }
-  const ids = value.production.countedEligibleLaneIds
+  const ids = value.policy.countedEligibleLaneIds
   if (!Array.isArray(ids) || ids.some((entry) => typeof entry !== "string")) {
     throw new TypeError("Counted runtime lane posture is malformed.")
   }
