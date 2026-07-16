@@ -44,8 +44,11 @@ describe("Phase 258 runtime ABI activation closure", () => {
       "packages/spec/src/versions.ts",
       "packages/spec/src/runtime.ts",
       "packages/engine/src/kernel/types.ts",
+      "packages/engine/src/types.ts",
       "packages/replay/src/validate.ts",
       "packages/spec/artifacts/v1.37-current-event-coverage.json",
+      ".planning/artifacts/v1.37-typescript-backend-runtime-selection-overlay.json",
+      ".planning/artifacts/v1.37-typescript-surface-runtime-selection-overlay.json",
       "apps/runtime-service/src/server.ts",
       "apps/go-backend/orchestrator.go",
       "apps/go-backend/completion.go",
@@ -75,7 +78,10 @@ describe("Phase 258 runtime ABI activation closure", () => {
       ),
     )
     const exact = allowlist.operations
-      .map(({ path, operation }) => `${operation === "create" ? "A" : "M"}\t${path}`)
+      .map(
+        ({ path, operation }) =>
+          `${operation === "create" ? "A" : "M"}\t${path}`,
+      )
       .join("\n")
     expect(() =>
       verifyRuntimeAbiActivationNameStatus(allowlist, exact),
