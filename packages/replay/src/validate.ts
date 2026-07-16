@@ -5,7 +5,6 @@ import {
   COMPATIBILITY_VERSIONS,
   CURRENT_CANONICAL_COMPATIBILITY_TUPLE_RECORD,
   STRATEGY_RUNTIME_ABI_VERSION,
-  HistoricalV14ChronicleSchema,
   MatchExecutionExactEvidenceV137Schema,
   RuntimeExecutionFinalStateSchema,
   resolveCanonicalCompatibilityTuple,
@@ -25,6 +24,7 @@ import {
   type SemanticIntegrityIssue,
 } from "@cowards/spec"
 import { validateChronicleGrammar } from "./grammar.js"
+import { validateHistoricalV14Grammar } from "./historical-v1-4-grammar.js"
 import { createChronicleContentHash, stableStringify } from "./hash.js"
 import {
   resolveReplayTransitionEventContract,
@@ -686,31 +686,15 @@ const validateHistoricalV14Version = (
 export const validateHistoricalV14Chronicle = (
   chronicle: unknown,
 ): ChronicleValidationResult => {
-  const parsed = HistoricalV14ChronicleSchema.safeParse(chronicle)
-  if (!parsed.success) {
-    return {
-      ok: false,
-      errors: [
-        error(
-          "SCHEMA_INVALID",
-          "Historical v1.4 Chronicle does not match its original shape.",
-          {
-            actual: parsed.error.issues.map((issue) => ({
-              path: issue.path.join("."),
-              message: issue.message,
-            })) as JsonValue,
-          },
-        ),
-      ],
-    }
+  const historicalGrammarErrors = validateHistoricalV14Grammar(chronicle)
+  if (historicalGrammarErrors.some(({ code }) => code === "SCHEMA_INVALID")) {
+    return { ok: false, errors: historicalGrammarErrors }
   }
-  const value = parsed.data as Chronicle
+  const value = chronicle as Chronicle
   const errors = [
     ...validateHistoricalV14Version(value),
-    ...validateEventOrder(value),
-    ...validateRequiredEvents(value),
+    ...historicalGrammarErrors,
     ...validateSnapshots(value),
-    ...validateChronicleGrammar(value),
     ...validateSnapshotBoundaries(value),
     ...validateChronicleTransitions(value),
     ...validateHash(value),
