@@ -338,6 +338,60 @@ export const verifyPhase258ApprovedInterleavedCommitPaths = (
   }
 }
 
+export const verifyPhase258LaterPlanningOwnership = (
+  records: readonly Readonly<{ commit: string; path: string }>[],
+): void => {
+  const approved = new Set<string>(RUNTIME_ABI_PHASE258_INTERLEAVED_COMMITS)
+  for (const record of records) {
+    const path = normalizedInventoryPath(record.path)
+    if (
+      !/^[0-9a-f]{40}$/u.test(record.commit) ||
+      !path.startsWith(`${RUNTIME_ABI_PHASE259_DIRECTORY}/`) ||
+      !approved.has(record.commit)
+    ) {
+      throw new TypeError(
+        `Phase 258 git closure contains unowned later-phase planning: ${record.commit} ${path}`,
+      )
+    }
+  }
+}
+
+const verifyPhase258LaterPlanningCommitOwnership = (
+  baselineCommit: string,
+  headCommit: string,
+  runGit: RunGit,
+): void => {
+  const records: Array<{ commit: string; path: string }> = []
+  let commit: string | undefined
+  for (const line of runGit([
+    "log",
+    "--first-parent",
+    "--format=@@%H",
+    "--name-only",
+    `${baselineCommit}..${headCommit}`,
+    "--",
+    `${RUNTIME_ABI_PHASE259_DIRECTORY}/`,
+  ]).stdout.split(/\r?\n/u)) {
+    if (line.startsWith("@@")) {
+      commit = line.slice(2)
+      if (!/^[0-9a-f]{40}$/u.test(commit)) {
+        throw new TypeError(
+          `Phase 258 later-phase planning history is malformed: ${line}`,
+        )
+      }
+      continue
+    }
+    if (!line) continue
+    if (commit === undefined) {
+      throw new TypeError(
+        `Phase 258 later-phase planning path has no owning commit: ${line}`,
+      )
+    }
+    records.push({ commit, path: line })
+  }
+  verifyPhase258LaterPlanningOwnership(records)
+}
+
 export const verifyPhase258GitClosureAncestry = (options: {
   baselineCommit: string
   headCommit: string
@@ -397,6 +451,11 @@ export const verifyPhase258GitClosureAncestry = (options: {
       )
     }
   }
+  verifyPhase258LaterPlanningCommitOwnership(
+    baselineCommit,
+    headCommit,
+    runGit,
+  )
 }
 
 export const collectPhase258GitChangedPaths = (options: {

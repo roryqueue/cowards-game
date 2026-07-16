@@ -31,6 +31,7 @@ import {
   verifyPhase258AuthoritativeRegularFiles,
   verifyPhase258ApprovedInterleavedCommitPaths,
   verifyPhase258GitClosureAncestry,
+  verifyPhase258LaterPlanningOwnership,
   verifyPhase258PlanFilesMatchGit,
   verifyPhase258PlanInventoryMatchesGit,
   verifyRuntimeAbiActivationNameStatus,
@@ -208,6 +209,27 @@ describe("Phase 258 runtime ABI activation closure", () => {
     for (const path of exactPaths) {
       expect(inventory).not.toContain(path)
     }
+  })
+
+  it("rejects later-phase planning touched by any non-pinned Phase 258 commit", () => {
+    const path =
+      ".planning/phases/259-executable-four-language-and-chronicle-conformance/259-01-PLAN.md"
+    expect(() =>
+      verifyPhase258LaterPlanningOwnership([
+        {
+          commit: "f".repeat(40),
+          path,
+        },
+      ]),
+    ).toThrow(/unowned later-phase planning/iu)
+    expect(() =>
+      verifyPhase258LaterPlanningOwnership([
+        {
+          commit: "5bddb034e7239e8f32a7061174d275cfef393848",
+          path,
+        },
+      ]),
+    ).not.toThrow()
   })
 
   it("expands directories into exact regular files and rejects unsafe filesystem entries", () => {
