@@ -91,6 +91,7 @@ status: complete
 - Added a strict manifest pinning original v1.4 fixture/source blobs from the annotated `v1.4` tag, frozen interpreter blobs from commit `4fab0af`, literal historical versions, the authoritative exact tuple, and interpretation root.
 - Independently anchored the expected frozen commit, blobs, SHA-256 digests, and byte lengths so a self-consistent manifest relabel or substitution fails closed.
 - Routed historical validation through the frozen grammar so current initiative/snake checks cannot reinterpret valid v1.4 evidence.
+- Resolved every test evidence path and Git read from the test module's deterministic repository root, making the same immutable proof portable across root and package-local invocations.
 - Proved archived and working frozen bytes are unchanged before and after parsing, validation, transition interpretation, and manifest audit.
 
 ## Task Commits
@@ -102,6 +103,7 @@ status: complete
 5. **Review fix CR-03: Freeze historical runtime dependencies** — `4fab0af` (fix)
 6. **Review fix WR-01: Anchor historical source identities** — `4d647b4` (fix)
 7. **Review fix CR-03: Route history through frozen grammar** — `8f7b3be` (fix)
+8. **Portability fix: Resolve historical evidence module-relatively** — `c023ad4` (test)
 
 ## Files Created
 
@@ -124,6 +126,7 @@ None.
 
 - The repository has source-backed v1.4 Chronicle fixtures rather than a standalone raw Chronicle JSON file at the tag. The manifest therefore pins the exact Git blobs containing the original inline Chronicle and scenario generators, alongside the original schema, grammar, and transition sources.
 - The first combined current-event proof correctly detected that Plan 259-05 changed the grammar source hash. The vocabulary was unchanged; the current event-coverage artifact was regenerated and recorded in the updated Plan 259-05 summary.
+- The package-local Vitest command changed `process.cwd()` to `packages/replay`, exposing root-relative fixture reads in the proof test. Module-relative paths and an explicit Git `cwd` now make both supported invocations identical.
 
 ## User Setup Required
 
@@ -140,6 +143,7 @@ None.
 - Historical focused tests passed 13/13.
 - Historical plus current validate/reconstruct tests passed 57/57 serially.
 - Full replay package tests passed 194/194 serially with `--maxWorkers=1`.
+- Both package-local and repository-root full replay invocations passed 194/194 serially.
 - Replay typecheck, lint, formatting, and diff checks passed.
 - Phase-257 compatibility and kernel-contract tests passed 31/31.
 - Current event-coverage tests passed 4/4 and the artifact check is byte-exact.
