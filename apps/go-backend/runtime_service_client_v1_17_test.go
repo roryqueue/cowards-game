@@ -13,6 +13,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"sync"
 	"testing"
 	"time"
 )
@@ -834,8 +835,7 @@ func TestPhase258CurrentDefaultRoutes(t *testing.T) {
 		})
 	}))
 	defer server.Close()
-	router := newRuntimeServiceExecutionRouter(server.URL)
-	router.semanticReceiptSecret = runtimeServiceV117FixtureSecret
+	router := newRuntimeServiceExecutionRouterWithSemanticReceiptSecret(server.URL, runtimeServiceV117FixtureSecret)
 	routedRequest := runtimeServiceExecutionRequest{ContractVersion: selected}
 	if selected == runtimeExecutionServiceVersionV117 {
 		routedRequest.V117 = &requestV117
@@ -847,6 +847,56 @@ func TestPhase258CurrentDefaultRoutes(t *testing.T) {
 	}
 	if observed != selected {
 		t.Fatalf("current route used %q, want %q", observed, selected)
+	}
+}
+
+func TestPhase258RuntimeServiceRouterCapturesEnvironmentSecretOnce(t *testing.T) {
+	if selectedRuntimeServiceContractVersion() != runtimeExecutionServiceVersionV117 {
+		t.Fatal("environment-backed router concurrency proof requires the selected v1.17 service")
+	}
+	t.Setenv("COWARDS_RUNTIME_SERVICE_SEMANTIC_RECEIPT_SECRET", runtimeServiceV117FixtureSecret)
+	request, responseFixture, _ := loadCurrentRuntimeServiceV117Fixture(t)
+	responseBytes := encodeRuntimeServiceResponseFixtureV117(t, responseFixture)
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) {
+		writer.Header().Set("content-type", "application/json")
+		_, _ = writer.Write(responseBytes)
+	}))
+	defer server.Close()
+
+	router := newRuntimeServiceExecutionRouter(server.URL)
+	if router.v116.semanticReceiptSecret != runtimeServiceV117FixtureSecret ||
+		router.v117.semanticReceiptSecret != runtimeServiceV117FixtureSecret {
+		t.Fatal("router clients did not capture one exact semantic receipt secret at construction")
+	}
+	t.Setenv("COWARDS_RUNTIME_SERVICE_SEMANTIC_RECEIPT_SECRET", "rotated-after-router-construction")
+
+	const workers = 32
+	start := make(chan struct{})
+	failures := make(chan string, workers)
+	var wait sync.WaitGroup
+	for index := 0; index < workers; index++ {
+		wait.Add(1)
+		go func() {
+			defer wait.Done()
+			<-start
+			response, failure := router.executeMatch(context.Background(), runtimeServiceExecutionRequest{
+				ContractVersion: runtimeExecutionServiceVersionV117,
+				V117:            &request,
+			})
+			if response == nil || response.V117 == nil || failure != nil {
+				failures <- "concurrent execution did not preserve the constructor-bound receipt authority"
+			}
+		}()
+	}
+	close(start)
+	wait.Wait()
+	close(failures)
+	for failure := range failures {
+		t.Error(failure)
+	}
+	if router.v116.semanticReceiptSecret != runtimeServiceV117FixtureSecret ||
+		router.v117.semanticReceiptSecret != runtimeServiceV117FixtureSecret {
+		t.Fatal("router clients reread or mutated the semantic receipt secret after construction")
 	}
 }
 
@@ -964,8 +1014,7 @@ func TestPhase258ActivatedDefaultRoutes(t *testing.T) {
 		_, _ = writer.Write(encodeRuntimeServiceResponseFixtureV117(t, responseFixture))
 	}))
 	defer server.Close()
-	router := newRuntimeServiceExecutionRouter(server.URL)
-	router.semanticReceiptSecret = runtimeServiceV117FixtureSecret
+	router := newRuntimeServiceExecutionRouterWithSemanticReceiptSecret(server.URL, runtimeServiceV117FixtureSecret)
 	response, failure := router.executeMatch(context.Background(), runtimeServiceExecutionRequest{
 		ContractVersion: runtimeExecutionServiceVersionV117,
 		V117:            &request,

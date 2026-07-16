@@ -94,7 +94,7 @@ func TestGoMatchOrchestratorIntegration(t *testing.T) {
 	defer runtimeServer.Close()
 
 	orchestrator := newGoMatchOrchestrator(pool, runtimeServer.URL)
-	orchestrator.runtime.semanticReceiptSecret = semanticReceiptSecret
+	orchestrator.runtime = newRuntimeServiceExecutionRouterWithSemanticReceiptSecret(runtimeServer.URL, semanticReceiptSecret)
 	orchestrator.lifecycle = newTestMatchJobLifecycle(pool, time.Now().UTC().Add(time.Minute), "lease:go:orchestrator")
 	for _, matchID := range matchIDs {
 		result, err := orchestrator.runOnce(ctx, []string{matchID})
@@ -285,8 +285,8 @@ func TestPhase258ClaimBuildServiceCompleteV117Postgres(t *testing.T) {
 	orchestrator.completion.loadAuthority = func() (*verifiedRuntimeEvidenceAuthority, error) { return fixture.authority, nil }
 	orchestrator.completion.successorAuthorityTrustDomain = runtimeEvidenceAuthorityFixtureTrustDomain
 	orchestrator.completion.semanticReceiptSecret = runtimeServiceV117FixtureSecret
+	orchestrator.runtime = newRuntimeServiceExecutionRouterWithSemanticReceiptSecret(runtimeServer.URL, runtimeServiceV117FixtureSecret)
 	orchestrator.runtime.currentContractVersion = func() string { return runtimeExecutionServiceVersionV117 }
-	orchestrator.runtime.semanticReceiptSecret = runtimeServiceV117FixtureSecret
 
 	result, err := orchestrator.runOnce(ctx, []string{seeded.matchID})
 	if err != nil {

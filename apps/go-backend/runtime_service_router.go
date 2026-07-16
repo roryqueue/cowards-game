@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"strings"
 )
 
 // runtimeServiceExecutionRequest is an exact tagged union. A request may not
@@ -26,13 +27,21 @@ type runtimeServiceExecutionRouter struct {
 	v116                   *runtimeServiceClient
 	v117                   *runtimeServiceClientV117
 	currentContractVersion func() string
-	semanticReceiptSecret  string
 }
 
 func newRuntimeServiceExecutionRouter(endpoint string) *runtimeServiceExecutionRouter {
+	return newRuntimeServiceExecutionRouterWithSemanticReceiptSecret(endpoint, runtimeServiceSemanticReceiptSecret())
+}
+
+func newRuntimeServiceExecutionRouterWithSemanticReceiptSecret(endpoint string, semanticReceiptSecret string) *runtimeServiceExecutionRouter {
+	secret := strings.TrimSpace(semanticReceiptSecret)
+	v116 := newRuntimeServiceClient(endpoint)
+	v117 := newRuntimeServiceClientV117(endpoint)
+	v116.semanticReceiptSecret = secret
+	v117.semanticReceiptSecret = secret
 	return &runtimeServiceExecutionRouter{
-		v116:                   newRuntimeServiceClient(endpoint),
-		v117:                   newRuntimeServiceClientV117(endpoint),
+		v116:                   v116,
+		v117:                   v117,
 		currentContractVersion: selectedRuntimeServiceContractVersion,
 	}
 }
@@ -44,8 +53,6 @@ func (router *runtimeServiceExecutionRouter) executeMatch(
 	if router == nil || router.v116 == nil || router.v117 == nil || router.currentContractVersion == nil {
 		return nil, newRuntimeServiceFailure("RuntimeServiceStopped", "Runtime execution service router is not configured", true, nil)
 	}
-	router.v116.semanticReceiptSecret = router.semanticReceiptSecret
-	router.v117.semanticReceiptSecret = router.semanticReceiptSecret
 	switch request.ContractVersion {
 	case runtimeExecutionServiceVersion:
 		if router.currentContractVersion() != runtimeExecutionServiceVersion || request.V116 == nil || request.V117 != nil || request.V116.ContractVersion != runtimeExecutionServiceVersion {
