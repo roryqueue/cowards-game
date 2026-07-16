@@ -1,0 +1,13 @@
+export const V1_37_CONFORMANCE_CORPUS_REVIEWED_PIN = Object.freeze({
+  schemaVersion: "v1.37-executable-conformance-reviewed-pin-v1",
+  reviewedUnder: "259-01",
+  activeVersion: "v1",
+  corpusRootSha256:
+    "sha256:4e13f5e14961c7b7efd6869c6e456c9f8cfeb1cdd2afd9ec17a93812ccbe76a9",
+  corpusFileSha256:
+    "sha256:276aa063351d649db0d21a96b7db7f8af6fa6a5f5736736775d42d35ee7ec574",
+  registryFileSha256:
+    "sha256:fc3a4c5387e076742bfb0f91bf1f3498691333da37e393ca3b18ef5bae619fba",
+  path: "packages/golden/src/fixtures/v1-37-conformance-corpus/v1/corpus.json",
+  updatePolicy: "explicit-new-version-and-reviewed-pin-change",
+} as const)

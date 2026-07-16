@@ -7,12 +7,12 @@ import path from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
 // eslint-disable-next-line no-restricted-imports -- repo-root read-only checker consumes exact golden source contracts.
 import {
-  V1_37_CONFORMANCE_ACTIVE_REGISTRY,
-  V1_37_CONFORMANCE_CORPUS_ROOT,
   validateV137ConformanceCorpus,
   type V137ConformanceCorpus,
   type V137ConformanceRegistry,
 } from "../packages/golden/src/v1-37-conformance-corpus.ts"
+// eslint-disable-next-line no-restricted-imports -- the checker must use a literal reviewed pin independent of checked files.
+import { V1_37_CONFORMANCE_CORPUS_REVIEWED_PIN } from "../packages/golden/src/v1-37-conformance-corpus-pin.ts"
 
 const repoRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -24,7 +24,6 @@ const GOLDEN_ROOT = "packages/golden/src/fixtures/v1-37-conformance-corpus"
 
 export interface CheckCommittedV137ConformanceCorpusOptions {
   root?: string
-  expectedCorpusRootSha256?: string
 }
 
 export class V137ConformanceCheckError extends Error {
@@ -40,7 +39,7 @@ const fail = (code: string): never => {
 
 const renderJson = (value: unknown): string =>
   `${JSON.stringify(value, null, 2)}\n`
-const sha256 = (bytes: Uint8Array): string =>
+const sha256 = (bytes: Uint8Array | string): string =>
   `sha256:${createHash("sha256").update(bytes).digest("hex")}`
 
 const readJson = <T>(absolutePath: string): T =>
@@ -63,6 +62,13 @@ export const checkCommittedV137ConformanceCorpus = (
   const registryPath = path.join(root, REGISTRY_PATH)
   if (!existsSync(registryPath)) return [`${REGISTRY_PATH} is missing`]
 
+  const registryBytes = readFileSync(registryPath)
+  if (
+    sha256(registryBytes) !==
+    V1_37_CONFORMANCE_CORPUS_REVIEWED_PIN.registryFileSha256
+  ) {
+    errors.push("active registry exact bytes do not match reviewed pin")
+  }
   let registry: V137ConformanceRegistry
   try {
     registry = readJson<V137ConformanceRegistry>(registryPath)
@@ -75,15 +81,19 @@ export const checkCommittedV137ConformanceCorpus = (
   if (
     registry.schemaVersion !== "v1.37-executable-conformance-registry-v1" ||
     registry.activeVersion !==
-      V1_37_CONFORMANCE_ACTIVE_REGISTRY.activeVersion ||
-    registry.path !== V1_37_CONFORMANCE_ACTIVE_REGISTRY.path
+      V1_37_CONFORMANCE_CORPUS_REVIEWED_PIN.activeVersion ||
+    registry.corpusRootSha256 !==
+      V1_37_CONFORMANCE_CORPUS_REVIEWED_PIN.corpusRootSha256 ||
+    registry.corpusFileSha256 !==
+      V1_37_CONFORMANCE_CORPUS_REVIEWED_PIN.corpusFileSha256 ||
+    registry.path !== V1_37_CONFORMANCE_CORPUS_REVIEWED_PIN.path
   ) {
     errors.push("active registry identity mismatch")
   }
 
-  const corpusPath = path.join(root, registry.path)
+  const corpusPath = path.join(root, V1_37_CONFORMANCE_CORPUS_REVIEWED_PIN.path)
   if (!existsSync(corpusPath)) {
-    errors.push(`${registry.path} is missing`)
+    errors.push(`${V1_37_CONFORMANCE_CORPUS_REVIEWED_PIN.path} is missing`)
     return errors
   }
   let corpus: V137ConformanceCorpus
@@ -92,18 +102,25 @@ export const checkCommittedV137ConformanceCorpus = (
     validateV137ConformanceCorpus(corpus)
   } catch (error) {
     errors.push(
-      `${registry.path} failed validation: ${
+      `${V1_37_CONFORMANCE_CORPUS_REVIEWED_PIN.path} failed validation: ${
         error instanceof Error ? error.message : String(error)
       }`,
     )
     return errors
   }
   const corpusBytes = readFileSync(corpusPath)
-  if (sha256(corpusBytes) !== registry.corpusFileSha256) {
-    errors.push(`${registry.path} exact committed bytes do not match registry`)
+  if (
+    sha256(corpusBytes) !==
+    V1_37_CONFORMANCE_CORPUS_REVIEWED_PIN.corpusFileSha256
+  ) {
+    errors.push("active corpus exact bytes do not match reviewed pin")
   }
-  const expectedRoot =
-    options.expectedCorpusRootSha256 ?? V1_37_CONFORMANCE_CORPUS_ROOT
+  if (sha256(corpusBytes) !== registry.corpusFileSha256) {
+    errors.push(
+      `${V1_37_CONFORMANCE_CORPUS_REVIEWED_PIN.path} exact committed bytes do not match registry`,
+    )
+  }
+  const expectedRoot = V1_37_CONFORMANCE_CORPUS_REVIEWED_PIN.corpusRootSha256
   if (corpus.corpusRootSha256 !== expectedRoot) {
     errors.push(
       `active corpus root mismatch: expected ${expectedRoot}, got ${corpus.corpusRootSha256}`,
@@ -139,7 +156,7 @@ const main = (): void => {
     throw new Error(errors.join("\n"))
   }
   console.log(
-    `v1.37 conformance corpus current: ${V1_37_CONFORMANCE_ACTIVE_REGISTRY.activeVersion} root=${V1_37_CONFORMANCE_CORPUS_ROOT}`,
+    `v1.37 conformance corpus current: ${V1_37_CONFORMANCE_CORPUS_REVIEWED_PIN.activeVersion} root=${V1_37_CONFORMANCE_CORPUS_REVIEWED_PIN.corpusRootSha256}`,
   )
 }
 

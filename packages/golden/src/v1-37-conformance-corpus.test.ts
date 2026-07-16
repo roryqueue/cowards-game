@@ -1,7 +1,7 @@
 /// <reference types="node" />
 
 import { createHash } from "node:crypto"
-import { existsSync } from "node:fs"
+import { existsSync, readFileSync } from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 import { describe, expect, it } from "vitest"
@@ -19,6 +19,7 @@ import {
   type V137ConformanceCaseResult,
   type V137ConformanceCorpus,
 } from "./v1-37-conformance-corpus.js"
+import { V1_37_CONFORMANCE_CORPUS_REVIEWED_PIN } from "./v1-37-conformance-corpus-pin.js"
 
 const expectedLanguages = ["typescript", "python", "rust", "zig"] as const
 const expectedKinds = [
@@ -198,6 +199,21 @@ describe("v1.37 executable conformance corpus", () => {
         path.join(path.dirname(activeCorpusPath), "..", "corpus.json"),
       ),
     ).toBe(false)
+    expect(V1_37_CONFORMANCE_CORPUS_REVIEWED_PIN).toEqual({
+      schemaVersion: "v1.37-executable-conformance-reviewed-pin-v1",
+      reviewedUnder: "259-01",
+      activeVersion: "v1",
+      corpusRootSha256: V1_37_CONFORMANCE_CORPUS_ROOT,
+      corpusFileSha256:
+        "sha256:276aa063351d649db0d21a96b7db7f8af6fa6a5f5736736775d42d35ee7ec574",
+      registryFileSha256:
+        "sha256:fc3a4c5387e076742bfb0f91bf1f3498691333da37e393ca3b18ef5bae619fba",
+      path: "packages/golden/src/fixtures/v1-37-conformance-corpus/v1/corpus.json",
+      updatePolicy: "explicit-new-version-and-reviewed-pin-change",
+    })
+    expect(sha256(readFileSync(activeCorpusPath, "utf8"))).toBe(
+      V1_37_CONFORMANCE_CORPUS_REVIEWED_PIN.corpusFileSha256,
+    )
   })
 
   it("rejects missing, duplicate, reordered, skipped, unsupported, and substituted results", () => {

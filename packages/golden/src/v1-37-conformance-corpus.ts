@@ -3,6 +3,7 @@
 import { createHash } from "node:crypto"
 import { readFileSync } from "node:fs"
 import { encodeCanonicalJson, type JsonValue } from "@cowards/spec"
+import { V1_37_CONFORMANCE_CORPUS_REVIEWED_PIN } from "./v1-37-conformance-corpus-pin.js"
 
 export const V1_37_CONFORMANCE_LANGUAGES = Object.freeze([
   "typescript",
@@ -583,7 +584,16 @@ if (
   registry.corpusRootSha256 !== corpus.corpusRootSha256 ||
   !SHA256.test(registry.corpusFileSha256) ||
   registry.path !==
-    `packages/golden/src/fixtures/v1-37-conformance-corpus/${corpus.version}/corpus.json`
+    `packages/golden/src/fixtures/v1-37-conformance-corpus/${corpus.version}/corpus.json` ||
+  registry.activeVersion !==
+    V1_37_CONFORMANCE_CORPUS_REVIEWED_PIN.activeVersion ||
+  registry.corpusRootSha256 !==
+    V1_37_CONFORMANCE_CORPUS_REVIEWED_PIN.corpusRootSha256 ||
+  registry.corpusFileSha256 !==
+    V1_37_CONFORMANCE_CORPUS_REVIEWED_PIN.corpusFileSha256 ||
+  registry.path !== V1_37_CONFORMANCE_CORPUS_REVIEWED_PIN.path ||
+  corpus.corpusRootSha256 !==
+    V1_37_CONFORMANCE_CORPUS_REVIEWED_PIN.corpusRootSha256
 ) {
   fail("ACTIVE_REGISTRY")
 }
