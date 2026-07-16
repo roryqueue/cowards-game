@@ -60,6 +60,7 @@ describe("v1.37 conformance candidate generation", () => {
     expect(result.semanticDiffPath).toBe(
       path.join(destinationRoot, "v2", "semantic-diff.json"),
     )
+    expect(result.corpusLogicalPath).toBe("v2/corpus.json")
 
     const corpusBytes = readFileSync(result.corpusPath)
     const diffBytes = readFileSync(result.semanticDiffPath)
@@ -76,11 +77,32 @@ describe("v1.37 conformance candidate generation", () => {
       candidate: {
         version: "v2",
         corpusRootSha256: result.corpusRootSha256,
+        path: "v2/corpus.json",
       },
       sourceChanges: ["typescript"],
+      fixtureChanges: [
+        "fixtures.typescript.source",
+        "fixtures.typescript.sourceSha256",
+      ],
     })
     expect(diff.changedPaths).toContain("fixtures.typescript.source")
+    expect(diffBytes.toString("utf8")).not.toContain(destinationRoot)
     expect(JSON.stringify(diff)).not.toMatch(/approval|approved|disposition/iu)
+  })
+
+  it("reports every governed fixture identity field in the semantic diff", () => {
+    const candidateCorpus = globalThis.structuredClone(V1_37_CONFORMANCE_CORPUS)
+    candidateCorpus.fixtures[0]!.providerId =
+      "strategy-language-provider-js-ts-reviewed-candidate"
+
+    const result = writeV137ConformanceCandidate({
+      destinationRoot: temporaryRoot(),
+      nextVersion: "v2",
+      candidateCorpus,
+    })
+    const diff = JSON.parse(readFileSync(result.semanticDiffPath, "utf8"))
+    expect(diff.fixtureChanges).toEqual(["fixtures.typescript.providerId"])
+    expect(diff.changedPaths).toContain("fixtures.typescript.providerId")
   })
 
   it("changes roots for seed, generator, case, mutation, expectation, and invocation inputs", () => {

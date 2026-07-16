@@ -12,6 +12,7 @@ import {
   computeV137ConformanceCorpusRoot,
   validateV137ConformanceCorpus,
   type V137ConformanceCorpus,
+  type V137ConformanceFixture,
 } from "../packages/golden/src/v1-37-conformance-corpus.ts"
 
 const repoRoot = path.resolve(
@@ -23,6 +24,15 @@ const ACTIVE_GOLDEN_ROOT = path.join(
   "packages/golden/src/fixtures/v1-37-conformance-corpus",
 )
 const VERSION = /^v[1-9][0-9]*$/u
+const GOVERNED_FIXTURE_FIELDS = Object.freeze([
+  "languageId",
+  "providerId",
+  "runtimeTarget",
+  "behaviorManifestId",
+  "sourceEncoding",
+  "sourceSha256",
+  "source",
+] as const satisfies readonly (keyof V137ConformanceFixture)[])
 
 export interface WriteV137ConformanceCandidateInput {
   destinationRoot: string
@@ -40,6 +50,7 @@ export interface V137ConformanceCandidateResult {
   version: string
   corpusRootSha256: string
   corpusPath: string
+  corpusLogicalPath: string
   semanticDiffPath: string
   corpusFileSha256: string
 }
@@ -58,6 +69,7 @@ interface V137ConformanceSemanticDiff {
     path: string
   }
   changedPaths: string[]
+  fixtureChanges: string[]
   sourceChanges: string[]
   caseChanges: string[]
 }
@@ -106,20 +118,19 @@ const semanticDiff = (
   ) {
     changedPaths.add("behaviorManifest")
   }
-  const sourceChanges: string[] = []
+  const fixtureChanges: string[] = []
+  const sourceChanges = new Set<string>()
   for (const fixture of candidate.fixtures) {
     const baseline = V1_37_CONFORMANCE_CORPUS.fixtures.find(
       ({ languageId }) => languageId === fixture.languageId,
     )
-    if (baseline === undefined || fixture.source !== baseline.source) {
-      sourceChanges.push(fixture.languageId)
-      changedPaths.add(`fixtures.${fixture.languageId}.source`)
-    }
-    if (
-      baseline === undefined ||
-      fixture.sourceSha256 !== baseline.sourceSha256
-    ) {
-      changedPaths.add(`fixtures.${fixture.languageId}.sourceSha256`)
+    for (const field of GOVERNED_FIXTURE_FIELDS) {
+      if (baseline === undefined || fixture[field] !== baseline[field]) {
+        const changedPath = `fixtures.${fixture.languageId}.${field}`
+        changedPaths.add(changedPath)
+        fixtureChanges.push(changedPath)
+        if (field === "source") sourceChanges.add(fixture.languageId)
+      }
     }
   }
   const caseChanges: string[] = []
@@ -153,7 +164,8 @@ const semanticDiff = (
       path: corpusPath,
     },
     changedPaths: [...changedPaths].sort(),
-    sourceChanges: sourceChanges.sort(),
+    fixtureChanges: fixtureChanges.sort(),
+    sourceChanges: [...sourceChanges].sort(),
     caseChanges: caseChanges.sort(),
   }
 }
@@ -183,9 +195,10 @@ export const writeV137ConformanceCandidate = (
   validateV137ConformanceCorpus(candidate)
 
   const corpusPath = path.join(candidateDirectory, "corpus.json")
+  const corpusLogicalPath = path.posix.join(input.nextVersion, "corpus.json")
   const semanticDiffPath = path.join(candidateDirectory, "semantic-diff.json")
   const corpusBytes = renderJson(candidate)
-  const diff = semanticDiff(candidate, corpusPath)
+  const diff = semanticDiff(candidate, corpusLogicalPath)
   mkdirSync(candidateDirectory, { recursive: true })
   writeFileSync(corpusPath, corpusBytes, { flag: "wx" })
   writeFileSync(semanticDiffPath, renderJson(diff), { flag: "wx" })
@@ -193,6 +206,7 @@ export const writeV137ConformanceCandidate = (
     version: candidate.version,
     corpusRootSha256: candidate.corpusRootSha256,
     corpusPath,
+    corpusLogicalPath,
     semanticDiffPath,
     corpusFileSha256: sha256(corpusBytes),
   }
@@ -249,7 +263,7 @@ const main = (): void => {
     ...(candidateCorpus === undefined ? {} : { candidateCorpus }),
   })
   console.log(
-    `v1.37 conformance candidate ${result.version}: ${result.corpusRootSha256} at ${result.corpusPath}`,
+    `v1.37 conformance candidate ${result.version}: ${result.corpusRootSha256} at ${result.corpusLogicalPath}`,
   )
 }
 
