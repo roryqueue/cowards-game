@@ -3,6 +3,7 @@
 import { createHash } from "node:crypto"
 import { existsSync } from "node:fs"
 import path from "node:path"
+import { fileURLToPath } from "node:url"
 import { describe, expect, it } from "vitest"
 import {
   V1_37_CONFORMANCE_ACTIVE_REGISTRY,
@@ -172,14 +173,16 @@ describe("v1.37 executable conformance corpus", () => {
         "sha256:276aa063351d649db0d21a96b7db7f8af6fa6a5f5736736775d42d35ee7ec574",
       path: "packages/golden/src/fixtures/v1-37-conformance-corpus/v1/corpus.json",
     })
-    expect(existsSync(V1_37_CONFORMANCE_ACTIVE_REGISTRY.path)).toBe(true)
+    const activeCorpusPath = fileURLToPath(
+      new URL(
+        "./fixtures/v1-37-conformance-corpus/v1/corpus.json",
+        import.meta.url,
+      ),
+    )
+    expect(existsSync(activeCorpusPath)).toBe(true)
     expect(
       existsSync(
-        path.join(
-          path.dirname(V1_37_CONFORMANCE_ACTIVE_REGISTRY.path),
-          "..",
-          "corpus.json",
-        ),
+        path.join(path.dirname(activeCorpusPath), "..", "corpus.json"),
       ),
     ).toBe(false)
   })
