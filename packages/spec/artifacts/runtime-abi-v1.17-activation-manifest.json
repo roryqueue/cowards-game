@@ -215,6 +215,10 @@
       "sha256": "d684c302df08fd145f8cd236b63fb39ca9d16e0fa09a5f202bb83294ab7902dc"
     },
     {
+      "path": "apps/go-backend/deployment_lane_registry_test.go",
+      "sha256": "ecfd728315ea0bd1dfde2bdf31d758b3c74851b425d98ae9754076c4e78780c6"
+    },
+    {
       "path": "apps/go-backend/live_backend.go",
       "sha256": "a4892f45c06f8e498333043f9ea293f923096c8cb446ee1632c236bb4fcc025e"
     },
