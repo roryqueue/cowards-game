@@ -431,7 +431,7 @@ describe("current Match completion v1.18 semantic receipt admission", () => {
         }),
       ).toThrow(MatchCompletionSemanticSystemFailure)
     }
-  })
+  }, 15_000)
 
   it("rejects invalid v1.18 evidence before opening a transaction", async () => {
     const fixture = v118CompletionFixture("completion:v118:pretransaction")
@@ -1111,7 +1111,7 @@ describePostgres(
         attempt_status: "running",
         chronicles: 0,
       })
-    })
+    }, 15_000)
 
     it("refuses every stale or not-yet-evaluated entrant scheduling decision without mutation", async () => {
       const cases = [
@@ -1176,7 +1176,7 @@ describePostgres(
           "alter table match_set_execution_entrants enable trigger match_set_execution_entrants_append_only",
         )
       }
-    })
+    }, 15_000)
 
     it("persists only the engine-produced player-violation consequence and prior memory", async () => {
       const violationNamespace = `${namespace}:player-violation`

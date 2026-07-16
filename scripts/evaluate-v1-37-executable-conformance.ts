@@ -53,11 +53,20 @@ const INPUT_PATHS = Object.freeze([
   ".planning/artifacts/v1.37-protected-working-tree-baseline.json",
   ".planning/artifacts/v1.37-runtime-authority-import-trust-roots-bootstrap.json",
   "apps/go-backend/runtime_service_client_v1_18.go",
+  "apps/go-backend/main_test.go",
   "apps/runtime-service/src/execute-match.ts",
+  "package.json",
   "packages/persistence/src/complete-match.ts",
+  "packages/persistence/src/complete-match.test.ts",
   "packages/replay/src/reconstruct.ts",
+  "packages/spec/artifacts/strategy-artifacts.v1.14.json",
+  "packages/spec/artifacts/v1.37-current-event-coverage.json",
+  "packages/spec/src/runtime-budget-capabilities-v1-18.ts",
   "packages/spec/src/runtime-conformance-certificate-v1-17.ts",
   "packages/spec/src/runtime-semantic-receipt-v1-18.ts",
+  "scripts/check-boundary-monitors.ts",
+  "scripts/evaluate-v1-37-executable-conformance.ts",
+  "scripts/sign-v1-37-language-conformance-certificate.ts",
 ] as const)
 
 const GATE_IDS = Object.freeze([
@@ -185,6 +194,8 @@ const gateDefinitions = Object.freeze([
       "exec",
       "vitest",
       "run",
+      "--maxWorkers=1",
+      "--no-file-parallelism",
       "packages/spec/src/runtime-conformance-certificate-v1-17.test.ts",
       "packages/spec/src/runtime-semantic-receipt-v1-18.test.ts",
       "packages/spec/src/runtime-execution-service-v1-18.test.ts",
@@ -609,9 +620,17 @@ const main = (): void => {
     process.stdout.write(
       `${JSON.stringify({ status: "passed", code: "EXECUTABLE_CONFORMANCE_PROVED" })}\n`,
     )
-  } catch {
+  } catch (error) {
+    const gateMatch =
+      error instanceof Error
+        ? /^gate failed: ([a-z0-9-]+)$/u.exec(error.message)
+        : null
+    const code =
+      gateMatch === null
+        ? "EXECUTABLE_CONFORMANCE_PROOF_INVALID"
+        : `EXECUTABLE_CONFORMANCE_GATE_FAILED_${gateMatch[1]!.toUpperCase().replaceAll("-", "_")}`
     process.stderr.write(
-      `${JSON.stringify({ status: "failed", code: "EXECUTABLE_CONFORMANCE_PROOF_INVALID" })}\n`,
+      `${JSON.stringify({ status: "failed", code })}\n`,
     )
     process.exitCode = 1
   }

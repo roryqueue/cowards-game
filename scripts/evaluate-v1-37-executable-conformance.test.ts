@@ -31,7 +31,7 @@ describe("v1.37 executable conformance proof", () => {
       passingGates().map((gate, index) => ({
         ...gate,
         command: [
-          "pnpm exec vitest run packages/spec/src/runtime-conformance-certificate-v1-17.test.ts packages/spec/src/runtime-semantic-receipt-v1-18.test.ts packages/spec/src/runtime-execution-service-v1-18.test.ts packages/spec/src/runtime-budget-capabilities-v1-18.test.ts packages/persistence/src/runtime-evidence-authority-publisher.test.ts packages/persistence/src/complete-match.test.ts apps/runtime-service/src/execute-match-v1-18.test.ts scripts/sign-v1-37-language-conformance-certificate.test.ts",
+          "pnpm exec vitest run --maxWorkers=1 --no-file-parallelism packages/spec/src/runtime-conformance-certificate-v1-17.test.ts packages/spec/src/runtime-semantic-receipt-v1-18.test.ts packages/spec/src/runtime-execution-service-v1-18.test.ts packages/spec/src/runtime-budget-capabilities-v1-18.test.ts packages/persistence/src/runtime-evidence-authority-publisher.test.ts packages/persistence/src/complete-match.test.ts apps/runtime-service/src/execute-match-v1-18.test.ts scripts/sign-v1-37-language-conformance-certificate.test.ts",
           "pnpm go:parity",
           "pnpm contract:check",
           "pnpm strategy-artifacts:check",
@@ -84,7 +84,7 @@ describe("v1.37 executable conformance proof", () => {
       passingGates().map((gate, index) => ({
         ...gate,
         command: [
-          "pnpm exec vitest run packages/spec/src/runtime-conformance-certificate-v1-17.test.ts packages/spec/src/runtime-semantic-receipt-v1-18.test.ts packages/spec/src/runtime-execution-service-v1-18.test.ts packages/spec/src/runtime-budget-capabilities-v1-18.test.ts packages/persistence/src/runtime-evidence-authority-publisher.test.ts packages/persistence/src/complete-match.test.ts apps/runtime-service/src/execute-match-v1-18.test.ts scripts/sign-v1-37-language-conformance-certificate.test.ts",
+          "pnpm exec vitest run --maxWorkers=1 --no-file-parallelism packages/spec/src/runtime-conformance-certificate-v1-17.test.ts packages/spec/src/runtime-semantic-receipt-v1-18.test.ts packages/spec/src/runtime-execution-service-v1-18.test.ts packages/spec/src/runtime-budget-capabilities-v1-18.test.ts packages/persistence/src/runtime-evidence-authority-publisher.test.ts packages/persistence/src/complete-match.test.ts apps/runtime-service/src/execute-match-v1-18.test.ts scripts/sign-v1-37-language-conformance-certificate.test.ts",
           "pnpm go:parity",
           "pnpm contract:check",
           "pnpm strategy-artifacts:check",

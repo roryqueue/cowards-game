@@ -310,7 +310,8 @@ func TestLiveStrategyArtifactManifestSupportsForkLookups(t *testing.T) {
 	if insert.Source == "" || insert.SourceHash == "" || insert.SourceHash != hashString(insert.Source) {
 		t.Fatalf("fork insert did not preserve manifest source hash")
 	}
-	if insert.Runtime == nil || stringValue(insert.Runtime, "abiVersion") != "strategy-runtime-abi-v1.14" {
+	expectedRuntimeABI := stringValue(artifact.Runtime, "abiVersion")
+	if expectedRuntimeABI == "" || insert.Runtime == nil || stringValue(insert.Runtime, "abiVersion") != expectedRuntimeABI {
 		t.Fatalf("fork insert did not preserve runtime ABI metadata")
 	}
 	if insert.Validation == nil || !boolValue(insert.Validation, "valid") {

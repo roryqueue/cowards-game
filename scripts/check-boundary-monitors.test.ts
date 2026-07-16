@@ -19,6 +19,7 @@ import {
   findUnknownReportOnlyOffenses,
   runBoundaryMonitorChecks,
   selectedGoRouteManifest,
+  validateV137ExecutableConformanceMonitorWiring,
   validateSelectedGoRouteManifest,
   validateV116FinalTypeScriptSurfaceLabels,
   validateV115LifecycleOwnershipManifest,
@@ -314,7 +315,7 @@ describe("boundary drift monitors", () => {
       "pnpm v1.36:final-proof:check",
     )
     expect(packageJson.scripts["boundary:monitors"]).toContain(
-      "pnpm v1.36:historical-proof:check && pnpm v1.37:integrity-authority:check && pnpm v1.37:worker-retirement:check && pnpm v1.37:integrity-boundaries:check && pnpm v1.37:kernel-integrity:check && pnpm exec tsx scripts/check-boundary-monitors.ts",
+      "pnpm v1.36:historical-proof:check && pnpm v1.37:integrity-authority:check && pnpm v1.37:worker-retirement:check && pnpm v1.37:integrity-boundaries:check && pnpm v1.37:kernel-integrity:check && pnpm v1.37:executable-conformance:check && pnpm exec tsx scripts/check-boundary-monitors.ts",
     )
     expect(
       packageJson.scripts["boundary:monitors"].match(
@@ -348,6 +349,20 @@ describe("boundary drift monitors", () => {
         "pnpm v1.36:historical-proof:check",
       ),
     )
+  })
+
+  it("serializes the pure executable conformance check exactly once", () => {
+    expect(validateV137ExecutableConformanceMonitorWiring()).toContain(
+      "exactly once",
+    )
+    const packageJson = JSON.parse(readFileSync("package.json", "utf8")) as {
+      scripts: Record<string, string>
+    }
+    const boundary = packageJson.scripts["boundary:monitors"]!
+    expect(boundary).not.toContain("v1.37:executable-conformance:write")
+    expect(
+      boundary.match(/pnpm v1\.37:executable-conformance:check/gu),
+    ).toHaveLength(1)
   })
 
   it("checks v1.35 account provider entry proof artifacts without live dependencies", () => {
@@ -1205,8 +1220,8 @@ describe("boundary drift monitors", () => {
         return new Response(
           JSON.stringify({
             ok: true,
-            service: "runtime-execution-service-v1.16",
-            runtimeAbiVersion: "strategy-runtime-abi-v1.14",
+            service: "runtime-execution-service-v1.17",
+            runtimeAbiVersion: "strategy-runtime-abi-v1.17",
             adapter: "runtime-js-worker-thread",
           }),
           { status: 200 },

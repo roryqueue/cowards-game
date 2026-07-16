@@ -1,4 +1,5 @@
 #!/usr/bin/env -S pnpm exec tsx
+/* eslint-disable no-restricted-imports -- Repository boundary monitor inspects cross-package source contracts directly. */
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs"
 import { createHash } from "node:crypto"
 import path from "node:path"
@@ -5630,7 +5631,36 @@ export const runBoundaryMonitorChecks = async (): Promise<
   await check("topology", "live v1.15 topology diagnostics", () =>
     checkTopologyDiagnostics(),
   ),
+  await check(
+    "contract_drift",
+    "v1.37 executable conformance monitor wiring",
+    () => validateV137ExecutableConformanceMonitorWiring(),
+  ),
 ]
+
+export const validateV137ExecutableConformanceMonitorWiring = (): string => {
+  const packageJson = readJson<{ scripts: Record<string, string> }>(
+    "package.json",
+  )
+  const writeCommand =
+    "pnpm exec tsx scripts/evaluate-v1-37-executable-conformance.ts --write"
+  const checkCommand =
+    "pnpm exec tsx scripts/evaluate-v1-37-executable-conformance.ts --check"
+  const boundary = packageJson.scripts["boundary:monitors"] ?? ""
+  if (
+    packageJson.scripts["v1.37:executable-conformance:write"] !==
+      writeCommand ||
+    packageJson.scripts["v1.37:executable-conformance:check"] !==
+      checkCommand ||
+    boundary.includes("v1.37:executable-conformance:write") ||
+    boundary.split("pnpm v1.37:executable-conformance:check").length !== 2 ||
+    boundary.indexOf("pnpm v1.37:executable-conformance:check") >
+      boundary.indexOf("pnpm exec tsx scripts/check-boundary-monitors.ts")
+  ) {
+    throw new Error("v1.37 executable conformance monitor wiring drifted")
+  }
+  return "pure proof check is serialized exactly once without write-mode recursion"
+}
 
 const run = async (): Promise<number> => {
   const checks = await runBoundaryMonitorChecks()
