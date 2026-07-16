@@ -896,7 +896,8 @@ const validateStateChronology = (
   if (
     invocationOrdinal === null ||
     invocationOrdinal === undefined ||
-    input.finalStateHash !== input.invocations[invocationOrdinal]!.afterStateHash
+    input.finalStateHash !==
+      input.invocations[invocationOrdinal]!.afterStateHash
   ) {
     fail("TRACE_RESULT_INVALID")
   }

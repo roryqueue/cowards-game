@@ -586,7 +586,7 @@ describe("v1.37 canonical conformance trace", () => {
     const nonJsonEvent = mutableTrace(expected)
     nonJsonEvent.transitions[0]!.orderedEvents[0]!.payload = {
       privateCounter: 1n,
-    } as unknown as typeof nonJsonEvent.transitions[0]["orderedEvents"][0]["payload"]
+    } as unknown as (typeof nonJsonEvent.transitions)[0]["orderedEvents"][0]["payload"]
     invalidCandidates.push(nonJsonEvent as CanonicalConformanceTrace)
 
     const invalidTransitionRoot = mutableTrace(expected)
@@ -596,7 +596,9 @@ describe("v1.37 canonical conformance trace", () => {
     const invalidTransitionIdentity = mutableTrace(expected)
     invalidTransitionIdentity.transitions[0]!.coordinates.stage =
       "host-private-stage"
-    invalidCandidates.push(invalidTransitionIdentity as CanonicalConformanceTrace)
+    invalidCandidates.push(
+      invalidTransitionIdentity as CanonicalConformanceTrace,
+    )
 
     for (const actual of invalidCandidates) {
       expect(() =>
@@ -1176,12 +1178,11 @@ describe("v1.37 canonical conformance trace", () => {
       expectDivergence(
         expected,
         rehash(actual, {
-          preserveTransitionRoots:
-            field === "transition.accumulatedTraceRoot",
+          preserveTransitionRoots: field === "transition.accumulatedTraceRoot",
         }),
         field,
         {
-        transitionOrdinal: index,
+          transitionOrdinal: index,
         },
       )
     }
