@@ -73,6 +73,7 @@ fn base64(bytes: &[u8]) -> String {
     output
 }
 
+#[cfg(any(test, not(target_os = "linux")))]
 fn platform_status() -> &'static str {
     #[cfg(target_os = "linux")]
     {

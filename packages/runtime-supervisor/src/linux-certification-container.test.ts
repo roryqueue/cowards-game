@@ -12,7 +12,8 @@ const input = {
   descriptorSha256:
     "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
   repoRoot: "/repo",
-  binaryPath: "/repo/packages/runtime-supervisor/native/target/release/cowards-runtime-supervisor",
+  binaryPath:
+    "/repo/packages/runtime-supervisor/native/target/release/cowards-runtime-supervisor",
   seccompPath:
     "/repo/packages/runtime-supervisor/native/seccomp/moby-v0.2.1-userns-landlock.json",
   inputPath: "/tmp/input.json",

@@ -12,6 +12,7 @@ import {
   PINNED_RUNTIME_SUPERVISOR_TARGET,
   type NativeSupervisorBuildManifestV118,
 } from "../packages/runtime-supervisor/src/native-supervisor.js"
+import { runLinuxCertificationContainerProbe } from "../packages/runtime-supervisor/src/linux-certification-container.js"
 
 export { PINNED_RUNTIME_SUPERVISOR_BUILDER_IMAGE }
 
@@ -106,11 +107,12 @@ const stable = (value: unknown): string => `${JSON.stringify(value, null, 2)}\n`
 
 const main = (): void => {
   const build = process.argv.includes("--build")
+  const buildLinuxContainer = process.argv.includes("--build-linux-container")
   const check = process.argv.includes("--check")
-  if (!build && !check) {
+  if (!build && !buildLinuxContainer && !check) {
     throw new TypeError("Use --build, --check, or both")
   }
-  if (build) {
+  if (build || buildLinuxContainer) {
     const result = spawnSync("docker", supervisorBuildDockerArgs(repoRoot), {
       encoding: "utf8",
       env: { PATH: process.env.PATH ?? "" },
@@ -122,6 +124,16 @@ const main = (): void => {
       throw new TypeError("Pinned Linux Rust supervisor build failed")
     }
     writeFileSync(manifestPath, stable(currentManifest()))
+  }
+  if (buildLinuxContainer) {
+    runLinuxCertificationContainerProbe({
+      repoRoot,
+      binaryPath,
+      seccompPath: path.join(
+        nativeRoot,
+        "seccomp/moby-v0.2.1-userns-landlock.json",
+      ),
+    })
   }
   if (check) {
     const expected = stable(currentManifest())
