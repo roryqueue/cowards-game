@@ -416,19 +416,9 @@ const traceMaterial = (
   return material
 }
 
-const frozenTraceRootCache = new WeakMap<CanonicalConformanceTrace, string>()
-
 export const hashCanonicalConformanceTrace = (
   trace: CanonicalConformanceTrace,
-): string => {
-  if (Object.isFrozen(trace)) {
-    const cached = frozenTraceRootCache.get(trace)
-    if (cached !== undefined) return cached
-  }
-  const root = hashTraceMaterial(traceMaterial(trace))
-  if (Object.isFrozen(trace)) frozenTraceRootCache.set(trace, root)
-  return root
-}
+): string => hashTraceMaterial(traceMaterial(trace))
 
 const validateInvocation = (
   value: CanonicalConformanceInvocation,

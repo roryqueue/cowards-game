@@ -311,6 +311,28 @@ describe("v1.37 canonical conformance trace", () => {
     )
   })
 
+  it("never reuses a stale root from a merely shallow-frozen caller trace", () => {
+    const expected = projectCanonicalConformanceTrace(successfulInput())
+    const actual = mutableTrace(expected)
+    Object.freeze(actual)
+
+    expect(hashCanonicalConformanceTrace(actual)).toBe(actual.traceRoot)
+    actual.invocations[0]!.objectiveHash = hash("f")
+
+    expect(
+      compareCanonicalConformanceTrace({
+        expected,
+        actual: actual as CanonicalConformanceTrace,
+      }),
+    ).toMatchObject({
+      status: "diverged",
+      disposition: "quarantine",
+      divergence: {
+        field: "traceRoot",
+      },
+    })
+  })
+
   it("rejects host-private and private-preimage fields instead of serializing them", () => {
     for (const field of [
       "sourceBytes",
