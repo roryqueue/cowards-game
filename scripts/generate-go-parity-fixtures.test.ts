@@ -70,6 +70,10 @@ const currentServiceRequestRelative =
   "packages/spec/artifacts/runtime-execution-service-request.v1.17.json"
 const currentServiceResponseRelative =
   "packages/spec/artifacts/runtime-execution-service-response.v1.17.wire.json"
+const v118ServiceRequestRelative =
+  "packages/spec/artifacts/runtime-execution-service-request.v1.18.candidate.json"
+const v118ServiceResponseRelative =
+  "packages/spec/artifacts/runtime-execution-service-response.v1.18.candidate.wire.json"
 const successorAuthorityFixtureRelative =
   "packages/spec/artifacts/runtime-successor-authority-v1.17.fixture.json"
 const generatedRelative = "apps/go-backend/runtime_execution_contract_gen.go"
@@ -103,6 +107,24 @@ const makeVersionRoot = (): string => {
     cpSync(source, target)
   }
   return root
+}
+
+const copyV117Inputs = (root: string): void => {
+  for (const relative of [
+    "packages/spec/src/runtime-execution-service-v1-17.ts",
+    "apps/runtime-service/src/semantic-receipt-v1-17.ts",
+    candidateRequestRelative,
+    candidateResponseRelative,
+    serviceRequestRelative,
+    serviceResponseRelative,
+    currentServiceRequestRelative,
+    currentServiceResponseRelative,
+    successorAuthorityFixtureRelative,
+  ]) {
+    const target = path.join(root, relative)
+    mkdirSync(path.dirname(target), { recursive: true })
+    cpSync(path.join(repoRoot, relative), target)
+  }
 }
 
 const runGenerator = (args: readonly string[]) =>
@@ -155,6 +177,7 @@ describe("versioned TypeScript-to-Go parity generator", () => {
     expect(source).toContain('args.includes("--write-v1.17-invocation")')
     expect(source).toContain('args.includes("--write-v1.17-service")')
     expect(source).toContain('"--write-v1.17-current-service"')
+    expect(source).toContain('args.includes("--write-v1.18-service")')
     expect(source).toContain('args.includes("--write-v1.16")')
     expect(source).toContain("Refusing to rewrite immutable v1.16")
     expect(source).not.toContain("writeFileSync(runtimeExecutionWireGoldenPath")
@@ -173,6 +196,94 @@ describe("versioned TypeScript-to-Go parity generator", () => {
         ),
       ),
     ).toBe("9c870d57e0125eb80ab2ba941ecbbede8a9a775f61c0b278abec25c491374d97")
+  })
+
+  it("writes exact additive v1.18 service and Go receipt vectors without changing v1.16/v1.17", () => {
+    const root = makeVersionRoot()
+    copyV117Inputs(root)
+    const protectedBefore = Object.fromEntries(
+      [
+        "packages/spec/artifacts/runtime-execution-service-request.v1.16.json",
+        "packages/spec/artifacts/runtime-execution-service-response.v1.16.wire.json",
+        "packages/spec/src/runtime-execution-service-v1-17.ts",
+        "apps/runtime-service/src/semantic-receipt-v1-17.ts",
+        serviceRequestRelative,
+        serviceResponseRelative,
+        currentServiceRequestRelative,
+        currentServiceResponseRelative,
+      ].map((relative) => [
+        relative,
+        sha256(readFileSync(path.join(root, relative))),
+      ]),
+    )
+    const completed = runGenerator([
+      "--root",
+      root,
+      "--versions-only",
+      "--write-v1.18-service",
+      "--check",
+    ])
+    expect(completed.status, `${completed.stdout}\n${completed.stderr}`).toBe(0)
+    expect(readFileSync(path.join(root, v118ServiceRequestRelative))).toEqual(
+      read(v118ServiceRequestRelative),
+    )
+    expect(readFileSync(path.join(root, v118ServiceResponseRelative))).toEqual(
+      read(v118ServiceResponseRelative),
+    )
+    expect(
+      Object.fromEntries(
+        Object.keys(protectedBefore).map((relative) => [
+          relative,
+          sha256(readFileSync(path.join(root, relative))),
+        ]),
+      ),
+    ).toEqual(protectedBefore)
+
+    const generated = readFileSync(
+      path.join(root, generatedRelative),
+      "utf8",
+    )
+    expect(generated).toContain(
+      'case "runtime-execution-service-v1.18":',
+    )
+    expect(generated).toContain("runtimeSemanticReceiptClaimFieldsV118")
+    expect(generated).toContain("runtimeCertificateReferenceFieldsV118")
+    expect(generated).toContain("runtimeCertificateSourceIdentityFieldsV118")
+    expect(generated).toContain("runtimeSemanticReceiptNegativeVectorsV118")
+    for (const vector of [
+      "missing-bottom-certificate",
+      "missing-top-certificate",
+      "swapped-certificate-sides",
+      "duplicate-certificate-reference",
+      "stale-certificate",
+      "trace-root-mismatch",
+      "signature-mismatch",
+      "private-output-field",
+    ]) {
+      expect(generated).toContain(JSON.stringify(vector))
+    }
+  }, 60_000)
+
+  it("fails closed before a v1.18 write when any immutable v1.17 byte drifts", () => {
+    const root = makeVersionRoot()
+    copyV117Inputs(root)
+    writeFileSync(
+      path.join(root, serviceRequestRelative),
+      `${readFileSync(path.join(root, serviceRequestRelative), "utf8")} `,
+    )
+    const completed = runGenerator([
+      "--root",
+      root,
+      "--versions-only",
+      "--write-v1.18-service",
+      "--check",
+    ])
+    expect(completed.status).toBe(1)
+    expect(`${completed.stdout}\n${completed.stderr}`).toContain(
+      "Immutable v1.17 runtime execution",
+    )
+    expect(existsSync(path.join(root, v118ServiceRequestRelative))).toBe(false)
+    expect(existsSync(path.join(root, v118ServiceResponseRelative))).toBe(false)
   })
 
   it("refuses a v1.16 write before changing any byte", () => {
