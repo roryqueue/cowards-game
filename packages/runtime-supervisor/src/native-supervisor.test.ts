@@ -1,6 +1,16 @@
 import { Buffer } from "node:buffer"
 import { createHash } from "node:crypto"
+import {
+  chmodSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs"
+import { tmpdir } from "node:os"
+import path from "node:path"
 import { describe, expect, it } from "vitest"
+import * as publicSupervisorApi from "./index.js"
 import {
   createRuntimeInvocationRequestV118,
   RUNTIME_BUDGET_PROFILE_V1_18_SHA256,
@@ -14,6 +24,7 @@ import {
   computeDockerEngineSha256V118,
   computeLinuxKernelSha256V118,
   computeSupervisorToolchainSha256V118,
+  executeVerifiedSupervisorBinaryV118,
   NATIVE_SUPERVISOR_MANIFEST_SCHEMA_V118,
   runPinnedNativeSupervisorV118,
   verifyNativeSupervisorManifestV118,
@@ -128,6 +139,51 @@ const controller = (
   })
 
 describe("native runtime supervisor", () => {
+  it("does not expose controller authority minting through the package API", () => {
+    expect(publicSupervisorApi).not.toHaveProperty(
+      "createVerifiedHardenedControllerContextV118",
+    )
+    expect(publicSupervisorApi).not.toHaveProperty(
+      "createCertificationControllerContextV118",
+    )
+  })
+
+  it("hashes and executes the same O_NOFOLLOW supervisor descriptor", () => {
+    const temporary = mkdtempSync(path.join(tmpdir(), "cowards-supervisor-fd-"))
+    const executable = path.join(temporary, "supervisor")
+    try {
+      writeFileSync(executable, "#!/bin/sh\nprintf pinned\n", { mode: 0o700 })
+      const expected =
+        `sha256:${createHash("sha256").update(readFileSync(executable)).digest("hex")}` as const
+      const seen: { command?: string; fd?: number } = {}
+      const result = executeVerifiedSupervisorBinaryV118({
+        binaryPath: executable,
+        expectedSha256: expected,
+        args: [],
+        environment: {},
+        input: new Uint8Array(),
+        maxBuffer: 1024,
+        timeout: 1000,
+        spawn: (command, _args, options) => {
+          seen.command = command
+          seen.fd = options.stdio[3]
+          writeFileSync(executable, "#!/bin/sh\nprintf substituted\n")
+          return {
+            status: 0,
+            signal: null,
+            stdout: Buffer.from("pinned"),
+            stderr: Buffer.alloc(0),
+          }
+        },
+      })
+      expect(result.stdout.toString("utf8")).toBe("pinned")
+      expect(seen.command).toBe("/proc/self/fd/3")
+      expect(seen.fd).toBeTypeOf("number")
+    } finally {
+      rmSync(temporary, { recursive: true, force: true })
+    }
+  })
+
   it("binds source lock seccomp toolchain target UID controllers and binary", () => {
     expect(
       verifyNativeSupervisorManifestV118(manifest(), {
@@ -388,6 +444,94 @@ describe("native runtime supervisor", () => {
       ok: false,
       gameplayDisposition: "no_mutation",
       code: "RAW_RECEIPT_INVALID",
+    })
+    expect(cleanupCalls).toBe(1)
+  })
+
+  it("requires trusted cleanup after every post-launch receipt mismatch", () => {
+    const binaryBytes = Buffer.from("pinned-native-binary")
+    const binarySha256 =
+      `sha256:${createHash("sha256").update(binaryBytes).digest("hex")}` as const
+    const current = request(binarySha256)
+    let cleanupCalls = 0
+    const receipt = {
+      schemaVersion: "cowards-native-supervisor-receipt-v1",
+      requestSha256: hash("f"),
+      processGroupIdentitySha256: current.expectedProcessGroupIdentitySha256,
+      actualCgroupPath: `/run/cowards-cgroup/invocation-${current.invocation.hostNonce}`,
+      cpuMax: `${current.invocation.limits.cpuMax.quotaMicroseconds} ${current.invocation.limits.cpuMax.periodMicroseconds}`,
+      memoryMaxBytes: current.invocation.limits.memoryMaxBytes,
+      pidsMax: current.invocation.limits.pidsMax,
+      guestNamespaceUid: 65534,
+      supervisorHostUid: 65532,
+      wallElapsedNanoseconds: 1_000_000,
+      cpuUsageBeforeMicroseconds: 0,
+      cpuUsageAfterMicroseconds: 1,
+      memoryPeakBytes: 1,
+      memoryEventsBefore: {
+        low: 0,
+        high: 0,
+        max: 0,
+        oom: 0,
+        oom_kill: 0,
+        oom_group_kill: 0,
+        sock_throttled: 0,
+      },
+      memoryEventsAfter: {
+        low: 0,
+        high: 0,
+        max: 0,
+        oom: 0,
+        oom_kill: 0,
+        oom_group_kill: 0,
+        sock_throttled: 0,
+      },
+      pidsEventsBefore: { max: 0 },
+      pidsEventsAfter: { max: 0 },
+      pidsPeak: 1,
+      exitCode: 0,
+      signal: null,
+      timedOut: false,
+      cancellationRequested: false,
+      cgroupKillUsed: false,
+      stdoutBase64: Buffer.from("{}").toString("base64"),
+      stderrBase64: "",
+      stdoutTruncated: false,
+      stderrTruncated: false,
+      payloadTruncated: false,
+      cgroupEmpty: true,
+      cleanupComplete: true,
+    }
+    expect(
+      runPinnedNativeSupervisorV118({
+        controller: controller({
+          cleanupInvocation: () => {
+            cleanupCalls += 1
+            return true
+          },
+        }),
+        manifest: { ...manifest(), binarySha256 },
+        expectedHashes: {
+          sourceSha256: hash("1"),
+          cargoLockSha256: hash("2"),
+          seccompProfileSha256: hash("3"),
+          binarySha256,
+        },
+        request: current,
+        binaryPath: "/private/native-supervisor",
+        cgroupRoot: "/run/cowards-cgroup",
+        readBinary: () => binaryBytes,
+        spawnSync: () => ({
+          status: 0,
+          signal: null,
+          stdout: Buffer.from(JSON.stringify(receipt)),
+          stderr: Buffer.alloc(0),
+        }),
+      }),
+    ).toEqual({
+      ok: false,
+      gameplayDisposition: "no_mutation",
+      code: "RECEIPT_BINDING_MISMATCH",
     })
     expect(cleanupCalls).toBe(1)
   })

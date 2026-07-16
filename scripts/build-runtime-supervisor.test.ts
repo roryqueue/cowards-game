@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest"
 import {
   PINNED_RUNTIME_SUPERVISOR_BUILDER_IMAGE,
   buildRuntimeSupervisorManifest,
+  inspectSupervisorElfIdentity,
   supervisorBuildDockerArgs,
 } from "./build-runtime-supervisor.js"
 
@@ -12,6 +13,8 @@ describe("runtime supervisor locked build", () => {
     )
     expect(supervisorBuildDockerArgs("/repo")).toEqual(
       expect.arrayContaining([
+        "--platform",
+        "linux/amd64",
         "--network",
         "none",
         "--cap-drop",
@@ -19,6 +22,8 @@ describe("runtime supervisor locked build", () => {
         "--security-opt",
         "no-new-privileges",
         "--read-only",
+        "--target",
+        "x86_64-unknown-linux-musl",
       ]),
     )
   })
@@ -68,5 +73,26 @@ describe("runtime supervisor locked build", () => {
       guestNamespaceUid: 65534,
     })
     expect(built.supervisorToolchainSha256).toMatch(/^sha256:[0-9a-f]{64}$/u)
+  })
+
+  it("rejects any non-x86-64 or dynamically linked supervisor artifact", () => {
+    expect(
+      inspectSupervisorElfIdentity(
+        Buffer.from(
+          "ELF 64-bit LSB pie executable, x86-64, statically linked, stripped",
+        ),
+      ),
+    ).toEqual({
+      architecture: "x86_64",
+      libc: "musl-static",
+    })
+    for (const output of [
+      "ELF 64-bit LSB pie executable, ARM aarch64, statically linked",
+      "ELF 64-bit LSB pie executable, x86-64, dynamically linked",
+    ]) {
+      expect(() =>
+        inspectSupervisorElfIdentity(Buffer.from(output)),
+      ).toThrow(/ELF|target|musl|static/iu)
+    }
   })
 })

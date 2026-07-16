@@ -3,6 +3,8 @@ import {
   PINNED_CERTIFICATION_LINUX_IMAGE,
   certificationBootstrapArgs,
   certificationFinalizerArgs,
+  certificationGuestArgs,
+  certificationMonitorArgs,
   certificationSupervisorArgs,
   inspectCertificationDockerInfo,
   trustedCleanupScript,
@@ -46,7 +48,7 @@ describe("Linux certification container controller", () => {
   })
 
   it("runs the real supervisor unprivileged with subtree-only cgroup access", () => {
-    const args = certificationSupervisorArgs(input)
+    const args = certificationMonitorArgs(input)
     expect(args).toEqual(
       expect.arrayContaining([
         "--cgroupns=host",
@@ -69,6 +71,29 @@ describe("Linux certification container controller", () => {
     )
     expect(args.join(" ")).not.toContain("/sys/fs/cgroup:/run/cowards-cgroup")
     expect(args.join(" ")).not.toContain("--cap-add")
+  })
+
+  it("daemon-launches the guest with a distinct kernel UID and isolated PID/proc view", () => {
+    const args = certificationGuestArgs(input)
+    expect(args).toEqual(
+      expect.arrayContaining([
+        "--cgroup-parent=/cowards/run-0123456789abcdef01234567/invocation-certification-nonce-00000000000000000001",
+        "--user",
+        "65534:65534",
+        "--pid",
+        "private",
+        "--cap-drop",
+        "ALL",
+        "--network",
+        "none",
+        "--read-only",
+        "--security-opt",
+        "no-new-privileges",
+      ]),
+    )
+    expect(args.join(" ")).not.toContain("/sys/fs/cgroup")
+    expect(args.join(" ")).not.toContain("--cap-add")
+    expect(args.join(" ")).not.toContain("--cgroupns=host")
   })
 
   it("uses the trusted finalizer and rejects Docker identity drift", () => {
@@ -108,5 +133,9 @@ describe("Linux certification container controller", () => {
     expect(trustedCleanupScript("run-safe")).toContain("find")
     expect(trustedCleanupScript("run-safe")).toContain("test ! -e")
     expect(trustedCleanupScript("run-safe")).not.toContain("|| true")
+  })
+
+  it("does not retain the legacy nested-user-namespace launch entry point", () => {
+    expect(certificationSupervisorArgs).toBeUndefined()
   })
 })
