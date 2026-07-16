@@ -6,6 +6,7 @@ import { adaptRuntimeForCurrentKernel } from "@cowards/engine/test/current-kerne
 import {
   createCurrentReplay,
   createHistoricalV14Replay,
+  validateCurrentReplayReconstruction,
 } from "./reconstruct.js"
 import { recordChronicleFromExecution } from "./record.js"
 
@@ -71,6 +72,10 @@ const createBuiltCurrentInput = () => {
     compatibility: recorded.semanticIdentity,
     chronicle: recorded.chronicle,
     boundaryAnchors: recorded.boundaryAnchors,
+    recordedTransitions: recorded.recordedTransitions,
+    transitionTraceRoot: recorded.transitionTraceRoot,
+    recordedFinalState: recorded.finalState,
+    recordedOutcome: recorded.finalState.outcome,
     execution,
   }
 }
@@ -310,7 +315,13 @@ describe("createReplay", () => {
   it("reconstructs built Chronicle states without StrategyRuntime", () => {
     const input = createBuiltCurrentInput()
     const chronicle = input.chronicle
-    const replay = createCurrentReplay(input)
+    const replay = createCurrentReplay({
+      profile: input.profile,
+      compatibility: input.compatibility,
+      chronicle: input.chronicle,
+      boundaryAnchors: input.boundaryAnchors,
+      execution: input.execution,
+    })
 
     expect(replay.ok).toBe(true)
     if (!replay.ok) {
@@ -398,5 +409,107 @@ describe("createReplay", () => {
     expect(replay.ok ? [] : replay.errors.map((error) => error.code)).toContain(
       "SNAPSHOT_MISSING",
     )
+  })
+})
+
+describe("current reconstruction evidence closure", () => {
+  it("validates semantics exactly once before exact transition and final proof", () => {
+    const input = createBuiltCurrentInput()
+    const before = JSON.stringify(input)
+    const source = readFileSync(new URL("./reconstruct.ts", import.meta.url), "utf8")
+    const body = source.slice(
+      source.indexOf("export const validateCurrentReplayReconstruction"),
+      source.indexOf("export type CreateCurrentReplayResult"),
+    )
+
+    expect(validateCurrentReplayReconstruction(input)).toEqual({
+      ok: true,
+      terminalStateHash: input.boundaryAnchors.at(-1)?.stateHash,
+      transitionTraceRoot: input.transitionTraceRoot,
+      transitionCount: input.recordedTransitions.length,
+      outcome: input.recordedOutcome,
+    })
+    expect(
+      body.match(/validateCurrentChronicleSemantics\(/gu) ?? [],
+    ).toHaveLength(1)
+    expect(body).not.toContain("validateCurrentChronicle(")
+    expect(JSON.stringify(input)).toBe(before)
+  })
+
+  it("rejects the first and later recorded transition mismatch before later proof", () => {
+    const input = createBuiltCurrentInput()
+    const laterIndex = Math.floor(input.recordedTransitions.length / 2)
+
+    for (const transitionIndex of [0, laterIndex]) {
+      const recordedTransitions = input.recordedTransitions.map(
+        (transition, index) =>
+          index === transitionIndex
+            ? { ...transition, kind: `${transition.kind}:MUTATED` }
+            : transition,
+      )
+      expect(
+        validateCurrentReplayReconstruction({
+          ...input,
+          recordedTransitions,
+        }),
+      ).toEqual({
+        ok: false,
+        code: "CURRENT_TRANSITION_FIELD_MISMATCH",
+        transitionIndex,
+        field: "kind",
+      })
+    }
+  })
+
+  it("keeps validation, final state, outcome, and trace-root failures distinct", () => {
+    const input = createBuiltCurrentInput()
+    const terminalAnchorIndex = input.boundaryAnchors.length - 1
+    const invalidAnchors = input.boundaryAnchors.map((anchor, index) =>
+      index === terminalAnchorIndex
+        ? { ...anchor, stateHash: `sha256:${"0".repeat(64)}` }
+        : anchor,
+    )
+    expect(
+      validateCurrentReplayReconstruction({
+        ...input,
+        boundaryAnchors: invalidAnchors,
+      }),
+    ).toEqual({
+      ok: false,
+      code: "CURRENT_SEMANTIC_ADMISSION_INVALID",
+    })
+
+    expect(
+      validateCurrentReplayReconstruction({
+        ...input,
+        recordedFinalState: {
+          ...globalThis.structuredClone(input.recordedFinalState),
+          seed: "mutated-final-seed",
+        },
+      }),
+    ).toEqual({
+      ok: false,
+      code: "CURRENT_FINAL_STATE_MISMATCH",
+    })
+
+    expect(
+      validateCurrentReplayReconstruction({
+        ...input,
+        recordedOutcome: { type: "FAILED", reason: "MUTATED_OUTCOME" },
+      }),
+    ).toEqual({
+      ok: false,
+      code: "CURRENT_OUTCOME_MISMATCH",
+    })
+
+    expect(
+      validateCurrentReplayReconstruction({
+        ...input,
+        transitionTraceRoot: `sha256:${"f".repeat(64)}`,
+      }),
+    ).toEqual({
+      ok: false,
+      code: "CURRENT_TRACE_ROOT_MISMATCH",
+    })
   })
 })
