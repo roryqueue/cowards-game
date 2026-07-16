@@ -40,15 +40,6 @@ import { validateSnapshotBoundaries } from "./snapshot-boundaries.js"
 
 const SUPPORTED_SCHEMA_VERSION = "chronicle-v1.4"
 
-const HISTORICAL_V14_VERSIONS = Object.freeze({
-  spec: "cowards-rules-v1.4",
-  engine: "0.1.4",
-  runtimeJs: "0.1.0",
-  chronicle: "chronicle-v1.4",
-  strategyRevision: "0.1.4",
-  arenaVariant: "0.1.0",
-})
-
 export const V1_37_CURRENT_REPLAY_TUPLE = Object.freeze({
   tupleId: CURRENT_CANONICAL_COMPATIBILITY_TUPLE_RECORD.tupleId,
   tuple: Object.freeze({
@@ -648,57 +639,11 @@ export const validateChronicle = (
   return validateParsedChronicle(parsedChronicle)
 }
 
-const validateHistoricalV14Version = (
-  chronicle: Chronicle,
-): ChronicleValidationError[] => {
-  if (chronicle.schemaVersion !== "chronicle-v1.4") {
-    return [
-      error("VERSION_INCOMPATIBLE", "Unsupported historical Chronicle.", {
-        expected: "chronicle-v1.4",
-        actual: chronicle.schemaVersion,
-      }),
-    ]
-  }
-  const mismatch = Object.entries(HISTORICAL_V14_VERSIONS).find(
-    ([key, expected]) =>
-      chronicle.reproducibility.versions[
-        key as keyof typeof HISTORICAL_V14_VERSIONS
-      ] !== expected,
-  )
-  return mismatch === undefined
-    ? []
-    : [
-        error(
-          "VERSION_INCOMPATIBLE",
-          "Historical v1.4 evidence must retain its literal original versions.",
-          {
-            expected: mismatch[1],
-            actual:
-              chronicle.reproducibility.versions[
-                mismatch[0] as keyof typeof HISTORICAL_V14_VERSIONS
-              ],
-          },
-        ),
-      ]
-}
-
 /** Frozen v1.4 route. Plan 19 must not replace this comparator with current. */
 export const validateHistoricalV14Chronicle = (
   chronicle: unknown,
 ): ChronicleValidationResult => {
-  const historicalGrammarErrors = validateHistoricalV14Grammar(chronicle)
-  if (historicalGrammarErrors.some(({ code }) => code === "SCHEMA_INVALID")) {
-    return { ok: false, errors: historicalGrammarErrors }
-  }
-  const value = chronicle as Chronicle
-  const errors = [
-    ...validateHistoricalV14Version(value),
-    ...historicalGrammarErrors,
-    ...validateSnapshots(value),
-    ...validateSnapshotBoundaries(value),
-    ...validateChronicleTransitions(value),
-    ...validateHash(value),
-  ]
+  const errors = validateHistoricalV14Grammar(chronicle)
   return errors.length === 0 ? { ok: true } : { ok: false, errors }
 }
 
