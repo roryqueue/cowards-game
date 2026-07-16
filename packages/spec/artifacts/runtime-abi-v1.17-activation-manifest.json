@@ -488,11 +488,11 @@
     },
     {
       "path": "packages/runtime-python/src/python-subprocess-adapter.test.ts",
-      "sha256": "ea305e6b3dcba6de9de965f7739a199f4035ab957cbb7974faa452240ab5d9e7"
+      "sha256": "684bee321fa8e5e2bd8503f26ded01a194dbc9f32b74aac4ecb6a57c0b58460f"
     },
     {
       "path": "packages/runtime-python/src/python-subprocess-adapter.ts",
-      "sha256": "4d4a38e36eb34c4a4cf3cba8345e44cff525c71b1e3a922daafdcd29a07b385a"
+      "sha256": "b73b6d5860fdaa3ab6f066b7ca76e709d0f77631d602cfd4014e3c49a7443384"
     },
     {
       "path": "packages/runtime-python/src/python_runtime_host.py",
@@ -1073,6 +1073,14 @@
     {
       "path": "scripts/evaluate-runtime-sandbox.ts",
       "sha256": "6beded762839bd928ee2d18d32b0a501ef46f72476cb3b2d9a09df4ac8649dec"
+    },
+    {
+      "path": "scripts/evaluate-v1-23-wasm-wasi-beta.ts",
+      "sha256": "cc4484515fad75510f7998735fb9ed1b0682844f8dd25b6fce5fd27bae668191"
+    },
+    {
+      "path": "scripts/evaluate-v1-24-runtime-abuse-lab.ts",
+      "sha256": "072638c3e7fd93de6db65be6077b072b95ee14c7a63a4e7162395a105e2049b6"
     },
     {
       "path": "scripts/evaluate-v1-37-runtime-abi.test.ts",
