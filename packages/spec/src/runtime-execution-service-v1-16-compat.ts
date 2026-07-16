@@ -16,6 +16,7 @@ import type {
   StrategyRuntimeResponseEnvelope,
 } from "./runtime.js"
 import type { StrategyRevision } from "./types.js"
+import { CURRENT_CANONICAL_COMPATIBILITY_TUPLE_RECORD } from "./integrity-authority.js"
 import { STRATEGY_RUNTIME_ABI_VERSION } from "./versions.js"
 
 export const HISTORICAL_RUNTIME_EXECUTION_SERVICE_V1_16 = Object.freeze({
@@ -144,6 +145,15 @@ const normalizeHistoricalRequestForSelectedSchema = (
   }
   normalizeRevisionAbiForSelectedSchema(normalized.strategies.bottom)
   normalizeRevisionAbiForSelectedSchema(normalized.strategies.top)
+  if (
+    isRecord(normalized.evidenceSnapshot) &&
+    isRecord(normalized.evidenceSnapshot.compatibility)
+  ) {
+    normalized.evidenceSnapshot.compatibility = {
+      tupleId: CURRENT_CANONICAL_COMPATIBILITY_TUPLE_RECORD.tupleId,
+      tuple: { ...CURRENT_CANONICAL_COMPATIBILITY_TUPLE_RECORD.tuple },
+    }
+  }
   return normalized
 }
 

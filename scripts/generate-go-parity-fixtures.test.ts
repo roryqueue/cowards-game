@@ -21,6 +21,7 @@ import {
   CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_ID,
   COMPATIBILITY_VERSIONS,
   RUNTIME_INVOCATION_V1_17_SYSTEM_FAILURE_RETRYABILITY,
+  STRATEGY_RUNTIME_ABI_VERSION,
   StrategyRevisionSchema,
   StrategyRevisionV117Schema,
   SUCCESSOR_RUNTIME_LANE_PROFILE_DOMAIN_V117,
@@ -344,9 +345,8 @@ describe("versioned TypeScript-to-Go parity generator", () => {
       readFileSync(path.join(repoRoot, successorAuthorityFixtureRelative)),
     )
     expect(
-      JSON.parse(
-        readFileSync(path.join(root, serviceRequestRelative), "utf8"),
-      ).compatibilityTupleId,
+      JSON.parse(readFileSync(path.join(root, serviceRequestRelative), "utf8"))
+        .compatibilityTupleId,
     ).toBe(CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_ID)
   }, 30_000)
 
@@ -556,7 +556,7 @@ describe("versioned TypeScript-to-Go parity generator", () => {
         StrategyRevisionV117Schema.safeParse(vector.revision).success,
       ).toBe(true)
       expect(StrategyRevisionSchema.safeParse(vector.revision).success).toBe(
-        false,
+        String(STRATEGY_RUNTIME_ABI_VERSION) === "strategy-runtime-abi-v1.17",
       )
       expect(vector.revision.runtime.abiVersion).toBe(
         CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE.runtimeAbi,
