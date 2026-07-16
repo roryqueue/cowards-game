@@ -16,6 +16,7 @@ import {
 import { runLinuxCertificationContainerProbe } from "../packages/runtime-supervisor/src/linux-certification-container.js"
 
 export { PINNED_RUNTIME_SUPERVISOR_BUILDER_IMAGE }
+export const PINNED_RUNTIME_SUPERVISOR_BUILD_TIMEOUT_MS = 300_000
 
 const repoRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -182,7 +183,7 @@ const main = (): void => {
       env: { PATH: process.env.PATH ?? "" },
       shell: false,
       stdio: "inherit",
-      timeout: 120_000,
+      timeout: PINNED_RUNTIME_SUPERVISOR_BUILD_TIMEOUT_MS,
     })
     if (result.error || result.status !== 0) {
       throw new TypeError("Pinned Linux Rust supervisor build failed")

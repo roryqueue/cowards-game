@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
 import {
+  PINNED_RUNTIME_SUPERVISOR_BUILD_TIMEOUT_MS,
   PINNED_RUNTIME_SUPERVISOR_BUILDER_IMAGE,
   buildRuntimeSupervisorManifest,
   inspectSupervisorElfIdentity,
@@ -27,6 +28,7 @@ describe("runtime supervisor locked build", () => {
     )
     expect(args.join("\n")).toContain("--target x86_64-unknown-linux-musl")
     expect(args.join("\n")).toContain('test "$(uname -m)" = x86_64')
+    expect(PINNED_RUNTIME_SUPERVISOR_BUILD_TIMEOUT_MS).toBe(300_000)
   })
 
   it("changes the manifest for any source lock seccomp or binary byte", () => {
