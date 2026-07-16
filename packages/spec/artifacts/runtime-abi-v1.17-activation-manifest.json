@@ -391,6 +391,14 @@
       "sha256": "87b3992460fc0275e643841bb414e443808139f55efc3f153ba4f1568c29b522"
     },
     {
+      "path": "packages/engine/src/test/current-kernel-runtime.test.ts",
+      "sha256": "244a76111aedf7a8f432e0d903975f6777b3af009cec8fc2963c684ba46f37c2"
+    },
+    {
+      "path": "packages/engine/src/test/current-kernel-runtime.ts",
+      "sha256": "1ffedb56b2c02f306e544ed0968642afa8bf4590df5523ecd7f78419b7187d0f"
+    },
+    {
       "path": "packages/engine/src/types.ts",
       "sha256": "5f4ff2bf83251b44946d88f8b0827ead96bb2b03fd24008fc9946fcbc0b5d193"
     },
@@ -1037,6 +1045,14 @@
     {
       "path": "packages/spec/src/versions.ts",
       "sha256": "78b8d73d05831d7560908b7b8fa150b8b8d086bee6d6f7cbe107a89e462c559b"
+    },
+    {
+      "path": "packages/test-utils/src/replay-scenarios.legality.test.ts",
+      "sha256": "c59071342b1a2a753cf3984843717f5871b5ba13cb8d55788dd9c220d2afd6ca"
+    },
+    {
+      "path": "packages/test-utils/src/replay-scenarios.ts",
+      "sha256": "662f4e851dc8e39155462a2afd371b8f257b168d0b38d7ba827fa6a1d09bcec2"
     },
     {
       "path": "scripts/calibrate-v1-37-runtime-abi.test.ts",
