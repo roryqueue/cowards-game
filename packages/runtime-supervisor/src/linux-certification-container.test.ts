@@ -5,6 +5,7 @@ import {
   certificationFinalizerArgs,
   certificationSupervisorArgs,
   inspectCertificationDockerInfo,
+  trustedCleanupScript,
 } from "./linux-certification-container.js"
 
 const input = {
@@ -100,5 +101,12 @@ describe("Linux certification container controller", () => {
         KernelVersion: "7.0.5-orbstack-00330-ge3df4e19b0a0-dirty",
       }),
     ).toThrow(/cgroup|unsupported/iu)
+  })
+
+  it("makes failed cleanup explicit and verifies bottom-up removal", () => {
+    expect(trustedCleanupScript("run-safe")).toContain("cgroup.kill")
+    expect(trustedCleanupScript("run-safe")).toContain("find")
+    expect(trustedCleanupScript("run-safe")).toContain("test ! -e")
+    expect(trustedCleanupScript("run-safe")).not.toContain("|| true")
   })
 })

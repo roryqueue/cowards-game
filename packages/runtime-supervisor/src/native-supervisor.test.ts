@@ -10,6 +10,7 @@ import {
   deriveSupervisorExecutionIdentityV118,
 } from "./supervisor-contract.js"
 import {
+  createVerifiedHardenedControllerContextV118,
   NATIVE_SUPERVISOR_MANIFEST_SCHEMA_V118,
   runPinnedNativeSupervisorV118,
   verifyNativeSupervisorManifestV118,
@@ -72,6 +73,31 @@ const request = (supervisorBinarySha256: `sha256:${string}` = hash("4")) => {
   })
 }
 
+const controller = (
+  overrides: Partial<
+    Parameters<typeof createVerifiedHardenedControllerContextV118>[0]
+  > = {},
+) =>
+  createVerifiedHardenedControllerContextV118({
+    operatingSystem: "linux",
+    cgroupVersion: 2,
+    cgroupDriver: "cgroupfs",
+    delegatedControllers: ["cpu", "memory", "pids"],
+    kernelVersion: "test-kernel",
+    dockerEngineVersion: "test-docker",
+    dockerImageDigest: hash("8"),
+    supervisorToolchainSha256: hash("5"),
+    linuxKernelSha256: hash("6"),
+    dockerEngineSha256: hash("7"),
+    cgroupDelegationSha256: hash("9"),
+    supervisorHostUid: 65532,
+    guestNamespaceUid: 65534,
+    delegatedRoot: "/run/cowards-cgroup",
+    cancellationRoot: "/run/cowards-cancel",
+    cleanupInvocation: () => true,
+    ...overrides,
+  })
+
 describe("native runtime supervisor", () => {
   it("binds source lock seccomp toolchain target UID controllers and binary", () => {
     expect(
@@ -102,11 +128,10 @@ describe("native runtime supervisor", () => {
     }
   })
 
-  it("rejects native non-Linux counted launch before spawn", () => {
+  it("rejects launch without independently verified hardened controller context", () => {
     let launched = false
     expect(
       runPinnedNativeSupervisorV118({
-        platform: "darwin",
         manifest: manifest(),
         expectedHashes: {
           sourceSha256: hash("1"),
@@ -179,7 +204,7 @@ describe("native runtime supervisor", () => {
       cgroupEmpty: true,
     }
     const result = runPinnedNativeSupervisorV118({
-      platform: "linux",
+      controller: controller(),
       manifest: currentManifest,
       expectedHashes: {
         sourceSha256: hash("1"),
@@ -211,5 +236,120 @@ describe("native runtime supervisor", () => {
         },
       })
     }
+  })
+
+  it("passes the exact executable digest, environment, cancellation channel, and controller root", () => {
+    const binaryBytes = Buffer.from("pinned-native-binary")
+    const binarySha256 =
+      `sha256:${createHash("sha256").update(binaryBytes).digest("hex")}` as const
+    const current = request(binarySha256)
+    let args: readonly string[] = []
+    runPinnedNativeSupervisorV118({
+      controller: controller(),
+      manifest: { ...manifest(), binarySha256 },
+      expectedHashes: {
+        sourceSha256: hash("1"),
+        cargoLockSha256: hash("2"),
+        seccompProfileSha256: hash("3"),
+        binarySha256,
+      },
+      request: current,
+      binaryPath: "/private/native-supervisor",
+      cgroupRoot: "/run/cowards-cgroup",
+      readBinary: () => binaryBytes,
+      spawnSync: (_command, received) => {
+        args = received
+        return {
+          status: 70,
+          signal: null,
+          stdout: Buffer.alloc(0),
+          stderr: Buffer.alloc(0),
+        }
+      },
+    })
+    expect(args).toEqual(
+      expect.arrayContaining([
+        "--expected-executable-sha256",
+        current.execution.executableBytesSha256,
+        "--environment-count",
+        "1",
+        "--environment-0-name",
+        "LANG",
+        "--environment-0-value",
+        "C.UTF-8",
+        "--cancellation-path",
+        expect.stringContaining("/run/cowards-cancel/"),
+        "--cancellation-nonce",
+        current.cancellation.channelNonce,
+      ]),
+    )
+  })
+
+  it("rejects observed controller identity substitution before spawn", () => {
+    let launched = false
+    expect(
+      runPinnedNativeSupervisorV118({
+        controller: controller({ linuxKernelSha256: hash("0") }),
+        manifest: manifest(),
+        expectedHashes: {
+          sourceSha256: hash("1"),
+          cargoLockSha256: hash("2"),
+          seccompProfileSha256: hash("3"),
+          binarySha256: hash("4"),
+        },
+        request: request(),
+        binaryPath: "/private/native-supervisor",
+        cgroupRoot: "/run/cowards-cgroup",
+        spawnSync: () => {
+          launched = true
+          throw new Error("must not launch")
+        },
+      }),
+    ).toEqual({
+      ok: false,
+      gameplayDisposition: "no_mutation",
+      code: "IDENTITY_MISMATCH",
+    })
+    expect(launched).toBe(false)
+  })
+
+  it("requires trusted cleanup after an outer supervisor timeout", () => {
+    const binaryBytes = Buffer.from("pinned-native-binary")
+    const binarySha256 =
+      `sha256:${createHash("sha256").update(binaryBytes).digest("hex")}` as const
+    let cleanupCalls = 0
+    expect(
+      runPinnedNativeSupervisorV118({
+        controller: controller({
+          cleanupInvocation: () => {
+            cleanupCalls += 1
+            return true
+          },
+        }),
+        manifest: { ...manifest(), binarySha256 },
+        expectedHashes: {
+          sourceSha256: hash("1"),
+          cargoLockSha256: hash("2"),
+          seccompProfileSha256: hash("3"),
+          binarySha256,
+        },
+        request: request(binarySha256),
+        binaryPath: "/private/native-supervisor",
+        cgroupRoot: "/run/cowards-cgroup",
+        readBinary: () => binaryBytes,
+        spawnSync: () => ({
+          status: null,
+          signal: "SIGTERM",
+          stdout: Buffer.alloc(0),
+          stderr: Buffer.alloc(0),
+          error: new Error("ETIMEDOUT"),
+        }),
+      }),
+    ).toEqual({
+      ok: false,
+      gameplayDisposition: "no_mutation",
+      code: "RAW_RECEIPT_INVALID",
+    })
+    expect(cleanupCalls).toBe(1)
   })
 })

@@ -50,4 +50,23 @@ describe("runtime supervisor locked build", () => {
       expect(changed).not.toEqual(first)
     }
   })
+
+  it("pins independently observed controller and supervisor identity fields", () => {
+    const built = buildRuntimeSupervisorManifest({
+      sourceBytes: new Uint8Array([1]),
+      cargoLockBytes: new Uint8Array([2]),
+      seccompProfileBytes: new Uint8Array([3]),
+      binaryBytes: new Uint8Array([4]),
+      rustcVersion: "rustc 1.95.0 (59807616e 2026-04-14)",
+      cargoVersion: "cargo 1.95.0 (f2d3ce0bd 2026-03-21)",
+    })
+    expect(built).toMatchObject({
+      operatingSystem: "linux",
+      cgroupVersion: 2,
+      cgroupDriver: "cgroupfs",
+      supervisorHostUid: 65532,
+      guestNamespaceUid: 65534,
+    })
+    expect(built.supervisorToolchainSha256).toMatch(/^sha256:[0-9a-f]{64}$/u)
+  })
 })
