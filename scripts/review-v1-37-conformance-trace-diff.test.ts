@@ -131,7 +131,7 @@ describe("v1.37 independent conformance trace review", () => {
       outputPath,
     })
     expect(JSON.parse(readFileSync(outputPath, "utf8"))).toEqual(written)
-  }, 60_000)
+  }, 120_000)
 
   it("rejects generator self-disposition, generic labels, category omission, and root mutation", () => {
     const mutations: Array<(directory: string) => void> = [

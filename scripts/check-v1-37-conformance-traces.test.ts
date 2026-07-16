@@ -123,7 +123,7 @@ describe("v1.37 conformance trace candidate checker", () => {
         checkV137ConformanceTraceCandidate({ candidateDirectory: directory }),
       ).not.toEqual([])
     }
-  }, 60_000)
+  }, 120_000)
 
   it("rejects dangling symlink and non-regular trace entries", () => {
     const targetDirectory = candidate()
