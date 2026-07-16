@@ -452,8 +452,7 @@ export const parseRuntimeEvidenceAuthorityConformanceSourceV117 = (
   if (
     record.schemaVersion !==
       "runtime-evidence-authority-conformance-source-v1.17" ||
-    record.certificateVersion !==
-      "runtime-conformance-certificate-v1.17" ||
+    record.certificateVersion !== "runtime-conformance-certificate-v1.17" ||
     record.runtimeAbiVersion !== "strategy-runtime-abi-v1.18" ||
     record.additiveBudgetProfileSha256 !==
       RUNTIME_BUDGET_PROFILE_V1_18_SHA256 ||
@@ -1301,7 +1300,7 @@ export const parseRuntimeEvidenceAuthorityPayloadV117 = (
         (conformanceSource.certificateId !== certificateId ||
           conformanceSource.certificateVersion !== certificateVersion ||
           conformanceSource.identityManifestRoot !==
-          binding.identityManifestRoot ||
+            binding.identityManifestRoot ||
           conformanceSource.evidenceGraphRoot !== binding.evidenceGraphRoot ||
           conformanceSource.attestationSha256 !== attestation.attestationHash ||
           conformanceSource.registryGeneration !==
