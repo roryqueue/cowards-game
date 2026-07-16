@@ -1,6 +1,28 @@
 #!/usr/bin/env -S pnpm exec tsx
-import { pathToFileURL } from "node:url"
-import type { V137ConformanceCorpus } from "../packages/golden/src/v1-37-conformance-corpus.js"
+/// <reference types="node" />
+
+import { createHash } from "node:crypto"
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs"
+import path from "node:path"
+import { fileURLToPath, pathToFileURL } from "node:url"
+// eslint-disable-next-line no-restricted-imports -- repo-root candidate generator consumes the exact golden source contract.
+import {
+  V1_37_CONFORMANCE_ACTIVE_REGISTRY,
+  V1_37_CONFORMANCE_CORPUS,
+  computeV137ConformanceCorpusRoot,
+  validateV137ConformanceCorpus,
+  type V137ConformanceCorpus,
+} from "../packages/golden/src/v1-37-conformance-corpus.ts"
+
+const repoRoot = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "..",
+)
+const ACTIVE_GOLDEN_ROOT = path.join(
+  repoRoot,
+  "packages/golden/src/fixtures/v1-37-conformance-corpus",
+)
+const VERSION = /^v[1-9][0-9]*$/u
 
 export interface WriteV137ConformanceCandidateInput {
   destinationRoot: string
@@ -8,16 +30,232 @@ export interface WriteV137ConformanceCandidateInput {
   candidateCorpus?: V137ConformanceCorpus
 }
 
-const missing = (): never => {
-  throw new Error("[EXPECTED_RED:MISSING_V1_37_CORPUS_CANDIDATE_GENERATOR]")
+export interface V137ConformanceCandidateArgs {
+  destinationRoot: string
+  nextVersion: string
+  inputPath: string | undefined
 }
 
-export const writeV137ConformanceCandidate = missing
-export const parseV137ConformanceCandidateArgs = missing
+export interface V137ConformanceCandidateResult {
+  version: string
+  corpusRootSha256: string
+  corpusPath: string
+  semanticDiffPath: string
+  corpusFileSha256: string
+}
+
+interface V137ConformanceSemanticDiff {
+  schemaVersion: "v1.37-executable-conformance-semantic-diff-v1"
+  generatedBy: "scripts/generate-v1-37-conformance-corpus.ts"
+  baseline: {
+    version: string
+    corpusRootSha256: string
+    path: string
+  }
+  candidate: {
+    version: string
+    corpusRootSha256: string
+    path: string
+  }
+  changedPaths: string[]
+  sourceChanges: string[]
+  caseChanges: string[]
+}
+
+export class V137ConformanceCandidateError extends Error {
+  constructor(readonly code: string) {
+    super(`Conformance corpus candidate rejected: ${code}.`)
+    this.name = "V137ConformanceCandidateError"
+  }
+}
+
+const fail = (code: string): never => {
+  throw new V137ConformanceCandidateError(code)
+}
+
+const sha256 = (value: Uint8Array | string): string =>
+  `sha256:${createHash("sha256").update(value).digest("hex")}`
+
+const renderJson = (value: unknown): string =>
+  `${JSON.stringify(value, null, 2)}\n`
+
+const inside = (candidate: string, root: string): boolean => {
+  const relative = path.relative(root, candidate)
+  return (
+    relative === "" ||
+    (!relative.startsWith("..") && !path.isAbsolute(relative))
+  )
+}
+
+const changed = (left: unknown, right: unknown): boolean =>
+  JSON.stringify(left) !== JSON.stringify(right)
+
+const semanticDiff = (
+  candidate: V137ConformanceCorpus,
+  corpusPath: string,
+): V137ConformanceSemanticDiff => {
+  const changedPaths = new Set<string>()
+  if (candidate.version !== V1_37_CONFORMANCE_CORPUS.version) {
+    changedPaths.add("version")
+  }
+  if (
+    changed(
+      candidate.behaviorManifest,
+      V1_37_CONFORMANCE_CORPUS.behaviorManifest,
+    )
+  ) {
+    changedPaths.add("behaviorManifest")
+  }
+  const sourceChanges: string[] = []
+  for (const fixture of candidate.fixtures) {
+    const baseline = V1_37_CONFORMANCE_CORPUS.fixtures.find(
+      ({ languageId }) => languageId === fixture.languageId,
+    )
+    if (baseline === undefined || fixture.source !== baseline.source) {
+      sourceChanges.push(fixture.languageId)
+      changedPaths.add(`fixtures.${fixture.languageId}.source`)
+    }
+    if (
+      baseline === undefined ||
+      fixture.sourceSha256 !== baseline.sourceSha256
+    ) {
+      changedPaths.add(`fixtures.${fixture.languageId}.sourceSha256`)
+    }
+  }
+  const caseChanges: string[] = []
+  const baselineCases = new Map(
+    V1_37_CONFORMANCE_CORPUS.cases.map((testCase) => [testCase.id, testCase]),
+  )
+  const candidateCases = new Map(
+    candidate.cases.map((testCase) => [testCase.id, testCase]),
+  )
+  for (const caseId of new Set([
+    ...baselineCases.keys(),
+    ...candidateCases.keys(),
+  ])) {
+    if (changed(baselineCases.get(caseId), candidateCases.get(caseId))) {
+      caseChanges.push(caseId)
+      changedPaths.add(`cases.${caseId}`)
+    }
+  }
+  changedPaths.add("corpusRootSha256")
+  return {
+    schemaVersion: "v1.37-executable-conformance-semantic-diff-v1",
+    generatedBy: "scripts/generate-v1-37-conformance-corpus.ts",
+    baseline: {
+      version: V1_37_CONFORMANCE_CORPUS.version,
+      corpusRootSha256: V1_37_CONFORMANCE_CORPUS.corpusRootSha256,
+      path: V1_37_CONFORMANCE_ACTIVE_REGISTRY.path,
+    },
+    candidate: {
+      version: candidate.version,
+      corpusRootSha256: candidate.corpusRootSha256,
+      path: corpusPath,
+    },
+    changedPaths: [...changedPaths].sort(),
+    sourceChanges: sourceChanges.sort(),
+    caseChanges: caseChanges.sort(),
+  }
+}
+
+export const writeV137ConformanceCandidate = (
+  input: WriteV137ConformanceCandidateInput,
+): V137ConformanceCandidateResult => {
+  if (!VERSION.test(input.nextVersion)) fail("CANDIDATE_VERSION")
+  if (input.nextVersion === V1_37_CONFORMANCE_CORPUS.version) {
+    fail("ACTIVE_VERSION_REUSE_FORBIDDEN")
+  }
+  const destinationRoot = path.resolve(input.destinationRoot)
+  const candidateDirectory = path.join(destinationRoot, input.nextVersion)
+  if (inside(candidateDirectory, ACTIVE_GOLDEN_ROOT)) {
+    fail("ACTIVE_GOLDEN_OVERWRITE_FORBIDDEN")
+  }
+  if (existsSync(candidateDirectory)) fail("CANDIDATE_VERSION_EXISTS")
+
+  const candidate = globalThis.structuredClone(
+    input.candidateCorpus ?? V1_37_CONFORMANCE_CORPUS,
+  ) as V137ConformanceCorpus
+  candidate.version = input.nextVersion
+  for (const fixture of candidate.fixtures) {
+    fixture.sourceSha256 = sha256(fixture.source)
+  }
+  candidate.corpusRootSha256 = computeV137ConformanceCorpusRoot(candidate)
+  validateV137ConformanceCorpus(candidate)
+
+  const corpusPath = path.join(candidateDirectory, "corpus.json")
+  const semanticDiffPath = path.join(candidateDirectory, "semantic-diff.json")
+  const corpusBytes = renderJson(candidate)
+  const diff = semanticDiff(candidate, corpusPath)
+  mkdirSync(candidateDirectory, { recursive: false })
+  writeFileSync(corpusPath, corpusBytes, { flag: "wx" })
+  writeFileSync(semanticDiffPath, renderJson(diff), { flag: "wx" })
+  return {
+    version: candidate.version,
+    corpusRootSha256: candidate.corpusRootSha256,
+    corpusPath,
+    semanticDiffPath,
+    corpusFileSha256: sha256(corpusBytes),
+  }
+}
+
+export const parseV137ConformanceCandidateArgs = (
+  args: readonly string[],
+): V137ConformanceCandidateArgs => {
+  const allowed = new Set(["--version", "--destination", "--input"])
+  if (
+    args.length < 4 ||
+    args.length % 2 !== 0 ||
+    args.some((value, index) => index % 2 === 0 && !allowed.has(value))
+  ) {
+    fail("CANDIDATE_ARGUMENTS")
+  }
+  const values = new Map<string, string>()
+  for (let index = 0; index < args.length; index += 2) {
+    const key = args[index]
+    const value = args[index + 1]
+    if (
+      key === undefined ||
+      value === undefined ||
+      value.length === 0 ||
+      values.has(key)
+    ) {
+      fail("CANDIDATE_ARGUMENTS")
+    }
+    values.set(key, value)
+  }
+  const nextVersion = values.get("--version")
+  const destinationRoot = values.get("--destination")
+  if (nextVersion === undefined || destinationRoot === undefined) {
+    fail("CANDIDATE_ARGUMENTS")
+  }
+  return {
+    nextVersion,
+    destinationRoot,
+    inputPath: values.get("--input"),
+  }
+}
+
+const main = (): void => {
+  const args = parseV137ConformanceCandidateArgs(process.argv.slice(2))
+  const candidateCorpus =
+    args.inputPath === undefined
+      ? undefined
+      : (JSON.parse(
+          readFileSync(path.resolve(args.inputPath), "utf8"),
+        ) as V137ConformanceCorpus)
+  const result = writeV137ConformanceCandidate({
+    destinationRoot: args.destinationRoot,
+    nextVersion: args.nextVersion,
+    ...(candidateCorpus === undefined ? {} : { candidateCorpus }),
+  })
+  console.log(
+    `v1.37 conformance candidate ${result.version}: ${result.corpusRootSha256} at ${result.corpusPath}`,
+  )
+}
 
 if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
   try {
-    missing()
+    main()
   } catch (error) {
     console.error(error instanceof Error ? error.message : String(error))
     process.exitCode = 1

@@ -3,6 +3,7 @@
 import { createHash } from "node:crypto"
 import { readFileSync } from "node:fs"
 import { describe, expect, it } from "vitest"
+// eslint-disable-next-line no-restricted-imports -- repo-root checker test exercises the exact golden source contract.
 import {
   V1_37_CONFORMANCE_ACTIVE_REGISTRY,
   V1_37_CONFORMANCE_CORPUS_ROOT,

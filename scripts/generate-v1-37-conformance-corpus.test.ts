@@ -5,9 +5,11 @@ import { mkdtempSync, readFileSync, rmSync } from "node:fs"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { afterEach, describe, expect, it } from "vitest"
+// eslint-disable-next-line no-restricted-imports -- repo-root governance test exercises the exact golden source contract.
 import {
   V1_37_CONFORMANCE_CORPUS,
   V1_37_CONFORMANCE_CORPUS_ROOT,
+  type V137ConformanceCorpus,
 } from "../packages/golden/src/v1-37-conformance-corpus.js"
 import {
   parseV137ConformanceCandidateArgs,
@@ -17,7 +19,9 @@ import {
 const temporaryRoots: string[] = []
 
 const temporaryRoot = (): string => {
-  const root = mkdtempSync(path.join(tmpdir(), "cowards-v137-corpus-candidate-"))
+  const root = mkdtempSync(
+    path.join(tmpdir(), "cowards-v137-corpus-candidate-"),
+  )
   temporaryRoots.push(root)
   return root
 }
@@ -34,10 +38,9 @@ const sha256 = (bytes: Uint8Array): string =>
 describe("v1.37 conformance candidate generation", () => {
   it("writes only a new versioned candidate and semantic diff", () => {
     const destinationRoot = temporaryRoot()
-    const candidateCorpus = globalThis.structuredClone(
-      V1_37_CONFORMANCE_CORPUS,
-    )
-    candidateCorpus.fixtures[0]!.source += "\n// reviewed candidate source change\n"
+    const candidateCorpus = globalThis.structuredClone(V1_37_CONFORMANCE_CORPUS)
+    candidateCorpus.fixtures[0]!.source +=
+      "\n// reviewed candidate source change\n"
 
     const result = writeV137ConformanceCandidate({
       destinationRoot,
@@ -78,29 +81,30 @@ describe("v1.37 conformance candidate generation", () => {
 
   it("changes roots for seed, generator, case, mutation, expectation, and invocation inputs", () => {
     const mutations = [
-      (corpus: typeof V1_37_CONFORMANCE_CORPUS) => {
+      (corpus: V137ConformanceCorpus) => {
         corpus.cases.find(({ seed }) => seed !== null)!.seed += ":changed"
       },
-      (corpus: typeof V1_37_CONFORMANCE_CORPUS) => {
-        corpus.cases.find(({ generatorId }) => generatorId !== null)!.generatorId +=
-          ":changed"
+      (corpus: V137ConformanceCorpus) => {
+        corpus.cases.find(
+          ({ generatorId }) => generatorId !== null,
+        )!.generatorId += ":changed"
       },
-      (corpus: typeof V1_37_CONFORMANCE_CORPUS) => {
+      (corpus: V137ConformanceCorpus) => {
         corpus.cases[0]!.id = `z-${corpus.cases[0]!.id}`
         corpus.cases.sort((left, right) => left.id.localeCompare(right.id))
         for (const testCase of corpus.cases) {
           testCase.expectation.traceRef = `trace:${testCase.id}`
         }
       },
-      (corpus: typeof V1_37_CONFORMANCE_CORPUS) => {
+      (corpus: V137ConformanceCorpus) => {
         corpus.cases.find(
           ({ mutationTarget }) => mutationTarget !== null,
         )!.mutationTarget += ":changed"
       },
-      (corpus: typeof V1_37_CONFORMANCE_CORPUS) => {
+      (corpus: V137ConformanceCorpus) => {
         corpus.cases[0]!.expectation.reasonCode = "CHANGED_EXPECTATION"
       },
-      (corpus: typeof V1_37_CONFORMANCE_CORPUS) => {
+      (corpus: V137ConformanceCorpus) => {
         corpus.behaviorManifest.invocationScript[0]!.inputFixtureId =
           "fixture:select:changed"
       },

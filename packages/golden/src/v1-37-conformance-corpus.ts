@@ -112,6 +112,7 @@ export interface V137ConformanceRegistry {
   schemaVersion: "v1.37-executable-conformance-registry-v1"
   activeVersion: string
   corpusRootSha256: string
+  corpusFileSha256: string
   path: string
 }
 
@@ -272,8 +273,8 @@ const validateBehaviorManifest = (
     fail("BEHAVIOR_MANIFEST")
   }
   const expectedInvocations = [
-    [0, "selectActivations", "fixture:select:first-active"],
-    [1, "soldierBrain", "fixture:brain:turn-to-stone"],
+    [0, "selectActivations"],
+    [1, "soldierBrain"],
   ] as const
   if (value.invocationScript.length !== expectedInvocations.length) {
     fail("INVOCATION_SCRIPT")
@@ -284,7 +285,7 @@ const validateBehaviorManifest = (
     if (
       invocation.ordinal !== expected[0] ||
       invocation.methodName !== expected[1] ||
-      invocation.inputFixtureId !== expected[2]
+      !IDENTIFIER.test(invocation.inputFixtureId)
     ) {
       fail("INVOCATION_SCRIPT")
     }
@@ -392,8 +393,7 @@ const validateCases = (cases: readonly V137ConformanceCase[]): void => {
         typeof testCase.mutationTarget !== "string") ||
       (testCase.kind === "seeded-property" &&
         (testCase.seed === null || testCase.generatorId === null)) ||
-      (testCase.kind === "mutation-kill" &&
-        testCase.mutationTarget === null) ||
+      (testCase.kind === "mutation-kill" && testCase.mutationTarget === null) ||
       testCase.expectation.traceRef !== `trace:${testCase.id}` ||
       typeof testCase.expectation.gameplayMutation !== "boolean" ||
       typeof testCase.expectation.retryable !== "boolean"
@@ -441,8 +441,7 @@ export const validateV137ConformanceCorpus = (
     corpus.hashAlgorithm !== "sha256" ||
     corpus.rootDomain !==
       "cowards-game:v1.37:executable-conformance-corpus:v1" ||
-    corpus.rootFraming !==
-      "unsigned-64-bit-big-endian-length-then-bytes" ||
+    corpus.rootFraming !== "unsigned-64-bit-big-endian-length-then-bytes" ||
     !Array.isArray(corpus.languageIds)
   ) {
     fail("CORPUS_HEADER")
@@ -520,9 +519,7 @@ export const createV137ConformanceRunRoot = (
   const hash = createHash("sha256")
   hash.update(
     frame(
-      textEncoder.encode(
-        "cowards-game:v1.37:executable-conformance-run:v1",
-      ),
+      textEncoder.encode("cowards-game:v1.37:executable-conformance-run:v1"),
     ),
   )
   hash.update(frame(textEncoder.encode(V1_37_CONFORMANCE_CORPUS_ROOT)))
@@ -557,12 +554,14 @@ exactKeys(registry, [
   "schemaVersion",
   "activeVersion",
   "corpusRootSha256",
+  "corpusFileSha256",
   "path",
 ])
 if (
   registry.schemaVersion !== "v1.37-executable-conformance-registry-v1" ||
   registry.activeVersion !== corpus.version ||
   registry.corpusRootSha256 !== corpus.corpusRootSha256 ||
+  !SHA256.test(registry.corpusFileSha256) ||
   registry.path !==
     `packages/golden/src/fixtures/v1-37-conformance-corpus/${corpus.version}/corpus.json`
 ) {

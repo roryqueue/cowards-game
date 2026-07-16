@@ -81,7 +81,9 @@ describe("v1.37 executable conformance corpus", () => {
       new Set(V1_37_CONFORMANCE_CORPUS.cases.map(({ kind }) => kind)),
     ).toEqual(new Set(expectedKinds))
     expect(
-      new Set(V1_37_CONFORMANCE_CORPUS.cases.map(({ capability }) => capability)),
+      new Set(
+        V1_37_CONFORMANCE_CORPUS.cases.map(({ capability }) => capability),
+      ),
     ).toEqual(new Set(expectedCapabilities))
 
     for (const testCase of V1_37_CONFORMANCE_CORPUS.cases) {
@@ -97,9 +99,9 @@ describe("v1.37 executable conformance corpus", () => {
   })
 
   it("binds readable independent fixture source bytes to one behavior manifest", () => {
-    expect(V1_37_CONFORMANCE_CORPUS.fixtures.map(({ languageId }) => languageId)).toEqual(
-      expectedLanguages,
-    )
+    expect(
+      V1_37_CONFORMANCE_CORPUS.fixtures.map(({ languageId }) => languageId),
+    ).toEqual(expectedLanguages)
     expect(V1_37_CONFORMANCE_CORPUS.behaviorManifest.invocationScript).toEqual([
       {
         ordinal: 0,
@@ -121,7 +123,9 @@ describe("v1.37 executable conformance corpus", () => {
     }
     expect(
       new Set(
-        V1_37_CONFORMANCE_CORPUS.fixtures.map(({ sourceSha256 }) => sourceSha256),
+        V1_37_CONFORMANCE_CORPUS.fixtures.map(
+          ({ sourceSha256 }) => sourceSha256,
+        ),
       ).size,
     ).toBe(expectedLanguages.length)
     expect(
@@ -137,9 +141,7 @@ describe("v1.37 executable conformance corpus", () => {
       V1_37_CONFORMANCE_CORPUS_ROOT,
     )
 
-    const sourceMutation = globalThis.structuredClone(
-      V1_37_CONFORMANCE_CORPUS,
-    )
+    const sourceMutation = globalThis.structuredClone(V1_37_CONFORMANCE_CORPUS)
     sourceMutation.fixtures[0]!.source += "\n// mutation"
     expect(computeV137ConformanceCorpusRoot(sourceMutation)).not.toBe(
       V1_37_CONFORMANCE_CORPUS_ROOT,
@@ -166,6 +168,8 @@ describe("v1.37 executable conformance corpus", () => {
       schemaVersion: "v1.37-executable-conformance-registry-v1",
       activeVersion: V1_37_CONFORMANCE_CORPUS.version,
       corpusRootSha256: V1_37_CONFORMANCE_CORPUS_ROOT,
+      corpusFileSha256:
+        "sha256:276aa063351d649db0d21a96b7db7f8af6fa6a5f5736736775d42d35ee7ec574",
       path: "packages/golden/src/fixtures/v1-37-conformance-corpus/v1/corpus.json",
     })
     expect(existsSync(V1_37_CONFORMANCE_ACTIVE_REGISTRY.path)).toBe(true)
