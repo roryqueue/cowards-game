@@ -14,6 +14,10 @@ import {
   type ReplayState,
   type ReplayStateResult,
 } from "./replay-transition.js"
+import {
+  applyHistoricalV14Transition,
+  type HistoricalV14ReplayState,
+} from "./historical-v1-4-transition.js"
 import { stableStringify } from "./hash.js"
 import {
   createChronicleBoundaryAnchors,
@@ -176,6 +180,111 @@ export interface HistoricalV14ReplayInput {
   readonly chronicle: Chronicle
 }
 
+const historicalStateFromSnapshot = (
+  snapshot: ChronicleBoundarySnapshot,
+): HistoricalV14ReplayState => ({
+  board: globalThis.structuredClone(snapshot.board),
+  ...(snapshot.outcome === undefined
+    ? {}
+    : { outcome: globalThis.structuredClone(snapshot.outcome) }),
+})
+
+const createHistoricalValidatedReplay = (
+  chronicle: Chronicle,
+): CreateReplayResult => {
+  const stateAt = (sequence: number): ReplayStateResult => {
+    if (!Number.isInteger(sequence) || sequence < 0) {
+      return {
+        ok: false,
+        errors: [
+          error(
+            "EVENT_ORDER_INVALID",
+            "Replay sequence must be a nonnegative integer.",
+            { actual: sequence },
+          ),
+        ],
+      }
+    }
+    if (chronicle.events[sequence] === undefined) {
+      return {
+        ok: false,
+        errors: [
+          error("EVENT_ORDER_INVALID", "Replay sequence does not exist.", {
+            actual: sequence,
+          }),
+        ],
+      }
+    }
+    const startingSnapshot = nearestSnapshotAtOrBefore(chronicle, sequence)
+    if (startingSnapshot === undefined) {
+      return {
+        ok: false,
+        errors: [
+          error(
+            "SNAPSHOT_MISSING",
+            "No historical v1.4 boundary snapshot exists before sequence.",
+            { sequence },
+          ),
+        ],
+      }
+    }
+    let current = historicalStateFromSnapshot(startingSnapshot)
+    for (
+      let eventIndex = startingSnapshot.sequence + 1;
+      eventIndex <= sequence;
+      eventIndex += 1
+    ) {
+      const event = chronicle.events[eventIndex]
+      if (event === undefined) {
+        return {
+          ok: false,
+          errors: [
+            error(
+              "EVENT_ORDER_INVALID",
+              "Historical v1.4 replay event sequence does not exist.",
+              { actual: eventIndex },
+            ),
+          ],
+        }
+      }
+      const applied = applyHistoricalV14Transition(current, event)
+      if (!applied.ok) return { ok: false, errors: [...applied.errors] }
+      current = applied.state
+      const boundary = snapshotAt(chronicle, eventIndex)
+      if (
+        boundary !== undefined &&
+        stableStringify(current) !==
+          stableStringify(historicalStateFromSnapshot(boundary))
+      ) {
+        return {
+          ok: false,
+          errors: [
+            error(
+              "SNAPSHOT_MISMATCH",
+              "Historical v1.4 reconstructed state did not match boundary snapshot.",
+              { sequence: eventIndex },
+            ),
+          ],
+        }
+      }
+    }
+    return { ok: true, state: current }
+  }
+  return {
+    ok: true,
+    replay: {
+      stateAt,
+      *iterateReplay() {
+        for (const event of chronicle.events) {
+          const result = stateAt(event.sequence)
+          if (!result.ok) return
+          yield { sequence: event.sequence, event, state: result.state }
+        }
+      },
+    },
+  }
+}
+
 /** Frozen historical route; intentionally never dispatches through current. */
 export const createHistoricalV14Replay = (
   input: HistoricalV14ReplayInput,
@@ -202,7 +311,7 @@ export const createHistoricalV14Replay = (
         ],
   )
   return snapshotErrors.length === 0
-    ? createValidatedReplay(input.chronicle)
+    ? createHistoricalValidatedReplay(input.chronicle)
     : { ok: false, errors: snapshotErrors }
 }
 

@@ -1,4 +1,5 @@
 import type { Chronicle, SoldierBrainInput, StrategyInput } from "@cowards/spec"
+import { readFileSync } from "node:fs"
 import { describe, expect, it } from "vitest"
 import { MATCH_KERNEL, type StrategyRuntime } from "@cowards/engine"
 import { adaptRuntimeForCurrentKernel } from "@cowards/engine/test/current-kernel-runtime"
@@ -291,6 +292,18 @@ const movementChronicle = (): Chronicle => {
 }
 
 describe("createReplay", () => {
+  it("keeps historical replay calls isolated from mutable current transitions", () => {
+    const source = readFileSync(new URL("./reconstruct.ts", import.meta.url), "utf8")
+    const historicalBody = source.slice(
+      source.indexOf("const createHistoricalValidatedReplay"),
+      source.indexOf("const CURRENT_STATE_HASH_DOMAIN"),
+    )
+
+    expect(historicalBody).toContain("applyHistoricalV14Transition")
+    expect(historicalBody).not.toContain("createValidatedReplay")
+    expect(historicalBody).not.toContain("applyReplayEvent")
+  })
+
   it("reconstructs built Chronicle states without StrategyRuntime", () => {
     const input = createBuiltCurrentInput()
     const chronicle = input.chronicle
