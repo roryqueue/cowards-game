@@ -1,9 +1,5 @@
 import { describe, expect, it } from "vitest"
-import {
-  MATCH_KERNEL,
-  runMatch,
-  type RunMatchInput,
-} from "@cowards/engine"
+import { MATCH_KERNEL, runMatch, type RunMatchInput } from "@cowards/engine"
 import { adaptRuntimeForCurrentKernel } from "@cowards/engine/test/current-kernel-runtime"
 import {
   projectOwnerChronicle,
@@ -12,7 +8,7 @@ import {
 } from "@cowards/replay"
 import { createScenarioStateParts } from "@cowards/test-utils"
 import { buildStrategyRevision } from "./revision.js"
-import { createRuntimeFromRevision } from "./worker.js"
+import { createNestedMatchShapeRuntimeFromRevisionTestSupport } from "./executor.js"
 
 const createInput = (
   source: string,
@@ -33,7 +29,9 @@ const createInput = (
     topPlayerId: "top",
     bottomStrategyRevisionId: revision.id,
     topStrategyRevisionId: revision.id,
-    runtime: adaptRuntimeForCurrentKernel(createRuntimeFromRevision(revision)),
+    runtime: adaptRuntimeForCurrentKernel(
+      createNestedMatchShapeRuntimeFromRevisionTestSupport(revision),
+    ),
     maxPhases: 1,
     ...overrides,
   }
@@ -98,7 +96,8 @@ describe("runtime-js engine and Chronicle integration", () => {
 
   it("selectActivations receives full-board StrategyInput and returns activation orders plus StrategyMemory", () => {
     const revision = buildStrategyRevision({ source: validSource })
-    const runtime = createRuntimeFromRevision(revision)
+    const runtime =
+      createNestedMatchShapeRuntimeFromRevisionTestSupport(revision)
     const result = runtime.selectActivations({
       phaseNumber: 1,
       roundNumber: 1,
