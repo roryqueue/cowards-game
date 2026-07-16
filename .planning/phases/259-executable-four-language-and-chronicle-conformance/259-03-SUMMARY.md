@@ -39,6 +39,9 @@ key-decisions:
   - "The package entrypoint exports pure corpus and comparison contracts but no writer, approval, promotion, regeneration, private-preimage, or diagnostic authority."
   - "Comparator equality is available only after both projected traces pass closed semantic admission; a semantically invalid reviewed trace suspends the oracle and an invalid candidate remains quarantined."
   - "Every system-failure trace has exactly one referenced system-failure invocation with unchanged state, memory, and objective hashes."
+  - "Every invalid candidate semantic is reduced to one bounded traceSemantics quarantine before candidate hashing or field-level diffing."
+  - "Top-level result class owns exactly one matching negative invocation or transition, with no stray or dual failure evidence."
+  - "Adjacent gameplay-state hashes and the final-state hash are continuous; machine hashes remain boundary commitments because runtime effect/resume gaps are intentional."
 
 patterns-established:
   - "D-05 oracle authority: committed reviewed trace roots are checked independently and never regenerated from a live TypeScript lane."
@@ -102,6 +105,7 @@ status: complete
 - Closed three adversarial review gaps: caller-owned shallow freezes can no longer create stale-root false equality, event payloads/contexts must survive the canonical public Chronicle schema without stripped fields, and system-failure summaries must prove no mutation while matching their referenced invocation.
 - Closed three independent rereview gaps: self-rehashed invalid prefix/derived roots cannot become an equal oracle, system-failure invocations are unique and reference-strict across result classes, and transition stage/outcome/event/terminal hashes are replay-owned and semantically revalidated before equality.
 - Closed the final independent blocker set: owner-private events require commitments while public events forbid them, event sequences are globally contiguous across transitions, terminal evidence is final-only and exactly matches the final `MATCH_ENDED`, and every player violation is bound to exact invocation or transition evidence.
+- Closed the post-integration review blockers: every invalid candidate semantic now quarantines before hashing, success/system/player result classes reconcile all nested evidence with exactly one negative owner, and transition/final gameplay-state hashes form one continuous chain.
 
 ## Task Commits
 
@@ -117,6 +121,11 @@ status: complete
 10. **Rereview CR-04: Quarantine structurally malformed candidates safely** — `b79f709` (fix)
 11. **Final rereview RED: Reproduce owner, chronology, terminal, and violation-ownership gaps** — `4417707` (test)
 12. **Final rereview CR-07/CR-08/CR-09: Close final trace admission gaps** — `0fd55f1` (fix)
+13. **Post-integration RED: Reproduce final trace review blockers** — `19919e3` (test)
+14. **Post-integration BL-01: Quarantine invalid candidate semantics before hashing** — `149f508` (fix)
+15. **Post-integration BL-02: Reconcile result class and exact negative ownership** — `aa6eb0b` (fix)
+16. **Post-integration BL-03: Enforce state chronology and final-state ownership** — `ae093db` (fix)
+17. **Post-integration formatting** — `ba6b21a` (style)
 
 ## Files Created/Modified
 
@@ -140,6 +149,9 @@ status: complete
 - Admit terminal evidence only on the final transition, with exactly one final `MATCH_ENDED` whose public payload canonically equals the terminal status.
 - Bind transition-owned player violations to one exact `RUNTIME_VIOLATION` stable code, the referenced transition kind, derived gameplay mutation, rejected private-memory mutation, terminal effect, and non-retryability; invocation-owned violations retain the same exact field-by-field check.
 - Return a bounded `traceSemantics` quarantine result for structurally malformed candidate objects instead of hashing or traversing unsafe shapes.
+- Return that same bounded `traceSemantics` quarantine for every invalid candidate semantic before computing a candidate root or restricted field diff.
+- Require success traces to contain no negative evidence, and system/player failures to contain exactly one matching invocation-or-transition owner with no ambiguous dual ownership.
+- Require adjacent transition gameplay-state hashes and the top-level final-state hash to agree exactly; do not require raw machine-hash adjacency across intentional runtime effect/resume boundaries.
 - Carry before/after objective hashes alongside memory hashes so system failure proves no objective mutation rather than relying on a single unpaired digest.
 
 ## Deviations from Plan
@@ -157,6 +169,8 @@ status: complete
 - Adversarial review showed that shallow freezing is not a safe cache eligibility signal and that closed top-level event keys do not make nested payloads closed. Both assumptions were replaced with executable fail-closed checks.
 - Independent rereview showed that an outer self-hash is not semantic admission: derived roots, stage/outcome schemas, terminal coherence, and unique failure ownership must all pass before equal-root short-circuiting.
 - Final rereview showed that transition-local event monotonicity was insufficient for Chronicle reconstruction and that a nullable private commitment made owner evidence indistinguishable from missing evidence. Both are now closed at projection admission.
+- Post-integration probing showed that semantically invalid but non-canonical candidate values could still throw while hashing, and that success traces could contain unowned player-violation evidence. Both paths now fail closed before equality.
+- Full-Match probing also showed that machine hashes intentionally differ across runtime effect/resume boundaries. The final validator therefore enforces gameplay-state continuity and final-state ownership without inventing a false machine-adjacency invariant.
 
 ## User Setup Required
 
@@ -172,9 +186,9 @@ None.
 
 - All three planned source/test/export files and both review-owned shared authority updates exist.
 - RED/GREEN commits `a34ccfa`, `8a9227c`, `69cf415`, and `5a7ff21` exist in order.
-- Focused trace suite passes: 1 file, 15 tests.
-- Full `@cowards/golden` package suite passes: 3 files, 24 tests.
-- Joined replay recorder and trace regression passes: 2 files, 33 tests.
+- Focused trace suite passes: 1 file, 17 tests.
+- Full `@cowards/golden` package suite passes: 3 files, 26 tests.
+- Joined replay recorder and trace regression passes: 2 files, 35 tests.
 - Golden package typecheck, focused ESLint, Prettier check, and `git diff --check` pass.
 - Protected milestone, project-state, and v1.4 specification files are unchanged.
 
