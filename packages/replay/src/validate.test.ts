@@ -640,6 +640,45 @@ describe("validateChronicle", () => {
     expect(result.issues.every(({ path }) => path.length <= 8)).toBe(true)
   })
 
+  it("admits the exact current tuple independent of JSON object key order", () => {
+    const input = createCurrentReplayInput()
+    const tuple = input.compatibility.tuple
+    const reorderedTuple = {
+      arenaCatalog: tuple.arenaCatalog,
+      chronicle: tuple.chronicle,
+      engine: tuple.engine,
+      rules: tuple.rules,
+      runtimeAbi: tuple.runtimeAbi,
+      setPolicy: tuple.setPolicy,
+    }
+    const reordered = {
+      ...input,
+      compatibility: {
+        tupleId: input.compatibility.tupleId,
+        tuple: reorderedTuple,
+      },
+    }
+
+    expect(validateCurrentChronicle(reordered)).toEqual({
+      ok: true,
+      profile: "current-exact",
+      publishable: true,
+      current: true,
+      issues: [],
+      truncated: false,
+    })
+    expect(
+      resolveReplayCompatibilityIdentity({
+        profile: reordered.profile,
+        compatibility: reordered.compatibility,
+        chronicle: reordered.chronicle,
+      }),
+    ).toEqual({
+      status: "current_exact",
+      tupleId: input.compatibility.tupleId,
+    })
+  })
+
   it("atomically validates current tuples while preserving explicit historical dispatch", () => {
     const chronicle = createChronicle()
     const registered = CANONICAL_COMPATIBILITY_TUPLES[0]!
@@ -767,7 +806,7 @@ describe("validateChronicle", () => {
         tupleId: HISTORICAL_RUNTIME_V114_SEMANTIC_TUPLE_ID,
         tuple: { ...HISTORICAL_RUNTIME_V114_SEMANTIC_TUPLE },
       },
-      chronicle,
+      chronicle: historicalChronicle,
     }
     expect(validateReplayInput(historicalV116)).toEqual({ ok: true })
     expect(resolveReplayCompatibilityIdentity(historicalV116)).toEqual({
@@ -790,6 +829,30 @@ describe("validateChronicle", () => {
       ok: false,
       errors: [expect.objectContaining({ code: "VERSION_INCOMPATIBLE" })],
     })
+  })
+
+  it("keeps exact historical-v1.16 admission isolated from mutable current schema and grammar", () => {
+    const current = createCurrentReplayInput()
+    const historicalChronicle = withHistoricalPushAttempt(current.chronicle)
+    const input = {
+      profile: "historical-v1.16" as const,
+      compatibility: {
+        tupleId: HISTORICAL_RUNTIME_V114_SEMANTIC_TUPLE_ID,
+        tuple: { ...HISTORICAL_RUNTIME_V114_SEMANTIC_TUPLE },
+      },
+      chronicle: historicalChronicle,
+    }
+    const before = JSON.stringify(input)
+
+    expect(validateChronicle(historicalChronicle)).toMatchObject({
+      ok: false,
+      errors: [{ code: "SCHEMA_INVALID" }],
+    })
+    expect(validateHistoricalV14Chronicle(historicalChronicle)).toEqual({
+      ok: true,
+    })
+    expect(validateReplayInput(input)).toEqual({ ok: true })
+    expect(JSON.stringify(input)).toBe(before)
   })
 
   it("routes original historical evidence only through the frozen grammar without requiring current snapshots", () => {
