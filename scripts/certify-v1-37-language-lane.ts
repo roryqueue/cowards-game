@@ -1,6 +1,7 @@
+import { Buffer } from "node:buffer"
 import { spawnSync } from "node:child_process"
 import { createHash, randomBytes } from "node:crypto"
-import { mkdtempSync, readFileSync, rmSync } from "node:fs"
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import {
@@ -23,6 +24,21 @@ const HASH = /^sha256:[0-9a-f]{64}$/u
 const IDENTIFIER = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,511}$/u
 const ACTIVE_TRACE_REGISTRY =
   "packages/golden/src/fixtures/v1-37-conformance-traces/registry.json"
+const REVIEWED_RESULT_PATHS = Object.freeze({
+  typescript: ".planning/artifacts/v1.37-language-conformance-typescript.json",
+  python: ".planning/artifacts/v1.37-language-conformance-python.json",
+  rust: ".planning/artifacts/v1.37-language-conformance-rust.json",
+  zig: ".planning/artifacts/v1.37-language-conformance-zig.json",
+} as const)
+const REVIEWED_INDEX_PATH =
+  ".planning/artifacts/v1.37-language-conformance-candidates.md"
+const LANGUAGES = Object.freeze([
+  "typescript",
+  "python",
+  "rust",
+  "zig",
+] as const satisfies readonly RuntimeConformanceLanguageIdV117[])
+const TSX_IMPORT_URL = import.meta.resolve("tsx")
 
 const sha256 = (value: Uint8Array | string): `sha256:${string}` =>
   `sha256:${createHash("sha256").update(value).digest("hex")}`
@@ -405,7 +421,7 @@ const cliChildRunner: V137LanguageChildRunner = (invocation) => {
     process.execPath,
     [
       "--import",
-      "tsx",
+      TSX_IMPORT_URL,
       path.join(invocation.repoRoot, "scripts/run-v1-37-real-language-lane.ts"),
       "--language",
       invocation.languageId,
@@ -426,6 +442,15 @@ const cliChildRunner: V137LanguageChildRunner = (invocation) => {
         LANG: "C",
         LC_ALL: "C",
         TZ: "UTC",
+        RUSTUP_HOME:
+          process.env.RUSTUP_HOME ??
+          path.join(process.env.HOME ?? invocation.workspacePath, ".rustup"),
+        CARGO_HOME:
+          process.env.CARGO_HOME ??
+          path.join(process.env.HOME ?? invocation.workspacePath, ".cargo"),
+        ...(process.env.COWARDS_CERTIFICATION_DEBUG === "1"
+          ? { COWARDS_CERTIFICATION_DEBUG: "1" }
+          : {}),
       },
       maxBuffer: 1024 * 1024,
       shell: false,
@@ -433,13 +458,250 @@ const cliChildRunner: V137LanguageChildRunner = (invocation) => {
     },
   )
   if (result.error || result.status !== 0 || result.signal !== null) {
-    throw new TypeError("Real language child run failed")
+    if (process.env.COWARDS_CERTIFICATION_DEBUG === "1") {
+      process.stderr.write(result.stderr)
+    }
+    throw new TypeError(
+      process.env.COWARDS_CERTIFICATION_DEBUG === "1"
+        ? `Real language child run failed: ${result.stderr}`
+        : "Real language child run failed",
+    )
   }
   return JSON.parse(result.stdout) as unknown
 }
 
+const canonicalResultBytes = (
+  value: V137ReviewedLanguageResult,
+): Uint8Array => {
+  const encoded = encodeCanonicalJson(value as unknown as JsonValue, {
+    context: "canonical-manifest",
+  })
+  if (!encoded.ok) throw new TypeError("Reviewed lane result is not canonical")
+  return encoded.bytes
+}
+
+const checkReviewedResult = (
+  languageId: RuntimeConformanceLanguageIdV117,
+  value: unknown,
+): V137ReviewedLanguageResult => {
+  if (
+    value === null ||
+    typeof value !== "object" ||
+    Array.isArray(value) ||
+    (value as { languageId?: unknown }).languageId !== languageId
+  ) {
+    throw new TypeError("Reviewed lane result identity is invalid")
+  }
+  const result = value as V137ReviewedLanguageResult
+  if (result.status === "reviewed_unsigned_candidate") {
+    if (
+      !exactKeys(result, [
+        "schemaVersion",
+        "status",
+        "languageId",
+        "candidatePayload",
+        "candidatePayloadSha256",
+        "expectedRunBinding",
+      ]) ||
+      result.schemaVersion !== "v1.37-reviewed-language-candidate-v1" ||
+      result.candidatePayload.identity.languageId !== languageId ||
+      result.candidatePayload.runs.length !== 3 ||
+      result.candidatePayload.runs.some(
+        (run) =>
+          !run.complete ||
+          !run.freshWorkspace ||
+          !run.freshProcess ||
+          run.skippedCaseCount !== 0 ||
+          run.unsupportedCaseCount !== 0 ||
+          run.fallbackUsed ||
+          run.syntheticEvidence ||
+          run.caseCount !== V1_37_CONFORMANCE_CORPUS.cases.length,
+      ) ||
+      sha256(
+        encodeRuntimeConformanceCertificatePayloadV117(result.candidatePayload),
+      ) !== result.candidatePayloadSha256 ||
+      result.expectedRunBinding.caseInventorySha256 !==
+        V137_CONFORMANCE_CASE_INVENTORY_SHA256 ||
+      result.expectedRunBinding.requiredCaseCount !==
+        V1_37_CONFORMANCE_CORPUS.cases.length ||
+      result.expectedRunBinding.resultRootSha256 !==
+        result.candidatePayload.runs[0]?.resultRootSha256
+    ) {
+      throw new TypeError("Reviewed lane candidate is invalid")
+    }
+  } else if (
+    !exactKeys(result, [
+      "schemaVersion",
+      "status",
+      "languageId",
+      "code",
+      "candidatePayload",
+      "candidatePayloadSha256",
+      "expectedRunBinding",
+    ]) ||
+    result.schemaVersion !== "v1.37-reviewed-language-candidate-v1" ||
+    result.status !== "system_failure" ||
+    result.candidatePayload !== null ||
+    result.candidatePayloadSha256 !== null ||
+    result.expectedRunBinding !== null
+  ) {
+    throw new TypeError("Reviewed lane failure is invalid")
+  }
+  const serialized = JSON.stringify(result)
+  if (
+    /"(?:source|sourceBytes|memory|objective|diagnostics|stderr|path|hostData|privateKey)"\s*:/iu.test(
+      serialized,
+    ) ||
+    serialized.includes(path.resolve(import.meta.dirname, ".."))
+  ) {
+    throw new TypeError("Reviewed lane result exposes forbidden material")
+  }
+  canonicalResultBytes(result)
+  return globalThis.structuredClone(result)
+}
+
+const reviewedIndex = (
+  results: Readonly<
+    Record<RuntimeConformanceLanguageIdV117, V137ReviewedLanguageResult>
+  >,
+): string => {
+  const lines = [
+    "# v1.37 Four-Language Conformance Candidates",
+    "",
+    "Each lane is independently reviewed, unsigned, and non-promoting until the managed signing and append-only import gates complete.",
+    "",
+    "| Language | Status | Candidate payload | Result root | Runs |",
+    "|---|---|---|---|---:|",
+  ]
+  for (const languageId of LANGUAGES) {
+    const result = results[languageId]
+    if (result.status === "reviewed_unsigned_candidate") {
+      lines.push(
+        `| ${languageId} | reviewed unsigned candidate | ${result.candidatePayloadSha256} | ${result.expectedRunBinding.resultRootSha256} | ${result.candidatePayload.runs.length} |`,
+      )
+    } else {
+      lines.push(
+        `| ${languageId} | system failure: ${result.code} | — | — | 0 |`,
+      )
+    }
+  }
+  lines.push(
+    "",
+    "Closure requires all four current candidates, three fresh complete runs per lane, identical per-lane identity/result/evidence roots, zero skips/fallbacks/synthetic evidence, and later managed sign/verify/import receipts.",
+    "",
+  )
+  return lines.join("\n")
+}
+
+const certifyOne = (
+  languageId: RuntimeConformanceLanguageIdV117,
+  issuedAt: string,
+  requestedValidUntil: string,
+): V137ReviewedLanguageResult =>
+  certifyLanguageLaneV137({
+    languageId,
+    repoRoot: path.resolve(import.meta.dirname, ".."),
+    runs: 3,
+    childRunner: cliChildRunner,
+    issuedAt,
+    requestedValidUntil,
+    registryGeneration: "0",
+    producerId: "cowards-runtime-conformance-producer-v1.37",
+    producerKeyId: "cowards-runtime-conformance-key-v1.37",
+  })
+
 export const runCertifierCli = (): void => {
   const args = process.argv.slice(2)
+  const repoRoot = path.resolve(import.meta.dirname, "..")
+  if (args.includes("--check-reviewed-lane-results")) {
+    const results = {} as Record<
+      RuntimeConformanceLanguageIdV117,
+      V137ReviewedLanguageResult
+    >
+    for (const languageId of LANGUAGES) {
+      const resultPath = path.join(repoRoot, REVIEWED_RESULT_PATHS[languageId])
+      const bytes = readFileSync(resultPath)
+      const result = checkReviewedResult(
+        languageId,
+        JSON.parse(bytes.toString("utf8")) as unknown,
+      )
+      const expectedBytes = Buffer.concat([
+        Buffer.from(canonicalResultBytes(result)),
+        Buffer.from("\n"),
+      ])
+      if (!bytes.equals(expectedBytes)) {
+        throw new TypeError("Reviewed lane result bytes are not canonical")
+      }
+      results[languageId] = result
+    }
+    if (
+      readFileSync(path.join(repoRoot, REVIEWED_INDEX_PATH), "utf8") !==
+      reviewedIndex(results)
+    ) {
+      throw new TypeError("Reviewed lane index is not synchronized")
+    }
+    process.stdout.write(
+      `${JSON.stringify({ status: "passed", lanes: LANGUAGES.length })}\n`,
+    )
+    return
+  }
+  const issuedAt = new Date().toISOString()
+  const requestedValidUntil = new Date(
+    Date.parse(issuedAt) + 30 * 24 * 60 * 60 * 1_000,
+  ).toISOString()
+  if (args.includes("--attempt-all")) {
+    const results = {} as Record<
+      RuntimeConformanceLanguageIdV117,
+      V137ReviewedLanguageResult
+    >
+    for (const languageId of LANGUAGES) {
+      const result = checkReviewedResult(
+        languageId,
+        certifyOne(languageId, issuedAt, requestedValidUntil),
+      )
+      results[languageId] = result
+      if (args.includes("--write-reviewed-lane-results")) {
+        writeFileSync(
+          path.join(repoRoot, REVIEWED_RESULT_PATHS[languageId]),
+          Buffer.concat([
+            Buffer.from(canonicalResultBytes(result)),
+            Buffer.from("\n"),
+          ]),
+          { flag: "w", mode: 0o600 },
+        )
+      }
+    }
+    if (args.includes("--write-reviewed-lane-results")) {
+      writeFileSync(
+        path.join(repoRoot, REVIEWED_INDEX_PATH),
+        reviewedIndex(results),
+        { encoding: "utf8", flag: "w", mode: 0o600 },
+      )
+    }
+    process.stdout.write(
+      `${JSON.stringify({
+        status: LANGUAGES.every(
+          (languageId) =>
+            results[languageId].status === "reviewed_unsigned_candidate",
+        )
+          ? "passed"
+          : "system_failure",
+        lanes: LANGUAGES.map((languageId) => ({
+          languageId,
+          status: results[languageId].status,
+        })),
+      })}\n`,
+    )
+    if (
+      LANGUAGES.some(
+        (languageId) =>
+          results[languageId].status !== "reviewed_unsigned_candidate",
+      )
+    ) {
+      process.exitCode = 1
+    }
+    return
+  }
   const languageValue = args[args.indexOf("--language") + 1]
   if (
     languageValue !== "typescript" &&
@@ -449,19 +711,7 @@ export const runCertifierCli = (): void => {
   ) {
     throw new TypeError("A supported --language is required")
   }
-  const result = certifyLanguageLaneV137({
-    languageId: languageValue,
-    repoRoot: path.resolve(import.meta.dirname, ".."),
-    runs: 3,
-    childRunner: cliChildRunner,
-    issuedAt: new Date().toISOString(),
-    requestedValidUntil: new Date(
-      Date.now() + 30 * 24 * 60 * 60 * 1_000,
-    ).toISOString(),
-    registryGeneration: "0",
-    producerId: "cowards-runtime-conformance-producer-v1.37",
-    producerKeyId: "cowards-runtime-conformance-key-v1.37",
-  })
+  const result = certifyOne(languageValue, issuedAt, requestedValidUntil)
   process.stdout.write(`${JSON.stringify(result)}\n`)
   if (result.status !== "reviewed_unsigned_candidate") process.exitCode = 1
 }
