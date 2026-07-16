@@ -118,9 +118,6 @@ importers:
         specifier: ^19.2.6
         version: 19.2.6(react@19.2.6)
     devDependencies:
-      '@cowards/runtime-python':
-        specifier: workspace:*
-        version: link:../../packages/runtime-python
       '@types/react':
         specifier: ^19.2.7
         version: 19.2.14
@@ -207,6 +204,9 @@ importers:
         specifier: ^8.20.0
         version: 8.20.0
     devDependencies:
+      '@cowards/runtime-wasm-wasi':
+        specifier: workspace:*
+        version: link:../runtime-wasm-wasi
       '@types/pg':
         specifier: ^8.20.0
         version: 8.20.0

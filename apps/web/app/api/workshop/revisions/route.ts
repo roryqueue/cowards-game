@@ -28,12 +28,26 @@ const runtimeServiceValidateStrategy = async (
       error: runtimeServiceSubmitError(sourceFormat),
     }
   }
+  const privateArtifactToken =
+    process.env.COWARDS_RUNTIME_SERVICE_PRIVATE_ARTIFACT_TOKEN?.trim()
+  if (!privateArtifactToken) {
+    return {
+      error: runtimeServiceSubmitError(sourceFormat),
+    }
+  }
   let response: globalThis.Response
   try {
     response = await fetch(`${endpoint}/validate-strategy`, {
       method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ sourceFormat, source }),
+      headers: {
+        "content-type": "application/json",
+        "x-cowards-private-artifact-token": privateArtifactToken,
+      },
+      body: JSON.stringify({
+        sourceFormat,
+        source,
+        includePrivateArtifact: true,
+      }),
     })
   } catch {
     return { error: runtimeServiceSubmitError(sourceFormat) }

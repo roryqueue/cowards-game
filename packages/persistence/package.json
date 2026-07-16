@@ -38,6 +38,7 @@
     "pg": "^8.20.0"
   },
   "devDependencies": {
+    "@cowards/runtime-wasm-wasi": "workspace:*",
     "@types/pg": "^8.20.0"
   }
 }

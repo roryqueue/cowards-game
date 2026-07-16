@@ -1,20 +1,11 @@
 import { describe, expect, it } from "vitest"
-import { Buffer } from "node:buffer"
-import { createHash, createHmac } from "node:crypto"
+import { createHash } from "node:crypto"
 import { createWorkshopServer, isStorageUnavailableError } from "./server.js"
 import {
   COMPATIBILITY_VERSIONS,
-  STRATEGY_LANGUAGE_PROVIDER_CONTRACT_VERSION,
-  STRATEGY_RUNTIME_ABI_VERSION,
+  defaultRuntimeMetadata,
   type StrategyRevision,
-  type StrategyRevisionMetadata,
 } from "@cowards/spec"
-import { buildPythonStrategyRevisionV117 } from "@cowards/runtime-python/validation"
-
-const TEST_PROVIDER_VALIDATION_SECRET =
-  "cowards-provider-validation-test-secret-v1.33"
-
-process.env.COWARDS_PROVIDER_VALIDATION_SECRET = TEST_PROVIDER_VALIDATION_SECRET
 
 const validSource = `
 export default {
@@ -30,133 +21,77 @@ export default {
 }
 `.trim()
 
-const pythonProviderValidationProof = (input: {
-  sourceHash: string
-  sourceBytes: number
-  artifactHash: string
-  artifactBytes: number
-}): string =>
-  `hmac-sha256:${createHmac("sha256", TEST_PROVIDER_VALIDATION_SECRET)
-    .update(
-      [
-        "strategy-language-provider-python",
-        STRATEGY_LANGUAGE_PROVIDER_CONTRACT_VERSION,
-        input.sourceHash,
-        String(input.sourceBytes),
-        input.artifactHash,
-        String(input.artifactBytes),
-      ].join("\n"),
-    )
-    .digest("hex")}`
-
-const pythonProviderMetadata = (
-  source: string,
-): Pick<
-  StrategyRevision,
-  "runtime" | "validation" | "engineCompatibility" | "metadata" | "sourceHash"
-> => {
-  if (String(STRATEGY_RUNTIME_ABI_VERSION) === "strategy-runtime-abi-v1.17") {
-    return buildPythonStrategyRevisionV117({ source }) as unknown as Pick<
-      StrategyRevision,
-      | "runtime"
-      | "validation"
-      | "engineCompatibility"
-      | "metadata"
-      | "sourceHash"
-    >
-  }
-  const sourceBytes = new TextEncoder().encode(source).length
+const stubProviderRevision = (source: string): StrategyRevision => {
   const sourceHash = createHash("sha256").update(source).digest("hex")
-  const artifactPayload = Buffer.from(source.replace(/\r\n?/g, "\n"), "utf8")
-  const artifactHash = createHash("sha256")
-    .update(artifactPayload)
-    .digest("hex")
-  const artifactBytes = artifactPayload.byteLength
-  const runtime: StrategyRevision["runtime"] = {
-    abiVersion: STRATEGY_RUNTIME_ABI_VERSION,
-    language: { id: "python", version: "3.9" },
-    adapter: {
-      id: "runtime-python-subprocess-experimental",
-      version: "0.1.0-experimental",
-    },
-    package: { mode: "none", entrypoint: "module" },
-    requiredCapabilities: [],
-    limits: {
-      timeoutMs: 1000,
-      stdoutBytes: 262144,
-      stderrBytes: 65536,
-      sourceBytes: 65536,
-      strategyMemoryBytes: 32768,
-      soldierMemoryBytes: 2048,
-      objectivePayloadBytes: 1024,
-      environment: "minimal",
-      filesystem: "none",
-      network: "disabled",
-      shell: "disabled",
-      packagePolicy: "none",
-    },
-  }
-  const metadata: StrategyRevisionMetadata = {
-    tags: ["python", "counted", "provider"],
-    sourceArtifact: {
-      format: "python-source-bundle",
-      hash: artifactHash,
-      bytes: artifactBytes,
-      bytesBase64: artifactPayload.toString("base64"),
-      sourceHash,
-      sourceBytes,
-      abiVersion: STRATEGY_RUNTIME_ABI_VERSION,
-      validationStatus: "valid",
-      createdAt: "test",
-      toolchain: {
-        language: "python",
-        runtime: "python",
-        runtimeVersion: "3.9",
-        commandSummary: "test",
-        validationPolicy: "test",
-      },
-      publicEvidence: {
-        label: "Python source bundle provenance",
-        nonCounted: false,
-        sandboxClaim: "provenance-only",
-      },
-    },
-    providerValidation: {
-      providerId: "strategy-language-provider-python",
-      contractVersion: STRATEGY_LANGUAGE_PROVIDER_CONTRACT_VERSION,
-      sourceHash,
-      sourceBytes,
-      artifactHash,
-      artifactBytes,
-      proof: pythonProviderValidationProof({
-        sourceHash,
-        sourceBytes,
-        artifactHash,
-        artifactBytes,
-      }),
-    },
-  }
-  return {
+  const sourceBytes = new TextEncoder().encode(source).length
+  const runtime = defaultRuntimeMetadata("typescript")
+  const validation = {
+    valid: true,
+    errors: [],
+    warnings: [],
+    sourceBytes,
+    forbiddenPatterns: [],
     sourceHash,
-    runtime,
-    validation: {
-      valid: true,
-      errors: [],
-      warnings: [],
-      sourceBytes,
-      forbiddenPatterns: [],
-      sourceHash,
-      runtimeVersion: runtime.adapter.version,
-      engineCompatibility: {
-        spec: COMPATIBILITY_VERSIONS.spec,
-        engine: COMPATIBILITY_VERSIONS.engine,
-      },
-    },
+    runtimeVersion: runtime.adapter.version,
     engineCompatibility: {
       spec: COMPATIBILITY_VERSIONS.spec,
       engine: COMPATIBILITY_VERSIONS.engine,
     },
-    metadata,
+  }
+  return {
+    id: `strategy-revision:stub:${sourceHash}`,
+    strategyId: "strategy:local-workshop",
+    source,
+    sourceHash,
+    sourceBytes,
+    runtime,
+    engineCompatibility: validation.engineCompatibility,
+    validation,
+    metadata: {
+      createdBy: "user:local",
+      providerValidation: {
+        providerId: "strategy-language-provider-js-ts",
+        contractVersion: "runtime-provider-validation-test",
+        sourceHash,
+        sourceBytes,
+        artifactHash: "artifact-hash",
+        artifactBytes: 7,
+        proof: "sha256:provider-proof",
+      },
+      sourceArtifact: {
+        format: "transpiled-javascript",
+        hash: "artifact-hash",
+        bytes: 7,
+        bytesBase64: "cHJpdmF0ZQ==",
+        sourceHash,
+        sourceBytes,
+        abiVersion: runtime.abiVersion,
+        validationStatus: "valid",
+        sourceIdentity: {
+          identityVersion: "strategy-source-identity-v2",
+          normalizationPolicy: "source-line-endings-lf-v1.17",
+          originalSourceSha256: `sha256:${"a".repeat(64)}`,
+          originalSourceBytes: sourceBytes,
+          normalizedSourceSha256: `sha256:${"b".repeat(64)}`,
+          normalizedSourceBytes: sourceBytes,
+          lineEndings: { kind: "none", lf: 0, crlf: 0, cr: 0 },
+          hasFinalNewline: false,
+        },
+        createdAt: "test",
+        toolchain: {
+          language: "typescript",
+          runtime: "test",
+          runtimeVersion: "test",
+          commandSummary: "test",
+          validationPolicy: "test",
+        },
+        publicEvidence: {
+          label: "test",
+          nonCounted: false,
+          sandboxClaim: "provenance-only",
+        },
+      },
+    },
   }
 }
 
@@ -179,6 +114,7 @@ describe("Workshop server facade", () => {
   })
 
   it("builds and inserts Workshop revisions without returning source text", async () => {
+    const providerRevision = stubProviderRevision(validSource)
     const insertedIds: string[] = []
     const server = createWorkshopServer({
       withPool: async (fn) => fn({} as never),
@@ -186,10 +122,23 @@ describe("Workshop server facade", () => {
         insertedIds.push(revision.id)
         return revision
       },
+      buildRevision: (input) => ({
+        ...providerRevision,
+        metadata: {
+          ...providerRevision.metadata,
+          label: input.label,
+          notes: input.notes,
+        },
+      }),
     })
 
     const response = await server.submitSource({
       source: validSource,
+      runtime: providerRevision.runtime,
+      validation: providerRevision.validation,
+      engineCompatibility: providerRevision.engineCompatibility,
+      metadata: providerRevision.metadata,
+      runtimeServiceValidated: true,
       label: "Local test",
       notes: "Workshop note",
     })
@@ -203,18 +152,30 @@ describe("Workshop server facade", () => {
         notes: "Workshop note",
       })
       expect(response.revision).not.toHaveProperty("source")
+      expect(JSON.stringify(response)).not.toContain("bytesBase64")
+      expect(JSON.stringify(response)).not.toContain("sourceIdentity")
+      expect(JSON.stringify(response)).not.toContain(validSource)
     }
   })
 
-  it("requires runtime-service provenance for submitted Python Workshop revisions", async () => {
-    const pythonSource = `
-def select_activations(input):
-    return {"activationOrders": [], "strategyMemory": input["strategyMemory"]}
+  it("fails closed for proofless default TypeScript submissions", async () => {
+    let inserted = false
+    const server = createWorkshopServer({
+      withPool: async (fn) => fn({} as never),
+      insertRevision: async () => {
+        inserted = true
+        throw new Error("proofless source must not be inserted")
+      },
+    })
 
-def soldier_brain(input):
-    return {"action": {"type": "TURN_TO_STONE"}, "soldierMemory": input["soldierMemory"]}
-`
-    const providerRevision = pythonProviderMetadata(pythonSource)
+    await expect(server.submitSource({ source: validSource })).rejects.toThrow(
+      "runtime-service provider validation",
+    )
+    expect(inserted).toBe(false)
+  })
+
+  it("requires exact runtime-service provenance for submitted Workshop revisions", async () => {
+    const providerRevision = stubProviderRevision(validSource)
     const insertedIds: string[] = []
     const server = createWorkshopServer({
       withPool: async (fn) => fn({} as never),
@@ -222,12 +183,20 @@ def soldier_brain(input):
         insertedIds.push(revision.id)
         return revision
       },
+      buildRevision: (input) => {
+        if (input.source !== validSource) {
+          throw new Error(
+            "TypeScript Workshop revisions require runtime-service provider validation.",
+          )
+        }
+        return providerRevision
+      },
     })
 
     await expect(
       server.submitSource({
-        source: pythonSource,
-        sourceFormat: "python",
+        source: validSource,
+        sourceFormat: "typescript",
         runtime: providerRevision.runtime,
         validation: providerRevision.validation,
         engineCompatibility: providerRevision.engineCompatibility,
@@ -237,8 +206,8 @@ def soldier_brain(input):
 
     await expect(
       server.submitSource({
-        source: `${pythonSource}\n# changed after provider validation\n`,
-        sourceFormat: "python",
+        source: `${validSource}\n// changed after provider validation\n`,
+        sourceFormat: "typescript",
         runtime: providerRevision.runtime,
         validation: providerRevision.validation,
         engineCompatibility: providerRevision.engineCompatibility,
@@ -248,8 +217,8 @@ def soldier_brain(input):
     ).rejects.toThrow("runtime-service provider validation")
 
     const response = await server.submitSource({
-      source: pythonSource,
-      sourceFormat: "python",
+      source: validSource,
+      sourceFormat: "typescript",
       runtime: providerRevision.runtime,
       validation: providerRevision.validation,
       engineCompatibility: providerRevision.engineCompatibility,
@@ -261,7 +230,7 @@ def soldier_brain(input):
     expect(insertedIds).toHaveLength(1)
     if (response.ok) {
       expect(response.revision.metadata.providerValidation).toMatchObject({
-        providerId: "strategy-language-provider-python",
+        providerId: "strategy-language-provider-js-ts",
         sourceHash: providerRevision.sourceHash,
       })
     }

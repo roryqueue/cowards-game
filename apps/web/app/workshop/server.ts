@@ -47,6 +47,7 @@ export interface WorkshopServerDeps {
   getSnapshot?: typeof getWorkshopSnapshot | undefined
   getSource?: typeof getWorkshopRevisionSource | undefined
   insertRevision?: typeof insertWorkshopRevision | undefined
+  buildRevision?: typeof buildWorkshopRevision | undefined
   createTestMatchSet?: typeof createWorkshopTestMatchSet | undefined
   getTestSummary?: typeof getWorkshopTestSummary | undefined
   getAnalyticsSnapshot?: typeof getWorkshopAnalyticsSnapshot | undefined
@@ -99,6 +100,7 @@ export const createWorkshopServer = (deps: WorkshopServerDeps = {}) => {
   const snapshot = deps.getSnapshot ?? getWorkshopSnapshot
   const source = deps.getSource ?? getWorkshopRevisionSource
   const insertRevision = deps.insertRevision ?? insertWorkshopRevision
+  const revisionBuilder = deps.buildRevision ?? buildWorkshopRevision
   const createTest = deps.createTestMatchSet ?? createWorkshopTestMatchSet
   const testSummary = deps.getTestSummary ?? getWorkshopTestSummary
   const analyticsSnapshot =
@@ -131,30 +133,31 @@ export const createWorkshopServer = (deps: WorkshopServerDeps = {}) => {
     async submitSource(
       request: WorkshopSubmitRequest,
     ): Promise<WorkshopSubmitResponse> {
+      const sourceFormat = request.sourceFormat ?? "typescript"
       const validation =
         request.validation ??
-        validateWorkshopSource(request.source, request.sourceFormat)
+        validateWorkshopSource(request.source, sourceFormat)
       if (!validation.valid) {
         return { ok: false, validation }
       }
       if (
-        (request.sourceFormat === "python" ||
-          request.sourceFormat === "typescript" ||
-          request.sourceFormat === "rust" ||
-          request.sourceFormat === "zig") &&
+        (sourceFormat === "python" ||
+          sourceFormat === "typescript" ||
+          sourceFormat === "rust" ||
+          sourceFormat === "zig") &&
         request.runtimeServiceValidated !== true
       ) {
         const label =
-          getSupportedStrategyLanguageBySourceFormat(request.sourceFormat)
-            ?.label ?? "Strategy"
+          getSupportedStrategyLanguageBySourceFormat(sourceFormat)?.label ??
+          "Strategy"
         throw new Error(
           `${label} Workshop revisions require runtime-service provider validation.`,
         )
       }
 
-      const revision = buildWorkshopRevision({
+      const revision = revisionBuilder({
         source: request.source,
-        sourceFormat: request.sourceFormat,
+        sourceFormat,
         runtime: request.runtime,
         validation,
         engineCompatibility: request.engineCompatibility,

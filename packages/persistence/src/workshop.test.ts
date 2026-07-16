@@ -7,15 +7,22 @@ import {
 } from "@cowards/engine"
 import { adaptRuntimeForCurrentKernel } from "@cowards/engine/test/current-kernel-runtime"
 import {
+  buildStrategyRevisionV117,
   transpileStrategySource,
   validateStrategySource,
 } from "@cowards/runtime-js"
 import {
   buildPythonStrategyRevision,
+  buildPythonStrategyRevisionV117,
   createPythonRuntimeFromRevision,
 } from "@cowards/runtime-python"
 import {
+  buildRustStrategyRevisionV117,
+  buildZigStrategyRevisionV117,
+} from "@cowards/runtime-wasm-wasi"
+import {
   INITIAL_BOUNDS,
+  STRATEGY_RUNTIME_ABI_VERSION,
   type SoldierBrainResult,
   type StrategyResult,
   type StrategyRevision,
@@ -26,16 +33,22 @@ import {
   createWorkshopTestMatchSet,
   GET_WORKSHOP_REVISION_SOURCE_SQL,
   getWorkshopTestSummary,
+  insertWorkshopRevision,
   LIST_WORKSHOP_REVISIONS_SQL,
   listWorkshopOpponents,
   listWorkshopPresets,
   listWorkshopSamples,
   listWorkshopTemplates,
+  publicWorkshopRevisionMetadata,
+  rustWasiTacticalStarterSource,
+  pythonTacticalStarterSource,
+  zigWasiTacticalStarterSource,
   getWorkshopStaticSnapshot,
   WORKSHOP_STRATEGY_ID,
   WORKSHOP_MATCH_SET_PREFIX,
   WORKSHOP_OPPONENTS,
   workshopTemplateSource,
+  workshopRuntimeSemantics,
 } from "./workshop.js"
 import type { Pool } from "pg"
 import type { MatchSetExecutionEvidenceResolver } from "./matchset-service.js"
@@ -770,6 +783,139 @@ describe("Workshop service contracts", () => {
         localRevision.id,
       ),
     ).toThrow("valid Strategy revision")
+  })
+
+  it("admits only exact selected runtime-service revisions with collision-safe identity", () => {
+    const candidates = [
+      {
+        sourceFormat: "typescript" as const,
+        revision: buildStrategyRevisionV117({ source: workshopTemplateSource }),
+      },
+      {
+        sourceFormat: "python" as const,
+        revision: buildPythonStrategyRevisionV117({
+          source: pythonTacticalStarterSource,
+        }),
+      },
+      {
+        sourceFormat: "rust" as const,
+        revision: buildRustStrategyRevisionV117({
+          source: rustWasiTacticalStarterSource,
+        }),
+      },
+      {
+        sourceFormat: "zig" as const,
+        revision: buildZigStrategyRevisionV117({
+          source: zigWasiTacticalStarterSource,
+        }),
+      },
+    ]
+    const admit = (candidate: (typeof candidates)[number]) =>
+      buildWorkshopRevision({
+        source: candidate.revision.source,
+        sourceFormat: candidate.sourceFormat,
+        runtime: candidate.revision.runtime,
+        validation: candidate.revision.validation,
+        engineCompatibility: candidate.revision.engineCompatibility,
+        metadata: candidate.revision.metadata,
+        runtimeServiceValidated: true,
+      })
+
+    if (String(STRATEGY_RUNTIME_ABI_VERSION) !== "strategy-runtime-abi-v1.17") {
+      for (const candidate of candidates) {
+        expect(() => admit(candidate)).toThrow(
+          "runtime-service provider validation",
+        )
+      }
+      return
+    }
+
+    const admitted = candidates.map(admit)
+    for (const [index, revision] of admitted.entries()) {
+      expect(admit(candidates[index]!)).toEqual(revision)
+      expect(revision.id).toMatch(
+        /^strategy-revision:workshop:(typescript|python|rust|zig):sha256:[0-9a-f]{64}$/u,
+      )
+      expect(workshopRuntimeSemantics(revision)).toMatchObject({
+        countedPlayEligible: true,
+        countedPlayLabel: "Counted eligible",
+      })
+      const publicMetadata = publicWorkshopRevisionMetadata(revision.metadata)
+      expect(JSON.stringify(publicMetadata)).not.toContain("bytesBase64")
+      expect(JSON.stringify(publicMetadata)).not.toContain("sourceIdentity")
+    }
+
+    const proofDrift = structuredClone(candidates[0]!)
+    proofDrift.revision.metadata.providerValidation.proof = `sha256:${"0".repeat(64)}`
+    expect(() => admit(proofDrift)).toThrow(
+      "runtime-service provider validation",
+    )
+
+    const historicalProof = structuredClone(candidates[0]!)
+    historicalProof.revision.metadata.providerValidation.contractVersion =
+      "strategy-language-provider-contract-v1.33"
+    historicalProof.revision.metadata.providerValidation.proof = `hmac-sha256:${"0".repeat(64)}`
+    expect(() => admit(historicalProof)).toThrow(
+      "runtime-service provider validation",
+    )
+
+    const identityDrift = structuredClone(candidates[0]!)
+    const identityArtifact = identityDrift.revision.metadata.sourceArtifact
+    if (identityArtifact?.sourceIdentity === undefined) {
+      throw new Error("TypeScript v1.17 fixture is missing source identity.")
+    }
+    identityArtifact.sourceIdentity.lineEndings = {
+      kind: "crlf",
+      lf: 0,
+      crlf: 1,
+      cr: 0,
+    }
+    expect(() => admit(identityDrift)).toThrow(
+      "runtime-service provider validation",
+    )
+
+    const distinctToolchain = structuredClone(candidates[0]!)
+    const distinctArtifact = distinctToolchain.revision.metadata.sourceArtifact
+    if (distinctArtifact === undefined) {
+      throw new Error("TypeScript v1.17 fixture is missing its artifact.")
+    }
+    distinctArtifact.toolchain.commandSummary = `${distinctArtifact.toolchain.commandSummary} exact-distinct-toolchain`
+    const distinctAdmission = admit(distinctToolchain)
+    expect(distinctAdmission.sourceHash).toBe(admitted[0]!.sourceHash)
+    expect(distinctAdmission.id).not.toBe(admitted[0]!.id)
+  }, 30_000)
+
+  it("persists Workshop source identity as an all-or-none v2 record", async () => {
+    const revision = buildWorkshopRevision({ source: workshopTemplateSource })
+    const calls: { text: string; values?: readonly unknown[] | undefined }[] =
+      []
+    const query = async (text: string, values?: readonly unknown[]) => {
+      calls.push({ text, values })
+      return { rows: [], rowCount: 0 }
+    }
+    const client = { query, release: () => undefined }
+    const pool = {
+      query,
+      connect: async () => client,
+    } as unknown as Pool
+
+    await insertWorkshopRevision(pool, revision)
+
+    const insert = calls.find(
+      ({ text, values }) =>
+        text.includes("insert into strategy_revisions") &&
+        values?.[0] === revision.id,
+    )
+    expect(insert?.values?.slice(10, 18)).toEqual([
+      "strategy-source-identity-v2",
+      expect.stringMatching(/^[0-9a-f]{64}$/u),
+      revision.sourceBytes,
+      expect.stringMatching(/^[0-9a-f]{64}$/u),
+      revision.sourceBytes,
+      "source-line-endings-lf-v1.17",
+      expect.objectContaining({ kind: expect.any(String) }),
+      false,
+    ])
   })
 
   it("does not expose non-Workshop MatchSets through Workshop status lookup", async () => {

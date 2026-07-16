@@ -381,8 +381,12 @@ export interface StrategyPackageMetadata {
   declaredDependencies?: Record<string, string> | undefined
 }
 
+export type StrategyRuntimeAbiVersion =
+  | "strategy-runtime-abi-v1.14"
+  | "strategy-runtime-abi-v1.17"
+
 export interface StrategyRuntimeMetadata {
-  abiVersion: typeof STRATEGY_RUNTIME_ABI_VERSION
+  abiVersion: StrategyRuntimeAbiVersion
   language: {
     id: StrategyLanguageId
     version: string

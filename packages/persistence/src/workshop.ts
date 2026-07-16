@@ -13,12 +13,14 @@ import {
 import { validatePythonStrategySource } from "@cowards/runtime-python/validation"
 import {
   describeStrategyRuntimeProductSemantics,
+  encodeCanonicalJson,
   getSupportedStrategyLanguageRecord,
   STRATEGY_RUNTIME_ABI_VERSION,
   STRATEGY_RUNTIME_ABI_VERSION_V1_17,
   StrategyRevisionV117Schema,
 } from "@cowards/spec"
 import type {
+  JsonValue,
   MatchId,
   MatchSetId,
   PlayerId,
@@ -44,7 +46,10 @@ import {
   refreshMatchSetStatus,
 } from "./matchset-status.js"
 import { getMatchSetPreset, type MatchSetPresetId } from "./presets.js"
-import { createRepositories } from "./repositories.js"
+import {
+  buildSourceIdentityV2PersistenceRecord,
+  createRepositories,
+} from "./repositories.js"
 import {
   listAdvancedStrategies,
   type AdvancedStrategySummary,
@@ -337,16 +342,22 @@ export const publicWorkshopRevisionMetadata = (
     metadata.sourceArtifact === undefined
       ? {}
       : (() => {
-          const { bytesBase64: _bytesBase64, ...sourceArtifact } =
-            metadata.sourceArtifact
+          const {
+            bytesBase64: _bytesBase64,
+            sourceIdentity: _sourceIdentity,
+            ...sourceArtifact
+          } = metadata.sourceArtifact
           return { sourceArtifact }
         })()
   const redactCompiledArtifact =
     metadata.compiledArtifact === undefined
       ? {}
       : (() => {
-          const { bytesBase64: _bytesBase64, ...compiledArtifact } =
-            metadata.compiledArtifact
+          const {
+            bytesBase64: _bytesBase64,
+            sourceIdentity: _sourceIdentity,
+            ...compiledArtifact
+          } = metadata.compiledArtifact
           return { compiledArtifact }
         })()
   return {
@@ -431,9 +442,11 @@ export const LIST_WORKSHOP_REVISIONS_SQL = `
   select
     sr.id,
     sr.strategy_id,
+    sr.source,
     sr.source_hash,
     sr.source_bytes,
     sr.runtime,
+    sr.engine_compatibility,
     sr.validation,
     sr.metadata,
     sr.created_at,
@@ -1025,9 +1038,11 @@ export const listWorkshopRevisions = async (
   const result = await pool.query<{
     id: StrategyRevisionId
     strategy_id: StrategyId
+    source: string
     source_hash: string
     source_bytes: number
     runtime: StrategyRevision["runtime"]
+    engine_compatibility: StrategyRevision["engineCompatibility"]
     validation: StrategyRevisionValidationReport
     metadata: StrategyRevision["metadata"]
     created_at: Date
@@ -1049,34 +1064,45 @@ export const listWorkshopRevisions = async (
     validation: row.validation,
     metadata: publicWorkshopRevisionMetadata(row.metadata),
     runtimeSemantics: workshopRuntimeSemantics({
+      id: row.id,
+      strategyId: row.strategy_id,
+      source: row.source,
       runtime: row.runtime,
+      engineCompatibility: row.engine_compatibility,
+      validation: row.validation,
       metadata: row.metadata,
       sourceHash: row.source_hash,
       sourceBytes: row.source_bytes,
-      valid: row.validation.valid,
     }),
     createdAt: row.created_at.toISOString(),
     usedInMatches: row.used_in_matches,
   }))
 }
 
-const workshopRuntimeSemantics = (revision: {
-  runtime: StrategyRevision["runtime"]
-  metadata: StrategyRevision["metadata"]
-  sourceHash: string
-  sourceBytes: number
-  valid: boolean
-}): StrategyRuntimeProductSemantics => {
+export const workshopRuntimeSemantics = (
+  revision: StrategyRevision,
+): StrategyRuntimeProductSemantics => {
   const semantics = describeStrategyRuntimeProductSemantics(revision.runtime)
   const language = getSupportedStrategyLanguageRecord(
     revision.runtime.language.id,
   )
-  if (!revision.valid) {
+  if (!revision.validation.valid) {
     return {
       ...semantics,
       countedPlayEligible: false,
       countedPlayLabel: "Not counted",
       countedPlayReason: "Invalid Strategy Revision cannot enter counted play.",
+    }
+  }
+  if (currentRuntimeUsesV117()) {
+    if (StrategyRevisionV117Schema.safeParse(revision).success) {
+      return semantics
+    }
+    return {
+      ...semantics,
+      countedPlayEligible: false,
+      countedPlayLabel: "Not counted",
+      countedPlayReason: `${language?.label ?? "Strategy"} counted play requires exact current runtime-service revision provenance.`,
     }
   }
   if (language?.runtimeTarget === "runtime-python") {
@@ -1126,7 +1152,10 @@ export const insertWorkshopRevision = async (
     throw new Error("Workshop revisions must use the Workshop strategy id")
   }
   await ensureWorkshopSeed(pool)
-  await createRepositories(pool).insertStrategyRevision(revision)
+  await createRepositories(pool).insertStrategyRevision(
+    revision,
+    buildSourceIdentityV2PersistenceRecord(revision.source),
+  )
   return revision
 }
 
@@ -1150,6 +1179,62 @@ type CurrentRuntimeServiceWorkshopFormat =
 const currentRuntimeUsesV117 = (): boolean =>
   String(STRATEGY_RUNTIME_ABI_VERSION) ===
   String(STRATEGY_RUNTIME_ABI_VERSION_V1_17)
+
+const createCurrentWorkshopRevisionId = (input: {
+  sourceFormat: CurrentRuntimeServiceWorkshopFormat
+  sourceHash: string
+  sourceBytes: number
+  runtime: StrategyRevision["runtime"]
+  engineCompatibility: StrategyRevision["engineCompatibility"]
+  metadata: StrategyRevision["metadata"]
+}): StrategyRevisionId => {
+  const artifact =
+    input.metadata.sourceArtifact ?? input.metadata.compiledArtifact ?? null
+  const identity = JSON.parse(
+    JSON.stringify({
+      schemaVersion: "workshop-strategy-revision-identity-v1.17",
+      sourceFormat: input.sourceFormat,
+      sourceHash: input.sourceHash,
+      sourceBytes: input.sourceBytes,
+      runtime: input.runtime,
+      engineCompatibility: input.engineCompatibility,
+      artifact:
+        artifact === null
+          ? null
+          : {
+              format: artifact.format,
+              hash: artifact.hash,
+              bytes: artifact.bytes,
+              abiVersion: artifact.abiVersion,
+              sourceIdentity: artifact.sourceIdentity ?? null,
+              toolchain: artifact.toolchain,
+              ...(input.metadata.compiledArtifact === undefined
+                ? {
+                    sourceHash: input.metadata.sourceArtifact?.sourceHash,
+                    sourceBytes: input.metadata.sourceArtifact?.sourceBytes,
+                  }
+                : {
+                    sourceHash: input.metadata.compiledArtifact.sourceHash,
+                    targetTriple: input.metadata.compiledArtifact.targetTriple,
+                    wasiProfile: input.metadata.compiledArtifact.wasiProfile,
+                    abiEnvelope: input.metadata.compiledArtifact.abiEnvelope,
+                  }),
+            },
+      providerValidation: input.metadata.providerValidation ?? null,
+    }),
+  ) as JsonValue
+  const encodedIdentity = encodeCanonicalJson(identity, {
+    context: "canonical-manifest",
+  })
+  if (!encodedIdentity.ok) {
+    throw new Error("Workshop revision identity is not canonical JSON.")
+  }
+  const digest = createHash("sha256")
+    .update("cowards-game:workshop-strategy-revision:v1.17\0", "utf8")
+    .update(encodedIdentity.bytes)
+    .digest("hex")
+  return `strategy-revision:workshop:${input.sourceFormat}:sha256:${digest}` as StrategyRevisionId
+}
 
 const buildCurrentRuntimeServiceWorkshopRevision = (
   input: {
@@ -1175,7 +1260,14 @@ const buildCurrentRuntimeServiceWorkshopRevision = (
   const sourceHash = createHash("sha256").update(input.source).digest("hex")
   const sourceBytes = new TextEncoder().encode(input.source).length
   const revision: StrategyRevision = {
-    id: `strategy-revision:workshop:${sourceFormat}:${sourceHash}` as StrategyRevisionId,
+    id: createCurrentWorkshopRevisionId({
+      sourceFormat,
+      sourceHash,
+      sourceBytes,
+      runtime: input.runtime,
+      engineCompatibility: input.engineCompatibility,
+      metadata,
+    }),
     strategyId: WORKSHOP_STRATEGY_ID,
     source: input.source,
     sourceHash,
@@ -1186,9 +1278,7 @@ const buildCurrentRuntimeServiceWorkshopRevision = (
     metadata,
   }
   const admitted = StrategyRevisionV117Schema.safeParse(revision)
-  return admitted.success
-    ? (admitted.data as unknown as StrategyRevision)
-    : null
+  return admitted.success ? admitted.data : null
 }
 
 export const buildWorkshopRevision = (input: {

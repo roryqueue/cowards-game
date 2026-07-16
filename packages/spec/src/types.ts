@@ -324,7 +324,9 @@ export interface SourceLanguageStrategyArtifact {
 export type CompiledStrategyArtifactFormat = "wasm"
 export type CompiledStrategyArtifactValidationStatus = "valid" | "invalid"
 export type WasiProfile = "preview1"
-export type WasmAbiEnvelope = "stdin-stdout-json"
+export type WasmAbiEnvelope =
+  | "stdin-stdout-json"
+  | "stdin-canonical-request-stdout-raw-canonical-payload"
 
 export interface CompiledStrategyArtifactToolchainEvidence {
   language: "rust" | "zig"
@@ -345,6 +347,7 @@ export interface CompiledStrategyArtifact {
   abiEnvelope: WasmAbiEnvelope
   abiVersion: string
   validationStatus: CompiledStrategyArtifactValidationStatus
+  sourceIdentity?: SourceLanguageStrategyArtifact["sourceIdentity"] | undefined
   createdAt: string
   toolchain: CompiledStrategyArtifactToolchainEvidence
   publicEvidence: {
