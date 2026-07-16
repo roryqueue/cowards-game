@@ -112,6 +112,10 @@ func (router *runtimeServiceExecutionRouter) validateStrategy(
 		return response, nil
 	case runtimeExecutionServiceVersionV117:
 		return router.v117.validateStrategy(ctx, sourceFormat, source, strategyID)
+	case runtimeExecutionServiceVersionV118:
+		// v1.18 is an additive executeMatch admission envelope over the same
+		// v1.17 Strategy ABI and provider-validation contract.
+		return router.v117.validateStrategy(ctx, sourceFormat, source, strategyID)
 	default:
 		return nil, newRuntimeServiceFailure("RuntimeServiceContractMismatch", "Runtime service validation contract is not registered", false, nil)
 	}
