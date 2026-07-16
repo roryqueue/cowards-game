@@ -16,7 +16,10 @@ import { pathToFileURL } from "node:url"
 import { afterEach, describe, expect, it } from "vitest"
 
 const repoRoot = path.resolve(import.meta.dirname, "..")
-const subjectPath = path.join(repoRoot, "scripts/calibrate-v1-37-runtime-abi.ts")
+const subjectPath = path.join(
+  repoRoot,
+  "scripts/calibrate-v1-37-runtime-abi.ts",
+)
 const manifestRelativePath =
   "packages/spec/artifacts/runtime-abi-v1.17-calibration-inputs.json"
 const tempRoots: string[] = []
@@ -35,13 +38,19 @@ const sha256 = (bytes: Uint8Array): string =>
   createHash("sha256").update(bytes).digest("hex")
 
 const createTempRepo = (): string => {
-  const root = mkdtempSync(path.join(tmpdir(), "cowards-runtime-abi-calibration-"))
+  const root = mkdtempSync(
+    path.join(tmpdir(), "cowards-runtime-abi-calibration-"),
+  )
   tempRoots.push(root)
   execFileSync("git", ["init", "--quiet"], { cwd: root })
   return root
 }
 
-const writeTracked = (root: string, relativePath: string, contents: string): void => {
+const writeTracked = (
+  root: string,
+  relativePath: string,
+  contents: string,
+): void => {
   const target = path.join(root, relativePath)
   mkdirSync(path.dirname(target), { recursive: true })
   writeFileSync(target, contents)
@@ -107,7 +116,13 @@ describe("runtime ABI v1.17 calibration input boundary", () => {
     const raw = readFileSync(path.join(repoRoot, manifestRelativePath))
 
     expect(manifest.sha256).toBe(sha256(raw))
-    expect(manifest.inputs).toHaveLength(13)
+    expect(manifest.inputs).toHaveLength(12)
+    expect(
+      manifest.inputs.some(
+        ({ path }) =>
+          path === "packages/spec/artifacts/v1.37-current-event-coverage.json",
+      ),
+    ).toBe(false)
     expect(
       manifest.inputs.every((entry) =>
         [
@@ -134,7 +149,9 @@ describe("runtime ABI v1.17 calibration input boundary", () => {
     if (mutation !== "missing") writeTracked(root, file, contents)
     const entry: Record<string, unknown> = validEntry(file, contents)
     if (mutation === "untracked") {
-      execFileSync("git", ["rm", "--cached", "--quiet", "--", file], { cwd: root })
+      execFileSync("git", ["rm", "--cached", "--quiet", "--", file], {
+        cwd: root,
+      })
     }
     if (mutation === "hash drift") entry.sha256 = "0".repeat(64)
     if (mutation === "length drift") entry.byteLength = 1
@@ -184,7 +201,10 @@ describe("runtime ABI v1.17 limit probes", () => {
     const receipt = calibration.evaluateCalibration(repoRoot)
 
     for (const [limit, probes] of Object.entries(receipt.probes)) {
-      expect(probes.map((probe) => probe.offset), limit).toEqual([-1, 0, 1])
+      expect(
+        probes.map((probe) => probe.offset),
+        limit,
+      ).toEqual([-1, 0, 1])
       expect(probes[0]?.result.kind, limit).toBe("accepted")
       expect(probes[1]?.result.kind, limit).toBe("accepted")
       expect(probes[2]?.result.kind, limit).toBe("rejected")
@@ -210,10 +230,13 @@ describe("runtime ABI v1.17 limit probes", () => {
     const calibration = await subject()
     const receipt = calibration.evaluateCalibration(repoRoot)
 
-    expect(receipt.maximaSources.every((row) =>
-      row.classification === "current-valid-contract" ||
-      row.classification === "current-valid-fixture",
-    )).toBe(true)
+    expect(
+      receipt.maximaSources.every(
+        (row) =>
+          row.classification === "current-valid-contract" ||
+          row.classification === "current-valid-fixture",
+      ),
+    ).toBe(true)
     expect(receipt.historicalControls.length).toBeGreaterThan(0)
     expect(receipt.hostileProbes.length).toBeGreaterThan(0)
   })

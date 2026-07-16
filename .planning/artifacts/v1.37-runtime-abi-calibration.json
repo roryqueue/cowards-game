@@ -6,7 +6,7 @@
   "activation": "not-active",
   "inputManifest": {
     "schemaVersion": "runtime-abi-v1.17-calibration-inputs-v1",
-    "sha256": "76f9af3d0f46fee34e02853d9925172c26e79816609c45091a1a88c3cd369aa8",
+    "sha256": "eb507c6f21b454a1fe57e2358163d58b0f62c9ba84a18a4ac07615ed37d9e722",
     "path": "packages/spec/artifacts/runtime-abi-v1.17-calibration-inputs.json",
     "privacy": "internal-build-evidence-no-private-payload-copy",
     "denylist": [
@@ -106,17 +106,6 @@
         "byteLength": 38089,
         "classification": "current-valid-fixture",
         "inclusionReason": "Committed candidate event-coverage fixture consumed by current integrity checks.",
-        "expectedLimitDomains": [
-          "canonical-payload",
-          "evidence-manifest"
-        ]
-      },
-      {
-        "path": "packages/spec/artifacts/v1.37-current-event-coverage.json",
-        "sha256": "ef2b9b57e31b6fe0d12ac78b8077e8510e180ca4e7260c01291a8f7498c67397",
-        "byteLength": 36257,
-        "classification": "current-valid-fixture",
-        "inclusionReason": "Committed current event-coverage fixture consumed by current integrity checks.",
         "expectedLimitDomains": [
           "canonical-payload",
           "evidence-manifest"
@@ -406,26 +395,6 @@
       }
     },
     {
-      "path": "packages/spec/artifacts/v1.37-current-event-coverage.json",
-      "sha256": "ef2b9b57e31b6fe0d12ac78b8077e8510e180ca4e7260c01291a8f7498c67397",
-      "byteLength": 36257,
-      "classification": "current-valid-fixture",
-      "inclusionReason": "Committed current event-coverage fixture consumed by current integrity checks.",
-      "expectedLimitDomains": [
-        "canonical-payload",
-        "evidence-manifest"
-      ],
-      "metrics": {
-        "rawUtf8Bytes": 36257,
-        "canonicalPayloadBytes": 23460,
-        "depth": 6,
-        "nodes": 901,
-        "decodedStringUtf8Bytes": 71,
-        "arrayEntries": 21,
-        "objectEntries": 12
-      }
-    },
-    {
       "path": "packages/spec/artifacts/v1.37-integrity-authority-hash-vectors.json",
       "sha256": "59c548d29ac905a8834c7b52351abff7a6bc449c6176179c7240bbecea6848b2",
       "byteLength": 12776,
@@ -591,19 +560,6 @@
         "decodedStringUtf8Bytes": 71,
         "arrayEntries": 21,
         "objectEntries": 17
-      }
-    },
-    {
-      "path": "packages/spec/artifacts/v1.37-current-event-coverage.json",
-      "classification": "current-valid-fixture",
-      "metrics": {
-        "rawUtf8Bytes": 36257,
-        "canonicalPayloadBytes": 23460,
-        "depth": 6,
-        "nodes": 901,
-        "decodedStringUtf8Bytes": 71,
-        "arrayEntries": 21,
-        "objectEntries": 12
       }
     },
     {
