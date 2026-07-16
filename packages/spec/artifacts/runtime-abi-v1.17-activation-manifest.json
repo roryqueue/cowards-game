@@ -171,6 +171,14 @@
   },
   "phase258Inventory": [
     {
+      "path": ".planning/artifacts/runtime-sandbox-evaluation.json",
+      "sha256": "2ca8151ba7895e0f00bb2da8e359f13a9838427aaa28dbde931d886cf37b1823"
+    },
+    {
+      "path": ".planning/artifacts/v1.20-runtime-sandbox-candidate-readiness.json",
+      "sha256": "c5439c8ecda8c02512b6a839bf8fd14558a27f5a1927cb4426d47e10dda58311"
+    },
+    {
       "path": ".planning/artifacts/v1.37-canonical-json-red.json",
       "sha256": "f80b76b1472dd852a2ea0380e8dac8d6037f2f669b8ca5f82a4cb8a5a9e171fa"
     },
@@ -1061,6 +1069,10 @@
     {
       "path": "scripts/check-v1-37-runtime-abi-manifest-closure.ts",
       "sha256": "1b6ab4fe4920cc4dac624ef423bed57949f0e44b14c0bc66d9ec7622fa6a3151"
+    },
+    {
+      "path": "scripts/evaluate-runtime-sandbox.ts",
+      "sha256": "6beded762839bd928ee2d18d32b0a501ef46f72476cb3b2d9a09df4ac8649dec"
     },
     {
       "path": "scripts/evaluate-v1-37-runtime-abi.test.ts",
