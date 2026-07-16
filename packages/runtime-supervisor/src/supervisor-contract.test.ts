@@ -66,10 +66,7 @@ const inputBytes = canonicalBytes({
   initiative: "bottom",
 })
 const payloadBytes = canonicalBytes({ action: { type: "WAIT" } })
-const stdoutBytes = Uint8Array.from([
-  "S".charCodeAt(0),
-  ...payloadBytes,
-])
+const stdoutBytes = Uint8Array.from(["S".charCodeAt(0), ...payloadBytes])
 const stderrBytes = new TextEncoder().encode("guest-safe-error")
 
 const rawReceipt = (
@@ -91,8 +88,7 @@ const rawReceipt = (
   },
   limits: request.invocation.limits,
   cgroup: {
-    pathIdentitySha256:
-      request.invocation.expectedCgroup.pathIdentitySha256,
+    pathIdentitySha256: request.invocation.expectedCgroup.pathIdentitySha256,
     settingsSha256: request.invocation.expectedCgroup.settingsSha256,
   },
   wall: {
@@ -209,16 +205,12 @@ describe("shared runtime supervisor v1.18 contract", () => {
     expect(parsed).toEqual({ ok: true, value: request })
     expect(request.input.byteLength).toBe(inputBytes.byteLength)
     expect(request.input.sha256).toMatch(/^sha256:[0-9a-f]{64}$/u)
-    expect(request.supervisorRequestSha256).toMatch(
-      /^sha256:[0-9a-f]{64}$/u,
-    )
+    expect(request.supervisorRequestSha256).toMatch(/^sha256:[0-9a-f]{64}$/u)
     expect(Object.isFrozen(request)).toBe(true)
     expect(Object.isFrozen(request.invocation)).toBe(true)
 
     const changedNonce = createSupervisorInvocationRequestV118({
-      invocation: invocation(
-        "host-nonce-v1-18-substituted-000000000001",
-      ),
+      invocation: invocation("host-nonce-v1-18-substituted-000000000001"),
       inputBytes,
       cancellationChannel: {
         channelId: request.cancellation.channelId,
@@ -255,17 +247,14 @@ describe("shared runtime supervisor v1.18 contract", () => {
     const substituted = clone(request) as unknown as {
       input: { bytesBase64: string }
     }
-    substituted.input.bytesBase64 = Buffer.from('{"changed":true}').toString(
-      "base64",
-    )
+    substituted.input.bytesBase64 =
+      Buffer.from('{"changed":true}').toString("base64")
     expectFailure(
       parseSupervisorInvocationRequestV118(canonicalBytes(substituted)),
       "REQUEST_INPUT_MISMATCH",
     )
 
-    const oversized = new Uint8Array(
-      request.invocation.limits.payloadBytes + 1,
-    )
+    const oversized = new Uint8Array(request.invocation.limits.payloadBytes + 1)
     oversized.fill(" ".charCodeAt(0))
     expect(() =>
       createSupervisorInvocationRequestV118({
@@ -290,9 +279,7 @@ describe("shared runtime supervisor v1.18 contract", () => {
     if (!result.ok) return
     expect(result.value.result.kind).toBe("success")
     expect(isVerifiedSupervisorEvidenceV118(result.value)).toBe(true)
-    expect(
-      isVerifiedSupervisorEvidenceV118(clone(result.value)),
-    ).toBe(false)
+    expect(isVerifiedSupervisorEvidenceV118(clone(result.value))).toBe(false)
     expect(Object.isFrozen(result.value)).toBe(true)
     expect(JSON.stringify(result.value)).not.toMatch(
       /strategySource|artifactBytes|strategyMemory|soldierMemory|objective|diagnostic|hostPath|stderrBase64|channelNonce/u,
@@ -316,8 +303,7 @@ describe("shared runtime supervisor v1.18 contract", () => {
       (envelope: SupervisorRawReceiptEnvelopeV118) => void
     > = [
       (envelope) => {
-        envelope.receipt.hostNonce =
-          "host-nonce-v1-18-replayed-000000000001"
+        envelope.receipt.hostNonce = "host-nonce-v1-18-replayed-000000000001"
       },
       (envelope) => {
         envelope.receipt.requestSha256 = hash("0")

@@ -290,8 +290,7 @@ export const createSupervisorInvocationRequestV118 = (
   if (
     !admittedInput.ok ||
     input.inputBytes.byteLength === 0 ||
-    input.inputBytes.byteLength >
-      parsedInvocation.data.limits.payloadBytes
+    input.inputBytes.byteLength > parsedInvocation.data.limits.payloadBytes
   ) {
     throw new TypeError("Supervisor input bytes are invalid")
   }
@@ -372,7 +371,8 @@ export const parseSupervisorInvocationRequestV118 = (
     ok: true,
     value: authorizeRequest({
       ...withoutHash,
-      supervisorRequestSha256: value.supervisorRequestSha256 as `sha256:${string}`,
+      supervisorRequestSha256:
+        value.supervisorRequestSha256 as `sha256:${string}`,
     }),
   }
 }
@@ -404,11 +404,7 @@ const parseRawReceiptEnvelope = (
     !SHA256.test(value.inputSha256) ||
     typeof value.cancellationChannelSha256 !== "string" ||
     !SHA256.test(value.cancellationChannelSha256) ||
-    !exactKeys(value.output, [
-      "payloadSha256",
-      "stdoutSha256",
-      "stderrSha256",
-    ])
+    !exactKeys(value.output, ["payloadSha256", "stdoutSha256", "stderrSha256"])
   ) {
     return undefined
   }
@@ -431,8 +427,7 @@ const parseRawReceiptEnvelope = (
       stdoutSha256: value.output.stdoutSha256 as `sha256:${string}`,
       stderrSha256: value.output.stderrSha256 as `sha256:${string}`,
     },
-    receipt:
-      parsedReceipt.data as unknown as RuntimeSupervisorRawReceiptV118,
+    receipt: parsedReceipt.data as unknown as RuntimeSupervisorRawReceiptV118,
   }
 }
 
@@ -454,12 +449,9 @@ export const createSupervisorRawReceiptEnvelopeV118 = (input: {
     schemaVersion: RECEIPT_SCHEMA_VERSION,
     supervisorRequestSha256: input.request.supervisorRequestSha256,
     inputSha256: input.request.input.sha256,
-    cancellationChannelSha256: cancellationHash(
-      input.request.cancellation,
-    ),
+    cancellationChannelSha256: cancellationHash(input.request.cancellation),
     output: outputHashes(input.observed),
-    receipt:
-      parsedReceipt.data as unknown as RuntimeSupervisorRawReceiptV118,
+    receipt: parsedReceipt.data as unknown as RuntimeSupervisorRawReceiptV118,
   }) as SupervisorRawReceiptEnvelopeV118
 }
 
@@ -486,8 +478,7 @@ const verifyObservationBinding = (
   observed: SupervisorObservedOutputV118,
 ): SupervisorVerificationFailureV118 | undefined => {
   if (
-    envelope.supervisorRequestSha256 !==
-      request.supervisorRequestSha256 ||
+    envelope.supervisorRequestSha256 !== request.supervisorRequestSha256 ||
     envelope.inputSha256 !== request.input.sha256 ||
     envelope.cancellationChannelSha256 !==
       cancellationHash(request.cancellation)
@@ -502,12 +493,9 @@ const verifyObservationBinding = (
     hashes.payloadSha256 !== envelope.output.payloadSha256 ||
     hashes.stdoutSha256 !== envelope.output.stdoutSha256 ||
     hashes.stderrSha256 !== envelope.output.stderrSha256 ||
-    observed.payloadBytes.byteLength !==
-      envelope.receipt.bytes.payloadBytes ||
-    observed.stdoutBytes.byteLength !==
-      envelope.receipt.bytes.stdoutBytes ||
-    observed.stderrBytes.byteLength !==
-      envelope.receipt.bytes.stderrBytes
+    observed.payloadBytes.byteLength !== envelope.receipt.bytes.payloadBytes ||
+    observed.stdoutBytes.byteLength !== envelope.receipt.bytes.stdoutBytes ||
+    observed.stderrBytes.byteLength !== envelope.receipt.bytes.stderrBytes
   ) {
     return failure("OBSERVATION_MISMATCH")
   }
