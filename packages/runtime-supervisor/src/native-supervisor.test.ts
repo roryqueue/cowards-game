@@ -11,6 +11,9 @@ import {
 } from "./supervisor-contract.js"
 import {
   createVerifiedHardenedControllerContextV118,
+  computeDockerEngineSha256V118,
+  computeLinuxKernelSha256V118,
+  computeSupervisorToolchainSha256V118,
   NATIVE_SUPERVISOR_MANIFEST_SCHEMA_V118,
   runPinnedNativeSupervisorV118,
   verifyNativeSupervisorManifestV118,
@@ -20,21 +23,47 @@ import {
 const hash = (character: string): `sha256:${string}` =>
   `sha256:${character.repeat(64)}`
 
-const manifest = (): NativeSupervisorBuildManifestV118 => ({
-  schemaVersion: NATIVE_SUPERVISOR_MANIFEST_SCHEMA_V118,
-  sourceSha256: hash("1"),
-  cargoLockSha256: hash("2"),
-  seccompProfileSha256: hash("3"),
-  builderImage:
-    "rust:1.95.0-alpine@sha256:e98196986adced5602f6e21c54babdbf2a8700400c7a78868324a3630e0c5d15",
-  rustcVersion: "rustc 1.95.0 (59807616e 2026-04-14)",
-  cargoVersion: "cargo 1.95.0 (f2d3ce0bd 2026-03-21)",
-  target: "x86_64-unknown-linux-musl",
+const kernelSha256 = computeLinuxKernelSha256V118("test-kernel")
+const dockerEngineSha256 = computeDockerEngineSha256V118({
+  dockerEngineVersion: "test-docker",
   operatingSystem: "linux",
-  guestNamespaceUid: 65534,
+  cgroupVersion: 2,
+  cgroupDriver: "cgroupfs",
   delegatedControllers: ["cpu", "memory", "pids"],
-  binarySha256: hash("4"),
 })
+
+const manifest = (): NativeSupervisorBuildManifestV118 => {
+  const base = {
+    schemaVersion: NATIVE_SUPERVISOR_MANIFEST_SCHEMA_V118,
+    sourceSha256: hash("1"),
+    cargoLockSha256: hash("2"),
+    seccompProfileSha256: hash("3"),
+    builderImage:
+      "rust:1.95.0-alpine@sha256:e98196986adced5602f6e21c54babdbf2a8700400c7a78868324a3630e0c5d15" as const,
+    rustcVersion: "rustc 1.95.0 (59807616e 2026-04-14)" as const,
+    cargoVersion: "cargo 1.95.0 (f2d3ce0bd 2026-03-21)" as const,
+    target: "x86_64-unknown-linux-musl" as const,
+    operatingSystem: "linux" as const,
+    cgroupVersion: 2 as const,
+    cgroupDriver: "cgroupfs" as const,
+    supervisorHostUid: 65532 as const,
+    guestNamespaceUid: 65534 as const,
+    delegatedControllers: ["cpu", "memory", "pids"] as const,
+    binarySha256: hash("4"),
+  }
+  return {
+    ...base,
+    supervisorToolchainSha256: computeSupervisorToolchainSha256V118({
+      builderImage: base.builderImage,
+      rustcVersion: base.rustcVersion,
+      cargoVersion: base.cargoVersion,
+      target: base.target,
+      sourceSha256: base.sourceSha256,
+      cargoLockSha256: base.cargoLockSha256,
+      seccompProfileSha256: base.seccompProfileSha256,
+    }),
+  }
+}
 
 const request = (supervisorBinarySha256: `sha256:${string}` = hash("4")) => {
   const execution = {
@@ -52,9 +81,9 @@ const request = (supervisorBinarySha256: `sha256:${string}` = hash("4")) => {
     executable: deriveSupervisorExecutionIdentityV118(execution),
     expectedIdentity: {
       supervisorBinarySha256,
-      supervisorToolchainSha256: hash("5"),
-      linuxKernelSha256: hash("6"),
-      dockerEngineSha256: hash("7"),
+      supervisorToolchainSha256: manifest().supervisorToolchainSha256,
+      linuxKernelSha256: kernelSha256,
+      dockerEngineSha256,
       dockerImageDigest: hash("8"),
       cgroupDelegationSha256: hash("9"),
       adapterBuildSha256: hash("b"),
@@ -86,9 +115,9 @@ const controller = (
     kernelVersion: "test-kernel",
     dockerEngineVersion: "test-docker",
     dockerImageDigest: hash("8"),
-    supervisorToolchainSha256: hash("5"),
-    linuxKernelSha256: hash("6"),
-    dockerEngineSha256: hash("7"),
+    supervisorToolchainSha256: manifest().supervisorToolchainSha256,
+    linuxKernelSha256: kernelSha256,
+    dockerEngineSha256,
     cgroupDelegationSha256: hash("9"),
     supervisorHostUid: 65532,
     guestNamespaceUid: 65534,
@@ -166,6 +195,10 @@ describe("native runtime supervisor", () => {
       schemaVersion: "cowards-native-supervisor-receipt-v1",
       requestSha256: current.invocation.requestSha256,
       processGroupIdentitySha256: current.expectedProcessGroupIdentitySha256,
+      actualCgroupPath: `/run/cowards-cgroup/invocation-${current.invocation.hostNonce}`,
+      cpuMax: `${current.invocation.limits.cpuMax.quotaMicroseconds} ${current.invocation.limits.cpuMax.periodMicroseconds}`,
+      memoryMaxBytes: current.invocation.limits.memoryMaxBytes,
+      pidsMax: current.invocation.limits.pidsMax,
       guestNamespaceUid: 65534,
       supervisorHostUid: 65532,
       wallElapsedNanoseconds: 1_000_000,
@@ -196,12 +229,15 @@ describe("native runtime supervisor", () => {
       exitCode: 0,
       signal: null,
       timedOut: false,
+      cancellationRequested: false,
+      cgroupKillUsed: false,
       stdoutBase64: payload.toString("base64"),
       stderrBase64: "",
       stdoutTruncated: false,
       stderrTruncated: false,
       payloadTruncated: false,
       cgroupEmpty: true,
+      cleanupComplete: true,
     }
     const result = runPinnedNativeSupervisorV118({
       controller: controller(),
@@ -214,7 +250,7 @@ describe("native runtime supervisor", () => {
       },
       request: current,
       binaryPath: "/private/native-supervisor",
-      cgroupRoot: "/private/cgroup",
+      cgroupRoot: "/run/cowards-cgroup",
       readBinary: () => binaryBytes,
       spawnSync: () => ({
         pid: 123,
@@ -289,7 +325,10 @@ describe("native runtime supervisor", () => {
     let launched = false
     expect(
       runPinnedNativeSupervisorV118({
-        controller: controller({ linuxKernelSha256: hash("0") }),
+        controller: controller({
+          kernelVersion: "substituted-kernel",
+          linuxKernelSha256: computeLinuxKernelSha256V118("substituted-kernel"),
+        }),
         manifest: manifest(),
         expectedHashes: {
           sourceSha256: hash("1"),

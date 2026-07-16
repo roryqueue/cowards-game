@@ -73,6 +73,93 @@ fn base64(bytes: &[u8]) -> String {
     output
 }
 
+fn sha256(bytes: &[u8]) -> [u8; 32] {
+    const K: [u32; 64] = [
+        0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4,
+        0xab1c5ed5, 0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe,
+        0x9bdc06a7, 0xc19bf174, 0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f,
+        0x4a7484aa, 0x5cb0a9dc, 0x76f988da, 0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7,
+        0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967, 0x27b70a85, 0x2e1b2138, 0x4d2c6dfc,
+        0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85, 0xa2bfe8a1, 0xa81a664b,
+        0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070, 0x19a4c116,
+        0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
+        0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7,
+        0xc67178f2,
+    ];
+    let mut state = [
+        0x6a09e667_u32,
+        0xbb67ae85,
+        0x3c6ef372,
+        0xa54ff53a,
+        0x510e527f,
+        0x9b05688c,
+        0x1f83d9ab,
+        0x5be0cd19,
+    ];
+    let bit_length = (bytes.len() as u64).wrapping_mul(8);
+    let mut padded = bytes.to_vec();
+    padded.push(0x80);
+    while padded.len() % 64 != 56 {
+        padded.push(0);
+    }
+    padded.extend_from_slice(&bit_length.to_be_bytes());
+    for chunk in padded.chunks_exact(64) {
+        let mut words = [0_u32; 64];
+        for (index, word) in words.iter_mut().take(16).enumerate() {
+            let start = index * 4;
+            *word = u32::from_be_bytes(chunk[start..start + 4].try_into().expect("word"));
+        }
+        for index in 16..64 {
+            let s0 = words[index - 15].rotate_right(7)
+                ^ words[index - 15].rotate_right(18)
+                ^ (words[index - 15] >> 3);
+            let s1 = words[index - 2].rotate_right(17)
+                ^ words[index - 2].rotate_right(19)
+                ^ (words[index - 2] >> 10);
+            words[index] = words[index - 16]
+                .wrapping_add(s0)
+                .wrapping_add(words[index - 7])
+                .wrapping_add(s1);
+        }
+        let [mut a, mut b, mut c, mut d, mut e, mut f, mut g, mut h] = state;
+        for index in 0..64 {
+            let sum1 = e.rotate_right(6) ^ e.rotate_right(11) ^ e.rotate_right(25);
+            let choice = (e & f) ^ ((!e) & g);
+            let temporary1 = h
+                .wrapping_add(sum1)
+                .wrapping_add(choice)
+                .wrapping_add(K[index])
+                .wrapping_add(words[index]);
+            let sum0 = a.rotate_right(2) ^ a.rotate_right(13) ^ a.rotate_right(22);
+            let majority = (a & b) ^ (a & c) ^ (b & c);
+            let temporary2 = sum0.wrapping_add(majority);
+            h = g;
+            g = f;
+            f = e;
+            e = d.wrapping_add(temporary1);
+            d = c;
+            c = b;
+            b = a;
+            a = temporary1.wrapping_add(temporary2);
+        }
+        for (slot, value) in state.iter_mut().zip([a, b, c, d, e, f, g, h].into_iter()) {
+            *slot = slot.wrapping_add(value);
+        }
+    }
+    let mut output = [0_u8; 32];
+    for (index, value) in state.iter().enumerate() {
+        output[index * 4..index * 4 + 4].copy_from_slice(&value.to_be_bytes());
+    }
+    output
+}
+
+fn sha256_hex(bytes: &[u8]) -> String {
+    sha256(bytes)
+        .iter()
+        .map(|byte| format!("{byte:02x}"))
+        .collect()
+}
+
 #[cfg(any(test, not(target_os = "linux")))]
 fn platform_status() -> &'static str {
     #[cfg(target_os = "linux")]
@@ -88,7 +175,8 @@ fn platform_status() -> &'static str {
 #[cfg(target_os = "linux")]
 mod linux {
     use super::{
-        REQUIRED_CONTROLLERS, base64, cpu_max, json_escape, require_controllers, validate_nonce,
+        REQUIRED_CONTROLLERS, base64, cpu_max, json_escape, require_controllers, sha256_hex,
+        validate_nonce,
     };
     use std::collections::{BTreeMap, BTreeSet};
     use std::env;
@@ -105,6 +193,7 @@ mod linux {
 
     const CLONE_NEWNS: c_int = 0x0002_0000;
     const CLONE_NEWUSER: c_int = 0x1000_0000;
+    const PR_SET_CHILD_SUBREAPER: c_int = 36;
     const MS_REC: c_ulong = 16_384;
     const MS_PRIVATE: c_ulong = 1 << 18;
     const MS_NOSUID: c_ulong = 2;
@@ -115,6 +204,8 @@ mod linux {
     const PR_CAPBSET_DROP: c_int = 24;
     const O_PATH: c_int = 0o10_000_000;
     const O_CLOEXEC: c_int = 0o2_000_000;
+    const O_NOFOLLOW: c_int = 0o4_000_00;
+    const WNOHANG: c_int = 1;
     const LANDLOCK_CREATE_RULESET_VERSION: u32 = 1;
     const LANDLOCK_RULE_PATH_BENEATH: u32 = 1;
     const LANDLOCK_ACCESS_FS_EXECUTE: u64 = 1 << 0;
@@ -179,6 +270,7 @@ mod linux {
         fn prctl(option: c_int, ...) -> c_int;
         fn syscall(number: c_long, ...) -> c_long;
         fn kill(pid: c_int, signal: c_int) -> c_int;
+        fn waitpid(pid: c_int, status: *mut c_int, options: c_int) -> c_int;
         fn getuid() -> u32;
         fn getgid() -> u32;
     }
@@ -198,6 +290,10 @@ mod linux {
         payload_max: usize,
         request_sha256: String,
         process_group_sha256: String,
+        expected_executable_sha256: String,
+        environment: Vec<(String, String)>,
+        cancellation_path: PathBuf,
+        cancellation_nonce: String,
         input_path: PathBuf,
         command: Vec<String>,
     }
@@ -239,6 +335,32 @@ mod linux {
             if command.is_empty() || command.iter().any(|value| value.contains('\0')) {
                 return Err("INVALID_COMMAND".into());
             }
+            let environment_count = parse_u64("--environment-count")?
+                .try_into()
+                .map_err(|_| "INVALID_ENVIRONMENT_COUNT")?;
+            if environment_count > 128 {
+                return Err("INVALID_ENVIRONMENT_COUNT".into());
+            }
+            let mut environment = Vec::with_capacity(environment_count);
+            for index in 0..environment_count {
+                let name = take(&format!("--environment-{index}-name"))?;
+                let value = take(&format!("--environment-{index}-value"))?;
+                if name.is_empty()
+                    || name.len() > 128
+                    || !name.bytes().enumerate().all(|(offset, byte)| {
+                        if offset == 0 {
+                            byte.is_ascii_alphabetic() || byte == b'_'
+                        } else {
+                            byte.is_ascii_alphanumeric() || byte == b'_'
+                        }
+                    })
+                    || value.contains('\0')
+                    || value.len() > 16_384
+                {
+                    return Err("INVALID_ENVIRONMENT".into());
+                }
+                environment.push((name, value));
+            }
             let config = Self {
                 cgroup_root: PathBuf::from(take("--cgroup-root")?),
                 nonce,
@@ -261,9 +383,16 @@ mod linux {
                     .map_err(|_| "INVALID_PAYLOAD_MAX")?,
                 request_sha256: take("--request-sha256")?,
                 process_group_sha256: take("--process-group-sha256")?,
+                expected_executable_sha256: take("--expected-executable-sha256")?,
+                environment,
+                cancellation_path: PathBuf::from(take("--cancellation-path")?),
+                cancellation_nonce: take("--cancellation-nonce")?,
                 input_path: PathBuf::from(take("--input-path")?),
                 command,
             };
+            if values.len() != 18 + environment_count * 2 {
+                return Err("UNKNOWN_ARGUMENT".into());
+            }
             if config.cpu_quota_us == 0
                 || config.cpu_period_us == 0
                 || config.memory_max_bytes == 0
@@ -274,6 +403,9 @@ mod linux {
                 || config.payload_max == 0
                 || !config.request_sha256.starts_with("sha256:")
                 || !config.process_group_sha256.starts_with("sha256:")
+                || config.expected_executable_sha256.len() != 71
+                || !config.expected_executable_sha256.starts_with("sha256:")
+                || config.cancellation_nonce.len() < 24
             {
                 return Err("INVALID_LIMIT_OR_IDENTITY".into());
             }
@@ -371,6 +503,79 @@ mod linux {
         fn libc_open(path: *const c_char, flags: c_int, ...) -> c_int;
         #[link_name = "close"]
         fn libc_close(fd: c_int) -> c_int;
+    }
+
+    fn cancellation_requested(config: &Config) -> Result<bool, String> {
+        match fs::read_to_string(&config.cancellation_path) {
+            Ok(value) if value.trim_end() == config.cancellation_nonce => Ok(true),
+            Ok(_) => Err("CANCELLATION_CHANNEL_INVALID".into()),
+            Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(false),
+            Err(_) => Err("CANCELLATION_CHANNEL_INVALID".into()),
+        }
+    }
+
+    fn wait_cgroup_empty(invocation: &Path, duration: Duration) -> Result<(), String> {
+        let deadline = Instant::now() + duration;
+        loop {
+            let procs = fs::read_to_string(invocation.join("cgroup.procs"))
+                .map_err(|_| "COUNTER_READ_FAILED")?;
+            if procs.trim().is_empty() {
+                return Ok(());
+            }
+            if Instant::now() >= deadline {
+                return Err("CGROUP_NOT_EMPTY".into());
+            }
+            thread::sleep(Duration::from_millis(2));
+        }
+    }
+
+    fn reap_adopted_children() -> Result<(), String> {
+        loop {
+            let mut status = 0;
+            let reaped = unsafe { waitpid(-1, &mut status, WNOHANG) };
+            if reaped > 0 {
+                continue;
+            }
+            if reaped == 0 || io::Error::last_os_error().raw_os_error() == Some(10) {
+                return Ok(());
+            }
+            return Err("DESCENDANT_REAP_FAILED".into());
+        }
+    }
+
+    fn mandatory_kill(child_pid: u32, invocation: &Path) -> Result<(), String> {
+        let group_result = unsafe { kill(-(child_pid as c_int), SIGKILL) };
+        let cgroup_kill = invocation.join("cgroup.kill");
+        if !cgroup_kill.exists() {
+            return Err("CGROUP_KILL_UNAVAILABLE".into());
+        }
+        write_control(&cgroup_kill, "1").map_err(|_| "CGROUP_KILL_FAILED")?;
+        if group_result != 0 {
+            return Err("PROCESS_GROUP_KILL_FAILED".into());
+        }
+        Ok(())
+    }
+
+    fn cleanup_invocation(invocation: &Path) -> Result<(), String> {
+        if !invocation.exists() {
+            return Ok(());
+        }
+        let populated = fs::read_to_string(invocation.join("cgroup.procs"))
+            .map_err(|_| "CLEANUP_READ_FAILED")?;
+        if !populated.trim().is_empty() {
+            let cgroup_kill = invocation.join("cgroup.kill");
+            if !cgroup_kill.exists() {
+                return Err("CGROUP_KILL_UNAVAILABLE".into());
+            }
+            write_control(&cgroup_kill, "1").map_err(|_| "CGROUP_KILL_FAILED")?;
+            wait_cgroup_empty(invocation, Duration::from_secs(2))?;
+        }
+        reap_adopted_children()?;
+        fs::remove_dir(invocation).map_err(|_| "CGROUP_REMOVE_FAILED")?;
+        if invocation.exists() {
+            return Err("CGROUP_REMOVE_FAILED".into());
+        }
+        Ok(())
     }
 
     unsafe fn install_landlock(executable: &Path) -> io::Result<()> {
@@ -525,9 +730,6 @@ mod linux {
         fs::create_dir(&invocation).map_err(|_| "CGROUP_CREATE_FAILED")?;
         fs::set_permissions(&invocation, fs::Permissions::from_mode(0o700))
             .map_err(|_| "CGROUP_MODE_FAILED")?;
-        let cleanup = || {
-            let _ = fs::remove_dir(&invocation);
-        };
         let result = (|| -> Result<String, String> {
             write_control(
                 &invocation.join("cpu.max"),
@@ -545,6 +747,26 @@ mod linux {
                 write_control(&invocation.join("memory.oom.group"), "1")
                     .map_err(|_| "CGROUP_WRITE_FAILED")?;
             }
+            let actual_cpu_max = fs::read_to_string(invocation.join("cpu.max"))
+                .map_err(|_| "CGROUP_READBACK_FAILED")?
+                .trim()
+                .to_owned();
+            let actual_memory_max = fs::read_to_string(invocation.join("memory.max"))
+                .map_err(|_| "CGROUP_READBACK_FAILED")?
+                .trim()
+                .parse::<u64>()
+                .map_err(|_| "CGROUP_READBACK_FAILED")?;
+            let actual_pids_max = fs::read_to_string(invocation.join("pids.max"))
+                .map_err(|_| "CGROUP_READBACK_FAILED")?
+                .trim()
+                .parse::<u64>()
+                .map_err(|_| "CGROUP_READBACK_FAILED")?;
+            if actual_cpu_max != cpu_max(config.cpu_quota_us, config.cpu_period_us)
+                || actual_memory_max != config.memory_max_bytes
+                || actual_pids_max != config.pids_max
+            {
+                return Err("CGROUP_SETTINGS_MISMATCH".into());
+            }
 
             let baseline_cpu = parse_key_values(&invocation.join("cpu.stat"))
                 .map_err(|_| "COUNTER_READ_FAILED")?;
@@ -557,7 +779,25 @@ mod linux {
             }
 
             let input = fs::read(&config.input_path).map_err(|_| "INPUT_READ_FAILED")?;
+            if cancellation_requested(&config)? {
+                return Err("CANCELLED_BEFORE_LAUNCH".into());
+            }
             let executable = PathBuf::from(&config.command[0]);
+            let mut executable_file = OpenOptions::new()
+                .read(true)
+                .custom_flags(O_NOFOLLOW)
+                .open(&executable)
+                .map_err(|_| "EXECUTABLE_OPEN_FAILED")?;
+            let mut executable_bytes = Vec::new();
+            executable_file
+                .read_to_end(&mut executable_bytes)
+                .map_err(|_| "EXECUTABLE_READ_FAILED")?;
+            if format!("sha256:{}", sha256_hex(&executable_bytes))
+                != config.expected_executable_sha256
+            {
+                return Err("EXECUTABLE_IDENTITY_MISMATCH".into());
+            }
+            let executable_fd = executable_file.as_raw_fd();
             let cgroup_procs = OpenOptions::new()
                 .write(true)
                 .custom_flags(0)
@@ -567,13 +807,18 @@ mod linux {
             let delegated_root = config.cgroup_root.clone();
             let guest_uid = config.guest_namespace_uid;
             let preexec_executable = executable.clone();
-            let mut command = Command::new(&config.command[0]);
+            let mut command = Command::new(format!("/proc/self/fd/{executable_fd}"));
             command
+                .arg0(&config.command[0])
                 .args(&config.command[1..])
                 .stdin(Stdio::piped())
                 .stdout(Stdio::piped())
                 .stderr(Stdio::piped())
-                .env_clear();
+                .env_clear()
+                .envs(config.environment.iter().cloned());
+            if unsafe { prctl(PR_SET_CHILD_SUBREAPER, 1, 0, 0, 0) } != 0 {
+                return Err("SUBREAPER_UNAVAILABLE".into());
+            }
             unsafe {
                 command.pre_exec(move || {
                     if libc_setsid() < 0 {
@@ -591,6 +836,7 @@ mod linux {
             let mut child = command
                 .spawn()
                 .map_err(|error| format!("CHILD_LAUNCH_FAILED:{error}"))?;
+            drop(executable_file);
             drop(cgroup_procs);
             child
                 .stdin
@@ -606,22 +852,32 @@ mod linux {
             let stderr_reader = thread::spawn(move || read_limited(stderr, stderr_max));
             let deadline = Duration::from_millis(config.deadline_ms);
             let mut timed_out = false;
+            let mut cancellation_won = false;
+            let mut cgroup_kill_used = false;
             let status = loop {
                 if let Some(status) = child.try_wait().map_err(|_| "CHILD_WAIT_FAILED")? {
+                    if cancellation_requested(&config)? {
+                        return Err("CANCELLATION_RACE_AMBIGUOUS".into());
+                    }
                     break status;
                 }
-                if started.elapsed() >= deadline {
-                    timed_out = true;
-                    unsafe {
-                        kill(-(child.id() as c_int), SIGKILL);
-                    }
-                    if invocation.join("cgroup.kill").exists() {
-                        let _ = write_control(&invocation.join("cgroup.kill"), "1");
-                    }
+                let requested = cancellation_requested(&config)?;
+                if requested || started.elapsed() >= deadline {
+                    timed_out = !requested;
+                    cancellation_won = requested;
+                    mandatory_kill(child.id(), &invocation)?;
+                    cgroup_kill_used = true;
                     break child.wait().map_err(|_| "CHILD_WAIT_FAILED")?;
                 }
                 thread::sleep(Duration::from_millis(2));
             };
+            if wait_cgroup_empty(&invocation, Duration::from_secs(1)).is_err() {
+                mandatory_kill(child.id(), &invocation)?;
+                wait_cgroup_empty(&invocation, Duration::from_secs(2))?;
+                reap_adopted_children()?;
+                return Err("LINGERING_DESCENDANT".into());
+            }
+            reap_adopted_children()?;
             let (stdout, stdout_truncated) = stdout_reader
                 .join()
                 .map_err(|_| "STDOUT_READER_FAILED")?
@@ -631,18 +887,6 @@ mod linux {
                 .map_err(|_| "STDERR_READER_FAILED")?
                 .map_err(|_| "STDERR_READER_FAILED")?;
 
-            let empty_deadline = Instant::now() + Duration::from_millis(1_000);
-            loop {
-                let procs = fs::read_to_string(invocation.join("cgroup.procs"))
-                    .map_err(|_| "COUNTER_READ_FAILED")?;
-                if procs.trim().is_empty() {
-                    break;
-                }
-                if Instant::now() >= empty_deadline {
-                    return Err("CGROUP_NOT_EMPTY".into());
-                }
-                thread::sleep(Duration::from_millis(2));
-            }
             let final_cpu = parse_key_values(&invocation.join("cpu.stat"))
                 .map_err(|_| "COUNTER_READ_FAILED")?;
             let final_memory = parse_key_values(&invocation.join("memory.events"))
@@ -677,18 +921,26 @@ mod linux {
                 concat!(
                     "{{\"schemaVersion\":\"cowards-native-supervisor-receipt-v1\",",
                     "\"requestSha256\":\"{}\",\"processGroupIdentitySha256\":\"{}\",",
+                    "\"actualCgroupPath\":\"{}\",\"cpuMax\":\"{}\",",
+                    "\"memoryMaxBytes\":{},\"pidsMax\":{},",
                     "\"guestNamespaceUid\":{},\"supervisorHostUid\":{},",
                     "\"wallElapsedNanoseconds\":{},\"cpuUsageBeforeMicroseconds\":{},",
                     "\"cpuUsageAfterMicroseconds\":{},\"memoryPeakBytes\":{},",
                     "\"memoryEventsBefore\":{},\"memoryEventsAfter\":{},",
                     "\"pidsEventsBefore\":{},\"pidsEventsAfter\":{},\"pidsPeak\":{},",
                     "\"exitCode\":{},\"signal\":{},\"timedOut\":{},",
+                    "\"cancellationRequested\":{},\"cgroupKillUsed\":{},",
                     "\"stdoutBase64\":\"{}\",\"stderrBase64\":\"{}\",",
                     "\"stdoutTruncated\":{},\"stderrTruncated\":{},",
-                    "\"payloadTruncated\":{},\"cgroupEmpty\":true}}"
+                    "\"payloadTruncated\":{},\"cgroupEmpty\":true,",
+                    "\"cleanupComplete\":true}}"
                 ),
                 json_escape(&config.request_sha256),
                 json_escape(&config.process_group_sha256),
+                json_escape(invocation.to_str().ok_or("CGROUP_PATH_INVALID")?,),
+                json_escape(&actual_cpu_max),
+                actual_memory_max,
+                actual_pids_max,
                 config.guest_namespace_uid,
                 unsafe { getuid() },
                 elapsed_ns,
@@ -703,6 +955,8 @@ mod linux {
                 exit_code,
                 signal,
                 timed_out,
+                cancellation_won,
+                cgroup_kill_used,
                 base64(&stdout),
                 base64(&stderr),
                 stdout_truncated,
@@ -710,8 +964,16 @@ mod linux {
                 payload_truncated,
             ))
         })();
-        cleanup();
-        result
+        match result {
+            Ok(receipt) => {
+                cleanup_invocation(&invocation)?;
+                Ok(receipt)
+            }
+            Err(code) => match cleanup_invocation(&invocation) {
+                Ok(()) => Err(code),
+                Err(cleanup) => Err(format!("{code}:{cleanup}")),
+            },
+        }
     }
 
     unsafe extern "C" {
@@ -802,6 +1064,18 @@ mod tests {
         assert_eq!(base64(b"f"), "Zg==");
         assert_eq!(base64(b"fo"), "Zm8=");
         assert_eq!(base64(b"foo"), "Zm9v");
+    }
+
+    #[test]
+    fn sha256_matches_the_empty_and_abc_vectors() {
+        assert_eq!(
+            sha256_hex(b""),
+            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        );
+        assert_eq!(
+            sha256_hex(b"abc"),
+            "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+        );
     }
 
     #[test]

@@ -5,6 +5,7 @@ import { readFileSync, writeFileSync } from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 import {
+  computeSupervisorToolchainSha256V118,
   NATIVE_SUPERVISOR_MANIFEST_SCHEMA_V118,
   PINNED_RUNTIME_SUPERVISOR_BUILDER_IMAGE,
   PINNED_RUNTIME_SUPERVISOR_CARGO,
@@ -44,18 +45,33 @@ export const buildRuntimeSupervisorManifest = (input: {
   ) {
     throw new TypeError("Pinned Rust toolchain identity is unavailable")
   }
+  const sourceSha256 = sha256(input.sourceBytes)
+  const cargoLockSha256 = sha256(input.cargoLockBytes)
+  const seccompProfileSha256 = sha256(input.seccompProfileBytes)
   return Object.freeze({
     schemaVersion: NATIVE_SUPERVISOR_MANIFEST_SCHEMA_V118,
-    sourceSha256: sha256(input.sourceBytes),
-    cargoLockSha256: sha256(input.cargoLockBytes),
-    seccompProfileSha256: sha256(input.seccompProfileBytes),
+    sourceSha256,
+    cargoLockSha256,
+    seccompProfileSha256,
     builderImage: PINNED_RUNTIME_SUPERVISOR_BUILDER_IMAGE,
     rustcVersion: PINNED_RUNTIME_SUPERVISOR_RUSTC,
     cargoVersion: PINNED_RUNTIME_SUPERVISOR_CARGO,
     target: PINNED_RUNTIME_SUPERVISOR_TARGET,
     operatingSystem: "linux",
+    cgroupVersion: 2,
+    cgroupDriver: "cgroupfs",
+    supervisorHostUid: 65532,
     guestNamespaceUid: 65534,
     delegatedControllers: ["cpu", "memory", "pids"],
+    supervisorToolchainSha256: computeSupervisorToolchainSha256V118({
+      builderImage: PINNED_RUNTIME_SUPERVISOR_BUILDER_IMAGE,
+      rustcVersion: PINNED_RUNTIME_SUPERVISOR_RUSTC,
+      cargoVersion: PINNED_RUNTIME_SUPERVISOR_CARGO,
+      target: PINNED_RUNTIME_SUPERVISOR_TARGET,
+      sourceSha256,
+      cargoLockSha256,
+      seccompProfileSha256,
+    }),
     binarySha256: sha256(input.binaryBytes),
   })
 }
@@ -126,6 +142,7 @@ const main = (): void => {
     writeFileSync(manifestPath, stable(currentManifest()))
   }
   if (buildLinuxContainer) {
+    const manifest = currentManifest()
     runLinuxCertificationContainerProbe({
       repoRoot,
       binaryPath,
@@ -133,6 +150,7 @@ const main = (): void => {
         nativeRoot,
         "seccomp/moby-v0.2.1-userns-landlock.json",
       ),
+      supervisorToolchainSha256: manifest.supervisorToolchainSha256,
     })
   }
   if (check) {

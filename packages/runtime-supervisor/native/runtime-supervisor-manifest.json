@@ -1,6 +1,6 @@
 {
   "schemaVersion": "runtime-native-supervisor-build-manifest-v1.18",
-  "sourceSha256": "sha256:0499ed8e7307016ab4669a58097d693593e7617b45a2f9559f43a0dc8b2c3e4f",
+  "sourceSha256": "sha256:c63b024b46f4ea18e99d479af613d876fdb676cadffc20a0db38163673e8da99",
   "cargoLockSha256": "sha256:f347dcf650d26f6c3c158e9a2536467dabb5782fb7d6ee9de9bdab8cd3b924e5",
   "seccompProfileSha256": "sha256:6a3c520f674cf2959ad7d8df55d4cc301a97bc62aa742f9556eb6972bf55bde5",
   "builderImage": "rust:1.95.0-alpine@sha256:e98196986adced5602f6e21c54babdbf2a8700400c7a78868324a3630e0c5d15",
@@ -8,11 +8,11 @@
   "cargoVersion": "cargo 1.95.0 (f2d3ce0bd 2026-03-21)",
   "target": "x86_64-unknown-linux-musl",
   "operatingSystem": "linux",
+  "cgroupVersion": 2,
+  "cgroupDriver": "cgroupfs",
+  "supervisorHostUid": 65532,
   "guestNamespaceUid": 65534,
-  "delegatedControllers": [
-    "cpu",
-    "memory",
-    "pids"
-  ],
-  "binarySha256": "sha256:ecc2349a47b89c8a66012fe63ac3a914b1e0fb1b6daa9166136e5ccfcb04d76e"
+  "delegatedControllers": ["cpu", "memory", "pids"],
+  "supervisorToolchainSha256": "sha256:76832e3d8915066e713d3a30b2a982f58dfd59f9cf2b3ca0b1f98642205ab741",
+  "binarySha256": "sha256:8c2c10e363ef03f6e8dd82c0b2f6f4146c9ca7728a4378cdf25bb09d4af9b3bd"
 }
