@@ -35,6 +35,7 @@ The strict append-only reviewed-history artifact records both v1 and v2 version/
 
 - `3ee0c0c` — reproduce final trace-governance blockers
 - `5c3b1b4` — close final trace-governance blockers
+- `bc66e4b` — align reconstructed-review integration budgets
 
 ## Verification
 

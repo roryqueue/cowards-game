@@ -127,6 +127,7 @@ status: complete
 7. **Hardening: Preserve retired candidate history** — `4de3f5f` (fix)
 8. **RED: Reproduce final trace-governance blockers** — `3ee0c0c` (test)
 9. **GREEN: Close final trace-governance blockers** — `5c3b1b4` (fix)
+10. **Verification: Align reconstructed-review integration budgets** — `bc66e4b` (test)
 
 ## Files Created/Modified
 
@@ -191,7 +192,7 @@ status: complete
 - **Issue:** A fully rehashed forged trace could receive `no_semantic_delta`; the read-only checker accepted dangling trace symlinks; generation followed symlinked parents; and retired reviewed roots depended on a manually amended source map.
 - **Fix:** Reconstructed every expected trace from canonical authority, derived protected counts from actual trace projections, admitted only regular no-follow evidence, staged candidate output before atomic rename under approved real parents, and added strict append-only v1/v2 reviewed history.
 - **Verification:** The forged trace now suspends with Strategy-observation and historical deltas; symlink/non-regular probes fail; 51/51 joined tests pass; two v2 regenerations are byte-identical.
-- **Committed in:** `3ee0c0c`, `5c3b1b4`
+- **Committed in:** `3ee0c0c`, `5c3b1b4`, `bc66e4b`
 
 ---
 
