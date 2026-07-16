@@ -460,7 +460,7 @@ describe("Coward's Game spec contracts", () => {
   it("runtime product semantics quarantine every provider without exact evidence", () => {
     const jsRuntime = defaultRuntimeMetadata()
     const pythonRuntime = {
-      abiVersion: "strategy-runtime-abi-v1.14",
+      abiVersion: STRATEGY_RUNTIME_ABI_VERSION,
       language: { id: "python", version: "3.9" },
       adapter: {
         id: "runtime-python-subprocess-experimental",
@@ -689,9 +689,11 @@ describe("Coward's Game spec contracts", () => {
     expect(getSupportedStrategyLanguageBySourceFormat("tinygo")).toBeNull()
   })
 
-  it("v1.32 strategy language providers declare ABI and boundary posture", () => {
+  it("selected strategy language providers declare ABI and boundary posture", () => {
     expect(STRATEGY_LANGUAGE_PROVIDER_CONTRACT_VERSION).toBe(
-      "strategy-language-provider-contract-v1.33",
+      String(STRATEGY_RUNTIME_ABI_VERSION) === "strategy-runtime-abi-v1.17"
+        ? "runtime-provider-validation-v1.17"
+        : "strategy-language-provider-contract-v1.33",
     )
     expect(STRATEGY_LANGUAGE_PROVIDER_REGISTRY).toHaveLength(4)
     for (const language of SUPPORTED_STRATEGY_LANGUAGES) {

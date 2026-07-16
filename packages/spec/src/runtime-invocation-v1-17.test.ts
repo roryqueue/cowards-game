@@ -945,7 +945,8 @@ describe("runtime invocation v1.17 exclusive ownership", () => {
       identity,
     )
     const selectedIsCandidate =
-      RUNTIME_INVOCATION_V1_17_SELECTED_LIFECYCLE.current === false
+      String(STRATEGY_RUNTIME_ABI_VERSION) !==
+      String(RUNTIME_INVOCATION_V1_17_CANDIDATE.runtimeAbiVersion)
     expect(candidateAsSelected.kind).toBe(
       selectedIsCandidate ? "success" : "system_failure",
     )

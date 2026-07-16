@@ -18,7 +18,7 @@ import type {
   MatchOutcome,
   PlayerId,
 } from "@cowards/spec"
-import { hashCanonicalCompatibilityTuple } from "@cowards/spec"
+import { resolveCanonicalCompatibilityTuple } from "@cowards/spec"
 
 const STATE_HASH_DOMAIN =
   "cowards-game:candidate-game-state-projection:v1" as const
@@ -283,8 +283,10 @@ const metadataIsSafe = (metadata: ChronicleRecordingMetadata): boolean => {
   }
   try {
     return (
-      metadata.semanticTupleId ===
-      `sha256:${hashCanonicalCompatibilityTuple(metadata.semanticTuple)}`
+      resolveCanonicalCompatibilityTuple({
+        tupleId: metadata.semanticTupleId,
+        tuple: metadata.semanticTuple,
+      }) !== undefined
     )
   } catch {
     return false

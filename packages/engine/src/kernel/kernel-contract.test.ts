@@ -7,6 +7,7 @@ import {
 } from "@cowards/spec"
 import * as enginePublic from "../index.js"
 import { createFakeRuntime } from "../test/fake-runtime.js"
+import { adaptRuntimeForCurrentKernel } from "../test/current-kernel-runtime.js"
 import { createCandidateInitialGameState } from "./create-initial-state.js"
 import { stepCandidateMatch } from "./step.js"
 import {
@@ -185,7 +186,9 @@ const withoutRuntime = (): Readonly<Record<string, unknown>> => ({
 
 const withRuntime = (): Readonly<Record<string, unknown>> => ({
   ...matchInput,
-  runtime: createFakeRuntime({ action: { type: "TURN_TO_STONE" } }),
+  runtime: adaptRuntimeForCurrentKernel(
+    createFakeRuntime({ action: { type: "TURN_TO_STONE" } }),
+  ),
 })
 
 const advanceToEffect = (
@@ -517,7 +520,7 @@ describe("Phase 257 canonical Match kernel contract", () => {
   it("driver discards every partial record when a runtime system failure occurs", () => {
     if (candidateAuthority === undefined) return
     let selectionCall = 0
-    const runtime = {
+    const runtime = adaptRuntimeForCurrentKernel({
       selectActivations: (input: {
         activationCount: number
         mySoldiers: readonly { id: string; status: string }[]
@@ -537,16 +540,16 @@ describe("Phase 257 canonical Match kernel contract", () => {
           : {
               ok: false as const,
               systemFailure: {
-                code: "TEST_HOST_FAILURE",
+                code: "ADAPTER_CRASH",
                 retryable: true,
               },
             }
       },
       runSoldierBrain: () => ({
         ok: false as const,
-        systemFailure: { code: "TEST_HOST_FAILURE", retryable: true },
+        systemFailure: { code: "ADAPTER_CRASH", retryable: true },
       }),
-    }
+    })
     const initial = candidateAuthority.createMachine(withoutRuntime())
     const result = candidateAuthority.runMatch({ ...matchInput, runtime })
     expect(result).toMatchObject({
@@ -555,7 +558,7 @@ describe("Phase 257 canonical Match kernel contract", () => {
       failure: {
         classification: "system_failure",
         category: "RUNTIME_SYSTEM_FAILURE",
-        code: "TEST_HOST_FAILURE",
+        code: "ADAPTER_CRASH",
       },
     })
     expect(result.unchangedState).toEqual((initial as { state: unknown }).state)
@@ -567,7 +570,7 @@ describe("Phase 257 canonical Match kernel contract", () => {
     const initial = candidateAuthority.createMachine(withoutRuntime())
     const result = candidateAuthority.runMatch({
       ...matchInput,
-      runtime: {
+      runtime: adaptRuntimeForCurrentKernel({
         selectActivations: (input: {
           activationCount: number
           mySoldiers: readonly { id: string; status: string }[]
@@ -595,12 +598,12 @@ describe("Phase 257 canonical Match kernel contract", () => {
             : {
                 ok: false,
                 systemFailure: {
-                  code: "LATE_TEST_HOST_FAILURE",
-                  retryable: false,
+                  code: "ADAPTER_CRASH",
+                  retryable: true,
                 },
               }
         },
-      },
+      }),
     })
     expect(soldierCall).toBe(3)
     expect(result).toMatchObject({
@@ -609,7 +612,7 @@ describe("Phase 257 canonical Match kernel contract", () => {
       failure: {
         classification: "system_failure",
         category: "RUNTIME_SYSTEM_FAILURE",
-        code: "LATE_TEST_HOST_FAILURE",
+        code: "ADAPTER_CRASH",
       },
       unchangedState: (initial as { state: unknown }).state,
     })
@@ -639,14 +642,14 @@ describe("Phase 257 canonical Match kernel contract", () => {
     const initial = candidateAuthority.createMachine(withoutRuntime())
     const hostFailure = candidateAuthority.runMatch({
       ...matchInput,
-      runtime: {
+      runtime: adaptRuntimeForCurrentKernel({
         selectActivations: () => {
           throw new Error("private host diagnostic")
         },
         runSoldierBrain: () => {
           throw new Error("private host diagnostic")
         },
-      },
+      }),
     })
     expect(hostFailure).toMatchObject({
       kind: "failure",
@@ -654,7 +657,10 @@ describe("Phase 257 canonical Match kernel contract", () => {
       unchangedState: (initial as { state: unknown }).state,
       failure: {
         category: "RUNTIME_SYSTEM_FAILURE",
-        code: "RUNTIME_INVOCATION_THROWN",
+        code:
+          EXPECTED_CANDIDATE_TUPLE.runtimeAbi === "strategy-runtime-abi-v1.17"
+            ? "ADAPTER_CRASH"
+            : "RUNTIME_INVOCATION_THROWN",
       },
     })
     expect(JSON.stringify(hostFailure)).not.toContain("private host diagnostic")

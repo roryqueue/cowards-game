@@ -13,6 +13,7 @@ import {
   STRATEGY_LANGUAGE_PROVIDER_CONTRACT_VERSION,
   STRATEGY_RUNTIME_ABI_VERSION,
   RuntimeExecutionServiceResponseSchema,
+  RuntimeExecutionServiceResponseV117Schema,
   admitCanonicalJsonBytes,
   createAuthenticatedRuntimeInvocationResponseV117,
   createRuntimeInvocationExecutionReceiptV117,
@@ -424,10 +425,13 @@ describe("runtime execution HTTP boundary", () => {
       candidateInvocationAdapterV117: ({ request, signingIdentity }) => {
         candidateInvocations += 1
         if (forceMissingReceipt) return new Uint8Array()
-        const value: JsonValue = {
-          activationOrders: [],
-          strategyMemory: {},
-        }
+        const value: JsonValue =
+          request.method === "selectActivations"
+            ? { activationOrders: [], strategyMemory: {} }
+            : {
+                action: { type: "TURN_TO_STONE" },
+                soldierMemory: {},
+              }
         const encoded = encodeCanonicalJson(value, {
           context: "authenticated-outer-envelope",
         })
@@ -1140,7 +1144,16 @@ fn main() {
         id: "strategy-language-provider-rust-wasi",
       },
       metadata: {
-        tags: ["rust", "wasm-wasi", "counted", "provider"],
+        tags: [
+          "rust",
+          "wasm-wasi",
+          "counted",
+          "provider",
+          ...(String(STRATEGY_RUNTIME_ABI_VERSION) ===
+          "strategy-runtime-abi-v1.17"
+            ? ["v1.17"]
+            : []),
+        ],
         providerValidation: {
           providerId: "strategy-language-provider-rust-wasi",
           contractVersion: STRATEGY_LANGUAGE_PROVIDER_CONTRACT_VERSION,
@@ -1238,7 +1251,16 @@ export fn _start() void {
         id: "strategy-language-provider-zig-wasi",
       },
       metadata: {
-        tags: ["zig", "wasm-wasi", "counted", "provider"],
+        tags: [
+          "zig",
+          "wasm-wasi",
+          "counted",
+          "provider",
+          ...(String(STRATEGY_RUNTIME_ABI_VERSION) ===
+          "strategy-runtime-abi-v1.17"
+            ? ["v1.17"]
+            : []),
+        ],
         providerValidation: {
           providerId: "strategy-language-provider-zig-wasi",
           contractVersion: STRATEGY_LANGUAGE_PROVIDER_CONTRACT_VERSION,
@@ -1303,7 +1325,11 @@ export fn _start() void {
     for (const response of [badJson, oversized]) {
       const body = await response.json()
       expect(response.status).toBe(400)
-      expect(RuntimeExecutionServiceResponseSchema.parse(body)).toMatchObject({
+      const parsed =
+        String(STRATEGY_RUNTIME_ABI_VERSION) === "strategy-runtime-abi-v1.17"
+          ? RuntimeExecutionServiceResponseV117Schema.parse(body)
+          : RuntimeExecutionServiceResponseSchema.parse(body)
+      expect(parsed).toMatchObject({
         ok: false,
         kind: "systemFailure",
         systemFailure: {

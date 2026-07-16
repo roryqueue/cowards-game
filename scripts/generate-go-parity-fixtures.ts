@@ -78,6 +78,8 @@ import {
   buildRuntimeEvidenceAuthorityEnvelope,
   encodeRuntimeEvidenceAuthorityPayloadV117,
   encodeRuntimeEvidenceAuthoritySignatureMessage,
+  HistoricalRuntimeExecutionServiceRequestV116Schema,
+  HistoricalRuntimeExecutionServiceResponseV116Schema,
   RuntimeExecutionServiceRequestSchema,
   RuntimeExecutionServiceResponseSchema,
   RuntimeExecutionFinalStateSchema,
@@ -1079,14 +1081,14 @@ const createV117GeneratedSource = () => {
 const verifyImmutableV116 = (root: string): void => {
   const paths = versionPaths(root)
   const requestBytes = readFileSync(paths.v116Request)
-  RuntimeExecutionServiceRequestSchema.parse(
+  HistoricalRuntimeExecutionServiceRequestV116Schema.parse(
     JSON.parse(requestBytes.toString("utf8")),
   )
   const responseBytes = readFileSync(paths.v116Response)
-  const recomputedResponse = Buffer.from(createRuntimeExecutionWireGolden(root))
-  const parsedResponse = RuntimeExecutionServiceResponseSchema.parse(
-    JSON.parse(responseBytes.toString("utf8")),
-  )
+  const parsedResponse =
+    HistoricalRuntimeExecutionServiceResponseV116Schema.parse(
+      JSON.parse(responseBytes.toString("utf8")),
+    )
   if (!parsedResponse.ok) {
     throw new Error("Immutable v1.16 response is not a success receipt")
   }
@@ -1095,7 +1097,6 @@ const verifyImmutableV116 = (root: string): void => {
   if (
     sha256Hex(requestBytes) !== V1_16_REQUEST_SHA256 ||
     sha256Hex(responseBytes) !== V1_16_RESPONSE_SHA256 ||
-    !responseBytes.equals(recomputedResponse) ||
     sha256Hex(encodeRuntimeSemanticReceiptClaims(receiptClaims)) !==
       V1_16_SIGNATURE_INPUT_SHA256
   ) {
@@ -1716,9 +1717,7 @@ export const main = async (args = process.argv.slice(2)): Promise<void> => {
   const versionsOnly = args.includes("--versions-only")
   const writeV117Invocation = args.includes("--write-v1.17-invocation")
   const writeV117Service = args.includes("--write-v1.17-service")
-  const writeV117CurrentService = args.includes(
-    "--write-v1.17-current-service",
-  )
+  const writeV117CurrentService = args.includes("--write-v1.17-current-service")
   const checkMode = args.includes("--check")
   const historicalV116Only = args.includes("--historical-v1.16-only")
 
