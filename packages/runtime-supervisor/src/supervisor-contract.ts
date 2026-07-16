@@ -704,6 +704,14 @@ export const verifySupervisorRawReceiptV118 = (input: {
   if (evaluated.kind === "system_failure") {
     return failure(evaluated.code)
   }
+  if (
+    evaluated.kind === "player_violation" &&
+    (envelope.receipt.lifecycle.exitCode !== 0 ||
+      envelope.receipt.lifecycle.signal !== null ||
+      envelope.receipt.lifecycle.cancellationRequested)
+  ) {
+    return failure("PROCESS_RESULT_UNRESOLVED")
+  }
   const result: VerifiedSupervisorResultV118 =
     evaluated.kind === "success"
       ? {
