@@ -186,7 +186,7 @@ export const writeV137ConformanceCandidate = (
   const semanticDiffPath = path.join(candidateDirectory, "semantic-diff.json")
   const corpusBytes = renderJson(candidate)
   const diff = semanticDiff(candidate, corpusPath)
-  mkdirSync(candidateDirectory, { recursive: false })
+  mkdirSync(candidateDirectory, { recursive: true })
   writeFileSync(corpusPath, corpusBytes, { flag: "wx" })
   writeFileSync(semanticDiffPath, renderJson(diff), { flag: "wx" })
   return {

@@ -37,7 +37,11 @@ const sha256 = (bytes: Uint8Array): string =>
 
 describe("v1.37 conformance candidate generation", () => {
   it("writes only a new versioned candidate and semantic diff", () => {
-    const destinationRoot = temporaryRoot()
+    const destinationRoot = path.join(
+      temporaryRoot(),
+      "not-yet-created",
+      "candidates",
+    )
     const candidateCorpus = globalThis.structuredClone(V1_37_CONFORMANCE_CORPUS)
     candidateCorpus.fixtures[0]!.source +=
       "\n// reviewed candidate source change\n"
