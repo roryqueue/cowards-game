@@ -38,7 +38,7 @@ describe("v1.37 conformance trace candidate generation", () => {
       "v1.37-conformance-trace-v1",
     )
     const result = generateV137ConformanceTraceCandidate({
-      candidateVersion: "v1.37-conformance-trace-v1",
+      candidateVersion: "v1.37-conformance-trace-v2",
       candidateDirectory,
     })
     const manifest = JSON.parse(readFileSync(result.manifestPath, "utf8"))
@@ -46,7 +46,7 @@ describe("v1.37 conformance trace candidate generation", () => {
 
     expect(manifest).toMatchObject({
       schemaVersion: "v1.37-conformance-trace-candidate-v1",
-      candidateVersion: "v1.37-conformance-trace-v1",
+      candidateVersion: "v1.37-conformance-trace-v2",
       corpusVersion: V1_37_CONFORMANCE_CORPUS.version,
       corpusRootSha256: V1_37_CONFORMANCE_CORPUS_ROOT,
       generatedBy: "scripts/generate-v1-37-conformance-traces.ts",
@@ -70,10 +70,41 @@ describe("v1.37 conformance trace candidate generation", () => {
     )
   }, 30_000)
 
+  it("generates each success from its exact execution mode and case seed", () => {
+    const candidateDirectory = path.join(temporaryRoot(), "candidate")
+    generateV137ConformanceTraceCandidate({
+      candidateVersion: "v1.37-conformance-trace-v2",
+      candidateDirectory,
+    })
+    const trace = (caseId: string) =>
+      JSON.parse(
+        readFileSync(
+          path.join(candidateDirectory, "traces", `${caseId}.json`),
+          "utf8",
+        ),
+      )
+    const negativeZero = trace("boundary-numeric-negative-zero")
+    const unicode = trace("boundary-unicode-scalar")
+    const normative = trace("normative-first-active-turn-to-stone")
+    const seeded = trace("property-seeded-selection-seed-003")
+
+    expect(negativeZero.transitions).toEqual([])
+    expect(unicode.transitions).toEqual([])
+    expect(
+      [...negativeZero.invocations, ...unicode.invocations].every(
+        ({ gameplayMutation }: { gameplayMutation: boolean }) =>
+          gameplayMutation === false,
+      ),
+    ).toBe(true)
+    expect(normative.transitions.length).toBeGreaterThan(0)
+    expect(seeded.transitions.length).toBeGreaterThan(0)
+    expect(normative.traceRoot).not.toBe(seeded.traceRoot)
+  }, 30_000)
+
   it("refuses active paths, version reuse, existing candidates, and live-lane arguments", () => {
     expect(() =>
       generateV137ConformanceTraceCandidate({
-        candidateVersion: "v1.37-conformance-trace-v1",
+        candidateVersion: "v1.37-conformance-trace-v2",
         candidateDirectory: ACTIVE_V137_CONFORMANCE_TRACE_ROOT,
       }),
     ).toThrow("ACTIVE_GOLDEN_OVERWRITE_FORBIDDEN")
@@ -86,15 +117,21 @@ describe("v1.37 conformance trace candidate generation", () => {
 
     const candidateDirectory = path.join(temporaryRoot(), "candidate")
     generateV137ConformanceTraceCandidate({
-      candidateVersion: "v1.37-conformance-trace-v1",
+      candidateVersion: "v1.37-conformance-trace-v2",
       candidateDirectory,
     })
     expect(() =>
       generateV137ConformanceTraceCandidate({
-        candidateVersion: "v1.37-conformance-trace-v1",
+        candidateVersion: "v1.37-conformance-trace-v2",
         candidateDirectory,
       }),
     ).toThrow("CANDIDATE_DIRECTORY_EXISTS")
+    expect(() =>
+      generateV137ConformanceTraceCandidate({
+        candidateVersion: "v1.37-conformance-trace-v1",
+        candidateDirectory: path.join(temporaryRoot(), "reviewed-version"),
+      }),
+    ).toThrow("REVIEWED_VERSION_ROOT_MISMATCH")
     expect(() =>
       parseV137ConformanceTraceCandidateArgs([
         "--candidate-version=v2",
@@ -109,7 +146,7 @@ describe("v1.37 conformance trace candidate generation", () => {
     changedCorpus.cases[0]!.expectation.reasonCode = "CHANGED_EXPECTATION"
     expect(() =>
       generateV137ConformanceTraceCandidate({
-        candidateVersion: "v1.37-conformance-trace-v1",
+        candidateVersion: "v1.37-conformance-trace-v2",
         candidateDirectory: path.join(temporaryRoot(), "candidate"),
         corpus: changedCorpus,
       }),

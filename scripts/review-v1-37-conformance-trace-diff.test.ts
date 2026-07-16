@@ -1,10 +1,18 @@
 /// <reference types="node" />
 
+import { createHash } from "node:crypto"
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { afterEach, describe, expect, it } from "vitest"
-import { generateV137ConformanceTraceCandidate } from "./generate-v1-37-conformance-traces.js"
+import {
+  encodeCanonicalJson,
+  type JsonValue,
+} from "../packages/spec/src/index.js"
+import {
+  computeV137ConformanceTraceCandidateRoot,
+  generateV137ConformanceTraceCandidate,
+} from "./generate-v1-37-conformance-traces.js"
 import {
   PROTECTED_V137_COMPATIBILITY_CATEGORIES,
   reviewV137ConformanceTraceDiff,
@@ -28,10 +36,31 @@ afterEach(() => {
 const candidate = (): string => {
   const directory = path.join(temporaryRoot(), "candidate")
   generateV137ConformanceTraceCandidate({
-    candidateVersion: "v1.37-conformance-trace-v1",
+    candidateVersion: "v1.37-conformance-trace-v2",
     candidateDirectory: directory,
   })
   return directory
+}
+
+const rehash = (directory: string): void => {
+  const manifestPath = path.join(directory, "manifest.json")
+  const diffPath = path.join(directory, "semantic-diff.json")
+  const manifest = JSON.parse(readFileSync(manifestPath, "utf8"))
+  manifest.candidateRootSha256 =
+    computeV137ConformanceTraceCandidateRoot(manifest)
+  writeFileSync(manifestPath, render(manifest))
+  const diff = JSON.parse(readFileSync(diffPath, "utf8"))
+  diff.candidateRootSha256 = manifest.candidateRootSha256
+  const { semanticDiffRootSha256: _root, ...material } = diff
+  const encoded = encodeCanonicalJson(material as JsonValue, {
+    context: "canonical-manifest",
+  })
+  if (!encoded.ok) throw new Error(encoded.error.code)
+  diff.semanticDiffRootSha256 = `sha256:${createHash("sha256")
+    .update("cowards-game:v1.37:conformance-trace-semantic-diff:v1\0")
+    .update(encoded.bytes)
+    .digest("hex")}`
+  writeFileSync(diffPath, render(diff))
 }
 
 describe("v1.37 independent conformance trace review", () => {
@@ -96,6 +125,66 @@ describe("v1.37 independent conformance trace review", () => {
       ).toThrow()
     }
   }, 60_000)
+
+  it("rejects rehashed tuple substitution and forged semantic diff contents", () => {
+    const tupleDirectory = candidate()
+    const tupleManifestPath = path.join(tupleDirectory, "manifest.json")
+    const tupleManifest = JSON.parse(readFileSync(tupleManifestPath, "utf8"))
+    tupleManifest.semanticTupleId = `sha256:${"0".repeat(64)}`
+    writeFileSync(tupleManifestPath, render(tupleManifest))
+    rehash(tupleDirectory)
+    expect(() =>
+      reviewV137ConformanceTraceDiff({
+        candidateDirectory: tupleDirectory,
+      }),
+    ).toThrow()
+
+    const diffDirectory = candidate()
+    const diffPath = path.join(diffDirectory, "semantic-diff.json")
+    const diff = JSON.parse(readFileSync(diffPath, "utf8"))
+    diff.caseDiffs[0].caseId = "forged-case"
+    diff.caseDiffs[0].candidateTraceRoot = `sha256:${"f".repeat(64)}`
+    diff.protectedCategories.validV14State = {
+      baselineHash: `sha256:${"1".repeat(64)}`,
+      candidateHash: `sha256:${"2".repeat(64)}`,
+      changeCount: 999,
+    }
+    writeFileSync(diffPath, render(diff))
+    rehash(diffDirectory)
+    expect(() =>
+      reviewV137ConformanceTraceDiff({
+        candidateDirectory: diffDirectory,
+      }),
+    ).toThrow()
+  }, 60_000)
+
+  it("allows only the exact artifact or candidate-local immutable review path", () => {
+    const directory = candidate()
+    expect(() =>
+      writeV137ConformanceTraceIndependentReview({
+        candidateDirectory: directory,
+        outputPath: path.join(temporaryRoot(), "arbitrary.json"),
+      }),
+    ).toThrow("REVIEW_OUTPUT_PATH_FORBIDDEN")
+    const outputPath = path.join(directory, "independent-review.json")
+    const first = writeV137ConformanceTraceIndependentReview({
+      candidateDirectory: directory,
+      outputPath,
+    })
+    expect(
+      writeV137ConformanceTraceIndependentReview({
+        candidateDirectory: directory,
+        outputPath,
+      }),
+    ).toEqual(first)
+    writeFileSync(outputPath, "{}\n")
+    expect(() =>
+      writeV137ConformanceTraceIndependentReview({
+        candidateDirectory: directory,
+        outputPath,
+      }),
+    ).toThrow("REVIEW_OUTPUT_IMMUTABLE")
+  }, 30_000)
 
   it("suspends every protected category change, including historical interpretation", () => {
     for (const category of PROTECTED_V137_COMPATIBILITY_CATEGORIES) {

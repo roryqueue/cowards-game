@@ -38,7 +38,7 @@ afterEach(() => {
 const candidate = (): string => {
   const directory = path.join(temporaryRoot(), "candidate")
   generateV137ConformanceTraceCandidate({
-    candidateVersion: "v1.37-conformance-trace-v1",
+    candidateVersion: "v1.37-conformance-trace-v2",
     candidateDirectory: directory,
   })
   return directory
