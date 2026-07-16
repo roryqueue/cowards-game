@@ -416,7 +416,10 @@ describe("current reconstruction evidence closure", () => {
   it("validates semantics exactly once before exact transition and final proof", () => {
     const input = createBuiltCurrentInput()
     const before = JSON.stringify(input)
-    const source = readFileSync(new URL("./reconstruct.ts", import.meta.url), "utf8")
+    const source = readFileSync(
+      new URL("./reconstruct.ts", import.meta.url),
+      "utf8",
+    )
     const body = source.slice(
       source.indexOf("export const validateCurrentReplayReconstruction"),
       source.indexOf("export type CreateCurrentReplayResult"),
@@ -439,6 +442,17 @@ describe("current reconstruction evidence closure", () => {
   it("rejects the first and later recorded transition mismatch before later proof", () => {
     const input = createBuiltCurrentInput()
     const laterIndex = Math.floor(input.recordedTransitions.length / 2)
+
+    expect(
+      validateCurrentReplayReconstruction({
+        ...input,
+        recordedTransitions: input.recordedTransitions.slice(0, -1),
+      }),
+    ).toEqual({
+      ok: false,
+      code: "CURRENT_TRANSITION_COUNT_MISMATCH",
+      transitionIndex: input.recordedTransitions.length - 1,
+    })
 
     for (const transitionIndex of [0, laterIndex]) {
       const recordedTransitions = input.recordedTransitions.map(

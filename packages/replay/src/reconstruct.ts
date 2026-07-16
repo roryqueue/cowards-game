@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto"
+import type { GameState } from "@cowards/engine"
 import type {
   Chronicle,
   ChronicleBoundarySnapshot,
@@ -7,9 +8,11 @@ import type {
   MatchOutcome,
 } from "@cowards/spec"
 import {
+  compareCurrentReplayTransitionV137,
   applyReplayEvent,
   compareReplayStateToSnapshot,
   stateFromSnapshot,
+  type CurrentReplayTransitionField,
   type ReplayState,
   type ReplayStateResult,
 } from "./replay-transition.js"
@@ -20,7 +23,10 @@ import {
 import { stableStringify } from "./hash.js"
 import {
   createChronicleBoundaryAnchors,
+  recordChronicleFromExecution,
+  type ChronicleBoundaryAnchor,
   type ChronicleRecorderExecution,
+  type RecordedCanonicalTransitionV137,
 } from "./record.js"
 import {
   replayStateFromCurrentProjection,
@@ -333,6 +339,8 @@ export type CurrentReplayReconstructionResult =
   | {
       readonly ok: true
       readonly terminalStateHash: string
+      readonly transitionTraceRoot: string
+      readonly transitionCount: number
       readonly outcome: MatchOutcome
     }
   | {
@@ -340,15 +348,28 @@ export type CurrentReplayReconstructionResult =
       readonly code:
         | "CURRENT_RECONSTRUCTION_SHAPE_INVALID"
         | "CURRENT_SEMANTIC_ADMISSION_INVALID"
+        | "CURRENT_TRANSITION_COUNT_MISMATCH"
+        | "CURRENT_TRANSITION_FIELD_MISMATCH"
         | "CURRENT_TRANSITION_STATE_MISMATCH"
         | "CURRENT_TERMINAL_EVENT_INVALID"
         | "CURRENT_TERMINAL_STATE_MISMATCH"
+        | "CURRENT_FINAL_STATE_MISMATCH"
+        | "CURRENT_OUTCOME_MISMATCH"
+        | "CURRENT_TRACE_ROOT_MISMATCH"
       readonly transitionIndex?: number | undefined
+      readonly field?: CurrentReplayTransitionField | undefined
     }
 
 export interface CurrentReplayReconstructionInput {
   readonly chronicle: Chronicle
   readonly execution: ChronicleRecorderExecution
+  readonly boundaryAnchors?: readonly ChronicleBoundaryAnchor[] | undefined
+  readonly recordedTransitions?:
+    | readonly RecordedCanonicalTransitionV137[]
+    | undefined
+  readonly transitionTraceRoot?: string | undefined
+  readonly recordedFinalState?: GameState | undefined
+  readonly recordedOutcome?: MatchOutcome | undefined
 }
 
 const finalReplayState = (
@@ -384,10 +405,10 @@ const finalReplayState = (
     : { outcome: execution.recorderMaterial.finalState.outcome }),
 })
 
-export const validateCurrentReplayReconstruction = ({
-  chronicle,
-  execution,
-}: CurrentReplayReconstructionInput): CurrentReplayReconstructionResult => {
+export const validateCurrentReplayReconstruction = (
+  input: CurrentReplayReconstructionInput,
+): CurrentReplayReconstructionResult => {
+  const { chronicle, execution } = input
   if (execution.kind !== "completed" || execution.transitions.length === 0) {
     return { ok: false, code: "CURRENT_RECONSTRUCTION_SHAPE_INVALID" }
   }
@@ -430,6 +451,8 @@ export const validateCurrentReplayReconstruction = ({
     }
   }
 
+  const boundaryAnchors =
+    input.boundaryAnchors ?? createChronicleBoundaryAnchors(execution)
   const semanticAdmission = validateCurrentChronicleSemantics({
     profile: "current-exact",
     compatibility: {
@@ -437,11 +460,46 @@ export const validateCurrentReplayReconstruction = ({
       tuple: execution.transitions[0]!.semanticTuple,
     },
     chronicle,
-    boundaryAnchors: createChronicleBoundaryAnchors(execution),
+    boundaryAnchors,
     execution,
   })
   if (!semanticAdmission.ok) {
     return { ok: false, code: "CURRENT_SEMANTIC_ADMISSION_INVALID" }
+  }
+
+  const reconstructedRecording = recordChronicleFromExecution({
+    execution,
+    metadata: {
+      schemaVersion: "chronicle-v1.4",
+      semanticTupleId: execution.transitions[0]!.semanticTupleId,
+      semanticTuple: execution.transitions[0]!.semanticTuple,
+    },
+  })
+  if (!reconstructedRecording.ok) {
+    return { ok: false, code: "CURRENT_RECONSTRUCTION_SHAPE_INVALID" }
+  }
+  const recordedTransitions =
+    input.recordedTransitions ?? reconstructedRecording.recordedTransitions
+  if (
+    recordedTransitions.length !==
+    reconstructedRecording.recordedTransitions.length
+  ) {
+    return {
+      ok: false,
+      code: "CURRENT_TRANSITION_COUNT_MISMATCH",
+      transitionIndex: Math.min(
+        recordedTransitions.length,
+        reconstructedRecording.recordedTransitions.length,
+      ),
+    }
+  }
+  for (let index = 0; index < recordedTransitions.length; index += 1) {
+    const comparison = compareCurrentReplayTransitionV137(
+      recordedTransitions[index]!,
+      reconstructedRecording.recordedTransitions[index]!,
+      index,
+    )
+    if (!comparison.ok) return comparison
   }
 
   const transitionPostconditions = validateCurrentTransitionPostconditions({
@@ -457,6 +515,18 @@ export const validateCurrentReplayReconstruction = ({
   const projectedFinal = replayStateFromCurrentProjection(last.afterState)
   const terminalSnapshot = chronicle.snapshots.at(-1)
   const outcome = execution.recorderMaterial.finalState.outcome
+  const recordedFinalState =
+    input.recordedFinalState ?? reconstructedRecording.finalState
+  if (
+    stableStringify(recordedFinalState) !==
+    stableStringify(reconstructedRecording.finalState)
+  ) {
+    return { ok: false, code: "CURRENT_FINAL_STATE_MISMATCH" }
+  }
+  const recordedOutcome = input.recordedOutcome ?? outcome
+  if (stableStringify(recordedOutcome) !== stableStringify(outcome)) {
+    return { ok: false, code: "CURRENT_OUTCOME_MISMATCH" }
+  }
   if (
     outcome === undefined ||
     projectedFinal === undefined ||
@@ -468,9 +538,16 @@ export const validateCurrentReplayReconstruction = ({
   ) {
     return { ok: false, code: "CURRENT_TERMINAL_STATE_MISMATCH" }
   }
+  const transitionTraceRoot =
+    input.transitionTraceRoot ?? reconstructedRecording.transitionTraceRoot
+  if (transitionTraceRoot !== reconstructedRecording.transitionTraceRoot) {
+    return { ok: false, code: "CURRENT_TRACE_ROOT_MISMATCH" }
+  }
   return {
     ok: true,
     terminalStateHash: last.afterStateHash,
+    transitionTraceRoot,
+    transitionCount: recordedTransitions.length,
     outcome,
   }
 }
