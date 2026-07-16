@@ -403,6 +403,24 @@ describe("runtime invocation v1.18", () => {
     }
   })
 
+  it("rejects non-empty or internally impossible pids snapshots", () => {
+    const request = createRuntimeInvocationRequestV118(requestInput())
+    const snapshots = [
+      { currentBefore: 1, currentPeak: 1, currentAfter: 0 },
+      { currentBefore: 2, currentPeak: 1, currentAfter: 0 },
+      { currentBefore: 0, currentPeak: 0, currentAfter: 1 },
+    ] as const
+    for (const snapshot of snapshots) {
+      const receipt = clone(validReceipt())
+      Object.assign(receipt.pids, snapshot)
+      expect(evaluateRuntimeSupervisorReceiptV118(request, receipt)).toEqual({
+        kind: "system_failure",
+        gameplayDisposition: "no_mutation",
+        code: "COUNTER_INCONSISTENT",
+      })
+    }
+  })
+
   it("rejects noncanonical, overflow, negative, and gameplay-bearing receipts", () => {
     const malformed = clone(validReceipt()) as unknown as Record<string, unknown>
     malformed.gameplay = { strategyMemory: { private: true } }

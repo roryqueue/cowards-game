@@ -690,6 +690,13 @@ export const evaluateRuntimeSupervisorReceiptV118 = (
     return systemFailure("COUNTER_INCONSISTENT")
   }
   if (
+    receipt.pids.currentBefore !== 0 ||
+    receipt.pids.currentPeak < receipt.pids.currentBefore ||
+    receipt.pids.currentPeak < receipt.pids.currentAfter
+  ) {
+    return systemFailure("COUNTER_INCONSISTENT")
+  }
+  if (
     !countersNondecreasing(
       receipt.memory.eventsBefore,
       receipt.memory.eventsAfter,
