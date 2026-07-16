@@ -33,9 +33,9 @@ key-files:
     - tsconfig.json
 
 key-decisions:
-  - "The private supervisor request self-hash binds the exact public v1.18 invocation, canonical input bytes, and cancellation channel; the guest never supplies host accounting fields."
+  - "The private supervisor request self-hash binds the exact public v1.18 invocation, canonical input bytes, closed executable/argv/environment values, derived process-group identity, and cancellation channel; the guest never supplies host accounting fields."
   - "The raw host receipt is a separate canonical envelope binding the supervisor request, input, cancellation channel, and exact payload/stdout/stderr hashes before the public spec evaluator runs."
-  - "Verified output is immutable and verifier-branded, retains only bounded hashes/counts/identity and success-or-player-violation evidence, and never carries raw output, source, artifacts, memories, objectives, diagnostics, paths, or cancellation secrets."
+  - "Verified output is immutable and verifier-branded, retains only bounded hashes/counts/identity and success-or-player-violation evidence, and never carries raw output, private launch values, source, artifacts, memories, objectives, diagnostics, paths, or cancellation secrets."
   - "Plan 31 remains the sole lockfile owner; Plan 25 registers only the package manifest, project reference, and public workspace dependency."
 
 patterns-established:
@@ -86,7 +86,7 @@ status: complete
 
 # Phase 259 Plan 25: Shared Supervisor Protocol and Verifier Summary
 
-**A package-free shared supervisor boundary now binds canonical input and cancellation to the public v1.18 invocation, rejects contradictory host receipts, and emits only immutable privacy-safe evidence for later adapter signing.**
+**A package-free shared supervisor boundary now binds canonical input, exact private launch values, process-group identity, and cancellation to the public v1.18 invocation, rejects contradictory host receipts, and emits only immutable privacy-safe evidence for later adapter signing.**
 
 ## Performance
 
@@ -95,14 +95,15 @@ status: complete
 - **Completed:** 2026-07-16T11:54:00Z
 - **Tasks:** 2
 - **Files modified:** 6
-- **Focused tests:** 8/8 supervisor tests and 34/34 joined v1.18 budget/invocation/supervisor tests passed
+- **Focused tests:** 10/10 supervisor tests and 36/36 joined v1.18 budget/invocation/supervisor tests passed
 
 ## Accomplishments
 
-- Added a canonical internal request containing the public v1.18 invocation, exact canonical input bytes, one host nonce through the invocation, executable/argv/environment identities, exact limits, and a private cancellation channel.
+- Added a canonical internal request containing the public v1.18 invocation, exact canonical input bytes, one host nonce through the invocation, closed executable path/argv/environment allowlist values, exact limits, a derived process-group identity, and a private cancellation channel.
 - Added a separate strict host raw-receipt envelope that binds the supervisor request, input, cancellation channel, output hashes, public v1.18 raw receipt, platform, cgroup path/settings, counters, lifecycle, containment, and exact supervisor identities.
 - Reused public `@cowards/spec` canonical JSON, request schema, counter conversions, resource classification, and three-way failure contract rather than importing source paths or creating a second quantitative policy.
 - Added verifier-known immutable evidence. Guest output can be observed and hash-bound but cannot construct the host receipt, sign evidence, or carry source, artifacts, memories, objectives, diagnostics, host paths, raw stderr, or key material into the verified projection.
+- Closed three post-plan review blockers: independently derived public executable/argv/environment hashes from the actual private launch descriptor, bound the receipt's process-group identity to the exact request/session/launch, and kept timeout, cancellation, crash, null result, and incomplete reap system-owned before any over-limit player classification.
 - Registered `@cowards/runtime-supervisor` under the existing `packages/*` workspace and root TypeScript graph while preserving Plan 31's sole ownership of the lockfile update.
 
 ## Task Commits
@@ -111,6 +112,10 @@ status: complete
 2. **Task 1 GREEN: shared supervisor verifier** - `bb5f775` (feat)
 3. **Task 2: package and root project registration** - `bdcc6a1` (chore)
 4. **Task 1/2 refactor: repository formatting** - `d3d0beb` (style)
+5. **Review RED: reproduce three supervisor false-pass paths** - `4fc9cdb` (test)
+6. **Review BL-02/BL-03: bind private launch and process-group identities** - `527e6e0` (fix)
+7. **Review BL-01: preserve system ownership for unresolved processes** - `d9e21e1` (fix)
+8. **Review privacy guard: keep private launch values out of verified output** - `98702d8` (test)
 
 ## Files Created/Modified
 
@@ -125,7 +130,7 @@ status: complete
 
 - Used a wrapper request rather than altering the public Plan-24 invocation. This binds exact private input and cancellation material without changing the additive v1.18 spec bytes or broadening the public ABI.
 - Kept the raw host receipt on a separate canonical channel from guest stdout/payload. The verifier receives raw guest observations only to recompute hashes and byte counts.
-- Delegated all gameplay-neutral resource and lifecycle classification to the public spec evaluator. The supervisor package does not apply gameplay consequences or sign adapter evidence.
+- Delegated counter, containment, and lifecycle consistency to the public spec evaluator, then required a resolved zero-exit process before accepting its player-violation classification. The supervisor package does not apply gameplay consequences or sign adapter evidence.
 - Required verifier authority for request serialization and accepted evidence. Cloned certificate-shaped objects do not cross the trusted boundary.
 
 ## Deviations from Plan
@@ -141,10 +146,37 @@ status: complete
 - **Verification:** Package build, lint, typecheck, and all 8 tests pass.
 - **Committed in:** `bdcc6a1`
 
+**2. [Post-plan code review BL-01] Kept unresolved processes system-owned**
+
+- **Found during:** Independent review of the completed Plan-25 commits
+- **Issue:** The shared public evaluator classified over-limit evidence before checking unresolved exit, signal, or cancellation state. A combined timeout, crash, nonzero/null result, or host cancellation could therefore become a player resource violation.
+- **Fix:** The supervisor verifier now accepts a player violation only after confirming exit code zero, no signal, and no cancellation. Containment and lifecycle contradictions still fail earlier through the public evaluator.
+- **Files modified:** `packages/runtime-supervisor/src/supervisor-contract.ts`, `packages/runtime-supervisor/src/supervisor-contract.test.ts`
+- **Verification:** Combined over-limit plus timeout/cancel, signal, nonzero exit, null result, and incomplete-reap cases all remain no-mutation system failures.
+- **Committed in:** `4fc9cdb`, `d9e21e1`
+
+**3. [Post-plan code review BL-02] Bound actual private launch values**
+
+- **Found during:** Independent review of the completed Plan-25 commits
+- **Issue:** The request carried only executable/argv/environment digest claims, which would have forced Plan 26 to pass actual launch parameters out of band.
+- **Fix:** Added a strict private execution descriptor with an absolute executable path, ordered argv, and unique canonical environment allowlist. The wrapper independently derives all three public invocation hashes and rejects substituted values even when the outer request hash is recomputed.
+- **Files modified:** `packages/runtime-supervisor/src/supervisor-contract.ts`, `packages/runtime-supervisor/src/supervisor-contract.test.ts`
+- **Verification:** Path, argv, and environment substitution tests reject; verified output contains none of the private descriptor values.
+- **Committed in:** `4fc9cdb`, `527e6e0`, `98702d8`
+
+**4. [Post-plan code review BL-03] Bound process-group identity**
+
+- **Found during:** Independent review of the completed Plan-25 commits
+- **Issue:** `processGroupIdentitySha256` was syntactically valid but was not compared with request/session identity.
+- **Fix:** Derived the expected process-group identity from the invocation request hash, host nonce, input hash, cancellation channel, and exact launch descriptor, included it in the canonical wrapper request, and rejected receipt substitution before public evaluation.
+- **Files modified:** `packages/runtime-supervisor/src/supervisor-contract.ts`, `packages/runtime-supervisor/src/supervisor-contract.test.ts`
+- **Verification:** Receipt process-group substitution fails closed with no verified evidence.
+- **Committed in:** `4fc9cdb`, `527e6e0`
+
 ---
 
-**Total deviations:** 1 auto-fixed blocking test issue.  
-**Impact on plan:** Test-only type correction; no protocol, API, dependency, or scope expansion.
+**Total deviations:** 4 fixed issues (1 implementation-time test issue, 3 post-plan review blockers).
+**Impact on plan:** The protocol is more exact and fail-closed without native Plan-26 work, dependency additions, lockfile changes, public output expansion, or gameplay mutation.
 
 ## Issues Encountered
 
@@ -154,16 +186,16 @@ status: complete
 
 ## Verification
 
-- `pnpm exec vitest run packages/runtime-supervisor/src/supervisor-contract.test.ts --maxWorkers=1` — 8/8 passed.
+- `pnpm exec vitest run packages/runtime-supervisor/src/supervisor-contract.test.ts --maxWorkers=1` — 10/10 passed.
 - `pnpm --filter @cowards/runtime-supervisor build` — passed.
 - `pnpm --filter @cowards/runtime-supervisor lint` — passed.
 - `pnpm --filter @cowards/runtime-supervisor typecheck` — passed.
-- `pnpm --filter @cowards/runtime-supervisor test` — 8/8 passed.
+- `pnpm --filter @cowards/runtime-supervisor test` — 10/10 passed.
 - `pnpm exec tsc -b --dry` — root project graph includes and resolves the supervisor.
 - `pnpm typecheck` — 26/26 Turbo tasks passed across 15 packages.
 - `pnpm lint` — 15/15 packages passed.
 - `pnpm boundary:imports` — zero strict offenses.
-- `pnpm exec vitest run packages/spec/src/runtime-budget-profile-v1-18.test.ts packages/spec/src/runtime-invocation-v1-18.test.ts packages/runtime-supervisor/src/supervisor-contract.test.ts --maxWorkers=1` — 34/34 passed.
+- `pnpm exec vitest run packages/spec/src/runtime-budget-profile-v1-18.test.ts packages/spec/src/runtime-invocation-v1-18.test.ts packages/runtime-supervisor/src/supervisor-contract.test.ts --maxWorkers=1` — 36/36 passed.
 - Prettier check for every created/modified source, manifest, and tsconfig — passed.
 - Source-import scan, lockfile diff, forbidden-file diff, and `git diff --check` — passed.
 
@@ -180,7 +212,7 @@ None. This plan intentionally defines only the pure protocol/verifier. Plan 26 o
 ## Self-Check: PASSED
 
 - All five declared package files and the root project reference exist.
-- RED, GREEN, workspace-registration, and formatting commits exist in order.
+- RED, GREEN, workspace-registration, formatting, review-RED, three blocker fixes, and the private-output guard exist in order.
 - Exact package verification, root typecheck/lint, joined v1.18 tests, formatting, source-import, and boundary checks pass.
 - No ROADMAP, STATE, REQUIREMENTS, protected file, workspace definition, or lockfile changed.
 
