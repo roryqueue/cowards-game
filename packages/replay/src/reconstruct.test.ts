@@ -293,7 +293,10 @@ const movementChronicle = (): Chronicle => {
 
 describe("createReplay", () => {
   it("keeps historical replay calls isolated from mutable current transitions", () => {
-    const source = readFileSync(new URL("./reconstruct.ts", import.meta.url), "utf8")
+    const source = readFileSync(
+      new URL("./reconstruct.ts", import.meta.url),
+      "utf8",
+    )
     const historicalBody = source.slice(
       source.indexOf("const createHistoricalValidatedReplay"),
       source.indexOf("const CURRENT_STATE_HASH_DOMAIN"),
