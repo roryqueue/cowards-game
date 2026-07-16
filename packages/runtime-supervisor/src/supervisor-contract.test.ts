@@ -17,7 +17,6 @@ import {
   verifySupervisorRawReceiptV118,
   type SupervisorInvocationRequestV118,
   type SupervisorRawReceiptEnvelopeV118,
-  type SupervisorVerificationResultV118,
 } from "./supervisor-contract.js"
 
 const hash = (character: string): `sha256:${string}` =>
@@ -188,7 +187,11 @@ const fixture = (): {
 }
 
 const expectFailure = (
-  result: SupervisorVerificationResultV118,
+  result: Readonly<{
+    ok: boolean
+    gameplayDisposition?: string
+    code?: string
+  }>,
   code?: string,
 ): void => {
   expect(result).toMatchObject({
