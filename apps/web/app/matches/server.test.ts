@@ -25,14 +25,32 @@ const board = {
       facing: "UP",
       lastSuccessfulMoveDirection: null,
     },
+    {
+      id: "soldier:top:1",
+      ownerPlayerId: "player:top",
+      status: "ACTIVE",
+      position: { x: 10, y: 1 },
+      facing: "DOWN",
+      lastSuccessfulMoveDirection: null,
+    },
   ],
   terrainStones: [],
 } satisfies Chronicle["snapshots"][number]["board"]
 
+const stonedBoard = {
+  ...board,
+  soldiers: board.soldiers.map((soldier) =>
+    soldier.id === "soldier:bottom:1"
+      ? { ...soldier, status: "STONE" as const }
+      : soldier,
+  ),
+} satisfies Chronicle["snapshots"][number]["board"]
+
 const activationContext = {
+  phaseNumber: 1,
   roundNumber: 1,
   activationIndex: 0,
-  activationId: "activation:1",
+  activationId: "1:1:0",
   actingPlayerId: "player:bottom",
   soldierId: "soldier:bottom:1",
 } satisfies Chronicle["events"][number]["context"]
@@ -41,7 +59,7 @@ const createChronicle = (): Chronicle => ({
   schemaVersion: "chronicle-v1.4",
   reproducibility: {
     matchId: "match:replay-test",
-    seed: "seed:replay-test",
+    seed: "seed:replay-testa",
     arenaVariantId: "arena:replay-test",
     arenaVariantVersion: COMPATIBILITY_VERSIONS.arenaVariant,
     strategyRevisionIds: ["revision:bottom", "revision:top"],
@@ -53,19 +71,26 @@ const createChronicle = (): Chronicle => ({
       sequence: 0,
       context: {},
       privacy: "public",
-      payload: { matchId: "match:replay-test" },
+      payload: {
+        matchId: "match:replay-test",
+        seed: "seed:replay-testa",
+      },
     },
     {
       type: "ROUND_STARTED",
       sequence: 1,
-      context: { roundNumber: 1 },
+      context: { phaseNumber: 1, roundNumber: 1 },
       privacy: "public",
       payload: { roundNumber: 1 },
     },
     {
       type: "STRATEGY_EVALUATED",
       sequence: 2,
-      context: { roundNumber: 1, actingPlayerId: "player:bottom" },
+      context: {
+        phaseNumber: 1,
+        roundNumber: 1,
+        actingPlayerId: "player:bottom",
+      },
       privacy: "owner",
       payload: {
         playerId: "player:bottom",
@@ -73,19 +98,36 @@ const createChronicle = (): Chronicle => ({
       },
     },
     {
-      type: "ACTIVATION_STARTED",
+      type: "STRATEGY_EVALUATED",
       sequence: 3,
+      context: {
+        phaseNumber: 1,
+        roundNumber: 1,
+        actingPlayerId: "player:top",
+      },
+      privacy: "owner",
+      payload: {
+        playerId: "player:top",
+      },
+    },
+    {
+      type: "ACTIVATION_STARTED",
+      sequence: 4,
       context: activationContext,
       privacy: "public",
       payload: { soldierId: "soldier:bottom:1" },
     },
     {
+      type: "CYCLE_STARTED",
+      sequence: 5,
+      context: { ...activationContext, cycleIndex: 0 },
+      privacy: "public",
+      payload: { soldierId: "soldier:bottom:1", cycleIndex: 0 },
+    },
+    {
       type: "AWARENESS_GRID_OBSERVED",
-      sequence: 4,
-      context: {
-        ...activationContext,
-        cycleIndex: 0,
-      },
+      sequence: 6,
+      context: { ...activationContext, cycleIndex: 0 },
       privacy: "owner",
       payload: {
         soldierId: "soldier:bottom:1",
@@ -96,11 +138,8 @@ const createChronicle = (): Chronicle => ({
     },
     {
       type: "ACTION_EMITTED",
-      sequence: 5,
-      context: {
-        ...activationContext,
-        cycleIndex: 0,
-      },
+      sequence: 7,
+      context: { ...activationContext, cycleIndex: 0 },
       privacy: "owner",
       payload: {
         soldierId: "soldier:bottom:1",
@@ -109,11 +148,38 @@ const createChronicle = (): Chronicle => ({
       },
     },
     {
+      type: "SOLDIER_STONED",
+      sequence: 8,
+      context: { ...activationContext, cycleIndex: 0 },
+      privacy: "public",
+      payload: {
+        soldierId: "soldier:bottom:1",
+        reason: "TURN_TO_STONE",
+      },
+    },
+    {
+      type: "CYCLE_ENDED",
+      sequence: 9,
+      context: { ...activationContext, cycleIndex: 0 },
+      privacy: "public",
+      payload: { soldierId: "soldier:bottom:1", cycleIndex: 0 },
+    },
+    {
+      type: "ACTIVATION_ENDED",
+      sequence: 10,
+      context: activationContext,
+      privacy: "public",
+      payload: {
+        soldierId: "soldier:bottom:1",
+        reason: "SOLDIER_STONED",
+      },
+    },
+    {
       type: "MATCH_ENDED",
-      sequence: 6,
+      sequence: 11,
       context: {},
       privacy: "public",
-      payload: { type: "WIN", winnerPlayerId: "player:bottom" },
+      payload: { type: "WIN", winnerPlayerId: "player:top" },
     },
   ],
   snapshots: [
@@ -121,40 +187,40 @@ const createChronicle = (): Chronicle => ({
     {
       kind: "ROUND_START",
       sequence: 1,
-      context: { roundNumber: 1 },
+      context: { phaseNumber: 1, roundNumber: 1 },
       board,
     },
     {
       kind: "ACTIVATION_START",
-      sequence: 3,
+      sequence: 4,
       context: activationContext,
       board,
     },
     {
       kind: "ACTIVATION_END",
-      sequence: 5,
+      sequence: 10,
       context: activationContext,
-      board,
+      board: stonedBoard,
     },
     {
       kind: "ROUND_END",
-      sequence: 5,
-      context: { roundNumber: 1 },
-      board,
+      sequence: 10,
+      context: { phaseNumber: 1, roundNumber: 1 },
+      board: stonedBoard,
     },
     {
       kind: "TERMINAL",
-      sequence: 6,
+      sequence: 11,
       context: {},
-      board,
-      outcome: { type: "WIN", winnerPlayerId: "player:bottom" },
+      board: stonedBoard,
+      outcome: { type: "WIN", winnerPlayerId: "player:top" },
     },
     {
       kind: "MATCH_END",
-      sequence: 6,
+      sequence: 11,
       context: {},
-      board,
-      outcome: { type: "WIN", winnerPlayerId: "player:bottom" },
+      board: stonedBoard,
+      outcome: { type: "WIN", winnerPlayerId: "player:top" },
     },
   ],
   private: {
