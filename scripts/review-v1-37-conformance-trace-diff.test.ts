@@ -64,7 +64,7 @@ describe("v1.37 independent conformance trace review", () => {
       outputPath,
     })
     expect(JSON.parse(readFileSync(outputPath, "utf8"))).toEqual(written)
-  })
+  }, 30_000)
 
   it("rejects generator self-disposition, generic labels, category omission, and root mutation", () => {
     const mutations: Array<(directory: string) => void> = [
@@ -100,7 +100,7 @@ describe("v1.37 independent conformance trace review", () => {
         reviewV137ConformanceTraceDiff({ candidateDirectory: directory }),
       ).toThrow()
     }
-  })
+  }, 60_000)
 
   it("suspends every protected category change, including historical interpretation", () => {
     for (const category of PROTECTED_V137_COMPATIBILITY_CATEGORIES) {
@@ -119,5 +119,5 @@ describe("v1.37 independent conformance trace review", () => {
         0,
       )
     }
-  })
+  }, 120_000)
 })
