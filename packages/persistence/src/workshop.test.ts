@@ -253,9 +253,14 @@ describe("Workshop service contracts", () => {
     ).toEqual(
       expect.objectContaining({
         experimental: false,
-        countedPlayEligible: true,
+        countedPlayEligible: false,
       }),
     )
+    expect(
+      listWorkshopTemplates().some(
+        (template) => template.countedPlayEligible === true,
+      ),
+    ).toBe(false)
   })
 
   it("ships the full v1.4 Starter Strategy Library as distinct playable doctrines", () => {
@@ -837,8 +842,8 @@ describe("Workshop service contracts", () => {
         /^strategy-revision:workshop:(typescript|python|rust|zig):sha256:[0-9a-f]{64}$/u,
       )
       expect(workshopRuntimeSemantics(revision)).toMatchObject({
-        countedPlayEligible: true,
-        countedPlayLabel: "Counted eligible",
+        countedPlayEligible: false,
+        countedPlayLabel: "Not counted",
       })
       const publicMetadata = publicWorkshopRevisionMetadata(revision.metadata)
       expect(JSON.stringify(publicMetadata)).not.toContain("bytesBase64")
