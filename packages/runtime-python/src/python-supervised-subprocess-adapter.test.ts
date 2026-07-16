@@ -1,4 +1,5 @@
 import { Buffer } from "node:buffer"
+import { generateKeyPairSync, sign as signBytes } from "node:crypto"
 import { readFileSync } from "node:fs"
 import {
   RUNTIME_BUDGET_PROFILE_V1_18_SHA256,
@@ -204,7 +205,12 @@ const launch =
     }
   }
 
-const signature = Buffer.alloc(64, 0x6b).toString("base64")
+const signingKeys = generateKeyPairSync("ed25519")
+const signingKeyId = "runtime-evidence-key:test:python"
+const signingPublicKeyPem = signingKeys.publicKey.export({
+  type: "spki",
+  format: "pem",
+}) as string
 
 const execute = (input?: {
   launch?: PythonSupervisorHostLaunchV118
@@ -220,9 +226,18 @@ const execute = (input?: {
     input?.signer ??
     vi.fn(() => ({
       algorithm: "Ed25519" as const,
-      keyId: "runtime-evidence-key:test:python",
-      signatureBase64: signature,
+      keyId: signingKeyId,
+      signatureBase64: "",
     }))
+  if (input?.signer === undefined) {
+    vi.mocked(signEvidence).mockImplementation((bytes) => ({
+      algorithm: "Ed25519",
+      keyId: signingKeyId,
+      signatureBase64: signBytes(null, bytes, signingKeys.privateKey).toString(
+        "base64",
+      ),
+    }))
+  }
   const adapter = createCountedPythonSupervisedAdapterV118({
     launchSupervisor: input?.launch ?? launch(),
     signEvidence,
@@ -231,6 +246,8 @@ const execute = (input?: {
       ...executableIdentity,
       ...input?.identityOverride,
     },
+    evidenceSigningPublicKeyPem: signingPublicKeyPem,
+    expectedSigningKeyId: signingKeyId,
   })
   return {
     result: adapter.execute({
@@ -529,6 +546,23 @@ describe("Python supervised subprocess adapter v1.18", () => {
           algorithm: "Ed25519",
           keyId: "runtime-evidence-key:test:python",
           signatureBase64: "bad",
+        }),
+      }).result,
+    ).toEqual({
+      kind: "system_failure",
+      gameplayDisposition: "no_mutation",
+      code: "EVIDENCE_SIGNING_FAILED",
+    })
+    expect(
+      execute({
+        signer: () => ({
+          algorithm: "Ed25519",
+          keyId: signingKeyId,
+          signatureBase64: signBytes(
+            null,
+            new TextEncoder().encode("different evidence"),
+            signingKeys.privateKey,
+          ).toString("base64"),
         }),
       }).result,
     ).toEqual({

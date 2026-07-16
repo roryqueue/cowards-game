@@ -1,5 +1,10 @@
 import { Buffer } from "node:buffer"
-import { createHash } from "node:crypto"
+import {
+  createHash,
+  createPublicKey,
+  verify as verifySignature,
+  type KeyObject,
+} from "node:crypto"
 import path from "node:path"
 import {
   RUNTIME_BUDGET_PROFILE_V1_18_SHA256,
@@ -362,13 +367,20 @@ const capabilityFor = (
     wasmtimeDefenseInDepth: null,
   })
 
-const validSignature = (value: PythonRuntimeEvidenceSignatureV118): boolean => {
+const validSignature = (
+  value: PythonRuntimeEvidenceSignatureV118,
+  evidenceBytes: Uint8Array,
+  publicKey: KeyObject | undefined,
+  expectedKeyId: string,
+): boolean => {
   if (
+    publicKey === undefined ||
     value === null ||
     typeof value !== "object" ||
     value.algorithm !== "Ed25519" ||
     typeof value.keyId !== "string" ||
     !PUBLIC_ID.test(value.keyId) ||
+    value.keyId !== expectedKeyId ||
     typeof value.signatureBase64 !== "string"
   ) {
     return false
@@ -376,7 +388,8 @@ const validSignature = (value: PythonRuntimeEvidenceSignatureV118): boolean => {
   const bytes = Buffer.from(value.signatureBase64, "base64")
   return (
     bytes.byteLength === 64 &&
-    bytes.toString("base64") === value.signatureBase64
+    bytes.toString("base64") === value.signatureBase64 &&
+    verifySignature(null, evidenceBytes, publicKey, bytes)
   )
 }
 
@@ -387,6 +400,8 @@ const signedEvidence = (
   signEvidence: (
     canonicalEvidenceBytes: Uint8Array,
   ) => PythonRuntimeEvidenceSignatureV118,
+  publicKey: KeyObject | undefined,
+  expectedKeyId: string,
 ): PythonSignedEvidenceV118 | undefined => {
   if (
     capability.kind !== "certificate_candidate" ||
@@ -419,7 +434,9 @@ const signedEvidence = (
       "authenticated-outer-envelope",
     )
     const signature = signEvidence(Uint8Array.from(bytes))
-    if (!validSignature(signature)) return undefined
+    if (!validSignature(signature, bytes, publicKey, expectedKeyId)) {
+      return undefined
+    }
     return deepFreeze({
       schemaVersion: "runtime-language-evidence-signature-v1.18" as const,
       evidence,
@@ -442,6 +459,8 @@ export const createCountedPythonSupervisedAdapterV118 = (options: {
   ) => PythonRuntimeEvidenceSignatureV118
   readonly execution: SupervisorExecutionDescriptorV118
   readonly expectedLanguageIdentity: PythonLanguageIdentityObservationV118
+  readonly evidenceSigningPublicKeyPem: string
+  readonly expectedSigningKeyId: string
 }): CountedPythonSupervisedAdapterV118 => {
   const launchSupervisor = options.launchSupervisor
   const signEvidence = options.signEvidence
@@ -451,6 +470,19 @@ export const createCountedPythonSupervisedAdapterV118 = (options: {
   const expectedLanguageIdentity = deepFreeze(
     globalThis.structuredClone(options.expectedLanguageIdentity),
   ) as PythonLanguageIdentityObservationV118
+  const expectedSigningKeyId = options.expectedSigningKeyId
+  let publicKey: KeyObject | undefined
+  try {
+    const candidate = createPublicKey(options.evidenceSigningPublicKeyPem)
+    if (
+      candidate.asymmetricKeyType === "ed25519" &&
+      PUBLIC_ID.test(expectedSigningKeyId)
+    ) {
+      publicKey = candidate
+    }
+  } catch {
+    publicKey = undefined
+  }
   return Object.freeze({
     lane: COUNTED_PYTHON_RUNTIME_V1_18,
     execute(input: CountedPythonSupervisedExecutionInputV118) {
@@ -514,6 +546,8 @@ export const createCountedPythonSupervisedAdapterV118 = (options: {
         input.invocation,
         capability,
         signEvidence,
+        publicKey,
+        expectedSigningKeyId,
       )
       if (signature === undefined) {
         return systemFailure("EVIDENCE_SIGNING_FAILED")
