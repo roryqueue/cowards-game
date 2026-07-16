@@ -454,6 +454,7 @@ const parseRuns = (
 ): {
   runs: RuntimeConformanceRunV117[]
   minimumValidUntil: number
+  minimumExecutionFreshUntil: number
   resultRootSha256: string
   evidenceRootSha256: string
 } => {
@@ -464,6 +465,7 @@ const parseRuns = (
   const parsed: RuntimeConformanceRunV117[] = []
   let previousRunId = ""
   let minimumValidUntil = Number.POSITIVE_INFINITY
+  let minimumExecutionFreshUntil = Number.POSITIVE_INFINITY
   let expectedResultRoot: string | undefined
   let expectedEvidenceRoot: string | undefined
   let expectedCaseCount: number | undefined
@@ -521,7 +523,15 @@ const parseRuns = (
     ) {
       fail("RUN_VALIDITY")
     }
+    const executionFreshUntil = completedAt + MAX_VALIDITY_MILLISECONDS
+    if (issuedAt > executionFreshUntil) {
+      fail("RUN_STALE_AT_ISSUANCE")
+    }
     minimumValidUntil = Math.min(minimumValidUntil, validUntil)
+    minimumExecutionFreshUntil = Math.min(
+      minimumExecutionFreshUntil,
+      executionFreshUntil,
+    )
     const resultRootSha256 = requireHash(
       run.resultRootSha256,
       "RUN_ROOT_MISMATCH",
@@ -565,6 +575,7 @@ const parseRuns = (
   return {
     runs: deepFreeze(parsed),
     minimumValidUntil,
+    minimumExecutionFreshUntil,
     resultRootSha256: expectedResultRoot!,
     evidenceRootSha256: expectedEvidenceRoot!,
   }
@@ -614,6 +625,7 @@ export const verifyRuntimeConformanceCertificateV117 = (
     requestedValidUntil,
     issuedAt + MAX_VALIDITY_MILLISECONDS,
     runEvidence.minimumValidUntil,
+    runEvidence.minimumExecutionFreshUntil,
   )
   if (signedFreshUntil !== computedFreshUntil || signedFreshUntil < issuedAt) {
     fail("FRESHNESS")

@@ -311,6 +311,15 @@ describe("runtime conformance certificate v1.17", () => {
       },
       "RUN_VALIDITY",
     ],
+    [
+      "issuance after the completed run freshness window",
+      (value: RuntimeConformanceCertificatePayloadV117) => {
+        value.runs[0]!.startedAt = "2026-06-01T00:00:00.000Z"
+        value.runs[0]!.completedAt = "2026-06-01T00:10:00.000Z"
+        value.runs[0]!.validUntil = "2026-09-01T00:00:00.000Z"
+      },
+      "RUN_STALE_AT_ISSUANCE",
+    ],
   ] as const)("rejects %s without minting a lane", (_name, mutate, code) => {
     const fixture = resignMutation(mutate)
     try {
@@ -386,6 +395,16 @@ describe("runtime conformance certificate v1.17", () => {
       })
     })
     expect(() => verifyFixture(wrongFreshness)).toThrow("FRESHNESS")
+
+    const completionCapped = signFixture((value) => {
+      value.runs.forEach((run) => {
+        run.validUntil = "2026-09-01T00:00:00.000Z"
+      })
+      value.freshUntil = "2026-08-14T00:10:00.000Z"
+    })
+    expect(verifyFixture(completionCapped).freshUntil).toBe(
+      "2026-08-14T00:10:00.000Z",
+    )
   })
 
   it("rejects invalid signatures, open shapes, and caller trust in production", () => {
