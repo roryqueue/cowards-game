@@ -1,0 +1,48 @@
+{
+  "schemaVersion": "v1.37-canonical-conformance-trace-v1",
+  "corpusVersion": "v1",
+  "corpusRootSha256": "sha256:4e13f5e14961c7b7efd6869c6e456c9f8cfeb1cdd2afd9ec17a93812ccbe76a9",
+  "caseId": "failure-malformed-output-player",
+  "semanticTupleId": "sha256:0d8a04fdfe49e3aa7261728ee51beb0a9049b661aad978277f2892c3a4bc54fe",
+  "resultClass": "player_violation",
+  "invocations": [
+    {
+      "ordinal": 0,
+      "invocationId": "invocation:failure-malformed-output-player:failure",
+      "methodName": "selectActivations",
+      "resultClass": "player_violation",
+      "stableCode": "INVALID_STRATEGY_PAYLOAD",
+      "failingBoundary": "decoded-strategy-payload",
+      "canonicalPayloadHash": null,
+      "strategyMemoryHash": "sha256:7cdc6a387add2b9d04e21a3bff342b4490870f64e48664afbf3c979ff6ad0238",
+      "soldierMemoryHash": "sha256:7cdc6a387add2b9d04e21a3bff342b4490870f64e48664afbf3c979ff6ad0238",
+      "objectiveHash": "sha256:b780c621649b27b6e59125300c6da4c81623927b2cca307ea16c80231aca7e0e",
+      "beforeObjectiveHash": "sha256:b780c621649b27b6e59125300c6da4c81623927b2cca307ea16c80231aca7e0e",
+      "afterObjectiveHash": "sha256:b780c621649b27b6e59125300c6da4c81623927b2cca307ea16c80231aca7e0e",
+      "beforeStateHash": "sha256:5df42ad91ac1f028963dc8be265a6fab5ef5152499fe3a28404a5e398a985cfe",
+      "afterStateHash": "sha256:5df42ad91ac1f028963dc8be265a6fab5ef5152499fe3a28404a5e398a985cfe",
+      "beforeMemoryHash": "sha256:7cdc6a387add2b9d04e21a3bff342b4490870f64e48664afbf3c979ff6ad0238",
+      "afterMemoryHash": "sha256:7cdc6a387add2b9d04e21a3bff342b4490870f64e48664afbf3c979ff6ad0238",
+      "gameplayMutation": false,
+      "memoryMutation": false,
+      "terminalEffectHash": null,
+      "retryable": false
+    }
+  ],
+  "transitions": [],
+  "finalStateHash": "sha256:5df42ad91ac1f028963dc8be265a6fab5ef5152499fe3a28404a5e398a985cfe",
+  "outcomeHash": "sha256:d00f63178e7bbdbcf7051fcd38bd398d879597bec6b9572eeafa1c10492f3ece",
+  "failure": {
+    "resultClass": "player_violation",
+    "stableCode": "INVALID_STRATEGY_PAYLOAD",
+    "failingBoundary": "decoded-strategy-payload",
+    "invocationOrdinal": 0,
+    "transitionOrdinal": null,
+    "gameplayMutation": false,
+    "memoryMutation": false,
+    "terminalEffectHash": null,
+    "retryable": false
+  },
+  "transitionTraceRoot": "sha256:71562612ed4d24b5995747cee43d8a7b0269ed596a7cf7f694f0c17484faf4f6",
+  "traceRoot": "sha256:10f24da5f188696bca37043b3d59ab9eae3fabc2f8b4a4068e35ae725bc22b14"
+}

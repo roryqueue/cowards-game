@@ -1,0 +1,11 @@
+{
+  "schemaVersion": "v1.37-conformance-trace-registry-v1",
+  "activeVersion": "v1.37-conformance-trace-v2",
+  "activePath": "packages/golden/src/fixtures/v1-37-conformance-traces/v1.37-conformance-trace-v2",
+  "candidateRootSha256": "sha256:ed75cc5b9f5441a727f98d566e70cf3e9a4147201b5fd7752becf9194e549d42",
+  "manifestSha256": "sha256:c0ef155cecc61dc52b6859018883b5d53ba46ac76c9fc87f1194657079283679",
+  "semanticDiffSha256": "sha256:73dd5a4b3e19c83d3b9605d2cb6014a07999e5196a55adcad6931f8bf0322115",
+  "independentReviewSha256": "sha256:8b919d8f5e9160822284a81da57963f7b39cdee8a3689bc903ab65a50da1c19c",
+  "compatibilityDispositionSha256": "sha256:4ff6328e0bbebbe39fd01ea7988579245c8bf4bf9781c549f0555a31a98549fb",
+  "caseCount": 16
+}

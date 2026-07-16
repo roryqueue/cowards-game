@@ -1,3 +1,6 @@
+import { createHash } from "node:crypto"
+import { readFileSync } from "node:fs"
+import path from "node:path"
 import { MATCH_KERNEL, type StrategyRuntime } from "@cowards/engine"
 import { adaptRuntimeForCurrentKernel } from "@cowards/engine/test/current-kernel-runtime"
 import {
@@ -1647,5 +1650,66 @@ describe("v1.37 canonical conformance trace", () => {
         "diagnostics",
       ]),
     )
+  })
+
+  it("binds the active trace oracle to exact independently reviewed immutable evidence", () => {
+    const root = path.resolve(import.meta.dirname, "../../..")
+    const fixtureRoot = path.join(
+      root,
+      "packages/golden/src/fixtures/v1-37-conformance-traces",
+    )
+    const registryBytes = readFileSync(path.join(fixtureRoot, "registry.json"))
+    const registry = JSON.parse(registryBytes.toString("utf8"))
+    const activeDirectory = path.join(fixtureRoot, registry.activeVersion)
+    const manifestBytes = readFileSync(
+      path.join(activeDirectory, "manifest.json"),
+    )
+    const diffBytes = readFileSync(
+      path.join(activeDirectory, "semantic-diff.json"),
+    )
+    const reviewBytes = readFileSync(
+      path.join(activeDirectory, "independent-review.json"),
+    )
+    const dispositionBytes = readFileSync(
+      path.join(activeDirectory, "compatibility-disposition.json"),
+    )
+    const manifest = JSON.parse(manifestBytes.toString("utf8"))
+    const review = JSON.parse(reviewBytes.toString("utf8"))
+    const disposition = JSON.parse(dispositionBytes.toString("utf8"))
+    const digest = (bytes: Uint8Array) =>
+      `sha256:${createHash("sha256").update(bytes).digest("hex")}`
+
+    expect(registry).toMatchObject({
+      schemaVersion: "v1.37-conformance-trace-registry-v1",
+      activeVersion: "v1.37-conformance-trace-v2",
+      activePath:
+        "packages/golden/src/fixtures/v1-37-conformance-traces/v1.37-conformance-trace-v2",
+      candidateRootSha256: manifest.candidateRootSha256,
+      manifestSha256: digest(manifestBytes),
+      semanticDiffSha256: digest(diffBytes),
+      independentReviewSha256: digest(reviewBytes),
+      compatibilityDispositionSha256: digest(dispositionBytes),
+      caseCount: 16,
+    })
+    expect(review).toMatchObject({
+      status: "no_semantic_delta",
+      computedCandidateRootSha256: registry.candidateRootSha256,
+      caseCount: 16,
+    })
+    expect(
+      Object.values(review.protectedCategories).every(
+        (value: unknown) =>
+          typeof value === "object" &&
+          value !== null &&
+          (value as { changeCount?: unknown }).changeCount === 0,
+      ),
+    ).toBe(true)
+    expect(disposition).toMatchObject({
+      status: "no_semantic_delta",
+      candidateRootSha256: registry.candidateRootSha256,
+      independentReviewSha256: registry.independentReviewSha256,
+      approval: null,
+    })
+    expect(manifest.cases).toHaveLength(16)
   })
 })

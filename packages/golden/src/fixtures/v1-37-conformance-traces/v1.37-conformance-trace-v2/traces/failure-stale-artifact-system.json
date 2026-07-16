@@ -1,0 +1,48 @@
+{
+  "schemaVersion": "v1.37-canonical-conformance-trace-v1",
+  "corpusVersion": "v1",
+  "corpusRootSha256": "sha256:4e13f5e14961c7b7efd6869c6e456c9f8cfeb1cdd2afd9ec17a93812ccbe76a9",
+  "caseId": "failure-stale-artifact-system",
+  "semanticTupleId": "sha256:0d8a04fdfe49e3aa7261728ee51beb0a9049b661aad978277f2892c3a4bc54fe",
+  "resultClass": "system_failure",
+  "invocations": [
+    {
+      "ordinal": 0,
+      "invocationId": "invocation:failure-stale-artifact-system:failure",
+      "methodName": "selectActivations",
+      "resultClass": "system_failure",
+      "stableCode": "ARTIFACT_IDENTITY_MISMATCH",
+      "failingBoundary": "pre-invocation-identity",
+      "canonicalPayloadHash": null,
+      "strategyMemoryHash": "sha256:76b554382feac5224af5904d44633b3ab3a50d5a6a0f4e1170728941e8e7a784",
+      "soldierMemoryHash": "sha256:76b554382feac5224af5904d44633b3ab3a50d5a6a0f4e1170728941e8e7a784",
+      "objectiveHash": "sha256:5cc866b5bdcf627fd9ab15df2c80fdacac99e475c91ab52a28e74beefd08528b",
+      "beforeObjectiveHash": "sha256:5cc866b5bdcf627fd9ab15df2c80fdacac99e475c91ab52a28e74beefd08528b",
+      "afterObjectiveHash": "sha256:5cc866b5bdcf627fd9ab15df2c80fdacac99e475c91ab52a28e74beefd08528b",
+      "beforeStateHash": "sha256:318a8b3d200e2aeb9254f0e61df67b6f9e49d83f7df191969825b702b431b862",
+      "afterStateHash": "sha256:318a8b3d200e2aeb9254f0e61df67b6f9e49d83f7df191969825b702b431b862",
+      "beforeMemoryHash": "sha256:76b554382feac5224af5904d44633b3ab3a50d5a6a0f4e1170728941e8e7a784",
+      "afterMemoryHash": "sha256:76b554382feac5224af5904d44633b3ab3a50d5a6a0f4e1170728941e8e7a784",
+      "gameplayMutation": false,
+      "memoryMutation": false,
+      "terminalEffectHash": null,
+      "retryable": false
+    }
+  ],
+  "transitions": [],
+  "finalStateHash": "sha256:318a8b3d200e2aeb9254f0e61df67b6f9e49d83f7df191969825b702b431b862",
+  "outcomeHash": "sha256:1c80266522561e4244f7ba8e848a6c7a8df181cb1fcd6051f2d22d006040ba92",
+  "failure": {
+    "resultClass": "system_failure",
+    "stableCode": "ARTIFACT_IDENTITY_MISMATCH",
+    "failingBoundary": "pre-invocation-identity",
+    "invocationOrdinal": 0,
+    "transitionOrdinal": null,
+    "gameplayMutation": false,
+    "memoryMutation": false,
+    "terminalEffectHash": null,
+    "retryable": false
+  },
+  "transitionTraceRoot": "sha256:71562612ed4d24b5995747cee43d8a7b0269ed596a7cf7f694f0c17484faf4f6",
+  "traceRoot": "sha256:f14bd746032a15b94aed26caa46784358281d426427ff854b04aeb9702c86b56"
+}

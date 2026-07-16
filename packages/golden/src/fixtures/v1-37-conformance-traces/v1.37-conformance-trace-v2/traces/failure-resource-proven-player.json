@@ -1,0 +1,48 @@
+{
+  "schemaVersion": "v1.37-canonical-conformance-trace-v1",
+  "corpusVersion": "v1",
+  "corpusRootSha256": "sha256:4e13f5e14961c7b7efd6869c6e456c9f8cfeb1cdd2afd9ec17a93812ccbe76a9",
+  "caseId": "failure-resource-proven-player",
+  "semanticTupleId": "sha256:0d8a04fdfe49e3aa7261728ee51beb0a9049b661aad978277f2892c3a4bc54fe",
+  "resultClass": "player_violation",
+  "invocations": [
+    {
+      "ordinal": 0,
+      "invocationId": "invocation:failure-resource-proven-player:failure",
+      "methodName": "selectActivations",
+      "resultClass": "player_violation",
+      "stableCode": "RESOURCE_EXHAUSTION",
+      "failingBoundary": "guest-method",
+      "canonicalPayloadHash": null,
+      "strategyMemoryHash": "sha256:170cba61fa00ea88ef35efc94f8f0cf856459edc9f820dc7869a8f3e7fac30ee",
+      "soldierMemoryHash": "sha256:170cba61fa00ea88ef35efc94f8f0cf856459edc9f820dc7869a8f3e7fac30ee",
+      "objectiveHash": "sha256:c3f6ef1bf2a5a90c6ee9f4b3c7bbc6a8c8a503fea741e85127bbf6220de7530c",
+      "beforeObjectiveHash": "sha256:c3f6ef1bf2a5a90c6ee9f4b3c7bbc6a8c8a503fea741e85127bbf6220de7530c",
+      "afterObjectiveHash": "sha256:c3f6ef1bf2a5a90c6ee9f4b3c7bbc6a8c8a503fea741e85127bbf6220de7530c",
+      "beforeStateHash": "sha256:b8a958609479fc2ced6b51a760fee53b921e6063a521ee8d26919b7a4192f63d",
+      "afterStateHash": "sha256:b8a958609479fc2ced6b51a760fee53b921e6063a521ee8d26919b7a4192f63d",
+      "beforeMemoryHash": "sha256:170cba61fa00ea88ef35efc94f8f0cf856459edc9f820dc7869a8f3e7fac30ee",
+      "afterMemoryHash": "sha256:170cba61fa00ea88ef35efc94f8f0cf856459edc9f820dc7869a8f3e7fac30ee",
+      "gameplayMutation": false,
+      "memoryMutation": false,
+      "terminalEffectHash": null,
+      "retryable": false
+    }
+  ],
+  "transitions": [],
+  "finalStateHash": "sha256:b8a958609479fc2ced6b51a760fee53b921e6063a521ee8d26919b7a4192f63d",
+  "outcomeHash": "sha256:d8efcacde49e2226a3ad440ecf04105f1faa797463f17ccdb8d56803752ac7df",
+  "failure": {
+    "resultClass": "player_violation",
+    "stableCode": "RESOURCE_EXHAUSTION",
+    "failingBoundary": "guest-method",
+    "invocationOrdinal": 0,
+    "transitionOrdinal": null,
+    "gameplayMutation": false,
+    "memoryMutation": false,
+    "terminalEffectHash": null,
+    "retryable": false
+  },
+  "transitionTraceRoot": "sha256:71562612ed4d24b5995747cee43d8a7b0269ed596a7cf7f694f0c17484faf4f6",
+  "traceRoot": "sha256:7ab92634d7a17d8b2bc1c6a16fdc67f501abeb8a0c445652ee2b2949a65e2a5d"
+}

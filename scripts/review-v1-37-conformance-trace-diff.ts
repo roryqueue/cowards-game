@@ -853,6 +853,78 @@ export const writeV137ConformanceTraceIndependentReview = ({
   return review
 }
 
+export const checkV137ConformanceTraceCheckpointDisposition = (
+  reviewPath: string,
+): "no_semantic_delta" => {
+  const bytes = readRegularFileNoFollow(path.resolve(reviewPath))
+  if (bytes === undefined) return fail("CHECKPOINT_REVIEW_NOT_REGULAR")
+  let review: V137ConformanceTraceIndependentReview
+  try {
+    review = JSON.parse(
+      bytes.toString("utf8"),
+    ) as V137ConformanceTraceIndependentReview
+  } catch {
+    return fail("CHECKPOINT_REVIEW_INVALID")
+  }
+  if (
+    bytes.toString("utf8") !== renderJson(review) ||
+    !exactKeys(review, [
+      "schemaVersion",
+      "reviewedBy",
+      "candidateVersion",
+      "corpusVersion",
+      "corpusRootSha256",
+      "semanticTupleId",
+      "candidateManifestSha256",
+      "claimedCandidateRootSha256",
+      "computedCandidateRootSha256",
+      "semanticDiffSha256",
+      "claimedSemanticDiffRootSha256",
+      "computedSemanticDiffRootSha256",
+      "caseCount",
+      "caseTraceRootsSha256",
+      "protectedCategories",
+      "status",
+    ]) ||
+    review.schemaVersion !== "v1.37-conformance-trace-independent-review-v1" ||
+    review.reviewedBy !== "scripts/review-v1-37-conformance-trace-diff.ts" ||
+    !exactKeys(
+      review.protectedCategories,
+      PROTECTED_V137_COMPATIBILITY_CATEGORIES,
+    ) ||
+    !PROTECTED_V137_COMPATIBILITY_CATEGORIES.every((category) => {
+      const value = review.protectedCategories[category]
+      return (
+        exactKeys(value, [
+          "baselineHash",
+          "candidateHash",
+          "recomputedCandidateHash",
+          "changeCount",
+        ]) &&
+        Number.isSafeInteger(value.changeCount) &&
+        value.changeCount >= 0
+      )
+    })
+  ) {
+    return fail("CHECKPOINT_REVIEW_INVALID")
+  }
+  if (review.status === "suspended_pending_approval") {
+    return fail("EXACT_COMPATIBILITY_CHECKPOINT_REQUIRED")
+  }
+  if (
+    review.status !== "no_semantic_delta" ||
+    !PROTECTED_V137_COMPATIBILITY_CATEGORIES.every(
+      (category) =>
+        review.protectedCategories[category].changeCount === 0 &&
+        review.protectedCategories[category].candidateHash ===
+          review.protectedCategories[category].recomputedCandidateHash,
+    )
+  ) {
+    return fail("CHECKPOINT_REVIEW_INVALID")
+  }
+  return "no_semantic_delta"
+}
+
 const parseArgs = (
   args: readonly string[],
 ): {
@@ -878,7 +950,17 @@ const parseArgs = (
 }
 
 const main = (): void => {
-  const args = parseArgs(process.argv.slice(2))
+  const rawArgs = process.argv.slice(2)
+  const checkpoint = rawArgs[0]?.startsWith("--check-checkpoint-disposition=")
+  if (checkpoint && rawArgs.length === 1) {
+    const reviewPath = rawArgs[0]!.slice(
+      "--check-checkpoint-disposition=".length,
+    )
+    checkV137ConformanceTraceCheckpointDisposition(reviewPath)
+    console.log("v1.37 conformance trace checkpoint: no semantic delta")
+    return
+  }
+  const args = parseArgs(rawArgs)
   const review = writeV137ConformanceTraceIndependentReview(args)
   if (
     readFileSync(path.resolve(args.outputPath), "utf8") !== renderJson(review)

@@ -18,6 +18,7 @@ import {
   V1_37_CONFORMANCE_CORPUS_ROOT,
 } from "../packages/golden/src/v1-37-conformance-corpus.js"
 import {
+  assertV137ActiveConformanceTraceCheckArgs,
   assertV137ConformanceTraceCheckArgs,
   checkV137ConformanceTraceCandidate,
 } from "./check-v1-37-conformance-traces.js"
@@ -68,6 +69,24 @@ describe("v1.37 conformance trace candidate checker", () => {
     ]) {
       expect(() => assertV137ConformanceTraceCheckArgs(args)).toThrow(
         "READ_ONLY_CHECK_ARGUMENTS",
+      )
+    }
+    expect(
+      assertV137ActiveConformanceTraceCheckArgs([
+        "--check-active",
+        "--require-independent-review",
+      ]),
+    ).toEqual({
+      checkActive: true,
+      requireIndependentReview: true,
+    })
+    for (const args of [
+      ["--check-active"],
+      ["--check-active", "--write"],
+      ["--require-independent-review", "--check-active"],
+    ]) {
+      expect(() => assertV137ActiveConformanceTraceCheckArgs(args)).toThrow(
+        "READ_ONLY_ACTIVE_CHECK_ARGUMENTS",
       )
     }
   }, 30_000)

@@ -1,0 +1,173 @@
+{
+  "schemaVersion": "v1.37-conformance-trace-candidate-v1",
+  "candidateVersion": "v1.37-conformance-trace-v2",
+  "corpusVersion": "v1",
+  "corpusRootSha256": "sha256:4e13f5e14961c7b7efd6869c6e456c9f8cfeb1cdd2afd9ec17a93812ccbe76a9",
+  "semanticTupleId": "sha256:0d8a04fdfe49e3aa7261728ee51beb0a9049b661aad978277f2892c3a4bc54fe",
+  "generatedBy": "scripts/generate-v1-37-conformance-traces.ts",
+  "authoritySource": "canonical-engine-kernel-recording",
+  "recordingApi": "RecordedCanonicalTransitionV137",
+  "projectorApi": "projectCanonicalConformanceTrace",
+  "policy": "candidate-only-no-live-lane-oracle-no-promotion",
+  "caseCount": 16,
+  "cases": [
+    {
+      "ordinal": 0,
+      "caseId": "boundary-canonical-json-duplicate-key",
+      "traceRef": "trace:boundary-canonical-json-duplicate-key",
+      "resultClass": "player_violation",
+      "tracePath": "traces/boundary-canonical-json-duplicate-key.json",
+      "traceFileSha256": "sha256:cbdf82760cc5724418836e5cac58ecd4d5399258bf4fbb94e292518d0183987d",
+      "traceRoot": "sha256:7653ea1b7984bcc45638c80c382602445282fb32fc8a483a9151917f74cd783d"
+    },
+    {
+      "ordinal": 1,
+      "caseId": "boundary-depth-limit",
+      "traceRef": "trace:boundary-depth-limit",
+      "resultClass": "player_violation",
+      "tracePath": "traces/boundary-depth-limit.json",
+      "traceFileSha256": "sha256:a08a0426f36012d7f14e5f0bdda8ae26631cb8c0791da7b68f342a0203a48902",
+      "traceRoot": "sha256:1f3d58cbf5ddb0237d624716577668617fab5c4c37a0ab6e8686e3955dabbd40"
+    },
+    {
+      "ordinal": 2,
+      "caseId": "boundary-numeric-negative-zero",
+      "traceRef": "trace:boundary-numeric-negative-zero",
+      "resultClass": "success",
+      "tracePath": "traces/boundary-numeric-negative-zero.json",
+      "traceFileSha256": "sha256:754b6bc51b178e0a98efd84b7612532c4098a2faaa6b3228046c3524b24d9655",
+      "traceRoot": "sha256:1f4325756588fb511d37e8e37e250f9d22cc931731c913c84fdcba00f90b896a"
+    },
+    {
+      "ordinal": 3,
+      "caseId": "boundary-unicode-scalar",
+      "traceRef": "trace:boundary-unicode-scalar",
+      "resultClass": "success",
+      "tracePath": "traces/boundary-unicode-scalar.json",
+      "traceFileSha256": "sha256:f0009841c6b8d62a3f00e366876bd9f21f78e621c8595104adf21e8904e2cc5e",
+      "traceRoot": "sha256:5f86af1ae8454bc43aff2495c504c108b9529be2626a945653ddc814f1095db0"
+    },
+    {
+      "ordinal": 4,
+      "caseId": "failure-malformed-output-player",
+      "traceRef": "trace:failure-malformed-output-player",
+      "resultClass": "player_violation",
+      "tracePath": "traces/failure-malformed-output-player.json",
+      "traceFileSha256": "sha256:5885a5da48cd43ab2540a44aa13f504a2150a32de0f031105fd7b78e23aff677",
+      "traceRoot": "sha256:10f24da5f188696bca37043b3d59ab9eae3fabc2f8b4a4068e35ae725bc22b14"
+    },
+    {
+      "ordinal": 5,
+      "caseId": "failure-resource-proven-player",
+      "traceRef": "trace:failure-resource-proven-player",
+      "resultClass": "player_violation",
+      "tracePath": "traces/failure-resource-proven-player.json",
+      "traceFileSha256": "sha256:5110938a1f833e942d2388a4008a0ed41a516bea174a9b10cf4580d9d42262d7",
+      "traceRoot": "sha256:7ab92634d7a17d8b2bc1c6a16fdc67f501abeb8a0c445652ee2b2949a65e2a5d"
+    },
+    {
+      "ordinal": 6,
+      "caseId": "failure-stale-artifact-system",
+      "traceRef": "trace:failure-stale-artifact-system",
+      "resultClass": "system_failure",
+      "tracePath": "traces/failure-stale-artifact-system.json",
+      "traceFileSha256": "sha256:79b2ca3d06c4f71894c5aa1fc7081559171a460c3f09c20cbae149ecbd21a197",
+      "traceRoot": "sha256:f14bd746032a15b94aed26caa46784358281d426427ff854b04aeb9702c86b56"
+    },
+    {
+      "ordinal": 7,
+      "caseId": "failure-timeout-unattributed-system",
+      "traceRef": "trace:failure-timeout-unattributed-system",
+      "resultClass": "system_failure",
+      "tracePath": "traces/failure-timeout-unattributed-system.json",
+      "traceFileSha256": "sha256:95c6b00b9b0966b4133d091a5759c476c5ab36e5f5a09c8c133d5277c12cc236",
+      "traceRoot": "sha256:3cb6379fc7638177d8a8d8f6f06d03bbaf9aab9c5ba2f562c9c96b957b539bd7"
+    },
+    {
+      "ordinal": 8,
+      "caseId": "failure-toolchain-unavailable-system",
+      "traceRef": "trace:failure-toolchain-unavailable-system",
+      "resultClass": "system_failure",
+      "tracePath": "traces/failure-toolchain-unavailable-system.json",
+      "traceFileSha256": "sha256:e24c114f27e6f19496410b8f0c331b23842a20c1df1ca2307e3d4688ea0ffc10",
+      "traceRoot": "sha256:d44cd2154aa52904b6fbb4211b59c5e4cd75200cbdb9f17576172109f6230e0b"
+    },
+    {
+      "ordinal": 9,
+      "caseId": "mutation-event-order-kill",
+      "traceRef": "trace:mutation-event-order-kill",
+      "resultClass": "success",
+      "tracePath": "traces/mutation-event-order-kill.json",
+      "traceFileSha256": "sha256:35b9c7a5e8055a40cfc88c65f05522ae909870dc46e4397996ff9bab1588e5e7",
+      "traceRoot": "sha256:2e42f5c84bafb37acb3e291025db6f3f6eaab8e5a6e00fc67eed3de4ad32e28a"
+    },
+    {
+      "ordinal": 10,
+      "caseId": "normative-first-active-turn-to-stone",
+      "traceRef": "trace:normative-first-active-turn-to-stone",
+      "resultClass": "success",
+      "tracePath": "traces/normative-first-active-turn-to-stone.json",
+      "traceFileSha256": "sha256:1922da4e33283f0e6be68582ec707580c19e9650ace8b9b31d0297dcacd10245",
+      "traceRoot": "sha256:045457e74739ddb332618cbad33c7321e90d573db68398294127f7508df0d42e"
+    },
+    {
+      "ordinal": 11,
+      "caseId": "probe-raw-envelope-authentication",
+      "traceRef": "trace:probe-raw-envelope-authentication",
+      "resultClass": "system_failure",
+      "tracePath": "traces/probe-raw-envelope-authentication.json",
+      "traceFileSha256": "sha256:cbc449050b6e6fea70de027abf99274684305d9283df0ddee29b0f21fff6466b",
+      "traceRoot": "sha256:6ea40afc2fc97b73a64048707a3ae9ca408e72df7d27147db951448eef854ee1"
+    },
+    {
+      "ordinal": 12,
+      "caseId": "probe-raw-envelope-transport-truncation",
+      "traceRef": "trace:probe-raw-envelope-transport-truncation",
+      "resultClass": "system_failure",
+      "tracePath": "traces/probe-raw-envelope-transport-truncation.json",
+      "traceFileSha256": "sha256:e1d6201756f9577796b09c1f802ee5df8de4a8f462bcf5f73dbf5259a93865d1",
+      "traceRoot": "sha256:ccad210f6ef23c9138cb319bc0e68a347366cc65a3eb3e3d00ed8bd9acce1abd"
+    },
+    {
+      "ordinal": 13,
+      "caseId": "property-deterministic-repeat-seed-001",
+      "traceRef": "trace:property-deterministic-repeat-seed-001",
+      "resultClass": "success",
+      "tracePath": "traces/property-deterministic-repeat-seed-001.json",
+      "traceFileSha256": "sha256:355cd30a4e6b44db212b5d78a6023731f3d3409e2cf7af255cea9f7a5fbea097",
+      "traceRoot": "sha256:df4a5c379c0dafe1ba4387c7147d4db838bbacc0386997753eedd876ec87215a"
+    },
+    {
+      "ordinal": 14,
+      "caseId": "property-differential-full-trace-seed-002",
+      "traceRef": "trace:property-differential-full-trace-seed-002",
+      "resultClass": "success",
+      "tracePath": "traces/property-differential-full-trace-seed-002.json",
+      "traceFileSha256": "sha256:33ea368d5cf346b402de55b22598477d4c7c90c753a5fa8eaa89842334f6b1a0",
+      "traceRoot": "sha256:f5dae60f51decea7c28eb52429b867ef46f3c3a7dabfcc45767eb90ab482a80e"
+    },
+    {
+      "ordinal": 15,
+      "caseId": "property-seeded-selection-seed-003",
+      "traceRef": "trace:property-seeded-selection-seed-003",
+      "resultClass": "success",
+      "tracePath": "traces/property-seeded-selection-seed-003.json",
+      "traceFileSha256": "sha256:79ffc49fdfe52700ccdc7a9982c1328b3dfbbaa535834693244116a2c9b03130",
+      "traceRoot": "sha256:edbdc7a0d54ea21b73c014828816836a0a9a773d299f1a232b9df2e47afe0e4b"
+    }
+  ],
+  "compatibilityEvidence": {
+    "baselineVersion": "v1.4-locked-compatibility-v1",
+    "candidateCorpusVersion": "v1.4-full-observation-compatibility-v1",
+    "protectedCategories": {
+      "validV14State": "sha256:c46fdc14b65e130aaf9f63cde1e1efd416df81e3de629815b2cd36dba344beb5",
+      "actionLegality": "sha256:69efa4fcfe787e575cc2d9b2abbe7ff71c2b5a3dd966fd23f50b7923cc321768",
+      "eventOrder": "sha256:ee5477ea2eae1dfffd1d938afd96a058c23ba76f5809a4ccfcc3239bf4506c1d",
+      "outcome": "sha256:841541f014068df9a45269f420338fbc827b5a425ac5fb39ffe7a1c064d6bb1a",
+      "terminalTimingReason": "sha256:ad68eb823bed0e27aebe802e666b8890cc3a13adc4965d19c3b4989b3be117c9",
+      "strategyObservation": "sha256:2793952f23e7b019f24e6c76eca1304ef9970e03ee752c2768a7a3c0fc5b1e50",
+      "historicalInterpretation": "sha256:69698d5f0cb3796046ee6d8bc760912ede025e3c3d6411214f5f70b04adff645"
+    }
+  },
+  "candidateRootSha256": "sha256:ed75cc5b9f5441a727f98d566e70cf3e9a4147201b5fd7752becf9194e549d42"
+}

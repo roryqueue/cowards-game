@@ -21,6 +21,7 @@ import {
 } from "./generate-v1-37-conformance-traces.js"
 import {
   PROTECTED_V137_COMPATIBILITY_CATEGORIES,
+  checkV137ConformanceTraceCheckpointDisposition,
   reviewV137ConformanceTraceDiff,
   writeV137ConformanceTraceIndependentReview,
 } from "./review-v1-37-conformance-trace-diff.js"
@@ -274,5 +275,31 @@ describe("v1.37 independent conformance trace review", () => {
       review.protectedCategories.historicalInterpretation.changeCount,
     ).toBe(1)
     expect(review.protectedCategories.validV14State.changeCount).toBe(0)
+  }, 30_000)
+
+  it("skips the compatibility checkpoint only for an exact zero-delta review", () => {
+    const directory = candidate()
+    const outputPath = path.join(directory, "independent-review.json")
+    writeV137ConformanceTraceIndependentReview({
+      candidateDirectory: directory,
+      outputPath,
+    })
+    expect(checkV137ConformanceTraceCheckpointDisposition(outputPath)).toBe(
+      "no_semantic_delta",
+    )
+
+    const review = JSON.parse(readFileSync(outputPath, "utf8"))
+    review.status = "suspended_pending_approval"
+    review.protectedCategories.strategyObservation.changeCount = 1
+    writeFileSync(outputPath, render(review))
+    expect(() =>
+      checkV137ConformanceTraceCheckpointDisposition(outputPath),
+    ).toThrow("EXACT_COMPATIBILITY_CHECKPOINT_REQUIRED")
+
+    review.status = "approved"
+    writeFileSync(outputPath, render(review))
+    expect(() =>
+      checkV137ConformanceTraceCheckpointDisposition(outputPath),
+    ).toThrow("CHECKPOINT_REVIEW_INVALID")
   }, 30_000)
 })

@@ -401,8 +401,33 @@ export const assertV137ConformanceTraceCheckArgs = (
   return { candidateDirectory, check: true }
 }
 
-const main = (): void => {
-  const args = assertV137ConformanceTraceCheckArgs(process.argv.slice(2))
+export const assertV137ActiveConformanceTraceCheckArgs = (
+  args: readonly string[],
+): { readonly checkActive: true; readonly requireIndependentReview: true } => {
+  if (
+    args.length !== 2 ||
+    args[0] !== "--check-active" ||
+    args[1] !== "--require-independent-review"
+  ) {
+    return fail("READ_ONLY_ACTIVE_CHECK_ARGUMENTS")
+  }
+  return { checkActive: true, requireIndependentReview: true }
+}
+
+const main = async (): Promise<void> => {
+  const rawArgs = process.argv.slice(2)
+  if (rawArgs[0] === "--check-active") {
+    assertV137ActiveConformanceTraceCheckArgs(rawArgs)
+    const { checkActiveV137ConformanceTrace } =
+      await import("./promote-v1-37-conformance-traces.js")
+    const errors = checkActiveV137ConformanceTrace({
+      repoRoot: path.resolve(import.meta.dirname, ".."),
+    })
+    if (errors.length > 0) throw new Error(errors.join("\n"))
+    console.log("v1.37 active conformance trace and independent review current")
+    return
+  }
+  const args = assertV137ConformanceTraceCheckArgs(rawArgs)
   const errors = checkV137ConformanceTraceCandidate(args)
   if (errors.length > 0) throw new Error(errors.join("\n"))
   console.log(
@@ -411,10 +436,8 @@ const main = (): void => {
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
-  try {
-    main()
-  } catch (error) {
+  void main().catch((error: unknown) => {
     console.error(error instanceof Error ? error.message : String(error))
     process.exitCode = 1
-  }
+  })
 }
