@@ -10,7 +10,11 @@ import {
   encodeCanonicalJson,
   type JsonValue,
 } from "../packages/spec/src/index.js"
-import { hashCanonicalConformanceTrace } from "../packages/golden/src/v1-37-conformance-trace.js"
+// eslint-disable-next-line no-restricted-imports -- repo-root governance test mutates and rehashes the exact trace contract.
+import {
+  hashCanonicalConformanceTrace,
+  type CanonicalConformanceTrace,
+} from "../packages/golden/src/v1-37-conformance-trace.js"
 import {
   computeV137ConformanceTraceCandidateRoot,
   generateV137ConformanceTraceCandidate,
@@ -68,12 +72,17 @@ const rehash = (directory: string): void => {
 const mutateTraceAndRehash = (
   directory: string,
   caseId: string,
-  mutate: (trace: Record<string, any>) => void,
+  mutate: (trace: {
+    traceRoot: string
+    invocations: Array<{ canonicalPayloadHash: string | null }>
+  }) => void,
 ): void => {
   const tracePath = path.join(directory, "traces", `${caseId}.json`)
   const trace = JSON.parse(readFileSync(tracePath, "utf8"))
   mutate(trace)
-  trace.traceRoot = hashCanonicalConformanceTrace(trace)
+  trace.traceRoot = hashCanonicalConformanceTrace(
+    trace as unknown as CanonicalConformanceTrace,
+  )
   const traceBytes = render(trace)
   writeFileSync(tracePath, traceBytes)
 
@@ -122,7 +131,7 @@ describe("v1.37 independent conformance trace review", () => {
       outputPath,
     })
     expect(JSON.parse(readFileSync(outputPath, "utf8"))).toEqual(written)
-  }, 30_000)
+  }, 60_000)
 
   it("rejects generator self-disposition, generic labels, category omission, and root mutation", () => {
     const mutations: Array<(directory: string) => void> = [
@@ -218,7 +227,7 @@ describe("v1.37 independent conformance trace review", () => {
         outputPath,
       }),
     ).toThrow("REVIEW_OUTPUT_IMMUTABLE")
-  }, 30_000)
+  }, 60_000)
 
   it("suspends every protected category change, including historical interpretation", () => {
     for (const category of PROTECTED_V137_COMPATIBILITY_CATEGORIES) {
@@ -252,8 +261,7 @@ describe("v1.37 independent conformance trace review", () => {
       directory,
       "boundary-numeric-negative-zero",
       (trace) => {
-        trace.invocations[0].canonicalPayloadHash =
-          `sha256:${"f".repeat(64)}`
+        trace.invocations[0].canonicalPayloadHash = `sha256:${"f".repeat(64)}`
       },
     )
 

@@ -1,8 +1,16 @@
 #!/usr/bin/env -S pnpm exec tsx
 /// <reference types="node" />
 
+import type { Buffer } from "node:buffer"
 import { createHash } from "node:crypto"
-import { existsSync, readFileSync, readdirSync } from "node:fs"
+import {
+  closeSync,
+  constants,
+  lstatSync,
+  openSync,
+  readFileSync,
+  readdirSync,
+} from "node:fs"
 import path from "node:path"
 import { pathToFileURL } from "node:url"
 // eslint-disable-next-line no-restricted-imports -- checker binds the exact immutable compatibility corpus identity.
@@ -57,8 +65,24 @@ const canonicalHash = (domain: string, value: JsonValue): string => {
     .update(encoded.bytes)
     .digest("hex")}`
 }
-const readJson = <T>(filePath: string): T =>
-  JSON.parse(readFileSync(filePath, "utf8")) as T
+const readRegularFileNoFollow = (filePath: string): Buffer | undefined => {
+  let stat
+  try {
+    stat = lstatSync(filePath)
+  } catch {
+    return undefined
+  }
+  if (stat.isSymbolicLink() || !stat.isFile()) return undefined
+  let descriptor: number | undefined
+  try {
+    descriptor = openSync(filePath, constants.O_RDONLY | constants.O_NOFOLLOW)
+    return readFileSync(descriptor)
+  } catch {
+    return undefined
+  } finally {
+    if (descriptor !== undefined) closeSync(descriptor)
+  }
+}
 const exactKeys = (
   value: unknown,
   expected: readonly string[],
@@ -175,26 +199,45 @@ export const checkV137ConformanceTraceCandidate = ({
 }): string[] => {
   const directory = path.resolve(candidateDirectory)
   const errors: string[] = []
+  try {
+    const stat = lstatSync(directory)
+    if (stat.isSymbolicLink() || !stat.isDirectory()) {
+      return ["candidate directory must be a regular no-follow directory"]
+    }
+  } catch {
+    return ["candidate directory must be a regular no-follow directory"]
+  }
   const manifestPath = path.join(directory, "manifest.json")
   const diffPath = path.join(directory, "semantic-diff.json")
   const tracesDirectory = path.join(directory, "traces")
+  const manifestBytes = readRegularFileNoFollow(manifestPath)
+  const diffBytes = readRegularFileNoFollow(diffPath)
+  let tracesDirectoryValid = false
+  try {
+    const stat = lstatSync(tracesDirectory)
+    tracesDirectoryValid = stat.isDirectory() && !stat.isSymbolicLink()
+  } catch {
+    tracesDirectoryValid = false
+  }
   if (
-    !existsSync(manifestPath) ||
-    !existsSync(diffPath) ||
-    !existsSync(tracesDirectory)
+    manifestBytes === undefined ||
+    diffBytes === undefined ||
+    !tracesDirectoryValid
   ) {
     return [
-      "candidate manifest, semantic diff, and traces directory are required",
+      "regular no-follow candidate manifest, semantic diff, and traces directory are required",
     ]
   }
   let manifest: V137ConformanceTraceCandidateManifest
   try {
-    manifest = readJson(manifestPath)
+    manifest = JSON.parse(
+      manifestBytes.toString("utf8"),
+    ) as V137ConformanceTraceCandidateManifest
   } catch {
     return ["candidate manifest is invalid JSON"]
   }
   if (
-    readFileSync(manifestPath, "utf8") !== renderJson(manifest) ||
+    manifestBytes.toString("utf8") !== renderJson(manifest) ||
     !manifestShapeValid(manifest)
   ) {
     errors.push("candidate manifest shape or exact text is invalid")
@@ -214,8 +257,14 @@ export const checkV137ConformanceTraceCandidate = ({
     errors.push("candidate case inventory is missing, extra, or reordered")
   }
   const expectedTraceFiles = expectedCaseIds.map((caseId) => `${caseId}.json`)
-  const actualTraceFiles = readdirSync(tracesDirectory).sort()
-  if (JSON.stringify(actualTraceFiles) !== JSON.stringify(expectedTraceFiles)) {
+  const actualTraceEntries = readdirSync(tracesDirectory, {
+    withFileTypes: true,
+  })
+  const actualTraceFiles = actualTraceEntries.map(({ name }) => name).sort()
+  if (
+    actualTraceEntries.some((entry) => !entry.isFile()) ||
+    JSON.stringify(actualTraceFiles) !== JSON.stringify(expectedTraceFiles)
+  ) {
     errors.push("candidate trace files are missing or extra")
   }
 
@@ -244,10 +293,15 @@ export const checkV137ConformanceTraceCandidate = ({
       continue
     }
     const tracePath = path.join(directory, entry.tracePath)
-    if (!existsSync(tracePath)) continue
+    const bytes = readRegularFileNoFollow(tracePath)
+    if (bytes === undefined) {
+      errors.push(`trace ${entry.caseId} is missing or non-regular`)
+      continue
+    }
     try {
-      const trace = readJson<CanonicalConformanceTrace>(tracePath)
-      const bytes = readFileSync(tracePath)
+      const trace = JSON.parse(
+        bytes.toString("utf8"),
+      ) as CanonicalConformanceTrace
       if (bytes.toString("utf8") !== renderJson(trace)) {
         errors.push(`trace ${entry.caseId} exact text is invalid`)
       }
@@ -302,9 +356,11 @@ export const checkV137ConformanceTraceCandidate = ({
   }
 
   try {
-    const diff = readJson<V137ConformanceTraceSemanticDiff>(diffPath)
+    const diff = JSON.parse(
+      diffBytes.toString("utf8"),
+    ) as V137ConformanceTraceSemanticDiff
     if (
-      readFileSync(diffPath, "utf8") !== renderJson(diff) ||
+      diffBytes.toString("utf8") !== renderJson(diff) ||
       !exactKeys(diff, [
         "schemaVersion",
         "generatedBy",

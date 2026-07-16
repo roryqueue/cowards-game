@@ -4,11 +4,16 @@
 import { createHash } from "node:crypto"
 import {
   existsSync,
+  lstatSync,
   mkdirSync,
+  mkdtempSync,
   readFileSync,
+  realpathSync,
+  renameSync,
   rmSync,
   writeFileSync,
 } from "node:fs"
+import { tmpdir } from "node:os"
 import path from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
 // eslint-disable-next-line no-restricted-imports -- repo-root candidate generator consumes the canonical engine authority.
@@ -67,10 +72,10 @@ export const V137_CONFORMANCE_TRACE_REVIEW_ARTIFACT = path.join(
   repoRoot,
   ".planning/artifacts/v1.37-conformance-trace-independent-review.json",
 )
-const RETIRED_V137_CONFORMANCE_TRACE_REVIEWED_ROOTS = Object.freeze({
-  "v1.37-conformance-trace-v1":
-    "sha256:e22fc0cf69acedc35723e1253c060332e389b3e4993c3fc2a87cf904a1e5f50f",
-} as const)
+export const V137_CONFORMANCE_TRACE_REVIEWED_HISTORY_ARTIFACT = path.join(
+  repoRoot,
+  ".planning/artifacts/v1.37-conformance-trace-reviewed-history.json",
+)
 export const V137_CONFORMANCE_TRACE_PROTECTED_CATEGORIES = Object.freeze([
   "validV14State",
   "actionLegality",
@@ -162,6 +167,17 @@ export interface GenerateV137ConformanceTraceCandidateResult {
   readonly manifestFileSha256: string
 }
 
+export interface V137ConformanceTraceReviewedHistory {
+  readonly schemaVersion: "v1.37-conformance-trace-reviewed-history-v1"
+  readonly entries: readonly {
+    readonly ordinal: number
+    readonly candidateVersion: string
+    readonly computedCandidateRootSha256: string
+    readonly status: "no_semantic_delta" | "suspended_pending_approval"
+  }[]
+  readonly historyRootSha256: string
+}
+
 export class V137ConformanceTraceCandidateError extends Error {
   constructor(readonly code: string) {
     super(`Conformance trace candidate rejected: ${code}.`)
@@ -173,6 +189,7 @@ const fail = (code: string): never => {
   throw new V137ConformanceTraceCandidateError(code)
 }
 const VERSION = /^v[1-9][0-9A-Za-z.-]{0,127}$/u
+const HASH = /^sha256:[0-9a-f]{64}$/u
 const renderJson = (value: unknown): string =>
   `${JSON.stringify(value, null, 2)}\n`
 const sha256 = (value: Uint8Array | string): string =>
@@ -192,11 +209,137 @@ const inside = (candidate: string, root: string): boolean => {
     (!relative.startsWith("..") && !path.isAbsolute(relative))
   )
 }
+const exactKeys = (
+  value: unknown,
+  expected: readonly string[],
+): value is Record<string, unknown> => {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    return false
+  }
+  const keys = Object.keys(value)
+  return (
+    keys.length === expected.length &&
+    expected.every((key) => Object.hasOwn(value, key))
+  )
+}
 const evidenceHash = (label: string, caseId: string): string =>
   canonicalHash("cowards-game:v1.37:conformance-trace-evidence:v1", {
     label,
     caseId,
   } as JsonValue)
+
+const reviewedHistoryRoot = (
+  history: Omit<V137ConformanceTraceReviewedHistory, "historyRootSha256">,
+): string =>
+  canonicalHash(
+    "cowards-game:v1.37:conformance-trace-reviewed-history:v1",
+    history as unknown as JsonValue,
+  )
+
+export const parseV137ConformanceTraceReviewedHistory = (
+  value: unknown,
+): V137ConformanceTraceReviewedHistory => {
+  if (
+    !exactKeys(value, ["schemaVersion", "entries", "historyRootSha256"]) ||
+    value.schemaVersion !== "v1.37-conformance-trace-reviewed-history-v1" ||
+    !Array.isArray(value.entries) ||
+    value.entries.length === 0 ||
+    !HASH.test(value.historyRootSha256 as string)
+  ) {
+    return fail("REVIEW_HISTORY_INVALID")
+  }
+  const versions = new Set<string>()
+  for (const [ordinal, entry] of value.entries.entries()) {
+    if (
+      !exactKeys(entry, [
+        "ordinal",
+        "candidateVersion",
+        "computedCandidateRootSha256",
+        "status",
+      ]) ||
+      entry.ordinal !== ordinal ||
+      typeof entry.candidateVersion !== "string" ||
+      !VERSION.test(entry.candidateVersion) ||
+      typeof entry.computedCandidateRootSha256 !== "string" ||
+      !HASH.test(entry.computedCandidateRootSha256) ||
+      (entry.status !== "no_semantic_delta" &&
+        entry.status !== "suspended_pending_approval") ||
+      versions.has(entry.candidateVersion)
+    ) {
+      return fail("REVIEW_HISTORY_INVALID")
+    }
+    versions.add(entry.candidateVersion)
+  }
+  const history = value as unknown as V137ConformanceTraceReviewedHistory
+  const { historyRootSha256: _historyRootSha256, ...material } = history
+  if (reviewedHistoryRoot(material) !== history.historyRootSha256) {
+    return fail("REVIEW_HISTORY_INVALID")
+  }
+  return history
+}
+
+export const readV137ConformanceTraceReviewedHistory =
+  (): V137ConformanceTraceReviewedHistory => {
+    let parsed: unknown
+    try {
+      const bytes = readFileSync(
+        V137_CONFORMANCE_TRACE_REVIEWED_HISTORY_ARTIFACT,
+        "utf8",
+      )
+      parsed = JSON.parse(bytes)
+      if (bytes !== renderJson(parsed)) return fail("REVIEW_HISTORY_INVALID")
+    } catch {
+      return fail("REVIEW_HISTORY_INVALID")
+    }
+    const history = parseV137ConformanceTraceReviewedHistory(parsed)
+    let currentReview: unknown
+    try {
+      currentReview = JSON.parse(
+        readFileSync(V137_CONFORMANCE_TRACE_REVIEW_ARTIFACT, "utf8"),
+      )
+    } catch {
+      return fail("REVIEW_HISTORY_INVALID")
+    }
+    if (
+      !exactKeys(currentReview, [
+        "schemaVersion",
+        "reviewedBy",
+        "candidateVersion",
+        "corpusVersion",
+        "corpusRootSha256",
+        "semanticTupleId",
+        "candidateManifestSha256",
+        "claimedCandidateRootSha256",
+        "computedCandidateRootSha256",
+        "semanticDiffSha256",
+        "claimedSemanticDiffRootSha256",
+        "computedSemanticDiffRootSha256",
+        "caseCount",
+        "caseTraceRootsSha256",
+        "protectedCategories",
+        "status",
+      ]) ||
+      typeof currentReview.candidateVersion !== "string" ||
+      typeof currentReview.computedCandidateRootSha256 !== "string" ||
+      (currentReview.status !== "no_semantic_delta" &&
+        currentReview.status !== "suspended_pending_approval")
+    ) {
+      return fail("REVIEW_HISTORY_INVALID")
+    }
+    const currentEntry = history.entries.find(
+      ({ candidateVersion }) =>
+        candidateVersion === currentReview.candidateVersion,
+    )
+    if (
+      currentEntry === undefined ||
+      currentEntry.computedCandidateRootSha256 !==
+        currentReview.computedCandidateRootSha256 ||
+      currentEntry.status !== currentReview.status
+    ) {
+      return fail("REVIEW_HISTORY_INVALID")
+    }
+    return history
+  }
 
 const categoryDimensions: Readonly<
   Record<
@@ -455,7 +598,7 @@ const rawEnvelopeSuccessTrace = (
   })
 }
 
-const caseTrace = (
+export const reconstructV137ConformanceTrace = (
   testCase: V137ConformanceCase,
 ): Readonly<CanonicalConformanceTrace> => {
   const resultClass = testCase.expectation.resultClass
@@ -514,35 +657,14 @@ const caseTrace = (
 }
 
 const reviewedVersionRoots = (): ReadonlyMap<string, string> => {
-  const roots = new Map<string, string>(
-    Object.entries(RETIRED_V137_CONFORMANCE_TRACE_REVIEWED_ROOTS),
+  return new Map(
+    readV137ConformanceTraceReviewedHistory().entries.map(
+      ({ candidateVersion, computedCandidateRootSha256 }) => [
+        candidateVersion,
+        computedCandidateRootSha256,
+      ],
+    ),
   )
-  if (!existsSync(V137_CONFORMANCE_TRACE_REVIEW_ARTIFACT)) return roots
-  let review: unknown
-  try {
-    review = JSON.parse(
-      readFileSync(V137_CONFORMANCE_TRACE_REVIEW_ARTIFACT, "utf8"),
-    )
-  } catch {
-    return fail("REVIEW_HISTORY_INVALID")
-  }
-  if (
-    review === null ||
-    typeof review !== "object" ||
-    Array.isArray(review) ||
-    typeof (review as { candidateVersion?: unknown }).candidateVersion !==
-      "string" ||
-    typeof (review as { computedCandidateRootSha256?: unknown })
-      .computedCandidateRootSha256 !== "string"
-  ) {
-    return fail("REVIEW_HISTORY_INVALID")
-  }
-  roots.set(
-    (review as { candidateVersion: string }).candidateVersion,
-    (review as { computedCandidateRootSha256: string })
-      .computedCandidateRootSha256,
-  )
-  return roots
 }
 
 const manifestRoot = (
@@ -604,6 +726,73 @@ const semanticDiff = (
   }
 }
 
+const candidateParent = (requestedDirectory: string): string => {
+  const requested = path.resolve(requestedDirectory)
+  if (inside(requested, ACTIVE_V137_CONFORMANCE_TRACE_ROOT)) {
+    return fail("ACTIVE_GOLDEN_OVERWRITE_FORBIDDEN")
+  }
+
+  const planningRoot = path.join(repoRoot, ".planning")
+  const planningTemporaryRoot = path.join(planningRoot, "tmp")
+  const systemTemporaryRoot = path.resolve(tmpdir())
+  let lexicalRoot: string
+  let realRoot: string
+  if (inside(requested, planningTemporaryRoot)) {
+    const planningStat = lstatSync(planningRoot)
+    if (planningStat.isSymbolicLink() || !planningStat.isDirectory()) {
+      return fail("CANDIDATE_PARENT_SYMLINK_FORBIDDEN")
+    }
+    if (!existsSync(planningTemporaryRoot)) {
+      mkdirSync(planningTemporaryRoot, { mode: 0o700 })
+    }
+    const temporaryStat = lstatSync(planningTemporaryRoot)
+    if (temporaryStat.isSymbolicLink() || !temporaryStat.isDirectory()) {
+      return fail("CANDIDATE_PARENT_SYMLINK_FORBIDDEN")
+    }
+    lexicalRoot = planningTemporaryRoot
+    realRoot = realpathSync(planningTemporaryRoot)
+  } else if (
+    inside(requested, systemTemporaryRoot) ||
+    inside(requested, realpathSync(systemTemporaryRoot))
+  ) {
+    lexicalRoot = inside(requested, systemTemporaryRoot)
+      ? systemTemporaryRoot
+      : realpathSync(systemTemporaryRoot)
+    realRoot = realpathSync(systemTemporaryRoot)
+  } else {
+    return fail("CANDIDATE_PARENT_FORBIDDEN")
+  }
+
+  const relative = path.relative(lexicalRoot, requested)
+  if (
+    relative === "" ||
+    relative.startsWith("..") ||
+    path.isAbsolute(relative)
+  ) {
+    return fail("CANDIDATE_PARENT_FORBIDDEN")
+  }
+  const segments = relative.split(path.sep)
+  const basename = segments.pop()!
+  let realParent = realRoot
+  for (const segment of segments) {
+    realParent = path.join(realParent, segment)
+    if (!existsSync(realParent)) return fail("CANDIDATE_PARENT_MISSING")
+    const stat = lstatSync(realParent)
+    if (stat.isSymbolicLink()) {
+      return fail("CANDIDATE_PARENT_SYMLINK_FORBIDDEN")
+    }
+    if (!stat.isDirectory()) return fail("CANDIDATE_PARENT_INVALID")
+  }
+  const candidateDirectory = path.join(realParent, basename)
+  if (
+    existsSync(ACTIVE_V137_CONFORMANCE_TRACE_ROOT) &&
+    inside(candidateDirectory, realpathSync(ACTIVE_V137_CONFORMANCE_TRACE_ROOT))
+  ) {
+    return fail("ACTIVE_GOLDEN_OVERWRITE_FORBIDDEN")
+  }
+  return candidateDirectory
+}
+
 export const generateV137ConformanceTraceCandidate = (
   input: GenerateV137ConformanceTraceCandidateInput,
 ): GenerateV137ConformanceTraceCandidateResult => {
@@ -617,10 +806,7 @@ export const generateV137ConformanceTraceCandidate = (
         : "CANDIDATE_VERSION_INVALID",
     )
   }
-  const candidateDirectory = path.resolve(input.candidateDirectory)
-  if (inside(candidateDirectory, ACTIVE_V137_CONFORMANCE_TRACE_ROOT)) {
-    return fail("ACTIVE_GOLDEN_OVERWRITE_FORBIDDEN")
-  }
+  const candidateDirectory = candidateParent(input.candidateDirectory)
   if (existsSync(candidateDirectory)) return fail("CANDIDATE_DIRECTORY_EXISTS")
 
   const corpus = input.corpus ?? V1_37_CONFORMANCE_CORPUS
@@ -632,72 +818,91 @@ export const generateV137ConformanceTraceCandidate = (
     return fail("ACTIVE_CORPUS_IDENTITY_REQUIRED")
   }
   validateV137ConformanceCorpus(corpus)
-
-  const tracesDirectory = path.join(candidateDirectory, "traces")
-  mkdirSync(tracesDirectory, { recursive: true })
-  const cases: V137ConformanceTraceCandidateCase[] = []
-  for (const [ordinal, testCase] of corpus.cases.entries()) {
-    const trace = caseTrace(testCase)
-    const tracePath = path.posix.join("traces", `${testCase.id}.json`)
-    const traceBytes = renderJson(trace)
-    writeFileSync(path.join(candidateDirectory, tracePath), traceBytes, {
+  const reviewedRoots = reviewedVersionRoots()
+  const stagingDirectory = mkdtempSync(
+    path.join(
+      path.dirname(candidateDirectory),
+      `.${path.basename(candidateDirectory)}.staging-`,
+    ),
+  )
+  try {
+    const tracesDirectory = path.join(stagingDirectory, "traces")
+    mkdirSync(tracesDirectory)
+    const cases: V137ConformanceTraceCandidateCase[] = []
+    for (const [ordinal, testCase] of corpus.cases.entries()) {
+      const trace = reconstructV137ConformanceTrace(testCase)
+      const tracePath = path.posix.join("traces", `${testCase.id}.json`)
+      const traceBytes = renderJson(trace)
+      writeFileSync(path.join(stagingDirectory, tracePath), traceBytes, {
+        flag: "wx",
+        mode: 0o600,
+      })
+      cases.push({
+        ordinal,
+        caseId: testCase.id,
+        traceRef: testCase.expectation.traceRef,
+        resultClass: trace.resultClass,
+        tracePath,
+        traceFileSha256: sha256(traceBytes),
+        traceRoot: trace.traceRoot,
+      })
+    }
+    const material = {
+      schemaVersion: "v1.37-conformance-trace-candidate-v1" as const,
+      candidateVersion: input.candidateVersion,
+      corpusVersion: corpus.version,
+      corpusRootSha256: corpus.corpusRootSha256,
+      semanticTupleId: MATCH_KERNEL.tupleId,
+      generatedBy: "scripts/generate-v1-37-conformance-traces.ts" as const,
+      authoritySource: "canonical-engine-kernel-recording" as const,
+      recordingApi: "RecordedCanonicalTransitionV137" as const,
+      projectorApi: "projectCanonicalConformanceTrace" as const,
+      policy: "candidate-only-no-live-lane-oracle-no-promotion" as const,
+      caseCount: cases.length,
+      cases,
+      compatibilityEvidence: {
+        baselineVersion: V137_CONFORMANCE_TRACE_BASELINE_VERSION,
+        candidateCorpusVersion: V1_4_COMPATIBILITY_CORPUS_VERSION,
+        protectedCategories: captureV137CompatibilityCategoryRoots(),
+      },
+    }
+    const manifest: V137ConformanceTraceCandidateManifest = {
+      ...material,
+      candidateRootSha256: manifestRoot(material),
+    }
+    const reviewedRoot = reviewedRoots.get(input.candidateVersion)
+    if (
+      reviewedRoot !== undefined &&
+      reviewedRoot !== manifest.candidateRootSha256
+    ) {
+      return fail("REVIEWED_VERSION_ROOT_MISMATCH")
+    }
+    const manifestBytes = renderJson(manifest)
+    writeFileSync(path.join(stagingDirectory, "manifest.json"), manifestBytes, {
       flag: "wx",
+      mode: 0o600,
     })
-    cases.push({
-      ordinal,
-      caseId: testCase.id,
-      traceRef: testCase.expectation.traceRef,
-      resultClass: trace.resultClass,
-      tracePath,
-      traceFileSha256: sha256(traceBytes),
-      traceRoot: trace.traceRoot,
-    })
-  }
-  const material = {
-    schemaVersion: "v1.37-conformance-trace-candidate-v1" as const,
-    candidateVersion: input.candidateVersion,
-    corpusVersion: corpus.version,
-    corpusRootSha256: corpus.corpusRootSha256,
-    semanticTupleId: MATCH_KERNEL.tupleId,
-    generatedBy: "scripts/generate-v1-37-conformance-traces.ts" as const,
-    authoritySource: "canonical-engine-kernel-recording" as const,
-    recordingApi: "RecordedCanonicalTransitionV137" as const,
-    projectorApi: "projectCanonicalConformanceTrace" as const,
-    policy: "candidate-only-no-live-lane-oracle-no-promotion" as const,
-    caseCount: cases.length,
-    cases,
-    compatibilityEvidence: {
-      baselineVersion: V137_CONFORMANCE_TRACE_BASELINE_VERSION,
-      candidateCorpusVersion: V1_4_COMPATIBILITY_CORPUS_VERSION,
-      protectedCategories: captureV137CompatibilityCategoryRoots(),
-    },
-  }
-  const manifest: V137ConformanceTraceCandidateManifest = {
-    ...material,
-    candidateRootSha256: manifestRoot(material),
-  }
-  const reviewedRoot = reviewedVersionRoots().get(input.candidateVersion)
-  if (
-    reviewedRoot !== undefined &&
-    reviewedRoot !== manifest.candidateRootSha256
-  ) {
-    rmSync(candidateDirectory, { recursive: true, force: true })
-    return fail("REVIEWED_VERSION_ROOT_MISMATCH")
-  }
-  const manifestPath = path.join(candidateDirectory, "manifest.json")
-  const semanticDiffPath = path.join(candidateDirectory, "semantic-diff.json")
-  const manifestBytes = renderJson(manifest)
-  writeFileSync(manifestPath, manifestBytes, { flag: "wx" })
-  writeFileSync(semanticDiffPath, renderJson(semanticDiff(manifest)), {
-    flag: "wx",
-  })
-  return {
-    candidateVersion: input.candidateVersion,
-    candidateDirectory,
-    manifestPath,
-    semanticDiffPath,
-    candidateRootSha256: manifest.candidateRootSha256,
-    manifestFileSha256: sha256(manifestBytes),
+    writeFileSync(
+      path.join(stagingDirectory, "semantic-diff.json"),
+      renderJson(semanticDiff(manifest)),
+      { flag: "wx", mode: 0o600 },
+    )
+    if (existsSync(candidateDirectory)) {
+      return fail("CANDIDATE_DIRECTORY_EXISTS")
+    }
+    renameSync(stagingDirectory, candidateDirectory)
+    return {
+      candidateVersion: input.candidateVersion,
+      candidateDirectory,
+      manifestPath: path.join(candidateDirectory, "manifest.json"),
+      semanticDiffPath: path.join(candidateDirectory, "semantic-diff.json"),
+      candidateRootSha256: manifest.candidateRootSha256,
+      manifestFileSha256: sha256(manifestBytes),
+    }
+  } finally {
+    if (existsSync(stagingDirectory)) {
+      rmSync(stagingDirectory, { recursive: true, force: true })
+    }
   }
 }
 

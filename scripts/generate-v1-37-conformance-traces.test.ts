@@ -24,6 +24,7 @@ import {
   parseV137ConformanceTraceReviewedHistory,
   parseV137ConformanceTraceCandidateArgs,
   readV137ConformanceTraceReviewedHistory,
+  type V137ConformanceTraceReviewedHistory,
 } from "./generate-v1-37-conformance-traces.js"
 
 const roots: string[] = []
@@ -186,24 +187,34 @@ describe("v1.37 conformance trace candidate generation", () => {
 
   it("loads strict append-only reviewed version history", () => {
     const history = readV137ConformanceTraceReviewedHistory()
-    expect(history.entries.map(({ candidateVersion }) => candidateVersion)).toEqual(
-      ["v1.37-conformance-trace-v1", "v1.37-conformance-trace-v2"],
-    )
+    expect(
+      history.entries.map(({ candidateVersion }) => candidateVersion),
+    ).toEqual(["v1.37-conformance-trace-v1", "v1.37-conformance-trace-v2"])
     expect(
       parseV137ConformanceTraceReviewedHistory(
         globalThis.structuredClone(history),
       ),
     ).toEqual(history)
 
-    const duplicate = globalThis.structuredClone(history)
+    type MutableHistory = Omit<
+      V137ConformanceTraceReviewedHistory,
+      "entries"
+    > & {
+      entries: Array<{
+        ordinal: number
+        candidateVersion: string
+        computedCandidateRootSha256: string
+        status: "no_semantic_delta" | "suspended_pending_approval"
+      }>
+    }
+    const duplicate = globalThis.structuredClone(history) as MutableHistory
     duplicate.entries.push({ ...duplicate.entries[0]! })
     expect(() => parseV137ConformanceTraceReviewedHistory(duplicate)).toThrow(
       "REVIEW_HISTORY_INVALID",
     )
 
-    const changedRoot = globalThis.structuredClone(history)
-    changedRoot.entries[0]!.computedCandidateRootSha256 =
-      `sha256:${"f".repeat(64)}`
+    const changedRoot = globalThis.structuredClone(history) as MutableHistory
+    changedRoot.entries[0]!.computedCandidateRootSha256 = `sha256:${"f".repeat(64)}`
     expect(() => parseV137ConformanceTraceReviewedHistory(changedRoot)).toThrow(
       "REVIEW_HISTORY_INVALID",
     )

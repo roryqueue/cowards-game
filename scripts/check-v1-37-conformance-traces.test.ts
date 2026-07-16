@@ -126,6 +126,15 @@ describe("v1.37 conformance trace candidate checker", () => {
   }, 60_000)
 
   it("rejects dangling symlink and non-regular trace entries", () => {
+    const targetDirectory = candidate()
+    const linkedDirectory = path.join(temporaryRoot(), "linked-candidate")
+    symlinkSync(targetDirectory, linkedDirectory)
+    expect(
+      checkV137ConformanceTraceCandidate({
+        candidateDirectory: linkedDirectory,
+      }),
+    ).not.toEqual([])
+
     const dangling = candidate()
     const danglingPath = path.join(
       dangling,
