@@ -377,6 +377,32 @@ describe("v1.37 canonical conformance trace", () => {
     expect(() => projectCanonicalConformanceTrace(eventLeak)).toThrowError(
       expect.objectContaining({ code: "TRACE_SHAPE_INVALID" }),
     )
+
+    const nestedPayloadLeak = globalThis.structuredClone(
+      successfulInput(),
+    ) as DeepMutable<ProjectCanonicalConformanceTraceInput>
+    const payload = nestedPayloadLeak.transitions[0]!.orderedEvents[0]!
+      .payload as Record<string, unknown>
+    payload.strategyMemory = { secret: "SECRET_MEMORY_PREIMAGE" }
+    nestedPayloadLeak.transitions[0]!.accumulatedTraceRoot =
+      computeRecordedTransitionTraceRootV137(nestedPayloadLeak.transitions)
+    expect(() =>
+      projectCanonicalConformanceTrace(nestedPayloadLeak),
+    ).toThrowError(expect.objectContaining({ code: "TRACE_EVENT_INVALID" }))
+
+    const nestedContextLeak = globalThis.structuredClone(
+      successfulInput(),
+    ) as DeepMutable<ProjectCanonicalConformanceTraceInput>
+    const leakedEvent = nestedContextLeak.transitions[0]!.orderedEvents[0]!
+    leakedEvent.context = {
+      ...(leakedEvent.context ?? {}),
+      hostPath: "/private/SECRET_HOST_PATH",
+    } as typeof leakedEvent.context
+    nestedContextLeak.transitions[0]!.accumulatedTraceRoot =
+      computeRecordedTransitionTraceRootV137(nestedContextLeak.transitions)
+    expect(() =>
+      projectCanonicalConformanceTrace(nestedContextLeak),
+    ).toThrowError(expect.objectContaining({ code: "TRACE_EVENT_INVALID" }))
   })
 
   it("rejects noncanonical invocation order, transition roots, and tuple identity", () => {

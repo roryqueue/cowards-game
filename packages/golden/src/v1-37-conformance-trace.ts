@@ -4,7 +4,11 @@ import {
   validateRecordedTransitionTraceRootsV137,
   type RecordedCanonicalTransitionV137,
 } from "@cowards/replay"
-import { encodeCanonicalJson, type JsonValue } from "@cowards/spec"
+import {
+  ChronicleEventSchema,
+  encodeCanonicalJson,
+  type JsonValue,
+} from "@cowards/spec"
 
 export const CANONICAL_CONFORMANCE_TRACE_SCHEMA_VERSION =
   "v1.37-canonical-conformance-trace-v1" as const
@@ -162,6 +166,7 @@ export type CanonicalConformanceTraceErrorCode =
   | "TRACE_HASH_INVALID"
   | "TRACE_ORDER_INVALID"
   | "TRACE_RESULT_INVALID"
+  | "TRACE_EVENT_INVALID"
   | "TRACE_TRANSITION_ROOT_INVALID"
   | "TRACE_TRANSITION_IDENTITY_INVALID"
   | "TRACE_CANONICAL_JSON_INVALID"
@@ -393,6 +398,15 @@ const canonicalBytes = (value: JsonValue): Uint8Array => {
   return encoded.bytes
 }
 
+const canonicalValuesEqual = (left: JsonValue, right: JsonValue): boolean => {
+  const leftBytes = canonicalBytes(left)
+  const rightBytes = canonicalBytes(right)
+  return (
+    leftBytes.byteLength === rightBytes.byteLength &&
+    leftBytes.every((byte, index) => byte === rightBytes[index])
+  )
+}
+
 const frame = (value: Uint8Array): Uint8Array => {
   const output = new Uint8Array(8 + value.byteLength)
   new DataView(output.buffer).setBigUint64(0, BigInt(value.byteLength), false)
@@ -530,9 +544,27 @@ const validateEvent = (
     fail("TRACE_RESULT_INVALID")
   }
   requireNullableHash(event.privatePayloadHash)
-  canonicalBytes(event.payload as JsonValue)
-  if (event.context !== undefined) {
-    canonicalBytes(event.context as unknown as JsonValue)
+  const context = (event.context ?? {}) as unknown as JsonValue
+  const parsed = ChronicleEventSchema.safeParse({
+    type: event.type,
+    sequence: event.sequence,
+    context,
+    privacy: event.privacy,
+    payload: event.payload,
+  })
+  if (
+    !parsed.success ||
+    !canonicalValuesEqual(
+      parsed.data.payload as unknown as JsonValue,
+      event.payload as JsonValue,
+    ) ||
+    !canonicalValuesEqual(
+      parsed.data.context as unknown as JsonValue,
+      context,
+    ) ||
+    (event.privacy === "public" && event.privatePayloadHash !== null)
+  ) {
+    fail("TRACE_EVENT_INVALID")
   }
 }
 
