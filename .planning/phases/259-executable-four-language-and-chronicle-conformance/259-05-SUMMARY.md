@@ -81,6 +81,7 @@ status: complete
 
 1. **RED: Specify per-slot lifecycle, boundary, and immutability behavior** — `14b30ce` (test)
 2. **GREEN: Implement immutable per-slot Chronicle grammar** — `02a9a22` (feat)
+3. **Proof refresh: Bind the current event-coverage artifact to the new grammar bytes** — `266020c` (test)
 
 ## Files Modified
 
@@ -104,10 +105,17 @@ status: complete
 - **Fix:** Model `NO_ADVANCE` as self-Soldier Activation-close cleanup, reject an attached Cycle coordinate, and retain the successful-Advance contradiction check.
 - **Verification:** Focused grammar tests passed 36/36; all replay tests passed 176/176 serially; Phase-257 compatibility/kernel tests passed 31/31.
 
+**2. [Rule 3 - Blocking] Current event-coverage proof retained the pre-refactor grammar source hash**
+
+- **Found during:** Combined Wave-1 replay proof.
+- **Issue:** The event vocabulary and dispositions were unchanged, but the generated artifact still pinned the old `packages/replay/src/grammar.ts` bytes.
+- **Fix:** Regenerated the current-only event-coverage artifact with the repository generator.
+- **Verification:** Generator tests passed 4/4 and `--current --check` reported byte-exact current evidence.
+
 ---
 
-**Total deviations:** 1 auto-fixed compatibility bug.
-**Impact on plan:** The correction preserves existing valid v1.4 event timing and adds no gameplay, outcome, observation, or public/private projection change.
+**Total deviations:** 2 auto-fixed (1 compatibility bug, 1 derived-proof refresh).
+**Impact on plan:** Both corrections preserve existing valid v1.4 event timing and add no gameplay, outcome, observation, vocabulary, or public/private projection change.
 
 ## Issues Encountered
 
@@ -130,6 +138,7 @@ None.
 - Replay typecheck, lint, and formatting checks passed.
 - All replay tests passed 176/176 with one worker.
 - Phase-257 compatibility and kernel-contract tests passed 31/31.
+- Current event-coverage generator tests passed 4/4 and the persisted artifact is byte-exact.
 
 ---
 *Phase: 259-executable-four-language-and-chronicle-conformance*
