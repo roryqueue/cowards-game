@@ -254,6 +254,42 @@ describe("recordChronicleFromExecution", () => {
     )
   })
 
+  it("hashes optional internal private fields through their existing JSON representation", () => {
+    const execution = MATCH_KERNEL.runMatch({
+      matchId: "optional-private-field-match",
+      seed: "optional-private-field-seed",
+      arenaVariant: {
+        id: "optional-private-field-arena",
+        name: "Optional Private Field Arena",
+        initialBounds: { minX: 0, maxX: 11, minY: 0, maxY: 11 },
+        terrainStones: [],
+      },
+      bottomPlayerId: "bottom",
+      topPlayerId: "top",
+      bottomStrategyRevisionId: "bottom-revision",
+      topStrategyRevisionId: "top-revision",
+      runtime: adaptRuntimeForCurrentKernel({
+        ...runtime,
+        selectActivations(input) {
+          return {
+            ok: true,
+            value: {
+              activationOrders: input.mySoldiers
+                .filter((soldier) => soldier.status === "ACTIVE")
+                .map((soldier) => ({ soldierId: soldier.id })),
+              strategyMemory: {},
+            },
+          }
+        },
+      }),
+    })
+
+    const recorded = recordChronicleFromExecution({ execution, metadata })
+    expect(recorded.ok).toBe(true)
+    if (!recorded.ok) return
+    expect(recorded.transitionTraceRoot).toMatch(/^sha256:[0-9a-f]{64}$/u)
+  })
+
   it.each(["top", "unknown-player"])(
     "rejects private owner relabeling to %s",
     (playerId) => {

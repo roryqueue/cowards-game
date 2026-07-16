@@ -202,7 +202,10 @@ const codePointCompare = (left: string, right: string): number => {
 }
 
 const hashCanonicalTraceField = (label: string, value: JsonValue): string => {
-  const encoded = encodeCanonicalJson(value, { context: "canonical-manifest" })
+  const normalized = JSON.parse(JSON.stringify(value)) as JsonValue
+  const encoded = encodeCanonicalJson(normalized, {
+    context: "canonical-manifest",
+  })
   if (!encoded.ok) {
     throw new Error(
       `RECORDED_TRANSITION_CANONICAL_JSON_INVALID:${label}:${encoded.error.code}`,
