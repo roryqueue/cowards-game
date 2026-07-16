@@ -1188,7 +1188,7 @@
     },
     {
       "path": "scripts/run-v1-37-runtime-abi-test-manifest.test.ts",
-      "sha256": "4c5bc249e3d855f0cf2c05f85094818db8fe054c1bfcdb4d106681b9b16546d7"
+      "sha256": "67312de672a2436f48f821c26958890597392b137c092c963214de09448bcc9d"
     },
     {
       "path": "scripts/run-v1-37-runtime-abi-test-manifest.ts",
