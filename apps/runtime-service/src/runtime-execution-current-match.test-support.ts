@@ -1,3 +1,4 @@
+/* eslint-disable no-restricted-imports -- Fixture-only service dispatch requires intentionally unexported runtime test seams. */
 import type { CanonicalStrategyRuntime, StrategyRuntime } from "@cowards/engine"
 import { createNestedMatchShapeRuntimeFromRevisionTestSupport } from "../../../packages/runtime-js/src/executor.js"
 import { createPythonNestedMatchShapeRuntimeTestSupport } from "../../../packages/runtime-python/src/python-subprocess-adapter.js"

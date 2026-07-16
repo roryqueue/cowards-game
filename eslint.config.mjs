@@ -66,6 +66,14 @@ export default [
     },
   },
   {
+    files: ["packages/spec/src/runtime-execution-service-v1-16-compat.ts"],
+    languageOptions: {
+      globals: {
+        structuredClone: "readonly",
+      },
+    },
+  },
+  {
     files: ["packages/spec/src/**/*.{ts,tsx}"],
     rules: {
       "no-restricted-imports": [
