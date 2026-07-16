@@ -12,7 +12,8 @@ requires:
 provides:
   - exact tuple-first current and historical Chronicle dispatch without parser probing
   - one acyclic non-reconstructing current semantic admission core
-  - canonical transition, state, lifecycle, event, boundary, and terminal validation before reconstruction
+  - one pure current transition-postcondition and terminal comparator shared by semantic admission and reconstruction
+  - exact trusted-recorder event, snapshot, boundary-anchor, state, and terminal validation
 affects: [259-14, runtime-service-admission, persistence-admission, replay-reconstruction]
 
 tech-stack:
@@ -20,23 +21,27 @@ tech-stack:
   patterns:
     - exact compatibility identity resolution before schema or grammar admission
     - internal semantic core behind one public shared Chronicle validator
-    - reconstruction depends on semantic admission without a reverse validation dependency
+    - current validation and reconstruction share one acyclic transition-postcondition proof
+    - historical replay executes only the byte-pinned v1.4 transition interpreter
 
 key-files:
-  created: []
+  created:
+    - packages/replay/src/current-transition-postconditions.ts
   modified:
     - packages/replay/src/validate.ts
     - packages/replay/src/validate.test.ts
     - packages/replay/src/reconstruct.ts
+    - packages/replay/src/reconstruct.test.ts
     - packages/replay/src/record.ts
     - packages/replay/src/replay-transition.ts
     - packages/replay/src/replay-transition.test.ts
     - packages/replay/src/index.ts
 
 key-decisions:
-  - "Original historical v1.4 evidence is admitted only by the frozen historical grammar; current snapshot, grammar, transition, and migration helpers are unreachable from that route."
+  - "Original historical v1.4 evidence is admitted and replayed only by the frozen historical grammar and transition interpreter; mutable current transition helpers are unreachable from that route."
   - "validateCurrentChronicle remains the sole public semantic admission API, while validateCurrentChronicleSemantics is module-internal to replay validation and reconstruction."
-  - "Replay reconstruction calls semantic admission exactly once, then compares transition state hashes, ordered events, terminal data, and final state without creating a validation cycle."
+  - "Semantic admission and reconstruction each call the same pure transition-postcondition comparator exactly once."
+  - "Candidate snapshots and boundary anchors must equal the trusted recorder's exact ordered output; self-consistency is only defense in depth."
 
 patterns-established:
   - "Version-first admission: unresolved or unsupported identity fails before Chronicle bytes are read."
@@ -57,25 +62,28 @@ coverage:
         status: pass
     human_judgment: false
   - id: D2
-    description: "Current Chronicle admission validates the canonical transition, semantic state, lifecycle, event, boundary, outcome, and terminal contracts through one non-reconstructing core."
+    description: "Current Chronicle admission validates ordered events against every transition after-state and terminal status through the same pure comparator used by reconstruction."
     requirement: CHRN-03
     verification:
       - kind: unit
         ref: "packages/replay/src/validate.test.ts#keeps current semantic admission acyclic and single-invocation"
+        status: pass
+      - kind: unit
+        ref: "packages/replay/src/replay-transition.test.ts#current transition postconditions"
         status: pass
       - kind: integration
         ref: "pnpm --filter @cowards/replay exec vitest run --maxWorkers=1"
         status: pass
     human_judgment: false
   - id: D3
-    description: "Historical v1.4 bytes and interpretation remain isolated from mutable current validation and reconstruction."
+    description: "Historical v1.4 bytes and replay interpretation remain isolated from mutable current validation and transition application."
     requirement: CHRN-06
     verification:
       - kind: unit
         ref: "packages/replay/src/historical-v1-4.test.ts"
         status: pass
       - kind: unit
-        ref: "packages/replay/src/validate.test.ts#routes original historical evidence only through the frozen grammar without requiring current snapshots"
+        ref: "packages/replay/src/reconstruct.test.ts#keeps historical replay calls isolated from mutable current transitions"
         status: pass
     human_judgment: false
 
@@ -101,7 +109,9 @@ status: complete
 - Routed unresolved and unsupported identities to bounded version failures before any Chronicle getter, schema, grammar, replay projection, or migration can run.
 - Removed current snapshot, boundary, hash, and transition helpers from original historical v1.4 admission; the frozen historical grammar is now the complete admission authority for that profile.
 - Extracted one non-reconstructing current semantic core that enforces authenticated recording equality, current vocabulary and per-slot grammar, canonical transition/state semantics, boundary anchors, and terminal outcome agreement.
-- Moved current reconstruction ownership out of the transition helper module so validation has no reverse reconstruction import or call.
+- Added one pure, acyclic current transition-postcondition comparator used by both semantic admission and reconstruction to prove ordered events produce every exact after-state and terminal status.
+- Routed historical replay execution through only the frozen v1.4 transition interpreter.
+- Bound current snapshots and boundary anchors to the trusted recorder's exact order, rejecting swapped or renumbered self-consistent pairs.
 - Kept only `validateCurrentChronicle` in the package public admission surface; the semantic core remains an internal replay implementation seam.
 
 ## Task Commits
@@ -110,12 +120,18 @@ status: complete
 2. **Task 1 GREEN: Frozen historical admission isolation** — `793bdd7` (feat)
 3. **Task 2 RED: Acyclic single-core semantic admission contract** — `b154fb1` (test)
 4. **Task 2 GREEN: Canonical semantic admission and reconstruction ownership** — `3a62a49` (feat)
+5. **Review BL-01: Frozen historical replay interpreter isolation** — `a13763a` (fix)
+6. **Review BL-02: Shared transition postcondition and terminal proof** — `cc3359a` (fix)
+7. **Review BL-03: Exact trusted-recorder snapshot and anchor order** — `09b4cb3` (fix)
+8. **Review gate formatting correction** — `d7f21df` (style)
 
 ## Files Created/Modified
 
 - `packages/replay/src/validate.ts` — Exact current semantic core, public wrapper, canonical transition validation, and frozen historical routing.
-- `packages/replay/src/validate.test.ts` — Version-first no-read vectors and acyclic single-invocation proof.
-- `packages/replay/src/reconstruct.ts` — Current transition-by-transition reconstruction after exactly one semantic admission.
+- `packages/replay/src/validate.test.ts` — Version-first vectors, acyclic single-invocation proof, and exact recorder-order regression.
+- `packages/replay/src/reconstruct.ts` — Current reconstruction after exactly one semantic admission plus frozen historical v1.4 replay.
+- `packages/replay/src/reconstruct.test.ts` — Source-level proof that historical replay cannot call mutable current transition helpers.
+- `packages/replay/src/current-transition-postconditions.ts` — Pure shared current event-to-after-state and terminal comparator.
 - `packages/replay/src/record.ts` — Shared deterministic boundary-anchor derivation from recorder transitions.
 - `packages/replay/src/replay-transition.ts` — Pure replay event/transition helpers without semantic validation ownership.
 - `packages/replay/src/replay-transition.test.ts` — Reconstruction imports follow the new acyclic owner.
@@ -124,8 +140,11 @@ status: complete
 ## Decisions Made
 
 - Historical admission intentionally does not require current snapshot structure. Original v1.4 grammar and vocabulary are the frozen authority for original evidence.
+- Historical replay execution intentionally uses only `applyHistoricalV14Transition`; current `applyReplayEvent` and current validated-replay construction are excluded from the historical route.
 - The semantic core is exported only from its implementation module for reconstruction composition; the package barrel exposes the stable public wrapper instead.
+- Transition reconstruction and terminal-status comparison have one internal implementation called independently by admission and reconstruction without an import cycle.
 - Boundary anchors are deterministically derived from the same snapshot descriptors used during recording, avoiding a second independently implemented boundary schedule.
+- Exact recorder-output equality is required before boundary self-consistency checks, so reordered evidence cannot redefine its own trusted order.
 
 ## Deviations from Plan
 
@@ -140,9 +159,24 @@ status: complete
 - **Verification:** Replay typecheck and lint pass; runtime-service and persistence continue importing the unchanged public wrapper and reconstruction APIs.
 - **Committed in:** `3a62a49`
 
+**2. [Code review blocker] Historical replay still used mutable current replay construction**
+
+- **Fix:** Added a historical-only replay constructor that applies only the frozen v1.4 transition interpreter and compares historical snapshots without current helpers.
+- **Committed in:** `a13763a`
+
+**3. [Code review blocker] Current admission did not prove ordered events reconstruct transition after-states**
+
+- **Fix:** Extracted a pure acyclic postcondition comparator and invoked it exactly once from both current semantic admission and reconstruction.
+- **Committed in:** `cc3359a`
+
+**4. [Code review blocker] Swapped snapshots and anchors could remain self-consistent**
+
+- **Fix:** Required exact ordered equality with trusted recorder snapshots and boundary anchors before defense-in-depth boundary checks.
+- **Committed in:** `09b4cb3`
+
 ---
 
-**Total deviations:** 1 auto-fixed (1 missing critical boundary control).
+**Total deviations:** 4 auto-fixed (1 missing critical boundary control, 3 code-review blockers).
 **Impact on plan:** The correction narrows the API surface without changing valid Match state, Action legality, event order, outcome, Strategy observation, historical interpretation, or public output.
 
 ## Issues Encountered
@@ -151,11 +185,12 @@ status: complete
 
 ## Verification
 
-- Focused current, historical, and reconstruction suites: 71/71 passed.
-- Full replay package suite with one worker: 14 files / 197 tests passed.
+- Focused current, historical, and reconstruction suites: 78/78 passed.
+- Full replay package suite with one worker: 14 files / 201 tests passed in 164.99 seconds.
 - `@cowards/replay` typecheck and lint passed.
 - Focused Prettier check and `git diff --check` passed.
-- No gameplay, event vocabulary, historical bytes, protected files, lockfile, or milestone-level planning files changed.
+- Frozen historical hashes remain `c331055e4aadba3fa01142bf764247c961d1b45483a310a11af5d66ce214d108` for grammar and `ff90b9938b9a6c85cafacf1d9b7856af70b4d87234819a50e60ab8666c37b477` for transition interpretation.
+- No gameplay, event vocabulary, historical bytes, Plan 259-09 files, protected files, lockfile, or milestone-level planning files changed.
 
 ## User Setup Required
 
@@ -169,8 +204,9 @@ None.
 
 ## Self-Check: PASSED
 
-- All seven declared modified files exist.
+- All declared created and modified files exist.
 - RED commits `7237f84` and `b154fb1` precede GREEN commits `793bdd7` and `3a62a49`.
+- Review fixes `a13763a`, `cc3359a`, and `09b4cb3` close all three blocking findings with regression coverage.
 - Required focused and full replay gates pass.
 - Original historical v1.4 interpretation remains disjoint and immutable.
 
