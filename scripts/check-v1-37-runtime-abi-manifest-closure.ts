@@ -1,11 +1,72 @@
 import { createHash } from "node:crypto"
 import { spawnSync } from "node:child_process"
-import { existsSync, readFileSync } from "node:fs"
+import {
+  existsSync,
+  readFileSync,
+  readdirSync,
+  writeFileSync,
+} from "node:fs"
+// eslint-disable-next-line no-restricted-imports -- This repository gate verifies the source-owned tuple without a built workspace package.
+import {
+  CURRENT_CANONICAL_COMPATIBILITY_TUPLE_RECORD,
+  CURRENT_RUNTIME_EXECUTION_SERVICE_VERSION,
+  CURRENT_RUNTIME_SEMANTIC_RECEIPT_SCHEMA_VERSION,
+  STRATEGY_RUNTIME_ABI_VERSION,
+} from "../packages/spec/src/index.js"
 
 export const RUNTIME_ABI_ACTIVATION_ALLOWLIST_PATH =
   "packages/spec/artifacts/runtime-abi-v1.17-activation-allowlist.json"
 export const RUNTIME_ABI_ACTIVATION_MANIFEST_PATH =
   "packages/spec/artifacts/runtime-abi-v1.17-activation-manifest.json"
+export const RUNTIME_ABI_TEST_RECEIPT_PATH =
+  "packages/spec/artifacts/runtime-abi-v1.17-test-receipt.json"
+export const RUNTIME_ABI_ACTIVATION_COMMIT =
+  "ba05038f5d9b232afa1cb6c24eef1079524ffcc8"
+
+export const RUNTIME_ABI_DERIVED_VALIDATION_OUTPUTS = Object.freeze([
+  ".planning/artifacts/v1.37-runtime-abi-validation.md",
+  "docs/verification.md",
+  "packages/spec/artifacts/runtime-abi-v1.17-validation.json",
+] as const)
+
+export type RuntimeAbiManifestDigest = Readonly<{
+  path: string
+  sha256: string
+}>
+
+export type RuntimeAbiActivationManifest = Readonly<{
+  schemaVersion: "runtime-abi-v1.17-activation-manifest-v1"
+  activationPlan: "258-14"
+  activationCommit: string
+  activationDiff: readonly (AllowlistOperation & { readonly sha256: string })[]
+  current: Readonly<{
+    canonicalJson: "canonical-json-v1.1"
+    runtimeAbi: "strategy-runtime-abi-v1.17"
+    runtimeService: "runtime-execution-service-v1.17"
+    semanticReceipt: "runtime-semantic-receipt-v1.17"
+    semanticTuple: typeof CURRENT_CANONICAL_COMPATIBILITY_TUPLE_RECORD
+  }>
+  posture: Readonly<{
+    countedEligibleLaneIds: readonly string[]
+    productionTrustedProducers: readonly never[]
+    certificationOwner: "Phase 259"
+  }>
+  evidenceAuthority: Readonly<{
+    fixture: RuntimeAbiManifestDigest
+    nodeCount: 15
+    edgeCount: 26
+    orderedPinCount: 10
+    rootNodeId: "node:evidenceBundle"
+  }>
+  testReceipt: RuntimeAbiManifestDigest
+  inventoryPolicy: Readonly<{
+    source: "Phase 258 PLAN files_modified plus the exact postactivation test receipt"
+    excludedSelf: typeof RUNTIME_ABI_ACTIVATION_MANIFEST_PATH
+    derivedValidationOutputs: typeof RUNTIME_ABI_DERIVED_VALIDATION_OUTPUTS
+    validationDependency: "validation-consumes-manifest"
+  }>
+  phase258Inventory: readonly RuntimeAbiManifestDigest[]
+}>
 
 export type AllowlistOperation = Readonly<{
   path: string
@@ -30,6 +91,263 @@ const readJson = (path: string): unknown =>
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   value !== null && typeof value === "object" && !Array.isArray(value)
+
+const sha256 = (bytes: Uint8Array): string =>
+  createHash("sha256").update(bytes).digest("hex")
+
+const digestPath = (
+  path: string,
+  readBytes: (path: string) => Uint8Array = (candidate) =>
+    readFileSync(candidate),
+): RuntimeAbiManifestDigest => ({ path, sha256: sha256(readBytes(path)) })
+
+export const parsePlanFilesModified = (source: string): readonly string[] => {
+  const lines = source.split(/\r?\n/u)
+  const start = lines.findIndex((line) => line === "files_modified:")
+  if (start === -1) {
+    throw new TypeError("Phase plan has no files_modified inventory.")
+  }
+  const paths: string[] = []
+  for (const line of lines.slice(start + 1)) {
+    if (/^[a-z_]+:/u.test(line)) break
+    const match = /^ {2}- (.+)$/u.exec(line)
+    if (match?.[1] !== undefined) paths.push(match[1])
+  }
+  if (paths.length === 0 || new Set(paths).size !== paths.length) {
+    throw new TypeError("Phase plan files_modified inventory is empty or duplicated.")
+  }
+  return paths
+}
+
+export const collectPhase258InventoryPaths = (): readonly string[] => {
+  const phaseDirectory =
+    ".planning/phases/258-canonical-json-failure-semantics-and-artifact-identity"
+  const planPaths = readdirSync(phaseDirectory)
+    .filter((name) => /^258-\d{2}-PLAN\.md$/u.test(name))
+    .sort()
+  if (planPaths.length !== 14) {
+    throw new TypeError(
+      `Phase 258 plan inventory is incomplete: expected 14 plans, received ${String(planPaths.length)}.`,
+    )
+  }
+  const excluded = new Set<string>([
+    RUNTIME_ABI_ACTIVATION_MANIFEST_PATH,
+    ...RUNTIME_ABI_DERIVED_VALIDATION_OUTPUTS,
+  ])
+  const inventory = new Set<string>([RUNTIME_ABI_TEST_RECEIPT_PATH])
+  for (const name of planPaths) {
+    for (const path of parsePlanFilesModified(
+      readFileSync(`${phaseDirectory}/${name}`, "utf8"),
+    )) {
+      if (!excluded.has(path)) inventory.add(path)
+    }
+  }
+  const paths = [...inventory].sort()
+  if (
+    paths.includes(RUNTIME_ABI_ACTIVATION_MANIFEST_PATH) ||
+    RUNTIME_ABI_DERIVED_VALIDATION_OUTPUTS.some((path) => paths.includes(path))
+  ) {
+    throw new TypeError("Activation manifest inventory contains a hash cycle.")
+  }
+  return paths
+}
+
+const readCountedEligibleLaneIds = (): readonly string[] => {
+  const value = readJson(
+    "packages/spec/artifacts/runtime-abi-v1.17-budget-capabilities.json",
+  )
+  if (!isRecord(value) || !isRecord(value.production)) {
+    throw new TypeError("Runtime budget capability artifact is malformed.")
+  }
+  const ids = value.production.countedEligibleLaneIds
+  if (!Array.isArray(ids) || ids.some((entry) => typeof entry !== "string")) {
+    throw new TypeError("Counted runtime lane posture is malformed.")
+  }
+  return Object.freeze([...ids].sort())
+}
+
+const verifyExactCurrentRuntimeTuple = (): void => {
+  if (
+    STRATEGY_RUNTIME_ABI_VERSION !== "strategy-runtime-abi-v1.17" ||
+    CURRENT_RUNTIME_EXECUTION_SERVICE_VERSION !==
+      "runtime-execution-service-v1.17" ||
+    CURRENT_RUNTIME_SEMANTIC_RECEIPT_SCHEMA_VERSION !==
+      "runtime-semantic-receipt-v1.17" ||
+    CURRENT_CANONICAL_COMPATIBILITY_TUPLE_RECORD.tuple.runtimeAbi !==
+      STRATEGY_RUNTIME_ABI_VERSION
+  ) {
+    throw new TypeError("Current runtime lifecycle tuple is split or stale.")
+  }
+  const contract = readJson(
+    "packages/spec/artifacts/runtime-abi-v1.17-contract.json",
+  )
+  if (
+    !isRecord(contract) ||
+    !isRecord(contract.versions) ||
+    contract.versions.canonicalJson !== "canonical-json-v1.1" ||
+    contract.versions.runtimeAbi !== STRATEGY_RUNTIME_ABI_VERSION ||
+    contract.versions.runtimeService !==
+      CURRENT_RUNTIME_EXECUTION_SERVICE_VERSION ||
+    contract.versions.semanticReceipt !==
+      CURRENT_RUNTIME_SEMANTIC_RECEIPT_SCHEMA_VERSION
+  ) {
+    throw new TypeError("Generated runtime ABI contract is not current.")
+  }
+}
+
+export const buildRuntimeAbiActivationManifest = (
+  readBytes: (path: string) => Uint8Array = (path) => readFileSync(path),
+): RuntimeAbiActivationManifest => {
+  verifyExactCurrentRuntimeTuple()
+  const allowlist = parseRuntimeAbiActivationAllowlist(
+    readJson(RUNTIME_ABI_ACTIVATION_ALLOWLIST_PATH),
+  )
+  const inventory = collectPhase258InventoryPaths().map((path) =>
+    digestPath(path, readBytes),
+  )
+  const inventoryPaths = new Set(inventory.map(({ path }) => path))
+  for (const { path } of allowlist.operations) {
+    if (!inventoryPaths.has(path)) {
+      throw new TypeError(`Activation path is absent from final inventory: ${path}`)
+    }
+  }
+  for (const required of [
+    "scripts/check-v1-37-runtime-abi-manifest-closure.ts",
+    "scripts/check-v1-37-runtime-abi-manifest-closure.test.ts",
+    "scripts/evaluate-v1-37-runtime-abi.ts",
+    "scripts/evaluate-v1-37-runtime-abi.test.ts",
+    RUNTIME_ABI_TEST_RECEIPT_PATH,
+  ]) {
+    if (!inventoryPaths.has(required)) {
+      throw new TypeError(`Final closure authority is absent from inventory: ${required}`)
+    }
+  }
+  const countedEligibleLaneIds = readCountedEligibleLaneIds()
+  if (countedEligibleLaneIds.length !== 0) {
+    throw new TypeError("A runtime lane became counted before Phase 259 certification.")
+  }
+  const fixturePath =
+    "packages/spec/artifacts/runtime-successor-authority-v1.17.fixture.json"
+  const testReceipt = digestPath(RUNTIME_ABI_TEST_RECEIPT_PATH, readBytes)
+  return Object.freeze({
+    schemaVersion: "runtime-abi-v1.17-activation-manifest-v1",
+    activationPlan: "258-14",
+    activationCommit: RUNTIME_ABI_ACTIVATION_COMMIT,
+    activationDiff: Object.freeze(
+      allowlist.operations.map(({ path, operation }) =>
+        Object.freeze({ path, operation, sha256: sha256(readBytes(path)) }),
+      ),
+    ),
+    current: Object.freeze({
+      canonicalJson: "canonical-json-v1.1",
+      runtimeAbi: STRATEGY_RUNTIME_ABI_VERSION,
+      runtimeService: CURRENT_RUNTIME_EXECUTION_SERVICE_VERSION,
+      semanticReceipt: CURRENT_RUNTIME_SEMANTIC_RECEIPT_SCHEMA_VERSION,
+      semanticTuple: CURRENT_CANONICAL_COMPATIBILITY_TUPLE_RECORD,
+    }),
+    posture: Object.freeze({
+      countedEligibleLaneIds,
+      productionTrustedProducers: Object.freeze([]),
+      certificationOwner: "Phase 259",
+    }),
+    evidenceAuthority: Object.freeze({
+      fixture: digestPath(fixturePath, readBytes),
+      nodeCount: 15,
+      edgeCount: 26,
+      orderedPinCount: 10,
+      rootNodeId: "node:evidenceBundle",
+    }),
+    testReceipt,
+    inventoryPolicy: Object.freeze({
+      source:
+        "Phase 258 PLAN files_modified plus the exact postactivation test receipt",
+      excludedSelf: RUNTIME_ABI_ACTIVATION_MANIFEST_PATH,
+      derivedValidationOutputs: RUNTIME_ABI_DERIVED_VALIDATION_OUTPUTS,
+      validationDependency: "validation-consumes-manifest",
+    }),
+    phase258Inventory: Object.freeze(inventory),
+  })
+}
+
+export const parseRuntimeAbiActivationManifest = (
+  value: unknown,
+): RuntimeAbiActivationManifest => {
+  const isDigest = (entry: unknown): entry is RuntimeAbiManifestDigest =>
+    isRecord(entry) &&
+    Object.keys(entry).sort().join(",") === "path,sha256" &&
+    typeof entry.path === "string" &&
+    /^[0-9a-f]{64}$/u.test(String(entry.sha256))
+  const isActivationDigest = (
+    entry: unknown,
+  ): entry is AllowlistOperation & { readonly sha256: string } =>
+    isRecord(entry) &&
+    Object.keys(entry).sort().join(",") === "operation,path,sha256" &&
+    typeof entry.path === "string" &&
+    (entry.operation === "create" || entry.operation === "update") &&
+    /^[0-9a-f]{64}$/u.test(String(entry.sha256))
+  if (
+    !isRecord(value) ||
+    value.schemaVersion !== "runtime-abi-v1.17-activation-manifest-v1" ||
+    value.activationPlan !== "258-14" ||
+    value.activationCommit !== RUNTIME_ABI_ACTIVATION_COMMIT ||
+    !Array.isArray(value.activationDiff) ||
+    value.activationDiff.some((entry) => !isActivationDigest(entry)) ||
+    !Array.isArray(value.phase258Inventory) ||
+    value.phase258Inventory.some((entry) => !isDigest(entry)) ||
+    !isRecord(value.current) ||
+    value.current.canonicalJson !== "canonical-json-v1.1" ||
+    value.current.runtimeAbi !== "strategy-runtime-abi-v1.17" ||
+    value.current.runtimeService !== "runtime-execution-service-v1.17" ||
+    value.current.semanticReceipt !== "runtime-semantic-receipt-v1.17" ||
+    JSON.stringify(value.current.semanticTuple) !==
+      JSON.stringify(CURRENT_CANONICAL_COMPATIBILITY_TUPLE_RECORD) ||
+    !isRecord(value.posture) ||
+    !Array.isArray(value.posture.countedEligibleLaneIds) ||
+    value.posture.countedEligibleLaneIds.length !== 0 ||
+    !Array.isArray(value.posture.productionTrustedProducers) ||
+    value.posture.productionTrustedProducers.length !== 0 ||
+    value.posture.certificationOwner !== "Phase 259" ||
+    !isRecord(value.evidenceAuthority) ||
+    !isDigest(value.evidenceAuthority.fixture) ||
+    value.evidenceAuthority.nodeCount !== 15 ||
+    value.evidenceAuthority.edgeCount !== 26 ||
+    value.evidenceAuthority.orderedPinCount !== 10 ||
+    value.evidenceAuthority.rootNodeId !== "node:evidenceBundle" ||
+    !isRecord(value.testReceipt) ||
+    !isDigest(value.testReceipt) ||
+    value.testReceipt.path !== RUNTIME_ABI_TEST_RECEIPT_PATH ||
+    !isRecord(value.inventoryPolicy) ||
+    value.inventoryPolicy.excludedSelf !== RUNTIME_ABI_ACTIVATION_MANIFEST_PATH ||
+    value.inventoryPolicy.validationDependency !==
+      "validation-consumes-manifest" ||
+    JSON.stringify(value.inventoryPolicy.derivedValidationOutputs) !==
+      JSON.stringify(RUNTIME_ABI_DERIVED_VALIDATION_OUTPUTS)
+  ) {
+    throw new TypeError("Runtime ABI activation manifest is malformed.")
+  }
+  const inventoryPaths = value.phase258Inventory.map(({ path }) => path)
+  if (
+    new Set(inventoryPaths).size !== inventoryPaths.length ||
+    inventoryPaths.join("\n") !== [...inventoryPaths].sort().join("\n") ||
+    !inventoryPaths.includes(RUNTIME_ABI_TEST_RECEIPT_PATH) ||
+    inventoryPaths.includes(RUNTIME_ABI_ACTIVATION_MANIFEST_PATH) ||
+    RUNTIME_ABI_DERIVED_VALIDATION_OUTPUTS.some((path) =>
+      inventoryPaths.includes(path),
+    )
+  ) {
+    throw new TypeError("Runtime ABI activation manifest inventory is malformed.")
+  }
+  return value as RuntimeAbiActivationManifest
+}
+
+const serializeManifest = (manifest: RuntimeAbiActivationManifest): string =>
+  `${JSON.stringify(manifest, null, 2)}\n`
+
+export const writeRuntimeAbiActivationManifest = (): RuntimeAbiActivationManifest => {
+  const manifest = buildRuntimeAbiActivationManifest()
+  writeFileSync(RUNTIME_ABI_ACTIVATION_MANIFEST_PATH, serializeManifest(manifest))
+  return manifest
+}
 
 export const parseRuntimeAbiActivationAllowlist = (
   value: unknown,
@@ -226,7 +544,7 @@ export const verifyImmutableRuntimeServiceV116Digests = (
     } catch {
       throw new TypeError(`Immutable v1.16 path is unavailable: ${path}`)
     }
-    const actual = createHash("sha256").update(bytes).digest("hex")
+    const actual = sha256(bytes)
     if (actual !== expected) {
       throw new TypeError(
         `Immutable v1.16 digest changed: ${path} expected=${expected} actual=${actual}`,
@@ -250,9 +568,6 @@ export const checkRuntimeAbiManifestClosure = (options: {
   }
   verifyPreparedLifecycleConsumers(allowlist)
   verifyImmutableRuntimeServiceV116Digests()
-  if (!options.final && existsSync(RUNTIME_ABI_ACTIVATION_MANIFEST_PATH)) {
-    throw new TypeError("Final activation manifest exists before activation.")
-  }
   if (options.final && !existsSync(RUNTIME_ABI_ACTIVATION_MANIFEST_PATH)) {
     throw new TypeError("Final activation manifest is unavailable.")
   }
@@ -263,6 +578,18 @@ export const checkRuntimeAbiManifestClosure = (options: {
       activationCommit: options.activationCommit,
     })
   }
+  if (options.final) {
+    verifyExactCurrentRuntimeTuple()
+    const actual = parseRuntimeAbiActivationManifest(
+      readJson(RUNTIME_ABI_ACTIVATION_MANIFEST_PATH),
+    )
+    const expected = buildRuntimeAbiActivationManifest()
+    if (serializeManifest(actual) !== serializeManifest(expected)) {
+      throw new TypeError(
+        "Final activation manifest does not match exact current Phase 258 bytes.",
+      )
+    }
+  }
 }
 
 const isMain =
@@ -271,14 +598,10 @@ const isMain =
 
 if (isMain) {
   const writeFinal = process.argv.includes("--write-final")
-  if (writeFinal) {
-    throw new TypeError(
-      "Final manifest generation is available only after the activation commit.",
-    )
-  }
+  const checkFinal = process.argv.includes("--check") || writeFinal
   const staged = process.argv.includes("--check-staged-activation")
   const committed = process.argv.includes("--check-committed-activation")
-  if (staged && committed) {
+  if ([staged, committed, checkFinal].filter(Boolean).length > 1) {
     throw new TypeError("Activation closure accepts exactly one diff mode.")
   }
   const activationCommitArgument = process.argv.find((argument) =>
@@ -287,10 +610,13 @@ if (isMain) {
   const activationCommit = activationCommitArgument?.slice(
     "--activation-commit=".length,
   )
+  if (writeFinal) writeRuntimeAbiActivationManifest()
   checkRuntimeAbiManifestClosure({
-    final: false,
+    final: checkFinal,
     diffMode: staged ? "staged" : committed ? "committed" : "none",
-    activationCommit,
+    activationCommit: checkFinal
+      ? RUNTIME_ABI_ACTIVATION_COMMIT
+      : activationCommit,
   })
   console.log("runtime-abi-v1.17 manifest closure: PASS")
 }

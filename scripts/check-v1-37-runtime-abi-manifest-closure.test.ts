@@ -3,7 +3,14 @@ import { readFileSync } from "node:fs"
 import { describe, expect, it } from "vitest"
 import {
   IMMUTABLE_RUNTIME_SERVICE_V116_DIGESTS,
+  RUNTIME_ABI_ACTIVATION_COMMIT,
+  RUNTIME_ABI_ACTIVATION_MANIFEST_PATH,
+  RUNTIME_ABI_DERIVED_VALIDATION_OUTPUTS,
   RUNTIME_ABI_PREPARED_LIFECYCLE_CONSUMERS,
+  RUNTIME_ABI_TEST_RECEIPT_PATH,
+  collectPhase258InventoryPaths,
+  parsePlanFilesModified,
+  parseRuntimeAbiActivationManifest,
   parseRuntimeAbiActivationAllowlist,
   runtimeAbiActivationDiffArguments,
   verifyRuntimeAbiActivationNameStatus,
@@ -25,12 +32,47 @@ describe("Phase 258 runtime ABI activation closure", () => {
     expect(JSON.stringify(allowlist)).not.toMatch(/sha256|hash/iu)
   })
 
-  it("does not publish the final post-activation hash manifest early", () => {
-    expect(() =>
-      readFileSync(
-        "packages/spec/artifacts/runtime-abi-v1.17-activation-manifest.json",
+  it("derives a sorted, cycle-free final inventory from all fourteen plans", () => {
+    expect(
+      parsePlanFilesModified(
+        "---\nfiles_modified:\n  - z.ts\n  - a.ts\nautonomous: true\n---\n",
       ),
-    ).toThrow()
+    ).toEqual(["z.ts", "a.ts"])
+    const paths = collectPhase258InventoryPaths()
+    expect(paths).toEqual([...paths].sort())
+    expect(paths).toContain(RUNTIME_ABI_TEST_RECEIPT_PATH)
+    expect(paths).toContain(
+      "scripts/check-v1-37-runtime-abi-manifest-closure.ts",
+    )
+    expect(paths).toContain("scripts/evaluate-v1-37-runtime-abi.ts")
+    expect(paths).not.toContain(RUNTIME_ABI_ACTIVATION_MANIFEST_PATH)
+    for (const path of RUNTIME_ABI_DERIVED_VALIDATION_OUTPUTS) {
+      expect(paths).not.toContain(path)
+    }
+    expect(() => parsePlanFilesModified("files_modified:\nautonomous: true"))
+      .toThrow(/empty or duplicated/iu)
+  })
+
+  it("rejects partial or differently committed postactivation manifests", () => {
+    const minimal = {
+      schemaVersion: "runtime-abi-v1.17-activation-manifest-v1",
+      activationPlan: "258-14",
+      activationCommit: RUNTIME_ABI_ACTIVATION_COMMIT,
+      activationDiff: [],
+      current: {},
+      posture: {},
+      evidenceAuthority: {},
+      testReceipt: {},
+      inventoryPolicy: {},
+      phase258Inventory: [],
+    }
+    expect(() => parseRuntimeAbiActivationManifest(minimal)).toThrow(/malformed/iu)
+    expect(() =>
+      parseRuntimeAbiActivationManifest({
+        ...minimal,
+        activationCommit: "a".repeat(40),
+      }),
+    ).toThrow(/malformed/iu)
   })
 
   it("keeps every v1.17 current/default consumer in the atomic allowlist", () => {
@@ -92,7 +134,7 @@ describe("Phase 258 runtime ABI activation closure", () => {
       "--name-status",
       "--no-renames",
     ])
-    const activationCommit = "a".repeat(40)
+    const activationCommit = RUNTIME_ABI_ACTIVATION_COMMIT
     expect(
       runtimeAbiActivationDiffArguments({
         mode: "committed",
