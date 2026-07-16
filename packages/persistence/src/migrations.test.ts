@@ -54,8 +54,45 @@ describe("migrations", () => {
     )
     expect(names).toContain("0020_runtime_evidence_v1_17_graph.sql")
     expect(names).toContain("0021_runtime_abi_v1_17_activation.sql")
-    expect(names).toContain("0022_runtime_evidence_v1_17_installed_authority.sql")
+    expect(names).toContain(
+      "0022_runtime_evidence_v1_17_installed_authority.sql",
+    )
+    expect(names).toContain("0023_runtime_conformance_certificates.sql")
     expect(names).toEqual([...names].sort())
+  })
+
+  it("extends the existing certificate ledger with exact Phase-259 provenance", async () => {
+    const sql = await readFile(
+      new URL("0023_runtime_conformance_certificates.sql", migrationsDirectory),
+      "utf8",
+    )
+    for (const required of [
+      "alter table runtime_evidence_certificates",
+      "exact_certificate_bytes",
+      "exact_certificate_sha256",
+      "conformance_language_id",
+      "conformance_fixture_source_sha256",
+      "conformance_artifact_sha256",
+      "conformance_runtime_executable_sha256",
+      "conformance_toolchain_sha256",
+      "conformance_identity_manifest_root",
+      "conformance_evidence_graph_root",
+      "conformance_result_root_sha256",
+      "conformance_evidence_root_sha256",
+      "runtime_evidence_conformance_certificate_runs",
+      "reject_integrity_authority_mutation",
+    ]) {
+      expect(sql).toContain(required)
+    }
+    expect(sql).toContain("conformance_run_count = 3")
+    expect(sql).toContain("skipped_case_count = 0")
+    expect(sql).toContain("not fallback_used")
+    expect(sql).toContain("not synthetic_evidence")
+    expect(sql).not.toMatch(
+      /create table runtime_evidence_conformance_certificates/iu,
+    )
+    expect(sql).not.toMatch(/update\s+runtime_evidence_/iu)
+    expect(sql).not.toMatch(/insert\s+into\s+runtime_evidence_/iu)
   })
 
   it("stores v1.17 installed authority independently from legacy publication bytes", async () => {
@@ -84,7 +121,9 @@ describe("migrations", () => {
     expect(sql).toContain(
       "trust_domain = 'cowards-game:runtime-evidence-authority:production:v1'",
     )
-    expect(sql).not.toMatch(/insert\s+into\s+runtime_evidence_v1_17_installed_authorities/iu)
+    expect(sql).not.toMatch(
+      /insert\s+into\s+runtime_evidence_v1_17_installed_authorities/iu,
+    )
   })
 
   it("binds new v1.17 receipts without rewriting v1.16 Chronicle evidence", async () => {

@@ -25,6 +25,8 @@ import {
   RUNTIME_EVIDENCE_AUTHORITY_TRUST_DOMAINS,
   RUNTIME_EVIDENCE_AUTHORITY_PAYLOAD_SCHEMA_VERSION_V1_17,
   buildRuntimeEvidenceAuthorityEnvelope,
+  encodeCanonicalJson,
+  encodeRuntimeConformanceCertificatePayloadV117,
   encodeRuntimeEvidenceAuthorityPayload,
   encodeRuntimeEvidenceAuthorityPayloadV117,
   encodeRuntimeEvidenceAuthoritySignatureMessage,
@@ -32,8 +34,13 @@ import {
   hashExecutableLaneIdentity,
   inspectRuntimeEvidenceAuthorityBundle,
   type CanonicalCompatibilityTuple,
+  type JsonValue,
   type RuntimeEvidenceAuthorityBindingV117,
   type RuntimeEvidenceAuthorityPayloadV117,
+  type RuntimeConformanceCertificatePayloadV117,
+  type RuntimeConformanceCertificateV117,
+  type RuntimeConformanceExpectedRunBindingV117,
+  type RuntimeConformanceTrustedProducerV117,
 } from "@cowards/spec"
 import { Pool } from "pg"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
@@ -45,6 +52,7 @@ import {
   importAuthenticatedCertificateRevocation,
   importAuthenticatedCertificateSupersession,
   importAuthenticatedRuntimeLaneControl,
+  importRuntimeConformanceCertificateV117,
   installRuntimeEvidenceAuthorityPublication,
   prepareRuntimeEvidenceAuthorityPublication,
   prepareRuntimeEvidenceAuthorityPublicationV117,
@@ -1480,3 +1488,157 @@ describePostgres(
     })
   },
 )
+
+describePostgres("Phase-259 reviewed conformance certificate import", () => {
+  const schema = `runtime_conformance_${randomUUID().replaceAll("-", "")}`
+  const conformanceKeys = generateKeyPairSync("ed25519")
+  let admin: Pool
+  let pool: Pool
+
+  const fixture = async () => {
+    const reviewed = JSON.parse(
+      await readFile(
+        path.resolve(
+          import.meta.dirname,
+          "../../..",
+          ".planning/artifacts/v1.37-language-conformance-typescript.json",
+        ),
+        "utf8",
+      ),
+    ) as {
+      candidatePayload: RuntimeConformanceCertificatePayloadV117
+      expectedRunBinding: RuntimeConformanceExpectedRunBindingV117
+    }
+    const payload: RuntimeConformanceCertificatePayloadV117 = {
+      ...globalThis.structuredClone(reviewed.candidatePayload),
+      producerId: "fixture:runtime-conformance-producer:v1.37",
+      producerKeyId: "fixture:runtime-conformance-key:v1.37",
+      trustDomain: "fixture",
+    }
+    const certificate: RuntimeConformanceCertificateV117 = {
+      ...payload,
+      signatureBase64: sign(
+        null,
+        encodeRuntimeConformanceCertificatePayloadV117(payload),
+        conformanceKeys.privateKey,
+      ).toString("base64"),
+    }
+    const encoded = encodeCanonicalJson(certificate as unknown as JsonValue, {
+      context: "canonical-manifest",
+    })
+    if (!encoded.ok) throw new Error("fixture certificate is not canonical")
+    const certificateSha256 = `sha256:${createHash("sha256")
+      .update(encoded.bytes)
+      .digest("hex")}`
+    const importPayload: RuntimeEvidenceAuthorityImportPayload = {
+      schemaVersion: RUNTIME_EVIDENCE_AUTHORITY_IMPORT_SCHEMA_VERSION,
+      domain: "conformance-certificate",
+      eventId: `fixture:conformance-import:${certificateSha256.slice(-16)}`,
+      producerId: trustRoot.producerId,
+      producerKeyId: trustRoot.keyId,
+      trustDomain: trustRoot.trustDomain,
+      issuedAt: payload.issuedAt,
+      validUntil: payload.freshUntil,
+      action: null,
+      laneIdentityHash: null,
+      reasonCode: "REVIEWED_CONFORMANCE_CERTIFICATE",
+      evidenceReferenceHash: payload.identity.evidenceGraphRoot,
+      compensatesEventId: null,
+      targetCertificateId: payload.certificateId,
+      targetCertificateRecordHash: certificateSha256,
+      replacementCertificateId: null,
+      replacementCertificateRecordHash: null,
+    }
+    const trustedProducer: RuntimeConformanceTrustedProducerV117 = {
+      producerId: payload.producerId,
+      keyId: payload.producerKeyId,
+      trustDomain: "fixture",
+      managedIdentity: true,
+      publicKeyPem: conformanceKeys.publicKey
+        .export({ type: "spki", format: "pem" })
+        .toString(),
+    }
+    return {
+      input: {
+        mode: "fixture" as const,
+        certificate,
+        currentIdentity: payload.identity,
+        expectedRunBinding: reviewed.expectedRunBinding,
+        verificationInstant: payload.issuedAt,
+        trustedProducers: [trustedProducer],
+        importEnvelope: envelope(importPayload),
+        trustedImportAuthorities: [trustRoot],
+      },
+      certificateSha256,
+    }
+  }
+
+  beforeAll(async () => {
+    admin = new Pool({ connectionString: databaseUrl! })
+    await admin.query(`create schema ${schema}`)
+    pool = new Pool({
+      connectionString: databaseUrl!,
+      options: `-c search_path=${schema}`,
+      max: 4,
+    })
+    await migrate(pool)
+  }, 30_000)
+
+  afterAll(async () => {
+    await pool.end()
+    await admin.query(`drop schema ${schema} cascade`)
+    await admin.end()
+  })
+
+  it("imports one exact certificate idempotently with three immutable runs", async () => {
+    const prepared = await fixture()
+    const [left, right] = await Promise.all([
+      importRuntimeConformanceCertificateV117(pool, prepared.input),
+      importRuntimeConformanceCertificateV117(pool, prepared.input),
+    ])
+    expect(left).toEqual(right)
+    expect(left).toMatchObject({
+      status: "installed",
+      certificateSha256: prepared.certificateSha256,
+      languageId: "typescript",
+      registryGeneration: "0",
+    })
+    expect(JSON.stringify(left)).not.toMatch(
+      /source|memory|objective|diagnostics|stderr|private|path|host/iu,
+    )
+    const counts = await pool.query<{
+      certificates: number
+      runs: number
+    }>(`select
+      (select count(*)::integer from runtime_evidence_certificates
+        where exact_certificate_sha256 is not null) as certificates,
+      (select count(*)::integer
+         from runtime_evidence_conformance_certificate_runs) as runs`)
+    expect(counts.rows[0]).toEqual({ certificates: 1, runs: 3 })
+    await expect(
+      pool.query(
+        "update runtime_evidence_conformance_certificate_runs set case_count = 17",
+      ),
+    ).rejects.toThrow(/append-only/iu)
+    await expect(
+      pool.query("delete from runtime_evidence_certificates"),
+    ).rejects.toThrow(/append-only/iu)
+  })
+
+  it("rejects operator substitution before durable mutation", async () => {
+    const prepared = await fixture()
+    const changed = globalThis.structuredClone(prepared.input)
+    changed.importEnvelope.payload.targetCertificateRecordHash = sha256(
+      "substituted-certificate",
+    )
+    changed.importEnvelope = envelope(changed.importEnvelope.payload)
+    await expect(
+      importRuntimeConformanceCertificateV117(pool, changed),
+    ).rejects.toMatchObject({ code: "CERTIFICATE_IMPORT_BINDING" })
+    const count = await pool.query<{ count: number }>(
+      "select count(*)::integer as count from runtime_evidence_certificates where exact_certificate_sha256 = $1",
+      [sha256("substituted-certificate")],
+    )
+    expect(count.rows[0]?.count).toBe(0)
+  })
+})
