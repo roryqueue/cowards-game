@@ -406,6 +406,7 @@ describe("runtime invocation v1.18", () => {
   it("rejects non-empty or internally impossible pids snapshots", () => {
     const request = createRuntimeInvocationRequestV118(requestInput())
     const snapshots = [
+      { currentBefore: 0, currentPeak: 0, currentAfter: 0 },
       { currentBefore: 1, currentPeak: 1, currentAfter: 0 },
       { currentBefore: 2, currentPeak: 1, currentAfter: 0 },
       { currentBefore: 0, currentPeak: 0, currentAfter: 1 },
@@ -419,6 +420,24 @@ describe("runtime invocation v1.18", () => {
         code: "COUNTER_INCONSISTENT",
       })
     }
+  })
+
+  it("keeps an impossible zero-process peak system-owned even when over limit", () => {
+    const request = createRuntimeInvocationRequestV118(requestInput())
+    const receipt = clone(validReceipt())
+    receipt.pids.currentPeak = 0
+    receipt.wall.elapsedNanoseconds =
+      (request.limits.wallMilliseconds + 1) * 1_000_000
+    receipt.wall.processGroupReapedMonotonicNanoseconds =
+      receipt.wall.supervisedSpawnMonotonicNanoseconds +
+      receipt.wall.elapsedNanoseconds
+    receipt.wall.wallMilliseconds = request.limits.wallMilliseconds + 1
+
+    expect(evaluateRuntimeSupervisorReceiptV118(request, receipt)).toEqual({
+      kind: "system_failure",
+      gameplayDisposition: "no_mutation",
+      code: "COUNTER_INCONSISTENT",
+    })
   })
 
   it("rejects noncanonical, overflow, negative, and gameplay-bearing receipts", () => {

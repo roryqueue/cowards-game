@@ -691,6 +691,7 @@ export const evaluateRuntimeSupervisorReceiptV118 = (
   }
   if (
     receipt.pids.currentBefore !== 0 ||
+    receipt.pids.currentPeak < 1 ||
     receipt.pids.currentPeak < receipt.pids.currentBefore ||
     receipt.pids.currentPeak < receipt.pids.currentAfter
   ) {

@@ -462,6 +462,9 @@ describe("shared runtime supervisor v1.18 contract", () => {
         envelope.receipt.pids.currentPeak = 1
       },
       (envelope) => {
+        envelope.receipt.pids.currentPeak = 0
+      },
+      (envelope) => {
         envelope.receipt.cpu.finalUsageMicroseconds =
           Number.MAX_SAFE_INTEGER + 1
       },
@@ -571,6 +574,12 @@ describe("shared runtime supervisor v1.18 contract", () => {
         mutate: (receipt) => {
           receipt.containment.cgroupEmpty = false
           receipt.containment.lingeringProcessCount = 1
+        },
+      },
+      {
+        expectedCode: "COUNTER_INCONSISTENT",
+        mutate: (receipt) => {
+          receipt.pids.currentPeak = 0
         },
       },
     ]
