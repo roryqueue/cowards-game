@@ -143,7 +143,22 @@ const RuntimeInvocationRequestWithoutHashV118Schema =
 export const RuntimeInvocationRequestV118Schema =
   RuntimeInvocationRequestWithoutHashV118Schema.extend({
     requestSha256: Sha256Schema,
-  }).strict()
+  })
+    .strict()
+    .superRefine((request, context) => {
+      const { requestSha256, ...withoutHash } = request
+      if (
+        requestSha256 ===
+        sha256(canonicalBytes(withoutHash as unknown as JsonValue))
+      ) {
+        return
+      }
+      context.addIssue({
+        code: "custom",
+        path: ["requestSha256"],
+        message: "runtime invocation v1.18 request hash does not match its body",
+      })
+    })
 
 const canonicalBytes = (value: JsonValue): Uint8Array => {
   const encoded = encodeCanonicalJson(value, {
@@ -197,10 +212,13 @@ export const createRuntimeInvocationRequestV118 = (
 
 export const serializeRuntimeInvocationRequestV118 = (
   request: RuntimeInvocationRequestV118,
-): Uint8Array =>
-  canonicalBytes(
-    RuntimeInvocationRequestV118Schema.parse(request) as unknown as JsonValue,
-  )
+): Uint8Array => {
+  const parsed = RuntimeInvocationRequestV118Schema.safeParse(request)
+  if (!parsed.success) {
+    throw new TypeError("Runtime invocation v1.18 request hash is invalid")
+  }
+  return canonicalBytes(parsed.data as unknown as JsonValue)
+}
 
 export interface RuntimeMemoryEventsV118 {
   low: number

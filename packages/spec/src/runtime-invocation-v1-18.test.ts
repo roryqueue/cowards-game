@@ -154,6 +154,44 @@ describe("runtime invocation v1.18", () => {
     expect(Object.isFrozen(request.expectedIdentity)).toBe(true)
   })
 
+  it("rejects a cloned request whose canonical body or self-hash changed", () => {
+    const request = createRuntimeInvocationRequestV118(requestInput())
+    const changedBody = clone(request) as unknown as {
+      monotonicDeadlineNanoseconds: number
+    }
+    changedBody.monotonicDeadlineNanoseconds += 1
+    expect(RuntimeInvocationRequestV118Schema.safeParse(changedBody).success).toBe(
+      false,
+    )
+    expect(() =>
+      serializeRuntimeInvocationRequestV118(
+        changedBody as unknown as ReturnType<
+          typeof createRuntimeInvocationRequestV118
+        >,
+      ),
+    ).toThrow(/request hash/u)
+
+    const changedHash = clone(request) as unknown as {
+      requestSha256: `sha256:${string}`
+    }
+    changedHash.requestSha256 = hash("0")
+    expect(RuntimeInvocationRequestV118Schema.safeParse(changedHash).success).toBe(
+      false,
+    )
+    expect(
+      evaluateRuntimeSupervisorReceiptV118(
+        changedHash as unknown as ReturnType<
+          typeof createRuntimeInvocationRequestV118
+        >,
+        validReceipt(),
+      ),
+    ).toEqual({
+      kind: "system_failure",
+      gameplayDisposition: "no_mutation",
+      code: "RAW_RECEIPT_INVALID",
+    })
+  })
+
   it("accepts exact ceilings with complete Linux cgroup-v2 evidence", () => {
     const request = createRuntimeInvocationRequestV118(requestInput())
     const receipt = validReceipt()
