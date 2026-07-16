@@ -292,8 +292,8 @@ Plans:
 
 **Wave 7 — evidence ledger and independent Go verification**
 
-- [ ] 259-19-PLAN.md — Extend the append-only evidence ledger and publisher.
-- [ ] 259-20-PLAN.md — Add independent Go v1.18 receipt verification.
+- [x] 259-19-PLAN.md — Extend the append-only evidence ledger and publisher.
+- [x] 259-20-PLAN.md — Add independent Go v1.18 receipt verification.
 
 **Wave 8 — Go completion authority and import trust bootstrap**
 
