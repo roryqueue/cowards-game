@@ -805,22 +805,62 @@ const transitionViolationStableCode = (
   return requireStableCode(payload.type)
 }
 
-const validatePlayerViolationFailureOwnership = (
+const validateResultOwnership = (
   input: ProjectCanonicalConformanceTraceInput,
 ): void => {
-  if (input.resultClass !== "player_violation") return
+  const negativeInvocations = input.invocations.filter(
+    ({ resultClass }) => resultClass !== "success",
+  )
+  const negativeTransitions = input.transitions.filter(
+    ({ resultClass }) => resultClass !== "success",
+  )
+  if (input.resultClass === "success") {
+    if (negativeInvocations.length > 0 || negativeTransitions.length > 0) {
+      fail("TRACE_RESULT_INVALID")
+    }
+    return
+  }
+
   const failure = input.failure
   if (failure === null) return fail("TRACE_RESULT_INVALID")
+  const hasInvocationOwner = failure.invocationOrdinal !== null
+  const hasTransitionOwner = failure.transitionOrdinal !== null
+  if (hasInvocationOwner === hasTransitionOwner) fail("TRACE_RESULT_INVALID")
+
+  if (input.resultClass === "system_failure") {
+    if (
+      !hasInvocationOwner ||
+      negativeInvocations.length !== 1 ||
+      negativeInvocations[0]!.resultClass !== "system_failure" ||
+      negativeInvocations[0]!.ordinal !== failure.invocationOrdinal ||
+      negativeTransitions.length !== 0
+    ) {
+      fail("TRACE_RESULT_INVALID")
+    }
+    return
+  }
+
+  if (hasInvocationOwner) {
+    if (
+      negativeInvocations.length !== 1 ||
+      negativeInvocations[0]!.resultClass !== "player_violation" ||
+      negativeInvocations[0]!.ordinal !== failure.invocationOrdinal ||
+      negativeTransitions.length !== 0
+    ) {
+      fail("TRACE_RESULT_INVALID")
+    }
+    return
+  }
+
   if (
-    failure.invocationOrdinal === null &&
-    failure.transitionOrdinal === null
+    negativeInvocations.length !== 0 ||
+    negativeTransitions.length !== 1 ||
+    negativeTransitions[0]!.ordinal !== failure.transitionOrdinal
   ) {
     fail("TRACE_RESULT_INVALID")
   }
-  if (failure.transitionOrdinal === null) return
-  const transition = input.transitions[failure.transitionOrdinal]!
+  const transition = negativeTransitions[0]!
   if (
-    transition.resultClass !== "player_violation" ||
     transitionViolationStableCode(transition) !== failure.stableCode ||
     transition.kind !== failure.failingBoundary ||
     (transition.beforeStateHash !== transition.afterStateHash) !==
@@ -828,27 +868,6 @@ const validatePlayerViolationFailureOwnership = (
     failure.memoryMutation ||
     transition.terminalHash !== failure.terminalEffectHash ||
     failure.retryable
-  ) {
-    fail("TRACE_RESULT_INVALID")
-  }
-}
-
-const validateSystemFailureInvocationOwnership = (
-  input: ProjectCanonicalConformanceTraceInput,
-): void => {
-  const systemFailureOrdinals = input.invocations
-    .filter(({ resultClass }) => resultClass === "system_failure")
-    .map(({ ordinal }) => ordinal)
-  if (input.resultClass !== "system_failure") {
-    if (systemFailureOrdinals.length > 0) fail("TRACE_RESULT_INVALID")
-    return
-  }
-  if (
-    input.failure === null ||
-    input.failure.invocationOrdinal === null ||
-    input.failure.transitionOrdinal !== null ||
-    systemFailureOrdinals.length !== 1 ||
-    systemFailureOrdinals[0] !== input.failure.invocationOrdinal
   ) {
     fail("TRACE_RESULT_INVALID")
   }
@@ -885,8 +904,7 @@ const validateInput = (input: ProjectCanonicalConformanceTraceInput): void => {
       fail("TRACE_RESULT_INVALID")
     }
   }
-  validatePlayerViolationFailureOwnership(input)
-  validateSystemFailureInvocationOwnership(input)
+  validateResultOwnership(input)
 }
 
 const traceInput = (
