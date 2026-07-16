@@ -6,7 +6,7 @@
   "posture": "activated-uncertified-pending-phase-259-conformance",
   "activation": {
     "activationCommit": "ba05038f5d9b232afa1cb6c24eef1079524ffcc8",
-    "manifestSha256": "sha256:7af3e0674afbaa073c48c61b3aa2130d41a4cdc8452e3ddbb580001490d144e8",
+    "manifestSha256": "sha256:396d4e96f2c821547da844bd6636d9cb55352c79a3a363b9aff325f278f228f4",
     "activationPathCount": 23,
     "manifestStatus": "verified"
   },
@@ -22,7 +22,7 @@
     "stage": "postactivation",
     "testManifestSha256": "sha256:cf3654f1791b77554ee77cd47f9cbdbafa95f638db3832d96ed31e8594ffbc0c",
     "selectedCommandCount": 18,
-    "passedCount": 1228,
+    "passedCount": 1238,
     "skippedCount": 0,
     "databaseCommandCount": 8
   },
