@@ -111,7 +111,7 @@
     {
       "path": "apps/go-backend/live_backend.go",
       "operation": "update",
-      "sha256": "a4892f45c06f8e498333043f9ea293f923096c8cb446ee1632c236bb4fcc025e"
+      "sha256": "6455814977a6dc0467755086132668e82a52045c6cfdcbd906f4653264ed5700"
     },
     {
       "path": "packages/persistence/src/complete-match.ts",
@@ -236,11 +236,11 @@
     },
     {
       "path": "apps/go-backend/deployment_lane_registry_test.go",
-      "sha256": "ecfd728315ea0bd1dfde2bdf31d758b3c74851b425d98ae9754076c4e78780c6"
+      "sha256": "a50872e2bb81c70cf8ad94840447a8f457e0ae998aff90dc9f22ce931857126f"
     },
     {
       "path": "apps/go-backend/live_backend.go",
-      "sha256": "a4892f45c06f8e498333043f9ea293f923096c8cb446ee1632c236bb4fcc025e"
+      "sha256": "6455814977a6dc0467755086132668e82a52045c6cfdcbd906f4653264ed5700"
     },
     {
       "path": "apps/go-backend/main_test.go",
@@ -252,7 +252,7 @@
     },
     {
       "path": "apps/go-backend/orchestrator_test.go",
-      "sha256": "c16d55b990c5db6422dcef25baadb64c32c1f1790bd5fbe981b534b00cb30cfb"
+      "sha256": "cfb6911504ad8c1a84bac7b906d017a8696cc96fe174420c75a61b1a77d3f678"
     },
     {
       "path": "apps/go-backend/phase244_account_provider_db_test.go",
@@ -288,7 +288,11 @@
     },
     {
       "path": "apps/go-backend/runtime_service_client_v1_17_test.go",
-      "sha256": "7ded9967666d8e97358e01eefcdac3f895b36df5f1138d2344ba4fbd2b1516ae"
+      "sha256": "fff2eb62971444ae507d8243a8118a5cb124575c87eb712c336204cb208b692b"
+    },
+    {
+      "path": "apps/go-backend/runtime_service_router.go",
+      "sha256": "33a04878a82a9e8f7c3d8ef5cfc86245471dbabb25e4d29b49c3af5f4beb47d5"
     },
     {
       "path": "apps/go-backend/source_identity_test.go",
