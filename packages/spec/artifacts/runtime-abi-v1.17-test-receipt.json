@@ -1,0 +1,342 @@
+{
+  "schemaVersion": "runtime-abi-v1.17-test-receipt-v1",
+  "activationPlan": "258-14",
+  "stage": "postactivation",
+  "testManifestSha256": "sha256:cf3654f1791b77554ee77cd47f9cbdbafa95f638db3832d96ed31e8594ffbc0c",
+  "selectedCommandCount": 18,
+  "results": [
+    {
+      "id": "phase258.spec-and-codecs",
+      "stage": "preactivation",
+      "kind": "vitest",
+      "namedResult": "phase258-spec-and-codecs",
+      "ownedFiles": [
+        "packages/spec/src/canonical-identity-domains.test.ts",
+        "packages/spec/src/canonical-json-boundaries.test.ts",
+        "packages/spec/src/canonical-json-corpus.test.ts",
+        "packages/spec/src/canonical-json-encode.test.ts",
+        "packages/spec/src/canonical-json-parse.test.ts",
+        "packages/spec/src/canonical-json-scan.test.ts",
+        "packages/spec/src/integrity-authority.test.ts",
+        "packages/spec/src/runtime-abi-v1-17.test.ts",
+        "packages/spec/src/runtime-evidence-attestation-v1-17.test.ts",
+        "packages/spec/src/runtime-evidence-authority-bundle.test.ts",
+        "packages/spec/src/runtime-execution-service-v1-17.test.ts",
+        "packages/spec/src/runtime-identity-manifest.test.ts",
+        "packages/spec/src/runtime-invocation-v1-17.test.ts",
+        "packages/spec/src/runtime-preflight-v1-17.test.ts"
+      ],
+      "status": "PASS",
+      "passedCount": 188,
+      "skippedCount": 0,
+      "databaseRequired": false,
+      "databaseObserved": false
+    },
+    {
+      "id": "phase258.runtime-lanes",
+      "stage": "preactivation",
+      "kind": "vitest",
+      "namedResult": "phase258-runtime-lanes",
+      "ownedFiles": [
+        "packages/runtime-js/src/adapter-contract.test.ts",
+        "packages/runtime-js/src/hostile-matrix.test.ts",
+        "packages/runtime-js/src/revision-v1-17.test.ts",
+        "packages/runtime-js/src/revision.test.ts",
+        "packages/runtime-python/src/python-subprocess-adapter.test.ts",
+        "packages/runtime-python/src/revision-v1-17.test.ts",
+        "packages/runtime-wasm-wasi/src/revision-v1-17.test.ts",
+        "packages/runtime-wasm-wasi/src/wasm-wasi-subprocess-adapter.test.ts"
+      ],
+      "status": "PASS",
+      "passedCount": 216,
+      "skippedCount": 0,
+      "databaseRequired": false,
+      "databaseObserved": false
+    },
+    {
+      "id": "phase258.service-and-engine",
+      "stage": "preactivation",
+      "kind": "vitest",
+      "namedResult": "phase258-service-and-engine",
+      "ownedFiles": [
+        "apps/runtime-service/src/counted-safety.test.ts",
+        "apps/runtime-service/src/deployment-lane-registry-v1-17.test.ts",
+        "apps/runtime-service/src/execute-match.test.ts",
+        "apps/runtime-service/src/runtime-evidence-authority.test.ts",
+        "apps/runtime-service/src/semantic-integrity.test.ts",
+        "apps/runtime-service/src/semantic-receipt-v1-17.test.ts",
+        "apps/runtime-service/src/server.test.ts",
+        "apps/runtime-service/src/source-identity-proof-server.test-support.test.ts",
+        "packages/engine/src/kernel/runtime-ownership.test.ts"
+      ],
+      "status": "PASS",
+      "passedCount": 104,
+      "skippedCount": 0,
+      "databaseRequired": false,
+      "databaseObserved": false
+    },
+    {
+      "id": "phase258.replay-and-web",
+      "stage": "preactivation",
+      "kind": "vitest",
+      "namedResult": "phase258-replay-and-web",
+      "ownedFiles": [
+        "packages/replay/src/grammar.test.ts",
+        "packages/replay/src/replay-transition.test.ts",
+        "packages/replay/src/validate.test.ts",
+        "apps/web/app/tuple-classification.test.ts"
+      ],
+      "status": "PASS",
+      "passedCount": 81,
+      "skippedCount": 0,
+      "databaseRequired": false,
+      "databaseObserved": false
+    },
+    {
+      "id": "phase258.scripts",
+      "stage": "preactivation",
+      "kind": "vitest",
+      "namedResult": "phase258-scripts",
+      "ownedFiles": [
+        "scripts/calibrate-v1-37-runtime-abi.test.ts",
+        "scripts/check-canonical-json-v1-1-red.test.ts",
+        "scripts/check-v1-37-integrity-boundaries.test.ts",
+        "scripts/check-v1-37-runtime-abi-manifest-closure.test.ts",
+        "scripts/evaluate-v1-37-runtime-abi.test.ts",
+        "scripts/generate-canonical-json-v1-1-corpus.test.ts",
+        "scripts/generate-go-parity-fixtures.test.ts",
+        "scripts/generate-v1-37-event-coverage.test.ts",
+        "scripts/prove-v1-37-atomic-activation.test.ts",
+        "scripts/run-v1-37-runtime-abi-test-manifest.test.ts"
+      ],
+      "status": "PASS",
+      "passedCount": 128,
+      "skippedCount": 0,
+      "databaseRequired": false,
+      "databaseObserved": false
+    },
+    {
+      "id": "phase258.database",
+      "stage": "preactivation",
+      "kind": "vitest",
+      "namedResult": "phase258-required-database",
+      "ownedFiles": [
+        "packages/persistence/src/account-revisions.test.ts",
+        "packages/persistence/src/complete-match.test.ts",
+        "packages/persistence/src/migrations.test.ts",
+        "packages/persistence/src/runtime-evidence-authority-publisher.test.ts",
+        "packages/persistence/src/runtime-evidence-import.test.ts"
+      ],
+      "status": "PASS",
+      "passedCount": 63,
+      "skippedCount": 0,
+      "databaseRequired": true,
+      "databaseObserved": true
+    },
+    {
+      "id": "phase258.go.provider-validation-v117",
+      "stage": "preactivation",
+      "kind": "go",
+      "namedResult": "TestPhase258ProviderValidationV117Admission",
+      "ownedFiles": [
+        "apps/go-backend/runtime_service_client_v1_17_test.go"
+      ],
+      "status": "PASS",
+      "passedCount": 1,
+      "skippedCount": 0,
+      "databaseRequired": true,
+      "databaseObserved": true
+    },
+    {
+      "id": "phase258.go.current-contract",
+      "stage": "preactivation",
+      "kind": "go",
+      "namedResult": "TestPhase258CurrentDefaultRuntimeServiceContract",
+      "ownedFiles": [
+        "apps/go-backend/runtime_service_client_v1_17_test.go"
+      ],
+      "status": "PASS",
+      "passedCount": 1,
+      "skippedCount": 0,
+      "databaseRequired": true,
+      "databaseObserved": true
+    },
+    {
+      "id": "phase258.go.current-routes",
+      "stage": "preactivation",
+      "kind": "go",
+      "namedResult": "TestPhase258CurrentDefaultRoutes",
+      "ownedFiles": [
+        "apps/go-backend/runtime_service_client_v1_17_test.go"
+      ],
+      "status": "PASS",
+      "passedCount": 1,
+      "skippedCount": 0,
+      "databaseRequired": true,
+      "databaseObserved": true
+    },
+    {
+      "id": "phase258.go.mixed-fails-closed",
+      "stage": "preactivation",
+      "kind": "go",
+      "namedResult": "TestPhase258MixedRuntimeContractFailsClosed",
+      "ownedFiles": [
+        "apps/go-backend/runtime_service_client_v1_17_test.go"
+      ],
+      "status": "PASS",
+      "passedCount": 1,
+      "skippedCount": 0,
+      "databaseRequired": true,
+      "databaseObserved": true
+    },
+    {
+      "id": "phase258.go.historical-v116",
+      "stage": "preactivation",
+      "kind": "go",
+      "namedResult": "TestPhase258HistoricalV116Dispatch",
+      "ownedFiles": [
+        "apps/go-backend/runtime_service_client_v1_17_test.go"
+      ],
+      "status": "PASS",
+      "passedCount": 1,
+      "skippedCount": 0,
+      "databaseRequired": true,
+      "databaseObserved": true
+    },
+    {
+      "id": "phase258.go.http-outcome-binding",
+      "stage": "preactivation",
+      "kind": "go",
+      "namedResult": "TestPhase258RuntimeServiceV117RejectsHTTPOutcomeContradictions",
+      "ownedFiles": [
+        "apps/go-backend/runtime_service_client_v1_17_test.go"
+      ],
+      "status": "PASS",
+      "passedCount": 1,
+      "skippedCount": 0,
+      "databaseRequired": true,
+      "databaseObserved": true
+    },
+    {
+      "id": "phase258.full-engine-compatibility",
+      "stage": "activation",
+      "kind": "vitest",
+      "namedResult": "phase258-full-engine-compatibility",
+      "ownedFiles": [
+        "packages/engine/src/activation.test.ts",
+        "packages/engine/src/backstab.test.ts",
+        "packages/engine/src/compatibility-fixtures.test.ts",
+        "packages/engine/src/contraction.test.ts",
+        "packages/engine/src/invariants.test.ts",
+        "packages/engine/src/kernel/create-initial-state.test.ts",
+        "packages/engine/src/kernel/kernel-contract.test.ts",
+        "packages/engine/src/kernel/lifecycle-repairs.test.ts",
+        "packages/engine/src/kernel/runtime-ownership.test.ts",
+        "packages/engine/src/kernel/semantic-boundaries.test.ts",
+        "packages/engine/src/lifecycle-repairs.test.ts",
+        "packages/engine/src/match.test.ts",
+        "packages/engine/src/movement.test.ts",
+        "packages/engine/src/public-surface.test.ts",
+        "packages/engine/src/purity.test.ts",
+        "packages/engine/src/state.test.ts"
+      ],
+      "status": "PASS",
+      "passedCount": 135,
+      "skippedCount": 0,
+      "databaseRequired": false,
+      "databaseObserved": false
+    },
+    {
+      "id": "phase258.full-replay-compatibility",
+      "stage": "activation",
+      "kind": "vitest",
+      "namedResult": "phase258-full-replay-compatibility",
+      "ownedFiles": [
+        "packages/replay/src/build.test.ts",
+        "packages/replay/src/debug-explanations.test.ts",
+        "packages/replay/src/determinism.test.ts",
+        "packages/replay/src/grammar.test.ts",
+        "packages/replay/src/integration.test.ts",
+        "packages/replay/src/integrity.test.ts",
+        "packages/replay/src/project.test.ts",
+        "packages/replay/src/reconstruct.test.ts",
+        "packages/replay/src/record.test.ts",
+        "packages/replay/src/replay-transition.test.ts",
+        "packages/replay/src/semantic-integrity.test.ts",
+        "packages/replay/src/snapshot-boundaries.test.ts",
+        "packages/replay/src/validate.test.ts"
+      ],
+      "status": "PASS",
+      "passedCount": 162,
+      "skippedCount": 0,
+      "databaseRequired": false,
+      "databaseObserved": false
+    },
+    {
+      "id": "phase258.cross-package-current-callers",
+      "stage": "activation",
+      "kind": "vitest",
+      "namedResult": "phase258-cross-package-current-callers",
+      "ownedFiles": [
+        "apps/runtime-service/src/four-language-parity.test.ts",
+        "packages/runtime-js/src/integration.test.ts",
+        "packages/persistence/src/semantic-integrity.test.ts",
+        "packages/persistence/src/workshop.test.ts",
+        "packages/golden/src/parity.test.ts"
+      ],
+      "status": "PASS",
+      "passedCount": 37,
+      "skippedCount": 0,
+      "databaseRequired": false,
+      "databaseObserved": false
+    },
+    {
+      "id": "phase258.activation-critical-contracts",
+      "stage": "activation",
+      "kind": "vitest",
+      "namedResult": "phase258-activation-critical-contracts",
+      "ownedFiles": [
+        "apps/runtime-service/src/server.test.ts",
+        "packages/engine/src/kernel/kernel-contract.test.ts",
+        "packages/spec/src/match-execution-contract.test.ts",
+        "packages/spec/src/source-artifact-identity.test.ts",
+        "packages/spec/src/spec.test.ts",
+        "scripts/generate-typescript-backend-inventory.test.ts",
+        "scripts/generate-typescript-surface-labels.test.ts"
+      ],
+      "status": "PASS",
+      "passedCount": 106,
+      "skippedCount": 0,
+      "databaseRequired": false,
+      "databaseObserved": false
+    },
+    {
+      "id": "phase258.go.activated-default-routes",
+      "stage": "activation",
+      "kind": "go",
+      "namedResult": "TestPhase258ActivatedDefaultRoutes",
+      "ownedFiles": [
+        "apps/go-backend/runtime_service_client_v1_17_test.go"
+      ],
+      "status": "PASS",
+      "passedCount": 1,
+      "skippedCount": 0,
+      "databaseRequired": true,
+      "databaseObserved": true
+    },
+    {
+      "id": "phase258.web-source-identity",
+      "stage": "postactivation",
+      "kind": "playwright",
+      "namedResult": "v1-37-runtime-source-identity-proof.spec.ts",
+      "ownedFiles": [
+        "apps/web/e2e/v1-37-runtime-source-identity-proof.spec.ts"
+      ],
+      "status": "PASS",
+      "passedCount": 1,
+      "skippedCount": 0,
+      "databaseRequired": false,
+      "databaseObserved": false
+    }
+  ]
+}
