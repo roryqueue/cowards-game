@@ -189,6 +189,8 @@ export interface RuntimeEvidenceAuthorityCertificateV117 {
 
 export interface RuntimeEvidenceAuthorityConformanceSourceV117 {
   schemaVersion: "runtime-evidence-authority-conformance-source-v1.17"
+  certificateId: string
+  certificateVersion: "runtime-conformance-certificate-v1.17"
   certificateSha256: string
   attestationSha256: string
   conformanceBindingSha256: string
@@ -373,6 +375,8 @@ export const createRuntimeEvidenceAuthorityConformanceSourceV117 = (
   )
   const source = Object.freeze({
     schemaVersion: "runtime-evidence-authority-conformance-source-v1.17",
+    certificateId: binding.certificateId,
+    certificateVersion: binding.certificateVersion,
     certificateSha256: binding.certificateSha256,
     attestationSha256: `sha256:${binding.attestationSha256}`,
     conformanceBindingSha256,
@@ -398,6 +402,8 @@ export const createRuntimeEvidenceAuthorityConformanceSourceV117 = (
 
 const CONFORMANCE_SOURCE_KEYS_V1_17 = [
   "schemaVersion",
+  "certificateId",
+  "certificateVersion",
   "certificateSha256",
   "attestationSha256",
   "conformanceBindingSha256",
@@ -446,6 +452,8 @@ export const parseRuntimeEvidenceAuthorityConformanceSourceV117 = (
   if (
     record.schemaVersion !==
       "runtime-evidence-authority-conformance-source-v1.17" ||
+    record.certificateVersion !==
+      "runtime-conformance-certificate-v1.17" ||
     record.runtimeAbiVersion !== "strategy-runtime-abi-v1.18" ||
     record.additiveBudgetProfileSha256 !==
       RUNTIME_BUDGET_PROFILE_V1_18_SHA256 ||
@@ -475,6 +483,8 @@ export const parseRuntimeEvidenceAuthorityConformanceSourceV117 = (
   ) as Record<string, string>
   return Object.freeze({
     schemaVersion: "runtime-evidence-authority-conformance-source-v1.17",
+    certificateId: assertString(record.certificateId, "certificateId"),
+    certificateVersion: "runtime-conformance-certificate-v1.17",
     certificateSha256: hashes.certificateSha256!,
     attestationSha256: hashes.attestationSha256!,
     conformanceBindingSha256: hashes.conformanceBindingSha256!,
@@ -1288,7 +1298,9 @@ export const parseRuntimeEvidenceAuthorityPayloadV117 = (
         conformanceSource !== undefined) ||
       (currentConformance && conformanceSource === undefined) ||
       (conformanceSource !== undefined &&
-        (conformanceSource.identityManifestRoot !==
+        (conformanceSource.certificateId !== certificateId ||
+          conformanceSource.certificateVersion !== certificateVersion ||
+          conformanceSource.identityManifestRoot !==
           binding.identityManifestRoot ||
           conformanceSource.evidenceGraphRoot !== binding.evidenceGraphRoot ||
           conformanceSource.attestationSha256 !== attestation.attestationHash ||

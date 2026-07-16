@@ -109,6 +109,8 @@ const fixtureBindingV117 = (): RuntimeEvidenceAuthorityBindingV117 => ({
 const fixtureConformanceSourceV117 =
   (): RuntimeEvidenceAuthorityConformanceSourceV117 => ({
     schemaVersion: "runtime-evidence-authority-conformance-source-v1.17",
+    certificateId: "certificate:typescript:generation-7",
+    certificateVersion: "runtime-conformance-certificate-v1.17",
     certificateSha256: `sha256:${"9".repeat(64)}`,
     attestationSha256: `sha256:${"a".repeat(64)}`,
     conformanceBindingSha256: `sha256:${"b".repeat(64)}`,
@@ -440,6 +442,8 @@ const hashRawConformanceRecordV117 = (input: {
     ...input.binding.exactPins.flatMap(([name, value]) => [name, value]),
     ...[
       "schemaVersion",
+      "certificateId",
+      "certificateVersion",
       "certificateSha256",
       "attestationSha256",
       "conformanceBindingSha256",

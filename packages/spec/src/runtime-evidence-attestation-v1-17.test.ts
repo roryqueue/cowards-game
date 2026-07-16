@@ -528,6 +528,8 @@ describe("runtime evidence v1.17 frozen contract", () => {
       createRuntimeEvidenceAuthorityConformanceSourceV117(verified),
     ).toMatchObject({
       schemaVersion: "runtime-evidence-authority-conformance-source-v1.17",
+      certificateId: verified.certificateId,
+      certificateVersion: verified.certificateVersion,
       certificateSha256: verified.certificateSha256,
       languageId: verified.languageId,
       corpusRootSha256: verified.corpusRootSha256,
