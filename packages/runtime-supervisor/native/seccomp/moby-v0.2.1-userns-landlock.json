@@ -427,17 +427,6 @@
     },
     {
       "names": [
-        "process_vm_readv",
-        "process_vm_writev",
-        "ptrace"
-      ],
-      "action": "SCMP_ACT_ALLOW",
-      "includes": {
-        "minKernel": "4.8"
-      }
-    },
-    {
-      "names": [
         "socket"
       ],
       "action": "SCMP_ACT_ALLOW",
@@ -629,28 +618,6 @@
           "CAP_DAC_READ_SEARCH"
         ]
       }
-    },
-    {
-      "names": [
-        "unshare"
-      ],
-      "action": "SCMP_ACT_ALLOW",
-      "args": [
-        {
-          "index": 0,
-          "value": 2114060416,
-          "valueTwo": 268566528,
-          "op": "SCMP_CMP_MASKED_EQ"
-        }
-      ],
-      "comment": "Cowards Game trusted supervisor setup only: CLONE_NEWUSER|CLONE_NEWNS"
-    },
-    {
-      "names": [
-        "mount"
-      ],
-      "action": "SCMP_ACT_ALLOW",
-      "comment": "Cowards Game trusted supervisor setup only before Landlock and capability drop"
     },
     {
       "names": [

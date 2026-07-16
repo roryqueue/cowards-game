@@ -11,7 +11,8 @@ describe("runtime supervisor locked build", () => {
     expect(PINNED_RUNTIME_SUPERVISOR_BUILDER_IMAGE).toBe(
       "rust:1.95.0-alpine@sha256:e98196986adced5602f6e21c54babdbf2a8700400c7a78868324a3630e0c5d15",
     )
-    expect(supervisorBuildDockerArgs("/repo")).toEqual(
+    const args = supervisorBuildDockerArgs("/repo")
+    expect(args).toEqual(
       expect.arrayContaining([
         "--platform",
         "linux/amd64",
@@ -22,10 +23,10 @@ describe("runtime supervisor locked build", () => {
         "--security-opt",
         "no-new-privileges",
         "--read-only",
-        "--target",
-        "x86_64-unknown-linux-musl",
       ]),
     )
+    expect(args.join("\n")).toContain("--target x86_64-unknown-linux-musl")
+    expect(args.join("\n")).toContain('test "$(uname -m)" = x86_64')
   })
 
   it("changes the manifest for any source lock seccomp or binary byte", () => {
@@ -90,9 +91,9 @@ describe("runtime supervisor locked build", () => {
       "ELF 64-bit LSB pie executable, ARM aarch64, statically linked",
       "ELF 64-bit LSB pie executable, x86-64, dynamically linked",
     ]) {
-      expect(() =>
-        inspectSupervisorElfIdentity(Buffer.from(output)),
-      ).toThrow(/ELF|target|musl|static/iu)
+      expect(() => inspectSupervisorElfIdentity(Buffer.from(output))).toThrow(
+        /ELF|target|musl|static/iu,
+      )
     }
   })
 })

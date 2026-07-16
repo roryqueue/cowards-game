@@ -160,6 +160,54 @@ fn sha256_hex(bytes: &[u8]) -> String {
         .collect()
 }
 
+fn validate_sha256_identity(value: &str) -> Result<(), &'static str> {
+    if value.len() != 71
+        || !value.starts_with("sha256:")
+        || !value[7..]
+            .bytes()
+            .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
+    {
+        return Err("INVALID_IDENTITY");
+    }
+    Ok(())
+}
+
+#[derive(Debug, PartialEq, Eq)]
+struct CompletionStatus {
+    exit_code: Option<u32>,
+    signal: Option<u32>,
+}
+
+fn parse_completion_status(value: &str, nonce: &str) -> Result<CompletionStatus, &'static str> {
+    let lines = value.split_inclusive('\n').collect::<Vec<_>>();
+    if lines.len() != 3 || lines.iter().any(|line| !line.ends_with('\n')) {
+        return Err("COMPLETION_INVALID");
+    }
+    let expected_nonce = format!("nonce={nonce}\n");
+    if lines[0] != expected_nonce {
+        return Err("COMPLETION_INVALID");
+    }
+    let parse_optional = |line: &str, prefix: &str| -> Result<Option<u32>, &'static str> {
+        let value = line
+            .strip_prefix(prefix)
+            .and_then(|value| value.strip_suffix('\n'))
+            .ok_or("COMPLETION_INVALID")?;
+        if value == "null" {
+            return Ok(None);
+        }
+        let parsed = value.parse::<u32>().map_err(|_| "COMPLETION_INVALID")?;
+        Ok(Some(parsed))
+    };
+    let status = CompletionStatus {
+        exit_code: parse_optional(lines[1], "exit-code=")?,
+        signal: parse_optional(lines[2], "signal=")?,
+    };
+    if status.exit_code.is_some() == status.signal.is_some() {
+        return Err("COMPLETION_INVALID");
+    }
+    Ok(status)
+}
+
 #[cfg(any(test, not(target_os = "linux")))]
 fn platform_status() -> &'static str {
     #[cfg(target_os = "linux")]
@@ -175,8 +223,9 @@ fn platform_status() -> &'static str {
 #[cfg(target_os = "linux")]
 mod linux {
     use super::{
-        REQUIRED_CONTROLLERS, base64, cpu_max, json_escape, require_controllers, sha256_hex,
-        validate_nonce,
+        CompletionStatus, REQUIRED_CONTROLLERS, base64, cpu_max, json_escape,
+        parse_completion_status, require_controllers, sha256_hex, validate_nonce,
+        validate_sha256_identity,
     };
     use std::collections::{BTreeMap, BTreeSet};
     use std::env;
@@ -184,7 +233,7 @@ mod linux {
     use std::fs::{self, OpenOptions};
     use std::io::{self, Read, Write};
     use std::os::fd::AsRawFd;
-    use std::os::unix::fs::{OpenOptionsExt, PermissionsExt};
+    use std::os::unix::fs::{MetadataExt, OpenOptionsExt, PermissionsExt};
     use std::os::unix::process::{CommandExt, ExitStatusExt};
     use std::path::{Path, PathBuf};
     use std::process::{Command, Stdio};
@@ -206,6 +255,8 @@ mod linux {
     const O_CLOEXEC: c_int = 0o2_000_000;
     const O_NOFOLLOW: c_int = 0o4_000_00;
     const WNOHANG: c_int = 1;
+    const SUPERVISOR_HOST_UID: u32 = 65_532;
+    const GUEST_HOST_UID: u32 = 65_534;
     const LANDLOCK_CREATE_RULESET_VERSION: u32 = 1;
     const LANDLOCK_RULE_PATH_BENEATH: u32 = 1;
     const LANDLOCK_ACCESS_FS_EXECUTE: u64 = 1 << 0;
@@ -296,6 +347,145 @@ mod linux {
         cancellation_nonce: String,
         input_path: PathBuf,
         command: Vec<String>,
+    }
+
+    #[derive(Debug)]
+    struct MonitorConfig {
+        cgroup_root: PathBuf,
+        invocation_name: String,
+        control_root: PathBuf,
+        nonce: String,
+        cpu_quota_us: u64,
+        cpu_period_us: u64,
+        memory_max_bytes: u64,
+        pids_max: u64,
+        supervisor_host_uid: u32,
+        guest_host_uid: u32,
+        deadline_ms: u64,
+        stdout_max: usize,
+        stderr_max: usize,
+        payload_max: usize,
+        request_sha256: String,
+        process_group_sha256: String,
+        cancellation_path: PathBuf,
+        cancellation_nonce: String,
+        completion_path: PathBuf,
+        ready_path: PathBuf,
+        stdout_path: PathBuf,
+        stderr_path: PathBuf,
+    }
+
+    impl MonitorConfig {
+        fn parse() -> Result<Self, String> {
+            Self::parse_from(env::args().skip(1))
+        }
+
+        fn parse_from(arguments: impl IntoIterator<Item = String>) -> Result<Self, String> {
+            let mut arguments = arguments.into_iter();
+            if arguments.next().as_deref() != Some("monitor") {
+                return Err("USAGE".into());
+            }
+            let mut values = BTreeMap::new();
+            while let Some(argument) = arguments.next() {
+                if !argument.starts_with("--") {
+                    return Err("USAGE".into());
+                }
+                let value = arguments.next().ok_or("USAGE")?;
+                if values.insert(argument, value).is_some() {
+                    return Err("DUPLICATE_ARGUMENT".into());
+                }
+            }
+            let take = |name: &str| {
+                values
+                    .get(name)
+                    .cloned()
+                    .ok_or_else(|| format!("MISSING_{name}"))
+            };
+            let parse_u64 = |name: &str| -> Result<u64, String> {
+                take(name)?
+                    .parse::<u64>()
+                    .map_err(|_| format!("INVALID_{name}"))
+            };
+            let nonce = take("--nonce")?;
+            validate_nonce(&nonce).map_err(str::to_owned)?;
+            let supervisor_host_uid: u32 = parse_u64("--supervisor-host-uid")?
+                .try_into()
+                .map_err(|_| "INVALID_SUPERVISOR_UID")?;
+            let guest_host_uid: u32 = parse_u64("--guest-host-uid")?
+                .try_into()
+                .map_err(|_| "INVALID_GUEST_UID")?;
+            let config = Self {
+                cgroup_root: PathBuf::from(take("--cgroup-root")?),
+                invocation_name: take("--invocation-name")?,
+                control_root: PathBuf::from(take("--control-root")?),
+                nonce,
+                cpu_quota_us: parse_u64("--cpu-quota-us")?,
+                cpu_period_us: parse_u64("--cpu-period-us")?,
+                memory_max_bytes: parse_u64("--memory-max-bytes")?,
+                pids_max: parse_u64("--pids-max")?,
+                supervisor_host_uid,
+                guest_host_uid,
+                deadline_ms: parse_u64("--deadline-ms")?,
+                stdout_max: parse_u64("--stdout-max")?
+                    .try_into()
+                    .map_err(|_| "INVALID_STDOUT_MAX")?,
+                stderr_max: parse_u64("--stderr-max")?
+                    .try_into()
+                    .map_err(|_| "INVALID_STDERR_MAX")?,
+                payload_max: parse_u64("--payload-max")?
+                    .try_into()
+                    .map_err(|_| "INVALID_PAYLOAD_MAX")?,
+                request_sha256: take("--request-sha256")?,
+                process_group_sha256: take("--process-group-sha256")?,
+                cancellation_path: PathBuf::from(take("--cancellation-path")?),
+                cancellation_nonce: take("--cancellation-nonce")?,
+                completion_path: PathBuf::from(take("--completion-path")?),
+                ready_path: PathBuf::from(take("--ready-path")?),
+                stdout_path: PathBuf::from(take("--stdout-path")?),
+                stderr_path: PathBuf::from(take("--stderr-path")?),
+            };
+            if values.len() != 22 {
+                return Err("UNKNOWN_ARGUMENT".into());
+            }
+            if config.invocation_name != format!("invocation-{}", config.nonce)
+                || !config.cgroup_root.is_absolute()
+                || !config.control_root.is_absolute()
+                || config.cpu_quota_us == 0
+                || config.cpu_period_us == 0
+                || config.memory_max_bytes == 0
+                || config.pids_max == 0
+                || config.deadline_ms == 0
+                || config.deadline_ms > 300_000
+                || config.stdout_max == 0
+                || config.stdout_max > 16 * 1024 * 1024
+                || config.stderr_max == 0
+                || config.stderr_max > 16 * 1024 * 1024
+                || config.payload_max == 0
+                || config.payload_max > config.stdout_max
+                || config.supervisor_host_uid != SUPERVISOR_HOST_UID
+                || config.guest_host_uid != GUEST_HOST_UID
+                || config.supervisor_host_uid == config.guest_host_uid
+                || config.cancellation_nonce.len() < 24
+                || validate_sha256_identity(&config.request_sha256).is_err()
+                || validate_sha256_identity(&config.process_group_sha256).is_err()
+            {
+                return Err("INVALID_LIMIT_OR_IDENTITY".into());
+            }
+            for (path, name) in [
+                (&config.cancellation_path, "cancel"),
+                (&config.completion_path, "completion"),
+                (&config.ready_path, "ready"),
+                (&config.stdout_path, "stdout"),
+                (&config.stderr_path, "stderr"),
+            ] {
+                if path.parent() != Some(config.control_root.as_path())
+                    || path.file_name().and_then(|value| value.to_str()) != Some(name)
+                {
+                    return Err("CONTROL_PATH_INVALID".into());
+                }
+            }
+            Ok(config)
+        }
     }
 
     impl Config {
@@ -465,6 +655,171 @@ mod linux {
             }
         }
         Ok((retained, truncated))
+    }
+
+    fn validate_private_directory(path: &Path, owner: u32) -> Result<(), String> {
+        let metadata = fs::symlink_metadata(path).map_err(|_| "CONTROL_ROOT_INVALID")?;
+        if metadata.file_type().is_symlink()
+            || !metadata.is_dir()
+            || metadata.uid() != owner
+            || metadata.mode() & 0o7777 != 0o700
+        {
+            return Err("CONTROL_ROOT_INVALID".into());
+        }
+        Ok(())
+    }
+
+    fn secure_file(path: &Path, owner: u32, maximum: usize) -> Result<Vec<u8>, String> {
+        let before = fs::symlink_metadata(path).map_err(|_| "CONTROL_FILE_INVALID")?;
+        if before.file_type().is_symlink()
+            || !before.is_file()
+            || before.uid() != owner
+            || before.mode() & 0o7777 != 0o600
+            || before.nlink() != 1
+            || before.len() > (maximum as u64).saturating_add(1)
+        {
+            return Err("CONTROL_FILE_INVALID".into());
+        }
+        let mut file = OpenOptions::new()
+            .read(true)
+            .custom_flags(O_NOFOLLOW | O_CLOEXEC)
+            .open(path)
+            .map_err(|_| "CONTROL_FILE_INVALID")?;
+        let opened = file.metadata().map_err(|_| "CONTROL_FILE_INVALID")?;
+        if before.dev() != opened.dev() || before.ino() != opened.ino() {
+            return Err("CONTROL_FILE_INVALID".into());
+        }
+        let mut bytes = Vec::with_capacity(maximum.min(64 * 1024).saturating_add(1));
+        Read::by_ref(&mut file)
+            .take((maximum as u64).saturating_add(2))
+            .read_to_end(&mut bytes)
+            .map_err(|_| "CONTROL_FILE_INVALID")?;
+        if bytes.len() > maximum.saturating_add(1) {
+            return Err("CONTROL_FILE_INVALID".into());
+        }
+        Ok(bytes)
+    }
+
+    fn optional_secure_text(
+        path: &Path,
+        owner: u32,
+        maximum: usize,
+    ) -> Result<Option<String>, String> {
+        match fs::symlink_metadata(path) {
+            Ok(_) => {
+                let bytes = secure_file(path, owner, maximum)?;
+                let value =
+                    String::from_utf8(bytes).map_err(|_| "CONTROL_FILE_INVALID".to_owned())?;
+                Ok(Some(value))
+            }
+            Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(None),
+            Err(_) => Err("CONTROL_FILE_INVALID".into()),
+        }
+    }
+
+    fn create_ready_marker(config: &MonitorConfig) -> Result<(), String> {
+        let mut ready = OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .mode(0o600)
+            .custom_flags(O_NOFOLLOW | O_CLOEXEC)
+            .open(&config.ready_path)
+            .map_err(|_| "READY_MARKER_INVALID")?;
+        ready
+            .write_all(format!("{}\n", config.nonce).as_bytes())
+            .and_then(|()| ready.sync_all())
+            .map_err(|_| "READY_MARKER_INVALID".to_owned())
+    }
+
+    fn monitor_cancellation_requested(config: &MonitorConfig) -> Result<bool, String> {
+        match optional_secure_text(
+            &config.cancellation_path,
+            config.supervisor_host_uid,
+            config.cancellation_nonce.len().saturating_add(1),
+        )? {
+            Some(value) if value == format!("{}\n", config.cancellation_nonce) => Ok(true),
+            Some(_) => Err("CANCELLATION_CHANNEL_INVALID".into()),
+            None => Ok(false),
+        }
+    }
+
+    fn monitor_completion(config: &MonitorConfig) -> Result<Option<CompletionStatus>, String> {
+        let Some(value) =
+            optional_secure_text(&config.completion_path, config.supervisor_host_uid, 1024)?
+        else {
+            return Ok(None);
+        };
+        parse_completion_status(&value, &config.nonce)
+            .map(Some)
+            .map_err(str::to_owned)
+    }
+
+    fn cgroup_populated(path: &Path) -> Result<bool, String> {
+        let events =
+            parse_key_values(&path.join("cgroup.events")).map_err(|_| "COUNTER_READ_FAILED")?;
+        match events.get("populated") {
+            Some(0) => Ok(false),
+            Some(1) => Ok(true),
+            _ => Err("COUNTER_READ_FAILED".into()),
+        }
+    }
+
+    fn validate_cgroup_directory(path: &Path, owner: u32) -> Result<(), String> {
+        let metadata = fs::symlink_metadata(path).map_err(|_| "CGROUP_IDENTITY_INVALID")?;
+        if metadata.file_type().is_symlink() || !metadata.is_dir() || metadata.uid() != owner {
+            return Err("CGROUP_IDENTITY_INVALID".into());
+        }
+        Ok(())
+    }
+
+    fn wait_recursive_empty(invocation: &Path, duration: Duration) -> Result<(), String> {
+        let deadline = Instant::now() + duration;
+        loop {
+            if !cgroup_populated(invocation)? {
+                let procs = fs::read_to_string(invocation.join("cgroup.procs"))
+                    .map_err(|_| "COUNTER_READ_FAILED")?;
+                if procs.trim().is_empty() {
+                    return Ok(());
+                }
+            }
+            if Instant::now() >= deadline {
+                return Err("CGROUP_NOT_EMPTY".into());
+            }
+            thread::sleep(Duration::from_millis(2));
+        }
+    }
+
+    fn validate_no_process_children() -> Result<(), String> {
+        let mut status = 0;
+        let reaped = unsafe { waitpid(-1, &mut status, WNOHANG) };
+        if reaped < 0 && io::Error::last_os_error().raw_os_error() == Some(10) {
+            return Ok(());
+        }
+        Err("DAEMON_SEPARATION_INVALID".into())
+    }
+
+    fn monitor_mandatory_kill(invocation: &Path) -> Result<(), String> {
+        let cgroup_kill = invocation.join("cgroup.kill");
+        let metadata = fs::symlink_metadata(&cgroup_kill).map_err(|_| "CGROUP_KILL_UNAVAILABLE")?;
+        if metadata.file_type().is_symlink() || !metadata.is_file() {
+            return Err("CGROUP_KILL_UNAVAILABLE".into());
+        }
+        write_control(&cgroup_kill, "1").map_err(|_| "CGROUP_KILL_FAILED".to_owned())
+    }
+
+    fn read_bounded_output(
+        path: &Path,
+        owner: u32,
+        maximum: usize,
+    ) -> Result<(Vec<u8>, bool, usize), String> {
+        let bytes = secure_file(path, owner, maximum)?;
+        let original_length = bytes.len();
+        let truncated = original_length > maximum;
+        Ok((
+            bytes.into_iter().take(maximum).collect(),
+            truncated,
+            original_length,
+        ))
     }
 
     unsafe fn add_landlock_path(ruleset_fd: c_int, path: &Path, access: u64) -> io::Result<()> {
@@ -687,7 +1042,14 @@ mod linux {
         Ok(())
     }
 
-    fn run(config: Config) -> Result<String, String> {
+    fn monitor_inner(config: &MonitorConfig) -> Result<String, String> {
+        if unsafe { getuid() } != config.supervisor_host_uid
+            || config.supervisor_host_uid == config.guest_host_uid
+        {
+            return Err("HOST_UID_IDENTITY_MISMATCH".into());
+        }
+        validate_private_directory(&config.control_root, config.supervisor_host_uid)?;
+        validate_cgroup_directory(&config.cgroup_root, config.supervisor_host_uid)?;
         let controllers = fs::read_to_string(config.cgroup_root.join("cgroup.controllers"))
             .map_err(|_| "CONTROLLERS_UNAVAILABLE")?;
         let available = controllers
@@ -699,280 +1061,531 @@ mod linux {
         {
             return Err("CONTROLLERS_UNAVAILABLE".into());
         }
-        let subtree_control = config.cgroup_root.join("cgroup.subtree_control");
-        let delegated =
-            fs::read_to_string(&subtree_control).map_err(|_| "DELEGATION_UNAVAILABLE")?;
-        let extra_controllers = delegated
+        let subtree_path = config.cgroup_root.join("cgroup.subtree_control");
+        let subtree = fs::read_to_string(&subtree_path).map_err(|_| "DELEGATION_UNAVAILABLE")?;
+        let extras = subtree
             .split_ascii_whitespace()
             .map(|value| value.trim_start_matches('+'))
             .filter(|value| !REQUIRED_CONTROLLERS.contains(value))
             .collect::<Vec<_>>();
-        if !extra_controllers.is_empty() {
-            let disable = extra_controllers
-                .iter()
-                .map(|value| format!("-{value}"))
-                .collect::<Vec<_>>()
-                .join(" ");
-            write_control(&subtree_control, &disable)
-                .map_err(|_| "DELEGATION_NORMALIZATION_FAILED")?;
+        if !extras.is_empty() {
+            write_control(
+                &subtree_path,
+                &extras
+                    .iter()
+                    .map(|value| format!("-{value}"))
+                    .collect::<Vec<_>>()
+                    .join(" "),
+            )
+            .map_err(|_| "DELEGATION_NORMALIZATION_FAILED")?;
         }
-        let enabled = fs::read_to_string(&subtree_control)
-            .map_err(|_| "DELEGATION_UNAVAILABLE")?
-            .split_ascii_whitespace()
-            .map(|value| value.trim_start_matches('+'))
-            .collect::<Vec<_>>()
-            .join(" ");
-        require_controllers(&enabled).map_err(str::to_owned)?;
+        let subtree = fs::read_to_string(&subtree_path).map_err(|_| "DELEGATION_UNAVAILABLE")?;
+        require_controllers(
+            &subtree
+                .split_ascii_whitespace()
+                .map(|value| value.trim_start_matches('+'))
+                .collect::<Vec<_>>()
+                .join(" "),
+        )
+        .map_err(str::to_owned)?;
 
-        let invocation = config
-            .cgroup_root
-            .join(format!("invocation-{}", config.nonce));
-        fs::create_dir(&invocation).map_err(|_| "CGROUP_CREATE_FAILED")?;
-        fs::set_permissions(&invocation, fs::Permissions::from_mode(0o700))
-            .map_err(|_| "CGROUP_MODE_FAILED")?;
-        let result = (|| -> Result<String, String> {
-            write_control(
-                &invocation.join("cpu.max"),
-                &cpu_max(config.cpu_quota_us, config.cpu_period_us),
-            )
-            .map_err(|_| "CGROUP_WRITE_FAILED")?;
-            write_control(
-                &invocation.join("memory.max"),
-                &config.memory_max_bytes.to_string(),
-            )
-            .map_err(|_| "CGROUP_WRITE_FAILED")?;
-            write_control(&invocation.join("pids.max"), &config.pids_max.to_string())
-                .map_err(|_| "CGROUP_WRITE_FAILED")?;
-            if invocation.join("memory.oom.group").exists() {
-                write_control(&invocation.join("memory.oom.group"), "1")
-                    .map_err(|_| "CGROUP_WRITE_FAILED")?;
-            }
-            let actual_cpu_max = fs::read_to_string(invocation.join("cpu.max"))
-                .map_err(|_| "CGROUP_READBACK_FAILED")?
-                .trim()
-                .to_owned();
-            let actual_memory_max = fs::read_to_string(invocation.join("memory.max"))
-                .map_err(|_| "CGROUP_READBACK_FAILED")?
-                .trim()
-                .parse::<u64>()
-                .map_err(|_| "CGROUP_READBACK_FAILED")?;
-            let actual_pids_max = fs::read_to_string(invocation.join("pids.max"))
-                .map_err(|_| "CGROUP_READBACK_FAILED")?
-                .trim()
-                .parse::<u64>()
-                .map_err(|_| "CGROUP_READBACK_FAILED")?;
-            if actual_cpu_max != cpu_max(config.cpu_quota_us, config.cpu_period_us)
-                || actual_memory_max != config.memory_max_bytes
-                || actual_pids_max != config.pids_max
-            {
-                return Err("CGROUP_SETTINGS_MISMATCH".into());
-            }
+        let invocation = config.cgroup_root.join(&config.invocation_name);
+        validate_cgroup_directory(&invocation, config.supervisor_host_uid)?;
+        let invocation_metadata =
+            fs::symlink_metadata(&invocation).map_err(|_| "CGROUP_IDENTITY_INVALID")?;
+        if invocation_metadata.mode() & 0o7777 != 0o700 {
+            return Err("CGROUP_IDENTITY_INVALID".into());
+        }
+        let actual_cpu_max = fs::read_to_string(invocation.join("cpu.max"))
+            .map_err(|_| "CGROUP_READBACK_FAILED")?
+            .trim()
+            .to_owned();
+        let actual_memory_max =
+            read_u64(&invocation.join("memory.max")).map_err(|_| "CGROUP_READBACK_FAILED")?;
+        let actual_pids_max =
+            read_u64(&invocation.join("pids.max")).map_err(|_| "CGROUP_READBACK_FAILED")?;
+        if actual_cpu_max != cpu_max(config.cpu_quota_us, config.cpu_period_us)
+            || actual_memory_max != config.memory_max_bytes
+            || actual_pids_max != config.pids_max
+        {
+            return Err("CGROUP_SETTINGS_MISMATCH".into());
+        }
+        if read_u64(&invocation.join("pids.current")).map_err(|_| "COUNTER_READ_FAILED")? != 0
+            || cgroup_populated(&invocation)?
+        {
+            return Err("CGROUP_NOT_EMPTY".into());
+        }
+        let baseline_cpu =
+            parse_key_values(&invocation.join("cpu.stat")).map_err(|_| "COUNTER_READ_FAILED")?;
+        let baseline_memory = parse_key_values(&invocation.join("memory.events"))
+            .map_err(|_| "COUNTER_READ_FAILED")?;
+        let baseline_pids =
+            parse_key_values(&invocation.join("pids.events")).map_err(|_| "COUNTER_READ_FAILED")?;
 
-            let baseline_cpu = parse_key_values(&invocation.join("cpu.stat"))
-                .map_err(|_| "COUNTER_READ_FAILED")?;
-            let baseline_memory = parse_key_values(&invocation.join("memory.events"))
-                .map_err(|_| "COUNTER_READ_FAILED")?;
-            let baseline_pids = parse_key_values(&invocation.join("pids.events"))
-                .map_err(|_| "COUNTER_READ_FAILED")?;
-            if read_u64(&invocation.join("pids.current")).map_err(|_| "COUNTER_READ_FAILED")? != 0 {
-                return Err("CGROUP_NOT_EMPTY".into());
+        create_ready_marker(config)?;
+        let ready_at = Instant::now();
+        let deadline = Duration::from_millis(config.deadline_ms);
+        let mut started = None;
+        let mut observed_populated = false;
+        let mut timed_out = false;
+        let mut cancellation_won = false;
+        let completion = loop {
+            if cgroup_populated(&invocation)? {
+                observed_populated = true;
+                started.get_or_insert_with(Instant::now);
             }
-
-            let input = fs::read(&config.input_path).map_err(|_| "INPUT_READ_FAILED")?;
-            if cancellation_requested(&config)? {
-                return Err("CANCELLED_BEFORE_LAUNCH".into());
-            }
-            let executable = PathBuf::from(&config.command[0]);
-            let mut executable_file = OpenOptions::new()
-                .read(true)
-                .custom_flags(O_NOFOLLOW)
-                .open(&executable)
-                .map_err(|_| "EXECUTABLE_OPEN_FAILED")?;
-            let mut executable_bytes = Vec::new();
-            executable_file
-                .read_to_end(&mut executable_bytes)
-                .map_err(|_| "EXECUTABLE_READ_FAILED")?;
-            if format!("sha256:{}", sha256_hex(&executable_bytes))
-                != config.expected_executable_sha256
-            {
-                return Err("EXECUTABLE_IDENTITY_MISMATCH".into());
-            }
-            let executable_fd = executable_file.as_raw_fd();
-            let cgroup_procs = OpenOptions::new()
-                .write(true)
-                .custom_flags(0)
-                .open(invocation.join("cgroup.procs"))
-                .map_err(|_| "DELEGATION_UNAVAILABLE")?;
-            let cgroup_fd = cgroup_procs.as_raw_fd();
-            let delegated_root = config.cgroup_root.clone();
-            let guest_uid = config.guest_namespace_uid;
-            let preexec_executable = executable.clone();
-            let mut command = Command::new(format!("/proc/self/fd/{executable_fd}"));
-            command
-                .arg0(&config.command[0])
-                .args(&config.command[1..])
-                .stdin(Stdio::piped())
-                .stdout(Stdio::piped())
-                .stderr(Stdio::piped())
-                .env_clear()
-                .envs(config.environment.iter().cloned());
-            if unsafe { prctl(PR_SET_CHILD_SUBREAPER, 1, 0, 0, 0) } != 0 {
-                return Err("SUBREAPER_UNAVAILABLE".into());
-            }
-            unsafe {
-                command.pre_exec(move || {
-                    if libc_setsid() < 0 {
-                        return Err(io::Error::last_os_error());
-                    }
-                    enter_guest_namespace(
-                        cgroup_fd,
-                        &delegated_root,
-                        guest_uid,
-                        &preexec_executable,
-                    )
-                });
-            }
-            let started = Instant::now();
-            let mut child = command
-                .spawn()
-                .map_err(|error| format!("CHILD_LAUNCH_FAILED:{error}"))?;
-            drop(executable_file);
-            drop(cgroup_procs);
-            child
-                .stdin
-                .take()
-                .ok_or("CHILD_STDIN_FAILED")?
-                .write_all(&input)
-                .map_err(|_| "CHILD_STDIN_FAILED")?;
-            let stdout = child.stdout.take().ok_or("CHILD_STDOUT_FAILED")?;
-            let stderr = child.stderr.take().ok_or("CHILD_STDERR_FAILED")?;
-            let stdout_max = config.stdout_max;
-            let stderr_max = config.stderr_max;
-            let stdout_reader = thread::spawn(move || read_limited(stdout, stdout_max));
-            let stderr_reader = thread::spawn(move || read_limited(stderr, stderr_max));
-            let deadline = Duration::from_millis(config.deadline_ms);
-            let mut timed_out = false;
-            let mut cancellation_won = false;
-            let mut cgroup_kill_used = false;
-            let status = loop {
-                if let Some(status) = child.try_wait().map_err(|_| "CHILD_WAIT_FAILED")? {
-                    if cancellation_requested(&config)? {
-                        return Err("CANCELLATION_RACE_AMBIGUOUS".into());
-                    }
-                    break status;
+            if monitor_cancellation_requested(config)? {
+                if !observed_populated {
+                    return Err("CANCELLED_BEFORE_GUEST".into());
                 }
-                let requested = cancellation_requested(&config)?;
-                if requested || started.elapsed() >= deadline {
-                    timed_out = !requested;
-                    cancellation_won = requested;
-                    mandatory_kill(child.id(), &invocation)?;
-                    cgroup_kill_used = true;
-                    break child.wait().map_err(|_| "CHILD_WAIT_FAILED")?;
+                cancellation_won = true;
+                monitor_mandatory_kill(&invocation)?;
+                break None;
+            }
+            if let Some(status) = monitor_completion(config)? {
+                if !observed_populated {
+                    return Err("POPULATED_STATE_NOT_OBSERVED".into());
                 }
-                thread::sleep(Duration::from_millis(2));
-            };
-            if wait_cgroup_empty(&invocation, Duration::from_secs(1)).is_err() {
-                mandatory_kill(child.id(), &invocation)?;
-                wait_cgroup_empty(&invocation, Duration::from_secs(2))?;
-                reap_adopted_children()?;
-                return Err("LINGERING_DESCENDANT".into());
+                monitor_mandatory_kill(&invocation)?;
+                break Some(status);
             }
-            reap_adopted_children()?;
-            let (stdout, stdout_truncated) = stdout_reader
-                .join()
-                .map_err(|_| "STDOUT_READER_FAILED")?
-                .map_err(|_| "STDOUT_READER_FAILED")?;
-            let (stderr, stderr_truncated) = stderr_reader
-                .join()
-                .map_err(|_| "STDERR_READER_FAILED")?
-                .map_err(|_| "STDERR_READER_FAILED")?;
+            if started.is_some_and(|started| started.elapsed() >= deadline) {
+                timed_out = true;
+                monitor_mandatory_kill(&invocation)?;
+                break None;
+            }
+            if !observed_populated && ready_at.elapsed() >= Duration::from_secs(30) {
+                return Err("GUEST_NOT_OBSERVED".into());
+            }
+            thread::sleep(Duration::from_millis(2));
+        };
 
-            let final_cpu = parse_key_values(&invocation.join("cpu.stat"))
-                .map_err(|_| "COUNTER_READ_FAILED")?;
-            let final_memory = parse_key_values(&invocation.join("memory.events"))
-                .map_err(|_| "COUNTER_READ_FAILED")?;
-            let final_pids = parse_key_values(&invocation.join("pids.events"))
-                .map_err(|_| "COUNTER_READ_FAILED")?;
-            let pids_peak =
-                read_u64(&invocation.join("pids.peak")).map_err(|_| "COUNTER_READ_FAILED")?;
-            let memory_peak =
-                read_u64(&invocation.join("memory.peak")).map_err(|_| "COUNTER_READ_FAILED")?;
-            let elapsed_ns: u64 = started
-                .elapsed()
-                .as_nanos()
-                .try_into()
-                .map_err(|_| "COUNTER_OVERFLOW")?;
-            let payload_truncated = stdout.len() > config.payload_max;
-            let exit_code = status
-                .code()
-                .map_or("null".to_owned(), |value| value.to_string());
-            let signal = status
-                .signal()
-                .map_or("null".to_owned(), |value| format!("\"SIG{value}\""));
-            let cpu_before = baseline_cpu
-                .get("usage_usec")
-                .copied()
-                .ok_or("COUNTER_READ_FAILED")?;
-            let cpu_after = final_cpu
-                .get("usage_usec")
-                .copied()
-                .ok_or("COUNTER_READ_FAILED")?;
-            Ok(format!(
-                concat!(
-                    "{{\"schemaVersion\":\"cowards-native-supervisor-receipt-v1\",",
-                    "\"requestSha256\":\"{}\",\"processGroupIdentitySha256\":\"{}\",",
-                    "\"actualCgroupPath\":\"{}\",\"cpuMax\":\"{}\",",
-                    "\"memoryMaxBytes\":{},\"pidsMax\":{},",
-                    "\"guestNamespaceUid\":{},\"supervisorHostUid\":{},",
-                    "\"wallElapsedNanoseconds\":{},\"cpuUsageBeforeMicroseconds\":{},",
-                    "\"cpuUsageAfterMicroseconds\":{},\"memoryPeakBytes\":{},",
-                    "\"memoryEventsBefore\":{},\"memoryEventsAfter\":{},",
-                    "\"pidsEventsBefore\":{},\"pidsEventsAfter\":{},\"pidsPeak\":{},",
-                    "\"exitCode\":{},\"signal\":{},\"timedOut\":{},",
-                    "\"cancellationRequested\":{},\"cgroupKillUsed\":{},",
-                    "\"stdoutBase64\":\"{}\",\"stderrBase64\":\"{}\",",
-                    "\"stdoutTruncated\":{},\"stderrTruncated\":{},",
-                    "\"payloadTruncated\":{},\"cgroupEmpty\":true,",
-                    "\"cleanupComplete\":true}}"
-                ),
-                json_escape(&config.request_sha256),
-                json_escape(&config.process_group_sha256),
-                json_escape(invocation.to_str().ok_or("CGROUP_PATH_INVALID")?,),
-                json_escape(&actual_cpu_max),
-                actual_memory_max,
-                actual_pids_max,
-                config.guest_namespace_uid,
-                unsafe { getuid() },
-                elapsed_ns,
-                cpu_before,
-                cpu_after,
-                memory_peak,
-                json_map(&baseline_memory),
-                json_map(&final_memory),
-                json_map(&baseline_pids),
-                json_map(&final_pids),
-                pids_peak,
-                exit_code,
-                signal,
-                timed_out,
-                cancellation_won,
-                cgroup_kill_used,
-                base64(&stdout),
-                base64(&stderr),
-                stdout_truncated,
-                stderr_truncated,
-                payload_truncated,
-            ))
-        })();
-        match result {
-            Ok(receipt) => {
-                cleanup_invocation(&invocation)?;
-                Ok(receipt)
-            }
-            Err(code) => match cleanup_invocation(&invocation) {
+        wait_recursive_empty(&invocation, Duration::from_secs(5))?;
+        validate_no_process_children()?;
+        let (stdout, stdout_truncated, stdout_original_length) = if completion.is_some() {
+            read_bounded_output(
+                &config.stdout_path,
+                config.supervisor_host_uid,
+                config.stdout_max,
+            )?
+        } else {
+            (Vec::new(), false, 0)
+        };
+        let (stderr, stderr_truncated, _) = if completion.is_some() {
+            read_bounded_output(
+                &config.stderr_path,
+                config.supervisor_host_uid,
+                config.stderr_max,
+            )?
+        } else {
+            (Vec::new(), false, 0)
+        };
+        let final_cpu =
+            parse_key_values(&invocation.join("cpu.stat")).map_err(|_| "COUNTER_READ_FAILED")?;
+        let final_memory = parse_key_values(&invocation.join("memory.events"))
+            .map_err(|_| "COUNTER_READ_FAILED")?;
+        let final_pids =
+            parse_key_values(&invocation.join("pids.events")).map_err(|_| "COUNTER_READ_FAILED")?;
+        let pids_peak =
+            read_u64(&invocation.join("pids.peak")).map_err(|_| "COUNTER_READ_FAILED")?;
+        let memory_peak =
+            read_u64(&invocation.join("memory.peak")).map_err(|_| "COUNTER_READ_FAILED")?;
+        let elapsed_ns: u64 = started
+            .ok_or("GUEST_NOT_OBSERVED")?
+            .elapsed()
+            .as_nanos()
+            .try_into()
+            .map_err(|_| "COUNTER_OVERFLOW")?;
+        let cpu_before = baseline_cpu
+            .get("usage_usec")
+            .copied()
+            .ok_or("COUNTER_READ_FAILED")?;
+        let cpu_after = final_cpu
+            .get("usage_usec")
+            .copied()
+            .ok_or("COUNTER_READ_FAILED")?;
+        if cpu_after < cpu_before {
+            return Err("COUNTER_REGRESSION".into());
+        }
+        let (exit_code, signal) = match completion {
+            Some(CompletionStatus { exit_code, signal }) => (
+                exit_code.map_or("null".to_owned(), |value| value.to_string()),
+                signal.map_or("null".to_owned(), |value| format!("\"SIG{value}\"")),
+            ),
+            None => ("null".to_owned(), "\"SIG9\"".to_owned()),
+        };
+        let actual_cgroup_path = invocation.to_str().ok_or("CGROUP_PATH_INVALID")?.to_owned();
+        if fs::read_dir(&invocation)
+            .map_err(|_| "CGROUP_REMOVE_FAILED")?
+            .filter_map(Result::ok)
+            .any(|entry| entry.file_type().map(|kind| kind.is_dir()).unwrap_or(true))
+        {
+            return Err("FOREIGN_CGROUP_CHILD".into());
+        }
+
+        Ok(format!(
+            concat!(
+                "{{\"schemaVersion\":\"cowards-native-supervisor-receipt-v1\",",
+                "\"requestSha256\":\"{}\",\"processGroupIdentitySha256\":\"{}\",",
+                "\"actualCgroupPath\":\"{}\",\"cpuMax\":\"{}\",",
+                "\"memoryMaxBytes\":{},\"pidsMax\":{},",
+                "\"guestNamespaceUid\":{},\"supervisorHostUid\":{},",
+                "\"wallElapsedNanoseconds\":{},\"cpuUsageBeforeMicroseconds\":{},",
+                "\"cpuUsageAfterMicroseconds\":{},\"memoryPeakBytes\":{},",
+                "\"memoryEventsBefore\":{},\"memoryEventsAfter\":{},",
+                "\"pidsEventsBefore\":{},\"pidsEventsAfter\":{},\"pidsPeak\":{},",
+                "\"exitCode\":{},\"signal\":{},\"timedOut\":{},",
+                "\"cancellationRequested\":{},\"cgroupKillUsed\":true,",
+                "\"stdoutBase64\":\"{}\",\"stderrBase64\":\"{}\",",
+                "\"stdoutTruncated\":{},\"stderrTruncated\":{},",
+                "\"payloadTruncated\":{},\"cgroupEmpty\":true,",
+                "\"cleanupComplete\":false}}"
+            ),
+            json_escape(&config.request_sha256),
+            json_escape(&config.process_group_sha256),
+            json_escape(&actual_cgroup_path),
+            json_escape(&actual_cpu_max),
+            actual_memory_max,
+            actual_pids_max,
+            config.guest_host_uid,
+            config.supervisor_host_uid,
+            elapsed_ns,
+            cpu_before,
+            cpu_after,
+            memory_peak,
+            json_map(&baseline_memory),
+            json_map(&final_memory),
+            json_map(&baseline_pids),
+            json_map(&final_pids),
+            pids_peak,
+            exit_code,
+            signal,
+            timed_out,
+            cancellation_won,
+            base64(&stdout),
+            base64(&stderr),
+            stdout_truncated,
+            stderr_truncated,
+            stdout_original_length > config.payload_max,
+        ))
+    }
+
+    fn force_monitor_cleanup(config: &MonitorConfig) -> Result<(), String> {
+        let invocation = config.cgroup_root.join(&config.invocation_name);
+        if !invocation.exists() {
+            return Ok(());
+        }
+        monitor_mandatory_kill(&invocation)?;
+        wait_recursive_empty(&invocation, Duration::from_secs(5))?;
+        Ok(())
+    }
+
+    fn monitor(config: MonitorConfig) -> Result<String, String> {
+        match monitor_inner(&config) {
+            Ok(receipt) => Ok(receipt),
+            Err(code) => match force_monitor_cleanup(&config) {
                 Ok(()) => Err(code),
                 Err(cleanup) => Err(format!("{code}:{cleanup}")),
             },
+        }
+    }
+
+    #[allow(unused_variables)]
+    fn run(config: Config) -> Result<String, String> {
+        // The legacy in-process namespace launcher maps the guest namespace UID
+        // onto the supervisor's kernel UID. It remains parseable only for
+        // compatibility diagnostics and can never produce counted evidence.
+        return Err("LEGACY_RUN_MODE_NOT_COUNTED".into());
+        #[allow(unreachable_code)]
+        {
+            let controllers = fs::read_to_string(config.cgroup_root.join("cgroup.controllers"))
+                .map_err(|_| "CONTROLLERS_UNAVAILABLE")?;
+            let available = controllers
+                .split_ascii_whitespace()
+                .collect::<BTreeSet<_>>();
+            if REQUIRED_CONTROLLERS
+                .iter()
+                .any(|required| !available.contains(required))
+            {
+                return Err("CONTROLLERS_UNAVAILABLE".into());
+            }
+            let subtree_control = config.cgroup_root.join("cgroup.subtree_control");
+            let delegated =
+                fs::read_to_string(&subtree_control).map_err(|_| "DELEGATION_UNAVAILABLE")?;
+            let extra_controllers = delegated
+                .split_ascii_whitespace()
+                .map(|value| value.trim_start_matches('+'))
+                .filter(|value| !REQUIRED_CONTROLLERS.contains(value))
+                .collect::<Vec<_>>();
+            if !extra_controllers.is_empty() {
+                let disable = extra_controllers
+                    .iter()
+                    .map(|value| format!("-{value}"))
+                    .collect::<Vec<_>>()
+                    .join(" ");
+                write_control(&subtree_control, &disable)
+                    .map_err(|_| "DELEGATION_NORMALIZATION_FAILED")?;
+            }
+            let enabled = fs::read_to_string(&subtree_control)
+                .map_err(|_| "DELEGATION_UNAVAILABLE")?
+                .split_ascii_whitespace()
+                .map(|value| value.trim_start_matches('+'))
+                .collect::<Vec<_>>()
+                .join(" ");
+            require_controllers(&enabled).map_err(str::to_owned)?;
+
+            let invocation = config
+                .cgroup_root
+                .join(format!("invocation-{}", config.nonce));
+            fs::create_dir(&invocation).map_err(|_| "CGROUP_CREATE_FAILED")?;
+            fs::set_permissions(&invocation, fs::Permissions::from_mode(0o700))
+                .map_err(|_| "CGROUP_MODE_FAILED")?;
+            let result = (|| -> Result<String, String> {
+                write_control(
+                    &invocation.join("cpu.max"),
+                    &cpu_max(config.cpu_quota_us, config.cpu_period_us),
+                )
+                .map_err(|_| "CGROUP_WRITE_FAILED")?;
+                write_control(
+                    &invocation.join("memory.max"),
+                    &config.memory_max_bytes.to_string(),
+                )
+                .map_err(|_| "CGROUP_WRITE_FAILED")?;
+                write_control(&invocation.join("pids.max"), &config.pids_max.to_string())
+                    .map_err(|_| "CGROUP_WRITE_FAILED")?;
+                if invocation.join("memory.oom.group").exists() {
+                    write_control(&invocation.join("memory.oom.group"), "1")
+                        .map_err(|_| "CGROUP_WRITE_FAILED")?;
+                }
+                let actual_cpu_max = fs::read_to_string(invocation.join("cpu.max"))
+                    .map_err(|_| "CGROUP_READBACK_FAILED")?
+                    .trim()
+                    .to_owned();
+                let actual_memory_max = fs::read_to_string(invocation.join("memory.max"))
+                    .map_err(|_| "CGROUP_READBACK_FAILED")?
+                    .trim()
+                    .parse::<u64>()
+                    .map_err(|_| "CGROUP_READBACK_FAILED")?;
+                let actual_pids_max = fs::read_to_string(invocation.join("pids.max"))
+                    .map_err(|_| "CGROUP_READBACK_FAILED")?
+                    .trim()
+                    .parse::<u64>()
+                    .map_err(|_| "CGROUP_READBACK_FAILED")?;
+                if actual_cpu_max != cpu_max(config.cpu_quota_us, config.cpu_period_us)
+                    || actual_memory_max != config.memory_max_bytes
+                    || actual_pids_max != config.pids_max
+                {
+                    return Err("CGROUP_SETTINGS_MISMATCH".into());
+                }
+
+                let baseline_cpu = parse_key_values(&invocation.join("cpu.stat"))
+                    .map_err(|_| "COUNTER_READ_FAILED")?;
+                let baseline_memory = parse_key_values(&invocation.join("memory.events"))
+                    .map_err(|_| "COUNTER_READ_FAILED")?;
+                let baseline_pids = parse_key_values(&invocation.join("pids.events"))
+                    .map_err(|_| "COUNTER_READ_FAILED")?;
+                if read_u64(&invocation.join("pids.current")).map_err(|_| "COUNTER_READ_FAILED")?
+                    != 0
+                {
+                    return Err("CGROUP_NOT_EMPTY".into());
+                }
+
+                let input = fs::read(&config.input_path).map_err(|_| "INPUT_READ_FAILED")?;
+                if cancellation_requested(&config)? {
+                    return Err("CANCELLED_BEFORE_LAUNCH".into());
+                }
+                let executable = PathBuf::from(&config.command[0]);
+                let mut executable_file = OpenOptions::new()
+                    .read(true)
+                    .custom_flags(O_NOFOLLOW)
+                    .open(&executable)
+                    .map_err(|_| "EXECUTABLE_OPEN_FAILED")?;
+                let mut executable_bytes = Vec::new();
+                executable_file
+                    .read_to_end(&mut executable_bytes)
+                    .map_err(|_| "EXECUTABLE_READ_FAILED")?;
+                if format!("sha256:{}", sha256_hex(&executable_bytes))
+                    != config.expected_executable_sha256
+                {
+                    return Err("EXECUTABLE_IDENTITY_MISMATCH".into());
+                }
+                let executable_fd = executable_file.as_raw_fd();
+                let cgroup_procs = OpenOptions::new()
+                    .write(true)
+                    .custom_flags(0)
+                    .open(invocation.join("cgroup.procs"))
+                    .map_err(|_| "DELEGATION_UNAVAILABLE")?;
+                let cgroup_fd = cgroup_procs.as_raw_fd();
+                let delegated_root = config.cgroup_root.clone();
+                let guest_uid = config.guest_namespace_uid;
+                let preexec_executable = executable.clone();
+                let mut command = Command::new(format!("/proc/self/fd/{executable_fd}"));
+                command
+                    .arg0(&config.command[0])
+                    .args(&config.command[1..])
+                    .stdin(Stdio::piped())
+                    .stdout(Stdio::piped())
+                    .stderr(Stdio::piped())
+                    .env_clear()
+                    .envs(config.environment.iter().cloned());
+                if unsafe { prctl(PR_SET_CHILD_SUBREAPER, 1, 0, 0, 0) } != 0 {
+                    return Err("SUBREAPER_UNAVAILABLE".into());
+                }
+                unsafe {
+                    command.pre_exec(move || {
+                        if libc_setsid() < 0 {
+                            return Err(io::Error::last_os_error());
+                        }
+                        enter_guest_namespace(
+                            cgroup_fd,
+                            &delegated_root,
+                            guest_uid,
+                            &preexec_executable,
+                        )
+                    });
+                }
+                let started = Instant::now();
+                let mut child = command
+                    .spawn()
+                    .map_err(|error| format!("CHILD_LAUNCH_FAILED:{error}"))?;
+                drop(executable_file);
+                drop(cgroup_procs);
+                child
+                    .stdin
+                    .take()
+                    .ok_or("CHILD_STDIN_FAILED")?
+                    .write_all(&input)
+                    .map_err(|_| "CHILD_STDIN_FAILED")?;
+                let stdout = child.stdout.take().ok_or("CHILD_STDOUT_FAILED")?;
+                let stderr = child.stderr.take().ok_or("CHILD_STDERR_FAILED")?;
+                let stdout_max = config.stdout_max;
+                let stderr_max = config.stderr_max;
+                let stdout_reader = thread::spawn(move || read_limited(stdout, stdout_max));
+                let stderr_reader = thread::spawn(move || read_limited(stderr, stderr_max));
+                let deadline = Duration::from_millis(config.deadline_ms);
+                let mut timed_out = false;
+                let mut cancellation_won = false;
+                let mut cgroup_kill_used = false;
+                let status = loop {
+                    if let Some(status) = child.try_wait().map_err(|_| "CHILD_WAIT_FAILED")? {
+                        if cancellation_requested(&config)? {
+                            return Err("CANCELLATION_RACE_AMBIGUOUS".into());
+                        }
+                        break status;
+                    }
+                    let requested = cancellation_requested(&config)?;
+                    if requested || started.elapsed() >= deadline {
+                        timed_out = !requested;
+                        cancellation_won = requested;
+                        mandatory_kill(child.id(), &invocation)?;
+                        cgroup_kill_used = true;
+                        break child.wait().map_err(|_| "CHILD_WAIT_FAILED")?;
+                    }
+                    thread::sleep(Duration::from_millis(2));
+                };
+                if wait_cgroup_empty(&invocation, Duration::from_secs(1)).is_err() {
+                    mandatory_kill(child.id(), &invocation)?;
+                    wait_cgroup_empty(&invocation, Duration::from_secs(2))?;
+                    reap_adopted_children()?;
+                    return Err("LINGERING_DESCENDANT".into());
+                }
+                reap_adopted_children()?;
+                let (stdout, stdout_truncated) = stdout_reader
+                    .join()
+                    .map_err(|_| "STDOUT_READER_FAILED")?
+                    .map_err(|_| "STDOUT_READER_FAILED")?;
+                let (stderr, stderr_truncated) = stderr_reader
+                    .join()
+                    .map_err(|_| "STDERR_READER_FAILED")?
+                    .map_err(|_| "STDERR_READER_FAILED")?;
+
+                let final_cpu = parse_key_values(&invocation.join("cpu.stat"))
+                    .map_err(|_| "COUNTER_READ_FAILED")?;
+                let final_memory = parse_key_values(&invocation.join("memory.events"))
+                    .map_err(|_| "COUNTER_READ_FAILED")?;
+                let final_pids = parse_key_values(&invocation.join("pids.events"))
+                    .map_err(|_| "COUNTER_READ_FAILED")?;
+                let pids_peak =
+                    read_u64(&invocation.join("pids.peak")).map_err(|_| "COUNTER_READ_FAILED")?;
+                let memory_peak =
+                    read_u64(&invocation.join("memory.peak")).map_err(|_| "COUNTER_READ_FAILED")?;
+                let elapsed_ns: u64 = started
+                    .elapsed()
+                    .as_nanos()
+                    .try_into()
+                    .map_err(|_| "COUNTER_OVERFLOW")?;
+                let payload_truncated = stdout.len() > config.payload_max;
+                let exit_code = status
+                    .code()
+                    .map_or("null".to_owned(), |value| value.to_string());
+                let signal = status
+                    .signal()
+                    .map_or("null".to_owned(), |value| format!("\"SIG{value}\""));
+                let cpu_before = baseline_cpu
+                    .get("usage_usec")
+                    .copied()
+                    .ok_or("COUNTER_READ_FAILED")?;
+                let cpu_after = final_cpu
+                    .get("usage_usec")
+                    .copied()
+                    .ok_or("COUNTER_READ_FAILED")?;
+                Ok(format!(
+                    concat!(
+                        "{{\"schemaVersion\":\"cowards-native-supervisor-receipt-v1\",",
+                        "\"requestSha256\":\"{}\",\"processGroupIdentitySha256\":\"{}\",",
+                        "\"actualCgroupPath\":\"{}\",\"cpuMax\":\"{}\",",
+                        "\"memoryMaxBytes\":{},\"pidsMax\":{},",
+                        "\"guestNamespaceUid\":{},\"supervisorHostUid\":{},",
+                        "\"wallElapsedNanoseconds\":{},\"cpuUsageBeforeMicroseconds\":{},",
+                        "\"cpuUsageAfterMicroseconds\":{},\"memoryPeakBytes\":{},",
+                        "\"memoryEventsBefore\":{},\"memoryEventsAfter\":{},",
+                        "\"pidsEventsBefore\":{},\"pidsEventsAfter\":{},\"pidsPeak\":{},",
+                        "\"exitCode\":{},\"signal\":{},\"timedOut\":{},",
+                        "\"cancellationRequested\":{},\"cgroupKillUsed\":{},",
+                        "\"stdoutBase64\":\"{}\",\"stderrBase64\":\"{}\",",
+                        "\"stdoutTruncated\":{},\"stderrTruncated\":{},",
+                        "\"payloadTruncated\":{},\"cgroupEmpty\":true,",
+                        "\"cleanupComplete\":true}}"
+                    ),
+                    json_escape(&config.request_sha256),
+                    json_escape(&config.process_group_sha256),
+                    json_escape(invocation.to_str().ok_or("CGROUP_PATH_INVALID")?,),
+                    json_escape(&actual_cpu_max),
+                    actual_memory_max,
+                    actual_pids_max,
+                    config.guest_namespace_uid,
+                    unsafe { getuid() },
+                    elapsed_ns,
+                    cpu_before,
+                    cpu_after,
+                    memory_peak,
+                    json_map(&baseline_memory),
+                    json_map(&final_memory),
+                    json_map(&baseline_pids),
+                    json_map(&final_pids),
+                    pids_peak,
+                    exit_code,
+                    signal,
+                    timed_out,
+                    cancellation_won,
+                    cgroup_kill_used,
+                    base64(&stdout),
+                    base64(&stderr),
+                    stdout_truncated,
+                    stderr_truncated,
+                    payload_truncated,
+                ))
+            })();
+            match result {
+                Ok(receipt) => {
+                    cleanup_invocation(&invocation)?;
+                    Ok(receipt)
+                }
+                Err(code) => match cleanup_invocation(&invocation) {
+                    Ok(()) => Err(code),
+                    Err(cleanup) => Err(format!("{code}:{cleanup}")),
+                },
+            }
         }
     }
 
@@ -993,12 +1606,143 @@ mod linux {
     }
 
     pub fn main_linux() {
-        match Config::parse().and_then(run) {
+        let mode = env::args().nth(1);
+        let result = match mode.as_deref() {
+            Some("monitor") => MonitorConfig::parse().and_then(monitor),
+            Some("run") => Config::parse().and_then(run),
+            _ => Err("USAGE".into()),
+        };
+        match result {
             Ok(receipt) => println!("{receipt}"),
             Err(code) => {
                 eprintln!("cowards-runtime-supervisor:{code}");
                 std::process::exit(70);
             }
+        }
+    }
+
+    #[cfg(test)]
+    mod monitor_tests {
+        use super::*;
+
+        fn arguments() -> Vec<String> {
+            [
+                "monitor",
+                "--cgroup-root",
+                "/run/cowards-cgroup",
+                "--invocation-name",
+                "invocation-certification-nonce-00000000000000000001",
+                "--control-root",
+                "/run/cowards-control",
+                "--nonce",
+                "certification-nonce-00000000000000000001",
+                "--cpu-quota-us",
+                "50000",
+                "--cpu-period-us",
+                "100000",
+                "--memory-max-bytes",
+                "33554432",
+                "--pids-max",
+                "16",
+                "--supervisor-host-uid",
+                "65532",
+                "--guest-host-uid",
+                "65534",
+                "--deadline-ms",
+                "2000",
+                "--stdout-max",
+                "16384",
+                "--stderr-max",
+                "4096",
+                "--payload-max",
+                "16384",
+                "--request-sha256",
+                "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                "--process-group-sha256",
+                "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                "--cancellation-path",
+                "/run/cowards-control/cancel",
+                "--cancellation-nonce",
+                "certification-cancel-nonce-00000000000001",
+                "--completion-path",
+                "/run/cowards-control/completion",
+                "--ready-path",
+                "/run/cowards-control/ready",
+                "--stdout-path",
+                "/run/cowards-control/stdout",
+                "--stderr-path",
+                "/run/cowards-control/stderr",
+            ]
+            .into_iter()
+            .map(str::to_owned)
+            .collect()
+        }
+
+        fn replace(arguments: &mut [String], name: &str, value: &str) {
+            let index = arguments
+                .iter()
+                .position(|argument| argument == name)
+                .expect("argument");
+            arguments[index + 1] = value.to_owned();
+        }
+
+        #[test]
+        fn parses_exact_daemon_monitor_contract() {
+            let config = MonitorConfig::parse_from(arguments()).expect("valid monitor arguments");
+            assert_eq!(config.supervisor_host_uid, SUPERVISOR_HOST_UID);
+            assert_eq!(config.guest_host_uid, GUEST_HOST_UID);
+            assert_ne!(config.supervisor_host_uid, config.guest_host_uid);
+            assert_eq!(
+                config.cgroup_root.join(&config.invocation_name),
+                PathBuf::from(
+                    "/run/cowards-cgroup/invocation-certification-nonce-00000000000000000001"
+                )
+            );
+        }
+
+        #[test]
+        fn rejects_same_kernel_uid_and_control_path_substitution() {
+            let mut same_uid = arguments();
+            replace(&mut same_uid, "--guest-host-uid", "65532");
+            assert_eq!(
+                MonitorConfig::parse_from(same_uid).unwrap_err(),
+                "INVALID_LIMIT_OR_IDENTITY"
+            );
+
+            let mut escaped = arguments();
+            replace(
+                &mut escaped,
+                "--completion-path",
+                "/run/guest-visible/completion",
+            );
+            assert_eq!(
+                MonitorConfig::parse_from(escaped).unwrap_err(),
+                "CONTROL_PATH_INVALID"
+            );
+        }
+
+        #[test]
+        fn rejects_unknown_duplicate_and_unbound_invocation_arguments() {
+            let mut duplicate = arguments();
+            duplicate.extend(["--deadline-ms".to_owned(), "3000".to_owned()]);
+            assert_eq!(
+                MonitorConfig::parse_from(duplicate).unwrap_err(),
+                "DUPLICATE_ARGUMENT"
+            );
+
+            let mut unknown = arguments();
+            unknown.extend(["--extra".to_owned(), "value".to_owned()]);
+            assert_eq!(
+                MonitorConfig::parse_from(unknown).unwrap_err(),
+                "UNKNOWN_ARGUMENT"
+            );
+
+            let mut unbound = arguments();
+            replace(&mut unbound, "--invocation-name", "invocation-other");
+            assert_eq!(
+                MonitorConfig::parse_from(unbound).unwrap_err(),
+                "INVALID_LIMIT_OR_IDENTITY"
+            );
         }
     }
 }
@@ -1076,6 +1820,54 @@ mod tests {
             sha256_hex(b"abc"),
             "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
         );
+    }
+
+    #[test]
+    fn validates_exact_sha256_identity_shape() {
+        assert!(
+            validate_sha256_identity(
+                "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+            )
+            .is_ok()
+        );
+        for invalid in [
+            "",
+            "sha256:abc",
+            "sha256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+            "sha512:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        ] {
+            assert!(validate_sha256_identity(invalid).is_err(), "{invalid}");
+        }
+    }
+
+    #[test]
+    fn parses_nonce_bound_exact_completion_status() {
+        let nonce = "certification-nonce-00000000000000000001";
+        assert_eq!(
+            parse_completion_status(&format!("nonce={nonce}\nexit-code=0\nsignal=null\n"), nonce),
+            Ok(CompletionStatus {
+                exit_code: Some(0),
+                signal: None,
+            })
+        );
+        assert_eq!(
+            parse_completion_status(&format!("nonce={nonce}\nexit-code=null\nsignal=9\n"), nonce),
+            Ok(CompletionStatus {
+                exit_code: None,
+                signal: Some(9),
+            })
+        );
+        for invalid in [
+            format!("nonce={nonce}\nexit-code=null\nsignal=null\n"),
+            format!("nonce={nonce}\nexit-code=0\nsignal=9\n"),
+            format!("nonce=other\nexit-code=0\nsignal=null\n"),
+            format!("nonce={nonce}\nexit-code=0\nsignal=null"),
+        ] {
+            assert_eq!(
+                parse_completion_status(&invalid, nonce),
+                Err("COMPLETION_INVALID")
+            );
+        }
     }
 
     #[test]

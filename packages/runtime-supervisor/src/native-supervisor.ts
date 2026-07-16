@@ -1,7 +1,12 @@
 import { Buffer } from "node:buffer"
 import { spawnSync } from "node:child_process"
 import { createHash } from "node:crypto"
-import { readFileSync } from "node:fs"
+import {
+  closeSync,
+  constants as fsConstants,
+  openSync,
+  readFileSync,
+} from "node:fs"
 import path from "node:path"
 import {
   RUNTIME_BUDGET_PROFILE_V1_18_SHA256,
@@ -107,6 +112,54 @@ type NativeSpawn = (
 
 const sha256 = (bytes: Uint8Array): `sha256:${string}` =>
   `sha256:${createHash("sha256").update(bytes).digest("hex")}`
+
+type VerifiedBinarySpawn = (
+  command: string,
+  args: readonly string[],
+  options: {
+    encoding: "buffer"
+    env: Record<string, string | undefined>
+    input: Uint8Array
+    maxBuffer: number
+    shell: false
+    stdio: readonly ["pipe", "pipe", "pipe", number]
+    timeout: number
+  },
+) => ReturnType<NativeSpawn>
+
+/** @internal Not exported from the package root. */
+export const executeVerifiedSupervisorBinaryV118 = (input: {
+  readonly binaryPath: string
+  readonly expectedSha256: `sha256:${string}`
+  readonly args: readonly string[]
+  readonly environment: Record<string, string | undefined>
+  readonly input: Uint8Array
+  readonly maxBuffer: number
+  readonly timeout: number
+  readonly spawn?: VerifiedBinarySpawn | undefined
+}): ReturnType<NativeSpawn> => {
+  let descriptor: number | undefined
+  try {
+    descriptor = openSync(
+      input.binaryPath,
+      fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW,
+    )
+    if (sha256(readFileSync(descriptor)) !== input.expectedSha256) {
+      throw new TypeError("Native supervisor binary identity is invalid")
+    }
+    return (input.spawn ?? spawnSync)("/proc/self/fd/3", [...input.args], {
+      encoding: "buffer",
+      env: input.environment,
+      input: input.input,
+      maxBuffer: input.maxBuffer,
+      shell: false,
+      stdio: ["pipe", "pipe", "pipe", descriptor],
+      timeout: input.timeout,
+    })
+  } finally {
+    if (descriptor !== undefined) closeSync(descriptor)
+  }
+}
 
 export const computeSupervisorToolchainSha256V118 = (input: {
   readonly builderImage: string
@@ -536,73 +589,88 @@ export const runPinnedNativeSupervisorV118 = (input: {
       value,
     ],
   )
-  const result = (input.spawnSync ?? spawnSync)(
-    input.binaryPath,
-    [
-      "run",
-      "--cgroup-root",
-      input.cgroupRoot,
-      "--nonce",
-      request.invocation.hostNonce,
-      "--cpu-quota-us",
-      String(request.invocation.limits.cpuMax.quotaMicroseconds),
-      "--cpu-period-us",
-      String(request.invocation.limits.cpuMax.periodMicroseconds),
-      "--memory-max-bytes",
-      String(request.invocation.limits.memoryMaxBytes),
-      "--pids-max",
-      String(request.invocation.limits.pidsMax),
-      "--guest-namespace-uid",
-      String(manifest.guestNamespaceUid),
-      "--deadline-ms",
-      String(request.invocation.limits.wallMilliseconds),
-      "--stdout-max",
-      String(request.invocation.limits.stdoutBytes),
-      "--stderr-max",
-      String(request.invocation.limits.stderrBytes),
-      "--payload-max",
-      String(request.invocation.limits.payloadBytes),
-      "--request-sha256",
-      request.invocation.requestSha256,
-      "--process-group-sha256",
-      request.expectedProcessGroupIdentitySha256,
-      "--expected-executable-sha256",
-      request.execution.executableBytesSha256,
-      "--environment-count",
-      String(request.execution.environment.length),
-      ...environmentArgs,
-      "--cancellation-path",
-      cancellationPath(controller, request),
-      "--cancellation-nonce",
-      request.cancellation.channelNonce,
-      "--input-path",
-      "/proc/self/fd/0",
-      "--",
-      request.execution.executablePath,
-      ...request.execution.argv,
-    ],
-    {
-      encoding: "buffer",
-      env: Object.fromEntries(
-        request.execution.environment.map(({ name, value }) => [name, value]),
-      ),
-      input: Buffer.from(request.input.bytesBase64, "base64"),
-      maxBuffer:
-        request.invocation.limits.payloadBytes +
-        request.invocation.limits.stdoutBytes +
-        request.invocation.limits.stderrBytes +
-        256 * 1024,
-      shell: false,
-      timeout:
-        request.invocation.limits.wallMilliseconds +
-        request.invocation.limits.terminationGraceMilliseconds,
-    },
+  const nativeArgs = [
+    "run",
+    "--cgroup-root",
+    input.cgroupRoot,
+    "--nonce",
+    request.invocation.hostNonce,
+    "--cpu-quota-us",
+    String(request.invocation.limits.cpuMax.quotaMicroseconds),
+    "--cpu-period-us",
+    String(request.invocation.limits.cpuMax.periodMicroseconds),
+    "--memory-max-bytes",
+    String(request.invocation.limits.memoryMaxBytes),
+    "--pids-max",
+    String(request.invocation.limits.pidsMax),
+    "--guest-namespace-uid",
+    String(manifest.guestNamespaceUid),
+    "--deadline-ms",
+    String(request.invocation.limits.wallMilliseconds),
+    "--stdout-max",
+    String(request.invocation.limits.stdoutBytes),
+    "--stderr-max",
+    String(request.invocation.limits.stderrBytes),
+    "--payload-max",
+    String(request.invocation.limits.payloadBytes),
+    "--request-sha256",
+    request.invocation.requestSha256,
+    "--process-group-sha256",
+    request.expectedProcessGroupIdentitySha256,
+    "--expected-executable-sha256",
+    request.execution.executableBytesSha256,
+    "--environment-count",
+    String(request.execution.environment.length),
+    ...environmentArgs,
+    "--cancellation-path",
+    cancellationPath(controller, request),
+    "--cancellation-nonce",
+    request.cancellation.channelNonce,
+    "--input-path",
+    "/proc/self/fd/0",
+    "--",
+    request.execution.executablePath,
+    ...request.execution.argv,
+  ] as const
+  const nativeEnvironment = Object.fromEntries(
+    request.execution.environment.map(({ name, value }) => [name, value]),
   )
+  const nativeInput = Buffer.from(request.input.bytesBase64, "base64")
+  const nativeMaxBuffer =
+    request.invocation.limits.payloadBytes +
+    request.invocation.limits.stdoutBytes +
+    request.invocation.limits.stderrBytes +
+    256 * 1024
+  const nativeTimeout =
+    request.invocation.limits.wallMilliseconds +
+    request.invocation.limits.terminationGraceMilliseconds
+  const result =
+    input.spawnSync === undefined && input.readBinary === undefined
+      ? executeVerifiedSupervisorBinaryV118({
+          binaryPath: input.binaryPath,
+          expectedSha256: manifest.binarySha256,
+          args: nativeArgs,
+          environment: nativeEnvironment,
+          input: nativeInput,
+          maxBuffer: nativeMaxBuffer,
+          timeout: nativeTimeout,
+        })
+      : (input.spawnSync ?? spawnSync)(input.binaryPath, nativeArgs, {
+          encoding: "buffer",
+          env: nativeEnvironment,
+          input: nativeInput,
+          maxBuffer: nativeMaxBuffer,
+          shell: false,
+          timeout: nativeTimeout,
+        })
+  const postLaunchFailure = (
+    code: "RAW_RECEIPT_INVALID" | "RECEIPT_BINDING_MISMATCH",
+  ): SupervisorVerificationResultV118 =>
+    controller.cleanupInvocation(request.invocation.hostNonce)
+      ? failure(code)
+      : failure("CONTAINMENT_INCOMPLETE")
   if (result.error || result.status !== 0 || result.signal !== null) {
-    if (!controller.cleanupInvocation(request.invocation.hostNonce)) {
-      return failure("CONTAINMENT_INCOMPLETE")
-    }
-    return failure("RAW_RECEIPT_INVALID")
+    return postLaunchFailure("RAW_RECEIPT_INVALID")
   }
   try {
     const native = parseNativeReceipt(result.stdout)
@@ -621,9 +689,10 @@ export const runPinnedNativeSupervisorV118 = (input: {
       native.pidsMax !== request.invocation.limits.pidsMax ||
       native.supervisorHostUid !== controller.supervisorHostUid ||
       native.guestNamespaceUid !== controller.guestNamespaceUid ||
+      !native.cgroupEmpty ||
       !native.cleanupComplete
     ) {
-      return failure("RECEIPT_BINDING_MISMATCH")
+      return postLaunchFailure("RECEIPT_BINDING_MISMATCH")
     }
     const payloadBytes = Buffer.from(native.stdoutBase64, "base64")
     const stdoutBytes = payloadBytes
@@ -728,9 +797,6 @@ export const runPinnedNativeSupervisorV118 = (input: {
       observed,
     })
   } catch {
-    if (!controller.cleanupInvocation(request.invocation.hostNonce)) {
-      return failure("CONTAINMENT_INCOMPLETE")
-    }
-    return failure("RAW_RECEIPT_INVALID")
+    return postLaunchFailure("RAW_RECEIPT_INVALID")
   }
 }

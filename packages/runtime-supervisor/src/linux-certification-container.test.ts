@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest"
+import * as certificationModule from "./linux-certification-container.js"
 import {
   PINNED_CERTIFICATION_LINUX_IMAGE,
   certificationBootstrapArgs,
   certificationFinalizerArgs,
   certificationGuestArgs,
   certificationMonitorArgs,
-  certificationSupervisorArgs,
   inspectCertificationDockerInfo,
   trustedCleanupScript,
 } from "./linux-certification-container.js"
@@ -80,8 +80,6 @@ describe("Linux certification container controller", () => {
         "--cgroup-parent=/cowards/run-0123456789abcdef01234567/invocation-certification-nonce-00000000000000000001",
         "--user",
         "65534:65534",
-        "--pid",
-        "private",
         "--cap-drop",
         "ALL",
         "--network",
@@ -94,6 +92,8 @@ describe("Linux certification container controller", () => {
     expect(args.join(" ")).not.toContain("/sys/fs/cgroup")
     expect(args.join(" ")).not.toContain("--cap-add")
     expect(args.join(" ")).not.toContain("--cgroupns=host")
+    expect(args.join(" ")).not.toContain("--pid=host")
+    expect(args.join(" ")).not.toContain("--pid host")
   })
 
   it("uses the trusted finalizer and rejects Docker identity drift", () => {
@@ -111,19 +111,23 @@ describe("Linux certification container controller", () => {
     expect(
       inspectCertificationDockerInfo({
         OSType: "linux",
+        Architecture: "x86_64",
         CgroupVersion: "2",
         CgroupDriver: "cgroupfs",
         ServerVersion: "29.4.0",
         KernelVersion: "7.0.5-orbstack-00330-ge3df4e19b0a0-dirty",
+        SecurityOptions: ["name=seccomp,profile=builtin", "name=cgroupns"],
       }),
     ).toMatchObject({ status: "ready" })
     expect(() =>
       inspectCertificationDockerInfo({
         OSType: "linux",
+        Architecture: "x86_64",
         CgroupVersion: "2",
         CgroupDriver: "systemd",
         ServerVersion: "29.4.0",
         KernelVersion: "7.0.5-orbstack-00330-ge3df4e19b0a0-dirty",
+        SecurityOptions: ["name=seccomp,profile=builtin", "name=cgroupns"],
       }),
     ).toThrow(/cgroup|unsupported/iu)
   })
@@ -136,6 +140,8 @@ describe("Linux certification container controller", () => {
   })
 
   it("does not retain the legacy nested-user-namespace launch entry point", () => {
-    expect(certificationSupervisorArgs).toBeUndefined()
+    expect(certificationModule).not.toHaveProperty(
+      "certificationSupervisorArgs",
+    )
   })
 })

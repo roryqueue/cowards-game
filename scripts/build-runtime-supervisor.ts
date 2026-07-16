@@ -25,7 +25,7 @@ const nativeRoot = path.join(repoRoot, "packages/runtime-supervisor/native")
 const manifestPath = path.join(nativeRoot, "runtime-supervisor-manifest.json")
 const binaryPath = path.join(
   nativeRoot,
-  "target/release/cowards-runtime-supervisor",
+  "target/x86_64-unknown-linux-musl/release/cowards-runtime-supervisor",
 )
 
 const sha256 = (bytes: Uint8Array): `sha256:${string}` =>
@@ -79,6 +79,8 @@ export const buildRuntimeSupervisorManifest = (input: {
 export const supervisorBuildDockerArgs = (root: string): readonly string[] => [
   "run",
   "--rm",
+  "--platform",
+  "linux/amd64",
   "--network",
   "none",
   "--cap-drop",
@@ -93,13 +95,53 @@ export const supervisorBuildDockerArgs = (root: string): readonly string[] => [
   "--workdir",
   "/work",
   PINNED_RUNTIME_SUPERVISOR_BUILDER_IMAGE,
-  "cargo",
-  "build",
-  "--release",
-  "--locked",
-  "--manifest-path",
-  "packages/runtime-supervisor/native/Cargo.toml",
+  "/bin/sh",
+  "-ceu",
+  [
+    `test "$(uname -m)" = x86_64`,
+    `test "$(rustc --version)" = '${PINNED_RUNTIME_SUPERVISOR_RUSTC}'`,
+    `test "$(cargo --version)" = '${PINNED_RUNTIME_SUPERVISOR_CARGO}'`,
+    [
+      "cargo build",
+      "--release",
+      "--locked",
+      `--target ${PINNED_RUNTIME_SUPERVISOR_TARGET}`,
+      "--manifest-path packages/runtime-supervisor/native/Cargo.toml",
+    ].join(" "),
+  ].join("\n"),
 ]
+
+export const inspectSupervisorElfIdentity = (
+  fileOutput: Uint8Array,
+): Readonly<{ architecture: "x86_64"; libc: "musl-static" }> => {
+  const value = new TextDecoder("utf-8", { fatal: true })
+    .decode(fileOutput)
+    .trim()
+  if (
+    !/\bELF 64-bit\b/u.test(value) ||
+    !/\b(?:x86-64|x86_64)\b/u.test(value) ||
+    !/\b(?:statically|static-pie) linked\b/u.test(value) ||
+    /\bdynamically linked\b/u.test(value)
+  ) {
+    throw new TypeError(
+      "Supervisor ELF target is not pinned x86_64 musl-static",
+    )
+  }
+  return Object.freeze({ architecture: "x86_64", libc: "musl-static" })
+}
+
+const verifyBuiltBinaryIdentity = (): void => {
+  const result = spawnSync("file", ["-b", binaryPath], {
+    encoding: "buffer",
+    env: { PATH: process.env.PATH ?? "" },
+    shell: false,
+    timeout: 5_000,
+  })
+  if (result.error || result.status !== 0 || result.signal !== null) {
+    throw new TypeError("Supervisor ELF identity is unavailable")
+  }
+  inspectSupervisorElfIdentity(result.stdout)
+}
 
 const sourceBytes = (): Uint8Array =>
   Buffer.concat([
@@ -107,7 +149,8 @@ const sourceBytes = (): Uint8Array =>
     readFileSync(path.join(nativeRoot, "src/main.rs")),
   ])
 
-const currentManifest = (): NativeSupervisorBuildManifestV118 =>
+const currentManifest = (): NativeSupervisorBuildManifestV118 => (
+  verifyBuiltBinaryIdentity(),
   buildRuntimeSupervisorManifest({
     sourceBytes: sourceBytes(),
     cargoLockBytes: readFileSync(path.join(nativeRoot, "Cargo.lock")),
@@ -118,6 +161,7 @@ const currentManifest = (): NativeSupervisorBuildManifestV118 =>
     rustcVersion: PINNED_RUNTIME_SUPERVISOR_RUSTC,
     cargoVersion: PINNED_RUNTIME_SUPERVISOR_CARGO,
   })
+)
 
 const stable = (value: unknown): string =>
   `${JSON.stringify(value, null, 2).replace(
@@ -150,6 +194,7 @@ const main = (): void => {
     runLinuxCertificationContainerProbe({
       repoRoot,
       binaryPath,
+      supervisorBinarySha256: manifest.binarySha256,
       seccompPath: path.join(
         nativeRoot,
         "seccomp/moby-v0.2.1-userns-landlock.json",
