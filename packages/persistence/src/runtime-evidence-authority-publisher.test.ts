@@ -1711,8 +1711,8 @@ describePostgres("Phase-259 import trust-root bootstrap", () => {
   it("rejects changed bytes, identity conflict, and mutation", async () => {
     const other = {
       ...trustRoot,
-      publicKeyPem: generateKeyPairSync("ed25519").publicKey
-        .export({ type: "spki", format: "pem" })
+      publicKeyPem: generateKeyPairSync("ed25519")
+        .publicKey.export({ type: "spki", format: "pem" })
         .toString(),
     }
     const bytes = descriptorBytes([other])

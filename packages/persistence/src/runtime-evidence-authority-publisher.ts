@@ -100,6 +100,24 @@ export interface RuntimeEvidenceAuthorityImportTrustRoot {
   publicKeyPem: string
 }
 
+export interface BootstrapRuntimeEvidenceAuthorityImportTrustRootsInput {
+  expectedDescriptorSha256: string
+  producerId: string
+  keyId: string
+  trustDomain: string
+  readDescriptorBytes(): Promise<Uint8Array>
+}
+
+export interface RuntimeEvidenceAuthorityImportTrustRootBootstrapReceipt {
+  status: "installed" | "idempotent"
+  descriptorSha256: string
+  producerId: string
+  keyId: string
+  trustDomain: string
+  publicKeyFingerprint: string
+  generation: string
+}
+
 export class RuntimeEvidenceAuthorityPublisherError extends Error {
   constructor(
     readonly code: string,
@@ -425,6 +443,273 @@ const withSerializableTransaction = async <T>(
     "SERIALIZATION_FAILURE",
     "Serializable transaction retry exhausted.",
   )
+}
+
+interface InspectedImportTrustRootDescriptor {
+  descriptorBytes: Uint8Array
+  descriptorSha256: string
+  selectedRoot: Readonly<RuntimeEvidenceAuthorityImportTrustRoot>
+  publicKeyFingerprint: string
+}
+
+const IMPORT_TRUST_ROOT_KEYS = Object.freeze([
+  "keyId",
+  "producerId",
+  "publicKeyPem",
+  "trustDomain",
+] as const)
+
+const inspectImportTrustRootDescriptor = (
+  bytesInput: Uint8Array,
+  input: Pick<
+    BootstrapRuntimeEvidenceAuthorityImportTrustRootsInput,
+    "expectedDescriptorSha256" | "producerId" | "keyId" | "trustDomain"
+  >,
+): InspectedImportTrustRootDescriptor => {
+  const bytes = new Uint8Array(bytesInput)
+  if (bytes.byteLength < 2 || bytes.byteLength > 64 * 1024) {
+    return fail(
+      "IMPORT_ROOT_DESCRIPTOR_SIZE",
+      "Import trust-root descriptor must be between 2 and 65536 bytes.",
+    )
+  }
+  if (!SHA256.test(input.expectedDescriptorSha256)) {
+    return fail(
+      "IMPORT_ROOT_EXPECTED_HASH",
+      "Expected import trust-root descriptor hash is invalid.",
+    )
+  }
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes))
+  } catch {
+    return fail(
+      "IMPORT_ROOT_DESCRIPTOR_JSON",
+      "Import trust-root descriptor is not strict UTF-8 JSON.",
+    )
+  }
+  if (!Array.isArray(parsed) || parsed.length === 0 || parsed.length > 32) {
+    return fail(
+      "IMPORT_ROOT_DESCRIPTOR_SCHEMA",
+      "Import trust-root descriptor must be a bounded plural array.",
+    )
+  }
+  const roots = parsed.map((entry, index) => {
+    if (entry === null || typeof entry !== "object" || Array.isArray(entry)) {
+      return fail(
+        "IMPORT_ROOT_DESCRIPTOR_SCHEMA",
+        `Import trust root ${index} is not an object.`,
+      )
+    }
+    const record = entry as Record<string, unknown>
+    const keys = Object.keys(record).sort()
+    if (
+      keys.length !== IMPORT_TRUST_ROOT_KEYS.length ||
+      keys.some((key, keyIndex) => key !== IMPORT_TRUST_ROOT_KEYS[keyIndex])
+    ) {
+      return fail(
+        "IMPORT_ROOT_DESCRIPTOR_SCHEMA",
+        `Import trust root ${index} is not closed.`,
+      )
+    }
+    return Object.freeze({
+      producerId: assertString(record.producerId, "producerId"),
+      keyId: assertString(record.keyId, "keyId"),
+      trustDomain: assertString(record.trustDomain, "trustDomain"),
+      publicKeyPem: assertString(record.publicKeyPem, "publicKeyPem"),
+    })
+  })
+  const identities = new Set<string>()
+  for (const root of roots) {
+    const identity = `${root.producerId}\0${root.keyId}\0${root.trustDomain}`
+    if (identities.has(identity)) {
+      return fail(
+        "IMPORT_ROOT_DUPLICATE",
+        "Import trust-root descriptor contains a duplicate identity.",
+      )
+    }
+    identities.add(identity)
+  }
+  const canonical = encodeCanonicalJson(roots as unknown as JsonValue, {
+    context: "canonical-manifest",
+  })
+  if (
+    !canonical.ok ||
+    !Buffer.from(canonical.bytes).equals(Buffer.from(bytes))
+  ) {
+    return fail(
+      "IMPORT_ROOT_DESCRIPTOR_CANONICAL",
+      "Import trust-root descriptor bytes are not canonical JSON.",
+    )
+  }
+  const descriptorSha256 = `sha256:${createHash("sha256")
+    .update(bytes)
+    .digest("hex")}`
+  if (descriptorSha256 !== input.expectedDescriptorSha256) {
+    return fail(
+      "IMPORT_ROOT_DESCRIPTOR_HASH",
+      "Import trust-root descriptor does not match the expected hash.",
+    )
+  }
+  const matches = roots.filter(
+    (root) =>
+      root.producerId === input.producerId &&
+      root.keyId === input.keyId &&
+      root.trustDomain === input.trustDomain,
+  )
+  if (matches.length !== 1) {
+    return fail(
+      "IMPORT_ROOT_PIN",
+      "Import trust-root descriptor does not contain the exact selected identity.",
+    )
+  }
+  let publicKey: KeyObject
+  try {
+    publicKey = createPublicKey(matches[0]!.publicKeyPem)
+  } catch {
+    return fail(
+      "IMPORT_ROOT_PUBLIC_KEY",
+      "Import trust-root public key is invalid.",
+    )
+  }
+  if (publicKey.asymmetricKeyType !== "ed25519") {
+    return fail(
+      "IMPORT_ROOT_PUBLIC_KEY",
+      "Import trust-root public key must be Ed25519.",
+    )
+  }
+  const publicKeyFingerprint = `sha256:${createHash("sha256")
+    .update(publicKey.export({ type: "spki", format: "der" }))
+    .digest("hex")}`
+  return {
+    descriptorBytes: bytes,
+    descriptorSha256,
+    selectedRoot: matches[0]!,
+    publicKeyFingerprint,
+  }
+}
+
+export const bootstrapRuntimeEvidenceAuthorityImportTrustRoots = async (
+  pool: Pool,
+  input: BootstrapRuntimeEvidenceAuthorityImportTrustRootsInput,
+): Promise<
+  Readonly<RuntimeEvidenceAuthorityImportTrustRootBootstrapReceipt>
+> => {
+  const expected = inspectImportTrustRootDescriptor(
+    await input.readDescriptorBytes(),
+    input,
+  )
+  return withSerializableTransaction(pool, async (client) => {
+    await client.query(
+      `select next_generation
+         from runtime_evidence_authority_import_trust_root_head
+        where singleton = true
+        for update`,
+    )
+    let checked: InspectedImportTrustRootDescriptor
+    try {
+      checked = inspectImportTrustRootDescriptor(
+        await input.readDescriptorBytes(),
+        input,
+      )
+    } catch {
+      return fail(
+        "IMPORT_ROOT_DESCRIPTOR_CHANGED",
+        "Import trust-root descriptor changed during bootstrap.",
+      )
+    }
+    if (
+      checked.descriptorSha256 !== expected.descriptorSha256 ||
+      !Buffer.from(checked.descriptorBytes).equals(
+        Buffer.from(expected.descriptorBytes),
+      ) ||
+      checked.publicKeyFingerprint !== expected.publicKeyFingerprint
+    ) {
+      return fail(
+        "IMPORT_ROOT_DESCRIPTOR_CHANGED",
+        "Import trust-root descriptor changed during bootstrap.",
+      )
+    }
+    const existing = await client.query<{
+      descriptor_sha256: string
+      descriptor_bytes: Buffer
+      public_key_fingerprint: string
+      generation: string
+    }>(
+      `select descriptor_sha256, descriptor_bytes, public_key_fingerprint,
+              generation::text
+         from runtime_evidence_authority_import_trust_root_deployments
+        where producer_id = $1 and key_id = $2 and trust_domain = $3`,
+      [input.producerId, input.keyId, input.trustDomain],
+    )
+    const row = existing.rows[0]
+    if (row !== undefined) {
+      if (
+        row.descriptor_sha256 !== checked.descriptorSha256 ||
+        !row.descriptor_bytes.equals(Buffer.from(checked.descriptorBytes)) ||
+        row.public_key_fingerprint !== checked.publicKeyFingerprint
+      ) {
+        return fail(
+          "IMPORT_ROOT_CONFLICT",
+          "Import trust-root identity is already pinned to different bytes.",
+        )
+      }
+      return Object.freeze({
+        status: "idempotent" as const,
+        descriptorSha256: checked.descriptorSha256,
+        producerId: input.producerId,
+        keyId: input.keyId,
+        trustDomain: input.trustDomain,
+        publicKeyFingerprint: checked.publicKeyFingerprint,
+        generation: row.generation,
+      })
+    }
+    const head = await client.query<{ next_generation: string }>(
+      `select next_generation::text
+         from runtime_evidence_authority_import_trust_root_head
+        where singleton = true`,
+    )
+    const generation = head.rows[0]?.next_generation
+    if (generation === undefined) {
+      return fail(
+        "IMPORT_ROOT_HEAD",
+        "Import trust-root generation head is unavailable.",
+      )
+    }
+    const id = `runtime-authority-import-root:${checked.descriptorSha256.slice(
+      "sha256:".length,
+    )}`
+    await client.query(
+      `insert into runtime_evidence_authority_import_trust_root_deployments
+        (id, descriptor_sha256, descriptor_bytes, producer_id, key_id,
+         trust_domain, public_key_fingerprint, generation)
+       values ($1,$2,$3,$4,$5,$6,$7,$8::bigint)`,
+      [
+        id,
+        checked.descriptorSha256,
+        Buffer.from(checked.descriptorBytes),
+        input.producerId,
+        input.keyId,
+        input.trustDomain,
+        checked.publicKeyFingerprint,
+        generation,
+      ],
+    )
+    await client.query(
+      `update runtime_evidence_authority_import_trust_root_head
+          set next_generation = next_generation + 1
+        where singleton = true`,
+    )
+    return Object.freeze({
+      status: "installed" as const,
+      descriptorSha256: checked.descriptorSha256,
+      producerId: input.producerId,
+      keyId: input.keyId,
+      trustDomain: input.trustDomain,
+      publicKeyFingerprint: checked.publicKeyFingerprint,
+      generation,
+    })
+  })
 }
 
 const storedHash = (hash: string): string => hash.slice("sha256:".length)

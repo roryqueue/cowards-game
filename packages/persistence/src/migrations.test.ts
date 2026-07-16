@@ -58,9 +58,7 @@ describe("migrations", () => {
       "0022_runtime_evidence_v1_17_installed_authority.sql",
     )
     expect(names).toContain("0023_runtime_conformance_certificates.sql")
-    expect(names).toContain(
-      "0024_runtime_authority_import_trust_roots.sql",
-    )
+    expect(names).toContain("0024_runtime_authority_import_trust_roots.sql")
     expect(names).toEqual([...names].sort())
   })
 
