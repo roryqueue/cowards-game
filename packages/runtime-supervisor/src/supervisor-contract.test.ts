@@ -1,4 +1,5 @@
 import { Buffer } from "node:buffer"
+import { createHash } from "node:crypto"
 import {
   createRuntimeInvocationRequestV118,
   encodeCanonicalJson,
@@ -10,6 +11,7 @@ import { describe, expect, it } from "vitest"
 import {
   createSupervisorInvocationRequestV118,
   createSupervisorRawReceiptEnvelopeV118,
+  deriveSupervisorExecutionIdentityV118,
   isVerifiedSupervisorEvidenceV118,
   parseSupervisorInvocationRequestV118,
   serializeSupervisorInvocationRequestV118,
@@ -21,6 +23,17 @@ import {
 
 const hash = (character: string): `sha256:${string}` =>
   `sha256:${character.repeat(64)}`
+
+const execution = {
+  executablePath: "/usr/local/bin/node",
+  argv: ["--no-warnings", "/runtime/strategy-runner.mjs"],
+  environment: [
+    { name: "LANG", value: "C.UTF-8" },
+    { name: "TZ", value: "UTC" },
+  ],
+} as const
+
+const executionIdentity = deriveSupervisorExecutionIdentityV118(execution)
 
 const identity = {
   supervisorBinarySha256: hash("1"),
@@ -54,9 +67,9 @@ const invocation = (
     hostNonce,
     monotonicDeadlineNanoseconds: 9_000_000_000,
     executable: {
-      executableSha256: hash("a"),
-      argvSha256: hash("b"),
-      environmentPolicySha256: hash("c"),
+      executableSha256: executionIdentity.executableSha256,
+      argvSha256: executionIdentity.argvSha256,
+      environmentPolicySha256: executionIdentity.environmentPolicySha256,
     },
     expectedIdentity: identity,
   })
@@ -163,12 +176,15 @@ const fixture = (): {
   const request = createSupervisorInvocationRequestV118({
     invocation: invocation(),
     inputBytes,
+    execution,
     cancellationChannel: {
       channelId: "cancel-channel:v1.18:test:0001",
       channelNonce: "cancel-nonce-v1-18-000000000000000001",
     },
   })
   const receipt = rawReceipt(request)
+  receipt.containment.processGroupIdentitySha256 =
+    request.expectedProcessGroupIdentitySha256
   const envelope = createSupervisorRawReceiptEnvelopeV118({
     request,
     receipt,
@@ -197,6 +213,30 @@ const expectFailure = (
   })
 }
 
+const canonicalSha256 = (value: unknown): `sha256:${string}` =>
+  `sha256:${createHash("sha256").update(canonicalBytes(value)).digest("hex")}`
+
+const recomputeSupervisorRequestHash = (
+  request: SupervisorInvocationRequestV118,
+): void => {
+  const mutable = request as unknown as Record<string, unknown>
+  const { supervisorRequestSha256: _ignored, ...body } = mutable
+  mutable.supervisorRequestSha256 = canonicalSha256(body)
+}
+
+const setOverLimitWall = (
+  receipt: RuntimeSupervisorRawReceiptV118,
+  request: SupervisorInvocationRequestV118,
+): void => {
+  receipt.wall.elapsedNanoseconds =
+    (request.invocation.limits.wallMilliseconds + 1) * 1_000_000
+  receipt.wall.processGroupReapedMonotonicNanoseconds =
+    receipt.wall.supervisedSpawnMonotonicNanoseconds +
+    receipt.wall.elapsedNanoseconds
+  receipt.wall.wallMilliseconds =
+    request.invocation.limits.wallMilliseconds + 1
+}
+
 describe("shared runtime supervisor v1.18 contract", () => {
   it("creates and parses one canonical request bound to input and cancellation", () => {
     const request = fixture().request
@@ -212,6 +252,7 @@ describe("shared runtime supervisor v1.18 contract", () => {
     const changedNonce = createSupervisorInvocationRequestV118({
       invocation: invocation("host-nonce-v1-18-substituted-000000000001"),
       inputBytes,
+      execution,
       cancellationChannel: {
         channelId: request.cancellation.channelId,
         channelNonce: request.cancellation.channelNonce,
@@ -260,6 +301,7 @@ describe("shared runtime supervisor v1.18 contract", () => {
       createSupervisorInvocationRequestV118({
         invocation: invocation(),
         inputBytes: oversized,
+        execution,
         cancellationChannel: {
           channelId: request.cancellation.channelId,
           channelNonce: request.cancellation.channelNonce,
@@ -315,6 +357,9 @@ describe("shared runtime supervisor v1.18 contract", () => {
         envelope.receipt.cgroup.settingsSha256 = hash("e")
       },
       (envelope) => {
+        envelope.receipt.containment.processGroupIdentitySha256 = hash("f")
+      },
+      (envelope) => {
         envelope.supervisorRequestSha256 = hash("0")
       },
       (envelope) => {
@@ -334,6 +379,40 @@ describe("shared runtime supervisor v1.18 contract", () => {
           rawReceiptBytes: canonicalBytes(envelope),
           observed: { payloadBytes, stdoutBytes, stderrBytes },
         }),
+      )
+    }
+  })
+
+  it("binds actual executable, argv, and environment values to public identities", () => {
+    const mutations: Array<
+      (request: SupervisorInvocationRequestV118) => void
+    > = [
+      (request) => {
+        ;(
+          request.execution as {
+            executablePath: string
+          }
+        ).executablePath = "/tmp/substituted-runtime"
+      },
+      (request) => {
+        ;(request.execution.argv as string[])[0] = "--inspect"
+      },
+      (request) => {
+        ;(
+          request.execution.environment as Array<{
+            name: string
+            value: string
+          }>
+        )[0] = { name: "LANG", value: "attacker-controlled" }
+      },
+    ]
+    for (const mutate of mutations) {
+      const request = clone(fixture().request)
+      mutate(request)
+      recomputeSupervisorRequestHash(request)
+      expectFailure(
+        parseSupervisorInvocationRequestV118(canonicalBytes(request)),
+        "REQUEST_BINDING_MISMATCH",
       )
     }
   })
@@ -422,6 +501,73 @@ describe("shared runtime supervisor v1.18 contract", () => {
           rawReceiptBytes: canonicalBytes(envelope),
           observed: { payloadBytes, stdoutBytes, stderrBytes },
         }),
+      )
+    }
+  })
+
+  it("keeps unresolved process results and incomplete reap system-owned even when over limit", () => {
+    const cases: Array<
+      Readonly<{
+        expectedCode: string
+        mutate: (receipt: RuntimeSupervisorRawReceiptV118) => void
+      }>
+    > = [
+      {
+        expectedCode: "PROCESS_RESULT_UNRESOLVED",
+        mutate: (receipt) => {
+          receipt.lifecycle.exitCode = null
+          receipt.lifecycle.signal = "SIGKILL"
+          receipt.lifecycle.cancellationRequested = true
+          receipt.lifecycle.cancellationWinner = "host"
+          receipt.lifecycle.cgroupKillUsed = true
+          receipt.lifecycle.lateResultDiscarded = true
+        },
+      },
+      {
+        expectedCode: "PROCESS_RESULT_UNRESOLVED",
+        mutate: (receipt) => {
+          receipt.lifecycle.exitCode = null
+          receipt.lifecycle.signal = "SIGSEGV"
+        },
+      },
+      {
+        expectedCode: "PROCESS_RESULT_UNRESOLVED",
+        mutate: (receipt) => {
+          receipt.lifecycle.exitCode = 1
+        },
+      },
+      {
+        expectedCode: "PROCESS_RESULT_UNRESOLVED",
+        mutate: (receipt) => {
+          receipt.lifecycle.exitCode = null
+        },
+      },
+      {
+        expectedCode: "CONTAINMENT_INCOMPLETE",
+        mutate: (receipt) => {
+          receipt.containment.cgroupEmpty = false
+          receipt.containment.lingeringProcessCount = 1
+        },
+      },
+    ]
+    for (const testCase of cases) {
+      const current = fixture()
+      const receipt = clone(current.receipt)
+      setOverLimitWall(receipt, current.request)
+      testCase.mutate(receipt)
+      const envelope = createSupervisorRawReceiptEnvelopeV118({
+        request: current.request,
+        receipt,
+        observed: { payloadBytes, stdoutBytes, stderrBytes },
+      })
+      expectFailure(
+        verifySupervisorRawReceiptV118({
+          request: current.request,
+          rawReceiptBytes:
+            serializeSupervisorRawReceiptEnvelopeV118(envelope),
+          observed: { payloadBytes, stdoutBytes, stderrBytes },
+        }),
+        testCase.expectedCode,
       )
     }
   })
