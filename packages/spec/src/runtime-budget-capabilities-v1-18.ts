@@ -266,6 +266,13 @@ const evidenceShapeIsClosed = (
       return false
     }
   }
+  if (
+    Object.values(value.containment).some(
+      (entry) => typeof entry !== "boolean",
+    )
+  ) {
+    return false
+  }
   const defense = value.wasmtimeDefenseInDepth
   return (
     defense === null ||

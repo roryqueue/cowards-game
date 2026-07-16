@@ -182,6 +182,32 @@ describe("runtime budget capabilities v1.18", () => {
     })
   })
 
+  it.each([
+    "delegated",
+    "settingsApplied",
+    "noCgroupEscape",
+    "emptyAfterReap",
+    "cleanupVerified",
+  ] as const)("rejects truthy non-boolean containment evidence for %s", (field) => {
+    const value = clone(completeEvidence("typescript")) as unknown as {
+      containment: Record<string, unknown>
+    }
+    value.containment[field] = "false"
+    expect(
+      evaluateRuntimeBudgetCapabilityV118(
+        value as unknown as RuntimeBudgetCapabilityEvidenceV118,
+      ),
+    ).toEqual({
+      kind: "system_failure",
+      laneId: "typescript",
+      supervisorEligible: false,
+      certificateEligible: false,
+      countedEligible: false,
+      gameplayDisposition: "no_mutation",
+      code: "EVIDENCE_SHAPE_INVALID",
+    })
+  })
+
   it("rejects native macOS and every non-Linux counted attempt", () => {
     for (const operatingSystem of ["darwin", "windows", "freebsd"]) {
       const value = clone(completeEvidence("python"))
