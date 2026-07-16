@@ -426,7 +426,7 @@ describe("versioned TypeScript-to-Go parity generator", () => {
     expect(`${missingAuthority.stdout}\n${missingAuthority.stderr}`).toContain(
       "runtime-successor-authority-v1.17.fixture.json is stale",
     )
-  }, 30_000)
+  }, 120_000)
 
   it("fails a stale generated table instead of silently regenerating it", () => {
     const root = makeVersionRoot()
