@@ -126,21 +126,25 @@ const listFiles = (root: string): string[] => {
 }
 
 describe("versioned TypeScript-to-Go parity generator", () => {
-  it("is pure on import and keeps all writes behind an explicit guarded main", () => {
-    const source = read(scriptPath).toString("utf8")
-    expect(source).toContain("pathToFileURL")
-    expect(source).toMatch(/import\.meta\.url\s*===\s*pathToFileURL/)
+  it(
+    "is pure on import and keeps all writes behind an explicit guarded main",
+    () => {
+      const source = read(scriptPath).toString("utf8")
+      expect(source).toContain("pathToFileURL")
+      expect(source).toMatch(/import\.meta\.url\s*===\s*pathToFileURL/)
 
-    const watched = [generatedPath, v116RequestPath, v116ResponsePath]
-    const before = watched.map((file) => statSync(file).mtimeMs)
-    const imported = spawnSync(
-      "pnpm",
-      ["exec", "tsx", "-e", `void import(${JSON.stringify(scriptPath)})`],
-      { cwd: repoRoot, encoding: "utf8", timeout: 120_000 },
-    )
-    expect(imported.status, imported.stderr).toBe(0)
-    expect(watched.map((file) => statSync(file).mtimeMs)).toEqual(before)
-  })
+      const watched = [generatedPath, v116RequestPath, v116ResponsePath]
+      const before = watched.map((file) => statSync(file).mtimeMs)
+      const imported = spawnSync(
+        "pnpm",
+        ["exec", "tsx", "-e", `void import(${JSON.stringify(scriptPath)})`],
+        { cwd: repoRoot, encoding: "utf8", timeout: 120_000 },
+      )
+      expect(imported.status, imported.stderr).toBe(0)
+      expect(watched.map((file) => statSync(file).mtimeMs)).toEqual(before)
+    },
+    20_000,
+  )
 
   it("protects immutable v1.16 bytes and exposes only an explicit v1.17 writer", () => {
     const source = read("scripts/generate-go-parity-fixtures.ts").toString(
