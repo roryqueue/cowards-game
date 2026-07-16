@@ -490,6 +490,7 @@ const renderRuntimeInvocationContractSource = (
     "",
     "var runtimeCertificateSourceIdentityFieldsV118 = [...]string{",
     ...[
+      "side",
       "strategyRevisionId",
       "originalSourceSha256",
       "normalizedSourceSha256",
@@ -791,12 +792,10 @@ const createV118ServiceArtifacts = () => {
     certificateId: `certificate:fixture:${side}:v1.17`,
     certificateRecordHash: identity(side === "bottom" ? "1" : "2"),
     registryGeneration: "23",
-    lane:
-      side === "bottom"
-        ? "typescript-linux-amd64"
-        : "rust-linux-amd64",
+    lane: side === "bottom" ? "typescript-linux-amd64" : "rust-linux-amd64",
     freshUntil: "2026-08-01T00:00:00.000Z",
     sourceIdentity: {
+      side,
       strategyRevisionId: `strategy-revision:fixture:${side}:v1.18`,
       originalSourceSha256: identity(side === "bottom" ? "3" : "4"),
       normalizedSourceSha256: identity(side === "bottom" ? "5" : "6"),
@@ -1272,9 +1271,7 @@ const verifyImmutableV116 = (root: string): void => {
 }
 
 const verifyImmutableV117 = (root: string): void => {
-  for (const [relative, expected] of Object.entries(
-    V1_17_IMMUTABLE_SHA256,
-  )) {
+  for (const [relative, expected] of Object.entries(V1_17_IMMUTABLE_SHA256)) {
     const target = path.join(root, relative)
     if (!existsSync(target) || sha256Hex(readFileSync(target)) !== expected) {
       throw new Error(
@@ -1959,10 +1956,7 @@ export const main = async (args = process.argv.slice(2)): Promise<void> => {
     writeV118Service ||
     (checkMode &&
       existsSync(
-        path.join(
-          root,
-          "packages/spec/src/runtime-execution-service-v1-17.ts",
-        ),
+        path.join(root, "packages/spec/src/runtime-execution-service-v1-17.ts"),
       ))
   ) {
     verifyImmutableV117(root)

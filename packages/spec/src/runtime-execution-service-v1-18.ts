@@ -1,3 +1,4 @@
+import { Buffer } from "node:buffer"
 import { createHash } from "node:crypto"
 import { z } from "zod"
 import { encodeCanonicalJson } from "./canonical-json-encode.js"
@@ -27,6 +28,7 @@ export interface RuntimeSemanticTupleV118 {
 }
 
 export interface RuntimeCertificateSourceIdentityV118 {
+  side: RuntimeMatchSideV118
   strategyRevisionId: string
   originalSourceSha256: Sha256IdentityV118
   normalizedSourceSha256: Sha256IdentityV118
@@ -164,17 +166,14 @@ const BoundedIdentifierSchema = z
   .min(1)
   .max(512)
   .regex(/^[A-Za-z0-9][A-Za-z0-9._:-]{0,511}$/u)
-const ExactIdentifierSchema = BoundedIdentifierSchema
-  .refine(
-    (value) =>
-      !/(?:^|[-_.:])(latest|current|default|any|stable|head)(?:$|[-_.:])|[*^~<>]/iu.test(
-        value,
-      ),
-    "floating identifiers are not canonical",
-  )
-const RegistryGenerationSchema = z
-  .string()
-  .regex(/^(?:0|[1-9][0-9]{0,15})$/u)
+const ExactIdentifierSchema = BoundedIdentifierSchema.refine(
+  (value) =>
+    !/(?:^|[-_.:])(latest|current|default|any|stable|head)(?:$|[-_.:])|[*^~<>]/iu.test(
+      value,
+    ),
+  "floating identifiers are not canonical",
+)
+const RegistryGenerationSchema = z.string().regex(/^(?:0|[1-9][0-9]{0,15})$/u)
 const CanonicalInstantSchema = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/u)
@@ -230,6 +229,7 @@ const RuntimeSemanticTupleV118Schema = z
 
 const RuntimeCertificateSourceIdentityV118Schema = z
   .object({
+    side: z.enum(["bottom", "top"]),
     strategyRevisionId: ExactIdentifierSchema,
     originalSourceSha256: Sha256Schema,
     normalizedSourceSha256: Sha256Schema,
@@ -306,7 +306,16 @@ const validateCertificateReferences = (
         message: "certificate registry generation does not match authority",
       })
     }
-    if (Date.parse(reference.freshUntil) <= Date.parse(value.evaluationInstant)) {
+    if (reference.sourceIdentity.side !== side) {
+      context.addIssue({
+        code: "custom",
+        path: ["certificateReferences", side, "sourceIdentity", "side"],
+        message: "certificate source identity is bound to the wrong side",
+      })
+    }
+    if (
+      Date.parse(reference.freshUntil) <= Date.parse(value.evaluationInstant)
+    ) {
       context.addIssue({
         code: "custom",
         path: ["certificateReferences", side, "freshUntil"],
@@ -330,7 +339,9 @@ export const RuntimeExecutionServiceRequestV118Schema = z
     match: CanonicalJsonValueV117Schema,
   })
   .strict()
-  .superRefine(validateCertificateReferences) satisfies z.ZodType<RuntimeExecutionServiceRequestV118>
+  .superRefine(
+    validateCertificateReferences,
+  ) satisfies z.ZodType<RuntimeExecutionServiceRequestV118>
 
 const RuntimeSemanticAdmissionResultV118Schema = z
   .object({
@@ -363,13 +374,9 @@ const RuntimeSemanticAdmissionResultV118Schema = z
 
 export const RuntimeSemanticAdmissionClaimV118Schema = z
   .object({
-    schemaVersion: z.literal(
-      RUNTIME_SEMANTIC_RECEIPT_SCHEMA_VERSION_V1_18,
-    ),
+    schemaVersion: z.literal(RUNTIME_SEMANTIC_RECEIPT_SCHEMA_VERSION_V1_18),
     profile: z.literal(RUNTIME_SEMANTIC_RECEIPT_PROFILE_V1_18),
-    serviceContractVersion: z.literal(
-      RUNTIME_EXECUTION_SERVICE_VERSION_V1_18,
-    ),
+    serviceContractVersion: z.literal(RUNTIME_EXECUTION_SERVICE_VERSION_V1_18),
     requestSha256: Sha256Schema,
     requestId: ExactIdentifierSchema,
     matchId: ExactIdentifierSchema,
@@ -391,11 +398,14 @@ export const RuntimeSemanticAdmissionClaimV118Schema = z
     result: RuntimeSemanticAdmissionResultV118Schema,
   })
   .strict()
-  .superRefine(validateCertificateReferences) satisfies z.ZodType<RuntimeSemanticAdmissionClaimV118>
+  .superRefine(
+    validateCertificateReferences,
+  ) satisfies z.ZodType<RuntimeSemanticAdmissionClaimV118>
 
 const Ed25519SignatureBase64Schema = z.string().refine((value) => {
   if (!/^[A-Za-z0-9+/]{86}==$/u.test(value)) return false
-  return Buffer.from(value, "base64").byteLength === 64
+  const decoded = Buffer.from(value, "base64")
+  return decoded.byteLength === 64 && decoded.toString("base64") === value
 }, "signature must be canonical base64 for exactly 64 Ed25519 bytes")
 
 export const RuntimeSemanticReceiptV118Schema = z

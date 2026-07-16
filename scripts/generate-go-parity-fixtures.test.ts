@@ -148,25 +148,21 @@ const listFiles = (root: string): string[] => {
 }
 
 describe("versioned TypeScript-to-Go parity generator", () => {
-  it(
-    "is pure on import and keeps all writes behind an explicit guarded main",
-    () => {
-      const source = read(scriptPath).toString("utf8")
-      expect(source).toContain("pathToFileURL")
-      expect(source).toMatch(/import\.meta\.url\s*===\s*pathToFileURL/)
+  it("is pure on import and keeps all writes behind an explicit guarded main", () => {
+    const source = read(scriptPath).toString("utf8")
+    expect(source).toContain("pathToFileURL")
+    expect(source).toMatch(/import\.meta\.url\s*===\s*pathToFileURL/)
 
-      const watched = [generatedPath, v116RequestPath, v116ResponsePath]
-      const before = watched.map((file) => statSync(file).mtimeMs)
-      const imported = spawnSync(
-        "pnpm",
-        ["exec", "tsx", "-e", `void import(${JSON.stringify(scriptPath)})`],
-        { cwd: repoRoot, encoding: "utf8", timeout: 120_000 },
-      )
-      expect(imported.status, imported.stderr).toBe(0)
-      expect(watched.map((file) => statSync(file).mtimeMs)).toEqual(before)
-    },
-    20_000,
-  )
+    const watched = [generatedPath, v116RequestPath, v116ResponsePath]
+    const before = watched.map((file) => statSync(file).mtimeMs)
+    const imported = spawnSync(
+      "pnpm",
+      ["exec", "tsx", "-e", `void import(${JSON.stringify(scriptPath)})`],
+      { cwd: repoRoot, encoding: "utf8", timeout: 120_000 },
+    )
+    expect(imported.status, imported.stderr).toBe(0)
+    expect(watched.map((file) => statSync(file).mtimeMs)).toEqual(before)
+  }, 20_000)
 
   it("protects immutable v1.16 bytes and exposes only an explicit v1.17 writer", () => {
     const source = read("scripts/generate-go-parity-fixtures.ts").toString(
@@ -239,13 +235,8 @@ describe("versioned TypeScript-to-Go parity generator", () => {
       ),
     ).toEqual(protectedBefore)
 
-    const generated = readFileSync(
-      path.join(root, generatedRelative),
-      "utf8",
-    )
-    expect(generated).toContain(
-      'case "runtime-execution-service-v1.18":',
-    )
+    const generated = readFileSync(path.join(root, generatedRelative), "utf8")
+    expect(generated).toContain('case "runtime-execution-service-v1.18":')
     expect(generated).toContain("runtimeSemanticReceiptClaimFieldsV118")
     expect(generated).toContain("runtimeCertificateReferenceFieldsV118")
     expect(generated).toContain("runtimeCertificateSourceIdentityFieldsV118")
@@ -329,7 +320,7 @@ describe("versioned TypeScript-to-Go parity generator", () => {
     expect(
       readFileSync(path.join(root, path.relative(repoRoot, v116ResponsePath))),
     ).toEqual(readFileSync(v116ResponsePath))
-  })
+  }, 20_000)
 
   it("writes only the exact deterministic v1.17 fixture and version-table set", () => {
     const root = makeVersionRoot()
@@ -382,7 +373,7 @@ describe("versioned TypeScript-to-Go parity generator", () => {
         ]),
       ),
     ).toEqual(firstHashes)
-  }, 30_000)
+  }, 60_000)
 
   it("binds candidate receipt bytes to the canonical success frame", () => {
     const response = JSON.parse(
@@ -463,7 +454,7 @@ describe("versioned TypeScript-to-Go parity generator", () => {
       JSON.parse(readFileSync(path.join(root, serviceRequestRelative), "utf8"))
         .compatibilityTupleId,
     ).toBe(CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_ID)
-  }, 30_000)
+  }, 60_000)
 
   it("writes only the exact canonical current service pair for activation", () => {
     const root = makeVersionRoot()

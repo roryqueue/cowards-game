@@ -23,6 +23,7 @@ const certificateReference = (side: "bottom" | "top") => ({
   lane: side === "bottom" ? "typescript-linux-amd64" : "rust-linux-amd64",
   freshUntil: "2026-08-01T00:00:00.000Z",
   sourceIdentity: {
+    side,
     strategyRevisionId: `strategy-revision:fixture:${side}`,
     originalSourceSha256: hash(side === "bottom" ? "3" : "4"),
     normalizedSourceSha256: hash(side === "bottom" ? "5" : "6"),
@@ -39,12 +40,12 @@ const request = (): RuntimeExecutionServiceRequestV118 => ({
   requestId: "request:fixture:v1.18",
   matchId: "match:fixture:v1.18",
   semanticTuple: createRuntimeSemanticTupleV118({
-      rules: "cowards-rules-v1.4",
-      engine: "engine-kernel-v1.37-candidate-1",
-      runtimeAbi: "strategy-runtime-abi-v1.18",
-      chronicle: "chronicle-recorder-current-events-v1.37-candidate-1",
-      arenaCatalog: "semantic-arena-catalog-v1.37-candidate-1",
-      setPolicy: "canonical-set-policy-v1.4",
+    rules: "cowards-rules-v1.4",
+    engine: "engine-kernel-v1.37-candidate-1",
+    runtimeAbi: "strategy-runtime-abi-v1.18",
+    chronicle: "chronicle-recorder-current-events-v1.37-candidate-1",
+    arenaCatalog: "semantic-arena-catalog-v1.37-candidate-1",
+    setPolicy: "canonical-set-policy-v1.4",
   }),
   authorityGeneration: "19",
   evaluationInstant: "2026-07-16T00:00:00.000Z",
@@ -217,6 +218,21 @@ describe("runtime execution service v1.18 additive contract", () => {
         }).success,
       ).toBe(false)
     }
+    expect(
+      RuntimeExecutionServiceRequestV118Schema.safeParse({
+        ...value,
+        certificateReferences: {
+          bottom: {
+            ...bottom,
+            sourceIdentity: {
+              ...bottom.sourceIdentity,
+              side: "top",
+            },
+          },
+          top,
+        },
+      }).success,
+    ).toBe(false)
   })
 
   it("binds the claim to request, trace, terminal, accounting, and no-mutation failure ownership", () => {
@@ -310,10 +326,7 @@ describe("runtime execution service v1.18 additive contract", () => {
     }
     expect(
       readFileSync(
-        path.join(
-          root,
-          "packages/spec/src/runtime-execution-service-v1-17.ts",
-        ),
+        path.join(root, "packages/spec/src/runtime-execution-service-v1-17.ts"),
         "utf8",
       ),
     ).toContain("cowards-game:runtime-semantic-receipt:v1.17")

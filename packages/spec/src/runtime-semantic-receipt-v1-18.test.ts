@@ -1,8 +1,4 @@
-import {
-  generateKeyPairSync,
-  sign,
-  type KeyObject,
-} from "node:crypto"
+import { generateKeyPairSync, sign, type KeyObject } from "node:crypto"
 import { readFileSync } from "node:fs"
 import { describe, expect, it } from "vitest"
 import {
@@ -49,6 +45,7 @@ const request = (): RuntimeExecutionServiceRequestV118 => ({
       lane: "typescript-linux-amd64",
       freshUntil: "2026-08-01T00:00:00.000Z",
       sourceIdentity: {
+        side: "bottom",
         strategyRevisionId: "private-source-secret-bottom",
         originalSourceSha256: hash("2"),
         normalizedSourceSha256: hash("3"),
@@ -66,6 +63,7 @@ const request = (): RuntimeExecutionServiceRequestV118 => ({
       lane: "rust-linux-amd64",
       freshUntil: "2026-08-01T00:00:00.000Z",
       sourceIdentity: {
+        side: "top",
         strategyRevisionId: "private-source-secret-top",
         originalSourceSha256: hash("9"),
         normalizedSourceSha256: hash("a"),
@@ -150,16 +148,23 @@ describe("runtime semantic receipt v1.18 spec authority", () => {
     expect(encodeRuntimeSemanticAdmissionClaimV118(reversed)).toEqual(
       encodeRuntimeSemanticAdmissionClaimV118(value),
     )
-    expect(new TextDecoder().decode(encodeRuntimeSemanticAdmissionClaimV118(value)))
-      .toContain("cowards-game:runtime-semantic-receipt:v1.18")
+    expect(
+      new TextDecoder().decode(encodeRuntimeSemanticAdmissionClaimV118(value)),
+    ).toContain("cowards-game:runtime-semantic-receipt:v1.18")
   })
 
   it("strictly parses only exact canonical closed receipt bytes", () => {
     const signed = signedReceipt()
-    expect(parseRuntimeSemanticReceiptV118(signed.receiptBytes)).toEqual({
+    const admitted = parseRuntimeSemanticReceiptV118(signed.receiptBytes)
+    expect(admitted).toEqual({
       ok: true,
       receipt: signed.receipt,
     })
+    expect(admitted.ok && Object.isFrozen(admitted.receipt)).toBe(true)
+    expect(
+      admitted.ok &&
+        Object.isFrozen(admitted.receipt.claim.certificateReferences),
+    ).toBe(true)
 
     const parsed = JSON.parse(new TextDecoder().decode(signed.receiptBytes))
     const extra = new TextEncoder().encode(
@@ -205,9 +210,7 @@ describe("runtime semantic receipt v1.18 spec authority", () => {
     ).toEqual({
       ok: true,
       receipt: signed.receipt,
-      publicProjection: projectPublicRuntimeSemanticReceiptV118(
-        signed.receipt,
-      ),
+      publicProjection: projectPublicRuntimeSemanticReceiptV118(signed.receipt),
     })
 
     const wrongKey = keys()

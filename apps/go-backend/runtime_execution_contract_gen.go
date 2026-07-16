@@ -181,6 +181,7 @@ var runtimeCertificateReferenceFieldsV118 = [...]string{
 }
 
 var runtimeCertificateSourceIdentityFieldsV118 = [...]string{
+	"side",
 	"strategyRevisionId",
 	"originalSourceSha256",
 	"normalizedSourceSha256",
@@ -254,13 +255,13 @@ func runtimeInvocationContractForVersion(version string) (runtimeInvocationContr
 	case "runtime-execution-service-v1.18":
 		return runtimeInvocationContractDescriptor{
 			ContractVersion:     "runtime-execution-service-v1.18",
-			RequestSHA256:       "6ba2f52df81989de2d41cc974c8851a6f0a16a7ee43604767af5ffda606ab320",
-			ResponseSHA256:      "22f4ffc55cd3860acd8bffafed9bb0e39fcd8008165d329909d155dc12f09821",
+			RequestSHA256:       "ca740755015abe9f99bc7ac3564a641ebc262f3d872fb160927c9eee16fe6958",
+			ResponseSHA256:      "fd8f8c9ea13692121005c45e846ed0cc2ce5293b5c3c233d70bb8ad0a1a6fa1a",
 			Historical:          false,
 			CanonicalJSON:       true,
 			Current:             false,
-			ReceiptClaimSHA256:  "d6a01a25e8c4cd8bd2b6a3f22f844a5537f47f78967539b4bad94f423c8d3ac9",
-			ReceiptSignature:    "iWUbQeajQxdLkW6vXB5gDLqtFGhm+TI0Nlv4FtcIZsSCOcCOq7P+uQC+LaILmYllpcAcDTVLhl7EHxkT1M75DA==",
+			ReceiptClaimSHA256:  "b9f990fbdc3e546ba82a5271e7989dff6c1c905e982275e9f824fbf01697495f",
+			ReceiptSignature:    "YvfKmIY7OeWL+trWfLmCb60NqbscjUG2gk+UurDnE7nLnt1EbEsU6Jl1qSjVOAexVHduhUXvRdOyu7vvUV6ZDw==",
 			ReceiptAlgorithm:    "Ed25519",
 			ReceiptKeyID:        "fixture-only:runtime-semantic-receipt:v1.18",
 			ReceiptPublicKeyPEM: "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAXgrWpdGHFNO5Z+VoS28vWLcygYyLwCv4Ovkfyf4Z610=\n-----END PUBLIC KEY-----\n",

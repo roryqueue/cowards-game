@@ -152,7 +152,10 @@ export const parseRuntimeSemanticReceiptV118 = (
         failure: RUNTIME_SEMANTIC_RECEIPT_INVALID_FAILURE_V1_18,
       }
     }
-    return { ok: true, receipt: parsed.data }
+    return {
+      ok: true,
+      receipt: deepFreeze(parsed.data) as RuntimeSemanticReceiptV118,
+    }
   } catch {
     return {
       ok: false,
@@ -268,9 +271,7 @@ export const verifyRuntimeSemanticReceiptV118 = (input: {
     return {
       ok: true,
       receipt: parsed.receipt,
-      publicProjection: projectPublicRuntimeSemanticReceiptV118(
-        parsed.receipt,
-      ),
+      publicProjection: projectPublicRuntimeSemanticReceiptV118(parsed.receipt),
     }
   } catch {
     return {
