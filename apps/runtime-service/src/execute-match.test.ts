@@ -11,6 +11,7 @@ import {
   RUNTIME_EXECUTION_SERVICE_VERSION,
   RUNTIME_INVOCATION_V1_17_INITIAL_EXECUTION_LEDGER_ROOT,
   RUNTIME_INVOCATION_V1_17_PLAYER_VIOLATIONS,
+  RUNTIME_INVOCATION_V1_17_SELECTED_LIFECYCLE,
   RUNTIME_INVOCATION_V1_17_TEST_KEY_ID,
   STRATEGY_RUNTIME_ABI_VERSION,
   RuntimeExecutionServiceRequestSchema,
@@ -42,7 +43,10 @@ import {
   type StrategyRevision,
 } from "@cowards/spec"
 import { buildStrategyRevision } from "@cowards/runtime-js"
-import { buildPythonStrategyRevision } from "@cowards/runtime-python"
+import {
+  buildPythonStrategyRevision,
+  buildPythonStrategyRevisionV117,
+} from "@cowards/runtime-python"
 import {
   buildRustStrategyRevision,
   buildZigStrategyRevision,
@@ -55,9 +59,9 @@ import {
   executePreparedRuntimeServiceRequestV117,
 } from "./execute-match.js"
 import {
-  executeNestedMatchServiceTestSupport,
-  type NestedMatchServiceTestOverrides,
-} from "./runtime-execution-nested-match.test-support.js"
+  executeCurrentMatchServiceTestSupport,
+  type CurrentMatchServiceTestOverrides,
+} from "./runtime-execution-current-match.test-support.js"
 import {
   createFixtureRuntimeEvidenceAuthorityLoader,
   createFixtureRuntimeExecutionAuthorityContext,
@@ -86,7 +90,7 @@ const runtimeConfig = createRuntimeServiceConfig({
 const executeRuntimeServiceRequest = (
   rawRequest: unknown,
   config = runtimeConfig,
-  dependencies: NestedMatchServiceTestOverrides = {},
+  dependencies: CurrentMatchServiceTestOverrides = {},
 ) => {
   const selected = RuntimeExecutionServiceRequestSchema.safeParse(rawRequest)
   const historical = isExactCommittedRuntimeExecutionServiceRequestV116(
@@ -95,7 +99,7 @@ const executeRuntimeServiceRequest = (
     ? HistoricalRuntimeExecutionServiceRequestV116Schema.safeParse(rawRequest)
     : selected
   const parsed = selected.success ? selected : historical
-  return executeNestedMatchServiceTestSupport(rawRequest, config, {
+  return executeCurrentMatchServiceTestSupport(rawRequest, config, {
     ...dependencies,
     ...(parsed.success
       ? {
@@ -1007,16 +1011,34 @@ describe("runtime execution service", () => {
     ).toBe(true)
   })
 
-  it("executes a Python Strategy through broker selection without JS fallback", () => {
-    const pythonRevision = buildPythonStrategyRevision({
-      source: pythonTacticalSource,
-      strategyId: "strategy:python",
-    })
+  it("executes the legacy Python broker only while its Match-shaped lane is selected", () => {
+    const pythonRevision = (
+      String(STRATEGY_RUNTIME_ABI_VERSION) === "strategy-runtime-abi-v1.17"
+        ? buildPythonStrategyRevisionV117({
+            source: pythonTacticalSource,
+            strategyId: "strategy:python",
+          })
+        : buildPythonStrategyRevision({
+            source: pythonTacticalSource,
+            strategyId: "strategy:python",
+          })
+    ) as unknown as StrategyRevision
     const response = executeRuntimeServiceRequest(
       requestFor({ bottom: pythonRevision }),
       runtimeConfig,
     )
 
+    if (String(STRATEGY_RUNTIME_ABI_VERSION) === "strategy-runtime-abi-v1.17") {
+      expect(response).toMatchObject({
+        ok: false,
+        kind: "systemFailure",
+        systemFailure: {
+          code: "MATCH_EXECUTION_FAILED",
+          diagnostics: { failureCode: "ADAPTER_CRASH" },
+        },
+      })
+      return
+    }
     expect(response.ok).toBe(true)
     if (!response.ok) {
       throw new Error(response.systemFailure.message)
@@ -1408,8 +1430,9 @@ describe("runtime execution service v1.17 candidate bridge", () => {
     )
     expect(result.publicResult).toEqual({
       contractVersion: "runtime-invocation-v1.17",
-      candidateStatus: "inactive-candidate",
-      current: false,
+      candidateStatus:
+        RUNTIME_INVOCATION_V1_17_SELECTED_LIFECYCLE.lifecycle,
+      current: RUNTIME_INVOCATION_V1_17_SELECTED_LIFECYCLE.current,
       requestId: request.requestId,
       invocationId: request.invocationId,
       kernelRequestId: request.kernelRequestId,

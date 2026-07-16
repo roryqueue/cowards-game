@@ -11,6 +11,7 @@ import {
   INITIAL_BOUNDS,
   RUNTIME_ABI_V1_17_BUDGET_PROFILE_SHA256,
   RUNTIME_EXECUTION_SERVICE_VERSION,
+  STRATEGY_RUNTIME_ABI_VERSION,
   SUCCESSOR_RUNTIME_IDENTITY_TEMPLATE_DOMAINS_V117,
   SUCCESSOR_RUNTIME_IDENTITY_TEMPLATE_PROFILE_V117,
   SUCCESSOR_RUNTIME_IDENTITY_TEMPLATE_SCHEMA_V117,
@@ -20,8 +21,8 @@ import {
   type RuntimeExecutionServiceRequest,
 } from "@cowards/spec"
 import { buildStrategyRevision } from "@cowards/runtime-js"
-import { executeNestedMatchServiceTestSupport as executeRuntimeServiceRequest } from "./runtime-execution-nested-match.test-support.js"
-import type { NestedMatchServiceTestOverrides } from "./runtime-execution-nested-match.test-support.js"
+import { executeCurrentMatchServiceTestSupport as executeRuntimeServiceRequest } from "./runtime-execution-current-match.test-support.js"
+import type { CurrentMatchServiceTestOverrides } from "./runtime-execution-current-match.test-support.js"
 import {
   createFixtureDeploymentLaneIdentity,
   createFixtureRuntimeExecutionAuthorityContext,
@@ -140,6 +141,57 @@ const requestWithProviderIdentity = (
   ) as unknown as RuntimeExecutionServiceRequest["strategies"],
 })
 
+const successorTemplateForProfile = (profile: DeploymentLaneProfile) => {
+  const bindings = SUCCESSOR_RUNTIME_IDENTITY_TEMPLATE_DOMAINS_V117.map(
+    (domain, index) => ({
+      domain,
+      publicId:
+        domain === "canonicalJsonProfile"
+          ? "canonical-json-v1.1"
+          : domain === "containmentPolicy"
+            ? profile.policyId
+            : domain === "conformanceCorpus"
+              ? profile.corpusId
+              : domain === "semanticTuple"
+                ? profile.semanticTupleId
+                : `fixture.${domain}.v1.17`,
+      sha256:
+        domain === "budgetProfile"
+          ? RUNTIME_ABI_V1_17_BUDGET_PROFILE_SHA256.slice("sha256:".length)
+          : domain === "semanticTuple"
+            ? profile.semanticTupleId.slice("sha256:".length)
+            : ((index + 1) % 16).toString(16).repeat(64),
+    }),
+  )
+  const binding = (
+    domain: (typeof SUCCESSOR_RUNTIME_IDENTITY_TEMPLATE_DOMAINS_V117)[number],
+  ) => bindings.find((candidate) => candidate.domain === domain)!
+  return {
+    schemaVersion: SUCCESSOR_RUNTIME_IDENTITY_TEMPLATE_SCHEMA_V117,
+    profile: SUCCESSOR_RUNTIME_IDENTITY_TEMPLATE_PROFILE_V117,
+    bindings,
+    exactPins: [
+      [
+        "runtimeExecutableDigest",
+        `sha256:${binding("runtimeExecutable").sha256}`,
+      ],
+      ["reportedVersion", profile.runtimeVersion],
+      ["targetAbi", "fixture-target-abi"],
+      ["compilerFlags", `sha256:${"a".repeat(64)}`],
+      ["adapterBuildDigest", `sha256:${binding("adapterBuild").sha256}`],
+      [
+        "standardLibraryOrSysrootDigest",
+        `sha256:${binding("sysrootStdlib").sha256}`,
+      ],
+      ["containmentPolicyId", profile.policyId],
+      ["budgetProfileSha256", RUNTIME_ABI_V1_17_BUDGET_PROFILE_SHA256],
+      ["canonicalJsonProfileId", "canonical-json-v1.1"],
+      ["behaviorSettingsHash", `sha256:${"b".repeat(64)}`],
+    ],
+    laneProfileSha256: hashSuccessorRuntimeLaneProfileV117(profile),
+  }
+}
+
 const registryForRequest = (request: RuntimeExecutionServiceRequest) => {
   const revision = request.strategies.bottom
   const identity = createFixtureDeploymentLaneIdentity(revision)
@@ -167,7 +219,15 @@ const registryForRequest = (request: RuntimeExecutionServiceRequest) => {
   return {
     schemaVersion: DEPLOYMENT_LANE_REGISTRY_SCHEMA_VERSION,
     registryId: "fixture-only:deployment-lanes",
-    lanes: [profile],
+    lanes: [
+      profile.semanticTupleId === CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_ID
+        ? {
+            ...profile,
+            successorRuntimeIdentityTemplate:
+              successorTemplateForProfile(profile),
+          }
+        : profile,
+    ],
   }
 }
 
@@ -252,7 +312,7 @@ const authorityWith = (
 const executeWith = (
   request: RuntimeExecutionServiceRequest,
   authorityLoader: RuntimeEvidenceAuthorityLoader,
-  dependencies: NestedMatchServiceTestOverrides = {},
+  dependencies: CurrentMatchServiceTestOverrides = {},
 ) =>
   executeRuntimeServiceRequest(request, runtimeConfig, {
     ...dependencies,
@@ -283,6 +343,10 @@ describe("runtime-service counted safety", () => {
     const context = requestContext()
     const request = requestWithProviderIdentity(context.request)
     const registry = registryForRequest(request)
+    const {
+      successorRuntimeIdentityTemplate: _selectedTemplate,
+      ...registryLane
+    } = registry.lanes[0]!
     const bindings = SUCCESSOR_RUNTIME_IDENTITY_TEMPLATE_DOMAINS_V117.map(
       (domain, index) => ({
         domain,
@@ -329,7 +393,7 @@ describe("runtime-service counted safety", () => {
       ],
     }
     const successorLane = {
-      ...registry.lanes[0]!,
+      ...registryLane,
       runtimeId: "fixture-runtime-node",
       runtimeVersion: "fixture-runtime-v1",
       toolchainId:
@@ -349,10 +413,10 @@ describe("runtime-service counted safety", () => {
       parseDeploymentLaneRegistry({
         ...registry,
         lanes: [
-          { ...registry.lanes[0]!, successorRuntimeIdentityTemplate: template },
+          { ...registryLane, successorRuntimeIdentityTemplate: template },
         ],
       }),
-    ).toThrow(/successor identity does not match/iu)
+    ).toThrow(/successor identity does not (?:match|bind)/iu)
     expect(() =>
       parseDeploymentLaneRegistry({
         ...registry,
@@ -487,6 +551,14 @@ describe("runtime-service counted safety", () => {
       authorityLoader: exactContext.context.authorityLoader,
       registry: registryForRequest(exactRequest),
     })
+    if (String(STRATEGY_RUNTIME_ABI_VERSION) === "strategy-runtime-abi-v1.17") {
+      expect(exact.status).toBe(422)
+      expect(exact.body).toMatchObject({
+        ok: false,
+        systemFailure: { code: "CONTRACT_INACTIVE" },
+      })
+      return
+    }
     expect(exact.status).toBe(200)
     expect(exact.body.ok).toBe(true)
 

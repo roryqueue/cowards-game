@@ -10,7 +10,7 @@ import {
 import type { StrategyRuntime } from "@cowards/engine"
 import { recordChronicleFromExecution } from "@cowards/replay"
 import { buildStrategyRevision } from "@cowards/runtime-js"
-import { executeNestedMatchServiceTestSupport as executeRuntimeServiceRequest } from "./runtime-execution-nested-match.test-support.js"
+import { executeCurrentMatchServiceTestSupport as executeRuntimeServiceRequest } from "./runtime-execution-current-match.test-support.js"
 import {
   createFixtureDeploymentLaneIdentity,
   createFixtureRuntimeExecutionAuthorityContext,
