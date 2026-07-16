@@ -113,6 +113,7 @@ status: complete
 7. **Review CR-03: Enforce no-mutation failure consistency** — `8fe7716` (fix)
 8. **Rereview RED: Reproduce semantic-admission gaps** — `368c82e` (test)
 9. **Rereview CR-04/CR-05/CR-06: Close projected trace admission** — `8289633` (fix)
+10. **Rereview CR-04: Quarantine structurally malformed candidates safely** — `b79f709` (fix)
 
 ## Files Created/Modified
 
@@ -131,6 +132,7 @@ status: complete
 - Admit recorded events only when their payload and context are unchanged by the canonical current Chronicle event schema; schema-stripped unknown data is a typed trace rejection.
 - Require referenced failure summaries to agree with invocation class, stable code, boundary, mutation flags, terminal effect, and retryability; system failures additionally prove unchanged state, memory, and objective hashes.
 - Revalidate the complete closed projected trace before comparator equality, including exact stage vocabulary, event/output hashes, outcome schema, terminal hash coherence, prefix roots, derived transition root, and failure ownership.
+- Return a bounded `traceSemantics` quarantine result for structurally malformed candidate objects instead of hashing or traversing unsafe shapes.
 - Carry before/after objective hashes alongside memory hashes so system failure proves no objective mutation rather than relying on a single unpaired digest.
 
 ## Deviations from Plan
