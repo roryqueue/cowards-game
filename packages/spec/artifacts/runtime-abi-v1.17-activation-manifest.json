@@ -516,11 +516,11 @@
     },
     {
       "path": "packages/runtime-wasm-wasi/src/wasm-wasi-subprocess-adapter.test.ts",
-      "sha256": "d60c734d38227e67484be01d04054ee4327a93467e2bdf7527fb6f15dd0ed41d"
+      "sha256": "874f44b13974bdcf0f14222e9d8887fdcc74de5cf5021b0bc5c0efbdd08d26be"
     },
     {
       "path": "packages/runtime-wasm-wasi/src/wasm-wasi-subprocess-adapter.ts",
-      "sha256": "e22676fb5beb52986a6532af6c818496f2c071f9c0c8bba2455948df7c7da84c"
+      "sha256": "dcd07df12750f1e61309c752abf298a83c897cc7baf3ed989426c691d450aff8"
     },
     {
       "path": "packages/spec/artifacts/runtime-abi-v1.17-activation-allowlist.json",
@@ -1084,7 +1084,7 @@
     },
     {
       "path": "scripts/evaluate-wasm-wasi-runtime.ts",
-      "sha256": "77e2a02ecd804e1807950de9cf24dac8e46d6736e69f946740cf02f0e8635579"
+      "sha256": "6cde1dd25ae01a46b46e453bac977103709e1e6551557cae20c19201e8065f23"
     },
     {
       "path": "scripts/generate-canonical-json-v1-1-corpus.test.ts",

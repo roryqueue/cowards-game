@@ -6,7 +6,7 @@
   "posture": "activated-uncertified-pending-phase-259-conformance",
   "activation": {
     "activationCommit": "ba05038f5d9b232afa1cb6c24eef1079524ffcc8",
-    "manifestSha256": "sha256:27381a176aafdfc82ed8d19a8e27e8692a769ea2c9481b4cbdc8b82750b89552",
+    "manifestSha256": "sha256:951c408211e80823305e19df00e0411e16cff87bf619af3925c257d8eee48f72",
     "activationPathCount": 23,
     "manifestStatus": "verified"
   },
