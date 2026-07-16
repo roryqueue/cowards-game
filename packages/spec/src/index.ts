@@ -16,6 +16,8 @@ export * from "./public-discovery.js"
 export * from "./runtime-execution-service.js"
 export * from "./runtime-execution-service-v1-16-compat.js"
 export * from "./runtime-execution-service-v1-17.js"
+export * from "./runtime-execution-service-v1-18.js"
+export * from "./runtime-semantic-receipt-v1-18.js"
 export {
   RUNTIME_EXECUTION_SERVICE_VERSION as HISTORICAL_RUNTIME_EXECUTION_SERVICE_VERSION_V1_16,
   RUNTIME_SEMANTIC_RECEIPT_SCHEMA_VERSION as HISTORICAL_RUNTIME_SEMANTIC_RECEIPT_SCHEMA_VERSION_V1_16,
@@ -29,6 +31,7 @@ export * from "./runtime-evidence-v1-17.js"
 export * from "./runtime-evidence-authority-bundle.js"
 export * from "./runtime-evidence-attestation.js"
 export * from "./runtime-evidence-attestation-v1-17.js"
+export * from "./runtime-conformance-certificate-v1-17.js"
 export * from "./runtime-evidence.js"
 export * from "./runtime.js"
 export * from "./runtime-budget-profile-v1-18.js"
