@@ -722,6 +722,56 @@ describe("validateChronicle", () => {
       errors: [expect.objectContaining({ code: "VERSION_INCOMPATIBLE" })],
     })
   })
+
+  it("routes original historical evidence only through the frozen grammar without requiring current snapshots", () => {
+    const current = createCurrentReplayInput()
+    const historicalChronicle = {
+      ...current.chronicle,
+      reproducibility: {
+        ...current.chronicle.reproducibility,
+        versions: {
+          spec: "cowards-rules-v1.4",
+          engine: "0.1.4",
+          runtimeJs: "0.1.0",
+          chronicle: "chronicle-v1.4",
+          strategyRevision: "0.1.4",
+          arenaVariant: "0.1.0",
+        },
+      },
+      snapshots: [],
+    }
+    const input = {
+      profile: "historical-v1.4" as const,
+      chronicle: historicalChronicle,
+    }
+    const before = JSON.stringify(input)
+
+    expect(validateReplayInput(input)).toEqual({ ok: true })
+    expect(JSON.stringify(input)).toBe(before)
+  })
+
+  it("rejects an unknown current tuple before reading or probing Chronicle bytes", () => {
+    const current = createCurrentReplayInput()
+    let chronicleReads = 0
+    const input = {
+      profile: "current-exact" as const,
+      compatibility: {
+        ...current.compatibility,
+        tupleId: `sha256:${"0".repeat(64)}`,
+      },
+      get chronicle(): Chronicle {
+        chronicleReads += 1
+        throw new Error("Chronicle parser probing is forbidden.")
+      },
+    }
+
+    expect(validateReplayInput(input)).toMatchObject({
+      ok: false,
+      errors: [{ code: "VERSION_INCOMPATIBLE" }],
+    })
+    expect(chronicleReads).toBe(0)
+  })
+
   it("accepts a valid Chronicle with matching integrity", () => {
     const chronicle = createChronicle()
     const withIntegrity = {
