@@ -97,6 +97,7 @@ status: complete
 - Added exhaustive one-field mutation coverage across top-level, invocation, transition, terminal, aggregate, and failure dimensions.
 - Added restricted first-divergence output containing only stable coordinates and hashed values; raw source, artifact, memory, objective, event-private, diagnostics, stderr, path, timing, and host preimages cannot enter the closed projection.
 - Exported the pure v1.37 corpus/projector/root/comparator surface without exposing golden-writing or promotion authority.
+- Closed three adversarial review gaps: caller-owned shallow freezes can no longer create stale-root false equality, event payloads/contexts must survive the canonical public Chronicle schema without stripped fields, and system-failure summaries must prove no mutation while matching their referenced invocation.
 
 ## Task Commits
 
@@ -104,6 +105,9 @@ status: complete
 2. **Task 1 GREEN: Implement canonical projection, root, and restricted comparator** — `8a9227c` (feat)
 3. **Task 2 RED: Require read-only package exports** — `69cf415` (test)
 4. **Task 2 GREEN: Export the pure corpus and trace contract** — `5a7ff21` (feat)
+5. **Review CR-01: Remove shallow-freeze trace-root caching** — `f6cff37` (fix)
+6. **Review CR-02: Reject private event preimages through canonical event validation** — `3d3e078` (fix)
+7. **Review CR-03: Enforce no-mutation failure consistency** — `8fe7716` (fix)
 
 ## Files Created/Modified
 
@@ -116,7 +120,9 @@ status: complete
 - Kept live TypeScript execution out of oracle authority: this contract compares a candidate with separately reviewed trace material and has no golden update path.
 - Used exact canonical JSON bytes with explicit framing for roots and divergence-value hashes.
 - Treated system-failure and player-violation semantics as first-class equality dimensions rather than messages or host diagnostics.
-- Cached only already-frozen trace objects, so mutable caller-owned candidates are always rehashed and cannot reuse stale identity.
+- Rehash every caller-supplied trace instead of trusting shallow `Object.freeze` as evidence of recursive immutability.
+- Admit recorded events only when their payload and context are unchanged by the canonical current Chronicle event schema; schema-stripped unknown data is a typed trace rejection.
+- Require referenced failure summaries to agree with invocation class, stable code, boundary, mutation flags, terminal effect, and retryability; system failures additionally prove unchanged state and memory hashes.
 
 ## Deviations from Plan
 
@@ -125,6 +131,7 @@ None. The planned RED/GREEN implementation, export boundary, and verification we
 ## Issues Encountered
 
 - Repeating the complete Match transition stream for every one-field mutation exceeded Vitest's default per-test budget. The projection test still exercises the entire recorded Match, while the exhaustive mutation table uses a valid compact `RecordedCanonicalTransitionV137` prefix with the same complete field surface. Focused runtime fell from more than 20 seconds with timeouts to 2.85 seconds with all assertions passing.
+- Adversarial review showed that shallow freezing is not a safe cache eligibility signal and that closed top-level event keys do not make nested payloads closed. Both assumptions were replaced with executable fail-closed checks.
 
 ## User Setup Required
 
@@ -140,8 +147,8 @@ None.
 
 - All three planned source/test/export files exist.
 - RED/GREEN commits `a34ccfa`, `8a9227c`, `69cf415`, and `5a7ff21` exist in order.
-- Focused trace suite passes: 1 file, 8 tests.
-- Full `@cowards/golden` package suite passes: 3 files, 17 tests.
+- Focused trace suite passes: 1 file, 10 tests.
+- Full `@cowards/golden` package suite passes: 3 files, 19 tests.
 - Golden package typecheck, focused ESLint, Prettier check, and `git diff --check` pass.
 - Protected milestone, project-state, and v1.4 specification files are unchanged.
 
