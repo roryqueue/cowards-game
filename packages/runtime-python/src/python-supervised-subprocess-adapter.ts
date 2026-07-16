@@ -262,13 +262,20 @@ const languageIdentityMatches = (
 const sameLanguageObservation = (
   left: PythonLanguageIdentityObservationV118,
   right: PythonLanguageIdentityObservationV118,
-): boolean =>
-  left.pythonExecutableSha256 === right.pythonExecutableSha256 &&
-  left.pythonVersion === right.pythonVersion &&
-  left.stdlibSha256 === right.stdlibSha256 &&
-  left.adapterModuleSha256 === right.adapterModuleSha256 &&
-  left.pythonHostSha256 === right.pythonHostSha256 &&
-  left.artifactSha256 === right.artifactSha256
+): boolean => {
+  try {
+    return (
+      left.pythonExecutableSha256 === right.pythonExecutableSha256 &&
+      left.pythonVersion === right.pythonVersion &&
+      left.stdlibSha256 === right.stdlibSha256 &&
+      left.adapterModuleSha256 === right.adapterModuleSha256 &&
+      left.pythonHostSha256 === right.pythonHostSha256 &&
+      left.artifactSha256 === right.artifactSha256
+    )
+  } catch {
+    return false
+  }
+}
 
 const executionIsExactPythonHost = (
   execution: SupervisorExecutionDescriptorV118,
