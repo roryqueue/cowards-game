@@ -12,6 +12,7 @@ import {
 } from "node:fs"
 import { tmpdir } from "node:os"
 import path from "node:path"
+import { fileURLToPath } from "node:url"
 import { afterEach, describe, expect, it } from "vitest"
 import {
   V137_PROTECTED_BASELINE_PATH,
@@ -249,6 +250,38 @@ describe("v1.37 protected working-tree baseline", () => {
     expect(() =>
       parseV137ProtectedBaseline(canonical.slice(0, -1)),
     ).toThrow(/not canonical/u)
+  })
+
+  it("cannot redirect the production check through an environment override", () => {
+    const executionRepoRoot = path.resolve(
+      path.dirname(fileURLToPath(import.meta.url)),
+      "..",
+    )
+    const output = execFileSync(
+      "pnpm",
+      [
+        "exec",
+        "tsx",
+        "scripts/capture-v1-37-protected-baseline.ts",
+        "--check",
+      ],
+      {
+        cwd: executionRepoRoot,
+        encoding: "utf8",
+        env: {
+          ...process.env,
+          COWARDS_PROTECTED_BASELINE_REPO_ROOT: path.join(
+            tmpdir(),
+            "redirected-protected-baseline-repo-does-not-exist",
+          ),
+        },
+      },
+    )
+    expect(JSON.parse(output)).toMatchObject({
+      status: "verified",
+      artifact: V137_PROTECTED_BASELINE_PATH,
+      protectedPathCount: V137_PROTECTED_PATHS.length,
+    })
   })
 
   it("stores exact binary diff bytes as Base64 with matching hashes and lengths", () => {

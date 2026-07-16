@@ -569,24 +569,47 @@ const defaultExecutionRepoRoot = path.resolve(
   "..",
 )
 
-const defaultObservedRepoRoot = (): string => {
-  const override = process.env.COWARDS_PROTECTED_BASELINE_REPO_ROOT
-  if (override !== undefined && override.length > 0) {
-    return path.resolve(override)
+const gitCommonDirectory = (repoRoot: string): string => {
+  const reported = runGit(repoRoot, ["rev-parse", "--git-common-dir"])
+    .stdout.toString("utf8")
+    .trim()
+  if (reported.length === 0) {
+    throw new TypeError(
+      "Protected baseline Git common directory is unavailable.",
+    )
   }
-  const currentRoot = assertRepositoryRoot(defaultExecutionRepoRoot)
-  const dotGit = lstatSync(path.join(currentRoot, ".git"))
-  if (dotGit.isDirectory()) return currentRoot
-  const worktrees = runGit(currentRoot, [
+  return realpathSync(path.resolve(repoRoot, reported))
+}
+
+const defaultObservedRepoRoot = (): string => {
+  const executionRoot = assertRepositoryRoot(defaultExecutionRepoRoot)
+  const worktrees = runGit(executionRoot, [
     "worktree",
     "list",
     "--porcelain",
   ]).stdout.toString("utf8")
-  const primary = /^worktree (.+)$/mu.exec(worktrees)?.[1]
-  if (primary === undefined) {
+  const listedRoots = Array.from(
+    worktrees.matchAll(/^worktree (.+)$/gmu),
+    (match) => path.resolve(match[1]!),
+  )
+  const primaryCandidate = listedRoots[0]
+  if (
+    primaryCandidate === undefined ||
+    !listedRoots.some((listedRoot) => listedRoot === executionRoot)
+  ) {
     throw new TypeError("Protected baseline primary worktree is unavailable.")
   }
-  return path.resolve(primary)
+  const primaryRoot = assertRepositoryRoot(primaryCandidate)
+  if (
+    gitCommonDirectory(executionRoot) !== gitCommonDirectory(primaryRoot) ||
+    (lstatSync(path.join(executionRoot, ".git")).isDirectory() &&
+      primaryRoot !== executionRoot)
+  ) {
+    throw new TypeError(
+      "Protected baseline primary worktree does not match the execution repository.",
+    )
+  }
+  return primaryRoot
 }
 
 const runCli = (): void => {
