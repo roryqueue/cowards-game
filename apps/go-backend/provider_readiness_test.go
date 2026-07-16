@@ -791,9 +791,11 @@ func TestAccountRevisionWriteHookRejectsOuterFailureWithNestedSuccessEvidence(t 
 		"user:v1.17-outer-failure", strategyRevisionCreateBody{Source: source, SourceFormat: "python"},
 		validation, strategyRuntimeABIVersionV117,
 	)
+	_, sourceArtifactPersisted := insert.Metadata["sourceArtifact"]
+	_, compiledArtifactPersisted := insert.Metadata["compiledArtifact"]
 	if readiness.State != revisionReadinessNonExecutionDraft || readiness.PublicCategory != "invalid_strategy_revision" ||
 		readiness.EntryEligible || readiness.CountedEligible ||
-		validationStatus(insert.Validation) == "valid" || stringValue(insert.Runtime, "abiVersion") == strategyRuntimeABIVersionV117 {
+		validationStatus(insert.Validation) == "valid" || sourceArtifactPersisted || compiledArtifactPersisted || insert.EngineCompatibility != nil {
 		t.Fatalf("outer provider failure copied nested success evidence into persistence: insert=%+v readiness=%+v", insert, readiness)
 	}
 }

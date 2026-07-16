@@ -1,6 +1,9 @@
 import { createHash } from "node:crypto"
 import { describe, expect, it } from "vitest"
-import { StrategyRevisionV117Schema } from "@cowards/spec"
+import {
+  STRATEGY_RUNTIME_ABI_VERSION,
+  StrategyRevisionV117Schema,
+} from "@cowards/spec"
 import { buildStrategyRevision } from "./revision.js"
 import { buildStrategyRevisionV117 } from "./revision-v1-17.js"
 import {
@@ -132,12 +135,12 @@ describe("TypeScript Strategy Revision v1.17 source identity", () => {
     }
   })
 
-  it("leaves the pre-v1.17 TypeScript artifact shape unchanged", () => {
-    const legacy = buildStrategyRevision({ source: lfSource })
+  it("keeps the generic TypeScript artifact separate from exact v1.17 identity evidence", () => {
+    const generic = buildStrategyRevision({ source: lfSource })
 
-    expect(legacy.metadata.sourceArtifact?.sourceIdentity).toBeUndefined()
-    expect(legacy.metadata.sourceArtifact?.abiVersion).not.toBe(
-      "strategy-runtime-abi-v1.17",
+    expect(generic.metadata.sourceArtifact?.sourceIdentity).toBeUndefined()
+    expect(generic.metadata.sourceArtifact?.abiVersion).toBe(
+      STRATEGY_RUNTIME_ABI_VERSION,
     )
   })
 })

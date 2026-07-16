@@ -5,7 +5,7 @@ import { readFileSync } from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 import { describe, expect, it } from "vitest"
-import { CANONICAL_COMPATIBILITY_TUPLES } from "../packages/spec/src/integrity-authority.js"
+import { HISTORICAL_RUNTIME_V114_SEMANTIC_TUPLE_RECORD } from "../packages/spec/src/integrity-authority.js"
 import {
   RETAINED_V1_37_CANDIDATE_HASHES,
   candidateArtifactPath,
@@ -35,7 +35,7 @@ describe("retained v1.37 kernel candidate provenance", () => {
     ).toEqual(RETAINED_V1_37_CANDIDATE_HASHES)
   })
 
-  it("keeps retained candidate status inactive even after its tuple becomes current", () => {
+  it("keeps retained candidate status and historical tuple inactive", () => {
     const artifact = JSON.parse(
       readFileSync(path.join(repoRoot, candidateArtifactPath), "utf8"),
     ) as {
@@ -53,10 +53,11 @@ describe("retained v1.37 kernel candidate provenance", () => {
       countedExecutionAllowed: false,
     })
     expect(artifact.candidate.candidateTupleId).toBe(
-      CANONICAL_COMPATIBILITY_TUPLES[0]?.tupleId,
+      HISTORICAL_RUNTIME_V114_SEMANTIC_TUPLE_RECORD.tupleId,
     )
-    expect(Object.values(artifact.candidate.activation).every((value) => !value))
-      .toBe(true)
+    expect(
+      Object.values(artifact.candidate.activation).every((value) => !value),
+    ).toBe(true)
     expect(
       readFileSync(path.join(repoRoot, "packages/spec/src/index.ts"), "utf8"),
     ).not.toContain("integrity-authority-candidate-v1-37")

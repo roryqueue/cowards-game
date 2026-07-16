@@ -21,6 +21,7 @@ import { fileURLToPath } from "node:url"
 import {
   CANONICAL_COMPATIBILITY_TUPLES,
   CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_ID,
+  HISTORICAL_RUNTIME_V114_SEMANTIC_TUPLE_ID,
   RUNTIME_EVIDENCE_AUTHORITY_TRUST_DOMAINS,
   RUNTIME_EVIDENCE_AUTHORITY_PAYLOAD_SCHEMA_VERSION_V1_17,
   buildRuntimeEvidenceAuthorityEnvelope,
@@ -369,7 +370,7 @@ describe("v1.17 installed authority persistence boundary", () => {
       verifyInstalledRuntimeEvidenceAuthorityV117(
         inputFor(
           installedAuthorityFixtureV117(
-            CANONICAL_COMPATIBILITY_TUPLES[0]!.tupleId,
+            HISTORICAL_RUNTIME_V114_SEMANTIC_TUPLE_ID,
           ),
         ),
       ),

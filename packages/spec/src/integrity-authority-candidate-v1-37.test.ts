@@ -4,18 +4,15 @@ import path from "node:path"
 import { fileURLToPath } from "node:url"
 import { describe, expect, it } from "vitest"
 import {
-  CANONICAL_COMPATIBILITY_TUPLES,
-  resolveCanonicalCompatibilityTuple,
+  HISTORICAL_RUNTIME_V114_SEMANTIC_TUPLE_RECORD,
+  resolveHistoricalRuntimeV114SemanticTuple,
 } from "./integrity-authority.js"
 import {
   INACTIVE_V1_37_KERNEL_INTEGRITY_CANDIDATE,
   assertInactiveV137KernelIntegrityCandidate,
   cloneInactiveV137KernelIntegrityCandidate,
 } from "./integrity-authority-candidate-v1-37.js"
-import {
-  COMPATIBILITY_VERSIONS,
-  STRATEGY_RUNTIME_ABI_VERSION,
-} from "./versions.js"
+import { COMPATIBILITY_VERSIONS } from "./versions.js"
 
 const repoRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -35,7 +32,7 @@ describe("inactive v1.37 kernel integrity candidate", () => {
     expect(candidate.candidateTuple).toEqual({
       rules: COMPATIBILITY_VERSIONS.spec,
       engine: "engine-kernel-v1.37-candidate-1",
-      runtimeAbi: STRATEGY_RUNTIME_ABI_VERSION,
+      runtimeAbi: "strategy-runtime-abi-v1.14",
       chronicle: "chronicle-recorder-current-events-v1.37-candidate-1",
       arenaCatalog: "semantic-arena-catalog-v1.37-candidate-1",
       setPolicy: "canonical-set-policy-v1.4",
@@ -67,13 +64,18 @@ describe("inactive v1.37 kernel integrity candidate", () => {
   it("remains inactive provenance and is not exported by the spec barrel", () => {
     const candidate = INACTIVE_V1_37_KERNEL_INTEGRITY_CANDIDATE
     expect(
-      resolveCanonicalCompatibilityTuple({
+      resolveHistoricalRuntimeV114SemanticTuple({
         tupleId: candidate.candidateTupleId,
         tuple: candidate.candidateTuple,
       }),
-    ).toEqual(CANONICAL_COMPATIBILITY_TUPLES[0])
+    ).toMatchObject({
+      tupleId: HISTORICAL_RUNTIME_V114_SEMANTIC_TUPLE_RECORD.tupleId,
+      algorithm: HISTORICAL_RUNTIME_V114_SEMANTIC_TUPLE_RECORD.algorithm,
+      sha256: HISTORICAL_RUNTIME_V114_SEMANTIC_TUPLE_RECORD.sha256,
+      tuple: HISTORICAL_RUNTIME_V114_SEMANTIC_TUPLE_RECORD.tuple,
+    })
     expect(candidate.candidateTupleId).toBe(
-      CANONICAL_COMPATIBILITY_TUPLES[0]?.tupleId,
+      HISTORICAL_RUNTIME_V114_SEMANTIC_TUPLE_RECORD.tupleId,
     )
     expect(
       readFileSync(path.join(repoRoot, "packages/spec/src/index.ts"), "utf8"),

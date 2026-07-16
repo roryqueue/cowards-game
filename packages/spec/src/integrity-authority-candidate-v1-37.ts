@@ -3,10 +3,7 @@ import {
   type CanonicalCompatibilityTuple,
 } from "./integrity-authority.js"
 import type { ChronicleEventType } from "./types.js"
-import {
-  COMPATIBILITY_VERSIONS,
-  STRATEGY_RUNTIME_ABI_VERSION,
-} from "./versions.js"
+import { COMPATIBILITY_VERSIONS } from "./versions.js"
 
 /**
  * Inactive migration material for the Phase 257 atomic authority flip.
@@ -66,7 +63,7 @@ export const V1_37_KERNEL_CANDIDATE_EVENT_VOCABULARY = Object.freeze([
 const candidateTuple: CanonicalCompatibilityTuple = {
   rules: COMPATIBILITY_VERSIONS.spec,
   engine: V1_37_KERNEL_CANDIDATE_COMPONENTS.engine,
-  runtimeAbi: STRATEGY_RUNTIME_ABI_VERSION,
+  runtimeAbi: "strategy-runtime-abi-v1.14",
   chronicle: V1_37_KERNEL_CANDIDATE_COMPONENTS.chronicle,
   arenaCatalog: V1_37_KERNEL_CANDIDATE_COMPONENTS.arenaCatalog,
   setPolicy: "canonical-set-policy-v1.4",

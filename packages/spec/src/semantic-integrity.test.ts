@@ -5,6 +5,10 @@ import {
   RuntimeExecutionFinalStateSchema,
 } from "./schemas.js"
 import {
+  HISTORICAL_RUNTIME_V114_SEMANTIC_TUPLE_RECORD,
+  VERSIONED_RUNTIME_V117_SEMANTIC_TUPLE_RECORD,
+} from "./integrity-authority.js"
+import {
   DEFAULT_SEMANTIC_INTEGRITY_LIMITS,
   SEMANTIC_INTEGRITY_CODE_ORDER,
   SEMANTIC_INTEGRITY_FAMILY_ORDER,
@@ -346,6 +350,44 @@ describe("semantic integrity shared vectors", () => {
     expect(JSON.stringify(corpus.valid.arena)).toBe(arenaBefore)
     expect(JSON.stringify(corpus.valid.state)).toBe(stateBefore)
     expect(JSON.stringify(corpus.valid.transition)).toBe(transitionBefore)
+  })
+
+  it("admits the registered successor tuple identity and rejects a mixed profile", () => {
+    const successor: CanonicalSemanticTransition = {
+      transitionKind: "MATCH_STARTED",
+      semanticTupleId: VERSIONED_RUNTIME_V117_SEMANTIC_TUPLE_RECORD.tupleId,
+      semanticTuple: VERSIONED_RUNTIME_V117_SEMANTIC_TUPLE_RECORD.tuple,
+      coordinates: {
+        phaseNumber: 1,
+        roundNumber: 1,
+        stage: "match_start",
+        ordinal: 0,
+      },
+      classification: "success",
+      events: [{ type: "MATCH_STARTED", sequence: 0 }],
+      beforeStateHash:
+        "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      afterStateHash:
+        "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      beforeMachineHash:
+        "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      afterMachineHash:
+        "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+      terminalStatus: null,
+      failureStatus: null,
+    }
+    expect(validateCanonicalTransition(successor)).toMatchObject({ ok: true })
+    expect(
+      validateCanonicalTransition({
+        ...successor,
+        semanticTuple: HISTORICAL_RUNTIME_V114_SEMANTIC_TUPLE_RECORD.tuple,
+      }),
+    ).toMatchObject({
+      ok: false,
+      issues: expect.arrayContaining([
+        expect.objectContaining({ code: "TUPLE_SHAPE_INVALID" }),
+      ]),
+    })
   })
 
   it("allows a causal event prefix only when one final MATCH_ENDED closes the transition", () => {

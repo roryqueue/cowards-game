@@ -15,6 +15,7 @@ import { COMPATIBILITY_VERSIONS } from "./versions.js"
 import { ChronicleEventTypeSchema } from "./schemas.js"
 import {
   hashCanonicalCompatibilityTuple,
+  resolveRegisteredCanonicalCompatibilityTuple,
   type CanonicalCompatibilityTuple,
 } from "./integrity-authority.js"
 
@@ -902,12 +903,24 @@ export const validateCanonicalTransition = (
     const tupleValues = expectedTupleKeys.map(
       (key) => tuple[key as keyof CanonicalCompatibilityTuple],
     )
-    if (
-      JSON.stringify(tupleKeys) !== JSON.stringify(expectedTupleKeys) ||
-      tupleValues.some((value) => typeof value !== "string" || value === "") ||
-      transition.semanticTupleId !==
-        `sha256:${hashCanonicalCompatibilityTuple(tuple)}`
-    ) {
+    const tupleShapeValid =
+      JSON.stringify(tupleKeys) === JSON.stringify(expectedTupleKeys) &&
+      tupleValues.every((value) => typeof value === "string" && value !== "")
+    let tupleIdentityValid = false
+    if (tupleShapeValid) {
+      try {
+        tupleIdentityValid =
+          transition.semanticTupleId ===
+            `sha256:${hashCanonicalCompatibilityTuple(tuple)}` ||
+          resolveRegisteredCanonicalCompatibilityTuple({
+            tupleId: transition.semanticTupleId,
+            tuple,
+          }) !== undefined
+      } catch {
+        tupleIdentityValid = false
+      }
+    }
+    if (!tupleShapeValid || !tupleIdentityValid) {
       issues.push(issue("TUPLE_SHAPE_INVALID", ["semanticTupleId"]))
     }
     const coordinates = transition.coordinates

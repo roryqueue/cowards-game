@@ -8,6 +8,7 @@ import {
 } from "./index.js"
 import { stableStringify } from "./hash.js"
 import {
+  STRATEGY_RUNTIME_ABI_VERSION,
   StrategyRevisionSchema,
   StrategyRevisionV117Schema,
 } from "@cowards/spec"
@@ -95,14 +96,16 @@ describe("Strategy Revision hashing", () => {
     expect(first.id).not.toBe(second.id)
   })
 
-  it("builds a genuine contained v1.17 candidate without activating current admission", () => {
+  it("builds a genuine contained v1.17 revision with pointer-aware current admission", () => {
     const candidate = buildStrategyRevisionV117({
       source: validSource,
       strategyId: "strategy-candidate-v1.17",
     })
 
     expect(StrategyRevisionV117Schema.parse(candidate)).toEqual(candidate)
-    expect(StrategyRevisionSchema.safeParse(candidate).success).toBe(false)
+    expect(StrategyRevisionSchema.safeParse(candidate).success).toBe(
+      String(STRATEGY_RUNTIME_ABI_VERSION) === "strategy-runtime-abi-v1.17",
+    )
     expect(candidate.runtime.abiVersion).toBe("strategy-runtime-abi-v1.17")
     expect(candidate.runtime.limits).toMatchObject({
       environment: "empty",

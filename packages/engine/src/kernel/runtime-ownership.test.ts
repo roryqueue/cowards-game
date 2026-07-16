@@ -270,7 +270,7 @@ const soldierEffectFor = (
 }
 
 describe("Phase 258 successor runtime ownership", () => {
-  it("preserves the current v1.14 one-argument mutable runtime call", () => {
+  it("selects the exact legacy or authenticated current runtime call contract", () => {
     const state = withPrivateMemory()
     const soldier = state.soldiers.find(
       (candidate) => candidate.ownerPlayerId === state.players[0].id,
@@ -278,6 +278,8 @@ describe("Phase 258 successor runtime ownership", () => {
     if (!soldier) throw new Error("missing fixture soldier")
     soldier.soldierMemory = { n: 0 }
     let callContract: unknown
+    const selectedV117 =
+      String(MATCH_KERNEL.tuple.runtimeAbi) === "strategy-runtime-abi-v1.17"
 
     const execution = MATCH_KERNEL.runActivationFromState({
       state,
@@ -286,11 +288,25 @@ describe("Phase 258 successor runtime ownership", () => {
         selectActivations() {
           throw new Error("selection is unreachable in activation mode")
         },
-        runSoldierBrain(input: SoldierBrainInput) {
+        runSoldierBrain(
+          input: SoldierBrainInput,
+          request?: RuntimeRequestFor<"soldierBrain">,
+        ) {
           callContract = {
             argumentCount: arguments.length,
             inputFrozen: Object.isFrozen(input),
             memoryFrozen: Object.isFrozen(input.soldierMemory),
+          }
+          if (selectedV117) {
+            if (!request) throw new Error("driver omitted kernel request")
+            return bindOutcome(request, {
+              kind: "success",
+              value: {
+                action: { type: "TURN_TO_STONE" as const },
+                soldierMemory: { n: 1 },
+              },
+              trace: traceFor(request),
+            })
           }
           ;(input.soldierMemory as { n: number }).n += 1
           return {
@@ -306,9 +322,9 @@ describe("Phase 258 successor runtime ownership", () => {
     })
 
     expect(callContract).toEqual({
-      argumentCount: 1,
-      inputFrozen: false,
-      memoryFrozen: false,
+      argumentCount: selectedV117 ? 2 : 1,
+      inputFrozen: selectedV117,
+      memoryFrozen: selectedV117,
     })
     expect(execution).toMatchObject({ kind: "completed" })
     expect(
@@ -503,7 +519,8 @@ describe("Phase 258 successor runtime ownership", () => {
       execution.kind !== "completed" ||
       !execution.result ||
       !execution.recorderMaterial
-    ) return
+    )
+      return
     const after = execution.result.state
     const memoryAfter = sha256({
       players: after.players.map(({ strategyMemory }) => strategyMemory),
@@ -568,7 +585,8 @@ describe("Phase 258 successor runtime ownership", () => {
       execution.kind !== "completed" ||
       !execution.result ||
       !execution.recorderMaterial
-    ) return
+    )
+      return
     const violationEvent = execution.result.events.find(
       ({ type }) => type === "RUNTIME_VIOLATION",
     )

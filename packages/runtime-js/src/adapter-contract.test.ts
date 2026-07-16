@@ -653,7 +653,7 @@ export default {
 
           expect(result.ok).toBe(false)
           expect(!result.ok && result.violation.type).toBe(
-            legacyRuntimeIsSelected ? "FORBIDDEN_CAPABILITY" : "INVALID_OUTPUT",
+            "FORBIDDEN_CAPABILITY",
           )
         },
       )

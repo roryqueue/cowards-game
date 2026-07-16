@@ -167,6 +167,13 @@ func TestPhase258ProviderValidationV117Admission(t *testing.T) {
 	t.Run("account outer OK seam", TestAccountRevisionWriteHookRejectsOuterFailureWithNestedSuccessEvidence)
 }
 
+func historicalPythonRuntimeMetadataV114ForTest() map[string]any {
+	runtime := pythonRuntimeMetadata()
+	runtime["abiVersion"] = strategyRuntimeABIVersion
+	mapValue(runtime, "package")["entrypoint"] = "module"
+	return runtime
+}
+
 func TestRuntimeServiceValidationRouterSelectsExactLegacyAndV117Clients(t *testing.T) {
 	t.Setenv("COWARDS_RUNTIME_SERVICE_PRIVATE_ARTIFACT_TOKEN", "private-validation-v1.17-test")
 	source := "print('ok')\r\n"
@@ -175,7 +182,7 @@ func TestRuntimeServiceValidationRouterSelectsExactLegacyAndV117Clients(t *testi
 		server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 			writeRuntimeServiceTestJSON(t, writer, runtimeServiceValidationResponse{
 				OK: true, Kind: "strategyValidation", SourceFormat: "python",
-				Runtime: pythonRuntimeMetadata(), Validation: map[string]any{"valid": true},
+				Runtime: historicalPythonRuntimeMetadataV114ForTest(), Validation: map[string]any{"valid": true},
 				EngineCompatibility: engineCompatibility(), Metadata: map[string]any{"tags": []string{"python"}},
 				SourceHash: hashStrategySourceForGo(source), SourceBytes: len([]byte(source)),
 			})

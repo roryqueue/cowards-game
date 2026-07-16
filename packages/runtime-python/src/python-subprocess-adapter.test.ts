@@ -1219,11 +1219,20 @@ describe("Python subprocess Strategy provider ABI", () => {
       },
     })
 
-    expect(response.ok).toBe(true)
-    expect(response.ok ? response.value : undefined).toEqual({
-      activationOrders: [{ soldierId: "soldier:1" }],
-      strategyMemory: {},
-    })
+    if (String(STRATEGY_RUNTIME_ABI_VERSION) === "strategy-runtime-abi-v1.17") {
+      expect(response).toMatchObject({
+        ok: false,
+        failureKind: "systemFailure",
+        systemFailure: { code: "MALFORMED_IPC" },
+      })
+      expect(response).not.toHaveProperty("value")
+    } else {
+      expect(response.ok).toBe(true)
+      expect(response.ok ? response.value : undefined).toEqual({
+        activationOrders: [{ soldierId: "soldier:1" }],
+        strategyMemory: {},
+      })
+    }
   })
 
   it("uses constrained provider metadata for counted Python", () => {
