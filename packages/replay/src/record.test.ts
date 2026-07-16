@@ -7,6 +7,7 @@ import { describe, expect, it } from "vitest"
 import {
   computeRecordedTransitionTraceRootV137,
   recordChronicleFromExecution,
+  validateRecordedTransitionTraceRootsV137,
 } from "./record.js"
 
 const runtime: StrategyRuntime = {
@@ -228,6 +229,39 @@ describe("recordChronicleFromExecution", () => {
       expect(computeRecordedTransitionTraceRootV137(mutated)).not.toBe(root)
     }
   })
+
+  it.each(["first", "middle", "last"] as const)(
+    "rejects a mutated %s stored accumulated trace root at its exact ordinal",
+    (position) => {
+      const recorded = recordChronicleFromExecution({
+        execution: run(),
+        metadata,
+      })
+      expect(recorded.ok).toBe(true)
+      if (!recorded.ok) return
+      const index =
+        position === "first"
+          ? 0
+          : position === "last"
+            ? recorded.recordedTransitions.length - 1
+            : Math.floor(recorded.recordedTransitions.length / 2)
+      const mutated = recorded.recordedTransitions.map((transition, ordinal) =>
+        ordinal === index
+          ? {
+              ...transition,
+              accumulatedTraceRoot: `sha256:${"f".repeat(64)}`,
+            }
+          : transition,
+      )
+
+      expect(validateRecordedTransitionTraceRootsV137(mutated)).toMatchObject({
+        ok: false,
+        code: "RECORDED_TRANSITION_PREFIX_ROOT_MISMATCH",
+        transitionIndex: index,
+        actualRoot: `sha256:${"f".repeat(64)}`,
+      })
+    },
+  )
 
   it("stores private payloads only under an explicit owner and exposes only a reference", () => {
     const recorded = recordChronicleFromExecution({

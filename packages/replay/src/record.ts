@@ -283,6 +283,42 @@ export const computeRecordedTransitionTraceRootV137 = (
   return root
 }
 
+export type RecordedTransitionTraceRootValidationV137 =
+  | {
+      readonly ok: true
+      readonly traceRoot: string
+    }
+  | {
+      readonly ok: false
+      readonly code: "RECORDED_TRANSITION_PREFIX_ROOT_MISMATCH"
+      readonly transitionIndex: number
+      readonly expectedRoot: string
+      readonly actualRoot: string
+    }
+
+export const validateRecordedTransitionTraceRootsV137 = (
+  transitions: readonly RecordedCanonicalTransitionV137[],
+): RecordedTransitionTraceRootValidationV137 => {
+  let root = emptyRecordedTransitionTraceRootV137()
+  for (let index = 0; index < transitions.length; index += 1) {
+    const transition = transitions[index]!
+    root = extendRecordedTransitionTraceRootV137(
+      root,
+      recordedTransitionMaterial(transition),
+    )
+    if (transition.accumulatedTraceRoot !== root) {
+      return Object.freeze({
+        ok: false,
+        code: "RECORDED_TRANSITION_PREFIX_ROOT_MISMATCH",
+        transitionIndex: index,
+        expectedRoot: root,
+        actualRoot: transition.accumulatedTraceRoot,
+      })
+    }
+  }
+  return Object.freeze({ ok: true, traceRoot: root })
+}
+
 const projectState = (state: GameState) => ({
   matchId: state.matchId,
   seed: state.seed,
@@ -934,8 +970,12 @@ export const recordChronicleFromExecution = ({
   const finalState = execution.recorderMaterial.finalState
   const { snapshots, anchors } = createSnapshots(execution.transitions)
   const recordedTransitions = projectRecordedTransitions(execution)
-  const transitionTraceRoot =
-    computeRecordedTransitionTraceRootV137(recordedTransitions)
+  const traceValidation =
+    validateRecordedTransitionTraceRootsV137(recordedTransitions)
+  if (!traceValidation.ok) {
+    return failure("RECORDER_BOUNDARY_INTEGRITY_INVALID")
+  }
+  const transitionTraceRoot = traceValidation.traceRoot
   const privateSections: ChroniclePrivateSections | undefined =
     Object.keys(byPlayerId).length === 0 ? undefined : { byPlayerId }
   const chronicle: Chronicle = {
