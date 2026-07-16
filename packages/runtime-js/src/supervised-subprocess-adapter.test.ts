@@ -19,6 +19,7 @@ import { describe, expect, it, vi } from "vitest"
 import * as publicRuntimeJs from "./index.js"
 import {
   createCountedTypeScriptSupervisedAdapterV118,
+  isVerifiedCountedTypeScriptSupervisedResultV118,
   type TypeScriptLanguageIdentityObservationV118,
   type TypeScriptSupervisorHostLaunchV118,
 } from "./supervised-subprocess-adapter.js"
@@ -290,6 +291,12 @@ describe("TypeScript supervised subprocess adapter v1.18", () => {
         },
       },
     })
+    expect(isVerifiedCountedTypeScriptSupervisedResultV118(result)).toBe(true)
+    expect(
+      isVerifiedCountedTypeScriptSupervisedResultV118(
+        globalThis.structuredClone(result),
+      ),
+    ).toBe(false)
     expect(signEvidence).toHaveBeenCalledTimes(1)
     const signedText = new TextDecoder().decode(
       vi.mocked(signEvidence).mock.calls[0]![0],

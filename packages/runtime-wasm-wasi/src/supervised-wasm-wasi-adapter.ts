@@ -341,13 +341,29 @@ export interface CountedWasmWasiSupervisedAdapterV118 {
   ): CountedWasmWasiSupervisedResultV118
 }
 
+const verifiedResultAuthority = new WeakSet<object>()
+const authorizeResult = (
+  value: CountedWasmWasiSupervisedResultV118,
+): CountedWasmWasiSupervisedResultV118 => {
+  const frozen = Object.freeze(value)
+  verifiedResultAuthority.add(frozen)
+  return frozen
+}
+
+export const isVerifiedCountedWasmWasiSupervisedResultV118 = (
+  value: unknown,
+): value is CountedWasmWasiSupervisedResultV118 =>
+  value !== null &&
+  typeof value === "object" &&
+  verifiedResultAuthority.has(value)
+
 const systemFailure = (
   code: Extract<
     CountedWasmWasiSupervisedResultV118,
     { kind: "system_failure" }
   >["code"],
 ): CountedWasmWasiSupervisedResultV118 =>
-  Object.freeze({
+  authorizeResult({
     kind: "system_failure",
     gameplayDisposition: "no_mutation",
     code,
@@ -836,7 +852,7 @@ export const createCountedWasmWasiSupervisedAdapterV118 = (options: {
         return systemFailure("EVIDENCE_SIGNING_FAILED")
       }
       if (verified.value.result.kind === "player_violation") {
-        return Object.freeze({
+        return authorizeResult({
           kind: "player_violation" as const,
           gameplayDisposition: "apply_player_violation" as const,
           code: verified.value.result.code,
@@ -845,7 +861,7 @@ export const createCountedWasmWasiSupervisedAdapterV118 = (options: {
           signedEvidence: signature,
         })
       }
-      return Object.freeze({
+      return authorizeResult({
         kind: "success" as const,
         gameplayDisposition: "accept_success" as const,
         payloadBytes: Uint8Array.from(launched.observed.payloadBytes),

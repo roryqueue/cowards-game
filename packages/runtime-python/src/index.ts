@@ -4,6 +4,7 @@ export {
   createCountedPythonSupervisedAdapterV118,
   createPythonAdapterBuildIdentityV118,
   createPythonRuntimeCompilerIdentityV118,
+  isVerifiedCountedPythonSupervisedResultV118,
   type CountedPythonSupervisedAdapterV118,
   type CountedPythonSupervisedExecutionInputV118,
   type CountedPythonSupervisedResultV118,

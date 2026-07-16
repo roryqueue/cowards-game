@@ -27,6 +27,7 @@ import {
   createWasmWasiAdapterBuildIdentityV118,
   createWasmWasiManifestRootV118,
   createWasmWasiRuntimeCompilerIdentityV118,
+  isVerifiedCountedWasmWasiSupervisedResultV118,
   type WasmWasiLanguageIdentityObservationV118,
   type WasmWasiLocalDefenseObservationV118,
 } from "./supervised-wasm-wasi-adapter.js"
@@ -332,6 +333,12 @@ describe("supervised Rust/Zig Wasmtime adapter v1.18", () => {
         },
       },
     })
+    expect(isVerifiedCountedWasmWasiSupervisedResultV118(result)).toBe(true)
+    expect(
+      isVerifiedCountedWasmWasiSupervisedResultV118(
+        globalThis.structuredClone(result),
+      ),
+    ).toBe(false)
     if (result.kind !== "success") throw new Error("expected success")
     expect(result.signedEvidence.evidence.commonMeter.result).toMatchObject({
       kind: "success",

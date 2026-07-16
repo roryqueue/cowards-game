@@ -215,13 +215,29 @@ const deepFreeze = <T>(value: T): Readonly<T> => {
   return value
 }
 
+const verifiedResultAuthority = new WeakSet<object>()
+const authorizeResult = (
+  value: CountedPythonSupervisedResultV118,
+): CountedPythonSupervisedResultV118 => {
+  const frozen = Object.freeze(value)
+  verifiedResultAuthority.add(frozen)
+  return frozen
+}
+
+export const isVerifiedCountedPythonSupervisedResultV118 = (
+  value: unknown,
+): value is CountedPythonSupervisedResultV118 =>
+  value !== null &&
+  typeof value === "object" &&
+  verifiedResultAuthority.has(value)
+
 const systemFailure = (
   code: Extract<
     CountedPythonSupervisedResultV118,
     { kind: "system_failure" }
   >["code"],
 ): CountedPythonSupervisedResultV118 =>
-  Object.freeze({
+  authorizeResult({
     kind: "system_failure",
     gameplayDisposition: "no_mutation",
     code,
@@ -553,7 +569,7 @@ export const createCountedPythonSupervisedAdapterV118 = (options: {
         return systemFailure("EVIDENCE_SIGNING_FAILED")
       }
       if (verified.value.result.kind === "player_violation") {
-        return Object.freeze({
+        return authorizeResult({
           kind: "player_violation" as const,
           gameplayDisposition: "apply_player_violation" as const,
           code: verified.value.result.code,
@@ -562,7 +578,7 @@ export const createCountedPythonSupervisedAdapterV118 = (options: {
           signedEvidence: signature,
         })
       }
-      return Object.freeze({
+      return authorizeResult({
         kind: "success" as const,
         gameplayDisposition: "accept_success" as const,
         payloadBytes: Uint8Array.from(launched.observed.payloadBytes),

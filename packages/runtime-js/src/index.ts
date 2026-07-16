@@ -17,6 +17,7 @@ export {
 } from "./revision-v1-18.js"
 export {
   createCountedTypeScriptSupervisedAdapterV118,
+  isVerifiedCountedTypeScriptSupervisedResultV118,
   type CountedTypeScriptSupervisedAdapterV118,
   type CountedTypeScriptSupervisedExecutionInputV118,
   type CountedTypeScriptSupervisedResultV118,

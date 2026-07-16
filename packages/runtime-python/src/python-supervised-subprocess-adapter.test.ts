@@ -20,6 +20,7 @@ import {
   createCountedPythonSupervisedAdapterV118,
   createPythonAdapterBuildIdentityV118,
   createPythonRuntimeCompilerIdentityV118,
+  isVerifiedCountedPythonSupervisedResultV118,
   type PythonLanguageIdentityObservationV118,
   type PythonSupervisorHostLaunchV118,
 } from "./python-supervised-subprocess-adapter.js"
@@ -284,6 +285,12 @@ describe("Python supervised subprocess adapter v1.18", () => {
         },
       },
     })
+    expect(isVerifiedCountedPythonSupervisedResultV118(result)).toBe(true)
+    expect(
+      isVerifiedCountedPythonSupervisedResultV118(
+        globalThis.structuredClone(result),
+      ),
+    ).toBe(false)
     expect(launchSupervisor).toHaveBeenCalledTimes(1)
     const request = launchSupervisor.mock.calls[0]![0]
     expect(request.execution).toEqual(execution)

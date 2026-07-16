@@ -34,6 +34,7 @@ import {
   createFixtureRuntimeExecutionEvidenceSnapshot,
 } from "./runtime-execution-evidence.test-support.js"
 import { createRuntimeServiceConfig } from "./runtime-config.js"
+import { RETAINED_FOUR_LANGUAGE_PARITY_CERTIFICATION_STATUS } from "./four-language-conformance-runner.js"
 
 const runtimeConfig = createRuntimeServiceConfig({
   strategyExecutionAdapter: "worker-thread",
@@ -161,6 +162,12 @@ const legacyMatchServiceIsSelected =
   HISTORICAL_RUNTIME_EXECUTION_SERVICE_V1_16.runtimeServiceVersion
 
 describe("v1.37 retained four-language corpus readiness", () => {
+  it("is explicitly retained as non-promoting regression evidence", () => {
+    expect(RETAINED_FOUR_LANGUAGE_PARITY_CERTIFICATION_STATUS).toBe(
+      "non_promoting_regression_only",
+    )
+  })
+
   it("declares equivalent golden Strategy sources and all pairwise combinations", () => {
     expect(FOUR_LANGUAGE_CURRENT_CORPUS_VERSION).toBe(
       "four-language-current-corpus-v1.37",
