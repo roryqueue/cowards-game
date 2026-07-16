@@ -3,6 +3,7 @@ import { adaptRuntimeForCurrentKernel } from "@cowards/engine/test/current-kerne
 import {
   computeRecordedTransitionTraceRootV137,
   recordChronicleFromExecution,
+  type RecordedCanonicalTransitionV137,
 } from "@cowards/replay"
 import type { SoldierBrainInput, StrategyInput } from "@cowards/spec"
 import { describe, expect, it } from "vitest"
@@ -25,8 +26,7 @@ type DeepMutable<T> = T extends readonly (infer Item)[]
     ? { -readonly [Key in keyof T]: DeepMutable<T[Key]> }
     : T
 
-const hash = (character: string): string =>
-  `sha256:${character.repeat(64)}`
+const hash = (character: string): string => `sha256:${character.repeat(64)}`
 
 const runtime: StrategyRuntime = {
   selectActivations(input: StrategyInput) {
@@ -55,7 +55,15 @@ const runtime: StrategyRuntime = {
   },
 }
 
+let cachedRecordedFixture: ReturnType<
+  typeof recordChronicleFromExecution
+> | null = null
+let cachedCompactTransitions:
+  | readonly RecordedCanonicalTransitionV137[]
+  | null = null
+
 const recordedFixture = () => {
+  if (cachedRecordedFixture?.ok) return cachedRecordedFixture
   const execution = MATCH_KERNEL.runMatch({
     matchId: "conformance-trace-match",
     seed: "conformance-trace-seed",
@@ -83,13 +91,60 @@ const recordedFixture = () => {
   if (!recorded.ok) {
     throw new Error(`fixture recording failed: ${recorded.failure.code}`)
   }
+  cachedRecordedFixture = recorded
   return recorded
 }
 
-const successfulInput = (): ProjectCanonicalConformanceTraceInput => {
+const compactTransitions = (): readonly RecordedCanonicalTransitionV137[] => {
+  if (cachedCompactTransitions !== null) return cachedCompactTransitions
   const recorded = recordedFixture()
-  const first = recorded.recordedTransitions[0]!
-  const last = recorded.recordedTransitions.at(-1)!
+  const terminal = recorded.recordedTransitions.find(
+    ({ terminalStatus }) => terminalStatus !== null,
+  )!
+  const firstEvent = terminal.orderedEvents[0]!
+  const orderedEvents =
+    terminal.orderedEvents.length > 1
+      ? terminal.orderedEvents
+      : [
+          firstEvent,
+          {
+            ...firstEvent,
+            sequence: firstEvent.sequence + 1,
+          },
+        ]
+  const transition: RecordedCanonicalTransitionV137 = {
+    ...terminal,
+    ordinal: 0,
+    coordinates: { ...terminal.coordinates, ordinal: 0 },
+    orderedEvents,
+    orderedEventsHash:
+      orderedEvents === terminal.orderedEvents
+        ? terminal.orderedEventsHash
+        : hash("e"),
+    accumulatedTraceRoot: hash("0"),
+  }
+  cachedCompactTransitions = [
+    {
+      ...transition,
+      accumulatedTraceRoot: computeRecordedTransitionTraceRootV137([
+        transition,
+      ]),
+    },
+  ]
+  return cachedCompactTransitions
+}
+
+const successfulInput = ({
+  fullTrace = false,
+}: {
+  readonly fullTrace?: boolean
+} = {}): ProjectCanonicalConformanceTraceInput => {
+  const recorded = recordedFixture()
+  const transitions = fullTrace
+    ? recorded.recordedTransitions
+    : compactTransitions()
+  const first = transitions[0]!
+  const last = transitions.at(-1)!
   return {
     corpusVersion: V1_37_CONFORMANCE_CORPUS.version,
     corpusRootSha256: V1_37_CONFORMANCE_CORPUS_ROOT,
@@ -138,7 +193,7 @@ const successfulInput = (): ProjectCanonicalConformanceTraceInput => {
         retryable: false,
       },
     ],
-    transitions: recorded.recordedTransitions,
+    transitions,
     finalStateHash: last.afterStateHash,
     outcomeHash: hash("4"),
     failure: null,
@@ -224,7 +279,9 @@ const expectDivergence = (
 
 describe("v1.37 canonical conformance trace", () => {
   it("projects one immutable transition-complete hash-only success trace", () => {
-    const trace = projectCanonicalConformanceTrace(successfulInput())
+    const trace = projectCanonicalConformanceTrace(
+      successfulInput({ fullTrace: true }),
+    )
 
     expect(trace).toMatchObject({
       schemaVersion: "v1.37-canonical-conformance-trace-v1",
@@ -267,17 +324,19 @@ describe("v1.37 canonical conformance trace", () => {
         | ProjectCanonicalConformanceTraceInput
         | Record<string, unknown>
       ;(input as Record<string, unknown>)[field] = `SECRET_${field}`
-      expect(() => projectCanonicalConformanceTrace(input)).toThrowError(
-        expect.objectContaining({ code: "TRACE_SHAPE_INVALID" }),
-      )
+      expect(() =>
+        projectCanonicalConformanceTrace(
+          input as ProjectCanonicalConformanceTraceInput,
+        ),
+      ).toThrowError(expect.objectContaining({ code: "TRACE_SHAPE_INVALID" }))
     }
 
     const invocationLeak = globalThis.structuredClone(
       successfulInput(),
     ) as unknown as Record<string, unknown>
     ;(
-      (invocationLeak.invocations as Array<Record<string, unknown>>)[0]!
-    ).strategyMemory = { secret: "SECRET_MEMORY_PREIMAGE" }
+      invocationLeak.invocations as Array<Record<string, unknown>>
+    )[0]!.strategyMemory = { secret: "SECRET_MEMORY_PREIMAGE" }
     expect(() =>
       projectCanonicalConformanceTrace(
         invocationLeak as unknown as ProjectCanonicalConformanceTraceInput,
@@ -293,9 +352,9 @@ describe("v1.37 canonical conformance trace", () => {
         unknown
       >
     ).privatePayload = { secret: "SECRET_EVENT_PREIMAGE" }
-    expect(() =>
-      projectCanonicalConformanceTrace(eventLeak),
-    ).toThrowError(expect.objectContaining({ code: "TRACE_SHAPE_INVALID" }))
+    expect(() => projectCanonicalConformanceTrace(eventLeak)).toThrowError(
+      expect.objectContaining({ code: "TRACE_SHAPE_INVALID" }),
+    )
   })
 
   it("rejects noncanonical invocation order, transition roots, and tuple identity", () => {
@@ -369,9 +428,11 @@ describe("v1.37 canonical conformance trace", () => {
 
     const invocationMutations: Array<{
       field: string
-      mutate: (invocation: DeepMutable<
-        CanonicalConformanceTrace["invocations"][number]
-      >) => void
+      mutate: (
+        invocation: DeepMutable<
+          CanonicalConformanceTrace["invocations"][number]
+        >,
+      ) => void
     }> = [
       {
         field: "invocation.ordinal",
@@ -505,9 +566,11 @@ describe("v1.37 canonical conformance trace", () => {
     const transitionMutations: Array<{
       field: string
       index?: number
-      mutate: (transition: DeepMutable<
-        CanonicalConformanceTrace["transitions"][number]
-      >) => void
+      mutate: (
+        transition: DeepMutable<
+          CanonicalConformanceTrace["transitions"][number]
+        >,
+      ) => void
     }> = [
       {
         field: "transition.ordinal",
@@ -714,9 +777,7 @@ describe("v1.37 canonical conformance trace", () => {
     const failureMutations: Array<{
       field: string
       mutate: (
-        failure: NonNullable<
-          DeepMutable<CanonicalConformanceTrace>["failure"]
-        >,
+        failure: NonNullable<DeepMutable<CanonicalConformanceTrace>["failure"]>,
       ) => void
     }> = [
       {
@@ -779,8 +840,12 @@ describe("v1.37 canonical conformance trace", () => {
       const actual = mutableTrace(expected)
       mutate(actual.failure!)
       expectDivergence(expected, rehash(actual), field, {
-        invocationOrdinal: expected.failure!.invocationOrdinal ?? undefined,
-        transitionOrdinal: expected.failure!.transitionOrdinal ?? undefined,
+        ...(expected.failure!.invocationOrdinal === null
+          ? {}
+          : { invocationOrdinal: expected.failure!.invocationOrdinal }),
+        ...(expected.failure!.transitionOrdinal === null
+          ? {}
+          : { transitionOrdinal: expected.failure!.transitionOrdinal }),
       })
     }
 
