@@ -113,12 +113,11 @@ func TestProviderReadinessClassifiesPhase244StatesD02D03D04D09D10D11(t *testing.
 			name: "D-11 package mode other than none is rejected",
 			input: revisionReadinessInput{
 				SourceFormat: "typescript",
-				Runtime: map[string]any{
-					"abiVersion": "strategy-runtime-abi-v1.14",
-					"language":   map[string]any{"id": "typescript"},
-					"adapter":    map[string]any{"id": "runtime-js-worker-thread"},
-					"package":    map[string]any{"mode": "npm"},
-				},
+				Runtime: func() map[string]any {
+					runtime := defaultRuntimeMetadata()
+					runtime["package"] = map[string]any{"mode": "npm"}
+					return runtime
+				}(),
 				Validation:  validValidation,
 				Metadata:    validMetadata,
 				SourceHash:  sourceHash,

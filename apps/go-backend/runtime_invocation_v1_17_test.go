@@ -455,7 +455,8 @@ func TestPhase258RuntimeInvocationV117UsesFiniteGoOwnedSignedBudgetRetryPolicy(t
 func TestPhase258RuntimeInvocationV117GeneratedAuthoritySnapshotsCannotMutateLookup(t *testing.T) {
 	historicalVersion := "runtime-execution-service-v1.16"
 	original, ok := runtimeInvocationContractForVersion(historicalVersion)
-	if !ok || !original.Historical || !original.Current {
+	wantCurrent := selectedRuntimeServiceContractVersion() == historicalVersion
+	if !ok || !original.Historical || original.Current != wantCurrent {
 		t.Fatalf("historical contract missing before mutation: %+v ok=%v", original, ok)
 	}
 	contracts := runtimeInvocationContractsSnapshot()
