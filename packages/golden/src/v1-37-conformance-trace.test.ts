@@ -214,6 +214,8 @@ const failureInput = (): ProjectCanonicalConformanceTraceInput => {
         canonicalPayloadHash: null,
         gameplayMutation: false,
         memoryMutation: false,
+        afterStateHash: input.invocations[0]!.beforeStateHash,
+        afterMemoryHash: input.invocations[0]!.beforeMemoryHash,
         terminalEffectHash: null,
         retryable: true,
       },
@@ -899,6 +901,53 @@ describe("v1.37 canonical conformance trace", () => {
 
     const success = projectCanonicalConformanceTrace(successfulInput())
     expectDivergence(success, expected, "resultClass")
+  })
+
+  it("rejects mutating or contradictory system-failure evidence", () => {
+    const mutations: Array<
+      (input: DeepMutable<ProjectCanonicalConformanceTraceInput>) => void
+    > = [
+      (input) => {
+        input.failure!.gameplayMutation = true
+      },
+      (input) => {
+        input.failure!.memoryMutation = true
+      },
+      (input) => {
+        input.failure!.terminalEffectHash = hash("f")
+      },
+      (input) => {
+        input.invocations[0]!.afterStateHash = hash("f")
+      },
+      (input) => {
+        input.invocations[0]!.afterMemoryHash = hash("f")
+      },
+      (input) => {
+        input.invocations[0]!.resultClass = "success"
+        input.invocations[0]!.stableCode = null
+        input.invocations[0]!.canonicalPayloadHash = hash("f")
+        input.invocations[0]!.retryable = false
+      },
+      (input) => {
+        input.invocations[0]!.stableCode = "DIFFERENT_FAILURE"
+      },
+      (input) => {
+        input.invocations[0]!.failingBoundary = "different-boundary"
+      },
+      (input) => {
+        input.invocations[0]!.retryable = false
+      },
+    ]
+
+    for (const mutate of mutations) {
+      const input = globalThis.structuredClone(
+        failureInput(),
+      ) as DeepMutable<ProjectCanonicalConformanceTraceInput>
+      mutate(input)
+      expect(() => projectCanonicalConformanceTrace(input)).toThrowError(
+        expect.objectContaining({ code: "TRACE_RESULT_INVALID" }),
+      )
+    }
   })
 
   it("uses typed stable projector errors", () => {

@@ -500,6 +500,36 @@ const validateFailure = (
   requireBoolean(value.memoryMutation)
   requireNullableHash(value.terminalEffectHash)
   requireBoolean(value.retryable)
+  if (
+    value.resultClass === "system_failure" &&
+    (value.gameplayMutation ||
+      value.memoryMutation ||
+      value.terminalEffectHash !== null)
+  ) {
+    fail("TRACE_RESULT_INVALID")
+  }
+  if (value.invocationOrdinal !== null) {
+    const invocation = input.invocations[value.invocationOrdinal]!
+    if (
+      invocation.resultClass !== value.resultClass ||
+      invocation.stableCode !== value.stableCode ||
+      invocation.failingBoundary !== value.failingBoundary ||
+      invocation.gameplayMutation !== value.gameplayMutation ||
+      invocation.memoryMutation !== value.memoryMutation ||
+      invocation.terminalEffectHash !== value.terminalEffectHash ||
+      invocation.retryable !== value.retryable
+    ) {
+      fail("TRACE_RESULT_INVALID")
+    }
+    if (
+      value.resultClass === "system_failure" &&
+      (invocation.beforeStateHash !== invocation.afterStateHash ||
+        invocation.beforeMemoryHash !== invocation.afterMemoryHash ||
+        input.finalStateHash !== invocation.beforeStateHash)
+    ) {
+      fail("TRACE_RESULT_INVALID")
+    }
+  }
 }
 
 const validateCoordinates = (
