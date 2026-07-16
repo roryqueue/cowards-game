@@ -477,6 +477,7 @@ func TestPhase258DeploymentLaneRegistryOwnsAndNormalizesSuccessorTemplate(t *tes
 	fixture := newDeploymentLaneFixture(t)
 	fixture.Registry.Lanes[0].SemanticTupleID = runtimeSuccessorSemanticTupleIDV117
 	fixture.Registry.Lanes[0].SemanticTuple = runtimeSuccessorCanonicalTupleV117
+	fixture.Registry.Lanes[0].SuccessorRuntimeIdentityTemplate = nil
 	directory := t.TempDir()
 	path := filepath.Join(directory, "successor-deployment-lanes.json")
 	write := func() {
