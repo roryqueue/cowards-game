@@ -102,6 +102,7 @@ status: complete
 2. **Task 1 GREEN: Mandatory immutable corpus** - `56afe3f` (feat)
 3. **Task 2 RED: Corpus governance contract** - `aec3b54` (test)
 4. **Task 2 GREEN: Candidate/check separation** - `87b7fb6` (feat)
+5. **Package-run portability fix** - `348543f` (fix)
 
 ## Files Created/Modified
 
@@ -132,7 +133,15 @@ status: complete
 - **Verification:** All candidate mutation and active-corpus tests pass.
 - **Committed in:** `87b7fb6`
 
-**Total deviations:** 1 auto-fixed bug. **Impact:** Candidate governance now matches D-03 without weakening the active v1 corpus.
+**2. [Rule 1 - Bug] Made fixture existence proof independent of test working directory**
+- **Found during:** Combined affected-package verification
+- **Issue:** The root-focused suite passed, but the package-local `@cowards/golden test` command resolved the registry's repository-relative path from `packages/golden`.
+- **Fix:** Resolved the immutable fixture from the test module URL while retaining the exact registry-path assertion.
+- **Files modified:** `packages/golden/src/v1-37-conformance-corpus.test.ts`
+- **Verification:** Root-focused suite and package-local 8-test suite both pass.
+- **Committed in:** `348543f`
+
+**Total deviations:** 2 auto-fixed bugs. **Impact:** Candidate governance matches D-03 and the same proof now runs correctly from root or package scope without weakening active v1.
 
 ## Issues Encountered
 
@@ -153,6 +162,7 @@ None - no external service configuration required.
 - All eight planned implementation/test/fixture files exist.
 - All four task commits exist in order.
 - Focused corpus and governance tests pass: 3 files, 12 tests.
+- Full `@cowards/golden` package suite passes: 2 files, 8 tests.
 - Golden package typecheck, focused lint, Prettier check, and the read-only corpus CLI pass.
 
 ---
