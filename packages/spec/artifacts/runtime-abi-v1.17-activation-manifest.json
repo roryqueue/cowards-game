@@ -235,6 +235,14 @@
       "sha256": "c16d55b990c5db6422dcef25baadb64c32c1f1790bd5fbe981b534b00cb30cfb"
     },
     {
+      "path": "apps/go-backend/phase244_account_provider_db_test.go",
+      "sha256": "b9bada841367e5a14dc30751514f9b92c45ccd50f286954ecd5865e8f853a922"
+    },
+    {
+      "path": "apps/go-backend/provider_readiness_test.go",
+      "sha256": "9238872a44115a0295abed90d68540c91b9e35d901a1d6cf8f4cae6be794eee5"
+    },
+    {
       "path": "apps/go-backend/runtime_execution_contract_gen.go",
       "sha256": "3d3ea260fca7fbb0e8bc302a1c5ee34cafc88b03cad263985c47db84a7885c2d"
     },
@@ -260,11 +268,11 @@
     },
     {
       "path": "apps/go-backend/runtime_service_client_v1_17_test.go",
-      "sha256": "be1f3de6c560f32609178e35d624a4406641f539152aad2340ff373bcb63f95d"
+      "sha256": "7ded9967666d8e97358e01eefcdac3f895b36df5f1138d2344ba4fbd2b1516ae"
     },
     {
       "path": "apps/go-backend/source_identity_test.go",
-      "sha256": "1d895b705debd32ccf12cd0aeb290ebc7d31b509b338975cc62814536cdf40dc"
+      "sha256": "d85bee4fd8488f6dedbf90e39a390ddd5a6b118b301650b2736052e9a1139b9f"
     },
     {
       "path": "apps/runtime-service/src/counted-safety.test.ts",
