@@ -1,5 +1,6 @@
 #!/usr/bin/env -S pnpm exec tsx
-import { readFile, stat, writeFile } from "node:fs/promises"
+import { constants } from "node:fs"
+import { open, readFile, writeFile } from "node:fs/promises"
 import { fileURLToPath } from "node:url"
 import {
   bootstrapRuntimeEvidenceAuthorityImportTrustRoots,
@@ -36,21 +37,35 @@ const required = (
 }
 
 const readProtectedDescriptor = async (descriptorPath: string) => {
-  const metadata = await stat(descriptorPath, { bigint: false })
-  if (
-    !metadata.isFile() ||
-    metadata.size < 2 ||
-    metadata.size > 64 * 1024 ||
-    (metadata.mode & 0o022) !== 0 ||
-    (typeof process.getuid === "function" && metadata.uid !== process.getuid())
-  ) {
-    throw new Error("unsafe import trust-root descriptor")
+  const handle = await open(
+    descriptorPath,
+    constants.O_RDONLY | constants.O_NOFOLLOW,
+  )
+  try {
+    const before = await handle.stat({ bigint: false })
+    if (
+      !before.isFile() ||
+      before.size < 2 ||
+      before.size > 64 * 1024 ||
+      (before.mode & 0o022) !== 0 ||
+      (typeof process.getuid === "function" && before.uid !== process.getuid())
+    ) {
+      throw new Error("unsafe import trust-root descriptor")
+    }
+    const bytes = await handle.readFile()
+    const after = await handle.stat({ bigint: false })
+    if (
+      bytes.byteLength !== before.size ||
+      after.size !== before.size ||
+      after.ino !== before.ino ||
+      after.dev !== before.dev
+    ) {
+      throw new Error("import trust-root descriptor changed while reading")
+    }
+    return new Uint8Array(bytes)
+  } finally {
+    await handle.close()
   }
-  const bytes = await readFile(descriptorPath)
-  if (bytes.byteLength !== metadata.size) {
-    throw new Error("import trust-root descriptor changed while reading")
-  }
-  return new Uint8Array(bytes)
 }
 
 const parseArgs = (args: readonly string[]) => {

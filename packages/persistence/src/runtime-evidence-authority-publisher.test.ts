@@ -1750,6 +1750,16 @@ describePostgres("Phase-259 import trust-root bootstrap", () => {
         "update runtime_evidence_authority_import_trust_root_deployments set generation = generation + 1",
       ),
     ).rejects.toThrow(/append-only/iu)
+    await expect(
+      pool.query(
+        "update runtime_evidence_authority_import_trust_root_head set next_generation = 1",
+      ),
+    ).rejects.toThrow(/advance exactly once/iu)
+    await expect(
+      pool.query(
+        "update runtime_evidence_authority_import_trust_root_head set next_generation = next_generation + 2",
+      ),
+    ).rejects.toThrow(/advance exactly once/iu)
   })
 
   it("rejects noncanonical, duplicate, poisoned, mismatched, and invalid roots without writes", async () => {

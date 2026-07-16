@@ -73,6 +73,7 @@ describe("migrations", () => {
     for (const required of [
       "runtime_evidence_authority_import_trust_root_head",
       "runtime_evidence_authority_import_trust_root_deployments",
+      "enforce_runtime_authority_import_trust_root_generation",
       "descriptor_sha256",
       "descriptor_bytes",
       "producer_id",
@@ -85,6 +86,7 @@ describe("migrations", () => {
       expect(sql).toContain(required)
     }
     expect(sql).toContain("unique (producer_id, key_id, trust_domain)")
+    expect(sql).toContain("new.next_generation <> old.next_generation + 1")
     expect(sql).not.toMatch(/private|file_path|runtime_producer/iu)
     expect(sql).not.toMatch(
       /insert\s+into\s+runtime_evidence_authority_import_trust_root_deployments/iu,

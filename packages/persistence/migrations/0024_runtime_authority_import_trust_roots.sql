@@ -12,6 +12,23 @@ insert into runtime_evidence_authority_import_trust_root_head (
   next_generation
 ) values (true, 1);
 
+create function enforce_runtime_authority_import_trust_root_generation()
+returns trigger language plpgsql as $$
+begin
+  if new.next_generation <> old.next_generation + 1 then
+    raise exception
+      'runtime authority import trust-root generation must advance exactly once';
+  end if;
+  return new;
+end;
+$$;
+
+create trigger runtime_evidence_authority_import_trust_root_head_monotonic
+before update
+on runtime_evidence_authority_import_trust_root_head
+for each row execute function
+  enforce_runtime_authority_import_trust_root_generation();
+
 create table runtime_evidence_authority_import_trust_root_deployments (
   id text primary key,
   descriptor_sha256 text not null unique

@@ -1,5 +1,12 @@
 import { createHash, generateKeyPairSync } from "node:crypto"
-import { chmod, mkdtemp, readFile, rm, writeFile } from "node:fs/promises"
+import {
+  chmod,
+  mkdtemp,
+  readFile,
+  rm,
+  symlink,
+  writeFile,
+} from "node:fs/promises"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { encodeCanonicalJson, type JsonValue } from "@cowards/spec"
@@ -134,6 +141,20 @@ describe("runtime authority import trust-root bootstrap CLI", () => {
     await expect(
       runRuntimeAuthorityImportTrustRootBootstrapCli(["--check"], {
         env: base,
+        pool: {} as never,
+        bootstrap,
+        stderr,
+      }),
+    ).resolves.toBe(1)
+    await chmod(prepared.descriptorPath, 0o600)
+    const descriptorLink = path.join(prepared.directory, "roots-link.json")
+    await symlink(prepared.descriptorPath, descriptorLink)
+    await expect(
+      runRuntimeAuthorityImportTrustRootBootstrapCli(["--check"], {
+        env: {
+          ...base,
+          COWARDS_RUNTIME_AUTHORITY_IMPORT_TRUST_ROOTS_PATH: descriptorLink,
+        },
         pool: {} as never,
         bootstrap,
         stderr,
