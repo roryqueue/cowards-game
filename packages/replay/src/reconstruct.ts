@@ -1,8 +1,11 @@
+import { createHash } from "node:crypto"
 import type {
   Chronicle,
   ChronicleBoundarySnapshot,
   ChronicleEvent,
   ChronicleValidationError,
+  FullBoardSnapshot,
+  MatchOutcome,
 } from "@cowards/spec"
 import {
   applyReplayEvent,
@@ -11,14 +14,18 @@ import {
   type ReplayState,
   type ReplayStateResult,
 } from "./replay-transition.js"
+import { stableStringify } from "./hash.js"
 import {
-  validateChronicle,
-  validateHistoricalV14Chronicle,
-} from "./validate.js"
+  createChronicleBoundaryAnchors,
+  type ChronicleRecorderExecution,
+} from "./record.js"
 import {
   type CurrentChronicleSemanticInput,
   type CurrentChronicleSemanticValidationResult,
+  validateChronicle,
   validateCurrentChronicle,
+  validateCurrentChronicleSemantics,
+  validateHistoricalV14Chronicle,
 } from "./validate.js"
 
 export interface ReplayTimelineEntry {
@@ -174,7 +181,243 @@ export const createHistoricalV14Replay = (
   input: HistoricalV14ReplayInput,
 ): CreateReplayResult => {
   const validation = validateHistoricalV14Chronicle(input.chronicle)
-  return validation.ok ? createValidatedReplay(input.chronicle) : validation
+  if (!validation.ok) return validation
+  const requiredSnapshotKinds = [
+    "MATCH_START",
+    "MATCH_END",
+    "TERMINAL",
+  ] as const
+  const presentSnapshotKinds = new Set(
+    input.chronicle.snapshots.map(({ kind }) => kind),
+  )
+  const snapshotErrors = requiredSnapshotKinds.flatMap((kind) =>
+    presentSnapshotKinds.has(kind)
+      ? []
+      : [
+          error(
+            "SNAPSHOT_MISSING",
+            `Historical v1.4 Chronicle is missing ${kind} snapshot.`,
+            { expected: kind },
+          ),
+        ],
+  )
+  return snapshotErrors.length === 0
+    ? createValidatedReplay(input.chronicle)
+    : { ok: false, errors: snapshotErrors }
+}
+
+const CURRENT_STATE_HASH_DOMAIN =
+  "cowards-game:candidate-game-state-projection:v1" as const
+
+const hashCurrentStateProjection = (
+  projection: Readonly<Record<string, unknown>>,
+): string =>
+  `sha256:${createHash("sha256")
+    .update(`${CURRENT_STATE_HASH_DOMAIN}\0`, "utf8")
+    .update(JSON.stringify(projection), "utf8")
+    .digest("hex")}`
+
+export type CurrentReplayReconstructionResult =
+  | {
+      readonly ok: true
+      readonly terminalStateHash: string
+      readonly outcome: MatchOutcome
+    }
+  | {
+      readonly ok: false
+      readonly code:
+        | "CURRENT_RECONSTRUCTION_SHAPE_INVALID"
+        | "CURRENT_SEMANTIC_ADMISSION_INVALID"
+        | "CURRENT_TRANSITION_STATE_MISMATCH"
+        | "CURRENT_TERMINAL_EVENT_INVALID"
+        | "CURRENT_TERMINAL_STATE_MISMATCH"
+      readonly transitionIndex?: number | undefined
+    }
+
+export interface CurrentReplayReconstructionInput {
+  readonly chronicle: Chronicle
+  readonly execution: ChronicleRecorderExecution
+}
+
+const replayStateFromProjection = (
+  projection: Readonly<Record<string, unknown>>,
+): ReplayState | undefined => {
+  if (
+    !projection.bounds ||
+    !Array.isArray(projection.soldiers) ||
+    !Array.isArray(projection.terrainStones)
+  ) {
+    return undefined
+  }
+  return {
+    board: globalThis.structuredClone({
+      bounds: projection.bounds,
+      soldiers: projection.soldiers,
+      terrainStones: projection.terrainStones,
+    }) as FullBoardSnapshot,
+    ...(projection.outcome === null || projection.outcome === undefined
+      ? {}
+      : {
+          outcome: globalThis.structuredClone(
+            projection.outcome,
+          ) as MatchOutcome,
+        }),
+  }
+}
+
+const finalReplayState = (
+  execution: Extract<ChronicleRecorderExecution, { kind: "completed" }>,
+): ReplayState => ({
+  board: {
+    bounds: globalThis.structuredClone(
+      execution.recorderMaterial.finalState.bounds,
+    ),
+    soldiers: execution.recorderMaterial.finalState.soldiers.map(
+      ({
+        id,
+        ownerPlayerId,
+        status,
+        position,
+        facing,
+        lastSuccessfulMoveDirection,
+      }) => ({
+        id,
+        ownerPlayerId,
+        status,
+        position: position === null ? null : { ...position },
+        facing,
+        lastSuccessfulMoveDirection,
+      }),
+    ),
+    terrainStones: execution.recorderMaterial.finalState.terrainStones.map(
+      (position) => ({ ...position }),
+    ),
+  },
+  ...(execution.recorderMaterial.finalState.outcome === undefined
+    ? {}
+    : { outcome: execution.recorderMaterial.finalState.outcome }),
+})
+
+export const validateCurrentReplayReconstruction = ({
+  chronicle,
+  execution,
+}: CurrentReplayReconstructionInput): CurrentReplayReconstructionResult => {
+  if (execution.kind !== "completed" || execution.transitions.length === 0) {
+    return { ok: false, code: "CURRENT_RECONSTRUCTION_SHAPE_INVALID" }
+  }
+  if (
+    execution.recorderMaterial.boundaries.length !==
+      execution.transitions.length ||
+    stableStringify(execution.recorderMaterial.boundaries) !==
+      stableStringify(execution.transitions)
+  ) {
+    return { ok: false, code: "CURRENT_RECONSTRUCTION_SHAPE_INVALID" }
+  }
+  const terminalEvents = chronicle.events.filter(
+    ({ type }) => type === "MATCH_ENDED",
+  )
+  if (
+    terminalEvents.length !== 1 ||
+    chronicle.events.at(-1)?.type !== "MATCH_ENDED"
+  ) {
+    return { ok: false, code: "CURRENT_TERMINAL_EVENT_INVALID" }
+  }
+
+  for (let index = 0; index < execution.transitions.length; index += 1) {
+    const transition = execution.transitions[index]!
+    const previous = execution.transitions[index - 1]
+    if (
+      hashCurrentStateProjection(transition.beforeState) !==
+        transition.beforeStateHash ||
+      hashCurrentStateProjection(transition.afterState) !==
+        transition.afterStateHash ||
+      (previous !== undefined &&
+        (previous.afterStateHash !== transition.beforeStateHash ||
+          stableStringify(previous.afterState) !==
+            stableStringify(transition.beforeState)))
+    ) {
+      return {
+        ok: false,
+        code: "CURRENT_TRANSITION_STATE_MISMATCH",
+        transitionIndex: index,
+      }
+    }
+  }
+
+  const semanticAdmission = validateCurrentChronicleSemantics({
+    profile: "current-exact",
+    compatibility: {
+      tupleId: execution.transitions[0]!.semanticTupleId,
+      tuple: execution.transitions[0]!.semanticTuple,
+    },
+    chronicle,
+    boundaryAnchors: createChronicleBoundaryAnchors(execution),
+    execution,
+  })
+  if (!semanticAdmission.ok) {
+    return { ok: false, code: "CURRENT_SEMANTIC_ADMISSION_INVALID" }
+  }
+
+  for (let index = 0; index < execution.transitions.length; index += 1) {
+    const transition = execution.transitions[index]!
+    const before = replayStateFromProjection(transition.beforeState)
+    const expectedAfter = replayStateFromProjection(transition.afterState)
+    if (before === undefined || expectedAfter === undefined) {
+      return {
+        ok: false,
+        code: "CURRENT_RECONSTRUCTION_SHAPE_INVALID",
+        transitionIndex: index,
+      }
+    }
+    let reconstructed = before
+    for (const summary of transition.events) {
+      const applied = applyReplayEvent(reconstructed, {
+        type: summary.type,
+        sequence: summary.sequence,
+        context: summary.context ?? {},
+        privacy: summary.privacy ?? "public",
+        payload: summary.payload,
+      })
+      if (!applied.ok) {
+        return {
+          ok: false,
+          code: "CURRENT_TRANSITION_STATE_MISMATCH",
+          transitionIndex: index,
+        }
+      }
+      reconstructed = applied.state
+    }
+    if (stableStringify(reconstructed) !== stableStringify(expectedAfter)) {
+      return {
+        ok: false,
+        code: "CURRENT_TRANSITION_STATE_MISMATCH",
+        transitionIndex: index,
+      }
+    }
+  }
+
+  const last = execution.transitions.at(-1)!
+  const finalState = finalReplayState(execution)
+  const projectedFinal = replayStateFromProjection(last.afterState)
+  const terminalSnapshot = chronicle.snapshots.at(-1)
+  const outcome = execution.recorderMaterial.finalState.outcome
+  if (
+    outcome === undefined ||
+    projectedFinal === undefined ||
+    stableStringify(projectedFinal) !== stableStringify(finalState) ||
+    terminalSnapshot?.kind !== "TERMINAL" ||
+    stableStringify(stateFromSnapshot(terminalSnapshot)) !==
+      stableStringify(finalState) ||
+    stableStringify(terminalEvents[0]!.payload) !== stableStringify(outcome) ||
+    stableStringify(last.terminalStatus) !== stableStringify(outcome)
+  ) {
+    return { ok: false, code: "CURRENT_TERMINAL_STATE_MISMATCH" }
+  }
+  return {
+    ok: true,
+    terminalStateHash: last.afterStateHash,
+    outcome,
+  }
 }
 
 export type CreateCurrentReplayResult =

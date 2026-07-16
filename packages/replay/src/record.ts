@@ -684,14 +684,19 @@ const fallbackContext = (
   }
 }
 
-const createSnapshots = (
+interface ChronicleSnapshotDescriptor {
+  readonly kind: ChronicleSnapshotKind
+  readonly sequence: number
+  readonly context: ChronicleEventContext
+  readonly transition: RecorderTransition
+  readonly stateSide: "before" | "after"
+  readonly includeOutcome: boolean
+}
+
+const createSnapshotDescriptors = (
   transitions: readonly RecorderTransition[],
-): {
-  snapshots: ChronicleBoundarySnapshot[]
-  anchors: ChronicleBoundaryAnchor[]
-} => {
-  const snapshots: ChronicleBoundarySnapshot[] = []
-  const anchors: ChronicleBoundaryAnchor[] = []
+): readonly ChronicleSnapshotDescriptor[] => {
+  const descriptors: ChronicleSnapshotDescriptor[] = []
   const append = (
     kind: ChronicleSnapshotKind,
     sequence: number,
@@ -700,27 +705,13 @@ const createSnapshots = (
     stateSide: "before" | "after",
     includeOutcome = true,
   ): void => {
-    const projection =
-      stateSide === "before" ? transition.beforeState : transition.afterState
-    const outcome = includeOutcome
-      ? outcomeFromProjection(projection)
-      : undefined
-    snapshots.push({
+    descriptors.push({
       kind,
       sequence,
       context,
-      board: boardFromProjection(projection),
-      ...(outcome === undefined ? {} : { outcome }),
-    })
-    anchors.push({
-      kind,
-      snapshotIndex: snapshots.length - 1,
-      transitionOrdinal: transition.coordinates.ordinal,
+      transition,
       stateSide,
-      stateHash:
-        stateSide === "before"
-          ? transition.beforeStateHash
-          : transition.afterStateHash,
+      includeOutcome,
     })
   }
 
@@ -786,6 +777,67 @@ const createSnapshots = (
   const terminalSequence = lastEventSequence(last)
   append("MATCH_END", terminalSequence, {}, last, "after")
   append("TERMINAL", terminalSequence, {}, last, "after")
+  return descriptors
+}
+
+export const createChronicleBoundaryAnchors = (
+  execution: ChronicleRecorderExecution,
+): readonly ChronicleBoundaryAnchor[] => {
+  if (execution.kind !== "completed" || execution.transitions.length === 0) {
+    return Object.freeze([])
+  }
+  return Object.freeze(
+    createSnapshotDescriptors(execution.transitions).map(
+      ({ kind, transition, stateSide }, snapshotIndex) =>
+        Object.freeze({
+          kind,
+          snapshotIndex,
+          transitionOrdinal: transition.coordinates.ordinal,
+          stateSide,
+          stateHash:
+            stateSide === "before"
+              ? transition.beforeStateHash
+              : transition.afterStateHash,
+        }),
+    ),
+  )
+}
+
+const createSnapshots = (
+  transitions: readonly RecorderTransition[],
+): {
+  snapshots: ChronicleBoundarySnapshot[]
+  anchors: ChronicleBoundaryAnchor[]
+} => {
+  const descriptors = createSnapshotDescriptors(transitions)
+  const snapshots = descriptors.map(
+    ({ kind, sequence, context, transition, stateSide, includeOutcome }) => {
+      const projection =
+        stateSide === "before" ? transition.beforeState : transition.afterState
+      const outcome = includeOutcome
+        ? outcomeFromProjection(projection)
+        : undefined
+      return {
+        kind,
+        sequence,
+        context,
+        board: boardFromProjection(projection),
+        ...(outcome === undefined ? {} : { outcome }),
+      }
+    },
+  )
+  const anchors = descriptors.map(
+    ({ kind, transition, stateSide }, snapshotIndex) => ({
+      kind,
+      snapshotIndex,
+      transitionOrdinal: transition.coordinates.ordinal,
+      stateSide,
+      stateHash:
+        stateSide === "before"
+          ? transition.beforeStateHash
+          : transition.afterStateHash,
+    }),
+  )
   return { snapshots, anchors }
 }
 

@@ -9,12 +9,12 @@ import type {
 import { MATCH_KERNEL, type StrategyRuntime } from "@cowards/engine"
 import { adaptRuntimeForCurrentKernel } from "@cowards/engine/test/current-kernel-runtime"
 import { describe, expect, it } from "vitest"
-import { createCurrentReplay } from "./reconstruct.js"
-import { recordChronicleFromExecution } from "./record.js"
 import {
+  createCurrentReplay,
   validateCurrentReplayReconstruction,
-  validateChronicleTransitions,
-} from "./replay-transition.js"
+} from "./reconstruct.js"
+import { recordChronicleFromExecution } from "./record.js"
+import { validateChronicleTransitions } from "./replay-transition.js"
 
 const soldier = (
   id: string,

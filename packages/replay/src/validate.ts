@@ -12,6 +12,7 @@ import {
   validateCanonicalArena,
   validateCanonicalGameState,
   validateCanonicalInitialGameState,
+  validateCanonicalTransition,
   type CanonicalCompatibilityTuple,
   type CanonicalSemanticGameState,
   type Chronicle,
@@ -28,7 +29,6 @@ import { validateHistoricalV14Grammar } from "./historical-v1-4-grammar.js"
 import { createChronicleContentHash, stableStringify } from "./hash.js"
 import {
   resolveReplayTransitionEventContract,
-  validateCurrentReplayReconstruction,
   validateChronicleTransitions,
 } from "./replay-transition.js"
 import {
@@ -840,7 +840,7 @@ const currentInputHasExactRoute = (input: Record<string, unknown>): boolean =>
     "execution",
   ])
 
-export const validateCurrentChronicle = (
+export const validateCurrentChronicleSemantics = (
   input: unknown,
 ): CurrentChronicleSemanticValidationResult => {
   if (
@@ -1028,6 +1028,14 @@ export const validateCurrentChronicle = (
 
   for (let index = 0; index < execution.transitions.length; index += 1) {
     const transition = execution.transitions[index]!
+    const transitionSemantic = validateCanonicalTransition(transition)
+    if (!transitionSemantic.ok) {
+      return prefixedSemanticFailure(
+        transitionSemantic.issues,
+        ["execution", "transitions", index],
+        transitionSemantic.truncated,
+      )
+    }
     const before = projectionAsState(transition.beforeState)
     const after = projectionAsState(transition.afterState)
     if (before === undefined || after === undefined) {
@@ -1122,22 +1130,6 @@ export const validateCurrentChronicle = (
     }
   }
 
-  const reconstruction = validateCurrentReplayReconstruction({
-    chronicle,
-    execution,
-  })
-  if (!reconstruction.ok) {
-    return currentCodeFailure(
-      reconstruction.code === "CURRENT_TERMINAL_EVENT_INVALID" ||
-        reconstruction.code === "CURRENT_TERMINAL_STATE_MISMATCH"
-        ? "CURRENT_TERMINAL_INVALID"
-        : "CURRENT_RECONSTRUCTION_INVALID",
-      reconstruction.transitionIndex === undefined
-        ? ["execution", "transitions"]
-        : ["execution", "transitions", reconstruction.transitionIndex],
-    )
-  }
-
   const parsedFinal = RuntimeExecutionFinalStateSchema.safeParse(
     execution.recorderMaterial.finalState,
   )
@@ -1168,6 +1160,11 @@ export const validateCurrentChronicle = (
   }
   return currentSuccess()
 }
+
+export const validateCurrentChronicle = (
+  input: unknown,
+): CurrentChronicleSemanticValidationResult =>
+  validateCurrentChronicleSemantics(input)
 
 export const assertChronicleCompatible = (chronicle: unknown): Chronicle => {
   const result = validateChronicle(chronicle)
