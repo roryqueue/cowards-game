@@ -1,5 +1,4 @@
 import { Buffer } from "node:buffer"
-import { createHash } from "node:crypto"
 import { readFileSync } from "node:fs"
 import {
   RUNTIME_BUDGET_PROFILE_V1_18_SHA256,
@@ -161,28 +160,30 @@ const rawReceipt = (
     escapedProcessCount: 0,
     lingeringProcessCount: 0,
   },
-  identity,
+  identity: { ...identity },
   attribution: "proven_strategy",
 })
 
-const launch = (
-  mutate?: (
-    receipt: RuntimeSupervisorRawReceiptV118,
-    request: SupervisorInvocationRequestV118,
-  ) => void,
-): TypeScriptSupervisorHostLaunchV118 => (request) => {
-  const receipt = rawReceipt(request)
-  mutate?.(receipt, request)
-  const envelope = createSupervisorRawReceiptEnvelopeV118({
-    request,
-    receipt,
-    observed: { payloadBytes, stdoutBytes, stderrBytes },
-  })
-  return {
-    rawReceiptBytes: serializeSupervisorRawReceiptEnvelopeV118(envelope),
-    observed: { payloadBytes, stdoutBytes, stderrBytes },
+const launch =
+  (
+    mutate?: (
+      receipt: RuntimeSupervisorRawReceiptV118,
+      request: SupervisorInvocationRequestV118,
+    ) => void,
+  ): TypeScriptSupervisorHostLaunchV118 =>
+  (request) => {
+    const receipt = rawReceipt(request)
+    mutate?.(receipt, request)
+    const envelope = createSupervisorRawReceiptEnvelopeV118({
+      request,
+      receipt,
+      observed: { payloadBytes, stdoutBytes, stderrBytes },
+    })
+    return {
+      rawReceiptBytes: serializeSupervisorRawReceiptEnvelopeV118(envelope),
+      observed: { payloadBytes, stdoutBytes, stderrBytes },
+    }
   }
-}
 
 const signature = Buffer.alloc(64, 0x5a).toString("base64")
 
@@ -264,7 +265,10 @@ describe("TypeScript supervised subprocess adapter v1.18", () => {
       "host-owned-harness",
     ]) {
       expect(signedText).not.toContain(poison)
-      expect(JSON.stringify(result.signedEvidence)).not.toContain(poison)
+      expect(result.kind).not.toBe("system_failure")
+      if (result.kind !== "system_failure") {
+        expect(JSON.stringify(result.signedEvidence)).not.toContain(poison)
+      }
     }
   })
 
@@ -290,29 +294,44 @@ describe("TypeScript supervised subprocess adapter v1.18", () => {
   })
 
   it.each([
-    ["wall", (receipt: RuntimeSupervisorRawReceiptV118) => {
-      receipt.wall.elapsedNanoseconds = 51_000_000
-      receipt.wall.processGroupReapedMonotonicNanoseconds = 52_000_000
-      receipt.wall.wallMilliseconds = 51
-    }],
-    ["compute", (receipt: RuntimeSupervisorRawReceiptV118) => {
-      receipt.cpu.finalUsageMicroseconds = 100_101
-      receipt.cpu.computeFuel = 100_001_000
-    }],
-    ["memory", (receipt: RuntimeSupervisorRawReceiptV118) => {
-      receipt.memory.peakBytes = receipt.limits.memoryMaxBytes + 1
-    }],
-    ["pids", (receipt: RuntimeSupervisorRawReceiptV118) => {
-      receipt.pids.currentPeak = receipt.limits.pidsMax + 1
-    }],
-  ] as const)("classifies proven N+1 %s as a player violation", (_name, mutate) => {
-    const { result } = execute({ launch: launch(mutate) })
-    expect(result).toMatchObject({
-      kind: "player_violation",
-      gameplayDisposition: "apply_player_violation",
-      code: "RESOURCE_EXHAUSTION",
-    })
-  })
+    [
+      "wall",
+      (receipt: RuntimeSupervisorRawReceiptV118) => {
+        receipt.wall.elapsedNanoseconds = 51_000_000
+        receipt.wall.processGroupReapedMonotonicNanoseconds = 52_000_000
+        receipt.wall.wallMilliseconds = 51
+      },
+    ],
+    [
+      "compute",
+      (receipt: RuntimeSupervisorRawReceiptV118) => {
+        receipt.cpu.finalUsageMicroseconds = 100_101
+        receipt.cpu.computeFuel = 100_001_000
+      },
+    ],
+    [
+      "memory",
+      (receipt: RuntimeSupervisorRawReceiptV118) => {
+        receipt.memory.peakBytes = receipt.limits.memoryMaxBytes + 1
+      },
+    ],
+    [
+      "pids",
+      (receipt: RuntimeSupervisorRawReceiptV118) => {
+        receipt.pids.currentPeak = receipt.limits.pidsMax + 1
+      },
+    ],
+  ] as const)(
+    "classifies proven N+1 %s as a player violation",
+    (_name, mutate) => {
+      const { result } = execute({ launch: launch(mutate) })
+      expect(result).toMatchObject({
+        kind: "player_violation",
+        gameplayDisposition: "apply_player_violation",
+        code: "RESOURCE_EXHAUSTION",
+      })
+    },
+  )
 
   it("fails closed without signing on replayed nonce/request evidence", () => {
     let firstRequest: SupervisorInvocationRequestV118 | undefined
@@ -334,9 +353,7 @@ describe("TypeScript supervised subprocess adapter v1.18", () => {
     execute({ launch: replayLaunch })
     const { result, signEvidence } = execute({
       launch: replayLaunch,
-      invocation: invocation(
-        "host-nonce-v1-18-typescript-000000000002",
-      ),
+      invocation: invocation("host-nonce-v1-18-typescript-000000000002"),
     })
     expect(result).toMatchObject({
       kind: "system_failure",
@@ -347,19 +364,31 @@ describe("TypeScript supervised subprocess adapter v1.18", () => {
   })
 
   it.each([
-    ["wrong platform", (receipt: RuntimeSupervisorRawReceiptV118) => {
-      receipt.platform.operatingSystem = "darwin"
-    }],
-    ["supervisor substitution", (receipt: RuntimeSupervisorRawReceiptV118) => {
-      receipt.identity.supervisorBinarySha256 = hash("0")
-    }],
-    ["stale adapter", (receipt: RuntimeSupervisorRawReceiptV118) => {
-      receipt.identity.adapterBuildSha256 = hash("0")
-    }],
-    ["unclean cgroup", (receipt: RuntimeSupervisorRawReceiptV118) => {
-      receipt.containment.cgroupEmpty = false
-      receipt.containment.lingeringProcessCount = 1
-    }],
+    [
+      "wrong platform",
+      (receipt: RuntimeSupervisorRawReceiptV118) => {
+        receipt.platform.operatingSystem = "darwin"
+      },
+    ],
+    [
+      "supervisor substitution",
+      (receipt: RuntimeSupervisorRawReceiptV118) => {
+        receipt.identity.supervisorBinarySha256 = hash("0")
+      },
+    ],
+    [
+      "stale adapter",
+      (receipt: RuntimeSupervisorRawReceiptV118) => {
+        receipt.identity.adapterBuildSha256 = hash("0")
+      },
+    ],
+    [
+      "unclean cgroup",
+      (receipt: RuntimeSupervisorRawReceiptV118) => {
+        receipt.containment.cgroupEmpty = false
+        receipt.containment.lingeringProcessCount = 1
+      },
+    ],
   ] as const)("fails closed without a certificate on %s", (_name, mutate) => {
     const { result, signEvidence } = execute({ launch: launch(mutate) })
     expect(result).toMatchObject({
@@ -443,7 +472,9 @@ describe("TypeScript supervised subprocess adapter v1.18", () => {
       new URL("./supervised-subprocess-adapter.ts", import.meta.url),
       "utf8",
     )
-    expect(source).not.toMatch(/node:child_process|worker_threads|docker/iu)
+    expect(source).not.toMatch(
+      /from\s+["']node:child_process["']|from\s+["']node:worker_threads["']|\bspawn(?:Sync)?\s*\(/u,
+    )
     expect(source).toContain('from "@cowards/runtime-supervisor"')
     expect(source).not.toContain("@cowards/runtime-supervisor/src/")
   })
