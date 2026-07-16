@@ -3,7 +3,10 @@ import {
   type RunMatchInput,
   type StrategyRuntime,
 } from "@cowards/engine"
-import { adaptRuntimeForCurrentKernel } from "@cowards/engine/test/current-kernel-runtime"
+import {
+  adaptHistoricalRuntimeForCurrentKernel,
+  adaptRuntimeForCurrentKernel,
+} from "@cowards/engine/test/current-kernel-runtime"
 import { recordChronicleFromExecution } from "@cowards/replay"
 import {
   INITIAL_BOUNDS,
@@ -210,10 +213,15 @@ const buildScenario = (
     eventType: ChronicleEventType
     assertions: string[]
   }>,
+  options: {
+    historicalPlayerOwnedTimeout?: boolean | undefined
+  } = {},
 ): CanonicalReplayScenario => {
   const execution = MATCH_KERNEL.runMatch({
     ...input,
-    runtime: adaptRuntimeForCurrentKernel(input.runtime),
+    runtime: options.historicalPlayerOwnedTimeout
+      ? adaptHistoricalRuntimeForCurrentKernel(input.runtime)
+      : adaptRuntimeForCurrentKernel(input.runtime),
   })
   const recorded = recordChronicleFromExecution({
     execution,
@@ -415,6 +423,7 @@ const createRuntimeFailureScenario = (): CanonicalReplayScenario =>
         ],
       },
     ],
+    { historicalPlayerOwnedTimeout: true },
   )
 
 const createEndgameScenario = (): CanonicalReplayScenario =>

@@ -1,3 +1,4 @@
+/* eslint-disable no-redeclare -- TypeScript overload signatures intentionally share implementation names. */
 import {
   RUNTIME_INVOCATION_V1_17_PLAYER_VIOLATIONS,
   RUNTIME_INVOCATION_V1_17_SYSTEM_FAILURE_CODES,
@@ -62,6 +63,7 @@ const requestFor = (request: KernelEffectRequest) =>
 const boundResult = <TValue extends StrategyResult | SoldierBrainResult>(
   request: KernelEffectRequest,
   legacy: CandidateRuntimeInvocationResult<TValue>,
+  timeoutOwnership: "unproven_system" | "historical_player_resource",
 ): CandidateBoundRuntimeInvocationV117<TValue> => {
   if (!("ok" in legacy)) return legacy
   const authenticatedRequest = requestFor(request)
@@ -89,15 +91,24 @@ const boundResult = <TValue extends StrategyResult | SoldierBrainResult>(
       trace,
     }
   } else if (legacy.violation.type === "TIMEOUT") {
-    outcome = {
-      kind: "system_failure",
-      failure: {
-        code: "TIMEOUT",
-        publicMessage: "Runtime system failure.",
-        retryable: RUNTIME_INVOCATION_V1_17_SYSTEM_FAILURE_RETRYABILITY.TIMEOUT,
-      },
-      trace,
-    }
+    outcome =
+      timeoutOwnership === "historical_player_resource"
+        ? {
+            kind: "player_violation",
+            violation:
+              RUNTIME_INVOCATION_V1_17_PLAYER_VIOLATIONS.RESOURCE_EXHAUSTION,
+            trace,
+          }
+        : {
+            kind: "system_failure",
+            failure: {
+              code: "TIMEOUT",
+              publicMessage: "Runtime system failure.",
+              retryable:
+                RUNTIME_INVOCATION_V1_17_SYSTEM_FAILURE_RETRYABILITY.TIMEOUT,
+            },
+            trace,
+          }
   } else {
     const violation =
       RUNTIME_INVOCATION_V1_17_PLAYER_VIOLATIONS[
@@ -122,8 +133,9 @@ const boundResult = <TValue extends StrategyResult | SoldierBrainResult>(
 export type CurrentKernelTestRuntime = CandidateStrategyRuntime &
   CanonicalStrategyRuntime
 
-export const adaptRuntimeForCurrentKernel = (
+const adaptRuntimeForCurrentKernelWithTimeoutOwnership = (
   runtime: CandidateStrategyRuntime,
+  timeoutOwnership: "unproven_system" | "historical_player_resource",
 ): CurrentKernelTestRuntime => {
   function selectActivations(
     input: StrategyInput,
@@ -138,7 +150,9 @@ export const adaptRuntimeForCurrentKernel = (
     request?: KernelSelectActivationsRequest,
   ): CandidateRuntimeInvocationResult<StrategyResult> {
     const legacy = runtime.selectActivations(input)
-    return request === undefined ? legacy : boundResult(request, legacy)
+    return request === undefined
+      ? legacy
+      : boundResult(request, legacy, timeoutOwnership)
   }
 
   function runSoldierBrain(
@@ -154,8 +168,28 @@ export const adaptRuntimeForCurrentKernel = (
     request?: KernelSoldierBrainRequest,
   ): CandidateRuntimeInvocationResult<SoldierBrainResult> {
     const legacy = runtime.runSoldierBrain(input)
-    return request === undefined ? legacy : boundResult(request, legacy)
+    return request === undefined
+      ? legacy
+      : boundResult(request, legacy, timeoutOwnership)
   }
 
   return { selectActivations, runSoldierBrain }
 }
+
+export const adaptRuntimeForCurrentKernel = (
+  runtime: CandidateStrategyRuntime,
+): CurrentKernelTestRuntime =>
+  adaptRuntimeForCurrentKernelWithTimeoutOwnership(runtime, "unproven_system")
+
+/**
+ * Immutable historical-fixture replay only. The caller supplies evidence that
+ * a legacy TIMEOUT represented player-owned resource exhaustion, allowing the
+ * v1.17 private classification to retain v1.4 TIMEOUT gameplay vocabulary.
+ */
+export const adaptHistoricalRuntimeForCurrentKernel = (
+  runtime: CandidateStrategyRuntime,
+): CurrentKernelTestRuntime =>
+  adaptRuntimeForCurrentKernelWithTimeoutOwnership(
+    runtime,
+    "historical_player_resource",
+  )
