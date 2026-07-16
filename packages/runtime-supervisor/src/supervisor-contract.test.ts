@@ -252,7 +252,9 @@ describe("shared runtime supervisor v1.18 contract", () => {
       "REQUEST_CANONICAL_JSON_INVALID",
     )
 
-    const substituted = clone(request)
+    const substituted = clone(request) as unknown as {
+      input: { bytesBase64: string }
+    }
     substituted.input.bytesBase64 = Buffer.from('{"changed":true}').toString(
       "base64",
     )
