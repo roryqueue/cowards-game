@@ -1,4 +1,5 @@
 import {
+  mkdirSync,
   mkdtempSync,
   readFileSync,
   rmSync,
@@ -15,6 +16,7 @@ import {
   evaluateV137HistoricalV116,
   evaluateV137OutcomeSemantics,
   evaluateV137RuntimeBudgets,
+  evaluateV137RuntimeAbiTestReceipt,
   evaluateV137SourceIdentity,
   evaluateV137TypescriptGoParity,
   parseV137RuntimeAbiEvaluatorArgs,
@@ -295,11 +297,23 @@ describe("Phase 258 integrated runtime ABI evaluator", () => {
 
   it("summarizes only exact PASS/not-SKIP receipt rows", () => {
     const receipt = {
-      schemaVersion: "runtime-abi-v1.17-test-receipt-v1" as const,
+      schemaVersion: "runtime-abi-v1.17-test-receipt-v2" as const,
       activationPlan: "258-14" as const,
       stage: "postactivation" as const,
       testManifestSha256: `sha256:${"c".repeat(64)}` as const,
       selectedCommandCount: 2,
+      provenance: {
+        mode: "local-authoritative-rerun-v1" as const,
+        git: {
+          executionCommit: "a".repeat(40),
+          executionTree: "b".repeat(40),
+          worktreeStateSha256:
+            "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" as const,
+          worktreeClean: true as const,
+        },
+        commandDefinitionsSha256: `sha256:${"d".repeat(64)}` as const,
+        outputDigestProfile: "runtime-abi-named-evidence-v1" as const,
+      },
       results: [
         {
           id: "phase258.service-and-engine",
@@ -312,6 +326,12 @@ describe("Phase 258 integrated runtime ABI evaluator", () => {
           skippedCount: 0 as const,
           databaseRequired: false,
           databaseObserved: false,
+          exitStatus: 0 as const,
+          commandSha256: `sha256:${"1".repeat(64)}` as const,
+          stdoutSha256: `sha256:${"2".repeat(64)}` as const,
+          stderrSha256: `sha256:${"3".repeat(64)}` as const,
+          outputSha256: `sha256:${"4".repeat(64)}` as const,
+          namedEvidenceSha256: `sha256:${"5".repeat(64)}` as const,
         },
         {
           id: "phase258.database",
@@ -324,6 +344,12 @@ describe("Phase 258 integrated runtime ABI evaluator", () => {
           skippedCount: 0 as const,
           databaseRequired: true,
           databaseObserved: true,
+          exitStatus: 0 as const,
+          commandSha256: `sha256:${"6".repeat(64)}` as const,
+          stdoutSha256: `sha256:${"7".repeat(64)}` as const,
+          stderrSha256: `sha256:${"8".repeat(64)}` as const,
+          outputSha256: `sha256:${"9".repeat(64)}` as const,
+          namedEvidenceSha256: `sha256:${"a".repeat(64)}` as const,
         },
       ],
     }
@@ -345,5 +371,38 @@ describe("Phase 258 integrated runtime ABI evaluator", () => {
         ],
       }),
     ).toThrow(/incomplete/u)
+  })
+
+  it("requires both provenance verification and an authoritative exact-command rerun", () => {
+    const temporaryRoot = mkdtempSync(
+      path.join(tmpdir(), "runtime-abi-receipt-evaluator-"),
+    )
+    const artifactDirectory = path.join(
+      temporaryRoot,
+      "packages/spec/artifacts",
+    )
+    mkdirSync(artifactDirectory, { recursive: true })
+    try {
+      for (const name of [
+        "runtime-abi-v1.17-test-manifest.json",
+        "runtime-abi-v1.17-test-receipt.json",
+      ]) {
+        writeFileSync(
+          path.join(artifactDirectory, name),
+          readFileSync(
+            path.join(repoRoot, "packages/spec/artifacts", name),
+          ),
+        )
+      }
+      const calls: string[] = []
+      const summary = evaluateV137RuntimeAbiTestReceipt(temporaryRoot, {
+        verifyProvenance: () => calls.push("provenance"),
+        verifyByRerun: () => calls.push("rerun"),
+      })
+      expect(calls).toEqual(["provenance", "rerun"])
+      expect(summary.selectedCommandCount).toBeGreaterThan(0)
+    } finally {
+      rmSync(temporaryRoot, { recursive: true, force: true })
+    }
   })
 })

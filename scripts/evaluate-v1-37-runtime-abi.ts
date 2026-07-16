@@ -78,7 +78,10 @@ import {
   RUNTIME_ABI_TEST_RECEIPT_PATH,
   parseRuntimeAbiTestManifest,
   parseRuntimeAbiTestReceipt,
+  verifyRuntimeAbiTestReceiptByRerun,
+  verifyRuntimeAbiTestReceiptProvenance,
   type RuntimeAbiTestReceipt,
+  type RuntimeAbiTestManifest,
 } from "./run-v1-37-runtime-abi-test-manifest.js"
 
 const defaultRepoRoot = path.resolve(
@@ -688,6 +691,16 @@ export const summarizeV137RuntimeAbiTestReceipt = (
 
 export const evaluateV137RuntimeAbiTestReceipt = (
   root: string = defaultRepoRoot,
+  options: {
+    verifyProvenance?: ((
+      receipt: RuntimeAbiTestReceipt,
+      manifest: RuntimeAbiTestManifest,
+    ) => void) | undefined
+    verifyByRerun?: ((
+      receipt: RuntimeAbiTestReceipt,
+      manifest: RuntimeAbiTestManifest,
+    ) => void) | undefined
+  } = {},
 ): V137RuntimeAbiTestReceiptSummary => {
   const manifestBytes = readFileSync(
     path.join(root, RUNTIME_ABI_TEST_MANIFEST_PATH),
@@ -703,6 +716,23 @@ export const evaluateV137RuntimeAbiTestReceipt = (
       requiredStage: "postactivation",
     },
   )
+  ;(
+    options.verifyProvenance ??
+    ((candidate, candidateManifest) =>
+      verifyRuntimeAbiTestReceiptProvenance(candidate, {
+        manifest: candidateManifest,
+        repoRoot: root,
+      }))
+  )(receipt, manifest)
+  ;(
+    options.verifyByRerun ??
+    ((candidate, candidateManifest) =>
+      verifyRuntimeAbiTestReceiptByRerun(candidate, {
+        manifest: candidateManifest,
+        repoRoot: root,
+        emitOutput: true,
+      }))
+  )(receipt, manifest)
   return summarizeV137RuntimeAbiTestReceipt(receipt)
 }
 

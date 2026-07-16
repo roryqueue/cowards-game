@@ -9,12 +9,21 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { describe, expect, it } from "vitest"
 import {
+  captureRuntimeAbiTestReceiptProvenance,
   createRuntimeAbiTestReceipt,
   parseRuntimeAbiTestReceipt,
   parseRuntimeAbiTestManifest,
+  projectRuntimeAbiTestExecutionResult,
   projectRuntimeAbiTestResult,
+  runtimeAbiCommandDefinitionsSha256,
   validateGoTestSourceOwnership,
   validateRuntimeAbiTestResult,
+  verifyRuntimeAbiTestReceiptByRerun,
+  verifyRuntimeAbiTestReceiptProvenance,
+  type RuntimeAbiTestEntry,
+  type RuntimeAbiTestManifest,
+  type RuntimeAbiTestReceiptProvenance,
+  type RuntimeAbiTestReceiptResult,
 } from "./run-v1-37-runtime-abi-test-manifest.js"
 
 type TestManifest = {
@@ -35,6 +44,45 @@ const manifest = (): TestManifest =>
       "utf8",
     ),
   ) as TestManifest
+
+const syntheticProvenance = (
+  parsed: RuntimeAbiTestManifest,
+): RuntimeAbiTestReceiptProvenance => ({
+  mode: "local-authoritative-rerun-v1",
+  git: {
+    executionCommit: "a".repeat(40),
+    executionTree: "b".repeat(40),
+    worktreeStateSha256:
+      "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    worktreeClean: true,
+  },
+  commandDefinitionsSha256: runtimeAbiCommandDefinitionsSha256(parsed.tests),
+  outputDigestProfile: "runtime-abi-named-evidence-v1",
+})
+
+const passingOutput = (test: RuntimeAbiTestEntry): string => {
+  switch (test.kind) {
+    case "vitest":
+      return `${test.ownedFiles.map((path) => ` ✓ ${path}`).join("\n")}\n${test.expectedOutput.join("\n")}\n Test Files  ${test.ownedFiles.length} passed (${test.ownedFiles.length})\n Tests  1 passed (1)`
+    case "go":
+      return `=== RUN   ${test.namedResult}\n--- PASS: ${test.namedResult} (0.00s)\nPASS\nok example.test 0.001s`
+    case "playwright":
+      return `${test.ownedFiles[0]}\n${test.expectedOutput.join("\n")}\n1 passed`
+    case "command":
+      throw new Error("unsupported")
+  }
+}
+
+const syntheticResults = (
+  parsed: RuntimeAbiTestManifest,
+): readonly RuntimeAbiTestReceiptResult[] =>
+  parsed.tests.map((test) =>
+    projectRuntimeAbiTestExecutionResult(
+      test,
+      { status: 0, stdout: passingOutput(test), stderr: "" },
+      test.database !== undefined,
+    ),
+  )
 
 describe("Phase 258 exact runtime ABI test manifest", () => {
   it("exposes exact package entry points for closure and staged execution", () => {
@@ -215,34 +263,40 @@ describe("Phase 258 exact runtime ABI test manifest", () => {
     )
     const parsed = parseRuntimeAbiTestManifest(JSON.parse(raw.toString("utf8")))
     const selected = parsed.tests
-    const results = selected.map((test) => ({
-      id: test.id,
-      stage: test.stage,
-      kind: test.kind,
-      namedResult: test.namedResult,
-      ownedFiles: [...test.ownedFiles],
-      status: "PASS" as const,
-      passedCount: 1,
-      skippedCount: 0 as const,
-      databaseRequired: test.database !== undefined,
-      databaseObserved: test.database !== undefined,
-    }))
+    const results = syntheticResults(parsed)
     const receipt = createRuntimeAbiTestReceipt({
       stage: "postactivation",
       manifestBytes: raw,
       manifest: parsed,
+      provenance: syntheticProvenance(parsed),
       results,
     })
 
     expect(receipt).toMatchObject({
-      schemaVersion: "runtime-abi-v1.17-test-receipt-v1",
+      schemaVersion: "runtime-abi-v1.17-test-receipt-v2",
       activationPlan: "258-14",
       stage: "postactivation",
       selectedCommandCount: selected.length,
+      provenance: {
+        mode: "local-authoritative-rerun-v1",
+        outputDigestProfile: "runtime-abi-named-evidence-v1",
+      },
     })
     expect(receipt.testManifestSha256).toMatch(/^sha256:[0-9a-f]{64}$/u)
+    for (const result of receipt.results) {
+      expect(result).toMatchObject({ exitStatus: 0, status: "PASS" })
+      for (const digest of [
+        result.commandSha256,
+        result.stdoutSha256,
+        result.stderrSha256,
+        result.outputSha256,
+        result.namedEvidenceSha256,
+      ]) {
+        expect(digest).toMatch(/^sha256:[0-9a-f]{64}$/u)
+      }
+    }
     expect(JSON.stringify(receipt)).not.toMatch(
-      /DATABASE_URL|postgres(?:ql)?|"duration|"stderr"|"stdout"|"command"|"environment"/iu,
+      /DATABASE_URL|postgres(?:ql)?|"duration|"stderr":|"stdout":|"command":|"environment"/iu,
     )
     expect(() =>
       parseRuntimeAbiTestReceipt(receipt, {
@@ -258,22 +312,12 @@ describe("Phase 258 exact runtime ABI test manifest", () => {
       "packages/spec/artifacts/runtime-abi-v1.17-test-manifest.json",
     )
     const parsed = parseRuntimeAbiTestManifest(JSON.parse(raw.toString("utf8")))
-    const results = parsed.tests.map((test) => ({
-      id: test.id,
-      stage: test.stage,
-      kind: test.kind,
-      namedResult: test.namedResult,
-      ownedFiles: [...test.ownedFiles],
-      status: "PASS" as const,
-      passedCount: 1,
-      skippedCount: 0 as const,
-      databaseRequired: test.database !== undefined,
-      databaseObserved: test.database !== undefined,
-    }))
+    const results = syntheticResults(parsed)
     const valid = createRuntimeAbiTestReceipt({
       stage: "postactivation",
       manifestBytes: raw,
       manifest: parsed,
+      provenance: syntheticProvenance(parsed),
       results,
     })
     const options = {
@@ -296,9 +340,145 @@ describe("Phase 258 exact runtime ABI test manifest", () => {
         ),
       },
       { ...valid, testManifestSha256: `sha256:${"0".repeat(64)}` },
+      {
+        ...valid,
+        provenance: {
+          ...valid.provenance,
+          commandDefinitionsSha256: `sha256:${"0".repeat(64)}`,
+        },
+      },
     ]
     for (const attacked of attacks) {
       expect(() => parseRuntimeAbiTestReceipt(attacked, options)).toThrow()
     }
+  })
+
+  it("binds the authoritative receipt to an exact clean commit, tree, and command set", () => {
+    const parsed = parseRuntimeAbiTestManifest(manifest())
+    const responses = new Map<string, string>([
+      ["rev-parse HEAD", "a".repeat(40)],
+      ["rev-parse HEAD^{tree}", "b".repeat(40)],
+      ["status --porcelain=v1 --untracked-files=all", ""],
+    ])
+    const provenance = captureRuntimeAbiTestReceiptProvenance({
+      manifest: parsed,
+      stage: "postactivation",
+      runGit: (args) => ({
+        status: 0,
+        stdout: `${responses.get(args.join(" ")) ?? ""}\n`.replace(/^\n$/u, ""),
+        stderr: "",
+      }),
+    })
+    expect(provenance).toEqual(syntheticProvenance(parsed))
+    expect(() =>
+      captureRuntimeAbiTestReceiptProvenance({
+        manifest: parsed,
+        stage: "postactivation",
+        runGit: (args) => ({
+          status: 0,
+          stdout:
+            args[0] === "status"
+              ? " M scripts/fabricated.ts\n"
+              : `${(args.at(-1) === "HEAD^{tree}" ? "b" : "a").repeat(40)}\n`,
+          stderr: "",
+        }),
+      }),
+    ).toThrow(/clean execution worktree/iu)
+  })
+
+  it("rejects fabricated or stale provenance and reruns exact command evidence", () => {
+    const raw = readFileSync(
+      "packages/spec/artifacts/runtime-abi-v1.17-test-manifest.json",
+    )
+    const parsed = parseRuntimeAbiTestManifest(JSON.parse(raw.toString("utf8")))
+    const results = syntheticResults(parsed)
+    const receipt = createRuntimeAbiTestReceipt({
+      stage: "postactivation",
+      manifestBytes: raw,
+      manifest: parsed,
+      provenance: syntheticProvenance(parsed),
+      results,
+    })
+    const runGit = (
+      args: readonly string[],
+      options?: { readonly allowFailure?: boolean },
+    ) => {
+      const joined = args.join(" ")
+      if (joined === `rev-parse ${"a".repeat(40)}^{tree}`) {
+        return { status: 0, stdout: `${"b".repeat(40)}\n`, stderr: "" }
+      }
+      if (joined === "rev-parse HEAD") {
+        return { status: 0, stdout: `${"c".repeat(40)}\n`, stderr: "" }
+      }
+      if (joined.startsWith("merge-base --is-ancestor")) {
+        return { status: 0, stdout: "", stderr: "" }
+      }
+      if (joined.startsWith("diff --name-only")) {
+        return {
+          status: 0,
+          stdout:
+            "packages/spec/artifacts/runtime-abi-v1.17-test-receipt.json\n",
+          stderr: "",
+        }
+      }
+      if (joined === "status --porcelain=v1 --untracked-files=all") {
+        return { status: 0, stdout: "", stderr: "" }
+      }
+      return {
+        status: options?.allowFailure ? 1 : 0,
+        stdout: "",
+        stderr: "",
+      }
+    }
+    expect(() =>
+      verifyRuntimeAbiTestReceiptProvenance(receipt, {
+        manifest: parsed,
+        runGit,
+      }),
+    ).not.toThrow()
+    expect(() =>
+      verifyRuntimeAbiTestReceiptByRerun(receipt, {
+        manifest: parsed,
+        execute: (test) => results.find(({ id }) => id === test.id)!,
+      }),
+    ).not.toThrow()
+
+    expect(() =>
+      verifyRuntimeAbiTestReceiptProvenance(receipt, {
+        manifest: parsed,
+        runGit: (args, options) =>
+          args[0] === "diff"
+            ? {
+                status: 0,
+                stdout: "scripts/fabricated-source.ts\n",
+                stderr: "",
+              }
+            : runGit(args, options),
+      }),
+    ).toThrow(/stale after source changes/iu)
+    expect(() =>
+      verifyRuntimeAbiTestReceiptProvenance(receipt, {
+        manifest: parsed,
+        runGit: (args, options) =>
+          args[0] === "status"
+            ? {
+                status: 0,
+                stdout: " M scripts/fabricated-source.ts\n",
+                stderr: "",
+              }
+            : runGit(args, options),
+      }),
+    ).toThrow(/worktree is dirty/iu)
+    expect(() =>
+      verifyRuntimeAbiTestReceiptByRerun(receipt, {
+        manifest: parsed,
+        execute: (test) => {
+          const result = results.find(({ id }) => id === test.id)!
+          return test.id === parsed.tests[0]!.id
+            ? { ...result, stdoutSha256: `sha256:${"0".repeat(64)}` }
+            : result
+        },
+      }),
+    ).toThrow(/rerun evidence mismatch/iu)
   })
 })
