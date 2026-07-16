@@ -70,7 +70,9 @@ status: complete
 - Captured raw file SHA-256, byte length, POSIX mode, HEAD blob identity/mode, exact unstaged and cached `git diff --binary --no-ext-diff` bytes/hash/length, and exact per-path porcelain status.
 - Stored diff bytes as canonical Base64 so later checks compare exact bytes rather than declarations or normalized text.
 - Added deterministic artifact self-hashing and write-once identical-only behavior. A changed checkout cannot rewrite its baseline, and a changed baseline cannot pass its own parser.
-- Made isolated execution observe the primary checkout read-only. The script writes only the evidence artifact in its execution checkout and never stages, restores, chmods, normalizes, or writes either protected path.
+- Made isolated execution observe the exact primary checkout read-only, bound through the execution checkout's Git common directory and registered primary worktree. Environment overrides cannot redirect the production `--check`.
+- Canonical-byte validation now reconstructs every nested object in fixed field order and requires the final newline, so semantically equal key reordering cannot mutate write-once evidence bytes.
+- The script writes only the evidence artifact in its execution checkout and never stages, restores, chmods, normalizes, or writes either protected path.
 - Proved the live requested state exactly:
   - config raw `a9502647c42da6e83564e56e35833a66d2daad6704f2ac2a2d98cf12cc953f7b`, unstaged diff `1372d196c86ee3907fcac07a7075b06814f2eaedf328314a31641713c71e6765`
   - spec raw `01b0a95c79e2ba5e8a089abe7106856e7f081bb10193d5ab8e86171f6ee0fa46`, unstaged diff `ae29a7dbf894437668f880f7775904eeb580b0e82c99a91cba0dbf9e611bcd2d`
@@ -82,6 +84,8 @@ status: complete
 |---|---|
 | `5ac119f` | RED tests for protected state, drift, and write-once behavior |
 | `00c7eb1` | Capture/check command and exact live baseline artifact |
+| `53abf3b` | `BL-04` recursive canonical-byte enforcement |
+| `fb07bff` | `BL-05` exact primary-worktree production binding |
 
 ## Decisions Made
 
@@ -103,20 +107,37 @@ status: complete
 - **Verification:** All clean, modified, staged, mixed, and mutation fixtures pass.
 - **Commit:** `00c7eb1`
 
-**Total deviations:** 1 auto-fixed bug. **Impact:** Portable exact-root validation without relaxing repository containment.
+**2. [Post-plan code review] Enforced recursive canonical artifact bytes**
+
+- **Found during:** Independent review of Plans 259-24 and 259-29
+- **Issue:** Nested key reordering survived parsing and rendering because parsed object insertion order was retained.
+- **Fix:** Reconstructed capture policy, path, raw, HEAD, and diff evidence in fixed order before rendering and required the canonical trailing newline.
+- **Verification:** Capture/parser suite passes reordered-policy, reordered-raw, and newline-negative cases.
+- **Commit:** `53abf3b`
+
+**3. [Post-plan code review] Removed production repository redirection**
+
+- **Found during:** Independent review of Plans 259-24 and 259-29
+- **Issue:** An environment variable could point production `--check` at an unrelated repository.
+- **Fix:** Removed the override and resolve the observed checkout only from the execution checkout's exact Git common directory and registered primary worktree.
+- **Verification:** An invalid redirection environment is ignored while live primary-checkout verification succeeds.
+- **Commit:** `fb07bff`
+
+**Total deviations:** 3 auto-fixed/review-fixed bugs. **Impact:** Portable exact-root validation plus canonical, non-redirectable write-once evidence without relaxing repository containment.
 
 ## Verification
 
-- `pnpm exec vitest run scripts/capture-v1-37-protected-baseline.test.ts` — 7/7 passed.
+- `pnpm exec vitest run scripts/capture-v1-37-protected-baseline.test.ts --maxWorkers=1` — 9/9 passed.
 - `pnpm exec tsx scripts/capture-v1-37-protected-baseline.ts --write` — deterministic identical capture succeeded.
 - `pnpm exec tsx scripts/capture-v1-37-protected-baseline.ts --check` — exact live primary-checkout verification succeeded.
 - Focused ESLint for the script and tests — passed.
 - Root `pnpm typecheck` — 25/25 Turbo tasks passed.
+- Root `pnpm build` and `pnpm lint` — 14/14 packages passed in each gate.
 - Final direct main-checkout re-observation reproduced all four requested raw/diff SHA-256 values, both `0644` modes, both unstaged-only statuses, and both empty cached diffs after implementation.
 
 ## Issues Encountered
 
-None.
+- Root `pnpm format:check` remains red on 99 pre-existing repository files. No unrelated formatting or protected-file normalization was performed; `git diff --check` is clean.
 
 ## Next Phase Readiness
 
@@ -127,6 +148,6 @@ None.
 ## Self-Check: PASSED
 
 - The script, tests, and artifact exist.
-- Both implementation commits exist.
+- Both implementation commits and both atomic review-fix commits exist.
 - Exact focused tests, CLI write/check, lint, and root typecheck pass.
 - The protected main checkout remains byte-for-byte, mode-for-mode, diff-for-diff, and status-for-status unchanged.

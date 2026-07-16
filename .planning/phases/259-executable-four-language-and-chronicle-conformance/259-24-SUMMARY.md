@@ -88,6 +88,7 @@ status: complete
 - Added strict request and raw-receipt schemas. Canonical request self-hashes, nonce, method, limits, profile, Linux/cgroup identity, controller delegation, monotonic counters, event deltas, lifecycle, containment, and exact executable/toolchain identities all fail closed on drift.
 - Made exact N acceptable and N+1 a player violation only with positive Strategy attribution. Ambiguous or host-owned exhaustion, truncated capture, counter contradiction, unavailable containment, cancellation ambiguity, and process uncertainty are no-mutation system failures.
 - Added one capability transition contract for TypeScript, Python, Rust, and Zig. Complete common-meter evidence can proceed to certificate review but remains uncounted until a later verified certificate installation.
+- Closed the post-review false-pass paths: containment evidence is boolean-strict, cgroup path and applied-settings identities are independently derived from the exact request, nonce, limits, executable, and supervisor identity, and impossible/non-empty initial pids snapshots fail as system failures.
 - Exported the additive APIs from `@cowards/spec` and added all three suites to the package's explicit normal test command.
 - Rechecked the four v1.17 source guards after implementation; every SHA-256 remained exactly unchanged.
 
@@ -101,6 +102,9 @@ status: complete
 | `818b240` | Common-supervisor capability gate implementation |
 | `698fa57` | Public exports and package test enumeration |
 | `94b49d7` | Canonical request self-hash verification |
+| `006eab1` | `BL-01` strict boolean containment evidence |
+| `8154a63` | `BL-02` request-derived cgroup path/settings bindings |
+| `740bd6f` | `BL-03` empty and internally ordered pids snapshots |
 
 ## Decisions Made
 
@@ -131,16 +135,27 @@ status: complete
 - **Verification:** `pnpm --filter @cowards/spec lint` passes.
 - **Commit:** `698fa57`
 
-**Total deviations:** 2 auto-fixed (1 missing critical, 1 lint bug). **Impact:** Stronger request integrity and repository-conformant code; no scope expansion or prior-version change.
+**3. [Post-plan code review] Closed three runtime evidence false-pass paths**
+
+- **Found during:** Independent review of Plans 259-24 and 259-29
+- **Issue:** Truthy string containment values could reach certificate-candidate state, cgroup path/settings receipt values were not independently request-derived, and contradictory pids snapshots could under-report the observed peak.
+- **Fix:** Added closed boolean validation, canonical domain-separated request bindings for path identity and exact cgroup settings, and fresh-empty plus peak-order pids invariants.
+- **Files modified:** `packages/spec/src/runtime-budget-capabilities-v1-18.ts`, `packages/spec/src/runtime-budget-capabilities-v1-18.test.ts`, `packages/spec/src/runtime-invocation-v1-18.ts`, `packages/spec/src/runtime-invocation-v1-18.test.ts`
+- **Verification:** Focused v1.18 capability and invocation suites pass 41/41; all four focused budget/baseline files pass 56/56; full lint, build, and typecheck pass.
+- **Commits:** `006eab1`, `8154a63`, `740bd6f`
+
+**Total deviations:** 5 auto-fixed/review-fixed issues (2 original, 3 review blockers). **Impact:** Stronger request and evidence integrity with no gameplay, failure-ownership, public-boundary, or prior-version change.
 
 ## Verification
 
 - `pnpm exec vitest run packages/spec/src/runtime-budget-profile-v1-18.test.ts packages/spec/src/runtime-invocation-v1-18.test.ts packages/spec/src/runtime-invocation-v1-17.test.ts` — 62/62 passed before the self-hash hardening; the final invocation suite passed 18/18 afterward.
 - `pnpm exec vitest run packages/spec/src/runtime-budget-capabilities-v1-18.test.ts packages/spec/src/runtime-budget-capabilities-v1-17.test.ts` — 34/34 passed.
-- `pnpm --filter @cowards/spec test` — 15 package files / 262 tests and 3 root files / 33 tests passed.
+- `pnpm --filter @cowards/spec test` — 15 package files / 269 tests passed; the three root supplemental files passed 33/33 when rerun without concurrent build pressure.
+- `pnpm exec vitest run packages/spec/src/runtime-budget-profile-v1-18.test.ts packages/spec/src/runtime-invocation-v1-18.test.ts packages/spec/src/runtime-budget-capabilities-v1-18.test.ts scripts/capture-v1-37-protected-baseline.test.ts --maxWorkers=1` — 56/56 passed after review remediation.
 - `pnpm --filter @cowards/spec build` — passed.
 - `pnpm --filter @cowards/spec lint` — passed.
 - `pnpm --filter @cowards/spec typecheck` — passed.
+- Root `pnpm build`, `pnpm lint`, and `pnpm typecheck` — all 14 build/lint packages and all 25 typecheck tasks passed.
 - Immutable v1.17 SHA-256 guards remained:
   - runtime ABI: `d09db74dc613b6fa67daf7d17e778782684ab2ebe2c954ec63bb0e979aeafbe7`
   - invocation: `305b974a2c8aa0eabb7fd31f9d40e4a2788ab8ebd2720324c21d274248b94f2e`
@@ -149,7 +164,7 @@ status: complete
 
 ## Issues Encountered
 
-None.
+- Root `pnpm format:check` remains red on 99 pre-existing repository files, including the already-unformatted Plan-24 source files. The fix pass did not bulk-reformat unrelated code; `git diff --check`, lint, build, and typecheck are clean.
 
 ## Next Phase Readiness
 
@@ -160,6 +175,6 @@ None.
 ## Self-Check: PASSED
 
 - All declared implementation and test files exist.
-- All six task commits exist.
+- All six task commits and all three atomic review-fix commits exist.
 - Full package tests, build, lint, and typecheck pass.
 - No v1.17 or protected user-owned file changed.
