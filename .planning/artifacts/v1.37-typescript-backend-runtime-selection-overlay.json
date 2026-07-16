@@ -120,6 +120,13 @@
       "selectionAuthority": "packages/spec/src/versions.ts"
     },
     {
+      "path": "packages/runtime-js/src/revision-v1-18.ts",
+      "role": "runtime-adapter",
+      "lifecycle": "selected_by_pointer",
+      "gate": "selected-current Strategy runtime ABI from the authoritative activation pointer",
+      "selectionAuthority": "packages/spec/src/versions.ts"
+    },
+    {
       "path": "packages/runtime-js/src/revision.ts",
       "role": "runtime-adapter",
       "lifecycle": "selected_by_pointer",
@@ -156,6 +163,13 @@
     },
     {
       "path": "packages/runtime-js/src/subprocess-ipc.ts",
+      "role": "runtime-adapter",
+      "lifecycle": "selected_by_pointer",
+      "gate": "selected-current Strategy runtime ABI from the authoritative activation pointer",
+      "selectionAuthority": "packages/spec/src/versions.ts"
+    },
+    {
+      "path": "packages/runtime-js/src/supervised-subprocess-adapter.ts",
       "role": "runtime-adapter",
       "lifecycle": "selected_by_pointer",
       "gate": "selected-current Strategy runtime ABI from the authoritative activation pointer",
@@ -212,6 +226,13 @@
     },
     {
       "path": "apps/runtime-service/src/execute-match.ts",
+      "role": "runtime-service",
+      "lifecycle": "selected_by_pointer",
+      "gate": "selected-current runtime execution service schema from the authoritative activation pointer and DB-free boundary",
+      "selectionAuthority": "apps/runtime-service/src/runtime-config.ts"
+    },
+    {
+      "path": "apps/runtime-service/src/four-language-conformance-runner.ts",
       "role": "runtime-service",
       "lifecycle": "selected_by_pointer",
       "gate": "selected-current runtime execution service schema from the authoritative activation pointer and DB-free boundary",
@@ -275,6 +296,13 @@
     },
     {
       "path": "apps/runtime-service/src/semantic-receipt-v1-17.ts",
+      "role": "runtime-service",
+      "lifecycle": "selected_by_pointer",
+      "gate": "selected-current runtime execution service schema from the authoritative activation pointer and DB-free boundary",
+      "selectionAuthority": "apps/runtime-service/src/runtime-config.ts"
+    },
+    {
+      "path": "apps/runtime-service/src/semantic-receipt-v1-18-issuer.ts",
       "role": "runtime-service",
       "lifecycle": "selected_by_pointer",
       "gate": "selected-current runtime execution service schema from the authoritative activation pointer and DB-free boundary",
