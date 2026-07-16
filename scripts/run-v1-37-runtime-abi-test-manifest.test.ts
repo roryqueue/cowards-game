@@ -9,7 +9,10 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { describe, expect, it } from "vitest"
 import {
+  createRuntimeAbiTestReceipt,
+  parseRuntimeAbiTestReceipt,
   parseRuntimeAbiTestManifest,
+  projectRuntimeAbiTestResult,
   validateGoTestSourceOwnership,
   validateRuntimeAbiTestResult,
 } from "./run-v1-37-runtime-abi-test-manifest.js"
@@ -148,6 +151,21 @@ describe("Phase 258 exact runtime ABI test manifest", () => {
         `${namedFiles}\n ✓ rejects all-skipped Vitest output\n Test Files  ${fileCount} passed (${fileCount})\n Tests  19 passed (19)`,
       ),
     ).not.toThrow()
+
+    expect(
+      projectRuntimeAbiTestResult(
+        test,
+        `${namedFiles}\n Test Files  ${fileCount} passed (${fileCount})\n Tests  19 passed (19)`,
+        false,
+      ),
+    ).toMatchObject({
+      id: "phase258.scripts",
+      status: "PASS",
+      passedCount: 19,
+      skippedCount: 0,
+      databaseRequired: false,
+      databaseObserved: false,
+    })
   })
 
   it("proves exact named Go test ownership from syntax, not verbose markers", () => {
@@ -188,6 +206,99 @@ describe("Phase 258 exact runtime ABI test manifest", () => {
       )
     } finally {
       rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  it("projects a deterministic privacy-safe receipt bound to the exact manifest", () => {
+    const raw = readFileSync(
+      "packages/spec/artifacts/runtime-abi-v1.17-test-manifest.json",
+    )
+    const parsed = parseRuntimeAbiTestManifest(JSON.parse(raw.toString("utf8")))
+    const selected = parsed.tests
+    const results = selected.map((test) => ({
+      id: test.id,
+      stage: test.stage,
+      kind: test.kind,
+      namedResult: test.namedResult,
+      ownedFiles: [...test.ownedFiles],
+      status: "PASS" as const,
+      passedCount: 1,
+      skippedCount: 0 as const,
+      databaseRequired: test.database !== undefined,
+      databaseObserved: test.database !== undefined,
+    }))
+    const receipt = createRuntimeAbiTestReceipt({
+      stage: "postactivation",
+      manifestBytes: raw,
+      manifest: parsed,
+      results,
+    })
+
+    expect(receipt).toMatchObject({
+      schemaVersion: "runtime-abi-v1.17-test-receipt-v1",
+      activationPlan: "258-14",
+      stage: "postactivation",
+      selectedCommandCount: selected.length,
+    })
+    expect(receipt.testManifestSha256).toMatch(/^sha256:[0-9a-f]{64}$/u)
+    expect(JSON.stringify(receipt)).not.toMatch(
+      /DATABASE_URL|postgres(?:ql)?|"duration|"stderr"|"stdout"|"command"|"environment"/iu,
+    )
+    expect(() =>
+      parseRuntimeAbiTestReceipt(receipt, {
+        manifestBytes: raw,
+        manifest: parsed,
+        requiredStage: "postactivation",
+      }),
+    ).not.toThrow()
+  })
+
+  it("rejects partial, fake, skipped, and stale test receipts", () => {
+    const raw = readFileSync(
+      "packages/spec/artifacts/runtime-abi-v1.17-test-manifest.json",
+    )
+    const parsed = parseRuntimeAbiTestManifest(JSON.parse(raw.toString("utf8")))
+    const results = parsed.tests.map((test) => ({
+      id: test.id,
+      stage: test.stage,
+      kind: test.kind,
+      namedResult: test.namedResult,
+      ownedFiles: [...test.ownedFiles],
+      status: "PASS" as const,
+      passedCount: 1,
+      skippedCount: 0 as const,
+      databaseRequired: test.database !== undefined,
+      databaseObserved: test.database !== undefined,
+    }))
+    const valid = createRuntimeAbiTestReceipt({
+      stage: "postactivation",
+      manifestBytes: raw,
+      manifest: parsed,
+      results,
+    })
+    const options = {
+      manifestBytes: raw,
+      manifest: parsed,
+      requiredStage: "postactivation" as const,
+    }
+    const attacks = [
+      { ...valid, results: valid.results.slice(1) },
+      {
+        ...valid,
+        results: valid.results.map((result, index) =>
+          index === 0 ? { ...result, namedResult: "fake-pass" } : result,
+        ),
+      },
+      {
+        ...valid,
+        results: valid.results.map((result, index) =>
+          index === 0 ? { ...result, skippedCount: 1 } : result,
+        ),
+      },
+      { ...valid, testManifestSha256: `sha256:${"0".repeat(64)}` },
+    ]
+    for (const attacked of attacks) {
+      expect(() => parseRuntimeAbiTestReceipt(attacked, options)).toThrow()
     }
   })
 })

@@ -1,5 +1,6 @@
+import { createHash } from "node:crypto"
 import { spawnSync } from "node:child_process"
-import { readFileSync } from "node:fs"
+import { readFileSync, renameSync, rmSync, writeFileSync } from "node:fs"
 import { basename, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
 
@@ -23,11 +24,38 @@ export type RuntimeAbiTestEntry = Readonly<{
   }>
 }>
 
-type TestManifest = Readonly<{
+export type RuntimeAbiTestManifest = Readonly<{
   schemaVersion: "runtime-abi-v1.17-test-manifest-v1"
   activationPlan: "258-14"
   tests: readonly RuntimeAbiTestEntry[]
 }>
+
+export const RUNTIME_ABI_TEST_MANIFEST_PATH =
+  "packages/spec/artifacts/runtime-abi-v1.17-test-manifest.json" as const
+export const RUNTIME_ABI_TEST_RECEIPT_PATH =
+  "packages/spec/artifacts/runtime-abi-v1.17-test-receipt.json" as const
+
+export interface RuntimeAbiTestReceiptResult {
+  id: string
+  stage: RuntimeAbiTestStage
+  kind: RuntimeAbiTestEntry["kind"]
+  namedResult: string
+  ownedFiles: readonly string[]
+  status: "PASS"
+  passedCount: number
+  skippedCount: 0
+  databaseRequired: boolean
+  databaseObserved: boolean
+}
+
+export interface RuntimeAbiTestReceipt {
+  schemaVersion: "runtime-abi-v1.17-test-receipt-v1"
+  activationPlan: "258-14"
+  stage: RuntimeAbiTestStage
+  testManifestSha256: `sha256:${string}`
+  selectedCommandCount: number
+  results: readonly RuntimeAbiTestReceiptResult[]
+}
 
 const stageRank: Readonly<Record<RuntimeAbiTestStage, number>> = {
   preactivation: 0,
@@ -174,6 +202,57 @@ export const validateRuntimeAbiTestResult = (
   }
 }
 
+export const projectRuntimeAbiTestResult = (
+  test: RuntimeAbiTestEntry,
+  output: string,
+  databaseObserved: boolean,
+): RuntimeAbiTestReceiptResult => {
+  validateRuntimeAbiTestResult(test, output)
+  let passedCount: number
+  switch (test.kind) {
+    case "vitest": {
+      const match =
+        /(?:^|\n)\s*Tests\s+([1-9][0-9]*) passed \([1-9][0-9]*\)/u.exec(output)
+      if (match?.[1] === undefined) {
+        throw new TypeError(`${test.id} omitted the structured Vitest count.`)
+      }
+      passedCount = Number(match[1])
+      break
+    }
+    case "go":
+      passedCount = 1
+      break
+    case "playwright": {
+      const match = /\b([1-9][0-9]*) passed\b/u.exec(output)
+      if (match?.[1] === undefined) {
+        throw new TypeError(
+          `${test.id} omitted the structured Playwright count.`,
+        )
+      }
+      passedCount = Number(match[1])
+      break
+    }
+    case "command":
+      throw new TypeError(`${test.id} used an unsupported generic command.`)
+  }
+  const databaseRequired = test.database !== undefined
+  if (databaseObserved !== databaseRequired) {
+    throw new TypeError(`${test.id} has inconsistent database observation.`)
+  }
+  return {
+    id: test.id,
+    stage: test.stage,
+    kind: test.kind,
+    namedResult: test.namedResult,
+    ownedFiles: [...test.ownedFiles],
+    status: "PASS",
+    passedCount,
+    skippedCount: 0,
+    databaseRequired,
+    databaseObserved,
+  }
+}
+
 export const validateGoTestSourceOwnership = (
   test: RuntimeAbiTestEntry,
   repoRoot: string,
@@ -215,7 +294,9 @@ export const validateGoTestSourceOwnership = (
   }
 }
 
-export const parseRuntimeAbiTestManifest = (value: unknown): TestManifest => {
+export const parseRuntimeAbiTestManifest = (
+  value: unknown,
+): RuntimeAbiTestManifest => {
   if (
     !isRecord(value) ||
     value.schemaVersion !== "runtime-abi-v1.17-test-manifest-v1" ||
@@ -308,24 +389,206 @@ export const parseRuntimeAbiTestManifest = (value: unknown): TestManifest => {
   }
 }
 
+const exactKeys = (
+  value: Record<string, unknown>,
+  expected: readonly string[],
+): boolean => {
+  const actual = Object.keys(value).sort()
+  const wanted = [...expected].sort()
+  return (
+    actual.length === wanted.length &&
+    actual.every((key, index) => key === wanted[index])
+  )
+}
+
+const manifestSha256 = (bytes: Uint8Array): `sha256:${string}` =>
+  `sha256:${createHash("sha256").update(bytes).digest("hex")}`
+
+const selectedRuntimeAbiTests = (
+  manifest: RuntimeAbiTestManifest,
+  stage: RuntimeAbiTestStage,
+): readonly RuntimeAbiTestEntry[] =>
+  manifest.tests.filter((test) => stageRank[test.stage] <= stageRank[stage])
+
+export const createRuntimeAbiTestReceipt = (input: {
+  stage: RuntimeAbiTestStage
+  manifestBytes: Uint8Array
+  manifest: RuntimeAbiTestManifest
+  results: readonly RuntimeAbiTestReceiptResult[]
+}): RuntimeAbiTestReceipt => {
+  const selected = selectedRuntimeAbiTests(input.manifest, input.stage)
+  if (selected.length === 0 || input.results.length !== selected.length) {
+    throw new TypeError("Runtime ABI test receipt is partial.")
+  }
+  for (const [index, test] of selected.entries()) {
+    const result = input.results[index]
+    if (
+      result === undefined ||
+      result.id !== test.id ||
+      result.stage !== test.stage ||
+      result.kind !== test.kind ||
+      result.namedResult !== test.namedResult ||
+      !sameStrings(result.ownedFiles, test.ownedFiles) ||
+      result.status !== "PASS" ||
+      !Number.isSafeInteger(result.passedCount) ||
+      result.passedCount <= 0 ||
+      result.skippedCount !== 0 ||
+      result.databaseRequired !== (test.database !== undefined) ||
+      result.databaseObserved !== (test.database !== undefined)
+    ) {
+      throw new TypeError(
+        `Runtime ABI test receipt result is invalid: ${test.id}`,
+      )
+    }
+  }
+  return {
+    schemaVersion: "runtime-abi-v1.17-test-receipt-v1",
+    activationPlan: "258-14",
+    stage: input.stage,
+    testManifestSha256: manifestSha256(input.manifestBytes),
+    selectedCommandCount: selected.length,
+    results: input.results.map((result) => ({
+      ...result,
+      ownedFiles: [...result.ownedFiles],
+    })),
+  }
+}
+
+export const parseRuntimeAbiTestReceipt = (
+  value: unknown,
+  options: {
+    manifestBytes: Uint8Array
+    manifest: RuntimeAbiTestManifest
+    requiredStage: RuntimeAbiTestStage
+  },
+): RuntimeAbiTestReceipt => {
+  if (
+    !isRecord(value) ||
+    !exactKeys(value, [
+      "activationPlan",
+      "results",
+      "schemaVersion",
+      "selectedCommandCount",
+      "stage",
+      "testManifestSha256",
+    ]) ||
+    value.schemaVersion !== "runtime-abi-v1.17-test-receipt-v1" ||
+    value.activationPlan !== "258-14" ||
+    value.stage !== options.requiredStage ||
+    value.testManifestSha256 !== manifestSha256(options.manifestBytes) ||
+    !Number.isSafeInteger(value.selectedCommandCount) ||
+    !Array.isArray(value.results)
+  ) {
+    throw new TypeError("Runtime ABI test receipt is malformed or stale.")
+  }
+  const results = value.results.map((raw): RuntimeAbiTestReceiptResult => {
+    if (
+      !isRecord(raw) ||
+      !exactKeys(raw, [
+        "databaseObserved",
+        "databaseRequired",
+        "id",
+        "kind",
+        "namedResult",
+        "ownedFiles",
+        "passedCount",
+        "skippedCount",
+        "stage",
+        "status",
+      ]) ||
+      typeof raw.id !== "string" ||
+      !stages.has(raw.stage as RuntimeAbiTestStage) ||
+      (raw.kind !== "vitest" &&
+        raw.kind !== "go" &&
+        raw.kind !== "playwright") ||
+      typeof raw.namedResult !== "string" ||
+      !Array.isArray(raw.ownedFiles) ||
+      raw.ownedFiles.some((entry) => typeof entry !== "string") ||
+      raw.status !== "PASS" ||
+      !Number.isSafeInteger(raw.passedCount) ||
+      Number(raw.passedCount) <= 0 ||
+      raw.skippedCount !== 0 ||
+      typeof raw.databaseRequired !== "boolean" ||
+      typeof raw.databaseObserved !== "boolean"
+    ) {
+      throw new TypeError("Runtime ABI test receipt result is malformed.")
+    }
+    return {
+      id: raw.id,
+      stage: raw.stage as RuntimeAbiTestStage,
+      kind: raw.kind,
+      namedResult: raw.namedResult,
+      ownedFiles: raw.ownedFiles as string[],
+      status: "PASS",
+      passedCount: Number(raw.passedCount),
+      skippedCount: 0,
+      databaseRequired: raw.databaseRequired,
+      databaseObserved: raw.databaseObserved,
+    }
+  })
+  if (value.selectedCommandCount !== results.length) {
+    throw new TypeError("Runtime ABI test receipt count is partial.")
+  }
+  return createRuntimeAbiTestReceipt({
+    stage: options.requiredStage,
+    manifestBytes: options.manifestBytes,
+    manifest: options.manifest,
+    results,
+  })
+}
+
+export const checkRuntimeAbiTestReceipt = (
+  requiredStage: RuntimeAbiTestStage = "postactivation",
+): RuntimeAbiTestReceipt => {
+  const manifestBytes = readFileSync(RUNTIME_ABI_TEST_MANIFEST_PATH)
+  const manifest = parseRuntimeAbiTestManifest(
+    JSON.parse(manifestBytes.toString("utf8")) as unknown,
+  )
+  const receipt = JSON.parse(
+    readFileSync(RUNTIME_ABI_TEST_RECEIPT_PATH, "utf8"),
+  ) as unknown
+  return parseRuntimeAbiTestReceipt(receipt, {
+    manifestBytes,
+    manifest,
+    requiredStage,
+  })
+}
+
+const writeRuntimeAbiTestReceipt = (receipt: RuntimeAbiTestReceipt): void => {
+  const temporaryPath = `${RUNTIME_ABI_TEST_RECEIPT_PATH}.tmp-${String(process.pid)}`
+  try {
+    writeFileSync(temporaryPath, `${JSON.stringify(receipt, null, 2)}\n`, {
+      flag: "wx",
+    })
+    renameSync(temporaryPath, RUNTIME_ABI_TEST_RECEIPT_PATH)
+  } finally {
+    rmSync(temporaryPath, { force: true })
+  }
+}
+
 export const runRuntimeAbiTestManifest = (options: {
   stage: RuntimeAbiTestStage
   requireAll: boolean
-}): void => {
+  writeReceipt?: boolean | undefined
+}): RuntimeAbiTestReceipt => {
+  if (
+    options.writeReceipt &&
+    (!options.requireAll || options.stage !== "postactivation")
+  ) {
+    throw new TypeError(
+      "Runtime ABI receipt writing requires postactivation --require-all.",
+    )
+  }
+  const manifestBytes = readFileSync(RUNTIME_ABI_TEST_MANIFEST_PATH)
   const manifest = parseRuntimeAbiTestManifest(
-    JSON.parse(
-      readFileSync(
-        "packages/spec/artifacts/runtime-abi-v1.17-test-manifest.json",
-        "utf8",
-      ),
-    ) as unknown,
+    JSON.parse(manifestBytes.toString("utf8")) as unknown,
   )
-  const selected = manifest.tests.filter(
-    ({ stage }) => stageRank[stage] <= stageRank[options.stage],
-  )
+  const selected = selectedRuntimeAbiTests(manifest, options.stage)
   if (selected.length === 0) throw new TypeError("Zero tests selected.")
   let completed = 0
+  const receiptResults: RuntimeAbiTestReceiptResult[] = []
   for (const test of selected) {
+    let databaseObserved = false
     if (test.database !== undefined) {
       const value = process.env[test.database.dsnEnvironmentVariable]
       if (value === undefined || value.trim() === "") {
@@ -333,6 +596,7 @@ export const runRuntimeAbiTestManifest = (options: {
           `${test.id} requires ${test.database.dsnEnvironmentVariable}.`,
         )
       }
+      databaseObserved = true
     }
     if (test.kind === "go") {
       validateGoTestSourceOwnership(test, process.cwd())
@@ -352,7 +616,9 @@ export const runRuntimeAbiTestManifest = (options: {
         `${test.id} failed with status ${String(result.status)}.`,
       )
     }
-    validateRuntimeAbiTestResult(test, output)
+    receiptResults.push(
+      projectRuntimeAbiTestResult(test, output, databaseObserved),
+    )
     completed += 1
   }
   if (options.requireAll && completed !== selected.length) {
@@ -361,6 +627,14 @@ export const runRuntimeAbiTestManifest = (options: {
   console.log(
     `runtime-abi-v1.17 ${options.stage} test manifest: PASS (${selected.length} commands)`,
   )
+  const receipt = createRuntimeAbiTestReceipt({
+    stage: options.stage,
+    manifestBytes,
+    manifest,
+    results: receiptResults,
+  })
+  if (options.writeReceipt) writeRuntimeAbiTestReceipt(receipt)
+  return receipt
 }
 
 const stageArgument = process.argv.indexOf("--stage")
@@ -376,5 +650,6 @@ if (stageArgument >= 0) {
   runRuntimeAbiTestManifest({
     stage,
     requireAll: process.argv.includes("--require-all"),
+    writeReceipt: process.argv.includes("--write-receipt"),
   })
 }
