@@ -15,6 +15,7 @@ import {
   type RuntimeConformanceIdentityBindingsV117,
   type RuntimeConformanceTrustedProducerV117,
 } from "./runtime-conformance-certificate-v1-17.js"
+import { createRuntimeEvidenceAuthorityConformanceSourceV117 } from "./runtime-evidence-authority-bundle.js"
 import {
   RUNTIME_EVIDENCE_EDGE_SCHEMA_V1_17,
   RUNTIME_EVIDENCE_GRAPH_NODE_KINDS_V1_17,
@@ -523,6 +524,24 @@ describe("runtime evidence v1.17 frozen contract", () => {
     expect(Object.isFrozen(verified)).toBe(true)
     expect(Object.isFrozen(verified.supervisorIdentity)).toBe(true)
     expect(Object.isFrozen(verified.runReceiptSha256s)).toBe(true)
+    expect(
+      createRuntimeEvidenceAuthorityConformanceSourceV117(verified),
+    ).toMatchObject({
+      schemaVersion: "runtime-evidence-authority-conformance-source-v1.17",
+      certificateSha256: verified.certificateSha256,
+      languageId: verified.languageId,
+      corpusRootSha256: verified.corpusRootSha256,
+      caseInventorySha256: verified.caseInventorySha256,
+      identityManifestRoot: verified.identityManifestRoot,
+      evidenceGraphRoot: verified.evidenceGraphRoot,
+      registryGeneration: verified.registryGeneration,
+      freshUntil: verified.freshUntil,
+    })
+    expect(() =>
+      createRuntimeEvidenceAuthorityConformanceSourceV117(
+        globalThis.structuredClone(verified),
+      ),
+    ).toThrowError(RuntimeConformanceEvidenceBindingV117Error)
   })
 
   it.each([

@@ -599,6 +599,8 @@ const publicBindingId = (
   return binding!.publicId
 }
 
+const verifiedConformanceBindings = new WeakSet<object>()
+
 export const verifyRuntimeConformanceEvidenceBindingV117 = (
   input: VerifyRuntimeConformanceEvidenceBindingInputV117,
 ): Readonly<RuntimeConformanceEvidenceBindingV117> => {
@@ -681,7 +683,7 @@ export const verifyRuntimeConformanceEvidenceBindingV117 = (
       requireInstant(certificate.freshUntil),
     ),
   ).toISOString()
-  return deepFreeze<RuntimeConformanceEvidenceBindingV117>({
+  const binding = deepFreeze<RuntimeConformanceEvidenceBindingV117>({
     schemaVersion: "runtime-conformance-evidence-binding-v1.17",
     certificateId: certificate.certificateId,
     certificateSha256: certificate.certificateSha256 as `sha256:${string}`,
@@ -725,4 +727,15 @@ export const verifyRuntimeConformanceEvidenceBindingV117 = (
       ({ receiptSha256 }) => receiptSha256,
     ),
   })
+  verifiedConformanceBindings.add(binding)
+  return binding
+}
+
+export const getVerifiedRuntimeConformanceEvidenceBindingV117 = (
+  value: Readonly<RuntimeConformanceEvidenceBindingV117>,
+): Readonly<RuntimeConformanceEvidenceBindingV117> => {
+  if (!verifiedConformanceBindings.has(value as object)) {
+    bindingFail("UNVERIFIED_BINDING")
+  }
+  return value
 }

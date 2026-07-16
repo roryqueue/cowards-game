@@ -1,17 +1,21 @@
 import { Buffer } from "node:buffer"
 import { createHash } from "node:crypto"
+import { encodeCanonicalJson } from "./canonical-json-encode.js"
 import {
   hashExecutableLaneIdentity,
   parseExecutableLaneIdentity,
 } from "./runtime-evidence-attestation.js"
+import { getVerifiedRuntimeConformanceEvidenceBindingV117 } from "./runtime-evidence-attestation-v1-17.js"
 import type { ExecutableLaneIdentity } from "./runtime-evidence.js"
 import {
   RUNTIME_EVIDENCE_GRAPH_PROFILE_V1_17,
   RUNTIME_EVIDENCE_GRAPH_SCHEMA_VERSION_V1_17,
   RUNTIME_EVIDENCE_REQUIRED_EXACT_PINS_V1_17,
   isCanonicalSafeRegistryGenerationV117,
+  type RuntimeConformanceEvidenceBindingV117,
   type RuntimeEvidenceExactPinNameV117,
 } from "./runtime-evidence-v1-17.js"
+import type { JsonValue } from "./types.js"
 
 export const RUNTIME_EVIDENCE_AUTHORITY_ENVELOPE_SCHEMA_VERSION =
   "v1.37-runtime-evidence-authority-envelope-v1" as const
@@ -179,6 +183,29 @@ export interface RuntimeEvidenceAuthorityCertificateV117 {
   certificateKind: "containment" | "conformance"
   attestationId: string
   binding: RuntimeEvidenceAuthorityBindingV117
+  conformanceSource?: RuntimeEvidenceAuthorityConformanceSourceV117 | undefined
+}
+
+export interface RuntimeEvidenceAuthorityConformanceSourceV117 {
+  schemaVersion: "runtime-evidence-authority-conformance-source-v1.17"
+  certificateSha256: string
+  attestationSha256: string
+  conformanceBindingSha256: string
+  languageId: "typescript" | "python" | "rust" | "zig"
+  laneId: string
+  corpusRootSha256: string
+  caseInventorySha256: string
+  identityManifestRoot: string
+  evidenceGraphRoot: string
+  runtimeAbiVersion: "strategy-runtime-abi-v1.18"
+  runtimeAbiEnvelopeSha256: string
+  additiveBudgetProfileSha256: string
+  supervisorIdentityRootSha256: string
+  resultRootSha256: string
+  evidenceRootSha256: string
+  runReceiptRootSha256: string
+  registryGeneration: string
+  freshUntil: string
 }
 
 export interface RuntimeEvidenceAuthorityPayloadV117 {
@@ -272,14 +299,206 @@ const frameV117 = (parts: readonly string[]): Uint8Array => {
   return output
 }
 
+const hashCanonicalAuthoritySourceV117 = (
+  domain: string,
+  value: JsonValue,
+): string => {
+  const encoded = encodeCanonicalJson(value, { context: "canonical-manifest" })
+  if (!encoded.ok) {
+    return fail(
+      "V117_CONFORMANCE_SOURCE",
+      "Runtime conformance authority source is not canonical.",
+    )
+  }
+  const domainBytes = textEncoder.encode(domain)
+  const output = Buffer.alloc(
+    16 + domainBytes.byteLength + encoded.bytes.byteLength,
+  )
+  output.writeBigUInt64BE(BigInt(domainBytes.byteLength), 0)
+  output.set(domainBytes, 8)
+  const valueOffset = 8 + domainBytes.byteLength
+  output.writeBigUInt64BE(BigInt(encoded.bytes.byteLength), valueOffset)
+  output.set(encoded.bytes, valueOffset + 8)
+  return `sha256:${createHash("sha256").update(output).digest("hex")}`
+}
+
+export const createRuntimeEvidenceAuthorityConformanceSourceV117 = (
+  value: Readonly<RuntimeConformanceEvidenceBindingV117>,
+): Readonly<RuntimeEvidenceAuthorityConformanceSourceV117> => {
+  const binding = getVerifiedRuntimeConformanceEvidenceBindingV117(value)
+  const supervisorIdentityRootSha256 = hashCanonicalAuthoritySourceV117(
+    "cowards-game:runtime-evidence-authority-supervisor-source:v1.17",
+    {
+      supervisorOperatingSystemSha256: binding.supervisorOperatingSystemSha256,
+      supervisorSettingsSha256: binding.supervisorSettingsSha256,
+      aggregateReceiptSchemaSha256: binding.aggregateReceiptSchemaSha256,
+      supervisorIdentity: binding.supervisorIdentity,
+    } as unknown as JsonValue,
+  )
+  const runReceiptRootSha256 = hashCanonicalAuthoritySourceV117(
+    "cowards-game:runtime-evidence-authority-run-receipts:v1.17",
+    {
+      runIds: binding.runIds,
+      runReceiptSha256s: binding.runReceiptSha256s,
+      resultRootSha256: binding.resultRootSha256,
+      evidenceRootSha256: binding.evidenceRootSha256,
+    } as unknown as JsonValue,
+  )
+  const conformanceBindingSha256 = hashCanonicalAuthoritySourceV117(
+    "cowards-game:runtime-evidence-authority-conformance-binding:v1.17",
+    binding as unknown as JsonValue,
+  )
+  return Object.freeze({
+    schemaVersion: "runtime-evidence-authority-conformance-source-v1.17",
+    certificateSha256: binding.certificateSha256,
+    attestationSha256: `sha256:${binding.attestationSha256}`,
+    conformanceBindingSha256,
+    languageId: binding.languageId,
+    laneId: binding.laneId,
+    corpusRootSha256: binding.corpusRootSha256,
+    caseInventorySha256: binding.caseInventorySha256,
+    identityManifestRoot: binding.identityManifestRoot,
+    evidenceGraphRoot: binding.evidenceGraphRoot,
+    runtimeAbiVersion: binding.runtimeAbiVersion,
+    runtimeAbiEnvelopeSha256: binding.runtimeAbiEnvelopeSha256,
+    additiveBudgetProfileSha256: binding.additiveBudgetProfileSha256,
+    supervisorIdentityRootSha256,
+    resultRootSha256: binding.resultRootSha256,
+    evidenceRootSha256: binding.evidenceRootSha256,
+    runReceiptRootSha256,
+    registryGeneration: binding.registryGeneration,
+    freshUntil: binding.freshUntil,
+  })
+}
+
+const CONFORMANCE_SOURCE_KEYS_V1_17 = [
+  "schemaVersion",
+  "certificateSha256",
+  "attestationSha256",
+  "conformanceBindingSha256",
+  "languageId",
+  "laneId",
+  "corpusRootSha256",
+  "caseInventorySha256",
+  "identityManifestRoot",
+  "evidenceGraphRoot",
+  "runtimeAbiVersion",
+  "runtimeAbiEnvelopeSha256",
+  "additiveBudgetProfileSha256",
+  "supervisorIdentityRootSha256",
+  "resultRootSha256",
+  "evidenceRootSha256",
+  "runReceiptRootSha256",
+  "registryGeneration",
+  "freshUntil",
+] as const
+
+export const parseRuntimeEvidenceAuthorityConformanceSourceV117 = (
+  value: RuntimeEvidenceAuthorityConformanceSourceV117,
+): Readonly<RuntimeEvidenceAuthorityConformanceSourceV117> => {
+  const record = requireRecord(
+    value,
+    "V117_CONFORMANCE_SOURCE",
+    "Runtime conformance authority source is invalid.",
+  )
+  assertExactKeys(
+    record,
+    CONFORMANCE_SOURCE_KEYS_V1_17,
+    "Runtime conformance authority source",
+  )
+  const languageId = record.languageId
+  if (
+    languageId !== "typescript" &&
+    languageId !== "python" &&
+    languageId !== "rust" &&
+    languageId !== "zig"
+  ) {
+    fail(
+      "V117_CONFORMANCE_SOURCE",
+      "Runtime conformance authority source is invalid.",
+    )
+  }
+  if (
+    record.schemaVersion !==
+      "runtime-evidence-authority-conformance-source-v1.17" ||
+    record.runtimeAbiVersion !== "strategy-runtime-abi-v1.18"
+  ) {
+    fail(
+      "V117_CONFORMANCE_SOURCE",
+      "Runtime conformance authority source is invalid.",
+    )
+  }
+  const hashes = Object.fromEntries(
+    [
+      "certificateSha256",
+      "attestationSha256",
+      "conformanceBindingSha256",
+      "corpusRootSha256",
+      "caseInventorySha256",
+      "identityManifestRoot",
+      "evidenceGraphRoot",
+      "runtimeAbiEnvelopeSha256",
+      "additiveBudgetProfileSha256",
+      "supervisorIdentityRootSha256",
+      "resultRootSha256",
+      "evidenceRootSha256",
+      "runReceiptRootSha256",
+    ].map((key) => [key, assertHash(record[key], key)]),
+  ) as Record<string, string>
+  return Object.freeze({
+    schemaVersion: "runtime-evidence-authority-conformance-source-v1.17",
+    certificateSha256: hashes.certificateSha256!,
+    attestationSha256: hashes.attestationSha256!,
+    conformanceBindingSha256: hashes.conformanceBindingSha256!,
+    languageId: languageId as "typescript" | "python" | "rust" | "zig",
+    laneId: assertString(record.laneId, "laneId"),
+    corpusRootSha256: hashes.corpusRootSha256!,
+    caseInventorySha256: hashes.caseInventorySha256!,
+    identityManifestRoot: hashes.identityManifestRoot!,
+    evidenceGraphRoot: hashes.evidenceGraphRoot!,
+    runtimeAbiVersion: "strategy-runtime-abi-v1.18",
+    runtimeAbiEnvelopeSha256: hashes.runtimeAbiEnvelopeSha256!,
+    additiveBudgetProfileSha256: hashes.additiveBudgetProfileSha256!,
+    supervisorIdentityRootSha256: hashes.supervisorIdentityRootSha256!,
+    resultRootSha256: hashes.resultRootSha256!,
+    evidenceRootSha256: hashes.evidenceRootSha256!,
+    runReceiptRootSha256: hashes.runReceiptRootSha256!,
+    registryGeneration: assertGeneration(
+      record.registryGeneration,
+      "registryGeneration",
+    ),
+    freshUntil: parseInstant(record.freshUntil, "freshUntil"),
+  })
+}
+
 export const hashRuntimeEvidenceCertificateRecordV117 = (input: {
   certificateKind: "containment" | "conformance"
   certificateId: string
   certificateVersion: string
   attestationId: string
   binding: RuntimeEvidenceAuthorityBindingV117
+  conformanceSource?: RuntimeEvidenceAuthorityConformanceSourceV117 | undefined
 }): string => {
   const binding = parseRuntimeEvidenceAuthorityBindingV117(input.binding)
+  const conformanceSource =
+    input.conformanceSource === undefined
+      ? undefined
+      : parseRuntimeEvidenceAuthorityConformanceSourceV117(
+          input.conformanceSource,
+        )
+  if (
+    input.certificateKind === "containment" &&
+    conformanceSource !== undefined
+  ) {
+    fail("V117_CERTIFICATE", "Runtime evidence certificate is invalid.")
+  }
+  if (
+    input.certificateKind === "conformance" &&
+    input.certificateVersion === "runtime-conformance-certificate-v1.17" &&
+    conformanceSource === undefined
+  ) {
+    fail("V117_CERTIFICATE", "Runtime evidence certificate is invalid.")
+  }
   for (const value of [
     input.certificateId,
     input.certificateVersion,
@@ -306,6 +525,11 @@ export const hashRuntimeEvidenceCertificateRecordV117 = (input: {
         binding.identityManifestRoot,
         binding.evidenceGraphRoot,
         ...binding.exactPins.flatMap(([name, value]) => [name, value]),
+        ...(conformanceSource === undefined
+          ? []
+          : CONFORMANCE_SOURCE_KEYS_V1_17.map((key) =>
+              String(conformanceSource[key]),
+            )),
       ]),
     )
     .digest("hex")}`
@@ -983,16 +1207,20 @@ export const parseRuntimeEvidenceAuthorityPayloadV117 = (
       "V117_CERTIFICATE",
       "v1.17 certificate is invalid.",
     )
+    const certificateKeys = [
+      "certificateId",
+      "certificateVersion",
+      "certificateRecordHash",
+      "certificateKind",
+      "attestationId",
+      "binding",
+    ] as const
+    const hasConformanceSource = Object.hasOwn(candidate, "conformanceSource")
     assertExactKeys(
       candidate,
-      [
-        "certificateId",
-        "certificateVersion",
-        "certificateRecordHash",
-        "certificateKind",
-        "attestationId",
-        "binding",
-      ],
+      hasConformanceSource
+        ? [...certificateKeys, "conformanceSource"]
+        : certificateKeys,
       "v1.17 certificate",
     )
     const certificateKind: "containment" | "conformance" =
@@ -1015,6 +1243,27 @@ export const parseRuntimeEvidenceAuthorityPayloadV117 = (
       candidate.certificateVersion,
       "certificateVersion",
     )
+    const conformanceSource = hasConformanceSource
+      ? parseRuntimeEvidenceAuthorityConformanceSourceV117(
+          candidate.conformanceSource as RuntimeEvidenceAuthorityConformanceSourceV117,
+        )
+      : undefined
+    if (
+      (certificateKind === "containment" && conformanceSource !== undefined) ||
+      (certificateKind === "conformance" &&
+        certificateVersion === "runtime-conformance-certificate-v1.17" &&
+        conformanceSource === undefined) ||
+      (conformanceSource !== undefined &&
+        (conformanceSource.identityManifestRoot !==
+          binding.identityManifestRoot ||
+          conformanceSource.evidenceGraphRoot !== binding.evidenceGraphRoot ||
+          conformanceSource.registryGeneration !==
+            assertGeneration(record.registryGeneration, "registryGeneration") ||
+          Date.parse(conformanceSource.freshUntil) <
+            Date.parse(parseInstant(record.validUntil, "validUntil"))))
+    ) {
+      fail("V117_CONFORMANCE_SOURCE", "v1.17 certificate source is invalid.")
+    }
     const certificateRecordHash = assertHash(
       candidate.certificateRecordHash,
       "certificateRecordHash",
@@ -1026,6 +1275,7 @@ export const parseRuntimeEvidenceAuthorityPayloadV117 = (
         certificateVersion,
         attestationId,
         binding,
+        ...(conformanceSource === undefined ? {} : { conformanceSource }),
       }) !== certificateRecordHash
     )
       fail("CERTIFICATE_HASH", "v1.17 authority graph is invalid.")
@@ -1036,6 +1286,7 @@ export const parseRuntimeEvidenceAuthorityPayloadV117 = (
       certificateKind,
       attestationId,
       binding,
+      ...(conformanceSource === undefined ? {} : { conformanceSource }),
     })
   })
   if (
