@@ -556,7 +556,7 @@
     },
     {
       "path": "packages/spec/artifacts/service-api-v1.8.openapi.json",
-      "sha256": "6bc82a632245c2ae440eeee5b2608ecabbc56a32e559195be0bac3ba623877a1"
+      "sha256": "5ebc109e9efc41a9b16eece865ea6c369dfa3f437135e054c2e3eace42a88ae2"
     },
     {
       "path": "packages/spec/artifacts/v1.37-current-event-coverage.json",
