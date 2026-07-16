@@ -280,10 +280,27 @@ const expectedOriginalSourcePaths = Object.freeze([
   "packages/spec/src/schemas.ts",
 ])
 
-const expectedFrozenSourcePaths = Object.freeze([
-  "packages/replay/src/historical-v1-4-grammar.ts",
-  "packages/replay/src/historical-v1-4-transition.ts",
-])
+const expectedFrozenSourceCommit =
+  "4fab0afc058232f37ba11506b5d04a1d59b2f4e0" as const
+
+const expectedFrozenSourcePins = Object.freeze([
+  {
+    path: "packages/replay/src/historical-v1-4-grammar.ts",
+    blob: "c1262d8fd2d2933244c033829978e33f3f3722b4",
+    sha256: "c331055e4aadba3fa01142bf764247c961d1b45483a310a11af5d66ce214d108",
+    bytes: 48_793,
+  },
+  {
+    path: "packages/replay/src/historical-v1-4-transition.ts",
+    blob: "b520e41d2e722ade8fb688843a62312fbba80d8e",
+    sha256: "ff90b9938b9a6c85cafacf1d9b7856af70b4d87234819a50e60ab8666c37b477",
+    bytes: 15_032,
+  },
+] as const satisfies readonly HistoricalPin[])
+
+const expectedFrozenSourcePaths = Object.freeze(
+  expectedFrozenSourcePins.map(({ path }) => path),
+)
 
 const sameOrderedPaths = (
   pins: readonly HistoricalPin[],
@@ -358,6 +375,15 @@ const auditHistoricalManifest = (
     !sameOrderedPaths(manifest.frozenSources.entries, expectedFrozenSourcePaths)
   ) {
     findings.push("ENTRY_SET_MISMATCH")
+  }
+  if (manifest.frozenSources.commit !== expectedFrozenSourceCommit) {
+    findings.push("FROZEN_SOURCE_COMMIT_MISMATCH")
+  }
+  if (
+    JSON.stringify(manifest.frozenSources.entries) !==
+    JSON.stringify(expectedFrozenSourcePins)
+  ) {
+    findings.push("FROZEN_SOURCE_IDENTITY_MISMATCH")
   }
   if (gitText(["rev-parse", "refs/tags/v1.4"]) !== manifest.archive.tagObject) {
     findings.push("TAG_OBJECT_MISMATCH")
@@ -619,6 +645,28 @@ describe("frozen historical v1.4 interpretation", () => {
         },
       }),
     ).toContain(`FROZEN_SOURCE_MISMATCH:${expectedFrozenSourcePaths[0]}`)
+    expect(
+      auditHistoricalManifest({
+        ...manifest,
+        frozenSources: {
+          ...manifest.frozenSources,
+          commit: manifest.archive.peeledCommit,
+        },
+      }),
+    ).toContain("FROZEN_SOURCE_COMMIT_MISMATCH")
+    expect(
+      auditHistoricalManifest({
+        ...manifest,
+        frozenSources: {
+          ...manifest.frozenSources,
+          entries: manifest.frozenSources.entries.map((pin, index) =>
+            index === 0
+              ? { ...pin, blob: manifest.originalSources[0]!.blob }
+              : pin,
+          ),
+        },
+      }),
+    ).toContain("FROZEN_SOURCE_IDENTITY_MISMATCH")
     expect(
       auditHistoricalManifest({
         ...manifest,

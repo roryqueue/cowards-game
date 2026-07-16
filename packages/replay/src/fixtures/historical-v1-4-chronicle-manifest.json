@@ -64,19 +64,19 @@
     }
   ],
   "frozenSources": {
-    "commit": "9b59d05b08f39e6835dead14edc082cd498aef81",
+    "commit": "4fab0afc058232f37ba11506b5d04a1d59b2f4e0",
     "entries": [
       {
         "path": "packages/replay/src/historical-v1-4-grammar.ts",
-        "blob": "4cedf3eadb73e1fa687016075d159086031fd711",
-        "sha256": "6c3d23252c81c53bbb8476482a190b55b9a75ecc17187d60f3e7a5829dbd4b2a",
-        "bytes": 26333
+        "blob": "c1262d8fd2d2933244c033829978e33f3f3722b4",
+        "sha256": "c331055e4aadba3fa01142bf764247c961d1b45483a310a11af5d66ce214d108",
+        "bytes": 48793
       },
       {
         "path": "packages/replay/src/historical-v1-4-transition.ts",
-        "blob": "d06eb4f87509f2ebf3c2ec95c723a1309b4eb51a",
-        "sha256": "72bf94f9d579705fd11c3db3fec703d0307a3f18635b46e5df6373ab94c6fd98",
-        "bytes": 14517
+        "blob": "b520e41d2e722ade8fb688843a62312fbba80d8e",
+        "sha256": "ff90b9938b9a6c85cafacf1d9b7856af70b4d87234819a50e60ab8666c37b477",
+        "bytes": 15032
       }
     ]
   },
