@@ -322,9 +322,17 @@ describe("shared runtime supervisor v1.18 contract", () => {
     expect(isVerifiedSupervisorEvidenceV118(result.value)).toBe(true)
     expect(isVerifiedSupervisorEvidenceV118(clone(result.value))).toBe(false)
     expect(Object.isFrozen(result.value)).toBe(true)
-    expect(JSON.stringify(result.value)).not.toMatch(
+    const serialized = JSON.stringify(result.value)
+    expect(serialized).not.toMatch(
       /strategySource|artifactBytes|strategyMemory|soldierMemory|objective|diagnostic|hostPath|stderrBase64|channelNonce/u,
     )
+    expect(serialized).not.toContain(execution.executablePath)
+    for (const argument of execution.argv) {
+      expect(serialized).not.toContain(argument)
+    }
+    for (const entry of execution.environment) {
+      expect(serialized).not.toContain(entry.value)
+    }
   })
 
   it("never accepts a forged guest frame as host receipt evidence", () => {
