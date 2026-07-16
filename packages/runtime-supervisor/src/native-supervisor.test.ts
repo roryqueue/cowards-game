@@ -1,4 +1,5 @@
 import { Buffer } from "node:buffer"
+import { createHash } from "node:crypto"
 import { describe, expect, it } from "vitest"
 import {
   createRuntimeInvocationRequestV118,
@@ -34,7 +35,7 @@ const manifest = (): NativeSupervisorBuildManifestV118 => ({
   binarySha256: hash("4"),
 })
 
-const request = () => {
+const request = (supervisorBinarySha256: `sha256:${string}` = hash("4")) => {
   const execution = {
     executablePath: "/usr/bin/node",
     executableBytesSha256: hash("a"),
@@ -49,7 +50,7 @@ const request = () => {
     monotonicDeadlineNanoseconds: 9_000_000_000,
     executable: deriveSupervisorExecutionIdentityV118(execution),
     expectedIdentity: {
-      supervisorBinarySha256: hash("4"),
+      supervisorBinarySha256,
       supervisorToolchainSha256: hash("5"),
       linuxKernelSha256: hash("6"),
       dockerEngineSha256: hash("7"),
@@ -130,13 +131,16 @@ describe("native runtime supervisor", () => {
   })
 
   it("maps one exact native receipt through the shared verifier", () => {
-    const current = request()
+    const binaryBytes = Buffer.from("pinned-native-binary")
+    const binarySha256 =
+      `sha256:${createHash("sha256").update(binaryBytes).digest("hex")}` as const
+    const current = request(binarySha256)
+    const currentManifest = { ...manifest(), binarySha256 }
     const payload = Buffer.from('{"action":{"type":"MOVE"}}')
     const receipt = {
       schemaVersion: "cowards-native-supervisor-receipt-v1",
       requestSha256: current.invocation.requestSha256,
-      processGroupIdentitySha256:
-        current.expectedProcessGroupIdentitySha256,
+      processGroupIdentitySha256: current.expectedProcessGroupIdentitySha256,
       guestNamespaceUid: 65534,
       supervisorHostUid: 65532,
       wallElapsedNanoseconds: 1_000_000,
@@ -176,21 +180,24 @@ describe("native runtime supervisor", () => {
     }
     const result = runPinnedNativeSupervisorV118({
       platform: "linux",
-      manifest: manifest(),
+      manifest: currentManifest,
       expectedHashes: {
         sourceSha256: hash("1"),
         cargoLockSha256: hash("2"),
         seccompProfileSha256: hash("3"),
-        binarySha256: hash("4"),
+        binarySha256,
       },
       request: current,
       binaryPath: "/private/native-supervisor",
       cgroupRoot: "/private/cgroup",
+      readBinary: () => binaryBytes,
       spawnSync: () => ({
+        pid: 123,
         status: 0,
         signal: null,
         stdout: Buffer.from(JSON.stringify(receipt)),
         stderr: Buffer.alloc(0),
+        output: [null, Buffer.from(JSON.stringify(receipt)), Buffer.alloc(0)],
         error: undefined,
       }),
     })

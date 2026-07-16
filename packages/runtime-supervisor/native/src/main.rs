@@ -648,6 +648,8 @@ mod linux {
                 .map_err(|_| "COUNTER_READ_FAILED")?;
             let final_pids = parse_key_values(&invocation.join("pids.events"))
                 .map_err(|_| "COUNTER_READ_FAILED")?;
+            let pids_peak =
+                read_u64(&invocation.join("pids.peak")).map_err(|_| "COUNTER_READ_FAILED")?;
             let memory_peak =
                 read_u64(&invocation.join("memory.peak")).map_err(|_| "COUNTER_READ_FAILED")?;
             let elapsed_ns: u64 = started
@@ -678,7 +680,7 @@ mod linux {
                     "\"wallElapsedNanoseconds\":{},\"cpuUsageBeforeMicroseconds\":{},",
                     "\"cpuUsageAfterMicroseconds\":{},\"memoryPeakBytes\":{},",
                     "\"memoryEventsBefore\":{},\"memoryEventsAfter\":{},",
-                    "\"pidsEventsBefore\":{},\"pidsEventsAfter\":{},",
+                    "\"pidsEventsBefore\":{},\"pidsEventsAfter\":{},\"pidsPeak\":{},",
                     "\"exitCode\":{},\"signal\":{},\"timedOut\":{},",
                     "\"stdoutBase64\":\"{}\",\"stderrBase64\":\"{}\",",
                     "\"stdoutTruncated\":{},\"stderrTruncated\":{},",
@@ -696,6 +698,7 @@ mod linux {
                 json_map(&final_memory),
                 json_map(&baseline_pids),
                 json_map(&final_pids),
+                pids_peak,
                 exit_code,
                 signal,
                 timed_out,
