@@ -10,8 +10,9 @@ requires:
     provides: immutable mandatory four-language corpus identity from Plan 01
 provides:
   - pure exact-shape Ed25519 verifier for three-run per-lane conformance certificates
-  - branded immutable lane snapshots with immediate identity staleness and 30-day maximum freshness
-  - separate all-four current-lane phase-closure predicate
+  - branded immutable lane snapshots bound to the exact expected mandatory inventory/count/result root
+  - completion-anchored freshness with immediate identity staleness and a 30-day maximum
+  - production-only all-four closure plus a distinctly branded fixture-only predicate
 affects:
   - 259-language-certifiers
   - runtime-evidence-authority-publisher
@@ -30,10 +31,10 @@ key-files:
   modified: []
 key-decisions:
   - "A certificate requires exactly three canonically ordered runs with distinct run, workspace, and process identities; every run is complete, fresh, passed, non-fallback, and non-synthetic."
-  - "Every run binds the same complete lane identity, case count, result root, and evidence root; unavailable tools are system failures that mint no snapshot."
-  - "Per-lane verification is independent, while Phase 259 closure additionally requires all four current lanes under identical corpus, inventory, ABI, JSON, budget, containment, and semantic-tuple criteria."
+  - "Every run binds the same complete lane identity and evidence root plus the caller-supplied exact current inventory digest, mandatory case count, and expected canonical result root."
+  - "Per-lane verification is independent, while production Phase 259 closure additionally requires four production-trusted lanes under one registry generation and identical corpus, inventory, ABI, JSON, budget, containment, and semantic-tuple criteria."
 patterns-established:
-  - "Freshness: min(requested validity, all run evidence validity, issuedAt plus 30 days), with immediate staleness on any current binding change."
+  - "Freshness: min(requested validity, all run evidence validity, issuedAt plus 30 days, every run completion plus 30 days), with stale-at-issuance rejection and immediate staleness on current binding change."
   - "Authority: shape-compatible caller objects cannot substitute for verifier-branded certificate snapshots."
 requirements-completed: [CONF-04, CONF-05]
 coverage:
@@ -85,12 +86,16 @@ status: complete
 
 - Added a closed language-neutral certificate payload binding lane, corpus, case inventory, fixture, artifact, adapter, runtime, toolchain, ABI, policies, semantic tuple, identity DAG, and behavior settings.
 - Required three distinct fresh workspaces/processes with identical complete case counts and full result/evidence roots; skips, unsupported capability, fallback, synthetic evidence, and system-failed runs cannot mint authority.
-- Added a branded freshness evaluator and a separate all-four-lane closure predicate without adding a declaration/readiness shortcut or enabling production producer trust.
+- Bound the signed claims to an explicit exact expected inventory/count/result root so a one-case or arbitrary-root run cannot self-declare completeness.
+- Added a branded freshness evaluator and production-only all-four-lane closure, plus a distinctly branded fixture helper, without enabling production producer trust.
 
 ## Task Commits
 
 1. **Task 1 RED: Three-run certificate and mutation contract** - `0477435` (test)
 2. **Task 1 GREEN: Exact certificate verifier and closure predicate** - `ed9d96e` (feat)
+3. **Review BL-03: Exact inventory/count/result-root binding** - `5e912e3` (fix)
+4. **Review BL-04: Completion-anchored freshness** - `afa2b23` (fix)
+5. **Review BL-01: Production/fixture closure separation** - `762160e` (fix)
 
 ## Files Created/Modified
 
@@ -100,13 +105,18 @@ status: complete
 ## Decisions Made
 
 - Kept the production trusted-producer registry empty; later reviewed trust installation remains necessary before a real lane can become counted.
-- Used each run's `validUntil` as the already-reduced validity of its complete bound evidence, then capped the certificate at 30 days from issuance.
-- Required exact case-count equality in addition to case-inventory identity so three purportedly complete runs cannot disagree on executed breadth.
+- Used each run's `validUntil` as the already-reduced validity of its complete bound evidence, then capped the certificate from both issuance and actual run completion.
+- Required an explicit expected-run binding for exact case-inventory digest, mandatory count, and canonical result root in addition to three-run equality.
 - Required common criteria only for semantic/corpus/policy fields across languages; fixture, artifact, adapter, runtime, toolchain, sysroot, and graph identities remain exact per lane.
+- Required production closure snapshots to carry production trust under one exact registry generation; fixture closure has a distinct schema and cannot substitute.
 
 ## Deviations from Plan
 
-None - plan executed exactly as written.
+### Code-review remediation
+
+- Caller-trusted fixture snapshots could previously satisfy the nominal phase-closure predicate. Production closure now rejects them and the fixture-only helper emits a distinct schema.
+- Positive equal case counts and arbitrary equal result roots could previously self-declare completeness. Verification now requires the exact external current inventory/count/result-root binding without introducing a spec-to-golden dependency.
+- Freshness could previously be reset by issuing a new certificate over old executions. Each run must now still be inside its completion-derived 30-day window at issuance and throughout certificate validity.
 
 ## Issues Encountered
 
@@ -126,7 +136,7 @@ None - no production key or trusted producer was configured.
 ## Self-Check: PASSED
 
 - Both planned source/test files exist and both RED/GREEN commits exist in order.
-- Focused certificate suite passes: 1 file, 24 tests.
+- Focused certificate suite passes: 1 file, 26 tests.
 - Full `@cowards/spec` package suite passes: 12 files / 222 tests plus 3 root suites / 33 tests.
 - `@cowards/spec` typecheck, focused ESLint, and Prettier checks pass.
 - Production trusted producers remain exactly empty.
