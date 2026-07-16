@@ -62,7 +62,7 @@ func TestPhase244AccountProviderProofPersistsThroughDBEntryAndRuntimeRequest(t *
 		if !ok || source == "" {
 			t.Fatalf("validation request omitted source: %+v", body)
 		}
-		writeRuntimeServiceTestJSON(t, writer, providerReadinessValidationResponseForSelectedABI(t, "typescript", source))
+		writeRuntimeServiceTestJSON(t, writer, providerReadinessValidationWireResponseForSelectedABI(t, "typescript", source))
 	}))
 	defer runtimeServer.Close()
 

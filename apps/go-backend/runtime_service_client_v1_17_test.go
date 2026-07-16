@@ -167,6 +167,64 @@ func TestPhase258ProviderValidationV117Admission(t *testing.T) {
 	t.Run("account outer OK seam", TestAccountRevisionWriteHookRejectsOuterFailureWithNestedSuccessEvidence)
 }
 
+func TestPhase258CurrentValidationWireFixturePreservesFailClosedAuthority(t *testing.T) {
+	const source = "export default { selectActivations() { return []; }, soldierBrain() { return {}; } }\n"
+	t.Setenv("COWARDS_PROVIDER_VALIDATION_SECRET", "cowards-provider-validation-test-secret-v1.33")
+	for _, test := range []struct {
+		name       string
+		response   func(*testing.T) any
+		wantAccept bool
+	}{
+		{
+			name: "exact current authority",
+			response: func(t *testing.T) any {
+				return providerReadinessValidationWireResponseForSelectedABI(t, "typescript", source)
+			},
+			wantAccept: true,
+		},
+		{
+			name: "stale provider ABI",
+			response: func(t *testing.T) any {
+				wire := providerReadinessValidationWireResponseForSelectedABI(t, "typescript", source).(*runtimeServiceValidationWireResponseV117)
+				wire.Provider.RuntimeABIVersion = strategyRuntimeABIVersion
+				return wire
+			},
+		},
+		{
+			name: "fake response without provider authority",
+			response: func(t *testing.T) any {
+				return providerReadinessValidationResponseForSelectedABI(t, "typescript", source)
+			},
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) {
+				writeRuntimeServiceTestJSON(t, writer, test.response(t))
+			}))
+			defer server.Close()
+			response, failure := newRuntimeServiceClientV117(server.URL).validateStrategy(context.Background(), "typescript", source, "strategy:phase258:wire-fixture")
+			if test.wantAccept {
+				if response == nil || failure != nil {
+					t.Fatalf("exact current v1.17 validation fixture was rejected: response=%+v failure=%+v", response, failure)
+				}
+				readiness := classifyRevisionReadiness(revisionReadinessInput{
+					SourceFormat: "typescript", Runtime: response.Runtime,
+					Validation: response.Validation, Metadata: response.Metadata,
+					EngineCompatibility: response.EngineCompatibility,
+					SourceHash:          response.SourceHash, SourceBytes: response.SourceBytes,
+				})
+				if readiness.State != revisionReadinessExecutionDisabled || readiness.EntryEligible || readiness.CountedEligible {
+					t.Fatalf("current validation fixture implied certified or counted posture: %+v", readiness)
+				}
+				return
+			}
+			if response != nil || failure == nil || failure.ErrorClass != "RuntimeServiceContractMismatch" {
+				t.Fatalf("stale or fake validation evidence did not fail closed: response=%+v failure=%+v", response, failure)
+			}
+		})
+	}
+}
+
 func historicalPythonRuntimeMetadataV114ForTest() map[string]any {
 	runtime := pythonRuntimeMetadata()
 	runtime["abiVersion"] = strategyRuntimeABIVersion

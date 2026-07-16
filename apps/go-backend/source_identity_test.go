@@ -134,7 +134,7 @@ func TestPhase258SourceIdentityPostgres(t *testing.T) {
 			t.Fatal(err)
 		}
 		source := body["source"].(string)
-		writeRuntimeServiceTestJSON(t, w, providerReadinessValidationResponseForSelectedABI(t, "typescript", source))
+		writeRuntimeServiceTestJSON(t, w, providerReadinessValidationWireResponseForSelectedABI(t, "typescript", source))
 	}))
 	defer runtimeServer.Close()
 	server := &LiveServer{pool: pool, now: func() time.Time { return time.Date(2026, 7, 14, 12, 0, 0, 0, time.UTC) }, strategyArtifacts: map[string]strategyArtifact{}, orchestrator: newGoMatchOrchestrator(pool, runtimeServer.URL)}

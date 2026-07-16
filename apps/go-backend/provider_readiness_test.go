@@ -666,6 +666,26 @@ func providerReadinessValidationResponseForSelectedABI(t *testing.T, languageID 
 	}
 }
 
+func providerReadinessValidationWireResponseForSelectedABI(t *testing.T, languageID string, source string) any {
+	t.Helper()
+	response := providerReadinessValidationResponseForSelectedABI(t, languageID, source)
+	if selectedStrategyRuntimeABIVersion() != strategyRuntimeABIVersionV117 {
+		return response
+	}
+	providerID := expectedRuntimeServiceValidationProviderIDV117(languageID)
+	return &runtimeServiceValidationWireResponseV117{
+		OK: response.OK, Kind: response.Kind, SourceFormat: response.SourceFormat,
+		Provider: &runtimeServiceValidationProviderV117{
+			ID: providerID, ContractVersion: "runtime-provider-validation-v1.17",
+			RuntimeABIVersion: strategyRuntimeABIVersionV117,
+			ABIPosture:        expectedRuntimeServiceValidationABIPostureV117(languageID),
+		},
+		Runtime: response.Runtime, Validation: response.Validation,
+		EngineCompatibility: response.EngineCompatibility, Metadata: response.Metadata,
+		SourceHash: response.SourceHash, SourceBytes: response.SourceBytes, Error: response.Error,
+	}
+}
+
 func TestProviderArtifactSourceIdentityWriteBoundaryAcceptsV117LFAndCRLF(t *testing.T) {
 	for _, languageID := range []string{"typescript", "python", "rust", "zig"} {
 		for _, source := range []string{"print('ok')\n", "print('ok')\r\n"} {
