@@ -1146,7 +1146,6 @@ mod linux {
                 if !observed_populated {
                     return Err("POPULATED_STATE_NOT_OBSERVED".into());
                 }
-                monitor_mandatory_kill(&invocation)?;
                 break Some(status);
             }
             if started.is_some_and(|started| started.elapsed() >= deadline) {
@@ -1214,6 +1213,7 @@ mod linux {
             ),
             None => ("null".to_owned(), "\"SIG9\"".to_owned()),
         };
+        let cgroup_kill_used = timed_out || cancellation_won;
         let actual_cgroup_path = invocation.to_str().ok_or("CGROUP_PATH_INVALID")?.to_owned();
         if fs::read_dir(&invocation)
             .map_err(|_| "CGROUP_REMOVE_FAILED")?
@@ -1235,7 +1235,7 @@ mod linux {
                 "\"memoryEventsBefore\":{},\"memoryEventsAfter\":{},",
                 "\"pidsEventsBefore\":{},\"pidsEventsAfter\":{},\"pidsPeak\":{},",
                 "\"exitCode\":{},\"signal\":{},\"timedOut\":{},",
-                "\"cancellationRequested\":{},\"cgroupKillUsed\":true,",
+                "\"cancellationRequested\":{},\"cgroupKillUsed\":{},",
                 "\"stdoutBase64\":\"{}\",\"stderrBase64\":\"{}\",",
                 "\"stdoutTruncated\":{},\"stderrTruncated\":{},",
                 "\"payloadTruncated\":{},\"cgroupEmpty\":true,",
@@ -1262,6 +1262,7 @@ mod linux {
             signal,
             timed_out,
             cancellation_won,
+            cgroup_kill_used,
             base64(&stdout),
             base64(&stderr),
             stdout_truncated,

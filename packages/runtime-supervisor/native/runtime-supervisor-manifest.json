@@ -1,6 +1,6 @@
 {
   "schemaVersion": "runtime-native-supervisor-build-manifest-v1.18",
-  "sourceSha256": "sha256:f7e1f4d4347dc2a4fcb4524c6be82efc5126b1be6e080810a3bd95818580d568",
+  "sourceSha256": "sha256:7e7376b0fb8922ccf13591252441453035b4f804138373e6469ebfd1c0c190e3",
   "cargoLockSha256": "sha256:f347dcf650d26f6c3c158e9a2536467dabb5782fb7d6ee9de9bdab8cd3b924e5",
   "seccompProfileSha256": "sha256:49695944ce0459ad0af407f5534370dec0a0db79bab31c22378cffdf8689ccb6",
   "builderImage": "rust:1.95.0-alpine@sha256:e98196986adced5602f6e21c54babdbf2a8700400c7a78868324a3630e0c5d15",
@@ -13,6 +13,6 @@
   "supervisorHostUid": 65532,
   "guestNamespaceUid": 65534,
   "delegatedControllers": ["cpu", "memory", "pids"],
-  "supervisorToolchainSha256": "sha256:d091adbd9d75ec74d634556a91bc375e7b445c595c8b30549382d65872c73d94",
-  "binarySha256": "sha256:7eb2805b0327092e143d8995cda3acbe9396ee0897d3f69fe54951c94718ce45"
+  "supervisorToolchainSha256": "sha256:14832063cce051c2341d6c385630eee8aa6eca4254ab8199bfc6999769419007",
+  "binarySha256": "sha256:c98b1b5447029f931975b5b4be6be70694d3cf53dd8d4a62cabd98fabc41d0e2"
 }

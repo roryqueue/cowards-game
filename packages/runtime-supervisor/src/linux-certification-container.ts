@@ -622,7 +622,9 @@ export const runLinuxCertificationContainerProbe = (input: {
       supervisorHostUid: number
       pidsPeak: number
       stdoutBase64: string
+      cgroupKillUsed: boolean
       cgroupEmpty: boolean
+      cleanupComplete: boolean
     }
     const guestOutput = Buffer.from(receipt.stdoutBase64, "base64").toString(
       "utf8",
@@ -631,7 +633,9 @@ export const runLinuxCertificationContainerProbe = (input: {
       receipt.guestNamespaceUid !== CERTIFICATION_GUEST_NAMESPACE_UID ||
       receipt.supervisorHostUid !== CERTIFICATION_SUPERVISOR_UID ||
       receipt.pidsPeak < 2 ||
+      receipt.cgroupKillUsed !== false ||
       receipt.cgroupEmpty !== true ||
+      receipt.cleanupComplete !== false ||
       !guestOutput.startsWith(`${CERTIFICATION_GUEST_NAMESPACE_UID}\n`) ||
       !guestOutput.includes("CapEff:\t0000000000000000") ||
       !guestOutput.includes("CapBnd:\t0000000000000000") ||
