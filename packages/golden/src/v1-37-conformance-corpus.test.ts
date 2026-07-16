@@ -17,6 +17,7 @@ import {
   validateCompleteConformanceCaseInventory,
   validateV137ConformanceCorpus,
   type V137ConformanceCaseResult,
+  type V137ConformanceCorpus,
 } from "./v1-37-conformance-corpus.js"
 
 const expectedLanguages = ["typescript", "python", "rust", "zig"] as const
@@ -61,6 +62,18 @@ const completeResults = (): V137ConformanceCaseResult[] =>
       resultSha256: sha256(`${testCase.id}:${fixture.languageId}:result`),
     })),
   )
+
+const expectCorpusMutationRejected = (
+  mutate: (corpus: V137ConformanceCorpus) => void,
+  code: string,
+): void => {
+  const corpus = globalThis.structuredClone(
+    V1_37_CONFORMANCE_CORPUS,
+  ) as V137ConformanceCorpus
+  mutate(corpus)
+  corpus.corpusRootSha256 = computeV137ConformanceCorpusRoot(corpus)
+  expect(() => validateV137ConformanceCorpus(corpus)).toThrow(code)
+}
 
 describe("v1.37 executable conformance corpus", () => {
   it("freezes one closed mandatory D-01 through D-04 manifest", () => {
@@ -229,5 +242,29 @@ describe("v1.37 executable conformance corpus", () => {
     expect(() => validateCompleteConformanceCaseInventory(substituted)).toThrow(
       "SOURCE_IDENTITY_MISMATCH",
     )
+  })
+
+  it("rejects coercible identifiers, open enums, and unbounded optional identifiers", () => {
+    expectCorpusMutationRejected((corpus) => {
+      corpus.behaviorManifest.invocationScript[0]!.inputFixtureId =
+        123 as unknown as string
+    }, "INVOCATION_SCRIPT")
+    expectCorpusMutationRejected((corpus) => {
+      corpus.cases[0]!.expectation.resultClass =
+        "made_up" as (typeof corpus.cases)[0]["expectation"]["resultClass"]
+    }, "CASE_EXPECTATION")
+    expectCorpusMutationRejected((corpus) => {
+      corpus.cases.find(({ seed }) => seed !== null)!.seed = ""
+    }, "CASE_INVENTORY")
+    expectCorpusMutationRejected((corpus) => {
+      corpus.cases.find(
+        ({ generatorId }) => generatorId !== null,
+      )!.generatorId = "x".repeat(257)
+    }, "CASE_INVENTORY")
+    expectCorpusMutationRejected((corpus) => {
+      corpus.cases.find(
+        ({ mutationTarget }) => mutationTarget !== null,
+      )!.mutationTarget = ""
+    }, "CASE_INVENTORY")
   })
 })

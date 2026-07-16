@@ -47,6 +47,15 @@ export const V1_37_CONFORMANCE_REQUIRED_CAPABILITIES = Object.freeze([
 export type V137ConformanceCapability =
   (typeof V1_37_CONFORMANCE_REQUIRED_CAPABILITIES)[number]
 
+export const V1_37_CONFORMANCE_RESULT_CLASSES = Object.freeze([
+  "success",
+  "player_violation",
+  "system_failure",
+] as const)
+
+export type V137ConformanceResultClass =
+  (typeof V1_37_CONFORMANCE_RESULT_CLASSES)[number]
+
 export interface V137ConformanceInvocation {
   ordinal: number
   methodName: "selectActivations" | "soldierBrain"
@@ -72,7 +81,7 @@ export interface V137ConformanceFixture {
 }
 
 export interface V137ConformanceExpectation {
-  resultClass: "success" | "player_violation" | "system_failure"
+  resultClass: V137ConformanceResultClass
   reasonCode: string
   failingBoundary: string
   gameplayMutation: boolean
@@ -282,10 +291,10 @@ const validateBehaviorManifest = (
   for (const [index, invocation] of value.invocationScript.entries()) {
     exactKeys(invocation, ["ordinal", "methodName", "inputFixtureId"])
     const expected = expectedInvocations[index]!
+    requireIdentifier(invocation.inputFixtureId, "INVOCATION_SCRIPT")
     if (
       invocation.ordinal !== expected[0] ||
-      invocation.methodName !== expected[1] ||
-      !IDENTIFIER.test(invocation.inputFixtureId)
+      invocation.methodName !== expected[1]
     ) {
       fail("INVOCATION_SCRIPT")
     }
@@ -385,12 +394,16 @@ const validateCases = (cases: readonly V137ConformanceCase[]): void => {
       V1_37_CONFORMANCE_LANGUAGES,
       "CASE_LANGUAGE_MEMBERSHIP",
     )
+    if (testCase.seed !== null) {
+      requireIdentifier(testCase.seed, "CASE_INVENTORY")
+    }
+    if (testCase.generatorId !== null) {
+      requireIdentifier(testCase.generatorId, "CASE_INVENTORY")
+    }
+    if (testCase.mutationTarget !== null) {
+      requireIdentifier(testCase.mutationTarget, "CASE_INVENTORY")
+    }
     if (
-      (testCase.seed !== null && typeof testCase.seed !== "string") ||
-      (testCase.generatorId !== null &&
-        typeof testCase.generatorId !== "string") ||
-      (testCase.mutationTarget !== null &&
-        typeof testCase.mutationTarget !== "string") ||
       (testCase.kind === "seeded-property" &&
         (testCase.seed === null || testCase.generatorId === null)) ||
       (testCase.kind === "mutation-kill" && testCase.mutationTarget === null) ||
@@ -399,6 +412,13 @@ const validateCases = (cases: readonly V137ConformanceCase[]): void => {
       typeof testCase.expectation.retryable !== "boolean"
     ) {
       fail("CASE_INVENTORY")
+    }
+    if (
+      !V1_37_CONFORMANCE_RESULT_CLASSES.includes(
+        testCase.expectation.resultClass,
+      )
+    ) {
+      fail("CASE_EXPECTATION")
     }
     requireIdentifier(testCase.expectation.reasonCode, "CASE_EXPECTATION")
     requireIdentifier(testCase.expectation.failingBoundary, "CASE_EXPECTATION")
