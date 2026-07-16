@@ -103,6 +103,7 @@ status: complete
 3. **Task 2 RED: Corpus governance contract** - `aec3b54` (test)
 4. **Task 2 GREEN: Candidate/check separation** - `87b7fb6` (feat)
 5. **Package-run portability fix** - `348543f` (fix)
+6. **Nested candidate destination fix** - `18bed6e` (fix)
 
 ## Files Created/Modified
 
@@ -141,7 +142,15 @@ status: complete
 - **Verification:** Root-focused suite and package-local 8-test suite both pass.
 - **Committed in:** `348543f`
 
-**Total deviations:** 2 auto-fixed bugs. **Impact:** Candidate governance matches D-03 and the same proof now runs correctly from root or package scope without weakening active v1.
+**3. [Rule 1 - Bug] Allowed first-use nested candidate output roots**
+- **Found during:** Final implementation review
+- **Issue:** Candidate generation created only the version directory and assumed its configured parent already existed, so the documented `.planning/candidates/...` first-use path could fail.
+- **Fix:** Created the candidate directory recursively after the existing-path and active-golden guards; the test now starts from a missing nested destination.
+- **Files modified:** candidate generator and its test
+- **Verification:** Candidate/check suite passes 7/7 with the parent path absent.
+- **Committed in:** `18bed6e`
+
+**Total deviations:** 3 auto-fixed bugs. **Impact:** Candidate governance matches D-03, runs from root or package scope, and works on first use without weakening active v1.
 
 ## Issues Encountered
 
