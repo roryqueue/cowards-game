@@ -287,9 +287,7 @@ describe("frozen historical v1.4 interpretation", () => {
     })
     expect(mutation).toMatchObject({ ok: true })
     if (!mutation.ok) throw new Error(mutation.errors[0]?.code)
-    expect(mutation.interpretationRoot).not.toBe(
-      interpreted.interpretationRoot,
-    )
+    expect(mutation.interpretationRoot).not.toBe(interpreted.interpretationRoot)
   })
 
   it("keeps original-version resolution typed and byte-preserving", () => {
