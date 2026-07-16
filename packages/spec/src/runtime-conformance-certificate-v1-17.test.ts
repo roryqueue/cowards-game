@@ -6,6 +6,7 @@ import {
   encodeRuntimeConformanceCertificatePayloadV117,
   evaluateRuntimeConformanceFreshnessV117,
   requireAllFourConformanceLanesV117,
+  requireAllFourFixtureConformanceLanesV117,
   verifyRuntimeConformanceCertificateV117,
   type RuntimeConformanceCertificatePayloadV117,
   type RuntimeConformanceCertificateV117,
@@ -541,13 +542,28 @@ describe("runtime conformance certificate v1.17", () => {
       }),
     ).toThrow("ALL_FOUR_REQUIRED")
 
-    const closure = requireAllFourConformanceLanesV117({
+    expect(() =>
+      requireAllFourConformanceLanesV117({
+        certificates: verified,
+        currentIdentities: fixtures.map(
+          ({ certificate }) => certificate.identity,
+        ),
+        verificationInstant: "2026-07-20T00:00:00.000Z",
+      }),
+    ).toThrow("PRODUCTION_TRUST_REQUIRED")
+
+    const closure = requireAllFourFixtureConformanceLanesV117({
       certificates: verified,
       currentIdentities: fixtures.map(
         ({ certificate }) => certificate.identity,
       ),
       verificationInstant: "2026-07-20T00:00:00.000Z",
     })
+    expect(closure.schemaVersion).toBe(
+      "runtime-conformance-four-lane-fixture-closure-v1.17",
+    )
+    expect(closure.trustDomain).toBe("fixture")
+    expect(closure.registryGeneration).toBe("7")
     expect(closure.languageIds).toEqual(languages)
     expect(closure.corpusRootSha256).toBe(hash("1"))
     expect(Object.isFrozen(closure)).toBe(true)
@@ -561,7 +577,7 @@ describe("runtime conformance certificate v1.17", () => {
     }, "python")
     mismatched[1] = verifyFixture(python, python.certificate.identity)
     expect(() =>
-      requireAllFourConformanceLanesV117({
+      requireAllFourFixtureConformanceLanesV117({
         certificates: mismatched,
         currentIdentities: [
           fixtures[0]!.certificate.identity,
@@ -572,5 +588,23 @@ describe("runtime conformance certificate v1.17", () => {
         verificationInstant: "2026-07-20T00:00:00.000Z",
       }),
     ).toThrow("COMMON_CRITERIA_MISMATCH")
+
+    const nextGeneration = signFixture((value) => {
+      value.registryGeneration = "8"
+    }, "python")
+    const mixedGeneration = [...verified]
+    mixedGeneration[1] = verifyFixture(nextGeneration)
+    expect(() =>
+      requireAllFourFixtureConformanceLanesV117({
+        certificates: mixedGeneration,
+        currentIdentities: [
+          fixtures[0]!.certificate.identity,
+          nextGeneration.certificate.identity,
+          fixtures[2]!.certificate.identity,
+          fixtures[3]!.certificate.identity,
+        ],
+        verificationInstant: "2026-07-20T00:00:00.000Z",
+      }),
+    ).toThrow("REGISTRY_GENERATION_MISMATCH")
   })
 })

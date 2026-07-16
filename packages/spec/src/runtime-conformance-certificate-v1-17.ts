@@ -124,6 +124,24 @@ export interface RuntimeConformanceFreshnessDecisionV117 {
 
 export interface RuntimeConformanceFourLaneClosureV117 {
   schemaVersion: "runtime-conformance-four-lane-closure-v1.17"
+  trustDomain: "production"
+  registryGeneration: string
+  languageIds: RuntimeConformanceLanguageIdV117[]
+  certificateIds: string[]
+  freshUntil: string
+  corpusRootSha256: string
+  caseInventorySha256: string
+  runtimeAbiVersion: string
+  canonicalJsonProfileId: string
+  budgetPolicySha256: string
+  containmentPolicySha256: string
+  semanticTupleSha256: string
+}
+
+export interface RuntimeConformanceFourLaneFixtureClosureV117 {
+  schemaVersion: "runtime-conformance-four-lane-fixture-closure-v1.17"
+  trustDomain: "fixture"
+  registryGeneration: string
   languageIds: RuntimeConformanceLanguageIdV117[]
   certificateIds: string[]
   freshUntil: string
@@ -739,11 +757,19 @@ const commonCriteria = (identity: RuntimeConformanceIdentityBindingsV117) => ({
   semanticTupleSha256: identity.semanticTupleSha256,
 })
 
-export const requireAllFourConformanceLanesV117 = (input: {
+interface RequireAllFourConformanceLanesInputV117 {
   certificates: readonly Readonly<RuntimeConformanceVerifiedSnapshotV117>[]
   currentIdentities: readonly RuntimeConformanceIdentityBindingsV117[]
   verificationInstant: string
-}): Readonly<RuntimeConformanceFourLaneClosureV117> => {
+}
+
+const requireAllFourConformanceLanesForTrustDomainV117 = (
+  input: RequireAllFourConformanceLanesInputV117,
+  trustDomain: "production" | "fixture",
+): Readonly<
+  | RuntimeConformanceFourLaneClosureV117
+  | RuntimeConformanceFourLaneFixtureClosureV117
+> => {
   if (input.certificates.length !== 4 || input.currentIdentities.length !== 4) {
     return fail("ALL_FOUR_REQUIRED")
   }
@@ -754,6 +780,13 @@ export const requireAllFourConformanceLanesV117 = (input: {
   for (const certificate of input.certificates) {
     if (!verifiedSnapshots.has(certificate as object)) {
       return fail("UNVERIFIED_SNAPSHOT")
+    }
+    if (certificate.trustDomain !== trustDomain) {
+      return fail(
+        trustDomain === "production"
+          ? "PRODUCTION_TRUST_REQUIRED"
+          : "FIXTURE_TRUST_REQUIRED",
+      )
     }
     if (certificates.has(certificate.identity.languageId)) {
       return fail("ALL_FOUR_REQUIRED")
@@ -802,16 +835,53 @@ export const requireAllFourConformanceLanesV117 = (input: {
   ) {
     fail("COMMON_CRITERIA_MISMATCH")
   }
+  const registryGeneration = ordered[0]!.registryGeneration
+  if (
+    ordered
+      .slice(1)
+      .some(
+        (certificate) => certificate.registryGeneration !== registryGeneration,
+      )
+  ) {
+    fail("REGISTRY_GENERATION_MISMATCH")
+  }
   const freshUntil = new Date(
     Math.min(
       ...ordered.map((certificate) => requireInstant(certificate.freshUntil)),
     ),
   ).toISOString()
-  return deepFreeze({
-    schemaVersion: "runtime-conformance-four-lane-closure-v1.17",
+  const closure = {
+    registryGeneration,
     languageIds: [...RUNTIME_CONFORMANCE_LANGUAGES_V1_17],
     certificateIds: ordered.map(({ certificateId }) => certificateId),
     freshUntil,
     ...common,
-  })
+  }
+  return trustDomain === "production"
+    ? deepFreeze({
+        schemaVersion: "runtime-conformance-four-lane-closure-v1.17",
+        trustDomain: "production",
+        ...closure,
+      })
+    : deepFreeze({
+        schemaVersion: "runtime-conformance-four-lane-fixture-closure-v1.17",
+        trustDomain: "fixture",
+        ...closure,
+      })
 }
+
+export const requireAllFourConformanceLanesV117 = (
+  input: RequireAllFourConformanceLanesInputV117,
+): Readonly<RuntimeConformanceFourLaneClosureV117> =>
+  requireAllFourConformanceLanesForTrustDomainV117(
+    input,
+    "production",
+  ) as Readonly<RuntimeConformanceFourLaneClosureV117>
+
+export const requireAllFourFixtureConformanceLanesV117 = (
+  input: RequireAllFourConformanceLanesInputV117,
+): Readonly<RuntimeConformanceFourLaneFixtureClosureV117> =>
+  requireAllFourConformanceLanesForTrustDomainV117(
+    input,
+    "fixture",
+  ) as Readonly<RuntimeConformanceFourLaneFixtureClosureV117>
