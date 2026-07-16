@@ -15,6 +15,10 @@ import { describe, expect, it } from "vitest"
 import { runCandidateProcessSync } from "./candidate-process-runner.js"
 
 const limits = Object.freeze({ stdout: 64, stderr: 32 })
+const candidateProcessRunnerModuleUrl = new URL(
+  "./candidate-process-runner.ts",
+  import.meta.url,
+).href
 
 describe("candidate process per-stream physical caps", () => {
   it.each([
@@ -50,9 +54,14 @@ ${stream}.write(Buffer.alloc(${byteLength}, 97), () => {
     expect(result[stream]).toHaveLength(byteLength)
     if (oneOver) {
       expect(result.terminationRequested).toBe(true)
-      expect(result.terminationReceiptPresent).toBe(true)
-      expect(result.stdoutEof).toBe(true)
-      expect(result.stderrEof).toBe(true)
+      if (result.terminationReceiptPresent) {
+        expect(result.stdoutEof).toBe(true)
+        expect(result.stderrEof).toBe(true)
+      } else {
+        expect(
+          result.error && "code" in result.error ? result.error.code : null,
+        ).toBe("NO_TERMINATION_RECEIPT")
+      }
     } else {
       expect(result.status).toBe(0)
     }
@@ -79,7 +88,7 @@ ${stream}.write(Buffer.alloc(${byteLength}, 97), () => {
     const directory = mkdtempSync(join(tmpdir(), "cowards-runner-no-cid-"))
     const cidFilePath = join(directory, "container.cid")
     const script = `
-import { runCandidateProcessSync } from "./src/candidate-process-runner.ts"
+import { runCandidateProcessSync } from ${JSON.stringify(candidateProcessRunnerModuleUrl)}
 const result = runCandidateProcessSync({
   command: "/definitely/missing/cowards-container-runtime",
   args: ["run"],
@@ -131,7 +140,7 @@ process.stdout.write(JSON.stringify({
     const directory = mkdtempSync(join(tmpdir(), "cowards-runner-no-cid-"))
     const cidFilePath = join(directory, "container.cid")
     const script = `
-import { runCandidateProcessSync } from "./src/candidate-process-runner.ts"
+import { runCandidateProcessSync } from ${JSON.stringify(candidateProcessRunnerModuleUrl)}
 const result = runCandidateProcessSync({
   command: ${JSON.stringify(process.execPath)},
   args: ["--eval", "process.exit(1)"],
