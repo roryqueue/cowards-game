@@ -10,8 +10,8 @@ import {
 } from "@cowards/golden"
 import {
   DEFAULT_RUNTIME_LIMITS,
+  HISTORICAL_RUNTIME_EXECUTION_SERVICE_V1_16,
   INITIAL_BOUNDS,
-  RUNTIME_EXECUTION_SERVICE_VERSION,
   type RuntimeExecutionServiceRequest,
   type StrategyRevision,
 } from "@cowards/spec"
@@ -124,7 +124,8 @@ const requestForPair = (input: {
   bottom: StrategyRevision
   top: StrategyRevision
 }): RuntimeExecutionServiceRequest => ({
-  contractVersion: RUNTIME_EXECUTION_SERVICE_VERSION,
+  contractVersion:
+    HISTORICAL_RUNTIME_EXECUTION_SERVICE_V1_16.runtimeServiceVersion,
   kind: "executeMatch",
   requestId: `runtime-request:golden:v1.37:${input.pairId}`,
   match: {
@@ -157,9 +158,9 @@ const requestForPair = (input: {
 const markerValues = Object.values(fourLanguageCurrentPrivateMarkers)
 const legacyMatchServiceIsSelected =
   runtimeConfig.contractSelection.runtimeServiceVersion ===
-  RUNTIME_EXECUTION_SERVICE_VERSION
+  HISTORICAL_RUNTIME_EXECUTION_SERVICE_V1_16.runtimeServiceVersion
 
-describe("v1.37 current four-language golden Strategy corpus", () => {
+describe("v1.37 retained four-language corpus readiness", () => {
   it("declares equivalent golden Strategy sources and all pairwise combinations", () => {
     expect(FOUR_LANGUAGE_CURRENT_CORPUS_VERSION).toBe(
       "four-language-current-corpus-v1.37",
@@ -329,11 +330,7 @@ describe("v1.37 current four-language golden Strategy corpus", () => {
 
       expect(response.ok).toBe(false)
       if (!response.ok) {
-        expect(response.systemFailure.code).toBe(
-          legacyMatchServiceIsSelected
-            ? "MALFORMED_REQUEST"
-            : "UNSUPPORTED_RUNTIME_ADAPTER",
-        )
+        expect(response.systemFailure.code).toBe("MALFORMED_REQUEST")
         expect(JSON.stringify(response)).not.toContain(
           sourceFor(languageId).source,
         )

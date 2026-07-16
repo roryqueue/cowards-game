@@ -145,10 +145,10 @@
       "id": "phase258.cross-package-current-callers",
       "stage": "activation",
       "kind": "vitest",
-      "command": ["pnpm", "exec", "vitest", "run", "--reporter=verbose", "--maxWorkers=1", "packages/runtime-js/src/integration.test.ts", "packages/persistence/src/semantic-integrity.test.ts", "packages/persistence/src/workshop.test.ts", "packages/golden/src/parity.test.ts"],
+      "command": ["pnpm", "exec", "vitest", "run", "--reporter=verbose", "--maxWorkers=1", "apps/runtime-service/src/four-language-parity.test.ts", "packages/runtime-js/src/integration.test.ts", "packages/persistence/src/semantic-integrity.test.ts", "packages/persistence/src/workshop.test.ts", "packages/golden/src/parity.test.ts"],
       "namedResult": "phase258-cross-package-current-callers",
-      "expectedOutput": ["runtime-js/src/integration.test.ts", "persistence/src/semantic-integrity.test.ts", "persistence/src/workshop.test.ts", "golden/src/parity.test.ts"],
-      "ownedFiles": ["packages/runtime-js/src/integration.test.ts", "packages/persistence/src/semantic-integrity.test.ts", "packages/persistence/src/workshop.test.ts", "packages/golden/src/parity.test.ts"]
+      "expectedOutput": ["runtime-service/src/four-language-parity.test.ts", "runtime-js/src/integration.test.ts", "persistence/src/semantic-integrity.test.ts", "persistence/src/workshop.test.ts", "golden/src/parity.test.ts"],
+      "ownedFiles": ["apps/runtime-service/src/four-language-parity.test.ts", "packages/runtime-js/src/integration.test.ts", "packages/persistence/src/semantic-integrity.test.ts", "packages/persistence/src/workshop.test.ts", "packages/golden/src/parity.test.ts"]
     },
     {
       "id": "phase258.activation-critical-contracts",
