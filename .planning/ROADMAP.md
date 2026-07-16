@@ -249,13 +249,13 @@ Plans:
 
 **Wave 1 — immutable inputs and protected baseline**
 
-- [ ] 259-01-PLAN.md — Freeze the mandatory executable corpus and audited four-language fixtures.
-- [ ] 259-02-PLAN.md — Record the canonical transition stream for trace and reconstruction proof.
-- [ ] 259-05-PLAN.md — Replace the singleton Chronicle cursor with per-activation-slot lifecycle state.
-- [ ] 259-06-PLAN.md — Freeze immutable v1.4 Chronicle interpretation and explicit historical dispatch.
-- [ ] 259-07-PLAN.md — Define fail-closed per-lane conformance certificates.
-- [ ] 259-24-PLAN.md — Define additive v1.18 budget, ABI, and evidence policy.
-- [ ] 259-29-PLAN.md — Capture the exact protected working-tree baseline.
+- [x] 259-01-PLAN.md — Freeze the mandatory executable corpus and audited four-language fixtures.
+- [x] 259-02-PLAN.md — Record the canonical transition stream for trace and reconstruction proof.
+- [x] 259-05-PLAN.md — Replace the singleton Chronicle cursor with per-activation-slot lifecycle state.
+- [x] 259-06-PLAN.md — Freeze immutable v1.4 Chronicle interpretation and explicit historical dispatch.
+- [x] 259-07-PLAN.md — Define fail-closed per-lane conformance certificates.
+- [x] 259-24-PLAN.md — Define additive v1.18 budget, ABI, and evidence policy.
+- [x] 259-29-PLAN.md — Capture the exact protected working-tree baseline.
 
 **Wave 2 — trace, Chronicle semantics, identity, and supervisor protocol**
 
