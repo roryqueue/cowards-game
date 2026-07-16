@@ -37,6 +37,8 @@ key-decisions:
   - "A reviewed expected trace with an invalid claimed root suspends the oracle, while an invalid or mismatching candidate is quarantined."
   - "Restricted diffs expose only stable case, invocation, transition, field, and hashed-value coordinates."
   - "The package entrypoint exports pure corpus and comparison contracts but no writer, approval, promotion, regeneration, private-preimage, or diagnostic authority."
+  - "Comparator equality is available only after both projected traces pass closed semantic admission; a semantically invalid reviewed trace suspends the oracle and an invalid candidate remains quarantined."
+  - "Every system-failure trace has exactly one referenced system-failure invocation with unchanged state, memory, and objective hashes."
 
 patterns-established:
   - "D-05 oracle authority: committed reviewed trace roots are checked independently and never regenerated from a live TypeScript lane."
@@ -87,7 +89,7 @@ status: complete
 - **Started:** 2026-07-16T11:40:14Z
 - **Completed:** 2026-07-16T11:55:35Z
 - **Tasks:** 2
-- **Files modified:** 3
+- **Files modified:** 5
 
 ## Accomplishments
 
@@ -98,6 +100,7 @@ status: complete
 - Added restricted first-divergence output containing only stable coordinates and hashed values; raw source, artifact, memory, objective, event-private, diagnostics, stderr, path, timing, and host preimages cannot enter the closed projection.
 - Exported the pure v1.37 corpus/projector/root/comparator surface without exposing golden-writing or promotion authority.
 - Closed three adversarial review gaps: caller-owned shallow freezes can no longer create stale-root false equality, event payloads/contexts must survive the canonical public Chronicle schema without stripped fields, and system-failure summaries must prove no mutation while matching their referenced invocation.
+- Closed three independent rereview gaps: self-rehashed invalid prefix/derived roots cannot become an equal oracle, system-failure invocations are unique and reference-strict across result classes, and transition stage/outcome/event/terminal hashes are replay-owned and semantically revalidated before equality.
 
 ## Task Commits
 
@@ -108,12 +111,16 @@ status: complete
 5. **Review CR-01: Remove shallow-freeze trace-root caching** — `f6cff37` (fix)
 6. **Review CR-02: Reject private event preimages through canonical event validation** — `3d3e078` (fix)
 7. **Review CR-03: Enforce no-mutation failure consistency** — `8fe7716` (fix)
+8. **Rereview RED: Reproduce semantic-admission gaps** — `368c82e` (test)
+9. **Rereview CR-04/CR-05/CR-06: Close projected trace admission** — `8289633` (fix)
 
 ## Files Created/Modified
 
 - `packages/golden/src/v1-37-conformance-trace.ts` — Closed projector, validation, root, typed errors, and restricted comparator.
 - `packages/golden/src/v1-37-conformance-trace.test.ts` — Full-Match projection, privacy rejection, exact mutation matrix, failure equality, oracle-dispute, and package-boundary tests.
 - `packages/golden/src/index.ts` — Read-only corpus and trace exports.
+- `packages/replay/src/record.ts` — Replay-owned canonical output, ordered-event, and terminal hash helpers used by both recording and trace verification.
+- `packages/engine/src/index.ts` — Public type-only `KernelStage` export for exhaustive compile-checked stage admission.
 
 ## Decisions Made
 
@@ -122,16 +129,24 @@ status: complete
 - Treated system-failure and player-violation semantics as first-class equality dimensions rather than messages or host diagnostics.
 - Rehash every caller-supplied trace instead of trusting shallow `Object.freeze` as evidence of recursive immutability.
 - Admit recorded events only when their payload and context are unchanged by the canonical current Chronicle event schema; schema-stripped unknown data is a typed trace rejection.
-- Require referenced failure summaries to agree with invocation class, stable code, boundary, mutation flags, terminal effect, and retryability; system failures additionally prove unchanged state and memory hashes.
+- Require referenced failure summaries to agree with invocation class, stable code, boundary, mutation flags, terminal effect, and retryability; system failures additionally prove unchanged state, memory, and objective hashes.
+- Revalidate the complete closed projected trace before comparator equality, including exact stage vocabulary, event/output hashes, outcome schema, terminal hash coherence, prefix roots, derived transition root, and failure ownership.
+- Carry before/after objective hashes alongside memory hashes so system failure proves no objective mutation rather than relying on a single unpaired digest.
 
 ## Deviations from Plan
 
-None. The planned RED/GREEN implementation, export boundary, and verification were completed without scope changes.
+### Review-driven hardening
+
+- Added replay-owned hash helpers instead of duplicating recorder domains in the golden package.
+- Added a type-only engine export so exact kernel-stage validation remains compile-time exhaustive without copying gameplay behavior.
+- Expanded invocation evidence with before/after objective hashes to prove system-failure no-mutation semantics.
+- These changes preserve gameplay and public privacy behavior while making the planned equality and failure-safety claims executable.
 
 ## Issues Encountered
 
 - Repeating the complete Match transition stream for every one-field mutation exceeded Vitest's default per-test budget. The projection test still exercises the entire recorded Match, while the exhaustive mutation table uses a valid compact `RecordedCanonicalTransitionV137` prefix with the same complete field surface. Focused runtime fell from more than 20 seconds with timeouts to 2.85 seconds with all assertions passing.
 - Adversarial review showed that shallow freezing is not a safe cache eligibility signal and that closed top-level event keys do not make nested payloads closed. Both assumptions were replaced with executable fail-closed checks.
+- Independent rereview showed that an outer self-hash is not semantic admission: derived roots, stage/outcome schemas, terminal coherence, and unique failure ownership must all pass before equal-root short-circuiting.
 
 ## User Setup Required
 
@@ -145,10 +160,11 @@ None.
 
 ## Self-Check: PASSED
 
-- All three planned source/test/export files exist.
+- All three planned source/test/export files and both review-owned shared authority updates exist.
 - RED/GREEN commits `a34ccfa`, `8a9227c`, `69cf415`, and `5a7ff21` exist in order.
-- Focused trace suite passes: 1 file, 10 tests.
-- Full `@cowards/golden` package suite passes: 3 files, 19 tests.
+- Focused trace suite passes: 1 file, 12 tests.
+- Full `@cowards/golden` package suite passes: 3 files, 21 tests.
+- Joined replay recorder and trace regression passes: 2 files, 30 tests.
 - Golden package typecheck, focused ESLint, Prettier check, and `git diff --check` pass.
 - Protected milestone, project-state, and v1.4 specification files are unchanged.
 
