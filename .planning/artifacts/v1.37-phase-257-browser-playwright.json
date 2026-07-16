@@ -5,9 +5,9 @@
     "ci": true,
     "workers": 1,
     "exitCode": 0,
-    "reportSha256": "1cef75a2d7ab43c7c0bc5d889086aab258fad6f0a8e4e790b9fa5152c1e6df51",
-    "startedAt": "2026-07-16T07:36:35.089Z",
-    "durationMs": 51334.979999999996,
+    "reportSha256": "43b76a9aa6c0eabd5d28e33d28ea4dca2f0c3e06b69f32a8a06bead1736b3f49",
+    "startedAt": "2026-07-16T23:30:04.999Z",
+    "durationMs": 60483.984000000004,
     "expected": 3,
     "skipped": 0,
     "unexpected": 0,
@@ -19,21 +19,21 @@
       "file": "apps/web/e2e/v1-37-rules-integrity-proof.spec.ts",
       "title": "result, APIs, and replay share one realistic public-safe terminal receipt",
       "status": "passed",
-      "durationMs": 20859
+      "durationMs": 21398
     },
     {
       "project": "mobile",
       "file": "apps/web/e2e/v1-37-rules-integrity-proof.spec.ts",
       "title": "result, APIs, and replay share one realistic public-safe terminal receipt",
       "status": "passed",
-      "durationMs": 7258
+      "durationMs": 5713
     },
     {
       "project": "tablet",
       "file": "apps/web/e2e/v1-37-rules-integrity-proof.spec.ts",
       "title": "result, APIs, and replay share one realistic public-safe terminal receipt",
       "status": "passed",
-      "durationMs": 10790
+      "durationMs": 10097
     }
   ]
 }
