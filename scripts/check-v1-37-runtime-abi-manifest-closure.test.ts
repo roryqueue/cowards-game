@@ -40,6 +40,14 @@ const readJson = (path: string): unknown =>
   JSON.parse(readFileSync(path, "utf8")) as unknown
 
 describe("Phase 258 runtime ABI activation closure", () => {
+  const currentHead = (): string => {
+    const result = spawnSync("git", ["rev-parse", "HEAD"], {
+      encoding: "utf8",
+    })
+    if (result.status !== 0) throw new Error("git HEAD unavailable")
+    return result.stdout.trim()
+  }
+
   it("prepares a path/operation allowlist without premature final hashes", () => {
     const allowlist = readJson(
       "packages/spec/artifacts/runtime-abi-v1.17-activation-allowlist.json",
@@ -57,7 +65,7 @@ describe("Phase 258 runtime ABI activation closure", () => {
         "---\nfiles_modified:\n  - z.ts\n  - a.ts\nautonomous: true\n---\n",
       ),
     ).toEqual(["z.ts", "a.ts"])
-    const paths = collectPhase258InventoryPaths()
+    const paths = collectPhase258InventoryPaths({ headCommit: currentHead() })
     expect(paths).toEqual([...paths].sort())
     expect(paths).not.toContain(
       "packages/spec/src/fixtures/canonical-json-v1-1-raw",
@@ -90,14 +98,7 @@ describe("Phase 258 runtime ABI activation closure", () => {
   })
 
   it("rejects plan inventory removal, unplanned git paths, plan tamper, and wrong ancestry pins", () => {
-    const headCommit = (
-      readJson(
-        "packages/spec/artifacts/runtime-abi-v1.17-test-receipt.json",
-      ) as {
-        provenance?: { git?: { executionCommit?: string } }
-      }
-    ).provenance?.git?.executionCommit
-    if (headCommit === undefined) throw new Error("receipt provenance missing")
+    const headCommit = currentHead()
     const gitPaths = collectPhase258GitChangedPaths({ headCommit })
     const declaredPaths = expandPhase258InventoryPaths(
       RUNTIME_ABI_PHASE258_PLAN_PATHS.flatMap((planPath) =>
@@ -250,7 +251,9 @@ describe("Phase 258 runtime ABI activation closure", () => {
   })
 
   it("reads the fail-closed counted-lane posture from the canonical policy", () => {
-    const manifest = buildRuntimeAbiActivationManifest()
+    const manifest = buildRuntimeAbiActivationManifest(undefined, {
+      closureHeadCommit: currentHead(),
+    })
     expect(manifest.posture).toMatchObject({
       countedEligibleLaneIds: [],
       productionTrustedProducers: [],

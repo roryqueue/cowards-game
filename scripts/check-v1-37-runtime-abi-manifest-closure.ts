@@ -587,13 +587,18 @@ const verifyExactCurrentRuntimeTuple = (): void => {
 
 export const buildRuntimeAbiActivationManifest = (
   readBytes: (path: string) => Uint8Array = (path) => readFileSync(path),
+  options: {
+    closureHeadCommit?: string | undefined
+  } = {},
 ): RuntimeAbiActivationManifest => {
   verifyExactCurrentRuntimeTuple()
   const allowlist = parseRuntimeAbiActivationAllowlist(
     readJson(RUNTIME_ABI_ACTIVATION_ALLOWLIST_PATH),
   )
-  const inventory = collectPhase258InventoryPaths().map((path) =>
-    digestPath(path, readBytes),
+  const closureHeadCommit =
+    options.closureHeadCommit ?? readPhase258ClosureHeadCommit()
+  const inventory = collectPhase258InventoryPaths({ headCommit: closureHeadCommit }).map(
+    (path) => digestPath(path, readBytes),
   )
   const inventoryPaths = new Set(inventory.map(({ path }) => path))
   for (const { path } of allowlist.operations) {
@@ -619,7 +624,6 @@ export const buildRuntimeAbiActivationManifest = (
   const fixturePath =
     "packages/spec/artifacts/runtime-successor-authority-v1.17.fixture.json"
   const testReceipt = digestPath(RUNTIME_ABI_TEST_RECEIPT_PATH, readBytes)
-  const closureHeadCommit = readPhase258ClosureHeadCommit()
   return Object.freeze({
     schemaVersion: "runtime-abi-v1.17-activation-manifest-v1",
     activationPlan: "258-14",
