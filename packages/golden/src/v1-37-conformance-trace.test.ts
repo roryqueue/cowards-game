@@ -163,6 +163,8 @@ const successfulInput = ({
         strategyMemoryHash: first.strategyMemoryHash,
         soldierMemoryHash: first.soldierMemoryHash,
         objectiveHash: first.objectiveHash,
+        beforeObjectiveHash: hash("6"),
+        afterObjectiveHash: hash("7"),
         beforeStateHash: first.beforeStateHash,
         afterStateHash: first.afterStateHash,
         beforeMemoryHash: hash("1"),
@@ -183,6 +185,8 @@ const successfulInput = ({
         strategyMemoryHash: last.strategyMemoryHash,
         soldierMemoryHash: last.soldierMemoryHash,
         objectiveHash: last.objectiveHash,
+        beforeObjectiveHash: hash("7"),
+        afterObjectiveHash: hash("8"),
         beforeStateHash: last.beforeStateHash,
         afterStateHash: last.afterStateHash,
         beforeMemoryHash: hash("2"),
@@ -216,6 +220,7 @@ const failureInput = (): ProjectCanonicalConformanceTraceInput => {
         memoryMutation: false,
         afterStateHash: input.invocations[0]!.beforeStateHash,
         afterMemoryHash: input.invocations[0]!.beforeMemoryHash,
+        afterObjectiveHash: input.invocations[0]!.beforeObjectiveHash,
         terminalEffectHash: null,
         retryable: true,
       },
@@ -335,6 +340,46 @@ describe("v1.37 canonical conformance trace", () => {
     })
   })
 
+  it("suspends a semantically invalid reviewed oracle even after outer rehash", () => {
+    const projected = projectCanonicalConformanceTrace(successfulInput())
+    for (const mutate of [
+      (trace: DeepMutable<CanonicalConformanceTrace>) => {
+        trace.transitions[0]!.accumulatedTraceRoot = hash("f")
+      },
+      (trace: DeepMutable<CanonicalConformanceTrace>) => {
+        trace.transitionTraceRoot = hash("f")
+      },
+    ]) {
+      const corrupted = mutableTrace(projected)
+      mutate(corrupted)
+      corrupted.traceRoot = hashCanonicalConformanceTrace(corrupted)
+      expect(
+        compareCanonicalConformanceTrace({
+          expected: corrupted as CanonicalConformanceTrace,
+          actual: corrupted as CanonicalConformanceTrace,
+        }),
+      ).toMatchObject({
+        status: "oracle_suspended",
+        disposition: "suspend_oracle",
+        code: "REVIEWED_ORACLE_SEMANTICS_INVALID",
+        caseId: projected.caseId,
+      })
+    }
+
+    const invalidActual = mutableTrace(projected)
+    invalidActual.transitions[0]!.accumulatedTraceRoot = hash("f")
+    invalidActual.traceRoot = hashCanonicalConformanceTrace(invalidActual)
+    expect(
+      compareCanonicalConformanceTrace({
+        expected: projected,
+        actual: invalidActual as CanonicalConformanceTrace,
+      }),
+    ).toMatchObject({
+      status: "diverged",
+      disposition: "quarantine",
+    })
+  })
+
   it("rejects host-private and private-preimage fields instead of serializing them", () => {
     for (const field of [
       "sourceBytes",
@@ -405,6 +450,20 @@ describe("v1.37 canonical conformance trace", () => {
     expect(() =>
       projectCanonicalConformanceTrace(nestedContextLeak),
     ).toThrowError(expect.objectContaining({ code: "TRACE_EVENT_INVALID" }))
+
+    const terminalLeak = globalThis.structuredClone(
+      successfulInput(),
+    ) as DeepMutable<ProjectCanonicalConformanceTraceInput>
+    const terminal = terminalLeak.transitions.find(
+      ({ terminalStatus }) => terminalStatus !== null,
+    )!
+    terminal.terminalStatus = {
+      type: "DRAW",
+      diagnostics: "SECRET_TERMINAL_DIAGNOSTIC",
+    } as unknown as typeof terminal.terminalStatus
+    expect(() => projectCanonicalConformanceTrace(terminalLeak)).toThrowError(
+      expect.objectContaining({ code: "TRACE_RESULT_INVALID" }),
+    )
   })
 
   it("rejects noncanonical invocation order, transition roots, and tuple identity", () => {
@@ -431,6 +490,40 @@ describe("v1.37 canonical conformance trace", () => {
     expect(() => projectCanonicalConformanceTrace(mixedTuple)).toThrowError(
       expect.objectContaining({ code: "TRACE_TRANSITION_IDENTITY_INVALID" }),
     )
+
+    const invalidStage = globalThis.structuredClone(
+      successfulInput(),
+    ) as DeepMutable<ProjectCanonicalConformanceTraceInput>
+    invalidStage.transitions[0]!.coordinates.stage = "private-host-stage"
+    expect(() => projectCanonicalConformanceTrace(invalidStage)).toThrowError(
+      expect.objectContaining({ code: "TRACE_TRANSITION_IDENTITY_INVALID" }),
+    )
+
+    for (const mutate of [
+      (transition: DeepMutable<RecordedCanonicalTransitionV137>) => {
+        transition.terminalStatus = null
+      },
+      (transition: DeepMutable<RecordedCanonicalTransitionV137>) => {
+        transition.terminalHash = null
+      },
+      (transition: DeepMutable<RecordedCanonicalTransitionV137>) => {
+        transition.terminalStatus = {
+          type: "FAILED",
+          reason: "/private/diagnostic",
+        }
+      },
+    ]) {
+      const terminalMismatch = globalThis.structuredClone(
+        successfulInput(),
+      ) as DeepMutable<ProjectCanonicalConformanceTraceInput>
+      const transition = terminalMismatch.transitions.find(
+        ({ terminalStatus }) => terminalStatus !== null,
+      )!
+      mutate(transition)
+      expect(() =>
+        projectCanonicalConformanceTrace(terminalMismatch),
+      ).toThrowError(expect.objectContaining({ code: "TRACE_RESULT_INVALID" }))
+    }
   })
 
   it("reports the first safe top-level and invocation divergence without values", () => {
@@ -542,6 +635,18 @@ describe("v1.37 canonical conformance trace", () => {
         field: "invocation.objectiveHash",
         mutate: (invocation) => {
           invocation.objectiveHash = hash("f")
+        },
+      },
+      {
+        field: "invocation.beforeObjectiveHash",
+        mutate: (invocation) => {
+          invocation.beforeObjectiveHash = hash("f")
+        },
+      },
+      {
+        field: "invocation.afterObjectiveHash",
+        mutate: (invocation) => {
+          invocation.afterObjectiveHash = hash("f")
         },
       },
       {
@@ -812,7 +917,7 @@ describe("v1.37 canonical conformance trace", () => {
         actual: expected,
       }),
     ).toMatchObject({
-      status: "oracle_disputed",
+      status: "oracle_suspended",
       disposition: "suspend_oracle",
       code: "REVIEWED_ORACLE_ROOT_MISMATCH",
       caseId: expected.caseId,
@@ -923,6 +1028,9 @@ describe("v1.37 canonical conformance trace", () => {
         input.invocations[0]!.afterMemoryHash = hash("f")
       },
       (input) => {
+        input.invocations[0]!.afterObjectiveHash = hash("f")
+      },
+      (input) => {
         input.invocations[0]!.resultClass = "success"
         input.invocations[0]!.stableCode = null
         input.invocations[0]!.canonicalPayloadHash = hash("f")
@@ -948,6 +1056,49 @@ describe("v1.37 canonical conformance trace", () => {
         expect.objectContaining({ code: "TRACE_RESULT_INVALID" }),
       )
     }
+  })
+
+  it("requires one uniquely referenced nonmutating system-failure invocation", () => {
+    const successWithSystemFailure = globalThis.structuredClone(
+      successfulInput(),
+    ) as DeepMutable<ProjectCanonicalConformanceTraceInput>
+    Object.assign(successWithSystemFailure.invocations[0]!, {
+      resultClass: "system_failure",
+      stableCode: "TOOLCHAIN_UNAVAILABLE",
+      canonicalPayloadHash: null,
+      gameplayMutation: false,
+      memoryMutation: false,
+      afterStateHash: successWithSystemFailure.invocations[0]!.beforeStateHash,
+      afterMemoryHash:
+        successWithSystemFailure.invocations[0]!.beforeMemoryHash,
+      afterObjectiveHash:
+        successWithSystemFailure.invocations[0]!.beforeObjectiveHash,
+      terminalEffectHash: null,
+      retryable: true,
+    })
+    expect(() =>
+      projectCanonicalConformanceTrace(successWithSystemFailure),
+    ).toThrowError(expect.objectContaining({ code: "TRACE_RESULT_INVALID" }))
+
+    const nullReference = globalThis.structuredClone(
+      failureInput(),
+    ) as DeepMutable<ProjectCanonicalConformanceTraceInput>
+    nullReference.failure!.invocationOrdinal = null
+    expect(() => projectCanonicalConformanceTrace(nullReference)).toThrowError(
+      expect.objectContaining({ code: "TRACE_RESULT_INVALID" }),
+    )
+
+    const duplicate = globalThis.structuredClone(
+      failureInput(),
+    ) as DeepMutable<ProjectCanonicalConformanceTraceInput>
+    duplicate.invocations.push({
+      ...duplicate.invocations[0]!,
+      ordinal: 1,
+      invocationId: "invocation:failure:duplicate",
+    })
+    expect(() => projectCanonicalConformanceTrace(duplicate)).toThrowError(
+      expect.objectContaining({ code: "TRACE_RESULT_INVALID" }),
+    )
   })
 
   it("uses typed stable projector errors", () => {
