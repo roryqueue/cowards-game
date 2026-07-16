@@ -1,7 +1,14 @@
 #!/usr/bin/env -S pnpm exec tsx
 import { Buffer } from "node:buffer"
 import { createHash, verify as verifySignature } from "node:crypto"
-import { readFileSync } from "node:fs"
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs"
 import path from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
 /* eslint-disable no-restricted-imports -- this repo-root evaluator verifies package-internal authorities directly. */
@@ -60,6 +67,10 @@ import { assertPublicOutputLeakSafe } from "../packages/spec/src/public-output-p
 /* eslint-enable no-restricted-imports */
 import {
   IMMUTABLE_RUNTIME_SERVICE_V116_DIGESTS,
+  RUNTIME_ABI_ACTIVATION_COMMIT,
+  RUNTIME_ABI_ACTIVATION_MANIFEST_PATH,
+  checkRuntimeAbiManifestClosure,
+  parseRuntimeAbiActivationManifest,
   verifyImmutableRuntimeServiceV116Digests,
 } from "./check-v1-37-runtime-abi-manifest-closure.js"
 import {
@@ -74,6 +85,11 @@ const defaultRepoRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   "..",
 )
+
+export const V137_RUNTIME_ABI_VALIDATION_JSON_PATH =
+  "packages/spec/artifacts/runtime-abi-v1.17-validation.json"
+export const V137_RUNTIME_ABI_VALIDATION_MARKDOWN_PATH =
+  ".planning/artifacts/v1.37-runtime-abi-validation.md"
 
 const sha256 = (bytes: Uint8Array | string): `sha256:${string}` =>
   `sha256:${createHash("sha256").update(bytes).digest("hex")}`
@@ -698,6 +714,7 @@ export interface V137RuntimeAbiValidation {
   posture: "activated-uncertified-pending-phase-259-conformance"
   activation: {
     activationCommit: string
+    manifestSha256: `sha256:${string}`
     activationPathCount: number
     manifestStatus: "verified"
   }
@@ -747,6 +764,7 @@ const expectedGateIds = [
 export const createV137RuntimeAbiValidation = (input: {
   activation: {
     activationCommit: string
+    manifestSha256: string
     activationPathCount: number
   }
   testReceipt: {
@@ -767,6 +785,7 @@ export const createV137RuntimeAbiValidation = (input: {
   )
   if (
     !/^[0-9a-f]{40}$/u.test(input.activation.activationCommit) ||
+    !/^sha256:[0-9a-f]{64}$/u.test(input.activation.manifestSha256) ||
     !Number.isSafeInteger(input.activation.activationPathCount) ||
     input.activation.activationPathCount <= 0 ||
     input.testReceipt.stage !== "postactivation" ||
@@ -866,6 +885,7 @@ export const renderV137RuntimeAbiValidationMarkdown = (
     `- Semantic receipt: \`${validation.current.semanticReceipt}\``,
     `- Canonical JSON: \`${validation.current.canonicalJson}\``,
     `- Activation: ${validation.activation.activationPathCount} exact paths in commit \`${validation.activation.activationCommit}\``,
+    `- Activation manifest: \`${validation.activation.manifestSha256}\``,
     "",
     "## Exact executable evidence",
     "",
@@ -889,6 +909,104 @@ export const renderV137RuntimeAbiValidationMarkdown = (
     "",
   ].join("\n")}\n`
 
+export const evaluateV137RuntimeAbi = (
+  root: string = defaultRepoRoot,
+  options: {
+    checkManifestClosure?: (() => void) | undefined
+  } = {},
+): V137RuntimeAbiValidation => {
+  if (
+    options.checkManifestClosure === undefined &&
+    path.resolve(root) !== path.resolve(process.cwd())
+  ) {
+    return fail(
+      "manifest closure must run from the same repository root as evaluation",
+    )
+  }
+  ;(
+    options.checkManifestClosure ??
+    (() =>
+      checkRuntimeAbiManifestClosure({
+        final: true,
+        activationCommit: RUNTIME_ABI_ACTIVATION_COMMIT,
+      }))
+  )()
+  const activationManifestBytes = readFileSync(
+    path.join(root, RUNTIME_ABI_ACTIVATION_MANIFEST_PATH),
+  )
+  const activationManifest = parseRuntimeAbiActivationManifest(
+    JSON.parse(activationManifestBytes.toString("utf8")) as unknown,
+  )
+  const testReceipt = evaluateV137RuntimeAbiTestReceipt(root)
+  return createV137RuntimeAbiValidation({
+    activation: {
+      activationCommit: activationManifest.activationCommit,
+      manifestSha256: sha256(activationManifestBytes),
+      activationPathCount: activationManifest.activationDiff.length,
+    },
+    testReceipt,
+    gates: [
+      evaluateV137CanonicalJsonCorpus(root),
+      evaluateV137OutcomeSemantics(),
+      evaluateV137RuntimeBudgets(root),
+      evaluateV137SourceIdentity(),
+      evaluateV137EvidenceDag(root),
+      evaluateV137HistoricalV116(root),
+      evaluateV137TypescriptGoParity(root),
+    ],
+  })
+}
+
+const writeAtomically = (targetPath: string, content: string): void => {
+  mkdirSync(path.dirname(targetPath), { recursive: true })
+  const temporaryPath = `${targetPath}.${String(process.pid)}.tmp`
+  try {
+    writeFileSync(temporaryPath, content, { encoding: "utf8", flag: "wx" })
+    renameSync(temporaryPath, targetPath)
+  } finally {
+    rmSync(temporaryPath, { force: true })
+  }
+}
+
+export const writeV137RuntimeAbiValidationArtifacts = (
+  validation: V137RuntimeAbiValidation,
+  root: string = defaultRepoRoot,
+): void => {
+  writeAtomically(
+    path.join(root, V137_RUNTIME_ABI_VALIDATION_JSON_PATH),
+    renderV137RuntimeAbiValidationJson(validation),
+  )
+  writeAtomically(
+    path.join(root, V137_RUNTIME_ABI_VALIDATION_MARKDOWN_PATH),
+    renderV137RuntimeAbiValidationMarkdown(validation),
+  )
+}
+
+export const checkV137RuntimeAbiValidationArtifacts = (
+  validation: V137RuntimeAbiValidation,
+  root: string = defaultRepoRoot,
+): void => {
+  const expected = [
+    {
+      relativePath: V137_RUNTIME_ABI_VALIDATION_JSON_PATH,
+      content: renderV137RuntimeAbiValidationJson(validation),
+    },
+    {
+      relativePath: V137_RUNTIME_ABI_VALIDATION_MARKDOWN_PATH,
+      content: renderV137RuntimeAbiValidationMarkdown(validation),
+    },
+  ] as const
+  for (const artifact of expected) {
+    const artifactPath = path.join(root, artifact.relativePath)
+    if (!existsSync(artifactPath)) {
+      return fail(`validation artifact is missing: ${artifact.relativePath}`)
+    }
+    if (readFileSync(artifactPath, "utf8") !== artifact.content) {
+      return fail(`validation artifact is stale: ${artifact.relativePath}`)
+    }
+  }
+}
+
 export const parseV137RuntimeAbiEvaluatorArgs = (
   args: readonly string[],
 ): { write: boolean; check: true } => {
@@ -901,12 +1019,29 @@ export const parseV137RuntimeAbiEvaluatorArgs = (
   return fail("usage: --check | --write --check")
 }
 
+export const runV137RuntimeAbiEvaluator = (
+  args: readonly string[],
+  dependencies: {
+    evaluate?: (() => V137RuntimeAbiValidation) | undefined
+    write?: ((validation: V137RuntimeAbiValidation) => void) | undefined
+    check?: ((validation: V137RuntimeAbiValidation) => void) | undefined
+  } = {},
+): V137RuntimeAbiValidation => {
+  const mode = parseV137RuntimeAbiEvaluatorArgs(args)
+  const validation = (dependencies.evaluate ?? evaluateV137RuntimeAbi)()
+  if (mode.write) {
+    ;(dependencies.write ?? writeV137RuntimeAbiValidationArtifacts)(validation)
+  }
+  ;(dependencies.check ?? checkV137RuntimeAbiValidationArtifacts)(validation)
+  return validation
+}
+
 if (
   process.argv[1] !== undefined &&
   import.meta.url === pathToFileURL(process.argv[1]).href
 ) {
-  parseV137RuntimeAbiEvaluatorArgs(process.argv.slice(2))
-  throw new TypeError(
-    "runtime ABI v1.17 evaluator output is unavailable until final activation-manifest integration",
+  const validation = runV137RuntimeAbiEvaluator(process.argv.slice(2))
+  console.log(
+    `runtime ABI v1.17 validation: ${validation.status.toUpperCase()} (${String(validation.testReceipt.selectedCommandCount)} exact commands)`,
   )
 }

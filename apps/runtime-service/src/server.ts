@@ -76,6 +76,12 @@ export interface RuntimeExecutionHttpServerOptions {
     | undefined
 }
 
+export interface RuntimeStrategyValidationHttpHandlerOptions {
+  bodyLimitBytes?: number | undefined
+  privateArtifactToken?: string | undefined
+  selectedRuntimeAbiVersion?: string | undefined
+}
+
 const writeJson = (
   response: ServerResponse,
   statusCode: number,
@@ -121,10 +127,11 @@ const quotedStringEnd = (text: string, start: number): number | undefined => {
 
 const skipWhitespace = (text: string, start: number): number => {
   let index = start
-  while (
-    index < text.length &&
-    /[\u0009\u000a\u000d\u0020]/u.test(text[index]!)
-  ) {
+  while (index < text.length) {
+    const code = text.charCodeAt(index)
+    if (code !== 0x09 && code !== 0x0a && code !== 0x0d && code !== 0x20) {
+      break
+    }
     index += 1
   }
   return index
@@ -555,15 +562,80 @@ const validateStrategyRequest = (
   }
 }
 
+const handleRuntimeStrategyValidationRequest = async (
+  request: IncomingMessage,
+  response: ServerResponse,
+  options: {
+    bodyLimitBytes: number
+    privateArtifactToken: string | undefined
+    selectedRuntimeAbiVersion: string | undefined
+  },
+): Promise<void> => {
+  try {
+    const body = await readBody(request, options.bodyLimitBytes)
+    const rawRequest = JSON.parse(body) as unknown
+    const requestBody =
+      rawRequest !== null && typeof rawRequest === "object"
+        ? (rawRequest as Record<string, unknown>)
+        : {}
+    const includePrivateArtifact = requestBody.includePrivateArtifact === true
+    if (
+      includePrivateArtifact &&
+      !privateArtifactRequestAuthorized(
+        request,
+        privateArtifactToken(options.privateArtifactToken),
+      )
+    ) {
+      writeJson(response, 403, {
+        ok: false,
+        kind: "strategyValidation",
+        ...(typeof requestBody.sourceFormat === "string"
+          ? { sourceFormat: requestBody.sourceFormat }
+          : {}),
+        error: "Private artifact validation evidence is not available.",
+      })
+      return
+    }
+    const result = validateStrategyRequest(rawRequest, {
+      includePrivateArtifact,
+      ...(options.selectedRuntimeAbiVersion === undefined
+        ? {}
+        : { selectedRuntimeAbiVersion: options.selectedRuntimeAbiVersion }),
+    })
+    writeJson(response, result.ok ? 200 : 422, result)
+  } catch (error) {
+    writeJson(response, 400, {
+      ok: false,
+      kind: "strategyValidation",
+      error:
+        error instanceof Error
+          ? redactedErrorMessage(error)
+          : "Strategy validation request was malformed.",
+    })
+  }
+}
+
+export const createRuntimeStrategyValidationHttpHandler = (
+  options: RuntimeStrategyValidationHttpHandlerOptions = {},
+) =>
+  async (request: IncomingMessage, response: ServerResponse): Promise<void> => {
+    if (request.method !== "POST" || request.url !== "/validate-strategy") {
+      writeJson(response, 404, { ok: false, error: "not_found" })
+      return
+    }
+    await handleRuntimeStrategyValidationRequest(request, response, {
+      bodyLimitBytes: options.bodyLimitBytes ?? DEFAULT_BODY_LIMIT_BYTES,
+      privateArtifactToken: options.privateArtifactToken,
+      selectedRuntimeAbiVersion: options.selectedRuntimeAbiVersion,
+    })
+  }
+
 export const createRuntimeExecutionHttpHandler = (
   options: RuntimeExecutionHttpServerOptions = {},
 ) => {
   const runtimeConfig =
     options.runtimeConfig ?? runtimeServiceConfigFromEnvironment()
   const bodyLimitBytes = options.bodyLimitBytes ?? DEFAULT_BODY_LIMIT_BYTES
-  const configuredPrivateArtifactToken = privateArtifactToken(
-    options.privateArtifactToken,
-  )
   const preparedV117Dependencies =
     options.authorityLoaderV117 === undefined
       ? undefined
@@ -594,48 +666,12 @@ export const createRuntimeExecutionHttpHandler = (
     }
 
     if (request.method === "POST" && request.url === "/validate-strategy") {
-      try {
-        const body = await readBody(request, bodyLimitBytes)
-        const rawRequest = JSON.parse(body) as unknown
-        const requestBody =
-          rawRequest !== null && typeof rawRequest === "object"
-            ? (rawRequest as Record<string, unknown>)
-            : {}
-        const includePrivateArtifact =
-          requestBody.includePrivateArtifact === true
-        if (
-          includePrivateArtifact &&
-          !privateArtifactRequestAuthorized(
-            request,
-            configuredPrivateArtifactToken,
-          )
-        ) {
-          writeJson(response, 403, {
-            ok: false,
-            kind: "strategyValidation",
-            ...(typeof requestBody.sourceFormat === "string"
-              ? { sourceFormat: requestBody.sourceFormat }
-              : {}),
-            error: "Private artifact validation evidence is not available.",
-          })
-          return
-        }
-        const result = validateStrategyRequest(rawRequest, {
-          includePrivateArtifact,
-          selectedRuntimeAbiVersion:
-            runtimeConfig.contractSelection.runtimeAbiVersion,
-        })
-        writeJson(response, result.ok ? 200 : 422, result)
-      } catch (error) {
-        writeJson(response, 400, {
-          ok: false,
-          kind: "strategyValidation",
-          error:
-            error instanceof Error
-              ? redactedErrorMessage(error)
-              : "Strategy validation request was malformed.",
-        })
-      }
+      await handleRuntimeStrategyValidationRequest(request, response, {
+        bodyLimitBytes,
+        privateArtifactToken: options.privateArtifactToken,
+        selectedRuntimeAbiVersion:
+          runtimeConfig.contractSelection.runtimeAbiVersion,
+      })
       return
     }
 

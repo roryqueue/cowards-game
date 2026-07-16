@@ -24,6 +24,7 @@ import {
   INITIAL_BOUNDS,
   STRATEGY_RUNTIME_ABI_VERSION,
   type SoldierBrainResult,
+  type StrategyInput,
   type StrategyResult,
   type StrategyRevision,
 } from "@cowards/spec"
@@ -562,18 +563,38 @@ describe("Workshop service contracts", () => {
     ).toEqual(["sample:rust-wasi-stone"])
   })
 
-  it("executes bundled Python starter samples through the Python provider runtime", () => {
+  it("validates bundled Python starter identities while the retired public runtime fails closed", () => {
     const pythonSamples = listWorkshopSamples().filter(
       (sample) => sample.sourceFormat === "python",
     )
 
     for (const sample of pythonSamples) {
-      const revision = buildPythonStrategyRevision({
+      const legacyShapeRevision = buildPythonStrategyRevision({
         source: sample.source,
         strategyId: WORKSHOP_STRATEGY_ID,
       })
-      const runtime = createPythonRuntimeFromRevision(revision)
-      const activation = runtime.selectActivations({
+      const revision = buildPythonStrategyRevisionV117({
+        source: sample.source,
+        strategyId: WORKSHOP_STRATEGY_ID,
+      })
+      const artifact = revision.metadata.sourceArtifact
+      expect(sample.validation.valid, sample.id).toBe(true)
+      expect(revision.validation.valid, sample.id).toBe(true)
+      expect(revision.runtime.abiVersion, sample.id).toBe(
+        "strategy-runtime-abi-v1.17",
+      )
+      expect(artifact, sample.id).toMatchObject({
+        abiVersion: "strategy-runtime-abi-v1.17",
+        format: "python-source-bundle",
+        sourceHash: revision.sourceHash,
+        sourceBytes: revision.sourceBytes,
+        validationStatus: "valid",
+        sourceIdentity: {
+          identityVersion: "strategy-source-identity-v2",
+          normalizationPolicy: "source-line-endings-lf-v1.17",
+        },
+      })
+      const activationInput: StrategyInput = {
         phaseNumber: 1,
         roundNumber: 1,
         activationCount: 1,
@@ -594,34 +615,17 @@ describe("Workshop service contracts", () => {
         ],
         enemySoldiers: [],
         strategyMemory: {},
-      })
-      const brain = runtime.runSoldierBrain({
-        self: {
-          id: "soldier:sample",
-          ownerPlayerId: "player:workshop-local",
-          status: "ACTIVE",
-          position: { x: 0, y: 0 },
-          facing: "UP",
-          lastSuccessfulMoveDirection: null,
-        },
-        awarenessGrid: {
-          cells: [
-            {
-              dx: 1,
-              dy: 0,
-              absoluteX: 1,
-              absoluteY: 0,
-              contents: "ENEMY_ACTIVE",
-            },
-          ],
-        },
-        cycleIndex: 0,
-        maxCycles: 12,
-        soldierMemory: {},
-      })
+      }
 
-      expect(activation.ok, sample.id).toBe(true)
-      expect(brain.ok, sample.id).toBe(true)
+      expect(STRATEGY_RUNTIME_ABI_VERSION).toBe("strategy-runtime-abi-v1.17")
+      const selectedResult = createPythonRuntimeFromRevision(
+        legacyShapeRevision,
+      ).selectActivations(activationInput)
+      expect(selectedResult).toMatchObject({
+        ok: false,
+        systemFailure: { code: "MALFORMED_IPC", retryable: true },
+      })
+      expect(selectedResult).not.toHaveProperty("value")
     }
   }, 15_000)
 
@@ -850,13 +854,13 @@ describe("Workshop service contracts", () => {
       expect(JSON.stringify(publicMetadata)).not.toContain("sourceIdentity")
     }
 
-    const proofDrift = structuredClone(candidates[0]!)
+    const proofDrift = globalThis.structuredClone(candidates[0]!)
     proofDrift.revision.metadata.providerValidation.proof = `sha256:${"0".repeat(64)}`
     expect(() => admit(proofDrift)).toThrow(
       "runtime-service provider validation",
     )
 
-    const historicalProof = structuredClone(candidates[0]!)
+    const historicalProof = globalThis.structuredClone(candidates[0]!)
     historicalProof.revision.metadata.providerValidation.contractVersion =
       "strategy-language-provider-contract-v1.33"
     historicalProof.revision.metadata.providerValidation.proof = `hmac-sha256:${"0".repeat(64)}`
@@ -864,7 +868,7 @@ describe("Workshop service contracts", () => {
       "runtime-service provider validation",
     )
 
-    const identityDrift = structuredClone(candidates[0]!)
+    const identityDrift = globalThis.structuredClone(candidates[0]!)
     const identityArtifact = identityDrift.revision.metadata.sourceArtifact
     if (identityArtifact?.sourceIdentity === undefined) {
       throw new Error("TypeScript v1.17 fixture is missing source identity.")
@@ -879,7 +883,7 @@ describe("Workshop service contracts", () => {
       "runtime-service provider validation",
     )
 
-    const distinctToolchain = structuredClone(candidates[0]!)
+    const distinctToolchain = globalThis.structuredClone(candidates[0]!)
     const distinctArtifact = distinctToolchain.revision.metadata.sourceArtifact
     if (distinctArtifact === undefined) {
       throw new Error("TypeScript v1.17 fixture is missing its artifact.")

@@ -6,11 +6,16 @@ import { hashCanonicalIdentity } from "@cowards/spec"
 
 const databaseUrl = process.env.DATABASE_URL
 const goBackendUrl = process.env.COWARDS_GO_BACKEND_URL
+const runtimeServiceUrl = process.env.COWARDS_RUNTIME_SERVICE_URL
 const sessionCookieName = "cowards_session"
 
 const requiredTopology = (): void => {
   expect(databaseUrl, "DATABASE_URL is required").toBeTruthy()
   expect(goBackendUrl, "COWARDS_GO_BACKEND_URL is required").toBeTruthy()
+  expect(
+    runtimeServiceUrl,
+    "COWARDS_RUNTIME_SERVICE_URL is required",
+  ).toBeTruthy()
 }
 
 const browserSession = async (page: Page, setCookie: string): Promise<void> => {

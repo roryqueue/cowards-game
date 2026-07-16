@@ -1,4 +1,3 @@
-import { Buffer } from "node:buffer"
 import { createHash } from "node:crypto"
 import { STRATEGY_RUNTIME_ABI_VERSION } from "./versions.js"
 
@@ -561,10 +560,15 @@ export type RuntimeAbiV117InvocationResult<
       violation?: never
     }>
 
-const frame = (bytes: Uint8Array): Buffer => {
-  const length = Buffer.alloc(8)
-  length.writeBigUInt64BE(BigInt(bytes.byteLength))
-  return Buffer.concat([length, Buffer.from(bytes)])
+const frame = (bytes: Uint8Array): Uint8Array => {
+  const output = new Uint8Array(8 + bytes.byteLength)
+  let remaining = BigInt(bytes.byteLength)
+  for (let index = 7; index >= 0; index -= 1) {
+    output[index] = Number(remaining & 0xffn)
+    remaining >>= 8n
+  }
+  output.set(bytes, 8)
+  return output
 }
 
 export const hashRuntimeAbiV117Identity = (

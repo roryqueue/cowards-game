@@ -4,7 +4,49 @@
 
 Phase 258 activates the v1.17 runtime tuple only after the exact manifest passes. The durable receipt contains command IDs, owned test files, aggregate PASS counts, zero skipped counts, and database-presence booleans. It never contains commands, environment values, connection strings, raw output, durations, diagnostics, source, artifacts, memory, objectives, or host paths.
 
-Run the post-activation proof from the repository root with the required database environment variables already configured:
+Run the post-activation proof from the repository root only after the service-backed topology is configured:
+
+- `DATABASE_URL` points to the migrated PostgreSQL proof database.
+- `COWARDS_GO_BACKEND_TEST_DATABASE_URL` points to the same isolated proof database for the exact Go database rows.
+- `COWARDS_RUNTIME_SERVICE_URL` points to the guarded, loopback-only Phase-258 validation proof service.
+- `COWARDS_GO_BACKEND_URL` points to the guarded Phase-258 Go/PostgreSQL proof helper backed by that database. The final Playwright row fails rather than skipping when either service or variable is unavailable.
+- `COWARDS_PROVIDER_VALIDATION_SECRET` and `COWARDS_RUNTIME_SERVICE_PRIVATE_ARTIFACT_TOKEN` are nonempty local proof secrets shared by both helpers and the test process.
+
+The proof-only runtime service never mounts production authority or execution, binds only `127.0.0.1:3107`, exposes only `/health` and `/validate-strategy`, and labels its output proof-only. It does not relax the production runtime-service entrypoint. Start it in one terminal:
+
+```sh
+export COWARDS_PHASE258_SOURCE_IDENTITY_E2E_SERVER=1
+export COWARDS_PROVIDER_VALIDATION_SECRET=phase258-provider-validation-proof
+export COWARDS_RUNTIME_SERVICE_PRIVATE_ARTIFACT_TOKEN=phase258-private-artifact-proof
+pnpm exec tsx apps/runtime-service/src/source-identity-proof-server.ts
+```
+
+Start the committed Go/PostgreSQL proof helper in a second terminal. Its extended timeout keeps it alive through the complete exact manifest:
+
+```sh
+cd apps/go-backend
+export COWARDS_PHASE258_SOURCE_IDENTITY_E2E_SERVER=1
+export COWARDS_GO_BACKEND_TEST_DATABASE_URL=postgresql://cowards:cowards@localhost:5432/cowards_game
+export COWARDS_RUNTIME_SERVICE_URL=http://127.0.0.1:3107
+export COWARDS_PROVIDER_VALIDATION_SECRET=phase258-provider-validation-proof
+export COWARDS_RUNTIME_SERVICE_PRIVATE_ARTIFACT_TOKEN=phase258-private-artifact-proof
+go test . -run '^TestPhase258SourceIdentityE2EServer$' -v -count=1 -timeout 30m
+```
+
+The Playwright configuration starts the local web process. In the runner terminal, export the same secrets and both URLs, then confirm both external dependencies:
+
+```sh
+test -n "$DATABASE_URL"
+test -n "$COWARDS_GO_BACKEND_TEST_DATABASE_URL"
+test -n "$COWARDS_RUNTIME_SERVICE_URL"
+test -n "$COWARDS_GO_BACKEND_URL"
+test -n "$COWARDS_PROVIDER_VALIDATION_SECRET"
+test -n "$COWARDS_RUNTIME_SERVICE_PRIVATE_ARTIFACT_TOKEN"
+curl --fail --silent --show-error "$COWARDS_RUNTIME_SERVICE_URL/health" >/dev/null
+curl --fail --silent --show-error "$COWARDS_GO_BACKEND_URL/health" >/dev/null
+```
+
+Then run:
 
 ```sh
 pnpm exec tsx scripts/run-v1-37-runtime-abi-test-manifest.ts --stage postactivation --require-all --write-receipt

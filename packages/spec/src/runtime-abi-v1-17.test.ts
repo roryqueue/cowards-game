@@ -516,6 +516,9 @@ describe("runtime ABI v1.17 frozen successor registry", () => {
     ).toBe(
       "sha256:3163bf2a551ff5b16867f88fea678eb09891ede5978a24aea2ef122ebe8d4985",
     )
+    const subjectSource = readFileSync(subjectPath, "utf8")
+    expect(subjectSource).not.toContain("node:buffer")
+    expect(subjectSource).not.toContain("writeBigUInt64BE")
     expect(identity.publicSafeFields).toEqual([
       "sourceRevisionId",
       "normalizedSourceId",

@@ -1,8 +1,15 @@
-import { readFileSync } from "node:fs"
+import {
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs"
+import { tmpdir } from "node:os"
 import path from "node:path"
 import { describe, expect, it } from "vitest"
 import {
   createV137RuntimeAbiValidation,
+  checkV137RuntimeAbiValidationArtifacts,
   evaluateV137CanonicalJsonCorpus,
   evaluateV137EvidenceDag,
   evaluateV137HistoricalV116,
@@ -13,7 +20,11 @@ import {
   parseV137RuntimeAbiEvaluatorArgs,
   renderV137RuntimeAbiValidationJson,
   renderV137RuntimeAbiValidationMarkdown,
+  runV137RuntimeAbiEvaluator,
   summarizeV137RuntimeAbiTestReceipt,
+  V137_RUNTIME_ABI_VALIDATION_JSON_PATH,
+  writeV137RuntimeAbiValidationArtifacts,
+  type V137RuntimeAbiValidation,
 } from "./evaluate-v1-37-runtime-abi.js"
 
 const repoRoot = path.resolve(import.meta.dirname, "..")
@@ -36,6 +47,37 @@ describe("Phase 258 integrated runtime ABI evaluator", () => {
     ]) {
       expect(() => parseV137RuntimeAbiEvaluatorArgs(args)).toThrow()
     }
+  })
+
+  it("runs pure check without writing and write-and-check in order", () => {
+    const validation = {
+      status: "passed",
+      testReceipt: { selectedCommandCount: 18 },
+    } as V137RuntimeAbiValidation
+    const calls: string[] = []
+    const dependencies = {
+      evaluate: () => {
+        calls.push("evaluate")
+        return validation
+      },
+      write: (received: V137RuntimeAbiValidation) => {
+        expect(received).toBe(validation)
+        calls.push("write")
+      },
+      check: (received: V137RuntimeAbiValidation) => {
+        expect(received).toBe(validation)
+        calls.push("check")
+      },
+    }
+    expect(runV137RuntimeAbiEvaluator(["--check"], dependencies)).toBe(
+      validation,
+    )
+    expect(calls).toEqual(["evaluate", "check"])
+    calls.length = 0
+    expect(
+      runV137RuntimeAbiEvaluator(["--write", "--check"], dependencies),
+    ).toBe(validation)
+    expect(calls).toEqual(["evaluate", "write", "check"])
   })
 
   it("executes the exact canonical JSON raw-byte corpus", () => {
@@ -147,12 +189,13 @@ describe("Phase 258 integrated runtime ABI evaluator", () => {
     const validation = createV137RuntimeAbiValidation({
       activation: {
         activationCommit: "a".repeat(40),
+        manifestSha256: `sha256:${"d".repeat(64)}`,
         activationPathCount: 23,
       },
       testReceipt: {
         stage: "postactivation",
         testManifestSha256: `sha256:${"b".repeat(64)}`,
-        selectedCommandCount: 19,
+        selectedCommandCount: 18,
         passedCount: 321,
         skippedCount: 0,
         databaseCommandCount: 8,
@@ -181,6 +224,7 @@ describe("Phase 258 integrated runtime ABI evaluator", () => {
       posture: "activated-uncertified-pending-phase-259-conformance",
       activation: {
         activationCommit: "a".repeat(40),
+        manifestSha256: `sha256:${"d".repeat(64)}`,
         activationPathCount: 23,
         manifestStatus: "verified",
       },
@@ -219,7 +263,7 @@ describe("Phase 258 integrated runtime ABI evaluator", () => {
     const markdown = renderV137RuntimeAbiValidationMarkdown(validation)
     expect(JSON.parse(json)).toEqual(validation)
     expect(markdown).toContain("# v1.37 Runtime ABI Validation")
-    expect(markdown).toContain("19 exact commands")
+    expect(markdown).toContain("18 exact commands")
     for (const output of [json, markdown]) {
       expect(output).not.toMatch(
         /DATABASE_URL|postgres(?:ql)?:|BEGIN PRIVATE KEY|\/Users\//u,
@@ -227,6 +271,25 @@ describe("Phase 258 integrated runtime ABI evaluator", () => {
       expect(output).not.toContain("artifactBytes")
       expect(output).not.toContain("strategyMemory")
       expect(output).not.toContain("objectivePayload")
+    }
+
+    const temporaryRoot = mkdtempSync(
+      path.join(tmpdir(), "runtime-abi-v1-17-evaluator-"),
+    )
+    try {
+      writeV137RuntimeAbiValidationArtifacts(validation, temporaryRoot)
+      expect(() =>
+        checkV137RuntimeAbiValidationArtifacts(validation, temporaryRoot),
+      ).not.toThrow()
+      writeFileSync(
+        path.join(temporaryRoot, V137_RUNTIME_ABI_VALIDATION_JSON_PATH),
+        "{}\n",
+      )
+      expect(() =>
+        checkV137RuntimeAbiValidationArtifacts(validation, temporaryRoot),
+      ).toThrow(/stale/u)
+    } finally {
+      rmSync(temporaryRoot, { recursive: true, force: true })
     }
   }, 20_000)
 
