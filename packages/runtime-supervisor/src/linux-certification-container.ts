@@ -373,10 +373,15 @@ export const createCertificationControllerContextV118 = (input: {
   })
 }
 
+const dockerSpawnEnvironment = () => ({
+  NODE_ENV: "production" as const,
+  PATH: process.env.PATH ?? "",
+})
+
 const runDocker = (args: readonly string[], timeout = 30_000): Buffer => {
   const result = spawnSync("docker", args, {
     encoding: "buffer",
-    env: { PATH: process.env.PATH ?? "" },
+    env: dockerSpawnEnvironment(),
     maxBuffer: 1024 * 1024,
     shell: false,
     timeout,
@@ -406,7 +411,7 @@ const waitForMonitorReady = (
       ],
       {
         encoding: "utf8",
-        env: { PATH: process.env.PATH ?? "" },
+        env: dockerSpawnEnvironment(),
         shell: false,
         timeout: 1_000,
       },
@@ -442,7 +447,7 @@ const writeMonitorControl = (
     ],
     {
       encoding: "buffer",
-      env: { PATH: process.env.PATH ?? "" },
+      env: dockerSpawnEnvironment(),
       input: bytes,
       maxBuffer: 1024 * 1024,
       shell: false,
@@ -452,7 +457,7 @@ const writeMonitorControl = (
   if (result.error || result.status !== 0 || result.signal !== null) {
     const logs = spawnSync("docker", ["logs", monitorName], {
       encoding: "utf8",
-      env: { PATH: process.env.PATH ?? "" },
+      env: dockerSpawnEnvironment(),
       shell: false,
       timeout: 2_000,
     })
@@ -502,7 +507,7 @@ export const runLinuxCertificationContainerProbe = (input: {
 }> => {
   const info = spawnSync("docker", ["info", "--format", "{{json .}}"], {
     encoding: "utf8",
-    env: { PATH: process.env.PATH ?? "" },
+    env: dockerSpawnEnvironment(),
     shell: false,
     timeout: 5_000,
   })
@@ -575,7 +580,7 @@ export const runLinuxCertificationContainerProbe = (input: {
     waitForMonitorReady(monitorName, 10_000)
     const guest = spawnSync("docker", certificationGuestArgs(controllerInput), {
       encoding: "buffer",
-      env: { PATH: process.env.PATH ?? "" },
+      env: dockerSpawnEnvironment(),
       maxBuffer: 1024 * 1024,
       shell: false,
       timeout: 30_000,
@@ -602,7 +607,7 @@ export const runLinuxCertificationContainerProbe = (input: {
     const monitorExit = runDocker(["wait", monitorName]).toString("utf8").trim()
     const monitorLogs = spawnSync("docker", ["logs", monitorName], {
       encoding: "buffer",
-      env: { PATH: process.env.PATH ?? "" },
+      env: dockerSpawnEnvironment(),
       maxBuffer: 1024 * 1024,
       shell: false,
       timeout: 5_000,
@@ -692,7 +697,7 @@ export const runLinuxCertificationContainerProbe = (input: {
         ],
         {
           encoding: "utf8",
-          env: { PATH: process.env.PATH ?? "" },
+          env: dockerSpawnEnvironment(),
           shell: false,
           timeout: 5_000,
         },

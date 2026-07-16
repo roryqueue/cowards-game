@@ -531,7 +531,9 @@ describe("Chronicle storage", () => {
   })
 
   it("keeps tuple-less v1.4 Chronicle bytes and content hashes unchanged", () => {
-    const historical = structuredClone(validChronicle())
+    const historical = JSON.parse(
+      JSON.stringify(validChronicle()),
+    ) as Chronicle
     historical.reproducibility.versions = {
       spec: "cowards-rules-v1.4",
       engine: "0.1.4",
