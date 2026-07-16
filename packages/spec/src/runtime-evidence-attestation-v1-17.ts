@@ -7,6 +7,12 @@ import {
   serializeRuntimeIdentityManifest,
   type RuntimeIdentityManifest,
 } from "./runtime-identity-manifest.js"
+import { RUNTIME_BUDGET_PROFILE_V1_18_SHA256 } from "./runtime-budget-profile-v1-18.js"
+import {
+  evaluateRuntimeConformanceFreshnessV117,
+  type RuntimeConformanceIdentityBindingsV117,
+  type RuntimeConformanceVerifiedSnapshotV117,
+} from "./runtime-conformance-certificate-v1-17.js"
 import {
   RUNTIME_EVIDENCE_EDGE_SCHEMA_V1_17,
   RUNTIME_EVIDENCE_GRAPH_NODE_KINDS_V1_17,
@@ -16,6 +22,8 @@ import {
   isCanonicalSafeRegistryGenerationV117,
   type RuntimeEvidenceExactPinsV117,
   type RuntimeEvidenceGraphV117,
+  type RuntimeConformanceEvidenceBindingV117,
+  type RuntimeConformanceEvidenceSourceV117,
 } from "./runtime-evidence-v1-17.js"
 import type { JsonValue } from "./types.js"
 
@@ -443,4 +451,278 @@ export const getVerifiedRuntimeEvidenceAttestationSnapshotV117 = (
 ): Readonly<RuntimeEvidenceVerifiedSnapshotV117> => {
   if (!verified.has(value as object)) fail("UNVERIFIED_SNAPSHOT")
   return value
+}
+
+export interface VerifyRuntimeConformanceEvidenceBindingInputV117 {
+  evidence: Readonly<RuntimeEvidenceVerifiedSnapshotV117>
+  certificate: Readonly<RuntimeConformanceVerifiedSnapshotV117>
+  currentIdentity: RuntimeConformanceIdentityBindingsV117
+  source: RuntimeConformanceEvidenceSourceV117
+  verificationInstant: string
+}
+
+export class RuntimeConformanceEvidenceBindingV117Error extends Error {
+  constructor(readonly code: string) {
+    super("Runtime conformance evidence binding is stale or uncertified.")
+    this.name = "RuntimeConformanceEvidenceBindingV117Error"
+  }
+}
+
+const bindingFail = (code: string): never => {
+  throw new RuntimeConformanceEvidenceBindingV117Error(code)
+}
+
+const CONFORMANCE_SOURCE_KEYS = [
+  "schemaVersion",
+  "runtimeAbiVersion",
+  "runtimeAbiEnvelopeSha256",
+  "additiveBudgetProfileSha256",
+  "supervisorOperatingSystemSha256",
+  "supervisorSettingsSha256",
+  "aggregateReceiptSchemaSha256",
+  "supervisorIdentity",
+  "caseInventorySha256",
+  "resultRootSha256",
+  "evidenceRootSha256",
+  "runReceipts",
+] as const
+
+const SUPERVISOR_IDENTITY_KEYS = [
+  "supervisorBinarySha256",
+  "supervisorToolchainSha256",
+  "linuxKernelSha256",
+  "dockerEngineSha256",
+  "dockerImageDigest",
+  "cgroupDelegationSha256",
+  "adapterBuildSha256",
+  "runtimeCompilerSha256",
+  "artifactSha256",
+] as const
+
+const RUN_RECEIPT_KEYS = ["runId", "receiptSha256"] as const
+
+const requireSha256Id = (value: unknown, code: string): string => {
+  if (typeof value !== "string" || !SHA256_ID.test(value)) bindingFail(code)
+  return value as string
+}
+
+const deepFreeze = <T>(value: T): Readonly<T> => {
+  if (value !== null && typeof value === "object" && !Object.isFrozen(value)) {
+    for (const child of Object.values(value as Record<string, unknown>)) {
+      deepFreeze(child)
+    }
+    Object.freeze(value)
+  }
+  return value
+}
+
+const parseConformanceSource = (
+  value: RuntimeConformanceEvidenceSourceV117,
+): Readonly<RuntimeConformanceEvidenceSourceV117> => {
+  const source = exactKeys(value, CONFORMANCE_SOURCE_KEYS, "SOURCE_SHAPE")
+  if (
+    source.schemaVersion !== "runtime-conformance-evidence-source-v1.17" ||
+    source.runtimeAbiVersion !== "strategy-runtime-abi-v1.18" ||
+    source.additiveBudgetProfileSha256 !== RUNTIME_BUDGET_PROFILE_V1_18_SHA256
+  ) {
+    bindingFail("SOURCE_IDENTITY")
+  }
+  for (const key of [
+    "runtimeAbiEnvelopeSha256",
+    "additiveBudgetProfileSha256",
+    "supervisorOperatingSystemSha256",
+    "supervisorSettingsSha256",
+    "aggregateReceiptSchemaSha256",
+    "caseInventorySha256",
+    "resultRootSha256",
+    "evidenceRootSha256",
+  ] as const) {
+    requireSha256Id(source[key], "SOURCE_IDENTITY")
+  }
+  const supervisor = exactKeys(
+    source.supervisorIdentity,
+    SUPERVISOR_IDENTITY_KEYS,
+    "SUPERVISOR_IDENTITY",
+  )
+  for (const key of SUPERVISOR_IDENTITY_KEYS) {
+    requireSha256Id(supervisor[key], "SUPERVISOR_IDENTITY")
+  }
+  if (!Array.isArray(source.runReceipts)) {
+    bindingFail("RUN_RECEIPTS")
+  }
+  const runReceipts = source.runReceipts as unknown[]
+  if (runReceipts.length !== 3) {
+    bindingFail("RUN_RECEIPTS")
+  }
+  const seenRunIds = new Set<string>()
+  const seenReceipts = new Set<string>()
+  let previousRunId = ""
+  for (const candidate of runReceipts) {
+    const receipt = exactKeys(candidate, RUN_RECEIPT_KEYS, "RUN_RECEIPTS")
+    const runId = receipt.runId
+    if (
+      typeof runId !== "string" ||
+      !PUBLIC_ID.test(runId) ||
+      runId <= previousRunId ||
+      seenRunIds.has(runId)
+    ) {
+      bindingFail("RUN_RECEIPTS")
+    }
+    const receiptSha256 = requireSha256Id(receipt.receiptSha256, "RUN_RECEIPTS")
+    if (seenReceipts.has(receiptSha256)) bindingFail("RUN_RECEIPTS")
+    previousRunId = runId as string
+    seenRunIds.add(runId as string)
+    seenReceipts.add(receiptSha256)
+  }
+  return deepFreeze(globalThis.structuredClone(value))
+}
+
+const prefixedBindingHash = (
+  evidence: RuntimeEvidenceVerifiedSnapshotV117,
+  domain: RuntimeEvidenceGraphV117["nodes"][number]["kind"],
+): `sha256:${string}` => {
+  const binding = evidence.bindings.find(
+    (candidate) => candidate.domain === domain,
+  )
+  if (binding === undefined) bindingFail("EVIDENCE_GRAPH")
+  return `sha256:${binding!.sha256}`
+}
+
+const publicBindingId = (
+  evidence: RuntimeEvidenceVerifiedSnapshotV117,
+  domain: RuntimeEvidenceGraphV117["nodes"][number]["kind"],
+): string => {
+  const binding = evidence.bindings.find(
+    (candidate) => candidate.domain === domain,
+  )
+  if (binding === undefined) bindingFail("EVIDENCE_GRAPH")
+  return binding!.publicId
+}
+
+export const verifyRuntimeConformanceEvidenceBindingV117 = (
+  input: VerifyRuntimeConformanceEvidenceBindingInputV117,
+): Readonly<RuntimeConformanceEvidenceBindingV117> => {
+  const evidence = getVerifiedRuntimeEvidenceAttestationSnapshotV117(
+    input.evidence,
+  )
+  let certificateFreshness
+  try {
+    certificateFreshness = evaluateRuntimeConformanceFreshnessV117({
+      certificate: input.certificate,
+      currentIdentity: input.currentIdentity,
+      verificationInstant: input.verificationInstant,
+    })
+  } catch {
+    return bindingFail("UNVERIFIED_CERTIFICATE")
+  }
+  if (certificateFreshness.status !== "current") {
+    bindingFail("CERTIFICATE_STALE")
+  }
+  const certificate = input.certificate
+  const source = parseConformanceSource(input.source)
+  const instant = requireInstant(input.verificationInstant)
+  if (
+    instant < requireInstant(evidence.issuedAt) ||
+    instant > requireInstant(evidence.validUntil) ||
+    evidence.trustDomain !== certificate.trustDomain ||
+    evidence.registryGeneration !== certificate.registryGeneration
+  ) {
+    bindingFail("ATTESTATION_STALE")
+  }
+  const sourceHash = hashCanonicalIdentity("evidenceBundle", [
+    canonicalBytes(source as unknown as JsonValue),
+  ])
+  const evidenceBundle = evidence.bindings.find(
+    ({ domain }) => domain === "evidenceBundle",
+  )
+  if (evidenceBundle?.sha256 !== sourceHash) bindingFail("SOURCE_ROOT")
+
+  const identity = certificate.identity
+  const expectedIdentity = {
+    corpusRootSha256: prefixedBindingHash(evidence, "conformanceCorpus"),
+    fixtureSourceSha256: prefixedBindingHash(evidence, "originalSource"),
+    artifactSha256: prefixedBindingHash(evidence, "artifact"),
+    adapterBuildSha256: prefixedBindingHash(evidence, "adapterBuild"),
+    runtimeExecutableSha256: prefixedBindingHash(evidence, "runtimeExecutable"),
+    toolchainSha256: prefixedBindingHash(evidence, "compilerExecutable"),
+    sysrootStdlibSha256: prefixedBindingHash(evidence, "sysrootStdlib"),
+    canonicalJsonProfileId: publicBindingId(evidence, "canonicalJsonProfile"),
+    budgetPolicySha256: prefixedBindingHash(evidence, "budgetProfile"),
+    containmentPolicySha256: prefixedBindingHash(evidence, "containmentPolicy"),
+    semanticTupleSha256: prefixedBindingHash(evidence, "semanticTuple"),
+    identityManifestRoot: `sha256:${evidence.identityManifestRoot}`,
+    evidenceGraphRoot: `sha256:${evidence.graphSha256}`,
+    behaviorSettingsSha256: evidence.exactPins.behaviorSettingsHash,
+  }
+  if (
+    Object.entries(expectedIdentity).some(
+      ([key, value]) =>
+        identity[key as keyof typeof expectedIdentity] !== value,
+    ) ||
+    identity.caseInventorySha256 !== source.caseInventorySha256 ||
+    identity.runtimeAbiVersion !== source.runtimeAbiVersion ||
+    source.supervisorIdentity.adapterBuildSha256 !==
+      identity.adapterBuildSha256 ||
+    source.supervisorIdentity.runtimeCompilerSha256 !==
+      identity.toolchainSha256 ||
+    source.supervisorIdentity.artifactSha256 !== identity.artifactSha256 ||
+    source.resultRootSha256 !== certificate.resultRootSha256 ||
+    source.evidenceRootSha256 !== certificate.evidenceRootSha256 ||
+    source.runReceipts.some(
+      ({ runId }, index) => runId !== certificate.runIds[index],
+    )
+  ) {
+    bindingFail("BINDING_MISMATCH")
+  }
+
+  const freshUntil = new Date(
+    Math.min(
+      requireInstant(evidence.validUntil),
+      requireInstant(certificate.freshUntil),
+    ),
+  ).toISOString()
+  return deepFreeze<RuntimeConformanceEvidenceBindingV117>({
+    schemaVersion: "runtime-conformance-evidence-binding-v1.17",
+    certificateId: certificate.certificateId,
+    certificateSha256: certificate.certificateSha256 as `sha256:${string}`,
+    certificateVersion: certificate.certificateVersion,
+    attestationSha256: evidence.attestationSha256,
+    trustDomain: certificate.trustDomain,
+    registryGeneration: certificate.registryGeneration,
+    issuedAt: certificate.issuedAt,
+    freshUntil,
+    languageId: identity.languageId,
+    laneId: identity.laneId,
+    corpusRootSha256: identity.corpusRootSha256 as `sha256:${string}`,
+    caseInventorySha256: identity.caseInventorySha256 as `sha256:${string}`,
+    fixtureSourceSha256: identity.fixtureSourceSha256 as `sha256:${string}`,
+    artifactSha256: identity.artifactSha256 as `sha256:${string}`,
+    adapterBuildSha256: identity.adapterBuildSha256 as `sha256:${string}`,
+    runtimeExecutableSha256:
+      identity.runtimeExecutableSha256 as `sha256:${string}`,
+    toolchainSha256: identity.toolchainSha256 as `sha256:${string}`,
+    sysrootStdlibSha256: identity.sysrootStdlibSha256 as `sha256:${string}`,
+    runtimeAbiVersion: source.runtimeAbiVersion,
+    runtimeAbiEnvelopeSha256: source.runtimeAbiEnvelopeSha256,
+    canonicalJsonProfileId: identity.canonicalJsonProfileId,
+    budgetPolicySha256: identity.budgetPolicySha256 as `sha256:${string}`,
+    additiveBudgetProfileSha256: source.additiveBudgetProfileSha256,
+    containmentPolicySha256:
+      identity.containmentPolicySha256 as `sha256:${string}`,
+    semanticTupleSha256: identity.semanticTupleSha256 as `sha256:${string}`,
+    identityManifestRoot: identity.identityManifestRoot as `sha256:${string}`,
+    evidenceGraphRoot: identity.evidenceGraphRoot as `sha256:${string}`,
+    behaviorSettingsSha256:
+      identity.behaviorSettingsSha256 as `sha256:${string}`,
+    supervisorOperatingSystemSha256: source.supervisorOperatingSystemSha256,
+    supervisorSettingsSha256: source.supervisorSettingsSha256,
+    aggregateReceiptSchemaSha256: source.aggregateReceiptSchemaSha256,
+    supervisorIdentity: globalThis.structuredClone(source.supervisorIdentity),
+    resultRootSha256: source.resultRootSha256,
+    evidenceRootSha256: source.evidenceRootSha256,
+    runIds: source.runReceipts.map(({ runId }) => runId),
+    runReceiptSha256s: source.runReceipts.map(
+      ({ receiptSha256 }) => receiptSha256,
+    ),
+  })
 }

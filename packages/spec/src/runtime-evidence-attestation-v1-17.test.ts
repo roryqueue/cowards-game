@@ -39,15 +39,17 @@ import {
   type RuntimeEvidenceTrustedProducerV117,
 } from "./runtime-evidence-attestation-v1-17.js"
 
-const bytes = Object.fromEntries(
+const bytes: Record<string, Uint8Array> = Object.fromEntries(
   RUNTIME_EVIDENCE_GRAPH_NODE_KINDS_V1_17.map((kind) => [
     `node:${kind}`,
     new TextEncoder().encode(`fixture:${kind}:bytes:v1`),
   ]),
 )
 
-const buildFixture = (evidenceBundleBytes = bytes["node:evidenceBundle"]!) => {
-  const evidenceBytes = {
+const buildFixture = (
+  evidenceBundleBytes: Uint8Array = bytes["node:evidenceBundle"]!,
+) => {
+  const evidenceBytes: Record<string, Uint8Array> = {
     ...bytes,
     "node:evidenceBundle": evidenceBundleBytes,
   }

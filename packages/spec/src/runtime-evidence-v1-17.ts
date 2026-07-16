@@ -1,4 +1,5 @@
 import type { CanonicalIdentityDomain } from "./canonical-identity-domains.js"
+import type { RuntimeSupervisorIdentityV118 } from "./runtime-invocation-v1-18.js"
 
 export const RUNTIME_EVIDENCE_GRAPH_SCHEMA_VERSION_V1_17 =
   "runtime-evidence-graph-v1.17" as const
@@ -130,4 +131,69 @@ export interface RuntimeEvidenceGraphV117 {
   edges: readonly RuntimeEvidenceGraphEdgeV117[]
   exactPins: RuntimeEvidenceExactPinsV117
   graphSha256: string
+}
+
+export interface RuntimeConformanceEvidenceRunReceiptV117 {
+  runId: string
+  receiptSha256: `sha256:${string}`
+}
+
+/**
+ * Canonical bytes committed by the existing evidenceBundle graph node.
+ * The certificate separately signs the graph/manifest roots, avoiding a
+ * certificate <-> graph self-hash cycle while still binding the full source.
+ */
+export interface RuntimeConformanceEvidenceSourceV117 {
+  schemaVersion: "runtime-conformance-evidence-source-v1.17"
+  runtimeAbiVersion: "strategy-runtime-abi-v1.18"
+  runtimeAbiEnvelopeSha256: `sha256:${string}`
+  additiveBudgetProfileSha256: `sha256:${string}`
+  supervisorOperatingSystemSha256: `sha256:${string}`
+  supervisorSettingsSha256: `sha256:${string}`
+  aggregateReceiptSchemaSha256: `sha256:${string}`
+  supervisorIdentity: RuntimeSupervisorIdentityV118
+  caseInventorySha256: `sha256:${string}`
+  resultRootSha256: `sha256:${string}`
+  evidenceRootSha256: `sha256:${string}`
+  runReceipts: RuntimeConformanceEvidenceRunReceiptV117[]
+}
+
+export interface RuntimeConformanceEvidenceBindingV117 {
+  schemaVersion: "runtime-conformance-evidence-binding-v1.17"
+  certificateId: string
+  certificateSha256: `sha256:${string}`
+  certificateVersion: "runtime-conformance-certificate-v1.17"
+  attestationSha256: string
+  trustDomain: "production" | "fixture"
+  registryGeneration: string
+  issuedAt: string
+  freshUntil: string
+  languageId: "typescript" | "python" | "rust" | "zig"
+  laneId: string
+  corpusRootSha256: `sha256:${string}`
+  caseInventorySha256: `sha256:${string}`
+  fixtureSourceSha256: `sha256:${string}`
+  artifactSha256: `sha256:${string}`
+  adapterBuildSha256: `sha256:${string}`
+  runtimeExecutableSha256: `sha256:${string}`
+  toolchainSha256: `sha256:${string}`
+  sysrootStdlibSha256: `sha256:${string}`
+  runtimeAbiVersion: "strategy-runtime-abi-v1.18"
+  runtimeAbiEnvelopeSha256: `sha256:${string}`
+  canonicalJsonProfileId: string
+  budgetPolicySha256: `sha256:${string}`
+  additiveBudgetProfileSha256: `sha256:${string}`
+  containmentPolicySha256: `sha256:${string}`
+  semanticTupleSha256: `sha256:${string}`
+  identityManifestRoot: `sha256:${string}`
+  evidenceGraphRoot: `sha256:${string}`
+  behaviorSettingsSha256: `sha256:${string}`
+  supervisorOperatingSystemSha256: `sha256:${string}`
+  supervisorSettingsSha256: `sha256:${string}`
+  aggregateReceiptSchemaSha256: `sha256:${string}`
+  supervisorIdentity: Readonly<RuntimeSupervisorIdentityV118>
+  resultRootSha256: `sha256:${string}`
+  evidenceRootSha256: `sha256:${string}`
+  runIds: readonly string[]
+  runReceiptSha256s: readonly `sha256:${string}`[]
 }
