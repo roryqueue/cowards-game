@@ -56,6 +56,9 @@ type deploymentLaneFixture struct {
 
 func newDeploymentLaneFixture(t *testing.T) deploymentLaneFixture {
 	t.Helper()
+	if selectedStrategyRuntimeABIVersion() == strategyRuntimeABIVersionV117 {
+		return newDeploymentLaneFixtureV117(t)
+	}
 	t.Setenv("COWARDS_PROVIDER_VALIDATION_SECRET", "cowards-provider-validation-test-secret-v1.33")
 	source := "export default { selectActivations() { return []; }, soldierBrain() { return {}; } }"
 	sourceHash := hashString(source)
@@ -92,6 +95,55 @@ func newDeploymentLaneFixture(t *testing.T) deploymentLaneFixture {
 			ID: revisionID, Source: source, SourceHash: sourceHash, SourceBytes: sourceBytes,
 			Runtime: runtime, EngineCompatibility: engine, Validation: map[string]any{"valid": true, "sourceHash": sourceHash, "sourceBytes": sourceBytes}, Metadata: metadata, LockedAt: &lockedAt,
 		},
+	}
+}
+
+func newDeploymentLaneFixtureV117(t *testing.T) deploymentLaneFixture {
+	t.Helper()
+	authority := loadRuntimeSuccessorAuthorityFixtureV117(t)
+	vector := authority.RevisionVectors[0]
+	lockedAt := time.Date(2026, 7, 13, 12, 0, 0, 0, time.UTC)
+	strategy := vector.strategy(t, lockedAt)
+	profile := goDeploymentLaneProfile{
+		ProviderID: vector.Deployed.ProviderID, LanguageID: vector.Deployed.LanguageID,
+		LanguageVersion: stringValue(mapValue(strategy.Runtime, "language"), "version"),
+		RuntimeID:       vector.Deployed.RuntimeID, RuntimeVersion: vector.Deployed.RuntimeVersion,
+		ToolchainID: vector.Deployed.ToolchainID, ToolchainVersion: vector.Deployed.ToolchainVersion,
+		AdapterID: vector.Deployed.AdapterID, AdapterVersion: vector.Deployed.AdapterVersion,
+		PolicyID: vector.Deployed.PolicyID, PolicyVersion: vector.Deployed.PolicyVersion,
+		CorpusID: vector.Deployed.CorpusID, CorpusVersion: vector.Deployed.CorpusVersion,
+		ArtifactKind: "source", ArtifactIDPrefix: strings.TrimSuffix(vector.Deployed.ArtifactID, strategy.ID),
+		ImplementationID: vector.Deployed.ImplementationID, BuildID: vector.Deployed.BuildID,
+		SemanticTupleID: vector.Deployed.SemanticTupleID, SemanticTuple: vector.Deployed.SemanticTuple,
+		SuccessorRuntimeIdentityTemplate: cloneRuntimeSuccessorIdentityTemplateV117(&authority.Template),
+	}
+	registry := &goDeploymentLaneRegistry{
+		SchemaVersion: deploymentLaneRegistrySchemaVersion,
+		RegistryID:    "fixture:exact-successor-authority:v1.17",
+		Lanes:         []goDeploymentLaneProfile{profile},
+	}
+	tuple := registeredCompatibilityTuple{TupleID: authority.SemanticTupleID, Tuple: authority.SemanticTuple}
+	lane, ok := registry.resolveRevision(
+		strategy.ID,
+		strategy.SourceHash,
+		strategy.SourceBytes,
+		strategy.Runtime,
+		strategy.EngineCompatibility,
+		strategy.Validation,
+		strategy.Metadata,
+		tuple,
+	)
+	if !ok || lane == nil || *lane != vector.Deployed {
+		t.Fatal("deployment registry did not resolve exact successor fixture revision")
+	}
+	return deploymentLaneFixture{
+		Tuple: tuple, Registry: registry, Lane: *lane,
+		Entrant: map[string]any{
+			"strategyRevisionId": strategy.ID, "sourceHash": strategy.SourceHash, "sourceBytes": strategy.SourceBytes,
+			"runtime": cloneMap(strategy.Runtime), "engineCompatibility": cloneMap(strategy.EngineCompatibility),
+			"_creationRuntime": cloneMap(strategy.Runtime), "_creationValidation": cloneMap(strategy.Validation), "_creationMetadata": cloneMap(strategy.Metadata),
+		},
+		Strategy: strategy,
 	}
 }
 

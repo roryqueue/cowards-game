@@ -62,25 +62,7 @@ func TestPhase244AccountProviderProofPersistsThroughDBEntryAndRuntimeRequest(t *
 		if !ok || source == "" {
 			t.Fatalf("validation request omitted source: %+v", body)
 		}
-		sourceHash := hashStrategySourceForGo(source)
-		sourceBytes := len([]byte(source))
-		writeRuntimeServiceTestJSON(t, writer, runtimeServiceValidationResponse{
-			OK:           true,
-			Kind:         "strategyValidation",
-			SourceFormat: "typescript",
-			Runtime:      defaultRuntimeMetadata(),
-			Validation: map[string]any{
-				"valid":       true,
-				"errors":      []any{},
-				"warnings":    []any{},
-				"sourceHash":  sourceHash,
-				"sourceBytes": sourceBytes,
-			},
-			EngineCompatibility: engineCompatibility(),
-			Metadata:            providerReadinessSourceArtifactMetadata(t, "typescript", "strategy-language-provider-js-ts", sourceHash, sourceBytes, true),
-			SourceHash:          sourceHash,
-			SourceBytes:         sourceBytes,
-		})
+		writeRuntimeServiceTestJSON(t, writer, providerReadinessValidationResponseForSelectedABI(t, "typescript", source))
 	}))
 	defer runtimeServer.Close()
 

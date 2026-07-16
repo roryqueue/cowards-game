@@ -273,25 +273,15 @@ func TestProviderReadinessAccountSaveAssemblyD02D03(t *testing.T) {
 	source := "export default { selectActivations() { return []; }, soldierBrain() { return { action: { type: \"TURN_TO_STONE\" }, soldierMemory: null }; } }"
 	sourceHash := hashString(source)
 	sourceBytes := len([]byte(source))
-	metadata := providerReadinessSourceArtifactMetadata(t, "typescript", "strategy-language-provider-js-ts", sourceHash, sourceBytes, true)
 
+	validationResponse := providerReadinessValidationResponseForSelectedABI(t, "typescript", source)
 	input, readiness := accountRevisionInsertFromProviderValidation("user:phase-244", strategyRevisionCreateBody{
 		StrategyID:   "strategy:phase-244",
 		Source:       source,
 		SourceFormat: "typescript",
 		Label:        "Proof backed",
 		Notes:        "phase 244 deterministic substitute",
-	}, &runtimeServiceValidationResponse{
-		OK:                  true,
-		Kind:                "strategyValidation",
-		SourceFormat:        "typescript",
-		Runtime:             defaultRuntimeMetadata(),
-		Validation:          map[string]any{"valid": true, "sourceHash": sourceHash, "sourceBytes": sourceBytes},
-		EngineCompatibility: engineCompatibility(),
-		Metadata:            metadata,
-		SourceHash:          sourceHash,
-		SourceBytes:         sourceBytes,
-	})
+	}, validationResponse)
 
 	if readiness.State != revisionReadinessExecutionDisabled || readiness.EntryEligible || readiness.CountedEligible {
 		t.Fatalf("expected account save assembly to remain quarantined, got %+v", readiness)
@@ -649,6 +639,30 @@ func providerReadinessV117ValidationResponse(t *testing.T, languageID string, so
 		},
 		EngineCompatibility: engine, Metadata: metadata,
 		SourceHash: sourceHash, SourceBytes: sourceBytes,
+	}
+}
+
+func providerReadinessValidationResponseForSelectedABI(t *testing.T, languageID string, source string) *runtimeServiceValidationResponse {
+	t.Helper()
+	if selectedStrategyRuntimeABIVersion() == strategyRuntimeABIVersionV117 {
+		return providerReadinessV117ValidationResponse(t, languageID, source)
+	}
+	sourceHash := hashString(source)
+	sourceBytes := len([]byte(source))
+	providerID := "strategy-language-provider-js-ts"
+	if languageID == "python" {
+		providerID = "strategy-language-provider-python"
+	}
+	return &runtimeServiceValidationResponse{
+		OK:                  true,
+		Kind:                "strategyValidation",
+		SourceFormat:        languageID,
+		Runtime:             runtimeMetadataForSourceFormat(languageID),
+		Validation:          validateSourceMetadata(source),
+		EngineCompatibility: engineCompatibility(),
+		Metadata:            providerReadinessSourceArtifactMetadata(t, languageID, providerID, sourceHash, sourceBytes, true),
+		SourceHash:          sourceHash,
+		SourceBytes:         sourceBytes,
 	}
 }
 

@@ -134,14 +134,7 @@ func TestPhase258SourceIdentityPostgres(t *testing.T) {
 			t.Fatal(err)
 		}
 		source := body["source"].(string)
-		sourceHash := hashString(source)
-		sourceBytes := len([]byte(source))
-		writeRuntimeServiceTestJSON(t, w, runtimeServiceValidationResponse{
-			OK: true, Kind: "strategyValidation", SourceFormat: "typescript",
-			Runtime: defaultRuntimeMetadata(), EngineCompatibility: engineCompatibility(),
-			Validation: validateSourceMetadata(source), SourceHash: sourceHash, SourceBytes: sourceBytes,
-			Metadata: providerReadinessSourceArtifactMetadata(t, "typescript", "strategy-language-provider-js-ts", sourceHash, sourceBytes, true),
-		})
+		writeRuntimeServiceTestJSON(t, w, providerReadinessValidationResponseForSelectedABI(t, "typescript", source))
 	}))
 	defer runtimeServer.Close()
 	server := &LiveServer{pool: pool, now: func() time.Time { return time.Date(2026, 7, 14, 12, 0, 0, 0, time.UTC) }, strategyArtifacts: map[string]strategyArtifact{}, orchestrator: newGoMatchOrchestrator(pool, runtimeServer.URL)}
