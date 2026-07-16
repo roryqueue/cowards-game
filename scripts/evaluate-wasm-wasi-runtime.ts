@@ -18,8 +18,8 @@ import {
   type WasmWasiCandidateRevisionV117,
 } from "../packages/runtime-wasm-wasi/src/validation.ts"
 import {
-  createWasmWasiRuntimeFromRevision,
-  runWasmWasiStrategyMethodSync,
+  createWasmWasiHistoricalV114RuntimeTestSupport,
+  runWasmWasiHistoricalV114MethodSyncTestSupport,
   runWasmWasiStrategyMethodV117Sync,
 } from "../packages/runtime-wasm-wasi/src/wasm-wasi-subprocess-adapter.ts"
 import {
@@ -33,7 +33,6 @@ import {
 } from "../packages/spec/src/index.ts"
 import {
   HISTORICAL_RUNTIME_ABI_V1_14,
-  projectSelectedRuntimeAbiSource,
 } from "./project-selected-runtime-abi-source.js"
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -169,8 +168,29 @@ export fn _start() void {
 }
 `
 
-const rustSource = projectSelectedRuntimeAbiSource(rustSourceV114)
-const zigSource = projectSelectedRuntimeAbiSource(zigSourceV114)
+const rustSource = rustSourceV114
+const zigSource = zigSourceV114
+
+const historicalRevisionV114 = (revision: StrategyRevision): StrategyRevision => ({
+  ...revision,
+  runtime: { ...revision.runtime, abiVersion: HISTORICAL_RUNTIME_ABI_V1_14 },
+  metadata: {
+    ...revision.metadata,
+    compiledArtifact:
+      revision.metadata.compiledArtifact === undefined
+        ? undefined
+        : {
+            ...revision.metadata.compiledArtifact,
+            abiVersion: HISTORICAL_RUNTIME_ABI_V1_14,
+          },
+  },
+}) as StrategyRevision
+
+const buildHistoricalRustRevisionV114 = (source: string): StrategyRevision =>
+  historicalRevisionV114(buildRustStrategyRevision({ source }))
+
+const buildHistoricalZigRevisionV114 = (source: string): StrategyRevision =>
+  historicalRevisionV114(buildZigStrategyRevision({ source }))
 
 const candidateRustSource = `
 fn main() {
@@ -282,8 +302,8 @@ const runtimeProbe = (
   options: { timeoutMs?: number; stdoutBytes?: number } = {},
 ): WasmWasiProbeResult =>
   runProbe(id, `runtime reports ${expectedFailureCode}`, () => {
-    const revision = buildRustStrategyRevision({ source })
-    const response = runWasmWasiStrategyMethodSync({
+    const revision = buildHistoricalRustRevisionV114(source)
+    const response = runWasmWasiHistoricalV114MethodSyncTestSupport({
       revision,
       methodName: "soldierBrain",
       input: soldierBrainInput,
@@ -307,8 +327,8 @@ const normalizedRuntimeProbe = (
   expectedViolationType: string,
 ): WasmWasiProbeResult =>
   runProbe(id, `runtime adapter reports ${expectedViolationType}`, () => {
-    const revision = buildRustStrategyRevision({ source })
-    const runtime = createWasmWasiRuntimeFromRevision(revision, {
+    const revision = buildHistoricalRustRevisionV114(source)
+    const runtime = createWasmWasiHistoricalV114RuntimeTestSupport(revision, {
       timeoutMs: 250,
       stdoutBytes: 8 * 1024,
       stderrBytes: 8 * 1024,
@@ -334,9 +354,7 @@ fn main() {
 }
 `
 
-const invalidActionSource = projectSelectedRuntimeAbiSource(
-  invalidActionSourceV114,
-)
+const invalidActionSource = invalidActionSourceV114
 
 const panicSource = `
 fn main() {
@@ -368,11 +386,11 @@ fn main() {
 const buildReport = () => {
   const compiled = compileRustWasmArtifact(rustSource)
   const compiledZig = compileZigWasmArtifact(zigSource)
-  const revision = buildRustStrategyRevision({ source: rustSource })
+  const revision = buildHistoricalRustRevisionV114(rustSource)
   const zigRevision = compiledZig.ok
-    ? buildZigStrategyRevision({ source: zigSource })
+    ? buildHistoricalZigRevisionV114(zigSource)
     : null
-  const selectResponse = runWasmWasiStrategyMethodSync({
+  const selectResponse = runWasmWasiHistoricalV114MethodSyncTestSupport({
     revision,
     methodName: "selectActivations",
     input: selectActivationsInput,
@@ -380,7 +398,7 @@ const buildReport = () => {
     stdoutBytes: 32 * 1024,
     stderrBytes: 32 * 1024,
   })
-  const soldierResponse = runWasmWasiStrategyMethodSync({
+  const soldierResponse = runWasmWasiHistoricalV114MethodSyncTestSupport({
     revision,
     methodName: "soldierBrain",
     input: soldierBrainInput,
@@ -400,7 +418,7 @@ const buildReport = () => {
         : undefined,
     },
   }
-  const staleHashResponse = runWasmWasiStrategyMethodSync({
+  const staleHashResponse = runWasmWasiHistoricalV114MethodSyncTestSupport({
     revision: staleHashRevision,
     methodName: "soldierBrain",
     input: soldierBrainInput,
@@ -408,7 +426,7 @@ const buildReport = () => {
   const zigSoldierResponse =
     zigRevision === null
       ? null
-      : runWasmWasiStrategyMethodSync({
+      : runWasmWasiHistoricalV114MethodSyncTestSupport({
           revision: zigRevision,
           methodName: "soldierBrain",
           input: soldierBrainInput,

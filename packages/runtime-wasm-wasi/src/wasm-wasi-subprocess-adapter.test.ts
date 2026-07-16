@@ -18,6 +18,7 @@ import {
   type RuntimeAbiV117LedgerAttribution,
   type RuntimeInvocationExecutionReceiptEvidenceV117,
   type RuntimeInvocationSigningIdentityV117,
+  type StrategyRevision,
 } from "@cowards/spec"
 import {
   buildZigStrategyRevision,
@@ -41,6 +42,7 @@ import {
   WASM_WASI_V1_17_EXECUTION_SETTINGS,
   classifyWasmtimeProcessObservationV117,
   createWasmWasiRuntimeFromRevision,
+  runWasmWasiHistoricalV114MethodSyncTestSupport,
   runWasmWasiStrategyMethodV117Sync,
   wasmWasiSharedCaptureBufferBytesV117,
   type WasmWasiGuestObservationV117,
@@ -1509,6 +1511,63 @@ describe("WASM/WASI runtime v1.17 exact Rust/Zig identity", () => {
 })
 
 describe("WASM/WASI runtime alpha", () => {
+  it.skipIf(!rustCompileProbe.ok)(
+    "replays immutable v1.14 evidence independently of the selected v1.17 pointer",
+    () => {
+      expect(STRATEGY_RUNTIME_ABI_VERSION).toBe("strategy-runtime-abi-v1.17")
+      const historicalSource = rustSource.replaceAll(
+        STRATEGY_RUNTIME_ABI_VERSION,
+        "strategy-runtime-abi-v1.14",
+      )
+      const selectedRevision = buildRustStrategyRevision({
+        source: historicalSource,
+      })
+      const historicalRevision = {
+        ...selectedRevision,
+        runtime: {
+          ...selectedRevision.runtime,
+          abiVersion: "strategy-runtime-abi-v1.14",
+        },
+        metadata: {
+          ...selectedRevision.metadata,
+          compiledArtifact: {
+            ...selectedRevision.metadata.compiledArtifact!,
+            abiVersion: "strategy-runtime-abi-v1.14",
+          },
+        },
+      } as unknown as StrategyRevision
+      const response = runWasmWasiHistoricalV114MethodSyncTestSupport({
+        revision: historicalRevision,
+        methodName: "soldierBrain",
+        input: {
+          self: {
+            id: "soldier:1",
+            ownerPlayerId: "player:1",
+            status: "ACTIVE",
+            position: { x: 0, y: 0 },
+            facing: "UP",
+            lastSuccessfulMoveDirection: null,
+          },
+          awarenessGrid: { cells: [] },
+          cycleIndex: 0,
+          maxCycles: 12,
+          soldierMemory: null,
+        },
+      })
+      expect(response).toEqual({
+        ok: true,
+        abiVersion: "strategy-runtime-abi-v1.14",
+        value: {
+          action: { type: "TURN_TO_STONE" },
+          soldierMemory: null,
+        },
+      })
+      expect(
+        createHash("sha256").update(JSON.stringify(response)).digest("hex"),
+      ).toBe("7241850e5f218810c4cf6fa67dd0e3823fbe6d230f64c189ed367159ec567f7d")
+    },
+  )
+
   it.skipIf(!rustCompileProbe.ok)(
     "compiles Rust source to immutable WASM artifact metadata",
     () => {

@@ -14,6 +14,7 @@ import { join } from "node:path"
 import {
   RUNTIME_INVOCATION_V1_17_CANDIDATE,
   RUNTIME_INVOCATION_V1_17_PLAYER_VIOLATIONS,
+  HistoricalStrategyRuntimeResponseEnvelopeV114Schema,
   SoldierBrainResultV117Schema,
   SoldierBrainResultSchema,
   STRATEGY_RUNTIME_ABI_VERSION,
@@ -826,12 +827,15 @@ export const runWasmWasiStrategyMethodV117Sync = (
 
 const artifactBytesFor = (
   revision: StrategyRevision,
+  runtimeAbiVersion: string = STRATEGY_RUNTIME_ABI_VERSION,
 ): Buffer | StrategyRuntimeResponseEnvelope => {
+  const responseAbiVersion =
+    runtimeAbiVersion as typeof STRATEGY_RUNTIME_ABI_VERSION
   const artifact = revision.metadata.compiledArtifact
   if (!artifact?.bytesBase64) {
     return {
       ok: false,
-      abiVersion: STRATEGY_RUNTIME_ABI_VERSION,
+      abiVersion: responseAbiVersion,
       failureKind: "systemFailure",
       systemFailure: {
         code: "SPAWN_FAILED",
@@ -847,7 +851,7 @@ const artifactBytesFor = (
   ) {
     return {
       ok: false,
-      abiVersion: STRATEGY_RUNTIME_ABI_VERSION,
+      abiVersion: responseAbiVersion,
       failureKind: "systemFailure",
       systemFailure: {
         code: "MALFORMED_IPC",
@@ -863,11 +867,11 @@ const artifactBytesFor = (
     artifact.wasiProfile !== "preview1" ||
     artifact.targetTriple !== expectedTargetTriple ||
     artifact.abiEnvelope !== "stdin-stdout-json" ||
-    artifact.abiVersion !== STRATEGY_RUNTIME_ABI_VERSION
+    artifact.abiVersion !== runtimeAbiVersion
   ) {
     return {
       ok: false,
-      abiVersion: STRATEGY_RUNTIME_ABI_VERSION,
+      abiVersion: responseAbiVersion,
       failureKind: "systemFailure",
       systemFailure: {
         code: "MALFORMED_IPC",
@@ -880,7 +884,7 @@ const artifactBytesFor = (
   if (importErrors.length > 0) {
     return {
       ok: false,
-      abiVersion: STRATEGY_RUNTIME_ABI_VERSION,
+      abiVersion: responseAbiVersion,
       failureKind: "runtimeViolation",
       violation: {
         code: "FORBIDDEN_CAPABILITY",
@@ -902,15 +906,21 @@ const artifactBytesFor = (
 
 const runWasmWasiStrategyMethodSyncInternal = (
   request: WasmWasiStrategyRequestInput,
-  allowNestedMatchTestSupport: boolean,
+  options: {
+    allowSelectedPointerBypass: boolean
+    runtimeAbiVersion: string
+  },
 ): StrategyRuntimeResponseEnvelope => {
+  const { allowSelectedPointerBypass, runtimeAbiVersion } = options
+  const responseAbiVersion =
+    runtimeAbiVersion as typeof STRATEGY_RUNTIME_ABI_VERSION
   if (
-    !allowNestedMatchTestSupport &&
+    !allowSelectedPointerBypass &&
     String(STRATEGY_RUNTIME_ABI_VERSION) !== "strategy-runtime-abi-v1.14"
   ) {
     return {
       ok: false,
-      abiVersion: STRATEGY_RUNTIME_ABI_VERSION,
+      abiVersion: responseAbiVersion,
       failureKind: "systemFailure",
       systemFailure: {
         code: "MALFORMED_IPC",
@@ -919,7 +929,7 @@ const runWasmWasiStrategyMethodSyncInternal = (
       },
     }
   }
-  const artifactBytes = artifactBytesFor(request.revision)
+  const artifactBytes = artifactBytesFor(request.revision, runtimeAbiVersion)
   if (!Buffer.isBuffer(artifactBytes)) {
     return artifactBytes
   }
@@ -928,7 +938,7 @@ const runWasmWasiStrategyMethodSyncInternal = (
   if (wasmtimePath === null) {
     return {
       ok: false,
-      abiVersion: STRATEGY_RUNTIME_ABI_VERSION,
+      abiVersion: responseAbiVersion,
       failureKind: "systemFailure",
       systemFailure: {
         code: "SPAWN_FAILED",
@@ -937,8 +947,8 @@ const runWasmWasiStrategyMethodSyncInternal = (
       },
     }
   }
-  const envelope: StrategyRuntimeRequestEnvelope = {
-    abiVersion: STRATEGY_RUNTIME_ABI_VERSION,
+  const rawEnvelope = {
+    abiVersion: responseAbiVersion,
     methodName: request.methodName,
     runtime: request.revision.runtime,
     source: {
@@ -948,6 +958,19 @@ const runWasmWasiStrategyMethodSyncInternal = (
     },
     input: request.input,
   }
+  if (
+    runtimeAbiVersion === "strategy-runtime-abi-v1.14" &&
+    (String(rawEnvelope.abiVersion) !== "strategy-runtime-abi-v1.14" ||
+      String(rawEnvelope.runtime.abiVersion) !== "strategy-runtime-abi-v1.14" ||
+      (rawEnvelope.methodName !== "selectActivations" &&
+        rawEnvelope.methodName !== "soldierBrain") ||
+      rawEnvelope.source.hash !== request.revision.sourceHash ||
+      rawEnvelope.source.bytes !== request.revision.sourceBytes ||
+      rawEnvelope.source.entrypoint !== request.revision.runtime.package.entrypoint)
+  ) {
+    throw new TypeError("Historical v1.14 WASM/WASI request binding drifted.")
+  }
+  const envelope = rawEnvelope as StrategyRuntimeRequestEnvelope
   const dir = mkdtempSync(join(tmpdir(), "cowards-wasmtime-"))
   const artifactPath = join(dir, "strategy.wasm")
   try {
@@ -993,7 +1016,7 @@ const runWasmWasiStrategyMethodSyncInternal = (
     ) {
       return {
         ok: false,
-        abiVersion: STRATEGY_RUNTIME_ABI_VERSION,
+        abiVersion: responseAbiVersion,
         failureKind: "systemFailure",
         systemFailure: {
           code: "STDIO_CAP_EXCEEDED",
@@ -1018,7 +1041,7 @@ const runWasmWasiStrategyMethodSyncInternal = (
         message.includes("maxBuffer") || message.includes("ENOBUFS")
       return {
         ok: false,
-        abiVersion: STRATEGY_RUNTIME_ABI_VERSION,
+        abiVersion: responseAbiVersion,
         failureKind: isTimeout ? "runtimeViolation" : "systemFailure",
         ...(isTimeout
           ? {
@@ -1047,7 +1070,7 @@ const runWasmWasiStrategyMethodSyncInternal = (
     if (result.status !== 0) {
       return {
         ok: false,
-        abiVersion: STRATEGY_RUNTIME_ABI_VERSION,
+        abiVersion: responseAbiVersion,
         failureKind: result.signal ? "systemFailure" : "runtimeViolation",
         ...(result.signal
           ? {
@@ -1069,13 +1092,16 @@ const runWasmWasiStrategyMethodSyncInternal = (
       } as StrategyRuntimeResponseEnvelope
     }
     try {
-      return StrategyRuntimeResponseEnvelopeSchema.parse(
-        JSON.parse(stdout),
-      ) as StrategyRuntimeResponseEnvelope
+      const parsed = JSON.parse(stdout) as unknown
+      return runtimeAbiVersion === "strategy-runtime-abi-v1.14"
+        ? HistoricalStrategyRuntimeResponseEnvelopeV114Schema.parse(parsed)
+        : (StrategyRuntimeResponseEnvelopeSchema.parse(
+            parsed,
+          ) as StrategyRuntimeResponseEnvelope)
     } catch {
       return {
         ok: false,
-        abiVersion: STRATEGY_RUNTIME_ABI_VERSION,
+        abiVersion: responseAbiVersion,
         failureKind: "systemFailure",
         systemFailure: {
           code: "MALFORMED_IPC",
@@ -1093,13 +1119,28 @@ const runWasmWasiStrategyMethodSyncInternal = (
 export const runWasmWasiStrategyMethodSync = (
   request: WasmWasiStrategyRequestInput,
 ): StrategyRuntimeResponseEnvelope =>
-  runWasmWasiStrategyMethodSyncInternal(request, false)
+  runWasmWasiStrategyMethodSyncInternal(request, {
+    allowSelectedPointerBypass: false,
+    runtimeAbiVersion: STRATEGY_RUNTIME_ABI_VERSION,
+  })
 
 /** Selected-pointer nested Match-shape test support; not historical evidence. */
 export const runWasmWasiNestedMatchShapeMethodSyncTestSupport = (
   request: WasmWasiStrategyRequestInput,
 ): StrategyRuntimeResponseEnvelope =>
-  runWasmWasiStrategyMethodSyncInternal(request, true)
+  runWasmWasiStrategyMethodSyncInternal(request, {
+    allowSelectedPointerBypass: true,
+    runtimeAbiVersion: STRATEGY_RUNTIME_ABI_VERSION,
+  })
+
+/** Immutable v1.14 evidence replay only; never selected for current execution. */
+export const runWasmWasiHistoricalV114MethodSyncTestSupport = (
+  request: WasmWasiStrategyRequestInput,
+): StrategyRuntimeResponseEnvelope =>
+  runWasmWasiStrategyMethodSyncInternal(request, {
+    allowSelectedPointerBypass: true,
+    runtimeAbiVersion: "strategy-runtime-abi-v1.14",
+  })
 
 const normalizeStrategyOutput = (
   envelope: StrategyRuntimeResponseEnvelope,
@@ -1243,4 +1284,19 @@ export const createWasmWasiNestedMatchShapeRuntimeTestSupport = (
     revision,
     options,
     runWasmWasiNestedMatchShapeMethodSyncTestSupport,
+  )
+
+/** Immutable v1.14 evidence replay only; never selected for current execution. */
+export const createWasmWasiHistoricalV114RuntimeTestSupport = (
+  revision: StrategyRevision,
+  options: {
+    timeoutMs?: number | undefined
+    stdoutBytes?: number | undefined
+    stderrBytes?: number | undefined
+  } = {},
+): StrategyRuntime =>
+  createWasmWasiRuntimeFromRevisionWithRunner(
+    revision,
+    options,
+    runWasmWasiHistoricalV114MethodSyncTestSupport,
   )
