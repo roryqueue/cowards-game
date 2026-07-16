@@ -20,7 +20,7 @@ const runtimeServiceV117EmptyLedgerRoot = "sha256:2ca3c0a9b5cd9ce685dfccf846334e
 // selectedRuntimeServiceContractVersion is the single Go-side activation
 // pointer. The activation commit selects the already-proved v1.17 client;
 // immutable v1.16 bytes remain available only to explicit historical verification.
-func selectedRuntimeServiceContractVersion() string {
+var selectedRuntimeServiceContractVersion = func() string {
 	return runtimeExecutionServiceVersionV117
 }
 
@@ -28,7 +28,8 @@ func selectedRuntimeExecutionAuthorityCoherent() bool {
 	service := selectedRuntimeServiceContractVersion()
 	runtimeABI := selectedStrategyRuntimeABIVersion()
 	return (service == runtimeExecutionServiceVersion && runtimeABI == strategyRuntimeABIVersion) ||
-		(service == runtimeExecutionServiceVersionV117 && runtimeABI == strategyRuntimeABIVersionV117)
+		(service == runtimeExecutionServiceVersionV117 && runtimeABI == strategyRuntimeABIVersionV117) ||
+		(service == runtimeExecutionServiceVersionV118 && runtimeABI == strategyRuntimeABIVersionV117)
 }
 
 // selectedStrategyRuntimeABIVersion derives ABI ownership from the same
@@ -38,6 +39,8 @@ func selectedStrategyRuntimeABIVersion() string {
 	case runtimeExecutionServiceVersion:
 		return strategyRuntimeABIVersion
 	case runtimeExecutionServiceVersionV117:
+		return strategyRuntimeABIVersionV117
+	case runtimeExecutionServiceVersionV118:
 		return strategyRuntimeABIVersionV117
 	default:
 		return ""

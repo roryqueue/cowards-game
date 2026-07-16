@@ -242,6 +242,8 @@ func claimedRuntimeServiceFixtureV117(identity *claimedMatchIntegrityIdentity) *
 		if evidence.ConformanceCertificateRef != nil {
 			id, kind := evidence.ConformanceCertificateRef.CertificateID, evidence.ConformanceCertificateRef.Kind
 			value.ConformanceCertificateID, value.ConformanceCertificateKind = &id, &kind
+			lane := evidence.LaneIdentity.LanguageID + ":" + evidence.LaneIdentity.AdapterID
+			value.ConformanceLaneID = &lane
 		}
 		return value
 	}

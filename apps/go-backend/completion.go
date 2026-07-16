@@ -23,6 +23,7 @@ type matchCompletionService struct {
 	allowLegacyTestCompletion     bool
 	semanticReceiptSecret         string
 	successorAuthorityTrustDomain string
+	lockIntegrity                 func(context.Context, pgx.Tx, string, string, *claimedMatchIntegrityIdentity) (*claimedMatchIntegrityIdentity, error)
 }
 
 type completeMatchInput struct {
@@ -34,6 +35,9 @@ type completeMatchInput struct {
 	SemanticWireEvidence runtimeSemanticWireEvidence
 	RuntimeRequestV117   *runtimeServiceRequestV117
 	SemanticReceiptV117  *runtimeSemanticReceiptV117
+	RuntimeRequestV118   *runtimeServiceRequestV118
+	VerifiedReceiptV118  *verifiedRuntimeSemanticReceiptV118
+	ReceiptBytesV118     []byte
 	Integrity            *claimedMatchIntegrityIdentity
 }
 
@@ -83,8 +87,15 @@ func validateSelectedRuntimeCompletionAuthority(input completeMatchInput, integr
 		return errors.New("match completion runtime ABI is not the selected authority")
 	}
 	switch selectedRuntimeServiceContractVersion() {
+	case runtimeExecutionServiceVersionV118:
+		if input.RuntimeRequestV118 == nil || input.VerifiedReceiptV118 == nil ||
+			!input.VerifiedReceiptV118.authenticated || len(input.ReceiptBytesV118) == 0 ||
+			input.RuntimeRequestV117 != nil || input.SemanticReceiptV117 != nil {
+			return errors.New("match completion is not bound to authenticated v1.18 service admission")
+		}
 	case runtimeExecutionServiceVersionV117:
-		if input.RuntimeRequestV117 == nil || input.SemanticReceiptV117 == nil {
+		if input.RuntimeRequestV117 == nil || input.SemanticReceiptV117 == nil ||
+			input.RuntimeRequestV118 != nil || input.VerifiedReceiptV118 != nil {
 			return errors.New("match completion is not bound to the selected v1.17 runtime authority")
 		}
 	case runtimeExecutionServiceVersion:
@@ -97,8 +108,114 @@ func validateSelectedRuntimeCompletionAuthority(input completeMatchInput, integr
 	return nil
 }
 
+func validateRuntimeSemanticReceiptV118ForCompletion(input completeMatchInput, integrity *claimedMatchIntegrityIdentity) error {
+	verified := input.VerifiedReceiptV118
+	request := input.RuntimeRequestV118
+	if verified == nil || request == nil || !verified.authenticated || integrity == nil ||
+		integrity.RuntimeServiceV117 == nil ||
+		verified.Claim != requestSemanticClaimIdentityV118(*request, verified.Claim) ||
+		verified.Claim.MatchID != stringValue(input.FinalState, "matchId") ||
+		verified.Claim.SemanticTuple.TupleID != integrity.CompatibilityTupleID ||
+		verified.Claim.AuthorityGeneration != integrity.RuntimeServiceV117.Authority.RegistryGeneration ||
+		verified.Claim.Result != (runtimeSemanticAdmissionResultV118{
+			ResultClass: "success", Ownership: "gameplay", Retryable: false, MutationStatus: "committed",
+		}) {
+		return errors.New("v1.18 completion admission identity changed")
+	}
+	chronicleHash, err := canonicalCompletionHashV118(input.Chronicle)
+	if err != nil || chronicleHash != verified.Claim.ChronicleCanonicalHash {
+		return errors.New("v1.18 completion Chronicle hash changed")
+	}
+	finalHash, err := canonicalCompletionHashV118(input.FinalState)
+	if err != nil || finalHash != verified.Claim.FinalStateCanonicalHash {
+		return errors.New("v1.18 completion final-state hash changed")
+	}
+	outcomeHash, err := canonicalCompletionHashV118(input.FinalState["outcome"])
+	if err != nil || outcomeHash != verified.Claim.OutcomeCanonicalHash {
+		return errors.New("v1.18 completion outcome hash changed")
+	}
+	if err := validateRuntimeCertificateReferencesV118ForCompletion(verified.Claim.CertificateReferences, integrity); err != nil {
+		return err
+	}
+	receipt, err := parseRuntimeSemanticReceiptV118(input.ReceiptBytesV118)
+	if err != nil || receipt.Claim != verified.Claim {
+		return errors.New("v1.18 completion receipt bytes changed")
+	}
+	return nil
+}
+
+func requestSemanticClaimIdentityV118(request runtimeServiceRequestV118, claim runtimeSemanticAdmissionClaimV118) runtimeSemanticAdmissionClaimV118 {
+	expected := claim
+	expected.RequestID = request.RequestID
+	expected.MatchID = request.MatchID
+	expected.SemanticTuple = request.SemanticTuple
+	expected.AuthorityGeneration = request.AuthorityGeneration
+	expected.EvaluationInstant = request.EvaluationInstant
+	expected.CertificateReferences = request.CertificateReferences
+	expected.Accounting.BudgetProfileRoot = request.Accounting.BudgetProfileRoot
+	expected.Accounting.LedgerPrestateRoot = request.Accounting.LedgerPrestateRoot
+	requestBytes, err := encodeRuntimeServiceRequestV118(request)
+	if err != nil {
+		expected.RequestSHA256 = ""
+	} else {
+		expected.RequestSHA256 = runtimeInvocationV117SHA256Value(requestBytes)
+	}
+	return expected
+}
+
+func validateRuntimeCertificateReferencesV118ForCompletion(references runtimeCertificateReferencesV118, integrity *claimedMatchIntegrityIdentity) error {
+	check := func(reference runtimeCertificateReferenceV118, evidence goEntrantExecutionEvidence, side string) bool {
+		return evidence.ConformanceCertificateRef != nil &&
+			reference.Side == side && reference.SourceIdentity.Side == side &&
+			reference.CertificateID == evidence.ConformanceCertificateRef.CertificateID &&
+			reference.CertificateRecordHash == "sha256:"+evidence.ConformanceCertificateRef.CertificateRecordHash &&
+			reference.RegistryGeneration == evidence.ConformanceCertificateRef.RegistryGeneration &&
+			reference.RegistryGeneration == integrity.RuntimeServiceV117.Authority.RegistryGeneration &&
+			reference.FreshUntil == evidence.SchedulingDecision.FreshUntil &&
+			integrity.RuntimeServiceV117Entrant(side).ConformanceLaneID != nil &&
+			reference.Lane == *integrity.RuntimeServiceV117Entrant(side).ConformanceLaneID &&
+			reference.SourceIdentity.StrategyRevisionID == evidence.StrategyRevisionID &&
+			reference.SourceIdentity.ArtifactSHA256 == "sha256:"+evidence.LaneIdentity.ArtifactSHA256 &&
+			reference.SourceIdentity.IdentityManifestRoot == integrity.RuntimeServiceV117Entrant(side).IdentityManifestRoot &&
+			reference.SourceIdentity.EvidenceGraphRoot == integrity.RuntimeServiceV117Entrant(side).EvidenceGraphRoot &&
+			reference.SourceIdentity.LaneIdentityHash == "sha256:"+hashCreationLaneIdentity(evidence.LaneIdentity)
+	}
+	if integrity.RuntimeServiceV117 == nil ||
+		!check(references.Bottom, integrity.Bottom, "bottom") ||
+		!check(references.Top, integrity.Top, "top") {
+		return errors.New("v1.18 completion certificate references changed")
+	}
+	return nil
+}
+
+func (identity *claimedMatchIntegrityIdentity) RuntimeServiceV117Entrant(side string) claimedRuntimeServiceEntrantV117 {
+	if identity == nil || identity.RuntimeServiceV117 == nil {
+		return claimedRuntimeServiceEntrantV117{}
+	}
+	if side == "bottom" {
+		return identity.RuntimeServiceV117.Bottom
+	}
+	return identity.RuntimeServiceV117.Top
+}
+
+func canonicalCompletionHashV118(value any) (string, error) {
+	bytes, err := runtimeInvocationV117CanonicalValue(value)
+	if err != nil {
+		return "", err
+	}
+	sum := sha256.Sum256(bytes)
+	return "sha256:" + hex.EncodeToString(sum[:]), nil
+}
+
 func newMatchCompletionService(pool *pgxpool.Pool) *matchCompletionService {
 	return &matchCompletionService{pool: pool, loadAuthority: loadProductionRuntimeEvidenceAuthorityFromEnvironment, now: time.Now, semanticReceiptSecret: runtimeServiceSemanticReceiptSecret(), successorAuthorityTrustDomain: runtimeEvidenceAuthorityProductionTrustDomain}
+}
+
+func validateRuntimeSemanticAdmissionForCompletion(input completeMatchInput, integrity *claimedMatchIntegrityIdentity, secret string) error {
+	if input.VerifiedReceiptV118 != nil || input.RuntimeRequestV118 != nil || len(input.ReceiptBytesV118) != 0 {
+		return validateRuntimeSemanticReceiptV118ForCompletion(input, integrity)
+	}
+	return validateVersionedRuntimeSemanticReceiptForCompletion(input, integrity, secret)
 }
 
 func (service *matchCompletionService) completeMatch(ctx context.Context, input completeMatchInput) (*completeMatchResult, error) {
@@ -109,7 +226,7 @@ func (service *matchCompletionService) completeMatch(ctx context.Context, input 
 		if err := validateSelectedRuntimeCompletionAuthority(input, input.Integrity); err != nil {
 			return nil, err
 		}
-		if err := validateVersionedRuntimeSemanticReceiptForCompletion(input, input.Integrity, service.semanticReceiptSecret); err != nil {
+		if err := validateRuntimeSemanticAdmissionForCompletion(input, input.Integrity, service.semanticReceiptSecret); err != nil {
 			return nil, err
 		}
 	}
@@ -118,7 +235,11 @@ func (service *matchCompletionService) completeMatch(ctx context.Context, input 
 	var semanticReceiptVersion any
 	var err error
 	if !service.allowLegacyTestCompletion {
-		if input.SemanticReceiptV117 != nil {
+		if input.VerifiedReceiptV118 != nil {
+			semanticReceiptHash = input.VerifiedReceiptV118.ReceiptSHA256
+			semanticReceiptJSON = append([]byte(nil), input.ReceiptBytesV118...)
+			semanticReceiptVersion = runtimeSemanticReceiptSchemaVersionV118
+		} else if input.SemanticReceiptV117 != nil {
 			semanticReceiptHash, err = runtimeSemanticReceiptHashV117(*input.SemanticReceiptV117)
 			if err == nil {
 				semanticReceiptJSON, err = runtimeSemanticReceiptRecordJSONV117(*input.SemanticReceiptV117)
@@ -138,11 +259,16 @@ func (service *matchCompletionService) completeMatch(ctx context.Context, input 
 	if err != nil {
 		return nil, err
 	}
-	metadata, err := createGoChronicleMetadata(input.Chronicle)
+	var metadata chronicleMetadata
+	if input.VerifiedReceiptV118 != nil {
+		metadata, err = createGoChronicleMetadataV118(input.Chronicle, input.FinalState, input.VerifiedReceiptV118.Claim)
+	} else {
+		metadata, err = createGoChronicleMetadata(input.Chronicle)
+	}
 	if err != nil {
 		return nil, err
 	}
-	if err := validateCompletionCompatibility(fields, metadata); err != nil {
+	if err := validateCompletionCompatibilityForInput(input, fields, metadata); err != nil {
 		return nil, err
 	}
 	artifact, err := json.Marshal(input.Chronicle)
@@ -204,14 +330,18 @@ func (service *matchCompletionService) completeMatch(ctx context.Context, input 
 	}
 	var lockedIntegrity *claimedMatchIntegrityIdentity
 	if !service.allowLegacyTestCompletion {
-		lockedIntegrity, err = service.lockCompletionIntegrity(ctx, tx, input.JobID, input.LeaseToken, input.Integrity)
+		lockIntegrity := service.lockIntegrity
+		if lockIntegrity == nil {
+			lockIntegrity = service.lockCompletionIntegrity
+		}
+		lockedIntegrity, err = lockIntegrity(ctx, tx, input.JobID, input.LeaseToken, input.Integrity)
 		if err != nil {
 			return nil, err
 		}
 		if err := validateSelectedRuntimeCompletionAuthority(input, lockedIntegrity); err != nil {
 			return nil, err
 		}
-		if err := validateVersionedRuntimeSemanticReceiptForCompletion(input, lockedIntegrity, service.semanticReceiptSecret); err != nil {
+		if err := validateRuntimeSemanticAdmissionForCompletion(input, lockedIntegrity, service.semanticReceiptSecret); err != nil {
 			return nil, err
 		}
 	}
@@ -463,6 +593,41 @@ func createGoChronicleMetadata(chronicle map[string]any) (chronicleMetadata, err
 	}, nil
 }
 
+func createGoChronicleMetadataV118(
+	chronicle map[string]any,
+	finalState map[string]any,
+	claim runtimeSemanticAdmissionClaimV118,
+) (chronicleMetadata, error) {
+	if hasPrivateOutputMarker(chronicle) {
+		return chronicleMetadata{}, errors.New("Chronicle contains private output markers")
+	}
+	reproducibility, ok := chronicle["reproducibility"].(map[string]any)
+	if !ok {
+		return chronicleMetadata{}, errors.New("Chronicle missing reproducibility")
+	}
+	events, eventsOK := chronicle["events"].([]any)
+	snapshots, snapshotsOK := chronicle["snapshots"].([]any)
+	strategyRevisionIDs := sliceValue(reproducibility, "strategyRevisionIds")
+	bottomPlayerID, topPlayerID := sidePlayerIDs(finalState)
+	if !eventsOK || !snapshotsOK || len(events) == 0 || len(snapshots) == 0 ||
+		len(strategyRevisionIDs) != 2 || bottomPlayerID == "" || topPlayerID == "" ||
+		stringValue(reproducibility, "matchId") != claim.MatchID ||
+		stringValue(reproducibility, "arenaVariantId") == "" ||
+		stringValue(chronicle, "schemaVersion") == "" {
+		return chronicleMetadata{}, errors.New("Chronicle structural identity is incomplete")
+	}
+	return chronicleMetadata{
+		ID:      "chronicle:" + strings.TrimPrefix(claim.ChronicleCanonicalHash, "sha256:"),
+		MatchID: claim.MatchID, SchemaVersion: stringValue(chronicle, "schemaVersion"),
+		Hash:    strings.TrimPrefix(claim.ChronicleCanonicalHash, "sha256:"),
+		Outcome: finalState["outcome"], EventCount: len(events), SnapshotCount: len(snapshots),
+		BottomPlayerID: bottomPlayerID, TopPlayerID: topPlayerID,
+		BottomStrategyRevisionID: stringFromAny(strategyRevisionIDs[0]),
+		TopStrategyRevisionID:    stringFromAny(strategyRevisionIDs[1]),
+		ArenaVariantID:           stringValue(reproducibility, "arenaVariantId"),
+	}, nil
+}
+
 func terminalChronicleOutcome(snapshots []any) (any, error) {
 	for _, snapshot := range snapshots {
 		row, ok := snapshot.(map[string]any)
@@ -510,6 +675,22 @@ func validateCompletionCompatibility(fields matchCompletionFields, metadata chro
 	}
 	if metadata.SchemaVersion == "" || metadata.ArenaVariantID == "" || metadata.BottomStrategyRevisionID == "" || metadata.TopStrategyRevisionID == "" {
 		return errors.New("Chronicle metadata is incomplete")
+	}
+	return nil
+}
+
+func validateCompletionCompatibilityForInput(input completeMatchInput, fields matchCompletionFields, metadata chronicleMetadata) error {
+	if input.VerifiedReceiptV118 == nil {
+		return validateCompletionCompatibility(fields, metadata)
+	}
+	if fields.MatchID != metadata.MatchID ||
+		metadata.SchemaVersion == "" || metadata.ArenaVariantID == "" ||
+		metadata.BottomStrategyRevisionID == "" || metadata.TopStrategyRevisionID == "" {
+		return errors.New("v1.18 completion structural metadata is incomplete")
+	}
+	outcomeHash, err := canonicalCompletionHashV118(fields.Outcome)
+	if err != nil || outcomeHash != input.VerifiedReceiptV118.Claim.OutcomeCanonicalHash {
+		return errors.New("v1.18 completion outcome anchor changed")
 	}
 	return nil
 }

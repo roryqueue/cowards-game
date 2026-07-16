@@ -1,4 +1,7 @@
+import { Buffer } from "node:buffer"
 import { createHash, generateKeyPairSync, sign } from "node:crypto"
+import { once } from "node:events"
+import type { AddressInfo } from "node:net"
 import { MATCH_KERNEL, type StrategyRuntime } from "@cowards/engine"
 import { adaptRuntimeForCurrentKernel } from "@cowards/engine/test/current-kernel-runtime"
 import { recordChronicleFromExecution } from "@cowards/replay"
@@ -9,6 +12,7 @@ import {
   RUNTIME_EXECUTION_SERVICE_VERSION,
   RUNTIME_EXECUTION_SERVICE_VERSION_V1_18,
   createRuntimeSemanticTupleV118,
+  encodeCanonicalJson,
   type JsonValue,
   type RuntimeCertificateReferenceV118,
   type RuntimeExecutionServiceRequest,
@@ -22,6 +26,8 @@ import {
   type PreparedRuntimeServiceExecutionV118,
 } from "./execute-match.js"
 import { createFixtureRuntimeExecutionEvidenceSnapshot } from "./runtime-execution-evidence.test-support.js"
+import { createRuntimeServiceConfig } from "./runtime-config.js"
+import { createRuntimeExecutionHttpServer } from "./server.js"
 
 const passiveSource = `
 export default {
@@ -255,6 +261,81 @@ describe("prepared runtime service v1.18 semantic admission", () => {
     )
     expect(response.result).not.toHaveProperty("chronicle")
     expect(response.result).not.toHaveProperty("finalState")
+  })
+
+  it("keeps completion documents behind the authenticated internal envelope", async () => {
+    const baseConfig = createRuntimeServiceConfig({
+      strategyExecutionAdapter: "worker-thread",
+      semanticReceiptSecret: "unused-v1.18-test-secret",
+    })
+    const server = createRuntimeExecutionHttpServer({
+      runtimeConfig: {
+        ...baseConfig,
+        contractSelection: {
+          ...baseConfig.contractSelection,
+          runtimeServiceVersion: RUNTIME_EXECUTION_SERVICE_VERSION_V1_18,
+        },
+      },
+      privateArtifactToken: "fixture-private-completion-token",
+      preparedV118Dependencies: dependencies(),
+    })
+    server.listen(0, "127.0.0.1")
+    await once(server, "listening")
+    try {
+      const address = server.address() as AddressInfo
+      const endpoint = `http://127.0.0.1:${address.port}/execute-match`
+      const encoded = encodeCanonicalJson(request() as unknown as JsonValue, {
+        context: "authenticated-outer-envelope",
+      })
+      if (!encoded.ok) throw new Error(encoded.error.code)
+      const publicResponse = await fetch(endpoint, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: Buffer.from(encoded.bytes),
+      })
+      const publicBody = (await publicResponse.json()) as Record<
+        string,
+        unknown
+      >
+      expect(publicBody).toMatchObject({
+        contractVersion: RUNTIME_EXECUTION_SERVICE_VERSION_V1_18,
+        ok: true,
+        kind: "executionResult",
+      })
+      expect(publicBody).not.toHaveProperty("chronicle")
+      expect(publicBody).not.toHaveProperty("finalState")
+      expect(JSON.stringify(publicBody)).not.toContain(passiveSource.trim())
+      expect(JSON.stringify(publicBody)).not.toMatch(
+        /strategyMemory|soldierMemory|objective|diagnostic|hostPath/iu,
+      )
+
+      const internalResponse = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "x-cowards-private-artifact-token":
+            "fixture-private-completion-token",
+        },
+        body: Buffer.from(encoded.bytes),
+      })
+      const internalBody = (await internalResponse.json()) as Record<
+        string,
+        unknown
+      >
+      expect(internalBody).toMatchObject({
+        schemaVersion: "runtime-service-completion-envelope-v1.18",
+        publicResponse: {
+          contractVersion: RUNTIME_EXECUTION_SERVICE_VERSION_V1_18,
+          ok: true,
+        },
+      })
+      expect(internalBody).toHaveProperty("chronicle")
+      expect(internalBody).toHaveProperty("finalState")
+    } finally {
+      await new Promise<void>((resolve, reject) => {
+        server.close((error) => (error ? reject(error) : resolve()))
+      })
+    }
   })
 
   it("fails closed on semantic, certificate, meter, execution, and signer drift", () => {

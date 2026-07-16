@@ -21,6 +21,23 @@ type runtimeServiceResponseFixtureV118 struct {
 	} `json:"result"`
 }
 
+func loadRuntimeServiceFixtureV118(t *testing.T) (runtimeServiceRequestV118, []byte) {
+	t.Helper()
+	requestBytes, err := os.ReadFile("../../packages/spec/artifacts/runtime-execution-service-request.v1.18.candidate.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var request runtimeServiceRequestV118
+	if err := json.Unmarshal(requestBytes, &request); err != nil {
+		t.Fatal(err)
+	}
+	responseBytes, err := os.ReadFile("../../packages/spec/artifacts/runtime-execution-service-response.v1.18.candidate.wire.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	return request, responseBytes
+}
+
 func loadRuntimeSemanticReceiptFixtureV118(t *testing.T) ([]byte, runtimeSemanticReceiptV118) {
 	t.Helper()
 	fixtureBytes, err := os.ReadFile("../../packages/spec/artifacts/runtime-execution-service-response.v1.18.candidate.wire.json")
@@ -124,6 +141,35 @@ func TestPhase259RuntimeSemanticReceiptV118AcceptsExactGeneratedVector(t *testin
 		verified.ReceiptSHA256 != runtimeInvocationV117SHA256Value(receiptBytes) ||
 		receipt.SignatureBase64 != descriptor.ReceiptSignature {
 		t.Fatalf("generated TypeScript/Go v1.18 parity drift: verified=%+v descriptor=%+v", verified, descriptor)
+	}
+}
+
+func TestPhase259RuntimeServiceV118AdmitsOnlyTheExactAuthenticatedPublicResponse(t *testing.T) {
+	request, responseBytes := loadRuntimeServiceFixtureV118(t)
+	response, failure := decodeRuntimeServiceResponseV118(
+		request,
+		responseBytes,
+		generatedRuntimeSemanticReceiptTrustedKeyV118(),
+	)
+	if failure != nil || response == nil || response.Verified == nil || !response.Verified.authenticated {
+		t.Fatalf("exact v1.18 public service response rejected: response=%+v failure=%+v", response, failure)
+	}
+	var mutated map[string]any
+	if err := json.Unmarshal(responseBytes, &mutated); err != nil {
+		t.Fatal(err)
+	}
+	mutated["result"].(map[string]any)["transitionTraceRoot"] = "sha256:" + strings.Repeat("a", 64)
+	encoded, err := runtimeInvocationV117CanonicalValue(mutated)
+	if err != nil {
+		t.Fatal(err)
+	}
+	response, failure = decodeRuntimeServiceResponseV118(
+		request,
+		encoded,
+		generatedRuntimeSemanticReceiptTrustedKeyV118(),
+	)
+	if response != nil || failure == nil || failure.PlayerPenalty {
+		t.Fatalf("unsigned outer-root substitution admitted: response=%+v failure=%+v", response, failure)
 	}
 }
 

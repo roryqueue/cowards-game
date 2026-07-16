@@ -59,7 +59,23 @@ describe("migrations", () => {
     )
     expect(names).toContain("0023_runtime_conformance_certificates.sql")
     expect(names).toContain("0024_runtime_authority_import_trust_roots.sql")
+    expect(names).toContain("0025_runtime_semantic_receipts_v1_18.sql")
     expect(names).toEqual([...names].sort())
+  })
+
+  it("extends strict Chronicle receipt versioning to v1.18 without rewriting history", async () => {
+    const sql = await readFile(
+      new URL("0025_runtime_semantic_receipts_v1_18.sql", migrationsDirectory),
+      "utf8",
+    )
+    expect(sql).toContain("runtime-semantic-receipt-v1.17")
+    expect(sql).toContain("runtime-semantic-receipt-v1.18")
+    expect(sql).toContain("runtime_semantic_receipt ->> 'schemaVersion'")
+    expect(sql).toContain(
+      "runtime_semantic_receipt -> 'claim' ->> 'schemaVersion'",
+    )
+    expect(sql).not.toMatch(/update\s+chronicles/iu)
+    expect(sql).not.toMatch(/insert\s+into\s+chronicles/iu)
   })
 
   it("pins plural authority import trust-root descriptors append-only", async () => {

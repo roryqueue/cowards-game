@@ -166,8 +166,19 @@ func (orchestrator *goMatchOrchestrator) runOnce(ctx context.Context, matchIDs [
 		JobID: claimed.JobID, LeaseToken: claimed.LeaseToken, Integrity: claimed.Integrity,
 	}
 	switch response.ContractVersion {
+	case runtimeExecutionServiceVersionV118:
+		if response.V118 == nil || response.V117 != nil || response.V116 != nil ||
+			request.V118 == nil || response.V118.Verified == nil ||
+			response.V118.Chronicle == nil || response.V118.FinalState == nil {
+			return nil, errors.New("runtime service v1.18 completion contract is incomplete")
+		}
+		completionInput.Chronicle = response.V118.Chronicle
+		completionInput.FinalState = response.V118.FinalState
+		completionInput.RuntimeRequestV118 = request.V118
+		completionInput.VerifiedReceiptV118 = response.V118.Verified
+		completionInput.ReceiptBytesV118 = response.V118.ReceiptBytes
 	case runtimeExecutionServiceVersion:
-		if response.V116 == nil || response.V117 != nil {
+		if response.V116 == nil || response.V117 != nil || response.V118 != nil {
 			return nil, errors.New("runtime service completion contract is mixed-version")
 		}
 		chronicle, finalState, semanticReceipt, semanticWireEvidence, err := runtimeServiceCompletionPayload(response.V116)
@@ -179,7 +190,7 @@ func (orchestrator *goMatchOrchestrator) runOnce(ctx context.Context, matchIDs [
 		completionInput.SemanticReceipt = semanticReceipt
 		completionInput.SemanticWireEvidence = semanticWireEvidence
 	case runtimeExecutionServiceVersionV117:
-		if response.V117 == nil || response.V116 != nil || request.V117 == nil {
+		if response.V117 == nil || response.V116 != nil || response.V118 != nil || request.V117 == nil {
 			return nil, errors.New("runtime service completion contract is mixed-version")
 		}
 		chronicle, finalState, semanticReceipt, err := runtimeServiceCompletionPayloadV117(response.V117)
@@ -215,6 +226,59 @@ func buildRuntimeServiceExecutionRequestForClaimedJob(ctx context.Context, pool 
 	}
 	if claimed == nil || claimed.Integrity == nil {
 		return nil, errors.New("claimed Match integrity identity is unavailable")
+	}
+	if selectedRuntimeServiceContractVersion() == runtimeExecutionServiceVersionV118 {
+		binding := claimed.Integrity.RuntimeServiceV117
+		if !validClaimedRuntimeServiceV117(binding, claimed.Integrity) {
+			return nil, errors.New("successor runtime evidence roots and accounting are unavailable")
+		}
+		bottom, bottomOK := runtimeCertificateReferenceForClaimV118(
+			request.Strategies.Bottom,
+			claimed.Integrity.Bottom,
+			binding.Bottom,
+			"bottom",
+			registry,
+		)
+		top, topOK := runtimeCertificateReferenceForClaimV118(
+			request.Strategies.Top,
+			claimed.Integrity.Top,
+			binding.Top,
+			"top",
+			registry,
+		)
+		if !bottomOK || !topOK ||
+			claimed.Integrity.Bottom.SchedulingDecision.EvaluatedAt != claimed.Integrity.Top.SchedulingDecision.EvaluatedAt {
+			return nil, errors.New("v1.18 two-sided certificate source identity is unavailable")
+		}
+		matchBytes, err := runtimeInvocationV117CanonicalValue(request)
+		if err != nil {
+			return nil, errors.New("v1.18 nested Match envelope is not canonical")
+		}
+		successor := runtimeServiceRequestV118{
+			ContractVersion: runtimeExecutionServiceVersionV118,
+			Kind:            "executeMatch", RequestID: request.RequestID, MatchID: request.Match.MatchID,
+			SemanticTuple: runtimeSemanticTupleV118{
+				TupleID: claimed.Integrity.CompatibilityTupleID,
+				Components: runtimeSemanticTupleComponentsV118{
+					Rules: claimed.Integrity.CompatibilityTuple.Rules, Engine: claimed.Integrity.CompatibilityTuple.Engine,
+					RuntimeABI: claimed.Integrity.CompatibilityTuple.RuntimeABI, Chronicle: claimed.Integrity.CompatibilityTuple.Chronicle,
+					ArenaCatalog: claimed.Integrity.CompatibilityTuple.ArenaCatalog, SetPolicy: claimed.Integrity.CompatibilityTuple.SetPolicy,
+				},
+			},
+			AuthorityGeneration:   binding.Authority.RegistryGeneration,
+			EvaluationInstant:     claimed.Integrity.Bottom.SchedulingDecision.EvaluatedAt,
+			CertificateReferences: runtimeCertificateReferencesV118{Bottom: bottom, Top: top},
+			Match:                 matchBytes,
+		}
+		successor.Accounting.BudgetProfileRoot = binding.BudgetProfileSHA256
+		successor.Accounting.LedgerPrestateRoot = binding.LedgerPrestateRoot
+		if err := validateRuntimeServiceRequestV118(successor); err != nil {
+			return nil, errors.New("claimed Match v1.18 runtime request is invalid")
+		}
+		return &runtimeServiceExecutionRequest{
+			ContractVersion: runtimeExecutionServiceVersionV118,
+			V118:            &successor,
+		}, nil
 	}
 	switch claimed.Integrity.CompatibilityTuple.RuntimeABI {
 	case strategyRuntimeABIVersion:
@@ -264,6 +328,41 @@ func buildRuntimeServiceExecutionRequestForClaimedJob(ctx context.Context, pool 
 	default:
 		return nil, errors.New("claimed Match runtime ABI has no service dispatch")
 	}
+}
+
+func runtimeCertificateReferenceForClaimV118(
+	strategy runtimeServiceStrategyRevision,
+	evidence goEntrantExecutionEvidence,
+	claimed claimedRuntimeServiceEntrantV117,
+	side string,
+	registry *goDeploymentLaneRegistry,
+) (runtimeCertificateReferenceV118, bool) {
+	if evidence.ConformanceCertificateRef == nil ||
+		claimed.ConformanceLaneID == nil ||
+		evidence.ConformanceCertificateRef.RegistryGeneration != evidence.SchedulingDecision.RegistryGeneration {
+		return runtimeCertificateReferenceV118{}, false
+	}
+	projected, ok := projectRuntimeServiceEntrantV117(strategy, evidence, claimed, registry)
+	if !ok {
+		return runtimeCertificateReferenceV118{}, false
+	}
+	return runtimeCertificateReferenceV118{
+		Side:                  side,
+		CertificateID:         evidence.ConformanceCertificateRef.CertificateID,
+		CertificateRecordHash: "sha256:" + evidence.ConformanceCertificateRef.CertificateRecordHash,
+		RegistryGeneration:    evidence.ConformanceCertificateRef.RegistryGeneration,
+		Lane:                  *claimed.ConformanceLaneID,
+		FreshUntil:            evidence.SchedulingDecision.FreshUntil,
+		SourceIdentity: runtimeCertificateSourceIdentityV118{
+			Side: side, StrategyRevisionID: evidence.StrategyRevisionID,
+			OriginalSourceSHA256:   projected.SourceIdentity.OriginalSourceSHA256,
+			NormalizedSourceSHA256: projected.SourceIdentity.NormalizedSourceSHA256,
+			ArtifactSHA256:         projected.SourceIdentity.ArtifactSHA256,
+			IdentityManifestRoot:   claimed.IdentityManifestRoot,
+			EvidenceGraphRoot:      claimed.EvidenceGraphRoot,
+			LaneIdentityHash:       claimed.LaneIdentityHash,
+		},
+	}, true
 }
 
 func matchJobLeaseForRuntimeService() time.Duration {

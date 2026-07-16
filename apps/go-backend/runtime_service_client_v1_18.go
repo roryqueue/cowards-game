@@ -2,13 +2,18 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"crypto/ed25519"
 	"crypto/sha256"
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/hex"
+	"encoding/json"
 	"encoding/pem"
 	"errors"
+	"io"
+	"net/http"
+	"os"
 	"reflect"
 	"regexp"
 	"sort"
@@ -175,6 +180,92 @@ type runtimeSemanticReceiptVerificationInputV118 struct {
 	ReceiptBytes  []byte
 	TrustedKey    runtimeSemanticReceiptTrustedKeyV118
 	ExpectedClaim runtimeSemanticAdmissionClaimV118
+}
+
+type runtimeServiceRequestV118 struct {
+	ContractVersion       string                           `json:"contractVersion"`
+	Kind                  string                           `json:"kind"`
+	RequestID             string                           `json:"requestId"`
+	MatchID               string                           `json:"matchId"`
+	SemanticTuple         runtimeSemanticTupleV118         `json:"semanticTuple"`
+	AuthorityGeneration   string                           `json:"authorityGeneration"`
+	EvaluationInstant     string                           `json:"evaluationInstant"`
+	CertificateReferences runtimeCertificateReferencesV118 `json:"certificateReferences"`
+	Accounting            struct {
+		BudgetProfileRoot  string `json:"budgetProfileRoot"`
+		LedgerPrestateRoot string `json:"ledgerPrestateRoot"`
+	} `json:"accounting"`
+	Match json.RawMessage `json:"match"`
+}
+
+type runtimeServiceSuccessResultV118 struct {
+	Privacy                 string                               `json:"privacy"`
+	ChronicleCanonicalHash  string                               `json:"chronicleCanonicalHash"`
+	TransitionTraceRoot     string                               `json:"transitionTraceRoot"`
+	FinalStateCanonicalHash string                               `json:"finalStateCanonicalHash"`
+	OutcomeCanonicalHash    string                               `json:"outcomeCanonicalHash"`
+	Terminal                runtimeSemanticTerminalV118          `json:"terminal"`
+	Accounting              runtimeExecutionAccountingResultV118 `json:"accounting"`
+	ResultClass             string                               `json:"resultClass"`
+	Ownership               string                               `json:"ownership"`
+	Retryable               bool                                 `json:"retryable"`
+	MutationStatus          string                               `json:"mutationStatus"`
+	SemanticReceipt         runtimeSemanticReceiptV118           `json:"semanticReceipt"`
+}
+
+type runtimeServiceResponseV118 struct {
+	ContractVersion string                              `json:"contractVersion"`
+	OK              bool                                `json:"ok"`
+	Kind            string                              `json:"kind"`
+	RequestID       string                              `json:"requestId"`
+	MatchID         string                              `json:"matchId,omitempty"`
+	Result          *runtimeServiceSuccessResultV118    `json:"result,omitempty"`
+	SystemFailure   *runtimeServiceFailureV118          `json:"systemFailure,omitempty"`
+	Verified        *verifiedRuntimeSemanticReceiptV118 `json:"-"`
+	ReceiptBytes    []byte                              `json:"-"`
+	Chronicle       map[string]any                      `json:"-"`
+	FinalState      map[string]any                      `json:"-"`
+}
+
+type runtimeServiceFailureV118 struct {
+	Classification string `json:"classification"`
+	Ownership      string `json:"ownership"`
+	Code           string `json:"code"`
+	PublicMessage  string `json:"publicMessage"`
+	Retryable      bool   `json:"retryable"`
+	PlayerPenalty  bool   `json:"playerPenalty"`
+	MutationStatus string `json:"mutationStatus"`
+}
+
+type runtimeServiceCompletionEnvelopeV118 struct {
+	SchemaVersion  string          `json:"schemaVersion"`
+	PublicResponse json.RawMessage `json:"publicResponse"`
+	Chronicle      json.RawMessage `json:"chronicle"`
+	FinalState     json.RawMessage `json:"finalState"`
+}
+
+type runtimeServiceClientV118 struct {
+	endpoint             string
+	httpClient           *http.Client
+	maxResponseBytes     int64
+	privateArtifactToken string
+	trustedKey           runtimeSemanticReceiptTrustedKeyV118
+}
+
+func newRuntimeServiceClientV118(endpoint string, trustedKey runtimeSemanticReceiptTrustedKeyV118) *runtimeServiceClientV118 {
+	legacy := newRuntimeServiceClient(endpoint)
+	return &runtimeServiceClientV118{
+		endpoint: strings.TrimRight(endpoint, "/"), httpClient: legacy.httpClient,
+		maxResponseBytes: legacy.maxResponseBytes, privateArtifactToken: legacy.privateArtifactToken,
+		trustedKey: trustedKey,
+	}
+}
+
+func runtimeSemanticReceiptTrustedKeyFromEnvironmentV118() runtimeSemanticReceiptTrustedKeyV118 {
+	return runtimeSemanticReceiptTrustedKeyV118{
+		KeyID:        strings.TrimSpace(os.Getenv("COWARDS_RUNTIME_SEMANTIC_RECEIPT_V1_18_KEY_ID")),
+		PublicKeyPEM: strings.TrimSpace(os.Getenv("COWARDS_RUNTIME_SEMANTIC_RECEIPT_V1_18_PUBLIC_KEY_PEM")),
+	}
 }
 
 func runtimeSemanticReceiptFailureResultV118() (*verifiedRuntimeSemanticReceiptV118, *runtimeSemanticReceiptFailureV118) {
@@ -467,6 +558,246 @@ func runtimeSemanticReceiptV118GeneratedTablesMatch() bool {
 	return reflect.DeepEqual(runtimeSemanticReceiptClaimFieldsV118[:], runtimeSemanticAdmissionClaimFieldNamesV118()) &&
 		reflect.DeepEqual(runtimeCertificateReferenceFieldsV118[:], runtimeCertificateReferenceFieldNamesV118()) &&
 		reflect.DeepEqual(runtimeCertificateSourceIdentityFieldsV118[:], runtimeCertificateSourceIdentityFieldNamesV118())
+}
+
+func validateRuntimeServiceRequestV118(request runtimeServiceRequestV118) error {
+	if request.ContractVersion != runtimeExecutionServiceVersionV118 ||
+		request.Kind != "executeMatch" ||
+		!validRuntimeSemanticReceiptExactIdentifierV118(request.RequestID) ||
+		!validRuntimeSemanticReceiptExactIdentifierV118(request.MatchID) ||
+		!validRuntimeSemanticTupleV118(request.SemanticTuple) ||
+		!runtimeSemanticReceiptGenerationV118.MatchString(request.AuthorityGeneration) ||
+		!isPrefixedLowerSHA256(request.Accounting.BudgetProfileRoot) ||
+		!isPrefixedLowerSHA256(request.Accounting.LedgerPrestateRoot) ||
+		len(request.Match) == 0 {
+		return errors.New("runtime service request v1.18 is invalid")
+	}
+	evaluationInstant, err := parseCanonicalInstant(request.EvaluationInstant)
+	if err != nil ||
+		!validRuntimeCertificateReferenceV118(request.CertificateReferences.Bottom, "bottom", request.AuthorityGeneration, evaluationInstant) ||
+		!validRuntimeCertificateReferenceV118(request.CertificateReferences.Top, "top", request.AuthorityGeneration, evaluationInstant) ||
+		request.CertificateReferences.Bottom.CertificateID == request.CertificateReferences.Top.CertificateID ||
+		request.CertificateReferences.Bottom.CertificateRecordHash == request.CertificateReferences.Top.CertificateRecordHash {
+		return errors.New("runtime service request v1.18 certificate binding is invalid")
+	}
+	return nil
+}
+
+func encodeRuntimeServiceRequestV118(request runtimeServiceRequestV118) ([]byte, error) {
+	if err := validateRuntimeServiceRequestV118(request); err != nil {
+		return nil, err
+	}
+	return runtimeInvocationV117CanonicalValue(request)
+}
+
+func runtimeServiceExpectedClaimV118(request runtimeServiceRequestV118, result runtimeServiceSuccessResultV118) (runtimeSemanticAdmissionClaimV118, error) {
+	requestBytes, err := encodeRuntimeServiceRequestV118(request)
+	if err != nil {
+		return runtimeSemanticAdmissionClaimV118{}, err
+	}
+	return runtimeSemanticAdmissionClaimV118{
+		SchemaVersion: runtimeSemanticReceiptSchemaVersionV118, Profile: runtimeSemanticReceiptProfileV118,
+		ServiceContractVersion: runtimeExecutionServiceVersionV118,
+		RequestSHA256:          runtimeInvocationV117SHA256Value(requestBytes), RequestID: request.RequestID, MatchID: request.MatchID,
+		SemanticTuple: request.SemanticTuple, AuthorityGeneration: request.AuthorityGeneration,
+		EvaluationInstant: request.EvaluationInstant, CertificateReferences: request.CertificateReferences,
+		ChronicleCanonicalHash: result.ChronicleCanonicalHash, TransitionTraceRoot: result.TransitionTraceRoot,
+		FinalStateCanonicalHash: result.FinalStateCanonicalHash, OutcomeCanonicalHash: result.OutcomeCanonicalHash,
+		Terminal: result.Terminal, Accounting: result.Accounting,
+		Result: runtimeSemanticAdmissionResultV118{
+			ResultClass: result.ResultClass, Ownership: result.Ownership,
+			Retryable: result.Retryable, MutationStatus: result.MutationStatus,
+		},
+	}, nil
+}
+
+func decodeRuntimeServiceResponseV118(
+	request runtimeServiceRequestV118,
+	payload []byte,
+	trustedKey runtimeSemanticReceiptTrustedKeyV118,
+) (*runtimeServiceResponseV118, *runtimeServiceFailure) {
+	canonical := decodeCanonicalJSONV11(payload, canonicalJSONV11Options{
+		Context: canonicalJSONV11AuthenticatedOuterEnvelope, RequireCanonical: true,
+	})
+	if canonical.Error != nil {
+		return nil, newRuntimeServiceFailure("RuntimeServiceMalformedResponse", "Runtime service v1.18 response was malformed", true, nil)
+	}
+	root, ok := canonical.Value.(map[string]any)
+	if !ok {
+		return nil, newRuntimeServiceFailure("RuntimeServiceMalformedResponse", "Runtime service v1.18 response was malformed", true, nil)
+	}
+	if boolValue(root, "ok") {
+		if !runtimeSemanticExactObjectFieldsV118(root, []string{"contractVersion", "ok", "kind", "requestId", "matchId", "result"}) {
+			return nil, newRuntimeServiceFailure("RuntimeServiceMalformedResponse", "Runtime service v1.18 success response was not closed", true, nil)
+		}
+		result, resultOK := root["result"].(map[string]any)
+		if !resultOK || !runtimeSemanticExactObjectFieldsV118(result, []string{
+			"privacy", "chronicleCanonicalHash", "transitionTraceRoot", "finalStateCanonicalHash",
+			"outcomeCanonicalHash", "terminal", "accounting", "resultClass", "ownership",
+			"retryable", "mutationStatus", "semanticReceipt",
+		}) {
+			return nil, newRuntimeServiceFailure("RuntimeServiceMalformedResponse", "Runtime service v1.18 result was not closed", true, nil)
+		}
+	} else {
+		expected := []string{"contractVersion", "ok", "kind", "requestId", "systemFailure"}
+		if _, hasMatchID := root["matchId"]; hasMatchID {
+			expected = append(expected, "matchId")
+		}
+		failure, failureOK := root["systemFailure"].(map[string]any)
+		if !runtimeSemanticExactObjectFieldsV118(root, expected) ||
+			!failureOK ||
+			!runtimeSemanticExactObjectFieldsV118(failure, []string{
+				"classification", "ownership", "code", "publicMessage",
+				"retryable", "playerPenalty", "mutationStatus",
+			}) {
+			return nil, newRuntimeServiceFailure("RuntimeServiceMalformedResponse", "Runtime service v1.18 failure response was not closed", true, nil)
+		}
+	}
+	var response runtimeServiceResponseV118
+	if err := decodeStrictJSONUseNumber(canonical.CanonicalBytes, &response); err != nil ||
+		response.ContractVersion != runtimeExecutionServiceVersionV118 ||
+		response.RequestID != request.RequestID {
+		return nil, newRuntimeServiceFailure("RuntimeServiceContractMismatch", "Runtime service v1.18 response binding mismatch", true, nil)
+	}
+	if !response.OK {
+		failure := response.SystemFailure
+		if response.Kind != "systemFailure" || response.Result != nil || failure == nil ||
+			(response.MatchID != "" && response.MatchID != request.MatchID) ||
+			failure.Classification != "system_failure" || failure.PlayerPenalty ||
+			failure.MutationStatus != "none" ||
+			failure.PublicMessage == "" {
+			return nil, newRuntimeServiceFailure("RuntimeServiceMalformedResponse", "Runtime service v1.18 failure response was malformed", true, nil)
+		}
+		return nil, &runtimeServiceFailure{
+			Classification: failure.Classification,
+			Ownership:      failure.Ownership,
+			Code:           failure.Code,
+			ErrorClass:     failure.Code,
+			ErrorMessage:   failure.PublicMessage,
+			PublicMessage:  failure.PublicMessage,
+			Retryable:      failure.Retryable,
+			PlayerPenalty:  false,
+			Details:        map[string]any{},
+		}
+	}
+	result := response.Result
+	if response.Kind != "executionResult" || response.MatchID != request.MatchID ||
+		result == nil || response.SystemFailure != nil || result.Privacy != "public_receipt" ||
+		result.ResultClass != "success" || result.Ownership != "gameplay" ||
+		result.Retryable || result.MutationStatus != "committed" {
+		return nil, newRuntimeServiceFailure("RuntimeServiceMalformedResponse", "Runtime service v1.18 success response was malformed", true, nil)
+	}
+	expectedClaim, err := runtimeServiceExpectedClaimV118(request, *result)
+	if err != nil {
+		return nil, newRuntimeServiceFailure("RuntimeServiceContractMismatch", "Runtime service v1.18 request was invalid", false, nil)
+	}
+	receiptBytes, err := runtimeInvocationV117CanonicalValue(result.SemanticReceipt)
+	if err != nil {
+		return nil, newRuntimeServiceFailure("RuntimeServiceMalformedResponse", "Runtime service v1.18 receipt was malformed", true, nil)
+	}
+	verified, receiptFailure := verifyRuntimeSemanticReceiptV118(runtimeSemanticReceiptVerificationInputV118{
+		ReceiptBytes: receiptBytes, TrustedKey: trustedKey, ExpectedClaim: expectedClaim,
+	})
+	if receiptFailure != nil || verified == nil {
+		return nil, newRuntimeServiceFailure("RuntimeServiceSemanticIntegrity", "Runtime service v1.18 receipt was rejected", false, nil)
+	}
+	response.Verified = verified
+	response.ReceiptBytes = append([]byte(nil), receiptBytes...)
+	return &response, nil
+}
+
+func decodeRuntimeServiceTransportResponseV118(
+	request runtimeServiceRequestV118,
+	payload []byte,
+	trustedKey runtimeSemanticReceiptTrustedKeyV118,
+) (*runtimeServiceResponseV118, *runtimeServiceFailure) {
+	canonical := decodeCanonicalJSONV11(payload, canonicalJSONV11Options{
+		Context: canonicalJSONV11AuthenticatedOuterEnvelope, RequireCanonical: true,
+	})
+	if canonical.Error == nil {
+		if root, ok := canonical.Value.(map[string]any); ok &&
+			runtimeSemanticExactObjectFieldsV118(root, []string{"schemaVersion", "publicResponse", "chronicle", "finalState"}) &&
+			stringValue(root, "schemaVersion") == "runtime-service-completion-envelope-v1.18" {
+			var envelope runtimeServiceCompletionEnvelopeV118
+			if err := decodeStrictJSONUseNumber(canonical.CanonicalBytes, &envelope); err != nil {
+				return nil, newRuntimeServiceFailure("RuntimeServiceMalformedResponse", "Runtime service v1.18 completion envelope was malformed", true, nil)
+			}
+			publicBytes, err := runtimeInvocationV117CanonicalValue(jsonMapFromRawV118(envelope.PublicResponse))
+			if err != nil {
+				return nil, newRuntimeServiceFailure("RuntimeServiceMalformedResponse", "Runtime service v1.18 public receipt was malformed", true, nil)
+			}
+			response, failure := decodeRuntimeServiceResponseV118(request, publicBytes, trustedKey)
+			if failure != nil || response == nil {
+				return nil, failure
+			}
+			if err := decodeStrictJSONUseNumber(envelope.Chronicle, &response.Chronicle); err != nil || response.Chronicle == nil ||
+				decodeStrictJSONUseNumber(envelope.FinalState, &response.FinalState) != nil || response.FinalState == nil {
+				return nil, newRuntimeServiceFailure("RuntimeServiceMalformedResponse", "Runtime service v1.18 completion documents were malformed", true, nil)
+			}
+			chronicleHash, chronicleErr := canonicalCompletionHashV118(response.Chronicle)
+			finalHash, finalErr := canonicalCompletionHashV118(response.FinalState)
+			outcomeHash, outcomeErr := canonicalCompletionHashV118(response.FinalState["outcome"])
+			if chronicleErr != nil || finalErr != nil || outcomeErr != nil ||
+				chronicleHash != response.Verified.Claim.ChronicleCanonicalHash ||
+				finalHash != response.Verified.Claim.FinalStateCanonicalHash ||
+				outcomeHash != response.Verified.Claim.OutcomeCanonicalHash {
+				return nil, newRuntimeServiceFailure("RuntimeServiceSemanticIntegrity", "Runtime service v1.18 completion documents changed", false, nil)
+			}
+			return response, nil
+		}
+	}
+	return decodeRuntimeServiceResponseV118(request, payload, trustedKey)
+}
+
+func jsonMapFromRawV118(raw json.RawMessage) map[string]any {
+	var value map[string]any
+	if decodeStrictJSONUseNumber(raw, &value) != nil {
+		return nil
+	}
+	return value
+}
+
+func (client *runtimeServiceClientV118) executeMatch(
+	ctx context.Context,
+	request runtimeServiceRequestV118,
+) (*runtimeServiceResponseV118, *runtimeServiceFailure) {
+	if client == nil {
+		return nil, newRuntimeServiceFailure("RuntimeServiceStopped", "Runtime service v1.18 client is unavailable", true, nil)
+	}
+	payload, err := encodeRuntimeServiceRequestV118(request)
+	if err != nil {
+		return nil, newRuntimeServiceFailure("RuntimeServiceContractMismatch", "Runtime service v1.18 request is invalid", false, nil)
+	}
+	httpRequest, err := http.NewRequestWithContext(ctx, http.MethodPost, client.endpoint+"/execute-match", bytes.NewReader(payload))
+	if err != nil {
+		return nil, newRuntimeServiceFailure("RuntimeServiceUnavailable", "Runtime service v1.18 request could not be created", true, nil)
+	}
+	httpRequest.Header.Set("content-type", "application/json")
+	if client.privateArtifactToken != "" {
+		httpRequest.Header.Set(runtimeServicePrivateArtifactTokenHeader, client.privateArtifactToken)
+	}
+	httpResponse, err := client.httpClient.Do(httpRequest)
+	if err != nil {
+		return nil, newRuntimeServiceFailure("RuntimeServiceUnavailable", "Runtime service v1.18 request failed", true, nil)
+	}
+	defer httpResponse.Body.Close()
+	responseBytes, err := io.ReadAll(io.LimitReader(httpResponse.Body, client.maxResponseBytes+1))
+	if err != nil || int64(len(responseBytes)) > client.maxResponseBytes {
+		return nil, newRuntimeServiceFailure("RuntimeServiceMalformedResponse", "Runtime service v1.18 response was unavailable", true, nil)
+	}
+	response, failure := decodeRuntimeServiceTransportResponseV118(request, responseBytes, client.trustedKey)
+	if failure != nil {
+		return nil, failure
+	}
+	if response == nil || response.Chronicle == nil || response.FinalState == nil {
+		return nil, newRuntimeServiceFailure(
+			"RuntimeServicePrivateCompletionUnavailable",
+			"Runtime service v1.18 completion documents were unavailable",
+			true,
+			nil,
+		)
+	}
+	return response, nil
 }
 
 func runtimeSemanticAdmissionClaimFieldNamesV118() []string {

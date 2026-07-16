@@ -11,6 +11,7 @@ import {
   RUNTIME_EXECUTION_SERVICE_TRANSPORT_BINDING,
   HISTORICAL_RUNTIME_EXECUTION_SERVICE_VERSION_V1_16,
   RUNTIME_EXECUTION_SERVICE_VERSION_V1_17,
+  RUNTIME_EXECUTION_SERVICE_VERSION_V1_18,
   RUNTIME_INVOCATION_V1_17_PLAYER_VIOLATIONS,
   RuntimeExecutionServiceResponseSchema,
   SoldierBrainResultV117Schema,
@@ -50,10 +51,13 @@ import type { RuntimeServiceConfig } from "./runtime-config.js"
 import { runtimeServiceConfigFromEnvironment } from "./production-runtime-config.js"
 import {
   createPreparedRuntimeServiceDependenciesV117,
+  executePreparedRuntimeServiceRequestV118,
   executePreparedRuntimeServiceRequestV117,
   executeRuntimeServiceRequest,
   failPreparedRuntimeServiceRequestV117,
   type PreparedRuntimeInvocationAdapterV117,
+  type PreparedRuntimeServiceDependenciesV118,
+  type PreparedRuntimeServiceExecutionV118,
 } from "./execute-match.js"
 import { redactedErrorMessage } from "./redaction.js"
 import type {
@@ -74,6 +78,7 @@ export interface RuntimeExecutionHttpServerOptions {
   candidateInvocationAdapterV117?:
     | PreparedRuntimeInvocationAdapterV117
     | undefined
+  preparedV118Dependencies?: PreparedRuntimeServiceDependenciesV118 | undefined
 }
 
 export interface RuntimeStrategyValidationHttpHandlerOptions {
@@ -142,8 +147,9 @@ const skipWhitespace = (text: string, start: number): number => {
  * body. This deliberately notices either occurrence of a duplicated contract
  * key, so duplicate-key attacks enter canonical admission and fail there.
  */
-export const claimsRuntimeExecutionServiceV117 = (
+const claimsRuntimeExecutionServiceVersion = (
   bytes: Uint8Array,
+  expectedVersion: string,
 ): boolean => {
   let text: string
   try {
@@ -177,7 +183,7 @@ export const claimsRuntimeExecutionServiceV117 = (
             } catch {
               return false
             }
-            if (value === RUNTIME_EXECUTION_SERVICE_VERSION_V1_17) return true
+            if (value === expectedVersion) return true
           }
         }
       }
@@ -191,6 +197,18 @@ export const claimsRuntimeExecutionServiceV117 = (
   }
   return false
 }
+
+export const claimsRuntimeExecutionServiceV117 = (bytes: Uint8Array): boolean =>
+  claimsRuntimeExecutionServiceVersion(
+    bytes,
+    RUNTIME_EXECUTION_SERVICE_VERSION_V1_17,
+  )
+
+export const claimsRuntimeExecutionServiceV118 = (bytes: Uint8Array): boolean =>
+  claimsRuntimeExecutionServiceVersion(
+    bytes,
+    RUNTIME_EXECUTION_SERVICE_VERSION_V1_18,
+  )
 
 export const readBodyBytes = async (
   request: IncomingMessage,
@@ -615,9 +633,8 @@ const handleRuntimeStrategyValidationRequest = async (
   }
 }
 
-export const createRuntimeStrategyValidationHttpHandler = (
-  options: RuntimeStrategyValidationHttpHandlerOptions = {},
-) =>
+export const createRuntimeStrategyValidationHttpHandler =
+  (options: RuntimeStrategyValidationHttpHandlerOptions = {}) =>
   async (request: IncomingMessage, response: ServerResponse): Promise<void> => {
     if (request.method !== "POST" || request.url !== "/validate-strategy") {
       writeJson(response, 404, { ok: false, error: "not_found" })
@@ -682,6 +699,93 @@ export const createRuntimeExecutionHttpHandler = (
 
     try {
       const bodyBytes = await readBodyBytes(request, bodyLimitBytes)
+      if (claimsRuntimeExecutionServiceV118(bodyBytes)) {
+        const admitted = admitCanonicalJsonBytes(bodyBytes, {
+          profile: "authenticated-envelope",
+        })
+        if (!admitted.ok) {
+          writeCanonicalJsonV117(response, 400, {
+            contractVersion: RUNTIME_EXECUTION_SERVICE_VERSION_V1_18,
+            ok: false,
+            kind: "systemFailure",
+            requestId: "runtime-request:unknown",
+            systemFailure: {
+              classification: "system_failure",
+              ownership: "system_integrity",
+              code: "MALFORMED_REQUEST",
+              publicMessage: "Runtime execution failed before completion.",
+              retryable: false,
+              playerPenalty: false,
+              mutationStatus: "none",
+            },
+          })
+          return
+        }
+        if (
+          runtimeConfig.contractSelection.runtimeServiceVersion !==
+            RUNTIME_EXECUTION_SERVICE_VERSION_V1_18 ||
+          options.preparedV118Dependencies === undefined
+        ) {
+          writeCanonicalJsonV117(response, 422, {
+            contractVersion: RUNTIME_EXECUTION_SERVICE_VERSION_V1_18,
+            ok: false,
+            kind: "systemFailure",
+            requestId:
+              typeof (admitted.value as { requestId?: unknown }).requestId ===
+              "string"
+                ? (admitted.value as { requestId: string }).requestId
+                : "runtime-request:unknown",
+            systemFailure: {
+              classification: "system_failure",
+              ownership: "system_operation",
+              code: "V118_ROUTE_UNAVAILABLE",
+              publicMessage: "Runtime execution failed before completion.",
+              retryable: true,
+              playerPenalty: false,
+              mutationStatus: "none",
+            },
+          })
+          return
+        }
+        let captured: PreparedRuntimeServiceExecutionV118 | undefined
+        const configured = options.preparedV118Dependencies
+        const result = executePreparedRuntimeServiceRequestV118(
+          admitted.value,
+          {
+            signer: configured.signer,
+            admitCertificateReference: (input) =>
+              configured.admitCertificateReference(input),
+            executeCurrentMatchWithAccounting: (nested) => {
+              captured = configured.executeCurrentMatchWithAccounting(nested)
+              return captured
+            },
+          },
+        )
+        const authorized = privateArtifactRequestAuthorized(
+          request,
+          privateArtifactToken(options.privateArtifactToken),
+        )
+        if (
+          result.ok &&
+          authorized &&
+          captured !== undefined &&
+          captured.response.ok
+        ) {
+          writeCanonicalJsonV117(response, 200, {
+            schemaVersion: "runtime-service-completion-envelope-v1.18",
+            publicResponse: result,
+            chronicle: captured.response.result.chronicle,
+            finalState: captured.response.result.finalState,
+          } as unknown as JsonValue)
+        } else {
+          writeCanonicalJsonV117(
+            response,
+            result.ok ? 200 : 422,
+            result as unknown as JsonValue,
+          )
+        }
+        return
+      }
       if (claimsRuntimeExecutionServiceV117(bodyBytes)) {
         const admitted = admitCanonicalJsonBytes(bodyBytes, {
           profile: "authenticated-envelope",
@@ -773,6 +877,25 @@ export const createRuntimeExecutionHttpHandler = (
             retryable: false,
           }) as unknown as JsonValue,
         )
+      } else if (
+        runtimeConfig.contractSelection.runtimeServiceVersion ===
+        RUNTIME_EXECUTION_SERVICE_VERSION_V1_18
+      ) {
+        writeCanonicalJsonV117(response, 400, {
+          contractVersion: RUNTIME_EXECUTION_SERVICE_VERSION_V1_18,
+          ok: false,
+          kind: "systemFailure",
+          requestId: "runtime-request:unknown",
+          systemFailure: {
+            classification: "system_failure",
+            ownership: "system_integrity",
+            code: "MALFORMED_REQUEST",
+            publicMessage: "Runtime execution failed before completion.",
+            retryable: false,
+            playerPenalty: false,
+            mutationStatus: "none",
+          },
+        })
       } else {
         writeJson(
           response,

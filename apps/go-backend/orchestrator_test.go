@@ -356,6 +356,39 @@ func TestGoMatchOrchestratorHasNoCandidateCompletionRoute(t *testing.T) {
 	}
 }
 
+func TestPhase259OrchestratorRoutesBrandedV118AdmissionWithoutSemanticHelpers(t *testing.T) {
+	source, err := os.ReadFile("orchestrator.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := string(source)
+	start := strings.Index(text, "case runtimeExecutionServiceVersionV118:")
+	if start < 0 {
+		t.Fatal("normal orchestrator v1.18 completion route is missing")
+	}
+	end := strings.Index(text[start:], "case runtimeExecutionServiceVersion:")
+	if end < 0 {
+		t.Fatal("v1.18 completion route is not version-isolated")
+	}
+	route := text[start : start+end]
+	for _, required := range []string{
+		"VerifiedReceiptV118", "ReceiptBytesV118", "RuntimeRequestV118",
+		"response.V118.Chronicle", "response.V118.FinalState",
+	} {
+		if !strings.Contains(route, required) {
+			t.Fatalf("v1.18 route omitted authenticated completion field %q", required)
+		}
+	}
+	for _, forbidden := range []string{
+		"validateGoChronicle", "runtimeSemanticReconstructed", "reconstruct",
+		"terminalChronicleOutcome", "validateChronicleEvent",
+	} {
+		if strings.Contains(route, forbidden) {
+			t.Fatalf("orchestrator v1.18 route imported semantic authority %q", forbidden)
+		}
+	}
+}
+
 func TestStrategyFailureRevisionIDFromChronicle(t *testing.T) {
 	artifact, err := json.Marshal(map[string]any{
 		"events": []any{

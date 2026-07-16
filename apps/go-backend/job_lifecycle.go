@@ -62,6 +62,7 @@ const claimNextMatchJobSQLTemplate = `
             'containmentCertificateKind', bottom_containment.certificate_kind,
             'conformanceCertificateId', bottom_conformance.id,
             'conformanceCertificateKind', bottom_conformance.certificate_kind,
+            'conformanceLaneId', bottom_conformance.conformance_lane_id,
             'identityManifestRoot', 'sha256:' || bottom_containment.identity_manifest_root,
             'evidenceGraphRoot', 'sha256:' || bottom_containment.evidence_graph_root,
             'exactPins', bottom_containment.exact_pin_expansion
@@ -73,6 +74,7 @@ const claimNextMatchJobSQLTemplate = `
             'containmentCertificateKind', top_containment.certificate_kind,
             'conformanceCertificateId', top_conformance.id,
             'conformanceCertificateKind', top_conformance.certificate_kind,
+            'conformanceLaneId', top_conformance.conformance_lane_id,
             'identityManifestRoot', 'sha256:' || top_containment.identity_manifest_root,
             'evidenceGraphRoot', 'sha256:' || top_containment.evidence_graph_root,
             'exactPins', top_containment.exact_pin_expansion
@@ -376,6 +378,7 @@ const recheckClaimedMatchIntegritySQLTemplate = `
           'containmentCertificateKind', bottom_containment.certificate_kind,
           'conformanceCertificateId', bottom_conformance.id,
           'conformanceCertificateKind', bottom_conformance.certificate_kind,
+          'conformanceLaneId', bottom_conformance.conformance_lane_id,
           'identityManifestRoot', 'sha256:' || bottom_containment.identity_manifest_root,
           'evidenceGraphRoot', 'sha256:' || bottom_containment.evidence_graph_root,
           'exactPins', bottom_containment.exact_pin_expansion
@@ -387,6 +390,7 @@ const recheckClaimedMatchIntegritySQLTemplate = `
           'containmentCertificateKind', top_containment.certificate_kind,
           'conformanceCertificateId', top_conformance.id,
           'conformanceCertificateKind', top_conformance.certificate_kind,
+          'conformanceLaneId', top_conformance.conformance_lane_id,
           'identityManifestRoot', 'sha256:' || top_containment.identity_manifest_root,
           'evidenceGraphRoot', 'sha256:' || top_containment.evidence_graph_root,
           'exactPins', top_containment.exact_pin_expansion
@@ -570,6 +574,7 @@ type claimedRuntimeServiceEntrantV117 struct {
 	ContainmentCertificateKind string                      `json:"containmentCertificateKind"`
 	ConformanceCertificateID   *string                     `json:"conformanceCertificateId"`
 	ConformanceCertificateKind *string                     `json:"conformanceCertificateKind"`
+	ConformanceLaneID          *string                     `json:"conformanceLaneId"`
 	IdentityManifestRoot       string                      `json:"identityManifestRoot"`
 	EvidenceGraphRoot          string                      `json:"evidenceGraphRoot"`
 	ExactPins                  runtimeServiceExactPinsV117 `json:"exactPins"`
@@ -797,12 +802,13 @@ func validClaimedRuntimeServiceV117(binding *claimedRuntimeServiceV117, identity
 			return false
 		}
 		if evidence.ConformanceCertificateRef == nil {
-			if entrant.ConformanceCertificateID != nil || entrant.ConformanceCertificateKind != nil {
+			if entrant.ConformanceCertificateID != nil || entrant.ConformanceCertificateKind != nil || entrant.ConformanceLaneID != nil {
 				return false
 			}
-		} else if entrant.ConformanceCertificateID == nil || entrant.ConformanceCertificateKind == nil ||
+		} else if entrant.ConformanceCertificateID == nil || entrant.ConformanceCertificateKind == nil || entrant.ConformanceLaneID == nil ||
 			*entrant.ConformanceCertificateID != evidence.ConformanceCertificateRef.CertificateID ||
-			*entrant.ConformanceCertificateKind != evidence.ConformanceCertificateRef.Kind {
+			*entrant.ConformanceCertificateKind != evidence.ConformanceCertificateRef.Kind ||
+			!validRuntimeSemanticReceiptV117Identifier(*entrant.ConformanceLaneID) {
 			return false
 		}
 	}

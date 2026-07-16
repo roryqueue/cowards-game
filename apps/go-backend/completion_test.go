@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -25,6 +26,32 @@ func TestGoMatchCompletionFields(t *testing.T) {
 	}
 	if fields.WinnerPlayerID == nil || *fields.WinnerPlayerID != "player:bottom:complete:001" {
 		t.Fatalf("unexpected winner: %+v", fields.WinnerPlayerID)
+	}
+}
+
+func TestPhase259CurrentV118CompletionHasNoGoChronicleSemanticAuthority(t *testing.T) {
+	source, err := os.ReadFile("completion.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := string(source)
+	start := strings.Index(text, "func createGoChronicleMetadataV118")
+	if start < 0 {
+		t.Fatal("v1.18 structural Chronicle completion boundary is missing")
+	}
+	end := strings.Index(text[start:], "func terminalChronicleOutcome")
+	if end < 0 {
+		t.Fatal("v1.18 structural Chronicle completion boundary is missing")
+	}
+	current := text[start : start+end]
+	for _, forbidden := range []string{
+		"validateGoChronicleShape", "validateChronicleEventSequence",
+		"validateChronicleSnapshots", "validateChronicleBoard",
+		"terminalChronicleOutcome", "chroniclePlayerIDs",
+	} {
+		if strings.Contains(current, forbidden) {
+			t.Fatalf("v1.18 completion reintroduced Go Chronicle semantics through %q", forbidden)
+		}
 	}
 }
 
@@ -454,6 +481,108 @@ func TestMatchCompletionSemanticDatabase(t *testing.T) {
 	})
 }
 
+func TestPhase259RuntimeServiceV118CompletionIsStructuralAndTransactional(t *testing.T) {
+	databaseURL := os.Getenv("COWARDS_GO_BACKEND_TEST_DATABASE_URL")
+	if databaseURL == "" {
+		t.Skip("set COWARDS_GO_BACKEND_TEST_DATABASE_URL for v1.18 completion proof")
+	}
+	previous := selectedRuntimeServiceContractVersion
+	selectedRuntimeServiceContractVersion = func() string { return runtimeExecutionServiceVersionV118 }
+	t.Cleanup(func() { selectedRuntimeServiceContractVersion = previous })
+
+	ctx := context.Background()
+	pool := semanticCurrentIsolatedPool(t, ctx, databaseURL)
+	now := selectedSemanticAuthorityInstantForTest(t, time.Time{})
+	fixture := seedSemanticCurrentAuthority(t, ctx, pool, now)
+	attachConformance := func(
+		evidence *goEntrantExecutionEvidence,
+		claimed *claimedRuntimeServiceEntrantV117,
+	) {
+		reference := evidence.ContainmentCertificateRef
+		reference.Kind = "conformance"
+		reference.CertificateID += ":conformance"
+		reference.CertificateRecordHash = hashString(reference.CertificateID)
+		evidence.ConformanceCertificateRef = &reference
+		evidence.SchedulingDecision.Status = executableLaneEvidenceCounted
+		evidence.SchedulingDecision.ReasonCode = "CONFORMANCE_CURRENT"
+		id, kind := reference.CertificateID, reference.Kind
+		claimed.ConformanceCertificateID = &id
+		claimed.ConformanceCertificateKind = &kind
+		lane := evidence.LaneIdentity.LanguageID + ":" + evidence.LaneIdentity.AdapterID
+		claimed.ConformanceLaneID = &lane
+	}
+	attachConformance(&fixture.identity.Bottom, &fixture.identity.RuntimeServiceV117.Bottom)
+	attachConformance(&fixture.identity.Top, &fixture.identity.RuntimeServiceV117.Top)
+	service := newMatchCompletionService(pool)
+	service.successorAuthorityTrustDomain = runtimeEvidenceAuthorityFixtureTrustDomain
+	service.loadAuthority = func() (*verifiedRuntimeEvidenceAuthority, error) { return fixture.authority, nil }
+	service.now = func() time.Time { return now }
+	service.lockIntegrity = func(_ context.Context, _ pgx.Tx, _ string, _ string, expected *claimedMatchIntegrityIdentity) (*claimedMatchIntegrityIdentity, error) {
+		if expected != fixture.identity {
+			return nil, errors.New("fixture integrity changed")
+		}
+		return fixture.identity, nil
+	}
+
+	t.Run("hash substitution fails before mutation", func(t *testing.T) {
+		current := fixture.seedMatch(t, ctx, pool, "v118-hash-reject")
+		before := semanticCompletionSnapshot(t, ctx, pool)
+		input := current.input(fixture.identity)
+		input.Chronicle = semanticCloneValue(t, input.Chronicle).(map[string]any)
+		input.Chronicle["events"].([]any)[0].(map[string]any)["type"] = "SUBSTITUTED"
+		if _, err := service.completeMatch(ctx, input); err == nil {
+			t.Fatal("v1.18 completion admitted changed Chronicle bytes")
+		}
+		after := semanticCompletionSnapshot(t, ctx, pool)
+		if before != after {
+			t.Fatalf("v1.18 early rejection mutated rows: before=%s after=%s", before, after)
+		}
+	})
+
+	t.Run("authenticated shared admission persists without Go event semantics", func(t *testing.T) {
+		current := fixture.seedMatch(t, ctx, pool, "v118-structural")
+		input := current.input(fixture.identity)
+		input.Chronicle = semanticCloneValue(t, input.Chronicle).(map[string]any)
+		events := input.Chronicle["events"].([]any)
+		events[0].(map[string]any)["type"] = "SHARED_VALIDATOR_OWNED"
+		events[0].(map[string]any)["sequence"] = 900
+		snapshots := input.Chronicle["snapshots"].([]any)
+		snapshots[0].(map[string]any)["kind"] = "SHARED_RECONSTRUCTION_OWNED"
+		claim := input.VerifiedReceiptV118.Claim
+		claim.ChronicleCanonicalHash, _ = canonicalCompletionHashV118(input.Chronicle)
+		receiptBytes, signed, trustedKey := signRuntimeSemanticReceiptForTestV118(t, claim)
+		verified, failure := verifyRuntimeSemanticReceiptV118(runtimeSemanticReceiptVerificationInputV118{
+			ReceiptBytes: receiptBytes, TrustedKey: trustedKey, ExpectedClaim: signed.Claim,
+		})
+		if failure != nil || verified == nil {
+			t.Fatalf("re-signed shared admission fixture failed: %+v", failure)
+		}
+		input.VerifiedReceiptV118 = verified
+		input.ReceiptBytesV118 = receiptBytes
+		result, err := service.completeMatch(ctx, input)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if result.Status != "complete" {
+			t.Fatalf("unexpected v1.18 completion: %+v", result)
+		}
+		var version, schema string
+		if err := pool.QueryRow(ctx, `
+			select runtime_semantic_receipt_version,
+			       coalesce(
+			         runtime_semantic_receipt->>'schemaVersion',
+			         runtime_semantic_receipt->'claim'->>'schemaVersion'
+			       )
+			  from chronicles where match_id=$1
+		`, current.matchID).Scan(&version, &schema); err != nil {
+			t.Fatal(err)
+		}
+		if version != runtimeSemanticReceiptSchemaVersionV118 || schema != runtimeSemanticReceiptSchemaVersionV118 {
+			t.Fatalf("v1.18 receipt version was not strict: version=%q schema=%q", version, schema)
+		}
+	})
+}
+
 func TestPhase258CompletionRollbackPostgres(t *testing.T) {
 	databaseURL := os.Getenv("COWARDS_GO_BACKEND_TEST_DATABASE_URL")
 	if databaseURL == "" {
@@ -739,6 +868,9 @@ type semanticCurrentMatchFixture struct {
 	semanticWireEvidence runtimeSemanticWireEvidence
 	runtimeRequestV117   *runtimeServiceRequestV117
 	semanticReceiptV117  *runtimeSemanticReceiptV117
+	runtimeRequestV118   *runtimeServiceRequestV118
+	verifiedReceiptV118  *verifiedRuntimeSemanticReceiptV118
+	receiptBytesV118     []byte
 }
 
 func (current semanticCurrentMatchFixture) input(identity *claimedMatchIntegrityIdentity) completeMatchInput {
@@ -759,6 +891,9 @@ func (current semanticCurrentMatchFixture) input(identity *claimedMatchIntegrity
 		SemanticWireEvidence: current.semanticWireEvidence.clone(),
 		RuntimeRequestV117:   runtimeRequestV117,
 		SemanticReceiptV117:  semanticReceiptV117,
+		RuntimeRequestV118:   current.runtimeRequestV118,
+		VerifiedReceiptV118:  current.verifiedReceiptV118,
+		ReceiptBytesV118:     append([]byte(nil), current.receiptBytesV118...),
 		Integrity:            identity,
 	}
 }
@@ -811,13 +946,15 @@ func seedSemanticCurrentAuthority(t *testing.T, ctx context.Context, pool *pgxpo
 		ctx,
 		pool,
 		now,
-		selectedRuntimeServiceContractVersion() == runtimeExecutionServiceVersionV117,
+		selectedRuntimeServiceContractVersion() == runtimeExecutionServiceVersionV117 ||
+			selectedRuntimeServiceContractVersion() == runtimeExecutionServiceVersionV118,
 	)
 	return fixture
 }
 
 func selectedCompletionSemanticReceiptSecretForTest() string {
-	if selectedRuntimeServiceContractVersion() == runtimeExecutionServiceVersionV117 {
+	if selectedRuntimeServiceContractVersion() == runtimeExecutionServiceVersionV117 ||
+		selectedRuntimeServiceContractVersion() == runtimeExecutionServiceVersionV118 {
 		return runtimeServiceV117FixtureSecret
 	}
 	return "fixture-semantic-receipt-secret-v1"
@@ -832,7 +969,8 @@ func selectedCompletionSuccessorTrustDomainForTest() string {
 
 func selectedSemanticAuthorityInstantForTest(t *testing.T, legacy time.Time) time.Time {
 	t.Helper()
-	if selectedRuntimeServiceContractVersion() != runtimeExecutionServiceVersionV117 {
+	if selectedRuntimeServiceContractVersion() != runtimeExecutionServiceVersionV117 &&
+		selectedRuntimeServiceContractVersion() != runtimeExecutionServiceVersionV118 {
 		return legacy
 	}
 	fixture := loadRuntimeSuccessorAuthorityFixtureV117(t)
@@ -1005,6 +1143,10 @@ func (fixture *semanticCurrentAuthorityFixture) seedMatch(t *testing.T, ctx cont
 	request := fixture.request
 	matchID := "current:match:" + suffix
 	seed := "current:seed:" + suffix
+	if selectedRuntimeServiceContractVersion() == runtimeExecutionServiceVersionV118 {
+		matchID = "match:phase259:" + suffix
+		seed = "seed:phase259:" + suffix
+	}
 	jobID := "candidate:job:" + suffix
 	leaseToken := "candidate:lease:" + suffix
 	bottomPlayerID := request.Match.BottomPlayerID
@@ -1065,7 +1207,82 @@ func (fixture *semanticCurrentAuthorityFixture) seedMatch(t *testing.T, ctx cont
 	var semanticWireEvidence runtimeSemanticWireEvidence
 	var runtimeRequestV117 *runtimeServiceRequestV117
 	var semanticReceiptV117 *runtimeSemanticReceiptV117
-	if binding := fixture.identity.RuntimeServiceV117; binding != nil {
+	var runtimeRequestV118 *runtimeServiceRequestV118
+	var verifiedReceiptV118 *verifiedRuntimeSemanticReceiptV118
+	var receiptBytesV118 []byte
+	if binding := fixture.identity.RuntimeServiceV117; binding != nil &&
+		selectedRuntimeServiceContractVersion() == runtimeExecutionServiceVersionV118 {
+		nestedBytes, err := runtimeInvocationV117CanonicalValue(request)
+		if err != nil {
+			t.Fatal(err)
+		}
+		source := func(revision runtimeServiceStrategyRevision, evidence goEntrantExecutionEvidence, claimed claimedRuntimeServiceEntrantV117, side string) runtimeCertificateReferenceV118 {
+			identity, ok := runtimeServiceSourceIdentityFromPersistedRevisionV117(revision, evidence)
+			if !ok || evidence.ConformanceCertificateRef == nil {
+				t.Fatal("v1.18 source/certificate fixture unavailable")
+			}
+			return runtimeCertificateReferenceV118{
+				Side: side, CertificateID: evidence.ConformanceCertificateRef.CertificateID,
+				CertificateRecordHash: "sha256:" + evidence.ConformanceCertificateRef.CertificateRecordHash,
+				RegistryGeneration:    evidence.ConformanceCertificateRef.RegistryGeneration,
+				Lane:                  *claimed.ConformanceLaneID,
+				FreshUntil:            evidence.SchedulingDecision.FreshUntil,
+				SourceIdentity: runtimeCertificateSourceIdentityV118{
+					Side: side, StrategyRevisionID: evidence.StrategyRevisionID,
+					OriginalSourceSHA256: identity.OriginalSourceSHA256, NormalizedSourceSHA256: identity.NormalizedSourceSHA256,
+					ArtifactSHA256: identity.ArtifactSHA256, IdentityManifestRoot: claimed.IdentityManifestRoot,
+					EvidenceGraphRoot: claimed.EvidenceGraphRoot, LaneIdentityHash: claimed.LaneIdentityHash,
+				},
+			}
+		}
+		currentRequest := runtimeServiceRequestV118{
+			ContractVersion: runtimeExecutionServiceVersionV118, Kind: "executeMatch",
+			RequestID: request.RequestID, MatchID: request.Match.MatchID,
+			SemanticTuple: runtimeSemanticTupleV118{
+				TupleID: fixture.identity.CompatibilityTupleID,
+				Components: runtimeSemanticTupleComponentsV118{
+					Rules: fixture.identity.CompatibilityTuple.Rules, Engine: fixture.identity.CompatibilityTuple.Engine,
+					RuntimeABI: fixture.identity.CompatibilityTuple.RuntimeABI, Chronicle: fixture.identity.CompatibilityTuple.Chronicle,
+					ArenaCatalog: fixture.identity.CompatibilityTuple.ArenaCatalog, SetPolicy: fixture.identity.CompatibilityTuple.SetPolicy,
+				},
+			},
+			AuthorityGeneration: binding.Authority.RegistryGeneration,
+			EvaluationInstant:   fixture.identity.Bottom.SchedulingDecision.EvaluatedAt,
+			Match:               nestedBytes,
+		}
+		currentRequest.CertificateReferences.Bottom = source(request.Strategies.Bottom, fixture.identity.Bottom, binding.Bottom, "bottom")
+		currentRequest.CertificateReferences.Top = source(request.Strategies.Top, fixture.identity.Top, binding.Top, "top")
+		currentRequest.Accounting.BudgetProfileRoot = binding.BudgetProfileSHA256
+		currentRequest.Accounting.LedgerPrestateRoot = binding.LedgerPrestateRoot
+		chronicleHash, _ := canonicalCompletionHashV118(chronicle)
+		finalHash, _ := canonicalCompletionHashV118(finalState)
+		outcomeHash, _ := canonicalCompletionHashV118(finalState["outcome"])
+		result := runtimeServiceSuccessResultV118{
+			Privacy: "public_receipt", ChronicleCanonicalHash: chronicleHash,
+			TransitionTraceRoot:     runtimeInvocationV117SHA256Value([]byte("trace:" + suffix)),
+			FinalStateCanonicalHash: finalHash, OutcomeCanonicalHash: outcomeHash,
+			Terminal: runtimeSemanticTerminalV118{Status: "complete", Reason: "shared-admission"},
+			Accounting: runtimeExecutionAccountingResultV118{
+				BudgetProfileRoot: binding.BudgetProfileSHA256, LedgerPrestateRoot: binding.LedgerPrestateRoot,
+				LedgerPoststateRoot: runtimeInvocationV117SHA256Value([]byte("ledger-poststate:" + suffix)),
+			},
+			ResultClass: "success", Ownership: "gameplay", Retryable: false, MutationStatus: "committed",
+		}
+		claim, err := runtimeServiceExpectedClaimV118(currentRequest, result)
+		if err != nil {
+			t.Fatalf("%v request=%+v", err, currentRequest)
+		}
+		receiptBytes, signed, trustedKey := signRuntimeSemanticReceiptForTestV118(t, claim)
+		verified, failure := verifyRuntimeSemanticReceiptV118(runtimeSemanticReceiptVerificationInputV118{
+			ReceiptBytes: receiptBytes, TrustedKey: trustedKey, ExpectedClaim: signed.Claim,
+		})
+		if failure != nil || verified == nil {
+			t.Fatalf("v1.18 fixture receipt rejected: %+v", failure)
+		}
+		runtimeRequestV118 = &currentRequest
+		verifiedReceiptV118 = verified
+		receiptBytesV118 = receiptBytes
+	} else if binding := fixture.identity.RuntimeServiceV117; binding != nil {
 		nestedBytes, err := runtimeInvocationV117CanonicalValue(request)
 		if err != nil {
 			t.Fatal(err)
@@ -1136,6 +1353,8 @@ func (fixture *semanticCurrentAuthorityFixture) seedMatch(t *testing.T, ctx cont
 		matchID: matchID, matchSetID: fixture.identity.MatchSetID, jobID: jobID, leaseToken: leaseToken, chronicle: chronicle, finalState: finalState,
 		semanticReceipt: semanticReceipt, semanticWireEvidence: semanticWireEvidence,
 		runtimeRequestV117: runtimeRequestV117, semanticReceiptV117: semanticReceiptV117,
+		runtimeRequestV118: runtimeRequestV118, verifiedReceiptV118: verifiedReceiptV118,
+		receiptBytesV118: receiptBytesV118,
 	}
 }
 
