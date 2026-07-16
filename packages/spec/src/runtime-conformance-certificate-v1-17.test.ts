@@ -2,6 +2,7 @@ import { generateKeyPairSync, sign } from "node:crypto"
 import { describe, expect, it } from "vitest"
 import {
   RUNTIME_CONFORMANCE_TRUSTED_PRODUCERS_V1_17,
+  RuntimeConformanceCertificateV117Error,
   encodeRuntimeConformanceCertificatePayloadV117,
   evaluateRuntimeConformanceFreshnessV117,
   requireAllFourConformanceLanesV117,
@@ -13,8 +14,7 @@ import {
   type RuntimeConformanceTrustedProducerV117,
 } from "./runtime-conformance-certificate-v1-17.js"
 
-const hash = (character: string): string =>
-  `sha256:${character.repeat(64)}`
+const hash = (character: string): string => `sha256:${character.repeat(64)}`
 
 const baseIdentity = (
   languageId: RuntimeConformanceLanguageIdV117 = "typescript",
@@ -109,7 +109,7 @@ const signFixture = (
   const producer: RuntimeConformanceTrustedProducerV117 = {
     producerId: payload.producerId,
     keyId: payload.producerKeyId,
-    trustDomain: "fixture",
+    trustDomain: payload.trustDomain,
     managedIdentity: true,
     publicKeyPem: keys.publicKey
       .export({ type: "spki", format: "pem" })
@@ -205,6 +205,20 @@ describe("runtime conformance certificate v1.17", () => {
       "RUN_INCOMPLETE",
     ],
     [
+      "reused workspace",
+      (value: RuntimeConformanceCertificatePayloadV117) => {
+        value.runs[0]!.freshWorkspace = false
+      },
+      "RUN_INCOMPLETE",
+    ],
+    [
+      "reused process",
+      (value: RuntimeConformanceCertificatePayloadV117) => {
+        value.runs[0]!.freshProcess = false
+      },
+      "RUN_INCOMPLETE",
+    ],
+    [
       "skipped",
       (value: RuntimeConformanceCertificatePayloadV117) => {
         value.runs[0]!.skippedCaseCount = 1
@@ -239,6 +253,48 @@ describe("runtime conformance certificate v1.17", () => {
       },
       "RUN_SYSTEM_FAILURE",
     ],
+    [
+      "empty case inventory",
+      (value: RuntimeConformanceCertificatePayloadV117) => {
+        value.runs[0]!.caseCount = 0
+      },
+      "RUN_INCOMPLETE",
+    ],
+    [
+      "different case count",
+      (value: RuntimeConformanceCertificatePayloadV117) => {
+        value.runs[1]!.caseCount = 65
+      },
+      "RUN_CASE_COUNT_MISMATCH",
+    ],
+    [
+      "reordered runs",
+      (value: RuntimeConformanceCertificatePayloadV117) => {
+        ;[value.runs[0], value.runs[1]] = [value.runs[1]!, value.runs[0]!]
+      },
+      "RUN_INDEPENDENCE",
+    ],
+    [
+      "run starts after completion",
+      (value: RuntimeConformanceCertificatePayloadV117) => {
+        value.runs[0]!.startedAt = "2026-07-15T03:00:00.000Z"
+      },
+      "RUN_VALIDITY",
+    ],
+    [
+      "run completes after issuance",
+      (value: RuntimeConformanceCertificatePayloadV117) => {
+        value.runs[0]!.completedAt = "2026-07-17T00:00:00.000Z"
+      },
+      "RUN_VALIDITY",
+    ],
+    [
+      "run evidence expires before completion",
+      (value: RuntimeConformanceCertificatePayloadV117) => {
+        value.runs[0]!.validUntil = "2026-07-14T00:00:00.000Z"
+      },
+      "RUN_VALIDITY",
+    ],
   ] as const)("rejects %s without minting a lane", (_name, mutate, code) => {
     const fixture = resignMutation(mutate)
     try {
@@ -255,18 +311,14 @@ describe("runtime conformance certificate v1.17", () => {
     >) {
       const fixture = resignMutation((value) => {
         const current = value.runs[1]!.identity[field]
-        value.runs[1]!.identity[field] =
-          (typeof current === "string"
-            ? `${current}:mutation`
-            : current) as never
+        value.runs[1]!.identity[field] = (
+          typeof current === "string" ? `${current}:mutation` : current
+        ) as never
       })
       expect(() => verifyFixture(fixture)).toThrow("RUN_IDENTITY_MISMATCH")
     }
 
-    for (const field of [
-      "resultRootSha256",
-      "evidenceRootSha256",
-    ] as const) {
+    for (const field of ["resultRootSha256", "evidenceRootSha256"] as const) {
       const fixture = resignMutation((value) => {
         value.runs[2]![field] = hash("6")
       })
@@ -342,34 +394,110 @@ describe("runtime conformance certificate v1.17", () => {
     ).toThrow("STRICT_SHAPE")
 
     expect(RUNTIME_CONFORMANCE_TRUSTED_PRODUCERS_V1_17).toEqual([])
+    const production = signFixture((value) => {
+      value.trustDomain = "production"
+    })
     expect(() =>
       verifyRuntimeConformanceCertificateV117({
         mode: "production",
-        certificate: fixture.certificate,
-        currentIdentity: fixture.certificate.identity,
+        certificate: production.certificate,
+        currentIdentity: production.certificate.identity,
         verificationInstant: "2026-07-20T00:00:00.000Z",
-        trustedProducers: [fixture.producer],
+        trustedProducers: [production.producer],
       }),
     ).toThrow("UNTRUSTED_PRODUCER")
   })
 
+  it("rejects a mutation to every signed top-level field without resigning", () => {
+    const fixture = signFixture()
+    const mutations: Array<
+      (certificate: RuntimeConformanceCertificateV117) => void
+    > = [
+      (value) => {
+        value.schemaVersion = "mutated" as typeof value.schemaVersion
+      },
+      (value) => {
+        value.certificateId += ":mutated"
+      },
+      (value) => {
+        value.certificateVersion = "mutated" as typeof value.certificateVersion
+      },
+      (value) => {
+        value.producerId += ":mutated"
+      },
+      (value) => {
+        value.producerKeyId += ":mutated"
+      },
+      (value) => {
+        value.trustDomain = "production"
+      },
+      (value) => {
+        value.managedIdentity = false as true
+      },
+      (value) => {
+        value.registryGeneration = "8"
+      },
+      (value) => {
+        value.issuedAt = "2026-07-16T00:00:00.001Z"
+      },
+      (value) => {
+        value.requestedValidUntil = "2026-08-31T00:00:00.000Z"
+      },
+      (value) => {
+        value.freshUntil = "2026-08-09T00:00:00.000Z"
+      },
+      (value) => {
+        value.identity.adapterBuildSha256 = hash("6")
+      },
+      (value) => {
+        value.runs[0]!.resultRootSha256 = hash("6")
+      },
+      (value) => {
+        value.signatureBase64 = `${
+          value.signatureBase64[0] === "A" ? "B" : "A"
+        }${value.signatureBase64.slice(1)}`
+      },
+    ]
+    for (const mutate of mutations) {
+      const certificate = globalThis.structuredClone(fixture.certificate)
+      mutate(certificate)
+      expect(() =>
+        verifyRuntimeConformanceCertificateV117({
+          mode: "fixture",
+          certificate,
+          currentIdentity: fixture.certificate.identity,
+          verificationInstant: "2026-07-20T00:00:00.000Z",
+          trustedProducers: [fixture.producer],
+        }),
+      ).toThrow(RuntimeConformanceCertificateV117Error)
+    }
+  })
+
   it("promotes lanes independently but closes the phase only with all four current lanes", () => {
     const languages = ["typescript", "python", "rust", "zig"] as const
-    const fixtures = languages.map((languageId) => signFixture(undefined, languageId))
+    const fixtures = languages.map((languageId) =>
+      signFixture(undefined, languageId),
+    )
     const verified = fixtures.map((fixture) => verifyFixture(fixture))
-    expect(verified.map(({ identity }) => identity.languageId)).toEqual(languages)
+    expect(verified.map(({ identity }) => identity.languageId)).toEqual(
+      languages,
+    )
 
     expect(() =>
       requireAllFourConformanceLanesV117({
         certificates: verified.slice(0, 3),
-        currentIdentities: fixtures.slice(0, 3).map(({ certificate }) => certificate.identity),
+        currentIdentities: fixtures
+          .slice(0, 3)
+          .map(({ certificate }) => certificate.identity),
         verificationInstant: "2026-07-20T00:00:00.000Z",
       }),
     ).toThrow("ALL_FOUR_REQUIRED")
 
     const closure = requireAllFourConformanceLanesV117({
       certificates: verified,
-      currentIdentities: fixtures.map(({ certificate }) => certificate.identity),
+      currentIdentities: fixtures.map(
+        ({ certificate }) => certificate.identity,
+      ),
       verificationInstant: "2026-07-20T00:00:00.000Z",
     })
     expect(closure.languageIds).toEqual(languages)
