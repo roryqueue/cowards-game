@@ -23,6 +23,7 @@ import {
   createRuntimeInvocationBudgetV117,
   createRuntimeInvocationExecutionReceiptV117,
   createRuntimeInvocationTraceV117,
+  getRuntimeInvocationRequestAdmissionV117,
   runtimeInvocationExecutionLedgerPrestateRootV117,
   serializeRuntimeInvocationRequestV117,
   serializeRuntimeInvocationResponseV117,
@@ -955,6 +956,49 @@ describe("runtime invocation v1.17 exclusive ownership", () => {
     )
   })
 
+  it("memoizes exact immutable requests without exposing mutable canonical bytes", () => {
+    const identity = {
+      keyId: RUNTIME_INVOCATION_V1_17_TEST_KEY_ID,
+      secret: fixtureSecret,
+    } as const
+    const request = selectedRequest()
+    const admission = getRuntimeInvocationRequestAdmissionV117(request)
+    expect(admission).toBeDefined()
+    expect(Object.keys(admission ?? {})).toEqual(["binding"])
+    expect(JSON.stringify(admission)).not.toMatch(
+      /"(?:canonicalBytes|sourceIdentity|strategyMemory|soldierMemory|objective|input)":/u,
+    )
+    expect(Object.isFrozen(request)).toBe(true)
+    expect(Object.isFrozen(request.input)).toBe(true)
+    expect(Object.isFrozen(request.input.value)).toBe(true)
+    expect(Object.isFrozen(admission?.binding)).toBe(true)
+
+    const expectedBytes = serializeRuntimeInvocationRequestV117(request)
+    const callerBytes = serializeRuntimeInvocationRequestV117(request)
+    callerBytes[0] = callerBytes[0] === 0x7b ? 0x5b : 0x7b
+    expect(serializeRuntimeInvocationRequestV117(request)).toEqual(
+      expectedBytes,
+    )
+
+    const clone = globalThis.structuredClone(request)
+    expect(getRuntimeInvocationRequestAdmissionV117(clone)).toBeUndefined()
+
+    const verified = verifySelectedRuntimeInvocationRequestV117(
+      expectedBytes,
+      identity,
+    )
+    expect(verified.kind).toBe("success")
+    if (verified.kind !== "success") return
+    expect(verified.value).not.toBe(request)
+    expect(Object.isFrozen(verified.value)).toBe(true)
+    expect(
+      getRuntimeInvocationRequestAdmissionV117(verified.value)?.binding,
+    ).toEqual(admission?.binding)
+    expect(createRuntimeInvocationTraceV117(verified.value, [])).toEqual(
+      createRuntimeInvocationTraceV117(request, []),
+    )
+  })
+
   it("classifies the complete boundary matrix with one exact owner", () => {
     const expected = {
       success: ["success", null],
@@ -1611,6 +1655,7 @@ describe("runtime invocation v1.17 authenticated candidate wire", () => {
       "createRuntimeInvocationBudgetV117",
       "createRuntimeInvocationExecutionReceiptV117",
       "createRuntimeInvocationTraceV117",
+      "getRuntimeInvocationRequestAdmissionV117",
       "createRuntimeAbiV117ExecutionLedger",
       "createRuntimeAbiV117PreflightLedger",
       "debitRuntimeAbiV117Ledger",

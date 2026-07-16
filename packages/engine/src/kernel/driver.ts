@@ -1,4 +1,3 @@
-import { createHash } from "node:crypto"
 import {
   AuthenticatedRuntimeInvocationRequestV117Schema,
   COMPATIBILITY_VERSIONS,
@@ -6,7 +5,7 @@ import {
   HISTORICAL_RUNTIME_V114_SEMANTIC_TUPLE_ID,
   RuntimeInvocationResultV117Schema,
   admitCanonicalJsonValue,
-  serializeRuntimeInvocationRequestV117,
+  getRuntimeInvocationRequestAdmissionV117,
   type JsonValue,
   type RuntimeInvocationResultV117,
 } from "@cowards/spec"
@@ -195,6 +194,22 @@ const runtimeResume = (
   request: KernelEffectRequest,
 ): KernelResume => {
   try {
+    const currentV117 =
+      request.semanticTupleId === CANDIDATE_KERNEL_V117_SEMANTIC_TUPLE_ID
+    const admittedInput = currentV117
+      ? admitCanonicalJsonValue(request.input, {
+          profile: "host-api-value",
+        })
+      : undefined
+    if (currentV117 && (admittedInput === undefined || !admittedInput.ok)) {
+      return {
+        kind: "runtime_resume",
+        requestId: request.requestId,
+        effectKind: request.kind,
+        classification: "system_failure",
+        failure: { code: "OUTER_FRAME_WRONG_BINDING", retryable: false },
+      }
+    }
     const result = (() => {
       if (
         request.semanticTupleId !==
@@ -237,14 +252,13 @@ const runtimeResume = (
           failure: { code: "OUTER_FRAME_UNDECODABLE", retryable: false },
         }
       }
-      const parsedRequest =
-        AuthenticatedRuntimeInvocationRequestV117Schema.safeParse(
-          result.request,
-        )
+      const admittedRequest = getRuntimeInvocationRequestAdmissionV117(
+        result.request,
+      )
       const parsedOutcome = RuntimeInvocationResultV117Schema.safeParse(
         result.outcome,
       )
-      if (!parsedRequest.success || !parsedOutcome.success) {
+      if (!parsedOutcome.success) {
         return {
           kind: "runtime_resume",
           requestId: request.requestId,
@@ -253,18 +267,30 @@ const runtimeResume = (
           failure: { code: "OUTER_FRAME_UNDECODABLE", retryable: false },
         }
       }
-      const boundRequest = parsedRequest.data as typeof result.request
+      if (admittedRequest === undefined) {
+        const requestShapeValid =
+          AuthenticatedRuntimeInvocationRequestV117Schema.safeParse(
+            result.request,
+          ).success
+        return {
+          kind: "runtime_resume",
+          requestId: request.requestId,
+          effectKind: request.kind,
+          classification: "system_failure",
+          failure: {
+            code: requestShapeValid
+              ? "OUTER_FRAME_WRONG_BINDING"
+              : "OUTER_FRAME_UNDECODABLE",
+            retryable: false,
+          },
+        }
+      }
+      const boundRequest = result.request
+      const boundIdentity = admittedRequest.binding
       const successor = parsedOutcome.data as RuntimeInvocationResultV117
-      const admittedInput = admitCanonicalJsonValue(request.input, {
-        profile: "host-api-value",
-      })
       const expectedCandidateTuple = CANDIDATE_KERNEL_V117_SEMANTIC_TUPLE
-      const serializedRequest = serializeRuntimeInvocationRequestV117(
-        boundRequest,
-      )
-      const expectedRequestSha256 =
-        `sha256:${createHash("sha256").update(serializedRequest).digest("hex")}`
       if (
+        admittedInput === undefined ||
         !admittedInput.ok ||
         request.semanticTupleId !==
           CANDIDATE_KERNEL_V117_SEMANTIC_TUPLE_ID ||
@@ -290,12 +316,16 @@ const runtimeResume = (
         successor.trace.invocationId !== boundRequest.invocationId ||
         successor.trace.kernelRequestId !== boundRequest.kernelRequestId ||
         successor.trace.method !== boundRequest.method ||
-        successor.trace.requestSha256 !== expectedRequestSha256 ||
+        successor.trace.requestSha256 !== boundIdentity.requestSha256 ||
         successor.trace.budgetProfileSha256 !==
           boundRequest.budget.profileSha256 ||
         successor.trace.inputSha256 !== boundRequest.input.canonicalSha256 ||
         successor.trace.retryIdentitySha256 !==
-          boundRequest.retry.identitySha256
+          boundRequest.retry.identitySha256 ||
+        successor.trace.accountingIdentitySha256 !==
+          boundRequest.accounting.identitySha256 ||
+        successor.trace.idempotencyKeySha256 !==
+          boundRequest.accounting.idempotencyKeySha256
       ) {
         return {
           kind: "runtime_resume",
@@ -464,10 +494,10 @@ const drive = (
           stepped.record.events.some((summary) =>
             ["ACTIVATION_ENDED", "MATCH_ENDED"].includes(summary.type),
           ))) ||
-        (stopAfter === "round" &&
-          (machine.cursor.stage === "contraction" ||
-            machine.cursor.roundNumber !==
-              initialMachine.cursor.roundNumber)))
+      (stopAfter === "round" &&
+        (machine.cursor.stage === "contraction" ||
+          machine.cursor.roundNumber !==
+            initialMachine.cursor.roundNumber)))
     ) {
       return completedExecution(machine, transitions)
     }

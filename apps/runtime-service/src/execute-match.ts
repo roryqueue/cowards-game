@@ -112,6 +112,8 @@ export interface CandidateRuntimeInvocationPublicResultV117 {
 export interface CandidateRuntimeInvocationExecutionV117<TExecution> {
   /** Private engine material. Never serialize this field on a public route. */
   readonly internalExecution: TExecution
+  /** Exact immutable request selected for execution; verifier-normalized on success. */
+  readonly admittedRequest: AuthenticatedRuntimeInvocationRequestV117
   /** Verified private accounting from an authenticated adapter response. */
   readonly authenticatedAccounting?: RuntimeInvocationResponseAccountingV117
   readonly publicResult: CandidateRuntimeInvocationPublicResultV117
@@ -228,6 +230,7 @@ export const executeCandidateRuntimeInvocationV117 = <
   const internalExecution = input.executeOutcome(outcome, expectedRequest)
   return {
     internalExecution,
+    admittedRequest: expectedRequest,
     ...(authenticatedAccounting === undefined
       ? {}
       : { authenticatedAccounting }),

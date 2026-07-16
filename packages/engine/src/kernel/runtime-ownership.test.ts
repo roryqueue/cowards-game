@@ -746,6 +746,103 @@ describe("Phase 258 successor runtime ownership", () => {
     expect(JSON.stringify(execution)).not.toContain("RUNTIME_VIOLATION")
   })
 
+  it("rejects a structurally valid clone that lacks exact-object admission", () => {
+    const state = withPrivateMemory()
+    const soldier = state.soldiers.find(
+      (candidate) => candidate.ownerPlayerId === state.players[0].id,
+    )
+    if (!soldier) throw new Error("missing fixture soldier")
+
+    const execution = MATCH_KERNEL.runActivationFromStateV117({
+      state,
+      soldierId: soldier.id,
+      runtime: {
+        selectActivations() {
+          throw new Error("selection is unreachable in activation mode")
+        },
+        runSoldierBrain(
+          _input: SoldierBrainInput,
+          request?: RuntimeRequestFor<"soldierBrain">,
+        ): CandidateBoundRuntimeInvocationV117<SoldierBrainResult> {
+          if (!request) throw new Error("driver omitted kernel request")
+          const bound = bindOutcome(request, {
+            kind: "success",
+            value: {
+              action: { type: "TURN_TO_STONE" },
+              soldierMemory: null,
+            },
+            trace: traceFor(request),
+          })
+          return {
+            ...bound,
+            request: globalThis.structuredClone(bound.request),
+          }
+        },
+      },
+    })
+
+    expect(execution).toMatchObject({
+      kind: "failure",
+      transitions: [],
+      failure: {
+        classification: "system_failure",
+        code: "OUTER_FRAME_WRONG_BINDING",
+      },
+      unchangedState: state,
+    })
+  })
+
+  it.each([
+    ["accounting identity", "accountingIdentitySha256"],
+    ["idempotency key", "idempotencyKeySha256"],
+  ] as const)("rejects a trace with a forged %s", (_label, field) => {
+    const state = withPrivateMemory()
+    const soldier = state.soldiers.find(
+      (candidate) => candidate.ownerPlayerId === state.players[0].id,
+    )
+    if (!soldier) throw new Error("missing fixture soldier")
+
+    const execution = MATCH_KERNEL.runActivationFromStateV117({
+      state,
+      soldierId: soldier.id,
+      runtime: {
+        selectActivations() {
+          throw new Error("selection is unreachable in activation mode")
+        },
+        runSoldierBrain(
+          _input: SoldierBrainInput,
+          request?: RuntimeRequestFor<"soldierBrain">,
+        ): CandidateBoundRuntimeInvocationV117<SoldierBrainResult> {
+          if (!request) throw new Error("driver omitted kernel request")
+          return bindOutcome(
+            request,
+            {
+              kind: "success",
+              value: {
+                action: { type: "TURN_TO_STONE" },
+                soldierMemory: null,
+              },
+              trace: traceFor(request, {
+                [field]: `sha256:${"9".repeat(64)}`,
+              }),
+            },
+            false,
+          )
+        },
+      },
+    })
+
+    expect(execution).toMatchObject({
+      kind: "failure",
+      transitions: [],
+      failure: {
+        classification: "system_failure",
+        code: "OUTER_FRAME_WRONG_BINDING",
+      },
+      unchangedState: state,
+    })
+  })
+
   it("rejects a response whose signed input identity belongs to another prestate", () => {
     const state = withPrivateMemory()
     const soldier = state.soldiers.find(

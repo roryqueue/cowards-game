@@ -25,6 +25,7 @@ import {
   createRuntimeInvocationBudgetV117,
   createRuntimeInvocationExecutionReceiptV117,
   createRuntimeInvocationTraceV117,
+  getRuntimeInvocationRequestAdmissionV117,
   encodeCanonicalJson,
   hashCanonicalIdentity,
   hashExecutableLaneIdentity,
@@ -1425,6 +1426,14 @@ describe("runtime execution service v1.17 candidate bridge", () => {
       outcome: { kind: "success" },
       request,
     })
+    expect(result.internalExecution.request).not.toBe(request)
+    expect(result.admittedRequest).toBe(result.internalExecution.request)
+    expect(Object.isFrozen(result.internalExecution.request)).toBe(true)
+    expect(
+      getRuntimeInvocationRequestAdmissionV117(
+        result.internalExecution.request,
+      ),
+    ).toBeDefined()
     expect(result.authenticatedAccounting).toEqual(
       authenticatedResponse.accounting,
     )
@@ -1816,7 +1825,7 @@ describe("runtime execution service v1.17 candidate bridge", () => {
     expect(JSON.stringify(result.publicResult)).not.toContain("forged")
   })
 
-  it("pins the admitted request against adapter-side retry mutation", () => {
+  it("pins the immutable admitted request against adapter-side retry mutation", () => {
     const request = candidateRequest()
     const admittedSnapshot = globalThis.structuredClone(request)
     const originalBytes = serializeRuntimeInvocationRequestV117(request)
@@ -1871,7 +1880,7 @@ describe("runtime execution service v1.17 candidate bridge", () => {
       identity: candidateIdentity,
       invoke(bytes) {
         expect(Buffer.from(bytes).equals(Buffer.from(originalBytes))).toBe(true)
-        Object.assign(request, mutated)
+        expect(Reflect.set(request, "retry", mutated.retry)).toBe(false)
         return mutatedResponse
       },
       executeOutcome: executeCandidateOutcome,

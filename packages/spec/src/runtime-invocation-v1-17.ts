@@ -1503,9 +1503,10 @@ const createAuthenticatedRuntimeInvocationRequestForLifecycleV117 = (
       identity,
     ),
   }
-  return AuthenticatedRuntimeInvocationRequestV117Schema.parse(
+  const parsed = AuthenticatedRuntimeInvocationRequestV117Schema.parse(
     request,
   ) as AuthenticatedRuntimeInvocationRequestV117
+  return registerRuntimeInvocationRequestV117(parsed)
 }
 
 /** Creates byte-stable inactive candidate evidence. */
@@ -1530,21 +1531,35 @@ export const createSelectedRuntimeInvocationRequestV117 = (
     RUNTIME_INVOCATION_V1_17_SELECTED_LIFECYCLE,
   )
 
-export const serializeRuntimeInvocationRequestV117 = (
-  request: AuthenticatedRuntimeInvocationRequestV117,
-): Uint8Array => {
-  const parsed = AuthenticatedRuntimeInvocationRequestV117Schema.parse(request)
-  return canonicalBytes(parsed as unknown as JsonValue)
+/**
+ * Immutable, exact-object admission material for a request that has already
+ * crossed the complete v1.17 construction or authenticated verification
+ * boundary. Canonical bytes stay private so callers cannot mutate the cache.
+ */
+export interface RuntimeInvocationRequestAdmissionV117 {
+  readonly binding: Readonly<RuntimeInvocationRequestBindingV117>
 }
 
-const requestBinding = (
+interface InternalRuntimeInvocationRequestAdmissionV117 {
+  readonly request: AuthenticatedRuntimeInvocationRequestV117
+  readonly public: RuntimeInvocationRequestAdmissionV117
+  readonly canonicalBytes: Uint8Array
+}
+
+const runtimeInvocationRequestAdmissionsV117 = new WeakMap<
+  object,
+  InternalRuntimeInvocationRequestAdmissionV117
+>()
+
+const requestBindingFromCanonicalBytes = (
   request: AuthenticatedRuntimeInvocationRequestV117,
+  bytes: Uint8Array,
 ): RuntimeInvocationRequestBindingV117 => ({
   requestId: request.requestId,
   invocationId: request.invocationId,
   kernelRequestId: request.kernelRequestId,
   method: request.method,
-  requestSha256: sha256Bytes(serializeRuntimeInvocationRequestV117(request)),
+  requestSha256: sha256Bytes(bytes),
   semanticTupleId: request.semanticTuple.tupleId,
   runtimeAbiVersion: request.semanticTuple.runtimeAbi,
   strategyRevisionId: request.sourceIdentity.strategyRevisionId,
@@ -1555,6 +1570,71 @@ const requestBinding = (
   accountingIdentitySha256: request.accounting.identitySha256,
   idempotencyKeySha256: request.accounting.idempotencyKeySha256,
 })
+
+const registerRuntimeInvocationRequestV117 = (
+  requestInput: AuthenticatedRuntimeInvocationRequestV117,
+  knownCanonicalBytes?: Uint8Array,
+): AuthenticatedRuntimeInvocationRequestV117 => {
+  const existing = runtimeInvocationRequestAdmissionsV117.get(requestInput)
+  if (existing !== undefined) return existing.request
+
+  const request = deepFreeze(
+    requestInput,
+  ) as AuthenticatedRuntimeInvocationRequestV117
+  const canonicalRequestBytes = Uint8Array.from(
+    knownCanonicalBytes ?? canonicalBytes(request as unknown as JsonValue),
+  )
+  const binding = deepFreeze(
+    requestBindingFromCanonicalBytes(request, canonicalRequestBytes),
+  ) as Readonly<RuntimeInvocationRequestBindingV117>
+  const admission = deepFreeze({
+    binding,
+  }) as RuntimeInvocationRequestAdmissionV117
+  runtimeInvocationRequestAdmissionsV117.set(request, {
+    request,
+    public: admission,
+    canonicalBytes: canonicalRequestBytes,
+  })
+  return request
+}
+
+/**
+ * Returns admission only for the exact immutable object produced by a v1.17
+ * constructor or successful verifier. Clones and reconstructed objects miss.
+ */
+export const getRuntimeInvocationRequestAdmissionV117 = (
+  value: unknown,
+): RuntimeInvocationRequestAdmissionV117 | undefined =>
+  value !== null && typeof value === "object"
+    ? runtimeInvocationRequestAdmissionsV117.get(value)?.public
+    : undefined
+
+const getInternalRuntimeInvocationRequestAdmissionV117 = (
+  value: unknown,
+): InternalRuntimeInvocationRequestAdmissionV117 | undefined =>
+  value !== null && typeof value === "object"
+    ? runtimeInvocationRequestAdmissionsV117.get(value)
+    : undefined
+
+export const serializeRuntimeInvocationRequestV117 = (
+  request: AuthenticatedRuntimeInvocationRequestV117,
+): Uint8Array => {
+  const admitted = runtimeInvocationRequestAdmissionsV117.get(request)
+  if (admitted !== undefined) {
+    return Uint8Array.from(admitted.canonicalBytes)
+  }
+  const parsed = AuthenticatedRuntimeInvocationRequestV117Schema.parse(request)
+  return canonicalBytes(parsed as unknown as JsonValue)
+}
+
+const requestBinding = (
+  request: AuthenticatedRuntimeInvocationRequestV117,
+): RuntimeInvocationRequestBindingV117 =>
+  getRuntimeInvocationRequestAdmissionV117(request)?.binding ??
+  requestBindingFromCanonicalBytes(
+    request,
+    serializeRuntimeInvocationRequestV117(request),
+  )
 
 const outcomeTraceMatchesRequest = (
   trace: RuntimeInvocationTraceV117,
@@ -1853,6 +1933,9 @@ const parseCanonicalEnvelope = <T>(
 const requestDerivedBindingsMatch = (
   request: AuthenticatedRuntimeInvocationRequestV117,
 ): boolean => {
+  if (getRuntimeInvocationRequestAdmissionV117(request) !== undefined) {
+    return true
+  }
   const semanticTuple = withoutProperty(request.semanticTuple, "tupleId")
   const budget = withoutProperty(request.budget, "profileSha256")
   const retry = withoutProperty(request.retry, "identitySha256")
@@ -1923,10 +2006,15 @@ export const createRuntimeInvocationExecutionReceiptV117 = (
   requestInput: AuthenticatedRuntimeInvocationRequestV117,
   evidenceInput: RuntimeInvocationExecutionReceiptEvidenceV117,
 ): RuntimeInvocationExecutionReceiptV117 => {
-  const request = AuthenticatedRuntimeInvocationRequestV117Schema.parse(
-    requestInput,
-  ) as AuthenticatedRuntimeInvocationRequestV117
-  if (!requestDerivedBindingsMatch(request)) {
+  const admitted = getRuntimeInvocationRequestAdmissionV117(requestInput)
+  const internalAdmission =
+    getInternalRuntimeInvocationRequestAdmissionV117(requestInput)
+  const request =
+    internalAdmission?.request ??
+    (AuthenticatedRuntimeInvocationRequestV117Schema.parse(
+      requestInput,
+    ) as AuthenticatedRuntimeInvocationRequestV117)
+  if (admitted === undefined && !requestDerivedBindingsMatch(request)) {
     throw new TypeError(
       "Cannot construct execution accounting for an invalid candidate request",
     )
@@ -1967,10 +2055,15 @@ export const createRuntimeInvocationTraceV117 = (
   requestInput: AuthenticatedRuntimeInvocationRequestV117,
   safeCodes: readonly string[],
 ): RuntimeInvocationTraceV117 => {
-  const request = AuthenticatedRuntimeInvocationRequestV117Schema.parse(
-    requestInput,
-  ) as AuthenticatedRuntimeInvocationRequestV117
-  if (!requestDerivedBindingsMatch(request)) {
+  const admitted = getRuntimeInvocationRequestAdmissionV117(requestInput)
+  const internalAdmission =
+    getInternalRuntimeInvocationRequestAdmissionV117(requestInput)
+  const request =
+    internalAdmission?.request ??
+    (AuthenticatedRuntimeInvocationRequestV117Schema.parse(
+      requestInput,
+    ) as AuthenticatedRuntimeInvocationRequestV117)
+  if (admitted === undefined && !requestDerivedBindingsMatch(request)) {
     throw new TypeError(
       "Cannot construct an invocation trace for an invalid candidate request",
     )
@@ -2038,9 +2131,10 @@ const verifyRuntimeInvocationRequestForLifecycleV117 = (
   if (!requestLifecycleMatches(request, lifecycle)) {
     return verificationFailure("OUTER_FRAME_WRONG_BINDING", bytes, trace)
   }
+  const admittedRequest = registerRuntimeInvocationRequestV117(request, bytes)
   return {
     kind: "success",
-    value: request,
+    value: admittedRequest,
     trace: {
       ...trace,
       safeCodes: ["ADAPTER_AUTHENTICATED", "OUTER_BINDINGS_VERIFIED"],
@@ -2075,14 +2169,29 @@ const verifyRuntimeInvocationResponseV117Unsafe = (
   expectedRequest: AuthenticatedRuntimeInvocationRequestV117,
   identity: RuntimeInvocationSigningIdentityV117,
 ): RuntimeInvocationResultV117<AuthenticatedRuntimeInvocationResponseV117> => {
+  const admittedExpectedRequest =
+    getRuntimeInvocationRequestAdmissionV117(expectedRequest)
+  const internalExpectedRequest =
+    getInternalRuntimeInvocationRequestAdmissionV117(expectedRequest)
   const parsedExpectedRequest =
-    AuthenticatedRuntimeInvocationRequestV117Schema.safeParse(expectedRequest)
-  if (!parsedExpectedRequest.success) {
+    admittedExpectedRequest === undefined
+      ? AuthenticatedRuntimeInvocationRequestV117Schema.safeParse(
+          expectedRequest,
+        )
+      : undefined
+  if (
+    admittedExpectedRequest === undefined &&
+    (parsedExpectedRequest === undefined || !parsedExpectedRequest.success)
+  ) {
     return verificationFailure("OUTER_FRAME_WRONG_BINDING", bytes)
   }
   const request =
-    parsedExpectedRequest.data as AuthenticatedRuntimeInvocationRequestV117
-  if (!requestDerivedBindingsMatch(request)) {
+    internalExpectedRequest?.request ??
+    (parsedExpectedRequest!.data as AuthenticatedRuntimeInvocationRequestV117)
+  if (
+    admittedExpectedRequest === undefined &&
+    !requestDerivedBindingsMatch(request)
+  ) {
     return verificationFailure("OUTER_FRAME_WRONG_BINDING", bytes)
   }
   const expectedBinding = requestBinding(request)
