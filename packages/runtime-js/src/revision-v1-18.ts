@@ -50,3 +50,25 @@ export const createTypeScriptRuntimeCompilerIdentityV118 = (input: {
     )
     .digest("hex")}`
 }
+
+export const createTypeScriptAdapterBuildIdentityV118 = (input: {
+  readonly adapterModuleSha256: `sha256:${string}`
+  readonly harnessSha256: `sha256:${string}`
+}): `sha256:${string}` => {
+  if (
+    !SHA256.test(input.adapterModuleSha256) ||
+    !SHA256.test(input.harnessSha256)
+  ) {
+    throw new TypeError("TypeScript adapter build identity is invalid")
+  }
+  return `sha256:${createHash("sha256")
+    .update(
+      canonicalBytes({
+        identityDomain:
+          "cowards-game:typescript-supervised-adapter-build:v1.18",
+        adapterModuleSha256: input.adapterModuleSha256,
+        harnessSha256: input.harnessSha256,
+      }),
+    )
+    .digest("hex")}`
+}

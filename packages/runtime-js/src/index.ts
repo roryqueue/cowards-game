@@ -12,6 +12,7 @@ export { buildStrategyRevision, isValidStrategyRevision } from "./revision.js"
 export { buildStrategyRevisionV117 } from "./revision-v1-17.js"
 export {
   COUNTED_TYPESCRIPT_RUNTIME_V1_18,
+  createTypeScriptAdapterBuildIdentityV118,
   createTypeScriptRuntimeCompilerIdentityV118,
 } from "./revision-v1-18.js"
 export {
@@ -20,7 +21,7 @@ export {
   type CountedTypeScriptSupervisedExecutionInputV118,
   type CountedTypeScriptSupervisedResultV118,
   type RuntimeEvidenceSignatureV118,
-  type TypeScriptLanguageIdentityV118,
+  type TypeScriptLanguageIdentityObservationV118,
   type TypeScriptSignedEvidenceV118,
   type TypeScriptSupervisorHostLaunchResultV118,
   type TypeScriptSupervisorHostLaunchV118,

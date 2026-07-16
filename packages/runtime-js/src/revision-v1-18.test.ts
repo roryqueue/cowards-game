@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs"
 import { describe, expect, it } from "vitest"
 import {
   COUNTED_TYPESCRIPT_RUNTIME_V1_18,
+  createTypeScriptAdapterBuildIdentityV118,
   createTypeScriptRuntimeCompilerIdentityV118,
 } from "./revision-v1-18.js"
 
@@ -68,6 +69,20 @@ describe("TypeScript counted runtime v1.18 identity", () => {
         v8Version: "13.6.233.10-node.17",
       }),
     ).toThrow(/identity/u)
+  })
+
+  it("binds the exact adapter module and harness bytes into one build identity", () => {
+    const identity = createTypeScriptAdapterBuildIdentityV118({
+      adapterModuleSha256: hash("c"),
+      harnessSha256: hash("d"),
+    })
+    expect(identity).toMatch(/^sha256:[0-9a-f]{64}$/u)
+    expect(
+      createTypeScriptAdapterBuildIdentityV118({
+        adapterModuleSha256: hash("c"),
+        harnessSha256: hash("e"),
+      }),
+    ).not.toBe(identity)
   })
 
   it("keeps every prior v1.17 execution byte immutable", () => {
