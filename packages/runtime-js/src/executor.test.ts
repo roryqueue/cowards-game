@@ -8,7 +8,10 @@ import type {
   StrategyRevision,
 } from "@cowards/spec"
 import type { StrategyExecutionAdapter } from "./adapter.js"
-import { createRuntimeFromRevision } from "./executor.js"
+import {
+  createNestedMatchShapeRuntimeFromRevisionTestSupport,
+  createRuntimeFromRevision,
+} from "./executor.js"
 import {
   createRuntimeViolation,
   toInvalidOutputViolation,
@@ -94,7 +97,9 @@ export default {
 `
 
 const runtimeForSource = (source: string) =>
-  createRuntimeFromRevision(buildStrategyRevision({ source }))
+  createNestedMatchShapeRuntimeFromRevisionTestSupport(
+    buildStrategyRevision({ source }),
+  )
 
 const forgedValidRevision = (source: string): StrategyRevision => {
   const revision = buildStrategyRevision({ source: validSource })
@@ -183,7 +188,7 @@ describe("StrategyRuntime execution adapter", () => {
       },
     } satisfies StrategyExecutionAdapter
 
-    const runtime = createRuntimeFromRevision(
+    const runtime = createNestedMatchShapeRuntimeFromRevisionTestSupport(
       buildStrategyRevision({ source: validSource }),
       { adapter, timeoutMs: 77 },
     )
@@ -205,6 +210,46 @@ describe("StrategyRuntime execution adapter", () => {
       },
     })
     expect(calls).toEqual(["selectActivations", "soldierBrain"])
+  })
+
+  it("keeps the legacy nested Match executor fail-closed on the selected production path", () => {
+    let adapterCalls = 0
+    const revision = buildStrategyRevision({ source: validSource })
+    const runtime = createRuntimeFromRevision(revision, {
+      adapter: {
+        metadata: {
+          id: "selected-path-test-adapter",
+          label: "Selected path test adapter",
+          default: false,
+          isolationBoundary: "Unit test double.",
+          notes: [],
+          runtimeControls: {
+            timeout: true,
+            outputByteLimit: true,
+            environment: "minimal",
+            execArgv: "empty",
+            resourceLimits: [],
+          },
+        },
+        execute() {
+          adapterCalls += 1
+          return {
+            ok: true,
+            value: { activationOrders: [], strategyMemory: {} },
+          }
+        },
+      },
+    })
+
+    expect(runtime.selectActivations(strategyInput)).toEqual({
+      ok: false,
+      violation: {
+        type: "INVALID_OUTPUT",
+        message: "Strategy runtime ABI is not selected",
+      },
+      systemFailure: { code: "MALFORMED_IPC", retryable: false },
+    })
+    expect(adapterCalls).toBe(0)
   })
 
   it("keeps executable runtime APIs out of the safe root entrypoint", async () => {

@@ -61,6 +61,9 @@ const INPUT_PATHS = Object.freeze([
   "packages/replay/src/reconstruct.ts",
   "packages/replay/src/grammar.ts",
   "packages/replay/package.json",
+  "packages/runtime-js/src/abi-bridge.ts",
+  "packages/runtime-js/src/executor.ts",
+  "packages/runtime-js/src/executor.test.ts",
   "packages/spec/artifacts/strategy-artifacts.v1.14.json",
   "packages/spec/artifacts/v1.37-current-event-coverage.json",
   "packages/spec/src/runtime-budget-capabilities-v1-18.ts",
@@ -68,6 +71,7 @@ const INPUT_PATHS = Object.freeze([
   "packages/spec/src/runtime-semantic-receipt-v1-18.ts",
   "scripts/check-boundary-monitors.ts",
   "scripts/evaluate-v1-37-executable-conformance.ts",
+  "scripts/evaluate-v1-37-executable-conformance.test.ts",
   "scripts/sign-v1-37-language-conformance-certificate.ts",
 ] as const)
 
@@ -204,6 +208,7 @@ const gateDefinitions = Object.freeze([
       "packages/spec/src/runtime-budget-capabilities-v1-18.test.ts",
       "packages/persistence/src/runtime-evidence-authority-publisher.test.ts",
       "packages/persistence/src/complete-match.test.ts",
+      "packages/runtime-js/src/executor.test.ts",
       "apps/runtime-service/src/execute-match-v1-18.test.ts",
       "scripts/sign-v1-37-language-conformance-certificate.test.ts",
     ],
