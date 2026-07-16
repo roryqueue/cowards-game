@@ -275,8 +275,7 @@ const validateExecutionDescriptor = (
   }
   return {
     executablePath: value.executablePath,
-    executableBytesSha256:
-      value.executableBytesSha256 as `sha256:${string}`,
+    executableBytesSha256: value.executableBytesSha256 as `sha256:${string}`,
     argv: [...value.argv],
     environment,
   }

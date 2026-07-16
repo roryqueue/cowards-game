@@ -170,9 +170,9 @@ describe("runtime invocation v1.18", () => {
       monotonicDeadlineNanoseconds: number
     }
     changedBody.monotonicDeadlineNanoseconds += 1
-    expect(RuntimeInvocationRequestV118Schema.safeParse(changedBody).success).toBe(
-      false,
-    )
+    expect(
+      RuntimeInvocationRequestV118Schema.safeParse(changedBody).success,
+    ).toBe(false)
     expect(() =>
       serializeRuntimeInvocationRequestV118(
         changedBody as unknown as ReturnType<
@@ -185,9 +185,9 @@ describe("runtime invocation v1.18", () => {
       requestSha256: `sha256:${string}`
     }
     changedHash.requestSha256 = hash("0")
-    expect(RuntimeInvocationRequestV118Schema.safeParse(changedHash).success).toBe(
-      false,
-    )
+    expect(
+      RuntimeInvocationRequestV118Schema.safeParse(changedHash).success,
+    ).toBe(false)
     expect(
       evaluateRuntimeSupervisorReceiptV118(
         changedHash as unknown as ReturnType<
@@ -205,7 +205,9 @@ describe("runtime invocation v1.18", () => {
   it("accepts exact ceilings with complete Linux cgroup-v2 evidence", () => {
     const request = createRuntimeInvocationRequestV118(requestInput())
     const receipt = validReceipt()
-    expect(RuntimeSupervisorRawReceiptV118Schema.parse(receipt)).toEqual(receipt)
+    expect(RuntimeSupervisorRawReceiptV118Schema.parse(receipt)).toEqual(
+      receipt,
+    )
     expect(evaluateRuntimeSupervisorReceiptV118(request, receipt)).toEqual({
       kind: "success",
       gameplayDisposition: "accept_success",
@@ -227,50 +229,53 @@ describe("runtime invocation v1.18", () => {
     "payloadBytes",
     "stdoutBytes",
     "stderrBytes",
-  ] as const)("classifies exact N+1 %s only from proven Strategy evidence", (dimension) => {
-    const request = createRuntimeInvocationRequestV118(requestInput())
-    const receipt = clone(validReceipt())
-    if (dimension === "wallMilliseconds") {
-      receipt.wall.elapsedNanoseconds =
-        (request.limits.wallMilliseconds + 1) * 1_000_000
-      receipt.wall.processGroupReapedMonotonicNanoseconds =
-        receipt.wall.supervisedSpawnMonotonicNanoseconds +
-        receipt.wall.elapsedNanoseconds
-      receipt.wall.wallMilliseconds = request.limits.wallMilliseconds + 1
-    } else if (dimension === "computeFuel") {
-      receipt.cpu.finalUsageMicroseconds =
-        receipt.cpu.baselineUsageMicroseconds +
-        request.limits.computeFuel / 1000 +
-        1
-      receipt.cpu.computeFuel = request.limits.computeFuel + 1000
-    } else if (dimension === "memoryPeakBytes") {
-      receipt.memory.peakBytes = request.limits.memoryMaxBytes + 1
-      receipt.memory.eventsAfter.max = 1
-    } else if (dimension === "pids") {
-      receipt.pids.currentPeak = request.limits.pidsMax + 1
-      receipt.pids.eventsAfter.max = 1
-    } else if (dimension === "payloadBytes") {
-      receipt.bytes.payloadBytes = request.limits.payloadBytes + 1
-    } else if (dimension === "stdoutBytes") {
-      receipt.bytes.stdoutBytes = request.limits.stdoutBytes + 1
-    } else {
-      receipt.bytes.stderrBytes = request.limits.stderrBytes + 1
-    }
-    const result = evaluateRuntimeSupervisorReceiptV118(request, receipt)
-    expect(result).toMatchObject({
-      kind: "player_violation",
-      gameplayDisposition: "apply_player_violation",
-      code: "RESOURCE_EXHAUSTION",
-      dimensions: [dimension],
-    })
+  ] as const)(
+    "classifies exact N+1 %s only from proven Strategy evidence",
+    (dimension) => {
+      const request = createRuntimeInvocationRequestV118(requestInput())
+      const receipt = clone(validReceipt())
+      if (dimension === "wallMilliseconds") {
+        receipt.wall.elapsedNanoseconds =
+          (request.limits.wallMilliseconds + 1) * 1_000_000
+        receipt.wall.processGroupReapedMonotonicNanoseconds =
+          receipt.wall.supervisedSpawnMonotonicNanoseconds +
+          receipt.wall.elapsedNanoseconds
+        receipt.wall.wallMilliseconds = request.limits.wallMilliseconds + 1
+      } else if (dimension === "computeFuel") {
+        receipt.cpu.finalUsageMicroseconds =
+          receipt.cpu.baselineUsageMicroseconds +
+          request.limits.computeFuel / 1000 +
+          1
+        receipt.cpu.computeFuel = request.limits.computeFuel + 1000
+      } else if (dimension === "memoryPeakBytes") {
+        receipt.memory.peakBytes = request.limits.memoryMaxBytes + 1
+        receipt.memory.eventsAfter.max = 1
+      } else if (dimension === "pids") {
+        receipt.pids.currentPeak = request.limits.pidsMax + 1
+        receipt.pids.eventsAfter.max = 1
+      } else if (dimension === "payloadBytes") {
+        receipt.bytes.payloadBytes = request.limits.payloadBytes + 1
+      } else if (dimension === "stdoutBytes") {
+        receipt.bytes.stdoutBytes = request.limits.stdoutBytes + 1
+      } else {
+        receipt.bytes.stderrBytes = request.limits.stderrBytes + 1
+      }
+      const result = evaluateRuntimeSupervisorReceiptV118(request, receipt)
+      expect(result).toMatchObject({
+        kind: "player_violation",
+        gameplayDisposition: "apply_player_violation",
+        code: "RESOURCE_EXHAUSTION",
+        dimensions: [dimension],
+      })
 
-    receipt.attribution = "ambiguous"
-    expect(evaluateRuntimeSupervisorReceiptV118(request, receipt)).toEqual({
-      kind: "system_failure",
-      gameplayDisposition: "no_mutation",
-      code: "RESOURCE_ATTRIBUTION_UNPROVEN",
-    })
-  })
+      receipt.attribution = "ambiguous"
+      expect(evaluateRuntimeSupervisorReceiptV118(request, receipt)).toEqual({
+        kind: "system_failure",
+        gameplayDisposition: "no_mutation",
+        code: "RESOURCE_ATTRIBUTION_UNPROVEN",
+      })
+    },
+  )
 
   it("never accepts a truncated success at or beyond a byte ceiling", () => {
     const request = createRuntimeInvocationRequestV118(requestInput())
@@ -441,23 +446,26 @@ describe("runtime invocation v1.18", () => {
   })
 
   it("rejects noncanonical, overflow, negative, and gameplay-bearing receipts", () => {
-    const malformed = clone(validReceipt()) as unknown as Record<string, unknown>
+    const malformed = clone(validReceipt()) as unknown as Record<
+      string,
+      unknown
+    >
     malformed.gameplay = { strategyMemory: { private: true } }
-    expect(RuntimeSupervisorRawReceiptV118Schema.safeParse(malformed).success).toBe(
-      false,
-    )
+    expect(
+      RuntimeSupervisorRawReceiptV118Schema.safeParse(malformed).success,
+    ).toBe(false)
 
     const negative = clone(validReceipt())
     negative.cpu.baselineUsageMicroseconds = -1
-    expect(RuntimeSupervisorRawReceiptV118Schema.safeParse(negative).success).toBe(
-      false,
-    )
+    expect(
+      RuntimeSupervisorRawReceiptV118Schema.safeParse(negative).success,
+    ).toBe(false)
 
     const overflow = clone(validReceipt())
     overflow.wall.processGroupReapedMonotonicNanoseconds =
       Number.MAX_SAFE_INTEGER + 1
-    expect(RuntimeSupervisorRawReceiptV118Schema.safeParse(overflow).success).toBe(
-      false,
-    )
+    expect(
+      RuntimeSupervisorRawReceiptV118Schema.safeParse(overflow).success,
+    ).toBe(false)
   })
 })
