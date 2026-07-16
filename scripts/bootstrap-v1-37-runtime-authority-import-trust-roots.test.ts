@@ -13,9 +13,9 @@ const temporaryDirectories: string[] = []
 
 afterEach(async () => {
   await Promise.all(
-    temporaryDirectories.splice(0).map((directory) =>
-      rm(directory, { recursive: true, force: true }),
-    ),
+    temporaryDirectories
+      .splice(0)
+      .map((directory) => rm(directory, { recursive: true, force: true })),
   )
 })
 
@@ -77,7 +77,8 @@ describe("runtime authority import trust-root bootstrap CLI", () => {
             prepared.descriptorPath,
           COWARDS_RUNTIME_AUTHORITY_IMPORT_TRUST_ROOTS_EXPECTED_SHA256:
             prepared.descriptorSha256,
-          COWARDS_RUNTIME_AUTHORITY_IMPORT_PRODUCER_ID: prepared.root.producerId,
+          COWARDS_RUNTIME_AUTHORITY_IMPORT_PRODUCER_ID:
+            prepared.root.producerId,
           COWARDS_RUNTIME_AUTHORITY_IMPORT_KEY_ID: prepared.root.keyId,
           COWARDS_RUNTIME_AUTHORITY_IMPORT_TRUST_DOMAIN:
             prepared.root.trustDomain,
