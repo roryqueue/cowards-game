@@ -916,12 +916,23 @@ export const validateCurrentChronicleSemantics = (
     ])
   }
   if (
-    stableStringify((input.chronicle as Chronicle).events) !==
+    stableStringify(chronicle.events) !==
       stableStringify(trustedRecording.chronicle.events) ||
-    stableStringify((input.chronicle as Chronicle).private ?? null) !==
+    stableStringify(chronicle.private ?? null) !==
       stableStringify(trustedRecording.chronicle.private ?? null)
   ) {
     return currentCodeFailure("CURRENT_EVENT_INVALID", ["chronicle", "events"])
+  }
+  if (
+    stableStringify(chronicle.snapshots) !==
+      stableStringify(trustedRecording.chronicle.snapshots) ||
+    stableStringify(input.boundaryAnchors) !==
+      stableStringify(trustedRecording.boundaryAnchors)
+  ) {
+    return currentCodeFailure("CURRENT_BOUNDARY_STATE_INVALID", [
+      "chronicle",
+      "snapshots",
+    ])
   }
 
   const eventErrors = [

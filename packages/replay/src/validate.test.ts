@@ -475,6 +475,43 @@ describe("validateChronicle", () => {
     })
   })
 
+  it("rejects swapped and renumbered snapshots and anchors that no longer match recorder order", () => {
+    const input = createCurrentReplayInput()
+    const snapshots = input.chronicle.snapshots.map((snapshot) =>
+      globalThis.structuredClone(snapshot),
+    )
+    const anchors = input.boundaryAnchors.map((anchor) =>
+      globalThis.structuredClone(anchor),
+    )
+    expect(snapshots.length).toBeGreaterThan(2)
+    ;[snapshots[1], snapshots[2]] = [snapshots[2]!, snapshots[1]!]
+    ;[anchors[1], anchors[2]] = [anchors[2]!, anchors[1]!]
+    const boundaryAnchors = anchors.map((anchor, snapshotIndex) => ({
+      ...anchor,
+      snapshotIndex,
+    }))
+    const chronicleWithoutIntegrity = {
+      ...input.chronicle,
+      snapshots,
+      integrity: undefined,
+    }
+    const chronicle = {
+      ...chronicleWithoutIntegrity,
+      integrity: createChronicleContentHash(chronicleWithoutIntegrity),
+    }
+
+    expect(
+      validateCurrentChronicle({
+        ...input,
+        chronicle,
+        boundaryAnchors,
+      }),
+    ).toMatchObject({
+      ok: false,
+      issues: [{ code: "CURRENT_BOUNDARY_STATE_INVALID" }],
+    })
+  })
+
   it("rejects in-place initiative drift despite recomputed public hashes", () => {
     const input = createCurrentReplayInput()
     if (input.execution.kind !== "completed") throw new Error("not completed")
