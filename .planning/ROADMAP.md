@@ -259,10 +259,10 @@ Plans:
 
 **Wave 2 — trace, Chronicle semantics, identity, and supervisor protocol**
 
-- [ ] 259-03-PLAN.md — Install the language-neutral full-trace oracle and safe divergence contract.
-- [ ] 259-08-PLAN.md — Make Chronicle admission version-strict, per-slot, and semantic.
-- [ ] 259-09-PLAN.md — Join Phase-259 certificates to the Phase-258 identity DAG.
-- [ ] 259-25-PLAN.md — Create the package-free shared supervisor protocol and verifier.
+- [x] 259-03-PLAN.md — Install the language-neutral full-trace oracle and safe divergence contract.
+- [x] 259-08-PLAN.md — Make Chronicle admission version-strict, per-slot, and semantic.
+- [x] 259-09-PLAN.md — Join Phase-259 certificates to the Phase-258 identity DAG.
+- [x] 259-25-PLAN.md — Create the package-free shared supervisor protocol and verifier.
 
 **Wave 3 — review gates, service API, workspace wiring, and native meter**
 
