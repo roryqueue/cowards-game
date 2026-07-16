@@ -28,7 +28,10 @@ import {
   type CanonicalConformanceTrace,
 } from "../packages/golden/src/v1-37-conformance-trace.ts"
 // eslint-disable-next-line no-restricted-imports -- use the existing canonical JSON codec.
-import { encodeCanonicalJson, type JsonValue } from "../packages/spec/src/index.ts"
+import {
+  encodeCanonicalJson,
+  type JsonValue,
+} from "../packages/spec/src/index.ts"
 import type {
   V137ConformanceTraceCandidateManifest,
   V137ConformanceTraceProtectedCategory,
@@ -160,9 +163,9 @@ const categoryRoots = ({
       fixtures,
     }),
   ])
-  return Object.freeze(
-    Object.fromEntries(entries),
-  ) as Readonly<Record<V137ConformanceTraceProtectedCategory, string>>
+  return Object.freeze(Object.fromEntries(entries)) as Readonly<
+    Record<V137ConformanceTraceProtectedCategory, string>
+  >
 }
 
 const recomputeCompatibility = (): {
@@ -209,9 +212,7 @@ const computedManifestRoot = (
   )
 }
 
-const computedDiffRoot = (
-  diff: V137ConformanceTraceSemanticDiff,
-): string => {
+const computedDiffRoot = (diff: V137ConformanceTraceSemanticDiff): string => {
   const { semanticDiffRootSha256: _semanticDiffRootSha256, ...material } = diff
   return canonicalHash(
     "cowards-game:v1.37:conformance-trace-semantic-diff:v1",
@@ -240,8 +241,7 @@ const validateManifestShape = (
       "candidateRootSha256",
     ]) ||
     manifest.schemaVersion !== "v1.37-conformance-trace-candidate-v1" ||
-    manifest.generatedBy !==
-      "scripts/generate-v1-37-conformance-traces.ts" ||
+    manifest.generatedBy !== "scripts/generate-v1-37-conformance-traces.ts" ||
     manifest.authoritySource !== "canonical-engine-kernel-recording" ||
     manifest.policy !== "candidate-only-no-live-lane-oracle-no-promotion" ||
     manifest.corpusVersion !== V1_37_CONFORMANCE_CORPUS.version ||
@@ -317,7 +317,9 @@ export const reviewV137ConformanceTraceDiff = ({
           candidateHash: claimed,
           recomputedCandidateHash: recomputed,
           changeCount:
-            claimed === baseline && recomputed === baseline && claimed === recomputed
+            claimed === baseline &&
+            recomputed === baseline &&
+            claimed === recomputed
               ? 0
               : 1,
         },
@@ -440,7 +442,9 @@ const parseArgs = (
 const main = (): void => {
   const args = parseArgs(process.argv.slice(2))
   const review = writeV137ConformanceTraceIndependentReview(args)
-  if (readFileSync(path.resolve(args.outputPath), "utf8") !== renderJson(review)) {
+  if (
+    readFileSync(path.resolve(args.outputPath), "utf8") !== renderJson(review)
+  ) {
     return fail("REVIEW_WRITE_CHECK_FAILED")
   }
   console.log(

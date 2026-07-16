@@ -17,14 +17,16 @@ import {
   type CanonicalConformanceTrace,
 } from "../packages/golden/src/v1-37-conformance-trace.ts"
 // eslint-disable-next-line no-restricted-imports -- use the existing canonical JSON codec.
-import { encodeCanonicalJson, type JsonValue } from "../packages/spec/src/index.ts"
+import {
+  encodeCanonicalJson,
+  type JsonValue,
+} from "../packages/spec/src/index.ts"
 import {
   V137_CONFORMANCE_TRACE_BASELINE_VERSION,
   V137_CONFORMANCE_TRACE_PROTECTED_CATEGORIES,
   computeV137ConformanceTraceCandidateRoot,
   lockedV137CompatibilityCategoryRoots,
   type V137ConformanceTraceCandidateManifest,
-  type V137ConformanceTraceProtectedCategory,
   type V137ConformanceTraceSemanticDiff,
 } from "./generate-v1-37-conformance-traces.js"
 
@@ -129,8 +131,7 @@ const manifestShapeValid = (
       "candidateRootSha256",
     ]) ||
     manifest.schemaVersion !== "v1.37-conformance-trace-candidate-v1" ||
-    manifest.generatedBy !==
-      "scripts/generate-v1-37-conformance-traces.ts" ||
+    manifest.generatedBy !== "scripts/generate-v1-37-conformance-traces.ts" ||
     manifest.authoritySource !== "canonical-engine-kernel-recording" ||
     manifest.recordingApi !== "RecordedCanonicalTransitionV137" ||
     manifest.projectorApi !== "projectCanonicalConformanceTrace" ||
@@ -173,7 +174,9 @@ export const checkV137ConformanceTraceCandidate = ({
     !existsSync(diffPath) ||
     !existsSync(tracesDirectory)
   ) {
-    return ["candidate manifest, semantic diff, and traces directory are required"]
+    return [
+      "candidate manifest, semantic diff, and traces directory are required",
+    ]
   }
   let manifest: V137ConformanceTraceCandidateManifest
   try {
@@ -308,7 +311,9 @@ const main = (): void => {
   const args = assertV137ConformanceTraceCheckArgs(process.argv.slice(2))
   const errors = checkV137ConformanceTraceCandidate(args)
   if (errors.length > 0) throw new Error(errors.join("\n"))
-  console.log(`v1.37 conformance trace candidate current: ${args.candidateDirectory}`)
+  console.log(
+    `v1.37 conformance trace candidate current: ${args.candidateDirectory}`,
+  )
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {

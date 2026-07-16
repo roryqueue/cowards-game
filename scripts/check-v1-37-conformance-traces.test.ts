@@ -10,6 +10,7 @@ import {
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { afterEach, describe, expect, it } from "vitest"
+// eslint-disable-next-line no-restricted-imports -- repo-root checker test exercises the exact golden source contract.
 import {
   V1_37_CONFORMANCE_CORPUS,
   V1_37_CONFORMANCE_CORPUS_ROOT,
@@ -47,14 +48,16 @@ describe("v1.37 conformance trace candidate checker", () => {
   it("is read-only and accepts the complete exact candidate", () => {
     const directory = candidate()
     const before = readFileSync(path.join(directory, "manifest.json"))
-    expect(checkV137ConformanceTraceCandidate({ candidateDirectory: directory })).toEqual(
-      [],
-    )
+    expect(
+      checkV137ConformanceTraceCandidate({ candidateDirectory: directory }),
+    ).toEqual([])
     expect(readFileSync(path.join(directory, "manifest.json"))).toEqual(before)
-    expect(assertV137ConformanceTraceCheckArgs([
-      `--candidate-dir=${directory}`,
-      "--check",
-    ])).toEqual({ candidateDirectory: directory, check: true })
+    expect(
+      assertV137ConformanceTraceCheckArgs([
+        `--candidate-dir=${directory}`,
+        "--check",
+      ]),
+    ).toEqual({ candidateDirectory: directory, check: true })
     for (const args of [
       [],
       ["--write"],

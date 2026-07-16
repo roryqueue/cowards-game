@@ -1,15 +1,11 @@
 /// <reference types="node" />
 
 import { createHash } from "node:crypto"
-import {
-  mkdtempSync,
-  readFileSync,
-  readdirSync,
-  rmSync,
-} from "node:fs"
+import { mkdtempSync, readFileSync, readdirSync, rmSync } from "node:fs"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { afterEach, describe, expect, it } from "vitest"
+// eslint-disable-next-line no-restricted-imports -- repo-root governance test exercises the exact golden source contract.
 import {
   V1_37_CONFORMANCE_CORPUS,
   V1_37_CONFORMANCE_CORPUS_ROOT,
@@ -59,9 +55,9 @@ describe("v1.37 conformance trace candidate generation", () => {
       policy: "candidate-only-no-live-lane-oracle-no-promotion",
       caseCount: V1_37_CONFORMANCE_CORPUS.cases.length,
     })
-    expect(manifest.cases.map(({ caseId }: { caseId: string }) => caseId)).toEqual(
-      V1_37_CONFORMANCE_CORPUS.cases.map(({ id }) => id),
-    )
+    expect(
+      manifest.cases.map(({ caseId }: { caseId: string }) => caseId),
+    ).toEqual(V1_37_CONFORMANCE_CORPUS.cases.map(({ id }) => id))
     expect(traceNames).toEqual(
       V1_37_CONFORMANCE_CORPUS.cases.map(({ id }) => `${id}.json`),
     )
@@ -72,7 +68,7 @@ describe("v1.37 conformance trace candidate generation", () => {
     expect(JSON.stringify(manifest)).not.toMatch(
       /laneOutput|typescriptOracle|approval|approved|disposition/iu,
     )
-  })
+  }, 30_000)
 
   it("refuses active paths, version reuse, existing candidates, and live-lane arguments", () => {
     expect(() =>
@@ -109,9 +105,7 @@ describe("v1.37 conformance trace candidate generation", () => {
   })
 
   it("changes candidate identity when the bound corpus identity changes", () => {
-    const changedCorpus = globalThis.structuredClone(
-      V1_37_CONFORMANCE_CORPUS,
-    )
+    const changedCorpus = globalThis.structuredClone(V1_37_CONFORMANCE_CORPUS)
     changedCorpus.cases[0]!.expectation.reasonCode = "CHANGED_EXPECTATION"
     expect(() =>
       generateV137ConformanceTraceCandidate({

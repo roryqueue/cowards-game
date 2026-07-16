@@ -2,16 +2,14 @@
 /// <reference types="node" />
 
 import { createHash } from "node:crypto"
-import {
-  existsSync,
-  mkdirSync,
-  readFileSync,
-  writeFileSync,
-} from "node:fs"
+import { existsSync, mkdirSync, writeFileSync } from "node:fs"
 import path from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
 // eslint-disable-next-line no-restricted-imports -- repo-root candidate generator consumes the canonical engine authority.
-import { MATCH_KERNEL, type StrategyRuntime } from "../packages/engine/src/index.ts"
+import {
+  MATCH_KERNEL,
+  type StrategyRuntime,
+} from "../packages/engine/src/index.ts"
 // eslint-disable-next-line no-restricted-imports -- fixture-only adapter binds deterministic kernel requests without invoking a language lane.
 import { adaptRuntimeForCurrentKernel } from "../packages/engine/src/test/current-kernel-runtime.ts"
 // eslint-disable-next-line no-restricted-imports -- compatibility roots are immutable review inputs, not regenerated authority.
@@ -46,9 +44,15 @@ import {
   type RecordedCanonicalTransitionV137,
 } from "../packages/replay/src/record.ts"
 // eslint-disable-next-line no-restricted-imports -- use the existing canonical JSON codec and types.
-import { encodeCanonicalJson, type JsonValue } from "../packages/spec/src/index.ts"
+import {
+  encodeCanonicalJson,
+  type JsonValue,
+} from "../packages/spec/src/index.ts"
 
-const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
+const repoRoot = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "..",
+)
 
 export const ACTIVE_V137_CONFORMANCE_TRACE_ROOT = path.join(
   repoRoot,
@@ -158,7 +162,6 @@ const fail = (code: string): never => {
   throw new V137ConformanceTraceCandidateError(code)
 }
 const VERSION = /^v[1-9][0-9A-Za-z.-]{0,127}$/u
-const HASH = /^sha256:[0-9a-f]{64}$/u
 const renderJson = (value: unknown): string =>
   `${JSON.stringify(value, null, 2)}\n`
 const sha256 = (value: Uint8Array | string): string =>
@@ -179,10 +182,10 @@ const inside = (candidate: string, root: string): boolean => {
   )
 }
 const evidenceHash = (label: string, caseId: string): string =>
-  canonicalHash(
-    "cowards-game:v1.37:conformance-trace-evidence:v1",
-    { label, caseId } as JsonValue,
-  )
+  canonicalHash("cowards-game:v1.37:conformance-trace-evidence:v1", {
+    label,
+    caseId,
+  } as JsonValue)
 
 const categoryDimensions: Readonly<
   Record<
@@ -215,10 +218,7 @@ const compatibilityCategoryRoots = ({
     ([category, dimensions]) => [
       category,
       hashCompatibilityValue(
-        dimensions.map((dimension) => [
-          dimension,
-          dimensionRoots[dimension],
-        ]),
+        dimensions.map((dimension) => [dimension, dimensionRoots[dimension]]),
       ),
     ],
   )
@@ -233,32 +233,34 @@ const compatibilityCategoryRoots = ({
       fixtures: fixtureRoots,
     }),
   ])
-  return Object.freeze(
-    Object.fromEntries(entries),
-  ) as Readonly<Record<V137ConformanceTraceProtectedCategory, string>>
+  return Object.freeze(Object.fromEntries(entries)) as Readonly<
+    Record<V137ConformanceTraceProtectedCategory, string>
+  >
 }
 
-export const lockedV137CompatibilityCategoryRoots =
-  (): Readonly<Record<V137ConformanceTraceProtectedCategory, string>> => {
-    lockedCompatibilityRoots ??= compatibilityCategoryRoots({
-      dimensionRoots: LOCKED_V1_4_DIMENSION_ROOTS,
-      fixtureRoots: Object.entries(LOCKED_V1_4_FIXTURE_HASHES),
-    })
-    return lockedCompatibilityRoots
-  }
+export const lockedV137CompatibilityCategoryRoots = (): Readonly<
+  Record<V137ConformanceTraceProtectedCategory, string>
+> => {
+  lockedCompatibilityRoots ??= compatibilityCategoryRoots({
+    dimensionRoots: LOCKED_V1_4_DIMENSION_ROOTS,
+    fixtureRoots: Object.entries(LOCKED_V1_4_FIXTURE_HASHES),
+  })
+  return lockedCompatibilityRoots
+}
 
-export const captureV137CompatibilityCategoryRoots =
-  (): Readonly<Record<V137ConformanceTraceProtectedCategory, string>> => {
-    if (capturedCompatibilityRoots !== undefined) {
-      return capturedCompatibilityRoots
-    }
-    const fixtures = captureV14CompatibilityCorpus()
-    capturedCompatibilityRoots = compatibilityCategoryRoots({
-      dimensionRoots: hashCompatibilityDimensionRoots(fixtures),
-      fixtureRoots: fixtures.map(({ name, overallHash }) => [name, overallHash]),
-    })
+export const captureV137CompatibilityCategoryRoots = (): Readonly<
+  Record<V137ConformanceTraceProtectedCategory, string>
+> => {
+  if (capturedCompatibilityRoots !== undefined) {
     return capturedCompatibilityRoots
   }
+  const fixtures = captureV14CompatibilityCorpus()
+  capturedCompatibilityRoots = compatibilityCategoryRoots({
+    dimensionRoots: hashCompatibilityDimensionRoots(fixtures),
+    fixtureRoots: fixtures.map(({ name, overallHash }) => [name, overallHash]),
+  })
+  return capturedCompatibilityRoots
+}
 
 let lockedCompatibilityRoots:
   | Readonly<Record<V137ConformanceTraceProtectedCategory, string>>
@@ -337,7 +339,11 @@ const successTrace = (
   const recorded = canonicalRecording()
   const first = recorded.transitions[0]
   const last = recorded.transitions.at(-1)
-  if (first === undefined || last === undefined || last.terminalStatus === null) {
+  if (
+    first === undefined ||
+    last === undefined ||
+    last.terminalStatus === null
+  ) {
     return fail("CANONICAL_RECORDING_INCOMPLETE")
   }
   const invocations: readonly CanonicalConformanceInvocation[] = [
@@ -476,8 +482,7 @@ const semanticDiff = (
   manifest: V137ConformanceTraceCandidateManifest,
 ): V137ConformanceTraceSemanticDiff => {
   const baselineCategories = lockedV137CompatibilityCategoryRoots()
-  const candidateCategories =
-    manifest.compatibilityEvidence.protectedCategories
+  const candidateCategories = manifest.compatibilityEvidence.protectedCategories
   const protectedCategories = Object.fromEntries(
     V137_CONFORMANCE_TRACE_PROTECTED_CATEGORIES.map((category) => [
       category,
@@ -485,7 +490,9 @@ const semanticDiff = (
         baselineHash: baselineCategories[category],
         candidateHash: candidateCategories[category],
         changeCount:
-          baselineCategories[category] === candidateCategories[category] ? 0 : 1,
+          baselineCategories[category] === candidateCategories[category]
+            ? 0
+            : 1,
       },
     ]),
   ) as V137ConformanceTraceSemanticDiff["protectedCategories"]
