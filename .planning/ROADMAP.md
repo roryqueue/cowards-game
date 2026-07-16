@@ -273,11 +273,11 @@ Plans:
 
 **Wave 4 — real language adapters and authenticated service receipt**
 
-- [ ] 259-10-PLAN.md — Make supervised subprocess execution the sole counted TypeScript path.
-- [ ] 259-11-PLAN.md — Run Python under the same quantitative and failure-safe boundary.
-- [ ] 259-12-PLAN.md — Run real Rust and Zig artifacts under the common supervisor.
-- [ ] 259-15-PLAN.md — Create the additive Chronicle/certificate-bound service receipt.
-- [ ] 259-27-PLAN.md — Apply the compatibility gate to reviewed golden candidates.
+- [x] 259-10-PLAN.md — Make supervised subprocess execution the sole counted TypeScript path.
+- [x] 259-11-PLAN.md — Run Python under the same quantitative and failure-safe boundary.
+- [x] 259-12-PLAN.md — Run real Rust and Zig artifacts under the common supervisor.
+- [x] 259-15-PLAN.md — Create the additive Chronicle/certificate-bound service receipt.
+- [x] 259-27-PLAN.md — Apply the compatibility gate to reviewed golden candidates.
 
 **Wave 5 — all-lane differential execution and public spec contract**
 
@@ -360,6 +360,6 @@ Cycle-cap, inward-start, facing-only MOVE, reversal-history, attacker-facing/Adv
 | 256. Counted Safety and Canonical Authority | 19/19 | Complete    | 2026-07-13 |
 | 257. Canonical Transition Kernel and v1.4 Semantic Integrity | 22/22 | Complete | 2026-07-13 |
 | 258. Canonical JSON, Failure Semantics, and Artifact Identity | 14/14 | Complete | 2026-07-16 |
-| 259. Executable Four-Language and Chronicle Conformance | 15/31 | In progress | - |
+| 259. Executable Four-Language and Chronicle Conformance | 20/31 | In progress | - |
 | 260. Truthful Strategy Inputs, Arena Authority, and Set Fairness | 0/TBD | Not started | - |
 | 261. Integrated Service Proof, Drift Guards, and Release | 0/TBD | Not started | - |

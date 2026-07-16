@@ -5,15 +5,15 @@ milestone_name: Rules Integrity and Strategy Evaluation Foundations — ACTIVE
 current_phase: 259
 current_phase_name: executable-four-language-and-chronicle-conformance
 status: ready
-stopped_at: Phase 259 Wave 3 complete; Wave 4 execution in progress
-last_updated: "2026-07-16T13:16:35-04:00"
+stopped_at: Phase 259 Wave 4 complete; Wave 5 ready
+last_updated: "2026-07-16T14:10:49-04:00"
 last_activity: 2026-07-16
-last_activity_desc: Phase 259 Wave 3 closed reviewed trace promotion inputs, reconstruction equality, workspace wiring, and the real pinned Linux cgroup-v2 supervisor with combined proof green
+last_activity_desc: Phase 259 Wave 4 integrated real supervised TypeScript, Python, Rust, and Zig adapters, the additive authenticated v1.18 receipt, and exact zero-delta trace promotion
 progress:
   total_phases: 6
   completed_phases: 3
   total_plans: 86
-  completed_plans: 70
+  completed_plans: 75
   percent: 50
 ---
 
@@ -29,9 +29,9 @@ See: `.planning/PROJECT.md` (updated 2026-07-12)
 ## Current Position
 
 Phase: 259 (executable-four-language-and-chronicle-conformance) — IN PROGRESS
-Plan: 15 of 31
-Status: Waves 1-3 complete after independent review/fix convergence; Wave 4 execution in progress
-Last activity: 2026-07-16 — Closed Phase 259 Wave 3 with 51 golden/trace tests, 208 replay tests, 136 engine tests, 29 supervisor tests, 9 Rust tests, real pinned Linux certification, and all identity/boundary/protected-byte gates green
+Plan: 20 of 31
+Status: Waves 1-4 complete after independent review/fix convergence; Wave 5 ready
+Last activity: 2026-07-16 — Closed Phase 259 Wave 4 with 76 joined adapter/supervisor tests, 68 full WASI tests, 65 receipt/golden/governance tests, database-backed Go proof, real pinned Linux certification, and all type/lint/boundary/protected-byte gates green
 
 Progress: [█████░░░░░] 50%
 
@@ -61,9 +61,9 @@ Progress: [█████░░░░░] 50%
 
 **Resume file:** None
 
-Last session: 2026-07-16T13:16:35-04:00
-Stopped at: Phase 259 Wave 3 complete; Wave 4 execution in progress
-Next command: `$gsd-execute-phase 259` Wave 4 for plans 259-10, 259-11, 259-12, 259-15, and 259-27.
+Last session: 2026-07-16T14:10:49-04:00
+Stopped at: Phase 259 Wave 4 complete; Wave 5 ready
+Next command: `$gsd-execute-phase 259` Wave 5 for plans 259-13 and 259-30.
 
 ## Performance Metrics
 
