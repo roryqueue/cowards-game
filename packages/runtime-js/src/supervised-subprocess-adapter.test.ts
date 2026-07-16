@@ -63,8 +63,10 @@ const inputBytes = canonicalBytes({
   },
 })
 const payloadBytes = canonicalBytes({
-  action: { type: "WAIT" },
-  guestClaimedSignature: "GUEST_FORGED_EVIDENCE_POISON",
+  action: { type: "TURN_TO_STONE" },
+  soldierMemory: {
+    guestClaimedSignature: "GUEST_FORGED_EVIDENCE_POISON",
+  },
 })
 const stdoutBytes = payloadBytes
 const stderrBytes = new Uint8Array()
@@ -426,6 +428,42 @@ describe("TypeScript supervised subprocess adapter v1.18", () => {
       })
       expect(signEvidence).not.toHaveBeenCalled()
     }
+  })
+
+  it("rejects malformed or schema-invalid guest payload before signing", () => {
+    const invalidPayload = canonicalBytes({
+      action: { type: "WAIT" },
+      guestClaimedCertificate: true,
+    })
+    const invalidLaunch: TypeScriptSupervisorHostLaunchV118 = (request) => {
+      const receipt = rawReceipt(request)
+      receipt.bytes.payloadBytes = invalidPayload.byteLength
+      receipt.bytes.stdoutBytes = invalidPayload.byteLength
+      const envelope = createSupervisorRawReceiptEnvelopeV118({
+        request,
+        receipt,
+        observed: {
+          payloadBytes: invalidPayload,
+          stdoutBytes: invalidPayload,
+          stderrBytes,
+        },
+      })
+      return {
+        rawReceiptBytes: serializeSupervisorRawReceiptEnvelopeV118(envelope),
+        observed: {
+          payloadBytes: invalidPayload,
+          stdoutBytes: invalidPayload,
+          stderrBytes,
+        },
+      }
+    }
+    const { result, signEvidence } = execute({ launch: invalidLaunch })
+    expect(result).toEqual({
+      kind: "system_failure",
+      gameplayDisposition: "no_mutation",
+      code: "GUEST_PAYLOAD_INVALID",
+    })
+    expect(signEvidence).not.toHaveBeenCalled()
   })
 
   it("fails closed if the host signer throws or returns a noncanonical signature", () => {

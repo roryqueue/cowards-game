@@ -2,6 +2,9 @@ import { Buffer } from "node:buffer"
 import { createHash } from "node:crypto"
 import {
   RUNTIME_BUDGET_PROFILE_V1_18_SHA256,
+  SoldierBrainResultV117Schema,
+  StrategyResultV117Schema,
+  admitCanonicalJsonBytes,
   encodeCanonicalJson,
   evaluateRuntimeBudgetCapabilityV118,
   type JsonValue,
@@ -100,6 +103,7 @@ export type CountedTypeScriptSupervisedResultV118 =
         | SupervisorVerificationFailureCodeV118
         | "LANGUAGE_IDENTITY_MISMATCH"
         | "SUPERVISOR_LAUNCH_FAILED"
+        | "GUEST_PAYLOAD_INVALID"
         | "EVIDENCE_SIGNING_FAILED"
     }>
 
@@ -165,6 +169,21 @@ const languageIdentityMatches = (
   invocation.expectedIdentity.runtimeCompilerSha256 ===
     expected.runtimeCompilerSha256 &&
   invocation.expectedIdentity.artifactSha256 === expected.artifactSha256
+
+const guestPayloadIsValid = (
+  invocation: RuntimeInvocationRequestV118,
+  bytes: Uint8Array,
+): boolean => {
+  const admitted = admitCanonicalJsonBytes(bytes, {
+    profile: "strategy-payload",
+  })
+  if (!admitted.ok) return false
+  return (
+    invocation.method === "selectActivations"
+      ? StrategyResultV117Schema
+      : SoldierBrainResultV117Schema
+  ).safeParse(admitted.value).success
+}
 
 const capabilityFor = (
   evidence: VerifiedSupervisorEvidenceV118,
@@ -330,14 +349,25 @@ export const createCountedTypeScriptSupervisedAdapterV118 = (options: {
       } catch {
         return systemFailure("SUPERVISOR_LAUNCH_FAILED")
       }
-      const verified = verifySupervisorRawReceiptV118({
-        request,
-        rawReceiptBytes: launched.rawReceiptBytes,
-        observed: launched.observed,
-      })
+      let verified: ReturnType<typeof verifySupervisorRawReceiptV118>
+      try {
+        verified = verifySupervisorRawReceiptV118({
+          request,
+          rawReceiptBytes: launched.rawReceiptBytes,
+          observed: launched.observed,
+        })
+      } catch {
+        return systemFailure("RAW_RECEIPT_INVALID")
+      }
       if (!verified.ok) return systemFailure(verified.code)
       if (!isVerifiedSupervisorEvidenceV118(verified.value)) {
         return systemFailure("RAW_RECEIPT_INVALID")
+      }
+      if (
+        verified.value.result.kind === "success" &&
+        !guestPayloadIsValid(input.invocation, launched.observed.payloadBytes)
+      ) {
+        return systemFailure("GUEST_PAYLOAD_INVALID")
       }
       const capability = capabilityFor(verified.value, input.invocation)
       const signature = signedEvidence(
