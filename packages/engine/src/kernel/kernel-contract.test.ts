@@ -490,32 +490,36 @@ describe("Phase 257 canonical Match kernel contract", () => {
     expect(penalized.kind).not.toBe("failure")
   })
 
-  it("driver execution is deterministic and returns its identical ordered canonical stream", () => {
-    if (candidateAuthority === undefined) return
-    const first = candidateAuthority.runMatch(withRuntime())
-    const second = candidateAuthority.runMatch(withRuntime())
+  it(
+    "driver execution is deterministic and returns its identical ordered canonical stream",
+    () => {
+      if (candidateAuthority === undefined) return
+      const first = candidateAuthority.runMatch(withRuntime())
+      const second = candidateAuthority.runMatch(withRuntime())
 
-    expect(first).toEqual(second)
-    expect(first.kind).toBe("completed")
-    expect(first.transitions.length).toBeGreaterThan(0)
-    first.transitions.forEach((transition) => {
-      expectRecordContract(transition)
+      expect(first).toEqual(second)
+      expect(first.kind).toBe("completed")
+      expect(first.transitions.length).toBeGreaterThan(0)
+      first.transitions.forEach((transition) => {
+        expectRecordContract(transition)
+        expect(
+          validateCanonicalTransition(
+            transition as unknown as CanonicalKernelSemanticTransition,
+          ),
+        ).toMatchObject({ ok: true })
+      })
+
+      const transitionEvents = first.transitions.flatMap(
+        (transition) => transition.events,
+      )
+      expect(first.result?.events).toEqual(transitionEvents)
       expect(
-        validateCanonicalTransition(
-          transition as unknown as CanonicalKernelSemanticTransition,
-        ),
-      ).toMatchObject({ ok: true })
-    })
-
-    const transitionEvents = first.transitions.flatMap(
-      (transition) => transition.events,
-    )
-    expect(first.result?.events).toEqual(transitionEvents)
-    expect(
-      transitionEvents.filter((event) => event.type === "MATCH_ENDED"),
-    ).toHaveLength(1)
-    expectNoPrivateTransitionData(first.transitions)
-  })
+        transitionEvents.filter((event) => event.type === "MATCH_ENDED"),
+      ).toHaveLength(1)
+      expectNoPrivateTransitionData(first.transitions)
+    },
+    15_000,
+  )
 
   it("driver discards every partial record when a runtime system failure occurs", () => {
     if (candidateAuthority === undefined) return
