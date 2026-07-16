@@ -5,15 +5,15 @@ milestone_name: Rules Integrity and Strategy Evaluation Foundations — ACTIVE
 current_phase: 259
 current_phase_name: executable-four-language-and-chronicle-conformance
 status: ready
-stopped_at: Phase 259 Wave 5 complete; Wave 6 ready
-last_updated: "2026-07-16T14:39:08-04:00"
+stopped_at: Phase 259 Wave 6 complete; Wave 7 ready
+last_updated: "2026-07-16T16:41:22-04:00"
 last_activity: 2026-07-16
-last_activity_desc: Phase 259 Wave 5 installed the strict branded four-language full-trace runner and published the additive v1.18 public spec contract
+last_activity_desc: Phase 259 Wave 6 produced four reviewed real-language candidates and closed shared semantic service/persistence admission
 progress:
   total_phases: 6
   completed_phases: 3
   total_plans: 86
-  completed_plans: 77
+  completed_plans: 80
   percent: 50
 ---
 
@@ -29,9 +29,9 @@ See: `.planning/PROJECT.md` (updated 2026-07-12)
 ## Current Position
 
 Phase: 259 (executable-four-language-and-chronicle-conformance) — IN PROGRESS
-Plan: 22 of 31
-Status: Waves 1-5 complete after independent review/fix convergence; Wave 6 ready
-Last activity: 2026-07-16 — Closed Phase 259 Wave 5 with 55 joined runner/adapter tests, 326 explicit spec tests, strict immutable oracle verification, public v1.18 exports, and all affected type/lint/protected-byte gates green
+Plan: 25 of 31
+Status: Waves 1-6 complete after real four-language certification and shared semantic-admission convergence; Wave 7 ready
+Last activity: 2026-07-16 — Closed Phase 259 Wave 6 with twelve fresh contained language runs, four canonical reviewed candidates, shared Chronicle/reconstruction admission, and protected-byte gates green
 
 Progress: [█████░░░░░] 50%
 
@@ -45,6 +45,9 @@ Progress: [█████░░░░░] 50%
 - Public/default output remains source, artifact, memory, objective, diagnostics, runtime-internal, dispute-internal, recovery-sensitive, and operator-detail safe.
 - v1.37 preserves valid v1.4 gameplay and immutable historical evidence; any semantic delta requires explicit compatibility approval.
 - Optional Cycle-start Backstab removal and post-Advance HOLD/END_ACTIVATION are not required for v1.37 and proceed only after equivalence proof and approval.
+- TypeScript, Python, Rust, and Zig reviewed candidates remain unsigned and non-promoting until managed signing, immediate verification, append-only import, and all-four closure complete.
+- Counted Rust/Zig conformance uses the exact pinned Wasmtime Winch low-memory settings because default Cranelift execution exceeds the v1.18 64 MiB lane ceiling.
+- Fresh-run equality persists deterministic proof facts after validating complete raw receipts; platform-variable exit details cannot manufacture evidence drift or weaken the underlying fail-closed checks.
 
 ## Deferred Items
 
@@ -61,9 +64,9 @@ Progress: [█████░░░░░] 50%
 
 **Resume file:** None
 
-Last session: 2026-07-16T14:39:08-04:00
-Stopped at: Phase 259 Wave 5 complete; Wave 6 ready
-Next command: `$gsd-execute-phase 259` Wave 6 for plans 259-16, 259-17, and 259-18.
+Last session: 2026-07-16T16:41:22-04:00
+Stopped at: Phase 259 Wave 6 complete; Wave 7 ready
+Next command: `$gsd-execute-phase 259` Wave 7 for plans 259-19 and 259-20.
 
 ## Performance Metrics
 

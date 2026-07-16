@@ -286,9 +286,9 @@ Plans:
 
 **Wave 6 — certificate production and shared semantic admission**
 
-- [ ] 259-16-PLAN.md — Produce fresh-process certificates for all four real languages.
-- [ ] 259-17-PLAN.md — Require Chronicle semantics and reconstruction at runtime-service success.
-- [ ] 259-18-PLAN.md — Require the same evidence for durable Match completion.
+- [x] 259-16-PLAN.md — Produce fresh-process certificates for all four real languages.
+- [x] 259-17-PLAN.md — Require Chronicle semantics and reconstruction at runtime-service success.
+- [x] 259-18-PLAN.md — Require the same evidence for durable Match completion.
 
 **Wave 7 — evidence ledger and independent Go verification**
 
