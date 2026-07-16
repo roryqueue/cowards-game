@@ -532,6 +532,53 @@ describe("frozen historical v1.4 interpretation", () => {
     }
   })
 
+  it("owns every frozen v1.4 runtime schema and scheduling dependency locally", () => {
+    for (const file of [
+      "packages/replay/src/historical-v1-4-grammar.ts",
+      "packages/replay/src/historical-v1-4-transition.ts",
+    ]) {
+      const source = readFileSync(file, "utf8")
+      const specImports =
+        source
+          .match(/import[\s\S]*?from\s+["'][^"']+["']/gu)
+          ?.filter((statement) => statement.includes('"@cowards/spec"')) ?? []
+      expect(
+        specImports.every((statement) => /^import\s+type\b/u.test(statement)),
+      ).toBe(true)
+    }
+    const grammar = readFileSync(
+      "packages/replay/src/historical-v1-4-grammar.ts",
+      "utf8",
+    )
+    expect(grammar).toContain("HISTORICAL_V14_MAX_ACTIVATION_CYCLES = 12")
+    expect(grammar).toContain("1: 1")
+    expect(grammar).toContain("2: 2")
+    expect(grammar).toContain("3: 3")
+    expect(grammar).toContain("4: 4")
+  })
+
+  it.each([
+    { type: "WIN", winnerPlayerId: "bottom" },
+    { type: "DRAW" },
+    { type: "FAILED", reason: "MAX_PHASES_EXCEEDED" },
+  ] as const)("applies frozen historical $type outcomes", (outcome) => {
+    const result = applyHistoricalV14Transition(initialState(), {
+      type: "MATCH_ENDED",
+      sequence: 0,
+      context: {},
+      privacy: "public",
+      payload: outcome,
+    })
+
+    expect(result).toEqual({
+      ok: true,
+      state: {
+        ...initialState(),
+        outcome,
+      },
+    })
+  })
+
   it("pins the strict archived and frozen source identity manifest", () => {
     expect(auditHistoricalManifest(readManifest())).toEqual([])
   })

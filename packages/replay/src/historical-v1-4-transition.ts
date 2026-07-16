@@ -1,14 +1,13 @@
 import { createHash } from "node:crypto"
-import {
-  MatchOutcomeSchema,
-  type ChronicleEvent,
-  type ChronicleValidationError,
-  type Direction,
-  type FullBoardSnapshot,
-  type JsonValue,
-  type MatchOutcome,
-  type Position,
-  type SoldierSnapshot,
+import type {
+  ChronicleEvent,
+  ChronicleValidationError,
+  Direction,
+  FullBoardSnapshot,
+  JsonValue,
+  MatchOutcome,
+  Position,
+  SoldierSnapshot,
 } from "@cowards/spec"
 
 export interface HistoricalV14ReplayState {
@@ -78,6 +77,28 @@ const readBoolean = (payload: JsonValue, key: string): boolean | undefined => {
   if (!isRecord(payload)) return undefined
   const value = payload[key]
   return typeof value === "boolean" ? value : undefined
+}
+
+const readHistoricalV14MatchOutcome = (
+  payload: JsonValue,
+): MatchOutcome | undefined => {
+  if (!isRecord(payload)) return undefined
+  if (payload.type === "DRAW") return { type: "DRAW" }
+  if (
+    payload.type === "WIN" &&
+    typeof payload.winnerPlayerId === "string" &&
+    payload.winnerPlayerId.length > 0
+  ) {
+    return { type: "WIN", winnerPlayerId: payload.winnerPlayerId }
+  }
+  if (
+    payload.type === "FAILED" &&
+    typeof payload.reason === "string" &&
+    payload.reason.length > 0
+  ) {
+    return { type: "FAILED", reason: payload.reason }
+  }
+  return undefined
 }
 
 const readDirection = (
@@ -433,8 +454,8 @@ export const applyHistoricalV14Transition = (
       }
     }
     case "MATCH_ENDED": {
-      const parsed = MatchOutcomeSchema.safeParse(event.payload)
-      if (!parsed.success) {
+      const outcome = readHistoricalV14MatchOutcome(event.payload)
+      if (outcome === undefined) {
         return {
           ok: false,
           errors: [
@@ -448,7 +469,7 @@ export const applyHistoricalV14Transition = (
         ok: true,
         state: {
           ...state,
-          outcome: parsed.data as MatchOutcome,
+          outcome,
         },
       }
     }

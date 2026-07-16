@@ -1,13 +1,19 @@
-import {
-  HistoricalV14ChronicleSchema,
-  MAX_ACTIVATION_CYCLES,
-  ROUND_ACTIVATION_COUNTS,
-  type Chronicle,
-  type ChronicleEvent,
-  type ChronicleEventType,
-  type ChronicleValidationError,
-  type JsonValue,
+import type {
+  Chronicle,
+  ChronicleEvent,
+  ChronicleEventType,
+  ChronicleValidationError,
+  JsonValue,
 } from "@cowards/spec"
+
+const HISTORICAL_V14_MAX_ACTIVATION_CYCLES = 12 as const
+
+const HISTORICAL_V14_ROUND_ACTIVATION_COUNTS = Object.freeze({
+  1: 1,
+  2: 2,
+  3: 3,
+  4: 4,
+} as const)
 
 export const HISTORICAL_V14_EVENT_TYPES = Object.freeze([
   "MATCH_STARTED",
@@ -132,6 +138,830 @@ const error = (
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   value !== null && typeof value === "object" && !Array.isArray(value)
+
+interface HistoricalSchemaIssue {
+  readonly path: readonly (string | number)[]
+  readonly message: string
+}
+
+type HistoricalSchemaParseResult =
+  | { readonly success: true; readonly data: Chronicle }
+  | {
+      readonly success: false
+      readonly error: { readonly issues: readonly HistoricalSchemaIssue[] }
+    }
+
+const HISTORICAL_V14_DIRECTIONS = new Set(["UP", "DOWN", "LEFT", "RIGHT"])
+
+const HISTORICAL_V14_SOLDIER_STATUSES = new Set(["ACTIVE", "STONE", "FALLEN"])
+
+const HISTORICAL_V14_SNAPSHOT_KINDS = new Set([
+  "MATCH_START",
+  "MATCH_END",
+  "ROUND_START",
+  "ROUND_END",
+  "ACTIVATION_START",
+  "ACTIVATION_END",
+  "CONTRACTION",
+  "TERMINAL",
+])
+
+const HISTORICAL_V14_PRIVACY_VALUES = new Set(["public", "owner", "private"])
+
+const HISTORICAL_V14_RUNTIME_VIOLATIONS = new Set([
+  "INVALID_OUTPUT",
+  "TIMEOUT",
+  "THROWN_EXCEPTION",
+  "FORBIDDEN_CAPABILITY",
+  "OVERSIZED_OUTPUT",
+])
+
+const HISTORICAL_V14_BACKSTAB_BOUNDARIES = new Set([
+  "activation-start",
+  "activation-end",
+  "post-advance",
+  "cycle-start",
+  "cycle-end",
+])
+
+const isFiniteNumber = (value: unknown): value is number =>
+  typeof value === "number" && Number.isFinite(value)
+
+const isInteger = (value: unknown): value is number =>
+  isFiniteNumber(value) && Number.isInteger(value)
+
+const isNonnegativeInteger = (value: unknown): value is number =>
+  isInteger(value) && value >= 0
+
+const isPositiveInteger = (value: unknown): value is number =>
+  isInteger(value) && value > 0
+
+const isNonemptyString = (value: unknown): value is string =>
+  typeof value === "string" && value.length > 0
+
+const isHistoricalDirection = (value: unknown): boolean =>
+  typeof value === "string" && HISTORICAL_V14_DIRECTIONS.has(value)
+
+const addSchemaIssue = (
+  issues: HistoricalSchemaIssue[],
+  path: readonly (string | number)[],
+  message: string,
+): false => {
+  issues.push({ path, message })
+  return false
+}
+
+const validateOptional = (
+  value: unknown,
+  predicate: (candidate: unknown) => boolean,
+  issues: HistoricalSchemaIssue[],
+  path: readonly (string | number)[],
+  message: string,
+): boolean =>
+  value === undefined ||
+  predicate(value) ||
+  addSchemaIssue(issues, path, message)
+
+const validateJsonValue = (
+  value: unknown,
+  issues: HistoricalSchemaIssue[],
+  path: readonly (string | number)[],
+  ancestors = new WeakSet<object>(),
+): boolean => {
+  if (
+    value === null ||
+    typeof value === "string" ||
+    typeof value === "boolean" ||
+    isFiniteNumber(value)
+  ) {
+    return true
+  }
+  if (typeof value !== "object" || value === null) {
+    return addSchemaIssue(issues, path, "Expected a JSON value.")
+  }
+  if (ancestors.has(value)) {
+    return addSchemaIssue(issues, path, "Expected an acyclic JSON value.")
+  }
+  ancestors.add(value)
+  let valid = true
+  if (Array.isArray(value)) {
+    value.forEach((child, index) => {
+      valid =
+        validateJsonValue(child, issues, [...path, index], ancestors) && valid
+    })
+  } else {
+    for (const [key, child] of Object.entries(value)) {
+      valid =
+        validateJsonValue(child, issues, [...path, key], ancestors) && valid
+    }
+  }
+  ancestors.delete(value)
+  return valid
+}
+
+const validateHistoricalContext = (
+  value: unknown,
+  issues: HistoricalSchemaIssue[],
+  path: readonly (string | number)[],
+): boolean => {
+  if (!isRecord(value)) {
+    return addSchemaIssue(issues, path, "Expected an event context object.")
+  }
+  let valid = true
+  valid =
+    validateOptional(
+      value.phaseNumber,
+      isPositiveInteger,
+      issues,
+      [...path, "phaseNumber"],
+      "Expected a positive integer.",
+    ) && valid
+  valid =
+    validateOptional(
+      value.roundNumber,
+      (candidate) =>
+        candidate === 1 ||
+        candidate === 2 ||
+        candidate === 3 ||
+        candidate === 4,
+      issues,
+      [...path, "roundNumber"],
+      "Expected Round 1, 2, 3, or 4.",
+    ) && valid
+  for (const field of [
+    "activationId",
+    "actingPlayerId",
+    "soldierId",
+  ] as const) {
+    valid =
+      validateOptional(
+        value[field],
+        isNonemptyString,
+        issues,
+        [...path, field],
+        "Expected a non-empty string.",
+      ) && valid
+  }
+  for (const field of ["activationIndex", "cycleIndex"] as const) {
+    valid =
+      validateOptional(
+        value[field],
+        isNonnegativeInteger,
+        issues,
+        [...path, field],
+        "Expected a nonnegative integer.",
+      ) && valid
+  }
+  return valid
+}
+
+const validatePosition = (
+  value: unknown,
+  issues: HistoricalSchemaIssue[],
+  path: readonly (string | number)[],
+): boolean => {
+  if (!isRecord(value)) {
+    return addSchemaIssue(issues, path, "Expected a position object.")
+  }
+  let valid = true
+  for (const field of ["x", "y"] as const) {
+    if (!isInteger(value[field])) {
+      valid =
+        addSchemaIssue(issues, [...path, field], "Expected an integer.") &&
+        valid
+    }
+  }
+  return valid
+}
+
+const validateBounds = (
+  value: unknown,
+  issues: HistoricalSchemaIssue[],
+  path: readonly (string | number)[],
+): boolean => {
+  if (!isRecord(value)) {
+    return addSchemaIssue(issues, path, "Expected a board-bounds object.")
+  }
+  let valid = true
+  for (const field of ["minX", "maxX", "minY", "maxY"] as const) {
+    if (!isInteger(value[field])) {
+      valid =
+        addSchemaIssue(issues, [...path, field], "Expected an integer.") &&
+        valid
+    }
+  }
+  return valid
+}
+
+const validateHistoricalOutcome = (
+  value: unknown,
+  issues: HistoricalSchemaIssue[],
+  path: readonly (string | number)[],
+): boolean => {
+  if (!isRecord(value)) {
+    return addSchemaIssue(issues, path, "Expected a Match outcome object.")
+  }
+  if (value.type === "DRAW") return true
+  if (value.type === "WIN" && isNonemptyString(value.winnerPlayerId)) {
+    return true
+  }
+  if (value.type === "FAILED" && isNonemptyString(value.reason)) return true
+  return addSchemaIssue(issues, path, "Expected a frozen v1.4 Match outcome.")
+}
+
+const validateHistoricalAction = (
+  value: unknown,
+  issues: HistoricalSchemaIssue[],
+  path: readonly (string | number)[],
+): boolean => {
+  if (!isRecord(value)) {
+    return addSchemaIssue(issues, path, "Expected an Action object.")
+  }
+  if (value.type === "TURN_TO_STONE") return true
+  if (
+    (value.type === "MOVE" || value.type === "TURN") &&
+    isHistoricalDirection(value.direction)
+  ) {
+    return true
+  }
+  return addSchemaIssue(issues, path, "Expected a frozen v1.4 Action.")
+}
+
+const validateHistoricalBoard = (
+  value: unknown,
+  issues: HistoricalSchemaIssue[],
+  path: readonly (string | number)[],
+): boolean => {
+  if (!isRecord(value)) {
+    return addSchemaIssue(issues, path, "Expected a board snapshot object.")
+  }
+  let valid = validateBounds(value.bounds, issues, [...path, "bounds"])
+  if (!Array.isArray(value.soldiers)) {
+    valid =
+      addSchemaIssue(
+        issues,
+        [...path, "soldiers"],
+        "Expected a Soldier array.",
+      ) && valid
+  } else {
+    value.soldiers.forEach((soldier, index) => {
+      const soldierPath = [...path, "soldiers", index]
+      if (!isRecord(soldier)) {
+        valid =
+          addSchemaIssue(
+            issues,
+            soldierPath,
+            "Expected a Soldier snapshot object.",
+          ) && valid
+        return
+      }
+      for (const field of ["id", "ownerPlayerId"] as const) {
+        if (!isNonemptyString(soldier[field])) {
+          valid =
+            addSchemaIssue(
+              issues,
+              [...soldierPath, field],
+              "Expected a non-empty string.",
+            ) && valid
+        }
+      }
+      if (
+        typeof soldier.status !== "string" ||
+        !HISTORICAL_V14_SOLDIER_STATUSES.has(soldier.status)
+      ) {
+        valid =
+          addSchemaIssue(
+            issues,
+            [...soldierPath, "status"],
+            "Expected a frozen v1.4 Soldier status.",
+          ) && valid
+      }
+      if (
+        soldier.position !== null &&
+        !validatePosition(soldier.position, issues, [
+          ...soldierPath,
+          "position",
+        ])
+      ) {
+        valid = false
+      }
+      for (const field of ["facing", "lastSuccessfulMoveDirection"] as const) {
+        if (soldier[field] !== null && !isHistoricalDirection(soldier[field])) {
+          valid =
+            addSchemaIssue(
+              issues,
+              [...soldierPath, field],
+              "Expected a Direction or null.",
+            ) && valid
+        }
+      }
+    })
+  }
+  if (!Array.isArray(value.terrainStones)) {
+    valid =
+      addSchemaIssue(
+        issues,
+        [...path, "terrainStones"],
+        "Expected a terrain-stone array.",
+      ) && valid
+  } else {
+    value.terrainStones.forEach((position, index) => {
+      valid =
+        validatePosition(position, issues, [...path, "terrainStones", index]) &&
+        valid
+    })
+  }
+  return valid
+}
+
+const validatePayloadObject = (
+  payload: unknown,
+  issues: HistoricalSchemaIssue[],
+  path: readonly (string | number)[],
+): Record<string, unknown> | undefined => {
+  if (isRecord(payload)) return payload
+  addSchemaIssue(issues, path, "Expected an event payload object.")
+  return undefined
+}
+
+const requirePayloadString = (
+  payload: Record<string, unknown>,
+  field: string,
+  issues: HistoricalSchemaIssue[],
+  path: readonly (string | number)[],
+): boolean =>
+  isNonemptyString(payload[field]) ||
+  addSchemaIssue(issues, [...path, field], "Expected a non-empty string.")
+
+const requirePayloadCycleIndex = (
+  payload: Record<string, unknown>,
+  issues: HistoricalSchemaIssue[],
+  path: readonly (string | number)[],
+): boolean =>
+  isNonnegativeInteger(payload.cycleIndex) ||
+  addSchemaIssue(
+    issues,
+    [...path, "cycleIndex"],
+    "Expected a nonnegative integer.",
+  )
+
+const validateHistoricalPayload = (
+  type: ChronicleEventType,
+  value: unknown,
+  issues: HistoricalSchemaIssue[],
+  path: readonly (string | number)[],
+): boolean => {
+  const payload = validatePayloadObject(value, issues, path)
+  if (payload === undefined) return false
+  let valid = true
+  const requireSoldier = (): void => {
+    valid = requirePayloadString(payload, "soldierId", issues, path) && valid
+  }
+  const requireTarget = (): void => {
+    valid =
+      requirePayloadString(payload, "targetSoldierId", issues, path) && valid
+  }
+  const validateOptionalReason = (): void => {
+    valid =
+      validateOptional(
+        payload.reason,
+        isNonemptyString,
+        issues,
+        [...path, "reason"],
+        "Expected a non-empty string.",
+      ) && valid
+  }
+
+  switch (type) {
+    case "MATCH_STARTED":
+      valid = requirePayloadString(payload, "matchId", issues, path) && valid
+      valid =
+        validateOptional(
+          payload.seed,
+          isNonemptyString,
+          issues,
+          [...path, "seed"],
+          "Expected a non-empty string.",
+        ) && valid
+      break
+    case "ROUND_STARTED":
+      if (
+        payload.roundNumber !== 1 &&
+        payload.roundNumber !== 2 &&
+        payload.roundNumber !== 3 &&
+        payload.roundNumber !== 4
+      ) {
+        valid =
+          addSchemaIssue(
+            issues,
+            [...path, "roundNumber"],
+            "Expected Round 1, 2, 3, or 4.",
+          ) && valid
+      }
+      break
+    case "STRATEGY_EVALUATED":
+      valid = requirePayloadString(payload, "playerId", issues, path) && valid
+      break
+    case "ACTIVATION_STARTED":
+      requireSoldier()
+      break
+    case "ACTIVATION_SKIPPED":
+      requireSoldier()
+      valid = requirePayloadCycleIndex(payload, issues, path) && valid
+      valid = requirePayloadString(payload, "reason", issues, path) && valid
+      break
+    case "ACTIVATION_ENDED":
+      requireSoldier()
+      valid = requirePayloadString(payload, "reason", issues, path) && valid
+      break
+    case "CYCLE_STARTED":
+    case "CYCLE_ENDED":
+    case "AWARENESS_GRID_OBSERVED":
+      requireSoldier()
+      valid = requirePayloadCycleIndex(payload, issues, path) && valid
+      break
+    case "ACTION_EMITTED":
+      requireSoldier()
+      valid =
+        validateHistoricalAction(payload.action, issues, [...path, "action"]) &&
+        valid
+      break
+    case "MOVE_ADVANCED":
+    case "TURN_RESOLVED":
+      requireSoldier()
+      if (!isHistoricalDirection(payload.direction)) {
+        valid =
+          addSchemaIssue(
+            issues,
+            [...path, "direction"],
+            "Expected a frozen v1.4 Direction.",
+          ) && valid
+      }
+      break
+    case "MOVE_BLOCKED":
+      requireSoldier()
+      valid = requirePayloadString(payload, "reason", issues, path) && valid
+      valid =
+        validateOptional(
+          payload.targetSoldierId,
+          isNonemptyString,
+          issues,
+          [...path, "targetSoldierId"],
+          "Expected a non-empty string.",
+        ) && valid
+      break
+    case "PUSH_ATTEMPTED":
+    case "PUSH_BLOCKED":
+      requireSoldier()
+      requireTarget()
+      break
+    case "PUSH_RESOLVED":
+      requireSoldier()
+      requireTarget()
+      if (typeof payload.pushedOffBoard !== "boolean") {
+        valid =
+          addSchemaIssue(
+            issues,
+            [...path, "pushedOffBoard"],
+            "Expected a boolean.",
+          ) && valid
+      }
+      break
+    case "BACKSTAB_RESOLVED":
+      if (
+        typeof payload.boundary !== "string" ||
+        !HISTORICAL_V14_BACKSTAB_BOUNDARIES.has(payload.boundary)
+      ) {
+        valid =
+          addSchemaIssue(
+            issues,
+            [...path, "boundary"],
+            "Expected a frozen v1.4 Backstab boundary.",
+          ) && valid
+      }
+      if (!Array.isArray(payload.pairs)) {
+        valid =
+          addSchemaIssue(
+            issues,
+            [...path, "pairs"],
+            "Expected a Backstab-pair array.",
+          ) && valid
+      } else {
+        payload.pairs.forEach((pair, index) => {
+          const pairPath = [...path, "pairs", index]
+          if (!isRecord(pair)) {
+            valid =
+              addSchemaIssue(
+                issues,
+                pairPath,
+                "Expected a Backstab pair object.",
+              ) && valid
+            return
+          }
+          for (const field of ["attackerId", "victimId"] as const) {
+            if (!isNonemptyString(pair[field])) {
+              valid =
+                addSchemaIssue(
+                  issues,
+                  [...pairPath, field],
+                  "Expected a non-empty string.",
+                ) && valid
+            }
+          }
+        })
+      }
+      break
+    case "SOLDIER_STONED":
+    case "SOLDIER_FELL":
+      requireSoldier()
+      validateOptionalReason()
+      break
+    case "CONTRACTION_RESOLVED":
+      valid =
+        validateBounds(payload.bounds, issues, [...path, "bounds"]) && valid
+      break
+    case "MATCH_ENDED":
+      valid = validateHistoricalOutcome(payload, issues, path) && valid
+      break
+    case "RUNTIME_VIOLATION":
+      if (
+        typeof payload.type !== "string" ||
+        !HISTORICAL_V14_RUNTIME_VIOLATIONS.has(payload.type)
+      ) {
+        valid =
+          addSchemaIssue(
+            issues,
+            [...path, "type"],
+            "Expected a frozen v1.4 Runtime violation.",
+          ) && valid
+      }
+      for (const field of [
+        "category",
+        "playerId",
+        "ownerPlayerId",
+        "soldierId",
+      ] as const) {
+        valid =
+          validateOptional(
+            payload[field],
+            isNonemptyString,
+            issues,
+            [...path, field],
+            "Expected a non-empty string.",
+          ) && valid
+      }
+      break
+  }
+  return valid
+}
+
+const validateHistoricalEvent = (
+  value: unknown,
+  issues: HistoricalSchemaIssue[],
+  path: readonly (string | number)[],
+): boolean => {
+  if (!isRecord(value)) {
+    return addSchemaIssue(issues, path, "Expected a Chronicle event object.")
+  }
+  let valid = true
+  if (
+    typeof value.type !== "string" ||
+    !(HISTORICAL_V14_EVENT_TYPES as readonly string[]).includes(value.type)
+  ) {
+    return addSchemaIssue(
+      issues,
+      [...path, "type"],
+      "Expected a frozen v1.4 Chronicle event type.",
+    )
+  }
+  if (!isNonnegativeInteger(value.sequence)) {
+    valid =
+      addSchemaIssue(
+        issues,
+        [...path, "sequence"],
+        "Expected a nonnegative integer.",
+      ) && valid
+  }
+  valid =
+    validateHistoricalContext(value.context, issues, [...path, "context"]) &&
+    valid
+  if (
+    typeof value.privacy !== "string" ||
+    !HISTORICAL_V14_PRIVACY_VALUES.has(value.privacy)
+  ) {
+    valid =
+      addSchemaIssue(
+        issues,
+        [...path, "privacy"],
+        "Expected public, owner, or private.",
+      ) && valid
+  }
+  valid =
+    validateOptional(
+      value.privateRef,
+      isNonemptyString,
+      issues,
+      [...path, "privateRef"],
+      "Expected a non-empty string.",
+    ) && valid
+  valid =
+    validateHistoricalPayload(
+      value.type as ChronicleEventType,
+      value.payload,
+      issues,
+      [...path, "payload"],
+    ) && valid
+  return valid
+}
+
+const validateHistoricalSnapshot = (
+  value: unknown,
+  issues: HistoricalSchemaIssue[],
+  path: readonly (string | number)[],
+): boolean => {
+  if (!isRecord(value)) {
+    return addSchemaIssue(issues, path, "Expected a Chronicle snapshot object.")
+  }
+  let valid = true
+  if (
+    typeof value.kind !== "string" ||
+    !HISTORICAL_V14_SNAPSHOT_KINDS.has(value.kind)
+  ) {
+    valid =
+      addSchemaIssue(
+        issues,
+        [...path, "kind"],
+        "Expected a frozen v1.4 snapshot kind.",
+      ) && valid
+  }
+  if (!isNonnegativeInteger(value.sequence)) {
+    valid =
+      addSchemaIssue(
+        issues,
+        [...path, "sequence"],
+        "Expected a nonnegative integer.",
+      ) && valid
+  }
+  valid =
+    validateHistoricalContext(value.context, issues, [...path, "context"]) &&
+    valid
+  valid =
+    validateHistoricalBoard(value.board, issues, [...path, "board"]) && valid
+  if (
+    value.outcome !== undefined &&
+    !validateHistoricalOutcome(value.outcome, issues, [...path, "outcome"])
+  ) {
+    valid = false
+  }
+  return valid
+}
+
+const parseHistoricalV14Chronicle = (
+  input: unknown,
+): HistoricalSchemaParseResult => {
+  const issues: HistoricalSchemaIssue[] = []
+  if (!isRecord(input)) {
+    addSchemaIssue(issues, [], "Expected a Chronicle object.")
+    return { success: false, error: { issues } }
+  }
+  if (input.schemaVersion !== "chronicle-v1.4") {
+    addSchemaIssue(
+      issues,
+      ["schemaVersion"],
+      "Expected literal chronicle-v1.4.",
+    )
+  }
+  if (!isRecord(input.reproducibility)) {
+    addSchemaIssue(
+      issues,
+      ["reproducibility"],
+      "Expected a reproducibility envelope.",
+    )
+  } else {
+    const reproducibility = input.reproducibility
+    for (const field of [
+      "matchId",
+      "seed",
+      "arenaVariantId",
+      "arenaVariantVersion",
+    ] as const) {
+      if (!isNonemptyString(reproducibility[field])) {
+        addSchemaIssue(
+          issues,
+          ["reproducibility", field],
+          "Expected a non-empty string.",
+        )
+      }
+    }
+    if (
+      !Array.isArray(reproducibility.strategyRevisionIds) ||
+      reproducibility.strategyRevisionIds.length !== 2
+    ) {
+      addSchemaIssue(
+        issues,
+        ["reproducibility", "strategyRevisionIds"],
+        "Expected exactly two Strategy revision identifiers.",
+      )
+    } else {
+      reproducibility.strategyRevisionIds.forEach((revisionId, index) => {
+        if (!isNonemptyString(revisionId)) {
+          addSchemaIssue(
+            issues,
+            ["reproducibility", "strategyRevisionIds", index],
+            "Expected a non-empty string.",
+          )
+        }
+      })
+    }
+    const expectedVersions = {
+      spec: "cowards-rules-v1.4",
+      engine: "0.1.4",
+      runtimeJs: "0.1.0",
+      chronicle: "chronicle-v1.4",
+      strategyRevision: "0.1.4",
+      arenaVariant: "0.1.0",
+    } as const
+    if (!isRecord(reproducibility.versions)) {
+      addSchemaIssue(
+        issues,
+        ["reproducibility", "versions"],
+        "Expected a compatibility-version object.",
+      )
+    } else {
+      for (const [field, expected] of Object.entries(expectedVersions)) {
+        if (reproducibility.versions[field] !== expected) {
+          addSchemaIssue(
+            issues,
+            ["reproducibility", "versions", field],
+            `Expected literal ${expected}.`,
+          )
+        }
+      }
+    }
+  }
+  if (!Array.isArray(input.events)) {
+    addSchemaIssue(issues, ["events"], "Expected a Chronicle-event array.")
+  } else {
+    input.events.forEach((event, index) => {
+      validateHistoricalEvent(event, issues, ["events", index])
+    })
+  }
+  if (!Array.isArray(input.snapshots)) {
+    addSchemaIssue(
+      issues,
+      ["snapshots"],
+      "Expected a Chronicle-snapshot array.",
+    )
+  } else {
+    input.snapshots.forEach((snapshot, index) => {
+      validateHistoricalSnapshot(snapshot, issues, ["snapshots", index])
+    })
+  }
+  if (input.private !== undefined) {
+    if (!isRecord(input.private) || !isRecord(input.private.byPlayerId)) {
+      addSchemaIssue(
+        issues,
+        ["private"],
+        "Expected private Chronicle sections.",
+      )
+    } else {
+      for (const [playerId, value] of Object.entries(
+        input.private.byPlayerId,
+      )) {
+        if (playerId.length === 0) {
+          addSchemaIssue(
+            issues,
+            ["private", "byPlayerId", playerId],
+            "Expected a non-empty player identifier.",
+          )
+        }
+        validateJsonValue(value, issues, ["private", "byPlayerId", playerId])
+      }
+      if (input.private.debug !== undefined) {
+        validateJsonValue(input.private.debug, issues, ["private", "debug"])
+      }
+    }
+  }
+  if (input.integrity !== undefined) {
+    if (
+      !isRecord(input.integrity) ||
+      input.integrity.algorithm !== "sha256" ||
+      !isNonemptyString(input.integrity.normalizedContentHash)
+    ) {
+      addSchemaIssue(
+        issues,
+        ["integrity"],
+        "Expected frozen v1.4 integrity metadata.",
+      )
+    }
+  }
+  if (input.storageMetadata !== undefined) {
+    validateJsonValue(input.storageMetadata, issues, ["storageMetadata"])
+  }
+  return issues.length === 0
+    ? { success: true, data: input as unknown as Chronicle }
+    : { success: false, error: { issues } }
+}
 
 const readPayloadString = (
   event: ChronicleEvent,
@@ -289,7 +1119,8 @@ const validateActivationIndexWindow = (
 ): void => {
   const { roundNumber, activationIndex } = event.context
   if (roundNumber === undefined || activationIndex === undefined) return
-  const maxActivationIndex = ROUND_ACTIVATION_COUNTS[roundNumber] * 2 - 1
+  const maxActivationIndex =
+    HISTORICAL_V14_ROUND_ACTIVATION_COUNTS[roundNumber] * 2 - 1
   if (activationIndex < 0 || activationIndex > maxActivationIndex) {
     errors.push(
       error(
@@ -310,7 +1141,7 @@ const requireCycleContext = (
   const cycleIndex = requireNumberContext(errors, event, "cycleIndex")
   if (
     cycleIndex !== undefined &&
-    (cycleIndex < 0 || cycleIndex >= MAX_ACTIVATION_CYCLES)
+    (cycleIndex < 0 || cycleIndex >= HISTORICAL_V14_MAX_ACTIVATION_CYCLES)
   ) {
     errors.push(
       error(
@@ -318,7 +1149,7 @@ const requireCycleContext = (
         `${event.type} context.cycleIndex is outside the Activation Cycle window.`,
         event,
         {
-          expected: `0..${MAX_ACTIVATION_CYCLES - 1}`,
+          expected: `0..${HISTORICAL_V14_MAX_ACTIVATION_CYCLES - 1}`,
           actual: cycleIndex,
         },
       ),
@@ -884,7 +1715,7 @@ const validateParsedHistoricalGrammar = (
 export const validateHistoricalV14Grammar = (
   input: unknown,
 ): ChronicleValidationError[] => {
-  const parsed = HistoricalV14ChronicleSchema.safeParse(input)
+  const parsed = parseHistoricalV14Chronicle(input)
   if (!parsed.success) {
     return [
       error(
