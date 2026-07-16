@@ -7,6 +7,7 @@ import {
   RuntimeExecutionServiceRequestV118Schema,
   RuntimeExecutionServiceResponseV118Schema,
   createRuntimeSemanticAdmissionClaimV118,
+  createRuntimeSemanticTupleV118,
   hashRuntimeExecutionServiceRequestV118,
   type RuntimeExecutionServiceRequestV118,
 } from "./runtime-execution-service-v1-18.js"
@@ -37,17 +38,14 @@ const request = (): RuntimeExecutionServiceRequestV118 => ({
   kind: "executeMatch",
   requestId: "request:fixture:v1.18",
   matchId: "match:fixture:v1.18",
-  semanticTuple: {
-    tupleId: hash("f"),
-    components: {
+  semanticTuple: createRuntimeSemanticTupleV118({
       rules: "cowards-rules-v1.4",
       engine: "engine-kernel-v1.37-candidate-1",
       runtimeAbi: "strategy-runtime-abi-v1.18",
       chronicle: "chronicle-recorder-current-events-v1.37-candidate-1",
       arenaCatalog: "semantic-arena-catalog-v1.37-candidate-1",
       setPolicy: "canonical-set-policy-v1.4",
-    },
-  },
+  }),
   authorityGeneration: "19",
   evaluationInstant: "2026-07-16T00:00:00.000Z",
   certificateReferences: {
@@ -160,16 +158,7 @@ describe("runtime execution service v1.18 additive contract", () => {
         bottom: { ...bottom, freshUntil: value.evaluationInstant },
         top,
       },
-      {
-        bottom: {
-          ...bottom,
-          sourceIdentity: {
-            ...bottom.sourceIdentity,
-            artifactSha256: top.sourceIdentity.artifactSha256,
-          },
-        },
-        top,
-      },
+      { bottom: { ...bottom, lane: "runtime-latest" }, top },
     ]
     for (const certificateReferences of invalidReferences) {
       expect(
