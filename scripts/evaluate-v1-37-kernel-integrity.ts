@@ -1,4 +1,6 @@
 #!/usr/bin/env -S pnpm exec tsx
+/* eslint-disable no-restricted-imports -- Repository proof owner must execute package source directly. */
+import { Buffer } from "node:buffer"
 import { createHash } from "node:crypto"
 import { spawnSync } from "node:child_process"
 import {
@@ -80,6 +82,8 @@ const targetBasename = path.basename(targetFile)
 const requiredProjects = ["desktop", "mobile", "tablet"] as const
 const sha256Pattern = /^[a-f0-9]{64}$/u
 const phase19ActivationCommit = "3642493db803a8f68e3863777cc66dd6609ee93d"
+const phase19ReceiptRereviewClosureCommit =
+  "f5741fb726828a507d4e7e1dd7dfac4a05902ab9"
 const promotedTupleId =
   "sha256:922a6857fdbc8354b744d6e766bff216f3fee85b5ed381355cb427f5a616b3ae"
 const limitations = [
@@ -794,6 +798,50 @@ const hashedFile = (
   sha256: hashBytes(readRepoBytes(repoRoot, repoPath)),
 })
 
+const readRepoBytesAtCommit = (
+  repoRoot: string,
+  commit: string,
+  repoPath: string,
+): Buffer => {
+  const historical = spawnSync(
+    "git",
+    ["show", `${commit}:${repoPath}`],
+    {
+      cwd: repoRoot,
+      encoding: "buffer",
+      maxBuffer: 16 * 1024 * 1024,
+    },
+  )
+  if (historical.status !== 0 || !Buffer.isBuffer(historical.stdout)) {
+    throw new Error(`Phase 257 historical evidence is unavailable: ${repoPath}`)
+  }
+  return historical.stdout
+}
+
+export const resolveV137HistoricalEvidenceFiles = (
+  evidence: unknown[],
+  readHistoricalBytes: (repoPath: string) => Uint8Array,
+): Array<Required<HashedFile>> =>
+  evidence.map((row, index): Required<HashedFile> => {
+    if (
+      !isRecord(row) ||
+      typeof row.id !== "string" ||
+      typeof row.path !== "string" ||
+      !sha256Pattern.test(String(row.sha256))
+    ) {
+      throw new Error(`Phase 257 evidence ${index} is invalid`)
+    }
+    const historicalSha256 = hashBytes(readHistoricalBytes(row.path))
+    if (historicalSha256 !== row.sha256) {
+      throw new Error(`Phase 257 historical evidence drifted: ${row.path}`)
+    }
+    return {
+      id: row.id,
+      path: row.path,
+      sha256: historicalSha256,
+    }
+  })
+
 const loadProofInputs = (
   repoRoot: string,
 ): {
@@ -828,26 +876,14 @@ const loadProofInputs = (
   ) {
     throw new Error("Phase 257 activation identity or evidence is invalid")
   }
-  const evidence = coreResult.evidence.map(
-    (row, index): Required<HashedFile> => {
-      if (
-        !isRecord(row) ||
-        typeof row.id !== "string" ||
-        typeof row.path !== "string" ||
-        !sha256Pattern.test(String(row.sha256))
-      ) {
-        throw new Error(`Phase 257 evidence ${index} is invalid`)
-      }
-      const current = hashedFile(
+  const evidence = resolveV137HistoricalEvidenceFiles(
+    coreResult.evidence,
+    (repoPath) =>
+      readRepoBytesAtCommit(
         repoRoot,
-        row.path,
-        row.id,
-      ) as Required<HashedFile>
-      if (current.sha256 !== row.sha256) {
-        throw new Error(`Phase 257 evidence drifted: ${row.path}`)
-      }
-      return current
-    },
+        phase19ReceiptRereviewClosureCommit,
+        repoPath,
+      ),
   )
   const inputFiles = [
     hashedFile(repoRoot, coreResultJsonPath, "phase257-core-result"),

@@ -1,3 +1,5 @@
+import { Buffer } from "node:buffer"
+import { createHash } from "node:crypto"
 import { describe, expect, it } from "vitest"
 import {
   createV137KernelIntegrityProof,
@@ -5,6 +7,7 @@ import {
   projectV137BrowserPlaywrightReceipt,
   renderV137KernelIntegrityProofJson,
   renderV137KernelIntegrityProofMarkdown,
+  resolveV137HistoricalEvidenceFiles,
   runV137KernelIntegrityCli,
   requiredV137DecisionIds,
   requiredV137GateIds,
@@ -136,6 +139,34 @@ const workingCopyReceipt = (): V137WorkingCopyReceipt => ({
 })
 
 describe("v1.37 Phase 257 kernel-integrity evaluator", () => {
+  it("resolves pinned historical inputs independently of later current-source bytes", () => {
+    const historicalBytes = Buffer.from("phase-257 historical evidence")
+    const historicalSha256 = createHash("sha256")
+      .update(historicalBytes)
+      .digest("hex")
+    const evidence = [
+      {
+        id: "historical-lifecycle",
+        path: "packages/engine/src/kernel/lifecycle-repairs.test.ts",
+        sha256: historicalSha256,
+      },
+    ]
+
+    expect(
+      resolveV137HistoricalEvidenceFiles(evidence, () => historicalBytes),
+    ).toEqual(evidence)
+    expect(
+      createHash("sha256")
+        .update("later current-source bytes")
+        .digest("hex"),
+    ).not.toBe(historicalSha256)
+    expect(() =>
+      resolveV137HistoricalEvidenceFiles(evidence, () =>
+        Buffer.from("wrong historical bytes"),
+      ),
+    ).toThrow("Phase 257 historical evidence drifted")
+  })
+
   it("parses only explicit write-with-browser or pure-check modes", () => {
     expect(parseV137KernelIntegrityArgs(["--write", "--run-browser"])).toEqual({
       mode: "write",
@@ -380,15 +411,15 @@ describe("v1.37 Phase 257 kernel-integrity evaluator", () => {
     const extra = { ...proof, head: "later-commit" }
     expect(validateV137KernelIntegrityProof(extra)).not.toEqual([])
 
-    const missing = structuredClone(proof)
+    const missing = globalThis.structuredClone(proof)
     missing.coverage.requirements.pop()
     expect(validateV137KernelIntegrityProof(missing)).not.toEqual([])
 
-    const badHash = structuredClone(proof)
+    const badHash = globalThis.structuredClone(proof)
     badHash.inputs.files[0]!.sha256 = "bad"
     expect(validateV137KernelIntegrityProof(badHash)).not.toEqual([])
 
-    const changed = structuredClone(proof)
+    const changed = globalThis.structuredClone(proof)
     changed.workingCopy.protectedFiles[0]!.afterBytesSha256 = "b".repeat(64)
     expect(validateV137KernelIntegrityProof(changed)).not.toEqual([])
   })

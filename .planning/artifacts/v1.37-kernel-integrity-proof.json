@@ -222,7 +222,7 @@
       },
       {
         "path": "apps/runtime-service/src/execute-match.ts",
-        "sha256": "49bcc5709688b0564fef75b3b56c34d5b7d464c947c477846db1835daabbc4bd"
+        "sha256": "17ef7a0e17ef01ab6c54268d09b57b480abcd56eecfdb364efaa7ed42bdbaec9"
       },
       {
         "path": "apps/runtime-service/src/semantic-receipt.ts",
@@ -242,11 +242,11 @@
       },
       {
         "path": "packages/engine/src/kernel/lifecycle-repairs.test.ts",
-        "sha256": "eeb9e3a5c7682ac47b1d8ba19a1bb89d588b371ee25fc9ceee5fe408a6f8aaee"
+        "sha256": "6f2992002a36cbcc6a7f4bb010ad62f780fda50df6cc227d96073e8a8451a38e"
       },
       {
         "path": "packages/engine/src/kernel/step.ts",
-        "sha256": "0602e497bab6647784de0ec2a2fe337f2fb30cbe4a3ac507b4b00800815ee733"
+        "sha256": "ebfc45858604cd5cd363b3e5248542379ecc7084960f8856c774e0eb4a1ee2fb"
       },
       {
         "path": "packages/persistence/migrations/0017_runtime_semantic_receipts.sql",
@@ -262,7 +262,7 @@
       },
       {
         "path": "packages/spec/src/match-execution-contract.ts",
-        "sha256": "f90a980ad3275fc6e505afdb2771e0afca38676539981c5d713efa43dd139417"
+        "sha256": "6b56e3ff020698a1c9d78cf533f8fe58888c7653e4b42cff1c3ebf9264b68b4c"
       },
       {
         "path": "packages/spec/src/runtime-execution-service.ts",
@@ -274,35 +274,35 @@
       },
       {
         "path": "scripts/check-v1-37-integrity-boundaries.ts",
-        "sha256": "88f068c1669d5826c4e68b5678fe03472776350e4ea25a3dd8bf91fcbf4c814a"
+        "sha256": "01e8564d4b07fd717f80bbcf341cb14dd32a097113cc25748cdabca7e840f578"
       },
       {
         "path": "scripts/generate-v1-37-event-coverage.ts",
-        "sha256": "a72d34282e1fddf07c19b751b5030a438d9e65eb5cb76b725b0fe4a826fd3960"
+        "sha256": "c354ad7464a964beedfb6d80582b53cfa76a4bdd22bbc33a7bd773962595ec87"
       }
     ]
   },
   "browser": {
     "path": ".planning/artifacts/v1.37-phase-257-browser-playwright.json",
-    "sha256": "4fe512d4b3e27d7eec49c284d0ad8912e9d692e2d2d006d555c785adaefce882"
+    "sha256": "17846af92c6429e78d63c33b3ad25ad74eb3c6656c6617c3fc05229edf9ef3bb"
   },
   "workingCopy": {
     "schemaVersion": "v1.37-working-copy-preservation-v1",
     "protectedFiles": [
       {
         "path": ".planning/config.json",
-        "beforeBytesSha256": "a9502647c42da6e83564e56e35833a66d2daad6704f2ac2a2d98cf12cc953f7b",
-        "afterBytesSha256": "a9502647c42da6e83564e56e35833a66d2daad6704f2ac2a2d98cf12cc953f7b",
-        "beforeBinaryDiffSha256": "1372d196c86ee3907fcac07a7075b06814f2eaedf328314a31641713c71e6765",
-        "afterBinaryDiffSha256": "1372d196c86ee3907fcac07a7075b06814f2eaedf328314a31641713c71e6765",
+        "beforeBytesSha256": "b6f77f033e4644344f43e021bbe035d1f8837831ba4b2edfacce6272ba30c0d0",
+        "afterBytesSha256": "b6f77f033e4644344f43e021bbe035d1f8837831ba4b2edfacce6272ba30c0d0",
+        "beforeBinaryDiffSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "afterBinaryDiffSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
         "preserved": true
       },
       {
         "path": "CowardsGameSpec_Full_Consolidated_v1.md",
-        "beforeBytesSha256": "01b0a95c79e2ba5e8a089abe7106856e7f081bb10193d5ab8e86171f6ee0fa46",
-        "afterBytesSha256": "01b0a95c79e2ba5e8a089abe7106856e7f081bb10193d5ab8e86171f6ee0fa46",
-        "beforeBinaryDiffSha256": "ae29a7dbf894437668f880f7775904eeb580b0e82c99a91cba0dbf9e611bcd2d",
-        "afterBinaryDiffSha256": "ae29a7dbf894437668f880f7775904eeb580b0e82c99a91cba0dbf9e611bcd2d",
+        "beforeBytesSha256": "4d2d17fd258360cb63b2c85eb5b070fa2dcaaa70eb2d3b7c150046763a7e34fc",
+        "afterBytesSha256": "4d2d17fd258360cb63b2c85eb5b070fa2dcaaa70eb2d3b7c150046763a7e34fc",
+        "beforeBinaryDiffSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "afterBinaryDiffSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
         "preserved": true
       }
     ],
@@ -538,7 +538,7 @@
       "id": "phase257-browser-playwright",
       "status": "passed",
       "inputSha256s": [
-        "4fe512d4b3e27d7eec49c284d0ad8912e9d692e2d2d006d555c785adaefce882"
+        "17846af92c6429e78d63c33b3ad25ad74eb3c6656c6617c3fc05229edf9ef3bb"
       ]
     },
     {
