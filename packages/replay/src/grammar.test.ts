@@ -9,7 +9,11 @@ import type {
 import { MATCH_KERNEL, type StrategyRuntime } from "@cowards/engine"
 import { adaptRuntimeForCurrentKernel } from "@cowards/engine/test/current-kernel-runtime"
 import { describe, expect, it } from "vitest"
-import { validateChronicleGrammar } from "./grammar.js"
+import {
+  advanceCurrentChronicleGrammar,
+  createCurrentChronicleGrammarState,
+  validateChronicleGrammar,
+} from "./grammar.js"
 import { recordChronicleFromExecution } from "./record.js"
 import { validateCurrentChronicle } from "./validate.js"
 
@@ -74,6 +78,11 @@ const createChronicle = (): Chronicle => {
 
 const cloneChronicle = (chronicle: Chronicle): Chronicle =>
   JSON.parse(JSON.stringify(chronicle)) as Chronicle
+
+const resequenceEvents = (
+  events: readonly ChronicleEvent[],
+): ChronicleEvent[] =>
+  events.map((event, sequence) => ({ ...event, sequence }))
 
 const findEvent = (
   chronicle: Chronicle,
@@ -419,5 +428,239 @@ describe("validateChronicleGrammar", () => {
     )
 
     expectErrorCode(chronicle, "EVENT_WINDOW_INVALID")
+  })
+
+  it("tracks interleaved activation slots independently in deterministic frozen state", () => {
+    const firstRound = createChronicle().events.filter(
+      (event) => event.sequence <= 39,
+    )
+    let state = createCurrentChronicleGrammarState()
+
+    for (const event of firstRound) {
+      const advanced = advanceCurrentChronicleGrammar(state, event)
+      expect(advanced).toMatchObject({ ok: true })
+      if (!advanced.ok) throw new Error(advanced.error.code)
+      state = advanced.state
+    }
+
+    expect(state.activationSlots.map((slot) => slot.activationIndex)).toEqual([
+      0, 1,
+    ])
+    expect(
+      state.activationSlots.map((slot) => ({
+        activationId: slot.activationId,
+        actingPlayerId: slot.actingPlayerId,
+        soldierId: slot.soldierId,
+        closed: slot.closed,
+        nextCycleIndex: slot.nextCycleIndex,
+        hasAdvancedThisActivation: slot.hasAdvancedThisActivation,
+        terminalReason: slot.terminalReason,
+      })),
+    ).toEqual([
+      {
+        activationId: "1:1:0",
+        actingPlayerId: "top",
+        soldierId: "top-soldier-1",
+        closed: true,
+        nextCycleIndex: 12,
+        hasAdvancedThisActivation: false,
+        terminalReason: "SOLDIER_STONED",
+      },
+      {
+        activationId: "1:1:1",
+        actingPlayerId: "bottom",
+        soldierId: "bottom-soldier-1",
+        closed: true,
+        nextCycleIndex: 12,
+        hasAdvancedThisActivation: false,
+        terminalReason: "SOLDIER_STONED",
+      },
+    ])
+    expect(Object.isFrozen(state)).toBe(true)
+    expect(Object.isFrozen(state.activationSlots)).toBe(true)
+    expect(state.activationSlots.every(Object.isFrozen)).toBe(true)
+    expect(
+      Array.isArray(
+        (
+          JSON.parse(JSON.stringify(state)) as {
+            activationSlots: unknown
+          }
+        ).activationSlots,
+      ),
+    ).toBe(true)
+  })
+
+  it.each([
+    {
+      name: "duplicate Activation start",
+      mutate(base: Chronicle): Chronicle {
+        const duplicate = base.events[5]!
+        return {
+          ...base,
+          events: resequenceEvents([
+            ...base.events.slice(0, 6),
+            duplicate,
+            ...base.events.slice(6),
+          ]),
+        }
+      },
+      code: "EVENT_WINDOW_INVALID",
+    },
+    {
+      name: "wrong actor for an open slot",
+      mutate(base: Chronicle): Chronicle {
+        return mutateFirstEvent(base, "AWARENESS_GRID_OBSERVED", (event) => ({
+          ...event,
+          context: { ...event.context, actingPlayerId: "bottom" },
+        }))
+      },
+      code: "CONTEXT_MISMATCH",
+    },
+    {
+      name: "skipped first Cycle",
+      mutate(base: Chronicle): Chronicle {
+        return mutateFirstEvent(base, "CYCLE_STARTED", (event) => ({
+          ...event,
+          context: { ...event.context, cycleIndex: 1 },
+          payload: { ...payloadObject(event), cycleIndex: 1 },
+        }))
+      },
+      code: "CONTEXT_MISMATCH",
+    },
+    {
+      name: "another slot at an open boundary",
+      mutate(base: Chronicle): Chronicle {
+        const wrongSlot = base.events[13]!
+        return {
+          ...base,
+          events: resequenceEvents([
+            ...base.events.slice(0, 7),
+            wrongSlot,
+            ...base.events.slice(7),
+          ]),
+        }
+      },
+      code: "EVENT_WINDOW_INVALID",
+    },
+    {
+      name: "Cycle after its slot closed",
+      mutate(base: Chronicle): Chronicle {
+        const closedSlotCycle = base.events[6]!
+        return {
+          ...base,
+          events: resequenceEvents([
+            ...base.events.slice(0, 12),
+            closedSlotCycle,
+            ...base.events.slice(12),
+          ]),
+        }
+      },
+      code: "EVENT_WINDOW_INVALID",
+    },
+    {
+      name: "duplicate Activation end",
+      mutate(base: Chronicle): Chronicle {
+        const duplicate = base.events[11]!
+        return {
+          ...base,
+          events: resequenceEvents([
+            ...base.events.slice(0, 12),
+            duplicate,
+            ...base.events.slice(12),
+          ]),
+        }
+      },
+      code: "EVENT_WINDOW_INVALID",
+    },
+    {
+      name: "terminal reason mismatch",
+      mutate(base: Chronicle): Chronicle {
+        return mutateFirstEvent(base, "ACTIVATION_ENDED", (event) => ({
+          ...event,
+          payload: {
+            ...payloadObject(event),
+            reason: "CYCLE_EXHAUSTED",
+          },
+        }))
+      },
+      code: "PAYLOAD_INCONSISTENT",
+    },
+    {
+      name: "Advance history contradicts no-Advance cleanup",
+      mutate(base: Chronicle): Chronicle {
+        const terminal = findEvent(base, "SOLDIER_STONED")
+        const advanced: ChronicleEvent = {
+          ...terminal,
+          type: "MOVE_ADVANCED",
+          payload: {
+            soldierId: terminal.context.soldierId ?? "missing-soldier",
+            from: { x: 0, y: 0 },
+            to: { x: 0, y: 1 },
+          },
+        }
+        const noAdvance = {
+          ...terminal,
+          payload: {
+            ...payloadObject(terminal),
+            reason: "NO_ADVANCE",
+          },
+        }
+        return {
+          ...base,
+          events: resequenceEvents([
+            ...base.events.slice(0, 9),
+            advanced,
+            noAdvance,
+            ...base.events.slice(10),
+          ]),
+        }
+      },
+      code: "PAYLOAD_INCONSISTENT",
+    },
+  ] as const)(
+    "rejects per-slot lifecycle corruption: $name",
+    ({ mutate, code }) => {
+      expect(validateChronicleGrammar(mutate(createChronicle()))[0]).toEqual(
+        expect.objectContaining({ code }),
+      )
+    },
+  )
+
+  it("does not mutate grammar state when the first event is rejected", () => {
+    const prefix = createChronicle().events.slice(0, 7)
+    let state = createCurrentChronicleGrammarState()
+    for (const event of prefix) {
+      const advanced = advanceCurrentChronicleGrammar(state, event)
+      if (!advanced.ok) throw new Error(advanced.error.code)
+      state = advanced.state
+    }
+    const serializedBefore = JSON.stringify(state)
+    const awareness = findEvent(createChronicle(), "AWARENESS_GRID_OBSERVED")
+    const invalidAwareness: ChronicleEvent = {
+      ...awareness,
+      context: { ...awareness.context, cycleIndex: 1 },
+      payload: { ...payloadObject(awareness), cycleIndex: 1 },
+    }
+
+    const rejected = advanceCurrentChronicleGrammar(state, invalidAwareness)
+
+    expect(rejected).toMatchObject({
+      ok: false,
+      error: { code: "CONTEXT_MISMATCH" },
+    })
+    expect(rejected.state).toBe(state)
+    expect(JSON.stringify(state)).toBe(serializedBefore)
+
+    const accepted = advanceCurrentChronicleGrammar(state, awareness)
+    expect(accepted).toMatchObject({
+      ok: true,
+      state: {
+        openCycle: {
+          activationId: "1:1:0",
+          cycleIndex: 0,
+          boundary: "observed",
+        },
+      },
+    })
   })
 })
