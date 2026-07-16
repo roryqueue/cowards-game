@@ -119,7 +119,11 @@ const currentManifest = (): NativeSupervisorBuildManifestV118 =>
     cargoVersion: PINNED_RUNTIME_SUPERVISOR_CARGO,
   })
 
-const stable = (value: unknown): string => `${JSON.stringify(value, null, 2)}\n`
+const stable = (value: unknown): string =>
+  `${JSON.stringify(value, null, 2).replace(
+    /\[\n {4}"cpu",\n {4}"memory",\n {4}"pids"\n {2}\]/u,
+    '["cpu", "memory", "pids"]',
+  )}\n`
 
 const main = (): void => {
   const build = process.argv.includes("--build")
