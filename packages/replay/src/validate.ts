@@ -297,11 +297,15 @@ export const validateReplayInput = (
       ],
     }
   }
-  return compatibility.status === "historical_original_semantics"
-    ? validateHistoricalV14Chronicle(
+  switch (compatibility.status) {
+    case "historical_original_semantics":
+    case "historical_v1_16_exact":
+      return validateHistoricalV14Chronicle(
         (input as Record<string, unknown>).chronicle,
       )
-    : validateChronicle((input as Record<string, unknown>).chronicle)
+    case "current_exact":
+      return validateChronicle((input as Record<string, unknown>).chronicle)
+  }
 }
 
 export const migrateChronicle = (
@@ -854,11 +858,10 @@ export const validateCurrentChronicleSemantics = (
   if (!isRecord(input.compatibility)) {
     return currentCodeFailure("CURRENT_TUPLE_INVALID")
   }
-  if (
-    input.compatibility.tupleId !== V1_37_CURRENT_REPLAY_TUPLE.tupleId ||
-    JSON.stringify(input.compatibility.tuple) !==
-      JSON.stringify(V1_37_CURRENT_REPLAY_TUPLE.tuple)
-  ) {
+  const resolvedCompatibility = resolveCanonicalCompatibilityTuple(
+    input.compatibility,
+  )
+  if (resolvedCompatibility?.tupleId !== V1_37_CURRENT_REPLAY_TUPLE.tupleId) {
     return currentCodeFailure("CURRENT_TUPLE_INVALID", ["compatibility"])
   }
 
@@ -893,9 +896,10 @@ export const validateCurrentChronicleSemantics = (
   if (
     execution.transitions.some(
       (transition) =>
-        transition.semanticTupleId !== V1_37_CURRENT_REPLAY_TUPLE.tupleId ||
-        JSON.stringify(transition.semanticTuple) !==
-          JSON.stringify(V1_37_CURRENT_REPLAY_TUPLE.tuple),
+        resolveCanonicalCompatibilityTuple({
+          tupleId: transition.semanticTupleId,
+          tuple: transition.semanticTuple,
+        })?.tupleId !== V1_37_CURRENT_REPLAY_TUPLE.tupleId,
     )
   ) {
     return currentCodeFailure("CURRENT_TUPLE_INVALID", ["execution"])

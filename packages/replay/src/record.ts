@@ -872,14 +872,14 @@ const validateExecution = (
     return "RECORDER_MATERIAL_INVALID"
   }
   const first = transitions[0]!
+  const matchesMetadataIdentity = (transition: RecorderTransition): boolean =>
+    resolveCanonicalCompatibilityTuple({
+      tupleId: transition.semanticTupleId,
+      tuple: transition.semanticTuple,
+    })?.tupleId === metadata.semanticTupleId
   if (
-    first.semanticTupleId !== metadata.semanticTupleId ||
-    !same(first.semanticTuple, metadata.semanticTuple) ||
-    transitions.some(
-      (transition) =>
-        transition.semanticTupleId !== metadata.semanticTupleId ||
-        !same(transition.semanticTuple, first.semanticTuple),
-    )
+    !matchesMetadataIdentity(first) ||
+    transitions.some((transition) => !matchesMetadataIdentity(transition))
   ) {
     return "RECORDER_SEMANTIC_IDENTITY_INVALID"
   }
