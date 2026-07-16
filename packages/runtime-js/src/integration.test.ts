@@ -6,6 +6,7 @@ import {
   projectPublicChronicle,
   recordChronicleFromExecution,
 } from "@cowards/replay"
+import { STRATEGY_RUNTIME_ABI_VERSION } from "@cowards/spec"
 import { createScenarioStateParts } from "@cowards/test-utils"
 import { buildStrategyRevision } from "./revision.js"
 import { createNestedMatchShapeRuntimeFromRevisionTestSupport } from "./executor.js"
@@ -205,7 +206,14 @@ export default {
     })
     expect(runtimeViolation?.context.soldierId).toBe("bottom-soldier-1")
     expect(JSON.stringify(publicProjection)).not.toContain("owner-only boom")
-    expect(JSON.stringify(ownerProjection)).toContain("owner-only boom")
+    if (String(STRATEGY_RUNTIME_ABI_VERSION) === "strategy-runtime-abi-v1.17") {
+      expect(JSON.stringify(ownerProjection)).not.toContain("owner-only boom")
+      expect(JSON.stringify(ownerProjection)).toContain(
+        "Strategy threw an exception.",
+      )
+    } else {
+      expect(JSON.stringify(ownerProjection)).toContain("owner-only boom")
+    }
   })
 
   it("invalid output interrupts activation and stones a Soldier that did not Advance", () => {
