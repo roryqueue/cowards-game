@@ -8,6 +8,12 @@ importers:
 
   .:
     devDependencies:
+      '@cowards/golden':
+        specifier: workspace:*
+        version: link:packages/golden
+      '@cowards/spec':
+        specifier: workspace:*
+        version: link:packages/spec
       '@eslint/js':
         specifier: ^9.39.2
         version: 9.39.4
