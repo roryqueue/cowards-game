@@ -4,7 +4,6 @@ import type {
   ChronicleBoundarySnapshot,
   ChronicleEvent,
   ChronicleValidationError,
-  FullBoardSnapshot,
   MatchOutcome,
 } from "@cowards/spec"
 import {
@@ -23,6 +22,10 @@ import {
   createChronicleBoundaryAnchors,
   type ChronicleRecorderExecution,
 } from "./record.js"
+import {
+  replayStateFromCurrentProjection,
+  validateCurrentTransitionPostconditions,
+} from "./current-transition-postconditions.js"
 import {
   type CurrentChronicleSemanticInput,
   type CurrentChronicleSemanticValidationResult,
@@ -348,32 +351,6 @@ export interface CurrentReplayReconstructionInput {
   readonly execution: ChronicleRecorderExecution
 }
 
-const replayStateFromProjection = (
-  projection: Readonly<Record<string, unknown>>,
-): ReplayState | undefined => {
-  if (
-    !projection.bounds ||
-    !Array.isArray(projection.soldiers) ||
-    !Array.isArray(projection.terrainStones)
-  ) {
-    return undefined
-  }
-  return {
-    board: globalThis.structuredClone({
-      bounds: projection.bounds,
-      soldiers: projection.soldiers,
-      terrainStones: projection.terrainStones,
-    }) as FullBoardSnapshot,
-    ...(projection.outcome === null || projection.outcome === undefined
-      ? {}
-      : {
-          outcome: globalThis.structuredClone(
-            projection.outcome,
-          ) as MatchOutcome,
-        }),
-  }
-}
-
 const finalReplayState = (
   execution: Extract<ChronicleRecorderExecution, { kind: "completed" }>,
 ): ReplayState => ({
@@ -467,47 +444,17 @@ export const validateCurrentReplayReconstruction = ({
     return { ok: false, code: "CURRENT_SEMANTIC_ADMISSION_INVALID" }
   }
 
-  for (let index = 0; index < execution.transitions.length; index += 1) {
-    const transition = execution.transitions[index]!
-    const before = replayStateFromProjection(transition.beforeState)
-    const expectedAfter = replayStateFromProjection(transition.afterState)
-    if (before === undefined || expectedAfter === undefined) {
-      return {
-        ok: false,
-        code: "CURRENT_RECONSTRUCTION_SHAPE_INVALID",
-        transitionIndex: index,
-      }
-    }
-    let reconstructed = before
-    for (const summary of transition.events) {
-      const applied = applyReplayEvent(reconstructed, {
-        type: summary.type,
-        sequence: summary.sequence,
-        context: summary.context ?? {},
-        privacy: summary.privacy ?? "public",
-        payload: summary.payload,
-      })
-      if (!applied.ok) {
-        return {
-          ok: false,
-          code: "CURRENT_TRANSITION_STATE_MISMATCH",
-          transitionIndex: index,
-        }
-      }
-      reconstructed = applied.state
-    }
-    if (stableStringify(reconstructed) !== stableStringify(expectedAfter)) {
-      return {
-        ok: false,
-        code: "CURRENT_TRANSITION_STATE_MISMATCH",
-        transitionIndex: index,
-      }
-    }
+  const transitionPostconditions = validateCurrentTransitionPostconditions({
+    transitions: execution.transitions,
+    finalOutcome: execution.recorderMaterial.finalState.outcome,
+  })
+  if (!transitionPostconditions.ok) {
+    return transitionPostconditions
   }
 
   const last = execution.transitions.at(-1)!
   const finalState = finalReplayState(execution)
-  const projectedFinal = replayStateFromProjection(last.afterState)
+  const projectedFinal = replayStateFromCurrentProjection(last.afterState)
   const terminalSnapshot = chronicle.snapshots.at(-1)
   const outcome = execution.recorderMaterial.finalState.outcome
   if (
@@ -517,8 +464,7 @@ export const validateCurrentReplayReconstruction = ({
     terminalSnapshot?.kind !== "TERMINAL" ||
     stableStringify(stateFromSnapshot(terminalSnapshot)) !==
       stableStringify(finalState) ||
-    stableStringify(terminalEvents[0]!.payload) !== stableStringify(outcome) ||
-    stableStringify(last.terminalStatus) !== stableStringify(outcome)
+    stableStringify(terminalEvents[0]!.payload) !== stableStringify(outcome)
   ) {
     return { ok: false, code: "CURRENT_TERMINAL_STATE_MISMATCH" }
   }

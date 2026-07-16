@@ -37,6 +37,7 @@ import {
   type ChronicleRecorderExecution,
 } from "./record.js"
 import { validateSnapshotBoundaries } from "./snapshot-boundaries.js"
+import { validateCurrentTransitionPostconditions } from "./current-transition-postconditions.js"
 
 const SUPPORTED_SCHEMA_VERSION = "chronicle-v1.4"
 
@@ -1083,6 +1084,25 @@ export const validateCurrentChronicleSemantics = (
         "beforeState",
       ])
     }
+  }
+
+  const transitionPostconditions = validateCurrentTransitionPostconditions({
+    transitions: execution.transitions,
+    finalOutcome: execution.recorderMaterial.finalState.outcome,
+  })
+  if (!transitionPostconditions.ok) {
+    return currentCodeFailure(
+      transitionPostconditions.code === "CURRENT_TERMINAL_STATE_MISMATCH"
+        ? "CURRENT_TERMINAL_INVALID"
+        : "CURRENT_RECONSTRUCTION_INVALID",
+      transitionPostconditions.transitionIndex === undefined
+        ? ["execution", "transitions"]
+        : [
+            "execution",
+            "transitions",
+            transitionPostconditions.transitionIndex,
+          ],
+    )
   }
 
   const anchors = input.boundaryAnchors as readonly ChronicleBoundaryAnchor[]

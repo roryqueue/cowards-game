@@ -13,6 +13,7 @@ import {
   createCurrentReplay,
   validateCurrentReplayReconstruction,
 } from "./reconstruct.js"
+import { validateCurrentTransitionPostconditions } from "./current-transition-postconditions.js"
 import { recordChronicleFromExecution } from "./record.js"
 import { validateChronicleTransitions } from "./replay-transition.js"
 
@@ -255,6 +256,64 @@ describe("validateChronicleTransitions", () => {
         board([soldier("mover")]),
       ),
     )
+  })
+})
+
+describe("current transition postconditions", () => {
+  it("rejects an after-state that is not produced by its ordered events", () => {
+    const unchanged = board([soldier("mover")])
+
+    expect(
+      validateCurrentTransitionPostconditions({
+        transitions: [
+          {
+            beforeState: unchanged,
+            afterState: unchanged,
+            events: [
+              {
+                type: "MOVE_ADVANCED",
+                sequence: 1,
+                payload: { soldierId: "mover", direction: "RIGHT" },
+              },
+            ],
+            terminalStatus: null,
+          },
+        ],
+        finalOutcome: undefined,
+      }),
+    ).toEqual({
+      ok: false,
+      code: "CURRENT_TRANSITION_STATE_MISMATCH",
+      transitionIndex: 0,
+    })
+  })
+
+  it("rejects terminal status that disagrees with event and final outcome", () => {
+    const start = board([soldier("mover")])
+    const after = { ...start, outcome: { type: "DRAW" as const } }
+
+    expect(
+      validateCurrentTransitionPostconditions({
+        transitions: [
+          {
+            beforeState: start,
+            afterState: after,
+            events: [
+              {
+                type: "MATCH_ENDED",
+                sequence: 1,
+                payload: { type: "DRAW" },
+              },
+            ],
+            terminalStatus: { type: "WIN", winnerPlayerId: "bottom" },
+          },
+        ],
+        finalOutcome: { type: "DRAW" },
+      }),
+    ).toEqual({
+      ok: false,
+      code: "CURRENT_TERMINAL_STATE_MISMATCH",
+    })
   })
 })
 

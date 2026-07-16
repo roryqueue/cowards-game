@@ -339,6 +339,13 @@ describe("validateChronicle", () => {
     expect(
       reconstructSource.match(/validateCurrentChronicleSemantics\(/gu) ?? [],
     ).toHaveLength(1)
+    expect(
+      validateSource.match(/validateCurrentTransitionPostconditions\(/gu) ?? [],
+    ).toHaveLength(1)
+    expect(
+      reconstructSource.match(/validateCurrentTransitionPostconditions\(/gu) ??
+        [],
+    ).toHaveLength(1)
   })
 
   it("routes exact current evidence as current and publishable", () => {
