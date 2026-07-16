@@ -48,6 +48,7 @@ import { migrate } from "./migrations.js"
 import {
   RUNTIME_EVIDENCE_AUTHORITY_IMPORT_SCHEMA_VERSION,
   RUNTIME_EVIDENCE_V117_INSTALLED_AUTHORITY_HEAD_LOCK_SQL,
+  bootstrapRuntimeEvidenceAuthorityImportTrustRoots,
   encodeRuntimeEvidenceAuthorityImportPayload,
   importAuthenticatedCertificateRevocation,
   importAuthenticatedCertificateSupersession,
@@ -1640,5 +1641,114 @@ describePostgres("Phase-259 reviewed conformance certificate import", () => {
       [sha256("substituted-certificate")],
     )
     expect(count.rows[0]?.count).toBe(0)
+  })
+})
+
+describePostgres("Phase-259 import trust-root bootstrap", () => {
+  const schema = `runtime_import_roots_${randomUUID().replaceAll("-", "")}`
+  let admin: Pool
+  let pool: Pool
+
+  const descriptorBytes = (roots: readonly unknown[]): Uint8Array => {
+    const encoded = encodeCanonicalJson(roots as JsonValue, {
+      context: "canonical-manifest",
+    })
+    if (!encoded.ok) throw new Error("fixture descriptor is not canonical")
+    return encoded.bytes
+  }
+
+  beforeAll(async () => {
+    admin = new Pool({ connectionString: databaseUrl! })
+    await admin.query(`create schema ${schema}`)
+    pool = new Pool({
+      connectionString: databaseUrl!,
+      options: `-c search_path=${schema}`,
+      max: 4,
+    })
+    await migrate(pool)
+  }, 30_000)
+
+  afterAll(async () => {
+    await pool.end()
+    await admin.query(`drop schema ${schema} cascade`)
+    await admin.end()
+  })
+
+  it("installs an exact plural descriptor idempotently", async () => {
+    const bytes = descriptorBytes([trustRoot])
+    const expectedDescriptorSha256 = `sha256:${createHash("sha256")
+      .update(bytes)
+      .digest("hex")}`
+    const input = {
+      expectedDescriptorSha256,
+      producerId: trustRoot.producerId,
+      keyId: trustRoot.keyId,
+      trustDomain: trustRoot.trustDomain,
+      readDescriptorBytes: async () => new Uint8Array(bytes),
+    }
+    const first = await bootstrapRuntimeEvidenceAuthorityImportTrustRoots(
+      pool,
+      input,
+    )
+    const second = await bootstrapRuntimeEvidenceAuthorityImportTrustRoots(
+      pool,
+      input,
+    )
+    expect(first).toMatchObject({
+      status: "installed",
+      descriptorSha256: expectedDescriptorSha256,
+      producerId: trustRoot.producerId,
+      keyId: trustRoot.keyId,
+      trustDomain: trustRoot.trustDomain,
+      generation: "1",
+    })
+    expect(second).toEqual({ ...first, status: "idempotent" })
+    expect(JSON.stringify(first)).not.toMatch(
+      /private|path|source|runtimeProducer|diagnostic|host/iu,
+    )
+  })
+
+  it("rejects changed bytes, identity conflict, and mutation", async () => {
+    const other = {
+      ...trustRoot,
+      publicKeyPem: generateKeyPairSync("ed25519").publicKey
+        .export({ type: "spki", format: "pem" })
+        .toString(),
+    }
+    const bytes = descriptorBytes([other])
+    await expect(
+      bootstrapRuntimeEvidenceAuthorityImportTrustRoots(pool, {
+        expectedDescriptorSha256: `sha256:${createHash("sha256")
+          .update(bytes)
+          .digest("hex")}`,
+        producerId: other.producerId,
+        keyId: other.keyId,
+        trustDomain: other.trustDomain,
+        readDescriptorBytes: async () => bytes,
+      }),
+    ).rejects.toMatchObject({ code: "IMPORT_ROOT_CONFLICT" })
+
+    const original = descriptorBytes([trustRoot])
+    let reads = 0
+    await expect(
+      bootstrapRuntimeEvidenceAuthorityImportTrustRoots(pool, {
+        expectedDescriptorSha256: `sha256:${createHash("sha256")
+          .update(original)
+          .digest("hex")}`,
+        producerId: trustRoot.producerId,
+        keyId: trustRoot.keyId,
+        trustDomain: trustRoot.trustDomain,
+        readDescriptorBytes: async () => {
+          reads += 1
+          return reads === 1 ? original : descriptorBytes([other])
+        },
+      }),
+    ).rejects.toMatchObject({ code: "IMPORT_ROOT_DESCRIPTOR_CHANGED" })
+
+    await expect(
+      pool.query(
+        "update runtime_evidence_authority_import_trust_root_deployments set generation = generation + 1",
+      ),
+    ).rejects.toThrow(/append-only/iu)
   })
 })
