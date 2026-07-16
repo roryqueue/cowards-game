@@ -14,8 +14,15 @@ import {
   validateCurrentReplayReconstruction,
 } from "./reconstruct.js"
 import { validateCurrentTransitionPostconditions } from "./current-transition-postconditions.js"
-import { recordChronicleFromExecution } from "./record.js"
-import { validateChronicleTransitions } from "./replay-transition.js"
+import {
+  recordChronicleFromExecution,
+  type RecordedCanonicalTransitionV137,
+} from "./record.js"
+import {
+  compareCurrentReplayTransitionV137,
+  validateChronicleTransitions,
+  type CurrentReplayTransitionField,
+} from "./replay-transition.js"
 
 const soldier = (
   id: string,
@@ -370,9 +377,160 @@ const candidateInput = () => {
     compatibility: recorded.semanticIdentity,
     chronicle: recorded.chronicle,
     boundaryAnchors: recorded.boundaryAnchors,
+    recordedTransitions: recorded.recordedTransitions,
+    transitionTraceRoot: recorded.transitionTraceRoot,
     execution,
   }
 }
+
+describe("current recorded transition equality", () => {
+  it("rejects the first exact D-14 field mismatch with stable safe coordinates", () => {
+    const input = candidateInput()
+    const expected = input.recordedTransitions.find(
+      ({ orderedEvents }) => orderedEvents.length > 1,
+    )!
+    const hash = `sha256:${"f".repeat(64)}`
+    const mutations: ReadonlyArray<{
+      readonly field: CurrentReplayTransitionField
+      readonly mutate: (
+        transition: RecordedCanonicalTransitionV137,
+      ) => RecordedCanonicalTransitionV137
+    }> = [
+      {
+        field: "ordinal",
+        mutate: (transition) => ({ ...transition, ordinal: -1 }),
+      },
+      {
+        field: "kind",
+        mutate: (transition) => ({ ...transition, kind: "MUTATED_KIND" }),
+      },
+      {
+        field: "semanticTupleId",
+        mutate: (transition) => ({ ...transition, semanticTupleId: hash }),
+      },
+      {
+        field: "coordinates",
+        mutate: (transition) => ({
+          ...transition,
+          coordinates: { ...transition.coordinates, stage: "mutated-stage" },
+        }),
+      },
+      {
+        field: "resultClass",
+        mutate: (transition) => ({
+          ...transition,
+          resultClass:
+            transition.resultClass === "success"
+              ? "player_violation"
+              : "success",
+        }),
+      },
+      {
+        field: "canonicalOutputHash",
+        mutate: (transition) => ({
+          ...transition,
+          canonicalOutputHash: hash,
+        }),
+      },
+      {
+        field: "strategyMemoryHash",
+        mutate: (transition) => ({ ...transition, strategyMemoryHash: hash }),
+      },
+      {
+        field: "soldierMemoryHash",
+        mutate: (transition) => ({ ...transition, soldierMemoryHash: hash }),
+      },
+      {
+        field: "objectiveHash",
+        mutate: (transition) => ({ ...transition, objectiveHash: hash }),
+      },
+      {
+        field: "orderedEvents",
+        mutate: (transition) => ({
+          ...transition,
+          orderedEvents: [...transition.orderedEvents].reverse(),
+        }),
+      },
+      {
+        field: "orderedEventsHash",
+        mutate: (transition) => ({ ...transition, orderedEventsHash: hash }),
+      },
+      {
+        field: "beforeStateHash",
+        mutate: (transition) => ({ ...transition, beforeStateHash: hash }),
+      },
+      {
+        field: "afterStateHash",
+        mutate: (transition) => ({ ...transition, afterStateHash: hash }),
+      },
+      {
+        field: "beforeMachineHash",
+        mutate: (transition) => ({ ...transition, beforeMachineHash: hash }),
+      },
+      {
+        field: "afterMachineHash",
+        mutate: (transition) => ({ ...transition, afterMachineHash: hash }),
+      },
+      {
+        field: "terminalStatus",
+        mutate: (transition) => ({
+          ...transition,
+          terminalStatus:
+            transition.terminalStatus === null
+              ? { type: "DRAW" }
+              : null,
+        }),
+      },
+      {
+        field: "failureStatus",
+        mutate: (transition) =>
+          ({
+            ...transition,
+            failureStatus: "mutated",
+          }) as unknown as RecordedCanonicalTransitionV137,
+      },
+      {
+        field: "terminalHash",
+        mutate: (transition) => ({ ...transition, terminalHash: hash }),
+      },
+      {
+        field: "accumulatedTraceRoot",
+        mutate: (transition) => ({
+          ...transition,
+          accumulatedTraceRoot: hash,
+        }),
+      },
+    ]
+
+    for (const { field, mutate } of mutations) {
+      expect(
+        compareCurrentReplayTransitionV137(
+          expected,
+          mutate(globalThis.structuredClone(expected)),
+          7,
+        ),
+        field,
+      ).toEqual({
+        ok: false,
+        code: "CURRENT_TRANSITION_FIELD_MISMATCH",
+        transitionIndex: 7,
+        field,
+      })
+    }
+  })
+
+  it("accepts exact transition equality without exposing compared values", () => {
+    const transition = candidateInput().recordedTransitions[0]!
+
+    expect(
+      compareCurrentReplayTransitionV137(
+        transition,
+        globalThis.structuredClone(transition),
+        0,
+      ),
+    ).toEqual({ ok: true })
+  })
+})
 
 describe("candidate replay reconstruction equivalence", () => {
   it("reconstructs every transition and the exact terminal outcome without scheduling", () => {
@@ -387,7 +545,13 @@ describe("candidate replay reconstruction equivalence", () => {
           ? input.execution.recorderMaterial.finalState.outcome
           : undefined,
     })
-    const replay = createCurrentReplay(input)
+    const replay = createCurrentReplay({
+      profile: input.profile,
+      compatibility: input.compatibility,
+      chronicle: input.chronicle,
+      boundaryAnchors: input.boundaryAnchors,
+      execution: input.execution,
+    })
     expect(replay.ok).toBe(true)
     if (!replay.ok) return
     const terminalSequence = input.chronicle.events.at(-1)?.sequence ?? -1
