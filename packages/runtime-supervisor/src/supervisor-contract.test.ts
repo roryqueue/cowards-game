@@ -233,8 +233,7 @@ const setOverLimitWall = (
   receipt.wall.processGroupReapedMonotonicNanoseconds =
     receipt.wall.supervisedSpawnMonotonicNanoseconds +
     receipt.wall.elapsedNanoseconds
-  receipt.wall.wallMilliseconds =
-    request.invocation.limits.wallMilliseconds + 1
+  receipt.wall.wallMilliseconds = request.invocation.limits.wallMilliseconds + 1
 }
 
 describe("shared runtime supervisor v1.18 contract", () => {
@@ -384,28 +383,27 @@ describe("shared runtime supervisor v1.18 contract", () => {
   })
 
   it("binds actual executable, argv, and environment values to public identities", () => {
-    const mutations: Array<
-      (request: SupervisorInvocationRequestV118) => void
-    > = [
-      (request) => {
-        ;(
-          request.execution as {
-            executablePath: string
-          }
-        ).executablePath = "/tmp/substituted-runtime"
-      },
-      (request) => {
-        ;(request.execution.argv as string[])[0] = "--inspect"
-      },
-      (request) => {
-        ;(
-          request.execution.environment as Array<{
-            name: string
-            value: string
-          }>
-        )[0] = { name: "LANG", value: "attacker-controlled" }
-      },
-    ]
+    const mutations: Array<(request: SupervisorInvocationRequestV118) => void> =
+      [
+        (request) => {
+          ;(
+            request.execution as {
+              executablePath: string
+            }
+          ).executablePath = "/tmp/substituted-runtime"
+        },
+        (request) => {
+          ;(request.execution.argv as string[])[0] = "--inspect"
+        },
+        (request) => {
+          ;(
+            request.execution.environment as Array<{
+              name: string
+              value: string
+            }>
+          )[0] = { name: "LANG", value: "attacker-controlled" }
+        },
+      ]
     for (const mutate of mutations) {
       const request = clone(fixture().request)
       mutate(request)
@@ -563,8 +561,7 @@ describe("shared runtime supervisor v1.18 contract", () => {
       expectFailure(
         verifySupervisorRawReceiptV118({
           request: current.request,
-          rawReceiptBytes:
-            serializeSupervisorRawReceiptEnvelopeV118(envelope),
+          rawReceiptBytes: serializeSupervisorRawReceiptEnvelopeV118(envelope),
           observed: { payloadBytes, stdoutBytes, stderrBytes },
         }),
         testCase.expectedCode,

@@ -21,6 +21,12 @@ const VERIFIED_SCHEMA_VERSION =
 const SHA256 = /^sha256:[0-9a-f]{64}$/u
 const PUBLIC_ID = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,255}$/u
 const NONCE = /^[A-Za-z0-9._:-]{24,255}$/u
+const ENVIRONMENT_NAME = /^[A-Za-z_][A-Za-z0-9_]{0,127}$/u
+const EXECUTABLE_PATH_MAX_BYTES = 4096
+const ARGUMENT_MAX_BYTES = 4096
+const ARGUMENT_COUNT_MAX = 64
+const ENVIRONMENT_VALUE_MAX_BYTES = 16_384
+const ENVIRONMENT_COUNT_MAX = 128
 
 const requestAuthority = new WeakSet<object>()
 const verifiedAuthority = new WeakSet<object>()
@@ -70,9 +76,19 @@ const decodeBase64 = (value: unknown): Uint8Array | undefined => {
 const isNonnegativeSafeInteger = (value: unknown): value is number =>
   typeof value === "number" && Number.isSafeInteger(value) && value >= 0
 
+export interface SupervisorExecutionDescriptorV118 {
+  readonly executablePath: string
+  readonly argv: readonly string[]
+  readonly environment: readonly Readonly<{
+    name: string
+    value: string
+  }>[]
+}
+
 export interface CreateSupervisorInvocationRequestV118Input {
   readonly invocation: RuntimeInvocationRequestV118
   readonly inputBytes: Uint8Array
+  readonly execution: SupervisorExecutionDescriptorV118
   readonly cancellationChannel: Readonly<{
     channelId: string
     channelNonce: string
@@ -91,6 +107,8 @@ export interface SupervisorInvocationRequestV118 {
     channelId: string
     channelNonce: string
   }>
+  readonly execution: SupervisorExecutionDescriptorV118
+  readonly expectedProcessGroupIdentitySha256: `sha256:${string}`
   readonly supervisorRequestSha256: `sha256:${string}`
 }
 
@@ -195,6 +213,102 @@ const failure = (
     code,
   })
 
+const utf8Length = (value: string): number => Buffer.byteLength(value, "utf8")
+
+const isBoundedText = (value: unknown, maximumBytes: number): value is string =>
+  typeof value === "string" &&
+  value.length > 0 &&
+  !value.includes("\u0000") &&
+  utf8Length(value) <= maximumBytes
+
+const validateExecutionDescriptor = (
+  value: unknown,
+): SupervisorExecutionDescriptorV118 | undefined => {
+  if (
+    !exactKeys(value, ["executablePath", "argv", "environment"]) ||
+    !isBoundedText(value.executablePath, EXECUTABLE_PATH_MAX_BYTES) ||
+    !value.executablePath.startsWith("/") ||
+    !Array.isArray(value.argv) ||
+    value.argv.length > ARGUMENT_COUNT_MAX ||
+    !value.argv.every((argument) =>
+      isBoundedText(argument, ARGUMENT_MAX_BYTES),
+    ) ||
+    !Array.isArray(value.environment) ||
+    value.environment.length > ENVIRONMENT_COUNT_MAX
+  ) {
+    return undefined
+  }
+  const environment: Array<{ name: string; value: string }> = []
+  for (const entry of value.environment) {
+    if (
+      !exactKeys(entry, ["name", "value"]) ||
+      typeof entry.name !== "string" ||
+      !ENVIRONMENT_NAME.test(entry.name) ||
+      typeof entry.value !== "string" ||
+      entry.value.includes("\u0000") ||
+      utf8Length(entry.value) > ENVIRONMENT_VALUE_MAX_BYTES
+    ) {
+      return undefined
+    }
+    environment.push({ name: entry.name, value: entry.value })
+  }
+  environment.sort((left, right) =>
+    left.name < right.name ? -1 : left.name > right.name ? 1 : 0,
+  )
+  for (let index = 1; index < environment.length; index += 1) {
+    if (environment[index - 1]?.name === environment[index]?.name) {
+      return undefined
+    }
+  }
+  return {
+    executablePath: value.executablePath,
+    argv: [...value.argv],
+    environment,
+  }
+}
+
+export const deriveSupervisorExecutionIdentityV118 = (
+  descriptor: SupervisorExecutionDescriptorV118,
+): RuntimeInvocationRequestV118["executable"] => {
+  const execution = validateExecutionDescriptor(descriptor)
+  if (execution === undefined) {
+    throw new TypeError("Supervisor execution descriptor is invalid")
+  }
+  return deepFreeze({
+    executableSha256: sha256(
+      canonicalBytes({
+        identityDomain: "cowards-game:runtime-executable-path:v1.18",
+        executablePath: execution.executablePath,
+      }),
+    ),
+    argvSha256: sha256(
+      canonicalBytes({
+        identityDomain: "cowards-game:runtime-argv:v1.18",
+        argv: execution.argv,
+      }),
+    ),
+    environmentPolicySha256: sha256(
+      canonicalBytes({
+        identityDomain: "cowards-game:runtime-environment-allowlist:v1.18",
+        environment: execution.environment,
+      }),
+    ),
+  }) as RuntimeInvocationRequestV118["executable"]
+}
+
+const executionIdentityMatchesInvocation = (
+  invocation: RuntimeInvocationRequestV118,
+  execution: SupervisorExecutionDescriptorV118,
+): boolean => {
+  const identity = deriveSupervisorExecutionIdentityV118(execution)
+  return (
+    identity.executableSha256 === invocation.executable.executableSha256 &&
+    identity.argvSha256 === invocation.executable.argvSha256 &&
+    identity.environmentPolicySha256 ===
+      invocation.executable.environmentPolicySha256
+  )
+}
+
 const requestBody = (
   request: Omit<SupervisorInvocationRequestV118, "supervisorRequestSha256">,
 ): JsonValue => request as unknown as JsonValue
@@ -211,6 +325,23 @@ const cancellationHash = (
       identityDomain: "cowards-game:runtime-cancellation-channel:v1.18",
       channelId: cancellation.channelId,
       channelNonce: cancellation.channelNonce,
+    }),
+  )
+
+const processGroupIdentityHash = (input: {
+  invocation: RuntimeInvocationRequestV118
+  input: SupervisorInvocationRequestV118["input"]
+  cancellation: SupervisorInvocationRequestV118["cancellation"]
+  execution: SupervisorExecutionDescriptorV118
+}): `sha256:${string}` =>
+  sha256(
+    canonicalBytes({
+      identityDomain: "cowards-game:runtime-process-group-identity:v1.18",
+      invocationRequestSha256: input.invocation.requestSha256,
+      hostNonce: input.invocation.hostNonce,
+      inputSha256: input.input.sha256,
+      cancellationChannelSha256: cancellationHash(input.cancellation),
+      execution: input.execution,
     }),
   )
 
@@ -298,7 +429,17 @@ export const createSupervisorInvocationRequestV118 = (
   if (cancellation === undefined) {
     throw new TypeError("Supervisor cancellation channel is invalid")
   }
-  const withoutHash = {
+  const execution = validateExecutionDescriptor(input.execution)
+  if (
+    execution === undefined ||
+    !executionIdentityMatchesInvocation(
+      parsedInvocation.data as unknown as RuntimeInvocationRequestV118,
+      execution,
+    )
+  ) {
+    throw new TypeError("Supervisor execution identity is invalid")
+  }
+  const bodyWithoutProcessGroup = {
     schemaVersion: REQUEST_SCHEMA_VERSION,
     invocation:
       parsedInvocation.data as unknown as RuntimeInvocationRequestV118,
@@ -308,6 +449,13 @@ export const createSupervisorInvocationRequestV118 = (
       sha256: sha256(input.inputBytes),
     },
     cancellation,
+    execution,
+  }
+  const withoutHash = {
+    ...bodyWithoutProcessGroup,
+    expectedProcessGroupIdentitySha256: processGroupIdentityHash(
+      bodyWithoutProcessGroup,
+    ),
   }
   return authorizeRequest({
     ...withoutHash,
@@ -338,9 +486,13 @@ export const parseSupervisorInvocationRequestV118 = (
       "invocation",
       "input",
       "cancellation",
+      "execution",
+      "expectedProcessGroupIdentitySha256",
       "supervisorRequestSha256",
     ]) ||
     value.schemaVersion !== REQUEST_SCHEMA_VERSION ||
+    typeof value.expectedProcessGroupIdentitySha256 !== "string" ||
+    !SHA256.test(value.expectedProcessGroupIdentitySha256) ||
     typeof value.supervisorRequestSha256 !== "string" ||
     !SHA256.test(value.supervisorRequestSha256)
   ) {
@@ -357,12 +509,32 @@ export const parseSupervisorInvocationRequestV118 = (
   if (input === undefined) return failure("REQUEST_INPUT_MISMATCH")
   const cancellation = validateCancellation(value.cancellation)
   if (cancellation === undefined) return failure("REQUEST_SHAPE_INVALID")
-  const withoutHash = {
+  const execution = validateExecutionDescriptor(value.execution)
+  if (execution === undefined) return failure("REQUEST_SHAPE_INVALID")
+  const invocation =
+    parsedInvocation.data as unknown as RuntimeInvocationRequestV118
+  if (!executionIdentityMatchesInvocation(invocation, execution)) {
+    return failure("REQUEST_BINDING_MISMATCH")
+  }
+  const bodyWithoutProcessGroup = {
     schemaVersion: REQUEST_SCHEMA_VERSION,
-    invocation:
-      parsedInvocation.data as unknown as RuntimeInvocationRequestV118,
+    invocation,
     input: input.binding,
     cancellation,
+    execution,
+  }
+  const expectedProcessGroupIdentitySha256 = processGroupIdentityHash(
+    bodyWithoutProcessGroup,
+  )
+  if (
+    expectedProcessGroupIdentitySha256 !==
+    value.expectedProcessGroupIdentitySha256
+  ) {
+    return failure("REQUEST_BINDING_MISMATCH")
+  }
+  const withoutHash = {
+    ...bodyWithoutProcessGroup,
+    expectedProcessGroupIdentitySha256,
   }
   if (requestHash(withoutHash) !== value.supervisorRequestSha256) {
     return failure("REQUEST_BINDING_MISMATCH")
@@ -481,7 +653,9 @@ const verifyObservationBinding = (
     envelope.supervisorRequestSha256 !== request.supervisorRequestSha256 ||
     envelope.inputSha256 !== request.input.sha256 ||
     envelope.cancellationChannelSha256 !==
-      cancellationHash(request.cancellation)
+      cancellationHash(request.cancellation) ||
+    envelope.receipt.containment.processGroupIdentitySha256 !==
+      request.expectedProcessGroupIdentitySha256
   ) {
     return failure("RECEIPT_BINDING_MISMATCH")
   }
