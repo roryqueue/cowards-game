@@ -183,6 +183,18 @@
       "sha256": "f80b76b1472dd852a2ea0380e8dac8d6037f2f669b8ca5f82a4cb8a5a9e171fa"
     },
     {
+      "path": ".planning/artifacts/v1.37-kernel-integrity-proof.json",
+      "sha256": "ef37233efa0bbe664f995754725851a6e6d7f970246da8dea5a5b54dd2c64534"
+    },
+    {
+      "path": ".planning/artifacts/v1.37-kernel-integrity-proof.md",
+      "sha256": "a731988bd96bd2d65a05a6a5d16cc9810748b9b15ab9894c5553f0ee383a7a7c"
+    },
+    {
+      "path": ".planning/artifacts/v1.37-phase-257-browser-playwright.json",
+      "sha256": "17846af92c6429e78d63c33b3ad25ad74eb3c6656c6617c3fc05229edf9ef3bb"
+    },
+    {
       "path": ".planning/artifacts/v1.37-runtime-abi-calibration.json",
       "sha256": "7c8f9e72ba26edfbe558210028074ec792894789e4d5197d510abb385c0b32a8"
     },
@@ -1097,6 +1109,14 @@
     {
       "path": "scripts/evaluate-v1-24-runtime-abuse-lab.ts",
       "sha256": "072638c3e7fd93de6db65be6077b072b95ee14c7a63a4e7162395a105e2049b6"
+    },
+    {
+      "path": "scripts/evaluate-v1-37-kernel-integrity.test.ts",
+      "sha256": "7a17a1de689be1482974ff2b29e320a8bc904a3650e35f5363f484d0e71deafe"
+    },
+    {
+      "path": "scripts/evaluate-v1-37-kernel-integrity.ts",
+      "sha256": "3bdc2434e9704d8b6cb361342841e1f6e9760f81bd0cc8f2838ce11279457006"
     },
     {
       "path": "scripts/evaluate-v1-37-runtime-abi.test.ts",
