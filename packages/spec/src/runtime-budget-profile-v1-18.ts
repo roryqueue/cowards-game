@@ -266,4 +266,4 @@ export const classifyRuntimeLimitComparisonV118 = (
 }
 
 export const cloneRuntimeBudgetProfileV118 = (): typeof RUNTIME_BUDGET_PROFILE_V1_18 =>
-  structuredClone(RUNTIME_BUDGET_PROFILE_V1_18)
+  globalThis.structuredClone(RUNTIME_BUDGET_PROFILE_V1_18)

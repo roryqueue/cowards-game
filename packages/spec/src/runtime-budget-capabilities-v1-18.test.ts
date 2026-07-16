@@ -86,7 +86,7 @@ const completeEvidence = (
       : null,
 })
 
-const clone = <T>(value: T): T => structuredClone(value)
+const clone = <T>(value: T): T => globalThis.structuredClone(value)
 
 describe("runtime budget capabilities v1.18", () => {
   it("defines one identical ordered common meter and identity contract", () => {

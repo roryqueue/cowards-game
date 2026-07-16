@@ -133,7 +133,7 @@ const validReceipt = (
   }
 }
 
-const clone = <T>(value: T): T => structuredClone(value)
+const clone = <T>(value: T): T => globalThis.structuredClone(value)
 
 describe("runtime invocation v1.18", () => {
   it("creates one closed canonical request bound to exact limits and identity", () => {
@@ -329,7 +329,6 @@ describe("runtime invocation v1.18", () => {
   })
 
   it("rejects noncanonical, overflow, negative, and gameplay-bearing receipts", () => {
-    const request = createRuntimeInvocationRequestV118(requestInput())
     const malformed = clone(validReceipt()) as unknown as Record<string, unknown>
     malformed.gameplay = { strategyMemory: { private: true } }
     expect(RuntimeSupervisorRawReceiptV118Schema.safeParse(malformed).success).toBe(
