@@ -58,7 +58,39 @@ describe("migrations", () => {
       "0022_runtime_evidence_v1_17_installed_authority.sql",
     )
     expect(names).toContain("0023_runtime_conformance_certificates.sql")
+    expect(names).toContain(
+      "0024_runtime_authority_import_trust_roots.sql",
+    )
     expect(names).toEqual([...names].sort())
+  })
+
+  it("pins plural authority import trust-root descriptors append-only", async () => {
+    const sql = await readFile(
+      new URL(
+        "0024_runtime_authority_import_trust_roots.sql",
+        migrationsDirectory,
+      ),
+      "utf8",
+    )
+    for (const required of [
+      "runtime_evidence_authority_import_trust_root_head",
+      "runtime_evidence_authority_import_trust_root_deployments",
+      "descriptor_sha256",
+      "descriptor_bytes",
+      "producer_id",
+      "key_id",
+      "trust_domain",
+      "public_key_fingerprint",
+      "generation",
+      "reject_integrity_authority_mutation",
+    ]) {
+      expect(sql).toContain(required)
+    }
+    expect(sql).toContain("unique (producer_id, key_id, trust_domain)")
+    expect(sql).not.toMatch(/private|file_path|runtime_producer/iu)
+    expect(sql).not.toMatch(
+      /insert\s+into\s+runtime_evidence_authority_import_trust_root_deployments/iu,
+    )
   })
 
   it("extends the existing certificate ledger with exact Phase-259 provenance", async () => {

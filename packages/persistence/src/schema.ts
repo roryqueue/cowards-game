@@ -77,3 +77,15 @@ export const RUNTIME_CONFORMANCE_CERTIFICATE_V1_17_COLUMNS = Object.freeze([
   "conformance_import_signature_base64",
   "conformance_import_envelope_hash",
 ] as const)
+
+export const RUNTIME_AUTHORITY_IMPORT_TRUST_ROOT_DEPLOYMENT_COLUMNS =
+  Object.freeze([
+    "id",
+    "descriptor_sha256",
+    "descriptor_bytes",
+    "producer_id",
+    "key_id",
+    "trust_domain",
+    "public_key_fingerprint",
+    "generation",
+  ] as const)
