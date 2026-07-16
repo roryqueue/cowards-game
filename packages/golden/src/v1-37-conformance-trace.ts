@@ -995,6 +995,18 @@ export const compareCanonicalConformanceTrace = ({
     }) as Readonly<CanonicalConformanceTraceComparison>
   }
   const actualValidation = projectedTraceValidation(actual)
+  if (
+    !actualValidation.ok &&
+    (actualValidation.code === "TRACE_SHAPE_INVALID" ||
+      actualValidation.code === "TRACE_CANONICAL_JSON_INVALID")
+  ) {
+    return divergence(
+      expected,
+      "traceSemantics",
+      "valid",
+      actualValidation.code,
+    )
+  }
   const computedActualRoot = hashCanonicalConformanceTrace(actual)
   if (actual.traceRoot !== computedActualRoot) {
     return divergence(

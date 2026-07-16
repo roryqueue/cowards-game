@@ -378,6 +378,21 @@ describe("v1.37 canonical conformance trace", () => {
       status: "diverged",
       disposition: "quarantine",
     })
+
+    const structurallyInvalid = {
+      ...projected,
+      invocations: null,
+    } as unknown as CanonicalConformanceTrace
+    expect(
+      compareCanonicalConformanceTrace({
+        expected: projected,
+        actual: structurallyInvalid,
+      }),
+    ).toMatchObject({
+      status: "diverged",
+      disposition: "quarantine",
+      divergence: { field: "traceSemantics" },
+    })
   })
 
   it("rejects host-private and private-preimage fields instead of serializing them", () => {
