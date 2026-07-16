@@ -92,114 +92,228 @@
                       "type": "string"
                     },
                     "runtime": {
-                      "additionalProperties": false,
-                      "properties": {
-                        "abiVersion": {
-                          "const": "strategy-runtime-abi-v1.14",
-                          "type": "string"
-                        },
-                        "adapter": {
+                      "anyOf": [
+                        {
                           "additionalProperties": false,
                           "properties": {
-                            "id": {
-                              "enum": [
-                                "runtime-js-worker-thread",
-                                "runtime-js-subprocess",
-                                "runtime-js-container-subprocess",
-                                "runtime-python-subprocess-experimental",
-                                "runtime-wasm-wasi-wasmtime-preview1"
-                              ],
+                            "abiVersion": {
+                              "const": "strategy-runtime-abi-v1.17",
                               "type": "string"
                             },
-                            "version": {
-                              "minLength": 1,
-                              "type": "string"
-                            }
-                          },
-                          "required": [
-                            "id",
-                            "version"
-                          ],
-                          "type": "object"
-                        },
-                        "language": {
-                          "additionalProperties": false,
-                          "properties": {
-                            "id": {
-                              "enum": [
-                                "javascript",
-                                "typescript",
-                                "python",
-                                "rust",
-                                "zig"
+                            "adapter": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "id": {
+                                  "enum": [
+                                    "runtime-js-worker-thread",
+                                    "runtime-js-subprocess",
+                                    "runtime-js-container-subprocess",
+                                    "runtime-python-subprocess-experimental",
+                                    "runtime-wasm-wasi-wasmtime-preview1"
+                                  ],
+                                  "type": "string"
+                                },
+                                "version": {
+                                  "minLength": 1,
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "version"
                               ],
-                              "type": "string"
-                            },
-                            "version": {
-                              "minLength": 1,
-                              "type": "string"
-                            }
-                          },
-                          "required": [
-                            "id",
-                            "version"
-                          ],
-                          "type": "object"
-                        },
-                        "package": {
-                          "additionalProperties": false,
-                          "properties": {
-                            "declaredDependencies": {
-                              "additionalProperties": {
-                                "type": "string"
-                              },
-                              "propertyNames": {
-                                "type": "string"
-                              },
                               "type": "object"
                             },
-                            "entrypoint": {
-                              "minLength": 1,
-                              "type": "string"
-                            },
-                            "lockfileHash": {
-                              "minLength": 1,
-                              "type": "string"
-                            },
-                            "manifestHash": {
-                              "minLength": 1,
-                              "type": "string"
-                            },
-                            "mode": {
-                              "enum": [
-                                "none",
-                                "declared"
+                            "language": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "id": {
+                                  "enum": [
+                                    "javascript",
+                                    "typescript",
+                                    "python",
+                                    "rust",
+                                    "zig"
+                                  ],
+                                  "type": "string"
+                                },
+                                "version": {
+                                  "minLength": 1,
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "version"
                               ],
-                              "type": "string"
+                              "type": "object"
+                            },
+                            "package": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "declaredDependencies": {
+                                  "additionalProperties": {
+                                    "type": "string"
+                                  },
+                                  "propertyNames": {
+                                    "type": "string"
+                                  },
+                                  "type": "object"
+                                },
+                                "entrypoint": {
+                                  "minLength": 1,
+                                  "type": "string"
+                                },
+                                "lockfileHash": {
+                                  "minLength": 1,
+                                  "type": "string"
+                                },
+                                "manifestHash": {
+                                  "minLength": 1,
+                                  "type": "string"
+                                },
+                                "mode": {
+                                  "enum": [
+                                    "none",
+                                    "declared"
+                                  ],
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "mode",
+                                "entrypoint"
+                              ],
+                              "type": "object"
+                            },
+                            "requiredCapabilities": {
+                              "items": {
+                                "minLength": 1,
+                                "type": "string"
+                              },
+                              "type": "array"
                             }
                           },
                           "required": [
-                            "mode",
-                            "entrypoint"
+                            "abiVersion",
+                            "language",
+                            "adapter",
+                            "package",
+                            "requiredCapabilities"
                           ],
                           "type": "object"
                         },
-                        "requiredCapabilities": {
-                          "items": {
-                            "minLength": 1,
-                            "type": "string"
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "abiVersion": {
+                              "const": "strategy-runtime-abi-v1.14",
+                              "type": "string"
+                            },
+                            "adapter": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "id": {
+                                  "enum": [
+                                    "runtime-js-worker-thread",
+                                    "runtime-js-subprocess",
+                                    "runtime-js-container-subprocess",
+                                    "runtime-python-subprocess-experimental",
+                                    "runtime-wasm-wasi-wasmtime-preview1"
+                                  ],
+                                  "type": "string"
+                                },
+                                "version": {
+                                  "minLength": 1,
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "version"
+                              ],
+                              "type": "object"
+                            },
+                            "language": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "id": {
+                                  "enum": [
+                                    "javascript",
+                                    "typescript",
+                                    "python",
+                                    "rust",
+                                    "zig"
+                                  ],
+                                  "type": "string"
+                                },
+                                "version": {
+                                  "minLength": 1,
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "version"
+                              ],
+                              "type": "object"
+                            },
+                            "package": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "declaredDependencies": {
+                                  "additionalProperties": {
+                                    "type": "string"
+                                  },
+                                  "propertyNames": {
+                                    "type": "string"
+                                  },
+                                  "type": "object"
+                                },
+                                "entrypoint": {
+                                  "minLength": 1,
+                                  "type": "string"
+                                },
+                                "lockfileHash": {
+                                  "minLength": 1,
+                                  "type": "string"
+                                },
+                                "manifestHash": {
+                                  "minLength": 1,
+                                  "type": "string"
+                                },
+                                "mode": {
+                                  "enum": [
+                                    "none",
+                                    "declared"
+                                  ],
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "mode",
+                                "entrypoint"
+                              ],
+                              "type": "object"
+                            },
+                            "requiredCapabilities": {
+                              "items": {
+                                "minLength": 1,
+                                "type": "string"
+                              },
+                              "type": "array"
+                            }
                           },
-                          "type": "array"
+                          "required": [
+                            "abiVersion",
+                            "language",
+                            "adapter",
+                            "package",
+                            "requiredCapabilities"
+                          ],
+                          "type": "object"
                         }
-                      },
-                      "required": [
-                        "abiVersion",
-                        "language",
-                        "adapter",
-                        "package",
-                        "requiredCapabilities"
-                      ],
-                      "type": "object"
+                      ]
                     },
                     "runtimeSemantics": {
                       "additionalProperties": false,
@@ -1246,114 +1360,228 @@
                       "type": "string"
                     },
                     "runtime": {
-                      "additionalProperties": false,
-                      "properties": {
-                        "abiVersion": {
-                          "const": "strategy-runtime-abi-v1.14",
-                          "type": "string"
-                        },
-                        "adapter": {
+                      "anyOf": [
+                        {
                           "additionalProperties": false,
                           "properties": {
-                            "id": {
-                              "enum": [
-                                "runtime-js-worker-thread",
-                                "runtime-js-subprocess",
-                                "runtime-js-container-subprocess",
-                                "runtime-python-subprocess-experimental",
-                                "runtime-wasm-wasi-wasmtime-preview1"
-                              ],
+                            "abiVersion": {
+                              "const": "strategy-runtime-abi-v1.17",
                               "type": "string"
                             },
-                            "version": {
-                              "minLength": 1,
-                              "type": "string"
-                            }
-                          },
-                          "required": [
-                            "id",
-                            "version"
-                          ],
-                          "type": "object"
-                        },
-                        "language": {
-                          "additionalProperties": false,
-                          "properties": {
-                            "id": {
-                              "enum": [
-                                "javascript",
-                                "typescript",
-                                "python",
-                                "rust",
-                                "zig"
+                            "adapter": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "id": {
+                                  "enum": [
+                                    "runtime-js-worker-thread",
+                                    "runtime-js-subprocess",
+                                    "runtime-js-container-subprocess",
+                                    "runtime-python-subprocess-experimental",
+                                    "runtime-wasm-wasi-wasmtime-preview1"
+                                  ],
+                                  "type": "string"
+                                },
+                                "version": {
+                                  "minLength": 1,
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "version"
                               ],
-                              "type": "string"
-                            },
-                            "version": {
-                              "minLength": 1,
-                              "type": "string"
-                            }
-                          },
-                          "required": [
-                            "id",
-                            "version"
-                          ],
-                          "type": "object"
-                        },
-                        "package": {
-                          "additionalProperties": false,
-                          "properties": {
-                            "declaredDependencies": {
-                              "additionalProperties": {
-                                "type": "string"
-                              },
-                              "propertyNames": {
-                                "type": "string"
-                              },
                               "type": "object"
                             },
-                            "entrypoint": {
-                              "minLength": 1,
-                              "type": "string"
-                            },
-                            "lockfileHash": {
-                              "minLength": 1,
-                              "type": "string"
-                            },
-                            "manifestHash": {
-                              "minLength": 1,
-                              "type": "string"
-                            },
-                            "mode": {
-                              "enum": [
-                                "none",
-                                "declared"
+                            "language": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "id": {
+                                  "enum": [
+                                    "javascript",
+                                    "typescript",
+                                    "python",
+                                    "rust",
+                                    "zig"
+                                  ],
+                                  "type": "string"
+                                },
+                                "version": {
+                                  "minLength": 1,
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "version"
                               ],
-                              "type": "string"
+                              "type": "object"
+                            },
+                            "package": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "declaredDependencies": {
+                                  "additionalProperties": {
+                                    "type": "string"
+                                  },
+                                  "propertyNames": {
+                                    "type": "string"
+                                  },
+                                  "type": "object"
+                                },
+                                "entrypoint": {
+                                  "minLength": 1,
+                                  "type": "string"
+                                },
+                                "lockfileHash": {
+                                  "minLength": 1,
+                                  "type": "string"
+                                },
+                                "manifestHash": {
+                                  "minLength": 1,
+                                  "type": "string"
+                                },
+                                "mode": {
+                                  "enum": [
+                                    "none",
+                                    "declared"
+                                  ],
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "mode",
+                                "entrypoint"
+                              ],
+                              "type": "object"
+                            },
+                            "requiredCapabilities": {
+                              "items": {
+                                "minLength": 1,
+                                "type": "string"
+                              },
+                              "type": "array"
                             }
                           },
                           "required": [
-                            "mode",
-                            "entrypoint"
+                            "abiVersion",
+                            "language",
+                            "adapter",
+                            "package",
+                            "requiredCapabilities"
                           ],
                           "type": "object"
                         },
-                        "requiredCapabilities": {
-                          "items": {
-                            "minLength": 1,
-                            "type": "string"
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "abiVersion": {
+                              "const": "strategy-runtime-abi-v1.14",
+                              "type": "string"
+                            },
+                            "adapter": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "id": {
+                                  "enum": [
+                                    "runtime-js-worker-thread",
+                                    "runtime-js-subprocess",
+                                    "runtime-js-container-subprocess",
+                                    "runtime-python-subprocess-experimental",
+                                    "runtime-wasm-wasi-wasmtime-preview1"
+                                  ],
+                                  "type": "string"
+                                },
+                                "version": {
+                                  "minLength": 1,
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "version"
+                              ],
+                              "type": "object"
+                            },
+                            "language": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "id": {
+                                  "enum": [
+                                    "javascript",
+                                    "typescript",
+                                    "python",
+                                    "rust",
+                                    "zig"
+                                  ],
+                                  "type": "string"
+                                },
+                                "version": {
+                                  "minLength": 1,
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "version"
+                              ],
+                              "type": "object"
+                            },
+                            "package": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "declaredDependencies": {
+                                  "additionalProperties": {
+                                    "type": "string"
+                                  },
+                                  "propertyNames": {
+                                    "type": "string"
+                                  },
+                                  "type": "object"
+                                },
+                                "entrypoint": {
+                                  "minLength": 1,
+                                  "type": "string"
+                                },
+                                "lockfileHash": {
+                                  "minLength": 1,
+                                  "type": "string"
+                                },
+                                "manifestHash": {
+                                  "minLength": 1,
+                                  "type": "string"
+                                },
+                                "mode": {
+                                  "enum": [
+                                    "none",
+                                    "declared"
+                                  ],
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "mode",
+                                "entrypoint"
+                              ],
+                              "type": "object"
+                            },
+                            "requiredCapabilities": {
+                              "items": {
+                                "minLength": 1,
+                                "type": "string"
+                              },
+                              "type": "array"
+                            }
                           },
-                          "type": "array"
+                          "required": [
+                            "abiVersion",
+                            "language",
+                            "adapter",
+                            "package",
+                            "requiredCapabilities"
+                          ],
+                          "type": "object"
                         }
-                      },
-                      "required": [
-                        "abiVersion",
-                        "language",
-                        "adapter",
-                        "package",
-                        "requiredCapabilities"
-                      ],
-                      "type": "object"
+                      ]
                     },
                     "runtimeSemantics": {
                       "additionalProperties": false,
@@ -2321,114 +2549,228 @@
                       "type": "array"
                     },
                     "runtime": {
-                      "additionalProperties": false,
-                      "properties": {
-                        "abiVersion": {
-                          "const": "strategy-runtime-abi-v1.14",
-                          "type": "string"
-                        },
-                        "adapter": {
+                      "anyOf": [
+                        {
                           "additionalProperties": false,
                           "properties": {
-                            "id": {
-                              "enum": [
-                                "runtime-js-worker-thread",
-                                "runtime-js-subprocess",
-                                "runtime-js-container-subprocess",
-                                "runtime-python-subprocess-experimental",
-                                "runtime-wasm-wasi-wasmtime-preview1"
-                              ],
+                            "abiVersion": {
+                              "const": "strategy-runtime-abi-v1.17",
                               "type": "string"
                             },
-                            "version": {
-                              "minLength": 1,
-                              "type": "string"
-                            }
-                          },
-                          "required": [
-                            "id",
-                            "version"
-                          ],
-                          "type": "object"
-                        },
-                        "language": {
-                          "additionalProperties": false,
-                          "properties": {
-                            "id": {
-                              "enum": [
-                                "javascript",
-                                "typescript",
-                                "python",
-                                "rust",
-                                "zig"
+                            "adapter": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "id": {
+                                  "enum": [
+                                    "runtime-js-worker-thread",
+                                    "runtime-js-subprocess",
+                                    "runtime-js-container-subprocess",
+                                    "runtime-python-subprocess-experimental",
+                                    "runtime-wasm-wasi-wasmtime-preview1"
+                                  ],
+                                  "type": "string"
+                                },
+                                "version": {
+                                  "minLength": 1,
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "version"
                               ],
-                              "type": "string"
-                            },
-                            "version": {
-                              "minLength": 1,
-                              "type": "string"
-                            }
-                          },
-                          "required": [
-                            "id",
-                            "version"
-                          ],
-                          "type": "object"
-                        },
-                        "package": {
-                          "additionalProperties": false,
-                          "properties": {
-                            "declaredDependencies": {
-                              "additionalProperties": {
-                                "type": "string"
-                              },
-                              "propertyNames": {
-                                "type": "string"
-                              },
                               "type": "object"
                             },
-                            "entrypoint": {
-                              "minLength": 1,
-                              "type": "string"
-                            },
-                            "lockfileHash": {
-                              "minLength": 1,
-                              "type": "string"
-                            },
-                            "manifestHash": {
-                              "minLength": 1,
-                              "type": "string"
-                            },
-                            "mode": {
-                              "enum": [
-                                "none",
-                                "declared"
+                            "language": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "id": {
+                                  "enum": [
+                                    "javascript",
+                                    "typescript",
+                                    "python",
+                                    "rust",
+                                    "zig"
+                                  ],
+                                  "type": "string"
+                                },
+                                "version": {
+                                  "minLength": 1,
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "version"
                               ],
-                              "type": "string"
+                              "type": "object"
+                            },
+                            "package": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "declaredDependencies": {
+                                  "additionalProperties": {
+                                    "type": "string"
+                                  },
+                                  "propertyNames": {
+                                    "type": "string"
+                                  },
+                                  "type": "object"
+                                },
+                                "entrypoint": {
+                                  "minLength": 1,
+                                  "type": "string"
+                                },
+                                "lockfileHash": {
+                                  "minLength": 1,
+                                  "type": "string"
+                                },
+                                "manifestHash": {
+                                  "minLength": 1,
+                                  "type": "string"
+                                },
+                                "mode": {
+                                  "enum": [
+                                    "none",
+                                    "declared"
+                                  ],
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "mode",
+                                "entrypoint"
+                              ],
+                              "type": "object"
+                            },
+                            "requiredCapabilities": {
+                              "items": {
+                                "minLength": 1,
+                                "type": "string"
+                              },
+                              "type": "array"
                             }
                           },
                           "required": [
-                            "mode",
-                            "entrypoint"
+                            "abiVersion",
+                            "language",
+                            "adapter",
+                            "package",
+                            "requiredCapabilities"
                           ],
                           "type": "object"
                         },
-                        "requiredCapabilities": {
-                          "items": {
-                            "minLength": 1,
-                            "type": "string"
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "abiVersion": {
+                              "const": "strategy-runtime-abi-v1.14",
+                              "type": "string"
+                            },
+                            "adapter": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "id": {
+                                  "enum": [
+                                    "runtime-js-worker-thread",
+                                    "runtime-js-subprocess",
+                                    "runtime-js-container-subprocess",
+                                    "runtime-python-subprocess-experimental",
+                                    "runtime-wasm-wasi-wasmtime-preview1"
+                                  ],
+                                  "type": "string"
+                                },
+                                "version": {
+                                  "minLength": 1,
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "version"
+                              ],
+                              "type": "object"
+                            },
+                            "language": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "id": {
+                                  "enum": [
+                                    "javascript",
+                                    "typescript",
+                                    "python",
+                                    "rust",
+                                    "zig"
+                                  ],
+                                  "type": "string"
+                                },
+                                "version": {
+                                  "minLength": 1,
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "version"
+                              ],
+                              "type": "object"
+                            },
+                            "package": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "declaredDependencies": {
+                                  "additionalProperties": {
+                                    "type": "string"
+                                  },
+                                  "propertyNames": {
+                                    "type": "string"
+                                  },
+                                  "type": "object"
+                                },
+                                "entrypoint": {
+                                  "minLength": 1,
+                                  "type": "string"
+                                },
+                                "lockfileHash": {
+                                  "minLength": 1,
+                                  "type": "string"
+                                },
+                                "manifestHash": {
+                                  "minLength": 1,
+                                  "type": "string"
+                                },
+                                "mode": {
+                                  "enum": [
+                                    "none",
+                                    "declared"
+                                  ],
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "mode",
+                                "entrypoint"
+                              ],
+                              "type": "object"
+                            },
+                            "requiredCapabilities": {
+                              "items": {
+                                "minLength": 1,
+                                "type": "string"
+                              },
+                              "type": "array"
+                            }
                           },
-                          "type": "array"
+                          "required": [
+                            "abiVersion",
+                            "language",
+                            "adapter",
+                            "package",
+                            "requiredCapabilities"
+                          ],
+                          "type": "object"
                         }
-                      },
-                      "required": [
-                        "abiVersion",
-                        "language",
-                        "adapter",
-                        "package",
-                        "requiredCapabilities"
-                      ],
-                      "type": "object"
+                      ]
                     },
                     "sourceBytes": {
                       "maximum": 9007199254740991,
@@ -3393,114 +3735,228 @@
                     "type": "array"
                   },
                   "runtime": {
-                    "additionalProperties": false,
-                    "properties": {
-                      "abiVersion": {
-                        "const": "strategy-runtime-abi-v1.14",
-                        "type": "string"
-                      },
-                      "adapter": {
+                    "anyOf": [
+                      {
                         "additionalProperties": false,
                         "properties": {
-                          "id": {
-                            "enum": [
-                              "runtime-js-worker-thread",
-                              "runtime-js-subprocess",
-                              "runtime-js-container-subprocess",
-                              "runtime-python-subprocess-experimental",
-                              "runtime-wasm-wasi-wasmtime-preview1"
-                            ],
+                          "abiVersion": {
+                            "const": "strategy-runtime-abi-v1.17",
                             "type": "string"
                           },
-                          "version": {
-                            "minLength": 1,
-                            "type": "string"
-                          }
-                        },
-                        "required": [
-                          "id",
-                          "version"
-                        ],
-                        "type": "object"
-                      },
-                      "language": {
-                        "additionalProperties": false,
-                        "properties": {
-                          "id": {
-                            "enum": [
-                              "javascript",
-                              "typescript",
-                              "python",
-                              "rust",
-                              "zig"
+                          "adapter": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "id": {
+                                "enum": [
+                                  "runtime-js-worker-thread",
+                                  "runtime-js-subprocess",
+                                  "runtime-js-container-subprocess",
+                                  "runtime-python-subprocess-experimental",
+                                  "runtime-wasm-wasi-wasmtime-preview1"
+                                ],
+                                "type": "string"
+                              },
+                              "version": {
+                                "minLength": 1,
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "version"
                             ],
-                            "type": "string"
-                          },
-                          "version": {
-                            "minLength": 1,
-                            "type": "string"
-                          }
-                        },
-                        "required": [
-                          "id",
-                          "version"
-                        ],
-                        "type": "object"
-                      },
-                      "package": {
-                        "additionalProperties": false,
-                        "properties": {
-                          "declaredDependencies": {
-                            "additionalProperties": {
-                              "type": "string"
-                            },
-                            "propertyNames": {
-                              "type": "string"
-                            },
                             "type": "object"
                           },
-                          "entrypoint": {
-                            "minLength": 1,
-                            "type": "string"
-                          },
-                          "lockfileHash": {
-                            "minLength": 1,
-                            "type": "string"
-                          },
-                          "manifestHash": {
-                            "minLength": 1,
-                            "type": "string"
-                          },
-                          "mode": {
-                            "enum": [
-                              "none",
-                              "declared"
+                          "language": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "id": {
+                                "enum": [
+                                  "javascript",
+                                  "typescript",
+                                  "python",
+                                  "rust",
+                                  "zig"
+                                ],
+                                "type": "string"
+                              },
+                              "version": {
+                                "minLength": 1,
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "version"
                             ],
-                            "type": "string"
+                            "type": "object"
+                          },
+                          "package": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "declaredDependencies": {
+                                "additionalProperties": {
+                                  "type": "string"
+                                },
+                                "propertyNames": {
+                                  "type": "string"
+                                },
+                                "type": "object"
+                              },
+                              "entrypoint": {
+                                "minLength": 1,
+                                "type": "string"
+                              },
+                              "lockfileHash": {
+                                "minLength": 1,
+                                "type": "string"
+                              },
+                              "manifestHash": {
+                                "minLength": 1,
+                                "type": "string"
+                              },
+                              "mode": {
+                                "enum": [
+                                  "none",
+                                  "declared"
+                                ],
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "mode",
+                              "entrypoint"
+                            ],
+                            "type": "object"
+                          },
+                          "requiredCapabilities": {
+                            "items": {
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "type": "array"
                           }
                         },
                         "required": [
-                          "mode",
-                          "entrypoint"
+                          "abiVersion",
+                          "language",
+                          "adapter",
+                          "package",
+                          "requiredCapabilities"
                         ],
                         "type": "object"
                       },
-                      "requiredCapabilities": {
-                        "items": {
-                          "minLength": 1,
-                          "type": "string"
+                      {
+                        "additionalProperties": false,
+                        "properties": {
+                          "abiVersion": {
+                            "const": "strategy-runtime-abi-v1.14",
+                            "type": "string"
+                          },
+                          "adapter": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "id": {
+                                "enum": [
+                                  "runtime-js-worker-thread",
+                                  "runtime-js-subprocess",
+                                  "runtime-js-container-subprocess",
+                                  "runtime-python-subprocess-experimental",
+                                  "runtime-wasm-wasi-wasmtime-preview1"
+                                ],
+                                "type": "string"
+                              },
+                              "version": {
+                                "minLength": 1,
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "version"
+                            ],
+                            "type": "object"
+                          },
+                          "language": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "id": {
+                                "enum": [
+                                  "javascript",
+                                  "typescript",
+                                  "python",
+                                  "rust",
+                                  "zig"
+                                ],
+                                "type": "string"
+                              },
+                              "version": {
+                                "minLength": 1,
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "version"
+                            ],
+                            "type": "object"
+                          },
+                          "package": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "declaredDependencies": {
+                                "additionalProperties": {
+                                  "type": "string"
+                                },
+                                "propertyNames": {
+                                  "type": "string"
+                                },
+                                "type": "object"
+                              },
+                              "entrypoint": {
+                                "minLength": 1,
+                                "type": "string"
+                              },
+                              "lockfileHash": {
+                                "minLength": 1,
+                                "type": "string"
+                              },
+                              "manifestHash": {
+                                "minLength": 1,
+                                "type": "string"
+                              },
+                              "mode": {
+                                "enum": [
+                                  "none",
+                                  "declared"
+                                ],
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "mode",
+                              "entrypoint"
+                            ],
+                            "type": "object"
+                          },
+                          "requiredCapabilities": {
+                            "items": {
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "type": "array"
+                          }
                         },
-                        "type": "array"
+                        "required": [
+                          "abiVersion",
+                          "language",
+                          "adapter",
+                          "package",
+                          "requiredCapabilities"
+                        ],
+                        "type": "object"
                       }
-                    },
-                    "required": [
-                      "abiVersion",
-                      "language",
-                      "adapter",
-                      "package",
-                      "requiredCapabilities"
-                    ],
-                    "type": "object"
+                    ]
                   },
                   "sourceBytes": {
                     "maximum": 9007199254740991,
@@ -4480,7 +4936,7 @@
                             "/matchsets/match-set:demo"
                           ],
                           "runtime": {
-                            "abiVersion": "strategy-runtime-abi-v1.14",
+                            "abiVersion": "strategy-runtime-abi-v1.17",
                             "adapter": {
                               "id": "runtime-js-worker-thread",
                               "version": "runtime-js-v1"
