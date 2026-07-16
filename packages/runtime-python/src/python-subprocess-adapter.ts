@@ -5,6 +5,7 @@ import { clearTimeout, setTimeout } from "node:timers"
 import { fileURLToPath } from "node:url"
 import { TextDecoder } from "node:util"
 import {
+  HistoricalStrategyRuntimeResponseEnvelopeV114Schema,
   RUNTIME_INVOCATION_V1_17_PLAYER_VIOLATIONS,
   SoldierBrainResultSchema,
   SoldierBrainResultV117Schema,
@@ -817,14 +818,23 @@ export interface PythonStrategySyncRequestInput extends PythonStrategyRequestInp
 
 const runPythonStrategyMethodSyncInternal = (
   request: PythonStrategySyncRequestInput,
-  allowNestedMatchTestSupport: boolean,
+  options: {
+    allowSelectedPointerBypass: boolean
+    runtimeAbiVersion: string
+  },
 ): StrategyRuntimeResponseEnvelope => {
-  if (!allowNestedMatchTestSupport && !legacyPythonRuntimeIsSelected()) {
+  const { allowSelectedPointerBypass, runtimeAbiVersion } = options
+  const responseAbiVersion =
+    runtimeAbiVersion as typeof STRATEGY_RUNTIME_ABI_VERSION
+  if (!allowSelectedPointerBypass && !legacyPythonRuntimeIsSelected()) {
     return legacyPythonRuntimeUnavailable()
   }
-  const runtime = pythonExperimentalRuntimeMetadata()
+  const runtime = {
+    ...pythonExperimentalRuntimeMetadata(),
+    abiVersion: responseAbiVersion,
+  }
   const envelope: StrategyRuntimeRequestEnvelope = {
-    abiVersion: STRATEGY_RUNTIME_ABI_VERSION,
+    abiVersion: responseAbiVersion,
     methodName: request.methodName,
     runtime,
     source: sourceEnvelopeFor(request.sourceText, request.sourceHash, runtime),
@@ -850,7 +860,7 @@ const runPythonStrategyMethodSyncInternal = (
       result.error.message.includes("ENOBUFS")
     return {
       ok: false,
-      abiVersion: STRATEGY_RUNTIME_ABI_VERSION,
+      abiVersion: responseAbiVersion,
       failureKind: isTimeout ? "runtimeViolation" : "systemFailure",
       ...(isTimeout
         ? {
@@ -883,7 +893,7 @@ const runPythonStrategyMethodSyncInternal = (
   if (result.status !== 0) {
     return {
       ok: false,
-      abiVersion: STRATEGY_RUNTIME_ABI_VERSION,
+      abiVersion: responseAbiVersion,
       failureKind: result.signal ? "systemFailure" : "runtimeViolation",
       ...(result.signal
         ? {
@@ -905,13 +915,16 @@ const runPythonStrategyMethodSyncInternal = (
     } as StrategyRuntimeResponseEnvelope
   }
   try {
-    return StrategyRuntimeResponseEnvelopeSchema.parse(
-      JSON.parse(result.stdout ?? ""),
-    ) as StrategyRuntimeResponseEnvelope
+    const parsed = JSON.parse(result.stdout ?? "") as unknown
+    return runtimeAbiVersion === LEGACY_PYTHON_RUNTIME_ABI_VERSION
+      ? HistoricalStrategyRuntimeResponseEnvelopeV114Schema.parse(parsed)
+      : (StrategyRuntimeResponseEnvelopeSchema.parse(
+          parsed,
+        ) as StrategyRuntimeResponseEnvelope)
   } catch {
     return {
       ok: false,
-      abiVersion: STRATEGY_RUNTIME_ABI_VERSION,
+      abiVersion: responseAbiVersion,
       failureKind: "systemFailure",
       systemFailure: {
         code: "MALFORMED_IPC",
@@ -926,13 +939,28 @@ const runPythonStrategyMethodSyncInternal = (
 export const runPythonStrategyMethodSync = (
   request: PythonStrategySyncRequestInput,
 ): StrategyRuntimeResponseEnvelope =>
-  runPythonStrategyMethodSyncInternal(request, false)
+  runPythonStrategyMethodSyncInternal(request, {
+    allowSelectedPointerBypass: false,
+    runtimeAbiVersion: STRATEGY_RUNTIME_ABI_VERSION,
+  })
 
 /** Selected-pointer nested Match-shape test support; not historical evidence. */
 export const runPythonNestedMatchShapeMethodSyncTestSupport = (
   request: PythonStrategySyncRequestInput,
 ): StrategyRuntimeResponseEnvelope =>
-  runPythonStrategyMethodSyncInternal(request, true)
+  runPythonStrategyMethodSyncInternal(request, {
+    allowSelectedPointerBypass: true,
+    runtimeAbiVersion: STRATEGY_RUNTIME_ABI_VERSION,
+  })
+
+/** Immutable v1.14 evidence replay only; never selected for current execution. */
+export const runPythonHistoricalV114MethodSyncTestSupport = (
+  request: PythonStrategySyncRequestInput,
+): StrategyRuntimeResponseEnvelope =>
+  runPythonStrategyMethodSyncInternal(request, {
+    allowSelectedPointerBypass: true,
+    runtimeAbiVersion: LEGACY_PYTHON_RUNTIME_ABI_VERSION,
+  })
 
 const normalizeStrategyOutput = (
   envelope: StrategyRuntimeResponseEnvelope,
@@ -1124,4 +1152,19 @@ export const createPythonNestedMatchShapeRuntimeTestSupport = (
     revision,
     options,
     runPythonNestedMatchShapeMethodSyncTestSupport,
+  )
+
+/** Immutable v1.14 evidence replay only; never selected for current execution. */
+export const createPythonHistoricalV114RuntimeTestSupport = (
+  revision: StrategyRevision,
+  options: {
+    timeoutMs?: number | undefined
+    stdoutBytes?: number | undefined
+    stderrBytes?: number | undefined
+  } = {},
+): StrategyRuntime =>
+  createPythonRuntimeFromRevisionWithRunner(
+    revision,
+    options,
+    runPythonHistoricalV114MethodSyncTestSupport,
   )

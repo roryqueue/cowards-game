@@ -1,4 +1,6 @@
 #!/usr/bin/env -S pnpm exec tsx
+/* eslint-disable no-restricted-imports -- Repository evidence evaluator must execute package sources directly. */
+import { Buffer } from "node:buffer"
 import { readFileSync, writeFileSync } from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
@@ -11,13 +13,13 @@ import {
   listWasmImports,
   validateRustStrategySource,
   validateZigStrategySource,
-  zigReadinessEvidence,
+  zigReadinessEvidenceForRuntimeAbi,
 } from "../packages/runtime-wasm-wasi/src/validation.ts"
 import {
-  createWasmWasiRuntimeFromRevision,
-  runWasmWasiStrategyMethodSync,
+  createWasmWasiHistoricalV114RuntimeTestSupport,
+  runWasmWasiHistoricalV114MethodSyncTestSupport,
 } from "../packages/runtime-wasm-wasi/src/wasm-wasi-subprocess-adapter.ts"
-import { projectSelectedRuntimeAbiSource } from "./project-selected-runtime-abi-source.js"
+import { HISTORICAL_RUNTIME_ABI_V1_14 } from "./project-selected-runtime-abi-source.js"
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const repoRoot = path.resolve(__dirname, "..")
@@ -171,8 +173,8 @@ export fn _start() void {
 }
 `
 
-const rustSource = projectSelectedRuntimeAbiSource(rustSourceV114)
-const zigHelperSource = projectSelectedRuntimeAbiSource(zigHelperSourceV114)
+const rustSource = rustSourceV114
+const zigHelperSource = zigHelperSourceV114
 
 const invalidJsonSource = `fn main() { println!("not-json"); }`
 const invalidActionSourceV114 = `
@@ -180,9 +182,7 @@ fn main() {
     println!(r#"{{"ok":true,"abiVersion":"strategy-runtime-abi-v1.14","value":{{"action":{{"type":"NOT_AN_ACTION"}},"soldierMemory":null}}}}"#);
 }
 `
-const invalidActionSource = projectSelectedRuntimeAbiSource(
-  invalidActionSourceV114,
-)
+const invalidActionSource = invalidActionSourceV114
 const panicSource = `fn main() { panic!("probe panic"); }`
 const infiniteLoopSource = `fn main() { loop {} }`
 const oversizedStdoutSource = `fn main() { println!("{}", "x".repeat(65536)); }`
@@ -194,6 +194,34 @@ fn main() {
     }
 }
 `
+
+const historicalRevisionV114 = (
+  revision: StrategyRevision,
+): StrategyRevision =>
+  ({
+    ...revision,
+    runtime: { ...revision.runtime, abiVersion: HISTORICAL_RUNTIME_ABI_V1_14 },
+    metadata: {
+      ...revision.metadata,
+      compiledArtifact:
+        revision.metadata.compiledArtifact === undefined
+          ? undefined
+          : {
+              ...revision.metadata.compiledArtifact,
+              abiVersion: HISTORICAL_RUNTIME_ABI_V1_14,
+            },
+    },
+  }) as StrategyRevision
+
+const buildHistoricalRustRevisionV114 = (
+  source: string,
+): StrategyRevision =>
+  historicalRevisionV114(buildRustStrategyRevision({ source }))
+
+const buildHistoricalZigRevisionV114 = (
+  source: string,
+): StrategyRevision =>
+  historicalRevisionV114(buildZigStrategyRevision({ source }))
 
 const selectActivationsInput = {
   phaseNumber: 1,
@@ -262,7 +290,7 @@ const runProbe = (
 }
 
 const runtimeFailureCode = (revision: StrategyRevision): string => {
-  const response = runWasmWasiStrategyMethodSync({
+  const response = runWasmWasiHistoricalV114MethodSyncTestSupport({
     revision,
     methodName: "soldierBrain",
     input: soldierBrainInput,
@@ -306,17 +334,17 @@ const publicArtifactMetadata = (
 const buildReport = () => {
   const rustCompiled = compileRustWasmArtifact(rustSource)
   const zigCompiled = compileZigWasmArtifact(zigHelperSource)
-  const rustRevision = buildRustStrategyRevision({ source: rustSource })
-  const zigRevision = buildZigStrategyRevision({ source: zigHelperSource })
+  const rustRevision = buildHistoricalRustRevisionV114(rustSource)
+  const zigRevision = buildHistoricalZigRevisionV114(zigHelperSource)
   const zigImports = zigCompiled.artifact?.bytesBase64
     ? listWasmImports(Buffer.from(zigCompiled.artifact.bytesBase64, "base64"))
     : []
-  const rustSelect = runWasmWasiStrategyMethodSync({
+  const rustSelect = runWasmWasiHistoricalV114MethodSyncTestSupport({
     revision: rustRevision,
     methodName: "selectActivations",
     input: selectActivationsInput,
   })
-  const zigSoldier = runWasmWasiStrategyMethodSync({
+  const zigSoldier = runWasmWasiHistoricalV114MethodSyncTestSupport({
     revision: zigRevision,
     methodName: "soldierBrain",
     input: soldierBrainInput,
@@ -403,7 +431,7 @@ const buildReport = () => {
       "Malformed stdout is classified as system IPC failure",
       () =>
         runtimeFailureCode(
-          buildRustStrategyRevision({ source: invalidJsonSource }),
+          buildHistoricalRustRevisionV114(invalidJsonSource),
         ) === "MALFORMED_IPC",
       "execute",
     ),
@@ -411,8 +439,8 @@ const buildReport = () => {
       "invalid-action-schema",
       "Invalid Strategy action is classified separately from system failure",
       () => {
-        const runtime = createWasmWasiRuntimeFromRevision(
-          buildRustStrategyRevision({ source: invalidActionSource }),
+        const runtime = createWasmWasiHistoricalV114RuntimeTestSupport(
+          buildHistoricalRustRevisionV114(invalidActionSource),
           {
             timeoutMs: 250,
             stdoutBytes: 8 * 1024,
@@ -429,7 +457,7 @@ const buildReport = () => {
       "Trap/panic/abort is classified as Strategy runtime violation",
       () =>
         runtimeFailureCode(
-          buildRustStrategyRevision({ source: panicSource }),
+          buildHistoricalRustRevisionV114(panicSource),
         ) === "THROWN_EXCEPTION",
       "execute",
     ),
@@ -438,10 +466,10 @@ const buildReport = () => {
       "Fuel/timeout terminates infinite loops",
       () =>
         runtimeFailureCode(
-          buildRustStrategyRevision({ source: infiniteLoopSource }),
+          buildHistoricalRustRevisionV114(infiniteLoopSource),
         ) === "TIMEOUT" ||
         runtimeFailureCode(
-          buildRustStrategyRevision({ source: infiniteLoopSource }),
+          buildHistoricalRustRevisionV114(infiniteLoopSource),
         ) === "THROWN_EXCEPTION",
       "execute",
     ),
@@ -450,7 +478,7 @@ const buildReport = () => {
       "Oversized stdout is capped without exposing raw streams",
       () =>
         runtimeFailureCode(
-          buildRustStrategyRevision({ source: oversizedStdoutSource }),
+          buildHistoricalRustRevisionV114(oversizedStdoutSource),
         ) === "STDIO_CAP_EXCEEDED",
       "execute",
     ),
@@ -459,7 +487,7 @@ const buildReport = () => {
       "Memory growth cap terminates runaway allocation",
       () =>
         runtimeFailureCode(
-          buildRustStrategyRevision({ source: growMemorySource }),
+          buildHistoricalRustRevisionV114(growMemorySource),
         ) === "THROWN_EXCEPTION",
       "execute",
     ),
@@ -546,7 +574,9 @@ const buildReport = () => {
     pythonStatus: "non-counted exhibition beta preserved",
     jsTsStatus:
       "counted Strategy path preserved; regression checked by proof/test gates",
-    zigReadiness: zigReadinessEvidence(),
+    zigReadiness: zigReadinessEvidenceForRuntimeAbi(
+      HISTORICAL_RUNTIME_ABI_V1_14,
+    ),
     summary: {
       pass: probes.filter((probe) => probe.status === "pass").length,
       fail: probes.filter((probe) => probe.status === "fail").length,

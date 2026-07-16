@@ -1,36 +1,33 @@
 #!/usr/bin/env -S pnpm exec tsx
+/* eslint-disable no-restricted-imports -- Repository evidence evaluator must execute package sources directly. */
 import { Buffer } from "node:buffer"
-import { createHash } from "node:crypto"
 import { readFileSync, writeFileSync } from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 import { buildStrategyRevision } from "../packages/runtime-js/src/index.ts"
-import { createRuntimeFromRevision } from "../packages/runtime-js/src/executor.ts"
+import { createNestedMatchShapeRuntimeFromRevisionTestSupport } from "../packages/runtime-js/src/executor.ts"
 import {
   buildPythonStrategyRevision,
-  createPythonRuntimeFromRevision,
   validatePythonStrategySource,
 } from "../packages/runtime-python/src/index.ts"
+import { createPythonHistoricalV114RuntimeTestSupport } from "../packages/runtime-python/src/python-subprocess-adapter.ts"
 import {
   buildRustStrategyRevision,
   buildZigStrategyRevision,
   compileRustWasmArtifact,
   compileZigWasmArtifact,
   listWasmImports,
-  runWasmWasiStrategyMethodSync,
   validateRustStrategySource,
   validateZigStrategySource,
 } from "../packages/runtime-wasm-wasi/src/index.ts"
+import { runWasmWasiHistoricalV114MethodSyncTestSupport } from "../packages/runtime-wasm-wasi/src/wasm-wasi-subprocess-adapter.ts"
 import {
   STRATEGY_RUNTIME_ADAPTER_REGISTRY,
   STRATEGY_LANGUAGE_REGISTRY,
   assertPublicOutputLeakSafe,
   type StrategyRevision,
 } from "../packages/spec/src/index.ts"
-import {
-  HISTORICAL_RUNTIME_ABI_V1_14,
-  projectSelectedRuntimeAbiSource,
-} from "./project-selected-runtime-abi-source.js"
+import { HISTORICAL_RUNTIME_ABI_V1_14 } from "./project-selected-runtime-abi-source.js"
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const repoRoot = path.resolve(__dirname, "..")
@@ -99,9 +96,6 @@ const stableValue = (value: unknown): unknown => {
 
 const serialize = (value: unknown): string =>
   `${JSON.stringify(stableValue(value), null, 2)}\n`
-
-const sha256 = (text: string): string =>
-  createHash("sha256").update(text).digest("hex")
 
 const publicSafe = (value: unknown): boolean => {
   try {
@@ -344,11 +338,39 @@ export fn _start() void {
 }
 `
 
-const rustSource = projectSelectedRuntimeAbiSource(rustSourceV114)
-const zigSource = projectSelectedRuntimeAbiSource(zigSourceV114)
+const rustSource = rustSourceV114
+const zigSource = zigSourceV114
+
+const historicalRevisionV114 = (
+  revision: StrategyRevision,
+): StrategyRevision =>
+  ({
+    ...revision,
+    runtime: { ...revision.runtime, abiVersion: HISTORICAL_RUNTIME_ABI_V1_14 },
+    metadata: {
+      ...revision.metadata,
+      compiledArtifact:
+        revision.metadata.compiledArtifact === undefined
+          ? undefined
+          : {
+              ...revision.metadata.compiledArtifact,
+              abiVersion: HISTORICAL_RUNTIME_ABI_V1_14,
+            },
+    },
+  }) as StrategyRevision
+
+const buildHistoricalRustRevisionV114 = (
+  source: string,
+): StrategyRevision =>
+  historicalRevisionV114(buildRustStrategyRevision({ source }))
+
+const buildHistoricalZigRevisionV114 = (
+  source: string,
+): StrategyRevision =>
+  historicalRevisionV114(buildZigStrategyRevision({ source }))
 
 const runtimeFailureCode = (revision: StrategyRevision): string => {
-  const response = runWasmWasiStrategyMethodSync({
+  const response = runWasmWasiHistoricalV114MethodSyncTestSupport({
     revision,
     methodName: "soldierBrain",
     input: soldierBrainInput,
@@ -364,18 +386,24 @@ const runtimeFailureCode = (revision: StrategyRevision): string => {
 
 const buildJsPythonProbes = (): AbuseProbe[] => {
   const jsRevision = buildStrategyRevision({ source: jsSource })
-  const jsRuntime = createRuntimeFromRevision(jsRevision, {
-    timeoutMs: 250,
-    outputByteLimit: 8 * 1024,
-  })
+  const jsRuntime = createNestedMatchShapeRuntimeFromRevisionTestSupport(
+    jsRevision,
+    {
+      timeoutMs: 250,
+      outputByteLimit: 8 * 1024,
+    },
+  )
   const pyRevision = buildPythonStrategyRevision({ source: pySource })
-  const pyRuntime = createPythonRuntimeFromRevision(pyRevision, {
-    timeoutMs: 500,
-    stdoutBytes: 16 * 1024,
-    stderrBytes: 4 * 1024,
-  })
+  const pyRuntime = createPythonHistoricalV114RuntimeTestSupport(
+    pyRevision,
+    {
+      timeoutMs: 500,
+      stdoutBytes: 16 * 1024,
+      stderrBytes: 4 * 1024,
+    },
+  )
   const jsResult = jsRuntime.selectActivations(strategyInput)
-  const jsInvalid = createRuntimeFromRevision(
+  const jsInvalid = createNestedMatchShapeRuntimeFromRevisionTestSupport(
     buildStrategyRevision({ source: jsInvalidSource }),
   ).selectActivations(strategyInput)
   const pyResult = pyRuntime.runSoldierBrain(soldierBrainInput)
@@ -485,14 +513,14 @@ const buildWasmProbes = (): AbuseProbe[] => {
   const rustCompiled = attempt(() => compileRustWasmArtifact(rustSource))
   const zigCompiled = attempt(() => compileZigWasmArtifact(zigSource))
   const rustRevision = attempt(() =>
-    buildRustStrategyRevision({ source: rustSource }),
+    buildHistoricalRustRevisionV114(rustSource),
   )
   const zigRevision = attempt(() =>
-    buildZigStrategyRevision({ source: zigSource }),
+    buildHistoricalZigRevisionV114(zigSource),
   )
   const rustSelect = rustRevision.ok
     ? attempt(() =>
-        runWasmWasiStrategyMethodSync({
+        runWasmWasiHistoricalV114MethodSyncTestSupport({
           revision: rustRevision.value,
           methodName: "selectActivations",
           input: strategyInput,
@@ -501,7 +529,7 @@ const buildWasmProbes = (): AbuseProbe[] => {
     : undefined
   const zigSoldier = zigRevision.ok
     ? attempt(() =>
-        runWasmWasiStrategyMethodSync({
+        runWasmWasiHistoricalV114MethodSyncTestSupport({
           revision: zigRevision.value,
           methodName: "soldierBrain",
           input: soldierBrainInput,
@@ -992,7 +1020,7 @@ const buildOutputs = () => {
     generatedAt,
     activeAbi: "wasi-preview1-stdin-stdout-json",
     // This serialized v1.24 report is immutable historical evidence. Live
-    // probes above execute the separately projected selected-current sources.
+    // probes above use explicit replay-only v1.14 test-support dispatch.
     runtimeAbiVersion: HISTORICAL_RUNTIME_ABI_V1_14,
     languageRegistry: STRATEGY_LANGUAGE_REGISTRY.map((language) => ({
       id: language.id,

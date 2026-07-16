@@ -9,6 +9,7 @@ import {
   PYTHON_RUNTIME_ENVIRONMENT,
   pythonExperimentalRuntimeMetadata,
   pythonRuntimeHostArgs,
+  runPythonHistoricalV114MethodSyncTestSupport,
   runPythonStrategyMethod,
   runPythonStrategyMethodSync,
   runPythonCandidateHostV117,
@@ -1317,6 +1318,53 @@ describe("Python subprocess Strategy provider ABI", () => {
         systemFailure: { code: "MALFORMED_IPC", retryable: true },
       })
     }
+  })
+
+  it("replays immutable v1.14 evidence independently of the v1.17 pointer", () => {
+    expect(String(STRATEGY_RUNTIME_ABI_VERSION)).toBe(
+      "strategy-runtime-abi-v1.17",
+    )
+    const revision = buildPythonLegacyStrategyRevision({
+      source: pythonSource,
+    })
+    const request = {
+      sourceText: revision.source,
+      sourceHash: revision.sourceHash,
+      methodName: "soldierBrain" as const,
+      input: {
+        self: {
+          id: "soldier:historical:1",
+          ownerPlayerId: "player:bottom",
+          status: "ACTIVE",
+          position: { x: 0, y: 0 },
+          facing: "UP",
+          lastSuccessfulMoveDirection: null,
+        },
+        awarenessGrid: { cells: [] },
+        cycleIndex: 0,
+        maxCycles: 12,
+        soldierMemory: {},
+      },
+    }
+
+    const production = runPythonStrategyMethodSync(request)
+    expect(production).toMatchObject({
+      ok: false,
+      abiVersion: "strategy-runtime-abi-v1.17",
+      failureKind: "systemFailure",
+      systemFailure: { code: "MALFORMED_IPC" },
+    })
+
+    const historical =
+      runPythonHistoricalV114MethodSyncTestSupport(request)
+    expect(historical).toMatchObject({
+      ok: true,
+      abiVersion: "strategy-runtime-abi-v1.14",
+      value: {
+        action: { type: "TURN_TO_STONE" },
+        soldierMemory: {},
+      },
+    })
   })
 
   it("maps timeout to a runtime violation", () => {
