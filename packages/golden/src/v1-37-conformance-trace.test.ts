@@ -256,6 +256,44 @@ const failureInput = (): ProjectCanonicalConformanceTraceInput => {
   }
 }
 
+const invocationOwnedPlayerViolationInput =
+  (): ProjectCanonicalConformanceTraceInput => {
+    const input = successfulInput()
+    const invocation = {
+      ...input.invocations[0]!,
+      resultClass: "player_violation" as const,
+      stableCode: "INVALID_OUTPUT",
+      failingBoundary: "runtime-contract",
+      canonicalPayloadHash: null,
+      gameplayMutation: false,
+      memoryMutation: false,
+      afterStateHash: input.invocations[0]!.beforeStateHash,
+      afterMemoryHash: input.invocations[0]!.beforeMemoryHash,
+      afterObjectiveHash: input.invocations[0]!.beforeObjectiveHash,
+      terminalEffectHash: null,
+      retryable: false,
+    }
+    return {
+      ...input,
+      resultClass: "player_violation",
+      invocations: [invocation],
+      transitions: [],
+      finalStateHash: invocation.afterStateHash,
+      outcomeHash: hash("5"),
+      failure: {
+        resultClass: "player_violation",
+        stableCode: invocation.stableCode,
+        failingBoundary: invocation.failingBoundary,
+        invocationOrdinal: 0,
+        transitionOrdinal: null,
+        gameplayMutation: invocation.gameplayMutation,
+        memoryMutation: invocation.memoryMutation,
+        terminalEffectHash: invocation.terminalEffectHash,
+        retryable: invocation.retryable,
+      },
+    }
+  }
+
 const transitionOwnedPlayerViolationInput =
   (): ProjectCanonicalConformanceTraceInput => {
     const input = globalThis.structuredClone(
@@ -307,6 +345,8 @@ const twoTransitionSuccessfulInput =
       ordinal: 1,
       coordinates: { ...original.coordinates, ordinal: 1 },
       orderedEvents: [globalThis.structuredClone(original.orderedEvents[1]!)],
+      beforeStateHash: first.afterStateHash,
+      beforeMachineHash: first.afterMachineHash,
     }
     input.transitions = [first, second]
     input.finalStateHash = second.afterStateHash
@@ -465,6 +505,66 @@ describe("v1.37 canonical conformance trace", () => {
       disposition: "quarantine",
       divergence: { field: "traceSemantics" },
     })
+  })
+
+  it("quarantines every invalid candidate semantic before hashing it", () => {
+    const expected = projectCanonicalConformanceTrace(successfulInput())
+    const invalidCandidates: CanonicalConformanceTrace[] = []
+
+    invalidCandidates.push({
+      ...expected,
+      invocations: null,
+    } as unknown as CanonicalConformanceTrace)
+
+    const invalidIdentifier = mutableTrace(expected)
+    invalidIdentifier.caseId = "/private/invalid-case"
+    invalidCandidates.push(invalidIdentifier as CanonicalConformanceTrace)
+
+    const invalidHash = mutableTrace(expected)
+    invalidHash.finalStateHash = "not-a-hash"
+    invalidCandidates.push(invalidHash as CanonicalConformanceTrace)
+
+    const invalidOrder = mutableTrace(expected)
+    invalidOrder.invocations[0]!.ordinal = 99
+    invalidCandidates.push(invalidOrder as CanonicalConformanceTrace)
+
+    const invalidResult = mutableTrace(expected)
+    invalidResult.resultClass = "unexpected" as typeof invalidResult.resultClass
+    invalidCandidates.push(invalidResult as CanonicalConformanceTrace)
+
+    const invalidEvent = mutableTrace(expected)
+    invalidEvent.transitions[0]!.orderedEvents[0]!.privacy = "owner"
+    invalidCandidates.push(invalidEvent as CanonicalConformanceTrace)
+
+    const nonJsonEvent = mutableTrace(expected)
+    nonJsonEvent.transitions[0]!.orderedEvents[0]!.payload = {
+      privateCounter: 1n,
+    } as unknown as typeof nonJsonEvent.transitions[0]["orderedEvents"][0]["payload"]
+    invalidCandidates.push(nonJsonEvent as CanonicalConformanceTrace)
+
+    const invalidTransitionRoot = mutableTrace(expected)
+    invalidTransitionRoot.transitions[0]!.accumulatedTraceRoot = hash("f")
+    invalidCandidates.push(invalidTransitionRoot as CanonicalConformanceTrace)
+
+    const invalidTransitionIdentity = mutableTrace(expected)
+    invalidTransitionIdentity.transitions[0]!.coordinates.stage =
+      "host-private-stage"
+    invalidCandidates.push(invalidTransitionIdentity as CanonicalConformanceTrace)
+
+    for (const actual of invalidCandidates) {
+      expect(() =>
+        compareCanonicalConformanceTrace({ expected, actual }),
+      ).not.toThrow()
+      const comparison = compareCanonicalConformanceTrace({ expected, actual })
+      expect(comparison).toMatchObject({
+        status: "diverged",
+        disposition: "quarantine",
+        divergence: { field: "traceSemantics" },
+      })
+      expect(JSON.stringify(comparison)).not.toMatch(
+        /privateCounter|private\/invalid-case|host-private-stage/iu,
+      )
+    }
   })
 
   it("rejects host-private and private-preimage fields instead of serializing them", () => {
@@ -1278,8 +1378,44 @@ describe("v1.37 canonical conformance trace", () => {
 
   it("requires every player violation to own exact invocation or transition evidence", () => {
     expect(() =>
+      projectCanonicalConformanceTrace(invocationOwnedPlayerViolationInput()),
+    ).not.toThrow()
+    expect(() =>
       projectCanonicalConformanceTrace(transitionOwnedPlayerViolationInput()),
     ).not.toThrow()
+
+    const successWithViolationInvocation = globalThis.structuredClone(
+      successfulInput(),
+    ) as DeepMutable<ProjectCanonicalConformanceTraceInput>
+    Object.assign(successWithViolationInvocation.invocations[0]!, {
+      resultClass: "player_violation",
+      stableCode: "INVALID_OUTPUT",
+      failingBoundary: "runtime-contract",
+      canonicalPayloadHash: null,
+      gameplayMutation: false,
+      memoryMutation: false,
+      afterStateHash:
+        successWithViolationInvocation.invocations[0]!.beforeStateHash,
+      afterMemoryHash:
+        successWithViolationInvocation.invocations[0]!.beforeMemoryHash,
+      afterObjectiveHash:
+        successWithViolationInvocation.invocations[0]!.beforeObjectiveHash,
+      terminalEffectHash: null,
+      retryable: false,
+    })
+    expect(() =>
+      projectCanonicalConformanceTrace(successWithViolationInvocation),
+    ).toThrowError(expect.objectContaining({ code: "TRACE_RESULT_INVALID" }))
+
+    const successWithViolationTransition = globalThis.structuredClone(
+      successfulInput(),
+    ) as DeepMutable<ProjectCanonicalConformanceTraceInput>
+    successWithViolationTransition.transitions[0]!.resultClass =
+      "player_violation"
+    rebuildTransitionEvidence(successWithViolationTransition)
+    expect(() =>
+      projectCanonicalConformanceTrace(successWithViolationTransition),
+    ).toThrowError(expect.objectContaining({ code: "TRACE_RESULT_INVALID" }))
 
     const unreferenced = globalThis.structuredClone(
       transitionOwnedPlayerViolationInput(),
@@ -1288,6 +1424,25 @@ describe("v1.37 canonical conformance trace", () => {
     expect(() => projectCanonicalConformanceTrace(unreferenced)).toThrowError(
       expect.objectContaining({ code: "TRACE_RESULT_INVALID" }),
     )
+
+    const ambiguousDualOwner = globalThis.structuredClone(
+      transitionOwnedPlayerViolationInput(),
+    ) as DeepMutable<ProjectCanonicalConformanceTraceInput>
+    const failure = ambiguousDualOwner.failure!
+    Object.assign(ambiguousDualOwner.invocations[0]!, {
+      resultClass: "player_violation",
+      stableCode: failure.stableCode,
+      failingBoundary: failure.failingBoundary,
+      canonicalPayloadHash: null,
+      gameplayMutation: failure.gameplayMutation,
+      memoryMutation: failure.memoryMutation,
+      terminalEffectHash: failure.terminalEffectHash,
+      retryable: failure.retryable,
+    })
+    failure.invocationOrdinal = 0
+    expect(() =>
+      projectCanonicalConformanceTrace(ambiguousDualOwner),
+    ).toThrowError(expect.objectContaining({ code: "TRACE_RESULT_INVALID" }))
 
     const mutations: Array<
       (input: DeepMutable<ProjectCanonicalConformanceTraceInput>) => void
@@ -1324,6 +1479,52 @@ describe("v1.37 canonical conformance trace", () => {
         expect.objectContaining({ code: "TRACE_RESULT_INVALID" }),
       )
     }
+  })
+
+  it("requires continuous transition state and exact final-state ownership", () => {
+    const valid = twoTransitionSuccessfulInput()
+    expect(() => projectCanonicalConformanceTrace(valid)).not.toThrow()
+    expect(() => projectCanonicalConformanceTrace(failureInput())).not.toThrow()
+    expect(() =>
+      projectCanonicalConformanceTrace(invocationOwnedPlayerViolationInput()),
+    ).not.toThrow()
+
+    for (const mutate of [
+      (input: DeepMutable<ProjectCanonicalConformanceTraceInput>) => {
+        input.transitions[1]!.beforeStateHash = hash("f")
+      },
+      (input: DeepMutable<ProjectCanonicalConformanceTraceInput>) => {
+        input.transitions[1]!.beforeMachineHash = hash("f")
+      },
+      (input: DeepMutable<ProjectCanonicalConformanceTraceInput>) => {
+        input.finalStateHash = hash("f")
+      },
+    ]) {
+      const invalid = globalThis.structuredClone(
+        valid,
+      ) as DeepMutable<ProjectCanonicalConformanceTraceInput>
+      mutate(invalid)
+      rebuildTransitionEvidence(invalid)
+      expect(() => projectCanonicalConformanceTrace(invalid)).toThrowError(
+        expect.objectContaining({ code: "TRACE_RESULT_INVALID" }),
+      )
+    }
+
+    const projected = projectCanonicalConformanceTrace(valid)
+    const corruptedOracle = mutableTrace(projected)
+    corruptedOracle.transitions[1]!.beforeStateHash = hash("f")
+    rebuildTransitionEvidence(corruptedOracle)
+    const selfRehashed = rehash(corruptedOracle)
+    expect(
+      compareCanonicalConformanceTrace({
+        expected: selfRehashed,
+        actual: selfRehashed,
+      }),
+    ).toMatchObject({
+      status: "oracle_suspended",
+      disposition: "suspend_oracle",
+      code: "REVIEWED_ORACLE_SEMANTICS_INVALID",
+    })
   })
 
   it("uses typed stable projector errors", () => {
