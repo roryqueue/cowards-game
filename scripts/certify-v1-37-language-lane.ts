@@ -294,6 +294,7 @@ export const certifyLanguageLaneV137 = (input: {
   readonly runs?: 3 | undefined
   readonly childRunner: V137LanguageChildRunner
   readonly issuedAt: string
+  readonly issueAfterRuns?: true | undefined
   readonly requestedValidUntil: string
   readonly registryGeneration: string
   readonly producerId: string
@@ -345,7 +346,15 @@ export const certifyLanguageLaneV137 = (input: {
     ) {
       return failure(input.languageId, "LANE_RUN_DRIFT")
     }
-    const issuedAt = parseInstant(input.issuedAt)
+    const effectiveIssuedAt = input.issueAfterRuns
+      ? new Date(
+          Math.max(
+            Date.now(),
+            ...runs.map(({ completedAt }) => parseInstant(completedAt)),
+          ) + 1,
+        ).toISOString()
+      : input.issuedAt
+    const issuedAt = parseInstant(effectiveIssuedAt)
     const requestedValidUntil = parseInstant(input.requestedValidUntil)
     const runFreshUntil = Math.min(
       ...runs.map(({ validUntil }) => parseInstant(validUntil)),
@@ -388,7 +397,7 @@ export const certifyLanguageLaneV137 = (input: {
       trustDomain: "production",
       managedIdentity: true,
       registryGeneration: input.registryGeneration,
-      issuedAt: input.issuedAt,
+      issuedAt: effectiveIssuedAt,
       requestedValidUntil: input.requestedValidUntil,
       freshUntil: new Date(runFreshUntil).toISOString(),
       identity: first.identity,
@@ -604,6 +613,7 @@ const certifyOne = (
     runs: 3,
     childRunner: cliChildRunner,
     issuedAt,
+    issueAfterRuns: true,
     requestedValidUntil,
     registryGeneration: "0",
     producerId: "cowards-runtime-conformance-producer-v1.37",
