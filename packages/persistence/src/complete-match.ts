@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto"
 import { isDeepStrictEqual } from "node:util"
 import type { GameState } from "@cowards/engine"
 import {
@@ -10,12 +11,20 @@ import {
 import {
   CANONICAL_COMPATIBILITY_TUPLES,
   RuntimeExecutionFinalStateSchema,
+  RuntimeExecutionServiceRequestV118Schema,
   RuntimeExecutionResolvedEvidenceSnapshotSchema,
   STRATEGY_RUNTIME_ABI_VERSION,
+  createRuntimeSemanticAdmissionClaimV118,
+  encodeCanonicalJson,
+  hashExecutableLaneIdentity,
   validateCanonicalGameState,
+  verifyRuntimeSemanticReceiptV118,
   type Chronicle,
   type MatchId,
+  type RuntimeCertificateReferenceV118,
   type RuntimeExecutionResolvedEvidenceSnapshot,
+  type RuntimeExecutionServiceRequestV118,
+  type RuntimeSemanticReceiptTrustedKeyV118,
 } from "@cowards/spec"
 import type { Pool } from "pg"
 import { createPostgresChronicleStore } from "./chronicle-store.js"
@@ -40,7 +49,35 @@ export interface CompleteMatchInput {
   boundaryAnchors: readonly ChronicleBoundaryAnchor[] | undefined
 }
 
-export type CompleteMatchRequest = CompleteMatchInput
+export interface CompleteMatchSemanticEvidenceV118 {
+  readonly request: RuntimeExecutionServiceRequestV118
+  readonly receiptBytes: Uint8Array
+  readonly trustedKey: RuntimeSemanticReceiptTrustedKeyV118
+  readonly ledgerPoststateRoot: `sha256:${string}`
+  readonly commonSupervisorEvidenceRoots: {
+    readonly bottom: `sha256:${string}`
+    readonly top: `sha256:${string}`
+  }
+}
+
+export interface CompleteMatchInputV118 extends CompleteMatchInput {
+  readonly semanticEvidence: CompleteMatchSemanticEvidenceV118
+}
+
+export type CompleteMatchRequest = CompleteMatchInput | CompleteMatchInputV118
+
+export interface MatchCompletionDependenciesV118 {
+  admitCertificateReference(input: {
+    readonly side: "bottom" | "top"
+    readonly reference: RuntimeCertificateReferenceV118
+    readonly integrityIdentity: RuntimeExecutionResolvedEvidenceSnapshot
+  }):
+    | {
+        readonly commonSupervisorEvidenceRoot: `sha256:${string}`
+        readonly sourceIdentity: RuntimeCertificateReferenceV118["sourceIdentity"]
+      }
+    | undefined
+}
 
 export class MatchCompletionIntegritySystemFailure extends Error {
   readonly code = "EVIDENCE_IDENTITY_MISMATCH"
@@ -174,6 +211,222 @@ export const admitCurrentMatchCompletion = (input: {
   }
 }
 
+const canonicalSha256V118 = (value: unknown): `sha256:${string}` => {
+  const encoded = encodeCanonicalJson(value as never, {
+    context: "canonical-manifest",
+  })
+  if (!encoded.ok) {
+    throw new MatchCompletionSemanticSystemFailure(
+      "CURRENT_V118_CANONICAL_HASH_INVALID",
+    )
+  }
+  return `sha256:${createHash("sha256").update(encoded.bytes).digest("hex")}`
+}
+
+const prefixedSha256 = (value: string): `sha256:${string}` =>
+  (value.startsWith("sha256:")
+    ? value
+    : `sha256:${value}`) as `sha256:${string}`
+
+const terminalV118 = (
+  outcome: NonNullable<GameState["outcome"]>,
+): { status: string; reason: string } => ({
+  status: "complete",
+  reason:
+    outcome.type === "WIN"
+      ? "win"
+      : outcome.type === "DRAW"
+        ? "draw"
+        : "failed",
+})
+
+const certificateReferenceMatchesV118 = (input: {
+  readonly side: "bottom" | "top"
+  readonly request: RuntimeExecutionServiceRequestV118
+  readonly integrityIdentity: RuntimeExecutionResolvedEvidenceSnapshot
+}): boolean => {
+  const reference = input.request.certificateReferences[input.side]
+  const entrant = input.integrityIdentity.entrants[input.side]
+  const conformance = entrant.conformanceCertificateRef
+  return (
+    conformance !== undefined &&
+    reference.side === input.side &&
+    reference.certificateId === conformance.certificateId &&
+    reference.certificateRecordHash ===
+      prefixedSha256(conformance.certificateRecordHash) &&
+    reference.registryGeneration === conformance.registryGeneration &&
+    reference.registryGeneration ===
+      input.integrityIdentity.registryGeneration &&
+    reference.freshUntil === entrant.schedulingDecision.freshUntil &&
+    reference.sourceIdentity.side === input.side &&
+    reference.sourceIdentity.strategyRevisionId ===
+      entrant.strategyRevisionId &&
+    reference.sourceIdentity.artifactSha256 ===
+      prefixedSha256(entrant.laneIdentity.artifactSha256) &&
+    reference.sourceIdentity.laneIdentityHash ===
+      `sha256:${hashExecutableLaneIdentity(entrant.laneIdentity)}`
+  )
+}
+
+const currentMatchCompletionAdmissionV118Brand: unique symbol = Symbol(
+  "current-match-completion-admission-v1.18",
+)
+
+export interface CurrentMatchCompletionAdmissionV118 {
+  readonly chronicle: Chronicle
+  readonly finalState: GameState
+  readonly semanticReceiptBytes: Uint8Array
+  readonly [currentMatchCompletionAdmissionV118Brand]: true
+}
+
+const admitCurrentMatchCompletionV118Unchecked = (input: {
+  readonly chronicle: Chronicle
+  readonly finalState: GameState
+  readonly integrityIdentity: RuntimeExecutionResolvedEvidenceSnapshot
+  readonly execution: ChronicleRecorderExecution | undefined
+  readonly boundaryAnchors: readonly ChronicleBoundaryAnchor[] | undefined
+  readonly semanticEvidence: CompleteMatchSemanticEvidenceV118
+  readonly dependencies: MatchCompletionDependenciesV118
+}): CurrentMatchCompletionAdmissionV118 => {
+  const request = RuntimeExecutionServiceRequestV118Schema.parse(
+    input.semanticEvidence.request,
+  )
+  if (
+    input.execution === undefined ||
+    input.execution.kind !== "completed" ||
+    !Array.isArray(input.boundaryAnchors) ||
+    request.matchId !== input.finalState.matchId ||
+    request.authorityGeneration !==
+      input.integrityIdentity.registryGeneration ||
+    request.semanticTuple.tupleId !==
+      input.integrityIdentity.compatibility.tupleId ||
+    !isDeepStrictEqual(
+      request.semanticTuple.components,
+      input.integrityIdentity.compatibility.tuple,
+    ) ||
+    !certificateReferenceMatchesV118({
+      side: "bottom",
+      request,
+      integrityIdentity: input.integrityIdentity,
+    }) ||
+    !certificateReferenceMatchesV118({
+      side: "top",
+      request,
+      integrityIdentity: input.integrityIdentity,
+    })
+  ) {
+    throw new MatchCompletionSemanticSystemFailure(
+      "CURRENT_V118_REQUEST_BINDING_MISMATCH",
+    )
+  }
+  const certificateAdmissions = {
+    bottom: input.dependencies.admitCertificateReference({
+      side: "bottom",
+      reference: request.certificateReferences.bottom,
+      integrityIdentity: input.integrityIdentity,
+    }),
+    top: input.dependencies.admitCertificateReference({
+      side: "top",
+      reference: request.certificateReferences.top,
+      integrityIdentity: input.integrityIdentity,
+    }),
+  }
+  if (
+    certificateAdmissions.bottom === undefined ||
+    certificateAdmissions.top === undefined ||
+    certificateAdmissions.bottom.commonSupervisorEvidenceRoot !==
+      input.semanticEvidence.commonSupervisorEvidenceRoots.bottom ||
+    certificateAdmissions.top.commonSupervisorEvidenceRoot !==
+      input.semanticEvidence.commonSupervisorEvidenceRoots.top ||
+    !isDeepStrictEqual(
+      certificateAdmissions.bottom.sourceIdentity,
+      request.certificateReferences.bottom.sourceIdentity,
+    ) ||
+    !isDeepStrictEqual(
+      certificateAdmissions.top.sourceIdentity,
+      request.certificateReferences.top.sourceIdentity,
+    )
+  ) {
+    throw new MatchCompletionSemanticSystemFailure(
+      "CURRENT_V118_CERTIFICATE_BINDING_MISMATCH",
+    )
+  }
+  const currentEnvelope = {
+    profile: "current-exact" as const,
+    compatibility: input.integrityIdentity.compatibility,
+    chronicle: input.chronicle,
+    execution: input.execution,
+    boundaryAnchors: input.boundaryAnchors,
+  }
+  const validation = validateCurrentChronicle(currentEnvelope)
+  const reconstruction = validateCurrentReplayReconstruction({
+    chronicle: input.chronicle,
+    execution: input.execution,
+  })
+  const terminalAnchor = input.boundaryAnchors.at(-1)
+  const outcome = input.finalState.outcome
+  if (
+    !validation.ok ||
+    !reconstruction.ok ||
+    outcome === undefined ||
+    terminalAnchor?.kind !== "TERMINAL" ||
+    terminalAnchor.stateHash !== reconstruction.terminalStateHash ||
+    !isDeepStrictEqual(input.execution.result.state, input.finalState) ||
+    !isDeepStrictEqual(
+      input.execution.recorderMaterial.finalState,
+      input.finalState,
+    ) ||
+    !isDeepStrictEqual(reconstruction.outcome, outcome)
+  ) {
+    throw new MatchCompletionSemanticSystemFailure(
+      "CURRENT_V118_CHRONICLE_RECONSTRUCTION_MISMATCH",
+    )
+  }
+  const expectedClaim = createRuntimeSemanticAdmissionClaimV118({
+    request,
+    chronicleCanonicalHash: canonicalSha256V118(input.chronicle),
+    transitionTraceRoot:
+      reconstruction.transitionTraceRoot as `sha256:${string}`,
+    finalStateCanonicalHash: canonicalSha256V118(input.finalState),
+    outcomeCanonicalHash: canonicalSha256V118(outcome),
+    terminal: terminalV118(outcome),
+    accounting: {
+      budgetProfileRoot: request.accounting.budgetProfileRoot,
+      ledgerPrestateRoot: request.accounting.ledgerPrestateRoot,
+      ledgerPoststateRoot: input.semanticEvidence.ledgerPoststateRoot,
+    },
+  })
+  const verified = verifyRuntimeSemanticReceiptV118({
+    receiptBytes: input.semanticEvidence.receiptBytes,
+    trustedKey: input.semanticEvidence.trustedKey,
+    expectedClaim,
+  })
+  if (!verified.ok) {
+    throw new MatchCompletionSemanticSystemFailure(
+      "CURRENT_V118_SEMANTIC_RECEIPT_INVALID",
+    )
+  }
+  return {
+    chronicle: globalThis.structuredClone(input.chronicle),
+    finalState: globalThis.structuredClone(input.finalState),
+    semanticReceiptBytes: Uint8Array.from(input.semanticEvidence.receiptBytes),
+    [currentMatchCompletionAdmissionV118Brand]: true,
+  }
+}
+
+export const admitCurrentMatchCompletionV118 = (
+  input: Parameters<typeof admitCurrentMatchCompletionV118Unchecked>[0],
+): CurrentMatchCompletionAdmissionV118 => {
+  try {
+    return admitCurrentMatchCompletionV118Unchecked(input)
+  } catch (error) {
+    if (error instanceof MatchCompletionSemanticSystemFailure) throw error
+    throw new MatchCompletionSemanticSystemFailure(
+      "CURRENT_V118_SEMANTIC_EVIDENCE_INVALID",
+    )
+  }
+}
+
 const currentCompleteKeys = [
   "jobId",
   "leaseToken",
@@ -184,6 +437,11 @@ const currentCompleteKeys = [
   "boundaryAnchors",
 ] as const
 
+const currentCompleteKeysV118 = [
+  ...currentCompleteKeys,
+  "semanticEvidence",
+] as const
+
 const exactTupleMatches = (
   actual: RuntimeExecutionResolvedEvidenceSnapshot["compatibility"],
   expected: Readonly<RuntimeExecutionResolvedEvidenceSnapshot["compatibility"]>,
@@ -191,7 +449,10 @@ const exactTupleMatches = (
   actual.tupleId === expected.tupleId &&
   isDeepStrictEqual(actual.tuple, expected.tuple)
 
-const prepareCompletion = (input: CompleteMatchRequest): PreparedCompletion => {
+const prepareCompletion = (
+  input: CompleteMatchRequest,
+  dependenciesV118?: MatchCompletionDependenciesV118 | undefined,
+): PreparedCompletion => {
   if (!isRecord(input)) {
     throw new MatchCompletionSemanticSystemFailure("COMPLETION_ROUTE_INVALID")
   }
@@ -209,7 +470,56 @@ const prepareCompletion = (input: CompleteMatchRequest): PreparedCompletion => {
     )
   }
   const integrityIdentity = globalThis.structuredClone(parsedIdentity.data)
+  const currentV118Envelope = hasExactKeys(input, currentCompleteKeysV118)
   const currentEnvelope = hasExactKeys(input, currentCompleteKeys)
+
+  if (currentV118Envelope) {
+    if (dependenciesV118 === undefined) {
+      throw new MatchCompletionSemanticSystemFailure(
+        "CURRENT_V118_CERTIFICATE_AUTHORITY_MISSING",
+      )
+    }
+    const activeCurrent = CANONICAL_COMPATIBILITY_TUPLES[0]
+    if (
+      !activeCurrent ||
+      activeCurrent.tuple.runtimeAbi !== STRATEGY_RUNTIME_ABI_VERSION ||
+      !exactTupleMatches(integrityIdentity.compatibility, activeCurrent)
+    ) {
+      throw new MatchCompletionSemanticSystemFailure(
+        "CURRENT_ROUTE_TUPLE_INVALID",
+      )
+    }
+    const current = input as CompleteMatchInputV118
+    const finalState = globalThis.structuredClone(current.finalState)
+    const parsedFinal = RuntimeExecutionFinalStateSchema.safeParse(finalState)
+    if (!parsedFinal.success) {
+      throw new MatchCompletionSemanticSystemFailure(
+        "CURRENT_FINAL_STATE_SHAPE_INVALID",
+      )
+    }
+    const finalSemantic = validateCanonicalGameState(parsedFinal.data)
+    if (!finalSemantic.ok) {
+      throw new MatchCompletionSemanticSystemFailure(
+        finalSemantic.issues[0]?.code ?? "CURRENT_FINAL_STATE_INVALID",
+      )
+    }
+    const admitted = admitCurrentMatchCompletionV118({
+      chronicle: current.chronicle,
+      finalState,
+      integrityIdentity,
+      execution: current.execution,
+      boundaryAnchors: current.boundaryAnchors,
+      semanticEvidence: current.semanticEvidence,
+      dependencies: dependenciesV118,
+    })
+    return {
+      jobId: current.jobId,
+      leaseToken: current.leaseToken,
+      chronicle: admitted.chronicle,
+      finalState: admitted.finalState,
+      integrityIdentity,
+    }
+  }
 
   if (currentEnvelope) {
     const activeCurrent = CANONICAL_COMPATIBILITY_TUPLES[0]
@@ -566,10 +876,11 @@ const currentAuthorityCte = `
 export const completeMatch = async (
   pool: Pool,
   input: CompleteMatchRequest,
+  dependenciesV118?: MatchCompletionDependenciesV118 | undefined,
 ): Promise<{ status: "complete"; matchId: MatchId; chronicleId: string }> => {
   // The exact current envelope is admitted and cloned before derived result
   // computation or opening a database transaction.
-  const prepared = prepareCompletion(input)
+  const prepared = prepareCompletion(input, dependenciesV118)
   const fields = deriveMatchCompletionFields(prepared.finalState)
   let chronicleId: string | undefined
 

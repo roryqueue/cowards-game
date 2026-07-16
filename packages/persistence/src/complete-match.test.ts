@@ -1,5 +1,6 @@
 import { Buffer } from "node:buffer"
-import { createHash, randomUUID } from "node:crypto"
+import { createHash, generateKeyPairSync, randomUUID, sign } from "node:crypto"
+import { readFileSync } from "node:fs"
 import {
   MATCH_KERNEL,
   type GameState,
@@ -13,19 +14,33 @@ import {
 } from "@cowards/replay"
 import {
   CANONICAL_COMPATIBILITY_TUPLES,
+  RUNTIME_EXECUTION_SERVICE_VERSION_V1_18,
+  createRuntimeSemanticAdmissionClaimV118,
+  createRuntimeSemanticTupleV118,
+  encodeCanonicalJson,
+  encodeRuntimeSemanticAdmissionClaimV118,
+  serializeRuntimeSemanticReceiptV118,
   type Chronicle,
   type ExecutableLaneIdentity,
+  type JsonValue,
   type RuntimeEntrantExecutionEvidence,
   type RuntimeExecutionResolvedEvidenceSnapshot,
+  type RuntimeExecutionServiceRequestV118,
+  type RuntimeSemanticReceiptV118,
 } from "@cowards/spec"
 import { Pool } from "pg"
-import { afterAll, beforeAll, describe, expect, it } from "vitest"
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest"
 import {
   MatchCompletionIntegritySystemFailure,
+  MatchCompletionSemanticSystemFailure,
   admitCurrentMatchCompletion,
+  admitCurrentMatchCompletionV118,
   completeMatch,
   deriveMatchCompletionFields,
   validateCompletionIntegritySnapshot,
+  type CompleteMatchInputV118,
+  type CompleteMatchSemanticEvidenceV118,
+  type MatchCompletionDependenciesV118,
 } from "./complete-match.js"
 import { migrate } from "./migrations.js"
 import {
@@ -137,6 +152,7 @@ const builtMatch = (
   finalState: GameState
   execution: ChronicleRecorderExecution
   boundaryAnchors: readonly ChronicleBoundaryAnchor[]
+  transitionTraceRoot: string
 } => {
   const runtime: StrategyRuntime = runtimeOverride ?? {
     selectActivations(input) {
@@ -190,8 +206,263 @@ const builtMatch = (
     finalState: recorded.finalState,
     execution,
     boundaryAnchors: recorded.boundaryAnchors,
+    transitionTraceRoot: recorded.transitionTraceRoot,
   }
 }
+
+const canonicalHashV118 = (value: unknown): `sha256:${string}` => {
+  const encoded = encodeCanonicalJson(value as JsonValue, {
+    context: "canonical-manifest",
+  })
+  if (!encoded.ok) throw new Error(encoded.error.code)
+  return `sha256:${createHash("sha256").update(encoded.bytes).digest("hex")}`
+}
+
+const v118CompletionFixture = (namespace: string) => {
+  const built = builtMatch(namespace)
+  const { identity, pair } = completionIdentity(namespace)
+  const integrityIdentity = responseSnapshot(identity, pair)
+  const reference = (side: "bottom" | "top") => {
+    const entrant = pair[side]
+    const certificate = entrant.conformanceCertificateRef
+    if (certificate === undefined) throw new Error("conformance missing")
+    return {
+      side,
+      certificateId: certificate.certificateId,
+      certificateRecordHash:
+        `sha256:${certificate.certificateRecordHash}` as `sha256:${string}`,
+      registryGeneration: certificate.registryGeneration,
+      lane: `${entrant.laneIdentity.languageId}-linux-amd64`,
+      freshUntil: entrant.schedulingDecision.freshUntil,
+      sourceIdentity: {
+        side,
+        strategyRevisionId: entrant.strategyRevisionId,
+        originalSourceSha256: canonicalHashV118({
+          side,
+          kind: "original",
+        }),
+        normalizedSourceSha256: canonicalHashV118({
+          side,
+          kind: "normalized",
+        }),
+        artifactSha256:
+          `sha256:${entrant.laneIdentity.artifactSha256}` as `sha256:${string}`,
+        identityManifestRoot: canonicalHashV118({
+          side,
+          kind: "manifest",
+        }),
+        evidenceGraphRoot: canonicalHashV118({
+          side,
+          kind: "graph",
+        }),
+        laneIdentityHash:
+          `sha256:${hashEntrantLaneIdentity(entrant.laneIdentity)}` as `sha256:${string}`,
+      },
+    }
+  }
+  const request: RuntimeExecutionServiceRequestV118 = {
+    contractVersion: RUNTIME_EXECUTION_SERVICE_VERSION_V1_18,
+    kind: "executeMatch",
+    requestId: `${namespace}:request:v1.18`,
+    matchId: built.finalState.matchId,
+    semanticTuple: createRuntimeSemanticTupleV118(tuple.tuple),
+    authorityGeneration: integrityIdentity.registryGeneration,
+    evaluationInstant: "2026-07-16T12:00:00.000Z",
+    certificateReferences: {
+      bottom: reference("bottom"),
+      top: reference("top"),
+    },
+    accounting: {
+      budgetProfileRoot: canonicalHashV118("budget"),
+      ledgerPrestateRoot: canonicalHashV118("prestate"),
+    },
+    match: { matchId: built.finalState.matchId },
+  }
+  const ledgerPoststateRoot = canonicalHashV118("poststate")
+  const claim = createRuntimeSemanticAdmissionClaimV118({
+    request,
+    chronicleCanonicalHash: canonicalHashV118(built.chronicle),
+    transitionTraceRoot: built.transitionTraceRoot as `sha256:${string}`,
+    finalStateCanonicalHash: canonicalHashV118(built.finalState),
+    outcomeCanonicalHash: canonicalHashV118(built.finalState.outcome),
+    terminal: {
+      status: "complete",
+      reason:
+        built.finalState.outcome?.type === "WIN"
+          ? "win"
+          : built.finalState.outcome?.type === "DRAW"
+            ? "draw"
+            : "failed",
+    },
+    accounting: {
+      ...request.accounting,
+      ledgerPoststateRoot,
+    },
+  })
+  const keys = generateKeyPairSync("ed25519")
+  const receipt: RuntimeSemanticReceiptV118 = {
+    claim,
+    algorithm: "Ed25519",
+    keyId: `${namespace}:semantic-receipt-key`,
+    signatureBase64: sign(
+      null,
+      encodeRuntimeSemanticAdmissionClaimV118(claim),
+      keys.privateKey,
+    ).toString("base64"),
+  }
+  const commonSupervisorEvidenceRoots = {
+    bottom: canonicalHashV118("common-supervisor:bottom"),
+    top: canonicalHashV118("common-supervisor:top"),
+  }
+  const semanticEvidence: CompleteMatchSemanticEvidenceV118 = {
+    request,
+    receiptBytes: serializeRuntimeSemanticReceiptV118(receipt),
+    trustedKey: {
+      keyId: receipt.keyId,
+      publicKeyPem: keys.publicKey.export({
+        format: "pem",
+        type: "spki",
+      }) as string,
+    },
+    ledgerPoststateRoot,
+    commonSupervisorEvidenceRoots,
+  }
+  const dependencies: MatchCompletionDependenciesV118 = {
+    admitCertificateReference({ side, reference }) {
+      return {
+        sourceIdentity: reference.sourceIdentity,
+        commonSupervisorEvidenceRoot: commonSupervisorEvidenceRoots[side],
+      }
+    },
+  }
+  return {
+    built,
+    integrityIdentity,
+    semanticEvidence,
+    dependencies,
+  }
+}
+
+describe("current Match completion v1.18 semantic receipt admission", () => {
+  it("verifies the exact spec receipt and returns an immutable deep clone", () => {
+    const fixture = v118CompletionFixture("completion:v118:valid")
+    const admitted = admitCurrentMatchCompletionV118({
+      chronicle: fixture.built.chronicle,
+      finalState: fixture.built.finalState,
+      integrityIdentity: fixture.integrityIdentity,
+      execution: fixture.built.execution,
+      boundaryAnchors: fixture.built.boundaryAnchors,
+      semanticEvidence: fixture.semanticEvidence,
+      dependencies: fixture.dependencies,
+    })
+    const originalPhase = admitted.finalState.phaseNumber
+    fixture.built.finalState.phaseNumber += 1
+    fixture.semanticEvidence.receiptBytes[0] = 0
+    expect(admitted.finalState.phaseNumber).toBe(originalPhase)
+    expect(admitted.semanticReceiptBytes[0]).not.toBe(0)
+  })
+
+  it("rejects receipt, reconstruction, certificate, meter, and trust drift", () => {
+    const mutations = [
+      (fixture: ReturnType<typeof v118CompletionFixture>) => {
+        fixture.semanticEvidence.receiptBytes[0] =
+          (fixture.semanticEvidence.receiptBytes[0] ?? 0) ^ 1
+      },
+      (fixture: ReturnType<typeof v118CompletionFixture>) => {
+        const requestMutation = {
+          ...fixture.semanticEvidence.request,
+          certificateReferences: {
+            ...fixture.semanticEvidence.request.certificateReferences,
+            bottom: {
+              ...fixture.semanticEvidence.request.certificateReferences.bottom,
+              certificateRecordHash: canonicalHashV118("wrong-certificate"),
+            },
+          },
+        }
+        Object.assign(
+          fixture.semanticEvidence as unknown as {
+            request: RuntimeExecutionServiceRequestV118
+          },
+          { request: requestMutation },
+        )
+      },
+      (fixture: ReturnType<typeof v118CompletionFixture>) => {
+        const commonSupervisorEvidenceRoots = {
+          ...fixture.semanticEvidence.commonSupervisorEvidenceRoots,
+          bottom: canonicalHashV118("wrong-common-root"),
+        }
+        Object.assign(
+          fixture.semanticEvidence as unknown as {
+            commonSupervisorEvidenceRoots: CompleteMatchSemanticEvidenceV118["commonSupervisorEvidenceRoots"]
+          },
+          { commonSupervisorEvidenceRoots },
+        )
+      },
+      (fixture: ReturnType<typeof v118CompletionFixture>) => {
+        fixture.built.boundaryAnchors = []
+      },
+      (fixture: ReturnType<typeof v118CompletionFixture>) => {
+        const trustedKey = {
+          ...fixture.semanticEvidence.trustedKey,
+          keyId: "wrong-key",
+        }
+        Object.assign(
+          fixture.semanticEvidence as unknown as {
+            trustedKey: CompleteMatchSemanticEvidenceV118["trustedKey"]
+          },
+          { trustedKey },
+        )
+      },
+    ]
+    for (const mutate of mutations) {
+      const fixture = v118CompletionFixture(
+        `completion:v118:mutation:${mutations.indexOf(mutate)}`,
+      )
+      mutate(fixture)
+      expect(() =>
+        admitCurrentMatchCompletionV118({
+          chronicle: fixture.built.chronicle,
+          finalState: fixture.built.finalState,
+          integrityIdentity: fixture.integrityIdentity,
+          execution: fixture.built.execution,
+          boundaryAnchors: fixture.built.boundaryAnchors,
+          semanticEvidence: fixture.semanticEvidence,
+          dependencies: fixture.dependencies,
+        }),
+      ).toThrow(MatchCompletionSemanticSystemFailure)
+    }
+  })
+
+  it("rejects invalid v1.18 evidence before opening a transaction", async () => {
+    const fixture = v118CompletionFixture("completion:v118:pretransaction")
+    fixture.semanticEvidence.receiptBytes[0] =
+      (fixture.semanticEvidence.receiptBytes[0] ?? 0) ^ 1
+    const query = vi.fn()
+    const input: CompleteMatchInputV118 = {
+      jobId: "job:v118",
+      leaseToken: "lease:v118",
+      chronicle: fixture.built.chronicle,
+      finalState: fixture.built.finalState,
+      integrityIdentity: fixture.integrityIdentity,
+      execution: fixture.built.execution,
+      boundaryAnchors: fixture.built.boundaryAnchors,
+      semanticEvidence: fixture.semanticEvidence,
+    }
+    await expect(
+      completeMatch({ query } as never, input, fixture.dependencies),
+    ).rejects.toBeInstanceOf(MatchCompletionSemanticSystemFailure)
+    expect(query).not.toHaveBeenCalled()
+  })
+
+  it("imports no runtime-service app authority", () => {
+    const source = readFileSync(
+      new URL("./complete-match.ts", import.meta.url),
+      "utf8",
+    )
+    expect(source).not.toContain("apps/runtime-service")
+    expect(source).not.toContain("@cowards/runtime-service")
+  })
+})
 
 const finalState = {
   matchId: "match:complete:001",
