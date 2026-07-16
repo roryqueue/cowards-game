@@ -1,7 +1,8 @@
 /// <reference types="node" />
 
 import { createHash } from "node:crypto"
-import { mkdtempSync, readFileSync, rmSync } from "node:fs"
+import { spawnSync } from "node:child_process"
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { afterEach, describe, expect, it } from "vitest"
@@ -13,6 +14,7 @@ import {
 } from "../packages/golden/src/v1-37-conformance-corpus.js"
 import {
   parseV137ConformanceCandidateArgs,
+  repairV137PinnedToolchainFixtures,
   writeV137ConformanceCandidate,
 } from "./generate-v1-37-conformance-corpus.js"
 
@@ -36,6 +38,49 @@ const sha256 = (bytes: Uint8Array): string =>
   `sha256:${createHash("sha256").update(bytes).digest("hex")}`
 
 describe("v1.37 conformance candidate generation", () => {
+  it("repairs Rust and Zig fixtures for the exact pinned compilers", () => {
+    const repaired = repairV137PinnedToolchainFixtures()
+    const root = temporaryRoot()
+    const rust = repaired.fixtures.find(
+      ({ languageId }) => languageId === "rust",
+    )
+    const zig = repaired.fixtures.find(({ languageId }) => languageId === "zig")
+    if (rust === undefined || zig === undefined) {
+      throw new Error("repaired fixtures are missing")
+    }
+    const rustPath = path.join(root, "main.rs")
+    const zigPath = path.join(root, "main.zig")
+    writeFileSync(rustPath, rust.source)
+    writeFileSync(zigPath, zig.source)
+    const rustCompile = spawnSync(
+      "rustc",
+      [
+        "--target",
+        "wasm32-wasip1",
+        "-O",
+        rustPath,
+        "-o",
+        path.join(root, "rust.wasm"),
+      ],
+      { encoding: "utf8", shell: false, timeout: 30_000 },
+    )
+    const zigCompile = spawnSync(
+      "zig",
+      [
+        "build-exe",
+        "-target",
+        "wasm32-wasi",
+        "-O",
+        "ReleaseSmall",
+        zigPath,
+        `-femit-bin=${path.join(root, "zig.wasm")}`,
+      ],
+      { encoding: "utf8", shell: false, timeout: 30_000 },
+    )
+    expect(rustCompile.status, rustCompile.stderr).toBe(0)
+    expect(zigCompile.status, zigCompile.stderr).toBe(0)
+  })
+
   it("writes only a new versioned candidate and semantic diff", () => {
     const destinationRoot = path.join(
       temporaryRoot(),
@@ -48,19 +93,19 @@ describe("v1.37 conformance candidate generation", () => {
 
     const result = writeV137ConformanceCandidate({
       destinationRoot,
-      nextVersion: "v2",
+      nextVersion: "v3",
       candidateCorpus,
     })
 
-    expect(result.version).toBe("v2")
+    expect(result.version).toBe("v3")
     expect(result.corpusRootSha256).not.toBe(V1_37_CONFORMANCE_CORPUS_ROOT)
     expect(result.corpusPath).toBe(
-      path.join(destinationRoot, "v2", "corpus.json"),
+      path.join(destinationRoot, "v3", "corpus.json"),
     )
     expect(result.semanticDiffPath).toBe(
-      path.join(destinationRoot, "v2", "semantic-diff.json"),
+      path.join(destinationRoot, "v3", "semantic-diff.json"),
     )
-    expect(result.corpusLogicalPath).toBe("v2/corpus.json")
+    expect(result.corpusLogicalPath).toBe("v3/corpus.json")
 
     const corpusBytes = readFileSync(result.corpusPath)
     const diffBytes = readFileSync(result.semanticDiffPath)
@@ -71,13 +116,13 @@ describe("v1.37 conformance candidate generation", () => {
     expect(diff).toMatchObject({
       schemaVersion: "v1.37-executable-conformance-semantic-diff-v1",
       baseline: {
-        version: "v1",
+        version: V1_37_CONFORMANCE_CORPUS.version,
         corpusRootSha256: V1_37_CONFORMANCE_CORPUS_ROOT,
       },
       candidate: {
-        version: "v2",
+        version: "v3",
         corpusRootSha256: result.corpusRootSha256,
-        path: "v2/corpus.json",
+        path: "v3/corpus.json",
       },
       sourceChanges: ["typescript"],
       fixtureChanges: [
@@ -97,7 +142,7 @@ describe("v1.37 conformance candidate generation", () => {
 
     const result = writeV137ConformanceCandidate({
       destinationRoot: temporaryRoot(),
-      nextVersion: "v2",
+      nextVersion: "v3",
       candidateCorpus,
     })
     const diff = JSON.parse(readFileSync(result.semanticDiffPath, "utf8"))
@@ -141,7 +186,7 @@ describe("v1.37 conformance candidate generation", () => {
       mutate(corpus)
       return writeV137ConformanceCandidate({
         destinationRoot: temporaryRoot(),
-        nextVersion: `v${index + 2}`,
+        nextVersion: `v${index + 3}`,
         candidateCorpus: corpus,
       }).corpusRootSha256
     })
@@ -155,21 +200,21 @@ describe("v1.37 conformance candidate generation", () => {
       writeV137ConformanceCandidate({
         destinationRoot:
           "packages/golden/src/fixtures/v1-37-conformance-corpus",
-        nextVersion: "v2",
+        nextVersion: "v3",
       }),
     ).toThrow("ACTIVE_GOLDEN_OVERWRITE_FORBIDDEN")
 
     expect(() =>
       writeV137ConformanceCandidate({
         destinationRoot: temporaryRoot(),
-        nextVersion: "v1",
+        nextVersion: V1_37_CONFORMANCE_CORPUS.version,
       }),
     ).toThrow("ACTIVE_VERSION_REUSE_FORBIDDEN")
 
     const destinationRoot = temporaryRoot()
-    writeV137ConformanceCandidate({ destinationRoot, nextVersion: "v2" })
+    writeV137ConformanceCandidate({ destinationRoot, nextVersion: "v3" })
     expect(() =>
-      writeV137ConformanceCandidate({ destinationRoot, nextVersion: "v2" }),
+      writeV137ConformanceCandidate({ destinationRoot, nextVersion: "v3" }),
     ).toThrow("CANDIDATE_VERSION_EXISTS")
   })
 
@@ -177,12 +222,12 @@ describe("v1.37 conformance candidate generation", () => {
     expect(
       parseV137ConformanceCandidateArgs([
         "--version",
-        "v2",
+        "v3",
         "--destination",
         ".planning/candidates/v1-37-conformance-corpus",
       ]),
     ).toEqual({
-      nextVersion: "v2",
+      nextVersion: "v3",
       destinationRoot: ".planning/candidates/v1-37-conformance-corpus",
       inputPath: undefined,
     })

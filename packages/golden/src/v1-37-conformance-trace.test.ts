@@ -480,7 +480,7 @@ describe("v1.37 canonical conformance trace", () => {
 
     expect(trace).toMatchObject({
       schemaVersion: "v1.37-canonical-conformance-trace-v1",
-      corpusVersion: "v1",
+      corpusVersion: V1_37_CONFORMANCE_CORPUS.version,
       corpusRootSha256: V1_37_CONFORMANCE_CORPUS_ROOT,
       caseId: "normative-first-active-turn-to-stone",
       semanticTupleId: MATCH_KERNEL.tupleId,
@@ -888,7 +888,7 @@ describe("v1.37 canonical conformance trace", () => {
       {
         field: "corpusVersion",
         mutate: (trace) => {
-          trace.corpusVersion = "v2"
+          trace.corpusVersion = "v999"
         },
       },
       {
@@ -1681,9 +1681,9 @@ describe("v1.37 canonical conformance trace", () => {
 
     expect(registry).toMatchObject({
       schemaVersion: "v1.37-conformance-trace-registry-v1",
-      activeVersion: "v1.37-conformance-trace-v2",
+      activeVersion: "v1.37-conformance-trace-v3",
       activePath:
-        "packages/golden/src/fixtures/v1-37-conformance-traces/v1.37-conformance-trace-v2",
+        "packages/golden/src/fixtures/v1-37-conformance-traces/v1.37-conformance-trace-v3",
       candidateRootSha256: manifest.candidateRootSha256,
       manifestSha256: digest(manifestBytes),
       semanticDiffSha256: digest(diffBytes),

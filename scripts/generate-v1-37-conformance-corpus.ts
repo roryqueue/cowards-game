@@ -34,6 +34,51 @@ const GOVERNED_FIXTURE_FIELDS = Object.freeze([
   "source",
 ] as const satisfies readonly (keyof V137ConformanceFixture)[])
 
+const RUST_V1_37_TOOLCHAIN_FIXTURE = `use std::io::{self, Read};
+
+fn main() {
+    let mut input = String::new();
+    io::stdin().read_to_string(&mut input).unwrap();
+    if input.contains("\\"methodName\\":\\"soldierBrain\\"") {
+        println!("{}", r#"{"action":{"type":"TURN_TO_STONE"},"soldierMemory":{"fixture":"v1.37"}}"#);
+    } else {
+        println!("{}", r#"{"activationOrders":[{"soldierId":"soldier:fixture:active","objective":{"fixture":"v1.37","intent":"stone"}}],"strategyMemory":{"fixture":"v1.37"}}"#);
+    }
+}
+`
+
+const ZIG_V1_37_TOOLCHAIN_FIXTURE = `const std = @import("std");
+
+pub fn main(init: std.process.Init) !void {
+    var input_buffer: [16384]u8 = undefined;
+    var reader_buffer: [4096]u8 = undefined;
+    var reader = std.Io.File.stdin().reader(init.io, &reader_buffer);
+    const count = try reader.interface.readSliceShort(&input_buffer);
+    const input = input_buffer[0..count];
+    const output = if (std.mem.indexOf(u8, input, "\\"methodName\\":\\"soldierBrain\\"") != null)
+        "{\\"action\\":{\\"type\\":\\"TURN_TO_STONE\\"},\\"soldierMemory\\":{\\"fixture\\":\\"v1.37\\"}}\\n"
+    else
+        "{\\"activationOrders\\":[{\\"soldierId\\":\\"soldier:fixture:active\\",\\"objective\\":{\\"fixture\\":\\"v1.37\\",\\"intent\\":\\"stone\\"}}],\\"strategyMemory\\":{\\"fixture\\":\\"v1.37\\"}}\\n";
+    try std.Io.File.stdout().writeStreamingAll(init.io, output);
+}
+`
+
+export const repairV137PinnedToolchainFixtures = (
+  input: V137ConformanceCorpus = V1_37_CONFORMANCE_CORPUS,
+): V137ConformanceCorpus => {
+  const candidate = globalThis.structuredClone(input)
+  const rust = candidate.fixtures.find(
+    ({ languageId }) => languageId === "rust",
+  )
+  const zig = candidate.fixtures.find(({ languageId }) => languageId === "zig")
+  if (rust === undefined || zig === undefined) {
+    fail("PINNED_TOOLCHAIN_FIXTURE_MISSING")
+  }
+  rust.source = RUST_V1_37_TOOLCHAIN_FIXTURE
+  zig.source = ZIG_V1_37_TOOLCHAIN_FIXTURE
+  return candidate
+}
+
 export interface WriteV137ConformanceCandidateInput {
   destinationRoot: string
   nextVersion: string

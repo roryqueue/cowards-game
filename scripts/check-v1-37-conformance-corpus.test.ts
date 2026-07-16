@@ -36,6 +36,7 @@ describe("v1.37 committed corpus checker", () => {
     const paths = [
       "packages/golden/src/fixtures/v1-37-conformance-corpus/registry.json",
       V1_37_CONFORMANCE_ACTIVE_REGISTRY.path,
+      V1_37_CONFORMANCE_CORPUS_REVIEWED_PIN.independentReviewPath,
     ]
     const before = paths.map((filePath) => sha256(readFileSync(filePath)))
     expect(checkCommittedV137ConformanceCorpus()).toEqual([])
@@ -45,6 +46,7 @@ describe("v1.37 committed corpus checker", () => {
     expect(before).toEqual([
       V1_37_CONFORMANCE_CORPUS_REVIEWED_PIN.registryFileSha256,
       V1_37_CONFORMANCE_CORPUS_REVIEWED_PIN.corpusFileSha256,
+      V1_37_CONFORMANCE_CORPUS_REVIEWED_PIN.independentReviewFileSha256,
     ])
   })
 

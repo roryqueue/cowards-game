@@ -34,7 +34,7 @@ const reviewedCandidate = () => {
     "independent-review.json",
   )
   generateV137ConformanceTraceCandidate({
-    candidateVersion: "v1.37-conformance-trace-v2",
+    candidateVersion: "v1.37-conformance-trace-v999",
     candidateDirectory,
   })
   writeV137ConformanceTraceIndependentReview({
@@ -51,7 +51,7 @@ describe("v1.37 conformance trace promotion", () => {
 
     expect(registry).toMatchObject({
       schemaVersion: "v1.37-conformance-trace-registry-v1",
-      activeVersion: "v1.37-conformance-trace-v2",
+      activeVersion: "v1.37-conformance-trace-v999",
       caseCount: 16,
     })
     expect(checkActiveV137ConformanceTrace(input)).toEqual([])

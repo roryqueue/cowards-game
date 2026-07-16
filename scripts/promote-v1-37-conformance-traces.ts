@@ -248,7 +248,7 @@ export const promoteV137ConformanceTraceCandidate = (input: {
     recomputedReview.candidateVersion,
   )
   const registryPath = path.join(activeRoot, "registry.json")
-  if (existsSync(targetDirectory) || existsSync(registryPath)) {
+  if (existsSync(targetDirectory)) {
     return fail("ACTIVE_EVIDENCE_IMMUTABLE")
   }
 
@@ -312,7 +312,7 @@ export const promoteV137ConformanceTraceCandidate = (input: {
     if (existsSync(stagingDirectory)) {
       rmSync(stagingDirectory, { recursive: true, force: true })
     }
-    if (existsSync(targetDirectory) && !existsSync(registryPath)) {
+    if (existsSync(targetDirectory)) {
       rmSync(targetDirectory, { recursive: true, force: true })
     }
     throw error

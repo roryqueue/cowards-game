@@ -184,12 +184,12 @@ describe("v1.37 executable conformance corpus", () => {
       activeVersion: V1_37_CONFORMANCE_CORPUS.version,
       corpusRootSha256: V1_37_CONFORMANCE_CORPUS_ROOT,
       corpusFileSha256:
-        "sha256:276aa063351d649db0d21a96b7db7f8af6fa6a5f5736736775d42d35ee7ec574",
-      path: "packages/golden/src/fixtures/v1-37-conformance-corpus/v1/corpus.json",
+        "sha256:8d51df780a1c9dcb35e28547f4891af0e28a4bd2cd8e854165a61a1726f3a0dd",
+      path: "packages/golden/src/fixtures/v1-37-conformance-corpus/v2/corpus.json",
     })
     const activeCorpusPath = fileURLToPath(
       new URL(
-        "./fixtures/v1-37-conformance-corpus/v1/corpus.json",
+        "./fixtures/v1-37-conformance-corpus/v2/corpus.json",
         import.meta.url,
       ),
     )
@@ -201,14 +201,18 @@ describe("v1.37 executable conformance corpus", () => {
     ).toBe(false)
     expect(V1_37_CONFORMANCE_CORPUS_REVIEWED_PIN).toEqual({
       schemaVersion: "v1.37-executable-conformance-reviewed-pin-v1",
-      reviewedUnder: "259-01",
-      activeVersion: "v1",
+      reviewedUnder: "259-16-toolchain-revalidation",
+      activeVersion: "v2",
       corpusRootSha256: V1_37_CONFORMANCE_CORPUS_ROOT,
       corpusFileSha256:
-        "sha256:276aa063351d649db0d21a96b7db7f8af6fa6a5f5736736775d42d35ee7ec574",
+        "sha256:8d51df780a1c9dcb35e28547f4891af0e28a4bd2cd8e854165a61a1726f3a0dd",
       registryFileSha256:
-        "sha256:fc3a4c5387e076742bfb0f91bf1f3498691333da37e393ca3b18ef5bae619fba",
-      path: "packages/golden/src/fixtures/v1-37-conformance-corpus/v1/corpus.json",
+        "sha256:440869c22aaffca1e872245809823cded028fb07783f1e7d6ece7b0b3781f3a0",
+      independentReviewFileSha256:
+        "sha256:871554dbd5d926a65016b1f30bc6dfb5403d52653579e9565b080b0ecb5e1942",
+      path: "packages/golden/src/fixtures/v1-37-conformance-corpus/v2/corpus.json",
+      independentReviewPath:
+        "packages/golden/src/fixtures/v1-37-conformance-corpus/v2/independent-review.json",
       updatePolicy: "explicit-new-version-and-reviewed-pin-change",
     })
     expect(sha256(readFileSync(activeCorpusPath, "utf8"))).toBe(

@@ -137,9 +137,41 @@ export const checkCommittedV137ConformanceCorpus = (
     errors.push(`active registry path mismatch: expected ${expectedPath}`)
   }
 
+  const reviewPath = path.join(
+    root,
+    V1_37_CONFORMANCE_CORPUS_REVIEWED_PIN.independentReviewPath,
+  )
+  if (!existsSync(reviewPath)) {
+    errors.push(
+      `${V1_37_CONFORMANCE_CORPUS_REVIEWED_PIN.independentReviewPath} is missing`,
+    )
+  } else {
+    const reviewBytes = readFileSync(reviewPath)
+    const review = readJson<{
+      candidateVersion: string
+      candidateCorpusRootSha256: string
+      caseChanges: unknown[]
+      status: string
+    }>(reviewPath)
+    if (
+      sha256(reviewBytes) !==
+        V1_37_CONFORMANCE_CORPUS_REVIEWED_PIN.independentReviewFileSha256 ||
+      review.candidateVersion !== corpus.version ||
+      review.candidateCorpusRootSha256 !== corpus.corpusRootSha256 ||
+      !Array.isArray(review.caseChanges) ||
+      review.caseChanges.length !== 0 ||
+      review.status !== "behavior_preserving_toolchain_repair"
+    ) {
+      errors.push("active independent review does not match reviewed pin")
+    }
+  }
+
   const activeDirectory = path.dirname(corpusPath)
   const unexpected = readdirSync(activeDirectory).filter(
-    (filename) => filename !== "corpus.json",
+    (filename) =>
+      filename !== "corpus.json" &&
+      filename !== "semantic-diff.json" &&
+      filename !== "independent-review.json",
   )
   for (const filename of unexpected) {
     errors.push(

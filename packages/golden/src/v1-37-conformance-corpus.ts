@@ -553,14 +553,6 @@ export const createV137ConformanceRunRoot = (
 const loadJson = (url: URL): unknown =>
   JSON.parse(readFileSync(url, "utf8")) as unknown
 
-const corpus = deepFreeze(
-  loadJson(
-    new URL(
-      "./fixtures/v1-37-conformance-corpus/v1/corpus.json",
-      import.meta.url,
-    ),
-  ) as V137ConformanceCorpus,
-)
 const registry = deepFreeze(
   loadJson(
     new URL(
@@ -569,6 +561,28 @@ const registry = deepFreeze(
     ),
   ) as V137ConformanceRegistry,
 )
+const corpus = deepFreeze(
+  loadJson(
+    new URL(
+      `./fixtures/v1-37-conformance-corpus/${registry.activeVersion}/corpus.json`,
+      import.meta.url,
+    ),
+  ) as V137ConformanceCorpus,
+)
+const independentReviewBytes = readFileSync(
+  new URL(
+    `./fixtures/v1-37-conformance-corpus/${registry.activeVersion}/independent-review.json`,
+    import.meta.url,
+  ),
+)
+const independentReview = JSON.parse(
+  independentReviewBytes.toString("utf8"),
+) as {
+  candidateVersion: string
+  candidateCorpusRootSha256: string
+  caseChanges: unknown[]
+  status: string
+}
 
 validateV137ConformanceCorpus(corpus)
 exactKeys(registry, [
@@ -593,7 +607,16 @@ if (
     V1_37_CONFORMANCE_CORPUS_REVIEWED_PIN.corpusFileSha256 ||
   registry.path !== V1_37_CONFORMANCE_CORPUS_REVIEWED_PIN.path ||
   corpus.corpusRootSha256 !==
-    V1_37_CONFORMANCE_CORPUS_REVIEWED_PIN.corpusRootSha256
+    V1_37_CONFORMANCE_CORPUS_REVIEWED_PIN.corpusRootSha256 ||
+  independentReview.candidateVersion !== registry.activeVersion ||
+  independentReview.candidateCorpusRootSha256 !== corpus.corpusRootSha256 ||
+  !Array.isArray(independentReview.caseChanges) ||
+  independentReview.caseChanges.length !== 0 ||
+  independentReview.status !== "behavior_preserving_toolchain_repair" ||
+  `sha256:${createHash("sha256")
+    .update(independentReviewBytes)
+    .digest("hex")}` !==
+    V1_37_CONFORMANCE_CORPUS_REVIEWED_PIN.independentReviewFileSha256
 ) {
   fail("ACTIVE_REGISTRY")
 }
