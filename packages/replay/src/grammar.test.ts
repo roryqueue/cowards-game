@@ -40,7 +40,9 @@ const runtime: StrategyRuntime = {
   },
 }
 
-const createChronicle = (): Chronicle => {
+const createChronicle = (
+  strategyRuntime: StrategyRuntime = runtime,
+): Chronicle => {
   const execution = MATCH_KERNEL.runMatch({
     matchId: "grammar-match",
     seed: "grammar-seed",
@@ -54,7 +56,7 @@ const createChronicle = (): Chronicle => {
     topPlayerId: "top",
     bottomStrategyRevisionId: "bottom-rev",
     topStrategyRevisionId: "top-rev",
-    runtime: adaptRuntimeForCurrentKernel(runtime),
+    runtime: adaptRuntimeForCurrentKernel(strategyRuntime),
   })
   const recorded = recordChronicleFromExecution({
     execution,
@@ -81,8 +83,7 @@ const cloneChronicle = (chronicle: Chronicle): Chronicle =>
 
 const resequenceEvents = (
   events: readonly ChronicleEvent[],
-): ChronicleEvent[] =>
-  events.map((event, sequence) => ({ ...event, sequence }))
+): ChronicleEvent[] => events.map((event, sequence) => ({ ...event, sequence }))
 
 const findEvent = (
   chronicle: Chronicle,
@@ -134,6 +135,31 @@ describe("validateChronicleGrammar", () => {
   it("accepts a legal Chronicle built from a Match", () => {
     expect(validateChronicleGrammar(createChronicle())).toEqual([])
   })
+
+  it("accepts canonical no-Advance cleanup after the final Cycle", () => {
+    const noAdvanceRuntime: StrategyRuntime = {
+      ...runtime,
+      runSoldierBrain() {
+        return {
+          ok: true,
+          value: {
+            action: { type: "TURN", direction: "RIGHT" },
+            soldierMemory: {},
+          },
+        }
+      },
+    }
+    const chronicle = createChronicle(noAdvanceRuntime)
+
+    expect(
+      chronicle.events.some(
+        (event) =>
+          event.type === "SOLDIER_STONED" &&
+          payloadObject(event).reason === "NO_ADVANCE",
+      ),
+    ).toBe(true)
+    expect(validateChronicleGrammar(chronicle)).toEqual([])
+  }, 15_000)
 
   it.each([
     {
@@ -598,8 +624,11 @@ describe("validateChronicleGrammar", () => {
             to: { x: 0, y: 1 },
           },
         }
+        const { cycleIndex: _cycleIndex, ...activationContext } =
+          terminal.context
         const noAdvance = {
           ...terminal,
+          context: activationContext,
           payload: {
             ...payloadObject(terminal),
             reason: "NO_ADVANCE",

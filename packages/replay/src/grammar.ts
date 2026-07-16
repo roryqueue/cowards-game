@@ -43,40 +43,48 @@ export const resolveGrammarEventContract = (
     ? classifyCanonicalCompatibilityTupleId(semanticTupleId)
     : "historical-or-unknown"
 
-type GrammarState = {
-  matchStarted: boolean
-  matchEnded: boolean
-  activeRoundNumber: number | undefined
-  activeActivation:
-    | {
-        activationId: string
-        activationIndex: number
-        actingPlayerId: string
-        soldierId: string
-        nextCycleIndex: number
-      }
-    | undefined
-  activeCycleIndex: number | undefined
-  contractionOpen: boolean
+export interface CurrentActivationSlotGrammarState {
+  readonly activationId: string
+  readonly activationIndex: number
+  readonly actingPlayerId: string
+  readonly soldierId: string
+  readonly selected: true
+  readonly started: true
+  readonly open: boolean
+  readonly closed: boolean
+  readonly nextCycleIndex: number
+  readonly hasAdvancedThisActivation: boolean
+  readonly terminalReason: string | null
+  readonly lastAcceptedEventType: ChronicleEventType
+  readonly lastAcceptedSequence: number
 }
 
-const ACTIVATION_EVENT_TYPES = new Set<ChronicleEventType>([
-  "ACTIVATION_STARTED",
-  "ACTIVATION_SKIPPED",
-  "ACTIVATION_ENDED",
-  "CYCLE_STARTED",
-  "CYCLE_ENDED",
-  "AWARENESS_GRID_OBSERVED",
-  "ACTION_EMITTED",
-  "MOVE_ADVANCED",
-  "MOVE_BLOCKED",
-  "TURN_RESOLVED",
-  "PUSH_ATTEMPTED",
-  "PUSH_RESOLVED",
-  "PUSH_BLOCKED",
-  "BACKSTAB_RESOLVED",
-  "SOLDIER_STONED",
-])
+export interface CurrentOpenCycleGrammarState {
+  readonly activationId: string
+  readonly cycleIndex: number
+  readonly boundary: "started" | "observed" | "action_emitted"
+}
+
+export interface CurrentChronicleGrammarState {
+  readonly matchStarted: boolean
+  readonly matchEnded: boolean
+  readonly activePhaseNumber: number | null
+  readonly activeRoundNumber: number | null
+  readonly contractionOpen: boolean
+  readonly activationSlots: readonly CurrentActivationSlotGrammarState[]
+  readonly openCycle: CurrentOpenCycleGrammarState | null
+}
+
+export type AdvanceCurrentChronicleGrammarResult =
+  | {
+      readonly ok: true
+      readonly state: CurrentChronicleGrammarState
+    }
+  | {
+      readonly ok: false
+      readonly state: CurrentChronicleGrammarState
+      readonly error: ChronicleValidationError
+    }
 
 const SOLDIER_CONTEXT_EVENT_TYPES = new Set<ChronicleEventType>([
   "ACTIVATION_STARTED",
@@ -238,11 +246,18 @@ const requireRoundContext = (
   return roundNumber
 }
 
-const requireActivationContext = (
+interface ActivationIdentity {
+  readonly activationId: string
+  readonly activationIndex: number
+  readonly actingPlayerId: string
+  readonly soldierId: string
+}
+
+const requireActivationIdentity = (
   errors: ChronicleValidationError[],
   event: ChronicleEvent,
-  activeActivation: GrammarState["activeActivation"],
-): GrammarState["activeActivation"] | undefined => {
+  expectedSlot?: CurrentActivationSlotGrammarState | undefined,
+): ActivationIdentity | undefined => {
   const activationId = requireStringContext(errors, event, "activationId")
   const activationIndex = requireNumberContext(errors, event, "activationIndex")
   const actingPlayerId = requireStringContext(errors, event, "actingPlayerId")
@@ -251,9 +266,9 @@ const requireActivationContext = (
     : event.context.soldierId
 
   if (
-    activeActivation !== undefined &&
+    expectedSlot !== undefined &&
     activationId !== undefined &&
-    activationId !== activeActivation.activationId
+    activationId !== expectedSlot.activationId
   ) {
     errors.push(
       error(
@@ -261,19 +276,16 @@ const requireActivationContext = (
         `${event.type} context.activationId must match the active Activation.`,
         event,
         {
-          expected: expectedField(
-            "activationId",
-            activeActivation.activationId,
-          ),
+          expected: expectedField("activationId", expectedSlot.activationId),
           actual: actualField("activationId", activationId),
         },
       ),
     )
   }
   if (
-    activeActivation !== undefined &&
+    expectedSlot !== undefined &&
     activationIndex !== undefined &&
-    activationIndex !== activeActivation.activationIndex
+    activationIndex !== expectedSlot.activationIndex
   ) {
     errors.push(
       error(
@@ -283,7 +295,7 @@ const requireActivationContext = (
         {
           expected: expectedField(
             "activationIndex",
-            activeActivation.activationIndex,
+            expectedSlot.activationIndex,
           ),
           actual: actualField("activationIndex", activationIndex),
         },
@@ -291,9 +303,9 @@ const requireActivationContext = (
     )
   }
   if (
-    activeActivation !== undefined &&
+    expectedSlot !== undefined &&
     actingPlayerId !== undefined &&
-    actingPlayerId !== activeActivation.actingPlayerId
+    actingPlayerId !== expectedSlot.actingPlayerId
   ) {
     errors.push(
       error(
@@ -303,7 +315,7 @@ const requireActivationContext = (
         {
           expected: expectedField(
             "actingPlayerId",
-            activeActivation.actingPlayerId,
+            expectedSlot.actingPlayerId,
           ),
           actual: actualField("actingPlayerId", actingPlayerId),
         },
@@ -311,9 +323,9 @@ const requireActivationContext = (
     )
   }
   if (
-    activeActivation !== undefined &&
+    expectedSlot !== undefined &&
     soldierId !== undefined &&
-    soldierId !== activeActivation.soldierId
+    soldierId !== expectedSlot.soldierId
   ) {
     errors.push(
       error(
@@ -321,7 +333,7 @@ const requireActivationContext = (
         `${event.type} context.soldierId must match the active Activation Soldier.`,
         event,
         {
-          expected: expectedField("soldierId", activeActivation.soldierId),
+          expected: expectedField("soldierId", expectedSlot.soldierId),
           actual: actualField("soldierId", soldierId),
         },
       ),
@@ -337,7 +349,6 @@ const requireActivationContext = (
         activationIndex,
         actingPlayerId,
         soldierId,
-        nextCycleIndex: activeActivation?.nextCycleIndex ?? 0,
       }
     : undefined
 }
@@ -370,7 +381,6 @@ const validateActivationIndexWindow = (
 const requireCycleContext = (
   errors: ChronicleValidationError[],
   event: ChronicleEvent,
-  activeCycleIndex: number | undefined,
 ): number | undefined => {
   const cycleIndex = requireNumberContext(errors, event, "cycleIndex")
   if (
@@ -385,38 +395,6 @@ const requireCycleContext = (
         {
           expected: `0..${MAX_ACTIVATION_CYCLES - 1}`,
           actual: cycleIndex,
-        },
-      ),
-    )
-  }
-  if (
-    event.type === "ACTION_EMITTED" &&
-    activeCycleIndex === undefined &&
-    cycleIndex !== undefined
-  ) {
-    errors.push(
-      error(
-        "EVENT_WINDOW_INVALID",
-        "ACTION_EMITTED requires an open Cycle started by AWARENESS_GRID_OBSERVED.",
-        event,
-        { expected: "open Cycle" },
-      ),
-    )
-  }
-  if (
-    event.type === "ACTION_EMITTED" &&
-    activeCycleIndex !== undefined &&
-    cycleIndex !== undefined &&
-    cycleIndex !== activeCycleIndex
-  ) {
-    errors.push(
-      error(
-        "CONTEXT_MISMATCH",
-        "ACTION_EMITTED context.cycleIndex must match the active Cycle.",
-        event,
-        {
-          expected: expectedField("cycleIndex", activeCycleIndex),
-          actual: actualField("cycleIndex", cycleIndex),
         },
       ),
     )
@@ -535,7 +513,7 @@ const validatePlayerPayload = (
 const requireMatchOpen = (
   errors: ChronicleValidationError[],
   event: ChronicleEvent,
-  state: GrammarState,
+  state: CurrentChronicleGrammarState,
 ): boolean => {
   if (!state.matchStarted) {
     errors.push(
@@ -554,9 +532,9 @@ const requireMatchOpen = (
 const requireRoundOpen = (
   errors: ChronicleValidationError[],
   event: ChronicleEvent,
-  state: GrammarState,
+  state: CurrentChronicleGrammarState,
 ): boolean => {
-  if (state.activeRoundNumber === undefined) {
+  if (state.activeRoundNumber === null) {
     errors.push(
       error(
         "EVENT_WINDOW_INVALID",
@@ -570,258 +548,766 @@ const requireRoundOpen = (
   return true
 }
 
-const requireActivationOpen = (
+const slotOrder = (
+  left: CurrentActivationSlotGrammarState,
+  right: CurrentActivationSlotGrammarState,
+): number =>
+  left.activationIndex - right.activationIndex ||
+  (left.activationId < right.activationId
+    ? -1
+    : left.activationId > right.activationId
+      ? 1
+      : 0)
+
+const freezeGrammarState = (
+  input: CurrentChronicleGrammarState,
+): CurrentChronicleGrammarState => {
+  const activationSlots = Object.freeze(
+    input.activationSlots
+      .map((slot) => Object.freeze({ ...slot }))
+      .sort(slotOrder),
+  )
+  return Object.freeze({
+    ...input,
+    activationSlots,
+    openCycle:
+      input.openCycle === null ? null : Object.freeze({ ...input.openCycle }),
+  })
+}
+
+export const createCurrentChronicleGrammarState =
+  (): CurrentChronicleGrammarState =>
+    freezeGrammarState({
+      matchStarted: false,
+      matchEnded: false,
+      activePhaseNumber: null,
+      activeRoundNumber: null,
+      contractionOpen: false,
+      activationSlots: [],
+      openCycle: null,
+    })
+
+const firstError = (
+  errors: readonly ChronicleValidationError[],
+): ChronicleValidationError => errors[0]!
+
+const readReason = (event: ChronicleEvent): string | undefined =>
+  readPayloadString(event, "reason")
+
+const validatePhaseContext = (
   errors: ChronicleValidationError[],
   event: ChronicleEvent,
-  state: GrammarState,
-): boolean => {
+  activePhaseNumber: number | null,
+): number | undefined => {
+  const phaseNumber = event.context.phaseNumber
   if (
-    state.activeActivation === undefined &&
-    event.context.activationId === undefined
+    typeof phaseNumber !== "number" ||
+    !Number.isSafeInteger(phaseNumber) ||
+    phaseNumber < 1
+  ) {
+    errors.push(
+      error(
+        "CONTEXT_MISSING",
+        `${event.type} requires a positive integer context.phaseNumber.`,
+        event,
+        { expected: "context.phaseNumber" },
+      ),
+    )
+    return undefined
+  }
+  if (activePhaseNumber !== null && phaseNumber !== activePhaseNumber) {
+    errors.push(
+      error(
+        "CONTEXT_MISMATCH",
+        `${event.type} context.phaseNumber must match the active Phase.`,
+        event,
+        {
+          expected: expectedField("phaseNumber", activePhaseNumber),
+          actual: actualField("phaseNumber", phaseNumber),
+        },
+      ),
+    )
+  }
+  return phaseNumber
+}
+
+const terminalReasonFromEvent = (
+  event: ChronicleEvent,
+  slot: CurrentActivationSlotGrammarState,
+): string | undefined => {
+  if (event.type === "RUNTIME_VIOLATION") return "RUNTIME_VIOLATION"
+  if (
+    event.type === "SOLDIER_FELL" &&
+    readPayloadString(event, "soldierId") === slot.soldierId
+  ) {
+    return "SOLDIER_FELL"
+  }
+  if (
+    event.type === "MOVE_BLOCKED" &&
+    readReason(event) === "IMMEDIATE_REVERSAL"
+  ) {
+    return "INVALID_MOVE"
+  }
+  if (
+    event.type === "SOLDIER_STONED" &&
+    readPayloadString(event, "soldierId") === slot.soldierId
+  ) {
+    const reason = readReason(event)
+    if (reason === "BACKSTAB") return "BACKSTABBED"
+    if (reason === "TURN_TO_STONE") return "SOLDIER_STONED"
+  }
+  return undefined
+}
+
+const slotWithAcceptedEvent = (
+  slot: CurrentActivationSlotGrammarState,
+  event: ChronicleEvent,
+  changes: Partial<CurrentActivationSlotGrammarState> = {},
+): CurrentActivationSlotGrammarState => ({
+  ...slot,
+  ...changes,
+  lastAcceptedEventType: event.type,
+  lastAcceptedSequence: event.sequence,
+})
+
+export const advanceCurrentChronicleGrammar = (
+  input: CurrentChronicleGrammarState,
+  event: ChronicleEvent,
+): AdvanceCurrentChronicleGrammarResult => {
+  const errors: ChronicleValidationError[] = []
+  const slots = new Map(
+    input.activationSlots.map((slot) => [
+      slot.activationId,
+      { ...slot } as CurrentActivationSlotGrammarState,
+    ]),
+  )
+  let matchStarted = input.matchStarted
+  let matchEnded = input.matchEnded
+  let activePhaseNumber = input.activePhaseNumber
+  let activeRoundNumber = input.activeRoundNumber
+  let contractionOpen = input.contractionOpen
+  let openCycle =
+    input.openCycle === null ? null : ({ ...input.openCycle } as const)
+
+  const reject = (): AdvanceCurrentChronicleGrammarResult => ({
+    ok: false,
+    state: input,
+    error: firstError(errors),
+  })
+  const acceptedState = (): CurrentChronicleGrammarState =>
+    freezeGrammarState({
+      matchStarted,
+      matchEnded,
+      activePhaseNumber,
+      activeRoundNumber,
+      contractionOpen,
+      activationSlots: [...slots.values()],
+      openCycle,
+    })
+  const requireRound = (): boolean =>
+    requireRoundOpen(errors, event, {
+      ...input,
+      activeRoundNumber,
+    })
+  const slotForEvent = (): CurrentActivationSlotGrammarState | undefined => {
+    const identity = requireActivationIdentity(errors, event)
+    if (identity === undefined) return undefined
+    const slot = slots.get(identity.activationId)
+    if (slot === undefined) {
+      errors.push(
+        error(
+          "EVENT_WINDOW_INVALID",
+          `${event.type} requires a previously selected Activation slot.`,
+          event,
+          { expected: "known activationId" },
+        ),
+      )
+      return undefined
+    }
+    requireActivationIdentity(errors, event, slot)
+    return slot
+  }
+  const requireMatchingOpenCycle = (
+    slot: CurrentActivationSlotGrammarState,
+    cycleIndex: number | undefined,
+    boundary?: CurrentOpenCycleGrammarState["boundary"],
+  ): boolean => {
+    if (
+      openCycle === null ||
+      openCycle.activationId !== slot.activationId ||
+      cycleIndex === undefined ||
+      openCycle.cycleIndex !== cycleIndex
+    ) {
+      errors.push(
+        error(
+          "CONTEXT_MISMATCH",
+          `${event.type} must target the exact open Activation Cycle.`,
+          event,
+          {
+            expected:
+              openCycle === null
+                ? "open Cycle"
+                : {
+                    activationId: openCycle.activationId,
+                    cycleIndex: openCycle.cycleIndex,
+                  },
+            actual:
+              cycleIndex === undefined
+                ? "missing Cycle"
+                : {
+                    activationId: slot.activationId,
+                    cycleIndex,
+                  },
+          },
+        ),
+      )
+      return false
+    }
+    if (boundary !== undefined && openCycle.boundary !== boundary) {
+      errors.push(
+        error(
+          "EVENT_WINDOW_INVALID",
+          `${event.type} is invalid at the current Cycle boundary.`,
+          event,
+          { expected: boundary, actual: openCycle.boundary },
+        ),
+      )
+      return false
+    }
+    return true
+  }
+
+  if (matchEnded) {
+    errors.push(
+      error(
+        "EVENT_WINDOW_INVALID",
+        event.type === "MATCH_ENDED"
+          ? "Chronicle cannot contain duplicate MATCH_ENDED events."
+          : `${event.type} cannot occur after MATCH_ENDED.`,
+        event,
+        { expected: "no events after MATCH_ENDED" },
+      ),
+    )
+    return reject()
+  }
+  if (
+    event.type !== "MATCH_STARTED" &&
+    !requireMatchOpen(errors, event, input)
+  ) {
+    return reject()
+  }
+  if (
+    openCycle !== null &&
+    event.type !== "MATCH_ENDED" &&
+    event.context.activationId !== undefined &&
+    event.context.activationId !== openCycle.activationId
   ) {
     errors.push(
       error(
         "EVENT_WINDOW_INVALID",
-        `${event.type} requires an open Activation.`,
+        `${event.type} cannot target another Activation while a Cycle boundary is open.`,
         event,
-        { expected: "open Activation" },
+        {
+          expected: { activationId: openCycle.activationId },
+          actual: { activationId: event.context.activationId },
+        },
       ),
     )
-    return false
-  }
-  return true
-}
-
-export const validateChronicleGrammar = (
-  chronicle: Chronicle,
-): ChronicleValidationError[] => {
-  const errors: ChronicleValidationError[] = []
-  const state: GrammarState = {
-    matchStarted: false,
-    matchEnded: false,
-    activeRoundNumber: undefined,
-    activeActivation: undefined,
-    activeCycleIndex: undefined,
-    contractionOpen: false,
+    return reject()
   }
 
-  for (const event of chronicle.events) {
-    if (state.matchEnded) {
-      errors.push(
-        error(
-          "EVENT_WINDOW_INVALID",
-          event.type === "MATCH_ENDED"
-            ? "Chronicle cannot contain duplicate MATCH_ENDED events."
-            : `${event.type} cannot occur after MATCH_ENDED.`,
-          event,
-          { expected: "no events after MATCH_ENDED" },
-        ),
-      )
-      continue
-    }
-
-    if (
-      event.type !== "MATCH_STARTED" &&
-      !requireMatchOpen(errors, event, state)
-    ) {
-      continue
-    }
-
-    if (
-      state.activeCycleIndex !== undefined &&
-      event.type !== "ACTION_EMITTED" &&
-      event.type !== "RUNTIME_VIOLATION"
-    ) {
-      errors.push(
-        error(
-          "EVENT_WINDOW_INVALID",
-          `${event.type} cannot occur before ACTION_EMITTED closes the active Cycle.`,
-          event,
-          { expected: "ACTION_EMITTED before non-Cycle event" },
-        ),
-      )
-    }
-
-    switch (event.type) {
-      case "MATCH_STARTED":
-        if (state.matchStarted) {
-          errors.push(
-            error(
-              "EVENT_WINDOW_INVALID",
-              "Chronicle cannot contain duplicate MATCH_STARTED events.",
-              event,
-              { expected: "single MATCH_STARTED" },
-            ),
-          )
-          break
-        }
-        state.matchStarted = true
-        state.activeRoundNumber = undefined
-        state.activeActivation = undefined
-        state.activeCycleIndex = undefined
-        state.contractionOpen = false
-        break
-      case "ROUND_STARTED": {
-        state.activeActivation = undefined
-        state.activeCycleIndex = undefined
-        state.contractionOpen = false
-        const contextRoundNumber = requireRoundContext(errors, event, undefined)
-        const payloadRoundNumber = validateRoundStartedPayload(errors, event)
-        state.activeRoundNumber = payloadRoundNumber ?? contextRoundNumber
-        break
+  switch (event.type) {
+    case "MATCH_STARTED":
+      if (matchStarted) {
+        errors.push(
+          error(
+            "EVENT_WINDOW_INVALID",
+            "Chronicle cannot contain duplicate MATCH_STARTED events.",
+            event,
+            { expected: "single MATCH_STARTED" },
+          ),
+        )
+        return reject()
       }
-      case "STRATEGY_EVALUATED":
-        requireRoundOpen(errors, event, state)
-        requireRoundContext(errors, event, state.activeRoundNumber)
-        requireStringContext(errors, event, "actingPlayerId")
-        validatePlayerPayload(errors, event)
-        break
-      case "RUNTIME_VIOLATION":
-        requireRoundOpen(errors, event, state)
-        requireRoundContext(errors, event, state.activeRoundNumber)
-        requireStringContext(errors, event, "actingPlayerId")
-        if (
-          state.activeCycleIndex !== undefined &&
-          readPayloadString(event, "soldierId") === undefined
-        ) {
-          errors.push(
-            error(
-              "EVENT_WINDOW_INVALID",
-              "RUNTIME_VIOLATION must identify the Soldier when closing an active Cycle.",
-              event,
-              { expected: "payload.soldierId" },
-            ),
-          )
-        }
-        if (readPayloadString(event, "soldierId") !== undefined) {
-          requireActivationOpen(errors, event, state)
-          requireActivationContext(errors, event, undefined)
-          validateSoldierPayload(errors, event)
-        }
-        if (state.activeCycleIndex !== undefined) {
-          state.activeActivation =
-            state.activeActivation === undefined
-              ? undefined
-              : {
-                  ...state.activeActivation,
-                  nextCycleIndex: state.activeActivation.nextCycleIndex + 1,
-                }
-          state.activeCycleIndex = undefined
-        }
-        validatePlayerPayload(errors, event)
-        break
-      case "ACTIVATION_STARTED": {
-        requireRoundOpen(errors, event, state)
-        requireRoundContext(errors, event, state.activeRoundNumber)
-        requireActivationContext(errors, event, undefined)
-        validateActivationIndexWindow(errors, event)
-        validateSoldierPayload(errors, event)
-        state.activeActivation = undefined
-        state.activeCycleIndex = undefined
-        state.contractionOpen = false
-        break
+      matchStarted = true
+      matchEnded = false
+      activePhaseNumber = null
+      activeRoundNumber = null
+      contractionOpen = false
+      slots.clear()
+      openCycle = null
+      break
+    case "ROUND_STARTED": {
+      if (openCycle !== null) {
+        errors.push(
+          error(
+            "EVENT_WINDOW_INVALID",
+            "ROUND_STARTED cannot replace an open Activation Cycle.",
+            event,
+            { expected: "closed Cycle" },
+          ),
+        )
+        return reject()
       }
-      case "CYCLE_STARTED":
-      case "CYCLE_ENDED":
-      case "ACTIVATION_SKIPPED":
-      case "ACTIVATION_ENDED":
-        requireRoundOpen(errors, event, state)
-        requireActivationOpen(errors, event, state)
-        requireRoundContext(errors, event, state.activeRoundNumber)
-        requireActivationContext(errors, event, undefined)
-        validateActivationIndexWindow(errors, event)
-        if (
-          event.type === "CYCLE_STARTED" ||
-          event.type === "CYCLE_ENDED" ||
-          event.type === "ACTIVATION_SKIPPED"
-        ) {
-          requireCycleContext(errors, event, undefined)
-          validateCyclePayload(errors, event)
-        }
-        validateSoldierPayload(errors, event)
-        break
-      case "AWARENESS_GRID_OBSERVED": {
-        requireRoundOpen(errors, event, state)
-        requireActivationOpen(errors, event, state)
-        requireRoundContext(errors, event, state.activeRoundNumber)
-        requireActivationContext(errors, event, undefined)
-        validateActivationIndexWindow(errors, event)
-        const cycleIndex = requireCycleContext(errors, event, undefined)
-        if (state.activeCycleIndex !== undefined && cycleIndex !== undefined) {
+      const phaseNumber = validatePhaseContext(errors, event, activePhaseNumber)
+      const contextRoundNumber = requireRoundContext(errors, event, undefined)
+      const payloadRoundNumber = validateRoundStartedPayload(errors, event)
+      if (errors.length > 0) return reject()
+      activePhaseNumber = phaseNumber ?? null
+      activeRoundNumber = payloadRoundNumber ?? contextRoundNumber ?? null
+      contractionOpen = false
+      slots.clear()
+      break
+    }
+    case "STRATEGY_EVALUATED":
+      requireRound()
+      validatePhaseContext(errors, event, activePhaseNumber)
+      requireRoundContext(errors, event, activeRoundNumber ?? undefined)
+      requireStringContext(errors, event, "actingPlayerId")
+      validatePlayerPayload(errors, event)
+      if (errors.length > 0) return reject()
+      break
+    case "ACTIVATION_STARTED": {
+      requireRound()
+      const phaseNumber = validatePhaseContext(errors, event, activePhaseNumber)
+      requireRoundContext(errors, event, activeRoundNumber ?? undefined)
+      const identity = requireActivationIdentity(errors, event)
+      validateActivationIndexWindow(errors, event)
+      validateSoldierPayload(errors, event)
+      if (identity !== undefined) {
+        const canonicalActivationId = `${phaseNumber}:${activeRoundNumber}:${identity.activationIndex}`
+        if (identity.activationId !== canonicalActivationId) {
           errors.push(
             error(
-              "EVENT_WINDOW_INVALID",
-              "AWARENESS_GRID_OBSERVED cannot start a new Cycle before ACTION_EMITTED closes the current Cycle.",
-              event,
-              { expected: "closed Cycle" },
-            ),
-          )
-        }
-        if (
-          state.activeActivation !== undefined &&
-          cycleIndex !== undefined &&
-          cycleIndex !== state.activeActivation.nextCycleIndex
-        ) {
-          errors.push(
-            error(
-              "EVENT_WINDOW_INVALID",
-              "AWARENESS_GRID_OBSERVED context.cycleIndex must be the next Cycle in the active Activation.",
+              "CONTEXT_MISMATCH",
+              "ACTIVATION_STARTED context.activationId must match its exact Phase/Round/index coordinate.",
               event,
               {
-                expected: expectedField(
-                  "cycleIndex",
-                  state.activeActivation.nextCycleIndex,
-                ),
+                expected: canonicalActivationId,
+                actual: identity.activationId,
+              },
+            ),
+          )
+        }
+        if (
+          slots.has(identity.activationId) ||
+          [...slots.values()].some(
+            (slot) =>
+              slot.activationIndex === identity.activationIndex ||
+              (slot.actingPlayerId === identity.actingPlayerId &&
+                slot.soldierId === identity.soldierId),
+          )
+        ) {
+          errors.push(
+            error(
+              "EVENT_WINDOW_INVALID",
+              "ACTIVATION_STARTED cannot select or start a duplicate Activation slot.",
+              event,
+              { expected: "unique activationId/index/player/Soldier slot" },
+            ),
+          )
+        }
+      }
+      if (errors.length > 0 || identity === undefined) return reject()
+      slots.set(identity.activationId, {
+        ...identity,
+        selected: true,
+        started: true,
+        open: true,
+        closed: false,
+        nextCycleIndex: 0,
+        hasAdvancedThisActivation: false,
+        terminalReason: null,
+        lastAcceptedEventType: event.type,
+        lastAcceptedSequence: event.sequence,
+      })
+      contractionOpen = false
+      break
+    }
+    case "CYCLE_STARTED": {
+      requireRound()
+      validatePhaseContext(errors, event, activePhaseNumber)
+      requireRoundContext(errors, event, activeRoundNumber ?? undefined)
+      const slot = slotForEvent()
+      const cycleIndex = requireCycleContext(errors, event)
+      validateActivationIndexWindow(errors, event)
+      validateCyclePayload(errors, event)
+      validateSoldierPayload(errors, event)
+      if (slot !== undefined) {
+        if (slot.closed) {
+          errors.push(
+            error(
+              "EVENT_WINDOW_INVALID",
+              "CYCLE_STARTED cannot reopen a closed Activation slot.",
+              event,
+              { expected: "open Activation slot" },
+            ),
+          )
+        }
+        if (openCycle !== null) {
+          errors.push(
+            error(
+              "EVENT_WINDOW_INVALID",
+              "CYCLE_STARTED requires the prior Cycle boundary to be closed.",
+              event,
+              { expected: "no open Cycle" },
+            ),
+          )
+        }
+        if (cycleIndex !== undefined && cycleIndex !== slot.nextCycleIndex) {
+          errors.push(
+            error(
+              "CONTEXT_MISMATCH",
+              "CYCLE_STARTED context.cycleIndex must be the slot's next Cycle.",
+              event,
+              {
+                expected: expectedField("cycleIndex", slot.nextCycleIndex),
                 actual: actualField("cycleIndex", cycleIndex),
               },
             ),
           )
         }
-        validateSoldierPayload(errors, event)
-        validateCyclePayload(errors, event)
-        state.activeCycleIndex = cycleIndex
-        break
       }
-      case "ACTION_EMITTED":
-        requireRoundOpen(errors, event, state)
-        requireActivationOpen(errors, event, state)
-        requireRoundContext(errors, event, state.activeRoundNumber)
-        requireActivationContext(errors, event, undefined)
-        validateActivationIndexWindow(errors, event)
-        requireCycleContext(errors, event, state.activeCycleIndex)
+      if (errors.length > 0 || slot === undefined || cycleIndex === undefined)
+        return reject()
+      openCycle = {
+        activationId: slot.activationId,
+        cycleIndex,
+        boundary: "started",
+      }
+      slots.set(slot.activationId, slotWithAcceptedEvent(slot, event))
+      break
+    }
+    case "AWARENESS_GRID_OBSERVED": {
+      requireRound()
+      validatePhaseContext(errors, event, activePhaseNumber)
+      requireRoundContext(errors, event, activeRoundNumber ?? undefined)
+      const slot = slotForEvent()
+      const cycleIndex = requireCycleContext(errors, event)
+      validateActivationIndexWindow(errors, event)
+      validateCyclePayload(errors, event)
+      validateSoldierPayload(errors, event)
+      if (
+        slot !== undefined &&
+        !requireMatchingOpenCycle(slot, cycleIndex, "started")
+      ) {
+        // Error already recorded.
+      }
+      if (errors.length > 0 || slot === undefined || cycleIndex === undefined)
+        return reject()
+      openCycle = {
+        activationId: slot.activationId,
+        cycleIndex,
+        boundary: "observed",
+      }
+      slots.set(slot.activationId, slotWithAcceptedEvent(slot, event))
+      break
+    }
+    case "ACTION_EMITTED": {
+      requireRound()
+      validatePhaseContext(errors, event, activePhaseNumber)
+      requireRoundContext(errors, event, activeRoundNumber ?? undefined)
+      const slot = slotForEvent()
+      const cycleIndex = requireCycleContext(errors, event)
+      validateActivationIndexWindow(errors, event)
+      validateSoldierPayload(errors, event)
+      if (
+        slot !== undefined &&
+        !requireMatchingOpenCycle(slot, cycleIndex, "observed")
+      ) {
+        // Error already recorded.
+      }
+      if (errors.length > 0 || slot === undefined || cycleIndex === undefined)
+        return reject()
+      openCycle = {
+        activationId: slot.activationId,
+        cycleIndex,
+        boundary: "action_emitted",
+      }
+      slots.set(slot.activationId, slotWithAcceptedEvent(slot, event))
+      break
+    }
+    case "MOVE_ADVANCED":
+    case "MOVE_BLOCKED":
+    case "TURN_RESOLVED":
+    case "PUSH_ATTEMPTED":
+    case "PUSH_RESOLVED":
+    case "PUSH_BLOCKED": {
+      requireRound()
+      validatePhaseContext(errors, event, activePhaseNumber)
+      requireRoundContext(errors, event, activeRoundNumber ?? undefined)
+      const slot = slotForEvent()
+      const cycleIndex = requireCycleContext(errors, event)
+      validateActivationIndexWindow(errors, event)
+      validateSoldierPayload(errors, event)
+      if (
+        slot !== undefined &&
+        !requireMatchingOpenCycle(slot, cycleIndex, "action_emitted")
+      ) {
+        // Error already recorded.
+      }
+      if (errors.length > 0 || slot === undefined) return reject()
+      const terminalReason = terminalReasonFromEvent(event, slot)
+      slots.set(
+        slot.activationId,
+        slotWithAcceptedEvent(slot, event, {
+          hasAdvancedThisActivation:
+            slot.hasAdvancedThisActivation || event.type === "MOVE_ADVANCED",
+          ...(terminalReason === undefined ? {} : { terminalReason }),
+        }),
+      )
+      break
+    }
+    case "BACKSTAB_RESOLVED":
+    case "SOLDIER_STONED": {
+      requireRound()
+      validatePhaseContext(errors, event, activePhaseNumber)
+      requireRoundContext(errors, event, activeRoundNumber ?? undefined)
+      const slot = slotForEvent()
+      const noAdvanceCleanup =
+        event.type === "SOLDIER_STONED" && readReason(event) === "NO_ADVANCE"
+      const cycleIndex = noAdvanceCleanup
+        ? event.context.cycleIndex
+        : requireCycleContext(errors, event)
+      validateActivationIndexWindow(errors, event)
+      if (noAdvanceCleanup) {
         validateSoldierPayload(errors, event)
-        if (state.activeActivation !== undefined) {
-          state.activeActivation = {
-            ...state.activeActivation,
-            nextCycleIndex: state.activeActivation.nextCycleIndex + 1,
-          }
+        if (cycleIndex !== undefined) {
+          errors.push(
+            error(
+              "CONTEXT_MISMATCH",
+              "SOLDIER_STONED reason NO_ADVANCE is Activation-close cleanup and must not claim a Cycle boundary.",
+              event,
+              { expected: "no context.cycleIndex", actual: cycleIndex },
+            ),
+          )
         }
-        state.activeCycleIndex = undefined
-        break
-      case "MOVE_ADVANCED":
-      case "MOVE_BLOCKED":
-      case "TURN_RESOLVED":
-      case "PUSH_ATTEMPTED":
-      case "PUSH_RESOLVED":
-      case "PUSH_BLOCKED":
-      case "BACKSTAB_RESOLVED":
-      case "SOLDIER_STONED":
-        requireRoundOpen(errors, event, state)
-        requireActivationOpen(errors, event, state)
-        requireRoundContext(errors, event, state.activeRoundNumber)
-        requireActivationContext(errors, event, undefined)
+      } else if (
+        slot !== undefined &&
+        !requireMatchingOpenCycle(slot, cycleIndex)
+      ) {
+        // Error already recorded.
+      }
+      if (
+        slot !== undefined &&
+        noAdvanceCleanup &&
+        slot.hasAdvancedThisActivation
+      ) {
+        errors.push(
+          error(
+            "PAYLOAD_INCONSISTENT",
+            "SOLDIER_STONED reason NO_ADVANCE conflicts with the slot's successful Advance history.",
+            event,
+            { expected: "no successful Advance" },
+          ),
+        )
+      }
+      if (errors.length > 0 || slot === undefined) return reject()
+      const terminalReason = terminalReasonFromEvent(event, slot)
+      slots.set(
+        slot.activationId,
+        slotWithAcceptedEvent(slot, event, {
+          ...(terminalReason === undefined ? {} : { terminalReason }),
+        }),
+      )
+      break
+    }
+    case "RUNTIME_VIOLATION": {
+      requireRound()
+      validatePhaseContext(errors, event, activePhaseNumber)
+      requireRoundContext(errors, event, activeRoundNumber ?? undefined)
+      requireStringContext(errors, event, "actingPlayerId")
+      const soldierId = readPayloadString(event, "soldierId")
+      if (soldierId !== undefined) {
+        const slot = slotForEvent()
+        const cycleIndex = requireCycleContext(errors, event)
         validateActivationIndexWindow(errors, event)
         validateSoldierPayload(errors, event)
-        break
-      case "SOLDIER_FELL":
+        if (slot !== undefined && !requireMatchingOpenCycle(slot, cycleIndex)) {
+          // Error already recorded.
+        }
+        if (errors.length > 0 || slot === undefined) return reject()
+        slots.set(
+          slot.activationId,
+          slotWithAcceptedEvent(slot, event, {
+            terminalReason: "RUNTIME_VIOLATION",
+          }),
+        )
+      } else if (openCycle !== null) {
+        errors.push(
+          error(
+            "EVENT_WINDOW_INVALID",
+            "RUNTIME_VIOLATION must identify the Soldier when a Cycle is open.",
+            event,
+            { expected: "payload.soldierId" },
+          ),
+        )
+      }
+      validatePlayerPayload(errors, event)
+      if (errors.length > 0) return reject()
+      break
+    }
+    case "CYCLE_ENDED": {
+      requireRound()
+      validatePhaseContext(errors, event, activePhaseNumber)
+      requireRoundContext(errors, event, activeRoundNumber ?? undefined)
+      const slot = slotForEvent()
+      const cycleIndex = requireCycleContext(errors, event)
+      validateActivationIndexWindow(errors, event)
+      validateCyclePayload(errors, event)
+      validateSoldierPayload(errors, event)
+      if (
+        slot !== undefined &&
+        !requireMatchingOpenCycle(slot, cycleIndex, "action_emitted")
+      ) {
+        // Error already recorded.
+      }
+      if (errors.length > 0 || slot === undefined || cycleIndex === undefined)
+        return reject()
+      slots.set(
+        slot.activationId,
+        slotWithAcceptedEvent(slot, event, {
+          nextCycleIndex: cycleIndex + 1,
+        }),
+      )
+      openCycle = null
+      break
+    }
+    case "ACTIVATION_ENDED": {
+      requireRound()
+      validatePhaseContext(errors, event, activePhaseNumber)
+      requireRoundContext(errors, event, activeRoundNumber ?? undefined)
+      const slot = slotForEvent()
+      validateActivationIndexWindow(errors, event)
+      validateSoldierPayload(errors, event)
+      const reason = readReason(event)
+      if (slot !== undefined) {
+        if (slot.closed) {
+          errors.push(
+            error(
+              "EVENT_WINDOW_INVALID",
+              "ACTIVATION_ENDED cannot close an Activation slot twice.",
+              event,
+              { expected: "open Activation slot" },
+            ),
+          )
+        }
         if (
-          state.activeActivation !== undefined ||
-          event.context.activationId !== undefined
+          slot.terminalReason !== null &&
+          reason !== undefined &&
+          reason !== slot.terminalReason
         ) {
-          requireRoundOpen(errors, event, state)
-          requireRoundContext(errors, event, state.activeRoundNumber)
-          requireActivationContext(errors, event, undefined)
-        } else if (!state.contractionOpen) {
+          errors.push(
+            error(
+              "PAYLOAD_INCONSISTENT",
+              "ACTIVATION_ENDED reason must match the slot's observed terminal reason.",
+              event,
+              {
+                expected: slot.terminalReason,
+                actual: reason,
+              },
+            ),
+          )
+        }
+        if (
+          reason === "CYCLE_EXHAUSTED" &&
+          slot.nextCycleIndex !== MAX_ACTIVATION_CYCLES
+        ) {
+          errors.push(
+            error(
+              "PAYLOAD_INCONSISTENT",
+              "ACTIVATION_ENDED cannot claim CYCLE_EXHAUSTED before every Cycle.",
+              event,
+              {
+                expected: MAX_ACTIVATION_CYCLES,
+                actual: slot.nextCycleIndex,
+              },
+            ),
+          )
+        }
+      }
+      if (errors.length > 0 || slot === undefined || reason === undefined)
+        return reject()
+      const nextCycleIndex =
+        openCycle?.activationId === slot.activationId
+          ? openCycle.cycleIndex + 1
+          : slot.nextCycleIndex
+      if (openCycle !== null && openCycle.activationId === slot.activationId) {
+        openCycle = null
+      }
+      slots.set(
+        slot.activationId,
+        slotWithAcceptedEvent(slot, event, {
+          open: false,
+          closed: true,
+          nextCycleIndex,
+          terminalReason: reason,
+        }),
+      )
+      break
+    }
+    case "ACTIVATION_SKIPPED": {
+      requireRound()
+      validatePhaseContext(errors, event, activePhaseNumber)
+      requireRoundContext(errors, event, activeRoundNumber ?? undefined)
+      const slot = slotForEvent()
+      const cycleIndex = requireCycleContext(errors, event)
+      validateActivationIndexWindow(errors, event)
+      validateCyclePayload(errors, event)
+      validateSoldierPayload(errors, event)
+      const reason = readReason(event)
+      if (slot !== undefined) {
+        if (!slot.closed) {
+          errors.push(
+            error(
+              "EVENT_WINDOW_INVALID",
+              "ACTIVATION_SKIPPED requires a previously closed Activation slot.",
+              event,
+              { expected: "closed Activation slot" },
+            ),
+          )
+        }
+        if (cycleIndex !== undefined && cycleIndex !== slot.nextCycleIndex) {
+          errors.push(
+            error(
+              "CONTEXT_MISMATCH",
+              "ACTIVATION_SKIPPED context.cycleIndex must be the slot's next Cycle.",
+              event,
+              {
+                expected: expectedField("cycleIndex", slot.nextCycleIndex),
+                actual: actualField("cycleIndex", cycleIndex),
+              },
+            ),
+          )
+        }
+        if (
+          slot.terminalReason !== null &&
+          reason !== undefined &&
+          reason !== slot.terminalReason
+        ) {
+          errors.push(
+            error(
+              "PAYLOAD_INCONSISTENT",
+              "ACTIVATION_SKIPPED reason must match the closed slot.",
+              event,
+              { expected: slot.terminalReason, actual: reason },
+            ),
+          )
+        }
+      }
+      if (errors.length > 0 || slot === undefined || cycleIndex === undefined)
+        return reject()
+      slots.set(
+        slot.activationId,
+        slotWithAcceptedEvent(slot, event, {
+          nextCycleIndex: cycleIndex + 1,
+        }),
+      )
+      break
+    }
+    case "SOLDIER_FELL": {
+      if (event.context.activationId === undefined) {
+        if (!contractionOpen) {
           errors.push(
             error(
               "EVENT_WINDOW_INVALID",
@@ -831,41 +1317,79 @@ export const validateChronicleGrammar = (
             ),
           )
         }
-        validateSoldierPayload(errors, event)
-        break
-      case "CONTRACTION_RESOLVED":
-        state.activeRoundNumber = undefined
-        state.activeActivation = undefined
-        state.activeCycleIndex = undefined
-        state.contractionOpen = true
-        break
-      case "MATCH_ENDED":
-        state.matchEnded = true
-        state.activeRoundNumber = undefined
-        state.activeActivation = undefined
-        state.activeCycleIndex = undefined
-        state.contractionOpen = false
-        break
-      default: {
-        const exhaustive: never = event.type
-        return exhaustive
+      } else {
+        requireRound()
+        validatePhaseContext(errors, event, activePhaseNumber)
+        requireRoundContext(errors, event, activeRoundNumber ?? undefined)
+        const slot = slotForEvent()
+        const cycleIndex = requireCycleContext(errors, event)
+        validateActivationIndexWindow(errors, event)
+        if (slot !== undefined && !requireMatchingOpenCycle(slot, cycleIndex)) {
+          // Error already recorded.
+        }
+        if (errors.length > 0 || slot === undefined) return reject()
+        const terminalReason = terminalReasonFromEvent(event, slot)
+        slots.set(
+          slot.activationId,
+          slotWithAcceptedEvent(slot, event, {
+            ...(terminalReason === undefined ? {} : { terminalReason }),
+          }),
+        )
       }
+      if (errors.length > 0) return reject()
+      break
     }
-
-    if (
-      !ACTIVATION_EVENT_TYPES.has(event.type) &&
-      event.type !== "MATCH_ENDED"
-    ) {
-      state.activeActivation =
-        event.type === "ROUND_STARTED" || event.type === "CONTRACTION_RESOLVED"
-          ? undefined
-          : state.activeActivation
-    }
-    if (!PLAYER_CONTEXT_EVENT_TYPES.has(event.type)) {
-      validatePlayerPayload(errors, event)
+    case "CONTRACTION_RESOLVED":
+      if (openCycle !== null) {
+        errors.push(
+          error(
+            "EVENT_WINDOW_INVALID",
+            "CONTRACTION_RESOLVED cannot replace an open Activation Cycle.",
+            event,
+            { expected: "closed Cycle" },
+          ),
+        )
+        return reject()
+      }
+      validatePhaseContext(errors, event, activePhaseNumber)
+      if (errors.length > 0) return reject()
+      activePhaseNumber = null
+      activeRoundNumber = null
+      contractionOpen = true
+      slots.clear()
+      break
+    case "MATCH_ENDED":
+      matchEnded = true
+      activeRoundNumber = null
+      contractionOpen = false
+      openCycle = null
+      break
+    default: {
+      const exhaustive: never = event.type
+      return exhaustive
     }
   }
 
+  if (!PLAYER_CONTEXT_EVENT_TYPES.has(event.type)) {
+    validatePlayerPayload(errors, event)
+  }
+  if (errors.length > 0) return reject()
+  return { ok: true, state: acceptedState() }
+}
+
+export const validateChronicleGrammar = (
+  chronicle: Chronicle,
+): ChronicleValidationError[] => {
+  const errors: ChronicleValidationError[] = []
+  let state = createCurrentChronicleGrammarState()
+  for (const event of chronicle.events) {
+    const advanced = advanceCurrentChronicleGrammar(state, event)
+    if (!advanced.ok) {
+      errors.push(advanced.error)
+      continue
+    }
+    state = advanced.state
+  }
   if (!state.matchStarted) {
     errors.push({
       code: "REQUIRED_EVENT_MISSING",
@@ -880,6 +1404,5 @@ export const validateChronicleGrammar = (
       expected: "MATCH_ENDED",
     })
   }
-
   return errors
 }
