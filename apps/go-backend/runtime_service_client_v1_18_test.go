@@ -28,7 +28,7 @@ func loadRuntimeSemanticReceiptFixtureV118(t *testing.T) ([]byte, runtimeSemanti
 		t.Fatal(err)
 	}
 	var fixture runtimeServiceResponseFixtureV118
-	if err := decodeStrictJSON(fixtureBytes, &fixture); err != nil {
+	if err := json.Unmarshal(fixtureBytes, &fixture); err != nil {
 		t.Fatal(err)
 	}
 	receiptBytes, err := runtimeInvocationV117CanonicalValue(fixture.Result.SemanticReceipt)
@@ -54,10 +54,11 @@ func signRuntimeSemanticReceiptForTestV118(
 	if err != nil {
 		t.Fatal(err)
 	}
-	message, err := encodeRuntimeSemanticAdmissionClaimV118(claim)
+	canonicalClaim, err := runtimeInvocationV117CanonicalValue(claim)
 	if err != nil {
 		t.Fatal(err)
 	}
+	message := runtimeInvocationV117Frame(runtimeSemanticReceiptDomainV118, canonicalClaim)
 	publicDER, err := x509.MarshalPKIXPublicKey(publicKey)
 	if err != nil {
 		t.Fatal(err)
@@ -297,6 +298,12 @@ func TestPhase259RuntimeSemanticReceiptV118RejectsWireKeyAndVersionConfusion(t *
 		{"cross version", func(value map[string]any) {
 			value["claim"].(map[string]any)["schemaVersion"] = "runtime-semantic-receipt-v1.17"
 		}},
+		{"missing bottom certificate", func(value map[string]any) {
+			delete(value["claim"].(map[string]any)["certificateReferences"].(map[string]any), "bottom")
+		}},
+		{"missing top certificate", func(value map[string]any) {
+			delete(value["claim"].(map[string]any)["certificateReferences"].(map[string]any), "top")
+		}},
 		{"singular certificate", func(value map[string]any) {
 			claim := value["claim"].(map[string]any)
 			references := claim["certificateReferences"].(map[string]any)
@@ -352,6 +359,33 @@ func TestPhase259RuntimeSemanticReceiptV118RejectsWireKeyAndVersionConfusion(t *
 	})
 	if verified != nil {
 		t.Fatal("wrong Ed25519 key admitted")
+	}
+	assertRuntimeSemanticReceiptFailureV118(t, failure)
+}
+
+func TestPhase259RuntimeSemanticReceiptV118MatchesStringGenerationGrammar(t *testing.T) {
+	_, receipt := loadRuntimeSemanticReceiptFixtureV118(t)
+	claim := receipt.Claim
+	claim.AuthorityGeneration = "9999999999999999"
+	claim.CertificateReferences.Bottom.RegistryGeneration = claim.AuthorityGeneration
+	claim.CertificateReferences.Top.RegistryGeneration = claim.AuthorityGeneration
+	receiptBytes, signed, trustedKey := signRuntimeSemanticReceiptForTestV118(t, claim)
+	verified, failure := verifyRuntimeSemanticReceiptV118(runtimeSemanticReceiptVerificationInputV118{
+		ReceiptBytes: receiptBytes, TrustedKey: trustedKey, ExpectedClaim: signed.Claim,
+	})
+	if failure != nil || verified == nil {
+		t.Fatalf("spec-valid 16-digit string generation rejected: %+v", failure)
+	}
+
+	claim.AuthorityGeneration = "01"
+	claim.CertificateReferences.Bottom.RegistryGeneration = claim.AuthorityGeneration
+	claim.CertificateReferences.Top.RegistryGeneration = claim.AuthorityGeneration
+	receiptBytes, signed, trustedKey = signRuntimeSemanticReceiptForTestV118(t, claim)
+	verified, failure = verifyRuntimeSemanticReceiptV118(runtimeSemanticReceiptVerificationInputV118{
+		ReceiptBytes: receiptBytes, TrustedKey: trustedKey, ExpectedClaim: signed.Claim,
+	})
+	if verified != nil {
+		t.Fatal("noncanonical leading-zero generation admitted")
 	}
 	assertRuntimeSemanticReceiptFailureV118(t, failure)
 }
