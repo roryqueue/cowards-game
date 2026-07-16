@@ -18,6 +18,7 @@ import {
   type StrategyRuntime,
   type TransitionResult,
 } from "../../../packages/engine/src/index.ts"
+import { adaptRuntimeForCurrentKernel } from "../../../packages/engine/src/test/current-kernel-runtime.ts"
 
 const baseInput = {
   matchId: "audit-match",
@@ -49,11 +50,12 @@ const stateWith = (soldiers: Soldier[]): GameState => ({
   soldiers,
 })
 
-const brainRuntime = (action: unknown): StrategyRuntime => ({
-  selectActivations: () =>
-    success({ activationOrders: [], strategyMemory: {} }),
-  runSoldierBrain: () => success({ action, soldierMemory: {} } as never),
-})
+const brainRuntime = (action: unknown): StrategyRuntime =>
+  adaptRuntimeForCurrentKernel({
+    selectActivations: () =>
+      success({ activationOrders: [], strategyMemory: {} }),
+    runSoldierBrain: () => success({ action, soldierMemory: {} } as never),
+  })
 
 const runCandidateActivation = (
   state: GameState,

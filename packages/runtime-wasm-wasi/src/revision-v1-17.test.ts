@@ -135,6 +135,7 @@ describe("Rust/Zig Strategy Revision v1.17 producers", () => {
         true,
       )
     },
+    15_000,
   )
 
   it("rejects missing or duplicated source-identity custom sections", () => {

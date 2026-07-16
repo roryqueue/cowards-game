@@ -33,7 +33,7 @@
       "id": "phase258.replay-and-web",
       "stage": "preactivation",
       "kind": "vitest",
-      "command": ["pnpm", "exec", "vitest", "run", "--reporter=verbose", "packages/replay/src/grammar.test.ts", "packages/replay/src/replay-transition.test.ts", "packages/replay/src/validate.test.ts", "apps/web/app/tuple-classification.test.ts"],
+      "command": ["pnpm", "exec", "vitest", "run", "--reporter=verbose", "--maxWorkers=1", "packages/replay/src/grammar.test.ts", "packages/replay/src/replay-transition.test.ts", "packages/replay/src/validate.test.ts", "apps/web/app/tuple-classification.test.ts"],
       "namedResult": "phase258-replay-and-web",
       "expectedOutput": ["grammar.test.ts", "replay-transition.test.ts", "validate.test.ts", "tuple-classification.test.ts"],
       "ownedFiles": ["packages/replay/src/grammar.test.ts", "packages/replay/src/replay-transition.test.ts", "packages/replay/src/validate.test.ts", "apps/web/app/tuple-classification.test.ts"]
