@@ -349,6 +349,29 @@ func TestPhase258SuccessorRuntimeLimitsRequireExactIntegersAfterJSONDecoding(t *
 	}
 }
 
+func TestPhase258DefaultRuntimeMetadataUsesSelectedSuccessorContainmentLimits(t *testing.T) {
+	runtime := defaultRuntimeMetadata()
+	if stringValue(runtime, "abiVersion") != strategyRuntimeABIVersionV117 {
+		t.Fatalf("default runtime metadata did not use the selected v1.17 ABI: %+v", runtime)
+	}
+	limits := mapValue(runtime, "limits")
+	if !validSuccessorRuntimeLimitsV117(limits) {
+		t.Fatalf("default runtime metadata did not use the canonical v1.17 containment limits: %+v", limits)
+	}
+	if stringValue(limits, "filesystem") != "none" ||
+		stringValue(limits, "network") != "disabled" ||
+		stringValue(limits, "environment") != "empty" {
+		t.Fatalf("default runtime metadata weakened selected containment: %+v", limits)
+	}
+	historical := historicalDefaultRuntimeMetadataLimits()
+	if stringValue(historical, "filesystem") != "host" ||
+		stringValue(historical, "network") != "inherited" ||
+		stringValue(historical, "environment") != "empty" ||
+		intValue(historical, "stdoutBytes") != 262144 {
+		t.Fatalf("literal historical runtime defaults were not preserved explicitly: %+v", historical)
+	}
+}
+
 func TestPhase258SuccessorValidationIssuesUseExactGeneratedSpecAuthority(t *testing.T) {
 	fixture := loadRuntimeSuccessorAuthorityFixtureV117(t)
 	strategy := fixture.RevisionVectors[0].strategy(t, time.Date(2026, 7, 15, 12, 0, 0, 0, time.UTC))

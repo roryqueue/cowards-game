@@ -3446,8 +3446,13 @@ func validUsername(value string) bool {
 }
 
 func defaultRuntimeMetadata() map[string]any {
+	selectedRuntimeABI := selectedStrategyRuntimeABIVersion()
+	limits := historicalDefaultRuntimeMetadataLimits()
+	if selectedRuntimeABI == strategyRuntimeABIVersionV117 {
+		limits = defaultRuntimeServiceLimitsV117()
+	}
 	return map[string]any{
-		"abiVersion": selectedStrategyRuntimeABIVersion(),
+		"abiVersion": selectedRuntimeABI,
 		"language": map[string]any{
 			"id":      "typescript",
 			"version": "0.1.0",
@@ -3461,20 +3466,24 @@ func defaultRuntimeMetadata() map[string]any {
 			"entrypoint": "default",
 		},
 		"requiredCapabilities": []string{},
-		"limits": map[string]any{
-			"timeoutMs":             1000,
-			"stdoutBytes":           262144,
-			"stderrBytes":           65536,
-			"sourceBytes":           strategySourceBytes,
-			"strategyMemoryBytes":   32768,
-			"soldierMemoryBytes":    2048,
-			"objectivePayloadBytes": 1024,
-			"environment":           "empty",
-			"filesystem":            "host",
-			"network":               "inherited",
-			"shell":                 "disabled",
-			"packagePolicy":         "none",
-		},
+		"limits":               limits,
+	}
+}
+
+func historicalDefaultRuntimeMetadataLimits() map[string]any {
+	return map[string]any{
+		"timeoutMs":             1000,
+		"stdoutBytes":           262144,
+		"stderrBytes":           65536,
+		"sourceBytes":           strategySourceBytes,
+		"strategyMemoryBytes":   32768,
+		"soldierMemoryBytes":    2048,
+		"objectivePayloadBytes": 1024,
+		"environment":           "empty",
+		"filesystem":            "host",
+		"network":               "inherited",
+		"shell":                 "disabled",
+		"packagePolicy":         "none",
 	}
 }
 
