@@ -1,6 +1,8 @@
 import { createHash } from "node:crypto"
 import { execFileSync } from "node:child_process"
 import { readFileSync } from "node:fs"
+import path from "node:path"
+import { fileURLToPath } from "node:url"
 import type {
   Chronicle,
   ChronicleEvent,
@@ -214,6 +216,14 @@ const initialState = (): HistoricalV14ReplayState => ({
 const manifestPath =
   "packages/replay/src/fixtures/historical-v1-4-chronicle-manifest.json"
 
+const repoRoot = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "../../..",
+)
+
+const repoPath = (relativePath: string): string =>
+  path.join(repoRoot, relativePath)
+
 interface HistoricalPin {
   readonly path: string
   readonly blob: string
@@ -256,18 +266,20 @@ const sha256 = (bytes: Uint8Array): string =>
 
 const gitText = (args: readonly string[]): string =>
   execFileSync("git", [...args], {
+    cwd: repoRoot,
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"],
   }).trim()
 
 const gitBytes = (args: readonly string[]): Uint8Array =>
   execFileSync("git", [...args], {
+    cwd: repoRoot,
     encoding: "buffer",
     stdio: ["ignore", "pipe", "pipe"],
   })
 
 const readManifest = (): HistoricalManifest =>
-  JSON.parse(readFileSync(manifestPath, "utf8")) as HistoricalManifest
+  JSON.parse(readFileSync(repoPath(manifestPath), "utf8")) as HistoricalManifest
 
 const expectedFixturePaths = Object.freeze([
   "packages/replay/src/reconstruct.test.ts",
@@ -404,7 +416,7 @@ const auditHistoricalManifest = (
     ),
   )
   for (const pin of manifest.frozenSources.entries) {
-    const working = readFileSync(pin.path)
+    const working = readFileSync(repoPath(pin.path))
     if (working.length !== pin.bytes || sha256(working) !== pin.sha256) {
       findings.push(`WORKING_SOURCE_MISMATCH:${pin.path}`)
     }
@@ -548,7 +560,7 @@ describe("frozen historical v1.4 interpretation", () => {
       "packages/replay/src/historical-v1-4-grammar.ts",
       "packages/replay/src/historical-v1-4-transition.ts",
     ]) {
-      const source = readFileSync(file, "utf8")
+      const source = readFileSync(repoPath(file), "utf8")
       expect(source).not.toMatch(
         /from\s+["']\.\/(?:grammar|replay-transition|validate|reconstruct)\.js["']/u,
       )
@@ -563,7 +575,7 @@ describe("frozen historical v1.4 interpretation", () => {
       "packages/replay/src/historical-v1-4-grammar.ts",
       "packages/replay/src/historical-v1-4-transition.ts",
     ]) {
-      const source = readFileSync(file, "utf8")
+      const source = readFileSync(repoPath(file), "utf8")
       const specImports =
         source
           .match(/import[\s\S]*?from\s+["'][^"']+["']/gu)
@@ -573,7 +585,7 @@ describe("frozen historical v1.4 interpretation", () => {
       ).toBe(true)
     }
     const grammar = readFileSync(
-      "packages/replay/src/historical-v1-4-grammar.ts",
+      repoPath("packages/replay/src/historical-v1-4-grammar.ts"),
       "utf8",
     )
     expect(grammar).toContain("HISTORICAL_V14_MAX_ACTIVATION_CYCLES = 12")
@@ -683,7 +695,7 @@ describe("frozen historical v1.4 interpretation", () => {
     ]
     const before = observedPaths.map((path) => ({
       path,
-      bytes: readFileSync(path),
+      bytes: readFileSync(repoPath(path)),
     }))
     const archiveBefore = [
       ...manifest.fixtures,
@@ -705,7 +717,7 @@ describe("frozen historical v1.4 interpretation", () => {
     expect(
       observedPaths.map((path) => ({
         path,
-        bytes: readFileSync(path),
+        bytes: readFileSync(repoPath(path)),
       })),
     ).toEqual(before)
     expect(
