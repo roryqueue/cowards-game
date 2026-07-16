@@ -38,7 +38,8 @@ import {
   SERVICE_API_ROUTES,
   STRATEGY_RUNTIME_ABI_VERSION,
   CURRENT_CANONICAL_COMPATIBILITY_TUPLE_RECORD,
-  RUNTIME_EXECUTION_SERVICE_VERSION,
+  HISTORICAL_RUNTIME_EXECUTION_SERVICE_V1_16,
+  HISTORICAL_RUNTIME_V114_SEMANTIC_TUPLE,
   COMPATIBILITY_VERSIONS,
   assertAnalyticsPublicSummaryLeakSafe,
   assertPublicOutputLeakSafe,
@@ -1494,7 +1495,10 @@ const checkV114RouteOwnershipManifest = (): string => {
   ) {
     throw new Error("v1.14 TypeScript role drifted")
   }
-  if (manifest.runtimeBoundary?.abiVersion !== STRATEGY_RUNTIME_ABI_VERSION) {
+  if (
+    manifest.runtimeBoundary?.abiVersion !==
+    HISTORICAL_RUNTIME_V114_SEMANTIC_TUPLE.runtimeAbi
+  ) {
     throw new Error("v1.14 runtime boundary ABI drifted")
   }
   if (
@@ -1716,7 +1720,8 @@ export const validateV115LifecycleOwnershipManifest = (
     throw new Error("v1.15 mixed DB-completing owners must stay forbidden")
   }
   if (
-    manifest.globalPolicies.runtimeAbiVersion !== STRATEGY_RUNTIME_ABI_VERSION
+    manifest.globalPolicies.runtimeAbiVersion !==
+      HISTORICAL_RUNTIME_V114_SEMANTIC_TUPLE.runtimeAbi
   ) {
     throw new Error("v1.15 runtime ABI drifted")
   }
@@ -1906,10 +1911,16 @@ export const validateV116RuntimeServiceBoundaryArtifact = (
   }
 
   const runtimeAbi = requireRecord(root.runtimeAbi, "runtimeAbi")
-  if (runtimeAbi.serviceContractVersion !== RUNTIME_EXECUTION_SERVICE_VERSION) {
+  if (
+    runtimeAbi.serviceContractVersion !==
+    HISTORICAL_RUNTIME_EXECUTION_SERVICE_V1_16.runtimeServiceVersion
+  ) {
     throw new Error("runtime execution service contract version drifted")
   }
-  if (runtimeAbi.strategyRuntimeAbiVersion !== STRATEGY_RUNTIME_ABI_VERSION) {
+  if (
+    runtimeAbi.strategyRuntimeAbiVersion !==
+    HISTORICAL_RUNTIME_V114_SEMANTIC_TUPLE.runtimeAbi
+  ) {
     throw new Error("runtime ABI version drifted")
   }
   if (runtimeAbi.languageSpecificShortcutsAllowed !== false) {
@@ -4332,7 +4343,8 @@ const checkV124RuntimeAbuseLabArtifacts = (): string => {
     abuse.schemaVersion !== "v1.24-runtime-abuse-lab-evidence" ||
     abuse.milestone !== "v1.24" ||
     abuse.activeAbi !== "wasi-preview1-stdin-stdout-json" ||
-    abuse.runtimeAbiVersion !== STRATEGY_RUNTIME_ABI_VERSION ||
+    abuse.runtimeAbiVersion !==
+      HISTORICAL_RUNTIME_V114_SEMANTIC_TUPLE.runtimeAbi ||
     abuse.summary.fail !== 0 ||
     abuse.summary.nonProof !== 2 ||
     abuse.summary.publicSafe !== true ||
