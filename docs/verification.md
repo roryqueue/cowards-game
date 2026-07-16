@@ -2,7 +2,9 @@
 
 ## v1.37 runtime ABI activation
 
-Phase 258 activates the v1.17 runtime tuple only after the exact manifest passes. The durable receipt contains command IDs, owned test files, aggregate PASS counts, zero skipped counts, and database-presence booleans. It never contains commands, environment values, connection strings, raw output, durations, diagnostics, source, artifacts, memory, objectives, or host paths.
+Phase 258 activates the v1.17 runtime tuple only after the exact manifest passes. The durable receipt binds a clean execution commit/tree, command-definition digest, command IDs, owned test files, aggregate PASS counts, zero skipped counts, database-presence booleans, exit status, and privacy-safe output/named-evidence digests. It never contains commands, environment values, connection strings, raw output, durations, diagnostics, source, artifacts, memory, objectives, or host paths.
+
+Run authoritative receipt generation from a clean detached worktree based on the intended closure source commit. A normal working copy with unrelated or user-owned edits correctly fails the provenance check even when those edits are legitimate. Reuse the local pnpm store through a worktree-local install; do not point a worktree at another checkout's mutable `node_modules` directory.
 
 Run the post-activation proof from the repository root only after the service-backed topology is configured:
 
@@ -30,7 +32,7 @@ export COWARDS_GO_BACKEND_TEST_DATABASE_URL=postgresql://cowards:cowards@localho
 export COWARDS_RUNTIME_SERVICE_URL=http://127.0.0.1:3107
 export COWARDS_PROVIDER_VALIDATION_SECRET=phase258-provider-validation-proof
 export COWARDS_RUNTIME_SERVICE_PRIVATE_ARTIFACT_TOKEN=phase258-private-artifact-proof
-go test . -run '^TestPhase258SourceIdentityE2EServer$' -v -count=1 -timeout 30m
+go test . -run '^TestPhase258SourceIdentityE2EServer$' -v -count=1 -timeout 90m
 ```
 
 The Playwright configuration starts the local web process. In the runner terminal, export the same secrets and both URLs, then confirm both external dependencies:
@@ -62,6 +64,8 @@ pnpm lint
 pnpm typecheck
 pnpm build
 ```
+
+The evaluator authoritatively reruns the receipt commands. Supply the same database URLs, proof-service URLs, and shared local proof secrets to both `--write --check` and later strict `--check` evaluator invocations; missing database or service environment fails closed rather than accepting the committed receipt.
 
 The evaluator fails closed if the activation manifest, exact test receipt, canonical JSON corpus, runtime budget artifact, source-normalization identity, signed managed evidence roots, immutable v1.16 evidence, or TypeScript/Go wire parity drifts.
 

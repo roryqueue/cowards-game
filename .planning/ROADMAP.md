@@ -15,8 +15,8 @@ v1.37 establishes the smallest complete trust substrate needed before serious co
 ## Phases
 
 - [x] **Phase 256: Counted Safety and Canonical Authority** - Fail closed on unproved lanes and establish one atomic compatibility and ownership authority. (completed 2026-07-13)
-- [ ] **Phase 257: Canonical Transition Kernel and v1.4 Semantic Integrity** - Make one validated kernel authoritative and close every confirmed rules-lifecycle defect without changing valid v1.4 behavior.
-- [ ] **Phase 258: Canonical JSON, Failure Semantics, and Artifact Identity** - Define a bounded language-neutral ABI with exact identity and atomic three-way failure behavior.
+- [x] **Phase 257: Canonical Transition Kernel and v1.4 Semantic Integrity** - Make one validated kernel authoritative and close every confirmed rules-lifecycle defect without changing valid v1.4 behavior. (completed 2026-07-13)
+- [x] **Phase 258: Canonical JSON, Failure Semantics, and Artifact Identity** - Define a bounded language-neutral ABI with exact identity and atomic three-way failure behavior. (completed 2026-07-16)
 - [ ] **Phase 259: Executable Four-Language and Chronicle Conformance** - Prove full-trace parity through real adapters and version-strict, reconstruction-equivalent Chronicles.
 - [ ] **Phase 260: Truthful Strategy Inputs, Arena Authority, and Set Fairness** - Give every Strategy truthful observations and every entrant explicit side-by-initiative evaluation coverage.
 - [ ] **Phase 261: Integrated Service Proof, Drift Guards, and Release** - Prove the complete trust chain, audit compatibility and privacy, then archive and tag v1.37.
@@ -228,7 +228,7 @@ Plans:
 
 **Wave 12 — preactivation, small atomic flip, then final proof**
 
-- [ ] 258-14-PLAN.md — Prepare exact candidates/tests, atomically flip the small default set, then generate final hashes and service-backed proof.
+- [x] 258-14-PLAN.md — Prepare exact candidates/tests, atomically flip the small default set, then generate final hashes and service-backed proof.
 
 **Cross-cutting constraints:** no host JSON conversion before raw duplicate/limit checks; no adapter or transport gameplay penalties; no mutation on system failure; no manufactured legacy source bytes; no false resource-meter equivalence; no v1.16 serializer rewrite; no production trusted producer before Phase 259.
 
@@ -359,7 +359,7 @@ Cycle-cap, inward-start, facing-only MOVE, reversal-history, attacker-facing/Adv
 |-------|----------------|--------|-----------|
 | 256. Counted Safety and Canonical Authority | 19/19 | Complete    | 2026-07-13 |
 | 257. Canonical Transition Kernel and v1.4 Semantic Integrity | 22/22 | Complete | 2026-07-13 |
-| 258. Canonical JSON, Failure Semantics, and Artifact Identity | 12/14 | In Progress | - |
+| 258. Canonical JSON, Failure Semantics, and Artifact Identity | 14/14 | Complete | 2026-07-16 |
 | 259. Executable Four-Language and Chronicle Conformance | 0/31 | Planned | - |
 | 260. Truthful Strategy Inputs, Arena Authority, and Set Fairness | 0/TBD | Not started | - |
 | 261. Integrated Service Proof, Drift Guards, and Release | 0/TBD | Not started | - |

@@ -2,19 +2,19 @@
 gsd_state_version: 1.0
 milestone: v1.37
 milestone_name: Rules Integrity and Strategy Evaluation Foundations — ACTIVE
-current_phase: 258
-current_phase_name: canonical-json-failure-semantics-and-artifact-identity
-status: in_progress
-stopped_at: Completed 258-13; ready for 258-14
-last_updated: "2026-07-15T15:06:34.000Z"
-last_activity: 2026-07-15
-last_activity_desc: Phase 258 Plan 13 completed the exact evidence DAG and successor receipt with zero review findings
+current_phase: 259
+current_phase_name: executable-four-language-and-chronicle-conformance
+status: ready
+stopped_at: Phase 258 complete; Phase 259 approved and ready for Wave 1
+last_updated: "2026-07-16T05:46:12.000-04:00"
+last_activity: 2026-07-16
+last_activity_desc: Phase 258 atomically activated and proved the provenance-bound v1.17 runtime tuple with zero open findings
 progress:
   total_phases: 6
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 86
-  completed_plans: 53
-  percent: 33
+  completed_plans: 55
+  percent: 50
 ---
 
 # State: Coward's Game
@@ -24,16 +24,16 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-07-12)
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
-**Current focus:** Phase 258 — Canonical JSON, Failure Semantics, and Artifact Identity execution
+**Current focus:** Phase 259 — Executable Four-Language and Chronicle Conformance execution
 
 ## Current Position
 
-Phase: 258 (canonical-json-failure-semantics-and-artifact-identity) — IN PROGRESS
-Plan: 13 of 14
-Status: Plan 13 complete with zero review findings; exact evidence graph, managed authority, and TS/Go successor receipt green
-Last activity: 2026-07-15 — Completed Plan 258-13 evidence graph and successor receipt
+Phase: 259 (executable-four-language-and-chronicle-conformance) — READY
+Plan: 0 of 31
+Status: Phase 258 complete; Phase 259 plan approved across 10 dependency-valid waves
+Last activity: 2026-07-16 — Completed Phase 258 activation, review, validation, verification, and Verify Work
 
-Progress: [███░░░░░░░] 33%
+Progress: [█████░░░░░] 50%
 
 ## Durable Decisions
 
@@ -61,9 +61,9 @@ Progress: [███░░░░░░░] 33%
 
 **Resume file:** None
 
-Last session: 2026-07-15T15:06:34.000Z
-Stopped at: Completed 258-13; ready for 258-14
-Next command: Complete Phase 258 closure, then `$gsd-execute-phase 259` using the approved 31-plan/10-wave plan.
+Last session: 2026-07-16T05:46:12.000-04:00
+Stopped at: Phase 258 complete; Phase 259 ready for Wave 1
+Next command: `$gsd-execute-phase 259` using the approved 31-plan/10-wave plan.
 
 ## Performance Metrics
 
@@ -106,8 +106,15 @@ Next command: Complete Phase 258 closure, then `$gsd-execute-phase 259` using th
 | Phase 258 P11 | 1h 2min | 2 tasks + 3 review loops | 24 implementation/test/artifact files |
 | Phase 258 P12 | 5h 05min | 2 tasks + deep review convergence | 61 implementation/test/artifact/planning files |
 | Phase 258 P13 | 1h 12min active + resumed validation | 3 tasks + 4 review loops | 33 implementation/test/artifact files |
+| Phase 258 P14 | 18h 27min elapsed | 3 tasks + review/proof convergence | 394 authoritative inventory files; 18 commands / 1,238 tests |
 
 ## Decisions
+
+- [Phase 258]: The complete current default set is `canonical-json-v1.1`, `strategy-runtime-abi-v1.17`, `runtime-execution-service-v1.17`, and `runtime-semantic-receipt-v1.17`; explicit v1.16 dispatch and protected historical bytes remain independently immutable. — A partial or mixed activation is not a valid current runtime.
+- [Phase 258]: Authoritative completion evidence is receipt v2 bound to a clean execution commit/tree, exact command definitions, exit status, and privacy-safe named evidence digests, and the evaluator must rerun those commands. — PASS labels or committed receipt structure alone cannot prove execution.
+- [Phase 258]: Phase-258 closure derives from pinned first-parent git ancestry, exact-path approved interleaved commits, and all fourteen plan files and bytes. — Later-phase planning cannot be silently included, excluded, or modified by an unowned Phase-258-labeled commit.
+- [Phase 258]: Go clients capture one immutable semantic-receipt secret at router construction, and selected v1.17 defaults use successor containment limits while historical literals remain unchanged. — Concurrency and environment drift cannot rewrite trust or containment identity.
+- [Phase 258]: Activation remains uncertified for competition with zero counted-eligible lanes and zero production trusted producers. — Phase 259 alone owns real four-language certificates and trust promotion.
 
 - [Phase 258]: The successor evidence authority is one exact 15-node, 26-edge DAG with a single evidence-bundle root and ten ABI-ordered exact pins; every import, publication, and mounted load recomputes the complete binding. — Floating, shallow, cyclic, substituted, or self-certified evidence cannot become counted authority.
 - [Phase 258]: Managed signatures require canonical Ed25519 Base64 spelling as well as valid bytes, and persisted generation/freshness is part of the signed publication statement. — Equivalent alternate encodings and caller-selected generations cannot mint distinct evidence identities.

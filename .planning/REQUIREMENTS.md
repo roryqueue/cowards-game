@@ -36,14 +36,14 @@
 
 ### Runtime ABI, JSON, Identity, and Failure Safety
 
-- [ ] **RABI-01**: Strategy authors have one canonical JSON profile defining byte, depth, node/entry, string, collection, Unicode, duplicate-key, ordering, finite-number, safe-integer, negative-zero, and serialization limits.
-- [ ] **RABI-02**: Canonical JSON validation is iterative and bounded so adversarial depth or size returns a typed result without recursion overflow or uncontrolled allocation.
-- [ ] **RABI-03**: Every runtime boundary preserves exactly three outcomes: success, player violation, and system failure.
-- [ ] **RABI-04**: Only the canonical engine boundary can convert a valid player violation into the approved v1.4 gameplay consequence; transports and language adapters cannot invent penalties.
-- [ ] **RABI-05**: Timeout, crash, unavailable runtime/toolchain, transport failure, malformed envelope, stale artifact, and persistence failure remain system failures and never mutate gameplay state, StrategyMemory, SoldierMemory, standings, or player result.
-- [ ] **RABI-06**: Original source bytes, normalized bytes, normalization policy/version, line endings, artifact bytes, manifest fields, provider, runtime, toolchain, ABI, policy, corpus, and evidence hashes have explicit identity domains and validated bindings.
-- [ ] **RABI-07**: Counted evidence resolves and pins exact runtime and toolchain identity rather than relying on floating labels such as Rust `stable` or Wasmtime `latest`.
-- [ ] **RABI-08**: TypeScript, Python, Rust, and Zig share one documented ABI envelope and one resource-budget contract with explicit units, measurement boundaries, and equivalent failure semantics.
+- [x] **RABI-01**: Strategy authors have one canonical JSON profile defining byte, depth, node/entry, string, collection, Unicode, duplicate-key, ordering, finite-number, safe-integer, negative-zero, and serialization limits.
+- [x] **RABI-02**: Canonical JSON validation is iterative and bounded so adversarial depth or size returns a typed result without recursion overflow or uncontrolled allocation.
+- [x] **RABI-03**: Every runtime boundary preserves exactly three outcomes: success, player violation, and system failure.
+- [x] **RABI-04**: Only the canonical engine boundary can convert a valid player violation into the approved v1.4 gameplay consequence; transports and language adapters cannot invent penalties.
+- [x] **RABI-05**: Timeout, crash, unavailable runtime/toolchain, transport failure, malformed envelope, stale artifact, and persistence failure remain system failures and never mutate gameplay state, StrategyMemory, SoldierMemory, standings, or player result.
+- [x] **RABI-06**: Original source bytes, normalized bytes, normalization policy/version, line endings, artifact bytes, manifest fields, provider, runtime, toolchain, ABI, policy, corpus, and evidence hashes have explicit identity domains and validated bindings.
+- [x] **RABI-07**: Counted evidence resolves and pins exact runtime and toolchain identity rather than relying on floating labels such as Rust `stable` or Wasmtime `latest`.
+- [x] **RABI-08**: TypeScript, Python, Rust, and Zig share one documented ABI envelope and one resource-budget contract with explicit units, measurement boundaries, and equivalent failure semantics.
 
 ### Executable Four-Language Conformance
 
@@ -141,14 +141,14 @@ These candidates are optional and are not required for v1.37 completion.
 | KERN-09 | Phase 257 | Complete |
 | KERN-10 | Phase 257 | Complete |
 | KERN-11 | Phase 257 | Complete |
-| RABI-01 | Phase 258 | Pending |
-| RABI-02 | Phase 258 | Pending |
-| RABI-03 | Phase 258 | Pending |
-| RABI-04 | Phase 258 | Pending |
-| RABI-05 | Phase 258 | Pending |
-| RABI-06 | Phase 258 | Pending |
-| RABI-07 | Phase 258 | Pending |
-| RABI-08 | Phase 258 | Pending |
+| RABI-01 | Phase 258 | Complete |
+| RABI-02 | Phase 258 | Complete |
+| RABI-03 | Phase 258 | Complete |
+| RABI-04 | Phase 258 | Complete |
+| RABI-05 | Phase 258 | Complete |
+| RABI-06 | Phase 258 | Complete |
+| RABI-07 | Phase 258 | Complete |
+| RABI-08 | Phase 258 | Complete |
 | CONF-01 | Phase 259 | Pending |
 | CONF-02 | Phase 259 | Pending |
 | CONF-03 | Phase 259 | Pending |
