@@ -476,9 +476,7 @@ describe("current recorded transition equality", () => {
         mutate: (transition) => ({
           ...transition,
           terminalStatus:
-            transition.terminalStatus === null
-              ? { type: "DRAW" }
-              : null,
+            transition.terminalStatus === null ? { type: "DRAW" } : null,
         }),
       },
       {

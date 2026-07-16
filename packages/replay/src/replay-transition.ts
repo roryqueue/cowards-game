@@ -16,6 +16,8 @@ import {
   type CanonicalCompatibilityTupleLifecycle,
 } from "@cowards/spec"
 import { stableStringify } from "./hash.js"
+import type { RecordedCanonicalTransitionV137 } from "./record.js"
+
 const V1_37_CURRENT_REPLAY_TRANSITION_EVENT_TYPES = new Set<string>([
   "MATCH_STARTED",
   "ROUND_STARTED",
@@ -47,6 +49,58 @@ export const resolveReplayTransitionEventContract = (
   V1_37_CURRENT_REPLAY_TRANSITION_EVENT_TYPES.has(eventType)
     ? classifyCanonicalCompatibilityTupleId(semanticTupleId)
     : "historical-or-unknown"
+
+export const CURRENT_REPLAY_TRANSITION_FIELD_ORDER = Object.freeze([
+  "ordinal",
+  "kind",
+  "semanticTupleId",
+  "coordinates",
+  "resultClass",
+  "canonicalOutputHash",
+  "strategyMemoryHash",
+  "soldierMemoryHash",
+  "objectiveHash",
+  "orderedEvents",
+  "orderedEventsHash",
+  "beforeStateHash",
+  "afterStateHash",
+  "beforeMachineHash",
+  "afterMachineHash",
+  "terminalStatus",
+  "failureStatus",
+  "terminalHash",
+  "accumulatedTraceRoot",
+] as const satisfies readonly (keyof RecordedCanonicalTransitionV137)[])
+
+export type CurrentReplayTransitionField =
+  (typeof CURRENT_REPLAY_TRANSITION_FIELD_ORDER)[number]
+
+export type CurrentReplayTransitionComparisonResult =
+  | { readonly ok: true }
+  | {
+      readonly ok: false
+      readonly code: "CURRENT_TRANSITION_FIELD_MISMATCH"
+      readonly transitionIndex: number
+      readonly field: CurrentReplayTransitionField
+    }
+
+export const compareCurrentReplayTransitionV137 = (
+  expected: RecordedCanonicalTransitionV137,
+  actual: RecordedCanonicalTransitionV137,
+  transitionIndex: number,
+): CurrentReplayTransitionComparisonResult => {
+  for (const field of CURRENT_REPLAY_TRANSITION_FIELD_ORDER) {
+    if (stableStringify(expected[field]) !== stableStringify(actual[field])) {
+      return Object.freeze({
+        ok: false,
+        code: "CURRENT_TRANSITION_FIELD_MISMATCH",
+        transitionIndex,
+        field,
+      })
+    }
+  }
+  return Object.freeze({ ok: true })
+}
 
 export interface ReplayState {
   board: FullBoardSnapshot
