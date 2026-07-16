@@ -1,6 +1,6 @@
 {
-  "schemaVersion": "NOT_IMPLEMENTED",
-  "activeVersion": "NOT_IMPLEMENTED",
-  "corpusRootSha256": "sha256:NOT_IMPLEMENTED",
-  "path": "NOT_IMPLEMENTED"
+  "schemaVersion": "v1.37-executable-conformance-registry-v1",
+  "activeVersion": "v1",
+  "corpusRootSha256": "sha256:4e13f5e14961c7b7efd6869c6e456c9f8cfeb1cdd2afd9ec17a93812ccbe76a9",
+  "path": "packages/golden/src/fixtures/v1-37-conformance-corpus/v1/corpus.json"
 }

@@ -1,3 +1,5 @@
+/// <reference types="node" />
+
 import { createHash } from "node:crypto"
 import { existsSync } from "node:fs"
 import path from "node:path"
@@ -13,6 +15,7 @@ import {
   createV137ConformanceRunRoot,
   validateCompleteConformanceCaseInventory,
   validateV137ConformanceCorpus,
+  type V137ConformanceCaseResult,
 } from "./v1-37-conformance-corpus.js"
 
 const expectedLanguages = ["typescript", "python", "rust", "zig"] as const
@@ -45,7 +48,7 @@ const expectedCapabilities = [
 const sha256 = (value: string): string =>
   `sha256:${createHash("sha256").update(value, "utf8").digest("hex")}`
 
-const completeResults = () =>
+const completeResults = (): V137ConformanceCaseResult[] =>
   V1_37_CONFORMANCE_CORPUS.cases.flatMap((testCase) =>
     V1_37_CONFORMANCE_CORPUS.fixtures.map((fixture) => ({
       caseId: testCase.id,
@@ -134,20 +137,24 @@ describe("v1.37 executable conformance corpus", () => {
       V1_37_CONFORMANCE_CORPUS_ROOT,
     )
 
-    const sourceMutation = structuredClone(V1_37_CONFORMANCE_CORPUS)
+    const sourceMutation = globalThis.structuredClone(
+      V1_37_CONFORMANCE_CORPUS,
+    )
     sourceMutation.fixtures[0]!.source += "\n// mutation"
     expect(computeV137ConformanceCorpusRoot(sourceMutation)).not.toBe(
       V1_37_CONFORMANCE_CORPUS_ROOT,
     )
 
-    const seedMutation = structuredClone(V1_37_CONFORMANCE_CORPUS)
+    const seedMutation = globalThis.structuredClone(V1_37_CONFORMANCE_CORPUS)
     const seeded = seedMutation.cases.find(({ seed }) => seed !== null)!
     seeded.seed = `${seeded.seed}:mutation`
     expect(computeV137ConformanceCorpusRoot(seedMutation)).not.toBe(
       V1_37_CONFORMANCE_CORPUS_ROOT,
     )
 
-    const expectationMutation = structuredClone(V1_37_CONFORMANCE_CORPUS)
+    const expectationMutation = globalThis.structuredClone(
+      V1_37_CONFORMANCE_CORPUS,
+    )
     expectationMutation.cases[0]!.expectation.reasonCode = "MUTATED"
     expect(computeV137ConformanceCorpusRoot(expectationMutation)).not.toBe(
       V1_37_CONFORMANCE_CORPUS_ROOT,
@@ -203,14 +210,14 @@ describe("v1.37 executable conformance corpus", () => {
     )
 
     for (const status of ["skipped", "unsupported", "failed"] as const) {
-      const blocked = structuredClone(results)
+      const blocked = globalThis.structuredClone(results)
       blocked[0]!.status = status
       expect(() => validateCompleteConformanceCaseInventory(blocked)).toThrow(
         "CASE_DID_NOT_PASS",
       )
     }
 
-    const substituted = structuredClone(results)
+    const substituted = globalThis.structuredClone(results)
     substituted[0]!.sourceSha256 = sha256("substituted")
     expect(() => validateCompleteConformanceCaseInventory(substituted)).toThrow(
       "SOURCE_IDENTITY_MISMATCH",
