@@ -5,6 +5,7 @@ import {
   type RunMatchInput,
   type StrategyRuntime,
 } from "@cowards/engine"
+import { adaptRuntimeForCurrentKernel } from "@cowards/engine/test/current-kernel-runtime"
 import { createChronicleContentHash } from "./hash.js"
 import { projectOwnerChronicle, projectPublicChronicle } from "./project.js"
 import { createCurrentReplay } from "./reconstruct.js"
@@ -63,7 +64,7 @@ const createMatchInput = (): RunMatchInput => ({
   topPlayerId: "top",
   bottomStrategyRevisionId: "bottom-rev",
   topStrategyRevisionId: "top-rev",
-  runtime: deterministicRuntime,
+  runtime: adaptRuntimeForCurrentKernel(deterministicRuntime),
 })
 
 describe("replay package integration", () => {

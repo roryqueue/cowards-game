@@ -1,6 +1,7 @@
 import type { Chronicle, SoldierBrainInput, StrategyInput } from "@cowards/spec"
 import { describe, expect, it } from "vitest"
 import { MATCH_KERNEL, type StrategyRuntime } from "@cowards/engine"
+import { adaptRuntimeForCurrentKernel } from "@cowards/engine/test/current-kernel-runtime"
 import {
   createCurrentReplay,
   createHistoricalV14Replay,
@@ -53,7 +54,7 @@ const createBuiltCurrentInput = () => {
     topPlayerId: "top",
     bottomStrategyRevisionId: "bottom-rev",
     topStrategyRevisionId: "top-rev",
-    runtime: turnToStoneRuntime,
+    runtime: adaptRuntimeForCurrentKernel(turnToStoneRuntime),
   })
   const recorded = recordChronicleFromExecution({
     execution,

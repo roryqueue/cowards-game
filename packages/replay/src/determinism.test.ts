@@ -5,6 +5,7 @@ import {
   type RunMatchInput,
   type StrategyRuntime,
 } from "@cowards/engine"
+import { adaptRuntimeForCurrentKernel } from "@cowards/engine/test/current-kernel-runtime"
 import { createChronicleContentHash } from "./hash.js"
 import { normalizeChronicle } from "./normalize.js"
 import { recordChronicleFromExecution } from "./record.js"
@@ -62,7 +63,10 @@ const createMatchInput = (
 })
 
 const buildNormalized = (input: RunMatchInput) => {
-  const execution = MATCH_KERNEL.runMatch(input)
+  const execution = MATCH_KERNEL.runMatch({
+    ...input,
+    runtime: adaptRuntimeForCurrentKernel(input.runtime),
+  })
   const recorded = recordChronicleFromExecution({
     execution,
     metadata: {

@@ -6,6 +6,7 @@ import type {
 } from "@cowards/spec"
 import { describe, expect, it } from "vitest"
 import { MATCH_KERNEL, type StrategyRuntime } from "@cowards/engine"
+import { adaptRuntimeForCurrentKernel } from "@cowards/engine/test/current-kernel-runtime"
 import { recordChronicleFromExecution } from "./record.js"
 
 const createRecordingRuntime = (
@@ -68,7 +69,9 @@ const metadata = {
 }
 
 const createRecorded = (runtime: StrategyRuntime) => {
-  const execution = MATCH_KERNEL.runMatch(createMatchInput(runtime))
+  const execution = MATCH_KERNEL.runMatch(
+    createMatchInput(adaptRuntimeForCurrentKernel(runtime)),
+  )
   if (execution.kind !== "completed") {
     throw new Error(execution.failure.code)
   }
@@ -170,7 +173,7 @@ describe("candidate Chronicle recording", () => {
       },
     } as unknown as StrategyRuntime
     const execution = MATCH_KERNEL.runMatch(
-      createMatchInput(systemFailureRuntime),
+      createMatchInput(adaptRuntimeForCurrentKernel(systemFailureRuntime)),
     )
     const recorded = recordChronicleFromExecution({ execution, metadata })
 

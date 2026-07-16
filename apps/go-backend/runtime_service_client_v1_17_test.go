@@ -536,6 +536,49 @@ func TestPhase258RuntimeServiceV117WritesCanonicalRequestBytes(t *testing.T) {
 	}
 }
 
+func TestPhase258RuntimeServiceV117RejectsHTTPOutcomeContradictions(t *testing.T) {
+	request, success, _ := loadRuntimeServiceV117Fixture(t)
+	failure := runtimeServiceResponseV117{
+		ContractVersion: runtimeExecutionServiceVersionV117,
+		OK:              false,
+		Kind:            "systemFailure",
+		RequestID:       request.RequestID,
+		MatchID:         request.MatchID,
+		SystemFailure: &runtimeServiceFailure{
+			Classification: "system_failure",
+			Ownership:      "runtime_system",
+			Code:           "RUNTIME_UNAVAILABLE",
+			PublicMessage:  "Runtime system failure.",
+			Retryable:      true,
+			PlayerPenalty:  false,
+		},
+	}
+	tests := []struct {
+		name     string
+		status   int
+		response runtimeServiceResponseV117
+	}{
+		{name: "success body with failure status", status: http.StatusInternalServerError, response: success},
+		{name: "failure body with success status", status: http.StatusOK, response: failure},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) {
+				writer.Header().Set("content-type", "application/json")
+				writer.WriteHeader(test.status)
+				_, _ = writer.Write(encodeRuntimeServiceResponseFixtureV117(t, test.response))
+			}))
+			defer server.Close()
+			client := newRuntimeServiceClientV117(server.URL)
+			client.semanticReceiptSecret = runtimeServiceV117FixtureSecret
+			response, contractFailure := client.executeMatch(context.Background(), request)
+			if response != nil || contractFailure == nil || contractFailure.Code != "RuntimeServiceContractMismatch" {
+				t.Fatalf("HTTP/body contradiction was admitted: response=%+v failure=%+v", response, contractFailure)
+			}
+		})
+	}
+}
+
 func TestPhase258RuntimeServiceV117RejectsEveryReceiptBindingSubstitution(t *testing.T) {
 	request, original, _ := loadRuntimeServiceV117Fixture(t)
 	if response, failure := decodeRuntimeServiceResponseV117(request, encodeRuntimeServiceResponseFixtureV117(t, original), runtimeServiceV117FixtureSecret); failure != nil || response == nil {

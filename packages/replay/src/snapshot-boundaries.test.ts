@@ -7,6 +7,7 @@ import type {
 } from "@cowards/spec"
 import { describe, expect, it } from "vitest"
 import { MATCH_KERNEL, type StrategyRuntime } from "@cowards/engine"
+import { adaptRuntimeForCurrentKernel } from "@cowards/engine/test/current-kernel-runtime"
 import { recordChronicleFromExecution } from "./record.js"
 import { validateSnapshotBoundaries } from "./snapshot-boundaries.js"
 import { validateCurrentChronicle } from "./validate.js"
@@ -71,7 +72,7 @@ const createChronicle = (
     topPlayerId: "top",
     bottomStrategyRevisionId: "bottom-rev",
     topStrategyRevisionId: "top-rev",
-    runtime,
+    runtime: adaptRuntimeForCurrentKernel(runtime),
     maxPhases: 1,
   })
   const recorded = recordChronicleFromExecution({

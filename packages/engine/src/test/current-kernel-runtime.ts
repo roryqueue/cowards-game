@@ -203,26 +203,20 @@ const boundResult = <TValue extends StrategyResult | SoldierBrainResult>(
 }
 
 /**
- * Keeps legacy fixture behavior before activation and supplies the authenticated
- * v1.17 adapter envelope once the atomic kernel pointer selects that ABI.
+ * Keeps a test runtime usable through explicit historical dispatch while
+ * supplying the authenticated v1.17 envelope whenever the kernel provides a
+ * current request. Production adapters must authenticate through their own
+ * containment boundary and must not import this fixture-only helper.
  */
 export const adaptRuntimeForCurrentKernel = (
   runtime: CandidateStrategyRuntime,
-): CandidateStrategyRuntime => {
-  if (
-    String(CANDIDATE_KERNEL_SEMANTIC_TUPLE.runtimeAbi) !==
-    "strategy-runtime-abi-v1.17"
-  ) {
-    return runtime
-  }
-  return {
-    selectActivations(input, request) {
-      if (request === undefined) throw new Error("kernel request was omitted")
-      return boundResult(request, runtime.selectActivations(input))
-    },
-    runSoldierBrain(input, request) {
-      if (request === undefined) throw new Error("kernel request was omitted")
-      return boundResult(request, runtime.runSoldierBrain(input))
-    },
-  }
-}
+): CandidateStrategyRuntime => ({
+  selectActivations(input, request) {
+    const legacy = runtime.selectActivations(input)
+    return request === undefined ? legacy : boundResult(request, legacy)
+  },
+  runSoldierBrain(input, request) {
+    const legacy = runtime.runSoldierBrain(input)
+    return request === undefined ? legacy : boundResult(request, legacy)
+  },
+})

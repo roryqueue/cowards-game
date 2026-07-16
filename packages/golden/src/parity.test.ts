@@ -1,4 +1,5 @@
 import { MATCH_KERNEL } from "@cowards/engine"
+import { adaptRuntimeForCurrentKernel } from "@cowards/engine/test/current-kernel-runtime"
 import {
   createChronicleContentHash,
   projectPublicChronicle,
@@ -25,7 +26,11 @@ import {
 } from "./v1-7-fixtures.js"
 
 const recordGoldenChronicle = () => {
-  const execution = MATCH_KERNEL.runMatch(createGoldenMatchInput())
+  const input = createGoldenMatchInput()
+  const execution = MATCH_KERNEL.runMatch({
+    ...input,
+    runtime: adaptRuntimeForCurrentKernel(input.runtime),
+  })
   const recorded = recordChronicleFromExecution({
     execution,
     metadata: {
@@ -194,7 +199,11 @@ describe("v1.7 golden parity harness", () => {
     expect(violation.failureKind).toBe("runtimeViolation")
     expect(systemFailure.failureKind).toBe("systemFailure")
     expect(GOLDEN_PARITY_VERSION).toBe("golden-parity-v1.7")
-    const execution = MATCH_KERNEL.runMatch(createGoldenMatchInput())
+    const input = createGoldenMatchInput()
+    const execution = MATCH_KERNEL.runMatch({
+      ...input,
+      runtime: adaptRuntimeForCurrentKernel(input.runtime),
+    })
     expect(execution.kind).toBe("completed")
     expect(
       execution.kind === "completed"

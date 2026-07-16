@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs"
 import { fileURLToPath } from "node:url"
 import { MATCH_KERNEL, type StrategyRuntime } from "@cowards/engine"
+import { adaptRuntimeForCurrentKernel } from "@cowards/engine/test/current-kernel-runtime"
 import type { SoldierBrainInput, StrategyInput } from "@cowards/spec"
 import { describe, expect, it } from "vitest"
 import { recordChronicleFromExecution } from "./record.js"
@@ -46,7 +47,7 @@ const run = () =>
     topPlayerId: "top",
     bottomStrategyRevisionId: "bottom-revision",
     topStrategyRevisionId: "top-revision",
-    runtime,
+    runtime: adaptRuntimeForCurrentKernel(runtime),
     maxPhases: 1,
   })
 
@@ -198,13 +199,13 @@ describe("recordChronicleFromExecution", () => {
       topPlayerId: "top",
       bottomStrategyRevisionId: "bottom-revision",
       topStrategyRevisionId: "top-revision",
-      runtime: {
+      runtime: adaptRuntimeForCurrentKernel({
         ...runtime,
         selectActivations: () => ({
           ok: false as const,
           systemFailure: { code: "SPAWN_FAILED", retryable: true },
         }),
-      },
+      }),
     })
     const recorded = recordChronicleFromExecution({ execution, metadata })
 

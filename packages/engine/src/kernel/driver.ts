@@ -2,6 +2,8 @@ import { createHash } from "node:crypto"
 import {
   AuthenticatedRuntimeInvocationRequestV117Schema,
   COMPATIBILITY_VERSIONS,
+  HISTORICAL_RUNTIME_V114_SEMANTIC_TUPLE,
+  HISTORICAL_RUNTIME_V114_SEMANTIC_TUPLE_ID,
   RuntimeInvocationResultV117Schema,
   admitCanonicalJsonValue,
   serializeRuntimeInvocationRequestV117,
@@ -579,6 +581,10 @@ export const runHistoricalV14RoundFromState = (input: {
       executionMode: "match",
       stage: "round_start",
       maxPhases: 100,
+      semanticTuple: {
+        tupleId: HISTORICAL_RUNTIME_V114_SEMANTIC_TUPLE_ID,
+        tuple: HISTORICAL_RUNTIME_V114_SEMANTIC_TUPLE,
+      },
     }),
   )
   const execution = drive(machine, input.runtime, "round")

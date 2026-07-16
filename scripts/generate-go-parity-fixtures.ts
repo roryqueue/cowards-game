@@ -14,6 +14,7 @@ import {
   MATCH_KERNEL,
   type StrategyRuntime,
 } from "../packages/engine/src/index.ts"
+import { adaptRuntimeForCurrentKernel } from "../packages/engine/src/test/current-kernel-runtime.ts"
 import {
   projectPublicChronicle,
   recordChronicleFromExecution,
@@ -1228,7 +1229,11 @@ const runtimeSemantics = {
 const PUBLIC_STRATEGY_ID = "strategy:go-parity:sentinel"
 
 const recordGoldenChronicle = () => {
-  const execution = MATCH_KERNEL.runMatch(createGoldenMatchInput())
+  const input = createGoldenMatchInput()
+  const execution = MATCH_KERNEL.runMatch({
+    ...input,
+    runtime: adaptRuntimeForCurrentKernel(input.runtime),
+  })
   const recorded = recordChronicleFromExecution({
     execution,
     metadata: {

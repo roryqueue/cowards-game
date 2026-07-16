@@ -369,6 +369,15 @@ func (client *runtimeServiceClientV117) executeMatch(
 	if err != nil || int64(len(responseBytes)) > client.maxResponseBytes {
 		return nil, newRuntimeServiceFailure("RuntimeServiceMalformedResponse", "Runtime service v1.17 response was unavailable", true, nil)
 	}
+	var outerOutcome struct {
+		OK *bool `json:"ok"`
+	}
+	if err := json.Unmarshal(responseBytes, &outerOutcome); err == nil && outerOutcome.OK != nil {
+		successStatus := httpResponse.StatusCode >= http.StatusOK && httpResponse.StatusCode < http.StatusMultipleChoices
+		if *outerOutcome.OK != successStatus {
+			return nil, newRuntimeServiceFailure("RuntimeServiceContractMismatch", "Runtime service v1.17 HTTP status contradicted its response outcome", true, nil)
+		}
+	}
 	return decodeRuntimeServiceResponseV117(request, responseBytes, client.semanticReceiptSecret)
 }
 

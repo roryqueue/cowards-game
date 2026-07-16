@@ -3,6 +3,7 @@ import {
   type RunMatchInput,
   type StrategyRuntime,
 } from "@cowards/engine"
+import { adaptRuntimeForCurrentKernel } from "@cowards/engine/test/current-kernel-runtime"
 import { recordChronicleFromExecution } from "@cowards/replay"
 import {
   INITIAL_BOUNDS,
@@ -210,7 +211,10 @@ const buildScenario = (
     assertions: string[]
   }>,
 ): CanonicalReplayScenario => {
-  const execution = MATCH_KERNEL.runMatch(input)
+  const execution = MATCH_KERNEL.runMatch({
+    ...input,
+    runtime: adaptRuntimeForCurrentKernel(input.runtime),
+  })
   const recorded = recordChronicleFromExecution({
     execution,
     metadata: {
