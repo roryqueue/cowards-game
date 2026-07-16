@@ -1,4 +1,5 @@
 #!/usr/bin/env -S pnpm exec tsx
+import { Buffer } from "node:buffer"
 import { execFileSync } from "node:child_process"
 import { createHash } from "node:crypto"
 import {
@@ -23,6 +24,8 @@ export const CALIBRATION_MARKDOWN_PATH =
 const OPTIONAL_CONTRACT_PATH =
   "packages/spec/artifacts/runtime-abi-v1.17-contract.json" as const
 const OPTIONAL_REGISTRY_PATH = "packages/spec/src/runtime-abi-v1-17.ts" as const
+export const RUNTIME_ABI_CALIBRATION_INPUT_CLOSURE_COMMIT =
+  "9f7712c9f6fdbcbbdc5e4f4531b5ac4b4953475d"
 
 export const RUNTIME_ABI_V1_17_CALIBRATION_LIMITS = Object.freeze({
   rawUtf8Bytes: 8 * 1024 * 1024,
@@ -168,6 +171,47 @@ const assertTracked = (root: string, relativePath: string): void => {
   }
 }
 
+const readCalibrationInputBytes = (
+  root: string,
+  relativePath: string,
+): Buffer => {
+  if (realpathSync(root) !== realpathSync(repoRoot)) {
+    return readFileSync(path.join(root, relativePath))
+  }
+  try {
+    execFileSync(
+      "git",
+      [
+        "merge-base",
+        "--is-ancestor",
+        RUNTIME_ABI_CALIBRATION_INPUT_CLOSURE_COMMIT,
+        "HEAD",
+      ],
+      {
+        cwd: root,
+        stdio: "ignore",
+      },
+    )
+    return execFileSync(
+      "git",
+      [
+        "show",
+        `${RUNTIME_ABI_CALIBRATION_INPUT_CLOSURE_COMMIT}:${relativePath}`,
+      ],
+      {
+        cwd: root,
+        encoding: "buffer",
+        maxBuffer: 16 * 1024 * 1024,
+      },
+    )
+  } catch {
+    return fail(
+      "pinned-input-unavailable",
+      `${RUNTIME_ABI_CALIBRATION_INPUT_CLOSURE_COMMIT}:${relativePath}`,
+    )
+  }
+}
+
 const parseManifestEntry = (
   raw: RawManifestEntry,
   index: number,
@@ -254,7 +298,7 @@ export const loadCalibrationInputManifest = (
       return fail("out-of-repository-input", entry.path)
     }
     assertTracked(absoluteRoot, entry.path)
-    const bytes = readFileSync(absolutePath)
+    const bytes = readCalibrationInputBytes(absoluteRoot, entry.path)
     if (bytes.byteLength !== entry.byteLength) {
       return fail(
         "length-mismatch",

@@ -1,3 +1,4 @@
+import { Buffer } from "node:buffer"
 import {
   existsSync,
   lstatSync,
@@ -14,6 +15,7 @@ import { tmpdir } from "node:os"
 import path from "node:path"
 import { pathToFileURL } from "node:url"
 import { afterEach, describe, expect, it } from "vitest"
+import type * as CalibrationSubject from "./calibrate-v1-37-runtime-abi.js"
 
 const repoRoot = path.resolve(import.meta.dirname, "..")
 const subjectPath = path.join(
@@ -24,7 +26,7 @@ const manifestRelativePath =
   "packages/spec/artifacts/runtime-abi-v1.17-calibration-inputs.json"
 const tempRoots: string[] = []
 
-type Subject = typeof import("./calibrate-v1-37-runtime-abi.ts")
+type Subject = typeof CalibrationSubject
 
 const subject = async (): Promise<Subject> => {
   expect(
@@ -133,6 +135,14 @@ describe("runtime ABI v1.17 calibration input boundary", () => {
         ].includes(entry.classification),
       ),
     ).toBe(true)
+    const pinnedPath = ".planning/artifacts/v1.37-kernel-integrity-proof.json"
+    const pinned = manifest.inputs.find(({ path }) => path === pinnedPath)
+    expect(calibration.RUNTIME_ABI_CALIBRATION_INPUT_CLOSURE_COMMIT).toBe(
+      "9f7712c9f6fdbcbbdc5e4f4531b5ac4b4953475d",
+    )
+    expect(pinned?.sha256).not.toBe(
+      sha256(readFileSync(path.join(repoRoot, pinnedPath))),
+    )
   })
 
   it.each([
