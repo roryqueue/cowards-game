@@ -103,17 +103,14 @@ const compactTransitions = (): readonly RecordedCanonicalTransitionV137[] => {
   const terminal = recorded.recordedTransitions.find(
     ({ terminalStatus }) => terminalStatus !== null,
   )!
-  const firstEvent = terminal.orderedEvents[0]!
-  const orderedEvents =
-    terminal.orderedEvents.length > 1
-      ? terminal.orderedEvents
-      : [
-          firstEvent,
-          {
-            ...firstEvent,
-            sequence: firstEvent.sequence + 1,
-          },
-        ]
+  const firstEvent = recorded.recordedTransitions[0]!.orderedEvents[0]!
+  const terminalEvent = terminal.orderedEvents.find(
+    ({ type }) => type === "MATCH_ENDED",
+  )!
+  const orderedEvents = [
+    { ...firstEvent, sequence: 0 },
+    { ...terminalEvent, sequence: 1 },
+  ]
   const transition: RecordedCanonicalTransitionV137 = {
     ...terminal,
     ordinal: 0,
@@ -132,6 +129,23 @@ const compactTransitions = (): readonly RecordedCanonicalTransitionV137[] => {
     },
   ]
   return cachedCompactTransitions
+}
+
+const rebuildTransitionEvidence = (
+  input: DeepMutable<ProjectCanonicalConformanceTraceInput>,
+): void => {
+  const prefix: DeepMutable<RecordedCanonicalTransitionV137>[] = []
+  for (const transition of input.transitions) {
+    transition.canonicalOutputHash = computeRecordedCanonicalOutputHashV137(
+      transition.orderedEvents,
+    )
+    transition.orderedEventsHash = computeRecordedOrderedEventsHashV137(
+      transition.orderedEvents,
+    )
+    prefix.push(transition)
+    transition.accumulatedTraceRoot =
+      computeRecordedTransitionTraceRootV137(prefix)
+  }
 }
 
 const successfulInput = ({
@@ -241,6 +255,38 @@ const failureInput = (): ProjectCanonicalConformanceTraceInput => {
     },
   }
 }
+
+const transitionOwnedPlayerViolationInput =
+  (): ProjectCanonicalConformanceTraceInput => {
+    const input = globalThis.structuredClone(
+      successfulInput(),
+    ) as DeepMutable<ProjectCanonicalConformanceTraceInput>
+    const transition = input.transitions[0]!
+    transition.resultClass = "player_violation"
+    transition.orderedEvents[0] = {
+      type: "RUNTIME_VIOLATION",
+      sequence: 0,
+      payload: { playerId: "bottom", type: "INVALID_OUTPUT" },
+      context: { actingPlayerId: "bottom" },
+      privacy: "owner",
+      privatePayloadHash: hash("9"),
+    }
+    input.resultClass = "player_violation"
+    input.failure = {
+      resultClass: "player_violation",
+      stableCode: "INVALID_OUTPUT",
+      failingBoundary: transition.kind,
+      invocationOrdinal: null,
+      transitionOrdinal: 0,
+      gameplayMutation:
+        transition.beforeStateHash !== transition.afterStateHash,
+      memoryMutation: false,
+      terminalEffectHash: transition.terminalHash,
+      retryable: false,
+    }
+    rebuildTransitionEvidence(input)
+    return input
+  }
 
 const mutableTrace = (
   trace: CanonicalConformanceTrace,
@@ -479,6 +525,93 @@ describe("v1.37 canonical conformance trace", () => {
     expect(() => projectCanonicalConformanceTrace(terminalLeak)).toThrowError(
       expect.objectContaining({ code: "TRACE_RESULT_INVALID" }),
     )
+  })
+
+  it("requires exact public and owner-private event commitments", () => {
+    const ownerWithoutCommitment = globalThis.structuredClone(
+      successfulInput({ fullTrace: true }),
+    ) as DeepMutable<ProjectCanonicalConformanceTraceInput>
+    const ownerEvent = ownerWithoutCommitment.transitions
+      .flatMap(({ orderedEvents }) => orderedEvents)
+      .find(({ privacy }) => privacy === "owner")!
+    ownerEvent.privatePayloadHash = null
+    rebuildTransitionEvidence(ownerWithoutCommitment)
+    expect(() =>
+      projectCanonicalConformanceTrace(ownerWithoutCommitment),
+    ).toThrowError(expect.objectContaining({ code: "TRACE_EVENT_INVALID" }))
+
+    const publicWithCommitment = globalThis.structuredClone(
+      successfulInput(),
+    ) as DeepMutable<ProjectCanonicalConformanceTraceInput>
+    const publicEvent = publicWithCommitment.transitions[0]!.orderedEvents.find(
+      ({ privacy }) => privacy === "public",
+    )!
+    publicEvent.privatePayloadHash = hash("f")
+    rebuildTransitionEvidence(publicWithCommitment)
+    expect(() =>
+      projectCanonicalConformanceTrace(publicWithCommitment),
+    ).toThrowError(expect.objectContaining({ code: "TRACE_EVENT_INVALID" }))
+  })
+
+  it("requires one global event sequence and exact final terminal evidence", () => {
+    const discontinuous = globalThis.structuredClone(
+      successfulInput({ fullTrace: true }),
+    ) as DeepMutable<ProjectCanonicalConformanceTraceInput>
+    const laterTransition = discontinuous.transitions.find(
+      ({ ordinal, orderedEvents }) => ordinal > 0 && orderedEvents.length > 0,
+    )!
+    for (const event of laterTransition.orderedEvents) {
+      event.sequence += 1
+    }
+    rebuildTransitionEvidence(discontinuous)
+    expect(() => projectCanonicalConformanceTrace(discontinuous)).toThrowError(
+      expect.objectContaining({ code: "TRACE_ORDER_INVALID" }),
+    )
+
+    const earlyTerminal = globalThis.structuredClone(
+      successfulInput({ fullTrace: true }),
+    ) as DeepMutable<ProjectCanonicalConformanceTraceInput>
+    const terminal = earlyTerminal.transitions.at(-1)!
+    earlyTerminal.transitions[0]!.terminalStatus =
+      globalThis.structuredClone(terminal.terminalStatus)
+    earlyTerminal.transitions[0]!.terminalHash = terminal.terminalHash
+    rebuildTransitionEvidence(earlyTerminal)
+    expect(() => projectCanonicalConformanceTrace(earlyTerminal)).toThrowError(
+      expect.objectContaining({ code: "TRACE_RESULT_INVALID" }),
+    )
+
+    const mismatchedTerminalEvent = globalThis.structuredClone(
+      successfulInput(),
+    ) as DeepMutable<ProjectCanonicalConformanceTraceInput>
+    const finalTransition = mismatchedTerminalEvent.transitions.at(-1)!
+    const matchEnded = finalTransition.orderedEvents.find(
+      ({ type }) => type === "MATCH_ENDED",
+    )!
+    matchEnded.payload =
+      finalTransition.terminalStatus?.type === "DRAW"
+        ? { type: "FAILED", reason: "MAX_PHASES_EXCEEDED" }
+        : { type: "DRAW" }
+    rebuildTransitionEvidence(mismatchedTerminalEvent)
+    expect(() =>
+      projectCanonicalConformanceTrace(mismatchedTerminalEvent),
+    ).toThrowError(expect.objectContaining({ code: "TRACE_RESULT_INVALID" }))
+
+    const eventAfterTerminal = globalThis.structuredClone(
+      successfulInput(),
+    ) as DeepMutable<ProjectCanonicalConformanceTraceInput>
+    const finalEvents = eventAfterTerminal.transitions.at(-1)!.orderedEvents
+    finalEvents.push({
+      type: "ROUND_STARTED",
+      sequence: finalEvents.length,
+      payload: { roundNumber: 1 },
+      context: {},
+      privacy: "public",
+      privatePayloadHash: null,
+    })
+    rebuildTransitionEvidence(eventAfterTerminal)
+    expect(() =>
+      projectCanonicalConformanceTrace(eventAfterTerminal),
+    ).toThrowError(expect.objectContaining({ code: "TRACE_RESULT_INVALID" }))
   })
 
   it("rejects noncanonical invocation order, transition roots, and tuple identity", () => {
@@ -1114,6 +1247,57 @@ describe("v1.37 canonical conformance trace", () => {
     expect(() => projectCanonicalConformanceTrace(duplicate)).toThrowError(
       expect.objectContaining({ code: "TRACE_RESULT_INVALID" }),
     )
+  })
+
+  it("requires every player violation to own exact invocation or transition evidence", () => {
+    expect(() =>
+      projectCanonicalConformanceTrace(transitionOwnedPlayerViolationInput()),
+    ).not.toThrow()
+
+    const unreferenced = globalThis.structuredClone(
+      transitionOwnedPlayerViolationInput(),
+    ) as DeepMutable<ProjectCanonicalConformanceTraceInput>
+    unreferenced.failure!.transitionOrdinal = null
+    expect(() => projectCanonicalConformanceTrace(unreferenced)).toThrowError(
+      expect.objectContaining({ code: "TRACE_RESULT_INVALID" }),
+    )
+
+    const mutations: Array<
+      (input: DeepMutable<ProjectCanonicalConformanceTraceInput>) => void
+    > = [
+      (input) => {
+        input.transitions[0]!.resultClass = "success"
+      },
+      (input) => {
+        input.failure!.stableCode = "TIMEOUT"
+      },
+      (input) => {
+        input.failure!.failingBoundary = "different-boundary"
+      },
+      (input) => {
+        input.failure!.gameplayMutation =
+          !input.failure!.gameplayMutation
+      },
+      (input) => {
+        input.failure!.memoryMutation = true
+      },
+      (input) => {
+        input.failure!.terminalEffectHash = null
+      },
+      (input) => {
+        input.failure!.retryable = true
+      },
+    ]
+    for (const mutate of mutations) {
+      const input = globalThis.structuredClone(
+        transitionOwnedPlayerViolationInput(),
+      ) as DeepMutable<ProjectCanonicalConformanceTraceInput>
+      mutate(input)
+      rebuildTransitionEvidence(input)
+      expect(() => projectCanonicalConformanceTrace(input)).toThrowError(
+        expect.objectContaining({ code: "TRACE_RESULT_INVALID" }),
+      )
+    }
   })
 
   it("uses typed stable projector errors", () => {
