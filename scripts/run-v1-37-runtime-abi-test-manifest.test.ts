@@ -102,13 +102,13 @@ describe("Phase 258 exact runtime ABI test manifest", () => {
     const raw = manifest() as unknown as {
       tests: Array<Record<string, unknown>>
     }
-    const fakeFilter = structuredClone(raw)
+    const fakeFilter = globalThis.structuredClone(raw)
     fakeFilter.tests[0]!.command = ["pnpm", "test", "--", "--filter=fake"]
     expect(() => parseRuntimeAbiTestManifest(fakeFilter)).toThrow(
       /exact command/u,
     )
 
-    const markerOnly = structuredClone(raw)
+    const markerOnly = globalThis.structuredClone(raw)
     markerOnly.tests[0]!.command = [
       "node",
       "-e",
