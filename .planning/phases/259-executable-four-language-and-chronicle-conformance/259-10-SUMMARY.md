@@ -38,6 +38,7 @@ key-files:
 key-decisions:
   - "The counted TypeScript package receives a host-owned supervisor launch seam and verifies the resulting raw receipt itself; it does not export or mint native controller authority."
   - "Only verifier-branded success or positively attributed resource exhaustion reaches the host signer; malformed payload, crash, cancellation ambiguity, identity drift, or receipt failure returns no-mutation system failure with no signed evidence."
+  - "Fresh host-observed Node, V8, executable, adapter-module, harness, and artifact identity must match the frozen adapter selection and invocation, and the returned Ed25519 signature must verify against the pinned public key and key ID."
   - "The v1.18 selector is additive and supervised-only; v1.17 subprocess, container, worker, revision, and protocol bytes remain unchanged."
 
 patterns-established:
@@ -78,7 +79,7 @@ coverage:
         status: pass
     human_judgment: false
 
-duration: 34min
+duration: 47min
 completed: 2026-07-16
 status: complete
 ---
@@ -89,7 +90,7 @@ status: complete
 
 ## Performance
 
-- **Duration:** 34 min
+- **Duration:** 47 min
 - **Started:** 2026-07-16T16:37:00Z
 - **Completed:** 2026-07-16T17:11:03Z
 - **Tasks:** 1
@@ -107,6 +108,8 @@ status: complete
 1. **Task 1 RED: Require supervised TypeScript counted execution** — `9109700`
 2. **Task 1 GREEN: Add the supervised TypeScript counted adapter** — `efe5fc7`
 3. **Review fix: Reject malformed supervised payloads before signing** — `cba0794`
+4. **Review fix: Bind fresh launch-time TypeScript identity** — `638c511`
+5. **Review fix: Cryptographically verify host evidence signatures** — `4d923e5`
 
 ## Files Created/Modified
 
@@ -121,6 +124,7 @@ status: complete
 - Kept the native hardened-controller mint and native runner out of `@cowards/runtime-js`; the adapter can only call an injected host launch and independently verify its returned receipt.
 - Used the existing v1.17 success payload schemas because v1.18 is a quantitative additive ABI, not a gameplay/output-schema rewrite.
 - Returned a non-promoting capability candidate. The adapter cannot make itself counted; later complete corpus evidence and managed certificate authority retain that responsibility.
+- Captured immutable expected execution/identity values at adapter construction, then required the host launch to return fresh matching observations and verified the signature with the pinned Ed25519 public key before returning evidence.
 
 ## Deviations from Plan
 
@@ -135,10 +139,28 @@ status: complete
 - **Verification:** Focused malformed/schema-invalid payload test plus the full 29-test TypeScript/supervisor suite passed.
 - **Committed in:** `cba0794`
 
+**2. [Rule 2 - Missing Critical] Replaced declaration-only language identity with fresh host observations**
+
+- **Found during:** Cross-lane self-review
+- **Issue:** Matching request and constructor fields alone did not prove that the launch-time Node executable, versions, harness, adapter, and Strategy artifact remained the selected bytes.
+- **Fix:** The host launch now returns the fresh language identity observation; the adapter compares it with an immutable constructor snapshot and the invocation. The fixed execution descriptor is cloned at construction and must be the exact Node `--input-type=module --eval` harness whose bytes are identity-bound.
+- **Files modified:** `packages/runtime-js/src/revision-v1-18.ts`, `packages/runtime-js/src/revision-v1-18.test.ts`, `packages/runtime-js/src/supervised-subprocess-adapter.ts`, `packages/runtime-js/src/supervised-subprocess-adapter.test.ts`, `packages/runtime-js/src/index.ts`
+- **Verification:** Launch-time harness substitution, prelaunch identity drift, exact execution, and public-boundary tests passed.
+- **Committed in:** `638c511`
+
+**3. [Rule 2 - Missing Critical] Verified the signer output instead of trusting signature shape**
+
+- **Found during:** Final trust-boundary review
+- **Issue:** A canonical Base64 string labeled Ed25519 did not prove the host signer possessed the trusted private key.
+- **Fix:** The adapter now parses a pinned Ed25519 public key, requires the exact expected key ID, and verifies the signature over the exact canonical evidence bytes. Valid signatures over different bytes and malformed signatures fail without evidence.
+- **Files modified:** `packages/runtime-js/src/supervised-subprocess-adapter.ts`, `packages/runtime-js/src/supervised-subprocess-adapter.test.ts`
+- **Verification:** Real generated Ed25519 positive signature plus malformed and wrong-message signature regressions passed.
+- **Committed in:** `4d923e5`
+
 ---
 
-**Total deviations:** 1 auto-fixed missing critical validation.
-**Impact on plan:** Strengthened the required malformed-output failure boundary without changing gameplay, dependencies, public output, or prior ABI behavior.
+**Total deviations:** 3 auto-fixed missing critical trust-boundary validations.
+**Impact on plan:** Strengthened payload, identity, and signer authority without changing gameplay, dependencies, public output, or prior ABI behavior.
 
 ## Issues Encountered
 
@@ -151,7 +173,7 @@ None - no external service configuration required.
 
 ## Verification
 
-- Focused TypeScript and native-supervisor suites: 3 files / 29 tests passed.
+- Final joined adapter/supervisor suite: 6 files / 64 tests passed, including all Plan-10 focused tests.
 - `pnpm --filter @cowards/runtime-js typecheck` passed.
 - `pnpm --filter @cowards/runtime-js lint` passed.
 - Focused Prettier and `git diff --check` passed.
