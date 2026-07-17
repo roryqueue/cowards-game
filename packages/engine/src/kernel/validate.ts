@@ -25,6 +25,8 @@ import {
   CANDIDATE_KERNEL_SEMANTIC_TUPLE_ID,
   CANDIDATE_KERNEL_V117_SEMANTIC_TUPLE,
   CANDIDATE_KERNEL_V117_SEMANTIC_TUPLE_ID,
+  CANDIDATE_KERNEL_V119_SEMANTIC_TUPLE,
+  CANDIDATE_KERNEL_V119_SEMANTIC_TUPLE_ID,
 } from "./types.js"
 
 const registeredKernelTuple = (tuple: KernelSemanticTuple): boolean =>
@@ -36,7 +38,10 @@ const registeredKernelTuple = (tuple: KernelSemanticTuple): boolean =>
       JSON.stringify(CANDIDATE_KERNEL_SEMANTIC_TUPLE)) ||
   (tuple.tupleId === CANDIDATE_KERNEL_V117_SEMANTIC_TUPLE_ID &&
     JSON.stringify(projectTuple(tuple.tuple)) ===
-      JSON.stringify(CANDIDATE_KERNEL_V117_SEMANTIC_TUPLE))
+      JSON.stringify(CANDIDATE_KERNEL_V117_SEMANTIC_TUPLE)) ||
+  (tuple.tupleId === CANDIDATE_KERNEL_V119_SEMANTIC_TUPLE_ID &&
+    JSON.stringify(projectTuple(tuple.tuple)) ===
+      JSON.stringify(CANDIDATE_KERNEL_V119_SEMANTIC_TUPLE))
 
 const MACHINE_HASH_DOMAIN =
   "cowards-game:candidate-match-machine-projection:v1" as const
@@ -334,6 +339,14 @@ export const validateMachine = (
   }
   if (!registeredKernelTuple(machine.semanticTuple)) {
     return integrityFailure("KERNEL_SEMANTIC_TUPLE_INVALID")
+  }
+  if (
+    machine.semanticTuple.tupleId ===
+      CANDIDATE_KERNEL_V119_SEMANTIC_TUPLE_ID &&
+    machine.state.initialInitiativePlayerId !== machine.state.players[0].id &&
+    machine.state.initialInitiativePlayerId !== machine.state.players[1].id
+  ) {
+    return integrityFailure("KERNEL_INITIAL_INITIATIVE_INVALID")
   }
   if (
     !Number.isSafeInteger(machine.maxPhases) ||

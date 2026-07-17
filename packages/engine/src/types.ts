@@ -55,6 +55,8 @@ export interface GameState {
   phaseNumber: number
   roundNumber: RoundNumber
   activationCount: ActivationCount
+  /** Present only for explicit v1.19 successor dispatch. */
+  readonly initialInitiativePlayerId?: PlayerId | undefined
   initiativePlayerId: PlayerId
   bounds: BoardBounds
   soldiers: Soldier[]
@@ -138,6 +140,11 @@ export interface CreateInitialGameStateInput {
   topPlayerId: PlayerId
   bottomStrategyRevisionId: StrategyRevisionId
   topStrategyRevisionId: StrategyRevisionId
+}
+
+export interface CreateInitialGameStateInputV119
+  extends CreateInitialGameStateInput {
+  readonly initialInitiativePlayerId: PlayerId
 }
 
 export interface RunMatchInput extends CreateInitialGameStateInput {

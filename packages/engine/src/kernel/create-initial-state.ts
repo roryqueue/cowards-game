@@ -17,6 +17,7 @@ import {
 } from "@cowards/spec"
 import type {
   CreateInitialGameStateInput,
+  CreateInitialGameStateInputV119,
   EnginePlayer,
   GameState,
   PlayerSide,
@@ -101,6 +102,19 @@ const createStartingSoldiers = (
 export const createCandidateInitialGameState = (
   input: CreateInitialGameStateInput,
 ): CandidateInitialGameStateResult => {
+  const initiativePlayerId = getInitialInitiativePlayerId(
+    input.seed,
+    input.bottomPlayerId,
+    input.topPlayerId,
+  )
+  return createInitialState(input, initiativePlayerId)
+}
+
+const createInitialState = (
+  input: CreateInitialGameStateInput,
+  initiativePlayerId: string,
+  initialInitiativePlayerId?: string,
+): CandidateInitialGameStateResult => {
   const parsedArena = ArenaVariantSchema.safeParse(input.arenaVariant)
   if (!parsedArena.success) {
     const failure = semanticIntegrityShapeFailure("ARENA", ["arenaVariant"])
@@ -136,11 +150,10 @@ export const createCandidateInitialGameState = (
     phaseNumber: 1,
     roundNumber: 1,
     activationCount: ROUND_ACTIVATION_COUNTS[1],
-    initiativePlayerId: getInitialInitiativePlayerId(
-      input.seed,
-      input.bottomPlayerId,
-      input.topPlayerId,
-    ),
+    ...(initialInitiativePlayerId === undefined
+      ? {}
+      : { initialInitiativePlayerId }),
+    initiativePlayerId,
     bounds: cloneBounds(arenaVariant.initialBounds),
     soldiers: [
       ...createStartingSoldiers(
@@ -163,4 +176,26 @@ export const createCandidateInitialGameState = (
   return stateAdmission.ok
     ? { ok: true, state }
     : { ok: false, failure: stateAdmission }
+}
+
+export const createCandidateInitialGameStateV119 = (
+  input: CreateInitialGameStateInputV119,
+): CandidateInitialGameStateResult => {
+  if (
+    input.initialInitiativePlayerId !== input.bottomPlayerId &&
+    input.initialInitiativePlayerId !== input.topPlayerId
+  ) {
+    const failure = semanticIntegrityShapeFailure("PLAYER", [
+      "initialInitiativePlayerId",
+    ])
+    if (failure.ok) {
+      throw new Error("Initial initiative failure unexpectedly validated.")
+    }
+    return { ok: false, failure }
+  }
+  return createInitialState(
+    input,
+    input.initialInitiativePlayerId,
+    input.initialInitiativePlayerId,
+  )
 }

@@ -9,7 +9,10 @@ import {
   type JsonValue,
   type RuntimeInvocationResultV117,
 } from "@cowards/spec"
-import { createCandidateInitialGameState } from "./create-initial-state.js"
+import {
+  createCandidateInitialGameState,
+  createCandidateInitialGameStateV119,
+} from "./create-initial-state.js"
 import { stepCandidateMatch } from "./step.js"
 import type {
   CandidateActivationExecution,
@@ -26,6 +29,8 @@ import {
   CANDIDATE_KERNEL_SEMANTIC_TUPLE_ID,
   CANDIDATE_KERNEL_V117_SEMANTIC_TUPLE,
   CANDIDATE_KERNEL_V117_SEMANTIC_TUPLE_ID,
+  CANDIDATE_KERNEL_V119_SEMANTIC_TUPLE,
+  CANDIDATE_KERNEL_V119_SEMANTIC_TUPLE_ID,
 } from "./types.js"
 import {
   createKernelEventHistory,
@@ -37,11 +42,17 @@ import { issueCandidateExecutionEvidence } from "./recorder-evidence-authority.j
 import type {
   ActivationSlotState,
   CreateInitialGameStateInput,
+  CreateInitialGameStateInputV119,
   GameState,
 } from "../types.js"
 import { getSoldier } from "../selectors.js"
 
 interface CandidateMatchInput extends CreateInitialGameStateInput {
+  readonly runtime: CandidateStrategyRuntime
+  readonly maxPhases?: number | undefined
+}
+
+interface CandidateMatchInputV119 extends CreateInitialGameStateInputV119 {
   readonly runtime: CandidateStrategyRuntime
   readonly maxPhases?: number | undefined
 }
@@ -131,6 +142,24 @@ export const createCandidateMatchMachineV117 = (
       semanticTuple: {
         tupleId: CANDIDATE_KERNEL_V117_SEMANTIC_TUPLE_ID,
         tuple: CANDIDATE_KERNEL_V117_SEMANTIC_TUPLE,
+      },
+    }),
+  )
+}
+
+export const createCandidateMatchMachineV119 = (
+  input: Omit<CandidateMatchInputV119, "runtime">,
+): MatchMachine => {
+  const created = createCandidateInitialGameStateV119(input)
+  if (!created.ok) throw new Error("CANDIDATE_V119_INITIAL_STATE_REJECTED")
+  return assertMachine(
+    baseMachine(created.state, {
+      executionMode: "match",
+      stage: "match_start",
+      maxPhases: input.maxPhases ?? 100,
+      semanticTuple: {
+        tupleId: CANDIDATE_KERNEL_V119_SEMANTIC_TUPLE_ID,
+        tuple: CANDIDATE_KERNEL_V119_SEMANTIC_TUPLE,
       },
     }),
   )
@@ -557,6 +586,28 @@ export const runCandidateMatchV117 = (
   }
 }
 
+export const runCandidateMatchV119 = (
+  input: CandidateMatchInputV119,
+): CandidateExecution => {
+  let machine: MatchMachine
+  try {
+    machine = createCandidateMatchMachineV119(input)
+  } catch {
+    return failedExecution(
+      null,
+      restrictedIntegrityFailure("CANDIDATE_V119_MATCH_ADMISSION_FAILED"),
+    )
+  }
+  try {
+    return drive(machine, input.runtime, "match")
+  } catch {
+    return failedExecution(
+      globalThis.structuredClone(machine.initialState),
+      restrictedIntegrityFailure("KERNEL_DRIVER_UNEXPECTED"),
+    )
+  }
+}
+
 export const runCandidateActivationFromState = (
   input: CandidateActivationInput,
 ): CandidateActivationExecution => {
@@ -679,6 +730,8 @@ export const MATCH_KERNEL = Object.freeze({
   runMatch: runCandidateMatch,
   createMachineV117: createCandidateMatchMachineV117,
   runMatchV117: runCandidateMatchV117,
+  createMachineV119: createCandidateMatchMachineV119,
+  runMatchV119: runCandidateMatchV119,
   createActivationMachine: createCandidateActivationMachine,
   runActivationFromState: runCandidateActivationFromState,
   createActivationMachineV117: createCandidateActivationMachineV117,

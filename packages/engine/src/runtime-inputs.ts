@@ -1,7 +1,9 @@
 import {
   MAX_ACTIVATION_CYCLES,
   SoldierBrainInputSchema,
+  SoldierBrainInputV119Schema,
   StrategyInputSchema,
+  StrategyInputV119Schema,
   type AwarenessCell,
   type AwarenessCellContents,
   type AwarenessGrid5x5,
@@ -9,7 +11,9 @@ import {
   type JsonValue,
   type Soldier,
   type SoldierBrainInput,
+  type SoldierBrainInputV119,
   type StrategyInput,
+  type StrategyInputV119,
 } from "@cowards/spec"
 import {
   getFullBoardSnapshot,
@@ -77,13 +81,39 @@ export const createAwarenessGrid = (
 export const createStrategyInput = (
   state: GameState,
   playerId: string,
-): StrategyInput => {
+  runtimeAbiVersion?: string,
+): StrategyInput =>
+  (runtimeAbiVersion === "strategy-runtime-abi-v1.19"
+    ? createStrategyInputV119(state, playerId)
+    : StrategyInputSchema.parse(
+        createStrategyInputValue(state, playerId),
+      )) as StrategyInput
+
+export const createStrategyInputV119 = (
+  state: GameState,
+  playerId: string,
+): StrategyInputV119 => {
+  const initialInitiativePlayerId = state.initialInitiativePlayerId
+  if (initialInitiativePlayerId === undefined) {
+    throw new Error("Successor GameState has no initial initiative owner.")
+  }
+  const base = createStrategyInputValue(state, playerId)
+  return StrategyInputV119Schema.parse({
+    ...base,
+    initialInitiativePlayerId,
+    hasInitialInitiative: initialInitiativePlayerId === playerId,
+    roundInitiativePlayerId: state.initiativePlayerId,
+    hasRoundInitiative: state.initiativePlayerId === playerId,
+  })
+}
+
+const createStrategyInputValue = (state: GameState, playerId: string) => {
   const player = getPlayer(state, playerId)
   if (!player) {
     throw new Error(`Player not found: ${playerId}`)
   }
   const opponent = getOpponentPlayer(state, playerId)
-  return StrategyInputSchema.parse({
+  return {
     phaseNumber: state.phaseNumber,
     roundNumber: state.roundNumber,
     activationCount: state.activationCount,
@@ -95,7 +125,7 @@ export const createStrategyInput = (
       .filter((soldier) => soldier.ownerPlayerId === opponent.id)
       .map(getSoldierSnapshot),
     strategyMemory: player.strategyMemory,
-  }) as StrategyInput
+  }
 }
 
 export const createSoldierBrainInput = (
@@ -103,17 +133,41 @@ export const createSoldierBrainInput = (
   soldierId: string,
   cycleIndex: number,
   objective?: JsonValue,
+  hasAdvancedThisActivation = false,
+  runtimeAbiVersion?: string,
 ): SoldierBrainInput => {
   const soldier = getSoldier(state, soldierId)
   if (!soldier) {
     throw new Error(`Soldier not found: ${soldierId}`)
   }
-  return SoldierBrainInputSchema.parse({
+  const value = {
     self: getSoldierSnapshot(soldier),
     awarenessGrid: createAwarenessGrid(state, soldier),
     cycleIndex,
     maxCycles: MAX_ACTIVATION_CYCLES,
     ...(objective === undefined ? {} : { objective }),
     soldierMemory: soldier.soldierMemory,
-  }) as SoldierBrainInput
+  }
+  return (runtimeAbiVersion === "strategy-runtime-abi-v1.19"
+    ? SoldierBrainInputV119Schema.parse({
+        ...value,
+        hasAdvancedThisActivation,
+      })
+    : SoldierBrainInputSchema.parse(value)) as SoldierBrainInput
 }
+
+export const createSoldierBrainInputV119 = (
+  state: GameState,
+  soldierId: string,
+  cycleIndex: number,
+  hasAdvancedThisActivation: boolean,
+  objective?: JsonValue,
+): SoldierBrainInputV119 =>
+  createSoldierBrainInput(
+    state,
+    soldierId,
+    cycleIndex,
+    objective,
+    hasAdvancedThisActivation,
+    "strategy-runtime-abi-v1.19",
+  ) as SoldierBrainInputV119

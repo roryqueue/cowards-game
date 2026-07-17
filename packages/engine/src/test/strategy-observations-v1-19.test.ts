@@ -20,7 +20,7 @@ const matchInput = {
   topPlayerId: "player:top",
   bottomStrategyRevisionId: "revision:bottom",
   topStrategyRevisionId: "revision:top",
-} as const
+}
 
 describe("successor Strategy observations", () => {
   it("requires an entrant-owned explicit initial initiative", () => {

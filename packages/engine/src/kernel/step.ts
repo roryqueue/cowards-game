@@ -374,7 +374,11 @@ const selectionRequest = (
     stage: machine.cursor.stage,
     ordinal: machine.cursor.ordinal,
   },
-  input: createStrategyInput(machine.state, playerId),
+  input: createStrategyInput(
+    machine.state,
+    playerId,
+    machine.semanticTuple.tuple.runtimeAbi,
+  ),
 })
 
 const yieldSelection = (
