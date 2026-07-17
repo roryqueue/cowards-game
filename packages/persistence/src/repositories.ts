@@ -1,4 +1,6 @@
 import type {
+  ArenaCatalogRecordV137,
+  ArenaCatalogV137,
   ArenaVariant,
   ArenaVariantId,
   MatchId,
@@ -9,11 +11,78 @@ import type {
 import {
   hashCanonicalIdentity,
   normalizeStrategyRuntimeMetadata,
+  parseArenaCatalogV137,
 } from "@cowards/spec"
 import { Buffer } from "node:buffer"
 import type { Pool, PoolClient } from "pg"
 
 export type Queryable = Pick<Pool | PoolClient, "query">
+
+export interface ReleasedArenaCatalogSnapshot {
+  catalogVersion: string
+  arenaId: string
+  arenaVersion: string
+  arenaName: string
+  status: ArenaCatalogRecordV137["status"]
+  schedulable: boolean
+  aliasOfArenaId: string | null
+  geometryHashProfile: string
+  semanticGeometryHash: `sha256:${string}`
+  config: ArenaCatalogRecordV137
+}
+
+interface ReleasedArenaCatalogRow {
+  catalog_version: string
+  arena_id: string
+  arena_version: string
+  arena_name: string
+  arena_status: ArenaCatalogRecordV137["status"]
+  schedulable: boolean
+  alias_of_arena_id: string | null
+  geometry_hash_profile: string
+  semantic_geometry_hash: `sha256:${string}`
+  config: ArenaCatalogRecordV137
+}
+
+const freezeReleasedArenaSnapshot = (
+  row: ReleasedArenaCatalogRow,
+): Readonly<ReleasedArenaCatalogSnapshot> =>
+  Object.freeze({
+    catalogVersion: row.catalog_version,
+    arenaId: row.arena_id,
+    arenaVersion: row.arena_version,
+    arenaName: row.arena_name,
+    status: row.arena_status,
+    schedulable: row.schedulable,
+    aliasOfArenaId: row.alias_of_arena_id,
+    geometryHashProfile: row.geometry_hash_profile,
+    semanticGeometryHash: row.semantic_geometry_hash,
+    config: Object.freeze(globalThis.structuredClone(row.config)),
+  })
+
+const hasPoolConnection = (db: Queryable): db is Pool =>
+  "connect" in db && typeof db.connect === "function"
+
+const withRepositoryTransaction = async <T>(
+  db: Queryable,
+  fn: (client: PoolClient) => Promise<T>,
+): Promise<T> => {
+  if (!hasPoolConnection(db)) {
+    throw new Error("Released catalog installation requires a database Pool.")
+  }
+  const client = await db.connect()
+  try {
+    await client.query("begin isolation level serializable")
+    const result = await fn(client)
+    await client.query("commit")
+    return result
+  } catch (error) {
+    await client.query("rollback")
+    throw error
+  } finally {
+    client.release()
+  }
+}
 
 export interface SourceIdentityV2PersistenceRecord {
   sourceIdentityVersion: "strategy-source-identity-v2"
@@ -122,6 +191,119 @@ export const assertCanUpdateStrategyRevisionContent = (input: {
 }
 
 export const createRepositories = (db: Queryable) => ({
+  async installReleasedArenaCatalog(
+    input: unknown,
+  ): Promise<ReadonlyArray<Readonly<ReleasedArenaCatalogSnapshot>>> {
+    const catalog: ArenaCatalogV137 = parseArenaCatalogV137(input)
+    return withRepositoryTransaction(db, async (client) => {
+      await client.query(
+        "select pg_advisory_xact_lock(hashtext($1), hashtext($2))",
+        ["released-arena-catalog", catalog.catalogVersion],
+      )
+      const installed: Readonly<ReleasedArenaCatalogSnapshot>[] = []
+      for (const arena of catalog.arenas) {
+        await client.query(
+          `insert into arena_catalog_entries (
+             catalog_version, arena_id, arena_version, arena_name,
+             arena_status, schedulable, alias_of_arena_id,
+             geometry_hash_profile, semantic_geometry_hash, config
+           ) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+           on conflict (catalog_version, arena_id) do nothing`,
+          [
+            catalog.catalogVersion,
+            arena.id,
+            arena.version,
+            arena.name,
+            arena.status,
+            arena.schedulable,
+            arena.aliasOf ?? null,
+            catalog.geometryHashProfile,
+            arena.semanticGeometryHash,
+            arena,
+          ],
+        )
+        const result = await client.query<ReleasedArenaCatalogRow>(
+          `select * from arena_catalog_entries
+            where catalog_version = $1 and arena_id = $2
+              and arena_version = $3 and arena_name = $4
+              and arena_status = $5 and schedulable = $6
+              and alias_of_arena_id is not distinct from $7
+              and geometry_hash_profile = $8
+              and semantic_geometry_hash = $9
+              and config = $10::jsonb
+            for key share`,
+          [
+            catalog.catalogVersion,
+            arena.id,
+            arena.version,
+            arena.name,
+            arena.status,
+            arena.schedulable,
+            arena.aliasOf ?? null,
+            catalog.geometryHashProfile,
+            arena.semanticGeometryHash,
+            arena,
+          ],
+        )
+        const row = result.rows[0]
+        if (!row) {
+          throw new Error(
+            `Released arena catalog identity mismatch: ${catalog.catalogVersion}/${arena.id}`,
+          )
+        }
+        installed.push(freezeReleasedArenaSnapshot(row))
+      }
+      return Object.freeze(installed)
+    })
+  },
+
+  async getReleasedArenaCatalogEntry(
+    catalogVersion: string,
+    arenaId: string,
+  ): Promise<Readonly<ReleasedArenaCatalogSnapshot> | null> {
+    const result = await db.query<ReleasedArenaCatalogRow>(
+      `select * from arena_catalog_entries
+        where catalog_version = $1 and arena_id = $2`,
+      [catalogVersion, arenaId],
+    )
+    const row = result.rows[0]
+    return row ? freezeReleasedArenaSnapshot(row) : null
+  },
+
+  async getSchedulableArenaCatalogEntry(
+    catalogVersion: string,
+    arenaId: string,
+  ): Promise<Readonly<ReleasedArenaCatalogSnapshot> | null> {
+    const result = await db.query<ReleasedArenaCatalogRow>(
+      `select * from arena_catalog_entries
+        where catalog_version = $1 and arena_id = $2
+          and arena_status = 'active' and schedulable`,
+      [catalogVersion, arenaId],
+    )
+    const row = result.rows[0]
+    return row ? freezeReleasedArenaSnapshot(row) : null
+  },
+
+  async lockReleasedArenaCatalogEntry(
+    catalogVersion: string,
+    arenaId: string,
+  ): Promise<Readonly<ReleasedArenaCatalogSnapshot>> {
+    const result = await db.query<ReleasedArenaCatalogRow>(
+      `select * from arena_catalog_entries
+        where catalog_version = $1 and arena_id = $2
+          and arena_status = 'active' and schedulable
+        for key share`,
+      [catalogVersion, arenaId],
+    )
+    const row = result.rows[0]
+    if (!row) {
+      throw new Error(
+        `Released schedulable arena not found: ${catalogVersion}/${arenaId}`,
+      )
+    }
+    return freezeReleasedArenaSnapshot(row)
+  },
+
   async upsertUser(record: {
     id: string
     displayName: string

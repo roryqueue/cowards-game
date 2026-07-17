@@ -11,6 +11,16 @@ import { createRepositories } from "./repositories.js"
 const databaseUrl = process.env.DATABASE_URL
 const describeDatabase = databaseUrl ? describe : describe.skip
 
+interface MutableArenaCatalog {
+  catalogVersion: string
+  arenas: Array<{
+    name: string
+    status: string
+    aliasOf?: string
+    semanticGeometryHash: string
+  }>
+}
+
 describeDatabase("released arena catalog repositories", () => {
   let admin: Pool
   let pool: Pool
@@ -76,15 +86,17 @@ describeDatabase("released arena catalog repositories", () => {
     ).resolves.toBeNull()
   })
 
-  it.each([
-    ["config", (catalog: any) => (catalog.arenas[0].name = "Changed")],
-    ["status", (catalog: any) => (catalog.arenas[0].status = "historical_alias")],
-    ["alias", (catalog: any) => (catalog.arenas[2].aliasOf = "arena:standard-cross:v1")],
-    ["hash", (catalog: any) => (catalog.arenas[0].semanticGeometryHash = `sha256:${"0".repeat(64)}`)],
-    ["version", (catalog: any) => (catalog.catalogVersion = "canonical-arena-catalog-v1.38")],
+  it.each<[string, (catalog: MutableArenaCatalog) => void]>([
+    ["config", (catalog: MutableArenaCatalog) => (catalog.arenas[0]!.name = "Changed")],
+    ["status", (catalog: MutableArenaCatalog) => (catalog.arenas[0]!.status = "historical_alias")],
+    ["alias", (catalog: MutableArenaCatalog) => (catalog.arenas[2]!.aliasOf = "arena:standard-cross:v1")],
+    ["hash", (catalog: MutableArenaCatalog) => (catalog.arenas[0]!.semanticGeometryHash = `sha256:${"0".repeat(64)}`)],
+    ["version", (catalog: MutableArenaCatalog) => (catalog.catalogVersion = "canonical-arena-catalog-v1.38")],
   ])("rejects changed released %s", async (_name, mutate) => {
     const repositories = createRepositories(pool)
-    const changed = globalThis.structuredClone(CANONICAL_ARENA_CATALOG_V1_37)
+    const changed = globalThis.structuredClone(
+      CANONICAL_ARENA_CATALOG_V1_37,
+    ) as unknown as MutableArenaCatalog
     mutate(changed)
     await expect(
       repositories.installReleasedArenaCatalog(changed),
