@@ -2778,6 +2778,13 @@ func (server *LiveServer) createExhibitionMatchSetWithDependencies(ctx context.C
 	defer func() {
 		_ = tx.Rollback(ctx)
 	}()
+	if _, err := tx.Exec(ctx, "set transaction isolation level serializable"); err != nil {
+		return nil, errors.New("creation transaction isolation unavailable")
+	}
+	semanticSelection, semanticSelectionRoot, err := lockCurrentGoSemanticAuthorityHead(ctx, tx, currentSemanticAuthorityGenerated())
+	if err != nil {
+		return nil, errors.New("creation semantic authority unavailable")
+	}
 	entrants, err := dependencies.loadEntrants(ctx, tx, userID, revisionIDs, now)
 	if err != nil {
 		return nil, err
@@ -2842,12 +2849,13 @@ func (server *LiveServer) createExhibitionMatchSetWithDependencies(ctx context.C
 			execution_evidence_set_hash, authority_publication_id,
 			authority_install_receipt_id, authority_payload_sha256,
 			authority_envelope_sha256, authority_source_manifest_hash,
-			authority_source_set
+			authority_source_set, semantic_authority_selection,
+			semantic_authority_selection_root
 		)
 		values ($1, 'pending', $2, 'v1', $3, $4, $5, 'v1',
 		        'exhibition-points-v1:v1', 'public', $6, $7, $8, $9, $10, $11, $12,
 		        $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23,
-		        $24, $25, $26, $27, $28, $29)
+		        $24, $25, $26, $27, $28, $29, $30, $31)
 	`, matchSetID, matchSetPresetID, matches, userID, presetID, entrants, map[string]any{
 		"publicResults":               true,
 		"publicReplayEvidence":        true,
@@ -2861,7 +2869,7 @@ func (server *LiveServer) createExhibitionMatchSetWithDependencies(ctx context.C
 		integrityIdentity.EvidenceSetHash, installedReceipt.PublicationID,
 		installedReceipt.ReceiptID, installedReceipt.PayloadSHA256,
 		installedReceipt.EnvelopeSHA256, installedReceipt.SourceManifestHash,
-		installedReceipt.SourceSet); err != nil {
+		installedReceipt.SourceSet, semanticSelection, semanticSelectionRoot); err != nil {
 		return nil, err
 	}
 	for _, entrant := range entrants {
@@ -2926,10 +2934,11 @@ func (server *LiveServer) createExhibitionMatchSetWithDependencies(ctx context.C
 				arena_variant_id, seed, bottom_player_id, top_player_id, status,
 				integrity_match_set_id, bottom_execution_entrant_key,
 				top_execution_entrant_key, bottom_execution_evidence,
-				top_execution_evidence, execution_evidence_pair_hash
+				top_execution_evidence, execution_evidence_pair_hash,
+				semantic_authority_selection_root
 			)
-			values ($1, $2, $3, $4, $5, $6, $7, 'pending', $8, $9, $10, $11, $12, $13)
-		`, match["id"], match["bottomStrategyRevisionId"], match["topStrategyRevisionId"], match["arenaVariantId"], match["seed"], match["bottomPlayerId"], match["topPlayerId"], matchSetID, pair.Bottom.EntrantKey, pair.Top.EntrantKey, pair.Bottom, pair.Top, pair.PairHash); err != nil {
+			values ($1, $2, $3, $4, $5, $6, $7, 'pending', $8, $9, $10, $11, $12, $13, $14)
+		`, match["id"], match["bottomStrategyRevisionId"], match["topStrategyRevisionId"], match["arenaVariantId"], match["seed"], match["bottomPlayerId"], match["topPlayerId"], matchSetID, pair.Bottom.EntrantKey, pair.Top.EntrantKey, pair.Bottom, pair.Top, pair.PairHash, semanticSelectionRoot); err != nil {
 			return nil, err
 		}
 		if _, err := tx.Exec(ctx, `
@@ -2937,9 +2946,9 @@ func (server *LiveServer) createExhibitionMatchSetWithDependencies(ctx context.C
 				id, match_id, status, integrity_match_set_id,
 				bottom_execution_entrant_key, top_execution_entrant_key,
 				bottom_execution_evidence, top_execution_evidence,
-				execution_evidence_pair_hash
-			) values ($1, $2, 'queued', $3, $4, $5, $6, $7, $8)
-		`, "match-job:"+stringValue(match, "id"), match["id"], matchSetID, pair.Bottom.EntrantKey, pair.Top.EntrantKey, pair.Bottom, pair.Top, pair.PairHash); err != nil {
+				execution_evidence_pair_hash, semantic_authority_selection_root
+			) values ($1, $2, 'queued', $3, $4, $5, $6, $7, $8, $9)
+		`, "match-job:"+stringValue(match, "id"), match["id"], matchSetID, pair.Bottom.EntrantKey, pair.Top.EntrantKey, pair.Bottom, pair.Top, pair.PairHash, semanticSelectionRoot); err != nil {
 			return nil, err
 		}
 		if _, err := tx.Exec(ctx, "insert into match_set_matches (match_set_id, match_id, matrix_index) values ($1, $2, $3)", matchSetID, match["id"], index); err != nil {
@@ -4165,11 +4174,149 @@ type candidateFourConditionMatchV119 struct {
 	InitialInitiativePlayerID   string `json:"initialInitiativePlayerId"`
 }
 
+const activeGoSemanticAuthoritySelectionRootV117 = "sha256:fd2cc24a345c0cb94dde9966262f128c663a4430022574729eb4a902177c4b5a"
+const reviewedGoSemanticAuthoritySelectionRootV119 = "sha256:17954660f17c83e60e5d7df0b589cd89cf6b00eba4d4963e2d4bf43bc71c6ea2"
+
+type goSemanticAuthoritySelection struct {
+	SchemaVersion                  string `json:"schemaVersion"`
+	SemanticAuthorityKey           string `json:"semanticAuthorityKey"`
+	TupleID                        string `json:"tupleId"`
+	RulesVersion                   string `json:"rulesVersion"`
+	EngineVersion                  string `json:"engineVersion"`
+	RuntimeABIVersion              string `json:"runtimeAbiVersion"`
+	ChronicleVersion               string `json:"chronicleVersion"`
+	ConformanceCertificateVersion  string `json:"conformanceCertificateVersion"`
+	ConformanceCorpusVersion       string `json:"conformanceCorpusVersion"`
+	ConformanceCorpusRoot          string `json:"conformanceCorpusRoot"`
+	ConformanceTraceVersion        string `json:"conformanceTraceVersion"`
+	ConformanceTraceRoot           string `json:"conformanceTraceRoot"`
+	WorkshopContractVersion        string `json:"workshopContractVersion"`
+	WorkshopContractRoot           string `json:"workshopContractRoot"`
+	ArenaCatalogVersion            string `json:"arenaCatalogVersion"`
+	SetPolicyVersion               string `json:"setPolicyVersion"`
+	StrategyRevisionEvidencePolicy string `json:"strategyRevisionEvidencePolicy"`
+}
+
+func activeGoSemanticAuthoritySelectionV117() goSemanticAuthoritySelection {
+	return goSemanticAuthoritySelection{
+		SchemaVersion: "semantic-authority-selection-v1", SemanticAuthorityKey: "runtime-v1.17",
+		TupleID:      "sha256:0d8a04fdfe49e3aa7261728ee51beb0a9049b661aad978277f2892c3a4bc54fe",
+		RulesVersion: "cowards-rules-v1.4", EngineVersion: "engine-kernel-v1.37-candidate-1",
+		RuntimeABIVersion: "strategy-runtime-abi-v1.17", ChronicleVersion: "chronicle-recorder-current-events-v1.37-candidate-1",
+		ConformanceCertificateVersion: "runtime-conformance-certificate-v1.17",
+		ConformanceCorpusVersion:      "v2", ConformanceCorpusRoot: "sha256:238347225defaaabcf9e57141ac7a54b4b277bd149bebe2b21903febc9ce7ac2",
+		ConformanceTraceVersion: "v1.37-conformance-trace-v3", ConformanceTraceRoot: "sha256:53ac4a34b8ea3a52b65b566dfb1da94cbc36ce220c590fe46c0bf43489668696",
+		WorkshopContractVersion: "workshop-contract-v1.17", WorkshopContractRoot: "sha256:1bed9b99ce512da13a3aa37554dc9b279f51dca619280ff3cbd85cc773ce18d3",
+		ArenaCatalogVersion: "semantic-arena-catalog-v1.37-candidate-1", SetPolicyVersion: "canonical-set-policy-v1.4",
+		StrategyRevisionEvidencePolicy: "phase259-explicit-current-evidence-v1",
+	}
+}
+
+func reviewedGoSemanticAuthoritySelectionV119() goSemanticAuthoritySelection {
+	return goSemanticAuthoritySelection{
+		SchemaVersion: "semantic-authority-selection-v1", SemanticAuthorityKey: "runtime-v1.19",
+		TupleID:      "sha256:37c9a07425d454c74859112debcc3ef362d43e80d5767560d9bde28a3c8d5e73",
+		RulesVersion: "cowards-rules-v1.4", EngineVersion: "engine-kernel-v1.37-candidate-1",
+		RuntimeABIVersion: "strategy-runtime-abi-v1.19", ChronicleVersion: "chronicle-recorder-current-events-v1.37-candidate-1",
+		ConformanceCertificateVersion: "runtime-conformance-certificate-v1.19",
+		ConformanceCorpusVersion:      "v3", ConformanceCorpusRoot: "sha256:06d0717a16047cace0364c94a15353e2d53b53da5e8bebef6912f9f30f3d681d",
+		ConformanceTraceVersion: "v1.37-observation-trace-v4", ConformanceTraceRoot: "sha256:f9821fd2b3a5a3cb17a01b4a8050ea70c2274df04601f314a25adac6da4f428a",
+		WorkshopContractVersion: "workshop-contract-v1.19", WorkshopContractRoot: "sha256:b455b4e44ccae14cb724c6d3e8f41e3fb8dfcdb36976d35058f859dcfc7a385d",
+		ArenaCatalogVersion: "canonical-arena-catalog-v1.37", SetPolicyVersion: "canonical-set-policy-v1.37-four-condition-v1",
+		StrategyRevisionEvidencePolicy: "strategy-revision-v1.19-revalidation-v1",
+	}
+}
+
+func (selection goSemanticAuthoritySelection) Root() string {
+	if selection == activeGoSemanticAuthoritySelectionV117() {
+		return activeGoSemanticAuthoritySelectionRootV117
+	}
+	if selection == reviewedGoSemanticAuthoritySelectionV119() {
+		return reviewedGoSemanticAuthoritySelectionRootV119
+	}
+	return ""
+}
+
+func resolveCurrentGoSemanticAuthoritySelection(current currentSemanticAuthorityGeneratedSelection) (goSemanticAuthoritySelection, string, error) {
+	var selection goSemanticAuthoritySelection
+	expectedSourceSHA256 := ""
+	expectedOutputSHA256 := ""
+	switch current.SemanticAuthorityKey {
+	case "runtime-v1.17":
+		selection = activeGoSemanticAuthoritySelectionV117()
+		expectedSourceSHA256 = "sha256:14296beaf5e79d731dba3de3501dde7239731ce51b0c926bced3d76f5eff29e1"
+		expectedOutputSHA256 = "sha256:bb814addab77fd473103651eb9aac2980ed45770d5147fb54de1f703143b2ce0"
+	case "runtime-v1.19":
+		selection = reviewedGoSemanticAuthoritySelectionV119()
+		expectedSourceSHA256 = "sha256:110d30db98623cb90f07b473045cf04aca3433fb823964163191a0a8cba64b61"
+		expectedOutputSHA256 = "sha256:15030ee59b81a2bf04667e045344de36d1b11b9834e64f71be05ccf7b73d80d5"
+	default:
+		return goSemanticAuthoritySelection{}, "", errors.New("generated Go semantic authority is unknown")
+	}
+	if current.TupleID != selection.TupleID || current.Rules != selection.RulesVersion || current.Engine != selection.EngineVersion ||
+		current.RuntimeABI != selection.RuntimeABIVersion || current.Chronicle != selection.ChronicleVersion ||
+		current.ArenaCatalog != selection.ArenaCatalogVersion || current.SetPolicy != selection.SetPolicyVersion ||
+		current.ConformanceCertificateVersion != selection.ConformanceCertificateVersion ||
+		current.SourceSHA256 != expectedSourceSHA256 || current.OutputSHA256 != expectedOutputSHA256 {
+		return goSemanticAuthoritySelection{}, "", errors.New("generated Go semantic authority is mixed")
+	}
+	return selection, selection.Root(), nil
+}
+
+type goSemanticAuthorityHeadSnapshot struct {
+	State               string
+	ActiveSelection     json.RawMessage
+	ActiveSelectionRoot string
+	PendingIntent       json.RawMessage
+}
+
+func validateCurrentGoSemanticAuthorityHead(current currentSemanticAuthorityGeneratedSelection, head goSemanticAuthorityHeadSnapshot) (goSemanticAuthoritySelection, string, error) {
+	expected, root, err := resolveCurrentGoSemanticAuthoritySelection(current)
+	if err != nil || (len(head.PendingIntent) != 0 && string(head.PendingIntent) != "null") {
+		return goSemanticAuthoritySelection{}, "", errors.New("semantic authority head is pending or invalid")
+	}
+	validState := current.SemanticAuthorityKey == "runtime-v1.17" && (head.State == "active-v1.17-bootstrap" || head.State == "active-v1.17-compensated")
+	validState = validState || current.SemanticAuthorityKey == "runtime-v1.19" && head.State == "active-v1.19-finalized"
+	if !validState || head.ActiveSelectionRoot != root {
+		return goSemanticAuthoritySelection{}, "", errors.New("semantic authority head does not match generated current")
+	}
+	var selected goSemanticAuthoritySelection
+	if err := decodeStrictJSON(head.ActiveSelection, &selected); err != nil || selected != expected || selected.Root() != root {
+		return goSemanticAuthoritySelection{}, "", errors.New("semantic authority head selection is mixed")
+	}
+	return selected, root, nil
+}
+
+func lockCurrentGoSemanticAuthorityHead(ctx context.Context, tx pgx.Tx, current currentSemanticAuthorityGeneratedSelection) (goSemanticAuthoritySelection, string, error) {
+	if tx == nil {
+		return goSemanticAuthoritySelection{}, "", errors.New("semantic authority transaction is unavailable")
+	}
+	var head goSemanticAuthorityHeadSnapshot
+	if err := tx.QueryRow(ctx, `
+		select state, active_selection, active_selection_root, pending_intent
+		  from semantic_authority_selection_head
+		 where singleton=true
+		 for update
+	`).Scan(&head.State, &head.ActiveSelection, &head.ActiveSelectionRoot, &head.PendingIntent); err != nil {
+		return goSemanticAuthoritySelection{}, "", errors.New("semantic authority head is unavailable")
+	}
+	return validateCurrentGoSemanticAuthorityHead(current, head)
+}
+
 func candidateSchedulingAuthorityV119(key string) (arenaSetAuthorityV137Candidate, error) {
-	current := currentSemanticAuthorityGenerated()
-	if current.SemanticAuthorityKey != "runtime-v1.17" || current.TupleID != "sha256:0d8a04fdfe49e3aa7261728ee51beb0a9049b661aad978277f2892c3a4bc54fe" ||
-		current.RuntimeABI != "strategy-runtime-abi-v1.17" || current.SetPolicy != "canonical-set-policy-v1.4" {
-		return arenaSetAuthorityV137Candidate{}, errors.New("selected Go semantic authority is not Phase-259 exact")
+	return candidateSchedulingAuthorityV119ForCurrent(key, currentSemanticAuthorityGenerated())
+}
+
+func candidateSchedulingAuthorityV119ForCurrent(key string, current currentSemanticAuthorityGeneratedSelection) (arenaSetAuthorityV137Candidate, error) {
+	selection, _, err := resolveCurrentGoSemanticAuthoritySelection(current)
+	if err != nil {
+		return arenaSetAuthorityV137Candidate{}, err
+	}
+	if key == "" {
+		if selection.SemanticAuthorityKey != "runtime-v1.19" {
+			return arenaSetAuthorityV137Candidate{}, errors.New("v1.19 semantic authority is not current")
+		}
+		key = selection.SemanticAuthorityKey
 	}
 	candidate, ok := arenaSetAuthorityV137CandidateBySemanticAuthorityKey(key)
 	if !ok || candidate.SemanticAuthorityKey != "runtime-v1.19" || candidate.Policy.Active ||
@@ -4496,6 +4643,11 @@ func (server *LiveServer) createCandidateFourConditionMatchSetV119(ctx context.C
 		return nil, err
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
+	if _, _, err := lockCurrentGoSemanticAuthorityHead(ctx, tx, currentSemanticAuthorityGenerated()); err != nil {
+		return nil, errors.New("candidate creation semantic authority unavailable")
+	}
+	semanticSelection := reviewedGoSemanticAuthoritySelectionV119()
+	semanticSelectionRoot := semanticSelection.Root()
 	if _, err := tx.Exec(ctx, "select pg_advisory_xact_lock(hashtext('cowards-game:runtime-v1.19-candidate-creation:v1'))"); err != nil {
 		return nil, errors.New("candidate authority lock is unavailable")
 	}
@@ -4531,16 +4683,17 @@ func (server *LiveServer) createCandidateFourConditionMatchSetV119(ctx context.C
 			compatibility_runtime_abi_version, compatibility_chronicle_version,
 			compatibility_arena_catalog_version, compatibility_set_policy_version,
 			authority_bundle_hash, authority_registry_generation,
-			execution_evidence_set, execution_evidence_set_hash
+			execution_evidence_set, execution_evidence_set_hash,
+			semantic_authority_selection, semantic_authority_selection_root
 		) values ($1,'pending','candidate-four-condition-v1','v1',$2,$3,
 		          'candidate-four-condition-v1','v1','exhibition-points-v1:v1',
-		          'private',$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
+		          'private',$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)
 	`, input.MatchSetID, matches, input.CreatorUserID,
 		orderedEvidence, map[string]any{"publicResults": false, "candidateOnly": true}, server.now(),
 		tuple.TupleID, tuple.Tuple.Rules, tuple.Tuple.Engine, tuple.Tuple.RuntimeABI,
 		tuple.Tuple.Chronicle, tuple.Tuple.ArenaCatalog, tuple.Tuple.SetPolicy,
 		input.IntegrityIdentity.AuthorityBundleHash, input.IntegrityIdentity.RegistryGeneration,
-		orderedEvidence, evidenceSetHash); err != nil {
+		orderedEvidence, evidenceSetHash, semanticSelection, semanticSelectionRoot); err != nil {
 		return nil, err
 	}
 	for _, entrant := range []candidateSetEntrantV119{input.EntrantA, input.EntrantB} {
@@ -4605,25 +4758,27 @@ func (server *LiveServer) createCandidateFourConditionMatchSetV119(ctx context.C
 				successor_scenario_id, successor_condition_id, successor_condition_ordinal,
 				successor_arena_catalog_version, successor_arena_semantic_geometry_hash,
 				successor_bottom_entrant_key, successor_top_entrant_key,
-				successor_initial_initiative_entrant_key, initial_initiative_player_id
+				successor_initial_initiative_entrant_key, initial_initiative_player_id,
+				semantic_authority_selection_root
 			) values ($1,$2,$3,$4,$5,$6,$7,'pending',$8,$9,$10,$11,$12,$13,
-			          $14,$15,$16,$17,$18,$19,$20,$21,$22,$23)
+			          $14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24)
 		`, match.ID, match.BottomStrategyRevisionID, match.TopStrategyRevisionID,
 			match.ArenaVariantID, match.Seed, match.BottomPlayerID, match.TopPlayerID,
 			input.MatchSetID, match.BottomEntrantKey, match.TopEntrantKey, pair.Bottom, pair.Top, pair.PairHash,
 			input.MatchSetID, match.ScenarioID, match.ConditionID, match.ConditionOrdinal,
 			match.ArenaCatalogVersion, match.ArenaSemanticGeometryHash, match.BottomEntrantKey,
-			match.TopEntrantKey, match.InitialInitiativeEntrantKey, match.InitialInitiativePlayerID); err != nil {
+			match.TopEntrantKey, match.InitialInitiativeEntrantKey, match.InitialInitiativePlayerID,
+			semanticSelectionRoot); err != nil {
 			return nil, err
 		}
 		if _, err := tx.Exec(ctx, `
 			insert into match_jobs (
 				id, match_id, status, integrity_match_set_id, bottom_execution_entrant_key,
 				top_execution_entrant_key, bottom_execution_evidence, top_execution_evidence,
-				execution_evidence_pair_hash
-			) values ($1,$2,'queued',$3,$4,$5,$6,$7,$8)
+				execution_evidence_pair_hash, semantic_authority_selection_root
+			) values ($1,$2,'queued',$3,$4,$5,$6,$7,$8,$9)
 		`, "match-job:"+match.ID, match.ID, input.MatchSetID, match.BottomEntrantKey,
-			match.TopEntrantKey, pair.Bottom, pair.Top, pair.PairHash); err != nil {
+			match.TopEntrantKey, pair.Bottom, pair.Top, pair.PairHash, semanticSelectionRoot); err != nil {
 			return nil, err
 		}
 		if _, err := tx.Exec(ctx, `insert into match_set_matches (match_set_id, match_id, matrix_index) values ($1,$2,$3)`, input.MatchSetID, match.ID, index); err != nil {

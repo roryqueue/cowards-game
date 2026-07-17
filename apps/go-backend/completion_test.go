@@ -114,10 +114,15 @@ func TestCandidateConditionIdentityCompletionV119(t *testing.T) {
 	}
 }
 
-func TestCandidateCompletionV119PreservesPhase259SelectorAndSemanticBoundary(t *testing.T) {
-	current := currentSemanticAuthorityGenerated()
-	if current.SemanticAuthorityKey != "runtime-v1.17" || current.RuntimeABI != "strategy-runtime-abi-v1.17" || current.SetPolicy != "canonical-set-policy-v1.4" {
-		t.Fatalf("candidate completion changed the Phase-259 selector: %+v", current)
+func TestCandidateCompletionV119UsesClosedSelectionWithoutSemanticAuthority(t *testing.T) {
+	for _, current := range []currentSemanticAuthorityGeneratedSelection{
+		currentSemanticAuthorityGenerated(),
+		simulatedCurrentSemanticAuthorityV119(),
+	} {
+		selection, root, err := resolveCurrentGoSemanticAuthoritySelection(current)
+		if err != nil || selection.SemanticAuthorityKey != current.SemanticAuthorityKey || root == "" {
+			t.Fatalf("completion current selection is not closed: current=%+v selection=%+v root=%q err=%v", current, selection, root, err)
+		}
 	}
 	source, err := os.ReadFile("completion.go")
 	if err != nil {

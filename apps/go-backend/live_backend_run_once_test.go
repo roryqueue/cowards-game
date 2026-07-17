@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"reflect"
 	"strings"
 	"testing"
@@ -202,11 +203,132 @@ func TestCandidatePairwiseFourConditionMatchesV119MatchTypeScriptCanonicalBytes(
 	}
 }
 
-func TestCandidatePairwiseStagingPreservesPhase259CurrentGoScheduler(t *testing.T) {
+func simulatedCurrentSemanticAuthorityV119() currentSemanticAuthorityGeneratedSelection {
+	return currentSemanticAuthorityGeneratedSelection{
+		SemanticAuthorityKey:          "runtime-v1.19",
+		TupleID:                       "sha256:37c9a07425d454c74859112debcc3ef362d43e80d5767560d9bde28a3c8d5e73",
+		Rules:                         "cowards-rules-v1.4",
+		Engine:                        "engine-kernel-v1.37-candidate-1",
+		RuntimeABI:                    "strategy-runtime-abi-v1.19",
+		Chronicle:                     "chronicle-recorder-current-events-v1.37-candidate-1",
+		ArenaCatalog:                  "canonical-arena-catalog-v1.37",
+		SetPolicy:                     "canonical-set-policy-v1.37-four-condition-v1",
+		ConformanceCertificateVersion: "runtime-conformance-certificate-v1.19",
+		SourceSHA256:                  "sha256:110d30db98623cb90f07b473045cf04aca3433fb823964163191a0a8cba64b61",
+		OutputSHA256:                  "sha256:15030ee59b81a2bf04667e045344de36d1b11b9834e64f71be05ccf7b73d80d5",
+	}
+}
+
+func TestGoSemanticAuthoritySelectionAcceptsOnlyClosedCurrentValues(t *testing.T) {
+	for _, current := range []currentSemanticAuthorityGeneratedSelection{
+		currentSemanticAuthorityGenerated(),
+		simulatedCurrentSemanticAuthorityV119(),
+	} {
+		selection, root, err := resolveCurrentGoSemanticAuthoritySelection(current)
+		if err != nil {
+			t.Fatalf("closed current %q was rejected: %v", current.SemanticAuthorityKey, err)
+		}
+		if selection.SemanticAuthorityKey != current.SemanticAuthorityKey || selection.TupleID != current.TupleID || selection.RuntimeABIVersion != current.RuntimeABI {
+			t.Fatalf("closed current %q projected a mixed selection: %+v", current.SemanticAuthorityKey, selection)
+		}
+		if root != selection.Root() {
+			t.Fatalf("closed current %q root drifted: %q", current.SemanticAuthorityKey, root)
+		}
+	}
+
+	mixed := simulatedCurrentSemanticAuthorityV119()
+	mixed.RuntimeABI = "strategy-runtime-abi-v1.17"
+	if _, _, err := resolveCurrentGoSemanticAuthoritySelection(mixed); err == nil {
+		t.Fatal("mixed generated current selection was admitted")
+	}
+	unknown := currentSemanticAuthorityGenerated()
+	unknown.SemanticAuthorityKey = "runtime-v1.18"
+	if _, _, err := resolveCurrentGoSemanticAuthoritySelection(unknown); err == nil {
+		t.Fatal("unknown generated current selection was admitted")
+	}
+	forged := currentSemanticAuthorityGenerated()
+	forged.SourceSHA256 = "sha256:" + strings.Repeat("z", 64)
+	if _, _, err := resolveCurrentGoSemanticAuthoritySelection(forged); err == nil {
+		t.Fatal("non-digest generated current selection was admitted")
+	}
+}
+
+func TestGoSemanticAuthorityHeadRejectsPendingMixedAndStaleValues(t *testing.T) {
+	for _, current := range []currentSemanticAuthorityGeneratedSelection{
+		currentSemanticAuthorityGenerated(),
+		simulatedCurrentSemanticAuthorityV119(),
+	} {
+		selection, root, err := resolveCurrentGoSemanticAuthoritySelection(current)
+		if err != nil {
+			t.Fatal(err)
+		}
+		bytes, err := json.Marshal(selection)
+		if err != nil {
+			t.Fatal(err)
+		}
+		state := "active-v1.17-bootstrap"
+		if current.SemanticAuthorityKey == "runtime-v1.19" {
+			state = "active-v1.19-finalized"
+		}
+		head := goSemanticAuthorityHeadSnapshot{State: state, ActiveSelection: bytes, ActiveSelectionRoot: root}
+		if _, _, err := validateCurrentGoSemanticAuthorityHead(current, head); err != nil {
+			t.Fatalf("exact %q head was rejected: %v", current.SemanticAuthorityKey, err)
+		}
+		pending := head
+		pending.State = "pending-precommit"
+		pending.PendingIntent = json.RawMessage(`{"direction":"forward"}`)
+		if _, _, err := validateCurrentGoSemanticAuthorityHead(current, pending); err == nil {
+			t.Fatal("pending semantic authority head was admitted")
+		}
+		stale := head
+		stale.ActiveSelectionRoot = "sha256:" + strings.Repeat("0", 64)
+		if _, _, err := validateCurrentGoSemanticAuthorityHead(current, stale); err == nil {
+			t.Fatal("stale semantic authority head was admitted")
+		}
+		mixed := head
+		mixed.ActiveSelection = append([]byte(nil), bytes...)
+		mixed.ActiveSelection = []byte(strings.Replace(string(mixed.ActiveSelection), current.RuntimeABI, "strategy-runtime-abi-v1.18", 1))
+		if _, _, err := validateCurrentGoSemanticAuthorityHead(current, mixed); err == nil {
+			t.Fatal("mixed semantic authority head was admitted")
+		}
+	}
+}
+
+func TestGoSchedulingReadsHeadOnlyAtCreationAndFreezesWork(t *testing.T) {
+	bytes, err := os.ReadFile("live_backend.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+	source := string(bytes)
+	for _, functionName := range []string{"createExhibitionMatchSetWithDependencies", "createCandidateFourConditionMatchSetV119"} {
+		body := goFunctionSource(t, source, functionName)
+		for _, required := range []string{"lockCurrentGoSemanticAuthorityHead", "semantic_authority_selection", "semantic_authority_selection_root"} {
+			if !strings.Contains(body, required) {
+				t.Fatalf("%s does not freeze %q", functionName, required)
+			}
+		}
+	}
+	runOnce := goFunctionSource(t, source, "runMatchJobOnce")
+	for _, forbidden := range []string{"semantic_authority_selection_head", "lockCurrentGoSemanticAuthorityHead", "currentSemanticAuthorityGenerated"} {
+		if strings.Contains(runOnce, forbidden) {
+			t.Fatalf("job execution rereads or derives authority through %q", forbidden)
+		}
+	}
+}
+
+func TestCandidatePairwiseStagingPreservesClosedCurrentGoScheduler(t *testing.T) {
 	current := currentSemanticAuthorityGenerated()
-	if current.SemanticAuthorityKey != "runtime-v1.17" || current.TupleID != "sha256:0d8a04fdfe49e3aa7261728ee51beb0a9049b661aad978277f2892c3a4bc54fe" ||
-		current.RuntimeABI != "strategy-runtime-abi-v1.17" || current.SetPolicy != "canonical-set-policy-v1.4" {
-		t.Fatalf("generated current selector drifted from Phase 259: %+v", current)
+	if _, _, err := resolveCurrentGoSemanticAuthoritySelection(current); err != nil {
+		t.Fatalf("generated current selector is not closed: %v", err)
+	}
+	if _, err := candidateSchedulingAuthorityV119ForCurrent("runtime-v1.19", current); err != nil {
+		t.Fatalf("explicit inactive candidate was rejected: %v", err)
+	}
+	if _, err := candidateSchedulingAuthorityV119ForCurrent("", simulatedCurrentSemanticAuthorityV119()); err != nil {
+		t.Fatalf("simulated v1.19 current did not become default: %v", err)
+	}
+	if _, err := candidateSchedulingAuthorityV119ForCurrent("", current); err == nil {
+		t.Fatal("inactive v1.19 candidate became default while v1.17 is current")
 	}
 	entrants := []map[string]any{
 		{"entrantId": "entrant:0", "entrantIndex": 0, "strategyRevisionId": "revision:0"},
@@ -225,7 +347,7 @@ func TestCandidatePairwiseStagingPreservesPhase259CurrentGoScheduler(t *testing.
 		},
 	}
 	if got := generatePairwiseMatches("match-set:current", "smoke-v1", entrants); !reflect.DeepEqual(got, want) {
-		t.Fatalf("selected Phase-259 scheduler changed:\nwant=%#v\n got=%#v", want, got)
+		t.Fatalf("selected v1.17 scheduler changed:\nwant=%#v\n got=%#v", want, got)
 	}
 	for _, arena := range competitionArenaDefinitions() {
 		_, hasCandidateKey := arena["semanticAuthorityKey"]
