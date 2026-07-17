@@ -378,7 +378,7 @@ Plans:
 
 **Wave 11 *(blocked on Wave 10 completion)* — postactivation evaluator preparation**
 
-- [ ] 260-22-PLAN.md — Prepare the distinct full activated-state and rollback evaluator.
+- [x] 260-22-PLAN.md — Prepare the distinct full activated-state and rollback evaluator.
 
 **Wave 12 *(blocked on Wave 11 completion)* — atomic activation**
 
