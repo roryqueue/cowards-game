@@ -1,6 +1,10 @@
 import { createHash } from "node:crypto"
 import {
+  ARENA_CATALOG_VERSION_V1_37,
+  CANONICAL_ARENA_CATALOG_V1_37,
   CANONICAL_COMPATIBILITY_TUPLES,
+  SET_CONDITION_POLICY_VERSION_V1_37,
+  createSetScenarioV137,
   type ExecutableLaneIdentity,
   type RuntimeEntrantExecutionEvidence,
 } from "@cowards/spec"
@@ -18,9 +22,16 @@ import {
   createMatchJobId,
   createMatchService,
   validateCreateMatchInput,
+  validateCreateMatchRecordInput,
   type CreateMatchInput,
   type CreateMatchRecordInput,
+  type CreateMatchRecordInputV119,
 } from "./match-service.js"
+import {
+  MATCH_SET_PRESETS,
+  getMatchSetPreset,
+  resolveVersionedMatchSetPreset,
+} from "./presets.js"
 import { DEFAULT_MAX_JOB_ATTEMPTS } from "./schema.js"
 
 const tuple = CANONICAL_COMPATIBILITY_TUPLES[0]!
@@ -116,6 +127,40 @@ const validInput = (): CreateMatchInput => {
   }
 }
 
+const successorRecord = (): CreateMatchRecordInputV119 => {
+  const arena = CANONICAL_ARENA_CATALOG_V1_37.arenas.find(
+    ({ id }) => id === "arena:smoke:v1",
+  )!
+  const scenario = createSetScenarioV137({
+    arenaCatalogVersion: ARENA_CATALOG_VERSION_V1_37,
+    arenaSemanticGeometryHash: arena.semanticGeometryHash,
+    entrantA: {
+      entrantKey: record.bottomEntrantKey,
+      playerId: record.bottomPlayerId,
+    },
+    entrantB: {
+      entrantKey: record.topEntrantKey,
+      playerId: record.topPlayerId,
+    },
+    baseSeed: record.seed,
+  })
+  const condition = scenario.conditions[0]!
+  return {
+    ...record,
+    semanticAuthorityKey: "runtime-v1.19",
+    setPolicyVersion: SET_CONDITION_POLICY_VERSION_V1_37,
+    scenarioId: scenario.scenarioId,
+    conditionId: condition.conditionId,
+    conditionOrdinal: condition.ordinal,
+    conditionSuffix: condition.suffix,
+    requestIdentity: condition.requestIdentity,
+    arenaCatalogVersion: scenario.arenaCatalogVersion,
+    arenaSemanticGeometryHash: scenario.arenaSemanticGeometryHash,
+    initialInitiativeEntrantKey: condition.initialInitiativeEntrantKey,
+    initialInitiativePlayerId: condition.initialInitiativePlayerId,
+  }
+}
+
 const fakePool = () => {
   const calls: Array<{ sql: string; values: readonly unknown[] }> = []
   const client = {
@@ -155,6 +200,98 @@ const fakePool = () => {
 }
 
 describe("match creation contracts", () => {
+  it("keeps the generated current preset dispatch byte-exact while exposing only schedulable candidate arenas and base seeds explicitly", () => {
+    expect(MATCH_SET_PRESETS).toEqual([
+      {
+        id: "smoke-v1",
+        version: "v1",
+        arenaVariantIds: ["arena:smoke:v1"],
+        seeds: ["seed:smoke:001"],
+        mirrorSides: false,
+      },
+      {
+        id: "standard-v1",
+        version: "v1",
+        arenaVariantIds: [
+          "arena:smoke:v1",
+          "arena:standard-cross:v1",
+        ],
+        seeds: ["seed:standard:001", "seed:standard:002"],
+        mirrorSides: true,
+      },
+      {
+        id: "stress-v1",
+        version: "v1",
+        arenaVariantIds: [
+          "arena:smoke:v1",
+          "arena:standard-cross:v1",
+          "arena:open-field:v1",
+        ],
+        seeds: [
+          "seed:stress:001",
+          "seed:stress:002",
+          "seed:stress:003",
+          "seed:stress:004",
+        ],
+        mirrorSides: true,
+      },
+    ])
+    expect(getMatchSetPreset("standard-v1")).toEqual(MATCH_SET_PRESETS[1])
+    expect(
+      resolveVersionedMatchSetPreset({
+        semanticAuthorityKey: "runtime-v1.17",
+        presetId: "stress-v1",
+      }),
+    ).toEqual(MATCH_SET_PRESETS[2])
+
+    const candidate = resolveVersionedMatchSetPreset({
+      semanticAuthorityKey: "runtime-v1.19",
+      presetId: "stress-v1",
+    })
+    expect(candidate).toEqual({
+      semanticAuthorityKey: "runtime-v1.19",
+      id: "stress-v1",
+      arenaCatalogVersion: ARENA_CATALOG_VERSION_V1_37,
+      setPolicyVersion: SET_CONDITION_POLICY_VERSION_V1_37,
+      arenaVariantIds: ["arena:smoke:v1", "arena:standard-cross:v1"],
+      baseSeeds: [
+        "seed:stress:001",
+        "seed:stress:002",
+        "seed:stress:003",
+        "seed:stress:004",
+      ],
+    })
+    expect(candidate).not.toHaveProperty("mirrorSides")
+    expect(candidate).not.toHaveProperty("seeds")
+    expect(
+      resolveVersionedMatchSetPreset({
+        semanticAuthorityKey: "runtime-v1.18" as "runtime-v1.19",
+        presetId: "stress-v1",
+      }),
+    ).toBeUndefined()
+  })
+
+  it("requires self-describing explicit successor condition facts without seed or alias inference", () => {
+    const candidate = successorRecord()
+    expect(() => validateCreateMatchRecordInput(candidate)).not.toThrow()
+
+    for (const mutation of [
+      { ...candidate, arenaVariantId: "arena:open-field:v1" },
+      { ...candidate, initialInitiativePlayerId: candidate.topPlayerId },
+      { ...candidate, initialInitiativeEntrantKey: candidate.topEntrantKey },
+      { ...candidate, arenaSemanticGeometryHash: `sha256:${"0".repeat(64)}` },
+      { ...candidate, conditionOrdinal: 1 },
+      { ...candidate, conditionSuffix: "a-bottom-b-first" },
+      { ...candidate, seed: `${candidate.seed}:mirror` },
+    ]) {
+      expect(() =>
+        validateCreateMatchRecordInput(mutation as CreateMatchRecordInputV119),
+      ).toThrow()
+    }
+
+    expect(() => validateCreateMatchRecordInput(record)).not.toThrow()
+  })
+
   it("requires a validator-minted exact tuple and ordered heterogeneous evidence pair", () => {
     const input = validInput()
     expect(() => validateCreateMatchInput(input)).not.toThrow()
