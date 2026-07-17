@@ -29,9 +29,14 @@ import {
   STRATEGY_RUNTIME_ABI_VERSION,
   describeStrategyRuntimeProductSemantics,
 } from "./runtime.js"
+import { ARENA_CATALOG_VERSION_V1_37 } from "./arena-catalog-v1-37.js"
+import { CANONICAL_SET_CONDITION_ROWS_V1_37 } from "./set-condition-policy-v1-37.js"
 
 export const MATCH_EXECUTION_APP_CONTRACT_VERSION =
   "match-execution-app-v1" as const
+
+export const MATCH_EXECUTION_PUBLIC_RESULT_VERSION_V119 =
+  "match-execution-public-result-v1.19-candidate-1" as const
 
 export const MATCH_EXECUTION_LIFECYCLE_STATES = [
   "queued",
@@ -284,6 +289,118 @@ export const MatchExecutionMatchSetSummaryV1Schema = z.object({
   privacy: MatchExecutionPrivacyV1Schema,
 })
 
+const CandidateConditionLabelV119Schema = z.enum([
+  CANONICAL_SET_CONDITION_ROWS_V1_37[0]!.suffix,
+  CANONICAL_SET_CONDITION_ROWS_V1_37[1]!.suffix,
+  CANONICAL_SET_CONDITION_ROWS_V1_37[2]!.suffix,
+  CANONICAL_SET_CONDITION_ROWS_V1_37[3]!.suffix,
+])
+const CandidateConditionOrdinalV119Schema = z.union([
+  z.literal(0),
+  z.literal(1),
+  z.literal(2),
+  z.literal(3),
+])
+const CandidateSha256V119Schema = z
+  .string()
+  .regex(/^sha256:[0-9a-f]{64}$/u)
+const CandidateScenarioIdV119Schema = z
+  .string()
+  .regex(/^set-scenario:sha256:[0-9a-f]{64}$/u)
+const CandidateConditionIdV119Schema = z
+  .string()
+  .regex(/^set-condition:sha256:[0-9a-f]{64}$/u)
+
+const MatchExecutionPublicResultPayloadV119Schema = z
+  .object({
+    matchSetId: z.string().min(1),
+    matchId: z.string().min(1),
+    publicationStatus: z.enum(["pending", "degraded", "countable"]),
+    counted: z.boolean(),
+    arena: z
+      .object({
+        variantId: z.string().min(1),
+        catalogVersion: z.literal(ARENA_CATALOG_VERSION_V1_37),
+        catalogStatus: z.literal("active"),
+        semanticGeometryHash: CandidateSha256V119Schema,
+      })
+      .strict(),
+    condition: z
+      .object({
+        scenarioId: CandidateScenarioIdV119Schema,
+        conditionId: CandidateConditionIdV119Schema,
+        ordinal: CandidateConditionOrdinalV119Schema,
+        label: CandidateConditionLabelV119Schema,
+        sides: z
+          .object({
+            bottomEntrantKey: z.string().min(1),
+            topEntrantKey: z.string().min(1),
+          })
+          .strict(),
+        initialInitiativeEntrantKey: z.string().min(1),
+      })
+      .strict(),
+  })
+  .strict()
+
+const refineMatchExecutionPublicResultV119 = (
+  candidate: z.infer<typeof MatchExecutionPublicResultPayloadV119Schema>,
+  ctx: z.RefinementCtx,
+): void => {
+  if (candidate.counted !== (candidate.publicationStatus === "countable")) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["counted"],
+      message: "counted is true only for a countable complete condition matrix",
+    })
+  }
+  const canonicalRow =
+    CANONICAL_SET_CONDITION_ROWS_V1_37[candidate.condition.ordinal]
+  if (canonicalRow?.suffix !== candidate.condition.label) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["condition", "label"],
+      message: "condition label must match its canonical ordinal",
+    })
+  }
+  const { bottomEntrantKey, topEntrantKey } = candidate.condition.sides
+  if (bottomEntrantKey === topEntrantKey) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["condition", "sides"],
+      message: "candidate condition sides must bind distinct entrants",
+    })
+  }
+  const expectedInitialSide =
+    candidate.condition.label === "a-bottom-a-first" ||
+    candidate.condition.label === "a-top-b-first"
+      ? bottomEntrantKey
+      : topEntrantKey
+  if (candidate.condition.initialInitiativeEntrantKey !== expectedInitialSide) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["condition", "initialInitiativeEntrantKey"],
+      message:
+        "initial initiative entrant must agree with the canonical condition label and sides",
+    })
+  }
+}
+
+export const MatchExecutionPublicResultSourceV119Schema =
+  MatchExecutionPublicResultPayloadV119Schema.superRefine(
+    refineMatchExecutionPublicResultV119,
+  )
+
+export const MatchExecutionPublicResultV119Schema = z
+  .object({
+    contractVersion: z.literal(MATCH_EXECUTION_PUBLIC_RESULT_VERSION_V119),
+    kind: z.literal("matchExecutionPublicResult"),
+    semanticAuthorityKey: z.literal("runtime-v1.19"),
+    ...MatchExecutionPublicResultPayloadV119Schema.shape,
+  })
+  .strict()
+  .superRefine(refineMatchExecutionPublicResultV119)
+
 export const MatchExecutionReplayMetadataV1Schema = z.object({
   contractVersion: z.literal(MATCH_EXECUTION_APP_CONTRACT_VERSION),
   kind: z.literal("matchExecutionReplayMetadata"),
@@ -358,6 +475,12 @@ export type MatchExecutionMatchResultV1 = z.infer<
 export type MatchExecutionMatchSetSummaryV1 = z.infer<
   typeof MatchExecutionMatchSetSummaryV1Schema
 >
+export type MatchExecutionPublicResultSourceV119 = z.infer<
+  typeof MatchExecutionPublicResultSourceV119Schema
+>
+export type MatchExecutionPublicResultV119 = z.infer<
+  typeof MatchExecutionPublicResultV119Schema
+>
 export type MatchExecutionReplayMetadataV1 = z.infer<
   typeof MatchExecutionReplayMetadataV1Schema
 >
@@ -377,6 +500,28 @@ type LifecycleOverride = {
 }
 
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T
+
+export const projectMatchExecutionPublicResultV119 = (
+  input: unknown,
+): MatchExecutionPublicResultV119 => {
+  const source = MatchExecutionPublicResultSourceV119Schema.parse(input)
+  const result = MatchExecutionPublicResultV119Schema.parse({
+    contractVersion: MATCH_EXECUTION_PUBLIC_RESULT_VERSION_V119,
+    kind: "matchExecutionPublicResult",
+    semanticAuthorityKey: "runtime-v1.19",
+    ...source,
+  })
+  assertPublicServiceDtoLeakSafe(result)
+  return result
+}
+
+export const parseMatchExecutionPublicResultV119 = (
+  input: unknown,
+): MatchExecutionPublicResultV119 => {
+  const result = MatchExecutionPublicResultV119Schema.parse(input)
+  assertPublicServiceDtoLeakSafe(result)
+  return result
+}
 
 export const createMatchExecutionExactEvidenceV137 = (
   input: Omit<
