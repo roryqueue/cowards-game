@@ -1,17 +1,19 @@
 #!/usr/bin/env -S pnpm exec tsx
 import { Buffer } from "node:buffer"
-import { createHash } from "node:crypto"
-import { execFile as execFileCallback } from "node:child_process"
+import { execFile as execFileCallback, fork } from "node:child_process"
+import { createHash, randomUUID } from "node:crypto"
 import { createRequire } from "node:module"
 import {
   mkdir,
   readFile,
   readdir,
   rm,
+  rmdir,
   symlink,
   writeFile,
 } from "node:fs/promises"
 import path from "node:path"
+import { setTimeout as delay } from "node:timers/promises"
 import { promisify } from "node:util"
 import { fileURLToPath } from "node:url"
 /* eslint-disable-next-line no-restricted-imports -- The activation coordinator owns the exact persisted semantic head transition API. */
@@ -30,6 +32,9 @@ import {
 } from "../packages/persistence/src/semantic-authority-selection-head.js"
 
 const execFile = promisify(execFileCallback)
+const ACTIVATION_GATE_SUPERVISOR_PATH = fileURLToPath(
+  new URL("./activation-gate-supervisor.mjs", import.meta.url),
+)
 type PersistencePool = Parameters<typeof readSemanticAuthoritySelectionHead>[0]
 
 export const ACTIVATION_SELECTOR_PATHS = Object.freeze([
@@ -1363,9 +1368,327 @@ const runProcess = async (
 export interface ProductionActivationAdapterOptions {
   readonly processRunner?: typeof runProcess
   readonly gateProcessRunner?: typeof runProcess
+  readonly activationId?: string
+  readonly gateEnvironment?: Readonly<Record<string, string | undefined>>
+  readonly gateLeaseDirectory?: string
+  readonly gateLeaseWaitMs?: number
   readonly now?: () => Date
   readonly protectedBaselineRoot?: string
   readonly candidateWorkspaceEnabled?: boolean
+}
+
+interface ActivationGateLease {
+  readonly version: 1
+  readonly state: "starting" | "active"
+  readonly activationId: string
+  readonly workspace: string
+  readonly gateId: string
+  readonly coordinatorPid: number
+  readonly coordinatorNonce: string
+  readonly supervisorPid: number
+  readonly gatePid: number | null
+  readonly processGroupId: number | null
+}
+
+const parseActivationGateLease = (value: string): ActivationGateLease => {
+  const parsed = JSON.parse(value) as Record<string, unknown>
+  const keys = Object.keys(parsed).sort()
+  const expected = [
+    "activationId",
+    "coordinatorNonce",
+    "coordinatorPid",
+    "gateId",
+    "gatePid",
+    "processGroupId",
+    "state",
+    "supervisorPid",
+    "version",
+    "workspace",
+  ].sort()
+  if (
+    keys.length !== expected.length ||
+    !keys.every((key, index) => key === expected[index]) ||
+    parsed.version !== 1 ||
+    !["starting", "active"].includes(String(parsed.state)) ||
+    typeof parsed.activationId !== "string" ||
+    typeof parsed.workspace !== "string" ||
+    typeof parsed.gateId !== "string" ||
+    !Number.isSafeInteger(parsed.coordinatorPid) ||
+    typeof parsed.coordinatorNonce !== "string" ||
+    !Number.isSafeInteger(parsed.supervisorPid) ||
+    !(parsed.gatePid === null || Number.isSafeInteger(parsed.gatePid)) ||
+    !(
+      parsed.processGroupId === null ||
+      Number.isSafeInteger(parsed.processGroupId)
+    )
+  ) {
+    throw new Error("Malformed activation gate lease")
+  }
+  return parsed as unknown as ActivationGateLease
+}
+
+const waitForActivationGateLeases = async (
+  leaseDirectory: string,
+  timeoutMs: number,
+): Promise<void> => {
+  const deadline = Date.now() + timeoutMs
+  while (true) {
+    let entries: string[]
+    try {
+      entries = await readdir(leaseDirectory)
+    } catch (error) {
+      if ((error as { code?: string }).code === "ENOENT") return
+      throw error
+    }
+    if (entries.length === 0) {
+      try {
+        await rmdir(leaseDirectory)
+      } catch (error) {
+        if ((error as { code?: string }).code !== "ENOENT") throw error
+      }
+      return
+    }
+    const identities = await Promise.all(
+      entries.sort().map(async (entry) => {
+        const lease = parseActivationGateLease(
+          await readFile(path.join(leaseDirectory, entry), "utf8"),
+        )
+        return `${lease.activationId}:${lease.gateId}:${lease.workspace}`
+      }),
+    )
+    if (Date.now() >= deadline) {
+      throw new Error(
+        `Activation gate lease remains active; refusing workspace cleanup: ${identities.join(", ")}`,
+      )
+    }
+    await delay(25)
+  }
+}
+
+interface SupervisedGateInput {
+  readonly command: string
+  readonly args: readonly string[]
+  readonly cwd: string
+  readonly environment: Readonly<Record<string, string>>
+  readonly leaseDirectory: string
+  readonly activationId: string
+  readonly workspace: string
+  readonly gateId: string
+}
+
+const supervisedProcessGroupExists = (processGroupId: number): boolean => {
+  try {
+    process.kill(-processGroupId, 0)
+    return true
+  } catch (error) {
+    if ((error as { code?: string }).code === "ESRCH") return false
+    throw error
+  }
+}
+
+const signalSupervisedProcessGroup = (
+  processGroupId: number,
+  signal: "SIGTERM" | "SIGKILL",
+): void => {
+  try {
+    process.kill(-processGroupId, signal)
+  } catch (error) {
+    if ((error as { code?: string }).code !== "ESRCH") throw error
+  }
+}
+
+const waitForSupervisedProcessGroupExit = async (
+  processGroupId: number,
+  timeoutMs: number,
+): Promise<boolean> => {
+  const deadline = Date.now() + timeoutMs
+  while (supervisedProcessGroupExists(processGroupId)) {
+    if (Date.now() >= deadline) return false
+    await delay(25)
+  }
+  return true
+}
+
+const terminateCurrentSupervisedProcessGroup = async (
+  processGroupId: number,
+): Promise<void> => {
+  if (!supervisedProcessGroupExists(processGroupId)) return
+  signalSupervisedProcessGroup(processGroupId, "SIGTERM")
+  if (await waitForSupervisedProcessGroupExit(processGroupId, 2_000)) return
+  signalSupervisedProcessGroup(processGroupId, "SIGKILL")
+  if (!(await waitForSupervisedProcessGroupExit(processGroupId, 8_000))) {
+    throw new Error(
+      `Current activation gate process group ${processGroupId} did not terminate`,
+    )
+  }
+}
+
+const runSupervisedGateProcess = async (
+  input: SupervisedGateInput,
+): Promise<{ stdout: string; stderr: string }> => {
+  if (process.platform === "win32") {
+    throw new Error("Activation gate supervision requires macOS or Linux")
+  }
+  await mkdir(input.leaseDirectory, { recursive: true })
+  const coordinatorNonce = randomUUID()
+  const leasePath = path.join(
+    input.leaseDirectory,
+    `${activationCandidateWorkspaceKey(input.activationId)}-${coordinatorNonce}.json`,
+  )
+  const supervisor = fork(
+    ACTIVATION_GATE_SUPERVISOR_PATH,
+    [leasePath, input.leaseDirectory],
+    {
+      detached: true,
+      execArgv: [],
+      stdio: ["ignore", "ignore", "ignore", "ipc"],
+    },
+  )
+  if (supervisor.pid === undefined) {
+    throw new Error("Activation gate supervisor did not receive a PID")
+  }
+  const completion = new Promise<{ stdout: string; stderr: string }>(
+    (resolve, reject) => {
+      let terminal:
+        | Readonly<{
+            type: "result"
+            exitCode: number | null
+            signal: string | null
+            stdout: string
+            stderr: string
+          }>
+        | Readonly<{ type: "error"; message: string }>
+        | undefined
+      let startedGatePid: number | undefined
+      supervisor.on("message", (message: unknown) => {
+        if (message === null || typeof message !== "object") return
+        const record = message as Record<string, unknown>
+        if (record.type === "started" && Number.isSafeInteger(record.gatePid)) {
+          startedGatePid = record.gatePid as number
+        } else if (
+          record.type === "error" &&
+          typeof record.message === "string"
+        ) {
+          terminal = { type: "error", message: record.message }
+        } else if (
+          record.type === "result" &&
+          (typeof record.exitCode === "number" || record.exitCode === null) &&
+          (typeof record.signal === "string" || record.signal === null) &&
+          typeof record.stdout === "string" &&
+          typeof record.stderr === "string"
+        ) {
+          terminal = {
+            type: "result",
+            exitCode: record.exitCode,
+            signal: record.signal,
+            stdout: record.stdout,
+            stderr: record.stderr,
+          }
+        }
+      })
+      supervisor.once("error", reject)
+      supervisor.once("exit", (code, signal) => {
+        void (async () => {
+          if (terminal?.type === "result" && terminal.exitCode === 0) {
+            resolve({ stdout: terminal.stdout, stderr: terminal.stderr })
+            return
+          }
+          if (terminal?.type === "result") {
+            reject(
+              new Error(
+                `Activation gate exited ${String(terminal.exitCode)}/${String(terminal.signal)}: ${terminal.stderr}`,
+              ),
+            )
+            return
+          }
+          if (terminal === undefined) {
+            try {
+              const lease = parseActivationGateLease(
+                await readFile(leasePath, "utf8"),
+              )
+              if (
+                lease.activationId !== input.activationId ||
+                lease.workspace !== input.workspace ||
+                lease.gateId !== input.gateId ||
+                lease.coordinatorPid !== process.pid ||
+                lease.coordinatorNonce !== coordinatorNonce ||
+                lease.supervisorPid !== supervisor.pid
+              ) {
+                throw new Error(
+                  "Unexpected supervisor exit left a mismatched gate lease",
+                )
+              }
+              if (lease.processGroupId !== null) {
+                await terminateCurrentSupervisedProcessGroup(
+                  lease.processGroupId,
+                )
+              }
+              await rm(leasePath, { force: true })
+              try {
+                await rmdir(input.leaseDirectory)
+              } catch (error) {
+                if (
+                  !["ENOENT", "ENOTEMPTY"].includes(
+                    (error as { code?: string }).code ?? "",
+                  )
+                ) {
+                  throw error
+                }
+              }
+            } catch (error) {
+              if ((error as { code?: string }).code !== "ENOENT") {
+                reject(error)
+                return
+              }
+            }
+          }
+          reject(
+            new Error(
+              terminal?.message ??
+                `Activation gate supervisor exited unexpectedly (${String(code)}/${String(signal)}; gate ${String(startedGatePid)})`,
+            ),
+          )
+        })()
+      })
+    },
+  )
+  try {
+    await writeFile(
+      leasePath,
+      `${JSON.stringify({
+        version: 1,
+        state: "starting",
+        activationId: input.activationId,
+        workspace: input.workspace,
+        gateId: input.gateId,
+        coordinatorPid: process.pid,
+        coordinatorNonce,
+        supervisorPid: supervisor.pid,
+        gatePid: null,
+        processGroupId: null,
+      })}\n`,
+      { flag: "wx", mode: 0o600 },
+    )
+    supervisor.send({
+      type: "start",
+      command: input.command,
+      args: [...input.args],
+      cwd: input.cwd,
+      environment: input.environment,
+      leasePath,
+      leaseDirectory: input.leaseDirectory,
+      activationId: input.activationId,
+      workspace: input.workspace,
+      gateId: input.gateId,
+      coordinatorPid: process.pid,
+      coordinatorNonce,
+    })
+  } catch (error) {
+    if (supervisor.connected) supervisor.disconnect()
+    await rm(leasePath, { force: true })
+    throw error
+  }
+  return await completion
 }
 
 const discoverNodeModulePaths = async (
@@ -1407,13 +1730,14 @@ export const createProductionActivationAdapter = (
   options: ProductionActivationAdapterOptions = {},
 ): ActivationCoordinatorAdapter => {
   const execute = options.processRunner ?? runProcess
-  const executeGate = options.gateProcessRunner ?? execute
+  const injectedGateRunner = options.gateProcessRunner ?? options.processRunner
   const now = options.now ?? (() => new Date())
   const protectedBaselineRoot = options.protectedBaselineRoot ?? repoRoot
   const candidateWorkspaceEnabled = options.candidateWorkspaceEnabled ?? true
+  const gateLeaseWaitMs = options.gateLeaseWaitMs ?? 15_000
   const candidateWorkspacePaths = async (
     activationId: string,
-  ): Promise<{ base: string; root: string }> => {
+  ): Promise<{ base: string; root: string; leaseDirectory: string }> => {
     const commonDir = (
       await execute("git", ["rev-parse", "--git-common-dir"], repoRoot)
     ).stdout.trim()
@@ -1422,10 +1746,14 @@ export const createProductionActivationAdapter = (
     return {
       base,
       root: path.join(base, activationCandidateWorkspaceKey(activationId)),
+      leaseDirectory:
+        options.gateLeaseDirectory ??
+        path.join(gitCommonDir, "cowards-activation-gate-leases"),
     }
   }
   const cleanupCandidate = async (activationId: string): Promise<void> => {
     const candidate = await candidateWorkspacePaths(activationId)
+    await waitForActivationGateLeases(candidate.leaseDirectory, gateLeaseWaitMs)
     await rm(candidate.base, { recursive: true, force: true })
   }
   const readLocalFile = async (filePath: string): Promise<FileBytes> => {
@@ -1487,6 +1815,8 @@ export const createProductionActivationAdapter = (
         return await operation(
           createProductionActivationAdapter(candidate.root, pool, {
             ...options,
+            activationId,
+            gateLeaseDirectory: candidate.leaseDirectory,
             protectedBaselineRoot,
             candidateWorkspaceEnabled: false,
           }),
@@ -1645,7 +1975,34 @@ export const createProductionActivationAdapter = (
       let result: { stdout: string; stderr: string } | undefined
       let gateError: unknown
       try {
-        result = await executeGate(command, args, gateRoot)
+        if (injectedGateRunner !== undefined) {
+          result = await injectedGateRunner(command, args, gateRoot)
+        } else {
+          const activationId = options.activationId
+          if (activationId === undefined) {
+            throw new Error(
+              "Production activation gates require an exact activation ID",
+            )
+          }
+          const candidate = await candidateWorkspacePaths(activationId)
+          const sourceEnvironment = options.gateEnvironment ?? process.env
+          const gateEnvironment = Object.fromEntries(
+            Object.entries(sourceEnvironment).filter(
+              (entry): entry is [string, string] =>
+                entry[1] !== undefined && !entry[0].startsWith("VITEST"),
+            ),
+          )
+          result = await runSupervisedGateProcess({
+            command,
+            args,
+            cwd: gateRoot,
+            environment: gateEnvironment,
+            leaseDirectory: candidate.leaseDirectory,
+            activationId,
+            workspace: repoRoot,
+            gateId: id,
+          })
+        }
       } catch (error) {
         gateError = error
       }
@@ -1690,7 +2047,9 @@ const main = async (): Promise<void> => {
     const result = await runV137ObservationV119Activation({
       mode,
       activationId,
-      adapter: createProductionActivationAdapter(repoRoot, pool),
+      adapter: createProductionActivationAdapter(repoRoot, pool, {
+        activationId,
+      }),
     })
     process.stdout.write(`${JSON.stringify(result)}\n`)
   } finally {
