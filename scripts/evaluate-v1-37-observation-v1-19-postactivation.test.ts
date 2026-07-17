@@ -100,7 +100,8 @@ const buildInput = (): V137ObservationV119PostactivationBuildInput => ({
   },
 })
 
-const passingProof = () => buildV137ObservationV119PostactivationProof(buildInput())
+const passingProof = () =>
+  buildV137ObservationV119PostactivationProof(buildInput())
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T
 
 describe("v1.37 observation-v1.19 postactivation proof", () => {
@@ -121,27 +122,96 @@ describe("v1.37 observation-v1.19 postactivation proof", () => {
   })
 
   it.each([
-    ["semantic key", (proof: ReturnType<typeof passingProof>) => (proof.selection.semantic.semanticAuthorityKey = "runtime-v1.18" as "runtime-v1.19")],
-    ["tuple", (proof: ReturnType<typeof passingProof>) => (proof.selection.semantic.tupleId = SHA_A)],
-    ["runtime ABI", (proof: ReturnType<typeof passingProof>) => (proof.selection.semantic.runtimeAbiVersion = "strategy-runtime-abi-v1.18" as "strategy-runtime-abi-v1.19")],
-    ["certificate", (proof: ReturnType<typeof passingProof>) => (proof.selection.semantic.certificateVersion = "runtime-conformance-certificate-v1.17" as "runtime-conformance-certificate-v1.19")],
-    ["arena", (proof: ReturnType<typeof passingProof>) => (proof.selection.semantic.arenaCatalogVersion = "wrong" as "canonical-arena-catalog-v1.37")],
-    ["Set policy", (proof: ReturnType<typeof passingProof>) => (proof.selection.semantic.setPolicyVersion = "wrong" as "canonical-set-policy-v1.37-four-condition-v1")],
-    ["corpus version", (proof: ReturnType<typeof passingProof>) => (proof.selection.corpus.version = "v2" as "v3")],
-    ["corpus root", (proof: ReturnType<typeof passingProof>) => (proof.selection.corpus.rootSha256 = SHA_A)],
-    ["reviewed corpus pin", (proof: ReturnType<typeof passingProof>) => (proof.selection.corpus.reviewedPinFileSha256 = SHA_A)],
-    ["trace version", (proof: ReturnType<typeof passingProof>) => (proof.selection.trace.version = "v1.37-conformance-trace-v3" as "v1.37-observation-trace-v4")],
-    ["trace root", (proof: ReturnType<typeof passingProof>) => (proof.selection.trace.rootSha256 = SHA_A)],
-    ["Workshop default", (proof: ReturnType<typeof passingProof>) => (proof.selection.workshop.version = "workshop-contract-v1.17" as "workshop-contract-v1.19")],
-    ["Workshop root", (proof: ReturnType<typeof passingProof>) => (proof.selection.workshop.rootSha256 = SHA_A)],
-    ["Go selector", (proof: ReturnType<typeof passingProof>) => (proof.selection.go.semanticAuthorityKey = "runtime-v1.18" as "runtime-v1.19")],
-    ["database selector", (proof: ReturnType<typeof passingProof>) => (proof.selection.database.semanticAuthorityKey = "runtime-v1.18" as "runtime-v1.19")],
+    [
+      "semantic key",
+      (proof: ReturnType<typeof passingProof>) =>
+        (proof.selection.semantic.semanticAuthorityKey =
+          "runtime-v1.18" as "runtime-v1.19"),
+    ],
+    [
+      "tuple",
+      (proof: ReturnType<typeof passingProof>) =>
+        (proof.selection.semantic.tupleId = SHA_A),
+    ],
+    [
+      "runtime ABI",
+      (proof: ReturnType<typeof passingProof>) =>
+        (proof.selection.semantic.runtimeAbiVersion =
+          "strategy-runtime-abi-v1.18" as "strategy-runtime-abi-v1.19"),
+    ],
+    [
+      "certificate",
+      (proof: ReturnType<typeof passingProof>) =>
+        (proof.selection.semantic.certificateVersion =
+          "runtime-conformance-certificate-v1.17" as "runtime-conformance-certificate-v1.19"),
+    ],
+    [
+      "arena",
+      (proof: ReturnType<typeof passingProof>) =>
+        (proof.selection.semantic.arenaCatalogVersion =
+          "wrong" as "canonical-arena-catalog-v1.37"),
+    ],
+    [
+      "Set policy",
+      (proof: ReturnType<typeof passingProof>) =>
+        (proof.selection.semantic.setPolicyVersion =
+          "wrong" as "canonical-set-policy-v1.37-four-condition-v1"),
+    ],
+    [
+      "corpus version",
+      (proof: ReturnType<typeof passingProof>) =>
+        (proof.selection.corpus.version = "v2" as "v3"),
+    ],
+    [
+      "corpus root",
+      (proof: ReturnType<typeof passingProof>) =>
+        (proof.selection.corpus.rootSha256 = SHA_A),
+    ],
+    [
+      "reviewed corpus pin",
+      (proof: ReturnType<typeof passingProof>) =>
+        (proof.selection.corpus.reviewedPinFileSha256 = SHA_A),
+    ],
+    [
+      "trace version",
+      (proof: ReturnType<typeof passingProof>) =>
+        (proof.selection.trace.version =
+          "v1.37-conformance-trace-v3" as "v1.37-observation-trace-v4"),
+    ],
+    [
+      "trace root",
+      (proof: ReturnType<typeof passingProof>) =>
+        (proof.selection.trace.rootSha256 = SHA_A),
+    ],
+    [
+      "Workshop default",
+      (proof: ReturnType<typeof passingProof>) =>
+        (proof.selection.workshop.version =
+          "workshop-contract-v1.17" as "workshop-contract-v1.19"),
+    ],
+    [
+      "Workshop root",
+      (proof: ReturnType<typeof passingProof>) =>
+        (proof.selection.workshop.rootSha256 = SHA_A),
+    ],
+    [
+      "Go selector",
+      (proof: ReturnType<typeof passingProof>) =>
+        (proof.selection.go.semanticAuthorityKey =
+          "runtime-v1.18" as "runtime-v1.19"),
+    ],
+    [
+      "database selector",
+      (proof: ReturnType<typeof passingProof>) =>
+        (proof.selection.database.semanticAuthorityKey =
+          "runtime-v1.18" as "runtime-v1.19"),
+    ],
   ] as const)("rejects a mixed successor %s", (_name, mutate) => {
     const proof = clone(passingProof())
     mutate(proof)
-    expect(validateV137ObservationV119PostactivationProof(proof, NOW)).not.toEqual(
-      [],
-    )
+    expect(
+      validateV137ObservationV119PostactivationProof(proof, NOW),
+    ).not.toEqual([])
   })
 
   it.each(V1_37_OBSERVATION_V1_19_ACTIVATION_FILES)(
@@ -150,9 +220,9 @@ describe("v1.37 observation-v1.19 postactivation proof", () => {
       const missing = clone(passingProof())
       missing.snapshots.files.activated =
         missing.snapshots.files.activated.filter((member) => member.id !== id)
-      expect(validateV137ObservationV119PostactivationProof(missing, NOW)).toContain(
-        "activated file snapshot",
-      )
+      expect(
+        validateV137ObservationV119PostactivationProof(missing, NOW),
+      ).toContain("activated file snapshot")
 
       const partial = clone(passingProof())
       const restored = partial.snapshots.files.restored.find(
@@ -160,9 +230,9 @@ describe("v1.37 observation-v1.19 postactivation proof", () => {
       )!
       restored.state = "present"
       restored.sha256 = SHA_C
-      expect(validateV137ObservationV119PostactivationProof(partial, NOW)).toContain(
-        "file rollback",
-      )
+      expect(
+        validateV137ObservationV119PostactivationProof(partial, NOW),
+      ).toContain("file rollback")
     },
   )
 
@@ -171,18 +241,20 @@ describe("v1.37 observation-v1.19 postactivation proof", () => {
     (id) => {
       const missing = clone(passingProof())
       missing.snapshots.database.activated =
-        missing.snapshots.database.activated.filter((member) => member.id !== id)
-      expect(validateV137ObservationV119PostactivationProof(missing, NOW)).toContain(
-        "activated database snapshot",
-      )
+        missing.snapshots.database.activated.filter(
+          (member) => member.id !== id,
+        )
+      expect(
+        validateV137ObservationV119PostactivationProof(missing, NOW),
+      ).toContain("activated database snapshot")
 
       const partial = clone(passingProof())
       partial.snapshots.database.reinstalled.find(
         (member) => member.id === id,
       )!.sha256 = SHA_C
-      expect(validateV137ObservationV119PostactivationProof(partial, NOW)).toContain(
-        "database reinstall",
-      )
+      expect(
+        validateV137ObservationV119PostactivationProof(partial, NOW),
+      ).toContain("database reinstall")
     },
   )
 
@@ -191,9 +263,9 @@ describe("v1.37 observation-v1.19 postactivation proof", () => {
     (id) => {
       const proof = clone(passingProof())
       proof.gates = proof.gates.filter((gate) => gate.id !== id)
-      expect(validateV137ObservationV119PostactivationProof(proof, NOW)).toContain(
-        "gates",
-      )
+      expect(
+        validateV137ObservationV119PostactivationProof(proof, NOW),
+      ).toContain("gates")
     },
   )
 
@@ -216,32 +288,32 @@ describe("v1.37 observation-v1.19 postactivation proof", () => {
     for (const mutate of mutations) {
       const proof = clone(passingProof())
       mutate(proof)
-      expect(validateV137ObservationV119PostactivationProof(proof, NOW)).toContain(
-        "gates",
-      )
+      expect(
+        validateV137ObservationV119PostactivationProof(proof, NOW),
+      ).toContain("gates")
     }
   })
 
   it("rejects inferred or incomplete D-04 admission", () => {
     const inferred = clone(passingProof())
     inferred.revisionAdmission.inferenceAllowed = true
-    expect(validateV137ObservationV119PostactivationProof(inferred, NOW)).toContain(
-      "revision admission",
-    )
+    expect(
+      validateV137ObservationV119PostactivationProof(inferred, NOW),
+    ).toContain("revision admission")
 
     const counted = clone(passingProof())
     counted.revisionAdmission.countedRevisionCount = 1
-    expect(validateV137ObservationV119PostactivationProof(counted, NOW)).toContain(
-      "revision admission",
-    )
+    expect(
+      validateV137ObservationV119PostactivationProof(counted, NOW),
+    ).toContain("revision admission")
   })
 
   it("rejects protected baseline drift and recursively rejects private fields", () => {
     const drifted = clone(passingProof())
     drifted.protectedBaseline.baselineSha256 = SHA_A
-    expect(validateV137ObservationV119PostactivationProof(drifted, NOW)).toContain(
-      "protected baseline",
-    )
+    expect(
+      validateV137ObservationV119PostactivationProof(drifted, NOW),
+    ).toContain("protected baseline")
 
     const privateProof = clone(passingProof()) as unknown as Record<
       string,
@@ -370,7 +442,9 @@ describe("v1.37 observation-v1.19 postactivation proof", () => {
       ),
       "utf8",
     )
-    expect(source).not.toContain("validateV137ObservationV119PreactivationProof")
+    expect(source).not.toContain(
+      "validateV137ObservationV119PreactivationProof",
+    )
     expect(source).not.toContain('"runtime-v1.17"')
   })
 })
