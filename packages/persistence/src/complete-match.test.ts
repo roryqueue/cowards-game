@@ -15,6 +15,7 @@ import {
 import {
   CANONICAL_COMPATIBILITY_TUPLES,
   CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE_ID,
+  ARENA_CATALOG_VERSION_V1_37,
   RUNTIME_EXECUTION_SERVICE_VERSION_V1_18,
   createRuntimeSemanticAdmissionClaimV118,
   createRuntimeSemanticTupleV118,
@@ -68,7 +69,7 @@ const successorConditionIdentity = () => ({
   signedRequestSha256: `sha256:${"4".repeat(64)}` as const,
   seed: "seed:successor",
   arenaId: "arena:smoke:v1",
-  arenaCatalogVersion: "arena-catalog-v1.37" as const,
+  arenaCatalogVersion: ARENA_CATALOG_VERSION_V1_37,
   arenaSemanticGeometryHash: `sha256:${"5".repeat(64)}` as const,
   semanticTupleId: CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE_ID,
   bottom: {

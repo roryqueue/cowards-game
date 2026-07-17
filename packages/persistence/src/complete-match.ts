@@ -11,6 +11,7 @@ import {
 import {
   CANONICAL_COMPATIBILITY_TUPLES,
   CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE_ID,
+  ARENA_CATALOG_VERSION_V1_37,
   RuntimeExecutionFinalStateSchema,
   RuntimeExecutionServiceRequestV118Schema,
   RuntimeExecutionResolvedEvidenceSnapshotSchema,
@@ -89,7 +90,7 @@ export interface SuccessorConditionIdentityV119 {
   readonly signedRequestSha256: `sha256:${string}`
   readonly seed: string
   readonly arenaId: string
-  readonly arenaCatalogVersion: "arena-catalog-v1.37"
+  readonly arenaCatalogVersion: typeof ARENA_CATALOG_VERSION_V1_37
   readonly arenaSemanticGeometryHash: `sha256:${string}`
   readonly semanticTupleId: typeof CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE_ID
   readonly bottom: Readonly<SuccessorRevisionRevalidationIdentityV119>
@@ -98,8 +99,7 @@ export interface SuccessorConditionIdentityV119 {
   readonly initialInitiativePlayerId: string
 }
 
-export interface SuccessorConditionTerminalEvidenceV119
-  extends SuccessorConditionIdentityV119 {
+export interface SuccessorConditionTerminalEvidenceV119 extends SuccessorConditionIdentityV119 {
   readonly terminalKind: "success" | "player_violation"
 }
 
@@ -142,7 +142,7 @@ const assertSuccessorConditionIdentityV119: (
     !hasExactKeys(value, successorConditionIdentityKeysV119) ||
     value.semanticAuthorityKey !== "runtime-v1.19" ||
     value.semanticTupleId !== CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE_ID ||
-    value.arenaCatalogVersion !== "arena-catalog-v1.37" ||
+    value.arenaCatalogVersion !== ARENA_CATALOG_VERSION_V1_37 ||
     !Number.isInteger(value.conditionOrdinal) ||
     Number(value.conditionOrdinal) < 0 ||
     Number(value.conditionOrdinal) > 3 ||
