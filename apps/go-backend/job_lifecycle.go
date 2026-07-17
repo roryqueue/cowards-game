@@ -590,6 +590,57 @@ type recordAttemptFailureInput struct {
 	Details      map[string]any
 }
 
+type successorJobAttemptDispositionV119 struct {
+	Status            string
+	TerminalEvidence  bool
+	NextAttemptNumber int
+	Identity          successorConditionIdentityV119
+}
+
+// classifySuccessorJobAttemptV119 is candidate-only lifecycle policy. It
+// classifies structural result ownership without inspecting guest output or
+// deriving any Match, Chronicle, or Strategy semantics.
+func classifySuccessorJobAttemptV119(
+	scheduled successorConditionIdentityV119,
+	attempted successorConditionIdentityV119,
+	resultClass string,
+	retryable bool,
+	attemptNumber int,
+	maxAttempts int,
+) (successorJobAttemptDispositionV119, error) {
+	switch resultClass {
+	case "success", "player_violation":
+		terminal := successorConditionTerminalEvidenceV119{
+			successorConditionIdentityV119: attempted,
+			TerminalKind:                   resultClass,
+		}
+		admitted, err := admitSuccessorConditionTerminalV119(scheduled, terminal)
+		if err != nil {
+			return successorJobAttemptDispositionV119{}, err
+		}
+		return successorJobAttemptDispositionV119{
+			Status: resultClass, TerminalEvidence: true, Identity: admitted.Identity,
+		}, nil
+	case "system_failure":
+		decision, err := evaluateSuccessorSystemFailureRetryV119(
+			scheduled, attempted, retryable, attemptNumber, maxAttempts, false,
+		)
+		if err != nil {
+			return successorJobAttemptDispositionV119{}, err
+		}
+		return successorJobAttemptDispositionV119{
+			Status: decision.Disposition, NextAttemptNumber: decision.NextAttemptNumber, Identity: decision.Identity,
+		}, nil
+	case "cancelled":
+		if err := validateSuccessorConditionIdentityV119(scheduled); err != nil || scheduled != attempted {
+			return successorJobAttemptDispositionV119{}, errors.New("successor frozen condition identity mismatch")
+		}
+		return successorJobAttemptDispositionV119{Status: "degraded", Identity: scheduled}, nil
+	default:
+		return successorJobAttemptDispositionV119{}, errors.New("successor attempt result class is invalid")
+	}
+}
+
 func newMatchJobLifecycle(pool *pgxpool.Pool) *matchJobLifecycle {
 	return &matchJobLifecycle{
 		pool:                          pool,

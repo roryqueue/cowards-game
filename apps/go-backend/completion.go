@@ -82,6 +82,250 @@ type matchCompletionOwnershipRow struct {
 	TopPlayerID              string
 }
 
+type successorRevisionRevalidationIdentityV119 struct {
+	EntrantKey         string
+	PlayerID           string
+	StrategyRevisionID string
+	RevalidationID     string
+	RevalidationRoot   string
+}
+
+// successorConditionIdentityV119 is structural scheduling evidence only. It
+// intentionally contains no Chronicle, event, state, outcome, or Strategy
+// payload from which Go could recreate gameplay semantics.
+type successorConditionIdentityV119 struct {
+	SemanticAuthorityKey        string
+	MatchSetID                  string
+	MatchID                     string
+	ScenarioID                  string
+	ConditionID                 string
+	ConditionOrdinal            int
+	RequestIdentity             string
+	SignedRequestSHA256         string
+	Seed                        string
+	ArenaID                     string
+	ArenaCatalogVersion         string
+	ArenaSemanticGeometryHash   string
+	SemanticTupleID             string
+	Bottom                      successorRevisionRevalidationIdentityV119
+	Top                         successorRevisionRevalidationIdentityV119
+	InitialInitiativeEntrantKey string
+	InitialInitiativePlayerID   string
+}
+
+type successorConditionTerminalEvidenceV119 struct {
+	successorConditionIdentityV119
+	TerminalKind string
+}
+
+type admittedSuccessorConditionTerminalV119 struct {
+	TerminalKind string
+	Identity     successorConditionIdentityV119
+}
+
+func validateSuccessorConditionIdentityV119(identity successorConditionIdentityV119) error {
+	authority, ok := arenaSetAuthorityV137CandidateBySemanticAuthorityKey(identity.SemanticAuthorityKey)
+	if !ok || authority.Policy.Active || identity.SemanticAuthorityKey != "runtime-v1.19" ||
+		identity.SemanticTupleID != authority.Tuple.TupleID ||
+		identity.ArenaCatalogVersion != authority.ArenaCatalogVersion ||
+		identity.MatchSetID == "" || identity.MatchID == "" || identity.Seed == "" ||
+		!strings.HasPrefix(identity.ScenarioID, "set-scenario:sha256:") ||
+		!strings.HasPrefix(identity.ConditionID, "set-condition:sha256:") ||
+		!strings.HasPrefix(identity.RequestIdentity, "set-request:sha256:") ||
+		!isPrefixedLowerSHA256(identity.SignedRequestSHA256) ||
+		!isPrefixedLowerSHA256(identity.ArenaSemanticGeometryHash) ||
+		identity.ConditionOrdinal < 0 || identity.ConditionOrdinal >= authority.Policy.ConditionCount {
+		return errors.New("successor frozen condition identity is invalid")
+	}
+	var arena *arenaSetAuthorityV137Arena
+	for index := range authority.Arenas {
+		if authority.Arenas[index].ID == identity.ArenaID {
+			arena = &authority.Arenas[index]
+			break
+		}
+	}
+	if arena == nil || arena.Status != "active" || !arena.Schedulable || arena.AliasOf != "" ||
+		arena.SemanticGeometryHash != identity.ArenaSemanticGeometryHash {
+		return errors.New("successor frozen condition identity is invalid")
+	}
+	validRevision := func(value successorRevisionRevalidationIdentityV119) bool {
+		return value.EntrantKey != "" && value.PlayerID != "" && value.StrategyRevisionID != "" &&
+			value.RevalidationID != "" && isPrefixedLowerSHA256(value.RevalidationRoot)
+	}
+	if !validRevision(identity.Bottom) || !validRevision(identity.Top) ||
+		identity.Bottom.EntrantKey == identity.Top.EntrantKey ||
+		identity.Bottom.PlayerID == identity.Top.PlayerID ||
+		identity.Bottom.StrategyRevisionID == identity.Top.StrategyRevisionID ||
+		identity.Bottom.RevalidationID == identity.Top.RevalidationID {
+		return errors.New("successor frozen condition identity is invalid")
+	}
+	initiative := identity.Bottom
+	if identity.InitialInitiativeEntrantKey == identity.Top.EntrantKey {
+		initiative = identity.Top
+	} else if identity.InitialInitiativeEntrantKey != identity.Bottom.EntrantKey {
+		return errors.New("successor frozen condition identity is invalid")
+	}
+	if identity.InitialInitiativePlayerID != initiative.PlayerID {
+		return errors.New("successor frozen condition identity is invalid")
+	}
+	return nil
+}
+
+func admitSuccessorConditionTerminalV119(
+	scheduled successorConditionIdentityV119,
+	terminal successorConditionTerminalEvidenceV119,
+) (admittedSuccessorConditionTerminalV119, error) {
+	if err := validateSuccessorConditionIdentityV119(scheduled); err != nil {
+		return admittedSuccessorConditionTerminalV119{}, err
+	}
+	if terminal.TerminalKind != "success" && terminal.TerminalKind != "player_violation" {
+		return admittedSuccessorConditionTerminalV119{}, errors.New("successor terminal evidence is invalid")
+	}
+	if err := validateSuccessorConditionIdentityV119(terminal.successorConditionIdentityV119); err != nil ||
+		!reflect.DeepEqual(scheduled, terminal.successorConditionIdentityV119) {
+		return admittedSuccessorConditionTerminalV119{}, errors.New("successor frozen condition identity mismatch")
+	}
+	return admittedSuccessorConditionTerminalV119{TerminalKind: terminal.TerminalKind, Identity: scheduled}, nil
+}
+
+// loadSuccessorConditionIdentityV119 locks no gameplay document. It rechecks
+// only immutable scheduling, request, catalog, execution-pair, and D-04
+// revision evidence before a candidate terminal writer may mutate lifecycle
+// rows. The normal Phase-259 completion path does not call this function.
+func loadSuccessorConditionIdentityV119(
+	ctx context.Context,
+	tx pgx.Tx,
+	jobID string,
+	leaseToken string,
+	signedRequestSHA256 string,
+) (successorConditionIdentityV119, error) {
+	if tx == nil || jobID == "" || leaseToken == "" || !isPrefixedLowerSHA256(signedRequestSHA256) {
+		return successorConditionIdentityV119{}, errors.New("successor completion identity is unavailable")
+	}
+	var row struct {
+		matchSetID, matchID, scenarioID, conditionID, requestIdentity string
+		seed, arenaID, catalogVersion, geometryHash                   string
+		tupleID, rules, engine, runtimeABI, chronicle, setPolicy      string
+		bottomKey, topKey, initialKey                                 string
+		bottomPlayer, topPlayer, initialPlayer                        string
+		bottomRevision, topRevision, pairHash                         string
+		ordinal                                                       int
+		bottomEvidence, topEvidence                                   []byte
+	}
+	err := tx.QueryRow(ctx, `
+		select ms.id, m.id, ss.scenario_id, sc.condition_id,
+		       sc.condition_ordinal, sc.request_identity, m.seed,
+		       m.arena_variant_id, sc.arena_catalog_version,
+		       sc.arena_semantic_geometry_hash, ms.compatibility_tuple_id,
+		       ms.compatibility_rules_version, ms.compatibility_engine_version,
+		       ms.compatibility_runtime_abi_version,
+		       ms.compatibility_chronicle_version,
+		       ms.compatibility_set_policy_version,
+		       sc.bottom_entrant_key, sc.top_entrant_key,
+		       sc.initial_initiative_entrant_key, sc.bottom_player_id,
+		       sc.top_player_id, sc.initial_initiative_player_id,
+		       m.bottom_strategy_revision_id, m.top_strategy_revision_id,
+		       m.execution_evidence_pair_hash,
+		       m.bottom_execution_evidence, m.top_execution_evidence
+		  from match_jobs j
+		  join matches m on m.id=j.match_id
+		  join match_sets ms on ms.id=m.successor_match_set_id
+		  join set_scenarios ss
+		    on ss.match_set_id=m.successor_match_set_id
+		   and ss.scenario_id=m.successor_scenario_id
+		  join set_conditions sc
+		    on sc.match_set_id=m.successor_match_set_id
+		   and sc.scenario_id=m.successor_scenario_id
+		   and sc.condition_id=m.successor_condition_id
+		   and sc.condition_ordinal=m.successor_condition_ordinal
+		   and sc.arena_catalog_version=m.successor_arena_catalog_version
+		   and sc.arena_semantic_geometry_hash=m.successor_arena_semantic_geometry_hash
+		   and sc.bottom_entrant_key=m.successor_bottom_entrant_key
+		   and sc.top_entrant_key=m.successor_top_entrant_key
+		   and sc.initial_initiative_entrant_key=m.successor_initial_initiative_entrant_key
+		   and sc.initial_initiative_player_id=m.initial_initiative_player_id
+		  join arena_catalog_entries catalog
+		    on catalog.catalog_version=sc.arena_catalog_version
+		   and catalog.arena_id=m.arena_variant_id
+		   and catalog.semantic_geometry_hash=sc.arena_semantic_geometry_hash
+		   and catalog.arena_status='active' and catalog.schedulable
+		 where j.id=$1 and j.lease_token=$2 and j.status='running'
+		   and m.status='running'
+		   and ms.compatibility_runtime_abi_version='strategy-runtime-abi-v1.19'
+		   and ms.compatibility_set_policy_version='canonical-set-policy-v1.37-four-condition-v1'
+		 for share of j, m, ms, ss, sc, catalog
+	`, jobID, leaseToken).Scan(
+		&row.matchSetID, &row.matchID, &row.scenarioID, &row.conditionID,
+		&row.ordinal, &row.requestIdentity, &row.seed, &row.arenaID,
+		&row.catalogVersion, &row.geometryHash, &row.tupleID, &row.rules,
+		&row.engine, &row.runtimeABI, &row.chronicle, &row.setPolicy,
+		&row.bottomKey, &row.topKey, &row.initialKey, &row.bottomPlayer,
+		&row.topPlayer, &row.initialPlayer, &row.bottomRevision,
+		&row.topRevision, &row.pairHash, &row.bottomEvidence, &row.topEvidence,
+	)
+	if err != nil {
+		return successorConditionIdentityV119{}, errors.New("successor completion identity is unavailable")
+	}
+	var bottomStored, topStored candidateEntrantExecutionEvidenceV119
+	if decodeStrictJSON(row.bottomEvidence, &bottomStored) != nil || decodeStrictJSON(row.topEvidence, &topStored) != nil {
+		return successorConditionIdentityV119{}, errors.New("successor completion D-04 evidence is unavailable")
+	}
+	tuple := registeredCompatibilityTuple{TupleID: row.tupleID, Tuple: canonicalCompatibilityTuple{
+		Rules: row.rules, Engine: row.engine, RuntimeABI: row.runtimeABI,
+		Chronicle: row.chronicle, ArenaCatalog: row.catalogVersion, SetPolicy: row.setPolicy,
+	}}
+	baseIdentity := &goMatchSetIntegrityIdentity{
+		Tuple:    tuple,
+		Entrants: []goEntrantExecutionEvidence{bottomStored.goEntrantExecutionEvidence, topStored.goEntrantExecutionEvidence},
+		ByKey: map[string]goEntrantExecutionEvidence{
+			row.bottomKey: bottomStored.goEntrantExecutionEvidence,
+			row.topKey:    topStored.goEntrantExecutionEvidence,
+		},
+	}
+	currentAdmissions, err := loadCandidateRevisionAdmissionsV119(ctx, tx, []candidateSetEntrantV119{
+		{EntrantKey: row.bottomKey, StrategyRevisionID: row.bottomRevision, PlayerID: row.bottomPlayer},
+		{EntrantKey: row.topKey, StrategyRevisionID: row.topRevision, PlayerID: row.topPlayer},
+	})
+	if err != nil {
+		return successorConditionIdentityV119{}, errors.New("successor completion D-04 evidence is unavailable")
+	}
+	currentEvidence, err := validateCandidateRevisionAdmissionsV119(baseIdentity, currentAdmissions)
+	if err != nil || !reflect.DeepEqual(currentEvidence[row.bottomKey], bottomStored) ||
+		!reflect.DeepEqual(currentEvidence[row.topKey], topStored) {
+		return successorConditionIdentityV119{}, errors.New("successor completion D-04 evidence changed")
+	}
+	pair, err := candidateEvidencePairV119(currentEvidence, candidateFourConditionMatchV119{
+		RequestIdentity:  row.requestIdentity,
+		BottomEntrantKey: row.bottomKey, TopEntrantKey: row.topKey,
+		BottomStrategyRevisionID: row.bottomRevision, TopStrategyRevisionID: row.topRevision,
+	})
+	if err != nil || pair.PairHash != row.pairHash {
+		return successorConditionIdentityV119{}, errors.New("successor completion request evidence changed")
+	}
+	identity := successorConditionIdentityV119{
+		SemanticAuthorityKey: "runtime-v1.19", MatchSetID: row.matchSetID, MatchID: row.matchID,
+		ScenarioID: row.scenarioID, ConditionID: row.conditionID, ConditionOrdinal: row.ordinal,
+		RequestIdentity: row.requestIdentity, SignedRequestSHA256: signedRequestSHA256, Seed: row.seed,
+		ArenaID: row.arenaID, ArenaCatalogVersion: row.catalogVersion,
+		ArenaSemanticGeometryHash: row.geometryHash, SemanticTupleID: row.tupleID,
+		Bottom: successorRevisionRevalidationIdentityV119{
+			EntrantKey: row.bottomKey, PlayerID: row.bottomPlayer, StrategyRevisionID: row.bottomRevision,
+			RevalidationID:   bottomStored.RevisionAdmission.RevalidationID,
+			RevalidationRoot: bottomStored.RevisionAdmission.ExecutionReceiptRoot,
+		},
+		Top: successorRevisionRevalidationIdentityV119{
+			EntrantKey: row.topKey, PlayerID: row.topPlayer, StrategyRevisionID: row.topRevision,
+			RevalidationID:   topStored.RevisionAdmission.RevalidationID,
+			RevalidationRoot: topStored.RevisionAdmission.ExecutionReceiptRoot,
+		},
+		InitialInitiativeEntrantKey: row.initialKey, InitialInitiativePlayerID: row.initialPlayer,
+	}
+	if err := validateSuccessorConditionIdentityV119(identity); err != nil {
+		return successorConditionIdentityV119{}, err
+	}
+	return identity, nil
+}
+
 func validateSelectedRuntimeCompletionAuthority(input completeMatchInput, integrity *claimedMatchIntegrityIdentity) error {
 	if integrity == nil || integrity.CompatibilityTuple.RuntimeABI != selectedStrategyRuntimeABIVersion() {
 		return errors.New("match completion runtime ABI is not the selected authority")

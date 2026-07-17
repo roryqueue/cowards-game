@@ -121,3 +121,31 @@ func TestCandidateConditionRetryPolicyV119(t *testing.T) {
 		}
 	}
 }
+
+func TestCandidateJobAttemptLifecycleV119(t *testing.T) {
+	identity := candidateConditionIdentityV119ForTest()
+	for _, resultClass := range []string{"success", "player_violation"} {
+		decision, err := classifySuccessorJobAttemptV119(identity, identity, resultClass, false, 1, 3)
+		if err != nil || decision.Status != resultClass || !decision.TerminalEvidence || decision.NextAttemptNumber != 0 {
+			t.Fatalf("%s did not become exact terminal evidence: decision=%+v err=%v", resultClass, decision, err)
+		}
+	}
+	retry, err := classifySuccessorJobAttemptV119(identity, identity, "system_failure", true, 1, 3)
+	if err != nil || retry.Status != "retry" || retry.TerminalEvidence || retry.NextAttemptNumber != 2 {
+		t.Fatalf("retryable system failure changed ownership: decision=%+v err=%v", retry, err)
+	}
+	for _, test := range []struct {
+		resultClass string
+		retryable   bool
+		attempt     int
+	}{
+		{resultClass: "system_failure", retryable: true, attempt: 3},
+		{resultClass: "system_failure", retryable: false, attempt: 1},
+		{resultClass: "cancelled", retryable: false, attempt: 1},
+	} {
+		decision, err := classifySuccessorJobAttemptV119(identity, identity, test.resultClass, test.retryable, test.attempt, 3)
+		if err != nil || decision.Status != "degraded" || decision.TerminalEvidence {
+			t.Fatalf("%s did not stay nonterminal and non-counted: decision=%+v err=%v", test.resultClass, decision, err)
+		}
+	}
+}

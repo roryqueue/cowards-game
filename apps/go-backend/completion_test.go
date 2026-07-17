@@ -43,7 +43,7 @@ func candidateConditionIdentityV119ForTest() successorConditionIdentityV119 {
 		Seed:                      "seed:successor",
 		ArenaID:                   "arena:smoke:v1",
 		ArenaCatalogVersion:       "canonical-arena-catalog-v1.37",
-		ArenaSemanticGeometryHash: "sha256:" + strings.Repeat("5", 64),
+		ArenaSemanticGeometryHash: "sha256:39aecc22c184660c1c08ab810fbfa3066da1a650b20e91d72a838ed7fb70a0e1",
 		SemanticTupleID:           "sha256:37c9a07425d454c74859112debcc3ef362d43e80d5767560d9bde28a3c8d5e73",
 		Bottom: successorRevisionRevalidationIdentityV119{
 			EntrantKey: "entrant:a", PlayerID: "player:a", StrategyRevisionID: "revision:a",
