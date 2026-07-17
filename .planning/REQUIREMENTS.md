@@ -67,7 +67,7 @@
 - [x] **STRAT-01**: `StrategyInput` exposes explicit canonical initial-initiative information across every supported language envelope.
 - [x] **STRAT-02**: `SoldierBrainInput` exposes scheduler-owned `hasAdvancedThisActivation` state across every supported language envelope.
 - [x] **STRAT-03**: Direct execution, runtime-service, generated contracts, examples, and SDK/Workshop documentation agree on the same Strategy observation and budget contract.
-- [ ] **STRAT-04**: Strategy execution remains behind runtime-service, Runtime Broker, and provider boundaries and never moves into web, API, or Go processes.
+- [x] **STRAT-04**: Strategy execution remains behind runtime-service, Runtime Broker, and provider boundaries and never moves into web, API, or Go processes.
 
 ### Arena Authority and Set Fairness
 
@@ -163,7 +163,7 @@ These candidates are optional and are not required for v1.37 completion.
 | STRAT-01 | Phase 260 | Complete |
 | STRAT-02 | Phase 260 | Complete |
 | STRAT-03 | Phase 260 | Complete |
-| STRAT-04 | Phase 260 | Pending |
+| STRAT-04 | Phase 260 | Complete |
 | SET-01 | Phase 260 | Complete |
 | SET-02 | Phase 260 | Complete |
 | SET-03 | Phase 260 | Pending |

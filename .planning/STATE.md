@@ -5,15 +5,15 @@ milestone_name: Rules Integrity and Strategy Evaluation Foundations — ACTIVE
 current_phase: 260
 current_phase_name: truthful-strategy-inputs-arena-authority-and-set-fairness
 status: executing
-stopped_at: Completed 260-17-PLAN.md
-last_updated: "2026-07-17T03:12:12.595Z"
+stopped_at: Completed 260-03-PLAN.md
+last_updated: "2026-07-17T03:43:59.775Z"
 last_activity: 2026-07-17
-last_activity_desc: Phase 260 execution started
+last_activity_desc: Completed Phase 260 Plan 03 successor kernel observations
 progress:
   total_phases: 6
   completed_phases: 4
   total_plans: 112
-  completed_plans: 91
+  completed_plans: 92
   percent: 67
 ---
 
@@ -29,11 +29,11 @@ See: `.planning/PROJECT.md` (updated 2026-07-12)
 ## Current Position
 
 Phase: 260 (truthful-strategy-inputs-arena-authority-and-set-fairness) — EXECUTING
-Plan: 6 of 26
+Plan: 7 of 26
 Status: Ready to execute
 Last activity: 2026-07-17 — Phase 260 execution started
 
-Progress: [████████░░] 78%
+Progress: [████████░░] 82%
 
 ## Durable Decisions
 
@@ -75,8 +75,8 @@ Progress: [████████░░] 78%
 
 **Resume file:** None
 
-Last session: 2026-07-17T03:11:41.183Z
-Stopped at: Completed 260-17-PLAN.md
+Last session: 2026-07-17T03:43:30.887Z
+Stopped at: Completed 260-03-PLAN.md
 Next command: `$gsd-execute-phase 260`.
 
 ## Performance Metrics
@@ -132,6 +132,7 @@ Next command: `$gsd-execute-phase 260`.
 | Phase 260 P04 | 22min | 3 tasks | 7 files |
 | Phase 260 P16 | 8min | 2 tasks | 5 files |
 | Phase 260 P17 | 12min | 2 tasks | 7 files |
+| Phase 260 P03 | 17min | 3 tasks | 14 files |
 
 ## Decisions
 
@@ -286,3 +287,5 @@ Next command: `$gsd-execute-phase 260`.
 - [Phase 260]: Keep both generated production Go files import-free and data-only. — Go receives structural authority data without geometry hashing, fairness derivation, gameplay, Chronicle construction, persistence, or Strategy execution ownership.
 - [Phase 260]: Keep unversioned public observation aliases selector-backed while exact v1.17 and v1.19 contracts remain directly addressable. — Plan 260-14 can activate one compact authority without handwritten consumer edits or preactivation drift.
 - [Phase 260]: Project the v1.19 map-config candidate only from the validated spec manifest and keep the complete Phase-259 branch intact. — Open Field remains readable history but cannot manufacture schedulable diversity, and no geometry is re-authored.
+- [Phase 260]: Keep v1.19 kernel execution behind exact candidate-only entry points until Plan 14. — Current and v1.17 dispatch remain the complete Phase-259 authority.
+- [Phase 260]: Source successor initiative and Advance observations only from canonical kernel state. — Adapters transport signed facts without seed, Round-parity, event, or position-difference inference.
