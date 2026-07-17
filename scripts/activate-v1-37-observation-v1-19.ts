@@ -156,6 +156,8 @@ export type ActivationMode =
   | "abort"
   | "compensate"
 
+export const PLAN14_ACTIVATION_ID = "activation:phase260:plan14:production"
+
 export interface RunActivationInput {
   readonly mode: ActivationMode
   readonly activationId: string
@@ -346,7 +348,7 @@ const manifestFor = (
     }).sort((left, right) => left.path.localeCompare(right.path)),
   )
 
-interface SnapshotEntry {
+export interface ActivationPathDigest {
   readonly path: string
   readonly state: "present" | "absent"
   readonly sha256?: Sha256
@@ -354,7 +356,7 @@ interface SnapshotEntry {
 
 const snapshotEntries = (
   snapshot: ReadonlyMap<string, FileBytes>,
-): readonly SnapshotEntry[] =>
+): readonly ActivationPathDigest[] =>
   ALL_PATHS.map((filePath) => {
     const file = snapshot.get(filePath)
     if (file === undefined)
@@ -364,10 +366,13 @@ const snapshotEntries = (
       : { path: filePath, state: "absent" }
   })
 
+export const hashActivationPathDigests = (
+  entries: readonly ActivationPathDigest[],
+): Sha256 =>
+  sha256(`cowards-game:activation-six-path-preimage:v1\0${stable(entries)}`)
+
 const snapshotRoot = (snapshot: ReadonlyMap<string, FileBytes>): Sha256 =>
-  sha256(
-    `cowards-game:activation-six-path-preimage:v1\0${stable(snapshotEntries(snapshot))}`,
-  )
+  hashActivationPathDigests(snapshotEntries(snapshot))
 
 const captureCommitSnapshot = async (
   adapter: ActivationCoordinatorAdapter,
@@ -435,7 +440,7 @@ interface ActivationProof {
   readonly pendingSelectionRoot: string
   readonly selectorManifest: readonly SemanticAuthoritySelectorManifestEntry[]
   readonly selectorManifestRoot: Sha256
-  readonly preimage: readonly SnapshotEntry[]
+  readonly preimage: readonly ActivationPathDigest[]
   readonly proofPreimageRoot: Sha256
   readonly validationReceipts: readonly GateReceipt[]
   readonly rollbackReceipt: GateReceipt | null
@@ -479,23 +484,60 @@ const pendingForward = (head: ActivationHead, activationId: string) => {
   return head.pendingIntent
 }
 
+const isExactGateReceipt = (
+  value: unknown,
+  expectedId: string,
+): value is GateReceipt => {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    return false
+  }
+  const receipt = value as Record<string, unknown>
+  return (
+    Object.keys(receipt).sort().join("\0") ===
+      [
+        "command",
+        "completedAt",
+        "exitCode",
+        "id",
+        "stderrSha256",
+        "stdoutSha256",
+      ]
+        .sort()
+        .join("\0") &&
+    receipt.id === expectedId &&
+    receipt.command === ACTIVATION_GATE_COMMANDS[expectedId] &&
+    receipt.exitCode === 0 &&
+    typeof receipt.stdoutSha256 === "string" &&
+    /^sha256:[0-9a-f]{64}$/u.test(receipt.stdoutSha256) &&
+    typeof receipt.stderrSha256 === "string" &&
+    /^sha256:[0-9a-f]{64}$/u.test(receipt.stderrSha256) &&
+    typeof receipt.completedAt === "string" &&
+    !Number.isNaN(Date.parse(receipt.completedAt))
+  )
+}
+
 const assertProofMatchesIntent = (
   proof: ActivationProof,
   intent: ReturnType<typeof pendingForward>,
   activationId: string,
 ): void => {
   const targetManifest = manifestFor(buildV119SelectorBytes())
+  const receiptsAreExact = proof.validationReceipts.every((receipt, index) =>
+    isExactGateReceipt(receipt, ACTIVATION_VALIDATION_GATE_IDS[index]),
+  )
   if (
     proof.activationId !== activationId ||
     proof.parentHead !== intent.parentHead ||
     proof.pendingSelectionRoot !== intent.targetRoot ||
     proof.selectorManifestRoot !== intent.selectorManifestRoot ||
     proof.proofPreimageRoot !== intent.proofPreimageRoot ||
+    hashActivationPathDigests(proof.preimage) !== proof.proofPreimageRoot ||
     stable(proof.selectorManifest) !== stable(targetManifest) ||
     stable(proof.selectorManifest) !== stable(intent.selectorManifest) ||
     stable(proof.validationReceipts.map(({ id }) => id)) !==
       stable(ACTIVATION_VALIDATION_GATE_IDS) ||
-    proof.validationReceipts.some(({ exitCode }) => exitCode !== 0)
+    !receiptsAreExact ||
+    !isExactGateReceipt(proof.rollbackReceipt, "rollback")
   ) {
     throw new Error("Activation proof does not match the durable intent")
   }
@@ -558,13 +600,14 @@ const assertFinalizedActivation = async (
   adapter: ActivationCoordinatorAdapter,
   head: ActivationHead,
   activationId: string,
+  requireCurrentHead = true,
 ): Promise<void> => {
   const finalization = head.finalization
   if (
-    head.state !== "active-v1.19-finalized" ||
     finalization === null ||
     finalization.activationId !== activationId ||
-    (await adapter.gitHead()) !== finalization.commitSha ||
+    (requireCurrentHead &&
+      (await adapter.gitHead()) !== finalization.commitSha) ||
     (await adapter.gitTree(finalization.commitSha)) !== finalization.treeSha ||
     !exactPaths(await adapter.changedPaths(finalization.commitSha))
   ) {
@@ -813,26 +856,90 @@ const abortForward = async (
   })
 }
 
-const compensationId = (sourceActivationId: string): string =>
-  `compensation:${sourceActivationId.replace(/^activation:/u, "")}`
+export const buildCompensationActivationId = (
+  sourceActivationId: string,
+): string =>
+  `compensation:${createHash("sha256").update(sourceActivationId).digest("hex")}`
+
+export const hashCompensationRecoveryReceipt = (
+  restoredEntries: readonly ActivationPathDigest[],
+): Sha256 =>
+  sha256(
+    `cowards-game:activation-compensation-restore:v1\0${hashActivationPathDigests(
+      restoredEntries,
+    )}`,
+  )
 
 const recoveryReceiptDigest = (
   restoredSnapshot: ReadonlyMap<string, FileBytes>,
-): Sha256 =>
-  sha256(
-    `cowards-game:activation-compensation-restore:v1\0${snapshotRoot(
-      restoredSnapshot,
-    )}`,
+): Sha256 => hashCompensationRecoveryReceipt(snapshotEntries(restoredSnapshot))
+
+const assertCompensatedActivation = async (
+  adapter: ActivationCoordinatorAdapter,
+  head: ActivationHead,
+  sourceActivationId: string,
+): Promise<void> => {
+  const compensation = head.compensation
+  const finalization = head.finalization
+  if (
+    head.state !== "active-v1.17-compensated" ||
+    head.pendingIntent !== null ||
+    compensation === null ||
+    finalization === null ||
+    compensation.activationId !==
+      buildCompensationActivationId(sourceActivationId) ||
+    compensation.sourceActivationId !== sourceActivationId ||
+    finalization.activationId !== sourceActivationId ||
+    (await adapter.gitHead()) !== compensation.commitSha ||
+    (await adapter.gitTree(compensation.commitSha)) !== compensation.treeSha ||
+    (await adapter.gitParent(compensation.commitSha)) !==
+      finalization.commitSha ||
+    !exactPaths(await adapter.changedPaths(compensation.commitSha))
+  ) {
+    throw new Error("Compensated activation binding mismatch")
+  }
+  await assertFinalizedActivation(adapter, head, sourceActivationId, false)
+  const activationParent = await adapter.gitParent(finalization.commitSha)
+  const restoredSnapshot = await captureCommitSnapshot(
+    adapter,
+    activationParent,
   )
+  await assertCommitSnapshot(
+    adapter,
+    compensation.commitSha,
+    restoredSnapshot,
+    "compensated activation",
+  )
+  const restoredSelectors = new Map<string, Uint8Array>()
+  for (const selectorPath of ACTIVATION_SELECTOR_PATHS) {
+    const file = restoredSnapshot.get(selectorPath)
+    if (file?.state !== "present") {
+      throw new Error(`Compensated selector is absent: ${selectorPath}`)
+    }
+    restoredSelectors.set(selectorPath, file.bytes)
+  }
+  const restoredManifest = manifestFor(restoredSelectors)
+  if (
+    hashSemanticAuthoritySelectorManifest(restoredManifest) !==
+      compensation.selectorManifestRoot ||
+    recoveryReceiptDigest(restoredSnapshot) !==
+      compensation.recoveryReceiptDigest
+  ) {
+    throw new Error("Compensated activation receipt mismatch")
+  }
+}
 
 const compensate = async (
   adapter: ActivationCoordinatorAdapter,
   sourceActivationId: string,
 ): Promise<ActivationHead> => {
   let head = await adapter.readHead()
-  if (head.state === "active-v1.17-compensated") return head
+  if (head.state === "active-v1.17-compensated") {
+    await assertCompensatedActivation(adapter, head, sourceActivationId)
+    return head
+  }
   if (head.state === "pending-compensation") {
-    return recoverReverse(adapter, head)
+    return recoverReverse(adapter, head, sourceActivationId)
   }
   if (
     head.state !== "active-v1.19-finalized" ||
@@ -855,7 +962,7 @@ const compensate = async (
     restoredSelectors.set(selectorPath, file.bytes)
   }
   const manifest = manifestFor(restoredSelectors)
-  const reverseActivationId = compensationId(sourceActivationId)
+  const reverseActivationId = buildCompensationActivationId(sourceActivationId)
   head = await adapter.prepare({
     direction: "reverse",
     activationId: reverseActivationId,
@@ -905,6 +1012,7 @@ const compensate = async (
 const recoverReverse = async (
   adapter: ActivationCoordinatorAdapter,
   head: ActivationHead,
+  sourceActivationId: string,
 ): Promise<ActivationHead> => {
   const intent = head.pendingIntent
   if (
@@ -912,6 +1020,9 @@ const recoverReverse = async (
     intent?.direction !== "reverse"
   ) {
     throw new Error("Exact reverse pending intent is required")
+  }
+  if (intent.sourceActivationId !== sourceActivationId) {
+    throw new Error("Reverse pending source activation token mismatch")
   }
   const current = await adapter.gitHead()
   if (current === intent.parentHead) {
@@ -970,15 +1081,22 @@ const recover = async (
   activationId: string,
 ): Promise<ActivationHead> => {
   const head = await adapter.readHead()
-  if (
-    head.state === "active-v1.19-finalized" ||
-    head.state === "active-v1.17-bootstrap" ||
-    head.state === "active-v1.17-compensated"
-  ) {
+  if (head.state === "active-v1.19-finalized") {
+    if (head.finalization?.activationId !== activationId) {
+      throw new Error("Finalized activation token mismatch")
+    }
+    await assertFinalizedActivation(adapter, head, activationId)
     return head
   }
+  if (head.state === "active-v1.17-compensated") {
+    await assertCompensatedActivation(adapter, head, activationId)
+    return head
+  }
+  if (head.state === "active-v1.17-bootstrap") {
+    throw new Error("No matching activation is pending or finalized")
+  }
   if (head.state === "pending-compensation")
-    return recoverReverse(adapter, head)
+    return recoverReverse(adapter, head, activationId)
   const intent = pendingForward(head, activationId)
   const current = await adapter.gitHead()
   if (current === intent.parentHead) return abortForward(adapter, activationId)
@@ -1016,8 +1134,8 @@ export const runV137ObservationV119Activation = async (
     }
   })
 
-const gateCommands: Readonly<Record<string, readonly string[]>> = Object.freeze(
-  {
+export const ACTIVATION_GATE_ARGV: Readonly<Record<string, readonly string[]>> =
+  Object.freeze({
     spec: ["pnpm", "--filter", "@cowards/spec", "test"],
     engine: ["pnpm", "--filter", "@cowards/engine", "test"],
     generator: ["pnpm", "v1.37:integrity-authority:check"],
@@ -1036,7 +1154,8 @@ const gateCommands: Readonly<Record<string, readonly string[]>> = Object.freeze(
       "exec",
       "vitest",
       "run",
-      "packages/runtime-service/src",
+      "apps/runtime-service/src",
+      "--maxWorkers=1",
     ],
     replay: ["pnpm", "exec", "vitest", "run", "packages/replay/src"],
     "public-contract": ["pnpm", "contract:check"],
@@ -1099,122 +1218,64 @@ const gateCommands: Readonly<Record<string, readonly string[]>> = Object.freeze(
       "packages/persistence/src/matchset-service.test.ts",
       "--maxWorkers=1",
     ],
-  },
-)
+  })
+
+export const ACTIVATION_GATE_COMMANDS: Readonly<Record<string, string>> =
+  Object.freeze(
+    Object.fromEntries(
+      Object.entries(ACTIVATION_GATE_ARGV).map(([id, argv]) => [
+        id,
+        argv.join(" "),
+      ]),
+    ),
+  )
 
 const runProcess = async (
   command: string,
   args: readonly string[],
   cwd: string,
 ): Promise<{ stdout: string; stderr: string }> => {
+  const childEnvironment = Object.fromEntries(
+    Object.entries(process.env).filter(([key]) => !key.startsWith("VITEST")),
+  )
   const result = await execFile(command, [...args], {
     cwd,
+    env: childEnvironment,
     maxBuffer: 64 * 1024 * 1024,
     encoding: "utf8",
   })
   return { stdout: result.stdout, stderr: result.stderr }
 }
 
+export interface ProductionActivationAdapterOptions {
+  readonly processRunner?: typeof runProcess
+  readonly now?: () => Date
+}
+
 export const createProductionActivationAdapter = (
   repoRoot: string,
   pool: PersistencePool,
-): ActivationCoordinatorAdapter => ({
-  async withLock<T>(operation: () => Promise<T>): Promise<T> {
-    const client = await pool.connect()
-    try {
-      await client.query(
-        "select pg_advisory_lock(hashtext('semantic-authority-activation-coordinator-v1'))",
-      )
-      return await operation()
-    } finally {
-      await client.query(
-        "select pg_advisory_unlock(hashtext('semantic-authority-activation-coordinator-v1'))",
-      )
-      client.release()
-    }
-  },
-  readHead: () => readSemanticAuthoritySelectionHead(pool),
-  prepare: (input) =>
-    prepareSemanticAuthoritySelectionTransition(
-      pool,
-      input as Parameters<
-        typeof prepareSemanticAuthoritySelectionTransition
-      >[1],
-    ),
-  finalize: (input) =>
-    finalizeSemanticAuthoritySelectionTransition(
-      pool,
-      input as Parameters<
-        typeof finalizeSemanticAuthoritySelectionTransition
-      >[1],
-    ),
-  abort: (input) =>
-    abortSemanticAuthoritySelectionTransition(
-      pool,
-      input as Parameters<typeof abortSemanticAuthoritySelectionTransition>[1],
-    ),
-  async gitHead() {
-    return (
-      await runProcess("git", ["rev-parse", "HEAD"], repoRoot)
-    ).stdout.trim()
-  },
-  async gitParent(commitSha) {
-    return (
-      await runProcess("git", ["rev-parse", `${commitSha}^`], repoRoot)
-    ).stdout.trim()
-  },
-  async gitTree(commitSha) {
-    return (
-      await runProcess("git", ["rev-parse", `${commitSha}^{tree}`], repoRoot)
-    ).stdout.trim()
-  },
-  async changedPaths(commitSha) {
-    const output = (
-      await runProcess(
-        "git",
-        ["diff-tree", "--no-commit-id", "--name-only", "-r", "-z", commitSha],
-        repoRoot,
-      )
-    ).stdout
-    return output.split("\0").filter(Boolean).sort()
-  },
-  async readFile(filePath) {
+  options: ProductionActivationAdapterOptions = {},
+): ActivationCoordinatorAdapter => {
+  const execute = options.processRunner ?? runProcess
+  const now = options.now ?? (() => new Date())
+  const readLocalFile = async (filePath: string): Promise<FileBytes> => {
     try {
       return {
         state: "present",
         bytes: await readFile(path.join(repoRoot, filePath)),
       }
     } catch (error) {
-      if ((error as { code?: string }).code === "ENOENT")
-        return { state: "absent" }
-      throw error
-    }
-  },
-  async readCommitFile(commitSha, filePath) {
-    try {
-      const result = await execFile(
-        "git",
-        ["show", `${commitSha}:${filePath}`],
-        {
-          cwd: repoRoot,
-          encoding: "buffer",
-          maxBuffer: 64 * 1024 * 1024,
-        },
-      )
-      return { state: "present", bytes: result.stdout }
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error)
-      if (
-        /does not exist|exists on disk, but not in|path .* not in/iu.test(
-          message,
-        )
-      ) {
+      if ((error as { code?: string }).code === "ENOENT") {
         return { state: "absent" }
       }
       throw error
     }
-  },
-  async writeFile(filePath, value) {
+  }
+  const writeLocalFile = async (
+    filePath: string,
+    value: FileBytes,
+  ): Promise<void> => {
     const absolute = path.join(repoRoot, filePath)
     if (value.state === "absent") {
       await rm(absolute, { force: true })
@@ -1222,77 +1283,167 @@ export const createProductionActivationAdapter = (
     }
     await mkdir(path.dirname(absolute), { recursive: true })
     await writeFile(absolute, value.bytes)
-  },
-  async stagedPaths() {
-    const output = (
-      await runProcess(
+  }
+  return {
+    async withLock<T>(operation: () => Promise<T>): Promise<T> {
+      const client = await pool.connect()
+      try {
+        await client.query(
+          "select pg_advisory_lock(hashtext('semantic-authority-activation-coordinator-v1'))",
+        )
+        return await operation()
+      } finally {
+        await client.query(
+          "select pg_advisory_unlock(hashtext('semantic-authority-activation-coordinator-v1'))",
+        )
+        client.release()
+      }
+    },
+    readHead: () => readSemanticAuthoritySelectionHead(pool),
+    prepare: (input) =>
+      prepareSemanticAuthoritySelectionTransition(
+        pool,
+        input as Parameters<
+          typeof prepareSemanticAuthoritySelectionTransition
+        >[1],
+      ),
+    finalize: (input) =>
+      finalizeSemanticAuthoritySelectionTransition(
+        pool,
+        input as Parameters<
+          typeof finalizeSemanticAuthoritySelectionTransition
+        >[1],
+      ),
+    abort: (input) =>
+      abortSemanticAuthoritySelectionTransition(
+        pool,
+        input as Parameters<
+          typeof abortSemanticAuthoritySelectionTransition
+        >[1],
+      ),
+    async gitHead() {
+      return (
+        await execute("git", ["rev-parse", "HEAD"], repoRoot)
+      ).stdout.trim()
+    },
+    async gitParent(commitSha) {
+      return (
+        await execute("git", ["rev-parse", `${commitSha}^`], repoRoot)
+      ).stdout.trim()
+    },
+    async gitTree(commitSha) {
+      return (
+        await execute("git", ["rev-parse", `${commitSha}^{tree}`], repoRoot)
+      ).stdout.trim()
+    },
+    async changedPaths(commitSha) {
+      const output = (
+        await execute(
+          "git",
+          ["diff-tree", "--no-commit-id", "--name-only", "-r", "-z", commitSha],
+          repoRoot,
+        )
+      ).stdout
+      return output.split("\0").filter(Boolean).sort()
+    },
+    async readFile(filePath) {
+      return readLocalFile(filePath)
+    },
+    async readCommitFile(commitSha, filePath) {
+      try {
+        const result = await execFile(
+          "git",
+          ["show", `${commitSha}:${filePath}`],
+          {
+            cwd: repoRoot,
+            encoding: "buffer",
+            maxBuffer: 64 * 1024 * 1024,
+          },
+        )
+        return { state: "present", bytes: result.stdout }
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error)
+        if (
+          /does not exist|exists on disk, but not in|path .* not in/iu.test(
+            message,
+          )
+        ) {
+          return { state: "absent" }
+        }
+        throw error
+      }
+    },
+    async writeFile(filePath, value) {
+      await writeLocalFile(filePath, value)
+    },
+    async stagedPaths() {
+      const output = (
+        await execute(
+          "git",
+          ["diff", "--cached", "--name-only", "-z"],
+          repoRoot,
+        )
+      ).stdout
+      return output.split("\0").filter(Boolean).sort()
+    },
+    async stage(paths) {
+      await execute("git", ["add", "-A", "--", ...paths], repoRoot)
+    },
+    async unstage(paths) {
+      await execute("git", ["reset", "-q", "HEAD", "--", ...paths], repoRoot)
+    },
+    async commit(message, paths) {
+      await execute(
         "git",
-        ["diff", "--cached", "--name-only", "-z"],
+        ["commit", "--only", "-m", message, "--", ...paths],
         repoRoot,
       )
-    ).stdout
-    return output.split("\0").filter(Boolean).sort()
-  },
-  async stage(paths) {
-    await runProcess("git", ["add", "-A", "--", ...paths], repoRoot)
-  },
-  async unstage(paths) {
-    await runProcess("git", ["reset", "-q", "HEAD", "--", ...paths], repoRoot)
-  },
-  async commit(message, paths) {
-    await runProcess(
-      "git",
-      ["commit", "--only", "-m", message, "--", ...paths],
-      repoRoot,
-    )
-    return (
-      await runProcess("git", ["rev-parse", "HEAD"], repoRoot)
-    ).stdout.trim()
-  },
-  async runGate(id) {
-    const argv = gateCommands[id]
-    if (argv === undefined) throw new Error(`Unknown activation gate ${id}`)
-    const [command, ...args] = argv
-    const startedAt = new Date()
-    const result = await runProcess(command, args, repoRoot)
-    return {
-      id,
-      command: argv.join(" "),
-      exitCode: 0,
-      stdoutSha256: sha256(result.stdout),
-      stderrSha256: sha256(result.stderr),
-      completedAt: startedAt.toISOString(),
-    }
-  },
-})
+      return (
+        await execute("git", ["rev-parse", "HEAD"], repoRoot)
+      ).stdout.trim()
+    },
+    async runGate(id) {
+      const argv = ACTIVATION_GATE_ARGV[id]
+      if (argv === undefined) throw new Error(`Unknown activation gate ${id}`)
+      const [command, ...args] = argv
+      const startedAt = now()
+      const nextEnvPath = "apps/web/next-env.d.ts"
+      const nextEnvPreimage =
+        id === "build" ? await readLocalFile(nextEnvPath) : undefined
+      let result: { stdout: string; stderr: string } | undefined
+      let gateError: unknown
+      try {
+        result = await execute(command, args, repoRoot)
+      } catch (error) {
+        gateError = error
+      }
+      if (nextEnvPreimage !== undefined) {
+        await writeLocalFile(nextEnvPath, nextEnvPreimage)
+        if (!equalFile(await readLocalFile(nextEnvPath), nextEnvPreimage)) {
+          throw new Error("Build gate failed to restore apps/web/next-env.d.ts")
+        }
+      }
+      if (gateError !== undefined) throw gateError
+      if (result === undefined) throw new Error(`Gate ${id} produced no result`)
+      return {
+        id,
+        command: argv.join(" "),
+        exitCode: 0,
+        stdoutSha256: sha256(result.stdout),
+        stderrSha256: sha256(result.stderr),
+        completedAt: startedAt.toISOString(),
+      }
+    },
+  }
+}
 
 const main = async (): Promise<void> => {
-  const modeIndex = process.argv.indexOf("--mode")
-  const activationIndex = process.argv.indexOf("--activation-id")
-  const mode = process.argv[modeIndex + 1] as ActivationMode | undefined
-  const activationId = process.argv[activationIndex + 1]
-  if (
-    modeIndex < 0 ||
-    activationIndex < 0 ||
-    mode === undefined ||
-    activationId === undefined ||
-    ![
-      "prepare",
-      "validate",
-      "rollback-drill",
-      "stage",
-      "commit",
-      "finalize",
-      "smoke",
-      "recover",
-      "abort",
-      "compensate",
-    ].includes(mode)
-  ) {
-    throw new Error(
-      "Usage: activate-v1-37-observation-v1-19.ts --mode <mode> --activation-id <id>",
-    )
+  const parsed = parseV137ObservationV119ActivationArgs(process.argv.slice(2))
+  if (parsed.parseOnly) {
+    process.stdout.write(`${JSON.stringify(parsed)}\n`)
+    return
   }
+  const { mode, activationId } = parsed
   if (process.env.DATABASE_URL === undefined) {
     throw new Error("DATABASE_URL is required")
   }
@@ -1317,6 +1468,42 @@ const main = async (): Promise<void> => {
   } finally {
     await pool.end()
   }
+}
+
+export const parseV137ObservationV119ActivationArgs = (
+  args: readonly string[],
+): { mode: ActivationMode; activationId: string; parseOnly: boolean } => {
+  const modeIndex = args.indexOf("--mode")
+  const activationIndex = args.indexOf("--activation-id")
+  const mode = args[modeIndex + 1] as ActivationMode | undefined
+  const activationId = args[activationIndex + 1]
+  const parseOnly = args.includes("--parse-only")
+  const expectedLength = parseOnly ? 5 : 4
+  if (
+    modeIndex < 0 ||
+    activationIndex < 0 ||
+    args.length !== expectedLength ||
+    mode === undefined ||
+    activationId === undefined ||
+    !/^activation:[A-Za-z0-9._:-]{1,160}$/u.test(activationId) ||
+    ![
+      "prepare",
+      "validate",
+      "rollback-drill",
+      "stage",
+      "commit",
+      "finalize",
+      "smoke",
+      "recover",
+      "abort",
+      "compensate",
+    ].includes(mode)
+  ) {
+    throw new Error(
+      "Usage: activate-v1-37-observation-v1-19.ts --mode <mode> --activation-id <id> [--parse-only]",
+    )
+  }
+  return { mode, activationId, parseOnly }
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {

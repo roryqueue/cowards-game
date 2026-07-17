@@ -8,11 +8,16 @@ import { fileURLToPath } from "node:url"
 /* eslint-disable-next-line no-restricted-imports -- The evaluator independently recomputes the persisted selector-manifest binding. */
 import { hashSemanticAuthoritySelectorManifest } from "../packages/persistence/src/semantic-authority-selection-head.js"
 import {
+  ACTIVATION_GATE_COMMANDS,
   ACTIVATION_PROOF_PATH,
   ACTIVATION_SELECTOR_PATHS,
   ACTIVATION_VALIDATION_GATE_IDS,
+  buildCompensationActivationId,
   buildV119SelectorBytes,
   createProductionActivationAdapter,
+  hashActivationPathDigests,
+  hashCompensationRecoveryReceipt,
+  type ActivationPathDigest,
   type ActivationCoordinatorAdapter,
   type ActivationHead,
   type FileBytes,
@@ -141,12 +146,14 @@ export interface V137ObservationV119PostactivationEvidence {
     activationTreeSha: string
     activationChangedPaths: string[]
     activationSelectorManifest: SelectorManifestEntry[]
+    currentPaths: ActivationPathDigest[]
   }
   smokeReceipt: GateReceipt
   protectedBaseline: {
     status: "verified"
     baselineSha256: Sha256
     protectedPathCount: 2
+    receipt: GateReceipt
   }
 }
 
@@ -176,7 +183,10 @@ const parseProofBytes = (bytes: Uint8Array): ActivationProofEvidence => {
 export const collectV137ObservationV119PostactivationEvidence = async (
   adapter: PostactivationEvaluationAdapter,
   activationId: string,
-  protectedBaseline: V137ObservationV119PostactivationEvidence["protectedBaseline"] = {
+  protectedBaseline: Omit<
+    V137ObservationV119PostactivationEvidence["protectedBaseline"],
+    "receipt"
+  > = {
     status: "verified",
     baselineSha256: BASELINE_ROOT,
     protectedPathCount: 2,
@@ -195,6 +205,15 @@ export const collectV137ObservationV119PostactivationEvidence = async (
   const currentHead = await adapter.gitHead()
   const selectorManifest: SelectorManifestEntry[] = []
   const activationSelectorManifest: SelectorManifestEntry[] = []
+  const currentPaths: ActivationPathDigest[] = []
+  for (const filePath of ALL_PATHS) {
+    const file = await adapter.readCommitFile(currentHead, filePath)
+    currentPaths.push(
+      file.state === "present"
+        ? { path: filePath, state: "present", sha256: sha256(file.bytes) }
+        : { path: filePath, state: "absent" },
+    )
+  }
   for (const selectorPath of ACTIVATION_SELECTOR_PATHS) {
     const currentFile = await adapter.readCommitFile(currentHead, selectorPath)
     const activationFile = await adapter.readCommitFile(
@@ -236,9 +255,13 @@ export const collectV137ObservationV119PostactivationEvidence = async (
         await adapter.changedPaths(activationCommit)
       ).sort(),
       activationSelectorManifest,
+      currentPaths,
     },
     smokeReceipt: await adapter.runGate("smoke"),
-    protectedBaseline,
+    protectedBaseline: {
+      ...protectedBaseline,
+      receipt: await adapter.runGate("protected-baseline"),
+    },
   }
 }
 
@@ -252,11 +275,8 @@ const validReceipt = (receipt: unknown, expectedId: string): boolean =>
     "completedAt",
   ]) &&
   (receipt as GateReceipt).id === expectedId &&
+  (receipt as GateReceipt).command === ACTIVATION_GATE_COMMANDS[expectedId] &&
   (receipt as GateReceipt).exitCode === 0 &&
-  typeof (receipt as GateReceipt).command === "string" &&
-  !(receipt as GateReceipt).command.includes(
-    "evaluate-v1-37-observation-v1-19-postactivation",
-  ) &&
   SHA256.test((receipt as GateReceipt).stdoutSha256) &&
   SHA256.test((receipt as GateReceipt).stderrSha256) &&
   !Number.isNaN(Date.parse((receipt as GateReceipt).completedAt))
@@ -319,6 +339,7 @@ export const validateV137ObservationV119PostactivationEvidence = (
       "activationTreeSha",
       "activationChangedPaths",
       "activationSelectorManifest",
+      "currentPaths",
     ])
   ) {
     return { status: "failed", errors: ["evidence shape"] }
@@ -380,7 +401,8 @@ export const validateV137ObservationV119PostactivationEvidence = (
         (member.state !== "present" && member.state !== "absent") ||
         (member.state === "present" &&
           (member.sha256 === undefined || !SHA256.test(member.sha256))),
-    )
+    ) ||
+    hashActivationPathDigests(proof.preimage) !== proof.proofPreimageRoot
   ) {
     errors.push("six-path preimage")
   }
@@ -415,6 +437,8 @@ export const validateV137ObservationV119PostactivationEvidence = (
       exactEvidence.head.pendingIntent !== null ||
       finalization === null ||
       compensation === null ||
+      compensation.activationId !==
+        buildCompensationActivationId(exactEvidence.activationId) ||
       compensation.sourceActivationId !== exactEvidence.activationId ||
       compensation.sourceActivationId !== finalization.activationId ||
       compensation.commitSha !== exactEvidence.git.headSha ||
@@ -422,12 +446,18 @@ export const validateV137ObservationV119PostactivationEvidence = (
       exactEvidence.git.parentSha !== finalization.commitSha ||
       stable([...exactEvidence.git.changedPaths].sort()) !==
         stable(ALL_PATHS) ||
+      !Array.isArray(exactEvidence.git.currentPaths) ||
+      exactEvidence.git.currentPaths.length !== 6 ||
+      exactEvidence.git.currentPaths.some((member) => !record(member)) ||
+      stable(exactEvidence.git.currentPaths) !== stable(proof.preimage) ||
       restoredManifest.some(
         ({ sha256: memberSha }) => memberSha === undefined,
       ) ||
       stable(exactEvidence.git.selectorManifest) !== stable(restoredManifest) ||
       hashSelectorManifestEntries(exactEvidence.git.selectorManifest) !==
-        compensation.selectorManifestRoot
+        compensation.selectorManifestRoot ||
+      hashCompensationRecoveryReceipt(exactEvidence.git.currentPaths) !==
+        compensation.recoveryReceiptDigest
     ) {
       errors.push("compensating recovery binding")
     }
@@ -471,10 +501,12 @@ export const validateV137ObservationV119PostactivationEvidence = (
       "status",
       "baselineSha256",
       "protectedPathCount",
+      "receipt",
     ]) ||
     exactEvidence.protectedBaseline.status !== "verified" ||
     exactEvidence.protectedBaseline.baselineSha256 !== BASELINE_ROOT ||
-    exactEvidence.protectedBaseline.protectedPathCount !== 2
+    exactEvidence.protectedBaseline.protectedPathCount !== 2 ||
+    !validReceipt(exactEvidence.protectedBaseline.receipt, "protected-baseline")
   ) {
     errors.push("protected baseline")
   }
@@ -486,27 +518,33 @@ export const validateV137ObservationV119PostactivationEvidence = (
 
 export const parseV137ObservationV119PostactivationArgs = (
   args: readonly string[],
-): { activationId: string } => {
+): { activationId: string; parseOnly: boolean } => {
   if (args.includes("--write")) {
     throw new Error("Postactivation evaluation is read-only")
   }
   const activationIndex = args.indexOf("--activation-id")
+  const parseOnly = args.includes("--parse-only")
   if (
     !args.includes("--check") ||
     activationIndex < 0 ||
-    args.length !== 3 ||
+    args.length !== (parseOnly ? 4 : 3) ||
     !ACTIVATION_ID.test(args[activationIndex + 1] ?? "")
   ) {
     throw new Error(
       "Usage: postactivation evaluator --check --activation-id <activation:id>",
     )
   }
-  return { activationId: args[activationIndex + 1]! }
+  return { activationId: args[activationIndex + 1]!, parseOnly }
 }
 
 const readProtectedBaseline = async (
   repoRoot: string,
-): Promise<V137ObservationV119PostactivationEvidence["protectedBaseline"]> => {
+): Promise<
+  Omit<
+    V137ObservationV119PostactivationEvidence["protectedBaseline"],
+    "receipt"
+  >
+> => {
   const bytes = await readFile(
     path.join(
       repoRoot,
@@ -525,9 +563,14 @@ const readProtectedBaseline = async (
 }
 
 const main = async (): Promise<void> => {
-  const { activationId } = parseV137ObservationV119PostactivationArgs(
+  const parsed = parseV137ObservationV119PostactivationArgs(
     process.argv.slice(2),
   )
+  if (parsed.parseOnly) {
+    process.stdout.write(`${JSON.stringify(parsed)}\n`)
+    return
+  }
+  const { activationId } = parsed
   if (process.env.DATABASE_URL === undefined) {
     throw new Error("DATABASE_URL is required")
   }

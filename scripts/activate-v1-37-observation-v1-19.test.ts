@@ -1,18 +1,22 @@
 import { Buffer } from "node:buffer"
 import { execFile as execFileCallback } from "node:child_process"
 import { createHash } from "node:crypto"
-import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises"
+import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { promisify } from "node:util"
 import { describe, expect, it, vi } from "vitest"
 import {
   ACTIVATION_COMMIT_MESSAGE,
+  ACTIVATION_GATE_COMMANDS,
   ACTIVATION_PROOF_PATH,
   ACTIVATION_SELECTOR_PATHS,
   COMPENSATION_COMMIT_MESSAGE,
+  PLAN14_ACTIVATION_ID,
+  buildCompensationActivationId,
   buildV119SelectorBytes,
   createProductionActivationAdapter,
+  parseV137ObservationV119ActivationArgs,
   runV137ObservationV119Activation,
   type ActivationCoordinatorAdapter,
   type ActivationHead,
@@ -218,7 +222,7 @@ class ModelAdapter implements ActivationCoordinatorAdapter {
     if (this.failGate === id) throw new Error(`gate failed: ${id}`)
     return {
       id,
-      command: `test:${id}`,
+      command: ACTIVATION_GATE_COMMANDS[id]!,
       exitCode: 0,
       stdoutSha256: hash(`stdout:${id}`),
       stderrSha256: hash(`stderr:${id}`),
@@ -244,6 +248,41 @@ const throughValidate = async (adapter: ModelAdapter) => {
 }
 
 describe("v1.37 observation v1.19 activation coordinator", () => {
+  it("parses every literal Plan 14 coordinator command in a subprocess without mutation", async () => {
+    for (const mode of [
+      "prepare",
+      "validate",
+      "rollback-drill",
+      "stage",
+      "commit",
+      "finalize",
+      "smoke",
+    ] as const) {
+      const args = [
+        "--mode",
+        mode,
+        "--activation-id",
+        PLAN14_ACTIVATION_ID,
+        "--parse-only",
+      ]
+      expect(parseV137ObservationV119ActivationArgs(args)).toEqual({
+        mode,
+        activationId: PLAN14_ACTIVATION_ID,
+        parseOnly: true,
+      })
+      const result = await execFile(
+        "pnpm",
+        ["exec", "tsx", "scripts/activate-v1-37-observation-v1-19.ts", ...args],
+        { cwd: process.cwd() },
+      )
+      expect(JSON.parse(result.stdout)).toEqual({
+        mode,
+        activationId: PLAN14_ACTIVATION_ID,
+        parseOnly: true,
+      })
+    }
+  }, 30_000)
+
   it("uses a nonrecursive five-selector manifest and a separate proof output", () => {
     expect(ACTIVATION_SELECTOR_PATHS).toHaveLength(5)
     expect(new Set(ACTIVATION_SELECTOR_PATHS).size).toBe(5)
@@ -299,6 +338,79 @@ describe("v1.37 observation v1.19 activation coordinator", () => {
     }
   })
 
+  it("executes the exact runtime-service production gate", async () => {
+    let executed = ""
+    const adapter = createProductionActivationAdapter(
+      process.cwd(),
+      {} as never,
+      {
+        processRunner: async (command, args) => {
+          executed = [command, ...args].join(" ")
+          return { stdout: "exact runtime-service gate passed", stderr: "" }
+        },
+      },
+    )
+    const receipt = await adapter.runGate("runtime-service")
+    expect(executed).toBe(
+      "pnpm exec vitest run apps/runtime-service/src --maxWorkers=1",
+    )
+    expect(receipt.command).toBe(
+      "pnpm exec vitest run apps/runtime-service/src --maxWorkers=1",
+    )
+    expect(receipt.exitCode).toBe(0)
+  })
+
+  it.each(["present", "absent"] as const)(
+    "restores next-env.d.ts after build success and failure from a %s preimage",
+    async (state) => {
+      for (const fails of [false, true]) {
+        const root = await mkdtemp(path.join(tmpdir(), "cowards-build-gate-"))
+        const nextEnv = path.join(root, "apps/web/next-env.d.ts")
+        try {
+          if (state === "present") {
+            await mkdir(path.dirname(nextEnv), { recursive: true })
+            await writeFile(nextEnv, "original next env\n")
+          }
+          const adapter = createProductionActivationAdapter(root, {} as never, {
+            processRunner: async (command, args) => {
+              expect([command, ...args].join(" ")).toBe("pnpm build")
+              await mkdir(path.dirname(nextEnv), { recursive: true })
+              await writeFile(nextEnv, "rewritten by installed Next\n")
+              if (fails) throw new Error("simulated build failure")
+              return { stdout: "built", stderr: "" }
+            },
+          })
+          if (fails) {
+            await expect(adapter.runGate("build")).rejects.toThrow(
+              /simulated build failure/iu,
+            )
+          } else {
+            await expect(adapter.runGate("build")).resolves.toMatchObject({
+              command: "pnpm build",
+              exitCode: 0,
+            })
+          }
+          if (state === "present") {
+            expect(await readFile(nextEnv, "utf8")).toBe("original next env\n")
+          } else {
+            await expect(readFile(nextEnv)).rejects.toMatchObject({
+              code: "ENOENT",
+            })
+          }
+        } finally {
+          await rm(root, { recursive: true, force: true })
+        }
+      }
+    },
+  )
+
+  it("uses a bounded valid compensation ID for a maximum-length activation ID", () => {
+    const source = `activation:${"x".repeat(160)}`
+    const compensation = buildCompensationActivationId(source)
+    expect(compensation).toMatch(/^compensation:[0-9a-f]{64}$/u)
+    expect(compensation.length).toBeLessThanOrEqual(169)
+  })
+
   it("runs prepare through smoke with exact staging and external finalization binding", async () => {
     const adapter = new ModelAdapter()
     await throughValidate(adapter)
@@ -352,6 +464,38 @@ describe("v1.37 observation v1.19 activation coordinator", () => {
     mixed.files.set(ACTIVATION_SELECTOR_PATHS[2], Buffer.from("mixed\n"))
     await expect(run(mixed, "stage")).rejects.toThrow(/mixed|stale selector/iu)
     expect(mixed.head.state).toBe("pending-precommit")
+  })
+
+  it("rejects forged commands, receipt hashes/dates, and preimage roots", async () => {
+    for (const mutate of [
+      (proof: Record<string, any>) => {
+        proof.validationReceipts[0].command = "test:spec"
+      },
+      (proof: Record<string, any>) => {
+        proof.validationReceipts[0].stdoutSha256 = "sha256:nope"
+      },
+      (proof: Record<string, any>) => {
+        proof.validationReceipts[0].completedAt = "not-a-date"
+      },
+      (proof: Record<string, any>) => {
+        proof.rollbackReceipt.command = "test:rollback-by-declaration"
+      },
+      (proof: Record<string, any>) => {
+        proof.preimage[0].sha256 = hash("forged preimage")
+      },
+    ]) {
+      const adapter = new ModelAdapter()
+      await throughValidate(adapter)
+      const proof = JSON.parse(
+        Buffer.from(adapter.files.get(ACTIVATION_PROOF_PATH)!).toString("utf8"),
+      ) as Record<string, any>
+      mutate(proof)
+      adapter.files.set(
+        ACTIVATION_PROOF_PATH,
+        Buffer.from(`${JSON.stringify(proof, null, 2)}\n`),
+      )
+      await expect(run(adapter, "stage")).rejects.toThrow(/proof/iu)
+    }
   })
 
   it("keeps commit and finalization failures recoverable and makes exact commit recovery idempotent", async () => {
@@ -445,6 +589,32 @@ describe("v1.37 observation v1.19 activation coordinator", () => {
     await run(adapter, "recover")
     expect(adapter.head.state).toBe("active-v1.17-compensated")
     expect(adapter.head.compensation?.commitSha).toBe(git("d"))
+  })
+
+  it("rejects wrong tokens for pending reverse and terminal idempotence", async () => {
+    const finalized = new ModelAdapter()
+    await throughValidate(finalized)
+    await run(finalized, "stage")
+    await run(finalized, "commit")
+    await run(finalized, "finalize")
+    await expect(
+      runV137ObservationV119Activation({
+        mode: "recover",
+        activationId: "activation:phase260:wrong",
+        adapter: finalized,
+      }),
+    ).rejects.toThrow(/token mismatch/iu)
+
+    finalized.failFinalize = true
+    await expect(run(finalized, "compensate")).rejects.toThrow(/finalization/iu)
+    finalized.failFinalize = false
+    await expect(
+      runV137ObservationV119Activation({
+        mode: "recover",
+        activationId: "activation:phase260:wrong",
+        adapter: finalized,
+      }),
+    ).rejects.toThrow(/source activation token mismatch/iu)
   })
 
   it("refuses a compensation commit that does not restore the parent bytes", async () => {

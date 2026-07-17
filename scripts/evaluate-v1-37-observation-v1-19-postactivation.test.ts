@@ -1,11 +1,18 @@
 import { Buffer } from "node:buffer"
+import { execFile as execFileCallback } from "node:child_process"
 import { createHash } from "node:crypto"
+import { promisify } from "node:util"
 import { describe, expect, it, vi } from "vitest"
 import {
+  ACTIVATION_GATE_COMMANDS,
   ACTIVATION_PROOF_PATH,
   ACTIVATION_SELECTOR_PATHS,
   ACTIVATION_VALIDATION_GATE_IDS,
+  PLAN14_ACTIVATION_ID,
+  buildCompensationActivationId,
   buildV119SelectorBytes,
+  hashActivationPathDigests,
+  hashCompensationRecoveryReceipt,
   type ActivationHead,
   type FileBytes,
   type GateReceipt,
@@ -19,6 +26,8 @@ import {
   type V137ObservationV119PostactivationEvidence,
 } from "./evaluate-v1-37-observation-v1-19-postactivation.js"
 
+const execFile = promisify(execFileCallback)
+
 const hash = (value: string | Uint8Array): `sha256:${string}` =>
   `sha256:${createHash("sha256").update(value).digest("hex")}`
 const git = (character: string): string => character.repeat(40)
@@ -31,32 +40,35 @@ const ALL_PATHS = [...ACTIVATION_SELECTOR_PATHS, ACTIVATION_PROOF_PATH].sort()
 
 const receipt = (id: string): GateReceipt => ({
   id,
-  command: `test:${id}`,
+  command: ACTIVATION_GATE_COMMANDS[id]!,
   exitCode: 0,
   stdoutSha256: hash(`stdout:${id}`),
   stderrSha256: hash(`stderr:${id}`),
   completedAt: NOW,
 })
 
-const proofObject = () => ({
-  schemaVersion: "v1.37-observation-v1.19-activation-proof-v1" as const,
-  lifecycle: "pending-precommit" as const,
-  activationId: ACTIVATION_ID,
-  parentHead: PARENT,
-  pendingSelectionRoot:
-    "sha256:17954660f17c83e60e5d7df0b589cd89cf6b00eba4d4963e2d4bf43bc71c6ea2",
-  selectorManifest: buildExpectedV119SelectorManifest().entries,
-  selectorManifestRoot:
-    "sha256:552386a32c70a73a82e85fc3be7a4d08d4d71bf78d16757702a8e056540f5a8f" as `sha256:${string}`,
-  preimage: ALL_PATHS.map((path) =>
+const proofObject = () => {
+  const preimage = ALL_PATHS.map((path) =>
     path === ACTIVATION_PROOF_PATH
       ? { path, state: "absent" as const }
       : { path, state: "present" as const, sha256: hash(`old:${path}`) },
-  ),
-  proofPreimageRoot: hash("preimage"),
-  validationReceipts: ACTIVATION_VALIDATION_GATE_IDS.map(receipt),
-  rollbackReceipt: receipt("rollback"),
-})
+  )
+  return {
+    schemaVersion: "v1.37-observation-v1.19-activation-proof-v1" as const,
+    lifecycle: "pending-precommit" as const,
+    activationId: ACTIVATION_ID,
+    parentHead: PARENT,
+    pendingSelectionRoot:
+      "sha256:17954660f17c83e60e5d7df0b589cd89cf6b00eba4d4963e2d4bf43bc71c6ea2",
+    selectorManifest: buildExpectedV119SelectorManifest().entries,
+    selectorManifestRoot:
+      "sha256:552386a32c70a73a82e85fc3be7a4d08d4d71bf78d16757702a8e056540f5a8f" as `sha256:${string}`,
+    preimage,
+    proofPreimageRoot: hashActivationPathDigests(preimage),
+    validationReceipts: ACTIVATION_VALIDATION_GATE_IDS.map(receipt),
+    rollbackReceipt: receipt("rollback"),
+  }
+}
 
 const passing = (): V137ObservationV119PostactivationEvidence => {
   const proof = proofObject()
@@ -95,6 +107,21 @@ const passing = (): V137ObservationV119PostactivationEvidence => {
       activationTreeSha: TREE,
       activationChangedPaths: ALL_PATHS,
       activationSelectorManifest: selectorManifest.entries,
+      currentPaths: proof.preimage.map((member) =>
+        member.path === ACTIVATION_PROOF_PATH
+          ? {
+              path: member.path,
+              state: "present" as const,
+              sha256: proofDigest,
+            }
+          : {
+              path: member.path,
+              state: "present" as const,
+              sha256: selectorManifest.entries.find(
+                ({ path }) => path === member.path,
+              )!.sha256,
+            },
+      ),
     },
     smokeReceipt: receipt("smoke"),
     protectedBaseline: {
@@ -102,6 +129,7 @@ const passing = (): V137ObservationV119PostactivationEvidence => {
       baselineSha256:
         "sha256:c0e1c2a6319f01377df74a2d6e5c493d26382f2882c059116c5ba467e5e81707",
       protectedPathCount: 2,
+      receipt: receipt("protected-baseline"),
     },
   }
 }
@@ -245,10 +273,13 @@ describe("v1.37 observation-v1.19 postactivation evaluator", () => {
     compensated.git.parentSha = COMMIT
     compensated.git.treeSha = git("e")
     compensated.git.selectorManifest = restoredManifest
+    compensated.git.currentPaths = compensated.proof.preimage
     mutableHead.compensation = {
-      activationId: "compensation:phase260:plan31:test",
+      activationId: buildCompensationActivationId(ACTIVATION_ID),
       sourceActivationId: ACTIVATION_ID,
-      recoveryReceiptDigest: hash("recovery"),
+      recoveryReceiptDigest: hashCompensationRecoveryReceipt(
+        compensated.git.currentPaths,
+      ),
       commitSha: git("d"),
       treeSha: git("e"),
       selectorManifestRoot: hashSelectorManifestEntries(restoredManifest),
@@ -285,6 +316,68 @@ describe("v1.37 observation-v1.19 postactivation evaluator", () => {
     ).toContain("evidence shape")
   })
 
+  it("rejects forged receipt commands, hashes, dates, preimages, and compensation recovery", () => {
+    const mutations = [
+      (value: V137ObservationV119PostactivationEvidence) => {
+        ;(
+          value.proof.validationReceipts[0]! as unknown as { command: string }
+        ).command = "test:spec"
+      },
+      (value: V137ObservationV119PostactivationEvidence) => {
+        ;(
+          value.proof.validationReceipts[0]! as unknown as {
+            stdoutSha256: `sha256:${string}`
+          }
+        ).stdoutSha256 = "sha256:bad"
+      },
+      (value: V137ObservationV119PostactivationEvidence) => {
+        ;(
+          value.protectedBaseline.receipt as unknown as { completedAt: string }
+        ).completedAt = "bad-date"
+      },
+      (value: V137ObservationV119PostactivationEvidence) => {
+        value.proof.preimage[0]!.sha256 = hash("wrong preimage")
+      },
+    ]
+    for (const mutate of mutations) {
+      const value = clone(passing())
+      mutate(value)
+      expect(
+        validateV137ObservationV119PostactivationEvidence(value).status,
+      ).toBe("failed")
+    }
+
+    const compensated = clone(passing())
+    const mutableHead = compensated.head as unknown as {
+      state: ActivationHead["state"]
+      activeSelectionRoot: string
+      compensation: ActivationHead["compensation"]
+    }
+    mutableHead.state = "active-v1.17-compensated"
+    mutableHead.activeSelectionRoot =
+      "sha256:fd2cc24a345c0cb94dde9966262f128c663a4430022574729eb4a902177c4b5a"
+    compensated.git.headSha = git("d")
+    compensated.git.parentSha = COMMIT
+    compensated.git.treeSha = git("e")
+    compensated.git.currentPaths = compensated.proof.preimage
+    compensated.git.selectorManifest = compensated.proof.preimage
+      .filter(({ path }) => path !== ACTIVATION_PROOF_PATH)
+      .map(({ path, sha256 }) => ({ path, sha256: sha256! }))
+    mutableHead.compensation = {
+      activationId: buildCompensationActivationId(ACTIVATION_ID),
+      sourceActivationId: ACTIVATION_ID,
+      recoveryReceiptDigest: hash("arbitrary"),
+      commitSha: git("d"),
+      treeSha: git("e"),
+      selectorManifestRoot: hashSelectorManifestEntries(
+        compensated.git.selectorManifest,
+      ),
+    }
+    expect(
+      validateV137ObservationV119PostactivationEvidence(compensated).errors,
+    ).toContain("compensating recovery binding")
+  })
+
   it("collects proof, selector, Git, head, and live smoke from the real coordinator port", async () => {
     const expected = passing()
     const proofBytes = Buffer.from(
@@ -307,7 +400,7 @@ describe("v1.37 observation-v1.19 postactivation evaluator", () => {
             : { state: "present", bytes }
         },
       ),
-      runGate: vi.fn(async () => receipt("smoke")),
+      runGate: vi.fn(async (id: string) => receipt(id)),
     }
     const evidence = await collectV137ObservationV119PostactivationEvidence(
       adapter,
@@ -317,16 +410,65 @@ describe("v1.37 observation-v1.19 postactivation evaluator", () => {
       validateV137ObservationV119PostactivationEvidence(evidence).status,
     ).toBe("passed")
     expect(adapter.runGate).toHaveBeenCalledWith("smoke")
+    expect(adapter.runGate).toHaveBeenCalledWith("protected-baseline")
   })
 
-  it("supports only explicit read-only checking", () => {
+  it("fails collection when the executable protected baseline checker detects mutation", async () => {
+    const expected = passing()
+    const proofBytes = Buffer.from(
+      `${JSON.stringify(expected.proof, null, 2)}\n`,
+    )
+    const selectors = buildV119SelectorBytes()
+    await expect(
+      collectV137ObservationV119PostactivationEvidence(
+        {
+          readHead: async () => expected.head,
+          gitHead: async () => COMMIT,
+          gitParent: async () => PARENT,
+          gitTree: async () => TREE,
+          changedPaths: async () => ALL_PATHS,
+          readCommitFile: async (_commit, filePath) => {
+            if (filePath === ACTIVATION_PROOF_PATH)
+              return { state: "present", bytes: proofBytes }
+            return { state: "present", bytes: selectors.get(filePath)! }
+          },
+          runGate: async (id) => {
+            if (id === "protected-baseline") {
+              throw new Error("protected working-tree state drifted")
+            }
+            return receipt(id)
+          },
+        },
+        ACTIVATION_ID,
+      ),
+    ).rejects.toThrow(/protected working-tree state drifted/iu)
+  })
+
+  it("supports only explicit read-only checking with the Plan 14 activation ID", async () => {
     expect(
       parseV137ObservationV119PostactivationArgs([
         "--check",
         "--activation-id",
-        ACTIVATION_ID,
+        PLAN14_ACTIVATION_ID,
       ]),
-    ).toEqual({ activationId: ACTIVATION_ID })
+    ).toEqual({ activationId: PLAN14_ACTIVATION_ID, parseOnly: false })
+    const result = await execFile(
+      "pnpm",
+      [
+        "exec",
+        "tsx",
+        "scripts/evaluate-v1-37-observation-v1-19-postactivation.ts",
+        "--check",
+        "--activation-id",
+        PLAN14_ACTIVATION_ID,
+        "--parse-only",
+      ],
+      { cwd: process.cwd() },
+    )
+    expect(JSON.parse(result.stdout)).toEqual({
+      activationId: PLAN14_ACTIVATION_ID,
+      parseOnly: true,
+    })
     expect(() =>
       parseV137ObservationV119PostactivationArgs(["--write"]),
     ).toThrow(/read-only/iu)
