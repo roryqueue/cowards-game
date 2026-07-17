@@ -14,6 +14,8 @@ import {
   type V137ConformanceCorpus,
   type V137ConformanceFixture,
 } from "../packages/golden/src/v1-37-conformance-corpus.ts"
+// eslint-disable-next-line no-restricted-imports -- candidate checker binds the explicit inactive v3 pin without consulting current selection.
+import { V1_37_CONFORMANCE_CORPUS_V3_CANDIDATE_PIN } from "../packages/golden/src/v1-37-conformance-corpus-v3-candidate-pin.ts"
 
 const repoRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -230,6 +232,36 @@ export interface WriteCommittedV137ObservationCorpusV3CandidateInput {
   root?: string
 }
 
+export interface ReviewCommittedV137ObservationCorpusV3CandidateInput {
+  root?: string
+  reviewedBy: string
+}
+
+export interface V137ObservationCorpusV3IndependentReview {
+  schemaVersion: "v1.37-executable-conformance-independent-review-v1"
+  reviewedBy: string
+  lifecycle: "inactive-candidate"
+  current: false
+  status: "approved-inactive-observation-candidate"
+  candidateVersion: "v3"
+  candidateCorpusRootSha256: string
+  candidateCorpusFileSha256: string
+  semanticDiffFileSha256: string
+  caseInventoryRootSha256: string
+  sourceInventoryRootSha256: string
+  caseRoots: Array<{ caseId: string; rootSha256: string }>
+  sourceRoots: Array<{ languageId: string; sourceSha256: string }>
+  decisionDispositions: Array<{
+    decisionId: string
+    disposition: "approved-observation-only"
+  }>
+  protectedSurfaces: Array<{
+    surface: string
+    disposition: "unchanged"
+  }>
+  approvedChangedPaths: string[]
+}
+
 interface V137ConformanceSemanticDiff {
   schemaVersion: "v1.37-executable-conformance-semantic-diff-v1"
   generatedBy: "scripts/generate-v1-37-conformance-corpus.ts"
@@ -276,6 +308,28 @@ const inside = (candidate: string, root: string): boolean => {
 
 const changed = (left: unknown, right: unknown): boolean =>
   JSON.stringify(left) !== JSON.stringify(right)
+
+const OBSERVATION_DECISIONS_V3 = Object.freeze([
+  "D-01",
+  "D-02",
+  "D-03",
+  "D-04",
+  "D-05",
+  "D-06",
+  "D-07",
+  "D-08",
+] as const)
+
+const PROTECTED_OBSERVATION_SURFACES_V3 = Object.freeze([
+  "valid-match-state",
+  "action-legality",
+  "canonical-event-order",
+  "match-outcome",
+  "v1.4-history",
+  "hold-or-end-activation-vocabulary",
+  "failure-ownership",
+  "public-privacy-boundary",
+] as const)
 
 const observationExpectedSelection = {
   activationOrders: [
@@ -470,6 +524,210 @@ export const writeCommittedV137ObservationCorpusV3Candidate = (
   }
 }
 
+const observationCandidatePaths = (root: string) => {
+  const directory = path.join(
+    root,
+    "packages/golden/src/fixtures/v1-37-conformance-corpus/v3",
+  )
+  return {
+    directory,
+    corpusPath: path.join(directory, "corpus.json"),
+    semanticDiffPath: path.join(directory, "semantic-diff.json"),
+    independentReviewPath: path.join(directory, "independent-review.json"),
+  }
+}
+
+const readObservationCandidate = (root: string) => {
+  const paths = observationCandidatePaths(root)
+  const corpusBytes = readFileSync(paths.corpusPath)
+  const semanticDiffBytes = readFileSync(paths.semanticDiffPath)
+  let corpus: V137ConformanceCorpus
+  try {
+    corpus = JSON.parse(corpusBytes.toString("utf8")) as V137ConformanceCorpus
+    validateV137ConformanceCorpus(corpus)
+  } catch {
+    return fail("CANDIDATE_CORPUS_STALE")
+  }
+  const expected = createV137ObservationCorpusV3Candidate()
+  if (renderJson(corpus) !== renderJson(expected)) {
+    fail("CANDIDATE_CORPUS_STALE")
+  }
+  const diff = JSON.parse(semanticDiffBytes.toString("utf8")) as {
+    generatedBy: string
+    candidate: { version: string; corpusRootSha256: string; path: string }
+    changedPaths: string[]
+    fixtureChanges: string[]
+    sourceChanges: string[]
+    caseChanges: string[]
+  }
+  const expectedDiff = semanticDiff(
+    expected,
+    "packages/golden/src/fixtures/v1-37-conformance-corpus/v3/corpus.json",
+  )
+  if (
+    renderJson(diff) !== renderJson(expectedDiff) ||
+    diff.generatedBy !== "scripts/generate-v1-37-conformance-corpus.ts" ||
+    diff.candidate.version !== "v3" ||
+    diff.candidate.corpusRootSha256 !== corpus.corpusRootSha256 ||
+    diff.sourceChanges.join(",") !== "python,rust,typescript,zig" ||
+    diff.caseChanges.join(",") !==
+      OBSERVATION_CASES_V3.map(([caseId]) => caseId)
+        .sort()
+        .join(",") ||
+    diff.changedPaths.some(
+      (changedPath) =>
+        changedPath !== "version" &&
+        changedPath !== "corpusRootSha256" &&
+        changedPath !== "behaviorManifest" &&
+        !changedPath.startsWith("fixtures.") &&
+        !changedPath.startsWith("cases.observation-d"),
+    )
+  ) {
+    fail("SEMANTIC_DIFF_UNAPPROVED")
+  }
+  const baselineCases = new Map(
+    V1_37_CONFORMANCE_CORPUS.cases.map((testCase) => [testCase.id, testCase]),
+  )
+  for (const testCase of corpus.cases) {
+    const baseline = baselineCases.get(testCase.id)
+    if (
+      (baseline !== undefined && changed(baseline, testCase)) ||
+      (baseline === undefined && testCase.expectation.gameplayMutation)
+    ) {
+      fail("GAMEPLAY_OR_HISTORY_DELTA")
+    }
+  }
+  if (
+    corpus.fixtures.some(
+      ({ source }) => /\b(?:HOLD|END_ACTIVATION)\b/u.test(source),
+    )
+  ) {
+    fail("HOLD_DELTA_FORBIDDEN")
+  }
+  return { paths, corpus, corpusBytes, semanticDiffBytes, diff }
+}
+
+const caseRoots = (corpus: V137ConformanceCorpus) =>
+  corpus.cases.map((testCase) => ({
+    caseId: testCase.id,
+    rootSha256: sha256(renderJson(testCase)),
+  }))
+
+const sourceRoots = (corpus: V137ConformanceCorpus) =>
+  corpus.fixtures.map(({ languageId, sourceSha256 }) => ({
+    languageId,
+    sourceSha256,
+  }))
+
+export const reviewCommittedV137ObservationCorpusV3Candidate = (
+  input: ReviewCommittedV137ObservationCorpusV3CandidateInput,
+): V137ObservationCorpusV3IndependentReview => {
+  if (
+    input.reviewedBy === "scripts/generate-v1-37-conformance-corpus.ts" ||
+    !/^phase-260-plan-11-independent-[a-z-]+$/u.test(input.reviewedBy)
+  ) {
+    fail("SELF_AUTHORED_REVIEW")
+  }
+  const root = path.resolve(input.root ?? repoRoot)
+  const candidate = readObservationCandidate(root)
+  const cases = caseRoots(candidate.corpus)
+  const sources = sourceRoots(candidate.corpus)
+  const review: V137ObservationCorpusV3IndependentReview = {
+    schemaVersion: "v1.37-executable-conformance-independent-review-v1",
+    reviewedBy: input.reviewedBy,
+    lifecycle: "inactive-candidate",
+    current: false,
+    status: "approved-inactive-observation-candidate",
+    candidateVersion: "v3",
+    candidateCorpusRootSha256: candidate.corpus.corpusRootSha256,
+    candidateCorpusFileSha256: sha256(candidate.corpusBytes),
+    semanticDiffFileSha256: sha256(candidate.semanticDiffBytes),
+    caseInventoryRootSha256: sha256(renderJson(cases)),
+    sourceInventoryRootSha256: sha256(renderJson(sources)),
+    caseRoots: cases,
+    sourceRoots: sources,
+    decisionDispositions: OBSERVATION_DECISIONS_V3.map((decisionId) => ({
+      decisionId,
+      disposition: "approved-observation-only",
+    })),
+    protectedSurfaces: PROTECTED_OBSERVATION_SURFACES_V3.map((surface) => ({
+      surface,
+      disposition: "unchanged",
+    })),
+    approvedChangedPaths: candidate.diff.changedPaths,
+  }
+  writeFileSync(candidate.paths.independentReviewPath, renderJson(review), {
+    flag: "wx",
+  })
+  return review
+}
+
+export const checkCommittedV137ObservationCorpusV3Candidate = (
+  input: WriteCommittedV137ObservationCorpusV3CandidateInput = {},
+): string[] => {
+  const root = path.resolve(input.root ?? repoRoot)
+  const errors: string[] = []
+  try {
+    const candidate = readObservationCandidate(root)
+    const reviewBytes = readFileSync(candidate.paths.independentReviewPath)
+    const review = JSON.parse(
+      reviewBytes.toString("utf8"),
+    ) as V137ObservationCorpusV3IndependentReview
+    const cases = caseRoots(candidate.corpus)
+    const sources = sourceRoots(candidate.corpus)
+    if (
+      review.schemaVersion !==
+        "v1.37-executable-conformance-independent-review-v1" ||
+      review.reviewedBy !==
+        "phase-260-plan-11-independent-observation-review" ||
+      review.lifecycle !== "inactive-candidate" ||
+      review.current !== false ||
+      review.status !== "approved-inactive-observation-candidate" ||
+      review.candidateVersion !== "v3" ||
+      review.candidateCorpusRootSha256 !== candidate.corpus.corpusRootSha256 ||
+      review.candidateCorpusFileSha256 !== sha256(candidate.corpusBytes) ||
+      review.semanticDiffFileSha256 !== sha256(candidate.semanticDiffBytes) ||
+      review.caseInventoryRootSha256 !== sha256(renderJson(cases)) ||
+      review.sourceInventoryRootSha256 !== sha256(renderJson(sources)) ||
+      renderJson(review.caseRoots) !== renderJson(cases) ||
+      renderJson(review.sourceRoots) !== renderJson(sources) ||
+      review.decisionDispositions.map(({ decisionId }) => decisionId).join(",") !==
+        OBSERVATION_DECISIONS_V3.join(",") ||
+      review.decisionDispositions.some(
+        ({ disposition }) => disposition !== "approved-observation-only",
+      ) ||
+      review.protectedSurfaces.map(({ surface }) => surface).join(",") !==
+        PROTECTED_OBSERVATION_SURFACES_V3.join(",") ||
+      review.protectedSurfaces.some(
+        ({ disposition }) => disposition !== "unchanged",
+      ) ||
+      renderJson(review.approvedChangedPaths) !==
+        renderJson(candidate.diff.changedPaths)
+    ) {
+      errors.push("independent review is stale, self-authored, or incomplete")
+    }
+    const pin = V1_37_CONFORMANCE_CORPUS_V3_CANDIDATE_PIN
+    if (
+      pin.lifecycle !== "inactive-candidate" ||
+      pin.current !== false ||
+      pin.candidateVersion !== "v3" ||
+      pin.corpusRootSha256 !== candidate.corpus.corpusRootSha256 ||
+      pin.corpusFileSha256 !== sha256(candidate.corpusBytes) ||
+      pin.semanticDiffFileSha256 !== sha256(candidate.semanticDiffBytes) ||
+      pin.independentReviewFileSha256 !== sha256(reviewBytes) ||
+      pin.caseInventoryRootSha256 !== review.caseInventoryRootSha256 ||
+      pin.sourceInventoryRootSha256 !== review.sourceInventoryRootSha256 ||
+      renderJson(pin.caseRoots) !== renderJson(review.caseRoots) ||
+      renderJson(pin.sourceRoots) !== renderJson(review.sourceRoots)
+    ) {
+      errors.push("inactive candidate pin does not bind exact reviewed bytes")
+    }
+  } catch (error) {
+    errors.push(error instanceof Error ? error.message : String(error))
+  }
+  return errors
+}
+
 export const writeV137ConformanceCandidate = (
   input: WriteV137ConformanceCandidateInput,
 ): V137ConformanceCandidateResult => {
@@ -550,7 +808,16 @@ export const parseV137ConformanceCandidateArgs = (
 }
 
 const main = (): void => {
-  const args = parseV137ConformanceCandidateArgs(process.argv.slice(2))
+  const rawArgs = process.argv.slice(2)
+  if (rawArgs.length === 1 && rawArgs[0] === "--check-candidate=v3") {
+    const errors = checkCommittedV137ObservationCorpusV3Candidate()
+    if (errors.length > 0) throw new Error(errors.join("\n"))
+    console.log(
+      `v1.37 conformance corpus candidate v3: ${V1_37_CONFORMANCE_CORPUS_V3_CANDIDATE_PIN.corpusRootSha256} inactive`,
+    )
+    return
+  }
+  const args = parseV137ConformanceCandidateArgs(rawArgs)
   const candidateCorpus =
     args.inputPath === undefined
       ? undefined

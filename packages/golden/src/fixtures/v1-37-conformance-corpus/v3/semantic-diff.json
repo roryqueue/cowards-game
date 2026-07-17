@@ -1,0 +1,81 @@
+{
+  "schemaVersion": "v1.37-executable-conformance-semantic-diff-v1",
+  "generatedBy": "scripts/generate-v1-37-conformance-corpus.ts",
+  "baseline": {
+    "version": "v2",
+    "corpusRootSha256": "sha256:238347225defaaabcf9e57141ac7a54b4b277bd149bebe2b21903febc9ce7ac2",
+    "path": "packages/golden/src/fixtures/v1-37-conformance-corpus/v2/corpus.json"
+  },
+  "candidate": {
+    "version": "v3",
+    "corpusRootSha256": "sha256:06d0717a16047cace0364c94a15353e2d53b53da5e8bebef6912f9f30f3d681d",
+    "path": "packages/golden/src/fixtures/v1-37-conformance-corpus/v3/corpus.json"
+  },
+  "changedPaths": [
+    "behaviorManifest",
+    "cases.observation-d01-initial-initiative-both-observers",
+    "cases.observation-d02-round-initiative-later-round",
+    "cases.observation-d03-kernel-owned-signed-transport",
+    "cases.observation-d04-real-revalidation-required",
+    "cases.observation-d05-blocked-move-false",
+    "cases.observation-d05-blocked-push-false",
+    "cases.observation-d05-pushed-target-false",
+    "cases.observation-d05-successful-pusher-true",
+    "cases.observation-d05-turn-false",
+    "cases.observation-d06-first-call-false",
+    "cases.observation-d06-later-cycle-true",
+    "cases.observation-d06-post-self-advance-true",
+    "cases.observation-d07-new-slot-reset-false",
+    "cases.observation-d08-observational-only-no-hold",
+    "corpusRootSha256",
+    "fixtures.python.behaviorManifestId",
+    "fixtures.python.source",
+    "fixtures.python.sourceSha256",
+    "fixtures.rust.behaviorManifestId",
+    "fixtures.rust.source",
+    "fixtures.rust.sourceSha256",
+    "fixtures.typescript.behaviorManifestId",
+    "fixtures.typescript.source",
+    "fixtures.typescript.sourceSha256",
+    "fixtures.zig.behaviorManifestId",
+    "fixtures.zig.source",
+    "fixtures.zig.sourceSha256",
+    "version"
+  ],
+  "fixtureChanges": [
+    "fixtures.python.behaviorManifestId",
+    "fixtures.python.source",
+    "fixtures.python.sourceSha256",
+    "fixtures.rust.behaviorManifestId",
+    "fixtures.rust.source",
+    "fixtures.rust.sourceSha256",
+    "fixtures.typescript.behaviorManifestId",
+    "fixtures.typescript.source",
+    "fixtures.typescript.sourceSha256",
+    "fixtures.zig.behaviorManifestId",
+    "fixtures.zig.source",
+    "fixtures.zig.sourceSha256"
+  ],
+  "sourceChanges": [
+    "python",
+    "rust",
+    "typescript",
+    "zig"
+  ],
+  "caseChanges": [
+    "observation-d01-initial-initiative-both-observers",
+    "observation-d02-round-initiative-later-round",
+    "observation-d03-kernel-owned-signed-transport",
+    "observation-d04-real-revalidation-required",
+    "observation-d05-blocked-move-false",
+    "observation-d05-blocked-push-false",
+    "observation-d05-pushed-target-false",
+    "observation-d05-successful-pusher-true",
+    "observation-d05-turn-false",
+    "observation-d06-first-call-false",
+    "observation-d06-later-cycle-true",
+    "observation-d06-post-self-advance-true",
+    "observation-d07-new-slot-reset-false",
+    "observation-d08-observational-only-no-hold"
+  ]
+}
