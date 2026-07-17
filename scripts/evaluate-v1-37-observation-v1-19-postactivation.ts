@@ -102,6 +102,10 @@ export const buildExpectedV119SelectorManifest = (): {
   }
 }
 
+export const hashSelectorManifestEntries = (
+  entries: readonly SelectorManifestEntry[],
+): Sha256 => hashSemanticAuthoritySelectorManifest(entries)
+
 export interface ActivationProofEvidence {
   schemaVersion: "v1.37-observation-v1.19-activation-proof-v1"
   lifecycle: "pending-precommit"
@@ -132,6 +136,11 @@ export interface V137ObservationV119PostactivationEvidence {
     treeSha: string
     changedPaths: string[]
     selectorManifest: SelectorManifestEntry[]
+    activationCommitSha: string
+    activationParentSha: string
+    activationTreeSha: string
+    activationChangedPaths: string[]
+    activationSelectorManifest: SelectorManifestEntry[]
   }
   smokeReceipt: GateReceipt
   protectedBaseline: {
@@ -183,15 +192,31 @@ export const collectV137ObservationV119PostactivationEvidence = async (
     ACTIVATION_PROOF_PATH,
   )
   if (proofFile.state === "absent") throw new Error("Committed proof is absent")
+  const currentHead = await adapter.gitHead()
   const selectorManifest: SelectorManifestEntry[] = []
+  const activationSelectorManifest: SelectorManifestEntry[] = []
   for (const selectorPath of ACTIVATION_SELECTOR_PATHS) {
-    const file = await adapter.readCommitFile(activationCommit, selectorPath)
-    if (file.state === "absent") {
+    const currentFile = await adapter.readCommitFile(currentHead, selectorPath)
+    const activationFile = await adapter.readCommitFile(
+      activationCommit,
+      selectorPath,
+    )
+    if (currentFile.state === "absent" || activationFile.state === "absent") {
       throw new Error(`Committed selector is absent: ${selectorPath}`)
     }
-    selectorManifest.push({ path: selectorPath, sha256: sha256(file.bytes) })
+    selectorManifest.push({
+      path: selectorPath,
+      sha256: sha256(currentFile.bytes),
+    })
+    activationSelectorManifest.push({
+      path: selectorPath,
+      sha256: sha256(activationFile.bytes),
+    })
   }
   selectorManifest.sort((left, right) => left.path.localeCompare(right.path))
+  activationSelectorManifest.sort((left, right) =>
+    left.path.localeCompare(right.path),
+  )
   return {
     schemaVersion: "v1.37-observation-v1.19-postactivation-evidence-v2",
     activationId,
@@ -199,11 +224,18 @@ export const collectV137ObservationV119PostactivationEvidence = async (
     proofDigest: sha256(proofFile.bytes),
     head,
     git: {
-      headSha: await adapter.gitHead(),
-      parentSha: await adapter.gitParent(activationCommit),
-      treeSha: await adapter.gitTree(activationCommit),
-      changedPaths: (await adapter.changedPaths(activationCommit)).sort(),
+      headSha: currentHead,
+      parentSha: await adapter.gitParent(currentHead),
+      treeSha: await adapter.gitTree(currentHead),
+      changedPaths: (await adapter.changedPaths(currentHead)).sort(),
       selectorManifest,
+      activationCommitSha: activationCommit,
+      activationParentSha: await adapter.gitParent(activationCommit),
+      activationTreeSha: await adapter.gitTree(activationCommit),
+      activationChangedPaths: (
+        await adapter.changedPaths(activationCommit)
+      ).sort(),
+      activationSelectorManifest,
     },
     smokeReceipt: await adapter.runGate("smoke"),
     protectedBaseline,
@@ -275,13 +307,23 @@ export const validateV137ObservationV119PostactivationEvidence = (
     !record(exactEvidence.proof) ||
     !record(exactEvidence.head) ||
     !record(exactEvidence.git) ||
-    !record(exactEvidence.protectedBaseline)
+    !record(exactEvidence.protectedBaseline) ||
+    !exactKeys(exactEvidence.git, [
+      "headSha",
+      "parentSha",
+      "treeSha",
+      "changedPaths",
+      "selectorManifest",
+      "activationCommitSha",
+      "activationParentSha",
+      "activationTreeSha",
+      "activationChangedPaths",
+      "activationSelectorManifest",
+    ])
   ) {
     return { status: "failed", errors: ["evidence shape"] }
   }
-  if (exactEvidence.head.state === "active-v1.17-compensated") {
-    return { status: "blocked", errors: ["compensated v1.17 safe blocker"] }
-  }
+  const compensated = exactEvidence.head.state === "active-v1.17-compensated"
   const errors: string[] = []
   const expected = buildExpectedV119SelectorManifest()
   const proof = exactEvidence.proof
@@ -357,31 +399,71 @@ export const validateV137ObservationV119PostactivationEvidence = (
   if (!validReceipt(proof.rollbackReceipt, "rollback")) {
     errors.push("rollback receipt")
   }
-  if (
+  const finalization = exactEvidence.head.finalization
+  if (compensated) {
+    const compensation = exactEvidence.head.compensation
+    const restoredManifest = proof.preimage
+      .filter(({ path: memberPath }) => memberPath !== ACTIVATION_PROOF_PATH)
+      .map(({ path: memberPath, sha256: memberSha }) => ({
+        path: memberPath,
+        sha256: memberSha,
+      }))
+      .sort((left, right) => left.path.localeCompare(right.path))
+    if (
+      exactEvidence.head.activeSelectionRoot !==
+        "sha256:fd2cc24a345c0cb94dde9966262f128c663a4430022574729eb4a902177c4b5a" ||
+      exactEvidence.head.pendingIntent !== null ||
+      finalization === null ||
+      compensation === null ||
+      compensation.sourceActivationId !== exactEvidence.activationId ||
+      compensation.sourceActivationId !== finalization.activationId ||
+      compensation.commitSha !== exactEvidence.git.headSha ||
+      compensation.treeSha !== exactEvidence.git.treeSha ||
+      exactEvidence.git.parentSha !== finalization.commitSha ||
+      stable([...exactEvidence.git.changedPaths].sort()) !==
+        stable(ALL_PATHS) ||
+      restoredManifest.some(
+        ({ sha256: memberSha }) => memberSha === undefined,
+      ) ||
+      stable(exactEvidence.git.selectorManifest) !== stable(restoredManifest) ||
+      hashSelectorManifestEntries(exactEvidence.git.selectorManifest) !==
+        compensation.selectorManifestRoot
+    ) {
+      errors.push("compensating recovery binding")
+    }
+  } else if (
     exactEvidence.head.state !== "active-v1.19-finalized" ||
     exactEvidence.head.activeSelectionRoot !== TARGET_ROOT ||
     exactEvidence.head.pendingIntent !== null ||
     exactEvidence.head.compensation !== null ||
-    exactEvidence.head.finalization === null ||
-    exactEvidence.head.finalization.activationId !== exactEvidence.activationId
+    finalization === null ||
+    finalization.activationId !== exactEvidence.activationId ||
+    exactEvidence.git.headSha !== finalization.commitSha ||
+    exactEvidence.git.treeSha !== finalization.treeSha ||
+    exactEvidence.git.parentSha !== proof.parentHead ||
+    stable([...exactEvidence.git.changedPaths].sort()) !== stable(ALL_PATHS) ||
+    !validManifest(exactEvidence.git.selectorManifest, expected.entries)
   ) {
     errors.push("final semantic head")
   }
-  const finalization = exactEvidence.head.finalization
   if (
     finalization === null ||
-    finalization.commitSha !== exactEvidence.git.headSha ||
-    finalization.treeSha !== exactEvidence.git.treeSha ||
+    finalization.commitSha !== exactEvidence.git.activationCommitSha ||
+    finalization.treeSha !== exactEvidence.git.activationTreeSha ||
     finalization.proofDigest !== exactEvidence.proofDigest ||
     finalization.selectorManifestRoot !== expected.root ||
-    exactEvidence.git.parentSha !== proof.parentHead ||
-    stable([...exactEvidence.git.changedPaths].sort()) !== stable(ALL_PATHS) ||
-    !validManifest(exactEvidence.git.selectorManifest, expected.entries) ||
+    exactEvidence.git.activationParentSha !== proof.parentHead ||
+    stable([...exactEvidence.git.activationChangedPaths].sort()) !==
+      stable(ALL_PATHS) ||
+    !validManifest(
+      exactEvidence.git.activationSelectorManifest,
+      expected.entries,
+    ) ||
     sha256(jsonBytes(proof)) !== exactEvidence.proofDigest
   ) {
     errors.push("commit tree proof binding")
   }
-  if (!validReceipt(exactEvidence.smokeReceipt, "smoke")) {
+  if (!compensated && !validReceipt(exactEvidence.smokeReceipt, "smoke")) {
     errors.push("live smoke")
   }
   if (
@@ -396,7 +478,10 @@ export const validateV137ObservationV119PostactivationEvidence = (
   ) {
     errors.push("protected baseline")
   }
-  return { status: errors.length === 0 ? "passed" : "failed", errors }
+  if (errors.length > 0) return { status: "failed", errors }
+  return compensated
+    ? { status: "blocked", errors: ["compensated v1.17 safe blocker"] }
+    : { status: "passed", errors: [] }
 }
 
 export const parseV137ObservationV119PostactivationArgs = (

@@ -13,6 +13,7 @@ import {
 import {
   buildExpectedV119SelectorManifest,
   collectV137ObservationV119PostactivationEvidence,
+  hashSelectorManifestEntries,
   parseV137ObservationV119PostactivationArgs,
   validateV137ObservationV119PostactivationEvidence,
   type V137ObservationV119PostactivationEvidence,
@@ -89,6 +90,11 @@ const passing = (): V137ObservationV119PostactivationEvidence => {
       treeSha: TREE,
       changedPaths: ALL_PATHS,
       selectorManifest: selectorManifest.entries,
+      activationCommitSha: COMMIT,
+      activationParentSha: PARENT,
+      activationTreeSha: TREE,
+      activationChangedPaths: ALL_PATHS,
+      activationSelectorManifest: selectorManifest.entries,
     },
     smokeReceipt: receipt("smoke"),
     protectedBaseline: {
@@ -231,13 +237,21 @@ describe("v1.37 observation-v1.19 postactivation evaluator", () => {
     mutableHead.state = "active-v1.17-compensated"
     mutableHead.activeSelectionRoot =
       "sha256:fd2cc24a345c0cb94dde9966262f128c663a4430022574729eb4a902177c4b5a"
+    const restoredManifest = compensated.proof.preimage
+      .filter(({ path }) => path !== ACTIVATION_PROOF_PATH)
+      .map(({ path, sha256 }) => ({ path, sha256: sha256! }))
+      .sort((left, right) => left.path.localeCompare(right.path))
+    compensated.git.headSha = git("d")
+    compensated.git.parentSha = COMMIT
+    compensated.git.treeSha = git("e")
+    compensated.git.selectorManifest = restoredManifest
     mutableHead.compensation = {
       activationId: "compensation:phase260:plan31:test",
       sourceActivationId: ACTIVATION_ID,
       recoveryReceiptDigest: hash("recovery"),
       commitSha: git("d"),
       treeSha: git("e"),
-      selectorManifestRoot: hash("restored-selectors"),
+      selectorManifestRoot: hashSelectorManifestEntries(restoredManifest),
     }
     const result =
       validateV137ObservationV119PostactivationEvidence(compensated)

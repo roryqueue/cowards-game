@@ -139,6 +139,7 @@ export interface ActivationCoordinatorAdapter {
   writeFile(path: string, value: FileBytes): Promise<void>
   stagedPaths(): Promise<string[]>
   stage(paths: readonly string[]): Promise<void>
+  unstage(paths: readonly string[]): Promise<void>
   commit(message: string, paths: readonly string[]): Promise<string>
   runGate(id: string): Promise<GateReceipt>
 }
@@ -409,6 +410,23 @@ const assertWorktreeSnapshot = async (
   }
 }
 
+const assertCommitSnapshot = async (
+  adapter: ActivationCoordinatorAdapter,
+  commitSha: string,
+  snapshot: ReadonlyMap<string, FileBytes>,
+  label: string,
+): Promise<void> => {
+  for (const filePath of ALL_PATHS) {
+    const expected = snapshot.get(filePath)
+    if (
+      expected === undefined ||
+      !equalFile(await adapter.readCommitFile(commitSha, filePath), expected)
+    ) {
+      throw new Error(`${label} commit mismatch at ${filePath}`)
+    }
+  }
+}
+
 interface ActivationProof {
   readonly schemaVersion: "v1.37-observation-v1.19-activation-proof-v1"
   readonly lifecycle: "pending-precommit"
@@ -533,6 +551,51 @@ const assertCommittedActivation = async (
   return {
     proofBytes: proofFile.bytes,
     treeSha: await adapter.gitTree(commitSha),
+  }
+}
+
+const assertFinalizedActivation = async (
+  adapter: ActivationCoordinatorAdapter,
+  head: ActivationHead,
+  activationId: string,
+): Promise<void> => {
+  const finalization = head.finalization
+  if (
+    head.state !== "active-v1.19-finalized" ||
+    finalization === null ||
+    finalization.activationId !== activationId ||
+    (await adapter.gitHead()) !== finalization.commitSha ||
+    (await adapter.gitTree(finalization.commitSha)) !== finalization.treeSha ||
+    !exactPaths(await adapter.changedPaths(finalization.commitSha))
+  ) {
+    throw new Error("Finalized activation Git binding mismatch")
+  }
+  const proofFile = await adapter.readCommitFile(
+    finalization.commitSha,
+    ACTIVATION_PROOF_PATH,
+  )
+  if (
+    proofFile.state === "absent" ||
+    sha256(proofFile.bytes) !== finalization.proofDigest
+  ) {
+    throw new Error("Finalized activation proof binding mismatch")
+  }
+  const proof = parseProofBytes(proofFile.bytes)
+  if (
+    proof.activationId !== activationId ||
+    proof.parentHead !== (await adapter.gitParent(finalization.commitSha)) ||
+    proof.selectorManifestRoot !== finalization.selectorManifestRoot
+  ) {
+    throw new Error("Finalized activation receipt mismatch")
+  }
+  for (const entry of proof.selectorManifest) {
+    const file = await adapter.readCommitFile(
+      finalization.commitSha,
+      entry.path,
+    )
+    if (file.state !== "present" || sha256(file.bytes) !== entry.sha256) {
+      throw new Error(`Finalized selector mismatch at ${entry.path}`)
+    }
   }
 }
 
@@ -684,6 +747,7 @@ const finalize = async (
     head.state === "active-v1.19-finalized" &&
     head.finalization?.activationId === activationId
   ) {
+    await assertFinalizedActivation(adapter, head, activationId)
     return head
   }
   const intent = pendingForward(head, activationId)
@@ -712,14 +776,10 @@ const smoke = async (
   activationId: string,
 ): Promise<GateReceipt> => {
   const head = await adapter.readHead()
-  if (
-    head.state !== "active-v1.19-finalized" ||
-    head.pendingIntent !== null ||
-    head.finalization?.activationId !== activationId ||
-    (await adapter.gitHead()) !== head.finalization.commitSha
-  ) {
+  if (head.pendingIntent !== null) {
     throw new Error("Smoke requires the exact finalized activation")
   }
+  await assertFinalizedActivation(adapter, head, activationId)
   return adapter.runGate("smoke")
 }
 
@@ -734,7 +794,15 @@ const abortForward = async (
   }
   const snapshot = await captureCommitSnapshot(adapter, intent.parentHead)
   await restoreSnapshot(adapter, snapshot)
+  await adapter.unstage(ALL_PATHS)
   await assertWorktreeSnapshot(adapter, snapshot, "abort restore")
+  if (
+    (await adapter.stagedPaths()).some((filePath) =>
+      ALL_PATHS.includes(filePath),
+    )
+  ) {
+    throw new Error("Abort restore left activation paths staged")
+  }
   return adapter.abort({
     direction: "forward",
     activationId,
@@ -773,6 +841,7 @@ const compensate = async (
   ) {
     throw new Error("Compensation requires the exact finalized activation")
   }
+  await assertFinalizedActivation(adapter, head, sourceActivationId)
   const activationCommit = head.finalization.commitSha
   const activationParent = await adapter.gitParent(activationCommit)
   const currentSnapshot = await captureCommitSnapshot(adapter, activationCommit)
@@ -801,6 +870,7 @@ const compensate = async (
     proofPreimageRoot: snapshotRoot(currentSnapshot),
   })
   await restoreSnapshot(adapter, parentSnapshot)
+  await assertWorktreeSnapshot(adapter, parentSnapshot, "compensation restore")
   await adapter.stage(ALL_PATHS)
   if (!exactPaths(await adapter.stagedPaths())) {
     throw new Error("Compensation staged allowlist mismatch")
@@ -812,6 +882,12 @@ const compensate = async (
   if (!(await exactActivationChild(adapter, reverseCommit, activationCommit))) {
     throw new Error("Compensation commit mismatch")
   }
+  await assertCommitSnapshot(
+    adapter,
+    reverseCommit,
+    parentSnapshot,
+    "compensation restore",
+  )
   return adapter.finalize({
     direction: "reverse",
     activationId: reverseActivationId,
@@ -844,6 +920,12 @@ const recoverReverse = async (
       intent.parentHead,
     )
     await restoreSnapshot(adapter, sourceSnapshot)
+    await adapter.unstage(ALL_PATHS)
+    await assertWorktreeSnapshot(
+      adapter,
+      sourceSnapshot,
+      "compensation abort restore",
+    )
     return adapter.abort({
       direction: "reverse",
       activationId: intent.activationId,
@@ -862,6 +944,12 @@ const recoverReverse = async (
   const parentSnapshot = await captureCommitSnapshot(
     adapter,
     await adapter.gitParent(intent.parentHead),
+  )
+  await assertCommitSnapshot(
+    adapter,
+    current,
+    parentSnapshot,
+    "compensation recovery",
   )
   return adapter.finalize({
     direction: "reverse",
@@ -1147,6 +1235,9 @@ export const createProductionActivationAdapter = (
   },
   async stage(paths) {
     await runProcess("git", ["add", "-A", "--", ...paths], repoRoot)
+  },
+  async unstage(paths) {
+    await runProcess("git", ["reset", "-q", "HEAD", "--", ...paths], repoRoot)
   },
   async commit(message, paths) {
     await runProcess(

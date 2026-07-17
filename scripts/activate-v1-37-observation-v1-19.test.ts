@@ -196,6 +196,10 @@ class ModelAdapter implements ActivationCoordinatorAdapter {
     this.events.push("stage")
     for (const path of paths) this.staged.add(path)
   }
+  async unstage(paths: readonly string[]): Promise<void> {
+    this.events.push("unstage")
+    for (const path of paths) this.staged.delete(path)
+  }
   async commit(message: string, paths: readonly string[]): Promise<string> {
     this.events.push(`commit:${message}`)
     if (this.failCommit) throw new Error("commit hook failed")
@@ -387,9 +391,12 @@ describe("v1.37 observation v1.19 activation coordinator", () => {
     const restored = new ModelAdapter()
     await run(restored, "prepare")
     await run(restored, "validate")
+    await run(restored, "rollback-drill")
+    await run(restored, "stage")
     await run(restored, "recover")
     expect(restored.head.state).toBe("active-v1.17-bootstrap")
     expect(restored.events).toContain("abort:forward")
+    expect(await restored.stagedPaths()).toEqual([])
 
     const mismatch = new ModelAdapter()
     await run(mismatch, "prepare")
@@ -438,6 +445,24 @@ describe("v1.37 observation v1.19 activation coordinator", () => {
     await run(adapter, "recover")
     expect(adapter.head.state).toBe("active-v1.17-compensated")
     expect(adapter.head.compensation?.commitSha).toBe(git("d"))
+  })
+
+  it("refuses a compensation commit that does not restore the parent bytes", async () => {
+    const adapter = new ModelAdapter()
+    await throughValidate(adapter)
+    await run(adapter, "stage")
+    await run(adapter, "commit")
+    await run(adapter, "finalize")
+    adapter.failFinalize = true
+    await expect(run(adapter, "compensate")).rejects.toThrow(/finalization/iu)
+    adapter.commits
+      .get(adapter.currentHead)!
+      .files.set(ACTIVATION_SELECTOR_PATHS[1], Buffer.from("wrong restore\n"))
+    adapter.failFinalize = false
+    await expect(run(adapter, "recover")).rejects.toThrow(
+      /compensation recovery commit mismatch/iu,
+    )
+    expect(adapter.head.state).toBe("pending-compensation")
   })
 
   it("serializes every mode under the coordinator lock", async () => {
