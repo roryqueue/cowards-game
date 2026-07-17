@@ -44,7 +44,7 @@ const proofObject = () => ({
   parentHead: PARENT,
   pendingSelectionRoot:
     "sha256:17954660f17c83e60e5d7df0b589cd89cf6b00eba4d4963e2d4bf43bc71c6ea2",
-  selectorManifest: buildExpectedV119SelectorManifest(),
+  selectorManifest: buildExpectedV119SelectorManifest().entries,
   selectorManifestRoot:
     "sha256:552386a32c70a73a82e85fc3be7a4d08d4d71bf78d16757702a8e056540f5a8f" as `sha256:${string}`,
   preimage: ALL_PATHS.map((path) =>
@@ -105,23 +105,25 @@ const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T
 describe("v1.37 observation-v1.19 postactivation evaluator", () => {
   it("passes only the finite five-selector, externally finalized activation", () => {
     const evidence = passing()
-    expect(validateV137ObservationV119PostactivationEvidence(evidence)).toEqual({
-      status: "passed",
-      errors: [],
-    })
-    expect(evidence.proof.selectorManifest).toHaveLength(5)
-    expect(evidence.proof.selectorManifest.map(({ path }) => path)).not.toContain(
-      ACTIVATION_PROOF_PATH,
+    expect(validateV137ObservationV119PostactivationEvidence(evidence)).toEqual(
+      {
+        status: "passed",
+        errors: [],
+      },
     )
+    expect(evidence.proof.selectorManifest).toHaveLength(5)
+    expect(
+      evidence.proof.selectorManifest.map(({ path }) => path),
+    ).not.toContain(ACTIVATION_PROOF_PATH)
     expect(evidence.git.changedPaths).toHaveLength(6)
   })
 
   it("rejects a mixed selector and proof recursion", () => {
     const mixed = clone(passing())
     mixed.proof.selectorManifest[0]!.sha256 = hash("mixed")
-    expect(validateV137ObservationV119PostactivationEvidence(mixed).status).toBe(
-      "failed",
-    )
+    expect(
+      validateV137ObservationV119PostactivationEvidence(mixed).status,
+    ).toBe("failed")
 
     const recursive = clone(passing())
     recursive.proof.selectorManifest.push({
@@ -135,8 +137,12 @@ describe("v1.37 observation-v1.19 postactivation evaluator", () => {
 
   it("rejects a stale or lingering pending intent", () => {
     const pending = clone(passing())
-    pending.head.state = "pending-precommit"
-    pending.head.pendingIntent = {
+    const mutableHead = pending.head as unknown as {
+      state: ActivationHead["state"]
+      pendingIntent: ActivationHead["pendingIntent"]
+    }
+    mutableHead.state = "pending-precommit"
+    mutableHead.pendingIntent = {
       direction: "forward",
       activationId: ACTIVATION_ID,
       parentHead: PARENT,
@@ -164,7 +170,7 @@ describe("v1.37 observation-v1.19 postactivation evaluator", () => {
     ).toContain("rollback receipt")
 
     const smoke = clone(passing())
-    smoke.smokeReceipt.id = "not-smoke"
+    ;(smoke.smokeReceipt as unknown as { id: string }).id = "not-smoke"
     expect(
       validateV137ObservationV119PostactivationEvidence(smoke).errors,
     ).toContain("live smoke")
@@ -178,32 +184,54 @@ describe("v1.37 observation-v1.19 postactivation evaluator", () => {
     ).toContain("six-path preimage")
 
     const recursive = clone(passing())
-    recursive.proof.validationReceipts[0]!.command =
-      "evaluate-v1-37-observation-v1-19-postactivation --check"
+    ;(
+      recursive.proof.validationReceipts[0]! as unknown as { command: string }
+    ).command = "evaluate-v1-37-observation-v1-19-postactivation --check"
     expect(
       validateV137ObservationV119PostactivationEvidence(recursive).errors,
     ).toContain("validation receipts")
   })
 
   it.each([
-    ["commit", (value: V137ObservationV119PostactivationEvidence) => (value.git.headSha = git("9"))],
-    ["parent", (value: V137ObservationV119PostactivationEvidence) => (value.git.parentSha = git("9"))],
-    ["tree", (value: V137ObservationV119PostactivationEvidence) => (value.git.treeSha = git("9"))],
-    ["proof", (value: V137ObservationV119PostactivationEvidence) => (value.proofDigest = hash("wrong"))],
+    [
+      "commit",
+      (value: V137ObservationV119PostactivationEvidence) =>
+        (value.git.headSha = git("9")),
+    ],
+    [
+      "parent",
+      (value: V137ObservationV119PostactivationEvidence) =>
+        (value.git.parentSha = git("9")),
+    ],
+    [
+      "tree",
+      (value: V137ObservationV119PostactivationEvidence) =>
+        (value.git.treeSha = git("9")),
+    ],
+    [
+      "proof",
+      (value: V137ObservationV119PostactivationEvidence) =>
+        (value.proofDigest = hash("wrong")),
+    ],
   ] as const)("rejects a %s binding mismatch", (_name, mutate) => {
     const evidence = clone(passing())
     mutate(evidence)
-    expect(validateV137ObservationV119PostactivationEvidence(evidence).status).toBe(
-      "failed",
-    )
+    expect(
+      validateV137ObservationV119PostactivationEvidence(evidence).status,
+    ).toBe("failed")
   })
 
   it("treats compensated v1.17 as a safe blocker, never success", () => {
     const compensated = clone(passing())
-    compensated.head.state = "active-v1.17-compensated"
-    compensated.head.activeSelectionRoot =
+    const mutableHead = compensated.head as unknown as {
+      state: ActivationHead["state"]
+      activeSelectionRoot: string
+      compensation: ActivationHead["compensation"]
+    }
+    mutableHead.state = "active-v1.17-compensated"
+    mutableHead.activeSelectionRoot =
       "sha256:fd2cc24a345c0cb94dde9966262f128c663a4430022574729eb4a902177c4b5a"
-    compensated.head.compensation = {
+    mutableHead.compensation = {
       activationId: "compensation:phase260:plan31:test",
       sourceActivationId: ACTIVATION_ID,
       recoveryReceiptDigest: hash("recovery"),
@@ -211,14 +239,17 @@ describe("v1.37 observation-v1.19 postactivation evaluator", () => {
       treeSha: git("e"),
       selectorManifestRoot: hash("restored-selectors"),
     }
-    const result = validateV137ObservationV119PostactivationEvidence(compensated)
+    const result =
+      validateV137ObservationV119PostactivationEvidence(compensated)
     expect(result.status).toBe("blocked")
     expect(result.errors).toContain("compensated v1.17 safe blocker")
   })
 
   it("rejects fake recovery and private diagnostic fields", () => {
     const fake = clone(passing())
-    fake.head.compensation = {
+    ;(
+      fake.head as unknown as { compensation: ActivationHead["compensation"] }
+    ).compensation = {
       activationId: "compensation:fake",
       sourceActivationId: ACTIVATION_ID,
       recoveryReceiptDigest: hash("fake"),
@@ -230,7 +261,10 @@ describe("v1.37 observation-v1.19 postactivation evaluator", () => {
       "failed",
     )
 
-    const privateEvidence = clone(passing()) as unknown as Record<string, unknown>
+    const privateEvidence = clone(passing()) as unknown as Record<
+      string,
+      unknown
+    >
     privateEvidence.diagnostics = { source: "private" }
     expect(
       validateV137ObservationV119PostactivationEvidence(privateEvidence).errors,
@@ -239,7 +273,9 @@ describe("v1.37 observation-v1.19 postactivation evaluator", () => {
 
   it("collects proof, selector, Git, head, and live smoke from the real coordinator port", async () => {
     const expected = passing()
-    const proofBytes = Buffer.from(`${JSON.stringify(expected.proof, null, 2)}\n`)
+    const proofBytes = Buffer.from(
+      `${JSON.stringify(expected.proof, null, 2)}\n`,
+    )
     const selectors = buildV119SelectorBytes()
     const adapter = {
       readHead: vi.fn(async () => expected.head as ActivationHead),
@@ -263,9 +299,9 @@ describe("v1.37 observation-v1.19 postactivation evaluator", () => {
       adapter,
       ACTIVATION_ID,
     )
-    expect(validateV137ObservationV119PostactivationEvidence(evidence).status).toBe(
-      "passed",
-    )
+    expect(
+      validateV137ObservationV119PostactivationEvidence(evidence).status,
+    ).toBe("passed")
     expect(adapter.runGate).toHaveBeenCalledWith("smoke")
   })
 

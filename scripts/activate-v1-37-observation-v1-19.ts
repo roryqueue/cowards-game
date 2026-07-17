@@ -992,7 +992,8 @@ const gateCommands: Readonly<Record<string, readonly string[]>> = Object.freeze(
       "pnpm",
       "exec",
       "tsx",
-      "scripts/check-v1-37-protected-baseline.ts",
+      "scripts/capture-v1-37-protected-baseline.ts",
+      "--check",
     ],
     rollback: [
       "git",
