@@ -14,6 +14,7 @@ import {
 } from "@cowards/replay"
 import {
   CANONICAL_COMPATIBILITY_TUPLES,
+  CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE_ID,
   RUNTIME_EXECUTION_SERVICE_VERSION_V1_18,
   createRuntimeSemanticAdmissionClaimV118,
   createRuntimeSemanticTupleV118,
@@ -69,7 +70,7 @@ const successorConditionIdentity = () => ({
   arenaId: "arena:smoke:v1",
   arenaCatalogVersion: "arena-catalog-v1.37" as const,
   arenaSemanticGeometryHash: `sha256:${"5".repeat(64)}` as const,
-  semanticTupleId: `sha256:${"6".repeat(64)}` as const,
+  semanticTupleId: CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE_ID,
   bottom: {
     entrantKey: "entrant:a",
     playerId: "player:a",
@@ -128,7 +129,7 @@ describe("runtime-v1.19 frozen condition completion", () => {
           scheduled,
           terminal: { ...terminal, terminalKind: "success" },
         }),
-      ).toThrow(/frozen condition identity/iu)
+      ).toThrow(/frozen_condition_identity/iu)
     }
   })
 
@@ -160,7 +161,7 @@ describe("runtime-v1.19 frozen condition completion", () => {
         attemptNumber: 1,
         maxAttempts: 3,
       }),
-    ).toThrow(/frozen condition identity/iu)
+    ).toThrow(/frozen_condition_identity/iu)
   })
 })
 

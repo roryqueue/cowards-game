@@ -10,6 +10,7 @@ import {
 } from "@cowards/replay"
 import {
   CANONICAL_COMPATIBILITY_TUPLES,
+  CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE_ID,
   RuntimeExecutionFinalStateSchema,
   RuntimeExecutionServiceRequestV118Schema,
   RuntimeExecutionResolvedEvidenceSnapshotSchema,
@@ -62,6 +63,236 @@ export interface CompleteMatchSemanticEvidenceV118 {
 
 export interface CompleteMatchInputV118 extends CompleteMatchInput {
   readonly semanticEvidence: CompleteMatchSemanticEvidenceV118
+}
+
+export interface SuccessorRevisionRevalidationIdentityV119 {
+  readonly entrantKey: string
+  readonly playerId: string
+  readonly strategyRevisionId: string
+  readonly revalidationId: string
+  readonly revalidationRoot: `sha256:${string}`
+}
+
+/**
+ * The immutable scheduling identity that a runtime-v1.19 terminal or retry
+ * must echo. The D-04 roots bind the real revision-specific service evidence;
+ * lane certificates alone are intentionally insufficient.
+ */
+export interface SuccessorConditionIdentityV119 {
+  readonly semanticAuthorityKey: "runtime-v1.19"
+  readonly matchSetId: string
+  readonly matchId: MatchId
+  readonly scenarioId: `set-scenario:sha256:${string}`
+  readonly conditionId: `set-condition:sha256:${string}`
+  readonly conditionOrdinal: 0 | 1 | 2 | 3
+  readonly requestIdentity: `set-request:sha256:${string}`
+  readonly signedRequestSha256: `sha256:${string}`
+  readonly seed: string
+  readonly arenaId: string
+  readonly arenaCatalogVersion: "arena-catalog-v1.37"
+  readonly arenaSemanticGeometryHash: `sha256:${string}`
+  readonly semanticTupleId: typeof CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE_ID
+  readonly bottom: Readonly<SuccessorRevisionRevalidationIdentityV119>
+  readonly top: Readonly<SuccessorRevisionRevalidationIdentityV119>
+  readonly initialInitiativeEntrantKey: string
+  readonly initialInitiativePlayerId: string
+}
+
+export interface SuccessorConditionTerminalEvidenceV119
+  extends SuccessorConditionIdentityV119 {
+  readonly terminalKind: "success" | "player_violation"
+}
+
+const successorConditionIdentityKeysV119 = [
+  "semanticAuthorityKey",
+  "matchSetId",
+  "matchId",
+  "scenarioId",
+  "conditionId",
+  "conditionOrdinal",
+  "requestIdentity",
+  "signedRequestSha256",
+  "seed",
+  "arenaId",
+  "arenaCatalogVersion",
+  "arenaSemanticGeometryHash",
+  "semanticTupleId",
+  "bottom",
+  "top",
+  "initialInitiativeEntrantKey",
+  "initialInitiativePlayerId",
+] as const
+
+const successorRevisionIdentityKeysV119 = [
+  "entrantKey",
+  "playerId",
+  "strategyRevisionId",
+  "revalidationId",
+  "revalidationRoot",
+] as const
+
+const isSha256Root = (value: unknown): value is `sha256:${string}` =>
+  typeof value === "string" && /^sha256:[0-9a-f]{64}$/u.test(value)
+
+const assertSuccessorConditionIdentityV119: (
+  value: unknown,
+) => asserts value is SuccessorConditionIdentityV119 = (value) => {
+  if (
+    !isRecord(value) ||
+    !hasExactKeys(value, successorConditionIdentityKeysV119) ||
+    value.semanticAuthorityKey !== "runtime-v1.19" ||
+    value.semanticTupleId !== CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE_ID ||
+    value.arenaCatalogVersion !== "arena-catalog-v1.37" ||
+    !Number.isInteger(value.conditionOrdinal) ||
+    Number(value.conditionOrdinal) < 0 ||
+    Number(value.conditionOrdinal) > 3 ||
+    !isSha256Root(value.signedRequestSha256) ||
+    !isSha256Root(value.arenaSemanticGeometryHash) ||
+    !isRecord(value.bottom) ||
+    !isRecord(value.top) ||
+    !hasExactKeys(value.bottom, successorRevisionIdentityKeysV119) ||
+    !hasExactKeys(value.top, successorRevisionIdentityKeysV119) ||
+    !isSha256Root(value.bottom.revalidationRoot) ||
+    !isSha256Root(value.top.revalidationRoot)
+  ) {
+    throw new MatchCompletionSemanticSystemFailure(
+      "SUCCESSOR_FROZEN_CONDITION_IDENTITY_INVALID",
+    )
+  }
+  for (const field of [
+    "matchSetId",
+    "matchId",
+    "scenarioId",
+    "conditionId",
+    "requestIdentity",
+    "seed",
+    "arenaId",
+    "initialInitiativeEntrantKey",
+    "initialInitiativePlayerId",
+  ] as const) {
+    if (typeof value[field] !== "string" || value[field].length === 0) {
+      throw new MatchCompletionSemanticSystemFailure(
+        "SUCCESSOR_FROZEN_CONDITION_IDENTITY_INVALID",
+      )
+    }
+  }
+  for (const side of [value.bottom, value.top]) {
+    for (const field of [
+      "entrantKey",
+      "playerId",
+      "strategyRevisionId",
+      "revalidationId",
+    ] as const) {
+      if (typeof side[field] !== "string" || side[field].length === 0) {
+        throw new MatchCompletionSemanticSystemFailure(
+          "SUCCESSOR_FROZEN_CONDITION_IDENTITY_INVALID",
+        )
+      }
+    }
+  }
+  const initiativeSide =
+    value.initialInitiativeEntrantKey === value.bottom.entrantKey
+      ? value.bottom
+      : value.initialInitiativeEntrantKey === value.top.entrantKey
+        ? value.top
+        : undefined
+  if (
+    value.bottom.entrantKey === value.top.entrantKey ||
+    value.bottom.strategyRevisionId === value.top.strategyRevisionId ||
+    value.bottom.revalidationId === value.top.revalidationId ||
+    initiativeSide?.playerId !== value.initialInitiativePlayerId
+  ) {
+    throw new MatchCompletionSemanticSystemFailure(
+      "SUCCESSOR_FROZEN_CONDITION_IDENTITY_INVALID",
+    )
+  }
+}
+
+const cloneSuccessorConditionIdentityV119 = (
+  identity: SuccessorConditionIdentityV119,
+): SuccessorConditionIdentityV119 =>
+  Object.freeze({
+    ...globalThis.structuredClone(identity),
+    bottom: Object.freeze(globalThis.structuredClone(identity.bottom)),
+    top: Object.freeze(globalThis.structuredClone(identity.top)),
+  })
+
+export const admitSuccessorConditionTerminalV119 = (input: {
+  readonly scheduled: SuccessorConditionIdentityV119 | unknown
+  readonly terminal: SuccessorConditionTerminalEvidenceV119 | unknown
+}): {
+  readonly terminalKind: "success" | "player_violation"
+  readonly identity: SuccessorConditionIdentityV119
+} => {
+  assertSuccessorConditionIdentityV119(input.scheduled)
+  if (
+    !isRecord(input.terminal) ||
+    !hasExactKeys(input.terminal, [
+      ...successorConditionIdentityKeysV119,
+      "terminalKind",
+    ]) ||
+    (input.terminal.terminalKind !== "success" &&
+      input.terminal.terminalKind !== "player_violation")
+  ) {
+    throw new MatchCompletionSemanticSystemFailure(
+      "SUCCESSOR_TERMINAL_EVIDENCE_INVALID",
+    )
+  }
+  const { terminalKind, ...terminalIdentity } = input.terminal
+  assertSuccessorConditionIdentityV119(terminalIdentity)
+  if (!isDeepStrictEqual(input.scheduled, terminalIdentity)) {
+    throw new MatchCompletionSemanticSystemFailure(
+      "SUCCESSOR_FROZEN_CONDITION_IDENTITY_MISMATCH",
+    )
+  }
+  return Object.freeze({
+    terminalKind,
+    identity: cloneSuccessorConditionIdentityV119(input.scheduled),
+  })
+}
+
+export const evaluateSuccessorSystemFailureRetryV119 = (input: {
+  readonly scheduled: SuccessorConditionIdentityV119 | unknown
+  readonly attempted: SuccessorConditionIdentityV119 | unknown
+  readonly retryable: boolean
+  readonly attemptNumber: number
+  readonly maxAttempts: number
+}):
+  | Readonly<{
+      disposition: "retry"
+      nextAttemptNumber: number
+      identity: SuccessorConditionIdentityV119
+    }>
+  | Readonly<{
+      disposition: "degraded"
+      identity: SuccessorConditionIdentityV119
+    }> => {
+  assertSuccessorConditionIdentityV119(input.scheduled)
+  assertSuccessorConditionIdentityV119(input.attempted)
+  if (!isDeepStrictEqual(input.scheduled, input.attempted)) {
+    throw new MatchCompletionSemanticSystemFailure(
+      "SUCCESSOR_FROZEN_CONDITION_IDENTITY_MISMATCH",
+    )
+  }
+  if (
+    !Number.isInteger(input.attemptNumber) ||
+    !Number.isInteger(input.maxAttempts) ||
+    input.attemptNumber < 1 ||
+    input.maxAttempts < 1 ||
+    input.attemptNumber > input.maxAttempts
+  ) {
+    throw new MatchCompletionSemanticSystemFailure(
+      "SUCCESSOR_RETRY_POLICY_INVALID",
+    )
+  }
+  const identity = cloneSuccessorConditionIdentityV119(input.scheduled)
+  return input.retryable && input.attemptNumber < input.maxAttempts
+    ? Object.freeze({
+        disposition: "retry" as const,
+        nextAttemptNumber: input.attemptNumber + 1,
+        identity,
+      })
+    : Object.freeze({ disposition: "degraded" as const, identity })
 }
 
 export type CompleteMatchRequest = CompleteMatchInput | CompleteMatchInputV118
