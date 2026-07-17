@@ -5,16 +5,16 @@ milestone_name: Rules Integrity and Strategy Evaluation Foundations — ACTIVE
 current_phase: 260
 current_phase_name: truthful-strategy-inputs-arena-authority-and-set-fairness
 status: executing
-stopped_at: Completed 260-05-PLAN.md
-last_updated: "2026-07-17T04:22:10.762Z"
+stopped_at: Completed 260-06-PLAN.md
+last_updated: "2026-07-17T04:44:48.437Z"
 last_activity: 2026-07-17
-last_activity_desc: Completed Phase 260 Plan 05 TypeScript four-condition scheduler candidate
+last_activity_desc: Completed Phase 260 Plan 06 generated-authority Go scheduler candidate
 progress:
   total_phases: 6
   completed_phases: 4
   total_plans: 112
-  completed_plans: 93
-  percent: 83
+  completed_plans: 94
+  percent: 84
 ---
 
 # State: Coward's Game
@@ -29,11 +29,11 @@ See: `.planning/PROJECT.md` (updated 2026-07-12)
 ## Current Position
 
 Phase: 260 (truthful-strategy-inputs-arena-authority-and-set-fairness) — EXECUTING
-Plan: 8 of 26
+Plan: 9 of 26
 Status: Ready to execute
-Last activity: 2026-07-17 — Completed Phase 260 Plan 05 TypeScript four-condition scheduler candidate
+Last activity: 2026-07-17 — Completed Phase 260 Plan 06 generated-authority Go scheduler candidate
 
-Progress: [████████░░] 83%
+Progress: [████████░░] 84%
 
 ## Durable Decisions
 
@@ -75,8 +75,8 @@ Progress: [████████░░] 83%
 
 **Resume file:** None
 
-Last session: 2026-07-17T04:21:30.308Z
-Stopped at: Completed 260-05-PLAN.md
+Last session: 2026-07-17T04:44:48.423Z
+Stopped at: Completed 260-06-PLAN.md
 Next command: `$gsd-execute-phase 260`.
 
 ## Performance Metrics
@@ -134,6 +134,7 @@ Next command: `$gsd-execute-phase 260`.
 | Phase 260 P17 | 12min | 2 tasks | 7 files |
 | Phase 260 P03 | 17min | 3 tasks | 14 files |
 | Phase 260 P05 | 24min | 3 tasks | 8 files |
+| Phase 260 P06 | 12min | 2 tasks | 5 files |
 
 ## Decisions
 
@@ -294,3 +295,5 @@ Next command: `$gsd-execute-phase 260`.
 - [Phase 260]: Treat one canonical scenario as the atomic scheduling unit: four explicit condition rows share one base seed and bind side, initiative, catalog, geometry, and request identity. — Mirror rows and seed suffixes are not fairness authority.
 - [Phase 260]: Require each immutable Strategy Revision to have its own exact non-revoked real runtime-v1.19 admission before candidate publication. — Language-level or cross-revision evidence cannot manufacture eligibility.
 - [Phase 260]: Canonicalize candidate competition pairs by immutable revision key while retaining Go as the selected normal scheduler. — Entrant reorder or insertion cannot change existing pair identity, and TypeScript remains rollback/parity/test only.
+- [Phase 260]: Keep the generated Phase-259 Go scheduler selected while runtime-v1.19 remains explicit candidate-only dispatch. — Go can consume successor structural authority without activating it or acquiring gameplay or Strategy execution authority.
+- [Phase 260]: Freeze each revision's exact runtime-v1.19 admission roots into every candidate Match and job evidence pair. — Cross-revision, synthetic, revoked, or substituted evidence cannot authorize any portion of the four-condition matrix.
