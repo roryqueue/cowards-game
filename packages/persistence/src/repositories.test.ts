@@ -7,7 +7,10 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest"
 import { randomUUID } from "node:crypto"
 import { Pool } from "pg"
 import { migrate } from "./migrations.js"
-import { createRepositories } from "./repositories.js"
+import {
+  createRepositories,
+  type StrategyRevisionV119RevalidationInput,
+} from "./repositories.js"
 
 const databaseUrl = process.env.DATABASE_URL
 const describeDatabase = databaseUrl ? describe : describe.skip
@@ -107,7 +110,7 @@ describeDatabase("released arena catalog repositories", () => {
   it("admits only exact non-revoked revision-scoped runtime-v1.19 evidence", async () => {
     const repositories = createRepositories(pool)
     const sourceHash = "a".repeat(64)
-    const artifactSha256 = `sha256:${"b".repeat(64)}`
+    const artifactSha256 = `sha256:${"b".repeat(64)}` as const
     await pool.query(
       "insert into users (id, display_name) values ('user:revalidation', 'Revalidation')",
     )
@@ -121,8 +124,15 @@ describeDatabase("released arena catalog repositories", () => {
          engine_compatibility, validation, metadata, locked_at
        ) values (
          'revision:v1.19', 'strategy:revalidation', 'return {}', $1, 9,
-         '{}'::jsonb, '{}'::jsonb, '{}'::jsonb,
-         jsonb_build_object('artifactHash', $2::text), now()
+         '{"language":{"id":"typescript"}}'::jsonb, '{}'::jsonb, '{}'::jsonb,
+         jsonb_build_object(
+           'artifactHash', $2::text,
+           'artifactBytes', 9,
+           'providerValidation', jsonb_build_object(
+             'providerId', 'strategy-language-provider-js-ts',
+             'artifactBytes', 9
+           )
+         ), now()
        )`,
       [sourceHash, artifactSha256],
     )
@@ -130,12 +140,13 @@ describeDatabase("released arena catalog repositories", () => {
       repositories.getStrategyRevisionV119Admission("revision:v1.19"),
     ).resolves.toBeNull()
 
-    const valid = {
+    const valid: StrategyRevisionV119RevalidationInput = {
       id: "revalidation:v1.19",
       strategyRevisionId: "revision:v1.19",
       sourceHash,
       sourceBytes: 9,
       artifactSha256,
+      artifactBytes: 9,
       languageId: "typescript" as const,
       providerId: "strategy-language-provider-js-ts",
       laneId: "lane:typescript:v1.19",
@@ -168,6 +179,26 @@ describeDatabase("released arena catalog repositories", () => {
       repositories.getStrategyRevisionV119Admission("revision:v1.19"),
     ).resolves.toEqual(admission)
 
+    await pool.query(
+      `insert into strategy_revisions (
+         id, strategy_id, source, source_hash, source_bytes, runtime,
+         engine_compatibility, validation, metadata, locked_at
+       ) select
+         'revision:sibling', strategy_id, source, source_hash, source_bytes,
+         runtime, engine_compatibility, validation, metadata, now()
+       from strategy_revisions where id = 'revision:v1.19'`,
+    )
+    await expect(
+      repositories.appendStrategyRevisionV119Revalidation({
+        ...valid,
+        id: "revalidation:sibling-reused-receipt",
+        strategyRevisionId: "revision:sibling",
+      }),
+    ).rejects.toThrow(/duplicate|unique|receipt/iu)
+    await expect(
+      repositories.getStrategyRevisionV119Admission("revision:sibling"),
+    ).resolves.toBeNull()
+
     for (const changed of [
       { ...valid, id: "bad:abi", runtimeAbiVersion: "strategy-runtime-abi-v1.18" },
       { ...valid, id: "bad:tuple", semanticTupleId: `sha256:${"0".repeat(64)}` },
@@ -175,9 +206,12 @@ describeDatabase("released arena catalog repositories", () => {
       { ...valid, id: "bad:artifact", artifactSha256: `sha256:${"2".repeat(64)}` },
       { ...valid, id: "bad:synthetic", syntheticEvidence: true },
       { ...valid, id: "bad:local", executionKind: "local_only" },
+      { ...valid, id: "bad:incomplete", reviewedCertificateId: undefined },
     ]) {
       await expect(
-        repositories.appendStrategyRevisionV119Revalidation(changed),
+        repositories.appendStrategyRevisionV119Revalidation(
+          changed as unknown as typeof valid,
+        ),
       ).rejects.toThrow(/runtime-v1.19|revalidation|identity|exact|duplicate/iu)
     }
 

@@ -671,14 +671,28 @@ describeDatabase("arena catalog and Set condition migration", () => {
            'arena:legacy', 'seed:legacy', 'player:bottom', 'player:top'
          )`,
       )
-      const before = await pool.query(
-        `select row_to_json(m.*)::text as value from matches m where id = 'match:legacy'`,
+      const before = await pool.query<{ value: unknown }>(
+        `select jsonb_build_object(
+           'id', id,
+           'bottom_strategy_revision_id', bottom_strategy_revision_id,
+           'top_strategy_revision_id', top_strategy_revision_id,
+           'arena_variant_id', arena_variant_id,
+           'seed', seed,
+           'status', status,
+           'bottom_player_id', bottom_player_id,
+           'top_player_id', top_player_id
+         ) as value from matches where id = 'match:legacy'`,
       )
 
       const result = await migrate(pool)
       expect(result.applied).toEqual([
         "0026_arena_catalog_and_set_conditions.sql",
       ])
+      const repeated = await migrate(pool)
+      expect(repeated.applied).toEqual([])
+      expect(repeated.skipped).toContain(
+        "0026_arena_catalog_and_set_conditions.sql",
+      )
       const after = await pool.query<{
         successor_scenario_id: string | null
         initial_initiative_player_id: string | null
@@ -690,7 +704,19 @@ describeDatabase("arena catalog and Set condition migration", () => {
         successor_scenario_id: null,
         initial_initiative_player_id: null,
       })
-      expect(before.rows).toHaveLength(1)
+      const afterHistorical = await pool.query<{ value: unknown }>(
+        `select jsonb_build_object(
+           'id', id,
+           'bottom_strategy_revision_id', bottom_strategy_revision_id,
+           'top_strategy_revision_id', top_strategy_revision_id,
+           'arena_variant_id', arena_variant_id,
+           'seed', seed,
+           'status', status,
+           'bottom_player_id', bottom_player_id,
+           'top_player_id', top_player_id
+         ) as value from matches where id = 'match:legacy'`,
+      )
+      expect(afterHistorical.rows[0]?.value).toEqual(before.rows[0]?.value)
       expect(
         await pool.query("select * from strategy_revision_v1_19_revalidations"),
       ).toHaveProperty("rowCount", 0)

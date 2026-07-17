@@ -120,6 +120,7 @@ export const STRATEGY_REVISION_V1_19_REVALIDATION_COLUMNS = Object.freeze([
   "source_hash",
   "source_bytes",
   "artifact_sha256",
+  "artifact_bytes",
   "language_id",
   "provider_id",
   "lane_id",

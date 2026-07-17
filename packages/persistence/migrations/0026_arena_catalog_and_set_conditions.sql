@@ -341,6 +341,7 @@ create table strategy_revision_v1_19_revalidations (
   source_hash text not null check (source_hash ~ '^[0-9a-f]{64}$'),
   source_bytes integer not null check (source_bytes >= 0),
   artifact_sha256 text not null check (artifact_sha256 ~ '^sha256:[0-9a-f]{64}$'),
+  artifact_bytes integer not null check (artifact_bytes > 0),
   language_id text not null check (language_id in ('typescript', 'python', 'rust', 'zig')),
   provider_id text not null,
   lane_id text not null,
@@ -376,6 +377,7 @@ returns trigger language plpgsql as $$
 declare
   revision strategy_revisions%rowtype;
   persisted_artifact_hash text;
+  persisted_artifact_bytes integer;
 begin
   select * into revision
     from strategy_revisions
@@ -393,9 +395,24 @@ begin
     revision.metadata->'sourceArtifact'->>'hash',
     revision.metadata->>'artifactHash'
   );
+  if persisted_artifact_hash ~ '^[0-9a-f]{64}$' then
+    persisted_artifact_hash := 'sha256:' || persisted_artifact_hash;
+  end if;
+  persisted_artifact_bytes := coalesce(
+    (revision.compiled_artifact->>'bytes')::integer,
+    (revision.metadata->'sourceArtifact'->>'bytes')::integer,
+    (revision.metadata->>'artifactBytes')::integer,
+    (revision.metadata->'providerValidation'->>'artifactBytes')::integer
+  );
   if persisted_artifact_hash is null or
-     persisted_artifact_hash <> new.artifact_sha256 then
+     persisted_artifact_hash <> new.artifact_sha256 or
+     persisted_artifact_bytes is null or
+     persisted_artifact_bytes <> new.artifact_bytes then
     raise exception 'runtime-v1.19 revalidation artifact identity mismatch';
+  end if;
+  if revision.runtime->'language'->>'id' is distinct from new.language_id or
+     revision.metadata->'providerValidation'->>'providerId' is distinct from new.provider_id then
+    raise exception 'runtime-v1.19 revalidation lane identity mismatch';
   end if;
   return new;
 end;

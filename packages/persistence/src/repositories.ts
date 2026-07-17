@@ -12,6 +12,7 @@ import {
   hashCanonicalIdentity,
   normalizeStrategyRuntimeMetadata,
   parseArenaCatalogV137,
+  CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE_ID,
 } from "@cowards/spec"
 import { Buffer } from "node:buffer"
 import type { Pool, PoolClient } from "pg"
@@ -29,6 +30,125 @@ export interface ReleasedArenaCatalogSnapshot {
   geometryHashProfile: string
   semanticGeometryHash: `sha256:${string}`
   config: ArenaCatalogRecordV137
+}
+
+type Sha256Identity = `sha256:${string}`
+
+export interface StrategyRevisionV119RevalidationInput {
+  id: string
+  strategyRevisionId: string
+  sourceHash: string
+  sourceBytes: number
+  artifactSha256: Sha256Identity
+  artifactBytes: number
+  languageId: "typescript" | "python" | "rust" | "zig"
+  providerId: string
+  laneId: string
+  runtimeAbiVersion: "strategy-runtime-abi-v1.19"
+  semanticRuntimeVersion: "runtime-v1.19"
+  semanticTupleId: string
+  executionKind: "real_service_execution"
+  syntheticEvidence: false
+  executionRequestRoot: Sha256Identity
+  executionResultRoot: Sha256Identity
+  executionReceiptRoot: Sha256Identity
+  serviceReceiptVersion: "runtime-semantic-receipt-v1.19"
+  reviewedCertificateId: string
+  reviewedCertificateSha256: Sha256Identity
+  reviewStatus: "reviewed"
+  evidenceStatus: "passed"
+  evidenceCreatedAt: string
+}
+
+export interface StrategyRevisionV119Admission {
+  brand: "strategy-revision-v1.19-admission"
+  revalidationId: string
+  strategyRevisionId: string
+  sourceHash: string
+  sourceBytes: number
+  artifactSha256: Sha256Identity
+  artifactBytes: number
+  languageId: StrategyRevisionV119RevalidationInput["languageId"]
+  providerId: string
+  laneId: string
+  runtimeAbiVersion: "strategy-runtime-abi-v1.19"
+  semanticRuntimeVersion: "runtime-v1.19"
+  semanticTupleId: string
+  executionRequestRoot: Sha256Identity
+  executionResultRoot: Sha256Identity
+  executionReceiptRoot: Sha256Identity
+  reviewedCertificateId: string
+  reviewedCertificateSha256: Sha256Identity
+}
+
+interface StrategyRevisionV119AdmissionRow {
+  id: string
+  strategy_revision_id: string
+  source_hash: string
+  source_bytes: number
+  artifact_sha256: Sha256Identity
+  artifact_bytes: number
+  language_id: StrategyRevisionV119RevalidationInput["languageId"]
+  provider_id: string
+  lane_id: string
+  runtime_abi_version: "strategy-runtime-abi-v1.19"
+  semantic_runtime_version: "runtime-v1.19"
+  semantic_tuple_id: string
+  execution_request_root: Sha256Identity
+  execution_result_root: Sha256Identity
+  execution_receipt_root: Sha256Identity
+  reviewed_certificate_id: string
+  reviewed_certificate_sha256: Sha256Identity
+}
+
+const freezeStrategyRevisionV119Admission = (
+  row: StrategyRevisionV119AdmissionRow,
+): Readonly<StrategyRevisionV119Admission> =>
+  Object.freeze({
+    brand: "strategy-revision-v1.19-admission",
+    revalidationId: row.id,
+    strategyRevisionId: row.strategy_revision_id,
+    sourceHash: row.source_hash,
+    sourceBytes: row.source_bytes,
+    artifactSha256: row.artifact_sha256,
+    artifactBytes: row.artifact_bytes,
+    languageId: row.language_id,
+    providerId: row.provider_id,
+    laneId: row.lane_id,
+    runtimeAbiVersion: row.runtime_abi_version,
+    semanticRuntimeVersion: row.semantic_runtime_version,
+    semanticTupleId: row.semantic_tuple_id,
+    executionRequestRoot: row.execution_request_root,
+    executionResultRoot: row.execution_result_root,
+    executionReceiptRoot: row.execution_receipt_root,
+    reviewedCertificateId: row.reviewed_certificate_id,
+    reviewedCertificateSha256: row.reviewed_certificate_sha256,
+  })
+
+const sha256IdentityPattern = /^sha256:[0-9a-f]{64}$/u
+
+const assertExactStrategyRevisionV119Revalidation = (
+  input: StrategyRevisionV119RevalidationInput,
+): void => {
+  if (
+    input.runtimeAbiVersion !== "strategy-runtime-abi-v1.19" ||
+    input.semanticRuntimeVersion !== "runtime-v1.19" ||
+    input.semanticTupleId !== CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE_ID ||
+    input.executionKind !== "real_service_execution" ||
+    input.syntheticEvidence !== false ||
+    input.serviceReceiptVersion !== "runtime-semantic-receipt-v1.19" ||
+    input.reviewStatus !== "reviewed" ||
+    input.evidenceStatus !== "passed" ||
+    ![
+      input.artifactSha256,
+      input.executionRequestRoot,
+      input.executionResultRoot,
+      input.executionReceiptRoot,
+      input.reviewedCertificateSha256,
+    ].every((value) => sha256IdentityPattern.test(value))
+  ) {
+    throw new Error("runtime-v1.19 revalidation requires exact real reviewed identity.")
+  }
 }
 
 interface ReleasedArenaCatalogRow {
@@ -302,6 +422,99 @@ export const createRepositories = (db: Queryable) => ({
       )
     }
     return freezeReleasedArenaSnapshot(row)
+  },
+
+  async appendStrategyRevisionV119Revalidation(
+    input: StrategyRevisionV119RevalidationInput,
+  ): Promise<Readonly<StrategyRevisionV119Admission>> {
+    assertExactStrategyRevisionV119Revalidation(input)
+    await db.query(
+      `insert into strategy_revision_v1_19_revalidations (
+         id, strategy_revision_id, source_hash, source_bytes, artifact_sha256,
+         artifact_bytes, language_id, provider_id, lane_id, runtime_abi_version,
+         semantic_runtime_version, semantic_tuple_id, execution_kind,
+         synthetic_evidence, execution_request_root, execution_result_root,
+         execution_receipt_root, service_receipt_version,
+         reviewed_certificate_id, reviewed_certificate_sha256, review_status,
+         evidence_status, evidence_created_at
+       ) values (
+         $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11,
+         $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23
+       )`,
+      [
+        input.id,
+        input.strategyRevisionId,
+        input.sourceHash,
+        input.sourceBytes,
+        input.artifactSha256,
+        input.artifactBytes,
+        input.languageId,
+        input.providerId,
+        input.laneId,
+        input.runtimeAbiVersion,
+        input.semanticRuntimeVersion,
+        input.semanticTupleId,
+        input.executionKind,
+        input.syntheticEvidence,
+        input.executionRequestRoot,
+        input.executionResultRoot,
+        input.executionReceiptRoot,
+        input.serviceReceiptVersion,
+        input.reviewedCertificateId,
+        input.reviewedCertificateSha256,
+        input.reviewStatus,
+        input.evidenceStatus,
+        input.evidenceCreatedAt,
+      ],
+    )
+    const admission = await this.getStrategyRevisionV119Admission(
+      input.strategyRevisionId,
+    )
+    if (!admission || admission.revalidationId !== input.id) {
+      throw new Error("runtime-v1.19 revalidation admission failed closed.")
+    }
+    return admission
+  },
+
+  async getStrategyRevisionV119Admission(
+    strategyRevisionId: string,
+  ): Promise<Readonly<StrategyRevisionV119Admission> | null> {
+    const result = await db.query<StrategyRevisionV119AdmissionRow>(
+      `select evidence.*
+         from strategy_revision_v1_19_revalidations evidence
+         left join strategy_revision_v1_19_revalidation_revocations revocation
+           on revocation.revalidation_id = evidence.id
+        where evidence.strategy_revision_id = $1
+          and evidence.runtime_abi_version = 'strategy-runtime-abi-v1.19'
+          and evidence.semantic_runtime_version = 'runtime-v1.19'
+          and evidence.semantic_tuple_id = $2
+          and evidence.execution_kind = 'real_service_execution'
+          and not evidence.synthetic_evidence
+          and evidence.service_receipt_version = 'runtime-semantic-receipt-v1.19'
+          and evidence.review_status = 'reviewed'
+          and evidence.evidence_status = 'passed'
+          and revocation.id is null`,
+      [strategyRevisionId, CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE_ID],
+    )
+    const row = result.rows[0]
+    return row ? freezeStrategyRevisionV119Admission(row) : null
+  },
+
+  async revokeStrategyRevisionV119Revalidation(input: {
+    id: string
+    revalidationId: string
+    reasonCode: string
+    evidenceRoot: Sha256Identity
+  }): Promise<void> {
+    if (!sha256IdentityPattern.test(input.evidenceRoot)) {
+      throw new Error("runtime-v1.19 revalidation revocation identity is invalid.")
+    }
+    await db.query(
+      `insert into strategy_revision_v1_19_revalidation_revocations (
+         id, revalidation_id, reason_code, evidence_root
+       ) values ($1, $2, $3, $4)`,
+      [input.id, input.revalidationId, input.reasonCode, input.evidenceRoot],
+    )
   },
 
   async upsertUser(record: {
