@@ -37,6 +37,9 @@ const pins = {
   certificateId: "certificate:typescript:v1.19:candidate",
   certificateSha256: sha256("certificate"),
   certificateStatus: "reviewed-inactive-candidate",
+  certificateLanguageId: "typescript",
+  certificateProviderId: "strategy-language-provider-js-ts",
+  certificateLaneId: "lane:typescript:v1.19",
   runtimeIdentityRoot: sha256("runtime"),
   toolchainIdentityRoot: sha256("toolchain"),
   adapterIdentityRoot: sha256("adapter"),
@@ -218,6 +221,9 @@ describe("revision-specific runtime-v1.19 revalidation", () => {
       certificateVersion: "runtime-conformance-certificate-v1.19",
       certificateId: "certificate:typescript:v1.19:candidate",
       certificateSha256: pins.certificateSha256,
+      certificateLanguageId: "typescript",
+      certificateProviderId: "strategy-language-provider-js-ts",
+      certificateLaneId: "lane:typescript:v1.19",
       probeCount: 6,
       probeIds: REQUIRED_REVISION_REVALIDATION_PROBES_V1_19,
     })
@@ -308,6 +314,23 @@ describe("revision-specific runtime-v1.19 revalidation", () => {
     [
       "old certificate",
       { pins: { ...pins, certificateVersion: "runtime-conformance-certificate-v1.18" } },
+    ],
+    [
+      "sibling language certificate",
+      { pins: { ...pins, certificateLanguageId: "python" } },
+    ],
+    [
+      "sibling provider certificate",
+      {
+        pins: {
+          ...pins,
+          certificateProviderId: "strategy-language-provider-python",
+        },
+      },
+    ],
+    [
+      "sibling lane certificate",
+      { pins: { ...pins, certificateLaneId: "lane:python:v1.19" } },
     ],
     [
       "current registry substitution",
