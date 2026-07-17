@@ -197,14 +197,19 @@ const createFakePnpm = async (root: string): Promise<string> => {
     executable,
     `#!/usr/bin/env node
 const { spawn } = require("node:child_process")
-const { writeFileSync } = require("node:fs")
+const { renameSync, writeFileSync } = require("node:fs")
+const writeMarker = (value) => {
+  const temporary = process.env.TEST_GATE_MARKER + ".tmp-" + process.pid
+  writeFileSync(temporary, JSON.stringify(value) + "\\n")
+  renameSync(temporary, process.env.TEST_GATE_MARKER)
+}
 if (process.env.TEST_GATE_BEHAVIOR === "exit") {
-  writeFileSync(process.env.TEST_GATE_MARKER, JSON.stringify({ gatePid: process.pid, childPid: null }) + "\\n")
+  writeMarker({ gatePid: process.pid, childPid: null })
   process.stdout.write("supervised gate complete\\n")
   process.exit(0)
 }
 const child = spawn(process.execPath, ["--eval", "setInterval(() => {}, 1000)"], { stdio: "ignore" })
-writeFileSync(process.env.TEST_GATE_MARKER, JSON.stringify({ gatePid: process.pid, childPid: child.pid }) + "\\n")
+writeMarker({ gatePid: process.pid, childPid: child.pid })
 setInterval(() => {}, 1000)
 `,
   )
@@ -648,6 +653,7 @@ describePostgres(
     }, 30_000)
 
     it.each([
+      "after-starting-lease-temp",
       "before-launcher-spawn",
       "after-launcher-spawn",
       "before-coordinator-ack",
@@ -738,6 +744,9 @@ describePostgres(
               })
             ).stdout,
           ).toBe("")
+          await expect(run(context, "recover")).resolves.toMatchObject({
+            state: "active-v1.17-bootstrap",
+          })
         } finally {
           if (child.exitCode === null && child.signalCode === null) {
             child.kill("SIGKILL")

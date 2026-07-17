@@ -1490,6 +1490,7 @@ interface SupervisedGateInput {
 const atomicWriteActivationGateLease = async (
   leasePath: string,
   value: ActivationGateLease,
+  afterTemporaryWrite?: () => Promise<void>,
 ): Promise<void> => {
   const temporary = `${leasePath}.tmp-${process.pid}-${randomUUID()}`
   try {
@@ -1497,6 +1498,7 @@ const atomicWriteActivationGateLease = async (
       flag: "wx",
       mode: 0o600,
     })
+    await afterTemporaryWrite?.()
     await rename(temporary, leasePath)
   } finally {
     await rm(temporary, { force: true })
@@ -1536,7 +1538,7 @@ const pauseCoordinatorSupervisionBoundary = async (
   input: SupervisedGateInput,
   boundary: string,
   supervisorPid: number,
-  processGroupId: number,
+  processGroupId: number | null,
   supervisorConnected: () => boolean,
 ): Promise<void> => {
   if (
@@ -1547,11 +1549,17 @@ const pauseCoordinatorSupervisionBoundary = async (
   }
   const reached = path.join(input.testControlDirectory, `${boundary}.reached`)
   const release = path.join(input.testControlDirectory, `${boundary}.release`)
-  await writeFile(
-    reached,
-    `${JSON.stringify({ boundary, supervisorPid, launcherPid: processGroupId })}\n`,
-    { flag: "wx", mode: 0o600 },
-  )
+  const temporary = `${reached}.tmp-${process.pid}-${randomUUID()}`
+  try {
+    await writeFile(
+      temporary,
+      `${JSON.stringify({ boundary, supervisorPid, launcherPid: processGroupId })}\n`,
+      { flag: "wx", mode: 0o600 },
+    )
+    await rename(temporary, reached)
+  } finally {
+    await rm(temporary, { force: true })
+  }
   while (supervisorConnected()) {
     try {
       await readFile(release)
@@ -1765,18 +1773,29 @@ const runSupervisedGateProcess = async (
     },
   )
   try {
-    await atomicWriteActivationGateLease(leasePath, {
-      version: 1,
-      state: "starting",
-      activationId: input.activationId,
-      workspace: input.workspace,
-      gateId: input.gateId,
-      coordinatorPid: process.pid,
-      coordinatorNonce,
-      supervisorPid,
-      gatePid: null,
-      processGroupId: null,
-    })
+    await atomicWriteActivationGateLease(
+      leasePath,
+      {
+        version: 1,
+        state: "starting",
+        activationId: input.activationId,
+        workspace: input.workspace,
+        gateId: input.gateId,
+        coordinatorPid: process.pid,
+        coordinatorNonce,
+        supervisorPid,
+        gatePid: null,
+        processGroupId: null,
+      },
+      () =>
+        pauseCoordinatorSupervisionBoundary(
+          input,
+          "after-starting-lease-temp",
+          supervisorPid,
+          null,
+          () => supervisor.connected,
+        ),
+    )
     supervisor.send({
       type: "start",
       command: input.command,

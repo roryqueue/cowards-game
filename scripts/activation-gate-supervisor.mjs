@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 import { fork } from "node:child_process"
 import { randomUUID } from "node:crypto"
-import { access, rename, rm, rmdir, writeFile } from "node:fs/promises"
+import { access, readdir, rename, rm, rmdir, writeFile } from "node:fs/promises"
+import path from "node:path"
 import process from "node:process"
 import { setTimeout } from "node:timers"
 import { fileURLToPath, URL } from "node:url"
@@ -174,7 +175,20 @@ const removeLease = async () => {
   const leasePath = configuration?.leasePath ?? startupLeasePath
   const leaseDirectory = configuration?.leaseDirectory ?? startupLeaseDirectory
   if (leasePath === undefined || leaseDirectory === undefined) return
-  await rm(leasePath, { force: true })
+  const basename = path.basename(leasePath)
+  let entries = []
+  try {
+    entries = await readdir(leaseDirectory)
+  } catch (error) {
+    if (error?.code !== "ENOENT") throw error
+  }
+  await Promise.all(
+    entries
+      .filter(
+        (entry) => entry === basename || entry.startsWith(`${basename}.tmp-`),
+      )
+      .map((entry) => rm(path.join(leaseDirectory, entry), { force: true })),
+  )
   try {
     await rmdir(leaseDirectory)
   } catch (error) {
@@ -194,15 +208,21 @@ const pauseAtBoundary = async (boundary) => {
   }
   const reached = `${configuration.testControlDirectory}/${boundary}.reached`
   const release = `${configuration.testControlDirectory}/${boundary}.release`
-  await writeFile(
-    reached,
-    `${JSON.stringify({
-      boundary,
-      supervisorPid: process.pid,
-      launcherPid: launcher?.pid ?? null,
-    })}\n`,
-    { flag: "wx", mode: 0o600 },
-  )
+  const temporary = `${reached}.tmp-${process.pid}-${randomUUID()}`
+  try {
+    await writeFile(
+      temporary,
+      `${JSON.stringify({
+        boundary,
+        supervisorPid: process.pid,
+        launcherPid: launcher?.pid ?? null,
+      })}\n`,
+      { flag: "wx", mode: 0o600 },
+    )
+    await rename(temporary, reached)
+  } finally {
+    await rm(temporary, { force: true })
+  }
   while (!coordinatorGone && process.connected) {
     try {
       await access(release)
