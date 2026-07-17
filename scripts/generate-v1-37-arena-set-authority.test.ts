@@ -7,9 +7,7 @@ import { CANONICAL_ARENA_CATALOG_V1_37 } from "../packages/spec/src/arena-catalo
 /* eslint-disable-next-line no-restricted-imports -- Generator tests pin the exact compact current selector module. */
 import { CURRENT_SEMANTIC_AUTHORITY_GENERATED } from "../packages/spec/src/current-semantic-authority-generated.js"
 /* eslint-disable-next-line no-restricted-imports -- Generator tests compare the explicit candidate-only tuple record. */
-import {
-  CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE_RECORD,
-} from "../packages/spec/src/integrity-authority.js"
+import { CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE_RECORD } from "../packages/spec/src/integrity-authority.js"
 /* eslint-disable-next-line no-restricted-imports -- Generator tests compare exact authority source ordering and bytes. */
 import {
   CANONICAL_SET_CONDITION_ROWS_V1_37,
@@ -37,9 +35,7 @@ describe("v1.37 arena and Set Go authority generator", () => {
     expect(authority.source.candidateTuple).toEqual(
       CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE_RECORD,
     )
-    expect(authority.source.arenaCatalog).toEqual(
-      CANONICAL_ARENA_CATALOG_V1_37,
-    )
+    expect(authority.source.arenaCatalog).toEqual(CANONICAL_ARENA_CATALOG_V1_37)
     expect(authority.source.setPolicy).toEqual(SET_CONDITION_POLICY_V1_37)
     expect(authority.source.conditionRows).toEqual(
       CANONICAL_SET_CONDITION_ROWS_V1_37,
@@ -59,9 +55,13 @@ describe("v1.37 arena and Set Go authority generator", () => {
   it("renders all three Go files deterministically and checks every byte", () => {
     const rendered = renderV137ArenaSetAuthorityArtifacts()
     expect(Object.keys(rendered)).toEqual(v137ArenaSetAuthorityOutputPaths)
-    expect(new Set(Array.from({ length: 5 }, () =>
-      JSON.stringify(renderV137ArenaSetAuthorityArtifacts()),
-    )).size).toBe(1)
+    expect(
+      new Set(
+        Array.from({ length: 5 }, () =>
+          JSON.stringify(renderV137ArenaSetAuthorityArtifacts()),
+        ),
+      ).size,
+    ).toBe(1)
 
     const persisted = new Map(Object.entries(rendered))
     expect(
@@ -96,8 +96,7 @@ describe("v1.37 arena and Set Go authority generator", () => {
         runtimeAbiVersion: "strategy-runtime-abi-v1.19",
         arenaCatalogVersion: "canonical-arena-catalog-v1.37",
         setPolicyVersion: "canonical-set-policy-v1.37-four-condition-v1",
-        conformanceCertificateVersion:
-          "runtime-conformance-certificate-v1.19",
+        conformanceCertificateVersion: "runtime-conformance-certificate-v1.19",
       },
     })
 
@@ -115,23 +114,30 @@ describe("v1.37 arena and Set Go authority generator", () => {
   it("rejects extra, reordered, aliased, seeded, stale, and preactivation drift", () => {
     const catalog = clone(CANONICAL_ARENA_CATALOG_V1_37)
     catalog.arenas.reverse()
-    expect(() => buildV137ArenaSetAuthorityArtifacts({ arenaCatalog: catalog }))
-      .toThrow(/catalog|order/iu)
+    expect(() =>
+      buildV137ArenaSetAuthorityArtifacts({ arenaCatalog: catalog }),
+    ).toThrow(/catalog|order/iu)
 
     const rows = clone(CANONICAL_SET_CONDITION_ROWS_V1_37)
     rows[0]!.suffix = "a-bottom-b-first"
-    expect(() => buildV137ArenaSetAuthorityArtifacts({ conditionRows: rows }))
-      .toThrow(/condition/iu)
+    expect(() =>
+      buildV137ArenaSetAuthorityArtifacts({ conditionRows: rows }),
+    ).toThrow(/condition/iu)
 
     const policy = clone(SET_CONDITION_POLICY_V1_37)
-    ;(policy as { seedCarriesFairnessSemantics: boolean })
-      .seedCarriesFairnessSemantics = true
-    expect(() => buildV137ArenaSetAuthorityArtifacts({ setPolicy: policy }))
-      .toThrow(/policy|seed/iu)
+    ;(
+      policy as { seedCarriesFairnessSemantics: boolean }
+    ).seedCarriesFairnessSemantics = true
+    expect(() =>
+      buildV137ArenaSetAuthorityArtifacts({ setPolicy: policy }),
+    ).toThrow(/policy|seed/iu)
 
-    const currentSelection = clone(CURRENT_SEMANTIC_AUTHORITY_GENERATED.selection)
-    ;(currentSelection as { semanticAuthorityKey: string }).semanticAuthorityKey =
-      "runtime-v1.18"
+    const currentSelection = clone(
+      CURRENT_SEMANTIC_AUTHORITY_GENERATED.selection,
+    )
+    ;(
+      currentSelection as { semanticAuthorityKey: string }
+    ).semanticAuthorityKey = "runtime-v1.18"
     expect(() =>
       buildV137ArenaSetAuthorityArtifacts({ currentSelection }),
     ).toThrow(/closed|current|selection/iu)
@@ -139,8 +145,9 @@ describe("v1.37 arena and Set Go authority generator", () => {
     const candidateTuple = clone(CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE_RECORD)
     ;(candidateTuple.tuple as { arenaCatalog: string }).arenaCatalog =
       "semantic-arena-catalog-v1.37-candidate-1"
-    expect(() => buildV137ArenaSetAuthorityArtifacts({ candidateTuple }))
-      .toThrow(/candidate|tuple/iu)
+    expect(() =>
+      buildV137ArenaSetAuthorityArtifacts({ candidateTuple }),
+    ).toThrow(/candidate|tuple/iu)
   })
 
   it("owns strict write/check CLI modes without environment or toolchain input", () => {
@@ -158,14 +165,18 @@ describe("v1.37 arena and Set Go authority generator", () => {
       }),
     ).toEqual({ wrote: true, checked: true })
     expect(persisted.size).toBe(3)
-    expect(() => runV137ArenaSetAuthorityGenerator([], {
-      readOutput: () => "",
-      writeOutput: () => undefined,
-    })).toThrow(/--write|--check/u)
-    expect(() => runV137ArenaSetAuthorityGenerator(["--latest"], {
-      readOutput: () => "",
-      writeOutput: () => undefined,
-    })).toThrow(/unknown/iu)
+    expect(() =>
+      runV137ArenaSetAuthorityGenerator([], {
+        readOutput: () => "",
+        writeOutput: () => undefined,
+      }),
+    ).toThrow(/--write|--check/u)
+    expect(() =>
+      runV137ArenaSetAuthorityGenerator(["--latest"], {
+        readOutput: () => "",
+        writeOutput: () => undefined,
+      }),
+    ).toThrow(/unknown/iu)
 
     const source = readFileSync(
       path.join(repoRoot, "scripts/generate-v1-37-arena-set-authority.ts"),

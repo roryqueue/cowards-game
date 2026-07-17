@@ -11,7 +11,7 @@ import (
 func TestArenaSetAuthorityV137CandidateProjection(t *testing.T) {
 	candidate, ok := arenaSetAuthorityV137CandidateBySemanticAuthorityKey("runtime-v1.19")
 	if !ok { t.Fatal("explicit v1.19 candidate lookup failed") }
-	if candidate.SourceSHA256 != "sha256:d1ec091831cb7f32d7dcb92eda3a0a91d77c1e694d3891c240ae15e950b9caf7" || candidate.OutputSHA256 != "sha256:f33c173bceb3b6c5e26ba6cc4cbf8370201f9c3e93ebfc29abcb8669f4ae5d7d" { t.Fatal("generated source/output digest drift") }
+	if candidate.SourceSHA256 != "sha256:eb5183d312073a4f90d53988d188688ceec40d12599ca8a03ef23919a73f4f95" || candidate.OutputSHA256 != "sha256:b8029f58ce84bd37b6c9f1bb1fe604d74bf35ea6a0c18b84d67a98e7c04c16d8" { t.Fatal("generated source/output digest drift") }
 	if candidate.Tuple.RuntimeABI != "strategy-runtime-abi-v1.19" || candidate.Tuple.ArenaCatalog != "canonical-arena-catalog-v1.37" || candidate.Tuple.SetPolicy != "canonical-set-policy-v1.37-four-condition-v1" { t.Fatal("candidate tuple drift") }
 	if len(candidate.Arenas) != 3 || candidate.Arenas[0].ID != "arena:smoke:v1" || candidate.Arenas[1].ID != "arena:standard-cross:v1" || candidate.Arenas[2].ID != "arena:open-field:v1" { t.Fatal("arena catalog membership/order drift") }
 	if candidate.Arenas[0].SemanticGeometryHash != candidate.Arenas[2].SemanticGeometryHash || candidate.Arenas[2].AliasOf != candidate.Arenas[0].ID || candidate.Arenas[2].Schedulable { t.Fatal("arena alias semantics drift") }
@@ -24,11 +24,17 @@ func TestArenaSetAuthorityV137CandidateProjection(t *testing.T) {
 	if again.Arenas[0].ID != "arena:smoke:v1" { t.Fatal("candidate lookup shared mutable data") }
 }
 
-func TestArenaSetAuthorityV137LookupIsExplicitAndCurrentRemainsPhase259(t *testing.T) {
+func TestArenaSetAuthorityV137LookupIsExplicitAndCurrentIsClosed(t *testing.T) {
 	for _, key := range []string{"", "runtime-v1.17", "runtime-v1.18", "runtime-v1.20"} { if _, ok := arenaSetAuthorityV137CandidateBySemanticAuthorityKey(key); ok { t.Fatalf("unexpected candidate lookup for %q", key) } }
 	current := currentSemanticAuthorityGenerated()
-	if current.SemanticAuthorityKey != "runtime-v1.17" || current.RuntimeABI != "strategy-runtime-abi-v1.17" || current.ArenaCatalog != "semantic-arena-catalog-v1.37-candidate-1" || current.SetPolicy != "canonical-set-policy-v1.4" || current.ConformanceCertificateVersion != "runtime-conformance-certificate-v1.17" { t.Fatalf("current selector no longer equals Phase 259: %+v", current) }
-	if current.TupleID != runtimeSuccessorSemanticTupleIDV117 || current.Rules != runtimeSuccessorCanonicalTupleV117.Rules || current.Engine != runtimeSuccessorCanonicalTupleV117.Engine || current.Chronicle != runtimeSuccessorCanonicalTupleV117.Chronicle { t.Fatal("current selector split from selected Phase-259 Go authority") }
+	switch current.SemanticAuthorityKey {
+	case "runtime-v1.17":
+		if current.TupleID != runtimeSuccessorSemanticTupleIDV117 || current.RuntimeABI != "strategy-runtime-abi-v1.17" || current.ArenaCatalog != "semantic-arena-catalog-v1.37-candidate-1" || current.SetPolicy != "canonical-set-policy-v1.4" || current.ConformanceCertificateVersion != "runtime-conformance-certificate-v1.17" || current.SourceSHA256 != "sha256:14296beaf5e79d731dba3de3501dde7239731ce51b0c926bced3d76f5eff29e1" || current.OutputSHA256 != "sha256:bb814addab77fd473103651eb9aac2980ed45770d5147fb54de1f703143b2ce0" { t.Fatalf("invalid v1.17 current selector: %+v", current) }
+	case "runtime-v1.19":
+		if current.TupleID != "sha256:37c9a07425d454c74859112debcc3ef362d43e80d5767560d9bde28a3c8d5e73" || current.RuntimeABI != "strategy-runtime-abi-v1.19" || current.ArenaCatalog != "canonical-arena-catalog-v1.37" || current.SetPolicy != "canonical-set-policy-v1.37-four-condition-v1" || current.ConformanceCertificateVersion != "runtime-conformance-certificate-v1.19" || current.SourceSHA256 != "sha256:110d30db98623cb90f07b473045cf04aca3433fb823964163191a0a8cba64b61" || current.OutputSHA256 != "sha256:15030ee59b81a2bf04667e045344de36d1b11b9834e64f71be05ccf7b73d80d5" { t.Fatalf("invalid v1.19 current selector: %+v", current) }
+	default:
+		t.Fatalf("unknown current selector: %+v", current)
+	}
 }
 
 func TestArenaSetAuthorityV137GeneratedProductionFilesAreDataOnly(t *testing.T) {

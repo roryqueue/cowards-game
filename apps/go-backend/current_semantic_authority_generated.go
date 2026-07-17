@@ -26,7 +26,7 @@ func currentSemanticAuthorityGenerated() currentSemanticAuthorityGeneratedSelect
 		ArenaCatalog: "semantic-arena-catalog-v1.37-candidate-1",
 		SetPolicy: "canonical-set-policy-v1.4",
 		ConformanceCertificateVersion: "runtime-conformance-certificate-v1.17",
-		SourceSHA256: arenaSetAuthorityV137SourceSHA256,
-		OutputSHA256: arenaSetAuthorityV137OutputSHA256,
+		SourceSHA256: "sha256:14296beaf5e79d731dba3de3501dde7239731ce51b0c926bced3d76f5eff29e1",
+		OutputSHA256: "sha256:bb814addab77fd473103651eb9aac2980ed45770d5147fb54de1f703143b2ce0",
 	}
 }
