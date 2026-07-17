@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest"
-import type { StrategyInputV117, StrategyInputV119 } from "@cowards/spec"
+import type {
+  Action,
+  SoldierBrainInputV119,
+  StrategyInputV117,
+  StrategyInputV119,
+} from "@cowards/spec"
 import { MATCH_KERNEL } from "../index.js"
 import {
   createCandidateInitialGameStateV119,
@@ -184,5 +189,169 @@ describe("successor Strategy observations", () => {
       failure: { code: "CANDIDATE_V119_MATCH_ADMISSION_FAILED" },
     })
     expect(runtimeStarted).toBe(false)
+  })
+})
+
+const successorState = () => {
+  const created = createCandidateInitialGameStateV119({
+    ...matchInput,
+    initialInitiativePlayerId: matchInput.bottomPlayerId,
+  })
+  if (!created.ok) throw new Error("Successor fixture state was rejected.")
+  return created.state
+}
+
+const actionRuntime = (
+  actions: readonly Action[],
+  observations: SoldierBrainInputV119[],
+) => {
+  let actionIndex = 0
+  return {
+    selectActivations() {
+      throw new Error("Selection is not used by activation-only fixtures.")
+    },
+    runSoldierBrain(input: unknown) {
+      observations.push(input as SoldierBrainInputV119)
+      const action = actions[actionIndex]
+      actionIndex += 1
+      if (action === undefined) {
+        throw new Error("Activation requested an unexpected extra Action.")
+      }
+      return { ok: true as const, value: { action, soldierMemory: {} } }
+    },
+  }
+}
+
+describe("successor SoldierBrain observations", () => {
+  it("reports false before Action, remains false after TURN, then stays true after self Advance", () => {
+    const observations: SoldierBrainInputV119[] = []
+    const execution = MATCH_KERNEL.runActivationFromStateV119({
+      state: successorState(),
+      soldierId: "bottom-soldier-1",
+      runtime: actionRuntime(
+        [
+          { type: "TURN", direction: "RIGHT" },
+          { type: "MOVE", direction: "UP" },
+          { type: "TURN", direction: "LEFT" },
+          { type: "TURN_TO_STONE" },
+        ],
+        observations,
+      ),
+    })
+
+    expect(execution.kind).toBe("completed")
+    expect(
+      observations.map((input) => input.hasAdvancedThisActivation),
+    ).toEqual([false, false, true, true])
+    if (execution.kind !== "completed") return
+    const recorded = execution.recorderMaterial.events
+      .filter((event) => event.type === "AWARENESS_GRID_OBSERVED")
+      .map(
+        (event) =>
+          (event.privatePayload as { hasAdvancedThisActivation?: boolean })
+            .hasAdvancedThisActivation,
+      )
+    expect(recorded).toEqual([false, false, true, true])
+  })
+
+  it("keeps blocked MOVE and PUSH false", () => {
+    const state = successorState()
+    const observations: SoldierBrainInputV119[] = []
+    const execution = MATCH_KERNEL.runActivationFromStateV119({
+      state,
+      soldierId: "bottom-soldier-1",
+      runtime: actionRuntime(
+        [
+          { type: "MOVE", direction: "RIGHT" },
+          { type: "TURN_TO_STONE" },
+        ],
+        observations,
+      ),
+    })
+
+    expect(execution.kind).toBe("completed")
+    expect(
+      observations.map((input) => input.hasAdvancedThisActivation),
+    ).toEqual([false, false])
+  })
+
+  it("counts successful push for the actor but not the pushed Soldier", () => {
+    const state = successorState()
+    state.soldiers = state.soldiers.map((soldier) => {
+      if (soldier.id === "bottom-soldier-1") {
+        return { ...soldier, position: { x: 4, y: 5 }, facing: "RIGHT" }
+      }
+      if (soldier.id === "top-soldier-1") {
+        return { ...soldier, position: { x: 5, y: 5 }, facing: "UP" }
+      }
+      return soldier
+    })
+    const actorObservations: SoldierBrainInputV119[] = []
+    const pushed = MATCH_KERNEL.runActivationFromStateV119({
+      state,
+      soldierId: "bottom-soldier-1",
+      runtime: actionRuntime(
+        [
+          { type: "MOVE", direction: "RIGHT" },
+          { type: "TURN_TO_STONE" },
+        ],
+        actorObservations,
+      ),
+    })
+    expect(pushed.kind).toBe("completed")
+    expect(
+      actorObservations.map((input) => input.hasAdvancedThisActivation),
+    ).toEqual([false, true])
+    if (pushed.kind !== "completed") return
+
+    const targetObservations: SoldierBrainInputV119[] = []
+    const target = MATCH_KERNEL.runActivationFromStateV119({
+      state: pushed.result.state,
+      soldierId: "top-soldier-1",
+      runtime: actionRuntime(
+        [{ type: "TURN_TO_STONE" }],
+        targetObservations,
+      ),
+    })
+    expect(target.kind).toBe("completed")
+    expect(targetObservations[0]?.hasAdvancedThisActivation).toBe(false)
+  })
+
+  it("resets to false in a new slot for the same Soldier", () => {
+    const firstObservations: SoldierBrainInputV119[] = []
+    const first = MATCH_KERNEL.runActivationFromStateV119({
+      state: successorState(),
+      soldierId: "bottom-soldier-1",
+      runtime: actionRuntime(
+        [
+          { type: "MOVE", direction: "UP" },
+          ...Array.from(
+            { length: 11 },
+            (): Action => ({ type: "TURN", direction: "LEFT" }),
+          ),
+        ],
+        firstObservations,
+      ),
+    })
+    expect(first.kind).toBe("completed")
+    expect(firstObservations[0]?.hasAdvancedThisActivation).toBe(false)
+    expect(
+      firstObservations.slice(1).every(
+        (input) => input.hasAdvancedThisActivation,
+      ),
+    ).toBe(true)
+    if (first.kind !== "completed") return
+
+    const secondObservations: SoldierBrainInputV119[] = []
+    const second = MATCH_KERNEL.runActivationFromStateV119({
+      state: first.result.state,
+      soldierId: "bottom-soldier-1",
+      runtime: actionRuntime(
+        [{ type: "TURN_TO_STONE" }],
+        secondObservations,
+      ),
+    })
+    expect(second.kind).toBe("completed")
+    expect(secondObservations[0]?.hasAdvancedThisActivation).toBe(false)
   })
 })
