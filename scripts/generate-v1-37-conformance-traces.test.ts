@@ -9,6 +9,7 @@ import {
   readdirSync,
   rmSync,
   symlinkSync,
+  writeFileSync,
 } from "node:fs"
 import { tmpdir } from "node:os"
 import path from "node:path"
@@ -19,6 +20,7 @@ import {
   V1_37_CONFORMANCE_CORPUS_ROOT,
 } from "../packages/golden/src/v1-37-conformance-corpus.js"
 import { V1_37_CONFORMANCE_CORPUS_V3_CANDIDATE_PIN } from "../packages/golden/src/v1-37-conformance-corpus-v3-candidate-pin.js"
+import { V1_37_OBSERVATION_TRACE_V4_CANDIDATE_PIN } from "../packages/golden/src/v1-37-conformance-trace-v4-candidate-pin.js"
 import {
   ACTIVE_V137_CONFORMANCE_TRACE_ROOT,
   generateV137ObservationTraceV4Candidate,
@@ -28,6 +30,7 @@ import {
   readV137ConformanceTraceReviewedHistory,
   type V137ConformanceTraceReviewedHistory,
 } from "./generate-v1-37-conformance-traces.js"
+import { writeV137ObservationTraceV4IndependentReview } from "./review-v1-37-conformance-trace-diff.js"
 
 const roots: string[] = []
 const temporaryRoot = (): string => {
@@ -191,6 +194,62 @@ describe("v1.37 conformance trace candidate generation", () => {
       "semantic-diff.json",
       "traces.bundle.json",
     ])
+  }, 30_000)
+
+  it("independently reviews and pins the exact inactive trace closure", () => {
+    const candidateDirectory = path.join(temporaryRoot(), "observation-trace-v4")
+    const result = generateV137ObservationTraceV4Candidate({ candidateDirectory })
+    const review = writeV137ObservationTraceV4IndependentReview({
+      candidateDirectory,
+      outputPath: path.join(candidateDirectory, "independent-review.json"),
+    })
+
+    expect(review).toMatchObject({
+      schemaVersion: "v1.37-observation-trace-independent-review-v1",
+      reviewedBy: "scripts/review-v1-37-conformance-trace-diff.ts",
+      candidateVersion: "v1.37-observation-trace-v4",
+      candidateRootSha256: result.candidateRootSha256,
+      status: "approved-inactive-observation-candidate",
+    })
+    expect(review.reviewedBy).not.toBe(
+      "scripts/generate-v1-37-conformance-traces.ts",
+    )
+    expect(V1_37_OBSERVATION_TRACE_V4_CANDIDATE_PIN).toMatchObject({
+      schemaVersion: "v1.37-observation-trace-candidate-pin-v1",
+      lifecycle: "inactive-candidate",
+      current: false,
+      candidateVersion: "v1.37-observation-trace-v4",
+      candidateRootSha256: result.candidateRootSha256,
+      updatePolicy: "plan-14-explicit-atomic-promotion-only",
+    })
+    expect(
+      sha256(
+        readFileSync(
+          path.join(ACTIVE_V137_CONFORMANCE_TRACE_ROOT, "registry.json"),
+        ),
+      ),
+    ).toBe(
+      "sha256:f97efb668bd956da600c0ca9bc1514473ad79554eba2477042c49091a698494d",
+    )
+  }, 30_000)
+
+  it("rejects incomplete dispositions before independent review", () => {
+    const candidateDirectory = path.join(temporaryRoot(), "observation-trace-v4")
+    generateV137ObservationTraceV4Candidate({ candidateDirectory })
+    const dispositionPath = path.join(
+      candidateDirectory,
+      "compatibility-disposition.json",
+    )
+    const disposition = JSON.parse(readFileSync(dispositionPath, "utf8"))
+    disposition.cases.pop()
+    writeFileSync(dispositionPath, `${JSON.stringify(disposition, null, 2)}\n`)
+
+    expect(() =>
+      writeV137ObservationTraceV4IndependentReview({
+        candidateDirectory,
+        outputPath: path.join(candidateDirectory, "independent-review.json"),
+      }),
+    ).toThrow(/DISPOSITION|ROOT|COVERAGE/u)
   }, 30_000)
 
   it("writes one new exact kernel-recorded trace per ordered corpus case", () => {
