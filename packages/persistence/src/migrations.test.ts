@@ -86,6 +86,7 @@ describe("migrations", () => {
       "strategy_revision_v1_19_revalidation_revocations",
       "strategy-runtime-abi-v1.19",
       "runtime-v1.19",
+      "sha256:37c9a07425d454c74859112debcc3ef362d43e80d5767560d9bde28a3c8d5e73",
       "real_service_execution",
       "reviewed",
       "reject_integrity_authority_mutation",
@@ -649,8 +650,16 @@ describeDatabase("arena catalog and Set condition migration", () => {
            engine_compatibility, validation, metadata, locked_at
          ) values (
            'revision:legacy', 'strategy:legacy', 'return {}', $1, 9,
-           '{}'::jsonb, '{}'::jsonb, '{}'::jsonb,
-           jsonb_build_object('artifactHash', $2::text), now()
+           '{"language":{"id":"typescript"}}'::jsonb,
+           '{}'::jsonb, '{}'::jsonb,
+           jsonb_build_object(
+             'artifactHash', $2::text,
+             'artifactBytes', 9,
+             'providerValidation', jsonb_build_object(
+               'providerId', 'strategy-language-provider-js-ts',
+               'artifactBytes', 9
+             )
+           ), now()
          )`,
         ["a".repeat(64), hash("b")],
       )
@@ -883,6 +892,36 @@ describeDatabase("arena catalog and Set condition migration", () => {
           ],
         ),
       ).rejects.toThrow(/source identity mismatch/iu)
+      await expect(
+        pool.query(
+          `insert into strategy_revision_v1_19_revalidations (
+             id, strategy_revision_id, source_hash, source_bytes,
+             artifact_sha256, artifact_bytes, language_id, provider_id, lane_id,
+             runtime_abi_version, semantic_runtime_version, semantic_tuple_id,
+             execution_kind, synthetic_evidence, execution_request_root,
+             execution_result_root, execution_receipt_root,
+             service_receipt_version, reviewed_certificate_id,
+             reviewed_certificate_sha256, review_status, evidence_status,
+             evidence_created_at
+           ) values (
+             'revalidation:old-tuple', 'revision:legacy', $1, 9, $2, 9,
+             'typescript', 'strategy-language-provider-js-ts',
+             'lane:typescript', 'strategy-runtime-abi-v1.19', 'runtime-v1.19', $3,
+             'real_service_execution', false, $4, $5, $6,
+             'runtime-semantic-receipt-v1.19', 'certificate:v1.19', $7,
+             'reviewed', 'passed', now() - interval '1 second'
+           )`,
+          [
+            "a".repeat(64),
+            hash("b"),
+            hash("4"),
+            hash("5"),
+            hash("6"),
+            hash("7"),
+            hash("8"),
+          ],
+        ),
+      ).rejects.toThrow(/semantic_tuple_id/iu)
 
       await pool.query("begin")
       try {

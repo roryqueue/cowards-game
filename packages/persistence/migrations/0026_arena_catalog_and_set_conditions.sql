@@ -21,6 +21,8 @@ create table arena_catalog_entries (
     or
     (arena_status = 'historical_alias' and not schedulable and alias_of_arena_id is not null)
   ),
+  check (catalog_version = 'canonical-arena-catalog-v1.37'),
+  check (geometry_hash_profile = 'arena-semantic-geometry-v1'),
   check (alias_of_arena_id is null or alias_of_arena_id <> arena_id),
   check (config->>'id' = arena_id),
   check (config->>'version' = arena_version),
@@ -89,6 +91,8 @@ create table set_scenarios (
   ),
   check (entrant_a_key <> entrant_b_key),
   check (entrant_a_player_id <> entrant_b_player_id),
+  check (set_policy_version = 'canonical-set-policy-v1.37-four-condition-v1'),
+  check (arena_catalog_version = 'canonical-arena-catalog-v1.37'),
   foreign key (arena_catalog_version, arena_id, arena_semantic_geometry_hash)
     references arena_catalog_entries(
       catalog_version,
@@ -351,7 +355,10 @@ create table strategy_revision_v1_19_revalidations (
   semantic_runtime_version text not null check (
     semantic_runtime_version = 'runtime-v1.19'
   ),
-  semantic_tuple_id text not null check (semantic_tuple_id ~ '^sha256:[0-9a-f]{64}$'),
+  semantic_tuple_id text not null check (
+    semantic_tuple_id =
+      'sha256:37c9a07425d454c74859112debcc3ef362d43e80d5767560d9bde28a3c8d5e73'
+  ),
   execution_kind text not null check (execution_kind = 'real_service_execution'),
   synthetic_evidence boolean not null check (not synthetic_evidence),
   execution_request_root text not null check (execution_request_root ~ '^sha256:[0-9a-f]{64}$'),
@@ -432,7 +439,8 @@ create table strategy_revision_v1_19_revalidation_revocations (
     references strategy_revision_v1_19_revalidations(id),
   reason_code text not null,
   evidence_root text not null check (evidence_root ~ '^sha256:[0-9a-f]{64}$'),
-  revoked_at timestamptz not null default now()
+  revoked_at timestamptz not null default now(),
+  check (reason_code <> '')
 );
 
 create trigger strategy_revision_v1_19_revalidation_revocations_append_only
