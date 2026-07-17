@@ -18,8 +18,10 @@ import {
   V1_37_CONFORMANCE_CORPUS,
   V1_37_CONFORMANCE_CORPUS_ROOT,
 } from "../packages/golden/src/v1-37-conformance-corpus.js"
+import { V1_37_CONFORMANCE_CORPUS_V3_CANDIDATE_PIN } from "../packages/golden/src/v1-37-conformance-corpus-v3-candidate-pin.js"
 import {
   ACTIVE_V137_CONFORMANCE_TRACE_ROOT,
+  generateV137ObservationTraceV4Candidate,
   generateV137ConformanceTraceCandidate,
   parseV137ConformanceTraceReviewedHistory,
   parseV137ConformanceTraceCandidateArgs,
@@ -43,6 +45,62 @@ afterEach(() => {
 })
 
 describe("v1.37 conformance trace candidate generation", () => {
+  it("bundles every corpus-v3 case in one fixed-schema inactive observation candidate", () => {
+    const registryPath = path.join(ACTIVE_V137_CONFORMANCE_TRACE_ROOT, "registry.json")
+    const registryBefore = readFileSync(registryPath)
+    const candidateDirectory = path.join(temporaryRoot(), "observation-trace-v4")
+
+    const result = generateV137ObservationTraceV4Candidate({ candidateDirectory })
+    const manifest = JSON.parse(readFileSync(result.manifestPath, "utf8"))
+    const bundle = JSON.parse(readFileSync(result.bundlePath, "utf8"))
+
+    expect(manifest).toMatchObject({
+      schemaVersion: "v1.37-observation-trace-candidate-v4",
+      candidateVersion: "v1.37-observation-trace-v4",
+      lifecycle: "inactive-candidate",
+      current: false,
+      corpusCandidateVersion: "v3",
+      corpusRootSha256:
+        V1_37_CONFORMANCE_CORPUS_V3_CANDIDATE_PIN.corpusRootSha256,
+      bundlePath: "traces.bundle.json",
+      caseCount: V1_37_CONFORMANCE_CORPUS_V3_CANDIDATE_PIN.caseRoots.length,
+    })
+    expect(bundle).toMatchObject({
+      schemaVersion: "v1.37-observation-trace-bundle-v1",
+      candidateVersion: manifest.candidateVersion,
+      corpusVersion: "v3",
+      corpusRootSha256: manifest.corpusRootSha256,
+      caseCount: manifest.caseCount,
+    })
+    expect(bundle.records.map(({ caseId }: { caseId: string }) => caseId)).toEqual(
+      V1_37_CONFORMANCE_CORPUS_V3_CANDIDATE_PIN.caseRoots.map(
+        ({ caseId }) => caseId,
+      ),
+    )
+    expect(manifest.cases).toEqual(
+      bundle.records.map(
+        ({ ordinal, caseId, resultClass, traceRoot }: Record<string, unknown>) => ({
+          ordinal,
+          caseId,
+          resultClass,
+          traceRoot,
+        }),
+      ),
+    )
+    expect(
+      bundle.records.every(
+        ({ canonicalInput, trace, evidence }: Record<string, unknown>) =>
+          canonicalInput !== undefined && trace !== undefined && evidence !== undefined,
+      ),
+    ).toBe(true)
+    expect(existsSync(path.join(candidateDirectory, "traces"))).toBe(false)
+    expect(readdirSync(candidateDirectory).sort()).toEqual([
+      "manifest.json",
+      "traces.bundle.json",
+    ])
+    expect(readFileSync(registryPath)).toEqual(registryBefore)
+  }, 30_000)
+
   it("writes one new exact kernel-recorded trace per ordered corpus case", () => {
     const candidateDirectory = path.join(
       temporaryRoot(),
