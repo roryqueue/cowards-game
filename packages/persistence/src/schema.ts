@@ -89,3 +89,46 @@ export const RUNTIME_AUTHORITY_IMPORT_TRUST_ROOT_DEPLOYMENT_COLUMNS =
     "public_key_fingerprint",
     "generation",
   ] as const)
+
+export const ARENA_CATALOG_ENTRY_COLUMNS = Object.freeze([
+  "catalog_version",
+  "arena_id",
+  "arena_version",
+  "arena_name",
+  "arena_status",
+  "schedulable",
+  "alias_of_arena_id",
+  "geometry_hash_profile",
+  "semantic_geometry_hash",
+  "config",
+] as const)
+
+export const SET_CONDITION_IDENTITY_COLUMNS = Object.freeze([
+  "scenario_id",
+  "condition_id",
+  "condition_ordinal",
+  "arena_catalog_version",
+  "arena_semantic_geometry_hash",
+  "bottom_entrant_key",
+  "top_entrant_key",
+  "initial_initiative_entrant_key",
+  "initial_initiative_player_id",
+] as const)
+
+export const STRATEGY_REVISION_V1_19_REVALIDATION_COLUMNS = Object.freeze([
+  "strategy_revision_id",
+  "source_hash",
+  "source_bytes",
+  "artifact_sha256",
+  "language_id",
+  "provider_id",
+  "lane_id",
+  "runtime_abi_version",
+  "semantic_runtime_version",
+  "semantic_tuple_id",
+  "execution_request_root",
+  "execution_result_root",
+  "execution_receipt_root",
+  "reviewed_certificate_id",
+  "reviewed_certificate_sha256",
+] as const)

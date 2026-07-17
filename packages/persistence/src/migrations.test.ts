@@ -609,6 +609,287 @@ describeDatabase("runtime semantic receipt v1.17 migration", () => {
   })
 })
 
+describeDatabase("arena catalog and Set condition migration", () => {
+  it("preserves historical rows and rejects malformed successor authority atomically", async () => {
+    const schema = `phase260_0026_${randomUUID().replaceAll("-", "")}`
+    const admin = new Pool({ connectionString: databaseUrl!, max: 1 })
+    await admin.query(`create schema ${schema}`)
+    const pool = new Pool({
+      connectionString: databaseUrl!,
+      max: 1,
+      options: `-c search_path=${schema}`,
+    })
+    const hash = (character: string): string => `sha256:${character.repeat(64)}`
+    try {
+      await pool.query(`
+        create table schema_migrations (
+          filename text primary key,
+          applied_at timestamptz not null default now()
+        )
+      `)
+      for (const file of await readMigrationFiles()) {
+        if (file.name === "0026_arena_catalog_and_set_conditions.sql") continue
+        await pool.query(file.sql)
+        await pool.query(
+          "insert into schema_migrations (filename) values ($1)",
+          [file.name],
+        )
+      }
+
+      await pool.query(
+        "insert into users (id, display_name) values ('user:legacy', 'Legacy')",
+      )
+      await pool.query(
+        `insert into strategies (id, owner_user_id, name)
+           values ('strategy:legacy', 'user:legacy', 'Legacy')`,
+      )
+      await pool.query(
+        `insert into strategy_revisions (
+           id, strategy_id, source, source_hash, source_bytes, runtime,
+           engine_compatibility, validation, metadata, locked_at
+         ) values (
+           'revision:legacy', 'strategy:legacy', 'return {}', $1, 9,
+           '{}'::jsonb, '{}'::jsonb, '{}'::jsonb,
+           jsonb_build_object('artifactHash', $2::text), now()
+         )`,
+        ["a".repeat(64), hash("b")],
+      )
+      await pool.query(
+        `insert into arena_variants (id, name, config)
+           values ('arena:legacy', 'Legacy', '{"legacy":true}'::jsonb)`,
+      )
+      await pool.query(
+        `insert into match_sets (id, matrix)
+           values ('set:legacy', '[{"legacy":true}]'::jsonb)`,
+      )
+      await pool.query(
+        `insert into matches (
+           id, bottom_strategy_revision_id, top_strategy_revision_id,
+           arena_variant_id, seed, bottom_player_id, top_player_id
+         ) values (
+           'match:legacy', 'revision:legacy', 'revision:legacy',
+           'arena:legacy', 'seed:legacy', 'player:bottom', 'player:top'
+         )`,
+      )
+      const before = await pool.query(
+        `select row_to_json(m.*)::text as value from matches m where id = 'match:legacy'`,
+      )
+
+      const result = await migrate(pool)
+      expect(result.applied).toEqual([
+        "0026_arena_catalog_and_set_conditions.sql",
+      ])
+      const after = await pool.query<{
+        successor_scenario_id: string | null
+        initial_initiative_player_id: string | null
+      }>(
+        `select successor_scenario_id, initial_initiative_player_id
+           from matches where id = 'match:legacy'`,
+      )
+      expect(after.rows[0]).toEqual({
+        successor_scenario_id: null,
+        initial_initiative_player_id: null,
+      })
+      expect(before.rows).toHaveLength(1)
+      expect(
+        await pool.query("select * from strategy_revision_v1_19_revalidations"),
+      ).toHaveProperty("rowCount", 0)
+
+      const smokeConfig = {
+        id: "arena:smoke:v1",
+        version: "v1",
+        name: "Smoke",
+        status: "active",
+        schedulable: true,
+        initialBounds: { minX: 0, maxX: 11, minY: 0, maxY: 11 },
+        terrainStones: [],
+        arenaOwnedSetup: {},
+        semanticGeometryHash: hash("c"),
+      }
+      await pool.query(
+        `insert into arena_catalog_entries (
+           catalog_version, arena_id, arena_version, arena_name, arena_status,
+           schedulable, geometry_hash_profile, semantic_geometry_hash, config
+         ) values ($1, $2, 'v1', 'Smoke', 'active', true, $3, $4, $5)`,
+        [
+          "canonical-arena-catalog-v1.37",
+          "arena:smoke:v1",
+          "arena-semantic-geometry-v1",
+          hash("c"),
+          smokeConfig,
+        ],
+      )
+      await expect(
+        pool.query(
+          `insert into arena_catalog_entries (
+             catalog_version, arena_id, arena_version, arena_name, arena_status,
+             schedulable, alias_of_arena_id, geometry_hash_profile,
+             semantic_geometry_hash, config
+           ) values ($1, 'arena:bad-alias:v1', 'v1', 'Bad Alias',
+             'historical_alias', false, 'arena:smoke:v1', $2, $3, $4)`,
+          [
+            "canonical-arena-catalog-v1.37",
+            "arena-semantic-geometry-v1",
+            hash("d"),
+            {
+              ...smokeConfig,
+              id: "arena:bad-alias:v1",
+              name: "Bad Alias",
+              status: "historical_alias",
+              schedulable: false,
+              aliasOf: "arena:smoke:v1",
+              semanticGeometryHash: hash("d"),
+            },
+          ],
+        ),
+      ).rejects.toThrow(/exact active semantic geometry/iu)
+      await expect(
+        pool.query(
+          "update arena_catalog_entries set arena_name = 'Changed' where arena_id = 'arena:smoke:v1'",
+        ),
+      ).rejects.toThrow(/append-only/iu)
+
+      await pool.query(
+        `insert into match_sets (id, matrix) values ('set:successor', '[]'::jsonb)`,
+      )
+      await pool.query(
+        `insert into set_scenarios (
+           match_set_id, scenario_id, set_policy_version,
+           arena_catalog_version, arena_id, arena_semantic_geometry_hash,
+           entrant_a_key, entrant_b_key, entrant_a_player_id,
+           entrant_b_player_id, base_seed
+         ) values (
+           'set:successor', $1, 'canonical-set-policy-v1.37-four-condition-v1',
+           'canonical-arena-catalog-v1.37', 'arena:smoke:v1', $2,
+           'entrant:a', 'entrant:b', 'player:a', 'player:b', 'seed:shared'
+         )`,
+        [`set-scenario:${hash("e")}`, hash("c")],
+      )
+      const insertCondition = (
+        ordinal: number,
+        suffix: string,
+        conditionHash: string,
+      ) =>
+        pool.query(
+          `insert into set_conditions (
+             match_set_id, scenario_id, condition_id, condition_ordinal,
+             condition_suffix, request_identity, arena_catalog_version,
+             arena_semantic_geometry_hash, bottom_entrant_key, top_entrant_key,
+             initial_initiative_entrant_key, bottom_player_id, top_player_id,
+             initial_initiative_player_id
+           ) values (
+             'set:successor', $1, $2, $3, $4, $5,
+             'canonical-arena-catalog-v1.37', $6,
+             'entrant:a', 'entrant:b', 'entrant:a',
+             'player:a', 'player:b', 'player:a'
+           )`,
+          [
+            `set-scenario:${hash("e")}`,
+            `set-condition:${conditionHash}`,
+            ordinal,
+            suffix,
+            `set-request:${conditionHash}`,
+            hash("c"),
+          ],
+        )
+      await insertCondition(0, "a-bottom-a-first", hash("f"))
+      await expect(
+        insertCondition(0, "a-bottom-a-first", hash("1")),
+      ).rejects.toThrow(/unique/iu)
+      await expect(
+        insertCondition(4, "a-bottom-a-first", hash("2")),
+      ).rejects.toThrow(/condition_ordinal/iu)
+      await expect(
+        pool.query(
+          `insert into set_conditions (
+             match_set_id, scenario_id, condition_id, condition_ordinal,
+             condition_suffix, request_identity, arena_catalog_version,
+             arena_semantic_geometry_hash, bottom_entrant_key, top_entrant_key,
+             initial_initiative_entrant_key, bottom_player_id, top_player_id,
+             initial_initiative_player_id
+           ) values (
+             'set:successor', $1, $2, 0, 'a-bottom-a-first', $3,
+             'canonical-arena-catalog-v1.37', $4,
+             'entrant:a', 'entrant:b', 'entrant:a',
+             'player:a', 'player:b', 'player:a'
+           )`,
+          [
+            `set-scenario:${hash("9")}`,
+            `set-condition:${hash("3")}`,
+            `set-request:${hash("3")}`,
+            hash("c"),
+          ],
+        ),
+      ).rejects.toThrow(/scenario|foreign key/iu)
+      await expect(
+        pool.query(
+          `update matches set successor_scenario_id = $1 where id = 'match:legacy'`,
+          [`set-scenario:${hash("e")}`],
+        ),
+      ).rejects.toThrow(/all_or_none/iu)
+      await expect(
+        pool.query(
+          `insert into strategy_revision_v1_19_revalidations (
+             id, strategy_revision_id, source_hash, source_bytes,
+             artifact_sha256, language_id, provider_id, lane_id,
+             runtime_abi_version, semantic_runtime_version, semantic_tuple_id,
+             execution_kind, synthetic_evidence, execution_request_root,
+             execution_result_root, execution_receipt_root,
+             service_receipt_version, reviewed_certificate_id,
+             reviewed_certificate_sha256, review_status, evidence_status,
+             evidence_created_at
+           ) values (
+             'revalidation:bad-source', 'revision:legacy', $1, 9, $2,
+             'typescript', 'provider:typescript', 'lane:typescript',
+             'strategy-runtime-abi-v1.19', 'runtime-v1.19', $3,
+             'real_service_execution', false, $4, $5, $6,
+             'runtime-semantic-receipt-v1.19', 'certificate:v1.19', $7,
+             'reviewed', 'passed', now() - interval '1 second'
+           )`,
+          [
+            "9".repeat(64),
+            hash("b"),
+            hash("4"),
+            hash("5"),
+            hash("6"),
+            hash("7"),
+            hash("8"),
+          ],
+        ),
+      ).rejects.toThrow(/source identity mismatch/iu)
+
+      await pool.query("begin")
+      try {
+        await pool.query(
+          `insert into set_scenarios (
+             match_set_id, scenario_id, set_policy_version,
+             arena_catalog_version, arena_id, arena_semantic_geometry_hash,
+             entrant_a_key, entrant_b_key, entrant_a_player_id,
+             entrant_b_player_id, base_seed
+           ) values (
+             'set:successor', $1, 'canonical-set-policy-v1.37-four-condition-v1',
+             'canonical-arena-catalog-v1.37', 'arena:smoke:v1', $2,
+             'entrant:c', 'entrant:d', 'player:c', 'player:d', 'seed:rollback'
+           )`,
+          [`set-scenario:${hash("a")}`, hash("c")],
+        )
+        await insertCondition(2, "a-bottom-a-first", hash("0"))
+        throw new Error("expected malformed condition to fail")
+      } catch {
+        await pool.query("rollback")
+      }
+      const rolledBack = await pool.query(
+        "select 1 from set_scenarios where base_seed = 'seed:rollback'",
+      )
+      expect(rolledBack.rowCount).toBe(0)
+    } finally {
+      await pool.end()
+      await admin.query(`drop schema if exists ${schema} cascade`)
+      await admin.end()
+    }
+  })
+})
+
 describe("development seed data", () => {
   it("includes deterministic local data for development smoke runs", () => {
     const seed = createDevelopmentSeedData()
