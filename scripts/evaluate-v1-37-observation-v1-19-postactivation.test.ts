@@ -12,6 +12,7 @@ import {
   buildCompensationActivationId,
   buildV119SelectorBytes,
   hashActivationPathDigests,
+  hashActivationProofCommitment,
   hashCompensationRecoveryReceipt,
   type ActivationHead,
   type FileBytes,
@@ -78,10 +79,14 @@ const passing = (): V137ObservationV119PostactivationEvidence => {
   const proofDigest = hash(proofBytes)
   const selectorManifest = buildExpectedV119SelectorManifest()
   return {
-    schemaVersion: "v1.37-observation-v1.19-postactivation-evidence-v2",
+    schemaVersion: "v1.37-observation-v1.19-postactivation-evidence-v3",
     activationId: ACTIVATION_ID,
     proof,
     proofDigest,
+    preparedProofCommitment: hashActivationProofCommitment(
+      proof.proofPreimageRoot,
+      proofDigest,
+    ),
     head: {
       state: "active-v1.19-finalized",
       revision: 2,
@@ -378,6 +383,27 @@ describe("v1.37 observation-v1.19 postactivation evaluator", () => {
     ).toContain("compensating recovery binding")
   })
 
+  it("rejects a well-formed receipt rewrite despite a matching finalization digest", () => {
+    const forged = clone(passing())
+    const forgedReceipt = forged.proof.validationReceipts[0]! as {
+      stdoutSha256: `sha256:${string}`
+      completedAt: string
+    }
+    forgedReceipt.stdoutSha256 = hash("arbitrary but well formed")
+    forgedReceipt.completedAt = "2037-01-01T00:00:00.000Z"
+    forged.proofDigest = hash(
+      Buffer.from(`${JSON.stringify(forged.proof, null, 2)}\n`),
+    )
+    ;(
+      forged.head.finalization as unknown as {
+        proofDigest: `sha256:${string}`
+      }
+    ).proofDigest = forged.proofDigest
+    expect(
+      validateV137ObservationV119PostactivationEvidence(forged).errors,
+    ).toContain("commit tree proof binding")
+  })
+
   it("collects proof, selector, Git, head, and live smoke from the real coordinator port", async () => {
     const expected = passing()
     const proofBytes = Buffer.from(
@@ -386,6 +412,9 @@ describe("v1.37 observation-v1.19 postactivation evaluator", () => {
     const selectors = buildV119SelectorBytes()
     const adapter = {
       readHead: vi.fn(async () => expected.head as ActivationHead),
+      readPreparedProofCommitment: vi.fn(
+        async () => expected.preparedProofCommitment,
+      ),
       gitHead: vi.fn(async () => COMMIT),
       gitParent: vi.fn(async () => PARENT),
       gitTree: vi.fn(async () => TREE),
@@ -423,6 +452,8 @@ describe("v1.37 observation-v1.19 postactivation evaluator", () => {
       collectV137ObservationV119PostactivationEvidence(
         {
           readHead: async () => expected.head,
+          readPreparedProofCommitment: async () =>
+            expected.preparedProofCommitment,
           gitHead: async () => COMMIT,
           gitParent: async () => PARENT,
           gitTree: async () => TREE,
@@ -451,24 +482,30 @@ describe("v1.37 observation-v1.19 postactivation evaluator", () => {
         "--activation-id",
         PLAN14_ACTIVATION_ID,
       ]),
-    ).toEqual({ activationId: PLAN14_ACTIVATION_ID, parseOnly: false })
-    const result = await execFile(
-      "pnpm",
-      [
-        "exec",
-        "tsx",
-        "scripts/evaluate-v1-37-observation-v1-19-postactivation.ts",
+    ).toEqual({ activationId: PLAN14_ACTIVATION_ID })
+    expect(() =>
+      parseV137ObservationV119PostactivationArgs([
         "--check",
         "--activation-id",
         PLAN14_ACTIVATION_ID,
         "--parse-only",
-      ],
-      { cwd: process.cwd() },
-    )
-    expect(JSON.parse(result.stdout)).toEqual({
-      activationId: PLAN14_ACTIVATION_ID,
-      parseOnly: true,
-    })
+      ]),
+    ).toThrow(/usage/iu)
+    await expect(
+      execFile(
+        "pnpm",
+        [
+          "exec",
+          "tsx",
+          "scripts/evaluate-v1-37-observation-v1-19-postactivation.ts",
+          "--check",
+          "--activation-id",
+          PLAN14_ACTIVATION_ID,
+          "--parse-only",
+        ],
+        { cwd: process.cwd() },
+      ),
+    ).rejects.toMatchObject({ stderr: expect.stringMatching(/usage/iu) })
     expect(() =>
       parseV137ObservationV119PostactivationArgs(["--write"]),
     ).toThrow(/read-only/iu)

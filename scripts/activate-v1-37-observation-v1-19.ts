@@ -127,6 +127,7 @@ interface AbortInput {
 export interface ActivationCoordinatorAdapter {
   withLock<T>(operation: () => Promise<T>): Promise<T>
   readHead(): Promise<ActivationHead>
+  readPreparedProofCommitment(activationId: string): Promise<Sha256>
   prepare(input: PrepareInput): Promise<ActivationHead>
   finalize(input: FinalizeInput): Promise<ActivationHead>
   abort(input: AbortInput): Promise<ActivationHead>
@@ -371,6 +372,14 @@ export const hashActivationPathDigests = (
 ): Sha256 =>
   sha256(`cowards-game:activation-six-path-preimage:v1\0${stable(entries)}`)
 
+export const hashActivationProofCommitment = (
+  rawPreimageRoot: Sha256,
+  proofDigest: Sha256,
+): Sha256 =>
+  sha256(
+    `cowards-game:activation-proof-commitment:v1\0${rawPreimageRoot}\0${proofDigest}`,
+  )
+
 const snapshotRoot = (snapshot: ReadonlyMap<string, FileBytes>): Sha256 =>
   hashActivationPathDigests(snapshotEntries(snapshot))
 
@@ -465,12 +474,12 @@ const parseProofBytes = (bytes: Uint8Array): ActivationProof => {
   return value as ActivationProof
 }
 
-const parseProof = async (
+const readProof = async (
   adapter: ActivationCoordinatorAdapter,
-): Promise<ActivationProof> => {
+): Promise<{ proof: ActivationProof; bytes: Uint8Array }> => {
   const file = await adapter.readFile(ACTIVATION_PROOF_PATH)
   if (file.state === "absent") throw new Error("Activation proof is absent")
-  return parseProofBytes(file.bytes)
+  return { proof: parseProofBytes(file.bytes), bytes: file.bytes }
 }
 
 const pendingForward = (head: ActivationHead, activationId: string) => {
@@ -518,6 +527,7 @@ const isExactGateReceipt = (
 
 const assertProofMatchesIntent = (
   proof: ActivationProof,
+  proofBytes: Uint8Array,
   intent: ReturnType<typeof pendingForward>,
   activationId: string,
 ): void => {
@@ -530,8 +540,11 @@ const assertProofMatchesIntent = (
     proof.parentHead !== intent.parentHead ||
     proof.pendingSelectionRoot !== intent.targetRoot ||
     proof.selectorManifestRoot !== intent.selectorManifestRoot ||
-    proof.proofPreimageRoot !== intent.proofPreimageRoot ||
     hashActivationPathDigests(proof.preimage) !== proof.proofPreimageRoot ||
+    hashActivationProofCommitment(
+      proof.proofPreimageRoot,
+      sha256(proofBytes),
+    ) !== intent.proofPreimageRoot ||
     stable(proof.selectorManifest) !== stable(targetManifest) ||
     stable(proof.selectorManifest) !== stable(intent.selectorManifest) ||
     stable(proof.validationReceipts.map(({ id }) => id)) !==
@@ -586,7 +599,7 @@ const assertCommittedActivation = async (
   )
   if (proofFile.state === "absent") throw new Error("Committed proof is absent")
   const proof = parseProofBytes(proofFile.bytes)
-  assertProofMatchesIntent(proof, intent, activationId)
+  assertProofMatchesIntent(proof, proofFile.bytes, intent, activationId)
   if (proof.rollbackReceipt?.id !== "rollback") {
     throw new Error("Committed proof lacks rollback evidence")
   }
@@ -624,10 +637,16 @@ const assertFinalizedActivation = async (
     throw new Error("Finalized activation proof binding mismatch")
   }
   const proof = parseProofBytes(proofFile.bytes)
+  const preparedProofCommitment =
+    await adapter.readPreparedProofCommitment(activationId)
   if (
     proof.activationId !== activationId ||
     proof.parentHead !== (await adapter.gitParent(finalization.commitSha)) ||
-    proof.selectorManifestRoot !== finalization.selectorManifestRoot
+    proof.selectorManifestRoot !== finalization.selectorManifestRoot ||
+    hashActivationProofCommitment(
+      proof.proofPreimageRoot,
+      finalization.proofDigest,
+    ) !== preparedProofCommitment
   ) {
     throw new Error("Finalized activation receipt mismatch")
   }
@@ -648,7 +667,10 @@ const prepare = async (
 ): Promise<ActivationHead> => {
   const head = await adapter.readHead()
   if (head.state === "pending-precommit") {
-    pendingForward(head, activationId)
+    const intent = pendingForward(head, activationId)
+    const { proof, bytes } = await readProof(adapter)
+    assertProofMatchesIntent(proof, bytes, intent, activationId)
+    await assertCurrentSelectors(adapter)
     return head
   }
   if (head.state !== "active-v1.17-bootstrap") {
@@ -660,8 +682,43 @@ const prepare = async (
   const parentHead = await adapter.gitHead()
   const preimage = await captureCommitSnapshot(adapter, parentHead)
   await assertWorktreeSnapshot(adapter, preimage, "worktree preimage")
-  const manifest = manifestFor(buildV119SelectorBytes())
-  return adapter.prepare({
+  const rawPreimageRoot = snapshotRoot(preimage)
+  const target = buildV119SelectorBytes()
+  const manifest = manifestFor(target)
+  let proofBytes: Uint8Array | undefined
+  try {
+    for (const [filePath, bytes] of target) {
+      await adapter.writeFile(filePath, { state: "present", bytes })
+    }
+    const validationReceipts: GateReceipt[] = []
+    for (const id of ACTIVATION_VALIDATION_GATE_IDS) {
+      validationReceipts.push(await adapter.runGate(id))
+    }
+    await restoreSnapshot(adapter, preimage)
+    await adapter.unstage(ALL_PATHS)
+    await assertWorktreeSnapshot(adapter, preimage, "pre-prepare rollback")
+    const rollbackReceipt = await adapter.runGate("rollback")
+    const proof: ActivationProof = {
+      schemaVersion: "v1.37-observation-v1.19-activation-proof-v1",
+      lifecycle: "pending-precommit",
+      activationId,
+      parentHead,
+      pendingSelectionRoot: REVIEWED_V1_19_SEMANTIC_AUTHORITY_SELECTION_ROOT,
+      selectorManifest: manifest,
+      selectorManifestRoot: hashSemanticAuthoritySelectorManifest(manifest),
+      preimage: snapshotEntries(preimage),
+      proofPreimageRoot: rawPreimageRoot,
+      validationReceipts,
+      rollbackReceipt,
+    }
+    proofBytes = jsonBytes(proof)
+  } catch (error) {
+    await restoreSnapshot(adapter, preimage)
+    await adapter.unstage(ALL_PATHS)
+    await assertWorktreeSnapshot(adapter, preimage, "failed prepare restore")
+    throw error
+  }
+  const prepared = await adapter.prepare({
     direction: "forward",
     activationId,
     expectedRevision: head.revision,
@@ -671,8 +728,19 @@ const prepare = async (
     parentHead,
     selectorManifest: manifest,
     selectorManifestRoot: hashSemanticAuthoritySelectorManifest(manifest),
-    proofPreimageRoot: snapshotRoot(preimage),
+    proofPreimageRoot: hashActivationProofCommitment(
+      rawPreimageRoot,
+      sha256(proofBytes),
+    ),
   })
+  for (const [filePath, bytes] of target) {
+    await adapter.writeFile(filePath, { state: "present", bytes })
+  }
+  await adapter.writeFile(ACTIVATION_PROOF_PATH, {
+    state: "present",
+    bytes: proofBytes,
+  })
+  return prepared
 }
 
 const validate = async (
@@ -683,32 +751,9 @@ const validate = async (
   if ((await adapter.gitHead()) !== intent.parentHead) {
     throw new Error("Activation parent HEAD changed before validation")
   }
-  const target = buildV119SelectorBytes()
-  for (const [filePath, bytes] of target) {
-    await adapter.writeFile(filePath, { state: "present", bytes })
-  }
-  const receipts: GateReceipt[] = []
-  for (const id of ACTIVATION_VALIDATION_GATE_IDS) {
-    receipts.push(await adapter.runGate(id))
-  }
-  const parentSnapshot = await captureCommitSnapshot(adapter, intent.parentHead)
-  const proof: ActivationProof = {
-    schemaVersion: "v1.37-observation-v1.19-activation-proof-v1",
-    lifecycle: "pending-precommit",
-    activationId,
-    parentHead: intent.parentHead,
-    pendingSelectionRoot: intent.targetRoot,
-    selectorManifest: intent.selectorManifest,
-    selectorManifestRoot: intent.selectorManifestRoot,
-    preimage: snapshotEntries(parentSnapshot),
-    proofPreimageRoot: snapshotRoot(parentSnapshot),
-    validationReceipts: receipts,
-    rollbackReceipt: null,
-  }
-  await adapter.writeFile(ACTIVATION_PROOF_PATH, {
-    state: "present",
-    bytes: jsonBytes(proof),
-  })
+  const { proof, bytes } = await readProof(adapter)
+  assertProofMatchesIntent(proof, bytes, intent, activationId)
+  await assertCurrentSelectors(adapter)
   return proof
 }
 
@@ -720,23 +765,10 @@ const rollbackDrill = async (
   if ((await adapter.gitHead()) !== intent.parentHead) {
     throw new Error("Activation parent HEAD changed before rollback drill")
   }
-  const proof = await parseProof(adapter)
-  const parentSnapshot = await captureCommitSnapshot(adapter, intent.parentHead)
-  await restoreSnapshot(adapter, parentSnapshot)
-  await assertWorktreeSnapshot(adapter, parentSnapshot, "rollback restore")
-  if (snapshotRoot(parentSnapshot) !== intent.proofPreimageRoot) {
-    throw new Error("Rollback preimage root mismatch")
-  }
-  const rollbackReceipt = await adapter.runGate("rollback")
-  for (const [filePath, bytes] of buildV119SelectorBytes()) {
-    await adapter.writeFile(filePath, { state: "present", bytes })
-  }
-  const completed = { ...proof, rollbackReceipt }
-  await adapter.writeFile(ACTIVATION_PROOF_PATH, {
-    state: "present",
-    bytes: jsonBytes(completed),
-  })
-  return completed
+  const { proof, bytes } = await readProof(adapter)
+  assertProofMatchesIntent(proof, bytes, intent, activationId)
+  await assertCurrentSelectors(adapter)
+  return proof
 }
 
 const stage = async (
@@ -744,8 +776,8 @@ const stage = async (
   activationId: string,
 ): Promise<void> => {
   const intent = pendingForward(await adapter.readHead(), activationId)
-  const proof = await parseProof(adapter)
-  assertProofMatchesIntent(proof, intent, activationId)
+  const { proof, bytes } = await readProof(adapter)
+  assertProofMatchesIntent(proof, bytes, intent, activationId)
   if (proof.rollbackReceipt?.id !== "rollback") {
     throw new Error("Successful rollback drill is required before staging")
   }
@@ -1024,17 +1056,51 @@ const recoverReverse = async (
   if (intent.sourceActivationId !== sourceActivationId) {
     throw new Error("Reverse pending source activation token mismatch")
   }
+  if (
+    intent.activationId !== buildCompensationActivationId(sourceActivationId) ||
+    head.finalization?.activationId !== sourceActivationId ||
+    head.finalization.commitSha !== intent.parentHead
+  ) {
+    throw new Error("Reverse pending activation binding mismatch")
+  }
+  await assertFinalizedActivation(adapter, head, sourceActivationId, false)
+  const activationSnapshot = await captureCommitSnapshot(
+    adapter,
+    intent.parentHead,
+  )
+  if (snapshotRoot(activationSnapshot) !== intent.proofPreimageRoot) {
+    throw new Error("Reverse pending activation preimage mismatch")
+  }
+  const activationParent = await adapter.gitParent(intent.parentHead)
+  const restoredSnapshot = await captureCommitSnapshot(
+    adapter,
+    activationParent,
+  )
+  const restoredSelectors = new Map<string, Uint8Array>()
+  for (const selectorPath of ACTIVATION_SELECTOR_PATHS) {
+    const file = restoredSnapshot.get(selectorPath)
+    if (file?.state !== "present") {
+      throw new Error(
+        `Reverse pending restored selector absent: ${selectorPath}`,
+      )
+    }
+    restoredSelectors.set(selectorPath, file.bytes)
+  }
+  const restoredManifest = manifestFor(restoredSelectors)
+  if (
+    stable(restoredManifest) !== stable(intent.selectorManifest) ||
+    hashSemanticAuthoritySelectorManifest(restoredManifest) !==
+      intent.selectorManifestRoot
+  ) {
+    throw new Error("Reverse pending selector manifest mismatch")
+  }
   const current = await adapter.gitHead()
   if (current === intent.parentHead) {
-    const sourceSnapshot = await captureCommitSnapshot(
-      adapter,
-      intent.parentHead,
-    )
-    await restoreSnapshot(adapter, sourceSnapshot)
+    await restoreSnapshot(adapter, activationSnapshot)
     await adapter.unstage(ALL_PATHS)
     await assertWorktreeSnapshot(
       adapter,
-      sourceSnapshot,
+      activationSnapshot,
       "compensation abort restore",
     )
     return adapter.abort({
@@ -1052,14 +1118,10 @@ const recoverReverse = async (
       "Unrelated or mismatched compensation commit remains pending",
     )
   }
-  const parentSnapshot = await captureCommitSnapshot(
-    adapter,
-    await adapter.gitParent(intent.parentHead),
-  )
   await assertCommitSnapshot(
     adapter,
     current,
-    parentSnapshot,
+    restoredSnapshot,
     "compensation recovery",
   )
   return adapter.finalize({
@@ -1070,7 +1132,7 @@ const recoverReverse = async (
     expectedParentHead: intent.parentHead,
     expectedTargetRoot: intent.targetRoot,
     expectedSelectorManifestRoot: intent.selectorManifestRoot,
-    recoveryReceiptDigest: recoveryReceiptDigest(parentSnapshot),
+    recoveryReceiptDigest: recoveryReceiptDigest(restoredSnapshot),
     commitSha: current,
     treeSha: await adapter.gitTree(current),
   })
@@ -1300,6 +1362,25 @@ export const createProductionActivationAdapter = (
       }
     },
     readHead: () => readSemanticAuthoritySelectionHead(pool),
+    async readPreparedProofCommitment(activationId) {
+      const result = (await pool.query(
+        `select pending_intent->>'proofPreimageRoot' as proof_preimage_root
+           from semantic_authority_selection_history
+          where transition_kind = 'prepared' and activation_id = $1
+          order by sequence desc
+          limit 1`,
+        [activationId],
+      )) as { rows: Array<{ proof_preimage_root: unknown }> }
+      const value = result.rows[0]?.proof_preimage_root
+      if (
+        result.rows.length !== 1 ||
+        typeof value !== "string" ||
+        !/^sha256:[0-9a-f]{64}$/u.test(value)
+      ) {
+        throw new Error("Exact prepared proof commitment is unavailable")
+      }
+      return value as Sha256
+    },
     prepare: (input) =>
       prepareSemanticAuthoritySelectionTransition(
         pool,
@@ -1439,10 +1520,6 @@ export const createProductionActivationAdapter = (
 
 const main = async (): Promise<void> => {
   const parsed = parseV137ObservationV119ActivationArgs(process.argv.slice(2))
-  if (parsed.parseOnly) {
-    process.stdout.write(`${JSON.stringify(parsed)}\n`)
-    return
-  }
   const { mode, activationId } = parsed
   if (process.env.DATABASE_URL === undefined) {
     throw new Error("DATABASE_URL is required")
@@ -1472,17 +1549,15 @@ const main = async (): Promise<void> => {
 
 export const parseV137ObservationV119ActivationArgs = (
   args: readonly string[],
-): { mode: ActivationMode; activationId: string; parseOnly: boolean } => {
+): { mode: ActivationMode; activationId: string } => {
   const modeIndex = args.indexOf("--mode")
   const activationIndex = args.indexOf("--activation-id")
   const mode = args[modeIndex + 1] as ActivationMode | undefined
   const activationId = args[activationIndex + 1]
-  const parseOnly = args.includes("--parse-only")
-  const expectedLength = parseOnly ? 5 : 4
   if (
     modeIndex < 0 ||
     activationIndex < 0 ||
-    args.length !== expectedLength ||
+    args.length !== 4 ||
     mode === undefined ||
     activationId === undefined ||
     !/^activation:[A-Za-z0-9._:-]{1,160}$/u.test(activationId) ||
@@ -1500,10 +1575,10 @@ export const parseV137ObservationV119ActivationArgs = (
     ].includes(mode)
   ) {
     throw new Error(
-      "Usage: activate-v1-37-observation-v1-19.ts --mode <mode> --activation-id <id> [--parse-only]",
+      "Usage: activate-v1-37-observation-v1-19.ts --mode <mode> --activation-id <id>",
     )
   }
-  return { mode, activationId, parseOnly }
+  return { mode, activationId }
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {

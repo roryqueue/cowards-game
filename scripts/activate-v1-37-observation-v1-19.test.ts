@@ -37,12 +37,14 @@ class ModelAdapter implements ActivationCoordinatorAdapter {
     { parent: string; tree: string; files: Map<string, Uint8Array> }
   >()
   readonly events: string[] = []
+  readonly preparedProofCommitments = new Map<string, `sha256:${string}`>()
   staged = new Set<string>()
   currentHead = git("a")
   head: ActivationHead
   failCommit = false
   failFinalize = false
   failGate: string | null = null
+  failReinstall = false
 
   constructor() {
     for (const path of [...ACTIVATION_SELECTOR_PATHS, ACTIVATION_PROOF_PATH]) {
@@ -73,6 +75,13 @@ class ModelAdapter implements ActivationCoordinatorAdapter {
   async readHead(): Promise<ActivationHead> {
     return JSON.parse(JSON.stringify(this.head)) as ActivationHead
   }
+  async readPreparedProofCommitment(
+    activationId: string,
+  ): Promise<`sha256:${string}`> {
+    const commitment = this.preparedProofCommitments.get(activationId)
+    if (commitment === undefined) throw new Error("missing prepared commitment")
+    return commitment
+  }
   async prepare(input: any): Promise<ActivationHead> {
     this.events.push(`prepare:${input.direction}`)
     if (input.expectedRevision !== this.head.revision)
@@ -94,6 +103,12 @@ class ModelAdapter implements ActivationCoordinatorAdapter {
         selectorManifestRoot: input.selectorManifestRoot,
         proofPreimageRoot: input.proofPreimageRoot,
       },
+    }
+    if (input.direction === "forward") {
+      this.preparedProofCommitments.set(
+        input.activationId,
+        input.proofPreimageRoot,
+      )
     }
     return this.readHead()
   }
@@ -190,6 +205,9 @@ class ModelAdapter implements ActivationCoordinatorAdapter {
   }
   async writeFile(path: string, value: FileBytes): Promise<void> {
     this.events.push(`write:${path}`)
+    if (this.failReinstall && this.head.state === "pending-precommit") {
+      throw new Error("simulated post-prepare reinstall crash")
+    }
     if (value.state === "present") this.files.set(path, value.bytes)
     else this.files.delete(path)
   }
@@ -248,7 +266,7 @@ const throughValidate = async (adapter: ModelAdapter) => {
 }
 
 describe("v1.37 observation v1.19 activation coordinator", () => {
-  it("parses every literal Plan 14 coordinator command in a subprocess without mutation", async () => {
+  it("parses every literal Plan 14 command directly and rejects a production argv bypass", async () => {
     for (const mode of [
       "prepare",
       "validate",
@@ -258,29 +276,37 @@ describe("v1.37 observation v1.19 activation coordinator", () => {
       "finalize",
       "smoke",
     ] as const) {
-      const args = [
-        "--mode",
-        mode,
-        "--activation-id",
-        PLAN14_ACTIVATION_ID,
-        "--parse-only",
-      ]
+      const args = ["--mode", mode, "--activation-id", PLAN14_ACTIVATION_ID]
       expect(parseV137ObservationV119ActivationArgs(args)).toEqual({
         mode,
         activationId: PLAN14_ACTIVATION_ID,
-        parseOnly: true,
-      })
-      const result = await execFile(
-        "pnpm",
-        ["exec", "tsx", "scripts/activate-v1-37-observation-v1-19.ts", ...args],
-        { cwd: process.cwd() },
-      )
-      expect(JSON.parse(result.stdout)).toEqual({
-        mode,
-        activationId: PLAN14_ACTIVATION_ID,
-        parseOnly: true,
       })
     }
+    expect(() =>
+      parseV137ObservationV119ActivationArgs([
+        "--mode",
+        "prepare",
+        "--activation-id",
+        PLAN14_ACTIVATION_ID,
+        "--parse-only",
+      ]),
+    ).toThrow(/usage/iu)
+    await expect(
+      execFile(
+        "pnpm",
+        [
+          "exec",
+          "tsx",
+          "scripts/activate-v1-37-observation-v1-19.ts",
+          "--mode",
+          "prepare",
+          "--activation-id",
+          PLAN14_ACTIVATION_ID,
+          "--parse-only",
+        ],
+        { cwd: process.cwd() },
+      ),
+    ).rejects.toMatchObject({ stderr: expect.stringMatching(/usage/iu) })
   }, 30_000)
 
   it("uses a nonrecursive five-selector manifest and a separate proof output", () => {
@@ -433,6 +459,38 @@ describe("v1.37 observation v1.19 activation coordinator", () => {
     expect(adapter.events).toContain(`commit:${ACTIVATION_COMMIT_MESSAGE}`)
   })
 
+  it("restores every pre-prepare gate failure with no pending and retries cleanly", async () => {
+    const adapter = new ModelAdapter()
+    adapter.failGate = "engine"
+    await expect(run(adapter, "prepare")).rejects.toThrow(/gate failed/iu)
+    expect(adapter.head.state).toBe("active-v1.17-bootstrap")
+    expect(adapter.head.pendingIntent).toBeNull()
+    expect(await adapter.stagedPaths()).toEqual([])
+    expect(adapter.files.has(ACTIVATION_PROOF_PATH)).toBe(false)
+    for (const selectorPath of ACTIVATION_SELECTOR_PATHS) {
+      expect(Buffer.from(adapter.files.get(selectorPath)!).toString()).toBe(
+        `old:${selectorPath}\n`,
+      )
+    }
+    adapter.failGate = null
+    await expect(run(adapter, "prepare")).resolves.toMatchObject({
+      state: "pending-precommit",
+    })
+  })
+
+  it("leaves a post-prepare reinstall crash pending for exact recovery and retry", async () => {
+    const adapter = new ModelAdapter()
+    adapter.failReinstall = true
+    await expect(run(adapter, "prepare")).rejects.toThrow(/reinstall crash/iu)
+    expect(adapter.head.state).toBe("pending-precommit")
+    adapter.failReinstall = false
+    await run(adapter, "recover")
+    expect(adapter.head.state).toBe("active-v1.17-bootstrap")
+    await expect(run(adapter, "prepare")).resolves.toMatchObject({
+      state: "pending-precommit",
+    })
+  })
+
   it("rejects an unrelated staged path and leaves the durable intent pending", async () => {
     const adapter = new ModelAdapter()
     await throughValidate(adapter)
@@ -466,16 +524,18 @@ describe("v1.37 observation v1.19 activation coordinator", () => {
     expect(mixed.head.state).toBe("pending-precommit")
   })
 
-  it("rejects forged commands, receipt hashes/dates, and preimage roots", async () => {
+  it("rejects forged commands and well-formed receipt mutations through the durable commitment", async () => {
     for (const mutate of [
       (proof: Record<string, any>) => {
         proof.validationReceipts[0].command = "test:spec"
       },
       (proof: Record<string, any>) => {
-        proof.validationReceipts[0].stdoutSha256 = "sha256:nope"
+        proof.validationReceipts[0].stdoutSha256 = hash(
+          "arbitrary well-formed stdout",
+        )
       },
       (proof: Record<string, any>) => {
-        proof.validationReceipts[0].completedAt = "not-a-date"
+        proof.validationReceipts[0].completedAt = "2037-01-01T00:00:00.000Z"
       },
       (proof: Record<string, any>) => {
         proof.rollbackReceipt.command = "test:rollback-by-declaration"
@@ -547,7 +607,10 @@ describe("v1.37 observation v1.19 activation coordinator", () => {
     mismatch.commits.set(git("9"), {
       parent: mismatch.currentHead,
       tree: git("8"),
-      files: new Map(mismatch.files),
+      files: new Map([
+        ...mismatch.files,
+        ["unrelated.txt", Buffer.from("unrelated\n")],
+      ]),
     })
     mismatch.currentHead = git("9")
     await expect(run(mismatch, "recover")).rejects.toThrow(
@@ -589,6 +652,43 @@ describe("v1.37 observation v1.19 activation coordinator", () => {
     await run(adapter, "recover")
     expect(adapter.head.state).toBe("active-v1.17-compensated")
     expect(adapter.head.compensation?.commitSha).toBe(git("d"))
+  })
+
+  it("rejects forged reverse manifest and activation-preimage intent bindings", async () => {
+    for (const mutate of [
+      (adapter: ModelAdapter) => {
+        const pendingIntent = JSON.parse(
+          JSON.stringify(adapter.head.pendingIntent),
+        ) as any
+        pendingIntent.selectorManifest[0].sha256 = hash(
+          "forged reverse manifest",
+        )
+        adapter.head = { ...adapter.head, pendingIntent }
+      },
+      (adapter: ModelAdapter) => {
+        adapter.head = {
+          ...adapter.head,
+          pendingIntent: {
+            ...adapter.head.pendingIntent!,
+            proofPreimageRoot: hash("forged activation snapshot"),
+          },
+        }
+      },
+    ]) {
+      const adapter = new ModelAdapter()
+      await throughValidate(adapter)
+      await run(adapter, "stage")
+      await run(adapter, "commit")
+      await run(adapter, "finalize")
+      adapter.failFinalize = true
+      await expect(run(adapter, "compensate")).rejects.toThrow(/finalization/iu)
+      adapter.failFinalize = false
+      mutate(adapter)
+      await expect(run(adapter, "recover")).rejects.toThrow(
+        /reverse pending (selector manifest|activation preimage) mismatch/iu,
+      )
+      expect(adapter.head.state).toBe("pending-compensation")
+    }
   })
 
   it("rejects wrong tokens for pending reverse and terminal idempotence", async () => {

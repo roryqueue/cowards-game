@@ -16,6 +16,7 @@ import {
   buildV119SelectorBytes,
   createProductionActivationAdapter,
   hashActivationPathDigests,
+  hashActivationProofCommitment,
   hashCompensationRecoveryReceipt,
   type ActivationPathDigest,
   type ActivationCoordinatorAdapter,
@@ -130,10 +131,11 @@ export interface ActivationProofEvidence {
 }
 
 export interface V137ObservationV119PostactivationEvidence {
-  schemaVersion: "v1.37-observation-v1.19-postactivation-evidence-v2"
+  schemaVersion: "v1.37-observation-v1.19-postactivation-evidence-v3"
   activationId: string
   proof: ActivationProofEvidence
   proofDigest: Sha256
+  preparedProofCommitment: Sha256
   head: ActivationHead
   git: {
     headSha: string
@@ -159,6 +161,7 @@ export interface V137ObservationV119PostactivationEvidence {
 
 export interface PostactivationEvaluationAdapter {
   readHead(): Promise<ActivationHead>
+  readPreparedProofCommitment(activationId: string): Promise<Sha256>
   gitHead(): Promise<string>
   gitParent(commit: string): Promise<string>
   gitTree(commit: string): Promise<string>
@@ -237,10 +240,12 @@ export const collectV137ObservationV119PostactivationEvidence = async (
     left.path.localeCompare(right.path),
   )
   return {
-    schemaVersion: "v1.37-observation-v1.19-postactivation-evidence-v2",
+    schemaVersion: "v1.37-observation-v1.19-postactivation-evidence-v3",
     activationId,
     proof: parseProofBytes(proofFile.bytes),
     proofDigest: sha256(proofFile.bytes),
+    preparedProofCommitment:
+      await adapter.readPreparedProofCommitment(activationId),
     head,
     git: {
       headSha: currentHead,
@@ -313,6 +318,7 @@ export const validateV137ObservationV119PostactivationEvidence = (
       "activationId",
       "proof",
       "proofDigest",
+      "preparedProofCommitment",
       "head",
       "git",
       "smokeReceipt",
@@ -367,14 +373,16 @@ export const validateV137ObservationV119PostactivationEvidence = (
   }
   if (
     exactEvidence.schemaVersion !==
-      "v1.37-observation-v1.19-postactivation-evidence-v2" ||
+      "v1.37-observation-v1.19-postactivation-evidence-v3" ||
     !ACTIVATION_ID.test(exactEvidence.activationId) ||
     proof.schemaVersion !== "v1.37-observation-v1.19-activation-proof-v1" ||
     proof.lifecycle !== "pending-precommit" ||
     proof.activationId !== exactEvidence.activationId ||
     !GIT_OBJECT.test(proof.parentHead) ||
     proof.pendingSelectionRoot !== TARGET_ROOT ||
-    !SHA256.test(proof.proofPreimageRoot)
+    !SHA256.test(proof.proofPreimageRoot) ||
+    !SHA256.test(exactEvidence.proofDigest) ||
+    !SHA256.test(exactEvidence.preparedProofCommitment)
   ) {
     errors.push("activation proof")
   }
@@ -482,6 +490,10 @@ export const validateV137ObservationV119PostactivationEvidence = (
     finalization.treeSha !== exactEvidence.git.activationTreeSha ||
     finalization.proofDigest !== exactEvidence.proofDigest ||
     finalization.selectorManifestRoot !== expected.root ||
+    hashActivationProofCommitment(
+      proof.proofPreimageRoot,
+      exactEvidence.proofDigest,
+    ) !== exactEvidence.preparedProofCommitment ||
     exactEvidence.git.activationParentSha !== proof.parentHead ||
     stable([...exactEvidence.git.activationChangedPaths].sort()) !==
       stable(ALL_PATHS) ||
@@ -518,23 +530,22 @@ export const validateV137ObservationV119PostactivationEvidence = (
 
 export const parseV137ObservationV119PostactivationArgs = (
   args: readonly string[],
-): { activationId: string; parseOnly: boolean } => {
+): { activationId: string } => {
   if (args.includes("--write")) {
     throw new Error("Postactivation evaluation is read-only")
   }
   const activationIndex = args.indexOf("--activation-id")
-  const parseOnly = args.includes("--parse-only")
   if (
     !args.includes("--check") ||
     activationIndex < 0 ||
-    args.length !== (parseOnly ? 4 : 3) ||
+    args.length !== 3 ||
     !ACTIVATION_ID.test(args[activationIndex + 1] ?? "")
   ) {
     throw new Error(
       "Usage: postactivation evaluator --check --activation-id <activation:id>",
     )
   }
-  return { activationId: args[activationIndex + 1]!, parseOnly }
+  return { activationId: args[activationIndex + 1]! }
 }
 
 const readProtectedBaseline = async (
@@ -566,10 +577,6 @@ const main = async (): Promise<void> => {
   const parsed = parseV137ObservationV119PostactivationArgs(
     process.argv.slice(2),
   )
-  if (parsed.parseOnly) {
-    process.stdout.write(`${JSON.stringify(parsed)}\n`)
-    return
-  }
   const { activationId } = parsed
   if (process.env.DATABASE_URL === undefined) {
     throw new Error("DATABASE_URL is required")

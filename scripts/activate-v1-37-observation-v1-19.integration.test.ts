@@ -11,12 +11,19 @@ import {
   ACTIVATION_GATE_COMMANDS,
   ACTIVATION_PROOF_PATH,
   ACTIVATION_SELECTOR_PATHS,
+  ACTIVATION_VALIDATION_GATE_IDS,
   createProductionActivationAdapter,
+  hashActivationPathDigests,
+  hashActivationProofCommitment,
   runV137ObservationV119Activation,
   type ActivationCoordinatorAdapter,
   type GateReceipt,
   type Sha256,
 } from "./activate-v1-37-observation-v1-19.js"
+import {
+  collectV137ObservationV119PostactivationEvidence,
+  validateV137ObservationV119PostactivationEvidence,
+} from "./evaluate-v1-37-observation-v1-19-postactivation.js"
 
 const runFile = promisify(execFile)
 const databaseUrl = process.env.DATABASE_URL
@@ -29,7 +36,7 @@ const { Pool } = requireFromPersistence("pg") as {
   Pool: new (config: Record<string, unknown>) => PoolType
 }
 
-const sha256 = (value: string): Sha256 =>
+const sha256 = (value: string | Uint8Array): Sha256 =>
   `sha256:${createHash("sha256").update(value).digest("hex")}`
 
 interface IsolatedContext {
@@ -112,6 +119,15 @@ const createContext = async (label: string): Promise<IsolatedContext> => {
   const adapter: ActivationCoordinatorAdapter = {
     ...production,
     async runGate(id: string): Promise<GateReceipt> {
+      if (id === "rollback" || ACTIVATION_VALIDATION_GATE_IDS.includes(id)) {
+        const head = await production.readHead()
+        if (
+          head.state === "pending-precommit" ||
+          head.state === "pending-compensation"
+        ) {
+          throw new Error(`Gate ${id} observed a premature pending intent`)
+        }
+      }
       return {
         id,
         command: ACTIVATION_GATE_COMMANDS[id]!,
@@ -183,6 +199,39 @@ describePostgres(
       expect((await context.adapter.readHead()).state).toBe(
         "active-v1.19-finalized",
       )
+      const activationHead = await context.adapter.readHead()
+      const proofFile = await context.adapter.readCommitFile(
+        activationHead.finalization!.commitSha,
+        ACTIVATION_PROOF_PATH,
+      )
+      expect(proofFile.state).toBe("present")
+      if (proofFile.state === "present") {
+        const proof = JSON.parse(Buffer.from(proofFile.bytes).toString()) as {
+          preimage: Array<{
+            path: string
+            state: "present" | "absent"
+            sha256?: Sha256
+          }>
+        }
+        expect(
+          await context.adapter.readPreparedProofCommitment(
+            context.activationId,
+          ),
+        ).toBe(
+          hashActivationProofCommitment(
+            hashActivationPathDigests(proof.preimage),
+            sha256(proofFile.bytes),
+          ),
+        )
+      }
+      expect(
+        validateV137ObservationV119PostactivationEvidence(
+          await collectV137ObservationV119PostactivationEvidence(
+            context.adapter,
+            context.activationId,
+          ),
+        ).status,
+      ).toBe("passed")
       await run(context, "compensate")
       const compensated = await context.adapter.readHead()
       expect(compensated.state).toBe("active-v1.17-compensated")
@@ -234,6 +283,78 @@ describePostgres(
         expect(file.state).toBe("present")
         if (file.state === "present") {
           expect(Buffer.from(file.bytes).toString("utf8")).toBe(
+            `old:${selectorPath}\n`,
+          )
+        }
+      }
+    }, 30_000)
+
+    it("rejects a forged durable reverse preimage in an isolated PostgreSQL intent", async () => {
+      const context = await createContext("forged-reverse-intent")
+      await throughCommit(context)
+      await run(context, "finalize")
+      const production = context.adapter
+      let failReverseFinalize = true
+      context.adapter = {
+        ...production,
+        async finalize(input) {
+          if (input.direction === "reverse" && failReverseFinalize) {
+            throw new Error("simulated reverse finalization crash")
+          }
+          return production.finalize(input)
+        },
+      }
+      await expect(run(context, "compensate")).rejects.toThrow(
+        /reverse finalization crash/iu,
+      )
+      expect((await context.adapter.readHead()).state).toBe(
+        "pending-compensation",
+      )
+      await context.pool.query(
+        `update semantic_authority_selection_head
+            set pending_intent = jsonb_set(
+              pending_intent,
+              '{proofPreimageRoot}',
+              to_jsonb($1::text),
+              false
+            )
+          where singleton = true`,
+        [sha256("forged production activation snapshot")],
+      )
+      failReverseFinalize = false
+      await expect(run(context, "recover")).rejects.toThrow(
+        /reverse pending activation preimage mismatch/iu,
+      )
+      expect((await context.adapter.readHead()).state).toBe(
+        "pending-compensation",
+      )
+    }, 30_000)
+
+    it("restores a real pre-prepare gate failure without creating pending state", async () => {
+      const context = await createContext("failed-pre-prepare-gate")
+      const production = context.adapter
+      context.adapter = {
+        ...production,
+        async runGate(id) {
+          if (id === "engine") throw new Error("real adapter gate failure")
+          return production.runGate(id)
+        },
+      }
+      await expect(run(context, "prepare")).rejects.toThrow(
+        /real adapter gate failure/iu,
+      )
+      expect((await context.adapter.readHead()).state).toBe(
+        "active-v1.17-bootstrap",
+      )
+      expect(await context.adapter.stagedPaths()).toEqual([])
+      expect(await context.adapter.readFile(ACTIVATION_PROOF_PATH)).toEqual({
+        state: "absent",
+      })
+      for (const selectorPath of ACTIVATION_SELECTOR_PATHS) {
+        const file = await context.adapter.readFile(selectorPath)
+        expect(file.state).toBe("present")
+        if (file.state === "present") {
+          expect(Buffer.from(file.bytes).toString()).toBe(
             `old:${selectorPath}\n`,
           )
         }
