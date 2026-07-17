@@ -55,7 +55,10 @@ import {
 } from "./workshop.js"
 import { WORKSHOP_CONTRACT_V1_19_CANDIDATE } from "./workshop-contract-v1-19-candidate.js"
 import type { Pool } from "pg"
-import type { MatchSetExecutionEvidenceResolver } from "./matchset-service.js"
+import {
+  createFixtureMatchSetEvidenceResolver,
+  type MatchSetExecutionEvidenceResolver,
+} from "./matchset-service.js"
 import {
   buildAdvancedStrategyRevision,
   listAdvancedStrategies,
@@ -67,6 +70,18 @@ import {
   type StarterStrategySummary,
 } from "./starter-strategies.js"
 import { MATCH_SET_STATUSES } from "./schema.js"
+import {
+  ACTIVE_V1_17_SEMANTIC_AUTHORITY_SELECTION,
+  ACTIVE_V1_17_SEMANTIC_AUTHORITY_SELECTION_ROOT,
+  REVIEWED_V1_19_SEMANTIC_AUTHORITY_SELECTION,
+  REVIEWED_V1_19_SEMANTIC_AUTHORITY_SELECTION_ROOT,
+  SEMANTIC_AUTHORITY_SELECTOR_PATHS,
+  hashSemanticAuthoritySelectorManifest,
+} from "./semantic-authority-selection-head.js"
+import {
+  WORKSHOP_CONTRACT_SELECTION_REGISTRY,
+  resolveWorkshopContractSelectionForSemanticAuthority,
+} from "./current-workshop-contract-generated.js"
 import {
   LIST_MATCH_STATUSES_FOR_SET_SQL,
   mapMatchSetMatchSummaryRow,
@@ -137,25 +152,102 @@ const createStarterSmokeAdapter = (): StarterSmokeAdapter => {
   }
 }
 
+const sha = (character: string): `sha256:${string}` =>
+  `sha256:${character.repeat(64)}`
+const gitObject = (character: string): string => character.repeat(40)
+const selectorManifest = SEMANTIC_AUTHORITY_SELECTOR_PATHS.map(
+  (memberPath, index) => ({
+    path: memberPath,
+    sha256: sha(String(index + 1)),
+  }),
+)
+const selectorManifestRoot =
+  hashSemanticAuthoritySelectorManifest(selectorManifest)
+
+const semanticHeadRow = (
+  state: "bootstrap" | "pending" | "mismatch",
+): Record<string, unknown> | undefined => {
+  if (state === "bootstrap") {
+    return {
+      state: "active-v1.17-bootstrap",
+      revision: 0,
+      active_selection: ACTIVE_V1_17_SEMANTIC_AUTHORITY_SELECTION,
+      active_selection_root: ACTIVE_V1_17_SEMANTIC_AUTHORITY_SELECTION_ROOT,
+      pending_intent: null,
+      finalization: null,
+      compensation: null,
+    }
+  }
+  if (state === "pending") {
+    return {
+      state: "pending-precommit",
+      revision: 1,
+      active_selection: ACTIVE_V1_17_SEMANTIC_AUTHORITY_SELECTION,
+      active_selection_root: ACTIVE_V1_17_SEMANTIC_AUTHORITY_SELECTION_ROOT,
+      pending_intent: {
+        direction: "forward",
+        activationId: "activation:workshop:test",
+        expectedOldRoot: ACTIVE_V1_17_SEMANTIC_AUTHORITY_SELECTION_ROOT,
+        targetSelection: REVIEWED_V1_19_SEMANTIC_AUTHORITY_SELECTION,
+        targetRoot: REVIEWED_V1_19_SEMANTIC_AUTHORITY_SELECTION_ROOT,
+        parentHead: gitObject("a"),
+        selectorManifest,
+        selectorManifestRoot,
+        proofPreimageRoot: sha("b"),
+      },
+      finalization: null,
+      compensation: null,
+    }
+  }
+  return {
+    state: "active-v1.19-finalized",
+    revision: 2,
+    active_selection: REVIEWED_V1_19_SEMANTIC_AUTHORITY_SELECTION,
+    active_selection_root: REVIEWED_V1_19_SEMANTIC_AUTHORITY_SELECTION_ROOT,
+    pending_intent: null,
+    finalization: {
+      activationId: "activation:workshop:test",
+      proofDigest: sha("c"),
+      commitSha: gitObject("b"),
+      treeSha: gitObject("c"),
+      selectorManifestRoot,
+    },
+    compensation: null,
+  }
+}
+
+const semanticHeadPool = (
+  state: "absent" | "bootstrap" | "pending" | "mismatch",
+) => {
+  const calls: string[] = []
+  const query = async (text: string) => {
+    calls.push(text)
+    if (!text.includes("from semantic_authority_selection_head")) {
+      throw new Error("Workshop mutated persistence after authority rejection")
+    }
+    const row = state === "absent" ? undefined : semanticHeadRow(state)
+    return { rows: row === undefined ? [] : [row], rowCount: row ? 1 : 0 }
+  }
+  const client = { query, release: () => undefined }
+  return {
+    calls,
+    pool: { query, connect: async () => client } as unknown as Pool,
+  }
+}
+
 describe("Workshop service contracts", () => {
   it("fails closed on empty production authority before seeding Workshop rows", async () => {
-    let calls = 0
-    const pool = {
-      async query() {
-        calls += 1
-        throw new Error("database must not be reached")
-      },
-    } as unknown as Pool
+    const fixture = semanticHeadPool("bootstrap")
 
     await expect(
-      createWorkshopTestMatchSet(pool, {
+      createWorkshopTestMatchSet(fixture.pool, {
         revisionId: "strategy-revision:workshop:test",
         opponentId: "opponent:cautious",
         presetId: "smoke-v1",
         matchSetId: "match-set:workshop:test",
       }),
     ).rejects.toThrow(/containment.*unavailable|production.*empty/iu)
-    expect(calls).toBe(0)
+    expect(fixture.calls).toHaveLength(1)
   })
 
   it("resolves Workshop revision and opponent as independent entrants", async () => {
@@ -170,19 +262,16 @@ describe("Workshop service contracts", () => {
         throw new Error("captured fixture resolution")
       },
     }
-    const pool = {
-      async query() {
-        throw new Error("unreachable")
-      },
-    } as unknown as Pool
+    const fixture = semanticHeadPool("bootstrap")
     await expect(
-      createWorkshopTestMatchSet(pool, {
+      createWorkshopTestMatchSet(fixture.pool, {
         revisionId: "strategy-revision:workshop:test",
         opponentId: "opponent:cautious",
         presetId: "smoke-v1",
         evidenceResolver: resolver,
       }),
     ).rejects.toThrow("captured fixture resolution")
+    expect(fixture.calls).toHaveLength(1)
     expect(captured).toEqual([
       {
         entrantKey: "strategy-revision:workshop:test",
@@ -215,7 +304,9 @@ describe("Workshop service contracts", () => {
       runtimeAbiVersion: "strategy-runtime-abi-v1.17",
       activationOwner: "Phase-260-Plan-14",
     })
-    expect(defaults.examples.map(({ language, source }) => [language, source])).toEqual([
+    expect(
+      defaults.examples.map(({ language, source }) => [language, source]),
+    ).toEqual([
       ["typescript", workshopTemplateSource],
       ["python", pythonTacticalStarterSource],
       ["rust", rustWasiTacticalStarterSource],
@@ -231,6 +322,72 @@ describe("Workshop service contracts", () => {
         ),
       ),
     ).toBe(false)
+  })
+
+  it("stores two immutable pins and resolves static current from the compact selector", () => {
+    expect(Object.keys(WORKSHOP_CONTRACT_SELECTION_REGISTRY)).toEqual([
+      "runtime-v1.17",
+      "runtime-v1.19",
+    ])
+    expect(Object.isFrozen(WORKSHOP_CONTRACT_SELECTION_REGISTRY)).toBe(true)
+    expect(
+      resolveWorkshopContractSelectionForSemanticAuthority({
+        semanticAuthorityKey: "runtime-v1.17",
+      }),
+    ).toMatchObject({
+      status: "current",
+      workshopContractVersion: "workshop-contract-v1.17",
+      runtimeAbiVersion: "strategy-runtime-abi-v1.17",
+      workshopContractRoot:
+        ACTIVE_V1_17_SEMANTIC_AUTHORITY_SELECTION.workshopContractRoot,
+    })
+    expect(
+      resolveWorkshopContractSelectionForSemanticAuthority({
+        semanticAuthorityKey: "runtime-v1.19",
+      }),
+    ).toMatchObject({
+      status: "current",
+      workshopContractVersion: "workshop-contract-v1.19",
+      runtimeAbiVersion: "strategy-runtime-abi-v1.19",
+      workshopContractRoot:
+        REVIEWED_V1_19_SEMANTIC_AUTHORITY_SELECTION.workshopContractRoot,
+    })
+    expect(() =>
+      resolveWorkshopContractSelectionForSemanticAuthority({
+        semanticAuthorityKey: "runtime-v1.18",
+      }),
+    ).toThrow(/semantic authority/iu)
+    expect(() =>
+      resolveWorkshopContractSelectionForSemanticAuthority({
+        semanticAuthorityKey: "runtime-v1.17",
+        runtimeAbiVersion: "strategy-runtime-abi-v1.19",
+      }),
+    ).toThrow(/semantic authority/iu)
+  })
+
+  it.each(["absent", "pending", "mismatch"] as const)(
+    "fails closed before Workshop MatchSet persistence for a %s head",
+    async (state) => {
+      const fixture = semanticHeadPool(state)
+      await expect(
+        createWorkshopTestMatchSet(fixture.pool, {
+          revisionId: "strategy-revision:workshop:test",
+          opponentId: "opponent:cautious",
+          presetId: "smoke-v1",
+          evidenceResolver: createFixtureMatchSetEvidenceResolver(),
+        }),
+      ).rejects.toThrow(/authority|unavailable|mismatch/iu)
+      expect(fixture.calls).toHaveLength(1)
+    },
+  )
+
+  it("fails closed before Workshop revision persistence when the head is absent", async () => {
+    const fixture = semanticHeadPool("absent")
+    const revision = buildWorkshopRevision({ source: workshopTemplateSource })
+    await expect(
+      insertWorkshopRevision(fixture.pool, revision),
+    ).rejects.toThrow(/authority|unavailable/iu)
+    expect(fixture.calls).toHaveLength(1)
   })
 
   it("returns v1.19 examples only through an exact explicit candidate selector", () => {
@@ -692,9 +849,10 @@ describe("Workshop service contracts", () => {
       }
 
       expect(STRATEGY_RUNTIME_ABI_VERSION).toBe("strategy-runtime-abi-v1.17")
-      const selectedResult = createPythonRuntimeFromRevision(
-        legacyShapeRevision,
-      ).selectActivations(activationInput)
+      const selectedResult =
+        createPythonRuntimeFromRevision(legacyShapeRevision).selectActivations(
+          activationInput,
+        )
       expect(selectedResult).toMatchObject({
         ok: false,
         systemFailure: { code: "MALFORMED_IPC", retryable: true },
@@ -974,6 +1132,9 @@ describe("Workshop service contracts", () => {
       []
     const query = async (text: string, values?: readonly unknown[]) => {
       calls.push({ text, values })
+      if (text.includes("from semantic_authority_selection_head")) {
+        return { rows: [semanticHeadRow("bootstrap")], rowCount: 1 }
+      }
       return { rows: [], rowCount: 0 }
     }
     const client = { query, release: () => undefined }

@@ -5,17 +5,15 @@ import {
   type StrategyExecutionAdapter,
   type StrategyExecutionAdapterMetadata,
 } from "@cowards/runtime-js/worker"
-import type {
-  ExecutableLaneIdentity,
-  StrategyRevision,
-} from "@cowards/spec"
+import type { ExecutableLaneIdentity, StrategyRevision } from "@cowards/spec"
 import type { SuccessorRuntimeIdentityTemplateV117 } from "./successor-runtime-identity.js"
 import {
+  CURRENT_SEMANTIC_AUTHORITY_GENERATED,
   RUNTIME_ABI_V1_17,
-  RUNTIME_EXECUTION_SERVICE_VERSION,
-  RUNTIME_SEMANTIC_RECEIPT_SCHEMA_VERSION,
-  STRATEGY_RUNTIME_ABI_VERSION,
+  resolveSemanticAuthoritySelection,
+  type SemanticAuthoritySelection,
 } from "@cowards/spec"
+import { isDeepStrictEqual } from "node:util"
 
 const LOCAL_DEV_STRATEGY_EXECUTION_ADAPTER_ID = "worker-thread"
 
@@ -33,7 +31,9 @@ export interface RuntimeServiceConfigInput {
     | ((revision: StrategyRevision) => ExecutableLaneIdentity | undefined)
     | undefined
   resolveSuccessorRuntimeIdentityTemplate?:
-    | ((revision: StrategyRevision) => SuccessorRuntimeIdentityTemplateV117 | undefined)
+    | ((
+        revision: StrategyRevision,
+      ) => SuccessorRuntimeIdentityTemplateV117 | undefined)
     | undefined
   deploymentLaneRegistryId?: string | undefined
   semanticReceiptSecret?: string | undefined
@@ -51,6 +51,9 @@ export interface RuntimeServiceConfig {
   deploymentLaneRegistryId?: string | undefined
   semanticReceiptSecret: string
   contractSelection: RuntimeServiceContractSelection
+  resolveContractSelectionForRequest(
+    frozenSelection: unknown,
+  ): RuntimeServiceContractSelection
 }
 
 export interface RuntimeServiceContractSelection {
@@ -60,21 +63,74 @@ export interface RuntimeServiceContractSelection {
   canonicalJsonVersion: string
 }
 
+const deepFreeze = <T>(value: T): Readonly<T> => {
+  if (value !== null && typeof value === "object" && !Object.isFrozen(value)) {
+    for (const child of Object.values(value as Record<string, unknown>)) {
+      deepFreeze(child)
+    }
+    Object.freeze(value)
+  }
+  return value
+}
+
+const runtimeServiceContractSelections = deepFreeze({
+  "runtime-v1.17": {
+    runtimeAbiVersion: RUNTIME_ABI_V1_17.versions.runtimeAbi,
+    runtimeServiceVersion: RUNTIME_ABI_V1_17.versions.runtimeService,
+    semanticReceiptVersion: RUNTIME_ABI_V1_17.versions.semanticReceipt,
+    canonicalJsonVersion: RUNTIME_ABI_V1_17.versions.canonicalJson,
+  },
+  "runtime-v1.19": {
+    runtimeAbiVersion: "strategy-runtime-abi-v1.19",
+    runtimeServiceVersion: "runtime-execution-service-v1.18",
+    semanticReceiptVersion: "runtime-semantic-receipt-v1.19",
+    canonicalJsonVersion: "canonical-json-v1.1",
+  },
+} as const satisfies Record<string, RuntimeServiceContractSelection>)
+
+const resolveExactSemanticAuthoritySelection = (
+  value: unknown,
+): SemanticAuthoritySelection | undefined => {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    return undefined
+  }
+  const semanticAuthorityKey = (value as Record<string, unknown>)[
+    "semanticAuthorityKey"
+  ]
+  const canonical = resolveSemanticAuthoritySelection({ semanticAuthorityKey })
+  return canonical !== undefined && isDeepStrictEqual(value, canonical)
+    ? canonical
+    : undefined
+}
+
+export const selectedRuntimeServiceContractForFrozenRequest = (
+  fileCurrentSelection: unknown,
+  frozenRequestSelection: unknown,
+): RuntimeServiceContractSelection => {
+  const fileCurrent =
+    resolveExactSemanticAuthoritySelection(fileCurrentSelection)
+  const requestCurrent = resolveExactSemanticAuthoritySelection(
+    frozenRequestSelection,
+  )
+  if (fileCurrent === undefined || requestCurrent === undefined) {
+    throw new RuntimeServiceConfigError(
+      "Runtime semantic authority selection is missing or invalid.",
+    )
+  }
+  if (!isDeepStrictEqual(fileCurrent, requestCurrent)) {
+    throw new RuntimeServiceConfigError(
+      "Runtime request semantic authority does not match file current.",
+    )
+  }
+  return runtimeServiceContractSelections[fileCurrent.semanticAuthorityKey]
+}
+
 export const selectedRuntimeServiceContract =
   (): RuntimeServiceContractSelection =>
-    RUNTIME_ABI_V1_17.lifecycle.active
-      ? {
-          runtimeAbiVersion: RUNTIME_ABI_V1_17.versions.runtimeAbi,
-          runtimeServiceVersion: RUNTIME_ABI_V1_17.versions.runtimeService,
-          semanticReceiptVersion: RUNTIME_ABI_V1_17.versions.semanticReceipt,
-          canonicalJsonVersion: RUNTIME_ABI_V1_17.versions.canonicalJson,
-        }
-      : {
-          runtimeAbiVersion: STRATEGY_RUNTIME_ABI_VERSION,
-          runtimeServiceVersion: RUNTIME_EXECUTION_SERVICE_VERSION,
-          semanticReceiptVersion: RUNTIME_SEMANTIC_RECEIPT_SCHEMA_VERSION,
-          canonicalJsonVersion: "legacy-json-stringify-v1.16",
-        }
+    selectedRuntimeServiceContractForFrozenRequest(
+      CURRENT_SEMANTIC_AUTHORITY_GENERATED.selection,
+      CURRENT_SEMANTIC_AUTHORITY_GENERATED.selection,
+    )
 
 export const createRuntimeServiceConfig = (
   input: RuntimeServiceConfigInput = {},
@@ -105,6 +161,11 @@ export const createRuntimeServiceConfig = (
   const resolveSuccessorRuntimeIdentityTemplate =
     input.resolveSuccessorRuntimeIdentityTemplate ?? (() => undefined)
   const contractSelection = selectedRuntimeServiceContract()
+  const resolveContractSelectionForRequest = (frozenSelection: unknown) =>
+    selectedRuntimeServiceContractForFrozenRequest(
+      CURRENT_SEMANTIC_AUTHORITY_GENERATED.selection,
+      frozenSelection,
+    )
 
   switch (selectedId) {
     case "worker-thread": {
@@ -117,6 +178,7 @@ export const createRuntimeServiceConfig = (
         deploymentLaneRegistryId: input.deploymentLaneRegistryId,
         semanticReceiptSecret,
         contractSelection,
+        resolveContractSelectionForRequest,
       }
     }
     case "subprocess": {
@@ -129,6 +191,7 @@ export const createRuntimeServiceConfig = (
         deploymentLaneRegistryId: input.deploymentLaneRegistryId,
         semanticReceiptSecret,
         contractSelection,
+        resolveContractSelectionForRequest,
       }
     }
     case "container-subprocess": {
@@ -141,6 +204,7 @@ export const createRuntimeServiceConfig = (
         deploymentLaneRegistryId: input.deploymentLaneRegistryId,
         semanticReceiptSecret,
         contractSelection,
+        resolveContractSelectionForRequest,
       }
     }
     default:

@@ -15,6 +15,7 @@ import {
   describeStrategyRuntimeProductSemantics,
   encodeCanonicalJson,
   getSupportedStrategyLanguageRecord,
+  CURRENT_SEMANTIC_AUTHORITY_KEY,
   STRATEGY_RUNTIME_ABI_VERSION,
   STRATEGY_RUNTIME_ABI_VERSION_V1_17,
   StrategyRevisionV117Schema,
@@ -65,12 +66,23 @@ import {
   recklessSource,
 } from "./seed.js"
 import type { MatchSetStatus } from "./schema.js"
-import { CURRENT_WORKSHOP_CONTRACT_GENERATED } from "./current-workshop-contract-generated.js"
+import {
+  CURRENT_WORKSHOP_CONTRACT_GENERATED,
+  WORKSHOP_CONTRACT_SELECTION_REGISTRY,
+} from "./current-workshop-contract-generated.js"
 import { WORKSHOP_CONTRACT_V1_19_CANDIDATE } from "./workshop-contract-v1-19-candidate.js"
 import {
   WORKSHOP_CONTRACT_V1_19_CANDIDATE_PIN,
   verifyWorkshopContractV119CandidatePin,
 } from "./workshop-contract-v1-19-candidate-pin.js"
+import {
+  ACTIVE_V1_17_SEMANTIC_AUTHORITY_SELECTION,
+  ACTIVE_V1_17_SEMANTIC_AUTHORITY_SELECTION_ROOT,
+  REVIEWED_V1_19_SEMANTIC_AUTHORITY_SELECTION,
+  REVIEWED_V1_19_SEMANTIC_AUTHORITY_SELECTION_ROOT,
+  assertCountedSemanticAuthoritySelection,
+  readSemanticAuthoritySelectionHead,
+} from "./semantic-authority-selection-head.js"
 
 export { CURRENT_WORKSHOP_CONTRACT_GENERATED }
 
@@ -1024,11 +1036,20 @@ export interface WorkshopContractExampleSummary {
 export type WorkshopContractExampleSelection =
   | typeof CURRENT_WORKSHOP_CONTRACT_GENERATED.selection
   | Readonly<{
-      status: "inactive-candidate"
-      workshopContractVersion: "workshop-contract-v1.19"
-      runtimeAbiVersion: "strategy-runtime-abi-v1.19"
+      status: "inactive-candidate" | "historical"
+      semanticAuthorityKey: "runtime-v1.17" | "runtime-v1.19"
+      workshopContractVersion:
+        | "workshop-contract-v1.17"
+        | "workshop-contract-v1.19"
+      runtimeAbiVersion:
+        | "strategy-runtime-abi-v1.17"
+        | "strategy-runtime-abi-v1.19"
       activationOwner: "Phase-260-Plan-14"
-      exampleSetRootSha256: string
+      workshopContractRoot: string
+      exampleSourceSha256: Readonly<
+        Record<"typescript" | "python" | "rust" | "zig", string>
+      >
+      validationContract: string
     }>
 
 export interface WorkshopContractExampleSet {
@@ -1039,7 +1060,7 @@ export interface WorkshopContractExampleSet {
 const sourceSha256 = (source: string): `sha256:${string}` =>
   `sha256:${createHash("sha256").update(source).digest("hex")}`
 
-const currentWorkshopContractExamples = (): WorkshopContractExampleSummary[] => [
+const v117WorkshopContractExamples = (): WorkshopContractExampleSummary[] => [
   {
     language: "typescript",
     sourceFormat: "typescript",
@@ -1066,17 +1087,41 @@ const currentWorkshopContractExamples = (): WorkshopContractExampleSummary[] => 
   },
 ]
 
+const v119WorkshopContractExamples = (): WorkshopContractExampleSummary[] => {
+  const verified = verifyWorkshopContractV119CandidatePin(
+    WORKSHOP_CONTRACT_V1_19_CANDIDATE,
+    WORKSHOP_CONTRACT_V1_19_CANDIDATE_PIN,
+  )
+  if (!verified.ok) {
+    throw new Error(`Workshop candidate pin failed: ${verified.code}`)
+  }
+  return WORKSHOP_CONTRACT_V1_19_CANDIDATE.examples.map((example) => ({
+    language: example.language,
+    sourceFormat: example.sourceFormat,
+    source: example.source,
+    validation: validateWorkshopSource(example.source, example.sourceFormat),
+  }))
+}
+
+const workshopExamplesForSelection = (
+  selection: Pick<WorkshopContractExampleSelection, "runtimeAbiVersion">,
+): WorkshopContractExampleSummary[] =>
+  selection.runtimeAbiVersion === "strategy-runtime-abi-v1.19"
+    ? v119WorkshopContractExamples()
+    : v117WorkshopContractExamples()
+
 const assertCurrentWorkshopContractPin = (
+  selection: Pick<
+    typeof CURRENT_WORKSHOP_CONTRACT_GENERATED.selection,
+    "exampleSourceSha256"
+  >,
   examples: readonly WorkshopContractExampleSummary[],
 ): void => {
   const actual = Object.fromEntries(
     examples.map((example) => [example.language, sourceSha256(example.source)]),
   )
   if (
-    JSON.stringify(actual) !==
-    JSON.stringify(
-      CURRENT_WORKSHOP_CONTRACT_GENERATED.selection.exampleSourceSha256,
-    )
+    JSON.stringify(actual) !== JSON.stringify(selection.exampleSourceSha256)
   ) {
     throw new Error("Generated current Workshop contract pin is stale.")
   }
@@ -1101,28 +1146,31 @@ export const listWorkshopContractExamples = (
   selector?: unknown,
 ): WorkshopContractExampleSet => {
   if (selector === undefined) {
-    const examples = currentWorkshopContractExamples()
-    assertCurrentWorkshopContractPin(examples)
+    const selection = CURRENT_WORKSHOP_CONTRACT_GENERATED.selection
+    const examples = workshopExamplesForSelection(selection)
+    assertCurrentWorkshopContractPin(selection, examples)
     return {
-      selection: CURRENT_WORKSHOP_CONTRACT_GENERATED.selection,
+      selection,
       examples,
     }
   }
   if (!isExactWorkshopContractSelector(selector)) {
-    throw new WorkshopInputError("An exact Workshop contract selector is required.")
+    throw new WorkshopInputError(
+      "An exact Workshop contract selector is required.",
+    )
   }
 
   if (
     selector.workshopContractVersion ===
-      CURRENT_WORKSHOP_CONTRACT_GENERATED.selection
-        .workshopContractVersion &&
+      CURRENT_WORKSHOP_CONTRACT_GENERATED.selection.workshopContractVersion &&
     selector.runtimeAbiVersion ===
       CURRENT_WORKSHOP_CONTRACT_GENERATED.selection.runtimeAbiVersion
   ) {
-    const examples = currentWorkshopContractExamples()
-    assertCurrentWorkshopContractPin(examples)
+    const selection = CURRENT_WORKSHOP_CONTRACT_GENERATED.selection
+    const examples = workshopExamplesForSelection(selection)
+    assertCurrentWorkshopContractPin(selection, examples)
     return {
-      selection: CURRENT_WORKSHOP_CONTRACT_GENERATED.selection,
+      selection,
       examples,
     }
   }
@@ -1131,35 +1179,32 @@ export const listWorkshopContractExamples = (
     selector.workshopContractVersion === "workshop-contract-v1.19" &&
     selector.runtimeAbiVersion === "strategy-runtime-abi-v1.19"
   ) {
-    const verified = verifyWorkshopContractV119CandidatePin(
-      WORKSHOP_CONTRACT_V1_19_CANDIDATE,
-      WORKSHOP_CONTRACT_V1_19_CANDIDATE_PIN,
-    )
-    if (!verified.ok) {
-      throw new Error(`Workshop candidate pin failed: ${verified.code}`)
-    }
+    const pin = WORKSHOP_CONTRACT_SELECTION_REGISTRY["runtime-v1.19"]
     return {
       selection: {
         status: "inactive-candidate",
-        workshopContractVersion: "workshop-contract-v1.19",
-        runtimeAbiVersion: "strategy-runtime-abi-v1.19",
-        activationOwner: "Phase-260-Plan-14",
-        exampleSetRootSha256:
-          WORKSHOP_CONTRACT_V1_19_CANDIDATE_PIN.exampleSetRootSha256,
+        ...pin,
       },
-      examples: WORKSHOP_CONTRACT_V1_19_CANDIDATE.examples.map((example) => ({
-        language: example.language,
-        sourceFormat: example.sourceFormat,
-        source: example.source,
-        validation: validateWorkshopSource(
-          example.source,
-          example.sourceFormat,
-        ),
-      })),
+      examples: v119WorkshopContractExamples(),
     }
   }
 
-  throw new WorkshopInputError("An exact Workshop contract selector is required.")
+  if (
+    selector.workshopContractVersion === "workshop-contract-v1.17" &&
+    selector.runtimeAbiVersion === "strategy-runtime-abi-v1.17"
+  ) {
+    const pin = WORKSHOP_CONTRACT_SELECTION_REGISTRY["runtime-v1.17"]
+    const examples = v117WorkshopContractExamples()
+    assertCurrentWorkshopContractPin(pin, examples)
+    return {
+      selection: { status: "historical", ...pin },
+      examples,
+    }
+  }
+
+  throw new WorkshopInputError(
+    "An exact Workshop contract selector is required.",
+  )
 }
 
 export const ensureWorkshopSeed = async (pool: Pool): Promise<void> => {
@@ -1185,6 +1230,37 @@ export const ensureWorkshopSeed = async (pool: Pool): Promise<void> => {
       await repositories.upsertArenaVariant(arena)
     }
   })
+}
+
+const assertWorkshopDatabaseSemanticAuthority = async (
+  pool: Pool,
+): Promise<void> => {
+  const expected =
+    String(CURRENT_SEMANTIC_AUTHORITY_KEY) === "runtime-v1.19"
+      ? {
+          selection: REVIEWED_V1_19_SEMANTIC_AUTHORITY_SELECTION,
+          root: REVIEWED_V1_19_SEMANTIC_AUTHORITY_SELECTION_ROOT,
+        }
+      : {
+          selection: ACTIVE_V1_17_SEMANTIC_AUTHORITY_SELECTION,
+          root: ACTIVE_V1_17_SEMANTIC_AUTHORITY_SELECTION_ROOT,
+        }
+  const head = await readSemanticAuthoritySelectionHead(pool)
+  const active = assertCountedSemanticAuthoritySelection(
+    head,
+    expected.selection,
+    expected.root,
+  )
+  const workshopSelection = CURRENT_WORKSHOP_CONTRACT_GENERATED.selection
+  if (
+    active.workshopContractVersion !==
+      workshopSelection.workshopContractVersion ||
+    active.workshopContractRoot !== workshopSelection.workshopContractRoot
+  ) {
+    throw new WorkshopInputError(
+      "Workshop contract does not match active semantic authority.",
+    )
+  }
 }
 
 export const listWorkshopRevisions = async (
@@ -1307,6 +1383,7 @@ export const insertWorkshopRevision = async (
   if (revision.strategyId !== WORKSHOP_STRATEGY_ID) {
     throw new Error("Workshop revisions must use the Workshop strategy id")
   }
+  await assertWorkshopDatabaseSemanticAuthority(pool)
   await ensureWorkshopSeed(pool)
   await createRepositories(pool).insertStrategyRevision(
     revision,
@@ -1887,6 +1964,7 @@ export const createWorkshopTestMatchSet = async (
 ): Promise<WorkshopTestSummary & { matchIds: MatchId[] }> => {
   const opponent = findWorkshopOpponent(input.opponentId)
   const now = input.now ?? new Date()
+  await assertWorkshopDatabaseSemanticAuthority(pool)
   const integrityIdentity = await resolveMatchSetExecutionEvidence({
     resolver: input.evidenceResolver,
     purpose: "workshop",
@@ -1962,28 +2040,44 @@ export const getWorkshopTestSummary = async (
   }
 }
 
+const currentWorkshopTemplate = (): WorkshopContractExampleSummary => {
+  const template = listWorkshopContractExamples().examples.find(
+    ({ language }) => language === "typescript",
+  )
+  if (template === undefined) {
+    throw new Error("Current Workshop contract lacks a TypeScript template.")
+  }
+  return template
+}
+
 export const getWorkshopSnapshot = async (
   pool: Pool,
-): Promise<WorkshopSnapshot> => ({
-  templateSource: workshopTemplateSource,
-  templateValidation: validateWorkshopSource(workshopTemplateSource),
-  revisions: await listWorkshopRevisions(pool),
-  presets: listWorkshopPresets(),
-  opponents: listWorkshopOpponents(),
-  templates: listWorkshopTemplates(),
-  starters: listStarterStrategies(),
-  advancedStrategies: listAdvancedStrategies(),
-  samples: listWorkshopSamples(),
-})
+): Promise<WorkshopSnapshot> => {
+  const template = currentWorkshopTemplate()
+  return {
+    templateSource: template.source,
+    templateValidation: template.validation,
+    revisions: await listWorkshopRevisions(pool),
+    presets: listWorkshopPresets(),
+    opponents: listWorkshopOpponents(),
+    templates: listWorkshopTemplates(),
+    starters: listStarterStrategies(),
+    advancedStrategies: listAdvancedStrategies(),
+    samples: listWorkshopSamples(),
+  }
+}
 
-export const getWorkshopStaticSnapshot = (): WorkshopSnapshot => ({
-  templateSource: workshopTemplateSource,
-  templateValidation: validateWorkshopSource(workshopTemplateSource),
-  revisions: [],
-  presets: listWorkshopPresets(),
-  opponents: listWorkshopOpponents(),
-  templates: listWorkshopTemplates(),
-  starters: listStarterStrategies(),
-  advancedStrategies: listAdvancedStrategies(),
-  samples: listWorkshopSamples(),
-})
+export const getWorkshopStaticSnapshot = (): WorkshopSnapshot => {
+  const template = currentWorkshopTemplate()
+  return {
+    templateSource: template.source,
+    templateValidation: template.validation,
+    revisions: [],
+    presets: listWorkshopPresets(),
+    opponents: listWorkshopOpponents(),
+    templates: listWorkshopTemplates(),
+    starters: listStarterStrategies(),
+    advancedStrategies: listAdvancedStrategies(),
+    samples: listWorkshopSamples(),
+  }
+}

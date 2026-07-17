@@ -4,7 +4,6 @@ import path from "node:path"
 import { pathToFileURL } from "node:url"
 import { describe, expect, it } from "vitest"
 import type * as SubjectModule from "./runtime-abi-v1-17.ts"
-import { STRATEGY_RUNTIME_ABI_VERSION } from "./versions.js"
 
 const repoRoot = path.resolve(import.meta.dirname, "../../..")
 const subjectPath = path.join(import.meta.dirname, "runtime-abi-v1-17.ts")
@@ -258,37 +257,28 @@ const preflightReceipt = (
 }
 
 describe("runtime ABI v1.17 frozen successor registry", () => {
-  it("keeps the atomic successor lifecycle aligned with the selected pointer", async () => {
+  it("keeps the released lifecycle as immutable historical evidence", async () => {
     const runtimeAbi = await subject()
     const contract = runtimeAbi.RUNTIME_ABI_V1_17
-    const selected =
-      String(STRATEGY_RUNTIME_ABI_VERSION) ===
-      String(contract.versions.runtimeAbi)
 
     expect(contract.versions).toEqual({
       runtimeAbi: "strategy-runtime-abi-v1.17",
       runtimeService: "runtime-execution-service-v1.17",
       semanticReceipt: "runtime-semantic-receipt-v1.17",
-      canonicalJson: selected ? "canonical-json-v1.1" : "canonical-json-v1",
+      canonicalJson: "canonical-json-v1.1",
       budget: "runtime-budget-v1",
       identity: "runtime-identity-v1",
     })
-    expect(contract.lifecycle.active).toBe(selected)
-    expect(contract.lifecycle.status).toBe(
-      selected ? "current" : "candidate-only",
-    )
+    expect(contract.lifecycle.active).toBe(true)
+    expect(contract.lifecycle.status).toBe("current")
     expect(contract.lifecycle.currentRuntimeAbi).toBe(
-      selected ? contract.versions.runtimeAbi : STRATEGY_RUNTIME_ABI_VERSION,
+      contract.versions.runtimeAbi,
     )
     expect(contract.lifecycle.currentRuntimeService).toBe(
-      selected
-        ? contract.versions.runtimeService
-        : "runtime-execution-service-v1.16",
+      contract.versions.runtimeService,
     )
     expect(contract.lifecycle.currentSemanticReceipt).toBe(
-      selected
-        ? contract.versions.semanticReceipt
-        : "runtime-semantic-receipt-v1",
+      contract.versions.semanticReceipt,
     )
     expect(contract.lifecycle.activationOwner).toBe("Phase-258-Plan-14")
     expect(contract.migration.v116ReadDispatchRetained).toBe(true)
@@ -297,37 +287,6 @@ describe("runtime ABI v1.17 frozen successor registry", () => {
     expect(contract.historicalV116).toMatchObject({
       serializer: "typescript-json-stringify-insertion-order",
       canonicalJsonV1Applied: false,
-    })
-    const lifecycle = (selected: boolean) => ({
-      canonicalJson: selected ? "canonical-json-v1.1" : "canonical-json-v1",
-      status: selected ? "current" : "candidate-only",
-      active: selected,
-      currentRuntimeAbi: selected
-        ? "strategy-runtime-abi-v1.17"
-        : "strategy-runtime-abi-v1.14",
-      currentRuntimeService: selected
-        ? "runtime-execution-service-v1.17"
-        : "runtime-execution-service-v1.16",
-      currentSemanticReceipt: selected
-        ? "runtime-semantic-receipt-v1.17"
-        : "runtime-semantic-receipt-v1",
-    })
-
-    expect(lifecycle(false)).toEqual({
-      canonicalJson: "canonical-json-v1",
-      status: "candidate-only",
-      active: false,
-      currentRuntimeAbi: "strategy-runtime-abi-v1.14",
-      currentRuntimeService: "runtime-execution-service-v1.16",
-      currentSemanticReceipt: "runtime-semantic-receipt-v1",
-    })
-    expect(lifecycle(true)).toEqual({
-      canonicalJson: "canonical-json-v1.1",
-      status: "current",
-      active: true,
-      currentRuntimeAbi: "strategy-runtime-abi-v1.17",
-      currentRuntimeService: "runtime-execution-service-v1.17",
-      currentSemanticReceipt: "runtime-semantic-receipt-v1.17",
     })
   })
 

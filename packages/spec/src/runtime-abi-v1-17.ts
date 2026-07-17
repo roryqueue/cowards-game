@@ -1,5 +1,4 @@
 import { createHash } from "node:crypto"
-import { STRATEGY_RUNTIME_ABI_VERSION } from "./versions.js"
 
 const KiB = 1024
 const MiB = 1024 * KiB
@@ -2020,30 +2019,18 @@ export const validateRuntimeAbiV117Contract = (): string[] => {
   ) {
     errors.push("decision map must cover D-01 through D-16 exactly")
   }
-  const selectedAsCurrent =
-    String(STRATEGY_RUNTIME_ABI_VERSION) ===
-    String(RUNTIME_ABI_V1_17.versions.runtimeAbi)
-  if (RUNTIME_ABI_V1_17.lifecycle.active !== selectedAsCurrent) {
-    errors.push("successor lifecycle must match the selected runtime ABI")
-  }
   if (
-    RUNTIME_ABI_V1_17.lifecycle.status !==
-    (selectedAsCurrent ? "current" : "candidate-only")
-  ) {
-    errors.push("successor status must match the selected runtime ABI")
-  }
-  if (
-    selectedAsCurrent &&
-    (String(RUNTIME_ABI_V1_17.lifecycle.currentRuntimeAbi) !==
+    !RUNTIME_ABI_V1_17.lifecycle.active ||
+    RUNTIME_ABI_V1_17.lifecycle.status !== "current" ||
+    String(RUNTIME_ABI_V1_17.lifecycle.currentRuntimeAbi) !==
       String(RUNTIME_ABI_V1_17.versions.runtimeAbi) ||
-      String(RUNTIME_ABI_V1_17.lifecycle.currentRuntimeService) !==
-        String(RUNTIME_ABI_V1_17.versions.runtimeService) ||
-      String(RUNTIME_ABI_V1_17.lifecycle.currentSemanticReceipt) !==
-        String(RUNTIME_ABI_V1_17.versions.semanticReceipt) ||
-      String(RUNTIME_ABI_V1_17.versions.canonicalJson) !==
-        "canonical-json-v1.1")
+    String(RUNTIME_ABI_V1_17.lifecycle.currentRuntimeService) !==
+      String(RUNTIME_ABI_V1_17.versions.runtimeService) ||
+    String(RUNTIME_ABI_V1_17.lifecycle.currentSemanticReceipt) !==
+      String(RUNTIME_ABI_V1_17.versions.semanticReceipt) ||
+    String(RUNTIME_ABI_V1_17.versions.canonicalJson) !== "canonical-json-v1.1"
   ) {
-    errors.push("active successor tuple is incomplete")
+    errors.push("released v1.17 lifecycle evidence is incomplete")
   }
   if (RUNTIME_ABI_V1_17.migration.migration0017RewriteAllowed) {
     errors.push("migration 0017 rewrite must remain forbidden")
