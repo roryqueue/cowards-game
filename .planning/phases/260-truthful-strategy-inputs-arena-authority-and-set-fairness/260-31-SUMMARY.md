@@ -65,4 +65,3 @@ status: complete
 - Rechecked finalized Git/tree/proof/selector bindings on idempotent finalize, smoke, and compensation entry.
 - Corrected the production protected-baseline gate to invoke the existing read-only baseline checker.
 - Repository lint exposed a pre-existing Plan 27 overload lint finding; it was fixed separately in `ab96afd` before final verification.
-
