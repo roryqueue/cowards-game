@@ -77,57 +77,104 @@ describe("v1.37 observation-v1.19 preactivation proof", () => {
   })
 
   it.each([
-    ["candidate corpus version", (proof: ReturnType<typeof passingProof>) => {
-      proof.candidate.corpus.version = "v2"
-    }],
-    ["candidate corpus root", (proof: ReturnType<typeof passingProof>) => {
-      proof.candidate.corpus.rootSha256 = `sha256:${"0".repeat(64)}`
-    }],
-    ["candidate corpus pin", (proof: ReturnType<typeof passingProof>) => {
-      proof.candidate.corpus.pinFileSha256 = `sha256:${"0".repeat(64)}`
-    }],
-    ["active corpus registry", (proof: ReturnType<typeof passingProof>) => {
-      proof.currentInventory.corpus.activeVersion = "v3"
-    }],
-    ["active trace registry", (proof: ReturnType<typeof passingProof>) => {
-      proof.currentInventory.trace.activeVersion =
-        "v1.37-observation-trace-v4"
-    }],
-    ["reviewed current pin", (proof: ReturnType<typeof passingProof>) => {
-      proof.currentInventory.corpus.reviewedPinFileSha256 =
-        `sha256:${"0".repeat(64)}`
-    }],
-    ["Workshop default", (proof: ReturnType<typeof passingProof>) => {
-      proof.currentInventory.workshop.contractVersion =
-        "workshop-contract-v1.19"
-    }],
-    ["TypeScript current selector", (proof: ReturnType<typeof passingProof>) => {
-      proof.currentInventory.semantic.semanticAuthorityKey = "runtime-v1.19"
-    }],
-    ["Go current selector", (proof: ReturnType<typeof passingProof>) => {
-      proof.currentInventory.go.semanticAuthorityKey = "runtime-v1.19"
-    }],
-    ["partial Set matrix", (proof: ReturnType<typeof passingProof>) => {
-      proof.candidate.set.conditionCount = 3
-    }],
-    ["alias counted as diversity", (proof: ReturnType<typeof passingProof>) => {
-      proof.candidate.arena.aliasDiversityCount = 1
-    }],
-    ["inferred revision eligibility", (proof: ReturnType<typeof passingProof>) => {
-      proof.candidate.revisions.inferenceAllowed = true
-    }],
-    ["reused Phase-259 evidence", (proof: ReturnType<typeof passingProof>) => {
-      proof.candidate.reusedPhase259RunCount = 1
-    }],
-    ["premature database current row", (proof: ReturnType<typeof passingProof>) => {
-      proof.currentInventory.database.phase259CurrentCandidateRows = 1
-    }],
-    ["premature successor Match", (proof: ReturnType<typeof passingProof>) => {
-      proof.currentInventory.database.successorMatchRows = 1
-    }],
-    ["protected baseline drift", (proof: ReturnType<typeof passingProof>) => {
-      proof.protectedBaseline.baselineSha256 = `sha256:${"0".repeat(64)}`
-    }],
+    [
+      "candidate corpus version",
+      (proof: ReturnType<typeof passingProof>) => {
+        proof.candidate.corpus.version = "v2"
+      },
+    ],
+    [
+      "candidate corpus root",
+      (proof: ReturnType<typeof passingProof>) => {
+        proof.candidate.corpus.rootSha256 = `sha256:${"0".repeat(64)}`
+      },
+    ],
+    [
+      "candidate corpus pin",
+      (proof: ReturnType<typeof passingProof>) => {
+        proof.candidate.corpus.pinFileSha256 = `sha256:${"0".repeat(64)}`
+      },
+    ],
+    [
+      "active corpus registry",
+      (proof: ReturnType<typeof passingProof>) => {
+        proof.currentInventory.corpus.activeVersion = "v3"
+      },
+    ],
+    [
+      "active trace registry",
+      (proof: ReturnType<typeof passingProof>) => {
+        proof.currentInventory.trace.activeVersion =
+          "v1.37-observation-trace-v4"
+      },
+    ],
+    [
+      "reviewed current pin",
+      (proof: ReturnType<typeof passingProof>) => {
+        proof.currentInventory.corpus.reviewedPinFileSha256 = `sha256:${"0".repeat(64)}`
+      },
+    ],
+    [
+      "Workshop default",
+      (proof: ReturnType<typeof passingProof>) => {
+        proof.currentInventory.workshop.contractVersion =
+          "workshop-contract-v1.19"
+      },
+    ],
+    [
+      "TypeScript current selector",
+      (proof: ReturnType<typeof passingProof>) => {
+        proof.currentInventory.semantic.semanticAuthorityKey = "runtime-v1.19"
+      },
+    ],
+    [
+      "Go current selector",
+      (proof: ReturnType<typeof passingProof>) => {
+        proof.currentInventory.go.semanticAuthorityKey = "runtime-v1.19"
+      },
+    ],
+    [
+      "partial Set matrix",
+      (proof: ReturnType<typeof passingProof>) => {
+        proof.candidate.set.conditionCount = 3
+      },
+    ],
+    [
+      "alias counted as diversity",
+      (proof: ReturnType<typeof passingProof>) => {
+        proof.candidate.arena.aliasDiversityCount = 1
+      },
+    ],
+    [
+      "inferred revision eligibility",
+      (proof: ReturnType<typeof passingProof>) => {
+        proof.candidate.revisions.inferenceAllowed = true
+      },
+    ],
+    [
+      "reused Phase-259 evidence",
+      (proof: ReturnType<typeof passingProof>) => {
+        proof.candidate.reusedPhase259RunCount = 1
+      },
+    ],
+    [
+      "premature database current row",
+      (proof: ReturnType<typeof passingProof>) => {
+        proof.currentInventory.database.phase259CurrentCandidateRows = 1
+      },
+    ],
+    [
+      "premature successor Match",
+      (proof: ReturnType<typeof passingProof>) => {
+        proof.currentInventory.database.successorMatchRows = 1
+      },
+    ],
+    [
+      "protected baseline drift",
+      (proof: ReturnType<typeof passingProof>) => {
+        proof.protectedBaseline.baselineSha256 = `sha256:${"0".repeat(64)}`
+      },
+    ],
   ] as const)("rejects %s", (_name, mutate) => {
     const proof = clone(passingProof())
     mutate(proof)
