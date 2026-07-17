@@ -5,15 +5,15 @@ milestone_name: Rules Integrity and Strategy Evaluation Foundations — ACTIVE
 current_phase: 260
 current_phase_name: truthful-strategy-inputs-arena-authority-and-set-fairness
 status: executing
-stopped_at: Wave-15 crash-safe activation coordinator complete; execute Plan 260-33 next
-last_updated: "2026-07-17T12:05:00.000Z"
+stopped_at: Plan 260-31 independent review failed; review-fix cycle active
+last_updated: "2026-07-17T12:15:00.000Z"
 last_activity: 2026-07-17
-last_activity_desc: Completed crash-safe activation coordinator and corrected postactivation proof
+last_activity_desc: Reopened the activation coordinator after nine independent review findings
 progress:
   total_phases: 6
   completed_phases: 4
   total_plans: 119
-  completed_plans: 116
+  completed_plans: 115
   percent: 97
 ---
 
@@ -29,11 +29,11 @@ See: `.planning/PROJECT.md` (updated 2026-07-12)
 ## Current Position
 
 Phase: 260 (truthful-strategy-inputs-arena-authority-and-set-fairness) — EXECUTING
-Plan: 33 of 33
-Status: Wave-15 complete; isolated seam audit and refreshed readiness are next
-Last activity: 2026-07-17 — Production activation, recovery, compensation, and external postactivation proof are implemented and rehearsed
+Plan: 31 of 33
+Status: Review-fix cycle active for production activation and proof integration
+Last activity: 2026-07-17 — Independent review found nine production-path gaps despite green model tests
 
-Progress: [█████████░] 91%
+Progress: [█████████░] 88%
 
 ## Durable Decisions
 
@@ -84,9 +84,9 @@ Progress: [█████████░] 91%
 
 **Resume file:** None
 
-Last session: 2026-07-17T12:05:00.000Z
-Stopped at: Wave-15 Plan 260-31 completed; development database remains exact v1.17 bootstrap with no pending intent.
-Next command: Execute Plan 260-33 isolated seam audit and refreshed preactivation readiness.
+Last session: 2026-07-17T12:15:00.000Z
+Stopped at: Plan 260-31 reopened after independent review; development database remains exact v1.17 bootstrap with no pending intent.
+Next command: Fix and independently re-review every Plan 260-31 finding before Plan 260-33.
 
 ## Performance Metrics
 
