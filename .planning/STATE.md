@@ -5,15 +5,15 @@ milestone_name: Rules Integrity and Strategy Evaluation Foundations — ACTIVE
 current_phase: 260
 current_phase_name: truthful-strategy-inputs-arena-authority-and-set-fairness
 status: executing
-stopped_at: Completed 260-16-PLAN.md
-last_updated: "2026-07-17T02:56:42.916Z"
+stopped_at: Completed 260-17-PLAN.md
+last_updated: "2026-07-17T03:12:12.595Z"
 last_activity: 2026-07-17
 last_activity_desc: Phase 260 execution started
 progress:
   total_phases: 6
   completed_phases: 4
   total_plans: 112
-  completed_plans: 90
+  completed_plans: 91
   percent: 67
 ---
 
@@ -29,7 +29,7 @@ See: `.planning/PROJECT.md` (updated 2026-07-12)
 ## Current Position
 
 Phase: 260 (truthful-strategy-inputs-arena-authority-and-set-fairness) — EXECUTING
-Plan: 5 of 26
+Plan: 6 of 26
 Status: Ready to execute
 Last activity: 2026-07-17 — Phase 260 execution started
 
@@ -75,8 +75,8 @@ Progress: [████████░░] 78%
 
 **Resume file:** None
 
-Last session: 2026-07-17T02:56:15.997Z
-Stopped at: Completed 260-16-PLAN.md
+Last session: 2026-07-17T03:11:41.183Z
+Stopped at: Completed 260-17-PLAN.md
 Next command: `$gsd-execute-phase 260`.
 
 ## Performance Metrics
@@ -131,6 +131,7 @@ Next command: `$gsd-execute-phase 260`.
 | Phase 260 P02 | 10min | 2 tasks | 5 files |
 | Phase 260 P04 | 22min | 3 tasks | 7 files |
 | Phase 260 P16 | 8min | 2 tasks | 5 files |
+| Phase 260 P17 | 12min | 2 tasks | 7 files |
 
 ## Decisions
 
@@ -283,3 +284,5 @@ Next command: `$gsd-execute-phase 260`.
 - [Phase 260]: Expose the v1.19 Go catalog and Set-policy records only through an exact candidate-key lookup; generic and Phase-259 keys cannot reach them. — Explicit candidate-only lookup prevents generated data from activating or relabeling selected Go behavior before Plan 260-14.
 - [Phase 260]: Generate the current Go selector from the complete Phase-259 TypeScript selection and leave it unreferenced by production scheduling until Plan 260-14. — The current selector must remain one atomic Phase-259 authority while the successor projection is prepared independently.
 - [Phase 260]: Keep both generated production Go files import-free and data-only. — Go receives structural authority data without geometry hashing, fairness derivation, gameplay, Chronicle construction, persistence, or Strategy execution ownership.
+- [Phase 260]: Keep unversioned public observation aliases selector-backed while exact v1.17 and v1.19 contracts remain directly addressable. — Plan 260-14 can activate one compact authority without handwritten consumer edits or preactivation drift.
+- [Phase 260]: Project the v1.19 map-config candidate only from the validated spec manifest and keep the complete Phase-259 branch intact. — Open Field remains readable history but cannot manufacture schedulable diversity, and no geometry is re-authored.

@@ -64,18 +64,18 @@
 
 ### Strategy Evaluation Inputs and Conditions
 
-- [ ] **STRAT-01**: `StrategyInput` exposes explicit canonical initial-initiative information across every supported language envelope.
-- [ ] **STRAT-02**: `SoldierBrainInput` exposes scheduler-owned `hasAdvancedThisActivation` state across every supported language envelope.
-- [ ] **STRAT-03**: Direct execution, runtime-service, generated contracts, examples, and SDK/Workshop documentation agree on the same Strategy observation and budget contract.
+- [x] **STRAT-01**: `StrategyInput` exposes explicit canonical initial-initiative information across every supported language envelope.
+- [x] **STRAT-02**: `SoldierBrainInput` exposes scheduler-owned `hasAdvancedThisActivation` state across every supported language envelope.
+- [x] **STRAT-03**: Direct execution, runtime-service, generated contracts, examples, and SDK/Workshop documentation agree on the same Strategy observation and budget contract.
 - [ ] **STRAT-04**: Strategy execution remains behind runtime-service, Runtime Broker, and provider boundaries and never moves into web, API, or Go processes.
 
 ### Arena Authority and Set Fairness
 
-- [ ] **SET-01**: Engine, persistence, Go, replay, UI, fixtures, and competition scheduling derive official arenas from one versioned canonical authority.
-- [ ] **SET-02**: Canonical arena identity includes semantic geometry identity so duplicate empty geometries cannot count as distinct evaluation scenarios.
+- [x] **SET-01**: Engine, persistence, Go, replay, UI, fixtures, and competition scheduling derive official arenas from one versioned canonical authority.
+- [x] **SET-02**: Canonical arena identity includes semantic geometry identity so duplicate empty geometries cannot count as distinct evaluation scenarios.
 - [ ] **SET-03**: Every counted scenario has explicit identity and schedules each entrant on each side and in each initial-initiative state.
 - [ ] **SET-04**: TypeScript, Go, persistence, and service-backed scheduling tests prove entrant-level side-by-initiative Cartesian coverage rather than inferring fairness from seed suffixes or side swaps.
-- [ ] **SET-05**: Arena and Set authority repair does not introduce a new official geometry or change valid v1.4 gameplay.
+- [x] **SET-05**: Arena and Set authority repair does not introduce a new official geometry or change valid v1.4 gameplay.
 
 ### Integrated Proof and Release
 
@@ -160,15 +160,15 @@ These candidates are optional and are not required for v1.37 completion.
 | CHRN-04 | Phase 259 | Complete |
 | CHRN-05 | Phase 259 | Complete |
 | CHRN-06 | Phase 259 | Complete |
-| STRAT-01 | Phase 260 | Pending |
-| STRAT-02 | Phase 260 | Pending |
-| STRAT-03 | Phase 260 | Pending |
+| STRAT-01 | Phase 260 | Complete |
+| STRAT-02 | Phase 260 | Complete |
+| STRAT-03 | Phase 260 | Complete |
 | STRAT-04 | Phase 260 | Pending |
-| SET-01 | Phase 260 | Pending |
-| SET-02 | Phase 260 | Pending |
+| SET-01 | Phase 260 | Complete |
+| SET-02 | Phase 260 | Complete |
 | SET-03 | Phase 260 | Pending |
 | SET-04 | Phase 260 | Pending |
-| SET-05 | Phase 260 | Pending |
+| SET-05 | Phase 260 | Complete |
 | PROOF-01 | Phase 261 | Pending |
 | PROOF-02 | Phase 261 | Pending |
 | PROOF-03 | Phase 261 | Pending |
