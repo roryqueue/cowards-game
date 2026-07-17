@@ -5,17 +5,21 @@ import { describe, expect, it } from "vitest"
 import { z } from "zod"
 import {
   MATCH_EXECUTION_APP_CONTRACT_VERSION,
+  MATCH_EXECUTION_PUBLIC_RESULT_VERSION_V119,
   MATCH_EXECUTION_CONTRACT_FIXTURE_IDS_V1,
   MATCH_EXECUTION_CONTRACT_FIXTURES_V1,
   MATCH_EXECUTION_FAILURE_CATEGORIES,
   MATCH_EXECUTION_LIFECYCLE_STATES,
   MatchExecutionExactEvidenceV137Schema,
   MatchExecutionMatchSetSummaryV1Schema,
+  MatchExecutionPublicResultV119Schema,
   MatchExecutionReplayEvidenceV1Schema,
   MatchExecutionReplayMetadataV1Schema,
   assertPublicServiceDtoLeakSafe,
   createMatchExecutionExactEvidenceV137,
   parseMatchExecutionEvidenceByVersion,
+  parseMatchExecutionPublicResultV119,
+  projectMatchExecutionPublicResultV119,
   projectPublicMatchExecutionIntegrityEvidenceV137,
   publicMatchSetSummaryExample,
   publicReplayEvidenceExample,
@@ -56,7 +60,101 @@ const privateMarkers = [
   "Bearer ",
 ] as const
 
+const candidatePublicResultSourceV119 = {
+  matchSetId: "match-set:candidate-public",
+  matchId: "match:candidate-public:0",
+  publicationStatus: "countable" as const,
+  counted: true,
+  arena: {
+    variantId: "arena-smoke-12x12",
+    catalogVersion: "canonical-arena-catalog-v1.37" as const,
+    catalogStatus: "active" as const,
+    semanticGeometryHash: `sha256:${"1".repeat(64)}`,
+  },
+  condition: {
+    scenarioId: `set-scenario:sha256:${"2".repeat(64)}`,
+    conditionId: `set-condition:sha256:${"3".repeat(64)}`,
+    ordinal: 0 as const,
+    label: "a-bottom-a-first" as const,
+    sides: {
+      bottomEntrantKey: "entrant:a",
+      topEntrantKey: "entrant:b",
+    },
+    initialInitiativeEntrantKey: "entrant:a",
+  },
+}
+
 describe("match execution app contract v1", () => {
+  it("stages a strict v1.19 public condition result without selecting it as current", () => {
+    const currentBytesBefore = JSON.stringify(
+      toMatchExecutionMatchSetSummaryV1(
+        publicMatchSetSummaryExample as PublicMatchSetSummaryServiceDto,
+      ),
+    )
+    const candidate = projectMatchExecutionPublicResultV119(
+      candidatePublicResultSourceV119,
+    )
+
+    expect(candidate).toEqual({
+      contractVersion: MATCH_EXECUTION_PUBLIC_RESULT_VERSION_V119,
+      kind: "matchExecutionPublicResult",
+      semanticAuthorityKey: "runtime-v1.19",
+      ...candidatePublicResultSourceV119,
+    })
+    expect(MatchExecutionPublicResultV119Schema.parse(candidate)).toEqual(
+      candidate,
+    )
+    expect(parseMatchExecutionPublicResultV119(candidate)).toEqual(candidate)
+    expect(MATCH_EXECUTION_APP_CONTRACT_VERSION).toBe("match-execution-app-v1")
+    expect(() => MatchExecutionMatchSetSummaryV1Schema.parse(candidate)).toThrow()
+    expect(
+      JSON.stringify(
+        toMatchExecutionMatchSetSummaryV1(
+          publicMatchSetSummaryExample as PublicMatchSetSummaryServiceDto,
+        ),
+      ),
+    ).toBe(currentBytesBefore)
+  })
+
+  it("rejects mixed, extra, inconsistent, and non-active candidate public facts", () => {
+    const candidate = projectMatchExecutionPublicResultV119(
+      candidatePublicResultSourceV119,
+    )
+    expect(() =>
+      parseMatchExecutionPublicResultV119({
+        ...candidate,
+        contractVersion: MATCH_EXECUTION_APP_CONTRACT_VERSION,
+      }),
+    ).toThrow()
+    expect(() =>
+      parseMatchExecutionPublicResultV119({ ...candidate, retryAttempt: 2 }),
+    ).toThrow()
+    expect(() =>
+      projectMatchExecutionPublicResultV119({
+        ...candidatePublicResultSourceV119,
+        publicationStatus: "pending",
+      }),
+    ).toThrow(/counted/i)
+    expect(() =>
+      projectMatchExecutionPublicResultV119({
+        ...candidatePublicResultSourceV119,
+        arena: {
+          ...candidatePublicResultSourceV119.arena,
+          catalogStatus: "historical_alias",
+        },
+      }),
+    ).toThrow()
+    expect(() =>
+      projectMatchExecutionPublicResultV119({
+        ...candidatePublicResultSourceV119,
+        condition: {
+          ...candidatePublicResultSourceV119.condition,
+          initialInitiativeEntrantKey: "entrant:unknown",
+        },
+      }),
+    ).toThrow(/initiative/i)
+  })
+
   it("persists one exact compatibility tuple and ordered heterogeneous entrant evidence pair", () => {
     const registered = CANONICAL_COMPATIBILITY_TUPLES[0]!
     const lane = (side: "bottom" | "top", languageId: string) => ({
