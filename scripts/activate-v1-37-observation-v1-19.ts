@@ -7,6 +7,7 @@ import {
   mkdir,
   readFile,
   readdir,
+  rename,
   rm,
   rmdir,
   symlink,
@@ -1372,6 +1373,8 @@ export interface ProductionActivationAdapterOptions {
   readonly gateEnvironment?: Readonly<Record<string, string | undefined>>
   readonly gateLeaseDirectory?: string
   readonly gateLeaseWaitMs?: number
+  readonly gateSupervisionTestBoundary?: string
+  readonly gateSupervisionTestControlDirectory?: string
   readonly now?: () => Date
   readonly protectedBaselineRoot?: string
   readonly candidateWorkspaceEnabled?: boolean
@@ -1414,13 +1417,19 @@ const parseActivationGateLease = (value: string): ActivationGateLease => {
     typeof parsed.workspace !== "string" ||
     typeof parsed.gateId !== "string" ||
     !Number.isSafeInteger(parsed.coordinatorPid) ||
+    (parsed.coordinatorPid as number) <= 0 ||
     typeof parsed.coordinatorNonce !== "string" ||
+    parsed.coordinatorNonce.length === 0 ||
     !Number.isSafeInteger(parsed.supervisorPid) ||
-    !(parsed.gatePid === null || Number.isSafeInteger(parsed.gatePid)) ||
-    !(
-      parsed.processGroupId === null ||
-      Number.isSafeInteger(parsed.processGroupId)
-    )
+    (parsed.supervisorPid as number) <= 0 ||
+    (parsed.state === "starting" &&
+      (parsed.gatePid !== null || parsed.processGroupId !== null)) ||
+    (parsed.state === "active" &&
+      (!Number.isSafeInteger(parsed.gatePid) ||
+        (parsed.gatePid as number) <= 0 ||
+        !Number.isSafeInteger(parsed.processGroupId) ||
+        (parsed.processGroupId as number) <= 0 ||
+        parsed.gatePid !== parsed.processGroupId))
   ) {
     throw new Error("Malformed activation gate lease")
   }
@@ -1474,16 +1483,102 @@ interface SupervisedGateInput {
   readonly activationId: string
   readonly workspace: string
   readonly gateId: string
+  readonly testBoundary?: string
+  readonly testControlDirectory?: string
 }
 
-const supervisedProcessGroupExists = (processGroupId: number): boolean => {
+const atomicWriteActivationGateLease = async (
+  leasePath: string,
+  value: ActivationGateLease,
+): Promise<void> => {
+  const temporary = `${leasePath}.tmp-${process.pid}-${randomUUID()}`
   try {
-    process.kill(-processGroupId, 0)
-    return true
-  } catch (error) {
-    if ((error as { code?: string }).code === "ESRCH") return false
-    throw error
+    await writeFile(temporary, `${JSON.stringify(value)}\n`, {
+      flag: "wx",
+      mode: 0o600,
+    })
+    await rename(temporary, leasePath)
+  } finally {
+    await rm(temporary, { force: true })
   }
+}
+
+const removeOwnedActivationGateLease = async (
+  leasePath: string,
+  leaseDirectory: string,
+): Promise<void> => {
+  const basename = path.basename(leasePath)
+  let entries: string[] = []
+  try {
+    entries = await readdir(leaseDirectory)
+  } catch (error) {
+    if ((error as { code?: string }).code !== "ENOENT") throw error
+  }
+  await Promise.all(
+    entries
+      .filter(
+        (entry) => entry === basename || entry.startsWith(`${basename}.tmp-`),
+      )
+      .map((entry) => rm(path.join(leaseDirectory, entry), { force: true })),
+  )
+  try {
+    await rmdir(leaseDirectory)
+  } catch (error) {
+    if (
+      !["ENOENT", "ENOTEMPTY"].includes((error as { code?: string }).code ?? "")
+    ) {
+      throw error
+    }
+  }
+}
+
+const pauseCoordinatorSupervisionBoundary = async (
+  input: SupervisedGateInput,
+  boundary: string,
+  supervisorPid: number,
+  processGroupId: number,
+  supervisorConnected: () => boolean,
+): Promise<void> => {
+  if (
+    input.testBoundary !== boundary ||
+    input.testControlDirectory === undefined
+  ) {
+    return
+  }
+  const reached = path.join(input.testControlDirectory, `${boundary}.reached`)
+  const release = path.join(input.testControlDirectory, `${boundary}.release`)
+  await writeFile(
+    reached,
+    `${JSON.stringify({ boundary, supervisorPid, launcherPid: processGroupId })}\n`,
+    { flag: "wx", mode: 0o600 },
+  )
+  while (supervisorConnected()) {
+    try {
+      await readFile(release)
+      return
+    } catch (error) {
+      if ((error as { code?: string }).code !== "ENOENT") throw error
+      await delay(10)
+    }
+  }
+}
+
+const supervisedProcessGroupHasLiveMembers = async (
+  processGroupId: number,
+): Promise<boolean> => {
+  const result = await execFile("ps", ["ax", "-o", "pgid=,state="], {
+    encoding: "utf8",
+    maxBuffer: 8 * 1024 * 1024,
+  })
+  return result.stdout
+    .split("\n")
+    .map((line) => line.trim().split(/\s+/u))
+    .some(
+      ([pgid, state]) =>
+        Number(pgid) === processGroupId &&
+        state !== undefined &&
+        !state.startsWith("Z"),
+    )
 }
 
 const signalSupervisedProcessGroup = (
@@ -1502,7 +1597,7 @@ const waitForSupervisedProcessGroupExit = async (
   timeoutMs: number,
 ): Promise<boolean> => {
   const deadline = Date.now() + timeoutMs
-  while (supervisedProcessGroupExists(processGroupId)) {
+  while (await supervisedProcessGroupHasLiveMembers(processGroupId)) {
     if (Date.now() >= deadline) return false
     await delay(25)
   }
@@ -1512,7 +1607,7 @@ const waitForSupervisedProcessGroupExit = async (
 const terminateCurrentSupervisedProcessGroup = async (
   processGroupId: number,
 ): Promise<void> => {
-  if (!supervisedProcessGroupExists(processGroupId)) return
+  if (!(await supervisedProcessGroupHasLiveMembers(processGroupId))) return
   signalSupervisedProcessGroup(processGroupId, "SIGTERM")
   if (await waitForSupervisedProcessGroupExit(processGroupId, 2_000)) return
   signalSupervisedProcessGroup(processGroupId, "SIGKILL")
@@ -1547,6 +1642,7 @@ const runSupervisedGateProcess = async (
   if (supervisor.pid === undefined) {
     throw new Error("Activation gate supervisor did not receive a PID")
   }
+  const supervisorPid = supervisor.pid
   const completion = new Promise<{ stdout: string; stderr: string }>(
     (resolve, reject) => {
       let terminal:
@@ -1559,32 +1655,70 @@ const runSupervisedGateProcess = async (
           }>
         | Readonly<{ type: "error"; message: string }>
         | undefined
-      let startedGatePid: number | undefined
+      let trustedProcessGroupId: number | undefined
       supervisor.on("message", (message: unknown) => {
-        if (message === null || typeof message !== "object") return
-        const record = message as Record<string, unknown>
-        if (record.type === "started" && Number.isSafeInteger(record.gatePid)) {
-          startedGatePid = record.gatePid as number
-        } else if (
-          record.type === "error" &&
-          typeof record.message === "string"
-        ) {
-          terminal = { type: "error", message: record.message }
-        } else if (
-          record.type === "result" &&
-          (typeof record.exitCode === "number" || record.exitCode === null) &&
-          (typeof record.signal === "string" || record.signal === null) &&
-          typeof record.stdout === "string" &&
-          typeof record.stderr === "string"
-        ) {
-          terminal = {
-            type: "result",
-            exitCode: record.exitCode,
-            signal: record.signal,
-            stdout: record.stdout,
-            stderr: record.stderr,
+        void (async () => {
+          if (message === null || typeof message !== "object") return
+          const record = message as Record<string, unknown>
+          if (record.type === "launcher-registered") {
+            if (
+              trustedProcessGroupId !== undefined ||
+              !Number.isSafeInteger(record.processGroupId) ||
+              (record.processGroupId as number) <= 0 ||
+              record.coordinatorNonce !== coordinatorNonce
+            ) {
+              terminal = {
+                type: "error",
+                message: "Invalid supervisor launcher registration",
+              }
+              if (supervisor.connected) supervisor.disconnect()
+              return
+            }
+            trustedProcessGroupId = record.processGroupId as number
+            await pauseCoordinatorSupervisionBoundary(
+              input,
+              "before-coordinator-ack",
+              supervisorPid,
+              trustedProcessGroupId,
+              () => supervisor.connected,
+            )
+            if (!supervisor.connected) return
+            await new Promise<void>((acknowledged, rejectAck) => {
+              supervisor.send(
+                {
+                  type: "ack-launcher",
+                  coordinatorNonce,
+                  processGroupId: trustedProcessGroupId,
+                },
+                (error) => (error === null ? acknowledged() : rejectAck(error)),
+              )
+            })
+            return
           }
-        }
+          if (record.type === "error" && typeof record.message === "string") {
+            terminal = { type: "error", message: record.message }
+          } else if (
+            record.type === "result" &&
+            (typeof record.exitCode === "number" || record.exitCode === null) &&
+            (typeof record.signal === "string" || record.signal === null) &&
+            typeof record.stdout === "string" &&
+            typeof record.stderr === "string"
+          ) {
+            terminal = {
+              type: "result",
+              exitCode: record.exitCode,
+              signal: record.signal,
+              stdout: record.stdout,
+              stderr: record.stderr,
+            }
+          }
+        })().catch((error: unknown) => {
+          terminal = {
+            type: "error",
+            message: error instanceof Error ? error.message : String(error),
+          }
+          if (supervisor.connected) supervisor.disconnect()
+        })
       })
       supervisor.once("error", reject)
       supervisor.once("exit", (code, signal) => {
@@ -1603,49 +1737,27 @@ const runSupervisedGateProcess = async (
           }
           if (terminal === undefined) {
             try {
-              const lease = parseActivationGateLease(
-                await readFile(leasePath, "utf8"),
-              )
-              if (
-                lease.activationId !== input.activationId ||
-                lease.workspace !== input.workspace ||
-                lease.gateId !== input.gateId ||
-                lease.coordinatorPid !== process.pid ||
-                lease.coordinatorNonce !== coordinatorNonce ||
-                lease.supervisorPid !== supervisor.pid
-              ) {
-                throw new Error(
-                  "Unexpected supervisor exit left a mismatched gate lease",
-                )
-              }
-              if (lease.processGroupId !== null) {
+              if (trustedProcessGroupId !== undefined) {
                 await terminateCurrentSupervisedProcessGroup(
-                  lease.processGroupId,
+                  trustedProcessGroupId,
                 )
+              } else {
+                // Without coordinator ACK the launcher contract forbids command execution.
+                await delay(300)
               }
-              await rm(leasePath, { force: true })
-              try {
-                await rmdir(input.leaseDirectory)
-              } catch (error) {
-                if (
-                  !["ENOENT", "ENOTEMPTY"].includes(
-                    (error as { code?: string }).code ?? "",
-                  )
-                ) {
-                  throw error
-                }
-              }
+              await removeOwnedActivationGateLease(
+                leasePath,
+                input.leaseDirectory,
+              )
             } catch (error) {
-              if ((error as { code?: string }).code !== "ENOENT") {
-                reject(error)
-                return
-              }
+              reject(error)
+              return
             }
           }
           reject(
             new Error(
               terminal?.message ??
-                `Activation gate supervisor exited unexpectedly (${String(code)}/${String(signal)}; gate ${String(startedGatePid)})`,
+                `Activation gate supervisor exited unexpectedly (${String(code)}/${String(signal)}; trusted process group ${String(trustedProcessGroupId)})`,
             ),
           )
         })()
@@ -1653,22 +1765,18 @@ const runSupervisedGateProcess = async (
     },
   )
   try {
-    await writeFile(
-      leasePath,
-      `${JSON.stringify({
-        version: 1,
-        state: "starting",
-        activationId: input.activationId,
-        workspace: input.workspace,
-        gateId: input.gateId,
-        coordinatorPid: process.pid,
-        coordinatorNonce,
-        supervisorPid: supervisor.pid,
-        gatePid: null,
-        processGroupId: null,
-      })}\n`,
-      { flag: "wx", mode: 0o600 },
-    )
+    await atomicWriteActivationGateLease(leasePath, {
+      version: 1,
+      state: "starting",
+      activationId: input.activationId,
+      workspace: input.workspace,
+      gateId: input.gateId,
+      coordinatorPid: process.pid,
+      coordinatorNonce,
+      supervisorPid,
+      gatePid: null,
+      processGroupId: null,
+    })
     supervisor.send({
       type: "start",
       command: input.command,
@@ -1682,10 +1790,12 @@ const runSupervisedGateProcess = async (
       gateId: input.gateId,
       coordinatorPid: process.pid,
       coordinatorNonce,
+      testBoundary: input.testBoundary ?? null,
+      testControlDirectory: input.testControlDirectory ?? null,
     })
   } catch (error) {
     if (supervisor.connected) supervisor.disconnect()
-    await rm(leasePath, { force: true })
+    await removeOwnedActivationGateLease(leasePath, input.leaseDirectory)
     throw error
   }
   return await completion
@@ -2001,6 +2111,8 @@ export const createProductionActivationAdapter = (
             activationId,
             workspace: repoRoot,
             gateId: id,
+            testBoundary: options.gateSupervisionTestBoundary,
+            testControlDirectory: options.gateSupervisionTestControlDirectory,
           })
         }
       } catch (error) {

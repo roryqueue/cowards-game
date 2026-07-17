@@ -12,6 +12,7 @@ import {
   ACTIVATION_PROOF_PATH,
   ACTIVATION_SELECTOR_PATHS,
   ACTIVATION_VALIDATION_GATE_IDS,
+  PLAN14_ACTIVATION_ID,
   buildCompensationActivationId,
   buildV119SelectorBytes,
   createProductionActivationAdapter,
@@ -33,6 +34,15 @@ const TARGET_ROOT =
   "sha256:17954660f17c83e60e5d7df0b589cd89cf6b00eba4d4963e2d4bf43bc71c6ea2"
 const BASELINE_ROOT =
   "sha256:c0e1c2a6319f01377df74a2d6e5c493d26382f2882c059116c5ba467e5e81707"
+
+type ProductionPool = Parameters<typeof createProductionActivationAdapter>[1]
+
+export const createProductionPostactivationAdapter = (
+  repoRoot: string,
+  pool: ProductionPool,
+  activationId: string,
+): ActivationCoordinatorAdapter =>
+  createProductionActivationAdapter(repoRoot, pool, { activationId })
 const ALL_PATHS = Object.freeze(
   [...ACTIVATION_SELECTOR_PATHS, ACTIVATION_PROOF_PATH].sort(),
 )
@@ -539,13 +549,14 @@ export const parseV137ObservationV119PostactivationArgs = (
     !args.includes("--check") ||
     activationIndex < 0 ||
     args.length !== 3 ||
-    !ACTIVATION_ID.test(args[activationIndex + 1] ?? "")
+    !ACTIVATION_ID.test(args[activationIndex + 1] ?? "") ||
+    args[activationIndex + 1] !== PLAN14_ACTIVATION_ID
   ) {
     throw new Error(
       "Usage: postactivation evaluator --check --activation-id <activation:id>",
     )
   }
-  return { activationId: args[activationIndex + 1]! }
+  return { activationId: PLAN14_ACTIVATION_ID }
 }
 
 const readProtectedBaseline = async (
@@ -594,8 +605,11 @@ const main = async (): Promise<void> => {
   }
   const pool = new Pool({ connectionString: process.env.DATABASE_URL })
   try {
-    const adapter: ActivationCoordinatorAdapter =
-      createProductionActivationAdapter(repoRoot, pool)
+    const adapter = createProductionPostactivationAdapter(
+      repoRoot,
+      pool,
+      activationId,
+    )
     const evidence = await collectV137ObservationV119PostactivationEvidence(
       adapter,
       activationId,

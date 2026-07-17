@@ -21,6 +21,7 @@ import {
 import {
   buildExpectedV119SelectorManifest,
   collectV137ObservationV119PostactivationEvidence,
+  createProductionPostactivationAdapter,
   hashSelectorManifestEntries,
   parseV137ObservationV119PostactivationArgs,
   validateV137ObservationV119PostactivationEvidence,
@@ -442,6 +443,24 @@ describe("v1.37 observation-v1.19 postactivation evaluator", () => {
     expect(adapter.runGate).toHaveBeenCalledWith("protected-baseline")
   })
 
+  it("runs the production-main smoke and baseline gates with the exact Plan 14 activation ID", async () => {
+    const adapter = createProductionPostactivationAdapter(
+      process.cwd(),
+      {} as never,
+      PLAN14_ACTIVATION_ID,
+    )
+    await expect(adapter.runGate("smoke")).resolves.toMatchObject({
+      id: "smoke",
+      command: ACTIVATION_GATE_COMMANDS.smoke,
+      exitCode: 0,
+    })
+    await expect(adapter.runGate("protected-baseline")).resolves.toMatchObject({
+      id: "protected-baseline",
+      command: ACTIVATION_GATE_COMMANDS["protected-baseline"],
+      exitCode: 0,
+    })
+  }, 60_000)
+
   it("fails collection when the executable protected baseline checker detects mutation", async () => {
     const expected = passing()
     const proofBytes = Buffer.from(
@@ -489,6 +508,13 @@ describe("v1.37 observation-v1.19 postactivation evaluator", () => {
         "--activation-id",
         PLAN14_ACTIVATION_ID,
         "--parse-only",
+      ]),
+    ).toThrow(/usage/iu)
+    expect(() =>
+      parseV137ObservationV119PostactivationArgs([
+        "--check",
+        "--activation-id",
+        "activation:phase260:plan31:not-plan14",
       ]),
     ).toThrow(/usage/iu)
     await expect(

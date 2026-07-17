@@ -237,6 +237,22 @@ const waitForProcessesToExit = async (
   throw new Error(`Processes remained alive: ${await processRows(pids)}`)
 }
 
+const waitForPathToDisappear = async (filePath: string): Promise<void> => {
+  for (let attempt = 0; attempt < 400; attempt += 1) {
+    try {
+      await access(filePath)
+      await delay(25)
+    } catch (error) {
+      if ((error as { code?: string }).code === "ENOENT") return
+      throw error
+    }
+  }
+  const entries = await readdir(filePath)
+  throw new Error(
+    `Path remained present: ${filePath} (${entries.join(", ") || "empty"})`,
+  )
+}
+
 const throughCommit = async (context: IsolatedContext): Promise<void> => {
   for (const mode of [
     "prepare",
@@ -486,6 +502,7 @@ describePostgres(
         "cowards-activation-gate-leases",
       )
       let supervisorPid: number | undefined
+      let launcherPid: number | undefined
       let gatePid: number | undefined
       let gateChildPid: number | undefined
       try {
@@ -519,15 +536,16 @@ describePostgres(
           await readFile(path.join(leaseDirectory, leases[0]!), "utf8"),
         ) as { supervisorPid: number; processGroupId: number }
         supervisorPid = lease.supervisorPid
-        expect(lease.processGroupId).toBe(gatePid)
+        launcherPid = lease.processGroupId
+        expect(launcherPid).not.toBe(gatePid)
         process.kill(supervisorPid, "SIGKILL")
         await gateRejection
-        await waitForProcessesToExit([gatePid, gateChildPid])
+        await waitForProcessesToExit([launcherPid, gatePid, gateChildPid])
         await expect(access(leaseDirectory)).rejects.toMatchObject({
           code: "ENOENT",
         })
       } finally {
-        for (const pid of [supervisorPid, gatePid, gateChildPid]) {
+        for (const pid of [supervisorPid, launcherPid, gatePid, gateChildPid]) {
           if (pid === undefined) continue
           try {
             process.kill(pid, "SIGKILL")
@@ -538,6 +556,303 @@ describePostgres(
         await rm(markerRoot, { recursive: true, force: true })
       }
     }, 30_000)
+
+    it("ignores an adversarial disk PGID and terminates only the IPC-registered group", async () => {
+      const context = await createContext("adversarial-gate-lease")
+      const markerRoot = await mkdtemp(
+        path.join(tmpdir(), "cowards-adversarial-lease-"),
+      )
+      const marker = path.join(markerRoot, "gate-started")
+      const fakeBin = await createFakePnpm(markerRoot)
+      const leaseDirectory = path.join(
+        context.root,
+        ".git",
+        "cowards-activation-gate-leases",
+      )
+      const unrelated = spawn(
+        process.execPath,
+        ["--eval", "setInterval(() => {}, 1000)"],
+        { detached: true, stdio: "ignore" },
+      )
+      const unrelatedExit = once(unrelated, "exit")
+      let supervisorPid: number | undefined
+      let launcherPid: number | undefined
+      let gatePid: number | undefined
+      let gateChildPid: number | undefined
+      try {
+        const adapter = createProductionActivationAdapter(
+          context.root,
+          context.pool,
+          {
+            activationId: context.activationId,
+            gateEnvironment: {
+              ...process.env,
+              PATH: `${fakeBin}:${process.env.PATH ?? ""}`,
+              TEST_GATE_BEHAVIOR: "hang",
+              TEST_GATE_MARKER: marker,
+            },
+          },
+        )
+        const gateResult = adapter.runGate("spec")
+        const gateRejection = expect(gateResult).rejects.toThrow(
+          /supervisor exited unexpectedly/iu,
+        )
+        await waitForFile(marker)
+        const markerValue = JSON.parse(await readFile(marker, "utf8")) as {
+          gatePid: number
+          childPid: number
+        }
+        gatePid = markerValue.gatePid
+        gateChildPid = markerValue.childPid
+        const [leaseName] = await readdir(leaseDirectory)
+        const leasePath = path.join(leaseDirectory, leaseName!)
+        const lease = JSON.parse(await readFile(leasePath, "utf8")) as {
+          supervisorPid: number
+          processGroupId: number
+          gatePid: number
+          [key: string]: unknown
+        }
+        supervisorPid = lease.supervisorPid
+        launcherPid = lease.processGroupId
+        await writeFile(
+          leasePath,
+          `${JSON.stringify({
+            ...lease,
+            gatePid: unrelated.pid,
+            processGroupId: unrelated.pid,
+          })}\n`,
+        )
+        process.kill(supervisorPid, "SIGKILL")
+        await gateRejection
+        await waitForProcessesToExit([launcherPid, gatePid, gateChildPid])
+        expect(await processRows([unrelated.pid!])).not.toBe("")
+        await expect(access(leaseDirectory)).rejects.toMatchObject({
+          code: "ENOENT",
+        })
+      } finally {
+        for (const pid of [supervisorPid, launcherPid, gatePid, gateChildPid]) {
+          if (pid === undefined) continue
+          try {
+            process.kill(pid, "SIGKILL")
+          } catch {
+            continue
+          }
+        }
+        if (unrelated.exitCode === null && unrelated.signalCode === null) {
+          unrelated.kill("SIGKILL")
+          await unrelatedExit
+        }
+        await rm(markerRoot, { recursive: true, force: true })
+        await rm(leaseDirectory, { recursive: true, force: true })
+      }
+    }, 30_000)
+
+    it.each([
+      "before-launcher-spawn",
+      "after-launcher-spawn",
+      "before-coordinator-ack",
+      "after-coordinator-ack",
+      "before-active-lease",
+      "after-active-lease",
+    ])(
+      "leaves no process or lease when the coordinator dies at %s",
+      async (boundary) => {
+        const context = await createContext(`registration-${boundary}`)
+        const markerRoot = await mkdtemp(
+          path.join(tmpdir(), "cowards-registration-boundary-"),
+        )
+        const commandMarker = path.join(markerRoot, "command-started")
+        const fakeBin = await createFakePnpm(markerRoot)
+        const reached = path.join(markerRoot, `${boundary}.reached`)
+        const leaseDirectory = path.join(
+          context.root,
+          ".git",
+          "cowards-activation-gate-leases",
+        )
+        const childSource = `
+          import path from "node:path";
+          import { pathToFileURL } from "node:url";
+          const activation = await import(
+            pathToFileURL(path.join(process.env.TEST_MODULE_ROOT, "scripts/activate-v1-37-observation-v1-19.ts")).href
+          );
+          const adapter = activation.createProductionActivationAdapter(
+            process.env.TEST_REPO_ROOT,
+            {},
+            {
+              activationId: process.env.TEST_ACTIVATION_ID,
+              gateSupervisionTestBoundary: process.env.TEST_BOUNDARY,
+              gateSupervisionTestControlDirectory: process.env.TEST_CONTROL_ROOT,
+            },
+          );
+          await adapter.runGate("spec");
+        `
+        const childEnvironment = Object.fromEntries(
+          Object.entries(process.env).filter(
+            ([key]) => !key.startsWith("VITEST"),
+          ),
+        )
+        const child = spawn(
+          process.execPath,
+          ["--import", "tsx", "--eval", childSource],
+          {
+            cwd: process.cwd(),
+            env: {
+              ...childEnvironment,
+              TEST_MODULE_ROOT: process.cwd(),
+              TEST_REPO_ROOT: context.root,
+              TEST_ACTIVATION_ID: context.activationId,
+              TEST_BOUNDARY: boundary,
+              TEST_CONTROL_ROOT: markerRoot,
+              TEST_GATE_BEHAVIOR: "hang",
+              TEST_GATE_MARKER: commandMarker,
+              PATH: `${fakeBin}:${childEnvironment.PATH ?? ""}`,
+            },
+            stdio: ["ignore", "pipe", "pipe"],
+          },
+        )
+        const exited = once(child, "exit") as Promise<
+          [number | null, string | null]
+        >
+        try {
+          await waitForFile(reached)
+          const boundaryState = JSON.parse(await readFile(reached, "utf8")) as {
+            supervisorPid: number
+            launcherPid: number | null
+          }
+          child.kill("SIGKILL")
+          const [, signal] = await exited
+          expect(signal).toBe("SIGKILL")
+          await waitForProcessesToExit(
+            [boundaryState.supervisorPid, boundaryState.launcherPid].filter(
+              (pid): pid is number => pid !== null,
+            ),
+          )
+          await waitForPathToDisappear(leaseDirectory)
+          await expect(access(commandMarker)).rejects.toMatchObject({
+            code: "ENOENT",
+          })
+          expect(
+            (
+              await runFile("git", ["status", "--porcelain"], {
+                cwd: context.root,
+              })
+            ).stdout,
+          ).toBe("")
+        } finally {
+          if (child.exitCode === null && child.signalCode === null) {
+            child.kill("SIGKILL")
+            await exited
+          }
+          await rm(markerRoot, { recursive: true, force: true })
+          await rm(leaseDirectory, { recursive: true, force: true })
+        }
+      },
+      30_000,
+    )
+
+    it.each([
+      "before-launcher-spawn",
+      "after-launcher-spawn",
+      "before-coordinator-ack",
+      "after-coordinator-ack",
+      "before-active-lease",
+      "after-active-lease",
+    ])(
+      "leaves no process or lease when the supervisor dies at %s",
+      async (boundary) => {
+        const context = await createContext(`supervisor-death-${boundary}`)
+        const markerRoot = await mkdtemp(
+          path.join(tmpdir(), "cowards-supervisor-boundary-"),
+        )
+        const commandMarker = path.join(markerRoot, "command-started")
+        const fakeBin = await createFakePnpm(markerRoot)
+        const reached = path.join(markerRoot, `${boundary}.reached`)
+        const leaseDirectory = path.join(
+          context.root,
+          ".git",
+          "cowards-activation-gate-leases",
+        )
+        const childSource = `
+          import path from "node:path";
+          import { pathToFileURL } from "node:url";
+          const activation = await import(
+            pathToFileURL(path.join(process.env.TEST_MODULE_ROOT, "scripts/activate-v1-37-observation-v1-19.ts")).href
+          );
+          const adapter = activation.createProductionActivationAdapter(
+            process.env.TEST_REPO_ROOT,
+            {},
+            {
+              activationId: process.env.TEST_ACTIVATION_ID,
+              gateSupervisionTestBoundary: process.env.TEST_BOUNDARY,
+              gateSupervisionTestControlDirectory: process.env.TEST_CONTROL_ROOT,
+            },
+          );
+          await adapter.runGate("spec");
+        `
+        const childEnvironment = Object.fromEntries(
+          Object.entries(process.env).filter(
+            ([key]) => !key.startsWith("VITEST"),
+          ),
+        )
+        const child = spawn(
+          process.execPath,
+          ["--import", "tsx", "--eval", childSource],
+          {
+            cwd: process.cwd(),
+            env: {
+              ...childEnvironment,
+              TEST_MODULE_ROOT: process.cwd(),
+              TEST_REPO_ROOT: context.root,
+              TEST_ACTIVATION_ID: context.activationId,
+              TEST_BOUNDARY: boundary,
+              TEST_CONTROL_ROOT: markerRoot,
+              TEST_GATE_BEHAVIOR: "hang",
+              TEST_GATE_MARKER: commandMarker,
+              PATH: `${fakeBin}:${childEnvironment.PATH ?? ""}`,
+            },
+            stdio: ["ignore", "pipe", "pipe"],
+          },
+        )
+        const exited = once(child, "exit") as Promise<
+          [number | null, string | null]
+        >
+        try {
+          await waitForFile(reached)
+          const boundaryState = JSON.parse(await readFile(reached, "utf8")) as {
+            supervisorPid: number
+            launcherPid: number | null
+          }
+          process.kill(boundaryState.supervisorPid, "SIGKILL")
+          const [code, signal] = await exited
+          expect(signal).toBeNull()
+          expect(code).not.toBe(0)
+          await waitForProcessesToExit(
+            [boundaryState.supervisorPid, boundaryState.launcherPid].filter(
+              (pid): pid is number => pid !== null,
+            ),
+          )
+          await waitForPathToDisappear(leaseDirectory)
+          await expect(access(commandMarker)).rejects.toMatchObject({
+            code: "ENOENT",
+          })
+          expect(
+            (
+              await runFile("git", ["status", "--porcelain"], {
+                cwd: context.root,
+              })
+            ).stdout,
+          ).toBe("")
+        } finally {
+          if (child.exitCode === null && child.signalCode === null) {
+            child.kill("SIGKILL")
+            await exited
+          }
+          await rm(markerRoot, { recursive: true, force: true })
+          await rm(leaseDirectory, { recursive: true, force: true })
+        }
+      },
+      30_000,
+    )
 
     it("fails recovery closed on a stale lease without signaling its unrelated PID", async () => {
       const context = await createContext("stale-gate-lease")
@@ -606,6 +921,55 @@ describePostgres(
           unrelated.kill("SIGKILL")
           await unrelatedExit
         }
+        await rm(leaseDirectory, { recursive: true, force: true })
+      }
+    }, 30_000)
+
+    it("rejects nonpositive and state-inconsistent gate lease identities", async () => {
+      const context = await createContext("malformed-gate-leases")
+      const leaseDirectory = path.join(
+        context.root,
+        ".git",
+        "cowards-activation-gate-leases",
+      )
+      const adapter = createProductionActivationAdapter(
+        context.root,
+        context.pool,
+        {
+          activationId: context.activationId,
+          gateLeaseWaitMs: 0,
+        },
+      )
+      const base = {
+        version: 1,
+        state: "active",
+        activationId: context.activationId,
+        workspace: context.root,
+        gateId: "spec",
+        coordinatorPid: process.pid,
+        coordinatorNonce: "closed-shape-lease-test",
+        supervisorPid: process.pid,
+        gatePid: process.pid,
+        processGroupId: process.pid,
+      }
+      const malformed = [
+        { ...base, coordinatorPid: 0 },
+        { ...base, supervisorPid: -1 },
+        { ...base, state: "starting", gatePid: 1, processGroupId: 1 },
+        { ...base, gatePid: 1, processGroupId: 2 },
+        { ...base, gatePid: null, processGroupId: null },
+      ]
+      try {
+        for (const [index, value] of malformed.entries()) {
+          await mkdir(leaseDirectory, { recursive: true })
+          const leasePath = path.join(leaseDirectory, `${index}.json`)
+          await writeFile(leasePath, `${JSON.stringify(value)}\n`)
+          await expect(
+            adapter.cleanupCandidateWorkspace(context.activationId),
+          ).rejects.toThrow(/malformed activation gate lease/iu)
+          await rm(leasePath, { force: true })
+        }
+      } finally {
         await rm(leaseDirectory, { recursive: true, force: true })
       }
     }, 30_000)
@@ -709,6 +1073,22 @@ describePostgres(
         expect(
           await processRows([gateMarker.gatePid, gateMarker.childPid]),
         ).not.toBe("")
+        const [leaseName] = await readdir(
+          path.join(context.root, ".git", "cowards-activation-gate-leases"),
+        )
+        const launcherPid = (
+          JSON.parse(
+            await readFile(
+              path.join(
+                context.root,
+                ".git",
+                "cowards-activation-gate-leases",
+                leaseName!,
+              ),
+              "utf8",
+            ),
+          ) as { processGroupId: number }
+        ).processGroupId
         expect(
           await readFile(
             path.join(candidateRoot, ACTIVATION_SELECTOR_PATHS[0]),
@@ -718,7 +1098,11 @@ describePostgres(
         child.kill("SIGKILL")
         const [, signal] = await exited
         expect(signal).toBe("SIGKILL")
-        await waitForProcessesToExit([gateMarker.gatePid, gateMarker.childPid])
+        await waitForProcessesToExit([
+          launcherPid,
+          gateMarker.gatePid,
+          gateMarker.childPid,
+        ])
         expect(
           await processRows([gateMarker.gatePid, gateMarker.childPid]),
         ).toBe("")
