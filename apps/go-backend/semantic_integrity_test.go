@@ -392,14 +392,14 @@ func TestSemanticIntegrityCandidateSchedulingHasNoGameplayOrStrategyExecutionAut
 			t.Fatal(err)
 		}
 		forbidden := map[string]bool{
-			"executeStrategy": true,
-			"runStrategy": true,
-			"runMatch": true,
-			"stepMatch": true,
-			"validateGoCanonicalGameState": true,
+			"executeStrategy":                  true,
+			"runStrategy":                      true,
+			"runMatch":                         true,
+			"stepMatch":                        true,
+			"validateGoCanonicalGameState":     true,
 			"validateCandidateChronicleEvents": true,
-			"hashCandidateArenaGeometry": true,
-			"parseConditionFromSeed": true,
+			"hashCandidateArenaGeometry":       true,
+			"parseConditionFromSeed":           true,
 		}
 		ast.Inspect(file, func(node ast.Node) bool {
 			declaration, ok := node.(*ast.FuncDecl)

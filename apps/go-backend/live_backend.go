@@ -4131,6 +4131,266 @@ func matchSetPresetSpec(matchSetPresetID string) ([]string, []string, bool) {
 	}
 }
 
+const candidateSetScenarioIdentityDomainV119 = "cowards-game:set-scenario:v1.37"
+const candidateSetConditionIdentityDomainV119 = "cowards-game:set-condition:v1.37"
+const candidateSetRequestIdentityDomainV119 = "cowards-game:set-condition-request:v1.37"
+const candidateSemanticTupleIdentityDomainV119 = "cowards-game:runtime-identity:v1:semantic-tuple"
+
+type candidateSetEntrantV119 struct {
+	EntrantKey         string
+	StrategyRevisionID string
+	PlayerID           string
+}
+
+type candidateFourConditionMatchV119 struct {
+	ID                          string `json:"id"`
+	BottomStrategyRevisionID    string `json:"bottomStrategyRevisionId"`
+	TopStrategyRevisionID       string `json:"topStrategyRevisionId"`
+	ArenaVariantID              string `json:"arenaVariantId"`
+	Seed                        string `json:"seed"`
+	BottomPlayerID              string `json:"bottomPlayerId"`
+	TopPlayerID                 string `json:"topPlayerId"`
+	BottomEntrantKey            string `json:"bottomEntrantKey"`
+	TopEntrantKey               string `json:"topEntrantKey"`
+	SemanticAuthorityKey        string `json:"semanticAuthorityKey"`
+	SetPolicyVersion            string `json:"setPolicyVersion"`
+	ScenarioID                  string `json:"scenarioId"`
+	ConditionID                 string `json:"conditionId"`
+	ConditionOrdinal            int    `json:"conditionOrdinal"`
+	ConditionSuffix             string `json:"conditionSuffix"`
+	RequestIdentity             string `json:"requestIdentity"`
+	ArenaCatalogVersion         string `json:"arenaCatalogVersion"`
+	ArenaSemanticGeometryHash   string `json:"arenaSemanticGeometryHash"`
+	InitialInitiativeEntrantKey string `json:"initialInitiativeEntrantKey"`
+	InitialInitiativePlayerID   string `json:"initialInitiativePlayerId"`
+}
+
+func candidateSchedulingAuthorityV119(key string) (arenaSetAuthorityV137Candidate, error) {
+	current := currentSemanticAuthorityGenerated()
+	if current.SemanticAuthorityKey != "runtime-v1.17" || current.TupleID != "sha256:0d8a04fdfe49e3aa7261728ee51beb0a9049b661aad978277f2892c3a4bc54fe" ||
+		current.RuntimeABI != "strategy-runtime-abi-v1.17" || current.SetPolicy != "canonical-set-policy-v1.4" {
+		return arenaSetAuthorityV137Candidate{}, errors.New("selected Go semantic authority is not Phase-259 exact")
+	}
+	candidate, ok := arenaSetAuthorityV137CandidateBySemanticAuthorityKey(key)
+	if !ok || candidate.SemanticAuthorityKey != "runtime-v1.19" || candidate.Policy.Active ||
+		candidate.Policy.ConditionCount != 4 || candidate.Policy.SeedCarriesFairnessSemantics ||
+		candidate.Tuple.TupleID != "sha256:37c9a07425d454c74859112debcc3ef362d43e80d5767560d9bde28a3c8d5e73" ||
+		candidate.Tuple.RuntimeABI != "strategy-runtime-abi-v1.19" ||
+		candidate.Tuple.ArenaCatalog != "canonical-arena-catalog-v1.37" ||
+		candidate.Tuple.SetPolicy != "canonical-set-policy-v1.37-four-condition-v1" ||
+		candidate.SourceSHA256 != arenaSetAuthorityV137SourceSHA256 ||
+		candidate.OutputSHA256 != arenaSetAuthorityV137OutputSHA256 {
+		return arenaSetAuthorityV137Candidate{}, errors.New("candidate Go semantic authority is unavailable")
+	}
+	return candidate, nil
+}
+
+func candidateSetIdentityHashV119(identityDomain string, value map[string]any) (string, error) {
+	canonical, err := runtimeInvocationV117CanonicalValue(value)
+	if err != nil {
+		return "", errors.New("candidate Set identity is not canonical")
+	}
+	framed := runtimeInvocationV117Frame(
+		candidateSemanticTupleIdentityDomainV119,
+		[]byte(identityDomain),
+		canonical,
+	)
+	digest := sha256.Sum256(framed)
+	return hex.EncodeToString(digest[:]), nil
+}
+
+func candidateArenaConfigV119(arena arenaSetAuthorityV137Arena) map[string]any {
+	stones := make([]map[string]any, 0, len(arena.TerrainStones))
+	for _, stone := range arena.TerrainStones {
+		stones = append(stones, map[string]any{"x": stone.X, "y": stone.Y})
+	}
+	return map[string]any{
+		"id":          arena.ID,
+		"version":     arena.Version,
+		"name":        arena.Name,
+		"status":      arena.Status,
+		"schedulable": arena.Schedulable,
+		"aliasOf": func() any {
+			if arena.AliasOf == "" {
+				return nil
+			}
+			return arena.AliasOf
+		}(),
+		"initialBounds": map[string]any{
+			"minX": arena.InitialBounds.MinX,
+			"maxX": arena.InitialBounds.MaxX,
+			"minY": arena.InitialBounds.MinY,
+			"maxY": arena.InitialBounds.MaxY,
+		},
+		"terrainStones":        stones,
+		"arenaOwnedSetup":      jsonMap([]byte(arena.ArenaOwnedSetupJSON)),
+		"semanticGeometryHash": arena.SemanticGeometryHash,
+	}
+}
+
+func ensureCandidateCompetitionArenasV119(ctx context.Context, tx pgx.Tx, semanticAuthorityKey string) error {
+	if tx == nil {
+		return errors.New("candidate catalog transaction is unavailable")
+	}
+	authority, err := candidateSchedulingAuthorityV119(semanticAuthorityKey)
+	if err != nil {
+		return err
+	}
+	if _, err := tx.Exec(ctx, "select pg_advisory_xact_lock(hashtext('cowards-game:arena-catalog-v1.37:install'))"); err != nil {
+		return errors.New("candidate catalog lock is unavailable")
+	}
+	for _, arena := range authority.Arenas {
+		config := candidateArenaConfigV119(arena)
+		var alias any
+		if arena.AliasOf != "" {
+			alias = arena.AliasOf
+		}
+		if _, err := tx.Exec(ctx, `
+			insert into arena_catalog_entries (
+				catalog_version, arena_id, arena_version, arena_name,
+				arena_status, schedulable, alias_of_arena_id,
+				geometry_hash_profile, semantic_geometry_hash, config
+			) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+			on conflict (catalog_version, arena_id) do nothing
+		`, authority.ArenaCatalogVersion, arena.ID, arena.Version, arena.Name,
+			arena.Status, arena.Schedulable, alias, authority.GeometryHashProfile,
+			arena.SemanticGeometryHash, config); err != nil {
+			return errors.New("candidate catalog installation failed")
+		}
+		var version, name, status, geometryProfile, geometryHash string
+		var schedulable bool
+		var persistedAlias *string
+		var persistedConfig []byte
+		if err := tx.QueryRow(ctx, `
+			select arena_version, arena_name, arena_status, schedulable,
+			       alias_of_arena_id, geometry_hash_profile,
+			       semantic_geometry_hash, config
+			  from arena_catalog_entries
+			 where catalog_version=$1 and arena_id=$2
+			 for share
+		`, authority.ArenaCatalogVersion, arena.ID).Scan(
+			&version, &name, &status, &schedulable, &persistedAlias,
+			&geometryProfile, &geometryHash, &persistedConfig,
+		); err != nil {
+			return errors.New("candidate catalog exact record is unavailable")
+		}
+		persistedAliasValue := ""
+		if persistedAlias != nil {
+			persistedAliasValue = *persistedAlias
+		}
+		if version != arena.Version || name != arena.Name || status != arena.Status ||
+			schedulable != arena.Schedulable || persistedAliasValue != arena.AliasOf ||
+			geometryProfile != authority.GeometryHashProfile || geometryHash != arena.SemanticGeometryHash ||
+			!jsonSemanticEqual(jsonMap(persistedConfig), config) {
+			return errors.New("candidate catalog exact record mismatch")
+		}
+	}
+	return nil
+}
+
+func generateCandidateFourConditionMatchesV119(
+	semanticAuthorityKey string,
+	matchSetID string,
+	arenaID string,
+	baseSeed string,
+	entrantA candidateSetEntrantV119,
+	entrantB candidateSetEntrantV119,
+) ([]candidateFourConditionMatchV119, error) {
+	authority, err := candidateSchedulingAuthorityV119(semanticAuthorityKey)
+	if err != nil || matchSetID == "" || baseSeed == "" || entrantA.EntrantKey == "" ||
+		entrantB.EntrantKey == "" || entrantA.EntrantKey == entrantB.EntrantKey ||
+		entrantA.StrategyRevisionID == "" || entrantB.StrategyRevisionID == "" ||
+		entrantA.PlayerID == "" || entrantB.PlayerID == "" || entrantA.PlayerID == entrantB.PlayerID {
+		return nil, errors.New("candidate four-condition input is invalid")
+	}
+	var arena *arenaSetAuthorityV137Arena
+	for index := range authority.Arenas {
+		entry := &authority.Arenas[index]
+		if entry.ID == arenaID {
+			arena = entry
+			break
+		}
+	}
+	if arena == nil || arena.Status != "active" || !arena.Schedulable || arena.AliasOf != "" {
+		return nil, errors.New("candidate arena is not schedulable")
+	}
+	scenarioHash, err := candidateSetIdentityHashV119(candidateSetScenarioIdentityDomainV119, map[string]any{
+		"setPolicyVersion":          authority.Policy.Version,
+		"arenaCatalogVersion":       authority.ArenaCatalogVersion,
+		"arenaSemanticGeometryHash": arena.SemanticGeometryHash,
+		"entrantAKey":               entrantA.EntrantKey,
+		"entrantBKey":               entrantB.EntrantKey,
+		"baseSeed":                  baseSeed,
+	})
+	if err != nil {
+		return nil, err
+	}
+	scenarioID := "set-scenario:sha256:" + scenarioHash
+	participant := func(value string) candidateSetEntrantV119 {
+		if value == "a" {
+			return entrantA
+		}
+		return entrantB
+	}
+	matches := make([]candidateFourConditionMatchV119, 0, len(authority.ConditionRows))
+	for _, row := range authority.ConditionRows {
+		if row.Ordinal != len(matches) || row.Ordinal < 0 || row.Ordinal > 3 {
+			return nil, errors.New("candidate condition authority is noncanonical")
+		}
+		bottom := participant(row.Bottom)
+		top := participant(row.Top)
+		initial := participant(row.InitialInitiative)
+		conditionHash, hashErr := candidateSetIdentityHashV119(candidateSetConditionIdentityDomainV119, map[string]any{
+			"scenarioId": scenarioID,
+			"suffix":     row.Suffix,
+		})
+		if hashErr != nil {
+			return nil, hashErr
+		}
+		conditionID := "set-condition:sha256:" + conditionHash
+		requestSource := map[string]any{
+			"scenarioId":                  scenarioID,
+			"conditionId":                 conditionID,
+			"ordinal":                     row.Ordinal,
+			"suffix":                      row.Suffix,
+			"baseSeed":                    baseSeed,
+			"bottomEntrantKey":            bottom.EntrantKey,
+			"topEntrantKey":               top.EntrantKey,
+			"initialInitiativeEntrantKey": initial.EntrantKey,
+			"bottomPlayerId":              bottom.PlayerID,
+			"topPlayerId":                 top.PlayerID,
+			"initialInitiativePlayerId":   initial.PlayerID,
+		}
+		requestHash, hashErr := candidateSetIdentityHashV119(candidateSetRequestIdentityDomainV119, requestSource)
+		if hashErr != nil {
+			return nil, hashErr
+		}
+		matches = append(matches, candidateFourConditionMatchV119{
+			ID:                          fmt.Sprintf("match:%s:%d", matchSetID, row.Ordinal),
+			BottomStrategyRevisionID:    bottom.StrategyRevisionID,
+			TopStrategyRevisionID:       top.StrategyRevisionID,
+			ArenaVariantID:              arena.ID,
+			Seed:                        baseSeed,
+			BottomPlayerID:              bottom.PlayerID,
+			TopPlayerID:                 top.PlayerID,
+			BottomEntrantKey:            bottom.EntrantKey,
+			TopEntrantKey:               top.EntrantKey,
+			SemanticAuthorityKey:        authority.SemanticAuthorityKey,
+			SetPolicyVersion:            authority.Policy.Version,
+			ScenarioID:                  scenarioID,
+			ConditionID:                 conditionID,
+			ConditionOrdinal:            row.Ordinal,
+			ConditionSuffix:             row.Suffix,
+			RequestIdentity:             "set-request:sha256:" + requestHash,
+			ArenaCatalogVersion:         authority.ArenaCatalogVersion,
+			ArenaSemanticGeometryHash:   arena.SemanticGeometryHash,
+			InitialInitiativeEntrantKey: initial.EntrantKey,
+			InitialInitiativePlayerID:   initial.PlayerID,
+		})
+	}
+	return matches, nil
+}
+
 func generatePairwiseMatches(matchSetID string, matchSetPresetID string, entrants []map[string]any) []map[string]any {
 	arenaVariantIDs, seeds, mirrorSides := matchSetPresetSpec(matchSetPresetID)
 	matches := []map[string]any{}

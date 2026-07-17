@@ -204,7 +204,7 @@ func TestCandidatePairwiseFourConditionMatchesV119MatchTypeScriptCanonicalBytes(
 
 func TestCandidatePairwiseStagingPreservesPhase259CurrentGoScheduler(t *testing.T) {
 	current := currentSemanticAuthorityGenerated()
-	if current.SemanticAuthorityKey != "runtime-v1.17" || current.TupleID != currentCanonicalTupleID ||
+	if current.SemanticAuthorityKey != "runtime-v1.17" || current.TupleID != "sha256:0d8a04fdfe49e3aa7261728ee51beb0a9049b661aad978277f2892c3a4bc54fe" ||
 		current.RuntimeABI != "strategy-runtime-abi-v1.17" || current.SetPolicy != "canonical-set-policy-v1.4" {
 		t.Fatalf("generated current selector drifted from Phase 259: %+v", current)
 	}
@@ -228,7 +228,8 @@ func TestCandidatePairwiseStagingPreservesPhase259CurrentGoScheduler(t *testing.
 		t.Fatalf("selected Phase-259 scheduler changed:\nwant=%#v\n got=%#v", want, got)
 	}
 	for _, arena := range competitionArenaDefinitions() {
-		if stringValue(arena, "id") == "arena:open-field:v1" || mapValue(arena, "semanticAuthorityKey") != nil {
+		_, hasCandidateKey := arena["semanticAuthorityKey"]
+		if stringValue(arena, "id") == "arena:open-field:v1" || hasCandidateKey {
 			t.Fatalf("candidate authority leaked into selected current arenas: %+v", arena)
 		}
 	}
