@@ -318,6 +318,20 @@ const analyzePhase260TypeScriptFile = (
     sourceKindForPath(repoPath),
   )
   const offenses: ServiceBoundaryOffense[] = []
+  const executionNamespaces = new Map<string, string>()
+
+  const recordExecutionSymbol = (node: ts.Node, symbol: string) => {
+    if (phase260ExecutionSymbols.has(symbol)) {
+      offenses.push(
+        offenseAt(
+          sourceFile,
+          node,
+          repoPath,
+          `strategy-execution-ownership:${symbol}`,
+        ),
+      )
+    }
+  }
 
   const visit = (node: ts.Node) => {
     if (
@@ -327,30 +341,79 @@ const analyzePhase260TypeScriptFile = (
     ) {
       const clause = node.importClause
       if (clause?.name && phase260ExecutionSymbols.has(clause.name.text)) {
-        offenses.push(
-          offenseAt(
-            sourceFile,
-            node,
-            repoPath,
-            `strategy-execution-ownership:${clause.name.text}`,
-          ),
-        )
+        recordExecutionSymbol(node, clause.name.text)
       }
       if (clause?.namedBindings && ts.isNamedImports(clause.namedBindings)) {
         for (const specifier of clause.namedBindings.elements) {
           const importedName = importSpecifierName(specifier)
-          if (phase260ExecutionSymbols.has(importedName)) {
-            offenses.push(
-              offenseAt(
-                sourceFile,
-                node,
-                repoPath,
-                `strategy-execution-ownership:${importedName}`,
-              ),
-            )
+          recordExecutionSymbol(node, importedName)
+        }
+      }
+      if (clause?.namedBindings && ts.isNamespaceImport(clause.namedBindings)) {
+        executionNamespaces.set(
+          clause.namedBindings.name.text,
+          node.moduleSpecifier.text,
+        )
+      }
+    }
+
+    if (
+      ts.isExportDeclaration(node) &&
+      node.moduleSpecifier &&
+      ts.isStringLiteral(node.moduleSpecifier) &&
+      phase260ExecutionModules.has(node.moduleSpecifier.text) &&
+      node.exportClause &&
+      ts.isNamedExports(node.exportClause)
+    ) {
+      for (const specifier of node.exportClause.elements) {
+        recordExecutionSymbol(
+          node,
+          (specifier.propertyName ?? specifier.name).text,
+        )
+      }
+    }
+
+    if (
+      ts.isVariableDeclaration(node) &&
+      node.initializer &&
+      ts.isCallExpression(node.initializer) &&
+      node.initializer.arguments.length === 1 &&
+      ts.isStringLiteral(node.initializer.arguments[0]!) &&
+      phase260ExecutionModules.has(node.initializer.arguments[0]!.text) &&
+      ((ts.isIdentifier(node.initializer.expression) &&
+        node.initializer.expression.text === "require") ||
+        node.initializer.expression.kind === ts.SyntaxKind.ImportKeyword)
+    ) {
+      if (ts.isIdentifier(node.name)) {
+        executionNamespaces.set(node.name.text, node.initializer.arguments[0]!.text)
+      } else if (ts.isObjectBindingPattern(node.name)) {
+        for (const element of node.name.elements) {
+          const importedName = element.propertyName
+            ? propertyNameText(element.propertyName)
+            : propertyNameText(element.name)
+          if (importedName) {
+            recordExecutionSymbol(node, importedName)
           }
         }
       }
+    }
+
+    if (
+      ts.isPropertyAccessExpression(node) &&
+      ts.isIdentifier(node.expression) &&
+      executionNamespaces.has(node.expression.text)
+    ) {
+      recordExecutionSymbol(node, node.name.text)
+    }
+
+    if (
+      ts.isElementAccessExpression(node) &&
+      ts.isIdentifier(node.expression) &&
+      executionNamespaces.has(node.expression.text) &&
+      node.argumentExpression &&
+      ts.isStringLiteral(node.argumentExpression)
+    ) {
+      recordExecutionSymbol(node, node.argumentExpression.text)
     }
 
     if (ts.isPropertyAssignment(node) || ts.isVariableDeclaration(node)) {
@@ -466,20 +529,50 @@ const analyzePhase260GoFile = (
   return offenses
 }
 
+const collectPhase260TypeScriptGraph = (
+  repoRoot: string,
+): readonly string[] => {
+  const queue = phase260TypeScriptRoots.flatMap((root) =>
+    walkFilesWithExtensions(repoRoot, root, new Set([".ts", ".tsx"]))
+      .map((absolutePath) => toRepoPath(repoRoot, absolutePath))
+      .filter(isPhase260ProductionSource),
+  )
+  const seen = new Set<string>()
+
+  while (queue.length > 0) {
+    const repoPath = queue.shift()!
+    if (seen.has(repoPath)) {
+      continue
+    }
+    seen.add(repoPath)
+    const absolutePath = path.join(repoRoot, repoPath)
+    if (!existsSync(absolutePath)) {
+      continue
+    }
+    const sourceText = readFileSync(absolutePath, "utf8")
+    for (const statement of extractImportLikeStatements(repoPath, sourceText)) {
+      const localImport = resolveLocalImport(repoRoot, repoPath, statement.source)
+      if (localImport && !seen.has(localImport)) {
+        queue.push(localImport)
+      }
+    }
+  }
+
+  return [...seen].sort()
+}
+
 const analyzePhase260Ownership = (
   repoRoot: string,
 ): readonly ServiceBoundaryOffense[] => {
-  const typeScriptFiles = phase260TypeScriptRoots.flatMap((root) =>
-    walkFilesWithExtensions(repoRoot, root, new Set([".ts", ".tsx"])),
-  )
+  const typeScriptFiles = collectPhase260TypeScriptGraph(repoRoot)
   const goFiles = walkFilesWithExtensions(
     repoRoot,
     "apps/go-backend",
     new Set([".go"]),
   )
   return [
-    ...typeScriptFiles.flatMap((absolutePath) => {
-      const repoPath = toRepoPath(repoRoot, absolutePath)
+    ...typeScriptFiles.flatMap((repoPath) => {
+      const absolutePath = path.join(repoRoot, repoPath)
       return analyzePhase260TypeScriptFile(
         repoPath,
         readFileSync(absolutePath, "utf8"),
