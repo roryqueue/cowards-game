@@ -7,6 +7,7 @@ import {
   EXECUTABLE_LANE_EVIDENCE_STATUSES,
   hashExecutableLaneIdentity,
   resolveCanonicalCompatibilityTuple,
+  resolveCandidateRuntimeV119SemanticTuple,
   parseCanonicalJsonInstant,
   type CanonicalCompatibilityTuple,
   type ExecutableLaneCertificateReference,
@@ -214,15 +215,25 @@ const cloneTuple = (
   tuple: CanonicalCompatibilityTuple,
 ): Readonly<CanonicalCompatibilityTuple> => Object.freeze({ ...tuple })
 
+type CompatibilityResolver = (
+  selector: unknown,
+) =>
+  | Readonly<{
+      tupleId: string
+      tuple: Readonly<CanonicalCompatibilityTuple>
+    }>
+  | undefined
+
 const validateCompatibility = (
   value: unknown,
+  resolveCompatibility: CompatibilityResolver,
 ): Readonly<RuntimeExecutionCompatibilityIdentity> => {
   if (!isRecord(value)) {
     throw new IntegrityEvidenceInputError("Compatibility tuple is required.")
   }
   assertExactKeys(value, ["tupleId", "tuple"], "Compatibility")
   const tupleId = requiredString(value.tupleId, "Compatibility tuple ID")
-  const resolved = resolveCanonicalCompatibilityTuple({
+  const resolved = resolveCompatibility({
     tupleId,
     tuple: value.tuple,
   })
@@ -235,6 +246,7 @@ const validateCompatibility = (
 const validateLaneIdentity = (
   value: unknown,
   compatibility: RuntimeExecutionCompatibilityIdentity,
+  resolveCompatibility: CompatibilityResolver,
 ): Readonly<ExecutableLaneIdentity> => {
   if (!isRecord(value)) {
     throw new IntegrityEvidenceInputError("Entrant lane identity is required.")
@@ -256,7 +268,7 @@ const validateLaneIdentity = (
   if (strings.semanticTupleId !== compatibility.tupleId) {
     throw new IntegrityEvidenceInputError("Entrant lane semantic tuple ID is mixed.")
   }
-  const resolved = resolveCanonicalCompatibilityTuple({
+  const resolved = resolveCompatibility({
     tupleId: strings.semanticTupleId,
     tuple: value.semanticTuple,
   })
@@ -312,6 +324,7 @@ const validateEntrant = (
   value: unknown,
   compatibility: RuntimeExecutionCompatibilityIdentity,
   registryGeneration: string,
+  resolveCompatibility: CompatibilityResolver,
 ): Readonly<EntrantExecutionEvidence> => {
   if (!isRecord(value)) {
     throw new IntegrityEvidenceInputError("Entrant execution evidence is required.")
@@ -340,7 +353,11 @@ const validateEntrant = (
     value.strategyRevisionId,
     "Strategy Revision ID",
   )
-  const laneIdentity = validateLaneIdentity(value.laneIdentity, compatibility)
+  const laneIdentity = validateLaneIdentity(
+    value.laneIdentity,
+    compatibility,
+    resolveCompatibility,
+  )
   const containmentCertificateRef = validateCertificateReference(
     value.containmentCertificateRef,
     "containment",
@@ -751,14 +768,18 @@ export const hashEntrantLaneIdentity = (
   identity: Readonly<ExecutableLaneIdentity>,
 ): string => hashExecutableLaneIdentity(identity)
 
-export const createMatchSetIntegrityIdentity = (
+const createMatchSetIntegrityIdentityWithResolver = (
   input: MatchSetIntegrityIdentityInput | unknown,
+  resolveCompatibility: CompatibilityResolver,
 ): Readonly<MatchSetIntegrityIdentity> => {
   if (!isRecord(input)) {
     throw new IntegrityEvidenceInputError("MatchSet integrity identity is required.")
   }
   assertExactKeys(input, IDENTITY_INPUT_KEYS, "MatchSet integrity identity")
-  const compatibility = validateCompatibility(input.compatibility)
+  const compatibility = validateCompatibility(
+    input.compatibility,
+    resolveCompatibility,
+  )
   const authorityBundleHash = assertSha256(
     input.authorityBundleHash,
     "Authority bundle hash",
@@ -794,7 +815,12 @@ export const createMatchSetIntegrityIdentity = (
   }
   const actualByKey = new Map<string, Readonly<EntrantExecutionEvidence>>()
   for (const rawEntrant of input.entrants) {
-    const entry = validateEntrant(rawEntrant, compatibility, registryGeneration)
+    const entry = validateEntrant(
+      rawEntrant,
+      compatibility,
+      registryGeneration,
+      resolveCompatibility,
+    )
     if (actualByKey.has(entry.entrantKey)) {
       throw new IntegrityEvidenceInputError(`Duplicate entrant key: ${entry.entrantKey}`)
     }
@@ -850,6 +876,22 @@ export const createMatchSetIntegrityIdentity = (
   validatedIdentityInstances.add(identity)
   return identity
 }
+
+export const createMatchSetIntegrityIdentity = (
+  input: MatchSetIntegrityIdentityInput | unknown,
+): Readonly<MatchSetIntegrityIdentity> =>
+  createMatchSetIntegrityIdentityWithResolver(
+    input,
+    resolveCanonicalCompatibilityTuple,
+  )
+
+export const createCandidateMatchSetIntegrityIdentityV119 = (
+  input: MatchSetIntegrityIdentityInput | unknown,
+): Readonly<MatchSetIntegrityIdentity> =>
+  createMatchSetIntegrityIdentityWithResolver(
+    input,
+    resolveCandidateRuntimeV119SemanticTuple,
+  )
 
 export const createMatchExecutionEvidencePair = (
   identity: Readonly<MatchSetIntegrityIdentity>,

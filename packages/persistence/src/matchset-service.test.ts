@@ -14,6 +14,7 @@ import type { Pool, PoolClient } from "pg"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
 import { createDatabasePool } from "./db.js"
 import { hashEntrantLaneIdentity } from "./integrity-evidence.js"
+import { createRepositories } from "./repositories.js"
 import {
   createFixtureMatchSetEvidenceResolver,
   createMatchSetService,
@@ -91,41 +92,42 @@ const entrant = (
 
 const candidateEntrant = (
   side: "a" | "b",
+  namespace = "candidate",
 ): RuntimeEntrantExecutionEvidence => {
   const index = side === "a" ? 0 : 1
-  const base = entrant(index, "candidate")
+  const base = entrant(index, namespace)
   return {
     ...base,
     laneIdentity: {
       ...base.laneIdentity,
       languageId: "typescript",
-      providerId: `candidate:provider:${side}`,
-      artifactId: `candidate:artifact:${side}`,
-      artifactSha256: sha256(`candidate:artifact:${side}`),
+      providerId: `${namespace}:provider:${side}`,
+      artifactId: `${namespace}:artifact:${side}`,
+      artifactSha256: sha256(`${namespace}:artifact:${side}`),
       semanticTupleId: CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE_ID,
       semanticTuple: { ...CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE },
     },
     conformanceCertificateRef: {
       kind: "conformance",
-      certificateId: `candidate:reviewed-certificate:${side}`,
+      certificateId: `${namespace}:reviewed-certificate:${side}`,
       certificateVersion: "runtime-conformance-certificate-v1.19",
-      certificateRecordHash: sha256(`candidate:certificate:${side}`),
-      registryGeneration: "candidate:generation:1",
+      certificateRecordHash: sha256(`${namespace}:certificate:${side}`),
+      registryGeneration: `${namespace}:generation:1`,
     },
     containmentCertificateRef: {
       ...base.containmentCertificateRef,
-      registryGeneration: "candidate:generation:1",
+      registryGeneration: `${namespace}:generation:1`,
     },
     schedulingDecision: {
       ...base.schedulingDecision,
-      registryGeneration: "candidate:generation:1",
+      registryGeneration: `${namespace}:generation:1`,
     },
   }
 }
 
-const candidateInput = (): CreateMatchSetFromMatrixInput => {
-  const entrantA = candidateEntrant("a")
-  const entrantB = candidateEntrant("b")
+const candidateInput = (namespace = "candidate"): CreateMatchSetFromMatrixInput => {
+  const entrantA = candidateEntrant("a", namespace)
+  const entrantB = candidateEntrant("b", namespace)
   const arena = CANONICAL_ARENA_CATALOG_V1_37.arenas.find(
     ({ id }) => id === "arena:smoke:v1",
   )!
@@ -134,24 +136,24 @@ const candidateInput = (): CreateMatchSetFromMatrixInput => {
     arenaSemanticGeometryHash: arena.semanticGeometryHash,
     entrantA: {
       entrantKey: entrantA.entrantKey,
-      playerId: "candidate:player:a",
+      playerId: `${namespace}:player:a`,
     },
     entrantB: {
       entrantKey: entrantB.entrantKey,
-      playerId: "candidate:player:b",
+      playerId: `${namespace}:player:b`,
     },
-    baseSeed: "candidate:base-seed:001",
+    baseSeed: `${namespace}:base-seed:001`,
   })
   const revisionByEntrant = new Map([
     [entrantA.entrantKey, entrantA.strategyRevisionId],
     [entrantB.entrantKey, entrantB.strategyRevisionId],
   ])
   return {
-    id: "candidate:match-set",
+    id: `${namespace}:match-set`,
     semanticAuthorityKey: "runtime-v1.19",
     matches: scenario.conditions.map(
       (condition): CreateMatchRecordInputV119 => ({
-        id: `candidate:match:${condition.ordinal}` as MatchId,
+        id: `${namespace}:match:${condition.ordinal}` as MatchId,
         bottomStrategyRevisionId: revisionByEntrant.get(
           condition.bottomEntrantKey,
         )!,
@@ -183,8 +185,8 @@ const candidateInput = (): CreateMatchSetFromMatrixInput => {
         tupleId: CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE_ID,
         tuple: { ...CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE },
       },
-      authorityBundleHash: sha256("candidate:bundle"),
-      registryGeneration: "candidate:generation:1",
+      authorityBundleHash: sha256(`${namespace}:bundle`),
+      registryGeneration: `${namespace}:generation:1`,
       executionEntrants: {
         [entrantA.entrantKey]: entrantA,
         [entrantB.entrantKey]: entrantB,
@@ -253,7 +255,10 @@ const inputFor = (
   } as CreateMatchSetFromMatrixInput
 }
 
-const fakeDatabase = (failOn = "") => {
+const fakeDatabase = (
+  failOn = "",
+  options: { omitCandidateAdmissionSide?: "a" | "b" } = {},
+) => {
   const calls: Array<{ sql: string; values: readonly unknown[] }> = []
   const client = {
     async query(sql: string, values: readonly unknown[] = []) {
@@ -309,16 +314,21 @@ const fakeDatabase = (failOn = "") => {
           "select evidence.* from strategy_revision_v1_19_revalidations",
         )
       ) {
-        const side = String(values[0]).endsWith(":0") ? "a" : "b"
-        const evidence = candidateEntrant(side)
+        const revisionId = String(values[0])
+        const side = revisionId.endsWith(":0") ? "a" : "b"
+        const namespace = revisionId.replace(/:revision:[01]$/u, "")
+        const evidence = candidateEntrant(side, namespace)
+        if (options.omitCandidateAdmissionSide === side) {
+          return { rows: [] }
+        }
         return {
           rows: [
             {
-              id: `candidate:revalidation:${side}`,
+              id: `${namespace}:revalidation:${side}`,
               strategy_revision_id: evidence.strategyRevisionId,
-              source_hash: sha256(`candidate:source:${side}`),
+              source_hash: sha256(`${namespace}:source:${side}`),
               source_bytes: 64,
-              artifact_sha256: evidence.laneIdentity.artifactSha256,
+              artifact_sha256: `sha256:${evidence.laneIdentity.artifactSha256}`,
               artifact_bytes: 128,
               language_id: evidence.laneIdentity.languageId,
               provider_id: evidence.laneIdentity.providerId,
@@ -326,13 +336,12 @@ const fakeDatabase = (failOn = "") => {
               runtime_abi_version: "strategy-runtime-abi-v1.19",
               semantic_runtime_version: "runtime-v1.19",
               semantic_tuple_id: CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE_ID,
-              execution_request_root: sha256(`candidate:request:${side}`),
-              execution_result_root: sha256(`candidate:result:${side}`),
-              execution_receipt_root: sha256(`candidate:receipt:${side}`),
+              execution_request_root: `sha256:${sha256(`${namespace}:request:${side}`)}`,
+              execution_result_root: `sha256:${sha256(`${namespace}:result:${side}`)}`,
+              execution_receipt_root: `sha256:${sha256(`${namespace}:receipt:${side}`)}`,
               reviewed_certificate_id:
                 evidence.conformanceCertificateRef!.certificateId,
-              reviewed_certificate_sha256:
-                evidence.conformanceCertificateRef!.certificateRecordHash,
+              reviewed_certificate_sha256: `sha256:${evidence.conformanceCertificateRef!.certificateRecordHash}`,
             },
           ],
         }
@@ -346,6 +355,106 @@ const fakeDatabase = (failOn = "") => {
     pool: { connect: async () => client } as unknown as Pool,
     calls,
   }
+}
+
+const seedRuntimeEvidenceCertificate = async (
+  client: PoolClient,
+  evidence: RuntimeEntrantExecutionEvidence,
+  kind: "containment" | "conformance",
+  namespace: string,
+  index: number,
+): Promise<void> => {
+  const reference =
+    kind === "containment"
+      ? evidence.containmentCertificateRef
+      : evidence.conformanceCertificateRef!
+  const producer = `${namespace}:producer:${kind}:${index}`
+  const command = `${namespace}:command:${kind}:${index}`
+  const graphHash = sha256(`${namespace}:graph:${kind}:${index}`)
+  const attestationId = `${namespace}:attestation:${kind}:${index}`
+  const laneHash = hashEntrantLaneIdentity(evidence.laneIdentity)
+  await client.query(
+    `insert into runtime_evidence_verified_attestations
+      (id, attestation_sha256, verification_status, certificate_kind,
+       producer_id, producer_key_id, trust_domain, schema_version,
+       command_id, command_digest, corpus_id, corpus_hash, policy_id,
+       policy_hash, runtime_id, runtime_version, toolchain_id,
+       toolchain_version, adapter_id, adapter_version, artifact_id,
+       artifact_hash, lane_identity_hash, semantic_tuple_id,
+       result_manifest_hash, result_graph_hash, original_evidence_hash,
+       derived_certificate_version, derived_certificate_record_hash,
+       registry_generation, lane_identity, issued_at, valid_until)
+     values ($1, $2, 'passed', $3, $4, 'fixture-key', 'fixture',
+       'runtime-evidence-attestation-v1', $5, $6, $7, $8, $9, $10,
+       $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21,
+       $22, $23, $24, $25, $26, $27, '2026-07-12T12:00:00Z',
+       '2099-08-12T12:00:00Z')`,
+    [
+      attestationId,
+      sha256(attestationId),
+      kind,
+      producer,
+      command,
+      sha256(command),
+      evidence.laneIdentity.corpusId,
+      sha256(evidence.laneIdentity.corpusId),
+      evidence.laneIdentity.policyId,
+      sha256(evidence.laneIdentity.policyId),
+      evidence.laneIdentity.runtimeId,
+      evidence.laneIdentity.runtimeVersion,
+      evidence.laneIdentity.toolchainId,
+      evidence.laneIdentity.toolchainVersion,
+      evidence.laneIdentity.adapterId,
+      evidence.laneIdentity.adapterVersion,
+      evidence.laneIdentity.artifactId,
+      evidence.laneIdentity.artifactSha256,
+      laneHash,
+      evidence.laneIdentity.semanticTupleId,
+      sha256(`${namespace}:manifest:${kind}:${index}`),
+      graphHash,
+      sha256(`${namespace}:original:${kind}:${index}`),
+      reference.certificateVersion,
+      reference.certificateRecordHash,
+      reference.registryGeneration,
+      evidence.laneIdentity,
+    ],
+  )
+  await client.query(
+    `insert into runtime_evidence_certificates
+      (id, certificate_kind, certificate_version,
+       certificate_record_hash, certificate_status,
+       verified_attestation_id, verified_attestation_status, producer_id,
+       schema_version, command_id, command_digest, corpus_id, corpus_hash,
+       policy_id, policy_hash, toolchain_id, toolchain_version, artifact_id,
+       artifact_hash, lane_identity_hash, lane_identity, result_graph_hash,
+       registry_generation, issued_at, fresh_until)
+     values ($1, $2, $3, $4, 'passed', $5, 'passed', $6,
+       'runtime-evidence-attestation-v1', $7, $8, $9, $10, $11, $12,
+       $13, $14, $15, $16, $17, $18, $19, $20,
+       '2026-07-12T12:00:00Z', '2099-08-12T12:00:00Z')`,
+    [
+      reference.certificateId,
+      kind,
+      reference.certificateVersion,
+      reference.certificateRecordHash,
+      attestationId,
+      producer,
+      command,
+      sha256(command),
+      evidence.laneIdentity.corpusId,
+      sha256(evidence.laneIdentity.corpusId),
+      evidence.laneIdentity.policyId,
+      sha256(evidence.laneIdentity.policyId),
+      evidence.laneIdentity.toolchainId,
+      evidence.laneIdentity.toolchainVersion,
+      evidence.laneIdentity.artifactId,
+      evidence.laneIdentity.artifactSha256,
+      laneHash,
+      evidence.laneIdentity,
+      graphHash,
+      reference.registryGeneration,
+    ],
+  )
 }
 
 describe("MatchSet presets", () => {
@@ -502,6 +611,31 @@ describe("exact MatchSet creation", () => {
       expect(fake.calls).toEqual([])
     },
   )
+
+  it("rolls back without candidate rows when exact revision admission is absent", async () => {
+    const fake = fakeDatabase("", { omitCandidateAdmissionSide: "a" })
+    await expect(
+      createMatchSetService(fake.pool).createFromMatrix(candidateInput()),
+    ).rejects.toThrow(/admission evidence/iu)
+    expect(
+      fake.calls.some((call) => call.sql.startsWith("insert into match_sets")),
+    ).toBe(false)
+    expect(fake.calls.at(-1)?.sql).toBe("rollback")
+  })
+
+  it("rolls back every candidate write family after a forced late job failure", async () => {
+    const fake = fakeDatabase("insert into match_jobs")
+    await expect(
+      createMatchSetService(fake.pool).createFromMatrix(candidateInput()),
+    ).rejects.toThrow("forced late child failure")
+    expect(
+      fake.calls.some((call) => call.sql.startsWith("insert into set_scenarios")),
+    ).toBe(true)
+    expect(
+      fake.calls.some((call) => call.sql.startsWith("insert into set_conditions")),
+    ).toBe(true)
+    expect(fake.calls.at(-1)?.sql).toBe("rollback")
+  })
 
   it.each([2, 3, 8])(
     "resolves complete fixture-domain evidence for %i heterogeneous entrants without collapsing languages",
@@ -918,6 +1052,194 @@ describePostgres("PostgreSQL MatchSet integrity identity and zero rows", () => {
       match_sets: 0,
       execution_entrants: 0,
       competition_entrants: 0,
+      matches: 0,
+      jobs: 0,
+    })
+  })
+})
+
+describePostgres("PostgreSQL runtime-v1.19 atomic scenario creation", () => {
+  let pool: Pool
+  let client: PoolClient
+  const namespace = `candidate:${randomUUID()}`
+  const input = candidateInput(namespace)
+
+  beforeAll(async () => {
+    pool = createDatabasePool({ connectionString: databaseUrl! })
+    await migrate(pool)
+    await createRepositories(pool).installReleasedArenaCatalog(
+      CANONICAL_ARENA_CATALOG_V1_37,
+    )
+    client = await pool.connect()
+    await client.query("begin isolation level serializable")
+    await client.query(
+      "insert into users (id, display_name) values ($1, 'Candidate owner')",
+      [`${namespace}:user`],
+    )
+    await client.query(
+      "insert into strategies (id, owner_user_id, name) values ($1, $2, 'Candidate')",
+      [`${namespace}:strategy`, `${namespace}:user`],
+    )
+    const smoke = CANONICAL_ARENA_CATALOG_V1_37.arenas.find(
+      ({ id }) => id === "arena:smoke:v1",
+    )!
+    await client.query(
+      `insert into arena_variants (id, name, config)
+       values ($1, $2, $3) on conflict (id) do nothing`,
+      [smoke.id, smoke.name, smoke],
+    )
+
+    for (const side of ["a", "b"] as const) {
+      const evidence = candidateEntrant(side, namespace)
+      const revisionIndex = side === "a" ? 0 : 1
+      await client.query(
+        `insert into strategy_revisions (
+           id, strategy_id, source, source_hash, source_bytes, runtime,
+           engine_compatibility, validation, metadata, compiled_artifact,
+           locked_at
+         ) values (
+           $1, $2, 'return', $3, 64, $4, '{}'::jsonb,
+           '{"valid":true}'::jsonb, $5, $6, now()
+         )`,
+        [
+          evidence.strategyRevisionId,
+          `${namespace}:strategy`,
+          sha256(`${namespace}:source:${side}`),
+          { language: { id: "typescript" } },
+          {
+            providerValidation: {
+              providerId: evidence.laneIdentity.providerId,
+              artifactBytes: 128,
+            },
+            sourceArtifact: {
+              artifactHash: `sha256:${evidence.laneIdentity.artifactSha256}`,
+              bytes: 128,
+            },
+          },
+          {
+            hash: `sha256:${evidence.laneIdentity.artifactSha256}`,
+            bytes: 128,
+            revisionIndex,
+          },
+        ],
+      )
+      await seedRuntimeEvidenceCertificate(
+        client,
+        evidence,
+        "containment",
+        namespace,
+        revisionIndex,
+      )
+      await seedRuntimeEvidenceCertificate(
+        client,
+        evidence,
+        "conformance",
+        namespace,
+        revisionIndex,
+      )
+      await createRepositories(client).appendStrategyRevisionV119Revalidation({
+        id: `${namespace}:revalidation:${side}`,
+        strategyRevisionId: evidence.strategyRevisionId,
+        sourceHash: sha256(`${namespace}:source:${side}`),
+        sourceBytes: 64,
+        artifactSha256: `sha256:${evidence.laneIdentity.artifactSha256}`,
+        artifactBytes: 128,
+        languageId: "typescript",
+        providerId: evidence.laneIdentity.providerId,
+        laneId: evidence.laneIdentity.adapterId,
+        runtimeAbiVersion: "strategy-runtime-abi-v1.19",
+        semanticRuntimeVersion: "runtime-v1.19",
+        semanticTupleId: CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE_ID,
+        executionKind: "real_service_execution",
+        syntheticEvidence: false,
+        executionRequestRoot: `sha256:${sha256(`${namespace}:request:${side}`)}`,
+        executionResultRoot: `sha256:${sha256(`${namespace}:result:${side}`)}`,
+        executionReceiptRoot: `sha256:${sha256(`${namespace}:receipt:${side}`)}`,
+        serviceReceiptVersion: "runtime-semantic-receipt-v1.19",
+        reviewedCertificateId:
+          evidence.conformanceCertificateRef!.certificateId,
+        reviewedCertificateSha256: `sha256:${evidence.conformanceCertificateRef!.certificateRecordHash}`,
+        reviewStatus: "reviewed",
+        evidenceStatus: "passed",
+        evidenceCreatedAt: "2026-07-17T00:00:00.000Z",
+      })
+    }
+  })
+
+  afterAll(async () => {
+    await client.query("rollback").catch(() => undefined)
+    client.release()
+    await pool.end()
+  })
+
+  it("persists the exact four conditions, successor Match identity, and jobs together", async () => {
+    await insertMatchSetWithMatrixOnClient(client, input)
+    const counts = await client.query(
+      `select
+         (select count(*) from set_scenarios where match_set_id = $1)::integer as scenarios,
+         (select count(*) from set_conditions where match_set_id = $1)::integer as conditions,
+         (select count(*) from matches where successor_match_set_id = $1)::integer as matches,
+         (select count(*) from match_jobs where integrity_match_set_id = $1)::integer as jobs`,
+      [input.id],
+    )
+    expect(counts.rows[0]).toEqual({
+      scenarios: 1,
+      conditions: 4,
+      matches: 4,
+      jobs: 4,
+    })
+    const rows = await client.query(
+      `select successor_condition_ordinal, seed, bottom_player_id,
+              top_player_id, initial_initiative_player_id,
+              successor_arena_semantic_geometry_hash
+         from matches where successor_match_set_id = $1
+         order by successor_condition_ordinal`,
+      [input.id],
+    )
+    expect(rows.rows.map(({ successor_condition_ordinal }) =>
+      successor_condition_ordinal,
+    )).toEqual([0, 1, 2, 3])
+    expect(new Set(rows.rows.map(({ seed }) => seed))).toEqual(
+      new Set([`${namespace}:base-seed:001`]),
+    )
+    expect(
+      rows.rows.filter(
+        ({ initial_initiative_player_id }) =>
+          initial_initiative_player_id === `${namespace}:player:a`,
+      ),
+    ).toHaveLength(2)
+  })
+
+  it("rolls back a complete second candidate after revision evidence revocation", async () => {
+    await createRepositories(client).revokeStrategyRevisionV119Revalidation({
+      id: `${namespace}:revocation:a`,
+      revalidationId: `${namespace}:revalidation:a`,
+      reasonCode: "TEST_REVOKED",
+      evidenceRoot: `sha256:${sha256(`${namespace}:revocation-root:a`)}`,
+    })
+    await expect(
+      insertMatchSetWithMatrixOnClient(client, {
+        ...input,
+        id: `${namespace}:revoked-set`,
+        matches: input.matches.map((match, index) => ({
+          ...match,
+          id: `${namespace}:revoked-match:${index}` as MatchId,
+        })),
+      }),
+    ).rejects.toThrow(/admission evidence/iu)
+    const counts = await client.query(
+      `select
+         (select count(*) from match_sets where id = $1)::integer as match_sets,
+         (select count(*) from set_scenarios where match_set_id = $1)::integer as scenarios,
+         (select count(*) from set_conditions where match_set_id = $1)::integer as conditions,
+         (select count(*) from matches where successor_match_set_id = $1)::integer as matches,
+         (select count(*) from match_jobs where integrity_match_set_id = $1)::integer as jobs`,
+      [`${namespace}:revoked-set`],
+    )
+    expect(counts.rows[0]).toEqual({
+      match_sets: 0,
+      scenarios: 0,
+      conditions: 0,
       matches: 0,
       jobs: 0,
     })
