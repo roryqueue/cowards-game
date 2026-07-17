@@ -13,12 +13,16 @@ import {
   type V137ConformanceCorpus,
 } from "../packages/golden/src/v1-37-conformance-corpus.js"
 import {
+  checkCommittedV137ObservationCorpusV3Candidate,
   createV137ObservationCorpusV3Candidate,
   parseV137ConformanceCandidateArgs,
+  reviewCommittedV137ObservationCorpusV3Candidate,
   repairV137PinnedToolchainFixtures,
   writeCommittedV137ObservationCorpusV3Candidate,
   writeV137ConformanceCandidate,
 } from "./generate-v1-37-conformance-corpus.js"
+// eslint-disable-next-line no-restricted-imports -- candidate review test binds the exact inactive pin without changing current exports.
+import { V1_37_CONFORMANCE_CORPUS_V3_CANDIDATE_PIN } from "../packages/golden/src/v1-37-conformance-corpus-v3-candidate-pin.js"
 
 const temporaryRoots: string[] = []
 
@@ -89,6 +93,71 @@ describe("v1.37 conformance candidate generation", () => {
     )
     expect(() => readFileSync(path.join(goldenRoot, "registry.json"))).toThrow()
     expect(result.corpusRootSha256).not.toBe(V1_37_CONFORMANCE_CORPUS_ROOT)
+  })
+
+  it("independently reviews and checks exact v3 roots and D-01 through D-08 dispositions", () => {
+    const root = temporaryRoot()
+    writeCommittedV137ObservationCorpusV3Candidate({ root })
+    const review = reviewCommittedV137ObservationCorpusV3Candidate({
+      root,
+      reviewedBy: "phase-260-plan-11-independent-observation-review",
+    })
+
+    expect(review.status).toBe("approved-inactive-observation-candidate")
+    expect(review.lifecycle).toBe("inactive-candidate")
+    expect(review.current).toBe(false)
+    expect(review.decisionDispositions.map(({ decisionId }) => decisionId)).toEqual(
+      ["D-01", "D-02", "D-03", "D-04", "D-05", "D-06", "D-07", "D-08"],
+    )
+    expect(review.protectedSurfaces.every(({ disposition }) => disposition === "unchanged")).toBe(true)
+    expect(checkCommittedV137ObservationCorpusV3Candidate({ root })).toEqual([])
+  })
+
+  it("rejects self-authored or stale candidate review evidence", () => {
+    const selfAuthoredRoot = temporaryRoot()
+    writeCommittedV137ObservationCorpusV3Candidate({ root: selfAuthoredRoot })
+    expect(() =>
+      reviewCommittedV137ObservationCorpusV3Candidate({
+        root: selfAuthoredRoot,
+        reviewedBy: "scripts/generate-v1-37-conformance-corpus.ts",
+      }),
+    ).toThrow("SELF_AUTHORED_REVIEW")
+
+    const staleRoot = temporaryRoot()
+    writeCommittedV137ObservationCorpusV3Candidate({ root: staleRoot })
+    const corpusPath = path.join(
+      staleRoot,
+      "packages/golden/src/fixtures/v1-37-conformance-corpus/v3/corpus.json",
+    )
+    const staleCorpus = readFileSync(corpusPath, "utf8").replace(
+      "v1.37-observation-v1.19",
+      "v1.37-observation-stale",
+    )
+    writeFileSync(corpusPath, staleCorpus)
+    expect(() =>
+      reviewCommittedV137ObservationCorpusV3Candidate({
+        root: staleRoot,
+        reviewedBy: "phase-260-plan-11-independent-observation-review",
+      }),
+    ).toThrow("CANDIDATE_CORPUS_STALE")
+  })
+
+  it("binds an explicit non-current candidate pin beside the Phase-259 pin", () => {
+    expect(V1_37_CONFORMANCE_CORPUS_V3_CANDIDATE_PIN).toMatchObject({
+      schemaVersion: "v1.37-executable-conformance-candidate-pin-v1",
+      lifecycle: "inactive-candidate",
+      current: false,
+      candidateVersion: "v3",
+      corpusPath:
+        "packages/golden/src/fixtures/v1-37-conformance-corpus/v3/corpus.json",
+      independentReviewPath:
+        "packages/golden/src/fixtures/v1-37-conformance-corpus/v3/independent-review.json",
+    })
+    expect(V1_37_CONFORMANCE_CORPUS_V3_CANDIDATE_PIN.caseRoots).toHaveLength(30)
+    expect(V1_37_CONFORMANCE_CORPUS_V3_CANDIDATE_PIN.sourceRoots).toHaveLength(4)
+    expect(V1_37_CONFORMANCE_CORPUS_V3_CANDIDATE_PIN).not.toHaveProperty(
+      "activeVersion",
+    )
   })
 
   it("repairs Rust and Zig fixtures for the exact pinned compilers", () => {
