@@ -303,7 +303,9 @@ const validateBehaviorManifest = (
     !value.invocationScript.some(
       ({ methodName }) => methodName === "selectActivations",
     ) ||
-    !value.invocationScript.some(({ methodName }) => methodName === "soldierBrain")
+    !value.invocationScript.some(
+      ({ methodName }) => methodName === "soldierBrain",
+    )
   ) {
     fail("INVOCATION_SCRIPT")
   }

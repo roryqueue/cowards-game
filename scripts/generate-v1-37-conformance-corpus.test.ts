@@ -106,10 +106,14 @@ describe("v1.37 conformance candidate generation", () => {
     expect(review.status).toBe("approved-inactive-observation-candidate")
     expect(review.lifecycle).toBe("inactive-candidate")
     expect(review.current).toBe(false)
-    expect(review.decisionDispositions.map(({ decisionId }) => decisionId)).toEqual(
-      ["D-01", "D-02", "D-03", "D-04", "D-05", "D-06", "D-07", "D-08"],
-    )
-    expect(review.protectedSurfaces.every(({ disposition }) => disposition === "unchanged")).toBe(true)
+    expect(
+      review.decisionDispositions.map(({ decisionId }) => decisionId),
+    ).toEqual(["D-01", "D-02", "D-03", "D-04", "D-05", "D-06", "D-07", "D-08"])
+    expect(
+      review.protectedSurfaces.every(
+        ({ disposition }) => disposition === "unchanged",
+      ),
+    ).toBe(true)
     expect(checkCommittedV137ObservationCorpusV3Candidate({ root })).toEqual([])
   })
 
@@ -154,7 +158,9 @@ describe("v1.37 conformance candidate generation", () => {
         "packages/golden/src/fixtures/v1-37-conformance-corpus/v3/independent-review.json",
     })
     expect(V1_37_CONFORMANCE_CORPUS_V3_CANDIDATE_PIN.caseRoots).toHaveLength(30)
-    expect(V1_37_CONFORMANCE_CORPUS_V3_CANDIDATE_PIN.sourceRoots).toHaveLength(4)
+    expect(V1_37_CONFORMANCE_CORPUS_V3_CANDIDATE_PIN.sourceRoots).toHaveLength(
+      4,
+    )
     expect(V1_37_CONFORMANCE_CORPUS_V3_CANDIDATE_PIN).not.toHaveProperty(
       "activeVersion",
     )
@@ -209,7 +215,9 @@ describe("v1.37 conformance candidate generation", () => {
     const rust = candidate.fixtures.find(
       ({ languageId }) => languageId === "rust",
     )
-    const zig = candidate.fixtures.find(({ languageId }) => languageId === "zig")
+    const zig = candidate.fixtures.find(
+      ({ languageId }) => languageId === "zig",
+    )
     if (rust === undefined || zig === undefined) {
       throw new Error("candidate fixtures are missing")
     }

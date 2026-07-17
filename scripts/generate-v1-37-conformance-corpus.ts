@@ -113,6 +113,7 @@ def soldier_brain(input):
     }
 `
 
+/* eslint-disable no-useless-escape -- escaped quotes are literal guest-language source bytes. */
 const RUST_OBSERVATION_FIXTURE_V3 = `use std::io::{self, Read};
 
 fn has(input: &str, field: &str) -> bool {
@@ -161,6 +162,7 @@ pub fn main(init: std.process.Init) !void {
     try std.Io.File.stdout().writeStreamingAll(init.io, output);
 }
 `
+/* eslint-enable no-useless-escape */
 
 const RUST_V1_37_TOOLCHAIN_FIXTURE = `use std::io::{self, Read};
 
@@ -598,8 +600,8 @@ const readObservationCandidate = (root: string) => {
     }
   }
   if (
-    corpus.fixtures.some(
-      ({ source }) => /\b(?:HOLD|END_ACTIVATION)\b/u.test(source),
+    corpus.fixtures.some(({ source }) =>
+      /\b(?:HOLD|END_ACTIVATION)\b/u.test(source),
     )
   ) {
     fail("HOLD_DELTA_FORBIDDEN")
@@ -691,8 +693,9 @@ export const checkCommittedV137ObservationCorpusV3Candidate = (
       review.sourceInventoryRootSha256 !== sha256(renderJson(sources)) ||
       renderJson(review.caseRoots) !== renderJson(cases) ||
       renderJson(review.sourceRoots) !== renderJson(sources) ||
-      review.decisionDispositions.map(({ decisionId }) => decisionId).join(",") !==
-        OBSERVATION_DECISIONS_V3.join(",") ||
+      review.decisionDispositions
+        .map(({ decisionId }) => decisionId)
+        .join(",") !== OBSERVATION_DECISIONS_V3.join(",") ||
       review.decisionDispositions.some(
         ({ disposition }) => disposition !== "approved-observation-only",
       ) ||
