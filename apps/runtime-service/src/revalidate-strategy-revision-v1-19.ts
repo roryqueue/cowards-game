@@ -37,6 +37,8 @@ export type RevisionRevalidationProbeIdV119 =
 export interface RevisionRevalidationCandidatePinsV119 {
   readonly candidateStatus: "inactive-candidate"
   readonly current: false
+  readonly pinSource: "explicit-candidate-pins"
+  readonly resolvedFromCurrentRegistry: false
   readonly runtimeAbiVersion: "strategy-runtime-abi-v1.19"
   readonly semanticRuntimeVersion: "runtime-v1.19"
   readonly semanticTupleId: string
@@ -49,6 +51,10 @@ export interface RevisionRevalidationCandidatePinsV119 {
   readonly workshopVersion: "v1.19"
   readonly workshopRootSha256: Sha256
   readonly workshopPinSha256: Sha256
+  readonly certificateVersion: "runtime-conformance-certificate-v1.19"
+  readonly certificateId: string
+  readonly certificateSha256: Sha256
+  readonly certificateStatus: "reviewed-inactive-candidate"
   readonly runtimeIdentityRoot: Sha256
   readonly toolchainIdentityRoot: Sha256
   readonly adapterIdentityRoot: Sha256
@@ -152,6 +158,9 @@ export interface StrategyRevisionRevalidationReceiptV119 {
   readonly workshopVersion: "v1.19"
   readonly workshopRootSha256: Sha256
   readonly workshopPinSha256: Sha256
+  readonly certificateVersion: "runtime-conformance-certificate-v1.19"
+  readonly certificateId: string
+  readonly certificateSha256: Sha256
   readonly runtimeIdentityRoot: Sha256
   readonly toolchainIdentityRoot: Sha256
   readonly adapterIdentityRoot: Sha256
@@ -260,6 +269,8 @@ const exactKeys = (value: unknown, keys: readonly string[]): boolean =>
 const PIN_KEYS = Object.freeze([
   "candidateStatus",
   "current",
+  "pinSource",
+  "resolvedFromCurrentRegistry",
   "runtimeAbiVersion",
   "semanticRuntimeVersion",
   "semanticTupleId",
@@ -272,6 +283,10 @@ const PIN_KEYS = Object.freeze([
   "workshopVersion",
   "workshopRootSha256",
   "workshopPinSha256",
+  "certificateVersion",
+  "certificateId",
+  "certificateSha256",
+  "certificateStatus",
   "runtimeIdentityRoot",
   "toolchainIdentityRoot",
   "adapterIdentityRoot",
@@ -282,12 +297,17 @@ const validPins = (pins: RevisionRevalidationCandidatePinsV119): boolean =>
   exactKeys(pins, PIN_KEYS) &&
   pins.candidateStatus === "inactive-candidate" &&
   pins.current === false &&
+  pins.pinSource === "explicit-candidate-pins" &&
+  pins.resolvedFromCurrentRegistry === false &&
   pins.runtimeAbiVersion === "strategy-runtime-abi-v1.19" &&
   pins.semanticRuntimeVersion === "runtime-v1.19" &&
   pins.semanticTupleId === CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE_ID &&
   pins.corpusVersion === "v3" &&
   pins.traceVersion === "v4" &&
   pins.workshopVersion === "v1.19" &&
+  pins.certificateVersion === "runtime-conformance-certificate-v1.19" &&
+  PUBLIC_ID.test(pins.certificateId) &&
+  pins.certificateStatus === "reviewed-inactive-candidate" &&
   [
     pins.corpusRootSha256,
     pins.corpusPinSha256,
@@ -295,6 +315,7 @@ const validPins = (pins: RevisionRevalidationCandidatePinsV119): boolean =>
     pins.tracePinSha256,
     pins.workshopRootSha256,
     pins.workshopPinSha256,
+    pins.certificateSha256,
     pins.runtimeIdentityRoot,
     pins.toolchainIdentityRoot,
     pins.adapterIdentityRoot,
@@ -543,6 +564,9 @@ export const revalidateStrategyRevisionV119 = (
     workshopVersion: input.pins.workshopVersion,
     workshopRootSha256: input.pins.workshopRootSha256,
     workshopPinSha256: input.pins.workshopPinSha256,
+    certificateVersion: input.pins.certificateVersion,
+    certificateId: input.pins.certificateId,
+    certificateSha256: input.pins.certificateSha256,
     runtimeIdentityRoot: input.pins.runtimeIdentityRoot,
     toolchainIdentityRoot: input.pins.toolchainIdentityRoot,
     adapterIdentityRoot: input.pins.adapterIdentityRoot,
