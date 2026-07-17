@@ -82,7 +82,7 @@ export interface V137ObservationV119CandidateBindings {
   readonly semanticTuple: Readonly<{
     runtimeAbiVersion: "strategy-runtime-abi-v1.19"
     tupleId: `sha256:${string}`
-    tupleSha256: `sha256:${string}`
+    tupleSha256: string
     arenaCatalogVersion: string
     setPolicyVersion: string
     current: false
@@ -167,7 +167,8 @@ const assertExactCandidateBindings = (
       "workshop",
       "semanticTuple",
     ]) ||
-    JSON.stringify(value) !== JSON.stringify(expected) ||
+    canonicalSha256(value as JsonValue) !==
+      canonicalSha256(expected as unknown as JsonValue) ||
     JSON.stringify(value).includes("registry.json") ||
     JSON.stringify(value).includes("v1.37-language-conformance-")
   ) {
@@ -399,8 +400,8 @@ const parseFreshRun = (
     completedAt > validUntil ||
     !HASH.test(run.resultRootSha256) ||
     !HASH.test(run.evidenceRootSha256) ||
-    JSON.stringify(run.candidateBindings) !==
-      JSON.stringify(expected.candidateBindings)
+    canonicalSha256(run.candidateBindings as unknown as JsonValue) !==
+      canonicalSha256(expected.candidateBindings as unknown as JsonValue)
   ) {
     throw new TypeError("Fresh lane run is incomplete or substituted")
   }
@@ -489,12 +490,16 @@ export const certifyObservationLanguageLaneV119 = (input: {
     const [first, ...rest] = runs
     if (
       first === undefined ||
+      new Set(runs.map((run) => run.workspaceId)).size !== 3 ||
+      new Set(runs.map((run) => run.processId)).size !== 3 ||
       rest.some(
         (run) =>
-          JSON.stringify(run.identity) !== JSON.stringify(first.identity) ||
+          canonicalSha256(run.identity as unknown as JsonValue) !==
+            canonicalSha256(first.identity as unknown as JsonValue) ||
           run.resultRootSha256 !== first.resultRootSha256 ||
           run.evidenceRootSha256 !== first.evidenceRootSha256 ||
-          JSON.stringify(run.candidateBindings) !== JSON.stringify(bindings),
+          canonicalSha256(run.candidateBindings as unknown as JsonValue) !==
+            canonicalSha256(bindings as unknown as JsonValue),
       )
     ) {
       return failure(input.languageId, "LANE_RUN_DRIFT")
@@ -631,10 +636,16 @@ const checkResult = (
     result.status !== "reviewed_unsigned_candidate" ||
     result.schemaVersion !==
       "v1.37-observation-v1.19-reviewed-language-candidate-v1" ||
-    JSON.stringify(result.candidateBindings) !==
-      JSON.stringify(exactObservationV119CandidateBindings(repoRoot)) ||
+    canonicalSha256(result.candidateBindings as unknown as JsonValue) !==
+      canonicalSha256(
+        exactObservationV119CandidateBindings(repoRoot) as unknown as JsonValue,
+      ) ||
     result.candidatePayload.status !== "inactive-candidate" ||
     result.candidatePayload.runs.length !== 3 ||
+    new Set(result.candidatePayload.runs.map((run) => run.workspaceId)).size !==
+      3 ||
+    new Set(result.candidatePayload.runs.map((run) => run.processId)).size !==
+      3 ||
     result.candidatePayload.runs.some(
       (run) =>
         !run.complete ||
