@@ -5,15 +5,15 @@ milestone_name: Rules Integrity and Strategy Evaluation Foundations — ACTIVE
 current_phase: 260
 current_phase_name: truthful-strategy-inputs-arena-authority-and-set-fairness
 status: executing
-stopped_at: Completed 260-26-PLAN.md
-last_updated: "2026-07-17T07:13:00.000Z"
+stopped_at: Completed 260-24-PLAN.md
+last_updated: "2026-07-17T07:17:45.137Z"
 last_activity: 2026-07-17
 last_activity_desc: Completed Phase 260 Plan 26 revision-specific real v1.19 revalidation
 progress:
   total_phases: 6
   completed_phases: 4
   total_plans: 112
-  completed_plans: 102
+  completed_plans: 103
   percent: 67
 ---
 
@@ -29,7 +29,7 @@ See: `.planning/PROJECT.md` (updated 2026-07-12)
 ## Current Position
 
 Phase: 260 (truthful-strategy-inputs-arena-authority-and-set-fairness) — EXECUTING
-Plan: 15 of 26
+Plan: 16 of 26
 Status: Ready to execute
 Last activity: 2026-07-17 — Completed Phase 260 Plan 26 revision-specific real v1.19 revalidation
 
@@ -76,8 +76,8 @@ Progress: [█████████░] 88%
 
 **Resume file:** None
 
-Last session: 2026-07-17T07:03:10.307Z
-Stopped at: Completed 260-18-PLAN.md
+Last session: 2026-07-17T07:17:45.118Z
+Stopped at: Completed 260-24-PLAN.md
 Next command: `$gsd-execute-phase 260`.
 
 ## Performance Metrics
@@ -143,6 +143,7 @@ Next command: `$gsd-execute-phase 260`.
 | Phase 260 P11 | 12min | 3 tasks | 8 files |
 | Phase 260 P18 | 14min | 2 tasks | 6 files |
 | Phase 260 P26 | 14min | 2 TDD tasks + review hardening | 2 files; 30 focused revalidation tests and full runtime-service gates |
+| Phase 260 P24 | 8min | 2 tasks | 5 files |
 
 ## Decisions
 
@@ -321,3 +322,5 @@ Next command: `$gsd-execute-phase 260`.
 - [Phase 260]: Address Workshop candidates only through an exact Workshop-contract/runtime-ABI pair; omitted and exact-current selection remain Phase 259. — Candidate staging cannot silently activate or redirect current authoring paths.
 - [Phase 260]: Bind Phase-259 Workshop defaults to exact per-language source roots until Plan 260-14 regenerates the compact current selector. — Exact roots prevent Workshop examples from drifting independently of activation authority.
 - [Phase 260]: Keep v1.19 Workshop examples observation-only and package-free; they consume kernel facts without HOLD or memory-owned scheduler state. — Examples must document approved observations without acquiring gameplay or scheduler authority.
+- [Phase 260]: Keep Phase-259 arena literals inside explicit current-only replay dispatch — Runtime-v1.19 web admission requires the strict public DTO and exact spec-owned active catalog identity.
+- [Phase 260]: Keep candidate replay and result projections inactive and non-publishable until Plan 260-14 — Render approved DTO labels mechanically without hash, fairness, seed, rules, runtime, or Strategy-execution derivation.
