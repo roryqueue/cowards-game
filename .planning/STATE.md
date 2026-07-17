@@ -5,15 +5,15 @@ milestone_name: Rules Integrity and Strategy Evaluation Foundations — ACTIVE
 current_phase: 260
 current_phase_name: truthful-strategy-inputs-arena-authority-and-set-fairness
 status: executing
-stopped_at: Completed 260-24-PLAN.md
-last_updated: "2026-07-17T07:32:39.241Z"
+stopped_at: Completed 260-19-PLAN.md
+last_updated: "2026-07-17T08:05:37.000Z"
 last_activity: 2026-07-17
-last_activity_desc: Completed Phase 260 Plan 26 revision-specific real v1.19 revalidation
+last_activity_desc: Completed Phase 260 Plan 19 twelve real observation-v1.19 lane runs
 progress:
   total_phases: 6
   completed_phases: 4
   total_plans: 112
-  completed_plans: 104
+  completed_plans: 105
   percent: 67
 ---
 
@@ -29,9 +29,9 @@ See: `.planning/PROJECT.md` (updated 2026-07-12)
 ## Current Position
 
 Phase: 260 (truthful-strategy-inputs-arena-authority-and-set-fairness) — EXECUTING
-Plan: 17 of 26
+Plan: 20 of 26
 Status: Ready to execute
-Last activity: 2026-07-17 — Completed Phase 260 Plan 26 revision-specific real v1.19 revalidation
+Last activity: 2026-07-17 — Completed Phase 260 Plan 19 twelve real observation-v1.19 lane runs
 
 Progress: [█████████░] 88%
 
@@ -76,8 +76,8 @@ Progress: [█████████░] 88%
 
 **Resume file:** None
 
-Last session: 2026-07-17T07:31:44.526Z
-Stopped at: Completed 260-24-PLAN.md
+Last session: 2026-07-17T08:05:37.000Z
+Stopped at: Completed 260-19-PLAN.md
 Next command: `$gsd-execute-phase 260`.
 
 ## Performance Metrics
@@ -145,8 +145,12 @@ Next command: `$gsd-execute-phase 260`.
 | Phase 260 P26 | 14min | 2 TDD tasks + review hardening | 2 files; 30 focused revalidation tests and full runtime-service gates |
 | Phase 260 P24 | 8min | 2 tasks | 5 files |
 | Phase 260 P25 | 12min | 2 tasks | 2 files |
+| Phase 260 P19 | 25min | 2 tasks + final identity refresh | 8 files; 12 fresh contained real-language runs |
 
 ## Decisions
+
+- [Phase 260]: Candidate lane certification requires one complete explicit corpus-v3, trace-v4, Workshop-v1.19, and successor-tuple binding; current registries and implicit defaults are inadmissible. — Preactivation evidence cannot be manufactured by relabeling Phase-259 runs.
+- [Phase 260]: Any adapter source-byte change invalidates candidate lane evidence and requires all real runs to be repeated. — Tooling identity is executable evidence, not a documentation label.
 
 - [Phase 260]: Revision-specific v1.19 compatibility is earned only by six exact real provider probes covering every initiative combination and both Advance states; compile-only, additive-JSON, synthetic, partial, sibling, old, or current-registry claims are inadmissible. — D-04 cannot be satisfied by inference or evidence inheritance.
 - [Phase 260]: Reviewed candidate certificate identity must equal the immutable revision's language, provider, and lane, and malformed provider output becomes a generic evidence-mismatch system failure with no receipt. — A hash-shaped certificate or typed callback result alone is not trusted runtime evidence.

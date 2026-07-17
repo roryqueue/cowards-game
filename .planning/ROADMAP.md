@@ -359,12 +359,12 @@ Plans:
 
 **Wave 7 *(blocked on Wave 6 completion)* — trace review and mechanical rendering**
 
-- [ ] 260-12-PLAN.md — Generate and independently review the fixed-schema trace-v4 candidate.
+- [x] 260-12-PLAN.md — Generate and independently review the fixed-schema trace-v4 candidate.
 - [x] 260-24-PLAN.md — Stage mechanical replay/result rendering without UI authority.
 
 **Wave 8 *(blocked on Wave 7 completion)* — real lane execution and permanent ownership guard**
 
-- [ ] 260-19-PLAN.md — Run and inventory twelve fresh real-language candidate executions.
+- [x] 260-19-PLAN.md — Run and inventory twelve fresh real-language candidate executions.
 - [x] 260-25-PLAN.md — Install permanent no-execution and no-semantic-derivation monitors.
 
 **Wave 9 *(blocked on Wave 8 completion)* — certificates and revision inventory proof**
@@ -428,5 +428,5 @@ Cycle-cap, inward-start, facing-only MOVE, reversal-history, attacker-facing/Adv
 | 257. Canonical Transition Kernel and v1.4 Semantic Integrity | 22/22 | Complete | 2026-07-13 |
 | 258. Canonical JSON, Failure Semantics, and Artifact Identity | 14/14 | Complete | 2026-07-16 |
 | 259. Executable Four-Language and Chronicle Conformance | 22/31 | In progress | - |
-| 260. Truthful Strategy Inputs, Arena Authority, and Set Fairness | 18/26 | In Progress|  |
+| 260. Truthful Strategy Inputs, Arena Authority, and Set Fairness | 20/26 | In Progress|  |
 | 261. Integrated Service Proof, Drift Guards, and Release | 0/TBD | Not started | - |
