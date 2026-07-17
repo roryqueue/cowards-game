@@ -13,8 +13,10 @@ import {
   type V137ConformanceCorpus,
 } from "../packages/golden/src/v1-37-conformance-corpus.js"
 import {
+  createV137ObservationCorpusV3Candidate,
   parseV137ConformanceCandidateArgs,
   repairV137PinnedToolchainFixtures,
+  writeCommittedV137ObservationCorpusV3Candidate,
   writeV137ConformanceCandidate,
 } from "./generate-v1-37-conformance-corpus.js"
 
@@ -38,6 +40,57 @@ const sha256 = (bytes: Uint8Array): string =>
   `sha256:${createHash("sha256").update(bytes).digest("hex")}`
 
 describe("v1.37 conformance candidate generation", () => {
+  it("creates an inactive v3 observation candidate with complete D-01 through D-08 cases", () => {
+    const candidate = createV137ObservationCorpusV3Candidate()
+
+    expect(candidate.version).toBe("v3")
+    expect(candidate.behaviorManifest.id).toBe(
+      "behavior:truthful-strategy-observations:v1.19",
+    )
+    expect(candidate.cases.map(({ id }) => id)).toEqual(
+      expect.arrayContaining([
+        "observation-d01-initial-initiative-both-observers",
+        "observation-d02-round-initiative-later-round",
+        "observation-d03-kernel-owned-signed-transport",
+        "observation-d04-real-revalidation-required",
+        "observation-d05-blocked-move-false",
+        "observation-d05-blocked-push-false",
+        "observation-d05-pushed-target-false",
+        "observation-d05-successful-pusher-true",
+        "observation-d05-turn-false",
+        "observation-d06-first-call-false",
+        "observation-d06-later-cycle-true",
+        "observation-d06-post-self-advance-true",
+        "observation-d07-new-slot-reset-false",
+        "observation-d08-observational-only-no-hold",
+      ]),
+    )
+    for (const fixture of candidate.fixtures) {
+      expect(fixture.source).toContain("initialInitiativePlayerId")
+      expect(fixture.source).toContain("hasInitialInitiative")
+      expect(fixture.source).toContain("roundInitiativePlayerId")
+      expect(fixture.source).toContain("hasRoundInitiative")
+      expect(fixture.source).toContain("hasAdvancedThisActivation")
+      expect(fixture.behaviorManifestId).toBe(candidate.behaviorManifest.id)
+    }
+  })
+
+  it("writes v3 only to its committed candidate directory without touching current", () => {
+    const root = temporaryRoot()
+    const goldenRoot = path.join(
+      root,
+      "packages/golden/src/fixtures/v1-37-conformance-corpus",
+    )
+    const result = writeCommittedV137ObservationCorpusV3Candidate({ root })
+
+    expect(result.corpusPath).toBe(path.join(goldenRoot, "v3/corpus.json"))
+    expect(result.semanticDiffPath).toBe(
+      path.join(goldenRoot, "v3/semantic-diff.json"),
+    )
+    expect(() => readFileSync(path.join(goldenRoot, "registry.json"))).toThrow()
+    expect(result.corpusRootSha256).not.toBe(V1_37_CONFORMANCE_CORPUS_ROOT)
+  })
+
   it("repairs Rust and Zig fixtures for the exact pinned compilers", () => {
     const repaired = repairV137PinnedToolchainFixtures()
     const root = temporaryRoot()
