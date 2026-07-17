@@ -1,9 +1,10 @@
-import { generateKeyPairSync } from "node:crypto"
+import { createHash, generateKeyPairSync } from "node:crypto"
 import { mkdtemp, readFile, rm } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { describe, expect, it, vi } from "vitest"
 import type { Pool } from "pg"
+import { encodeCanonicalJson, type JsonValue } from "@cowards/spec"
 import { runObservationV119CertificateSignerCli } from "./sign-import-v1-37-observation-v1-19-certificates.js"
 
 describe("v1.37 observation v1.19 managed certificate signer/importer", () => {
@@ -33,15 +34,24 @@ describe("v1.37 observation v1.19 managed certificate signer/importer", () => {
     const producer = generateKeyPairSync("ed25519")
     const operator = generateKeyPairSync("ed25519")
     const receiptPath = path.join(root, "receipts.json")
-    const importCertificate = vi.fn(async (_pool, input) => ({
-      status: "installed_inactive" as const,
-      certificateId: input.certificate.candidatePayload.certificateId,
-      certificateSha256: `sha256:${"1".repeat(64)}`,
-      candidatePayloadSha256: input.certificate.candidatePayloadSha256,
-      languageId: input.certificate.candidatePayload.identity.languageId,
-      registryGeneration: "candidate-0",
-      importEnvelopeHash: "1".repeat(64),
-    }))
+    const importCertificate = vi.fn(async (_pool, input) => {
+      const encoded = encodeCanonicalJson(
+        input.certificate as unknown as JsonValue,
+        { context: "canonical-manifest" },
+      )
+      if (!encoded.ok) throw new Error("certificate not canonical")
+      return {
+        status: "installed_inactive" as const,
+        certificateId: input.certificate.candidatePayload.certificateId,
+        certificateSha256: `sha256:${createHash("sha256")
+          .update(encoded.bytes)
+          .digest("hex")}`,
+        candidatePayloadSha256: input.certificate.candidatePayloadSha256,
+        languageId: input.certificate.candidatePayload.identity.languageId,
+        registryGeneration: "candidate-0" as const,
+        importEnvelopeHash: "1".repeat(64),
+      }
+    })
     try {
       expect(
         await runObservationV119CertificateSignerCli(["--write"], {
@@ -99,8 +109,8 @@ describe("v1.37 observation v1.19 managed certificate signer/importer", () => {
           "candidatePayloadSha256",
           "certificateId",
           "certificateSha256",
-          "languageId",
           "laneId",
+          "languageId",
           "ledgerIdentity",
           "runRoots",
           "status",

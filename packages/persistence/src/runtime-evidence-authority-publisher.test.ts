@@ -1767,8 +1767,7 @@ describePostgres("Phase-260 inactive observation certificate import", () => {
       status: "installed_inactive",
       certificateSha256: prepared.certificateSha256,
       languageId: "typescript",
-      candidatePayloadSha256:
-        prepared.input.certificate.candidatePayloadSha256,
+      candidatePayloadSha256: prepared.input.certificate.candidatePayloadSha256,
     })
     expect(JSON.stringify(left)).not.toMatch(
       /source|artifact(?:s)?[":]|memory|objective|diagnostics|stderr|private|path|host/iu,

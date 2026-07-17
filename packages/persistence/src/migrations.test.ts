@@ -66,7 +66,25 @@ describe("migrations", () => {
     expect(names).toContain("0024_runtime_authority_import_trust_roots.sql")
     expect(names).toContain("0025_runtime_semantic_receipts_v1_18.sql")
     expect(names).toContain("0026_arena_catalog_and_set_conditions.sql")
+    expect(names).toContain("0027_inactive_runtime_conformance_v1_19.sql")
     expect(names).toEqual([...names].sort())
+  })
+
+  it("extends the existing conformance ledger for inactive v1.19 evidence only", async () => {
+    const sql = await readFile(
+      new URL(
+        "0027_inactive_runtime_conformance_v1_19.sql",
+        migrationsDirectory,
+      ),
+      "utf8",
+    )
+    expect(sql).toContain("runtime-conformance-certificate-v1.17")
+    expect(sql).toContain("runtime-conformance-certificate-v1.19")
+    expect(sql).toContain("strategy-runtime-abi-v1.19")
+    expect(sql).toContain("runtime_evidence_certificates_phase260_shape")
+    expect(sql).not.toMatch(/create\s+table/iu)
+    expect(sql).not.toMatch(/insert\s+into/iu)
+    expect(sql).not.toMatch(/update\s+runtime_evidence/iu)
   })
 
   it("defines the additive immutable arena, condition, and revision revalidation substrate", async () => {
@@ -95,8 +113,12 @@ describe("migrations", () => {
     }
     expect(sql).toContain("num_nonnulls")
     expect(sql).toContain("condition_ordinal between 0 and 3")
-    expect(sql).not.toMatch(/update\s+(arena_variants|matches|match_sets|strategy_revisions)/iu)
-    expect(sql).not.toMatch(/insert\s+into\s+strategy_revision_v1_19_revalidations/iu)
+    expect(sql).not.toMatch(
+      /update\s+(arena_variants|matches|match_sets|strategy_revisions)/iu,
+    )
+    expect(sql).not.toMatch(
+      /insert\s+into\s+strategy_revision_v1_19_revalidations/iu,
+    )
   })
 
   it("exports the exact persistence column groups for successor authority", () => {

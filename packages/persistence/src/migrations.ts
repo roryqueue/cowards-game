@@ -14,7 +14,7 @@ export interface MigrationResult {
 
 export const migrationsDirectory = new URL("../migrations/", import.meta.url)
 export const latestMigrationName =
-  "0026_arena_catalog_and_set_conditions.sql" as const
+  "0027_inactive_runtime_conformance_v1_19.sql" as const
 
 export const readMigrationFiles = async (): Promise<MigrationFile[]> => {
   const names = (await readdir(migrationsDirectory))

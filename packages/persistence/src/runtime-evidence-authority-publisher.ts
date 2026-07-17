@@ -30,11 +30,15 @@ import {
   inspectRuntimeEvidenceAuthorityBundleV117,
   parseRuntimeEvidenceAuthorityBindingV117,
   verifyRuntimeConformanceCertificateV117,
+  verifyRuntimeConformanceCertificateV119,
   type RuntimeEvidenceAuthorityPayloadV117,
   type RuntimeConformanceCertificateV117,
   type RuntimeConformanceExpectedRunBindingV117,
   type RuntimeConformanceIdentityBindingsV117,
   type RuntimeConformanceTrustedProducerV117,
+  type RuntimeConformanceCertificateV119,
+  type RuntimeConformanceExpectedRunBindingV119,
+  type RuntimeConformanceTrustedProducerV119,
   type JsonValue,
 } from "@cowards/spec"
 import type { Pool, PoolClient, QueryResultRow } from "pg"
@@ -290,7 +294,8 @@ const exactPayload = (
       payload.domain === "conformance-certificate" &&
       (payload.replacementCertificateId !== null ||
         payload.replacementCertificateRecordHash !== null ||
-        payload.reasonCode !== "REVIEWED_CONFORMANCE_CERTIFICATE")
+        (payload.reasonCode !== "REVIEWED_CONFORMANCE_CERTIFICATE" &&
+          payload.reasonCode !== "REVIEWED_INACTIVE_OBSERVATION_CERTIFICATE"))
     ) {
       fail(
         "DOMAIN",
@@ -1066,6 +1071,28 @@ export interface ImportedRuntimeConformanceCertificateV117 {
   importEnvelopeHash: string
 }
 
+export interface ImportRuntimeConformanceCertificateV119Input {
+  mode: "production" | "fixture"
+  certificate: RuntimeConformanceCertificateV119
+  expectedIdentity: RuntimeConformanceIdentityBindingsV117
+  expectedRunBinding: RuntimeConformanceExpectedRunBindingV119
+  verificationInstant: string
+  trustedProducers: readonly RuntimeConformanceTrustedProducerV119[]
+  importEnvelope: RuntimeEvidenceAuthorityImportEnvelope
+  trustedImportAuthorities: readonly RuntimeEvidenceAuthorityImportTrustRoot[]
+  requiredTrustRootBootstrap?: RuntimeEvidenceAuthorityImportTrustRootBootstrapReceipt
+}
+
+export interface ImportedRuntimeConformanceCertificateV119 {
+  status: "installed_inactive"
+  certificateId: string
+  certificateSha256: string
+  candidatePayloadSha256: string
+  languageId: string
+  registryGeneration: "candidate-0"
+  importEnvelopeHash: string
+}
+
 const canonicalManifestBytes = (value: JsonValue): Uint8Array => {
   const encoded = encodeCanonicalJson(value, { context: "canonical-manifest" })
   if (!encoded.ok) {
@@ -1593,6 +1620,494 @@ export const importRuntimeConformanceCertificateV117 = async (
       certificateSha256: snapshot.certificateSha256,
       languageId: identity.languageId,
       registryGeneration: snapshot.registryGeneration,
+      importEnvelopeHash: verifiedImport.envelopeHash,
+    })
+  })
+}
+
+/**
+ * Installs an exact v1.19 observation certificate into the existing immutable
+ * certificate/run ledger. Deliberately does not create a v1.17 candidate row,
+ * publication source, authority record, or current selector.
+ */
+export const importRuntimeConformanceCertificateV119Inactive = async (
+  pool: Pool,
+  input: ImportRuntimeConformanceCertificateV119Input,
+): Promise<Readonly<ImportedRuntimeConformanceCertificateV119>> => {
+  const certificate = globalThis.structuredClone(input.certificate)
+  const expectedIdentity = globalThis.structuredClone(input.expectedIdentity)
+  const expectedRunBinding = globalThis.structuredClone(
+    input.expectedRunBinding,
+  )
+  const importEnvelope = globalThis.structuredClone(input.importEnvelope)
+  const bootstrap =
+    input.requiredTrustRootBootstrap === undefined
+      ? undefined
+      : globalThis.structuredClone(input.requiredTrustRootBootstrap)
+  if (input.mode === "production" && bootstrap === undefined) {
+    return fail(
+      "IMPORT_ROOT_BOOTSTRAP_REQUIRED",
+      "Production observation-certificate import requires a bootstrapped plural operator root.",
+    )
+  }
+
+  let snapshot
+  try {
+    snapshot = verifyRuntimeConformanceCertificateV119({
+      mode: input.mode,
+      certificate,
+      expectedIdentity,
+      expectedRunBinding,
+      verificationInstant: input.verificationInstant,
+      trustedProducers: input.trustedProducers,
+    })
+  } catch {
+    return fail(
+      "CERTIFICATE_INVALID",
+      "Inactive observation certificate verification failed.",
+    )
+  }
+  if (
+    importEnvelope.payload.producerId === snapshot.producerId ||
+    importEnvelope.payload.producerKeyId === snapshot.producerKeyId
+  ) {
+    return fail(
+      "PRODUCER_OPERATOR_COLLISION",
+      "Certificate production and operator import identities must be distinct.",
+    )
+  }
+  const preflightImport = verifyImport(
+    importEnvelope,
+    "conformance-certificate",
+    input.verificationInstant,
+    input.trustedImportAuthorities,
+  )
+  if (
+    (bootstrap !== undefined &&
+      (preflightImport.payload.producerId !== bootstrap.producerId ||
+        preflightImport.payload.producerKeyId !== bootstrap.keyId ||
+        preflightImport.payload.trustDomain !== bootstrap.trustDomain)) ||
+    preflightImport.payload.targetCertificateId !== snapshot.certificateId ||
+    preflightImport.payload.targetCertificateRecordHash !==
+      snapshot.certificateSha256 ||
+    preflightImport.payload.evidenceReferenceHash !==
+      snapshot.identity.evidenceGraphRoot
+  ) {
+    return fail(
+      "CERTIFICATE_IMPORT_BINDING",
+      "Operator import does not bind the exact inactive observation certificate.",
+    )
+  }
+
+  const certificateBytes = canonicalManifestBytes(
+    certificate as unknown as JsonValue,
+  )
+  const certificateSha256 = `sha256:${createHash("sha256")
+    .update(certificateBytes)
+    .digest("hex")}`
+  if (certificateSha256 !== snapshot.certificateSha256) {
+    return fail(
+      "CERTIFICATE_BYTES",
+      "Verified observation certificate changed before import.",
+    )
+  }
+  const payload = certificate.candidatePayload
+  const identity = snapshot.identity
+  const certificateRecordHash = storedHash(snapshot.certificateSha256)
+  const attestationId = `runtime-conformance-attestation:${certificateRecordHash}`
+  const artifactId = `runtime-conformance-artifact:${identity.languageId}:${storedHash(identity.artifactSha256)}`
+  const attestationColumns = [
+    "id",
+    "attestation_sha256",
+    "verification_status",
+    "certificate_kind",
+    "producer_id",
+    "producer_key_id",
+    "trust_domain",
+    "schema_version",
+    "command_id",
+    "command_digest",
+    "corpus_id",
+    "corpus_hash",
+    "policy_id",
+    "policy_hash",
+    "runtime_id",
+    "runtime_version",
+    "toolchain_id",
+    "toolchain_version",
+    "adapter_id",
+    "adapter_version",
+    "artifact_id",
+    "artifact_hash",
+    "lane_identity_hash",
+    "semantic_tuple_id",
+    "result_manifest_hash",
+    "result_graph_hash",
+    "original_evidence_hash",
+    "derived_certificate_version",
+    "derived_certificate_record_hash",
+    "registry_generation",
+    "lane_identity",
+    "issued_at",
+    "valid_until",
+  ] as const
+  const attestationValues = [
+    attestationId,
+    certificateRecordHash,
+    "passed",
+    "conformance",
+    snapshot.producerId,
+    snapshot.producerKeyId,
+    snapshot.trustDomain,
+    snapshot.schemaVersion,
+    identity.laneId,
+    identity.adapterBuildSha256,
+    "v1.37-observation-conformance-corpus-v3",
+    identity.corpusRootSha256,
+    identity.canonicalJsonProfileId,
+    identity.budgetPolicySha256,
+    identity.runtimeAbiVersion,
+    identity.runtimeAbiVersion,
+    identity.languageId,
+    identity.toolchainSha256,
+    identity.laneId,
+    identity.adapterBuildSha256,
+    artifactId,
+    identity.artifactSha256,
+    identity.identityManifestRoot,
+    identity.semanticTupleSha256,
+    snapshot.resultRootSha256,
+    storedHash(identity.evidenceGraphRoot),
+    snapshot.candidatePayloadSha256,
+    snapshot.certificateVersion,
+    certificateRecordHash,
+    snapshot.registryGeneration,
+    JSON.stringify(identity),
+    snapshot.issuedAt,
+    snapshot.freshUntil,
+  ] as const
+  const certificateColumns = [
+    "id",
+    "certificate_kind",
+    "certificate_version",
+    "certificate_record_hash",
+    "certificate_status",
+    "verified_attestation_id",
+    "verified_attestation_status",
+    "producer_id",
+    "schema_version",
+    "command_id",
+    "command_digest",
+    "corpus_id",
+    "corpus_hash",
+    "policy_id",
+    "policy_hash",
+    "toolchain_id",
+    "toolchain_version",
+    "artifact_id",
+    "artifact_hash",
+    "lane_identity_hash",
+    "lane_identity",
+    "result_graph_hash",
+    "registry_generation",
+    "issued_at",
+    "fresh_until",
+    "exact_certificate_bytes",
+    "exact_certificate_sha256",
+    "conformance_producer_key_id",
+    "conformance_trust_domain",
+    "conformance_managed_identity",
+    "conformance_language_id",
+    "conformance_lane_id",
+    "conformance_corpus_root_sha256",
+    "conformance_case_inventory_sha256",
+    "conformance_fixture_source_sha256",
+    "conformance_artifact_sha256",
+    "conformance_adapter_build_sha256",
+    "conformance_runtime_executable_sha256",
+    "conformance_toolchain_sha256",
+    "conformance_sysroot_stdlib_sha256",
+    "conformance_runtime_abi_version",
+    "conformance_canonical_json_profile_id",
+    "conformance_budget_policy_sha256",
+    "conformance_containment_policy_sha256",
+    "conformance_semantic_tuple_sha256",
+    "conformance_identity_manifest_root",
+    "conformance_evidence_graph_root",
+    "conformance_behavior_settings_sha256",
+    "conformance_run_count",
+    "conformance_result_root_sha256",
+    "conformance_evidence_root_sha256",
+    "conformance_requested_valid_until",
+    "conformance_import_producer_id",
+    "conformance_import_key_id",
+    "conformance_import_trust_domain",
+    "conformance_import_payload",
+    "conformance_import_signature_base64",
+    "conformance_import_envelope_hash",
+  ] as const
+  const certificateValues = [
+    snapshot.certificateId,
+    "conformance",
+    snapshot.certificateVersion,
+    certificateRecordHash,
+    "passed",
+    attestationId,
+    "passed",
+    snapshot.producerId,
+    snapshot.schemaVersion,
+    identity.laneId,
+    identity.adapterBuildSha256,
+    "v1.37-observation-conformance-corpus-v3",
+    identity.corpusRootSha256,
+    identity.canonicalJsonProfileId,
+    identity.budgetPolicySha256,
+    identity.languageId,
+    identity.toolchainSha256,
+    artifactId,
+    identity.artifactSha256,
+    identity.identityManifestRoot,
+    JSON.stringify(identity),
+    storedHash(identity.evidenceGraphRoot),
+    snapshot.registryGeneration,
+    snapshot.issuedAt,
+    snapshot.freshUntil,
+    Buffer.from(certificateBytes),
+    snapshot.certificateSha256,
+    snapshot.producerKeyId,
+    snapshot.trustDomain,
+    true,
+    identity.languageId,
+    identity.laneId,
+    identity.corpusRootSha256,
+    identity.caseInventorySha256,
+    identity.fixtureSourceSha256,
+    identity.artifactSha256,
+    identity.adapterBuildSha256,
+    identity.runtimeExecutableSha256,
+    identity.toolchainSha256,
+    identity.sysrootStdlibSha256,
+    identity.runtimeAbiVersion,
+    identity.canonicalJsonProfileId,
+    identity.budgetPolicySha256,
+    identity.containmentPolicySha256,
+    identity.semanticTupleSha256,
+    identity.identityManifestRoot,
+    identity.evidenceGraphRoot,
+    identity.behaviorSettingsSha256,
+    3,
+    snapshot.resultRootSha256,
+    snapshot.evidenceRootSha256,
+    payload.requestedValidUntil,
+    preflightImport.payload.producerId,
+    preflightImport.payload.producerKeyId,
+    preflightImport.payload.trustDomain,
+    Buffer.from(preflightImport.payloadBytes).toString("utf8"),
+    preflightImport.signatureBase64,
+    preflightImport.envelopeHash,
+  ] as const
+
+  return withSerializableTransaction(pool, async (client) => {
+    const verifiedImport = verifyImport(
+      importEnvelope,
+      "conformance-certificate",
+      input.verificationInstant,
+      input.trustedImportAuthorities,
+    )
+    if (verifiedImport.envelopeHash !== preflightImport.envelopeHash) {
+      return fail(
+        "CERTIFICATE_IMPORT_BINDING",
+        "Operator import changed inside the authority transaction.",
+      )
+    }
+    await client.query(
+      "select pg_advisory_xact_lock(hashtext('cowards-game:runtime-conformance-certificate-import:v1.19-inactive'))",
+    )
+    if (bootstrap !== undefined) {
+      const selectedRoots = input.trustedImportAuthorities.filter(
+        (root) =>
+          root.producerId === bootstrap.producerId &&
+          root.keyId === bootstrap.keyId &&
+          root.trustDomain === bootstrap.trustDomain,
+      )
+      const selected = selectedRoots[0]
+      if (selectedRoots.length !== 1 || selected === undefined) {
+        return fail(
+          "IMPORT_ROOT_BOOTSTRAP_MISMATCH",
+          "Selected plural operator root does not match bootstrap evidence.",
+        )
+      }
+      const fingerprint = `sha256:${createHash("sha256")
+        .update(
+          createPublicKey(selected.publicKeyPem).export({
+            type: "spki",
+            format: "der",
+          }),
+        )
+        .digest("hex")}`
+      const deployment = await client.query<{
+        descriptor_sha256: string
+        public_key_fingerprint: string
+        generation: string
+        current_generation: string
+      }>(
+        `select d.descriptor_sha256, d.public_key_fingerprint,
+                d.generation::text,
+                (h.next_generation - 1)::text as current_generation
+           from runtime_evidence_authority_import_trust_root_deployments d
+           cross join runtime_evidence_authority_import_trust_root_head h
+          where h.singleton = true
+            and d.producer_id = $1 and d.key_id = $2
+            and d.trust_domain = $3 and d.generation = $4::bigint
+          for share of d, h`,
+        [
+          bootstrap.producerId,
+          bootstrap.keyId,
+          bootstrap.trustDomain,
+          bootstrap.generation,
+        ],
+      )
+      const row = deployment.rows[0]
+      if (
+        row === undefined ||
+        row.generation !== bootstrap.generation ||
+        row.current_generation !== bootstrap.generation ||
+        row.descriptor_sha256 !== bootstrap.descriptorSha256 ||
+        row.public_key_fingerprint !== bootstrap.publicKeyFingerprint ||
+        fingerprint !== bootstrap.publicKeyFingerprint
+      ) {
+        return fail(
+          "IMPORT_ROOT_BOOTSTRAP_MISMATCH",
+          "Operator import root is not the bootstrapped high-water deployment.",
+        )
+      }
+    }
+
+    const revoked = await client.query(
+      `select 1 from runtime_evidence_certificate_revocations
+        where target_certificate_id = $1
+          and target_certificate_record_hash = $2
+        limit 1`,
+      [snapshot.certificateId, storedHash(snapshot.certificateSha256)],
+    )
+    if ((revoked.rowCount ?? 0) !== 0) {
+      return fail(
+        "CERTIFICATE_REVOKED",
+        "Revoked observation evidence cannot be reimported.",
+      )
+    }
+
+    await insertStaticRecord(
+      client,
+      "runtime_evidence_verified_attestations",
+      attestationColumns,
+      attestationValues,
+      "id",
+    )
+    await insertStaticRecord(
+      client,
+      "runtime_evidence_certificates",
+      certificateColumns,
+      certificateValues,
+      "id",
+    )
+    for (const [ordinal, run] of payload.runs.entries()) {
+      await insertStaticRecord(
+        client,
+        "runtime_evidence_conformance_certificate_runs",
+        [
+          "certificate_id",
+          "certificate_record_hash",
+          "run_ordinal",
+          "run_id",
+          "workspace_id",
+          "process_id",
+          "status",
+          "complete",
+          "fresh_workspace",
+          "fresh_process",
+          "skipped_case_count",
+          "unsupported_case_count",
+          "fallback_used",
+          "synthetic_evidence",
+          "case_count",
+          "started_at",
+          "completed_at",
+          "valid_until",
+          "identity",
+          "result_root_sha256",
+          "evidence_root_sha256",
+        ],
+        [
+          snapshot.certificateId,
+          certificateRecordHash,
+          ordinal,
+          run.runId,
+          run.workspaceId,
+          run.processId,
+          run.status,
+          run.complete,
+          run.freshWorkspace,
+          run.freshProcess,
+          run.skippedCaseCount,
+          run.unsupportedCaseCount,
+          run.fallbackUsed,
+          run.syntheticEvidence,
+          run.caseCount,
+          run.startedAt,
+          run.completedAt,
+          run.validUntil,
+          JSON.stringify(run.identity),
+          run.resultRootSha256,
+          run.evidenceRootSha256,
+        ],
+        "run_id",
+      )
+    }
+    const stored = await client.query<{
+      exact_certificate_bytes: Buffer
+      exact_certificate_sha256: string
+      conformance_language_id: string
+      conformance_runtime_abi_version: string
+      conformance_import_envelope_hash: string
+      run_count: number
+      current_count: number
+    }>(
+      `select c.exact_certificate_bytes, c.exact_certificate_sha256,
+              c.conformance_language_id, c.conformance_runtime_abi_version,
+              c.conformance_import_envelope_hash,
+              (select count(*)::integer
+                 from runtime_evidence_conformance_certificate_runs r
+                where r.certificate_id = c.id) as run_count,
+              (select count(*)::integer
+                 from runtime_evidence_v1_17_candidates v
+                where v.certificate_id = c.id) as current_count
+         from runtime_evidence_certificates c where c.id = $1`,
+      [snapshot.certificateId],
+    )
+    const row = stored.rows[0]
+    if (
+      row === undefined ||
+      !row.exact_certificate_bytes.equals(Buffer.from(certificateBytes)) ||
+      row.exact_certificate_sha256 !== snapshot.certificateSha256 ||
+      row.conformance_language_id !== snapshot.languageId ||
+      row.conformance_runtime_abi_version !== "strategy-runtime-abi-v1.19" ||
+      row.conformance_import_envelope_hash !== verifiedImport.envelopeHash ||
+      row.run_count !== 3 ||
+      row.current_count !== 0
+    ) {
+      return fail(
+        "CERTIFICATE_IMPORT_CONFLICT",
+        "Existing inactive observation certificate conflicts with exact reviewed evidence.",
+      )
+    }
+    return Object.freeze({
+      status: "installed_inactive" as const,
+      certificateId: snapshot.certificateId,
+      certificateSha256: snapshot.certificateSha256,
+      candidatePayloadSha256: snapshot.candidatePayloadSha256,
+      languageId: snapshot.languageId,
+      registryGeneration: "candidate-0" as const,
       importEnvelopeHash: verifiedImport.envelopeHash,
     })
   })
