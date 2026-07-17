@@ -2,7 +2,15 @@ import { readFileSync } from "node:fs"
 import { fileURLToPath } from "node:url"
 import { MATCH_KERNEL, type StrategyRuntime } from "@cowards/engine"
 import { adaptRuntimeForCurrentKernel } from "@cowards/engine/test/current-kernel-runtime"
-import type { SoldierBrainInput, StrategyInput } from "@cowards/spec"
+import {
+  ARENA_CATALOG_VERSION_V1_37,
+  CANONICAL_ARENA_CATALOG_V1_37,
+  CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE_RECORD,
+  SET_CONDITION_POLICY_VERSION_V1_37,
+  createSetScenarioV137,
+  type SoldierBrainInput,
+  type StrategyInput,
+} from "@cowards/spec"
 import { describe, expect, it } from "vitest"
 import {
   computeRecordedTransitionTraceRootV137,
@@ -61,7 +69,181 @@ const metadata = {
   semanticTuple: MATCH_KERNEL.tuple,
 }
 
+const candidateMetadata = {
+  schemaVersion: "chronicle-v1.4" as const,
+  semanticTupleId: CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE_RECORD.tupleId,
+  semanticTuple: CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE_RECORD.tuple,
+}
+
+const createCandidateRecordingInput = () => {
+  const arena = CANONICAL_ARENA_CATALOG_V1_37.arenas.find(
+    ({ id }) => id === "arena:smoke:v1",
+  )!
+  const scenario = createSetScenarioV137({
+    arenaCatalogVersion: ARENA_CATALOG_VERSION_V1_37,
+    arenaSemanticGeometryHash: arena.semanticGeometryHash,
+    entrantA: { entrantKey: "entrant:bottom", playerId: "bottom" },
+    entrantB: { entrantKey: "entrant:top", playerId: "top" },
+    baseSeed: "candidate-replay-seed",
+  })
+  const condition = scenario.conditions[0]!
+  const execution = MATCH_KERNEL.runMatchV119({
+    matchId: "candidate-replay-match",
+    seed: scenario.baseSeed,
+    arenaVariant: {
+      id: arena.id,
+      name: arena.name,
+      initialBounds: { ...arena.initialBounds },
+      terrainStones: arena.terrainStones.map((position) => ({ ...position })),
+    },
+    bottomPlayerId: condition.bottomPlayerId,
+    topPlayerId: condition.topPlayerId,
+    bottomStrategyRevisionId: "bottom-revision",
+    topStrategyRevisionId: "top-revision",
+    initialInitiativePlayerId: condition.initialInitiativePlayerId,
+    runtime,
+    maxPhases: 1,
+  })
+  const candidateMatch = {
+    semanticAuthorityKey: "runtime-v1.19" as const,
+    matchId: "candidate-replay-match",
+    seed: scenario.baseSeed,
+    arenaVariantId: arena.id,
+    bottomStrategyRevisionId: "bottom-revision",
+    topStrategyRevisionId: "top-revision",
+    bottomPlayerId: condition.bottomPlayerId,
+    topPlayerId: condition.topPlayerId,
+    bottomEntrantKey: condition.bottomEntrantKey,
+    topEntrantKey: condition.topEntrantKey,
+    setPolicyVersion: SET_CONDITION_POLICY_VERSION_V1_37,
+    scenarioId: scenario.scenarioId,
+    conditionId: condition.conditionId,
+    conditionOrdinal: condition.ordinal,
+    conditionSuffix: condition.suffix,
+    requestIdentity: condition.requestIdentity,
+    arenaCatalogVersion: ARENA_CATALOG_VERSION_V1_37,
+    arenaSemanticGeometryHash: scenario.arenaSemanticGeometryHash,
+    initialInitiativeEntrantKey: condition.initialInitiativeEntrantKey,
+    initialInitiativePlayerId: condition.initialInitiativePlayerId,
+  }
+  return { execution, candidateMatch }
+}
+
 describe("recordChronicleFromExecution", () => {
+  it("records one exact immutable runtime-v1.19 condition reproducibility envelope", () => {
+    const { execution, candidateMatch } = createCandidateRecordingInput()
+    const recorded = recordChronicleFromExecution({
+      execution,
+      metadata: candidateMetadata,
+      candidateMatch,
+    } as never)
+
+    expect(recorded.ok).toBe(true)
+    if (!recorded.ok) return
+    expect(recorded).toHaveProperty("candidateReproducibility")
+    const candidateReproducibility = (
+      recorded as unknown as {
+        candidateReproducibility: Record<string, unknown>
+      }
+    ).candidateReproducibility
+    expect(candidateReproducibility).toEqual({
+      profile: "candidate-v1.19",
+      compatibility: {
+        tupleId: CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE_RECORD.tupleId,
+        tuple: CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE_RECORD.tuple,
+      },
+      match: candidateMatch,
+    })
+    expect(Object.isFrozen(candidateReproducibility)).toBe(true)
+    expect(Object.isFrozen(candidateReproducibility.compatibility)).toBe(true)
+    expect(Object.isFrozen(candidateReproducibility.match)).toBe(true)
+    expect(JSON.stringify(candidateReproducibility)).not.toMatch(
+      /strategyMemory|soldierMemory|objective|source|artifact|diagnostic/iu,
+    )
+  })
+
+  it("rejects missing, mixed, and one-field-mutated candidate identities", () => {
+    const { execution, candidateMatch } = createCandidateRecordingInput()
+    const fields = [
+      "scenarioId",
+      "conditionId",
+      "conditionOrdinal",
+      "conditionSuffix",
+      "requestIdentity",
+      "arenaCatalogVersion",
+      "arenaSemanticGeometryHash",
+      "bottomEntrantKey",
+      "topEntrantKey",
+      "initialInitiativeEntrantKey",
+      "initialInitiativePlayerId",
+    ] as const
+
+    expect(
+      recordChronicleFromExecution({
+        execution,
+        metadata: candidateMetadata,
+      }),
+    ).toMatchObject({
+      ok: false,
+      failure: { code: "RECORDER_CANDIDATE_REPRODUCIBILITY_INVALID" },
+    })
+    expect(
+      recordChronicleFromExecution({
+        execution: run(),
+        metadata,
+        candidateMatch,
+      } as never),
+    ).toMatchObject({
+      ok: false,
+      failure: { code: "RECORDER_CANDIDATE_REPRODUCIBILITY_INVALID" },
+    })
+
+    for (const field of fields) {
+      const replacement =
+        field === "conditionOrdinal"
+          ? 1
+          : field === "arenaCatalogVersion"
+            ? "catalog:forged"
+            : `${String(candidateMatch[field])}:forged`
+      expect(
+        recordChronicleFromExecution({
+          execution,
+          metadata: candidateMetadata,
+          candidateMatch: { ...candidateMatch, [field]: replacement },
+        } as never),
+        field,
+      ).toMatchObject({
+        ok: false,
+        failure: { code: "RECORDER_CANDIDATE_REPRODUCIBILITY_INVALID" },
+      })
+    }
+  })
+
+  it("keeps the Phase-259 current recording result and Chronicle shape exact", () => {
+    const recorded = recordChronicleFromExecution({ execution: run(), metadata })
+    expect(recorded.ok).toBe(true)
+    if (!recorded.ok) return
+
+    expect(Object.keys(recorded)).toEqual([
+      "ok",
+      "chronicle",
+      "finalState",
+      "semanticIdentity",
+      "boundaryAnchors",
+      "recordedTransitions",
+      "transitionTraceRoot",
+    ])
+    expect(Object.hasOwn(recorded, "candidateReproducibility")).toBe(false)
+    expect(Object.keys(recorded.chronicle.reproducibility)).toEqual([
+      "matchId",
+      "seed",
+      "arenaVariantId",
+      "arenaVariantVersion",
+      "strategyRevisionIds",
+      "versions",
+    ])
+  })
+
   it("records one completed candidate stream with exact public events and state-hash anchors", () => {
     const execution = run()
     const recorded = recordChronicleFromExecution({ execution, metadata })
