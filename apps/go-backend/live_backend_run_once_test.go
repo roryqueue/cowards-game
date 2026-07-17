@@ -146,3 +146,90 @@ func TestRunMatchJobOnceAuthenticatesBeforeBodyAdmission(t *testing.T) {
 		t.Fatalf("forbidden response leaked request body: %s", response.Body.String())
 	}
 }
+
+func TestCandidatePairwiseFourConditionMatchesV119MatchTypeScriptCanonicalBytes(t *testing.T) {
+	entrantA := candidateSetEntrantV119{
+		EntrantKey: "entrant:a", StrategyRevisionID: "revision:a", PlayerID: "player:a",
+	}
+	entrantB := candidateSetEntrantV119{
+		EntrantKey: "entrant:b", StrategyRevisionID: "revision:b", PlayerID: "player:b",
+	}
+	matches, err := generateCandidateFourConditionMatchesV119(
+		"runtime-v1.19",
+		"match-set:candidate",
+		"arena:smoke:v1",
+		"seed:smoke:001",
+		entrantA,
+		entrantB,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(matches) != 4 {
+		t.Fatalf("candidate scenario produced %d rows, want 4", len(matches))
+	}
+	wantScenarioID := "set-scenario:sha256:f2ed13a31310a105e40f939a6b13ca8151fb924dd29ffec66aaa13bc9dae1517"
+	wantConditionIDs := []string{
+		"set-condition:sha256:a6236e8738e680c2f7f19fce95abaee8cbe9520e81768181340c73f3bbd95b12",
+		"set-condition:sha256:3e923813f7bea0afdd287cdf7950a7cdd4d7354d0bc80574d4176e8e37738342",
+		"set-condition:sha256:020165c1c510fbac455462404257ecd09d6cf40c28745150ea7b299ffb4091ec",
+		"set-condition:sha256:a9ad5b0f8777f12f3d0ec8a7a203481815bab53f5d37a6d3d613ddaa4d18b3a5",
+	}
+	wantRequestIDs := []string{
+		"set-request:sha256:ec8bba50a631cd3263624c71cb76647e49123dd95dccf3927e953b8f2ecee244",
+		"set-request:sha256:ce688c2c486d5fdf79598bac10f17feef2f53071d3bb01848fa919116b4eac4f",
+		"set-request:sha256:1cd3a34b22b73176a035623918deffb1a0da6cc8ba2e4861a131c415d7bb1a3b",
+		"set-request:sha256:91a089f384bae16e111968179959fc6f2b5678ce95849bc0e8c07df869119b7e",
+	}
+	wantBottom := []string{"entrant:a", "entrant:a", "entrant:b", "entrant:b"}
+	wantFirst := []string{"entrant:a", "entrant:b", "entrant:a", "entrant:b"}
+	for index, match := range matches {
+		if match.ScenarioID != wantScenarioID || match.ConditionID != wantConditionIDs[index] ||
+			match.RequestIdentity != wantRequestIDs[index] || match.ConditionOrdinal != index ||
+			match.BottomEntrantKey != wantBottom[index] || match.InitialInitiativeEntrantKey != wantFirst[index] ||
+			match.Seed != "seed:smoke:001" || match.ArenaCatalogVersion != "canonical-arena-catalog-v1.37" ||
+			match.ArenaSemanticGeometryHash != "sha256:39aecc22c184660c1c08ab810fbfa3066da1a650b20e91d72a838ed7fb70a0e1" {
+			t.Fatalf("candidate row %d drifted from TypeScript: %+v", index, match)
+		}
+	}
+	for _, key := range []string{"", "runtime-v1.17", "runtime-v1.18", "runtime-v1.20"} {
+		if _, err := generateCandidateFourConditionMatchesV119(key, "match-set:candidate", "arena:smoke:v1", "seed:smoke:001", entrantA, entrantB); err == nil {
+			t.Fatalf("candidate scheduler admitted semantic key %q", key)
+		}
+	}
+	if _, err := generateCandidateFourConditionMatchesV119("runtime-v1.19", "match-set:candidate", "arena:open-field:v1", "seed:smoke:001", entrantA, entrantB); err == nil {
+		t.Fatal("historical Open Field alias became schedulable")
+	}
+}
+
+func TestCandidatePairwiseStagingPreservesPhase259CurrentGoScheduler(t *testing.T) {
+	current := currentSemanticAuthorityGenerated()
+	if current.SemanticAuthorityKey != "runtime-v1.17" || current.TupleID != currentCanonicalTupleID ||
+		current.RuntimeABI != "strategy-runtime-abi-v1.17" || current.SetPolicy != "canonical-set-policy-v1.4" {
+		t.Fatalf("generated current selector drifted from Phase 259: %+v", current)
+	}
+	entrants := []map[string]any{
+		{"entrantId": "entrant:0", "entrantIndex": 0, "strategyRevisionId": "revision:0"},
+		{"entrantId": "entrant:1", "entrantIndex": 1, "strategyRevisionId": "revision:1"},
+	}
+	want := []map[string]any{
+		{
+			"id": "match:match-set:current:0", "bottomStrategyRevisionId": "revision:0", "topStrategyRevisionId": "revision:1",
+			"arenaVariantId": "arena:smoke:v1", "seed": "seed:smoke:001:pair:0-1", "bottomPlayerId": "player:match-set:current:entrant:0",
+			"topPlayerId": "player:match-set:current:entrant:1", "bottomExecutionEntrantKey": "entrant:0", "topExecutionEntrantKey": "entrant:1",
+		},
+		{
+			"id": "match:match-set:current:1", "bottomStrategyRevisionId": "revision:1", "topStrategyRevisionId": "revision:0",
+			"arenaVariantId": "arena:smoke:v1", "seed": "seed:smoke:001:pair:0-1:mirror", "bottomPlayerId": "player:match-set:current:entrant:1",
+			"topPlayerId": "player:match-set:current:entrant:0", "bottomExecutionEntrantKey": "entrant:1", "topExecutionEntrantKey": "entrant:0",
+		},
+	}
+	if got := generatePairwiseMatches("match-set:current", "smoke-v1", entrants); !reflect.DeepEqual(got, want) {
+		t.Fatalf("selected Phase-259 scheduler changed:\nwant=%#v\n got=%#v", want, got)
+	}
+	for _, arena := range competitionArenaDefinitions() {
+		if stringValue(arena, "id") == "arena:open-field:v1" || mapValue(arena, "semanticAuthorityKey") != nil {
+			t.Fatalf("candidate authority leaked into selected current arenas: %+v", arena)
+		}
+	}
+}

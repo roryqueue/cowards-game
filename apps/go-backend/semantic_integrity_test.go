@@ -381,6 +381,53 @@ func TestSemanticIntegrityGoASTSchedulerGuardMutations(t *testing.T) {
 	}
 }
 
+func TestSemanticIntegrityCandidateSchedulingHasNoGameplayOrStrategyExecutionAuthority(t *testing.T) {
+	for _, path := range []string{"live_backend.go", "integrity_creation.go"} {
+		source, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		file, err := parser.ParseFile(token.NewFileSet(), path, source, 0)
+		if err != nil {
+			t.Fatal(err)
+		}
+		forbidden := map[string]bool{
+			"executeStrategy": true,
+			"runStrategy": true,
+			"runMatch": true,
+			"stepMatch": true,
+			"validateGoCanonicalGameState": true,
+			"validateCandidateChronicleEvents": true,
+			"hashCandidateArenaGeometry": true,
+			"parseConditionFromSeed": true,
+		}
+		ast.Inspect(file, func(node ast.Node) bool {
+			declaration, ok := node.(*ast.FuncDecl)
+			if !ok || !strings.Contains(declaration.Name.Name, "V119") {
+				return true
+			}
+			ast.Inspect(declaration.Body, func(child ast.Node) bool {
+				call, ok := child.(*ast.CallExpr)
+				if !ok {
+					return true
+				}
+				name := ""
+				switch called := call.Fun.(type) {
+				case *ast.Ident:
+					name = called.Name
+				case *ast.SelectorExpr:
+					name = called.Sel.Name
+				}
+				if forbidden[name] {
+					t.Fatalf("candidate structural scheduler acquired forbidden authority: %s:%s->%s", path, declaration.Name.Name, name)
+				}
+				return true
+			})
+			return false
+		})
+	}
+}
+
 func TestSemanticIntegrityVocabularyMatchesSharedCorpus(t *testing.T) {
 	corpus := loadSemanticIntegrityCorpus(t)
 	known := map[string]bool{}
