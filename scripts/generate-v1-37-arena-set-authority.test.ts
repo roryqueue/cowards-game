@@ -2,11 +2,15 @@ import { readFileSync } from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 import { describe, expect, it } from "vitest"
+/* eslint-disable-next-line no-restricted-imports -- Generator tests compare the exact source modules, not package projections. */
 import { CANONICAL_ARENA_CATALOG_V1_37 } from "../packages/spec/src/arena-catalog-v1-37.js"
+/* eslint-disable-next-line no-restricted-imports -- Generator tests pin the exact compact current selector module. */
 import { CURRENT_SEMANTIC_AUTHORITY_GENERATED } from "../packages/spec/src/current-semantic-authority-generated.js"
+/* eslint-disable-next-line no-restricted-imports -- Generator tests compare the explicit candidate-only tuple record. */
 import {
   CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE_RECORD,
 } from "../packages/spec/src/integrity-authority.js"
+/* eslint-disable-next-line no-restricted-imports -- Generator tests compare exact authority source ordering and bytes. */
 import {
   CANONICAL_SET_CONDITION_ROWS_V1_37,
   SET_CONDITION_POLICY_V1_37,
