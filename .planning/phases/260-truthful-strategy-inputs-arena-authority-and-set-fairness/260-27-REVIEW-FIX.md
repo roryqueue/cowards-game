@@ -18,3 +18,13 @@ constant itself.
 
 - Runtime-service typecheck passed.
 - Runtime-service execute-match suite passed (`35/35`).
+
+## Follow-up Finding
+
+The repository base `no-redeclare` rule also flagged the two legal TypeScript
+overload declarations used to preserve literal-key inference for the closed
+selection resolver.
+
+The overload signature and implementation now carry narrow explanatory
+suppression comments. No type, runtime value, or selector behavior changed.
+Spec lint and typecheck pass with the overload contract intact.

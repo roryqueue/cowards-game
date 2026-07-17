@@ -75,9 +75,11 @@ export function resolveSemanticAuthoritySelection<
 >(
   selector: Readonly<{ semanticAuthorityKey: Key }>,
 ): (typeof semanticAuthoritySelections)[Key]
+// eslint-disable-next-line no-redeclare -- TypeScript overload signature for unknown callers.
 export function resolveSemanticAuthoritySelection(
   selector: unknown,
 ): SemanticAuthoritySelection | undefined
+// eslint-disable-next-line no-redeclare -- TypeScript overload implementation.
 export function resolveSemanticAuthoritySelection(
   selector: unknown,
 ): SemanticAuthoritySelection | undefined {
