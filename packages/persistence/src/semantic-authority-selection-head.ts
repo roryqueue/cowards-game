@@ -995,7 +995,27 @@ const lastAbortMatches = async (
   )
   const expected =
     input.direction === "forward" ? "aborted" : "compensation-aborted"
-  return result.rows[0]?.transition_kind === expected
+  if (result.rows[0]?.transition_kind !== expected) return false
+
+  const prepared = await client.query<{ pending_intent: unknown }>(
+    `select pending_intent
+       from semantic_authority_selection_history
+      where activation_id = $1 and transition_kind = $2
+      order by sequence desc limit 1`,
+    [
+      input.activationId,
+      input.direction === "forward" ? "prepared" : "compensation-prepared",
+    ],
+  )
+  const pending = parsePending(prepared.rows[0]?.pending_intent)
+  return (
+    pending?.direction === input.direction &&
+    pending.activationId === input.activationId &&
+    (input.expectedParentHead === undefined ||
+      pending.parentHead === input.expectedParentHead) &&
+    (input.expectedSelectorManifestRoot === undefined ||
+      pending.selectorManifestRoot === input.expectedSelectorManifestRoot)
+  )
 }
 
 export const abortSemanticAuthoritySelectionTransition = async (

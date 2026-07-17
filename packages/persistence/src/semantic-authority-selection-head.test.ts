@@ -256,6 +256,16 @@ describeDatabase("semantic authority selection head", () => {
       expectedRevision: 1,
     })
     expect(repeated).toEqual(aborted)
+
+    await expect(
+      abortSemanticAuthoritySelectionTransition(pool, {
+        direction: "forward",
+        activationId: "activation:phase260:test",
+        expectedRevision: 1,
+        expectedParentHead: git("9"),
+        expectedSelectorManifestRoot: selectorManifestRoot,
+      }),
+    ).rejects.toThrow(/intent|binding|stale/iu)
   })
 
   it("recovers precommit by aborting and exact committed state by finalizing without inference", async () => {
