@@ -10,11 +10,16 @@ import type {
   StrategyInput,
 } from "@cowards/spec"
 import {
+  ARENA_CATALOG_VERSION_V1_37,
+  CANONICAL_ARENA_CATALOG_V1_37,
   CANONICAL_COMPATIBILITY_TUPLES,
+  CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE_RECORD,
   HISTORICAL_RUNTIME_V114_SEMANTIC_TUPLE,
   HISTORICAL_RUNTIME_V114_SEMANTIC_TUPLE_ID,
+  SET_CONDITION_POLICY_VERSION_V1_37,
   ChronicleValidationErrorCodeSchema,
   COMPATIBILITY_VERSIONS,
+  createSetScenarioV137,
   createMatchExecutionExactEvidenceV137,
 } from "@cowards/spec"
 import { describe, expect, it } from "vitest"
@@ -26,6 +31,7 @@ import { recordChronicleFromExecution } from "./record.js"
 import {
   migrateChronicle,
   resolveReplayCompatibilityIdentity,
+  validateCandidateReplayV119,
   validateCurrentChronicle,
   validateCurrentChronicleSemantics,
   validateChronicle,
@@ -143,6 +149,84 @@ const createCurrentReplayInput = (
 }
 
 const createChronicle = () => createCurrentReplayInput().chronicle
+
+const createCandidateReplayInputV119 = () => {
+  const arena = CANONICAL_ARENA_CATALOG_V1_37.arenas.find(
+    ({ id }) => id === "arena:smoke:v1",
+  )!
+  const scenario = createSetScenarioV137({
+    arenaCatalogVersion: ARENA_CATALOG_VERSION_V1_37,
+    arenaSemanticGeometryHash: arena.semanticGeometryHash,
+    entrantA: { entrantKey: "entrant:bottom", playerId: "bottom" },
+    entrantB: { entrantKey: "entrant:top", playerId: "top" },
+    baseSeed: "candidate-validation-seed",
+  })
+  const condition = scenario.conditions[0]!
+  const execution = MATCH_KERNEL.runMatchV119({
+    matchId: "candidate-validation-match",
+    seed: scenario.baseSeed,
+    arenaVariant: {
+      id: arena.id,
+      name: arena.name,
+      initialBounds: { ...arena.initialBounds },
+      terrainStones: arena.terrainStones.map((position) => ({ ...position })),
+    },
+    bottomPlayerId: condition.bottomPlayerId,
+    topPlayerId: condition.topPlayerId,
+    bottomStrategyRevisionId: "bottom-rev",
+    topStrategyRevisionId: "top-rev",
+    initialInitiativePlayerId: condition.initialInitiativePlayerId,
+    runtime,
+    maxPhases: 1,
+  })
+  const persistedMatch = {
+    semanticAuthorityKey: "runtime-v1.19" as const,
+    matchId: "candidate-validation-match",
+    seed: scenario.baseSeed,
+    arenaVariantId: arena.id,
+    bottomStrategyRevisionId: "bottom-rev",
+    topStrategyRevisionId: "top-rev",
+    bottomPlayerId: condition.bottomPlayerId,
+    topPlayerId: condition.topPlayerId,
+    bottomEntrantKey: condition.bottomEntrantKey,
+    topEntrantKey: condition.topEntrantKey,
+    setPolicyVersion: SET_CONDITION_POLICY_VERSION_V1_37,
+    scenarioId: scenario.scenarioId,
+    conditionId: condition.conditionId,
+    conditionOrdinal: condition.ordinal,
+    conditionSuffix: condition.suffix,
+    requestIdentity: condition.requestIdentity,
+    arenaCatalogVersion: ARENA_CATALOG_VERSION_V1_37,
+    arenaSemanticGeometryHash: arena.semanticGeometryHash,
+    initialInitiativeEntrantKey: condition.initialInitiativeEntrantKey,
+    initialInitiativePlayerId: condition.initialInitiativePlayerId,
+  }
+  const recording = recordChronicleFromExecution({
+    execution,
+    metadata: {
+      schemaVersion: "chronicle-v1.4",
+      semanticTupleId: CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE_RECORD.tupleId,
+      semanticTuple: CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE_RECORD.tuple,
+    },
+    candidateMatch: persistedMatch,
+  } as never)
+  if (!recording.ok || recording.candidateReproducibility === undefined) {
+    throw new Error(
+      recording.ok
+        ? "candidate reproducibility missing"
+        : recording.failure.code,
+    )
+  }
+  return {
+    profile: "candidate-v1.19" as const,
+    compatibility: recording.semanticIdentity,
+    chronicle: recording.chronicle,
+    boundaryAnchors: recording.boundaryAnchors,
+    execution,
+    candidateReproducibility: recording.candidateReproducibility,
+    persistedMatch,
+  }
+}
 
 const createExecutionEvidence = (
   matchId: string,
@@ -677,6 +761,125 @@ describe("validateChronicle", () => {
       status: "current_exact",
       tupleId: input.compatibility.tupleId,
     })
+  })
+
+  it("admits exact runtime-v1.19 replay truth as inactive non-publishable evidence", () => {
+    const input = createCandidateReplayInputV119()
+    const expected = {
+      ok: true,
+      profile: "candidate-v1.19",
+      publishable: false,
+      current: false,
+      candidate: true,
+      issues: [],
+      truncated: false,
+    }
+
+    expect(validateCandidateReplayV119(input)).toEqual(expected)
+    expect(validateReplayInput(input)).toEqual(expected)
+    expect(resolveReplayCompatibilityIdentity(input)).toEqual({
+      status: "candidate_v1_19_exact",
+      tupleId: input.compatibility.tupleId,
+    })
+  })
+
+  it.each([
+    ["scenarioId", `set-scenario:sha256:${"0".repeat(64)}`],
+    ["conditionId", `set-condition:sha256:${"0".repeat(64)}`],
+    ["conditionOrdinal", 1],
+    ["conditionSuffix", "a-bottom-b-first"],
+    ["requestIdentity", `set-request:sha256:${"0".repeat(64)}`],
+    ["arenaCatalogVersion", "catalog:forged"],
+    ["arenaSemanticGeometryHash", `sha256:${"0".repeat(64)}`],
+    ["bottomEntrantKey", "entrant:forged"],
+    ["topEntrantKey", "entrant:forged"],
+    ["initialInitiativeEntrantKey", "entrant:top"],
+    ["initialInitiativePlayerId", "top"],
+  ] as const)(
+    "rejects replay/persistence agreement on forged candidate %s authority",
+    (field, replacement) => {
+      const input = createCandidateReplayInputV119()
+      const match = {
+        ...input.persistedMatch,
+        [field]: replacement,
+      }
+      const result = validateCandidateReplayV119({
+        ...input,
+        candidateReproducibility: {
+          ...input.candidateReproducibility,
+          match,
+        },
+        persistedMatch: match,
+      })
+
+      expect(result.ok, field).toBe(false)
+      if (result.ok) return
+      expect(result.issues.map(({ code }) => code), field).toContain(
+        field === "arenaCatalogVersion" ||
+          field === "arenaSemanticGeometryHash"
+          ? "CANDIDATE_CATALOG_INVALID"
+          : "CANDIDATE_REPRODUCIBILITY_INVALID",
+      )
+    },
+  )
+
+  it("rejects alias substitution, mixed tuples, persisted relabeling, and private extras before reconstruction", () => {
+    const input = createCandidateReplayInputV119()
+    const aliasMatch = {
+      ...input.persistedMatch,
+      arenaVariantId: "arena:open-field:v1",
+    }
+    const alias = validateCandidateReplayV119({
+      ...input,
+      candidateReproducibility: {
+        ...input.candidateReproducibility,
+        match: aliasMatch,
+      },
+      persistedMatch: aliasMatch,
+    })
+    expect(alias.ok).toBe(false)
+    expect(!alias.ok && alias.issues.map(({ code }) => code)).toEqual([
+      "CANDIDATE_CATALOG_INVALID",
+    ])
+
+    const mixed = validateCandidateReplayV119({
+      ...input,
+      compatibility: createCurrentReplayInput().compatibility,
+    })
+    expect(mixed.ok).toBe(false)
+    expect(!mixed.ok && mixed.issues.map(({ code }) => code)).toEqual([
+      "CANDIDATE_TUPLE_INVALID",
+    ])
+
+    const relabeled = validateCandidateReplayV119({
+      ...input,
+      persistedMatch: { ...input.persistedMatch, conditionOrdinal: 1 },
+    })
+    expect(relabeled.ok).toBe(false)
+    expect(!relabeled.ok && relabeled.issues.map(({ code }) => code)).toEqual([
+      "CANDIDATE_PERSISTED_MATCH_INVALID",
+    ])
+
+    const withPrivateExtra = validateCandidateReplayV119({
+      ...input,
+      persistedMatch: {
+        ...input.persistedMatch,
+        strategyMemory: { private: true },
+      },
+    })
+    expect(withPrivateExtra.ok).toBe(false)
+    expect(
+      !withPrivateExtra.ok &&
+        withPrivateExtra.issues.map(({ code }) => code),
+    ).toEqual(["CANDIDATE_PERSISTED_MATCH_INVALID"])
+  })
+
+  it("keeps candidate validation structural-only with no gameplay, runtime, or UI authority", () => {
+    const source = readFileSync(new URL("./validate.ts", import.meta.url), "utf8")
+    expect(source).not.toMatch(/MATCH_KERNEL|StrategyRuntime|runMatchV119/gu)
+    expect(source).not.toMatch(/runtime-service|strategy-provider|apps\/web/gu)
+    expect(source).not.toContain("initialInitiativePlayerId =")
+    expect(source).not.toMatch(/seed.*(?:split|slice|substring)|(?:split|slice|substring).*seed/giu)
   })
 
   it("atomically validates current tuples while preserving explicit historical dispatch", () => {
