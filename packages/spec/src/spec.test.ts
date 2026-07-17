@@ -106,8 +106,77 @@ import {
   SOLDIER_INACTIVITY_EXPLANATION_CAUSES,
 } from "./types.js"
 import type { AnalyticsGauntletRunSummary } from "./analytics.js"
+import * as publicSpec from "./index.js"
 
 describe("Coward's Game spec contracts", () => {
+  describe("versioned public semantic authority", () => {
+    it("keeps unversioned observation schemas on the generated Phase-259 selection", () => {
+      expect(publicSpec.CURRENT_SEMANTIC_RUNTIME_ABI_VERSION).toBe(
+        "strategy-runtime-abi-v1.17",
+      )
+      expect(publicSpec.StrategyInputSchema).toBe(
+        publicSpec.StrategyInputV117Schema,
+      )
+      expect(publicSpec.SoldierBrainInputSchema).toBe(
+        publicSpec.SoldierBrainInputV117Schema,
+      )
+    })
+
+    it("exports the exact v1.19 observation, arena, and Set candidates from the package root", () => {
+      const currentInput = fixtures.valid.standardStrategyInput
+      const candidateInput = {
+        ...currentInput,
+        initialInitiativePlayerId: "player:bottom",
+        hasInitialInitiative: true,
+        roundInitiativePlayerId: "player:top",
+        hasRoundInitiative: false,
+      }
+
+      expect(publicSpec.StrategyInputV119Schema.parse(candidateInput)).toEqual(
+        candidateInput,
+      )
+      expect(
+        publicSpec.StrategyInputV119Schema.safeParse(currentInput).success,
+      ).toBe(false)
+      expect(
+        publicSpec.StrategyInputV119Schema.safeParse({
+          ...candidateInput,
+          initiativePlayerId: "player:bottom",
+        }).success,
+      ).toBe(false)
+      expect(publicSpec.STRATEGY_OBSERVATION_ABI_V1_19).toMatchObject({
+        runtimeAbiVersion: "strategy-runtime-abi-v1.19",
+        lifecycle: { active: false },
+      })
+      expect(publicSpec.CANONICAL_ARENA_CATALOG_V1_37.catalogVersion).toBe(
+        "canonical-arena-catalog-v1.37",
+      )
+      expect(publicSpec.CANONICAL_SET_CONDITION_POLICY_V1_37.version).toBe(
+        "canonical-set-policy-v1.37-four-condition-v1",
+      )
+    })
+
+    it("rejects partial, mixed, and premature current selectors", () => {
+      expect(
+        publicSpec.resolveCurrentSemanticAuthoritySelection({
+          semanticAuthorityKey: "runtime-v1.17",
+        }),
+      ).toEqual(publicSpec.CURRENT_SEMANTIC_AUTHORITY_GENERATED.selection)
+      for (const selector of [
+        { semanticAuthorityKey: "runtime-v1.19" },
+        { runtimeAbiVersion: "strategy-runtime-abi-v1.19" },
+        {
+          semanticAuthorityKey: "runtime-v1.17",
+          runtimeAbiVersion: "strategy-runtime-abi-v1.19",
+        },
+      ]) {
+        expect(
+          publicSpec.resolveCurrentSemanticAuthoritySelection(selector),
+        ).toBeUndefined()
+      }
+    })
+  })
+
   describe("competition-policy-v1.36", () => {
     it("POST-01/D-02 locks the exact public beta trial competition posture", () => {
       expect(COMPETITION_POLICY_V1_36_ID).toBe("competition-policy-v1.36")
