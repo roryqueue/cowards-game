@@ -20,6 +20,7 @@ import {
   type V137ConformanceCorpus,
 } from "./v1-37-conformance-corpus.js"
 import { V1_37_CONFORMANCE_CORPUS_REVIEWED_PIN } from "./v1-37-conformance-corpus-pin.js"
+import { V1_37_CONFORMANCE_CORPUS_V3_CANDIDATE_PIN } from "./v1-37-conformance-corpus-v3-candidate-pin.js"
 
 const expectedLanguages = ["typescript", "python", "rust", "zig"] as const
 const expectedKinds = [
@@ -217,6 +218,43 @@ describe("v1.37 executable conformance corpus", () => {
     })
     expect(sha256(readFileSync(activeCorpusPath, "utf8"))).toBe(
       V1_37_CONFORMANCE_CORPUS_REVIEWED_PIN.corpusFileSha256,
+    )
+  })
+
+  it("keeps Phase-259 current bytes exact while v3 is explicit candidate-only", () => {
+    const fixtureRoot = fileURLToPath(
+      new URL("./fixtures/v1-37-conformance-corpus/", import.meta.url),
+    )
+    const registryPath = path.join(fixtureRoot, "registry.json")
+    const currentPinPath = fileURLToPath(
+      new URL("./v1-37-conformance-corpus-pin.ts", import.meta.url),
+    )
+    expect(sha256(readFileSync(registryPath, "utf8"))).toBe(
+      "sha256:440869c22aaffca1e872245809823cded028fb07783f1e7d6ece7b0b3781f3a0",
+    )
+    expect(sha256(readFileSync(currentPinPath, "utf8"))).toBe(
+      "sha256:95435d61e57c9e12106b9825d64a0a009b2381ad42ee582da0849ed56a7963ef",
+    )
+    expect(V1_37_CONFORMANCE_CORPUS.version).toBe("v2")
+    expect(V1_37_CONFORMANCE_ACTIVE_REGISTRY.activeVersion).toBe("v2")
+    expect(V1_37_CONFORMANCE_CORPUS_REVIEWED_PIN.activeVersion).toBe("v2")
+    expect(existsSync(path.join(fixtureRoot, "corpus.json"))).toBe(false)
+
+    expect(V1_37_CONFORMANCE_CORPUS_V3_CANDIDATE_PIN).toMatchObject({
+      lifecycle: "inactive-candidate",
+      current: false,
+      candidateVersion: "v3",
+    })
+    const candidatePath = path.join(
+      fileURLToPath(new URL("../../../", import.meta.url)),
+      V1_37_CONFORMANCE_CORPUS_V3_CANDIDATE_PIN.corpusPath,
+    )
+    const candidate = JSON.parse(
+      readFileSync(candidatePath, "utf8"),
+    ) as V137ConformanceCorpus
+    expect(validateV137ConformanceCorpus(candidate).version).toBe("v3")
+    expect(candidate.corpusRootSha256).toBe(
+      V1_37_CONFORMANCE_CORPUS_V3_CANDIDATE_PIN.corpusRootSha256,
     )
   })
 
