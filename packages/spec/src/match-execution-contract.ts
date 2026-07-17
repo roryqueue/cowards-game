@@ -31,6 +31,7 @@ import {
 } from "./runtime.js"
 import { ARENA_CATALOG_VERSION_V1_37 } from "./arena-catalog-v1-37.js"
 import { CANONICAL_SET_CONDITION_ROWS_V1_37 } from "./set-condition-policy-v1-37.js"
+import { normalizePublicOutputKey } from "./public-output-privacy.js"
 
 export const MATCH_EXECUTION_APP_CONTRACT_VERSION =
   "match-execution-app-v1" as const
@@ -501,9 +502,76 @@ type LifecycleOverride = {
 
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T
 
+const MATCH_EXECUTION_PUBLIC_RESULT_FORBIDDEN_FIELDS_V119 = new Set(
+  [
+    "source",
+    "sources",
+    "artifact",
+    "artifacts",
+    "memory",
+    "memories",
+    "strategyMemory",
+    "soldierMemory",
+    "objective",
+    "objectives",
+    "objectivePayload",
+    "objectivePayloads",
+    "receipt",
+    "receipts",
+    "diagnostic",
+    "diagnostics",
+    "rawDiagnostics",
+    "signature",
+    "signatures",
+    "key",
+    "keys",
+    "keyMaterial",
+    "hostData",
+    "hostPath",
+    "hostPaths",
+    "credential",
+    "credentials",
+    "securityInternal",
+    "securityInternals",
+    "runtimeInternal",
+    "runtimeInternals",
+  ].map(normalizePublicOutputKey),
+)
+
+export const assertMatchExecutionPublicResultV119LeakSafe = (
+  value: unknown,
+): void => {
+  assertPublicServiceDtoLeakSafe(value)
+  const visit = (node: unknown, path: string): void => {
+    if (Array.isArray(node)) {
+      node.forEach((entry, index) => visit(entry, `${path}[${index}]`))
+      return
+    }
+    if (node === null || typeof node !== "object") {
+      return
+    }
+    for (const [key, entry] of Object.entries(
+      node as Record<string, unknown>,
+    )) {
+      if (
+        MATCH_EXECUTION_PUBLIC_RESULT_FORBIDDEN_FIELDS_V119.has(
+          normalizePublicOutputKey(key),
+        )
+      ) {
+        throw new Error(
+          `Candidate Match execution public result leaks private field: ${path}.${key}`,
+        )
+      }
+      visit(entry, `${path}.${key}`)
+    }
+  }
+  visit(value, "$")
+}
+
 export const projectMatchExecutionPublicResultV119 = (
   input: unknown,
 ): MatchExecutionPublicResultV119 => {
+  assertMatchExecutionPublicResultV119LeakSafe(input)
   const source = MatchExecutionPublicResultSourceV119Schema.parse(input)
   const result = MatchExecutionPublicResultV119Schema.parse({
     contractVersion: MATCH_EXECUTION_PUBLIC_RESULT_VERSION_V119,
@@ -511,15 +579,16 @@ export const projectMatchExecutionPublicResultV119 = (
     semanticAuthorityKey: "runtime-v1.19",
     ...source,
   })
-  assertPublicServiceDtoLeakSafe(result)
+  assertMatchExecutionPublicResultV119LeakSafe(result)
   return result
 }
 
 export const parseMatchExecutionPublicResultV119 = (
   input: unknown,
 ): MatchExecutionPublicResultV119 => {
+  assertMatchExecutionPublicResultV119LeakSafe(input)
   const result = MatchExecutionPublicResultV119Schema.parse(input)
-  assertPublicServiceDtoLeakSafe(result)
+  assertMatchExecutionPublicResultV119LeakSafe(result)
   return result
 }
 

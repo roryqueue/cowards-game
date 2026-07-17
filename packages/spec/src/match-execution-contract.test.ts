@@ -180,10 +180,9 @@ describe("match execution app contract v1", () => {
 
     for (const field of poisonFields) {
       for (const nestingPath of nestingPaths) {
-        const poisoned = structuredClone(candidatePublicResultSourceV119) as Record<
-          string,
-          unknown
-        >
+        const poisoned = JSON.parse(
+          JSON.stringify(candidatePublicResultSourceV119),
+        ) as Record<string, unknown>
         let target = poisoned
         for (const segment of nestingPath) {
           target = target[segment] as Record<string, unknown>
