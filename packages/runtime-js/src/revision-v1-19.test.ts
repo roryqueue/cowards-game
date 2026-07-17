@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
-import { buildStrategyRevision } from "./revision.js"
-import { createRuntimeFromRevision } from "./executor.js"
+import { createSubprocessStrategyExecutionAdapter } from "./subprocess-adapter.js"
+import { transpileStrategySource } from "./transpile.js"
 import {
   createCandidateObservationTransportRequestV119,
   executeCandidateObservationTransportV119,
@@ -33,7 +33,15 @@ const soldierBrainInput = {
     facing: "UP",
     lastSuccessfulMoveDirection: null,
   },
-  awarenessGrid: { cells: [] },
+  awarenessGrid: {
+    cells: Array.from({ length: 25 }, (_, index) => ({
+      dx: (index % 5) - 2,
+      dy: Math.floor(index / 5) - 2,
+      absoluteX: index % 5,
+      absoluteY: Math.floor(index / 5),
+      contents: "EMPTY" as const,
+    })),
+  },
   cycleIndex: 2,
   maxCycles: 12,
   soldierMemory: null,
@@ -71,7 +79,9 @@ export default {
 
 describe("TypeScript v1.19 observation transport", () => {
   it("delivers the exact four initiative facts and slot Advance fact to the real lane", () => {
-    const runtime = createRuntimeFromRevision(buildStrategyRevision({ source }))
+    const runtime = createSubprocessStrategyExecutionAdapter()
+    const transpiled = transpileStrategySource(source)
+    if (!transpiled.ok) throw new Error(transpiled.message)
     const selectionRequest = createCandidateObservationTransportRequestV119({
       method: "selectActivations",
       kernelRequestId: "effect:v1.19:typescript-selection",
@@ -83,14 +93,26 @@ describe("TypeScript v1.19 observation transport", () => {
       selectionRequest,
       ({ input, signedInputBytes }) => {
         expect(signedInputBytes).toEqual(selectionRequest.signedInputBytes)
-        const result = runtime.selectActivations(input as never)
-        if (!result.ok) throw new Error("TypeScript selection fixture failed")
+        const result = runtime.execute({
+          source: transpiled.code,
+          methodName: "selectActivations",
+          input,
+          timeoutMs: 1_000,
+        })
+        if (!result.ok) throw new Error(`TypeScript selection fixture failed: ${JSON.stringify(result)}`)
         return { kind: "success" as const, value: result.value }
       },
     )
     expect(selection).toMatchObject({
       kind: "success",
-      value: { strategyMemory: strategyInput },
+      value: {
+        strategyMemory: {
+          initialInitiativePlayerId: "player:bottom",
+          hasInitialInitiative: true,
+          roundInitiativePlayerId: "player:top",
+          hasRoundInitiative: false,
+        },
+      },
     })
 
     const brainRequest = createCandidateObservationTransportRequestV119({
@@ -104,8 +126,13 @@ describe("TypeScript v1.19 observation transport", () => {
       brainRequest,
       ({ input, signedInputBytes }) => {
         expect(signedInputBytes).toEqual(brainRequest.signedInputBytes)
-        const result = runtime.runSoldierBrain(input as never)
-        if (!result.ok) throw new Error("TypeScript brain fixture failed")
+        const result = runtime.execute({
+          source: transpiled.code,
+          methodName: "soldierBrain",
+          input,
+          timeoutMs: 1_000,
+        })
+        if (!result.ok) throw new Error(`TypeScript brain fixture failed: ${JSON.stringify(result)}`)
         return { kind: "success" as const, value: result.value }
       },
     )
@@ -118,9 +145,9 @@ describe("TypeScript v1.19 observation transport", () => {
   })
 
   it.each([
-    ["missing", ({ hasInitialInitiative: _removed, ...rest }) => rest],
-    ["extra", (value) => ({ ...value, initiativeFromParity: true })],
-    ["contradictory", (value) => ({ ...value, hasRoundInitiative: true })],
+    ["missing", ({ hasInitialInitiative: _removed, ...rest }: typeof strategyInput) => rest],
+    ["extra", (value: typeof strategyInput) => ({ ...value, initiativeFromParity: true })],
+    ["contradictory", (value: typeof strategyInput) => ({ ...value, hasRoundInitiative: true })],
   ] as const)("rejects %s observation input before guest execution", (_name, mutate) => {
     let guestStarted = false
     const request = createCandidateObservationTransportRequestV119({
