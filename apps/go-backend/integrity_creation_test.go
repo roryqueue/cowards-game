@@ -161,6 +161,226 @@ func TestCandidateIntegrityCreationV119OwnsOneAtomicFourConditionTransaction(t *
 	}
 }
 
+func TestCandidateIntegrityCreationV119PostgresPublishesExactlyFourOrNothing(t *testing.T) {
+	databaseURL := os.Getenv("COWARDS_GO_BACKEND_TEST_DATABASE_URL")
+	if databaseURL == "" {
+		t.Skip("set COWARDS_GO_BACKEND_TEST_DATABASE_URL for candidate creation PostgreSQL proof")
+	}
+	ctx := context.Background()
+	admin, err := pgxpool.New(ctx, databaseURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer admin.Close()
+	schema := "candidate_creation_" + strings.ReplaceAll(randomID(), "-", "")
+	if _, err := admin.Exec(ctx, "create schema "+pgx.Identifier{schema}.Sanitize()); err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _, _ = admin.Exec(ctx, "drop schema "+pgx.Identifier{schema}.Sanitize()+" cascade") }()
+	config, err := pgxpool.ParseConfig(databaseURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	config.AfterConnect = func(ctx context.Context, connection *pgx.Conn) error {
+		_, err := connection.Exec(ctx, "set search_path to "+pgx.Identifier{schema}.Sanitize())
+		return err
+	}
+	pool, err := pgxpool.NewWithConfig(ctx, config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer pool.Close()
+	files, err := filepath.Glob("../../packages/persistence/migrations/*.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	sort.Strings(files)
+	for _, file := range files {
+		sql, readErr := os.ReadFile(file)
+		if readErr != nil {
+			t.Fatal(readErr)
+		}
+		if _, migrationErr := pool.Exec(ctx, string(sql)); migrationErr != nil {
+			t.Fatalf("migration %s: %v", filepath.Base(file), migrationErr)
+		}
+	}
+
+	now := time.Date(2026, 7, 17, 12, 0, 0, 0, time.UTC)
+	namespace := "candidate:" + randomID()
+	userID, strategyID := namespace+":user", namespace+":strategy"
+	if _, err := pool.Exec(ctx, "insert into users (id,display_name,handle) values ($1,'Candidate','candidate')", userID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := pool.Exec(ctx, "insert into strategies (id,owner_user_id,name) values ($1,$2,'Candidate')", strategyID, userID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := pool.Exec(ctx, "insert into arena_variants (id,name,version,config) values ('arena:smoke:v1','Smoke','v1','{}')"); err != nil {
+		t.Fatal(err)
+	}
+
+	authority, err := candidateSchedulingAuthorityV119("runtime-v1.19")
+	if err != nil {
+		t.Fatal(err)
+	}
+	tuple := registeredCompatibilityTuple{TupleID: authority.Tuple.TupleID, Tuple: canonicalCompatibilityTuple{
+		Rules: authority.Tuple.Rules, Engine: authority.Tuple.Engine, RuntimeABI: authority.Tuple.RuntimeABI,
+		Chronicle: authority.Tuple.Chronicle, ArenaCatalog: authority.Tuple.ArenaCatalog, SetPolicy: authority.Tuple.SetPolicy,
+	}}
+	setEntrants := make([]candidateSetEntrantV119, 0, 2)
+	executionEntrants := make([]goEntrantExecutionEvidence, 0, 2)
+	revalidationIDs := make([]string, 0, 2)
+	for index, key := range []string{"entrant:a", "entrant:b"} {
+		revisionID := namespace + ":revision:" + fmt.Sprint(index)
+		language := []string{"typescript", "python"}[index]
+		artifactHash := fmt.Sprintf("%064x", 100+index)
+		lane := goExecutableLaneIdentity{
+			ProviderID: "provider:real", LanguageID: language, RuntimeID: "runtime", RuntimeVersion: "1.19",
+			ToolchainID: "toolchain", ToolchainVersion: "1", AdapterID: "lane:real", AdapterVersion: "1",
+			PolicyID: "policy", PolicyVersion: "1", CorpusID: "corpus", CorpusVersion: "1",
+			ArtifactID: namespace + ":artifact:" + fmt.Sprint(index), ArtifactSHA256: artifactHash,
+			ImplementationID: "implementation", BuildID: "build", SemanticTupleID: tuple.TupleID, SemanticTuple: tuple.Tuple,
+		}
+		if _, err := pool.Exec(ctx, `insert into strategy_revisions (
+			id,strategy_id,source,source_hash,source_bytes,runtime,engine_compatibility,validation,
+			metadata,compiled_artifact,locked_at
+		) values ($1,$2,'return {}',$3,9,$4,'{}','{"valid":true}',$5,$6,$7)`,
+			revisionID, strategyID, artifactHash, map[string]any{"language": map[string]any{"id": language}},
+			map[string]any{"providerValidation": map[string]any{"providerId": lane.ProviderID}},
+			map[string]any{"hash": "sha256:" + artifactHash, "bytes": 9}, now); err != nil {
+			t.Fatal(err)
+		}
+
+		refs := map[string]goExecutionCertificateReference{}
+		laneHash := hashCreationLaneIdentity(lane)
+		for kindIndex, kind := range []string{"containment", "conformance"} {
+			attestationID := fmt.Sprintf("%s:attestation:%d:%d", namespace, index, kindIndex)
+			certificateID := fmt.Sprintf("%s:certificate:%d:%d", namespace, index, kindIndex)
+			attestationHash := fmt.Sprintf("%064x", 200+index*10+kindIndex)
+			certificateHash := fmt.Sprintf("%064x", 300+index*10+kindIndex)
+			graphHash := fmt.Sprintf("%064x", 400+index*10+kindIndex)
+			commandHash := fmt.Sprintf("%064x", 500+index*10+kindIndex)
+			if _, err := pool.Exec(ctx, `insert into runtime_evidence_verified_attestations (
+				id,attestation_sha256,verification_status,certificate_kind,producer_id,producer_key_id,
+				trust_domain,schema_version,command_id,command_digest,corpus_id,corpus_hash,policy_id,
+				policy_hash,runtime_id,runtime_version,toolchain_id,toolchain_version,adapter_id,adapter_version,
+				artifact_id,artifact_hash,lane_identity_hash,semantic_tuple_id,result_manifest_hash,result_graph_hash,
+				original_evidence_hash,derived_certificate_version,derived_certificate_record_hash,registry_generation,
+				lane_identity,issued_at,valid_until
+			) values ($1,$2,'passed',$3,'producer','key','fixture','schema','command',$4,'corpus',$4,
+			          'policy',$4,'runtime','1.19','toolchain','1','lane:real','1',$5,$6,$7,$8,$4,$9,$4,
+			          'certificate-v1',$10,'1',$11,$12,$13)`,
+				attestationID, attestationHash, kind, commandHash, lane.ArtifactID, artifactHash, laneHash,
+				tuple.TupleID, graphHash, certificateHash, lane, now.Add(-time.Hour), now.Add(time.Hour)); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := pool.Exec(ctx, `insert into runtime_evidence_certificates (
+				id,certificate_kind,certificate_version,certificate_record_hash,certificate_status,
+				verified_attestation_id,verified_attestation_status,producer_id,schema_version,command_id,
+				command_digest,corpus_id,corpus_hash,policy_id,policy_hash,toolchain_id,toolchain_version,
+				artifact_id,artifact_hash,lane_identity_hash,lane_identity,result_graph_hash,registry_generation,
+				issued_at,fresh_until
+			) values ($1,$2,'certificate-v1',$3,'passed',$4,'passed','producer','schema','command',$5,
+			          'corpus',$5,'policy',$5,'toolchain','1',$6,$7,$8,$9,$10,'1',$11,$12)`,
+				certificateID, kind, certificateHash, attestationID, commandHash, lane.ArtifactID,
+				artifactHash, laneHash, lane, graphHash, now.Add(-time.Hour), now.Add(time.Hour)); err != nil {
+				t.Fatal(err)
+			}
+			refs[kind] = goExecutionCertificateReference{Kind: kind, CertificateID: certificateID,
+				CertificateVersion: "certificate-v1", CertificateRecordHash: certificateHash, RegistryGeneration: "1"}
+		}
+		conformance := refs["conformance"]
+		executionEntrants = append(executionEntrants, goEntrantExecutionEvidence{
+			EntrantKey: key, StrategyRevisionID: revisionID, LaneIdentity: lane,
+			ContainmentCertificateRef: refs["containment"], ConformanceCertificateRef: &conformance,
+			SchedulingDecision: goSchedulingDecision{Status: executableLaneEvidenceCounted, ReasonCode: "EXACT_V119",
+				EvaluatedAt: now.Format(canonicalJSONInstantLayout), FreshUntil: now.Add(time.Hour).Format(canonicalJSONInstantLayout), RegistryGeneration: "1"},
+		})
+		revalidationID := namespace + ":revalidation:" + fmt.Sprint(index)
+		revalidationIDs = append(revalidationIDs, revalidationID)
+		if _, err := pool.Exec(ctx, `insert into strategy_revision_v1_19_revalidations (
+			id,strategy_revision_id,source_hash,source_bytes,artifact_sha256,artifact_bytes,language_id,
+			provider_id,lane_id,runtime_abi_version,semantic_runtime_version,semantic_tuple_id,
+			execution_kind,synthetic_evidence,execution_request_root,execution_result_root,
+			execution_receipt_root,service_receipt_version,reviewed_certificate_id,
+			reviewed_certificate_sha256,review_status,evidence_status,evidence_created_at
+		) values ($1,$2,$3,9,$4,9,$5,$6,$7,'strategy-runtime-abi-v1.19','runtime-v1.19',$8,
+		          'real_service_execution',false,$9,$10,$11,'runtime-semantic-receipt-v1.19',$12,$13,
+		          'reviewed','passed',$14)`, revalidationID, revisionID, artifactHash, "sha256:"+artifactHash,
+			language, lane.ProviderID, lane.AdapterID, tuple.TupleID,
+			"sha256:"+fmt.Sprintf("%064x", 600+index*10), "sha256:"+fmt.Sprintf("%064x", 601+index*10),
+			"sha256:"+fmt.Sprintf("%064x", 602+index*10), conformance.CertificateID,
+			"sha256:"+conformance.CertificateRecordHash, time.Now().UTC().Add(-time.Hour)); err != nil {
+			t.Fatal(err)
+		}
+		setEntrants = append(setEntrants, candidateSetEntrantV119{EntrantKey: key, StrategyRevisionID: revisionID, PlayerID: "player:" + key})
+	}
+	identity, err := createGoMatchSetIntegrityIdentity(&verifiedRuntimeEvidenceAuthority{
+		AuthorityBundleHash: "sha256:" + strings.Repeat("d", 64), RegistryGeneration: "1", CompatibilityTuple: tuple,
+	}, executionEntrants)
+	if err != nil {
+		t.Fatal(err)
+	}
+	server := &LiveServer{pool: pool, now: func() time.Time { return now }}
+	create := func(matchSetID string) error {
+		_, err := server.createCandidateFourConditionMatchSetV119(ctx, candidateFourConditionCreationInputV119{
+			MatchSetID: matchSetID, CreatorUserID: userID, ArenaID: "arena:smoke:v1", BaseSeed: "seed:fixed",
+			EntrantA: setEntrants[0], EntrantB: setEntrants[1], IntegrityIdentity: identity,
+		})
+		return err
+	}
+	matchSetID := namespace + ":match-set:success"
+	if err := create(matchSetID); err != nil {
+		t.Fatalf("candidate creation failed: %v", err)
+	}
+	var scenarios, conditions, matches, jobs, memberships int
+	if err := pool.QueryRow(ctx, `select
+		(select count(*) from set_scenarios where match_set_id=$1),
+		(select count(*) from set_conditions where match_set_id=$1),
+		(select count(*) from matches where successor_match_set_id=$1),
+		(select count(*) from match_jobs where integrity_match_set_id=$1),
+		(select count(*) from match_set_matches where match_set_id=$1)`, matchSetID).Scan(&scenarios, &conditions, &matches, &jobs, &memberships); err != nil {
+		t.Fatal(err)
+	}
+	if scenarios != 1 || conditions != 4 || matches != 4 || jobs != 4 || memberships != 4 {
+		t.Fatalf("candidate matrix is incomplete: scenarios=%d conditions=%d matches=%d jobs=%d memberships=%d", scenarios, conditions, matches, jobs, memberships)
+	}
+	if _, err := pool.Exec(ctx, `create function reject_candidate_job() returns trigger language plpgsql as $$ begin raise exception 'forced job fault'; end $$;
+		create trigger reject_candidate_job before insert on match_jobs for each row execute function reject_candidate_job()`); err != nil {
+		t.Fatal(err)
+	}
+	rollbackID := namespace + ":match-set:rollback"
+	if err := create(rollbackID); err == nil {
+		t.Fatal("forced late job fault did not fail candidate creation")
+	}
+	var residual int
+	if err := pool.QueryRow(ctx, `select
+		(select count(*) from match_sets where id=$1) +
+		(select count(*) from set_scenarios where match_set_id=$1) +
+		(select count(*) from set_conditions where match_set_id=$1) +
+		(select count(*) from matches where successor_match_set_id=$1)`, rollbackID).Scan(&residual); err != nil {
+		t.Fatal(err)
+	}
+	if residual != 0 {
+		t.Fatalf("candidate rollback left %d rows", residual)
+	}
+	if _, err := pool.Exec(ctx, "drop trigger reject_candidate_job on match_jobs"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := pool.Exec(ctx, `insert into strategy_revision_v1_19_revalidation_revocations (id,revalidation_id,reason_code,evidence_root) values ($1,$2,'REVOKED',$3)`, namespace+":revocation", revalidationIDs[1], "sha256:"+strings.Repeat("f", 64)); err != nil {
+		t.Fatal(err)
+	}
+	revokedID := namespace + ":match-set:revoked"
+	if err := create(revokedID); err == nil {
+		t.Fatal("revoked admission was accepted")
+	}
+	if err := pool.QueryRow(ctx, "select count(*) from match_sets where id=$1", revokedID).Scan(&residual); err != nil {
+		t.Fatal(err)
+	}
+	if residual != 0 {
+		t.Fatalf("revoked admission left %d MatchSet rows", residual)
+	}
+}
+
 func TestCreateExhibitionMatchSetIntegrityPurposeFloors(t *testing.T) {
 	tests := []struct {
 		name    string

@@ -4391,6 +4391,251 @@ func generateCandidateFourConditionMatchesV119(
 	return matches, nil
 }
 
+type candidateFourConditionCreationInputV119 struct {
+	MatchSetID        string
+	CreatorUserID     string
+	ArenaID           string
+	BaseSeed          string
+	EntrantA          candidateSetEntrantV119
+	EntrantB          candidateSetEntrantV119
+	IntegrityIdentity *goMatchSetIntegrityIdentity
+}
+
+func loadCandidateRevisionAdmissionsV119(ctx context.Context, tx pgx.Tx, entrants []candidateSetEntrantV119) (map[string]candidateRevisionAdmissionV119, error) {
+	if tx == nil || len(entrants) != 2 {
+		return nil, errors.New("candidate revision admission unavailable")
+	}
+	sorted := append([]candidateSetEntrantV119(nil), entrants...)
+	sort.Slice(sorted, func(i, j int) bool { return sorted[i].StrategyRevisionID < sorted[j].StrategyRevisionID })
+	result := make(map[string]candidateRevisionAdmissionV119, 2)
+	for _, entrant := range sorted {
+		var lockedID string
+		if err := tx.QueryRow(ctx, `
+			select id from strategy_revisions
+			 where id=$1 and locked_at is not null
+			 for update
+		`, entrant.StrategyRevisionID).Scan(&lockedID); err != nil || lockedID != entrant.StrategyRevisionID {
+			return nil, errors.New("candidate Strategy Revision is not immutable")
+		}
+		var admission candidateRevisionAdmissionV119
+		err := tx.QueryRow(ctx, `
+			select evidence.id, evidence.strategy_revision_id,
+			       evidence.source_hash, evidence.source_bytes,
+			       evidence.artifact_sha256, evidence.artifact_bytes,
+			       evidence.language_id, evidence.provider_id, evidence.lane_id,
+			       evidence.runtime_abi_version, evidence.semantic_runtime_version,
+			       evidence.semantic_tuple_id, evidence.execution_kind,
+			       evidence.synthetic_evidence, evidence.execution_request_root,
+			       evidence.execution_result_root, evidence.execution_receipt_root,
+			       evidence.service_receipt_version, evidence.reviewed_certificate_id,
+			       evidence.reviewed_certificate_sha256, evidence.review_status,
+			       evidence.evidence_status
+			  from strategy_revision_v1_19_revalidations evidence
+			  left join strategy_revision_v1_19_revalidation_revocations revocation
+			    on revocation.revalidation_id=evidence.id
+			 where evidence.strategy_revision_id=$1
+			   and evidence.runtime_abi_version='strategy-runtime-abi-v1.19'
+			   and evidence.semantic_runtime_version='runtime-v1.19'
+			   and evidence.semantic_tuple_id='sha256:37c9a07425d454c74859112debcc3ef362d43e80d5767560d9bde28a3c8d5e73'
+			   and evidence.execution_kind='real_service_execution'
+			   and not evidence.synthetic_evidence
+			   and evidence.service_receipt_version='runtime-semantic-receipt-v1.19'
+			   and evidence.review_status='reviewed' and evidence.evidence_status='passed'
+			   and revocation.id is null
+			 for share of evidence
+		`, entrant.StrategyRevisionID).Scan(
+			&admission.RevalidationID, &admission.StrategyRevisionID,
+			&admission.SourceHash, &admission.SourceBytes,
+			&admission.ArtifactSHA256, &admission.ArtifactBytes,
+			&admission.LanguageID, &admission.ProviderID, &admission.LaneID,
+			&admission.RuntimeABIVersion, &admission.SemanticRuntimeVersion,
+			&admission.SemanticTupleID, &admission.ExecutionKind,
+			&admission.SyntheticEvidence, &admission.ExecutionRequestRoot,
+			&admission.ExecutionResultRoot, &admission.ExecutionReceiptRoot,
+			&admission.ServiceReceiptVersion, &admission.ReviewedCertificateID,
+			&admission.ReviewedCertificateSHA256, &admission.ReviewStatus,
+			&admission.EvidenceStatus,
+		)
+		if err != nil {
+			return nil, errors.New("candidate revision admission unavailable")
+		}
+		result[entrant.EntrantKey] = admission
+	}
+	return result, nil
+}
+
+func candidateConformanceValuesV119(evidence goEntrantExecutionEvidence) (any, any, any, any) {
+	if evidence.ConformanceCertificateRef == nil {
+		return nil, nil, nil, nil
+	}
+	return evidence.ConformanceCertificateRef.Kind, evidence.ConformanceCertificateRef.CertificateID,
+		evidence.ConformanceCertificateRef.CertificateVersion, evidence.ConformanceCertificateRef.CertificateRecordHash
+}
+
+func (server *LiveServer) createCandidateFourConditionMatchSetV119(ctx context.Context, input candidateFourConditionCreationInputV119) (map[string]any, error) {
+	authority, err := candidateSchedulingAuthorityV119("runtime-v1.19")
+	if err != nil || server.pool == nil || input.MatchSetID == "" || input.CreatorUserID == "" || input.IntegrityIdentity == nil {
+		return nil, errors.New("candidate creation input is invalid")
+	}
+	tuple := input.IntegrityIdentity.Tuple
+	if tuple.TupleID != authority.Tuple.TupleID || tuple.Tuple.Rules != authority.Tuple.Rules ||
+		tuple.Tuple.Engine != authority.Tuple.Engine || tuple.Tuple.RuntimeABI != authority.Tuple.RuntimeABI ||
+		tuple.Tuple.Chronicle != authority.Tuple.Chronicle || tuple.Tuple.ArenaCatalog != authority.Tuple.ArenaCatalog ||
+		tuple.Tuple.SetPolicy != authority.Tuple.SetPolicy || len(input.IntegrityIdentity.AuthorityBundleHash) != 64 ||
+		input.IntegrityIdentity.RegistryGeneration == "" || len(input.IntegrityIdentity.EvidenceSetHash) != 64 {
+		return nil, errors.New("candidate creation integrity is invalid")
+	}
+	matches, err := generateCandidateFourConditionMatchesV119(
+		"runtime-v1.19", input.MatchSetID, input.ArenaID, input.BaseSeed, input.EntrantA, input.EntrantB,
+	)
+	if err != nil || len(matches) != 4 {
+		return nil, errors.New("candidate four-condition matrix is invalid")
+	}
+	tx, err := server.pool.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.Serializable})
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	if _, err := tx.Exec(ctx, "select pg_advisory_xact_lock(hashtext('cowards-game:runtime-v1.19-candidate-creation:v1'))"); err != nil {
+		return nil, errors.New("candidate authority lock is unavailable")
+	}
+	if err := ensureCandidateCompetitionArenasV119(ctx, tx, "runtime-v1.19"); err != nil {
+		return nil, err
+	}
+	var catalogHash string
+	if err := tx.QueryRow(ctx, `
+		select semantic_geometry_hash from arena_catalog_entries
+		 where catalog_version=$1 and arena_id=$2 and arena_status='active' and schedulable
+		 for key share
+	`, authority.ArenaCatalogVersion, input.ArenaID).Scan(&catalogHash); err != nil || catalogHash != matches[0].ArenaSemanticGeometryHash {
+		return nil, errors.New("candidate arena identity is unavailable")
+	}
+	admissions, err := loadCandidateRevisionAdmissionsV119(ctx, tx, []candidateSetEntrantV119{input.EntrantA, input.EntrantB})
+	if err != nil {
+		return nil, err
+	}
+	candidateEvidence, err := validateCandidateRevisionAdmissionsV119(input.IntegrityIdentity, admissions)
+	if err != nil {
+		return nil, err
+	}
+	orderedEvidence := []candidateEntrantExecutionEvidenceV119{candidateEvidence[input.EntrantA.EntrantKey], candidateEvidence[input.EntrantB.EntrantKey]}
+	evidenceSetHash := framedCreationHash(candidateRevisionAdmissionDomainV119, []string{
+		input.IntegrityIdentity.EvidenceSetHash, orderedEvidence[0].RevisionAdmissionHash, orderedEvidence[1].RevisionAdmissionHash,
+	})
+	if _, err := tx.Exec(ctx, `
+		insert into match_sets (
+			id, status, preset_id, preset_version, matrix, creator_user_id,
+			competition_preset_id, competition_preset_version, scoring_policy_version,
+			visibility, entrant_snapshot_set, publication_policy, locked_at,
+			compatibility_tuple_id, compatibility_rules_version, compatibility_engine_version,
+			compatibility_runtime_abi_version, compatibility_chronicle_version,
+			compatibility_arena_catalog_version, compatibility_set_policy_version,
+			authority_bundle_hash, authority_registry_generation,
+			execution_evidence_set, execution_evidence_set_hash
+		) values ($1,'pending','candidate-four-condition-v1','v1',$2,$3,
+		          'candidate-four-condition-v1','v1','exhibition-points-v1:v1',
+		          'private',$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
+	`, input.MatchSetID, matches, input.CreatorUserID,
+		orderedEvidence, map[string]any{"publicResults": false, "candidateOnly": true}, server.now(),
+		tuple.TupleID, tuple.Tuple.Rules, tuple.Tuple.Engine, tuple.Tuple.RuntimeABI,
+		tuple.Tuple.Chronicle, tuple.Tuple.ArenaCatalog, tuple.Tuple.SetPolicy,
+		input.IntegrityIdentity.AuthorityBundleHash, input.IntegrityIdentity.RegistryGeneration,
+		orderedEvidence, evidenceSetHash); err != nil {
+		return nil, err
+	}
+	for _, entrant := range []candidateSetEntrantV119{input.EntrantA, input.EntrantB} {
+		evidence := candidateEvidence[entrant.EntrantKey]
+		conformanceKind, conformanceID, conformanceVersion, conformanceHash := candidateConformanceValuesV119(evidence.goEntrantExecutionEvidence)
+		if _, err := tx.Exec(ctx, `
+			insert into match_set_execution_entrants (
+				match_set_id, entrant_key, strategy_revision_id, lane_identity, lane_identity_hash,
+				containment_certificate_kind, containment_certificate_id, containment_certificate_version,
+				containment_certificate_hash, conformance_certificate_kind, conformance_certificate_id,
+				conformance_certificate_version, conformance_certificate_hash, scheduling_status,
+				scheduling_reason_code, scheduling_evaluated_at, scheduling_fresh_until,
+				authority_bundle_hash, authority_registry_generation, execution_snapshot
+			) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)
+		`, input.MatchSetID, entrant.EntrantKey, entrant.StrategyRevisionID,
+			evidence.LaneIdentity, hashCreationLaneIdentity(evidence.LaneIdentity),
+			evidence.ContainmentCertificateRef.Kind, evidence.ContainmentCertificateRef.CertificateID,
+			evidence.ContainmentCertificateRef.CertificateVersion, evidence.ContainmentCertificateRef.CertificateRecordHash,
+			conformanceKind, conformanceID, conformanceVersion, conformanceHash,
+			string(evidence.SchedulingDecision.Status), evidence.SchedulingDecision.ReasonCode,
+			evidence.SchedulingDecision.EvaluatedAt, evidence.SchedulingDecision.FreshUntil,
+			input.IntegrityIdentity.AuthorityBundleHash, input.IntegrityIdentity.RegistryGeneration, evidence); err != nil {
+			return nil, err
+		}
+	}
+	scenario := matches[0]
+	if _, err := tx.Exec(ctx, `
+		insert into set_scenarios (
+			match_set_id, scenario_id, set_policy_version, arena_catalog_version, arena_id,
+			arena_semantic_geometry_hash, entrant_a_key, entrant_b_key,
+			entrant_a_player_id, entrant_b_player_id, base_seed
+		) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+	`, input.MatchSetID, scenario.ScenarioID, scenario.SetPolicyVersion, scenario.ArenaCatalogVersion,
+		input.ArenaID, scenario.ArenaSemanticGeometryHash, input.EntrantA.EntrantKey, input.EntrantB.EntrantKey,
+		input.EntrantA.PlayerID, input.EntrantB.PlayerID, input.BaseSeed); err != nil {
+		return nil, err
+	}
+	for index, match := range matches {
+		pair, err := candidateEvidencePairV119(candidateEvidence, match)
+		if err != nil {
+			return nil, err
+		}
+		if _, err := tx.Exec(ctx, `
+			insert into set_conditions (
+				match_set_id, scenario_id, condition_id, condition_ordinal, condition_suffix,
+				request_identity, arena_catalog_version, arena_semantic_geometry_hash,
+				bottom_entrant_key, top_entrant_key, initial_initiative_entrant_key,
+				bottom_player_id, top_player_id, initial_initiative_player_id
+			) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
+		`, input.MatchSetID, match.ScenarioID, match.ConditionID, match.ConditionOrdinal, match.ConditionSuffix,
+			match.RequestIdentity, match.ArenaCatalogVersion, match.ArenaSemanticGeometryHash,
+			match.BottomEntrantKey, match.TopEntrantKey, match.InitialInitiativeEntrantKey,
+			match.BottomPlayerID, match.TopPlayerID, match.InitialInitiativePlayerID); err != nil {
+			return nil, err
+		}
+		if _, err := tx.Exec(ctx, `
+			insert into matches (
+				id, bottom_strategy_revision_id, top_strategy_revision_id, arena_variant_id, seed,
+				bottom_player_id, top_player_id, status, integrity_match_set_id,
+				bottom_execution_entrant_key, top_execution_entrant_key, bottom_execution_evidence,
+				top_execution_evidence, execution_evidence_pair_hash, successor_match_set_id,
+				successor_scenario_id, successor_condition_id, successor_condition_ordinal,
+				successor_arena_catalog_version, successor_arena_semantic_geometry_hash,
+				successor_bottom_entrant_key, successor_top_entrant_key,
+				successor_initial_initiative_entrant_key, initial_initiative_player_id
+			) values ($1,$2,$3,$4,$5,$6,$7,'pending',$8,$9,$10,$11,$12,$13,
+			          $14,$15,$16,$17,$18,$19,$20,$21,$22,$23)
+		`, match.ID, match.BottomStrategyRevisionID, match.TopStrategyRevisionID,
+			match.ArenaVariantID, match.Seed, match.BottomPlayerID, match.TopPlayerID,
+			input.MatchSetID, match.BottomEntrantKey, match.TopEntrantKey, pair.Bottom, pair.Top, pair.PairHash,
+			input.MatchSetID, match.ScenarioID, match.ConditionID, match.ConditionOrdinal,
+			match.ArenaCatalogVersion, match.ArenaSemanticGeometryHash, match.BottomEntrantKey,
+			match.TopEntrantKey, match.InitialInitiativeEntrantKey, match.InitialInitiativePlayerID); err != nil {
+			return nil, err
+		}
+		if _, err := tx.Exec(ctx, `
+			insert into match_jobs (
+				id, match_id, status, integrity_match_set_id, bottom_execution_entrant_key,
+				top_execution_entrant_key, bottom_execution_evidence, top_execution_evidence,
+				execution_evidence_pair_hash
+			) values ($1,$2,'queued',$3,$4,$5,$6,$7,$8)
+		`, "match-job:"+match.ID, match.ID, input.MatchSetID, match.BottomEntrantKey,
+			match.TopEntrantKey, pair.Bottom, pair.Top, pair.PairHash); err != nil {
+			return nil, err
+		}
+		if _, err := tx.Exec(ctx, `insert into match_set_matches (match_set_id, match_id, matrix_index) values ($1,$2,$3)`, input.MatchSetID, match.ID, index); err != nil {
+			return nil, err
+		}
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return nil, err
+	}
+	return map[string]any{"matchSetId": input.MatchSetID, "matchCount": len(matches), "status": "queued"}, nil
+}
+
 func generatePairwiseMatches(matchSetID string, matchSetPresetID string, entrants []map[string]any) []map[string]any {
 	arenaVariantIDs, seeds, mirrorSides := matchSetPresetSpec(matchSetPresetID)
 	matches := []map[string]any{}

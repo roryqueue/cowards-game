@@ -17,6 +17,8 @@ import (
 const creationEvidenceSetDomain = "cowards-game:match-set-execution-evidence-set:v1"
 const creationEvidencePairDomain = "cowards-game:match-execution-evidence-pair:v1"
 const creationLaneIdentityDomain = "cowards-game:executable-lane-identity:v1"
+const candidateRevisionAdmissionDomainV119 = "cowards-game:strategy-revision-v1.19-admission:v1"
+const candidateEvidencePairDomainV119 = "cowards-game:match-execution-evidence-pair:v1.19"
 const runtimeEvidenceV117InstalledAuthorityHeadLockSQL = "select pg_advisory_xact_lock(hashtext('cowards-game:runtime-evidence-v1.17-installed-authority-head:v1'))"
 
 type exhibitionCreationDependencies struct {
@@ -85,6 +87,106 @@ type goExecutionEvidencePair struct {
 	Bottom   goEntrantExecutionEvidence
 	Top      goEntrantExecutionEvidence
 	PairHash string
+}
+
+type candidateRevisionAdmissionV119 struct {
+	RevalidationID            string `json:"revalidationId"`
+	StrategyRevisionID        string `json:"strategyRevisionId"`
+	SourceHash                string `json:"sourceHash"`
+	SourceBytes               int    `json:"sourceBytes"`
+	ArtifactSHA256            string `json:"artifactSha256"`
+	ArtifactBytes             int    `json:"artifactBytes"`
+	LanguageID                string `json:"languageId"`
+	ProviderID                string `json:"providerId"`
+	LaneID                    string `json:"laneId"`
+	RuntimeABIVersion         string `json:"runtimeAbiVersion"`
+	SemanticRuntimeVersion    string `json:"semanticRuntimeVersion"`
+	SemanticTupleID           string `json:"semanticTupleId"`
+	ExecutionKind             string `json:"executionKind"`
+	SyntheticEvidence         bool   `json:"syntheticEvidence"`
+	ExecutionRequestRoot      string `json:"executionRequestRoot"`
+	ExecutionResultRoot       string `json:"executionResultRoot"`
+	ExecutionReceiptRoot      string `json:"executionReceiptRoot"`
+	ServiceReceiptVersion     string `json:"serviceReceiptVersion"`
+	ReviewedCertificateID     string `json:"reviewedCertificateId"`
+	ReviewedCertificateSHA256 string `json:"reviewedCertificateSha256"`
+	ReviewStatus              string `json:"reviewStatus"`
+	EvidenceStatus            string `json:"evidenceStatus"`
+}
+
+type candidateEntrantExecutionEvidenceV119 struct {
+	goEntrantExecutionEvidence
+	RevisionAdmission     candidateRevisionAdmissionV119 `json:"revisionAdmission"`
+	RevisionAdmissionHash string                         `json:"revisionAdmissionHash"`
+}
+
+type candidateExecutionEvidencePairV119 struct {
+	Bottom   candidateEntrantExecutionEvidenceV119
+	Top      candidateEntrantExecutionEvidenceV119
+	PairHash string
+}
+
+func candidateAdmissionHashV119(admission candidateRevisionAdmissionV119) string {
+	return framedCreationHash(candidateRevisionAdmissionDomainV119, []string{
+		admission.RevalidationID, admission.StrategyRevisionID, admission.SourceHash,
+		fmt.Sprint(admission.SourceBytes), admission.ArtifactSHA256, fmt.Sprint(admission.ArtifactBytes),
+		admission.LanguageID, admission.ProviderID, admission.LaneID, admission.RuntimeABIVersion,
+		admission.SemanticRuntimeVersion, admission.SemanticTupleID, admission.ExecutionKind,
+		fmt.Sprint(admission.SyntheticEvidence), admission.ExecutionRequestRoot,
+		admission.ExecutionResultRoot, admission.ExecutionReceiptRoot, admission.ServiceReceiptVersion,
+		admission.ReviewedCertificateID, admission.ReviewedCertificateSHA256,
+		admission.ReviewStatus, admission.EvidenceStatus,
+	})
+}
+
+func validateCandidateRevisionAdmissionsV119(identity *goMatchSetIntegrityIdentity, admissions map[string]candidateRevisionAdmissionV119) (map[string]candidateEntrantExecutionEvidenceV119, error) {
+	const tupleID = "sha256:37c9a07425d454c74859112debcc3ef362d43e80d5767560d9bde28a3c8d5e73"
+	if identity == nil || len(identity.Entrants) != 2 || len(identity.ByKey) != 2 || len(admissions) != 2 ||
+		identity.Tuple.TupleID != tupleID || identity.Tuple.Tuple.RuntimeABI != "strategy-runtime-abi-v1.19" ||
+		identity.Tuple.Tuple.ArenaCatalog != "canonical-arena-catalog-v1.37" ||
+		identity.Tuple.Tuple.SetPolicy != "canonical-set-policy-v1.37-four-condition-v1" {
+		return nil, errors.New("candidate revision admission unavailable")
+	}
+	result := make(map[string]candidateEntrantExecutionEvidenceV119, 2)
+	for key, entrant := range identity.ByKey {
+		admission, ok := admissions[key]
+		certificate := entrant.ConformanceCertificateRef
+		if !ok || certificate == nil || admission.RevalidationID == "" ||
+			admission.StrategyRevisionID != entrant.StrategyRevisionID || admission.SourceHash == "" || admission.SourceBytes < 0 ||
+			admission.ArtifactSHA256 != "sha256:"+entrant.LaneIdentity.ArtifactSHA256 || admission.ArtifactBytes <= 0 ||
+			admission.LanguageID != entrant.LaneIdentity.LanguageID || admission.ProviderID != entrant.LaneIdentity.ProviderID ||
+			admission.LaneID != entrant.LaneIdentity.AdapterID || admission.RuntimeABIVersion != "strategy-runtime-abi-v1.19" ||
+			admission.SemanticRuntimeVersion != "runtime-v1.19" || admission.SemanticTupleID != tupleID ||
+			admission.ExecutionKind != "real_service_execution" || admission.SyntheticEvidence ||
+			admission.ServiceReceiptVersion != "runtime-semantic-receipt-v1.19" || admission.ReviewStatus != "reviewed" ||
+			admission.EvidenceStatus != "passed" || admission.ReviewedCertificateID != certificate.CertificateID ||
+			admission.ReviewedCertificateSHA256 != "sha256:"+certificate.CertificateRecordHash ||
+			!isPrefixedLowerSHA256(admission.ArtifactSHA256) || !isPrefixedLowerSHA256(admission.ExecutionRequestRoot) ||
+			!isPrefixedLowerSHA256(admission.ExecutionResultRoot) || !isPrefixedLowerSHA256(admission.ExecutionReceiptRoot) ||
+			!isPrefixedLowerSHA256(admission.ReviewedCertificateSHA256) {
+			return nil, errors.New("candidate revision admission unavailable")
+		}
+		result[key] = candidateEntrantExecutionEvidenceV119{
+			goEntrantExecutionEvidence: entrant,
+			RevisionAdmission:          admission,
+			RevisionAdmissionHash:      candidateAdmissionHashV119(admission),
+		}
+	}
+	return result, nil
+}
+
+func candidateEvidencePairV119(evidence map[string]candidateEntrantExecutionEvidenceV119, match candidateFourConditionMatchV119) (candidateExecutionEvidencePairV119, error) {
+	bottom, bottomOK := evidence[match.BottomEntrantKey]
+	top, topOK := evidence[match.TopEntrantKey]
+	if !bottomOK || !topOK || bottom.StrategyRevisionID != match.BottomStrategyRevisionID || top.StrategyRevisionID != match.TopStrategyRevisionID {
+		return candidateExecutionEvidencePairV119{}, errors.New("candidate execution evidence pair unavailable")
+	}
+	return candidateExecutionEvidencePairV119{
+		Bottom: bottom, Top: top,
+		PairHash: framedCreationHash(candidateEvidencePairDomainV119, []string{
+			match.RequestIdentity, bottom.RevisionAdmissionHash, top.RevisionAdmissionHash,
+		}),
+	}, nil
 }
 
 type installedAuthorityReceipt struct {
