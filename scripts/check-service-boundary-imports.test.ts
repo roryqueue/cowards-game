@@ -308,4 +308,145 @@ describe("service boundary import guard", () => {
     ])
     expect(result.exitCode).toBe(1)
   })
+
+  it("fails Phase 260 consumers that import Strategy execution or evaluator ownership", () => {
+    repoRoot = mkdtempSync(path.join(tmpdir(), "cowards-boundary-"))
+    writeRepoFile(
+      repoRoot,
+      "packages/replay/src/unsafe-execution.ts",
+      "import { executeMatch } from '@cowards/engine'\nexport const replay = executeMatch\n",
+    )
+    writeRepoFile(
+      repoRoot,
+      "packages/persistence/src/unsafe-evaluator.ts",
+      "import { evaluateStrategy } from '@cowards/runtime-js'\nexport const evaluate = evaluateStrategy\n",
+    )
+
+    const result = analyzeServiceBoundaryImports({ repoRoot })
+
+    expect(result.ownershipOffenses).toEqual([
+      {
+        path: "packages/persistence/src/unsafe-evaluator.ts",
+        line: 1,
+        pattern: "strategy-execution-ownership:evaluateStrategy",
+      },
+      {
+        path: "packages/replay/src/unsafe-execution.ts",
+        line: 1,
+        pattern: "strategy-execution-ownership:executeMatch",
+      },
+    ])
+    expect(result.exitCode).toBe(1)
+  })
+
+  it("fails non-kernel observation derivation and seed-encoded fairness", () => {
+    repoRoot = mkdtempSync(path.join(tmpdir(), "cowards-boundary-"))
+    writeRepoFile(
+      repoRoot,
+      "packages/persistence/src/derived-observations.ts",
+      [
+        "export const observe = (seed: string, roundNumber: number, events: readonly string[]) => ({",
+        "  initialInitiativePlayerId: seed.endsWith(':first') ? 'player:a' : 'player:b',",
+        "  roundInitiativePlayerId: roundNumber % 2 === 0 ? 'player:a' : 'player:b',",
+        "  hasAdvancedThisActivation: events.includes('MOVE_ADVANCED'),",
+        "})",
+      ].join("\n"),
+    )
+    writeRepoFile(
+      repoRoot,
+      "packages/persistence/src/candidate-fairness.ts",
+      [
+        "export const candidate = { semanticAuthorityKey: 'runtime-v1.19' }",
+        "export const fairness = (seed: string) => seed.endsWith(':mirror')",
+      ].join("\n"),
+    )
+
+    const result = analyzeServiceBoundaryImports({ repoRoot })
+
+    expect(result.ownershipOffenses.map(({ pattern }) => pattern)).toEqual([
+      "kernel-observation-derivation:hasAdvancedThisActivation",
+      "kernel-observation-derivation:initialInitiativePlayerId",
+      "kernel-observation-derivation:roundInitiativePlayerId",
+      "set-fairness-from-seed",
+    ])
+    expect(result.exitCode).toBe(1)
+  })
+
+  it("fails handwritten successor geometry, Go rules ownership, and current-selector bypass", () => {
+    repoRoot = mkdtempSync(path.join(tmpdir(), "cowards-boundary-"))
+    writeRepoFile(
+      repoRoot,
+      "apps/web/app/candidate-arena.ts",
+      [
+        "export const arena = {",
+        "  semanticAuthorityKey: 'runtime-v1.19',",
+        "  id: 'arena:smoke:v1',",
+        "  initialBounds: { minX: 0, maxX: 11, minY: 0, maxY: 11 },",
+        "  terrainStones: [],",
+        "}",
+      ].join("\n"),
+    )
+    writeRepoFile(
+      repoRoot,
+      "apps/web/app/current-semantic-authority.ts",
+      "export const CURRENT_SEMANTIC_AUTHORITY_KEY = 'runtime-v1.19'\n",
+    )
+    writeRepoFile(
+      repoRoot,
+      "apps/go-backend/candidate_rules.go",
+      [
+        "package main",
+        "func candidateRules() string {",
+        "  authority := \"runtime-v1.19\"",
+        "  _ = resolveBackstab()",
+        "  return authority",
+        "}",
+      ].join("\n"),
+    )
+
+    const result = analyzeServiceBoundaryImports({ repoRoot })
+
+    expect(result.ownershipOffenses.map(({ pattern }) => pattern)).toEqual([
+      "go-gameplay-ownership:resolveBackstab",
+      "current-selector-bypass",
+      "handwritten-successor-arena-geometry",
+    ])
+    expect(result.exitCode).toBe(1)
+  })
+
+  it("allows exact spec projections, transport-only consumers, and historical dispatch", () => {
+    repoRoot = mkdtempSync(path.join(tmpdir(), "cowards-boundary-"))
+    writeRepoFile(
+      repoRoot,
+      "packages/spec/src/arena-catalog-v1-37.ts",
+      [
+        "export const arena = {",
+        "  id: 'arena:smoke:v1',",
+        "  initialBounds: { minX: 0, maxX: 11, minY: 0, maxY: 11 },",
+        "  terrainStones: [],",
+        "}",
+      ].join("\n"),
+    )
+    writeRepoFile(
+      repoRoot,
+      "packages/replay/src/candidate-transport.ts",
+      [
+        "import { CANONICAL_ARENA_CATALOG_V1_37 } from '@cowards/spec'",
+        "export const transport = (input: { initialInitiativePlayerId: string }) => ({",
+        "  catalog: CANONICAL_ARENA_CATALOG_V1_37,",
+        "  initialInitiativePlayerId: input.initialInitiativePlayerId,",
+        "})",
+      ].join("\n"),
+    )
+    writeRepoFile(
+      repoRoot,
+      "packages/replay/src/historical-v1-4-transition.ts",
+      "export const historical = { seed: 'seed:old:mirror' }\n",
+    )
+
+    const result = analyzeServiceBoundaryImports({ repoRoot })
+
+    expect(result.ownershipOffenses).toEqual([])
+    expect(result.exitCode).toBe(0)
+  })
 })
