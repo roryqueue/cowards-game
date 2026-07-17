@@ -16,9 +16,11 @@ const sha256 = (value: Uint8Array | string): `sha256:${string}` =>
 const sourceBytes = new TextEncoder().encode("export const strategy = {}")
 const artifactBytes = new TextEncoder().encode("compiled exact artifact")
 
-const pins: RevisionRevalidationCandidatePinsV119 = {
+const pins = {
   candidateStatus: "inactive-candidate",
   current: false,
+  pinSource: "explicit-candidate-pins",
+  resolvedFromCurrentRegistry: false,
   runtimeAbiVersion: "strategy-runtime-abi-v1.19",
   semanticRuntimeVersion: "runtime-v1.19",
   semanticTupleId: CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE_ID,
@@ -31,11 +33,15 @@ const pins: RevisionRevalidationCandidatePinsV119 = {
   workshopVersion: "v1.19",
   workshopRootSha256: sha256("workshop-root"),
   workshopPinSha256: sha256("workshop-pin"),
+  certificateVersion: "runtime-conformance-certificate-v1.19",
+  certificateId: "certificate:typescript:v1.19:candidate",
+  certificateSha256: sha256("certificate"),
+  certificateStatus: "reviewed-inactive-candidate",
   runtimeIdentityRoot: sha256("runtime"),
   toolchainIdentityRoot: sha256("toolchain"),
   adapterIdentityRoot: sha256("adapter"),
   containmentEvidenceRoot: sha256("containment"),
-}
+} as unknown as RevisionRevalidationCandidatePinsV119
 
 const selectInput = (
   hasInitialInitiative: boolean,
@@ -209,6 +215,9 @@ describe("revision-specific runtime-v1.19 revalidation", () => {
       runtimeAbiVersion: "strategy-runtime-abi-v1.19",
       semanticRuntimeVersion: "runtime-v1.19",
       semanticTupleId: CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE_ID,
+      certificateVersion: "runtime-conformance-certificate-v1.19",
+      certificateId: "certificate:typescript:v1.19:candidate",
+      certificateSha256: pins.certificateSha256,
       probeCount: 6,
       probeIds: REQUIRED_REVISION_REVALIDATION_PROBES_V1_19,
     })
@@ -269,5 +278,91 @@ describe("revision-specific runtime-v1.19 revalidation", () => {
       },
     })
     expect(systemFailure).not.toHaveProperty("receipt")
+  })
+
+  it("is deterministic for an exact rerun and never serializes provider poison", () => {
+    const executeProvider = vi.fn(realSuccess)
+    const first = revalidateStrategyRevisionV119(request(executeProvider))
+    const second = revalidateStrategyRevisionV119(request(executeProvider))
+    expect(second).toEqual(first)
+    expect(executeProvider).toHaveBeenCalledTimes(12)
+    expect(JSON.stringify(first)).not.toMatch(
+      /sourceText|artifactBytesBase64|strategyMemory|soldierMemory|objective|privateDiagnostics|hostPath|private\/runtime/iu,
+    )
+  })
+
+  it.each([
+    ["changed source", { revision: { ...revision, sourceHash: "0".repeat(64) } }],
+    [
+      "changed artifact",
+      { revision: { ...revision, artifactSha256: sha256("other artifact") } },
+    ],
+    [
+      "old tuple",
+      { pins: { ...pins, semanticTupleId: `sha256:${"0".repeat(64)}` } },
+    ],
+    [
+      "old ABI",
+      { pins: { ...pins, runtimeAbiVersion: "strategy-runtime-abi-v1.18" } },
+    ],
+    [
+      "old certificate",
+      { pins: { ...pins, certificateVersion: "runtime-conformance-certificate-v1.18" } },
+    ],
+    [
+      "current registry substitution",
+      { pins: { ...pins, resolvedFromCurrentRegistry: true } },
+    ],
+    ["partial probe", { probes: probes().slice(0, -1) }],
+    ["duplicate probe", { probes: [...probes().slice(0, -1), probes()[0]!] }],
+  ])("rejects %s before provider execution", (_name, override) => {
+    const executeProvider = vi.fn(realSuccess)
+    const result = revalidateStrategyRevisionV119({
+      ...request(executeProvider),
+      ...override,
+    } as never)
+    expect(result).toMatchObject({
+      kind: "system_failure",
+      failure: { code: "REVALIDATION_REJECTED", retryable: false },
+    })
+    expect(result).not.toHaveProperty("receipt")
+    expect(executeProvider).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    ["sibling receipt", { strategyRevisionId: "revision:sibling" }],
+    ["changed source claim", { sourceHash: "1".repeat(64) }],
+    ["changed artifact claim", { artifactSha256: sha256("sibling artifact") }],
+    ["wrong provider", { providerId: "strategy-language-provider-python" }],
+    ["wrong lane", { laneId: "lane:python:v1.19" }],
+    ["old tuple claim", { semanticTupleId: `sha256:${"2".repeat(64)}` }],
+    ["substituted pins", { candidatePinsRoot: sha256("current registry") }],
+    ["compile-only claim", { executionKind: "compile_only" }],
+    ["synthetic claim", { syntheticEvidence: true }],
+    ["guest never started", { guestStarted: false }],
+    ["guest incomplete", { guestCompleted: false }],
+  ])("rejects provider %s as inadmissible", (_name, evidenceOverride) => {
+    const executeProvider = vi.fn(
+      (input: Parameters<RealProviderRevalidationExecutionV119>[0]) => {
+        const base = realSuccess(input)
+        return {
+          ...base,
+          value: {
+            ...base.value,
+            evidence: { ...base.value.evidence, ...evidenceOverride },
+          },
+        } as never
+      },
+    )
+    const result = revalidateStrategyRevisionV119(request(executeProvider))
+    expect(result).toMatchObject({
+      kind: "system_failure",
+      failure: {
+        code: "REVALIDATION_EVIDENCE_MISMATCH",
+        retryable: false,
+      },
+    })
+    expect(result).not.toHaveProperty("receipt")
+    expect(executeProvider).toHaveBeenCalledTimes(1)
   })
 })
