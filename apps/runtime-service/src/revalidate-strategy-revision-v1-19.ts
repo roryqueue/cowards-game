@@ -422,7 +422,7 @@ const providerRevisionCopy = (
   laneId: revision.laneId,
 })
 
-export const revalidateStrategyRevisionV119 = (
+const revalidateExactStrategyRevisionV119 = (
   input: RevalidateStrategyRevisionV119Input,
 ): StrategyRevisionRevalidationResultV119 => {
   const revisionId =
@@ -498,9 +498,17 @@ export const revalidateStrategyRevisionV119 = (
       executeCandidate: () => input.executeProvider(providerInput),
     })
     if (providerResult.kind === "player_violation") {
-      const code = /^[A-Z][A-Z0-9_]{0,63}$/u.test(
-        providerResult.violation.code,
-      )
+      if (
+        providerResult.violation === null ||
+        typeof providerResult.violation !== "object" ||
+        typeof providerResult.violation.code !== "string"
+      ) {
+        return systemFailure(
+          revisionId,
+          "REVALIDATION_EVIDENCE_MISMATCH",
+        )
+      }
+      const code = /^[A-Z][A-Z0-9_]{0,63}$/u.test(providerResult.violation.code)
         ? providerResult.violation.code
         : "PLAYER_VIOLATION"
       return {
@@ -514,6 +522,16 @@ export const revalidateStrategyRevisionV119 = (
       }
     }
     if (providerResult.kind === "system_failure") {
+      if (
+        providerResult.failure === null ||
+        typeof providerResult.failure !== "object" ||
+        typeof providerResult.failure.retryable !== "boolean"
+      ) {
+        return systemFailure(
+          revisionId,
+          "REVALIDATION_EVIDENCE_MISMATCH",
+        )
+      }
       return systemFailure(
         revisionId,
         "PROVIDER_SYSTEM_FAILURE",
@@ -586,4 +604,31 @@ export const revalidateStrategyRevisionV119 = (
     ),
   }
   return deepFreeze({ kind: "success", receipt })
+}
+
+/**
+ * Fail-closed public service boundary. Provider output is hostile even though
+ * the provider executor itself is a runtime-service-owned dependency.
+ */
+export const revalidateStrategyRevisionV119 = (
+  input: RevalidateStrategyRevisionV119Input,
+): StrategyRevisionRevalidationResultV119 => {
+  let revisionId = "revision:unknown"
+  try {
+    const candidate = (input as unknown as { revision?: unknown })?.revision
+    if (candidate !== null && typeof candidate === "object") {
+      const id = (candidate as { strategyRevisionId?: unknown })
+        .strategyRevisionId
+      if (typeof id === "string" && PUBLIC_ID.test(id)) {
+        revisionId = id
+      }
+    }
+    return revalidateExactStrategyRevisionV119(input)
+  } catch {
+    return systemFailure(
+      revisionId,
+      "REVALIDATION_EVIDENCE_MISMATCH",
+      false,
+    )
+  }
 }
