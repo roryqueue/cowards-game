@@ -1,4 +1,10 @@
-import type { ArenaVariantId } from "@cowards/spec"
+import {
+  ARENA_CATALOG_VERSION_V1_37,
+  CANONICAL_ARENA_CATALOG_V1_37,
+  CURRENT_SEMANTIC_AUTHORITY_KEY,
+  SET_CONDITION_POLICY_VERSION_V1_37,
+  type ArenaVariantId,
+} from "@cowards/spec"
 
 export type MatchSetPresetId = "smoke-v1" | "standard-v1" | "stress-v1"
 
@@ -8,6 +14,15 @@ export interface MatchSetPreset {
   arenaVariantIds: ArenaVariantId[]
   seeds: string[]
   mirrorSides: boolean
+}
+
+export interface MatchSetPresetV119Candidate {
+  semanticAuthorityKey: "runtime-v1.19"
+  id: MatchSetPresetId
+  arenaCatalogVersion: typeof ARENA_CATALOG_VERSION_V1_37
+  setPolicyVersion: typeof SET_CONDITION_POLICY_VERSION_V1_37
+  arenaVariantIds: ArenaVariantId[]
+  baseSeeds: string[]
 }
 
 export const MATCH_SET_PRESETS = [
@@ -43,7 +58,7 @@ export const MATCH_SET_PRESETS = [
   },
 ] as const satisfies readonly MatchSetPreset[]
 
-export const getMatchSetPreset = (id: MatchSetPresetId): MatchSetPreset => {
+const cloneLegacyPreset = (id: MatchSetPresetId): MatchSetPreset => {
   const preset = MATCH_SET_PRESETS.find((candidate) => candidate.id === id)
   if (!preset) {
     throw new Error(`Unknown MatchSet preset: ${id}`)
@@ -55,4 +70,63 @@ export const getMatchSetPreset = (id: MatchSetPresetId): MatchSetPreset => {
     seeds: [...preset.seeds],
     mirrorSides: preset.mirrorSides,
   }
+}
+
+const schedulableCandidateArenaIds = new Set(
+  CANONICAL_ARENA_CATALOG_V1_37.arenas
+    .filter(({ status, schedulable }) => status === "active" && schedulable)
+    .map(({ id }) => id),
+)
+
+export const MATCH_SET_PRESETS_V1_19_CANDIDATE = MATCH_SET_PRESETS.map(
+  (preset): MatchSetPresetV119Candidate => ({
+    semanticAuthorityKey: "runtime-v1.19",
+    id: preset.id,
+    arenaCatalogVersion: ARENA_CATALOG_VERSION_V1_37,
+    setPolicyVersion: SET_CONDITION_POLICY_VERSION_V1_37,
+    arenaVariantIds: preset.arenaVariantIds.filter((arenaVariantId) =>
+      schedulableCandidateArenaIds.has(arenaVariantId),
+    ),
+    baseSeeds: [...preset.seeds],
+  }),
+)
+
+export type VersionedMatchSetPreset =
+  | MatchSetPreset
+  | MatchSetPresetV119Candidate
+
+export const resolveVersionedMatchSetPreset = (input: {
+  semanticAuthorityKey: string
+  presetId: MatchSetPresetId
+}): VersionedMatchSetPreset | undefined => {
+  if (String(input.semanticAuthorityKey) === "runtime-v1.17") {
+    return cloneLegacyPreset(input.presetId)
+  }
+  if (String(input.semanticAuthorityKey) !== "runtime-v1.19") {
+    return undefined
+  }
+  const preset = MATCH_SET_PRESETS_V1_19_CANDIDATE.find(
+    ({ id }) => id === input.presetId,
+  )
+  return preset === undefined
+    ? undefined
+    : {
+        semanticAuthorityKey: preset.semanticAuthorityKey,
+        id: preset.id,
+        arenaCatalogVersion: preset.arenaCatalogVersion,
+        setPolicyVersion: preset.setPolicyVersion,
+        arenaVariantIds: [...preset.arenaVariantIds],
+        baseSeeds: [...preset.baseSeeds],
+      }
+}
+
+export const getMatchSetPreset = (id: MatchSetPresetId): MatchSetPreset => {
+  const preset = resolveVersionedMatchSetPreset({
+    semanticAuthorityKey: CURRENT_SEMANTIC_AUTHORITY_KEY,
+    presetId: id,
+  })
+  if (!preset || "semanticAuthorityKey" in preset) {
+    throw new Error("Current MatchSet preset selector is not Phase-259 exact.")
+  }
+  return preset
 }

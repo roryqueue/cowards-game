@@ -5,6 +5,13 @@ import type {
   PlayerId,
   StrategyRevisionId,
 } from "@cowards/spec"
+import {
+  ARENA_CATALOG_VERSION_V1_37,
+  CANONICAL_ARENA_CATALOG_V1_37,
+  SET_CONDITION_POLICY_VERSION_V1_37,
+  createSetScenarioV137,
+  type SetConditionPolicyRowV137,
+} from "@cowards/spec"
 import type { Pool } from "pg"
 import { withTransaction } from "./db.js"
 import {
@@ -18,7 +25,7 @@ import {
 import { createRepositories } from "./repositories.js"
 import { DEFAULT_MAX_JOB_ATTEMPTS, type MatchStatus } from "./schema.js"
 
-export interface CreateMatchRecordInput {
+export interface CreateMatchRecordInputV117 {
   id: MatchId
   bottomStrategyRevisionId: StrategyRevisionId
   topStrategyRevisionId: StrategyRevisionId
@@ -30,13 +37,32 @@ export interface CreateMatchRecordInput {
   topEntrantKey: string
 }
 
+export interface CreateMatchRecordInputV119
+  extends CreateMatchRecordInputV117 {
+  semanticAuthorityKey: "runtime-v1.19"
+  setPolicyVersion: typeof SET_CONDITION_POLICY_VERSION_V1_37
+  scenarioId: `set-scenario:sha256:${string}`
+  conditionId: `set-condition:sha256:${string}`
+  conditionOrdinal: 0 | 1 | 2 | 3
+  conditionSuffix: SetConditionPolicyRowV137["suffix"]
+  requestIdentity: `set-request:sha256:${string}`
+  arenaCatalogVersion: typeof ARENA_CATALOG_VERSION_V1_37
+  arenaSemanticGeometryHash: `sha256:${string}`
+  initialInitiativeEntrantKey: string
+  initialInitiativePlayerId: PlayerId
+}
+
+export type CreateMatchRecordInput =
+  | CreateMatchRecordInputV117
+  | CreateMatchRecordInputV119
+
 export interface CreateMatchIntegrityIdentity {
   matchSetId: MatchSetId
   identity: Readonly<MatchSetIntegrityIdentity>
   evidencePair: Readonly<MatchExecutionEvidencePair>
 }
 
-export interface CreateMatchInput extends CreateMatchRecordInput {
+export type CreateMatchInput = CreateMatchRecordInput & {
   integrityIdentity: Readonly<CreateMatchIntegrityIdentity>
 }
 
@@ -91,6 +117,73 @@ export const validateCreateMatchRecordInput = (
   if (input.bottomEntrantKey === input.topEntrantKey) {
     throw new IntegrityEvidenceInputError(
       "Match side entrant keys must be distinct.",
+    )
+  }
+  if (!("semanticAuthorityKey" in input)) {
+    return
+  }
+  if (input.semanticAuthorityKey !== "runtime-v1.19") {
+    throw new IntegrityEvidenceInputError(
+      "Unknown Match scheduling semantic authority.",
+    )
+  }
+  if (
+    input.setPolicyVersion !== SET_CONDITION_POLICY_VERSION_V1_37 ||
+    input.arenaCatalogVersion !== ARENA_CATALOG_VERSION_V1_37
+  ) {
+    throw new IntegrityEvidenceInputError(
+      "Successor Match policy or arena catalog version is not exact.",
+    )
+  }
+  const arena = CANONICAL_ARENA_CATALOG_V1_37.arenas.find(
+    ({ id }) => id === input.arenaVariantId,
+  )
+  if (
+    !arena ||
+    arena.status !== "active" ||
+    !arena.schedulable ||
+    arena.semanticGeometryHash !== input.arenaSemanticGeometryHash
+  ) {
+    throw new IntegrityEvidenceInputError(
+      "Successor Match requires an exact schedulable semantic arena.",
+    )
+  }
+
+  const entrantAIsBottom = input.conditionOrdinal < 2
+  const scenario = createSetScenarioV137({
+    arenaCatalogVersion: input.arenaCatalogVersion,
+    arenaSemanticGeometryHash: input.arenaSemanticGeometryHash,
+    entrantA: entrantAIsBottom
+      ? {
+          entrantKey: input.bottomEntrantKey,
+          playerId: input.bottomPlayerId,
+        }
+      : { entrantKey: input.topEntrantKey, playerId: input.topPlayerId },
+    entrantB: entrantAIsBottom
+      ? { entrantKey: input.topEntrantKey, playerId: input.topPlayerId }
+      : {
+          entrantKey: input.bottomEntrantKey,
+          playerId: input.bottomPlayerId,
+        },
+    baseSeed: input.seed,
+  })
+  const expected = scenario.conditions[input.conditionOrdinal]
+  if (
+    scenario.scenarioId !== input.scenarioId ||
+    !expected ||
+    expected.conditionId !== input.conditionId ||
+    expected.suffix !== input.conditionSuffix ||
+    expected.requestIdentity !== input.requestIdentity ||
+    expected.bottomEntrantKey !== input.bottomEntrantKey ||
+    expected.topEntrantKey !== input.topEntrantKey ||
+    expected.bottomPlayerId !== input.bottomPlayerId ||
+    expected.topPlayerId !== input.topPlayerId ||
+    expected.initialInitiativeEntrantKey !==
+      input.initialInitiativeEntrantKey ||
+    expected.initialInitiativePlayerId !== input.initialInitiativePlayerId
+  ) {
+    throw new IntegrityEvidenceInputError(
+      "Successor Match condition identity is not canonical.",
     )
   }
 }
