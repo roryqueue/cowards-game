@@ -1,6 +1,11 @@
 import { createHash, randomUUID } from "node:crypto"
 import {
+  ARENA_CATALOG_VERSION_V1_37,
+  CANONICAL_ARENA_CATALOG_V1_37,
   CANONICAL_COMPATIBILITY_TUPLES,
+  CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE,
+  CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE_ID,
+  createSetScenarioV137,
   type ExecutableLaneIdentity,
   type MatchId,
   type RuntimeEntrantExecutionEvidence,
@@ -12,12 +17,16 @@ import { hashEntrantLaneIdentity } from "./integrity-evidence.js"
 import {
   createFixtureMatchSetEvidenceResolver,
   createMatchSetService,
+  generateCandidatePresetMatrixV119,
   generatePresetMatrix,
   insertMatchSetWithMatrixOnClient,
   resolveMatchSetExecutionEvidence,
   type CreateMatchSetFromMatrixInput,
 } from "./matchset-service.js"
-import type { CreateMatchRecordInput } from "./match-service.js"
+import type {
+  CreateMatchRecordInput,
+  CreateMatchRecordInputV119,
+} from "./match-service.js"
 import { migrate } from "./migrations.js"
 import { getMatchSetPreset } from "./presets.js"
 
@@ -79,6 +88,110 @@ const entrant = (
     registryGeneration: `${namespace}:generation:1`,
   },
 })
+
+const candidateEntrant = (
+  side: "a" | "b",
+): RuntimeEntrantExecutionEvidence => {
+  const index = side === "a" ? 0 : 1
+  const base = entrant(index, "candidate")
+  return {
+    ...base,
+    laneIdentity: {
+      ...base.laneIdentity,
+      languageId: "typescript",
+      providerId: `candidate:provider:${side}`,
+      artifactId: `candidate:artifact:${side}`,
+      artifactSha256: sha256(`candidate:artifact:${side}`),
+      semanticTupleId: CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE_ID,
+      semanticTuple: { ...CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE },
+    },
+    conformanceCertificateRef: {
+      kind: "conformance",
+      certificateId: `candidate:reviewed-certificate:${side}`,
+      certificateVersion: "runtime-conformance-certificate-v1.19",
+      certificateRecordHash: sha256(`candidate:certificate:${side}`),
+      registryGeneration: "candidate:generation:1",
+    },
+    containmentCertificateRef: {
+      ...base.containmentCertificateRef,
+      registryGeneration: "candidate:generation:1",
+    },
+    schedulingDecision: {
+      ...base.schedulingDecision,
+      registryGeneration: "candidate:generation:1",
+    },
+  }
+}
+
+const candidateInput = (): CreateMatchSetFromMatrixInput => {
+  const entrantA = candidateEntrant("a")
+  const entrantB = candidateEntrant("b")
+  const arena = CANONICAL_ARENA_CATALOG_V1_37.arenas.find(
+    ({ id }) => id === "arena:smoke:v1",
+  )!
+  const scenario = createSetScenarioV137({
+    arenaCatalogVersion: ARENA_CATALOG_VERSION_V1_37,
+    arenaSemanticGeometryHash: arena.semanticGeometryHash,
+    entrantA: {
+      entrantKey: entrantA.entrantKey,
+      playerId: "candidate:player:a",
+    },
+    entrantB: {
+      entrantKey: entrantB.entrantKey,
+      playerId: "candidate:player:b",
+    },
+    baseSeed: "candidate:base-seed:001",
+  })
+  const revisionByEntrant = new Map([
+    [entrantA.entrantKey, entrantA.strategyRevisionId],
+    [entrantB.entrantKey, entrantB.strategyRevisionId],
+  ])
+  return {
+    id: "candidate:match-set",
+    semanticAuthorityKey: "runtime-v1.19",
+    matches: scenario.conditions.map(
+      (condition): CreateMatchRecordInputV119 => ({
+        id: `candidate:match:${condition.ordinal}` as MatchId,
+        bottomStrategyRevisionId: revisionByEntrant.get(
+          condition.bottomEntrantKey,
+        )!,
+        topStrategyRevisionId: revisionByEntrant.get(
+          condition.topEntrantKey,
+        )!,
+        arenaVariantId: arena.id,
+        seed: scenario.baseSeed,
+        bottomPlayerId: condition.bottomPlayerId,
+        topPlayerId: condition.topPlayerId,
+        bottomEntrantKey: condition.bottomEntrantKey,
+        topEntrantKey: condition.topEntrantKey,
+        semanticAuthorityKey: "runtime-v1.19",
+        setPolicyVersion: scenario.setPolicyVersion,
+        scenarioId: scenario.scenarioId,
+        conditionId: condition.conditionId,
+        conditionOrdinal: condition.ordinal,
+        conditionSuffix: condition.suffix,
+        requestIdentity: condition.requestIdentity,
+        arenaCatalogVersion: scenario.arenaCatalogVersion,
+        arenaSemanticGeometryHash: scenario.arenaSemanticGeometryHash,
+        initialInitiativeEntrantKey:
+          condition.initialInitiativeEntrantKey,
+        initialInitiativePlayerId: condition.initialInitiativePlayerId,
+      }),
+    ),
+    integrityIdentity: {
+      compatibility: {
+        tupleId: CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE_ID,
+        tuple: { ...CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE },
+      },
+      authorityBundleHash: sha256("candidate:bundle"),
+      registryGeneration: "candidate:generation:1",
+      executionEntrants: {
+        [entrantA.entrantKey]: entrantA,
+        [entrantB.entrantKey]: entrantB,
+      },
+    },
+  }
+}
 
 const matchRecords = (
   count: number,
@@ -170,6 +283,60 @@ const fakeDatabase = (failOn = "") => {
       if (normalized.startsWith("select config from arena_variants")) {
         return { rows: [{ config: { id: values[0] } }] }
       }
+      if (normalized.startsWith("select * from arena_catalog_entries")) {
+        const arena = CANONICAL_ARENA_CATALOG_V1_37.arenas.find(
+          ({ id }) => id === values[1],
+        )!
+        return {
+          rows: [
+            {
+              catalog_version: values[0],
+              arena_id: arena.id,
+              arena_version: arena.version,
+              arena_name: arena.name,
+              arena_status: arena.status,
+              schedulable: arena.schedulable,
+              alias_of_arena_id: arena.aliasOf ?? null,
+              geometry_hash_profile: "arena-semantic-geometry-v1",
+              semantic_geometry_hash: arena.semanticGeometryHash,
+              config: arena,
+            },
+          ],
+        }
+      }
+      if (
+        normalized.startsWith(
+          "select evidence.* from strategy_revision_v1_19_revalidations",
+        )
+      ) {
+        const side = String(values[0]).endsWith(":0") ? "a" : "b"
+        const evidence = candidateEntrant(side)
+        return {
+          rows: [
+            {
+              id: `candidate:revalidation:${side}`,
+              strategy_revision_id: evidence.strategyRevisionId,
+              source_hash: sha256(`candidate:source:${side}`),
+              source_bytes: 64,
+              artifact_sha256: evidence.laneIdentity.artifactSha256,
+              artifact_bytes: 128,
+              language_id: evidence.laneIdentity.languageId,
+              provider_id: evidence.laneIdentity.providerId,
+              lane_id: evidence.laneIdentity.adapterId,
+              runtime_abi_version: "strategy-runtime-abi-v1.19",
+              semantic_runtime_version: "runtime-v1.19",
+              semantic_tuple_id: CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE_ID,
+              execution_request_root: sha256(`candidate:request:${side}`),
+              execution_result_root: sha256(`candidate:result:${side}`),
+              execution_receipt_root: sha256(`candidate:receipt:${side}`),
+              reviewed_certificate_id:
+                evidence.conformanceCertificateRef!.certificateId,
+              reviewed_certificate_sha256:
+                evidence.conformanceCertificateRef!.certificateRecordHash,
+            },
+          ],
+        }
+      }
       return { rows: [], rowCount: 1 }
     },
     release() {},
@@ -221,6 +388,121 @@ describe("MatchSet presets", () => {
 })
 
 describe("exact MatchSet creation", () => {
+  it("generates one exact candidate scenario with four explicit rows and no seed suffix fairness", () => {
+    const matches = generateCandidatePresetMatrixV119({
+      id: "candidate:preset-set",
+      semanticAuthorityKey: "runtime-v1.19",
+      presetId: "smoke-v1",
+      bottomStrategyRevisionId: "candidate:revision:a",
+      topStrategyRevisionId: "candidate:revision:b",
+      bottomPlayerId: "candidate:player:a",
+      topPlayerId: "candidate:player:b",
+    })
+    expect(matches).toHaveLength(4)
+    expect(new Set(matches.map(({ scenarioId }) => scenarioId))).toHaveLength(1)
+    expect(new Set(matches.map(({ seed }) => seed))).toEqual(
+      new Set(["seed:smoke:001"]),
+    )
+    expect(matches.map(({ conditionOrdinal }) => conditionOrdinal)).toEqual([
+      0, 1, 2, 3,
+    ])
+    expect(
+      matches.filter(
+        ({ bottomStrategyRevisionId }) =>
+          bottomStrategyRevisionId === "candidate:revision:a",
+      ),
+    ).toHaveLength(2)
+    expect(
+      matches.filter(
+        ({ initialInitiativePlayerId }) =>
+          initialInitiativePlayerId === "candidate:player:a",
+      ),
+    ).toHaveLength(2)
+    expect(matches.some(({ seed }) => seed.includes("mirror"))).toBe(false)
+  })
+
+  it("freezes candidate revisions and catalog before atomically publishing exactly four jobs", async () => {
+    const fake = fakeDatabase()
+    const input = candidateInput()
+    await expect(
+      createMatchSetService(fake.pool).createFromMatrix(input),
+    ).resolves.toEqual({
+      matchSetId: input.id,
+      matchIds: input.matches.map(({ id }) => id),
+    })
+
+    expect(fake.calls.at(0)?.sql).toBe("begin isolation level serializable")
+    const firstWrite = fake.calls.findIndex((call) =>
+      call.sql.startsWith("insert into match_sets"),
+    )
+    const catalogLock = fake.calls.findIndex((call) =>
+      call.sql.startsWith("select * from arena_catalog_entries"),
+    )
+    const admissionLocks = fake.calls
+      .map((call, index) => ({ call, index }))
+      .filter(({ call }) =>
+        call.sql.startsWith(
+          "select evidence.* from strategy_revision_v1_19_revalidations",
+        ),
+      )
+    expect(catalogLock).toBeGreaterThanOrEqual(0)
+    expect(catalogLock).toBeLessThan(firstWrite)
+    expect(admissionLocks).toHaveLength(2)
+    expect(admissionLocks.every(({ index }) => index < firstWrite)).toBe(true)
+    expect(
+      fake.calls.filter((call) => call.sql.startsWith("insert into set_scenarios")),
+    ).toHaveLength(1)
+    expect(
+      fake.calls.filter((call) => call.sql.startsWith("insert into set_conditions")),
+    ).toHaveLength(4)
+    expect(
+      fake.calls.filter((call) => call.sql.startsWith("insert into matches")),
+    ).toHaveLength(4)
+    expect(
+      fake.calls.filter((call) => call.sql.startsWith("insert into match_jobs")),
+    ).toHaveLength(4)
+    expect(fake.calls.at(-1)?.sql).toBe("commit")
+  })
+
+  it.each([
+    ["missing", (input: CreateMatchSetFromMatrixInput) => input.matches.pop()],
+    [
+      "duplicate",
+      (input: CreateMatchSetFromMatrixInput) => {
+        input.matches[3] = { ...input.matches[2]! }
+      },
+    ],
+    [
+      "substituted initiative",
+      (input: CreateMatchSetFromMatrixInput) => {
+        input.matches[1] = {
+          ...input.matches[1]!,
+          initialInitiativePlayerId: input.matches[1]!.bottomPlayerId,
+        } as CreateMatchRecordInputV119
+      },
+    ],
+    [
+      "old tuple",
+      (input: CreateMatchSetFromMatrixInput) => {
+        input.integrityIdentity.compatibility = {
+          tupleId: tuple.tupleId,
+          tuple: { ...tuple.tuple },
+        }
+      },
+    ],
+  ] as const)(
+    "rejects candidate %s before the first SQL statement",
+    async (_, mutate) => {
+      const fake = fakeDatabase()
+      const input = candidateInput()
+      mutate(input)
+      await expect(
+        insertMatchSetWithMatrixOnClient(fake.client, input),
+      ).rejects.toThrow()
+      expect(fake.calls).toEqual([])
+    },
+  )
+
   it.each([2, 3, 8])(
     "resolves complete fixture-domain evidence for %i heterogeneous entrants without collapsing languages",
     async (count) => {
