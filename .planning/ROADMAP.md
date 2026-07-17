@@ -321,7 +321,7 @@ Plans:
   4. Each counted scenario explicitly schedules every entrant on each side and in each initial-initiative state, proved at entrant level through TypeScript, Go, persistence, and service-backed tests.
   5. Arena and Set repair adds no official geometry or valid v1.4 gameplay change; any change to Strategy observation or reachable Match semantics stops for explicit compatibility approval.
 
-**Plans:** 9/26 plans executed
+**Plans:** 10/26 plans executed
 
 **Wave 1 — immutable semantic authorities**
 
@@ -349,7 +349,7 @@ Plans:
 
 **Wave 6 *(blocked on Wave 5 completion)* — completion, replay, corpus, public contract, and revalidation service**
 
-- [ ] 260-07-PLAN.md — Stage exact TypeScript completion, retry, status, and scoring.
+- [x] 260-07-PLAN.md — Stage exact TypeScript completion, retry, status, and scoring.
 - [ ] 260-08-PLAN.md — Stage exact Go completion, retry, status, and scoring.
 - [ ] 260-09-PLAN.md — Stage candidate replay recording and validation.
 - [ ] 260-11-PLAN.md — Create and independently review the pinned corpus-v3 candidate.
