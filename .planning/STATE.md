@@ -4,17 +4,17 @@ milestone: v1.37
 milestone_name: Rules Integrity and Strategy Evaluation Foundations — ACTIVE
 current_phase: 260
 current_phase_name: truthful-strategy-inputs-arena-authority-and-set-fairness
-status: ready
+status: executing
 stopped_at: Phase 260 planned; Wave 1 ready
-last_updated: "2026-07-16T21:20:00-04:00"
-last_activity: 2026-07-16
-last_activity_desc: Phase 260 research and 26-plan independent verification completed with zero findings
+last_updated: "2026-07-17T01:18:56.005Z"
+last_activity: 2026-07-17
+last_activity_desc: Phase 260 execution started
 progress:
   total_phases: 6
   completed_phases: 4
   total_plans: 112
   completed_plans: 86
-  percent: 77
+  percent: 67
 ---
 
 # State: Coward's Game
@@ -24,14 +24,14 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-07-12)
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
-**Current focus:** Phase 260 — Truthful Strategy Inputs, Arena Authority, and Set Fairness execution
+**Current focus:** Phase 260 — truthful-strategy-inputs-arena-authority-and-set-fairness
 
 ## Current Position
 
-Phase: 260 (truthful-strategy-inputs-arena-authority-and-set-fairness) — READY
-Plan: 0 of 26
-Status: Research complete; 26 plans in 13 waves independently checked with zero blockers and zero warnings; Wave 1 ready
-Last activity: 2026-07-16 — Planned candidate-only v1.19 observation, arena authority, four-condition Set fairness, revision revalidation, atomic activation, and integrated proof
+Phase: 260 (truthful-strategy-inputs-arena-authority-and-set-fairness) — EXECUTING
+Plan: 1 of 26
+Status: Executing Phase 260
+Last activity: 2026-07-17 — Phase 260 execution started
 
 Progress: [████████░░] 77%
 
