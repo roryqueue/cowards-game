@@ -321,7 +321,7 @@ Plans:
   4. Each counted scenario explicitly schedules every entrant on each side and in each initial-initiative state, proved at entrant level through TypeScript, Go, persistence, and service-backed tests.
   5. Arena and Set repair adds no official geometry or valid v1.4 gameplay change; any change to Strategy observation or reachable Match semantics stops for explicit compatibility approval.
 
-**Plans:** 24/33 plans executed
+**Plans:** 29/33 plans executed
 
 **Wave 1 — immutable semantic authorities**
 
@@ -390,9 +390,9 @@ Plans:
 
 **Wave 14 *(blocked on Wave 13 completion)* — default-consumer delegation**
 
-- [ ] 260-29-PLAN.md — Delegate TypeScript runtime and Workshop defaults while keeping runtime-service database-free.
-- [ ] 260-30-PLAN.md — Delegate Go scheduling/completion to the compact selector and database head.
-- [ ] 260-32-PLAN.md — Enforce the active database head across every TypeScript scheduling and competition entry point.
+- [x] 260-29-PLAN.md — Delegate TypeScript runtime and Workshop defaults while keeping runtime-service database-free.
+- [x] 260-30-PLAN.md — Delegate Go scheduling/completion to the compact selector and database head.
+- [x] 260-32-PLAN.md — Enforce the active database head across every TypeScript scheduling and competition entry point.
 
 **Wave 15 *(blocked on Wave 14 completion)* — corrected proof inventory**
 
@@ -450,5 +450,5 @@ Cycle-cap, inward-start, facing-only MOVE, reversal-history, attacker-facing/Adv
 | 257. Canonical Transition Kernel and v1.4 Semantic Integrity | 22/22 | Complete | 2026-07-13 |
 | 258. Canonical JSON, Failure Semantics, and Artifact Identity | 14/14 | Complete | 2026-07-16 |
 | 259. Executable Four-Language and Chronicle Conformance | 22/31 | In progress | - |
-| 260. Truthful Strategy Inputs, Arena Authority, and Set Fairness | 26/33 | In Progress|  |
+| 260. Truthful Strategy Inputs, Arena Authority, and Set Fairness | 29/33 | In Progress|  |
 | 261. Integrated Service Proof, Drift Guards, and Release | 0/TBD | Not started | - |

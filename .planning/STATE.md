@@ -5,16 +5,16 @@ milestone_name: Rules Integrity and Strategy Evaluation Foundations — ACTIVE
 current_phase: 260
 current_phase_name: truthful-strategy-inputs-arena-authority-and-set-fairness
 status: executing
-stopped_at: Plan 260-28 complete; execute Wave-14 consumer delegation next
-last_updated: "2026-07-17T10:48:00.000Z"
+stopped_at: Wave-14 consumer delegation complete; execute Plan 260-31 next
+last_updated: "2026-07-17T11:23:20.000Z"
 last_activity: 2026-07-17
-last_activity_desc: Added the exact transactional database semantic-authority selection head
+last_activity_desc: Completed runtime, Workshop, Go, and TypeScript scheduling delegation
 progress:
   total_phases: 6
   completed_phases: 4
   total_plans: 119
-  completed_plans: 112
-  percent: 94
+  completed_plans: 115
+  percent: 97
 ---
 
 # State: Coward's Game
@@ -29,11 +29,11 @@ See: `.planning/PROJECT.md` (updated 2026-07-12)
 ## Current Position
 
 Phase: 260 (truthful-strategy-inputs-arena-authority-and-set-fairness) — EXECUTING
-Plan: 29 of 33
-Status: Plan 260-28 complete; Wave-14 Plans 260-29, 260-30, and 260-32 ready
-Last activity: 2026-07-17 — Exact v1.17 database head installed with no pending intent
+Plan: 31 of 33
+Status: Wave-14 complete; production activation coordinator is next
+Last activity: 2026-07-17 — Runtime, Workshop, Go, competition, ladder, Match, MatchSet, and job defaults delegate to exact file/head authority
 
-Progress: [████████░░] 79%
+Progress: [█████████░] 88%
 
 ## Durable Decisions
 
@@ -64,6 +64,8 @@ Progress: [████████░░] 79%
 - Observation-v1.19 preactivation readiness is valid only while the complete Phase-259 semantic, Go, corpus, trace, Workshop, public, and database current inventory remains exact. — Any premature selector or successor-row change invalidates the fixed receipt before atomic activation.
 - The compact semantic source is the sole TypeScript current selector; closed v1.17/v1.19 projections and selection-neutral Go candidate hashes keep live v1.17 exact while final activation changes only the compact Go mirror at this seam.
 - One serializable singleton database head stores the complete semantic selection and at most one durable exact pending intent; short revision-CAS transitions and append-only history own activation and compensation while current remains v1.17.
+- Runtime-service remains database-free and validates a compact frozen request projection against file current; Workshop static output follows file current and persisted Workshop work requires exact active database authority.
+- Go and TypeScript scheduling validate the exact database head at creation, freeze complete authority into MatchSet/Match/job work, and never let execution reread or derive current authority.
 
 ## Deferred Items
 
@@ -80,9 +82,9 @@ Progress: [████████░░] 79%
 
 **Resume file:** None
 
-Last session: 2026-07-17T10:48:00.000Z
-Stopped at: Plan 260-28 completed; development database is exact v1.17 bootstrap with no pending intent.
-Next command: Execute Wave-14 Plans 260-29, 260-30, and 260-32 without activating v1.19.
+Last session: 2026-07-17T11:23:20.000Z
+Stopped at: Wave-14 Plans 260-29, 260-30, and 260-32 completed; development database remains exact v1.17 bootstrap with no pending intent.
+Next command: Execute Plan 260-31 production activation coordinator and recovery matrix.
 
 ## Performance Metrics
 
