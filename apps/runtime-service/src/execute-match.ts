@@ -803,7 +803,7 @@ const createRuntimeForRevision = (
   revision: StrategyRevision,
   runtimeConfig: RuntimeServiceConfig,
   limits: RuntimeExecutionServiceRequest["limits"],
-  expectedRuntimeAbi = STRATEGY_RUNTIME_ABI_VERSION,
+  expectedRuntimeAbi: string = STRATEGY_RUNTIME_ABI_VERSION,
 ):
   | { ok: true; runtime: StrategyRuntime }
   | {
