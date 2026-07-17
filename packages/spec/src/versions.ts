@@ -5,6 +5,17 @@ import type { CompatibilityVersions } from "./types.js"
 export const STRATEGY_RUNTIME_ABI_VERSION = "strategy-runtime-abi-v1.17"
 
 /**
+ * Explicit successor identity. This is candidate data only: current schemas,
+ * defaults, certificates, and consumers continue to use the v1.17 pointer
+ * until the Phase 260 activation transaction.
+ */
+export const STRATEGY_RUNTIME_ABI_VERSION_V1_19 =
+  "strategy-runtime-abi-v1.19" as const
+
+export const CANDIDATE_CANONICAL_COMPATIBILITY_TUPLE_KEY_V1_19 =
+  "runtime-v1.19" as const
+
+/**
  * The atomic semantic-tuple selector is deliberately separate from the ABI
  * string. Identity encodings are selected by the registered tuple record, not
  * inferred from a version-shaped value. Plan 258-14 flips this key together

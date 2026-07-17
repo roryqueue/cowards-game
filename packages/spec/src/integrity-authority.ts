@@ -1,9 +1,13 @@
 import { createHash } from "node:crypto"
 import {
+  CANDIDATE_CANONICAL_COMPATIBILITY_TUPLE_KEY_V1_19,
   COMPATIBILITY_VERSIONS,
   CURRENT_CANONICAL_COMPATIBILITY_TUPLE_KEY,
   STRATEGY_RUNTIME_ABI_VERSION,
+  STRATEGY_RUNTIME_ABI_VERSION_V1_19,
 } from "./versions.js"
+import { ARENA_CATALOG_VERSION_V1_37 } from "./arena-catalog-v1-37.js"
+import { SET_CONDITION_POLICY_VERSION_V1_37 } from "./set-condition-policy-v1-37.js"
 import {
   CANONICAL_IDENTITY_DOMAINS,
   hashCanonicalIdentityValue,
@@ -312,6 +316,15 @@ const candidateRuntimeV117Tuple: CanonicalCompatibilityTuple = {
   setPolicy: "canonical-set-policy-v1.4",
 }
 
+const candidateRuntimeV119Tuple: CanonicalCompatibilityTuple = {
+  rules: COMPATIBILITY_VERSIONS.spec,
+  engine: COMPATIBILITY_VERSIONS.engine,
+  runtimeAbi: STRATEGY_RUNTIME_ABI_VERSION_V1_19,
+  chronicle: COMPATIBILITY_VERSIONS.chronicle,
+  arenaCatalog: ARENA_CATALOG_VERSION_V1_37,
+  setPolicy: SET_CONDITION_POLICY_VERSION_V1_37,
+}
+
 export const HISTORICAL_RUNTIME_V114_SEMANTIC_TUPLE_RECORD =
   prepareCanonicalCompatibilityTupleRecord(
     historicalRuntimeV114Tuple,
@@ -336,6 +349,24 @@ export const CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE =
 export const CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_ID =
   CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_RECORD.tupleId
 
+/**
+ * Closed successor tuple prepared for explicit candidate dispatch only.
+ * It is intentionally absent from the current and generally registered
+ * collections below, so adding the record cannot activate or relabel any
+ * Phase-259 selector, certificate, or historical route.
+ */
+export const CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE_RECORD =
+  prepareCanonicalCompatibilityTupleRecord(
+    candidateRuntimeV119Tuple,
+    CANONICAL_COMPATIBILITY_TUPLE_IDENTITY_PROFILES.successor.identityProfile,
+  )
+
+export const CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE =
+  CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE_RECORD.tuple
+
+export const CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE_ID =
+  CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE_RECORD.tupleId
+
 const versionTupleRecord = (
   record: Readonly<CanonicalCompatibilityTupleRecord>,
   profile: (typeof CANONICAL_COMPATIBILITY_TUPLE_IDENTITY_PROFILES)[keyof typeof CANONICAL_COMPATIBILITY_TUPLE_IDENTITY_PROFILES],
@@ -355,6 +386,18 @@ export const VERSIONED_RUNTIME_V117_SEMANTIC_TUPLE_RECORD = versionTupleRecord(
   CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_RECORD,
   CANONICAL_COMPATIBILITY_TUPLE_IDENTITY_PROFILES.successor,
 )
+
+export const VERSIONED_RUNTIME_V119_SEMANTIC_TUPLE_RECORD = versionTupleRecord(
+  CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE_RECORD,
+  CANONICAL_COMPATIBILITY_TUPLE_IDENTITY_PROFILES.successor,
+)
+
+if (
+  String(CANDIDATE_CANONICAL_COMPATIBILITY_TUPLE_KEY_V1_19) ===
+  String(CURRENT_CANONICAL_COMPATIBILITY_TUPLE_KEY)
+) {
+  throw new Error("Inactive successor tuple cannot be the current tuple key.")
+}
 
 const compatibilityTupleRecordsByKey = Object.freeze({
   "runtime-v1.14": VERSIONED_RUNTIME_V114_SEMANTIC_TUPLE_RECORD,
@@ -463,6 +506,13 @@ export const resolveCandidateRuntimeV117SemanticTuple = (
 ): Readonly<CanonicalCompatibilityTupleRecord> | undefined =>
   resolveCompatibilityTupleFrom(selector, [
     VERSIONED_RUNTIME_V117_SEMANTIC_TUPLE_RECORD,
+  ])
+
+export const resolveCandidateRuntimeV119SemanticTuple = (
+  selector: unknown,
+): Readonly<CanonicalCompatibilityTupleRecord> | undefined =>
+  resolveCompatibilityTupleFrom(selector, [
+    VERSIONED_RUNTIME_V119_SEMANTIC_TUPLE_RECORD,
   ])
 
 export const resolveHistoricalRuntimeV114SemanticTuple = (
