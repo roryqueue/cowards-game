@@ -180,6 +180,7 @@ export const resolveMatchSetExecutionEvidence = async (input: {
   purpose: MatchSetEvidencePurpose
   evaluationInstant: string
   entrants: readonly MatchSetEvidenceEntrantBinding[]
+  semanticAuthorityKey?: "runtime-v1.19" | undefined
 }): Promise<IntegritySchedulingIdentity> => {
   const resolver =
     input.resolver ?? EMPTY_PRODUCTION_MATCH_SET_EVIDENCE_RESOLVER
@@ -193,13 +194,17 @@ export const resolveMatchSetExecutionEvidence = async (input: {
     evaluationInstant: input.evaluationInstant,
     entrants: input.entrants.map((entrant) => ({ ...entrant })),
   })
-  const identity = createMatchSetIntegrityIdentity({
+  const identityInput = {
     compatibility: resolved.compatibility,
     authorityBundleHash: resolved.authorityBundleHash,
     registryGeneration: resolved.registryGeneration,
     expectedEntrants: input.entrants.map((entrant) => ({ ...entrant })),
     entrants: Object.values(resolved.executionEntrants),
-  })
+  }
+  const identity =
+    input.semanticAuthorityKey === "runtime-v1.19"
+      ? createCandidateMatchSetIntegrityIdentityV119(identityInput)
+      : createMatchSetIntegrityIdentity(identityInput)
   if (
     identity.normalizedEntrants.some(
       (entrant) =>

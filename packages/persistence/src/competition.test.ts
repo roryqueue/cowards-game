@@ -169,8 +169,8 @@ const candidateIntegrityIdentity = (
           registryGeneration,
         },
         schedulingDecision: {
-          status: "exhibition_only",
-          reasonCode: "CONFORMANCE_MISSING",
+          status: "counted",
+          reasonCode: "EVIDENCE_CURRENT",
           evaluatedAt: "2026-07-12T12:00:00.000Z",
           freshUntil: "2099-12-31T23:59:59.999Z",
           registryGeneration,
@@ -354,12 +354,15 @@ describe("competition helpers", () => {
     })
 
     expect(candidate).toHaveLength(12)
-    const byScenario = Map.groupBy(candidate, (match) => {
+    const byScenario = new Map<string, typeof candidate>()
+    for (const match of candidate) {
       if (!("semanticAuthorityKey" in match)) {
         throw new Error("candidate row lost its explicit dispatch")
       }
-      return match.scenarioId
-    })
+      const rows = byScenario.get(match.scenarioId) ?? []
+      rows.push(match)
+      byScenario.set(match.scenarioId, rows)
+    }
     expect(byScenario.size).toBe(3)
     for (const rows of byScenario.values()) {
       expect(rows).toHaveLength(4)
@@ -425,7 +428,19 @@ describe("competition helpers", () => {
     })
     const pool = {
       async connect() {
-        throw new Error("accepted matrix reached database boundary")
+        return {
+          async query(sql: string) {
+            const normalized = sql.trim().toLowerCase()
+            if (
+              normalized.startsWith("begin") ||
+              normalized === "rollback"
+            ) {
+              return { rows: [], rowCount: 0 }
+            }
+            throw new Error("accepted matrix reached database boundary")
+          },
+          release() {},
+        }
       },
     } as unknown as Pool
     const service = createMatchSetService(pool)
@@ -482,6 +497,15 @@ describe("competition helpers", () => {
         integrityIdentity: legacyIdentity,
       }),
     ).rejects.toThrow("accepted matrix reached database boundary")
+
+    expect(() =>
+      generateCompetitionPairwiseMatrix({
+        matchSetId,
+        presetId: "smoke-exhibition-v1",
+        entrants: entrants.slice(0, 2),
+        semanticAuthorityKey: "runtime-v1.18",
+      } as unknown as Parameters<typeof generateCompetitionPairwiseMatrix>[0]),
+    ).toThrow(/unknown.*semantic authority/iu)
   })
 
   it("fails closed on empty production authority before any exhibition database access", async () => {
@@ -548,6 +572,41 @@ describe("competition helpers", () => {
         strategyRevisionId: "strategy-revision:rust",
       },
     ])
+  })
+
+  it("addresses candidate evidence explicitly before the quarantined manual path reaches persistence", async () => {
+    const revisions = ["strategy-revision:a", "strategy-revision:b"]
+    const candidateIdentity = candidateIntegrityIdentity(revisions)
+    const resolver: MatchSetExecutionEvidenceResolver = {
+      trustDomain: "production",
+      async resolve(request) {
+        expect(request.purpose).toBe("exhibition")
+        expect(request.entrants.map(({ entrantKey }) => entrantKey)).toEqual(
+          revisions,
+        )
+        return candidateIdentity
+      },
+    }
+    const pool = {
+      async query() {
+        throw new Error("candidate evidence accepted before persistence")
+      },
+    } as unknown as Pool
+
+    await expect(
+      createManualExhibitionMatchSet(pool, {
+        creatorUserId: "user:alpha",
+        presetId: "smoke-exhibition-v1",
+        revisionIds: revisions,
+        now: new Date("2026-07-12T12:00:00.000Z"),
+        semanticAuthorityKey: "runtime-v1.19",
+        evidenceResolver: resolver,
+      }),
+    ).rejects.toThrow("candidate evidence accepted before persistence")
+    expect(TYPESCRIPT_COMPETITION_PERSISTENCE_ROLE.normalBackend).toBe(false)
+    expect(TYPESCRIPT_COMPETITION_PERSISTENCE_ROLE.selectedNormalOwner).toBe(
+      "go",
+    )
   })
 
   it("returns retry-after information once exhibition create limits are exceeded", () => {

@@ -25,6 +25,7 @@ import {
 import type { Pool } from "pg"
 import {
   createMatchSetService,
+  generateCandidatePresetMatrixV119,
   resolveMatchSetExecutionEvidence,
   type MatchSetExecutionEvidenceResolver,
 } from "./matchset-service.js"
@@ -476,8 +477,65 @@ export const generateCompetitionPairwiseMatrix = (input: {
   matchSetId: string
   presetId: CompetitionPresetId
   entrants: readonly CompetitionEntrantSnapshot[]
+  semanticAuthorityKey?: "runtime-v1.19" | undefined
 }): CreateMatchRecordInput[] => {
+  if (
+    input.semanticAuthorityKey !== undefined &&
+    String(input.semanticAuthorityKey) !== "runtime-v1.19"
+  ) {
+    throw new CompetitionInputError(
+      "Unknown TypeScript competition scheduling semantic authority.",
+    )
+  }
   const competitionPreset = getCompetitionPreset(input.presetId)
+  if (input.semanticAuthorityKey === "runtime-v1.19") {
+    const sortedEntrants = [...input.entrants].sort((left, right) =>
+      Buffer.compare(
+        Buffer.from(left.strategyRevisionId, "utf8"),
+        Buffer.from(right.strategyRevisionId, "utf8"),
+      ),
+    )
+    if (
+      new Set(sortedEntrants.map(({ strategyRevisionId }) => strategyRevisionId))
+        .size !== sortedEntrants.length
+    ) {
+      throw new CompetitionInputError(
+        "runtime-v1.19 competition entrants must have distinct immutable Strategy Revision ids.",
+      )
+    }
+    const matches: CreateMatchRecordInput[] = []
+    for (let left = 0; left < sortedEntrants.length; left += 1) {
+      for (let right = left + 1; right < sortedEntrants.length; right += 1) {
+        const entrantA = sortedEntrants[left]!
+        const entrantB = sortedEntrants[right]!
+        const pairHash = createHash("sha256")
+          .update(
+            JSON.stringify([
+              entrantA.strategyRevisionId,
+              entrantB.strategyRevisionId,
+            ]),
+            "utf8",
+          )
+          .digest("hex")
+        const playerIdFor = (strategyRevisionId: string): string =>
+          `player:revision:sha256:${createHash("sha256")
+            .update(strategyRevisionId, "utf8")
+            .digest("hex")}`
+        matches.push(
+          ...generateCandidatePresetMatrixV119({
+            id: `${input.matchSetId}:pair:sha256:${pairHash}`,
+            semanticAuthorityKey: "runtime-v1.19",
+            presetId: competitionPreset.matchSetPresetId,
+            bottomStrategyRevisionId: entrantA.strategyRevisionId,
+            topStrategyRevisionId: entrantB.strategyRevisionId,
+            bottomPlayerId: playerIdFor(entrantA.strategyRevisionId),
+            topPlayerId: playerIdFor(entrantB.strategyRevisionId),
+          }),
+        )
+      }
+    }
+    return matches
+  }
   const matchSetPreset = getMatchSetPreset(competitionPreset.matchSetPresetId)
   const matches: CreateMatchRecordInput[] = []
   let index = 0
@@ -615,6 +673,7 @@ export const createManualExhibitionMatchSet = async (
     now?: Date | undefined
     rateLimitPolicy?: ExhibitionRateLimitPolicy | undefined
     evidenceResolver?: MatchSetExecutionEvidenceResolver | undefined
+    semanticAuthorityKey?: "runtime-v1.19" | undefined
   },
 ): Promise<{
   matchSetId: string
@@ -622,6 +681,14 @@ export const createManualExhibitionMatchSet = async (
   entrants: CompetitionEntrantSnapshot[]
 }> => {
   validateManualExhibitionRevisionIds(input.revisionIds)
+  if (
+    input.semanticAuthorityKey !== undefined &&
+    String(input.semanticAuthorityKey) !== "runtime-v1.19"
+  ) {
+    throw new CompetitionInputError(
+      "Unknown manual exhibition scheduling semantic authority.",
+    )
+  }
   const preset = getCompetitionPreset(input.presetId)
   const now = input.now ?? new Date()
   const integrityIdentity = await resolveMatchSetExecutionEvidence({
@@ -632,6 +699,9 @@ export const createManualExhibitionMatchSet = async (
       entrantKey: strategyRevisionId,
       strategyRevisionId,
     })),
+    ...(input.semanticAuthorityKey
+      ? { semanticAuthorityKey: input.semanticAuthorityKey }
+      : {}),
   })
   await assertExhibitionCreateRateLimit(pool, {
     userId: input.creatorUserId,
@@ -646,15 +716,35 @@ export const createManualExhibitionMatchSet = async (
   await ensureCompetitionArenas(pool)
 
   const matchSetId = input.matchSetId ?? `match-set:exhibition:${randomUUID()}`
-  const entrants = await loadOwnedRevisionSnapshots(pool, {
+  const loadedEntrants = await loadOwnedRevisionSnapshots(pool, {
     userId: input.creatorUserId,
     revisionIds: input.revisionIds,
     lockedAt: now,
   })
+  const entrants =
+    input.semanticAuthorityKey === "runtime-v1.19"
+      ? [...loadedEntrants]
+          .sort((left, right) =>
+            Buffer.compare(
+              Buffer.from(left.strategyRevisionId, "utf8"),
+              Buffer.from(right.strategyRevisionId, "utf8"),
+            ),
+          )
+          .map((entrant, entrantIndex) => ({
+            ...entrant,
+            entrantId: `entrant:revision:sha256:${createHash("sha256")
+              .update(entrant.strategyRevisionId, "utf8")
+              .digest("hex")}`,
+            entrantIndex,
+          }))
+      : loadedEntrants
   const matches = generateCompetitionPairwiseMatrix({
     matchSetId,
     presetId: input.presetId,
     entrants,
+    ...(input.semanticAuthorityKey
+      ? { semanticAuthorityKey: input.semanticAuthorityKey }
+      : {}),
   })
   const duplicateKey = buildExhibitionDuplicateKey({
     creatorUserId: input.creatorUserId,
@@ -663,11 +753,14 @@ export const createManualExhibitionMatchSet = async (
   })
   const created = await createMatchSetService(pool).createFromMatrix({
     id: matchSetId,
+    ...(input.semanticAuthorityKey
+      ? { semanticAuthorityKey: input.semanticAuthorityKey }
+      : {}),
     matches,
     integrityIdentity,
     matchSet: {
       presetId: preset.matchSetPresetId,
-      presetVersion: "v1",
+      ...(input.semanticAuthorityKey ? {} : { presetVersion: "v1" as const }),
       creatorUserId: input.creatorUserId,
       competitionPresetId: preset.id,
       competitionPresetVersion: preset.version,
