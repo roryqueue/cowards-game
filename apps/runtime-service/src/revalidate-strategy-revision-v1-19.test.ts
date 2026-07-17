@@ -67,7 +67,7 @@ const soldier = {
   ownerPlayerId: "player:bottom",
   status: "ACTIVE",
   position: { x: 4, y: 9 },
-  facing: "N",
+  facing: "UP",
   lastSuccessfulMoveDirection: null,
 } as const
 
@@ -108,7 +108,9 @@ const probes = (): readonly RevisionRevalidationProbeV119[] => [
     }),
   })),
   ...([false, true] as const).map((advanced) => {
-    const probeId = advanced ? "brain-advanced-true" : "brain-advanced-false"
+    const probeId: RevisionRevalidationProbeV119["probeId"] = advanced
+      ? "brain-advanced-true"
+      : "brain-advanced-false"
     return {
       probeId,
       request: createCandidateObservationTransportRequestV119({
@@ -179,7 +181,10 @@ describe("revision-specific runtime-v1.19 revalidation", () => {
     const executeProvider = vi.fn(realSuccess)
     const result = revalidateStrategyRevisionV119(request(executeProvider))
 
-    expect(result.kind).toBe("success")
+    expect(
+      result.kind,
+      `${JSON.stringify(result)} calls=${executeProvider.mock.calls.length}`,
+    ).toBe("success")
     if (result.kind !== "success") throw new Error("expected success")
     expect(executeProvider).toHaveBeenCalledTimes(
       REQUIRED_REVISION_REVALIDATION_PROBES_V1_19.length,
@@ -238,7 +243,8 @@ describe("revision-specific runtime-v1.19 revalidation", () => {
       strategyRevisionId: revision.strategyRevisionId,
       violation: {
         code: "INVALID_OUTPUT",
-        publicMessage: "Strategy output was invalid.",
+        publicMessage:
+          "Strategy revision did not pass candidate revalidation.",
       },
     })
     expect(playerViolation).not.toHaveProperty("receipt")
