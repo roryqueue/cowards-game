@@ -321,7 +321,7 @@ Plans:
   4. Each counted scenario explicitly schedules every entrant on each side and in each initial-initiative state, proved at entrant level through TypeScript, Go, persistence, and service-backed tests.
   5. Arena and Set repair adds no official geometry or valid v1.4 gameplay change; any change to Strategy observation or reachable Match semantics stops for explicit compatibility approval.
 
-**Plans:** 22/26 plans executed
+**Plans:** 23/26 plans executed
 
 **Wave 1 — immutable semantic authorities**
 
@@ -374,7 +374,7 @@ Plans:
 
 **Wave 10 *(blocked on Wave 9 completion)* — complete preactivation proof**
 
-- [ ] 260-21-PLAN.md — Prove successor readiness while every Phase-259 current selector remains exact.
+- [x] 260-21-PLAN.md — Prove successor readiness while every Phase-259 current selector remains exact.
 
 **Wave 11 *(blocked on Wave 10 completion)* — postactivation evaluator preparation**
 

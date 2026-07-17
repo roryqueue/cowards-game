@@ -5,15 +5,15 @@ milestone_name: Rules Integrity and Strategy Evaluation Foundations — ACTIVE
 current_phase: 260
 current_phase_name: truthful-strategy-inputs-arena-authority-and-set-fairness
 status: executing
-stopped_at: Completed 260-13-PLAN.md
-last_updated: "2026-07-17T08:41:10.000Z"
+stopped_at: Completed 260-21-PLAN.md
+last_updated: "2026-07-17T09:05:00.000Z"
 last_activity: 2026-07-17
-last_activity_desc: Completed Phase 260 Plan 13 inactive observation-v1.19 certificate installation
+last_activity_desc: Completed Phase 260 Plan 21 exact preactivation readiness proof
 progress:
   total_phases: 6
   completed_phases: 4
   total_plans: 112
-  completed_plans: 107
+  completed_plans: 108
   percent: 67
 ---
 
@@ -31,7 +31,7 @@ See: `.planning/PROJECT.md` (updated 2026-07-12)
 Phase: 260 (truthful-strategy-inputs-arena-authority-and-set-fairness) — EXECUTING
 Plan: 22 of 26
 Status: Ready to execute
-Last activity: 2026-07-17 — Completed Phase 260 Plan 13 inactive observation-v1.19 certificate installation
+Last activity: 2026-07-17 — Completed Phase 260 Plan 21 exact preactivation readiness proof
 
 Progress: [█████████░] 90%
 
@@ -61,6 +61,7 @@ Progress: [█████████░] 90%
 - Docker certification probes receive only the explicit minimal `NODE_ENV` and `PATH` environment required by the production contract.
 - Runtime-v1.19 revision revalidation requires six real provider probes, exact original source/artifact bytes, explicit inactive candidate pins, and a reviewed certificate bound to the same language/provider/lane; only complete success yields a receipt.
 - Observation-v1.19 lane certificates bind the complete reviewed candidate payload under distinct managed producer/operator trust and remain append-only `candidate-0` evidence; no successor row enters the Phase-259 current selector before atomic activation.
+- Observation-v1.19 preactivation readiness is valid only while the complete Phase-259 semantic, Go, corpus, trace, Workshop, public, and database current inventory remains exact. — Any premature selector or successor-row change invalidates the fixed receipt before atomic activation.
 
 ## Deferred Items
 
@@ -77,8 +78,8 @@ Progress: [█████████░] 90%
 
 **Resume file:** None
 
-Last session: 2026-07-17T08:41:10.000Z
-Stopped at: Completed 260-13-PLAN.md
+Last session: 2026-07-17T09:05:00.000Z
+Stopped at: Completed 260-21-PLAN.md
 Next command: `$gsd-execute-phase 260`.
 
 ## Performance Metrics
@@ -149,6 +150,7 @@ Next command: `$gsd-execute-phase 260`.
 | Phase 260 P19 | 25min | 2 tasks + final identity refresh | 8 files; 12 fresh contained real-language runs |
 | Phase 260 P20 | 13min | 2 tasks + provider-proof hardening | 3 files; 9 frozen dispositions and 35 focused tests |
 | Phase 260 P13 | 29min | 3 TDD tasks | 12 files; 4 inactive certificates and 12 provenance rows |
+| Phase 260 P21 | 13min | 2 tasks | 3 evaluator/test/proof files; 14 executable gates |
 
 ## Decisions
 
