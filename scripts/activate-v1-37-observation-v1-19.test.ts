@@ -1,4 +1,10 @@
+import { Buffer } from "node:buffer"
+import { execFile as execFileCallback } from "node:child_process"
 import { createHash } from "node:crypto"
+import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises"
+import { tmpdir } from "node:os"
+import path from "node:path"
+import { promisify } from "node:util"
 import { describe, expect, it, vi } from "vitest"
 import {
   ACTIVATION_COMMIT_MESSAGE,
@@ -6,12 +12,15 @@ import {
   ACTIVATION_SELECTOR_PATHS,
   COMPENSATION_COMMIT_MESSAGE,
   buildV119SelectorBytes,
+  createProductionActivationAdapter,
   runV137ObservationV119Activation,
   type ActivationCoordinatorAdapter,
   type ActivationHead,
   type FileBytes,
   type GateReceipt,
 } from "./activate-v1-37-observation-v1-19.js"
+
+const execFile = promisify(execFileCallback)
 
 const hash = (value: string | Uint8Array): `sha256:${string}` =>
   `sha256:${createHash("sha256").update(value).digest("hex")}`
@@ -58,7 +67,7 @@ class ModelAdapter implements ActivationCoordinatorAdapter {
     return operation()
   }
   async readHead(): Promise<ActivationHead> {
-    return structuredClone(this.head)
+    return JSON.parse(JSON.stringify(this.head)) as ActivationHead
   }
   async prepare(input: any): Promise<ActivationHead> {
     this.events.push(`prepare:${input.direction}`)
@@ -158,7 +167,12 @@ class ModelAdapter implements ActivationCoordinatorAdapter {
       .filter((path) => {
         const before = parent?.files.get(path)
         const after = current.files.get(path)
-        return Buffer.compare(before ?? Buffer.alloc(0), after ?? Buffer.alloc(0)) !== 0
+        return (
+          Buffer.compare(
+            before ?? Buffer.alloc(0),
+            after ?? Buffer.alloc(0),
+          ) !== 0
+        )
       })
       .sort()
   }
@@ -231,7 +245,54 @@ describe("v1.37 observation v1.19 activation coordinator", () => {
     expect(new Set(ACTIVATION_SELECTOR_PATHS).size).toBe(5)
     expect(ACTIVATION_SELECTOR_PATHS).not.toContain(ACTIVATION_PROOF_PATH)
     const target = buildV119SelectorBytes()
-    expect([...target.keys()].sort()).toEqual([...ACTIVATION_SELECTOR_PATHS].sort())
+    expect([...target.keys()].sort()).toEqual(
+      [...ACTIVATION_SELECTOR_PATHS].sort(),
+    )
+  })
+
+  it("uses the real filesystem and Git adapter in an isolated six-path commit", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "cowards-activation-"))
+    try {
+      await execFile("git", ["init", "-q"], { cwd: root })
+      await execFile("git", ["config", "user.name", "Activation Test"], {
+        cwd: root,
+      })
+      await execFile(
+        "git",
+        ["config", "user.email", "activation@test.invalid"],
+        {
+          cwd: root,
+        },
+      )
+      for (const selectorPath of ACTIVATION_SELECTOR_PATHS) {
+        const absolute = path.join(root, selectorPath)
+        await mkdir(path.dirname(absolute), { recursive: true })
+        await writeFile(absolute, `old:${selectorPath}\n`)
+      }
+      await execFile("git", ["add", "-A"], { cwd: root })
+      await execFile("git", ["commit", "-q", "-m", "parent"], { cwd: root })
+
+      const adapter = createProductionActivationAdapter(root, {} as never)
+      const parent = await adapter.gitHead()
+      for (const [selectorPath, bytes] of buildV119SelectorBytes()) {
+        await adapter.writeFile(selectorPath, { state: "present", bytes })
+      }
+      await adapter.writeFile(ACTIVATION_PROOF_PATH, {
+        state: "present",
+        bytes: Buffer.from("{}\n"),
+      })
+      const paths = [...ACTIVATION_SELECTOR_PATHS, ACTIVATION_PROOF_PATH]
+      await adapter.stage(paths)
+      const commitSha = await adapter.commit(ACTIVATION_COMMIT_MESSAGE, paths)
+
+      expect(await adapter.gitParent(commitSha)).toBe(parent)
+      expect(await adapter.changedPaths(commitSha)).toEqual([...paths].sort())
+      expect(
+        (await adapter.readCommitFile(commitSha, ACTIVATION_PROOF_PATH)).state,
+      ).toBe("present")
+    } finally {
+      await rm(root, { recursive: true, force: true })
+    }
   })
 
   it("runs prepare through smoke with exact staging and external finalization binding", async () => {
@@ -264,6 +325,31 @@ describe("v1.37 observation v1.19 activation coordinator", () => {
     expect(adapter.head.state).toBe("pending-precommit")
   })
 
+  it("rejects a changed parent, a concurrent activation token, and mixed selector bytes", async () => {
+    const changedParent = new ModelAdapter()
+    await run(changedParent, "prepare")
+    changedParent.currentHead = git("9")
+    await expect(run(changedParent, "validate")).rejects.toThrow(
+      /parent HEAD changed/iu,
+    )
+
+    const concurrent = new ModelAdapter()
+    await run(concurrent, "prepare")
+    await expect(
+      runV137ObservationV119Activation({
+        mode: "prepare",
+        activationId: "activation:phase260:plan31:other",
+        adapter: concurrent,
+      }),
+    ).rejects.toThrow(/exact forward pending intent/iu)
+
+    const mixed = new ModelAdapter()
+    await throughValidate(mixed)
+    mixed.files.set(ACTIVATION_SELECTOR_PATHS[2], Buffer.from("mixed\n"))
+    await expect(run(mixed, "stage")).rejects.toThrow(/mixed|stale selector/iu)
+    expect(mixed.head.state).toBe("pending-precommit")
+  })
+
   it("keeps commit and finalization failures recoverable and makes exact commit recovery idempotent", async () => {
     const adapter = new ModelAdapter()
     await throughValidate(adapter)
@@ -283,6 +369,20 @@ describe("v1.37 observation v1.19 activation coordinator", () => {
     expect(adapter.head.state).toBe("active-v1.19-finalized")
   })
 
+  it("refuses to finalize a six-path commit with a tampered selector", async () => {
+    const adapter = new ModelAdapter()
+    await throughValidate(adapter)
+    await run(adapter, "stage")
+    await run(adapter, "commit")
+    adapter.commits
+      .get(adapter.currentHead)!
+      .files.set(ACTIVATION_SELECTOR_PATHS[0], Buffer.from("tampered\n"))
+    await expect(run(adapter, "recover")).rejects.toThrow(
+      /committed selector mismatch/iu,
+    )
+    expect(adapter.head.state).toBe("pending-precommit")
+  })
+
   it("restores and aborts an exact precommit crash but refuses an unrelated commit", async () => {
     const restored = new ModelAdapter()
     await run(restored, "prepare")
@@ -299,7 +399,9 @@ describe("v1.37 observation v1.19 activation coordinator", () => {
       files: new Map(mismatch.files),
     })
     mismatch.currentHead = git("9")
-    await expect(run(mismatch, "recover")).rejects.toThrow(/unrelated|mismatch/iu)
+    await expect(run(mismatch, "recover")).rejects.toThrow(
+      /unrelated|mismatch/iu,
+    )
     expect(mismatch.head.state).toBe("pending-precommit")
   })
 
@@ -321,6 +423,21 @@ describe("v1.37 observation v1.19 activation coordinator", () => {
       treeSha: git("e"),
     })
     expect(adapter.events).toContain(`commit:${COMPENSATION_COMMIT_MESSAGE}`)
+  })
+
+  it("recovers an exact committed-but-unfinalized compensation", async () => {
+    const adapter = new ModelAdapter()
+    await throughValidate(adapter)
+    await run(adapter, "stage")
+    await run(adapter, "commit")
+    await run(adapter, "finalize")
+    adapter.failFinalize = true
+    await expect(run(adapter, "compensate")).rejects.toThrow(/finalization/iu)
+    expect(adapter.head.state).toBe("pending-compensation")
+    adapter.failFinalize = false
+    await run(adapter, "recover")
+    expect(adapter.head.state).toBe("active-v1.17-compensated")
+    expect(adapter.head.compensation?.commitSha).toBe(git("d"))
   })
 
   it("serializes every mode under the coordinator lock", async () => {
