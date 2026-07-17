@@ -14,6 +14,11 @@ import {
   migrationsDirectory,
   readMigrationFiles,
 } from "./migrations.js"
+import {
+  ARENA_CATALOG_ENTRY_COLUMNS,
+  SET_CONDITION_IDENTITY_COLUMNS,
+  STRATEGY_REVISION_V1_19_REVALIDATION_COLUMNS,
+} from "./schema.js"
 
 const databaseUrl = process.env.DATABASE_URL
 const describeDatabase = databaseUrl ? describe : describe.skip
@@ -60,7 +65,62 @@ describe("migrations", () => {
     expect(names).toContain("0023_runtime_conformance_certificates.sql")
     expect(names).toContain("0024_runtime_authority_import_trust_roots.sql")
     expect(names).toContain("0025_runtime_semantic_receipts_v1_18.sql")
+    expect(names).toContain("0026_arena_catalog_and_set_conditions.sql")
     expect(names).toEqual([...names].sort())
+  })
+
+  it("defines the additive immutable arena, condition, and revision revalidation substrate", async () => {
+    const sql = await readFile(
+      new URL("0026_arena_catalog_and_set_conditions.sql", migrationsDirectory),
+      "utf8",
+    )
+
+    for (const required of [
+      "arena_catalog_entries",
+      "set_scenarios",
+      "set_conditions",
+      "successor_scenario_id",
+      "successor_condition_id",
+      "initial_initiative_player_id",
+      "strategy_revision_v1_19_revalidations",
+      "strategy_revision_v1_19_revalidation_revocations",
+      "strategy-runtime-abi-v1.19",
+      "runtime-v1.19",
+      "real_service_execution",
+      "reviewed",
+      "reject_integrity_authority_mutation",
+    ]) {
+      expect(sql).toContain(required)
+    }
+    expect(sql).toContain("num_nonnulls")
+    expect(sql).toContain("condition_ordinal between 0 and 3")
+    expect(sql).not.toMatch(/update\s+(arena_variants|matches|match_sets|strategy_revisions)/iu)
+    expect(sql).not.toMatch(/insert\s+into\s+strategy_revision_v1_19_revalidations/iu)
+  })
+
+  it("exports the exact persistence column groups for successor authority", () => {
+    expect(ARENA_CATALOG_ENTRY_COLUMNS).toEqual([
+      "catalog_version",
+      "arena_id",
+      "arena_version",
+      "arena_name",
+      "arena_status",
+      "schedulable",
+      "alias_of_arena_id",
+      "geometry_hash_profile",
+      "semantic_geometry_hash",
+      "config",
+    ])
+    expect(SET_CONDITION_IDENTITY_COLUMNS).toContain("condition_ordinal")
+    expect(SET_CONDITION_IDENTITY_COLUMNS).toContain(
+      "initial_initiative_player_id",
+    )
+    expect(STRATEGY_REVISION_V1_19_REVALIDATION_COLUMNS).toContain(
+      "execution_receipt_root",
+    )
+    expect(STRATEGY_REVISION_V1_19_REVALIDATION_COLUMNS).toContain(
+      "reviewed_certificate_sha256",
+    )
   })
 
   it("extends strict Chronicle receipt versioning to v1.18 without rewriting history", async () => {
