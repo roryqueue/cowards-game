@@ -1,9 +1,9 @@
 ---
 phase: 260
 slug: truthful-strategy-inputs-arena-authority-and-set-fairness
-status: draft
-nyquist_compliant: false
-wave_0_complete: false
+status: approved
+nyquist_compliant: true
+wave_0_complete: true
 created: 2026-07-16
 ---
 
@@ -47,16 +47,16 @@ created: 2026-07-16
 
 ## Wave 0 Requirements
 
-- [ ] Successor StrategyInput and SoldierBrainInput schema, consistency, and signed-invocation fixtures.
-- [ ] Engine initiative and `hasAdvancedThisActivation` transition table, including push, pushed Soldier, blocked actions, Round change, yielded continuation, and slot reset.
-- [ ] Spec arena manifest, semantic preimage/hash, alias, active-duplicate, and projection fixtures.
-- [ ] Spec four-condition Set policy, exact enumeration, permutation, scenario identity, and seed-independence fixtures.
-- [ ] Additive historical-safe persistence migration and atomic matrix/status/scoring/retry fixtures.
-- [ ] Generated Go catalog/policy parity plus entrant-level Cartesian database fixtures.
-- [ ] New immutable four-language observation corpus, reviewed traces, and successor certificate candidate checks.
-- [ ] Replay condition/catalog reproducibility, alias, and historical dispatch fixtures.
-- [ ] Public contract condition projection and prohibited-private-field scans.
-- [ ] Boundary monitors for handwritten arena authority, seed-parsed fairness, mixed tuple identities, stale certificates, and execution ownership.
+- [x] Successor StrategyInput and SoldierBrainInput schema, consistency, and signed-invocation fixtures — owned by Plans 260-01, 260-03, and 260-10.
+- [x] Engine initiative and `hasAdvancedThisActivation` transition table, including push, pushed Soldier, blocked actions, Round change, yielded continuation, and slot reset — owned by Plan 260-03.
+- [x] Spec arena manifest, semantic preimage/hash, alias, active-duplicate, and projection fixtures — owned by Plans 260-01, 260-16, and 260-17.
+- [x] Spec four-condition Set policy, exact enumeration, permutation, scenario identity, and seed-independence fixtures — owned by Plans 260-01, 260-05, and 260-06.
+- [x] Additive historical-safe persistence migration and atomic matrix/status/scoring/retry fixtures — owned by Plans 260-04, 260-05, and 260-07.
+- [x] Generated Go catalog/policy parity plus entrant-level Cartesian database fixtures — owned by Plans 260-06, 260-08, and 260-16.
+- [x] New immutable four-language observation corpus, reviewed traces, and successor certificate candidate checks — owned by Plans 260-11 through 260-13 and 260-18 through 260-20.
+- [x] Replay condition/catalog reproducibility, alias, and historical dispatch fixtures — owned by Plans 260-09 and 260-24.
+- [x] Public contract condition projection and prohibited-private-field scans — owned by Plan 260-23.
+- [x] Boundary monitors for handwritten arena authority, seed-parsed fairness, mixed tuple identities, stale certificates, and execution ownership — owned by Plans 260-15 and 260-25.
 
 ## Required Phase Gate
 
@@ -79,13 +79,12 @@ All required behaviors must be automated. No UI design or subjective visual acce
 
 ## Validation Sign-Off
 
-- [ ] Every plan task has an `<automated>` command or an explicit Wave-0 dependency.
-- [ ] Sampling continuity has no three consecutive tasks without automated verification.
-- [ ] Every Wave-0 asset is owned before its consumer task.
-- [ ] No watch mode, semantic skip, synthetic language success, seed-derived fairness assertion, or partial matrix pass.
-- [ ] Focused feedback target is under 120 seconds.
-- [ ] Final gate requires all four real lanes, exact Cartesian Set evidence, immutable history, and the protected baseline.
-- [ ] `nyquist_compliant: true` and `wave_0_complete: true` are set only after plan checking.
+- [x] Every plan task has an `<automated>` command or an explicit Wave-0 dependency.
+- [x] Sampling continuity has no three consecutive tasks without automated verification.
+- [x] Every Wave-0 asset is owned before its consumer task.
+- [x] No watch mode, semantic skip, synthetic language success, seed-derived fairness assertion, or partial matrix pass.
+- [x] Focused feedback target is under 120 seconds.
+- [x] Final gate requires all four real lanes, exact Cartesian Set evidence, immutable history, and the protected baseline.
+- [x] `nyquist_compliant: true` and `wave_0_complete: true` are set only after plan checking.
 
-**Approval:** pending plan creation and independent checking.
-
+**Approval:** 2026-07-16 — 26 bounded plans across 13 dependency-valid waves; requirements and D-01..D-16 coverage, candidate-only preactivation, nine-file atomic activation, generated-output inventory, file-conflict analysis, and independent checking passed with zero blockers and zero warnings.

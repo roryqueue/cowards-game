@@ -321,7 +321,74 @@ Plans:
   4. Each counted scenario explicitly schedules every entrant on each side and in each initial-initiative state, proved at entrant level through TypeScript, Go, persistence, and service-backed tests.
   5. Arena and Set repair adds no official geometry or valid v1.4 gameplay change; any change to Strategy observation or reachable Match semantics stops for explicit compatibility approval.
 
-**Plans:** TBD
+**Plans:** 26 plans in 13 waves
+
+**Wave 1 — immutable semantic authorities**
+
+- [ ] 260-01-PLAN.md — Freeze the successor observation ABI, arena catalog, and four-condition Set policy.
+
+**Wave 2 *(blocked on Wave 1 completion)* — inactive tuple and selector registration**
+
+- [ ] 260-02-PLAN.md — Register the complete inactive successor tuple and compact TypeScript selector.
+
+**Wave 3 *(blocked on Wave 2 completion)* — data projections and persistence substrate**
+
+- [ ] 260-04-PLAN.md — Add the historical-safe arena, condition, and revision-evidence database substrate.
+- [ ] 260-16-PLAN.md — Generate the candidate Go authority and Phase-259-preserving current selector.
+- [ ] 260-17-PLAN.md — Stage public spec and map-config candidate dispatch without current behavior change.
+
+**Wave 4 *(blocked on Wave 3 completion)* — pure kernel observations**
+
+- [ ] 260-03-PLAN.md — Derive initiative and pre-Action Advance observation from kernel state under successor dispatch.
+
+**Wave 5 *(blocked on Wave 4 completion)* — candidate scheduling and runtime transport**
+
+- [ ] 260-05-PLAN.md — Stage the TypeScript four-condition scheduler candidate.
+- [ ] 260-06-PLAN.md — Stage the generated-authority Go scheduler candidate.
+- [ ] 260-10-PLAN.md — Transport the v1.19 observation contract through all runtime lanes.
+
+**Wave 6 *(blocked on Wave 5 completion)* — completion, replay, corpus, public contract, and revalidation service**
+
+- [ ] 260-07-PLAN.md — Stage exact TypeScript completion, retry, status, and scoring.
+- [ ] 260-08-PLAN.md — Stage exact Go completion, retry, status, and scoring.
+- [ ] 260-09-PLAN.md — Stage candidate replay recording and validation.
+- [ ] 260-11-PLAN.md — Create and independently review the pinned corpus-v3 candidate.
+- [ ] 260-18-PLAN.md — Stage pinned v1.19 Workshop and SDK examples without changing defaults.
+- [ ] 260-23-PLAN.md — Stage the privacy-safe public result contract candidate.
+- [ ] 260-26-PLAN.md — Build revision-specific real v1.19 revalidation service.
+
+**Wave 7 *(blocked on Wave 6 completion)* — trace review and mechanical rendering**
+
+- [ ] 260-12-PLAN.md — Generate and independently review the fixed-schema trace-v4 candidate.
+- [ ] 260-24-PLAN.md — Stage mechanical replay/result rendering without UI authority.
+
+**Wave 8 *(blocked on Wave 7 completion)* — real lane execution and permanent ownership guard**
+
+- [ ] 260-19-PLAN.md — Run and inventory twelve fresh real-language candidate executions.
+- [ ] 260-25-PLAN.md — Install permanent no-execution and no-semantic-derivation monitors.
+
+**Wave 9 *(blocked on Wave 8 completion)* — certificates and revision inventory proof**
+
+- [ ] 260-13-PLAN.md — Verify, sign, and import four inactive successor certificates.
+- [ ] 260-20-PLAN.md — Execute D-04 revalidation over the frozen Strategy Revision inventory.
+
+**Wave 10 *(blocked on Wave 9 completion)* — complete preactivation proof**
+
+- [ ] 260-21-PLAN.md — Prove successor readiness while every Phase-259 current selector remains exact.
+
+**Wave 11 *(blocked on Wave 10 completion)* — postactivation evaluator preparation**
+
+- [ ] 260-22-PLAN.md — Prepare the distinct full activated-state and rollback evaluator.
+
+**Wave 12 *(blocked on Wave 11 completion)* — atomic activation**
+
+- [ ] 260-14-PLAN.md — Activate the nine-file selector/pin/default inventory and transactional database selection in one proved commit.
+
+**Wave 13 *(blocked on Wave 12 completion)* — integrated closure**
+
+- [ ] 260-15-PLAN.md — Close Phase 260 with one executable proof and permanent drift monitors.
+
+**Cross-cutting constraints:** all preactivation work is versioned candidate-only; Phase-259 current selectors, corpus/trace pins, Workshop defaults, certificates, and historical evidence remain exact until the single activation commit; initiative and Advance observations are kernel-owned; Set fairness is explicit four-condition identity rather than seed parsing; no valid v1.4 gameplay, official geometry, Strategy execution ownership, or public privacy boundary changes.
 
 ### Phase 261: Integrated Service Proof, Drift Guards, and Release
 
