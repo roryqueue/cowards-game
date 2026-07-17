@@ -3,8 +3,11 @@ import { Buffer } from "node:buffer"
 import { createHash, createHmac } from "node:crypto"
 import { readFileSync } from "node:fs"
 import {
+  CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE,
+  CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE_ID,
   defaultRuntimeMetadata,
   describeStrategyRuntimeProductSemantics,
+  type RuntimeEntrantExecutionEvidence,
 } from "@cowards/spec"
 import {
   buildExhibitionDuplicateKey,
@@ -16,7 +19,13 @@ import {
   validateManualExhibitionRevisionIds,
 } from "./competition.js"
 import type { Pool } from "pg"
-import type { MatchSetExecutionEvidenceResolver } from "./matchset-service.js"
+import {
+  createFixtureMatchSetEvidenceResolver,
+  createMatchSetService,
+  resolveMatchSetExecutionEvidence,
+  type IntegritySchedulingIdentity,
+  type MatchSetExecutionEvidenceResolver,
+} from "./matchset-service.js"
 
 const TEST_PROVIDER_VALIDATION_SECRET =
   "cowards-provider-validation-test-secret-v1.33"
@@ -112,6 +121,74 @@ const entrants = [
     lockedAt: "2026-05-19T00:00:00.000Z",
   },
 ]
+
+const sha256 = (value: string): string =>
+  createHash("sha256").update(value).digest("hex")
+
+const candidateIntegrityIdentity = (
+  revisionIds: readonly string[],
+): IntegritySchedulingIdentity => {
+  const registryGeneration = "competition-candidate:generation:1"
+  const executionEntrants = Object.fromEntries(
+    revisionIds.map((strategyRevisionId, index) => {
+      const evidence: RuntimeEntrantExecutionEvidence = {
+        entrantKey: strategyRevisionId,
+        strategyRevisionId,
+        laneIdentity: {
+          providerId: `competition-candidate:provider:${index}`,
+          languageId: "typescript",
+          runtimeId: `competition-candidate:runtime:${index}`,
+          runtimeVersion: "1",
+          toolchainId: `competition-candidate:toolchain:${index}`,
+          toolchainVersion: "1",
+          adapterId: `competition-candidate:adapter:${index}`,
+          adapterVersion: "1",
+          policyId: "competition-candidate:policy",
+          policyVersion: "1",
+          corpusId: "competition-candidate:corpus",
+          corpusVersion: "1",
+          artifactId: `competition-candidate:artifact:${index}`,
+          artifactSha256: sha256(`candidate-artifact:${strategyRevisionId}`),
+          implementationId: `competition-candidate:implementation:${index}`,
+          buildId: `competition-candidate:build:${index}`,
+          semanticTupleId: CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE_ID,
+          semanticTuple: { ...CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE },
+        },
+        containmentCertificateRef: {
+          kind: "containment",
+          certificateId: `competition-candidate:containment:${index}`,
+          certificateVersion: "runtime-certificate-v1",
+          certificateRecordHash: sha256(`containment:${strategyRevisionId}`),
+          registryGeneration,
+        },
+        conformanceCertificateRef: {
+          kind: "conformance",
+          certificateId: `competition-candidate:reviewed:${index}`,
+          certificateVersion: "runtime-conformance-certificate-v1.19",
+          certificateRecordHash: sha256(`conformance:${strategyRevisionId}`),
+          registryGeneration,
+        },
+        schedulingDecision: {
+          status: "exhibition_only",
+          reasonCode: "CONFORMANCE_MISSING",
+          evaluatedAt: "2026-07-12T12:00:00.000Z",
+          freshUntil: "2099-12-31T23:59:59.999Z",
+          registryGeneration,
+        },
+      }
+      return [strategyRevisionId, evidence]
+    }),
+  )
+  return {
+    compatibility: {
+      tupleId: CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE_ID,
+      tuple: { ...CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE },
+    },
+    authorityBundleHash: sha256("competition-candidate:bundle"),
+    registryGeneration,
+    executionEntrants,
+  }
+}
 
 describe("competition helpers", () => {
   it("keeps lifecycle and selected-normal creation helpers out of the normal persistence root export", async () => {
@@ -266,6 +343,145 @@ describe("competition helpers", () => {
         "strategy-revision:b",
       ],
     ])
+  })
+
+  it("generates the explicit runtime-v1.19 Cartesian candidate with stable canonical identities", () => {
+    const candidate = generateCompetitionPairwiseMatrix({
+      matchSetId: "match-set:exhibition:candidate",
+      presetId: "smoke-exhibition-v1",
+      entrants,
+      semanticAuthorityKey: "runtime-v1.19",
+    })
+
+    expect(candidate).toHaveLength(12)
+    const byScenario = Map.groupBy(candidate, (match) => {
+      if (!("semanticAuthorityKey" in match)) {
+        throw new Error("candidate row lost its explicit dispatch")
+      }
+      return match.scenarioId
+    })
+    expect(byScenario.size).toBe(3)
+    for (const rows of byScenario.values()) {
+      expect(rows).toHaveLength(4)
+      expect(new Set(rows.map(({ seed }) => seed))).toEqual(
+        new Set(["seed:smoke:001"]),
+      )
+      expect(
+        rows.filter(
+          (row) =>
+            row.bottomEntrantKey === rows[0]!.bottomEntrantKey,
+        ),
+      ).toHaveLength(2)
+      const candidateRows = rows.filter(
+        (row) => "semanticAuthorityKey" in row,
+      )
+      expect(
+        candidateRows.filter(
+          (row) =>
+            row.initialInitiativeEntrantKey ===
+            candidateRows[0]!.bottomEntrantKey,
+        ),
+      ).toHaveLength(2)
+      expect(candidateRows.map((row) => row.conditionOrdinal)).toEqual([
+        0, 1, 2, 3,
+      ])
+    }
+
+    const reordered = generateCompetitionPairwiseMatrix({
+      matchSetId: "match-set:exhibition:candidate",
+      presetId: "smoke-exhibition-v1",
+      entrants: [entrants[2]!, entrants[0]!, entrants[1]!],
+      semanticAuthorityKey: "runtime-v1.19",
+    })
+    expect(reordered).toEqual(candidate)
+
+    const pairOnly = generateCompetitionPairwiseMatrix({
+      matchSetId: "match-set:exhibition:candidate",
+      presetId: "smoke-exhibition-v1",
+      entrants: [entrants[0]!, entrants[1]!],
+      semanticAuthorityKey: "runtime-v1.19",
+    })
+    expect(
+      candidate.filter((row) => {
+        const keys = new Set([
+          row.bottomEntrantKey,
+          row.topEntrantKey,
+        ])
+        return (
+          keys.has("strategy-revision:a") &&
+          keys.has("strategy-revision:b")
+        )
+      }),
+    ).toEqual(pairOnly)
+  })
+
+  it("rejects two-row and seed-suffix fairness only on the explicit candidate branch", async () => {
+    const matchSetId = "match-set:competition:fairness-boundary"
+    const candidate = generateCompetitionPairwiseMatrix({
+      matchSetId,
+      presetId: "smoke-exhibition-v1",
+      entrants: entrants.slice(0, 2),
+      semanticAuthorityKey: "runtime-v1.19",
+    })
+    const pool = {
+      async connect() {
+        throw new Error("accepted matrix reached database boundary")
+      },
+    } as unknown as Pool
+    const service = createMatchSetService(pool)
+    const integrityIdentity = candidateIntegrityIdentity([
+      "strategy-revision:a",
+      "strategy-revision:b",
+    ])
+
+    await expect(
+      service.createFromMatrix({
+        id: matchSetId,
+        semanticAuthorityKey: "runtime-v1.19",
+        matches: candidate.slice(0, 2),
+        integrityIdentity,
+      }),
+    ).rejects.toThrow(/exactly four conditions/iu)
+
+    await expect(
+      service.createFromMatrix({
+        id: matchSetId,
+        semanticAuthorityKey: "runtime-v1.19",
+        matches: candidate.map((row, index) =>
+          index === 0 ? { ...row, seed: `${row.seed}:mirror` } : row,
+        ),
+        integrityIdentity,
+      }),
+    ).rejects.toThrow(/identity|membership|mismatch/iu)
+
+    const legacy = generateCompetitionPairwiseMatrix({
+      matchSetId,
+      presetId: "standard-exhibition-v1",
+      entrants: entrants.slice(0, 2),
+    })
+    expect(legacy.some(({ seed }) => seed.endsWith(":mirror"))).toBe(true)
+    const legacyIdentity = await resolveMatchSetExecutionEvidence({
+      resolver: createFixtureMatchSetEvidenceResolver(),
+      purpose: "exhibition",
+      evaluationInstant: "2026-07-12T12:00:00.000Z",
+      entrants: [
+        {
+          entrantKey: "strategy-revision:a",
+          strategyRevisionId: "strategy-revision:a",
+        },
+        {
+          entrantKey: "strategy-revision:b",
+          strategyRevisionId: "strategy-revision:b",
+        },
+      ],
+    })
+    await expect(
+      service.createFromMatrix({
+        id: matchSetId,
+        matches: legacy,
+        integrityIdentity: legacyIdentity,
+      }),
+    ).rejects.toThrow("accepted matrix reached database boundary")
   })
 
   it("fails closed on empty production authority before any exhibition database access", async () => {
