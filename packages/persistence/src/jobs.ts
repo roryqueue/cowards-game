@@ -1,12 +1,18 @@
 import { randomUUID } from "node:crypto"
-import type {
-  JsonValue,
-  MatchId,
-  RuntimeEntrantExecutionEvidence,
-  RuntimeExecutionResolvedEvidenceSnapshot,
+import {
+  resolveSemanticAuthoritySelection,
+  type JsonValue,
+  type MatchId,
+  type RuntimeEntrantExecutionEvidence,
+  type RuntimeExecutionResolvedEvidenceSnapshot,
+  type SemanticAuthoritySelection,
 } from "@cowards/spec"
 import type { Pool } from "pg"
 import { withTransaction } from "./db.js"
+import {
+  resolveExactSemanticAuthoritySelection,
+  type CompleteSemanticAuthoritySelection,
+} from "./semantic-authority-selection-head.js"
 
 export interface ClaimMatchJobInput {
   workerId: string
@@ -22,6 +28,11 @@ export interface ClaimedMatchJob {
   leaseToken: string
   leaseExpiresAt: Date
   evidenceSnapshot: RuntimeExecutionResolvedEvidenceSnapshot
+  semanticAuthority: Readonly<{
+    selection: Readonly<CompleteSemanticAuthoritySelection>
+    selectionRoot: `sha256:${string}`
+    runtimeRequestSelection: Readonly<SemanticAuthoritySelection>
+  }>
 }
 
 export const DEFAULT_LEASE_MS = 30_000
@@ -101,12 +112,16 @@ export const CLAIM_NEXT_MATCH_JOB_SQL = `
          match_set.authority_bundle_hash,
          match_set.authority_registry_generation,
          job.bottom_execution_evidence,
-         job.top_execution_evidence
+         job.top_execution_evidence,
+         match_set.semantic_authority_selection,
+         match_set.semantic_authority_selection_root
     from match_jobs job
     join matches match on match.id = job.match_id
     join match_sets match_set
       on match_set.id = job.integrity_match_set_id
      and match.integrity_match_set_id = match_set.id
+     and match.semantic_authority_selection_root =
+         match_set.semantic_authority_selection_root
     join current_authority authority
       on match_set.authority_registry_generation = authority.generation::text
      and match_set.authority_bundle_hash =
@@ -158,6 +173,27 @@ export const CLAIM_NEXT_MATCH_JOB_SQL = `
      and job.bottom_execution_evidence = match.bottom_execution_evidence
      and job.top_execution_evidence = match.top_execution_evidence
      and job.execution_evidence_pair_hash = match.execution_evidence_pair_hash
+     and job.semantic_authority_selection_root = match.semantic_authority_selection_root
+     and match.semantic_authority_selection_root = match_set.semantic_authority_selection_root
+     and match_set.semantic_authority_selection_root is not null
+     and semantic_authority_selection_is_exact(
+       match_set.semantic_authority_selection,
+       match_set.semantic_authority_selection_root
+     )
+     and match_set.semantic_authority_selection->>'tupleId' =
+         match_set.compatibility_tuple_id
+     and match_set.semantic_authority_selection->>'rulesVersion' =
+         match_set.compatibility_rules_version
+     and match_set.semantic_authority_selection->>'engineVersion' =
+         match_set.compatibility_engine_version
+     and match_set.semantic_authority_selection->>'runtimeAbiVersion' =
+         match_set.compatibility_runtime_abi_version
+     and match_set.semantic_authority_selection->>'chronicleVersion' =
+         match_set.compatibility_chronicle_version
+     and match_set.semantic_authority_selection->>'arenaCatalogVersion' =
+         match_set.compatibility_arena_catalog_version
+     and match_set.semantic_authority_selection->>'setPolicyVersion' =
+         match_set.compatibility_set_policy_version
      and job.bottom_execution_evidence = bottom_entrant.execution_snapshot
      and job.top_execution_evidence = top_entrant.execution_snapshot
      and bottom_entrant.authority_bundle_hash = match_set.authority_bundle_hash
@@ -323,10 +359,25 @@ export const claimNextMatchJob = async (
       authority_registry_generation: string
       bottom_execution_evidence: RuntimeEntrantExecutionEvidence
       top_execution_evidence: RuntimeEntrantExecutionEvidence
+      semantic_authority_selection: unknown
+      semantic_authority_selection_root: string
     }>(CLAIM_NEXT_MATCH_JOB_SQL, [now, input.matchIds ?? null])
     const row = claim.rows[0]
     if (!row) {
       return null
+    }
+    const semanticAuthoritySelection = resolveExactSemanticAuthoritySelection(
+      row.semantic_authority_selection,
+      row.semantic_authority_selection_root,
+    )
+    if (semanticAuthoritySelection === undefined) {
+      throw new Error("Claimed job has invalid frozen semantic authority.")
+    }
+    const runtimeRequestSelection = resolveSemanticAuthoritySelection({
+      semanticAuthorityKey: semanticAuthoritySelection.semanticAuthorityKey,
+    })
+    if (runtimeRequestSelection === undefined) {
+      throw new Error("Claimed job has no runtime request semantic selection.")
     }
     const attemptNumber = row.attempts + 1
     await client.query(
@@ -384,6 +435,12 @@ export const claimNextMatchJob = async (
           top: row.top_execution_evidence,
         },
       },
+      semanticAuthority: Object.freeze({
+        selection: semanticAuthoritySelection,
+        selectionRoot:
+          row.semantic_authority_selection_root as `sha256:${string}`,
+        runtimeRequestSelection,
+      }),
     }
   })
 }

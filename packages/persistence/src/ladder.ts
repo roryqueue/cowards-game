@@ -49,6 +49,10 @@ import {
   resolveMatchSetExecutionEvidence,
   type MatchSetExecutionEvidenceResolver,
 } from "./matchset-service.js"
+import {
+  resolveFileCurrentSchedulingSemanticAuthority,
+  type SchedulingSemanticAuthorityKey,
+} from "./presets.js"
 import { createRepositories } from "./repositories.js"
 import { createDevelopmentSeedData } from "./seed.js"
 import type { MatchSetStatus } from "./schema.js"
@@ -1381,6 +1385,7 @@ export const scheduleTrialLadderSeason = async (
     actorUserId?: UserId | undefined
     now?: Date | undefined
     evidenceResolver?: MatchSetExecutionEvidenceResolver | undefined
+    semanticAuthorityKey?: SchedulingSemanticAuthorityKey | undefined
   },
 ): Promise<{
   scheduleRunId: string
@@ -1499,6 +1504,10 @@ export const scheduleTrialLadderSeason = async (
 
     const now = input.now ?? new Date()
     const evaluationInstant = now.toISOString()
+    const resolvedSemanticAuthorityKey =
+      input.semanticAuthorityKey ??
+      resolveFileCurrentSchedulingSemanticAuthority().selection
+        .semanticAuthorityKey
     const publication = await loadInstalledAuthorityPublication(
       client,
       evaluationInstant,
@@ -1516,6 +1525,7 @@ export const scheduleTrialLadderSeason = async (
         matchSetId,
         presetId: TRIAL_LADDER_PRESET_ID,
         entrants,
+        semanticAuthorityKey: resolvedSemanticAuthorityKey,
       })
       const integrityIdentity = await resolveMatchSetExecutionEvidence({
         resolver: input.evidenceResolver,
@@ -1525,6 +1535,9 @@ export const scheduleTrialLadderSeason = async (
           entrantKey: entrant.strategyRevisionId,
           strategyRevisionId: entrant.strategyRevisionId,
         })),
+        ...(resolvedSemanticAuthorityKey === "runtime-v1.19"
+          ? { semanticAuthorityKey: "runtime-v1.19" as const }
+          : {}),
       })
       assertSchedulingIdentityMatchesInstalledPublication(
         integrityIdentity,
@@ -1560,11 +1573,16 @@ export const scheduleTrialLadderSeason = async (
         prepared
       await insertMatchSetWithMatrixOnClient(client, {
         id: matchSetId,
+        ...(input.semanticAuthorityKey !== undefined
+          ? { semanticAuthorityKey: input.semanticAuthorityKey }
+          : {}),
         matches,
         integrityIdentity,
         matchSet: {
           presetId: "standard-v1",
-          presetVersion: "v1",
+          ...(resolvedSemanticAuthorityKey === "runtime-v1.19"
+            ? {}
+            : { presetVersion: "v1" as const }),
           competitionPresetId: TRIAL_LADDER_PRESET_ID,
           competitionPresetVersion: "v1",
           scoringPolicyVersion: EXHIBITION_SCORING_POLICY_V1.version,

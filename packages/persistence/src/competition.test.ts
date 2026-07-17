@@ -26,6 +26,12 @@ import {
   type IntegritySchedulingIdentity,
   type MatchSetExecutionEvidenceResolver,
 } from "./matchset-service.js"
+import {
+  ACTIVE_V1_17_SEMANTIC_AUTHORITY_SELECTION,
+  ACTIVE_V1_17_SEMANTIC_AUTHORITY_SELECTION_ROOT,
+  REVIEWED_V1_19_SEMANTIC_AUTHORITY_SELECTION,
+  REVIEWED_V1_19_SEMANTIC_AUTHORITY_SELECTION_ROOT,
+} from "./semantic-authority-selection-head.js"
 
 const TEST_PROVIDER_VALIDATION_SECRET =
   "cowards-provider-validation-test-secret-v1.33"
@@ -187,6 +193,95 @@ const candidateIntegrityIdentity = (
     authorityBundleHash: sha256("competition-candidate:bundle"),
     registryGeneration,
     executionEntrants,
+  }
+}
+
+const competitionSchedulingPool = (options: {
+  head?: "active" | "pending" | "mismatch"
+  missingRevision?: boolean
+  failJobs?: boolean
+}) => {
+  const calls: string[] = []
+  const client = {
+    async query(sql: string, values: readonly unknown[] = []) {
+      const normalized = sql.replace(/\s+/gu, " ").trim()
+      calls.push(normalized)
+      if (options.failJobs && normalized.startsWith("insert into match_jobs")) {
+        throw new Error("competition system failure")
+      }
+      if (normalized.includes("from semantic_authority_selection_head")) {
+        if (options.head === "mismatch") {
+          return {
+            rowCount: 1,
+            rows: [
+              {
+                state: "active-v1.19-finalized",
+                revision: "2",
+                active_selection: REVIEWED_V1_19_SEMANTIC_AUTHORITY_SELECTION,
+                active_selection_root:
+                  REVIEWED_V1_19_SEMANTIC_AUTHORITY_SELECTION_ROOT,
+                pending_intent: null,
+                finalization: {
+                  activationId: "activation:competition-mismatch",
+                  proofDigest: `sha256:${"1".repeat(64)}`,
+                  commitSha: "2".repeat(40),
+                  treeSha: "3".repeat(40),
+                  selectorManifestRoot: `sha256:${"4".repeat(64)}`,
+                },
+                compensation: null,
+              },
+            ],
+          }
+        }
+        return {
+          rowCount: 1,
+          rows: [
+            {
+              state:
+                options.head === "pending"
+                  ? "pending-precommit"
+                  : "active-v1.17-bootstrap",
+              revision: options.head === "pending" ? "1" : "0",
+              active_selection: ACTIVE_V1_17_SEMANTIC_AUTHORITY_SELECTION,
+              active_selection_root:
+                ACTIVE_V1_17_SEMANTIC_AUTHORITY_SELECTION_ROOT,
+              pending_intent: options.head === "pending" ? {} : null,
+              finalization: null,
+              compensation: null,
+            },
+          ],
+        }
+      }
+      if (normalized.startsWith("select * from strategy_revisions")) {
+        return options.missingRevision
+          ? { rows: [] }
+          : {
+              rows: [
+                {
+                  id: values[0],
+                  strategy_id: null,
+                  source: "return",
+                  source_hash: "source-hash",
+                  source_bytes: 6,
+                  runtime: defaultRuntimeMetadata(),
+                  engine_compatibility: {},
+                  validation: { valid: true },
+                  metadata: {},
+                  compiled_artifact: null,
+                },
+              ],
+            }
+      }
+      if (normalized.startsWith("select config from arena_variants")) {
+        return { rows: [{ config: { id: values[0] } }] }
+      }
+      return { rows: [], rowCount: 1 }
+    },
+    release() {},
+  }
+  return {
+    calls,
+    pool: { connect: async () => client } as unknown as Pool,
   }
 }
 
@@ -371,13 +466,10 @@ describe("competition helpers", () => {
       )
       expect(
         rows.filter(
-          (row) =>
-            row.bottomEntrantKey === rows[0]!.bottomEntrantKey,
+          (row) => row.bottomEntrantKey === rows[0]!.bottomEntrantKey,
         ),
       ).toHaveLength(2)
-      const candidateRows = rows.filter(
-        (row) => "semanticAuthorityKey" in row,
-      )
+      const candidateRows = rows.filter((row) => "semanticAuthorityKey" in row)
       expect(
         candidateRows.filter(
           (row) =>
@@ -406,13 +498,9 @@ describe("competition helpers", () => {
     })
     expect(
       candidate.filter((row) => {
-        const keys = new Set([
-          row.bottomEntrantKey,
-          row.topEntrantKey,
-        ])
+        const keys = new Set([row.bottomEntrantKey, row.topEntrantKey])
         return (
-          keys.has("strategy-revision:a") &&
-          keys.has("strategy-revision:b")
+          keys.has("strategy-revision:a") && keys.has("strategy-revision:b")
         )
       }),
     ).toEqual(pairOnly)
@@ -431,10 +519,7 @@ describe("competition helpers", () => {
         return {
           async query(sql: string) {
             const normalized = sql.trim().toLowerCase()
-            if (
-              normalized.startsWith("begin") ||
-              normalized === "rollback"
-            ) {
+            if (normalized.startsWith("begin") || normalized === "rollback") {
               return { rows: [], rowCount: 0 }
             }
             throw new Error("accepted matrix reached database boundary")
@@ -506,6 +591,91 @@ describe("competition helpers", () => {
         semanticAuthorityKey: "runtime-v1.18",
       } as unknown as Parameters<typeof generateCompetitionPairwiseMatrix>[0]),
     ).toThrow(/unknown.*semantic authority/iu)
+  })
+
+  it("carries competition matrices through active-head, history, coverage, and rollback enforcement", async () => {
+    const competitionSource = readFileSync(
+      new URL("./competition.ts", import.meta.url),
+      "utf8",
+    )
+    const manualCreation = competitionSource.slice(
+      competitionSource.indexOf("export const createManualExhibitionMatchSet"),
+    )
+    expect(manualCreation).toContain(
+      "createMatchSetService(pool).createFromMatrix",
+    )
+    expect(manualCreation).not.toMatch(/insert\s+into\s+match_(sets|jobs)/iu)
+
+    const selected = entrants.slice(0, 2)
+    const matches = generateCompetitionPairwiseMatrix({
+      matchSetId: "match-set:competition:activation-seam",
+      presetId: "smoke-exhibition-v1",
+      entrants: selected,
+    })
+    const integrityIdentity = await resolveMatchSetExecutionEvidence({
+      resolver: createFixtureMatchSetEvidenceResolver(),
+      purpose: "exhibition",
+      evaluationInstant: "2026-07-12T12:00:00.000Z",
+      entrants: selected.map(({ strategyRevisionId }) => ({
+        entrantKey: strategyRevisionId,
+        strategyRevisionId,
+      })),
+    })
+    const input = {
+      id: "match-set:competition:activation-seam",
+      matches,
+      integrityIdentity,
+    } as const
+
+    const active = competitionSchedulingPool({ head: "active" })
+    await expect(
+      createMatchSetService(active.pool).createFromMatrix(input),
+    ).resolves.toMatchObject({ matchSetId: input.id })
+    expect(
+      active.calls.some((sql) =>
+        sql.includes("from semantic_authority_selection_head"),
+      ),
+    ).toBe(true)
+
+    for (const head of ["pending", "mismatch"] as const) {
+      const rejected = competitionSchedulingPool({ head })
+      await expect(
+        createMatchSetService(rejected.pool).createFromMatrix(input),
+      ).rejects.toThrow()
+      expect(
+        rejected.calls.some((sql) => sql.startsWith("insert into match_sets")),
+      ).toBe(false)
+    }
+
+    const uncovered = competitionSchedulingPool({
+      head: "active",
+      missingRevision: true,
+    })
+    await expect(
+      createMatchSetService(uncovered.pool).createFromMatrix(input),
+    ).rejects.toThrow(/StrategyRevision not found/iu)
+
+    const failed = competitionSchedulingPool({
+      head: "active",
+      failJobs: true,
+    })
+    await expect(
+      createMatchSetService(failed.pool).createFromMatrix(input),
+    ).rejects.toThrow("competition system failure")
+    expect(failed.calls.at(-1)).toBe("rollback")
+
+    const historical = competitionSchedulingPool({ head: "pending" })
+    await expect(
+      createMatchSetService(historical.pool).createFromMatrix({
+        ...input,
+        semanticAuthorityKey: "runtime-v1.17",
+      }),
+    ).resolves.toMatchObject({ matchSetId: input.id })
+    expect(
+      historical.calls.some((sql) =>
+        sql.includes("from semantic_authority_selection_head"),
+      ),
+    ).toBe(false)
   })
 
   it("fails closed on empty production authority before any exhibition database access", async () => {

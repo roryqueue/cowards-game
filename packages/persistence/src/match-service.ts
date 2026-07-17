@@ -24,6 +24,15 @@ import {
 } from "./integrity-evidence.js"
 import { createRepositories } from "./repositories.js"
 import { DEFAULT_MAX_JOB_ATTEMPTS, type MatchStatus } from "./schema.js"
+import {
+  resolveExactSemanticAuthoritySelection,
+  assertCountedSemanticAuthoritySelection,
+  lockSemanticAuthoritySelectionHead,
+} from "./semantic-authority-selection-head.js"
+import {
+  resolveFileCurrentSchedulingSemanticAuthority,
+  resolveSchedulingSemanticAuthority,
+} from "./presets.js"
 
 export interface CreateMatchRecordInputV117 {
   id: MatchId
@@ -37,8 +46,7 @@ export interface CreateMatchRecordInputV117 {
   topEntrantKey: string
 }
 
-export interface CreateMatchRecordInputV119
-  extends CreateMatchRecordInputV117 {
+export interface CreateMatchRecordInputV119 extends CreateMatchRecordInputV117 {
   semanticAuthorityKey: "runtime-v1.19"
   setPolicyVersion: typeof SET_CONDITION_POLICY_VERSION_V1_37
   scenarioId: `set-scenario:sha256:${string}`
@@ -227,8 +235,61 @@ export const createMatchService = (pool: Pool) => ({
   async createMatch(input: CreateMatchInput): Promise<CreateMatchResult> {
     validateCreateMatchInput(input)
     const jobId = createMatchJobId(input.id)
+    const isExplicitCandidate = "semanticAuthorityKey" in input
+    const semanticAuthority = isExplicitCandidate
+      ? resolveSchedulingSemanticAuthority("runtime-v1.19")
+      : resolveFileCurrentSchedulingSemanticAuthority()
+    const compatibility = input.integrityIdentity.identity.compatibility
+    if (
+      compatibility.tupleId !== semanticAuthority.selection.tupleId ||
+      compatibility.tuple.rules !== semanticAuthority.selection.rulesVersion ||
+      compatibility.tuple.engine !==
+        semanticAuthority.selection.engineVersion ||
+      compatibility.tuple.runtimeAbi !==
+        semanticAuthority.selection.runtimeAbiVersion ||
+      compatibility.tuple.chronicle !==
+        semanticAuthority.selection.chronicleVersion ||
+      compatibility.tuple.arenaCatalog !==
+        semanticAuthority.selection.arenaCatalogVersion ||
+      compatibility.tuple.setPolicy !==
+        semanticAuthority.selection.setPolicyVersion
+    ) {
+      throw new IntegrityEvidenceInputError(
+        "Direct Match compatibility tuple does not match its semantic authority selection.",
+      )
+    }
 
     await withTransaction(pool, async (client) => {
+      if (!isExplicitCandidate) {
+        const head = await lockSemanticAuthoritySelectionHead(client)
+        assertCountedSemanticAuthoritySelection(
+          head,
+          semanticAuthority.selection,
+          semanticAuthority.selectionRoot,
+        )
+      }
+      const parent = await client.query<{
+        semantic_authority_selection: unknown
+        semantic_authority_selection_root: string | null
+      }>(
+        `select semantic_authority_selection, semantic_authority_selection_root
+           from match_sets where id = $1 for share`,
+        [input.integrityIdentity.matchSetId],
+      )
+      const parentRow = parent.rows[0]
+      const parentSelection = resolveExactSemanticAuthoritySelection(
+        parentRow?.semantic_authority_selection,
+        parentRow?.semantic_authority_selection_root,
+      )
+      if (
+        parentSelection !== semanticAuthority.selection ||
+        parentRow?.semantic_authority_selection_root !==
+          semanticAuthority.selectionRoot
+      ) {
+        throw new IntegrityEvidenceInputError(
+          "Direct Match semantic authority must exactly match its frozen MatchSet.",
+        )
+      }
       const repositories = createRepositories(client)
       await repositories.assertStrategyRevisionCanBeUsed(
         input.bottomStrategyRevisionId,
@@ -249,11 +310,12 @@ export const createMatchService = (pool: Pool) => ({
             arena_variant_id, seed, bottom_player_id, top_player_id, status,
             integrity_match_set_id, bottom_execution_entrant_key,
             top_execution_entrant_key, bottom_execution_evidence,
-            top_execution_evidence, execution_evidence_pair_hash
+            top_execution_evidence, execution_evidence_pair_hash,
+            semantic_authority_selection_root
           )
           values (
             $1, $2, $3, $4, $5, $6, $7, 'pending',
-            $8, $9, $10, $11, $12, $13
+            $8, $9, $10, $11, $12, $13, $14
           )
         `,
         [
@@ -268,6 +330,7 @@ export const createMatchService = (pool: Pool) => ({
             input.integrityIdentity.matchSetId,
             input.integrityIdentity.evidencePair,
           ),
+          semanticAuthority.selectionRoot,
         ],
       )
       await client.query(
@@ -276,11 +339,12 @@ export const createMatchService = (pool: Pool) => ({
             id, match_id, status, attempts, max_attempts,
             integrity_match_set_id, bottom_execution_entrant_key,
             top_execution_entrant_key, bottom_execution_evidence,
-            top_execution_evidence, execution_evidence_pair_hash
+            top_execution_evidence, execution_evidence_pair_hash,
+            semantic_authority_selection_root
           )
           values (
             $1, $2, 'queued', 0, $3,
-            $4, $5, $6, $7, $8, $9
+            $4, $5, $6, $7, $8, $9, $10
           )
         `,
         [
@@ -291,6 +355,7 @@ export const createMatchService = (pool: Pool) => ({
             input.integrityIdentity.matchSetId,
             input.integrityIdentity.evidencePair,
           ),
+          semanticAuthority.selectionRoot,
         ],
       )
     })

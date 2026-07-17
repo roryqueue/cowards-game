@@ -30,6 +30,12 @@ import type {
 } from "./match-service.js"
 import { migrate } from "./migrations.js"
 import { getMatchSetPreset } from "./presets.js"
+import {
+  ACTIVE_V1_17_SEMANTIC_AUTHORITY_SELECTION,
+  ACTIVE_V1_17_SEMANTIC_AUTHORITY_SELECTION_ROOT,
+  REVIEWED_V1_19_SEMANTIC_AUTHORITY_SELECTION,
+  REVIEWED_V1_19_SEMANTIC_AUTHORITY_SELECTION_ROOT,
+} from "./semantic-authority-selection-head.js"
 
 const tuple = CANONICAL_COMPATIBILITY_TUPLES[0]!
 const sha256 = (value: string): string =>
@@ -125,7 +131,9 @@ const candidateEntrant = (
   }
 }
 
-const candidateInput = (namespace = "candidate"): CreateMatchSetFromMatrixInput => {
+const candidateInput = (
+  namespace = "candidate",
+): CreateMatchSetFromMatrixInput => {
   const entrantA = candidateEntrant("a", namespace)
   const entrantB = candidateEntrant("b", namespace)
   const arena = CANONICAL_ARENA_CATALOG_V1_37.arenas.find(
@@ -157,9 +165,7 @@ const candidateInput = (namespace = "candidate"): CreateMatchSetFromMatrixInput 
         bottomStrategyRevisionId: revisionByEntrant.get(
           condition.bottomEntrantKey,
         )!,
-        topStrategyRevisionId: revisionByEntrant.get(
-          condition.topEntrantKey,
-        )!,
+        topStrategyRevisionId: revisionByEntrant.get(condition.topEntrantKey)!,
         arenaVariantId: arena.id,
         seed: scenario.baseSeed,
         bottomPlayerId: condition.bottomPlayerId,
@@ -175,8 +181,7 @@ const candidateInput = (namespace = "candidate"): CreateMatchSetFromMatrixInput 
         requestIdentity: condition.requestIdentity,
         arenaCatalogVersion: scenario.arenaCatalogVersion,
         arenaSemanticGeometryHash: scenario.arenaSemanticGeometryHash,
-        initialInitiativeEntrantKey:
-          condition.initialInitiativeEntrantKey,
+        initialInitiativeEntrantKey: condition.initialInitiativeEntrantKey,
         initialInitiativePlayerId: condition.initialInitiativePlayerId,
       }),
     ),
@@ -257,7 +262,10 @@ const inputFor = (
 
 const fakeDatabase = (
   failOn = "",
-  options: { omitCandidateAdmissionSide?: "a" | "b" } = {},
+  options: {
+    omitCandidateAdmissionSide?: "a" | "b"
+    semanticHead?: "active" | "absent" | "pending" | "file-mismatch"
+  } = {},
 ) => {
   const calls: Array<{ sql: string; values: readonly unknown[] }> = []
   const client = {
@@ -287,6 +295,52 @@ const fakeDatabase = (
       }
       if (normalized.startsWith("select config from arena_variants")) {
         return { rows: [{ config: { id: values[0] } }] }
+      }
+      if (normalized.includes("from semantic_authority_selection_head")) {
+        if (options.semanticHead === "absent") {
+          return { rowCount: 0, rows: [] }
+        }
+        if (options.semanticHead === "file-mismatch") {
+          return {
+            rowCount: 1,
+            rows: [
+              {
+                state: "active-v1.19-finalized",
+                revision: "2",
+                active_selection: REVIEWED_V1_19_SEMANTIC_AUTHORITY_SELECTION,
+                active_selection_root:
+                  REVIEWED_V1_19_SEMANTIC_AUTHORITY_SELECTION_ROOT,
+                pending_intent: null,
+                finalization: {
+                  activationId: "activation:test-file-mismatch",
+                  proofDigest: `sha256:${"1".repeat(64)}`,
+                  commitSha: "2".repeat(40),
+                  treeSha: "3".repeat(40),
+                  selectorManifestRoot: `sha256:${"4".repeat(64)}`,
+                },
+                compensation: null,
+              },
+            ],
+          }
+        }
+        return {
+          rowCount: 1,
+          rows: [
+            {
+              state:
+                options.semanticHead === "pending"
+                  ? "pending-precommit"
+                  : "active-v1.17-bootstrap",
+              revision: options.semanticHead === "pending" ? "1" : "0",
+              active_selection: ACTIVE_V1_17_SEMANTIC_AUTHORITY_SELECTION,
+              active_selection_root:
+                ACTIVE_V1_17_SEMANTIC_AUTHORITY_SELECTION_ROOT,
+              pending_intent: options.semanticHead === "pending" ? {} : null,
+              finalization: null,
+              compensation: null,
+            },
+          ],
+        }
       }
       if (normalized.startsWith("select * from arena_catalog_entries")) {
         const arena = CANONICAL_ARENA_CATALOG_V1_37.arenas.find(
@@ -559,16 +613,22 @@ describe("exact MatchSet creation", () => {
     expect(admissionLocks).toHaveLength(2)
     expect(admissionLocks.every(({ index }) => index < firstWrite)).toBe(true)
     expect(
-      fake.calls.filter((call) => call.sql.startsWith("insert into set_scenarios")),
+      fake.calls.filter((call) =>
+        call.sql.startsWith("insert into set_scenarios"),
+      ),
     ).toHaveLength(1)
     expect(
-      fake.calls.filter((call) => call.sql.startsWith("insert into set_conditions")),
+      fake.calls.filter((call) =>
+        call.sql.startsWith("insert into set_conditions"),
+      ),
     ).toHaveLength(4)
     expect(
       fake.calls.filter((call) => call.sql.startsWith("insert into matches")),
     ).toHaveLength(4)
     expect(
-      fake.calls.filter((call) => call.sql.startsWith("insert into match_jobs")),
+      fake.calls.filter((call) =>
+        call.sql.startsWith("insert into match_jobs"),
+      ),
     ).toHaveLength(4)
     expect(fake.calls.at(-1)?.sql).toBe("commit")
   })
@@ -629,10 +689,14 @@ describe("exact MatchSet creation", () => {
       createMatchSetService(fake.pool).createFromMatrix(candidateInput()),
     ).rejects.toThrow("forced late child failure")
     expect(
-      fake.calls.some((call) => call.sql.startsWith("insert into set_scenarios")),
+      fake.calls.some((call) =>
+        call.sql.startsWith("insert into set_scenarios"),
+      ),
     ).toBe(true)
     expect(
-      fake.calls.some((call) => call.sql.startsWith("insert into set_conditions")),
+      fake.calls.some((call) =>
+        call.sql.startsWith("insert into set_conditions"),
+      ),
     ).toBe(true)
     expect(fake.calls.at(-1)?.sql).toBe("rollback")
   })
@@ -741,12 +805,80 @@ describe("exact MatchSet creation", () => {
         ),
       )
       for (const [index, match] of matches.entries()) {
-        expect(match.values.slice(-6)).toEqual(jobs[index]!.values.slice(-6))
-        expect(match.values.at(-5)).toBe(input.matches[index]!.bottomEntrantKey)
-        expect(match.values.at(-4)).toBe(input.matches[index]!.topEntrantKey)
+        expect(match.values.slice(-7)).toEqual(jobs[index]!.values.slice(-7))
+        expect(match.values.at(-6)).toBe(input.matches[index]!.bottomEntrantKey)
+        expect(match.values.at(-5)).toBe(input.matches[index]!.topEntrantKey)
       }
       expect(fake.calls.at(0)?.sql).toBe("begin")
       expect(fake.calls.at(-1)?.sql).toBe("commit")
+    },
+  )
+
+  it("locks the exact default head and freezes the complete selection through all work rows", async () => {
+    const fake = fakeDatabase()
+    await createMatchSetService(fake.pool).createFromMatrix(inputFor(2))
+
+    const headRead = fake.calls.find((call) =>
+      call.sql.includes("from semantic_authority_selection_head"),
+    )
+    const matchSetInsert = fake.calls.find((call) =>
+      call.sql.startsWith("insert into match_sets"),
+    )!
+    const matchInsert = fake.calls.find((call) =>
+      call.sql.startsWith("insert into matches"),
+    )!
+    const jobInsert = fake.calls.find((call) =>
+      call.sql.startsWith("insert into match_jobs"),
+    )!
+    expect(headRead?.sql).toContain("for update")
+    expect(matchSetInsert.sql).toContain("semantic_authority_selection")
+    expect(matchSetInsert.values).toContainEqual(
+      ACTIVE_V1_17_SEMANTIC_AUTHORITY_SELECTION,
+    )
+    expect(matchSetInsert.values).toContain(
+      ACTIVE_V1_17_SEMANTIC_AUTHORITY_SELECTION_ROOT,
+    )
+    expect(matchInsert.values).toContain(
+      ACTIVE_V1_17_SEMANTIC_AUTHORITY_SELECTION_ROOT,
+    )
+    expect(jobInsert.values).toContain(
+      ACTIVE_V1_17_SEMANTIC_AUTHORITY_SELECTION_ROOT,
+    )
+  })
+
+  it("freezes the explicit candidate selection without consulting the current head", async () => {
+    const fake = fakeDatabase()
+    await createMatchSetService(fake.pool).createFromMatrix(candidateInput())
+
+    expect(
+      fake.calls.some((call) =>
+        call.sql.includes("from semantic_authority_selection_head"),
+      ),
+    ).toBe(false)
+    const matchSetInsert = fake.calls.find((call) =>
+      call.sql.startsWith("insert into match_sets"),
+    )!
+    expect(matchSetInsert.values).toContainEqual(
+      REVIEWED_V1_19_SEMANTIC_AUTHORITY_SELECTION,
+    )
+    expect(matchSetInsert.values).toContain(
+      REVIEWED_V1_19_SEMANTIC_AUTHORITY_SELECTION_ROOT,
+    )
+  })
+
+  it.each(["absent", "pending", "file-mismatch"] as const)(
+    "fails closed before work writes when the default semantic head is %s",
+    async (semanticHead) => {
+      const fake = fakeDatabase("", { semanticHead })
+      await expect(
+        createMatchSetService(fake.pool).createFromMatrix(inputFor(2)),
+      ).rejects.toThrow()
+      expect(
+        fake.calls.some((call) =>
+          call.sql.startsWith("insert into match_sets"),
+        ),
+      ).toBe(false)
+      expect(fake.calls.at(-1)?.sql).toBe("rollback")
     },
   )
 
@@ -1196,9 +1328,11 @@ describePostgres("PostgreSQL runtime-v1.19 atomic scenario creation", () => {
          order by successor_condition_ordinal`,
       [input.id],
     )
-    expect(rows.rows.map(({ successor_condition_ordinal }) =>
-      successor_condition_ordinal,
-    )).toEqual([0, 1, 2, 3])
+    expect(
+      rows.rows.map(
+        ({ successor_condition_ordinal }) => successor_condition_ordinal,
+      ),
+    ).toEqual([0, 1, 2, 3])
     expect(new Set(rows.rows.map(({ seed }) => seed))).toEqual(
       new Set([`${namespace}:base-seed:001`]),
     )

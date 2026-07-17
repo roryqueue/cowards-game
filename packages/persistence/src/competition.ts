@@ -30,7 +30,11 @@ import {
   type MatchSetExecutionEvidenceResolver,
 } from "./matchset-service.js"
 import type { CreateMatchRecordInput } from "./match-service.js"
-import { getMatchSetPreset } from "./presets.js"
+import {
+  getMatchSetPreset,
+  resolveFileCurrentSchedulingSemanticAuthority,
+  type SchedulingSemanticAuthorityKey,
+} from "./presets.js"
 import { createRepositories } from "./repositories.js"
 import { createDevelopmentSeedData } from "./seed.js"
 import type { MatchSetStatus, MatchStatus } from "./schema.js"
@@ -477,18 +481,23 @@ export const generateCompetitionPairwiseMatrix = (input: {
   matchSetId: string
   presetId: CompetitionPresetId
   entrants: readonly CompetitionEntrantSnapshot[]
-  semanticAuthorityKey?: "runtime-v1.19" | undefined
+  semanticAuthorityKey?: SchedulingSemanticAuthorityKey | undefined
 }): CreateMatchRecordInput[] => {
   if (
     input.semanticAuthorityKey !== undefined &&
+    String(input.semanticAuthorityKey) !== "runtime-v1.17" &&
     String(input.semanticAuthorityKey) !== "runtime-v1.19"
   ) {
     throw new CompetitionInputError(
       "Unknown TypeScript competition scheduling semantic authority.",
     )
   }
+  const resolvedSemanticAuthorityKey =
+    input.semanticAuthorityKey ??
+    resolveFileCurrentSchedulingSemanticAuthority().selection
+      .semanticAuthorityKey
   const competitionPreset = getCompetitionPreset(input.presetId)
-  if (input.semanticAuthorityKey === "runtime-v1.19") {
+  if (resolvedSemanticAuthorityKey === "runtime-v1.19") {
     const sortedEntrants = [...input.entrants].sort((left, right) =>
       Buffer.compare(
         Buffer.from(left.strategyRevisionId, "utf8"),
@@ -496,8 +505,9 @@ export const generateCompetitionPairwiseMatrix = (input: {
       ),
     )
     if (
-      new Set(sortedEntrants.map(({ strategyRevisionId }) => strategyRevisionId))
-        .size !== sortedEntrants.length
+      new Set(
+        sortedEntrants.map(({ strategyRevisionId }) => strategyRevisionId),
+      ).size !== sortedEntrants.length
     ) {
       throw new CompetitionInputError(
         "runtime-v1.19 competition entrants must have distinct immutable Strategy Revision ids.",
@@ -673,7 +683,7 @@ export const createManualExhibitionMatchSet = async (
     now?: Date | undefined
     rateLimitPolicy?: ExhibitionRateLimitPolicy | undefined
     evidenceResolver?: MatchSetExecutionEvidenceResolver | undefined
-    semanticAuthorityKey?: "runtime-v1.19" | undefined
+    semanticAuthorityKey?: SchedulingSemanticAuthorityKey | undefined
   },
 ): Promise<{
   matchSetId: string
@@ -683,12 +693,17 @@ export const createManualExhibitionMatchSet = async (
   validateManualExhibitionRevisionIds(input.revisionIds)
   if (
     input.semanticAuthorityKey !== undefined &&
+    String(input.semanticAuthorityKey) !== "runtime-v1.17" &&
     String(input.semanticAuthorityKey) !== "runtime-v1.19"
   ) {
     throw new CompetitionInputError(
       "Unknown manual exhibition scheduling semantic authority.",
     )
   }
+  const resolvedSemanticAuthorityKey =
+    input.semanticAuthorityKey ??
+    resolveFileCurrentSchedulingSemanticAuthority().selection
+      .semanticAuthorityKey
   const preset = getCompetitionPreset(input.presetId)
   const now = input.now ?? new Date()
   const integrityIdentity = await resolveMatchSetExecutionEvidence({
@@ -699,8 +714,8 @@ export const createManualExhibitionMatchSet = async (
       entrantKey: strategyRevisionId,
       strategyRevisionId,
     })),
-    ...(input.semanticAuthorityKey
-      ? { semanticAuthorityKey: input.semanticAuthorityKey }
+    ...(resolvedSemanticAuthorityKey === "runtime-v1.19"
+      ? { semanticAuthorityKey: "runtime-v1.19" as const }
       : {}),
   })
   await assertExhibitionCreateRateLimit(pool, {
@@ -722,7 +737,7 @@ export const createManualExhibitionMatchSet = async (
     lockedAt: now,
   })
   const entrants =
-    input.semanticAuthorityKey === "runtime-v1.19"
+    resolvedSemanticAuthorityKey === "runtime-v1.19"
       ? [...loadedEntrants]
           .sort((left, right) =>
             Buffer.compare(
@@ -742,9 +757,7 @@ export const createManualExhibitionMatchSet = async (
     matchSetId,
     presetId: input.presetId,
     entrants,
-    ...(input.semanticAuthorityKey
-      ? { semanticAuthorityKey: input.semanticAuthorityKey }
-      : {}),
+    semanticAuthorityKey: resolvedSemanticAuthorityKey,
   })
   const duplicateKey = buildExhibitionDuplicateKey({
     creatorUserId: input.creatorUserId,
@@ -753,14 +766,16 @@ export const createManualExhibitionMatchSet = async (
   })
   const created = await createMatchSetService(pool).createFromMatrix({
     id: matchSetId,
-    ...(input.semanticAuthorityKey
+    ...(input.semanticAuthorityKey !== undefined
       ? { semanticAuthorityKey: input.semanticAuthorityKey }
       : {}),
     matches,
     integrityIdentity,
     matchSet: {
       presetId: preset.matchSetPresetId,
-      ...(input.semanticAuthorityKey ? {} : { presetVersion: "v1" as const }),
+      ...(resolvedSemanticAuthorityKey === "runtime-v1.19"
+        ? {}
+        : { presetVersion: "v1" as const }),
       creatorUserId: input.creatorUserId,
       competitionPresetId: preset.id,
       competitionPresetVersion: preset.version,

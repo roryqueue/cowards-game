@@ -33,6 +33,10 @@ import {
   resolveVersionedMatchSetPreset,
 } from "./presets.js"
 import { DEFAULT_MAX_JOB_ATTEMPTS } from "./schema.js"
+import {
+  ACTIVE_V1_17_SEMANTIC_AUTHORITY_SELECTION,
+  ACTIVE_V1_17_SEMANTIC_AUTHORITY_SELECTION_ROOT,
+} from "./semantic-authority-selection-head.js"
 
 const tuple = CANONICAL_COMPATIBILITY_TUPLES[0]!
 const sha256 = (value: string): string =>
@@ -188,6 +192,40 @@ const fakePool = () => {
       if (normalized.startsWith("select config from arena_variants")) {
         return { rows: [{ config: { id: values[0] } }] }
       }
+      if (normalized.includes("from semantic_authority_selection_head")) {
+        return {
+          rowCount: 1,
+          rows: [
+            {
+              state: "active-v1.17-bootstrap",
+              revision: "0",
+              active_selection: ACTIVE_V1_17_SEMANTIC_AUTHORITY_SELECTION,
+              active_selection_root:
+                ACTIVE_V1_17_SEMANTIC_AUTHORITY_SELECTION_ROOT,
+              pending_intent: null,
+              finalization: null,
+              compensation: null,
+            },
+          ],
+        }
+      }
+      if (
+        normalized.startsWith(
+          "select semantic_authority_selection, semantic_authority_selection_root from match_sets",
+        )
+      ) {
+        return {
+          rowCount: 1,
+          rows: [
+            {
+              semantic_authority_selection:
+                ACTIVE_V1_17_SEMANTIC_AUTHORITY_SELECTION,
+              semantic_authority_selection_root:
+                ACTIVE_V1_17_SEMANTIC_AUTHORITY_SELECTION_ROOT,
+            },
+          ],
+        }
+      }
       return { rows: [], rowCount: 1 }
     },
     release() {},
@@ -212,10 +250,7 @@ describe("match creation contracts", () => {
       {
         id: "standard-v1",
         version: "v1",
-        arenaVariantIds: [
-          "arena:smoke:v1",
-          "arena:standard-cross:v1",
-        ],
+        arenaVariantIds: ["arena:smoke:v1", "arena:standard-cross:v1"],
         seeds: ["seed:standard:001", "seed:standard:002"],
         mirrorSides: true,
       },
@@ -295,12 +330,12 @@ describe("match creation contracts", () => {
   it("requires a validator-minted exact tuple and ordered heterogeneous evidence pair", () => {
     const input = validInput()
     expect(() => validateCreateMatchInput(input)).not.toThrow()
-    expect(input.integrityIdentity.evidencePair.bottom.laneIdentity.languageId).toBe(
-      "typescript",
-    )
-    expect(input.integrityIdentity.evidencePair.top.laneIdentity.languageId).toBe(
-      "python",
-    )
+    expect(
+      input.integrityIdentity.evidencePair.bottom.laneIdentity.languageId,
+    ).toBe("typescript")
+    expect(
+      input.integrityIdentity.evidencePair.top.laneIdentity.languageId,
+    ).toBe("python")
 
     expect(() =>
       validateCreateMatchInput({
@@ -343,7 +378,8 @@ describe("match creation contracts", () => {
             bottom: {
               ...input.integrityIdentity.evidencePair.bottom,
               schedulingDecision: {
-                ...input.integrityIdentity.evidencePair.bottom.schedulingDecision,
+                ...input.integrityIdentity.evidencePair.bottom
+                  .schedulingDecision,
                 freshUntil: "2020-01-01T00:00:00.000Z",
               },
             },
@@ -368,7 +404,9 @@ describe("match creation contracts", () => {
       }),
     ]) {
       const fake = fakePool()
-      await expect(createMatchService(fake.pool).createMatch(mutation(validInput()))).rejects.toThrow()
+      await expect(
+        createMatchService(fake.pool).createMatch(mutation(validInput())),
+      ).rejects.toThrow()
       expect(fake.calls).toEqual([])
     }
   })
@@ -376,7 +414,9 @@ describe("match creation contracts", () => {
   it("writes the identical tuple-linked ordered pair onto Match and job in one transaction", async () => {
     const fake = fakePool()
     const input = validInput()
-    await expect(createMatchService(fake.pool).createMatch(input)).resolves.toEqual({
+    await expect(
+      createMatchService(fake.pool).createMatch(input),
+    ).resolves.toEqual({
       matchId: input.id,
       jobId: createMatchJobId(input.id),
       status: "pending",
@@ -388,36 +428,63 @@ describe("match creation contracts", () => {
     const jobInsert = fake.calls.find((call) =>
       call.sql.startsWith("insert into match_jobs"),
     )!
-    expect(matchInsert.values.slice(-6)).toEqual(jobInsert.values.slice(-6))
-    expect(matchInsert.values.slice(-6)).toEqual([
+    expect(matchInsert.values.slice(-7)).toEqual(jobInsert.values.slice(-7))
+    expect(matchInsert.values.slice(-7)).toEqual([
       input.integrityIdentity.matchSetId,
       input.bottomEntrantKey,
       input.topEntrantKey,
       input.integrityIdentity.evidencePair.bottom,
       input.integrityIdentity.evidencePair.top,
       input.integrityIdentity.evidencePair.pairHash,
+      ACTIVE_V1_17_SEMANTIC_AUTHORITY_SELECTION_ROOT,
     ])
     expect(fake.calls.at(0)?.sql).toBe("begin")
     expect(fake.calls.at(-1)?.sql).toBe("commit")
+  })
+
+  it("requires the exact current database head and freezes its root onto Match and job", async () => {
+    const fake = fakePool()
+    await createMatchService(fake.pool).createMatch(validInput())
+
+    const headRead = fake.calls.find((call) =>
+      call.sql.includes("from semantic_authority_selection_head"),
+    )
+    const matchInsert = fake.calls.find((call) =>
+      call.sql.startsWith("insert into matches"),
+    )!
+    const jobInsert = fake.calls.find((call) =>
+      call.sql.startsWith("insert into match_jobs"),
+    )!
+    expect(headRead?.sql).toContain("for update")
+    expect(matchInsert.sql).toContain("semantic_authority_selection_root")
+    expect(jobInsert.sql).toContain("semantic_authority_selection_root")
+    expect(matchInsert.values).toContain(
+      ACTIVE_V1_17_SEMANTIC_AUTHORITY_SELECTION_ROOT,
+    )
+    expect(jobInsert.values).toContain(
+      ACTIVE_V1_17_SEMANTIC_AUTHORITY_SELECTION_ROOT,
+    )
   })
 
   it("rolls back both rows when the queued-job insert fails", async () => {
     const fake = fakePool()
     const client = fake.client
     const baseQuery = client.query.bind(client)
-    client.query = (async (sql: string, values?: readonly unknown[]) => {
-      if (sql.replace(/\s+/gu, " ").trim().startsWith("insert into match_jobs")) {
+    client.query = async (sql: string, values?: readonly unknown[]) => {
+      if (
+        sql.replace(/\s+/gu, " ").trim().startsWith("insert into match_jobs")
+      ) {
         throw new Error("late job failure")
       }
       if (values === undefined) {
         return baseQuery(sql)
       }
       return baseQuery(sql, [...values])
-    })
+    }
 
-    await expect(createMatchService(fake.pool).createMatch(validInput())).rejects.toThrow(
-      "late job failure",
-    )
+    await expect(
+      createMatchService(fake.pool).createMatch(validInput()),
+    ).rejects.toThrow("late job failure")
     expect(fake.calls.at(-1)?.sql).toBe("rollback")
   })
 

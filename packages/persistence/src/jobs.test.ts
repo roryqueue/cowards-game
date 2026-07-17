@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from "node:crypto"
 import {
   CANONICAL_COMPATIBILITY_TUPLES,
+  CURRENT_SEMANTIC_AUTHORITY_GENERATED,
   type ExecutableLaneIdentity,
   type RuntimeEntrantExecutionEvidence,
 } from "@cowards/spec"
@@ -15,6 +16,10 @@ import {
   claimNextMatchJob,
   shouldExhaustRetries,
 } from "./jobs.js"
+import {
+  ACTIVE_V1_17_SEMANTIC_AUTHORITY_SELECTION,
+  ACTIVE_V1_17_SEMANTIC_AUTHORITY_SELECTION_ROOT,
+} from "./semantic-authority-selection-head.js"
 
 describe("job claiming", () => {
   it("uses lease-based skip-locked claiming", () => {
@@ -27,9 +32,7 @@ describe("job claiming", () => {
     expect(CLAIM_NEXT_MATCH_JOB_SQL).toContain(
       "runtime_evidence_authority_installed_head",
     )
-    expect(CLAIM_NEXT_MATCH_JOB_SQL).not.toContain(
-      "event_kind = 'installed'",
-    )
+    expect(CLAIM_NEXT_MATCH_JOB_SQL).not.toContain("event_kind = 'installed'")
     expect(CLAIM_NEXT_MATCH_JOB_SQL).toContain(
       "runtime_evidence_authority_publication_sources",
     )
@@ -51,6 +54,12 @@ describe("job claiming", () => {
     )
     expect(CLAIM_NEXT_MATCH_JOB_SQL).toContain(
       "bottom_entrant.conformance_certificate_id is null",
+    )
+    expect(CLAIM_NEXT_MATCH_JOB_SQL).toContain(
+      "job.semantic_authority_selection_root = match.semantic_authority_selection_root",
+    )
+    expect(CLAIM_NEXT_MATCH_JOB_SQL).toContain(
+      "match.semantic_authority_selection_root = match_set.semantic_authority_selection_root",
     )
   })
 
@@ -87,8 +96,10 @@ describe("job claiming", () => {
       strategyRevisionId: "revision:bottom",
     }
     const top = { entrantKey: "top", strategyRevisionId: "revision:top" }
+    const calls: string[] = []
     const client = {
       async query(sql: string) {
+        calls.push(sql)
         if (sql.includes("with current_authority")) {
           return {
             rows: [
@@ -107,6 +118,10 @@ describe("job claiming", () => {
                 authority_registry_generation: "7",
                 bottom_execution_evidence: bottom,
                 top_execution_evidence: top,
+                semantic_authority_selection:
+                  ACTIVE_V1_17_SEMANTIC_AUTHORITY_SELECTION,
+                semantic_authority_selection_root:
+                  ACTIVE_V1_17_SEMANTIC_AUTHORITY_SELECTION_ROOT,
               },
             ],
           }
@@ -141,6 +156,14 @@ describe("job claiming", () => {
       registryGeneration: "7",
       entrants: { bottom, top },
     })
+    expect(claimed?.semanticAuthority).toEqual({
+      selection: ACTIVE_V1_17_SEMANTIC_AUTHORITY_SELECTION,
+      selectionRoot: ACTIVE_V1_17_SEMANTIC_AUTHORITY_SELECTION_ROOT,
+      runtimeRequestSelection: CURRENT_SEMANTIC_AUTHORITY_GENERATED.selection,
+    })
+    expect(
+      calls.some((sql) => sql.includes("semantic_authority_selection_head")),
+    ).toBe(false)
   })
 
   it("exhausts retries at the fixed system failure limit", () => {
@@ -279,7 +302,8 @@ describePostgres("PostgreSQL integrity identity before claim", () => {
     const matchId = `${namespace}:match`
     const registryGeneration = "1"
     const authorityBundleHash = hash(`${namespace}:authority`)
-    const executionEntrants: Record<string, RuntimeEntrantExecutionEvidence> = {}
+    const executionEntrants: Record<string, RuntimeEntrantExecutionEvidence> =
+      {}
     const attestationIds: string[] = []
     const certificateIds: string[] = []
 
@@ -452,8 +476,7 @@ describePostgres("PostgreSQL integrity identity before claim", () => {
       ["certificate", certificateIds],
     ] as const) {
       for (const id of ids) {
-        const recordHash =
-          kind === "attestation" ? hash(id) : hash(id)
+        const recordHash = kind === "attestation" ? hash(id) : hash(id)
         await pool.query(
           `insert into runtime_evidence_authority_publication_sources
             (publication_id,source_type,source_id,source_record_hash,

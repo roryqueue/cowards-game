@@ -42,11 +42,19 @@ import {
 import type { RuntimeExecutionCompatibilityIdentity } from "@cowards/spec"
 import {
   getMatchSetPreset,
+  resolveFileCurrentSchedulingSemanticAuthority,
+  resolveSchedulingSemanticAuthority,
   resolveVersionedMatchSetPreset,
+  type FrozenSchedulingSemanticAuthority,
   type MatchSetPresetId,
   type MatchSetPresetV119Candidate,
+  type SchedulingSemanticAuthorityKey,
 } from "./presets.js"
 import type { MatchSetStatus } from "./schema.js"
+import {
+  assertCountedSemanticAuthoritySelection,
+  lockSemanticAuthoritySelectionHead,
+} from "./semantic-authority-selection-head.js"
 
 export interface IntegritySchedulingIdentity {
   compatibility: RuntimeExecutionCompatibilityIdentity
@@ -180,7 +188,7 @@ export const resolveMatchSetExecutionEvidence = async (input: {
   purpose: MatchSetEvidencePurpose
   evaluationInstant: string
   entrants: readonly MatchSetEvidenceEntrantBinding[]
-  semanticAuthorityKey?: "runtime-v1.19" | undefined
+  semanticAuthorityKey?: SchedulingSemanticAuthorityKey | undefined
 }): Promise<IntegritySchedulingIdentity> => {
   const resolver =
     input.resolver ?? EMPTY_PRODUCTION_MATCH_SET_EVIDENCE_RESOLVER
@@ -230,7 +238,7 @@ export const resolveMatchSetExecutionEvidence = async (input: {
 
 export interface CreateMatchSetFromMatrixInput {
   id: MatchSetId
-  semanticAuthorityKey?: "runtime-v1.19" | undefined
+  semanticAuthorityKey?: SchedulingSemanticAuthorityKey | undefined
   matches: CreateMatchRecordInput[]
   integrityIdentity: IntegritySchedulingIdentity
   matchSet?: {
@@ -272,9 +280,12 @@ export interface CreateMatchSetFromPresetInput {
   integrityIdentity: IntegritySchedulingIdentity
 }
 
-export interface CreateMatchSetFromPresetInputV119
-  extends CreateMatchSetFromPresetInput {
+export interface CreateMatchSetFromPresetInputV119 extends CreateMatchSetFromPresetInput {
   semanticAuthorityKey: "runtime-v1.19"
+}
+
+export interface CreateMatchSetFromPresetInputV117 extends CreateMatchSetFromPresetInput {
+  semanticAuthorityKey: "runtime-v1.17"
 }
 
 type GeneratePresetMatrixInput = Omit<
@@ -390,8 +401,7 @@ export const generateCandidatePresetMatrixV119 = (
           requestIdentity: condition.requestIdentity,
           arenaCatalogVersion: ARENA_CATALOG_VERSION_V1_37,
           arenaSemanticGeometryHash: arena.semanticGeometryHash,
-          initialInitiativeEntrantKey:
-            condition.initialInitiativeEntrantKey,
+          initialInitiativeEntrantKey: condition.initialInitiativeEntrantKey,
           initialInitiativePlayerId: condition.initialInitiativePlayerId,
         })
         matchIndex += 1
@@ -415,6 +425,7 @@ const utf8KeyOrder = (left: string, right: string): number =>
 
 const validateMatchSetCreation = (
   input: CreateMatchSetFromMatrixInput,
+  semanticAuthority: Readonly<FrozenSchedulingSemanticAuthority>,
   now = new Date(),
 ): ValidatedMatchSetCreation => {
   if (!input.integrityIdentity || typeof input.integrityIdentity !== "object") {
@@ -433,9 +444,11 @@ const validateMatchSetCreation = (
   }
 
   const expectedByKey = new Map<string, string>()
-  const isCandidate = input.semanticAuthorityKey === "runtime-v1.19"
+  const isCandidate =
+    semanticAuthority.selection.semanticAuthorityKey === "runtime-v1.19"
   if (
     input.semanticAuthorityKey !== undefined &&
+    input.semanticAuthorityKey !== "runtime-v1.17" &&
     input.semanticAuthorityKey !== "runtime-v1.19"
   ) {
     throw new IntegrityEvidenceInputError(
@@ -445,7 +458,7 @@ const validateMatchSetCreation = (
   if (
     input.matches.length === 0 ||
     input.matches.some(
-      (match) => ("semanticAuthorityKey" in match) !== isCandidate,
+      (match) => "semanticAuthorityKey" in match !== isCandidate,
     )
   ) {
     throw new IntegrityEvidenceInputError(
@@ -498,6 +511,20 @@ const validateMatchSetCreation = (
   const identity = isCandidate
     ? createCandidateMatchSetIntegrityIdentityV119(identityInput)
     : createMatchSetIntegrityIdentity(identityInput)
+  const tuple = identity.compatibility.tuple
+  if (
+    identity.compatibility.tupleId !== semanticAuthority.selection.tupleId ||
+    tuple.rules !== semanticAuthority.selection.rulesVersion ||
+    tuple.engine !== semanticAuthority.selection.engineVersion ||
+    tuple.runtimeAbi !== semanticAuthority.selection.runtimeAbiVersion ||
+    tuple.chronicle !== semanticAuthority.selection.chronicleVersion ||
+    tuple.arenaCatalog !== semanticAuthority.selection.arenaCatalogVersion ||
+    tuple.setPolicy !== semanticAuthority.selection.setPolicyVersion
+  ) {
+    throw new IntegrityEvidenceInputError(
+      "MatchSet compatibility tuple does not match its semantic authority selection.",
+    )
+  }
 
   const candidateScenarios: Array<{
     arenaId: string
@@ -628,7 +655,20 @@ export const insertMatchSetWithMatrixOnClient = async (
   client: PoolClient,
   input: CreateMatchSetFromMatrixInput,
 ): Promise<void> => {
-  const validated = validateMatchSetCreation(input)
+  const semanticAuthority =
+    input.semanticAuthorityKey === undefined
+      ? resolveFileCurrentSchedulingSemanticAuthority()
+      : resolveSchedulingSemanticAuthority(input.semanticAuthorityKey)
+  const validated = validateMatchSetCreation(input, semanticAuthority)
+
+  if (input.semanticAuthorityKey === undefined) {
+    const head = await lockSemanticAuthoritySelectionHead(client)
+    assertCountedSemanticAuthoritySelection(
+      head,
+      semanticAuthority.selection,
+      semanticAuthority.selectionRoot,
+    )
+  }
 
   const repositories = createRepositories(client)
   const revisionIds = new Set<StrategyRevisionId>()
@@ -661,9 +701,7 @@ export const insertMatchSetWithMatrixOnClient = async (
         scenario.arenaCatalogVersion,
         arenaId,
       )
-      if (
-        catalog.semanticGeometryHash !== scenario.arenaSemanticGeometryHash
-      ) {
+      if (catalog.semanticGeometryHash !== scenario.arenaSemanticGeometryHash) {
         throw new IntegrityEvidenceInputError(
           "Frozen arena catalog identity does not match the candidate scenario.",
         )
@@ -728,7 +766,9 @@ export const insertMatchSetWithMatrixOnClient = async (
           authority_bundle_hash,
           authority_registry_generation,
           execution_evidence_set,
-          execution_evidence_set_hash
+          execution_evidence_set_hash,
+          semantic_authority_selection,
+          semantic_authority_selection_root
         )
         values (
           $1,
@@ -745,7 +785,8 @@ export const insertMatchSetWithMatrixOnClient = async (
           $11,
           $12,
           $13,
-          $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24
+          $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24,
+          $25, $26
         )
       `,
     [
@@ -763,6 +804,8 @@ export const insertMatchSetWithMatrixOnClient = async (
       matchSet.duplicateKey ?? null,
       matchSet.lockedAt ?? null,
       ...integritySqlValues,
+      semanticAuthority.selection,
+      semanticAuthority.selectionRoot,
     ],
   )
 
@@ -899,11 +942,12 @@ export const insertMatchSetWithMatrixOnClient = async (
             successor_arena_semantic_geometry_hash,
             successor_bottom_entrant_key, successor_top_entrant_key,
             successor_initial_initiative_entrant_key,
-            initial_initiative_player_id
+            initial_initiative_player_id,
+            semantic_authority_selection_root
           ) values (
             $1, $2, $3, $4, $5, $6, $7, 'pending',
             $8, $9, $10, $11, $12, $13,
-            $14, $15, $16, $17, $18, $19, $20, $21, $22, $23
+            $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24
           )`,
         [
           match.id,
@@ -924,6 +968,7 @@ export const insertMatchSetWithMatrixOnClient = async (
           match.topEntrantKey,
           match.initialInitiativeEntrantKey,
           match.initialInitiativePlayerId,
+          semanticAuthority.selectionRoot,
         ],
       )
     } else {
@@ -934,11 +979,12 @@ export const insertMatchSetWithMatrixOnClient = async (
             arena_variant_id, seed, bottom_player_id, top_player_id, status,
             integrity_match_set_id, bottom_execution_entrant_key,
             top_execution_entrant_key, bottom_execution_evidence,
-            top_execution_evidence, execution_evidence_pair_hash
+            top_execution_evidence, execution_evidence_pair_hash,
+            semantic_authority_selection_root
           )
           values (
             $1, $2, $3, $4, $5, $6, $7, 'pending',
-            $8, $9, $10, $11, $12, $13
+            $8, $9, $10, $11, $12, $13, $14
           )
         `,
         [
@@ -950,6 +996,7 @@ export const insertMatchSetWithMatrixOnClient = async (
           match.bottomPlayerId,
           match.topPlayerId,
           ...matchExecutionEvidencePairSqlValues(input.id, evidencePair),
+          semanticAuthority.selectionRoot,
         ],
       )
     }
@@ -959,14 +1006,15 @@ export const insertMatchSetWithMatrixOnClient = async (
             id, match_id, status, integrity_match_set_id,
             bottom_execution_entrant_key, top_execution_entrant_key,
             bottom_execution_evidence, top_execution_evidence,
-            execution_evidence_pair_hash
+            execution_evidence_pair_hash, semantic_authority_selection_root
           )
-          values ($1, $2, 'queued', $3, $4, $5, $6, $7, $8)
+          values ($1, $2, 'queued', $3, $4, $5, $6, $7, $8, $9)
         `,
       [
         createMatchJobId(match.id),
         match.id,
         ...matchExecutionEvidencePairSqlValues(input.id, evidencePair),
+        semanticAuthority.selectionRoot,
       ],
     )
     await client.query(
@@ -1013,11 +1061,18 @@ export const createMatchSetService = (pool: Pool) => ({
   },
 
   async createFromPreset(
-    input: CreateMatchSetFromPresetInput | CreateMatchSetFromPresetInputV119,
+    input:
+      | CreateMatchSetFromPresetInput
+      | CreateMatchSetFromPresetInputV117
+      | CreateMatchSetFromPresetInputV119,
   ): Promise<{ matchSetId: MatchSetId; matchIds: MatchId[] }> {
-    if ("semanticAuthorityKey" in input) {
+    const semanticAuthority =
+      "semanticAuthorityKey" in input
+        ? resolveSchedulingSemanticAuthority(input.semanticAuthorityKey)
+        : resolveFileCurrentSchedulingSemanticAuthority()
+    if (semanticAuthority.selection.semanticAuthorityKey === "runtime-v1.19") {
       const preset = resolveVersionedMatchSetPreset({
-        semanticAuthorityKey: input.semanticAuthorityKey,
+        semanticAuthorityKey: "runtime-v1.19",
         presetId: input.presetId,
       })
       if (!preset || !("semanticAuthorityKey" in preset)) {
@@ -1025,10 +1080,15 @@ export const createMatchSetService = (pool: Pool) => ({
           "Explicit runtime-v1.19 preset dispatch is required.",
         )
       }
-      const matches = generateCandidatePresetMatrixV119(input)
+      const matches = generateCandidatePresetMatrixV119({
+        ...input,
+        semanticAuthorityKey: "runtime-v1.19",
+      })
       await insertMatchSetWithMatrix(pool, {
         id: input.id,
-        semanticAuthorityKey: "runtime-v1.19",
+        ...(!("semanticAuthorityKey" in input)
+          ? {}
+          : { semanticAuthorityKey: "runtime-v1.19" as const }),
         matches,
         integrityIdentity: input.integrityIdentity,
         matchSet: { presetId: preset.id },
@@ -1042,6 +1102,10 @@ export const createMatchSetService = (pool: Pool) => ({
     const matches = generatePresetMatrix(input)
     await insertMatchSetWithMatrix(pool, {
       id: input.id,
+      ...("semanticAuthorityKey" in input &&
+      input.semanticAuthorityKey === "runtime-v1.17"
+        ? { semanticAuthorityKey: "runtime-v1.17" as const }
+        : {}),
       matches,
       integrityIdentity: input.integrityIdentity,
       matchSet: {

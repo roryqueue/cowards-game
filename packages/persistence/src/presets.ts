@@ -5,6 +5,42 @@ import {
   SET_CONDITION_POLICY_VERSION_V1_37,
   type ArenaVariantId,
 } from "@cowards/spec"
+import {
+  ACTIVE_V1_17_SEMANTIC_AUTHORITY_SELECTION,
+  ACTIVE_V1_17_SEMANTIC_AUTHORITY_SELECTION_ROOT,
+  REVIEWED_V1_19_SEMANTIC_AUTHORITY_SELECTION,
+  REVIEWED_V1_19_SEMANTIC_AUTHORITY_SELECTION_ROOT,
+  type CompleteSemanticAuthoritySelection,
+} from "./semantic-authority-selection-head.js"
+
+export type SchedulingSemanticAuthorityKey = "runtime-v1.17" | "runtime-v1.19"
+
+export interface FrozenSchedulingSemanticAuthority {
+  selection: Readonly<CompleteSemanticAuthoritySelection>
+  selectionRoot: `sha256:${string}`
+}
+
+export const resolveSchedulingSemanticAuthority = (
+  semanticAuthorityKey: SchedulingSemanticAuthorityKey,
+): Readonly<FrozenSchedulingSemanticAuthority> =>
+  semanticAuthorityKey === "runtime-v1.19"
+    ? Object.freeze({
+        selection: REVIEWED_V1_19_SEMANTIC_AUTHORITY_SELECTION,
+        selectionRoot: REVIEWED_V1_19_SEMANTIC_AUTHORITY_SELECTION_ROOT,
+      })
+    : Object.freeze({
+        selection: ACTIVE_V1_17_SEMANTIC_AUTHORITY_SELECTION,
+        selectionRoot: ACTIVE_V1_17_SEMANTIC_AUTHORITY_SELECTION_ROOT,
+      })
+
+export const resolveFileCurrentSchedulingSemanticAuthority =
+  (): Readonly<FrozenSchedulingSemanticAuthority> => {
+    const key = String(CURRENT_SEMANTIC_AUTHORITY_KEY)
+    if (key !== "runtime-v1.17" && key !== "runtime-v1.19") {
+      throw new Error("File-current semantic authority is unknown.")
+    }
+    return resolveSchedulingSemanticAuthority(key)
+  }
 
 export type MatchSetPresetId = "smoke-v1" | "standard-v1" | "stress-v1"
 
