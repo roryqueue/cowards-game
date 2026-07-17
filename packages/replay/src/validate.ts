@@ -1,13 +1,17 @@
 import { createHash } from "node:crypto"
 import { verifyCandidateExecutionEvidence as verifyCurrentExecutionEvidence } from "@cowards/engine/recorder-evidence"
 import {
+  ARENA_CATALOG_VERSION_V1_37,
+  CANONICAL_ARENA_CATALOG_V1_37,
   ChronicleSchema,
   COMPATIBILITY_VERSIONS,
   CURRENT_CANONICAL_COMPATIBILITY_TUPLE_RECORD,
   STRATEGY_RUNTIME_ABI_VERSION,
   MatchExecutionExactEvidenceV137Schema,
   RuntimeExecutionFinalStateSchema,
+  SET_CONDITION_POLICY_VERSION_V1_37,
   resolveCanonicalCompatibilityTuple,
+  resolveCandidateRuntimeV119SemanticTuple,
   resolveHistoricalRuntimeV114SemanticTuple,
   validateCanonicalArena,
   validateCanonicalGameState,
@@ -33,6 +37,8 @@ import {
 } from "./replay-transition.js"
 import {
   recordChronicleFromExecution,
+  type CandidateReplayMatchAuthorityV119,
+  type CandidateReplayReproducibilityV119,
   type ChronicleBoundaryAnchor,
   type ChronicleRecorderExecution,
 } from "./record.js"
@@ -103,6 +109,58 @@ export type CurrentChronicleSemanticValidationResult =
       readonly truncated: boolean
     }
 
+export const CANDIDATE_REPLAY_ADMISSION_CODE_ORDER = Object.freeze([
+  "CANDIDATE_ROUTE_INVALID",
+  "CANDIDATE_TUPLE_INVALID",
+  "CANDIDATE_REPRODUCIBILITY_INVALID",
+  "CANDIDATE_PERSISTED_MATCH_INVALID",
+  "CANDIDATE_CATALOG_INVALID",
+] as const)
+
+export type CandidateReplayAdmissionCode =
+  (typeof CANDIDATE_REPLAY_ADMISSION_CODE_ORDER)[number]
+
+export interface CandidateReplaySemanticIssue {
+  readonly code: CandidateReplayAdmissionCode
+  readonly path: readonly (string | number)[]
+  readonly metadata: Readonly<Record<string, never>>
+}
+
+export type CandidateReplayValidationResult =
+  | {
+      readonly ok: true
+      readonly profile: "candidate-v1.19"
+      readonly publishable: false
+      readonly current: false
+      readonly candidate: true
+      readonly issues: readonly []
+      readonly truncated: false
+    }
+  | {
+      readonly ok: false
+      readonly profile: "candidate-v1.19"
+      readonly publishable: false
+      readonly current: false
+      readonly candidate: true
+      readonly category: "CANONICAL_INTEGRITY_FAILURE"
+      readonly ownership: "system_integrity"
+      readonly issues: readonly CandidateReplaySemanticIssue[]
+      readonly truncated: false
+    }
+
+export interface CandidateReplaySemanticInputV119 {
+  readonly profile: "candidate-v1.19"
+  readonly compatibility: {
+    readonly tupleId: string
+    readonly tuple: Readonly<CanonicalCompatibilityTuple>
+  }
+  readonly chronicle: unknown
+  readonly boundaryAnchors: readonly ChronicleBoundaryAnchor[]
+  readonly execution: ChronicleRecorderExecution
+  readonly candidateReproducibility: Readonly<CandidateReplayReproducibilityV119>
+  readonly persistedMatch: Readonly<CandidateReplayMatchAuthorityV119>
+}
+
 export interface CurrentChronicleSemanticInput {
   readonly profile: "current-exact"
   readonly compatibility: {
@@ -161,7 +219,154 @@ const hasExactKeys = (
   )
 }
 
+const candidateCodeFailure = (
+  code: CandidateReplayAdmissionCode,
+  path: readonly (string | number)[] = [],
+): CandidateReplayValidationResult => ({
+  ok: false,
+  profile: "candidate-v1.19",
+  publishable: false,
+  current: false,
+  candidate: true,
+  category: "CANONICAL_INTEGRITY_FAILURE",
+  ownership: "system_integrity",
+  issues: Object.freeze([
+    Object.freeze({ code, path: Object.freeze([...path]), metadata: {} }),
+  ]),
+  truncated: false,
+})
+
+const candidateInputHasExactRoute = (
+  input: Record<string, unknown>,
+): boolean =>
+  hasExactKeys(input, [
+    "profile",
+    "compatibility",
+    "chronicle",
+    "boundaryAnchors",
+    "execution",
+    "candidateReproducibility",
+    "persistedMatch",
+  ])
+
+export const validateCandidateReplayV119 = (
+  input: unknown,
+): CandidateReplayValidationResult => {
+  if (
+    !isRecord(input) ||
+    input.profile !== "candidate-v1.19" ||
+    !candidateInputHasExactRoute(input)
+  ) {
+    return candidateCodeFailure("CANDIDATE_ROUTE_INVALID")
+  }
+  if (!isRecord(input.compatibility)) {
+    return candidateCodeFailure("CANDIDATE_TUPLE_INVALID", [
+      "compatibility",
+    ])
+  }
+  const compatibility = resolveCandidateRuntimeV119SemanticTuple(
+    input.compatibility,
+  )
+  if (compatibility === undefined) {
+    return candidateCodeFailure("CANDIDATE_TUPLE_INVALID", [
+      "compatibility",
+    ])
+  }
+
+  if (
+    !isRecord(input.candidateReproducibility) ||
+    !hasExactKeys(input.candidateReproducibility, [
+      "profile",
+      "compatibility",
+      "match",
+    ]) ||
+    input.candidateReproducibility.profile !== "candidate-v1.19" ||
+    !isRecord(input.candidateReproducibility.compatibility) ||
+    !isRecord(input.candidateReproducibility.match) ||
+    stableStringify(input.candidateReproducibility.compatibility) !==
+      stableStringify(input.compatibility) ||
+    !isRecord(input.persistedMatch)
+  ) {
+    return candidateCodeFailure("CANDIDATE_REPRODUCIBILITY_INVALID", [
+      "candidateReproducibility",
+    ])
+  }
+  if (
+    stableStringify(input.persistedMatch) !==
+    stableStringify(input.candidateReproducibility.match)
+  ) {
+    return candidateCodeFailure("CANDIDATE_PERSISTED_MATCH_INVALID", [
+      "persistedMatch",
+    ])
+  }
+
+  const persistedMatch = input.persistedMatch as unknown as Readonly<CandidateReplayMatchAuthorityV119>
+  const arena = CANONICAL_ARENA_CATALOG_V1_37.arenas.find(
+    ({ id }) => id === persistedMatch.arenaVariantId,
+  )
+  const resolvedArena =
+    arena?.status === "historical_alias"
+      ? CANONICAL_ARENA_CATALOG_V1_37.arenas.find(
+          ({ id }) => id === arena.aliasOf,
+        )
+      : arena
+  if (
+    persistedMatch.arenaCatalogVersion !== ARENA_CATALOG_VERSION_V1_37 ||
+    persistedMatch.setPolicyVersion !== SET_CONDITION_POLICY_VERSION_V1_37 ||
+    arena === undefined ||
+    resolvedArena === undefined ||
+    arena !== resolvedArena ||
+    arena.status !== "active" ||
+    !arena.schedulable ||
+    arena.semanticGeometryHash !==
+      persistedMatch.arenaSemanticGeometryHash
+  ) {
+    return candidateCodeFailure("CANDIDATE_CATALOG_INVALID", [
+      "persistedMatch",
+      "arenaVariantId",
+    ])
+  }
+
+  const trusted = recordChronicleFromExecution({
+    execution: input.execution as ChronicleRecorderExecution,
+    metadata: {
+      schemaVersion: "chronicle-v1.4",
+      semanticTupleId: compatibility.tupleId,
+      semanticTuple: compatibility.tuple,
+    },
+    candidateMatch: persistedMatch,
+  })
+  if (
+    !trusted.ok ||
+    trusted.candidateReproducibility === undefined ||
+    !Array.isArray(input.boundaryAnchors) ||
+    stableStringify(input.chronicle) !== stableStringify(trusted.chronicle) ||
+    stableStringify(input.boundaryAnchors) !==
+      stableStringify(trusted.boundaryAnchors) ||
+    stableStringify(input.candidateReproducibility) !==
+      stableStringify(trusted.candidateReproducibility)
+  ) {
+    return candidateCodeFailure("CANDIDATE_REPRODUCIBILITY_INVALID", [
+      "candidateReproducibility",
+    ])
+  }
+
+  return {
+    ok: true,
+    profile: "candidate-v1.19",
+    publishable: false,
+    current: false,
+    candidate: true,
+    issues: [],
+    truncated: false,
+  }
+}
+
 export type ReplayCompatibilityIdentityResolution =
+  | {
+      status: "candidate_v1_19_exact"
+      tupleId: string
+    }
   | {
       status: "current_exact"
       tupleId: string
@@ -188,6 +393,30 @@ export const resolveReplayCompatibilityIdentity = (
 ): ReplayCompatibilityIdentityResolution => {
   if (!isRecord(input)) {
     return { status: "invalid", reason: "unsupported_profile" }
+  }
+  if (input.profile === "candidate-v1.19") {
+    if (
+      !hasExactKeys(input, [
+        "profile",
+        "compatibility",
+        "chronicle",
+        "boundaryAnchors",
+        "execution",
+        "candidateReproducibility",
+        "persistedMatch",
+      ])
+    ) {
+      return { status: "invalid", reason: "missing_or_mixed_current_tuple" }
+    }
+    const resolved = resolveCandidateRuntimeV119SemanticTuple(
+      input.compatibility,
+    )
+    return resolved === undefined
+      ? { status: "invalid", reason: "missing_or_mixed_current_tuple" }
+      : {
+          status: "candidate_v1_19_exact",
+          tupleId: resolved.tupleId,
+        }
   }
   if (input.profile === "historical-v1.4") {
     return hasExactKeys(input, ["profile", "chronicle"])
@@ -267,7 +496,13 @@ export const resolveReplayCompatibilityIdentity = (
 
 export const validateReplayInput = (
   input: unknown,
-): ChronicleValidationResult | CurrentChronicleSemanticValidationResult => {
+):
+  | ChronicleValidationResult
+  | CurrentChronicleSemanticValidationResult
+  | CandidateReplayValidationResult => {
+  if (isRecord(input) && input.profile === "candidate-v1.19") {
+    return validateCandidateReplayV119(input)
+  }
   if (
     isRecord(input) &&
     input.profile === "current-exact" &&
@@ -298,6 +533,8 @@ export const validateReplayInput = (
     }
   }
   switch (compatibility.status) {
+    case "candidate_v1_19_exact":
+      return validateCandidateReplayV119(input)
     case "historical_original_semantics":
     case "historical_v1_16_exact":
       return validateHistoricalV14Chronicle(
