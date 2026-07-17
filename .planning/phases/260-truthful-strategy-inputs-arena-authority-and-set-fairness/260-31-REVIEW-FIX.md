@@ -3,7 +3,7 @@ phase: 260-truthful-strategy-inputs-arena-authority-and-set-fairness
 plan: "31"
 review_status: resolved
 resolved: 2026-07-17
-fix_commits: [cf18693, 2660b59, 9ed78db, a88bfc4, a90da11]
+fix_commits: [cf18693, 2660b59, 9ed78db, a88bfc4, a90da11, 740e4d3]
 ---
 
 # Phase 260 Plan 31 Review Fix — Executable Activation Evidence
@@ -52,9 +52,16 @@ The independent reviews' activation-seam findings are resolved. The coordinator 
 4. **Exact evaluator production identity:** the postactivation CLI now accepts and passes only `PLAN14_ACTIVATION_ID` into the production adapter. A default-runner test invokes the real smoke and protected-baseline commands through that production-main adapter rather than a stub, proving both executable gates can start under the supervised contract.
 5. **Zombie-state portability:** supervisor-death boundary tests exposed adopted launcher zombies that kept `kill(-pgid, 0)` true after execution was impossible. The live coordinator now uses the trusted in-memory PGID plus macOS/Linux process-table state and treats only non-zombie group members as executable. This preserves fail-closed signaling while allowing exact current-nonce lease cleanup after an all-zombie group.
 
+## Sixth rereview closure
+
+1. **Pre-rename starting-lease recovery:** the coordinator's atomic starting-lease write now has an executable boundary after the same-directory temporary file is complete but before rename or supervisor configuration. If the coordinator receives SIGKILL there, the still-unconfigured supervisor removes only the exact random-nonce lease basename and its exact `.tmp-` siblings before removing the directory. It never scans or removes another lease namespace by PID, PGID, or declared disk identity.
+2. **Exact process-death proof:** a new production-runner integration kills the coordinator at `after-starting-lease-temp`, proves the command never starts, waits for the unconfigured supervisor and exact lease directory to disappear, verifies an unchanged Git worktree/index, and successfully performs bootstrap recovery. The coordinator/supervisor/launcher protocol therefore has tested recovery before the first durable observability rename as well as at every later registration boundary.
+3. **Atomic test observation:** the expanded death matrix exposed a separate harness race in which file existence could become visible before boundary-marker JSON was completely readable. Coordinator, supervisor, and fake-gate markers now use complete temporary writes followed by same-directory rename. The earlier 73/75 observation failures no longer reproduce; the integration file passes 24/24 and the combined seam passes 76/76.
+
 ## Verification evidence
 
-- `DATABASE_URL=postgresql://cowards:cowards@localhost:5432/cowards_game pnpm exec vitest run scripts/activate-v1-37-observation-v1-19.test.ts scripts/activate-v1-37-observation-v1-19.integration.test.ts scripts/evaluate-v1-37-observation-v1-19-postactivation.test.ts packages/persistence/src/semantic-authority-selection-head.test.ts --maxWorkers=1` — 75/75 tests passed.
+- `DATABASE_URL=postgresql://cowards:cowards@localhost:5432/cowards_game pnpm exec vitest run scripts/activate-v1-37-observation-v1-19.test.ts scripts/activate-v1-37-observation-v1-19.integration.test.ts scripts/evaluate-v1-37-observation-v1-19-postactivation.test.ts packages/persistence/src/semantic-authority-selection-head.test.ts --maxWorkers=1` — 76/76 tests passed.
+- `pnpm --filter @cowards/engine test` — 147/147 tests passed across 19 files under a serialized standalone gate.
 - `pnpm exec vitest run apps/runtime-service/src --maxWorkers=1` — 154/154 tests passed across 16 files.
 - Supervised production adapter `runGate("build")` — `pnpm build` passed and the tracked `next-env.d.ts` blob remained `7506fe6afbc69878107523a1a6aa3409b65bde64` before and after.
 - `pnpm typecheck` — 27/27 tasks passed.
