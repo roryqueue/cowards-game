@@ -26,8 +26,7 @@ const identity = (
 ): RuntimeConformanceIdentityBindingsV117 => ({
   languageId,
   laneId: `${languageId}-candidate-native-supervised-v1.19`,
-  corpusRootSha256:
-    V1_37_CONFORMANCE_CORPUS_V3_CANDIDATE_PIN.corpusRootSha256,
+  corpusRootSha256: V1_37_CONFORMANCE_CORPUS_V3_CANDIDATE_PIN.corpusRootSha256,
   caseInventorySha256: V137_OBSERVATION_V119_CASE_INVENTORY_SHA256,
   fixtureSourceSha256:
     V1_37_CONFORMANCE_CORPUS_V3_CANDIDATE_PIN.sourceRoots.find(
@@ -76,7 +75,9 @@ const freshRun = (
 })
 
 const certify = (
-  childRunner: (invocation: V137ObservationV119LanguageChildInvocation) => unknown,
+  childRunner: (
+    invocation: V137ObservationV119LanguageChildInvocation,
+  ) => unknown,
   candidateBindings = exactObservationV119CandidateBindings(repoRoot),
 ) =>
   certifyObservationLanguageLaneV119({
@@ -97,8 +98,7 @@ describe("v1.37 observation-v1.19 candidate lane certifier", () => {
     const childRunner = vi.fn(freshRun)
     const result = certify(childRunner)
     expect(result).toMatchObject({
-      schemaVersion:
-        "v1.37-observation-v1.19-reviewed-language-candidate-v1",
+      schemaVersion: "v1.37-observation-v1.19-reviewed-language-candidate-v1",
       status: "reviewed_unsigned_candidate",
       languageId: "typescript",
       candidateBindings: {
@@ -207,8 +207,8 @@ describe("v1.37 observation-v1.19 candidate lane certifier", () => {
     expect(JSON.stringify(result)).not.toMatch(
       /source memory|objective|diagnostics|stderr|host path/iu,
     )
-    expect(JSON.stringify(exactObservationV119CandidateBindings(repoRoot))).not.toMatch(
-      /registry\.json|v1\.37-language-conformance-/u,
-    )
+    expect(
+      JSON.stringify(exactObservationV119CandidateBindings(repoRoot)),
+    ).not.toMatch(/registry\.json|v1\.37-language-conformance-/u)
   })
 })

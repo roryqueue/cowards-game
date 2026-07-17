@@ -214,7 +214,7 @@ if(mode==="malformed"){process.stdout.write('{"broken":');process.exit(0)}
 if(mode==="resource"){const value=Buffer.alloc(268435456,1);process.stdout.write(String(value.length));process.exit(0)}
 if(mode==="timeout"){for(;;){}}
 const input={mySoldiers:[{id:"soldier:fixture:active",status:"ACTIVE"},{id:"soldier:fixture:stone",status:"STONE"}]${observationV119 ? ',initialInitiativePlayerId:"player:bottom",hasInitialInitiative:true,roundInitiativePlayerId:"player:bottom",hasRoundInitiative:true' : ""}}
-const brainInput=${observationV119 ? '{hasAdvancedThisActivation:false}' : "{}"}
+const brainInput=${observationV119 ? "{hasAdvancedThisActivation:false}" : "{}"}
 const first={selection:strategy.selectActivations(input),brain:strategy.soldierBrain(brainInput)}
 const second={selection:strategy.selectActivations(input),brain:strategy.soldierBrain(brainInput)}
 process.stdout.write(JSON.stringify({first,second}))
@@ -580,9 +580,10 @@ const execute = (): V137FreshLanguageRunResult => {
     candidateBindingIndex < 0
       ? null
       : (JSON.parse(
-          Buffer.from(process.argv[candidateBindingIndex + 1] ?? "", "base64").toString(
-            "utf8",
-          ),
+          Buffer.from(
+            process.argv[candidateBindingIndex + 1] ?? "",
+            "base64",
+          ).toString("utf8"),
         ) as V137ObservationV119CandidateBindings)
   const observationV119 = candidateBindings !== null
   if (

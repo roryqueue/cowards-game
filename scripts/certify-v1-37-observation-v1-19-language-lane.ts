@@ -45,7 +45,8 @@ const sha256 = (value: Uint8Array | string): `sha256:${string}` =>
 
 const canonicalBytes = (value: JsonValue): Uint8Array => {
   const encoded = encodeCanonicalJson(value, { context: "canonical-manifest" })
-  if (!encoded.ok) throw new TypeError("Candidate evidence is not canonical JSON")
+  if (!encoded.ok)
+    throw new TypeError("Candidate evidence is not canonical JSON")
   return encoded.bytes
 }
 
@@ -99,10 +100,8 @@ export const exactObservationV119CandidateBindings = (
     schemaVersion: "v1.37-observation-v1.19-candidate-bindings-v1",
     corpus: Object.freeze({
       version: V1_37_CONFORMANCE_CORPUS_V3_CANDIDATE_PIN.candidateVersion,
-      rootSha256:
-        V1_37_CONFORMANCE_CORPUS_V3_CANDIDATE_PIN.corpusRootSha256,
-      fileSha256:
-        V1_37_CONFORMANCE_CORPUS_V3_CANDIDATE_PIN.corpusFileSha256,
+      rootSha256: V1_37_CONFORMANCE_CORPUS_V3_CANDIDATE_PIN.corpusRootSha256,
+      fileSha256: V1_37_CONFORMANCE_CORPUS_V3_CANDIDATE_PIN.corpusFileSha256,
       pinFileSha256: pinFile(
         repoRoot,
         "packages/golden/src/v1-37-conformance-corpus-v3-candidate-pin.ts",
@@ -111,8 +110,7 @@ export const exactObservationV119CandidateBindings = (
     }),
     trace: Object.freeze({
       version: V1_37_OBSERVATION_TRACE_V4_CANDIDATE_PIN.candidateVersion,
-      rootSha256:
-        V1_37_OBSERVATION_TRACE_V4_CANDIDATE_PIN.candidateRootSha256,
+      rootSha256: V1_37_OBSERVATION_TRACE_V4_CANDIDATE_PIN.candidateRootSha256,
       bundleRootSha256:
         V1_37_OBSERVATION_TRACE_V4_CANDIDATE_PIN.bundleRootSha256,
       pinFileSha256: pinFile(
@@ -122,10 +120,8 @@ export const exactObservationV119CandidateBindings = (
       current: false,
     }),
     workshop: Object.freeze({
-      version:
-        WORKSHOP_CONTRACT_V1_19_CANDIDATE_PIN.workshopContractVersion,
-      rootSha256:
-        WORKSHOP_CONTRACT_V1_19_CANDIDATE_PIN.exampleSetRootSha256,
+      version: WORKSHOP_CONTRACT_V1_19_CANDIDATE_PIN.workshopContractVersion,
+      rootSha256: WORKSHOP_CONTRACT_V1_19_CANDIDATE_PIN.exampleSetRootSha256,
       observationSemanticsSha256:
         WORKSHOP_CONTRACT_V1_19_CANDIDATE_PIN.observationSemanticsSha256,
       pinFileSha256: pinFile(
@@ -232,8 +228,7 @@ interface V137ObservationV119CertificatePayload {
 }
 
 export interface V137ObservationV119ReviewedLanguageCandidate {
-  readonly schemaVersion:
-    "v1.37-observation-v1.19-reviewed-language-candidate-v1"
+  readonly schemaVersion: "v1.37-observation-v1.19-reviewed-language-candidate-v1"
   readonly status: "reviewed_unsigned_candidate"
   readonly languageId: RuntimeConformanceLanguageIdV117
   readonly candidateBindings: V137ObservationV119CandidateBindings
@@ -248,8 +243,7 @@ export interface V137ObservationV119ReviewedLanguageCandidate {
 }
 
 export interface V137ObservationV119SafeLanguageFailure {
-  readonly schemaVersion:
-    "v1.37-observation-v1.19-reviewed-language-candidate-v1"
+  readonly schemaVersion: "v1.37-observation-v1.19-reviewed-language-candidate-v1"
   readonly status: "system_failure"
   readonly languageId: RuntimeConformanceLanguageIdV117
   readonly code:
@@ -373,7 +367,8 @@ const parseFreshRun = (
   value: unknown,
   expected: V137ObservationV119LanguageChildInvocation,
 ): V137ObservationV119FreshLanguageRun => {
-  if (!exactKeys(value, RUN_KEYS)) throw new TypeError("Fresh lane run shape is invalid")
+  if (!exactKeys(value, RUN_KEYS))
+    throw new TypeError("Fresh lane run shape is invalid")
   const run = value as V137ObservationV119FreshLanguageRun
   const startedAt = parseInstant(run.startedAt)
   const completedAt = parseInstant(run.completedAt)
@@ -394,8 +389,7 @@ const parseFreshRun = (
     run.syntheticEvidence !== false ||
     run.caseCount !==
       V1_37_CONFORMANCE_CORPUS_V3_CANDIDATE_PIN.caseRoots.length ||
-    run.caseInventorySha256 !==
-      V137_OBSERVATION_V119_CASE_INVENTORY_SHA256 ||
+    run.caseInventorySha256 !== V137_OBSERVATION_V119_CASE_INVENTORY_SHA256 ||
     startedAt > completedAt ||
     completedAt > validUntil ||
     !HASH.test(run.resultRootSha256) ||
@@ -506,8 +500,10 @@ export const certifyObservationLanguageLaneV119 = (input: {
     }
     const effectiveIssuedAt = input.issueAfterRuns
       ? new Date(
-          Math.max(Date.now(), ...runs.map((run) => parseInstant(run.completedAt))) +
-            1,
+          Math.max(
+            Date.now(),
+            ...runs.map((run) => parseInstant(run.completedAt)),
+          ) + 1,
         ).toISOString()
       : input.issuedAt
     const issuedAt = parseInstant(effectiveIssuedAt)
@@ -519,7 +515,8 @@ export const certifyObservationLanguageLaneV119 = (input: {
       issuedAt + 30 * 24 * 60 * 60 * 1_000,
       parseInstant(input.requestedValidUntil),
     )
-    if (issuedAt >= freshUntil) return failure(input.languageId, "LANE_RUN_INVALID")
+    if (issuedAt >= freshUntil)
+      return failure(input.languageId, "LANE_RUN_INVALID")
     const payload: V137ObservationV119CertificatePayload = {
       schemaVersion: "runtime-conformance-certificate-candidate-v1.19",
       certificateVersion: "runtime-conformance-certificate-v1.19",
@@ -536,8 +533,7 @@ export const certifyObservationLanguageLaneV119 = (input: {
       runs,
     }
     return Object.freeze({
-      schemaVersion:
-        "v1.37-observation-v1.19-reviewed-language-candidate-v1",
+      schemaVersion: "v1.37-observation-v1.19-reviewed-language-candidate-v1",
       status: "reviewed_unsigned_candidate",
       languageId: input.languageId,
       candidateBindings: bindings,
@@ -576,9 +572,10 @@ const cliChildRunner: V137ObservationV119LanguageChildRunner = (invocation) => {
       "--workspace",
       invocation.workspacePath,
       "--observation-v1-19-candidate-bindings-base64",
-      Buffer.from(JSON.stringify(invocation.candidateBindings), "utf8").toString(
-        "base64",
-      ),
+      Buffer.from(
+        JSON.stringify(invocation.candidateBindings),
+        "utf8",
+      ).toString("base64"),
     ],
     {
       cwd: invocation.workspacePath,
@@ -681,7 +678,10 @@ const checkResult = (
 
 const reviewedIndex = (
   results: Readonly<
-    Record<RuntimeConformanceLanguageIdV117, V137ObservationV119ReviewedLanguageCandidate>
+    Record<
+      RuntimeConformanceLanguageIdV117,
+      V137ObservationV119ReviewedLanguageCandidate
+    >
   >,
 ): string => {
   const bindings = results.typescript.candidateBindings
@@ -753,11 +753,13 @@ const checkReviewedResults = (repoRoot: string): void => {
       Buffer.from(canonicalResultBytes(result)),
       Buffer.from("\n"),
     ])
-    if (!bytes.equals(expected)) throw new TypeError("Candidate bytes are not canonical")
+    if (!bytes.equals(expected))
+      throw new TypeError("Candidate bytes are not canonical")
     results[languageId] = result
   }
   if (
-    readFileSync(path.join(repoRoot, INDEX_PATH), "utf8") !== reviewedIndex(results)
+    readFileSync(path.join(repoRoot, INDEX_PATH), "utf8") !==
+    reviewedIndex(results)
   ) {
     throw new TypeError("Candidate inventory is not synchronized")
   }
@@ -805,7 +807,9 @@ export const runObservationV119CertifierCli = (): void => {
     return
   }
   if (!args.includes("--attempt-all")) {
-    throw new TypeError("Use --attempt-all and/or --check-reviewed-lane-results")
+    throw new TypeError(
+      "Use --attempt-all and/or --check-reviewed-lane-results",
+    )
   }
   process.stdout.write(
     `${JSON.stringify({ status: "passed", lanes: 4, runs: 12, current: false })}\n`,
