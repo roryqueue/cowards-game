@@ -3,7 +3,14 @@ import { Buffer } from "node:buffer"
 import { createHash } from "node:crypto"
 import { execFile as execFileCallback } from "node:child_process"
 import { createRequire } from "node:module"
-import { mkdir, readFile, rm, writeFile } from "node:fs/promises"
+import {
+  mkdir,
+  readFile,
+  readdir,
+  rm,
+  symlink,
+  writeFile,
+} from "node:fs/promises"
 import path from "node:path"
 import { promisify } from "node:util"
 import { fileURLToPath } from "node:url"
@@ -126,6 +133,12 @@ interface AbortInput {
 
 export interface ActivationCoordinatorAdapter {
   withLock<T>(operation: () => Promise<T>): Promise<T>
+  withCandidateWorkspace<T>(
+    activationId: string,
+    parentHead: string,
+    operation: (candidate: ActivationCoordinatorAdapter) => Promise<T>,
+  ): Promise<T>
+  cleanupCandidateWorkspace(activationId: string): Promise<void>
   readHead(): Promise<ActivationHead>
   readPreparedProofCommitment(activationId: string): Promise<Sha256>
   prepare(input: PrepareInput): Promise<ActivationHead>
@@ -158,6 +171,9 @@ export type ActivationMode =
   | "compensate"
 
 export const PLAN14_ACTIVATION_ID = "activation:phase260:plan14:production"
+
+export const activationCandidateWorkspaceKey = (activationId: string): string =>
+  createHash("sha256").update(activationId).digest("hex")
 
 export interface RunActivationInput {
   readonly mode: ActivationMode
@@ -685,39 +701,67 @@ const prepare = async (
   const rawPreimageRoot = snapshotRoot(preimage)
   const target = buildV119SelectorBytes()
   const manifest = manifestFor(target)
-  let proofBytes: Uint8Array | undefined
-  try {
-    for (const [filePath, bytes] of target) {
-      await adapter.writeFile(filePath, { state: "present", bytes })
-    }
-    const validationReceipts: GateReceipt[] = []
-    for (const id of ACTIVATION_VALIDATION_GATE_IDS) {
-      validationReceipts.push(await adapter.runGate(id))
-    }
-    await restoreSnapshot(adapter, preimage)
-    await adapter.unstage(ALL_PATHS)
-    await assertWorktreeSnapshot(adapter, preimage, "pre-prepare rollback")
-    const rollbackReceipt = await adapter.runGate("rollback")
-    const proof: ActivationProof = {
-      schemaVersion: "v1.37-observation-v1.19-activation-proof-v1",
-      lifecycle: "pending-precommit",
-      activationId,
-      parentHead,
-      pendingSelectionRoot: REVIEWED_V1_19_SEMANTIC_AUTHORITY_SELECTION_ROOT,
-      selectorManifest: manifest,
-      selectorManifestRoot: hashSemanticAuthoritySelectorManifest(manifest),
-      preimage: snapshotEntries(preimage),
-      proofPreimageRoot: rawPreimageRoot,
-      validationReceipts,
-      rollbackReceipt,
-    }
-    proofBytes = jsonBytes(proof)
-  } catch (error) {
-    await restoreSnapshot(adapter, preimage)
-    await adapter.unstage(ALL_PATHS)
-    await assertWorktreeSnapshot(adapter, preimage, "failed prepare restore")
-    throw error
+  const candidateEvidence = await adapter.withCandidateWorkspace(
+    activationId,
+    parentHead,
+    async (candidate) => {
+      if ((await candidate.gitHead()) !== parentHead) {
+        throw new Error("Candidate workspace parent mismatch")
+      }
+      const candidatePreimage = await captureCommitSnapshot(
+        candidate,
+        parentHead,
+      )
+      await assertWorktreeSnapshot(
+        candidate,
+        candidatePreimage,
+        "candidate preimage",
+      )
+      if (snapshotRoot(candidatePreimage) !== rawPreimageRoot) {
+        throw new Error("Candidate workspace preimage mismatch")
+      }
+      for (const [filePath, bytes] of target) {
+        await candidate.writeFile(filePath, { state: "present", bytes })
+      }
+      const validationReceipts: GateReceipt[] = []
+      for (const id of ACTIVATION_VALIDATION_GATE_IDS) {
+        validationReceipts.push(await candidate.runGate(id))
+      }
+      await restoreSnapshot(candidate, candidatePreimage)
+      await candidate.unstage(ALL_PATHS)
+      await assertWorktreeSnapshot(
+        candidate,
+        candidatePreimage,
+        "candidate rollback",
+      )
+      return {
+        validationReceipts,
+        rollbackReceipt: await candidate.runGate("rollback"),
+      }
+    },
+  )
+  await assertWorktreeSnapshot(
+    adapter,
+    preimage,
+    "post-candidate live preimage",
+  )
+  if ((await adapter.stagedPaths()).length > 0) {
+    throw new Error("Candidate validation changed the live staged index")
   }
+  const proof: ActivationProof = {
+    schemaVersion: "v1.37-observation-v1.19-activation-proof-v1",
+    lifecycle: "pending-precommit",
+    activationId,
+    parentHead,
+    pendingSelectionRoot: REVIEWED_V1_19_SEMANTIC_AUTHORITY_SELECTION_ROOT,
+    selectorManifest: manifest,
+    selectorManifestRoot: hashSemanticAuthoritySelectorManifest(manifest),
+    preimage: snapshotEntries(preimage),
+    proofPreimageRoot: rawPreimageRoot,
+    validationReceipts: candidateEvidence.validationReceipts,
+    rollbackReceipt: candidateEvidence.rollbackReceipt,
+  }
+  const proofBytes = jsonBytes(proof)
   const prepared = await adapter.prepare({
     direction: "forward",
     activationId,
@@ -1155,7 +1199,13 @@ const recover = async (
     return head
   }
   if (head.state === "active-v1.17-bootstrap") {
-    throw new Error("No matching activation is pending or finalized")
+    const currentHead = await adapter.gitHead()
+    const snapshot = await captureCommitSnapshot(adapter, currentHead)
+    await assertWorktreeSnapshot(adapter, snapshot, "bootstrap recovery")
+    if ((await adapter.stagedPaths()).length > 0) {
+      throw new Error("Bootstrap recovery requires an empty staged index")
+    }
+    return head
   }
   if (head.state === "pending-compensation")
     return recoverReverse(adapter, head, activationId)
@@ -1172,6 +1222,7 @@ export const runV137ObservationV119Activation = async (
   input: RunActivationInput,
 ): Promise<unknown> =>
   input.adapter.withLock(async () => {
+    await input.adapter.cleanupCandidateWorkspace(input.activationId)
     switch (input.mode) {
       case "prepare":
         return prepare(input.adapter, input.activationId)
@@ -1311,7 +1362,43 @@ const runProcess = async (
 
 export interface ProductionActivationAdapterOptions {
   readonly processRunner?: typeof runProcess
+  readonly gateProcessRunner?: typeof runProcess
   readonly now?: () => Date
+  readonly protectedBaselineRoot?: string
+  readonly candidateWorkspaceEnabled?: boolean
+}
+
+const discoverNodeModulePaths = async (
+  root: string,
+  current = root,
+): Promise<string[]> => {
+  const paths: string[] = []
+  for (const entry of await readdir(current, { withFileTypes: true })) {
+    if (entry.name === ".git") continue
+    const absolute = path.join(current, entry.name)
+    if (entry.name === "node_modules") {
+      paths.push(absolute)
+      continue
+    }
+    if (
+      entry.isDirectory() &&
+      ![".next", ".turbo", "coverage", "dist", "target"].includes(entry.name)
+    ) {
+      paths.push(...(await discoverNodeModulePaths(root, absolute)))
+    }
+  }
+  return paths
+}
+
+const linkWorkspaceNodeModules = async (
+  sourceRoot: string,
+  candidateRoot: string,
+): Promise<void> => {
+  for (const source of await discoverNodeModulePaths(sourceRoot)) {
+    const target = path.join(candidateRoot, path.relative(sourceRoot, source))
+    await mkdir(path.dirname(target), { recursive: true })
+    await symlink(source, target, "junction")
+  }
 }
 
 export const createProductionActivationAdapter = (
@@ -1320,7 +1407,27 @@ export const createProductionActivationAdapter = (
   options: ProductionActivationAdapterOptions = {},
 ): ActivationCoordinatorAdapter => {
   const execute = options.processRunner ?? runProcess
+  const executeGate = options.gateProcessRunner ?? execute
   const now = options.now ?? (() => new Date())
+  const protectedBaselineRoot = options.protectedBaselineRoot ?? repoRoot
+  const candidateWorkspaceEnabled = options.candidateWorkspaceEnabled ?? true
+  const candidateWorkspacePaths = async (
+    activationId: string,
+  ): Promise<{ base: string; root: string }> => {
+    const commonDir = (
+      await execute("git", ["rev-parse", "--git-common-dir"], repoRoot)
+    ).stdout.trim()
+    const gitCommonDir = path.resolve(repoRoot, commonDir)
+    const base = path.join(gitCommonDir, "cowards-activation-candidates")
+    return {
+      base,
+      root: path.join(base, activationCandidateWorkspaceKey(activationId)),
+    }
+  }
+  const cleanupCandidate = async (activationId: string): Promise<void> => {
+    const candidate = await candidateWorkspacePaths(activationId)
+    await rm(candidate.base, { recursive: true, force: true })
+  }
   const readLocalFile = async (filePath: string): Promise<FileBytes> => {
     try {
       return {
@@ -1347,6 +1454,48 @@ export const createProductionActivationAdapter = (
     await writeFile(absolute, value.bytes)
   }
   return {
+    async withCandidateWorkspace<T>(
+      activationId: string,
+      parentHead: string,
+      operation: (candidate: ActivationCoordinatorAdapter) => Promise<T>,
+    ): Promise<T> {
+      if (!candidateWorkspaceEnabled) {
+        throw new Error("Nested activation candidate workspace is forbidden")
+      }
+      const candidate = await candidateWorkspacePaths(activationId)
+      await cleanupCandidate(activationId)
+      await mkdir(candidate.base, { recursive: true })
+      try {
+        await execute(
+          "git",
+          [
+            "clone",
+            "--quiet",
+            "--shared",
+            "--no-checkout",
+            repoRoot,
+            candidate.root,
+          ],
+          repoRoot,
+        )
+        await execute(
+          "git",
+          ["checkout", "--quiet", "--detach", parentHead],
+          candidate.root,
+        )
+        await linkWorkspaceNodeModules(repoRoot, candidate.root)
+        return await operation(
+          createProductionActivationAdapter(candidate.root, pool, {
+            ...options,
+            protectedBaselineRoot,
+            candidateWorkspaceEnabled: false,
+          }),
+        )
+      } finally {
+        await cleanupCandidate(activationId)
+      }
+    },
+    cleanupCandidateWorkspace: cleanupCandidate,
     async withLock<T>(operation: () => Promise<T>): Promise<T> {
       const client = await pool.connect()
       try {
@@ -1488,13 +1637,15 @@ export const createProductionActivationAdapter = (
       if (argv === undefined) throw new Error(`Unknown activation gate ${id}`)
       const [command, ...args] = argv
       const startedAt = now()
+      const gateRoot =
+        id === "protected-baseline" ? protectedBaselineRoot : repoRoot
       const nextEnvPath = "apps/web/next-env.d.ts"
       const nextEnvPreimage =
         id === "build" ? await readLocalFile(nextEnvPath) : undefined
       let result: { stdout: string; stderr: string } | undefined
       let gateError: unknown
       try {
-        result = await execute(command, args, repoRoot)
+        result = await executeGate(command, args, gateRoot)
       } catch (error) {
         gateError = error
       }

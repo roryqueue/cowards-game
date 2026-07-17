@@ -1,10 +1,19 @@
 import { Buffer } from "node:buffer"
-import { execFile } from "node:child_process"
+import { execFile, spawn } from "node:child_process"
 import { createHash, randomUUID } from "node:crypto"
+import { once } from "node:events"
 import { createRequire } from "node:module"
-import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises"
+import {
+  access,
+  mkdtemp,
+  mkdir,
+  readFile,
+  rm,
+  writeFile,
+} from "node:fs/promises"
 import { tmpdir } from "node:os"
 import path from "node:path"
+import { setTimeout as delay } from "node:timers/promises"
 import { promisify } from "node:util"
 import { afterAll, describe, expect, it } from "vitest"
 import {
@@ -12,12 +21,12 @@ import {
   ACTIVATION_PROOF_PATH,
   ACTIVATION_SELECTOR_PATHS,
   ACTIVATION_VALIDATION_GATE_IDS,
+  activationCandidateWorkspaceKey,
   createProductionActivationAdapter,
   hashActivationPathDigests,
   hashActivationProofCommitment,
   runV137ObservationV119Activation,
   type ActivationCoordinatorAdapter,
-  type GateReceipt,
   type Sha256,
 } from "./activate-v1-37-observation-v1-19.js"
 import {
@@ -45,6 +54,7 @@ interface IsolatedContext {
   pool: PoolType
   adapter: ActivationCoordinatorAdapter
   activationId: string
+  gateFailure: { id: string | null }
 }
 
 const contexts: IsolatedContext[] = []
@@ -115,10 +125,17 @@ const createContext = async (label: string): Promise<IsolatedContext> => {
     connectionString: databaseUrl,
     options: `-c search_path=${schema},public`,
   })
-  const production = createProductionActivationAdapter(root, pool)
-  const adapter: ActivationCoordinatorAdapter = {
-    ...production,
-    async runGate(id: string): Promise<GateReceipt> {
+  const gateFailure = { id: null as string | null }
+  const production = createProductionActivationAdapter(root, pool, {
+    gateProcessRunner: async (command, args) => {
+      const commandText = [command, ...args].join(" ")
+      const id = Object.entries(ACTIVATION_GATE_COMMANDS).find(
+        ([, expected]) => expected === commandText,
+      )?.[0]
+      if (id === undefined)
+        throw new Error(`Unknown gate command ${commandText}`)
+      if (gateFailure.id === id)
+        throw new Error(`real adapter gate failure: ${id}`)
       if (id === "rollback" || ACTIVATION_VALIDATION_GATE_IDS.includes(id)) {
         const head = await production.readHead()
         if (
@@ -129,21 +146,20 @@ const createContext = async (label: string): Promise<IsolatedContext> => {
         }
       }
       return {
-        id,
-        command: ACTIVATION_GATE_COMMANDS[id]!,
-        exitCode: 0,
-        stdoutSha256: sha256(`isolated stdout:${id}`),
-        stderrSha256: sha256(`isolated stderr:${id}`),
-        completedAt: "2026-07-17T12:00:00.000Z",
+        stdout: `isolated stdout:${id}`,
+        stderr: `isolated stderr:${id}`,
       }
     },
-  }
+    now: () => new Date("2026-07-17T12:00:00.000Z"),
+  })
+  const adapter: ActivationCoordinatorAdapter = production
   const context = {
     root,
     schema,
     pool,
     adapter,
     activationId: `activation:phase260:plan31:integration:${label}`,
+    gateFailure,
   }
   contexts.push(context)
   return context
@@ -158,6 +174,18 @@ const run = (
     activationId: context.activationId,
     adapter: context.adapter,
   })
+
+const waitForFile = async (filePath: string): Promise<void> => {
+  for (let attempt = 0; attempt < 200; attempt += 1) {
+    try {
+      await access(filePath)
+      return
+    } catch {
+      await delay(50)
+    }
+  }
+  throw new Error(`Timed out waiting for ${filePath}`)
+}
 
 const throughCommit = async (context: IsolatedContext): Promise<void> => {
   for (const mode of [
@@ -332,14 +360,7 @@ describePostgres(
 
     it("restores a real pre-prepare gate failure without creating pending state", async () => {
       const context = await createContext("failed-pre-prepare-gate")
-      const production = context.adapter
-      context.adapter = {
-        ...production,
-        async runGate(id) {
-          if (id === "engine") throw new Error("real adapter gate failure")
-          return production.runGate(id)
-        },
-      }
+      context.gateFailure.id = "engine"
       await expect(run(context, "prepare")).rejects.toThrow(
         /real adapter gate failure/iu,
       )
@@ -358,6 +379,151 @@ describePostgres(
             `old:${selectorPath}\n`,
           )
         }
+      }
+    }, 30_000)
+
+    it("survives true SIGKILL during isolated candidate validation with exact bootstrap recovery", async () => {
+      const context = await createContext("sigkill-candidate")
+      const markerRoot = await mkdtemp(path.join(tmpdir(), "cowards-sigkill-"))
+      const marker = path.join(markerRoot, "candidate-gate-started")
+      const candidateBase = path.join(
+        context.root,
+        ".git",
+        "cowards-activation-candidates",
+      )
+      const candidateRoot = path.join(
+        candidateBase,
+        activationCandidateWorkspaceKey(context.activationId),
+      )
+      const schemasBefore = await context.pool.query(
+        "select count(*)::integer as count from information_schema.schemata where schema_name like 'activation_%'",
+      )
+      const childSource = `
+        import { writeFile } from "node:fs/promises";
+        import path from "node:path";
+        import { createRequire } from "node:module";
+        import { pathToFileURL } from "node:url";
+        void (async () => {
+          const moduleRoot = process.env.TEST_MODULE_ROOT;
+          const requireFromPersistence = createRequire(
+            pathToFileURL(path.join(moduleRoot, "packages/persistence/package.json")),
+          );
+          const { Pool } = requireFromPersistence("pg");
+          const activation = await import(
+            pathToFileURL(
+              path.join(moduleRoot, "scripts/activate-v1-37-observation-v1-19.ts"),
+            ).href
+          );
+          const pool = new Pool({
+            connectionString: process.env.DATABASE_URL,
+            options: "-c search_path=" + process.env.TEST_SCHEMA + ",public",
+          });
+          const adapter = activation.createProductionActivationAdapter(
+            process.env.TEST_REPO_ROOT,
+            pool,
+            {
+              gateProcessRunner: async () => {
+                await writeFile(process.env.TEST_MARKER, "started\\n");
+                await new Promise(() => {});
+              },
+            },
+          );
+          await activation.runV137ObservationV119Activation({
+            mode: "prepare",
+            activationId: process.env.TEST_ACTIVATION_ID,
+            adapter,
+          });
+        })();
+      `
+      const childEnvironment = Object.fromEntries(
+        Object.entries(process.env).filter(
+          ([key]) => !key.startsWith("VITEST"),
+        ),
+      )
+      const child = spawn(
+        process.execPath,
+        ["--import", "tsx", "--eval", childSource],
+        {
+          cwd: process.cwd(),
+          env: {
+            ...childEnvironment,
+            DATABASE_URL: databaseUrl!,
+            TEST_MODULE_ROOT: process.cwd(),
+            TEST_REPO_ROOT: context.root,
+            TEST_SCHEMA: context.schema,
+            TEST_MARKER: marker,
+            TEST_ACTIVATION_ID: context.activationId,
+          },
+          stdio: ["ignore", "pipe", "pipe"],
+        },
+      )
+      let stderr = ""
+      child.stderr.on("data", (chunk) => {
+        stderr += String(chunk)
+      })
+      const exited = once(child, "exit") as Promise<
+        [number | null, string | null]
+      >
+      try {
+        await Promise.race([
+          waitForFile(marker),
+          exited.then(([code, signal]) => {
+            throw new Error(
+              `Candidate child exited before marker (${String(code)}/${String(signal)}): ${stderr}`,
+            )
+          }),
+        ])
+        await access(candidateRoot)
+        expect(
+          await readFile(
+            path.join(candidateRoot, ACTIVATION_SELECTOR_PATHS[0]),
+            "utf8",
+          ),
+        ).not.toBe(`old:${ACTIVATION_SELECTOR_PATHS[0]}\n`)
+        child.kill("SIGKILL")
+        const [, signal] = await exited
+        expect(signal).toBe("SIGKILL")
+
+        expect((await context.adapter.readHead()).state).toBe(
+          "active-v1.17-bootstrap",
+        )
+        expect(await context.adapter.stagedPaths()).toEqual([])
+        expect(
+          (
+            await runFile("git", ["status", "--porcelain"], {
+              cwd: context.root,
+            })
+          ).stdout,
+        ).toBe("")
+        expect(await context.adapter.readFile(ACTIVATION_PROOF_PATH)).toEqual({
+          state: "absent",
+        })
+        for (const selectorPath of ACTIVATION_SELECTOR_PATHS) {
+          const file = await context.adapter.readFile(selectorPath)
+          expect(file.state).toBe("present")
+          if (file.state === "present") {
+            expect(Buffer.from(file.bytes).toString()).toBe(
+              `old:${selectorPath}\n`,
+            )
+          }
+        }
+
+        await expect(run(context, "recover")).resolves.toMatchObject({
+          state: "active-v1.17-bootstrap",
+        })
+        await expect(access(candidateBase)).rejects.toMatchObject({
+          code: "ENOENT",
+        })
+        const schemasAfter = await context.pool.query(
+          "select count(*)::integer as count from information_schema.schemata where schema_name like 'activation_%'",
+        )
+        expect(schemasAfter.rows).toEqual(schemasBefore.rows)
+      } finally {
+        if (child.exitCode === null && child.signalCode === null) {
+          child.kill("SIGKILL")
+          await exited
+        }
+        await rm(markerRoot, { recursive: true, force: true })
       }
     }, 30_000)
   },

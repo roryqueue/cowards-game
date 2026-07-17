@@ -1,7 +1,14 @@
 import { Buffer } from "node:buffer"
 import { execFile as execFileCallback } from "node:child_process"
 import { createHash } from "node:crypto"
-import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises"
+import {
+  access,
+  mkdtemp,
+  mkdir,
+  readFile,
+  rm,
+  writeFile,
+} from "node:fs/promises"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { promisify } from "node:util"
@@ -13,6 +20,7 @@ import {
   ACTIVATION_SELECTOR_PATHS,
   COMPENSATION_COMMIT_MESSAGE,
   PLAN14_ACTIVATION_ID,
+  activationCandidateWorkspaceKey,
   buildCompensationActivationId,
   buildV119SelectorBytes,
   createProductionActivationAdapter,
@@ -68,6 +76,43 @@ class ModelAdapter implements ActivationCoordinatorAdapter {
     }
   }
 
+  async withCandidateWorkspace<T>(
+    _activationId: string,
+    parentHead: string,
+    operation: (candidate: ActivationCoordinatorAdapter) => Promise<T>,
+  ): Promise<T> {
+    this.events.push("candidate:create")
+    const candidate = new ModelAdapter()
+    candidate.files.clear()
+    for (const [filePath, bytes] of this.commits.get(parentHead)!.files) {
+      candidate.files.set(filePath, Buffer.from(bytes))
+    }
+    candidate.commits.clear()
+    for (const [commit, value] of this.commits) {
+      candidate.commits.set(commit, {
+        parent: value.parent,
+        tree: value.tree,
+        files: new Map(
+          [...value.files].map(([filePath, bytes]) => [
+            filePath,
+            Buffer.from(bytes),
+          ]),
+        ),
+      })
+    }
+    candidate.currentHead = parentHead
+    candidate.head = JSON.parse(JSON.stringify(this.head)) as ActivationHead
+    candidate.failGate = this.failGate
+    try {
+      return await operation(candidate)
+    } finally {
+      this.events.push(...candidate.events.map((event) => `candidate:${event}`))
+      this.events.push("candidate:remove")
+    }
+  }
+  async cleanupCandidateWorkspace(_activationId: string): Promise<void> {
+    this.events.push("candidate:cleanup")
+  }
   async withLock<T>(operation: () => Promise<T>): Promise<T> {
     this.events.push("lock")
     return operation()
@@ -363,6 +408,47 @@ describe("v1.37 observation v1.19 activation coordinator", () => {
       await rm(root, { recursive: true, force: true })
     }
   })
+
+  it("runs an exact engine gate in a disposable clone without live-tree drift", async () => {
+    const root = process.cwd()
+    const activationId = "activation:phase260:plan31:candidate-engine-test"
+    const adapter = createProductionActivationAdapter(root, {} as never)
+    const parentHead = await adapter.gitHead()
+    const before = await execFile("git", ["status", "--porcelain=v1", "-z"], {
+      cwd: root,
+    })
+    const receipts = await adapter.withCandidateWorkspace(
+      activationId,
+      parentHead,
+      async (candidate) => ({
+        engine: await candidate.runGate("engine"),
+        protectedBaseline: await candidate.runGate("protected-baseline"),
+      }),
+    )
+    expect(receipts.engine).toMatchObject({
+      id: "engine",
+      command: ACTIVATION_GATE_COMMANDS.engine,
+      exitCode: 0,
+    })
+    expect(receipts.protectedBaseline).toMatchObject({
+      id: "protected-baseline",
+      command: ACTIVATION_GATE_COMMANDS["protected-baseline"],
+      exitCode: 0,
+    })
+    const after = await execFile("git", ["status", "--porcelain=v1", "-z"], {
+      cwd: root,
+    })
+    expect(after.stdout).toBe(before.stdout)
+    await expect(
+      access(
+        path.join(
+          root,
+          ".git/cowards-activation-candidates",
+          activationCandidateWorkspaceKey(activationId),
+        ),
+      ),
+    ).rejects.toMatchObject({ code: "ENOENT" })
+  }, 30_000)
 
   it("executes the exact runtime-service production gate", async () => {
     let executed = ""
