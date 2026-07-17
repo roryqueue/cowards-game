@@ -365,4 +365,40 @@ describe("revision-specific runtime-v1.19 revalidation", () => {
     expect(result).not.toHaveProperty("receipt")
     expect(executeProvider).toHaveBeenCalledTimes(1)
   })
+
+  it.each([
+    ["null", null],
+    ["empty object", {}],
+    ["success without evidence", { kind: "success", value: null }],
+    [
+      "malformed player violation",
+      { kind: "player_violation", violation: null },
+    ],
+    [
+      "malformed system failure",
+      {
+        kind: "system_failure",
+        failure: { retryable: "yes", diagnostics: { source: "private" } },
+      },
+    ],
+  ])("fails closed on %s provider output", (_name, providerOutput) => {
+    expect(() =>
+      revalidateStrategyRevisionV119(
+        request(() => providerOutput as never),
+      ),
+    ).not.toThrow()
+    const result = revalidateStrategyRevisionV119(
+      request(() => providerOutput as never),
+    )
+    expect(result).toMatchObject({
+      kind: "system_failure",
+      failure: {
+        code: "REVALIDATION_EVIDENCE_MISMATCH",
+        publicMessage: "Runtime system failure.",
+        retryable: false,
+      },
+    })
+    expect(JSON.stringify(result)).not.toContain("private")
+    expect(result).not.toHaveProperty("receipt")
+  })
 })
