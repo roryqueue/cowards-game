@@ -344,6 +344,28 @@ func TestCandidateIntegrityCreationV119PostgresPublishesExactlyFourOrNothing(t *
 	if scenarios != 1 || conditions != 4 || matches != 4 || jobs != 4 || memberships != 4 {
 		t.Fatalf("candidate matrix is incomplete: scenarios=%d conditions=%d matches=%d jobs=%d memberships=%d", scenarios, conditions, matches, jobs, memberships)
 	}
+	if _, err := pool.Exec(ctx, `update matches
+		set status='complete', winner_player_id=bottom_player_id,
+		    surviving_soldiers=3, bottom_surviving_soldiers=2, top_surviving_soldiers=1,
+		    survival_turns=10, bottom_survival_turns=10, top_survival_turns=10
+		where successor_match_set_id=$1`, matchSetID); err != nil {
+		t.Fatal(err)
+	}
+	statusService := newMatchSetStatusService(pool)
+	status, scoring, err := statusService.refreshMatchSetStatus(ctx, matchSetID)
+	if err != nil {
+		t.Fatalf("candidate PostgreSQL status/scoring refresh failed: %v", err)
+	}
+	if status != matchSetStatusComplete || !scoring.Complete || scoring.Degraded || len(scoring.Rankings) != 2 {
+		t.Fatalf("exact persisted four-condition matrix did not count: status=%s score=%+v", status, scoring)
+	}
+	var countedStatus string
+	if err := pool.QueryRow(ctx, "select counted_status from match_sets where id=$1", matchSetID).Scan(&countedStatus); err != nil {
+		t.Fatal(err)
+	}
+	if countedStatus != "counted" {
+		t.Fatalf("exact persisted matrix has counted_status=%s", countedStatus)
+	}
 	if _, err := pool.Exec(ctx, `create function reject_candidate_job() returns trigger language plpgsql as $$ begin raise exception 'forced job fault'; end $$;
 		create trigger reject_candidate_job before insert on match_jobs for each row execute function reject_candidate_job()`); err != nil {
 		t.Fatal(err)
@@ -368,6 +390,19 @@ func TestCandidateIntegrityCreationV119PostgresPublishesExactlyFourOrNothing(t *
 	}
 	if _, err := pool.Exec(ctx, `insert into strategy_revision_v1_19_revalidation_revocations (id,revalidation_id,reason_code,evidence_root) values ($1,$2,'REVOKED',$3)`, namespace+":revocation", revalidationIDs[1], "sha256:"+strings.Repeat("f", 64)); err != nil {
 		t.Fatal(err)
+	}
+	status, scoring, err = statusService.refreshMatchSetStatus(ctx, matchSetID)
+	if err != nil {
+		t.Fatalf("revoked D-04 refresh failed: %v", err)
+	}
+	if status != matchSetStatusPending || scoring.Complete || len(scoring.Rankings) != 0 {
+		t.Fatalf("revoked D-04 evidence remained counted: status=%s score=%+v", status, scoring)
+	}
+	if err := pool.QueryRow(ctx, "select counted_status from match_sets where id=$1", matchSetID).Scan(&countedStatus); err != nil {
+		t.Fatal(err)
+	}
+	if countedStatus != "pending" {
+		t.Fatalf("revoked D-04 matrix has counted_status=%s", countedStatus)
 	}
 	revokedID := namespace + ":match-set:revoked"
 	if err := create(revokedID); err == nil {

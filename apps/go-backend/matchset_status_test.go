@@ -49,6 +49,19 @@ func TestCandidateMatchSetStatusV119(t *testing.T) {
 	}
 }
 
+func TestCandidateMatchSetStatusV119IsStructuralOnly(t *testing.T) {
+	source, err := os.ReadFile("matchset_status.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+	body := goFunctionSource(t, string(source), "refreshSuccessorMatchSetStatusTxV119")
+	for _, forbidden := range []string{"chronicle", "strategyFailureRevisionIDFromChronicle", "validateChronicle", "gameState", "transition"} {
+		if strings.Contains(body, forbidden) {
+			t.Fatalf("candidate status branch reintroduced Go gameplay semantics through %q", forbidden)
+		}
+	}
+}
+
 func goFunctionSource(t *testing.T, source string, functionName string) string {
 	t.Helper()
 	marker := "func "
