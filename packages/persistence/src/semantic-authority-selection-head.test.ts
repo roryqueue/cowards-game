@@ -11,6 +11,7 @@ import {
   abortSemanticAuthoritySelectionTransition,
   assertCountedSemanticAuthoritySelection,
   finalizeSemanticAuthoritySelectionTransition,
+  hashSemanticAuthoritySelectorManifest,
   prepareSemanticAuthoritySelectionTransition,
   readSemanticAuthoritySelectionHead,
   recoverSemanticAuthoritySelectionTransition,
@@ -33,6 +34,8 @@ const selectorManifest = Object.freeze(
     Object.freeze({ path, sha256: hash(String(index + 1)) }),
   ),
 )
+const selectorManifestRoot =
+  hashSemanticAuthoritySelectorManifest(selectorManifest)
 
 const forwardInput = (overrides: Record<string, unknown> = {}) => ({
   direction: "forward" as const,
@@ -43,7 +46,7 @@ const forwardInput = (overrides: Record<string, unknown> = {}) => ({
   targetRoot: REVIEWED_V1_19_SEMANTIC_AUTHORITY_SELECTION_ROOT,
   parentHead: git("a"),
   selectorManifest,
-  selectorManifestRoot: hash("a"),
+  selectorManifestRoot,
   proofPreimageRoot: hash("b"),
   ...overrides,
 })
@@ -54,7 +57,7 @@ const forwardFinalization = (overrides: Record<string, unknown> = {}) => ({
   expectedRevision: 1,
   expectedParentHead: git("a"),
   expectedTargetRoot: REVIEWED_V1_19_SEMANTIC_AUTHORITY_SELECTION_ROOT,
-  expectedSelectorManifestRoot: hash("a"),
+  expectedSelectorManifestRoot: selectorManifestRoot,
   proofDigest: hash("c"),
   commitSha: git("b"),
   treeSha: git("c"),
@@ -99,8 +102,9 @@ describeDatabase("semantic authority selection head", () => {
     expect(Object.isFrozen(head)).toBe(true)
     expect(Object.isFrozen(head.activeSelection)).toBe(true)
     expect(() => {
-      ;(head.activeSelection as { runtimeAbiVersion: string }).runtimeAbiVersion =
-        "strategy-runtime-abi-v1.19"
+      ;(
+        head.activeSelection as { runtimeAbiVersion: string }
+      ).runtimeAbiVersion = "strategy-runtime-abi-v1.19"
     }).toThrow()
   })
 
@@ -188,7 +192,7 @@ describeDatabase("semantic authority selection head", () => {
       targetRoot: ACTIVE_V1_17_SEMANTIC_AUTHORITY_SELECTION_ROOT,
       parentHead: git("b"),
       selectorManifest,
-      selectorManifestRoot: hash("d"),
+      selectorManifestRoot,
       proofPreimageRoot: hash("e"),
     })
     expect(reverse).toMatchObject({
@@ -207,7 +211,7 @@ describeDatabase("semantic authority selection head", () => {
         expectedRevision: 3,
         expectedParentHead: git("b"),
         expectedTargetRoot: ACTIVE_V1_17_SEMANTIC_AUTHORITY_SELECTION_ROOT,
-        expectedSelectorManifestRoot: hash("d"),
+        expectedSelectorManifestRoot: selectorManifestRoot,
         recoveryReceiptDigest: hash("f"),
         commitSha: git("d"),
         treeSha: git("e"),
@@ -262,7 +266,7 @@ describeDatabase("semantic authority selection head", () => {
       activationId: "activation:phase260:test",
       expectedRevision: 1,
       expectedParentHead: git("a"),
-      expectedSelectorManifestRoot: hash("a"),
+      expectedSelectorManifestRoot: selectorManifestRoot,
     })
     expect(restored.state).toBe("active-v1.17-bootstrap")
 
@@ -280,6 +284,31 @@ describeDatabase("semantic authority selection head", () => {
       ...forwardFinalization({ expectedRevision: 3 }),
     })
     expect(repeated).toEqual(finalized)
+  })
+
+  it("revalidates recovery bindings under the row lock and on idempotent retries", async () => {
+    await prepareSemanticAuthoritySelectionTransition(pool, forwardInput())
+    await expect(
+      recoverSemanticAuthoritySelectionTransition(pool, {
+        disposition: "precommit",
+        direction: "forward",
+        activationId: "activation:phase260:test",
+        expectedRevision: 1,
+        expectedParentHead: git("9"),
+        expectedSelectorManifestRoot: selectorManifestRoot,
+      }),
+    ).rejects.toThrow(/binding/iu)
+
+    await finalizeSemanticAuthoritySelectionTransition(
+      pool,
+      forwardFinalization(),
+    )
+    await expect(
+      recoverSemanticAuthoritySelectionTransition(pool, {
+        disposition: "committed",
+        ...forwardFinalization({ expectedParentHead: git("9") }),
+      }),
+    ).rejects.toThrow(/binding/iu)
   })
 
   it("rejects stale CAS and concurrent activation tokens", async () => {
@@ -300,17 +329,18 @@ describeDatabase("semantic authority selection head", () => {
         forwardInput({ activationId: "activation:concurrent:b" }),
       ),
     ])
-    expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(
-      1,
-    )
-    expect(results.filter((result) => result.status === "rejected")).toHaveLength(
-      1,
-    )
+    expect(
+      results.filter((result) => result.status === "fulfilled"),
+    ).toHaveLength(1)
+    expect(
+      results.filter((result) => result.status === "rejected"),
+    ).toHaveLength(1)
   })
 
   it("rejects missing, extra, mixed, substituted, and forbidden selections", async () => {
-    const missing = structuredClone(REVIEWED_V1_19_SEMANTIC_AUTHORITY_SELECTION) as
-      | Record<string, unknown>
+    const missing = globalThis.structuredClone(
+      REVIEWED_V1_19_SEMANTIC_AUTHORITY_SELECTION,
+    ) as Record<string, unknown>
     delete missing.conformanceTraceRoot
     const extra = {
       ...REVIEWED_V1_19_SEMANTIC_AUTHORITY_SELECTION,
@@ -454,4 +484,3 @@ describeDatabase("semantic authority selection head", () => {
     expect(String(error)).not.toContain(privateMarker)
   })
 })
-

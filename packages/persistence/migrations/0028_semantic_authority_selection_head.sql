@@ -311,9 +311,15 @@ declare
   parent_root text;
 begin
   if tg_table_name = 'matches' and new.semantic_authority_selection_root is not null then
-    if new.successor_match_set_id is not null then
+    if new.successor_match_set_id is not null and
+       new.integrity_match_set_id is not null and
+       new.successor_match_set_id <> new.integrity_match_set_id then
+      raise exception 'Match semantic authority has conflicting MatchSet owners';
+    end if;
+    if coalesce(new.successor_match_set_id, new.integrity_match_set_id) is not null then
       select semantic_authority_selection_root into parent_root
-        from match_sets where id = new.successor_match_set_id;
+        from match_sets
+       where id = coalesce(new.successor_match_set_id, new.integrity_match_set_id);
       if parent_root is distinct from new.semantic_authority_selection_root then
         raise exception 'Match semantic authority root must match its MatchSet';
       end if;
@@ -324,6 +330,23 @@ begin
     if parent_root is distinct from new.semantic_authority_selection_root then
       raise exception 'job semantic authority root must match its Match';
     end if;
+  end if;
+  return new;
+end;
+$$;
+
+create function validate_match_set_match_semantic_authority_root()
+returns trigger language plpgsql as $$
+declare
+  set_root text;
+  match_root text;
+begin
+  select semantic_authority_selection_root into set_root
+    from match_sets where id = new.match_set_id;
+  select semantic_authority_selection_root into match_root
+    from matches where id = new.match_id;
+  if set_root is distinct from match_root then
+    raise exception 'Match semantic authority root must match its MatchSet';
   end if;
   return new;
 end;
@@ -359,6 +382,10 @@ for each row execute function validate_frozen_semantic_authority_root();
 create trigger matches_semantic_authority_immutable
 before update on matches
 for each row execute function prevent_frozen_semantic_authority_rewrite();
+
+create trigger match_set_matches_semantic_authority_validate
+before insert or update on match_set_matches
+for each row execute function validate_match_set_match_semantic_authority_root();
 
 create trigger match_jobs_semantic_authority_validate
 before insert or update on match_jobs

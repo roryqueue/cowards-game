@@ -73,7 +73,10 @@ describe("migrations", () => {
 
   it("defines one closed five-state semantic authority head and frozen work roots", async () => {
     const sql = await readFile(
-      new URL("0028_semantic_authority_selection_head.sql", migrationsDirectory),
+      new URL(
+        "0028_semantic_authority_selection_head.sql",
+        migrationsDirectory,
+      ),
       "utf8",
     )
 
@@ -97,7 +100,9 @@ describe("migrations", () => {
     }
     expect(sql).toContain("num_nonnulls")
     expect(sql).toContain("jsonb_object_keys")
-    expect(sql).toContain("for each row execute function prevent_semantic_authority_head_partial_update")
+    expect(sql).toContain(
+      "for each row execute function prevent_semantic_authority_head_partial_update",
+    )
     expect(sql).not.toMatch(/update\s+(match_sets|matches|match_jobs)/iu)
   })
 
@@ -1123,6 +1128,82 @@ describeDatabase("semantic authority selection-head migration", () => {
         semantic_authority_selection: null,
         semantic_authority_selection_root: null,
       })
+
+      await expect(
+        pool.query(
+          `insert into match_sets (
+             id, matrix, semantic_authority_selection
+           ) select 'set:partial:0028', '[]'::jsonb, active_selection
+               from semantic_authority_selection_head where singleton = true`,
+        ),
+      ).rejects.toThrow(/all_or_none/iu)
+      await pool.query(
+        `insert into match_sets (
+           id, matrix, semantic_authority_selection,
+           semantic_authority_selection_root
+         ) select 'set:frozen:0028', '[]'::jsonb, active_selection,
+                  active_selection_root
+             from semantic_authority_selection_head where singleton = true`,
+      )
+      await pool.query(
+        "insert into users (id, display_name) values ('user:0028', '0028')",
+      )
+      await pool.query(
+        `insert into strategies (id, owner_user_id, name)
+           values ('strategy:0028', 'user:0028', '0028')`,
+      )
+      await pool.query(
+        `insert into strategy_revisions (
+           id, strategy_id, source, source_hash, source_bytes, runtime,
+           engine_compatibility, validation, metadata
+         ) values (
+           'revision:0028', 'strategy:0028', '', $1, 0,
+           '{}'::jsonb, '{}'::jsonb, '{}'::jsonb, '{}'::jsonb
+         )`,
+        ["0".repeat(64)],
+      )
+      await pool.query(
+        `insert into arena_variants (id, name, config)
+           values ('arena:0028', '0028', '{}'::jsonb)`,
+      )
+      await pool.query(
+        `insert into matches (
+           id, bottom_strategy_revision_id, top_strategy_revision_id,
+           arena_variant_id, seed, bottom_player_id, top_player_id,
+           semantic_authority_selection_root
+         ) select 'match:frozen:0028', 'revision:0028', 'revision:0028',
+                  'arena:0028', 'seed:0028', 'bottom:0028', 'top:0028',
+                  active_selection_root
+             from semantic_authority_selection_head where singleton = true`,
+      )
+      await pool.query(
+        `insert into match_set_matches (match_set_id, match_id, matrix_index)
+           values ('set:frozen:0028', 'match:frozen:0028', 0)`,
+      )
+      await pool.query(
+        `insert into match_jobs (
+           id, match_id, semantic_authority_selection_root
+         ) select 'job:frozen:0028', 'match:frozen:0028', active_selection_root
+             from semantic_authority_selection_head where singleton = true`,
+      )
+      await expect(
+        pool.query(
+          `insert into match_jobs (
+             id, match_id, semantic_authority_selection_root
+           ) values (
+             'job:mismatch:0028', 'match:frozen:0028',
+             'sha256:17954660f17c83e60e5d7df0b589cd89cf6b00eba4d4963e2d4bf43bc71c6ea2'
+           )`,
+        ),
+      ).rejects.toThrow(/must match its Match/iu)
+      await expect(
+        pool.query(
+          `update match_sets
+              set semantic_authority_selection_root =
+                'sha256:17954660f17c83e60e5d7df0b589cd89cf6b00eba4d4963e2d4bf43bc71c6ea2'
+            where id = 'set:frozen:0028'`,
+        ),
+      ).rejects.toThrow(/immutable/iu)
 
       await expect(
         pool.query(
