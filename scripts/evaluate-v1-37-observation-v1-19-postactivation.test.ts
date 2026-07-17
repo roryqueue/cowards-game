@@ -214,6 +214,43 @@ describe("v1.37 observation-v1.19 postactivation proof", () => {
     ).not.toEqual([])
   })
 
+  it("rejects mutation of every successor selection leaf", () => {
+    const leafPaths: string[][] = []
+    const visit = (value: unknown, current: string[]): void => {
+      if (value !== null && typeof value === "object") {
+        for (const [key, child] of Object.entries(
+          value as Record<string, unknown>,
+        )) {
+          visit(child, [...current, key])
+        }
+        return
+      }
+      leafPaths.push(current)
+    }
+    visit(passingProof().selection, [])
+    expect(leafPaths.length).toBeGreaterThan(35)
+
+    for (const leafPath of leafPaths) {
+      const proof = clone(passingProof())
+      let parent = proof.selection as unknown as Record<string, unknown>
+      for (const key of leafPath.slice(0, -1)) {
+        parent = parent[key] as Record<string, unknown>
+      }
+      const key = leafPath.at(-1)!
+      const original = parent[key]
+      parent[key] =
+        typeof original === "boolean"
+          ? !original
+          : typeof original === "number"
+            ? original + 1
+            : `${String(original)}:mixed`
+      expect(
+        validateV137ObservationV119PostactivationProof(proof, NOW),
+        leafPath.join("."),
+      ).toContain("successor selection")
+    }
+  })
+
   it.each(V1_37_OBSERVATION_V1_19_ACTIVATION_FILES)(
     "rejects missing or partially restored file member %s",
     (id) => {
@@ -306,6 +343,21 @@ describe("v1.37 observation-v1.19 postactivation proof", () => {
     expect(
       validateV137ObservationV119PostactivationProof(counted, NOW),
     ).toContain("revision admission")
+  })
+
+  it("rejects an incomplete or differently bound rollback receipt", () => {
+    const incomplete = clone(passingProof())
+    incomplete.rollback.databaseMemberCount = 10 as 11
+    expect(
+      validateV137ObservationV119PostactivationProof(incomplete, NOW),
+    ).toContain("rollback receipt")
+
+    const rebound = clone(passingProof())
+    rebound.rollback.transactionToken =
+      "activation-transaction:phase-260-plan-14:other"
+    expect(
+      validateV137ObservationV119PostactivationProof(rebound, NOW),
+    ).toContain("rollback receipt")
   })
 
   it("rejects protected baseline drift and recursively rejects private fields", () => {

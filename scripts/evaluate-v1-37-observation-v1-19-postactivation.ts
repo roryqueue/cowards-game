@@ -252,6 +252,24 @@ export interface V137ObservationV119PostactivationProof {
     databasePreimageSha256: string
     databaseActivatedSha256: string
   }
+  rollback: {
+    status: "passed"
+    transactionToken: string
+    fileMemberCount: 9
+    databaseMemberCount: 11
+    oldFileRootSha256: string
+    oldDatabaseRootSha256: string
+    successorFileRootSha256: string
+    successorDatabaseRootSha256: string
+    sequence: [
+      "restore-files",
+      "restore-database",
+      "prove-old-equality",
+      "reinstall-files",
+      "reinstall-database",
+      "prove-successor-equality",
+    ]
+  }
   revisionAdmission: V137ObservationV119PostactivationBuildInput["revisionAdmission"]
   protectedBaseline: V137ObservationV119PostactivationBuildInput["protectedBaseline"]
   privacy: { publicSafe: true; forbiddenFieldCount: 0 }
@@ -406,6 +424,26 @@ export const buildV137ObservationV119PostactivationProof = (
     databasePreimageSha256: snapshotRoot(input.snapshots.database.preimage),
     databaseActivatedSha256: snapshotRoot(input.snapshots.database.activated),
   },
+  rollback: {
+    status: "passed",
+    transactionToken: input.binding.transactionToken,
+    fileMemberCount: 9,
+    databaseMemberCount: 11,
+    oldFileRootSha256: snapshotRoot(input.snapshots.files.preimage),
+    oldDatabaseRootSha256: snapshotRoot(input.snapshots.database.preimage),
+    successorFileRootSha256: snapshotRoot(input.snapshots.files.activated),
+    successorDatabaseRootSha256: snapshotRoot(
+      input.snapshots.database.activated,
+    ),
+    sequence: [
+      "restore-files",
+      "restore-database",
+      "prove-old-equality",
+      "reinstall-files",
+      "reinstall-database",
+      "prove-successor-equality",
+    ],
+  },
   revisionAdmission: clone(input.revisionAdmission),
   protectedBaseline: clone(input.protectedBaseline),
   privacy: { publicSafe: true, forbiddenFieldCount: 0 },
@@ -429,6 +467,7 @@ export const validateV137ObservationV119PostactivationProof = (
       "selection",
       "snapshots",
       "snapshotRoots",
+      "rollback",
       "revisionAdmission",
       "protectedBaseline",
       "privacy",
@@ -552,6 +591,37 @@ export const validateV137ObservationV119PostactivationProof = (
       snapshotRoot(database.activated)
   )
     errors.push("snapshot roots")
+  if (
+    !exactKeys(proof.rollback, [
+      "status",
+      "transactionToken",
+      "fileMemberCount",
+      "databaseMemberCount",
+      "oldFileRootSha256",
+      "oldDatabaseRootSha256",
+      "successorFileRootSha256",
+      "successorDatabaseRootSha256",
+      "sequence",
+    ]) ||
+    proof.rollback.status !== "passed" ||
+    proof.rollback.transactionToken !== proof.binding.transactionToken ||
+    proof.rollback.fileMemberCount !== 9 ||
+    proof.rollback.databaseMemberCount !== 11 ||
+    proof.rollback.oldFileRootSha256 !== snapshotRoot(files.preimage) ||
+    proof.rollback.oldDatabaseRootSha256 !== snapshotRoot(database.preimage) ||
+    proof.rollback.successorFileRootSha256 !== snapshotRoot(files.activated) ||
+    proof.rollback.successorDatabaseRootSha256 !==
+      snapshotRoot(database.activated) ||
+    !equal(proof.rollback.sequence, [
+      "restore-files",
+      "restore-database",
+      "prove-old-equality",
+      "reinstall-files",
+      "reinstall-database",
+      "prove-successor-equality",
+    ])
+  )
+    errors.push("rollback receipt")
   if (
     !exactKeys(proof.revisionAdmission, [
       "inventoryCount",
