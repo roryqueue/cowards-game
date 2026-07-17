@@ -235,6 +235,16 @@ describe("v1.37 executable conformance corpus", () => {
     expect(sha256(readFileSync(currentPinPath, "utf8"))).toBe(
       "sha256:95435d61e57c9e12106b9825d64a0a009b2381ad42ee582da0849ed56a7963ef",
     )
+    expect(
+      sha256(readFileSync(path.join(fixtureRoot, "v1/corpus.json"), "utf8")),
+    ).toBe(
+      "sha256:276aa063351d649db0d21a96b7db7f8af6fa6a5f5736736775d42d35ee7ec574",
+    )
+    expect(
+      sha256(readFileSync(path.join(fixtureRoot, "v2/corpus.json"), "utf8")),
+    ).toBe(
+      "sha256:8d51df780a1c9dcb35e28547f4891af0e28a4bd2cd8e854165a61a1726f3a0dd",
+    )
     expect(V1_37_CONFORMANCE_CORPUS.version).toBe("v2")
     expect(V1_37_CONFORMANCE_ACTIVE_REGISTRY.activeVersion).toBe("v2")
     expect(V1_37_CONFORMANCE_CORPUS_REVIEWED_PIN.activeVersion).toBe("v2")
