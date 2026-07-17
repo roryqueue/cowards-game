@@ -39,6 +39,7 @@ import {
   listWorkshopOpponents,
   listWorkshopPresets,
   listWorkshopSamples,
+  listWorkshopContractExamples,
   listWorkshopTemplates,
   publicWorkshopRevisionMetadata,
   rustWasiTacticalStarterSource,
@@ -50,7 +51,9 @@ import {
   WORKSHOP_OPPONENTS,
   workshopTemplateSource,
   workshopRuntimeSemantics,
+  CURRENT_WORKSHOP_CONTRACT_GENERATED,
 } from "./workshop.js"
+import { WORKSHOP_CONTRACT_V1_19_CANDIDATE } from "./workshop-contract-v1-19-candidate.js"
 import type { Pool } from "pg"
 import type { MatchSetExecutionEvidenceResolver } from "./matchset-service.js"
 import {
@@ -198,6 +201,77 @@ describe("Workshop service contracts", () => {
     for (const opponent of WORKSHOP_OPPONENTS) {
       expect(opponent.revisionId).toMatch(/^strategy-revision:/)
     }
+  })
+
+  it("keeps every unversioned Workshop and SDK example on Phase 259", () => {
+    const defaults = listWorkshopContractExamples()
+
+    expect(defaults.selection).toEqual(
+      CURRENT_WORKSHOP_CONTRACT_GENERATED.selection,
+    )
+    expect(defaults.selection).toMatchObject({
+      status: "current",
+      workshopContractVersion: "workshop-contract-v1.17",
+      runtimeAbiVersion: "strategy-runtime-abi-v1.17",
+      activationOwner: "Phase-260-Plan-14",
+    })
+    expect(defaults.examples.map(({ language, source }) => [language, source])).toEqual([
+      ["typescript", workshopTemplateSource],
+      ["python", pythonTacticalStarterSource],
+      ["rust", rustWasiTacticalStarterSource],
+      ["zig", zigWasiTacticalStarterSource],
+    ])
+    expect(defaults.examples.every(({ validation }) => validation.valid)).toBe(
+      true,
+    )
+    expect(
+      defaults.examples.some(({ source }) =>
+        WORKSHOP_CONTRACT_V1_19_CANDIDATE.examples.some(
+          (candidate) => candidate.source === source,
+        ),
+      ),
+    ).toBe(false)
+  })
+
+  it("returns v1.19 examples only through an exact explicit candidate selector", () => {
+    const candidate = listWorkshopContractExamples({
+      workshopContractVersion: "workshop-contract-v1.19",
+      runtimeAbiVersion: "strategy-runtime-abi-v1.19",
+    })
+
+    expect(candidate.selection).toMatchObject({
+      status: "inactive-candidate",
+      workshopContractVersion: "workshop-contract-v1.19",
+      runtimeAbiVersion: "strategy-runtime-abi-v1.19",
+      activationOwner: "Phase-260-Plan-14",
+    })
+    expect(candidate.examples.map(({ source }) => source)).toEqual(
+      WORKSHOP_CONTRACT_V1_19_CANDIDATE.examples.map(({ source }) => source),
+    )
+    expect(candidate.examples.every(({ validation }) => validation.valid)).toBe(
+      true,
+    )
+  })
+
+  it.each([
+    {
+      workshopContractVersion: "workshop-contract-v1.19",
+      runtimeAbiVersion: "strategy-runtime-abi-v1.17",
+    },
+    {
+      workshopContractVersion: "workshop-contract-v1.17",
+      runtimeAbiVersion: "strategy-runtime-abi-v1.19",
+    },
+    { workshopContractVersion: "workshop-contract-v1.19" },
+    {
+      workshopContractVersion: "workshop-contract-v1.19",
+      runtimeAbiVersion: "strategy-runtime-abi-v1.19",
+      active: true,
+    },
+  ])("rejects premature or mixed Workshop contract selection", (selector) => {
+    expect(() => listWorkshopContractExamples(selector)).toThrow(
+      /exact Workshop contract selector/u,
+    )
   })
 
   it("summarizes presets without exposing Strategy source", () => {
