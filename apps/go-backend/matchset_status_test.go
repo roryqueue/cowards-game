@@ -26,6 +26,29 @@ func TestPublicCompetitionReadsDoNotMutateLifecycle(t *testing.T) {
 	}
 }
 
+func TestCandidateMatchSetStatusV119(t *testing.T) {
+	tests := []struct {
+		name     string
+		evidence successorMatchSetStatusEvidenceV119
+		status   string
+		counted  bool
+	}{
+		{name: "exact", evidence: successorMatchSetStatusEvidenceV119{CanonicalConditionCount: 4, ValidTerminalConditionCount: 4}, status: "complete", counted: true},
+		{name: "partial", evidence: successorMatchSetStatusEvidenceV119{CanonicalConditionCount: 4, ValidTerminalConditionCount: 3}, status: "pending"},
+		{name: "retryable", evidence: successorMatchSetStatusEvidenceV119{CanonicalConditionCount: 4, ValidTerminalConditionCount: 3, RetryableSystemFailure: true}, status: "pending"},
+		{name: "exhausted", evidence: successorMatchSetStatusEvidenceV119{CanonicalConditionCount: 4, ValidTerminalConditionCount: 3, ExhaustedSystemFailure: true}, status: "degraded"},
+		{name: "invalid D-04", evidence: successorMatchSetStatusEvidenceV119{CanonicalConditionCount: 4, ValidTerminalConditionCount: 4, InvalidRevisionEvidence: true}, status: "pending"},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got := determineSuccessorMatchSetStatusV119(test.evidence)
+			if got.Status != test.status || got.Counted != test.counted {
+				t.Fatalf("unexpected status: %+v", got)
+			}
+		})
+	}
+}
+
 func goFunctionSource(t *testing.T, source string, functionName string) string {
 	t.Helper()
 	marker := "func "
