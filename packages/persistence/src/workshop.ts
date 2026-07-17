@@ -65,6 +65,14 @@ import {
   recklessSource,
 } from "./seed.js"
 import type { MatchSetStatus } from "./schema.js"
+import { CURRENT_WORKSHOP_CONTRACT_GENERATED } from "./current-workshop-contract-generated.js"
+import { WORKSHOP_CONTRACT_V1_19_CANDIDATE } from "./workshop-contract-v1-19-candidate.js"
+import {
+  WORKSHOP_CONTRACT_V1_19_CANDIDATE_PIN,
+  verifyWorkshopContractV119CandidatePin,
+} from "./workshop-contract-v1-19-candidate-pin.js"
+
+export { CURRENT_WORKSHOP_CONTRACT_GENERATED }
 
 export const WORKSHOP_USER_ID = "user:local"
 export const WORKSHOP_STRATEGY_ID = "strategy:local-workshop" as StrategyId
@@ -1004,6 +1012,154 @@ export const validateWorkshopSource = (
     }
   }
   return validateStrategySource(source)
+}
+
+export interface WorkshopContractExampleSummary {
+  language: "typescript" | "python" | "rust" | "zig"
+  sourceFormat: "typescript" | "python" | "rust" | "zig"
+  source: string
+  validation: StrategyRevisionValidationReport
+}
+
+export type WorkshopContractExampleSelection =
+  | typeof CURRENT_WORKSHOP_CONTRACT_GENERATED.selection
+  | Readonly<{
+      status: "inactive-candidate"
+      workshopContractVersion: "workshop-contract-v1.19"
+      runtimeAbiVersion: "strategy-runtime-abi-v1.19"
+      activationOwner: "Phase-260-Plan-14"
+      exampleSetRootSha256: string
+    }>
+
+export interface WorkshopContractExampleSet {
+  selection: WorkshopContractExampleSelection
+  examples: WorkshopContractExampleSummary[]
+}
+
+const sourceSha256 = (source: string): `sha256:${string}` =>
+  `sha256:${createHash("sha256").update(source).digest("hex")}`
+
+const currentWorkshopContractExamples = (): WorkshopContractExampleSummary[] => [
+  {
+    language: "typescript",
+    sourceFormat: "typescript",
+    source: workshopTemplateSource,
+    validation: validateWorkshopSource(workshopTemplateSource, "typescript"),
+  },
+  {
+    language: "python",
+    sourceFormat: "python",
+    source: pythonTacticalStarterSource,
+    validation: validateWorkshopSource(pythonTacticalStarterSource, "python"),
+  },
+  {
+    language: "rust",
+    sourceFormat: "rust",
+    source: rustWasiTacticalStarterSource,
+    validation: validateWorkshopSource(rustWasiTacticalStarterSource, "rust"),
+  },
+  {
+    language: "zig",
+    sourceFormat: "zig",
+    source: zigWasiTacticalStarterSource,
+    validation: validateWorkshopSource(zigWasiTacticalStarterSource, "zig"),
+  },
+]
+
+const assertCurrentWorkshopContractPin = (
+  examples: readonly WorkshopContractExampleSummary[],
+): void => {
+  const actual = Object.fromEntries(
+    examples.map((example) => [example.language, sourceSha256(example.source)]),
+  )
+  if (
+    JSON.stringify(actual) !==
+    JSON.stringify(
+      CURRENT_WORKSHOP_CONTRACT_GENERATED.selection.exampleSourceSha256,
+    )
+  ) {
+    throw new Error("Generated current Workshop contract pin is stale.")
+  }
+}
+
+const isExactWorkshopContractSelector = (
+  value: unknown,
+): value is Readonly<{
+  workshopContractVersion: string
+  runtimeAbiVersion: string
+}> => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false
+  const keys = Object.keys(value).sort()
+  return (
+    keys.length === 2 &&
+    keys[0] === "runtimeAbiVersion" &&
+    keys[1] === "workshopContractVersion"
+  )
+}
+
+export const listWorkshopContractExamples = (
+  selector?: unknown,
+): WorkshopContractExampleSet => {
+  if (selector === undefined) {
+    const examples = currentWorkshopContractExamples()
+    assertCurrentWorkshopContractPin(examples)
+    return {
+      selection: CURRENT_WORKSHOP_CONTRACT_GENERATED.selection,
+      examples,
+    }
+  }
+  if (!isExactWorkshopContractSelector(selector)) {
+    throw new WorkshopInputError("An exact Workshop contract selector is required.")
+  }
+
+  if (
+    selector.workshopContractVersion ===
+      CURRENT_WORKSHOP_CONTRACT_GENERATED.selection
+        .workshopContractVersion &&
+    selector.runtimeAbiVersion ===
+      CURRENT_WORKSHOP_CONTRACT_GENERATED.selection.runtimeAbiVersion
+  ) {
+    const examples = currentWorkshopContractExamples()
+    assertCurrentWorkshopContractPin(examples)
+    return {
+      selection: CURRENT_WORKSHOP_CONTRACT_GENERATED.selection,
+      examples,
+    }
+  }
+
+  if (
+    selector.workshopContractVersion === "workshop-contract-v1.19" &&
+    selector.runtimeAbiVersion === "strategy-runtime-abi-v1.19"
+  ) {
+    const verified = verifyWorkshopContractV119CandidatePin(
+      WORKSHOP_CONTRACT_V1_19_CANDIDATE,
+      WORKSHOP_CONTRACT_V1_19_CANDIDATE_PIN,
+    )
+    if (!verified.ok) {
+      throw new Error(`Workshop candidate pin failed: ${verified.code}`)
+    }
+    return {
+      selection: {
+        status: "inactive-candidate",
+        workshopContractVersion: "workshop-contract-v1.19",
+        runtimeAbiVersion: "strategy-runtime-abi-v1.19",
+        activationOwner: "Phase-260-Plan-14",
+        exampleSetRootSha256:
+          WORKSHOP_CONTRACT_V1_19_CANDIDATE_PIN.exampleSetRootSha256,
+      },
+      examples: WORKSHOP_CONTRACT_V1_19_CANDIDATE.examples.map((example) => ({
+        language: example.language,
+        sourceFormat: example.sourceFormat,
+        source: example.source,
+        validation: validateWorkshopSource(
+          example.source,
+          example.sourceFormat,
+        ),
+      })),
+    }
+  }
+
+  throw new WorkshopInputError("An exact Workshop contract selector is required.")
 }
 
 export const ensureWorkshopSeed = async (pool: Pool): Promise<void> => {
