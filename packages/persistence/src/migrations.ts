@@ -14,7 +14,7 @@ export interface MigrationResult {
 
 export const migrationsDirectory = new URL("../migrations/", import.meta.url)
 export const latestMigrationName =
-  "0027_inactive_runtime_conformance_v1_19.sql" as const
+  "0028_semantic_authority_selection_head.sql" as const
 
 export const readMigrationFiles = async (): Promise<MigrationFile[]> => {
   const names = (await readdir(migrationsDirectory))

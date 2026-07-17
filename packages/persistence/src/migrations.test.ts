@@ -96,7 +96,7 @@ describe("migrations", () => {
       expect(sql).toContain(required)
     }
     expect(sql).toContain("num_nonnulls")
-    expect(sql).toContain("jsonb_object_length")
+    expect(sql).toContain("jsonb_object_keys")
     expect(sql).toContain("for each row execute function prevent_semantic_authority_head_partial_update")
     expect(sql).not.toMatch(/update\s+(match_sets|matches|match_jobs)/iu)
   })
@@ -682,13 +682,20 @@ describeDatabase("arena catalog and Set condition migration", () => {
         )
       `)
       for (const file of await readMigrationFiles()) {
-        if (file.name === "0026_arena_catalog_and_set_conditions.sql") continue
+        if (
+          file.name === "0026_arena_catalog_and_set_conditions.sql" ||
+          file.name === "0028_semantic_authority_selection_head.sql"
+        )
+          continue
         await pool.query(file.sql)
         await pool.query(
           "insert into schema_migrations (filename) values ($1)",
           [file.name],
         )
       }
+      await pool.query(
+        "insert into schema_migrations (filename) values ('0028_semantic_authority_selection_head.sql')",
+      )
 
       await pool.query(
         "insert into users (id, display_name) values ('user:legacy', 'Legacy')",
@@ -1009,6 +1016,45 @@ describeDatabase("arena catalog and Set condition migration", () => {
 })
 
 describeDatabase("semantic authority selection-head migration", () => {
+  it("creates the exact bootstrap head on a fresh database", async () => {
+    const schema = `phase260_0028_fresh_${randomUUID().replaceAll("-", "")}`
+    const admin = new Pool({ connectionString: databaseUrl!, max: 1 })
+    await admin.query(`create schema ${schema}`)
+    const pool = new Pool({
+      connectionString: databaseUrl!,
+      max: 1,
+      options: `-c search_path=${schema}`,
+    })
+    try {
+      const result = await migrate(pool)
+      expect(result.applied.at(-1)).toBe(
+        "0028_semantic_authority_selection_head.sql",
+      )
+      const head = await pool.query<{
+        state: string
+        semantic_authority_key: string
+        history_count: string
+      }>(`
+        select h.state,
+               h.active_selection->>'semanticAuthorityKey' as semantic_authority_key,
+               (select count(*) from semantic_authority_selection_history)::text
+                 as history_count
+          from semantic_authority_selection_head h
+         where h.singleton = true
+      `)
+      expect(head.rows[0]).toEqual({
+        state: "active-v1.17-bootstrap",
+        semantic_authority_key: "runtime-v1.17",
+        history_count: "1",
+      })
+      expect((await migrate(pool)).applied).toEqual([])
+    } finally {
+      await pool.end()
+      await admin.query(`drop schema if exists ${schema} cascade`)
+      await admin.end()
+    }
+  })
+
   it("upgrades a current database with one exact Phase-259 head and preserves historical work", async () => {
     const schema = `phase260_0028_${randomUUID().replaceAll("-", "")}`
     const admin = new Pool({ connectionString: databaseUrl!, max: 1 })
