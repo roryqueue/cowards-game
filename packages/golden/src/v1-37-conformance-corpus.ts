@@ -282,23 +282,30 @@ const validateBehaviorManifest = (
   ) {
     fail("BEHAVIOR_MANIFEST")
   }
-  const expectedInvocations = [
-    [0, "selectActivations"],
-    [1, "soldierBrain"],
-  ] as const
-  if (value.invocationScript.length !== expectedInvocations.length) {
+  if (value.invocationScript.length < 2) {
     fail("INVOCATION_SCRIPT")
   }
+  const fixtureIds = new Set<string>()
   for (const [index, invocation] of value.invocationScript.entries()) {
     exactKeys(invocation, ["ordinal", "methodName", "inputFixtureId"])
-    const expected = expectedInvocations[index]!
     requireIdentifier(invocation.inputFixtureId, "INVOCATION_SCRIPT")
     if (
-      invocation.ordinal !== expected[0] ||
-      invocation.methodName !== expected[1]
+      invocation.ordinal !== index ||
+      (invocation.methodName !== "selectActivations" &&
+        invocation.methodName !== "soldierBrain") ||
+      fixtureIds.has(invocation.inputFixtureId)
     ) {
       fail("INVOCATION_SCRIPT")
     }
+    fixtureIds.add(invocation.inputFixtureId)
+  }
+  if (
+    !value.invocationScript.some(
+      ({ methodName }) => methodName === "selectActivations",
+    ) ||
+    !value.invocationScript.some(({ methodName }) => methodName === "soldierBrain")
+  ) {
+    fail("INVOCATION_SCRIPT")
   }
   canonicalBytes(value.expectedSelection)
   canonicalBytes(value.expectedBrain)

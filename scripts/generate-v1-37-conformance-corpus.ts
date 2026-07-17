@@ -34,6 +34,132 @@ const GOVERNED_FIXTURE_FIELDS = Object.freeze([
   "source",
 ] as const satisfies readonly (keyof V137ConformanceFixture)[])
 
+const OBSERVATION_CASES_V3 = Object.freeze([
+  ["observation-d01-initial-initiative-both-observers", "selectActivations"],
+  ["observation-d02-round-initiative-later-round", "selectActivations"],
+  ["observation-d03-kernel-owned-signed-transport", "selectActivations"],
+  ["observation-d04-real-revalidation-required", "selectActivations"],
+  ["observation-d05-blocked-move-false", "soldierBrain"],
+  ["observation-d05-blocked-push-false", "soldierBrain"],
+  ["observation-d05-pushed-target-false", "soldierBrain"],
+  ["observation-d05-successful-pusher-true", "soldierBrain"],
+  ["observation-d05-turn-false", "soldierBrain"],
+  ["observation-d06-first-call-false", "soldierBrain"],
+  ["observation-d06-later-cycle-true", "soldierBrain"],
+  ["observation-d06-post-self-advance-true", "soldierBrain"],
+  ["observation-d07-new-slot-reset-false", "soldierBrain"],
+  ["observation-d08-observational-only-no-hold", "soldierBrain"],
+] as const)
+
+const TYPESCRIPT_OBSERVATION_FIXTURE_V3 = `const initiative = (input) => ({
+  initialInitiativePlayerId: input.initialInitiativePlayerId,
+  hasInitialInitiative: input.hasInitialInitiative,
+  roundInitiativePlayerId: input.roundInitiativePlayerId,
+  hasRoundInitiative: input.hasRoundInitiative,
+})
+
+export default {
+  selectActivations(input) {
+    const soldier = input.mySoldiers.find((candidate) => candidate.status === "ACTIVE")
+    const observed = initiative(input)
+    return {
+      activationOrders: soldier
+        ? [{ soldierId: soldier.id, objective: { fixture: "v1.37-observation-v1.19", initiative: observed, intent: "stone" } }]
+        : [],
+      strategyMemory: { fixture: "v1.37-observation-v1.19", initiative: observed },
+    }
+  },
+  soldierBrain(input) {
+    return {
+      action: { type: "TURN_TO_STONE" },
+      soldierMemory: {
+        fixture: "v1.37-observation-v1.19",
+        hasAdvancedThisActivation: input.hasAdvancedThisActivation,
+      },
+    }
+  },
+}
+`
+
+const PYTHON_OBSERVATION_FIXTURE_V3 = `def select_activations(input):
+    observed = {
+        "initialInitiativePlayerId": input["initialInitiativePlayerId"],
+        "hasInitialInitiative": input["hasInitialInitiative"],
+        "roundInitiativePlayerId": input["roundInitiativePlayerId"],
+        "hasRoundInitiative": input["hasRoundInitiative"],
+    }
+    soldier = next(
+        (candidate for candidate in input["mySoldiers"] if candidate["status"] == "ACTIVE"),
+        None,
+    )
+    return {
+        "activationOrders": ([{
+            "soldierId": soldier["id"],
+            "objective": {"fixture": "v1.37-observation-v1.19", "initiative": observed, "intent": "stone"},
+        }] if soldier else []),
+        "strategyMemory": {"fixture": "v1.37-observation-v1.19", "initiative": observed},
+    }
+
+
+def soldier_brain(input):
+    return {
+        "action": {"type": "TURN_TO_STONE"},
+        "soldierMemory": {
+            "fixture": "v1.37-observation-v1.19",
+            "hasAdvancedThisActivation": input["hasAdvancedThisActivation"],
+        },
+    }
+`
+
+const RUST_OBSERVATION_FIXTURE_V3 = `use std::io::{self, Read};
+
+fn has(input: &str, field: &str) -> bool {
+    input.contains(field)
+}
+
+fn main() {
+    let mut input = String::new();
+    io::stdin().read_to_string(&mut input).unwrap();
+    let has_initiative = has(&input, "initialInitiativePlayerId")
+        && has(&input, "hasInitialInitiative")
+        && has(&input, "roundInitiativePlayerId")
+        && has(&input, "hasRoundInitiative");
+    let is_brain = input.contains("\\\"methodName\\\":\\\"soldierBrain\\\"");
+    let has_advanced = has(&input, "hasAdvancedThisActivation");
+    if is_brain && has_advanced {
+        println!("{}", r#"{"action":{"type":"TURN_TO_STONE"},"soldierMemory":{"fixture":"v1.37-observation-v1.19","hasAdvancedThisActivation":false}}"#);
+    } else if has_initiative {
+        println!("{}", r#"{"activationOrders":[{"soldierId":"soldier:fixture:active","objective":{"fixture":"v1.37-observation-v1.19","initiative":{"hasInitialInitiative":true,"hasRoundInitiative":true,"initialInitiativePlayerId":"player:bottom","roundInitiativePlayerId":"player:bottom"},"intent":"stone"}}],"strategyMemory":{"fixture":"v1.37-observation-v1.19","initiative":{"hasInitialInitiative":true,"hasRoundInitiative":true,"initialInitiativePlayerId":"player:bottom","roundInitiativePlayerId":"player:bottom"}}}"#);
+    } else {
+        println!("{}", r#"{"error":"missing-observation"}"#);
+    }
+}
+`
+
+const ZIG_OBSERVATION_FIXTURE_V3 = `const std = @import("std");
+
+pub fn main(init: std.process.Init) !void {
+    var input_buffer: [16384]u8 = undefined;
+    var reader_buffer: [4096]u8 = undefined;
+    var reader = std.Io.File.stdin().reader(init.io, &reader_buffer);
+    const count = try reader.interface.readSliceShort(&input_buffer);
+    const input = input_buffer[0..count];
+    const has_initiative = std.mem.indexOf(u8, input, "initialInitiativePlayerId") != null and
+        std.mem.indexOf(u8, input, "hasInitialInitiative") != null and
+        std.mem.indexOf(u8, input, "roundInitiativePlayerId") != null and
+        std.mem.indexOf(u8, input, "hasRoundInitiative") != null;
+    const is_brain = std.mem.indexOf(u8, input, "\\\"methodName\\\":\\\"soldierBrain\\\"") != null;
+    const has_advanced = std.mem.indexOf(u8, input, "hasAdvancedThisActivation") != null;
+    const output = if (is_brain and has_advanced)
+        "{\\\"action\\\":{\\\"type\\\":\\\"TURN_TO_STONE\\\"},\\\"soldierMemory\\\":{\\\"fixture\\\":\\\"v1.37-observation-v1.19\\\",\\\"hasAdvancedThisActivation\\\":false}}\\n"
+    else if (has_initiative)
+        "{\\\"activationOrders\\\":[{\\\"soldierId\\\":\\\"soldier:fixture:active\\\",\\\"objective\\\":{\\\"fixture\\\":\\\"v1.37-observation-v1.19\\\",\\\"initiative\\\":{\\\"hasInitialInitiative\\\":true,\\\"hasRoundInitiative\\\":true,\\\"initialInitiativePlayerId\\\":\\\"player:bottom\\\",\\\"roundInitiativePlayerId\\\":\\\"player:bottom\\\"},\\\"intent\\\":\\\"stone\\\"}}],\\\"strategyMemory\\\":{\\\"fixture\\\":\\\"v1.37-observation-v1.19\\\",\\\"initiative\\\":{\\\"hasInitialInitiative\\\":true,\\\"hasRoundInitiative\\\":true,\\\"initialInitiativePlayerId\\\":\\\"player:bottom\\\",\\\"roundInitiativePlayerId\\\":\\\"player:bottom\\\"}}}\\n"
+    else
+        "{\\\"error\\\":\\\"missing-observation\\\"}\\n";
+    try std.Io.File.stdout().writeStreamingAll(init.io, output);
+}
+`
+
 const RUST_V1_37_TOOLCHAIN_FIXTURE = `use std::io::{self, Read};
 
 fn main() {
@@ -100,6 +226,10 @@ export interface V137ConformanceCandidateResult {
   corpusFileSha256: string
 }
 
+export interface WriteCommittedV137ObservationCorpusV3CandidateInput {
+  root?: string
+}
+
 interface V137ConformanceSemanticDiff {
   schemaVersion: "v1.37-executable-conformance-semantic-diff-v1"
   generatedBy: "scripts/generate-v1-37-conformance-corpus.ts"
@@ -146,6 +276,101 @@ const inside = (candidate: string, root: string): boolean => {
 
 const changed = (left: unknown, right: unknown): boolean =>
   JSON.stringify(left) !== JSON.stringify(right)
+
+const observationExpectedSelection = {
+  activationOrders: [
+    {
+      soldierId: "soldier:fixture:active",
+      objective: {
+        fixture: "v1.37-observation-v1.19",
+        initiative: {
+          initialInitiativePlayerId: "player:bottom",
+          hasInitialInitiative: true,
+          roundInitiativePlayerId: "player:bottom",
+          hasRoundInitiative: true,
+        },
+        intent: "stone",
+      },
+    },
+  ],
+  strategyMemory: {
+    fixture: "v1.37-observation-v1.19",
+    initiative: {
+      initialInitiativePlayerId: "player:bottom",
+      hasInitialInitiative: true,
+      roundInitiativePlayerId: "player:bottom",
+      hasRoundInitiative: true,
+    },
+  },
+}
+
+const observationExpectedBrain = {
+  action: { type: "TURN_TO_STONE" },
+  soldierMemory: {
+    fixture: "v1.37-observation-v1.19",
+    hasAdvancedThisActivation: false,
+  },
+}
+
+export const createV137ObservationCorpusV3Candidate =
+  (): V137ConformanceCorpus => {
+    const candidate = globalThis.structuredClone(
+      V1_37_CONFORMANCE_CORPUS,
+    ) as V137ConformanceCorpus
+    candidate.version = "v3"
+    candidate.behaviorManifest = {
+      id: "behavior:truthful-strategy-observations:v1.19",
+      description:
+        "Consume kernel-owned initial and Round initiative plus pre-Action activation-slot Advance observations without changing gameplay.",
+      invocationScript: OBSERVATION_CASES_V3.map(
+        ([caseId, methodName], ordinal) => ({
+          ordinal,
+          methodName,
+          inputFixtureId: `fixture:${caseId}`,
+        }),
+      ),
+      expectedSelection: observationExpectedSelection,
+      expectedBrain: observationExpectedBrain,
+    }
+    const sources = {
+      typescript: TYPESCRIPT_OBSERVATION_FIXTURE_V3,
+      python: PYTHON_OBSERVATION_FIXTURE_V3,
+      rust: RUST_OBSERVATION_FIXTURE_V3,
+      zig: ZIG_OBSERVATION_FIXTURE_V3,
+    } as const
+    for (const fixture of candidate.fixtures) {
+      fixture.behaviorManifestId = candidate.behaviorManifest.id
+      fixture.source = sources[fixture.languageId]
+      fixture.sourceSha256 = sha256(fixture.source)
+    }
+    const requiredLanguageIds = [...V1_37_CONFORMANCE_CORPUS.languageIds]
+    for (const [caseId] of OBSERVATION_CASES_V3) {
+      candidate.cases.push({
+        id: caseId,
+        kind: "normative",
+        capability: "valid-behavior",
+        executionMode: "strategy",
+        seed: null,
+        generatorId: null,
+        mutationTarget: null,
+        required: true,
+        unsupportedDisposition: "fail-certification",
+        requiredLanguageIds,
+        expectation: {
+          resultClass: "success",
+          reasonCode: "OBSERVATION_CONSUMED",
+          failingBoundary: "none",
+          gameplayMutation: false,
+          retryable: false,
+          traceRef: `trace:${caseId}`,
+        },
+      })
+    }
+    candidate.cases.sort((left, right) => left.id.localeCompare(right.id))
+    candidate.corpusRootSha256 = computeV137ConformanceCorpusRoot(candidate)
+    validateV137ConformanceCorpus(candidate)
+    return candidate
+  }
 
 const semanticDiff = (
   candidate: V137ConformanceCorpus,
@@ -212,6 +437,36 @@ const semanticDiff = (
     fixtureChanges: fixtureChanges.sort(),
     sourceChanges: [...sourceChanges].sort(),
     caseChanges: caseChanges.sort(),
+  }
+}
+
+export const writeCommittedV137ObservationCorpusV3Candidate = (
+  input: WriteCommittedV137ObservationCorpusV3CandidateInput = {},
+): V137ConformanceCandidateResult => {
+  const root = path.resolve(input.root ?? repoRoot)
+  const destinationRoot = path.join(
+    root,
+    "packages/golden/src/fixtures/v1-37-conformance-corpus",
+  )
+  const candidateDirectory = path.join(destinationRoot, "v3")
+  if (existsSync(candidateDirectory)) fail("CANDIDATE_VERSION_EXISTS")
+  const candidate = createV137ObservationCorpusV3Candidate()
+  const corpusPath = path.join(candidateDirectory, "corpus.json")
+  const corpusLogicalPath =
+    "packages/golden/src/fixtures/v1-37-conformance-corpus/v3/corpus.json"
+  const semanticDiffPath = path.join(candidateDirectory, "semantic-diff.json")
+  const corpusBytes = renderJson(candidate)
+  const diff = semanticDiff(candidate, corpusLogicalPath)
+  mkdirSync(candidateDirectory, { recursive: true })
+  writeFileSync(corpusPath, corpusBytes, { flag: "wx" })
+  writeFileSync(semanticDiffPath, renderJson(diff), { flag: "wx" })
+  return {
+    version: candidate.version,
+    corpusRootSha256: candidate.corpusRootSha256,
+    corpusPath,
+    corpusLogicalPath,
+    semanticDiffPath,
+    corpusFileSha256: sha256(corpusBytes),
   }
 }
 

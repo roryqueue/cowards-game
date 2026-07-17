@@ -134,6 +134,49 @@ describe("v1.37 conformance candidate generation", () => {
     expect(zigCompile.status, zigCompile.stderr).toBe(0)
   })
 
+  it("compiles the v3 observation fixtures with the pinned Rust and Zig toolchains", () => {
+    const candidate = createV137ObservationCorpusV3Candidate()
+    const root = temporaryRoot()
+    const rust = candidate.fixtures.find(
+      ({ languageId }) => languageId === "rust",
+    )
+    const zig = candidate.fixtures.find(({ languageId }) => languageId === "zig")
+    if (rust === undefined || zig === undefined) {
+      throw new Error("candidate fixtures are missing")
+    }
+    const rustPath = path.join(root, "candidate.rs")
+    const zigPath = path.join(root, "candidate.zig")
+    writeFileSync(rustPath, rust.source)
+    writeFileSync(zigPath, zig.source)
+    const rustCompile = spawnSync(
+      "rustc",
+      [
+        "--target",
+        "wasm32-wasip1",
+        "-O",
+        rustPath,
+        "-o",
+        path.join(root, "candidate-rust.wasm"),
+      ],
+      { encoding: "utf8", shell: false, timeout: 30_000 },
+    )
+    const zigCompile = spawnSync(
+      "zig",
+      [
+        "build-exe",
+        "-target",
+        "wasm32-wasi",
+        "-O",
+        "ReleaseSmall",
+        zigPath,
+        `-femit-bin=${path.join(root, "candidate-zig.wasm")}`,
+      ],
+      { encoding: "utf8", shell: false, timeout: 30_000 },
+    )
+    expect(rustCompile.status, rustCompile.stderr).toBe(0)
+    expect(zigCompile.status, zigCompile.stderr).toBe(0)
+  })
+
   it("writes only a new versioned candidate and semantic diff", () => {
     const destinationRoot = path.join(
       temporaryRoot(),
