@@ -15,9 +15,11 @@ import type {
 } from "@cowards/spec"
 import {
   BOTTOM_STARTING_POSITIONS,
+  CANONICAL_ARENA_CATALOG_V1_37,
   INITIAL_BOUNDS,
   TOP_STARTING_POSITIONS,
   classifyCanonicalCompatibilityTupleId,
+  parseMatchExecutionPublicResultV119,
 } from "@cowards/spec"
 import type {
   GetMatchReplayOptions,
@@ -138,11 +140,123 @@ const isInsideBounds = (
   position.y >= bounds.minY &&
   position.y <= bounds.maxY
 
-const canonicalArenaVariantIds = new Set([
+const PHASE_259_CURRENT_CANONICAL_ARENA_VARIANT_IDS = new Set([
   "arena:smoke:v1",
   "arena:standard-cross:v1",
   "arena:open-field:v1",
 ])
+
+export type ReplayArenaAuthorityInput =
+  | {
+      profile: "phase-259-current"
+      arenaVariantId: string
+    }
+  | {
+      profile: "runtime-v1.19-candidate"
+      result: unknown
+    }
+
+export type ReplayArenaAuthorityResolution =
+  | {
+      status: "current"
+      profile: "phase-259-current"
+      arenaVariantId: string
+      canonicalStartRequired: boolean
+    }
+  | {
+      status: "candidate"
+      profile: "runtime-v1.19-candidate"
+      candidate: true
+      current: false
+      publishable: false
+      matchSetId: string
+      matchId: string
+      arena: {
+        variantId: string
+        catalogVersion: string
+        catalogStatus: "active"
+      }
+      condition: {
+        scenarioId: string
+        conditionId: string
+        ordinal: 0 | 1 | 2 | 3
+        label:
+          | "a-bottom-a-first"
+          | "a-bottom-b-first"
+          | "a-top-a-first"
+          | "a-top-b-first"
+      }
+    }
+  | {
+      status: "unavailable"
+      profile: "runtime-v1.19-candidate"
+      candidate: true
+      current: false
+      publishable: false
+      reason: "candidate-data-unavailable"
+    }
+
+const candidateReplayUnavailable = (): ReplayArenaAuthorityResolution => ({
+  status: "unavailable",
+  profile: "runtime-v1.19-candidate",
+  candidate: true,
+  current: false,
+  publishable: false,
+  reason: "candidate-data-unavailable",
+})
+
+export const resolveReplayArenaAuthority = (
+  input: ReplayArenaAuthorityInput,
+): ReplayArenaAuthorityResolution => {
+  if (input.profile === "phase-259-current") {
+    return {
+      status: "current",
+      profile: input.profile,
+      arenaVariantId: input.arenaVariantId,
+      canonicalStartRequired:
+        PHASE_259_CURRENT_CANONICAL_ARENA_VARIANT_IDS.has(
+          input.arenaVariantId,
+        ),
+    }
+  }
+
+  try {
+    const result = parseMatchExecutionPublicResultV119(input.result)
+    const arena = CANONICAL_ARENA_CATALOG_V1_37.arenas.find(
+      (candidate) => candidate.id === result.arena.variantId,
+    )
+    if (
+      !arena ||
+      arena.status !== "active" ||
+      !arena.schedulable ||
+      arena.semanticGeometryHash !== result.arena.semanticGeometryHash
+    ) {
+      return candidateReplayUnavailable()
+    }
+    return {
+      status: "candidate",
+      profile: input.profile,
+      candidate: true,
+      current: false,
+      publishable: false,
+      matchSetId: result.matchSetId,
+      matchId: result.matchId,
+      arena: {
+        variantId: result.arena.variantId,
+        catalogVersion: result.arena.catalogVersion,
+        catalogStatus: result.arena.catalogStatus,
+      },
+      condition: {
+        scenarioId: result.condition.scenarioId,
+        conditionId: result.condition.conditionId,
+        ordinal: result.condition.ordinal,
+        label: result.condition.label,
+      },
+    }
+  } catch {
+    return candidateReplayUnavailable()
+  }
+}
 
 const samePosition = (
   left: { x: number; y: number } | null | undefined,
@@ -153,7 +267,15 @@ const canonicalStartError = (
   state: ReplayReadyDto["states"][number] | undefined,
   arenaVariantId: string,
 ): string | null => {
-  if (!state || !canonicalArenaVariantIds.has(arenaVariantId)) {
+  const arenaAuthority = resolveReplayArenaAuthority({
+    profile: "phase-259-current",
+    arenaVariantId,
+  })
+  if (
+    !state ||
+    arenaAuthority.status !== "current" ||
+    !arenaAuthority.canonicalStartRequired
+  ) {
     return null
   }
   const { bounds, soldiers } = state.board
