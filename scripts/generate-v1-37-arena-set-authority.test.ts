@@ -85,6 +85,33 @@ describe("v1.37 arena and Set Go authority generator", () => {
     }
   })
 
+  it("changes only the compact current Go mirror for the exact successor selection", () => {
+    const current = renderV137ArenaSetAuthorityArtifacts()
+    const successor = renderV137ArenaSetAuthorityArtifacts({
+      currentSelection: {
+        semanticAuthorityKey: "runtime-v1.19",
+        tupleId:
+          "sha256:37c9a07425d454c74859112debcc3ef362d43e80d5767560d9bde28a3c8d5e73",
+        tuple: { ...CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE_RECORD.tuple },
+        runtimeAbiVersion: "strategy-runtime-abi-v1.19",
+        arenaCatalogVersion: "canonical-arena-catalog-v1.37",
+        setPolicyVersion: "canonical-set-policy-v1.37-four-condition-v1",
+        conformanceCertificateVersion:
+          "runtime-conformance-certificate-v1.19",
+      },
+    })
+
+    expect(successor[v137ArenaSetAuthorityOutputPaths[0]]).toBe(
+      current[v137ArenaSetAuthorityOutputPaths[0]],
+    )
+    expect(successor[v137ArenaSetAuthorityOutputPaths[1]]).toBe(
+      current[v137ArenaSetAuthorityOutputPaths[1]],
+    )
+    expect(successor[v137ArenaSetAuthorityOutputPaths[2]]).not.toBe(
+      current[v137ArenaSetAuthorityOutputPaths[2]],
+    )
+  })
+
   it("rejects extra, reordered, aliased, seeded, stale, and preactivation drift", () => {
     const catalog = clone(CANONICAL_ARENA_CATALOG_V1_37)
     catalog.arenas.reverse()
@@ -104,10 +131,10 @@ describe("v1.37 arena and Set Go authority generator", () => {
 
     const currentSelection = clone(CURRENT_SEMANTIC_AUTHORITY_GENERATED.selection)
     ;(currentSelection as { semanticAuthorityKey: string }).semanticAuthorityKey =
-      "runtime-v1.19"
+      "runtime-v1.18"
     expect(() =>
       buildV137ArenaSetAuthorityArtifacts({ currentSelection }),
-    ).toThrow(/Phase-259|current/iu)
+    ).toThrow(/closed|current|selection/iu)
 
     const candidateTuple = clone(CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE_RECORD)
     ;(candidateTuple.tuple as { arenaCatalog: string }).arenaCatalog =

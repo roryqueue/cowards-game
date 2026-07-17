@@ -57,6 +57,7 @@ import {
   CURRENT_SEMANTIC_TUPLE,
   CURRENT_SEMANTIC_TUPLE_ID,
   resolveCurrentSemanticAuthoritySelection,
+  resolveSemanticAuthoritySelection,
 } from "./current-semantic-authority-generated.js"
 
 const repoRoot = path.resolve(
@@ -531,6 +532,49 @@ describe("v1.37 canonical integrity authority", () => {
     }
   })
 
+  it("resolves both closed semantic selections without moving the live source", () => {
+    expect(
+      resolveSemanticAuthoritySelection({
+        semanticAuthorityKey: "runtime-v1.17",
+      }),
+    ).toEqual(CURRENT_SEMANTIC_AUTHORITY_GENERATED.selection)
+    expect(
+      resolveSemanticAuthoritySelection({
+        semanticAuthorityKey: "runtime-v1.19",
+      }),
+    ).toEqual({
+      semanticAuthorityKey: "runtime-v1.19",
+      tupleId:
+        "sha256:37c9a07425d454c74859112debcc3ef362d43e80d5767560d9bde28a3c8d5e73",
+      tuple: {
+        rules: "cowards-rules-v1.4",
+        engine: "engine-kernel-v1.37-candidate-1",
+        runtimeAbi: "strategy-runtime-abi-v1.19",
+        chronicle: "chronicle-recorder-current-events-v1.37-candidate-1",
+        arenaCatalog: "canonical-arena-catalog-v1.37",
+        setPolicy: "canonical-set-policy-v1.37-four-condition-v1",
+      },
+      runtimeAbiVersion: "strategy-runtime-abi-v1.19",
+      arenaCatalogVersion: "canonical-arena-catalog-v1.37",
+      setPolicyVersion: "canonical-set-policy-v1.37-four-condition-v1",
+      conformanceCertificateVersion: "runtime-conformance-certificate-v1.19",
+    })
+    expect(
+      resolveSemanticAuthoritySelection({
+        semanticAuthorityKey: "runtime-v1.18",
+      }),
+    ).toBeUndefined()
+    expect(
+      resolveSemanticAuthoritySelection({
+        semanticAuthorityKey: "runtime-v1.19",
+        runtimeAbiVersion: "strategy-runtime-abi-v1.19",
+      }),
+    ).toBeUndefined()
+    expect(CURRENT_SEMANTIC_AUTHORITY_SOURCE).toEqual({
+      semanticAuthorityKey: "runtime-v1.17",
+    })
+  })
+
   it("keeps the successor reachable only through explicit candidate lookup", () => {
     expect(
       resolveCurrentSemanticAuthoritySelection({
@@ -559,7 +603,9 @@ describe("v1.37 canonical integrity authority", () => {
       "utf8",
     )
     expect(sourceText).not.toContain("runtime-v1.19")
-    expect(generatedText).not.toContain("runtime-v1.19")
+    expect(generatedText).toContain('"runtime-v1.19"')
+    expect(generatedText).not.toContain("./integrity-authority.js")
+    expect(generatedText).not.toContain("./versions.js")
   })
 
   it("does not expose writable registry references", () => {
