@@ -1,6 +1,7 @@
 import {
   ARENA_CATALOG_VERSION_V1_37,
   CANONICAL_ARENA_CATALOG_V1_37,
+  CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE_ID,
 } from "@cowards/spec"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
 import { randomUUID } from "node:crypto"
@@ -101,5 +102,100 @@ describeDatabase("released arena catalog repositories", () => {
     await expect(
       repositories.installReleasedArenaCatalog(changed),
     ).rejects.toThrow(/catalog|arena|geometry|alias|shape|mismatch/iu)
+  })
+
+  it("admits only exact non-revoked revision-scoped runtime-v1.19 evidence", async () => {
+    const repositories = createRepositories(pool)
+    const sourceHash = "a".repeat(64)
+    const artifactSha256 = `sha256:${"b".repeat(64)}`
+    await pool.query(
+      "insert into users (id, display_name) values ('user:revalidation', 'Revalidation')",
+    )
+    await pool.query(
+      `insert into strategies (id, owner_user_id, name)
+         values ('strategy:revalidation', 'user:revalidation', 'Revalidation')`,
+    )
+    await pool.query(
+      `insert into strategy_revisions (
+         id, strategy_id, source, source_hash, source_bytes, runtime,
+         engine_compatibility, validation, metadata, locked_at
+       ) values (
+         'revision:v1.19', 'strategy:revalidation', 'return {}', $1, 9,
+         '{}'::jsonb, '{}'::jsonb, '{}'::jsonb,
+         jsonb_build_object('artifactHash', $2::text), now()
+       )`,
+      [sourceHash, artifactSha256],
+    )
+    await expect(
+      repositories.getStrategyRevisionV119Admission("revision:v1.19"),
+    ).resolves.toBeNull()
+
+    const valid = {
+      id: "revalidation:v1.19",
+      strategyRevisionId: "revision:v1.19",
+      sourceHash,
+      sourceBytes: 9,
+      artifactSha256,
+      languageId: "typescript" as const,
+      providerId: "strategy-language-provider-js-ts",
+      laneId: "lane:typescript:v1.19",
+      runtimeAbiVersion: "strategy-runtime-abi-v1.19" as const,
+      semanticRuntimeVersion: "runtime-v1.19" as const,
+      semanticTupleId: CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE_ID,
+      executionKind: "real_service_execution" as const,
+      syntheticEvidence: false as const,
+      executionRequestRoot: `sha256:${"c".repeat(64)}`,
+      executionResultRoot: `sha256:${"d".repeat(64)}`,
+      executionReceiptRoot: `sha256:${"e".repeat(64)}`,
+      serviceReceiptVersion: "runtime-semantic-receipt-v1.19" as const,
+      reviewedCertificateId: "certificate:typescript:v1.19",
+      reviewedCertificateSha256: `sha256:${"f".repeat(64)}`,
+      reviewStatus: "reviewed" as const,
+      evidenceStatus: "passed" as const,
+      evidenceCreatedAt: new Date(Date.now() - 1_000).toISOString(),
+    }
+    const admission = await repositories.appendStrategyRevisionV119Revalidation(
+      valid,
+    )
+    expect(admission).toMatchObject({
+      brand: "strategy-revision-v1.19-admission",
+      strategyRevisionId: "revision:v1.19",
+      semanticRuntimeVersion: "runtime-v1.19",
+      semanticTupleId: CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE_ID,
+    })
+    expect(Object.isFrozen(admission)).toBe(true)
+    await expect(
+      repositories.getStrategyRevisionV119Admission("revision:v1.19"),
+    ).resolves.toEqual(admission)
+
+    for (const changed of [
+      { ...valid, id: "bad:abi", runtimeAbiVersion: "strategy-runtime-abi-v1.18" },
+      { ...valid, id: "bad:tuple", semanticTupleId: `sha256:${"0".repeat(64)}` },
+      { ...valid, id: "bad:source", sourceHash: "1".repeat(64) },
+      { ...valid, id: "bad:artifact", artifactSha256: `sha256:${"2".repeat(64)}` },
+      { ...valid, id: "bad:synthetic", syntheticEvidence: true },
+      { ...valid, id: "bad:local", executionKind: "local_only" },
+    ]) {
+      await expect(
+        repositories.appendStrategyRevisionV119Revalidation(changed),
+      ).rejects.toThrow(/runtime-v1.19|revalidation|identity|exact|duplicate/iu)
+    }
+
+    await repositories.revokeStrategyRevisionV119Revalidation({
+      id: "revocation:v1.19",
+      revalidationId: valid.id,
+      reasonCode: "review-withdrawn",
+      evidenceRoot: `sha256:${"9".repeat(64)}`,
+    })
+    await expect(
+      repositories.getStrategyRevisionV119Admission("revision:v1.19"),
+    ).resolves.toBeNull()
+    await expect(
+      repositories.appendStrategyRevisionV119Revalidation({
+        ...valid,
+        id: "revalidation:replacement",
+        executionReceiptRoot: `sha256:${"8".repeat(64)}`,
+      }),
+    ).rejects.toThrow(/duplicate|unique|revalidation/iu)
   })
 })
