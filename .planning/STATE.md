@@ -5,15 +5,15 @@ milestone_name: Rules Integrity and Strategy Evaluation Foundations — ACTIVE
 current_phase: 260
 current_phase_name: truthful-strategy-inputs-arena-authority-and-set-fairness
 status: executing
-stopped_at: Completed 260-02-PLAN.md
-last_updated: "2026-07-17T01:59:55.150Z"
+stopped_at: Completed 260-04-PLAN.md
+last_updated: "2026-07-17T02:42:32.642Z"
 last_activity: 2026-07-17
 last_activity_desc: Phase 260 execution started
 progress:
   total_phases: 6
   completed_phases: 4
   total_plans: 112
-  completed_plans: 88
+  completed_plans: 89
   percent: 67
 ---
 
@@ -29,7 +29,7 @@ See: `.planning/PROJECT.md` (updated 2026-07-12)
 ## Current Position
 
 Phase: 260 (truthful-strategy-inputs-arena-authority-and-set-fairness) — EXECUTING
-Plan: 3 of 26
+Plan: 4 of 26
 Status: Ready to execute
 Last activity: 2026-07-17 — Phase 260 execution started
 
@@ -75,8 +75,8 @@ Progress: [████████░░] 78%
 
 **Resume file:** None
 
-Last session: 2026-07-17T01:59:55.129Z
-Stopped at: Completed 260-02-PLAN.md
+Last session: 2026-07-17T02:42:32.624Z
+Stopped at: Completed 260-04-PLAN.md
 Next command: `$gsd-execute-phase 260`.
 
 ## Performance Metrics
@@ -129,6 +129,7 @@ Next command: `$gsd-execute-phase 260`.
 | Phase 259 P23 | multi-session resumed | 3 tasks + 11 finding convergence | exact four-language/Chronicle/service/DB/Go/privacy proof and default drift guard |
 | Phase 260 P01 | 15min | 3 tasks | 6 files |
 | Phase 260 P02 | 10min | 2 tasks | 5 files |
+| Phase 260 P04 | 22min | 3 tasks | 7 files |
 
 ## Decisions
 
@@ -274,3 +275,7 @@ Next command: `$gsd-execute-phase 260`.
 - [Phase 260]: Keep runtime-v1.19 outside current and generally registered tuple collections. — Only exact candidate lookup may reach the successor before Plan 14, preserving every Phase-259 current and historical resolver.
 - [Phase 260]: Use one semanticAuthorityKey as the sole TypeScript activation source. — The generated projection expands the key into the complete tuple, ABI, arena, Set-policy, and certificate selection so partial activation is unrepresentable.
 - [Phase 260]: Pin deterministic compact-source and generated-selection roots with an eager stale guard. — Source/output drift or split Phase-259 pointers fail closed before any consumer can use the generated selector.
+- [Phase 260]: Keep migration 0026 strictly additive: historical rows remain null for every successor field and no current selector or runtime behavior changes. — Historical Match, MatchSet, arena, Chronicle, receipt, certificate, evidence, and Strategy Revision facts must remain original.
+- [Phase 260]: Install released arena catalogs under a serializable advisory lock and accept conflicts only when every persisted field and JSON config exactly match. — Released authority is append-only and repeat installation must prove exact equality.
+- [Phase 260]: Treat Open Field as an explicitly readable historical alias that can never pass the schedulable catalog lookup. — Alias readability must not manufacture arena diversity or scheduling authority.
+- [Phase 260]: Admit runtime-v1.19 only from one immutable Strategy Revision's exact source, artifact, lane, candidate tuple, real service receipt, and reviewed certificate evidence. — Revision admission remains fail-closed, revision-scoped, and inactive until later activation.
