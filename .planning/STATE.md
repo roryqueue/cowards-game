@@ -5,15 +5,15 @@ milestone_name: Rules Integrity and Strategy Evaluation Foundations — ACTIVE
 current_phase: 260
 current_phase_name: truthful-strategy-inputs-arena-authority-and-set-fairness
 status: executing
-stopped_at: Completed 260-10-PLAN.md
-last_updated: "2026-07-17T06:13:50.021Z"
+stopped_at: Completed 260-09-PLAN.md
+last_updated: "2026-07-17T06:43:12.175Z"
 last_activity: 2026-07-17
-last_activity_desc: Completed Phase 260 Plan 10 exact v1.19 observation transport
+last_activity_desc: Completed Phase 260 Plan 09 candidate replay authority
 progress:
   total_phases: 6
   completed_phases: 4
   total_plans: 112
-  completed_plans: 97
+  completed_plans: 98
   percent: 67
 ---
 
@@ -29,11 +29,11 @@ See: `.planning/PROJECT.md` (updated 2026-07-12)
 ## Current Position
 
 Phase: 260 (truthful-strategy-inputs-arena-authority-and-set-fairness) — EXECUTING
-Plan: 10 of 26
+Plan: 11 of 26
 Status: Ready to execute
-Last activity: 2026-07-17 — Completed Phase 260 Plan 10 exact v1.19 observation transport
+Last activity: 2026-07-17 — Completed Phase 260 Plan 09 candidate replay authority
 
-Progress: [█████████░] 85%
+Progress: [█████████░] 88%
 
 ## Durable Decisions
 
@@ -75,8 +75,8 @@ Progress: [█████████░] 85%
 
 **Resume file:** None
 
-Last session: 2026-07-17T05:11:56.643Z
-Stopped at: Completed 260-10-PLAN.md
+Last session: 2026-07-17T06:42:34.547Z
+Stopped at: Completed 260-09-PLAN.md
 Next command: `$gsd-execute-phase 260`.
 
 ## Performance Metrics
@@ -137,6 +137,7 @@ Next command: `$gsd-execute-phase 260`.
 | Phase 260 P06 | 12min | 2 tasks | 5 files |
 | Phase 260 P10 | 23min | 2 tasks | 8 files |
 | Phase 260 P08 | 18min | 2 tasks | 10 files |
+| Phase 260 P09 | 19min | 2 tasks | 4 files |
 
 ## Decisions
 
@@ -305,3 +306,5 @@ Next command: `$gsd-execute-phase 260`.
 - [Phase 260]: Go successor completion and scoring dispatch only for the exact runtime-v1.19 tuple; selected Phase-259 behavior remains unchanged. — Candidate work cannot silently activate or reinterpret current completion, retry, status, or scoring.
 - [Phase 260]: Go countability requires exact generated four-condition membership and matching frozen/current non-revoked D-04 revision evidence. — Partial, substituted, revoked, old-tuple, or system-failed matrices must persist empty rankings and cannot influence standings.
 - [Phase 260]: The Go successor status branch is structural-only and does not query Chronicle events, derive gameplay, or execute Strategy code. — Go verifies terminal and revision evidence identity while gameplay semantics remain owned by the canonical kernel and Chronicle validator.
+- [Phase 260]: Candidate replay attaches a separate immutable v1.19 reproducibility envelope and remains non-current and non-publishable before Plan 14. — Current Phase-259 Chronicle shape and historical v1.4 bytes cannot be rewritten by candidate staging.
+- [Phase 260]: Replay validates exact persisted condition and catalog authority through version-first dispatch and rejects historical aliases for candidate use. — Replay transports frozen truth without deriving fairness, gameplay, Strategy execution, or UI authority.
