@@ -5,15 +5,15 @@ milestone_name: Rules Integrity and Strategy Evaluation Foundations — ACTIVE
 current_phase: 260
 current_phase_name: truthful-strategy-inputs-arena-authority-and-set-fairness
 status: executing
-stopped_at: Completed 260-18-PLAN.md
-last_updated: "2026-07-17T07:03:10.327Z"
+stopped_at: Completed 260-26-PLAN.md
+last_updated: "2026-07-17T07:13:00.000Z"
 last_activity: 2026-07-17
-last_activity_desc: Completed Phase 260 Plan 11 reviewed corpus-v3 candidate
+last_activity_desc: Completed Phase 260 Plan 26 revision-specific real v1.19 revalidation
 progress:
   total_phases: 6
   completed_phases: 4
   total_plans: 112
-  completed_plans: 101
+  completed_plans: 102
   percent: 67
 ---
 
@@ -29,9 +29,9 @@ See: `.planning/PROJECT.md` (updated 2026-07-12)
 ## Current Position
 
 Phase: 260 (truthful-strategy-inputs-arena-authority-and-set-fairness) — EXECUTING
-Plan: 14 of 26
+Plan: 15 of 26
 Status: Ready to execute
-Last activity: 2026-07-17 — Completed Phase 260 Plan 11 reviewed corpus-v3 candidate
+Last activity: 2026-07-17 — Completed Phase 260 Plan 26 revision-specific real v1.19 revalidation
 
 Progress: [█████████░] 88%
 
@@ -59,6 +59,7 @@ Progress: [█████████░] 88%
 - Current Chronicle evidence requires phase and independent per-activation-slot lifecycle semantics, while tuple-less v1.4 evidence remains immutable under explicit historical dispatch.
 - Missing bounded termination receipt is a system ambiguity that fails closed without gameplay mutation or player penalty.
 - Docker certification probes receive only the explicit minimal `NODE_ENV` and `PATH` environment required by the production contract.
+- Runtime-v1.19 revision revalidation requires six real provider probes, exact original source/artifact bytes, explicit inactive candidate pins, and a reviewed certificate bound to the same language/provider/lane; only complete success yields a receipt.
 
 ## Deferred Items
 
@@ -141,8 +142,12 @@ Next command: `$gsd-execute-phase 260`.
 | Phase 260 P23 | 5min | 2 tasks | 2 files |
 | Phase 260 P11 | 12min | 3 tasks | 8 files |
 | Phase 260 P18 | 14min | 2 tasks | 6 files |
+| Phase 260 P26 | 14min | 2 TDD tasks + review hardening | 2 files; 30 focused revalidation tests and full runtime-service gates |
 
 ## Decisions
+
+- [Phase 260]: Revision-specific v1.19 compatibility is earned only by six exact real provider probes covering every initiative combination and both Advance states; compile-only, additive-JSON, synthetic, partial, sibling, old, or current-registry claims are inadmissible. — D-04 cannot be satisfied by inference or evidence inheritance.
+- [Phase 260]: Reviewed candidate certificate identity must equal the immutable revision's language, provider, and lane, and malformed provider output becomes a generic evidence-mismatch system failure with no receipt. — A hash-shaped certificate or typed callback result alone is not trusted runtime evidence.
 
 - [Phase 259]: Reviewed conformance certificates extend the existing append-only runtime evidence ledger with exactly three immutable run rows and an independently authenticated plural operator import envelope. — No parallel certificate registry, singular trust root, or runtime-producer key can authorize import.
 - [Phase 259]: Go v1.18 validates generation as the exact spec-owned 1-16 digit string rather than reusing the older safe-integer cap. — Cross-language receipt acceptance must follow the language-neutral wire contract, not host numeric limits.
