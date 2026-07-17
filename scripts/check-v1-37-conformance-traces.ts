@@ -29,6 +29,8 @@ import {
   hashCanonicalConformanceTrace,
   type CanonicalConformanceTrace,
 } from "../packages/golden/src/v1-37-conformance-trace.ts"
+// eslint-disable-next-line no-restricted-imports -- checker binds the separately named inactive trace pin.
+import { V1_37_OBSERVATION_TRACE_V4_CANDIDATE_PIN } from "../packages/golden/src/v1-37-conformance-trace-v4-candidate-pin.ts"
 // eslint-disable-next-line no-restricted-imports -- use the existing canonical JSON codec.
 import {
   CURRENT_CANONICAL_COMPATIBILITY_TUPLE_RECORD,
@@ -44,6 +46,7 @@ import {
   type V137ConformanceTraceCandidateManifest,
   type V137ConformanceTraceSemanticDiff,
 } from "./generate-v1-37-conformance-traces.js"
+import { reviewV137ObservationTraceV4Candidate } from "./review-v1-37-conformance-trace-diff.js"
 
 export class V137ConformanceTraceCheckError extends Error {
   constructor(readonly code: string) {
@@ -457,6 +460,82 @@ export const checkV137ObservationTraceV4Candidate = ({
         errors.push(`observation trace candidate ${name} is stale or invalid`)
       }
     }
+    const reviewPath = path.join(candidateDirectory, "independent-review.json")
+    const reviewBytes = readRegularFileNoFollow(reviewPath)
+    if (reviewBytes === undefined) {
+      errors.push("observation trace independent review is missing")
+      return errors
+    }
+    let review: ReturnType<typeof reviewV137ObservationTraceV4Candidate>
+    try {
+      review = reviewV137ObservationTraceV4Candidate({ candidateDirectory })
+    } catch (error) {
+      errors.push(error instanceof Error ? error.message : String(error))
+      return errors
+    }
+    if (reviewBytes.toString("utf8") !== renderJson(review)) {
+      errors.push(
+        "observation trace independent review is stale or self-authored",
+      )
+    }
+    const pin = V1_37_OBSERVATION_TRACE_V4_CANDIDATE_PIN
+    const pinFields = [
+      "corpusRootSha256",
+      "corpusCandidatePinFileSha256",
+      "semanticTupleId",
+      "candidateRootSha256",
+      "manifestFileSha256",
+      "bundleFileSha256",
+      "bundleRootSha256",
+      "semanticDiffFileSha256",
+      "semanticDiffRootSha256",
+      "compatibilityDispositionFileSha256",
+      "compatibilityDispositionRootSha256",
+      "caseCount",
+      "caseTraceRootsSha256",
+      "dispositionCoverageSha256",
+      "protectedSurfaceRootsSha256",
+    ] as const
+    if (
+      pin.lifecycle !== "inactive-candidate" ||
+      pin.current !== false ||
+      pin.candidateVersion !== review.candidateVersion ||
+      pin.independentReviewFileSha256 !== sha256(reviewBytes) ||
+      pin.activeRegistryFileSha256 !==
+        sha256(
+          readFileSync(
+            path.join(
+              repoRoot,
+              "packages/golden/src/fixtures/v1-37-conformance-traces/registry.json",
+            ),
+          ),
+        ) ||
+      pinFields.some((field) => pin[field] !== review[field])
+    ) {
+      errors.push("observation trace candidate pin is stale or promoted")
+    }
+    const closureValues = [
+      review.corpusRootSha256,
+      review.candidateRootSha256,
+      review.manifestFileSha256,
+      review.bundleFileSha256,
+      review.bundleRootSha256,
+      review.semanticDiffFileSha256,
+      review.semanticDiffRootSha256,
+      review.compatibilityDispositionFileSha256,
+      review.compatibilityDispositionRootSha256,
+      sha256(reviewBytes),
+      review.caseTraceRootsSha256,
+      review.dispositionCoverageSha256,
+      review.protectedSurfaceRootsSha256,
+    ]
+    if (
+      sha256(
+        `cowards-game:v1.37:observation-trace-candidate-closure:v1\0${closureValues.join("\0")}`,
+      ) !== pin.candidateClosureRootSha256
+    ) {
+      errors.push("observation trace candidate closure root is invalid")
+    }
     return errors
   } finally {
     rmSync(temporaryRoot, { recursive: true, force: true })
@@ -465,6 +544,20 @@ export const checkV137ObservationTraceV4Candidate = ({
 
 const main = async (): Promise<void> => {
   const rawArgs = process.argv.slice(2)
+  if (rawArgs.length === 0) {
+    const { checkActiveV137ConformanceTrace } =
+      await import("./promote-v1-37-conformance-traces.js")
+    const repoRoot = path.resolve(import.meta.dirname, "..")
+    const errors = [
+      ...checkActiveV137ConformanceTrace({ repoRoot }),
+      ...checkV137ObservationTraceV4Candidate({ repoRoot }),
+    ]
+    if (errors.length > 0) throw new Error(errors.join("\n"))
+    console.log(
+      "v1.37 active conformance trace exact; observation trace v4 reviewed and inactive",
+    )
+    return
+  }
   if (
     rawArgs.length === 1 &&
     rawArgs[0] === "--candidate=v1.37-observation-trace-v4"

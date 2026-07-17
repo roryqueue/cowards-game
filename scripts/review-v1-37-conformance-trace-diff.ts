@@ -32,6 +32,8 @@ import {
   V1_37_CONFORMANCE_CORPUS,
   V1_37_CONFORMANCE_CORPUS_ROOT,
 } from "../packages/golden/src/v1-37-conformance-corpus.ts"
+// eslint-disable-next-line no-restricted-imports -- independent review binds the exact inactive corpus candidate pin.
+import { V1_37_CONFORMANCE_CORPUS_V3_CANDIDATE_PIN } from "../packages/golden/src/v1-37-conformance-corpus-v3-candidate-pin.ts"
 // eslint-disable-next-line no-restricted-imports -- independent trace admission uses the pure Plan-03 verifier.
 import {
   compareCanonicalConformanceTrace,
@@ -40,6 +42,7 @@ import {
 } from "../packages/golden/src/v1-37-conformance-trace.ts"
 // eslint-disable-next-line no-restricted-imports -- use the existing canonical JSON codec.
 import {
+  CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE_ID,
   CURRENT_CANONICAL_COMPATIBILITY_TUPLE_RECORD,
   encodeCanonicalJson,
   type JsonValue,
@@ -48,6 +51,8 @@ import {
   reconstructV137ConformanceTrace,
   V137_CONFORMANCE_TRACE_REVIEW_ARTIFACT,
   type V137ConformanceTraceCandidateManifest,
+  type V137ObservationTraceV4Bundle,
+  type V137ObservationTraceV4Manifest,
   type V137ConformanceTraceProtectedCategory,
   type V137ConformanceTraceSemanticDiff,
 } from "./generate-v1-37-conformance-traces.js"
@@ -833,6 +838,454 @@ export const writeV137ConformanceTraceIndependentReview = ({
     }
     if (readRegularFileNoFollow(normalizedOutput)?.toString("utf8") !== bytes) {
       return fail("REVIEW_OUTPUT_IMMUTABLE")
+    }
+    return review
+  }
+  const descriptor = openSync(
+    normalizedOutput,
+    constants.O_CREAT |
+      constants.O_EXCL |
+      constants.O_WRONLY |
+      constants.O_NOFOLLOW,
+    0o600,
+  )
+  try {
+    writeFileSync(descriptor, bytes)
+    fsyncSync(descriptor)
+  } finally {
+    closeSync(descriptor)
+  }
+  return review
+}
+
+export interface V137ObservationTraceV4IndependentReview {
+  readonly schemaVersion: "v1.37-observation-trace-independent-review-v1"
+  readonly reviewedBy: "scripts/review-v1-37-conformance-trace-diff.ts"
+  readonly generatedBy: "scripts/generate-v1-37-conformance-traces.ts"
+  readonly candidateVersion: "v1.37-observation-trace-v4"
+  readonly lifecycle: "inactive-candidate"
+  readonly current: false
+  readonly corpusCandidateVersion: "v3"
+  readonly corpusRootSha256: string
+  readonly corpusCandidatePinFileSha256: string
+  readonly semanticTupleId: string
+  readonly candidateRootSha256: string
+  readonly manifestFileSha256: string
+  readonly bundleFileSha256: string
+  readonly bundleRootSha256: string
+  readonly semanticDiffFileSha256: string
+  readonly semanticDiffRootSha256: string
+  readonly compatibilityDispositionFileSha256: string
+  readonly compatibilityDispositionRootSha256: string
+  readonly caseCount: number
+  readonly caseTraceRootsSha256: string
+  readonly dispositionCoverageSha256: string
+  readonly protectedSurfaceRootsSha256: string
+  readonly status: "approved-inactive-observation-candidate"
+}
+
+const observationExactJsonHash = (domain: string, value: unknown): string =>
+  sha256(`${domain}\0${renderJson(JSON.parse(JSON.stringify(value)))}`)
+
+const parseExactObservationJson = <T>(
+  candidateDirectory: string,
+  name: string,
+): { readonly value: T; readonly bytes: Buffer } => {
+  const bytes = readRegularFileNoFollow(path.join(candidateDirectory, name))
+  if (bytes === undefined) return fail("OBSERVATION_EVIDENCE_MISSING")
+  let value: T
+  try {
+    value = JSON.parse(bytes.toString("utf8")) as T
+  } catch {
+    return fail("OBSERVATION_EVIDENCE_INVALID")
+  }
+  if (bytes.toString("utf8") !== renderJson(value)) {
+    return fail("OBSERVATION_EXACT_TEXT_INVALID")
+  }
+  return { value, bytes }
+}
+
+const validateObservationBundleRecord = ({
+  record,
+  ordinal,
+  manifestCase,
+}: {
+  readonly record: V137ObservationTraceV4Bundle["records"][number]
+  readonly ordinal: number
+  readonly manifestCase: V137ObservationTraceV4Manifest["cases"][number]
+}): void => {
+  const expectedCase =
+    V1_37_CONFORMANCE_CORPUS_V3_CANDIDATE_PIN.caseRoots[ordinal]
+  if (
+    expectedCase === undefined ||
+    !exactKeys(record, [
+      "ordinal",
+      "caseId",
+      "traceRef",
+      "resultClass",
+      "canonicalInput",
+      "trace",
+      "evidence",
+      "traceRoot",
+    ]) ||
+    record.ordinal !== ordinal ||
+    record.caseId !== expectedCase.caseId ||
+    record.traceRef !== `trace:${record.caseId}` ||
+    record.traceRoot !== record.trace.traceRoot ||
+    record.traceRoot !== manifestCase.traceRoot ||
+    record.resultClass !== manifestCase.resultClass ||
+    record.trace.caseId !== record.caseId ||
+    record.trace.corpusVersion !== "v3" ||
+    record.trace.corpusRootSha256 !==
+      V1_37_CONFORMANCE_CORPUS_V3_CANDIDATE_PIN.corpusRootSha256 ||
+    record.trace.semanticTupleId !== CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE_ID ||
+    record.trace.resultClass !== record.resultClass ||
+    hashCanonicalConformanceTrace(record.trace) !== record.traceRoot ||
+    compareCanonicalConformanceTrace({
+      expected: record.trace,
+      actual: record.trace,
+    }).status !== "equal"
+  ) {
+    return fail("OBSERVATION_BUNDLE_CASE_INVALID")
+  }
+  if (
+    record.canonicalInput === null ||
+    typeof record.canonicalInput !== "object" ||
+    record.evidence === null ||
+    typeof record.evidence !== "object"
+  ) {
+    return fail("OBSERVATION_BUNDLE_EVIDENCE_INVALID")
+  }
+  const evidence = record.evidence as Record<string, unknown>
+  if (
+    !exactKeys(evidence, [
+      "states",
+      "events",
+      "memories",
+      "objectives",
+      "terminal",
+      "failure",
+    ]) ||
+    JSON.stringify(evidence.failure) !== JSON.stringify(record.trace.failure)
+  ) {
+    return fail("OBSERVATION_BUNDLE_EVIDENCE_INVALID")
+  }
+}
+
+export const reviewV137ObservationTraceV4Candidate = ({
+  candidateDirectory,
+}: {
+  readonly candidateDirectory: string
+}): V137ObservationTraceV4IndependentReview => {
+  const directory = path.resolve(candidateDirectory)
+  let directoryStat
+  try {
+    directoryStat = lstatSync(directory)
+  } catch {
+    return fail("OBSERVATION_EVIDENCE_MISSING")
+  }
+  if (directoryStat.isSymbolicLink() || !directoryStat.isDirectory()) {
+    return fail("OBSERVATION_EVIDENCE_MISSING")
+  }
+  const manifestInput =
+    parseExactObservationJson<V137ObservationTraceV4Manifest>(
+      directory,
+      "manifest.json",
+    )
+  const bundleInput = parseExactObservationJson<V137ObservationTraceV4Bundle>(
+    directory,
+    "traces.bundle.json",
+  )
+  const diffInput = parseExactObservationJson<Record<string, unknown>>(
+    directory,
+    "semantic-diff.json",
+  )
+  const dispositionInput = parseExactObservationJson<Record<string, unknown>>(
+    directory,
+    "compatibility-disposition.json",
+  )
+  const { value: manifest } = manifestInput
+  const { value: bundle } = bundleInput
+  if (
+    !exactKeys(manifest, [
+      "schemaVersion",
+      "candidateVersion",
+      "lifecycle",
+      "current",
+      "generatedBy",
+      "policy",
+      "corpusCandidateVersion",
+      "corpusRootSha256",
+      "corpusFileSha256",
+      "corpusCandidatePinPath",
+      "corpusCandidatePinFileSha256",
+      "semanticTupleId",
+      "bundlePath",
+      "bundleFileSha256",
+      "bundleRootSha256",
+      "semanticDiffPath",
+      "semanticDiffFileSha256",
+      "semanticDiffRootSha256",
+      "compatibilityDispositionPath",
+      "compatibilityDispositionFileSha256",
+      "compatibilityDispositionRootSha256",
+      "caseCount",
+      "cases",
+      "candidateRootSha256",
+    ]) ||
+    manifest.schemaVersion !== "v1.37-observation-trace-candidate-v4" ||
+    manifest.candidateVersion !== "v1.37-observation-trace-v4" ||
+    manifest.lifecycle !== "inactive-candidate" ||
+    manifest.current !== false ||
+    manifest.generatedBy !== "scripts/generate-v1-37-conformance-traces.ts" ||
+    manifest.policy !== "candidate-only-plan-14-atomic-promotion" ||
+    manifest.corpusCandidateVersion !== "v3" ||
+    manifest.corpusRootSha256 !==
+      V1_37_CONFORMANCE_CORPUS_V3_CANDIDATE_PIN.corpusRootSha256 ||
+    manifest.corpusFileSha256 !==
+      V1_37_CONFORMANCE_CORPUS_V3_CANDIDATE_PIN.corpusFileSha256 ||
+    manifest.semanticTupleId !== CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE_ID ||
+    manifest.bundlePath !== "traces.bundle.json" ||
+    manifest.semanticDiffPath !== "semantic-diff.json" ||
+    manifest.compatibilityDispositionPath !==
+      "compatibility-disposition.json" ||
+    manifest.caseCount !==
+      V1_37_CONFORMANCE_CORPUS_V3_CANDIDATE_PIN.caseRoots.length ||
+    manifest.caseCount !== manifest.cases.length
+  ) {
+    return fail("OBSERVATION_MANIFEST_INVALID")
+  }
+  const { candidateRootSha256: _candidateRootSha256, ...manifestMaterial } =
+    manifest
+  if (
+    canonicalHash(
+      "cowards-game:v1.37:observation-trace-candidate:v4",
+      manifestMaterial as unknown as JsonValue,
+    ) !== manifest.candidateRootSha256 ||
+    sha256(bundleInput.bytes) !== manifest.bundleFileSha256 ||
+    sha256(diffInput.bytes) !== manifest.semanticDiffFileSha256 ||
+    sha256(dispositionInput.bytes) !==
+      manifest.compatibilityDispositionFileSha256
+  ) {
+    return fail("OBSERVATION_ROOT_MISMATCH")
+  }
+  if (
+    !exactKeys(bundle, [
+      "schemaVersion",
+      "candidateVersion",
+      "corpusVersion",
+      "corpusRootSha256",
+      "semanticTupleId",
+      "caseCount",
+      "records",
+      "bundleRootSha256",
+    ]) ||
+    bundle.schemaVersion !== "v1.37-observation-trace-bundle-v1" ||
+    bundle.candidateVersion !== manifest.candidateVersion ||
+    bundle.corpusVersion !== "v3" ||
+    bundle.corpusRootSha256 !== manifest.corpusRootSha256 ||
+    bundle.semanticTupleId !== manifest.semanticTupleId ||
+    bundle.caseCount !== manifest.caseCount ||
+    bundle.records.length !== manifest.caseCount
+  ) {
+    return fail("OBSERVATION_BUNDLE_INVALID")
+  }
+  const { bundleRootSha256: _bundleRootSha256, ...bundleMaterial } = bundle
+  const recomputedBundleRoot = observationExactJsonHash(
+    "cowards-game:v1.37:observation-trace-bundle:exact-json:v1",
+    bundleMaterial,
+  )
+  if (
+    recomputedBundleRoot !== bundle.bundleRootSha256 ||
+    bundle.bundleRootSha256 !== manifest.bundleRootSha256
+  ) {
+    return fail("OBSERVATION_ROOT_MISMATCH")
+  }
+  for (const [ordinal, record] of bundle.records.entries()) {
+    const manifestCase = manifest.cases[ordinal]
+    if (
+      manifestCase === undefined ||
+      !exactKeys(manifestCase, [
+        "ordinal",
+        "caseId",
+        "resultClass",
+        "traceRoot",
+      ]) ||
+      manifestCase.ordinal !== ordinal ||
+      manifestCase.caseId !== record.caseId
+    ) {
+      return fail("OBSERVATION_CASE_COVERAGE_INVALID")
+    }
+    validateObservationBundleRecord({ record, ordinal, manifestCase })
+  }
+
+  const diff = diffInput.value
+  const disposition = dispositionInput.value
+  const caseDiffs = diff.caseDiffs
+  const dispositionCases = disposition.cases
+  const protectedSurfaces = disposition.protectedSurfaces
+  if (
+    diff.schemaVersion !== "v1.37-observation-trace-semantic-diff-v1" ||
+    diff.generatedBy !== "scripts/generate-v1-37-conformance-traces.ts" ||
+    diff.candidateVersion !== manifest.candidateVersion ||
+    diff.bundleRootSha256 !== bundle.bundleRootSha256 ||
+    diff.caseCount !== manifest.caseCount ||
+    !Array.isArray(caseDiffs) ||
+    caseDiffs.length !== manifest.caseCount ||
+    disposition.schemaVersion !==
+      "v1.37-observation-trace-compatibility-disposition-v1" ||
+    disposition.candidateVersion !== manifest.candidateVersion ||
+    disposition.lifecycle !== "inactive-candidate" ||
+    disposition.current !== false ||
+    disposition.status !== "observation-only-compatible-candidate" ||
+    disposition.caseCount !== manifest.caseCount ||
+    !Array.isArray(dispositionCases) ||
+    dispositionCases.length !== manifest.caseCount ||
+    disposition.approval !== null ||
+    protectedSurfaces === null ||
+    typeof protectedSurfaces !== "object" ||
+    Array.isArray(protectedSurfaces)
+  ) {
+    return fail("OBSERVATION_DISPOSITION_COVERAGE_INVALID")
+  }
+  const { semanticDiffRootSha256: _diffRoot, ...diffMaterial } = diff
+  const {
+    compatibilityDispositionRootSha256: _dispositionRoot,
+    ...dispositionMaterial
+  } = disposition
+  const diffRoot = observationExactJsonHash(
+    "cowards-game:v1.37:observation-trace-semantic-diff:v1",
+    diffMaterial,
+  )
+  const dispositionRoot = observationExactJsonHash(
+    "cowards-game:v1.37:observation-trace-compatibility-disposition:v1",
+    dispositionMaterial,
+  )
+  if (
+    diffRoot !== diff.semanticDiffRootSha256 ||
+    diffRoot !== manifest.semanticDiffRootSha256 ||
+    dispositionRoot !== disposition.compatibilityDispositionRootSha256 ||
+    dispositionRoot !== manifest.compatibilityDispositionRootSha256
+  ) {
+    return fail("OBSERVATION_ROOT_MISMATCH")
+  }
+  for (const [ordinal, manifestCase] of manifest.cases.entries()) {
+    const caseDiff = caseDiffs[ordinal] as Record<string, unknown> | undefined
+    const caseDisposition = dispositionCases[ordinal] as
+      | Record<string, unknown>
+      | undefined
+    if (
+      caseDiff === undefined ||
+      caseDisposition === undefined ||
+      caseDiff.ordinal !== ordinal ||
+      caseDisposition.ordinal !== ordinal ||
+      caseDiff.caseId !== manifestCase.caseId ||
+      caseDisposition.caseId !== manifestCase.caseId ||
+      caseDiff.candidateTraceRoot !== manifestCase.traceRoot ||
+      caseDisposition.candidateTraceRoot !== manifestCase.traceRoot ||
+      caseDiff.baselineTraceRoot !== caseDisposition.baselineTraceRoot ||
+      caseDiff.disposition !== caseDisposition.disposition
+    ) {
+      return fail("OBSERVATION_DISPOSITION_COVERAGE_INVALID")
+    }
+  }
+  const expectedSurfaces = [
+    "gameplayState",
+    "actionLegality",
+    "eventOrder",
+    "cleanup",
+    "terminalTimingReason",
+    "outcome",
+    "backstab",
+    "arenaGeometry",
+    "historicalInterpretation",
+    "failureOwnership",
+  ]
+  if (!exactKeys(protectedSurfaces, expectedSurfaces)) {
+    return fail("OBSERVATION_DISPOSITION_COVERAGE_INVALID")
+  }
+  for (const surface of expectedSurfaces) {
+    const value = protectedSurfaces[surface]
+    if (
+      !exactKeys(value, [
+        "baselineRoot",
+        "candidateRoot",
+        "changeCount",
+        "disposition",
+      ]) ||
+      value.baselineRoot !== value.candidateRoot ||
+      value.changeCount !== 0 ||
+      value.disposition !== "unchanged" ||
+      typeof value.baselineRoot !== "string" ||
+      !HASH.test(value.baselineRoot)
+    ) {
+      return fail("OBSERVATION_UNAPPROVED_SEMANTIC_DELTA")
+    }
+  }
+
+  return {
+    schemaVersion: "v1.37-observation-trace-independent-review-v1",
+    reviewedBy: "scripts/review-v1-37-conformance-trace-diff.ts",
+    generatedBy: "scripts/generate-v1-37-conformance-traces.ts",
+    candidateVersion: "v1.37-observation-trace-v4",
+    lifecycle: "inactive-candidate",
+    current: false,
+    corpusCandidateVersion: "v3",
+    corpusRootSha256: manifest.corpusRootSha256,
+    corpusCandidatePinFileSha256: manifest.corpusCandidatePinFileSha256,
+    semanticTupleId: manifest.semanticTupleId,
+    candidateRootSha256: manifest.candidateRootSha256,
+    manifestFileSha256: sha256(manifestInput.bytes),
+    bundleFileSha256: sha256(bundleInput.bytes),
+    bundleRootSha256: bundle.bundleRootSha256,
+    semanticDiffFileSha256: sha256(diffInput.bytes),
+    semanticDiffRootSha256: diffRoot,
+    compatibilityDispositionFileSha256: sha256(dispositionInput.bytes),
+    compatibilityDispositionRootSha256: dispositionRoot,
+    caseCount: manifest.caseCount,
+    caseTraceRootsSha256: canonicalHash(
+      "cowards-game:v1.37:observation-trace-case-roots:v1",
+      manifest.cases.map(({ caseId, traceRoot }) => ({
+        caseId,
+        traceRoot,
+      })) as unknown as JsonValue,
+    ),
+    dispositionCoverageSha256: canonicalHash(
+      "cowards-game:v1.37:observation-trace-disposition-coverage:v1",
+      dispositionCases as JsonValue,
+    ),
+    protectedSurfaceRootsSha256: canonicalHash(
+      "cowards-game:v1.37:observation-trace-protected-surfaces:v1",
+      protectedSurfaces as JsonValue,
+    ),
+    status: "approved-inactive-observation-candidate",
+  }
+}
+
+export const writeV137ObservationTraceV4IndependentReview = ({
+  candidateDirectory,
+  outputPath,
+}: {
+  readonly candidateDirectory: string
+  readonly outputPath: string
+}): V137ObservationTraceV4IndependentReview => {
+  const review = reviewV137ObservationTraceV4Candidate({ candidateDirectory })
+  const candidateRealPath = realpathSync(path.resolve(candidateDirectory))
+  const absoluteOutput = path.resolve(outputPath)
+  const normalizedOutput = path.join(
+    realpathSync(path.dirname(absoluteOutput)),
+    path.basename(absoluteOutput),
+  )
+  if (
+    normalizedOutput !== path.join(candidateRealPath, "independent-review.json")
+  ) {
+    return fail("OBSERVATION_REVIEW_OUTPUT_FORBIDDEN")
+  }
+  const bytes = renderJson(review)
+  const existing = readRegularFileNoFollow(normalizedOutput)
+  if (existing !== undefined) {
+    if (existing.toString("utf8") !== bytes) {
+      return fail("OBSERVATION_REVIEW_STALE_OR_SELF_AUTHORED")
     }
     return review
   }

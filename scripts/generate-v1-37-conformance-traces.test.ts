@@ -19,7 +19,9 @@ import {
   V1_37_CONFORMANCE_CORPUS,
   V1_37_CONFORMANCE_CORPUS_ROOT,
 } from "../packages/golden/src/v1-37-conformance-corpus.js"
+// eslint-disable-next-line no-restricted-imports -- governance test binds the explicit inactive corpus candidate pin.
 import { V1_37_CONFORMANCE_CORPUS_V3_CANDIDATE_PIN } from "../packages/golden/src/v1-37-conformance-corpus-v3-candidate-pin.js"
+// eslint-disable-next-line no-restricted-imports -- governance test binds the explicit inactive trace candidate pin.
 import { V1_37_OBSERVATION_TRACE_V4_CANDIDATE_PIN } from "../packages/golden/src/v1-37-conformance-trace-v4-candidate-pin.js"
 import {
   ACTIVE_V137_CONFORMANCE_TRACE_ROOT,
@@ -197,8 +199,13 @@ describe("v1.37 conformance trace candidate generation", () => {
   }, 30_000)
 
   it("independently reviews and pins the exact inactive trace closure", () => {
-    const candidateDirectory = path.join(temporaryRoot(), "observation-trace-v4")
-    const result = generateV137ObservationTraceV4Candidate({ candidateDirectory })
+    const candidateDirectory = path.join(
+      temporaryRoot(),
+      "observation-trace-v4",
+    )
+    const result = generateV137ObservationTraceV4Candidate({
+      candidateDirectory,
+    })
     const review = writeV137ObservationTraceV4IndependentReview({
       candidateDirectory,
       outputPath: path.join(candidateDirectory, "independent-review.json"),
@@ -234,7 +241,10 @@ describe("v1.37 conformance trace candidate generation", () => {
   }, 30_000)
 
   it("rejects incomplete dispositions before independent review", () => {
-    const candidateDirectory = path.join(temporaryRoot(), "observation-trace-v4")
+    const candidateDirectory = path.join(
+      temporaryRoot(),
+      "observation-trace-v4",
+    )
     generateV137ObservationTraceV4Candidate({ candidateDirectory })
     const dispositionPath = path.join(
       candidateDirectory,
