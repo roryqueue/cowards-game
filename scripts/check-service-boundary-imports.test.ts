@@ -364,10 +364,10 @@ describe("service boundary import guard", () => {
     const result = analyzeServiceBoundaryImports({ repoRoot })
 
     expect(result.ownershipOffenses.map(({ pattern }) => pattern)).toEqual([
-      "kernel-observation-derivation:hasAdvancedThisActivation",
+      "set-fairness-from-seed",
       "kernel-observation-derivation:initialInitiativePlayerId",
       "kernel-observation-derivation:roundInitiativePlayerId",
-      "set-fairness-from-seed",
+      "kernel-observation-derivation:hasAdvancedThisActivation",
     ])
     expect(result.exitCode).toBe(1)
   })
@@ -408,8 +408,8 @@ describe("service boundary import guard", () => {
 
     expect(result.ownershipOffenses.map(({ pattern }) => pattern)).toEqual([
       "go-gameplay-ownership:resolveBackstab",
-      "current-selector-bypass",
       "handwritten-successor-arena-geometry",
+      "current-selector-bypass",
     ])
     expect(result.exitCode).toBe(1)
   })
