@@ -244,7 +244,7 @@ describe("successor SoldierBrain observations", () => {
       observations.map((input) => input.hasAdvancedThisActivation),
     ).toEqual([false, false, true, true])
     if (execution.kind !== "completed") return
-    const recorded = execution.recorderMaterial.events
+    const recorded = execution.recorderMaterial!.events
       .filter((event) => event.type === "AWARENESS_GRID_OBSERVED")
       .map(
         (event) =>
@@ -272,6 +272,31 @@ describe("successor SoldierBrain observations", () => {
     expect(execution.kind).toBe("completed")
     expect(
       observations.map((input) => input.hasAdvancedThisActivation),
+    ).toEqual([false, false])
+
+    const headToHeadState = successorState()
+    headToHeadState.soldiers = headToHeadState.soldiers.map((soldier) =>
+      soldier.id === "bottom-soldier-2"
+        ? { ...soldier, facing: "LEFT" }
+        : soldier,
+    )
+    const blockedMoveObservations: SoldierBrainInputV119[] = []
+    const blockedMove = MATCH_KERNEL.runActivationFromStateV119({
+      state: headToHeadState,
+      soldierId: "bottom-soldier-1",
+      runtime: actionRuntime(
+        [
+          { type: "MOVE", direction: "RIGHT" },
+          { type: "TURN_TO_STONE" },
+        ],
+        blockedMoveObservations,
+      ),
+    })
+    expect(blockedMove.kind).toBe("completed")
+    expect(
+      blockedMoveObservations.map(
+        (input) => input.hasAdvancedThisActivation,
+      ),
     ).toEqual([false, false])
   })
 
@@ -306,7 +331,7 @@ describe("successor SoldierBrain observations", () => {
 
     const targetObservations: SoldierBrainInputV119[] = []
     const target = MATCH_KERNEL.runActivationFromStateV119({
-      state: pushed.result.state,
+      state: pushed.result!.state,
       soldierId: "top-soldier-1",
       runtime: actionRuntime(
         [{ type: "TURN_TO_STONE" }],
@@ -344,7 +369,7 @@ describe("successor SoldierBrain observations", () => {
 
     const secondObservations: SoldierBrainInputV119[] = []
     const second = MATCH_KERNEL.runActivationFromStateV119({
-      state: first.result.state,
+      state: first.result!.state,
       soldierId: "bottom-soldier-1",
       runtime: actionRuntime(
         [{ type: "TURN_TO_STONE" }],

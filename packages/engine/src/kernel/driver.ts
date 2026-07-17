@@ -223,6 +223,19 @@ export const createCandidateActivationMachineV117 = (input: {
   )
 }
 
+export const createCandidateActivationMachineV119 = (input: {
+  readonly state: GameState
+  readonly soldierId: string
+  readonly objective?: JsonValue | undefined
+}): MatchMachine =>
+  assertMachine({
+    ...createCandidateActivationMachine(input),
+    semanticTuple: {
+      tupleId: CANDIDATE_KERNEL_V119_SEMANTIC_TUPLE_ID,
+      tuple: CANDIDATE_KERNEL_V119_SEMANTIC_TUPLE,
+    },
+  })
+
 const runtimeResume = (
   runtime: CandidateStrategyRuntime,
   request: KernelEffectRequest,
@@ -681,6 +694,28 @@ export const runCandidateActivationFromStateV117 = (
   }
 }
 
+export const runCandidateActivationFromStateV119 = (
+  input: CandidateActivationInput,
+): CandidateActivationExecution => {
+  let machine: MatchMachine
+  try {
+    machine = createCandidateActivationMachineV119(input)
+  } catch {
+    return failedExecution(
+      globalThis.structuredClone(input.state),
+      restrictedIntegrityFailure("CANDIDATE_V119_ACTIVATION_ADMISSION_FAILED"),
+    )
+  }
+  try {
+    return drive(machine, input.runtime, "activation")
+  } catch {
+    return failedExecution(
+      globalThis.structuredClone(machine.initialState),
+      restrictedIntegrityFailure("KERNEL_DRIVER_UNEXPECTED"),
+    )
+  }
+}
+
 /** Historical evidence projection over the canonical scheduler. */
 export const runHistoricalV14RoundFromState = (input: {
   readonly state: GameState
@@ -736,4 +771,6 @@ export const MATCH_KERNEL = Object.freeze({
   runActivationFromState: runCandidateActivationFromState,
   createActivationMachineV117: createCandidateActivationMachineV117,
   runActivationFromStateV117: runCandidateActivationFromStateV117,
+  createActivationMachineV119: createCandidateActivationMachineV119,
+  runActivationFromStateV119: runCandidateActivationFromStateV119,
 })

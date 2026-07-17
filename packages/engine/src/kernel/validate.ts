@@ -51,6 +51,8 @@ const RECORDER_HASH_DOMAIN =
   "cowards-game:candidate-recorder-material:v1" as const
 const V117_EFFECT_REQUEST_HASH_DOMAIN =
   "cowards-game:kernel-effect-request:v1.17" as const
+const V119_EFFECT_REQUEST_HASH_DOMAIN =
+  "cowards-game:kernel-effect-request:v1.19" as const
 const HASH_PATTERN = /^sha256:[0-9a-f]{64}$/u
 
 const kernelOwnedEventHistories = new WeakSet<object>()
@@ -180,6 +182,9 @@ export const projectCanonicalStateForRecording = (state: GameState) => ({
   phaseNumber: state.phaseNumber,
   roundNumber: state.roundNumber,
   activationCount: state.activationCount,
+  ...(state.initialInitiativePlayerId === undefined
+    ? {}
+    : { initialInitiativePlayerId: state.initialInitiativePlayerId }),
   initiativePlayerId: state.initiativePlayerId,
   bounds: {
     minX: state.bounds.minX,
@@ -532,6 +537,9 @@ const privateEffectIdentityState = (state: GameState) => ({
   phaseNumber: state.phaseNumber,
   roundNumber: state.roundNumber,
   activationCount: state.activationCount,
+  ...(state.initialInitiativePlayerId === undefined
+    ? {}
+    : { initialInitiativePlayerId: state.initialInitiativePlayerId }),
   initiativePlayerId: state.initiativePlayerId,
   bounds: {
     minX: state.bounds.minX,
@@ -722,17 +730,26 @@ export const expectedEffectRequestId = (
   kind: KernelEffectRequest["kind"],
   suffix: string,
 ): string => {
-  if (
-    machine.semanticTuple.tupleId !==
+  const version =
+    machine.semanticTuple.tupleId ===
     CANDIDATE_KERNEL_V117_SEMANTIC_TUPLE_ID
-  ) {
+      ? "v1.17"
+      : machine.semanticTuple.tupleId ===
+          CANDIDATE_KERNEL_V119_SEMANTIC_TUPLE_ID
+        ? "v1.19"
+        : undefined
+  if (version === undefined) {
     return `effect:${machine.cursor.ordinal}:${machine.cursor.stage}:${kind}:${suffix}`
   }
   const encoded = encodeEffectIdentityReference(
     effectIdentityMaterial(machine, kind, suffix),
   )
-  return `effect:v1.17:${createHash("sha256")
-    .update(`${V117_EFFECT_REQUEST_HASH_DOMAIN}\0`, "utf8")
+  const domain =
+    version === "v1.17"
+      ? V117_EFFECT_REQUEST_HASH_DOMAIN
+      : V119_EFFECT_REQUEST_HASH_DOMAIN
+  return `effect:${version}:${createHash("sha256")
+    .update(`${domain}\0`, "utf8")
     .update(encoded)
     .digest("hex")}`
 }

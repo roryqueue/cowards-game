@@ -623,6 +623,8 @@ const advanceObservation = (machine: MatchMachine): KernelStepResult => {
     slot.soldierId,
     machine.cursor.cycleLayer,
     slot.objective,
+    slot.advanced,
+    machine.semanticTuple.tuple.runtimeAbi,
   )
   return finishTransition(
     machine,
@@ -644,6 +646,13 @@ const advanceObservation = (machine: MatchMachine): KernelStepResult => {
             ownerPlayerId: soldier.ownerPlayerId,
             cycleIndex: machine.cursor.cycleLayer,
             awarenessGrid: input.awarenessGrid,
+            ...(Object.hasOwn(input, "hasAdvancedThisActivation")
+              ? {
+                  hasAdvancedThisActivation: (
+                    input as unknown as { hasAdvancedThisActivation: boolean }
+                  ).hasAdvancedThisActivation,
+                }
+              : {}),
             objectiveRef: { hasObjective: slot.objective !== undefined },
             objectivePayload: slot.objective,
           }),
@@ -682,6 +691,8 @@ const yieldSoldierEffect = (machine: MatchMachine): KernelStepResult => {
       slot.soldierId,
       machine.cursor.cycleLayer,
       slot.objective,
+      slot.advanced,
+      machine.semanticTuple.tuple.runtimeAbi,
     ),
   }
   return {
