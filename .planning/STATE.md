@@ -5,15 +5,15 @@ milestone_name: Rules Integrity and Strategy Evaluation Foundations — ACTIVE
 current_phase: 260
 current_phase_name: truthful-strategy-inputs-arena-authority-and-set-fairness
 status: executing
-stopped_at: Completed 260-20-PLAN.md
-last_updated: "2026-07-17T08:26:00.000Z"
+stopped_at: Completed 260-13-PLAN.md
+last_updated: "2026-07-17T08:41:10.000Z"
 last_activity: 2026-07-17
-last_activity_desc: Completed Phase 260 Plan 20 frozen Strategy Revision revalidation
+last_activity_desc: Completed Phase 260 Plan 13 inactive observation-v1.19 certificate installation
 progress:
   total_phases: 6
   completed_phases: 4
   total_plans: 112
-  completed_plans: 106
+  completed_plans: 107
   percent: 67
 ---
 
@@ -29,11 +29,11 @@ See: `.planning/PROJECT.md` (updated 2026-07-12)
 ## Current Position
 
 Phase: 260 (truthful-strategy-inputs-arena-authority-and-set-fairness) — EXECUTING
-Plan: 21 of 26
+Plan: 22 of 26
 Status: Ready to execute
-Last activity: 2026-07-17 — Completed Phase 260 Plan 20 frozen Strategy Revision revalidation
+Last activity: 2026-07-17 — Completed Phase 260 Plan 13 inactive observation-v1.19 certificate installation
 
-Progress: [█████████░] 89%
+Progress: [█████████░] 90%
 
 ## Durable Decisions
 
@@ -60,6 +60,7 @@ Progress: [█████████░] 89%
 - Missing bounded termination receipt is a system ambiguity that fails closed without gameplay mutation or player penalty.
 - Docker certification probes receive only the explicit minimal `NODE_ENV` and `PATH` environment required by the production contract.
 - Runtime-v1.19 revision revalidation requires six real provider probes, exact original source/artifact bytes, explicit inactive candidate pins, and a reviewed certificate bound to the same language/provider/lane; only complete success yields a receipt.
+- Observation-v1.19 lane certificates bind the complete reviewed candidate payload under distinct managed producer/operator trust and remain append-only `candidate-0` evidence; no successor row enters the Phase-259 current selector before atomic activation.
 
 ## Deferred Items
 
@@ -76,8 +77,8 @@ Progress: [█████████░] 89%
 
 **Resume file:** None
 
-Last session: 2026-07-17T08:26:00.000Z
-Stopped at: Completed 260-20-PLAN.md
+Last session: 2026-07-17T08:41:10.000Z
+Stopped at: Completed 260-13-PLAN.md
 Next command: `$gsd-execute-phase 260`.
 
 ## Performance Metrics
@@ -147,12 +148,14 @@ Next command: `$gsd-execute-phase 260`.
 | Phase 260 P25 | 12min | 2 tasks | 2 files |
 | Phase 260 P19 | 25min | 2 tasks + final identity refresh | 8 files; 12 fresh contained real-language runs |
 | Phase 260 P20 | 13min | 2 tasks + provider-proof hardening | 3 files; 9 frozen dispositions and 35 focused tests |
+| Phase 260 P13 | 29min | 3 TDD tasks | 12 files; 4 inactive certificates and 12 provenance rows |
 
 ## Decisions
 
 - [Phase 260]: Candidate lane certification requires one complete explicit corpus-v3, trace-v4, Workshop-v1.19, and successor-tuple binding; current registries and implicit defaults are inadmissible. — Preactivation evidence cannot be manufactured by relabeling Phase-259 runs.
 - [Phase 260]: Any adapter source-byte change invalidates candidate lane evidence and requires all real runs to be repeated. — Tooling identity is executable evidence, not a documentation label.
 - [Phase 260]: Pre-v1.19 revision compatibility is never inferred from language or source tolerance; persisted provider proof must bind exact source and artifact identity, while mutable or unowned historical rows receive explicit non-counted dispositions. — D-04 preserves immutable history without grandfathering unproved revisions.
+- [Phase 260]: Observation-v1.19 certificates sign the exact reviewed candidate payload and import only as append-only candidate-0 evidence under distinct managed producer and operator identities. — Preactivation cannot consult or mutate a current Phase-259 selector, and public receipts expose no operational material.
 
 - [Phase 260]: Revision-specific v1.19 compatibility is earned only by six exact real provider probes covering every initiative combination and both Advance states; compile-only, additive-JSON, synthetic, partial, sibling, old, or current-registry claims are inadmissible. — D-04 cannot be satisfied by inference or evidence inheritance.
 - [Phase 260]: Reviewed candidate certificate identity must equal the immutable revision's language, provider, and lane, and malformed provider output becomes a generic evidence-mismatch system failure with no receipt. — A hash-shaped certificate or typed callback result alone is not trusted runtime evidence.
