@@ -192,7 +192,9 @@ const successorMatches = (): SuccessorMatchScoreInputV119[] => {
     topEntrantKey: condition.topEntrantKey,
     initialInitiativeEntrantKey: condition.initialInitiativeEntrantKey,
     terminalKind:
-      condition.ordinal === 3 ? ("player_violation" as const) : ("success" as const),
+      condition.ordinal === 3
+        ? ("player_violation" as const)
+        : ("success" as const),
     attemptNumber: 1,
     retryableSystemFailure: false,
     bottomRevisionEvidence: {
@@ -229,18 +231,29 @@ describe("runtime-v1.19 exact matrix scoring", () => {
       [...matches].reverse(),
       [matches[2]!, matches[0]!, matches[3]!, matches[1]!],
     ]) {
-      expect(JSON.stringify(scoreSuccessorMatchSetV119(scenario, permutation))).toBe(
-        JSON.stringify(expected),
-      )
+      expect(
+        JSON.stringify(scoreSuccessorMatchSetV119(scenario, permutation)),
+      ).toBe(JSON.stringify(expected))
     }
-    expect(expected).toMatchObject({ complete: true, counted: true, degraded: false })
-    expect(expected.rankings.find(({ strategyRevisionId }) => strategyRevisionId === "strategy-revision:b")?.penaltyPoints).toBe(-1)
+    expect(expected).toMatchObject({
+      complete: true,
+      counted: true,
+      degraded: false,
+    })
+    expect(
+      expected.rankings.find(
+        ({ strategyRevisionId }) =>
+          strategyRevisionId === "strategy-revision:b",
+      )?.penaltyPoints,
+    ).toBe(-1)
   })
 
   it("keeps omitted, retryable, exhausted, and invalid D-04 matrices non-counted", () => {
     const scenario = successorScenario()
     const matches = successorMatches()
-    expect(scoreSuccessorMatchSetV119(scenario, matches.slice(0, 3))).toMatchObject({
+    expect(
+      scoreSuccessorMatchSetV119(scenario, matches.slice(0, 3)),
+    ).toMatchObject({
       status: "pending",
       counted: false,
       rankings: [],
@@ -248,18 +261,34 @@ describe("runtime-v1.19 exact matrix scoring", () => {
     expect(
       scoreSuccessorMatchSetV119(scenario, [
         ...matches.slice(0, 3),
-        { ...matches[3]!, status: "failed_system", terminalKind: undefined, retryableSystemFailure: true },
+        {
+          ...matches[3]!,
+          status: "failed_system",
+          terminalKind: undefined,
+          retryableSystemFailure: true,
+        },
       ]),
     ).toMatchObject({ status: "pending", counted: false, rankings: [] })
     expect(
       scoreSuccessorMatchSetV119(scenario, [
         ...matches.slice(0, 3),
-        { ...matches[3]!, status: "failed_system", terminalKind: undefined, retryableSystemFailure: false },
+        {
+          ...matches[3]!,
+          status: "failed_system",
+          terminalKind: undefined,
+          retryableSystemFailure: false,
+        },
       ]),
     ).toMatchObject({ status: "degraded", counted: false, rankings: [] })
     expect(
       scoreSuccessorMatchSetV119(scenario, [
-        { ...matches[0]!, bottomRevisionEvidence: { ...matches[0]!.bottomRevisionEvidence, revoked: true } },
+        {
+          ...matches[0]!,
+          bottomRevisionEvidence: {
+            ...matches[0]!.bottomRevisionEvidence,
+            revoked: true,
+          },
+        },
         ...matches.slice(1),
       ]),
     ).toMatchObject({ status: "pending", counted: false, rankings: [] })
@@ -270,10 +299,23 @@ describe("runtime-v1.19 exact matrix scoring", () => {
     const matches = successorMatches()
     for (const counterfeit of [
       [matches[0]!, matches[0]!, matches[2]!, matches[3]!],
-      [{ ...matches[0]!, conditionId: `set-condition:sha256:${"f".repeat(64)}` }, ...matches.slice(1)],
-      matches.map((entry, index) => ({ ...entry, conditionOrdinal: index as 0 | 1 | 2 | 3, conditionId: `set-condition:sha256:${String(index).repeat(64)}` })),
+      [
+        {
+          ...matches[0]!,
+          conditionId: `set-condition:sha256:${"f".repeat(64)}` as const,
+        },
+        ...matches.slice(1),
+      ],
+      matches.map((entry, index) => ({
+        ...entry,
+        conditionOrdinal: index as 0 | 1 | 2 | 3,
+        conditionId:
+          `set-condition:sha256:${String(index).repeat(64)}` as `set-condition:sha256:${string}`,
+      })),
     ]) {
-      expect(() => scoreSuccessorMatchSetV119(scenario, counterfeit)).toThrow(/membership/iu)
+      expect(() => scoreSuccessorMatchSetV119(scenario, counterfeit)).toThrow(
+        /membership/iu,
+      )
     }
   })
 })
