@@ -321,7 +321,7 @@ Plans:
   4. Each counted scenario explicitly schedules every entrant on each side and in each initial-initiative state, proved at entrant level through TypeScript, Go, persistence, and service-backed tests.
   5. Arena and Set repair adds no official geometry or valid v1.4 gameplay change; any change to Strategy observation or reachable Match semantics stops for explicit compatibility approval.
 
-**Plans:** 18/26 plans executed
+**Plans:** 21/26 plans executed
 
 **Wave 1 — immutable semantic authorities**
 
@@ -370,7 +370,7 @@ Plans:
 **Wave 9 *(blocked on Wave 8 completion)* — certificates and revision inventory proof**
 
 - [ ] 260-13-PLAN.md — Verify, sign, and import four inactive successor certificates.
-- [ ] 260-20-PLAN.md — Execute D-04 revalidation over the frozen Strategy Revision inventory.
+- [x] 260-20-PLAN.md — Execute D-04 revalidation over the frozen Strategy Revision inventory.
 
 **Wave 10 *(blocked on Wave 9 completion)* — complete preactivation proof**
 
@@ -428,5 +428,5 @@ Cycle-cap, inward-start, facing-only MOVE, reversal-history, attacker-facing/Adv
 | 257. Canonical Transition Kernel and v1.4 Semantic Integrity | 22/22 | Complete | 2026-07-13 |
 | 258. Canonical JSON, Failure Semantics, and Artifact Identity | 14/14 | Complete | 2026-07-16 |
 | 259. Executable Four-Language and Chronicle Conformance | 22/31 | In progress | - |
-| 260. Truthful Strategy Inputs, Arena Authority, and Set Fairness | 20/26 | In Progress|  |
+| 260. Truthful Strategy Inputs, Arena Authority, and Set Fairness | 21/26 | In Progress|  |
 | 261. Integrated Service Proof, Drift Guards, and Release | 0/TBD | Not started | - |
