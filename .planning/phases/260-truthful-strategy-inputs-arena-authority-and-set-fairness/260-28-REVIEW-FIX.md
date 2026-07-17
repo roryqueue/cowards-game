@@ -21,3 +21,10 @@ original abort.
 - Persistence typecheck passed.
 - Changed-file ESLint and Prettier checks passed.
 - Diff check and protected working-tree baseline passed.
+
+## Follow-up Lint Closure
+
+The full repository gate later reached the previously documented
+`consistent-type-imports` finding in `matchset-status.ts`. The arena catalog
+version symbol is now imported as a type, matching its only use and changing no
+runtime behavior.

@@ -1,4 +1,5 @@
 import type {
+  ARENA_CATALOG_VERSION_V1_37,
   JsonValue,
   MatchId,
   MatchSetId,
@@ -7,7 +8,6 @@ import type {
 } from "@cowards/spec"
 import {
   CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE_ID,
-  ARENA_CATALOG_VERSION_V1_37,
   createSetScenarioV137,
 } from "@cowards/spec"
 import type { Pool } from "pg"
