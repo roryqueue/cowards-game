@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 	"sort"
 	"strings"
 	"testing"
@@ -26,6 +27,107 @@ func TestGoMatchCompletionFields(t *testing.T) {
 	}
 	if fields.WinnerPlayerID == nil || *fields.WinnerPlayerID != "player:bottom:complete:001" {
 		t.Fatalf("unexpected winner: %+v", fields.WinnerPlayerID)
+	}
+}
+
+func candidateConditionIdentityV119ForTest() successorConditionIdentityV119 {
+	return successorConditionIdentityV119{
+		SemanticAuthorityKey:      "runtime-v1.19",
+		MatchSetID:                "match-set:successor",
+		MatchID:                   "match:successor",
+		ScenarioID:                "set-scenario:sha256:" + strings.Repeat("1", 64),
+		ConditionID:               "set-condition:sha256:" + strings.Repeat("2", 64),
+		ConditionOrdinal:          0,
+		RequestIdentity:           "set-request:sha256:" + strings.Repeat("3", 64),
+		SignedRequestSHA256:       "sha256:" + strings.Repeat("4", 64),
+		Seed:                      "seed:successor",
+		ArenaID:                   "arena:smoke:v1",
+		ArenaCatalogVersion:       "canonical-arena-catalog-v1.37",
+		ArenaSemanticGeometryHash: "sha256:" + strings.Repeat("5", 64),
+		SemanticTupleID:           "sha256:37c9a07425d454c74859112debcc3ef362d43e80d5767560d9bde28a3c8d5e73",
+		Bottom: successorRevisionRevalidationIdentityV119{
+			EntrantKey: "entrant:a", PlayerID: "player:a", StrategyRevisionID: "revision:a",
+			RevalidationID: "revalidation:a", RevalidationRoot: "sha256:" + strings.Repeat("7", 64),
+		},
+		Top: successorRevisionRevalidationIdentityV119{
+			EntrantKey: "entrant:b", PlayerID: "player:b", StrategyRevisionID: "revision:b",
+			RevalidationID: "revalidation:b", RevalidationRoot: "sha256:" + strings.Repeat("8", 64),
+		},
+		InitialInitiativeEntrantKey: "entrant:a",
+		InitialInitiativePlayerID:   "player:a",
+	}
+}
+
+func TestCandidateConditionIdentityCompletionV119(t *testing.T) {
+	scheduled := candidateConditionIdentityV119ForTest()
+	for _, terminalKind := range []string{"success", "player_violation"} {
+		terminal := successorConditionTerminalEvidenceV119{successorConditionIdentityV119: scheduled, TerminalKind: terminalKind}
+		admitted, err := admitSuccessorConditionTerminalV119(scheduled, terminal)
+		if err != nil || admitted.TerminalKind != terminalKind || !reflect.DeepEqual(admitted.Identity, scheduled) {
+			t.Fatalf("exact %s terminal was rejected: admitted=%+v err=%v", terminalKind, admitted, err)
+		}
+	}
+
+	mutations := map[string]func(*successorConditionIdentityV119){
+		"condition": func(value *successorConditionIdentityV119) {
+			value.ConditionID = "set-condition:sha256:" + strings.Repeat("9", 64)
+		},
+		"request identity": func(value *successorConditionIdentityV119) {
+			value.RequestIdentity = "set-request:sha256:" + strings.Repeat("a", 64)
+		},
+		"signed request": func(value *successorConditionIdentityV119) {
+			value.SignedRequestSHA256 = "sha256:" + strings.Repeat("b", 64)
+		},
+		"seed": func(value *successorConditionIdentityV119) { value.Seed = "seed:changed" },
+		"arena": func(value *successorConditionIdentityV119) {
+			value.ArenaSemanticGeometryHash = "sha256:" + strings.Repeat("c", 64)
+		},
+		"side": func(value *successorConditionIdentityV119) { value.Bottom, value.Top = value.Top, value.Bottom },
+		"initiative": func(value *successorConditionIdentityV119) {
+			value.InitialInitiativeEntrantKey, value.InitialInitiativePlayerID = value.Top.EntrantKey, value.Top.PlayerID
+		},
+		"tuple": func(value *successorConditionIdentityV119) {
+			value.SemanticTupleID = "sha256:" + strings.Repeat("d", 64)
+		},
+		"revision":        func(value *successorConditionIdentityV119) { value.Bottom.StrategyRevisionID = "revision:substituted" },
+		"revalidation id": func(value *successorConditionIdentityV119) { value.Bottom.RevalidationID = "revalidation:substituted" },
+		"revalidation root": func(value *successorConditionIdentityV119) {
+			value.Bottom.RevalidationRoot = "sha256:" + strings.Repeat("e", 64)
+		},
+	}
+	for name, mutate := range mutations {
+		t.Run(name, func(t *testing.T) {
+			changed := scheduled
+			mutate(&changed)
+			terminal := successorConditionTerminalEvidenceV119{successorConditionIdentityV119: changed, TerminalKind: "success"}
+			if _, err := admitSuccessorConditionTerminalV119(scheduled, terminal); err == nil {
+				t.Fatal("changed frozen condition identity was admitted")
+			}
+		})
+	}
+
+	for _, terminalKind := range []string{"", "system_failure", "cancelled"} {
+		terminal := successorConditionTerminalEvidenceV119{successorConditionIdentityV119: scheduled, TerminalKind: terminalKind}
+		if _, err := admitSuccessorConditionTerminalV119(scheduled, terminal); err == nil {
+			t.Fatalf("nonterminal class %q was admitted", terminalKind)
+		}
+	}
+}
+
+func TestCandidateCompletionV119PreservesPhase259SelectorAndSemanticBoundary(t *testing.T) {
+	current := currentSemanticAuthorityGenerated()
+	if current.SemanticAuthorityKey != "runtime-v1.17" || current.RuntimeABI != "strategy-runtime-abi-v1.17" || current.SetPolicy != "canonical-set-policy-v1.4" {
+		t.Fatalf("candidate completion changed the Phase-259 selector: %+v", current)
+	}
+	source, err := os.ReadFile("completion.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+	body := goFunctionSource(t, string(source), "admitSuccessorConditionTerminalV119")
+	for _, forbidden := range []string{"Chronicle", "event", "snapshot", "transition", "gameState", "Strategy"} {
+		if strings.Contains(body, forbidden) {
+			t.Fatalf("candidate completion acquired semantic authority through %q", forbidden)
+		}
 	}
 }
 

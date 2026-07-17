@@ -1,6 +1,9 @@
 package main
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestClassifyMatchFailure(t *testing.T) {
 	tests := []struct {
@@ -86,5 +89,35 @@ func TestMatchExecutionMetadataForFailureCategory(t *testing.T) {
 	metadata = matchExecutionMetadataForFailureCategory(matchFailureCategoryRuntimeUnavailable, true)
 	if metadata["state"] != "unavailable" || metadata["retryDisposition"] != "retryable" {
 		t.Fatalf("unexpected unavailable metadata: %+v", metadata)
+	}
+}
+
+func TestCandidateConditionRetryPolicyV119(t *testing.T) {
+	identity := candidateConditionIdentityV119ForTest()
+	decision, err := evaluateSuccessorSystemFailureRetryV119(identity, identity, true, 1, 3, false)
+	if err != nil || decision.Disposition != "retry" || decision.NextAttemptNumber != 2 || decision.Identity != identity {
+		t.Fatalf("exact retry was rejected: decision=%+v err=%v", decision, err)
+	}
+	decision, err = evaluateSuccessorSystemFailureRetryV119(identity, identity, true, 3, 3, false)
+	if err != nil || decision.Disposition != "degraded" || decision.NextAttemptNumber != 0 {
+		t.Fatalf("bounded exhaustion was not degraded: decision=%+v err=%v", decision, err)
+	}
+	decision, err = evaluateSuccessorSystemFailureRetryV119(identity, identity, false, 1, 3, false)
+	if err != nil || decision.Disposition != "degraded" {
+		t.Fatalf("non-retryable system failure was not degraded: decision=%+v err=%v", decision, err)
+	}
+
+	changed := identity
+	changed.SignedRequestSHA256 = "sha256:" + strings.Repeat("f", 64)
+	if _, err := evaluateSuccessorSystemFailureRetryV119(identity, changed, true, 1, 3, false); err == nil {
+		t.Fatal("changed request bytes received retry authority")
+	}
+	if _, err := evaluateSuccessorSystemFailureRetryV119(identity, identity, true, 1, 3, true); err == nil {
+		t.Fatal("player violation received system retry authority")
+	}
+	for _, attempts := range [][2]int{{0, 3}, {1, 0}, {4, 3}} {
+		if _, err := evaluateSuccessorSystemFailureRetryV119(identity, identity, true, attempts[0], attempts[1], false); err == nil {
+			t.Fatalf("invalid attempt bounds %v were accepted", attempts)
+		}
 	}
 }
