@@ -337,13 +337,22 @@ export const freezePreV119StrategyRevisionInventory = (
       const authority = supportedLanguage(languageId)
         ? authorityByLanguage[languageId]
         : undefined
+      const metadata = record(databaseRow.metadata)
+      const providerValidation = record(metadata?.providerValidation)
+      const persistedProviderId =
+        typeof providerValidation?.providerId === "string"
+          ? providerValidation.providerId
+          : null
+      const providerIdentityValid =
+        authority !== undefined && persistedProviderId === authority.providerId
       const artifact = artifactFor(databaseRow, languageId)
       const sourceBytes = Buffer.from(databaseRow.source, "utf8")
       const identityValid =
         SOURCE_HASH.test(databaseRow.source_hash) &&
         databaseRow.source_hash === sha256(sourceBytes).slice(7) &&
         databaseRow.source_bytes === sourceBytes.byteLength &&
-        artifact !== null
+        artifact !== null &&
+        providerIdentityValid
       return {
         strategyRevisionId: databaseRow.id,
         createdAt: iso(databaseRow.created_at),
@@ -352,8 +361,8 @@ export const freezePreV119StrategyRevisionInventory = (
         immutable: databaseRow.locked_at !== null,
         priorRuntimeAbiVersion,
         languageId,
-        providerId: authority?.providerId ?? null,
-        laneId: authority?.laneId ?? null,
+        providerId: providerIdentityValid ? authority.providerId : null,
+        laneId: providerIdentityValid ? authority.laneId : null,
         sourceHash: databaseRow.source_hash,
         sourceBytes: databaseRow.source_bytes,
         artifactSha256: artifact?.sha256 ?? null,

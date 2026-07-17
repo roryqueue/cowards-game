@@ -46,6 +46,9 @@ const row = (
       language: { id: "typescript", version: "0.1.0" },
     },
     metadata: {
+      providerValidation: {
+        providerId: "strategy-language-provider-js-ts",
+      },
       sourceArtifact: {
         hash: createHash("sha256").update(artifactBytes).digest("hex"),
         bytes: artifactBytes.byteLength,
@@ -95,6 +98,12 @@ describe("frozen pre-v1.19 Strategy Revision inventory", () => {
           abiVersion: "strategy-runtime-abi-v1.17",
           language: { id: "python", version: "3.13" },
         },
+        metadata: {
+          ...row("revision:a").metadata,
+          providerValidation: {
+            providerId: "strategy-language-provider-python",
+          },
+        },
       },
     ]
     for (const mutation of mutations) {
@@ -135,6 +144,12 @@ describe("revision-specific candidate execution and disposition", () => {
         runtime: {
           abiVersion: "strategy-runtime-abi-v1.17",
           language: { id: "python", version: "3.13" },
+        },
+        metadata: {
+          ...row("revision:unsupported").metadata,
+          providerValidation: {
+            providerId: "strategy-language-provider-python",
+          },
         },
       },
     ]
