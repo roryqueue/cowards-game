@@ -396,7 +396,7 @@ Plans:
 
 **Wave 15 *(blocked on Wave 14 completion)* — corrected proof inventory**
 
-- [ ] 260-31-PLAN.md — Rebuild pre/postactivation evaluators around five selector files and one database head.
+- [x] 260-31-PLAN.md — Rebuild pre/postactivation evaluators around five selector files and one database head.
 
 **Wave 16 *(blocked on Wave 15 completion)* — isolated seam audit and refreshed readiness**
 

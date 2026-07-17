@@ -5,15 +5,15 @@ milestone_name: Rules Integrity and Strategy Evaluation Foundations — ACTIVE
 current_phase: 260
 current_phase_name: truthful-strategy-inputs-arena-authority-and-set-fairness
 status: executing
-stopped_at: Wave-14 consumer delegation complete; execute Plan 260-31 next
-last_updated: "2026-07-17T11:23:20.000Z"
+stopped_at: Wave-15 crash-safe activation coordinator complete; execute Plan 260-33 next
+last_updated: "2026-07-17T12:05:00.000Z"
 last_activity: 2026-07-17
-last_activity_desc: Completed runtime, Workshop, Go, and TypeScript scheduling delegation
+last_activity_desc: Completed crash-safe activation coordinator and corrected postactivation proof
 progress:
   total_phases: 6
   completed_phases: 4
   total_plans: 119
-  completed_plans: 115
+  completed_plans: 116
   percent: 97
 ---
 
@@ -29,11 +29,11 @@ See: `.planning/PROJECT.md` (updated 2026-07-12)
 ## Current Position
 
 Phase: 260 (truthful-strategy-inputs-arena-authority-and-set-fairness) — EXECUTING
-Plan: 31 of 33
-Status: Wave-14 complete; production activation coordinator is next
-Last activity: 2026-07-17 — Runtime, Workshop, Go, competition, ladder, Match, MatchSet, and job defaults delegate to exact file/head authority
+Plan: 33 of 33
+Status: Wave-15 complete; isolated seam audit and refreshed readiness are next
+Last activity: 2026-07-17 — Production activation, recovery, compensation, and external postactivation proof are implemented and rehearsed
 
-Progress: [█████████░] 88%
+Progress: [█████████░] 91%
 
 ## Durable Decisions
 
@@ -66,6 +66,8 @@ Progress: [█████████░] 88%
 - One serializable singleton database head stores the complete semantic selection and at most one durable exact pending intent; short revision-CAS transitions and append-only history own activation and compensation while current remains v1.17.
 - Runtime-service remains database-free and validates a compact frozen request projection against file current; Workshop static output follows file current and persisted Workshop work requires exact active database authority.
 - Go and TypeScript scheduling validate the exact database head at creation, freeze complete authority into MatchSet/Match/job work, and never let execution reread or derive current authority.
+- One advisory-locked coordinator owns prepare through smoke, recovery, abort, and compensation; exact six-path restoration includes the Git index and reverse commit bytes.
+- The activation proof contains exactly five selector digests and no self-reference; final commit, tree, proof digest, smoke, and compensation bindings are validated externally against the database head.
 
 ## Deferred Items
 
@@ -82,9 +84,9 @@ Progress: [█████████░] 88%
 
 **Resume file:** None
 
-Last session: 2026-07-17T11:23:20.000Z
-Stopped at: Wave-14 Plans 260-29, 260-30, and 260-32 completed; development database remains exact v1.17 bootstrap with no pending intent.
-Next command: Execute Plan 260-31 production activation coordinator and recovery matrix.
+Last session: 2026-07-17T12:05:00.000Z
+Stopped at: Wave-15 Plan 260-31 completed; development database remains exact v1.17 bootstrap with no pending intent.
+Next command: Execute Plan 260-33 isolated seam audit and refreshed preactivation readiness.
 
 ## Performance Metrics
 
