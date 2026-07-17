@@ -115,7 +115,7 @@ describe("runtime conformance certificate v1.19", () => {
     [
       "Phase-259 corpus",
       (payload: RuntimeConformanceCertificateV119["candidatePayload"]) => {
-        payload.candidateBindings.corpus.version = "v2"
+        payload.candidateBindings.corpus.version = "v2" as never
       },
       "CANDIDATE_AUTHORITY_MISMATCH",
     ],
@@ -123,7 +123,7 @@ describe("runtime conformance certificate v1.19", () => {
       "trace pin substitution",
       (payload: RuntimeConformanceCertificateV119["candidatePayload"]) => {
         payload.candidateBindings.trace.pinFileSha256 =
-          `sha256:${"0".repeat(64)}`
+          `sha256:${"0".repeat(64)}` as never
       },
       "CANDIDATE_AUTHORITY_MISMATCH",
     ],
@@ -131,7 +131,7 @@ describe("runtime conformance certificate v1.19", () => {
       "Workshop pin substitution",
       (payload: RuntimeConformanceCertificateV119["candidatePayload"]) => {
         payload.candidateBindings.workshop.pinFileSha256 =
-          `sha256:${"0".repeat(64)}`
+          `sha256:${"0".repeat(64)}` as never
       },
       "CANDIDATE_AUTHORITY_MISMATCH",
     ],
@@ -166,8 +166,7 @@ describe("runtime conformance certificate v1.19", () => {
     [
       "mixed toolchain identity",
       (payload: RuntimeConformanceCertificateV119["candidatePayload"]) => {
-        payload.runs[1]!.identity.toolchainSha256 =
-          `sha256:${"0".repeat(64)}`
+        payload.runs[1]!.identity.toolchainSha256 = `sha256:${"0".repeat(64)}`
       },
       "RUN_IDENTITY_MISMATCH",
     ],
