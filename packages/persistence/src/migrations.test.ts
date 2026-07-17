@@ -67,7 +67,38 @@ describe("migrations", () => {
     expect(names).toContain("0025_runtime_semantic_receipts_v1_18.sql")
     expect(names).toContain("0026_arena_catalog_and_set_conditions.sql")
     expect(names).toContain("0027_inactive_runtime_conformance_v1_19.sql")
+    expect(names).toContain("0028_semantic_authority_selection_head.sql")
     expect(names).toEqual([...names].sort())
+  })
+
+  it("defines one closed five-state semantic authority head and frozen work roots", async () => {
+    const sql = await readFile(
+      new URL("0028_semantic_authority_selection_head.sql", migrationsDirectory),
+      "utf8",
+    )
+
+    for (const required of [
+      "semantic_authority_selection_head",
+      "semantic_authority_selection_history",
+      "active-v1.17-bootstrap",
+      "pending-precommit",
+      "active-v1.19-finalized",
+      "pending-compensation",
+      "active-v1.17-compensated",
+      "runtime-v1.17",
+      "runtime-v1.19",
+      "selectorManifest",
+      "recoveryReceiptDigest",
+      "semantic_authority_selection",
+      "semantic_authority_selection_root",
+      "reject_integrity_authority_mutation",
+    ]) {
+      expect(sql).toContain(required)
+    }
+    expect(sql).toContain("num_nonnulls")
+    expect(sql).toContain("jsonb_object_length")
+    expect(sql).toContain("for each row execute function prevent_semantic_authority_head_partial_update")
+    expect(sql).not.toMatch(/update\s+(match_sets|matches|match_jobs)/iu)
   })
 
   it("extends the existing conformance ledger for inactive v1.19 evidence only", async () => {
@@ -969,6 +1000,96 @@ describeDatabase("arena catalog and Set condition migration", () => {
         "select 1 from set_scenarios where base_seed = 'seed:rollback'",
       )
       expect(rolledBack.rowCount).toBe(0)
+    } finally {
+      await pool.end()
+      await admin.query(`drop schema if exists ${schema} cascade`)
+      await admin.end()
+    }
+  })
+})
+
+describeDatabase("semantic authority selection-head migration", () => {
+  it("upgrades a current database with one exact Phase-259 head and preserves historical work", async () => {
+    const schema = `phase260_0028_${randomUUID().replaceAll("-", "")}`
+    const admin = new Pool({ connectionString: databaseUrl!, max: 1 })
+    await admin.query(`create schema ${schema}`)
+    const pool = new Pool({
+      connectionString: databaseUrl!,
+      max: 1,
+      options: `-c search_path=${schema}`,
+    })
+    try {
+      await pool.query(`
+        create table schema_migrations (
+          filename text primary key,
+          applied_at timestamptz not null default now()
+        )
+      `)
+      for (const file of await readMigrationFiles()) {
+        if (file.name === "0028_semantic_authority_selection_head.sql") continue
+        await pool.query(file.sql)
+        await pool.query(
+          "insert into schema_migrations (filename) values ($1)",
+          [file.name],
+        )
+      }
+
+      await pool.query(
+        "insert into match_sets (id, matrix) values ('set:historical:0028', '[]'::jsonb)",
+      )
+      const result = await migrate(pool)
+      expect(result.applied).toEqual([
+        "0028_semantic_authority_selection_head.sql",
+      ])
+
+      const head = await pool.query<{
+        state: string
+        revision: string
+        active_selection: Record<string, unknown>
+        active_selection_root: string
+        pending_intent: unknown
+        finalization: unknown
+        compensation: unknown
+      }>(
+        `select state, revision, active_selection, active_selection_root,
+                pending_intent, finalization, compensation
+           from semantic_authority_selection_head where singleton = true`,
+      )
+      expect(head.rowCount).toBe(1)
+      expect(head.rows[0]).toMatchObject({
+        state: "active-v1.17-bootstrap",
+        revision: "0",
+        active_selection: { semanticAuthorityKey: "runtime-v1.17" },
+        active_selection_root: expect.stringMatching(/^sha256:[0-9a-f]{64}$/u),
+        pending_intent: null,
+        finalization: null,
+        compensation: null,
+      })
+
+      const historical = await pool.query<{
+        semantic_authority_selection: unknown
+        semantic_authority_selection_root: string | null
+      }>(
+        `select semantic_authority_selection, semantic_authority_selection_root
+           from match_sets where id = 'set:historical:0028'`,
+      )
+      expect(historical.rows[0]).toEqual({
+        semantic_authority_selection: null,
+        semantic_authority_selection_root: null,
+      })
+
+      await expect(
+        pool.query(
+          `update semantic_authority_selection_head
+              set active_selection = jsonb_set(
+                active_selection, '{runtimeAbiVersion}', '"strategy-runtime-abi-v1.19"'
+              )
+            where singleton = true`,
+        ),
+      ).rejects.toThrow(/transition|shape|partial|constraint/iu)
+      await expect(
+        pool.query("delete from semantic_authority_selection_history"),
+      ).rejects.toThrow(/append-only/iu)
     } finally {
       await pool.end()
       await admin.query(`drop schema if exists ${schema} cascade`)
