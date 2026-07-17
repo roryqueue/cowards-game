@@ -56,6 +56,111 @@ func TestCreateExhibitionMatchSetBeginsBeforeIntegritySnapshot(t *testing.T) {
 	}
 }
 
+func TestCandidateIntegrityCreationV119RequiresExactRevisionAdmissions(t *testing.T) {
+	tuple := registeredCompatibilityTuple{
+		TupleID: "sha256:37c9a07425d454c74859112debcc3ef362d43e80d5767560d9bde28a3c8d5e73",
+		Tuple: canonicalCompatibilityTuple{
+			Rules: "canonical-rules-v1.37", Engine: "canonical-engine-v1.37",
+			RuntimeABI: "strategy-runtime-abi-v1.19", Chronicle: "canonical-chronicle-v1.37",
+			ArenaCatalog: "canonical-arena-catalog-v1.37", SetPolicy: "canonical-set-policy-v1.37-four-condition-v1",
+		},
+	}
+	entrants := make([]goEntrantExecutionEvidence, 0, 2)
+	admissions := map[string]candidateRevisionAdmissionV119{}
+	for index, key := range []string{"entrant:a", "entrant:b"} {
+		hash := fmt.Sprintf("%064x", index+1)
+		certificateHash := fmt.Sprintf("%064x", index+11)
+		revisionID := "revision:" + key
+		lane := goExecutableLaneIdentity{
+			ProviderID: "provider:real", LanguageID: []string{"typescript", "python"}[index],
+			AdapterID: "lane:real", ArtifactSHA256: hash, SemanticTupleID: tuple.TupleID, SemanticTuple: tuple.Tuple,
+		}
+		certificate := goExecutionCertificateReference{
+			Kind: "conformance", CertificateID: "certificate:" + key,
+			CertificateVersion: "v1", CertificateRecordHash: certificateHash, RegistryGeneration: "1",
+		}
+		entrants = append(entrants, goEntrantExecutionEvidence{
+			EntrantKey: key, StrategyRevisionID: revisionID, LaneIdentity: lane,
+			ContainmentCertificateRef: certificate, ConformanceCertificateRef: &certificate,
+		})
+		admissions[key] = candidateRevisionAdmissionV119{
+			RevalidationID: "revalidation:" + key, StrategyRevisionID: revisionID,
+			SourceHash: hash, SourceBytes: 10, ArtifactSHA256: "sha256:" + hash, ArtifactBytes: 10,
+			LanguageID: lane.LanguageID, ProviderID: lane.ProviderID, LaneID: lane.AdapterID,
+			RuntimeABIVersion: "strategy-runtime-abi-v1.19", SemanticRuntimeVersion: "runtime-v1.19",
+			SemanticTupleID: tuple.TupleID, ExecutionKind: "real_service_execution", SyntheticEvidence: false,
+			ExecutionRequestRoot: "sha256:" + strings.Repeat("a", 64), ExecutionResultRoot: "sha256:" + strings.Repeat("b", 64),
+			ExecutionReceiptRoot: "sha256:" + strings.Repeat("c", 64), ServiceReceiptVersion: "runtime-semantic-receipt-v1.19",
+			ReviewedCertificateID: certificate.CertificateID, ReviewedCertificateSHA256: "sha256:" + certificateHash,
+			ReviewStatus: "reviewed", EvidenceStatus: "passed",
+		}
+	}
+	identity := &goMatchSetIntegrityIdentity{Tuple: tuple, Entrants: entrants, ByKey: map[string]goEntrantExecutionEvidence{
+		"entrant:a": entrants[0], "entrant:b": entrants[1],
+	}}
+	if _, err := validateCandidateRevisionAdmissionsV119(identity, admissions); err != nil {
+		t.Fatalf("exact revision admissions were rejected: %v", err)
+	}
+
+	mutations := map[string]func(map[string]candidateRevisionAdmissionV119){
+		"missing": func(values map[string]candidateRevisionAdmissionV119) { delete(values, "entrant:b") },
+		"cross-revision": func(values map[string]candidateRevisionAdmissionV119) {
+			value := values["entrant:b"]
+			value.StrategyRevisionID = "revision:entrant:a"
+			values["entrant:b"] = value
+		},
+		"old-tuple": func(values map[string]candidateRevisionAdmissionV119) {
+			value := values["entrant:b"]
+			value.SemanticTupleID = "sha256:" + strings.Repeat("d", 64)
+			values["entrant:b"] = value
+		},
+		"synthetic": func(values map[string]candidateRevisionAdmissionV119) {
+			value := values["entrant:b"]
+			value.SyntheticEvidence = true
+			values["entrant:b"] = value
+		},
+		"artifact-substitution": func(values map[string]candidateRevisionAdmissionV119) {
+			value := values["entrant:b"]
+			value.ArtifactSHA256 = "sha256:" + strings.Repeat("e", 64)
+			values["entrant:b"] = value
+		},
+		"certificate-substitution": func(values map[string]candidateRevisionAdmissionV119) {
+			value := values["entrant:b"]
+			value.ReviewedCertificateID = "certificate:other"
+			values["entrant:b"] = value
+		},
+	}
+	for name, mutate := range mutations {
+		t.Run(name, func(t *testing.T) {
+			candidate := map[string]candidateRevisionAdmissionV119{}
+			for key, value := range admissions {
+				candidate[key] = value
+			}
+			mutate(candidate)
+			if _, err := validateCandidateRevisionAdmissionsV119(identity, candidate); err == nil {
+				t.Fatal("inexact candidate admission was accepted")
+			}
+		})
+	}
+}
+
+func TestCandidateIntegrityCreationV119OwnsOneAtomicFourConditionTransaction(t *testing.T) {
+	source, err := os.ReadFile("live_backend.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := string(source)
+	for _, required := range []string{
+		"BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.Serializable})",
+		"insert into set_scenarios", "insert into set_conditions", "insert into matches",
+		"insert into match_jobs", "insert into match_set_matches", "tx.Commit(ctx)",
+	} {
+		if !strings.Contains(text, required) {
+			t.Fatalf("candidate transaction is missing %q", required)
+		}
+	}
+}
+
 func TestCreateExhibitionMatchSetIntegrityPurposeFloors(t *testing.T) {
 	tests := []struct {
 		name    string
