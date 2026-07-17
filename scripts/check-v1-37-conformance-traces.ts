@@ -7,10 +7,13 @@ import {
   closeSync,
   constants,
   lstatSync,
+  mkdtempSync,
   openSync,
   readFileSync,
   readdirSync,
+  rmSync,
 } from "node:fs"
+import { tmpdir } from "node:os"
 import path from "node:path"
 import { pathToFileURL } from "node:url"
 // eslint-disable-next-line no-restricted-imports -- checker binds the exact immutable compatibility corpus identity.
@@ -36,6 +39,7 @@ import {
   V137_CONFORMANCE_TRACE_BASELINE_VERSION,
   V137_CONFORMANCE_TRACE_PROTECTED_CATEGORIES,
   computeV137ConformanceTraceCandidateRoot,
+  generateV137ObservationTraceV4Candidate,
   lockedV137CompatibilityCategoryRoots,
   type V137ConformanceTraceCandidateManifest,
   type V137ConformanceTraceSemanticDiff,
@@ -414,8 +418,64 @@ export const assertV137ActiveConformanceTraceCheckArgs = (
   return { checkActive: true, requireIndependentReview: true }
 }
 
+export const checkV137ObservationTraceV4Candidate = ({
+  repoRoot,
+}: {
+  readonly repoRoot: string
+}): string[] => {
+  const candidateDirectory = path.join(
+    repoRoot,
+    "packages/golden/src/fixtures/v1-37-conformance-traces/v1.37-observation-trace-v4",
+  )
+  const temporaryRoot = mkdtempSync(
+    path.join(tmpdir(), "cowards-v137-observation-trace-check-"),
+  )
+  try {
+    const regeneratedDirectory = path.join(temporaryRoot, "candidate")
+    generateV137ObservationTraceV4Candidate({
+      candidateDirectory: regeneratedDirectory,
+    })
+    const required = [
+      "manifest.json",
+      "traces.bundle.json",
+      "semantic-diff.json",
+      "compatibility-disposition.json",
+    ] as const
+    const errors: string[] = []
+    for (const name of required) {
+      const committed = readRegularFileNoFollow(
+        path.join(candidateDirectory, name),
+      )
+      const regenerated = readRegularFileNoFollow(
+        path.join(regeneratedDirectory, name),
+      )
+      if (
+        committed === undefined ||
+        regenerated === undefined ||
+        !committed.equals(regenerated)
+      ) {
+        errors.push(`observation trace candidate ${name} is stale or invalid`)
+      }
+    }
+    return errors
+  } finally {
+    rmSync(temporaryRoot, { recursive: true, force: true })
+  }
+}
+
 const main = async (): Promise<void> => {
   const rawArgs = process.argv.slice(2)
+  if (
+    rawArgs.length === 1 &&
+    rawArgs[0] === "--candidate=v1.37-observation-trace-v4"
+  ) {
+    const errors = checkV137ObservationTraceV4Candidate({
+      repoRoot: path.resolve(import.meta.dirname, ".."),
+    })
+    if (errors.length > 0) throw new Error(errors.join("\n"))
+    console.log("v1.37 observation trace v4 candidate exact and inactive")
+    return
+  }
   if (rawArgs[0] === "--check-active") {
     assertV137ActiveConformanceTraceCheckArgs(rawArgs)
     const { checkActiveV137ConformanceTrace } =

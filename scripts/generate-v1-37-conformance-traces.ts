@@ -213,6 +213,12 @@ export interface V137ObservationTraceV4Manifest {
   readonly bundlePath: "traces.bundle.json"
   readonly bundleFileSha256: string
   readonly bundleRootSha256: string
+  readonly semanticDiffPath: "semantic-diff.json"
+  readonly semanticDiffFileSha256: string
+  readonly semanticDiffRootSha256: string
+  readonly compatibilityDispositionPath: "compatibility-disposition.json"
+  readonly compatibilityDispositionFileSha256: string
+  readonly compatibilityDispositionRootSha256: string
   readonly caseCount: number
   readonly cases: readonly {
     readonly ordinal: number
@@ -227,6 +233,8 @@ export interface GenerateV137ObservationTraceV4CandidateResult {
   readonly candidateDirectory: string
   readonly manifestPath: string
   readonly bundlePath: string
+  readonly semanticDiffPath: string
+  readonly compatibilityDispositionPath: string
   readonly candidateRootSha256: string
   readonly bundleRootSha256: string
 }
@@ -1377,6 +1385,212 @@ const observationCandidateRoot = (
     manifest as unknown as JsonValue,
   )
 
+const exactJsonDomainHash = (domain: string, value: unknown): string =>
+  sha256(`${domain}\0${renderJson(JSON.parse(JSON.stringify(value)))}`)
+
+const readActiveV137TraceManifest =
+  (): V137ConformanceTraceCandidateManifest => {
+    let registry: { activeVersion?: unknown; activePath?: unknown }
+    try {
+      registry = JSON.parse(
+        readFileSync(
+          path.join(ACTIVE_V137_CONFORMANCE_TRACE_ROOT, "registry.json"),
+          "utf8",
+        ),
+      ) as { activeVersion?: unknown; activePath?: unknown }
+    } catch {
+      return fail("ACTIVE_TRACE_REGISTRY_INVALID")
+    }
+    if (
+      registry.activeVersion !== "v1.37-conformance-trace-v3" ||
+      registry.activePath !==
+        "packages/golden/src/fixtures/v1-37-conformance-traces/v1.37-conformance-trace-v3"
+    ) {
+      return fail("ACTIVE_TRACE_REGISTRY_CHANGED")
+    }
+    const manifest = JSON.parse(
+      readFileSync(
+        path.join(repoRoot, registry.activePath, "manifest.json"),
+        "utf8",
+      ),
+    ) as V137ConformanceTraceCandidateManifest
+    if (
+      manifest.candidateVersion !== registry.activeVersion ||
+      manifest.caseCount !== manifest.cases.length ||
+      computeV137ConformanceTraceCandidateRoot(manifest) !==
+        manifest.candidateRootSha256
+    ) {
+      return fail("ACTIVE_TRACE_MANIFEST_INVALID")
+    }
+    return manifest
+  }
+
+const protectedObservationSurfaceRoots = (): Readonly<
+  Record<
+    | "gameplayState"
+    | "actionLegality"
+    | "eventOrder"
+    | "cleanup"
+    | "terminalTimingReason"
+    | "outcome"
+    | "backstab"
+    | "arenaGeometry"
+    | "historicalInterpretation"
+    | "failureOwnership",
+    string
+  >
+> => {
+  const locked = lockedV137CompatibilityCategoryRoots()
+  const captured = captureV137CompatibilityCategoryRoots()
+  for (const category of V137_CONFORMANCE_TRACE_PROTECTED_CATEGORIES) {
+    if (locked[category] !== captured[category]) {
+      return fail(`UNAPPROVED_COMPATIBILITY_DRIFT_${category}`)
+    }
+  }
+  const lifecycleMaterial = {
+    gameplayState: locked.validV14State,
+    actionLegality: locked.actionLegality,
+    eventOrder: locked.eventOrder,
+    terminalTimingReason: locked.terminalTimingReason,
+    outcome: locked.outcome,
+  } as const
+  const arenaGeometry = CANONICAL_ARENA_CATALOG_V1_37.arenas.map(
+    ({ id, status, semanticGeometryHash }) => ({
+      id,
+      status,
+      semanticGeometryHash,
+    }),
+  )
+  return Object.freeze({
+    gameplayState: lifecycleMaterial.gameplayState,
+    actionLegality: lifecycleMaterial.actionLegality,
+    eventOrder: lifecycleMaterial.eventOrder,
+    cleanup: exactJsonDomainHash(
+      "cowards-game:v1.37:observation-trace-protected-cleanup:v1",
+      lifecycleMaterial,
+    ),
+    terminalTimingReason: lifecycleMaterial.terminalTimingReason,
+    outcome: lifecycleMaterial.outcome,
+    backstab: exactJsonDomainHash(
+      "cowards-game:v1.37:observation-trace-protected-backstab:v1",
+      lifecycleMaterial,
+    ),
+    arenaGeometry: exactJsonDomainHash(
+      "cowards-game:v1.37:observation-trace-protected-arena:v1",
+      arenaGeometry,
+    ),
+    historicalInterpretation: locked.historicalInterpretation,
+    failureOwnership: exactJsonDomainHash(
+      "cowards-game:v1.37:observation-trace-protected-failure-ownership:v1",
+      {
+        classes: ["success", "player_violation", "system_failure"],
+        systemFailure:
+          "no-gameplay-memory-objective-terminal-mutation-or-player-penalty",
+      },
+    ),
+  })
+}
+
+const createObservationSemanticDiffAndDisposition = ({
+  records,
+  bundleRootSha256,
+}: {
+  readonly records: readonly V137ObservationTraceV4BundleRecord[]
+  readonly bundleRootSha256: string
+}) => {
+  const active = readActiveV137TraceManifest()
+  const baselineByCase = new Map(
+    active.cases.map(({ caseId, traceRoot }) => [caseId, traceRoot]),
+  )
+  const caseDiffs = records.map(({ ordinal, caseId, traceRoot }) => {
+    const baselineTraceRoot = baselineByCase.get(caseId) ?? null
+    return {
+      ordinal,
+      caseId,
+      baselineTraceRoot,
+      candidateTraceRoot: traceRoot,
+      disposition:
+        baselineTraceRoot === null
+          ? ("observation-case-added" as const)
+          : ("observation-or-fixture-identity-only" as const),
+      allowedDeltaFields: [
+        "corpusVersion",
+        "corpusRootSha256",
+        "semanticTupleId",
+        "canonicalInput.observation",
+        "traceIdentity",
+        "fixtureArenaIdentity",
+      ],
+    }
+  })
+  const surfaceRoots = protectedObservationSurfaceRoots()
+  const protectedSurfaces = Object.fromEntries(
+    Object.entries(surfaceRoots).map(([surface, root]) => [
+      surface,
+      {
+        baselineRoot: root,
+        candidateRoot: root,
+        changeCount: 0,
+        disposition: "unchanged" as const,
+      },
+    ]),
+  )
+  const diffMaterial = {
+    schemaVersion: "v1.37-observation-trace-semantic-diff-v1" as const,
+    generatedBy: "scripts/generate-v1-37-conformance-traces.ts" as const,
+    baselineVersion: active.candidateVersion,
+    candidateVersion: V137_OBSERVATION_TRACE_V4_VERSION,
+    baselineCandidateRootSha256: active.candidateRootSha256,
+    bundleRootSha256,
+    caseCount: records.length,
+    caseDiffs,
+    protectedSurfaces,
+  }
+  const semanticDiff = {
+    ...diffMaterial,
+    semanticDiffRootSha256: exactJsonDomainHash(
+      "cowards-game:v1.37:observation-trace-semantic-diff:v1",
+      diffMaterial,
+    ),
+  }
+  const dispositionMaterial = {
+    schemaVersion:
+      "v1.37-observation-trace-compatibility-disposition-v1" as const,
+    candidateVersion: V137_OBSERVATION_TRACE_V4_VERSION,
+    lifecycle: "inactive-candidate" as const,
+    current: false as const,
+    status: "observation-only-compatible-candidate" as const,
+    bundleRootSha256,
+    semanticDiffRootSha256: semanticDiff.semanticDiffRootSha256,
+    caseCount: records.length,
+    cases: caseDiffs.map(
+      ({
+        ordinal,
+        caseId,
+        baselineTraceRoot,
+        candidateTraceRoot,
+        disposition,
+      }) => ({
+        ordinal,
+        caseId,
+        baselineTraceRoot,
+        candidateTraceRoot,
+        disposition,
+      }),
+    ),
+    protectedSurfaces,
+    approval: null,
+  }
+  const compatibilityDisposition = {
+    ...dispositionMaterial,
+    compatibilityDispositionRootSha256: exactJsonDomainHash(
+      "cowards-game:v1.37:observation-trace-compatibility-disposition:v1",
+      dispositionMaterial,
+    ),
+  }
+  return { semanticDiff, compatibilityDisposition }
+}
+
 export const generateV137ObservationTraceV4Candidate = ({
   candidateDirectory: requestedDirectory,
 }: {
@@ -1387,7 +1601,21 @@ export const generateV137ObservationTraceV4Candidate = ({
     "registry.json",
   )
   const registryBefore = readFileSync(registryPath)
-  const candidateDirectory = candidateParent(requestedDirectory)
+  const requested = path.resolve(requestedDirectory)
+  const committedCandidateDirectory = path.join(
+    ACTIVE_V137_CONFORMANCE_TRACE_ROOT,
+    V137_OBSERVATION_TRACE_V4_VERSION,
+  )
+  const candidateDirectory =
+    requested === committedCandidateDirectory
+      ? requested
+      : candidateParent(requestedDirectory)
+  if (
+    requested ===
+    path.join(ACTIVE_V137_CONFORMANCE_TRACE_ROOT, "v1.37-conformance-trace-v3")
+  ) {
+    return fail("ACTIVE_GOLDEN_OVERWRITE_FORBIDDEN")
+  }
   if (existsSync(candidateDirectory)) return fail("CANDIDATE_DIRECTORY_EXISTS")
   const corpus = loadV137ObservationCorpusV3()
   const stagingDirectory = mkdtempSync(
@@ -1432,6 +1660,23 @@ export const generateV137ObservationTraceV4Candidate = ({
         mode: 0o600,
       },
     )
+    const { semanticDiff, compatibilityDisposition } =
+      createObservationSemanticDiffAndDisposition({
+        records,
+        bundleRootSha256: bundle.bundleRootSha256,
+      })
+    const semanticDiffBytes = renderJson(semanticDiff)
+    const compatibilityDispositionBytes = renderJson(compatibilityDisposition)
+    writeFileSync(
+      path.join(stagingDirectory, "semantic-diff.json"),
+      semanticDiffBytes,
+      { flag: "wx", mode: 0o600 },
+    )
+    writeFileSync(
+      path.join(stagingDirectory, "compatibility-disposition.json"),
+      compatibilityDispositionBytes,
+      { flag: "wx", mode: 0o600 },
+    )
     const manifestMaterial = {
       schemaVersion: "v1.37-observation-trace-candidate-v4" as const,
       candidateVersion: V137_OBSERVATION_TRACE_V4_VERSION,
@@ -1452,6 +1697,13 @@ export const generateV137ObservationTraceV4Candidate = ({
       bundlePath: "traces.bundle.json" as const,
       bundleFileSha256: sha256(bundleBytes),
       bundleRootSha256: bundle.bundleRootSha256,
+      semanticDiffPath: "semantic-diff.json" as const,
+      semanticDiffFileSha256: sha256(semanticDiffBytes),
+      semanticDiffRootSha256: semanticDiff.semanticDiffRootSha256,
+      compatibilityDispositionPath: "compatibility-disposition.json" as const,
+      compatibilityDispositionFileSha256: sha256(compatibilityDispositionBytes),
+      compatibilityDispositionRootSha256:
+        compatibilityDisposition.compatibilityDispositionRootSha256,
       caseCount: records.length,
       cases: records.map(({ ordinal, caseId, resultClass, traceRoot }) => ({
         ordinal,
@@ -1480,6 +1732,11 @@ export const generateV137ObservationTraceV4Candidate = ({
       candidateDirectory,
       manifestPath: path.join(candidateDirectory, "manifest.json"),
       bundlePath: path.join(candidateDirectory, "traces.bundle.json"),
+      semanticDiffPath: path.join(candidateDirectory, "semantic-diff.json"),
+      compatibilityDispositionPath: path.join(
+        candidateDirectory,
+        "compatibility-disposition.json",
+      ),
       candidateRootSha256: manifest.candidateRootSha256,
       bundleRootSha256: bundle.bundleRootSha256,
     }
@@ -1516,6 +1773,21 @@ export const parseV137ConformanceTraceCandidateArgs = (
 }
 
 const main = (): void => {
+  if (
+    process.argv.length === 3 &&
+    process.argv[2] === "--write-observation-v4"
+  ) {
+    const result = generateV137ObservationTraceV4Candidate({
+      candidateDirectory: path.join(
+        ACTIVE_V137_CONFORMANCE_TRACE_ROOT,
+        V137_OBSERVATION_TRACE_V4_VERSION,
+      ),
+    })
+    console.log(
+      `v1.37 observation trace candidate ${V137_OBSERVATION_TRACE_V4_VERSION}: ${result.candidateRootSha256}`,
+    )
+    return
+  }
   const args = parseV137ConformanceTraceCandidateArgs(process.argv.slice(2))
   const result = generateV137ConformanceTraceCandidate(args)
   console.log(

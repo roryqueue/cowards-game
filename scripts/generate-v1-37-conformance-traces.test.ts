@@ -112,15 +112,22 @@ describe("v1.37 conformance trace candidate generation", () => {
     ).toBe(true)
     expect(existsSync(path.join(candidateDirectory, "traces"))).toBe(false)
     expect(readdirSync(candidateDirectory).sort()).toEqual([
+      "compatibility-disposition.json",
       "manifest.json",
+      "semantic-diff.json",
       "traces.bundle.json",
     ])
     expect(readFileSync(registryPath)).toEqual(registryBefore)
   }, 30_000)
 
   it("disposes every trace case and protected semantic surface explicitly", () => {
-    const candidateDirectory = path.join(temporaryRoot(), "observation-trace-v4")
-    const result = generateV137ObservationTraceV4Candidate({ candidateDirectory })
+    const candidateDirectory = path.join(
+      temporaryRoot(),
+      "observation-trace-v4",
+    )
+    const result = generateV137ObservationTraceV4Candidate({
+      candidateDirectory,
+    })
     const manifest = JSON.parse(readFileSync(result.manifestPath, "utf8"))
     const diff = JSON.parse(
       readFileSync(path.join(candidateDirectory, "semantic-diff.json"), "utf8"),
@@ -141,7 +148,8 @@ describe("v1.37 conformance trace candidate generation", () => {
     expect(
       diff.caseDiffs.every(
         ({ baselineTraceRoot, candidateTraceRoot }: Record<string, unknown>) =>
-          (baselineTraceRoot === null || typeof baselineTraceRoot === "string") &&
+          (baselineTraceRoot === null ||
+            typeof baselineTraceRoot === "string") &&
           typeof candidateTraceRoot === "string",
       ),
     ).toBe(true)
@@ -152,9 +160,9 @@ describe("v1.37 conformance trace candidate generation", () => {
       status: "observation-only-compatible-candidate",
       caseCount: manifest.caseCount,
     })
-    expect(disposition.cases.map(({ caseId }: { caseId: string }) => caseId)).toEqual(
-      manifest.cases.map(({ caseId }: { caseId: string }) => caseId),
-    )
+    expect(
+      disposition.cases.map(({ caseId }: { caseId: string }) => caseId),
+    ).toEqual(manifest.cases.map(({ caseId }: { caseId: string }) => caseId))
     expect(Object.keys(disposition.protectedSurfaces).sort()).toEqual(
       [
         "actionLegality",
