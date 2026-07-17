@@ -27,6 +27,7 @@ import {
   buildRuntimeEvidenceAuthorityEnvelope,
   encodeCanonicalJson,
   encodeRuntimeConformanceCertificatePayloadV117,
+  encodeRuntimeConformanceCertificatePayloadV119,
   encodeRuntimeEvidenceAuthorityPayload,
   encodeRuntimeEvidenceAuthorityPayloadV117,
   encodeRuntimeEvidenceAuthoritySignatureMessage,
@@ -41,6 +42,8 @@ import {
   type RuntimeConformanceCertificateV117,
   type RuntimeConformanceExpectedRunBindingV117,
   type RuntimeConformanceTrustedProducerV117,
+  type RuntimeConformanceCertificateV119,
+  type RuntimeConformanceTrustedProducerV119,
 } from "@cowards/spec"
 import { Pool } from "pg"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
@@ -54,6 +57,7 @@ import {
   importAuthenticatedCertificateSupersession,
   importAuthenticatedRuntimeLaneControl,
   importRuntimeConformanceCertificateV117,
+  importRuntimeConformanceCertificateV119Inactive,
   installRuntimeEvidenceAuthorityPublication,
   prepareRuntimeEvidenceAuthorityPublication,
   prepareRuntimeEvidenceAuthorityPublicationV117,
@@ -1641,6 +1645,198 @@ describePostgres("Phase-259 reviewed conformance certificate import", () => {
       [sha256("substituted-certificate")],
     )
     expect(count.rows[0]?.count).toBe(0)
+  })
+})
+
+describePostgres("Phase-260 inactive observation certificate import", () => {
+  const schema = `runtime_conformance_v119_${randomUUID().replaceAll("-", "")}`
+  const producerKeys = generateKeyPairSync("ed25519")
+  let admin: Pool
+  let pool: Pool
+
+  const fixture = async () => {
+    const reviewed = JSON.parse(
+      await readFile(
+        path.resolve(
+          import.meta.dirname,
+          "../../..",
+          ".planning/artifacts/v1.37-observation-v1.19-language-conformance-typescript.json",
+        ),
+        "utf8",
+      ),
+    ) as {
+      candidatePayload: RuntimeConformanceCertificateV119["candidatePayload"]
+      candidatePayloadSha256: string
+      expectedRunBinding: {
+        caseInventorySha256: string
+        requiredCaseCount: number
+        resultRootSha256: string
+        evidenceRootSha256: string
+      }
+    }
+    const certificate: RuntimeConformanceCertificateV119 = {
+      schemaVersion: "runtime-conformance-certificate-envelope-v1.19",
+      trustDomain: "fixture",
+      managedIdentity: true,
+      candidatePayload: globalThis.structuredClone(reviewed.candidatePayload),
+      candidatePayloadSha256: reviewed.candidatePayloadSha256,
+      signatureBase64: sign(
+        null,
+        encodeRuntimeConformanceCertificatePayloadV119(
+          reviewed.candidatePayload,
+        ),
+        producerKeys.privateKey,
+      ).toString("base64"),
+    }
+    const encoded = encodeCanonicalJson(certificate as unknown as JsonValue, {
+      context: "canonical-manifest",
+    })
+    if (!encoded.ok) throw new Error("fixture certificate is not canonical")
+    const certificateSha256 = `sha256:${createHash("sha256")
+      .update(encoded.bytes)
+      .digest("hex")}`
+    const importPayload: RuntimeEvidenceAuthorityImportPayload = {
+      schemaVersion: RUNTIME_EVIDENCE_AUTHORITY_IMPORT_SCHEMA_VERSION,
+      domain: "conformance-certificate",
+      eventId: `fixture:observation-v1.19-import:${certificateSha256.slice(-16)}`,
+      producerId: trustRoot.producerId,
+      producerKeyId: trustRoot.keyId,
+      trustDomain: trustRoot.trustDomain,
+      issuedAt: reviewed.candidatePayload.issuedAt,
+      validUntil: reviewed.candidatePayload.freshUntil,
+      action: null,
+      laneIdentityHash: null,
+      reasonCode: "REVIEWED_INACTIVE_OBSERVATION_CERTIFICATE",
+      evidenceReferenceHash:
+        reviewed.candidatePayload.identity.evidenceGraphRoot,
+      compensatesEventId: null,
+      targetCertificateId: reviewed.candidatePayload.certificateId,
+      targetCertificateRecordHash: certificateSha256,
+      replacementCertificateId: null,
+      replacementCertificateRecordHash: null,
+    }
+    const trustedProducer: RuntimeConformanceTrustedProducerV119 = {
+      producerId: reviewed.candidatePayload.producerId,
+      keyId: reviewed.candidatePayload.producerKeyId,
+      trustDomain: "fixture",
+      managedIdentity: true,
+      publicKeyPem: producerKeys.publicKey
+        .export({ type: "spki", format: "pem" })
+        .toString(),
+    }
+    return {
+      input: {
+        mode: "fixture" as const,
+        certificate,
+        expectedIdentity: reviewed.candidatePayload.identity,
+        expectedRunBinding: reviewed.expectedRunBinding,
+        verificationInstant: reviewed.candidatePayload.issuedAt,
+        trustedProducers: [trustedProducer],
+        importEnvelope: envelope(importPayload),
+        trustedImportAuthorities: [trustRoot],
+      },
+      certificateSha256,
+    }
+  }
+
+  beforeAll(async () => {
+    admin = new Pool({ connectionString: databaseUrl! })
+    await admin.query(`create schema ${schema}`)
+    pool = new Pool({
+      connectionString: databaseUrl!,
+      options: `-c search_path=${schema}`,
+      max: 4,
+    })
+    await migrate(pool)
+  }, 30_000)
+
+  afterAll(async () => {
+    await pool.end()
+    await admin.query(`drop schema ${schema} cascade`)
+    await admin.end()
+  })
+
+  it("imports exact evidence idempotently but leaves it absent from every current registry", async () => {
+    const prepared = await fixture()
+    const [left, right] = await Promise.all([
+      importRuntimeConformanceCertificateV119Inactive(pool, prepared.input),
+      importRuntimeConformanceCertificateV119Inactive(pool, prepared.input),
+    ])
+    expect(left).toEqual(right)
+    expect(left).toMatchObject({
+      status: "installed_inactive",
+      certificateSha256: prepared.certificateSha256,
+      languageId: "typescript",
+      candidatePayloadSha256:
+        prepared.input.certificate.candidatePayloadSha256,
+    })
+    expect(JSON.stringify(left)).not.toMatch(
+      /source|artifact(?:s)?[":]|memory|objective|diagnostics|stderr|private|path|host/iu,
+    )
+    const counts = await pool.query<{
+      certificates: number
+      runs: number
+      current_candidates: number
+    }>(`select
+      (select count(*)::integer from runtime_evidence_certificates
+        where certificate_version = 'runtime-conformance-certificate-v1.19') as certificates,
+      (select count(*)::integer from runtime_evidence_conformance_certificate_runs) as runs,
+      (select count(*)::integer from runtime_evidence_v1_17_candidates) as current_candidates`)
+    expect(counts.rows[0]).toEqual({
+      certificates: 1,
+      runs: 3,
+      current_candidates: 0,
+    })
+  })
+
+  it("rejects substitution, stale evidence, producer/operator collision, and revocation", async () => {
+    const prepared = await fixture()
+
+    const substituted = globalThis.structuredClone(prepared.input)
+    substituted.importEnvelope.payload.targetCertificateRecordHash = sha256(
+      "substituted-observation-certificate",
+    )
+    substituted.importEnvelope = envelope(substituted.importEnvelope.payload)
+    await expect(
+      importRuntimeConformanceCertificateV119Inactive(pool, substituted),
+    ).rejects.toMatchObject({ code: "CERTIFICATE_IMPORT_BINDING" })
+
+    await expect(
+      importRuntimeConformanceCertificateV119Inactive(pool, {
+        ...prepared.input,
+        verificationInstant: "2026-09-01T00:00:00.000Z",
+      }),
+    ).rejects.toMatchObject({ code: "CERTIFICATE_INVALID" })
+
+    const collision = globalThis.structuredClone(prepared.input)
+    collision.importEnvelope.payload.producerId =
+      collision.certificate.candidatePayload.producerId
+    collision.importEnvelope.payload.producerKeyId =
+      collision.certificate.candidatePayload.producerKeyId
+    collision.importEnvelope = envelope(collision.importEnvelope.payload)
+    await expect(
+      importRuntimeConformanceCertificateV119Inactive(pool, collision),
+    ).rejects.toMatchObject({ code: "PRODUCER_OPERATOR_COLLISION" })
+
+    const installed = await importRuntimeConformanceCertificateV119Inactive(
+      pool,
+      prepared.input,
+    )
+    const revocationPayload = statusPayload("certificate-revocation", {
+      eventId: `fixture:revoke:${installed.certificateSha256.slice(-16)}`,
+      targetCertificateId: installed.certificateId,
+      targetCertificateRecordHash: installed.certificateSha256,
+      evidenceReferenceHash:
+        prepared.input.certificate.candidatePayload.identity.evidenceGraphRoot,
+    })
+    await importAuthenticatedCertificateRevocation(pool, {
+      envelope: envelope(revocationPayload),
+      verificationInstant,
+      trustedAuthorities: [trustRoot],
+    })
+    await expect(
+      importRuntimeConformanceCertificateV119Inactive(pool, prepared.input),
+    ).rejects.toMatchObject({ code: "CERTIFICATE_REVOKED" })
   })
 })
 
