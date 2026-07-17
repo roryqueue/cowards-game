@@ -479,7 +479,10 @@ describe("service boundary import guard", () => {
     writeRepoFile(
       repoRoot,
       "packages/replay/src/reexport-bypass.ts",
-      "export { evaluateStrategy as render } from '@cowards/runtime-js'\n",
+      [
+        "export { evaluateStrategy as render } from '@cowards/runtime-js/private'",
+        "export * from '@cowards/engine'",
+      ].join("\n"),
     )
 
     const result = analyzeServiceBoundaryImports({ repoRoot })
@@ -494,6 +497,11 @@ describe("service boundary import guard", () => {
         path: "packages/replay/src/reexport-bypass.ts",
         line: 1,
         pattern: "strategy-execution-ownership:evaluateStrategy",
+      },
+      {
+        path: "packages/replay/src/reexport-bypass.ts",
+        line: 2,
+        pattern: "strategy-execution-ownership:module-reexport",
       },
       {
         path: "shared/generated-helper.ts",
@@ -518,10 +526,35 @@ describe("service boundary import guard", () => {
         "}",
       ].join("\n"),
     )
+    writeRepoFile(
+      repoRoot,
+      "apps/go-backend/fixtures/generated_candidate.go",
+      [
+        "// Code generated. DO NOT EDIT.",
+        "package fixtures",
+        "func candidateAuthority(seed string) any {",
+        "  authority := \"runtime-v1.19\"",
+        "  initialBounds := map[string]any{\"minX\": 0, \"maxX\": 11}",
+        "  terrainStones := []any{}",
+        "  fairness := seed + \":mirror\"",
+        "  return []any{authority, initialBounds, terrainStones, fairness}",
+        "}",
+      ].join("\n"),
+    )
 
     const result = analyzeServiceBoundaryImports({ repoRoot })
 
     expect(result.ownershipOffenses).toEqual([
+      {
+        path: "apps/go-backend/fixtures/generated_candidate.go",
+        line: 5,
+        pattern: "handwritten-successor-arena-geometry",
+      },
+      {
+        path: "apps/go-backend/fixtures/generated_candidate.go",
+        line: 7,
+        pattern: "set-fairness-from-seed",
+      },
       {
         path: "packages/persistence/src/fixtures/generated-candidate.ts",
         line: 2,

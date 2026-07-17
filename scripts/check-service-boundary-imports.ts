@@ -130,6 +130,11 @@ const phase260ExecutionModules = new Set([
   "@cowards/runtime-wasm-wasi",
 ])
 
+const isPhase260ExecutionModule = (source: string): boolean =>
+  [...phase260ExecutionModules].some(
+    (moduleName) => source === moduleName || source.startsWith(`${moduleName}/`),
+  )
+
 const phase260ExecutionSymbols = new Set([
   "executeMatch",
   "executeStrategy",
@@ -303,10 +308,7 @@ const analyzePhase260TypeScriptFile = (
   repoPath: string,
   sourceText: string,
 ): readonly ServiceBoundaryOffense[] => {
-  if (
-    !isPhase260ProductionSource(repoPath) ||
-    phase260HistoricalAuthorityFiles.has(repoPath)
-  ) {
+  if (!isPhase260ProductionSource(repoPath)) {
     return []
   }
 
@@ -337,7 +339,7 @@ const analyzePhase260TypeScriptFile = (
     if (
       ts.isImportDeclaration(node) &&
       ts.isStringLiteral(node.moduleSpecifier) &&
-      phase260ExecutionModules.has(node.moduleSpecifier.text)
+      isPhase260ExecutionModule(node.moduleSpecifier.text)
     ) {
       const clause = node.importClause
       if (clause?.name && phase260ExecutionSymbols.has(clause.name.text)) {
@@ -361,15 +363,24 @@ const analyzePhase260TypeScriptFile = (
       ts.isExportDeclaration(node) &&
       node.moduleSpecifier &&
       ts.isStringLiteral(node.moduleSpecifier) &&
-      phase260ExecutionModules.has(node.moduleSpecifier.text) &&
-      node.exportClause &&
-      ts.isNamedExports(node.exportClause)
+      isPhase260ExecutionModule(node.moduleSpecifier.text)
     ) {
-      for (const specifier of node.exportClause.elements) {
-        recordExecutionSymbol(
-          node,
-          (specifier.propertyName ?? specifier.name).text,
+      if (!node.exportClause) {
+        offenses.push(
+          offenseAt(
+            sourceFile,
+            node,
+            repoPath,
+            "strategy-execution-ownership:module-reexport",
+          ),
         )
+      } else if (ts.isNamedExports(node.exportClause)) {
+        for (const specifier of node.exportClause.elements) {
+          recordExecutionSymbol(
+            node,
+            (specifier.propertyName ?? specifier.name).text,
+          )
+        }
       }
     }
 
@@ -379,7 +390,7 @@ const analyzePhase260TypeScriptFile = (
       ts.isCallExpression(node.initializer) &&
       node.initializer.arguments.length === 1 &&
       ts.isStringLiteral(node.initializer.arguments[0]!) &&
-      phase260ExecutionModules.has(node.initializer.arguments[0]!.text) &&
+      isPhase260ExecutionModule(node.initializer.arguments[0]!.text) &&
       ((ts.isIdentifier(node.initializer.expression) &&
         node.initializer.expression.text === "require") ||
         node.initializer.expression.kind === ts.SyntaxKind.ImportKeyword)
@@ -416,7 +427,10 @@ const analyzePhase260TypeScriptFile = (
       recordExecutionSymbol(node, node.argumentExpression.text)
     }
 
-    if (ts.isPropertyAssignment(node) || ts.isVariableDeclaration(node)) {
+    if (
+      !phase260HistoricalAuthorityFiles.has(repoPath) &&
+      (ts.isPropertyAssignment(node) || ts.isVariableDeclaration(node))
+    ) {
       const field = propertyNameText(node.name)
       if (
         field &&
@@ -514,16 +528,52 @@ const analyzePhase260GoFile = (
     "evaluateStrategy",
     "MOVE_ADVANCED",
   ] as const
-  if (sourceText.includes('"runtime-v1.19"')) {
+  const functionPattern = /^func\s+(?:\([^\n)]*\)\s*)?([A-Za-z0-9_]+)[^{]*\{/gmu
+  const starts = [...sourceText.matchAll(functionPattern)]
+  for (let index = 0; index < starts.length; index += 1) {
+    const match = starts[index]!
+    const start = match.index
+    const end = starts[index + 1]?.index ?? sourceText.length
+    const functionText = sourceText.slice(start, end)
+    const candidateFunction =
+      /candidate|v119/iu.test(match[1] ?? "") ||
+      functionText.includes('"runtime-v1.19"')
+    if (!candidateFunction) {
+      continue
+    }
     for (const symbol of gameplaySymbols) {
-      const index = sourceText.indexOf(symbol)
-      if (index >= 0) {
+      const symbolIndex = functionText.indexOf(symbol)
+      if (symbolIndex >= 0) {
         offenses.push({
           path: repoPath,
-          line: sourceText.slice(0, index).split("\n").length,
+          line: sourceText.slice(0, start + symbolIndex).split("\n").length,
           pattern: `go-gameplay-ownership:${symbol}`,
         })
       }
+    }
+    const geometryMatch =
+      /initialBounds\s*:?=\s*map\[string\](?:any|interface\s*\{\})\s*\{[^}]*\d[^}]*\}[\s\S]*?terrainStones\s*:?=\s*\[\][^\n{]*\{/u.exec(
+        functionText,
+      )
+    if (geometryMatch) {
+      offenses.push({
+        path: repoPath,
+        line: sourceText
+          .slice(0, start + (geometryMatch.index ?? 0))
+          .split("\n").length,
+        pattern: "handwritten-successor-arena-geometry",
+      })
+    }
+    const fairnessMatch =
+      /\bseed\b[^\n]*(?::mirror|mirror)|mirror[^\n]*\bseed\b/iu.exec(functionText)
+    if (fairnessMatch) {
+      offenses.push({
+        path: repoPath,
+        line: sourceText
+          .slice(0, start + (fairnessMatch.index ?? 0))
+          .split("\n").length,
+        pattern: "set-fairness-from-seed",
+      })
     }
   }
   return offenses
