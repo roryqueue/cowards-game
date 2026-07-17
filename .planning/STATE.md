@@ -5,16 +5,16 @@ milestone_name: Rules Integrity and Strategy Evaluation Foundations — ACTIVE
 current_phase: 260
 current_phase_name: truthful-strategy-inputs-arena-authority-and-set-fairness
 status: executing
-stopped_at: Completed 260-11-PLAN.md
-last_updated: "2026-07-17T06:58:55.000Z"
+stopped_at: Completed 260-18-PLAN.md
+last_updated: "2026-07-17T07:03:10.327Z"
 last_activity: 2026-07-17
 last_activity_desc: Completed Phase 260 Plan 11 reviewed corpus-v3 candidate
 progress:
   total_phases: 6
   completed_phases: 4
   total_plans: 112
-  completed_plans: 100
-  percent: 68
+  completed_plans: 101
+  percent: 67
 ---
 
 # State: Coward's Game
@@ -75,8 +75,8 @@ Progress: [█████████░] 88%
 
 **Resume file:** None
 
-Last session: 2026-07-17T06:58:55.000Z
-Stopped at: Completed 260-11-PLAN.md
+Last session: 2026-07-17T07:03:10.307Z
+Stopped at: Completed 260-18-PLAN.md
 Next command: `$gsd-execute-phase 260`.
 
 ## Performance Metrics
@@ -140,6 +140,7 @@ Next command: `$gsd-execute-phase 260`.
 | Phase 260 P09 | 19min | 2 tasks | 4 files |
 | Phase 260 P23 | 5min | 2 tasks | 2 files |
 | Phase 260 P11 | 12min | 3 tasks | 8 files |
+| Phase 260 P18 | 14min | 2 tasks | 6 files |
 
 ## Decisions
 
@@ -312,3 +313,6 @@ Next command: `$gsd-execute-phase 260`.
 - [Phase 260]: Replay validates exact persisted condition and catalog authority through version-first dispatch and rejects historical aliases for candidate use. — Replay transports frozen truth without deriving fairness, gameplay, Strategy execution, or UI authority.
 - [Phase 260]: Candidate public results use an explicit v1.19 discriminator and expose only validated Set status, active catalog, semantic hash, condition, side, and initial-initiative facts. — Importing the candidate cannot mutate or prematurely select the current Phase-259 app contract.
 - [Phase 260]: Candidate result privacy applies a strict recursive allowlist plus candidate-specific poison rejection for source, artifacts, memories, objectives, receipts, diagnostics, signatures, keys, host data, credentials, and security internals. — Public rendering cannot inherit private runtime or operator fields through nesting.
+- [Phase 260]: Address Workshop candidates only through an exact Workshop-contract/runtime-ABI pair; omitted and exact-current selection remain Phase 259. — Candidate staging cannot silently activate or redirect current authoring paths.
+- [Phase 260]: Bind Phase-259 Workshop defaults to exact per-language source roots until Plan 260-14 regenerates the compact current selector. — Exact roots prevent Workshop examples from drifting independently of activation authority.
+- [Phase 260]: Keep v1.19 Workshop examples observation-only and package-free; they consume kernel facts without HOLD or memory-owned scheduler state. — Examples must document approved observations without acquiring gameplay or scheduler authority.
