@@ -43,6 +43,8 @@ import {
   type V137ConformanceCase,
   type V137ConformanceCorpus,
 } from "../packages/golden/src/v1-37-conformance-corpus.ts"
+// eslint-disable-next-line no-restricted-imports -- the inactive trace candidate binds the reviewed inactive corpus candidate explicitly.
+import { V1_37_CONFORMANCE_CORPUS_V3_CANDIDATE_PIN } from "../packages/golden/src/v1-37-conformance-corpus-v3-candidate-pin.ts"
 // eslint-disable-next-line no-restricted-imports -- candidate traces use the pure canonical projector only.
 import {
   projectCanonicalConformanceTrace,
@@ -53,6 +55,12 @@ import {
 import { recordChronicleFromExecution } from "../packages/replay/src/record.ts"
 // eslint-disable-next-line no-restricted-imports -- use the existing canonical JSON codec and types.
 import {
+  ARENA_CATALOG_VERSION_V1_37,
+  CANONICAL_ARENA_CATALOG_V1_37,
+  CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE,
+  CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE_ID,
+  SET_CONDITION_POLICY_VERSION_V1_37,
+  createSetScenarioV137,
   encodeCanonicalJson,
   type JsonValue,
 } from "../packages/spec/src/index.ts"
@@ -165,6 +173,62 @@ export interface GenerateV137ConformanceTraceCandidateResult {
   readonly semanticDiffPath: string
   readonly candidateRootSha256: string
   readonly manifestFileSha256: string
+}
+
+export interface V137ObservationTraceV4BundleRecord {
+  readonly ordinal: number
+  readonly caseId: string
+  readonly traceRef: string
+  readonly resultClass: "success" | "player_violation" | "system_failure"
+  readonly canonicalInput: JsonValue
+  readonly trace: Readonly<CanonicalConformanceTrace>
+  readonly evidence: JsonValue
+  readonly traceRoot: string
+}
+
+export interface V137ObservationTraceV4Bundle {
+  readonly schemaVersion: "v1.37-observation-trace-bundle-v1"
+  readonly candidateVersion: "v1.37-observation-trace-v4"
+  readonly corpusVersion: "v3"
+  readonly corpusRootSha256: string
+  readonly semanticTupleId: string
+  readonly caseCount: number
+  readonly records: readonly V137ObservationTraceV4BundleRecord[]
+  readonly bundleRootSha256: string
+}
+
+export interface V137ObservationTraceV4Manifest {
+  readonly schemaVersion: "v1.37-observation-trace-candidate-v4"
+  readonly candidateVersion: "v1.37-observation-trace-v4"
+  readonly lifecycle: "inactive-candidate"
+  readonly current: false
+  readonly generatedBy: "scripts/generate-v1-37-conformance-traces.ts"
+  readonly policy: "candidate-only-plan-14-atomic-promotion"
+  readonly corpusCandidateVersion: "v3"
+  readonly corpusRootSha256: string
+  readonly corpusFileSha256: string
+  readonly corpusCandidatePinPath: string
+  readonly corpusCandidatePinFileSha256: string
+  readonly semanticTupleId: string
+  readonly bundlePath: "traces.bundle.json"
+  readonly bundleFileSha256: string
+  readonly bundleRootSha256: string
+  readonly caseCount: number
+  readonly cases: readonly {
+    readonly ordinal: number
+    readonly caseId: string
+    readonly resultClass: "success" | "player_violation" | "system_failure"
+    readonly traceRoot: string
+  }[]
+  readonly candidateRootSha256: string
+}
+
+export interface GenerateV137ObservationTraceV4CandidateResult {
+  readonly candidateDirectory: string
+  readonly manifestPath: string
+  readonly bundlePath: string
+  readonly candidateRootSha256: string
+  readonly bundleRootSha256: string
 }
 
 export interface V137ConformanceTraceReviewedHistory {
@@ -903,6 +967,525 @@ export const generateV137ConformanceTraceCandidate = (
     if (existsSync(stagingDirectory)) {
       rmSync(stagingDirectory, { recursive: true, force: true })
     }
+  }
+}
+
+const V137_OBSERVATION_TRACE_V4_VERSION = "v1.37-observation-trace-v4" as const
+const V137_OBSERVATION_CORPUS_PATH = path.join(
+  repoRoot,
+  V1_37_CONFORMANCE_CORPUS_V3_CANDIDATE_PIN.corpusPath,
+)
+const V137_OBSERVATION_CORPUS_PIN_PATH = path.join(
+  repoRoot,
+  "packages/golden/src/v1-37-conformance-corpus-v3-candidate-pin.ts",
+)
+
+const loadV137ObservationCorpusV3 = (): V137ConformanceCorpus => {
+  const corpusBytes = readFileSync(V137_OBSERVATION_CORPUS_PATH)
+  if (
+    sha256(corpusBytes) !==
+    V1_37_CONFORMANCE_CORPUS_V3_CANDIDATE_PIN.corpusFileSha256
+  ) {
+    return fail("OBSERVATION_CORPUS_FILE_IDENTITY_MISMATCH")
+  }
+  let corpus: V137ConformanceCorpus
+  try {
+    corpus = JSON.parse(corpusBytes.toString("utf8")) as V137ConformanceCorpus
+  } catch {
+    return fail("OBSERVATION_CORPUS_INVALID")
+  }
+  validateV137ConformanceCorpus(corpus)
+  if (
+    corpus.version !== "v3" ||
+    corpus.corpusRootSha256 !==
+      V1_37_CONFORMANCE_CORPUS_V3_CANDIDATE_PIN.corpusRootSha256 ||
+    computeV137ConformanceCorpusRoot(corpus) !== corpus.corpusRootSha256 ||
+    JSON.stringify(corpus.cases.map(({ id }) => id)) !==
+      JSON.stringify(
+        V1_37_CONFORMANCE_CORPUS_V3_CANDIDATE_PIN.caseRoots.map(
+          ({ caseId }) => caseId,
+        ),
+      )
+  ) {
+    return fail("OBSERVATION_CORPUS_IDENTITY_MISMATCH")
+  }
+  return corpus
+}
+
+const canonicalRecordingV119 = (testCase: V137ConformanceCase) => {
+  const identity = testCase.seed ?? testCase.id
+  const arena = CANONICAL_ARENA_CATALOG_V1_37.arenas.find(
+    ({ id }) => id === "arena:smoke:v1",
+  )
+  if (arena === undefined) return fail("CANONICAL_ARENA_MISSING")
+  const scenario = createSetScenarioV137({
+    arenaCatalogVersion: ARENA_CATALOG_VERSION_V1_37,
+    arenaSemanticGeometryHash: arena.semanticGeometryHash,
+    entrantA: { entrantKey: "entrant:bottom", playerId: "bottom" },
+    entrantB: { entrantKey: "entrant:top", playerId: "top" },
+    baseSeed: identity,
+  })
+  const condition = scenario.conditions[0]
+  if (condition === undefined) return fail("CANONICAL_CONDITION_MISSING")
+  const execution = MATCH_KERNEL.runMatchV119({
+    matchId: `conformance:${testCase.id}`,
+    seed: scenario.baseSeed,
+    arenaVariant: {
+      id: arena.id,
+      name: arena.name,
+      initialBounds: { ...arena.initialBounds },
+      terrainStones: arena.terrainStones.map((position) => ({ ...position })),
+    },
+    bottomPlayerId: condition.bottomPlayerId,
+    topPlayerId: condition.topPlayerId,
+    bottomStrategyRevisionId: "bottom-revision",
+    topStrategyRevisionId: "top-revision",
+    initialInitiativePlayerId: condition.initialInitiativePlayerId,
+    runtime: fixtureRuntime as never,
+    maxPhases: 1,
+  })
+  const recorded = recordChronicleFromExecution({
+    execution,
+    metadata: {
+      schemaVersion: "chronicle-v1.4",
+      semanticTupleId: CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE_ID,
+      semanticTuple: CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE,
+    },
+    candidateMatch: {
+      semanticAuthorityKey: "runtime-v1.19",
+      matchId: `conformance:${testCase.id}`,
+      seed: scenario.baseSeed,
+      arenaVariantId: arena.id,
+      bottomStrategyRevisionId: "bottom-revision",
+      topStrategyRevisionId: "top-revision",
+      bottomPlayerId: condition.bottomPlayerId,
+      topPlayerId: condition.topPlayerId,
+      bottomEntrantKey: condition.bottomEntrantKey,
+      topEntrantKey: condition.topEntrantKey,
+      setPolicyVersion: SET_CONDITION_POLICY_VERSION_V1_37,
+      scenarioId: scenario.scenarioId,
+      conditionId: condition.conditionId,
+      conditionOrdinal: condition.ordinal,
+      conditionSuffix: condition.suffix,
+      requestIdentity: condition.requestIdentity,
+      arenaCatalogVersion: ARENA_CATALOG_VERSION_V1_37,
+      arenaSemanticGeometryHash: scenario.arenaSemanticGeometryHash,
+      initialInitiativeEntrantKey: condition.initialInitiativeEntrantKey,
+      initialInitiativePlayerId: condition.initialInitiativePlayerId,
+    },
+  })
+  if (!recorded.ok) return fail(`CANONICAL_RECORDING_${recorded.failure.code}`)
+  return { transitions: recorded.recordedTransitions }
+}
+
+const projectV137ObservationTraceV4 = (
+  testCase: V137ConformanceCase,
+  corpus: V137ConformanceCorpus,
+): Readonly<CanonicalConformanceTrace> => {
+  const resultClass = testCase.expectation.resultClass
+  if (resultClass === "success") {
+    if (testCase.executionMode === "raw-envelope") {
+      const stateHash = evidenceHash("unchanged-state-v4", testCase.id)
+      const memoryHash = evidenceHash("unchanged-memory-v4", testCase.id)
+      const objectiveHash = evidenceHash("unchanged-objective-v4", testCase.id)
+      return projectCanonicalConformanceTrace({
+        corpusVersion: corpus.version,
+        corpusRootSha256: corpus.corpusRootSha256,
+        caseId: testCase.id,
+        semanticTupleId: CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE_ID,
+        resultClass,
+        invocations: [
+          {
+            ordinal: 0,
+            invocationId: `invocation:${testCase.id}:raw-envelope`,
+            methodName: "selectActivations",
+            resultClass,
+            stableCode: null,
+            failingBoundary: testCase.expectation.failingBoundary,
+            canonicalPayloadHash: evidenceHash(
+              "canonical-payload-v4",
+              testCase.id,
+            ),
+            strategyMemoryHash: memoryHash,
+            soldierMemoryHash: memoryHash,
+            objectiveHash,
+            beforeObjectiveHash: objectiveHash,
+            afterObjectiveHash: objectiveHash,
+            beforeStateHash: stateHash,
+            afterStateHash: stateHash,
+            beforeMemoryHash: memoryHash,
+            afterMemoryHash: memoryHash,
+            gameplayMutation: false,
+            memoryMutation: false,
+            terminalEffectHash: null,
+            retryable: false,
+          },
+        ],
+        transitions: [],
+        finalStateHash: stateHash,
+        outcomeHash: evidenceHash("no-outcome-v4", testCase.id),
+        failure: null,
+      })
+    }
+    const recorded = canonicalRecordingV119(testCase)
+    const first = recorded.transitions[0]
+    const last = recorded.transitions.at(-1)
+    if (
+      first === undefined ||
+      last === undefined ||
+      last.terminalStatus === null
+    ) {
+      return fail("CANONICAL_RECORDING_INCOMPLETE")
+    }
+    return projectCanonicalConformanceTrace({
+      corpusVersion: corpus.version,
+      corpusRootSha256: corpus.corpusRootSha256,
+      caseId: testCase.id,
+      semanticTupleId: CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE_ID,
+      resultClass,
+      invocations: [
+        {
+          ordinal: 0,
+          invocationId: `invocation:${testCase.id}:select`,
+          methodName: "selectActivations",
+          resultClass,
+          stableCode: null,
+          failingBoundary: "complete",
+          canonicalPayloadHash: first.canonicalOutputHash,
+          strategyMemoryHash: first.strategyMemoryHash,
+          soldierMemoryHash: first.soldierMemoryHash,
+          objectiveHash: first.objectiveHash,
+          beforeObjectiveHash: evidenceHash(
+            "objective-before-select-v4",
+            testCase.id,
+          ),
+          afterObjectiveHash: evidenceHash(
+            "objective-after-select-v4",
+            testCase.id,
+          ),
+          beforeStateHash: first.beforeStateHash,
+          afterStateHash: first.afterStateHash,
+          beforeMemoryHash: evidenceHash(
+            "memory-before-select-v4",
+            testCase.id,
+          ),
+          afterMemoryHash: evidenceHash("memory-after-select-v4", testCase.id),
+          gameplayMutation: false,
+          memoryMutation: true,
+          terminalEffectHash: null,
+          retryable: false,
+        },
+        {
+          ordinal: 1,
+          invocationId: `invocation:${testCase.id}:brain`,
+          methodName: "soldierBrain",
+          resultClass,
+          stableCode: null,
+          failingBoundary: "complete",
+          canonicalPayloadHash: last.canonicalOutputHash,
+          strategyMemoryHash: last.strategyMemoryHash,
+          soldierMemoryHash: last.soldierMemoryHash,
+          objectiveHash: last.objectiveHash,
+          beforeObjectiveHash: evidenceHash(
+            "objective-before-brain-v4",
+            testCase.id,
+          ),
+          afterObjectiveHash: evidenceHash(
+            "objective-after-brain-v4",
+            testCase.id,
+          ),
+          beforeStateHash: last.beforeStateHash,
+          afterStateHash: last.afterStateHash,
+          beforeMemoryHash: evidenceHash("memory-before-brain-v4", testCase.id),
+          afterMemoryHash: evidenceHash("memory-after-brain-v4", testCase.id),
+          gameplayMutation: true,
+          memoryMutation: true,
+          terminalEffectHash: last.terminalHash,
+          retryable: false,
+        },
+      ],
+      transitions: recorded.transitions,
+      finalStateHash: last.afterStateHash,
+      outcomeHash: canonicalHash(
+        "cowards-game:v1.37:conformance-outcome:v1",
+        last.terminalStatus as unknown as JsonValue,
+      ),
+      failure: null,
+    })
+  }
+
+  const stateHash = evidenceHash("unchanged-state-v4", testCase.id)
+  const memoryHash = evidenceHash("unchanged-memory-v4", testCase.id)
+  const objectiveHash = evidenceHash("unchanged-objective-v4", testCase.id)
+  const invocation: CanonicalConformanceInvocation = {
+    ordinal: 0,
+    invocationId: `invocation:${testCase.id}:failure`,
+    methodName: "selectActivations",
+    resultClass,
+    stableCode: testCase.expectation.reasonCode,
+    failingBoundary: testCase.expectation.failingBoundary,
+    canonicalPayloadHash: null,
+    strategyMemoryHash: memoryHash,
+    soldierMemoryHash: memoryHash,
+    objectiveHash,
+    beforeObjectiveHash: objectiveHash,
+    afterObjectiveHash: objectiveHash,
+    beforeStateHash: stateHash,
+    afterStateHash: stateHash,
+    beforeMemoryHash: memoryHash,
+    afterMemoryHash: memoryHash,
+    gameplayMutation: false,
+    memoryMutation: false,
+    terminalEffectHash: null,
+    retryable: testCase.expectation.retryable,
+  }
+  return projectCanonicalConformanceTrace({
+    corpusVersion: corpus.version,
+    corpusRootSha256: corpus.corpusRootSha256,
+    caseId: testCase.id,
+    semanticTupleId: CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE_ID,
+    resultClass,
+    invocations: [invocation],
+    transitions: [],
+    finalStateHash: stateHash,
+    outcomeHash: evidenceHash("no-outcome-v4", testCase.id),
+    failure: {
+      resultClass,
+      stableCode: testCase.expectation.reasonCode,
+      failingBoundary: testCase.expectation.failingBoundary,
+      invocationOrdinal: 0,
+      transitionOrdinal: null,
+      gameplayMutation: false,
+      memoryMutation: false,
+      terminalEffectHash: null,
+      retryable: testCase.expectation.retryable,
+    },
+  })
+}
+
+const observationInputForCase = (
+  testCase: V137ConformanceCase,
+  corpus: V137ConformanceCorpus,
+): JsonValue => {
+  const invocation = corpus.behaviorManifest.invocationScript.find(
+    ({ inputFixtureId }) => inputFixtureId === `fixture:${testCase.id}`,
+  )
+  if (invocation === undefined) {
+    return {
+      testCase: testCase as unknown as JsonValue,
+      invocation: null,
+      observation: null,
+    }
+  }
+  const hasAdvanced = new Set([
+    "observation-d05-successful-pusher-true",
+    "observation-d06-later-cycle-true",
+    "observation-d06-post-self-advance-true",
+  ]).has(testCase.id)
+  const laterRound =
+    testCase.id === "observation-d02-round-initiative-later-round"
+  const observation =
+    invocation.methodName === "selectActivations"
+      ? {
+          initialInitiativePlayerId: "player:bottom",
+          hasInitialInitiative: !laterRound,
+          roundInitiativePlayerId: laterRound ? "player:top" : "player:bottom",
+          hasRoundInitiative: true,
+        }
+      : { hasAdvancedThisActivation: hasAdvanced }
+  return {
+    testCase: testCase as unknown as JsonValue,
+    invocation: invocation as unknown as JsonValue,
+    observation,
+  }
+}
+
+const traceEvidence = (trace: CanonicalConformanceTrace): JsonValue =>
+  ({
+    states: {
+      boundaries: trace.transitions.map(
+        ({ ordinal, beforeStateHash, afterStateHash }) => ({
+          ordinal,
+          beforeStateHash,
+          afterStateHash,
+        }),
+      ),
+      finalStateHash: trace.finalStateHash,
+    },
+    events: trace.transitions.map(
+      ({ ordinal, orderedEvents, orderedEventsHash }) => ({
+        ordinal,
+        orderedEvents,
+        orderedEventsHash,
+      }),
+    ),
+    memories: trace.invocations.map(
+      ({
+        ordinal,
+        strategyMemoryHash,
+        soldierMemoryHash,
+        beforeMemoryHash,
+        afterMemoryHash,
+      }) => ({
+        ordinal,
+        strategyMemoryHash,
+        soldierMemoryHash,
+        beforeMemoryHash,
+        afterMemoryHash,
+      }),
+    ),
+    objectives: trace.invocations.map(
+      ({
+        ordinal,
+        objectiveHash,
+        beforeObjectiveHash,
+        afterObjectiveHash,
+      }) => ({
+        ordinal,
+        objectiveHash,
+        beforeObjectiveHash,
+        afterObjectiveHash,
+      }),
+    ),
+    terminal: {
+      outcomeHash: trace.outcomeHash,
+      statuses: trace.transitions.map(
+        ({ ordinal, terminalStatus, terminalHash }) => ({
+          ordinal,
+          terminalStatus,
+          terminalHash,
+        }),
+      ),
+    },
+    failure: trace.failure as unknown as JsonValue,
+  }) as JsonValue
+
+const observationBundleRoot = (
+  bundle: Omit<V137ObservationTraceV4Bundle, "bundleRootSha256">,
+): string =>
+  sha256(
+    `cowards-game:v1.37:observation-trace-bundle:exact-json:v1\0${renderJson(
+      JSON.parse(JSON.stringify(bundle)),
+    )}`,
+  )
+
+const observationCandidateRoot = (
+  manifest: Omit<V137ObservationTraceV4Manifest, "candidateRootSha256">,
+): string =>
+  canonicalHash(
+    "cowards-game:v1.37:observation-trace-candidate:v4",
+    manifest as unknown as JsonValue,
+  )
+
+export const generateV137ObservationTraceV4Candidate = ({
+  candidateDirectory: requestedDirectory,
+}: {
+  readonly candidateDirectory: string
+}): GenerateV137ObservationTraceV4CandidateResult => {
+  const registryPath = path.join(
+    ACTIVE_V137_CONFORMANCE_TRACE_ROOT,
+    "registry.json",
+  )
+  const registryBefore = readFileSync(registryPath)
+  const candidateDirectory = candidateParent(requestedDirectory)
+  if (existsSync(candidateDirectory)) return fail("CANDIDATE_DIRECTORY_EXISTS")
+  const corpus = loadV137ObservationCorpusV3()
+  const stagingDirectory = mkdtempSync(
+    path.join(
+      path.dirname(candidateDirectory),
+      `.${path.basename(candidateDirectory)}.staging-`,
+    ),
+  )
+  try {
+    const records = corpus.cases.map((testCase, ordinal) => {
+      const trace = projectV137ObservationTraceV4(testCase, corpus)
+      return {
+        ordinal,
+        caseId: testCase.id,
+        traceRef: testCase.expectation.traceRef,
+        resultClass: trace.resultClass,
+        canonicalInput: observationInputForCase(testCase, corpus),
+        trace,
+        evidence: traceEvidence(trace),
+        traceRoot: trace.traceRoot,
+      } satisfies V137ObservationTraceV4BundleRecord
+    })
+    const bundleMaterial = {
+      schemaVersion: "v1.37-observation-trace-bundle-v1" as const,
+      candidateVersion: V137_OBSERVATION_TRACE_V4_VERSION,
+      corpusVersion: "v3" as const,
+      corpusRootSha256: corpus.corpusRootSha256,
+      semanticTupleId: CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE_ID,
+      caseCount: records.length,
+      records,
+    }
+    const bundle: V137ObservationTraceV4Bundle = {
+      ...bundleMaterial,
+      bundleRootSha256: observationBundleRoot(bundleMaterial),
+    }
+    const bundleBytes = renderJson(bundle)
+    writeFileSync(
+      path.join(stagingDirectory, "traces.bundle.json"),
+      bundleBytes,
+      {
+        flag: "wx",
+        mode: 0o600,
+      },
+    )
+    const manifestMaterial = {
+      schemaVersion: "v1.37-observation-trace-candidate-v4" as const,
+      candidateVersion: V137_OBSERVATION_TRACE_V4_VERSION,
+      lifecycle: "inactive-candidate" as const,
+      current: false as const,
+      generatedBy: "scripts/generate-v1-37-conformance-traces.ts" as const,
+      policy: "candidate-only-plan-14-atomic-promotion" as const,
+      corpusCandidateVersion: "v3" as const,
+      corpusRootSha256: corpus.corpusRootSha256,
+      corpusFileSha256:
+        V1_37_CONFORMANCE_CORPUS_V3_CANDIDATE_PIN.corpusFileSha256,
+      corpusCandidatePinPath:
+        "packages/golden/src/v1-37-conformance-corpus-v3-candidate-pin.ts",
+      corpusCandidatePinFileSha256: sha256(
+        readFileSync(V137_OBSERVATION_CORPUS_PIN_PATH),
+      ),
+      semanticTupleId: CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE_ID,
+      bundlePath: "traces.bundle.json" as const,
+      bundleFileSha256: sha256(bundleBytes),
+      bundleRootSha256: bundle.bundleRootSha256,
+      caseCount: records.length,
+      cases: records.map(({ ordinal, caseId, resultClass, traceRoot }) => ({
+        ordinal,
+        caseId,
+        resultClass,
+        traceRoot,
+      })),
+    }
+    const manifest: V137ObservationTraceV4Manifest = {
+      ...manifestMaterial,
+      candidateRootSha256: observationCandidateRoot(manifestMaterial),
+    }
+    writeFileSync(
+      path.join(stagingDirectory, "manifest.json"),
+      renderJson(manifest),
+      {
+        flag: "wx",
+        mode: 0o600,
+      },
+    )
+    if (!registryBefore.equals(readFileSync(registryPath))) {
+      return fail("ACTIVE_TRACE_REGISTRY_CHANGED")
+    }
+    renameSync(stagingDirectory, candidateDirectory)
+    return {
+      candidateDirectory,
+      manifestPath: path.join(candidateDirectory, "manifest.json"),
+      bundlePath: path.join(candidateDirectory, "traces.bundle.json"),
+      candidateRootSha256: manifest.candidateRootSha256,
+      bundleRootSha256: bundle.bundleRootSha256,
+    }
+  } finally {
+    if (existsSync(stagingDirectory))
+      rmSync(stagingDirectory, { recursive: true, force: true })
   }
 }
 

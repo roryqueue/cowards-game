@@ -46,11 +46,19 @@ afterEach(() => {
 
 describe("v1.37 conformance trace candidate generation", () => {
   it("bundles every corpus-v3 case in one fixed-schema inactive observation candidate", () => {
-    const registryPath = path.join(ACTIVE_V137_CONFORMANCE_TRACE_ROOT, "registry.json")
+    const registryPath = path.join(
+      ACTIVE_V137_CONFORMANCE_TRACE_ROOT,
+      "registry.json",
+    )
     const registryBefore = readFileSync(registryPath)
-    const candidateDirectory = path.join(temporaryRoot(), "observation-trace-v4")
+    const candidateDirectory = path.join(
+      temporaryRoot(),
+      "observation-trace-v4",
+    )
 
-    const result = generateV137ObservationTraceV4Candidate({ candidateDirectory })
+    const result = generateV137ObservationTraceV4Candidate({
+      candidateDirectory,
+    })
     const manifest = JSON.parse(readFileSync(result.manifestPath, "utf8"))
     const bundle = JSON.parse(readFileSync(result.bundlePath, "utf8"))
 
@@ -72,14 +80,21 @@ describe("v1.37 conformance trace candidate generation", () => {
       corpusRootSha256: manifest.corpusRootSha256,
       caseCount: manifest.caseCount,
     })
-    expect(bundle.records.map(({ caseId }: { caseId: string }) => caseId)).toEqual(
+    expect(
+      bundle.records.map(({ caseId }: { caseId: string }) => caseId),
+    ).toEqual(
       V1_37_CONFORMANCE_CORPUS_V3_CANDIDATE_PIN.caseRoots.map(
         ({ caseId }) => caseId,
       ),
     )
     expect(manifest.cases).toEqual(
       bundle.records.map(
-        ({ ordinal, caseId, resultClass, traceRoot }: Record<string, unknown>) => ({
+        ({
+          ordinal,
+          caseId,
+          resultClass,
+          traceRoot,
+        }: Record<string, unknown>) => ({
           ordinal,
           caseId,
           resultClass,
@@ -90,7 +105,9 @@ describe("v1.37 conformance trace candidate generation", () => {
     expect(
       bundle.records.every(
         ({ canonicalInput, trace, evidence }: Record<string, unknown>) =>
-          canonicalInput !== undefined && trace !== undefined && evidence !== undefined,
+          canonicalInput !== undefined &&
+          trace !== undefined &&
+          evidence !== undefined,
       ),
     ).toBe(true)
     expect(existsSync(path.join(candidateDirectory, "traces"))).toBe(false)
@@ -107,7 +124,7 @@ describe("v1.37 conformance trace candidate generation", () => {
       "v1.37-conformance-trace-v1",
     )
     const result = generateV137ConformanceTraceCandidate({
-      candidateVersion: "v1.37-conformance-trace-v2",
+      candidateVersion: "v1.37-conformance-trace-v999",
       candidateDirectory,
     })
     const manifest = JSON.parse(readFileSync(result.manifestPath, "utf8"))
@@ -115,7 +132,7 @@ describe("v1.37 conformance trace candidate generation", () => {
 
     expect(manifest).toMatchObject({
       schemaVersion: "v1.37-conformance-trace-candidate-v1",
-      candidateVersion: "v1.37-conformance-trace-v2",
+      candidateVersion: "v1.37-conformance-trace-v999",
       corpusVersion: V1_37_CONFORMANCE_CORPUS.version,
       corpusRootSha256: V1_37_CONFORMANCE_CORPUS_ROOT,
       generatedBy: "scripts/generate-v1-37-conformance-traces.ts",
@@ -142,7 +159,7 @@ describe("v1.37 conformance trace candidate generation", () => {
   it("generates each success from its exact execution mode and case seed", () => {
     const candidateDirectory = path.join(temporaryRoot(), "candidate")
     generateV137ConformanceTraceCandidate({
-      candidateVersion: "v1.37-conformance-trace-v2",
+      candidateVersion: "v1.37-conformance-trace-v999",
       candidateDirectory,
     })
     const trace = (caseId: string) =>
@@ -186,12 +203,12 @@ describe("v1.37 conformance trace candidate generation", () => {
 
     const candidateDirectory = path.join(temporaryRoot(), "candidate")
     generateV137ConformanceTraceCandidate({
-      candidateVersion: "v1.37-conformance-trace-v2",
+      candidateVersion: "v1.37-conformance-trace-v999",
       candidateDirectory,
     })
     expect(() =>
       generateV137ConformanceTraceCandidate({
-        candidateVersion: "v1.37-conformance-trace-v2",
+        candidateVersion: "v1.37-conformance-trace-v999",
         candidateDirectory,
       }),
     ).toThrow("CANDIDATE_DIRECTORY_EXISTS")
