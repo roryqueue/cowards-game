@@ -19,8 +19,14 @@ import type {
   PlayerId,
 } from "@cowards/spec"
 import {
+  ARENA_CATALOG_VERSION_V1_37,
+  CANONICAL_ARENA_CATALOG_V1_37,
+  SET_CONDITION_POLICY_VERSION_V1_37,
+  createSetScenarioV137,
   encodeCanonicalJson,
   resolveCanonicalCompatibilityTuple,
+  resolveCandidateRuntimeV119SemanticTuple,
+  type SetConditionPolicyRowV137,
 } from "@cowards/spec"
 
 const STATE_HASH_DOMAIN =
@@ -131,6 +137,38 @@ export interface ChronicleRecordingMetadata {
   readonly semanticTuple: Readonly<CanonicalCompatibilityTuple>
 }
 
+export interface CandidateReplayMatchAuthorityV119 {
+  readonly semanticAuthorityKey: "runtime-v1.19"
+  readonly matchId: string
+  readonly seed: string
+  readonly arenaVariantId: string
+  readonly bottomStrategyRevisionId: string
+  readonly topStrategyRevisionId: string
+  readonly bottomPlayerId: PlayerId
+  readonly topPlayerId: PlayerId
+  readonly bottomEntrantKey: string
+  readonly topEntrantKey: string
+  readonly setPolicyVersion: typeof SET_CONDITION_POLICY_VERSION_V1_37
+  readonly scenarioId: `set-scenario:sha256:${string}`
+  readonly conditionId: `set-condition:sha256:${string}`
+  readonly conditionOrdinal: 0 | 1 | 2 | 3
+  readonly conditionSuffix: SetConditionPolicyRowV137["suffix"]
+  readonly requestIdentity: `set-request:sha256:${string}`
+  readonly arenaCatalogVersion: typeof ARENA_CATALOG_VERSION_V1_37
+  readonly arenaSemanticGeometryHash: `sha256:${string}`
+  readonly initialInitiativeEntrantKey: string
+  readonly initialInitiativePlayerId: PlayerId
+}
+
+export interface CandidateReplayReproducibilityV119 {
+  readonly profile: "candidate-v1.19"
+  readonly compatibility: {
+    readonly tupleId: string
+    readonly tuple: Readonly<CanonicalCompatibilityTuple>
+  }
+  readonly match: Readonly<CandidateReplayMatchAuthorityV119>
+}
+
 export type ChronicleRecorderFailureCode =
   | "RECORDER_EXECUTION_NOT_COMPLETED"
   | "RECORDER_METADATA_INVALID"
@@ -139,6 +177,7 @@ export type ChronicleRecorderFailureCode =
   | "RECORDER_BOUNDARY_INTEGRITY_INVALID"
   | "RECORDER_PRIVATE_OWNER_INVALID"
   | "RECORDER_MATERIAL_INVALID"
+  | "RECORDER_CANDIDATE_REPRODUCIBILITY_INVALID"
 
 export interface ChronicleRecorderFailure {
   readonly classification: "system_failure"
@@ -167,6 +206,9 @@ export type RecordChronicleFromExecutionResult =
       readonly boundaryAnchors: readonly ChronicleBoundaryAnchor[]
       readonly recordedTransitions: readonly RecordedCanonicalTransitionV137[]
       readonly transitionTraceRoot: string
+      readonly candidateReproducibility?:
+        | Readonly<CandidateReplayReproducibilityV119>
+        | undefined
     }
   | {
       readonly ok: false
@@ -176,6 +218,9 @@ export type RecordChronicleFromExecutionResult =
 export interface RecordChronicleFromExecutionInput {
   readonly execution: ChronicleRecorderExecution
   readonly metadata: ChronicleRecordingMetadata
+  readonly candidateMatch?:
+    | Readonly<CandidateReplayMatchAuthorityV119>
+    | undefined
 }
 
 const failure = (
@@ -383,6 +428,9 @@ const projectState = (state: GameState) => ({
   phaseNumber: state.phaseNumber,
   roundNumber: state.roundNumber,
   activationCount: state.activationCount,
+  ...(state.initialInitiativePlayerId === undefined
+    ? {}
+    : { initialInitiativePlayerId: state.initialInitiativePlayerId }),
   initiativePlayerId: state.initiativePlayerId,
   bounds: {
     minX: state.bounds.minX,
@@ -452,7 +500,7 @@ const safeEvent = ({
   ...(privacy === undefined ? {} : { privacy }),
 })
 
-const metadataIsSafe = (metadata: ChronicleRecordingMetadata): boolean => {
+const resolveRecordingTuple = (metadata: ChronicleRecordingMetadata) => {
   if (
     !same(Object.keys(metadata).sort(), [
       "schemaVersion",
@@ -473,14 +521,129 @@ const metadataIsSafe = (metadata: ChronicleRecordingMetadata): boolean => {
       (value) => typeof value !== "string" || value.length === 0,
     )
   ) {
-    return false
+    return undefined
   }
   try {
+    const selector = {
+      tupleId: metadata.semanticTupleId,
+      tuple: metadata.semanticTuple,
+    }
     return (
-      resolveCanonicalCompatibilityTuple({
-        tupleId: metadata.semanticTupleId,
-        tuple: metadata.semanticTuple,
-      }) !== undefined
+      resolveCanonicalCompatibilityTuple(selector) ??
+      resolveCandidateRuntimeV119SemanticTuple(selector)
+    )
+  } catch {
+    return undefined
+  }
+}
+
+const candidateMatchKeys = Object.freeze([
+  "arenaCatalogVersion",
+  "arenaSemanticGeometryHash",
+  "arenaVariantId",
+  "bottomEntrantKey",
+  "bottomPlayerId",
+  "bottomStrategyRevisionId",
+  "conditionId",
+  "conditionOrdinal",
+  "conditionSuffix",
+  "initialInitiativeEntrantKey",
+  "initialInitiativePlayerId",
+  "matchId",
+  "requestIdentity",
+  "scenarioId",
+  "seed",
+  "semanticAuthorityKey",
+  "setPolicyVersion",
+  "topEntrantKey",
+  "topPlayerId",
+  "topStrategyRevisionId",
+] as const)
+
+const validateCandidateMatchAuthorityV119 = (
+  candidate: Readonly<CandidateReplayMatchAuthorityV119>,
+  finalState: GameState,
+): boolean => {
+  if (
+    !same(Object.keys(candidate).sort(), candidateMatchKeys) ||
+    candidate.semanticAuthorityKey !== "runtime-v1.19" ||
+    candidate.setPolicyVersion !== SET_CONDITION_POLICY_VERSION_V1_37 ||
+    candidate.arenaCatalogVersion !== ARENA_CATALOG_VERSION_V1_37 ||
+    candidate.matchId !== finalState.matchId ||
+    candidate.seed !== finalState.seed ||
+    candidate.arenaVariantId !== finalState.arenaVariant.id ||
+    candidate.bottomPlayerId === candidate.topPlayerId ||
+    candidate.bottomEntrantKey === candidate.topEntrantKey ||
+    finalState.initialInitiativePlayerId !==
+      candidate.initialInitiativePlayerId
+  ) {
+    return false
+  }
+  const bottom = finalState.players.find(({ side }) => side === "bottom")
+  const top = finalState.players.find(({ side }) => side === "top")
+  if (
+    bottom?.id !== candidate.bottomPlayerId ||
+    top?.id !== candidate.topPlayerId ||
+    bottom.strategyRevisionId !== candidate.bottomStrategyRevisionId ||
+    top.strategyRevisionId !== candidate.topStrategyRevisionId
+  ) {
+    return false
+  }
+
+  const arena = CANONICAL_ARENA_CATALOG_V1_37.arenas.find(
+    ({ id }) => id === candidate.arenaVariantId,
+  )
+  if (
+    arena === undefined ||
+    arena.status !== "active" ||
+    !arena.schedulable ||
+    arena.semanticGeometryHash !== candidate.arenaSemanticGeometryHash ||
+    !same(arena.initialBounds, finalState.arenaVariant.initialBounds) ||
+    !same(arena.terrainStones, finalState.arenaVariant.terrainStones)
+  ) {
+    return false
+  }
+
+  try {
+    const entrantAIsBottom = candidate.conditionOrdinal < 2
+    const scenario = createSetScenarioV137({
+      arenaCatalogVersion: candidate.arenaCatalogVersion,
+      arenaSemanticGeometryHash: candidate.arenaSemanticGeometryHash,
+      entrantA: entrantAIsBottom
+        ? {
+            entrantKey: candidate.bottomEntrantKey,
+            playerId: candidate.bottomPlayerId,
+          }
+        : {
+            entrantKey: candidate.topEntrantKey,
+            playerId: candidate.topPlayerId,
+          },
+      entrantB: entrantAIsBottom
+        ? {
+            entrantKey: candidate.topEntrantKey,
+            playerId: candidate.topPlayerId,
+          }
+        : {
+            entrantKey: candidate.bottomEntrantKey,
+            playerId: candidate.bottomPlayerId,
+          },
+      baseSeed: candidate.seed,
+    })
+    const condition = scenario.conditions[candidate.conditionOrdinal]
+    return (
+      scenario.scenarioId === candidate.scenarioId &&
+      condition !== undefined &&
+      condition.conditionId === candidate.conditionId &&
+      condition.suffix === candidate.conditionSuffix &&
+      condition.requestIdentity === candidate.requestIdentity &&
+      condition.bottomEntrantKey === candidate.bottomEntrantKey &&
+      condition.topEntrantKey === candidate.topEntrantKey &&
+      condition.bottomPlayerId === candidate.bottomPlayerId &&
+      condition.topPlayerId === candidate.topPlayerId &&
+      condition.initialInitiativeEntrantKey ===
+        candidate.initialInitiativeEntrantKey &&
+      condition.initialInitiativePlayerId ===
+        candidate.initialInitiativePlayerId
     )
   } catch {
     return false
@@ -872,11 +1035,16 @@ const validateExecution = (
     return "RECORDER_MATERIAL_INVALID"
   }
   const first = transitions[0]!
-  const matchesMetadataIdentity = (transition: RecorderTransition): boolean =>
-    resolveCanonicalCompatibilityTuple({
+  const matchesMetadataIdentity = (transition: RecorderTransition): boolean => {
+    const selector = {
       tupleId: transition.semanticTupleId,
       tuple: transition.semanticTuple,
-    })?.tupleId === metadata.semanticTupleId
+    }
+    return (
+      resolveCanonicalCompatibilityTuple(selector) ??
+      resolveCandidateRuntimeV119SemanticTuple(selector)
+    )?.tupleId === metadata.semanticTupleId
+  }
   if (
     !matchesMetadataIdentity(first) ||
     transitions.some((transition) => !matchesMetadataIdentity(transition))
@@ -992,14 +1160,29 @@ const validateExecution = (
   return undefined
 }
 
-export const recordChronicleFromExecution = ({
-  execution,
-  metadata,
-}: RecordChronicleFromExecutionInput): RecordChronicleFromExecutionResult => {
+export const recordChronicleFromExecution = (
+  input: RecordChronicleFromExecutionInput,
+): RecordChronicleFromExecutionResult => {
+  const { execution, metadata, candidateMatch } = input
   if (execution.kind !== "completed") {
     return failure("RECORDER_EXECUTION_NOT_COMPLETED")
   }
-  if (!metadataIsSafe(metadata)) return failure("RECORDER_METADATA_INVALID")
+  const resolvedTuple = resolveRecordingTuple(metadata)
+  if (resolvedTuple === undefined) return failure("RECORDER_METADATA_INVALID")
+  const candidateTuple = resolveCandidateRuntimeV119SemanticTuple({
+    tupleId: metadata.semanticTupleId,
+    tuple: metadata.semanticTuple,
+  })
+  if (
+    (candidateTuple === undefined) !== (candidateMatch === undefined) ||
+    (candidateMatch !== undefined &&
+      !validateCandidateMatchAuthorityV119(
+        candidateMatch,
+        execution.recorderMaterial.finalState,
+      ))
+  ) {
+    return failure("RECORDER_CANDIDATE_REPRODUCIBILITY_INVALID")
+  }
   const invalid = validateExecution(execution, metadata)
   if (invalid !== undefined) return failure(invalid)
 
@@ -1065,6 +1248,17 @@ export const recordChronicleFromExecution = ({
     ...(privateSections === undefined ? {} : { private: privateSections }),
   }
   const first = execution.transitions[0]!
+  const candidateReproducibility =
+    candidateMatch === undefined
+      ? undefined
+      : freezeClone({
+          profile: "candidate-v1.19" as const,
+          compatibility: {
+            tupleId: first.semanticTupleId,
+            tuple: globalThis.structuredClone(first.semanticTuple),
+          },
+          match: globalThis.structuredClone(candidateMatch),
+        })
   return {
     ok: true,
     chronicle,
@@ -1076,5 +1270,8 @@ export const recordChronicleFromExecution = ({
     boundaryAnchors: anchors,
     recordedTransitions,
     transitionTraceRoot,
+    ...(candidateReproducibility === undefined
+      ? {}
+      : { candidateReproducibility }),
   }
 }
