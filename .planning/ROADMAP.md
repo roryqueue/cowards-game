@@ -382,7 +382,7 @@ Plans:
 
 **Wave 12 *(blocked on Wave 11 completion)* — authority inversion and generator decoupling**
 
-- [ ] 260-27-PLAN.md — Make the compact source the sole current authority and decouple current Go projection from candidate evidence.
+- [x] 260-27-PLAN.md — Make the compact source the sole current authority and decouple current Go projection from candidate evidence.
 
 **Wave 13 *(blocked on Wave 12 completion)* — transactional database selection head**
 
@@ -450,5 +450,5 @@ Cycle-cap, inward-start, facing-only MOVE, reversal-history, attacker-facing/Adv
 | 257. Canonical Transition Kernel and v1.4 Semantic Integrity | 22/22 | Complete | 2026-07-13 |
 | 258. Canonical JSON, Failure Semantics, and Artifact Identity | 14/14 | Complete | 2026-07-16 |
 | 259. Executable Four-Language and Chronicle Conformance | 22/31 | In progress | - |
-| 260. Truthful Strategy Inputs, Arena Authority, and Set Fairness | 24/33 | In Progress|  |
+| 260. Truthful Strategy Inputs, Arena Authority, and Set Fairness | 25/33 | In Progress|  |
 | 261. Integrated Service Proof, Drift Guards, and Release | 0/TBD | Not started | - |
