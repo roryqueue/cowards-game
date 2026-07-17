@@ -15,6 +15,7 @@ import {
   MatchExecutionPublicResultV119Schema,
   MatchExecutionReplayEvidenceV1Schema,
   MatchExecutionReplayMetadataV1Schema,
+  assertMatchExecutionPublicResultV119LeakSafe,
   assertPublicServiceDtoLeakSafe,
   createMatchExecutionExactEvidenceV137,
   parseMatchExecutionEvidenceByVersion,
@@ -153,6 +154,100 @@ describe("match execution app contract v1", () => {
         },
       }),
     ).toThrow(/initiative/i)
+  })
+
+  it("rejects candidate-only private poison recursively at every nesting level", () => {
+    const poisonFields = [
+      "source",
+      "artifacts",
+      "strategyMemory",
+      "soldierMemory",
+      "objectives",
+      "receipts",
+      "diagnostics",
+      "signatures",
+      "keys",
+      "hostData",
+      "credentials",
+      "securityInternals",
+    ] as const
+    const nestingPaths = [
+      [] as string[],
+      ["arena"],
+      ["condition"],
+      ["condition", "sides"],
+    ]
+
+    for (const field of poisonFields) {
+      for (const nestingPath of nestingPaths) {
+        const poisoned = structuredClone(candidatePublicResultSourceV119) as Record<
+          string,
+          unknown
+        >
+        let target = poisoned
+        for (const segment of nestingPath) {
+          target = target[segment] as Record<string, unknown>
+        }
+        target[field] = { nested: [{ value: "private" }] }
+        expect(() =>
+          assertMatchExecutionPublicResultV119LeakSafe(poisoned),
+        ).toThrow(/private field/i)
+        expect(() => projectMatchExecutionPublicResultV119(poisoned)).toThrow()
+      }
+    }
+
+    expect(() =>
+      assertMatchExecutionPublicResultV119LeakSafe({
+        wrapper: [{ safe: { deeper: { diagnostics: "private" } } }],
+      }),
+    ).toThrow(/private field/i)
+    expect(() =>
+      projectMatchExecutionPublicResultV119({
+        ...candidatePublicResultSourceV119,
+        matchId: "/var/lib/cowards/private-result.json",
+      }),
+    ).toThrow(/private marker/i)
+  })
+
+  it("preserves current and historical result dispatch bytes around candidate parsing", () => {
+    const current = toMatchExecutionMatchSetSummaryV1(
+      publicMatchSetSummaryExample as PublicMatchSetSummaryServiceDto,
+    )
+    const historical = {
+      profile: "historical-v1.4" as const,
+      matchId: "match:historical-public-result",
+      rulesVersion: "cowards-rules-v1.4" as const,
+      chronicleVersion: "chronicle-v1.4" as const,
+      originalCountedStatus: "counted" as const,
+    }
+    const currentBytes = JSON.stringify(current)
+    const currentSchemaBytes = JSON.stringify(
+      z.toJSONSchema(MatchExecutionMatchSetSummaryV1Schema),
+    )
+    const historicalBytes = JSON.stringify(historical)
+
+    expect(
+      parseMatchExecutionEvidenceByVersion(historical).classification,
+    ).toBe("historical_original_semantics")
+    expect(() =>
+      parseMatchExecutionPublicResultV119({
+        ...current,
+        semanticAuthorityKey: "runtime-v1.19",
+      }),
+    ).toThrow()
+    expect(() =>
+      parseMatchExecutionEvidenceByVersion(
+        projectMatchExecutionPublicResultV119(
+          candidatePublicResultSourceV119,
+        ),
+      ),
+    ).toThrow()
+    expect(JSON.stringify(current)).toBe(currentBytes)
+    expect(JSON.stringify(historical)).toBe(historicalBytes)
+    expect(
+      JSON.stringify(z.toJSONSchema(MatchExecutionMatchSetSummaryV1Schema)),
+    ).toBe(currentSchemaBytes)
+    expect(current.contractVersion).toBe("match-execution-app-v1")
   })
 
   it("persists one exact compatibility tuple and ordered heterogeneous entrant evidence pair", () => {
