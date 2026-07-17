@@ -73,8 +73,8 @@
 
 - [x] **SET-01**: Engine, persistence, Go, replay, UI, fixtures, and competition scheduling derive official arenas from one versioned canonical authority.
 - [x] **SET-02**: Canonical arena identity includes semantic geometry identity so duplicate empty geometries cannot count as distinct evaluation scenarios.
-- [ ] **SET-03**: Every counted scenario has explicit identity and schedules each entrant on each side and in each initial-initiative state.
-- [ ] **SET-04**: TypeScript, Go, persistence, and service-backed scheduling tests prove entrant-level side-by-initiative Cartesian coverage rather than inferring fairness from seed suffixes or side swaps.
+- [x] **SET-03**: Every counted scenario has explicit identity and schedules each entrant on each side and in each initial-initiative state.
+- [x] **SET-04**: TypeScript, Go, persistence, and service-backed scheduling tests prove entrant-level side-by-initiative Cartesian coverage rather than inferring fairness from seed suffixes or side swaps.
 - [x] **SET-05**: Arena and Set authority repair does not introduce a new official geometry or change valid v1.4 gameplay.
 
 ### Integrated Proof and Release
@@ -166,8 +166,8 @@ These candidates are optional and are not required for v1.37 completion.
 | STRAT-04 | Phase 260 | Complete |
 | SET-01 | Phase 260 | Complete |
 | SET-02 | Phase 260 | Complete |
-| SET-03 | Phase 260 | Pending |
-| SET-04 | Phase 260 | Pending |
+| SET-03 | Phase 260 | Complete |
+| SET-04 | Phase 260 | Complete |
 | SET-05 | Phase 260 | Complete |
 | PROOF-01 | Phase 261 | Pending |
 | PROOF-02 | Phase 261 | Pending |

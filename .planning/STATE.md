@@ -5,16 +5,16 @@ milestone_name: Rules Integrity and Strategy Evaluation Foundations — ACTIVE
 current_phase: 260
 current_phase_name: truthful-strategy-inputs-arena-authority-and-set-fairness
 status: executing
-stopped_at: Completed 260-03-PLAN.md
-last_updated: "2026-07-17T03:43:59.775Z"
+stopped_at: Completed 260-05-PLAN.md
+last_updated: "2026-07-17T04:22:10.762Z"
 last_activity: 2026-07-17
-last_activity_desc: Completed Phase 260 Plan 03 successor kernel observations
+last_activity_desc: Completed Phase 260 Plan 05 TypeScript four-condition scheduler candidate
 progress:
   total_phases: 6
   completed_phases: 4
   total_plans: 112
-  completed_plans: 92
-  percent: 67
+  completed_plans: 93
+  percent: 83
 ---
 
 # State: Coward's Game
@@ -29,11 +29,11 @@ See: `.planning/PROJECT.md` (updated 2026-07-12)
 ## Current Position
 
 Phase: 260 (truthful-strategy-inputs-arena-authority-and-set-fairness) — EXECUTING
-Plan: 7 of 26
+Plan: 8 of 26
 Status: Ready to execute
-Last activity: 2026-07-17 — Phase 260 execution started
+Last activity: 2026-07-17 — Completed Phase 260 Plan 05 TypeScript four-condition scheduler candidate
 
-Progress: [████████░░] 82%
+Progress: [████████░░] 83%
 
 ## Durable Decisions
 
@@ -75,8 +75,8 @@ Progress: [████████░░] 82%
 
 **Resume file:** None
 
-Last session: 2026-07-17T03:43:30.887Z
-Stopped at: Completed 260-03-PLAN.md
+Last session: 2026-07-17T04:21:30.308Z
+Stopped at: Completed 260-05-PLAN.md
 Next command: `$gsd-execute-phase 260`.
 
 ## Performance Metrics
@@ -133,6 +133,7 @@ Next command: `$gsd-execute-phase 260`.
 | Phase 260 P16 | 8min | 2 tasks | 5 files |
 | Phase 260 P17 | 12min | 2 tasks | 7 files |
 | Phase 260 P03 | 17min | 3 tasks | 14 files |
+| Phase 260 P05 | 24min | 3 tasks | 8 files |
 
 ## Decisions
 
@@ -289,3 +290,7 @@ Next command: `$gsd-execute-phase 260`.
 - [Phase 260]: Project the v1.19 map-config candidate only from the validated spec manifest and keep the complete Phase-259 branch intact. — Open Field remains readable history but cannot manufacture schedulable diversity, and no geometry is re-authored.
 - [Phase 260]: Keep v1.19 kernel execution behind exact candidate-only entry points until Plan 14. — Current and v1.17 dispatch remain the complete Phase-259 authority.
 - [Phase 260]: Source successor initiative and Advance observations only from canonical kernel state. — Adapters transport signed facts without seed, Round-parity, event, or position-difference inference.
+- [Phase 260]: Keep unaddressed TypeScript scheduling on the generated Phase-259 selector; runtime-v1.19 requires exact explicit dispatch. — Candidate staging must not activate or redirect current scheduling.
+- [Phase 260]: Treat one canonical scenario as the atomic scheduling unit: four explicit condition rows share one base seed and bind side, initiative, catalog, geometry, and request identity. — Mirror rows and seed suffixes are not fairness authority.
+- [Phase 260]: Require each immutable Strategy Revision to have its own exact non-revoked real runtime-v1.19 admission before candidate publication. — Language-level or cross-revision evidence cannot manufacture eligibility.
+- [Phase 260]: Canonicalize candidate competition pairs by immutable revision key while retaining Go as the selected normal scheduler. — Entrant reorder or insertion cannot change existing pair identity, and TypeScript remains rollback/parity/test only.
