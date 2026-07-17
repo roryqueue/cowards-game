@@ -36,10 +36,12 @@ const row = (
 ): StrategyRevisionInventoryDatabaseRowV119 => {
   const sourceText = options.sourceText ?? source
   const artifactBytes = Buffer.from(artifact, "utf8")
+  const sourceHash = createHash("sha256").update(sourceText).digest("hex")
+  const artifactHash = createHash("sha256").update(artifactBytes).digest("hex")
   return {
     id,
     source: sourceText,
-    source_hash: createHash("sha256").update(sourceText).digest("hex"),
+    source_hash: sourceHash,
     source_bytes: Buffer.byteLength(sourceText),
     runtime: {
       abiVersion: "strategy-runtime-abi-v1.17",
@@ -48,9 +50,15 @@ const row = (
     metadata: {
       providerValidation: {
         providerId: "strategy-language-provider-js-ts",
+        contractVersion: "strategy-language-provider-contract-v1.33",
+        sourceHash,
+        sourceBytes: Buffer.byteLength(sourceText),
+        artifactHash,
+        artifactBytes: artifactBytes.byteLength,
+        proof: `hmac-sha256:${"a".repeat(64)}`,
       },
       sourceArtifact: {
-        hash: createHash("sha256").update(artifactBytes).digest("hex"),
+        hash: artifactHash,
         bytes: artifactBytes.byteLength,
         bytesBase64: artifactBytes.toString("base64"),
       },
@@ -101,6 +109,11 @@ describe("frozen pre-v1.19 Strategy Revision inventory", () => {
         metadata: {
           ...row("revision:a").metadata,
           providerValidation: {
+            ...(
+              row("revision:a").metadata as {
+                providerValidation: Record<string, unknown>
+              }
+            ).providerValidation,
             providerId: "strategy-language-provider-python",
           },
         },
@@ -148,6 +161,11 @@ describe("revision-specific candidate execution and disposition", () => {
         metadata: {
           ...row("revision:unsupported").metadata,
           providerValidation: {
+            ...(
+              row("revision:unsupported").metadata as {
+                providerValidation: Record<string, unknown>
+              }
+            ).providerValidation,
             providerId: "strategy-language-provider-python",
           },
         },

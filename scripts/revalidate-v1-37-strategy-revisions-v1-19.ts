@@ -343,10 +343,21 @@ export const freezePreV119StrategyRevisionInventory = (
         typeof providerValidation?.providerId === "string"
           ? providerValidation.providerId
           : null
-      const providerIdentityValid =
-        authority !== undefined && persistedProviderId === authority.providerId
       const artifact = artifactFor(databaseRow, languageId)
       const sourceBytes = Buffer.from(databaseRow.source, "utf8")
+      const providerIdentityValid =
+        authority !== undefined &&
+        persistedProviderId === authority.providerId &&
+        typeof providerValidation?.contractVersion === "string" &&
+        providerValidation.contractVersion.length > 0 &&
+        providerValidation.sourceHash === databaseRow.source_hash &&
+        providerValidation.sourceBytes === databaseRow.source_bytes &&
+        artifact !== null &&
+        (providerValidation.artifactHash === artifact.sha256.slice(7) ||
+          providerValidation.artifactHash === artifact.sha256) &&
+        providerValidation.artifactBytes === artifact.bytes.byteLength &&
+        typeof providerValidation.proof === "string" &&
+        providerValidation.proof.length > 0
       const identityValid =
         SOURCE_HASH.test(databaseRow.source_hash) &&
         databaseRow.source_hash === sha256(sourceBytes).slice(7) &&
