@@ -5,15 +5,15 @@ milestone_name: Rules Integrity and Strategy Evaluation Foundations — ACTIVE
 current_phase: 260
 current_phase_name: truthful-strategy-inputs-arena-authority-and-set-fairness
 status: executing
-stopped_at: Phase 260 planned; Wave 1 ready
-last_updated: "2026-07-17T01:18:56.005Z"
+stopped_at: Completed 260-01-PLAN.md
+last_updated: "2026-07-17T01:38:12.319Z"
 last_activity: 2026-07-17
 last_activity_desc: Phase 260 execution started
 progress:
   total_phases: 6
   completed_phases: 4
   total_plans: 112
-  completed_plans: 86
+  completed_plans: 87
   percent: 67
 ---
 
@@ -29,11 +29,11 @@ See: `.planning/PROJECT.md` (updated 2026-07-12)
 ## Current Position
 
 Phase: 260 (truthful-strategy-inputs-arena-authority-and-set-fairness) — EXECUTING
-Plan: 1 of 26
-Status: Executing Phase 260
+Plan: 2 of 26
+Status: Ready to execute
 Last activity: 2026-07-17 — Phase 260 execution started
 
-Progress: [████████░░] 77%
+Progress: [████████░░] 78%
 
 ## Durable Decisions
 
@@ -75,8 +75,8 @@ Progress: [████████░░] 77%
 
 **Resume file:** None
 
-Last session: 2026-07-16T17:46:00-04:00
-Stopped at: Phase 260 planned; Wave 1 ready
+Last session: 2026-07-17T01:38:12.301Z
+Stopped at: Completed 260-01-PLAN.md
 Next command: `$gsd-execute-phase 260`.
 
 ## Performance Metrics
@@ -127,6 +127,7 @@ Next command: `$gsd-execute-phase 260`.
 | Phase 259 P28 | 23min | 2 TDD tasks + review | plural import-root bootstrap; 46 PostgreSQL/CLI tests |
 | Phase 259 P22 | 28min | 3 tasks + review | four managed signatures/imports, production trust activation, independent promotion |
 | Phase 259 P23 | multi-session resumed | 3 tasks + 11 finding convergence | exact four-language/Chronicle/service/DB/Go/privacy proof and default drift guard |
+| Phase 260 P01 | 15min | 3 tasks | 6 files |
 
 ## Decisions
 
@@ -265,3 +266,7 @@ Next command: `$gsd-execute-phase 260`.
 - [Phase 257]: The committed v1.16 semantic service receipt is the sole public-safe browser fixture source; browser proof is service-contract-backed test evidence, not live Go/runtime-service/database topology proof. — Phase 261 retains live execution and persistence ownership.
 - [Phase 257]: The retired public-safe replay Match ID is accepted only as a test input alias and every response retains canonical golden Match identity. — Compatibility navigation cannot create a second Chronicle or response identity.
 - [Phase 257]: Public replay proof joins exact result/API identity, complete event and snapshot evidence, in-bounds board geometry, pixel ink, responsive screenshots, terminal agreement, and recursive privacy checks. — A plausible canvas alone cannot stand in for semantic or boundary proof.
+- [Phase 260]: Freeze the three Plan 260-01 semantic authorities as inactive candidates. — Downstream consumers and cross-language evidence must activate them explicitly without rewriting Phase 259 released behavior.
+- [Phase 260]: Use strategy-runtime-abi-v1.19 for the successor observation ABI. — The v1.18 identifier is already occupied by the released supervisor invocation contract.
+- [Phase 260]: Hash canonical arenas from versioned semantic geometry only. — Bounds, canonical terrain, and arena-owned setup determine gameplay identity; labels, aliases, and schedulability do not.
+- [Phase 260]: Model Set fairness as four explicit stable conditions sharing one base seed. — Fairness assignments remain auditable data and retries preserve exact request identity instead of relying on seed suffix conventions.

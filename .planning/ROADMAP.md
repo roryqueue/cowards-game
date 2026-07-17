@@ -321,11 +321,11 @@ Plans:
   4. Each counted scenario explicitly schedules every entrant on each side and in each initial-initiative state, proved at entrant level through TypeScript, Go, persistence, and service-backed tests.
   5. Arena and Set repair adds no official geometry or valid v1.4 gameplay change; any change to Strategy observation or reachable Match semantics stops for explicit compatibility approval.
 
-**Plans:** 26 plans in 13 waves
+**Plans:** 1/26 plans executed
 
 **Wave 1 — immutable semantic authorities**
 
-- [ ] 260-01-PLAN.md — Freeze the successor observation ABI, arena catalog, and four-condition Set policy.
+- [x] 260-01-PLAN.md — Freeze the successor observation ABI, arena catalog, and four-condition Set policy.
 
 **Wave 2 *(blocked on Wave 1 completion)* — inactive tuple and selector registration**
 
@@ -428,5 +428,5 @@ Cycle-cap, inward-start, facing-only MOVE, reversal-history, attacker-facing/Adv
 | 257. Canonical Transition Kernel and v1.4 Semantic Integrity | 22/22 | Complete | 2026-07-13 |
 | 258. Canonical JSON, Failure Semantics, and Artifact Identity | 14/14 | Complete | 2026-07-16 |
 | 259. Executable Four-Language and Chronicle Conformance | 22/31 | In progress | - |
-| 260. Truthful Strategy Inputs, Arena Authority, and Set Fairness | 0/TBD | Not started | - |
+| 260. Truthful Strategy Inputs, Arena Authority, and Set Fairness | 1/26 | In Progress | - |
 | 261. Integrated Service Proof, Drift Guards, and Release | 0/TBD | Not started | - |
