@@ -33,10 +33,12 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest"
 import {
   MatchCompletionIntegritySystemFailure,
   MatchCompletionSemanticSystemFailure,
+  admitSuccessorConditionTerminalV119,
   admitCurrentMatchCompletion,
   admitCurrentMatchCompletionV118,
   completeMatch,
   deriveMatchCompletionFields,
+  evaluateSuccessorSystemFailureRetryV119,
   validateCompletionIntegritySnapshot,
   type CompleteMatchInputV118,
   type CompleteMatchSemanticEvidenceV118,
@@ -53,6 +55,114 @@ import {
   type MatchExecutionEvidencePair,
   type MatchSetIntegrityIdentity,
 } from "./integrity-evidence.js"
+
+const successorConditionIdentity = () => ({
+  semanticAuthorityKey: "runtime-v1.19" as const,
+  matchSetId: "match-set:successor",
+  matchId: "match:successor" as const,
+  scenarioId: `set-scenario:sha256:${"1".repeat(64)}` as const,
+  conditionId: `set-condition:sha256:${"2".repeat(64)}` as const,
+  conditionOrdinal: 0 as const,
+  requestIdentity: `set-request:sha256:${"3".repeat(64)}` as const,
+  signedRequestSha256: `sha256:${"4".repeat(64)}` as const,
+  seed: "seed:successor",
+  arenaId: "arena:smoke:v1",
+  arenaCatalogVersion: "arena-catalog-v1.37" as const,
+  arenaSemanticGeometryHash: `sha256:${"5".repeat(64)}` as const,
+  semanticTupleId: `sha256:${"6".repeat(64)}` as const,
+  bottom: {
+    entrantKey: "entrant:a",
+    playerId: "player:a",
+    strategyRevisionId: "revision:a",
+    revalidationId: "revalidation:a",
+    revalidationRoot: `sha256:${"7".repeat(64)}` as const,
+  },
+  top: {
+    entrantKey: "entrant:b",
+    playerId: "player:b",
+    strategyRevisionId: "revision:b",
+    revalidationId: "revalidation:b",
+    revalidationRoot: `sha256:${"8".repeat(64)}` as const,
+  },
+  initialInitiativeEntrantKey: "entrant:a",
+  initialInitiativePlayerId: "player:a",
+})
+
+describe("runtime-v1.19 frozen condition completion", () => {
+  it("admits success and player violations only for byte-identical terminal identity", () => {
+    const scheduled = successorConditionIdentity()
+    for (const terminalKind of ["success", "player_violation"] as const) {
+      expect(
+        admitSuccessorConditionTerminalV119({
+          scheduled,
+          terminal: { ...scheduled, terminalKind },
+        }),
+      ).toEqual({ terminalKind, identity: scheduled })
+    }
+
+    for (const terminal of [
+      { ...scheduled, conditionId: `set-condition:sha256:${"9".repeat(64)}` },
+      { ...scheduled, arenaCatalogVersion: "arena-catalog-v1.36" },
+      { ...scheduled, signedRequestSha256: `sha256:${"a".repeat(64)}` },
+      {
+        ...scheduled,
+        bottom: scheduled.top,
+        top: scheduled.bottom,
+      },
+      {
+        ...scheduled,
+        initialInitiativeEntrantKey: scheduled.top.entrantKey,
+        initialInitiativePlayerId: scheduled.top.playerId,
+      },
+      {
+        ...scheduled,
+        bottom: {
+          ...scheduled.bottom,
+          revalidationId: "revalidation:cross-revision",
+        },
+      },
+      { ...scheduled, semanticTupleId: `sha256:${"b".repeat(64)}` },
+    ]) {
+      expect(() =>
+        admitSuccessorConditionTerminalV119({
+          scheduled,
+          terminal: { ...terminal, terminalKind: "success" },
+        }),
+      ).toThrow(/frozen condition identity/iu)
+    }
+  })
+
+  it("retries system failures only with an identical frozen request and bounded attempt", () => {
+    const identity = successorConditionIdentity()
+    expect(
+      evaluateSuccessorSystemFailureRetryV119({
+        scheduled: identity,
+        attempted: identity,
+        retryable: true,
+        attemptNumber: 1,
+        maxAttempts: 3,
+      }),
+    ).toEqual({ disposition: "retry", nextAttemptNumber: 2, identity })
+    expect(
+      evaluateSuccessorSystemFailureRetryV119({
+        scheduled: identity,
+        attempted: identity,
+        retryable: true,
+        attemptNumber: 3,
+        maxAttempts: 3,
+      }),
+    ).toEqual({ disposition: "degraded", identity })
+    expect(() =>
+      evaluateSuccessorSystemFailureRetryV119({
+        scheduled: identity,
+        attempted: { ...identity, seed: "seed:drift" },
+        retryable: true,
+        attemptNumber: 1,
+        maxAttempts: 3,
+      }),
+    ).toThrow(/frozen condition identity/iu)
+  })
+})
 
 const tuple = CANONICAL_COMPATIBILITY_TUPLES[0]!
 const sha256 = (value: string): string =>
