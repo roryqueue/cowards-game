@@ -19,6 +19,7 @@ provides:
   - Exact precommit and compensation crash recovery
   - Non-recursive five-selector activation proof
   - External database commit, tree, proof, and smoke validation
+  - Production-adapter Git and PostgreSQL recovery integration proof
 affects: [260-33, 260-14, 260-15]
 requirements-completed: [STRAT-01, STRAT-02, STRAT-03, STRAT-04, SET-01, SET-02, SET-03, SET-04, SET-05]
 completed: 2026-07-17
@@ -38,7 +39,8 @@ status: complete
 - Added audited reverse preparation, exact activation-parent restoration, a fixed compensating commit, recovery-receipt binding, and final v1.17 compensation state.
 - Corrected the postactivation evaluator to bind the real proof digest, activation commit/tree, selector bytes, database finalization, zero pending intent, protected baseline, and live smoke.
 - Made compensated v1.17 an explicitly validated safe blocker that can never be reported as a successful v1.19 closure.
-- Kept all test mutation inside model adapters and temporary Git repositories; no live selector, activation commit, or development database transition was created.
+- Added a production-adapter integration suite with temporary Git repositories and isolated PostgreSQL schemas for finalize/compensate, committed recovery, and staged abort.
+- Kept all test mutation inside model adapters, temporary Git repositories, and dropped schemas; no live selector, activation commit, or development database transition was created.
 
 ## Commits
 
@@ -47,14 +49,15 @@ status: complete
 - `8bb5aa4` — `test(260-31): correct postactivation proof contract`
 - `2a27e11` — `fix(260-31): bind postactivation proof externally`
 - `f63f1d9` — `fix(260-31): close activation recovery bindings`
+- `cf18693` — `fix(260-31): prove production activation recovery`
 
 ## Verification
 
-- Coordinator and PostgreSQL selection-head gate: 24 tests passed with `DATABASE_URL` and one worker.
-- Corrected postactivation evaluator: 13 tests passed.
-- Combined coordinator/evaluator suite: 25 tests passed.
-- Real temporary-repository adapter proof covered exact six-path staging, commit parent, changed paths, and committed proof bytes.
-- Standalone script TypeScript compilation, focused ESLint, repository typecheck, repository lint, and focused formatting passed.
+- Coordinator, evaluator, production-adapter integration, and PostgreSQL selection-head gate: 49 tests passed with `DATABASE_URL` and one worker.
+- Exact runtime-service production gate: 154 tests passed across 16 files with one worker.
+- Real temporary-repository and isolated-schema proof covered exact six-path staging, commit parent/tree, finalization, compensation, committed recovery, staged abort, proof removal, and live-head non-mutation.
+- The production adapter ran `pnpm build` successfully and restored `apps/web/next-env.d.ts` to the exact tracked blob.
+- Standalone script TypeScript compilation, focused ESLint, repository typecheck (27 tasks), repository lint (15 tasks), and focused formatting passed.
 - Protected working-tree baseline remained `sha256:c0e1c2a6319f01377df74a2d6e5c493d26382f2882c059116c5ba467e5e81707`.
 - Development database remained `active-v1.17-bootstrap`, revision `0`, root `sha256:fd2cc24a345c0cb94dde9966262f128c663a4430022574729eb4a902177c4b5a`, with no pending intent.
 
@@ -64,4 +67,10 @@ status: complete
 - Required reverse commits to restore every activation-parent byte or absence, not merely change the expected path names.
 - Rechecked finalized Git/tree/proof/selector bindings on idempotent finalize, smoke, and compensation entry.
 - Corrected the production protected-baseline gate to invoke the existing read-only baseline checker.
-- Repository lint exposed a pre-existing Plan 27 overload lint finding; it was fixed separately in `ab96afd` before final verification.
+- Required exact closed-shape validation and rollback receipts, recomputed proof-preimage roots, and executable baseline evidence.
+- Bound compensated evidence to all six current path states, exact reverse commit/tree/source identity, proof removal, and a recomputed recovery digest.
+- Required exact activation tokens and full binding revalidation for pending reverse and terminal idempotent retries.
+- Added fixed-length compensation IDs valid for the maximum admitted source activation ID.
+- Corrected every Plan 14 invocation to the explicit coordinator CLI contract and added parse-only subprocess coverage.
+- Repository lint exposed unrelated Plan 27 type-import findings; the final correction landed separately in `3dc7b0e` before final verification.
+- Detailed finding-by-finding closure is recorded in `260-31-REVIEW-FIX.md`.
