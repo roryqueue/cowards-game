@@ -321,7 +321,7 @@ Plans:
   4. Each counted scenario explicitly schedules every entrant on each side and in each initial-initiative state, proved at entrant level through TypeScript, Go, persistence, and service-backed tests.
   5. Arena and Set repair adds no official geometry or valid v1.4 gameplay change; any change to Strategy observation or reachable Match semantics stops for explicit compatibility approval.
 
-**Plans:** 23/26 plans executed
+**Plans:** 24/33 plans executed
 
 **Wave 1 — immutable semantic authorities**
 
@@ -380,11 +380,33 @@ Plans:
 
 - [x] 260-22-PLAN.md — Prepare the distinct full activated-state and rollback evaluator.
 
-**Wave 12 *(blocked on Wave 11 completion)* — atomic activation**
+**Wave 12 *(blocked on Wave 11 completion)* — authority inversion and generator decoupling**
 
-- [ ] 260-14-PLAN.md — Activate the nine-file selector/pin/default inventory and transactional database selection in one proved commit.
+- [ ] 260-27-PLAN.md — Make the compact source the sole current authority and decouple current Go projection from candidate evidence.
 
-**Wave 13 *(blocked on Wave 12 completion)* — integrated closure**
+**Wave 13 *(blocked on Wave 12 completion)* — transactional database selection head**
+
+- [ ] 260-28-PLAN.md — Add one complete serializable semantic-authority selection-head row.
+
+**Wave 14 *(blocked on Wave 13 completion)* — default-consumer delegation**
+
+- [ ] 260-29-PLAN.md — Delegate TypeScript runtime and Workshop defaults while keeping runtime-service database-free.
+- [ ] 260-30-PLAN.md — Delegate Go scheduling/completion to the compact selector and database head.
+- [ ] 260-32-PLAN.md — Enforce the active database head across every TypeScript scheduling and competition entry point.
+
+**Wave 15 *(blocked on Wave 14 completion)* — corrected proof inventory**
+
+- [ ] 260-31-PLAN.md — Rebuild pre/postactivation evaluators around five selector files and one database head.
+
+**Wave 16 *(blocked on Wave 15 completion)* — isolated seam audit and refreshed readiness**
+
+- [ ] 260-33-PLAN.md — Prove zero stale seams and regenerate the exact preactivation proof.
+
+**Wave 17 *(blocked on Wave 16 completion)* — atomic activation**
+
+- [ ] 260-14-PLAN.md — Activate five selector files and one transactional database selection head in one proved commit.
+
+**Wave 18 *(blocked on Wave 17 completion)* — integrated closure**
 
 - [ ] 260-15-PLAN.md — Close Phase 260 with one executable proof and permanent drift monitors.
 
@@ -428,5 +450,5 @@ Cycle-cap, inward-start, facing-only MOVE, reversal-history, attacker-facing/Adv
 | 257. Canonical Transition Kernel and v1.4 Semantic Integrity | 22/22 | Complete | 2026-07-13 |
 | 258. Canonical JSON, Failure Semantics, and Artifact Identity | 14/14 | Complete | 2026-07-16 |
 | 259. Executable Four-Language and Chronicle Conformance | 22/31 | In progress | - |
-| 260. Truthful Strategy Inputs, Arena Authority, and Set Fairness | 22/26 | In Progress|  |
+| 260. Truthful Strategy Inputs, Arena Authority, and Set Fairness | 24/33 | In Progress|  |
 | 261. Integrated Service Proof, Drift Guards, and Release | 0/TBD | Not started | - |

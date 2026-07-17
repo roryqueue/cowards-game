@@ -85,6 +85,10 @@ All required behaviors must be automated. No UI design or subjective visual acce
 - [x] No watch mode, semantic skip, synthetic language success, seed-derived fairness assertion, or partial matrix pass.
 - [x] Focused feedback target is under 120 seconds.
 - [x] Final gate requires all four real lanes, exact Cartesian Set evidence, immutable history, and the protected baseline.
-- [x] `nyquist_compliant: true` and `wave_0_complete: true` are set only after plan checking.
+- [x] Amended activation plans passed independent checking; `nyquist_compliant: true` and `wave_0_complete: true` are valid.
 
-**Approval:** 2026-07-16 — 26 bounded plans across 13 dependency-valid waves; requirements and D-01..D-16 coverage, candidate-only preactivation, nine-file atomic activation, generated-output inventory, file-conflict analysis, and independent checking passed with zero blockers and zero warnings.
+**Original approval:** 2026-07-16 — 26 bounded plans across 13 dependency-valid waves passed the initial checker.
+
+**Activation-inventory amendment:** 2026-07-17 — the first Plan-14 attempt failed closed before mutation because the checked nine-file inventory retained independent v1.17 pointers, coupled all three Go generator outputs, named a nonexistent integrity artifact, self-included the proof output, assumed database selectors that did not exist, and lacked crash-safe cross-store finalization. Plans 260-27 through 260-33 supersede that model with behavior-preserving preactivation delegation, a durable pending-to-active database head, frozen scheduling selection, a real activation/recovery/compensation coordinator, non-recursive Git/proof binding, a read-only isolated seam audit, and a five-selector-file success-path commit. The protected baseline and all Phase-259 current behavior remain exact. Nyquist approval was reissued after the amended plans passed independent checking; Plan 33 must still regenerate the authoritative preactivation proof before mutation.
+
+**Amended approval:** 2026-07-17 — 33 bounded plans across 18 dependency-valid waves passed independent checking with no blockers or warnings. The corrected success, recovery, and compensation paths preserve the preactivation baseline and require Plan 33 to regenerate readiness before any selector mutation.
