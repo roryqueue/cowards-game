@@ -246,7 +246,7 @@
       },
       {
         "path": "packages/engine/src/kernel/step.ts",
-        "sha256": "ebfc45858604cd5cd363b3e5248542379ecc7084960f8856c774e0eb4a1ee2fb"
+        "sha256": "962c95ec5d428376a4e6210d0bc34c5647d2ef575ddcd5a0b2d2d667d0d68de0"
       },
       {
         "path": "packages/persistence/migrations/0017_runtime_semantic_receipts.sql",
@@ -284,7 +284,7 @@
   },
   "browser": {
     "path": ".planning/artifacts/v1.37-phase-257-browser-playwright.json",
-    "sha256": "341303db53431e86eab89ab755f810759eda9d07e089a076e3ac39d0be583354"
+    "sha256": "e2003d0ca92da423b730dd4e7b6d97d052a71340d8ee809dc9e28e433d648db3"
   },
   "workingCopy": {
     "schemaVersion": "v1.37-working-copy-preservation-v1",
@@ -538,7 +538,7 @@
       "id": "phase257-browser-playwright",
       "status": "passed",
       "inputSha256s": [
-        "341303db53431e86eab89ab755f810759eda9d07e089a076e3ac39d0be583354"
+        "e2003d0ca92da423b730dd4e7b6d97d052a71340d8ee809dc9e28e433d648db3"
       ]
     },
     {

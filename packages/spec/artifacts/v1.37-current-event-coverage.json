@@ -65,7 +65,7 @@
     },
     {
       "relativePath": "packages/engine/src/kernel/step.ts",
-      "sha256": "ebfc45858604cd5cd363b3e5248542379ecc7084960f8856c774e0eb4a1ee2fb"
+      "sha256": "962c95ec5d428376a4e6210d0bc34c5647d2ef575ddcd5a0b2d2d667d0d68de0"
     }
   ],
   "consumerSurfaces": [
@@ -106,7 +106,7 @@
       "producers": [
         {
           "relativePath": "packages/engine/src/kernel/step.ts",
-          "line": 951
+          "line": 966
         }
       ],
       "consumerDispositions": [
@@ -157,7 +157,7 @@
       "producers": [
         {
           "relativePath": "packages/engine/src/kernel/step.ts",
-          "line": 963
+          "line": 978
         }
       ],
       "consumerDispositions": [
@@ -208,7 +208,7 @@
       "producers": [
         {
           "relativePath": "packages/engine/src/kernel/step.ts",
-          "line": 424
+          "line": 428
         }
       ],
       "consumerDispositions": [
@@ -310,7 +310,7 @@
       "producers": [
         {
           "relativePath": "packages/engine/src/kernel/step.ts",
-          "line": 519
+          "line": 523
         }
       ],
       "consumerDispositions": [
@@ -412,7 +412,7 @@
       "producers": [
         {
           "relativePath": "packages/engine/src/kernel/step.ts",
-          "line": 552
+          "line": 556
         }
       ],
       "consumerDispositions": [
@@ -463,7 +463,7 @@
       "producers": [
         {
           "relativePath": "packages/engine/src/kernel/step.ts",
-          "line": 790
+          "line": 805
         }
       ],
       "consumerDispositions": [
@@ -514,7 +514,7 @@
       "producers": [
         {
           "relativePath": "packages/engine/src/kernel/step.ts",
-          "line": 630
+          "line": 636
         }
       ],
       "consumerDispositions": [
@@ -565,7 +565,7 @@
       "producers": [
         {
           "relativePath": "packages/engine/src/kernel/step.ts",
-          "line": 756
+          "line": 771
         }
       ],
       "consumerDispositions": [
@@ -1123,7 +1123,7 @@
         },
         {
           "relativePath": "packages/engine/src/kernel/step.ts",
-          "line": 910
+          "line": 925
         }
       ],
       "consumerDispositions": [
