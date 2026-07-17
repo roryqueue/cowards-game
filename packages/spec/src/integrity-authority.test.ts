@@ -41,6 +41,23 @@ import {
   STRATEGY_RUNTIME_ABI_VERSION,
   STRATEGY_RUNTIME_ABI_VERSION_V1_19,
 } from "./versions.js"
+import {
+  CURRENT_SEMANTIC_AUTHORITY_SOURCE,
+  type CurrentSemanticAuthoritySource,
+} from "./current-semantic-authority-source.js"
+import {
+  CURRENT_SEMANTIC_ARENA_CATALOG_VERSION,
+  CURRENT_SEMANTIC_AUTHORITY_GENERATED,
+  CURRENT_SEMANTIC_AUTHORITY_KEY,
+  CURRENT_SEMANTIC_AUTHORITY_OUTPUT_SHA256,
+  CURRENT_SEMANTIC_AUTHORITY_SOURCE_SHA256,
+  CURRENT_SEMANTIC_CONFORMANCE_CERTIFICATE_VERSION,
+  CURRENT_SEMANTIC_RUNTIME_ABI_VERSION,
+  CURRENT_SEMANTIC_SET_POLICY_VERSION,
+  CURRENT_SEMANTIC_TUPLE,
+  CURRENT_SEMANTIC_TUPLE_ID,
+  resolveCurrentSemanticAuthoritySelection,
+} from "./current-semantic-authority-generated.js"
 
 const repoRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -410,6 +427,143 @@ describe("v1.37 canonical integrity authority", () => {
         ({ tuple }) => tuple.runtimeAbi === "strategy-runtime-abi-v1.18",
       ),
     ).toBe(false)
+  })
+
+  it("stages one compact Phase-259-valued source and generated projection", () => {
+    expect(CURRENT_SEMANTIC_AUTHORITY_SOURCE).toEqual({
+      semanticAuthorityKey: "runtime-v1.17",
+    })
+    expect(Object.keys(CURRENT_SEMANTIC_AUTHORITY_SOURCE)).toEqual([
+      "semanticAuthorityKey",
+    ])
+    expect(Object.isFrozen(CURRENT_SEMANTIC_AUTHORITY_SOURCE)).toBe(true)
+
+    expect(CURRENT_SEMANTIC_AUTHORITY_KEY).toBe("runtime-v1.17")
+    expect(CURRENT_SEMANTIC_RUNTIME_ABI_VERSION).toBe(
+      "strategy-runtime-abi-v1.17",
+    )
+    expect(CURRENT_SEMANTIC_TUPLE_ID).toBe(
+      "sha256:0d8a04fdfe49e3aa7261728ee51beb0a9049b661aad978277f2892c3a4bc54fe",
+    )
+    expect(CURRENT_SEMANTIC_TUPLE).toEqual(
+      VERSIONED_RUNTIME_V117_SEMANTIC_TUPLE_RECORD.tuple,
+    )
+    expect(CURRENT_SEMANTIC_ARENA_CATALOG_VERSION).toBe(
+      "semantic-arena-catalog-v1.37-candidate-1",
+    )
+    expect(CURRENT_SEMANTIC_SET_POLICY_VERSION).toBe(
+      "canonical-set-policy-v1.4",
+    )
+    expect(CURRENT_SEMANTIC_CONFORMANCE_CERTIFICATE_VERSION).toBe(
+      "runtime-conformance-certificate-v1.17",
+    )
+    expect(CURRENT_SEMANTIC_AUTHORITY_GENERATED.selection).toEqual({
+      semanticAuthorityKey: "runtime-v1.17",
+      tupleId: CURRENT_CANONICAL_COMPATIBILITY_TUPLE_ID,
+      tuple: { ...CURRENT_CANONICAL_COMPATIBILITY_TUPLE_RECORD.tuple },
+      runtimeAbiVersion: "strategy-runtime-abi-v1.17",
+      arenaCatalogVersion: "semantic-arena-catalog-v1.37-candidate-1",
+      setPolicyVersion: "canonical-set-policy-v1.4",
+      conformanceCertificateVersion: "runtime-conformance-certificate-v1.17",
+    })
+    expect(Object.isFrozen(CURRENT_SEMANTIC_AUTHORITY_GENERATED)).toBe(true)
+    expect(Object.isFrozen(CURRENT_SEMANTIC_AUTHORITY_GENERATED.selection)).toBe(
+      true,
+    )
+  })
+
+  it("pins deterministic source and projection roots", () => {
+    const sha256 = (value: unknown): string =>
+      `sha256:${createHash("sha256").update(JSON.stringify(value)).digest("hex")}`
+
+    expect(CURRENT_SEMANTIC_AUTHORITY_SOURCE_SHA256).toBe(
+      sha256(CURRENT_SEMANTIC_AUTHORITY_SOURCE),
+    )
+    expect(CURRENT_SEMANTIC_AUTHORITY_OUTPUT_SHA256).toBe(
+      sha256(CURRENT_SEMANTIC_AUTHORITY_GENERATED.selection),
+    )
+    expect(CURRENT_SEMANTIC_AUTHORITY_GENERATED).toMatchObject({
+      schemaVersion: "current-semantic-authority-generated-v1",
+      generatedBy:
+        "packages/spec/src/current-semantic-authority-source.ts",
+      activationOwner: "Phase-260-Plan-14",
+      sourceSha256: CURRENT_SEMANTIC_AUTHORITY_SOURCE_SHA256,
+      outputSha256: CURRENT_SEMANTIC_AUTHORITY_OUTPUT_SHA256,
+    })
+  })
+
+  it("rejects premature, partial, mixed, and relabeled current selection", () => {
+    const exact: CurrentSemanticAuthoritySource = {
+      semanticAuthorityKey: "runtime-v1.17",
+    }
+    expect(resolveCurrentSemanticAuthoritySelection(exact)).toEqual(
+      CURRENT_SEMANTIC_AUTHORITY_GENERATED.selection,
+    )
+
+    const invalid: unknown[] = [
+      "runtime-v1.17",
+      {},
+      { semanticAuthorityKey: "runtime-v1.19" },
+      { runtimeAbiVersion: "strategy-runtime-abi-v1.17" },
+      { arenaCatalogVersion: "semantic-arena-catalog-v1.37-candidate-1" },
+      { setPolicyVersion: "canonical-set-policy-v1.4" },
+      {
+        conformanceCertificateVersion:
+          "runtime-conformance-certificate-v1.17",
+      },
+      {
+        semanticAuthorityKey: "runtime-v1.17",
+        runtimeAbiVersion: "strategy-runtime-abi-v1.19",
+      },
+      {
+        semanticAuthorityKey: "runtime-v1.17",
+        arenaCatalogVersion: "canonical-arena-catalog-v1.37",
+      },
+      {
+        semanticAuthorityKey: "runtime-v1.17",
+        setPolicyVersion: "canonical-set-policy-v1.37-four-condition-v1",
+      },
+      {
+        semanticAuthorityKey: "runtime-v1.17",
+        conformanceCertificateVersion:
+          "runtime-conformance-certificate-v1.19",
+      },
+    ]
+    for (const selector of invalid) {
+      expect(resolveCurrentSemanticAuthoritySelection(selector)).toBeUndefined()
+    }
+  })
+
+  it("keeps the successor reachable only through explicit candidate lookup", () => {
+    expect(
+      resolveCurrentSemanticAuthoritySelection({
+        semanticAuthorityKey:
+          CANDIDATE_CANONICAL_COMPATIBILITY_TUPLE_KEY_V1_19,
+      }),
+    ).toBeUndefined()
+    expect(
+      resolveCandidateRuntimeV119SemanticTuple({
+        tupleId: CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE_ID,
+        tuple: { ...CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE },
+      }),
+    ).toEqual(VERSIONED_RUNTIME_V119_SEMANTIC_TUPLE_RECORD)
+
+    const sourceText = readFileSync(
+      path.join(
+        repoRoot,
+        "packages/spec/src/current-semantic-authority-source.ts",
+      ),
+      "utf8",
+    )
+    const generatedText = readFileSync(
+      path.join(
+        repoRoot,
+        "packages/spec/src/current-semantic-authority-generated.ts",
+      ),
+      "utf8",
+    )
+    expect(sourceText).not.toContain("runtime-v1.19")
+    expect(generatedText).not.toContain("runtime-v1.19")
   })
 
   it("does not expose writable registry references", () => {
