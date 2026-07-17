@@ -15,7 +15,9 @@ import {
 } from "./workshop-contract-v1-19-candidate-pin.js"
 
 const cloneCandidate = (): WorkshopContractV119Candidate =>
-  structuredClone(WORKSHOP_CONTRACT_V1_19_CANDIDATE)
+  JSON.parse(
+    JSON.stringify(WORKSHOP_CONTRACT_V1_19_CANDIDATE),
+  ) as WorkshopContractV119Candidate
 
 describe("Workshop contract v1.19 candidate", () => {
   it("is an immutable, explicit, non-current candidate", () => {
@@ -77,8 +79,8 @@ describe("Workshop contract v1.19 candidate", () => {
 
     const rust = compileRustWasmArtifact(byLanguage.rust)
     const zig = compileZigWasmArtifact(byLanguage.zig)
-    expect(rust.ok, rust.ok ? undefined : rust.message).toBe(true)
-    expect(zig.ok, zig.ok ? undefined : zig.message).toBe(true)
+    expect(rust.ok, JSON.stringify(rust.errors)).toBe(true)
+    expect(zig.ok, JSON.stringify(zig.errors)).toBe(true)
   }, 30_000)
 
   it("binds the exact four sources and observation semantics in one pin", () => {
