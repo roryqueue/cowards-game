@@ -467,9 +467,9 @@ describe("v1.37 canonical integrity authority", () => {
       conformanceCertificateVersion: "runtime-conformance-certificate-v1.17",
     })
     expect(Object.isFrozen(CURRENT_SEMANTIC_AUTHORITY_GENERATED)).toBe(true)
-    expect(Object.isFrozen(CURRENT_SEMANTIC_AUTHORITY_GENERATED.selection)).toBe(
-      true,
-    )
+    expect(
+      Object.isFrozen(CURRENT_SEMANTIC_AUTHORITY_GENERATED.selection),
+    ).toBe(true)
   })
 
   it("pins deterministic source and projection roots", () => {
@@ -484,8 +484,7 @@ describe("v1.37 canonical integrity authority", () => {
     )
     expect(CURRENT_SEMANTIC_AUTHORITY_GENERATED).toMatchObject({
       schemaVersion: "current-semantic-authority-generated-v1",
-      generatedBy:
-        "packages/spec/src/current-semantic-authority-source.ts",
+      generatedBy: "packages/spec/src/current-semantic-authority-source.ts",
       activationOwner: "Phase-260-Plan-14",
       sourceSha256: CURRENT_SEMANTIC_AUTHORITY_SOURCE_SHA256,
       outputSha256: CURRENT_SEMANTIC_AUTHORITY_OUTPUT_SHA256,
@@ -508,8 +507,7 @@ describe("v1.37 canonical integrity authority", () => {
       { arenaCatalogVersion: "semantic-arena-catalog-v1.37-candidate-1" },
       { setPolicyVersion: "canonical-set-policy-v1.4" },
       {
-        conformanceCertificateVersion:
-          "runtime-conformance-certificate-v1.17",
+        conformanceCertificateVersion: "runtime-conformance-certificate-v1.17",
       },
       {
         semanticAuthorityKey: "runtime-v1.17",
@@ -525,8 +523,7 @@ describe("v1.37 canonical integrity authority", () => {
       },
       {
         semanticAuthorityKey: "runtime-v1.17",
-        conformanceCertificateVersion:
-          "runtime-conformance-certificate-v1.19",
+        conformanceCertificateVersion: "runtime-conformance-certificate-v1.19",
       },
     ]
     for (const selector of invalid) {
@@ -537,8 +534,7 @@ describe("v1.37 canonical integrity authority", () => {
   it("keeps the successor reachable only through explicit candidate lookup", () => {
     expect(
       resolveCurrentSemanticAuthoritySelection({
-        semanticAuthorityKey:
-          CANDIDATE_CANONICAL_COMPATIBILITY_TUPLE_KEY_V1_19,
+        semanticAuthorityKey: CANDIDATE_CANONICAL_COMPATIBILITY_TUPLE_KEY_V1_19,
       }),
     ).toBeUndefined()
     expect(
