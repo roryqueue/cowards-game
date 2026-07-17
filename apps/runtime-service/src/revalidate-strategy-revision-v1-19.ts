@@ -55,6 +55,9 @@ export interface RevisionRevalidationCandidatePinsV119 {
   readonly certificateId: string
   readonly certificateSha256: Sha256
   readonly certificateStatus: "reviewed-inactive-candidate"
+  readonly certificateLanguageId: LanguageId
+  readonly certificateProviderId: string
+  readonly certificateLaneId: string
   readonly runtimeIdentityRoot: Sha256
   readonly toolchainIdentityRoot: Sha256
   readonly adapterIdentityRoot: Sha256
@@ -161,6 +164,9 @@ export interface StrategyRevisionRevalidationReceiptV119 {
   readonly certificateVersion: "runtime-conformance-certificate-v1.19"
   readonly certificateId: string
   readonly certificateSha256: Sha256
+  readonly certificateLanguageId: LanguageId
+  readonly certificateProviderId: string
+  readonly certificateLaneId: string
   readonly runtimeIdentityRoot: Sha256
   readonly toolchainIdentityRoot: Sha256
   readonly adapterIdentityRoot: Sha256
@@ -287,13 +293,19 @@ const PIN_KEYS = Object.freeze([
   "certificateId",
   "certificateSha256",
   "certificateStatus",
+  "certificateLanguageId",
+  "certificateProviderId",
+  "certificateLaneId",
   "runtimeIdentityRoot",
   "toolchainIdentityRoot",
   "adapterIdentityRoot",
   "containmentEvidenceRoot",
 ] as const)
 
-const validPins = (pins: RevisionRevalidationCandidatePinsV119): boolean =>
+const validPins = (
+  pins: RevisionRevalidationCandidatePinsV119,
+  revision: ImmutableStrategyRevisionRevalidationInputV119,
+): boolean =>
   exactKeys(pins, PIN_KEYS) &&
   pins.candidateStatus === "inactive-candidate" &&
   pins.current === false &&
@@ -308,6 +320,9 @@ const validPins = (pins: RevisionRevalidationCandidatePinsV119): boolean =>
   pins.certificateVersion === "runtime-conformance-certificate-v1.19" &&
   PUBLIC_ID.test(pins.certificateId) &&
   pins.certificateStatus === "reviewed-inactive-candidate" &&
+  pins.certificateLanguageId === revision.languageId &&
+  pins.certificateProviderId === revision.providerId &&
+  pins.certificateLaneId === revision.laneId &&
   [
     pins.corpusRootSha256,
     pins.corpusPinSha256,
@@ -432,7 +447,7 @@ const revalidateExactStrategyRevisionV119 = (
       : "revision:unknown"
   if (
     !validRevision(input.revision) ||
-    !validPins(input.pins) ||
+    !validPins(input.pins, input.revision) ||
     !validProbeInventory(input.probes) ||
     typeof input.executeProvider !== "function"
   ) {
@@ -585,6 +600,9 @@ const revalidateExactStrategyRevisionV119 = (
     certificateVersion: input.pins.certificateVersion,
     certificateId: input.pins.certificateId,
     certificateSha256: input.pins.certificateSha256,
+    certificateLanguageId: input.pins.certificateLanguageId,
+    certificateProviderId: input.pins.certificateProviderId,
+    certificateLaneId: input.pins.certificateLaneId,
     runtimeIdentityRoot: input.pins.runtimeIdentityRoot,
     toolchainIdentityRoot: input.pins.toolchainIdentityRoot,
     adapterIdentityRoot: input.pins.adapterIdentityRoot,
