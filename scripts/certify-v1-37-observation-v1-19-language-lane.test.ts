@@ -6,9 +6,9 @@ import {
   type RuntimeConformanceIdentityBindingsV117,
 } from "@cowards/spec"
 import { describe, expect, it, vi } from "vitest"
+// Candidate pins are intentionally not exported through current package selectors.
+// eslint-disable-next-line no-restricted-imports
 import { V1_37_CONFORMANCE_CORPUS_V3_CANDIDATE_PIN } from "../packages/golden/src/v1-37-conformance-corpus-v3-candidate-pin.js"
-import { V1_37_OBSERVATION_TRACE_V4_CANDIDATE_PIN } from "../packages/golden/src/v1-37-conformance-trace-v4-candidate-pin.js"
-import { WORKSHOP_CONTRACT_V1_19_CANDIDATE_PIN } from "../packages/persistence/src/workshop-contract-v1-19-candidate-pin.js"
 import {
   V137_OBSERVATION_V119_CASE_INVENTORY_SHA256,
   certifyObservationLanguageLaneV119,
@@ -133,7 +133,7 @@ describe("v1.37 observation-v1.19 candidate lane certifier", () => {
   it("rejects old, current, missing, implicit, or substituted candidate authority", () => {
     const exact = exactObservationV119CandidateBindings(repoRoot)
     const mutations: unknown[] = [
-      undefined,
+      null,
       { ...exact, corpus: { ...exact.corpus, version: "v2" } },
       { ...exact, corpus: { ...exact.corpus, current: true } },
       { ...exact, trace: { ...exact.trace, rootSha256: hash("active-trace") } },

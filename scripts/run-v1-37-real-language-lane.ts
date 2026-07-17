@@ -10,6 +10,7 @@ import {
 } from "node:fs"
 import path from "node:path"
 import {
+  CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE_RECORD,
   CURRENT_CANONICAL_COMPATIBILITY_TUPLE_RECORD,
   RUNTIME_BUDGET_PROFILE_V1_18_SHA256,
   admitCanonicalJsonBytes,
@@ -24,10 +25,21 @@ import {
   type V137ConformanceLanguageId,
   type V137ConformanceResultClass,
 } from "@cowards/golden"
+// Candidate pins stay outside current package selectors until Plan 14 activation.
+// eslint-disable-next-line no-restricted-imports
+import { V1_37_CONFORMANCE_CORPUS_V3_CANDIDATE_PIN } from "../packages/golden/src/v1-37-conformance-corpus-v3-candidate-pin.js"
+// eslint-disable-next-line no-restricted-imports
+import { V1_37_OBSERVATION_TRACE_V4_CANDIDATE_PIN } from "../packages/golden/src/v1-37-conformance-trace-v4-candidate-pin.js"
+// eslint-disable-next-line no-restricted-imports
+import { WORKSHOP_CONTRACT_V1_19_CANDIDATE_PIN } from "../packages/persistence/src/workshop-contract-v1-19-candidate-pin.js"
 import {
   V137_CONFORMANCE_CASE_INVENTORY_SHA256,
   type V137FreshLanguageRunResult,
 } from "./certify-v1-37-language-lane.js"
+import {
+  V137_OBSERVATION_V119_CASE_INVENTORY_SHA256,
+  type V137ObservationV119CandidateBindings,
+} from "./certify-v1-37-observation-v1-19-language-lane.js"
 import {
   V137_PYTHON_LINUX_IMAGE,
   V137_TYPESCRIPT_LINUX_IMAGE,
@@ -137,14 +149,15 @@ const ensureWasmtime = (workspace: string): string => {
 
 const exactFixture = (
   languageId: V137ConformanceLanguageId,
+  corpus: typeof V1_37_CONFORMANCE_CORPUS,
 ): V137ConformanceFixture => {
-  const fixture = V1_37_CONFORMANCE_CORPUS.fixtures.find(
+  const fixture = corpus.fixtures.find(
     (candidate) => candidate.languageId === languageId,
   )
   if (
     fixture === undefined ||
     sha256(fixture.source) !== fixture.sourceSha256 ||
-    fixture.behaviorManifestId !== V1_37_CONFORMANCE_CORPUS.behaviorManifest.id
+    fixture.behaviorManifestId !== corpus.behaviorManifest.id
   ) {
     throw new TypeError("Pinned language fixture is invalid")
   }
@@ -182,6 +195,7 @@ const prepareScriptLane = (
   languageId: "typescript" | "python",
   fixture: V137ConformanceFixture,
   workspace: string,
+  observationV119: boolean,
 ): PreparedLane => {
   const fixturePath = path.join(
     workspace,
@@ -199,9 +213,10 @@ const mode=process.argv[2]
 if(mode==="malformed"){process.stdout.write('{"broken":');process.exit(0)}
 if(mode==="resource"){const value=Buffer.alloc(268435456,1);process.stdout.write(String(value.length));process.exit(0)}
 if(mode==="timeout"){for(;;){}}
-const input={mySoldiers:[{id:"soldier:fixture:active",status:"ACTIVE"},{id:"soldier:fixture:stone",status:"STONE"}]}
-const first={selection:strategy.selectActivations(input),brain:strategy.soldierBrain({})}
-const second={selection:strategy.selectActivations(input),brain:strategy.soldierBrain({})}
+const input={mySoldiers:[{id:"soldier:fixture:active",status:"ACTIVE"},{id:"soldier:fixture:stone",status:"STONE"}]${observationV119 ? ',initialInitiativePlayerId:"player:bottom",hasInitialInitiative:true,roundInitiativePlayerId:"player:bottom",hasRoundInitiative:true' : ""}}
+const brainInput=${observationV119 ? '{hasAdvancedThisActivation:false}' : "{}"}
+const first={selection:strategy.selectActivations(input),brain:strategy.soldierBrain(brainInput)}
+const second={selection:strategy.selectActivations(input),brain:strategy.soldierBrain(brainInput)}
 process.stdout.write(JSON.stringify({first,second}))
 `
       : `import json,sys
@@ -215,9 +230,10 @@ if mode=="resource":
     sys.stdout.write(str(len(value)));sys.exit(0)
 if mode=="timeout":
     while True: pass
-value={"mySoldiers":[{"id":"soldier:fixture:active","status":"ACTIVE"},{"id":"soldier:fixture:stone","status":"STONE"}]}
-first={"selection":namespace["select_activations"](value),"brain":namespace["soldier_brain"]({})}
-second={"selection":namespace["select_activations"](value),"brain":namespace["soldier_brain"]({})}
+value={"mySoldiers":[{"id":"soldier:fixture:active","status":"ACTIVE"},{"id":"soldier:fixture:stone","status":"STONE"}]${observationV119 ? ',"initialInitiativePlayerId":"player:bottom","hasInitialInitiative":True,"roundInitiativePlayerId":"player:bottom","hasRoundInitiative":True' : ""}}
+brain_value=${observationV119 ? '{"hasAdvancedThisActivation":False}' : "{}"}
+first={"selection":namespace["select_activations"](value),"brain":namespace["soldier_brain"](brain_value)}
+second={"selection":namespace["select_activations"](value),"brain":namespace["soldier_brain"](brain_value)}
 sys.stdout.write(json.dumps({"first":first,"second":second},separators=(",",":"),sort_keys=True))
 `
   write(harnessPath, harness)
@@ -326,6 +342,7 @@ const prepareWasmLane = (
   languageId: "rust" | "zig",
   fixture: V137ConformanceFixture,
   workspace: string,
+  observationV119: boolean,
 ): PreparedLane => {
   run("docker", ["pull", V137_WASMTIME_LINUX_IMAGE], 300_000)
   const extension = languageId === "rust" ? "rs" : "zig"
@@ -336,8 +353,18 @@ const prepareWasmLane = (
   const wasmtime = ensureWasmtime(workspace)
   const inputSelect = path.join(workspace, "select.json")
   const inputBrain = path.join(workspace, "brain.json")
-  write(inputSelect, '{"methodName":"selectActivations"}\n')
-  write(inputBrain, '{"methodName":"soldierBrain"}\n')
+  write(
+    inputSelect,
+    observationV119
+      ? '{"methodName":"selectActivations","mySoldiers":[{"id":"soldier:fixture:active","status":"ACTIVE"}],"initialInitiativePlayerId":"player:bottom","hasInitialInitiative":true,"roundInitiativePlayerId":"player:bottom","hasRoundInitiative":true}\n'
+      : '{"methodName":"selectActivations"}\n',
+  )
+  write(
+    inputBrain,
+    observationV119
+      ? '{"methodName":"soldierBrain","hasAdvancedThisActivation":false}\n'
+      : '{"methodName":"soldierBrain"}\n',
+  )
   const probes = {} as Record<"malformed" | "resource" | "timeout", string>
   for (const mode of ["malformed", "resource", "timeout"] as const) {
     const source = path.join(workspace, `${mode}.${extension}`)
@@ -431,6 +458,7 @@ const safeReceipt = (receipt: V137LinuxLanguageProbeReceipt): JsonValue => ({
 const parseNormal = (
   receipt: V137LinuxLanguageProbeReceipt,
   prepared: PreparedLane,
+  corpus: typeof V1_37_CONFORMANCE_CORPUS,
 ): Readonly<{ evidence: JsonValue; payload: JsonValue }> => {
   if (
     receipt.exitCode !== 0 ||
@@ -469,7 +497,7 @@ const parseNormal = (
     first: { selection: JsonValue; brain: JsonValue }
     second: { selection: JsonValue; brain: JsonValue }
   }
-  const expected = V1_37_CONFORMANCE_CORPUS.behaviorManifest
+  const expected = corpus.behaviorManifest
   if (
     canonicalHash(
       "cowards-game:v1.37:selection:v1",
@@ -545,16 +573,68 @@ const execute = (): V137FreshLanguageRunResult => {
   const workspaceId = arg("--workspace-id")
   const workspace = path.resolve(arg("--workspace"))
   const repoRoot = path.resolve(import.meta.dirname, "..")
+  const candidateBindingIndex = process.argv.indexOf(
+    "--observation-v1-19-candidate-bindings-base64",
+  )
+  const candidateBindings =
+    candidateBindingIndex < 0
+      ? null
+      : (JSON.parse(
+          Buffer.from(process.argv[candidateBindingIndex + 1] ?? "", "base64").toString(
+            "utf8",
+          ),
+        ) as V137ObservationV119CandidateBindings)
+  const observationV119 = candidateBindings !== null
+  if (
+    candidateBindings !== null &&
+    (candidateBindings.corpus.version !== "v3" ||
+      candidateBindings.corpus.current ||
+      candidateBindings.corpus.rootSha256 !==
+        V1_37_CONFORMANCE_CORPUS_V3_CANDIDATE_PIN.corpusRootSha256 ||
+      candidateBindings.trace.version !== "v1.37-observation-trace-v4" ||
+      candidateBindings.trace.current ||
+      candidateBindings.trace.rootSha256 !==
+        V1_37_OBSERVATION_TRACE_V4_CANDIDATE_PIN.candidateRootSha256 ||
+      candidateBindings.workshop.version !== "workshop-contract-v1.19" ||
+      candidateBindings.workshop.current ||
+      candidateBindings.workshop.rootSha256 !==
+        WORKSHOP_CONTRACT_V1_19_CANDIDATE_PIN.exampleSetRootSha256 ||
+      candidateBindings.semanticTuple.current ||
+      candidateBindings.semanticTuple.runtimeAbiVersion !==
+        "strategy-runtime-abi-v1.19" ||
+      candidateBindings.semanticTuple.tupleId !==
+        CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE_RECORD.tupleId)
+  ) {
+    throw new TypeError("Observation v1.19 candidate binding is invalid")
+  }
+  const corpus = observationV119
+    ? (JSON.parse(
+        readFileSync(
+          path.join(
+            repoRoot,
+            V1_37_CONFORMANCE_CORPUS_V3_CANDIDATE_PIN.corpusPath,
+          ),
+          "utf8",
+        ),
+      ) as typeof V1_37_CONFORMANCE_CORPUS)
+    : V1_37_CONFORMANCE_CORPUS
+  const corpusRootSha256 = observationV119
+    ? V1_37_CONFORMANCE_CORPUS_V3_CANDIDATE_PIN.corpusRootSha256
+    : V1_37_CONFORMANCE_CORPUS_ROOT
+  const caseInventorySha256 = observationV119
+    ? V137_OBSERVATION_V119_CASE_INVENTORY_SHA256
+    : V137_CONFORMANCE_CASE_INVENTORY_SHA256
   write(path.join(workspace, "probe-input.json"), "{}\n")
-  const fixture = exactFixture(languageId)
+  const fixture = exactFixture(languageId, corpus)
   const prepared =
     languageId === "typescript" || languageId === "python"
-      ? prepareScriptLane(languageId, fixture, workspace)
-      : prepareWasmLane(languageId, fixture, workspace)
+      ? prepareScriptLane(languageId, fixture, workspace, observationV119)
+      : prepareWasmLane(languageId, fixture, workspace, observationV119)
 
   const normal = parseNormal(
     probe(0, { runId, repoRoot, workspace }, prepared.normalGuest),
     prepared,
+    corpus,
   )
   const malformed = probe(
     1,
@@ -650,31 +730,63 @@ const execute = (): V137FreshLanguageRunResult => {
     throw new TypeError("Canonical JSON boundary probe failed")
   }
 
-  const traceRegistry = JSON.parse(
-    readFileSync(
-      path.join(
-        repoRoot,
-        "packages/golden/src/fixtures/v1-37-conformance-traces/registry.json",
-      ),
-      "utf8",
-    ),
-  ) as { activePath: string; candidateRootSha256: string }
-  const traceManifest = JSON.parse(
-    readFileSync(
-      path.join(repoRoot, traceRegistry.activePath, "manifest.json"),
-      "utf8",
-    ),
-  ) as {
-    corpusRootSha256: string
-    candidateRootSha256: string
-    cases: Array<{
-      caseId: string
-      resultClass: V137ConformanceResultClass
-      traceRoot: string
-    }>
-  }
+  const traceRegistry = observationV119
+    ? {
+        activePath: null,
+        candidateRootSha256:
+          V1_37_OBSERVATION_TRACE_V4_CANDIDATE_PIN.candidateRootSha256,
+      }
+    : (JSON.parse(
+        readFileSync(
+          path.join(
+            repoRoot,
+            "packages/golden/src/fixtures/v1-37-conformance-traces/registry.json",
+          ),
+          "utf8",
+        ),
+      ) as { activePath: string; candidateRootSha256: string })
+  const traceManifest = observationV119
+    ? (() => {
+        const bundle = JSON.parse(
+          readFileSync(
+            path.join(
+              repoRoot,
+              V1_37_OBSERVATION_TRACE_V4_CANDIDATE_PIN.bundlePath,
+            ),
+            "utf8",
+          ),
+        ) as {
+          corpusRootSha256: string
+          candidateVersion: string
+          records: Array<{
+            caseId: string
+            resultClass: V137ConformanceResultClass
+            traceRoot: string
+          }>
+        }
+        return {
+          corpusRootSha256: bundle.corpusRootSha256,
+          candidateRootSha256:
+            V1_37_OBSERVATION_TRACE_V4_CANDIDATE_PIN.candidateRootSha256,
+          cases: bundle.records,
+        }
+      })()
+    : (JSON.parse(
+        readFileSync(
+          path.join(repoRoot, traceRegistry.activePath!, "manifest.json"),
+          "utf8",
+        ),
+      ) as {
+        corpusRootSha256: string
+        candidateRootSha256: string
+        cases: Array<{
+          caseId: string
+          resultClass: V137ConformanceResultClass
+          traceRoot: string
+        }>
+      })
   if (
-    traceManifest.corpusRootSha256 !== V1_37_CONFORMANCE_CORPUS_ROOT ||
+    traceManifest.corpusRootSha256 !== corpusRootSha256 ||
     traceManifest.candidateRootSha256 !== traceRegistry.candidateRootSha256
   ) {
     throw new TypeError("Committed trace manifest is invalid")
@@ -686,7 +798,7 @@ const execute = (): V137FreshLanguageRunResult => {
     traceRoot: string
     observationSha256: `sha256:${string}`
   }> = []
-  for (const testCase of V1_37_CONFORMANCE_CORPUS.cases) {
+  for (const testCase of corpus.cases) {
     const trace = traceManifest.cases.find(
       (candidate) => candidate.caseId === testCase.id,
     )
@@ -826,7 +938,7 @@ const execute = (): V137FreshLanguageRunResult => {
   )
   const behaviorSettingsSha256 = canonicalHash(
     "cowards-game:v1.37:behavior-settings:v1",
-    V1_37_CONFORMANCE_CORPUS.behaviorManifest as unknown as JsonValue,
+    corpus.behaviorManifest as unknown as JsonValue,
   )
   const containmentPolicySha256 = canonicalHash(
     "cowards-game:v1.37:containment-policy:v1",
@@ -847,21 +959,25 @@ const execute = (): V137FreshLanguageRunResult => {
     languageId,
     laneId:
       languageId === "rust" || languageId === "zig"
-        ? `${languageId}-wasmtime-native-supervised-v1.18`
-        : `${languageId}-native-supervised-v1.18`,
-    corpusRootSha256: V1_37_CONFORMANCE_CORPUS_ROOT,
-    caseInventorySha256: V137_CONFORMANCE_CASE_INVENTORY_SHA256,
+        ? `${languageId}-wasmtime-native-supervised-${observationV119 ? "v1.19" : "v1.18"}`
+        : `${languageId}-native-supervised-${observationV119 ? "v1.19" : "v1.18"}`,
+    corpusRootSha256,
+    caseInventorySha256,
     fixtureSourceSha256: fixture.sourceSha256,
     artifactSha256: prepared.artifactSha256,
     adapterBuildSha256,
     runtimeExecutableSha256: prepared.runtimeExecutableSha256,
     toolchainSha256: prepared.toolchainSha256,
     sysrootStdlibSha256: prepared.sysrootStdlibSha256,
-    runtimeAbiVersion: "strategy-runtime-abi-v1.18",
+    runtimeAbiVersion: observationV119
+      ? "strategy-runtime-abi-v1.19"
+      : "strategy-runtime-abi-v1.18",
     canonicalJsonProfileId: "canonical-json-v1.1",
     budgetPolicySha256: RUNTIME_BUDGET_PROFILE_V1_18_SHA256,
     containmentPolicySha256,
-    semanticTupleSha256: CURRENT_CANONICAL_COMPATIBILITY_TUPLE_RECORD.tupleId,
+    semanticTupleSha256: observationV119
+      ? CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE_RECORD.tupleId
+      : CURRENT_CANONICAL_COMPATIBILITY_TUPLE_RECORD.tupleId,
     behaviorSettingsSha256,
   } as const
   const identityManifestRoot = canonicalHash(
@@ -901,7 +1017,9 @@ const execute = (): V137FreshLanguageRunResult => {
   )
   const completedAt = new Date().toISOString()
   return Object.freeze({
-    schemaVersion: "v1.37-fresh-language-run-v1",
+    schemaVersion: observationV119
+      ? "v1.37-observation-v1.19-fresh-language-run-v1"
+      : "v1.37-fresh-language-run-v1",
     languageId,
     runId,
     workspaceId,
@@ -915,7 +1033,7 @@ const execute = (): V137FreshLanguageRunResult => {
     fallbackUsed: false,
     syntheticEvidence: false,
     caseCount: observations.length,
-    caseInventorySha256: V137_CONFORMANCE_CASE_INVENTORY_SHA256,
+    caseInventorySha256,
     startedAt,
     completedAt,
     validUntil: new Date(
@@ -924,6 +1042,7 @@ const execute = (): V137FreshLanguageRunResult => {
     identity,
     resultRootSha256,
     evidenceRootSha256,
+    ...(candidateBindings === null ? {} : { candidateBindings }),
   })
 }
 
