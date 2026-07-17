@@ -57,7 +57,13 @@ import {
   type StrategyResult,
   type StrategyRevision,
 } from "@cowards/spec"
-import { hashStrategySource } from "@cowards/runtime-js"
+import {
+  executeCandidateObservationTransportV119,
+  hashStrategySource,
+  type AdmittedCandidateObservationV119,
+  type CandidateObservationTransportRequestV119,
+  type CandidateObservationTransportResultV119,
+} from "@cowards/runtime-js"
 import { createRuntimeFromRevision } from "@cowards/runtime-js/worker"
 import { createPythonRuntimeFromRevision } from "@cowards/runtime-python"
 import { createWasmWasiRuntimeFromRevision } from "@cowards/runtime-wasm-wasi"
@@ -131,6 +137,33 @@ export interface CandidateRuntimeInvocationExecutionV117<TExecution> {
   readonly authenticatedAccounting?: RuntimeInvocationResponseAccountingV117
   readonly publicResult: CandidateRuntimeInvocationPublicResultV117
 }
+
+export interface RuntimeObservationDispatchInputV119<
+  TCurrent,
+  TCandidate = unknown,
+> {
+  /** Omitted means the generated current/default route remains authoritative. */
+  readonly candidateRequest?: CandidateObservationTransportRequestV119 | undefined
+  readonly executeCurrent: () => TCurrent
+  readonly executeCandidate: (
+    observation: AdmittedCandidateObservationV119,
+  ) => CandidateObservationTransportResultV119<TCandidate>
+}
+
+/**
+ * Additive candidate-only provider dispatch. A request must carry the complete
+ * v1.19 candidate envelope; otherwise the existing Phase-259 current callback
+ * is the only route. Admission happens before any provider process is started.
+ */
+export const dispatchRuntimeObservationV119 = <TCurrent, TCandidate = unknown>(
+  input: RuntimeObservationDispatchInputV119<TCurrent, TCandidate>,
+): TCurrent | CandidateObservationTransportResultV119<TCandidate> =>
+  input.candidateRequest === undefined
+    ? input.executeCurrent()
+    : executeCandidateObservationTransportV119(
+        input.candidateRequest,
+        input.executeCandidate,
+      )
 
 const candidateRequestTrace = (
   request: AuthenticatedRuntimeInvocationRequestV117,

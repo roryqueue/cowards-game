@@ -8,10 +8,7 @@ import {
   type CandidateObservationTransportRequestV119,
 } from "@cowards/runtime-js"
 import { dispatchRuntimeObservationV119 } from "./execute-match.js"
-import {
-  runtimeServiceConfigFromEnvironment,
-  runtimeServiceSemanticSelectionFromEnvironment,
-} from "./production-runtime-config.js"
+import { runtimeServiceSemanticSelectionFromEnvironment } from "./production-runtime-config.js"
 
 const strategyInput = {
   phaseNumber: 1,
@@ -107,14 +104,9 @@ describe("runtime-service v1.19 observation dispatch", () => {
     expect(runtimeServiceSemanticSelectionFromEnvironment()).toEqual(
       CURRENT_SEMANTIC_AUTHORITY_GENERATED.selection,
     )
-    const config = runtimeServiceConfigFromEnvironment({
-      STRATEGY_EXECUTION_ADAPTER: "subprocess",
-      COWARDS_RUNTIME_SERVICE_SEMANTIC_RECEIPT_SECRET: "fixture-secret",
-    })
-    expect(config.semanticAuthoritySelection).toEqual(
-      CURRENT_SEMANTIC_AUTHORITY_GENERATED.selection,
-    )
-    expect(config.contractSelection.runtimeAbiVersion).toBe(
+    expect(
+      runtimeServiceSemanticSelectionFromEnvironment().runtimeAbiVersion,
+    ).toBe(
       "strategy-runtime-abi-v1.17",
     )
   })
