@@ -6,15 +6,15 @@ current_phase: 260
 current_phase_name: truthful-strategy-inputs-arena-authority-and-set-fairness
 status: executing
 stopped_at: Completed 260-10-PLAN.md
-last_updated: "2026-07-17T05:12:21.891Z"
+last_updated: "2026-07-17T06:13:50.021Z"
 last_activity: 2026-07-17
 last_activity_desc: Completed Phase 260 Plan 10 exact v1.19 observation transport
 progress:
   total_phases: 6
   completed_phases: 4
   total_plans: 112
-  completed_plans: 95
-  percent: 85
+  completed_plans: 97
+  percent: 67
 ---
 
 # State: Coward's Game
@@ -136,6 +136,7 @@ Next command: `$gsd-execute-phase 260`.
 | Phase 260 P05 | 24min | 3 tasks | 8 files |
 | Phase 260 P06 | 12min | 2 tasks | 5 files |
 | Phase 260 P10 | 23min | 2 tasks | 8 files |
+| Phase 260 P08 | 18min | 2 tasks | 10 files |
 
 ## Decisions
 
@@ -301,3 +302,6 @@ Next command: `$gsd-execute-phase 260`.
 - [Phase 260]: Admit exact canonical kernel input bytes once and transport the same facts to providers without deriving initiative, Round parity, or Advance state. — The kernel remains the sole semantic authority while adapters remain transport-only.
 - [Phase 260]: Treat an omitted candidate envelope as the existing Phase-259 route; runtime-v1.19 requires an explicit inactive-candidate envelope before Plan 14. — Candidate staging cannot silently activate or redirect current execution.
 - [Phase 260]: Preserve the existing three-way provider result and redacted system-failure envelope across v1.19 transport. — Infrastructure failure cannot become player blame or leak private runtime material.
+- [Phase 260]: Go successor completion and scoring dispatch only for the exact runtime-v1.19 tuple; selected Phase-259 behavior remains unchanged. — Candidate work cannot silently activate or reinterpret current completion, retry, status, or scoring.
+- [Phase 260]: Go countability requires exact generated four-condition membership and matching frozen/current non-revoked D-04 revision evidence. — Partial, substituted, revoked, old-tuple, or system-failed matrices must persist empty rankings and cannot influence standings.
+- [Phase 260]: The Go successor status branch is structural-only and does not query Chronicle events, derive gameplay, or execute Strategy code. — Go verifies terminal and revision evidence identity while gameplay semantics remain owned by the canonical kernel and Chronicle validator.
