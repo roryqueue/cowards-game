@@ -5,16 +5,16 @@ milestone_name: Rules Integrity and Strategy Evaluation Foundations — ACTIVE
 current_phase: 260
 current_phase_name: truthful-strategy-inputs-arena-authority-and-set-fairness
 status: executing
-stopped_at: Plan 260-27 complete; execute Plan 260-28 next
-last_updated: "2026-07-17T10:24:00.000Z"
+stopped_at: Plan 260-28 complete; execute Wave-14 consumer delegation next
+last_updated: "2026-07-17T10:48:00.000Z"
 last_activity: 2026-07-17
-last_activity_desc: Completed compact semantic-authority inversion and candidate Go evidence decoupling
+last_activity_desc: Added the exact transactional database semantic-authority selection head
 progress:
   total_phases: 6
   completed_phases: 4
   total_plans: 119
-  completed_plans: 111
-  percent: 93
+  completed_plans: 112
+  percent: 94
 ---
 
 # State: Coward's Game
@@ -29,11 +29,11 @@ See: `.planning/PROJECT.md` (updated 2026-07-12)
 ## Current Position
 
 Phase: 260 (truthful-strategy-inputs-arena-authority-and-set-fairness) — EXECUTING
-Plan: 28 of 33
-Status: Plan 260-27 complete; Plan 260-28 ready
-Last activity: 2026-07-17 — Compact source became the sole current semantic selector without activating v1.19
+Plan: 29 of 33
+Status: Plan 260-28 complete; Wave-14 Plans 260-29, 260-30, and 260-32 ready
+Last activity: 2026-07-17 — Exact v1.17 database head installed with no pending intent
 
-Progress: [████████░░] 76%
+Progress: [████████░░] 79%
 
 ## Durable Decisions
 
@@ -63,6 +63,7 @@ Progress: [████████░░] 76%
 - Observation-v1.19 lane certificates bind the complete reviewed candidate payload under distinct managed producer/operator trust and remain append-only `candidate-0` evidence; no successor row enters the Phase-259 current selector before atomic activation.
 - Observation-v1.19 preactivation readiness is valid only while the complete Phase-259 semantic, Go, corpus, trace, Workshop, public, and database current inventory remains exact. — Any premature selector or successor-row change invalidates the fixed receipt before atomic activation.
 - The compact semantic source is the sole TypeScript current selector; closed v1.17/v1.19 projections and selection-neutral Go candidate hashes keep live v1.17 exact while final activation changes only the compact Go mirror at this seam.
+- One serializable singleton database head stores the complete semantic selection and at most one durable exact pending intent; short revision-CAS transitions and append-only history own activation and compensation while current remains v1.17.
 
 ## Deferred Items
 
@@ -79,9 +80,9 @@ Progress: [████████░░] 76%
 
 **Resume file:** None
 
-Last session: 2026-07-17T10:24:00.000Z
-Stopped at: Plan 260-27 completed with live v1.17 equivalence and simulated v1.19 projection proof.
-Next command: Execute and verify Plan 260-28.
+Last session: 2026-07-17T10:48:00.000Z
+Stopped at: Plan 260-28 completed; development database is exact v1.17 bootstrap with no pending intent.
+Next command: Execute Wave-14 Plans 260-29, 260-30, and 260-32 without activating v1.19.
 
 ## Performance Metrics
 
@@ -154,6 +155,7 @@ Next command: Execute and verify Plan 260-28.
 | Phase 260 P21 | 13min | 2 tasks | 3 evaluator/test/proof files; 14 executable gates |
 | Phase 260 P22 | 8min | 2 TDD tasks | 2 evaluator/test files; 68 focused rollback and mixed-state assertions |
 | Phase 260 P27 | 9min | 3 tasks | 9 authority/generator/generated files; 65 focused spec tests and 5 generator tests |
+| Phase 260 P28 | 20min | 2 TDD tasks + adversarial review | 5 migration/API/test files; 36 focused and 314 full persistence tests |
 
 ## Decisions
 
@@ -164,6 +166,7 @@ Next command: Execute and verify Plan 260-28.
 - [Phase 260]: Postactivation proof uses a distinct successor-only predicate and captures Phase-259 state only as rollback preimages. — Old-current assertions cannot make a mixed activated state pass, while exact historical restoration remains provable.
 - [Phase 260]: The original nine-file/eleven-logical-selector activation inventory is superseded. — Authority inversion, default delegation, and a real singleton database head must land while v1.17 remains current; final rollback owns five selector files plus one exact row, and the proof is output-only.
 - [Phase 260]: The compact semantic source is the sole TypeScript current selector, and candidate Go hashes are independent of that selection. — Closed exact v1.17/v1.19 projections preserve live v1.17 while bounding this activation seam to the compact current Go mirror.
+- [Phase 260]: One exact singleton database head owns the complete semantic selection, durable pending intent, and append-only transition history. — No tuple, certificate, corpus, trace, Workshop, arena, Set, or D-04 member can activate independently, and recovery never infers Git success.
 
 - [Phase 260]: Revision-specific v1.19 compatibility is earned only by six exact real provider probes covering every initiative combination and both Advance states; compile-only, additive-JSON, synthetic, partial, sibling, old, or current-registry claims are inadmissible. — D-04 cannot be satisfied by inference or evidence inheritance.
 - [Phase 260]: Reviewed candidate certificate identity must equal the immutable revision's language, provider, and lane, and malformed provider output becomes a generic evidence-mismatch system failure with no receipt. — A hash-shaped certificate or typed callback result alone is not trusted runtime evidence.

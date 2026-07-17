@@ -386,7 +386,7 @@ Plans:
 
 **Wave 13 *(blocked on Wave 12 completion)* — transactional database selection head**
 
-- [ ] 260-28-PLAN.md — Add one complete serializable semantic-authority selection-head row.
+- [x] 260-28-PLAN.md — Add one complete serializable semantic-authority selection-head row.
 
 **Wave 14 *(blocked on Wave 13 completion)* — default-consumer delegation**
 
@@ -450,5 +450,5 @@ Cycle-cap, inward-start, facing-only MOVE, reversal-history, attacker-facing/Adv
 | 257. Canonical Transition Kernel and v1.4 Semantic Integrity | 22/22 | Complete | 2026-07-13 |
 | 258. Canonical JSON, Failure Semantics, and Artifact Identity | 14/14 | Complete | 2026-07-16 |
 | 259. Executable Four-Language and Chronicle Conformance | 22/31 | In progress | - |
-| 260. Truthful Strategy Inputs, Arena Authority, and Set Fairness | 25/33 | In Progress|  |
+| 260. Truthful Strategy Inputs, Arena Authority, and Set Fairness | 26/33 | In Progress|  |
 | 261. Integrated Service Proof, Drift Guards, and Release | 0/TBD | Not started | - |
