@@ -118,6 +118,73 @@ describe("v1.37 conformance trace candidate generation", () => {
     expect(readFileSync(registryPath)).toEqual(registryBefore)
   }, 30_000)
 
+  it("disposes every trace case and protected semantic surface explicitly", () => {
+    const candidateDirectory = path.join(temporaryRoot(), "observation-trace-v4")
+    const result = generateV137ObservationTraceV4Candidate({ candidateDirectory })
+    const manifest = JSON.parse(readFileSync(result.manifestPath, "utf8"))
+    const diff = JSON.parse(
+      readFileSync(path.join(candidateDirectory, "semantic-diff.json"), "utf8"),
+    )
+    const disposition = JSON.parse(
+      readFileSync(
+        path.join(candidateDirectory, "compatibility-disposition.json"),
+        "utf8",
+      ),
+    )
+
+    expect(diff).toMatchObject({
+      schemaVersion: "v1.37-observation-trace-semantic-diff-v1",
+      candidateVersion: manifest.candidateVersion,
+      caseCount: manifest.caseCount,
+    })
+    expect(diff.caseDiffs).toHaveLength(manifest.caseCount)
+    expect(
+      diff.caseDiffs.every(
+        ({ baselineTraceRoot, candidateTraceRoot }: Record<string, unknown>) =>
+          (baselineTraceRoot === null || typeof baselineTraceRoot === "string") &&
+          typeof candidateTraceRoot === "string",
+      ),
+    ).toBe(true)
+    expect(disposition).toMatchObject({
+      schemaVersion: "v1.37-observation-trace-compatibility-disposition-v1",
+      candidateVersion: manifest.candidateVersion,
+      lifecycle: "inactive-candidate",
+      status: "observation-only-compatible-candidate",
+      caseCount: manifest.caseCount,
+    })
+    expect(disposition.cases.map(({ caseId }: { caseId: string }) => caseId)).toEqual(
+      manifest.cases.map(({ caseId }: { caseId: string }) => caseId),
+    )
+    expect(Object.keys(disposition.protectedSurfaces).sort()).toEqual(
+      [
+        "actionLegality",
+        "arenaGeometry",
+        "backstab",
+        "cleanup",
+        "eventOrder",
+        "failureOwnership",
+        "gameplayState",
+        "historicalInterpretation",
+        "outcome",
+        "terminalTimingReason",
+      ].sort(),
+    )
+    expect(
+      Object.values(disposition.protectedSurfaces).every(
+        (surface) =>
+          (surface as { disposition: string }).disposition === "unchanged" &&
+          (surface as { baselineRoot: string }).baselineRoot ===
+            (surface as { candidateRoot: string }).candidateRoot,
+      ),
+    ).toBe(true)
+    expect(readdirSync(candidateDirectory).sort()).toEqual([
+      "compatibility-disposition.json",
+      "manifest.json",
+      "semantic-diff.json",
+      "traces.bundle.json",
+    ])
+  }, 30_000)
+
   it("writes one new exact kernel-recorded trace per ordered corpus case", () => {
     const candidateDirectory = path.join(
       temporaryRoot(),
