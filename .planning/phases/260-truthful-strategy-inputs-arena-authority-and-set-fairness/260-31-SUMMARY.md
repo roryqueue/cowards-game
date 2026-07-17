@@ -18,6 +18,7 @@ provides:
   - Production two-phase v1.19 activation coordinator
   - Exact precommit and compensation crash recovery
   - Isolated pre-prepare candidate validation with SIGKILL recovery proof
+  - IPC-leased production gate process-tree supervision
   - Non-recursive five-selector activation proof
   - External database commit, tree, proof, and smoke validation
   - Production-adapter Git and PostgreSQL recovery integration proof
@@ -42,6 +43,8 @@ status: complete
 - Moved candidate validation before database prepare and durably committed the exact proof bytes with a domain-separated raw-preimage-plus-proof-digest commitment recorded in PostgreSQL history.
 - Isolated all pre-prepare selector rendering, validation, rollback, and proof construction in a disposable shared clone so process death cannot expose mixed live selector bytes before a durable database intent exists.
 - Added stale-candidate cleanup to every locked invocation and proved direct-process SIGKILL recovery leaves the live Git index, governed paths, proof, and PostgreSQL head at the exact bootstrap preimage.
+- Added a supervisor-first default production gate runner whose exact IPC lease turns coordinator death into whole-process-group termination before candidate cleanup can proceed.
+- Made recovery fail closed on persistent or malformed leases without signaling disk-recorded PIDs, while current-run nonce binding lets a live coordinator close unexpected supervisor death safely.
 - Removed every production parse bypass; Plan 14 argument contracts are exercised only through pure exported parsers, and both executables reject extra bypass arguments.
 - Strengthened reverse recovery to rederive the activation preimage and restored manifest from actual commit ancestry before finalization.
 - Made compensated v1.17 an explicitly validated safe blocker that can never be reported as a successful v1.19 closure.
@@ -58,12 +61,13 @@ status: complete
 - `cf18693` — `fix(260-31): prove production activation recovery`
 - `2660b59` — `fix(260-31): durably commit activation proof evidence`
 - `9ed78db` — `fix(260-31): isolate precommit candidate validation`
+- `a88bfc4` — `fix(260-31): supervise activation gate process trees`
 
 ## Verification
 
-- Coordinator, evaluator, production-adapter integration, and PostgreSQL selection-head gate: 57 tests passed with `DATABASE_URL` and one worker.
+- Coordinator, evaluator, production-adapter integration, and PostgreSQL selection-head gate: 60 tests passed with `DATABASE_URL` and one worker.
 - Exact runtime-service production gate: 154 tests passed across 16 files with one worker.
-- Real temporary-repository and isolated-schema proof covered exact six-path staging, commit parent/tree, historical proof commitment, finalization, compensation, committed recovery, staged abort, pre-prepare gate failure, forged reverse intent, proof removal, live-head non-mutation, and direct-Node SIGKILL during isolated candidate validation.
+- Real temporary-repository and isolated-schema proof covered exact six-path staging, commit parent/tree, historical proof commitment, finalization, compensation, committed recovery, staged abort, pre-prepare gate failure, forged reverse intent, proof removal, live-head non-mutation, actual production-runner coordinator SIGKILL, whole gate-tree exit, normal watchdog cleanup, unexpected supervisor exit, and stale-lease refusal without unrelated-process signaling.
 - The production adapter ran `pnpm build` successfully and restored `apps/web/next-env.d.ts` to the exact tracked blob.
 - Standalone script TypeScript compilation, focused ESLint, repository typecheck (27 tasks), repository lint (15 tasks), and focused formatting passed.
 - Protected working-tree baseline remained `sha256:c0e1c2a6319f01377df74a2d6e5c493d26382f2882c059116c5ba467e5e81707`.
@@ -84,5 +88,8 @@ status: complete
 - Recomputed reverse activation snapshots and restored manifests from actual commits before recovered compensation finalization.
 - Moved every pre-prepare mutation into a disposable exact-parent shared clone, kept protected-baseline verification rooted in the untouched main checkout, and reasserted the main six-path/index preimage before durable prepare.
 - Added locked stale-clone cleanup plus a real SIGKILL integration proof that candidate process death cannot mutate the live selectors, proof, index, or database head.
+- Replaced unsupervised production gate execution with a detached plain-Node supervisor whose kernel IPC lease owns one exact shell-free gate process group and whose durable identity blocks clone cleanup until absence is proved.
+- Added direct process-table proof that coordinator SIGKILL removes the real gate leader and child, plus normal-exit, supervisor-death, stale-PID, PID-reuse-safe refusal, and delayed no-residue coverage.
+- Exact `execArgv: []` prevented evaluation or loader flags from becoming a second supervisor program; acknowledged IPC, stream-close receipts, and macOS directory removal closed the remaining toolchain-specific races.
 - Repository lint exposed unrelated Plan 27 type-import findings; the final correction landed separately in `3dc7b0e` before final verification.
 - Detailed finding-by-finding closure is recorded in `260-31-REVIEW-FIX.md`.

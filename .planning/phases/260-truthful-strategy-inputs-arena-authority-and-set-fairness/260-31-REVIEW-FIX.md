@@ -3,7 +3,7 @@ phase: 260-truthful-strategy-inputs-arena-authority-and-set-fairness
 plan: "31"
 review_status: resolved
 resolved: 2026-07-17
-fix_commits: [cf18693, 2660b59, 9ed78db]
+fix_commits: [cf18693, 2660b59, 9ed78db, a88bfc4]
 ---
 
 # Phase 260 Plan 31 Review Fix — Executable Activation Evidence
@@ -37,11 +37,18 @@ The independent reviews' activation-seam findings are resolved. The coordinator 
 2. **Crash-safe candidate cleanup:** every advisory-locked coordinator invocation removes the candidate-clone namespace before proceeding. Bootstrap recovery also verifies that the six governed live paths equal the current commit, the staged index is empty, and no pending database intent exists before returning the exact bootstrap head. A SIGKILL can therefore leave only a disposable clone, which the next locked invocation removes without treating candidate bytes as live gameplay state.
 3. **True process-death proof:** a direct Node subprocess now changes selectors inside the disposable clone, enters a controlled gate, and is killed with SIGKILL while it owns the advisory lock. The test proves the main Git status, index, six governed paths, proof path, and PostgreSQL selection head remain at the bootstrap preimage with no pending intent. Production bootstrap recovery then removes the stale candidate namespace and leaves no isolated schema or repository artifact behind. The first harness version killed a package-runner wrapper rather than the lock-owning Node process; replacing it with a direct Node launch made the process-death boundary exact and repeatable.
 
+## Fourth rereview closure
+
+1. **Supervisor-first production gates:** the default production gate runner now forks a plain-Node detached supervisor over an exact IPC lease. The supervisor writes a closed-shape activation/workspace/gate identity, spawns the real command with `shell: false` as its own process group, bounds stdout and stderr, and reports a receipt only after output streams close and the whole process group is absent. Coordinator SIGKILL closes the kernel-owned IPC channel, causing the independent supervisor to terminate the exact gate group with TERM/KILL escalation and wait for process-group absence before removing its lease.
+2. **Race-free fail-closed recovery:** the coordinator reserves the lease before sending spawn configuration, and the supervisor receives the exact lease paths as fixed arguments so a disconnect before configuration cannot leave an untracked spawn. Leases live in the Git common directory outside disposable clones. Candidate cleanup and recovery never signal a PID read from disk: they wait for every lease to disappear, validate exact closed shapes while waiting, and otherwise refuse clone deletion or reuse. A still-live coordinator may compensate for unexpected supervisor death only when the lease matches its current random nonce and exact activation/workspace/gate identity.
+3. **Actual production-boundary proof:** the SIGKILL integration uses the default production runner and a real executable gate command that creates a marker and child process. After the coordinator receives SIGKILL, both gate leader and child disappear from `ps`; neither survives under PPID 1. Recovery then removes the clone while the main Git status, index, six governed paths, proof path, PostgreSQL head, schema count, and bootstrap state remain exact. Separate tests prove normal gate completion removes the watchdog and lease, unexpected supervisor death is closed by the live coordinator, and a stale lease referencing an unrelated live process blocks recovery without signaling that process or deleting the candidate.
+4. **Toolchain and cleanup hardening:** the supervisor starts with exact empty `execArgv`, preventing `node --eval` or loader flags from being inherited as a second program. Terminal IPC sends are acknowledged, macOS uses directory-specific removal, and receipts wait for child `close` rather than only `exit`. A late empty-directory residue seen under the earlier startup implementation did not reproduce after guarded cleanup, the exact production candidate test, a 20-second delayed check, the full seam rerun, and a second delayed no-residue check.
+
 ## Verification evidence
 
-- `DATABASE_URL=postgresql://cowards:cowards@localhost:5432/cowards_game pnpm exec vitest run scripts/activate-v1-37-observation-v1-19.test.ts scripts/activate-v1-37-observation-v1-19.integration.test.ts scripts/evaluate-v1-37-observation-v1-19-postactivation.test.ts packages/persistence/src/semantic-authority-selection-head.test.ts --maxWorkers=1` — 57/57 tests passed.
+- `DATABASE_URL=postgresql://cowards:cowards@localhost:5432/cowards_game pnpm exec vitest run scripts/activate-v1-37-observation-v1-19.test.ts scripts/activate-v1-37-observation-v1-19.integration.test.ts scripts/evaluate-v1-37-observation-v1-19-postactivation.test.ts packages/persistence/src/semantic-authority-selection-head.test.ts --maxWorkers=1` — 60/60 tests passed.
 - `pnpm exec vitest run apps/runtime-service/src --maxWorkers=1` — 154/154 tests passed across 16 files.
-- Production adapter `runGate("build")` — `pnpm build` passed and the tracked `next-env.d.ts` blob remained `7506fe6afbc69878107523a1a6aa3409b65bde64` before and after.
+- Supervised production adapter `runGate("build")` — `pnpm build` passed and the tracked `next-env.d.ts` blob remained `7506fe6afbc69878107523a1a6aa3409b65bde64` before and after.
 - `pnpm typecheck` — 27/27 tasks passed.
 - `pnpm lint` — 15/15 tasks passed after the unrelated Plan 27 type-only import correction in `3dc7b0e`.
 - `pnpm exec tsx scripts/capture-v1-37-protected-baseline.ts --check` — verified baseline `sha256:c0e1c2a6319f01377df74a2d6e5c493d26382f2882c059116c5ba467e5e81707`.
@@ -49,4 +56,4 @@ The independent reviews' activation-seam findings are resolved. The coordinator 
 
 ## Boundary disposition
 
-No live selector, activation proof, activation commit, or development database transition was created. The integration schemas are uniquely named and dropped in cleanup; the final leftover-schema count was zero. The disposable candidate namespace was absent after recovery and final verification. The protected user-owned files remain unstaged and unchanged by Plan 31. No Match state, Action legality, event order, outcome, Strategy observation, gameplay rule, arena geometry, Chronicle, or historical evidence changed.
+No live selector, activation proof, activation commit, or development database transition was created. The integration schemas are uniquely named and dropped in cleanup; the final leftover-schema count was zero. The disposable candidate and gate-lease namespaces were absent after recovery, delayed residue checks, and final verification; no supervisor or gate process remained. The protected user-owned files remain unstaged and unchanged by Plan 31. No Match state, Action legality, event order, outcome, Strategy observation, gameplay rule, arena geometry, Chronicle, or historical evidence changed.
