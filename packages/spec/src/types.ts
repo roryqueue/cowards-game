@@ -1,4 +1,5 @@
 import type { StrategyRuntimeMetadata } from "./runtime.js"
+import type { CURRENT_SEMANTIC_RUNTIME_ABI_VERSION } from "./current-semantic-authority-generated.js"
 
 export type JsonPrimitive = string | number | boolean | null
 export type JsonValue =
@@ -108,7 +109,7 @@ export type TurnToStoneAction = {
 
 export type Action = MoveAction | TurnAction | TurnToStoneAction
 
-export interface StrategyInput {
+export interface StrategyInputV117 {
   phaseNumber: number
   roundNumber: 1 | 2 | 3 | 4
   activationCount: 1 | 2 | 3 | 4
@@ -117,6 +118,18 @@ export interface StrategyInput {
   enemySoldiers: SoldierSnapshot[]
   strategyMemory: StrategyMemory
 }
+
+export interface StrategyInputV119 extends StrategyInputV117 {
+  initialInitiativePlayerId: PlayerId
+  hasInitialInitiative: boolean
+  roundInitiativePlayerId: PlayerId
+  hasRoundInitiative: boolean
+}
+
+export type StrategyInput =
+  typeof CURRENT_SEMANTIC_RUNTIME_ABI_VERSION extends "strategy-runtime-abi-v1.19"
+    ? StrategyInputV119
+    : StrategyInputV117
 
 export interface ActivationOrder {
   soldierId: SoldierId
@@ -128,7 +141,7 @@ export interface StrategyResult {
   strategyMemory: StrategyMemory
 }
 
-export interface SoldierBrainInput {
+export interface SoldierBrainInputV117 {
   self: SoldierSnapshot
   awarenessGrid: AwarenessGrid5x5
   cycleIndex: number
@@ -136,6 +149,15 @@ export interface SoldierBrainInput {
   objective?: JsonValue
   soldierMemory: SoldierMemory
 }
+
+export interface SoldierBrainInputV119 extends SoldierBrainInputV117 {
+  hasAdvancedThisActivation: boolean
+}
+
+export type SoldierBrainInput =
+  typeof CURRENT_SEMANTIC_RUNTIME_ABI_VERSION extends "strategy-runtime-abi-v1.19"
+    ? SoldierBrainInputV119
+    : SoldierBrainInputV117
 
 export interface SoldierBrainResult {
   action: Action

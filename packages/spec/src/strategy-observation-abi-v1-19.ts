@@ -1,5 +1,11 @@
-import { z } from "zod"
-import { SoldierBrainInputSchema, StrategyInputSchema } from "./schemas.js"
+import { StrategyInputV119Schema } from "./schemas.js"
+import type { StrategyInputV119 } from "./types.js"
+
+export {
+  SoldierBrainInputV119Schema,
+  StrategyInputV119Schema,
+} from "./schemas.js"
+export type { SoldierBrainInputV119, StrategyInputV119 } from "./types.js"
 
 const deepFreeze = <T>(value: T): Readonly<T> => {
   if (value !== null && typeof value === "object" && !Object.isFrozen(value)) {
@@ -50,23 +56,6 @@ export const STRATEGY_OBSERVATION_ABI_V1_19 = deepFreeze({
     releasedV117AndSupervisorV118RemainUnchanged: true,
   },
 } as const)
-
-export const StrategyInputV119Schema = StrategyInputSchema.extend({
-  initialInitiativePlayerId: z.string().min(1),
-  hasInitialInitiative: z.boolean(),
-  roundInitiativePlayerId: z.string().min(1),
-  hasRoundInitiative: z.boolean(),
-}).strict()
-
-export type StrategyInputV119 = z.infer<typeof StrategyInputV119Schema>
-
-export const SoldierBrainInputV119Schema = SoldierBrainInputSchema.extend({
-  hasAdvancedThisActivation: z.boolean(),
-}).strict()
-
-export type SoldierBrainInputV119 = z.infer<
-  typeof SoldierBrainInputV119Schema
->
 
 export interface StrategyInputValidationContextV119 {
   readonly entrantPlayerIds: readonly [string, string]

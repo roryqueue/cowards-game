@@ -151,7 +151,7 @@ describe("Coward's Game spec contracts", () => {
       expect(publicSpec.CANONICAL_ARENA_CATALOG_V1_37.catalogVersion).toBe(
         "canonical-arena-catalog-v1.37",
       )
-      expect(publicSpec.CANONICAL_SET_CONDITION_POLICY_V1_37.version).toBe(
+      expect(publicSpec.SET_CONDITION_POLICY_V1_37.version).toBe(
         "canonical-set-policy-v1.37-four-condition-v1",
       )
     })

@@ -52,6 +52,7 @@ import {
 } from "./runtime.js"
 import { COUNTED_ENTRY_ELIGIBILITY_CATEGORIES } from "./competition-entry-eligibility.js"
 import { parseCanonicalJsonInstant } from "./canonical-instant.js"
+import { CURRENT_SEMANTIC_RUNTIME_ABI_VERSION } from "./current-semantic-authority-generated.js"
 export {
   CanonicalJsonValueV117Schema,
   ObjectivePayloadV117Schema,
@@ -382,7 +383,7 @@ export const FullBoardSnapshotSchema = z.object({
   terrainStones: z.array(PositionSchema),
 })
 
-export const StrategyInputSchema = z.object({
+export const StrategyInputV117Schema = z.object({
   phaseNumber: z.number().int().positive(),
   roundNumber: z.union([
     z.literal(1),
@@ -405,6 +406,33 @@ export const StrategyInputSchema = z.object({
   ),
 })
 
+export const StrategyInputV119Schema = StrategyInputV117Schema.extend({
+  initialInitiativePlayerId: z.string().min(1),
+  hasInitialInitiative: z.boolean(),
+  roundInitiativePlayerId: z.string().min(1),
+  hasRoundInitiative: z.boolean(),
+}).strict()
+
+export const resolveStrategyInputSchema = (runtimeAbiVersion: unknown) => {
+  if (runtimeAbiVersion === "strategy-runtime-abi-v1.17") {
+    return StrategyInputV117Schema
+  }
+  if (runtimeAbiVersion === "strategy-runtime-abi-v1.19") {
+    return StrategyInputV119Schema
+  }
+  return undefined
+}
+
+export const StrategyInputSchema = (() => {
+  const schema = resolveStrategyInputSchema(
+    CURRENT_SEMANTIC_RUNTIME_ABI_VERSION,
+  )
+  if (!schema) {
+    throw new Error("Unsupported current StrategyInput runtime ABI selection.")
+  }
+  return schema
+})()
+
 export const ActivationOrderSchema = z.object({
   soldierId: z.string().min(1),
   objective: JsonValueSchema.refine(
@@ -421,7 +449,7 @@ export const StrategyResultSchema = z.object({
   ),
 })
 
-export const SoldierBrainInputSchema = z.object({
+export const SoldierBrainInputV117Schema = z.object({
   self: SoldierSnapshotSchema,
   awarenessGrid: AwarenessGrid5x5Schema,
   cycleIndex: z.number().int().min(0),
@@ -435,6 +463,33 @@ export const SoldierBrainInputSchema = z.object({
     "SoldierMemory exceeds 2KB",
   ),
 })
+
+export const SoldierBrainInputV119Schema =
+  SoldierBrainInputV117Schema.extend({
+    hasAdvancedThisActivation: z.boolean(),
+  }).strict()
+
+export const resolveSoldierBrainInputSchema = (runtimeAbiVersion: unknown) => {
+  if (runtimeAbiVersion === "strategy-runtime-abi-v1.17") {
+    return SoldierBrainInputV117Schema
+  }
+  if (runtimeAbiVersion === "strategy-runtime-abi-v1.19") {
+    return SoldierBrainInputV119Schema
+  }
+  return undefined
+}
+
+export const SoldierBrainInputSchema = (() => {
+  const schema = resolveSoldierBrainInputSchema(
+    CURRENT_SEMANTIC_RUNTIME_ABI_VERSION,
+  )
+  if (!schema) {
+    throw new Error(
+      "Unsupported current SoldierBrainInput runtime ABI selection.",
+    )
+  }
+  return schema
+})()
 
 export const SoldierBrainResultSchema = z.object({
   action: ActionSchema,
