@@ -13,25 +13,33 @@ import {
   CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE,
   CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_ID,
   CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_RECORD,
+  CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE,
+  CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE_ID,
+  CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE_RECORD,
   CURRENT_CANONICAL_COMPATIBILITY_TUPLE_ID,
   CURRENT_CANONICAL_COMPATIBILITY_TUPLE_RECORD,
   HISTORICAL_RUNTIME_V114_SEMANTIC_TUPLE_ID,
   REGISTERED_CANONICAL_COMPATIBILITY_TUPLES,
   VERSIONED_RUNTIME_V114_SEMANTIC_TUPLE_RECORD,
   VERSIONED_RUNTIME_V117_SEMANTIC_TUPLE_RECORD,
+  VERSIONED_RUNTIME_V119_SEMANTIC_TUPLE_RECORD,
   assertCanonicalAuthorityRegistry,
   classifyCanonicalCompatibilityTupleIdAgainstCurrent,
   encodeCanonicalCompatibilityTuple,
   hashCanonicalCompatibilityTuple,
   prepareCanonicalCompatibilityTupleRecord,
   resolveCandidateRuntimeV117SemanticTuple,
+  resolveCandidateRuntimeV119SemanticTuple,
   resolveCanonicalCompatibilityTuple,
   resolveHistoricalRuntimeV114SemanticTuple,
+  resolveRegisteredCanonicalCompatibilityTuple,
   type CanonicalCompatibilityTuple,
 } from "./integrity-authority.js"
 import {
+  CANDIDATE_CANONICAL_COMPATIBILITY_TUPLE_KEY_V1_19,
   CURRENT_CANONICAL_COMPATIBILITY_TUPLE_KEY,
   STRATEGY_RUNTIME_ABI_VERSION,
+  STRATEGY_RUNTIME_ABI_VERSION_V1_19,
 } from "./versions.js"
 
 const repoRoot = path.resolve(
@@ -274,6 +282,134 @@ describe("v1.37 canonical integrity authority", () => {
     for (const selector of invalidSelectors) {
       expect(resolveCanonicalCompatibilityTuple(selector)).toBeUndefined()
     }
+  })
+
+  it("registers runtime-v1.19 only as an exact inactive six-component candidate", () => {
+    expect(CANDIDATE_CANONICAL_COMPATIBILITY_TUPLE_KEY_V1_19).toBe(
+      "runtime-v1.19",
+    )
+    expect(STRATEGY_RUNTIME_ABI_VERSION_V1_19).toBe(
+      "strategy-runtime-abi-v1.19",
+    )
+    expect(CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE).toEqual({
+      rules: "cowards-rules-v1.4",
+      engine: "engine-kernel-v1.37-candidate-1",
+      runtimeAbi: "strategy-runtime-abi-v1.19",
+      chronicle: "chronicle-recorder-current-events-v1.37-candidate-1",
+      arenaCatalog: "canonical-arena-catalog-v1.37",
+      setPolicy: "canonical-set-policy-v1.37-four-condition-v1",
+    })
+    expect(CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE_RECORD).toEqual(
+      prepareCanonicalCompatibilityTupleRecord(
+        { ...CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE },
+        CANONICAL_COMPATIBILITY_TUPLE_IDENTITY_PROFILES.successor
+          .identityProfile,
+      ),
+    )
+    expect(VERSIONED_RUNTIME_V119_SEMANTIC_TUPLE_RECORD).toMatchObject({
+      ...CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE_RECORD,
+      identityProfile:
+        CANONICAL_COMPATIBILITY_TUPLE_IDENTITY_PROFILES.successor
+          .identityProfile,
+      encodingId:
+        CANONICAL_COMPATIBILITY_TUPLE_IDENTITY_PROFILES.successor.encodingId,
+    })
+    expect(CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE_ID).toMatch(
+      /^sha256:[0-9a-f]{64}$/u,
+    )
+    expect(
+      resolveCandidateRuntimeV119SemanticTuple({
+        tupleId: CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE_ID,
+        tuple: { ...CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE },
+      }),
+    ).toEqual(VERSIONED_RUNTIME_V119_SEMANTIC_TUPLE_RECORD)
+    expect(
+      resolveCanonicalCompatibilityTuple({
+        tupleId: CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE_ID,
+        tuple: { ...CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE },
+      }),
+    ).toBeUndefined()
+    expect(
+      resolveRegisteredCanonicalCompatibilityTuple({
+        tupleId: CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE_ID,
+        tuple: { ...CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE },
+      }),
+    ).toBeUndefined()
+  })
+
+  it("rejects every mixed, incomplete, relabeled, and old-certificate candidate selector", () => {
+    const exact = {
+      tupleId: CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE_ID,
+      tuple: { ...CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE },
+    }
+    const invalid: unknown[] = [
+      { tupleId: exact.tupleId },
+      { tuple: exact.tuple },
+      { ...exact, current: true },
+      {
+        ...exact,
+        tuple: { ...exact.tuple, runtimeAbi: "strategy-runtime-abi-v1.18" },
+      },
+      {
+        ...exact,
+        tuple: {
+          ...exact.tuple,
+          arenaCatalog: CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE.arenaCatalog,
+        },
+      },
+      {
+        ...exact,
+        tuple: {
+          ...exact.tuple,
+          setPolicy: CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE.setPolicy,
+        },
+      },
+      {
+        tupleId: CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_ID,
+        tuple: { ...CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE },
+      },
+      {
+        tupleId: exact.tupleId,
+        tuple: {
+          rules: exact.tuple.rules,
+          engine: exact.tuple.engine,
+          runtimeAbi: exact.tuple.runtimeAbi,
+        },
+      },
+    ]
+
+    for (const selector of invalid) {
+      expect(resolveCandidateRuntimeV119SemanticTuple(selector)).toBeUndefined()
+    }
+  })
+
+  it("keeps every Phase-259 current and released selector exact", () => {
+    expect(CURRENT_CANONICAL_COMPATIBILITY_TUPLE_KEY).toBe("runtime-v1.17")
+    expect(STRATEGY_RUNTIME_ABI_VERSION).toBe("strategy-runtime-abi-v1.17")
+    expect(CURRENT_CANONICAL_COMPATIBILITY_TUPLE_ID).toBe(
+      "sha256:0d8a04fdfe49e3aa7261728ee51beb0a9049b661aad978277f2892c3a4bc54fe",
+    )
+    expect(CURRENT_CANONICAL_COMPATIBILITY_TUPLE_RECORD).toEqual(
+      VERSIONED_RUNTIME_V117_SEMANTIC_TUPLE_RECORD,
+    )
+    expect(CANONICAL_COMPATIBILITY_TUPLES).toEqual([
+      VERSIONED_RUNTIME_V117_SEMANTIC_TUPLE_RECORD,
+    ])
+    expect(REGISTERED_CANONICAL_COMPATIBILITY_TUPLES).toEqual([
+      VERSIONED_RUNTIME_V114_SEMANTIC_TUPLE_RECORD,
+      VERSIONED_RUNTIME_V117_SEMANTIC_TUPLE_RECORD,
+    ])
+    expect(
+      resolveCandidateRuntimeV119SemanticTuple({
+        tupleId: CURRENT_CANONICAL_COMPATIBILITY_TUPLE_ID,
+        tuple: { ...CURRENT_CANONICAL_COMPATIBILITY_TUPLE_RECORD.tuple },
+      }),
+    ).toBeUndefined()
+    expect(
+      REGISTERED_CANONICAL_COMPATIBILITY_TUPLES.some(
+        ({ tuple }) => tuple.runtimeAbi === "strategy-runtime-abi-v1.18",
+      ),
+    ).toBe(false)
   })
 
   it("does not expose writable registry references", () => {
