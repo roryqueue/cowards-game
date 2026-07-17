@@ -5,16 +5,16 @@ milestone_name: Rules Integrity and Strategy Evaluation Foundations — ACTIVE
 current_phase: 260
 current_phase_name: truthful-strategy-inputs-arena-authority-and-set-fairness
 status: executing
-stopped_at: Completed 260-06-PLAN.md
-last_updated: "2026-07-17T04:44:48.437Z"
+stopped_at: Completed 260-10-PLAN.md
+last_updated: "2026-07-17T05:12:21.891Z"
 last_activity: 2026-07-17
-last_activity_desc: Completed Phase 260 Plan 06 generated-authority Go scheduler candidate
+last_activity_desc: Completed Phase 260 Plan 10 exact v1.19 observation transport
 progress:
   total_phases: 6
   completed_phases: 4
   total_plans: 112
-  completed_plans: 94
-  percent: 84
+  completed_plans: 95
+  percent: 85
 ---
 
 # State: Coward's Game
@@ -29,11 +29,11 @@ See: `.planning/PROJECT.md` (updated 2026-07-12)
 ## Current Position
 
 Phase: 260 (truthful-strategy-inputs-arena-authority-and-set-fairness) — EXECUTING
-Plan: 9 of 26
+Plan: 10 of 26
 Status: Ready to execute
-Last activity: 2026-07-17 — Completed Phase 260 Plan 06 generated-authority Go scheduler candidate
+Last activity: 2026-07-17 — Completed Phase 260 Plan 10 exact v1.19 observation transport
 
-Progress: [████████░░] 84%
+Progress: [█████████░] 85%
 
 ## Durable Decisions
 
@@ -75,8 +75,8 @@ Progress: [████████░░] 84%
 
 **Resume file:** None
 
-Last session: 2026-07-17T04:44:48.423Z
-Stopped at: Completed 260-06-PLAN.md
+Last session: 2026-07-17T05:11:56.643Z
+Stopped at: Completed 260-10-PLAN.md
 Next command: `$gsd-execute-phase 260`.
 
 ## Performance Metrics
@@ -135,6 +135,7 @@ Next command: `$gsd-execute-phase 260`.
 | Phase 260 P03 | 17min | 3 tasks | 14 files |
 | Phase 260 P05 | 24min | 3 tasks | 8 files |
 | Phase 260 P06 | 12min | 2 tasks | 5 files |
+| Phase 260 P10 | 23min | 2 tasks | 8 files |
 
 ## Decisions
 
@@ -297,3 +298,6 @@ Next command: `$gsd-execute-phase 260`.
 - [Phase 260]: Canonicalize candidate competition pairs by immutable revision key while retaining Go as the selected normal scheduler. — Entrant reorder or insertion cannot change existing pair identity, and TypeScript remains rollback/parity/test only.
 - [Phase 260]: Keep the generated Phase-259 Go scheduler selected while runtime-v1.19 remains explicit candidate-only dispatch. — Go can consume successor structural authority without activating it or acquiring gameplay or Strategy execution authority.
 - [Phase 260]: Freeze each revision's exact runtime-v1.19 admission roots into every candidate Match and job evidence pair. — Cross-revision, synthetic, revoked, or substituted evidence cannot authorize any portion of the four-condition matrix.
+- [Phase 260]: Admit exact canonical kernel input bytes once and transport the same facts to providers without deriving initiative, Round parity, or Advance state. — The kernel remains the sole semantic authority while adapters remain transport-only.
+- [Phase 260]: Treat an omitted candidate envelope as the existing Phase-259 route; runtime-v1.19 requires an explicit inactive-candidate envelope before Plan 14. — Candidate staging cannot silently activate or redirect current execution.
+- [Phase 260]: Preserve the existing three-way provider result and redacted system-failure envelope across v1.19 transport. — Infrastructure failure cannot become player blame or leak private runtime material.
