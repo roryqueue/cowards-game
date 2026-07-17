@@ -1,3 +1,4 @@
+import { Buffer } from "node:buffer"
 import { createHash } from "node:crypto"
 import { describe, expect, it, vi } from "vitest"
 import {
@@ -52,8 +53,7 @@ const row = (
       },
     },
     compiled_artifact: null,
-    locked_at:
-      options.locked === false ? null : "2026-07-17T00:00:00.000Z",
+    locked_at: options.locked === false ? null : "2026-07-17T00:00:00.000Z",
     created_at: "2026-07-16T00:00:00.000Z",
   }
 }
@@ -164,7 +164,10 @@ describe("revision-specific candidate execution and disposition", () => {
       ]),
     )
     expect(append).toHaveBeenCalledTimes(1)
-    expect(new Set(artifactValue.records.map((entry) => entry.strategyRevisionId)).size).toBe(3)
+    expect(
+      new Set(artifactValue.records.map((entry) => entry.strategyRevisionId))
+        .size,
+    ).toBe(3)
     expect(JSON.stringify(artifactValue)).not.toContain("bytesBase64")
   })
 
@@ -173,7 +176,7 @@ describe("revision-specific candidate execution and disposition", () => {
     await expect(
       buildRevisionRevalidationArtifactV119({
         databaseRows: [row("revision:a"), row("revision:b")],
-        executeRevision: (inventoryRow) => ({
+        executeRevision: (_inventoryRow) => ({
           kind: "success",
           receipt: {
             strategyRevisionId: "revision:a",
