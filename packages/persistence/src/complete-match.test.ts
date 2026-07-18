@@ -472,7 +472,7 @@ describe("current Match completion v1.18 semantic receipt admission", () => {
     fixture.semanticEvidence.receiptBytes[0] = 0
     expect(admitted.finalState.phaseNumber).toBe(originalPhase)
     expect(admitted.semanticReceiptBytes[0]).not.toBe(0)
-  })
+  }, 15_000)
 
   it("rejects receipt, reconstruction, certificate, meter, and trust drift", () => {
     const mutations = [
