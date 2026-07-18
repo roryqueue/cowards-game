@@ -450,11 +450,15 @@ Plans:
 
 - [x] 260-45-PLAN.md — Derive the PostgreSQL claim time from the persisted job `run_after` rather than an earlier wall-clock sample.
 
-**Wave 29 *(blocked on Wave 28 completion)* — atomic activation**
+**Wave 29 *(blocked on Wave 28 completion)* — clone-local activation dependencies**
+
+- [ ] 260-46-PLAN.md — Materialize candidate dependency trees so workspace packages resolve the candidate selectors, and add the runtime-service oracle as the ninth selector seam.
+
+**Wave 30 *(blocked on Wave 29 completion)* — atomic activation**
 
 - [ ] 260-14-PLAN.md — Activate five selector files and one transactional database selection head in one proved commit.
 
-**Wave 30 *(blocked on Wave 29 completion)* — integrated closure**
+**Wave 31 *(blocked on Wave 30 completion)* — integrated closure**
 
 - [ ] 260-15-PLAN.md — Close Phase 260 with one executable proof and permanent drift monitors.
 
