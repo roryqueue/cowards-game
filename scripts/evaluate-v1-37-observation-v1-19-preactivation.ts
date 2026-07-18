@@ -128,6 +128,7 @@ const INPUT_PATHS = Object.freeze([
   "packages/spec/src/current-semantic-authority-source.ts",
   "packages/spec/src/match-execution-contract.ts",
   "scripts/check-service-boundary-imports.ts",
+  "scripts/generate-go-parity-fixtures.ts",
   "scripts/activate-v1-37-observation-v1-19.ts",
   "scripts/audit-v1-37-observation-v1-19-activation-seams.ts",
   "scripts/audit-v1-37-observation-v1-19-activation-seams.test.ts",
@@ -1095,6 +1096,7 @@ const gateDefinitions: GateDefinition[] = [
       "scripts/generate-v1-37-arena-set-authority.test.ts",
       "scripts/generate-v1-37-conformance-corpus.test.ts",
       "scripts/generate-v1-37-conformance-traces.test.ts",
+      "scripts/generate-go-parity-selector-independence.test.ts",
     ],
   },
   {

@@ -27,7 +27,7 @@ const GATE_IDS = [
 const GATE_COMMANDS = [
   "pnpm exec vitest run --maxWorkers=1 --no-file-parallelism packages/spec/src/strategy-observation-abi-v1-19.test.ts packages/spec/src/arena-catalog-v1-37.test.ts packages/spec/src/set-condition-policy-v1-37.test.ts packages/spec/src/integrity-authority.test.ts",
   "pnpm exec vitest run --maxWorkers=1 --no-file-parallelism packages/engine/src/test/strategy-observations-v1-19.test.ts packages/engine/src/test/compatibility-v1-4.test.ts",
-  "pnpm exec vitest run --maxWorkers=1 --no-file-parallelism scripts/generate-v1-37-arena-set-authority.test.ts scripts/generate-v1-37-conformance-corpus.test.ts scripts/generate-v1-37-conformance-traces.test.ts",
+  "pnpm exec vitest run --maxWorkers=1 --no-file-parallelism scripts/generate-v1-37-arena-set-authority.test.ts scripts/generate-v1-37-conformance-corpus.test.ts scripts/generate-v1-37-conformance-traces.test.ts scripts/generate-go-parity-selector-independence.test.ts",
   "pnpm exec vitest run --maxWorkers=1 --no-file-parallelism packages/persistence/src/migrations.test.ts packages/persistence/src/matchset-service.test.ts packages/persistence/src/complete-match.test.ts packages/persistence/src/matchset-status.test.ts packages/persistence/src/scoring.test.ts packages/persistence/src/workshop-contract-v1-19-candidate.test.ts",
   "go test ./... -count=1 -run ArenaSetAuthority|Candidate|Cartesian",
   "pnpm exec vitest run --maxWorkers=1 --no-file-parallelism packages/runtime-js/src/revision-v1-19.test.ts packages/runtime-python/src/revision-v1-19.test.ts packages/runtime-wasm-wasi/src/revision-v1-19.test.ts apps/runtime-service/src/execute-match-v1-19.test.ts",
@@ -108,6 +108,8 @@ describe("v1.37 observation-v1.19 preactivation proof", () => {
         "scripts/generate-v1-37-conformance-corpus.test.ts",
         "packages/replay/src/record.test.ts",
         "apps/web/app/matchsets/result-view-model.test.ts",
+        "scripts/generate-go-parity-selector-independence.test.ts",
+        "scripts/generate-go-parity-fixtures.ts",
       ]),
     )
     expect(proof.seamAudit).toEqual({

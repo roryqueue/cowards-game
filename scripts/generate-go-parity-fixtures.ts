@@ -1449,7 +1449,7 @@ const PUBLIC_STRATEGY_ID = "strategy:go-parity:sentinel"
 
 const recordGoldenChronicle = () => {
   const input = createGoldenMatchInput()
-  const execution = MATCH_KERNEL.runMatch({
+  const execution = MATCH_KERNEL.runMatchV117({
     ...input,
     runtime: adaptRuntimeForCurrentKernel(input.runtime),
   })
@@ -1457,8 +1457,8 @@ const recordGoldenChronicle = () => {
     execution,
     metadata: {
       schemaVersion: "chronicle-v1.4",
-      semanticTupleId: MATCH_KERNEL.tupleId,
-      semanticTuple: MATCH_KERNEL.tuple,
+      semanticTupleId: VERSIONED_RUNTIME_V117_SEMANTIC_TUPLE_RECORD.tupleId,
+      semanticTuple: VERSIONED_RUNTIME_V117_SEMANTIC_TUPLE_RECORD.tuple,
     },
   })
   if (!recorded.ok) throw new Error(recorded.failure.code)
