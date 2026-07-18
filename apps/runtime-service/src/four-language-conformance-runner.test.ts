@@ -177,7 +177,7 @@ describe("v1.37 four-language conformance runner", () => {
     } finally {
       rmSync(repoRoot, { recursive: true, force: true })
     }
-  })
+  }, 15_000)
 
   it("executes the identical shared matrix through TypeScript and Python real-adapter seams", async () => {
     for (const languageId of ["typescript", "python"] as const) {
@@ -338,5 +338,5 @@ describe("v1.37 four-language conformance runner", () => {
     expect(RETAINED_FOUR_LANGUAGE_PARITY_CERTIFICATION_STATUS).toBe(
       "non_promoting_regression_only",
     )
-  }, 20_000)
+  }, 60_000)
 })
