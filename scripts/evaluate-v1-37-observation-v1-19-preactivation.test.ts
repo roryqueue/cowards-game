@@ -29,7 +29,7 @@ const GATE_COMMANDS = [
   "pnpm exec vitest run --maxWorkers=1 --no-file-parallelism packages/engine/src/test/strategy-observations-v1-19.test.ts packages/engine/src/test/compatibility-v1-4.test.ts",
   "pnpm exec vitest run --maxWorkers=1 --no-file-parallelism scripts/generate-v1-37-arena-set-authority.test.ts scripts/generate-v1-37-conformance-corpus.test.ts scripts/generate-v1-37-conformance-traces.test.ts",
   "pnpm exec vitest run --maxWorkers=1 --no-file-parallelism packages/persistence/src/migrations.test.ts packages/persistence/src/matchset-service.test.ts packages/persistence/src/complete-match.test.ts packages/persistence/src/matchset-status.test.ts packages/persistence/src/scoring.test.ts packages/persistence/src/workshop-contract-v1-19-candidate.test.ts",
-  "go test ./... -run ArenaSetAuthority|Candidate|Cartesian",
+  "go test ./... -count=1 -run ArenaSetAuthority|Candidate|Cartesian",
   "pnpm exec vitest run --maxWorkers=1 --no-file-parallelism packages/runtime-js/src/revision-v1-19.test.ts packages/runtime-python/src/revision-v1-19.test.ts packages/runtime-wasm-wasi/src/revision-v1-19.test.ts apps/runtime-service/src/execute-match-v1-19.test.ts",
   "pnpm exec vitest run --maxWorkers=1 --no-file-parallelism packages/replay/src/record.test.ts packages/replay/src/validate.test.ts packages/replay/src/historical-v1-4.test.ts",
   "pnpm exec vitest run --maxWorkers=1 --no-file-parallelism packages/spec/src/match-execution-contract.test.ts",
@@ -48,6 +48,7 @@ const passingGates = (): V137ObservationV119GateReceipt[] =>
       status: "passed",
       command: GATE_COMMANDS[index],
       exitCode: 0,
+      outputNormalization: "gate-stable-v1",
       stdoutSha256: `sha256:${"1".repeat(64)}`,
       stderrSha256: `sha256:${"2".repeat(64)}`,
     }),
@@ -85,6 +86,7 @@ describe("v1.37 observation-v1.19 preactivation proof", () => {
         proof,
         process.cwd(),
         "2026-07-17T12:00:00.000Z",
+        passingGates(),
       ),
     ).toEqual([])
     expect(proof.lifecycle).toBe("preactivation-only")
@@ -232,6 +234,7 @@ describe("v1.37 observation-v1.19 preactivation proof", () => {
         proof,
         process.cwd(),
         "2026-07-17T12:00:00.000Z",
+        passingGates(),
       ),
     ).not.toEqual([])
   })
@@ -248,6 +251,7 @@ describe("v1.37 observation-v1.19 preactivation proof", () => {
         proof,
         process.cwd(),
         "2026-07-17T12:00:00.000Z",
+        passingGates(),
       ),
     ).toContain("proof shape")
   })
@@ -285,8 +289,38 @@ describe("v1.37 observation-v1.19 preactivation proof", () => {
         proof,
         process.cwd(),
         "2026-07-17T12:00:00.000Z",
+        passingGates(),
       ),
     ).toContain("gates")
+  })
+
+  it("rejects coordinated output tampering even when the receipt is resealed", () => {
+    const proof = clone(passingProof())
+    const { receiptSha256: _receiptSha256, ...unsealed } = proof.gates[0]!
+    proof.gates[0] = sealV137ObservationV119GateReceipt({
+      ...unsealed,
+      stdoutSha256: `sha256:${"6".repeat(64)}`,
+      stderrSha256: `sha256:${"7".repeat(64)}`,
+    })
+
+    expect(
+      validateV137ObservationV119PreactivationProof(
+        proof,
+        process.cwd(),
+        "2026-07-17T12:00:00.000Z",
+        passingGates(),
+      ),
+    ).toContain("independent gate execution")
+  })
+
+  it("rejects validation without an independently executed gate set", () => {
+    expect(
+      validateV137ObservationV119PreactivationProof(
+        passingProof(),
+        process.cwd(),
+        "2026-07-17T12:00:00.000Z",
+      ),
+    ).toContain("independent gate execution")
   })
 
   it("rejects stale, duplicated, fallback, or synthetic real-lane evidence", () => {
@@ -315,6 +349,7 @@ describe("v1.37 observation-v1.19 preactivation proof", () => {
           proof,
           process.cwd(),
           "2026-07-17T12:00:00.000Z",
+          passingGates(),
         ),
       ).toContain("candidate lanes")
     }

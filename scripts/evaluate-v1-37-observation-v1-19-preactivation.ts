@@ -8,6 +8,7 @@ import { fileURLToPath } from "node:url"
 import {
   checkActivationSeamInventory,
   DECLARED_STALE_SEAM_PATHS,
+  normalizeVitestGateStdout,
   validateActivationSeamInventory,
   type ActivationSeamInventory,
 } from "./audit-v1-37-observation-v1-19-activation-seams.js"
@@ -212,6 +213,7 @@ export interface V137ObservationV119GateReceipt {
   status: "passed"
   command: string
   exitCode: 0
+  outputNormalization: "gate-stable-v1"
   stdoutSha256: string
   stderrSha256: string
   receiptSha256: string
@@ -385,6 +387,7 @@ const gateReceiptSha256 = (
         receipt.status,
         receipt.command,
         String(receipt.exitCode),
+        receipt.outputNormalization,
         receipt.stdoutSha256,
         receipt.stderrSha256,
       ].join("\0"),
@@ -721,7 +724,7 @@ export const buildV137ObservationV119PreactivationProof = (
       baselineSha256: baseline.baselineSha256,
     },
     privacy: { publicSafe: true, forbiddenFieldCount: 0 },
-    gates,
+    gates: gates.map((gate) => ({ ...gate })),
   }
 }
 
@@ -784,6 +787,7 @@ export const validateV137ObservationV119PreactivationProof = (
   value: unknown,
   repoRoot: string = root,
   now: string = new Date().toISOString(),
+  independentlyExecutedGates?: readonly V137ObservationV119GateReceipt[],
 ): string[] => {
   if (
     !exactKeys(value, [
@@ -1005,6 +1009,7 @@ export const validateV137ObservationV119PreactivationProof = (
           "status",
           "command",
           "exitCode",
+          "outputNormalization",
           "stdoutSha256",
           "stderrSha256",
           "receiptSha256",
@@ -1014,6 +1019,7 @@ export const validateV137ObservationV119PreactivationProof = (
         gate.status !== "passed" ||
         gate.command !== expectedCommand ||
         gate.exitCode !== 0 ||
+        gate.outputNormalization !== "gate-stable-v1" ||
         !SHA256.test(gate.stdoutSha256) ||
         !SHA256.test(gate.stderrSha256) ||
         !SHA256.test(gate.receiptSha256) ||
@@ -1023,6 +1029,7 @@ export const validateV137ObservationV119PreactivationProof = (
             status: gate.status,
             command: gate.command,
             exitCode: gate.exitCode,
+            outputNormalization: gate.outputNormalization,
             stdoutSha256: gate.stdoutSha256,
             stderrSha256: gate.stderrSha256,
           })
@@ -1030,6 +1037,13 @@ export const validateV137ObservationV119PreactivationProof = (
     })
   )
     errors.push("gates")
+  if (
+    independentlyExecutedGates === undefined ||
+    independentlyExecutedGates === proof.gates ||
+    JSON.stringify(independentlyExecutedGates) !== JSON.stringify(proof.gates)
+  ) {
+    errors.push("independent gate execution")
+  }
   return errors
 }
 
@@ -1103,7 +1117,13 @@ const gateDefinitions: GateDefinition[] = [
   {
     id: "go",
     command: "go",
-    args: ["test", "./...", "-run", "ArenaSetAuthority|Candidate|Cartesian"],
+    args: [
+      "test",
+      "./...",
+      "-count=1",
+      "-run",
+      "ArenaSetAuthority|Candidate|Cartesian",
+    ],
     cwd: "apps/go-backend",
   },
   {
@@ -1236,8 +1256,9 @@ const executeGates = (repoRoot: string): V137ObservationV119GateReceipt[] => {
       status: "passed",
       command: [gate.command, ...gate.args].join(" "),
       exitCode: 0,
-      stdoutSha256: sha256(stdout),
-      stderrSha256: sha256(stderr),
+      outputNormalization: "gate-stable-v1",
+      stdoutSha256: sha256(normalizeVitestGateStdout(stdout, repoRoot)),
+      stderrSha256: sha256(normalizeVitestGateStdout(stderr, repoRoot)),
     })
   })
 }
@@ -1294,8 +1315,14 @@ export const checkV137ObservationV119PreactivationProof = (
     repoRoot,
     ARTIFACT_PATH,
   )
+  const independentlyExecutedGates = executeGates(repoRoot)
   if (
-    validateV137ObservationV119PreactivationProof(proof, repoRoot).length > 0
+    validateV137ObservationV119PreactivationProof(
+      proof,
+      repoRoot,
+      new Date().toISOString(),
+      independentlyExecutedGates,
+    ).length > 0
   ) {
     throw new Error("PREACTIVATION_PROOF_INVALID")
   }
@@ -1309,8 +1336,18 @@ const main = (): void => {
     const args = process.argv.slice(2)
     if (args.length === 1 && args[0] === "--write") {
       checkActivationSeamInventory()
-      const proof = buildV137ObservationV119PreactivationProof()
-      const errors = validateV137ObservationV119PreactivationProof(proof)
+      const independentlyExecutedGates = executeGates(root)
+      const proof = buildV137ObservationV119PreactivationProof(
+        root,
+        independentlyExecutedGates,
+        readDatabaseInventory(root),
+      )
+      const errors = validateV137ObservationV119PreactivationProof(
+        proof,
+        root,
+        new Date().toISOString(),
+        independentlyExecutedGates,
+      )
       if (errors.length > 0) throw new Error(errors.join(","))
       writeAtomic(ARTIFACT_PATH, Buffer.from(`${JSON.stringify(proof)}\n`))
     } else if (args.length === 1 && args[0] === "--check") {
