@@ -41,6 +41,8 @@ const inventory = (): ActivationSeamInventory => ({
     preStatusSha256: hash("3"),
     postStatusSha256: hash("3"),
     protectedBaselineSha256: hash("4"),
+    dependencyPreimageSha256: hash("7"),
+    dependencyPostimageSha256: hash("7"),
     unchanged: true,
   },
   declaredSeams: DECLARED_STALE_SEAM_PATHS.map((path) => ({
@@ -50,9 +52,7 @@ const inventory = (): ActivationSeamInventory => ({
   gate: {
     id: "declared-stale-seams",
     command: [
-      "pnpm",
-      "exec",
-      "vitest",
+      "node_modules/.bin/vitest",
       "run",
       ...DECLARED_STALE_SEAM_PATHS,
       "--maxWorkers=1",
@@ -62,6 +62,11 @@ const inventory = (): ActivationSeamInventory => ({
     exitCode: 0,
     stdoutSha256: hash("5"),
     stderrSha256: hash("6"),
+    dependencyExecution: "already-installed-direct-vitest",
+    packageManagerInvoked: false,
+    dependencyPreimageSha256: hash("7"),
+    dependencyPostimageSha256: hash("7"),
+    dependencyTreeUnchanged: true,
   },
   findings: [],
   findingCount: 0,
@@ -131,6 +136,33 @@ describe("v1.37 observation v1.19 activation seam audit", () => {
     expect(value.status).toBe("failed")
   })
 
+  it("keeps an injected failed gate isolated and dependency-preserving", () => {
+    const result = auditV137ObservationV119ActivationSeams(process.cwd(), {
+      gateRunner: () => ({
+        exitCode: 1,
+        stdout: Buffer.from("declared gate output"),
+        stderr: Buffer.from("declared gate failed"),
+      }),
+    })
+    expect(result.status).toBe("failed")
+    expect(result.findings).toEqual([
+      {
+        id: "declared-stale-seam-gate-failed",
+        classification: "declared-gate-failure",
+        path: null,
+      },
+    ])
+    expect(result.gate.dependencyExecution).toBe(
+      "already-installed-direct-vitest",
+    )
+    expect(result.gate.packageManagerInvoked).toBe(false)
+    expect(result.gate.dependencyTreeUnchanged).toBe(true)
+    expect(result.mainTree.dependencyPreimageSha256).toBe(
+      result.mainTree.dependencyPostimageSha256,
+    )
+    expect(result.simulation.cloneDisposed).toBe(true)
+  }, 120_000)
+
   it("rejects every auto-fix CLI and leaves the inventory bytes untouched", () => {
     const existed = existsSync(STALE_SEAM_INVENTORY_PATH)
     const before = existed
@@ -158,6 +190,11 @@ describe("v1.37 observation v1.19 activation seam audit", () => {
     expect(result.findings).toEqual([])
     expect(result.findingCount).toBe(0)
     expect(result.simulation.cloneDisposed).toBe(true)
+    expect(result.gate.command.startsWith("node_modules/.bin/vitest run")).toBe(
+      true,
+    )
+    expect(result.gate.packageManagerInvoked).toBe(false)
+    expect(result.gate.dependencyTreeUnchanged).toBe(true)
     expect(result.mainTree.preStatusSha256).toBe(
       result.mainTree.postStatusSha256,
     )

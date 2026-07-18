@@ -4,8 +4,11 @@ import { execFileSync, spawnSync } from "node:child_process"
 import { createHash, randomUUID } from "node:crypto"
 import {
   existsSync,
+  lstatSync,
   mkdirSync,
   readFileSync,
+  readlinkSync,
+  realpathSync,
   readdirSync,
   renameSync,
   rmSync,
@@ -39,9 +42,7 @@ const PROTECTED_PATHS = Object.freeze([
 ])
 
 const GATE_COMMAND = Object.freeze([
-  "pnpm",
-  "exec",
-  "vitest",
+  "node_modules/.bin/vitest",
   "run",
   ...DECLARED_STALE_SEAM_PATHS,
   "--maxWorkers=1",
@@ -75,6 +76,8 @@ export interface ActivationSeamInventory {
     readonly preStatusSha256: string
     readonly postStatusSha256: string
     readonly protectedBaselineSha256: string
+    readonly dependencyPreimageSha256: string
+    readonly dependencyPostimageSha256: string
     readonly unchanged: true
   }
   readonly declaredSeams: readonly {
@@ -88,6 +91,11 @@ export interface ActivationSeamInventory {
     readonly exitCode: number
     readonly stdoutSha256: string
     readonly stderrSha256: string
+    readonly dependencyExecution: "already-installed-direct-vitest"
+    readonly packageManagerInvoked: false
+    readonly dependencyPreimageSha256: string
+    readonly dependencyPostimageSha256: string
+    readonly dependencyTreeUnchanged: boolean
   }
   readonly findings: readonly ActivationSeamFinding[]
   readonly findingCount: number
@@ -167,11 +175,72 @@ const discoverNodeModulePaths = (
   return paths
 }
 
+const dependencyControlDigest = (repoRoot: string): string => {
+  const trackedControls = git(repoRoot, [
+    "ls-files",
+    "-z",
+    "--",
+    "*package.json",
+    "pnpm-lock.yaml",
+    "pnpm-workspace.yaml",
+    ".npmrc",
+  ])
+    .toString("utf8")
+    .split("\0")
+    .filter(Boolean)
+    .sort()
+    .map((relativePath) => ({
+      path: relativePath,
+      sha256: sha256(readFileSync(path.join(repoRoot, relativePath))),
+    }))
+  const nodeModules = discoverNodeModulePaths(repoRoot)
+    .sort()
+    .map((absolutePath) => {
+      const relativePath = path.relative(repoRoot, absolutePath)
+      const linkTarget = lstatSync(absolutePath).isSymbolicLink()
+        ? readlinkSync(absolutePath)
+        : null
+      const controls = [".modules.yaml", ".pnpm/lock.yaml"]
+        .map((controlPath) => path.join(absolutePath, controlPath))
+        .filter((controlPath) => existsSync(controlPath))
+        .map((controlPath) => ({
+          path: path.relative(absolutePath, controlPath),
+          sha256: sha256(readFileSync(controlPath)),
+        }))
+      return { path: relativePath, linkTarget, controls }
+    })
+  return sha256(JSON.stringify({ trackedControls, nodeModules }))
+}
+
 const linkNodeModules = (sourceRoot: string, cloneRoot: string): void => {
   for (const source of discoverNodeModulePaths(sourceRoot)) {
     const target = path.join(cloneRoot, path.relative(sourceRoot, source))
-    mkdirSync(path.dirname(target), { recursive: true })
-    symlinkSync(source, target, "junction")
+    mkdirSync(target, { recursive: true })
+    for (const entry of readdirSync(source, { withFileTypes: true })) {
+      const sourceEntry = path.join(source, entry.name)
+      const targetEntry = path.join(target, entry.name)
+      if (entry.name !== "@cowards") {
+        symlinkSync(
+          sourceEntry,
+          targetEntry,
+          entry.isDirectory() ? "junction" : "file",
+        )
+        continue
+      }
+      mkdirSync(targetEntry, { recursive: true })
+      for (const workspaceEntry of readdirSync(sourceEntry)) {
+        const resolved = realpathSync(path.join(sourceEntry, workspaceEntry))
+        const workspaceRelative = path.relative(sourceRoot, resolved)
+        if (workspaceRelative.startsWith("..")) {
+          throw new Error("Activation seam dependency escaped the repository")
+        }
+        symlinkSync(
+          path.join(cloneRoot, workspaceRelative),
+          path.join(targetEntry, workspaceEntry),
+          "junction",
+        )
+      }
+    }
   }
 }
 
@@ -189,11 +258,13 @@ const selectorManifest = (
 
 const defaultGateRunner = (cwd: string) => {
   const [command, ...args] = GATE_COMMAND
-  const result = spawnSync(command!, args, {
+  const result = spawnSync(path.join(cwd, command!), args, {
     cwd,
     env: {
       ...process.env,
       PATH: `/usr/local/go/bin:${process.env.PATH ?? ""}`,
+      COREPACK_ENABLE_DOWNLOAD_PROMPT: "0",
+      npm_config_ignore_scripts: "true",
     },
     encoding: "buffer",
     maxBuffer: 128 * 1024 * 1024,
@@ -252,7 +323,10 @@ export const validateActivationSeamInventory = (value: unknown): string[] => {
     inventory.mainTree.preStatusSha256 !==
       inventory.mainTree.postStatusSha256 ||
     inventory.mainTree.unchanged !== true ||
-    !SHA256.test(inventory.mainTree.protectedBaselineSha256)
+    !SHA256.test(inventory.mainTree.protectedBaselineSha256) ||
+    !SHA256.test(inventory.mainTree.dependencyPreimageSha256) ||
+    inventory.mainTree.dependencyPreimageSha256 !==
+      inventory.mainTree.dependencyPostimageSha256
   ) {
     errors.push("main-tree boundary")
   }
@@ -271,6 +345,12 @@ export const validateActivationSeamInventory = (value: unknown): string[] => {
     inventory.gate.command !== GATE_COMMAND.join(" ") ||
     !SHA256.test(inventory.gate.stdoutSha256) ||
     !SHA256.test(inventory.gate.stderrSha256) ||
+    inventory.gate.dependencyExecution !== "already-installed-direct-vitest" ||
+    inventory.gate.packageManagerInvoked !== false ||
+    !SHA256.test(inventory.gate.dependencyPreimageSha256) ||
+    inventory.gate.dependencyPreimageSha256 !==
+      inventory.gate.dependencyPostimageSha256 ||
+    inventory.gate.dependencyTreeUnchanged !== true ||
     inventory.findingCount !== inventory.findings?.length ||
     (inventory.findingCount === 0) !== (inventory.status === "passed") ||
     (inventory.findingCount === 0) !== (inventory.gate.status === "passed") ||
@@ -286,6 +366,7 @@ export const auditV137ObservationV119ActivationSeams = (
   options: ActivationSeamAuditOptions = {},
 ): ActivationSeamInventory => {
   const mainPreStatus = assertMainTreeBoundary(repoRoot)
+  const mainDependencyPreimage = dependencyControlDigest(repoRoot)
   const baseline = JSON.parse(
     readFileSync(
       path.join(
@@ -304,13 +385,18 @@ export const auditV137ObservationV119ActivationSeams = (
   )
   const cloneRoot = path.join(temporaryRoot, "worktree")
   const findings: ActivationSeamFinding[] = []
-  let gate = {
+  let gate: ActivationSeamInventory["gate"] = {
     id: "declared-stale-seams" as const,
     command: GATE_COMMAND.join(" "),
     status: "failed" as "passed" | "failed",
     exitCode: 1,
     stdoutSha256: sha256(Buffer.alloc(0)),
     stderrSha256: sha256(Buffer.alloc(0)),
+    dependencyExecution: "already-installed-direct-vitest" as const,
+    packageManagerInvoked: false as const,
+    dependencyPreimageSha256: sha256(Buffer.alloc(0)),
+    dependencyPostimageSha256: sha256(Buffer.alloc(0)),
+    dependencyTreeUnchanged: true,
   }
   try {
     mkdirSync(temporaryRoot, { recursive: true })
@@ -324,6 +410,7 @@ export const auditV137ObservationV119ActivationSeams = (
     for (const [relativePath, bytes] of target) {
       writeFileSync(path.join(cloneRoot, relativePath), bytes)
     }
+    const dependencyPreimage = dependencyControlDigest(cloneRoot)
     const beforeGatePaths = git(cloneRoot, ["diff", "--name-only", "--"])
       .toString("utf8")
       .trim()
@@ -342,17 +429,28 @@ export const auditV137ObservationV119ActivationSeams = (
       }
     }
     const result = (options.gateRunner ?? defaultGateRunner)(cloneRoot)
+    const dependencyPostimage = dependencyControlDigest(cloneRoot)
     gate = {
       ...gate,
       status: result.exitCode === 0 ? "passed" : "failed",
       exitCode: result.exitCode,
       stdoutSha256: sha256(result.stdout),
       stderrSha256: sha256(result.stderr),
+      dependencyPreimageSha256: dependencyPreimage,
+      dependencyPostimageSha256: dependencyPostimage,
+      dependencyTreeUnchanged: dependencyPreimage === dependencyPostimage,
     }
     if (result.exitCode !== 0) {
       findings.push({
         id: "declared-stale-seam-gate-failed",
         classification: "declared-gate-failure",
+        path: null,
+      })
+    }
+    if (dependencyPreimage !== dependencyPostimage) {
+      findings.push({
+        id: "dependency-tree-mutated",
+        classification: "undeclared-mutation",
         path: null,
       })
     }
@@ -385,8 +483,12 @@ export const auditV137ObservationV119ActivationSeams = (
     throw new Error("Activation seam audit clone cleanup failed")
   }
   const mainPostStatus = assertMainTreeBoundary(repoRoot)
+  const mainDependencyPostimage = dependencyControlDigest(repoRoot)
   if (!mainPostStatus.equals(mainPreStatus)) {
     throw new Error("Activation seam audit mutated the main worktree")
+  }
+  if (mainDependencyPostimage !== mainDependencyPreimage) {
+    throw new Error("Activation seam audit mutated the main dependency tree")
   }
   const inventory: ActivationSeamInventory = {
     schemaVersion: "v1.37-observation-v1.19-stale-seam-inventory-v1",
@@ -409,6 +511,8 @@ export const auditV137ObservationV119ActivationSeams = (
       preStatusSha256: sha256(mainPreStatus),
       postStatusSha256: sha256(mainPostStatus),
       protectedBaselineSha256: baseline.baselineSha256,
+      dependencyPreimageSha256: mainDependencyPreimage,
+      dependencyPostimageSha256: mainDependencyPostimage,
       unchanged: true,
     },
     declaredSeams: DECLARED_STALE_SEAM_PATHS.map((seamPath) => ({

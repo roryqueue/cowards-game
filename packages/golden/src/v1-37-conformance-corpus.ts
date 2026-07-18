@@ -4,6 +4,7 @@ import { createHash } from "node:crypto"
 import { readFileSync } from "node:fs"
 import { encodeCanonicalJson, type JsonValue } from "@cowards/spec"
 import { V1_37_CONFORMANCE_CORPUS_REVIEWED_PIN } from "./v1-37-conformance-corpus-pin.js"
+import { V1_37_CONFORMANCE_CORPUS_V3_CANDIDATE_PIN } from "./v1-37-conformance-corpus-v3-candidate-pin.js"
 
 export const V1_37_CONFORMANCE_LANGUAGES = Object.freeze([
   "typescript",
@@ -213,6 +214,10 @@ const exactArray = <T>(
   ) {
     fail(code)
   }
+}
+
+const exactJson = (actual: unknown, expected: unknown, code: string): void => {
+  if (JSON.stringify(actual) !== JSON.stringify(expected)) fail(code)
 }
 
 const requireIdentifier = (value: unknown, code: string): string => {
@@ -559,76 +564,396 @@ export const createV137ConformanceRunRoot = (
   return `sha256:${hash.digest("hex")}`
 }
 
-const loadJson = (url: URL): unknown =>
-  JSON.parse(readFileSync(url, "utf8")) as unknown
+const V2_REVIEW_SHA256 =
+  "sha256:871554dbd5d926a65016b1f30bc6dfb5403d52653579e9565b080b0ecb5e1942"
+const V2_SEMANTIC_DIFF_SHA256 =
+  "sha256:f5120aeeeb4877b626637a6ef5905ebc710a1630433642243e0d6d036ceb3707"
 
+const V2_REVIEW = Object.freeze({
+  schemaVersion: "v1.37-executable-conformance-independent-review-v1",
+  reviewedBy: "phase-259-plan-16-pinned-toolchain-revalidation",
+  candidateVersion: "v2",
+  candidateCorpusRootSha256:
+    "sha256:238347225defaaabcf9e57141ac7a54b4b277bd149bebe2b21903febc9ce7ac2",
+  candidateCorpusFileSha256:
+    "sha256:8d51df780a1c9dcb35e28547f4891af0e28a4bd2cd8e854165a61a1726f3a0dd",
+  semanticDiffFileSha256: V2_SEMANTIC_DIFF_SHA256,
+  sourceChanges: ["rust", "zig"],
+  caseChanges: [],
+  behaviorManifestChanged: false,
+  expectedSelectionChanged: false,
+  expectedBrainChanged: false,
+  rust: {
+    toolchain: "rustc 1.95.0 (59807616e 2026-04-14)",
+    target: "wasm32-wasip1",
+    artifactSha256:
+      "sha256:fef2bad9e18a53e6e0de72573096dfd37165fdd824c1e5992b99f87a6a19ffbd",
+    selectActivationsEquivalent: true,
+    soldierBrainEquivalent: true,
+  },
+  zig: {
+    toolchain: "0.16.0",
+    target: "wasm32-wasi",
+    artifactSha256:
+      "sha256:76b3d99310baa72b05a13631f2b086f0f0829d95dbcbb98e9835f18303e7d08c",
+    selectActivationsEquivalent: true,
+    soldierBrainEquivalent: true,
+  },
+  status: "behavior_preserving_toolchain_repair",
+})
+
+const V3_CHANGED_PATHS = Object.freeze([
+  "behaviorManifest",
+  "cases.observation-d01-initial-initiative-both-observers",
+  "cases.observation-d02-round-initiative-later-round",
+  "cases.observation-d03-kernel-owned-signed-transport",
+  "cases.observation-d04-real-revalidation-required",
+  "cases.observation-d05-blocked-move-false",
+  "cases.observation-d05-blocked-push-false",
+  "cases.observation-d05-pushed-target-false",
+  "cases.observation-d05-successful-pusher-true",
+  "cases.observation-d05-turn-false",
+  "cases.observation-d06-first-call-false",
+  "cases.observation-d06-later-cycle-true",
+  "cases.observation-d06-post-self-advance-true",
+  "cases.observation-d07-new-slot-reset-false",
+  "cases.observation-d08-observational-only-no-hold",
+  "corpusRootSha256",
+  "fixtures.python.behaviorManifestId",
+  "fixtures.python.source",
+  "fixtures.python.sourceSha256",
+  "fixtures.rust.behaviorManifestId",
+  "fixtures.rust.source",
+  "fixtures.rust.sourceSha256",
+  "fixtures.typescript.behaviorManifestId",
+  "fixtures.typescript.source",
+  "fixtures.typescript.sourceSha256",
+  "fixtures.zig.behaviorManifestId",
+  "fixtures.zig.source",
+  "fixtures.zig.sourceSha256",
+  "version",
+])
+const V3_FIXTURE_CHANGES = Object.freeze(
+  V3_CHANGED_PATHS.filter((entry) => entry.startsWith("fixtures.")),
+)
+const V3_CASE_CHANGES = Object.freeze(
+  V3_CHANGED_PATHS.filter((entry) => entry.startsWith("cases.")).map((entry) =>
+    entry.slice("cases.".length),
+  ),
+)
+const V3_DECISIONS = Object.freeze(
+  ["D-01", "D-02", "D-03", "D-04", "D-05", "D-06", "D-07", "D-08"].map(
+    (decisionId) => ({
+      decisionId,
+      disposition: "approved-observation-only",
+    }),
+  ),
+)
+const V3_PROTECTED_SURFACES = Object.freeze(
+  [
+    "valid-match-state",
+    "action-legality",
+    "canonical-event-order",
+    "match-outcome",
+    "v1.4-history",
+    "hold-or-end-activation-vocabulary",
+    "failure-ownership",
+    "public-privacy-boundary",
+  ].map((surface) => ({ surface, disposition: "unchanged" })),
+)
+
+export interface V137ActiveConformanceReviewInput {
+  readonly registry: unknown
+  readonly registryBytes: Uint8Array
+  readonly reviewedPin: unknown
+  readonly corpus: unknown
+  readonly corpusBytes: Uint8Array
+  readonly independentReview: unknown
+  readonly independentReviewBytes: Uint8Array
+  readonly semanticDiff: unknown
+  readonly semanticDiffBytes: Uint8Array
+}
+
+const validateReviewShape = (
+  review: unknown,
+  expectedKeys: readonly string[],
+): Record<string, unknown> => exactKeys(review, expectedKeys, "ACTIVE_REGISTRY")
+
+const validateV2Review = (
+  review: unknown,
+  reviewBytes: Uint8Array,
+  semanticDiff: unknown,
+  semanticDiffBytes: Uint8Array,
+): void => {
+  validateReviewShape(review, Object.keys(V2_REVIEW))
+  exactJson(review, V2_REVIEW, "ACTIVE_REGISTRY")
+  if (
+    sha256(reviewBytes) !== V2_REVIEW_SHA256 ||
+    sha256(semanticDiffBytes) !== V2_SEMANTIC_DIFF_SHA256
+  ) {
+    fail("ACTIVE_REGISTRY")
+  }
+  const diff = exactKeys(
+    semanticDiff,
+    [
+      "schemaVersion",
+      "generatedBy",
+      "baseline",
+      "candidate",
+      "changedPaths",
+      "fixtureChanges",
+      "sourceChanges",
+      "caseChanges",
+    ],
+    "ACTIVE_REGISTRY",
+  )
+  exactKeys(
+    diff.baseline,
+    ["version", "corpusRootSha256", "path"],
+    "ACTIVE_REGISTRY",
+  )
+  exactKeys(
+    diff.candidate,
+    ["version", "corpusRootSha256", "path"],
+    "ACTIVE_REGISTRY",
+  )
+  if (
+    diff.schemaVersion !== "v1.37-executable-conformance-semantic-diff-v1" ||
+    diff.generatedBy !== "scripts/generate-v1-37-conformance-corpus.ts"
+  ) {
+    fail("ACTIVE_REGISTRY")
+  }
+  exactJson(diff.sourceChanges, ["rust", "zig"], "ACTIVE_REGISTRY")
+  exactJson(diff.caseChanges, [], "ACTIVE_REGISTRY")
+}
+
+const validateV3Review = (
+  corpus: V137ConformanceCorpus,
+  review: unknown,
+  reviewBytes: Uint8Array,
+  semanticDiff: unknown,
+  semanticDiffBytes: Uint8Array,
+): void => {
+  const candidatePin = V1_37_CONFORMANCE_CORPUS_V3_CANDIDATE_PIN
+  const expectedReview = {
+    schemaVersion: "v1.37-executable-conformance-independent-review-v1",
+    reviewedBy: "phase-260-plan-11-independent-observation-review",
+    lifecycle: "inactive-candidate",
+    current: false,
+    status: "approved-inactive-observation-candidate",
+    candidateVersion: "v3",
+    candidateCorpusRootSha256: candidatePin.corpusRootSha256,
+    candidateCorpusFileSha256: candidatePin.corpusFileSha256,
+    semanticDiffFileSha256: candidatePin.semanticDiffFileSha256,
+    caseInventoryRootSha256: candidatePin.caseInventoryRootSha256,
+    sourceInventoryRootSha256: candidatePin.sourceInventoryRootSha256,
+    caseRoots: candidatePin.caseRoots,
+    sourceRoots: candidatePin.sourceRoots,
+    decisionDispositions: V3_DECISIONS,
+    protectedSurfaces: V3_PROTECTED_SURFACES,
+    approvedChangedPaths: V3_CHANGED_PATHS,
+  }
+  validateReviewShape(review, Object.keys(expectedReview))
+  exactJson(review, expectedReview, "ACTIVE_REGISTRY")
+  if (
+    sha256(reviewBytes) !== candidatePin.independentReviewFileSha256 ||
+    sha256(semanticDiffBytes) !== candidatePin.semanticDiffFileSha256
+  ) {
+    fail("ACTIVE_REGISTRY")
+  }
+
+  const expectedCaseRoots = corpus.cases.map((testCase) => ({
+    caseId: testCase.id,
+    rootSha256: sha256(`${JSON.stringify(testCase, null, 2)}\n`),
+  }))
+  const expectedSourceRoots = corpus.fixtures.map((fixture) => ({
+    languageId: fixture.languageId,
+    sourceSha256: fixture.sourceSha256,
+  }))
+  exactJson(expectedCaseRoots, candidatePin.caseRoots, "ACTIVE_REGISTRY")
+  exactJson(expectedSourceRoots, candidatePin.sourceRoots, "ACTIVE_REGISTRY")
+  if (
+    sha256(`${JSON.stringify(expectedCaseRoots, null, 2)}\n`) !==
+      candidatePin.caseInventoryRootSha256 ||
+    sha256(`${JSON.stringify(expectedSourceRoots, null, 2)}\n`) !==
+      candidatePin.sourceInventoryRootSha256
+  ) {
+    fail("ACTIVE_REGISTRY")
+  }
+
+  const diff = exactKeys(
+    semanticDiff,
+    [
+      "schemaVersion",
+      "generatedBy",
+      "baseline",
+      "candidate",
+      "changedPaths",
+      "fixtureChanges",
+      "sourceChanges",
+      "caseChanges",
+    ],
+    "ACTIVE_REGISTRY",
+  )
+  const baseline = exactKeys(
+    diff.baseline,
+    ["version", "corpusRootSha256", "path"],
+    "ACTIVE_REGISTRY",
+  )
+  const candidate = exactKeys(
+    diff.candidate,
+    ["version", "corpusRootSha256", "path"],
+    "ACTIVE_REGISTRY",
+  )
+  if (
+    diff.schemaVersion !== "v1.37-executable-conformance-semantic-diff-v1" ||
+    diff.generatedBy !== "scripts/generate-v1-37-conformance-corpus.ts" ||
+    baseline.version !== "v2" ||
+    baseline.corpusRootSha256 !== V2_REVIEW.candidateCorpusRootSha256 ||
+    baseline.path !==
+      "packages/golden/src/fixtures/v1-37-conformance-corpus/v2/corpus.json" ||
+    candidate.version !== "v3" ||
+    candidate.corpusRootSha256 !== candidatePin.corpusRootSha256 ||
+    candidate.path !== candidatePin.corpusPath
+  ) {
+    fail("ACTIVE_REGISTRY")
+  }
+  exactJson(diff.changedPaths, V3_CHANGED_PATHS, "ACTIVE_REGISTRY")
+  exactJson(diff.fixtureChanges, V3_FIXTURE_CHANGES, "ACTIVE_REGISTRY")
+  exactJson(
+    diff.sourceChanges,
+    ["python", "rust", "typescript", "zig"],
+    "ACTIVE_REGISTRY",
+  )
+  exactJson(diff.caseChanges, V3_CASE_CHANGES, "ACTIVE_REGISTRY")
+}
+
+export const validateV137ActiveConformanceReview = (
+  input: V137ActiveConformanceReviewInput,
+): void => {
+  const registry = exactKeys(
+    input.registry,
+    [
+      "schemaVersion",
+      "activeVersion",
+      "corpusRootSha256",
+      "corpusFileSha256",
+      "path",
+    ],
+    "ACTIVE_REGISTRY",
+  )
+  const pin = exactKeys(
+    input.reviewedPin,
+    [
+      "schemaVersion",
+      "reviewedUnder",
+      "activeVersion",
+      "corpusRootSha256",
+      "corpusFileSha256",
+      "registryFileSha256",
+      "independentReviewFileSha256",
+      "path",
+      "independentReviewPath",
+      "updatePolicy",
+    ],
+    "ACTIVE_REGISTRY",
+  )
+  const corpus = input.corpus as V137ConformanceCorpus
+  validateV137ConformanceCorpus(corpus)
+  if (
+    registry.schemaVersion !== "v1.37-executable-conformance-registry-v1" ||
+    pin.schemaVersion !== "v1.37-executable-conformance-reviewed-pin-v1" ||
+    registry.activeVersion !== corpus.version ||
+    registry.corpusRootSha256 !== corpus.corpusRootSha256 ||
+    registry.corpusFileSha256 !== sha256(input.corpusBytes) ||
+    registry.path !==
+      `packages/golden/src/fixtures/v1-37-conformance-corpus/${corpus.version}/corpus.json` ||
+    pin.activeVersion !== registry.activeVersion ||
+    pin.corpusRootSha256 !== registry.corpusRootSha256 ||
+    pin.corpusFileSha256 !== registry.corpusFileSha256 ||
+    pin.registryFileSha256 !== sha256(input.registryBytes) ||
+    pin.path !== registry.path ||
+    pin.independentReviewPath !==
+      `packages/golden/src/fixtures/v1-37-conformance-corpus/${corpus.version}/independent-review.json` ||
+    pin.updatePolicy !== "explicit-new-version-and-reviewed-pin-change"
+  ) {
+    fail("ACTIVE_REGISTRY")
+  }
+
+  if (registry.activeVersion === "v2") {
+    if (
+      pin.reviewedUnder !== "259-16-toolchain-revalidation" ||
+      pin.independentReviewFileSha256 !== V2_REVIEW_SHA256
+    ) {
+      fail("ACTIVE_REGISTRY")
+    }
+    validateV2Review(
+      input.independentReview,
+      input.independentReviewBytes,
+      input.semanticDiff,
+      input.semanticDiffBytes,
+    )
+    return
+  }
+  if (registry.activeVersion === "v3") {
+    const candidatePin = V1_37_CONFORMANCE_CORPUS_V3_CANDIDATE_PIN
+    if (
+      pin.reviewedUnder !== candidatePin.reviewedUnder ||
+      pin.corpusRootSha256 !== candidatePin.corpusRootSha256 ||
+      pin.corpusFileSha256 !== candidatePin.corpusFileSha256 ||
+      pin.independentReviewFileSha256 !==
+        candidatePin.independentReviewFileSha256 ||
+      pin.path !== candidatePin.corpusPath ||
+      pin.independentReviewPath !== candidatePin.independentReviewPath
+    ) {
+      fail("ACTIVE_REGISTRY")
+    }
+    validateV3Review(
+      corpus,
+      input.independentReview,
+      input.independentReviewBytes,
+      input.semanticDiff,
+      input.semanticDiffBytes,
+    )
+    return
+  }
+  fail("ACTIVE_REGISTRY")
+}
+
+const fixtureUrl = (path: string): URL =>
+  new URL(`./fixtures/v1-37-conformance-corpus/${path}`, import.meta.url)
+const registryBytes = readFileSync(fixtureUrl("registry.json"))
 const registry = deepFreeze(
-  loadJson(
-    new URL(
-      "./fixtures/v1-37-conformance-corpus/registry.json",
-      import.meta.url,
-    ),
-  ) as V137ConformanceRegistry,
+  JSON.parse(registryBytes.toString("utf8")) as V137ConformanceRegistry,
+)
+const corpusBytes = readFileSync(
+  fixtureUrl(`${registry.activeVersion}/corpus.json`),
 )
 const corpus = deepFreeze(
-  loadJson(
-    new URL(
-      `./fixtures/v1-37-conformance-corpus/${registry.activeVersion}/corpus.json`,
-      import.meta.url,
-    ),
-  ) as V137ConformanceCorpus,
+  JSON.parse(corpusBytes.toString("utf8")) as V137ConformanceCorpus,
 )
 const independentReviewBytes = readFileSync(
-  new URL(
-    `./fixtures/v1-37-conformance-corpus/${registry.activeVersion}/independent-review.json`,
-    import.meta.url,
-  ),
+  fixtureUrl(`${registry.activeVersion}/independent-review.json`),
 )
 const independentReview = JSON.parse(
   independentReviewBytes.toString("utf8"),
-) as {
-  candidateVersion: string
-  candidateCorpusRootSha256: string
-  caseChanges: unknown[]
-  status: string
-}
+) as unknown
+const semanticDiffBytes = readFileSync(
+  fixtureUrl(`${registry.activeVersion}/semantic-diff.json`),
+)
+const semanticDiff = JSON.parse(semanticDiffBytes.toString("utf8")) as unknown
 
-validateV137ConformanceCorpus(corpus)
-exactKeys(registry, [
-  "schemaVersion",
-  "activeVersion",
-  "corpusRootSha256",
-  "corpusFileSha256",
-  "path",
-])
-if (
-  registry.schemaVersion !== "v1.37-executable-conformance-registry-v1" ||
-  registry.activeVersion !== corpus.version ||
-  registry.corpusRootSha256 !== corpus.corpusRootSha256 ||
-  !SHA256.test(registry.corpusFileSha256) ||
-  registry.path !==
-    `packages/golden/src/fixtures/v1-37-conformance-corpus/${corpus.version}/corpus.json` ||
-  registry.activeVersion !==
-    V1_37_CONFORMANCE_CORPUS_REVIEWED_PIN.activeVersion ||
-  registry.corpusRootSha256 !==
-    V1_37_CONFORMANCE_CORPUS_REVIEWED_PIN.corpusRootSha256 ||
-  registry.corpusFileSha256 !==
-    V1_37_CONFORMANCE_CORPUS_REVIEWED_PIN.corpusFileSha256 ||
-  registry.path !== V1_37_CONFORMANCE_CORPUS_REVIEWED_PIN.path ||
-  corpus.corpusRootSha256 !==
-    V1_37_CONFORMANCE_CORPUS_REVIEWED_PIN.corpusRootSha256 ||
-  independentReview.candidateVersion !== registry.activeVersion ||
-  independentReview.candidateCorpusRootSha256 !== corpus.corpusRootSha256 ||
-  !Array.isArray(independentReview.caseChanges) ||
-  independentReview.caseChanges.length !== 0 ||
-  independentReview.status !== "behavior_preserving_toolchain_repair" ||
-  `sha256:${createHash("sha256")
-    .update(independentReviewBytes)
-    .digest("hex")}` !==
-    V1_37_CONFORMANCE_CORPUS_REVIEWED_PIN.independentReviewFileSha256
-) {
-  fail("ACTIVE_REGISTRY")
-}
+validateV137ActiveConformanceReview({
+  registry,
+  registryBytes,
+  reviewedPin: V1_37_CONFORMANCE_CORPUS_REVIEWED_PIN,
+  corpus,
+  corpusBytes,
+  independentReview,
+  independentReviewBytes,
+  semanticDiff,
+  semanticDiffBytes,
+})
 
 export const V1_37_CONFORMANCE_CORPUS: Readonly<V137ConformanceCorpus> = corpus
 export const V1_37_CONFORMANCE_CORPUS_ROOT = corpus.corpusRootSha256

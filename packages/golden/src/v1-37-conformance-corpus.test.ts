@@ -1,5 +1,6 @@
 /// <reference types="node" />
 
+import { Buffer } from "node:buffer"
 import { createHash } from "node:crypto"
 import { existsSync, readFileSync } from "node:fs"
 import path from "node:path"
@@ -20,7 +21,9 @@ import {
   computeV137ConformanceCorpusRoot,
   createV137ConformanceRunRoot,
   validateCompleteConformanceCaseInventory,
+  validateV137ActiveConformanceReview,
   validateV137ConformanceCorpus,
+  type V137ActiveConformanceReviewInput,
   type V137ConformanceCaseResult,
   type V137ConformanceCorpus,
 } from "./v1-37-conformance-corpus.js"
@@ -54,8 +57,81 @@ const expectedCapabilities = [
   "mutation-kill",
 ] as const
 
-const sha256 = (value: string): string =>
-  `sha256:${createHash("sha256").update(value, "utf8").digest("hex")}`
+const sha256 = (value: string | Uint8Array): string =>
+  `sha256:${createHash("sha256").update(value).digest("hex")}`
+
+const fixtureRoot = fileURLToPath(
+  new URL("./fixtures/v1-37-conformance-corpus/", import.meta.url),
+)
+
+const admissionInput = (
+  version: "v2" | "v3",
+): V137ActiveConformanceReviewInput => {
+  const corpusBytes = readFileSync(
+    path.join(fixtureRoot, version, "corpus.json"),
+  )
+  const corpus = JSON.parse(
+    corpusBytes.toString("utf8"),
+  ) as V137ConformanceCorpus
+  const registry = {
+    schemaVersion: "v1.37-executable-conformance-registry-v1",
+    activeVersion: version,
+    corpusRootSha256: corpus.corpusRootSha256,
+    corpusFileSha256: sha256(corpusBytes),
+    path: `packages/golden/src/fixtures/v1-37-conformance-corpus/${version}/corpus.json`,
+  }
+  const registryBytes = Buffer.from(`${JSON.stringify(registry, null, 2)}\n`)
+  const independentReviewBytes = readFileSync(
+    path.join(fixtureRoot, version, "independent-review.json"),
+  )
+  const semanticDiffBytes = readFileSync(
+    path.join(fixtureRoot, version, "semantic-diff.json"),
+  )
+  const reviewedPin =
+    version === "v2"
+      ? {
+          schemaVersion: "v1.37-executable-conformance-reviewed-pin-v1",
+          reviewedUnder: "259-16-toolchain-revalidation",
+          activeVersion: "v2",
+          corpusRootSha256: corpus.corpusRootSha256,
+          corpusFileSha256: sha256(corpusBytes),
+          registryFileSha256: sha256(registryBytes),
+          independentReviewFileSha256:
+            "sha256:871554dbd5d926a65016b1f30bc6dfb5403d52653579e9565b080b0ecb5e1942",
+          path: registry.path,
+          independentReviewPath:
+            "packages/golden/src/fixtures/v1-37-conformance-corpus/v2/independent-review.json",
+          updatePolicy: "explicit-new-version-and-reviewed-pin-change",
+        }
+      : {
+          schemaVersion: "v1.37-executable-conformance-reviewed-pin-v1",
+          reviewedUnder:
+            V1_37_CONFORMANCE_CORPUS_V3_CANDIDATE_PIN.reviewedUnder,
+          activeVersion: "v3",
+          corpusRootSha256:
+            V1_37_CONFORMANCE_CORPUS_V3_CANDIDATE_PIN.corpusRootSha256,
+          corpusFileSha256:
+            V1_37_CONFORMANCE_CORPUS_V3_CANDIDATE_PIN.corpusFileSha256,
+          registryFileSha256: sha256(registryBytes),
+          independentReviewFileSha256:
+            V1_37_CONFORMANCE_CORPUS_V3_CANDIDATE_PIN.independentReviewFileSha256,
+          path: V1_37_CONFORMANCE_CORPUS_V3_CANDIDATE_PIN.corpusPath,
+          independentReviewPath:
+            V1_37_CONFORMANCE_CORPUS_V3_CANDIDATE_PIN.independentReviewPath,
+          updatePolicy: "explicit-new-version-and-reviewed-pin-change",
+        }
+  return {
+    registry,
+    registryBytes,
+    reviewedPin,
+    corpus,
+    corpusBytes,
+    independentReview: JSON.parse(independentReviewBytes.toString("utf8")),
+    independentReviewBytes,
+    semanticDiff: JSON.parse(semanticDiffBytes.toString("utf8")),
+    semanticDiffBytes,
+  }
+}
 
 const completeResults = (): V137ConformanceCaseResult[] =>
   V1_37_CONFORMANCE_CORPUS.cases.flatMap((testCase) =>
@@ -123,18 +199,36 @@ describe("v1.37 executable conformance corpus", () => {
     expect(
       V1_37_CONFORMANCE_CORPUS.fixtures.map(({ languageId }) => languageId),
     ).toEqual(expectedLanguages)
-    expect(V1_37_CONFORMANCE_CORPUS.behaviorManifest.invocationScript).toEqual([
-      {
-        ordinal: 0,
-        methodName: "selectActivations",
-        inputFixtureId: "fixture:select:first-active",
-      },
-      {
-        ordinal: 1,
-        methodName: "soldierBrain",
-        inputFixtureId: "fixture:brain:turn-to-stone",
-      },
-    ])
+    if (V1_37_CONFORMANCE_CORPUS.version === "v2") {
+      expect(
+        V1_37_CONFORMANCE_CORPUS.behaviorManifest.invocationScript,
+      ).toEqual([
+        {
+          ordinal: 0,
+          methodName: "selectActivations",
+          inputFixtureId: "fixture:select:first-active",
+        },
+        {
+          ordinal: 1,
+          methodName: "soldierBrain",
+          inputFixtureId: "fixture:brain:turn-to-stone",
+        },
+      ])
+    } else {
+      expect(
+        V1_37_CONFORMANCE_CORPUS.behaviorManifest.invocationScript,
+      ).toHaveLength(14)
+      expect(
+        V1_37_CONFORMANCE_CORPUS.behaviorManifest.invocationScript.map(
+          ({ inputFixtureId }) => inputFixtureId,
+        ),
+      ).toEqual(
+        expect.arrayContaining([
+          "fixture:observation-d01-initial-initiative-both-observers",
+          "fixture:observation-d08-observational-only-no-hold",
+        ]),
+      )
+    }
     for (const fixture of V1_37_CONFORMANCE_CORPUS.fixtures) {
       expect(fixture.source.trim().split("\n").length).toBeGreaterThan(5)
       expect(fixture.sourceSha256).toBe(sha256(fixture.source))
@@ -244,6 +338,105 @@ describe("v1.37 executable conformance corpus", () => {
     )
     expect(sha256(readFileSync(activeCorpusPath, "utf8"))).toBe(
       V1_37_CONFORMANCE_CORPUS_REVIEWED_PIN.corpusFileSha256,
+    )
+  })
+
+  it("admits only the exact immutable review contract selected for v2 or v3", () => {
+    expect(() =>
+      validateV137ActiveConformanceReview(admissionInput("v2")),
+    ).not.toThrow()
+    expect(() =>
+      validateV137ActiveConformanceReview(admissionInput("v3")),
+    ).not.toThrow()
+
+    const successor = admissionInput("v3")
+    expect(successor.independentReview).toMatchObject({
+      lifecycle: "inactive-candidate",
+      current: false,
+      status: "approved-inactive-observation-candidate",
+    })
+  })
+
+  it.each([
+    [
+      "status relabel",
+      (input: V137ActiveConformanceReviewInput) => {
+        ;(input.independentReview as { status: string }).status =
+          "approved-active"
+      },
+    ],
+    [
+      "candidate root drift",
+      (input: V137ActiveConformanceReviewInput) => {
+        ;(
+          input.independentReview as { candidateCorpusRootSha256: string }
+        ).candidateCorpusRootSha256 = sha256("wrong-root")
+      },
+    ],
+    [
+      "review hash drift",
+      (input: V137ActiveConformanceReviewInput) => {
+        ;(
+          input.reviewedPin as { independentReviewFileSha256: string }
+        ).independentReviewFileSha256 = sha256("wrong-review")
+      },
+    ],
+    [
+      "case inventory drift",
+      (input: V137ActiveConformanceReviewInput) => {
+        const review = input.independentReview as {
+          caseRoots: Array<{ rootSha256: string }>
+        }
+        review.caseRoots[0]!.rootSha256 = sha256("wrong-case")
+      },
+    ],
+    [
+      "changed-path inventory drift",
+      (input: V137ActiveConformanceReviewInput) => {
+        const review = input.independentReview as {
+          approvedChangedPaths: string[]
+        }
+        review.approvedChangedPaths.push("match-outcome")
+      },
+    ],
+    [
+      "missing review field",
+      (input: V137ActiveConformanceReviewInput) => {
+        delete (input.independentReview as Record<string, unknown>)
+          .protectedSurfaces
+      },
+    ],
+    [
+      "extra review field",
+      (input: V137ActiveConformanceReviewInput) => {
+        ;(
+          input.independentReview as Record<string, unknown>
+        ).activationApproval = true
+      },
+    ],
+  ])("fails v3 closed for %s", (_name, mutate) => {
+    const input = admissionInput("v3")
+    mutate(input)
+    expect(() => validateV137ActiveConformanceReview(input)).toThrow(
+      "ACTIVE_REGISTRY",
+    )
+  })
+
+  it("rejects cross-version review hybrids and unknown active versions", () => {
+    const hybrid = admissionInput("v3")
+    const v2 = admissionInput("v2")
+    ;(hybrid as { independentReview: unknown }).independentReview =
+      v2.independentReview
+    ;(hybrid as { independentReviewBytes: Uint8Array }).independentReviewBytes =
+      v2.independentReviewBytes
+    expect(() => validateV137ActiveConformanceReview(hybrid)).toThrow(
+      "ACTIVE_REGISTRY",
+    )
+
+    const unknown = admissionInput("v3")
+    ;(unknown.registry as { activeVersion: string }).activeVersion = "v4"
+    expect(() => validateV137ActiveConformanceReview(unknown)).toThrow(
+      "ACTIVE_REGISTRY",
     )
   })
 

@@ -48,9 +48,27 @@ afterEach(() => {
 const sha256 = (bytes: Uint8Array): string =>
   `sha256:${createHash("sha256").update(bytes).digest("hex")}`
 
+const v3IsCurrent = V1_37_CONFORMANCE_CORPUS.version === "v3"
+const successorVersion = `v${Number(V1_37_CONFORMANCE_CORPUS.version.slice(1)) + 1}`
+const observationCorpus = (): V137ConformanceCorpus =>
+  v3IsCurrent
+    ? globalThis.structuredClone(V1_37_CONFORMANCE_CORPUS)
+    : createV137ObservationCorpusV3Candidate()
+
+const expectCurrentV3Evidence = (): void => {
+  const currentSelection = resolveCurrentSemanticAuthoritySelection({
+    semanticAuthorityKey: CURRENT_SEMANTIC_AUTHORITY_KEY,
+  })
+  expect(currentSelection?.semanticAuthorityKey).toBe("runtime-v1.19")
+  expect(V1_37_CONFORMANCE_CORPUS_ROOT).toBe(
+    V1_37_CONFORMANCE_CORPUS_V3_CANDIDATE_PIN.corpusRootSha256,
+  )
+  expect(checkCommittedV137ObservationCorpusV3Candidate()).toEqual([])
+}
+
 describe("v1.37 conformance candidate generation", () => {
   it("creates an inactive v3 observation candidate with complete D-01 through D-08 cases", () => {
-    const candidate = createV137ObservationCorpusV3Candidate()
+    const candidate = observationCorpus()
 
     expect(candidate.version).toBe("v3")
     expect(candidate.behaviorManifest.id).toBe(
@@ -85,6 +103,10 @@ describe("v1.37 conformance candidate generation", () => {
   })
 
   it("writes v3 without mutating historical v1.17 and resolves whether v3 is current from the sole selector", () => {
+    if (v3IsCurrent) {
+      expectCurrentV3Evidence()
+      return
+    }
     const root = temporaryRoot()
     const goldenRoot = path.join(
       root,
@@ -113,6 +135,10 @@ describe("v1.37 conformance candidate generation", () => {
   })
 
   it("independently reviews and checks exact v3 roots and D-01 through D-08 dispositions", () => {
+    if (v3IsCurrent) {
+      expectCurrentV3Evidence()
+      return
+    }
     const root = temporaryRoot()
     writeCommittedV137ObservationCorpusV3Candidate({ root })
     const review = reviewCommittedV137ObservationCorpusV3Candidate({
@@ -135,6 +161,10 @@ describe("v1.37 conformance candidate generation", () => {
   })
 
   it("rejects self-authored or stale candidate review evidence", () => {
+    if (v3IsCurrent) {
+      expectCurrentV3Evidence()
+      return
+    }
     const selfAuthoredRoot = temporaryRoot()
     writeCommittedV137ObservationCorpusV3Candidate({ root: selfAuthoredRoot })
     expect(() =>
@@ -227,7 +257,7 @@ describe("v1.37 conformance candidate generation", () => {
   })
 
   it("compiles the v3 observation fixtures with the pinned Rust and Zig toolchains", () => {
-    const candidate = createV137ObservationCorpusV3Candidate()
+    const candidate = observationCorpus()
     const root = temporaryRoot()
     const rust = candidate.fixtures.find(
       ({ languageId }) => languageId === "rust",
@@ -283,19 +313,19 @@ describe("v1.37 conformance candidate generation", () => {
 
     const result = writeV137ConformanceCandidate({
       destinationRoot,
-      nextVersion: "v3",
+      nextVersion: successorVersion,
       candidateCorpus,
     })
 
-    expect(result.version).toBe("v3")
+    expect(result.version).toBe(successorVersion)
     expect(result.corpusRootSha256).not.toBe(V1_37_CONFORMANCE_CORPUS_ROOT)
     expect(result.corpusPath).toBe(
-      path.join(destinationRoot, "v3", "corpus.json"),
+      path.join(destinationRoot, successorVersion, "corpus.json"),
     )
     expect(result.semanticDiffPath).toBe(
-      path.join(destinationRoot, "v3", "semantic-diff.json"),
+      path.join(destinationRoot, successorVersion, "semantic-diff.json"),
     )
-    expect(result.corpusLogicalPath).toBe("v3/corpus.json")
+    expect(result.corpusLogicalPath).toBe(`${successorVersion}/corpus.json`)
 
     const corpusBytes = readFileSync(result.corpusPath)
     const diffBytes = readFileSync(result.semanticDiffPath)
@@ -310,9 +340,9 @@ describe("v1.37 conformance candidate generation", () => {
         corpusRootSha256: V1_37_CONFORMANCE_CORPUS_ROOT,
       },
       candidate: {
-        version: "v3",
+        version: successorVersion,
         corpusRootSha256: result.corpusRootSha256,
-        path: "v3/corpus.json",
+        path: `${successorVersion}/corpus.json`,
       },
       sourceChanges: ["typescript"],
       fixtureChanges: [
@@ -332,7 +362,7 @@ describe("v1.37 conformance candidate generation", () => {
 
     const result = writeV137ConformanceCandidate({
       destinationRoot: temporaryRoot(),
-      nextVersion: "v3",
+      nextVersion: successorVersion,
       candidateCorpus,
     })
     const diff = JSON.parse(readFileSync(result.semanticDiffPath, "utf8"))
@@ -376,7 +406,7 @@ describe("v1.37 conformance candidate generation", () => {
       mutate(corpus)
       return writeV137ConformanceCandidate({
         destinationRoot: temporaryRoot(),
-        nextVersion: `v${index + 3}`,
+        nextVersion: `v${index + Number(successorVersion.slice(1))}`,
         candidateCorpus: corpus,
       }).corpusRootSha256
     })
@@ -390,7 +420,7 @@ describe("v1.37 conformance candidate generation", () => {
       writeV137ConformanceCandidate({
         destinationRoot:
           "packages/golden/src/fixtures/v1-37-conformance-corpus",
-        nextVersion: "v3",
+        nextVersion: successorVersion,
       }),
     ).toThrow("ACTIVE_GOLDEN_OVERWRITE_FORBIDDEN")
 
@@ -402,9 +432,15 @@ describe("v1.37 conformance candidate generation", () => {
     ).toThrow("ACTIVE_VERSION_REUSE_FORBIDDEN")
 
     const destinationRoot = temporaryRoot()
-    writeV137ConformanceCandidate({ destinationRoot, nextVersion: "v3" })
+    writeV137ConformanceCandidate({
+      destinationRoot,
+      nextVersion: successorVersion,
+    })
     expect(() =>
-      writeV137ConformanceCandidate({ destinationRoot, nextVersion: "v3" }),
+      writeV137ConformanceCandidate({
+        destinationRoot,
+        nextVersion: successorVersion,
+      }),
     ).toThrow("CANDIDATE_VERSION_EXISTS")
   })
 
