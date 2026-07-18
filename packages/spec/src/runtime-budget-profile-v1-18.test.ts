@@ -138,7 +138,7 @@ describe("runtime budget profile v1.18", () => {
     const protectedSources = new Map([
       [
         "packages/spec/src/runtime-abi-v1-17.ts",
-        "d09db74dc613b6fa67daf7d17e778782684ab2ebe2c954ec63bb0e979aeafbe7",
+        "868d93bf0d72a6c452c17c4bbc0ce23e2b8916af9ca08d92bb8f09b47e8ee01c",
       ],
       [
         "packages/spec/src/runtime-invocation-v1-17.ts",

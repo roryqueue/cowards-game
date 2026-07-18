@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 import {
   buildV137ObservationV119PreactivationProof,
+  sealV137ObservationV119GateReceipt,
   validateV137ObservationV119PreactivationProof,
   type V137ObservationV119DatabaseInventory,
   type V137ObservationV119GateReceipt,
@@ -23,15 +24,34 @@ const GATE_IDS = [
   "protected-baseline",
 ] as const
 
+const GATE_COMMANDS = [
+  "pnpm exec vitest run --maxWorkers=1 --no-file-parallelism packages/spec/src/strategy-observation-abi-v1-19.test.ts packages/spec/src/arena-catalog-v1-37.test.ts packages/spec/src/set-condition-policy-v1-37.test.ts packages/spec/src/integrity-authority.test.ts",
+  "pnpm exec vitest run --maxWorkers=1 --no-file-parallelism packages/engine/src/test/strategy-observations-v1-19.test.ts packages/engine/src/test/compatibility-v1-4.test.ts",
+  "pnpm exec vitest run --maxWorkers=1 --no-file-parallelism scripts/generate-v1-37-arena-set-authority.test.ts scripts/generate-v1-37-conformance-corpus.test.ts scripts/generate-v1-37-conformance-traces.test.ts",
+  "pnpm exec vitest run --maxWorkers=1 --no-file-parallelism packages/persistence/src/migrations.test.ts packages/persistence/src/matchset-service.test.ts packages/persistence/src/complete-match.test.ts packages/persistence/src/matchset-status.test.ts packages/persistence/src/scoring.test.ts packages/persistence/src/workshop-contract-v1-19-candidate.test.ts",
+  "go test ./... -run ArenaSetAuthority|Candidate|Cartesian",
+  "pnpm exec vitest run --maxWorkers=1 --no-file-parallelism packages/runtime-js/src/revision-v1-19.test.ts packages/runtime-python/src/revision-v1-19.test.ts packages/runtime-wasm-wasi/src/revision-v1-19.test.ts apps/runtime-service/src/execute-match-v1-19.test.ts",
+  "pnpm exec vitest run --maxWorkers=1 --no-file-parallelism packages/replay/src/record.test.ts packages/replay/src/validate.test.ts packages/replay/src/historical-v1-4.test.ts",
+  "pnpm exec vitest run --maxWorkers=1 --no-file-parallelism packages/spec/src/match-execution-contract.test.ts",
+  "pnpm exec vitest run --maxWorkers=1 --no-file-parallelism apps/web/app/matches/replay-fixture.test.ts apps/web/app/matchsets/result-view-model.test.ts",
+  "pnpm exec vitest run --maxWorkers=1 --no-file-parallelism apps/runtime-service/src/revalidate-strategy-revision-v1-19.test.ts packages/spec/src/match-execution-contract.test.ts",
+  "pnpm boundary:imports",
+  "pnpm exec vitest run --maxWorkers=1 --no-file-parallelism scripts/certify-v1-37-observation-v1-19-language-lane.test.ts scripts/sign-import-v1-37-observation-v1-19-certificates.test.ts",
+  "pnpm exec tsx scripts/revalidate-v1-37-strategy-revisions-v1-19.ts --check",
+  "pnpm exec tsx scripts/capture-v1-37-protected-baseline.ts --check",
+] as const
+
 const passingGates = (): V137ObservationV119GateReceipt[] =>
-  GATE_IDS.map((id) => ({
-    id,
-    status: "passed",
-    command: `test:${id}`,
-    exitCode: 0,
-    stdoutSha256: `sha256:${"1".repeat(64)}`,
-    stderrSha256: `sha256:${"2".repeat(64)}`,
-  }))
+  GATE_IDS.map((id, index) =>
+    sealV137ObservationV119GateReceipt({
+      id,
+      status: "passed",
+      command: GATE_COMMANDS[index],
+      exitCode: 0,
+      stdoutSha256: `sha256:${"1".repeat(64)}`,
+      stderrSha256: `sha256:${"2".repeat(64)}`,
+    }),
+  )
 
 const passingDatabase = (): V137ObservationV119DatabaseInventory => ({
   phase259CurrentCandidateRows: 0,
@@ -230,6 +250,43 @@ describe("v1.37 observation-v1.19 preactivation proof", () => {
         "2026-07-17T12:00:00.000Z",
       ),
     ).toContain("proof shape")
+  })
+
+  it.each([
+    [
+      "gate command",
+      (gate: V137ObservationV119GateReceipt) => {
+        gate.command = "true"
+      },
+    ],
+    [
+      "gate stdout digest",
+      (gate: V137ObservationV119GateReceipt) => {
+        gate.stdoutSha256 = `sha256:${"3".repeat(64)}`
+      },
+    ],
+    [
+      "gate stderr digest",
+      (gate: V137ObservationV119GateReceipt) => {
+        gate.stderrSha256 = `sha256:${"4".repeat(64)}`
+      },
+    ],
+    [
+      "gate receipt digest",
+      (gate: V137ObservationV119GateReceipt) => {
+        gate.receiptSha256 = `sha256:${"5".repeat(64)}`
+      },
+    ],
+  ] as const)("rejects tampered %s", (_name, mutate) => {
+    const proof = clone(passingProof())
+    mutate(proof.gates[0]!)
+    expect(
+      validateV137ObservationV119PreactivationProof(
+        proof,
+        process.cwd(),
+        "2026-07-17T12:00:00.000Z",
+      ),
+    ).toContain("gates")
   })
 
   it("rejects stale, duplicated, fallback, or synthetic real-lane evidence", () => {

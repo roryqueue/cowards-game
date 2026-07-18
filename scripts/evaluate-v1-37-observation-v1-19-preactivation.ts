@@ -214,6 +214,7 @@ export interface V137ObservationV119GateReceipt {
   exitCode: 0
   stdoutSha256: string
   stderrSha256: string
+  receiptSha256: string
 }
 
 export interface V137ObservationV119DatabaseInventory {
@@ -367,6 +368,36 @@ export interface V137ObservationV119PreactivationProof {
 
 const sha256 = (bytes: Uint8Array): string =>
   `sha256:${createHash("sha256").update(bytes).digest("hex")}`
+
+type UnsealedV137ObservationV119GateReceipt = Omit<
+  V137ObservationV119GateReceipt,
+  "receiptSha256"
+>
+
+const gateReceiptSha256 = (
+  receipt: UnsealedV137ObservationV119GateReceipt,
+): string =>
+  sha256(
+    Buffer.from(
+      [
+        "cowards-game:v1.37:observation-v1.19:preactivation-gate-receipt:v1",
+        receipt.id,
+        receipt.status,
+        receipt.command,
+        String(receipt.exitCode),
+        receipt.stdoutSha256,
+        receipt.stderrSha256,
+      ].join("\0"),
+      "utf8",
+    ),
+  )
+
+export const sealV137ObservationV119GateReceipt = (
+  receipt: UnsealedV137ObservationV119GateReceipt,
+): V137ObservationV119GateReceipt => ({
+  ...receipt,
+  receiptSha256: gateReceiptSha256(receipt),
+})
 const readBytes = (repoRoot: string, relativePath: string): Buffer =>
   readFileSync(path.join(repoRoot, relativePath))
 const readJson = <T>(repoRoot: string, relativePath: string): T =>
@@ -964,14 +995,39 @@ export const validateV137ObservationV119PreactivationProof = (
   }
   if (
     proof.gates.length !== GATE_IDS.length ||
-    proof.gates.some(
-      (gate, index) =>
+    proof.gates.some((gate, index) => {
+      const definition = gateDefinitions[index]
+      if (definition === undefined) return true
+      const expectedCommand = [definition.command, ...definition.args].join(" ")
+      return (
+        !exactKeys(gate, [
+          "id",
+          "status",
+          "command",
+          "exitCode",
+          "stdoutSha256",
+          "stderrSha256",
+          "receiptSha256",
+        ]) ||
         gate.id !== GATE_IDS[index] ||
+        gate.id !== definition.id ||
         gate.status !== "passed" ||
+        gate.command !== expectedCommand ||
         gate.exitCode !== 0 ||
         !SHA256.test(gate.stdoutSha256) ||
-        !SHA256.test(gate.stderrSha256),
-    )
+        !SHA256.test(gate.stderrSha256) ||
+        !SHA256.test(gate.receiptSha256) ||
+        gate.receiptSha256 !==
+          gateReceiptSha256({
+            id: gate.id,
+            status: gate.status,
+            command: gate.command,
+            exitCode: gate.exitCode,
+            stdoutSha256: gate.stdoutSha256,
+            stderrSha256: gate.stderrSha256,
+          })
+      )
+    })
   )
     errors.push("gates")
   return errors
@@ -1175,14 +1231,14 @@ const executeGates = (repoRoot: string): V137ObservationV119GateReceipt[] => {
     const stderr = result.stderr ?? Buffer.alloc(0)
     if (result.status !== 0 || result.error !== undefined)
       throw new Error(`gate failed: ${gate.id}`)
-    return {
+    return sealV137ObservationV119GateReceipt({
       id: gate.id,
       status: "passed",
       command: [gate.command, ...gate.args].join(" "),
       exitCode: 0,
       stdoutSha256: sha256(stdout),
       stderrSha256: sha256(stderr),
-    }
+    })
   })
 }
 
