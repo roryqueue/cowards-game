@@ -38,7 +38,6 @@ import {
 } from "./runtime-invocation-v1-17.js"
 import { RUNTIME_EXECUTION_SERVICE_VERSION } from "./runtime-execution-service.js"
 import { HistoricalStrategyRevisionV114Schema } from "./runtime-execution-service-v1-16-compat.js"
-import { STRATEGY_RUNTIME_ABI_VERSION } from "./versions.js"
 import { RUNTIME_ABI_V1_17_BUDGET_PROFILE_SHA256 } from "./runtime-budget-profile-v1-17.js"
 import { RUNTIME_BUDGET_CAPABILITY_CONTRACT_V1_17 } from "./runtime-budget-capabilities-v1-17.js"
 import {
@@ -900,9 +899,6 @@ const trace = (): RuntimeInvocationTraceV117 => ({
 
 describe("runtime invocation v1.17 exclusive ownership", () => {
   it("keeps the successor invocation registry aligned with the selected pointer", () => {
-    const selected =
-      String(STRATEGY_RUNTIME_ABI_VERSION) ===
-      String(RUNTIME_INVOCATION_V1_17_CANDIDATE.runtimeAbiVersion)
     expect(RUNTIME_INVOCATION_V1_17_CANDIDATE).toMatchObject({
       contractVersion: "runtime-invocation-v1.17",
       runtimeAbiVersion: "strategy-runtime-abi-v1.17",
@@ -914,8 +910,8 @@ describe("runtime invocation v1.17 exclusive ownership", () => {
       contractVersion: "runtime-invocation-v1.17",
       runtimeAbiVersion: "strategy-runtime-abi-v1.17",
       activationPlan: "258-14",
-      current: selected,
-      lifecycle: selected ? "active-current" : "inactive-candidate",
+      current: true,
+      lifecycle: "active-current",
     })
   })
 
@@ -945,15 +941,8 @@ describe("runtime invocation v1.17 exclusive ownership", () => {
       serializeRuntimeInvocationRequestV117(selected),
       identity,
     )
-    const selectedIsCandidate =
-      String(STRATEGY_RUNTIME_ABI_VERSION) !==
-      String(RUNTIME_INVOCATION_V1_17_CANDIDATE.runtimeAbiVersion)
-    expect(candidateAsSelected.kind).toBe(
-      selectedIsCandidate ? "success" : "system_failure",
-    )
-    expect(selectedAsCandidate.kind).toBe(
-      selectedIsCandidate ? "success" : "system_failure",
-    )
+    expect(candidateAsSelected.kind).toBe("system_failure")
+    expect(selectedAsCandidate.kind).toBe("system_failure")
   })
 
   it("memoizes exact immutable requests without exposing mutable canonical bytes", () => {
@@ -1596,10 +1585,7 @@ describe("runtime invocation v1.17 authenticated candidate wire", () => {
       lifecycle: "inactive-candidate",
       current: false,
     })
-    expect(RUNTIME_INVOCATION_V1_17_SELECTED_LIFECYCLE.current).toBe(
-      String(STRATEGY_RUNTIME_ABI_VERSION) ===
-        String(RUNTIME_INVOCATION_V1_17_CANDIDATE.runtimeAbiVersion),
-    )
+    expect(RUNTIME_INVOCATION_V1_17_SELECTED_LIFECYCLE.current).toBe(true)
     const protectedHashes = {
       "packages/spec/artifacts/runtime-execution-service-response.v1.16.wire.json":
         "9c870d57e0125eb80ab2ba941ecbbede8a9a775f61c0b278abec25c491374d97",

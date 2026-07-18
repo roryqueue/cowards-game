@@ -111,21 +111,38 @@ import * as publicSpec from "./index.js"
 describe("Coward's Game spec contracts", () => {
   describe("versioned public semantic authority", () => {
     it("keeps unversioned observation schemas on the generated Phase-259 selection", () => {
+      const currentIsV119 =
+        String(
+          publicSpec.CURRENT_SEMANTIC_AUTHORITY_GENERATED.selection
+            .runtimeAbiVersion,
+        ) === "strategy-runtime-abi-v1.19"
       expect(publicSpec.CURRENT_SEMANTIC_RUNTIME_ABI_VERSION).toBe(
-        "strategy-runtime-abi-v1.17",
+        publicSpec.CURRENT_SEMANTIC_AUTHORITY_GENERATED.selection
+          .runtimeAbiVersion,
       )
       expect(publicSpec.StrategyInputSchema).toBe(
-        publicSpec.StrategyInputV117Schema,
+        currentIsV119
+          ? publicSpec.StrategyInputV119Schema
+          : publicSpec.StrategyInputV117Schema,
       )
       expect(publicSpec.SoldierBrainInputSchema).toBe(
-        publicSpec.SoldierBrainInputV117Schema,
+        currentIsV119
+          ? publicSpec.SoldierBrainInputV119Schema
+          : publicSpec.SoldierBrainInputV117Schema,
       )
     })
 
     it("exports the exact v1.19 observation, arena, and Set candidates from the package root", () => {
       const currentInput = fixtures.valid.standardStrategyInput
-      const candidateInput = {
+      const historicalInput = {
         ...currentInput,
+      } as Record<string, unknown>
+      delete historicalInput.initialInitiativePlayerId
+      delete historicalInput.hasInitialInitiative
+      delete historicalInput.roundInitiativePlayerId
+      delete historicalInput.hasRoundInitiative
+      const candidateInput = {
+        ...historicalInput,
         initialInitiativePlayerId: "player:bottom",
         hasInitialInitiative: true,
         roundInitiativePlayerId: "player:top",
@@ -136,7 +153,7 @@ describe("Coward's Game spec contracts", () => {
         candidateInput,
       )
       expect(
-        publicSpec.StrategyInputV119Schema.safeParse(currentInput).success,
+        publicSpec.StrategyInputV119Schema.safeParse(historicalInput).success,
       ).toBe(false)
       expect(
         publicSpec.StrategyInputV119Schema.safeParse({
@@ -157,19 +174,36 @@ describe("Coward's Game spec contracts", () => {
     })
 
     it("projects the shared truthful fixtures through exact v1.17 and v1.19 schemas", () => {
-      const currentStrategy = fixtures.valid.standardStrategyInput
-      const currentSoldierBrain = fixtures.valid.standardSoldierBrainInput
+      const historicalStrategyInput = {
+        ...fixtures.valid.standardStrategyInput,
+      } as Record<string, unknown>
+      delete historicalStrategyInput.initialInitiativePlayerId
+      delete historicalStrategyInput.hasInitialInitiative
+      delete historicalStrategyInput.roundInitiativePlayerId
+      delete historicalStrategyInput.hasRoundInitiative
+      const historicalSoldierBrainInput = {
+        ...fixtures.valid.standardSoldierBrainInput,
+      } as Record<string, unknown>
+      delete historicalSoldierBrainInput.hasAdvancedThisActivation
 
-      expect(currentStrategy).not.toHaveProperty("initialInitiativePlayerId")
-      expect(currentStrategy).not.toHaveProperty("hasInitialInitiative")
-      expect(currentStrategy).not.toHaveProperty("roundInitiativePlayerId")
-      expect(currentStrategy).not.toHaveProperty("hasRoundInitiative")
-      expect(currentSoldierBrain).not.toHaveProperty(
+      const historicalStrategy = publicSpec.StrategyInputV117Schema.parse(
+        historicalStrategyInput,
+      )
+      const historicalSoldierBrain =
+        publicSpec.SoldierBrainInputV117Schema.parse(
+          historicalSoldierBrainInput,
+        )
+
+      expect(historicalStrategy).not.toHaveProperty("initialInitiativePlayerId")
+      expect(historicalStrategy).not.toHaveProperty("hasInitialInitiative")
+      expect(historicalStrategy).not.toHaveProperty("roundInitiativePlayerId")
+      expect(historicalStrategy).not.toHaveProperty("hasRoundInitiative")
+      expect(historicalSoldierBrain).not.toHaveProperty(
         "hasAdvancedThisActivation",
       )
 
       const candidateStrategy = publicSpec.StrategyInputV119Schema.parse({
-        ...currentStrategy,
+        ...historicalStrategy,
         initialInitiativePlayerId: "bottom",
         hasInitialInitiative: true,
         roundInitiativePlayerId: "bottom",
@@ -177,7 +211,7 @@ describe("Coward's Game spec contracts", () => {
       })
       const candidateSoldierBrain =
         publicSpec.SoldierBrainInputV119Schema.parse({
-          ...currentSoldierBrain,
+          ...historicalSoldierBrain,
           hasAdvancedThisActivation: false,
         })
 
@@ -188,6 +222,16 @@ describe("Coward's Game spec contracts", () => {
         hasRoundInitiative: true,
       })
       expect(candidateSoldierBrain.hasAdvancedThisActivation).toBe(false)
+      expect(
+        publicSpec.StrategyInputSchema.parse(
+          fixtures.valid.standardStrategyInput,
+        ),
+      ).toEqual(fixtures.valid.standardStrategyInput)
+      expect(
+        publicSpec.SoldierBrainInputSchema.parse(
+          fixtures.valid.standardSoldierBrainInput,
+        ),
+      ).toEqual(fixtures.valid.standardSoldierBrainInput)
       expect(
         publicSpec.StrategyInputV119Schema.safeParse({
           ...candidateStrategy,
@@ -203,17 +247,26 @@ describe("Coward's Game spec contracts", () => {
     })
 
     it("rejects partial, mixed, and premature current selectors", () => {
+      const current = publicSpec.CURRENT_SEMANTIC_AUTHORITY_GENERATED.selection
+      const alternateKey =
+        String(current.semanticAuthorityKey) === "runtime-v1.17"
+          ? "runtime-v1.19"
+          : "runtime-v1.17"
+      const alternateRuntimeAbi =
+        String(current.runtimeAbiVersion) === "strategy-runtime-abi-v1.17"
+          ? "strategy-runtime-abi-v1.19"
+          : "strategy-runtime-abi-v1.17"
       expect(
         publicSpec.resolveCurrentSemanticAuthoritySelection({
-          semanticAuthorityKey: "runtime-v1.17",
+          semanticAuthorityKey: current.semanticAuthorityKey,
         }),
-      ).toEqual(publicSpec.CURRENT_SEMANTIC_AUTHORITY_GENERATED.selection)
+      ).toEqual(current)
       for (const selector of [
-        { semanticAuthorityKey: "runtime-v1.19" },
-        { runtimeAbiVersion: "strategy-runtime-abi-v1.19" },
+        { semanticAuthorityKey: alternateKey },
+        { runtimeAbiVersion: current.runtimeAbiVersion },
         {
-          semanticAuthorityKey: "runtime-v1.17",
-          runtimeAbiVersion: "strategy-runtime-abi-v1.19",
+          semanticAuthorityKey: current.semanticAuthorityKey,
+          runtimeAbiVersion: alternateRuntimeAbi,
         },
       ]) {
         expect(
@@ -806,9 +859,7 @@ describe("Coward's Game spec contracts", () => {
 
   it("selected strategy language providers declare ABI and boundary posture", () => {
     expect(STRATEGY_LANGUAGE_PROVIDER_CONTRACT_VERSION).toBe(
-      String(STRATEGY_RUNTIME_ABI_VERSION) === "strategy-runtime-abi-v1.17"
-        ? "runtime-provider-validation-v1.17"
-        : "strategy-language-provider-contract-v1.33",
+      "runtime-provider-validation-v1.17",
     )
     expect(STRATEGY_LANGUAGE_PROVIDER_REGISTRY).toHaveLength(4)
     for (const language of SUPPORTED_STRATEGY_LANGUAGES) {

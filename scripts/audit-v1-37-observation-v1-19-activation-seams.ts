@@ -36,6 +36,9 @@ export const DECLARED_STALE_SEAM_PATHS = Object.freeze([
   "scripts/generate-v1-37-conformance-corpus.test.ts",
   "packages/replay/src/record.test.ts",
   "apps/web/app/matchsets/result-view-model.test.ts",
+  "packages/spec/src/runtime-budget-capabilities-v1-18.test.ts",
+  "packages/spec/src/runtime-invocation-v1-17.test.ts",
+  "packages/spec/src/spec.test.ts",
 ])
 
 const PROTECTED_PATHS = Object.freeze([

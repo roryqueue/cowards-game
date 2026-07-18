@@ -157,25 +157,49 @@ describe("runtime budget capabilities v1.18", () => {
   )
 
   it.each([
-    ["missing controller", (value: RuntimeBudgetCapabilityEvidenceV118) => {
-      value.platform.delegatedControllers = ["cpu", "memory"]
-    }, "CONTROLLERS_UNAVAILABLE"],
-    ["delegation failure", (value: RuntimeBudgetCapabilityEvidenceV118) => {
-      value.containment.delegated = false
-    }, "DELEGATION_UNAVAILABLE"],
-    ["cgroup escape", (value: RuntimeBudgetCapabilityEvidenceV118) => {
-      value.containment.noCgroupEscape = false
-    }, "CONTAINMENT_INCOMPLETE"],
-    ["lingering process", (value: RuntimeBudgetCapabilityEvidenceV118) => {
-      value.containment.emptyAfterReap = false
-    }, "CONTAINMENT_INCOMPLETE"],
-    ["cleanup failure", (value: RuntimeBudgetCapabilityEvidenceV118) => {
-      value.containment.cleanupVerified = false
-    }, "CONTAINMENT_INCOMPLETE"],
-    ["identity drift", (value: RuntimeBudgetCapabilityEvidenceV118) => {
-      value.identityPins.supervisorBinarySha256 =
-        "latest" as `sha256:${string}`
-    }, "IDENTITY_INCOMPLETE"],
+    [
+      "missing controller",
+      (value: RuntimeBudgetCapabilityEvidenceV118) => {
+        value.platform.delegatedControllers = ["cpu", "memory"]
+      },
+      "CONTROLLERS_UNAVAILABLE",
+    ],
+    [
+      "delegation failure",
+      (value: RuntimeBudgetCapabilityEvidenceV118) => {
+        value.containment.delegated = false
+      },
+      "DELEGATION_UNAVAILABLE",
+    ],
+    [
+      "cgroup escape",
+      (value: RuntimeBudgetCapabilityEvidenceV118) => {
+        value.containment.noCgroupEscape = false
+      },
+      "CONTAINMENT_INCOMPLETE",
+    ],
+    [
+      "lingering process",
+      (value: RuntimeBudgetCapabilityEvidenceV118) => {
+        value.containment.emptyAfterReap = false
+      },
+      "CONTAINMENT_INCOMPLETE",
+    ],
+    [
+      "cleanup failure",
+      (value: RuntimeBudgetCapabilityEvidenceV118) => {
+        value.containment.cleanupVerified = false
+      },
+      "CONTAINMENT_INCOMPLETE",
+    ],
+    [
+      "identity drift",
+      (value: RuntimeBudgetCapabilityEvidenceV118) => {
+        value.identityPins.supervisorBinarySha256 =
+          "latest" as `sha256:${string}`
+      },
+      "IDENTITY_INCOMPLETE",
+    ],
   ] as const)("fails closed on %s", (_name, mutate, code) => {
     const value = clone(completeEvidence("typescript"))
     mutate(value)
@@ -196,25 +220,28 @@ describe("runtime budget capabilities v1.18", () => {
     "noCgroupEscape",
     "emptyAfterReap",
     "cleanupVerified",
-  ] as const)("rejects truthy non-boolean containment evidence for %s", (field) => {
-    const value = clone(completeEvidence("typescript")) as unknown as {
-      containment: Record<string, unknown>
-    }
-    value.containment[field] = "false"
-    expect(
-      evaluateRuntimeBudgetCapabilityV118(
-        value as unknown as RuntimeBudgetCapabilityEvidenceV118,
-      ),
-    ).toEqual({
-      kind: "system_failure",
-      laneId: "typescript",
-      supervisorEligible: false,
-      certificateEligible: false,
-      countedEligible: false,
-      gameplayDisposition: "no_mutation",
-      code: "EVIDENCE_SHAPE_INVALID",
-    })
-  })
+  ] as const)(
+    "rejects truthy non-boolean containment evidence for %s",
+    (field) => {
+      const value = clone(completeEvidence("typescript")) as unknown as {
+        containment: Record<string, unknown>
+      }
+      value.containment[field] = "false"
+      expect(
+        evaluateRuntimeBudgetCapabilityV118(
+          value as unknown as RuntimeBudgetCapabilityEvidenceV118,
+        ),
+      ).toEqual({
+        kind: "system_failure",
+        laneId: "typescript",
+        supervisorEligible: false,
+        certificateEligible: false,
+        countedEligible: false,
+        gameplayDisposition: "no_mutation",
+        code: "EVIDENCE_SHAPE_INVALID",
+      })
+    },
+  )
 
   it("rejects native macOS and every non-Linux counted attempt", () => {
     for (const operatingSystem of ["darwin", "windows", "freebsd"]) {
@@ -230,30 +257,31 @@ describe("runtime budget capabilities v1.18", () => {
   })
 
   it("requires every exact meter source, unit, and completeness predicate", () => {
-    const mutations: Array<(value: RuntimeBudgetCapabilityEvidenceV118) => void> =
-      [
-        (value) => {
-          value.meters.wall.complete = false
-        },
-        (value) => {
-          value.meters.compute.source = "per-process-rusage"
-        },
-        (value) => {
-          value.meters.compute.unit = "instruction-fuel"
-        },
-        (value) => {
-          value.meters.memory.source = "process-rss"
-        },
-        (value) => {
-          value.meters.pids.complete = false
-        },
-        (value) => {
-          value.meters.bytes.unit = "characters"
-        },
-        (value) => {
-          value.meters.cancellation.source = "pid-only-kill"
-        },
-      ]
+    const mutations: Array<
+      (value: RuntimeBudgetCapabilityEvidenceV118) => void
+    > = [
+      (value) => {
+        value.meters.wall.complete = false
+      },
+      (value) => {
+        value.meters.compute.source = "per-process-rusage"
+      },
+      (value) => {
+        value.meters.compute.unit = "instruction-fuel"
+      },
+      (value) => {
+        value.meters.memory.source = "process-rss"
+      },
+      (value) => {
+        value.meters.pids.complete = false
+      },
+      (value) => {
+        value.meters.bytes.unit = "characters"
+      },
+      (value) => {
+        value.meters.cancellation.source = "pid-only-kill"
+      },
+    ]
     for (const mutate of mutations) {
       const value = clone(completeEvidence("typescript"))
       mutate(value)
@@ -295,7 +323,9 @@ describe("runtime budget capabilities v1.18", () => {
         snapshots.map((snapshot) => clone(snapshot)),
       ),
     ).toBe(false)
-    expect(requireAllFourConformanceLanesV118(snapshots.slice(0, 3))).toBe(false)
+    expect(requireAllFourConformanceLanesV118(snapshots.slice(0, 3))).toBe(
+      false,
+    )
   })
 
   it("leaves the v1.17 diagnostic matrix immutable and uncertified", () => {
@@ -327,8 +357,9 @@ describePostgres("installed runtime budget capability promotion v1.18", () => {
         databaseUrl!,
         "-Atc",
         `select exact_certificate_bytes
-           from runtime_evidence_certificates
-          where exact_certificate_sha256 is not null
+          from runtime_evidence_certificates
+          where certificate_version = 'runtime-conformance-certificate-v1.17'
+            and exact_certificate_sha256 is not null
           order by case conformance_language_id
             when 'typescript' then 1
             when 'python' then 2
@@ -362,12 +393,12 @@ describePostgres("installed runtime budget capability promotion v1.18", () => {
           verificationInstant,
         })
         const evidence = completeEvidence(certificate.identity.languageId)
-        evidence.identityPins.adapterBuildSha256 =
-          certificate.identity.adapterBuildSha256 as `sha256:${string}`
-        evidence.identityPins.runtimeCompilerSha256 =
-          certificate.identity.toolchainSha256 as `sha256:${string}`
-        evidence.identityPins.artifactSha256 =
-          certificate.identity.artifactSha256 as `sha256:${string}`
+        evidence.identityPins.adapterBuildSha256 = certificate.identity
+          .adapterBuildSha256 as `sha256:${string}`
+        evidence.identityPins.runtimeCompilerSha256 = certificate.identity
+          .toolchainSha256 as `sha256:${string}`
+        evidence.identityPins.artifactSha256 = certificate.identity
+          .artifactSha256 as `sha256:${string}`
         return {
           evidence,
           verified,
