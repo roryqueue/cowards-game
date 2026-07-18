@@ -367,6 +367,12 @@ export const validateActivationSeamInventory = (value: unknown): string[] => {
   }
   const inventory = value as ActivationSeamInventory
   const errors: string[] = []
+  const selectorPaths = [...ACTIVATION_SELECTOR_PATHS].sort()
+  const activationTarget = buildV119SelectorBytes()
+  const expectedSelectorTarget = selectorPaths.map((selectorPath) => ({
+    path: selectorPath,
+    sha256: sha256(activationTarget.get(selectorPath)!),
+  }))
   const hasGateFailureFinding =
     Array.isArray(inventory.findings) &&
     inventory.findings.some(
@@ -390,20 +396,19 @@ export const validateActivationSeamInventory = (value: unknown): string[] => {
     inventory.simulation.mutationPolicy !== "exact-five-selector-flip" ||
     inventory.simulation.autoFix !== false ||
     inventory.simulation.cloneDisposed !== true ||
-    !exactArray(
-      inventory.simulation.allowedMutationPaths,
-      [...ACTIVATION_SELECTOR_PATHS].sort(),
-    ) ||
+    !exactArray(inventory.simulation.allowedMutationPaths, selectorPaths) ||
     inventory.simulation.selectorPreimage.length !== 5 ||
     inventory.simulation.selectorTarget.length !== 5 ||
     [
       ...inventory.simulation.selectorPreimage,
       ...inventory.simulation.selectorTarget,
     ].some(
-      (entry) =>
-        !ACTIVATION_SELECTOR_PATHS.includes(entry.path) ||
+      (entry, index) =>
+        entry.path !== selectorPaths[index % selectorPaths.length] ||
         !SHA256.test(entry.sha256),
-    )
+    ) ||
+    JSON.stringify(inventory.simulation.selectorTarget) !==
+      JSON.stringify(expectedSelectorTarget)
   ) {
     errors.push("simulation boundary")
   }

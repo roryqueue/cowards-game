@@ -1,9 +1,13 @@
 import { Buffer } from "node:buffer"
 import { spawnSync } from "node:child_process"
+import { createHash } from "node:crypto"
 import { existsSync, readFileSync, writeFileSync } from "node:fs"
 import path from "node:path"
 import { describe, expect, it } from "vitest"
-import { ACTIVATION_SELECTOR_PATHS } from "./activate-v1-37-observation-v1-19.js"
+import {
+  ACTIVATION_SELECTOR_PATHS,
+  buildV119SelectorBytes,
+} from "./activate-v1-37-observation-v1-19.js"
 import {
   DECLARED_STALE_SEAM_PATHS,
   STALE_SEAM_INVENTORY_PATH,
@@ -14,6 +18,9 @@ import {
 } from "./audit-v1-37-observation-v1-19-activation-seams.js"
 
 const hash = (character: string): string => `sha256:${character.repeat(64)}`
+const activationTarget = buildV119SelectorBytes()
+const byteHash = (value: Uint8Array): string =>
+  `sha256:${createHash("sha256").update(value).digest("hex")}`
 
 const inventory = (): ActivationSeamInventory => ({
   schemaVersion: "v1.37-observation-v1.19-stale-seam-inventory-v1",
@@ -32,7 +39,7 @@ const inventory = (): ActivationSeamInventory => ({
       .map((path) => ({ path, sha256: hash("1") })),
     selectorTarget: [...ACTIVATION_SELECTOR_PATHS]
       .sort()
-      .map((path) => ({ path, sha256: hash("2") })),
+      .map((path) => ({ path, sha256: byteHash(activationTarget.get(path)!) })),
     cloneDisposed: true,
   },
   mainTree: {
@@ -169,6 +176,13 @@ describe("v1.37 observation v1.19 activation seam audit", () => {
       (value: ActivationSeamInventory) => {
         ;(value as { status: string }).status = "unknown"
         ;(value.gate as { status: string }).status = "unknown"
+      },
+    ],
+    [
+      "fabricated activation target digest",
+      (value: ActivationSeamInventory) => {
+        ;(value.simulation.selectorTarget[0] as { sha256: string }).sha256 =
+          hash("9")
       },
     ],
   ])("rejects %s", (_name, mutate) => {

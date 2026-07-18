@@ -74,6 +74,9 @@ describe("v1.37 observation-v1.19 preactivation proof", () => {
     expect(proof.candidate.lanes).toHaveLength(4)
     expect(proof.candidate.lanes.flatMap((lane) => lane.runs)).toHaveLength(12)
     expect(proof.currentInventory.database).toEqual(passingDatabase())
+    expect(proof.inputs.map(({ path }) => path)).toContain(
+      "scripts/activate-v1-37-observation-v1-19.ts",
+    )
     expect(proof.seamAudit).toEqual({
       status: "passed",
       findingCount: 0,

@@ -6,6 +6,7 @@ import { readFileSync, renameSync, writeFileSync } from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 import {
+  checkActivationSeamInventory,
   validateActivationSeamInventory,
   type ActivationSeamInventory,
 } from "./audit-v1-37-observation-v1-19-activation-seams.js"
@@ -124,6 +125,7 @@ const INPUT_PATHS = Object.freeze([
   "packages/spec/src/current-semantic-authority-source.ts",
   "packages/spec/src/match-execution-contract.ts",
   "scripts/check-service-boundary-imports.ts",
+  "scripts/activate-v1-37-observation-v1-19.ts",
   "scripts/audit-v1-37-observation-v1-19-activation-seams.ts",
   "scripts/audit-v1-37-observation-v1-19-activation-seams.test.ts",
   "scripts/evaluate-v1-37-observation-v1-19-preactivation.ts",
@@ -1247,6 +1249,7 @@ const main = (): void => {
   try {
     const args = process.argv.slice(2)
     if (args.length === 1 && args[0] === "--write") {
+      checkActivationSeamInventory()
       const proof = buildV137ObservationV119PreactivationProof()
       const errors = validateV137ObservationV119PreactivationProof(proof)
       if (errors.length > 0) throw new Error(errors.join(","))
