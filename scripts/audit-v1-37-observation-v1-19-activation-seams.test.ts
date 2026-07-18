@@ -58,6 +58,7 @@ const inventory = (): ActivationSeamInventory => ({
       ...DECLARED_STALE_SEAM_PATHS,
       "--maxWorkers=1",
       "--no-file-parallelism",
+      "--no-cache",
     ].join(" "),
     status: "passed",
     exitCode: 0,

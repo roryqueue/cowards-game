@@ -47,6 +47,7 @@ const GATE_COMMAND = Object.freeze([
   ...DECLARED_STALE_SEAM_PATHS,
   "--maxWorkers=1",
   "--no-file-parallelism",
+  "--no-cache",
 ])
 
 export interface ActivationSeamFinding {
