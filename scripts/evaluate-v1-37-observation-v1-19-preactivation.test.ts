@@ -77,6 +77,17 @@ describe("v1.37 observation-v1.19 preactivation proof", () => {
     expect(proof.inputs.map(({ path }) => path)).toContain(
       "scripts/activate-v1-37-observation-v1-19.ts",
     )
+    expect(proof.inputs.map(({ path }) => path)).toContain(
+      "packages/persistence/src/semantic-authority-selection-head.ts",
+    )
+    expect(proof.inputs.map(({ path }) => path)).toEqual(
+      expect.arrayContaining([
+        "packages/golden/src/v1-37-conformance-corpus.test.ts",
+        "scripts/generate-v1-37-conformance-corpus.test.ts",
+        "packages/replay/src/record.test.ts",
+        "apps/web/app/matchsets/result-view-model.test.ts",
+      ]),
+    )
     expect(proof.seamAudit).toEqual({
       status: "passed",
       findingCount: 0,

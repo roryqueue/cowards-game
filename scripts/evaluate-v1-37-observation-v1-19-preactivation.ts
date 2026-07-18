@@ -7,6 +7,7 @@ import path from "node:path"
 import { fileURLToPath } from "node:url"
 import {
   checkActivationSeamInventory,
+  DECLARED_STALE_SEAM_PATHS,
   validateActivationSeamInventory,
   type ActivationSeamInventory,
 } from "./audit-v1-37-observation-v1-19-activation-seams.js"
@@ -118,6 +119,7 @@ const INPUT_PATHS = Object.freeze([
   "packages/golden/src/v1-37-conformance-corpus-v3-candidate-pin.ts",
   "packages/golden/src/v1-37-conformance-trace-v4-candidate-pin.ts",
   "packages/persistence/src/current-workshop-contract-generated.ts",
+  "packages/persistence/src/semantic-authority-selection-head.ts",
   "packages/persistence/src/workshop-contract-v1-19-candidate-pin.ts",
   "packages/replay/src/record.ts",
   "packages/replay/src/validate.ts",
@@ -130,6 +132,7 @@ const INPUT_PATHS = Object.freeze([
   "scripts/audit-v1-37-observation-v1-19-activation-seams.test.ts",
   "scripts/evaluate-v1-37-observation-v1-19-preactivation.ts",
   "scripts/evaluate-v1-37-observation-v1-19-preactivation.test.ts",
+  ...DECLARED_STALE_SEAM_PATHS,
 ])
 
 const FIXED_INPUT_SHA256 = new Map<string, string>([
