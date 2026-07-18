@@ -13,6 +13,7 @@ import {
   allowedRoles,
   checkTypeScriptBackendRuntimeSelectionOverlayArtifactsV137,
   checkTypeScriptBackendInventoryArtifacts,
+  classifyRuntimeSurfaceLifecycleV137,
   generateTypeScriptBackendRuntimeSelectionOverlayV137,
   generateTypeScriptBackendInventory,
   renderTypeScriptBackendInventoryJson,
@@ -497,6 +498,39 @@ export const TYPE_SCRIPT_LIFECYCLE_QUARANTINE = { normalBackend: false }
     )
   })
 
+  it("classifies only paired inactive-candidate contracts as candidate evidence", () => {
+    expect(
+      classifyRuntimeSurfaceLifecycleV137(
+        "packages/runtime-js/src/revision-v1-19.ts",
+        `export const contract = { candidateStatus: "inactive-candidate", current: false } as const`,
+      ),
+    ).toBe("candidate_evidence")
+    expect(
+      classifyRuntimeSurfaceLifecycleV137(
+        "apps/runtime-service/src/revalidate-strategy-revision-v1-19.ts",
+        `export interface Pins { readonly candidateStatus: "inactive-candidate"; readonly current: false }`,
+      ),
+    ).toBe("candidate_evidence")
+    expect(
+      classifyRuntimeSurfaceLifecycleV137(
+        "apps/runtime-service/src/runtime-config.ts",
+        `export const current = true; const note = "inactive-candidate current: false"`,
+      ),
+    ).toBe("selected_by_pointer")
+    expect(
+      classifyRuntimeSurfaceLifecycleV137(
+        "packages/runtime-js/src/revision.ts",
+        `const status = { candidateStatus: "inactive-candidate" }; const selection = { current: false }`,
+      ),
+    ).toBe("selected_by_pointer")
+    expect(
+      classifyRuntimeSurfaceLifecycleV137(
+        "packages/runtime-js/src/revision-v1-19.ts",
+        `export const contract = { candidateStatus: "inactive-candidate", current: true } as const`,
+      ),
+    ).toBe("selected_by_pointer")
+  })
+
   it("keeps the committed v1.16 artifact immutable and overlays current runtime scanner roots for BASE-01", () => {
     const inventory = JSON.parse(
       readFileSync(
@@ -568,6 +602,31 @@ export const TYPE_SCRIPT_LIFECYCLE_QUARANTINE = { normalBackend: false }
     ).toMatchObject({
       lifecycle: "candidate_evidence",
       selectionAuthority: null,
+    })
+    expect(
+      overlay.runtimeSurfaces.find(
+        ({ path }) => path === "packages/runtime-js/src/revision-v1-19.ts",
+      ),
+    ).toMatchObject({
+      lifecycle: "candidate_evidence",
+      selectionAuthority: null,
+    })
+    expect(
+      overlay.runtimeSurfaces.find(
+        ({ path }) =>
+          path ===
+          "apps/runtime-service/src/revalidate-strategy-revision-v1-19.ts",
+      ),
+    ).toMatchObject({
+      lifecycle: "candidate_evidence",
+      selectionAuthority: null,
+    })
+    expect(
+      overlay.runtimeSurfaces.find(
+        ({ path }) => path === "apps/runtime-service/src/runtime-config.ts",
+      ),
+    ).toMatchObject({
+      lifecycle: "selected_by_pointer",
     })
     expect(inventory.surfaces.length).toBeGreaterThan(0)
     expect(
