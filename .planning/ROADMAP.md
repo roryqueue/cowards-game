@@ -428,7 +428,7 @@ Plans:
 
 **Wave 23 *(blocked on Wave 22 completion)* — derived boundary and evidence-chain refresh**
 
-- [ ] 260-41-PLAN.md — Repair candidate lifecycle classification, refresh the TypeScript backend overlay, and close the masked current-event evidence chain without semantic drift.
+- [x] 260-41-PLAN.md — Repair candidate lifecycle classification, refresh the TypeScript backend overlay, and close the masked current-event evidence chain without semantic drift.
 
 **Wave 24 *(blocked on Wave 23 completion)* — isolated seam audit and refreshed readiness**
 
