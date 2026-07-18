@@ -6,6 +6,7 @@ import {
   V1_37_CONFORMANCE_CORPUS,
   V1_37_CONFORMANCE_CORPUS_ROOT,
   V1_37_CONFORMANCE_LANGUAGES,
+  V1_37_OBSERVATION_TRACE_V4_CANDIDATE_PIN,
   compareCanonicalConformanceTrace,
   hashCanonicalConformanceTrace,
   type CanonicalConformanceDivergence,
@@ -74,6 +75,15 @@ const canonicalHash = (
     ]),
   )
 }
+
+const renderExactJson = (value: unknown): string =>
+  `${JSON.stringify(value, null, 2)}\n`
+
+const exactJsonDomainHash = (
+  domain: string,
+  value: unknown,
+): `sha256:${string}` =>
+  sha256(`${domain}\0${renderExactJson(JSON.parse(JSON.stringify(value)))}`)
 
 const deepFreeze = <T>(value: T): Readonly<T> => {
   if (value !== null && typeof value === "object" && !Object.isFrozen(value)) {
@@ -145,15 +155,264 @@ const readRegularBytes = (filePath: string): Buffer => {
   return readFileSync(filePath)
 }
 
+interface V137ValidatedTraceRegistry {
+  readonly activeVersion: string
+  readonly activePath: string
+  readonly candidateRootSha256: `sha256:${string}`
+  readonly manifestSha256: `sha256:${string}`
+  readonly semanticDiffSha256: `sha256:${string}`
+  readonly independentReviewSha256: `sha256:${string}`
+  readonly compatibilityDispositionSha256: `sha256:${string}`
+  readonly caseCount: number
+}
+
+const loadCommittedV137ObservationTraceV4Oracle = (input: {
+  readonly registry: V137ValidatedTraceRegistry
+  readonly registryBytes: Buffer
+  readonly activeDirectory: string
+  readonly manifestBytes: Buffer
+  readonly semanticDiffBytes: Buffer
+  readonly independentReviewBytes: Buffer
+  readonly dispositionBytes: Buffer
+}): V137CommittedTraceOracle => {
+  const { registry } = input
+  const pin = V1_37_OBSERVATION_TRACE_V4_CANDIDATE_PIN
+  const bundleBytes = readRegularBytes(
+    path.join(input.activeDirectory, "traces.bundle.json"),
+  )
+  const manifest = JSON.parse(input.manifestBytes.toString("utf8")) as Record<
+    string,
+    unknown
+  >
+  const bundle = JSON.parse(bundleBytes.toString("utf8")) as Record<
+    string,
+    unknown
+  >
+  const semanticDiff = JSON.parse(
+    input.semanticDiffBytes.toString("utf8"),
+  ) as Record<string, unknown>
+  const disposition = JSON.parse(
+    input.dispositionBytes.toString("utf8"),
+  ) as Record<string, unknown>
+  const review = JSON.parse(
+    input.independentReviewBytes.toString("utf8"),
+  ) as Record<string, unknown>
+  const manifestCases = manifest.cases
+  const records = bundle.records
+  const { candidateRootSha256: _candidateRoot, ...manifestMaterial } = manifest
+  const { bundleRootSha256: _bundleRoot, ...bundleMaterial } = bundle
+  const { semanticDiffRootSha256: _diffRoot, ...diffMaterial } = semanticDiff
+  const {
+    compatibilityDispositionRootSha256: _dispositionRoot,
+    ...dispositionMaterial
+  } = disposition
+  if (
+    sha256(input.registryBytes) !== pin.activeRegistryFileSha256 ||
+    registry.activeVersion !== pin.candidateVersion ||
+    registry.activePath !== path.posix.dirname(pin.manifestPath) ||
+    registry.candidateRootSha256 !== pin.candidateRootSha256 ||
+    registry.manifestSha256 !== pin.manifestFileSha256 ||
+    registry.semanticDiffSha256 !== pin.semanticDiffFileSha256 ||
+    registry.independentReviewSha256 !== pin.independentReviewFileSha256 ||
+    registry.compatibilityDispositionSha256 !==
+      pin.compatibilityDispositionFileSha256 ||
+    registry.caseCount !== pin.caseCount ||
+    sha256(input.manifestBytes) !== pin.manifestFileSha256 ||
+    sha256(bundleBytes) !== pin.bundleFileSha256 ||
+    sha256(input.semanticDiffBytes) !== pin.semanticDiffFileSha256 ||
+    sha256(input.independentReviewBytes) !== pin.independentReviewFileSha256 ||
+    sha256(input.dispositionBytes) !== pin.compatibilityDispositionFileSha256 ||
+    input.manifestBytes.toString("utf8") !== renderExactJson(manifest) ||
+    bundleBytes.toString("utf8") !== renderExactJson(bundle) ||
+    input.semanticDiffBytes.toString("utf8") !==
+      renderExactJson(semanticDiff) ||
+    input.independentReviewBytes.toString("utf8") !== renderExactJson(review) ||
+    input.dispositionBytes.toString("utf8") !== renderExactJson(disposition) ||
+    !exactKeys(manifest, [
+      "schemaVersion",
+      "candidateVersion",
+      "lifecycle",
+      "current",
+      "generatedBy",
+      "policy",
+      "corpusCandidateVersion",
+      "corpusRootSha256",
+      "corpusFileSha256",
+      "corpusCandidatePinPath",
+      "corpusCandidatePinFileSha256",
+      "semanticTupleId",
+      "bundlePath",
+      "bundleFileSha256",
+      "bundleRootSha256",
+      "semanticDiffPath",
+      "semanticDiffFileSha256",
+      "semanticDiffRootSha256",
+      "compatibilityDispositionPath",
+      "compatibilityDispositionFileSha256",
+      "compatibilityDispositionRootSha256",
+      "caseCount",
+      "cases",
+      "candidateRootSha256",
+    ]) ||
+    manifest.schemaVersion !== "v1.37-observation-trace-candidate-v4" ||
+    manifest.candidateVersion !== pin.candidateVersion ||
+    manifest.lifecycle !== "inactive-candidate" ||
+    manifest.current !== false ||
+    manifest.generatedBy !== "scripts/generate-v1-37-conformance-traces.ts" ||
+    manifest.policy !== "candidate-only-plan-14-atomic-promotion" ||
+    manifest.corpusCandidateVersion !== pin.corpusCandidateVersion ||
+    manifest.corpusRootSha256 !== V1_37_CONFORMANCE_CORPUS_ROOT ||
+    manifest.corpusRootSha256 !== pin.corpusRootSha256 ||
+    manifest.corpusCandidatePinFileSha256 !==
+      pin.corpusCandidatePinFileSha256 ||
+    manifest.semanticTupleId !==
+      CURRENT_CANONICAL_COMPATIBILITY_TUPLE_RECORD.tupleId ||
+    manifest.semanticTupleId !== pin.semanticTupleId ||
+    manifest.bundlePath !== "traces.bundle.json" ||
+    manifest.bundleFileSha256 !== pin.bundleFileSha256 ||
+    manifest.bundleRootSha256 !== pin.bundleRootSha256 ||
+    manifest.semanticDiffPath !== "semantic-diff.json" ||
+    manifest.semanticDiffFileSha256 !== pin.semanticDiffFileSha256 ||
+    manifest.semanticDiffRootSha256 !== pin.semanticDiffRootSha256 ||
+    manifest.compatibilityDispositionPath !==
+      "compatibility-disposition.json" ||
+    manifest.compatibilityDispositionFileSha256 !==
+      pin.compatibilityDispositionFileSha256 ||
+    manifest.compatibilityDispositionRootSha256 !==
+      pin.compatibilityDispositionRootSha256 ||
+    manifest.caseCount !== V1_37_CONFORMANCE_CORPUS.cases.length ||
+    !Array.isArray(manifestCases) ||
+    manifestCases.length !== V1_37_CONFORMANCE_CORPUS.cases.length ||
+    canonicalHash(
+      "cowards-game:v1.37:observation-trace-candidate:v4",
+      manifestMaterial as JsonValue,
+    ) !== pin.candidateRootSha256 ||
+    !exactKeys(bundle, [
+      "schemaVersion",
+      "candidateVersion",
+      "corpusVersion",
+      "corpusRootSha256",
+      "semanticTupleId",
+      "caseCount",
+      "records",
+      "bundleRootSha256",
+    ]) ||
+    bundle.schemaVersion !== "v1.37-observation-trace-bundle-v1" ||
+    bundle.candidateVersion !== pin.candidateVersion ||
+    bundle.corpusVersion !== pin.corpusCandidateVersion ||
+    bundle.corpusRootSha256 !== pin.corpusRootSha256 ||
+    bundle.semanticTupleId !== pin.semanticTupleId ||
+    bundle.caseCount !== V1_37_CONFORMANCE_CORPUS.cases.length ||
+    !Array.isArray(records) ||
+    records.length !== V1_37_CONFORMANCE_CORPUS.cases.length ||
+    exactJsonDomainHash(
+      "cowards-game:v1.37:observation-trace-bundle:exact-json:v1",
+      bundleMaterial,
+    ) !== pin.bundleRootSha256 ||
+    semanticDiff.semanticDiffRootSha256 !== pin.semanticDiffRootSha256 ||
+    exactJsonDomainHash(
+      "cowards-game:v1.37:observation-trace-semantic-diff:v1",
+      diffMaterial,
+    ) !== pin.semanticDiffRootSha256 ||
+    disposition.compatibilityDispositionRootSha256 !==
+      pin.compatibilityDispositionRootSha256 ||
+    exactJsonDomainHash(
+      "cowards-game:v1.37:observation-trace-compatibility-disposition:v1",
+      dispositionMaterial,
+    ) !== pin.compatibilityDispositionRootSha256 ||
+    review.status !== "approved-inactive-observation-candidate" ||
+    review.candidateRootSha256 !== pin.candidateRootSha256 ||
+    review.bundleRootSha256 !== pin.bundleRootSha256 ||
+    review.caseTraceRootsSha256 !== pin.caseTraceRootsSha256 ||
+    review.dispositionCoverageSha256 !== pin.dispositionCoverageSha256 ||
+    review.protectedSurfaceRootsSha256 !== pin.protectedSurfaceRootsSha256
+  ) {
+    throw new TypeError("Committed conformance trace authority is invalid")
+  }
+  const traces = new Map<string, CanonicalConformanceTrace>()
+  for (const [ordinal, testCase] of V1_37_CONFORMANCE_CORPUS.cases.entries()) {
+    const manifestCase = manifestCases[ordinal] as unknown
+    const record = records[ordinal] as unknown
+    if (
+      !exactKeys(manifestCase, [
+        "ordinal",
+        "caseId",
+        "resultClass",
+        "traceRoot",
+      ]) ||
+      !exactKeys(record, [
+        "ordinal",
+        "caseId",
+        "traceRef",
+        "resultClass",
+        "canonicalInput",
+        "trace",
+        "evidence",
+        "traceRoot",
+      ]) ||
+      record.ordinal !== ordinal ||
+      record.caseId !== testCase.id ||
+      record.traceRef !== `trace:${testCase.id}` ||
+      record.resultClass !== testCase.expectation.resultClass ||
+      manifestCase.ordinal !== ordinal ||
+      manifestCase.caseId !== record.caseId ||
+      manifestCase.resultClass !== record.resultClass ||
+      manifestCase.traceRoot !== record.traceRoot ||
+      record.canonicalInput === null ||
+      typeof record.canonicalInput !== "object" ||
+      record.evidence === null ||
+      typeof record.evidence !== "object" ||
+      !HASH.test(String(record.traceRoot))
+    ) {
+      throw new TypeError("Committed conformance trace inventory is invalid")
+    }
+    const trace = record.trace as CanonicalConformanceTrace
+    const evidence = record.evidence
+    if (
+      !exactKeys(evidence, [
+        "states",
+        "events",
+        "memories",
+        "objectives",
+        "terminal",
+        "failure",
+      ]) ||
+      JSON.stringify(evidence.failure) !== JSON.stringify(trace.failure) ||
+      trace.caseId !== testCase.id ||
+      trace.corpusVersion !== pin.corpusCandidateVersion ||
+      trace.corpusRootSha256 !== pin.corpusRootSha256 ||
+      trace.semanticTupleId !== pin.semanticTupleId ||
+      trace.resultClass !== testCase.expectation.resultClass ||
+      trace.traceRoot !== record.traceRoot ||
+      hashCanonicalConformanceTrace(trace) !== record.traceRoot ||
+      compareCanonicalConformanceTrace({ expected: trace, actual: trace })
+        .status !== "equal"
+    ) {
+      throw new TypeError("Committed conformance trace bytes are invalid")
+    }
+    traces.set(testCase.id, deepFreeze(trace) as CanonicalConformanceTrace)
+  }
+  const caseIds = Object.freeze(
+    V1_37_CONFORMANCE_CORPUS.cases.map(({ id }) => id),
+  )
+  return Object.freeze({
+    activeVersion: registry.activeVersion,
+    candidateRootSha256: registry.candidateRootSha256,
+    caseIds,
+    traceForCase(caseId: string) {
+      return traces.get(caseId)
+    },
+  })
+}
+
 export const loadCommittedV137ConformanceTraceOracle = ({
   repoRoot = path.resolve(import.meta.dirname, "../../.."),
 }: {
   readonly repoRoot?: string
 } = {}): V137CommittedTraceOracle => {
   const registryPath = path.join(repoRoot, ORACLE_REGISTRY_RELATIVE)
-  const registry = JSON.parse(
-    readRegularBytes(registryPath).toString("utf8"),
-  ) as unknown
+  const registryBytes = readRegularBytes(registryPath)
+  const registry = JSON.parse(registryBytes.toString("utf8")) as unknown
   if (
     !exactKeys(registry, [
       "schemaVersion",
@@ -206,6 +465,17 @@ export const loadCommittedV137ConformanceTraceOracle = ({
   const dispositionBytes = readRegularBytes(
     path.join(activeDirectory, "compatibility-disposition.json"),
   )
+  if (registry.activeVersion === "v1.37-observation-trace-v4") {
+    return loadCommittedV137ObservationTraceV4Oracle({
+      registry: registry as unknown as V137ValidatedTraceRegistry,
+      registryBytes,
+      activeDirectory,
+      manifestBytes,
+      semanticDiffBytes,
+      independentReviewBytes,
+      dispositionBytes,
+    })
+  }
   const manifest = JSON.parse(manifestBytes.toString("utf8")) as {
     schemaVersion: string
     candidateVersion: string
