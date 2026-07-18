@@ -51,9 +51,7 @@ const sha256 = (bytes: Uint8Array): string =>
 const v3IsCurrent = V1_37_CONFORMANCE_CORPUS.version === "v3"
 const successorVersion = `v${Number(V1_37_CONFORMANCE_CORPUS.version.slice(1)) + 1}`
 const observationCorpus = (): V137ConformanceCorpus =>
-  v3IsCurrent
-    ? globalThis.structuredClone(V1_37_CONFORMANCE_CORPUS)
-    : createV137ObservationCorpusV3Candidate()
+  createV137ObservationCorpusV3Candidate()
 
 const expectCurrentV3Evidence = (): void => {
   const currentSelection = resolveCurrentSemanticAuthoritySelection({
@@ -62,6 +60,9 @@ const expectCurrentV3Evidence = (): void => {
   expect(currentSelection?.semanticAuthorityKey).toBe("runtime-v1.19")
   expect(V1_37_CONFORMANCE_CORPUS_ROOT).toBe(
     V1_37_CONFORMANCE_CORPUS_V3_CANDIDATE_PIN.corpusRootSha256,
+  )
+  expect(createV137ObservationCorpusV3Candidate()).toEqual(
+    V1_37_CONFORMANCE_CORPUS,
   )
   expect(checkCommittedV137ObservationCorpusV3Candidate()).toEqual([])
 }

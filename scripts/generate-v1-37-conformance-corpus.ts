@@ -311,6 +311,28 @@ const inside = (candidate: string, root: string): boolean => {
 const changed = (left: unknown, right: unknown): boolean =>
   JSON.stringify(left) !== JSON.stringify(right)
 
+const OBSERVATION_V3_BASELINE_PATH =
+  "packages/golden/src/fixtures/v1-37-conformance-corpus/v2/corpus.json"
+const OBSERVATION_V3_BASELINE_ROOT =
+  "sha256:238347225defaaabcf9e57141ac7a54b4b277bd149bebe2b21903febc9ce7ac2"
+const OBSERVATION_V3_BASELINE_FILE =
+  "sha256:8d51df780a1c9dcb35e28547f4891af0e28a4bd2cd8e854165a61a1726f3a0dd"
+const OBSERVATION_V3_BASELINE = (() => {
+  const bytes = readFileSync(path.join(repoRoot, OBSERVATION_V3_BASELINE_PATH))
+  if (sha256(bytes) !== OBSERVATION_V3_BASELINE_FILE) {
+    fail("OBSERVATION_V3_BASELINE_FILE_IDENTITY")
+  }
+  const corpus = JSON.parse(bytes.toString("utf8")) as V137ConformanceCorpus
+  validateV137ConformanceCorpus(corpus)
+  if (
+    corpus.version !== "v2" ||
+    corpus.corpusRootSha256 !== OBSERVATION_V3_BASELINE_ROOT
+  ) {
+    fail("OBSERVATION_V3_BASELINE_SEMANTIC_IDENTITY")
+  }
+  return corpus
+})()
+
 const OBSERVATION_DECISIONS_V3 = Object.freeze([
   "D-01",
   "D-02",
@@ -371,7 +393,7 @@ const observationExpectedBrain = {
 export const createV137ObservationCorpusV3Candidate =
   (): V137ConformanceCorpus => {
     const candidate = globalThis.structuredClone(
-      V1_37_CONFORMANCE_CORPUS,
+      OBSERVATION_V3_BASELINE,
     ) as V137ConformanceCorpus
     candidate.version = "v3"
     candidate.behaviorManifest = {
@@ -399,7 +421,7 @@ export const createV137ObservationCorpusV3Candidate =
       fixture.source = sources[fixture.languageId]
       fixture.sourceSha256 = sha256(fixture.source)
     }
-    const requiredLanguageIds = [...V1_37_CONFORMANCE_CORPUS.languageIds]
+    const requiredLanguageIds = [...OBSERVATION_V3_BASELINE.languageIds]
     for (const [caseId] of OBSERVATION_CASES_V3) {
       candidate.cases.push({
         id: caseId,
@@ -431,27 +453,27 @@ export const createV137ObservationCorpusV3Candidate =
 const semanticDiff = (
   candidate: V137ConformanceCorpus,
   corpusPath: string,
+  baseline: V137ConformanceCorpus = V1_37_CONFORMANCE_CORPUS,
+  baselinePath: string = V1_37_CONFORMANCE_ACTIVE_REGISTRY.path,
 ): V137ConformanceSemanticDiff => {
   const changedPaths = new Set<string>()
-  if (candidate.version !== V1_37_CONFORMANCE_CORPUS.version) {
+  if (candidate.version !== baseline.version) {
     changedPaths.add("version")
   }
-  if (
-    changed(
-      candidate.behaviorManifest,
-      V1_37_CONFORMANCE_CORPUS.behaviorManifest,
-    )
-  ) {
+  if (changed(candidate.behaviorManifest, baseline.behaviorManifest)) {
     changedPaths.add("behaviorManifest")
   }
   const fixtureChanges: string[] = []
   const sourceChanges = new Set<string>()
   for (const fixture of candidate.fixtures) {
-    const baseline = V1_37_CONFORMANCE_CORPUS.fixtures.find(
+    const baselineFixture = baseline.fixtures.find(
       ({ languageId }) => languageId === fixture.languageId,
     )
     for (const field of GOVERNED_FIXTURE_FIELDS) {
-      if (baseline === undefined || fixture[field] !== baseline[field]) {
+      if (
+        baselineFixture === undefined ||
+        fixture[field] !== baselineFixture[field]
+      ) {
         const changedPath = `fixtures.${fixture.languageId}.${field}`
         changedPaths.add(changedPath)
         fixtureChanges.push(changedPath)
@@ -461,7 +483,7 @@ const semanticDiff = (
   }
   const caseChanges: string[] = []
   const baselineCases = new Map(
-    V1_37_CONFORMANCE_CORPUS.cases.map((testCase) => [testCase.id, testCase]),
+    baseline.cases.map((testCase) => [testCase.id, testCase]),
   )
   const candidateCases = new Map(
     candidate.cases.map((testCase) => [testCase.id, testCase]),
@@ -480,9 +502,9 @@ const semanticDiff = (
     schemaVersion: "v1.37-executable-conformance-semantic-diff-v1",
     generatedBy: "scripts/generate-v1-37-conformance-corpus.ts",
     baseline: {
-      version: V1_37_CONFORMANCE_CORPUS.version,
-      corpusRootSha256: V1_37_CONFORMANCE_CORPUS.corpusRootSha256,
-      path: V1_37_CONFORMANCE_ACTIVE_REGISTRY.path,
+      version: baseline.version,
+      corpusRootSha256: baseline.corpusRootSha256,
+      path: baselinePath,
     },
     candidate: {
       version: candidate.version,
@@ -512,7 +534,12 @@ export const writeCommittedV137ObservationCorpusV3Candidate = (
     "packages/golden/src/fixtures/v1-37-conformance-corpus/v3/corpus.json"
   const semanticDiffPath = path.join(candidateDirectory, "semantic-diff.json")
   const corpusBytes = renderJson(candidate)
-  const diff = semanticDiff(candidate, corpusLogicalPath)
+  const diff = semanticDiff(
+    candidate,
+    corpusLogicalPath,
+    OBSERVATION_V3_BASELINE,
+    OBSERVATION_V3_BASELINE_PATH,
+  )
   mkdirSync(candidateDirectory, { recursive: true })
   writeFileSync(corpusPath, corpusBytes, { flag: "wx" })
   writeFileSync(semanticDiffPath, renderJson(diff), { flag: "wx" })
@@ -565,6 +592,8 @@ const readObservationCandidate = (root: string) => {
   const expectedDiff = semanticDiff(
     expected,
     "packages/golden/src/fixtures/v1-37-conformance-corpus/v3/corpus.json",
+    OBSERVATION_V3_BASELINE,
+    OBSERVATION_V3_BASELINE_PATH,
   )
   if (
     renderJson(diff) !== renderJson(expectedDiff) ||
@@ -588,7 +617,7 @@ const readObservationCandidate = (root: string) => {
     fail("SEMANTIC_DIFF_UNAPPROVED")
   }
   const baselineCases = new Map(
-    V1_37_CONFORMANCE_CORPUS.cases.map((testCase) => [testCase.id, testCase]),
+    OBSERVATION_V3_BASELINE.cases.map((testCase) => [testCase.id, testCase]),
   )
   for (const testCase of corpus.cases) {
     const baseline = baselineCases.get(testCase.id)

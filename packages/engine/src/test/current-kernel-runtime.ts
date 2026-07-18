@@ -16,7 +16,7 @@ import {
   type StrategyResult,
 } from "@cowards/spec"
 import {
-  CANDIDATE_KERNEL_SEMANTIC_TUPLE,
+  CANDIDATE_KERNEL_V117_SEMANTIC_TUPLE,
   type CandidateBoundRuntimeInvocationV117,
   type CandidateRuntimeInvocationResult,
   type CandidateStrategyRuntime,
@@ -39,7 +39,7 @@ const requestFor = (request: KernelEffectRequest) =>
       kernelRequestId: request.requestId,
       method: request.kind,
       semanticTuple: {
-        ...CANDIDATE_KERNEL_SEMANTIC_TUPLE,
+        ...CANDIDATE_KERNEL_V117_SEMANTIC_TUPLE,
         runtimeAbi: "strategy-runtime-abi-v1.17",
       },
       sourceIdentity: {

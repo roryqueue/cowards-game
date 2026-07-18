@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest"
 import type { SoldierBrainInput, StrategyInput } from "@cowards/spec"
 import type { StrategyRuntime } from "../types.js"
 import {
-  CANDIDATE_KERNEL_SEMANTIC_TUPLE_ID,
+  CANDIDATE_KERNEL_V117_SEMANTIC_TUPLE,
+  CANDIDATE_KERNEL_V117_SEMANTIC_TUPLE_ID,
   type KernelSoldierBrainRequest,
 } from "../kernel/types.js"
 import {
@@ -28,7 +29,7 @@ const soldierBrainInput: SoldierBrainInput = {
 const request: KernelSoldierBrainRequest = {
   kind: "soldierBrain",
   requestId: "kernel-request:historical-timeout",
-  semanticTupleId: CANDIDATE_KERNEL_SEMANTIC_TUPLE_ID,
+  semanticTupleId: CANDIDATE_KERNEL_V117_SEMANTIC_TUPLE_ID,
   coordinates: {
     phaseNumber: 1,
     roundNumber: 1,
@@ -65,6 +66,9 @@ describe("current-kernel runtime test support", () => {
     ).runSoldierBrain(soldierBrainInput, request)
     expect(current).toMatchObject({
       kind: "v1_17_bound",
+      request: {
+        semanticTuple: CANDIDATE_KERNEL_V117_SEMANTIC_TUPLE,
+      },
       outcome: {
         kind: "system_failure",
         failure: { code: "TIMEOUT" },
