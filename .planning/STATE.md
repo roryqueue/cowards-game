@@ -5,15 +5,15 @@ milestone_name: Rules Integrity and Strategy Evaluation Foundations — ACTIVE
 current_phase: 260
 current_phase_name: truthful-strategy-inputs-arena-authority-and-set-fairness
 status: executing
-stopped_at: Plan 260-34 complete after converged review; bounded Plan 260-35 ready
-last_updated: "2026-07-18T16:15:00.000Z"
+stopped_at: Plan 260-35 complete; real selector audit found Vitest cache mutation and bounded Plan 260-36 is ready
+last_updated: "2026-07-18T16:25:00.000Z"
 last_activity: 2026-07-18
-last_activity_desc: Closed exact corpus admission and clone-local mutation-safe gates; queued shared fixture completeness
+last_activity_desc: Closed truthful shared fixtures and routed clone-local Vitest cache mutation to bounded Plan 260-36
 progress:
   total_phases: 6
   completed_phases: 4
-  total_plans: 121
-  completed_plans: 117
+  total_plans: 122
+  completed_plans: 118
   percent: 97
 ---
 
@@ -29,9 +29,9 @@ See: `.planning/PROJECT.md` (updated 2026-07-12)
 ## Current Position
 
 Phase: 260 (truthful-strategy-inputs-arena-authority-and-set-fairness) — EXECUTING
-Plan: 35 of 35
-Status: Ready to execute the bounded exact-version shared fixture repair
-Last activity: 2026-07-18 — Plan 260-34 independently rereviewed PASS; Plan 260-35 queued
+Plan: 36 of 36
+Status: Ready to make the real declared Vitest gate cache-inert
+Last activity: 2026-07-18 — Plan 260-35 independently reviewed PASS; exact audit stopped on clone dependency cache mutation
 
 Progress: [█████████░] 89%
 
@@ -85,8 +85,8 @@ Progress: [█████████░] 89%
 **Resume file:** None
 
 Last session: 2026-07-18T15:10:00.000Z
-Stopped at: Plan 260-34 is complete after independent review converged to PASS; development database remains exact v1.17 bootstrap with no pending intent.
-Next command: Execute and independently review bounded Plan 260-35, then resume Plan 260-33.
+Stopped at: Plan 260-35 is complete; the exact selector audit advanced past fixture import and stopped on clone-local Vitest cache mutation. Development database remains exact v1.17 bootstrap with no pending intent.
+Next command: Execute and independently review bounded Plan 260-36, then resume Plan 260-33.
 
 ## Performance Metrics
 
