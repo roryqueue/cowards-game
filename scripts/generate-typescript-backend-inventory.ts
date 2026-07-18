@@ -1382,7 +1382,89 @@ const runtimeContractMemberLiteral = (
   return null
 }
 
-const declaresInactiveCandidateContractV137 = (sourceText: string): boolean => {
+const inactiveCandidateLifecycleAuthorityV137: Readonly<
+  Record<string, string>
+> = Object.freeze({
+  "packages/runtime-js/src/revision-v1-19.ts":
+    "CANDIDATE_OBSERVATION_TRANSPORT_V1_19",
+  "apps/runtime-service/src/revalidate-strategy-revision-v1-19.ts":
+    "RevisionRevalidationCandidatePinsV119",
+})
+
+const isExportedDeclaration = (node: ts.Node): boolean =>
+  ts.canHaveModifiers(node) &&
+  (ts
+    .getModifiers(node)
+    ?.some(({ kind }) => kind === ts.SyntaxKind.ExportKeyword) ??
+    false)
+
+const unwrapRuntimeContractObject = (
+  expression: ts.Expression,
+): ts.ObjectLiteralExpression | null => {
+  let current = expression
+  while (
+    ts.isAsExpression(current) ||
+    ts.isSatisfiesExpression(current) ||
+    ts.isParenthesizedExpression(current)
+  ) {
+    current = current.expression
+  }
+  if (
+    ts.isCallExpression(current) &&
+    current.arguments.length === 1 &&
+    ts.isPropertyAccessExpression(current.expression) &&
+    ts.isIdentifier(current.expression.expression) &&
+    current.expression.expression.text === "Object" &&
+    current.expression.name.text === "freeze"
+  ) {
+    return unwrapRuntimeContractObject(current.arguments[0]!)
+  }
+  return ts.isObjectLiteralExpression(current) ? current : null
+}
+
+const authorizedRuntimeContractMembersV137 = (
+  sourceFile: ts.SourceFile,
+  expectedSymbol: string,
+): ts.NodeArray<ts.TypeElement | ts.ObjectLiteralElementLike> | null => {
+  for (const statement of sourceFile.statements) {
+    if (!isExportedDeclaration(statement)) continue
+    if (
+      ts.isInterfaceDeclaration(statement) &&
+      statement.name.text === expectedSymbol
+    ) {
+      return statement.members
+    }
+    if (
+      ts.isTypeAliasDeclaration(statement) &&
+      statement.name.text === expectedSymbol &&
+      ts.isTypeLiteralNode(statement.type)
+    ) {
+      return statement.type.members
+    }
+    if (ts.isVariableStatement(statement)) {
+      for (const declaration of statement.declarationList.declarations) {
+        if (
+          ts.isIdentifier(declaration.name) &&
+          declaration.name.text === expectedSymbol &&
+          declaration.initializer !== undefined
+        ) {
+          return (
+            unwrapRuntimeContractObject(declaration.initializer)?.properties ??
+            null
+          )
+        }
+      }
+    }
+  }
+  return null
+}
+
+const declaresInactiveCandidateContractV137 = (
+  surfacePath: string,
+  sourceText: string,
+): boolean => {
+  const expectedSymbol = inactiveCandidateLifecycleAuthorityV137[surfacePath]
+  if (expectedSymbol === undefined) return false
   const sourceFile = ts.createSourceFile(
     "runtime-surface.ts",
     sourceText,
@@ -1390,32 +1472,22 @@ const declaresInactiveCandidateContractV137 = (sourceText: string): boolean => {
     true,
     ts.ScriptKind.TS,
   )
-  let declared = false
-  const visit = (node: ts.Node): void => {
-    const members = ts.isInterfaceDeclaration(node)
-      ? node.members
-      : ts.isTypeLiteralNode(node)
-        ? node.members
-        : ts.isObjectLiteralExpression(node)
-          ? node.properties
-          : undefined
-    if (members !== undefined) {
-      let candidateStatus = false
-      let currentFalse = false
-      for (const member of members) {
-        const name = runtimeContractMemberName(member)
-        const literal = runtimeContractMemberLiteral(member)
-        if (name === "candidateStatus" && literal === "inactive-candidate") {
-          candidateStatus = true
-        }
-        if (name === "current" && literal === false) currentFalse = true
-      }
-      if (candidateStatus && currentFalse) declared = true
+  const members = authorizedRuntimeContractMembersV137(
+    sourceFile,
+    expectedSymbol,
+  )
+  if (members === null) return false
+  let candidateStatus = false
+  let currentFalse = false
+  for (const member of members) {
+    const name = runtimeContractMemberName(member)
+    const literal = runtimeContractMemberLiteral(member)
+    if (name === "candidateStatus" && literal === "inactive-candidate") {
+      candidateStatus = true
     }
-    if (!declared) ts.forEachChild(node, visit)
+    if (name === "current" && literal === false) currentFalse = true
   }
-  visit(sourceFile)
-  return declared
+  return candidateStatus && currentFalse
 }
 
 export const classifyRuntimeSurfaceLifecycleV137 = (
@@ -1427,7 +1499,7 @@ export const classifyRuntimeSurfaceLifecycleV137 = (
   surfacePath.includes(".test-support.") ||
   surfacePath.endsWith(".test.ts") ||
   surfacePath.endsWith(".test.tsx") ||
-  declaresInactiveCandidateContractV137(sourceText)
+  declaresInactiveCandidateContractV137(surfacePath, sourceText)
     ? "candidate_evidence"
     : "selected_by_pointer"
 

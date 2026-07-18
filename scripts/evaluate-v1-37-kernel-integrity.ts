@@ -1059,6 +1059,68 @@ const runFreshBrowserProof = (
 const canonicalJson = (value: unknown): string =>
   `${JSON.stringify(value, null, 2)}\n`
 
+const kernelRefreshImmutableProjection = (
+  proof: V137KernelIntegrityProof,
+): unknown => ({
+  schemaVersion: proof.schemaVersion,
+  scope: proof.scope,
+  activation: proof.activation,
+  coverage: proof.coverage,
+  browser: proof.browser,
+  workingCopy: proof.workingCopy,
+  gates: proof.gates.map(({ id, status }) => ({ id, status })),
+  limitations: proof.limitations,
+})
+
+export const admitV137KernelRefreshPreimages = (input: {
+  currentBrowserText: string
+  committedBrowserText: string
+  currentProofText: string
+  committedProofText: string
+}): {
+  browserReceipt: V137BrowserPlaywrightReceipt
+  workingCopyReceipt: V137WorkingCopyReceipt
+} => {
+  if (input.currentBrowserText !== input.committedBrowserText) {
+    throw new Error("browser receipt differs from immutable HEAD preimage")
+  }
+  const browserReceipt = JSON.parse(
+    input.committedBrowserText,
+  ) as V137BrowserPlaywrightReceipt
+  const browserFindings = validateV137BrowserPlaywrightReceipt(browserReceipt)
+  if (browserFindings.length > 0) throw new Error(browserFindings.join("; "))
+  if (input.committedBrowserText !== canonicalJson(browserReceipt)) {
+    throw new Error("browser receipt JSON is not canonical")
+  }
+
+  const currentProof = JSON.parse(
+    input.currentProofText,
+  ) as V137KernelIntegrityProof
+  const committedProof = JSON.parse(
+    input.committedProofText,
+  ) as V137KernelIntegrityProof
+  for (const [label, proof, proofText] of [
+    ["current", currentProof, input.currentProofText],
+    ["committed", committedProof, input.committedProofText],
+  ] as const) {
+    const findings = validateV137KernelIntegrityProof(proof)
+    if (findings.length > 0) throw new Error(findings.join("; "))
+    if (proofText !== renderV137KernelIntegrityProofJson(proof)) {
+      throw new Error(`${label} kernel proof JSON is not canonical`)
+    }
+  }
+  if (committedProof.browser.sha256 !== hashBytes(input.committedBrowserText)) {
+    throw new Error("committed browser receipt binding is invalid")
+  }
+  if (
+    JSON.stringify(kernelRefreshImmutableProjection(currentProof)) !==
+    JSON.stringify(kernelRefreshImmutableProjection(committedProof))
+  ) {
+    throw new Error("kernel immutable refresh preimage changed")
+  }
+  return { browserReceipt, workingCopyReceipt: committedProof.workingCopy }
+}
+
 export const checkV137KernelIntegrityArtifacts = (
   repoRoot = defaultRepoRoot,
 ): string[] => {
@@ -1168,31 +1230,37 @@ export const refreshV137KernelIntegrityArtifacts = (
         .join(", ")}`,
     )
   }
-  const browserPath = path.join(repoRoot, v137BrowserPlaywrightArtifactPath)
-  const browserText = readFileSync(browserPath, "utf8")
-  const browserReceipt = JSON.parse(browserText) as V137BrowserPlaywrightReceipt
-  const browserFindings = validateV137BrowserPlaywrightReceipt(browserReceipt)
-  if (browserFindings.length > 0) throw new Error(browserFindings.join("; "))
-  if (browserText !== canonicalJson(browserReceipt)) {
-    throw new Error("browser receipt JSON is not canonical")
-  }
+  const browserText = readFileSync(
+    path.join(repoRoot, v137BrowserPlaywrightArtifactPath),
+    "utf8",
+  )
+  const proofText = readFileSync(
+    path.join(repoRoot, v137KernelIntegrityArtifactPaths.json),
+    "utf8",
+  )
+  const { browserReceipt, workingCopyReceipt } =
+    admitV137KernelRefreshPreimages({
+      currentBrowserText: browserText,
+      committedBrowserText: readRepoBytesAtCommit(
+        repoRoot,
+        "HEAD",
+        v137BrowserPlaywrightArtifactPath,
+      ).toString("utf8"),
+      currentProofText: proofText,
+      committedProofText: readRepoBytesAtCommit(
+        repoRoot,
+        "HEAD",
+        v137KernelIntegrityArtifactPaths.json,
+      ).toString("utf8"),
+    })
   assertV137IntegrityPublicPayload(browserReceipt)
   assertPublicOutputLeakSafe(browserReceipt, "Phase 257 browser receipt")
-
-  const priorProof = JSON.parse(
-    readFileSync(
-      path.join(repoRoot, v137KernelIntegrityArtifactPaths.json),
-      "utf8",
-    ),
-  ) as V137KernelIntegrityProof
-  const priorFindings = validateV137KernelIntegrityProof(priorProof)
-  if (priorFindings.length > 0) throw new Error(priorFindings.join("; "))
 
   const { inputFiles, manifestFiles } = loadProofInputs(repoRoot)
   const proof = createV137KernelIntegrityProof({
     browserReceipt,
     browserReceiptSha256: hashBytes(browserText),
-    workingCopyReceipt: priorProof.workingCopy,
+    workingCopyReceipt,
     inputFiles,
     manifestFiles,
   })

@@ -76,12 +76,88 @@ describe("v1.37 executable conformance proof", () => {
     )
     const refreshed = buildV137ExecutableConformanceProofFromPersistedReceipts(
       prior,
+      prior,
       process.cwd(),
     )
 
     expect(refreshed.gates).toEqual(prior.gates)
     expect(refreshed.gates).toHaveLength(8)
     expect(validateV137ExecutableConformanceProof(refreshed)).toEqual([])
+
+    const mutations: Array<[string, (proof: Record<string, unknown>) => void]> =
+      [
+        ["identity", (proof) => (proof.milestone = "v1.38")],
+        [
+          "requirements",
+          (proof) =>
+            ((proof.requirements as Array<{ status: string }>)[0]!.status =
+              "unproved"),
+        ],
+        [
+          "decisions",
+          (proof) =>
+            ((proof.decisions as Array<{ status: string }>)[0]!.status =
+              "unproved"),
+        ],
+        [
+          "lanes",
+          (proof) =>
+            ((proof.lanes as Array<{ status: string }>)[0]!.status =
+              "candidate"),
+        ],
+        [
+          "chronicle",
+          (proof) =>
+            ((
+              proof.chronicle as { transitionAuthorityCount: number }
+            ).transitionAuthorityCount = 2),
+        ],
+        [
+          "service",
+          (proof) =>
+            ((
+              proof.service as { failureNoMutation: boolean }
+            ).failureNoMutation = false),
+        ],
+        [
+          "privacy",
+          (proof) =>
+            ((
+              proof.privacy as { forbiddenFieldCount: number }
+            ).forbiddenFieldCount = 1),
+        ],
+        [
+          "protected baseline",
+          (proof) =>
+            ((
+              proof.protectedBaseline as { protectedPathCount: number }
+            ).protectedPathCount = 1),
+        ],
+        [
+          "gate receipt",
+          (proof) =>
+            ((proof.gates as Array<{ stdoutSha256: string }>)[0]!.stdoutSha256 =
+              `sha256:${"9".repeat(64)}`),
+        ],
+        [
+          "limitations",
+          (proof) => (proof.limitations as string[]).push("cycle-cap-4"),
+        ],
+      ]
+    for (const [_name, mutate] of mutations) {
+      const changed = globalThis.structuredClone(prior) as unknown as Record<
+        string,
+        unknown
+      >
+      mutate(changed)
+      expect(() =>
+        buildV137ExecutableConformanceProofFromPersistedReceipts(
+          changed as unknown as typeof prior,
+          prior,
+          process.cwd(),
+        ),
+      ).toThrow(/IMMUTABLE_PREIMAGE/u)
+    }
   })
 
   it.each([

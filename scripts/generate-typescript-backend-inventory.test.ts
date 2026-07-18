@@ -502,13 +502,13 @@ export const TYPE_SCRIPT_LIFECYCLE_QUARANTINE = { normalBackend: false }
     expect(
       classifyRuntimeSurfaceLifecycleV137(
         "packages/runtime-js/src/revision-v1-19.ts",
-        `export const contract = { candidateStatus: "inactive-candidate", current: false } as const`,
+        `export const CANDIDATE_OBSERVATION_TRANSPORT_V1_19 = Object.freeze({ candidateStatus: "inactive-candidate", current: false } as const)`,
       ),
     ).toBe("candidate_evidence")
     expect(
       classifyRuntimeSurfaceLifecycleV137(
         "apps/runtime-service/src/revalidate-strategy-revision-v1-19.ts",
-        `export interface Pins { readonly candidateStatus: "inactive-candidate"; readonly current: false }`,
+        `export interface RevisionRevalidationCandidatePinsV119 { readonly candidateStatus: "inactive-candidate"; readonly current: false }`,
       ),
     ).toBe("candidate_evidence")
     expect(
@@ -526,7 +526,31 @@ export const TYPE_SCRIPT_LIFECYCLE_QUARANTINE = { normalBackend: false }
     expect(
       classifyRuntimeSurfaceLifecycleV137(
         "packages/runtime-js/src/revision-v1-19.ts",
-        `export const contract = { candidateStatus: "inactive-candidate", current: true } as const`,
+        `export const CANDIDATE_OBSERVATION_TRANSPORT_V1_19 = { candidateStatus: "inactive-candidate", current: true } as const`,
+      ),
+    ).toBe("selected_by_pointer")
+    expect(
+      classifyRuntimeSurfaceLifecycleV137(
+        "packages/runtime-js/src/revision-v1-19.ts",
+        `export const OtherContract = { candidateStatus: "inactive-candidate", current: false } as const`,
+      ),
+    ).toBe("selected_by_pointer")
+    expect(
+      classifyRuntimeSurfaceLifecycleV137(
+        "packages/runtime-js/src/revision-v1-19.ts",
+        `export const factory = () => { const CANDIDATE_OBSERVATION_TRANSPORT_V1_19 = { candidateStatus: "inactive-candidate", current: false } as const; return CANDIDATE_OBSERVATION_TRANSPORT_V1_19 }`,
+      ),
+    ).toBe("selected_by_pointer")
+    expect(
+      classifyRuntimeSurfaceLifecycleV137(
+        "packages/runtime-js/src/revision-v1-19.ts",
+        `const candidateStatus = "inactive-candidate"; const current = false; export const CANDIDATE_OBSERVATION_TRANSPORT_V1_19 = { candidateStatus, current } as const`,
+      ),
+    ).toBe("selected_by_pointer")
+    expect(
+      classifyRuntimeSurfaceLifecycleV137(
+        "apps/runtime-service/src/revalidate-strategy-revision-v1-19.ts",
+        `type Status = "inactive-candidate"; export interface RevisionRevalidationCandidatePinsV119 { candidateStatus: Status; current: false }`,
       ),
     ).toBe("selected_by_pointer")
   })

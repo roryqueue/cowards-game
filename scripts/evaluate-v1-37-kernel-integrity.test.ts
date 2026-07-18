@@ -2,6 +2,7 @@ import { Buffer } from "node:buffer"
 import { createHash } from "node:crypto"
 import { describe, expect, it } from "vitest"
 import {
+  admitV137KernelRefreshPreimages,
   createV137KernelIntegrityProof,
   parseV137KernelIntegrityArgs,
   projectV137BrowserPlaywrightReceipt,
@@ -244,6 +245,68 @@ describe("v1.37 Phase 257 kernel-integrity evaluator", () => {
       workers: 1,
       testFile: targetFile,
     })
+  })
+
+  it("binds refresh-only browser and working-copy receipts to immutable preimages", () => {
+    const receipt = browserReceipt()
+    const browserText = `${JSON.stringify(receipt, null, 2)}\n`
+    const browserSha256 = createHash("sha256").update(browserText).digest("hex")
+    const proof = createV137KernelIntegrityProof({
+      browserReceipt: receipt,
+      browserReceiptSha256: browserSha256,
+      workingCopyReceipt: workingCopyReceipt(),
+      inputFiles: [
+        {
+          id: "phase257-core-result",
+          path: ".planning/artifacts/v1.37-phase-257-core-rules-result.json",
+          sha256: digest,
+        },
+      ],
+      manifestFiles: [
+        { path: "packages/engine/src/kernel/step.ts", sha256: digest },
+      ],
+    })
+    const proofText = renderV137KernelIntegrityProofJson(proof)
+    expect(
+      admitV137KernelRefreshPreimages({
+        currentBrowserText: browserText,
+        committedBrowserText: browserText,
+        currentProofText: proofText,
+        committedProofText: proofText,
+      }),
+    ).toEqual({
+      browserReceipt: receipt,
+      workingCopyReceipt: proof.workingCopy,
+    })
+
+    const changedReceipt = globalThis.structuredClone(receipt)
+    changedReceipt.run.durationMs += 1
+    expect(() =>
+      admitV137KernelRefreshPreimages({
+        currentBrowserText: `${JSON.stringify(changedReceipt, null, 2)}\n`,
+        committedBrowserText: browserText,
+        currentProofText: proofText,
+        committedProofText: proofText,
+      }),
+    ).toThrow("immutable HEAD preimage")
+
+    const forgedProof = globalThis.structuredClone(proof)
+    const forged = "b".repeat(64)
+    forgedProof.workingCopy.protectedFiles[0] = {
+      ...forgedProof.workingCopy.protectedFiles[0]!,
+      beforeBytesSha256: forged,
+      afterBytesSha256: forged,
+      beforeBinaryDiffSha256: forged,
+      afterBinaryDiffSha256: forged,
+    }
+    expect(() =>
+      admitV137KernelRefreshPreimages({
+        currentBrowserText: browserText,
+        committedBrowserText: browserText,
+        currentProofText: renderV137KernelIntegrityProofJson(forgedProof),
+        committedProofText: proofText,
+      }),
+    ).toThrow("immutable refresh preimage")
   })
 
   it("projects exactly one clean target test from desktop, tablet, and mobile", () => {

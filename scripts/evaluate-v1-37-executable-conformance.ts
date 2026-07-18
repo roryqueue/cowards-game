@@ -593,29 +593,84 @@ const writeAtomic = (
 }
 
 export const buildV137ExecutableConformanceProofFromPersistedReceipts = (
-  priorProof: V137ExecutableConformanceProof,
+  currentProof: V137ExecutableConformanceProof,
+  committedProof: V137ExecutableConformanceProof,
   repoRoot: string = root,
 ): V137ExecutableConformanceProof => {
-  const proof = buildV137ExecutableConformanceProof(repoRoot, priorProof.gates)
-  if (JSON.stringify(proof.gates) !== JSON.stringify(priorProof.gates)) {
-    throw new Error("EXECUTABLE_CONFORMANCE_RECEIPTS_CHANGED")
+  const nonInputProjection = ({
+    inputs: _inputs,
+    ...immutable
+  }: V137ExecutableConformanceProof): unknown => immutable
+  for (const prior of [currentProof, committedProof]) {
+    const nonInputErrors = validateV137ExecutableConformanceProof(
+      prior,
+      repoRoot,
+    ).filter((error) => error !== "inputs")
+    if (nonInputErrors.length > 0) {
+      throw new Error("EXECUTABLE_CONFORMANCE_IMMUTABLE_PREIMAGE_INVALID")
+    }
   }
+  if (
+    JSON.stringify(nonInputProjection(currentProof)) !==
+    JSON.stringify(nonInputProjection(committedProof))
+  ) {
+    throw new Error("EXECUTABLE_CONFORMANCE_IMMUTABLE_PREIMAGE_CHANGED")
+  }
+  const proof = buildV137ExecutableConformanceProof(
+    repoRoot,
+    committedProof.gates,
+  )
   const errors = validateV137ExecutableConformanceProof(proof, repoRoot)
   if (errors.length > 0) {
     throw new Error("EXECUTABLE_CONFORMANCE_PROOF_INVALID")
   }
+  if (
+    JSON.stringify(nonInputProjection(proof)) !==
+    JSON.stringify(nonInputProjection(committedProof))
+  ) {
+    throw new Error("EXECUTABLE_CONFORMANCE_NON_INPUT_TRUTH_CHANGED")
+  }
   return proof
+}
+
+const readBytesAtHead = (repoRoot: string, relativePath: string): Buffer => {
+  const result = spawnSync("git", ["show", `HEAD:${relativePath}`], {
+    cwd: repoRoot,
+    encoding: "buffer",
+    maxBuffer: 64 * 1024 * 1024,
+  })
+  if (result.status !== 0 || !Buffer.isBuffer(result.stdout)) {
+    throw new Error("EXECUTABLE_CONFORMANCE_HEAD_PREIMAGE_UNAVAILABLE")
+  }
+  return result.stdout
 }
 
 export const refreshV137ExecutableConformanceArtifacts = (
   repoRoot: string = root,
 ): void => {
-  const priorProof = readJson<V137ExecutableConformanceProof>(
+  const currentBytes = readBytes(
     repoRoot,
     V137_EXECUTABLE_CONFORMANCE_PATHS.json,
   )
+  const committedBytes = readBytesAtHead(
+    repoRoot,
+    V137_EXECUTABLE_CONFORMANCE_PATHS.json,
+  )
+  const currentProof = JSON.parse(
+    currentBytes.toString("utf8"),
+  ) as V137ExecutableConformanceProof
+  const committedProof = JSON.parse(
+    committedBytes.toString("utf8"),
+  ) as V137ExecutableConformanceProof
+  if (
+    !currentBytes.equals(Buffer.from(`${JSON.stringify(currentProof)}\n`)) ||
+    !committedBytes.equals(Buffer.from(`${JSON.stringify(committedProof)}\n`))
+  ) {
+    throw new Error("EXECUTABLE_CONFORMANCE_IMMUTABLE_PREIMAGE_INVALID")
+  }
   const proof = buildV137ExecutableConformanceProofFromPersistedReceipts(
-    priorProof,
+    currentProof,
+    committedProof,
     repoRoot,
   )
   writeAtomic(
