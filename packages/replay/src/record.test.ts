@@ -343,8 +343,8 @@ describe("recordChronicleFromExecution", () => {
     ).toBe(true)
     expect(recorded.finalState).toEqual(execution.result.state)
     expect(recorded.semanticIdentity).toEqual({
-      tupleId: MATCH_KERNEL.tupleId,
-      tuple: MATCH_KERNEL.tuple,
+      tupleId: metadata.semanticTupleId,
+      tuple: metadata.semanticTuple,
     })
   })
 
@@ -526,7 +526,7 @@ describe("recordChronicleFromExecution", () => {
   })
 
   it("hashes optional internal private fields through their existing JSON representation", () => {
-    const execution = MATCH_KERNEL.runMatch({
+    const execution = MATCH_KERNEL.runMatchV117({
       matchId: "optional-private-field-match",
       seed: "optional-private-field-seed",
       arenaVariant: {
