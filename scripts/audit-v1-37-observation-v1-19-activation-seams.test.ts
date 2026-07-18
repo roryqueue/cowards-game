@@ -1,6 +1,7 @@
 import { Buffer } from "node:buffer"
 import { spawnSync } from "node:child_process"
-import { existsSync, readFileSync } from "node:fs"
+import { existsSync, readFileSync, writeFileSync } from "node:fs"
+import path from "node:path"
 import { describe, expect, it } from "vitest"
 import { ACTIVATION_SELECTOR_PATHS } from "./activate-v1-37-observation-v1-19.js"
 import {
@@ -115,6 +116,16 @@ describe("v1.37 observation v1.19 activation seam audit", () => {
         ;(value.simulation as { autoFix: boolean }).autoFix = true
       },
     ],
+    [
+      "invalid dependency postimage",
+      (value: ActivationSeamInventory) => {
+        ;(value.gate as { dependencyPostimageSha256: string })
+          .dependencyPostimageSha256 = "not-a-hash"
+        ;(value.gate as { dependencyTreeUnchanged: boolean })
+          .dependencyTreeUnchanged = false
+        ;(value.gate as { status: string }).status = "failed"
+      },
+    ],
   ])("rejects %s", (_name, mutate) => {
     const value = clone(inventory())
     mutate(value)
@@ -159,6 +170,84 @@ describe("v1.37 observation v1.19 activation seam audit", () => {
     expect(result.gate.dependencyTreeUnchanged).toBe(true)
     expect(result.mainTree.dependencyPreimageSha256).toBe(
       result.mainTree.dependencyPostimageSha256,
+    )
+    expect(result.simulation.cloneDisposed).toBe(true)
+  }, 120_000)
+
+  it("materializes dependency bytes so an injected clone mutation cannot reach the main tree", () => {
+    const dependencyPath = "node_modules/vitest/dist/index.js"
+    const mainDependencyPath = path.join(process.cwd(), dependencyPath)
+    const mainPreimage = readFileSync(mainDependencyPath)
+    let cloneMutationObserved = false
+
+    const result = auditV137ObservationV119ActivationSeams(process.cwd(), {
+      gateRunner: (cwd) => {
+        const cloneDependencyPath = path.join(cwd, dependencyPath)
+        writeFileSync(
+          cloneDependencyPath,
+          Buffer.concat([
+            readFileSync(cloneDependencyPath),
+            Buffer.from("\n// injected disposable-clone mutation\n"),
+          ]),
+        )
+        cloneMutationObserved =
+          !readFileSync(cloneDependencyPath).equals(mainPreimage)
+        return {
+          exitCode: 0,
+          stdout: Buffer.from("dependency mutation attempted"),
+          stderr: Buffer.alloc(0),
+        }
+      },
+    })
+
+    expect(cloneMutationObserved).toBe(true)
+    expect(readFileSync(mainDependencyPath)).toEqual(mainPreimage)
+    expect(result.status).toBe("failed")
+    expect(result.gate).toMatchObject({
+      status: "failed",
+      exitCode: 0,
+      dependencyTreeUnchanged: false,
+    })
+    expect(result.findings).toContainEqual({
+      id: "dependency-tree-mutated",
+      classification: "undeclared-mutation",
+      path: null,
+    })
+    expect(result.gate.dependencyPreimageSha256).not.toBe(
+      result.gate.dependencyPostimageSha256,
+    )
+    expect(result.mainTree.dependencyPreimageSha256).toBe(
+      result.mainTree.dependencyPostimageSha256,
+    )
+    expect(result.simulation.cloneDisposed).toBe(true)
+  }, 120_000)
+
+  it("fails closed when a successful injected gate creates an untracked clone file", () => {
+    const undeclaredPath = "packages/spec/src/undeclared-seam-probe.tmp"
+    const result = auditV137ObservationV119ActivationSeams(process.cwd(), {
+      gateRunner: (cwd) => {
+        writeFileSync(path.join(cwd, undeclaredPath), "injected\n")
+        return {
+          exitCode: 0,
+          stdout: Buffer.from("untracked mutation attempted"),
+          stderr: Buffer.alloc(0),
+        }
+      },
+    })
+
+    expect(result.status).toBe("failed")
+    expect(result.gate).toMatchObject({
+      status: "passed",
+      exitCode: 0,
+      dependencyTreeUnchanged: true,
+    })
+    expect(result.findings).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          classification: "undeclared-mutation",
+          path: undeclaredPath,
+        }),
+      ]),
     )
     expect(result.simulation.cloneDisposed).toBe(true)
   }, 120_000)

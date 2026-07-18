@@ -3,6 +3,7 @@ import { Buffer } from "node:buffer"
 import { execFileSync, spawnSync } from "node:child_process"
 import { createHash, randomUUID } from "node:crypto"
 import {
+  cpSync,
   existsSync,
   lstatSync,
   mkdirSync,
@@ -12,7 +13,6 @@ import {
   readdirSync,
   renameSync,
   rmSync,
-  symlinkSync,
   writeFileSync,
 } from "node:fs"
 import { tmpdir } from "node:os"
@@ -212,35 +212,99 @@ const dependencyControlDigest = (repoRoot: string): string => {
   return sha256(JSON.stringify({ trackedControls, nodeModules }))
 }
 
-const linkNodeModules = (sourceRoot: string, cloneRoot: string): void => {
+const dependencyTreeDigest = (repoRoot: string): string => {
+  const digest = createHash("sha256")
+  const updateField = (value: string): void => {
+    digest.update(`${Buffer.byteLength(value, "utf8")}:`)
+    digest.update(value)
+  }
+  const visit = (absolutePath: string): void => {
+    const relativePath = path.relative(repoRoot, absolutePath)
+    const stat = lstatSync(absolutePath)
+    if (stat.isSymbolicLink()) {
+      updateField("link")
+      updateField(relativePath)
+      updateField(readlinkSync(absolutePath))
+      return
+    }
+    if (stat.isDirectory()) {
+      updateField("directory")
+      updateField(relativePath)
+      for (const entry of readdirSync(absolutePath).sort()) {
+        visit(path.join(absolutePath, entry))
+      }
+      return
+    }
+    if (stat.isFile()) {
+      updateField("file")
+      updateField(relativePath)
+      updateField(String(stat.size))
+      digest.update(readFileSync(absolutePath))
+      return
+    }
+    throw new Error("Activation seam dependency contains an unsupported entry")
+  }
+  for (const dependencyRoot of discoverNodeModulePaths(repoRoot).sort()) {
+    visit(dependencyRoot)
+  }
+  return `sha256:${digest.digest("hex")}`
+}
+
+const assertCloneLocalDependencyLinks = (
+  cloneRoot: string,
+  current: string,
+): void => {
+  for (const entry of readdirSync(current, { withFileTypes: true })) {
+    const absolute = path.join(current, entry.name)
+    if (entry.isSymbolicLink()) {
+      const resolved = realpathSync(absolute)
+      const relative = path.relative(cloneRoot, resolved)
+      if (relative.startsWith("..") || path.isAbsolute(relative)) {
+        throw new Error(
+          "Activation seam dependency escaped the disposable clone",
+        )
+      }
+      continue
+    }
+    if (entry.isDirectory()) {
+      assertCloneLocalDependencyLinks(cloneRoot, absolute)
+    }
+  }
+}
+
+const copyNodeModules = (source: string, target: string): void => {
+  if (!lstatSync(source).isDirectory()) {
+    throw new Error("Activation seam dependency root must be a directory")
+  }
+  mkdirSync(path.dirname(target), { recursive: true })
+  if (process.platform === "darwin") {
+    execFileSync("cp", ["-cR", "-P", source, target])
+    return
+  }
+  if (process.platform === "linux") {
+    execFileSync("cp", ["-a", "--reflink=auto", source, target])
+    return
+  }
+  cpSync(source, target, {
+    recursive: true,
+    dereference: false,
+    verbatimSymlinks: true,
+  })
+}
+
+const materializeNodeModules = (
+  sourceRoot: string,
+  cloneRoot: string,
+): void => {
+  const canonicalCloneRoot = realpathSync(cloneRoot)
+  const targets: string[] = []
   for (const source of discoverNodeModulePaths(sourceRoot)) {
     const target = path.join(cloneRoot, path.relative(sourceRoot, source))
-    mkdirSync(target, { recursive: true })
-    for (const entry of readdirSync(source, { withFileTypes: true })) {
-      const sourceEntry = path.join(source, entry.name)
-      const targetEntry = path.join(target, entry.name)
-      if (entry.name !== "@cowards") {
-        symlinkSync(
-          sourceEntry,
-          targetEntry,
-          entry.isDirectory() ? "junction" : "file",
-        )
-        continue
-      }
-      mkdirSync(targetEntry, { recursive: true })
-      for (const workspaceEntry of readdirSync(sourceEntry)) {
-        const resolved = realpathSync(path.join(sourceEntry, workspaceEntry))
-        const workspaceRelative = path.relative(sourceRoot, resolved)
-        if (workspaceRelative.startsWith("..")) {
-          throw new Error("Activation seam dependency escaped the repository")
-        }
-        symlinkSync(
-          path.join(cloneRoot, workspaceRelative),
-          path.join(targetEntry, workspaceEntry),
-          "junction",
-        )
-      }
-    }
+    copyNodeModules(source, target)
+    targets.push(target)
+  }
+  for (const target of targets) {
+    assertCloneLocalDependencyLinks(canonicalCloneRoot, target)
   }
 }
 
@@ -348,13 +412,15 @@ export const validateActivationSeamInventory = (value: unknown): string[] => {
     inventory.gate.dependencyExecution !== "already-installed-direct-vitest" ||
     inventory.gate.packageManagerInvoked !== false ||
     !SHA256.test(inventory.gate.dependencyPreimageSha256) ||
-    inventory.gate.dependencyPreimageSha256 !==
-      inventory.gate.dependencyPostimageSha256 ||
-    inventory.gate.dependencyTreeUnchanged !== true ||
+    !SHA256.test(inventory.gate.dependencyPostimageSha256) ||
+    inventory.gate.dependencyTreeUnchanged !==
+      (inventory.gate.dependencyPreimageSha256 ===
+        inventory.gate.dependencyPostimageSha256) ||
     inventory.findingCount !== inventory.findings?.length ||
     (inventory.findingCount === 0) !== (inventory.status === "passed") ||
-    (inventory.findingCount === 0) !== (inventory.gate.status === "passed") ||
-    (inventory.findingCount === 0) !== (inventory.gate.exitCode === 0)
+    (inventory.gate.status === "passed") !==
+      (inventory.gate.exitCode === 0 &&
+        inventory.gate.dependencyTreeUnchanged)
   ) {
     errors.push("gate or findings")
   }
@@ -406,17 +472,12 @@ export const auditV137ObservationV119ActivationSeams = (
       { cwd: repoRoot },
     )
     git(cloneRoot, ["checkout", "--quiet", "--detach", "HEAD"])
-    linkNodeModules(repoRoot, cloneRoot)
+    materializeNodeModules(repoRoot, cloneRoot)
     for (const [relativePath, bytes] of target) {
       writeFileSync(path.join(cloneRoot, relativePath), bytes)
     }
-    const dependencyPreimage = dependencyControlDigest(cloneRoot)
-    const beforeGatePaths = git(cloneRoot, ["diff", "--name-only", "--"])
-      .toString("utf8")
-      .trim()
-      .split("\n")
-      .filter(Boolean)
-      .sort()
+    const dependencyPreimage = dependencyTreeDigest(cloneRoot)
+    const beforeGatePaths = statusPaths(repositoryStatus(cloneRoot))
     if (!exactArray(beforeGatePaths, [...ACTIVATION_SELECTOR_PATHS].sort())) {
       for (const undeclared of beforeGatePaths.filter(
         (entry) => !ACTIVATION_SELECTOR_PATHS.includes(entry),
@@ -429,16 +490,21 @@ export const auditV137ObservationV119ActivationSeams = (
       }
     }
     const result = (options.gateRunner ?? defaultGateRunner)(cloneRoot)
-    const dependencyPostimage = dependencyControlDigest(cloneRoot)
+    const dependencyPostimage = dependencyTreeDigest(cloneRoot)
+    const dependencyTreeUnchanged =
+      dependencyPreimage === dependencyPostimage
     gate = {
       ...gate,
-      status: result.exitCode === 0 ? "passed" : "failed",
+      status:
+        result.exitCode === 0 && dependencyTreeUnchanged
+          ? "passed"
+          : "failed",
       exitCode: result.exitCode,
       stdoutSha256: sha256(result.stdout),
       stderrSha256: sha256(result.stderr),
       dependencyPreimageSha256: dependencyPreimage,
       dependencyPostimageSha256: dependencyPostimage,
-      dependencyTreeUnchanged: dependencyPreimage === dependencyPostimage,
+      dependencyTreeUnchanged,
     }
     if (result.exitCode !== 0) {
       findings.push({
@@ -454,12 +520,7 @@ export const auditV137ObservationV119ActivationSeams = (
         path: null,
       })
     }
-    const afterGatePaths = git(cloneRoot, ["diff", "--name-only", "--"])
-      .toString("utf8")
-      .trim()
-      .split("\n")
-      .filter(Boolean)
-      .sort()
+    const afterGatePaths = statusPaths(repositoryStatus(cloneRoot))
     for (const undeclared of afterGatePaths.filter(
       (entry) => !ACTIVATION_SELECTOR_PATHS.includes(entry),
     )) {

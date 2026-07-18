@@ -357,6 +357,40 @@ describe("v1.37 executable conformance corpus", () => {
     })
   })
 
+  it("rejects a structurally valid v2 corpus when its registry and pin no longer match the reviewed candidate identity", () => {
+    const input = admissionInput("v2")
+    const corpus = input.corpus as V137ConformanceCorpus
+    const fixture = corpus.fixtures[0]!
+    fixture.source = `${fixture.source}\n// adversarial but structurally valid v2 source mutation\n`
+    fixture.sourceSha256 = sha256(fixture.source)
+    corpus.corpusRootSha256 = computeV137ConformanceCorpusRoot(corpus)
+    const corpusBytes = Buffer.from(`${JSON.stringify(corpus, null, 2)}\n`)
+    const registry = input.registry as {
+      corpusRootSha256: string
+      corpusFileSha256: string
+    }
+    registry.corpusRootSha256 = corpus.corpusRootSha256
+    registry.corpusFileSha256 = sha256(corpusBytes)
+    const registryBytes = Buffer.from(
+      `${JSON.stringify(input.registry, null, 2)}\n`,
+    )
+    const reviewedPin = input.reviewedPin as {
+      corpusRootSha256: string
+      corpusFileSha256: string
+      registryFileSha256: string
+    }
+    reviewedPin.corpusRootSha256 = registry.corpusRootSha256
+    reviewedPin.corpusFileSha256 = registry.corpusFileSha256
+    reviewedPin.registryFileSha256 = sha256(registryBytes)
+    ;(input as { corpusBytes: Uint8Array }).corpusBytes = corpusBytes
+    ;(input as { registryBytes: Uint8Array }).registryBytes = registryBytes
+
+    expect(() => validateV137ConformanceCorpus(corpus)).not.toThrow()
+    expect(() => validateV137ActiveConformanceReview(input)).toThrow(
+      "ACTIVE_REGISTRY",
+    )
+  })
+
   it.each([
     [
       "status relabel",

@@ -883,6 +883,10 @@ export const validateV137ActiveConformanceReview = (
   if (registry.activeVersion === "v2") {
     if (
       pin.reviewedUnder !== "259-16-toolchain-revalidation" ||
+      registry.corpusRootSha256 !== V2_REVIEW.candidateCorpusRootSha256 ||
+      registry.corpusFileSha256 !== V2_REVIEW.candidateCorpusFileSha256 ||
+      pin.corpusRootSha256 !== V2_REVIEW.candidateCorpusRootSha256 ||
+      pin.corpusFileSha256 !== V2_REVIEW.candidateCorpusFileSha256 ||
       pin.independentReviewFileSha256 !== V2_REVIEW_SHA256
     ) {
       fail("ACTIVE_REGISTRY")
