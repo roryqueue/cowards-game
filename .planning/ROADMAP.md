@@ -438,11 +438,15 @@ Plans:
 
 - [x] 260-42-PLAN.md — Repair stale historical/current spec assertions, expand the seam inventory, and re-prove readiness without production changes.
 
-**Wave 26 *(blocked on Wave 25 completion)* — atomic activation**
+**Wave 26 *(blocked on Wave 25 completion)* — selector-independent Go parity generation**
+
+- [ ] 260-43-PLAN.md — Pin immutable Go parity Chronicle generation to explicit v1.17 dispatch and extend readiness coverage.
+
+**Wave 27 *(blocked on Wave 26 completion)* — atomic activation**
 
 - [ ] 260-14-PLAN.md — Activate five selector files and one transactional database selection head in one proved commit.
 
-**Wave 27 *(blocked on Wave 26 completion)* — integrated closure**
+**Wave 28 *(blocked on Wave 27 completion)* — integrated closure**
 
 - [ ] 260-15-PLAN.md — Close Phase 260 with one executable proof and permanent drift monitors.
 
