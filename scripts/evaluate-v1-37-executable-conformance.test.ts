@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 import {
   buildV137ExecutableConformanceProof,
+  buildV137ExecutableConformanceProofFromPersistedReceipts,
   renderV137ExecutableConformanceMarkdown,
   validateV137ExecutableConformanceProof,
 } from "./evaluate-v1-37-executable-conformance.js"
@@ -56,28 +57,78 @@ describe("v1.37 executable conformance proof", () => {
     )
   })
 
+  it("refreshes current inputs while preserving every executable gate receipt", () => {
+    const prior = buildV137ExecutableConformanceProof(
+      process.cwd(),
+      passingGates().map((gate, index) => ({
+        ...gate,
+        command: [
+          "pnpm exec vitest run --maxWorkers=1 --no-file-parallelism packages/spec/src/runtime-conformance-certificate-v1-17.test.ts packages/spec/src/runtime-semantic-receipt-v1-18.test.ts packages/spec/src/runtime-execution-service-v1-18.test.ts packages/spec/src/runtime-budget-capabilities-v1-18.test.ts packages/persistence/src/runtime-evidence-authority-publisher.test.ts packages/persistence/src/chronicle-store.test.ts packages/persistence/src/complete-match.test.ts packages/runtime-js/src/candidate-process-runner.test.ts packages/runtime-js/src/executor.test.ts packages/runtime-supervisor/src/linux-certification-container.test.ts apps/runtime-service/src/execute-match-v1-18.test.ts apps/web/app/matches/server.test.ts scripts/sign-v1-37-language-conformance-certificate.test.ts",
+          "pnpm go:parity",
+          "pnpm contract:check",
+          "pnpm strategy-artifacts:check",
+          "pnpm exec tsx .planning/artifacts/v2.0-core-rules-audit/reproduce-core-rule-gaps.ts",
+          "pnpm boundary:imports",
+          "pnpm v1.37:integrity-boundaries:check",
+          "pnpm exec tsx scripts/capture-v1-37-protected-baseline.ts --check",
+        ][index]!,
+      })),
+    )
+    const refreshed = buildV137ExecutableConformanceProofFromPersistedReceipts(
+      prior,
+      process.cwd(),
+    )
+
+    expect(refreshed.gates).toEqual(prior.gates)
+    expect(refreshed.gates).toHaveLength(8)
+    expect(validateV137ExecutableConformanceProof(refreshed)).toEqual([])
+  })
+
   it.each([
-    ["extra top-level field", (proof: Record<string, unknown>) => {
-      proof.extra = true
-    }],
-    ["missing requirement", (proof: Record<string, unknown>) => {
-      ;(proof.requirements as unknown[]).pop()
-    }],
-    ["missing lane", (proof: Record<string, unknown>) => {
-      ;(proof.lanes as unknown[]).pop()
-    }],
-    ["partial run", (proof: Record<string, unknown>) => {
-      ;((proof.lanes as Array<{ runs: unknown[] }>)[0]!.runs).pop()
-    }],
-    ["false gate", (proof: Record<string, unknown>) => {
-      ;(proof.gates as Array<{ status: string }>)[0]!.status = "failed"
-    }],
-    ["private count", (proof: Record<string, unknown>) => {
-      ;(proof.privacy as { forbiddenFieldCount: number }).forbiddenFieldCount = 1
-    }],
-    ["unapproved limitation", (proof: Record<string, unknown>) => {
-      ;(proof.limitations as string[]).push("cycle-cap-4")
-    }],
+    [
+      "extra top-level field",
+      (proof: Record<string, unknown>) => {
+        proof.extra = true
+      },
+    ],
+    [
+      "missing requirement",
+      (proof: Record<string, unknown>) => {
+        ;(proof.requirements as unknown[]).pop()
+      },
+    ],
+    [
+      "missing lane",
+      (proof: Record<string, unknown>) => {
+        ;(proof.lanes as unknown[]).pop()
+      },
+    ],
+    [
+      "partial run",
+      (proof: Record<string, unknown>) => {
+        ;(proof.lanes as Array<{ runs: unknown[] }>)[0]!.runs.pop()
+      },
+    ],
+    [
+      "false gate",
+      (proof: Record<string, unknown>) => {
+        ;(proof.gates as Array<{ status: string }>)[0]!.status = "failed"
+      },
+    ],
+    [
+      "private count",
+      (proof: Record<string, unknown>) => {
+        ;(
+          proof.privacy as { forbiddenFieldCount: number }
+        ).forbiddenFieldCount = 1
+      },
+    ],
+    [
+      "unapproved limitation",
+      (proof: Record<string, unknown>) => {
+        ;(proof.limitations as string[]).push("cycle-cap-4")
+      },
+    ],
   ] as const)("rejects %s", (_name, mutate) => {
     const proof = buildV137ExecutableConformanceProof(
       process.cwd(),

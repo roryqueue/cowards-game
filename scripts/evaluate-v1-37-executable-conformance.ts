@@ -2,11 +2,7 @@
 import { Buffer } from "node:buffer"
 import { createHash } from "node:crypto"
 import { spawnSync } from "node:child_process"
-import {
-  readFileSync,
-  renameSync,
-  writeFileSync,
-} from "node:fs"
+import { readFileSync, renameSync, writeFileSync } from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 
@@ -30,7 +26,10 @@ export const V137_EXECUTABLE_CONFORMANCE_REQUIREMENTS = Object.freeze([
 ] as const)
 
 export const V137_EXECUTABLE_CONFORMANCE_DECISIONS = Object.freeze(
-  Array.from({ length: 16 }, (_, index) => `D-${String(index + 1).padStart(2, "0")}`),
+  Array.from(
+    { length: 16 },
+    (_, index) => `D-${String(index + 1).padStart(2, "0")}`,
+  ),
 )
 
 const LANGUAGES = Object.freeze([
@@ -360,10 +359,7 @@ export const buildV137ExecutableConformanceProof = (
   const baseline = readJson<{
     baselineSha256: string
     paths: unknown[]
-  }>(
-    repoRoot,
-    ".planning/artifacts/v1.37-protected-working-tree-baseline.json",
-  )
+  }>(repoRoot, ".planning/artifacts/v1.37-protected-working-tree-baseline.json")
   return {
     schemaVersion: "v1.37-executable-conformance-proof-v1",
     milestone: "v1.37",
@@ -553,7 +549,10 @@ export const validateV137ExecutableConformanceProof = (
         gate.status !== "passed" ||
         gate.exitCode !== 0 ||
         gate.command !==
-          safeCommand(gateDefinitions[index]!.command, gateDefinitions[index]!.args) ||
+          safeCommand(
+            gateDefinitions[index]!.command,
+            gateDefinitions[index]!.args,
+          ) ||
         !SHA256.test(gate.stdoutSha256) ||
         !SHA256.test(gate.stderrSha256),
     )
@@ -582,11 +581,54 @@ export const renderV137ExecutableConformanceMarkdown = (
 - Deferred experimental simplifications: ${proof.limitations.join(", ")}
 `
 
-const writeAtomic = (relativePath: string, bytes: Buffer): void => {
-  const target = path.join(root, relativePath)
+const writeAtomic = (
+  repoRoot: string,
+  relativePath: string,
+  bytes: Buffer,
+): void => {
+  const target = path.join(repoRoot, relativePath)
   const temporary = `${target}.tmp-${process.pid}`
   writeFileSync(temporary, bytes, { flag: "wx", mode: 0o644 })
   renameSync(temporary, target)
+}
+
+export const buildV137ExecutableConformanceProofFromPersistedReceipts = (
+  priorProof: V137ExecutableConformanceProof,
+  repoRoot: string = root,
+): V137ExecutableConformanceProof => {
+  const proof = buildV137ExecutableConformanceProof(repoRoot, priorProof.gates)
+  if (JSON.stringify(proof.gates) !== JSON.stringify(priorProof.gates)) {
+    throw new Error("EXECUTABLE_CONFORMANCE_RECEIPTS_CHANGED")
+  }
+  const errors = validateV137ExecutableConformanceProof(proof, repoRoot)
+  if (errors.length > 0) {
+    throw new Error("EXECUTABLE_CONFORMANCE_PROOF_INVALID")
+  }
+  return proof
+}
+
+export const refreshV137ExecutableConformanceArtifacts = (
+  repoRoot: string = root,
+): void => {
+  const priorProof = readJson<V137ExecutableConformanceProof>(
+    repoRoot,
+    V137_EXECUTABLE_CONFORMANCE_PATHS.json,
+  )
+  const proof = buildV137ExecutableConformanceProofFromPersistedReceipts(
+    priorProof,
+    repoRoot,
+  )
+  writeAtomic(
+    repoRoot,
+    V137_EXECUTABLE_CONFORMANCE_PATHS.json,
+    Buffer.from(`${JSON.stringify(proof)}\n`),
+  )
+  writeAtomic(
+    repoRoot,
+    V137_EXECUTABLE_CONFORMANCE_PATHS.markdown,
+    Buffer.from(renderV137ExecutableConformanceMarkdown(proof)),
+  )
+  checkV137ExecutableConformanceArtifacts(repoRoot)
 }
 
 export const checkV137ExecutableConformanceArtifacts = (
@@ -624,13 +666,17 @@ const main = (): void => {
       const errors = validateV137ExecutableConformanceProof(proof)
       if (errors.length > 0) throw new Error("proof construction failed")
       writeAtomic(
+        root,
         V137_EXECUTABLE_CONFORMANCE_PATHS.json,
         Buffer.from(`${JSON.stringify(proof)}\n`),
       )
       writeAtomic(
+        root,
         V137_EXECUTABLE_CONFORMANCE_PATHS.markdown,
         Buffer.from(renderV137ExecutableConformanceMarkdown(proof)),
       )
+    } else if (args.length === 1 && args[0] === "--refresh") {
+      refreshV137ExecutableConformanceArtifacts()
     } else if (args.length === 1 && args[0] === "--check") {
       checkV137ExecutableConformanceArtifacts()
     } else {
@@ -648,9 +694,7 @@ const main = (): void => {
       gateMatch === null
         ? "EXECUTABLE_CONFORMANCE_PROOF_INVALID"
         : `EXECUTABLE_CONFORMANCE_GATE_FAILED_${gateMatch[1]!.toUpperCase().replaceAll("-", "_")}`
-    process.stderr.write(
-      `${JSON.stringify({ status: "failed", code })}\n`,
-    )
+    process.stderr.write(`${JSON.stringify({ status: "failed", code })}\n`)
     process.exitCode = 1
   }
 }
