@@ -432,7 +432,7 @@ Plans:
 
 **Wave 24 *(blocked on Wave 23 completion)* — isolated seam audit and refreshed readiness**
 
-- [ ] 260-33-PLAN.md — Prove zero stale seams and regenerate the exact preactivation proof.
+- [x] 260-33-PLAN.md — Prove zero stale seams and regenerate the exact preactivation proof.
 
 **Wave 25 *(blocked on Wave 24 completion)* — atomic activation**
 
