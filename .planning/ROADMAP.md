@@ -424,7 +424,7 @@ Plans:
 
 **Wave 22 *(blocked on Wave 21 completion)* — bounded readiness-evidence repair**
 
-- [ ] 260-40-PLAN.md — Refresh the approved released-v1.17 source pin and make preactivation gate receipts tamper-evident.
+- [x] 260-40-PLAN.md — Refresh the approved released-v1.17 source pin and make preactivation gate receipts tamper-evident.
 
 **Wave 23 *(blocked on Wave 22 completion)* — derived boundary and evidence-chain refresh**
 
