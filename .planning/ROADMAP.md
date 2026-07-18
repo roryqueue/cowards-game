@@ -444,7 +444,7 @@ Plans:
 
 **Wave 27 *(blocked on Wave 26 completion)* — deterministic activation-gate timing**
 
-- [ ] 260-44-PLAN.md — Give the cryptographic receipt/deep-clone persistence assertion its established bounded integration-test timeout.
+- [x] 260-44-PLAN.md — Give the cryptographic receipt/deep-clone persistence assertion its established bounded integration-test timeout.
 
 **Wave 28 *(blocked on Wave 27 completion)* — atomic activation**
 
