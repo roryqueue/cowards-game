@@ -2,8 +2,11 @@ import { readFileSync } from "node:fs"
 import { describe, expect, it } from "vitest"
 import {
   CANONICAL_ARENA_CATALOG_V1_37,
+  CURRENT_SEMANTIC_AUTHORITY_KEY,
   MATCH_EXECUTION_CONTRACT_FIXTURES_V1,
   projectMatchExecutionPublicResultV119,
+  resolveCurrentSemanticAuthoritySelection,
+  resolveSemanticAuthoritySelection,
   type MatchExecutionContractFixtureV1,
   type MatchExecutionLifecycleStateV1,
 } from "@cowards/spec"
@@ -184,7 +187,7 @@ describe("result workbench view model", () => {
     }
   })
 
-  it("leaves the Phase-259 current view model exact after candidate dispatch", () => {
+  it("preserves the historical v1.17 view model and resolves current identity from the sole selector", () => {
     const result = fixtureResult("complete")
     const labels = ["JS/TS - counted eligible"]
     const before = buildResultWorkbenchViewModel(result, labels)
@@ -202,6 +205,16 @@ describe("result workbench view model", () => {
       "sections",
       "matches",
     ])
+    expect(
+      resolveSemanticAuthoritySelection({
+        semanticAuthorityKey: "runtime-v1.17",
+      }).semanticAuthorityKey,
+    ).toBe("runtime-v1.17")
+    expect(
+      resolveCurrentSemanticAuthoritySelection({
+        semanticAuthorityKey: CURRENT_SEMANTIC_AUTHORITY_KEY,
+      })?.semanticAuthorityKey,
+    ).toBe(CURRENT_SEMANTIC_AUTHORITY_KEY)
   })
 
   it("covers every frozen fixture lifecycle without private marker copy", () => {

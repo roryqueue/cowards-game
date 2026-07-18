@@ -5,6 +5,11 @@ import { spawnSync } from "node:child_process"
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import path from "node:path"
+import {
+  CURRENT_SEMANTIC_AUTHORITY_KEY,
+  resolveCurrentSemanticAuthoritySelection,
+  resolveSemanticAuthoritySelection,
+} from "@cowards/spec"
 import { afterEach, describe, expect, it } from "vitest"
 // eslint-disable-next-line no-restricted-imports -- repo-root governance test exercises the exact golden source contract.
 import {
@@ -79,7 +84,7 @@ describe("v1.37 conformance candidate generation", () => {
     }
   })
 
-  it("writes v3 only to its committed candidate directory without touching current", () => {
+  it("writes v3 without mutating historical v1.17 and resolves whether v3 is current from the sole selector", () => {
     const root = temporaryRoot()
     const goldenRoot = path.join(
       root,
@@ -92,7 +97,19 @@ describe("v1.37 conformance candidate generation", () => {
       path.join(goldenRoot, "v3/semantic-diff.json"),
     )
     expect(() => readFileSync(path.join(goldenRoot, "registry.json"))).toThrow()
-    expect(result.corpusRootSha256).not.toBe(V1_37_CONFORMANCE_CORPUS_ROOT)
+    const historicalSelection = resolveSemanticAuthoritySelection({
+      semanticAuthorityKey: "runtime-v1.17",
+    })
+    const currentSelection = resolveCurrentSemanticAuthoritySelection({
+      semanticAuthorityKey: CURRENT_SEMANTIC_AUTHORITY_KEY,
+    })
+    expect(historicalSelection.semanticAuthorityKey).toBe("runtime-v1.17")
+    expect(result.corpusRootSha256).not.toBe(
+      "sha256:238347225defaaabcf9e57141ac7a54b4b277bd149bebe2b21903febc9ce7ac2",
+    )
+    expect(result.corpusRootSha256 === V1_37_CONFORMANCE_CORPUS_ROOT).toBe(
+      currentSelection?.semanticAuthorityKey === "runtime-v1.19",
+    )
   })
 
   it("independently reviews and checks exact v3 roots and D-01 through D-08 dispositions", () => {

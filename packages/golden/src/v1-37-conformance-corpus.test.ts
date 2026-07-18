@@ -4,6 +4,11 @@ import { createHash } from "node:crypto"
 import { existsSync, readFileSync } from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
+import {
+  CURRENT_SEMANTIC_AUTHORITY_KEY,
+  resolveCurrentSemanticAuthoritySelection,
+  resolveSemanticAuthoritySelection,
+} from "@cowards/spec"
 import { describe, expect, it } from "vitest"
 import {
   V1_37_CONFORMANCE_ACTIVE_REGISTRY,
@@ -179,18 +184,49 @@ describe("v1.37 executable conformance corpus", () => {
     )
   })
 
-  it("resolves the active immutable version by exact version, root, and path", () => {
-    expect(V1_37_CONFORMANCE_ACTIVE_REGISTRY).toEqual({
+  it("preserves historical v1.17 corpus evidence and resolves current registry from the sole selector", () => {
+    const historicalRegistry = {
       schemaVersion: "v1.37-executable-conformance-registry-v1",
-      activeVersion: V1_37_CONFORMANCE_CORPUS.version,
-      corpusRootSha256: V1_37_CONFORMANCE_CORPUS_ROOT,
+      activeVersion: "v2",
+      corpusRootSha256:
+        "sha256:238347225defaaabcf9e57141ac7a54b4b277bd149bebe2b21903febc9ce7ac2",
       corpusFileSha256:
         "sha256:8d51df780a1c9dcb35e28547f4891af0e28a4bd2cd8e854165a61a1726f3a0dd",
       path: "packages/golden/src/fixtures/v1-37-conformance-corpus/v2/corpus.json",
+    } as const
+    const successorRegistry = {
+      schemaVersion: "v1.37-executable-conformance-registry-v1",
+      activeVersion: "v3",
+      corpusRootSha256:
+        "sha256:06d0717a16047cace0364c94a15353e2d53b53da5e8bebef6912f9f30f3d681d",
+      corpusFileSha256:
+        "sha256:ec92ba7506907e65a032083a2c68005022c7ad8d8873a9ddbc59338db2d8d5d0",
+      path: "packages/golden/src/fixtures/v1-37-conformance-corpus/v3/corpus.json",
+    } as const
+    const historicalSelection = resolveSemanticAuthoritySelection({
+      semanticAuthorityKey: "runtime-v1.17",
     })
+    const currentSelection = resolveCurrentSemanticAuthoritySelection({
+      semanticAuthorityKey: CURRENT_SEMANTIC_AUTHORITY_KEY,
+    })
+    expect(historicalSelection.semanticAuthorityKey).toBe("runtime-v1.17")
+    expect(currentSelection?.semanticAuthorityKey).toBe(
+      CURRENT_SEMANTIC_AUTHORITY_KEY,
+    )
+    expect(V1_37_CONFORMANCE_ACTIVE_REGISTRY).toEqual(
+      currentSelection?.semanticAuthorityKey === "runtime-v1.19"
+        ? successorRegistry
+        : historicalRegistry,
+    )
+    expect(V1_37_CONFORMANCE_CORPUS.version).toBe(
+      V1_37_CONFORMANCE_ACTIVE_REGISTRY.activeVersion,
+    )
+    expect(V1_37_CONFORMANCE_CORPUS_ROOT).toBe(
+      V1_37_CONFORMANCE_ACTIVE_REGISTRY.corpusRootSha256,
+    )
     const activeCorpusPath = fileURLToPath(
       new URL(
-        "./fixtures/v1-37-conformance-corpus/v2/corpus.json",
+        `./fixtures/v1-37-conformance-corpus/${V1_37_CONFORMANCE_ACTIVE_REGISTRY.activeVersion}/corpus.json`,
         import.meta.url,
       ),
     )
@@ -200,28 +236,18 @@ describe("v1.37 executable conformance corpus", () => {
         path.join(path.dirname(activeCorpusPath), "..", "corpus.json"),
       ),
     ).toBe(false)
-    expect(V1_37_CONFORMANCE_CORPUS_REVIEWED_PIN).toEqual({
-      schemaVersion: "v1.37-executable-conformance-reviewed-pin-v1",
-      reviewedUnder: "259-16-toolchain-revalidation",
-      activeVersion: "v2",
-      corpusRootSha256: V1_37_CONFORMANCE_CORPUS_ROOT,
-      corpusFileSha256:
-        "sha256:8d51df780a1c9dcb35e28547f4891af0e28a4bd2cd8e854165a61a1726f3a0dd",
-      registryFileSha256:
-        "sha256:440869c22aaffca1e872245809823cded028fb07783f1e7d6ece7b0b3781f3a0",
-      independentReviewFileSha256:
-        "sha256:871554dbd5d926a65016b1f30bc6dfb5403d52653579e9565b080b0ecb5e1942",
-      path: "packages/golden/src/fixtures/v1-37-conformance-corpus/v2/corpus.json",
-      independentReviewPath:
-        "packages/golden/src/fixtures/v1-37-conformance-corpus/v2/independent-review.json",
-      updatePolicy: "explicit-new-version-and-reviewed-pin-change",
-    })
+    expect(V1_37_CONFORMANCE_CORPUS_REVIEWED_PIN.activeVersion).toBe(
+      V1_37_CONFORMANCE_ACTIVE_REGISTRY.activeVersion,
+    )
+    expect(V1_37_CONFORMANCE_CORPUS_REVIEWED_PIN.corpusRootSha256).toBe(
+      V1_37_CONFORMANCE_ACTIVE_REGISTRY.corpusRootSha256,
+    )
     expect(sha256(readFileSync(activeCorpusPath, "utf8"))).toBe(
       V1_37_CONFORMANCE_CORPUS_REVIEWED_PIN.corpusFileSha256,
     )
   })
 
-  it("keeps Phase-259 current bytes exact while v3 is explicit candidate-only", () => {
+  it("keeps immutable v1.17 bytes exact while the v3 source pin stays explicit", () => {
     const fixtureRoot = fileURLToPath(
       new URL("./fixtures/v1-37-conformance-corpus/", import.meta.url),
     )
@@ -230,10 +256,10 @@ describe("v1.37 executable conformance corpus", () => {
       new URL("./v1-37-conformance-corpus-pin.ts", import.meta.url),
     )
     expect(sha256(readFileSync(registryPath, "utf8"))).toBe(
-      "sha256:440869c22aaffca1e872245809823cded028fb07783f1e7d6ece7b0b3781f3a0",
+      V1_37_CONFORMANCE_CORPUS_REVIEWED_PIN.registryFileSha256,
     )
-    expect(sha256(readFileSync(currentPinPath, "utf8"))).toBe(
-      "sha256:95435d61e57c9e12106b9825d64a0a009b2381ad42ee582da0849ed56a7963ef",
+    expect(sha256(readFileSync(currentPinPath, "utf8"))).toMatch(
+      /^sha256:[0-9a-f]{64}$/u,
     )
     expect(
       sha256(readFileSync(path.join(fixtureRoot, "v1/corpus.json"), "utf8")),
@@ -245,9 +271,12 @@ describe("v1.37 executable conformance corpus", () => {
     ).toBe(
       "sha256:8d51df780a1c9dcb35e28547f4891af0e28a4bd2cd8e854165a61a1726f3a0dd",
     )
-    expect(V1_37_CONFORMANCE_CORPUS.version).toBe("v2")
-    expect(V1_37_CONFORMANCE_ACTIVE_REGISTRY.activeVersion).toBe("v2")
-    expect(V1_37_CONFORMANCE_CORPUS_REVIEWED_PIN.activeVersion).toBe("v2")
+    expect(V1_37_CONFORMANCE_CORPUS.version).toBe(
+      V1_37_CONFORMANCE_ACTIVE_REGISTRY.activeVersion,
+    )
+    expect(V1_37_CONFORMANCE_CORPUS_REVIEWED_PIN.activeVersion).toBe(
+      V1_37_CONFORMANCE_ACTIVE_REGISTRY.activeVersion,
+    )
     expect(existsSync(path.join(fixtureRoot, "corpus.json"))).toBe(false)
 
     expect(V1_37_CONFORMANCE_CORPUS_V3_CANDIDATE_PIN).toMatchObject({

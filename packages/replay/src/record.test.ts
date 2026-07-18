@@ -5,9 +5,14 @@ import { adaptRuntimeForCurrentKernel } from "@cowards/engine/test/current-kerne
 import {
   ARENA_CATALOG_VERSION_V1_37,
   CANONICAL_ARENA_CATALOG_V1_37,
+  CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE,
+  CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_ID,
   CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE_RECORD,
+  CURRENT_SEMANTIC_AUTHORITY_KEY,
   SET_CONDITION_POLICY_VERSION_V1_37,
   createSetScenarioV137,
+  resolveCurrentSemanticAuthoritySelection,
+  resolveSemanticAuthoritySelection,
   type SoldierBrainInput,
   type StrategyInput,
 } from "@cowards/spec"
@@ -46,7 +51,7 @@ const runtime: StrategyRuntime = {
 }
 
 const run = () =>
-  MATCH_KERNEL.runMatch({
+  MATCH_KERNEL.runMatchV117({
     matchId: "recorder-match",
     seed: "recorder-seed",
     arenaVariant: {
@@ -65,8 +70,8 @@ const run = () =>
 
 const metadata = {
   schemaVersion: "chronicle-v1.4" as const,
-  semanticTupleId: MATCH_KERNEL.tupleId,
-  semanticTuple: MATCH_KERNEL.tuple,
+  semanticTupleId: CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_ID,
+  semanticTuple: CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE,
 }
 
 const candidateMetadata = {
@@ -219,8 +224,11 @@ describe("recordChronicleFromExecution", () => {
     }
   })
 
-  it("keeps the Phase-259 current recording result and Chronicle shape exact", () => {
-    const recorded = recordChronicleFromExecution({ execution: run(), metadata })
+  it("keeps historical v1.17 recording exact and resolves current kernel identity from the sole selector", () => {
+    const recorded = recordChronicleFromExecution({
+      execution: run(),
+      metadata,
+    })
     expect(recorded.ok).toBe(true)
     if (!recorded.ok) return
 
@@ -242,6 +250,14 @@ describe("recordChronicleFromExecution", () => {
       "strategyRevisionIds",
       "versions",
     ])
+    const historicalSelection = resolveSemanticAuthoritySelection({
+      semanticAuthorityKey: "runtime-v1.17",
+    })
+    const currentSelection = resolveCurrentSemanticAuthoritySelection({
+      semanticAuthorityKey: CURRENT_SEMANTIC_AUTHORITY_KEY,
+    })
+    expect(metadata.semanticTupleId).toBe(historicalSelection.tupleId)
+    expect(MATCH_KERNEL.tupleId).toBe(currentSelection?.tupleId)
   })
 
   it("records one completed candidate stream with exact public events and state-hash anchors", () => {
