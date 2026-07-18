@@ -1,9 +1,10 @@
 import {
+  CURRENT_SEMANTIC_RUNTIME_ABI_VERSION,
   MAX_ACTIVATION_CYCLES,
   SoldierBrainInputSchema,
-  SoldierBrainInputV119Schema,
   StrategyInputSchema,
-  StrategyInputV119Schema,
+  resolveSoldierBrainInputSchema,
+  resolveStrategyInputSchema,
   type AwarenessCell,
   type AwarenessCellContents,
   type AwarenessGrid5x5,
@@ -82,30 +83,46 @@ export const createStrategyInput = (
   state: GameState,
   playerId: string,
   runtimeAbiVersion?: string,
-): StrategyInput =>
-  (runtimeAbiVersion === "strategy-runtime-abi-v1.19"
-    ? createStrategyInputV119(state, playerId)
-    : StrategyInputSchema.parse(
-        createStrategyInputValue(state, playerId),
-      )) as StrategyInput
-
-export const createStrategyInputV119 = (
-  state: GameState,
-  playerId: string,
-): StrategyInputV119 => {
+): StrategyInput => {
+  const effectiveRuntimeAbiVersion =
+    runtimeAbiVersion ?? CURRENT_SEMANTIC_RUNTIME_ABI_VERSION
+  const observationSchemaRuntimeAbiVersion =
+    effectiveRuntimeAbiVersion === "strategy-runtime-abi-v1.14"
+      ? "strategy-runtime-abi-v1.17"
+      : effectiveRuntimeAbiVersion
+  const schema =
+    runtimeAbiVersion === undefined
+      ? StrategyInputSchema
+      : resolveStrategyInputSchema(observationSchemaRuntimeAbiVersion)
+  if (schema === undefined) {
+    throw new Error("Unsupported explicit StrategyInput runtime ABI selection.")
+  }
+  const base = createStrategyInputValue(state, playerId)
+  if (effectiveRuntimeAbiVersion !== "strategy-runtime-abi-v1.19") {
+    return schema.parse(base) as StrategyInput
+  }
   const initialInitiativePlayerId = state.initialInitiativePlayerId
   if (initialInitiativePlayerId === undefined) {
     throw new Error("Successor GameState has no initial initiative owner.")
   }
-  const base = createStrategyInputValue(state, playerId)
-  return StrategyInputV119Schema.parse({
+  return schema.parse({
     ...base,
     initialInitiativePlayerId,
     hasInitialInitiative: initialInitiativePlayerId === playerId,
     roundInitiativePlayerId: state.initiativePlayerId,
     hasRoundInitiative: state.initiativePlayerId === playerId,
-  })
+  }) as StrategyInput
 }
+
+export const createStrategyInputV119 = (
+  state: GameState,
+  playerId: string,
+): StrategyInputV119 =>
+  createStrategyInput(
+    state,
+    playerId,
+    "strategy-runtime-abi-v1.19",
+  ) as StrategyInputV119
 
 const createStrategyInputValue = (state: GameState, playerId: string) => {
   const player = getPlayer(state, playerId)
@@ -148,12 +165,29 @@ export const createSoldierBrainInput = (
     ...(objective === undefined ? {} : { objective }),
     soldierMemory: soldier.soldierMemory,
   }
-  return (runtimeAbiVersion === "strategy-runtime-abi-v1.19"
-    ? SoldierBrainInputV119Schema.parse({
-        ...value,
-        hasAdvancedThisActivation,
-      })
-    : SoldierBrainInputSchema.parse(value)) as SoldierBrainInput
+  const effectiveRuntimeAbiVersion =
+    runtimeAbiVersion ?? CURRENT_SEMANTIC_RUNTIME_ABI_VERSION
+  const observationSchemaRuntimeAbiVersion =
+    effectiveRuntimeAbiVersion === "strategy-runtime-abi-v1.14"
+      ? "strategy-runtime-abi-v1.17"
+      : effectiveRuntimeAbiVersion
+  const schema =
+    runtimeAbiVersion === undefined
+      ? SoldierBrainInputSchema
+      : resolveSoldierBrainInputSchema(observationSchemaRuntimeAbiVersion)
+  if (schema === undefined) {
+    throw new Error(
+      "Unsupported explicit SoldierBrainInput runtime ABI selection.",
+    )
+  }
+  return (
+    effectiveRuntimeAbiVersion === "strategy-runtime-abi-v1.19"
+      ? schema.parse({
+          ...value,
+          hasAdvancedThisActivation,
+        })
+      : schema.parse(value)
+  ) as SoldierBrainInput
 }
 
 export const createSoldierBrainInputV119 = (

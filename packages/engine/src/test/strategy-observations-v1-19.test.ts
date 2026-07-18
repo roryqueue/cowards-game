@@ -6,10 +6,12 @@ import type {
   StrategyInputV119,
 } from "@cowards/spec"
 import { MATCH_KERNEL } from "../index.js"
+import { createCandidateInitialGameStateV119 } from "../kernel/create-initial-state.js"
 import {
-  createCandidateInitialGameStateV119,
-} from "../kernel/create-initial-state.js"
-import { createStrategyInputV119 } from "../runtime-inputs.js"
+  createSoldierBrainInput,
+  createStrategyInput,
+  createStrategyInputV119,
+} from "../runtime-inputs.js"
 import { adaptRuntimeForCurrentKernel } from "./current-kernel-runtime.js"
 
 const matchInput = {
@@ -76,6 +78,99 @@ describe("successor Strategy observations", () => {
       roundInitiativePlayerId: matchInput.bottomPlayerId,
       hasRoundInitiative: false,
     })
+  })
+
+  it("projects observations through the explicitly addressed runtime ABI", () => {
+    const created = createCandidateInitialGameStateV119({
+      ...matchInput,
+      initialInitiativePlayerId: matchInput.bottomPlayerId,
+    })
+    expect(created.ok).toBe(true)
+    if (!created.ok) return
+
+    const historicalStrategy = createStrategyInput(
+      created.state,
+      matchInput.bottomPlayerId,
+      "strategy-runtime-abi-v1.17",
+    )
+    expect(historicalStrategy).not.toHaveProperty("initialInitiativePlayerId")
+    expect(historicalStrategy).not.toHaveProperty("roundInitiativePlayerId")
+    expect(
+      createStrategyInput(
+        created.state,
+        matchInput.bottomPlayerId,
+        "strategy-runtime-abi-v1.14",
+      ),
+    ).toEqual(historicalStrategy)
+
+    const successorStrategy = createStrategyInput(
+      created.state,
+      matchInput.bottomPlayerId,
+      "strategy-runtime-abi-v1.19",
+    ) as StrategyInputV119
+    expect(successorStrategy).toMatchObject({
+      initialInitiativePlayerId: matchInput.bottomPlayerId,
+      hasInitialInitiative: true,
+      roundInitiativePlayerId: matchInput.bottomPlayerId,
+      hasRoundInitiative: true,
+    })
+
+    const historicalSoldier = createSoldierBrainInput(
+      created.state,
+      "bottom-soldier-1",
+      0,
+      undefined,
+      true,
+      "strategy-runtime-abi-v1.17",
+    )
+    expect(historicalSoldier).not.toHaveProperty("hasAdvancedThisActivation")
+    expect(
+      createSoldierBrainInput(
+        created.state,
+        "bottom-soldier-1",
+        0,
+        undefined,
+        true,
+        "strategy-runtime-abi-v1.14",
+      ),
+    ).toEqual(historicalSoldier)
+
+    const successorSoldier = createSoldierBrainInput(
+      created.state,
+      "bottom-soldier-1",
+      0,
+      undefined,
+      true,
+      "strategy-runtime-abi-v1.19",
+    ) as SoldierBrainInputV119
+    expect(successorSoldier.hasAdvancedThisActivation).toBe(true)
+  })
+
+  it("fails closed for unsupported explicit Strategy and SoldierBrain ABIs", () => {
+    const created = createCandidateInitialGameStateV119({
+      ...matchInput,
+      initialInitiativePlayerId: matchInput.bottomPlayerId,
+    })
+    expect(created.ok).toBe(true)
+    if (!created.ok) return
+
+    expect(() =>
+      createStrategyInput(
+        created.state,
+        matchInput.bottomPlayerId,
+        "strategy-runtime-abi-v9.99",
+      ),
+    ).toThrow("Unsupported explicit StrategyInput runtime ABI selection.")
+    expect(() =>
+      createSoldierBrainInput(
+        created.state,
+        "bottom-soldier-1",
+        0,
+        undefined,
+        false,
+        "strategy-runtime-abi-v9.99",
+      ),
+    ).toThrow("Unsupported explicit SoldierBrainInput runtime ABI selection.")
   })
 
   it("keeps initial initiative immutable while current initiative flips each Round", () => {
@@ -160,9 +255,9 @@ describe("successor Strategy observations", () => {
     expect(observations.length).toBeGreaterThan(0)
     expect(observations[0]).not.toHaveProperty("initialInitiativePlayerId")
     expect(observations[0]).not.toHaveProperty("roundInitiativePlayerId")
-    expect(result.kind === "completed" && result.result.state).not.toHaveProperty(
-      "initialInitiativePlayerId",
-    )
+    expect(
+      result.kind === "completed" && result.result.state,
+    ).not.toHaveProperty("initialInitiativePlayerId")
   })
 
   it("rejects an old initial-state tuple at the v1.19 entry point", () => {
@@ -244,8 +339,10 @@ describe("successor SoldierBrain observations", () => {
       observations.map((input) => input.hasAdvancedThisActivation),
     ).toEqual([false, false, true, true])
     if (execution.kind !== "completed") return
-    const recorded = execution.recorderMaterial!.events
-      .filter((event) => event.type === "AWARENESS_GRID_OBSERVED")
+    const recorded = execution
+      .recorderMaterial!.events.filter(
+        (event) => event.type === "AWARENESS_GRID_OBSERVED",
+      )
       .map(
         (event) =>
           (event.privatePayload as { hasAdvancedThisActivation?: boolean })
@@ -261,10 +358,7 @@ describe("successor SoldierBrain observations", () => {
       state,
       soldierId: "bottom-soldier-1",
       runtime: actionRuntime(
-        [
-          { type: "MOVE", direction: "RIGHT" },
-          { type: "TURN_TO_STONE" },
-        ],
+        [{ type: "MOVE", direction: "RIGHT" }, { type: "TURN_TO_STONE" }],
         observations,
       ),
     })
@@ -285,18 +379,13 @@ describe("successor SoldierBrain observations", () => {
       state: headToHeadState,
       soldierId: "bottom-soldier-1",
       runtime: actionRuntime(
-        [
-          { type: "MOVE", direction: "RIGHT" },
-          { type: "TURN_TO_STONE" },
-        ],
+        [{ type: "MOVE", direction: "RIGHT" }, { type: "TURN_TO_STONE" }],
         blockedMoveObservations,
       ),
     })
     expect(blockedMove.kind).toBe("completed")
     expect(
-      blockedMoveObservations.map(
-        (input) => input.hasAdvancedThisActivation,
-      ),
+      blockedMoveObservations.map((input) => input.hasAdvancedThisActivation),
     ).toEqual([false, false])
   })
 
@@ -316,10 +405,7 @@ describe("successor SoldierBrain observations", () => {
       state,
       soldierId: "bottom-soldier-1",
       runtime: actionRuntime(
-        [
-          { type: "MOVE", direction: "RIGHT" },
-          { type: "TURN_TO_STONE" },
-        ],
+        [{ type: "MOVE", direction: "RIGHT" }, { type: "TURN_TO_STONE" }],
         actorObservations,
       ),
     })
@@ -333,10 +419,7 @@ describe("successor SoldierBrain observations", () => {
     const target = MATCH_KERNEL.runActivationFromStateV119({
       state: pushed.result!.state,
       soldierId: "top-soldier-1",
-      runtime: actionRuntime(
-        [{ type: "TURN_TO_STONE" }],
-        targetObservations,
-      ),
+      runtime: actionRuntime([{ type: "TURN_TO_STONE" }], targetObservations),
     })
     expect(target.kind).toBe("completed")
     expect(targetObservations[0]?.hasAdvancedThisActivation).toBe(false)
@@ -361,9 +444,9 @@ describe("successor SoldierBrain observations", () => {
     expect(first.kind).toBe("completed")
     expect(firstObservations[0]?.hasAdvancedThisActivation).toBe(false)
     expect(
-      firstObservations.slice(1).every(
-        (input) => input.hasAdvancedThisActivation,
-      ),
+      firstObservations
+        .slice(1)
+        .every((input) => input.hasAdvancedThisActivation),
     ).toBe(true)
     if (first.kind !== "completed") return
 
@@ -371,10 +454,7 @@ describe("successor SoldierBrain observations", () => {
     const second = MATCH_KERNEL.runActivationFromStateV119({
       state: first.result!.state,
       soldierId: "bottom-soldier-1",
-      runtime: actionRuntime(
-        [{ type: "TURN_TO_STONE" }],
-        secondObservations,
-      ),
+      runtime: actionRuntime([{ type: "TURN_TO_STONE" }], secondObservations),
     })
     expect(second.kind).toBe("completed")
     expect(secondObservations[0]?.hasAdvancedThisActivation).toBe(false)
