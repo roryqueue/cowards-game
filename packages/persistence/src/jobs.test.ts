@@ -559,10 +559,22 @@ describePostgres("PostgreSQL integrity identity before claim", () => {
       { conformance_certificate_id: null, conformance_certificate_hash: null },
       { conformance_certificate_id: null, conformance_certificate_hash: null },
     ])
+    const eligibility = await pool.query<{ claim_at: Date }>(
+      `select run_after + interval '1 second' as claim_at
+         from match_jobs
+        where match_id = $1`,
+      [matchId],
+    )
+    expect(eligibility.rows).toHaveLength(1)
+    const claimAt = eligibility.rows[0]?.claim_at
+    expect(claimAt).toBeInstanceOf(Date)
+    if (!(claimAt instanceof Date)) {
+      throw new Error("persisted queued-job eligibility time is unavailable")
+    }
     const claimed = await claimNextMatchJob(pool, {
       workerId: `${namespace}:worker`,
       matchIds: [matchId],
-      now: new Date(now.getTime() + 1_000),
+      now: claimAt,
     })
     expect(claimed?.matchId).toBe(matchId)
     expect(claimed?.evidenceSnapshot.entrants.bottom).not.toHaveProperty(
