@@ -5,15 +5,15 @@ milestone_name: Rules Integrity and Strategy Evaluation Foundations — ACTIVE
 current_phase: 260
 current_phase_name: truthful-strategy-inputs-arena-authority-and-set-fairness
 status: executing
-stopped_at: Plan 260-37 complete; exact audit exposed explicit v1.17 runtime-input projection through current v1.19 schemas and bounded Plan 260-38 is ready
-last_updated: "2026-07-18T17:20:00.000Z"
+stopped_at: Plan 260-38 complete; exact audit exposed historical recorder identity admission through current-only resolution and bounded Plan 260-39 is ready
+last_updated: "2026-07-18T17:50:00.000Z"
 last_activity: 2026-07-18
-last_activity_desc: Closed selector-independent identity repair and routed exact runtime-input projection to Plan 260-38
+last_activity_desc: Closed exact runtime-input projection and routed recorder identity admission to Plan 260-39
 progress:
   total_phases: 6
   completed_phases: 4
-  total_plans: 124
-  completed_plans: 120
+  total_plans: 125
+  completed_plans: 121
   percent: 97
 ---
 
@@ -29,9 +29,9 @@ See: `.planning/PROJECT.md` (updated 2026-07-12)
 ## Current Position
 
 Phase: 260 (truthful-strategy-inputs-arena-authority-and-set-fairness) — EXECUTING
-Plan: 38 of 38
-Status: Ready to make explicit v1.17 and v1.19 observation projection independent of the current alias
-Last activity: 2026-07-18 — Plan 260-37 independently reviewed PASS; exact audit isolated the remaining historical replay failure to runtime-input schema dispatch
+Plan: 39 of 39
+Status: Ready to make exact recorder identity admission independent of the current tuple
+Last activity: 2026-07-18 — Plan 260-38 independently reviewed PASS; exact audit isolated remaining replay failures to current-only recorder metadata resolution
 
 Progress: [█████████░] 89%
 
@@ -85,8 +85,8 @@ Progress: [█████████░] 89%
 **Resume file:** None
 
 Last session: 2026-07-18T15:10:00.000Z
-Stopped at: Plan 260-37 is complete; the exact selector audit now passes immutable corpus and fixture identity gates and stopped because explicit v1.17 kernel requests parsed observations through selector-backed current v1.19 schemas. Development database remains exact v1.17 bootstrap with no pending intent.
-Next command: Review, execute, and independently code-review bounded Plan 260-38, then resume Plan 260-33.
+Stopped at: Plan 260-38 is complete; the exact selector audit now completes explicit v1.17 and v1.19 kernel execution and stopped because recorder metadata and transition identity resolve v1.17 only while it is current. Development database remains exact v1.17 bootstrap with no pending intent.
+Next command: Review, execute, and independently code-review bounded Plan 260-39, then resume Plan 260-33.
 
 ## Performance Metrics
 
@@ -161,6 +161,7 @@ Next command: Review, execute, and independently code-review bounded Plan 260-38
 | Phase 260 P27 | 9min | 3 tasks | 9 authority/generator/generated files; 65 focused spec tests and 5 generator tests |
 | Phase 260 P28 | 20min | 2 TDD tasks + adversarial review | 5 migration/API/test files; 36 focused and 314 full persistence tests |
 | Phase 260 P37 | 12min | 2 TDD tasks + independent review | 4 generator/fixture-helper files; 51 focused tests |
+| Phase 260 P38 | 18min | 1 TDD task + independent review | 2 engine files; 34 focused compatibility/replay tests |
 
 ## Decisions
 
