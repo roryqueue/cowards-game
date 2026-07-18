@@ -9,6 +9,8 @@ import {
   CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_ID,
   CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE_RECORD,
   CURRENT_SEMANTIC_AUTHORITY_KEY,
+  HISTORICAL_RUNTIME_V114_SEMANTIC_TUPLE,
+  HISTORICAL_RUNTIME_V114_SEMANTIC_TUPLE_ID,
   SET_CONDITION_POLICY_VERSION_V1_37,
   createSetScenarioV137,
   resolveCurrentSemanticAuthoritySelection,
@@ -258,6 +260,43 @@ describe("recordChronicleFromExecution", () => {
     })
     expect(metadata.semanticTupleId).toBe(historicalSelection.tupleId)
     expect(MATCH_KERNEL.tupleId).toBe(currentSelection?.tupleId)
+  })
+
+  it("keeps recorder identity admission closed against v1.14, unknown, mixed, and mutated tuples", () => {
+    const invalidMetadata = [
+      {
+        schemaVersion: "chronicle-v1.4" as const,
+        semanticTupleId: HISTORICAL_RUNTIME_V114_SEMANTIC_TUPLE_ID,
+        semanticTuple: HISTORICAL_RUNTIME_V114_SEMANTIC_TUPLE,
+      },
+      {
+        ...metadata,
+        semanticTupleId: `sha256:${"0".repeat(64)}`,
+      },
+      {
+        ...metadata,
+        semanticTuple: CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE_RECORD.tuple,
+      },
+      {
+        ...metadata,
+        semanticTuple: {
+          ...metadata.semanticTuple,
+          engine: `${metadata.semanticTuple.engine}:mutated`,
+        },
+      },
+    ]
+
+    for (const rejected of invalidMetadata) {
+      expect(
+        recordChronicleFromExecution({
+          execution: run(),
+          metadata: rejected,
+        } as never),
+      ).toMatchObject({
+        ok: false,
+        failure: { code: "RECORDER_METADATA_INVALID" },
+      })
+    }
   })
 
   it("records one completed candidate stream with exact public events and state-hash anchors", () => {

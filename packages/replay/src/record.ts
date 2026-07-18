@@ -24,7 +24,7 @@ import {
   SET_CONDITION_POLICY_VERSION_V1_37,
   createSetScenarioV137,
   encodeCanonicalJson,
-  resolveCanonicalCompatibilityTuple,
+  resolveCandidateRuntimeV117SemanticTuple,
   resolveCandidateRuntimeV119SemanticTuple,
   type SetConditionPolicyRowV137,
 } from "@cowards/spec"
@@ -500,6 +500,10 @@ const safeEvent = ({
   ...(privacy === undefined ? {} : { privacy }),
 })
 
+const resolveRecorderSemanticTuple = (selector: unknown) =>
+  resolveCandidateRuntimeV117SemanticTuple(selector) ??
+  resolveCandidateRuntimeV119SemanticTuple(selector)
+
 const resolveRecordingTuple = (metadata: ChronicleRecordingMetadata) => {
   if (
     !same(Object.keys(metadata).sort(), [
@@ -528,10 +532,7 @@ const resolveRecordingTuple = (metadata: ChronicleRecordingMetadata) => {
       tupleId: metadata.semanticTupleId,
       tuple: metadata.semanticTuple,
     }
-    return (
-      resolveCanonicalCompatibilityTuple(selector) ??
-      resolveCandidateRuntimeV119SemanticTuple(selector)
-    )
+    return resolveRecorderSemanticTuple(selector)
   } catch {
     return undefined
   }
@@ -574,8 +575,7 @@ const validateCandidateMatchAuthorityV119 = (
     candidate.arenaVariantId !== finalState.arenaVariant.id ||
     candidate.bottomPlayerId === candidate.topPlayerId ||
     candidate.bottomEntrantKey === candidate.topEntrantKey ||
-    finalState.initialInitiativePlayerId !==
-      candidate.initialInitiativePlayerId
+    finalState.initialInitiativePlayerId !== candidate.initialInitiativePlayerId
   ) {
     return false
   }
@@ -1041,9 +1041,9 @@ const validateExecution = (
       tuple: transition.semanticTuple,
     }
     return (
-      resolveCanonicalCompatibilityTuple(selector) ??
-      resolveCandidateRuntimeV119SemanticTuple(selector)
-    )?.tupleId === metadata.semanticTupleId
+      resolveRecorderSemanticTuple(selector)?.tupleId ===
+      metadata.semanticTupleId
+    )
   }
   if (
     !matchesMetadataIdentity(first) ||
