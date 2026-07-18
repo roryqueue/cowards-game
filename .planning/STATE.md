@@ -5,15 +5,15 @@ milestone_name: Rules Integrity and Strategy Evaluation Foundations — ACTIVE
 current_phase: 260
 current_phase_name: truthful-strategy-inputs-arena-authority-and-set-fairness
 status: executing
-stopped_at: Plan 260-38 complete; exact audit exposed historical recorder identity admission through current-only resolution and bounded Plan 260-39 is ready
-last_updated: "2026-07-18T17:50:00.000Z"
+stopped_at: Plan 260-39 complete; exact isolated selector audit has zero findings and Plan 260-33 is ready to persist readiness
+last_updated: "2026-07-18T18:20:00.000Z"
 last_activity: 2026-07-18
-last_activity_desc: Closed exact runtime-input projection and routed recorder identity admission to Plan 260-39
+last_activity_desc: Closed exact recorder identity admission and drove the isolated v1.19 selector audit to zero findings
 progress:
   total_phases: 6
   completed_phases: 4
   total_plans: 125
-  completed_plans: 121
+  completed_plans: 122
   percent: 97
 ---
 
@@ -29,11 +29,11 @@ See: `.planning/PROJECT.md` (updated 2026-07-12)
 ## Current Position
 
 Phase: 260 (truthful-strategy-inputs-arena-authority-and-set-fairness) — EXECUTING
-Plan: 39 of 39
-Status: Ready to make exact recorder identity admission independent of the current tuple
-Last activity: 2026-07-18 — Plan 260-38 independently reviewed PASS; exact audit isolated remaining replay failures to current-only recorder metadata resolution
+Plan: 33 of 39
+Status: Ready to persist the zero seam inventory and regenerate exact preactivation readiness
+Last activity: 2026-07-18 — Plan 260-39 amended review PASS; exact isolated v1.19 selector audit passed with zero findings
 
-Progress: [█████████░] 89%
+Progress: [█████████░] 92%
 
 ## Durable Decisions
 
@@ -68,6 +68,7 @@ Progress: [█████████░] 89%
 - Go and TypeScript scheduling validate the exact database head at creation, freeze complete authority into MatchSet/Match/job work, and never let execution reread or derive current authority.
 - One advisory-locked coordinator owns prepare through smoke, recovery, abort, and compensation; exact six-path restoration includes the Git index and reverse commit bytes.
 - The activation proof contains exactly five selector digests and no self-reference; final commit, tree, proof digest, smoke, and compensation bindings are validated externally against the database head.
+- Chronicle recorder admission is a closed exact v1.17/v1.19 set independent of current selection; v1.14 remains confined to immutable historical Chronicle validation.
 
 ## Deferred Items
 
@@ -85,8 +86,8 @@ Progress: [█████████░] 89%
 **Resume file:** None
 
 Last session: 2026-07-18T15:10:00.000Z
-Stopped at: Plan 260-38 is complete; the exact selector audit now completes explicit v1.17 and v1.19 kernel execution and stopped because recorder metadata and transition identity resolve v1.17 only while it is current. Development database remains exact v1.17 bootstrap with no pending intent.
-Next command: Review, execute, and independently code-review bounded Plan 260-39, then resume Plan 260-33.
+Stopped at: Plan 260-39 is complete; the exact selector audit passes its four declared files under the simulated v1.19 current selection with zero findings and unchanged dependency bytes. Development database remains exact v1.17 bootstrap with no pending intent.
+Next command: Execute Plan 260-33 zero-inventory persistence and authoritative preactivation proof regeneration.
 
 ## Performance Metrics
 
@@ -162,6 +163,7 @@ Next command: Review, execute, and independently code-review bounded Plan 260-39
 | Phase 260 P28 | 20min | 2 TDD tasks + adversarial review | 5 migration/API/test files; 36 focused and 314 full persistence tests |
 | Phase 260 P37 | 12min | 2 TDD tasks + independent review | 4 generator/fixture-helper files; 51 focused tests |
 | Phase 260 P38 | 18min | 1 TDD task + independent review | 2 engine files; 34 focused compatibility/replay tests |
+| Phase 260 P39 | 20min | 1 TDD task + amended review | 2 replay files; 22 focused tests and 61 exact-selector tests |
 
 ## Decisions
 

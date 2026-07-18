@@ -321,7 +321,7 @@ Plans:
   4. Each counted scenario explicitly schedules every entrant on each side and in each initial-initiative state, proved at entrant level through TypeScript, Go, persistence, and service-backed tests.
   5. Arena and Set repair adds no official geometry or valid v1.4 gameplay change; any change to Strategy observation or reachable Match semantics stops for explicit compatibility approval.
 
-**Plans:** 35/39 plans executed
+**Plans:** 36/39 plans executed
 
 **Wave 1 — immutable semantic authorities**
 
@@ -420,7 +420,7 @@ Plans:
 
 **Wave 21 *(blocked on Wave 20 completion)* — exact recorder identity admission**
 
-- [ ] 260-39-PLAN.md — Admit exact v1.17/v1.19 recorder identities independently of current selection.
+- [x] 260-39-PLAN.md — Admit exact v1.17/v1.19 recorder identities independently of current selection.
 
 **Wave 22 *(blocked on Wave 21 completion)* — isolated seam audit and refreshed readiness**
 
