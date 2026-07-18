@@ -32,19 +32,25 @@ const byteHash = (value: Uint8Array): string =>
   `sha256:${createHash("sha256").update(value).digest("hex")}`
 const signedConformanceDatabaseEnv =
   "COWARDS_V1_37_SIGNED_CONFORMANCE_TEST_DATABASE_URL"
+const goBackendDatabaseEnv = "COWARDS_GO_BACKEND_TEST_DATABASE_URL"
 const itSignedConformanceDatabase = process.env[signedConformanceDatabaseEnv]
   ? it
   : it.skip
 
 const withRequiredSignedConformanceDatabase = <T>(run: () => T): T => {
   const previous = process.env[signedConformanceDatabaseEnv]
+  const previousGo = process.env[goBackendDatabaseEnv]
   process.env[signedConformanceDatabaseEnv] ??=
+    "postgresql://injected-gate.invalid/cowards"
+  process.env[goBackendDatabaseEnv] ??=
     "postgresql://injected-gate.invalid/cowards"
   try {
     return run()
   } finally {
     if (previous === undefined) delete process.env[signedConformanceDatabaseEnv]
     else process.env[signedConformanceDatabaseEnv] = previous
+    if (previousGo === undefined) delete process.env[goBackendDatabaseEnv]
+    else process.env[goBackendDatabaseEnv] = previousGo
   }
 }
 
@@ -86,22 +92,24 @@ const inventory = (): ActivationSeamInventory => ({
   })),
   gate: {
     id: "declared-stale-seams",
-    command: [
+    command: `${[
       "node_modules/.bin/vitest",
       "run",
       ...DECLARED_STALE_SEAM_PATHS,
       "--maxWorkers=1",
       "--no-file-parallelism",
       "--no-cache",
-    ].join(" "),
+    ].join(" ")} && (cd apps/go-backend && /usr/local/go/bin/go test ./... -count=1 -run TestCandidatePairwiseFourConditionMatchesV119MatchTypeScriptCanonicalBytes|TestCandidateIntegrityCreationV119PostgresPublishesExactlyFourOrNothing|TestCreateExhibitionMatchSetIntegrityPostgresReceiptReconciliationAndPropagation)`,
     status: "passed",
     exitCode: 0,
-    stdoutNormalization: "vitest-stable-v1",
+    stdoutNormalization: "composite-gate-stable-v1",
     stdoutSha256: hash("5"),
     stderrSha256: hash("6"),
-    dependencyExecution: "already-installed-direct-vitest",
+    dependencyExecution: "already-installed-direct-vitest-and-go",
     packageManagerInvoked: false,
     databaseBackedExecution: "required-and-executed",
+    mixedAuthorityDatabaseProof:
+      "v1.19-file-selector-with-v1.17-head-zero-write",
     dependencyPreimageSha256: hash("7"),
     dependencyPostimageSha256: hash("7"),
     dependencyTreeUnchanged: true,
@@ -278,7 +286,9 @@ describe("v1.37 observation v1.19 activation seam audit", () => {
             }
           },
         }),
-      ).toThrow(`${signedConformanceDatabaseEnv} is required`)
+      ).toThrow(
+        `${signedConformanceDatabaseEnv} and ${goBackendDatabaseEnv} are required`,
+      )
       expect(gateCalled).toBe(false)
     } finally {
       if (previous === undefined)
@@ -306,7 +316,7 @@ describe("v1.37 observation v1.19 activation seam audit", () => {
       },
     ])
     expect(result.gate.dependencyExecution).toBe(
-      "already-installed-direct-vitest",
+      "already-installed-direct-vitest-and-go",
     )
     expect(result.gate.packageManagerInvoked).toBe(false)
     expect(result.gate.dependencyTreeUnchanged).toBe(true)
@@ -430,6 +440,12 @@ describe("v1.37 observation v1.19 activation seam audit", () => {
       expect(
         result.gate.command.startsWith("node_modules/.bin/vitest run"),
       ).toBe(true)
+      expect(result.gate.command).toContain(
+        "TestCreateExhibitionMatchSetIntegrityPostgresReceiptReconciliationAndPropagation",
+      )
+      expect(result.gate.mixedAuthorityDatabaseProof).toBe(
+        "v1.19-file-selector-with-v1.17-head-zero-write",
+      )
       expect(result.gate.packageManagerInvoked).toBe(false)
       expect(result.gate.dependencyTreeUnchanged).toBe(true)
       expect(result.mainTree.preStatusSha256).toBe(

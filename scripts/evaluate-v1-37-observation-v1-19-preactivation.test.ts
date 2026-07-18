@@ -110,6 +110,8 @@ describe("v1.37 observation-v1.19 preactivation proof", () => {
         "apps/web/app/matchsets/result-view-model.test.ts",
         "scripts/generate-go-parity-selector-independence.test.ts",
         "scripts/generate-go-parity-fixtures.ts",
+        "apps/go-backend/integrity_creation_test.go",
+        "apps/go-backend/live_backend_run_once_test.go",
       ]),
     )
     expect(proof.seamAudit).toEqual({
@@ -119,7 +121,9 @@ describe("v1.37 observation-v1.19 preactivation proof", () => {
       gateStatus: "passed",
       gateExitCode: 0,
       dependencyTreeUnchanged: true,
-      stdoutNormalization: "vitest-stable-v1",
+      stdoutNormalization: "composite-gate-stable-v1",
+      mixedAuthorityDatabaseProof:
+        "v1.19-file-selector-with-v1.17-head-zero-write",
     })
   })
 

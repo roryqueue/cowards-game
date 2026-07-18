@@ -49,8 +49,9 @@ const PROTECTED_PATHS = Object.freeze([
 
 const SIGNED_CONFORMANCE_DATABASE_ENV =
   "COWARDS_V1_37_SIGNED_CONFORMANCE_TEST_DATABASE_URL"
+const GO_BACKEND_DATABASE_ENV = "COWARDS_GO_BACKEND_TEST_DATABASE_URL"
 
-const GATE_COMMAND = Object.freeze([
+const VITEST_GATE_COMMAND = Object.freeze([
   "node_modules/.bin/vitest",
   "run",
   ...DECLARED_STALE_SEAM_PATHS,
@@ -58,6 +59,20 @@ const GATE_COMMAND = Object.freeze([
   "--no-file-parallelism",
   "--no-cache",
 ])
+
+const GO_GATE_TEST_PATTERN =
+  "TestCandidatePairwiseFourConditionMatchesV119MatchTypeScriptCanonicalBytes|TestCandidateIntegrityCreationV119PostgresPublishesExactlyFourOrNothing|TestCreateExhibitionMatchSetIntegrityPostgresReceiptReconciliationAndPropagation"
+
+const GO_GATE_COMMAND = Object.freeze([
+  "/usr/local/go/bin/go",
+  "test",
+  "./...",
+  "-count=1",
+  "-run",
+  GO_GATE_TEST_PATTERN,
+])
+
+const GATE_COMMAND = `${VITEST_GATE_COMMAND.join(" ")} && (cd apps/go-backend && ${GO_GATE_COMMAND.join(" ")})`
 
 export interface ActivationSeamFinding {
   readonly id: string
@@ -99,12 +114,13 @@ export interface ActivationSeamInventory {
     readonly command: string
     readonly status: "passed" | "failed"
     readonly exitCode: number
-    readonly stdoutNormalization: "vitest-stable-v1"
+    readonly stdoutNormalization: "composite-gate-stable-v1"
     readonly stdoutSha256: string
     readonly stderrSha256: string
-    readonly dependencyExecution: "already-installed-direct-vitest"
+    readonly dependencyExecution: "already-installed-direct-vitest-and-go"
     readonly packageManagerInvoked: false
     readonly databaseBackedExecution: "required-and-executed"
+    readonly mixedAuthorityDatabaseProof: "v1.19-file-selector-with-v1.17-head-zero-write"
     readonly dependencyPreimageSha256: string
     readonly dependencyPostimageSha256: string
     readonly dependencyTreeUnchanged: boolean
@@ -361,23 +377,43 @@ const selectorManifest = (
   }))
 
 const defaultGateRunner = (cwd: string) => {
-  const [command, ...args] = GATE_COMMAND
-  const result = spawnSync(path.join(cwd, command!), args, {
-    cwd,
+  const [vitestCommand, ...vitestArgs] = VITEST_GATE_COMMAND
+  const commonOptions = {
     env: {
       ...process.env,
       PATH: `/usr/local/go/bin:${process.env.PATH ?? ""}`,
       COREPACK_ENABLE_DOWNLOAD_PROMPT: "0",
       npm_config_ignore_scripts: "true",
     },
-    encoding: "buffer",
+    encoding: "buffer" as const,
     maxBuffer: 128 * 1024 * 1024,
     timeout: 10 * 60 * 1_000,
+  }
+  const vitest = spawnSync(path.join(cwd, vitestCommand!), vitestArgs, {
+    cwd,
+    ...commonOptions,
   })
+  const [goCommand, ...goArgs] = GO_GATE_COMMAND
+  const go = spawnSync(goCommand!, goArgs, {
+    cwd: path.join(cwd, "apps/go-backend"),
+    ...commonOptions,
+  })
+  const vitestExitCode = vitest.status ?? 1
+  const goExitCode = go.status ?? 1
   return {
-    exitCode: result.status ?? 1,
-    stdout: result.stdout ?? Buffer.alloc(0),
-    stderr: result.stderr ?? Buffer.from(String(result.error ?? "")),
+    exitCode: vitestExitCode === 0 && goExitCode === 0 ? 0 : 1,
+    stdout: Buffer.concat([
+      Buffer.from("[vitest]\n"),
+      vitest.stdout ?? Buffer.alloc(0),
+      Buffer.from("\n[go]\n"),
+      go.stdout ?? Buffer.alloc(0),
+    ]),
+    stderr: Buffer.concat([
+      Buffer.from(String(vitest.error ?? "")),
+      vitest.stderr ?? Buffer.alloc(0),
+      Buffer.from(String(go.error ?? "")),
+      go.stderr ?? Buffer.alloc(0),
+    ]),
   }
 }
 
@@ -462,13 +498,16 @@ export const validateActivationSeamInventory = (value: unknown): string[] => {
     (inventory.status !== "passed" && inventory.status !== "failed") ||
     (inventory.gate.status !== "passed" &&
       inventory.gate.status !== "failed") ||
-    inventory.gate.command !== GATE_COMMAND.join(" ") ||
-    inventory.gate.stdoutNormalization !== "vitest-stable-v1" ||
+    inventory.gate.command !== GATE_COMMAND ||
+    inventory.gate.stdoutNormalization !== "composite-gate-stable-v1" ||
     !SHA256.test(inventory.gate.stdoutSha256) ||
     !SHA256.test(inventory.gate.stderrSha256) ||
-    inventory.gate.dependencyExecution !== "already-installed-direct-vitest" ||
+    inventory.gate.dependencyExecution !==
+      "already-installed-direct-vitest-and-go" ||
     inventory.gate.packageManagerInvoked !== false ||
     inventory.gate.databaseBackedExecution !== "required-and-executed" ||
+    inventory.gate.mixedAuthorityDatabaseProof !==
+      "v1.19-file-selector-with-v1.17-head-zero-write" ||
     !SHA256.test(inventory.gate.dependencyPreimageSha256) ||
     !SHA256.test(inventory.gate.dependencyPostimageSha256) ||
     inventory.gate.dependencyTreeUnchanged !==
@@ -489,9 +528,12 @@ export const auditV137ObservationV119ActivationSeams = (
   repoRoot: string = root,
   options: ActivationSeamAuditOptions = {},
 ): ActivationSeamInventory => {
-  if (!process.env[SIGNED_CONFORMANCE_DATABASE_ENV]) {
+  if (
+    !process.env[SIGNED_CONFORMANCE_DATABASE_ENV] ||
+    !process.env[GO_BACKEND_DATABASE_ENV]
+  ) {
     throw new Error(
-      `${SIGNED_CONFORMANCE_DATABASE_ENV} is required for the database-backed seam`,
+      `${SIGNED_CONFORMANCE_DATABASE_ENV} and ${GO_BACKEND_DATABASE_ENV} are required for the database-backed seams`,
     )
   }
   const mainPreStatus = assertMainTreeBoundary(repoRoot)
@@ -516,15 +558,17 @@ export const auditV137ObservationV119ActivationSeams = (
   const findings: ActivationSeamFinding[] = []
   let gate: ActivationSeamInventory["gate"] = {
     id: "declared-stale-seams" as const,
-    command: GATE_COMMAND.join(" "),
+    command: GATE_COMMAND,
     status: "failed" as "passed" | "failed",
     exitCode: 1,
-    stdoutNormalization: "vitest-stable-v1" as const,
+    stdoutNormalization: "composite-gate-stable-v1" as const,
     stdoutSha256: sha256(Buffer.alloc(0)),
     stderrSha256: sha256(Buffer.alloc(0)),
-    dependencyExecution: "already-installed-direct-vitest" as const,
+    dependencyExecution: "already-installed-direct-vitest-and-go" as const,
     packageManagerInvoked: false as const,
     databaseBackedExecution: "required-and-executed" as const,
+    mixedAuthorityDatabaseProof:
+      "v1.19-file-selector-with-v1.17-head-zero-write" as const,
     dependencyPreimageSha256: sha256(Buffer.alloc(0)),
     dependencyPostimageSha256: sha256(Buffer.alloc(0)),
     dependencyTreeUnchanged: true,

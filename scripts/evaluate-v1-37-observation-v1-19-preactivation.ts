@@ -111,6 +111,8 @@ const INPUT_PATHS = Object.freeze([
   ".planning/artifacts/v1.37-protected-working-tree-baseline.json",
   "apps/go-backend/arena_set_authority_v1_37_generated.go",
   "apps/go-backend/current_semantic_authority_generated.go",
+  "apps/go-backend/integrity_creation_test.go",
+  "apps/go-backend/live_backend_run_once_test.go",
   "apps/runtime-service/src/production-runtime-config.ts",
   "apps/web/app/matches/replay-ready.ts",
   "apps/web/app/matchsets/result-view-model.ts",
@@ -358,7 +360,8 @@ export interface V137ObservationV119PreactivationProof {
     gateStatus: "passed"
     gateExitCode: 0
     dependencyTreeUnchanged: true
-    stdoutNormalization: "vitest-stable-v1"
+    stdoutNormalization: "composite-gate-stable-v1"
+    mixedAuthorityDatabaseProof: "v1.19-file-selector-with-v1.17-head-zero-write"
   }
   protectedBaseline: {
     status: "verified"
@@ -718,6 +721,8 @@ export const buildV137ObservationV119PreactivationProof = (
       gateExitCode: seamInventory.gate.exitCode,
       dependencyTreeUnchanged: seamInventory.gate.dependencyTreeUnchanged,
       stdoutNormalization: seamInventory.gate.stdoutNormalization,
+      mixedAuthorityDatabaseProof:
+        seamInventory.gate.mixedAuthorityDatabaseProof,
     },
     protectedBaseline: {
       status: "verified",
@@ -930,7 +935,9 @@ export const validateV137ObservationV119PreactivationProof = (
       gateStatus: "passed",
       gateExitCode: 0,
       dependencyTreeUnchanged: true,
-      stdoutNormalization: "vitest-stable-v1",
+      stdoutNormalization: "composite-gate-stable-v1",
+      mixedAuthorityDatabaseProof:
+        "v1.19-file-selector-with-v1.17-head-zero-write",
     })
   ) {
     errors.push("seam audit")
