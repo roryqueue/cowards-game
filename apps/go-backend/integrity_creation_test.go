@@ -329,6 +329,20 @@ func TestCandidateIntegrityCreationV119PostgresPublishesExactlyFourOrNothing(t *
 		return err
 	}
 	matchSetID := namespace + ":match-set:success"
+	var headState string
+	if err := pool.QueryRow(ctx, "select state from semantic_authority_selection_head where singleton=true").Scan(&headState); err != nil {
+		t.Fatal(err)
+	}
+	if currentSemanticAuthorityGenerated().SemanticAuthorityKey == "runtime-v1.19" && headState != "active-v1.19-finalized" {
+		if err := create(matchSetID); err == nil || !strings.Contains(err.Error(), "semantic authority unavailable") {
+			t.Fatalf("mixed file/database authority did not fail closed: %v", err)
+		}
+		var rows int
+		if err := pool.QueryRow(ctx, "select count(*) from set_scenarios where match_set_id=$1", matchSetID).Scan(&rows); err != nil || rows != 0 {
+			t.Fatalf("mixed authority wrote %d candidate scenarios: %v", rows, err)
+		}
+		return
+	}
 	if err := create(matchSetID); err != nil {
 		t.Fatalf("candidate creation failed: %v", err)
 	}
@@ -613,6 +627,20 @@ func TestCreateExhibitionMatchSetIntegrityPostgresReceiptReconciliationAndPropag
 		tracedConcurrentMutation = true
 		return identity, nil
 	}, begin: func(ctx context.Context) (pgx.Tx, error) { return pool.Begin(ctx) }}
+	var headState string
+	if err := pool.QueryRow(ctx, "select state from semantic_authority_selection_head where singleton=true").Scan(&headState); err != nil {
+		t.Fatal(err)
+	}
+	if currentSemanticAuthorityGenerated().SemanticAuthorityKey == "runtime-v1.19" && headState != "active-v1.19-finalized" {
+		if _, err := server.createExhibitionMatchSetWithDependencies(ctx, userID, "smoke-exhibition-v1", revisionIDs, false, dependencies); err == nil || !strings.Contains(err.Error(), "semantic authority unavailable") {
+			t.Fatalf("mixed file/database authority did not fail closed: %v", err)
+		}
+		var rows int
+		if err := pool.QueryRow(ctx, "select count(*) from match_sets").Scan(&rows); err != nil || rows != 0 {
+			t.Fatalf("mixed authority wrote %d MatchSets: %v", rows, err)
+		}
+		return
+	}
 	if _, err := server.createExhibitionMatchSetWithDependencies(ctx, userID, "smoke-exhibition-v1", revisionIDs, false, dependencies); err == nil {
 		t.Fatal("uncertain receipt unexpectedly created a MatchSet")
 	}

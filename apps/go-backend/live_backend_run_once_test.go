@@ -193,10 +193,18 @@ func TestCandidatePairwiseFourConditionMatchesV119MatchTypeScriptCanonicalBytes(
 			t.Fatalf("candidate row %d drifted from TypeScript: %+v", index, match)
 		}
 	}
-	for _, key := range []string{"", "runtime-v1.17", "runtime-v1.18", "runtime-v1.20"} {
+	for _, key := range []string{"runtime-v1.17", "runtime-v1.18", "runtime-v1.20"} {
 		if _, err := generateCandidateFourConditionMatchesV119(key, "match-set:candidate", "arena:smoke:v1", "seed:smoke:001", entrantA, entrantB); err == nil {
 			t.Fatalf("candidate scheduler admitted semantic key %q", key)
 		}
+	}
+	blankMatches, blankErr := generateCandidateFourConditionMatchesV119("", "match-set:candidate", "arena:smoke:v1", "seed:smoke:001", entrantA, entrantB)
+	if currentSemanticAuthorityGenerated().SemanticAuthorityKey == "runtime-v1.19" {
+		if blankErr != nil || !reflect.DeepEqual(blankMatches, matches) {
+			t.Fatalf("current v1.19 scheduler did not admit the default key: %v", blankErr)
+		}
+	} else if blankErr == nil {
+		t.Fatal("inactive v1.19 candidate became the default scheduler")
 	}
 	if _, err := generateCandidateFourConditionMatchesV119("runtime-v1.19", "match-set:candidate", "arena:open-field:v1", "seed:smoke:001", entrantA, entrantB); err == nil {
 		t.Fatal("historical Open Field alias became schedulable")
@@ -327,7 +335,11 @@ func TestCandidatePairwiseStagingPreservesClosedCurrentGoScheduler(t *testing.T)
 	if _, err := candidateSchedulingAuthorityV119ForCurrent("", simulatedCurrentSemanticAuthorityV119()); err != nil {
 		t.Fatalf("simulated v1.19 current did not become default: %v", err)
 	}
-	if _, err := candidateSchedulingAuthorityV119ForCurrent("", current); err == nil {
+	if _, err := candidateSchedulingAuthorityV119ForCurrent("", current); current.SemanticAuthorityKey == "runtime-v1.19" {
+		if err != nil {
+			t.Fatalf("selected v1.19 authority did not become default: %v", err)
+		}
+	} else if err == nil {
 		t.Fatal("inactive v1.19 candidate became default while v1.17 is current")
 	}
 	entrants := []map[string]any{
@@ -347,7 +359,7 @@ func TestCandidatePairwiseStagingPreservesClosedCurrentGoScheduler(t *testing.T)
 		},
 	}
 	if got := generatePairwiseMatches("match-set:current", "smoke-v1", entrants); !reflect.DeepEqual(got, want) {
-		t.Fatalf("selected v1.17 scheduler changed:\nwant=%#v\n got=%#v", want, got)
+		t.Fatalf("legacy v1.17 scheduler changed:\nwant=%#v\n got=%#v", want, got)
 	}
 	for _, arena := range competitionArenaDefinitions() {
 		_, hasCandidateKey := arena["semanticAuthorityKey"]
