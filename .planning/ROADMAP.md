@@ -442,11 +442,15 @@ Plans:
 
 - [x] 260-43-PLAN.md — Pin immutable Go parity Chronicle generation to explicit v1.17 dispatch and extend readiness coverage.
 
-**Wave 27 *(blocked on Wave 26 completion)* — atomic activation**
+**Wave 27 *(blocked on Wave 26 completion)* — deterministic activation-gate timing**
+
+- [ ] 260-44-PLAN.md — Give the cryptographic receipt/deep-clone persistence assertion its established bounded integration-test timeout.
+
+**Wave 28 *(blocked on Wave 27 completion)* — atomic activation**
 
 - [ ] 260-14-PLAN.md — Activate five selector files and one transactional database selection head in one proved commit.
 
-**Wave 28 *(blocked on Wave 27 completion)* — integrated closure**
+**Wave 29 *(blocked on Wave 28 completion)* — integrated closure**
 
 - [ ] 260-15-PLAN.md — Close Phase 260 with one executable proof and permanent drift monitors.
 
