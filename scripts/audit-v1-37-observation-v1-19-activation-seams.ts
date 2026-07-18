@@ -46,6 +46,9 @@ const PROTECTED_PATHS = Object.freeze([
   "CowardsGameSpec_Full_Consolidated_v1.md",
 ])
 
+const SIGNED_CONFORMANCE_DATABASE_ENV =
+  "COWARDS_V1_37_SIGNED_CONFORMANCE_TEST_DATABASE_URL"
+
 const GATE_COMMAND = Object.freeze([
   "node_modules/.bin/vitest",
   "run",
@@ -100,6 +103,7 @@ export interface ActivationSeamInventory {
     readonly stderrSha256: string
     readonly dependencyExecution: "already-installed-direct-vitest"
     readonly packageManagerInvoked: false
+    readonly databaseBackedExecution: "required-and-executed"
     readonly dependencyPreimageSha256: string
     readonly dependencyPostimageSha256: string
     readonly dependencyTreeUnchanged: boolean
@@ -463,6 +467,7 @@ export const validateActivationSeamInventory = (value: unknown): string[] => {
     !SHA256.test(inventory.gate.stderrSha256) ||
     inventory.gate.dependencyExecution !== "already-installed-direct-vitest" ||
     inventory.gate.packageManagerInvoked !== false ||
+    inventory.gate.databaseBackedExecution !== "required-and-executed" ||
     !SHA256.test(inventory.gate.dependencyPreimageSha256) ||
     !SHA256.test(inventory.gate.dependencyPostimageSha256) ||
     inventory.gate.dependencyTreeUnchanged !==
@@ -483,6 +488,11 @@ export const auditV137ObservationV119ActivationSeams = (
   repoRoot: string = root,
   options: ActivationSeamAuditOptions = {},
 ): ActivationSeamInventory => {
+  if (!process.env[SIGNED_CONFORMANCE_DATABASE_ENV]) {
+    throw new Error(
+      `${SIGNED_CONFORMANCE_DATABASE_ENV} is required for the database-backed seam`,
+    )
+  }
   const mainPreStatus = assertMainTreeBoundary(repoRoot)
   const mainDependencyPreimage = dependencyControlDigest(repoRoot)
   const baseline = JSON.parse(
@@ -513,6 +523,7 @@ export const auditV137ObservationV119ActivationSeams = (
     stderrSha256: sha256(Buffer.alloc(0)),
     dependencyExecution: "already-installed-direct-vitest" as const,
     packageManagerInvoked: false as const,
+    databaseBackedExecution: "required-and-executed" as const,
     dependencyPreimageSha256: sha256(Buffer.alloc(0)),
     dependencyPostimageSha256: sha256(Buffer.alloc(0)),
     dependencyTreeUnchanged: true,
