@@ -127,6 +127,13 @@
       "selectionAuthority": "packages/spec/src/versions.ts"
     },
     {
+      "path": "packages/runtime-js/src/revision-v1-19.ts",
+      "role": "runtime-adapter",
+      "lifecycle": "candidate_evidence",
+      "gate": "immutable candidate, fixture, or test evidence only; never current by declaration",
+      "selectionAuthority": null
+    },
+    {
       "path": "packages/runtime-js/src/revision.ts",
       "role": "runtime-adapter",
       "lifecycle": "selected_by_pointer",
@@ -258,6 +265,13 @@
       "lifecycle": "selected_by_pointer",
       "gate": "selected-current runtime execution service schema from the authoritative activation pointer and DB-free boundary",
       "selectionAuthority": "apps/runtime-service/src/runtime-config.ts"
+    },
+    {
+      "path": "apps/runtime-service/src/revalidate-strategy-revision-v1-19.ts",
+      "role": "runtime-service",
+      "lifecycle": "candidate_evidence",
+      "gate": "immutable candidate, fixture, or test evidence only; never current by declaration",
+      "selectionAuthority": null
     },
     {
       "path": "apps/runtime-service/src/runtime-config.ts",

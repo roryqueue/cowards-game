@@ -1350,6 +1350,87 @@ export interface TypeScriptBackendRuntimeSelectionOverlayV137 {
   }[]
 }
 
+type RuntimeSurfaceLifecycleV137 = "selected_by_pointer" | "candidate_evidence"
+
+const runtimeContractMemberName = (
+  member: ts.TypeElement | ts.ObjectLiteralElementLike,
+): string | null => {
+  if (!ts.isPropertySignature(member) && !ts.isPropertyAssignment(member)) {
+    return null
+  }
+  const { name } = member
+  return ts.isIdentifier(name) || ts.isStringLiteral(name) ? name.text : null
+}
+
+const runtimeContractMemberLiteral = (
+  member: ts.TypeElement | ts.ObjectLiteralElementLike,
+): string | boolean | null => {
+  const value = ts.isPropertyAssignment(member)
+    ? member.initializer
+    : ts.isPropertySignature(member)
+      ? member.type
+      : undefined
+  if (value === undefined) return null
+  if (ts.isStringLiteral(value)) return value.text
+  if (value.kind === ts.SyntaxKind.FalseKeyword) return false
+  if (value.kind === ts.SyntaxKind.TrueKeyword) return true
+  if (ts.isLiteralTypeNode(value)) {
+    if (ts.isStringLiteral(value.literal)) return value.literal.text
+    if (value.literal.kind === ts.SyntaxKind.FalseKeyword) return false
+    if (value.literal.kind === ts.SyntaxKind.TrueKeyword) return true
+  }
+  return null
+}
+
+const declaresInactiveCandidateContractV137 = (sourceText: string): boolean => {
+  const sourceFile = ts.createSourceFile(
+    "runtime-surface.ts",
+    sourceText,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TS,
+  )
+  let declared = false
+  const visit = (node: ts.Node): void => {
+    const members = ts.isInterfaceDeclaration(node)
+      ? node.members
+      : ts.isTypeLiteralNode(node)
+        ? node.members
+        : ts.isObjectLiteralExpression(node)
+          ? node.properties
+          : undefined
+    if (members !== undefined) {
+      let candidateStatus = false
+      let currentFalse = false
+      for (const member of members) {
+        const name = runtimeContractMemberName(member)
+        const literal = runtimeContractMemberLiteral(member)
+        if (name === "candidateStatus" && literal === "inactive-candidate") {
+          candidateStatus = true
+        }
+        if (name === "current" && literal === false) currentFalse = true
+      }
+      if (candidateStatus && currentFalse) declared = true
+    }
+    if (!declared) ts.forEachChild(node, visit)
+  }
+  visit(sourceFile)
+  return declared
+}
+
+export const classifyRuntimeSurfaceLifecycleV137 = (
+  surfacePath: string,
+  sourceText: string,
+): RuntimeSurfaceLifecycleV137 =>
+  surfacePath.includes("/candidate-") ||
+  surfacePath.includes("fixture") ||
+  surfacePath.includes(".test-support.") ||
+  surfacePath.endsWith(".test.ts") ||
+  surfacePath.endsWith(".test.tsx") ||
+  declaresInactiveCandidateContractV137(sourceText)
+    ? "candidate_evidence"
+    : "selected_by_pointer"
+
 const sha256File = (absolutePath: string): string =>
   createHash("sha256").update(readFileSync(absolutePath)).digest("hex")
 
@@ -1380,18 +1461,15 @@ export const generateTypeScriptBackendRuntimeSelectionOverlayV137 = (
         surface.role === "runtime-adapter",
     )
     .map((surface) => {
-      const candidateEvidence =
-        surface.path.includes("/candidate-") ||
-        surface.path.includes("fixture") ||
-        surface.path.includes(".test-support.") ||
-        surface.path.endsWith(".test.ts") ||
-        surface.path.endsWith(".test.tsx")
+      const lifecycle = classifyRuntimeSurfaceLifecycleV137(
+        surface.path,
+        readFileSync(path.join(root, surface.path), "utf8"),
+      )
+      const candidateEvidence = lifecycle === "candidate_evidence"
       return {
         path: surface.path,
         role: surface.role,
-        lifecycle: candidateEvidence
-          ? "candidate_evidence"
-          : "selected_by_pointer",
+        lifecycle,
         gate: candidateEvidence
           ? "immutable candidate, fixture, or test evidence only; never current by declaration"
           : surface.role === "runtime-service"
