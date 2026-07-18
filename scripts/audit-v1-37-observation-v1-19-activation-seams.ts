@@ -232,7 +232,16 @@ const dependencyControlDigest = (repoRoot: string): string => {
   return sha256(JSON.stringify({ trackedControls, nodeModules }))
 }
 
-const dependencyTreeDigest = (repoRoot: string): string => {
+const isDependencyExecutionCachePath = (relativePath: string): boolean => {
+  const segments = relativePath.split(path.sep)
+  return segments.some(
+    (segment, index) =>
+      segment === "node_modules" &&
+      (segments[index + 1] === ".vite" || segments[index + 1] === ".cache"),
+  )
+}
+
+export const dependencyTreeDigest = (repoRoot: string): string => {
   const digest = createHash("sha256")
   const updateField = (value: string): void => {
     digest.update(`${Buffer.byteLength(value, "utf8")}:`)
@@ -241,6 +250,9 @@ const dependencyTreeDigest = (repoRoot: string): string => {
   const visit = (absolutePath: string): void => {
     const relativePath = path.relative(repoRoot, absolutePath)
     const stat = lstatSync(absolutePath)
+    if (stat.isDirectory() && isDependencyExecutionCachePath(relativePath)) {
+      return
+    }
     if (stat.isSymbolicLink()) {
       updateField("link")
       updateField(relativePath)

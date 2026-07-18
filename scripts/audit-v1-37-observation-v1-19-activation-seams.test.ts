@@ -1,7 +1,15 @@
 import { Buffer } from "node:buffer"
 import { spawnSync } from "node:child_process"
 import { createHash } from "node:crypto"
-import { existsSync, readFileSync, writeFileSync } from "node:fs"
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs"
+import { tmpdir } from "node:os"
 import path from "node:path"
 import { describe, expect, it } from "vitest"
 import {
@@ -12,6 +20,7 @@ import {
   DECLARED_STALE_SEAM_PATHS,
   STALE_SEAM_INVENTORY_PATH,
   auditV137ObservationV119ActivationSeams,
+  dependencyTreeDigest,
   normalizeVitestGateStdout,
   validateActivationSeamInventory,
   type ActivationSeamInventory,
@@ -110,6 +119,27 @@ describe("v1.37 observation v1.19 activation seam audit", () => {
     expect(first).not.toEqual(changed)
     expect(first.toString("utf8")).toContain("<clone-root>")
     expect(first.toString("utf8")).toContain("<duration>")
+  })
+
+  it("excludes execution caches but binds installed dependency bytes", () => {
+    const root = mkdtempSync(path.join(tmpdir(), "cowards-seam-deps-"))
+    const packageFile = path.join(root, "node_modules/example/index.js")
+    const cacheFile = path.join(root, "node_modules/.vite/vitest/results.json")
+    try {
+      mkdirSync(path.dirname(packageFile), { recursive: true })
+      mkdirSync(path.dirname(cacheFile), { recursive: true })
+      writeFileSync(packageFile, "export const version = 1\n")
+      writeFileSync(cacheFile, '{"duration":1}\n')
+      const baseline = dependencyTreeDigest(root)
+
+      writeFileSync(cacheFile, '{"duration":999}\n')
+      expect(dependencyTreeDigest(root)).toBe(baseline)
+
+      writeFileSync(packageFile, "export const version = 2\n")
+      expect(dependencyTreeDigest(root)).not.toBe(baseline)
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
   })
 
   it("accepts only the exact five-selector, four-seam, zero-finding contract", () => {
