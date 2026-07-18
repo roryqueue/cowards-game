@@ -40,6 +40,7 @@ export const DECLARED_STALE_SEAM_PATHS = Object.freeze([
   "packages/spec/src/runtime-invocation-v1-17.test.ts",
   "packages/spec/src/spec.test.ts",
   "scripts/generate-go-parity-selector-independence.test.ts",
+  "apps/runtime-service/src/four-language-conformance-runner.test.ts",
 ])
 
 const PROTECTED_PATHS = Object.freeze([

@@ -6,6 +6,7 @@ import {
   mkdtemp,
   mkdir,
   readFile,
+  realpath,
   rm,
   writeFile,
 } from "node:fs/promises"
@@ -464,7 +465,67 @@ describe("v1.37 observation v1.19 activation coordinator", () => {
       ),
     ).rejects.toMatchObject({ code: "ENOENT" })
     expect(cleanupLockClient.release).toHaveBeenCalled()
-  }, 30_000)
+  }, 120_000)
+
+  it("resolves workspace dependencies inside the disposable candidate checkout", async () => {
+    const root = process.cwd()
+    const activationId =
+      "activation:phase260:plan46:candidate-dependency-containment"
+    const cleanupLockClient = {
+      query: vi.fn(async (sql: string) => ({
+        rows: [
+          sql.includes("pg_try_advisory_lock")
+            ? { acquired: true }
+            : { unlocked: true },
+        ],
+      })),
+      release: vi.fn(),
+    }
+    let candidateRoot = ""
+    let candidateGolden = ""
+    const liveGolden = await realpath(
+      path.join(root, "apps/runtime-service/node_modules/@cowards/golden"),
+    )
+    const adapter = createProductionActivationAdapter(
+      root,
+      {
+        connect: vi.fn(async () => cleanupLockClient),
+      } as never,
+      {
+        gateProcessRunner: async (_command, _args, cwd) => {
+          candidateRoot = cwd
+          candidateGolden = await realpath(
+            path.join(
+              cwd,
+              "apps/runtime-service/node_modules/@cowards/golden",
+            ),
+          )
+          return { stdout: "candidate dependency contained", stderr: "" }
+        },
+      },
+    )
+    const parentHead = await adapter.gitHead()
+    await adapter.withCandidateWorkspace(
+      activationId,
+      parentHead,
+      async (candidate) => candidate.runGate("engine"),
+    )
+
+    expect(candidateRoot).not.toBe("")
+    expect(candidateGolden).not.toBe(liveGolden)
+    const relative = path.relative(candidateRoot, candidateGolden)
+    expect(relative.startsWith("..")).toBe(false)
+    expect(path.isAbsolute(relative)).toBe(false)
+    await expect(
+      access(
+        path.join(
+          root,
+          ".git/cowards-activation-candidates",
+          activationCandidateWorkspaceKey(activationId),
+        ),
+      ),
+    ).rejects.toMatchObject({ code: "ENOENT" })
+  }, 120_000)
 
   it("executes the exact runtime-service production gate", async () => {
     let executed = ""

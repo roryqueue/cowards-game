@@ -4,13 +4,16 @@ import { execFile as execFileCallback, fork } from "node:child_process"
 import { createHash, randomUUID } from "node:crypto"
 import { createRequire } from "node:module"
 import {
+  cp,
+  lstat,
   mkdir,
   readFile,
+  readlink,
   readdir,
+  realpath,
   rename,
   rm,
   rmdir,
-  symlink,
   writeFile,
 } from "node:fs/promises"
 import path from "node:path"
@@ -1779,14 +1782,59 @@ const discoverNodeModulePaths = async (
   return paths
 }
 
-const linkWorkspaceNodeModules = async (
+const assertCandidateDependencyLinks = async (
+  candidateRoot: string,
+  current: string,
+): Promise<void> => {
+  for (const entry of await readdir(current, { withFileTypes: true })) {
+    const absolute = path.join(current, entry.name)
+    const stat = await lstat(absolute)
+    if (stat.isSymbolicLink()) {
+      const resolved = await realpath(absolute)
+      const relative = path.relative(candidateRoot, resolved)
+      if (relative.startsWith("..") || path.isAbsolute(relative)) {
+        throw new Error(
+          `Candidate dependency escaped the disposable checkout: ${await readlink(absolute)}`,
+        )
+      }
+      continue
+    }
+    if (stat.isDirectory()) {
+      await assertCandidateDependencyLinks(candidateRoot, absolute)
+    }
+  }
+}
+
+const copyNodeModules = async (source: string, target: string): Promise<void> => {
+  await mkdir(path.dirname(target), { recursive: true })
+  if (process.platform === "darwin") {
+    await execFile("cp", ["-cR", "-P", source, target])
+    return
+  }
+  if (process.platform === "linux") {
+    await execFile("cp", ["-a", "--reflink=auto", source, target])
+    return
+  }
+  await cp(source, target, {
+    recursive: true,
+    dereference: false,
+    verbatimSymlinks: true,
+  })
+}
+
+const materializeCandidateNodeModules = async (
   sourceRoot: string,
   candidateRoot: string,
 ): Promise<void> => {
+  const targets: string[] = []
   for (const source of await discoverNodeModulePaths(sourceRoot)) {
     const target = path.join(candidateRoot, path.relative(sourceRoot, source))
-    await mkdir(path.dirname(target), { recursive: true })
-    await symlink(source, target, "junction")
+    await copyNodeModules(source, target)
+    targets.push(target)
+  }
+  const canonicalCandidateRoot = await realpath(candidateRoot)
+  for (const target of targets) {
+    await assertCandidateDependencyLinks(canonicalCandidateRoot, target)
   }
 }
 
@@ -1971,7 +2019,7 @@ export const createProductionActivationAdapter = (
           ["checkout", "--quiet", "--detach", parentHead],
           candidate.root,
         )
-        await linkWorkspaceNodeModules(repoRoot, candidate.root)
+        await materializeCandidateNodeModules(repoRoot, candidate.root)
         return await operation(
           createProductionActivationAdapter(candidate.root, pool, {
             ...options,

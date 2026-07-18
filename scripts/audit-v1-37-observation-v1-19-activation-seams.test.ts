@@ -168,10 +168,10 @@ describe("v1.37 observation v1.19 activation seam audit", () => {
     }
   })
 
-  it("accepts only the exact five-selector, eight-seam, zero-finding contract", () => {
+  it("accepts only the exact five-selector, nine-seam, zero-finding contract", () => {
     expect(validateActivationSeamInventory(inventory())).toEqual([])
     expect(ACTIVATION_SELECTOR_PATHS).toHaveLength(5)
-    expect(DECLARED_STALE_SEAM_PATHS).toHaveLength(8)
+    expect(DECLARED_STALE_SEAM_PATHS).toHaveLength(9)
     expect(ACTIVATION_SELECTOR_PATHS).not.toContain(".planning/config.json")
     expect(ACTIVATION_SELECTOR_PATHS).not.toContain(
       "CowardsGameSpec_Full_Consolidated_v1.md",
