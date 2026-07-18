@@ -434,11 +434,15 @@ Plans:
 
 - [x] 260-33-PLAN.md — Prove zero stale seams and regenerate the exact preactivation proof.
 
-**Wave 25 *(blocked on Wave 24 completion)* — atomic activation**
+**Wave 25 *(blocked on Wave 24 completion)* — bounded candidate-gate compatibility repair**
+
+- [ ] 260-42-PLAN.md — Repair stale historical/current spec assertions, expand the seam inventory, and re-prove readiness without production changes.
+
+**Wave 26 *(blocked on Wave 25 completion)* — atomic activation**
 
 - [ ] 260-14-PLAN.md — Activate five selector files and one transactional database selection head in one proved commit.
 
-**Wave 26 *(blocked on Wave 25 completion)* — integrated closure**
+**Wave 27 *(blocked on Wave 26 completion)* — integrated closure**
 
 - [ ] 260-15-PLAN.md — Close Phase 260 with one executable proof and permanent drift monitors.
 
