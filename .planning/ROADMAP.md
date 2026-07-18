@@ -448,7 +448,7 @@ Plans:
 
 **Wave 28 *(blocked on Wave 27 completion)* — deterministic queued-job eligibility time**
 
-- [ ] 260-45-PLAN.md — Derive the PostgreSQL claim time from the persisted job `run_after` rather than an earlier wall-clock sample.
+- [x] 260-45-PLAN.md — Derive the PostgreSQL claim time from the persisted job `run_after` rather than an earlier wall-clock sample.
 
 **Wave 29 *(blocked on Wave 28 completion)* — atomic activation**
 
