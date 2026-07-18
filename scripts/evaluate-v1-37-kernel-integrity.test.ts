@@ -156,9 +156,7 @@ describe("v1.37 Phase 257 kernel-integrity evaluator", () => {
       resolveV137HistoricalEvidenceFiles(evidence, () => historicalBytes),
     ).toEqual(evidence)
     expect(
-      createHash("sha256")
-        .update("later current-source bytes")
-        .digest("hex"),
+      createHash("sha256").update("later current-source bytes").digest("hex"),
     ).not.toBe(historicalSha256)
     expect(() =>
       resolveV137HistoricalEvidenceFiles(evidence, () =>
@@ -167,7 +165,7 @@ describe("v1.37 Phase 257 kernel-integrity evaluator", () => {
     ).toThrow("Phase 257 historical evidence drifted")
   })
 
-  it("parses only explicit write-with-browser or pure-check modes", () => {
+  it("parses only explicit fresh-write, receipt-refresh, or pure-check modes", () => {
     expect(parseV137KernelIntegrityArgs(["--write", "--run-browser"])).toEqual({
       mode: "write",
       runBrowser: true,
@@ -176,10 +174,15 @@ describe("v1.37 Phase 257 kernel-integrity evaluator", () => {
       mode: "check",
       runBrowser: false,
     })
+    expect(parseV137KernelIntegrityArgs(["--refresh"])).toEqual({
+      mode: "refresh",
+      runBrowser: false,
+    })
     for (const args of [
       [],
       ["--write"],
       ["--run-browser"],
+      ["--refresh", "--run-browser"],
       ["--write", "--check", "--run-browser"],
       ["--check", "--unknown"],
     ]) {
@@ -187,11 +190,12 @@ describe("v1.37 Phase 257 kernel-integrity evaluator", () => {
     }
   })
 
-  it("keeps check pure and gives write sole ownership of one fresh browser run", () => {
+  it("keeps check pure, refresh browser-inert, and fresh write explicit", () => {
     const checkEvents: string[] = []
     expect(
       runV137KernelIntegrityCli(["--check"], {
         write: () => checkEvents.push("write"),
+        refresh: () => checkEvents.push("refresh"),
         check: () => {
           checkEvents.push("check")
           return []
@@ -200,10 +204,24 @@ describe("v1.37 Phase 257 kernel-integrity evaluator", () => {
     ).toBe(0)
     expect(checkEvents).toEqual(["check"])
 
+    const refreshEvents: string[] = []
+    expect(
+      runV137KernelIntegrityCli(["--refresh"], {
+        write: () => refreshEvents.push("write-browser"),
+        refresh: () => refreshEvents.push("refresh-receipts"),
+        check: () => {
+          refreshEvents.push("check")
+          return []
+        },
+      }),
+    ).toBe(0)
+    expect(refreshEvents).toEqual(["refresh-receipts", "check"])
+
     const writeEvents: string[] = []
     expect(
       runV137KernelIntegrityCli(["--write", "--run-browser"], {
         write: () => writeEvents.push("write-browser-once"),
+        refresh: () => writeEvents.push("refresh"),
         check: () => {
           writeEvents.push("check")
           return []

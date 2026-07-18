@@ -218,11 +218,11 @@
       },
       {
         "path": "apps/go-backend/semantic_integrity_test.go",
-        "sha256": "ce31dd73e569f22c53ec127589d380ce7f14cfeb2e1060d15aa86c47ec021637"
+        "sha256": "7178ee8012d6ea6f7ef2157b33f57995d0b590997dbe6dc3baea697dd2f5ace4"
       },
       {
         "path": "apps/runtime-service/src/execute-match.ts",
-        "sha256": "1321e9d2c6a1520a58d1a8cf72d20bf3f549007f5af41ee512ef6e2c3cc5ff04"
+        "sha256": "f0f1435436f1524e0bf36938b0b420d8ecd88665eee804901e4b98b2a5adfddb"
       },
       {
         "path": "apps/runtime-service/src/semantic-receipt.ts",
@@ -262,7 +262,7 @@
       },
       {
         "path": "packages/spec/src/match-execution-contract.ts",
-        "sha256": "6b56e3ff020698a1c9d78cf533f8fe58888c7653e4b42cff1c3ebf9264b68b4c"
+        "sha256": "7fb2f6aa0f73eb0bcb0a8a3d71f9bbc9f0f4779c91656993d3ea0c561d25bec1"
       },
       {
         "path": "packages/spec/src/runtime-execution-service.ts",

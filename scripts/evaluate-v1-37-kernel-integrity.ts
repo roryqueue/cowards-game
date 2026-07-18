@@ -191,7 +191,7 @@ const comparePaths = (left: string, right: string): number =>
 
 export const parseV137KernelIntegrityArgs = (
   args: readonly string[],
-): { mode: "write" | "check"; runBrowser: boolean } => {
+): { mode: "write" | "refresh" | "check"; runBrowser: boolean } => {
   if (
     args.length === 2 &&
     args[0] === "--write" &&
@@ -199,10 +199,13 @@ export const parseV137KernelIntegrityArgs = (
   ) {
     return { mode: "write", runBrowser: true }
   }
+  if (args.length === 1 && args[0] === "--refresh") {
+    return { mode: "refresh", runBrowser: false }
+  }
   if (args.length === 1 && args[0] === "--check") {
     return { mode: "check", runBrowser: false }
   }
-  throw new Error("usage: --write --run-browser | --check")
+  throw new Error("usage: --write --run-browser | --refresh | --check")
 }
 
 const collectRawTests = (
@@ -803,15 +806,11 @@ const readRepoBytesAtCommit = (
   commit: string,
   repoPath: string,
 ): Buffer => {
-  const historical = spawnSync(
-    "git",
-    ["show", `${commit}:${repoPath}`],
-    {
-      cwd: repoRoot,
-      encoding: "buffer",
-      maxBuffer: 16 * 1024 * 1024,
-    },
-  )
+  const historical = spawnSync("git", ["show", `${commit}:${repoPath}`], {
+    cwd: repoRoot,
+    encoding: "buffer",
+    maxBuffer: 16 * 1024 * 1024,
+  })
   if (historical.status !== 0 || !Buffer.isBuffer(historical.stdout)) {
     throw new Error(`Phase 257 historical evidence is unavailable: ${repoPath}`)
   }
@@ -1158,8 +1157,69 @@ export const writeV137KernelIntegrityArtifacts = (
   if (findings.length > 0) throw new Error(findings.join("; "))
 }
 
+export const refreshV137KernelIntegrityArtifacts = (
+  repoRoot = defaultRepoRoot,
+): void => {
+  const exactCoreResult = checkV137Phase257CoreRulesResult(repoRoot)
+  if (exactCoreResult.findings.length > 0) {
+    throw new Error(
+      `Phase 257 core result exact validation failed: ${exactCoreResult.findings
+        .map(({ code }) => code)
+        .join(", ")}`,
+    )
+  }
+  const browserPath = path.join(repoRoot, v137BrowserPlaywrightArtifactPath)
+  const browserText = readFileSync(browserPath, "utf8")
+  const browserReceipt = JSON.parse(browserText) as V137BrowserPlaywrightReceipt
+  const browserFindings = validateV137BrowserPlaywrightReceipt(browserReceipt)
+  if (browserFindings.length > 0) throw new Error(browserFindings.join("; "))
+  if (browserText !== canonicalJson(browserReceipt)) {
+    throw new Error("browser receipt JSON is not canonical")
+  }
+  assertV137IntegrityPublicPayload(browserReceipt)
+  assertPublicOutputLeakSafe(browserReceipt, "Phase 257 browser receipt")
+
+  const priorProof = JSON.parse(
+    readFileSync(
+      path.join(repoRoot, v137KernelIntegrityArtifactPaths.json),
+      "utf8",
+    ),
+  ) as V137KernelIntegrityProof
+  const priorFindings = validateV137KernelIntegrityProof(priorProof)
+  if (priorFindings.length > 0) throw new Error(priorFindings.join("; "))
+
+  const { inputFiles, manifestFiles } = loadProofInputs(repoRoot)
+  const proof = createV137KernelIntegrityProof({
+    browserReceipt,
+    browserReceiptSha256: hashBytes(browserText),
+    workingCopyReceipt: priorProof.workingCopy,
+    inputFiles,
+    manifestFiles,
+  })
+  const proofFindings = validateV137KernelIntegrityProof(proof)
+  if (proofFindings.length > 0) throw new Error(proofFindings.join("; "))
+  const json = renderV137KernelIntegrityProofJson(proof)
+  const markdown = renderV137KernelIntegrityProofMarkdown(proof)
+  assertV137IntegrityPublicPayload(proof)
+  assertV137IntegrityPublicPayload({ markdown })
+  assertPublicOutputLeakSafe(proof, "Phase 257 kernel proof")
+  writeFileSync(
+    path.join(repoRoot, v137KernelIntegrityArtifactPaths.json),
+    json,
+    "utf8",
+  )
+  writeFileSync(
+    path.join(repoRoot, v137KernelIntegrityArtifactPaths.markdown),
+    markdown,
+    "utf8",
+  )
+  const findings = checkV137KernelIntegrityArtifacts(repoRoot)
+  if (findings.length > 0) throw new Error(findings.join("; "))
+}
+
 export interface V137KernelIntegrityCliRuntime {
   write: () => void
+  refresh: () => void
   check: () => readonly string[]
 }
 
@@ -1167,11 +1227,13 @@ export const runV137KernelIntegrityCli = (
   args: readonly string[],
   runtime: V137KernelIntegrityCliRuntime = {
     write: () => writeV137KernelIntegrityArtifacts(),
+    refresh: () => refreshV137KernelIntegrityArtifacts(),
     check: () => checkV137KernelIntegrityArtifacts(),
   },
 ): number => {
   const parsed = parseV137KernelIntegrityArgs(args)
   if (parsed.mode === "write") runtime.write()
+  if (parsed.mode === "refresh") runtime.refresh()
   const findings = runtime.check()
   if (findings.length > 0) throw new Error(findings.join("\n"))
   return 0
