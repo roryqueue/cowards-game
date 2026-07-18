@@ -412,7 +412,22 @@ describe("v1.37 observation v1.19 activation coordinator", () => {
   it("runs an exact engine gate in a disposable clone without live-tree drift", async () => {
     const root = process.cwd()
     const activationId = "activation:phase260:plan31:candidate-engine-test"
-    const adapter = createProductionActivationAdapter(root, {} as never)
+    const cleanupLockClient = {
+      query: vi.fn(async (sql: string) => ({
+        rows: [
+          sql.includes("pg_try_advisory_lock")
+            ? { acquired: true }
+            : { unlocked: true },
+        ],
+      })),
+      release: vi.fn(),
+    }
+    const adapter = createProductionActivationAdapter(
+      root,
+      {
+        connect: vi.fn(async () => cleanupLockClient),
+      } as never,
+    )
     const parentHead = await adapter.gitHead()
     const before = await execFile("git", ["status", "--porcelain=v1", "-z"], {
       cwd: root,
@@ -448,6 +463,7 @@ describe("v1.37 observation v1.19 activation coordinator", () => {
         ),
       ),
     ).rejects.toMatchObject({ code: "ENOENT" })
+    expect(cleanupLockClient.release).toHaveBeenCalled()
   }, 30_000)
 
   it("executes the exact runtime-service production gate", async () => {

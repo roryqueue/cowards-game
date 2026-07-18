@@ -1,17 +1,26 @@
 #!/usr/bin/env node
 import { Buffer } from "node:buffer"
 import { spawn } from "node:child_process"
+import { createRequire } from "node:module"
 import process from "node:process"
 import { setTimeout } from "node:timers"
+import { URL } from "node:url"
 
 const MAX_OUTPUT_BYTES = 64 * 1024 * 1024
 
 let configuration
 let commandProcess
+let livenessClient
 let released = false
 let shuttingDown = false
+let terminalReported = false
 let stdout = Buffer.alloc(0)
 let stderr = Buffer.alloc(0)
+
+const requireFromPersistence = createRequire(
+  new URL("../packages/persistence/package.json", import.meta.url),
+)
+const { Client } = requireFromPersistence("pg")
 
 const exactKeys = (value, keys) => {
   if (value === null || typeof value !== "object" || Array.isArray(value)) {
@@ -32,6 +41,8 @@ const validConfiguration = (value) =>
     "args",
     "cwd",
     "environment",
+    "databaseUrl",
+    "advisoryLockKey",
     "coordinatorNonce",
     "launcherNonce",
   ]) &&
@@ -47,6 +58,12 @@ const validConfiguration = (value) =>
   Object.values(value.environment).every(
     (entry) => typeof entry === "string",
   ) &&
+  typeof value.databaseUrl === "string" &&
+  value.databaseUrl.length > 0 &&
+  typeof value.advisoryLockKey === "string" &&
+  /^-?(?:0|[1-9][0-9]*)$/.test(value.advisoryLockKey) &&
+  BigInt(value.advisoryLockKey) >= -(1n << 63n) &&
+  BigInt(value.advisoryLockKey) < 1n << 63n &&
   typeof value.coordinatorNonce === "string" &&
   value.coordinatorNonce.length > 0 &&
   typeof value.launcherNonce === "string" &&
@@ -85,15 +102,11 @@ const appendOutput = (current, chunk) => {
 }
 
 const fail = async (error) => {
-  if (shuttingDown) return
-  shuttingDown = true
+  if (shuttingDown || terminalReported) return
+  terminalReported = true
   await send({ type: "error", message: serializeError(error) })
-  if (process.connected) process.disconnect()
-  if (commandProcess !== undefined) {
-    beginOwnProcessGroupTermination()
-    return
-  }
-  process.exitCode = 1
+  if (!process.connected) terminateOwnProcessGroup()
+  setTimeout(() => terminateOwnProcessGroup(), 1_000)
 }
 
 const beginOwnProcessGroupTermination = () => {
@@ -116,10 +129,42 @@ const terminateOwnProcessGroup = () => {
   if (shuttingDown) return
   shuttingDown = true
   if (commandProcess === undefined) {
-    process.exitCode = 0
+    void (async () => {
+      try {
+        await livenessClient?.end()
+      } finally {
+        process.exitCode = 0
+      }
+    })()
     return
   }
   beginOwnProcessGroupTermination()
+}
+
+const acquireLivenessLock = async () => {
+  const client = new Client({
+    connectionString: configuration.databaseUrl,
+    connectionTimeoutMillis: 5_000,
+    application_name: `cowards-activation-gate:${process.pid}`,
+  })
+  livenessClient = client
+  client.on("error", (error) => {
+    void fail(
+      new Error(
+        `Activation gate liveness session failed: ${serializeError(error)}`,
+      ),
+    )
+  })
+  await client.connect()
+  const result = await client.query(
+    "select pg_try_advisory_lock($1::bigint) as acquired",
+    [configuration.advisoryLockKey],
+  )
+  if (result.rows.length !== 1 || result.rows[0]?.acquired !== true) {
+    await client.end()
+    livenessClient = undefined
+    throw new Error("Activation gate liveness lock is already held")
+  }
 }
 
 process.on("message", async (message) => {
@@ -129,6 +174,12 @@ process.on("message", async (message) => {
       return
     }
     configuration = message
+    try {
+      await acquireLivenessLock()
+    } catch (error) {
+      await fail(error)
+      return
+    }
     await send({
       type: "registered",
       processGroupId: process.pid,
@@ -168,8 +219,8 @@ process.on("message", async (message) => {
       void fail(error)
     })
     commandProcess.once("close", (exitCode, signal) => {
-      if (shuttingDown) return
-      shuttingDown = true
+      if (shuttingDown || terminalReported) return
+      terminalReported = true
       void (async () => {
         await send({
           type: "result",
@@ -178,8 +229,8 @@ process.on("message", async (message) => {
           stdout: stdout.toString("utf8"),
           stderr: stderr.toString("utf8"),
         })
-        if (process.connected) process.disconnect()
-        process.exitCode = 0
+        if (!process.connected) terminateOwnProcessGroup()
+        setTimeout(() => terminateOwnProcessGroup(), 1_000)
       })()
     })
     await send({

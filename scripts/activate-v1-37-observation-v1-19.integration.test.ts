@@ -242,6 +242,24 @@ const waitForProcessesToExit = async (
   throw new Error(`Processes remained alive: ${await processRows(pids)}`)
 }
 
+const stopAndKillProcesses = (pids: readonly number[]): void => {
+  const exactPids = [...new Set(pids)].filter((pid) => pid > 0)
+  for (const pid of exactPids) {
+    try {
+      process.kill(pid, "SIGSTOP")
+    } catch (error) {
+      if ((error as { code?: string }).code !== "ESRCH") throw error
+    }
+  }
+  for (const pid of exactPids) {
+    try {
+      process.kill(pid, "SIGKILL")
+    } catch (error) {
+      if ((error as { code?: string }).code !== "ESRCH") throw error
+    }
+  }
+}
+
 const waitForPathToDisappear = async (filePath: string): Promise<void> => {
   for (let attempt = 0; attempt < 400; attempt += 1) {
     try {
@@ -491,6 +509,90 @@ describePostgres(
         })
       } finally {
         await rm(markerRoot, { recursive: true, force: true })
+      }
+    }, 30_000)
+
+    it("fails closed and kills the gate tree when its PostgreSQL liveness session is lost", async () => {
+      const context = await createContext("gate-database-session-loss")
+      const markerRoot = await mkdtemp(
+        path.join(tmpdir(), "cowards-gate-database-loss-"),
+      )
+      const marker = path.join(markerRoot, "gate-started")
+      const fakeBin = await createFakePnpm(markerRoot)
+      const leaseDirectory = path.join(
+        context.root,
+        ".git",
+        "cowards-activation-gate-leases",
+      )
+      let processIds: number[] = []
+      try {
+        const adapter = createProductionActivationAdapter(
+          context.root,
+          context.pool,
+          {
+            activationId: context.activationId,
+            gateEnvironment: {
+              ...process.env,
+              PATH: `${fakeBin}:${process.env.PATH ?? ""}`,
+              TEST_GATE_BEHAVIOR: "hang",
+              TEST_GATE_MARKER: marker,
+            },
+          },
+        )
+        const gateResult = adapter.runGate("spec")
+        const gateRejection = expect(gateResult).rejects.toThrow(
+          /liveness session failed/iu,
+        )
+        await waitForFile(marker)
+        const markerValue = JSON.parse(await readFile(marker, "utf8")) as {
+          gatePid: number
+          childPid: number
+        }
+        const [leaseName] = await readdir(leaseDirectory)
+        const lease = JSON.parse(
+          await readFile(path.join(leaseDirectory, leaseName!), "utf8"),
+        ) as { supervisorPid: number; processGroupId: number }
+        processIds = [
+          lease.supervisorPid,
+          lease.processGroupId,
+          markerValue.gatePid,
+          markerValue.childPid,
+        ]
+
+        let backendPid: number | undefined
+        for (let attempt = 0; attempt < 200; attempt += 1) {
+          const activity = await context.pool.query(
+            `select pid
+               from pg_stat_activity
+              where application_name = $1
+              order by pid`,
+            [`cowards-activation-gate:${lease.processGroupId}`],
+          )
+          if (activity.rows.length === 1) {
+            backendPid = activity.rows[0]?.pid as number
+            break
+          }
+          await delay(25)
+        }
+        expect(backendPid).toBeTypeOf("number")
+        const terminated = await context.pool.query(
+          "select pg_terminate_backend($1::integer) as terminated",
+          [backendPid],
+        )
+        expect(terminated.rows).toEqual([{ terminated: true }])
+
+        await gateRejection
+        await waitForProcessesToExit(processIds)
+        await expect(access(leaseDirectory)).rejects.toMatchObject({
+          code: "ENOENT",
+        })
+        await expect(run(context, "recover")).resolves.toMatchObject({
+          state: "active-v1.17-bootstrap",
+        })
+      } finally {
+        stopAndKillProcesses(processIds)
+        await rm(markerRoot, { recursive: true, force: true })
+        await rm(leaseDirectory, { recursive: true, force: true })
       }
     }, 30_000)
 
@@ -863,7 +965,7 @@ describePostgres(
       30_000,
     )
 
-    it("fails recovery closed on a stale lease without signaling its unrelated PID", async () => {
+    it("reclaims an owned stale lease without signaling its disk-declared PID", async () => {
       const context = await createContext("stale-gate-lease")
       const leaseDirectory = path.join(
         context.root,
@@ -875,7 +977,11 @@ describePostgres(
         ".git",
         "cowards-activation-candidates",
       )
-      const candidateSentinel = path.join(candidateBase, "must-remain")
+      const candidateRoot = path.join(
+        candidateBase,
+        activationCandidateWorkspaceKey(context.activationId),
+      )
+      const candidateSentinel = path.join(candidateRoot, "stale-candidate")
       const unrelated = spawn(
         process.execPath,
         ["--eval", "setInterval(() => {}, 1000)"],
@@ -884,10 +990,14 @@ describePostgres(
       const unrelatedExit = once(unrelated, "exit")
       try {
         await mkdir(leaseDirectory, { recursive: true })
-        await mkdir(candidateBase, { recursive: true })
+        await mkdir(candidateRoot, { recursive: true })
         await writeFile(candidateSentinel, "candidate preimage\n")
+        const staleLease = path.join(
+          leaseDirectory,
+          `${activationCandidateWorkspaceKey(context.activationId)}-${randomUUID()}.json`,
+        )
         await writeFile(
-          path.join(leaseDirectory, "stale.json"),
+          staleLease,
           `${JSON.stringify({
             version: 1,
             state: "active",
@@ -909,18 +1019,12 @@ describePostgres(
             gateLeaseWaitMs: 100,
           },
         )
-        await expect(run(context, "recover")).rejects.toThrow(
-          /lease remains active; refusing workspace cleanup/iu,
-        )
-        expect(await processRows([unrelated.pid!])).not.toBe("")
-        expect(await readFile(candidateSentinel, "utf8")).toBe(
-          "candidate preimage\n",
-        )
-        await rm(leaseDirectory, { recursive: true, force: true })
-        unrelated.kill("SIGKILL")
-        await unrelatedExit
         await expect(run(context, "recover")).resolves.toMatchObject({
           state: "active-v1.17-bootstrap",
+        })
+        expect(await processRows([unrelated.pid!])).not.toBe("")
+        await expect(access(staleLease)).rejects.toMatchObject({
+          code: "ENOENT",
         })
         await expect(access(candidateBase)).rejects.toMatchObject({
           code: "ENOENT",
@@ -934,7 +1038,7 @@ describePostgres(
       }
     }, 30_000)
 
-    it("rejects nonpositive and state-inconsistent gate lease identities", async () => {
+    it("reclaims malformed activation-owned lease observations only after liveness vacancy", async () => {
       const context = await createContext("malformed-gate-leases")
       const leaseDirectory = path.join(
         context.root,
@@ -949,39 +1053,355 @@ describePostgres(
           gateLeaseWaitMs: 0,
         },
       )
-      const base = {
-        version: 1,
-        state: "active",
-        activationId: context.activationId,
-        workspace: context.root,
-        gateId: "spec",
-        coordinatorPid: process.pid,
-        coordinatorNonce: "closed-shape-lease-test",
-        supervisorPid: process.pid,
-        gatePid: process.pid,
-        processGroupId: process.pid,
-      }
-      const malformed = [
-        { ...base, coordinatorPid: 0 },
-        { ...base, supervisorPid: -1 },
-        { ...base, state: "starting", gatePid: 1, processGroupId: 1 },
-        { ...base, gatePid: 1, processGroupId: 2 },
-        { ...base, gatePid: null, processGroupId: null },
-      ]
       try {
-        for (const [index, value] of malformed.entries()) {
-          await mkdir(leaseDirectory, { recursive: true })
-          const leasePath = path.join(leaseDirectory, `${index}.json`)
-          await writeFile(leasePath, `${JSON.stringify(value)}\n`)
-          await expect(
-            adapter.cleanupCandidateWorkspace(context.activationId),
-          ).rejects.toThrow(/malformed activation gate lease/iu)
-          await rm(leasePath, { force: true })
-        }
+        await mkdir(leaseDirectory, { recursive: true })
+        const leasePath = path.join(
+          leaseDirectory,
+          `${activationCandidateWorkspaceKey(context.activationId)}-${randomUUID()}.json`,
+        )
+        await writeFile(leasePath, "{malformed lease observation\n")
+        await expect(
+          adapter.cleanupCandidateWorkspace(context.activationId),
+        ).resolves.toBeUndefined()
+        await expect(access(leasePath)).rejects.toMatchObject({
+          code: "ENOENT",
+        })
       } finally {
         await rm(leaseDirectory, { recursive: true, force: true })
       }
     }, 30_000)
+
+    it("blocks cleanup on the launcher DB lock even when its lease is deleted and preserves unrelated lock state", async () => {
+      const context = await createContext("live-gate-db-lock")
+      const markerRoot = await mkdtemp(
+        path.join(tmpdir(), "cowards-live-gate-lock-"),
+      )
+      const marker = path.join(markerRoot, "gate-started")
+      const fakeBin = await createFakePnpm(markerRoot)
+      const leaseDirectory = path.join(
+        context.root,
+        ".git",
+        "cowards-activation-gate-leases",
+      )
+      const candidateBase = path.join(
+        context.root,
+        ".git",
+        "cowards-activation-candidates",
+      )
+      const candidateRoot = path.join(
+        candidateBase,
+        activationCandidateWorkspaceKey(context.activationId),
+      )
+      const candidateSentinel = path.join(candidateRoot, "must-remain")
+      const unrelatedCandidateSentinel = path.join(
+        candidateBase,
+        "unrelated-candidate",
+        "must-remain",
+      )
+      const unrelatedLease = path.join(leaseDirectory, "unrelated.json")
+      const unrelatedLockKey = "9223372036854775000"
+      const unrelatedClient = await context.pool.connect()
+      const probeClient = await context.pool.connect()
+      let child: ReturnType<typeof spawn> | undefined
+      let exited: Promise<[number | null, string | null]> | undefined
+      let processIds: number[] = []
+      try {
+        const acquired = await unrelatedClient.query(
+          "select pg_try_advisory_lock($1::bigint) as acquired",
+          [unrelatedLockKey],
+        )
+        expect(acquired.rows).toEqual([{ acquired: true }])
+        const childSource = `
+          import path from "node:path";
+          import { pathToFileURL } from "node:url";
+          const activation = await import(
+            pathToFileURL(path.join(process.env.TEST_MODULE_ROOT, "scripts/activate-v1-37-observation-v1-19.ts")).href
+          );
+          const adapter = activation.createProductionActivationAdapter(
+            process.env.TEST_REPO_ROOT,
+            {},
+            { activationId: process.env.TEST_ACTIVATION_ID },
+          );
+          await adapter.runGate("spec");
+        `
+        const childEnvironment = Object.fromEntries(
+          Object.entries(process.env).filter(
+            ([key]) => !key.startsWith("VITEST"),
+          ),
+        )
+        child = spawn(
+          process.execPath,
+          ["--import", "tsx", "--eval", childSource],
+          {
+            cwd: process.cwd(),
+            env: {
+              ...childEnvironment,
+              TEST_MODULE_ROOT: process.cwd(),
+              TEST_REPO_ROOT: context.root,
+              TEST_ACTIVATION_ID: context.activationId,
+              TEST_GATE_BEHAVIOR: "hang",
+              TEST_GATE_MARKER: marker,
+              PATH: `${fakeBin}:${childEnvironment.PATH ?? ""}`,
+            },
+            stdio: ["ignore", "pipe", "pipe"],
+          },
+        )
+        exited = once(child, "exit") as Promise<[number | null, string | null]>
+        await waitForFile(marker)
+        const markerValue = JSON.parse(await readFile(marker, "utf8")) as {
+          gatePid: number
+          childPid: number
+        }
+        const [leaseName] = await readdir(leaseDirectory)
+        const leasePath = path.join(leaseDirectory, leaseName!)
+        const lease = JSON.parse(await readFile(leasePath, "utf8")) as {
+          supervisorPid: number
+          processGroupId: number
+        }
+        processIds = [
+          lease.supervisorPid,
+          lease.processGroupId,
+          markerValue.gatePid,
+          markerValue.childPid,
+        ]
+        await rm(leasePath, { force: true })
+        await writeFile(unrelatedLease, "unrelated lease observation\n")
+        await mkdir(candidateRoot, { recursive: true })
+        await writeFile(candidateSentinel, "candidate preimage\n")
+        await mkdir(path.dirname(unrelatedCandidateSentinel), {
+          recursive: true,
+        })
+        await writeFile(unrelatedCandidateSentinel, "unrelated candidate\n")
+        context.adapter = createProductionActivationAdapter(
+          context.root,
+          context.pool,
+          {
+            activationId: context.activationId,
+            gateLeaseWaitMs: 100,
+          },
+        )
+        await expect(
+          context.adapter.cleanupCandidateWorkspace(context.activationId),
+        ).rejects.toThrow(/liveness lock remains active/iu)
+        expect(await readFile(candidateSentinel, "utf8")).toBe(
+          "candidate preimage\n",
+        )
+        expect(await readFile(unrelatedLease, "utf8")).toBe(
+          "unrelated lease observation\n",
+        )
+        const blocked = await probeClient.query(
+          "select pg_try_advisory_lock($1::bigint) as acquired",
+          [unrelatedLockKey],
+        )
+        expect(blocked.rows).toEqual([{ acquired: false }])
+
+        child.kill("SIGKILL")
+        await exited
+        await waitForProcessesToExit(processIds)
+        await expect(
+          context.adapter.cleanupCandidateWorkspace(context.activationId),
+        ).resolves.toBeUndefined()
+        await expect(access(candidateRoot)).rejects.toMatchObject({
+          code: "ENOENT",
+        })
+        expect(await readFile(unrelatedCandidateSentinel, "utf8")).toBe(
+          "unrelated candidate\n",
+        )
+        expect(await readFile(unrelatedLease, "utf8")).toBe(
+          "unrelated lease observation\n",
+        )
+        const stillBlocked = await probeClient.query(
+          "select pg_try_advisory_lock($1::bigint) as acquired",
+          [unrelatedLockKey],
+        )
+        expect(stillBlocked.rows).toEqual([{ acquired: false }])
+      } finally {
+        if (
+          child !== undefined &&
+          child.exitCode === null &&
+          child.signalCode === null
+        ) {
+          child.kill("SIGKILL")
+          await exited
+        }
+        stopAndKillProcesses(processIds)
+        await unrelatedClient.query("select pg_advisory_unlock($1::bigint)", [
+          unrelatedLockKey,
+        ])
+        unrelatedClient.release()
+        probeClient.release()
+        await rm(markerRoot, { recursive: true, force: true })
+        await rm(leaseDirectory, { recursive: true, force: true })
+      }
+    }, 30_000)
+
+    it.each([
+      "after-starting-lease-temp",
+      "before-launcher-spawn",
+      "after-active-lease",
+      "active-gate",
+    ])(
+      "reclaims exact stale lease and candidate state after full process-tree loss at %s",
+      async (scenario) => {
+        const context = await createContext(`full-tree-loss-${scenario}`)
+        const markerRoot = await mkdtemp(
+          path.join(tmpdir(), "cowards-full-tree-loss-"),
+        )
+        const commandMarker = path.join(markerRoot, "command-started")
+        const reached = path.join(markerRoot, `${scenario}.reached`)
+        const fakeBin = await createFakePnpm(markerRoot)
+        const candidateBase = path.join(
+          context.root,
+          ".git",
+          "cowards-activation-candidates",
+        )
+        const candidateRoot = path.join(
+          candidateBase,
+          activationCandidateWorkspaceKey(context.activationId),
+        )
+        const leaseDirectory = path.join(
+          context.root,
+          ".git",
+          "cowards-activation-gate-leases",
+        )
+        const childSource = `
+          import path from "node:path";
+          import { createRequire } from "node:module";
+          import { pathToFileURL } from "node:url";
+          const moduleRoot = process.env.TEST_MODULE_ROOT;
+          const requireFromPersistence = createRequire(
+            pathToFileURL(path.join(moduleRoot, "packages/persistence/package.json")),
+          );
+          const { Pool } = requireFromPersistence("pg");
+          const activation = await import(
+            pathToFileURL(path.join(moduleRoot, "scripts/activate-v1-37-observation-v1-19.ts")).href
+          );
+          const pool = new Pool({
+            connectionString: process.env.DATABASE_URL,
+            options: "-c search_path=" + process.env.TEST_SCHEMA + ",public",
+          });
+          const options = { activationId: process.env.TEST_ACTIVATION_ID };
+          if (process.env.TEST_BOUNDARY) {
+            options.gateSupervisionTestBoundary = process.env.TEST_BOUNDARY;
+            options.gateSupervisionTestControlDirectory = process.env.TEST_CONTROL_ROOT;
+          }
+          const adapter = activation.createProductionActivationAdapter(
+            process.env.TEST_REPO_ROOT,
+            pool,
+            options,
+          );
+          await activation.runV137ObservationV119Activation({
+            mode: "prepare",
+            activationId: process.env.TEST_ACTIVATION_ID,
+            adapter,
+          });
+        `
+        const childEnvironment = Object.fromEntries(
+          Object.entries(process.env).filter(
+            ([key]) => !key.startsWith("VITEST"),
+          ),
+        )
+        const child = spawn(
+          process.execPath,
+          ["--import", "tsx", "--eval", childSource],
+          {
+            cwd: process.cwd(),
+            env: {
+              ...childEnvironment,
+              DATABASE_URL: databaseUrl!,
+              TEST_MODULE_ROOT: process.cwd(),
+              TEST_REPO_ROOT: context.root,
+              TEST_SCHEMA: context.schema,
+              TEST_ACTIVATION_ID: context.activationId,
+              TEST_BOUNDARY: scenario === "active-gate" ? "" : scenario,
+              TEST_CONTROL_ROOT: markerRoot,
+              TEST_GATE_BEHAVIOR: "hang",
+              TEST_GATE_MARKER: commandMarker,
+              PATH: `${fakeBin}:${childEnvironment.PATH ?? ""}`,
+            },
+            stdio: ["ignore", "pipe", "pipe"],
+          },
+        )
+        const exited = once(child, "exit") as Promise<
+          [number | null, string | null]
+        >
+        let processIds: number[] = [child.pid!]
+        try {
+          if (scenario === "active-gate") {
+            await waitForFile(commandMarker)
+            const markerValue = JSON.parse(
+              await readFile(commandMarker, "utf8"),
+            ) as { gatePid: number; childPid: number }
+            const [leaseName] = await readdir(leaseDirectory)
+            const lease = JSON.parse(
+              await readFile(path.join(leaseDirectory, leaseName!), "utf8"),
+            ) as { supervisorPid: number; processGroupId: number }
+            processIds.push(
+              lease.supervisorPid,
+              lease.processGroupId,
+              markerValue.gatePid,
+              markerValue.childPid,
+            )
+          } else {
+            await waitForFile(reached)
+            const boundary = JSON.parse(await readFile(reached, "utf8")) as {
+              supervisorPid: number
+              launcherPid: number | null
+            }
+            processIds.push(boundary.supervisorPid)
+            if (boundary.launcherPid !== null) {
+              processIds.push(boundary.launcherPid)
+            }
+          }
+          await access(candidateRoot)
+          expect((await readdir(leaseDirectory)).length).toBeGreaterThan(0)
+          stopAndKillProcesses(processIds)
+          const [, signal] = await exited
+          expect(signal).toBe("SIGKILL")
+          await waitForProcessesToExit(processIds)
+          expect((await readdir(leaseDirectory)).length).toBeGreaterThan(0)
+
+          context.adapter = createProductionActivationAdapter(
+            context.root,
+            context.pool,
+            {
+              activationId: context.activationId,
+              gateLeaseWaitMs: 100,
+            },
+          )
+          await expect(run(context, "recover")).resolves.toMatchObject({
+            state: "active-v1.17-bootstrap",
+          })
+          await expect(access(candidateBase)).rejects.toMatchObject({
+            code: "ENOENT",
+          })
+          await expect(access(leaseDirectory)).rejects.toMatchObject({
+            code: "ENOENT",
+          })
+          expect(
+            (
+              await runFile("git", ["status", "--porcelain"], {
+                cwd: context.root,
+              })
+            ).stdout,
+          ).toBe("")
+          if (scenario !== "active-gate") {
+            await expect(access(commandMarker)).rejects.toMatchObject({
+              code: "ENOENT",
+            })
+          }
+        } finally {
+          if (child.exitCode === null && child.signalCode === null) {
+            child.kill("SIGKILL")
+            await exited
+          }
+          stopAndKillProcesses(processIds)
+          await rm(markerRoot, { recursive: true, force: true })
+          await rm(leaseDirectory, { recursive: true, force: true })
+        }
+      },
+      60_000,
+    )
 
     it("kills the real production gate process group before exact SIGKILL recovery", async () => {
       const context = await createContext("sigkill-candidate")

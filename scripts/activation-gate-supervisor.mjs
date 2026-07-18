@@ -53,6 +53,8 @@ const validConfiguration = (value) =>
     "args",
     "cwd",
     "environment",
+    "databaseUrl",
+    "advisoryLockKey",
     "leasePath",
     "leaseDirectory",
     "activationId",
@@ -75,6 +77,10 @@ const validConfiguration = (value) =>
   Object.values(value.environment).every(
     (entry) => typeof entry === "string",
   ) &&
+  typeof value.databaseUrl === "string" &&
+  value.databaseUrl.length > 0 &&
+  typeof value.advisoryLockKey === "string" &&
+  /^-?(?:0|[1-9][0-9]*)$/.test(value.advisoryLockKey) &&
   value.leasePath === startupLeasePath &&
   value.leaseDirectory === startupLeaseDirectory &&
   typeof value.activationId === "string" &&
@@ -312,7 +318,12 @@ const handleLauncherMessage = async (message) => {
     return
   }
   if (message.type === "result" || message.type === "error") {
+    if (launcherTerminal !== undefined) {
+      await finish({ type: "error", message: "Duplicate launcher terminal" })
+      return
+    }
     launcherTerminal = message
+    await finish(message)
   }
 }
 
@@ -412,6 +423,8 @@ process.on("message", (message) => {
         args: configuration.args,
         cwd: configuration.cwd,
         environment: configuration.environment,
+        databaseUrl: configuration.databaseUrl,
+        advisoryLockKey: configuration.advisoryLockKey,
         coordinatorNonce: configuration.coordinatorNonce,
         launcherNonce,
       })

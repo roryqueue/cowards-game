@@ -1371,6 +1371,7 @@ export interface ProductionActivationAdapterOptions {
   readonly gateProcessRunner?: typeof runProcess
   readonly activationId?: string
   readonly gateEnvironment?: Readonly<Record<string, string | undefined>>
+  readonly gateDatabaseUrl?: string
   readonly gateLeaseDirectory?: string
   readonly gateLeaseWaitMs?: number
   readonly gateSupervisionTestBoundary?: string
@@ -1393,92 +1394,13 @@ interface ActivationGateLease {
   readonly processGroupId: number | null
 }
 
-const parseActivationGateLease = (value: string): ActivationGateLease => {
-  const parsed = JSON.parse(value) as Record<string, unknown>
-  const keys = Object.keys(parsed).sort()
-  const expected = [
-    "activationId",
-    "coordinatorNonce",
-    "coordinatorPid",
-    "gateId",
-    "gatePid",
-    "processGroupId",
-    "state",
-    "supervisorPid",
-    "version",
-    "workspace",
-  ].sort()
-  if (
-    keys.length !== expected.length ||
-    !keys.every((key, index) => key === expected[index]) ||
-    parsed.version !== 1 ||
-    !["starting", "active"].includes(String(parsed.state)) ||
-    typeof parsed.activationId !== "string" ||
-    typeof parsed.workspace !== "string" ||
-    typeof parsed.gateId !== "string" ||
-    !Number.isSafeInteger(parsed.coordinatorPid) ||
-    (parsed.coordinatorPid as number) <= 0 ||
-    typeof parsed.coordinatorNonce !== "string" ||
-    parsed.coordinatorNonce.length === 0 ||
-    !Number.isSafeInteger(parsed.supervisorPid) ||
-    (parsed.supervisorPid as number) <= 0 ||
-    (parsed.state === "starting" &&
-      (parsed.gatePid !== null || parsed.processGroupId !== null)) ||
-    (parsed.state === "active" &&
-      (!Number.isSafeInteger(parsed.gatePid) ||
-        (parsed.gatePid as number) <= 0 ||
-        !Number.isSafeInteger(parsed.processGroupId) ||
-        (parsed.processGroupId as number) <= 0 ||
-        parsed.gatePid !== parsed.processGroupId))
-  ) {
-    throw new Error("Malformed activation gate lease")
-  }
-  return parsed as unknown as ActivationGateLease
-}
-
-const waitForActivationGateLeases = async (
-  leaseDirectory: string,
-  timeoutMs: number,
-): Promise<void> => {
-  const deadline = Date.now() + timeoutMs
-  while (true) {
-    let entries: string[]
-    try {
-      entries = await readdir(leaseDirectory)
-    } catch (error) {
-      if ((error as { code?: string }).code === "ENOENT") return
-      throw error
-    }
-    if (entries.length === 0) {
-      try {
-        await rmdir(leaseDirectory)
-      } catch (error) {
-        if ((error as { code?: string }).code !== "ENOENT") throw error
-      }
-      return
-    }
-    const identities = await Promise.all(
-      entries.sort().map(async (entry) => {
-        const lease = parseActivationGateLease(
-          await readFile(path.join(leaseDirectory, entry), "utf8"),
-        )
-        return `${lease.activationId}:${lease.gateId}:${lease.workspace}`
-      }),
-    )
-    if (Date.now() >= deadline) {
-      throw new Error(
-        `Activation gate lease remains active; refusing workspace cleanup: ${identities.join(", ")}`,
-      )
-    }
-    await delay(25)
-  }
-}
-
 interface SupervisedGateInput {
   readonly command: string
   readonly args: readonly string[]
   readonly cwd: string
   readonly environment: Readonly<Record<string, string>>
+  readonly databaseUrl: string
+  readonly advisoryLockKey: string
   readonly leaseDirectory: string
   readonly activationId: string
   readonly workspace: string
@@ -1486,6 +1408,19 @@ interface SupervisedGateInput {
   readonly testBoundary?: string
   readonly testControlDirectory?: string
 }
+
+const activationGateAdvisoryLockKey = (
+  scope: string,
+  activationId: string,
+): string =>
+  createHash("sha256")
+    .update("cowards-game:activation-gate-liveness:v1\0")
+    .update(path.resolve(scope))
+    .update("\0")
+    .update(activationId)
+    .digest()
+    .readBigInt64BE(0)
+    .toString()
 
 const atomicWriteActivationGateLease = async (
   leasePath: string,
@@ -1802,6 +1737,8 @@ const runSupervisedGateProcess = async (
       args: [...input.args],
       cwd: input.cwd,
       environment: input.environment,
+      databaseUrl: input.databaseUrl,
+      advisoryLockKey: input.advisoryLockKey,
       leasePath,
       leaseDirectory: input.leaseDirectory,
       activationId: input.activationId,
@@ -1864,6 +1801,8 @@ export const createProductionActivationAdapter = (
   const protectedBaselineRoot = options.protectedBaselineRoot ?? repoRoot
   const candidateWorkspaceEnabled = options.candidateWorkspaceEnabled ?? true
   const gateLeaseWaitMs = options.gateLeaseWaitMs ?? 15_000
+  const gateAdvisoryLockKey = (activationId: string): string =>
+    activationGateAdvisoryLockKey(protectedBaselineRoot, activationId)
   const candidateWorkspacePaths = async (
     activationId: string,
   ): Promise<{ base: string; root: string; leaseDirectory: string }> => {
@@ -1882,8 +1821,100 @@ export const createProductionActivationAdapter = (
   }
   const cleanupCandidate = async (activationId: string): Promise<void> => {
     const candidate = await candidateWorkspacePaths(activationId)
-    await waitForActivationGateLeases(candidate.leaseDirectory, gateLeaseWaitMs)
-    await rm(candidate.base, { recursive: true, force: true })
+    const client = await pool.connect()
+    let acquired = false
+    let operationFailure: unknown
+    const exactLockKey = gateAdvisoryLockKey(activationId)
+    try {
+      const deadline = Date.now() + gateLeaseWaitMs
+      while (!acquired) {
+        const result = await client.query(
+          "select pg_try_advisory_lock($1::bigint) as acquired",
+          [exactLockKey],
+        )
+        acquired = result.rows.length === 1 && result.rows[0]?.acquired === true
+        if (acquired) break
+        if (Date.now() >= deadline) {
+          throw new Error(
+            "Activation gate liveness lock remains active; refusing workspace cleanup",
+          )
+        }
+        await delay(25)
+      }
+      const ownedLeasePrefix = `${activationCandidateWorkspaceKey(activationId)}-`
+      let ownedEntries: string[] = []
+      while (true) {
+        let entries: string[] = []
+        try {
+          entries = await readdir(candidate.leaseDirectory)
+        } catch (error) {
+          if ((error as { code?: string }).code !== "ENOENT") throw error
+        }
+        ownedEntries = entries.filter((entry) =>
+          entry.startsWith(ownedLeasePrefix),
+        )
+        if (ownedEntries.length === 0 || Date.now() >= deadline) break
+        // A database-session loss releases the advisory lock before the
+        // launcher/supervisor can finish terminating the gate process group.
+        // Give that kernel-owned cleanup path the bounded lease window before
+        // treating the remaining activation-owned observations as stale.
+        await delay(25)
+      }
+      await Promise.all(
+        ownedEntries.map((entry) =>
+          rm(path.join(candidate.leaseDirectory, entry), { force: true }),
+        ),
+      )
+      try {
+        await rmdir(candidate.leaseDirectory)
+      } catch (error) {
+        if (
+          !["ENOENT", "ENOTEMPTY"].includes(
+            (error as { code?: string }).code ?? "",
+          )
+        ) {
+          throw error
+        }
+      }
+      await rm(candidate.root, { recursive: true, force: true })
+      try {
+        await rmdir(candidate.base)
+      } catch (error) {
+        if (
+          !["ENOENT", "ENOTEMPTY"].includes(
+            (error as { code?: string }).code ?? "",
+          )
+        ) {
+          throw error
+        }
+      }
+    } catch (error) {
+      operationFailure = error
+    }
+    let releaseFailure: unknown
+    try {
+      if (acquired) {
+        const result = await client.query(
+          "select pg_advisory_unlock($1::bigint) as unlocked",
+          [exactLockKey],
+        )
+        if (result.rows.length !== 1 || result.rows[0]?.unlocked !== true) {
+          throw new Error("Activation gate liveness lock release failed")
+        }
+      }
+    } catch (error) {
+      releaseFailure = error
+    } finally {
+      client.release()
+    }
+    if (operationFailure !== undefined && releaseFailure !== undefined) {
+      throw new AggregateError(
+        [operationFailure, releaseFailure],
+        "Activation candidate cleanup and liveness lock release both failed",
+      )
+    }
+    if (operationFailure !== undefined) throw operationFailure
+    if (releaseFailure !== undefined) throw releaseFailure
   }
   const readLocalFile = async (filePath: string): Promise<FileBytes> => {
     try {
@@ -2126,6 +2157,15 @@ export const createProductionActivationAdapter = (
             args,
             cwd: gateRoot,
             environment: gateEnvironment,
+            databaseUrl:
+              options.gateDatabaseUrl ??
+              gateEnvironment.DATABASE_URL ??
+              (() => {
+                throw new Error(
+                  "Production activation gate liveness requires DATABASE_URL",
+                )
+              })(),
+            advisoryLockKey: gateAdvisoryLockKey(activationId),
             leaseDirectory: candidate.leaseDirectory,
             activationId,
             workspace: repoRoot,
