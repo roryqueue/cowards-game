@@ -1,5 +1,13 @@
 import { createHash } from "node:crypto"
-import { mkdirSync, mkdtempSync, rmSync, symlinkSync } from "node:fs"
+import {
+  cpSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import {
@@ -130,6 +138,42 @@ describe("v1.37 four-language conformance runner", () => {
       expect(() =>
         loadCommittedV137ConformanceTraceOracle({ repoRoot }),
       ).toThrow(/not regular/u)
+    } finally {
+      rmSync(repoRoot, { recursive: true, force: true })
+    }
+  })
+
+  it("rechecks exact evidence bytes before reusing an immutable oracle", () => {
+    const repoRoot = mkdtempSync(
+      path.join(tmpdir(), "cowards-v137-oracle-cache-integrity-"),
+    )
+    const registryRelative =
+      "packages/golden/src/fixtures/v1-37-conformance-traces/registry.json"
+    const sourceRegistryPath = path.resolve(process.cwd(), registryRelative)
+    const registry = JSON.parse(readFileSync(sourceRegistryPath, "utf8")) as {
+      activePath: string
+    }
+    const targetRegistryPath = path.join(repoRoot, registryRelative)
+    mkdirSync(path.dirname(targetRegistryPath), { recursive: true })
+    cpSync(sourceRegistryPath, targetRegistryPath)
+    cpSync(
+      path.resolve(process.cwd(), registry.activePath),
+      path.join(repoRoot, registry.activePath),
+      { recursive: true },
+    )
+    try {
+      expect(
+        loadCommittedV137ConformanceTraceOracle({ repoRoot }).activeVersion,
+      ).toBeTruthy()
+      const manifestPath = path.join(
+        repoRoot,
+        registry.activePath,
+        "manifest.json",
+      )
+      writeFileSync(manifestPath, `${readFileSync(manifestPath, "utf8")}\n`)
+      expect(() =>
+        loadCommittedV137ConformanceTraceOracle({ repoRoot }),
+      ).toThrow(/authority is invalid/u)
     } finally {
       rmSync(repoRoot, { recursive: true, force: true })
     }

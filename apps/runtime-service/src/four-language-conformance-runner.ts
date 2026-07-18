@@ -166,6 +166,11 @@ interface V137ValidatedTraceRegistry {
   readonly caseCount: number
 }
 
+const validatedObservationTraceV4Oracles = new Map<
+  string,
+  V137CommittedTraceOracle
+>()
+
 const loadCommittedV137ObservationTraceV4Oracle = (input: {
   readonly registry: V137ValidatedTraceRegistry
   readonly registryBytes: Buffer
@@ -180,6 +185,27 @@ const loadCommittedV137ObservationTraceV4Oracle = (input: {
   const bundleBytes = readRegularBytes(
     path.join(input.activeDirectory, "traces.bundle.json"),
   )
+  if (
+    input.registryBytes.toString("utf8") !== renderExactJson(registry) ||
+    registry.activeVersion !== pin.candidateVersion ||
+    registry.activePath !== path.posix.dirname(pin.manifestPath) ||
+    registry.candidateRootSha256 !== pin.candidateRootSha256 ||
+    registry.manifestSha256 !== pin.manifestFileSha256 ||
+    registry.semanticDiffSha256 !== pin.semanticDiffFileSha256 ||
+    registry.independentReviewSha256 !== pin.independentReviewFileSha256 ||
+    registry.compatibilityDispositionSha256 !==
+      pin.compatibilityDispositionFileSha256 ||
+    registry.caseCount !== pin.caseCount ||
+    sha256(input.manifestBytes) !== pin.manifestFileSha256 ||
+    sha256(bundleBytes) !== pin.bundleFileSha256 ||
+    sha256(input.semanticDiffBytes) !== pin.semanticDiffFileSha256 ||
+    sha256(input.independentReviewBytes) !== pin.independentReviewFileSha256 ||
+    sha256(input.dispositionBytes) !== pin.compatibilityDispositionFileSha256
+  ) {
+    throw new TypeError("Committed conformance trace authority is invalid")
+  }
+  const cached = validatedObservationTraceV4Oracles.get(input.activeDirectory)
+  if (cached !== undefined) return cached
   const manifest = JSON.parse(input.manifestBytes.toString("utf8")) as Record<
     string,
     unknown
@@ -207,21 +233,6 @@ const loadCommittedV137ObservationTraceV4Oracle = (input: {
     ...dispositionMaterial
   } = disposition
   if (
-    input.registryBytes.toString("utf8") !== renderExactJson(registry) ||
-    registry.activeVersion !== pin.candidateVersion ||
-    registry.activePath !== path.posix.dirname(pin.manifestPath) ||
-    registry.candidateRootSha256 !== pin.candidateRootSha256 ||
-    registry.manifestSha256 !== pin.manifestFileSha256 ||
-    registry.semanticDiffSha256 !== pin.semanticDiffFileSha256 ||
-    registry.independentReviewSha256 !== pin.independentReviewFileSha256 ||
-    registry.compatibilityDispositionSha256 !==
-      pin.compatibilityDispositionFileSha256 ||
-    registry.caseCount !== pin.caseCount ||
-    sha256(input.manifestBytes) !== pin.manifestFileSha256 ||
-    sha256(bundleBytes) !== pin.bundleFileSha256 ||
-    sha256(input.semanticDiffBytes) !== pin.semanticDiffFileSha256 ||
-    sha256(input.independentReviewBytes) !== pin.independentReviewFileSha256 ||
-    sha256(input.dispositionBytes) !== pin.compatibilityDispositionFileSha256 ||
     input.manifestBytes.toString("utf8") !== renderExactJson(manifest) ||
     bundleBytes.toString("utf8") !== renderExactJson(bundle) ||
     input.semanticDiffBytes.toString("utf8") !==
@@ -395,7 +406,7 @@ const loadCommittedV137ObservationTraceV4Oracle = (input: {
   const caseIds = Object.freeze(
     V1_37_CONFORMANCE_CORPUS.cases.map(({ id }) => id),
   )
-  return Object.freeze({
+  const oracle = Object.freeze({
     activeVersion: registry.activeVersion,
     candidateRootSha256: registry.candidateRootSha256,
     caseIds,
@@ -403,6 +414,8 @@ const loadCommittedV137ObservationTraceV4Oracle = (input: {
       return traces.get(caseId)
     },
   })
+  validatedObservationTraceV4Oracles.set(input.activeDirectory, oracle)
+  return oracle
 }
 
 export const loadCommittedV137ConformanceTraceOracle = ({
