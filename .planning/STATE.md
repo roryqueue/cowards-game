@@ -5,14 +5,14 @@ milestone_name: Rules Integrity and Strategy Evaluation Foundations — ACTIVE
 current_phase: 260
 current_phase_name: truthful-strategy-inputs-arena-authority-and-set-fairness
 status: executing
-stopped_at: Plan 260-31 independently accepted; ready for Plan 260-33
-last_updated: "2026-07-18T14:53:10.000Z"
+stopped_at: Plan 260-33 found one undeclared corpus-review admission seam; bounded Plan 260-34 ready
+last_updated: "2026-07-18T15:10:00.000Z"
 last_activity: 2026-07-18
-last_activity_desc: Closed Plan 260-31 after comprehensive production recovery review passed
+last_activity_desc: Stopped Plan 260-33 safely and added bounded Plan 260-34 for exact corpus-review admission
 progress:
   total_phases: 6
   completed_phases: 4
-  total_plans: 119
+  total_plans: 120
   completed_plans: 116
   percent: 97
 ---
@@ -29,11 +29,11 @@ See: `.planning/PROJECT.md` (updated 2026-07-12)
 ## Current Position
 
 Phase: 260 (truthful-strategy-inputs-arena-authority-and-set-fairness) — EXECUTING
-Plan: 33 of 33
-Status: Ready to execute the isolated stale-seam audit and refreshed preactivation proof
-Last activity: 2026-07-18 — Plan 260-31 independently passed after full host-loss recovery hardening
+Plan: 34 of 34
+Status: Ready to close the exact corpus-review admission seam before resuming Plan 260-33
+Last activity: 2026-07-18 — Plan 260-33 stopped on an undeclared v3 active-review admission seam
 
-Progress: [█████████░] 91%
+Progress: [█████████░] 88%
 
 ## Durable Decisions
 
@@ -84,9 +84,9 @@ Progress: [█████████░] 91%
 
 **Resume file:** None
 
-Last session: 2026-07-18T14:53:10.000Z
-Stopped at: Plan 260-31 independently accepted; development database remains exact v1.17 bootstrap with no pending intent.
-Next command: Execute Plan 260-33 isolated seam audit and refreshed preactivation proof.
+Last session: 2026-07-18T15:10:00.000Z
+Stopped at: Plan 260-33 safely stopped after an isolated v1.19 simulation exposed the closed corpus-review admission seam; development database remains exact v1.17 bootstrap with no pending intent.
+Next command: Execute and independently review bounded Plan 260-34, then resume Plan 260-33.
 
 ## Performance Metrics
 
