@@ -436,7 +436,7 @@ Plans:
 
 **Wave 25 *(blocked on Wave 24 completion)* — bounded candidate-gate compatibility repair**
 
-- [ ] 260-42-PLAN.md — Repair stale historical/current spec assertions, expand the seam inventory, and re-prove readiness without production changes.
+- [x] 260-42-PLAN.md — Repair stale historical/current spec assertions, expand the seam inventory, and re-prove readiness without production changes.
 
 **Wave 26 *(blocked on Wave 25 completion)* — atomic activation**
 
