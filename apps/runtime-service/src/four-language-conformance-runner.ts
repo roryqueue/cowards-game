@@ -207,7 +207,7 @@ const loadCommittedV137ObservationTraceV4Oracle = (input: {
     ...dispositionMaterial
   } = disposition
   if (
-    sha256(input.registryBytes) !== pin.activeRegistryFileSha256 ||
+    input.registryBytes.toString("utf8") !== renderExactJson(registry) ||
     registry.activeVersion !== pin.candidateVersion ||
     registry.activePath !== path.posix.dirname(pin.manifestPath) ||
     registry.candidateRootSha256 !== pin.candidateRootSha256 ||
