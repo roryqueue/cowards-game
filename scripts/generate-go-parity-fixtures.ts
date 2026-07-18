@@ -20,7 +20,7 @@ import { issueRuntimeSemanticReceiptV117 } from "../apps/runtime-service/src/sem
 import { composeSuccessorRuntimeIdentityV117 } from "../apps/runtime-service/src/successor-runtime-identity.ts"
 import { createChronicleMetadata } from "../packages/persistence/src/chronicle-store.ts"
 import { verifyInstalledRuntimeEvidenceAuthorityV117 } from "../packages/persistence/src/runtime-evidence-authority-publisher.ts"
-import { createWorkshopAnalyticsDemoSnapshot } from "../packages/persistence/src/workshop-analytics.ts"
+import { createWorkshopAnalyticsDemoSnapshotV117 } from "../packages/persistence/src/workshop-analytics.ts"
 import { createCowardsLocalService } from "../packages/service/src/index.ts"
 import { createGoldenMatchInput } from "../packages/golden/src/index.ts"
 import { buildStrategyRevisionV117 } from "../packages/runtime-js/src/index.ts"
@@ -1605,7 +1605,7 @@ const createParityService = () => {
     artifact: chronicle,
     metadata: createChronicleMetadata(chronicle),
   }
-  const analyticsSnapshot = createWorkshopAnalyticsDemoSnapshot()
+  const analyticsSnapshot = createWorkshopAnalyticsDemoSnapshotV117()
 
   return {
     service: createCowardsLocalService({

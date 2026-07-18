@@ -27,7 +27,11 @@ import {
 } from "@cowards/spec"
 import type { Pool } from "pg"
 import { listAdvancedStrategies } from "./advanced-strategies.js"
-import { getMatchSetPreset } from "./presets.js"
+import {
+  getMatchSetPreset,
+  resolveVersionedMatchSetPreset,
+  type MatchSetPreset,
+} from "./presets.js"
 import { listStarterStrategies } from "./starter-strategies.js"
 import {
   sentinelSource,
@@ -341,142 +345,159 @@ const buildMatchup = (
   }
 }
 
-export const createWorkshopAnalyticsDemoSnapshot =
-  (): WorkshopAnalyticsSnapshot => {
-    const candidate = workshopCandidate()
-    const opponents = [
-      ...starterOpponentSnapshots(),
-      ...advancedOpponentSnapshots(),
-    ]
-    const preset = getMatchSetPreset("standard-v1")
-    const definition: AnalyticsGauntletProfileDefinition = {
-      profileSchemaVersion: ANALYTICS_PROFILE_SCHEMA_VERSION,
-      candidates: [candidate],
-      opponents,
-      presetId: preset.id,
-      seeds: preset.seeds,
-      mirrorSides: preset.mirrorSides,
-      scoringPolicyVersion: "matchset-scoring-v1",
-      ruleVersion: "rules-v1.6",
-      chronicleVersion: "chronicle-v1.4",
-      runtimeAdapter: "runtime-js",
-      runtimeVersion: "runtime-js-v1",
-      matrixOrder: opponents.map(
-        (opponent) => `${candidate.revisionId}|${opponent.revisionId}`,
-      ),
-    }
-    const compatibility = buildCompatibility(definition)
-    const profile: AnalyticsGauntletProfile = {
-      id: WORKSHOP_ANALYTICS_PROFILE_ID,
-      ownerUserId: WORKSHOP_USER_ID,
-      name: "v1.6 Starters + Advanced Evidence",
-      notes:
-        "Deterministic local demo profile with controlled strong, thin, degraded, and system-failed evidence states.",
-      status: "active",
-      createdAt: "2026-05-22T00:00:00.000Z",
-      updatedAt: "2026-05-22T00:00:00.000Z",
-      definition,
-      compatibility,
-    }
-    const matchupRecords = opponents.map((opponent, index) =>
-      buildMatchup(candidate, opponent, index),
-    )
-    const totals = matchupRecords.reduce(
-      (acc, matchup) => ({
-        wins: acc.wins + matchup.wins,
-        losses: acc.losses + matchup.losses,
-        draws: acc.draws + matchup.draws,
-        points: acc.points + matchup.points,
-        matchups: acc.matchups + 1,
-        completedMatches:
-          acc.completedMatches + matchup.evidence.completedCount,
-        failedMatches: acc.failedMatches + matchup.failureCount,
-      }),
-      {
-        wins: 0,
-        losses: 0,
-        draws: 0,
-        points: 0,
-        matchups: 0,
-        completedMatches: 0,
-        failedMatches: 0,
-      },
-    )
-    const latestSummary: AnalyticsGauntletRunSummary = {
-      summarySchemaVersion: ANALYTICS_SUMMARY_SCHEMA_VERSION,
-      profileId: profile.id,
-      runId: WORKSHOP_ANALYTICS_RUN_ID,
-      ownerUserId: WORKSHOP_USER_ID,
-      lifecycleStatus: "complete",
-      compatibility,
-      totals,
-      matchupRecords,
-      provenance: {
-        matchSetIds: matchupRecords.map((matchup) => matchup.matchSetId),
-        generatedAt: "2026-05-22T00:00:00.000Z",
-        runSchemaVersion: ANALYTICS_RUN_SCHEMA_VERSION,
-      },
-      privacy: {
-        ownerSafe: true,
-        publicFieldsExcluded: [
-          "strategy code",
-          "private strategy state",
-          "private soldier state",
-          "activation payloads",
-          "owner-only debugging",
-          "private grid observations",
-          "runtime internals",
-        ],
-      },
-      metadata: {
-        demo: true,
-        localOwnerPlayerId: WORKSHOP_PLAYER_ID,
-        compatibilityEquivalentToPreviousRun: true,
-      },
-    }
-    const previousSummary: AnalyticsGauntletRunSummary = {
-      ...latestSummary,
-      runId: WORKSHOP_ANALYTICS_PREVIOUS_RUN_ID,
-      totals: {
-        ...latestSummary.totals,
-        wins: latestSummary.totals.wins - 2,
-        losses: latestSummary.totals.losses + 1,
-        points: latestSummary.totals.points - 7,
-      },
-      provenance: {
-        ...latestSummary.provenance,
-        generatedAt: "2026-05-22T00:00:00.000Z",
-      },
-    }
-    assertAnalyticsPublicSummaryLeakSafe(previousSummary)
-    assertAnalyticsPublicSummaryLeakSafe(latestSummary)
-    return {
-      profiles: [profile],
-      runs: [
-        {
-          id: WORKSHOP_ANALYTICS_PREVIOUS_RUN_ID,
-          profileId: profile.id,
-          ownerUserId: WORKSHOP_USER_ID,
-          runIndex: 1,
-          createdAt: "2026-05-22T00:00:00.000Z",
-          completedAt: "2026-05-22T00:02:00.000Z",
-          notes: "Previous compatible demo run.",
-          summary: previousSummary,
-        },
-        {
-          id: WORKSHOP_ANALYTICS_RUN_ID,
-          profileId: profile.id,
-          ownerUserId: WORKSHOP_USER_ID,
-          runIndex: 2,
-          createdAt: "2026-05-22T00:00:00.000Z",
-          completedAt: "2026-05-22T00:03:00.000Z",
-          notes: "Demo run generated from deterministic summary fixtures.",
-          summary: latestSummary,
-        },
+const createWorkshopAnalyticsDemoSnapshotForPreset = (
+  preset: MatchSetPreset,
+): WorkshopAnalyticsSnapshot => {
+  const candidate = workshopCandidate()
+  const opponents = [
+    ...starterOpponentSnapshots(),
+    ...advancedOpponentSnapshots(),
+  ]
+  const definition: AnalyticsGauntletProfileDefinition = {
+    profileSchemaVersion: ANALYTICS_PROFILE_SCHEMA_VERSION,
+    candidates: [candidate],
+    opponents,
+    presetId: preset.id,
+    seeds: preset.seeds,
+    mirrorSides: preset.mirrorSides,
+    scoringPolicyVersion: "matchset-scoring-v1",
+    ruleVersion: "rules-v1.6",
+    chronicleVersion: "chronicle-v1.4",
+    runtimeAdapter: "runtime-js",
+    runtimeVersion: "runtime-js-v1",
+    matrixOrder: opponents.map(
+      (opponent) => `${candidate.revisionId}|${opponent.revisionId}`,
+    ),
+  }
+  const compatibility = buildCompatibility(definition)
+  const profile: AnalyticsGauntletProfile = {
+    id: WORKSHOP_ANALYTICS_PROFILE_ID,
+    ownerUserId: WORKSHOP_USER_ID,
+    name: "v1.6 Starters + Advanced Evidence",
+    notes:
+      "Deterministic local demo profile with controlled strong, thin, degraded, and system-failed evidence states.",
+    status: "active",
+    createdAt: "2026-05-22T00:00:00.000Z",
+    updatedAt: "2026-05-22T00:00:00.000Z",
+    definition,
+    compatibility,
+  }
+  const matchupRecords = opponents.map((opponent, index) =>
+    buildMatchup(candidate, opponent, index),
+  )
+  const totals = matchupRecords.reduce(
+    (acc, matchup) => ({
+      wins: acc.wins + matchup.wins,
+      losses: acc.losses + matchup.losses,
+      draws: acc.draws + matchup.draws,
+      points: acc.points + matchup.points,
+      matchups: acc.matchups + 1,
+      completedMatches: acc.completedMatches + matchup.evidence.completedCount,
+      failedMatches: acc.failedMatches + matchup.failureCount,
+    }),
+    {
+      wins: 0,
+      losses: 0,
+      draws: 0,
+      points: 0,
+      matchups: 0,
+      completedMatches: 0,
+      failedMatches: 0,
+    },
+  )
+  const latestSummary: AnalyticsGauntletRunSummary = {
+    summarySchemaVersion: ANALYTICS_SUMMARY_SCHEMA_VERSION,
+    profileId: profile.id,
+    runId: WORKSHOP_ANALYTICS_RUN_ID,
+    ownerUserId: WORKSHOP_USER_ID,
+    lifecycleStatus: "complete",
+    compatibility,
+    totals,
+    matchupRecords,
+    provenance: {
+      matchSetIds: matchupRecords.map((matchup) => matchup.matchSetId),
+      generatedAt: "2026-05-22T00:00:00.000Z",
+      runSchemaVersion: ANALYTICS_RUN_SCHEMA_VERSION,
+    },
+    privacy: {
+      ownerSafe: true,
+      publicFieldsExcluded: [
+        "strategy code",
+        "private strategy state",
+        "private soldier state",
+        "activation payloads",
+        "owner-only debugging",
+        "private grid observations",
+        "runtime internals",
       ],
-      selectedProfileId: profile.id,
-      selectedRunId: WORKSHOP_ANALYTICS_RUN_ID,
+    },
+    metadata: {
+      demo: true,
+      localOwnerPlayerId: WORKSHOP_PLAYER_ID,
+      compatibilityEquivalentToPreviousRun: true,
+    },
+  }
+  const previousSummary: AnalyticsGauntletRunSummary = {
+    ...latestSummary,
+    runId: WORKSHOP_ANALYTICS_PREVIOUS_RUN_ID,
+    totals: {
+      ...latestSummary.totals,
+      wins: latestSummary.totals.wins - 2,
+      losses: latestSummary.totals.losses + 1,
+      points: latestSummary.totals.points - 7,
+    },
+    provenance: {
+      ...latestSummary.provenance,
+      generatedAt: "2026-05-22T00:00:00.000Z",
+    },
+  }
+  assertAnalyticsPublicSummaryLeakSafe(previousSummary)
+  assertAnalyticsPublicSummaryLeakSafe(latestSummary)
+  return {
+    profiles: [profile],
+    runs: [
+      {
+        id: WORKSHOP_ANALYTICS_PREVIOUS_RUN_ID,
+        profileId: profile.id,
+        ownerUserId: WORKSHOP_USER_ID,
+        runIndex: 1,
+        createdAt: "2026-05-22T00:00:00.000Z",
+        completedAt: "2026-05-22T00:02:00.000Z",
+        notes: "Previous compatible demo run.",
+        summary: previousSummary,
+      },
+      {
+        id: WORKSHOP_ANALYTICS_RUN_ID,
+        profileId: profile.id,
+        ownerUserId: WORKSHOP_USER_ID,
+        runIndex: 2,
+        createdAt: "2026-05-22T00:00:00.000Z",
+        completedAt: "2026-05-22T00:03:00.000Z",
+        notes: "Demo run generated from deterministic summary fixtures.",
+        summary: latestSummary,
+      },
+    ],
+    selectedProfileId: profile.id,
+    selectedRunId: WORKSHOP_ANALYTICS_RUN_ID,
+  }
+}
+
+export const createWorkshopAnalyticsDemoSnapshot =
+  (): WorkshopAnalyticsSnapshot =>
+    createWorkshopAnalyticsDemoSnapshotForPreset(
+      getMatchSetPreset("standard-v1"),
+    )
+
+export const createWorkshopAnalyticsDemoSnapshotV117 =
+  (): WorkshopAnalyticsSnapshot => {
+    const preset = resolveVersionedMatchSetPreset({
+      semanticAuthorityKey: "runtime-v1.17",
+      presetId: "standard-v1",
+    })
+    if (!preset || "semanticAuthorityKey" in preset) {
+      throw new Error("Historical v1.17 Workshop preset is unavailable.")
     }
+    return createWorkshopAnalyticsDemoSnapshotForPreset(preset)
   }
 
 const upsertAnalyticsProfile = async (

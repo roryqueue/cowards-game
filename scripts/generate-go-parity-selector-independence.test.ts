@@ -20,6 +20,8 @@ describe("Go parity selector independence", () => {
     expect(source).toContain(
       "semanticTuple: VERSIONED_RUNTIME_V117_SEMANTIC_TUPLE_RECORD.tuple",
     )
+    expect(source).toContain("createWorkshopAnalyticsDemoSnapshotV117()")
+    expect(source).not.toContain("createWorkshopAnalyticsDemoSnapshot()")
   })
 
   it("checks repository Go parity bytes without invoking a package manager", () => {
