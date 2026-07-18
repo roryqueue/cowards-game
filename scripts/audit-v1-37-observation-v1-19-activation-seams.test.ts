@@ -157,6 +157,20 @@ describe("v1.37 observation v1.19 activation seam audit", () => {
         ;(value.gate as { status: string }).status = "failed"
       },
     ],
+    [
+      "failed gate without failed inventory or finding",
+      (value: ActivationSeamInventory) => {
+        ;(value.gate as { status: string }).status = "failed"
+        ;(value.gate as { exitCode: number }).exitCode = 1
+      },
+    ],
+    [
+      "unknown status values",
+      (value: ActivationSeamInventory) => {
+        ;(value as { status: string }).status = "unknown"
+        ;(value.gate as { status: string }).status = "unknown"
+      },
+    ],
   ])("rejects %s", (_name, mutate) => {
     const value = clone(inventory())
     mutate(value)

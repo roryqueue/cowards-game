@@ -74,6 +74,15 @@ describe("v1.37 observation-v1.19 preactivation proof", () => {
     expect(proof.candidate.lanes).toHaveLength(4)
     expect(proof.candidate.lanes.flatMap((lane) => lane.runs)).toHaveLength(12)
     expect(proof.currentInventory.database).toEqual(passingDatabase())
+    expect(proof.seamAudit).toEqual({
+      status: "passed",
+      findingCount: 0,
+      autoFix: false,
+      gateStatus: "passed",
+      gateExitCode: 0,
+      dependencyTreeUnchanged: true,
+      stdoutNormalization: "vitest-stable-v1",
+    })
   })
 
   it.each([
@@ -173,6 +182,12 @@ describe("v1.37 observation-v1.19 preactivation proof", () => {
       "protected baseline drift",
       (proof: ReturnType<typeof passingProof>) => {
         proof.protectedBaseline.baselineSha256 = `sha256:${"0".repeat(64)}`
+      },
+    ],
+    [
+      "nonzero seam inventory",
+      (proof: ReturnType<typeof passingProof>) => {
+        ;(proof.seamAudit as { findingCount: number }).findingCount = 1
       },
     ],
   ] as const)("rejects %s", (_name, mutate) => {

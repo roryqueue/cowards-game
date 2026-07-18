@@ -367,6 +367,14 @@ export const validateActivationSeamInventory = (value: unknown): string[] => {
   }
   const inventory = value as ActivationSeamInventory
   const errors: string[] = []
+  const hasGateFailureFinding =
+    Array.isArray(inventory.findings) &&
+    inventory.findings.some(
+      (finding) =>
+        finding.id === "declared-stale-seam-gate-failed" &&
+        finding.classification === "declared-gate-failure" &&
+        finding.path === null,
+    )
   if (
     inventory.schemaVersion !==
       "v1.37-observation-v1.19-stale-seam-inventory-v1" ||
@@ -426,6 +434,9 @@ export const validateActivationSeamInventory = (value: unknown): string[] => {
   }
   if (
     inventory.gate?.id !== "declared-stale-seams" ||
+    (inventory.status !== "passed" && inventory.status !== "failed") ||
+    (inventory.gate.status !== "passed" &&
+      inventory.gate.status !== "failed") ||
     inventory.gate.command !== GATE_COMMAND.join(" ") ||
     inventory.gate.stdoutNormalization !== "vitest-stable-v1" ||
     !SHA256.test(inventory.gate.stdoutSha256) ||
@@ -439,6 +450,7 @@ export const validateActivationSeamInventory = (value: unknown): string[] => {
         inventory.gate.dependencyPostimageSha256) ||
     inventory.findingCount !== inventory.findings?.length ||
     (inventory.findingCount === 0) !== (inventory.status === "passed") ||
+    hasGateFailureFinding !== (inventory.gate.exitCode !== 0) ||
     (inventory.gate.status === "passed") !==
       (inventory.gate.exitCode === 0 && inventory.gate.dependencyTreeUnchanged)
   ) {

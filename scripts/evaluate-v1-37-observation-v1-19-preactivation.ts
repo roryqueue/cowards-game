@@ -5,6 +5,10 @@ import { spawnSync } from "node:child_process"
 import { readFileSync, renameSync, writeFileSync } from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
+import {
+  validateActivationSeamInventory,
+  type ActivationSeamInventory,
+} from "./audit-v1-37-observation-v1-19-activation-seams.js"
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
 const SHA256 = /^sha256:[0-9a-f]{64}$/u
@@ -94,6 +98,7 @@ const EXPECTED_BINDINGS = Object.freeze({
 
 const INPUT_PATHS = Object.freeze([
   ".planning/artifacts/v1.37-kernel-integrity-proof.json",
+  ".planning/artifacts/v1.37-observation-v1.19-stale-seam-inventory.json",
   ".planning/artifacts/v1.37-observation-v1.19-language-conformance-import-receipts.json",
   ".planning/artifacts/v1.37-observation-v1.19-language-conformance-python.json",
   ".planning/artifacts/v1.37-observation-v1.19-language-conformance-rust.json",
@@ -119,6 +124,8 @@ const INPUT_PATHS = Object.freeze([
   "packages/spec/src/current-semantic-authority-source.ts",
   "packages/spec/src/match-execution-contract.ts",
   "scripts/check-service-boundary-imports.ts",
+  "scripts/audit-v1-37-observation-v1-19-activation-seams.ts",
+  "scripts/audit-v1-37-observation-v1-19-activation-seams.test.ts",
   "scripts/evaluate-v1-37-observation-v1-19-preactivation.ts",
   "scripts/evaluate-v1-37-observation-v1-19-preactivation.test.ts",
 ])
@@ -334,6 +341,15 @@ export interface V137ObservationV119PreactivationProof {
       runtimeAbiVersion: string
     }
     database: V137ObservationV119DatabaseInventory
+  }
+  seamAudit: {
+    status: "passed"
+    findingCount: 0
+    autoFix: false
+    gateStatus: "passed"
+    gateExitCode: 0
+    dependencyTreeUnchanged: true
+    stdoutNormalization: "vitest-stable-v1"
   }
   protectedBaseline: {
     status: "verified"
@@ -626,6 +642,20 @@ export const buildV137ObservationV119PreactivationProof = (
     repoRoot,
     ".planning/artifacts/v1.37-protected-working-tree-baseline.json",
   )
+  const seamInventory = readJson<ActivationSeamInventory>(
+    repoRoot,
+    ".planning/artifacts/v1.37-observation-v1.19-stale-seam-inventory.json",
+  )
+  if (
+    validateActivationSeamInventory(seamInventory).length > 0 ||
+    seamInventory.status !== "passed" ||
+    seamInventory.findingCount !== 0 ||
+    seamInventory.gate.status !== "passed" ||
+    seamInventory.gate.exitCode !== 0 ||
+    seamInventory.gate.dependencyTreeUnchanged !== true
+  ) {
+    throw new Error("preactivation seam inventory invalid")
+  }
   return {
     schemaVersion: "v1.37-observation-v1.19-preactivation-proof-v1",
     milestone: "v1.37",
@@ -640,6 +670,15 @@ export const buildV137ObservationV119PreactivationProof = (
     })),
     candidate: buildCandidate(repoRoot),
     currentInventory: buildCurrentInventory(repoRoot, database),
+    seamAudit: {
+      status: seamInventory.status,
+      findingCount: seamInventory.findingCount,
+      autoFix: seamInventory.simulation.autoFix,
+      gateStatus: seamInventory.gate.status,
+      gateExitCode: seamInventory.gate.exitCode,
+      dependencyTreeUnchanged: seamInventory.gate.dependencyTreeUnchanged,
+      stdoutNormalization: seamInventory.gate.stdoutNormalization,
+    },
     protectedBaseline: {
       status: "verified",
       protectedPathCount: baseline.paths.length as 2,
@@ -722,6 +761,7 @@ export const validateV137ObservationV119PreactivationProof = (
       "inputs",
       "candidate",
       "currentInventory",
+      "seamAudit",
       "protectedBaseline",
       "privacy",
       "gates",
@@ -841,6 +881,20 @@ export const validateV137ObservationV119PreactivationProof = (
     errors.push("database inventory")
   }
   if (
+    JSON.stringify(proof.seamAudit) !==
+    JSON.stringify({
+      status: "passed",
+      findingCount: 0,
+      autoFix: false,
+      gateStatus: "passed",
+      gateExitCode: 0,
+      dependencyTreeUnchanged: true,
+      stdoutNormalization: "vitest-stable-v1",
+    })
+  ) {
+    errors.push("seam audit")
+  }
+  if (
     proof.currentInventory.semantic.semanticAuthorityKey !== "runtime-v1.17" ||
     proof.currentInventory.corpus.activeVersion !== "v2" ||
     proof.currentInventory.corpus.rootSha256 !==
@@ -862,7 +916,7 @@ export const validateV137ObservationV119PreactivationProof = (
         "packages/persistence/src/current-workshop-contract-generated.ts",
       ),
     ) !==
-      "sha256:1bed9b99ce512da13a3aa37554dc9b279f51dca619280ff3cbd85cc773ce18d3" ||
+      "sha256:7eef33f3b8081383e08a6330dc2ed6a5c468503bb72be6ff0cfb27202d1835ad" ||
     sha256(
       readBytes(
         repoRoot,
@@ -876,14 +930,14 @@ export const validateV137ObservationV119PreactivationProof = (
         "packages/spec/src/current-semantic-authority-generated.ts",
       ),
     ) !==
-      "sha256:7aaf65bdb8160710aaaccc78f0c826872747153c566469642407c611e98baacf" ||
+      "sha256:158837d2ccf0b2cec8ef3851d3822a49cde8cd21058f5a350d740e3766492fd4" ||
     sha256(
       readBytes(
         repoRoot,
         "apps/go-backend/current_semantic_authority_generated.go",
       ),
     ) !==
-      "sha256:a7b4fe61dd04ae73a8d0ce487a10f6bffd1bca2ff5df7d5b04f842f31ce73c6d"
+      "sha256:512b83fc6bd300b17214b25b851e737aecb7c58b629642c33bbd6443f6807063"
   )
     errors.push("Phase-259 current selection")
   const baseline = readJson<{ paths: unknown[]; baselineSha256: string }>(
