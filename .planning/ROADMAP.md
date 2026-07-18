@@ -396,7 +396,7 @@ Plans:
 
 **Wave 15 *(blocked on Wave 14 completion)* — corrected proof inventory**
 
-- [ ] 260-31-PLAN.md — Rebuild pre/postactivation evaluators around five selector files and one database head. *(review-fix cycle active)*
+- [x] 260-31-PLAN.md — Rebuild pre/postactivation evaluators around five selector files and one database head.
 
 **Wave 16 *(blocked on Wave 15 completion)* — isolated seam audit and refreshed readiness**
 
@@ -449,6 +449,6 @@ Cycle-cap, inward-start, facing-only MOVE, reversal-history, attacker-facing/Adv
 | 256. Counted Safety and Canonical Authority | 19/19 | Complete    | 2026-07-13 |
 | 257. Canonical Transition Kernel and v1.4 Semantic Integrity | 22/22 | Complete | 2026-07-13 |
 | 258. Canonical JSON, Failure Semantics, and Artifact Identity | 14/14 | Complete | 2026-07-16 |
-| 259. Executable Four-Language and Chronicle Conformance | 22/31 | In progress | - |
-| 260. Truthful Strategy Inputs, Arena Authority, and Set Fairness | 29/33 | In Progress|  |
+| 259. Executable Four-Language and Chronicle Conformance | 31/31 | Complete | 2026-07-16 |
+| 260. Truthful Strategy Inputs, Arena Authority, and Set Fairness | 30/33 | In Progress|  |
 | 261. Integrated Service Proof, Drift Guards, and Release | 0/TBD | Not started | - |
