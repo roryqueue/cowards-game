@@ -156,6 +156,52 @@ describe("Coward's Game spec contracts", () => {
       )
     })
 
+    it("projects the shared truthful fixtures through exact v1.17 and v1.19 schemas", () => {
+      const currentStrategy = fixtures.valid.standardStrategyInput
+      const currentSoldierBrain = fixtures.valid.standardSoldierBrainInput
+
+      expect(currentStrategy).not.toHaveProperty("initialInitiativePlayerId")
+      expect(currentStrategy).not.toHaveProperty("hasInitialInitiative")
+      expect(currentStrategy).not.toHaveProperty("roundInitiativePlayerId")
+      expect(currentStrategy).not.toHaveProperty("hasRoundInitiative")
+      expect(currentSoldierBrain).not.toHaveProperty(
+        "hasAdvancedThisActivation",
+      )
+
+      const candidateStrategy = publicSpec.StrategyInputV119Schema.parse({
+        ...currentStrategy,
+        initialInitiativePlayerId: "bottom",
+        hasInitialInitiative: true,
+        roundInitiativePlayerId: "bottom",
+        hasRoundInitiative: true,
+      })
+      const candidateSoldierBrain =
+        publicSpec.SoldierBrainInputV119Schema.parse({
+          ...currentSoldierBrain,
+          hasAdvancedThisActivation: false,
+        })
+
+      expect(candidateStrategy).toMatchObject({
+        initialInitiativePlayerId: "bottom",
+        hasInitialInitiative: true,
+        roundInitiativePlayerId: "bottom",
+        hasRoundInitiative: true,
+      })
+      expect(candidateSoldierBrain.hasAdvancedThisActivation).toBe(false)
+      expect(
+        publicSpec.StrategyInputV119Schema.safeParse({
+          ...candidateStrategy,
+          hasRoundInitiative: undefined,
+        }).success,
+      ).toBe(false)
+      expect(
+        publicSpec.SoldierBrainInputV119Schema.safeParse({
+          ...candidateSoldierBrain,
+          hasAdvancedThisActivation: undefined,
+        }).success,
+      ).toBe(false)
+    })
+
     it("rejects partial, mixed, and premature current selectors", () => {
       expect(
         publicSpec.resolveCurrentSemanticAuthoritySelection({
