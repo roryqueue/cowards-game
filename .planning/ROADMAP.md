@@ -321,7 +321,7 @@ Plans:
   4. Each counted scenario explicitly schedules every entrant on each side and in each initial-initiative state, proved at entrant level through TypeScript, Go, persistence, and service-backed tests.
   5. Arena and Set repair adds no official geometry or valid v1.4 gameplay change; any change to Strategy observation or reachable Match semantics stops for explicit compatibility approval.
 
-**Plans:** 29/33 plans executed
+**Plans:** 31/35 plans executed
 
 **Wave 1 — immutable semantic authorities**
 
@@ -400,17 +400,21 @@ Plans:
 
 **Wave 16 *(blocked on Wave 15 completion)* — bounded active-review admission repair**
 
-- [ ] 260-34-PLAN.md — Admit only exact reviewed v2/v3 corpus evidence and make the isolated auditor package-manager inert.
+- [x] 260-34-PLAN.md — Admit only exact reviewed v2/v3 corpus evidence and make the isolated auditor package-manager inert.
 
-**Wave 17 *(blocked on Wave 16 completion)* — isolated seam audit and refreshed readiness**
+**Wave 17 *(blocked on Wave 16 completion)* — closed-version fixture completeness**
+
+- [ ] 260-35-PLAN.md — Complete shared observation fixtures for exact v1.17 stripping and v1.19 retention.
+
+**Wave 18 *(blocked on Wave 17 completion)* — isolated seam audit and refreshed readiness**
 
 - [ ] 260-33-PLAN.md — Prove zero stale seams and regenerate the exact preactivation proof.
 
-**Wave 18 *(blocked on Wave 17 completion)* — atomic activation**
+**Wave 19 *(blocked on Wave 18 completion)* — atomic activation**
 
 - [ ] 260-14-PLAN.md — Activate five selector files and one transactional database selection head in one proved commit.
 
-**Wave 19 *(blocked on Wave 18 completion)* — integrated closure**
+**Wave 20 *(blocked on Wave 19 completion)* — integrated closure**
 
 - [ ] 260-15-PLAN.md — Close Phase 260 with one executable proof and permanent drift monitors.
 
