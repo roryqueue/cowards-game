@@ -8,6 +8,7 @@ import {
   DECLARED_STALE_SEAM_PATHS,
   STALE_SEAM_INVENTORY_PATH,
   auditV137ObservationV119ActivationSeams,
+  normalizeVitestGateStdout,
   validateActivationSeamInventory,
   type ActivationSeamInventory,
 } from "./audit-v1-37-observation-v1-19-activation-seams.js"
@@ -62,6 +63,7 @@ const inventory = (): ActivationSeamInventory => ({
     ].join(" "),
     status: "passed",
     exitCode: 0,
+    stdoutNormalization: "vitest-stable-v1",
     stdoutSha256: hash("5"),
     stderrSha256: hash("6"),
     dependencyExecution: "already-installed-direct-vitest",
@@ -77,6 +79,32 @@ const inventory = (): ActivationSeamInventory => ({
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T
 
 describe("v1.37 observation v1.19 activation seam audit", () => {
+  it("normalizes only volatile Vitest paths, timing, and terminal decoration", () => {
+    const first = normalizeVitestGateStdout(
+      Buffer.from(
+        "\u001b[32m RUN\u001b[0m v4 /tmp/clone-a/worktree\n ✓ suite (2 tests) 12ms\n Start at 13:15:46\n Duration 1.25s (transform 80ms)\n",
+      ),
+      "/tmp/clone-a/worktree",
+    )
+    const second = normalizeVitestGateStdout(
+      Buffer.from(
+        " RUN v4 /tmp/clone-b/worktree\r\n ✓ suite (2 tests) 900ms\r\n Start at 18:22:01\r\n Duration 9.75s (transform 700ms)\r\n",
+      ),
+      "/tmp/clone-b/worktree",
+    )
+    const changed = normalizeVitestGateStdout(
+      Buffer.from(
+        " RUN v4 /tmp/clone-c/worktree\n ✓ suite (3 tests) 12ms\n Start at 13:15:46\n Duration 1.25s (transform 80ms)\n",
+      ),
+      "/tmp/clone-c/worktree",
+    )
+
+    expect(first).toEqual(second)
+    expect(first).not.toEqual(changed)
+    expect(first.toString("utf8")).toContain("<clone-root>")
+    expect(first.toString("utf8")).toContain("<duration>")
+  })
+
   it("accepts only the exact five-selector, four-seam, zero-finding contract", () => {
     expect(validateActivationSeamInventory(inventory())).toEqual([])
     expect(ACTIVATION_SELECTOR_PATHS).toHaveLength(5)
@@ -120,10 +148,12 @@ describe("v1.37 observation v1.19 activation seam audit", () => {
     [
       "invalid dependency postimage",
       (value: ActivationSeamInventory) => {
-        ;(value.gate as { dependencyPostimageSha256: string })
-          .dependencyPostimageSha256 = "not-a-hash"
-        ;(value.gate as { dependencyTreeUnchanged: boolean })
-          .dependencyTreeUnchanged = false
+        ;(
+          value.gate as { dependencyPostimageSha256: string }
+        ).dependencyPostimageSha256 = "not-a-hash"
+        ;(
+          value.gate as { dependencyTreeUnchanged: boolean }
+        ).dependencyTreeUnchanged = false
         ;(value.gate as { status: string }).status = "failed"
       },
     ],

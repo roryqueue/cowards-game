@@ -25,6 +25,8 @@ import {
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
 const SHA256 = /^sha256:[0-9a-f]{64}$/u
+// eslint-disable-next-line no-control-regex -- terminal decoration is the exact volatile byte class removed from evidence.
+const ANSI_CONTROL_SEQUENCE = new RegExp("\\u001b\\[[0-?]*[ -/]*[@-~]", "gu")
 
 export const STALE_SEAM_INVENTORY_PATH =
   ".planning/artifacts/v1.37-observation-v1.19-stale-seam-inventory.json"
@@ -90,6 +92,7 @@ export interface ActivationSeamInventory {
     readonly command: string
     readonly status: "passed" | "failed"
     readonly exitCode: number
+    readonly stdoutNormalization: "vitest-stable-v1"
     readonly stdoutSha256: string
     readonly stderrSha256: string
     readonly dependencyExecution: "already-installed-direct-vitest"
@@ -112,6 +115,22 @@ export interface ActivationSeamAuditOptions {
 
 const sha256 = (value: string | Uint8Array): string =>
   `sha256:${createHash("sha256").update(value).digest("hex")}`
+
+export const normalizeVitestGateStdout = (
+  output: Uint8Array,
+  cloneRoot: string,
+): Buffer =>
+  Buffer.from(
+    Buffer.from(output)
+      .toString("utf8")
+      .replaceAll("\r\n", "\n")
+      .replaceAll(cloneRoot, "<clone-root>")
+      .replace(ANSI_CONTROL_SEQUENCE, "")
+      .replace(/^\s*Start at\s+.*$/gmu, " Start at <normalized>")
+      .replace(/^\s*Duration\s+.*$/gmu, " Duration <normalized>")
+      .replace(/\b\d+(?:\.\d+)?(?:ms|s)\b/gu, "<duration>"),
+    "utf8",
+  )
 
 const git = (repoRoot: string, args: readonly string[]): Buffer =>
   execFileSync("git", [...args], {
@@ -408,6 +427,7 @@ export const validateActivationSeamInventory = (value: unknown): string[] => {
   if (
     inventory.gate?.id !== "declared-stale-seams" ||
     inventory.gate.command !== GATE_COMMAND.join(" ") ||
+    inventory.gate.stdoutNormalization !== "vitest-stable-v1" ||
     !SHA256.test(inventory.gate.stdoutSha256) ||
     !SHA256.test(inventory.gate.stderrSha256) ||
     inventory.gate.dependencyExecution !== "already-installed-direct-vitest" ||
@@ -420,8 +440,7 @@ export const validateActivationSeamInventory = (value: unknown): string[] => {
     inventory.findingCount !== inventory.findings?.length ||
     (inventory.findingCount === 0) !== (inventory.status === "passed") ||
     (inventory.gate.status === "passed") !==
-      (inventory.gate.exitCode === 0 &&
-        inventory.gate.dependencyTreeUnchanged)
+      (inventory.gate.exitCode === 0 && inventory.gate.dependencyTreeUnchanged)
   ) {
     errors.push("gate or findings")
   }
@@ -457,6 +476,7 @@ export const auditV137ObservationV119ActivationSeams = (
     command: GATE_COMMAND.join(" "),
     status: "failed" as "passed" | "failed",
     exitCode: 1,
+    stdoutNormalization: "vitest-stable-v1" as const,
     stdoutSha256: sha256(Buffer.alloc(0)),
     stderrSha256: sha256(Buffer.alloc(0)),
     dependencyExecution: "already-installed-direct-vitest" as const,
@@ -492,16 +512,13 @@ export const auditV137ObservationV119ActivationSeams = (
     }
     const result = (options.gateRunner ?? defaultGateRunner)(cloneRoot)
     const dependencyPostimage = dependencyTreeDigest(cloneRoot)
-    const dependencyTreeUnchanged =
-      dependencyPreimage === dependencyPostimage
+    const dependencyTreeUnchanged = dependencyPreimage === dependencyPostimage
     gate = {
       ...gate,
       status:
-        result.exitCode === 0 && dependencyTreeUnchanged
-          ? "passed"
-          : "failed",
+        result.exitCode === 0 && dependencyTreeUnchanged ? "passed" : "failed",
       exitCode: result.exitCode,
-      stdoutSha256: sha256(result.stdout),
+      stdoutSha256: sha256(normalizeVitestGateStdout(result.stdout, cloneRoot)),
       stderrSha256: sha256(result.stderr),
       dependencyPreimageSha256: dependencyPreimage,
       dependencyPostimageSha256: dependencyPostimage,
