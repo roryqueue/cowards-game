@@ -49,6 +49,9 @@ status: complete
 - Replaced disk-assisted exceptional cleanup with a coordinator-ACKed launcher PGID delivered only through exact child IPC; the gate command cannot execute until that identity is trusted in memory.
 - Made the persisted lease observability-only, atomically updated, and state-strict, with no production signal ever derived from a disk PID or PGID.
 - Closed coordinator death during the initial atomic starting-lease write by letting the unconfigured supervisor remove the exact nonce-owned final/temp lease namespace before recovery.
+- Added an activation-scoped launcher PostgreSQL liveness lock held before IPC registration through gate termination, allowing bootstrap recovery to reclaim stale final/temp leases and the exact disposable candidate after complete host/process-tree loss without trusting disk PIDs.
+- Made database-session loss fail the gate closed and terminate its complete process group; bounded post-lock lease settling closes the database-restart ordering window before stale cleanup.
+- Scoped candidate deletion to the exact activation root and proved unrelated advisory locks, leases, candidates, and live processes remain untouched.
 - Bound the postactivation production adapter to the exact Plan 14 activation ID and executed its real smoke and protected-baseline gates in the test suite.
 - Removed every production parse bypass; Plan 14 argument contracts are exercised only through pure exported parsers, and both executables reject extra bypass arguments.
 - Strengthened reverse recovery to rederive the activation preimage and restored manifest from actual commit ancestry before finalization.
@@ -69,13 +72,14 @@ status: complete
 - `a88bfc4` — `fix(260-31): supervise activation gate process trees`
 - `a90da11` — `fix(260-31): register gate groups before launch`
 - `740e4d3` — `fix(260-31): recover prelease coordinator death`
+- `be9e9dc` — `fix(260-31): recover gates after complete host loss`
 
 ## Verification
 
-- Coordinator, evaluator, production-adapter integration, and PostgreSQL selection-head gate: 76 tests passed with `DATABASE_URL` and one worker.
+- Coordinator, evaluator, production-adapter integration, and PostgreSQL selection-head gate: 82 tests passed with `DATABASE_URL` and one worker.
 - Standalone serialized engine gate: 147 tests passed across 19 files.
 - Exact runtime-service production gate: 154 tests passed across 16 files with one worker.
-- Real temporary-repository and isolated-schema proof covered exact six-path staging, commit parent/tree, historical proof commitment, finalization, compensation, committed recovery, staged abort, pre-prepare gate failure, forged reverse intent, proof removal, live-head non-mutation, actual production-runner coordinator SIGKILL, whole gate-tree exit, normal watchdog cleanup, unexpected supervisor exit, stale-lease refusal, adversarial disk-PGID rewriting, and coordinator/supervisor death at every launcher-registration boundary.
+- Real temporary-repository and isolated-schema proof covered exact six-path staging, commit parent/tree, historical proof commitment, finalization, compensation, committed recovery, staged abort, pre-prepare gate failure, forged reverse intent, proof removal, live-head non-mutation, actual production-runner coordinator SIGKILL, whole gate-tree exit, normal watchdog cleanup, unexpected supervisor exit, adversarial disk-PGID rewriting, coordinator/supervisor death at every launcher-registration boundary, full process-tree loss with stale lease/candidate reclamation, deleted/forged lease resistance, unrelated-state preservation, and PostgreSQL liveness-session termination.
 - The production adapter ran `pnpm build` successfully and restored `apps/web/next-env.d.ts` to the exact tracked blob.
 - Standalone script TypeScript compilation, focused ESLint, repository typecheck (27 tasks), repository lint (15 tasks), and focused formatting passed.
 - Protected working-tree baseline remained `sha256:c0e1c2a6319f01377df74a2d6e5c493d26382f2882c059116c5ba467e5e81707`.
@@ -106,5 +110,8 @@ status: complete
 - Process-table state handling distinguishes adopted zombies from executable group members, closing the only residue found by the expanded boundary matrix.
 - Unconfigured-supervisor cleanup now removes the exact random-nonce starting-lease basename and its atomic-write temp siblings, closing coordinator SIGKILL between temp creation and rename without touching unrelated leases.
 - Boundary and fake-gate markers publish atomically, eliminating partial-JSON observation races exposed by the expanded death matrix.
+- Replaced persistent-lease refusal with an activation-scoped launcher-held PostgreSQL liveness proof: recovery never signals disk identities, blocks while the lock is held even if the lease is forged or deleted, and reclaims stale owned final/temp lease files only after vacancy.
+- Made liveness cleanup use its own pool client and exact try-lock/unlock checks so it cannot wait on the coordinator's separate advisory-lock session; database-session failure now kills the registered gate tree and returns no receipt.
+- Removed only the exact activation candidate root and lease prefix, preserving unrelated lock, lease, candidate, and process state.
 - Repository lint exposed unrelated Plan 27 type-import findings; the final correction landed separately in `3dc7b0e` before final verification.
 - Detailed finding-by-finding closure is recorded in `260-31-REVIEW-FIX.md`.
