@@ -440,7 +440,7 @@ Plans:
 
 **Wave 26 *(blocked on Wave 25 completion)* — selector-independent Go parity generation**
 
-- [ ] 260-43-PLAN.md — Pin immutable Go parity Chronicle generation to explicit v1.17 dispatch and extend readiness coverage.
+- [x] 260-43-PLAN.md — Pin immutable Go parity Chronicle generation to explicit v1.17 dispatch and extend readiness coverage.
 
 **Wave 27 *(blocked on Wave 26 completion)* — atomic activation**
 
