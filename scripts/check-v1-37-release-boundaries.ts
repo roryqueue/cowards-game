@@ -3,7 +3,7 @@ import { createHash } from "node:crypto"
 import { existsSync, readFileSync } from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
-import { assertPublicOutputLeakSafe } from "../packages/spec/src/public-output-privacy.js"
+import { assertPublicOutputLeakSafe } from "@cowards/spec"
 import {
   analyzeV137IntegrityBoundaries,
   type V137IntegrityBoundaryFinding,

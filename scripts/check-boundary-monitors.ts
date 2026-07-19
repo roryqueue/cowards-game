@@ -5639,6 +5639,9 @@ export const runBoundaryMonitorChecks = async (): Promise<
   await check("contract_drift", "v1.37 Phase 260 closure monitor wiring", () =>
     validateV137Phase260ClosureMonitorWiring(),
   ),
+  await check("contract_drift", "v1.37 release boundary monitor wiring", () =>
+    validateV137ReleaseBoundaryMonitorWiring(),
+  ),
 ]
 
 export const validateV137ExecutableConformanceMonitorWiring = (): string => {
@@ -5688,6 +5691,34 @@ export const validateV137Phase260ClosureMonitorWiring = (): string => {
     throw new Error("v1.37 Phase 260 closure monitor wiring drifted")
   }
   return "pure Phase 260 proof check is serialized exactly once without write-mode recursion"
+}
+
+export const validateV137ReleaseBoundaryMonitorWiring = (): string => {
+  const packageJson = readJson<{ scripts: Record<string, string> }>(
+    "package.json",
+  )
+  const sourceCommand =
+    "pnpm exec tsx scripts/check-v1-37-release-boundaries.ts --source-fixture"
+  const strictCommand =
+    "pnpm exec tsx scripts/check-v1-37-release-boundaries.ts --strict-release"
+  const sourceInvocation = "pnpm v1.37:release-boundaries:source-check"
+  const boundary = packageJson.scripts["boundary:monitors"] ?? ""
+  if (
+    packageJson.scripts["v1.37:release-boundaries:source-check"] !==
+      sourceCommand ||
+    packageJson.scripts["v1.37:release-boundaries:check"] !== strictCommand ||
+    boundary.split(sourceInvocation).length !== 2 ||
+    boundary.includes("pnpm v1.37:release-boundaries:check") ||
+    boundary.includes("--strict-release") ||
+    boundary.includes("check-v1-37-release-boundaries.ts --write") ||
+    boundary.indexOf(sourceInvocation) <
+      boundary.indexOf("pnpm v1.37:phase260-proof:check") ||
+    boundary.indexOf(sourceInvocation) >
+      boundary.indexOf("pnpm exec tsx scripts/check-boundary-monitors.ts")
+  ) {
+    throw new Error("v1.37 release boundary monitor wiring drifted")
+  }
+  return "pure source/fixture release check is serialized exactly once; strict release remains reserved for final artifacts"
 }
 
 const run = async (): Promise<number> => {
