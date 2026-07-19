@@ -296,6 +296,9 @@ export const runDevelopmentMatchSetSmoke = async (
       entrantKey: revision.id,
       strategyRevisionId: revision.id,
     })),
+    ...(options.semanticAuthorityKey === undefined
+      ? {}
+      : { semanticAuthorityKey: options.semanticAuthorityKey }),
   })
 
   await migrate(pool)

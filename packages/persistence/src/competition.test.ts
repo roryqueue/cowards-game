@@ -200,6 +200,7 @@ const competitionSchedulingPool = (options: {
   head?: "active" | "pending" | "mismatch"
   missingRevision?: boolean
   failJobs?: boolean
+  integrityIdentity?: IntegritySchedulingIdentity
 }) => {
   const calls: string[] = []
   const client = {
@@ -279,6 +280,40 @@ const competitionSchedulingPool = (options: {
               geometry_hash_profile: "arena-semantic-geometry-v1",
               semantic_geometry_hash: arena.semanticGeometryHash,
               config: arena,
+            },
+          ],
+        }
+      }
+      if (
+        normalized.startsWith(
+          "select evidence.* from strategy_revision_v1_19_revalidations",
+        )
+      ) {
+        const revisionId = String(values[0])
+        const evidence =
+          options.integrityIdentity?.executionEntrants[revisionId]
+        const certificate = evidence?.conformanceCertificateRef
+        if (!evidence || !certificate) return { rows: [] }
+        return {
+          rows: [
+            {
+              id: `competition-candidate:revalidation:${revisionId}`,
+              strategy_revision_id: revisionId,
+              source_hash: sha256(`competition-source:${revisionId}`),
+              source_bytes: 64,
+              artifact_sha256: `sha256:${evidence.laneIdentity.artifactSha256}`,
+              artifact_bytes: 128,
+              language_id: evidence.laneIdentity.languageId,
+              provider_id: evidence.laneIdentity.providerId,
+              lane_id: evidence.laneIdentity.adapterId,
+              runtime_abi_version: "strategy-runtime-abi-v1.19",
+              semantic_runtime_version: "runtime-v1.19",
+              semantic_tuple_id: evidence.laneIdentity.semanticTupleId,
+              execution_request_root: `sha256:${sha256(`competition-request:${revisionId}`)}`,
+              execution_result_root: `sha256:${sha256(`competition-result:${revisionId}`)}`,
+              execution_receipt_root: `sha256:${sha256(`competition-receipt:${revisionId}`)}`,
+              reviewed_certificate_id: certificate.certificateId,
+              reviewed_certificate_sha256: `sha256:${certificate.certificateRecordHash}`,
             },
           ],
         }
@@ -587,6 +622,7 @@ describe("competition helpers", () => {
       }),
       purpose: "exhibition",
       evaluationInstant: "2026-07-12T12:00:00.000Z",
+      semanticAuthorityKey: "runtime-v1.17",
       entrants: [
         {
           entrantKey: "strategy-revision:a",
@@ -601,6 +637,7 @@ describe("competition helpers", () => {
     await expect(
       service.createFromMatrix({
         id: matchSetId,
+        semanticAuthorityKey: "runtime-v1.17",
         matches: legacy,
         integrityIdentity: legacyIdentity,
       }),
@@ -650,7 +687,10 @@ describe("competition helpers", () => {
       integrityIdentity,
     } as const
 
-    const active = competitionSchedulingPool({ head: "active" })
+    const active = competitionSchedulingPool({
+      head: "active",
+      integrityIdentity,
+    })
     await expect(
       createMatchSetService(active.pool).createFromMatrix(input),
     ).resolves.toMatchObject({ matchSetId: input.id })
@@ -681,6 +721,7 @@ describe("competition helpers", () => {
     const failed = competitionSchedulingPool({
       head: "active",
       failJobs: true,
+      integrityIdentity,
     })
     await expect(
       createMatchSetService(failed.pool).createFromMatrix(input),

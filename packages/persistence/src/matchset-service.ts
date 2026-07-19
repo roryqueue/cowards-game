@@ -29,6 +29,7 @@ import {
 import {
   IntegrityEvidenceInputError,
   createMatchExecutionEvidencePair,
+  createCandidateMatchSetIntegrityIdentityV117,
   createCandidateMatchSetIntegrityIdentityV119,
   createMatchSetIntegrityIdentity,
   matchExecutionEvidencePairSqlValues,
@@ -130,6 +131,7 @@ export const createFixtureMatchSetEvidenceResolver = (
           setPolicy: selected.setPolicyVersion,
         },
       }
+      const isCandidate = selected.semanticAuthorityKey === "runtime-v1.19"
       const registryGeneration = "fixture:v1.37:generation:1"
       const omitted = new Set(options.omitStrategyRevisionIds ?? [])
       const executionEntrants = Object.fromEntries(
@@ -176,9 +178,27 @@ export const createFixtureMatchSetEvidenceResolver = (
                   ),
                   registryGeneration,
                 },
+                ...(isCandidate
+                  ? {
+                      conformanceCertificateRef: {
+                        kind: "conformance" as const,
+                        certificateId: `fixture:certificate:conformance:${binding.strategyRevisionId}`,
+                        certificateVersion:
+                          "runtime-conformance-certificate-v1.19",
+                        certificateRecordHash: fixtureHash(
+                          `conformance:${binding.strategyRevisionId}`,
+                        ),
+                        registryGeneration,
+                      },
+                    }
+                  : {}),
                 schedulingDecision: {
-                  status: "exhibition_only" as const,
-                  reasonCode: "CONFORMANCE_MISSING" as const,
+                  status: isCandidate
+                    ? ("counted" as const)
+                    : ("exhibition_only" as const),
+                  reasonCode: isCandidate
+                    ? ("EVIDENCE_CURRENT" as const)
+                    : ("CONFORMANCE_MISSING" as const),
                   evaluatedAt: input.evaluationInstant,
                   freshUntil: "2099-12-31T23:59:59.999Z",
                   registryGeneration,
@@ -228,7 +248,9 @@ export const resolveMatchSetExecutionEvidence = async (input: {
   const identity =
     input.semanticAuthorityKey === "runtime-v1.19"
       ? createCandidateMatchSetIntegrityIdentityV119(identityInput)
-      : createMatchSetIntegrityIdentity(identityInput)
+      : input.semanticAuthorityKey === "runtime-v1.17"
+        ? createCandidateMatchSetIntegrityIdentityV117(identityInput)
+        : createMatchSetIntegrityIdentity(identityInput)
   if (
     identity.normalizedEntrants.some(
       (entrant) =>
@@ -533,7 +555,9 @@ const validateMatchSetCreation = (
   }
   const identity = isCandidate
     ? createCandidateMatchSetIntegrityIdentityV119(identityInput)
-    : createMatchSetIntegrityIdentity(identityInput)
+    : semanticAuthority.selection.semanticAuthorityKey === "runtime-v1.17"
+      ? createCandidateMatchSetIntegrityIdentityV117(identityInput)
+      : createMatchSetIntegrityIdentity(identityInput)
   const tuple = identity.compatibility.tuple
   if (
     identity.compatibility.tupleId !== semanticAuthority.selection.tupleId ||

@@ -30,6 +30,7 @@ import {
   createFixtureMatchSetEvidenceResolver,
   createMatchSetService,
   resolveMatchSetExecutionEvidence,
+  type IntegritySchedulingIdentity,
 } from "./matchset-service.js"
 import {
   TEST_CURRENT_SEMANTIC_AUTHORITY_HEAD,
@@ -467,6 +468,7 @@ const ladderSchedulingSeamPool = (options: {
   head?: "active" | "pending" | "mismatch"
   missingRevision?: boolean
   failJobs?: boolean
+  integrityIdentity?: IntegritySchedulingIdentity
 }) => {
   const calls: string[] = []
   const client = {
@@ -546,6 +548,42 @@ const ladderSchedulingSeamPool = (options: {
               geometry_hash_profile: "arena-semantic-geometry-v1",
               semantic_geometry_hash: arena.semanticGeometryHash,
               config: arena,
+            },
+          ],
+        }
+      }
+      if (
+        normalized.startsWith(
+          "select evidence.* from strategy_revision_v1_19_revalidations",
+        )
+      ) {
+        const revisionId = String(values[0])
+        const evidence =
+          options.integrityIdentity?.executionEntrants[revisionId]
+        const certificate = evidence?.conformanceCertificateRef
+        if (!evidence || !certificate) return { rows: [] }
+        const hash = (value: string): string =>
+          createHash("sha256").update(value).digest("hex")
+        return {
+          rows: [
+            {
+              id: `ladder-candidate:revalidation:${revisionId}`,
+              strategy_revision_id: revisionId,
+              source_hash: hash(`ladder-source:${revisionId}`),
+              source_bytes: 64,
+              artifact_sha256: `sha256:${evidence.laneIdentity.artifactSha256}`,
+              artifact_bytes: 128,
+              language_id: evidence.laneIdentity.languageId,
+              provider_id: evidence.laneIdentity.providerId,
+              lane_id: evidence.laneIdentity.adapterId,
+              runtime_abi_version: "strategy-runtime-abi-v1.19",
+              semantic_runtime_version: "runtime-v1.19",
+              semantic_tuple_id: evidence.laneIdentity.semanticTupleId,
+              execution_request_root: `sha256:${hash(`ladder-request:${revisionId}`)}`,
+              execution_result_root: `sha256:${hash(`ladder-result:${revisionId}`)}`,
+              execution_receipt_root: `sha256:${hash(`ladder-receipt:${revisionId}`)}`,
+              reviewed_certificate_id: certificate.certificateId,
+              reviewed_certificate_sha256: `sha256:${certificate.certificateRecordHash}`,
             },
           ],
         }
@@ -753,7 +791,10 @@ describe("trial ladder contracts", () => {
     })
     const input = { id, matches, integrityIdentity } as const
 
-    const active = ladderSchedulingSeamPool({ head: "active" })
+    const active = ladderSchedulingSeamPool({
+      head: "active",
+      integrityIdentity,
+    })
     await expect(
       createMatchSetService(active.pool).createFromMatrix(input),
     ).resolves.toMatchObject({ matchSetId: id })
@@ -779,6 +820,7 @@ describe("trial ladder contracts", () => {
     const failed = ladderSchedulingSeamPool({
       head: "active",
       failJobs: true,
+      integrityIdentity,
     })
     await expect(
       createMatchSetService(failed.pool).createFromMatrix(input),

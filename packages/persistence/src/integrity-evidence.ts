@@ -7,6 +7,7 @@ import {
   EXECUTABLE_LANE_EVIDENCE_STATUSES,
   hashExecutableLaneIdentity,
   resolveCanonicalCompatibilityTuple,
+  resolveCandidateRuntimeV117SemanticTuple,
   resolveCandidateRuntimeV119SemanticTuple,
   parseCanonicalJsonInstant,
   type CanonicalCompatibilityTuple,
@@ -192,13 +193,17 @@ const assertExactKeys = (
     actual.length !== expected.length ||
     actual.some((field, index) => field !== expected[index])
   ) {
-    throw new IntegrityEvidenceInputError(`${label} must use one exact identity shape.`)
+    throw new IntegrityEvidenceInputError(
+      `${label} must use one exact identity shape.`,
+    )
   }
 }
 
 const requiredString = (value: unknown, label: string): string => {
   if (typeof value !== "string" || value.length === 0 || value.includes("\0")) {
-    throw new IntegrityEvidenceInputError(`${label} must be a non-empty string.`)
+    throw new IntegrityEvidenceInputError(
+      `${label} must be a non-empty string.`,
+    )
   }
   return value
 }
@@ -206,7 +211,9 @@ const requiredString = (value: unknown, label: string): string => {
 const assertSha256 = (value: unknown, label: string): string => {
   const hash = requiredString(value, label)
   if (!/^[0-9a-f]{64}$/u.test(hash)) {
-    throw new IntegrityEvidenceInputError(`${label} must be a lowercase SHA-256 hash.`)
+    throw new IntegrityEvidenceInputError(
+      `${label} must be a lowercase SHA-256 hash.`,
+    )
   }
   return hash
 }
@@ -215,9 +222,7 @@ const cloneTuple = (
   tuple: CanonicalCompatibilityTuple,
 ): Readonly<CanonicalCompatibilityTuple> => Object.freeze({ ...tuple })
 
-type CompatibilityResolver = (
-  selector: unknown,
-) =>
+type CompatibilityResolver = (selector: unknown) =>
   | Readonly<{
       tupleId: string
       tuple: Readonly<CanonicalCompatibilityTuple>
@@ -238,7 +243,9 @@ const validateCompatibility = (
     tuple: value.tuple,
   })
   if (!resolved) {
-    throw new IntegrityEvidenceInputError("Compatibility tuple is unknown or uncertified.")
+    throw new IntegrityEvidenceInputError(
+      "Compatibility tuple is unknown or uncertified.",
+    )
   }
   return Object.freeze({ tupleId, tuple: cloneTuple({ ...resolved.tuple }) })
 }
@@ -266,7 +273,9 @@ const validateLaneIdentity = (
     (typeof LANE_IDENTITY_STRING_FIELDS)[number]
   >
   if (strings.semanticTupleId !== compatibility.tupleId) {
-    throw new IntegrityEvidenceInputError("Entrant lane semantic tuple ID is mixed.")
+    throw new IntegrityEvidenceInputError(
+      "Entrant lane semantic tuple ID is mixed.",
+    )
   }
   const resolved = resolveCompatibility({
     tupleId: strings.semanticTupleId,
@@ -278,7 +287,9 @@ const validateLaneIdentity = (
       (field) => resolved.tuple[field] !== compatibility.tuple[field],
     )
   ) {
-    throw new IntegrityEvidenceInputError("Entrant lane semantic tuple is mixed or uncertified.")
+    throw new IntegrityEvidenceInputError(
+      "Entrant lane semantic tuple is mixed or uncertified.",
+    )
   }
   return Object.freeze({
     ...strings,
@@ -292,15 +303,26 @@ const validateCertificateReference = <K extends "containment" | "conformance">(
   registryGeneration: string,
 ): Readonly<ExecutableLaneCertificateReference & { kind: K }> => {
   if (!isRecord(value)) {
-    throw new IntegrityEvidenceInputError(`${kind} certificate reference is required.`)
+    throw new IntegrityEvidenceInputError(
+      `${kind} certificate reference is required.`,
+    )
   }
-  assertExactKeys(value, CERTIFICATE_REFERENCE_FIELDS, `${kind} certificate reference`)
+  assertExactKeys(
+    value,
+    CERTIFICATE_REFERENCE_FIELDS,
+    `${kind} certificate reference`,
+  )
   if (value.kind !== kind) {
-    throw new IntegrityEvidenceInputError(`${kind} certificate reference has the wrong kind.`)
+    throw new IntegrityEvidenceInputError(
+      `${kind} certificate reference has the wrong kind.`,
+    )
   }
   const reference = {
     kind,
-    certificateId: requiredString(value.certificateId, `${kind} certificate ID`),
+    certificateId: requiredString(
+      value.certificateId,
+      `${kind} certificate ID`,
+    ),
     certificateVersion: requiredString(
       value.certificateVersion,
       `${kind} certificate version`,
@@ -315,7 +337,9 @@ const validateCertificateReference = <K extends "containment" | "conformance">(
     ),
   }
   if (reference.registryGeneration !== registryGeneration) {
-    throw new IntegrityEvidenceInputError(`${kind} certificate registry generation drifted.`)
+    throw new IntegrityEvidenceInputError(
+      `${kind} certificate registry generation drifted.`,
+    )
   }
   return Object.freeze(reference)
 }
@@ -327,7 +351,9 @@ const validateEntrant = (
   resolveCompatibility: CompatibilityResolver,
 ): Readonly<EntrantExecutionEvidence> => {
   if (!isRecord(value)) {
-    throw new IntegrityEvidenceInputError("Entrant execution evidence is required.")
+    throw new IntegrityEvidenceInputError(
+      "Entrant execution evidence is required.",
+    )
   }
   const requiredEntrantFields = [
     "entrantKey",
@@ -374,9 +400,11 @@ const validateEntrant = (
   if (
     conformanceCertificateRef &&
     containmentCertificateRef.certificateId ===
-    conformanceCertificateRef.certificateId
+      conformanceCertificateRef.certificateId
   ) {
-    throw new IntegrityEvidenceInputError("Containment and conformance certificates must be distinct.")
+    throw new IntegrityEvidenceInputError(
+      "Containment and conformance certificates must be distinct.",
+    )
   }
   if (!isRecord(value.schedulingDecision)) {
     throw new IntegrityEvidenceInputError("Scheduling decision is required.")
@@ -396,7 +424,9 @@ const validateEntrant = (
       value.schedulingDecision.reasonCode,
     )
   ) {
-    throw new IntegrityEvidenceInputError("Scheduling decision status or reason is invalid.")
+    throw new IntegrityEvidenceInputError(
+      "Scheduling decision status or reason is invalid.",
+    )
   }
   if (
     value.schedulingDecision.status === "counted"
@@ -425,7 +455,9 @@ const validateEntrant = (
     freshTime < evaluatedTime ||
     value.schedulingDecision.registryGeneration !== registryGeneration
   ) {
-    throw new IntegrityEvidenceInputError("Scheduling decision freshness or generation is invalid.")
+    throw new IntegrityEvidenceInputError(
+      "Scheduling decision freshness or generation is invalid.",
+    )
   }
   return Object.freeze({
     entrantKey,
@@ -542,7 +574,9 @@ const validateHistoricalSource = (
   value: Readonly<HistoricalIntegritySource>,
 ): Readonly<HistoricalIntegritySource> => {
   if (!isRecord(value)) {
-    throw new IntegrityEvidenceInputError("Historical integrity source is required.")
+    throw new IntegrityEvidenceInputError(
+      "Historical integrity source is required.",
+    )
   }
   assertExactKeys(
     value,
@@ -569,7 +603,10 @@ const validateHistoricalSource = (
       }
       return [sourceField, field]
     }),
-  ) as Pick<HistoricalIntegritySource, (typeof HISTORICAL_TUPLE_FIELDS)[number][0]>
+  ) as Pick<
+    HistoricalIntegritySource,
+    (typeof HISTORICAL_TUPLE_FIELDS)[number][0]
+  >
   if (typeof value.originalCounted !== "boolean") {
     throw new IntegrityEvidenceInputError(
       "Historical original counted meaning must be explicit.",
@@ -587,7 +624,9 @@ const validateHistoricalManifest = (
   value: Readonly<ImmutableHistoricalReleaseManifest>,
 ): Readonly<ImmutableHistoricalReleaseManifest> => {
   if (!isRecord(value)) {
-    throw new IntegrityEvidenceInputError("Historical release manifest is required.")
+    throw new IntegrityEvidenceInputError(
+      "Historical release manifest is required.",
+    )
   }
   assertExactKeys(
     value,
@@ -615,7 +654,10 @@ export const resolveHistoricalIntegrityEvidence = (input: {
   const matching = manifests.filter((manifest) =>
     HISTORICAL_TUPLE_FIELDS.every(([sourceField, tupleField]) => {
       const persisted = source[sourceField]
-      return persisted === null || persisted === manifest.compatibility.tuple[tupleField]
+      return (
+        persisted === null ||
+        persisted === manifest.compatibility.tuple[tupleField]
+      )
     }),
   )
   const base: HistoricalIntegrityResolutionBase = {
@@ -645,7 +687,10 @@ export const resolveHistoricalIntegrityEvidence = (input: {
     return resolution
   }
 
-  if (matching.length > 0 && (source.rulesVersion === null || source.chronicleVersion === null)) {
+  if (
+    matching.length > 0 &&
+    (source.rulesVersion === null || source.chronicleVersion === null)
+  ) {
     const resolution = Object.freeze({
       ...base,
       kind: "legacy_incomplete" as const,
@@ -667,7 +712,10 @@ export const resolveHistoricalIntegrityEvidence = (input: {
 const currentStandingsRejection = (
   reason: CurrentStandingsIntegrityRejectionReason,
 ): Readonly<CurrentStandingsIntegrityResolution> => {
-  const resolution = Object.freeze({ kind: "current_rejected" as const, reason })
+  const resolution = Object.freeze({
+    kind: "current_rejected" as const,
+    reason,
+  })
   currentStandingsResolutionInstances.add(resolution)
   return resolution
 }
@@ -718,7 +766,8 @@ export const isStandingsIntegrityEligible = (
 ): boolean => {
   if (!resolution || typeof resolution !== "object") return false
   if (resolution.kind === "current_certified") {
-    if (!currentStandingsResolutionInstances.has(resolution as object)) return false
+    if (!currentStandingsResolutionInstances.has(resolution as object))
+      return false
     const expected = [...new Set(strategyRevisionIds)].sort()
     const certified = [
       ...new Set(
@@ -773,7 +822,9 @@ const createMatchSetIntegrityIdentityWithResolver = (
   resolveCompatibility: CompatibilityResolver,
 ): Readonly<MatchSetIntegrityIdentity> => {
   if (!isRecord(input)) {
-    throw new IntegrityEvidenceInputError("MatchSet integrity identity is required.")
+    throw new IntegrityEvidenceInputError(
+      "MatchSet integrity identity is required.",
+    )
   }
   assertExactKeys(input, IDENTITY_INPUT_KEYS, "MatchSet integrity identity")
   const compatibility = validateCompatibility(
@@ -788,30 +839,47 @@ const createMatchSetIntegrityIdentityWithResolver = (
     input.registryGeneration,
     "Authority registry generation",
   )
-  if (!Array.isArray(input.expectedEntrants) || !Array.isArray(input.entrants)) {
-    throw new IntegrityEvidenceInputError("Expected and actual entrant coverage are required.")
+  if (
+    !Array.isArray(input.expectedEntrants) ||
+    !Array.isArray(input.entrants)
+  ) {
+    throw new IntegrityEvidenceInputError(
+      "Expected and actual entrant coverage are required.",
+    )
   }
   if (input.expectedEntrants.length < 2 || input.expectedEntrants.length > 8) {
-    throw new IntegrityEvidenceInputError("MatchSet entrant coverage must contain two through eight entrants.")
+    throw new IntegrityEvidenceInputError(
+      "MatchSet entrant coverage must contain two through eight entrants.",
+    )
   }
   const expectedByKey = new Map<string, string>()
   for (const expected of input.expectedEntrants) {
     if (!isRecord(expected)) {
-      throw new IntegrityEvidenceInputError("Expected entrant binding is invalid.")
+      throw new IntegrityEvidenceInputError(
+        "Expected entrant binding is invalid.",
+      )
     }
-    assertExactKeys(expected, ["entrantKey", "strategyRevisionId"], "Expected entrant")
+    assertExactKeys(
+      expected,
+      ["entrantKey", "strategyRevisionId"],
+      "Expected entrant",
+    )
     const key = requiredString(expected.entrantKey, "Expected entrant key")
     const revision = requiredString(
       expected.strategyRevisionId,
       "Expected Strategy Revision ID",
     )
     if (expectedByKey.has(key)) {
-      throw new IntegrityEvidenceInputError(`Duplicate expected entrant key: ${key}`)
+      throw new IntegrityEvidenceInputError(
+        `Duplicate expected entrant key: ${key}`,
+      )
     }
     expectedByKey.set(key, revision)
   }
   if (input.entrants.length !== expectedByKey.size) {
-    throw new IntegrityEvidenceInputError("Entrant evidence coverage is incomplete or contains extras.")
+    throw new IntegrityEvidenceInputError(
+      "Entrant evidence coverage is incomplete or contains extras.",
+    )
   }
   const actualByKey = new Map<string, Readonly<EntrantExecutionEvidence>>()
   for (const rawEntrant of input.entrants) {
@@ -822,11 +890,15 @@ const createMatchSetIntegrityIdentityWithResolver = (
       resolveCompatibility,
     )
     if (actualByKey.has(entry.entrantKey)) {
-      throw new IntegrityEvidenceInputError(`Duplicate entrant key: ${entry.entrantKey}`)
+      throw new IntegrityEvidenceInputError(
+        `Duplicate entrant key: ${entry.entrantKey}`,
+      )
     }
     const expectedRevision = expectedByKey.get(entry.entrantKey)
     if (!expectedRevision) {
-      throw new IntegrityEvidenceInputError(`Entrant coverage contains an extra key: ${entry.entrantKey}`)
+      throw new IntegrityEvidenceInputError(
+        `Entrant coverage contains an extra key: ${entry.entrantKey}`,
+      )
     }
     if (expectedRevision !== entry.strategyRevisionId) {
       throw new IntegrityEvidenceInputError(
@@ -837,7 +909,9 @@ const createMatchSetIntegrityIdentityWithResolver = (
   }
   for (const key of expectedByKey.keys()) {
     if (!actualByKey.has(key)) {
-      throw new IntegrityEvidenceInputError(`Entrant evidence coverage is missing ${key}.`)
+      throw new IntegrityEvidenceInputError(
+        `Entrant evidence coverage is missing ${key}.`,
+      )
     }
   }
   const normalizedEntrants = Object.freeze(
@@ -864,7 +938,8 @@ const createMatchSetIntegrityIdentityWithResolver = (
     string,
     Readonly<EntrantExecutionEvidence>
   >
-  for (const entry of normalizedEntrants) entrantsByKey[entry.entrantKey] = entry
+  for (const entry of normalizedEntrants)
+    entrantsByKey[entry.entrantKey] = entry
   const identity = Object.freeze({
     compatibility,
     authorityBundleHash,
@@ -893,24 +968,38 @@ export const createCandidateMatchSetIntegrityIdentityV119 = (
     resolveCandidateRuntimeV119SemanticTuple,
   )
 
+export const createCandidateMatchSetIntegrityIdentityV117 = (
+  input: MatchSetIntegrityIdentityInput | unknown,
+): Readonly<MatchSetIntegrityIdentity> =>
+  createMatchSetIntegrityIdentityWithResolver(
+    input,
+    resolveCandidateRuntimeV117SemanticTuple,
+  )
+
 export const createMatchExecutionEvidencePair = (
   identity: Readonly<MatchSetIntegrityIdentity>,
   selector: MatchExecutionEvidencePairSelector,
 ): Readonly<MatchExecutionEvidencePair> => {
   assertValidatedIdentity(identity)
   if (selector.bottomEntrantKey === selector.topEntrantKey) {
-    throw new IntegrityEvidenceInputError("Match side entrant keys must be distinct.")
+    throw new IntegrityEvidenceInputError(
+      "Match side entrant keys must be distinct.",
+    )
   }
   const bottom = identity.entrantsByKey[selector.bottomEntrantKey]
   const top = identity.entrantsByKey[selector.topEntrantKey]
   if (!bottom || !top) {
-    throw new IntegrityEvidenceInputError("Match side selector contains an unknown entrant key.")
+    throw new IntegrityEvidenceInputError(
+      "Match side selector contains an unknown entrant key.",
+    )
   }
   if (
     bottom.strategyRevisionId !== selector.bottomStrategyRevisionId ||
     top.strategyRevisionId !== selector.topStrategyRevisionId
   ) {
-    throw new IntegrityEvidenceInputError("Match side Strategy Revision binding is swapped or invalid.")
+    throw new IntegrityEvidenceInputError(
+      "Match side Strategy Revision binding is swapped or invalid.",
+    )
   }
   return Object.freeze({
     bottom,
@@ -961,39 +1050,41 @@ export const matchSetIntegritySqlValues = (
 export const matchSetExecutionEntrantSqlValues = (
   matchSetId: string,
   entrant: Readonly<EntrantExecutionEvidence>,
-): readonly unknown[] => Object.freeze([
-  matchSetId,
-  entrant.entrantKey,
-  entrant.strategyRevisionId,
-  entrant.laneIdentity,
-  hashEntrantLaneIdentity(entrant.laneIdentity),
-  entrant.containmentCertificateRef.kind,
-  entrant.containmentCertificateRef.certificateId,
-  entrant.containmentCertificateRef.certificateVersion,
-  entrant.containmentCertificateRef.certificateRecordHash,
-  entrant.conformanceCertificateRef?.kind ?? null,
-  entrant.conformanceCertificateRef?.certificateId ?? null,
-  entrant.conformanceCertificateRef?.certificateVersion ?? null,
-  entrant.conformanceCertificateRef?.certificateRecordHash ?? null,
-  entrant.schedulingDecision.status,
-  entrant.schedulingDecision.reasonCode,
-  entrant.schedulingDecision.evaluatedAt,
-  entrant.schedulingDecision.freshUntil,
-  entrant.containmentCertificateRef.registryGeneration,
-  entrant,
-])
+): readonly unknown[] =>
+  Object.freeze([
+    matchSetId,
+    entrant.entrantKey,
+    entrant.strategyRevisionId,
+    entrant.laneIdentity,
+    hashEntrantLaneIdentity(entrant.laneIdentity),
+    entrant.containmentCertificateRef.kind,
+    entrant.containmentCertificateRef.certificateId,
+    entrant.containmentCertificateRef.certificateVersion,
+    entrant.containmentCertificateRef.certificateRecordHash,
+    entrant.conformanceCertificateRef?.kind ?? null,
+    entrant.conformanceCertificateRef?.certificateId ?? null,
+    entrant.conformanceCertificateRef?.certificateVersion ?? null,
+    entrant.conformanceCertificateRef?.certificateRecordHash ?? null,
+    entrant.schedulingDecision.status,
+    entrant.schedulingDecision.reasonCode,
+    entrant.schedulingDecision.evaluatedAt,
+    entrant.schedulingDecision.freshUntil,
+    entrant.containmentCertificateRef.registryGeneration,
+    entrant,
+  ])
 
 export const matchExecutionEvidencePairSqlValues = (
   matchSetId: string,
   pair: Readonly<MatchExecutionEvidencePair>,
-): readonly unknown[] => Object.freeze([
-  matchSetId,
-  pair.bottom.entrantKey,
-  pair.top.entrantKey,
-  pair.bottom,
-  pair.top,
-  pair.pairHash,
-])
+): readonly unknown[] =>
+  Object.freeze([
+    matchSetId,
+    pair.bottom.entrantKey,
+    pair.top.entrantKey,
+    pair.bottom,
+    pair.top,
+    pair.pairHash,
+  ])
 
 export interface MatchSetIntegrityRow {
   compatibility_tuple_id: string
@@ -1051,7 +1142,9 @@ export const parseMatchSetIntegrityIdentityRows = (
   entrantRows: readonly MatchSetExecutionEntrantRow[],
 ): Readonly<MatchSetIntegrityIdentity> => {
   if (!Array.isArray(matchSet.execution_evidence_set)) {
-    throw new IntegrityEvidenceInputError("Persisted execution evidence set is missing.")
+    throw new IntegrityEvidenceInputError(
+      "Persisted execution evidence set is missing.",
+    )
   }
   const identity = createMatchSetIntegrityIdentity({
     compatibility: {
@@ -1076,10 +1169,19 @@ export const parseMatchSetIntegrityIdentityRows = (
     ),
   })
   if (identity.evidenceSetHash !== matchSet.execution_evidence_set_hash) {
-    throw new IntegrityEvidenceInputError("Persisted execution evidence set hash mismatches its rows.")
+    throw new IntegrityEvidenceInputError(
+      "Persisted execution evidence set hash mismatches its rows.",
+    )
   }
-  if (!isDeepStrictEqual(identity.normalizedEntrants, matchSet.execution_evidence_set)) {
-    throw new IntegrityEvidenceInputError("Persisted normalized evidence set mismatches entrant rows.")
+  if (
+    !isDeepStrictEqual(
+      identity.normalizedEntrants,
+      matchSet.execution_evidence_set,
+    )
+  ) {
+    throw new IntegrityEvidenceInputError(
+      "Persisted normalized evidence set mismatches entrant rows.",
+    )
   }
   return identity
 }

@@ -716,9 +716,7 @@ export const createManualExhibitionMatchSet = async (
       entrantKey: strategyRevisionId,
       strategyRevisionId,
     })),
-    ...(resolvedSemanticAuthorityKey === "runtime-v1.19"
-      ? { semanticAuthorityKey: "runtime-v1.19" as const }
-      : {}),
+    semanticAuthorityKey: resolvedSemanticAuthorityKey,
   })
   await assertExhibitionCreateRateLimit(pool, {
     userId: input.creatorUserId,

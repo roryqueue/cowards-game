@@ -1535,9 +1535,7 @@ export const scheduleTrialLadderSeason = async (
           entrantKey: entrant.strategyRevisionId,
           strategyRevisionId: entrant.strategyRevisionId,
         })),
-        ...(resolvedSemanticAuthorityKey === "runtime-v1.19"
-          ? { semanticAuthorityKey: "runtime-v1.19" as const }
-          : {}),
+        semanticAuthorityKey: resolvedSemanticAuthorityKey,
       })
       assertSchedulingIdentityMatchesInstalledPublication(
         integrityIdentity,

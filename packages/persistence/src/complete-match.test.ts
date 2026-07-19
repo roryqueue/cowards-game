@@ -49,7 +49,7 @@ import {
 import { migrate } from "./migrations.js"
 import {
   createMatchExecutionEvidencePair,
-  createMatchSetIntegrityIdentity,
+  createCandidateMatchSetIntegrityIdentityV117,
   hashEntrantLaneIdentity,
   matchExecutionEvidencePairSqlValues,
   matchSetExecutionEntrantSqlValues,
@@ -226,7 +226,7 @@ const entrant = (
 
 const completionIdentity = (namespace: string) => {
   const entrants = [entrant("bottom", namespace), entrant("top", namespace)]
-  const identity = createMatchSetIntegrityIdentity({
+  const identity = createCandidateMatchSetIntegrityIdentityV117({
     compatibility: { tupleId: tuple.tupleId, tuple: { ...tuple.tuple } },
     authorityBundleHash: sha256(`${namespace}:bundle`),
     registryGeneration: "1",
