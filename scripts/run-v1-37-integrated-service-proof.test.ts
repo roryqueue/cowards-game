@@ -177,6 +177,13 @@ describe("v1.37 integrated service proof four lanes typed failure Chronicle reco
       V137_INTEGRATED_SERVICE_SCENARIOS.map(({ id }) => id),
     )
     for (const scenario of validated.scenarios) {
+      expect(scenario.evidenceMode).toBe(
+        scenario.id.startsWith("lane-") ||
+          scenario.id === "current-chronicle-valid" ||
+          scenario.id === "reconstruction-equivalent"
+          ? "live-service-execution"
+          : "executable-regression",
+      )
       if (scenario.expectedResultClass === "system-failure") {
         expect(scenario.failureOwner).toBe("system")
         expect(scenario.before).toEqual(scenario.after)

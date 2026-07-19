@@ -177,7 +177,9 @@ const invoke = (
       Buffer.byteLength(result.stdout) > stdoutBytes ||
       Buffer.byteLength(result.stderr) > stderrBytes
     ) {
-      throw new TypeError("Pinned Wasmtime contained output exceeded its limit.")
+      throw new TypeError(
+        "Pinned Wasmtime contained output exceeded its limit.",
+      )
     }
     return JSON.parse(result.stdout)
   } finally {

@@ -153,6 +153,7 @@ export interface V137IntegratedServiceScenarioReceipt {
   id: string
   expectedResultClass: V137IntegratedProofScenario["expectedResultClass"]
   status: "passed"
+  evidenceMode: "live-service-execution" | "executable-regression"
   failureOwner: "none" | "player" | "system"
   before: V137NoMutationRoots
   after: V137NoMutationRoots
@@ -414,6 +415,7 @@ export const validateV137IntegratedServiceReceipt = (
         "id",
         "expectedResultClass",
         "status",
+        "evidenceMode",
         "failureOwner",
         "before",
         "after",
@@ -423,6 +425,12 @@ export const validateV137IntegratedServiceReceipt = (
       scenario.id !== expected.id ||
       scenario.expectedResultClass !== expected.expectedResultClass ||
       scenario.status !== "passed" ||
+      scenario.evidenceMode !==
+        (expected.group === "four-lane-positive" ||
+        expected.id === "current-chronicle-valid" ||
+        expected.id === "reconstruction-equivalent"
+          ? "live-service-execution"
+          : "executable-regression") ||
       !validMutationRoots(scenario.before) ||
       !validMutationRoots(scenario.after) ||
       !validHash(scenario.observationRootSha256) ||
@@ -560,6 +568,12 @@ export const createV137IntegratedServiceReceiptFixture =
         id: scenario.id,
         expectedResultClass: scenario.expectedResultClass,
         status: "passed",
+        evidenceMode:
+          scenario.group === "four-lane-positive" ||
+          scenario.id === "current-chronicle-valid" ||
+          scenario.id === "reconstruction-equivalent"
+            ? "live-service-execution"
+            : "executable-regression",
         failureOwner:
           scenario.expectedResultClass === "system-failure"
             ? "system"
@@ -1915,11 +1929,18 @@ export const writeV137IntegratedServiceProof = async (
         : scenario.expectedResultClass === "player-violation"
           ? "player"
           : "none"
+    const evidenceMode =
+      scenario.group === "four-lane-positive" ||
+      scenario.id === "current-chronicle-valid" ||
+      scenario.id === "reconstruction-equivalent"
+        ? ("live-service-execution" as const)
+        : ("executable-regression" as const)
     const scenarioEvidence = {
       schemaVersion: "v1.37-integrated-service-scenario-evidence-v1",
       scenario,
       authority: receipt.authority,
       failureOwner,
+      evidenceMode,
       before: before.roots,
       after: after.roots,
       commandReceipts,
@@ -1946,6 +1967,7 @@ export const writeV137IntegratedServiceProof = async (
       id: scenario.id,
       expectedResultClass: scenario.expectedResultClass,
       status: "passed" as const,
+      evidenceMode,
       failureOwner,
       before: { ...before.roots },
       after: { ...after.roots },
