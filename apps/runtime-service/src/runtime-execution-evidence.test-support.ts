@@ -100,8 +100,11 @@ export const bindFixtureCandidateMatchAuthorityV119 = (
 
 export const createFixtureDeploymentLaneIdentity = (
   revision: StrategyRevision,
+  compatibility: Readonly<{
+    tupleId: string
+    tuple: RuntimeExecutionEvidenceSnapshot["compatibility"]["tuple"]
+  }> = CANONICAL_COMPATIBILITY_TUPLES[0]!,
 ): ExecutableLaneIdentity => {
-  const tuple = CANONICAL_COMPATIBILITY_TUPLES[0]!
   const sourceArtifact = revision.metadata.sourceArtifact
   const compiledArtifact = revision.metadata.compiledArtifact
   const artifact = sourceArtifact ?? compiledArtifact
@@ -137,8 +140,8 @@ export const createFixtureDeploymentLaneIdentity = (
     ),
     implementationId: "fixture-runtime-service",
     buildId: "fixture-runtime-service-build-v1.37",
-    semanticTupleId: tuple.tupleId,
-    semanticTuple: { ...tuple.tuple },
+    semanticTupleId: compatibility.tupleId,
+    semanticTuple: { ...compatibility.tuple },
   }
 }
 
@@ -147,10 +150,16 @@ const fixtureEntrantEvidence = (input: {
   side: "bottom" | "top"
   revision: StrategyRevision
   effectiveStatus: Exclude<ExecutableLaneEvidenceStatus, "disabled">
-  compatibilityTupleId: string
+  compatibility: Readonly<{
+    tupleId: string
+    tuple: RuntimeExecutionEvidenceSnapshot["compatibility"]["tuple"]
+  }>
 }): RuntimeEntrantAuthorityReference => {
   const identitySuffix = `${input.fixtureId}:${input.side}:${input.revision.runtime.language.id}`
-  const laneIdentity = createFixtureDeploymentLaneIdentity(input.revision)
+  const laneIdentity = createFixtureDeploymentLaneIdentity(
+    input.revision,
+    input.compatibility,
+  )
   const entrant: RuntimeEntrantAuthorityReference = {
     entrantKey: `fixture-only:entrant:${input.fixtureId}:${input.side}`,
     strategyRevisionId: input.revision.id,
@@ -180,7 +189,7 @@ const fixtureEntrantEvidence = (input: {
   return {
     ...entrant,
     schedulingDecisionHash: hashRuntimeAuthoritySchedulingDecisionReference({
-      compatibilityTupleId: input.compatibilityTupleId,
+      compatibilityTupleId: input.compatibility.tupleId,
       authorityBundleHash: FIXTURE_AUTHORITY_BUNDLE_HASH,
       registryGeneration: FIXTURE_REGISTRY_GENERATION,
       publication: FIXTURE_PUBLICATION,
@@ -209,6 +218,7 @@ const fixtureAuthorityForSnapshot = (
       const attestationId = attestations[index]!.attestationId
       const laneIdentity = createFixtureDeploymentLaneIdentity(
         strategies[side as "bottom" | "top"],
+        snapshot.compatibility,
       )
       return [
         {
@@ -290,8 +300,14 @@ export const createFixtureRuntimeExecutionAuthorityContext = (input: {
   bottom: StrategyRevision
   top: StrategyRevision
   effectiveStatus?: "exhibition_only" | "counted"
+  compatibility?:
+    | Readonly<{
+        tupleId: string
+        tuple: RuntimeExecutionEvidenceSnapshot["compatibility"]["tuple"]
+      }>
+    | undefined
 }): FixtureRuntimeExecutionAuthorityContext => {
-  const tuple = CANONICAL_COMPATIBILITY_TUPLES[0]!
+  const tuple = input.compatibility ?? CANONICAL_COMPATIBILITY_TUPLES[0]!
   const effectiveStatus = input.effectiveStatus ?? "exhibition_only"
   const evidenceSnapshot: RuntimeExecutionEvidenceSnapshot = {
     compatibility: {
@@ -307,14 +323,14 @@ export const createFixtureRuntimeExecutionAuthorityContext = (input: {
         side: "bottom",
         revision: input.bottom,
         effectiveStatus,
-        compatibilityTupleId: tuple.tupleId,
+        compatibility: tuple,
       }),
       top: fixtureEntrantEvidence({
         fixtureId: input.fixtureId,
         side: "top",
         revision: input.top,
         effectiveStatus,
-        compatibilityTupleId: tuple.tupleId,
+        compatibility: tuple,
       }),
     },
   }
@@ -342,5 +358,8 @@ export const createFixtureRuntimeExecutionEvidenceSnapshot = (input: {
   fixtureId: string
   bottom: StrategyRevision
   top: StrategyRevision
+  compatibility?: Parameters<
+    typeof createFixtureRuntimeExecutionAuthorityContext
+  >[0]["compatibility"]
 }): RuntimeExecutionEvidenceSnapshot =>
   createFixtureRuntimeExecutionAuthorityContext(input).evidenceSnapshot

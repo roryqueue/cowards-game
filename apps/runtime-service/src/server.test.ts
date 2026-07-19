@@ -12,6 +12,7 @@ import {
   RUNTIME_INVOCATION_V1_17_TEST_KEY_ID,
   STRATEGY_LANGUAGE_PROVIDER_CONTRACT_VERSION,
   STRATEGY_RUNTIME_ABI_VERSION,
+  VERSIONED_RUNTIME_V117_SEMANTIC_TUPLE_RECORD,
   RuntimeExecutionServiceResponseV117Schema,
   RuntimeExecutionServiceResponseV118Schema,
   admitCanonicalJsonBytes,
@@ -28,8 +29,9 @@ import {
   type JsonValue,
   type RuntimeInvocationExecutionReceiptEvidenceV117,
   type RuntimeInvocationResultV117,
+  type StrategyRevision,
 } from "@cowards/spec"
-import { buildStrategyRevision } from "@cowards/runtime-js"
+import { buildStrategyRevisionV117 } from "@cowards/runtime-js"
 import {
   createRuntimeServiceConfig,
   selectedRuntimeServiceContract,
@@ -111,13 +113,17 @@ const expectSelectedProviderAuthority = (
       ? "runtime-js-source-artifact"
       : sourceFormat === "python"
         ? "python-source-provenance-json"
-        : String(STRATEGY_RUNTIME_ABI_VERSION) === "strategy-runtime-abi-v1.17"
+        : String(STRATEGY_LANGUAGE_PROVIDER_CONTRACT_VERSION).startsWith(
+              "runtime-provider-validation-",
+            )
           ? "wasi-preview1-stdin-canonical-request-stdout-raw-canonical-payload"
           : "wasi-preview1-stdin-stdout-json"
   expect(provider.abiPosture).toBe(expectedAbiPosture)
   if (metadata.compiledArtifact !== undefined) {
     expect(artifact.abiEnvelope).toBe(
-      String(STRATEGY_RUNTIME_ABI_VERSION) === "strategy-runtime-abi-v1.17"
+      String(STRATEGY_LANGUAGE_PROVIDER_CONTRACT_VERSION).startsWith(
+        "runtime-provider-validation-",
+      )
         ? "stdin-canonical-request-stdout-raw-canonical-payload"
         : "stdin-stdout-json",
     )
@@ -173,10 +179,13 @@ const successorTemplate = (() => {
 })()
 
 const successorEntrant = (
-  revision: ReturnType<typeof buildStrategyRevision>,
+  revision: StrategyRevision,
   graphDigit: string,
 ) => {
-  const deployed = createFixtureDeploymentLaneIdentity(revision)
+  const deployed = createFixtureDeploymentLaneIdentity(
+    revision,
+    VERSIONED_RUNTIME_V117_SEMANTIC_TUPLE_RECORD,
+  )
   const composed = composeSuccessorRuntimeIdentityV117({
     revision,
     deployed,
@@ -186,7 +195,7 @@ const successorEntrant = (
   return {
     strategyRevisionId: revision.id,
     laneIdentityHash:
-      `sha256:${hashExecutableLaneIdentity(createFixtureDeploymentLaneIdentity(revision))}` as const,
+      `sha256:${hashExecutableLaneIdentity(deployed)}` as const,
     sourceIdentity: composed.sourceIdentity,
     identityManifestRoot:
       `sha256:${hashRuntimeIdentityManifest(composed.identityManifest)}` as const,
@@ -264,13 +273,19 @@ describe("runtime execution HTTP boundary", () => {
       selectActivations() { return { activationOrders: [], strategyMemory: {} } },
       soldierBrain() { return { action: { type: "TURN_TO_STONE" }, soldierMemory: {} } }
     }`
-    const bottom = buildStrategyRevision({
+    const bottom = buildStrategyRevisionV117({
       source: `${source}\n// entrant:bottom`,
       strategyId: "strategy:http-route:bottom",
     })
-    const top = buildStrategyRevision({
+    const top = buildStrategyRevisionV117({
       source: `${source}\n// entrant:top`,
       strategyId: "strategy:http-route:top",
+    })
+    const evidenceSnapshot = createFixtureRuntimeExecutionEvidenceSnapshot({
+      fixtureId: "server-http-route-v117",
+      bottom,
+      top,
+      compatibility: VERSIONED_RUNTIME_V117_SEMANTIC_TUPLE_RECORD,
     })
     const current = {
       contractVersion: RUNTIME_EXECUTION_SERVICE_VERSION,
@@ -293,11 +308,7 @@ describe("runtime execution HTTP boundary", () => {
       },
       strategies: { bottom, top },
       limits: DEFAULT_RUNTIME_LIMITS,
-      evidenceSnapshot: createFixtureRuntimeExecutionEvidenceSnapshot({
-        fixtureId: "server-http-route",
-        bottom,
-        top,
-      }),
+      evidenceSnapshot,
     }
     const bottomBinding = successorEntrant(bottom, "2")
     const topBinding = successorEntrant(top, "4")
@@ -343,7 +354,11 @@ describe("runtime execution HTTP boundary", () => {
     const routeRuntimeConfig = createRuntimeServiceConfig({
       strategyExecutionAdapter: "worker-thread",
       semanticReceiptSecret: "fixture-semantic-receipt-secret-v1",
-      resolveDeploymentLaneIdentity: createFixtureDeploymentLaneIdentity,
+      resolveDeploymentLaneIdentity: (revision) =>
+        createFixtureDeploymentLaneIdentity(
+          revision,
+          VERSIONED_RUNTIME_V117_SEMANTIC_TUPLE_RECORD,
+        ),
       resolveSuccessorRuntimeIdentityTemplate: () => successorTemplate,
     })
     const selectedV117Config =

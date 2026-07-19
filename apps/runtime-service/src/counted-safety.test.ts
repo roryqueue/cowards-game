@@ -1,9 +1,11 @@
+import { createHash, generateKeyPairSync, sign } from "node:crypto"
 import { once } from "node:events"
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs"
 import type { AddressInfo } from "node:net"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { describe, expect, it, vi } from "vitest"
+import { MATCH_KERNEL } from "@cowards/engine"
 import {
   CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE,
   CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_ID,
@@ -11,15 +13,21 @@ import {
   INITIAL_BOUNDS,
   RUNTIME_ABI_V1_17_BUDGET_PROFILE_SHA256,
   RUNTIME_EXECUTION_SERVICE_VERSION,
+  RUNTIME_EXECUTION_SERVICE_VERSION_V1_18,
   STRATEGY_RUNTIME_ABI_VERSION,
   SUCCESSOR_RUNTIME_IDENTITY_TEMPLATE_DOMAINS_V117,
   SUCCESSOR_RUNTIME_IDENTITY_TEMPLATE_PROFILE_V117,
   SUCCESSOR_RUNTIME_IDENTITY_TEMPLATE_SCHEMA_V117,
   SUCCESSOR_RUNTIME_LANE_PROFILE_FIELDS_V117,
+  createRuntimeSemanticTupleV118,
   hashSuccessorRuntimeLaneProfileV117,
   type ExecutableLaneIdentity,
+  type JsonValue,
+  type RuntimeCertificateReferenceV118,
   type RuntimeExecutionServiceRequest,
+  type RuntimeExecutionServiceRequestV118,
 } from "@cowards/spec"
+import { recordChronicleFromExecution } from "@cowards/replay"
 import { buildStrategyRevision } from "@cowards/runtime-js"
 import { executeCurrentMatchServiceTestSupport as executeRuntimeServiceRequest } from "./runtime-execution-current-match.test-support.js"
 import type { CurrentMatchServiceTestOverrides } from "./runtime-execution-current-match.test-support.js"
@@ -42,6 +50,10 @@ import {
 } from "./deployment-lane-registry.js"
 import { runtimeServiceConfigFromEnvironment } from "./production-runtime-config.js"
 import { createRuntimeExecutionHttpServer } from "./server.js"
+import type {
+  PreparedRuntimeServiceDependenciesV118,
+  PreparedRuntimeServiceExecutionV118,
+} from "./execute-match.js"
 
 const runtimeConfig = createRuntimeServiceConfig({
   strategyExecutionAdapter: "worker-thread",
@@ -246,9 +258,129 @@ const executeOverProductionConfiguredHttp = async (input: {
     COWARDS_RUNTIME_SERVICE_SEMANTIC_RECEIPT_SECRET:
       "fixture-semantic-receipt-secret-v1",
   })
+  const sha256 = (value: string | Uint8Array): `sha256:${string}` =>
+    `sha256:${createHash("sha256").update(value).digest("hex")}`
+  const sourceReference = (
+    side: "bottom" | "top",
+  ): RuntimeCertificateReferenceV118 => {
+    const revision = input.request.strategies[side]
+    const artifact =
+      revision.metadata.sourceArtifact ?? revision.metadata.compiledArtifact
+    if (artifact === undefined) throw new Error("fixture artifact missing")
+    return {
+      side,
+      certificateId: `fixture:certificate:counted-http:${side}`,
+      certificateRecordHash: sha256(`certificate:${side}`),
+      registryGeneration: input.request.evidenceSnapshot.registryGeneration,
+      lane: `${revision.runtime.language.id}-fixture`,
+      freshUntil: "2099-08-01T00:00:00.000Z",
+      sourceIdentity: {
+        side,
+        strategyRevisionId: revision.id,
+        originalSourceSha256: sha256(revision.source),
+        normalizedSourceSha256: sha256(
+          revision.source.replaceAll("\r\n", "\n").replaceAll("\r", "\n"),
+        ),
+        artifactSha256: `sha256:${artifact.hash.replace(/^sha256:/u, "")}`,
+        identityManifestRoot: sha256(`manifest:${side}`),
+        evidenceGraphRoot: sha256(`graph:${side}`),
+        laneIdentityHash: sha256(`lane:${side}`),
+      },
+    }
+  }
+  const accounting = {
+    budgetProfileRoot: sha256("budget"),
+    ledgerPrestateRoot: sha256("prestate"),
+  }
+  const commonSupervisorEvidenceRoots = {
+    bottom: sha256("common-supervisor:bottom"),
+    top: sha256("common-supervisor:top"),
+  }
+  const candidateV119 =
+    runtimeConfig.contractSelection.runtimeServiceVersion ===
+    RUNTIME_EXECUTION_SERVICE_VERSION_V1_18
+  const keys = generateKeyPairSync("ed25519")
+  const preparedV118Dependencies: PreparedRuntimeServiceDependenciesV118 = {
+    signer: {
+      keyId: "fixture:semantic-receipt:v1.18",
+      publicKeyPem: keys.publicKey.export({
+        format: "pem",
+        type: "spki",
+      }) as string,
+      sign: (bytes) => sign(null, bytes, keys.privateKey),
+    },
+    admitCertificateReference({ side, reference }) {
+      return {
+        certificateRecordHash: reference.certificateRecordHash,
+        sourceIdentity: reference.sourceIdentity,
+        commonSupervisorEvidenceRoot:
+          commonSupervisorEvidenceRoots[side],
+      }
+    },
+    executeCurrentMatchWithAccounting(nested) {
+      let captured: Parameters<typeof recordChronicleFromExecution>[0]["execution"] | undefined
+      const response = executeRuntimeServiceRequest(nested, runtimeConfig, {
+        authorityLoader: input.authorityLoader,
+        runMatchV119: (match) => {
+          const result = MATCH_KERNEL.runMatchV119(match)
+          captured = result
+          return result
+        },
+      })
+      if (!response.ok || captured === undefined) {
+        throw new Error("selected counted Match did not complete")
+      }
+      const candidateMatch = (
+        nested.match as RuntimeExecutionServiceRequest["match"] & {
+          candidateMatch?: Parameters<
+            typeof recordChronicleFromExecution
+          >[0]["candidateMatch"]
+        }
+      ).candidateMatch
+      const recorded = recordChronicleFromExecution({
+        execution: captured,
+        metadata: {
+          schemaVersion: "chronicle-v1.4",
+          semanticTupleId: nested.evidenceSnapshot.compatibility.tupleId,
+          semanticTuple: nested.evidenceSnapshot.compatibility.tuple,
+        },
+        ...(candidateMatch === undefined ? {} : { candidateMatch }),
+      })
+      if (!recorded.ok) throw new Error(recorded.failure.code)
+      return {
+        response,
+        execution: captured,
+        boundaryAnchors: recorded.boundaryAnchors,
+        transitionTraceRoot: recorded.transitionTraceRoot,
+        accounting: {
+          ...accounting,
+          ledgerPoststateRoot: sha256("poststate"),
+        },
+        commonSupervisorEvidenceRoots,
+      } as PreparedRuntimeServiceExecutionV118
+    },
+  }
+  const outerRequest: RuntimeExecutionServiceRequestV118 = {
+    contractVersion: RUNTIME_EXECUTION_SERVICE_VERSION_V1_18,
+    kind: "executeMatch",
+    requestId: `${input.request.requestId}:v1.18`,
+    matchId: input.request.match.matchId,
+    semanticTuple: createRuntimeSemanticTupleV118(
+      input.request.evidenceSnapshot.compatibility.tuple,
+    ),
+    authorityGeneration: input.request.evidenceSnapshot.registryGeneration,
+    evaluationInstant: "2026-07-16T12:00:00.000Z",
+    certificateReferences: {
+      bottom: sourceReference("bottom"),
+      top: sourceReference("top"),
+    },
+    accounting,
+    match: input.request as unknown as JsonValue,
+  }
   const server = createRuntimeExecutionHttpServer({
     runtimeConfig,
     authorityLoader: input.authorityLoader,
+    ...(candidateV119 ? { preparedV118Dependencies } : {}),
   })
   try {
     server.listen(0, "127.0.0.1")
@@ -259,7 +391,7 @@ const executeOverProductionConfiguredHttp = async (input: {
       {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify(input.request),
+        body: JSON.stringify(candidateV119 ? outerRequest : input.request),
       },
     )
     return {

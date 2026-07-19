@@ -28,6 +28,8 @@ import {
   type V137RealLanguageExecutor,
 } from "./four-language-conformance-runner.js"
 
+const workspaceRoot = path.resolve(import.meta.dirname, "../../..")
+
 vi.mock("@cowards/runtime-js", async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   isVerifiedCountedTypeScriptSupervisedResultV118: (value: unknown) =>
@@ -132,7 +134,7 @@ describe("v1.37 four-language conformance runner", () => {
     const registryRelative =
       "packages/golden/src/fixtures/v1-37-conformance-traces/registry.json"
     const registryPath = path.join(repoRoot, registryRelative)
-    const realRegistryPath = path.resolve(process.cwd(), registryRelative)
+    const realRegistryPath = path.resolve(workspaceRoot, registryRelative)
     mkdirSync(path.dirname(registryPath), { recursive: true })
     symlinkSync(realRegistryPath, registryPath)
     try {
@@ -150,7 +152,7 @@ describe("v1.37 four-language conformance runner", () => {
     )
     const registryRelative =
       "packages/golden/src/fixtures/v1-37-conformance-traces/registry.json"
-    const sourceRegistryPath = path.resolve(process.cwd(), registryRelative)
+    const sourceRegistryPath = path.resolve(workspaceRoot, registryRelative)
     const registry = JSON.parse(readFileSync(sourceRegistryPath, "utf8")) as {
       activePath: string
     }
@@ -158,7 +160,7 @@ describe("v1.37 four-language conformance runner", () => {
     mkdirSync(path.dirname(targetRegistryPath), { recursive: true })
     cpSync(sourceRegistryPath, targetRegistryPath)
     cpSync(
-      path.resolve(process.cwd(), registry.activePath),
+      path.resolve(workspaceRoot, registry.activePath),
       path.join(repoRoot, registry.activePath),
       { recursive: true },
     )
@@ -182,7 +184,7 @@ describe("v1.37 four-language conformance runner", () => {
 
   it("rejects every inconsistent v4 canonical-input and evidence projection class", () => {
     const candidateDirectory = path.resolve(
-      process.cwd(),
+      workspaceRoot,
       "packages/golden/src/fixtures/v1-37-conformance-traces/v1.37-observation-trace-v4",
     )
     const bundle = JSON.parse(

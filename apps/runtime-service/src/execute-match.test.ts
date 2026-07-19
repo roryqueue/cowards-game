@@ -14,6 +14,8 @@ import {
   RUNTIME_INVOCATION_V1_17_SELECTED_LIFECYCLE,
   RUNTIME_INVOCATION_V1_17_TEST_KEY_ID,
   STRATEGY_RUNTIME_ABI_VERSION,
+  VERSIONED_RUNTIME_V117_SEMANTIC_TUPLE_RECORD,
+  VersionedRuntimeExecutionServiceRequestV117Schema,
   RuntimeExecutionServiceRequestSchema,
   HistoricalRuntimeExecutionServiceRequestV116Schema,
   HistoricalRuntimeExecutionServiceResponseV116Schema,
@@ -43,7 +45,10 @@ import {
   type SoldierBrainResult,
   type StrategyRevision,
 } from "@cowards/spec"
-import { buildStrategyRevision } from "@cowards/runtime-js"
+import {
+  buildStrategyRevision,
+  buildStrategyRevisionV117,
+} from "@cowards/runtime-js"
 import {
   buildPythonStrategyRevision,
   buildPythonStrategyRevisionV117,
@@ -95,12 +100,18 @@ const executeRuntimeServiceRequest = (
   dependencies: CurrentMatchServiceTestOverrides = {},
 ) => {
   const selected = RuntimeExecutionServiceRequestSchema.safeParse(rawRequest)
+  const versioned =
+    VersionedRuntimeExecutionServiceRequestV117Schema.safeParse(rawRequest)
   const historical = isExactCommittedRuntimeExecutionServiceRequestV116(
     rawRequest,
   )
     ? HistoricalRuntimeExecutionServiceRequestV116Schema.safeParse(rawRequest)
     : selected
-  const parsed = selected.success ? selected : historical
+  const parsed = selected.success
+    ? selected
+    : versioned.success
+      ? versioned
+      : historical
   return executeCurrentMatchServiceTestSupport(rawRequest, config, {
     ...dependencies,
     ...(parsed.success
@@ -173,8 +184,14 @@ const preparedSuccessorTemplate = (() => {
   }
 })()
 
-const preparedSuccessorIdentity = (revision: StrategyRevision) => {
-  const deployed = createFixtureDeploymentLaneIdentity(revision)
+const preparedSuccessorIdentity = (
+  revision: StrategyRevision,
+  compatibility = VERSIONED_RUNTIME_V117_SEMANTIC_TUPLE_RECORD,
+) => {
+  const deployed = createFixtureDeploymentLaneIdentity(
+    revision,
+    compatibility,
+  )
   const composed = composeSuccessorRuntimeIdentityV117({
     revision,
     deployed,
@@ -572,6 +589,43 @@ const requestFor = (
   })
 }
 
+const requestForV117 = (): RuntimeExecutionServiceRequest => {
+  const bottom = buildStrategyRevisionV117({
+    source: passiveSource,
+    strategyId: "strategy:v117:bottom",
+  })
+  const top = buildStrategyRevisionV117({
+    source: passiveSource,
+    strategyId: "strategy:v117:top",
+  })
+  return {
+    contractVersion: RUNTIME_EXECUTION_SERVICE_VERSION,
+    kind: "executeMatch",
+    requestId: "runtime-request:v117:test",
+    match: {
+      matchId: "match:runtime-service-v117-test",
+      seed: "seed:runtime-service-v117-test",
+      arenaVariant,
+      bottomPlayerId: "player:bottom",
+      topPlayerId: "player:top",
+      bottomStrategyRevisionId: bottom.id,
+      topStrategyRevisionId: top.id,
+      maxPhases: 1,
+    },
+    strategies: { bottom, top },
+    limits: {
+      ...DEFAULT_RUNTIME_LIMITS,
+      stdoutBytes: 32 * 1024,
+    },
+    evidenceSnapshot: createFixtureRuntimeExecutionEvidenceSnapshot({
+      fixtureId: "execute-match-v117",
+      bottom,
+      top,
+      compatibility: VERSIONED_RUNTIME_V117_SEMANTIC_TUPLE_RECORD,
+    }),
+  }
+}
+
 const stringify = (value: unknown): string => JSON.stringify(value)
 describe("runtime execution service", () => {
   it("keeps active-old requests on the unchanged current response route", () => {
@@ -588,7 +642,7 @@ describe("runtime execution service", () => {
   })
 
   it("prepares v1.17 by wrapping the actual current Match path with exact authority and ledger roots", () => {
-    const currentRequest = requestFor()
+    const currentRequest = requestForV117()
     const match = JSON.parse(JSON.stringify(currentRequest)) as JsonValue
     const bottomSuccessor = preparedSuccessorIdentity(
       currentRequest.strategies.bottom,
@@ -601,7 +655,11 @@ describe("runtime execution service", () => {
     const preparedRuntimeConfig = createRuntimeServiceConfig({
       strategyExecutionAdapter: "worker-thread",
       semanticReceiptSecret: "fixture-semantic-receipt-secret-v1",
-      resolveDeploymentLaneIdentity: createFixtureDeploymentLaneIdentity,
+      resolveDeploymentLaneIdentity: (revision) =>
+        createFixtureDeploymentLaneIdentity(
+          revision,
+          VERSIONED_RUNTIME_V117_SEMANTIC_TUPLE_RECORD,
+        ),
       resolveSuccessorRuntimeIdentityTemplate: (revision) =>
         revision.id === currentRequest.strategies.bottom.id
           ? bottomSuccessor.template
