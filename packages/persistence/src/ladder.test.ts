@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest"
 import { Buffer } from "node:buffer"
 import { createHash, createHmac } from "node:crypto"
 import {
+  CANONICAL_ARENA_CATALOG_V1_37,
   COMPATIBILITY_VERSIONS,
   STRATEGY_RUNTIME_ABI_VERSION,
   defaultRuntimeMetadata,
@@ -527,6 +528,27 @@ const ladderSchedulingSeamPool = (options: {
       }
       if (normalized.startsWith("select config from arena_variants")) {
         return { rows: [{ config: { id: values[0] } }] }
+      }
+      if (normalized.startsWith("select * from arena_catalog_entries")) {
+        const arena = CANONICAL_ARENA_CATALOG_V1_37.arenas.find(
+          ({ id }) => id === values[1],
+        )!
+        return {
+          rows: [
+            {
+              catalog_version: values[0],
+              arena_id: arena.id,
+              arena_version: arena.version,
+              arena_name: arena.name,
+              arena_status: arena.status,
+              schedulable: arena.schedulable,
+              alias_of_arena_id: arena.aliasOf ?? null,
+              geometry_hash_profile: "arena-semantic-geometry-v1",
+              semantic_geometry_hash: arena.semanticGeometryHash,
+              config: arena,
+            },
+          ],
+        }
       }
       return { rows: [], rowCount: 1 }
     },

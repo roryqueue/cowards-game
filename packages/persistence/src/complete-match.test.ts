@@ -13,7 +13,7 @@ import {
   type ChronicleRecorderExecution,
 } from "@cowards/replay"
 import {
-  CANONICAL_COMPATIBILITY_TUPLES,
+  VERSIONED_RUNTIME_V117_SEMANTIC_TUPLE_RECORD,
   CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE_ID,
   ARENA_CATALOG_VERSION_V1_37,
   RUNTIME_EXECUTION_SERVICE_VERSION_V1_18,
@@ -166,7 +166,7 @@ describe("runtime-v1.19 frozen condition completion", () => {
   })
 })
 
-const tuple = CANONICAL_COMPATIBILITY_TUPLES[0]!
+const tuple = VERSIONED_RUNTIME_V117_SEMANTIC_TUPLE_RECORD
 const sha256 = (value: string): string =>
   createHash("sha256").update(value).digest("hex")
 

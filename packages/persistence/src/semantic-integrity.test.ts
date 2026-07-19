@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto"
 import {
+  getInitialInitiativePlayerId,
   MATCH_KERNEL,
   type GameState,
   type StrategyRuntime,
@@ -7,8 +8,11 @@ import {
 import { adaptRuntimeForCurrentKernel } from "@cowards/engine/test/current-kernel-runtime"
 import { recordChronicleFromExecution } from "@cowards/replay"
 import {
+  ARENA_CATALOG_VERSION_V1_37,
   CANONICAL_COMPATIBILITY_TUPLES,
   CANONICAL_ARENA_CATALOG_V1_37,
+  SET_CONDITION_POLICY_VERSION_V1_37,
+  createSetScenarioV137,
   type ExecutableLaneIdentity,
   type RuntimeEntrantExecutionEvidence,
   type RuntimeExecutionResolvedEvidenceSnapshot,
@@ -20,6 +24,7 @@ import {
   createMatchExecutionEvidencePair,
   createMatchSetIntegrityIdentity,
 } from "./integrity-evidence.js"
+import { TEST_CURRENT_IS_V119 } from "./test-current-semantic-authority.js"
 
 const tuple = CANONICAL_COMPATIBILITY_TUPLES[0]!
 const sha256 = (value: string): string =>
@@ -130,22 +135,53 @@ const runtime: StrategyRuntime = {
 describe("current persistence semantic integrity", () => {
   it("rejects invalid current state before opening a database transaction", async () => {
     const namespace = "semantic:current"
+    const matchId = `${namespace}:match`
+    const seed = `${namespace}:seed`
+    const bottomPlayerId = `${namespace}:player:bottom`
+    const topPlayerId = `${namespace}:player:top`
+    const bottomStrategyRevisionId = `${namespace}:revision:bottom`
+    const topStrategyRevisionId = `${namespace}:revision:top`
     const arena = CANONICAL_ARENA_CATALOG_V1_37.arenas.find(
       ({ id }) => id === "arena:smoke:v1",
     )!
+    const scenario = createSetScenarioV137({
+      arenaCatalogVersion: ARENA_CATALOG_VERSION_V1_37,
+      arenaSemanticGeometryHash: arena.semanticGeometryHash,
+      entrantA: {
+        entrantKey: `${namespace}:entrant:bottom`,
+        playerId: bottomPlayerId,
+      },
+      entrantB: {
+        entrantKey: `${namespace}:entrant:top`,
+        playerId: topPlayerId,
+      },
+      baseSeed: seed,
+    })
+    const derivedInitialInitiativePlayerId = getInitialInitiativePlayerId(
+      seed,
+      bottomPlayerId,
+      topPlayerId,
+    )
+    const condition = scenario.conditions.find(
+      (candidate) =>
+        candidate.bottomPlayerId === bottomPlayerId &&
+        candidate.topPlayerId === topPlayerId &&
+        candidate.initialInitiativePlayerId ===
+          derivedInitialInitiativePlayerId,
+    )!
     const execution = MATCH_KERNEL.runMatch({
-      matchId: `${namespace}:match`,
-      seed: `${namespace}:seed`,
+      matchId,
+      seed,
       arenaVariant: {
         id: arena.id,
         name: arena.name,
         initialBounds: arena.initialBounds,
         terrainStones: arena.terrainStones,
       },
-      bottomPlayerId: `${namespace}:player:bottom`,
-      topPlayerId: `${namespace}:player:top`,
-      bottomStrategyRevisionId: `${namespace}:revision:bottom`,
-      topStrategyRevisionId: `${namespace}:revision:top`,
+      bottomPlayerId,
+      topPlayerId,
+      bottomStrategyRevisionId,
+      topStrategyRevisionId,
       runtime: adaptRuntimeForCurrentKernel(runtime),
     })
     const recorded = recordChronicleFromExecution({
@@ -155,6 +191,33 @@ describe("current persistence semantic integrity", () => {
         semanticTupleId: MATCH_KERNEL.tupleId,
         semanticTuple: MATCH_KERNEL.tuple,
       },
+      ...(TEST_CURRENT_IS_V119
+        ? {
+            candidateMatch: {
+              semanticAuthorityKey: "runtime-v1.19" as const,
+              matchId,
+              seed,
+              arenaVariantId: arena.id,
+              bottomStrategyRevisionId,
+              topStrategyRevisionId,
+              bottomPlayerId,
+              topPlayerId,
+              bottomEntrantKey: condition.bottomEntrantKey,
+              topEntrantKey: condition.topEntrantKey,
+              setPolicyVersion: SET_CONDITION_POLICY_VERSION_V1_37,
+              scenarioId: scenario.scenarioId,
+              conditionId: condition.conditionId,
+              conditionOrdinal: condition.ordinal,
+              conditionSuffix: condition.suffix,
+              requestIdentity: condition.requestIdentity,
+              arenaCatalogVersion: ARENA_CATALOG_VERSION_V1_37,
+              arenaSemanticGeometryHash: arena.semanticGeometryHash,
+              initialInitiativeEntrantKey:
+                condition.initialInitiativeEntrantKey,
+              initialInitiativePlayerId: condition.initialInitiativePlayerId,
+            },
+          }
+        : {}),
     })
     if (!recorded.ok) throw new Error(recorded.failure.code)
     const positioned = recorded.finalState.soldiers.filter(

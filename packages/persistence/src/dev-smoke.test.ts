@@ -52,7 +52,9 @@ describe("development smoke helper", () => {
       try {
         const result = await runDevelopmentMatchSetSmoke(pool, {
           matchSetId: `match-set:dev-smoke:${randomUUID()}`,
-          evidenceResolver: createFixtureMatchSetEvidenceResolver(),
+          evidenceResolver: createFixtureMatchSetEvidenceResolver({
+            semanticAuthorityKey: "runtime-v1.17",
+          }),
           semanticAuthorityKey: "runtime-v1.17",
           runQueuedMatch: async () => undefined,
         })

@@ -2,9 +2,9 @@ import { createHash, randomUUID } from "node:crypto"
 import {
   ARENA_CATALOG_VERSION_V1_37,
   CANONICAL_ARENA_CATALOG_V1_37,
-  CANONICAL_COMPATIBILITY_TUPLES,
   CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE,
   CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE_ID,
+  VERSIONED_RUNTIME_V117_SEMANTIC_TUPLE_RECORD,
   createSetScenarioV137,
   type ExecutableLaneIdentity,
   type MatchId,
@@ -42,7 +42,7 @@ import {
   TEST_NONCURRENT_SEMANTIC_AUTHORITY_HEAD,
 } from "./test-current-semantic-authority.js"
 
-const tuple = CANONICAL_COMPATIBILITY_TUPLES[0]!
+const tuple = VERSIONED_RUNTIME_V117_SEMANTIC_TUPLE_RECORD
 const sha256 = (value: string): string =>
   createHash("sha256").update(value).digest("hex")
 const languages = ["typescript", "python", "rust", "zig"] as const

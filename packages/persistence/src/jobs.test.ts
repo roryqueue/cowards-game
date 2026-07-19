@@ -1,7 +1,7 @@
 import { createHash, randomUUID } from "node:crypto"
 import {
-  CANONICAL_COMPATIBILITY_TUPLES,
   CURRENT_SEMANTIC_AUTHORITY_GENERATED,
+  VERSIONED_RUNTIME_V117_SEMANTIC_TUPLE_RECORD,
   type ExecutableLaneIdentity,
   type RuntimeEntrantExecutionEvidence,
 } from "@cowards/spec"
@@ -291,7 +291,7 @@ describePostgres("PostgreSQL integrity identity before claim", () => {
   it("creates and claims containment-only exhibition entrants with null conformance identity", async () => {
     const suffix = randomUUID()
     const now = new Date()
-    const tuple = CANONICAL_COMPATIBILITY_TUPLES[0]!
+    const tuple = VERSIONED_RUNTIME_V117_SEMANTIC_TUPLE_RECORD
     const hash = (value: string): string =>
       createHash("sha256").update(value).digest("hex")
     const namespace = `containment-only:${suffix}`

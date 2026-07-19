@@ -11,7 +11,6 @@ import type {
 import {
   ARENA_CATALOG_VERSION_V1_37,
   CANONICAL_ARENA_CATALOG_V1_37,
-  CANONICAL_COMPATIBILITY_TUPLES,
   CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE_ID,
   SET_CONDITION_POLICY_VERSION_V1_37,
   createSetScenarioV137,
@@ -107,6 +106,7 @@ export const createFixtureMatchSetEvidenceResolver = (
       | Readonly<Record<string, StrategyLanguageId>>
       | undefined
     omitStrategyRevisionIds?: readonly string[] | undefined
+    semanticAuthorityKey?: SchedulingSemanticAuthorityKey | undefined
   } = {},
 ): MatchSetExecutionEvidenceResolver =>
   Object.freeze({
@@ -114,7 +114,22 @@ export const createFixtureMatchSetEvidenceResolver = (
     async resolve(
       input: MatchSetEvidenceResolutionRequest,
     ): Promise<IntegritySchedulingIdentity> {
-      const tuple = CANONICAL_COMPATIBILITY_TUPLES[0]!
+      const selected = (
+        options.semanticAuthorityKey === undefined
+          ? resolveFileCurrentSchedulingSemanticAuthority()
+          : resolveSchedulingSemanticAuthority(options.semanticAuthorityKey)
+      ).selection
+      const tuple = {
+        tupleId: selected.tupleId,
+        tuple: {
+          rules: selected.rulesVersion,
+          engine: selected.engineVersion,
+          runtimeAbi: selected.runtimeAbiVersion,
+          chronicle: selected.chronicleVersion,
+          arenaCatalog: selected.arenaCatalogVersion,
+          setPolicy: selected.setPolicyVersion,
+        },
+      }
       const registryGeneration = "fixture:v1.37:generation:1"
       const omitted = new Set(options.omitStrategyRevisionIds ?? [])
       const executionEntrants = Object.fromEntries(

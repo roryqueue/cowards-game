@@ -3,6 +3,7 @@ import { Buffer } from "node:buffer"
 import { createHash, createHmac } from "node:crypto"
 import { readFileSync } from "node:fs"
 import {
+  CANONICAL_ARENA_CATALOG_V1_37,
   CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE,
   CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE_ID,
   defaultRuntimeMetadata,
@@ -260,6 +261,27 @@ const competitionSchedulingPool = (options: {
       }
       if (normalized.startsWith("select config from arena_variants")) {
         return { rows: [{ config: { id: values[0] } }] }
+      }
+      if (normalized.startsWith("select * from arena_catalog_entries")) {
+        const arena = CANONICAL_ARENA_CATALOG_V1_37.arenas.find(
+          ({ id }) => id === values[1],
+        )!
+        return {
+          rows: [
+            {
+              catalog_version: values[0],
+              arena_id: arena.id,
+              arena_version: arena.version,
+              arena_name: arena.name,
+              arena_status: arena.status,
+              schedulable: arena.schedulable,
+              alias_of_arena_id: arena.aliasOf ?? null,
+              geometry_hash_profile: "arena-semantic-geometry-v1",
+              semantic_geometry_hash: arena.semanticGeometryHash,
+              config: arena,
+            },
+          ],
+        }
       }
       return { rows: [], rowCount: 1 }
     },
@@ -560,7 +582,9 @@ describe("competition helpers", () => {
     })
     expect(legacy.some(({ seed }) => seed.endsWith(":mirror"))).toBe(true)
     const legacyIdentity = await resolveMatchSetExecutionEvidence({
-      resolver: createFixtureMatchSetEvidenceResolver(),
+      resolver: createFixtureMatchSetEvidenceResolver({
+        semanticAuthorityKey: "runtime-v1.17",
+      }),
       purpose: "exhibition",
       evaluationInstant: "2026-07-12T12:00:00.000Z",
       entrants: [
