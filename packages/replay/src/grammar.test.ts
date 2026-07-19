@@ -7,7 +7,10 @@ import type {
   StrategyInput,
 } from "@cowards/spec"
 import { MATCH_KERNEL, type StrategyRuntime } from "@cowards/engine"
-import { adaptRuntimeForCurrentKernel } from "@cowards/engine/test/current-kernel-runtime"
+import {
+  adaptRuntimeForCurrentKernel,
+  runCurrentMatchForReplayTestSupport,
+} from "@cowards/engine/test/current-kernel-runtime"
 import { describe, expect, it } from "vitest"
 import {
   advanceCurrentChronicleGrammar,
@@ -16,7 +19,6 @@ import {
 } from "./grammar.js"
 import {
   recordCurrentChronicleTestSupport as recordChronicleFromExecution,
-  runCurrentMatchForReplayTestSupport,
   selectedCurrentSemanticAuthorityTestSupport,
 } from "./test/current-recording.js"
 import { validateCurrentChronicle } from "./validate.js"

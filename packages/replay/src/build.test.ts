@@ -10,11 +10,11 @@ import {
   type CanonicalStrategyRuntime,
   type StrategyRuntime,
 } from "@cowards/engine"
-import { adaptRuntimeForCurrentKernel } from "@cowards/engine/test/current-kernel-runtime"
 import {
-  recordCurrentChronicleTestSupport as recordChronicleFromExecution,
+  adaptRuntimeForCurrentKernel,
   runCurrentMatchForReplayTestSupport,
-} from "./test/current-recording.js"
+} from "@cowards/engine/test/current-kernel-runtime"
+import { recordCurrentChronicleTestSupport as recordChronicleFromExecution } from "./test/current-recording.js"
 
 const createRecordingRuntime = (
   observedInputs: Map<string, SoldierBrainInput>,

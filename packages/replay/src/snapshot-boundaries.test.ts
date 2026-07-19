@@ -7,10 +7,12 @@ import type {
 } from "@cowards/spec"
 import { describe, expect, it } from "vitest"
 import { MATCH_KERNEL, type StrategyRuntime } from "@cowards/engine"
-import { adaptRuntimeForCurrentKernel } from "@cowards/engine/test/current-kernel-runtime"
+import {
+  adaptRuntimeForCurrentKernel,
+  runCurrentMatchForReplayTestSupport,
+} from "@cowards/engine/test/current-kernel-runtime"
 import {
   recordCurrentChronicleTestSupport as recordChronicleFromExecution,
-  runCurrentMatchForReplayTestSupport,
   selectedCurrentSemanticAuthorityTestSupport,
 } from "./test/current-recording.js"
 import { validateSnapshotBoundaries } from "./snapshot-boundaries.js"

@@ -8,19 +8,19 @@ import {
   type StrategyInput,
 } from "@cowards/spec"
 import { MATCH_KERNEL, type StrategyRuntime } from "@cowards/engine"
-import { adaptRuntimeForCurrentKernel } from "@cowards/engine/test/current-kernel-runtime"
+import {
+  adaptRuntimeForCurrentKernel,
+  runCurrentMatchForReplayTestSupport,
+} from "@cowards/engine/test/current-kernel-runtime"
 import { describe, expect, it } from "vitest"
 import {
   createCurrentReplay,
   validateCurrentReplayReconstruction,
 } from "./reconstruct.js"
 import { validateCurrentTransitionPostconditions } from "./current-transition-postconditions.js"
-import {
-  type RecordedCanonicalTransitionV137,
-} from "./record.js"
+import { type RecordedCanonicalTransitionV137 } from "./record.js"
 import {
   recordCurrentChronicleTestSupport as recordChronicleFromExecution,
-  runCurrentMatchForReplayTestSupport,
   selectedCurrentReconstructionAuthorityTestSupport,
 } from "./test/current-recording.js"
 import {

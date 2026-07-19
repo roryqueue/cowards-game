@@ -2,11 +2,9 @@ import type { RunMatchInput, StrategyRuntime } from "@cowards/engine"
 import {
   adaptHistoricalRuntimeForCurrentKernel,
   adaptRuntimeForCurrentKernel,
-} from "@cowards/engine/test/current-kernel-runtime"
-import {
-  recordCurrentChronicleTestSupport as recordChronicleFromExecution,
   runSelectedCurrentMatchForReplayTestSupport,
-} from "@cowards/replay/test/current-recording"
+} from "@cowards/engine/test/current-kernel-runtime"
+import { recordCurrentChronicleTestSupport as recordChronicleFromExecution } from "@cowards/replay/test/current-recording"
 import {
   INITIAL_BOUNDS,
   CURRENT_SEMANTIC_TUPLE,

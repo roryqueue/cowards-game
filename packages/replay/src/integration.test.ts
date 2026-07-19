@@ -5,13 +5,15 @@ import {
   type RunMatchInput,
   type StrategyRuntime,
 } from "@cowards/engine"
-import { adaptRuntimeForCurrentKernel } from "@cowards/engine/test/current-kernel-runtime"
+import {
+  adaptRuntimeForCurrentKernel,
+  runCurrentMatchForReplayTestSupport,
+} from "@cowards/engine/test/current-kernel-runtime"
 import { createChronicleContentHash } from "./hash.js"
 import { projectOwnerChronicle, projectPublicChronicle } from "./project.js"
 import { createCurrentReplay } from "./reconstruct.js"
 import {
   recordCurrentChronicleTestSupport as recordChronicleFromExecution,
-  runCurrentMatchForReplayTestSupport,
   selectedCurrentSemanticAuthorityTestSupport,
 } from "./test/current-recording.js"
 import { validateCurrentChronicle } from "./validate.js"

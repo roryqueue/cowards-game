@@ -2,7 +2,10 @@ import type { Chronicle, SoldierBrainInput, StrategyInput } from "@cowards/spec"
 import { readFileSync } from "node:fs"
 import { describe, expect, it } from "vitest"
 import { MATCH_KERNEL, type StrategyRuntime } from "@cowards/engine"
-import { adaptRuntimeForCurrentKernel } from "@cowards/engine/test/current-kernel-runtime"
+import {
+  adaptRuntimeForCurrentKernel,
+  runCurrentMatchForReplayTestSupport,
+} from "@cowards/engine/test/current-kernel-runtime"
 import {
   createCurrentReplay,
   createHistoricalV14Replay,
@@ -10,7 +13,6 @@ import {
 } from "./reconstruct.js"
 import {
   recordCurrentChronicleTestSupport as recordChronicleFromExecution,
-  runCurrentMatchForReplayTestSupport,
   selectedCurrentReconstructionAuthorityTestSupport,
 } from "./test/current-recording.js"
 

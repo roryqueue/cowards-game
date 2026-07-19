@@ -4,6 +4,8 @@ import {
   RUNTIME_INVOCATION_V1_17_SYSTEM_FAILURE_CODES,
   RUNTIME_INVOCATION_V1_17_SYSTEM_FAILURE_RETRYABILITY,
   RUNTIME_INVOCATION_V1_17_TEST_KEY_ID,
+  CANONICAL_ARENA_CATALOG_V1_37,
+  CURRENT_SEMANTIC_AUTHORITY_KEY,
   createRuntimeAbiV117ExecutionLedger,
   createRuntimeInvocationBudgetV117,
   createRuntimeInvocationTraceV117,
@@ -20,11 +22,62 @@ import {
   type CandidateBoundRuntimeInvocationV117,
   type CandidateRuntimeInvocationResult,
   type CandidateStrategyRuntime,
+  type CandidateExecution,
   type KernelEffectRequest,
   type KernelSelectActivationsRequest,
   type KernelSoldierBrainRequest,
 } from "../kernel/types.js"
-import type { CanonicalStrategyRuntime } from "../types.js"
+import { MatchExecutionFailure, runMatch } from "../match.js"
+import type { CanonicalStrategyRuntime, RunMatchInput } from "../types.js"
+
+type CurrentMatchResult = CandidateExecution
+
+const executeCurrentMatch = (input: RunMatchInput): CurrentMatchResult => {
+  try {
+    return runMatch(input).execution
+  } catch (error) {
+    if (!(error instanceof MatchExecutionFailure)) throw error
+    return {
+      kind: "failure",
+      transitions: [],
+      failure: error.failure,
+      unchangedState: error.unchangedState,
+    }
+  }
+}
+
+const currentFixtureArena = () => {
+  const arena = CANONICAL_ARENA_CATALOG_V1_37.arenas.find(
+    ({ status, schedulable, terrainStones }) =>
+      status === "active" && schedulable && terrainStones.length === 0,
+  )
+  if (arena === undefined) {
+    throw new Error("CURRENT_REPLAY_TEST_ARENA_UNAVAILABLE")
+  }
+  return arena
+}
+
+export const runCurrentMatchForReplayTestSupport = (
+  input: RunMatchInput,
+): CurrentMatchResult => {
+  const arena = currentFixtureArena()
+  return executeCurrentMatch({
+    ...input,
+    arenaVariant: {
+      id: arena.id,
+      name: arena.name,
+      initialBounds: { ...arena.initialBounds },
+      terrainStones: arena.terrainStones.map((position) => ({ ...position })),
+    },
+  })
+}
+
+export const runSelectedCurrentMatchForReplayTestSupport = (
+  input: RunMatchInput,
+): CurrentMatchResult =>
+  String(CURRENT_SEMANTIC_AUTHORITY_KEY) !== "runtime-v1.19"
+    ? executeCurrentMatch(input)
+    : runCurrentMatchForReplayTestSupport(input)
 
 const signingIdentity = {
   keyId: RUNTIME_INVOCATION_V1_17_TEST_KEY_ID,

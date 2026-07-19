@@ -26,12 +26,14 @@ import {
 } from "@cowards/spec"
 import { describe, expect, it } from "vitest"
 import { MATCH_KERNEL, type StrategyRuntime } from "@cowards/engine"
-import { adaptRuntimeForCurrentKernel } from "@cowards/engine/test/current-kernel-runtime"
+import {
+  adaptRuntimeForCurrentKernel,
+  runCurrentMatchForReplayTestSupport,
+} from "@cowards/engine/test/current-kernel-runtime"
 import { createChronicleContentHash } from "./hash.js"
 import { projectOwnerChronicle } from "./project.js"
 import {
   recordCurrentChronicleTestSupport as recordChronicleFromExecution,
-  runCurrentMatchForReplayTestSupport,
   selectedCurrentSemanticAuthorityTestSupport,
 } from "./test/current-recording.js"
 import {
@@ -1200,16 +1202,17 @@ describe("validateChronicle", () => {
   it("rejects semantically invalid runtime-v1.17 intermediate state evidence", () => {
     const input = createVersionedReplayInputV117()
     const execution = globalThis.structuredClone(input.execution)
-    const beforeState = execution.transitions[0]!
-      .beforeState as unknown as { soldiers: Soldier[] }
+    const beforeState = execution.transitions[0]!.beforeState as unknown as {
+      soldiers: Soldier[]
+    }
     beforeState.soldiers[1] = {
       ...beforeState.soldiers[1]!,
       position: beforeState.soldiers[0]!.position,
     }
 
-    expect(validateVersionedChronicleV117({ ...input, execution })).toMatchObject(
-      { ok: false },
-    )
+    expect(
+      validateVersionedChronicleV117({ ...input, execution }),
+    ).toMatchObject({ ok: false })
   })
 
   it("accepts grammar-specific validation codes in the schema contract", () => {
