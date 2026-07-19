@@ -499,8 +499,12 @@ describe("v1.37 canonical integrity authority", () => {
   })
 
   it("rejects premature, partial, mixed, and relabeled current selection", () => {
+    const currentKey =
+      CURRENT_SEMANTIC_AUTHORITY_GENERATED.selection.semanticAuthorityKey
+    const otherKey =
+      currentKey === "runtime-v1.17" ? "runtime-v1.19" : "runtime-v1.17"
     const exact: CurrentSemanticAuthoritySource = {
-      semanticAuthorityKey: "runtime-v1.17",
+      semanticAuthorityKey: currentKey,
     }
     expect(resolveCurrentSemanticAuthoritySelection(exact)).toEqual(
       CURRENT_SEMANTIC_AUTHORITY_GENERATED.selection,
@@ -509,7 +513,7 @@ describe("v1.37 canonical integrity authority", () => {
     const invalid: unknown[] = [
       "runtime-v1.17",
       {},
-      { semanticAuthorityKey: "runtime-v1.19" },
+      { semanticAuthorityKey: otherKey },
       { runtimeAbiVersion: "strategy-runtime-abi-v1.17" },
       { arenaCatalogVersion: "semantic-arena-catalog-v1.37-candidate-1" },
       { setPolicyVersion: "canonical-set-policy-v1.4" },
@@ -538,12 +542,15 @@ describe("v1.37 canonical integrity authority", () => {
     }
   })
 
-  it("resolves both closed semantic selections without moving the live source", () => {
+  it("resolves both closed semantic selections independently of the live source", () => {
     expect(
       resolveSemanticAuthoritySelection({
         semanticAuthorityKey: "runtime-v1.17",
       }),
-    ).toEqual(CURRENT_SEMANTIC_AUTHORITY_GENERATED.selection)
+    ).toMatchObject({
+      semanticAuthorityKey: "runtime-v1.17",
+      runtimeAbiVersion: "strategy-runtime-abi-v1.17",
+    })
     expect(
       resolveSemanticAuthoritySelection({
         semanticAuthorityKey: "runtime-v1.19",

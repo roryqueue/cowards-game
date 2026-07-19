@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest"
 import {
   CURRENT_SEMANTIC_AUTHORITY_GENERATED,
   resolveSemanticAuthoritySelection,
+  type SemanticAuthorityKey,
 } from "@cowards/spec"
 import {
   RuntimeServiceConfigError,
@@ -14,7 +15,8 @@ import {
 
 describe("runtime-service compact current selection", () => {
   const currentKey =
-    CURRENT_SEMANTIC_AUTHORITY_GENERATED.selection.semanticAuthorityKey
+    CURRENT_SEMANTIC_AUTHORITY_GENERATED.selection
+      .semanticAuthorityKey as SemanticAuthorityKey
   const otherSelection = resolveSemanticAuthoritySelection({
     semanticAuthorityKey:
       currentKey === "runtime-v1.17" ? "runtime-v1.19" : "runtime-v1.17",

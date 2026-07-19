@@ -387,6 +387,7 @@ export interface StrategyPackageMetadata {
 export type StrategyRuntimeAbiVersion =
   | "strategy-runtime-abi-v1.14"
   | "strategy-runtime-abi-v1.17"
+  | "strategy-runtime-abi-v1.19"
 
 export interface StrategyRuntimeMetadata {
   abiVersion: StrategyRuntimeAbiVersion
