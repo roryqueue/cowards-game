@@ -10,7 +10,7 @@ import {
   writeFileSync,
 } from "node:fs"
 import { tmpdir } from "node:os"
-import { join } from "node:path"
+import { dirname, join } from "node:path"
 import {
   RUNTIME_INVOCATION_V1_17_CANDIDATE,
   RUNTIME_INVOCATION_V1_17_PLAYER_VIOLATIONS,
@@ -526,7 +526,9 @@ const executeCandidateGuest = (
     {
       input: Buffer.from(input.stdin),
       encoding: "buffer",
-      env: {},
+      // Wasmtime 45 resolves host-only cache configuration through HOME.
+      // Point it at the invocation directory; no host or guest environment is inherited.
+      env: { HOME: dirname(input.artifactPath) },
       shell: false,
       timeout:
         input.request.budget.methodLimit.counters.wallMilliseconds.maximum +
@@ -966,7 +968,8 @@ const runWasmWasiStrategyMethodSyncInternal = (
         rawEnvelope.methodName !== "soldierBrain") ||
       rawEnvelope.source.hash !== request.revision.sourceHash ||
       rawEnvelope.source.bytes !== request.revision.sourceBytes ||
-      rawEnvelope.source.entrypoint !== request.revision.runtime.package.entrypoint)
+      rawEnvelope.source.entrypoint !==
+        request.revision.runtime.package.entrypoint)
   ) {
     throw new TypeError("Historical v1.14 WASM/WASI request binding drifted.")
   }
@@ -996,7 +999,9 @@ const runWasmWasiStrategyMethodSyncInternal = (
       {
         input: JSON.stringify(envelope),
         encoding: "utf8",
-        env: {},
+        // Keep host configuration invocation-local without exposing host data
+        // or adding any WASI guest environment entries.
+        env: { HOME: dir },
         shell: false,
         timeout: timeoutMs + 250,
         maxBuffer:

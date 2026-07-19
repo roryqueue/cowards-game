@@ -17,7 +17,11 @@ const strategyInput = {
   phaseNumber: 1,
   roundNumber: 2,
   activationCount: 1,
-  board: { bounds: { minX: 0, maxX: 11, minY: 0, maxY: 11 }, soldiers: [], terrainStones: [] },
+  board: {
+    bounds: { minX: 0, maxX: 11, minY: 0, maxY: 11 },
+    soldiers: [],
+    terrainStones: [],
+  },
   mySoldiers: [],
   enemySoldiers: [],
   strategyMemory: null,
@@ -110,12 +114,15 @@ const rustProbe = compileRustWasmArtifact(rustSource)
 const zigProbe = compileZigWasmArtifact(zigSource)
 
 const invokeWasm = (
-  revision: ReturnType<typeof buildRustStrategyRevision> | ReturnType<typeof buildZigStrategyRevision>,
+  revision:
+    | ReturnType<typeof buildRustStrategyRevision>
+    | ReturnType<typeof buildZigStrategyRevision>,
   methodName: "selectActivations" | "soldierBrain",
   input: unknown,
 ): unknown => {
   const artifact = revision.metadata.compiledArtifact
-  if (artifact?.bytesBase64 === undefined) throw new Error("Candidate artifact is missing")
+  if (artifact?.bytesBase64 === undefined)
+    throw new Error("Candidate artifact is missing")
   const dir = mkdtempSync(join(tmpdir(), "cowards-v119-observation-"))
   const artifactPath = join(dir, "strategy.wasm")
   try {
@@ -127,16 +134,22 @@ const invokeWasm = (
         input,
       }),
       encoding: "utf8",
-      env: { PATH: process.env.PATH ?? "" },
+      env: { HOME: dir, PATH: process.env.PATH ?? "" },
       shell: false,
       timeout: 1_250,
       maxBuffer: 64 * 1024,
     })
     if (result.error || result.status !== 0) {
-      throw new Error(`WASM/WASI candidate host failed: ${result.error?.message ?? result.stderr}`)
+      throw new Error(
+        `WASM/WASI candidate host failed: ${result.error?.message ?? result.stderr}`,
+      )
     }
-    const envelope = JSON.parse(result.stdout) as { ok: boolean; value: unknown }
-    if (!envelope.ok) throw new Error("WASM/WASI candidate returned a violation")
+    const envelope = JSON.parse(result.stdout) as {
+      ok: boolean
+      value: unknown
+    }
+    if (!envelope.ok)
+      throw new Error("WASM/WASI candidate returned a violation")
     return envelope.value
   } finally {
     rmSync(dir, { recursive: true, force: true })
@@ -151,7 +164,9 @@ describe("Rust and Zig v1.19 observation transport", () => {
         ["rust", buildRustStrategyRevision({ source: rustSource })],
         ["zig", buildZigStrategyRevision({ source: zigSource })],
       ] as const) {
-        expect(invokeWasm(revision, "selectActivations", strategyInput)).toMatchObject({
+        expect(
+          invokeWasm(revision, "selectActivations", strategyInput),
+        ).toMatchObject({
           strategyMemory: { lane, observed: true },
         })
 

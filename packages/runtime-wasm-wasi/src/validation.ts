@@ -1881,7 +1881,9 @@ export fn _start() void {
             input: {},
           }),
           encoding: "utf8",
-          env: {},
+          // Resolve Wasmtime's host-only default cache configuration inside
+          // the disposable proof directory; the guest still receives no env.
+          env: { HOME: dir },
           shell: false,
           timeout: 1_250,
           maxBuffer: 64 * 1024,

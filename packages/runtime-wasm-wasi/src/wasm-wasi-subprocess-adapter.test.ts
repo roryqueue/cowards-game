@@ -7,6 +7,7 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { pathToFileURL } from "node:url"
 import {
+  admitCanonicalJsonValue,
   createSelectedRuntimeInvocationRequestV117,
   createRuntimeAbiV117ExecutionLedger,
   createRuntimeInvocationBudgetV117,
@@ -403,10 +404,18 @@ const runCandidateObservation = (
     signingIdentity: candidateSigningIdentity,
     executionIdentity: candidateExecutionIdentity(revision),
     executeGuest: ({ stdin, settings }) => {
-      expect(new TextDecoder().decode(stdin)).toBe(
-        '{"input":' +
-          JSON.stringify(request.input.value) +
-          ',"method":"soldierBrain","runtimeAbi":"strategy-runtime-abi-v1.17"}',
+      const expectedGuestInput = admitCanonicalJsonValue(
+        {
+          input: request.input.value,
+          method: "soldierBrain",
+          runtimeAbi: "strategy-runtime-abi-v1.17",
+        },
+        { profile: "host-api-value" },
+      )
+      if (!expectedGuestInput.ok)
+        throw new TypeError(expectedGuestInput.error.code)
+      expect(Buffer.from(stdin)).toEqual(
+        Buffer.from(expectedGuestInput.canonicalBytes),
       )
       expect(settings).toEqual(WASM_WASI_V1_17_EXECUTION_SETTINGS)
       return {
