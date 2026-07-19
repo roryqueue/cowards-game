@@ -1710,7 +1710,8 @@ export const executePreparedRuntimeServiceRequestV117 = (
     })
   }
   const request = parsed.data
-  const nested = RuntimeExecutionServiceRequestSchema.safeParse(request.match)
+  const nested =
+    VersionedRuntimeExecutionServiceRequestV117Schema.safeParse(request.match)
   if (!nested.success) {
     return preparedV117Failure({
       rawRequest: request,

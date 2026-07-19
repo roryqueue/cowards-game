@@ -1,3 +1,4 @@
+import { Buffer } from "node:buffer"
 import { createHash, generateKeyPairSync, sign } from "node:crypto"
 import { once } from "node:events"
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs"
@@ -20,6 +21,7 @@ import {
   SUCCESSOR_RUNTIME_IDENTITY_TEMPLATE_SCHEMA_V117,
   SUCCESSOR_RUNTIME_LANE_PROFILE_FIELDS_V117,
   createRuntimeSemanticTupleV118,
+  encodeCanonicalJson,
   hashSuccessorRuntimeLaneProfileV117,
   type ExecutableLaneIdentity,
   type JsonValue,
@@ -386,12 +388,21 @@ const executeOverProductionConfiguredHttp = async (input: {
     server.listen(0, "127.0.0.1")
     await once(server, "listening")
     const address = server.address() as AddressInfo
+    const candidateBody = encodeCanonicalJson(
+      outerRequest as unknown as JsonValue,
+      { context: "authenticated-outer-envelope" },
+    )
+    if (candidateV119 && !candidateBody.ok) {
+      throw new Error(candidateBody.error.code)
+    }
     const response = await fetch(
       `http://127.0.0.1:${address.port}/execute-match`,
       {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify(candidateV119 ? outerRequest : input.request),
+        body: candidateV119
+          ? Buffer.from(candidateBody.ok ? candidateBody.bytes : [])
+          : JSON.stringify(input.request),
       },
     )
     return {
