@@ -487,9 +487,24 @@ Plans:
   2. Service-backed proof covers success, player violation, system failure with no mutation, semantic Chronicle validation, reconstruction, replay, Set fairness, persistence, recomputation, idempotency, retry, rollback, and immutable historical evidence.
   3. Public/default APIs, views, logs, fixtures, contracts, and proof artifacts pass privacy scans for source, artifacts, memories, objectives, diagnostics, host data, credentials, and security internals.
   4. Boundary monitors detect duplicate transition ownership, mixed tuples, adapter-owned gameplay classification, stale identity, unsupported events, duplicate arenas, unfair scheduling, unproved counted lanes, and private-output leakage.
-  5. The final audit proves complete 56/56 traceability, one transition authority, passing drift guards, and no unapproved gameplay change; v1.37 is then archived and tagged before serious Strategy work begins.
+  5. The prearchive audit proves complete 56/56 traceability, 55 passed requirements, PROOF-08 release-ready/pending, one transition authority, passing drift guards, and no unapproved gameplay change; the archive commit is then tagged, and the actual annotated tag plus post-tag checker closes PROOF-08 before serious Strategy work begins.
 
-**Plans:** TBD
+**Plans:** 13 plans
+
+Plans:
+- [ ] 261-01-PLAN.md — Freeze the closed scenario manifest and restricted content-addressed evidence contract.
+- [ ] 261-02-PLAN.md — Add mutation-tested release privacy and drift guards to the default boundary chain.
+- [ ] 261-03-PLAN.md — Execute the real four-language production-shaped service topology and typed failure proof.
+- [ ] 261-04-PLAN.md — Serialize and prove exact audit compatibility, persistence, rollback, recomputation, retry, and immutable history.
+- [ ] 261-05-PLAN.md — Own and validate live desktop/mobile topology, proof-data handoff, network privacy, and replay-board realism.
+- [ ] 261-06-PLAN.md — Generate the deterministic public-safe integrated service proof.
+- [ ] 261-07-PLAN.md — Produce the exact non-circular 48+7+1 prearchive requirement proof.
+- [ ] 261-08-PLAN.md — Render the truthful 56-traced/55-passed release-ready milestone audit.
+- [ ] 261-09-PLAN.md — Freeze the public-safe, non-authorizing Strategy-evaluation foundation.
+- [ ] 261-10-PLAN.md — Bind proof, audit, handoff, tuple, tag absence, and protected baseline into release readiness.
+- [ ] 261-11-PLAN.md — Prepare the post-tag checker and promote strict missing/stale evidence into the default boundary gate.
+- [ ] 261-12-PLAN.md — Converge review, validation, verification, and audit fixes to zero in the release-ready state.
+- [ ] 261-13-PLAN.md — Archive synchronously, create annotated v1.37, and close PROOF-08 through the actual post-tag join.
 
 ## Optional Compatibility-Gated Simplifications
 
@@ -514,5 +529,5 @@ Cycle-cap, inward-start, facing-only MOVE, reversal-history, attacker-facing/Adv
 | 257. Canonical Transition Kernel and v1.4 Semantic Integrity | 22/22 | Complete | 2026-07-13 |
 | 258. Canonical JSON, Failure Semantics, and Artifact Identity | 14/14 | Complete | 2026-07-16 |
 | 259. Executable Four-Language and Chronicle Conformance | 31/31 | Complete | 2026-07-16 |
-| 260. Truthful Strategy Inputs, Arena Authority, and Set Fairness | 48/49 | In Progress|  |
-| 261. Integrated Service Proof, Drift Guards, and Release | 0/TBD | Not started | - |
+| 260. Truthful Strategy Inputs, Arena Authority, and Set Fairness | 49/49 | Complete | 2026-07-19 |
+| 261. Integrated Service Proof, Drift Guards, and Release | 0/9 | Planned | - |
