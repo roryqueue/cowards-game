@@ -10,7 +10,7 @@ import {
 import * as enginePublic from "../index.js"
 import { createFakeRuntime } from "../test/fake-runtime.js"
 import { adaptRuntimeForCurrentKernel } from "../test/current-kernel-runtime.js"
-import { createCandidateInitialGameState } from "./create-initial-state.js"
+import { createInitialGameState } from "../state.js"
 import { stepCandidateMatch } from "./step.js"
 import {
   appendKernelEventHistory,
@@ -156,20 +156,17 @@ const candidateAuthority = (
 ).MATCH_KERNEL
 
 const createDirectMachine = (): MatchMachine => {
-  const initial = createCandidateInitialGameState({
+  const initialState = createInitialGameState({
     ...matchInput,
     arenaVariant: {
       ...matchInput.arenaVariant,
       terrainStones: [...matchInput.arenaVariant.terrainStones],
     },
   })
-  if (!initial.ok) {
-    throw new Error("candidate test state failed semantic admission")
-  }
   return {
     executionMode: "match",
-    state: initial.state,
-    initialState: initial.state,
+    state: initialState,
+    initialState,
     semanticTuple: {
       tupleId: EXPECTED_CANDIDATE_TUPLE_ID,
       tuple: EXPECTED_CANDIDATE_TUPLE,

@@ -115,7 +115,9 @@ export const resolveActivationSelection = (
   if (!player) {
     throw new Error(`Player not found: ${playerId}`)
   }
-  const result = runtime.selectActivations(createStrategyInput(state, playerId))
+  const result = runtime.selectActivations(
+    createStrategyInput(state, playerId, "strategy-runtime-abi-v1.14"),
+  )
   if (!result.ok) {
     if ("systemFailure" in result) {
       throw new Error(result.systemFailure.code)
@@ -324,6 +326,8 @@ export const resolveActivationCycle = (
     slot.soldierId,
     cycleLayer,
     slot.objective,
+    false,
+    "strategy-runtime-abi-v1.14",
   )
   events.push(
     event(

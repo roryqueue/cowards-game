@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs"
 import { describe, expect, it } from "vitest"
 import { ArenaVariantSchema } from "@cowards/spec"
 import { createCandidateInitialGameState } from "./create-initial-state.js"
-import { createCandidateActivationMachine } from "./driver.js"
+import { createCandidateActivationMachineV117 } from "./driver.js"
 
 type SemanticCorpus = {
   valid: { arena: unknown }
@@ -88,14 +88,14 @@ describe("candidate semantic boundaries", () => {
       ],
     }
     expect(() =>
-      createCandidateActivationMachine({
+      createCandidateActivationMachineV117({
         state: preserved,
         soldierId: bottom.id,
       }),
     ).not.toThrow()
 
     expect(() =>
-      createCandidateActivationMachine({
+      createCandidateActivationMachineV117({
         state: {
           ...preserved,
           bounds: { ...preserved.bounds, maxX: 12 },
@@ -104,7 +104,7 @@ describe("candidate semantic boundaries", () => {
       }),
     ).toThrow("KERNEL_STATE_INVALID")
     expect(() =>
-      createCandidateActivationMachine({
+      createCandidateActivationMachineV117({
         state: { ...preserved, terrainStones: [{ x: 99, y: 99 }] },
         soldierId: bottom.id,
       }),
