@@ -21,6 +21,7 @@ import {
 import {
   recordCurrentChronicleTestSupport as recordChronicleFromExecution,
   runCurrentMatchForReplayTestSupport,
+  selectedCurrentReconstructionAuthorityTestSupport,
 } from "./test/current-recording.js"
 import {
   compareCurrentReplayTransitionV137,
@@ -402,6 +403,7 @@ const candidateInput = () => {
     recordedTransitions: recorded.recordedTransitions,
     transitionTraceRoot: recorded.transitionTraceRoot,
     execution,
+    ...selectedCurrentReconstructionAuthorityTestSupport(recorded),
   }
 }
 

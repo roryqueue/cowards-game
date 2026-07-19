@@ -32,6 +32,7 @@ import { projectOwnerChronicle } from "./project.js"
 import {
   recordCurrentChronicleTestSupport as recordChronicleFromExecution,
   runCurrentMatchForReplayTestSupport,
+  selectedCurrentSemanticAuthorityTestSupport,
 } from "./test/current-recording.js"
 import {
   migrateChronicle,
@@ -152,6 +153,7 @@ const createCurrentReplayInput = (
     chronicle: recorded.chronicle,
     boundaryAnchors: recorded.boundaryAnchors,
     execution,
+    ...selectedCurrentSemanticAuthorityTestSupport(recorded),
   }
 }
 

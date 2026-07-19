@@ -5,6 +5,7 @@ import { adaptRuntimeForCurrentKernel } from "@cowards/engine/test/current-kerne
 import {
   recordCurrentChronicleTestSupport as recordChronicleFromExecution,
   runCurrentMatchForReplayTestSupport,
+  selectedCurrentSemanticAuthorityTestSupport,
 } from "./test/current-recording.js"
 import { validateCurrentChronicle } from "./validate.js"
 
@@ -80,6 +81,7 @@ describe("replay semantic integrity", () => {
       chronicle: recorded.chronicle,
       boundaryAnchors: recorded.boundaryAnchors,
       execution: invalidExecution,
+      ...selectedCurrentSemanticAuthorityTestSupport(recorded),
     })
     expect(runtimeCalls, "replay validation must never schedule gameplay").toBe(
       0,

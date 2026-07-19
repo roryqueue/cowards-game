@@ -12,6 +12,7 @@ import { createCurrentReplay } from "./reconstruct.js"
 import {
   recordCurrentChronicleTestSupport as recordChronicleFromExecution,
   runCurrentMatchForReplayTestSupport,
+  selectedCurrentSemanticAuthorityTestSupport,
 } from "./test/current-recording.js"
 import { validateCurrentChronicle } from "./validate.js"
 
@@ -93,6 +94,7 @@ describe("replay package integration", () => {
       chronicle: chronicleWithIntegrity,
       boundaryAnchors: recorded.boundaryAnchors,
       execution,
+      ...selectedCurrentSemanticAuthorityTestSupport(recorded),
     }
 
     expect(validateCurrentChronicle(candidateInput)).toEqual({

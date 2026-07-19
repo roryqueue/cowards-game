@@ -419,6 +419,7 @@ const finalReplayState = (
 const validateReplayReconstructionWithSemantics = (
   input: CurrentReplayReconstructionInput,
   validateSemantics: (input: unknown) => { readonly ok: boolean },
+  semanticRoute: "current" | "candidate" = "current",
 ): CurrentReplayReconstructionResult => {
   const { chronicle, execution } = input
   if (execution.kind !== "completed" || execution.transitions.length === 0) {
@@ -470,13 +471,19 @@ const validateReplayReconstructionWithSemantics = (
     tuple: execution.transitions[0]!.semanticTuple,
   }
   const semanticAdmission = validateSemantics(
-    input.candidateMatch === undefined
+    semanticRoute === "current"
       ? {
           profile: "current-exact",
           compatibility,
           chronicle,
           boundaryAnchors,
           execution,
+          ...(input.candidateMatch === undefined
+            ? {}
+            : {
+                candidateReproducibility: input.candidateReproducibility,
+                persistedMatch: input.candidateMatch,
+              }),
         }
       : {
           profile: "candidate-v1.19",
@@ -600,7 +607,11 @@ export const validateCandidateReplayReconstructionV119 = (
     readonly candidateReproducibility: Readonly<CandidateReplayReproducibilityV119>
   },
 ): CurrentReplayReconstructionResult =>
-  validateReplayReconstructionWithSemantics(input, validateCandidateReplayV119)
+  validateReplayReconstructionWithSemantics(
+    input,
+    validateCandidateReplayV119,
+    "candidate",
+  )
 
 export type CreateCurrentReplayResult =
   | { readonly ok: true; readonly replay: Replay }

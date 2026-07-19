@@ -107,6 +107,7 @@ export const recordCurrentChronicleTestSupport = (
   input: RecordChronicleFromExecutionInput,
 ): RecordChronicleFromExecutionResult => {
   if (
+    input.execution.kind !== "completed" ||
     input.candidateMatch !== undefined ||
     resolveCandidateRuntimeV119SemanticTuple({
       tupleId: input.metadata.semanticTupleId,
@@ -120,3 +121,28 @@ export const recordCurrentChronicleTestSupport = (
     candidateMatch: deriveCandidateMatchAuthority(input),
   })
 }
+
+type SuccessfulRecording = Extract<
+  RecordChronicleFromExecutionResult,
+  { readonly ok: true }
+>
+
+export const selectedCurrentSemanticAuthorityTestSupport = (
+  recording: SuccessfulRecording,
+) =>
+  recording.candidateReproducibility === undefined
+    ? {}
+    : {
+        candidateReproducibility: recording.candidateReproducibility,
+        persistedMatch: recording.candidateReproducibility.match,
+      }
+
+export const selectedCurrentReconstructionAuthorityTestSupport = (
+  recording: SuccessfulRecording,
+) =>
+  recording.candidateReproducibility === undefined
+    ? {}
+    : {
+        candidateReproducibility: recording.candidateReproducibility,
+        candidateMatch: recording.candidateReproducibility.match,
+      }

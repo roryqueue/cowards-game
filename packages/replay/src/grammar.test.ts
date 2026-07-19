@@ -17,6 +17,7 @@ import {
 import {
   recordCurrentChronicleTestSupport as recordChronicleFromExecution,
   runCurrentMatchForReplayTestSupport,
+  selectedCurrentSemanticAuthorityTestSupport,
 } from "./test/current-recording.js"
 import { validateCurrentChronicle } from "./validate.js"
 
@@ -76,6 +77,7 @@ const createChronicle = (
     chronicle: recorded.chronicle,
     boundaryAnchors: recorded.boundaryAnchors,
     execution,
+    ...selectedCurrentSemanticAuthorityTestSupport(recorded),
   })
   if (!candidate.ok) throw new Error(candidate.issues[0]?.code)
   return recorded.chronicle

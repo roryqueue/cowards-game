@@ -11,6 +11,7 @@ import {
 import {
   recordCurrentChronicleTestSupport as recordChronicleFromExecution,
   runCurrentMatchForReplayTestSupport,
+  selectedCurrentReconstructionAuthorityTestSupport,
 } from "./test/current-recording.js"
 
 const HISTORICAL_V14_VERSIONS = Object.freeze({
@@ -80,6 +81,7 @@ const createBuiltCurrentInput = () => {
     recordedFinalState: recorded.finalState,
     recordedOutcome: recorded.finalState.outcome,
     execution,
+    ...selectedCurrentReconstructionAuthorityTestSupport(recorded),
   }
 }
 

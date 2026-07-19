@@ -178,7 +178,7 @@ export interface CandidateReplaySemanticInputV119 {
   readonly persistedMatch: Readonly<CandidateReplayMatchAuthorityV119>
 }
 
-export interface CurrentChronicleSemanticInput {
+interface CurrentChronicleSemanticInputBase {
   readonly profile: "current-exact"
   readonly compatibility: {
     readonly tupleId: string
@@ -188,6 +188,13 @@ export interface CurrentChronicleSemanticInput {
   readonly boundaryAnchors: readonly ChronicleBoundaryAnchor[]
   readonly execution: ChronicleRecorderExecution
 }
+
+export type CurrentChronicleSemanticInput =
+  | CurrentChronicleSemanticInputBase
+  | (CurrentChronicleSemanticInputBase & {
+      readonly candidateReproducibility: Readonly<CandidateReplayReproducibilityV119>
+      readonly persistedMatch: Readonly<CandidateReplayMatchAuthorityV119>
+    })
 
 const REQUIRED_COMPLETED_EVENT_TYPES = [
   "MATCH_STARTED",
@@ -517,13 +524,8 @@ export const validateReplayInput = (
   if (
     isRecord(input) &&
     input.profile === "current-exact" &&
-    hasExactKeys(input, [
-      "profile",
-      "compatibility",
-      "chronicle",
-      "boundaryAnchors",
-      "execution",
-    ])
+    Object.hasOwn(input, "boundaryAnchors") &&
+    Object.hasOwn(input, "execution")
   ) {
     return validateCurrentChronicle(input)
   }
@@ -1163,14 +1165,30 @@ const boardFromProjection = (projection: Record<string, unknown>) => ({
   terrainStones: projection.terrainStones,
 })
 
-const currentInputHasExactRoute = (input: Record<string, unknown>): boolean =>
-  hasExactKeys(input, [
-    "profile",
-    "compatibility",
-    "chronicle",
-    "boundaryAnchors",
-    "execution",
-  ])
+const currentInputHasExactRoute = (
+  input: Record<string, unknown>,
+  candidateAuthorityRequired: boolean,
+): boolean =>
+  hasExactKeys(
+    input,
+    candidateAuthorityRequired
+      ? [
+          "profile",
+          "compatibility",
+          "chronicle",
+          "boundaryAnchors",
+          "execution",
+          "candidateReproducibility",
+          "persistedMatch",
+        ]
+      : [
+          "profile",
+          "compatibility",
+          "chronicle",
+          "boundaryAnchors",
+          "execution",
+        ],
+  )
 
 const validateChronicleSemanticsForAuthority = (
   input: unknown,
@@ -1181,10 +1199,12 @@ const validateChronicleSemanticsForAuthority = (
   resolveCompatibility: typeof resolveCanonicalCompatibilityTuple,
   versionedV117 = false,
 ): CurrentChronicleSemanticValidationResult => {
+  const candidateAuthorityRequired =
+    authority.tuple.runtimeAbi === "strategy-runtime-abi-v1.19"
   if (
     !isRecord(input) ||
     input.profile !== "current-exact" ||
-    !currentInputHasExactRoute(input)
+    !currentInputHasExactRoute(input, candidateAuthorityRequired)
   ) {
     return currentCodeFailure("CURRENT_ROUTE_INVALID")
   }
@@ -1194,6 +1214,20 @@ const validateChronicleSemanticsForAuthority = (
   const resolvedCompatibility = resolveCompatibility(input.compatibility)
   if (resolvedCompatibility?.tupleId !== authority.tupleId) {
     return currentCodeFailure("CURRENT_TUPLE_INVALID", ["compatibility"])
+  }
+
+  let candidateMatch: Readonly<CandidateReplayMatchAuthorityV119> | undefined
+  if (candidateAuthorityRequired) {
+    const candidateAdmission = validateCandidateReplayV119({
+      ...input,
+      profile: "candidate-v1.19",
+    })
+    if (!candidateAdmission.ok) {
+      return currentCodeFailure("CURRENT_BOUNDARY_HASH_INVALID", [
+        "candidateReproducibility",
+      ])
+    }
+    candidateMatch = input.persistedMatch as Readonly<CandidateReplayMatchAuthorityV119>
   }
 
   const execution = input.execution as ChronicleRecorderExecution
@@ -1245,6 +1279,7 @@ const validateChronicleSemanticsForAuthority = (
       semanticTupleId: authority.tupleId,
       semanticTuple: authority.tuple,
     },
+    ...(candidateMatch === undefined ? {} : { candidateMatch }),
   })
   if (!trustedRecording.ok) {
     return currentCodeFailure("CURRENT_BOUNDARY_HASH_INVALID", [
