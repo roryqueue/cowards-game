@@ -42,6 +42,7 @@ import {
 import type { RuntimeExecutionCompatibilityIdentity } from "@cowards/spec"
 import {
   getMatchSetPreset,
+  getMatchSetPresetV117,
   resolveFileCurrentSchedulingSemanticAuthority,
   resolveSchedulingSemanticAuthority,
   resolveVersionedMatchSetPreset,
@@ -293,10 +294,10 @@ type GeneratePresetMatrixInput = Omit<
   "integrityIdentity"
 >
 
-export const generatePresetMatrix = (
+export const generatePresetMatrixV117 = (
   input: GeneratePresetMatrixInput,
 ): CreateMatchRecordInput[] => {
-  const preset = getMatchSetPreset(input.presetId)
+  const preset = getMatchSetPresetV117(input.presetId)
   const matches: CreateMatchRecordInput[] = []
   let index = 0
 
@@ -332,6 +333,13 @@ export const generatePresetMatrix = (
   }
 
   return matches
+}
+
+export const generatePresetMatrix = (
+  input: GeneratePresetMatrixInput,
+): CreateMatchRecordInput[] => {
+  getMatchSetPreset(input.presetId)
+  return generatePresetMatrixV117(input)
 }
 
 export const generateCandidatePresetMatrixV119 = (
@@ -1098,8 +1106,8 @@ export const createMatchSetService = (pool: Pool) => ({
         matchIds: matches.map((match) => match.id),
       }
     }
-    const preset = getMatchSetPreset(input.presetId)
-    const matches = generatePresetMatrix(input)
+    const preset = getMatchSetPresetV117(input.presetId)
+    const matches = generatePresetMatrixV117(input)
     await insertMatchSetWithMatrix(pool, {
       id: input.id,
       ...("semanticAuthorityKey" in input &&

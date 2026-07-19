@@ -31,7 +31,7 @@ import {
 } from "./matchset-service.js"
 import type { CreateMatchRecordInput } from "./match-service.js"
 import {
-  getMatchSetPreset,
+  getMatchSetPresetV117,
   resolveFileCurrentSchedulingSemanticAuthority,
   type SchedulingSemanticAuthorityKey,
 } from "./presets.js"
@@ -546,7 +546,9 @@ export const generateCompetitionPairwiseMatrix = (input: {
     }
     return matches
   }
-  const matchSetPreset = getMatchSetPreset(competitionPreset.matchSetPresetId)
+  const matchSetPreset = getMatchSetPresetV117(
+    competitionPreset.matchSetPresetId,
+  )
   const matches: CreateMatchRecordInput[] = []
   let index = 0
 

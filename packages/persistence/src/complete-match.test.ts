@@ -289,7 +289,7 @@ const builtMatch = (
       }
     },
   }
-  const execution = MATCH_KERNEL.runMatch({
+  const execution = MATCH_KERNEL.runMatchV117({
     matchId: `${namespace}:match`,
     seed,
     arenaVariant: {

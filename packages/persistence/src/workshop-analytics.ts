@@ -28,7 +28,7 @@ import {
 import type { Pool } from "pg"
 import { listAdvancedStrategies } from "./advanced-strategies.js"
 import {
-  getMatchSetPreset,
+  getMatchSetPresetV117,
   resolveVersionedMatchSetPreset,
   type MatchSetPreset,
 } from "./presets.js"
@@ -485,7 +485,7 @@ const createWorkshopAnalyticsDemoSnapshotForPreset = (
 export const createWorkshopAnalyticsDemoSnapshot =
   (): WorkshopAnalyticsSnapshot =>
     createWorkshopAnalyticsDemoSnapshotForPreset(
-      getMatchSetPreset("standard-v1"),
+      getMatchSetPresetV117("standard-v1"),
     )
 
 export const createWorkshopAnalyticsDemoSnapshotV117 =

@@ -8,6 +8,7 @@ import { adaptRuntimeForCurrentKernel } from "@cowards/engine/test/current-kerne
 import { recordChronicleFromExecution } from "@cowards/replay"
 import {
   CANONICAL_COMPATIBILITY_TUPLES,
+  CANONICAL_ARENA_CATALOG_V1_37,
   type ExecutableLaneIdentity,
   type RuntimeEntrantExecutionEvidence,
   type RuntimeExecutionResolvedEvidenceSnapshot,
@@ -129,14 +130,17 @@ const runtime: StrategyRuntime = {
 describe("current persistence semantic integrity", () => {
   it("rejects invalid current state before opening a database transaction", async () => {
     const namespace = "semantic:current"
+    const arena = CANONICAL_ARENA_CATALOG_V1_37.arenas.find(
+      ({ id }) => id === "arena:smoke:v1",
+    )!
     const execution = MATCH_KERNEL.runMatch({
       matchId: `${namespace}:match`,
       seed: `${namespace}:seed`,
       arenaVariant: {
-        id: `${namespace}:arena`,
-        name: "Current semantic admission",
-        initialBounds: { minX: 0, maxX: 11, minY: 0, maxY: 11 },
-        terrainStones: [],
+        id: arena.id,
+        name: arena.name,
+        initialBounds: arena.initialBounds,
+        terrainStones: arena.terrainStones,
       },
       bottomPlayerId: `${namespace}:player:bottom`,
       topPlayerId: `${namespace}:player:top`,

@@ -70,8 +70,7 @@ const developmentEvidenceBytes = (
     `fixture:v1.37:${artifactLabel}`,
   )
   if (
-    developmentEvidenceHash(artifact) !==
-    evidence.laneIdentity.artifactSha256
+    developmentEvidenceHash(artifact) !== evidence.laneIdentity.artifactSha256
   ) {
     throw new Error(
       "Development smoke fixture artifact bytes do not match the resolved lane identity.",
@@ -214,8 +213,7 @@ const developmentContainmentImport = (
       graph,
       issuedAt: "2026-01-01T00:00:00.000Z",
       validUntil: "2099-12-31T23:59:59.999Z",
-      registryGeneration:
-        evidence.containmentCertificateRef.registryGeneration,
+      registryGeneration: evidence.containmentCertificateRef.registryGeneration,
       derivedCertificateVersion: "fixture-runtime-certificate-v1",
     },
   }
@@ -277,6 +275,7 @@ export const runDevelopmentMatchSetSmoke = async (
     matchSetId?: MatchSetId | undefined
     runQueuedMatch?: (matchIds: readonly string[]) => Promise<unknown>
     evidenceResolver?: MatchSetExecutionEvidenceResolver | undefined
+    semanticAuthorityKey?: "runtime-v1.17" | "runtime-v1.19" | undefined
   } = {},
 ): Promise<DevelopmentMatchSetSmokeResult> => {
   const seed = createDevelopmentSeedData()
@@ -329,6 +328,9 @@ export const runDevelopmentMatchSetSmoke = async (
     bottomPlayerId: "player:bottom",
     topPlayerId: "player:top",
     integrityIdentity,
+    ...(options.semanticAuthorityKey === undefined
+      ? {}
+      : { semanticAuthorityKey: options.semanticAuthorityKey }),
   })
 
   await options.runQueuedMatch?.(created.matchIds)

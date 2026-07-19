@@ -34,9 +34,11 @@ import {
 } from "./presets.js"
 import { DEFAULT_MAX_JOB_ATTEMPTS } from "./schema.js"
 import {
-  ACTIVE_V1_17_SEMANTIC_AUTHORITY_SELECTION,
-  ACTIVE_V1_17_SEMANTIC_AUTHORITY_SELECTION_ROOT,
-} from "./semantic-authority-selection-head.js"
+  TEST_CURRENT_IS_V119,
+  TEST_CURRENT_SEMANTIC_AUTHORITY_HEAD,
+  TEST_CURRENT_SEMANTIC_AUTHORITY_SELECTION,
+  TEST_CURRENT_SEMANTIC_AUTHORITY_SELECTION_ROOT,
+} from "./test-current-semantic-authority.js"
 
 const tuple = CANONICAL_COMPATIBILITY_TUPLES[0]!
 const sha256 = (value: string): string =>
@@ -197,14 +199,7 @@ const fakePool = () => {
           rowCount: 1,
           rows: [
             {
-              state: "active-v1.17-bootstrap",
-              revision: "0",
-              active_selection: ACTIVE_V1_17_SEMANTIC_AUTHORITY_SELECTION,
-              active_selection_root:
-                ACTIVE_V1_17_SEMANTIC_AUTHORITY_SELECTION_ROOT,
-              pending_intent: null,
-              finalization: null,
-              compensation: null,
+              ...TEST_CURRENT_SEMANTIC_AUTHORITY_HEAD,
             },
           ],
         }
@@ -219,9 +214,9 @@ const fakePool = () => {
           rows: [
             {
               semantic_authority_selection:
-                ACTIVE_V1_17_SEMANTIC_AUTHORITY_SELECTION,
+                TEST_CURRENT_SEMANTIC_AUTHORITY_SELECTION,
               semantic_authority_selection_root:
-                ACTIVE_V1_17_SEMANTIC_AUTHORITY_SELECTION_ROOT,
+                TEST_CURRENT_SEMANTIC_AUTHORITY_SELECTION_ROOT,
             },
           ],
         }
@@ -271,7 +266,13 @@ describe("match creation contracts", () => {
         mirrorSides: true,
       },
     ])
-    expect(getMatchSetPreset("standard-v1")).toEqual(MATCH_SET_PRESETS[1])
+    if (TEST_CURRENT_IS_V119) {
+      expect(() => getMatchSetPreset("standard-v1")).toThrow(
+        /Phase-259 exact/iu,
+      )
+    } else {
+      expect(getMatchSetPreset("standard-v1")).toEqual(MATCH_SET_PRESETS[1])
+    }
     expect(
       resolveVersionedMatchSetPreset({
         semanticAuthorityKey: "runtime-v1.17",
@@ -436,7 +437,7 @@ describe("match creation contracts", () => {
       input.integrityIdentity.evidencePair.bottom,
       input.integrityIdentity.evidencePair.top,
       input.integrityIdentity.evidencePair.pairHash,
-      ACTIVE_V1_17_SEMANTIC_AUTHORITY_SELECTION_ROOT,
+      TEST_CURRENT_SEMANTIC_AUTHORITY_SELECTION_ROOT,
     ])
     expect(fake.calls.at(0)?.sql).toBe("begin")
     expect(fake.calls.at(-1)?.sql).toBe("commit")
@@ -459,10 +460,10 @@ describe("match creation contracts", () => {
     expect(matchInsert.sql).toContain("semantic_authority_selection_root")
     expect(jobInsert.sql).toContain("semantic_authority_selection_root")
     expect(matchInsert.values).toContain(
-      ACTIVE_V1_17_SEMANTIC_AUTHORITY_SELECTION_ROOT,
+      TEST_CURRENT_SEMANTIC_AUTHORITY_SELECTION_ROOT,
     )
     expect(jobInsert.values).toContain(
-      ACTIVE_V1_17_SEMANTIC_AUTHORITY_SELECTION_ROOT,
+      TEST_CURRENT_SEMANTIC_AUTHORITY_SELECTION_ROOT,
     )
   })
 

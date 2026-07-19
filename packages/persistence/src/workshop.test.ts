@@ -79,6 +79,11 @@ import {
   hashSemanticAuthoritySelectorManifest,
 } from "./semantic-authority-selection-head.js"
 import {
+  TEST_CURRENT_IS_V119,
+  TEST_CURRENT_SEMANTIC_AUTHORITY_HEAD,
+  TEST_NONCURRENT_SEMANTIC_AUTHORITY_HEAD,
+} from "./test-current-semantic-authority.js"
+import {
   WORKSHOP_CONTRACT_SELECTION_REGISTRY,
   resolveWorkshopContractSelectionForSemanticAuthority,
 } from "./current-workshop-contract-generated.js"
@@ -168,15 +173,7 @@ const semanticHeadRow = (
   state: "bootstrap" | "pending" | "mismatch",
 ): Record<string, unknown> | undefined => {
   if (state === "bootstrap") {
-    return {
-      state: "active-v1.17-bootstrap",
-      revision: 0,
-      active_selection: ACTIVE_V1_17_SEMANTIC_AUTHORITY_SELECTION,
-      active_selection_root: ACTIVE_V1_17_SEMANTIC_AUTHORITY_SELECTION_ROOT,
-      pending_intent: null,
-      finalization: null,
-      compensation: null,
-    }
+    return TEST_CURRENT_SEMANTIC_AUTHORITY_HEAD
   }
   if (state === "pending") {
     return {
@@ -199,21 +196,7 @@ const semanticHeadRow = (
       compensation: null,
     }
   }
-  return {
-    state: "active-v1.19-finalized",
-    revision: 2,
-    active_selection: REVIEWED_V1_19_SEMANTIC_AUTHORITY_SELECTION,
-    active_selection_root: REVIEWED_V1_19_SEMANTIC_AUTHORITY_SELECTION_ROOT,
-    pending_intent: null,
-    finalization: {
-      activationId: "activation:workshop:test",
-      proofDigest: sha("c"),
-      commitSha: gitObject("b"),
-      treeSha: gitObject("c"),
-      selectorManifestRoot,
-    },
-    compensation: null,
-  }
+  return TEST_NONCURRENT_SEMANTIC_AUTHORITY_HEAD
 }
 
 const semanticHeadPool = (
@@ -292,7 +275,7 @@ describe("Workshop service contracts", () => {
     }
   })
 
-  it("keeps every unversioned Workshop and SDK example on Phase 259", () => {
+  it("keeps every unversioned Workshop and SDK example on the exact generated current contract", () => {
     const defaults = listWorkshopContractExamples()
 
     expect(defaults.selection).toEqual(
@@ -300,18 +283,26 @@ describe("Workshop service contracts", () => {
     )
     expect(defaults.selection).toMatchObject({
       status: "current",
-      workshopContractVersion: "workshop-contract-v1.17",
-      runtimeAbiVersion: "strategy-runtime-abi-v1.17",
+      workshopContractVersion:
+        CURRENT_WORKSHOP_CONTRACT_GENERATED.selection.workshopContractVersion,
+      runtimeAbiVersion:
+        CURRENT_WORKSHOP_CONTRACT_GENERATED.selection.runtimeAbiVersion,
       activationOwner: "Phase-260-Plan-14",
     })
     expect(
       defaults.examples.map(({ language, source }) => [language, source]),
-    ).toEqual([
-      ["typescript", workshopTemplateSource],
-      ["python", pythonTacticalStarterSource],
-      ["rust", rustWasiTacticalStarterSource],
-      ["zig", zigWasiTacticalStarterSource],
-    ])
+    ).toEqual(
+      TEST_CURRENT_IS_V119
+        ? WORKSHOP_CONTRACT_V1_19_CANDIDATE.examples.map(
+            ({ language, source }) => [language, source],
+          )
+        : [
+            ["typescript", workshopTemplateSource],
+            ["python", pythonTacticalStarterSource],
+            ["rust", rustWasiTacticalStarterSource],
+            ["zig", zigWasiTacticalStarterSource],
+          ],
+    )
     expect(defaults.examples.every(({ validation }) => validation.valid)).toBe(
       true,
     )
@@ -321,7 +312,7 @@ describe("Workshop service contracts", () => {
           (candidate) => candidate.source === source,
         ),
       ),
-    ).toBe(false)
+    ).toBe(TEST_CURRENT_IS_V119)
   })
 
   it("stores two immutable pins and resolves static current from the compact selector", () => {
@@ -397,7 +388,7 @@ describe("Workshop service contracts", () => {
     })
 
     expect(candidate.selection).toMatchObject({
-      status: "inactive-candidate",
+      status: TEST_CURRENT_IS_V119 ? "current" : "inactive-candidate",
       workshopContractVersion: "workshop-contract-v1.19",
       runtimeAbiVersion: "strategy-runtime-abi-v1.19",
       activationOwner: "Phase-260-Plan-14",
@@ -848,7 +839,9 @@ describe("Workshop service contracts", () => {
         strategyMemory: {},
       }
 
-      expect(STRATEGY_RUNTIME_ABI_VERSION).toBe("strategy-runtime-abi-v1.17")
+      expect(STRATEGY_RUNTIME_ABI_VERSION).toBe(
+        CURRENT_WORKSHOP_CONTRACT_GENERATED.selection.runtimeAbiVersion,
+      )
       const selectedResult =
         createPythonRuntimeFromRevision(legacyShapeRevision).selectActivations(
           activationInput,

@@ -15,7 +15,10 @@ describe("development smoke helper", () => {
   })
 
   it("routes fixture evidence through the sole verified import authority", () => {
-    const source = readFileSync(new URL("./dev-smoke.ts", import.meta.url), "utf8")
+    const source = readFileSync(
+      new URL("./dev-smoke.ts", import.meta.url),
+      "utf8",
+    )
     expect(source).toContain("importVerifiedRuntimeEvidenceAttestation")
     expect(source).not.toMatch(
       /insert\s+into\s+runtime_evidence_(?:verified_attestations|certificates)/iu,
@@ -50,6 +53,7 @@ describe("development smoke helper", () => {
         const result = await runDevelopmentMatchSetSmoke(pool, {
           matchSetId: `match-set:dev-smoke:${randomUUID()}`,
           evidenceResolver: createFixtureMatchSetEvidenceResolver(),
+          semanticAuthorityKey: "runtime-v1.17",
           runQueuedMatch: async () => undefined,
         })
         expect(result.matchSetId).toMatch(/^match-set:dev-smoke:/u)

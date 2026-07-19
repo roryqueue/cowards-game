@@ -46,7 +46,7 @@ import {
   type MatchSetMatchSummary,
   refreshMatchSetStatus,
 } from "./matchset-status.js"
-import { getMatchSetPreset, type MatchSetPresetId } from "./presets.js"
+import { getMatchSetPresetV117, type MatchSetPresetId } from "./presets.js"
 import {
   buildSourceIdentityV2PersistenceRecord,
   createRepositories,
@@ -490,7 +490,7 @@ export const GET_WORKSHOP_REVISION_SOURCE_SQL = `
 
 export const listWorkshopPresets = (): WorkshopPresetSummary[] =>
   (["smoke-v1", "standard-v1", "stress-v1"] as const).map((presetId) => {
-    const preset = getMatchSetPreset(presetId)
+    const preset = getMatchSetPresetV117(presetId)
     return {
       id: preset.id,
       label: presetLabels[preset.id],

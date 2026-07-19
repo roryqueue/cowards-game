@@ -108,6 +108,9 @@ const cloneLegacyPreset = (id: MatchSetPresetId): MatchSetPreset => {
   }
 }
 
+export const getMatchSetPresetV117 = (id: MatchSetPresetId): MatchSetPreset =>
+  cloneLegacyPreset(id)
+
 const schedulableCandidateArenaIds = new Set(
   CANONICAL_ARENA_CATALOG_V1_37.arenas
     .filter(({ status, schedulable }) => status === "active" && schedulable)

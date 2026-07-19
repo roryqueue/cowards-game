@@ -19,7 +19,7 @@ import {
   createFixtureMatchSetEvidenceResolver,
   createMatchSetService,
   generateCandidatePresetMatrixV119,
-  generatePresetMatrix,
+  generatePresetMatrixV117,
   insertMatchSetWithMatrixOnClient,
   resolveMatchSetExecutionEvidence,
   type CreateMatchSetFromMatrixInput,
@@ -29,13 +29,18 @@ import type {
   CreateMatchRecordInputV119,
 } from "./match-service.js"
 import { migrate } from "./migrations.js"
-import { getMatchSetPreset } from "./presets.js"
+import { getMatchSetPresetV117 } from "./presets.js"
 import {
-  ACTIVE_V1_17_SEMANTIC_AUTHORITY_SELECTION,
-  ACTIVE_V1_17_SEMANTIC_AUTHORITY_SELECTION_ROOT,
   REVIEWED_V1_19_SEMANTIC_AUTHORITY_SELECTION,
   REVIEWED_V1_19_SEMANTIC_AUTHORITY_SELECTION_ROOT,
 } from "./semantic-authority-selection-head.js"
+import {
+  TEST_CURRENT_IS_V119,
+  TEST_CURRENT_SEMANTIC_AUTHORITY_HEAD,
+  TEST_CURRENT_SEMANTIC_AUTHORITY_SELECTION,
+  TEST_CURRENT_SEMANTIC_AUTHORITY_SELECTION_ROOT,
+  TEST_NONCURRENT_SEMANTIC_AUTHORITY_HEAD,
+} from "./test-current-semantic-authority.js"
 
 const tuple = CANONICAL_COMPATIBILITY_TUPLES[0]!
 const sha256 = (value: string): string =>
@@ -231,6 +236,7 @@ const inputFor = (
   )
   return {
     id: `${namespace}:match-set`,
+    semanticAuthorityKey: "runtime-v1.17",
     matches: matchRecords(count, namespace),
     integrityIdentity: {
       compatibility: {
@@ -258,6 +264,14 @@ const inputFor = (
       }),
     ),
   } as CreateMatchSetFromMatrixInput
+}
+
+const currentInputFor = (): CreateMatchSetFromMatrixInput => {
+  const addressed = TEST_CURRENT_IS_V119
+    ? candidateInput("current")
+    : inputFor(2, "current")
+  const { semanticAuthorityKey: _semanticAuthorityKey, ...current } = addressed
+  return current as CreateMatchSetFromMatrixInput
 }
 
 const fakeDatabase = (
@@ -303,39 +317,26 @@ const fakeDatabase = (
         if (options.semanticHead === "file-mismatch") {
           return {
             rowCount: 1,
-            rows: [
-              {
-                state: "active-v1.19-finalized",
-                revision: "2",
-                active_selection: REVIEWED_V1_19_SEMANTIC_AUTHORITY_SELECTION,
-                active_selection_root:
-                  REVIEWED_V1_19_SEMANTIC_AUTHORITY_SELECTION_ROOT,
-                pending_intent: null,
-                finalization: {
-                  activationId: "activation:test-file-mismatch",
-                  proofDigest: `sha256:${"1".repeat(64)}`,
-                  commitSha: "2".repeat(40),
-                  treeSha: "3".repeat(40),
-                  selectorManifestRoot: `sha256:${"4".repeat(64)}`,
-                },
-                compensation: null,
-              },
-            ],
+            rows: [TEST_NONCURRENT_SEMANTIC_AUTHORITY_HEAD],
+          }
+        }
+        if (options.semanticHead !== "pending") {
+          return {
+            rowCount: 1,
+            rows: [TEST_CURRENT_SEMANTIC_AUTHORITY_HEAD],
           }
         }
         return {
           rowCount: 1,
           rows: [
             {
-              state:
-                options.semanticHead === "pending"
-                  ? "pending-precommit"
-                  : "active-v1.17-bootstrap",
-              revision: options.semanticHead === "pending" ? "1" : "0",
-              active_selection: ACTIVE_V1_17_SEMANTIC_AUTHORITY_SELECTION,
+              state: "pending-precommit",
+              revision: "1",
+              active_selection:
+                TEST_CURRENT_SEMANTIC_AUTHORITY_HEAD.active_selection,
               active_selection_root:
-                ACTIVE_V1_17_SEMANTIC_AUTHORITY_SELECTION_ROOT,
-              pending_intent: options.semanticHead === "pending" ? {} : null,
+                TEST_CURRENT_SEMANTIC_AUTHORITY_HEAD.active_selection_root,
+              pending_intent: {},
               finalization: null,
               compensation: null,
             },
@@ -513,7 +514,7 @@ const seedRuntimeEvidenceCertificate = async (
 
 describe("MatchSet presets", () => {
   it("defines fixed standard-v1 seed and arena lists", () => {
-    const preset = getMatchSetPreset("standard-v1")
+    const preset = getMatchSetPresetV117("standard-v1")
 
     expect(preset.arenaVariantIds).toEqual([
       "arena:smoke:v1",
@@ -524,7 +525,7 @@ describe("MatchSet presets", () => {
   })
 
   it("generates mirrored side assignments with stable entrant keys", () => {
-    const matrix = generatePresetMatrix({
+    const matrix = generatePresetMatrixV117({
       id: "match-set:test",
       presetId: "standard-v1",
       bottomStrategyRevisionId: "strategy-revision:bottom",
@@ -816,7 +817,7 @@ describe("exact MatchSet creation", () => {
 
   it("locks the exact default head and freezes the complete selection through all work rows", async () => {
     const fake = fakeDatabase()
-    await createMatchSetService(fake.pool).createFromMatrix(inputFor(2))
+    await createMatchSetService(fake.pool).createFromMatrix(currentInputFor())
 
     const headRead = fake.calls.find((call) =>
       call.sql.includes("from semantic_authority_selection_head"),
@@ -833,16 +834,16 @@ describe("exact MatchSet creation", () => {
     expect(headRead?.sql).toContain("for update")
     expect(matchSetInsert.sql).toContain("semantic_authority_selection")
     expect(matchSetInsert.values).toContainEqual(
-      ACTIVE_V1_17_SEMANTIC_AUTHORITY_SELECTION,
+      TEST_CURRENT_SEMANTIC_AUTHORITY_SELECTION,
     )
     expect(matchSetInsert.values).toContain(
-      ACTIVE_V1_17_SEMANTIC_AUTHORITY_SELECTION_ROOT,
+      TEST_CURRENT_SEMANTIC_AUTHORITY_SELECTION_ROOT,
     )
     expect(matchInsert.values).toContain(
-      ACTIVE_V1_17_SEMANTIC_AUTHORITY_SELECTION_ROOT,
+      TEST_CURRENT_SEMANTIC_AUTHORITY_SELECTION_ROOT,
     )
     expect(jobInsert.values).toContain(
-      ACTIVE_V1_17_SEMANTIC_AUTHORITY_SELECTION_ROOT,
+      TEST_CURRENT_SEMANTIC_AUTHORITY_SELECTION_ROOT,
     )
   })
 
@@ -871,7 +872,7 @@ describe("exact MatchSet creation", () => {
     async (semanticHead) => {
       const fake = fakeDatabase("", { semanticHead })
       await expect(
-        createMatchSetService(fake.pool).createFromMatrix(inputFor(2)),
+        createMatchSetService(fake.pool).createFromMatrix(currentInputFor()),
       ).rejects.toThrow()
       expect(
         fake.calls.some((call) =>

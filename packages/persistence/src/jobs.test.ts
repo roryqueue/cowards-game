@@ -17,9 +17,9 @@ import {
   shouldExhaustRetries,
 } from "./jobs.js"
 import {
-  ACTIVE_V1_17_SEMANTIC_AUTHORITY_SELECTION,
-  ACTIVE_V1_17_SEMANTIC_AUTHORITY_SELECTION_ROOT,
-} from "./semantic-authority-selection-head.js"
+  TEST_CURRENT_SEMANTIC_AUTHORITY_SELECTION,
+  TEST_CURRENT_SEMANTIC_AUTHORITY_SELECTION_ROOT,
+} from "./test-current-semantic-authority.js"
 
 describe("job claiming", () => {
   it("uses lease-based skip-locked claiming", () => {
@@ -119,9 +119,9 @@ describe("job claiming", () => {
                 bottom_execution_evidence: bottom,
                 top_execution_evidence: top,
                 semantic_authority_selection:
-                  ACTIVE_V1_17_SEMANTIC_AUTHORITY_SELECTION,
+                  TEST_CURRENT_SEMANTIC_AUTHORITY_SELECTION,
                 semantic_authority_selection_root:
-                  ACTIVE_V1_17_SEMANTIC_AUTHORITY_SELECTION_ROOT,
+                  TEST_CURRENT_SEMANTIC_AUTHORITY_SELECTION_ROOT,
               },
             ],
           }
@@ -157,8 +157,8 @@ describe("job claiming", () => {
       entrants: { bottom, top },
     })
     expect(claimed?.semanticAuthority).toEqual({
-      selection: ACTIVE_V1_17_SEMANTIC_AUTHORITY_SELECTION,
-      selectionRoot: ACTIVE_V1_17_SEMANTIC_AUTHORITY_SELECTION_ROOT,
+      selection: TEST_CURRENT_SEMANTIC_AUTHORITY_SELECTION,
+      selectionRoot: TEST_CURRENT_SEMANTIC_AUTHORITY_SELECTION_ROOT,
       runtimeRequestSelection: CURRENT_SEMANTIC_AUTHORITY_GENERATED.selection,
     })
     expect(
@@ -526,6 +526,7 @@ describePostgres("PostgreSQL integrity identity before claim", () => {
     const [bottom, top] = Object.values(executionEntrants)
     await createMatchSetService(pool).createFromMatrix({
       id: matchSetId,
+      semanticAuthorityKey: "runtime-v1.17",
       matches: [
         {
           id: matchId,

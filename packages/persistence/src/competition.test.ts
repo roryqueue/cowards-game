@@ -27,11 +27,10 @@ import {
   type MatchSetExecutionEvidenceResolver,
 } from "./matchset-service.js"
 import {
-  ACTIVE_V1_17_SEMANTIC_AUTHORITY_SELECTION,
-  ACTIVE_V1_17_SEMANTIC_AUTHORITY_SELECTION_ROOT,
-  REVIEWED_V1_19_SEMANTIC_AUTHORITY_SELECTION,
-  REVIEWED_V1_19_SEMANTIC_AUTHORITY_SELECTION_ROOT,
-} from "./semantic-authority-selection-head.js"
+  TEST_CURRENT_IS_V119,
+  TEST_CURRENT_SEMANTIC_AUTHORITY_HEAD,
+  TEST_NONCURRENT_SEMANTIC_AUTHORITY_HEAD,
+} from "./test-current-semantic-authority.js"
 
 const TEST_PROVIDER_VALIDATION_SECRET =
   "cowards-provider-validation-test-secret-v1.33"
@@ -213,39 +212,26 @@ const competitionSchedulingPool = (options: {
         if (options.head === "mismatch") {
           return {
             rowCount: 1,
-            rows: [
-              {
-                state: "active-v1.19-finalized",
-                revision: "2",
-                active_selection: REVIEWED_V1_19_SEMANTIC_AUTHORITY_SELECTION,
-                active_selection_root:
-                  REVIEWED_V1_19_SEMANTIC_AUTHORITY_SELECTION_ROOT,
-                pending_intent: null,
-                finalization: {
-                  activationId: "activation:competition-mismatch",
-                  proofDigest: `sha256:${"1".repeat(64)}`,
-                  commitSha: "2".repeat(40),
-                  treeSha: "3".repeat(40),
-                  selectorManifestRoot: `sha256:${"4".repeat(64)}`,
-                },
-                compensation: null,
-              },
-            ],
+            rows: [TEST_NONCURRENT_SEMANTIC_AUTHORITY_HEAD],
+          }
+        }
+        if (options.head !== "pending") {
+          return {
+            rowCount: 1,
+            rows: [TEST_CURRENT_SEMANTIC_AUTHORITY_HEAD],
           }
         }
         return {
           rowCount: 1,
           rows: [
             {
-              state:
-                options.head === "pending"
-                  ? "pending-precommit"
-                  : "active-v1.17-bootstrap",
-              revision: options.head === "pending" ? "1" : "0",
-              active_selection: ACTIVE_V1_17_SEMANTIC_AUTHORITY_SELECTION,
+              state: "pending-precommit",
+              revision: "1",
+              active_selection:
+                TEST_CURRENT_SEMANTIC_AUTHORITY_HEAD.active_selection,
               active_selection_root:
-                ACTIVE_V1_17_SEMANTIC_AUTHORITY_SELECTION_ROOT,
-              pending_intent: options.head === "pending" ? {} : null,
+                TEST_CURRENT_SEMANTIC_AUTHORITY_HEAD.active_selection_root,
+              pending_intent: {},
               finalization: null,
               compensation: null,
             },
@@ -391,6 +377,18 @@ describe("competition helpers", () => {
       presetId: "smoke-exhibition-v1",
       entrants,
     })
+
+    if (TEST_CURRENT_IS_V119) {
+      expect(matches).toEqual(
+        generateCompetitionPairwiseMatrix({
+          matchSetId: "match-set:exhibition:test",
+          presetId: "smoke-exhibition-v1",
+          entrants,
+          semanticAuthorityKey: "runtime-v1.19",
+        }),
+      )
+      return
+    }
 
     expect(matches).toHaveLength(6)
     expect(
@@ -558,6 +556,7 @@ describe("competition helpers", () => {
       matchSetId,
       presetId: "standard-exhibition-v1",
       entrants: entrants.slice(0, 2),
+      semanticAuthorityKey: "runtime-v1.17",
     })
     expect(legacy.some(({ seed }) => seed.endsWith(":mirror"))).toBe(true)
     const legacyIdentity = await resolveMatchSetExecutionEvidence({
