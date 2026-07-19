@@ -7,10 +7,14 @@ import {
   computeRecordedCanonicalOutputHashV137,
   computeRecordedOrderedEventsHashV137,
   computeRecordedTransitionTraceRootV137,
-  recordChronicleFromExecution,
   type RecordedCanonicalTransitionV137,
 } from "@cowards/replay"
-import type { SoldierBrainInput, StrategyInput } from "@cowards/spec"
+import { recordCurrentChronicleTestSupport as recordChronicleFromExecution } from "@cowards/replay/test/current-recording"
+import {
+  CANONICAL_ARENA_CATALOG_V1_37,
+  type SoldierBrainInput,
+  type StrategyInput,
+} from "@cowards/spec"
 import { describe, expect, it } from "vitest"
 import {
   V1_37_CONFORMANCE_CORPUS,
@@ -32,6 +36,9 @@ type DeepMutable<T> = T extends readonly (infer Item)[]
     : T
 
 const hash = (character: string): string => `sha256:${character.repeat(64)}`
+const traceArena = CANONICAL_ARENA_CATALOG_V1_37.arenas.find(
+  ({ id }) => id === "arena:smoke:v1",
+)!
 
 const runtime: StrategyRuntime = {
   selectActivations(input: StrategyInput) {
@@ -73,10 +80,12 @@ const recordedFixture = () => {
     matchId: "conformance-trace-match",
     seed: "conformance-trace-seed",
     arenaVariant: {
-      id: "conformance-trace-arena",
-      name: "Conformance Trace Arena",
-      initialBounds: { minX: 0, maxX: 11, minY: 0, maxY: 11 },
-      terrainStones: [],
+      id: traceArena.id,
+      name: traceArena.name,
+      initialBounds: { ...traceArena.initialBounds },
+      terrainStones: traceArena.terrainStones.map((position) => ({
+        ...position,
+      })),
     },
     bottomPlayerId: "bottom",
     topPlayerId: "top",
@@ -1674,30 +1683,38 @@ describe("v1.37 canonical conformance trace", () => {
       path.join(activeDirectory, "compatibility-disposition.json"),
     )
     const manifest = JSON.parse(manifestBytes.toString("utf8"))
+    const diff = JSON.parse(diffBytes.toString("utf8"))
     const review = JSON.parse(reviewBytes.toString("utf8"))
     const disposition = JSON.parse(dispositionBytes.toString("utf8"))
+    const historicalManifest = JSON.parse(
+      readFileSync(
+        path.join(fixtureRoot, "v1.37-conformance-trace-v3", "manifest.json"),
+      ).toString("utf8"),
+    )
     const digest = (bytes: Uint8Array) =>
       `sha256:${createHash("sha256").update(bytes).digest("hex")}`
 
     expect(registry).toMatchObject({
       schemaVersion: "v1.37-conformance-trace-registry-v1",
-      activeVersion: "v1.37-conformance-trace-v3",
+      activeVersion: "v1.37-observation-trace-v4",
       activePath:
-        "packages/golden/src/fixtures/v1-37-conformance-traces/v1.37-conformance-trace-v3",
+        "packages/golden/src/fixtures/v1-37-conformance-traces/v1.37-observation-trace-v4",
       candidateRootSha256: manifest.candidateRootSha256,
       manifestSha256: digest(manifestBytes),
       semanticDiffSha256: digest(diffBytes),
       independentReviewSha256: digest(reviewBytes),
       compatibilityDispositionSha256: digest(dispositionBytes),
-      caseCount: 16,
+      caseCount: 30,
     })
     expect(review).toMatchObject({
-      status: "no_semantic_delta",
-      computedCandidateRootSha256: registry.candidateRootSha256,
-      caseCount: 16,
+      schemaVersion: "v1.37-observation-trace-independent-review-v1",
+      candidateVersion: "v1.37-observation-trace-v4",
+      status: "approved-inactive-observation-candidate",
+      candidateRootSha256: registry.candidateRootSha256,
+      caseCount: 30,
     })
     expect(
-      Object.values(review.protectedCategories).every(
+      Object.values(diff.protectedSurfaces).every(
         (value: unknown) =>
           typeof value === "object" &&
           value !== null &&
@@ -1705,11 +1722,24 @@ describe("v1.37 canonical conformance trace", () => {
       ),
     ).toBe(true)
     expect(disposition).toMatchObject({
-      status: "no_semantic_delta",
-      candidateRootSha256: registry.candidateRootSha256,
-      independentReviewSha256: registry.independentReviewSha256,
+      status: "observation-only-compatible-candidate",
+      candidateVersion: "v1.37-observation-trace-v4",
+      caseCount: 30,
       approval: null,
     })
-    expect(manifest.cases).toHaveLength(16)
+    expect(manifest).toMatchObject({
+      candidateVersion: "v1.37-observation-trace-v4",
+      candidateRootSha256: registry.candidateRootSha256,
+      caseCount: 30,
+    })
+    expect(manifest.cases).toHaveLength(30)
+
+    expect(historicalManifest).toMatchObject({
+      candidateVersion: "v1.37-conformance-trace-v3",
+      candidateRootSha256:
+        "sha256:53ac4a34b8ea3a52b65b566dfb1da94cbc36ce220c590fe46c0bf43489668696",
+      caseCount: 16,
+    })
+    expect(historicalManifest.cases).toHaveLength(16)
   })
 })

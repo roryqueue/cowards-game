@@ -8,6 +8,8 @@ import {
 import {
   assertPublicMatchSetResultLeakSafe,
   assertPublicServiceDtoLeakSafe,
+  CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE,
+  CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_ID,
   defaultRuntimeMetadata,
   describeStrategyRuntimeProductSemantics,
   EXHIBITION_SCORING_POLICY_V1,
@@ -27,7 +29,7 @@ import {
 
 const recordGoldenChronicle = () => {
   const input = createGoldenMatchInput()
-  const execution = MATCH_KERNEL.runMatch({
+  const execution = MATCH_KERNEL.runMatchV117({
     ...input,
     runtime: adaptRuntimeForCurrentKernel(input.runtime),
   })
@@ -35,8 +37,8 @@ const recordGoldenChronicle = () => {
     execution,
     metadata: {
       schemaVersion: "chronicle-v1.4",
-      semanticTupleId: MATCH_KERNEL.tupleId,
-      semanticTuple: MATCH_KERNEL.tuple,
+      semanticTupleId: CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_ID,
+      semanticTuple: CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE,
     },
   })
   if (!recorded.ok) throw new Error(recorded.failure.code)
