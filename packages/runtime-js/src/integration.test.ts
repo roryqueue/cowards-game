@@ -6,7 +6,10 @@ import {
   projectPublicChronicle,
   recordChronicleFromExecution,
 } from "@cowards/replay"
-import { STRATEGY_RUNTIME_ABI_VERSION } from "@cowards/spec"
+import {
+  STRATEGY_RUNTIME_ABI_VERSION,
+  StrategyInputSchema,
+} from "@cowards/spec"
 import { createScenarioStateParts } from "@cowards/test-utils"
 import { buildStrategyRevision } from "./revision.js"
 import { createNestedMatchShapeRuntimeFromRevisionTestSupport } from "./executor.js"
@@ -99,13 +102,38 @@ describe("runtime-js engine and Chronicle integration", () => {
     const revision = buildStrategyRevision({ source: validSource })
     const runtime =
       createNestedMatchShapeRuntimeFromRevisionTestSupport(revision)
-    const result = runtime.selectActivations({
-      phaseNumber: 1,
-      roundNumber: 1,
-      activationCount: 1,
-      board: {
-        bounds: { minX: 0, maxX: 11, minY: 0, maxY: 11 },
-        soldiers: [
+    const result = runtime.selectActivations(
+      StrategyInputSchema.parse({
+        phaseNumber: 1,
+        roundNumber: 1,
+        activationCount: 1,
+        initialInitiativePlayerId: "bottom",
+        hasInitialInitiative: true,
+        roundInitiativePlayerId: "bottom",
+        hasRoundInitiative: true,
+        board: {
+          bounds: { minX: 0, maxX: 11, minY: 0, maxY: 11 },
+          soldiers: [
+            {
+              id: "bottom-1",
+              ownerPlayerId: "bottom",
+              status: "ACTIVE",
+              position: { x: 5, y: 10 },
+              facing: "UP",
+              lastSuccessfulMoveDirection: null,
+            },
+            {
+              id: "top-1",
+              ownerPlayerId: "top",
+              status: "ACTIVE",
+              position: { x: 5, y: 1 },
+              facing: "DOWN",
+              lastSuccessfulMoveDirection: null,
+            },
+          ],
+          terrainStones: [],
+        },
+        mySoldiers: [
           {
             id: "bottom-1",
             ownerPlayerId: "bottom",
@@ -114,6 +142,8 @@ describe("runtime-js engine and Chronicle integration", () => {
             facing: "UP",
             lastSuccessfulMoveDirection: null,
           },
+        ],
+        enemySoldiers: [
           {
             id: "top-1",
             ownerPlayerId: "top",
@@ -123,30 +153,9 @@ describe("runtime-js engine and Chronicle integration", () => {
             lastSuccessfulMoveDirection: null,
           },
         ],
-        terrainStones: [],
-      },
-      mySoldiers: [
-        {
-          id: "bottom-1",
-          ownerPlayerId: "bottom",
-          status: "ACTIVE",
-          position: { x: 5, y: 10 },
-          facing: "UP",
-          lastSuccessfulMoveDirection: null,
-        },
-      ],
-      enemySoldiers: [
-        {
-          id: "top-1",
-          ownerPlayerId: "top",
-          status: "ACTIVE",
-          position: { x: 5, y: 1 },
-          facing: "DOWN",
-          lastSuccessfulMoveDirection: null,
-        },
-      ],
-      strategyMemory: {},
-    })
+        strategyMemory: {},
+      }),
+    )
 
     expect(result.ok).toBe(true)
     expect(result.ok && result.value.activationOrders).toEqual([

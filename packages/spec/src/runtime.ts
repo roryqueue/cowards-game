@@ -11,6 +11,7 @@ import {
   evaluateExecutableLaneEligibility,
   type EvaluateExecutableLaneEligibilityInput,
 } from "./runtime-evidence.js"
+import type { SemanticAuthoritySelection } from "./current-semantic-authority-generated.js"
 
 export { STRATEGY_RUNTIME_ABI_VERSION } from "./versions.js"
 export {
@@ -386,8 +387,7 @@ export interface StrategyPackageMetadata {
 
 export type StrategyRuntimeAbiVersion =
   | "strategy-runtime-abi-v1.14"
-  | "strategy-runtime-abi-v1.17"
-  | "strategy-runtime-abi-v1.19"
+  | SemanticAuthoritySelection["runtimeAbiVersion"]
 
 export interface StrategyRuntimeMetadata {
   abiVersion: StrategyRuntimeAbiVersion
@@ -1978,7 +1978,9 @@ export const defaultRuntimeMetadata = (
     StrategyLanguageId,
     "javascript" | "typescript"
   > = "typescript",
-): StrategyRuntimeMetadata => {
+): StrategyRuntimeMetadata & {
+  abiVersion: typeof STRATEGY_RUNTIME_ABI_VERSION
+} => {
   const adapter = STRATEGY_RUNTIME_ADAPTER_REGISTRY[0]!
   const language =
     STRATEGY_LANGUAGE_REGISTRY.find(

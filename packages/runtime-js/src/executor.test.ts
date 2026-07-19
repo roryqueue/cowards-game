@@ -7,6 +7,7 @@ import type {
   StrategyInput,
   StrategyRevision,
 } from "@cowards/spec"
+import { SoldierBrainInputSchema, StrategyInputSchema } from "@cowards/spec"
 import type { StrategyExecutionAdapter } from "./adapter.js"
 import {
   createNestedMatchShapeRuntimeFromRevisionTestSupport,
@@ -54,10 +55,14 @@ const awarenessCells = (): AwarenessCell[] => {
   return cells
 }
 
-const strategyInput: StrategyInput = {
+const strategyInput: StrategyInput = StrategyInputSchema.parse({
   phaseNumber: 1,
   roundNumber: 1,
   activationCount: 1,
+  initialInitiativePlayerId: "bottom",
+  hasInitialInitiative: true,
+  roundInitiativePlayerId: "bottom",
+  hasRoundInitiative: true,
   board: {
     bounds: { minX: 0, maxX: 11, minY: 0, maxY: 11 },
     soldiers: [bottomSoldier, topSoldier],
@@ -66,14 +71,18 @@ const strategyInput: StrategyInput = {
   mySoldiers: [bottomSoldier],
   enemySoldiers: [topSoldier],
   strategyMemory: {},
-}
+})
 
 const soldierBrainInput: SoldierBrainInput = {
-  self: bottomSoldier,
-  awarenessGrid: { cells: awarenessCells() },
-  cycleIndex: 0,
-  maxCycles: 12,
-  soldierMemory: {},
+  ...SoldierBrainInputSchema.parse({
+    self: bottomSoldier,
+    awarenessGrid: { cells: awarenessCells() },
+    cycleIndex: 0,
+    maxCycles: 12,
+    hasAdvancedThisActivation: false,
+    soldierMemory: {},
+  }),
+  objective: null,
 }
 
 const validSource = `

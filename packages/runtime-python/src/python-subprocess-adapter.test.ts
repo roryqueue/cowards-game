@@ -17,6 +17,7 @@ import {
 } from "./python-subprocess-adapter.js"
 import {
   RUNTIME_INVOCATION_V1_17_TEST_KEY_ID,
+  SoldierBrainInputSchema,
   STRATEGY_RUNTIME_ABI_VERSION,
   createAuthenticatedRuntimeInvocationRequestV117,
   createSelectedRuntimeInvocationRequestV117,
@@ -34,6 +35,22 @@ import {
   buildPythonStrategyRevisionV117 as buildPythonStrategyRevision,
   validatePythonStrategySource,
 } from "./validation.js"
+
+const fixtureAwarenessCells = (x: number, y: number) =>
+  Array.from({ length: 25 }, (_, index) => {
+    const dx = (index % 5) - 2
+    const dy = Math.floor(index / 5) - 2
+    return {
+      dx,
+      dy,
+      absoluteX: x + dx,
+      absoluteY: y + dy,
+      contents:
+        dx === 0 && dy === 0
+          ? ("FRIENDLY_ACTIVE" as const)
+          : ("EMPTY" as const),
+    }
+  })
 
 const pythonSource = `
 def select_activations(input):
@@ -1293,18 +1310,22 @@ describe("Python subprocess Strategy provider ABI", () => {
       stderrBytes: 4 * 1024,
     })
     const result = runtime.runSoldierBrain({
-      self: {
-        id: "soldier:1",
-        ownerPlayerId: "player:bottom",
-        status: "ACTIVE",
-        position: { x: 0, y: 0 },
-        facing: "UP",
-        lastSuccessfulMoveDirection: null,
-      },
-      awarenessGrid: { cells: [] },
-      cycleIndex: 0,
-      maxCycles: 12,
-      soldierMemory: {},
+      ...SoldierBrainInputSchema.parse({
+        self: {
+          id: "soldier:1",
+          ownerPlayerId: "player:bottom",
+          status: "ACTIVE",
+          position: { x: 0, y: 0 },
+          facing: "UP",
+          lastSuccessfulMoveDirection: null,
+        },
+        awarenessGrid: { cells: fixtureAwarenessCells(0, 0) },
+        cycleIndex: 0,
+        maxCycles: 12,
+        hasAdvancedThisActivation: false,
+        soldierMemory: {},
+      }),
+      objective: null,
     })
 
     if (legacyPythonRuntimeIsSelected) {
@@ -1340,7 +1361,7 @@ describe("Python subprocess Strategy provider ABI", () => {
           facing: "UP",
           lastSuccessfulMoveDirection: null,
         },
-        awarenessGrid: { cells: [] },
+        awarenessGrid: { cells: fixtureAwarenessCells(0, 0) },
         cycleIndex: 0,
         maxCycles: 12,
         soldierMemory: {},
@@ -1355,8 +1376,7 @@ describe("Python subprocess Strategy provider ABI", () => {
       systemFailure: { code: "MALFORMED_IPC" },
     })
 
-    const historical =
-      runPythonHistoricalV114MethodSyncTestSupport(request)
+    const historical = runPythonHistoricalV114MethodSyncTestSupport(request)
     expect(historical).toMatchObject({
       ok: true,
       abiVersion: "strategy-runtime-abi-v1.14",
@@ -1383,7 +1403,7 @@ describe("Python subprocess Strategy provider ABI", () => {
           facing: "UP",
           lastSuccessfulMoveDirection: null,
         },
-        awarenessGrid: { cells: [] },
+        awarenessGrid: { cells: fixtureAwarenessCells(0, 0) },
         cycleIndex: 0,
         maxCycles: 12,
         soldierMemory: {},
@@ -1442,18 +1462,22 @@ describe("Python subprocess Strategy provider ABI", () => {
       stdoutBytes: 64,
     })
     const normalized = runtime.runSoldierBrain({
-      self: {
-        id: "soldier:1",
-        ownerPlayerId: "player:bottom",
-        status: "ACTIVE",
-        position: { x: 0, y: 0 },
-        facing: "UP",
-        lastSuccessfulMoveDirection: null,
-      },
-      awarenessGrid: { cells: [] },
-      cycleIndex: 0,
-      maxCycles: 12,
-      soldierMemory: {},
+      ...SoldierBrainInputSchema.parse({
+        self: {
+          id: "soldier:1",
+          ownerPlayerId: "player:bottom",
+          status: "ACTIVE",
+          position: { x: 0, y: 0 },
+          facing: "UP",
+          lastSuccessfulMoveDirection: null,
+        },
+        awarenessGrid: { cells: [] },
+        cycleIndex: 0,
+        maxCycles: 12,
+        hasAdvancedThisActivation: false,
+        soldierMemory: {},
+      }),
+      objective: null,
     })
     expect(normalized).toMatchObject({
       ok: false,

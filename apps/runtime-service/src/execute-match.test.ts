@@ -36,12 +36,12 @@ import {
   serializeRuntimeInvocationResponseV117,
   type AuthenticatedRuntimeInvocationRequestV117,
   type JsonValue,
+  type SoldierBrainInputV117,
   type RuntimeAbiV117ExecutionLedger,
   type RuntimeInvocationExecutionReceiptEvidenceV117,
   type RuntimeInvocationResultV117,
   type RuntimeInvocationTraceV117,
   type RuntimeExecutionServiceRequest,
-  type SoldierBrainInput,
   type SoldierBrainResult,
   type StrategyRevision,
 } from "@cowards/spec"
@@ -188,10 +188,7 @@ const preparedSuccessorIdentity = (
   revision: StrategyRevision,
   compatibility = VERSIONED_RUNTIME_V117_SEMANTIC_TUPLE_RECORD,
 ) => {
-  const deployed = createFixtureDeploymentLaneIdentity(
-    revision,
-    compatibility,
-  )
+  const deployed = createFixtureDeploymentLaneIdentity(revision, compatibility)
   const composed = composeSuccessorRuntimeIdentityV117({
     revision,
     deployed,
@@ -213,7 +210,7 @@ const preparedSuccessorIdentity = (
   }
 }
 
-const candidateBrainInput = (): SoldierBrainInput => {
+const candidateBrainInput = (): SoldierBrainInputV117 => {
   const self = {
     id: "soldier:service-candidate:v1.17",
     ownerPlayerId: "player:bottom",
@@ -222,7 +219,7 @@ const candidateBrainInput = (): SoldierBrainInput => {
     facing: "UP" as const,
     lastSuccessfulMoveDirection: null,
   }
-  const cells: SoldierBrainInput["awarenessGrid"]["cells"] = []
+  const cells: SoldierBrainInputV117["awarenessGrid"]["cells"] = []
   for (const dy of [-2, -1, 0, 1, 2] as const) {
     for (const dx of [-2, -1, 0, 1, 2] as const) {
       cells.push({
@@ -725,10 +722,7 @@ describe("runtime execution service", () => {
       executeCurrentMatchWithAccounting: (nested: unknown) => {
         executions += 1
         return {
-          response: executeRuntimeServiceRequest(
-            nested,
-            preparedRuntimeConfig,
-          ),
+          response: executeRuntimeServiceRequest(nested, preparedRuntimeConfig),
           accounting: {
             budgetProfileSha256,
             ledgerPrestateRoot,
@@ -1076,17 +1070,16 @@ describe("runtime execution service", () => {
   })
 
   it("executes the legacy Python broker only while its Match-shaped lane is selected", () => {
-    const pythonRevision = (
-      String(STRATEGY_RUNTIME_ABI_VERSION) === "strategy-runtime-abi-v1.17"
-        ? buildPythonStrategyRevisionV117({
-            source: pythonTacticalSource,
-            strategyId: "strategy:python",
-          })
-        : buildPythonStrategyRevision({
-            source: pythonTacticalSource,
-            strategyId: "strategy:python",
-          })
-    ) as unknown as StrategyRevision
+    const pythonRevision = (String(STRATEGY_RUNTIME_ABI_VERSION) ===
+    "strategy-runtime-abi-v1.17"
+      ? buildPythonStrategyRevisionV117({
+          source: pythonTacticalSource,
+          strategyId: "strategy:python",
+        })
+      : buildPythonStrategyRevision({
+          source: pythonTacticalSource,
+          strategyId: "strategy:python",
+        })) as unknown as StrategyRevision
     const response = executeRuntimeServiceRequest(
       requestFor({ bottom: pythonRevision }),
       runtimeConfig,
@@ -1502,8 +1495,7 @@ describe("runtime execution service v1.17 candidate bridge", () => {
     )
     expect(result.publicResult).toEqual({
       contractVersion: "runtime-invocation-v1.17",
-      candidateStatus:
-        RUNTIME_INVOCATION_V1_17_SELECTED_LIFECYCLE.lifecycle,
+      candidateStatus: RUNTIME_INVOCATION_V1_17_SELECTED_LIFECYCLE.lifecycle,
       current: RUNTIME_INVOCATION_V1_17_SELECTED_LIFECYCLE.current,
       requestId: request.requestId,
       invocationId: request.invocationId,

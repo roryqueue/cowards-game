@@ -41,10 +41,7 @@ import {
   STRATEGY_RUNTIME_ABI_VERSION,
   STRATEGY_RUNTIME_ABI_VERSION_V1_19,
 } from "./versions.js"
-import {
-  CURRENT_SEMANTIC_AUTHORITY_SOURCE,
-  type CurrentSemanticAuthoritySource,
-} from "./current-semantic-authority-source.js"
+import { CURRENT_SEMANTIC_AUTHORITY_SOURCE } from "./current-semantic-authority-source.js"
 import {
   CURRENT_SEMANTIC_ARENA_CATALOG_VERSION,
   CURRENT_SEMANTIC_AUTHORITY_GENERATED,
@@ -58,6 +55,7 @@ import {
   CURRENT_SEMANTIC_TUPLE_ID,
   resolveCurrentSemanticAuthoritySelection,
   resolveSemanticAuthoritySelection,
+  type SemanticAuthorityKey,
 } from "./current-semantic-authority-generated.js"
 
 const repoRoot = path.resolve(
@@ -499,13 +497,11 @@ describe("v1.37 canonical integrity authority", () => {
   })
 
   it("rejects premature, partial, mixed, and relabeled current selection", () => {
-    const currentKey =
-      CURRENT_SEMANTIC_AUTHORITY_GENERATED.selection.semanticAuthorityKey
+    const currentKey = CURRENT_SEMANTIC_AUTHORITY_GENERATED.selection
+      .semanticAuthorityKey as SemanticAuthorityKey
     const otherKey =
       currentKey === "runtime-v1.17" ? "runtime-v1.19" : "runtime-v1.17"
-    const exact: CurrentSemanticAuthoritySource = {
-      semanticAuthorityKey: currentKey,
-    }
+    const exact = CURRENT_SEMANTIC_AUTHORITY_SOURCE
     expect(resolveCurrentSemanticAuthoritySelection(exact)).toEqual(
       CURRENT_SEMANTIC_AUTHORITY_GENERATED.selection,
     )

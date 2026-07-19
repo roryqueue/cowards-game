@@ -7,6 +7,7 @@ import type {
   UserId,
 } from "./types.js"
 import type {
+  STRATEGY_RUNTIME_ABI_VERSION,
   StrategyRuntimeMetadata,
   StrategyRuntimeProductSemantics,
 } from "./runtime.js"
@@ -185,8 +186,15 @@ export interface PublicStrategyCardDto {
 
 type CurrentPublicStrategyRuntimeMetadata = Omit<
   StrategyRuntimeMetadata,
-  "limits"
->
+  "limits" | "abiVersion"
+> & { abiVersion: typeof STRATEGY_RUNTIME_ABI_VERSION }
+
+export type HistoricalPublicStrategyRuntimeMetadataV117 = Omit<
+  StrategyRuntimeMetadata,
+  "limits" | "abiVersion"
+> & {
+  abiVersion: "strategy-runtime-abi-v1.17"
+}
 
 export type HistoricalPublicStrategyRuntimeMetadataV114 = Omit<
   StrategyRuntimeMetadata,
@@ -198,6 +206,7 @@ export type HistoricalPublicStrategyRuntimeMetadataV114 = Omit<
 /** Read-only public metadata may describe immutable v1.14 evidence. */
 export type PublicStrategyRuntimeMetadata =
   | CurrentPublicStrategyRuntimeMetadata
+  | HistoricalPublicStrategyRuntimeMetadataV117
   | HistoricalPublicStrategyRuntimeMetadataV114
 
 export interface CompetitionScoringPolicy {

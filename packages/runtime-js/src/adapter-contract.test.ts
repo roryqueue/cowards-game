@@ -7,6 +7,7 @@ import {
   RUNTIME_ABI_V1_17,
   RUNTIME_INVOCATION_V1_17_TEST_KEY_ID,
   STRATEGY_RUNTIME_ABI_VERSION,
+  StrategyInputSchema,
   createSelectedRuntimeInvocationRequestV117,
   createRuntimeAbiV117ExecutionLedger,
   createRuntimeInvocationBudgetV117,
@@ -83,10 +84,14 @@ const transpileOrThrow = (source: string): string => {
   return transpiled.code
 }
 
-const runtimeInput: StrategyInput = {
+const runtimeInput: StrategyInput = StrategyInputSchema.parse({
   phaseNumber: 1,
   roundNumber: 1,
   activationCount: 1,
+  initialInitiativePlayerId: "bottom",
+  hasInitialInitiative: true,
+  roundInitiativePlayerId: "bottom",
+  hasRoundInitiative: true,
   board: {
     bounds: { minX: 0, maxX: 11, minY: 0, maxY: 11 },
     soldiers: [
@@ -113,7 +118,7 @@ const runtimeInput: StrategyInput = {
   ],
   enemySoldiers: [],
   strategyMemory: {},
-}
+})
 
 const candidateIdentity: RuntimeInvocationSigningIdentityV117 = {
   keyId: RUNTIME_INVOCATION_V1_17_TEST_KEY_ID,

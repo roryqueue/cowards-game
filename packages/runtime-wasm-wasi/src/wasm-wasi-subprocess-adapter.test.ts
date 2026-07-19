@@ -11,7 +11,9 @@ import {
   createRuntimeAbiV117ExecutionLedger,
   createRuntimeInvocationBudgetV117,
   serializeRuntimeInvocationResponseV117,
+  SoldierBrainInputSchema,
   STRATEGY_RUNTIME_ABI_VERSION,
+  StrategyInputSchema,
   STRATEGY_WASM_ARTIFACT_BYTES,
   verifyRuntimeInvocationResponseV117,
   type AuthenticatedRuntimeInvocationRequestV117,
@@ -37,6 +39,22 @@ import {
   resolveWasmWasiAdapterBuildFilesV117,
   type WasmWasiCandidateRevisionV117,
 } from "./validation.js"
+
+const fixtureAwarenessCells = (x: number, y: number) =>
+  Array.from({ length: 25 }, (_, index) => {
+    const dx = (index % 5) - 2
+    const dy = Math.floor(index / 5) - 2
+    return {
+      dx,
+      dy,
+      absoluteX: x + dx,
+      absoluteY: y + dy,
+      contents:
+        dx === 0 && dy === 0
+          ? ("FRIENDLY_ACTIVE" as const)
+          : ("EMPTY" as const),
+    }
+  })
 import { wasmWasiRuntimeMetadataV117 } from "./metadata.js"
 import {
   WASM_WASI_V1_17_EXECUTION_SETTINGS,
@@ -173,7 +191,7 @@ const candidateRequest = (
       accounting: { prestate: createRuntimeAbiV117ExecutionLedger() },
       input: {
         value: {
-          awarenessGrid: { cells: [] },
+          awarenessGrid: { cells: fixtureAwarenessCells(0, 0) },
           cycleIndex: 0,
           hasAdvancedThisActivation: false,
           maxCycles: 12,
@@ -1548,7 +1566,7 @@ describe("WASM/WASI runtime alpha", () => {
             facing: "UP",
             lastSuccessfulMoveDirection: null,
           },
-          awarenessGrid: { cells: [] },
+          awarenessGrid: { cells: fixtureAwarenessCells(0, 0) },
           cycleIndex: 0,
           maxCycles: 12,
           soldierMemory: null,
@@ -1587,19 +1605,25 @@ describe("WASM/WASI runtime alpha", () => {
       const revision = buildRustStrategyRevision({ source: rustSource })
       const runtime = createWasmWasiRuntimeFromRevision(revision)
 
-      const selection = runtime.selectActivations({
-        phaseNumber: 1,
-        roundNumber: 1,
-        activationCount: 1,
-        board: {
-          bounds: { minX: 0, maxX: 11, minY: 0, maxY: 11 },
-          soldiers: [],
-          terrainStones: [],
-        },
-        mySoldiers: [],
-        enemySoldiers: [],
-        strategyMemory: null,
-      })
+      const selection = runtime.selectActivations(
+        StrategyInputSchema.parse({
+          phaseNumber: 1,
+          roundNumber: 1,
+          activationCount: 1,
+          initialInitiativePlayerId: "player:1",
+          hasInitialInitiative: true,
+          roundInitiativePlayerId: "player:1",
+          hasRoundInitiative: true,
+          board: {
+            bounds: { minX: 0, maxX: 11, minY: 0, maxY: 11 },
+            soldiers: [],
+            terrainStones: [],
+          },
+          mySoldiers: [],
+          enemySoldiers: [],
+          strategyMemory: null,
+        }),
+      )
       expect(selection).toEqual(
         legacyRuntimeIsSelected
           ? {
@@ -1616,18 +1640,22 @@ describe("WASM/WASI runtime alpha", () => {
             },
       )
       const soldier = runtime.runSoldierBrain({
-        self: {
-          id: "soldier:1",
-          ownerPlayerId: "player:1",
-          status: "ACTIVE",
-          position: { x: 0, y: 0 },
-          facing: "UP",
-          lastSuccessfulMoveDirection: null,
-        },
-        awarenessGrid: { cells: [] },
-        cycleIndex: 0,
-        maxCycles: 12,
-        soldierMemory: null,
+        ...SoldierBrainInputSchema.parse({
+          self: {
+            id: "soldier:1",
+            ownerPlayerId: "player:1",
+            status: "ACTIVE",
+            position: { x: 0, y: 0 },
+            facing: "UP",
+            lastSuccessfulMoveDirection: null,
+          },
+          awarenessGrid: { cells: fixtureAwarenessCells(0, 0) },
+          cycleIndex: 0,
+          maxCycles: 12,
+          hasAdvancedThisActivation: false,
+          soldierMemory: null,
+        }),
+        objective: null,
       })
       expect(soldier).toEqual(
         legacyRuntimeIsSelected
@@ -1671,18 +1699,22 @@ describe("WASM/WASI runtime alpha", () => {
       const result = createWasmWasiRuntimeFromRevision(
         corruptRevision,
       ).runSoldierBrain({
-        self: {
-          id: "soldier:1",
-          ownerPlayerId: "player:1",
-          status: "ACTIVE",
-          position: { x: 0, y: 0 },
-          facing: "UP",
-          lastSuccessfulMoveDirection: null,
-        },
-        awarenessGrid: { cells: [] },
-        cycleIndex: 0,
-        maxCycles: 12,
-        soldierMemory: null,
+        ...SoldierBrainInputSchema.parse({
+          self: {
+            id: "soldier:1",
+            ownerPlayerId: "player:1",
+            status: "ACTIVE",
+            position: { x: 0, y: 0 },
+            facing: "UP",
+            lastSuccessfulMoveDirection: null,
+          },
+          awarenessGrid: { cells: fixtureAwarenessCells(0, 0) },
+          cycleIndex: 0,
+          maxCycles: 12,
+          hasAdvancedThisActivation: false,
+          soldierMemory: null,
+        }),
+        objective: null,
       })
 
       expect(result).toMatchObject({
@@ -1705,18 +1737,22 @@ describe("WASM/WASI runtime alpha", () => {
       const runtime = createWasmWasiRuntimeFromRevision(revision)
 
       const result = runtime.runSoldierBrain({
-        self: {
-          id: "soldier:1",
-          ownerPlayerId: "player:1",
-          status: "ACTIVE",
-          position: { x: 0, y: 0 },
-          facing: "UP",
-          lastSuccessfulMoveDirection: null,
-        },
-        awarenessGrid: { cells: [] },
-        cycleIndex: 0,
-        maxCycles: 12,
-        soldierMemory: null,
+        ...SoldierBrainInputSchema.parse({
+          self: {
+            id: "soldier:1",
+            ownerPlayerId: "player:1",
+            status: "ACTIVE",
+            position: { x: 0, y: 0 },
+            facing: "UP",
+            lastSuccessfulMoveDirection: null,
+          },
+          awarenessGrid: { cells: fixtureAwarenessCells(0, 0) },
+          cycleIndex: 0,
+          maxCycles: 12,
+          hasAdvancedThisActivation: false,
+          soldierMemory: null,
+        }),
+        objective: null,
       })
       expect(result).toEqual(
         legacyRuntimeIsSelected

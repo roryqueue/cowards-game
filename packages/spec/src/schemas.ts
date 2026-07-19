@@ -465,10 +465,9 @@ export const SoldierBrainInputV117Schema = z.object({
   ),
 })
 
-export const SoldierBrainInputV119Schema =
-  SoldierBrainInputV117Schema.extend({
-    hasAdvancedThisActivation: z.boolean(),
-  }).strict()
+export const SoldierBrainInputV119Schema = SoldierBrainInputV117Schema.extend({
+  hasAdvancedThisActivation: z.boolean(),
+}).strict()
 
 export const resolveSoldierBrainInputSchema = (runtimeAbiVersion: unknown) => {
   if (runtimeAbiVersion === "strategy-runtime-abi-v1.17") {
@@ -588,9 +587,15 @@ export const HistoricalPublicStrategyRuntimeMetadataV114Schema =
     abiVersion: z.literal("strategy-runtime-abi-v1.14"),
   })
 
+export const HistoricalPublicStrategyRuntimeMetadataV117Schema =
+  CurrentPublicStrategyRuntimeMetadataSchema.extend({
+    abiVersion: z.literal("strategy-runtime-abi-v1.17"),
+  })
+
 /** Read-only public DTO admission; execution remains selected-current-only. */
 export const PublicStrategyRuntimeMetadataSchema = z.union([
   CurrentPublicStrategyRuntimeMetadataSchema,
+  HistoricalPublicStrategyRuntimeMetadataV117Schema,
   HistoricalPublicStrategyRuntimeMetadataV114Schema,
 ])
 
@@ -2816,19 +2821,17 @@ export const RuntimeExecutionCandidateMatchAuthorityV119Schema = z
     topPlayerId: z.string().min(1),
     bottomEntrantKey: z.string().min(1),
     topEntrantKey: z.string().min(1),
-    setPolicyVersion: z.literal(
-      "canonical-set-policy-v1.37-four-condition-v1",
-    ),
+    setPolicyVersion: z.literal("canonical-set-policy-v1.37-four-condition-v1"),
     scenarioId: z
       .string()
-      .regex(/^set-scenario:sha256:[0-9a-f]{64}$/u) as z.ZodType<
-      `set-scenario:sha256:${string}`
-    >,
+      .regex(
+        /^set-scenario:sha256:[0-9a-f]{64}$/u,
+      ) as z.ZodType<`set-scenario:sha256:${string}`>,
     conditionId: z
       .string()
-      .regex(/^set-condition:sha256:[0-9a-f]{64}$/u) as z.ZodType<
-      `set-condition:sha256:${string}`
-    >,
+      .regex(
+        /^set-condition:sha256:[0-9a-f]{64}$/u,
+      ) as z.ZodType<`set-condition:sha256:${string}`>,
     conditionOrdinal: z.union([
       z.literal(0),
       z.literal(1),
@@ -2843,9 +2846,9 @@ export const RuntimeExecutionCandidateMatchAuthorityV119Schema = z
     ]),
     requestIdentity: z
       .string()
-      .regex(/^set-request:sha256:[0-9a-f]{64}$/u) as z.ZodType<
-      `set-request:sha256:${string}`
-    >,
+      .regex(
+        /^set-request:sha256:[0-9a-f]{64}$/u,
+      ) as z.ZodType<`set-request:sha256:${string}`>,
     arenaCatalogVersion: z.literal("canonical-arena-catalog-v1.37"),
     arenaSemanticGeometryHash: z
       .string()
@@ -2865,7 +2868,8 @@ export const RuntimeExecutionMatchInputSchema = z
     bottomStrategyRevisionId: z.string().min(1),
     topStrategyRevisionId: z.string().min(1),
     initialInitiativePlayerId: z.string().min(1).optional(),
-    candidateMatch: RuntimeExecutionCandidateMatchAuthorityV119Schema.optional(),
+    candidateMatch:
+      RuntimeExecutionCandidateMatchAuthorityV119Schema.optional(),
     maxPhases: z.number().int().positive().optional(),
   })
   .strict()
@@ -2888,8 +2892,7 @@ export const RuntimeExecutionMatchInputSchema = z
       ctx.addIssue({
         code: "custom",
         path: ["candidateMatch"],
-        message:
-          "selected Match authority must be complete and version-exact",
+        message: "selected Match authority must be complete and version-exact",
       })
     }
     const candidate = match.candidateMatch
@@ -2900,11 +2903,9 @@ export const RuntimeExecutionMatchInputSchema = z
         candidate.arenaVariantId !== match.arenaVariant.id ||
         candidate.bottomPlayerId !== match.bottomPlayerId ||
         candidate.topPlayerId !== match.topPlayerId ||
-        candidate.bottomStrategyRevisionId !==
-          match.bottomStrategyRevisionId ||
+        candidate.bottomStrategyRevisionId !== match.bottomStrategyRevisionId ||
         candidate.topStrategyRevisionId !== match.topStrategyRevisionId ||
-        candidate.initialInitiativePlayerId !==
-          match.initialInitiativePlayerId)
+        candidate.initialInitiativePlayerId !== match.initialInitiativePlayerId)
     ) {
       ctx.addIssue({
         code: "custom",
@@ -3062,9 +3063,7 @@ export const RuntimeExecutionFinalStateSchema = z
     }
     if (
       state.initialInitiativePlayerId !== undefined &&
-      !state.players.some(
-        ({ id }) => id === state.initialInitiativePlayerId,
-      )
+      !state.players.some(({ id }) => id === state.initialInitiativePlayerId)
     ) {
       ctx.addIssue({
         code: "custom",

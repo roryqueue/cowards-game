@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest"
-import type { SoldierBrainInput, StrategyInput } from "@cowards/spec"
+import {
+  SoldierBrainInputSchema,
+  type SoldierBrainInput,
+  type StrategyInput,
+} from "@cowards/spec"
 import type { StrategyRuntime } from "../types.js"
 import {
   CANDIDATE_KERNEL_V117_SEMANTIC_TUPLE,
@@ -11,19 +15,39 @@ import {
   adaptRuntimeForCurrentKernel,
 } from "./current-kernel-runtime.js"
 
+const fixtureAwarenessCells = (x: number, y: number) =>
+  Array.from({ length: 25 }, (_, index) => {
+    const dx = (index % 5) - 2
+    const dy = Math.floor(index / 5) - 2
+    return {
+      dx,
+      dy,
+      absoluteX: x + dx,
+      absoluteY: y + dy,
+      contents:
+        dx === 0 && dy === 0
+          ? ("FRIENDLY_ACTIVE" as const)
+          : ("EMPTY" as const),
+    }
+  })
+
 const soldierBrainInput: SoldierBrainInput = {
-  self: {
-    id: "soldier:historical-timeout",
-    ownerPlayerId: "bottom",
-    status: "ACTIVE",
-    position: { x: 1, y: 1 },
-    facing: "UP",
-    lastSuccessfulMoveDirection: null,
-  },
-  awarenessGrid: { cells: [] },
-  cycleIndex: 0,
-  maxCycles: 12,
-  soldierMemory: {},
+  ...SoldierBrainInputSchema.parse({
+    self: {
+      id: "soldier:historical-timeout",
+      ownerPlayerId: "bottom",
+      status: "ACTIVE",
+      position: { x: 1, y: 1 },
+      facing: "UP",
+      lastSuccessfulMoveDirection: null,
+    },
+    awarenessGrid: { cells: fixtureAwarenessCells(1, 1) },
+    cycleIndex: 0,
+    maxCycles: 12,
+    hasAdvancedThisActivation: false,
+    soldierMemory: {},
+  }),
+  objective: null,
 }
 
 const request: KernelSoldierBrainRequest = {
