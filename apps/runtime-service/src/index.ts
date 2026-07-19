@@ -1,8 +1,17 @@
 import { runtimeJsWorkerEntrypoint } from "@cowards/runtime-js/worker"
-import { CURRENT_RUNTIME_EXECUTION_SERVICE_VERSION } from "@cowards/spec"
+import {
+  CURRENT_RUNTIME_EXECUTION_SERVICE_VERSION,
+  RUNTIME_BUDGET_PROFILE_V1_18_SHA256,
+  RUNTIME_INVOCATION_V1_17_INITIAL_EXECUTION_LEDGER_ROOT,
+  RUNTIME_EXECUTION_SERVICE_VERSION_V1_18,
+} from "@cowards/spec"
 import { createRuntimeExecutionHttpServer } from "./server.js"
 import { formatRuntimeServiceConfigLogLines } from "./runtime-config.js"
-import { runtimeServiceConfigFromEnvironment } from "./production-runtime-config.js"
+import {
+  runtimeSemanticReceiptSignerV118FromEnvironment,
+  runtimeServiceConfigFromEnvironment,
+} from "./production-runtime-config.js"
+import { createPreparedRuntimeServiceDependenciesV118 } from "./execute-match.js"
 import {
   createRuntimeEvidenceAuthorityLoader,
   createRuntimeEvidenceAuthorityLoaderV117,
@@ -34,10 +43,26 @@ const startRuntimeExecutionService = (): void => {
   }
   const port = Number.parseInt(process.env.RUNTIME_SERVICE_PORT ?? "3107", 10)
   const host = process.env.RUNTIME_SERVICE_HOST ?? "127.0.0.1"
+  const preparedV118Dependencies =
+    runtimeConfig.contractSelection.runtimeServiceVersion ===
+    RUNTIME_EXECUTION_SERVICE_VERSION_V1_18
+      ? createPreparedRuntimeServiceDependenciesV118({
+          runtimeConfig,
+          authorityLoader,
+          signer: runtimeSemanticReceiptSignerV118FromEnvironment(),
+          budgetProfileRoot: RUNTIME_BUDGET_PROFILE_V1_18_SHA256,
+          ledgerPrestateRoot:
+            RUNTIME_INVOCATION_V1_17_INITIAL_EXECUTION_LEDGER_ROOT,
+          evaluationInstant: () => new Date().toISOString(),
+        })
+      : undefined
   const server = createRuntimeExecutionHttpServer({
     runtimeConfig,
     authorityLoader,
     authorityLoaderV117,
+    ...(preparedV118Dependencies === undefined
+      ? {}
+      : { preparedV118Dependencies }),
   })
 
   console.log("Coward's Game runtime execution service ready")

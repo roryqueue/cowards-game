@@ -2012,6 +2012,182 @@ export interface PreparedRuntimeServiceDependenciesV118 {
   ): PreparedRuntimeServiceExecutionV118
 }
 
+export interface PreparedRuntimeServiceFactoryInputV118 {
+  readonly runtimeConfig: RuntimeServiceConfig
+  readonly authorityLoader: RuntimeEvidenceAuthorityLoader
+  readonly signer: RuntimeSemanticReceiptSignerV118
+  readonly budgetProfileRoot: Sha256IdentityV118
+  readonly ledgerPrestateRoot: Sha256IdentityV118
+  readonly evaluationInstant: () => string
+}
+
+const activeContainmentForEntrantV118 = (input: {
+  readonly authority: Readonly<VerifiedMountedRuntimeEvidenceAuthority>
+  readonly entrant: RuntimeEntrantAuthorityReference
+  readonly evaluationInstant: string
+}) => {
+  const certificate = input.authority.payload.certificates.find(
+    (candidate) =>
+      candidate.kind === "containment" &&
+      candidate.certificateId === input.entrant.containmentCertificateId &&
+      candidate.certificateRecordHash ===
+        input.entrant.containmentCertificateHash &&
+      candidate.laneIdentityHash === input.entrant.laneIdentityHash,
+  )
+  const instant = Date.parse(input.evaluationInstant)
+  if (
+    certificate === undefined ||
+    !Number.isFinite(instant) ||
+    instant < Date.parse(certificate.issuedAt) ||
+    instant > Date.parse(certificate.freshUntil) ||
+    certificateIsInactive(input.authority, certificate)
+  ) {
+    return undefined
+  }
+  const attestation = input.authority.payload.attestations.find(
+    (candidate) =>
+      certificate.attestationIds.includes(candidate.attestationId) &&
+      candidate.verified,
+  )
+  return attestation === undefined
+    ? undefined
+    : Object.freeze({ certificate, attestation })
+}
+
+export const admitRuntimeCertificateReferenceV118 = (input: {
+  readonly authority: Readonly<VerifiedMountedRuntimeEvidenceAuthority>
+  readonly side: "bottom" | "top"
+  readonly reference: RuntimeCertificateReferenceV118
+  readonly nestedRequest: RuntimeExecutionServiceRequest
+  readonly evaluationInstant: string
+}): PreparedRuntimeCertificateAdmissionV118 | undefined => {
+  const entrant = input.nestedRequest.evidenceSnapshot.entrants[input.side]
+  const active = activeContainmentForEntrantV118({
+    authority: input.authority,
+    entrant,
+    evaluationInstant: input.evaluationInstant,
+  })
+  if (
+    active === undefined ||
+    input.authority.registryGeneration !== input.reference.registryGeneration ||
+    input.reference.registryGeneration !==
+      input.nestedRequest.evidenceSnapshot.registryGeneration ||
+    input.reference.certificateId !== active.certificate.certificateId ||
+    input.reference.certificateRecordHash !==
+      active.certificate.certificateRecordHash ||
+    input.reference.freshUntil !== active.certificate.freshUntil ||
+    input.reference.sourceIdentity.side !== input.side ||
+    input.reference.sourceIdentity.strategyRevisionId !==
+      entrant.strategyRevisionId ||
+    input.reference.sourceIdentity.laneIdentityHash !==
+      active.certificate.laneIdentityHash ||
+    input.reference.sourceIdentity.identityManifestRoot !==
+      active.certificate.laneIdentityHash ||
+    input.reference.sourceIdentity.evidenceGraphRoot !==
+      active.attestation.attestationHash ||
+    input.reference.sourceIdentity.artifactSha256 !==
+      (active.certificate.laneIdentity.artifactSha256.startsWith("sha256:")
+        ? active.certificate.laneIdentity.artifactSha256
+        : `sha256:${active.certificate.laneIdentity.artifactSha256}`) ||
+    entrant.effectiveStatus !== "exhibition_only" ||
+    entrant.conformanceCertificateId !== undefined ||
+    entrant.conformanceCertificateHash !== undefined
+  ) {
+    return undefined
+  }
+  return Object.freeze({
+    certificateRecordHash: active.certificate.certificateRecordHash as Sha256IdentityV118,
+    commonSupervisorEvidenceRoot:
+      active.attestation.attestationHash as Sha256IdentityV118,
+    sourceIdentity: globalThis.structuredClone(input.reference.sourceIdentity),
+  })
+}
+
+/**
+ * Production dependency authority for the selected v1.18 HTTP envelope. It
+ * admits only current containment certificates from the mounted signed
+ * authority and delegates the nested Match to the existing selected-current
+ * execution/Chronicle/replay owners.
+ */
+export const createPreparedRuntimeServiceDependenciesV118 = (
+  input: PreparedRuntimeServiceFactoryInputV118,
+): PreparedRuntimeServiceDependenciesV118 => ({
+  signer: input.signer,
+  admitCertificateReference: ({ side, reference, nestedRequest }) => {
+    let authority: Readonly<VerifiedMountedRuntimeEvidenceAuthority>
+    try {
+      authority = input.authorityLoader.load()
+    } catch {
+      return undefined
+    }
+    return admitRuntimeCertificateReferenceV118({
+      authority,
+      side,
+      reference,
+      nestedRequest,
+      evaluationInstant: input.evaluationInstant(),
+    })
+  },
+  executeCurrentMatchWithAccounting: (request) => {
+    let captured:
+      | Parameters<typeof recordChronicleFromExecution>[0]["execution"]
+      | undefined
+    const response = executeRuntimeServiceRequest(request, input.runtimeConfig, {
+      authorityLoader: input.authorityLoader,
+      runMatchV119: (match) => {
+        const result = runVersionedMatchV119(match)
+        captured = result.execution
+        return result
+      },
+    })
+    if (!response.ok || captured === undefined) {
+      throw new TypeError("Selected current Match execution did not complete.")
+    }
+    const candidateMatch = (
+      request.match as RoutedRuntimeExecutionServiceRequest["match"]
+    ).candidateMatch
+    const recorded = recordChronicleFromExecution({
+      execution: captured,
+      metadata: {
+        schemaVersion: "chronicle-v1.4",
+        semanticTupleId: request.evidenceSnapshot.compatibility.tupleId,
+        semanticTuple: request.evidenceSnapshot.compatibility.tuple,
+      },
+      ...(candidateMatch === undefined ? {} : { candidateMatch }),
+    })
+    if (!recorded.ok) throw new TypeError(recorded.failure.code)
+    const authority = input.authorityLoader.load()
+    const roots = Object.fromEntries(
+      (["bottom", "top"] as const).map((side) => {
+        const active = activeContainmentForEntrantV118({
+          authority,
+          entrant: request.evidenceSnapshot.entrants[side],
+          evaluationInstant: input.evaluationInstant(),
+        })
+        if (active === undefined) {
+          throw new TypeError("Current containment evidence is unavailable.")
+        }
+        return [side, active.attestation.attestationHash]
+      }),
+    ) as { bottom: Sha256IdentityV118; top: Sha256IdentityV118 }
+    return Object.freeze({
+      response,
+      execution: captured,
+      boundaryAnchors: recorded.boundaryAnchors,
+      transitionTraceRoot: recorded.transitionTraceRoot as Sha256IdentityV118,
+      accounting: Object.freeze({
+        budgetProfileRoot: input.budgetProfileRoot,
+        ledgerPrestateRoot: input.ledgerPrestateRoot,
+        ledgerPoststateRoot: canonicalSha256V118({
+          requestId: request.requestId,
+          transitionTraceRoot: recorded.transitionTraceRoot,
+        }),
+      }),
+      commonSupervisorEvidenceRoots: Object.freeze(roots),
+    })
+  },
+})
+
 const preparedV118Failure = (input: {
   readonly rawRequest: unknown
   readonly code: string

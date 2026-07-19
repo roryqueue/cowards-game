@@ -22,12 +22,14 @@ import {
 import { buildStrategyRevision } from "@cowards/runtime-js"
 import { describe, expect, it, vi } from "vitest"
 import {
+  admitRuntimeCertificateReferenceV118,
   executePreparedRuntimeServiceRequestV118,
   type PreparedRuntimeServiceDependenciesV118,
   type PreparedRuntimeServiceExecutionV118,
 } from "./execute-match.js"
 import {
   bindFixtureCandidateMatchAuthorityV119,
+  createFixtureRuntimeEvidenceAuthorityLoader,
   createFixtureRuntimeExecutionEvidenceSnapshot,
 } from "./runtime-execution-evidence.test-support.js"
 import { createRuntimeServiceConfig } from "./runtime-config.js"
@@ -253,6 +255,85 @@ const dependencies = (): PreparedRuntimeServiceDependenciesV118 => {
 }
 
 describe("prepared runtime service v1.18 semantic admission", () => {
+  it("joins exact current containment identity and rejects stale or mixed references", () => {
+    const authority = createFixtureRuntimeEvidenceAuthorityLoader(
+      nestedRequest.evidenceSnapshot,
+      nestedRequest.strategies,
+    ).load()
+    const entrant = nestedRequest.evidenceSnapshot.entrants.bottom
+    const certificate = authority.payload.certificates.find(
+      (candidate) =>
+        candidate.kind === "containment" &&
+        candidate.certificateId === entrant.containmentCertificateId,
+    )!
+    const attestation = authority.payload.attestations.find((candidate) =>
+      certificate.attestationIds.includes(candidate.attestationId),
+    )!
+    const revision = nestedRequest.strategies.bottom
+    const artifact =
+      revision.metadata.sourceArtifact ?? revision.metadata.compiledArtifact
+    if (artifact === undefined) throw new Error("fixture artifact missing")
+    const reference: RuntimeCertificateReferenceV118 = {
+      side: "bottom",
+      certificateId: certificate.certificateId,
+      certificateRecordHash:
+        certificate.certificateRecordHash as `sha256:${string}`,
+      registryGeneration: authority.registryGeneration,
+      lane: certificate.laneIdentity.languageId,
+      freshUntil: certificate.freshUntil,
+      sourceIdentity: {
+        side: "bottom",
+        strategyRevisionId: revision.id,
+        originalSourceSha256: sha256(revision.source),
+        normalizedSourceSha256: sha256(
+          revision.source.replaceAll("\r\n", "\n").replaceAll("\r", "\n"),
+        ),
+        artifactSha256: `sha256:${artifact.hash.replace(/^sha256:/u, "")}`,
+        identityManifestRoot:
+          certificate.laneIdentityHash as `sha256:${string}`,
+        evidenceGraphRoot: attestation.attestationHash as `sha256:${string}`,
+        laneIdentityHash:
+          certificate.laneIdentityHash as `sha256:${string}`,
+      },
+    }
+    expect(
+      admitRuntimeCertificateReferenceV118({
+        authority,
+        side: "bottom",
+        reference,
+        nestedRequest,
+        evaluationInstant: "2026-07-13T00:00:00.000Z",
+      }),
+    ).toMatchObject({
+      certificateRecordHash: reference.certificateRecordHash,
+      commonSupervisorEvidenceRoot: reference.sourceIdentity.evidenceGraphRoot,
+    })
+    expect(
+      admitRuntimeCertificateReferenceV118({
+        authority,
+        side: "bottom",
+        reference,
+        nestedRequest,
+        evaluationInstant: "2026-07-15T00:00:00.000Z",
+      }),
+    ).toBeUndefined()
+    expect(
+      admitRuntimeCertificateReferenceV118({
+        authority,
+        side: "bottom",
+        reference: {
+          ...reference,
+          sourceIdentity: {
+            ...reference.sourceIdentity,
+            laneIdentityHash: sha256("mixed-lane"),
+          },
+        },
+        nestedRequest,
+        evaluationInstant: "2026-07-13T00:00:00.000Z",
+      }),
+    ).toBeUndefined()
+  })
+
   it("issues only a two-certificate, reconstruction-equivalent public receipt", () => {
     const response = executePreparedRuntimeServiceRequestV118(
       request(),
