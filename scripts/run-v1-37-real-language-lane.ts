@@ -99,6 +99,9 @@ const run = (
       ...(process.env.CARGO_HOME === undefined
         ? {}
         : { CARGO_HOME: process.env.CARGO_HOME }),
+      ...(process.env.DOCKER_CONFIG === undefined
+        ? {}
+        : { DOCKER_CONFIG: process.env.DOCKER_CONFIG }),
     },
     maxBuffer: 16 * 1024 * 1024,
     shell: false,

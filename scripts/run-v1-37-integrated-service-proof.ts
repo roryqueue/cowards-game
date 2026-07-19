@@ -1336,6 +1336,12 @@ const executeLiveLanes = async (
       const workspace = mkdtempSync(
         path.join(tmpdir(), `cowards-v137-service-${languageId}-`),
       )
+      const dockerConfig = path.join(workspace, "docker-config")
+      mkdirSync(dockerConfig, { mode: 0o700 })
+      writeFileSync(path.join(dockerConfig, "config.json"), "{}\n", {
+        mode: 0o600,
+        flag: "wx",
+      })
       const runId = `run:v1.19:service:${languageId}:${ordinal}:${nonce}`
       const workspaceId = `workspace:v1.19:service:${languageId}:${ordinal}:${nonce}`
       try {
@@ -1360,7 +1366,11 @@ const executeLiveLanes = async (
             ),
           ],
           cwd: repoRoot,
-          environment: { ...environment, TMPDIR: workspace },
+          environment: {
+            ...environment,
+            TMPDIR: workspace,
+            DOCKER_CONFIG: dockerConfig,
+          },
           timeoutMs: 20 * 60 * 1_000,
         })
         receipts.push(result.receipt)

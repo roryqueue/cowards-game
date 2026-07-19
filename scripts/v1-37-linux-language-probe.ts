@@ -37,6 +37,13 @@ const descriptor = (runId: string): string =>
 const sha256 = (value: Uint8Array | string): `sha256:${string}` =>
   `sha256:${createHash("sha256").update(value).digest("hex")}`
 
+const dockerEnvironment = (): Record<string, string> => ({
+  PATH: process.env.PATH ?? "",
+  ...(process.env.DOCKER_CONFIG === undefined
+    ? {}
+    : { DOCKER_CONFIG: process.env.DOCKER_CONFIG }),
+})
+
 const runDocker = (
   args: readonly string[],
   input?: Uint8Array,
@@ -44,7 +51,7 @@ const runDocker = (
 ): Buffer => {
   const result = spawnSync("docker", [...args], {
     encoding: "buffer",
-    env: { PATH: process.env.PATH ?? "" },
+    env: dockerEnvironment(),
     ...(input === undefined ? {} : { input }),
     maxBuffer: 4 * 1024 * 1024,
     shell: false,
@@ -72,7 +79,7 @@ const waitForReady = (monitorName: string): void => {
       ],
       {
         encoding: "utf8",
-        env: { PATH: process.env.PATH ?? "" },
+        env: dockerEnvironment(),
         shell: false,
         timeout: 1_000,
       },
@@ -114,7 +121,7 @@ const monitorIsRunning = (monitorName: string): boolean => {
     ["inspect", "--format", "{{.State.Running}}", monitorName],
     {
       encoding: "utf8",
-      env: { PATH: process.env.PATH ?? "" },
+      env: dockerEnvironment(),
       shell: false,
       timeout: 1_000,
     },
@@ -254,7 +261,7 @@ export const runV137LinuxLanguageProbe = (input: {
     waitForReady(monitorName)
     const guest = spawnSync("docker", guestArgs(controllerInput, input.guest), {
       encoding: "buffer",
-      env: { PATH: process.env.PATH ?? "" },
+      env: dockerEnvironment(),
       maxBuffer: 4 * 1024 * 1024,
       shell: false,
       timeout: 30_000,
@@ -284,7 +291,7 @@ export const runV137LinuxLanguageProbe = (input: {
     const monitorExit = runDocker(["wait", monitorName]).toString("utf8").trim()
     const logResult = spawnSync("docker", ["logs", monitorName], {
       encoding: "buffer",
-      env: { PATH: process.env.PATH ?? "" },
+      env: dockerEnvironment(),
       maxBuffer: 4 * 1024 * 1024,
       shell: false,
       timeout: 5_000,
