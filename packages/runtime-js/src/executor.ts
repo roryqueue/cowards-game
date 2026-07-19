@@ -24,6 +24,7 @@ import type { StrategyExecutionAdapter } from "./adapter.js"
 import {
   executeNestedMatchShapeRuntimeAbiTestSupport,
   executeSelectedStrategyRuntimeAbi,
+  executeVersionedV117NestedMatchShapeRuntimeAbiTestSupport,
   type ExecuteStrategyRuntimeAbiBridgeInput,
 } from "./abi-bridge.js"
 import { workerThreadStrategyExecutionAdapter } from "./worker-thread-adapter.js"
@@ -177,12 +178,13 @@ const createRuntimeFromRevisionWithBridge = (
   revision: StrategyRevision,
   options: CreateRuntimeFromRevisionOptions,
   executeRuntimeAbi: RuntimeAbiBridge,
+  expectedRuntimeAbi: string = STRATEGY_RUNTIME_ABI_VERSION,
 ): StrategyRuntime => {
   const adapter = options.adapter ?? workerThreadStrategyExecutionAdapter
   const timeoutMs = options.timeoutMs ?? WORKER_STARTUP_TIMEOUT_MS
   const outputByteLimit = options.outputByteLimit ?? RUNTIME_OUTPUT_BYTES
   const selectedRuntimeAbi =
-    revision.runtime.abiVersion === STRATEGY_RUNTIME_ABI_VERSION
+    revision.runtime.abiVersion === expectedRuntimeAbi
 
   return {
     selectActivations(input) {
@@ -255,4 +257,16 @@ export const createNestedMatchShapeRuntimeFromRevisionTestSupport = (
     revision,
     options,
     executeNestedMatchShapeRuntimeAbiTestSupport,
+  )
+
+/** Exact v1.17 fixture dispatch independent of the generated current pointer. */
+export const createVersionedV117NestedMatchShapeRuntimeFromRevisionTestSupport = (
+  revision: StrategyRevision,
+  options: CreateRuntimeFromRevisionOptions = {},
+): StrategyRuntime =>
+  createRuntimeFromRevisionWithBridge(
+    revision,
+    options,
+    executeVersionedV117NestedMatchShapeRuntimeAbiTestSupport,
+    "strategy-runtime-abi-v1.17",
   )

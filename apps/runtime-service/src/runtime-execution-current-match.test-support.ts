@@ -4,7 +4,10 @@ import {
   STRATEGY_RUNTIME_ABI_VERSION,
   VersionedRuntimeExecutionServiceRequestV117Schema,
 } from "@cowards/spec"
-import { createNestedMatchShapeRuntimeFromRevisionTestSupport } from "../../../packages/runtime-js/src/executor.js"
+import {
+  createNestedMatchShapeRuntimeFromRevisionTestSupport,
+  createVersionedV117NestedMatchShapeRuntimeFromRevisionTestSupport,
+} from "../../../packages/runtime-js/src/executor.js"
 import { createPythonNestedMatchShapeRuntimeTestSupport } from "../../../packages/runtime-python/src/python-subprocess-adapter.js"
 import { createWasmWasiNestedMatchShapeRuntimeTestSupport } from "../../../packages/runtime-wasm-wasi/src/wasm-wasi-subprocess-adapter.js"
 import { adaptRuntimeForCurrentKernel } from "../../../packages/engine/src/test/current-kernel-runtime.js"
@@ -89,11 +92,16 @@ export const executeCurrentMatchServiceTestSupport = (
                 stdoutBytes,
                 stderrBytes,
               })
-            : createNestedMatchShapeRuntimeFromRevisionTestSupport(revision, {
-                adapter: config.adapter,
-                timeoutMs,
-                outputByteLimit: stdoutBytes,
-              })
+            : (versionedV117
+                ? createVersionedV117NestedMatchShapeRuntimeFromRevisionTestSupport
+                : createNestedMatchShapeRuntimeFromRevisionTestSupport)(
+                revision,
+                {
+                  adapter: config.adapter,
+                  timeoutMs,
+                  outputByteLimit: stdoutBytes,
+                },
+              )
       return { ok: true, runtime }
     },
   })

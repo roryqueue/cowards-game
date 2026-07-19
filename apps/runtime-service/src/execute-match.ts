@@ -1439,9 +1439,20 @@ const executeParsedRequest = (
   })
     .strict()
     .safeParse(recorded.chronicle)
-  const responseFinalState = RuntimeExecutionFinalStateSchema.safeParse(
-    recorded.finalState,
-  )
+  const versionedInitialInitiativePlayerId =
+    versionedV117 &&
+    result.execution.kind === "completed" &&
+    typeof result.execution.recorderMaterial.initialState.initiativePlayerId ===
+      "string"
+      ? result.execution.recorderMaterial.initialState.initiativePlayerId
+      : undefined
+  const responseFinalState = RuntimeExecutionFinalStateSchema.safeParse({
+    ...recorded.finalState,
+    ...(versionedInitialInitiativePlayerId === undefined ||
+    String(STRATEGY_RUNTIME_ABI_VERSION) !== "strategy-runtime-abi-v1.19"
+      ? {}
+      : { initialInitiativePlayerId: versionedInitialInitiativePlayerId }),
+  })
   if (!responseChronicle.success || !responseFinalState.success) {
     return systemFailureResponse({
       rawRequest: request,
@@ -1455,10 +1466,13 @@ const executeParsedRequest = (
     integrity?: never
     storageMetadata?: never
   }
+  const responseFinalStateData = versionedV117
+    ? recorded.finalState
+    : responseFinalState.data
   const semanticReceiptInput = {
     request,
     chronicle: responseChronicleData,
-    finalState: responseFinalState.data,
+    finalState: responseFinalStateData,
     reconstructedTerminalStateHash: reconstructionValidation.terminalStateHash,
     runtimeViolationEventCount: violationCount,
     secret: runtimeConfig.semanticReceiptSecret,
@@ -1476,7 +1490,7 @@ const executeParsedRequest = (
     result: {
       privacy: "internal_runtime_result",
       chronicle: responseChronicleData,
-      finalState: responseFinalState.data,
+      finalState: responseFinalStateData,
       runtimeViolationEventCount: violationCount,
       semanticReceipt,
     },

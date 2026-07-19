@@ -151,6 +151,63 @@ export const executeNestedMatchShapeRuntimeAbiTestSupport = (
       StrategyRuntimeResponseEnvelopeSchema.parse(value),
   })
 
+const normalizeVersionedV117EnvelopeForSelectedSchema = (
+  value: unknown,
+): unknown => {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    return value
+  }
+  const normalized = globalThis.structuredClone(value) as Record<
+    string,
+    unknown
+  >
+  normalized.abiVersion = STRATEGY_RUNTIME_ABI_VERSION
+  if (
+    normalized.runtime !== null &&
+    typeof normalized.runtime === "object" &&
+    !Array.isArray(normalized.runtime)
+  ) {
+    const runtime = normalized.runtime as Record<string, unknown>
+    runtime.abiVersion = STRATEGY_RUNTIME_ABI_VERSION
+  }
+  return normalized
+}
+
+/**
+ * Immutable v1.17 nested-Match fixture bridge. It verifies the exact historical
+ * ABI before using the selected schema only as a structural validator.
+ */
+export const executeVersionedV117NestedMatchShapeRuntimeAbiTestSupport = (
+  input: ExecuteStrategyRuntimeAbiBridgeInput,
+): RuntimeResult<unknown> =>
+  executeStrategyRuntimeAbi(input, {
+    abiVersion: "strategy-runtime-abi-v1.17",
+    parseRequest: (value) => {
+      const record = value as {
+        abiVersion?: unknown
+        runtime?: { abiVersion?: unknown }
+      }
+      if (
+        record.abiVersion !== "strategy-runtime-abi-v1.17" ||
+        record.runtime?.abiVersion !== "strategy-runtime-abi-v1.17"
+      ) {
+        throw new Error("Versioned v1.17 runtime request identity mismatch")
+      }
+      return StrategyRuntimeRequestEnvelopeSchema.parse(
+        normalizeVersionedV117EnvelopeForSelectedSchema(value),
+      )
+    },
+    parseResponse: (value) => {
+      const record = value as { abiVersion?: unknown }
+      if (record.abiVersion !== "strategy-runtime-abi-v1.17") {
+        throw new Error("Versioned v1.17 runtime response identity mismatch")
+      }
+      return StrategyRuntimeResponseEnvelopeSchema.parse(
+        normalizeVersionedV117EnvelopeForSelectedSchema(value),
+      )
+    },
+  })
+
 /** Selected-current bridge for new writes; its ABI follows the current pointer. */
 export const executeSelectedStrategyRuntimeAbi = (
   input: ExecuteStrategyRuntimeAbiBridgeInput,
