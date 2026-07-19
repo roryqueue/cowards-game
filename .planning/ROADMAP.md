@@ -454,11 +454,15 @@ Plans:
 
 - [x] 260-46-PLAN.md — Materialize candidate dependency trees so workspace packages resolve the candidate selectors, and add the runtime-service oracle as the ninth selector seam.
 
-**Wave 30 *(blocked on Wave 29 completion)* — atomic activation**
+**Wave 30 *(blocked on Wave 29 completion)* — selected-current engine facade repair**
+
+- [ ] 260-47-PLAN.md — Align unversioned current engine construction/dispatch with v1.19 while retaining explicit immutable v1.4 evidence.
+
+**Wave 31 *(blocked on Wave 30 completion)* — atomic activation**
 
 - [ ] 260-14-PLAN.md — Activate five selector files and one transactional database selection head in one proved commit.
 
-**Wave 31 *(blocked on Wave 30 completion)* — integrated closure**
+**Wave 32 *(blocked on Wave 31 completion)* — integrated closure**
 
 - [ ] 260-15-PLAN.md — Close Phase 260 with one executable proof and permanent drift monitors.
 
@@ -502,5 +506,5 @@ Cycle-cap, inward-start, facing-only MOVE, reversal-history, attacker-facing/Adv
 | 257. Canonical Transition Kernel and v1.4 Semantic Integrity | 22/22 | Complete | 2026-07-13 |
 | 258. Canonical JSON, Failure Semantics, and Artifact Identity | 14/14 | Complete | 2026-07-16 |
 | 259. Executable Four-Language and Chronicle Conformance | 31/31 | Complete | 2026-07-16 |
-| 260. Truthful Strategy Inputs, Arena Authority, and Set Fairness | 31/34 | In Progress|  |
+| 260. Truthful Strategy Inputs, Arena Authority, and Set Fairness | 31/35 | In Progress|  |
 | 261. Integrated Service Proof, Drift Guards, and Release | 0/TBD | Not started | - |
