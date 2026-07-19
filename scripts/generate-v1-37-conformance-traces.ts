@@ -57,6 +57,8 @@ import { recordChronicleFromExecution } from "../packages/replay/src/record.ts"
 import {
   ARENA_CATALOG_VERSION_V1_37,
   CANONICAL_ARENA_CATALOG_V1_37,
+  CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE,
+  CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_ID,
   CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE,
   CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE_ID,
   SET_CONDITION_POLICY_VERSION_V1_37,
@@ -74,6 +76,12 @@ export const ACTIVE_V137_CONFORMANCE_TRACE_ROOT = path.join(
   repoRoot,
   "packages/golden/src/fixtures/v1-37-conformance-traces",
 )
+const RELEASED_V137_CONFORMANCE_TRACE_V3_PATH = path.join(
+  ACTIVE_V137_CONFORMANCE_TRACE_ROOT,
+  "v1.37-conformance-trace-v3",
+)
+const RELEASED_V137_CONFORMANCE_TRACE_V3_ROOT =
+  "sha256:53ac4a34b8ea3a52b65b566dfb1da94cbc36ce220c590fe46c0bf43489668696" as const
 export const V137_CONFORMANCE_TRACE_BASELINE_VERSION =
   "v1.4-locked-compatibility-v1" as const
 export const V137_CONFORMANCE_TRACE_REVIEW_ARTIFACT = path.join(
@@ -524,7 +532,7 @@ const fixtureRuntime: StrategyRuntime = {
 
 const canonicalRecording = (testCase: V137ConformanceCase) => {
   const identity = testCase.seed ?? testCase.id
-  const execution = MATCH_KERNEL.runMatch({
+  const execution = MATCH_KERNEL.runMatchV117({
     matchId: `conformance:${testCase.id}`,
     seed: identity,
     arenaVariant: {
@@ -544,8 +552,8 @@ const canonicalRecording = (testCase: V137ConformanceCase) => {
     execution,
     metadata: {
       schemaVersion: "chronicle-v1.4",
-      semanticTupleId: MATCH_KERNEL.tupleId,
-      semanticTuple: MATCH_KERNEL.tuple,
+      semanticTupleId: CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_ID,
+      semanticTuple: CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE,
     },
   })
   if (!recorded.ok) return fail(`CANONICAL_RECORDING_${recorded.failure.code}`)
@@ -1388,39 +1396,27 @@ const observationCandidateRoot = (
 const exactJsonDomainHash = (domain: string, value: unknown): string =>
   sha256(`${domain}\0${renderJson(JSON.parse(JSON.stringify(value)))}`)
 
-const readActiveV137TraceManifest =
+const readReleasedV137TraceManifest =
   (): V137ConformanceTraceCandidateManifest => {
-    let registry: { activeVersion?: unknown; activePath?: unknown }
+    let manifest: V137ConformanceTraceCandidateManifest
     try {
-      registry = JSON.parse(
+      manifest = JSON.parse(
         readFileSync(
-          path.join(ACTIVE_V137_CONFORMANCE_TRACE_ROOT, "registry.json"),
+          path.join(RELEASED_V137_CONFORMANCE_TRACE_V3_PATH, "manifest.json"),
           "utf8",
         ),
-      ) as { activeVersion?: unknown; activePath?: unknown }
+      ) as V137ConformanceTraceCandidateManifest
     } catch {
-      return fail("ACTIVE_TRACE_REGISTRY_INVALID")
+      return fail("RELEASED_TRACE_MANIFEST_INVALID")
     }
     if (
-      registry.activeVersion !== "v1.37-conformance-trace-v3" ||
-      registry.activePath !==
-        "packages/golden/src/fixtures/v1-37-conformance-traces/v1.37-conformance-trace-v3"
-    ) {
-      return fail("ACTIVE_TRACE_REGISTRY_CHANGED")
-    }
-    const manifest = JSON.parse(
-      readFileSync(
-        path.join(repoRoot, registry.activePath, "manifest.json"),
-        "utf8",
-      ),
-    ) as V137ConformanceTraceCandidateManifest
-    if (
-      manifest.candidateVersion !== registry.activeVersion ||
+      manifest.candidateVersion !== "v1.37-conformance-trace-v3" ||
+      manifest.candidateRootSha256 !== RELEASED_V137_CONFORMANCE_TRACE_V3_ROOT ||
       manifest.caseCount !== manifest.cases.length ||
       computeV137ConformanceTraceCandidateRoot(manifest) !==
         manifest.candidateRootSha256
     ) {
-      return fail("ACTIVE_TRACE_MANIFEST_INVALID")
+      return fail("RELEASED_TRACE_MANIFEST_INVALID")
     }
     return manifest
   }
@@ -1498,7 +1494,7 @@ const createObservationSemanticDiffAndDisposition = ({
   readonly records: readonly V137ObservationTraceV4BundleRecord[]
   readonly bundleRootSha256: string
 }) => {
-  const active = readActiveV137TraceManifest()
+  const active = readReleasedV137TraceManifest()
   const baselineByCase = new Map(
     active.cases.map(({ caseId, traceRoot }) => [caseId, traceRoot]),
   )
