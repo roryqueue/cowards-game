@@ -7,7 +7,7 @@ import {
 } from "./v1-37-integrated-proof-manifest.js"
 
 const cloneManifest = (): unknown[] =>
-  structuredClone(V137_INTEGRATED_PROOF_SCENARIOS) as unknown[]
+  JSON.parse(JSON.stringify(V137_INTEGRATED_PROOF_SCENARIOS)) as unknown[]
 
 const expectCode = (value: unknown, code: string): void => {
   expect(() => parseV137IntegratedProofManifest(value)).toThrowError(code)
@@ -106,11 +106,11 @@ describe("v1.37 integrated proof manifest", () => {
     expectCode(missing, "V137_MANIFEST_MISSING_SCENARIO")
 
     const extra = cloneManifest()
-    extra.push(structuredClone(extra[0]))
+    extra.push(JSON.parse(JSON.stringify(extra[0])) as unknown)
     expectCode(extra, "V137_MANIFEST_EXTRA_SCENARIO")
 
     const duplicate = cloneManifest()
-    duplicate[1] = structuredClone(duplicate[0])
+    duplicate[1] = JSON.parse(JSON.stringify(duplicate[0])) as unknown
     expectCode(duplicate, "V137_MANIFEST_DUPLICATE_SCENARIO")
 
     const reordered = cloneManifest()
@@ -147,17 +147,17 @@ describe("v1.37 integrated proof manifest", () => {
   })
 
   it("rejects participant, result, mutation, evidence, and limitation relabeling", () => {
-    for (const key of [
-      "topologyParticipants",
-      "expectedResultClass",
-      "mutationAssertions",
-      "restrictedEvidenceClass",
-      "publicLimitationCode",
+    for (const [key, replacement] of [
+      ["topologyParticipants", ["go-backend"]],
+      ["expectedResultClass", "rejected"],
+      ["mutationAssertions", ["no-gameplay-mutation"]],
+      ["restrictedEvidenceClass", "command-receipt"],
+      ["publicLimitationCode", "different-safe-limitation"],
     ] as const) {
       const drifted = cloneManifest() as Array<Record<string, unknown>>
       drifted[0] = {
         ...drifted[0],
-        [key]: key.endsWith("s") ? [] : "none",
+        [key]: replacement,
       }
       expectCode(drifted, "V137_MANIFEST_TRACE_MISMATCH")
     }
