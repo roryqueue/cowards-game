@@ -16,10 +16,7 @@ import type {
   PublicTrialLadderSeasonDto,
 } from "./competition.js"
 import type { AnalyticsGauntletRunSummary } from "./analytics.js"
-import {
-  STRATEGY_RUNTIME_ABI_VERSION,
-  type StrategyRuntimeProductSemantics,
-} from "./runtime.js"
+import type { StrategyRuntimeProductSemantics } from "./runtime.js"
 import type { CountedEntryEligibilityCategory } from "./competition-entry-eligibility.js"
 import type {
   WorkshopAnalyticsComparisonSchema,
