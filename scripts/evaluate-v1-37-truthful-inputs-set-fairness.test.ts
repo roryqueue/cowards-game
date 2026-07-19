@@ -31,7 +31,8 @@ const createProof = (): V137TruthfulInputsSetFairnessProof => ({
   ],
   authority: {
     semanticAuthorityKey: "runtime-v1.19",
-    tupleId: hash("2"),
+    tupleId:
+      "sha256:37c9a07425d454c74859112debcc3ef362d43e80d5767560d9bde28a3c8d5e73",
     rulesVersion: "cowards-rules-v1.4",
     engineVersion: "engine-kernel-v1.37-candidate-1",
     runtimeAbiVersion: "strategy-runtime-abi-v1.19",
