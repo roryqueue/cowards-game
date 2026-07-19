@@ -21,6 +21,7 @@ import { describe, expect, it, vi } from "vitest"
 import {
   RETAINED_FOUR_LANGUAGE_PARITY_CERTIFICATION_STATUS,
   V137_REAL_ADAPTER_SELECTORS,
+  isValidV137ObservationTraceV4BundleRecord,
   loadCommittedV137ConformanceTraceOracle,
   requireCompleteFourLanguageMatrixV137,
   runCompleteLanguageConformanceLaneV137,
@@ -178,6 +179,77 @@ describe("v1.37 four-language conformance runner", () => {
       rmSync(repoRoot, { recursive: true, force: true })
     }
   }, 15_000)
+
+  it("rejects every inconsistent v4 canonical-input and evidence projection class", () => {
+    const candidateDirectory = path.resolve(
+      process.cwd(),
+      "packages/golden/src/fixtures/v1-37-conformance-traces/v1.37-observation-trace-v4",
+    )
+    const bundle = JSON.parse(
+      readFileSync(path.join(candidateDirectory, "traces.bundle.json"), "utf8"),
+    ) as { records: Record<string, unknown>[] }
+    const manifest = JSON.parse(
+      readFileSync(path.join(candidateDirectory, "manifest.json"), "utf8"),
+    ) as { cases: Record<string, unknown>[] }
+    const testCase = V1_37_CONFORMANCE_CORPUS.cases.find(
+      ({ id }) => id === "normative-first-active-turn-to-stone",
+    )!
+    const ordinal = bundle.records.findIndex(
+      ({ caseId }) => caseId === testCase.id,
+    )
+    const record = bundle.records[ordinal]!
+    const manifestCase = manifest.cases[ordinal]!
+    const valid = (candidate: Record<string, unknown>): boolean =>
+      isValidV137ObservationTraceV4BundleRecord({
+        record: candidate,
+        manifestCase,
+        ordinal,
+        testCase,
+      })
+    expect(valid(record)).toBe(true)
+
+    const mutations = [
+      (candidate: Record<string, unknown>) => {
+        const canonicalInput = candidate.canonicalInput as Record<
+          string,
+          unknown
+        >
+        const recordedCase = canonicalInput.testCase as Record<string, unknown>
+        recordedCase.id = "mutated-case-id"
+      },
+      (candidate: Record<string, unknown>) => {
+        const evidence = candidate.evidence as Record<string, unknown>
+        const states = evidence.states as Record<string, unknown>
+        states.finalStateHash = sha256("mutated-state")
+      },
+      (candidate: Record<string, unknown>) => {
+        const evidence = candidate.evidence as Record<string, unknown>
+        evidence.events = []
+      },
+      (candidate: Record<string, unknown>) => {
+        const evidence = candidate.evidence as Record<string, unknown>
+        evidence.memories = []
+      },
+      (candidate: Record<string, unknown>) => {
+        const evidence = candidate.evidence as Record<string, unknown>
+        evidence.objectives = []
+      },
+      (candidate: Record<string, unknown>) => {
+        const evidence = candidate.evidence as Record<string, unknown>
+        const terminal = evidence.terminal as Record<string, unknown>
+        terminal.outcomeHash = sha256("mutated-terminal")
+      },
+      (candidate: Record<string, unknown>) => {
+        const evidence = candidate.evidence as Record<string, unknown>
+        evidence.failure = {}
+      },
+    ]
+    for (const mutate of mutations) {
+      const candidate = globalThis.structuredClone(record)
+      mutate(candidate)
+      expect(valid(candidate)).toBe(false)
+    }
+  })
 
   it("executes the identical shared matrix through TypeScript and Python real-adapter seams", async () => {
     for (const languageId of ["typescript", "python"] as const) {

@@ -155,6 +155,188 @@ const readRegularBytes = (filePath: string): Buffer => {
   return readFileSync(filePath)
 }
 
+const canonicalJsonEqual = (left: JsonValue, right: JsonValue): boolean => {
+  const leftBytes = encodeCanonicalJson(left, { context: "canonical-manifest" })
+  const rightBytes = encodeCanonicalJson(right, {
+    context: "canonical-manifest",
+  })
+  return (
+    leftBytes.ok &&
+    rightBytes.ok &&
+    Buffer.compare(
+      Buffer.from(leftBytes.bytes),
+      Buffer.from(rightBytes.bytes),
+    ) === 0
+  )
+}
+
+const observationInputForCase = (testCase: V137ConformanceCase): JsonValue => {
+  const invocation =
+    V1_37_CONFORMANCE_CORPUS.behaviorManifest.invocationScript.find(
+      ({ inputFixtureId }) => inputFixtureId === `fixture:${testCase.id}`,
+    )
+  if (invocation === undefined) {
+    return {
+      testCase: testCase as unknown as JsonValue,
+      invocation: null,
+      observation: null,
+    }
+  }
+  const hasAdvanced = new Set([
+    "observation-d05-successful-pusher-true",
+    "observation-d06-later-cycle-true",
+    "observation-d06-post-self-advance-true",
+  ]).has(testCase.id)
+  const laterRound =
+    testCase.id === "observation-d02-round-initiative-later-round"
+  return {
+    testCase: testCase as unknown as JsonValue,
+    invocation: invocation as unknown as JsonValue,
+    observation:
+      invocation.methodName === "selectActivations"
+        ? {
+            initialInitiativePlayerId: "player:bottom",
+            hasInitialInitiative: !laterRound,
+            roundInitiativePlayerId: laterRound
+              ? "player:top"
+              : "player:bottom",
+            hasRoundInitiative: true,
+          }
+        : { hasAdvancedThisActivation: hasAdvanced },
+  }
+}
+
+const observationEvidenceForTrace = (
+  trace: CanonicalConformanceTrace,
+): JsonValue =>
+  ({
+    states: {
+      boundaries: trace.transitions.map(
+        ({ ordinal, beforeStateHash, afterStateHash }) => ({
+          ordinal,
+          beforeStateHash,
+          afterStateHash,
+        }),
+      ),
+      finalStateHash: trace.finalStateHash,
+    },
+    events: trace.transitions.map(
+      ({ ordinal, orderedEvents, orderedEventsHash }) => ({
+        ordinal,
+        orderedEvents,
+        orderedEventsHash,
+      }),
+    ),
+    memories: trace.invocations.map(
+      ({
+        ordinal,
+        strategyMemoryHash,
+        soldierMemoryHash,
+        beforeMemoryHash,
+        afterMemoryHash,
+      }) => ({
+        ordinal,
+        strategyMemoryHash,
+        soldierMemoryHash,
+        beforeMemoryHash,
+        afterMemoryHash,
+      }),
+    ),
+    objectives: trace.invocations.map(
+      ({
+        ordinal,
+        objectiveHash,
+        beforeObjectiveHash,
+        afterObjectiveHash,
+      }) => ({
+        ordinal,
+        objectiveHash,
+        beforeObjectiveHash,
+        afterObjectiveHash,
+      }),
+    ),
+    terminal: {
+      outcomeHash: trace.outcomeHash,
+      statuses: trace.transitions.map(
+        ({ ordinal, terminalStatus, terminalHash }) => ({
+          ordinal,
+          terminalStatus,
+          terminalHash,
+        }),
+      ),
+    },
+    failure: trace.failure as unknown as JsonValue,
+  }) as unknown as JsonValue
+
+export const isValidV137ObservationTraceV4BundleRecord = (input: {
+  readonly record: unknown
+  readonly manifestCase: unknown
+  readonly ordinal: number
+  readonly testCase: V137ConformanceCase
+}): boolean => {
+  const { record, manifestCase, ordinal, testCase } = input
+  if (
+    !exactKeys(manifestCase, [
+      "ordinal",
+      "caseId",
+      "resultClass",
+      "traceRoot",
+    ]) ||
+    !exactKeys(record, [
+      "ordinal",
+      "caseId",
+      "traceRef",
+      "resultClass",
+      "canonicalInput",
+      "trace",
+      "evidence",
+      "traceRoot",
+    ]) ||
+    record.ordinal !== ordinal ||
+    record.caseId !== testCase.id ||
+    record.traceRef !== `trace:${testCase.id}` ||
+    record.resultClass !== testCase.expectation.resultClass ||
+    manifestCase.ordinal !== ordinal ||
+    manifestCase.caseId !== record.caseId ||
+    manifestCase.resultClass !== record.resultClass ||
+    manifestCase.traceRoot !== record.traceRoot ||
+    record.canonicalInput === null ||
+    typeof record.canonicalInput !== "object" ||
+    record.evidence === null ||
+    typeof record.evidence !== "object" ||
+    !HASH.test(String(record.traceRoot))
+  ) {
+    return false
+  }
+  const trace = record.trace as CanonicalConformanceTrace
+  try {
+    return (
+      trace.caseId === testCase.id &&
+      trace.corpusVersion ===
+        V1_37_OBSERVATION_TRACE_V4_CANDIDATE_PIN.corpusCandidateVersion &&
+      trace.corpusRootSha256 ===
+        V1_37_OBSERVATION_TRACE_V4_CANDIDATE_PIN.corpusRootSha256 &&
+      trace.semanticTupleId ===
+        V1_37_OBSERVATION_TRACE_V4_CANDIDATE_PIN.semanticTupleId &&
+      trace.resultClass === testCase.expectation.resultClass &&
+      trace.traceRoot === record.traceRoot &&
+      hashCanonicalConformanceTrace(trace) === record.traceRoot &&
+      compareCanonicalConformanceTrace({ expected: trace, actual: trace })
+        .status === "equal" &&
+      canonicalJsonEqual(
+        record.canonicalInput as JsonValue,
+        observationInputForCase(testCase),
+      ) &&
+      canonicalJsonEqual(
+        record.evidence as JsonValue,
+        observationEvidenceForTrace(trace),
+      )
+    )
+  } catch {
+    return false
+  }
+}
+
 interface V137ValidatedTraceRegistry {
   readonly activeVersion: string
   readonly activePath: string
@@ -345,62 +527,17 @@ const loadCommittedV137ObservationTraceV4Oracle = (input: {
     const manifestCase = manifestCases[ordinal] as unknown
     const record = records[ordinal] as unknown
     if (
-      !exactKeys(manifestCase, [
-        "ordinal",
-        "caseId",
-        "resultClass",
-        "traceRoot",
-      ]) ||
-      !exactKeys(record, [
-        "ordinal",
-        "caseId",
-        "traceRef",
-        "resultClass",
-        "canonicalInput",
-        "trace",
-        "evidence",
-        "traceRoot",
-      ]) ||
-      record.ordinal !== ordinal ||
-      record.caseId !== testCase.id ||
-      record.traceRef !== `trace:${testCase.id}` ||
-      record.resultClass !== testCase.expectation.resultClass ||
-      manifestCase.ordinal !== ordinal ||
-      manifestCase.caseId !== record.caseId ||
-      manifestCase.resultClass !== record.resultClass ||
-      manifestCase.traceRoot !== record.traceRoot ||
-      record.canonicalInput === null ||
-      typeof record.canonicalInput !== "object" ||
-      record.evidence === null ||
-      typeof record.evidence !== "object" ||
-      !HASH.test(String(record.traceRoot))
-    ) {
-      throw new TypeError("Committed conformance trace inventory is invalid")
-    }
-    const trace = record.trace as CanonicalConformanceTrace
-    const evidence = record.evidence
-    if (
-      !exactKeys(evidence, [
-        "states",
-        "events",
-        "memories",
-        "objectives",
-        "terminal",
-        "failure",
-      ]) ||
-      JSON.stringify(evidence.failure) !== JSON.stringify(trace.failure) ||
-      trace.caseId !== testCase.id ||
-      trace.corpusVersion !== pin.corpusCandidateVersion ||
-      trace.corpusRootSha256 !== pin.corpusRootSha256 ||
-      trace.semanticTupleId !== pin.semanticTupleId ||
-      trace.resultClass !== testCase.expectation.resultClass ||
-      trace.traceRoot !== record.traceRoot ||
-      hashCanonicalConformanceTrace(trace) !== record.traceRoot ||
-      compareCanonicalConformanceTrace({ expected: trace, actual: trace })
-        .status !== "equal"
+      !isValidV137ObservationTraceV4BundleRecord({
+        record,
+        manifestCase,
+        ordinal,
+        testCase,
+      })
     ) {
       throw new TypeError("Committed conformance trace bytes are invalid")
     }
+    const trace = (record as { readonly trace: CanonicalConformanceTrace })
+      .trace
     traces.set(testCase.id, deepFreeze(trace) as CanonicalConformanceTrace)
   }
   const caseIds = Object.freeze(
