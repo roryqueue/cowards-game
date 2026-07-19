@@ -184,6 +184,10 @@ const strategyInput = {
   phaseNumber: 1,
   roundNumber: 1,
   activationCount: 1,
+  initialInitiativePlayerId: "player:v124",
+  hasInitialInitiative: true,
+  roundInitiativePlayerId: "player:v124",
+  hasRoundInitiative: true,
   board: {
     bounds: { minX: 0, maxX: 11, minY: 0, maxY: 11 },
     soldiers: [
