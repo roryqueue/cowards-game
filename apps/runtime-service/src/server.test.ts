@@ -113,17 +113,13 @@ const expectSelectedProviderAuthority = (
       ? "runtime-js-source-artifact"
       : sourceFormat === "python"
         ? "python-source-provenance-json"
-        : String(STRATEGY_LANGUAGE_PROVIDER_CONTRACT_VERSION).startsWith(
-              "runtime-provider-validation-",
-            )
+        : String(STRATEGY_RUNTIME_ABI_VERSION) === "strategy-runtime-abi-v1.17"
           ? "wasi-preview1-stdin-canonical-request-stdout-raw-canonical-payload"
           : "wasi-preview1-stdin-stdout-json"
   expect(provider.abiPosture).toBe(expectedAbiPosture)
   if (metadata.compiledArtifact !== undefined) {
     expect(artifact.abiEnvelope).toBe(
-      String(STRATEGY_LANGUAGE_PROVIDER_CONTRACT_VERSION).startsWith(
-        "runtime-provider-validation-",
-      )
+      String(STRATEGY_RUNTIME_ABI_VERSION) === "strategy-runtime-abi-v1.17"
         ? "stdin-canonical-request-stdout-raw-canonical-payload"
         : "stdin-stdout-json",
     )

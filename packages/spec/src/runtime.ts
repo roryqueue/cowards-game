@@ -1015,6 +1015,11 @@ export const STRATEGY_LANGUAGE_REGISTRY = SUPPORTED_STRATEGY_LANGUAGES.map(
   }),
 ) as readonly StrategyLanguageRecord[]
 
+const selectedWasmWasiAbiPosture =
+  String(STRATEGY_RUNTIME_ABI_VERSION) === "strategy-runtime-abi-v1.17"
+    ? "wasi-preview1-stdin-canonical-request-stdout-raw-canonical-payload"
+    : "wasi-preview1-stdin-stdout-json"
+
 export const STRATEGY_LANGUAGE_PROVIDER_REGISTRY = [
   {
     id: "strategy-language-provider-js-ts",
@@ -1103,8 +1108,7 @@ export const STRATEGY_LANGUAGE_PROVIDER_REGISTRY = [
     runtimeTarget: "runtime-wasm-wasi",
     adapterIds: ["runtime-wasm-wasi-wasmtime-preview1"],
     runtimeAbiVersion: STRATEGY_RUNTIME_ABI_VERSION,
-    abiPosture:
-      "wasi-preview1-stdin-canonical-request-stdout-raw-canonical-payload",
+    abiPosture: selectedWasmWasiAbiPosture,
     validationOwner: "runtime-service",
     buildOwner: "runtime-service",
     executionOwner: "runtime-service",
@@ -1138,8 +1142,7 @@ export const STRATEGY_LANGUAGE_PROVIDER_REGISTRY = [
     runtimeTarget: "runtime-wasm-wasi",
     adapterIds: ["runtime-wasm-wasi-wasmtime-preview1"],
     runtimeAbiVersion: STRATEGY_RUNTIME_ABI_VERSION,
-    abiPosture:
-      "wasi-preview1-stdin-canonical-request-stdout-raw-canonical-payload",
+    abiPosture: selectedWasmWasiAbiPosture,
     validationOwner: "runtime-service",
     buildOwner: "runtime-service",
     executionOwner: "runtime-service",

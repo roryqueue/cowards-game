@@ -2,6 +2,8 @@ import { Buffer } from "node:buffer"
 import { createHash, verify as verifySignature } from "node:crypto"
 import {
   CANONICAL_COMPATIBILITY_TUPLE_FIELDS,
+  resolveCandidateRuntimeV117SemanticTuple,
+  resolveCandidateRuntimeV119SemanticTuple,
   resolveCanonicalCompatibilityTuple,
   type CanonicalCompatibilityTuple,
 } from "./integrity-authority.js"
@@ -370,10 +372,14 @@ export const parseExecutableLaneIdentity = (
     requireString(value[field], `Lane identity ${field}`)
   }
   requireSha256(value.artifactSha256, "Lane artifact digest")
-  const resolved = resolveCanonicalCompatibilityTuple({
+  const selector = {
     tupleId: value.semanticTupleId,
     tuple: value.semanticTuple,
-  })
+  }
+  const resolved =
+    resolveCanonicalCompatibilityTuple(selector) ??
+    resolveCandidateRuntimeV117SemanticTuple(selector) ??
+    resolveCandidateRuntimeV119SemanticTuple(selector)
   if (!resolved) {
     fail("Lane identity uses an unknown or mismatched semantic tuple.")
   }
