@@ -1,0 +1,64 @@
+{
+  "version": "1.0",
+  "timestamp": "2026-07-19T12:49:57.317Z",
+  "phase": "260",
+  "phase_name": "truthful-strategy-inputs-arena-authority-and-set-fairness",
+  "phase_dir": ".planning/phases/260-truthful-strategy-inputs-arena-authority-and-set-fairness",
+  "plan": 14,
+  "task": 1,
+  "total_tasks": 1,
+  "status": "paused",
+  "completed_tasks": [
+    {
+      "id": 1,
+      "name": "Flip the complete compact inventory, validate activated state, and commit once",
+      "status": "in_progress",
+      "progress": "Activation hardening is complete through exact-parent disposable-clone typecheck and refreshed preactivation/seam evidence. Historical v1.17 trace generation is selection-neutral, stale runtime fixture types/imports are removed, selected workshop input is ABI-specific, exported React element types are stable under exact isolated dependencies, the protected baseline verifies, and every failed prepare compensated to the exact v1.17 database head. No live activation mutation has occurred."
+    }
+  ],
+  "remaining_tasks": [
+    {
+      "id": 1,
+      "name": "Run the complete Plan-31 coordinator transaction from prepare through postactivation proof",
+      "status": "in_progress",
+      "remaining": "Re-run prepare after commits e7d851d and 9a6a248; on success run validate, rollback-drill, stage, commit, finalize, smoke, and the postactivation evaluator. Then create 260-14-SUMMARY.md and continue Phase 260/milestone closure."
+    }
+  ],
+  "blockers": [],
+  "async_jobs": [],
+  "human_actions_pending": [],
+  "decisions": [
+    {
+      "decision": "Keep historical v1.17 trace generation independent of the selected-current registry and call runMatchV117 explicitly.",
+      "rationale": "The activation prepare gate exposed current-selection contamination in historical evidence generation; immutable history must remain replayable regardless of the current selector.",
+      "phase": "260"
+    },
+    {
+      "decision": "Treat exact-parent disposable-clone validation as authoritative for activation readiness.",
+      "rationale": "The main workspace dependency graph concealed exported React TS2883 type leaks that appeared in the coordinator's isolated candidate materialization.",
+      "phase": "260"
+    },
+    {
+      "decision": "Use the Plan-31 coordinator exclusively for selector and database-head activation.",
+      "rationale": "Five selectors, the proof artifact, Git index/commit, and the singleton database head must transition or compensate as one audited unit.",
+      "phase": "260"
+    }
+  ],
+  "uncommitted_files": [
+    {
+      "path": ".planning/config.json",
+      "ownership": "protected user change",
+      "instruction": "Do not edit, stage, restore, or commit."
+    },
+    {
+      "path": "CowardsGameSpec_Full_Consolidated_v1.md",
+      "ownership": "protected user change",
+      "instruction": "Do not edit, stage, restore, or commit."
+    }
+  ],
+  "background_processes": [],
+  "database_state": "active-v1.17-bootstrap|0|sha256:fd2cc24a345c0cb94dde9966262f128c663a4430022574729eb4a902177c4b5a|null|null|null",
+  "protected_baseline": "sha256:c0e1c2a6319f01377df74a2d6e5c493d26382f2882c059116c5ba467e5e81707",
+  "next_action": "Verify the protected baseline and exact v1.17 database head, then run `pnpm exec tsx scripts/activate-v1-37-observation-v1-19.ts --mode prepare --activation-id activation:phase260:plan14:production` with the three required database variables and `/usr/local/go/bin` on PATH. Continue only through the same coordinator if prepare succeeds.",
+  "context_notes": "Milestone v1.37 is not complete. Four of six phases are complete; Phase 260 Plan 14 is the active activation transaction. The latest proof process finished and committed refreshed activation seam inventory as 9a6a248. The working tree contains only the two protected user changes. No process, watcher, external job, pending intent, finalization, or compensation is active."
+}
