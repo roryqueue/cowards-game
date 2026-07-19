@@ -13,6 +13,7 @@ import {
   evaluateStrategyRuntimeCountedEligibility,
   getCompetitionPreset,
   normalizeStrategyRuntimeMetadata,
+  PublicStrategyRuntimeMetadataSchema,
   STRATEGY_RUNTIME_ABI_VERSION,
   type CompetitionEntrantSnapshot,
   type CompetitionPresetId,
@@ -902,7 +903,9 @@ export const buildPublicMatchSetResultDto = async (
     [matchSetId],
   )
   const entrants = entrantsResult.rows.map((row) => {
-    const runtime = normalizeStrategyRuntimeMetadata(row.snapshot.runtime)
+    const runtime = PublicStrategyRuntimeMetadataSchema.parse(
+      normalizeStrategyRuntimeMetadata(row.snapshot.runtime),
+    )
     return {
       ...row.snapshot,
       runtime,

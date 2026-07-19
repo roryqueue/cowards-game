@@ -4,6 +4,7 @@ import {
   projectPublicCompetitionGovernance,
   describeStrategyRuntimeProductSemantics,
   normalizeStrategyRuntimeMetadata,
+  PublicStrategyRuntimeMetadataSchema,
   type PublicPlayerProfileDto,
   type PublicStrategyCardDto,
 } from "@cowards/spec"
@@ -294,7 +295,9 @@ export const listPublicStrategyCardsForUser = async (
   )
   const recordsByRevision = await loadPublicRecordsByRevision(pool, userId)
   return result.rows.map((row) => {
-    const runtime = normalizeStrategyRuntimeMetadata(row.runtime)
+    const runtime = PublicStrategyRuntimeMetadataSchema.parse(
+      normalizeStrategyRuntimeMetadata(row.runtime),
+    )
     return {
       strategyId: row.strategy_id,
       strategyRevisionId: row.revision_id,
