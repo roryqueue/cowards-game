@@ -7,10 +7,12 @@ import {
   V137_INTEGRATED_SERVICE_PROOF_CONTROL_PATH,
   V137_INTEGRATED_SERVICE_SCENARIOS,
   assertV137IntegratedServiceTopology,
+  checkV137IntegratedServiceProof,
   cleanupV137OwnedProcesses,
   createV137IntegratedServiceReceiptFixture,
   validateV137IntegratedServiceReceipt,
   validateV137IntegratedServiceEnvironment,
+  writeV137IntegratedServiceProofFixture,
 } from "./run-v1-37-integrated-service-proof.js"
 
 const repoRoot = path.resolve(import.meta.dirname, "..")
@@ -217,5 +219,92 @@ describe("v1.37 integrated service proof four lanes typed failure Chronicle reco
     expect(() =>
       validateV137IntegratedServiceReceipt(missingHandoff),
     ).toThrow("V137_SERVICE_PROOF_RECEIPT_SHAPE")
+  })
+})
+
+describe("v1.37 integrated service proof deterministic write and read-only check", () => {
+  it("writes restricted evidence once and checks it twice without changing any byte", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "v137-proof-check-"))
+    const previous = process.env.COWARDS_V1_37_RESTRICTED_EVIDENCE_ROOT
+    process.env.COWARDS_V1_37_RESTRICTED_EVIDENCE_ROOT = root
+    try {
+      await writeV137IntegratedServiceProofFixture(repoRoot, root)
+      const before = await readFile(
+        path.join(root, V137_INTEGRATED_SERVICE_PROOF_CONTROL_PATH),
+      )
+      expect(checkV137IntegratedServiceProof(repoRoot, root).status).toBe(
+        "passed-functional-containment-unattested",
+      )
+      expect(checkV137IntegratedServiceProof(repoRoot, root).status).toBe(
+        "passed-functional-containment-unattested",
+      )
+      const after = await readFile(
+        path.join(root, V137_INTEGRATED_SERVICE_PROOF_CONTROL_PATH),
+      )
+      expect(after).toEqual(before)
+    } finally {
+      if (previous === undefined) {
+        delete process.env.COWARDS_V1_37_RESTRICTED_EVIDENCE_ROOT
+      } else {
+        process.env.COWARDS_V1_37_RESTRICTED_EVIDENCE_ROOT = previous
+      }
+      await rm(root, { recursive: true, force: true })
+    }
+  })
+
+  it("fails strict check on missing restricted evidence or stale current inputs", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "v137-proof-mutate-"))
+    const previous = process.env.COWARDS_V1_37_RESTRICTED_EVIDENCE_ROOT
+    process.env.COWARDS_V1_37_RESTRICTED_EVIDENCE_ROOT = root
+    try {
+      const control = await writeV137IntegratedServiceProofFixture(repoRoot, root)
+      const first = control.records[0]!
+      const objectPath = path.join(
+        root,
+        "objects",
+        first.reference.sha256.slice(7, 9),
+        first.reference.sha256.slice(9, 11),
+        first.reference.sha256.slice(7),
+      )
+      await rm(objectPath)
+      expect(() => checkV137IntegratedServiceProof(repoRoot, root)).toThrow(
+        "V137_SERVICE_PROOF_RESTRICTED_OBJECT_MISSING",
+      )
+
+      await rm(root, { recursive: true, force: true })
+      await mkdir(root, { recursive: true })
+      const rewritten = await writeV137IntegratedServiceProofFixture(
+        repoRoot,
+        root,
+      )
+      rewritten.receipt.inputRootSha256 =
+        `sha256:${"7".repeat(64)}` as `sha256:${string}`
+      await writeFile(
+        path.join(root, V137_INTEGRATED_SERVICE_PROOF_CONTROL_PATH),
+        `${JSON.stringify(rewritten)}\n`,
+      )
+      expect(() => checkV137IntegratedServiceProof(repoRoot, root)).toThrow(
+        "V137_SERVICE_PROOF_INPUT_STALE",
+      )
+    } finally {
+      if (previous === undefined) {
+        delete process.env.COWARDS_V1_37_RESTRICTED_EVIDENCE_ROOT
+      } else {
+        process.env.COWARDS_V1_37_RESTRICTED_EVIDENCE_ROOT = previous
+      }
+      await rm(root, { recursive: true, force: true })
+    }
+  })
+
+  it("exposes exactly one live write command and one pure check command", () => {
+    const packageJson = JSON.parse(
+      readFileSync(path.join(repoRoot, "package.json"), "utf8"),
+    ) as { scripts: Record<string, string> }
+    expect(packageJson.scripts["v1.37:integrated-service-proof:write"]).toBe(
+      "pnpm exec tsx scripts/run-v1-37-integrated-service-proof.ts --write",
+    )
+    expect(packageJson.scripts["v1.37:integrated-service-proof:check"]).toBe(
+      "pnpm exec tsx scripts/run-v1-37-integrated-service-proof.ts --check",
+    )
   })
 })
