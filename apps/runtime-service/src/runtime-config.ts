@@ -37,6 +37,8 @@ export interface RuntimeServiceConfigInput {
     | undefined
   deploymentLaneRegistryId?: string | undefined
   semanticReceiptSecret?: string | undefined
+  containerImage?: string | undefined
+  pythonContainerImage?: string | undefined
 }
 
 export interface RuntimeServiceConfig {
@@ -50,6 +52,7 @@ export interface RuntimeServiceConfig {
   ): SuccessorRuntimeIdentityTemplateV117 | undefined
   deploymentLaneRegistryId?: string | undefined
   semanticReceiptSecret: string
+  pythonContainerImage?: string | undefined
   contractSelection: RuntimeServiceContractSelection
   resolveContractSelectionForRequest(
     frozenSelection: unknown,
@@ -195,7 +198,11 @@ export const createRuntimeServiceConfig = (
       }
     }
     case "container-subprocess": {
-      const adapter = createContainerSubprocessStrategyExecutionAdapter()
+      const adapter = createContainerSubprocessStrategyExecutionAdapter({
+        ...(input.containerImage === undefined
+          ? {}
+          : { image: input.containerImage }),
+      })
       return {
         adapter,
         metadata: adapter.metadata,
@@ -203,6 +210,9 @@ export const createRuntimeServiceConfig = (
         resolveSuccessorRuntimeIdentityTemplate,
         deploymentLaneRegistryId: input.deploymentLaneRegistryId,
         semanticReceiptSecret,
+        ...(input.pythonContainerImage === undefined
+          ? {}
+          : { pythonContainerImage: input.pythonContainerImage }),
         contractSelection,
         resolveContractSelectionForRequest,
       }

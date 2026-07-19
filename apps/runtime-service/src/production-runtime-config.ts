@@ -40,6 +40,9 @@ export const runtimeServiceConfigFromEnvironment = (
       deploymentLaneRegistryId: registry.registryId,
       semanticReceiptSecret:
         environment.COWARDS_RUNTIME_SERVICE_SEMANTIC_RECEIPT_SECRET,
+      containerImage: environment.COWARDS_RUNTIME_TYPESCRIPT_CONTAINER_IMAGE,
+      pythonContainerImage:
+        environment.COWARDS_RUNTIME_PYTHON_CONTAINER_IMAGE,
     }),
     semanticAuthoritySelection:
       runtimeServiceSemanticSelectionFromEnvironment(),

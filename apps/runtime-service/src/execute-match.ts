@@ -72,6 +72,7 @@ import {
 import { createRuntimeFromRevision } from "@cowards/runtime-js/worker"
 import { createPythonRuntimeFromRevision } from "@cowards/runtime-python"
 import { createWasmWasiRuntimeFromRevision } from "@cowards/runtime-wasm-wasi"
+import { createPinnedPythonContainerRuntime } from "./pinned-python-container-runtime.js"
 import {
   createCurrentReplay,
   createCandidateReplayV119,
@@ -884,20 +885,34 @@ const createRuntimeForRevision = (
   if (registryEntry.runtimeTarget === "runtime-python") {
     return {
       ok: true,
-      runtime: createPythonRuntimeFromRevision(revision, {
-        timeoutMs: Math.min(
-          limits.timeoutMs,
-          revision.runtime.limits.timeoutMs,
-        ),
-        stdoutBytes: Math.min(
-          limits.stdoutBytes,
-          revision.runtime.limits.stdoutBytes,
-        ),
-        stderrBytes: Math.min(
-          limits.stderrBytes,
-          revision.runtime.limits.stderrBytes,
-        ),
-      }),
+      runtime:
+        runtimeConfig.pythonContainerImage === undefined
+          ? createPythonRuntimeFromRevision(revision, {
+              timeoutMs: Math.min(
+                limits.timeoutMs,
+                revision.runtime.limits.timeoutMs,
+              ),
+              stdoutBytes: Math.min(
+                limits.stdoutBytes,
+                revision.runtime.limits.stdoutBytes,
+              ),
+              stderrBytes: Math.min(
+                limits.stderrBytes,
+                revision.runtime.limits.stderrBytes,
+              ),
+            })
+          : createPinnedPythonContainerRuntime({
+              revision,
+              image: runtimeConfig.pythonContainerImage,
+              timeoutMs: Math.min(
+                limits.timeoutMs,
+                revision.runtime.limits.timeoutMs,
+              ),
+              stdoutBytes: Math.min(
+                limits.stdoutBytes,
+                revision.runtime.limits.stdoutBytes,
+              ),
+            }),
     }
   }
   if (registryEntry.runtimeTarget === "runtime-wasm-wasi") {
