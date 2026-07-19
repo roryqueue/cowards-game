@@ -5,16 +5,16 @@ milestone_name: Rules Integrity and Strategy Evaluation Foundations — ACTIVE
 current_phase: 261
 current_phase_name: integrated-service-proof-drift-guards-and-release
 status: executing
-stopped_at: Completed 261-01-PLAN.md
-last_updated: "2026-07-19T16:32:15.260Z"
+stopped_at: Completed 261-02-PLAN.md
+last_updated: "2026-07-19T16:52:58.556Z"
 last_activity: 2026-07-19
-last_activity_desc: Completed Phase 261 plan 01 closed proof and restricted evidence contracts
+last_activity_desc: Phase 261 plan 02 release privacy and drift guards passed
 progress:
   total_phases: 6
   completed_phases: 5
   total_plans: 149
-  completed_plans: 136
-  percent: 83
+  completed_plans: 137
+  percent: 92
 ---
 
 # State: Coward's Game
@@ -29,11 +29,11 @@ See: `.planning/PROJECT.md` (updated 2026-07-12)
 ## Current Position
 
 Phase: 261 (integrated-service-proof-drift-guards-and-release) — EXECUTING
-Plan: 2 of 13
+Plan: 3 of 13
 Status: Ready to execute
-Last activity: 2026-07-19 — Phase 261 plan 01 contracts and verification passed
+Last activity: 2026-07-19 — Phase 261 plan 02 release privacy and drift guards passed
 
-Progress: [████████░░] 83%
+Progress: [█████████░] 92%
 
 ## Durable Decisions
 
@@ -89,9 +89,9 @@ Progress: [████████░░] 83%
 
 **Resume file:** None
 
-Last session: 2026-07-19T16:32:15.242Z
-Stopped at: Completed 261-01-PLAN.md
-Next command: Execute 261-02 release privacy and drift guards.
+Last session: 2026-07-19T16:52:58.540Z
+Stopped at: Completed 261-02-PLAN.md
+Next command: Execute 261-03 integrated service proof.
 
 ## Performance Metrics
 
@@ -171,6 +171,7 @@ Next command: Execute 261-02 release privacy and drift guards.
 | Phase 260 P49 | multi-session | 2 TDD tasks + review convergence | exact released/selected service and replay gates; refreshed preactivation proof |
 | Phase 260 P15 | multi-session resumed | 3 tasks + review/validation/verification | 9/9 requirements; 12 proof gates; full workspace suite; 44 boundary assertions |
 | Phase 261 P01 | 13min | 2 tasks | 7 files |
+| Phase 261 P02 | 17min | 2 tasks | 5 files |
 
 ## Decisions
 
@@ -362,3 +363,6 @@ Next command: Execute 261-02 release privacy and drift guards.
 - [Phase 260]: Keep candidate replay and result projections inactive and non-publishable until Plan 260-14 — Render approved DTO labels mechanically without hash, fairness, seed, rules, runtime, or Strategy-execution derivation.
 - [Phase 260]: Boundary ownership follows original imported symbols and resolved local-module paths; aliases, computed access, generated-looking headers, and fixture placement grant no execution or semantic authority. — D-03, D-09, D-13, and STRAT-04 require executable rather than declarative ownership.
 - [Phase 260]: Chronicle grammar allowlists suppress only recorded observation derivation findings; execution import and re-export checks stay active. — Historical validation compatibility cannot become an execution-ownership escape.
+- [Phase 261]: Construction-time release monitoring uses source-fixture mode only; strict-release stays fail-closed until all collectors and rollups exist. — Future evidence cannot make the current build gate impossible, and final release cannot pass on missing artifacts.
+- [Phase 261]: Functional four-language conformance and counted containment are independent release facts. — An unattested lane remains non-counted even when functional execution passes.
+- [Phase 261]: Release findings expose only stable code, class, and logical artifact identity. — Source paths, diagnostics, and concrete restricted preimages never enter public or default results.
