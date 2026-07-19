@@ -2,19 +2,19 @@
 gsd_state_version: 1.0
 milestone: v1.37
 milestone_name: Rules Integrity and Strategy Evaluation Foundations — ACTIVE
-current_phase: 260
-current_phase_name: truthful-strategy-inputs-arena-authority-and-set-fairness
-status: executing
-stopped_at: Plan 260-14 complete; runtime v1.19 is finalized and Plan 260-15 closure is ready
-last_updated: "2026-07-19T13:26:09.000Z"
+current_phase: 261
+current_phase_name: integrated-service-proof-drift-guards-and-release
+status: ready_for_planning
+stopped_at: Phase 260 complete and verified; Phase 261 research and planning are next
+last_updated: "2026-07-19T15:05:00.000Z"
 last_activity: 2026-07-19
-last_activity_desc: Atomically activated and postactivation-verified the complete runtime-v1.19 semantic authority
+last_activity_desc: Closed and verified Phase 260 with one executable proof and 44 permanent boundary assertions
 progress:
   total_phases: 6
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 135
-  completed_plans: 134
-  percent: 99
+  completed_plans: 135
+  percent: 100
 ---
 
 # State: Coward's Game
@@ -24,16 +24,16 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-07-12)
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
-**Current focus:** Phase 260 — truthful-strategy-inputs-arena-authority-and-set-fairness
+**Current focus:** Phase 261 — integrated-service-proof-drift-guards-and-release
 
 ## Current Position
 
-Phase: 260 (truthful-strategy-inputs-arena-authority-and-set-fairness) — EXECUTING
-Plan: 48 of 49
-Status: Runtime v1.19 finalized; ready for the Plan 260-15 integrated closure proof and permanent monitors
-Last activity: 2026-07-19 — Plan 260-14 activation and independent postactivation review PASS
+Phase: 261 (integrated-service-proof-drift-guards-and-release) — READY FOR PLANNING
+Plan: 0 of TBD
+Status: Phase 260 passed 9/9 requirements with zero open gaps; Phase 261 research and planning may begin
+Last activity: 2026-07-19 — Phase 260 aggregate proof, code review, validation, and verification PASS
 
-Progress: [██████████] 96%
+Progress: [████████░░] 83%
 
 ## Durable Decisions
 
@@ -72,6 +72,7 @@ Progress: [██████████] 96%
 - Selected-current replay requires the exact persisted v1.19 Match/Set/arena/initiative reproducibility envelope; explicit v1.17 replay remains independently immutable.
 - Initial initiative is present in v1.19 replay state and absent from frozen v1.17 projections, so successor truth cannot rewrite historical evidence.
 - Runtime v1.19 is the finalized current semantic authority at PostgreSQL revision 2, bound to activation commit `617a240`, tree `4cf0f2a`, the exact five-selector manifest, and the activation proof digest with no pending intent or compensation.
+- Phase 260 closure is sustained by one exact-input aggregate proof and one pure non-recursive default monitor; all nine Strategy/Set requirements, sixteen decisions, four lanes/twelve runs/four certificates, four Set conditions, nine revision-specific fail-closed dispositions, historical compatibility, and public privacy are proved.
 
 ## Deferred Items
 
@@ -88,9 +89,9 @@ Progress: [██████████] 96%
 
 **Resume file:** None
 
-Last session: 2026-07-19T13:26:09.000Z
-Stopped at: Plan 260-14 is complete; runtime v1.19 is finalized, smoke-tested, and independently postactivation-verified with no pending intent or compensation.
-Next command: Execute Plan 260-15 integrated Phase-260 evaluator, proof artifacts, and permanent boundary monitors.
+Last session: 2026-07-19T15:05:00.000Z
+Stopped at: Phase 260 is complete and verified with 49/49 plans and zero open gaps.
+Next command: Research and plan Phase 261 integrated service proof, drift guards, audit, archive, tag, and Strategy-foundation handoff.
 
 ## Performance Metrics
 
@@ -168,6 +169,7 @@ Next command: Execute Plan 260-15 integrated Phase-260 evaluator, proof artifact
 | Phase 260 P38 | 18min | 1 TDD task + independent review | 2 engine files; 34 focused compatibility/replay tests |
 | Phase 260 P39 | 20min | 1 TDD task + amended review | 2 replay files; 22 focused tests and 61 exact-selector tests |
 | Phase 260 P49 | multi-session | 2 TDD tasks + review convergence | exact released/selected service and replay gates; refreshed preactivation proof |
+| Phase 260 P15 | multi-session resumed | 3 tasks + review/validation/verification | 9/9 requirements; 12 proof gates; full workspace suite; 44 boundary assertions |
 
 ## Decisions
 

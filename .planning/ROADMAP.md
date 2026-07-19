@@ -321,7 +321,7 @@ Plans:
   4. Each counted scenario explicitly schedules every entrant on each side and in each initial-initiative state, proved at entrant level through TypeScript, Go, persistence, and service-backed tests.
   5. Arena and Set repair adds no official geometry or valid v1.4 gameplay change; any change to Strategy observation or reachable Match semantics stops for explicit compatibility approval.
 
-**Plans:** 47/49 plans executed
+**Plans:** 49/49 plans executed
 
 **Wave 1 — immutable semantic authorities**
 
@@ -472,7 +472,7 @@ Plans:
 
 **Wave 34 *(blocked on Wave 33 completion)* — integrated closure**
 
-- [ ] 260-15-PLAN.md — Close Phase 260 with one executable proof and permanent drift monitors.
+- [x] 260-15-PLAN.md — Close Phase 260 with one executable proof and permanent drift monitors.
 
 **Cross-cutting constraints:** all preactivation work is versioned candidate-only; Phase-259 current selectors, corpus/trace pins, Workshop defaults, certificates, and historical evidence remain exact until the single activation commit; initiative and Advance observations are kernel-owned; Set fairness is explicit four-condition identity rather than seed parsing; no valid v1.4 gameplay, official geometry, Strategy execution ownership, or public privacy boundary changes.
 

@@ -1,35 +1,30 @@
 {
   "version": "1.0",
-  "timestamp": "2026-07-19T13:26:09.000Z",
-  "phase": "260",
-  "phase_name": "truthful-strategy-inputs-arena-authority-and-set-fairness",
-  "phase_dir": ".planning/phases/260-truthful-strategy-inputs-arena-authority-and-set-fairness",
-  "plan": 15,
-  "task": 1,
-  "total_tasks": 3,
-  "status": "in_progress",
+  "timestamp": "2026-07-19T15:05:00.000Z",
+  "phase": "261",
+  "phase_name": "integrated-service-proof-drift-guards-and-release",
+  "phase_dir": ".planning/phases/261-integrated-service-proof-drift-guards-and-release",
+  "plan": 0,
+  "task": 0,
+  "total_tasks": 0,
+  "status": "ready_for_planning",
   "completed_tasks": [
     {
-      "id": 14,
-      "name": "Activate five selectors and one transactional database selection head",
+      "id": 15,
+      "name": "Close Phase 260 with one executable proof and permanent drift monitors",
       "status": "complete",
-      "progress": "Activation commit 617a240 finalized runtime v1.19 at database revision 2. Prepare, 23-gate validation, rollback drill, stage, commit, finalize, smoke, and independent postactivation evaluation all passed."
+      "progress": "Phase 260 passed 9/9 requirements and 16/16 decisions with four lanes, twelve runs, four certificates, four Set conditions, 12 aggregate gates, the full workspace suite, and 44 permanent boundary assertions."
     }
   ],
   "remaining_tasks": [
     {
       "id": 1,
-      "name": "Build the strict Phase-260 evaluator and complete tamper matrix",
+      "name": "Research Phase 261 integrated release proof against current HEAD and Phase 260 evidence",
       "status": "pending"
     },
     {
       "id": 2,
-      "name": "Execute the full service-backed Phase-260 closure gate",
-      "status": "pending"
-    },
-    {
-      "id": 3,
-      "name": "Serialize the pure Phase-260 check into the default boundary chain",
+      "name": "Plan Phase 261 through final audit, archive, tag, and Strategy-foundation handoff",
       "status": "pending"
     }
   ],
@@ -45,6 +40,11 @@
     {
       "decision": "Historical v1.17 generation and replay remain explicit immutable routes independent of selected-current registries.",
       "rationale": "Activation must not reinterpret persisted v1.4/v1.17 evidence.",
+      "phase": "260"
+    },
+    {
+      "decision": "Phase 260 is complete only while its exact-input proof and permanent default monitor remain green.",
+      "rationale": "Documentation alone cannot sustain truthful observations, arena authority, Set fairness, or counted-lane eligibility.",
       "phase": "260"
     }
   ],
@@ -63,6 +63,6 @@
   "background_processes": [],
   "database_state": "active-v1.19-finalized|2|sha256:17954660f17c83e60e5d7df0b589cd89cf6b00eba4d4963e2d4bf43bc71c6ea2|null|activation:phase260:plan14:production|null",
   "protected_baseline": "sha256:c0e1c2a6319f01377df74a2d6e5c493d26382f2882c059116c5ba467e5e81707",
-  "next_action": "Execute .planning/phases/260-truthful-strategy-inputs-arena-authority-and-set-fairness/260-15-PLAN.md from Task 1, preserving the finalized runtime-v1.19 head and the two protected user changes.",
-  "context_notes": "Milestone v1.37 is not complete. Phase 260 has one remaining plan. PostgreSQL and Redis containers are healthy. The activation is finalized with no pending intent or compensation, and postactivation evaluation returned zero errors."
+  "next_action": "Research and plan Phase 261 from its approved context, preserving the finalized runtime-v1.19 head, exact Phase-260 proof, and the two protected user changes.",
+  "context_notes": "Milestone v1.37 is not complete. Phase 260 is complete and verified with zero open gaps. PostgreSQL and Redis containers are healthy. Phase 261 owns the integrated service proof, final 56/56 audit, archive, annotated v1.37 tag, and Strategy-foundation handoff."
 }
