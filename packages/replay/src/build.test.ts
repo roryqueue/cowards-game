@@ -11,7 +11,10 @@ import {
   type StrategyRuntime,
 } from "@cowards/engine"
 import { adaptRuntimeForCurrentKernel } from "@cowards/engine/test/current-kernel-runtime"
-import { recordChronicleFromExecution } from "./record.js"
+import {
+  recordCurrentChronicleTestSupport as recordChronicleFromExecution,
+  runCurrentMatchForReplayTestSupport,
+} from "./test/current-recording.js"
 
 const createRecordingRuntime = (
   observedInputs: Map<string, SoldierBrainInput>,
@@ -73,7 +76,7 @@ const metadata = {
 }
 
 const createRecorded = (runtime: StrategyRuntime) => {
-  const execution = MATCH_KERNEL.runMatch(
+  const execution = runCurrentMatchForReplayTestSupport(
     createMatchInput(adaptRuntimeForCurrentKernel(runtime)),
   )
   if (execution.kind !== "completed") {
@@ -176,7 +179,7 @@ describe("candidate Chronicle recording", () => {
         }
       },
     } as unknown as StrategyRuntime
-    const execution = MATCH_KERNEL.runMatch(
+    const execution = runCurrentMatchForReplayTestSupport(
       createMatchInput(adaptRuntimeForCurrentKernel(systemFailureRuntime)),
     )
     const recorded = recordChronicleFromExecution({ execution, metadata })

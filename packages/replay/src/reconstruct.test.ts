@@ -8,7 +8,10 @@ import {
   createHistoricalV14Replay,
   validateCurrentReplayReconstruction,
 } from "./reconstruct.js"
-import { recordChronicleFromExecution } from "./record.js"
+import {
+  recordCurrentChronicleTestSupport as recordChronicleFromExecution,
+  runCurrentMatchForReplayTestSupport,
+} from "./test/current-recording.js"
 
 const HISTORICAL_V14_VERSIONS = Object.freeze({
   spec: "cowards-rules-v1.4",
@@ -43,7 +46,7 @@ const turnToStoneRuntime: StrategyRuntime = {
 }
 
 const createBuiltCurrentInput = () => {
-  const execution = MATCH_KERNEL.runMatch({
+  const execution = runCurrentMatchForReplayTestSupport({
     matchId: "reconstruct-match",
     seed: "reconstruct-seed",
     arenaVariant: {

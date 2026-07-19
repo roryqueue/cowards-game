@@ -2,7 +2,10 @@ import { describe, expect, it } from "vitest"
 import type { SoldierBrainInput, StrategyInput } from "@cowards/spec"
 import { MATCH_KERNEL, type StrategyRuntime } from "@cowards/engine"
 import { adaptRuntimeForCurrentKernel } from "@cowards/engine/test/current-kernel-runtime"
-import { recordChronicleFromExecution } from "./record.js"
+import {
+  recordCurrentChronicleTestSupport as recordChronicleFromExecution,
+  runCurrentMatchForReplayTestSupport,
+} from "./test/current-recording.js"
 import { validateCurrentChronicle } from "./validate.js"
 
 describe("replay semantic integrity", () => {
@@ -32,7 +35,7 @@ describe("replay semantic integrity", () => {
         }
       },
     }
-    const execution = MATCH_KERNEL.runMatch({
+    const execution = runCurrentMatchForReplayTestSupport({
       matchId: "match:replay-semantic-red",
       seed: "seed:replay-semantic-red",
       arenaVariant: {

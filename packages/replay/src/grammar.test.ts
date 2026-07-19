@@ -14,7 +14,10 @@ import {
   createCurrentChronicleGrammarState,
   validateChronicleGrammar,
 } from "./grammar.js"
-import { recordChronicleFromExecution } from "./record.js"
+import {
+  recordCurrentChronicleTestSupport as recordChronicleFromExecution,
+  runCurrentMatchForReplayTestSupport,
+} from "./test/current-recording.js"
 import { validateCurrentChronicle } from "./validate.js"
 
 const runtime: StrategyRuntime = {
@@ -43,7 +46,7 @@ const runtime: StrategyRuntime = {
 const createChronicle = (
   strategyRuntime: StrategyRuntime = runtime,
 ): Chronicle => {
-  const execution = MATCH_KERNEL.runMatch({
+  const execution = runCurrentMatchForReplayTestSupport({
     matchId: "grammar-match",
     seed: "grammar-seed",
     arenaVariant: {

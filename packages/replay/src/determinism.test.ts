@@ -8,7 +8,10 @@ import {
 import { adaptRuntimeForCurrentKernel } from "@cowards/engine/test/current-kernel-runtime"
 import { createChronicleContentHash } from "./hash.js"
 import { normalizeChronicle } from "./normalize.js"
-import { recordChronicleFromExecution } from "./record.js"
+import {
+  recordCurrentChronicleTestSupport as recordChronicleFromExecution,
+  runCurrentMatchForReplayTestSupport,
+} from "./test/current-recording.js"
 import { validateCurrentChronicle } from "./validate.js"
 
 const deterministicRuntime: StrategyRuntime = {
@@ -63,7 +66,7 @@ const createMatchInput = (
 })
 
 const buildNormalized = (input: RunMatchInput) => {
-  const execution = MATCH_KERNEL.runMatch({
+  const execution = runCurrentMatchForReplayTestSupport({
     ...input,
     runtime: input.runtime,
   })

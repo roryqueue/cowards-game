@@ -29,7 +29,10 @@ import { MATCH_KERNEL, type StrategyRuntime } from "@cowards/engine"
 import { adaptRuntimeForCurrentKernel } from "@cowards/engine/test/current-kernel-runtime"
 import { createChronicleContentHash } from "./hash.js"
 import { projectOwnerChronicle } from "./project.js"
-import { recordChronicleFromExecution } from "./record.js"
+import {
+  recordCurrentChronicleTestSupport as recordChronicleFromExecution,
+  runCurrentMatchForReplayTestSupport,
+} from "./test/current-recording.js"
 import {
   migrateChronicle,
   resolveReplayCompatibilityIdentity,
@@ -116,7 +119,7 @@ const createCurrentReplayInput = (
   candidateRuntime: StrategyRuntime = runtime,
   overrides: { readonly matchId?: string; readonly maxPhases?: number } = {},
 ) => {
-  const execution = MATCH_KERNEL.runMatch({
+  const execution = runCurrentMatchForReplayTestSupport({
     matchId: overrides.matchId ?? "validation-match",
     seed: "validation-seed",
     arenaVariant: {

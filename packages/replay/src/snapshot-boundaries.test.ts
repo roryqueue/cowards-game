@@ -8,7 +8,10 @@ import type {
 import { describe, expect, it } from "vitest"
 import { MATCH_KERNEL, type StrategyRuntime } from "@cowards/engine"
 import { adaptRuntimeForCurrentKernel } from "@cowards/engine/test/current-kernel-runtime"
-import { recordChronicleFromExecution } from "./record.js"
+import {
+  recordCurrentChronicleTestSupport as recordChronicleFromExecution,
+  runCurrentMatchForReplayTestSupport,
+} from "./test/current-recording.js"
 import { validateSnapshotBoundaries } from "./snapshot-boundaries.js"
 import { validateCurrentChronicle } from "./validate.js"
 
@@ -59,7 +62,7 @@ const passiveRuntime: StrategyRuntime = {
 const createChronicle = (
   runtime: StrategyRuntime = turnToStoneRuntime,
 ): Chronicle => {
-  const execution = MATCH_KERNEL.runMatch({
+  const execution = runCurrentMatchForReplayTestSupport({
     matchId: "snapshot-boundary-match",
     seed: "snapshot-boundary-seed",
     arenaVariant: {

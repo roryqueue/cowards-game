@@ -9,7 +9,10 @@ import { adaptRuntimeForCurrentKernel } from "@cowards/engine/test/current-kerne
 import { createChronicleContentHash } from "./hash.js"
 import { projectOwnerChronicle, projectPublicChronicle } from "./project.js"
 import { createCurrentReplay } from "./reconstruct.js"
-import { recordChronicleFromExecution } from "./record.js"
+import {
+  recordCurrentChronicleTestSupport as recordChronicleFromExecution,
+  runCurrentMatchForReplayTestSupport,
+} from "./test/current-recording.js"
 import { validateCurrentChronicle } from "./validate.js"
 
 const PRIVATE_STRATEGY_MEMORY_MARKER = "INTEGRATION_PRIVATE_STRATEGY_MEMORY"
@@ -69,7 +72,7 @@ const createMatchInput = (): RunMatchInput => ({
 
 describe("replay package integration", () => {
   it("builds, validates, hashes, reconstructs, iterates, and projects a deterministic Match", () => {
-    const execution = MATCH_KERNEL.runMatch(createMatchInput())
+    const execution = runCurrentMatchForReplayTestSupport(createMatchInput())
     const recorded = recordChronicleFromExecution({
       execution,
       metadata: {

@@ -16,9 +16,12 @@ import {
 } from "./reconstruct.js"
 import { validateCurrentTransitionPostconditions } from "./current-transition-postconditions.js"
 import {
-  recordChronicleFromExecution,
   type RecordedCanonicalTransitionV137,
 } from "./record.js"
+import {
+  recordCurrentChronicleTestSupport as recordChronicleFromExecution,
+  runCurrentMatchForReplayTestSupport,
+} from "./test/current-recording.js"
 import {
   compareCurrentReplayTransitionV137,
   resolveVersionedReplayTransitionEventContractV117,
@@ -367,7 +370,7 @@ const candidateInput = () => {
       }
     },
   }
-  const execution = MATCH_KERNEL.runMatch({
+  const execution = runCurrentMatchForReplayTestSupport({
     matchId: "candidate-reconstruction",
     seed: "candidate-reconstruction-seed",
     arenaVariant: {
