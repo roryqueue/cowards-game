@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto"
 import { describe, expect, it } from "vitest"
 import {
   V137_RELEASE_ARTIFACT_CLASSES,
@@ -138,6 +139,22 @@ describe("v1.37 release boundaries", () => {
     }
   })
 
+  it("requires every public artifact class exactly once", () => {
+    const fixture = createV137ReleaseBoundaryFixture("source-fixture")
+    const [first, second, ...rest] = fixture.publicArtifacts
+    expect(first).toBeDefined()
+    expect(second).toBeDefined()
+    const duplicatedClass = [
+      first!,
+      { ...second!, artifactClass: first!.artifactClass },
+      ...rest,
+    ]
+
+    expect(
+      findingCodes(replace(fixture, { publicArtifacts: duplicatedClass })),
+    ).toContain("RELEASE_PUBLIC_SCHEMA_DRIFT")
+  })
+
   it("accepts a complete exact strict-release inventory", () => {
     const fixture = createV137ReleaseBoundaryFixture("strict-release")
 
@@ -147,6 +164,16 @@ describe("v1.37 release boundaries", () => {
       publicArtifactCount: V137_RELEASE_ARTIFACT_CLASSES.length,
       strictArtifactCount: V137_RELEASE_REQUIRED_STRICT_ARTIFACTS.length,
     })
+  })
+
+  it("strict inventory includes the exact event, arena, and Set authorities", () => {
+    expect(V137_RELEASE_REQUIRED_STRICT_ARTIFACTS.map(({ id }) => id)).toEqual(
+      expect.arrayContaining([
+        "current-event-authority",
+        "current-arena-authority",
+        "current-set-policy-authority",
+      ]),
+    )
   })
 
   it.each(V137_RELEASE_REQUIRED_STRICT_ARTIFACTS)(
@@ -183,6 +210,37 @@ describe("v1.37 release boundaries", () => {
     expect(findingCodes(replace(fixture, { strictArtifacts: [] }))).toContain(
       "RELEASE_ARTIFACT_MISSING",
     )
+  })
+
+  it("strict release applies public privacy and concrete-preimage scans to canonical bytes", () => {
+    const fixture = createV137ReleaseBoundaryFixture("strict-release")
+    const [first, ...rest] = fixture.strictArtifacts
+    expect(first).toBeDefined()
+    const privateValue = "restricted-browser-handoff-78c2"
+    const canonicalBytes = `${JSON.stringify({ status: "pass", note: privateValue })}\n`
+    const actualSha256 = `sha256:${createHash("sha256")
+      .update(canonicalBytes)
+      .digest("hex")}`
+    const strictArtifacts = [
+      {
+        ...first!,
+        canonicalBytes,
+        actualSha256,
+        expectedSha256: actualSha256,
+      },
+      ...rest,
+    ]
+    const result = analyzeV137ReleaseBoundaries(
+      replace(fixture, {
+        strictArtifacts,
+        privatePreimages: [{ category: "restricted-id", value: privateValue }],
+      }),
+    )
+
+    expect(result.findings.map(({ code }) => code)).toContain(
+      "RELEASE_PRIVATE_PREIMAGE",
+    )
+    expect(JSON.stringify(result)).not.toContain(privateValue)
   })
 
   it("findings never contain concrete private values or diagnostics", () => {
