@@ -1,4 +1,5 @@
 import type { PublicStrategyCardDto, StrategyId } from "@cowards/spec"
+import type { JSX } from "react"
 import {
   getPublicStrategyCard,
   isPublicStrategyReadUnavailable,
@@ -16,7 +17,7 @@ export default async function StrategyCardPage({
   params,
 }: {
   params: Promise<{ strategyId: string }> | { strategyId: string }
-}) {
+}): Promise<JSX.Element> {
   const { strategyId } = await params
   let strategy: PublicStrategyCardDto | null
   try {

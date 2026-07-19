@@ -1,4 +1,5 @@
 import { getPublicPlayerProfile } from "../../../lib/public-service-boundary.js"
+import type { JSX } from "react"
 
 export const dynamic = "force-dynamic"
 
@@ -6,7 +7,7 @@ export default async function PlayerProfilePage({
   params,
 }: {
   params: Promise<{ handle: string }> | { handle: string }
-}) {
+}): Promise<JSX.Element> {
   const { handle } = await params
   const profile = await getPublicPlayerProfile(decodeURIComponent(handle))
   if (!profile) {

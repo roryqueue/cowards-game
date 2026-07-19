@@ -1,4 +1,5 @@
 import { COMPETITION_PRESETS } from "@cowards/spec"
+import type { JSX } from "react"
 import { ExhibitionClient } from "../../../exhibitions/new/exhibition-client.js"
 import { getSignedInCompetitionEntryDashboard } from "../../../../lib/public-discovery-service.js"
 import { LadderEntryClient } from "./ladder-entry-client.js"
@@ -17,7 +18,7 @@ export default async function CompetitionEnterPage({
   params,
 }: {
   params: Promise<{ competitionId: string }> | { competitionId: string }
-}) {
+}): Promise<JSX.Element> {
   const { competitionId } = await params
   const dashboard = await getSignedInCompetitionEntryDashboard(competitionId)
 

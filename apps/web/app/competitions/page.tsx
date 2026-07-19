@@ -3,12 +3,13 @@ import {
   CompetitionDiscoveryCard,
   EmptyStates,
 } from "../public-discovery-components.js"
+import type { JSX } from "react"
 import { getPublicCompetitionIndex } from "../../lib/public-discovery-service.js"
 import { COMPETITION_POLICY_V1_36_POSTURE } from "@cowards/spec"
 
 export const dynamic = "force-dynamic"
 
-export default async function CompetitionsPage() {
+export default async function CompetitionsPage(): Promise<JSX.Element> {
   const index = await getPublicCompetitionIndex()
 
   return (

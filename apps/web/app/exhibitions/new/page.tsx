@@ -1,4 +1,5 @@
 import { COMPETITION_PRESETS } from "@cowards/spec"
+import type { JSX } from "react"
 import {
   getCurrentAccountReadUser,
   listAccountReadRevisions,
@@ -9,7 +10,7 @@ import { ExhibitionClient } from "./exhibition-client.js"
 
 export const dynamic = "force-dynamic"
 
-export default async function NewExhibitionPage() {
+export default async function NewExhibitionPage(): Promise<JSX.Element> {
   let accountUnavailable = false
   let revisionsUnavailable = false
   let user: Awaited<ReturnType<typeof getCurrentAccountReadUser>> = null

@@ -1,6 +1,7 @@
 import { COMPETITION_FAIR_PLAY_POLICY } from "@cowards/spec"
+import type { JSX } from "react"
 
-export default function FairPlayPage() {
+export default function FairPlayPage(): JSX.Element {
   return (
     <main className="app-page">
       <section className="app-panel">

@@ -3,6 +3,7 @@ import {
   EmptyStates,
   MatchSetDiscoveryCard,
 } from "../../public-discovery-components.js"
+import type { JSX } from "react"
 import { getPublicCompetitionDetail } from "../../../lib/public-discovery-service.js"
 import { COMPETITION_POLICY_V1_36_POSTURE } from "@cowards/spec"
 
@@ -12,7 +13,7 @@ export default async function CompetitionDetailPage({
   params,
 }: {
   params: Promise<{ competitionId: string }> | { competitionId: string }
-}) {
+}): Promise<JSX.Element> {
   const { competitionId } = await params
   const detail = await getPublicCompetitionDetail(competitionId)
 

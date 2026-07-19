@@ -2,8 +2,9 @@ import type {
   PublicDiscoveryCompetitionCard,
   PublicDiscoveryMatchSetCard,
 } from "@cowards/spec"
+import type { JSX } from "react"
 
-export function ArenaSignal() {
+export function ArenaSignal(): JSX.Element {
   return (
     <div className="arena-signal" aria-label="Coward's Game arena preview">
       <div className="arena-signal-board">
@@ -37,7 +38,7 @@ export function BoundaryNotice({
   privateFieldsExcluded: _privateFieldsExcluded,
 }: {
   privateFieldsExcluded: readonly string[]
-}) {
+}): JSX.Element {
   return (
     <aside className="boundary-notice" aria-label="Discovery read boundary">
       <strong>public-discovery-v1</strong>
@@ -50,7 +51,11 @@ export function BoundaryNotice({
   )
 }
 
-export function EmptyStates({ states }: { states: readonly string[] }) {
+export function EmptyStates({
+  states,
+}: {
+  states: readonly string[]
+}): JSX.Element | null {
   if (!states.length) {
     return null
   }
@@ -69,7 +74,7 @@ export function MatchSetDiscoveryCard({
   matchSet,
 }: {
   matchSet: PublicDiscoveryMatchSetCard
-}) {
+}): JSX.Element {
   return (
     <article className="discovery-card">
       <div className="discovery-card-header">
@@ -104,7 +109,7 @@ export function CompetitionDiscoveryCard({
   competition,
 }: {
   competition: PublicDiscoveryCompetitionCard
-}) {
+}): JSX.Element {
   return (
     <article className="discovery-card">
       <div className="discovery-card-header">

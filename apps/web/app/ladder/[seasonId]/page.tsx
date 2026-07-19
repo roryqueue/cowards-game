@@ -1,5 +1,6 @@
 import { getPublicLadderSeason } from "../../../lib/public-service-boundary.js"
 import { getCurrentPublicReadUser } from "../../../lib/public-service-adapter.js"
+import type { JSX } from "react"
 
 export const dynamic = "force-dynamic"
 
@@ -7,7 +8,7 @@ export default async function TrialLadderSeasonPage({
   params,
 }: {
   params: Promise<{ seasonId: string }> | { seasonId: string }
-}) {
+}): Promise<JSX.Element> {
   const resolvedParams = await params
   const seasonId = decodeURIComponent(resolvedParams.seasonId)
   const [season, user] = await Promise.all([

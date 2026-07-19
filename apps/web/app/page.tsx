@@ -5,11 +5,12 @@ import {
   EmptyStates,
   MatchSetDiscoveryCard,
 } from "./public-discovery-components.js"
+import type { JSX } from "react"
 import { getPublicHomeDiscovery } from "../lib/public-discovery-service.js"
 
 export const dynamic = "force-dynamic"
 
-export default async function HomePage() {
+export default async function HomePage(): Promise<JSX.Element> {
   const discovery = await getPublicHomeDiscovery()
 
   return (

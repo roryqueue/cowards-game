@@ -1,5 +1,6 @@
 import { getWorkshopAnalyticsReadData } from "../../../lib/workshop-analytics-service-boundary.js"
 import { EvidenceExplorerClient } from "./evidence-client.js"
+import type { JSX } from "react"
 
 export const dynamic = "force-dynamic"
 
@@ -15,7 +16,7 @@ const readSingle = (
 
 export default async function EvidencePage({
   searchParams,
-}: EvidencePageProps) {
+}: EvidencePageProps): Promise<JSX.Element> {
   const resolvedSearchParams =
     searchParams === undefined ? undefined : await Promise.resolve(searchParams)
   const analytics = await getWorkshopAnalyticsReadData()

@@ -1,3 +1,4 @@
+import type { JSX } from "react"
 import {
   getCurrentAccountReadUser,
   listAccountReadRevisions,
@@ -16,7 +17,7 @@ const runtimeDisplayLabel = (revision: {
   }
 }) => runtimeExhibitionStatusLabel(revision.runtimeSemantics)
 
-export default async function AccountPage() {
+export default async function AccountPage(): Promise<JSX.Element> {
   let accountUnavailable = false
   let revisionsUnavailable = false
   let user: Awaited<ReturnType<typeof getCurrentAccountReadUser>> = null

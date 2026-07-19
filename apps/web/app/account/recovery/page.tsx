@@ -1,6 +1,7 @@
 import { COMPETITION_ACCOUNT_RECOVERY_POLICY } from "@cowards/spec"
+import type { JSX } from "react"
 
-export default function AccountRecoveryPage() {
+export default function AccountRecoveryPage(): JSX.Element {
   return (
     <main className="app-page">
       <section className="app-panel">
