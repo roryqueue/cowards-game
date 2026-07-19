@@ -321,7 +321,7 @@ Plans:
   4. Each counted scenario explicitly schedules every entrant on each side and in each initial-initiative state, proved at entrant level through TypeScript, Go, persistence, and service-backed tests.
   5. Arena and Set repair adds no official geometry or valid v1.4 gameplay change; any change to Strategy observation or reachable Match semantics stops for explicit compatibility approval.
 
-**Plans:** 45/48 plans executed
+**Plans:** 46/49 plans executed
 
 **Wave 1 — immutable semantic authorities**
 
@@ -460,13 +460,17 @@ Plans:
 
 **Wave 31 *(blocked on Wave 30 completion)* — selected-current persistence test repair**
 
-- [ ] 260-48-PLAN.md — Make the full persistence suite explicit about historical v1.17 versus selected-current v1.19 semantics.
+- [x] 260-48-PLAN.md — Make persistence and replay explicit about historical v1.17 versus selected-current v1.19 semantics.
 
-**Wave 32 *(blocked on Wave 31 completion)* — atomic activation**
+**Wave 32 *(blocked on Wave 31 completion)* — selected-current runtime-service repair**
+
+- [ ] 260-49-PLAN.md — Separate immutable v1.17 service requests from selected-v1.19 defaults and exact successor Chronicle authority.
+
+**Wave 33 *(blocked on Wave 32 completion)* — atomic activation**
 
 - [ ] 260-14-PLAN.md — Activate five selector files and one transactional database selection head in one proved commit.
 
-**Wave 33 *(blocked on Wave 32 completion)* — integrated closure**
+**Wave 34 *(blocked on Wave 33 completion)* — integrated closure**
 
 - [ ] 260-15-PLAN.md — Close Phase 260 with one executable proof and permanent drift monitors.
 
