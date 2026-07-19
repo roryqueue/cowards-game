@@ -1,5 +1,6 @@
 #!/usr/bin/env -S pnpm exec tsx
 import { Buffer } from "node:buffer"
+import { spawnSync } from "node:child_process"
 import { createHash } from "node:crypto"
 import { createRequire } from "node:module"
 import { readFile } from "node:fs/promises"
@@ -41,8 +42,28 @@ export const createProductionPostactivationAdapter = (
   repoRoot: string,
   pool: ProductionPool,
   activationId: string,
-): ActivationCoordinatorAdapter =>
-  createProductionActivationAdapter(repoRoot, pool, { activationId })
+): ActivationCoordinatorAdapter & {
+  gitIsAncestor(ancestor: string, descendant: string): Promise<boolean>
+} => {
+  const adapter = createProductionActivationAdapter(repoRoot, pool, {
+    activationId,
+  })
+  return {
+    ...adapter,
+    gitIsAncestor: async (ancestor, descendant) => {
+      const result = spawnSync(
+        "git",
+        ["merge-base", "--is-ancestor", ancestor, descendant],
+        { cwd: repoRoot, encoding: "utf8" },
+      )
+      if (result.status === 0) return true
+      if (result.status === 1) return false
+      throw new Error(
+        `Unable to verify activation ancestry: ${result.stderr.trim()}`,
+      )
+    },
+  }
+}
 const ALL_PATHS = Object.freeze(
   [...ACTIVATION_SELECTOR_PATHS, ACTIVATION_PROOF_PATH].sort(),
 )
@@ -141,7 +162,7 @@ export interface ActivationProofEvidence {
 }
 
 export interface V137ObservationV119PostactivationEvidence {
-  schemaVersion: "v1.37-observation-v1.19-postactivation-evidence-v3"
+  schemaVersion: "v1.37-observation-v1.19-postactivation-evidence-v4"
   activationId: string
   proof: ActivationProofEvidence
   proofDigest: Sha256
@@ -158,6 +179,7 @@ export interface V137ObservationV119PostactivationEvidence {
     activationTreeSha: string
     activationChangedPaths: string[]
     activationSelectorManifest: SelectorManifestEntry[]
+    activationCommitIsAncestor: boolean
     currentPaths: ActivationPathDigest[]
   }
   smokeReceipt: GateReceipt
@@ -176,6 +198,7 @@ export interface PostactivationEvaluationAdapter {
   gitParent(commit: string): Promise<string>
   gitTree(commit: string): Promise<string>
   changedPaths(commit: string): Promise<string[]>
+  gitIsAncestor(ancestor: string, descendant: string): Promise<boolean>
   readCommitFile(commit: string, path: string): Promise<FileBytes>
   runGate(id: string): Promise<GateReceipt>
 }
@@ -250,7 +273,7 @@ export const collectV137ObservationV119PostactivationEvidence = async (
     left.path.localeCompare(right.path),
   )
   return {
-    schemaVersion: "v1.37-observation-v1.19-postactivation-evidence-v3",
+    schemaVersion: "v1.37-observation-v1.19-postactivation-evidence-v4",
     activationId,
     proof: parseProofBytes(proofFile.bytes),
     proofDigest: sha256(proofFile.bytes),
@@ -270,6 +293,10 @@ export const collectV137ObservationV119PostactivationEvidence = async (
         await adapter.changedPaths(activationCommit)
       ).sort(),
       activationSelectorManifest,
+      activationCommitIsAncestor: await adapter.gitIsAncestor(
+        activationCommit,
+        currentHead,
+      ),
       currentPaths,
     },
     smokeReceipt: await adapter.runGate("smoke"),
@@ -355,6 +382,7 @@ export const validateV137ObservationV119PostactivationEvidence = (
       "activationTreeSha",
       "activationChangedPaths",
       "activationSelectorManifest",
+      "activationCommitIsAncestor",
       "currentPaths",
     ])
   ) {
@@ -383,7 +411,7 @@ export const validateV137ObservationV119PostactivationEvidence = (
   }
   if (
     exactEvidence.schemaVersion !==
-      "v1.37-observation-v1.19-postactivation-evidence-v3" ||
+      "v1.37-observation-v1.19-postactivation-evidence-v4" ||
     !ACTIVATION_ID.test(exactEvidence.activationId) ||
     proof.schemaVersion !== "v1.37-observation-v1.19-activation-proof-v1" ||
     proof.lifecycle !== "pending-precommit" ||
@@ -440,6 +468,18 @@ export const validateV137ObservationV119PostactivationEvidence = (
     errors.push("rollback receipt")
   }
   const finalization = exactEvidence.head.finalization
+  const expectedCurrentPaths: ActivationPathDigest[] = [
+    ...expected.entries.map(({ path: memberPath, sha256: memberSha }) => ({
+      path: memberPath,
+      state: "present" as const,
+      sha256: memberSha,
+    })),
+    {
+      path: ACTIVATION_PROOF_PATH,
+      state: "present" as const,
+      sha256: exactEvidence.proofDigest,
+    },
+  ].sort((left, right) => left.path.localeCompare(right.path))
   if (compensated) {
     const compensation = exactEvidence.head.compensation
     const restoredManifest = proof.preimage
@@ -486,11 +526,12 @@ export const validateV137ObservationV119PostactivationEvidence = (
     exactEvidence.head.compensation !== null ||
     finalization === null ||
     finalization.activationId !== exactEvidence.activationId ||
-    exactEvidence.git.headSha !== finalization.commitSha ||
-    exactEvidence.git.treeSha !== finalization.treeSha ||
-    exactEvidence.git.parentSha !== proof.parentHead ||
-    stable([...exactEvidence.git.changedPaths].sort()) !== stable(ALL_PATHS) ||
-    !validManifest(exactEvidence.git.selectorManifest, expected.entries)
+    !GIT_OBJECT.test(exactEvidence.git.headSha) ||
+    !GIT_OBJECT.test(exactEvidence.git.treeSha) ||
+    !GIT_OBJECT.test(exactEvidence.git.parentSha) ||
+    !exactEvidence.git.activationCommitIsAncestor ||
+    !validManifest(exactEvidence.git.selectorManifest, expected.entries) ||
+    stable(exactEvidence.git.currentPaths) !== stable(expectedCurrentPaths)
   ) {
     errors.push("final semantic head")
   }
@@ -500,6 +541,7 @@ export const validateV137ObservationV119PostactivationEvidence = (
     finalization.treeSha !== exactEvidence.git.activationTreeSha ||
     finalization.proofDigest !== exactEvidence.proofDigest ||
     finalization.selectorManifestRoot !== expected.root ||
+    !exactEvidence.git.activationCommitIsAncestor ||
     hashActivationProofCommitment(
       proof.proofPreimageRoot,
       exactEvidence.proofDigest,

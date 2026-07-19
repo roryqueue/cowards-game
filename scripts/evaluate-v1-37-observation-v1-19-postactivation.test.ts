@@ -80,7 +80,7 @@ const passing = (): V137ObservationV119PostactivationEvidence => {
   const proofDigest = hash(proofBytes)
   const selectorManifest = buildExpectedV119SelectorManifest()
   return {
-    schemaVersion: "v1.37-observation-v1.19-postactivation-evidence-v3",
+    schemaVersion: "v1.37-observation-v1.19-postactivation-evidence-v4",
     activationId: ACTIVATION_ID,
     proof,
     proofDigest,
@@ -113,6 +113,7 @@ const passing = (): V137ObservationV119PostactivationEvidence => {
       activationTreeSha: TREE,
       activationChangedPaths: ALL_PATHS,
       activationSelectorManifest: selectorManifest.entries,
+      activationCommitIsAncestor: true,
       currentPaths: proof.preimage.map((member) =>
         member.path === ACTIVATION_PROOF_PATH
           ? {
@@ -196,6 +197,25 @@ describe("v1.37 observation-v1.19 postactivation evaluator", () => {
     ).toContain("final semantic head")
   })
 
+  it("accepts ordinary descendant commits while the activation remains an immutable ancestor", () => {
+    const descendant = clone(passing())
+    descendant.git.headSha = git("d")
+    descendant.git.parentSha = git("e")
+    descendant.git.treeSha = git("f")
+    descendant.git.changedPaths = ["scripts/follow-up.ts"]
+    expect(
+      validateV137ObservationV119PostactivationEvidence(descendant),
+    ).toEqual({ status: "passed", errors: [] })
+  })
+
+  it("rejects a current head that no longer descends from the activation", () => {
+    const detached = clone(passing())
+    detached.git.activationCommitIsAncestor = false
+    expect(
+      validateV137ObservationV119PostactivationEvidence(detached).status,
+    ).toBe("failed")
+  })
+
   it("requires every validation, rollback, and smoke receipt", () => {
     const missing = clone(passing())
     missing.proof.validationReceipts.pop()
@@ -236,17 +256,17 @@ describe("v1.37 observation-v1.19 postactivation evaluator", () => {
     [
       "commit",
       (value: V137ObservationV119PostactivationEvidence) =>
-        (value.git.headSha = git("9")),
+        (value.git.activationCommitSha = git("9")),
     ],
     [
       "parent",
       (value: V137ObservationV119PostactivationEvidence) =>
-        (value.git.parentSha = git("9")),
+        (value.git.activationParentSha = git("9")),
     ],
     [
       "tree",
       (value: V137ObservationV119PostactivationEvidence) =>
-        (value.git.treeSha = git("9")),
+        (value.git.activationTreeSha = git("9")),
     ],
     [
       "proof",
@@ -420,6 +440,7 @@ describe("v1.37 observation-v1.19 postactivation evaluator", () => {
       gitParent: vi.fn(async () => PARENT),
       gitTree: vi.fn(async () => TREE),
       changedPaths: vi.fn(async () => ALL_PATHS),
+      gitIsAncestor: vi.fn(async () => true),
       readCommitFile: vi.fn(
         async (_commit: string, filePath: string): Promise<FileBytes> => {
           if (filePath === ACTIVATION_PROOF_PATH)
@@ -477,6 +498,7 @@ describe("v1.37 observation-v1.19 postactivation evaluator", () => {
           gitParent: async () => PARENT,
           gitTree: async () => TREE,
           changedPaths: async () => ALL_PATHS,
+          gitIsAncestor: async () => true,
           readCommitFile: async (_commit, filePath) => {
             if (filePath === ACTIVATION_PROOF_PATH)
               return { state: "present", bytes: proofBytes }
