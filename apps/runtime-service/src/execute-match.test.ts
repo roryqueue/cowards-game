@@ -725,7 +725,10 @@ describe("runtime execution service", () => {
       executeCurrentMatchWithAccounting: (nested: unknown) => {
         executions += 1
         return {
-          response: executeRuntimeServiceRequest(nested),
+          response: executeRuntimeServiceRequest(
+            nested,
+            preparedRuntimeConfig,
+          ),
           accounting: {
             budgetProfileSha256,
             ledgerPrestateRoot,

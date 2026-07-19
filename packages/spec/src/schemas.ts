@@ -3018,35 +3018,61 @@ export const RuntimeExecutionEnginePlayerSchema = z.object({
   strategyMemory: JsonValueSchema,
 })
 
-export const RuntimeExecutionFinalStateSchema = z.object({
-  matchId: z.string().min(1),
-  seed: z.string().min(1),
-  versions: CompatibilityVersionsSchema,
-  arenaVariant: ArenaVariantSchema,
-  players: z.tuple([
-    RuntimeExecutionEnginePlayerSchema,
-    RuntimeExecutionEnginePlayerSchema,
-  ]),
-  phase: z.enum(["ROUND", "CONTRACTION", "COMPLETE"]),
-  phaseNumber: z.number().int().positive(),
-  roundNumber: z.union([
-    z.literal(1),
-    z.literal(2),
-    z.literal(3),
-    z.literal(4),
-  ]),
-  activationCount: z.union([
-    z.literal(1),
-    z.literal(2),
-    z.literal(3),
-    z.literal(4),
-  ]),
-  initiativePlayerId: z.string().min(1),
-  bounds: BoardBoundsSchema,
-  soldiers: z.array(SoldierSchema),
-  terrainStones: z.array(PositionSchema),
-  outcome: MatchOutcomeSchema.optional(),
-}) satisfies z.ZodType<RuntimeExecutionFinalState>
+export const RuntimeExecutionFinalStateSchema = z
+  .object({
+    matchId: z.string().min(1),
+    seed: z.string().min(1),
+    versions: CompatibilityVersionsSchema,
+    arenaVariant: ArenaVariantSchema,
+    players: z.tuple([
+      RuntimeExecutionEnginePlayerSchema,
+      RuntimeExecutionEnginePlayerSchema,
+    ]),
+    phase: z.enum(["ROUND", "CONTRACTION", "COMPLETE"]),
+    phaseNumber: z.number().int().positive(),
+    roundNumber: z.union([
+      z.literal(1),
+      z.literal(2),
+      z.literal(3),
+      z.literal(4),
+    ]),
+    activationCount: z.union([
+      z.literal(1),
+      z.literal(2),
+      z.literal(3),
+      z.literal(4),
+    ]),
+    initialInitiativePlayerId: z.string().min(1).optional(),
+    initiativePlayerId: z.string().min(1),
+    bounds: BoardBoundsSchema,
+    soldiers: z.array(SoldierSchema),
+    terrainStones: z.array(PositionSchema),
+    outcome: MatchOutcomeSchema.optional(),
+  })
+  .superRefine((state, ctx) => {
+    const successorSelected =
+      String(CURRENT_SEMANTIC_RUNTIME_ABI_VERSION) ===
+      "strategy-runtime-abi-v1.19"
+    if (successorSelected !== (state.initialInitiativePlayerId !== undefined)) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["initialInitiativePlayerId"],
+        message: "final-state initiative authority is version-exact",
+      })
+    }
+    if (
+      state.initialInitiativePlayerId !== undefined &&
+      !state.players.some(
+        ({ id }) => id === state.initialInitiativePlayerId,
+      )
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["initialInitiativePlayerId"],
+        message: "initial initiative must identify a Match player",
+      })
+    }
+  }) satisfies z.ZodType<RuntimeExecutionFinalState>
 
 const PrefixedSha256Schema = z.string().regex(/^sha256:[0-9a-f]{64}$/u)
 
