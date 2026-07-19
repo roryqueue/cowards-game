@@ -3,6 +3,7 @@ import {
   createChronicleContentHash,
   validateChronicle,
   validateHistoricalV14Chronicle,
+  validateVersionedStoredChronicleV117,
 } from "@cowards/replay"
 import type {
   ArenaVariantId,
@@ -13,7 +14,11 @@ import type {
   PlayerId,
   StrategyRevisionId,
 } from "@cowards/spec"
-import { CANONICAL_COMPATIBILITY_TUPLES } from "@cowards/spec"
+import {
+  CANONICAL_COMPATIBILITY_TUPLES,
+  VERSIONED_RUNTIME_V117_SEMANTIC_TUPLE_RECORD,
+  type RuntimeExecutionCompatibilityIdentity,
+} from "@cowards/spec"
 import type { Queryable } from "./repositories.js"
 import {
   createMatchExecutionEvidencePair,
@@ -146,9 +151,14 @@ const validatePutInput = (
       activeCurrent !== undefined &&
       identity.compatibility.tupleId === activeCurrent.tupleId &&
       isDeepStrictEqual(identity.compatibility.tuple, activeCurrent.tuple)
-    if (
-      !currentTuple
-    ) {
+    const versionedV117Tuple =
+      identity.compatibility.tupleId ===
+        VERSIONED_RUNTIME_V117_SEMANTIC_TUPLE_RECORD.tupleId &&
+      isDeepStrictEqual(
+        identity.compatibility.tuple,
+        VERSIONED_RUNTIME_V117_SEMANTIC_TUPLE_RECORD.tuple,
+      )
+    if (!currentTuple && !versionedV117Tuple) {
       throw new Error("route tuple mismatch")
     }
   } catch {
@@ -214,6 +224,7 @@ const playerIdsFromChronicle = (chronicle: Chronicle): [PlayerId, PlayerId] => {
 
 export const createChronicleMetadata = (
   chronicle: Chronicle,
+  compatibility?: Readonly<RuntimeExecutionCompatibilityIdentity> | undefined,
 ): ChronicleMetadata => {
   const versions = chronicle.reproducibility.versions
   const historicalV14 =
@@ -224,9 +235,18 @@ export const createChronicleMetadata = (
     versions.chronicle === "chronicle-v1.4" &&
     versions.strategyRevision === "0.1.4" &&
     versions.arenaVariant === "0.1.0"
+  const versionedV117 =
+    compatibility?.tupleId ===
+      VERSIONED_RUNTIME_V117_SEMANTIC_TUPLE_RECORD.tupleId &&
+    isDeepStrictEqual(
+      compatibility.tuple,
+      VERSIONED_RUNTIME_V117_SEMANTIC_TUPLE_RECORD.tuple,
+    )
   const validation = historicalV14
     ? validateHistoricalV14Chronicle(chronicle)
-    : validateChronicle(chronicle)
+    : versionedV117
+      ? validateVersionedStoredChronicleV117(chronicle)
+      : validateChronicle(chronicle)
   if (!validation.ok) {
     throw new ChronicleValidationSystemFailure(
       validation.errors[0]?.message ?? "Chronicle validation failed.",
@@ -330,7 +350,10 @@ export const createPostgresChronicleStore = (
 ): ChronicleStore => ({
   async put(rawInput) {
     const { chronicle, integrityIdentity } = validatePutInput(rawInput)
-    const metadata = createChronicleMetadata(chronicle)
+    const metadata = createChronicleMetadata(
+      chronicle,
+      integrityIdentity.identity.compatibility,
+    )
     const identityValues = matchSetIntegritySqlValues(
       integrityIdentity.identity,
     )

@@ -36,6 +36,7 @@ import {
   validateCurrentChronicleSemantics,
   validateChronicle,
   validateHistoricalV14Chronicle,
+  validateVersionedStoredChronicleV117,
   validateReplayInput,
 } from "./validate.js"
 
@@ -814,9 +815,11 @@ describe("validateChronicle", () => {
 
       expect(result.ok, field).toBe(false)
       if (result.ok) return
-      expect(result.issues.map(({ code }) => code), field).toContain(
-        field === "arenaCatalogVersion" ||
-          field === "arenaSemanticGeometryHash"
+      expect(
+        result.issues.map(({ code }) => code),
+        field,
+      ).toContain(
+        field === "arenaCatalogVersion" || field === "arenaSemanticGeometryHash"
           ? "CANDIDATE_CATALOG_INVALID"
           : "CANDIDATE_REPRODUCIBILITY_INVALID",
       )
@@ -869,17 +872,21 @@ describe("validateChronicle", () => {
     })
     expect(withPrivateExtra.ok).toBe(false)
     expect(
-      !withPrivateExtra.ok &&
-        withPrivateExtra.issues.map(({ code }) => code),
+      !withPrivateExtra.ok && withPrivateExtra.issues.map(({ code }) => code),
     ).toEqual(["CANDIDATE_PERSISTED_MATCH_INVALID"])
   })
 
   it("keeps candidate validation structural-only with no gameplay, runtime, or UI authority", () => {
-    const source = readFileSync(new URL("./validate.ts", import.meta.url), "utf8")
+    const source = readFileSync(
+      new URL("./validate.ts", import.meta.url),
+      "utf8",
+    )
     expect(source).not.toMatch(/MATCH_KERNEL|StrategyRuntime|runMatchV119/gu)
     expect(source).not.toMatch(/runtime-service|strategy-provider|apps\/web/gu)
     expect(source).not.toContain("initialInitiativePlayerId =")
-    expect(source).not.toMatch(/seed.*(?:split|slice|substring)|(?:split|slice|substring).*seed/giu)
+    expect(source).not.toMatch(
+      /seed.*(?:split|slice|substring)|(?:split|slice|substring).*seed/giu,
+    )
   })
 
   it("atomically validates current tuples while preserving explicit historical dispatch", () => {
@@ -1115,6 +1122,14 @@ describe("validateChronicle", () => {
     }
 
     expect(validateChronicle(withIntegrity)).toEqual({ ok: true })
+  })
+
+  it("validates stored runtime-v1.17 Chronicles without selected-current version dispatch", () => {
+    expect(
+      validateVersionedStoredChronicleV117(
+        createCurrentReplayInput().chronicle,
+      ),
+    ).toEqual({ ok: true })
   })
 
   it("accepts grammar-specific validation codes in the schema contract", () => {

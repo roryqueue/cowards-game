@@ -13,6 +13,7 @@ export {
   validateVersionedChronicleV117,
   validateVersionedChronicleSemanticsV117,
   validateHistoricalV14Chronicle,
+  validateVersionedStoredChronicleV117,
   validateReplayInput,
   V1_37_CURRENT_REPLAY_TUPLE,
   type CurrentChronicleSemanticInput,

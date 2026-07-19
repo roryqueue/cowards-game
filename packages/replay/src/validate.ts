@@ -886,6 +886,47 @@ export const validateHistoricalV14Chronicle = (
   return errors.length === 0 ? { ok: true } : { ok: false, errors }
 }
 
+export const validateVersionedStoredChronicleV117 = (
+  chronicle: unknown,
+): ChronicleValidationResult => {
+  const parsed = ChronicleSchema.safeParse(chronicle)
+  if (!parsed.success) {
+    return {
+      ok: false,
+      errors: [
+        error("SCHEMA_INVALID", "Chronicle does not match the v1.17 schema."),
+      ],
+    }
+  }
+  const value = parsed.data as Chronicle
+  const errors = [
+    ...validateEventOrder(value),
+    ...validateCurrentRequiredEvents(value),
+    ...validateSnapshots(value),
+    ...validateChronicleGrammar(value),
+    ...validateSnapshotBoundaries(value),
+    ...validateChronicleTransitions(value),
+    ...validateHash(value),
+  ]
+  if (
+    value.events.some(
+      ({ type }) =>
+        resolveVersionedReplayTransitionEventContractV117(
+          VERSIONED_RUNTIME_V117_SEMANTIC_TUPLE_RECORD.tupleId,
+          type,
+        ) !== "current-exact",
+    )
+  ) {
+    errors.push(
+      error(
+        "SCHEMA_INVALID",
+        "Chronicle contains an event outside the immutable v1.17 vocabulary.",
+      ),
+    )
+  }
+  return errors.length === 0 ? { ok: true } : { ok: false, errors }
+}
+
 const CURRENT_ISSUE_LIMIT = 16
 const CURRENT_PATH_LIMIT = 8
 const STATE_HASH_DOMAIN =
