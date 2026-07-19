@@ -1553,9 +1553,9 @@ describe("WASM/WASI runtime v1.17 exact Rust/Zig identity", () => {
 
 describe("WASM/WASI runtime alpha", () => {
   it.skipIf(!rustCompileProbe.ok)(
-    "replays immutable v1.14 evidence independently of the selected v1.17 pointer",
+    "replays immutable v1.14 evidence independently of the selected v1.19 pointer",
     () => {
-      expect(STRATEGY_RUNTIME_ABI_VERSION).toBe("strategy-runtime-abi-v1.17")
+      expect(STRATEGY_RUNTIME_ABI_VERSION).toBe("strategy-runtime-abi-v1.19")
       const historicalSource = rustSource.replaceAll(
         STRATEGY_RUNTIME_ABI_VERSION,
         "strategy-runtime-abi-v1.14",

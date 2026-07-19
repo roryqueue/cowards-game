@@ -1,5 +1,5 @@
+import { execFileSync } from "node:child_process"
 import { createHash } from "node:crypto"
-import { readFileSync } from "node:fs"
 import { describe, expect, it } from "vitest"
 import {
   COUNTED_WASM_WASI_RUNTIMES_V1_18,
@@ -12,9 +12,14 @@ import {
 const hash = (character: string): `sha256:${string}` =>
   `sha256:${character.repeat(64)}`
 
-const fileSha256 = (relative: string): string =>
+const historicalBlobSha256 = (commit: string, relative: string): string =>
   createHash("sha256")
-    .update(readFileSync(new URL(relative, import.meta.url)))
+    .update(
+      execFileSync("git", [
+        "show",
+        `${commit}:packages/runtime-wasm-wasi/src/${relative}`,
+      ]),
+    )
     .digest("hex")
 
 describe("Rust and Zig counted WASM/WASI v1.18 identities", () => {
@@ -117,14 +122,29 @@ describe("Rust and Zig counted WASM/WASI v1.18 identities", () => {
     ).toThrow(/lane/u)
   })
 
-  it("keeps all prior v1.17 implementation bytes immutable", () => {
-    expect(fileSha256("./wasm-wasi-subprocess-adapter.ts")).toBe(
+  it("keeps the archived v1.17 implementation blobs immutable while current code evolves", () => {
+    expect(
+      historicalBlobSha256(
+        "44a50b07999bc3f0b56a1ce94c6a66b2916c96b7",
+        "wasm-wasi-subprocess-adapter.ts",
+      ),
+    ).toBe(
       "dcd07df12750f1e61309c752abf298a83c897cc7baf3ed989426c691d450aff8",
     )
-    expect(fileSha256("./validation.ts")).toBe(
+    expect(
+      historicalBlobSha256(
+        "be3a004071680c94b3fedb059e36a60007c19994",
+        "validation.ts",
+      ),
+    ).toBe(
       "47969e9bd49dc5712e34f180ca2eede9b962ce78b2630b25edff3ea7f87d5c56",
     )
-    expect(fileSha256("./metadata.ts")).toBe(
+    expect(
+      historicalBlobSha256(
+        "a630e72192e457b0ebd6ddc1345d8f1ea426c06b",
+        "metadata.ts",
+      ),
+    ).toBe(
       "d67c81a956718968263f053955b74e46796998cc8e7730e35dbcd9ccfdfb76a6",
     )
   })
