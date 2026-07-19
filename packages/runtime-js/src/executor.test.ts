@@ -10,6 +10,7 @@ import type { StrategyExecutionAdapter } from "./adapter.js"
 import {
   createNestedMatchShapeRuntimeFromRevisionTestSupport,
   createRuntimeFromRevision,
+  createSelectedCurrentRuntimeFromRevisionV119,
 } from "./executor.js"
 import {
   createRuntimeViolation,
@@ -264,6 +265,42 @@ describe("StrategyRuntime execution adapter", () => {
       systemFailure: { code: "MALFORMED_IPC", retryable: false },
     })
     expect(adapterCalls).toBe(0)
+  })
+
+  it("executes the selected v1.19 ABI only through its explicit current service bridge", () => {
+    let adapterCalls = 0
+    const revision = buildStrategyRevision({ source: validSource })
+    const runtime = createSelectedCurrentRuntimeFromRevisionV119(revision, {
+      adapter: {
+        metadata: {
+          id: "selected-v119-test-adapter",
+          label: "Selected v1.19 test adapter",
+          default: false,
+          isolationBoundary: "Unit test double.",
+          notes: [],
+          runtimeControls: {
+            timeout: true,
+            outputByteLimit: true,
+            environment: "minimal",
+            execArgv: "empty",
+            resourceLimits: [],
+          },
+        },
+        execute() {
+          adapterCalls += 1
+          return {
+            ok: true,
+            value: { activationOrders: [], strategyMemory: {} },
+          }
+        },
+      },
+    })
+
+    expect(runtime.selectActivations(strategyInput)).toEqual({
+      ok: true,
+      value: { activationOrders: [], strategyMemory: {} },
+    })
+    expect(adapterCalls).toBe(1)
   })
 
   it("keeps executable runtime APIs out of the safe root entrypoint", async () => {
