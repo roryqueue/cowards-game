@@ -25,6 +25,8 @@ import {
   STRATEGY_RUNTIME_ABI_VERSION,
   type SoldierBrainResult,
   type StrategyInput,
+  type StrategyInputV117,
+  type StrategyInputV119,
   type StrategyResult,
   type StrategyRevision,
 } from "@cowards/spec"
@@ -816,7 +818,7 @@ describe("Workshop service contracts", () => {
           normalizationPolicy: "source-line-endings-lf-v1.17",
         },
       })
-      const activationInput: StrategyInput = {
+      const activationInputV117: StrategyInputV117 = {
         phaseNumber: 1,
         roundNumber: 1,
         activationCount: 1,
@@ -838,6 +840,17 @@ describe("Workshop service contracts", () => {
         enemySoldiers: [],
         strategyMemory: {},
       }
+      const activationInput = (
+        String(STRATEGY_RUNTIME_ABI_VERSION) === "strategy-runtime-abi-v1.19"
+          ? ({
+              ...activationInputV117,
+              initialInitiativePlayerId: "player:workshop-local",
+              hasInitialInitiative: true,
+              roundInitiativePlayerId: "player:workshop-local",
+              hasRoundInitiative: true,
+            } satisfies StrategyInputV119)
+          : activationInputV117
+      ) as StrategyInput
 
       expect(STRATEGY_RUNTIME_ABI_VERSION).toBe(
         CURRENT_WORKSHOP_CONTRACT_GENERATED.selection.runtimeAbiVersion,
