@@ -172,10 +172,18 @@ const execution = () => {
       | RuntimeExecutionCandidateMatchAuthorityV119
       | undefined
   }
-  const matchExecution = MATCH_KERNEL.runMatch({
-    ...match,
-    runtime: adaptRuntimeForCurrentKernel(runtime),
-  })
+  const matchExecution =
+    candidateMatch === undefined
+      ? MATCH_KERNEL.runMatch({
+          ...match,
+          runtime: adaptRuntimeForCurrentKernel(runtime),
+        })
+      : MATCH_KERNEL.runMatchV119({
+          ...match,
+          initialInitiativePlayerId:
+            candidateMatch.initialInitiativePlayerId,
+          runtime: adaptRuntimeForCurrentKernel(runtime),
+        })
   const recorded = recordChronicleFromExecution({
     execution: matchExecution,
     metadata: {
