@@ -1527,17 +1527,6 @@ const supervisedProcessGroupHasLiveMembers = async (
     )
 }
 
-const signalSupervisedProcessGroup = (
-  processGroupId: number,
-  signal: "SIGTERM" | "SIGKILL",
-): void => {
-  try {
-    process.kill(-processGroupId, signal)
-  } catch (error) {
-    if ((error as { code?: string }).code !== "ESRCH") throw error
-  }
-}
-
 const waitForSupervisedProcessGroupExit = async (
   processGroupId: number,
   timeoutMs: number,
@@ -1550,13 +1539,32 @@ const waitForSupervisedProcessGroupExit = async (
   return true
 }
 
+const signalSupervisedProcessGroup = async (
+  processGroupId: number,
+  signal: "SIGTERM" | "SIGKILL",
+): Promise<void> => {
+  try {
+    process.kill(-processGroupId, signal)
+  } catch (error) {
+    const code = (error as { code?: string }).code
+    if (code === "ESRCH") return
+    if (
+      code === "EPERM" &&
+      (await waitForSupervisedProcessGroupExit(processGroupId, 250))
+    ) {
+      return
+    }
+    throw error
+  }
+}
+
 const terminateCurrentSupervisedProcessGroup = async (
   processGroupId: number,
 ): Promise<void> => {
   if (!(await supervisedProcessGroupHasLiveMembers(processGroupId))) return
-  signalSupervisedProcessGroup(processGroupId, "SIGTERM")
+  await signalSupervisedProcessGroup(processGroupId, "SIGTERM")
   if (await waitForSupervisedProcessGroupExit(processGroupId, 2_000)) return
-  signalSupervisedProcessGroup(processGroupId, "SIGKILL")
+  await signalSupervisedProcessGroup(processGroupId, "SIGKILL")
   if (!(await waitForSupervisedProcessGroupExit(processGroupId, 8_000))) {
     throw new Error(
       `Current activation gate process group ${processGroupId} did not terminate`,
@@ -1805,7 +1813,10 @@ const assertCandidateDependencyLinks = async (
   }
 }
 
-const copyNodeModules = async (source: string, target: string): Promise<void> => {
+const copyNodeModules = async (
+  source: string,
+  target: string,
+): Promise<void> => {
   await mkdir(path.dirname(target), { recursive: true })
   if (process.platform === "darwin") {
     await execFile("cp", ["-cR", "-P", source, target])

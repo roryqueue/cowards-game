@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { fork } from "node:child_process"
+import { execFile, fork } from "node:child_process"
 import { randomUUID } from "node:crypto"
 import { access, readdir, rename, rm, rmdir, writeFile } from "node:fs/promises"
 import path from "node:path"
@@ -94,27 +94,44 @@ const validConfiguration = (value) =>
   (value.testControlDirectory === null ||
     typeof value.testControlDirectory === "string")
 
-const processGroupExists = (processGroupId) => {
-  try {
-    process.kill(-processGroupId, 0)
-    return true
-  } catch (error) {
-    if (error?.code === "ESRCH") return false
-    throw error
-  }
+const processGroupHasLiveMembers = async (processGroupId) => {
+  const result = await new Promise((resolve, reject) => {
+    execFile(
+      "ps",
+      ["ax", "-o", "pgid=,state="],
+      { encoding: "utf8", maxBuffer: 8 * 1024 * 1024 },
+      (error, stdout) => (error === null ? resolve({ stdout }) : reject(error)),
+    )
+  })
+  return result.stdout
+    .split("\n")
+    .map((line) => line.trim().split(/\s+/u))
+    .some(
+      ([pgid, state]) =>
+        Number(pgid) === processGroupId &&
+        state !== undefined &&
+        !state.startsWith("Z"),
+    )
 }
 
-const signalProcessGroup = (processGroupId, signal) => {
+const signalProcessGroup = async (processGroupId, signal) => {
   try {
     process.kill(-processGroupId, signal)
   } catch (error) {
-    if (error?.code !== "ESRCH") throw error
+    if (error?.code === "ESRCH") return
+    if (
+      error?.code === "EPERM" &&
+      (await waitForProcessGroupExit(processGroupId, 250))
+    ) {
+      return
+    }
+    throw error
   }
 }
 
 const waitForProcessGroupExit = async (processGroupId, timeoutMs) => {
   const deadline = Date.now() + timeoutMs
-  while (processGroupExists(processGroupId)) {
+  while (await processGroupHasLiveMembers(processGroupId)) {
     if (Date.now() >= deadline) return false
     await sleep(POLL_MS)
   }
@@ -123,6 +140,17 @@ const waitForProcessGroupExit = async (processGroupId, timeoutMs) => {
 
 const terminateLauncherProcessGroup = async () => {
   if (launcher === undefined) return
+  if (launcherTerminal !== undefined && !launcherExited) {
+    await Promise.race([launcherExit, sleep(1_500)])
+    if (
+      launcherExited &&
+      !(await processGroupHasLiveMembers(
+        launcherProcessGroupId ?? launcher.pid,
+      ))
+    ) {
+      return
+    }
+  }
   if (!launcherStarted && !launcherExited) {
     if (launcher.connected) launcher.disconnect()
     await Promise.race([launcherExit, sleep(1_000)])
@@ -132,13 +160,13 @@ const terminateLauncherProcessGroup = async () => {
   if (
     !Number.isSafeInteger(processGroupId) ||
     processGroupId <= 0 ||
-    !processGroupExists(processGroupId)
+    !(await processGroupHasLiveMembers(processGroupId))
   ) {
     return
   }
-  signalProcessGroup(processGroupId, "SIGTERM")
+  await signalProcessGroup(processGroupId, "SIGTERM")
   if (await waitForProcessGroupExit(processGroupId, TERMINATE_GRACE_MS)) return
-  signalProcessGroup(processGroupId, "SIGKILL")
+  await signalProcessGroup(processGroupId, "SIGKILL")
   if (!(await waitForProcessGroupExit(processGroupId, KILL_GRACE_MS))) {
     throw new Error(
       `Gate launcher process group ${processGroupId} did not terminate`,
@@ -243,7 +271,6 @@ const finish = async (outcome) => {
   if (shuttingDown) return
   shuttingDown = true
   try {
-    if (launcher?.connected) launcher.disconnect()
     await terminateLauncherProcessGroup()
     await removeLease()
     await sendCoordinator(outcome)
