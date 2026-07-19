@@ -1,3 +1,4 @@
+import { Buffer } from "node:buffer"
 import { createHash } from "node:crypto"
 import {
   mkdirSync,
@@ -11,6 +12,7 @@ import {
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { afterEach, beforeEach, describe, expect, it } from "vitest"
+// eslint-disable-next-line no-restricted-imports -- The test proves the canonical public privacy seam accepts only the closed ref.
 import { assertPublicOutputLeakSafe } from "../../packages/spec/src/public-output-privacy.js"
 import {
   V137_RESTRICTED_EVIDENCE_ACCESS_LOG_RELATIVE_PATH,

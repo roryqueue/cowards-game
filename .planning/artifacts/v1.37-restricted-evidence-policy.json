@@ -1,0 +1,28 @@
+{
+  "schemaVersion": "v1.37-restricted-evidence-policy-v1",
+  "milestone": "v1.37",
+  "retentionClass": "certificate-plus-audit-window",
+  "postCertificateValidityCalendarDays": 90,
+  "releaseObjectPosture": "present-and-digest-valid",
+  "permanentAttestationPosture": "valid-after-policy-deletion",
+  "accessLog": {
+    "schemaVersion": "v1.37-restricted-evidence-access-log-v1",
+    "appendOnly": true,
+    "eventClasses": [
+      "write",
+      "read",
+      "verify",
+      "release-check",
+      "delete-authorized",
+      "delete-completed"
+    ]
+  },
+  "deletion": {
+    "eligibility": "latest-bound-certificate-validity-plus-90-calendar-days",
+    "explicitOperationRequired": true,
+    "writeRecordRequired": true,
+    "objectDigestRequiredBeforeDeletion": true,
+    "attestationDigestRequiredBeforeDeletion": true,
+    "authorizedAndCompletedEventsRequired": true
+  }
+}
