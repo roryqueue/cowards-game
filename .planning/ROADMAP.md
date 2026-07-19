@@ -489,10 +489,10 @@ Plans:
   4. Boundary monitors detect duplicate transition ownership, mixed tuples, adapter-owned gameplay classification, stale identity, unsupported events, duplicate arenas, unfair scheduling, unproved counted lanes, and private-output leakage.
   5. The prearchive audit proves complete 56/56 traceability, 55 passed requirements, PROOF-08 release-ready/pending, one transition authority, passing drift guards, and no unapproved gameplay change; the archive commit is then tagged, and the actual annotated tag plus post-tag checker closes PROOF-08 before serious Strategy work begins.
 
-**Plans:** 13 plans
+**Plans:** 1/13 plans executed
 
 Plans:
-- [ ] 261-01-PLAN.md — Freeze the closed scenario manifest and restricted content-addressed evidence contract.
+- [x] 261-01-PLAN.md — Freeze the closed scenario manifest and restricted content-addressed evidence contract.
 - [ ] 261-02-PLAN.md — Add mutation-tested release privacy and drift guards to the default boundary chain.
 - [ ] 261-03-PLAN.md — Execute the real four-language production-shaped service topology and typed failure proof.
 - [ ] 261-04-PLAN.md — Serialize and prove exact audit compatibility, persistence, rollback, recomputation, retry, and immutable history.
@@ -530,4 +530,4 @@ Cycle-cap, inward-start, facing-only MOVE, reversal-history, attacker-facing/Adv
 | 258. Canonical JSON, Failure Semantics, and Artifact Identity | 14/14 | Complete | 2026-07-16 |
 | 259. Executable Four-Language and Chronicle Conformance | 31/31 | Complete | 2026-07-16 |
 | 260. Truthful Strategy Inputs, Arena Authority, and Set Fairness | 49/49 | Complete | 2026-07-19 |
-| 261. Integrated Service Proof, Drift Guards, and Release | 0/9 | Planned | - |
+| 261. Integrated Service Proof, Drift Guards, and Release | 1/13 | In Progress | - |

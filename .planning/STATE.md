@@ -4,17 +4,17 @@ milestone: v1.37
 milestone_name: Rules Integrity and Strategy Evaluation Foundations — ACTIVE
 current_phase: 261
 current_phase_name: integrated-service-proof-drift-guards-and-release
-status: ready_for_planning
-stopped_at: Phase 260 complete and verified; Phase 261 research and planning are next
-last_updated: "2026-07-19T15:05:00.000Z"
+status: executing
+stopped_at: Completed 261-01-PLAN.md
+last_updated: "2026-07-19T16:32:15.260Z"
 last_activity: 2026-07-19
-last_activity_desc: Closed and verified Phase 260 with one executable proof and 44 permanent boundary assertions
+last_activity_desc: Completed Phase 261 plan 01 closed proof and restricted evidence contracts
 progress:
   total_phases: 6
   completed_phases: 5
-  total_plans: 135
-  completed_plans: 135
-  percent: 100
+  total_plans: 149
+  completed_plans: 136
+  percent: 83
 ---
 
 # State: Coward's Game
@@ -28,10 +28,10 @@ See: `.planning/PROJECT.md` (updated 2026-07-12)
 
 ## Current Position
 
-Phase: 261 (integrated-service-proof-drift-guards-and-release) — READY FOR PLANNING
-Plan: 0 of TBD
-Status: Phase 260 passed 9/9 requirements with zero open gaps; Phase 261 research and planning may begin
-Last activity: 2026-07-19 — Phase 260 aggregate proof, code review, validation, and verification PASS
+Phase: 261 (integrated-service-proof-drift-guards-and-release) — EXECUTING
+Plan: 2 of 13
+Status: Ready to execute
+Last activity: 2026-07-19 — Phase 261 plan 01 contracts and verification passed
 
 Progress: [████████░░] 83%
 
@@ -89,9 +89,9 @@ Progress: [████████░░] 83%
 
 **Resume file:** None
 
-Last session: 2026-07-19T15:05:00.000Z
-Stopped at: Phase 260 is complete and verified with 49/49 plans and zero open gaps.
-Next command: Research and plan Phase 261 integrated service proof, drift guards, audit, archive, tag, and Strategy-foundation handoff.
+Last session: 2026-07-19T16:32:15.242Z
+Stopped at: Completed 261-01-PLAN.md
+Next command: Execute 261-02 release privacy and drift guards.
 
 ## Performance Metrics
 
@@ -170,6 +170,7 @@ Next command: Research and plan Phase 261 integrated service proof, drift guards
 | Phase 260 P39 | 20min | 1 TDD task + amended review | 2 replay files; 22 focused tests and 61 exact-selector tests |
 | Phase 260 P49 | multi-session | 2 TDD tasks + review convergence | exact released/selected service and replay gates; refreshed preactivation proof |
 | Phase 260 P15 | multi-session resumed | 3 tasks + review/validation/verification | 9/9 requirements; 12 proof gates; full workspace suite; 44 boundary assertions |
+| Phase 261 P01 | 13min | 2 tasks | 7 files |
 
 ## Decisions
 
