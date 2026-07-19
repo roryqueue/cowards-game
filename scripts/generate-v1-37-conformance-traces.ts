@@ -623,7 +623,7 @@ const strategySuccessTrace = (
     corpusVersion: V1_37_CONFORMANCE_CORPUS.version,
     corpusRootSha256: V1_37_CONFORMANCE_CORPUS_ROOT,
     caseId: testCase.id,
-    semanticTupleId: MATCH_KERNEL.tupleId,
+    semanticTupleId: CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_ID,
     resultClass: "success",
     invocations,
     transitions: recorded.transitions,

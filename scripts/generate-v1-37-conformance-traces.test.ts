@@ -199,6 +199,11 @@ describe("v1.37 conformance trace candidate generation", () => {
   }, 30_000)
 
   it("independently reviews and pins the exact inactive trace closure", () => {
+    const registryPath = path.join(
+      ACTIVE_V137_CONFORMANCE_TRACE_ROOT,
+      "registry.json",
+    )
+    const registryBefore = readFileSync(registryPath)
     const candidateDirectory = path.join(
       temporaryRoot(),
       "observation-trace-v4",
@@ -229,15 +234,7 @@ describe("v1.37 conformance trace candidate generation", () => {
       candidateRootSha256: result.candidateRootSha256,
       updatePolicy: "plan-14-explicit-atomic-promotion-only",
     })
-    expect(
-      sha256(
-        readFileSync(
-          path.join(ACTIVE_V137_CONFORMANCE_TRACE_ROOT, "registry.json"),
-        ),
-      ),
-    ).toBe(
-      "sha256:f97efb668bd956da600c0ca9bc1514473ad79554eba2477042c49091a698494d",
-    )
+    expect(readFileSync(registryPath)).toEqual(registryBefore)
   }, 30_000)
 
   it("rejects incomplete dispositions before independent review", () => {
