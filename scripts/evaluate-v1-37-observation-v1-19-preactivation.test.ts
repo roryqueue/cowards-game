@@ -112,7 +112,9 @@ describe("v1.37 observation-v1.19 preactivation proof", () => {
         "scripts/generate-go-parity-fixtures.ts",
         "apps/go-backend/integrity_creation_test.go",
         "apps/go-backend/live_backend_run_once_test.go",
+        "apps/runtime-service/src/four-language-conformance-runner.ts",
         "apps/runtime-service/src/four-language-conformance-runner.test.ts",
+        "packages/golden/src/index.ts",
       ]),
     )
     expect(proof.seamAudit).toEqual({
