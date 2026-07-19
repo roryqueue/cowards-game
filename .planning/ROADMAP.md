@@ -321,7 +321,7 @@ Plans:
   4. Each counted scenario explicitly schedules every entrant on each side and in each initial-initiative state, proved at entrant level through TypeScript, Go, persistence, and service-backed tests.
   5. Arena and Set repair adds no official geometry or valid v1.4 gameplay change; any change to Strategy observation or reachable Match semantics stops for explicit compatibility approval.
 
-**Plans:** 45/47 plans executed
+**Plans:** 45/48 plans executed
 
 **Wave 1 — immutable semantic authorities**
 
@@ -458,11 +458,15 @@ Plans:
 
 - [x] 260-47-PLAN.md — Align unversioned current engine construction/dispatch with v1.19 while retaining explicit immutable v1.4 evidence.
 
-**Wave 31 *(blocked on Wave 30 completion)* — atomic activation**
+**Wave 31 *(blocked on Wave 30 completion)* — selected-current persistence test repair**
+
+- [ ] 260-48-PLAN.md — Make the full persistence suite explicit about historical v1.17 versus selected-current v1.19 semantics.
+
+**Wave 32 *(blocked on Wave 31 completion)* — atomic activation**
 
 - [ ] 260-14-PLAN.md — Activate five selector files and one transactional database selection head in one proved commit.
 
-**Wave 32 *(blocked on Wave 31 completion)* — integrated closure**
+**Wave 33 *(blocked on Wave 32 completion)* — integrated closure**
 
 - [ ] 260-15-PLAN.md — Close Phase 260 with one executable proof and permanent drift monitors.
 
@@ -506,5 +510,5 @@ Cycle-cap, inward-start, facing-only MOVE, reversal-history, attacker-facing/Adv
 | 257. Canonical Transition Kernel and v1.4 Semantic Integrity | 22/22 | Complete | 2026-07-13 |
 | 258. Canonical JSON, Failure Semantics, and Artifact Identity | 14/14 | Complete | 2026-07-16 |
 | 259. Executable Four-Language and Chronicle Conformance | 31/31 | Complete | 2026-07-16 |
-| 260. Truthful Strategy Inputs, Arena Authority, and Set Fairness | 45/47 | In Progress|  |
+| 260. Truthful Strategy Inputs, Arena Authority, and Set Fairness | 45/48 | In Progress|  |
 | 261. Integrated Service Proof, Drift Guards, and Release | 0/TBD | Not started | - |
