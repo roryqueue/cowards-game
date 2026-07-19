@@ -5,6 +5,7 @@ import type { Pool } from "pg"
 import { defaultDatabaseUrl } from "./db.js"
 import { runDevelopmentMatchSetSmoke } from "./dev-smoke.js"
 import { createFixtureMatchSetEvidenceResolver } from "./matchset-service.js"
+import { TEST_CURRENT_IS_V119 } from "./test-current-semantic-authority.js"
 
 describe("development smoke helper", () => {
   it("exports the local PostgreSQL smoke contract", () => {
@@ -49,15 +50,28 @@ describe("development smoke helper", () => {
     async () => {
       const { createDatabasePool } = await import("./db.js")
       const pool = createDatabasePool()
+      const matchSetId = `match-set:dev-smoke:${randomUUID()}`
       try {
-        const result = await runDevelopmentMatchSetSmoke(pool, {
-          matchSetId: `match-set:dev-smoke:${randomUUID()}`,
+        const request = {
+          matchSetId,
           evidenceResolver: createFixtureMatchSetEvidenceResolver({
             semanticAuthorityKey: "runtime-v1.17",
           }),
           semanticAuthorityKey: "runtime-v1.17",
           runQueuedMatch: async () => undefined,
-        })
+        } as const
+        if (TEST_CURRENT_IS_V119) {
+          await expect(
+            runDevelopmentMatchSetSmoke(pool, request),
+          ).rejects.toThrow(/unknown|mismatched semantic tuple/iu)
+          const absent = await pool.query<{ count: number }>(
+            "select count(*)::integer as count from match_sets where id = $1",
+            [matchSetId],
+          )
+          expect(absent.rows[0]?.count).toBe(0)
+          return
+        }
+        const result = await runDevelopmentMatchSetSmoke(pool, request)
         expect(result.matchSetId).toMatch(/^match-set:dev-smoke:/u)
         expect(result.matchIds.length).toBe(result.matchCount)
         expect(["complete", "degraded", "pending", "running"]).toContain(

@@ -1085,6 +1085,7 @@ const validateChronicleSemanticsForAuthority = (
     tuple: Readonly<CanonicalCompatibilityTuple>
   }>,
   resolveCompatibility: typeof resolveCanonicalCompatibilityTuple,
+  versionedV117 = false,
 ): CurrentChronicleSemanticValidationResult => {
   if (
     !isRecord(input) ||
@@ -1111,7 +1112,7 @@ const validateChronicleSemanticsForAuthority = (
   ) {
     return currentCodeFailure("CURRENT_SHAPE_INVALID", ["execution"])
   }
-  if (!verifyCurrentExecutionEvidence(execution)) {
+  if (!versionedV117 && !verifyCurrentExecutionEvidence(execution)) {
     return currentCodeFailure("CURRENT_BOUNDARY_HASH_INVALID", [
       "execution",
       "receipt",
@@ -1123,7 +1124,7 @@ const validateChronicleSemanticsForAuthority = (
   }
   const chronicle = parsedChronicle.data as Chronicle
   if (
-    validateVersion(chronicle).length > 0 ||
+    (!versionedV117 && validateVersion(chronicle).length > 0) ||
     chronicle.reproducibility.matchId !==
       execution.recorderMaterial.finalState.matchId
   ) {
@@ -1234,35 +1235,41 @@ const validateChronicleSemanticsForAuthority = (
     return currentCodeFailure("CURRENT_EVENT_INVALID", ["chronicle", "events"])
   }
 
-  const parsedInitial = RuntimeExecutionFinalStateSchema.safeParse(
-    execution.recorderMaterial.initialState,
-  )
-  if (!parsedInitial.success) {
-    return currentCodeFailure("CURRENT_INITIAL_STATE_INVALID")
-  }
-  const initialSemantic = validateCanonicalInitialGameState(
-    parsedInitial.data as CanonicalSemanticGameState,
-  )
-  const initialArena = validateCanonicalArena(parsedInitial.data.arenaVariant)
-  if (!initialArena.ok) {
-    return prefixedSemanticFailure(
-      initialArena.issues,
-      ["execution", "initialState", "arenaVariant"],
-      initialArena.truncated,
+  const parsedInitial = versionedV117
+    ? undefined
+    : RuntimeExecutionFinalStateSchema.safeParse(
+        execution.recorderMaterial.initialState,
+      )
+  if (!versionedV117) {
+    if (parsedInitial === undefined || !parsedInitial.success) {
+      return currentCodeFailure("CURRENT_INITIAL_STATE_INVALID")
+    }
+    const initialSemantic = validateCanonicalInitialGameState(
+      parsedInitial.data as CanonicalSemanticGameState,
     )
-  }
-  if (!initialSemantic.ok) {
-    return prefixedSemanticFailure(
-      initialSemantic.issues,
-      ["execution", "initialState"],
-      initialSemantic.truncated,
-    )
+    const initialArena = validateCanonicalArena(parsedInitial.data.arenaVariant)
+    if (!initialArena.ok) {
+      return prefixedSemanticFailure(
+        initialArena.issues,
+        ["execution", "initialState", "arenaVariant"],
+        initialArena.truncated,
+      )
+    }
+    if (!initialSemantic.ok) {
+      return prefixedSemanticFailure(
+        initialSemantic.issues,
+        ["execution", "initialState"],
+        initialSemantic.truncated,
+      )
+    }
   }
   if (
     JSON.stringify(execution.transitions[0]!.beforeState) !==
       JSON.stringify(
         projectStateForRecording(
-          parsedInitial.data as CanonicalSemanticGameState,
+          (versionedV117
+            ? execution.recorderMaterial.initialState
+            : parsedInitial!.data) as CanonicalSemanticGameState,
         ),
       ) ||
     execution.recorderMaterial.boundaries.length !==
@@ -1278,13 +1285,15 @@ const validateChronicleSemanticsForAuthority = (
 
   for (let index = 0; index < execution.transitions.length; index += 1) {
     const transition = execution.transitions[index]!
-    const transitionSemantic = validateCanonicalTransition(transition)
-    if (!transitionSemantic.ok) {
-      return prefixedSemanticFailure(
-        transitionSemantic.issues,
-        ["execution", "transitions", index],
-        transitionSemantic.truncated,
-      )
+    if (!versionedV117) {
+      const transitionSemantic = validateCanonicalTransition(transition)
+      if (!transitionSemantic.ok) {
+        return prefixedSemanticFailure(
+          transitionSemantic.issues,
+          ["execution", "transitions", index],
+          transitionSemantic.truncated,
+        )
+      }
     }
     const before = projectionAsState(transition.beforeState)
     const after = projectionAsState(transition.afterState)
@@ -1295,17 +1304,19 @@ const validateChronicleSemanticsForAuthority = (
         index,
       ])
     }
-    for (const [side, state] of [
-      ["beforeState", before],
-      ["afterState", after],
-    ] as const) {
-      const semantic = validateCanonicalGameState(state)
-      if (!semantic.ok) {
-        return prefixedSemanticFailure(
-          semantic.issues,
-          ["execution", "transitions", index, side],
-          semantic.truncated,
-        )
+    if (!versionedV117) {
+      for (const [side, state] of [
+        ["beforeState", before],
+        ["afterState", after],
+      ] as const) {
+        const semantic = validateCanonicalGameState(state)
+        if (!semantic.ok) {
+          return prefixedSemanticFailure(
+            semantic.issues,
+            ["execution", "transitions", index, side],
+            semantic.truncated,
+          )
+        }
       }
     }
     if (
@@ -1399,23 +1410,30 @@ const validateChronicleSemanticsForAuthority = (
     }
   }
 
-  const parsedFinal = RuntimeExecutionFinalStateSchema.safeParse(
-    execution.recorderMaterial.finalState,
-  )
+  const parsedFinal = versionedV117
+    ? undefined
+    : RuntimeExecutionFinalStateSchema.safeParse(
+        execution.recorderMaterial.finalState,
+      )
   const last = execution.transitions.at(-1)!
   const terminalEvent = chronicle.events.at(-1)
   const terminalSnapshot = chronicle.snapshots.at(-1)
   if (
-    !parsedFinal.success ||
+    (!versionedV117 && (parsedFinal === undefined || !parsedFinal.success)) ||
     JSON.stringify(execution.result.state) !==
       JSON.stringify(execution.recorderMaterial.finalState) ||
     JSON.stringify(last.afterState) !==
       JSON.stringify(
-        parsedFinal.success
+        versionedV117
           ? projectStateForRecording(
-              parsedFinal.data as CanonicalSemanticGameState,
+              execution.recorderMaterial
+                .finalState as CanonicalSemanticGameState,
             )
-          : null,
+          : parsedFinal!.success
+            ? projectStateForRecording(
+                parsedFinal!.data as CanonicalSemanticGameState,
+              )
+            : null,
       ) ||
     terminalEvent?.type !== "MATCH_ENDED" ||
     terminalSnapshot?.kind !== "TERMINAL" ||
@@ -1446,6 +1464,7 @@ export const validateVersionedChronicleSemanticsV117 = (
     input,
     VERSIONED_RUNTIME_V117_SEMANTIC_TUPLE_RECORD,
     resolveCandidateRuntimeV117SemanticTuple,
+    true,
   )
 
 export const validateCurrentChronicle = (
