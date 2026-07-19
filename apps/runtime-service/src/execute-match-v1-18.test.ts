@@ -15,6 +15,7 @@ import {
   encodeCanonicalJson,
   type JsonValue,
   type RuntimeCertificateReferenceV118,
+  type RuntimeExecutionCandidateMatchAuthorityV119,
   type RuntimeExecutionServiceRequest,
   type RuntimeExecutionServiceRequestV118,
 } from "@cowards/spec"
@@ -25,7 +26,10 @@ import {
   type PreparedRuntimeServiceDependenciesV118,
   type PreparedRuntimeServiceExecutionV118,
 } from "./execute-match.js"
-import { createFixtureRuntimeExecutionEvidenceSnapshot } from "./runtime-execution-evidence.test-support.js"
+import {
+  bindFixtureCandidateMatchAuthorityV119,
+  createFixtureRuntimeExecutionEvidenceSnapshot,
+} from "./runtime-execution-evidence.test-support.js"
 import { createRuntimeServiceConfig } from "./runtime-config.js"
 import { createRuntimeExecutionHttpServer } from "./server.js"
 
@@ -58,7 +62,8 @@ const top = buildStrategyRevision({
   strategyId: "strategy:v118:top",
 })
 const tuple = CANONICAL_COMPATIBILITY_TUPLES[0]!
-const nestedRequest: RuntimeExecutionServiceRequest = {
+const nestedRequest: RuntimeExecutionServiceRequest =
+  bindFixtureCandidateMatchAuthorityV119({
   contractVersion: RUNTIME_EXECUTION_SERVICE_VERSION,
   kind: "executeMatch",
   requestId: "request:v118:nested",
@@ -84,7 +89,7 @@ const nestedRequest: RuntimeExecutionServiceRequest = {
     bottom,
     top,
   }),
-}
+  })
 
 const sha256 = (value: string | Uint8Array): `sha256:${string}` =>
   `sha256:${createHash("sha256").update(value).digest("hex")}`
@@ -162,8 +167,13 @@ const runtime: StrategyRuntime = {
 }
 
 const execution = () => {
+  const { candidateMatch, ...match } = nestedRequest.match as typeof nestedRequest.match & {
+    readonly candidateMatch?:
+      | RuntimeExecutionCandidateMatchAuthorityV119
+      | undefined
+  }
   const matchExecution = MATCH_KERNEL.runMatch({
-    ...nestedRequest.match,
+    ...match,
     runtime: adaptRuntimeForCurrentKernel(runtime),
   })
   const recorded = recordChronicleFromExecution({
@@ -173,6 +183,7 @@ const execution = () => {
       semanticTupleId: tuple.tupleId,
       semanticTuple: tuple.tuple,
     },
+    ...(candidateMatch === undefined ? {} : { candidateMatch }),
   })
   if (!recorded.ok) throw new Error(recorded.failure.code)
   const commonRoots = {

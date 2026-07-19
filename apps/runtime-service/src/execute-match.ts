@@ -6,6 +6,7 @@ import {
   RUNTIME_INVOCATION_V1_17_INITIAL_EXECUTION_LEDGER_ROOT,
   HISTORICAL_RUNTIME_EXECUTION_SERVICE_V1_16,
   HistoricalRuntimeExecutionServiceRequestV116Schema,
+  VersionedRuntimeExecutionServiceRequestV117Schema,
   HistoricalRuntimeExecutionServiceResponseV116Schema,
   isExactCommittedRuntimeExecutionServiceRequestV116,
   RuntimeExecutionServiceRequestSchema,
@@ -18,6 +19,8 @@ import {
   RuntimeExecutionFinalStateSchema,
   ChronicleSchema,
   STRATEGY_RUNTIME_ABI_VERSION,
+  resolveCandidateRuntimeV117SemanticTuple,
+  resolveCandidateRuntimeV119SemanticTuple,
   findRuntimeBrokerRegistryEntry,
   createRuntimeInvocationTraceV117,
   encodeCanonicalJson,
@@ -42,6 +45,7 @@ import {
   type RuntimeExecutionServiceResponseV117,
   type RuntimeExecutionServiceRequestV118,
   type RuntimeExecutionServiceResponseV118,
+  type RuntimeExecutionCandidateMatchAuthorityV119,
   type RuntimeCertificateReferenceV118,
   type RuntimeExecutionEntrantV117,
   type RuntimeEvidenceAuthorityExactPinV117,
@@ -69,15 +73,22 @@ import { createPythonRuntimeFromRevision } from "@cowards/runtime-python"
 import { createWasmWasiRuntimeFromRevision } from "@cowards/runtime-wasm-wasi"
 import {
   createCurrentReplay,
+  createCandidateReplayV119,
+  createVersionedReplayV117,
   recordChronicleFromExecution,
+  validateCandidateReplayV119,
+  validateCandidateReplayReconstructionV119,
   validateCurrentChronicle,
   validateCurrentReplayReconstruction,
+  validateVersionedChronicleV117,
+  validateVersionedReplayReconstructionV117,
   type ChronicleBoundaryAnchor,
   type ChronicleRecorderExecution,
   type ReplayState,
 } from "@cowards/replay"
 import {
   MatchExecutionFailure,
+  MATCH_KERNEL,
   runMatch,
   type GameState,
   type CanonicalStrategyRuntime,
@@ -101,6 +112,13 @@ import {
   composeSuccessorRuntimeIdentityV117,
   type SuccessorRuntimeIdentityTemplateV117,
 } from "./successor-runtime-identity.js"
+
+type RoutedRuntimeExecutionServiceRequest = RuntimeExecutionServiceRequest & {
+  readonly match: RuntimeExecutionServiceRequest["match"] & {
+    readonly initialInitiativePlayerId?: string | undefined
+    readonly candidateMatch?: RuntimeExecutionCandidateMatchAuthorityV119 | undefined
+  }
+}
 
 export interface CandidateRuntimeInvocationInputV117<
   TValue = JsonValue,
@@ -936,10 +954,17 @@ export const validateNestedMatchRuntimeRevisionTestSupport = (
 
 export interface RuntimeExecutionServiceDependencies {
   runMatch: typeof runMatch
+  runMatchV117: typeof MATCH_KERNEL.runMatchV117
   recordChronicle: typeof recordChronicleFromExecution
   validateChronicle: typeof validateCurrentChronicle
+  validateVersionedChronicle: typeof validateVersionedChronicleV117
+  validateCandidateChronicle: typeof validateCandidateReplayV119
   reconstructChronicle: typeof validateCurrentReplayReconstruction
+  reconstructVersionedChronicle: typeof validateVersionedReplayReconstructionV117
+  reconstructCandidateChronicle: typeof validateCandidateReplayReconstructionV119
   createReplay: typeof createCurrentReplay
+  createVersionedReplay: typeof createVersionedReplayV117
+  createCandidateReplay: typeof createCandidateReplayV119
   createRuntimeForRevision: typeof createRuntimeForRevision
   createCanonicalRuntimeForRevision?:
     | ((
@@ -959,10 +984,17 @@ export interface RuntimeExecutionServiceDependencies {
 
 const defaultDependencies: RuntimeExecutionServiceDependencies = {
   runMatch,
+  runMatchV117: MATCH_KERNEL.runMatchV117,
   recordChronicle: recordChronicleFromExecution,
   validateChronicle: validateCurrentChronicle,
+  validateVersionedChronicle: validateVersionedChronicleV117,
+  validateCandidateChronicle: validateCandidateReplayV119,
   reconstructChronicle: validateCurrentReplayReconstruction,
+  reconstructVersionedChronicle: validateVersionedReplayReconstructionV117,
+  reconstructCandidateChronicle: validateCandidateReplayReconstructionV119,
   createReplay: createCurrentReplay,
+  createVersionedReplay: createVersionedReplayV117,
+  createCandidateReplay: createCandidateReplayV119,
   createRuntimeForRevision,
 }
 
@@ -1023,14 +1055,28 @@ const projectFinalStateForReplay = (state: GameState): ReplayState => ({
 })
 
 const executeParsedRequest = (
-  request: RuntimeExecutionServiceRequest,
+  request: RoutedRuntimeExecutionServiceRequest,
   runtimeConfig: RuntimeServiceConfig,
   dependencies: RuntimeExecutionServiceDependencies,
   historicalV116: boolean,
 ): RuntimeExecutionServiceResponse => {
+  const versionedV117 =
+    !historicalV116 &&
+    resolveCandidateRuntimeV117SemanticTuple(
+      request.evidenceSnapshot.compatibility,
+    ) !== undefined
+  const candidateV119 =
+    !historicalV116 &&
+    resolveCandidateRuntimeV119SemanticTuple(
+      request.evidenceSnapshot.compatibility,
+    ) !== undefined
   const expectedRuntimeAbi = historicalV116
     ? HISTORICAL_RUNTIME_EXECUTION_SERVICE_V1_16.runtimeAbiVersion
-    : STRATEGY_RUNTIME_ABI_VERSION
+    : versionedV117
+      ? "strategy-runtime-abi-v1.17"
+      : candidateV119
+        ? "strategy-runtime-abi-v1.19"
+        : STRATEGY_RUNTIME_ABI_VERSION
   const acceptedAuthority = loadAndVerifyRequestAuthority({
     request,
     runtimeConfig,
@@ -1137,8 +1183,9 @@ const executeParsedRequest = (
       diagnostics: topRuntime.diagnostics,
     })
   }
+  const { candidateMatch, ...kernelMatch } = request.match
   const runMatchInput: RunMatchInput = {
-    ...request.match,
+    ...kernelMatch,
     runtime: createSideDispatchRuntime(
       bottomRuntime.runtime,
       topRuntime.runtime,
@@ -1150,7 +1197,25 @@ const executeParsedRequest = (
   }
   let result: ReturnType<typeof runMatch>
   try {
-    result = dependencies.runMatch(runMatchInput)
+    if (
+      versionedV117 &&
+      String(STRATEGY_RUNTIME_ABI_VERSION) !== "strategy-runtime-abi-v1.17"
+    ) {
+      const execution = dependencies.runMatchV117(runMatchInput)
+      if (execution.kind !== "completed") {
+        throw new MatchExecutionFailure(
+          execution.failure,
+          execution.unchangedState,
+        )
+      }
+      result = {
+        state: execution.result.state,
+        events: [...execution.result.events],
+        execution,
+      }
+    } else {
+      result = dependencies.runMatch(runMatchInput)
+    }
   } catch (error) {
     return systemFailureResponse({
       rawRequest: request,
@@ -1174,6 +1239,9 @@ const executeParsedRequest = (
       semanticTupleId: request.evidenceSnapshot.compatibility.tupleId,
       semanticTuple: request.evidenceSnapshot.compatibility.tuple,
     },
+    ...(candidateV119 && candidateMatch !== undefined
+      ? { candidateMatch }
+      : {}),
   })
   if (!recorded.ok) {
     return systemFailureResponse({
@@ -1187,14 +1255,27 @@ const executeParsedRequest = (
       },
     })
   }
-  const semanticInput = {
+  const currentSemanticInput = {
     profile: "current-exact" as const,
     compatibility: recorded.semanticIdentity,
     chronicle: recorded.chronicle,
     boundaryAnchors: recorded.boundaryAnchors,
     execution: result.execution,
   }
-  const validated = dependencies.validateChronicle(semanticInput)
+  const candidateSemanticInput = {
+    profile: "candidate-v1.19" as const,
+    compatibility: recorded.semanticIdentity,
+    chronicle: recorded.chronicle,
+    boundaryAnchors: recorded.boundaryAnchors,
+    execution: result.execution,
+    candidateReproducibility: recorded.candidateReproducibility,
+    persistedMatch: candidateMatch,
+  }
+  const validated = candidateV119
+    ? dependencies.validateCandidateChronicle(candidateSemanticInput)
+    : versionedV117
+      ? dependencies.validateVersionedChronicle(currentSemanticInput)
+      : dependencies.validateChronicle(currentSemanticInput)
   if (!validated.ok) {
     return systemFailureResponse({
       rawRequest: request,
@@ -1206,10 +1287,24 @@ const executeParsedRequest = (
       },
     })
   }
-  const reconstructionValidation = dependencies.reconstructChronicle({
+  const reconstructionInput = {
     chronicle: recorded.chronicle,
     execution: result.execution,
-  })
+    boundaryAnchors: recorded.boundaryAnchors,
+    recordedTransitions: recorded.recordedTransitions,
+    transitionTraceRoot: recorded.transitionTraceRoot,
+    recordedFinalState: recorded.finalState,
+    recordedOutcome: recorded.finalState.outcome,
+  }
+  const reconstructionValidation = candidateV119
+    ? dependencies.reconstructCandidateChronicle({
+        ...reconstructionInput,
+        candidateMatch: candidateMatch!,
+        candidateReproducibility: recorded.candidateReproducibility!,
+      })
+    : versionedV117
+      ? dependencies.reconstructVersionedChronicle(reconstructionInput)
+      : dependencies.reconstructChronicle(reconstructionInput)
   if (!reconstructionValidation.ok) {
     return systemFailureResponse({
       rawRequest: request,
@@ -1221,7 +1316,11 @@ const executeParsedRequest = (
       },
     })
   }
-  const reconstructed = dependencies.createReplay(semanticInput)
+  const reconstructed = candidateV119
+    ? dependencies.createCandidateReplay(candidateSemanticInput)
+    : versionedV117
+      ? dependencies.createVersionedReplay(currentSemanticInput)
+      : dependencies.createReplay(currentSemanticInput)
   const terminalSequence = recorded.chronicle.events.at(-1)?.sequence
   const reconstructedTerminalState =
     reconstructed.ok && terminalSequence !== undefined
@@ -1336,12 +1435,16 @@ const executeRuntimeServiceRequestInternal = (
   dependencyOverrides: Partial<RuntimeExecutionServiceDependencies> = {},
   allowSelectedV117NestedMatch = false,
 ): RuntimeExecutionServiceResponse => {
-  const selectedRequest =
-    RuntimeExecutionServiceRequestSchema.safeParse(rawRequest)
+  const selectedRequest = RuntimeExecutionServiceRequestSchema.safeParse(rawRequest)
+  const versionedV117Request = allowSelectedV117NestedMatch
+    ? VersionedRuntimeExecutionServiceRequestV117Schema.safeParse(rawRequest)
+    : undefined
   const historicalV116 =
     !selectedRequest.success && historicalRuntimeV116Request(rawRequest)
   const parsedRequest = selectedRequest.success
     ? selectedRequest
+    : versionedV117Request?.success
+      ? versionedV117Request
     : historicalV116
       ? HistoricalRuntimeExecutionServiceRequestV116Schema.safeParse(rawRequest)
       : selectedRequest

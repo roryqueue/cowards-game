@@ -33,6 +33,7 @@ import {
   type RuntimeSemanticReceipt,
   type RuntimeExecutionServiceRequest,
 } from "./runtime-execution-service.js"
+import type { RuntimeExecutionCandidateMatchAuthorityV119 } from "./runtime-execution-service-v1-18.js"
 import {
   CANONICAL_COMPATIBILITY_TUPLE_FIELDS,
   resolveCanonicalCompatibilityTuple,
@@ -2803,6 +2804,57 @@ export const RuntimeExecutionEvidenceSnapshotSchema = z
     }
   })
 
+export const RuntimeExecutionCandidateMatchAuthorityV119Schema = z
+  .object({
+    semanticAuthorityKey: z.literal("runtime-v1.19"),
+    matchId: z.string().min(1),
+    seed: z.string().min(1),
+    arenaVariantId: z.string().min(1),
+    bottomStrategyRevisionId: z.string().min(1),
+    topStrategyRevisionId: z.string().min(1),
+    bottomPlayerId: z.string().min(1),
+    topPlayerId: z.string().min(1),
+    bottomEntrantKey: z.string().min(1),
+    topEntrantKey: z.string().min(1),
+    setPolicyVersion: z.literal(
+      "canonical-set-policy-v1.37-four-condition-v1",
+    ),
+    scenarioId: z
+      .string()
+      .regex(/^set-scenario:sha256:[0-9a-f]{64}$/u) as z.ZodType<
+      `set-scenario:sha256:${string}`
+    >,
+    conditionId: z
+      .string()
+      .regex(/^set-condition:sha256:[0-9a-f]{64}$/u) as z.ZodType<
+      `set-condition:sha256:${string}`
+    >,
+    conditionOrdinal: z.union([
+      z.literal(0),
+      z.literal(1),
+      z.literal(2),
+      z.literal(3),
+    ]),
+    conditionSuffix: z.enum([
+      "a-bottom-a-first",
+      "a-bottom-b-first",
+      "a-top-a-first",
+      "a-top-b-first",
+    ]),
+    requestIdentity: z
+      .string()
+      .regex(/^set-request:sha256:[0-9a-f]{64}$/u) as z.ZodType<
+      `set-request:sha256:${string}`
+    >,
+    arenaCatalogVersion: z.literal("canonical-arena-catalog-v1.37"),
+    arenaSemanticGeometryHash: z
+      .string()
+      .regex(/^sha256:[0-9a-f]{64}$/u) as z.ZodType<`sha256:${string}`>,
+    initialInitiativeEntrantKey: z.string().min(1),
+    initialInitiativePlayerId: z.string().min(1),
+  })
+  .strict() satisfies z.ZodType<RuntimeExecutionCandidateMatchAuthorityV119>
+
 export const RuntimeExecutionMatchInputSchema = z
   .object({
     matchId: z.string().min(1),
@@ -2812,14 +2864,52 @@ export const RuntimeExecutionMatchInputSchema = z
     topPlayerId: z.string().min(1),
     bottomStrategyRevisionId: z.string().min(1),
     topStrategyRevisionId: z.string().min(1),
+    initialInitiativePlayerId: z.string().min(1).optional(),
+    candidateMatch: RuntimeExecutionCandidateMatchAuthorityV119Schema.optional(),
     maxPhases: z.number().int().positive().optional(),
   })
+  .strict()
   .superRefine((match, ctx) => {
     if (match.bottomPlayerId === match.topPlayerId) {
       ctx.addIssue({
         code: "custom",
         path: ["topPlayerId"],
         message: "bottomPlayerId and topPlayerId must differ",
+      })
+    }
+    const successorSelected =
+      String(CURRENT_SEMANTIC_RUNTIME_ABI_VERSION) ===
+      "strategy-runtime-abi-v1.19"
+    if (
+      successorSelected !==
+      (match.initialInitiativePlayerId !== undefined &&
+        match.candidateMatch !== undefined)
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["candidateMatch"],
+        message:
+          "selected Match authority must be complete and version-exact",
+      })
+    }
+    const candidate = match.candidateMatch
+    if (
+      candidate !== undefined &&
+      (candidate.matchId !== match.matchId ||
+        candidate.seed !== match.seed ||
+        candidate.arenaVariantId !== match.arenaVariant.id ||
+        candidate.bottomPlayerId !== match.bottomPlayerId ||
+        candidate.topPlayerId !== match.topPlayerId ||
+        candidate.bottomStrategyRevisionId !==
+          match.bottomStrategyRevisionId ||
+        candidate.topStrategyRevisionId !== match.topStrategyRevisionId ||
+        candidate.initialInitiativePlayerId !==
+          match.initialInitiativePlayerId)
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["candidateMatch"],
+        message: "candidate Match authority does not bind the Match input",
       })
     }
   })
@@ -2904,6 +2994,20 @@ export const RuntimeExecutionServiceRequestSchema = z
           message: `${side} execution evidence must bind the Match Strategy Revision`,
         })
       }
+    }
+    const candidate = request.match.candidateMatch
+    if (
+      candidate !== undefined &&
+      (candidate.bottomEntrantKey !==
+        request.evidenceSnapshot.entrants.bottom.entrantKey ||
+        candidate.topEntrantKey !==
+          request.evidenceSnapshot.entrants.top.entrantKey)
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["match", "candidateMatch"],
+        message: "candidate Match entrants do not bind execution evidence",
+      })
     }
   }) satisfies z.ZodType<RuntimeExecutionServiceRequest>
 

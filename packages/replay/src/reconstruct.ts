@@ -26,6 +26,8 @@ import {
   recordChronicleFromExecution,
   type ChronicleBoundaryAnchor,
   type ChronicleRecorderExecution,
+  type CandidateReplayMatchAuthorityV119,
+  type CandidateReplayReproducibilityV119,
   type RecordedCanonicalTransitionV137,
 } from "./record.js"
 import {
@@ -35,9 +37,11 @@ import {
 import {
   type CurrentChronicleSemanticInput,
   type CurrentChronicleSemanticValidationResult,
+  type CandidateReplayValidationResult,
   validateChronicle,
   validateCurrentChronicle,
   validateCurrentChronicleSemantics,
+  validateCandidateReplayV119,
   validateVersionedChronicleSemanticsV117,
   validateHistoricalV14Chronicle,
 } from "./validate.js"
@@ -371,6 +375,12 @@ export interface CurrentReplayReconstructionInput {
   readonly transitionTraceRoot?: string | undefined
   readonly recordedFinalState?: GameState | undefined
   readonly recordedOutcome?: MatchOutcome | undefined
+  readonly candidateMatch?:
+    | Readonly<CandidateReplayMatchAuthorityV119>
+    | undefined
+  readonly candidateReproducibility?:
+    | Readonly<CandidateReplayReproducibilityV119>
+    | undefined
 }
 
 const finalReplayState = (
@@ -408,7 +418,7 @@ const finalReplayState = (
 
 const validateReplayReconstructionWithSemantics = (
   input: CurrentReplayReconstructionInput,
-  validateSemantics: typeof validateCurrentChronicleSemantics,
+  validateSemantics: (input: unknown) => { readonly ok: boolean },
 ): CurrentReplayReconstructionResult => {
   const { chronicle, execution } = input
   if (execution.kind !== "completed" || execution.transitions.length === 0) {
@@ -455,16 +465,29 @@ const validateReplayReconstructionWithSemantics = (
 
   const boundaryAnchors =
     input.boundaryAnchors ?? createChronicleBoundaryAnchors(execution)
-  const semanticAdmission = validateSemantics({
-    profile: "current-exact",
-    compatibility: {
-      tupleId: execution.transitions[0]!.semanticTupleId,
-      tuple: execution.transitions[0]!.semanticTuple,
-    },
-    chronicle,
-    boundaryAnchors,
-    execution,
-  })
+  const compatibility = {
+    tupleId: execution.transitions[0]!.semanticTupleId,
+    tuple: execution.transitions[0]!.semanticTuple,
+  }
+  const semanticAdmission = validateSemantics(
+    input.candidateMatch === undefined
+      ? {
+          profile: "current-exact",
+          compatibility,
+          chronicle,
+          boundaryAnchors,
+          execution,
+        }
+      : {
+          profile: "candidate-v1.19",
+          compatibility,
+          chronicle,
+          boundaryAnchors,
+          execution,
+          candidateReproducibility: input.candidateReproducibility,
+          persistedMatch: input.candidateMatch,
+        },
+  )
   if (!semanticAdmission.ok) {
     return { ok: false, code: "CURRENT_SEMANTIC_ADMISSION_INVALID" }
   }
@@ -476,6 +499,9 @@ const validateReplayReconstructionWithSemantics = (
       semanticTupleId: execution.transitions[0]!.semanticTupleId,
       semanticTuple: execution.transitions[0]!.semanticTuple,
     },
+    ...(input.candidateMatch === undefined
+      ? {}
+      : { candidateMatch: input.candidateMatch }),
   })
   if (!reconstructedRecording.ok) {
     return { ok: false, code: "CURRENT_RECONSTRUCTION_SHAPE_INVALID" }
@@ -568,6 +594,14 @@ export const validateVersionedReplayReconstructionV117 = (
     validateVersionedChronicleSemanticsV117(semanticInput),
   )
 
+export const validateCandidateReplayReconstructionV119 = (
+  input: CurrentReplayReconstructionInput & {
+    readonly candidateMatch: Readonly<CandidateReplayMatchAuthorityV119>
+    readonly candidateReproducibility: Readonly<CandidateReplayReproducibilityV119>
+  },
+): CurrentReplayReconstructionResult =>
+  validateReplayReconstructionWithSemantics(input, validateCandidateReplayV119)
+
 export type CreateCurrentReplayResult =
   | { readonly ok: true; readonly replay: Replay }
   | Exclude<CurrentChronicleSemanticValidationResult, { ok: true }>
@@ -580,4 +614,28 @@ export const createCurrentReplay = (
   return createValidatedReplay(
     input.chronicle as Chronicle,
   ) as CreateCurrentReplayResult
+}
+
+export const createVersionedReplayV117 = (
+  input: CurrentChronicleSemanticInput,
+): CreateCurrentReplayResult => {
+  const validation = validateVersionedChronicleSemanticsV117(input)
+  if (!validation.ok) return validation
+  return createValidatedReplay(
+    input.chronicle as Chronicle,
+  ) as CreateCurrentReplayResult
+}
+
+export type CreateCandidateReplayV119Result =
+  | { readonly ok: true; readonly replay: Replay }
+  | Exclude<CandidateReplayValidationResult, { ok: true }>
+
+export const createCandidateReplayV119 = (
+  input: Parameters<typeof validateCandidateReplayV119>[0],
+): CreateCandidateReplayV119Result => {
+  const validation = validateCandidateReplayV119(input)
+  if (!validation.ok) return validation
+  return createValidatedReplay(
+    (input as { readonly chronicle: Chronicle }).chronicle,
+  ) as CreateCandidateReplayV119Result
 }

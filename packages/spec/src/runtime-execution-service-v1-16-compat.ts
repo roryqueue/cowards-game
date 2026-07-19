@@ -16,7 +16,10 @@ import type {
   StrategyRuntimeResponseEnvelope,
 } from "./runtime.js"
 import type { StrategyRevision } from "./types.js"
-import { CURRENT_CANONICAL_COMPATIBILITY_TUPLE_RECORD } from "./integrity-authority.js"
+import {
+  CURRENT_CANONICAL_COMPATIBILITY_TUPLE_RECORD,
+  VERSIONED_RUNTIME_V117_SEMANTIC_TUPLE_RECORD,
+} from "./integrity-authority.js"
 import { STRATEGY_RUNTIME_ABI_VERSION } from "./versions.js"
 
 export const HISTORICAL_RUNTIME_EXECUTION_SERVICE_V1_16 = Object.freeze({
@@ -65,12 +68,9 @@ export const verifyHistoricalRuntimeExecutionServiceV116ProtectedBytes = (
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   value !== null && typeof value === "object" && !Array.isArray(value)
 
-const historicalRevisionHasExactAbi = (value: unknown): boolean => {
+const revisionHasExactAbi = (value: unknown, expectedAbi: string): boolean => {
   if (!isRecord(value) || !isRecord(value.runtime)) return false
-  if (
-    value.runtime.abiVersion !==
-    HISTORICAL_RUNTIME_EXECUTION_SERVICE_V1_16.runtimeAbiVersion
-  ) {
+  if (value.runtime.abiVersion !== expectedAbi) {
     return false
   }
   if (!isRecord(value.metadata)) return false
@@ -79,14 +79,19 @@ const historicalRevisionHasExactAbi = (value: unknown): boolean => {
     if (
       artifact !== undefined &&
       (!isRecord(artifact) ||
-        artifact.abiVersion !==
-          HISTORICAL_RUNTIME_EXECUTION_SERVICE_V1_16.runtimeAbiVersion)
+        artifact.abiVersion !== expectedAbi)
     ) {
       return false
     }
   }
   return true
 }
+
+const historicalRevisionHasExactAbi = (value: unknown): boolean =>
+  revisionHasExactAbi(
+    value,
+    HISTORICAL_RUNTIME_EXECUTION_SERVICE_V1_16.runtimeAbiVersion,
+  )
 
 const historicalRequestHasExactIdentity = (value: unknown): boolean => {
   if (
@@ -119,6 +124,34 @@ const historicalRequestHasExactIdentity = (value: unknown): boolean => {
     return false
   }
   return true
+}
+
+const versionedV117RequestHasExactIdentity = (value: unknown): boolean => {
+  if (
+    !isRecord(value) ||
+    value.contractVersion !==
+      HISTORICAL_RUNTIME_EXECUTION_SERVICE_V1_16.runtimeServiceVersion
+  ) {
+    return false
+  }
+  const strategies = value.strategies
+  const evidenceSnapshot = value.evidenceSnapshot
+  if (
+    !isRecord(strategies) ||
+    !revisionHasExactAbi(strategies.bottom, "strategy-runtime-abi-v1.17") ||
+    !revisionHasExactAbi(strategies.top, "strategy-runtime-abi-v1.17") ||
+    !isRecord(evidenceSnapshot) ||
+    !isRecord(evidenceSnapshot.compatibility) ||
+    evidenceSnapshot.compatibility.tupleId !==
+      VERSIONED_RUNTIME_V117_SEMANTIC_TUPLE_RECORD.tupleId ||
+    !isRecord(evidenceSnapshot.compatibility.tuple)
+  ) {
+    return false
+  }
+  const tuple = evidenceSnapshot.compatibility.tuple
+  return Object.entries(VERSIONED_RUNTIME_V117_SEMANTIC_TUPLE_RECORD.tuple).every(
+    ([key, expected]) => tuple[key] === expected,
+  )
 }
 
 const normalizeRevisionAbiForSelectedSchema = (value: unknown): void => {
@@ -154,6 +187,43 @@ const normalizeHistoricalRequestForSelectedSchema = (
       tuple: { ...CURRENT_CANONICAL_COMPATIBILITY_TUPLE_RECORD.tuple },
     }
   }
+  if (
+    String(STRATEGY_RUNTIME_ABI_VERSION) === "strategy-runtime-abi-v1.19" &&
+    isRecord(normalized.match) &&
+    isRecord(normalized.evidenceSnapshot) &&
+    isRecord(normalized.evidenceSnapshot.entrants) &&
+    isRecord(normalized.evidenceSnapshot.entrants.bottom) &&
+    isRecord(normalized.evidenceSnapshot.entrants.top)
+  ) {
+    const match = normalized.match
+    match.initialInitiativePlayerId = match.bottomPlayerId
+    match.candidateMatch = {
+      semanticAuthorityKey: "runtime-v1.19",
+      matchId: match.matchId,
+      seed: match.seed,
+      arenaVariantId: isRecord(match.arenaVariant)
+        ? match.arenaVariant.id
+        : "invalid",
+      bottomStrategyRevisionId: match.bottomStrategyRevisionId,
+      topStrategyRevisionId: match.topStrategyRevisionId,
+      bottomPlayerId: match.bottomPlayerId,
+      topPlayerId: match.topPlayerId,
+      bottomEntrantKey:
+        normalized.evidenceSnapshot.entrants.bottom.entrantKey,
+      topEntrantKey: normalized.evidenceSnapshot.entrants.top.entrantKey,
+      setPolicyVersion: "canonical-set-policy-v1.37-four-condition-v1",
+      scenarioId: `set-scenario:sha256:${"0".repeat(64)}`,
+      conditionId: `set-condition:sha256:${"0".repeat(64)}`,
+      conditionOrdinal: 0,
+      conditionSuffix: "a-bottom-a-first",
+      requestIdentity: `set-request:sha256:${"0".repeat(64)}`,
+      arenaCatalogVersion: "canonical-arena-catalog-v1.37",
+      arenaSemanticGeometryHash: `sha256:${"0".repeat(64)}`,
+      initialInitiativeEntrantKey:
+        normalized.evidenceSnapshot.entrants.bottom.entrantKey,
+      initialInitiativePlayerId: match.bottomPlayerId,
+    }
+  }
   return normalized
 }
 
@@ -182,6 +252,17 @@ export const HistoricalRuntimeExecutionServiceRequestV116Schema =
         normalizeHistoricalRequestForSelectedSchema(value),
       ).success,
     { error: "historical runtime service v1.16 request is invalid" },
+  )
+
+/** Immutable runtime-v1.17 Match envelope, independent of selected current. */
+export const VersionedRuntimeExecutionServiceRequestV117Schema =
+  z.custom<RuntimeExecutionServiceRequest>(
+    (value) =>
+      versionedV117RequestHasExactIdentity(value) &&
+      RuntimeExecutionServiceRequestSchema.safeParse(
+        normalizeHistoricalRequestForSelectedSchema(value),
+      ).success,
+    { error: "versioned runtime service v1.17 request is invalid" },
   )
 
 export const isExactCommittedRuntimeExecutionServiceRequestV116 = (

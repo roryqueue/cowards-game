@@ -9,6 +9,7 @@ export {
   migrateChronicle,
   resolveReplayCompatibilityIdentity,
   validateChronicle,
+  validateCandidateReplayV119,
   validateCurrentChronicle,
   validateVersionedChronicleV117,
   validateVersionedChronicleSemanticsV117,

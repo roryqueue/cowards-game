@@ -1,6 +1,9 @@
 import { vi } from "vitest"
 import {
   CANONICAL_COMPATIBILITY_TUPLES,
+  CANONICAL_ARENA_CATALOG_V1_37,
+  CURRENT_SEMANTIC_RUNTIME_ABI_VERSION,
+  createSetScenarioV137,
   RUNTIME_EVIDENCE_AUTHORITY_PAYLOAD_SCHEMA_VERSION,
   RUNTIME_EVIDENCE_AUTHORITY_TRUST_DOMAINS,
   hashExecutableLaneIdentity,
@@ -27,6 +30,73 @@ const FIXTURE_PUBLICATION = {
   envelopeSha256: `sha256:${"f".repeat(64)}`,
   sourceManifestHash: `sha256:${"9".repeat(64)}`,
 } as const
+
+export const bindFixtureCandidateMatchAuthorityV119 = (
+  request: RuntimeExecutionServiceRequest,
+): RuntimeExecutionServiceRequest => {
+  if (
+    String(CURRENT_SEMANTIC_RUNTIME_ABI_VERSION) !==
+    "strategy-runtime-abi-v1.19"
+  ) {
+    return request
+  }
+  const arena = CANONICAL_ARENA_CATALOG_V1_37.arenas.find(
+    ({ id }) => id === "arena:smoke:v1",
+  )
+  if (arena === undefined || arena.status !== "active") {
+    throw new Error("fixture candidate arena is unavailable")
+  }
+  const scenario = createSetScenarioV137({
+    arenaCatalogVersion: CANONICAL_ARENA_CATALOG_V1_37.catalogVersion,
+    arenaSemanticGeometryHash: arena.semanticGeometryHash,
+    entrantA: {
+      entrantKey: request.evidenceSnapshot.entrants.bottom.entrantKey,
+      playerId: request.match.bottomPlayerId,
+    },
+    entrantB: {
+      entrantKey: request.evidenceSnapshot.entrants.top.entrantKey,
+      playerId: request.match.topPlayerId,
+    },
+    baseSeed: request.match.seed,
+  })
+  const condition = scenario.conditions[0]!
+  return {
+    ...request,
+    match: {
+      ...request.match,
+      arenaVariant: {
+        id: arena.id,
+        name: arena.name,
+        initialBounds: { ...arena.initialBounds },
+        terrainStones: arena.terrainStones.map((position) => ({ ...position })),
+      },
+      initialInitiativePlayerId: condition.initialInitiativePlayerId,
+      candidateMatch: {
+        semanticAuthorityKey: "runtime-v1.19",
+        matchId: request.match.matchId,
+        seed: request.match.seed,
+        arenaVariantId: arena.id,
+        bottomStrategyRevisionId: request.match.bottomStrategyRevisionId,
+        topStrategyRevisionId: request.match.topStrategyRevisionId,
+        bottomPlayerId: request.match.bottomPlayerId,
+        topPlayerId: request.match.topPlayerId,
+        bottomEntrantKey: condition.bottomEntrantKey,
+        topEntrantKey: condition.topEntrantKey,
+        setPolicyVersion: scenario.setPolicyVersion,
+        scenarioId: scenario.scenarioId,
+        conditionId: condition.conditionId,
+        conditionOrdinal: condition.ordinal,
+        conditionSuffix: condition.suffix,
+        requestIdentity: condition.requestIdentity,
+        arenaCatalogVersion: scenario.arenaCatalogVersion,
+        arenaSemanticGeometryHash: scenario.arenaSemanticGeometryHash,
+        initialInitiativeEntrantKey:
+          condition.initialInitiativeEntrantKey,
+        initialInitiativePlayerId: condition.initialInitiativePlayerId,
+      },
+    },
+  } as RuntimeExecutionServiceRequest
+}
 
 export const createFixtureDeploymentLaneIdentity = (
   revision: StrategyRevision,

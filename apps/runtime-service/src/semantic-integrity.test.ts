@@ -12,6 +12,7 @@ import { recordChronicleFromExecution } from "@cowards/replay"
 import { buildStrategyRevision } from "@cowards/runtime-js"
 import { executeCurrentMatchServiceTestSupport as executeRuntimeServiceRequest } from "./runtime-execution-current-match.test-support.js"
 import {
+  bindFixtureCandidateMatchAuthorityV119,
   createFixtureDeploymentLaneIdentity,
   createFixtureRuntimeExecutionAuthorityContext,
 } from "./runtime-execution-evidence.test-support.js"
@@ -41,7 +42,8 @@ const authority = createFixtureRuntimeExecutionAuthorityContext({
   bottom,
   top,
 })
-const request: RuntimeExecutionServiceRequest = {
+const request: RuntimeExecutionServiceRequest =
+  bindFixtureCandidateMatchAuthorityV119({
   contractVersion: RUNTIME_EXECUTION_SERVICE_VERSION,
   kind: "executeMatch",
   requestId: "request:semantic-current",
@@ -63,7 +65,7 @@ const request: RuntimeExecutionServiceRequest = {
   strategies: { bottom, top },
   limits: DEFAULT_RUNTIME_LIMITS,
   evidenceSnapshot: authority.evidenceSnapshot,
-}
+  })
 
 const passiveRuntime: StrategyRuntime = {
   selectActivations(_input: StrategyInput) {
@@ -216,7 +218,28 @@ describe("runtime-service semantic integrity", () => {
           category: "CANONICAL_INTEGRITY_FAILURE" as const,
           ownership: "system_integrity" as const,
           issues: [],
-          truncated: false,
+          truncated: false as const,
+        })),
+        validateVersionedChronicle: vi.fn(() => ({
+          ok: false as const,
+          profile: "current-exact" as const,
+          publishable: false as const,
+          current: true as const,
+          category: "CANONICAL_INTEGRITY_FAILURE" as const,
+          ownership: "system_integrity" as const,
+          issues: [],
+          truncated: false as const,
+        })),
+        validateCandidateChronicle: vi.fn(() => ({
+          ok: false as const,
+          profile: "candidate-v1.19" as const,
+          publishable: false as const,
+          current: false as const,
+          candidate: true as const,
+          category: "CANONICAL_INTEGRITY_FAILURE" as const,
+          ownership: "system_integrity" as const,
+          issues: [],
+          truncated: false as const,
         })),
         reconstructChronicle,
       },

@@ -24,6 +24,7 @@ import { buildStrategyRevision } from "@cowards/runtime-js"
 import { executeCurrentMatchServiceTestSupport as executeRuntimeServiceRequest } from "./runtime-execution-current-match.test-support.js"
 import type { CurrentMatchServiceTestOverrides } from "./runtime-execution-current-match.test-support.js"
 import {
+  bindFixtureCandidateMatchAuthorityV119,
   createFixtureDeploymentLaneIdentity,
   createFixtureRuntimeExecutionAuthorityContext,
   type FixtureRuntimeExecutionAuthorityContext,
@@ -81,7 +82,7 @@ const requestContext = (
   })
   return {
     context,
-    request: {
+    request: bindFixtureCandidateMatchAuthorityV119({
       contractVersion: RUNTIME_EXECUTION_SERVICE_VERSION,
       kind: "executeMatch",
       requestId: `runtime-request:counted-safety:${status}`,
@@ -103,7 +104,7 @@ const requestContext = (
       strategies: { bottom, top },
       limits: DEFAULT_RUNTIME_LIMITS,
       evidenceSnapshot: context.evidenceSnapshot,
-    },
+    }),
   }
 }
 

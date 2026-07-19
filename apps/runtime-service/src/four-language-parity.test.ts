@@ -29,6 +29,7 @@ import {
 } from "@cowards/replay"
 import { executeRuntimeServiceRequest as executeRuntimeServiceRequestWithAuthority } from "./execute-match.js"
 import {
+  bindFixtureCandidateMatchAuthorityV119,
   createFixtureRuntimeEvidenceAuthorityLoader,
   createFixtureDeploymentLaneIdentity,
   createFixtureRuntimeExecutionEvidenceSnapshot,
@@ -124,7 +125,8 @@ const requestForPair = (input: {
   pairId: string
   bottom: StrategyRevision
   top: StrategyRevision
-}): RuntimeExecutionServiceRequest => ({
+}): RuntimeExecutionServiceRequest =>
+  bindFixtureCandidateMatchAuthorityV119({
   contractVersion:
     HISTORICAL_RUNTIME_EXECUTION_SERVICE_V1_16.runtimeServiceVersion,
   kind: "executeMatch",
@@ -154,7 +156,7 @@ const requestForPair = (input: {
     bottom: input.bottom,
     top: input.top,
   }),
-})
+  })
 
 const markerValues = Object.values(fourLanguageCurrentPrivateMarkers)
 const legacyMatchServiceIsSelected =

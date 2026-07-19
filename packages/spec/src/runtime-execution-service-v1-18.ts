@@ -22,6 +22,33 @@ export const RUNTIME_SEMANTIC_RECEIPT_DOMAIN_V1_18 =
 export type Sha256IdentityV118 = `sha256:${string}`
 export type RuntimeMatchSideV118 = "bottom" | "top"
 
+export interface RuntimeExecutionCandidateMatchAuthorityV119 {
+  semanticAuthorityKey: "runtime-v1.19"
+  matchId: string
+  seed: string
+  arenaVariantId: string
+  bottomStrategyRevisionId: string
+  topStrategyRevisionId: string
+  bottomPlayerId: string
+  topPlayerId: string
+  bottomEntrantKey: string
+  topEntrantKey: string
+  setPolicyVersion: "canonical-set-policy-v1.37-four-condition-v1"
+  scenarioId: `set-scenario:sha256:${string}`
+  conditionId: `set-condition:sha256:${string}`
+  conditionOrdinal: 0 | 1 | 2 | 3
+  conditionSuffix:
+    | "a-bottom-a-first"
+    | "a-bottom-b-first"
+    | "a-top-a-first"
+    | "a-top-b-first"
+  requestIdentity: `set-request:sha256:${string}`
+  arenaCatalogVersion: "canonical-arena-catalog-v1.37"
+  arenaSemanticGeometryHash: `sha256:${string}`
+  initialInitiativeEntrantKey: string
+  initialInitiativePlayerId: string
+}
+
 export interface RuntimeSemanticTupleV118 {
   tupleId: Sha256IdentityV118
   components: CanonicalCompatibilityTuple

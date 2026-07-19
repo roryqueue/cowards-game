@@ -64,6 +64,7 @@ import {
   type CurrentMatchServiceTestOverrides,
 } from "./runtime-execution-current-match.test-support.js"
 import {
+  bindFixtureCandidateMatchAuthorityV119,
   createFixtureRuntimeEvidenceAuthorityLoader,
   createFixtureRuntimeExecutionAuthorityContext,
   createFixtureDeploymentLaneIdentity,
@@ -543,7 +544,7 @@ const requestFor = (
       source: passiveSource,
       strategyId: "strategy:top",
     })
-  return {
+  return bindFixtureCandidateMatchAuthorityV119({
     contractVersion: RUNTIME_EXECUTION_SERVICE_VERSION,
     kind: "executeMatch",
     requestId: "runtime-request:test",
@@ -568,7 +569,7 @@ const requestFor = (
       bottom,
       top,
     }),
-  }
+  })
 }
 
 const stringify = (value: unknown): string => JSON.stringify(value)
