@@ -11,6 +11,7 @@ import * as enginePublic from "../index.js"
 import { createFakeRuntime } from "../test/fake-runtime.js"
 import { adaptRuntimeForCurrentKernel } from "../test/current-kernel-runtime.js"
 import { createInitialGameState } from "../state.js"
+import { createCandidateInitialGameState } from "./create-initial-state.js"
 import { stepCandidateMatch } from "./step.js"
 import {
   appendKernelEventHistory,
@@ -188,6 +189,22 @@ const createDirectMachine = (): MatchMachine => {
   }
 }
 
+const createHistoricalDirectMachine = (): MatchMachine => {
+  const created = createCandidateInitialGameState({
+    ...matchInput,
+    arenaVariant: {
+      ...matchInput.arenaVariant,
+      terrainStones: [...matchInput.arenaVariant.terrainStones],
+    },
+  })
+  if (!created.ok) throw new Error("historical initial state rejected")
+  return {
+    ...createDirectMachine(),
+    state: created.state,
+    initialState: created.state,
+  }
+}
+
 const withoutRuntime = (): Readonly<Record<string, unknown>> => ({
   ...matchInput,
 })
@@ -310,7 +327,7 @@ const expectRecordContract = (record: KernelTransitionRecord): void => {
 describe("Phase 257 canonical Match kernel contract", () => {
   it("keeps the historical consumed-request projection and machine hash byte-identical", () => {
     const historical: MatchMachine = {
-      ...createDirectMachine(),
+      ...createHistoricalDirectMachine(),
       semanticTuple: {
         tupleId: HISTORICAL_RUNTIME_V114_SEMANTIC_TUPLE_ID,
         tuple: HISTORICAL_RUNTIME_V114_SEMANTIC_TUPLE,
@@ -340,10 +357,7 @@ describe("Phase 257 canonical Match kernel contract", () => {
     )
     const ordered: MatchMachine = {
       ...base,
-      consumedRequestIds: appendKernelRequestIdHistory(
-        first,
-        "request:second",
-      ),
+      consumedRequestIds: appendKernelRequestIdHistory(first, "request:second"),
     }
     const reordered: MatchMachine = {
       ...base,
@@ -357,12 +371,12 @@ describe("Phase 257 canonical Match kernel contract", () => {
       ...base,
       consumedRequestIds: ["request:first"],
     }
-    expect(projectMatchMachineForHash(ordered).consumedRequestIds).toMatchObject(
-      {
-        commitment: expect.stringMatching(/^sha256:[0-9a-f]{64}$/u),
-        count: 2,
-      },
-    )
+    expect(
+      projectMatchMachineForHash(ordered).consumedRequestIds,
+    ).toMatchObject({
+      commitment: expect.stringMatching(/^sha256:[0-9a-f]{64}$/u),
+      count: 2,
+    })
     expect(
       new Set(
         [ordered, reordered, differentContent, differentCount].map(
@@ -473,7 +487,9 @@ describe("Phase 257 canonical Match kernel contract", () => {
 
     const mutableEvents = globalThis.structuredClone(owned)
     const mutable: MatchMachine = { ...base, fullEvents: mutableEvents }
-    expect(expectedEffectRequestId(base, "selectActivations", "player:bottom")).toBe(
+    expect(
+      expectedEffectRequestId(base, "selectActivations", "player:bottom"),
+    ).toBe(
       expectedEffectRequestId(mutable, "selectActivations", "player:bottom"),
     )
     const before = expectedEffectRequestId(
@@ -557,11 +573,7 @@ describe("Phase 257 canonical Match kernel contract", () => {
       },
     }
     expect(
-      expectedEffectRequestId(
-        historical,
-        "selectActivations",
-        "player:bottom",
-      ),
+      expectedEffectRequestId(historical, "selectActivations", "player:bottom"),
     ).toBe(
       `effect:${historical.cursor.ordinal}:${historical.cursor.stage}:selectActivations:player:bottom`,
     )
@@ -757,36 +769,32 @@ describe("Phase 257 canonical Match kernel contract", () => {
     expect(penalized.kind).not.toBe("failure")
   })
 
-  it(
-    "driver execution is deterministic and returns its identical ordered canonical stream",
-    () => {
-      if (candidateAuthority === undefined) return
-      const first = candidateAuthority.runMatch(withRuntime())
-      const second = candidateAuthority.runMatch(withRuntime())
+  it("driver execution is deterministic and returns its identical ordered canonical stream", () => {
+    if (candidateAuthority === undefined) return
+    const first = candidateAuthority.runMatch(withRuntime())
+    const second = candidateAuthority.runMatch(withRuntime())
 
-      expect(first).toEqual(second)
-      expect(first.kind).toBe("completed")
-      expect(first.transitions.length).toBeGreaterThan(0)
-      first.transitions.forEach((transition) => {
-        expectRecordContract(transition)
-        expect(
-          validateCanonicalTransition(
-            transition as unknown as CanonicalKernelSemanticTransition,
-          ),
-        ).toMatchObject({ ok: true })
-      })
-
-      const transitionEvents = first.transitions.flatMap(
-        (transition) => transition.events,
-      )
-      expect(first.result?.events).toEqual(transitionEvents)
+    expect(first).toEqual(second)
+    expect(first.kind).toBe("completed")
+    expect(first.transitions.length).toBeGreaterThan(0)
+    first.transitions.forEach((transition) => {
+      expectRecordContract(transition)
       expect(
-        transitionEvents.filter((event) => event.type === "MATCH_ENDED"),
-      ).toHaveLength(1)
-      expectNoPrivateTransitionData(first.transitions)
-    },
-    15_000,
-  )
+        validateCanonicalTransition(
+          transition as unknown as CanonicalKernelSemanticTransition,
+        ),
+      ).toMatchObject({ ok: true })
+    })
+
+    const transitionEvents = first.transitions.flatMap(
+      (transition) => transition.events,
+    )
+    expect(first.result?.events).toEqual(transitionEvents)
+    expect(
+      transitionEvents.filter((event) => event.type === "MATCH_ENDED"),
+    ).toHaveLength(1)
+    expectNoPrivateTransitionData(first.transitions)
+  }, 15_000)
 
   it("driver discards every partial record when a runtime system failure occurs", () => {
     if (candidateAuthority === undefined) return

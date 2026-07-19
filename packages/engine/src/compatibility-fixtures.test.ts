@@ -64,12 +64,12 @@ describe("v1.4 full-observation compatibility corpus", () => {
     expect(captureV14CompatibilityCorpus()).toEqual(corpusBefore)
   })
 
-  it("drives an arbitrary valid activation state through the current seam without test-owned scheduling", () => {
+  it("drives an arbitrary valid historical activation state through the explicit v1.17 seam without test-owned scheduling", () => {
     const legacy = byName().get("terminal-push-emits-one-match-ended")
     if (!legacy) {
       throw new Error("missing terminal-push legacy observation")
     }
-    const candidate = MATCH_KERNEL.runActivationFromState({
+    const candidate = MATCH_KERNEL.runActivationFromStateV117({
       state: {
         ...(legacy.observation.initialState as GameState),
         versions: { ...COMPATIBILITY_VERSIONS },
