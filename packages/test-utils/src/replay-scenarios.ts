@@ -1,4 +1,8 @@
-import type { RunMatchInput, StrategyRuntime } from "@cowards/engine"
+import {
+  MATCH_KERNEL,
+  type RunMatchInput,
+  type StrategyRuntime,
+} from "@cowards/engine"
 import {
   adaptHistoricalRuntimeForCurrentKernel,
   adaptRuntimeForCurrentKernel,
@@ -6,6 +10,8 @@ import {
 } from "@cowards/engine/test/current-kernel-runtime"
 import { recordCurrentChronicleTestSupport as recordChronicleFromExecution } from "@cowards/replay/test/current-recording"
 import {
+  CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE,
+  CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_ID,
   INITIAL_BOUNDS,
   CURRENT_SEMANTIC_TUPLE,
   CURRENT_SEMANTIC_TUPLE_ID,
@@ -216,18 +222,26 @@ const buildScenario = (
     historicalPlayerOwnedTimeout?: boolean | undefined
   } = {},
 ): CanonicalReplayScenario => {
-  const execution = runSelectedCurrentMatchForReplayTestSupport({
-    ...input,
-    runtime: options.historicalPlayerOwnedTimeout
-      ? adaptHistoricalRuntimeForCurrentKernel(input.runtime)
-      : adaptRuntimeForCurrentKernel(input.runtime),
-  })
+  const historical = options.historicalPlayerOwnedTimeout === true
+  const execution = historical
+    ? MATCH_KERNEL.runMatchV117({
+        ...input,
+        runtime: adaptHistoricalRuntimeForCurrentKernel(input.runtime),
+      })
+    : runSelectedCurrentMatchForReplayTestSupport({
+        ...input,
+        runtime: adaptRuntimeForCurrentKernel(input.runtime),
+      })
   const recorded = recordChronicleFromExecution({
     execution,
     metadata: {
       schemaVersion: "chronicle-v1.4",
-      semanticTupleId: CURRENT_SEMANTIC_TUPLE_ID,
-      semanticTuple: CURRENT_SEMANTIC_TUPLE,
+      semanticTupleId: historical
+        ? CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_ID
+        : CURRENT_SEMANTIC_TUPLE_ID,
+      semanticTuple: historical
+        ? CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE
+        : CURRENT_SEMANTIC_TUPLE,
     },
   })
   if (!recorded.ok) {
