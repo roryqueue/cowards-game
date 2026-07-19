@@ -1096,7 +1096,10 @@ const projectionAsState = (
     : undefined
 }
 
-const projectStateForRecording = (state: CanonicalSemanticGameState) => ({
+const projectStateForRecording = (
+  state: CanonicalSemanticGameState,
+  includeInitialInitiative = false,
+) => ({
   matchId: state.matchId,
   seed: state.seed,
   versions: {
@@ -1126,7 +1129,8 @@ const projectStateForRecording = (state: CanonicalSemanticGameState) => ({
   phaseNumber: state.phaseNumber,
   roundNumber: state.roundNumber,
   activationCount: state.activationCount,
-  ...(typeof state.initialInitiativePlayerId !== "string"
+  ...(!includeInitialInitiative ||
+  typeof state.initialInitiativePlayerId !== "string"
     ? {}
     : { initialInitiativePlayerId: state.initialInitiativePlayerId }),
   initiativePlayerId: state.initiativePlayerId,
@@ -1426,9 +1430,7 @@ const validateChronicleSemanticsForAuthority = (
   if (
     JSON.stringify(execution.transitions[0]!.beforeState) !==
       JSON.stringify(
-        projectStateForRecording(
-          initialState,
-        ),
+        projectStateForRecording(initialState, candidateAuthorityRequired),
       ) ||
     execution.recorderMaterial.boundaries.length !==
       execution.transitions.length ||
@@ -1609,6 +1611,7 @@ const validateChronicleSemanticsForAuthority = (
         parsedFinal.success
           ? projectStateForRecording(
               parsedFinal.data as CanonicalSemanticGameState,
+              candidateAuthorityRequired,
             )
           : null,
       ) ||
