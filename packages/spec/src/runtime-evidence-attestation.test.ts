@@ -207,8 +207,24 @@ const verifyFixture = (
   })
 
 describe("runtime evidence attestation", () => {
-  it("keeps production producers empty and verifies one exact fixture-domain graph", () => {
-    expect(RUNTIME_EVIDENCE_TRUSTED_PRODUCERS).toEqual([])
+  it("activates only the four reviewed proof-local containment producers and verifies one exact fixture-domain graph", () => {
+    expect(
+      RUNTIME_EVIDENCE_TRUSTED_PRODUCERS.map(({ producerId, kind }) => ({
+        producerId,
+        kind,
+      })),
+    ).toEqual(
+      ["typescript", "python", "rust", "zig"].map((languageId) => ({
+        producerId: `proof-local:runtime-containment:${languageId}:v1`,
+        kind: "containment",
+      })),
+    )
+    expect(Object.isFrozen(RUNTIME_EVIDENCE_TRUSTED_PRODUCERS)).toBe(true)
+    expect(
+      RUNTIME_EVIDENCE_TRUSTED_PRODUCERS.every((entry) =>
+        Object.isFrozen(entry),
+      ),
+    ).toBe(true)
     const verified = verifyFixture()
     const snapshot = getVerifiedRuntimeEvidenceAttestationSnapshot(verified)
     expect(snapshot.kind).toBe("conformance")
