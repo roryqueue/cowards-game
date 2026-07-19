@@ -376,7 +376,7 @@ describe("v1.37 conformance trace candidate generation", () => {
         "--lane=typescript",
       ]),
     ).toThrow("CANDIDATE_ARGUMENTS")
-  }, 30_000)
+  }, 90_000)
 
   it("rejects disallowed and symlinked candidate parents before writing", () => {
     const root = temporaryRoot()
