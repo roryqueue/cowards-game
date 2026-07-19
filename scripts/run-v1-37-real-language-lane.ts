@@ -120,6 +120,14 @@ const run = (
 const hashFile = (filePath: string): `sha256:${string}` =>
   sha256(readFileSync(filePath))
 
+const ensurePinnedImage = (image: string): void => {
+  try {
+    run("docker", ["image", "inspect", image], 30_000)
+  } catch {
+    run("docker", ["pull", image], 300_000)
+  }
+}
+
 const write = (filePath: string, bytes: string): void => {
   writeFileSync(filePath, bytes, { encoding: "utf8", mode: 0o600, flag: "wx" })
 }
@@ -244,7 +252,7 @@ sys.stdout.write(json.dumps({"first":first,"second":second},separators=(",",":")
     languageId === "typescript"
       ? V137_TYPESCRIPT_LINUX_IMAGE
       : V137_PYTHON_LINUX_IMAGE
-  run("docker", ["pull", image], 300_000)
+  ensurePinnedImage(image)
   const executable =
     languageId === "typescript"
       ? "/usr/local/bin/node"
@@ -347,7 +355,7 @@ const prepareWasmLane = (
   workspace: string,
   observationV119: boolean,
 ): PreparedLane => {
-  run("docker", ["pull", V137_WASMTIME_LINUX_IMAGE], 300_000)
+  ensurePinnedImage(V137_WASMTIME_LINUX_IMAGE)
   const extension = languageId === "rust" ? "rs" : "zig"
   const fixtureSource = path.join(workspace, `fixture.${extension}`)
   const fixtureWasm = path.join(workspace, "fixture.wasm")
