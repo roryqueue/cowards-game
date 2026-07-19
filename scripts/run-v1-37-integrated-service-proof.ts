@@ -3,9 +3,16 @@ import { spawn, type ChildProcess } from "node:child_process"
 import { Buffer } from "node:buffer"
 import { createHash } from "node:crypto"
 import {
+  closeSync,
+  constants,
   existsSync,
+  mkdirSync,
   lstatSync,
+  openSync,
   readFileSync,
+  renameSync,
+  unlinkSync,
+  writeFileSync,
 } from "node:fs"
 import path from "node:path"
 import { clearTimeout, setTimeout } from "node:timers"
@@ -14,7 +21,14 @@ import {
   V137_INTEGRATED_PROOF_SCENARIOS,
   type V137IntegratedProofScenario,
 } from "./lib/v1-37-integrated-proof-manifest.js"
-import type { V137PublicRestrictedEvidenceRef } from "./lib/v1-37-restricted-evidence-store.js"
+import {
+  V137_RESTRICTED_EVIDENCE_ACCESS_LOG_RELATIVE_PATH,
+  createV137RestrictedEvidenceStore,
+  v137RestrictedEvidenceAttestationRelativePath,
+  v137RestrictedEvidenceObjectRelativePath,
+  type V137PublicRestrictedEvidenceRef,
+  type V137RestrictedEvidenceRecord,
+} from "./lib/v1-37-restricted-evidence-store.js"
 
 const SHA256 = /^sha256:[0-9a-f]{64}$/u
 const CURRENT_SELECTION_ROOT =
@@ -681,6 +695,358 @@ export const hashV137ServiceInput = (repoRoot: string, relativePath: string) => 
     fail("V137_SERVICE_PROOF_INPUT_MISSING")
   }
   return sha256(readFileSync(absolute))
+}
+
+export interface V137IntegratedServiceProofControl {
+  schemaVersion: "v1.37-integrated-service-control-v1"
+  receipt: V137IntegratedServiceReceipt
+  records: V137RestrictedEvidenceRecord[]
+}
+
+const V137_SERVICE_INPUT_FILES = Object.freeze([
+  "scripts/run-v1-37-integrated-service-proof.ts",
+  "scripts/run-v1-37-real-language-lane.ts",
+  "scripts/lib/v1-37-integrated-proof-manifest.ts",
+  "scripts/lib/v1-37-restricted-evidence-store.ts",
+  ".planning/artifacts/v1.37-observation-v1.19-language-conformance-typescript.json",
+  ".planning/artifacts/v1.37-observation-v1.19-language-conformance-python.json",
+  ".planning/artifacts/v1.37-observation-v1.19-language-conformance-rust.json",
+  ".planning/artifacts/v1.37-observation-v1.19-language-conformance-zig.json",
+  ".planning/artifacts/v1.37-observation-v1.19-language-conformance-import-receipts.json",
+  ".planning/artifacts/v1.37-truthful-inputs-set-fairness-proof.json",
+  "packages/spec/src/current-semantic-authority-source.ts",
+  "packages/spec/src/current-semantic-authority-generated.ts",
+  "apps/go-backend/current_semantic_authority_generated.go",
+  "apps/runtime-service/src/execute-match.ts",
+  "apps/runtime-service/src/server.ts",
+  "packages/replay/src/record.ts",
+  "packages/replay/src/reconstruct.test.ts",
+  "packages/replay/src/replay-transition.ts",
+  "packages/replay/src/validate.ts",
+] as const)
+
+export const computeV137ServiceInputRoot = (
+  repoRoot: string,
+): `sha256:${string}` =>
+  sha256(
+    `${JSON.stringify(
+      V137_SERVICE_INPUT_FILES.map((relativePath) => ({
+        relativePath,
+        sha256: hashV137ServiceInput(repoRoot, relativePath),
+      })),
+    )}\n`,
+  )
+
+const readRegularBounded = (
+  absolutePath: string,
+  missingCode: string,
+  maxBytes: number,
+): Buffer => {
+  if (!existsSync(absolutePath)) fail(missingCode)
+  const stat = lstatSync(absolutePath)
+  if (stat.isSymbolicLink() || !stat.isFile()) {
+    fail("V137_SERVICE_PROOF_RESTRICTED_PATH_INVALID")
+  }
+  if (stat.size > maxBytes) fail("V137_SERVICE_PROOF_RESTRICTED_SIZE_LIMIT")
+  let descriptor: number | undefined
+  try {
+    descriptor = openSync(
+      absolutePath,
+      constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0),
+    )
+    const bytes = readFileSync(descriptor)
+    if (bytes.byteLength > maxBytes) {
+      fail("V137_SERVICE_PROOF_RESTRICTED_SIZE_LIMIT")
+    }
+    return bytes
+  } finally {
+    if (descriptor !== undefined) closeSync(descriptor)
+  }
+}
+
+const parseControl = (source: Buffer): V137IntegratedServiceProofControl => {
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(source.toString("utf8"))
+  } catch {
+    fail("V137_SERVICE_PROOF_CONTROL_INVALID")
+  }
+  if (
+    !exactKeys(parsed, ["schemaVersion", "receipt", "records"]) ||
+    (parsed as V137IntegratedServiceProofControl).schemaVersion !==
+      "v1.37-integrated-service-control-v1" ||
+    !Array.isArray((parsed as V137IntegratedServiceProofControl).records)
+  ) {
+    fail("V137_SERVICE_PROOF_CONTROL_INVALID")
+  }
+  return parsed as V137IntegratedServiceProofControl
+}
+
+const validateRecordShape = (record: unknown): V137RestrictedEvidenceRecord => {
+  if (
+    !exactKeys(record, [
+      "reference",
+      "byteLength",
+      "latestBoundCertificateValidUntil",
+      "deleteEligibleAt",
+    ]) ||
+    !validRestrictedRef((record as V137RestrictedEvidenceRecord).reference) ||
+    !Number.isSafeInteger((record as V137RestrictedEvidenceRecord).byteLength) ||
+    (record as V137RestrictedEvidenceRecord).byteLength < 1 ||
+    typeof (record as V137RestrictedEvidenceRecord)
+      .latestBoundCertificateValidUntil !== "string" ||
+    typeof (record as V137RestrictedEvidenceRecord).deleteEligibleAt !==
+      "string"
+  ) {
+    fail("V137_SERVICE_PROOF_RESTRICTED_RECORD_INVALID")
+  }
+  const validated = record as V137RestrictedEvidenceRecord
+  const validUntil = new Date(validated.latestBoundCertificateValidUntil)
+  const deleteEligibleAt = new Date(validated.deleteEligibleAt)
+  if (
+    Number.isNaN(validUntil.valueOf()) ||
+    Number.isNaN(deleteEligibleAt.valueOf()) ||
+    validUntil.toISOString() !== validated.latestBoundCertificateValidUntil ||
+    deleteEligibleAt.toISOString() !== validated.deleteEligibleAt ||
+    deleteEligibleAt.valueOf() - validUntil.valueOf() !==
+      90 * 24 * 60 * 60 * 1_000
+  ) {
+    fail("V137_SERVICE_PROOF_RESTRICTED_RECORD_INVALID")
+  }
+  return validated
+}
+
+const verifyRecordReadOnly = (
+  restrictedRoot: string,
+  recordInput: unknown,
+  writeEvents: ReadonlySet<string>,
+): V137RestrictedEvidenceRecord => {
+  const record = validateRecordShape(recordInput)
+  const objectPath = path.join(
+    restrictedRoot,
+    v137RestrictedEvidenceObjectRelativePath(record.reference.sha256),
+  )
+  const objectBytes = readRegularBounded(
+    objectPath,
+    "V137_SERVICE_PROOF_RESTRICTED_OBJECT_MISSING",
+    64 * 1024 * 1024,
+  )
+  if (
+    objectBytes.byteLength !== record.byteLength ||
+    sha256(objectBytes) !== record.reference.sha256
+  ) {
+    fail("V137_SERVICE_PROOF_RESTRICTED_OBJECT_DIGEST_MISMATCH")
+  }
+  const attestationPath = path.join(
+    restrictedRoot,
+    v137RestrictedEvidenceAttestationRelativePath(
+      record.reference.attestationSha256,
+    ),
+  )
+  const attestationBytes = readRegularBounded(
+    attestationPath,
+    "V137_SERVICE_PROOF_RESTRICTED_ATTESTATION_MISSING",
+    16 * 1024,
+  )
+  if (sha256(attestationBytes) !== record.reference.attestationSha256) {
+    fail("V137_SERVICE_PROOF_RESTRICTED_ATTESTATION_DIGEST_MISMATCH")
+  }
+  let attestation: unknown
+  try {
+    attestation = JSON.parse(attestationBytes.toString("utf8"))
+  } catch {
+    fail("V137_SERVICE_PROOF_RESTRICTED_ATTESTATION_INVALID")
+  }
+  if (
+    !exactKeys(attestation, [
+      "schemaVersion",
+      "sha256",
+      "class",
+      "byteLength",
+      "retentionClass",
+      "latestBoundCertificateValidUntil",
+      "deleteEligibleAt",
+    ]) ||
+    (attestation as Record<string, unknown>).schemaVersion !==
+      "v1.37-restricted-evidence-attestation-v1" ||
+    (attestation as Record<string, unknown>).sha256 !== record.reference.sha256 ||
+    (attestation as Record<string, unknown>).class !== record.reference.class ||
+    (attestation as Record<string, unknown>).byteLength !== record.byteLength ||
+    (attestation as Record<string, unknown>).retentionClass !==
+      record.reference.retentionClass ||
+    (attestation as Record<string, unknown>)
+      .latestBoundCertificateValidUntil !==
+      record.latestBoundCertificateValidUntil ||
+    (attestation as Record<string, unknown>).deleteEligibleAt !==
+      record.deleteEligibleAt ||
+    attestationBytes.toString("utf8") !== `${JSON.stringify(attestation)}\n`
+  ) {
+    fail("V137_SERVICE_PROOF_RESTRICTED_ATTESTATION_INVALID")
+  }
+  const writeKey = `${record.reference.sha256}:${record.reference.attestationSha256}:${record.reference.class}`
+  if (!writeEvents.has(writeKey)) {
+    fail("V137_SERVICE_PROOF_RESTRICTED_WRITE_RECORD_MISSING")
+  }
+  return record
+}
+
+const readWriteEvents = (restrictedRoot: string): ReadonlySet<string> => {
+  const source = readRegularBounded(
+    path.join(
+      restrictedRoot,
+      V137_RESTRICTED_EVIDENCE_ACCESS_LOG_RELATIVE_PATH,
+    ),
+    "V137_SERVICE_PROOF_RESTRICTED_ACCESS_LOG_MISSING",
+    8 * 1024 * 1024,
+  ).toString("utf8")
+  const writeEvents = new Set<string>()
+  for (const line of source.split("\n").filter(Boolean)) {
+    let event: unknown
+    try {
+      event = JSON.parse(line)
+    } catch {
+      fail("V137_SERVICE_PROOF_RESTRICTED_ACCESS_LOG_INVALID")
+    }
+    if (
+      event !== null &&
+      typeof event === "object" &&
+      !Array.isArray(event) &&
+      (event as Record<string, unknown>).schemaVersion ===
+        "v1.37-restricted-evidence-access-log-v1" &&
+      (event as Record<string, unknown>).action === "write" &&
+      validHash((event as Record<string, unknown>).sha256) &&
+      validHash((event as Record<string, unknown>).attestationSha256) &&
+      typeof (event as Record<string, unknown>).evidenceClass === "string"
+    ) {
+      writeEvents.add(
+        `${String((event as Record<string, unknown>).sha256)}:${String(
+          (event as Record<string, unknown>).attestationSha256,
+        )}:${String((event as Record<string, unknown>).evidenceClass)}`,
+      )
+    }
+  }
+  return writeEvents
+}
+
+export const checkV137IntegratedServiceProof = (
+  repoRoot: string,
+  restrictedRoot: string,
+): V137IntegratedServiceReceipt => {
+  const root = path.resolve(restrictedRoot)
+  const controlBytes = readRegularBounded(
+    path.join(root, V137_INTEGRATED_SERVICE_PROOF_CONTROL_PATH),
+    "V137_SERVICE_PROOF_CONTROL_MISSING",
+    16 * 1024 * 1024,
+  )
+  const control = parseControl(controlBytes)
+  const receipt = validateV137IntegratedServiceReceipt(control.receipt)
+  if (receipt.inputRootSha256 !== computeV137ServiceInputRoot(repoRoot)) {
+    fail("V137_SERVICE_PROOF_INPUT_STALE")
+  }
+  const writeEvents = readWriteEvents(root)
+  const records = control.records.map((record) =>
+    verifyRecordReadOnly(root, record, writeEvents),
+  )
+  const recordRefs = records.map(({ reference }) => JSON.stringify(reference))
+  if (new Set(recordRefs).size !== recordRefs.length) {
+    fail("V137_SERVICE_PROOF_RESTRICTED_RECORD_DUPLICATE")
+  }
+  const expectedRefs = [
+    ...receipt.scenarios.map(({ restrictedEvidenceRef }) =>
+      JSON.stringify(restrictedEvidenceRef),
+    ),
+    JSON.stringify(receipt.proofDataHandoffRef),
+    JSON.stringify(receipt.serviceTraceRef),
+  ]
+  if (
+    expectedRefs.length !== recordRefs.length ||
+    expectedRefs.some((reference) => !recordRefs.includes(reference))
+  ) {
+    fail("V137_SERVICE_PROOF_RESTRICTED_RECORD_COVERAGE")
+  }
+  return receipt
+}
+
+const writeControlAtomic = (
+  restrictedRoot: string,
+  control: V137IntegratedServiceProofControl,
+): void => {
+  const target = path.join(
+    restrictedRoot,
+    V137_INTEGRATED_SERVICE_PROOF_CONTROL_PATH,
+  )
+  mkdirSync(path.dirname(target), { recursive: true, mode: 0o700 })
+  if (existsSync(target) && lstatSync(target).isSymbolicLink()) {
+    fail("V137_SERVICE_PROOF_CONTROL_SYMLINK")
+  }
+  const temporary = `${target}.tmp-${process.pid}`
+  try {
+    writeFileSync(temporary, `${JSON.stringify(control)}\n`, {
+      flag: "wx",
+      mode: 0o600,
+    })
+    renameSync(temporary, target)
+  } finally {
+    if (existsSync(temporary)) unlinkSync(temporary)
+  }
+}
+
+export const writeV137IntegratedServiceProofFixture = async (
+  repoRoot: string,
+  restrictedRoot: string,
+): Promise<V137IntegratedServiceProofControl> => {
+  const resolvedRoot = path.resolve(restrictedRoot)
+  if (
+    path.resolve(process.env.COWARDS_V1_37_RESTRICTED_EVIDENCE_ROOT ?? "") !==
+    resolvedRoot
+  ) {
+    fail("V137_SERVICE_PROOF_RESTRICTED_ROOT_MISMATCH")
+  }
+  const store = createV137RestrictedEvidenceStore({
+    repoRoot,
+    maxObjectBytes: 64 * 1024 * 1024,
+  })
+  const receipt = createV137IntegratedServiceReceiptFixture()
+  const records: V137RestrictedEvidenceRecord[] = []
+  const writeFixtureEvidence = (
+    label: string,
+    evidenceClass: V137PublicRestrictedEvidenceRef["class"],
+  ): V137RestrictedEvidenceRecord => {
+    const record = store.writeEvidence({
+      bytes: Buffer.from(
+        `${JSON.stringify({ schemaVersion: "v1.37-service-proof-fixture-v1", label })}\n`,
+        "utf8",
+      ),
+      evidenceClass,
+      actorClass: "collector",
+      latestBoundCertificateValidUntil: "2099-01-01T00:00:00.000Z",
+    })
+    records.push(record)
+    return record
+  }
+  receipt.scenarios.forEach((scenario) => {
+    scenario.restrictedEvidenceRef = writeFixtureEvidence(
+      `scenario:${scenario.id}`,
+      scenario.restrictedEvidenceRef.class,
+    ).reference
+  })
+  receipt.proofDataHandoffRef = writeFixtureEvidence(
+    "proof-data-handoff",
+    "service-trace",
+  ).reference
+  receipt.serviceTraceRef = writeFixtureEvidence(
+    "service-trace",
+    "command-receipt",
+  ).reference
+  receipt.inputRootSha256 = computeV137ServiceInputRoot(repoRoot)
+  validateV137IntegratedServiceReceipt(receipt)
+  const control: V137IntegratedServiceProofControl = {
+    schemaVersion: "v1.37-integrated-service-control-v1",
+    receipt,
+    records,
+  }
+  writeControlAtomic(resolvedRoot, control)
+  return control
 }
 
 const isDirectRun =
