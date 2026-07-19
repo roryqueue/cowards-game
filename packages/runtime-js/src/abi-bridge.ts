@@ -5,7 +5,9 @@ import {
   STRATEGY_RUNTIME_ABI_VERSION,
   StrategyRuntimeRequestEnvelopeSchema,
   StrategyRuntimeResponseEnvelopeSchema,
+  SoldierBrainInputV117Schema,
   SoldierBrainResultV117Schema,
+  StrategyInputV117Schema,
   StrategyResultV117Schema,
   admitCanonicalJsonBytes,
   createAuthenticatedRuntimeInvocationResponseV117,
@@ -173,6 +175,44 @@ const normalizeVersionedV117EnvelopeForSelectedSchema = (
   return normalized
 }
 
+const parseVersionedV117RequestForSelectedSchema = (value: unknown) => {
+  const record = value as {
+    abiVersion?: unknown
+    methodName?: unknown
+    runtime?: { abiVersion?: unknown }
+    input?: unknown
+  }
+  if (
+    record.abiVersion !== "strategy-runtime-abi-v1.17" ||
+    record.runtime?.abiVersion !== "strategy-runtime-abi-v1.17"
+  ) {
+    throw new Error("Versioned v1.17 runtime request identity mismatch")
+  }
+  const versionedInput =
+    record.methodName === "selectActivations"
+      ? StrategyInputV117Schema.parse(record.input)
+      : record.methodName === "soldierBrain"
+        ? SoldierBrainInputV117Schema.parse(record.input)
+        : (() => {
+            throw new Error("Versioned v1.17 runtime method mismatch")
+          })()
+  const normalized = normalizeVersionedV117EnvelopeForSelectedSchema(
+    value,
+  ) as Record<string, unknown>
+  normalized.input =
+    record.methodName === "selectActivations"
+      ? {
+          ...versionedInput,
+          initialInitiativePlayerId: "fixture-only:versioned-v1.17",
+          hasInitialInitiative: false,
+          roundInitiativePlayerId: "fixture-only:versioned-v1.17",
+          hasRoundInitiative: false,
+        }
+      : { ...versionedInput, hasAdvancedThisActivation: false }
+  const parsed = StrategyRuntimeRequestEnvelopeSchema.parse(normalized)
+  return { ...parsed, input: versionedInput }
+}
+
 /**
  * Immutable v1.17 nested-Match fixture bridge. It verifies the exact historical
  * ABI before using the selected schema only as a structural validator.
@@ -182,21 +222,7 @@ export const executeVersionedV117NestedMatchShapeRuntimeAbiTestSupport = (
 ): RuntimeResult<unknown> =>
   executeStrategyRuntimeAbi(input, {
     abiVersion: "strategy-runtime-abi-v1.17",
-    parseRequest: (value) => {
-      const record = value as {
-        abiVersion?: unknown
-        runtime?: { abiVersion?: unknown }
-      }
-      if (
-        record.abiVersion !== "strategy-runtime-abi-v1.17" ||
-        record.runtime?.abiVersion !== "strategy-runtime-abi-v1.17"
-      ) {
-        throw new Error("Versioned v1.17 runtime request identity mismatch")
-      }
-      return StrategyRuntimeRequestEnvelopeSchema.parse(
-        normalizeVersionedV117EnvelopeForSelectedSchema(value),
-      )
-    },
+    parseRequest: parseVersionedV117RequestForSelectedSchema,
     parseResponse: (value) => {
       const record = value as { abiVersion?: unknown }
       if (record.abiVersion !== "strategy-runtime-abi-v1.17") {
