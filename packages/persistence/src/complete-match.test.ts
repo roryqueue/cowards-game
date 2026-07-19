@@ -672,6 +672,51 @@ describe("current Match completion semantic admission", () => {
       }),
     ).toThrow(/execution|boundary|semantic|reconstruct/iu)
   })
+
+  it("rejects hostile v1.17 Chronicle versions without relying on optional integrity", () => {
+    const built = builtMatch("completion:hostile-v1.17-version")
+    const chronicle = globalThis.structuredClone(built.chronicle)
+    ;(chronicle.reproducibility.versions as { engine: string }).engine =
+      "hostile-engine"
+    delete (chronicle as Chronicle & { integrity?: unknown }).integrity
+
+    expect(() =>
+      admitCurrentMatchCompletion({
+        chronicle,
+        finalState: built.finalState,
+        compatibility: {
+          tupleId: tuple.tupleId,
+          tuple: tuple.tuple,
+        },
+        execution: built.execution,
+        boundaryAnchors: built.boundaryAnchors,
+      }),
+    ).toThrow(MatchCompletionSemanticSystemFailure)
+  })
+
+  it("rejects semantically invalid v1.17 intermediate state evidence", () => {
+    const built = builtMatch("completion:invalid-v1.17-state")
+    const execution = globalThis.structuredClone(built.execution)
+    const beforeState = execution.transitions[0]!
+      .beforeState as unknown as { soldiers: GameState["soldiers"] }
+    beforeState.soldiers[1] = {
+      ...beforeState.soldiers[1]!,
+      position: beforeState.soldiers[0]!.position,
+    }
+
+    expect(() =>
+      admitCurrentMatchCompletion({
+        chronicle: built.chronicle,
+        finalState: built.finalState,
+        compatibility: {
+          tupleId: tuple.tupleId,
+          tuple: tuple.tuple,
+        },
+        execution,
+        boundaryAnchors: built.boundaryAnchors,
+      }),
+    ).toThrow(MatchCompletionSemanticSystemFailure)
+  })
 })
 
 describe("Match completion integrity identity", () => {
