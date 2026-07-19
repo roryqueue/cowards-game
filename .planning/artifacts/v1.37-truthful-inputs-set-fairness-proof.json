@@ -111,7 +111,7 @@
   "inputs": [
     {
       "path": ".planning/artifacts/v1.37-executable-conformance-proof.json",
-      "sha256": "sha256:b3e964c9b240b391cf15368ddf2c8ba78c0ab7a33888dc1eb951c690b8b25f97"
+      "sha256": "sha256:e851d8a7b0300eba4bf54021a3212a8c8f12d850def0d933c9b6a763b94f1d6a"
     },
     {
       "path": ".planning/artifacts/v1.37-kernel-integrity-proof.json",
@@ -624,7 +624,7 @@
       "status": "passed",
       "command": "pnpm exec tsx scripts/evaluate-v1-37-observation-v1-19-postactivation.ts --check --activation-id activation:phase260:plan14:production",
       "exitCode": 0,
-      "stdoutSha256": "sha256:ad0032251a1abfaa90d0fe0dac3593149fb70ae3dcad6f95756782ee3056f328",
+      "stdoutSha256": "sha256:0acaf8da2331b20ce5d324ec280509edfd2c922c361df3b15db23ec428bb4202",
       "stderrSha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     {
@@ -632,7 +632,7 @@
       "status": "passed",
       "command": "pnpm exec vitest run --maxWorkers=1 --no-file-parallelism packages/spec/src/strategy-observation-abi-v1-19.test.ts packages/engine/src/test/strategy-observations-v1-19.test.ts apps/runtime-service/src/execute-match-v1-19.test.ts",
       "exitCode": 0,
-      "stdoutSha256": "sha256:3290b0fdea794367dc553770d0aa1a51b3e59efe739248f6d8d558983722810a",
+      "stdoutSha256": "sha256:c3cc7718098008b39c1a43b68321a406591a768b35fce312423179caf069fcc0",
       "stderrSha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     {
@@ -640,7 +640,7 @@
       "status": "passed",
       "command": "pnpm exec vitest run --maxWorkers=1 --no-file-parallelism packages/spec/src/arena-catalog-v1-37.test.ts packages/spec/src/set-condition-policy-v1-37.test.ts packages/persistence/src/matchset-service.test.ts packages/persistence/src/matchset-status.test.ts packages/persistence/src/scoring.test.ts",
       "exitCode": 0,
-      "stdoutSha256": "sha256:b98dfe74631a0ff4f66c82cc0970b5ef7d84c57183d9eb00cbd245ef5491cf38",
+      "stdoutSha256": "sha256:db702bd9ed02b2b272fe4f391b1dc6175f37461877ee22cc86b0d05994560550",
       "stderrSha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     {
@@ -656,7 +656,7 @@
       "status": "passed",
       "command": "pnpm exec vitest run --maxWorkers=1 --no-file-parallelism apps/runtime-service/src/execute-match-v1-19.test.ts packages/replay/src/record.test.ts packages/replay/src/validate.test.ts packages/replay/src/historical-v1-4.test.ts",
       "exitCode": 0,
-      "stdoutSha256": "sha256:49d4fa0a40dbec1bb59b5db969e4b2444afd49c1c0ca2f5cd0ad37c63c72453e",
+      "stdoutSha256": "sha256:ed6f0b728ca73e109ae7334fe8b2057cef81600016ccbcebb19a09c4e332b2d8",
       "stderrSha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     {
@@ -664,7 +664,7 @@
       "status": "passed",
       "command": "pnpm exec vitest run --maxWorkers=1 --no-file-parallelism apps/runtime-service/src/four-language-conformance-runner.test.ts scripts/certify-v1-37-observation-v1-19-language-lane.test.ts scripts/sign-import-v1-37-observation-v1-19-certificates.test.ts",
       "exitCode": 0,
-      "stdoutSha256": "sha256:b6cf26e9dd18c64740f3e00d38bfdf6cf854d37ae77cad0144935176d3f239e8",
+      "stdoutSha256": "sha256:0234c1d1970cf74ca982478663b0f4191e88e0109632eac9925e3fda96c5a899",
       "stderrSha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     {
@@ -672,7 +672,7 @@
       "status": "passed",
       "command": "pnpm exec vitest run --maxWorkers=1 --no-file-parallelism scripts/activate-v1-37-observation-v1-19.test.ts packages/persistence/src/semantic-authority-selection-head.test.ts scripts/evaluate-v1-37-observation-v1-19-postactivation.test.ts",
       "exitCode": 0,
-      "stdoutSha256": "sha256:2652a13304459b635cfff52cf0363159fc35d54068a8de90bfd4960c379b49cc",
+      "stdoutSha256": "sha256:2d52c19e3cbb0855e48c3bfba88aea53c718e357207c875cc8b6fd879f8a5dc2",
       "stderrSha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     {
