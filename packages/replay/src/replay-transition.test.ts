@@ -1,10 +1,11 @@
-import type {
-  Chronicle,
-  ChronicleEvent,
-  FullBoardSnapshot,
-  SoldierSnapshot,
-  SoldierBrainInput,
-  StrategyInput,
+import {
+  VERSIONED_RUNTIME_V117_SEMANTIC_TUPLE_RECORD,
+  type Chronicle,
+  type ChronicleEvent,
+  type FullBoardSnapshot,
+  type SoldierSnapshot,
+  type SoldierBrainInput,
+  type StrategyInput,
 } from "@cowards/spec"
 import { MATCH_KERNEL, type StrategyRuntime } from "@cowards/engine"
 import { adaptRuntimeForCurrentKernel } from "@cowards/engine/test/current-kernel-runtime"
@@ -20,9 +21,27 @@ import {
 } from "./record.js"
 import {
   compareCurrentReplayTransitionV137,
+  resolveVersionedReplayTransitionEventContractV117,
   validateChronicleTransitions,
   type CurrentReplayTransitionField,
 } from "./replay-transition.js"
+
+describe("versioned runtime-v1.17 event vocabulary", () => {
+  it("remains exact when another semantic authority is selected", () => {
+    expect(
+      resolveVersionedReplayTransitionEventContractV117(
+        VERSIONED_RUNTIME_V117_SEMANTIC_TUPLE_RECORD.tupleId,
+        "MATCH_STARTED",
+      ),
+    ).toBe("current-exact")
+    expect(
+      resolveVersionedReplayTransitionEventContractV117(
+        VERSIONED_RUNTIME_V117_SEMANTIC_TUPLE_RECORD.tupleId,
+        "UNKNOWN_EVENT",
+      ),
+    ).toBe("historical-or-unknown")
+  })
+})
 
 const soldier = (
   id: string,

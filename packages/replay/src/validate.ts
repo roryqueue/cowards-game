@@ -35,6 +35,7 @@ import { validateHistoricalV14Grammar } from "./historical-v1-4-grammar.js"
 import { createChronicleContentHash, stableStringify } from "./hash.js"
 import {
   resolveReplayTransitionEventContract,
+  resolveVersionedReplayTransitionEventContractV117,
   validateChronicleTransitions,
 } from "./replay-transition.js"
 import {
@@ -1185,7 +1186,12 @@ const validateChronicleSemanticsForAuthority = (
     eventErrors.length > 0 ||
     chronicle.events.some(
       ({ type }) =>
-        resolveReplayTransitionEventContract(authority.tupleId, type) !==
+        (versionedV117
+          ? resolveVersionedReplayTransitionEventContractV117(
+              authority.tupleId,
+              type,
+            )
+          : resolveReplayTransitionEventContract(authority.tupleId, type)) !==
         "current-exact",
     )
   ) {

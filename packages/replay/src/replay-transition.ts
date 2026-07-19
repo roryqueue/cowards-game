@@ -12,6 +12,7 @@ import type {
 } from "@cowards/spec"
 import {
   MatchOutcomeSchema,
+  VERSIONED_RUNTIME_V117_SEMANTIC_TUPLE_RECORD,
   classifyCanonicalCompatibilityTupleId,
   type CanonicalCompatibilityTupleLifecycle,
 } from "@cowards/spec"
@@ -48,6 +49,15 @@ export const resolveReplayTransitionEventContract = (
 ): CanonicalCompatibilityTupleLifecycle =>
   V1_37_CURRENT_REPLAY_TRANSITION_EVENT_TYPES.has(eventType)
     ? classifyCanonicalCompatibilityTupleId(semanticTupleId)
+    : "historical-or-unknown"
+
+export const resolveVersionedReplayTransitionEventContractV117 = (
+  semanticTupleId: string,
+  eventType: string,
+): CanonicalCompatibilityTupleLifecycle =>
+  semanticTupleId === VERSIONED_RUNTIME_V117_SEMANTIC_TUPLE_RECORD.tupleId &&
+  V1_37_CURRENT_REPLAY_TRANSITION_EVENT_TYPES.has(eventType)
+    ? "current-exact"
     : "historical-or-unknown"
 
 export const CURRENT_REPLAY_TRANSITION_FIELD_ORDER = Object.freeze([
