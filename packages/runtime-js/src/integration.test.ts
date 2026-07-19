@@ -4,15 +4,19 @@ import { adaptRuntimeForCurrentKernel } from "@cowards/engine/test/current-kerne
 import {
   projectOwnerChronicle,
   projectPublicChronicle,
-  recordChronicleFromExecution,
 } from "@cowards/replay"
+import { recordCurrentChronicleTestSupport as recordChronicleFromExecution } from "@cowards/replay/test/current-recording"
 import {
+  CANONICAL_ARENA_CATALOG_V1_37,
   STRATEGY_RUNTIME_ABI_VERSION,
   StrategyInputSchema,
 } from "@cowards/spec"
-import { createScenarioStateParts } from "@cowards/test-utils"
 import { buildStrategyRevision } from "./revision.js"
 import { createNestedMatchShapeRuntimeFromRevisionTestSupport } from "./executor.js"
+
+const integrationArena = CANONICAL_ARENA_CATALOG_V1_37.arenas.find(
+  ({ id }) => id === "arena:smoke:v1",
+)!
 
 const selectedStrategyInput = (input: unknown) => ({
   ...StrategyInputSchema.parse(input),
@@ -26,16 +30,18 @@ const createInput = (
   source: string,
   overrides: Partial<RunMatchInput> = {},
 ): RunMatchInput => {
-  const scenario = createScenarioStateParts()
   const revision = buildStrategyRevision({ source })
 
   return {
     matchId: "runtime-js-integration",
     seed: "runtime-js-seed",
     arenaVariant: {
-      ...scenario.arenaVariant,
-      id: "runtime-js-arena",
-      terrainStones: [],
+      id: integrationArena.id,
+      name: integrationArena.name,
+      initialBounds: { ...integrationArena.initialBounds },
+      terrainStones: integrationArena.terrainStones.map((position) => ({
+        ...position,
+      })),
     },
     bottomPlayerId: "bottom",
     topPlayerId: "top",
