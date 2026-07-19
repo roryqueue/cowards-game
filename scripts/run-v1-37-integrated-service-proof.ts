@@ -1487,18 +1487,39 @@ export const writeV137IntegratedServiceProof = async (
     environment,
   )
   const commandReceipts: V137CommandReceipt[] = []
-  commandReceipts.push(
-    (
-      await runCapturedCommand({
-        id: "services-up",
-        executable: "pnpm",
-        args: ["services:up"],
-        cwd: repoRoot,
-        environment,
-        timeoutMs: 120_000,
-      })
-    ).receipt,
-  )
+  try {
+    commandReceipts.push(
+      (
+        await runCapturedCommand({
+          id: "services-reused",
+          executable: "docker",
+          args: [
+            "inspect",
+            "--format",
+            "{{.State.Status}}",
+            "cowards-postgres",
+            "cowards-redis",
+          ],
+          cwd: repoRoot,
+          environment,
+          timeoutMs: 30_000,
+        })
+      ).receipt,
+    )
+  } catch {
+    commandReceipts.push(
+      (
+        await runCapturedCommand({
+          id: "services-up",
+          executable: "pnpm",
+          args: ["services:up"],
+          cwd: repoRoot,
+          environment,
+          timeoutMs: 120_000,
+        })
+      ).receipt,
+    )
+  }
   const liveTopology = await readLiveTopology(
     repoRoot,
     environment,
