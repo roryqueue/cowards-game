@@ -21,6 +21,7 @@ import {
   selectedGoRouteManifest,
   validateV137ExecutableConformanceMonitorWiring,
   validateV137Phase260ClosureMonitorWiring,
+  validateV137ReleaseBoundaryMonitorWiring,
   validateSelectedGoRouteManifest,
   validateV116FinalTypeScriptSurfaceLabels,
   validateV115LifecycleOwnershipManifest,
@@ -316,7 +317,7 @@ describe("boundary drift monitors", () => {
       "pnpm v1.36:final-proof:check",
     )
     expect(packageJson.scripts["boundary:monitors"]).toContain(
-      "pnpm v1.36:historical-proof:check && pnpm v1.37:integrity-authority:check && pnpm v1.37:worker-retirement:check && pnpm v1.37:integrity-boundaries:check && pnpm v1.37:kernel-integrity:check && pnpm v1.37:executable-conformance:check && pnpm v1.37:phase260-proof:check && pnpm exec tsx scripts/check-boundary-monitors.ts",
+      "pnpm v1.36:historical-proof:check && pnpm v1.37:integrity-authority:check && pnpm v1.37:worker-retirement:check && pnpm v1.37:integrity-boundaries:check && pnpm v1.37:kernel-integrity:check && pnpm v1.37:executable-conformance:check && pnpm v1.37:phase260-proof:check && pnpm v1.37:release-boundaries:source-check && pnpm exec tsx scripts/check-boundary-monitors.ts",
     )
     expect(
       packageJson.scripts["boundary:monitors"].match(
@@ -383,6 +384,39 @@ describe("boundary drift monitors", () => {
     expect(
       boundary.indexOf("pnpm v1.37:executable-conformance:check"),
     ).toBeLessThan(boundary.indexOf("pnpm v1.37:phase260-proof:check"))
+  })
+
+  it("serializes source-only v1.37 release boundaries exactly once without premature strict mode", () => {
+    expect(validateV137ReleaseBoundaryMonitorWiring()).toContain("exactly once")
+    const packageJson = JSON.parse(readFileSync("package.json", "utf8")) as {
+      scripts: Record<string, string>
+    }
+    const sourceCommand =
+      "pnpm exec tsx scripts/check-v1-37-release-boundaries.ts --source-fixture"
+    const strictCommand =
+      "pnpm exec tsx scripts/check-v1-37-release-boundaries.ts --strict-release"
+    expect(packageJson.scripts["v1.37:release-boundaries:source-check"]).toBe(
+      sourceCommand,
+    )
+    expect(packageJson.scripts["v1.37:release-boundaries:check"]).toBe(
+      strictCommand,
+    )
+    expect(sourceCommand).not.toMatch(/--write|services:|playwright|database/iu)
+    const boundary = packageJson.scripts["boundary:monitors"]!
+    expect(boundary).not.toContain("v1.37:release-boundaries:check")
+    expect(boundary).not.toContain("--strict-release")
+    expect(boundary).not.toContain("check-v1-37-release-boundaries.ts --write")
+    expect(
+      boundary.match(/pnpm v1\.37:release-boundaries:source-check/gu),
+    ).toHaveLength(1)
+    expect(boundary.indexOf("pnpm v1.37:phase260-proof:check")).toBeLessThan(
+      boundary.indexOf("pnpm v1.37:release-boundaries:source-check"),
+    )
+    expect(
+      boundary.indexOf("pnpm v1.37:release-boundaries:source-check"),
+    ).toBeLessThan(
+      boundary.indexOf("pnpm exec tsx scripts/check-boundary-monitors.ts"),
+    )
   })
 
   it("checks v1.35 account provider entry proof artifacts without live dependencies", () => {
