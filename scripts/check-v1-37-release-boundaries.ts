@@ -90,6 +90,7 @@ export interface V137ReleaseStrictArtifact {
     | "audit"
     | "handoff"
     | "readiness"
+    | "authority"
   expectedSha256: string
   actualSha256: string
   canonicalBytes: string
@@ -119,6 +120,9 @@ export const V137_RELEASE_REQUIRED_STRICT_ARTIFACTS = [
   { id: "integrated-service-receipt", artifactClass: "service" },
   { id: "rollback-history-receipt", artifactClass: "rollback-history" },
   { id: "browser-receipt", artifactClass: "browser" },
+  { id: "current-event-authority", artifactClass: "authority" },
+  { id: "current-arena-authority", artifactClass: "authority" },
+  { id: "current-set-policy-authority", artifactClass: "authority" },
   { id: "integrated-proof", artifactClass: "integrated-proof" },
   { id: "prearchive-proof", artifactClass: "prearchive-proof" },
   { id: "milestone-audit", artifactClass: "audit" },
@@ -138,6 +142,17 @@ const publicArtifactKeys = [
   "schemaVersion",
   "status",
   "summary",
+] as const
+
+const strictArtifactKeys = [
+  "actualIdentity",
+  "actualSha256",
+  "artifactClass",
+  "canonicalBytes",
+  "duplicateCount",
+  "expectedIdentity",
+  "expectedSha256",
+  "id",
 ] as const
 
 const integrityFindingMap: Readonly<
@@ -258,6 +273,19 @@ export const analyzeV137ReleaseBoundaries = (
   }
 
   const privateValues = input.privatePreimages.map((preimage) => preimage.value)
+  for (const artifactClass of V137_RELEASE_ARTIFACT_CLASSES) {
+    if (
+      input.publicArtifacts.filter(
+        (artifact) => artifact.artifactClass === artifactClass,
+      ).length !== 1
+    ) {
+      addUnique(findings, {
+        code: "RELEASE_PUBLIC_SCHEMA_DRIFT",
+        artifactClass,
+        artifactId: `${artifactClass}-class-inventory`,
+      })
+    }
+  }
   for (const artifact of input.publicArtifacts) {
     if (!hasExactPublicSchema(artifact)) {
       addUnique(findings, {
@@ -265,7 +293,6 @@ export const analyzeV137ReleaseBoundaries = (
         artifactClass: artifact.artifactClass,
         artifactId: artifact.artifactId,
       })
-      continue
     }
     try {
       assertPublicOutputLeakSafe(artifact, "v1.37 public release artifact")
@@ -301,6 +328,16 @@ export const analyzeV137ReleaseBoundaries = (
         continue
       }
       const artifact = matches[0]!
+      if (
+        JSON.stringify(Object.keys(artifact).sort()) !==
+        JSON.stringify(strictArtifactKeys)
+      ) {
+        addUnique(findings, {
+          code: "RELEASE_PUBLIC_SCHEMA_DRIFT",
+          artifactClass: "release",
+          artifactId: required.id,
+        })
+      }
       if (matches.length !== 1 || artifact.duplicateCount !== 1) {
         addUnique(findings, {
           code: "RELEASE_ARTIFACT_DUPLICATED",
@@ -325,6 +362,31 @@ export const analyzeV137ReleaseBoundaries = (
       if (artifact.actualIdentity !== artifact.expectedIdentity) {
         addUnique(findings, {
           code: "RELEASE_IDENTITY_MIXED",
+          artifactClass: "release",
+          artifactId: required.id,
+        })
+      }
+      let privacyValue: unknown = artifact.canonicalBytes
+      try {
+        privacyValue = JSON.parse(artifact.canonicalBytes) as unknown
+      } catch {
+        // Markdown and other textual release artifacts are scanned as strings.
+      }
+      try {
+        assertPublicOutputLeakSafe(
+          privacyValue,
+          "v1.37 strict release artifact",
+        )
+      } catch {
+        addUnique(findings, {
+          code: "RELEASE_PRIVATE_LEAKAGE",
+          artifactClass: "release",
+          artifactId: required.id,
+        })
+      }
+      if (containsConcretePreimage(privacyValue, privateValues)) {
+        addUnique(findings, {
+          code: "RELEASE_PRIVATE_PREIMAGE",
           artifactClass: "release",
           artifactId: required.id,
         })
