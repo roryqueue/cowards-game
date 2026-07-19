@@ -1126,6 +1126,9 @@ const projectStateForRecording = (state: CanonicalSemanticGameState) => ({
   phaseNumber: state.phaseNumber,
   roundNumber: state.roundNumber,
   activationCount: state.activationCount,
+  ...(state.initialInitiativePlayerId === undefined
+    ? {}
+    : { initialInitiativePlayerId: state.initialInitiativePlayerId }),
   initiativePlayerId: state.initiativePlayerId,
   bounds: { ...state.bounds },
   soldiers: [...state.soldiers]
@@ -1218,15 +1221,6 @@ const validateChronicleSemanticsForAuthority = (
 
   let candidateMatch: Readonly<CandidateReplayMatchAuthorityV119> | undefined
   if (candidateAuthorityRequired) {
-    const candidateAdmission = validateCandidateReplayV119({
-      ...input,
-      profile: "candidate-v1.19",
-    })
-    if (!candidateAdmission.ok) {
-      return currentCodeFailure("CURRENT_BOUNDARY_HASH_INVALID", [
-        "candidateReproducibility",
-      ])
-    }
     candidateMatch = input.persistedMatch as Readonly<CandidateReplayMatchAuthorityV119>
   }
 
@@ -1285,6 +1279,18 @@ const validateChronicleSemanticsForAuthority = (
     return currentCodeFailure("CURRENT_BOUNDARY_HASH_INVALID", [
       "execution",
       "recorderMaterial",
+    ])
+  }
+  if (
+    candidateAuthorityRequired &&
+    (trustedRecording.candidateReproducibility === undefined ||
+      stableStringify(input.candidateReproducibility) !==
+        stableStringify(trustedRecording.candidateReproducibility) ||
+      stableStringify(input.persistedMatch) !==
+        stableStringify(trustedRecording.candidateReproducibility.match))
+  ) {
+    return currentCodeFailure("CURRENT_BOUNDARY_HASH_INVALID", [
+      "candidateReproducibility",
     ])
   }
   if (

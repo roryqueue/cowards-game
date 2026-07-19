@@ -418,6 +418,7 @@ export interface CanonicalSemanticGameState {
   readonly phaseNumber: number
   readonly roundNumber: 1 | 2 | 3 | 4
   readonly activationCount: 1 | 2 | 3 | 4
+  readonly initialInitiativePlayerId?: PlayerId | undefined
   readonly initiativePlayerId: PlayerId
   readonly bounds: BoardBounds
   readonly soldiers: readonly Soldier[]
