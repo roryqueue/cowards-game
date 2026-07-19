@@ -1,8 +1,5 @@
 import { describe, expect, it } from "vitest"
-import {
-  PublicStrategyRuntimeMetadataSchema,
-  STRATEGY_RUNTIME_ABI_VERSION,
-} from "./index.js"
+import { PublicStrategyRuntimeMetadataSchema } from "./index.js"
 
 const metadataFor = (abiVersion: string) => ({
   abiVersion,
@@ -14,7 +11,7 @@ const metadataFor = (abiVersion: string) => ({
 
 describe("public Strategy runtime metadata versioning", () => {
   it.each([
-    STRATEGY_RUNTIME_ABI_VERSION,
+    "strategy-runtime-abi-v1.19",
     "strategy-runtime-abi-v1.17",
     "strategy-runtime-abi-v1.14",
   ])("admits exact %s read-only evidence", (abiVersion) => {

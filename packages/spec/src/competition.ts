@@ -7,7 +7,6 @@ import type {
   UserId,
 } from "./types.js"
 import type {
-  STRATEGY_RUNTIME_ABI_VERSION,
   StrategyRuntimeMetadata,
   StrategyRuntimeProductSemantics,
 } from "./runtime.js"
@@ -184,28 +183,29 @@ export interface PublicStrategyCardDto {
   replayLinks: string[]
 }
 
-type CurrentPublicStrategyRuntimeMetadata = Omit<
+type PublicStrategyRuntimeMetadataBase = Omit<
   StrategyRuntimeMetadata,
   "limits" | "abiVersion"
-> & { abiVersion: typeof STRATEGY_RUNTIME_ABI_VERSION }
+>
 
-export type HistoricalPublicStrategyRuntimeMetadataV117 = Omit<
-  StrategyRuntimeMetadata,
-  "limits" | "abiVersion"
-> & {
-  abiVersion: "strategy-runtime-abi-v1.17"
-}
+export type PublicStrategyRuntimeMetadataV119 =
+  PublicStrategyRuntimeMetadataBase & {
+    abiVersion: "strategy-runtime-abi-v1.19"
+  }
 
-export type HistoricalPublicStrategyRuntimeMetadataV114 = Omit<
-  StrategyRuntimeMetadata,
-  "limits" | "abiVersion"
-> & {
-  abiVersion: "strategy-runtime-abi-v1.14"
-}
+export type HistoricalPublicStrategyRuntimeMetadataV117 =
+  PublicStrategyRuntimeMetadataBase & {
+    abiVersion: "strategy-runtime-abi-v1.17"
+  }
 
-/** Read-only public metadata may describe immutable v1.14 evidence. */
+export type HistoricalPublicStrategyRuntimeMetadataV114 =
+  PublicStrategyRuntimeMetadataBase & {
+    abiVersion: "strategy-runtime-abi-v1.14"
+  }
+
+/** Read-only public metadata admits each exact registered evidence generation. */
 export type PublicStrategyRuntimeMetadata =
-  | CurrentPublicStrategyRuntimeMetadata
+  | PublicStrategyRuntimeMetadataV119
   | HistoricalPublicStrategyRuntimeMetadataV117
   | HistoricalPublicStrategyRuntimeMetadataV114
 
