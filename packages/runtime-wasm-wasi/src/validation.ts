@@ -56,6 +56,10 @@ const hashSource = (source: string): string =>
 const prefixedSha256 = (bytes: Uint8Array | string): `sha256:${string}` =>
   `sha256:${createHash("sha256").update(bytes).digest("hex")}`
 
+// Toolchain discovery is outside every signed Strategy method budget. Keep it
+// bounded, but allow loaded hosts enough time to resolve an exact compiler.
+const TOOLCHAIN_IDENTITY_PROBE_TIMEOUT_MS = 15_000
+
 const resolveExactCommandPath = (command: string): string | null => {
   for (const directory of (process.env.PATH ?? "").split(delimiter)) {
     if (directory.length === 0) continue
@@ -78,13 +82,65 @@ const requireCommandOutput = (
     encoding: "utf8",
     shell: false,
     env: { PATH: process.env.PATH ?? "" },
-    timeout: 5_000,
+    timeout: TOOLCHAIN_IDENTITY_PROBE_TIMEOUT_MS,
     maxBuffer: 256 * 1024,
   })
   if (result.error !== undefined || result.status !== 0) {
     throw new Error("Exact WASM/WASI identity command was unavailable")
   }
   return (result.stdout ?? "").trim()
+}
+
+interface ResolvedRustcToolchain {
+  invocationPath: string
+  invocationResolvedPath: string
+  compilerResolvedPath: string
+}
+
+const resolveRustcToolchain = (): ResolvedRustcToolchain | null => {
+  const invocationPath = resolveExactCommandPath("rustc")
+  if (invocationPath === null) return null
+  const invocationResolvedPath = realpathSync(invocationPath)
+  const rustupPath = resolveExactCommandPath("rustup")
+  if (
+    rustupPath === null ||
+    realpathSync(rustupPath) !== invocationResolvedPath
+  ) {
+    return {
+      invocationPath,
+      invocationResolvedPath,
+      compilerResolvedPath: invocationResolvedPath,
+    }
+  }
+
+  const cargoHome = process.env.CARGO_HOME ?? dirname(dirname(invocationPath))
+  const rustupHome =
+    process.env.RUSTUP_HOME ?? join(dirname(cargoHome), ".rustup")
+  const discoveryEnvironment = {
+    PATH: process.env.PATH ?? "",
+    CARGO_HOME: cargoHome,
+    RUSTUP_HOME: rustupHome,
+  }
+  const resolved = spawnSync(rustupPath, ["which", "rustc"], {
+    encoding: "utf8",
+    shell: false,
+    env: discoveryEnvironment,
+    timeout: TOOLCHAIN_IDENTITY_PROBE_TIMEOUT_MS,
+    maxBuffer: 256 * 1024,
+  })
+  if (resolved.error !== undefined || resolved.status !== 0) return null
+  const compilerPath = (resolved.stdout ?? "").trim()
+  if (compilerPath.length === 0) return null
+  try {
+    accessSync(compilerPath, constants.X_OK)
+    return {
+      invocationPath,
+      invocationResolvedPath,
+      compilerResolvedPath: realpathSync(compilerPath),
+    }
+  } catch {
+    return null
+  }
 }
 
 const hashDirectoryTree = (root: string): `sha256:${string}` => {
@@ -497,24 +553,20 @@ export const collectWasmWasiCandidateIdentityV117 = (
     )
   }
   const compilerName = languageId === "rust" ? "rustc" : "zig"
-  const compilerInvocationPath = resolveExactCommandPath(compilerName)
+  const rustcToolchain = languageId === "rust" ? resolveRustcToolchain() : null
+  const compilerInvocationPath =
+    rustcToolchain?.invocationPath ?? resolveExactCommandPath(compilerName)
   const wasmtimePath = resolveExactCommandPath("wasmtime")
   if (compilerInvocationPath === null || wasmtimePath === null) {
     throw new Error(
       "Exact WASM/WASI compiler or runtime executable is unavailable",
     )
   }
-  const compilerInvocationResolvedPath = realpathSync(compilerInvocationPath)
-  const rustupPath =
-    languageId === "rust" ? resolveExactCommandPath("rustup") : null
-  const rustupResolvedPath =
-    rustupPath === null ? null : realpathSync(rustupPath)
+  const compilerInvocationResolvedPath =
+    rustcToolchain?.invocationResolvedPath ??
+    realpathSync(compilerInvocationPath)
   const compilerResolvedPath =
-    languageId === "rust" &&
-    rustupPath !== null &&
-    compilerInvocationResolvedPath === rustupResolvedPath
-      ? realpathSync(requireCommandOutput(rustupPath, ["which", "rustc"]))
-      : compilerInvocationResolvedPath
+    rustcToolchain?.compilerResolvedPath ?? compilerInvocationResolvedPath
   const compilerInvocationShim =
     compilerResolvedPath === compilerInvocationResolvedPath
       ? null
@@ -905,13 +957,11 @@ const CANDIDATE_WASM_ARTIFACT_ABI_V117 = {
   },
 } as const satisfies WasmArtifactAbiDeclaration
 
-// Toolchain discovery is outside every signed Strategy method budget. Keep it
-// bounded, but allow the same host-load tolerance as the exact identity probes
-// so a busy compiler is not misclassified as an absent runtime lane.
-const TOOLCHAIN_IDENTITY_PROBE_TIMEOUT_MS = 5_000
-
-const rustcVersion = (): string => {
-  const result = spawnSync("rustc", ["--version"], {
+const rustcVersion = (
+  rustc: ResolvedRustcToolchain | null = resolveRustcToolchain(),
+): string => {
+  if (rustc === null) return "rustc unavailable"
+  const result = spawnSync(rustc.compilerResolvedPath, ["--version"], {
     encoding: "utf8",
     shell: false,
     env: { PATH: process.env.PATH ?? "" },
@@ -1201,7 +1251,8 @@ const compileRustWasmArtifactWithAbi = <D extends WasmArtifactAbiDeclaration>(
   if (errors.length > 0) {
     return { ok: false, errors, forbiddenPatterns }
   }
-  if (rustcVersion() === "rustc unavailable") {
+  const rustc = resolveRustcToolchain()
+  if (rustc === null || rustcVersion(rustc) === "rustc unavailable") {
     return {
       ok: false,
       forbiddenPatterns,
@@ -1223,7 +1274,7 @@ const compileRustWasmArtifactWithAbi = <D extends WasmArtifactAbiDeclaration>(
   try {
     writeFileSync(sourcePath, source, "utf8")
     const result = spawnSync(
-      "rustc",
+      rustc.compilerResolvedPath,
       ["--target", "wasm32-wasip1", "-O", sourcePath, "-o", artifactPath],
       {
         encoding: "utf8",

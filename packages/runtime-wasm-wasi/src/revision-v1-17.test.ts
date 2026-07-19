@@ -29,6 +29,23 @@ export fn _start() void {
 
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T
 
+const withoutRustupHomeEnvironment = <T>(operation: () => T): T => {
+  const keys = ["HOME", "CARGO_HOME", "RUSTUP_HOME"] as const
+  const previous = Object.fromEntries(
+    keys.map((key) => [key, process.env[key]]),
+  ) as Record<(typeof keys)[number], string | undefined>
+  for (const key of keys) delete process.env[key]
+  try {
+    return operation()
+  } finally {
+    for (const key of keys) {
+      const value = previous[key]
+      if (value === undefined) delete process.env[key]
+      else process.env[key] = value
+    }
+  }
+}
+
 const decodeLeb128 = (bytes: Buffer, start: number) => {
   let value = 0
   let shift = 0
@@ -55,6 +72,17 @@ const lastWasmSectionOffset = (bytes: Buffer): number => {
 }
 
 describe("Rust/Zig Strategy Revision v1.17 producers", () => {
+  it("resolves rustup's exact rustc without inheriting home variables", () => {
+    const revision = withoutRustupHomeEnvironment(() =>
+      buildRustStrategyRevisionV117({ source: rustSourceLf }),
+    )
+    expect(revision.metadata.compiledArtifact.toolchain).toMatchObject({
+      language: "rust",
+      compiler: "rustc",
+      targetTriple: "wasm32-wasip1",
+    })
+  }, 15_000)
+
   it.each([
     [
       "rust",
