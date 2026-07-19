@@ -14,6 +14,7 @@ import {
   CANONICAL_COMPATIBILITY_TUPLES,
   CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE_ID,
   ARENA_CATALOG_VERSION_V1_37,
+  STRATEGY_RUNTIME_ABI_VERSION,
   VERSIONED_RUNTIME_V117_SEMANTIC_TUPLE_RECORD,
   RuntimeExecutionFinalStateSchema,
   RuntimeExecutionServiceRequestV118Schema,
@@ -694,6 +695,29 @@ const exactTupleMatches = (
   actual.tupleId === expected.tupleId &&
   isDeepStrictEqual(actual.tuple, expected.tuple)
 
+const parseFinalStateForCompatibility = (
+  finalState: GameState,
+  execution: ChronicleRecorderExecution | undefined,
+  compatibility: RuntimeExecutionResolvedEvidenceSnapshot["compatibility"],
+) => {
+  const historicalV117 = exactTupleMatches(
+    compatibility,
+    VERSIONED_RUNTIME_V117_SEMANTIC_TUPLE_RECORD,
+  )
+  const initialInitiativePlayerId =
+    historicalV117 && execution?.kind === "completed"
+      ? execution.recorderMaterial.initialState.initiativePlayerId
+      : undefined
+
+  return RuntimeExecutionFinalStateSchema.safeParse({
+    ...finalState,
+    ...(initialInitiativePlayerId === undefined ||
+    String(STRATEGY_RUNTIME_ABI_VERSION) !== "strategy-runtime-abi-v1.19"
+      ? {}
+      : { initialInitiativePlayerId }),
+  })
+}
+
 const prepareCompletion = (
   input: CompleteMatchRequest,
   dependenciesV118?: MatchCompletionDependenciesV118 | undefined,
@@ -732,7 +756,11 @@ const prepareCompletion = (
     }
     const current = input as CompleteMatchInputV118
     const finalState = globalThis.structuredClone(current.finalState)
-    const parsedFinal = RuntimeExecutionFinalStateSchema.safeParse(finalState)
+    const parsedFinal = parseFinalStateForCompatibility(
+      finalState,
+      current.execution,
+      integrityIdentity.compatibility,
+    )
     if (!parsedFinal.success) {
       throw new MatchCompletionSemanticSystemFailure(
         "CURRENT_FINAL_STATE_SHAPE_INVALID",
@@ -776,7 +804,11 @@ const prepareCompletion = (
     }
     const current = input as unknown as CompleteMatchInput
     const finalState = globalThis.structuredClone(current.finalState)
-    const parsedFinal = RuntimeExecutionFinalStateSchema.safeParse(finalState)
+    const parsedFinal = parseFinalStateForCompatibility(
+      finalState,
+      current.execution,
+      integrityIdentity.compatibility,
+    )
     if (!parsedFinal.success) {
       throw new MatchCompletionSemanticSystemFailure(
         "CURRENT_FINAL_STATE_SHAPE_INVALID",
