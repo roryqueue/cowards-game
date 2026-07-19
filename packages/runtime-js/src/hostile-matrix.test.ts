@@ -18,9 +18,7 @@ import {
   type RuntimeViolationType,
   type RuntimeInvocationExecutionReceiptEvidenceV117,
   type RuntimeInvocationSigningIdentityV117,
-  type SoldierBrainInput,
   type SoldierSnapshot,
-  type StrategyInput,
   type StrategyRevision,
   type StrategyRevisionValidationCode,
 } from "@cowards/spec"

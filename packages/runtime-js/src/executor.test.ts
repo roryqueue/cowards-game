@@ -2,9 +2,7 @@ import { describe, expect, it } from "vitest"
 import { readFileSync } from "node:fs"
 import type {
   AwarenessCell,
-  SoldierBrainInput,
   SoldierSnapshot,
-  StrategyInput,
   StrategyRevision,
 } from "@cowards/spec"
 import { SoldierBrainInputSchema, StrategyInputSchema } from "@cowards/spec"
