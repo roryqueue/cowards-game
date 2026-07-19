@@ -111,7 +111,7 @@
   "inputs": [
     {
       "path": ".planning/artifacts/v1.37-executable-conformance-proof.json",
-      "sha256": "sha256:0c62de09b27d3d3227510ba20a3067ddb3662574bbf41cf19800ede9c44e2680"
+      "sha256": "sha256:e571ee9b4405400927e7f5b4a852807c13b53463029c4e91264106ea5f7e0d39"
     },
     {
       "path": ".planning/artifacts/v1.37-kernel-integrity-proof.json",
@@ -163,7 +163,7 @@
     },
     {
       "path": "package.json",
-      "sha256": "sha256:4502c623a04b15a9c8ff5b143d1453fe163ae573c1089d2503ebde523d611eee"
+      "sha256": "sha256:623628c62a8567146ea1f019873ab26009d3d9fbbf9660af8ef212bb2a3d559d"
     },
     {
       "path": "packages/engine/src/test/strategy-observations-v1-19.test.ts",
@@ -231,7 +231,7 @@
     },
     {
       "path": "scripts/evaluate-v1-37-truthful-inputs-set-fairness.ts",
-      "sha256": "sha256:87c5eeab1f20480a26dc1bbf5dde0b4a1ca6a8c1ee87111cdbba568e9545db1e"
+      "sha256": "sha256:65304c877296987016b26ee420b3f1fd4ac392912b44f51006c9495b57453732"
     }
   ],
   "authority": {

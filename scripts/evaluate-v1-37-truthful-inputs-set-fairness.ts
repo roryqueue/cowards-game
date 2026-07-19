@@ -480,7 +480,10 @@ const exactKeys = (value: unknown, expected: readonly string[]): boolean =>
   Object.keys(value).length === expected.length &&
   expected.every((key) => Object.hasOwn(value, key))
 
-const exactSequence = (actual: readonly string[], expected: readonly string[]): boolean =>
+const exactSequence = (
+  actual: readonly string[],
+  expected: readonly string[],
+): boolean =>
   actual.length === expected.length &&
   actual.every((value, index) => value === expected[index])
 
@@ -519,7 +522,9 @@ const executeGates = (repoRoot: string): Phase260GateReceipt[] => {
     if (result.status !== 0 || result.error !== undefined) {
       process.stderr.write(result.stdout ?? Buffer.alloc(0))
       process.stderr.write(result.stderr ?? Buffer.alloc(0))
-      throw new Error(`PHASE260_GATE_FAILED_${gate.id.toUpperCase().replaceAll("-", "_")}`)
+      throw new Error(
+        `PHASE260_GATE_FAILED_${gate.id.toUpperCase().replaceAll("-", "_")}`,
+      )
     }
     return {
       id: gate.id,
@@ -590,7 +595,10 @@ export const buildV137TruthfulInputsSetFairnessProof = (
   )
   const activationProofPath =
     ".planning/artifacts/v1.37-observation-v1.19-activation-transaction-proof.json"
-  const activationProof = readJson<ActivationProof>(repoRoot, activationProofPath)
+  const activationProof = readJson<ActivationProof>(
+    repoRoot,
+    activationProofPath,
+  )
   const proofDigest = sha256(readBytes(repoRoot, activationProofPath))
   const finalization = database.finalization
   if (!finalization) throw new Error("PHASE260_FINALIZATION_MISSING")
@@ -598,8 +606,7 @@ export const buildV137TruthfulInputsSetFairnessProof = (
   if (
     CURRENT_SEMANTIC_AUTHORITY_GENERATED.selection.semanticAuthorityKey !==
       "runtime-v1.19" ||
-    CURRENT_SEMANTIC_AUTHORITY_GENERATED.selection.tupleId !==
-      selection.tupleId
+    CURRENT_SEMANTIC_AUTHORITY_GENERATED.selection.tupleId !== selection.tupleId
   ) {
     throw new Error("PHASE260_FILE_DATABASE_AUTHORITY_MISMATCH")
   }
@@ -719,11 +726,9 @@ export const buildV137TruthfulInputsSetFairnessProof = (
       activeSemanticGeometryCount: new Set(
         schedulableArenas.map((arena) => arena.semanticGeometryHash),
       ).size as 2,
-      duplicateActiveGeometryCount:
-        (schedulableArenas.length -
-          new Set(
-            schedulableArenas.map((arena) => arena.semanticGeometryHash),
-          ).size) as 0,
+      duplicateActiveGeometryCount: (schedulableArenas.length -
+        new Set(schedulableArenas.map((arena) => arena.semanticGeometryHash))
+          .size) as 0,
       smokeOpenFieldAliasExact:
         alias?.aliasOf === smoke?.id &&
         alias.semanticGeometryHash === smoke.semanticGeometryHash,
@@ -801,7 +806,8 @@ export const buildV137TruthfulInputsSetFairnessProof = (
     },
     recovery: {
       productionHistory: database.history.map((entry) => entry.transitionKind),
-      rollbackDrillPassed: (activationProof.rollbackReceipt.exitCode === 0) as true,
+      rollbackDrillPassed: (activationProof.rollbackReceipt.exitCode ===
+        0) as true,
       preparedFailClosed: true,
       dirtyFilesFailClosed: true,
       committedUnfinalizedRecoverable: true,
@@ -829,7 +835,8 @@ export const buildV137TruthfulInputsSetFairnessProof = (
     },
     protectedBaseline: {
       status: preactivation.protectedBaseline.status as "verified",
-      protectedPathCount: preactivation.protectedBaseline.protectedPathCount as 2,
+      protectedPathCount: preactivation.protectedBaseline
+        .protectedPathCount as 2,
       baselineSha256: preactivation.protectedBaseline.baselineSha256,
     },
     gates,
@@ -1034,9 +1041,7 @@ const validateExactNestedKeys = (
     if (!exactKeys(value, keys)) errors.push(error)
   }
   if (
-    proof.requirements.some(
-      (entry) => !exactKeys(entry, ["id", "status"]),
-    ) ||
+    proof.requirements.some((entry) => !exactKeys(entry, ["id", "status"])) ||
     proof.decisions.some((entry) => !exactKeys(entry, ["id", "status"])) ||
     proof.inputs.some((entry) => !exactKeys(entry, ["path", "sha256"])) ||
     proof.gates.some(
@@ -1170,11 +1175,9 @@ export const validateV137TruthfulInputsSetFairnessProof = (
       "canonical-set-policy-v1.37-four-condition-v1" ||
     authority.revisionEvidencePolicy !==
       "strategy-revision-v1.19-revalidation-v1" ||
-    [
-      authority.corpusRoot,
-      authority.traceRoot,
-      authority.workshopRoot,
-    ].some((digest) => !SHA256.test(digest))
+    [authority.corpusRoot, authority.traceRoot, authority.workshopRoot].some(
+      (digest) => !SHA256.test(digest),
+    )
   ) {
     errors.push("authority")
   }
@@ -1273,9 +1276,8 @@ export const validateV137TruthfulInputsSetFairnessProof = (
     !proof.revisions.failedClosed ||
     !proof.revisions.exactRevisionEvidenceRequired ||
     !proof.revisions.crossRevisionSubstitutionRejected ||
-    new Set(
-      proof.revisions.records.map((record) => record.strategyRevisionId),
-    ).size !== proof.revisions.records.length ||
+    new Set(proof.revisions.records.map((record) => record.strategyRevisionId))
+      .size !== proof.revisions.records.length ||
     proof.revisions.records.some(
       (record) =>
         !record.dispositionCode ||
@@ -1287,8 +1289,7 @@ export const validateV137TruthfulInputsSetFairnessProof = (
     errors.push("revisions")
   }
   if (
-    proof.activation.activationId !==
-      "activation:phase260:plan14:production" ||
+    proof.activation.activationId !== "activation:phase260:plan14:production" ||
     proof.activation.state !== "active-v1.19-finalized" ||
     proof.activation.revision !== 2 ||
     !SHA256.test(proof.activation.activeSelectionRoot) ||
@@ -1431,6 +1432,58 @@ export const refreshV137TruthfulInputsSetFairnessArtifacts = (
   return proof
 }
 
+export const refreshV137TruthfulInputsSetFairnessInputBindings = (
+  repoRoot: string = root,
+): V137TruthfulInputsSetFairnessProof => {
+  const current = readJson<V137TruthfulInputsSetFairnessProof>(
+    repoRoot,
+    V137_TRUTHFUL_INPUTS_SET_FAIRNESS_PATHS.json,
+  )
+  const committedResult = spawnSync(
+    "git",
+    ["show", `HEAD:${V137_TRUTHFUL_INPUTS_SET_FAIRNESS_PATHS.json}`],
+    { cwd: repoRoot, encoding: "utf8", timeout: 30_000 },
+  )
+  if (committedResult.status !== 0 || committedResult.error !== undefined) {
+    throw new Error("PHASE260_IMMUTABLE_PREIMAGE_UNAVAILABLE")
+  }
+  const committed = JSON.parse(
+    committedResult.stdout,
+  ) as V137TruthfulInputsSetFairnessProof
+  const immutable = ({
+    inputs: _inputs,
+    ...value
+  }: V137TruthfulInputsSetFairnessProof): unknown => value
+  if (
+    validateV137TruthfulInputsSetFairnessProof(current).length > 0 ||
+    validateV137TruthfulInputsSetFairnessProof(committed).length > 0 ||
+    JSON.stringify(immutable(current)) !== JSON.stringify(immutable(committed))
+  ) {
+    throw new Error("PHASE260_IMMUTABLE_PREIMAGE_INVALID")
+  }
+  const refreshed = {
+    ...current,
+    inputs: hashInputs(repoRoot),
+  }
+  if (
+    JSON.stringify(immutable(current)) !==
+      JSON.stringify(immutable(refreshed)) ||
+    validateV137TruthfulInputsSetFairnessProof(refreshed).length > 0
+  ) {
+    throw new Error("PHASE260_IMMUTABLE_PREIMAGE_CHANGED")
+  }
+  writeAtomic(
+    V137_TRUTHFUL_INPUTS_SET_FAIRNESS_PATHS.json,
+    renderV137TruthfulInputsSetFairnessJson(refreshed),
+  )
+  writeAtomic(
+    V137_TRUTHFUL_INPUTS_SET_FAIRNESS_PATHS.markdown,
+    renderV137TruthfulInputsSetFairnessMarkdown(refreshed),
+  )
+  checkV137TruthfulInputsSetFairnessArtifacts(repoRoot)
+  return refreshed
+}
+
 export const checkV137TruthfulInputsSetFairnessArtifacts = (
   repoRoot: string = root,
 ): void => {
@@ -1465,11 +1518,16 @@ export const checkV137TruthfulInputsSetFairnessArtifacts = (
 const main = (): void => {
   try {
     const args = process.argv.slice(2)
-    if (args.length !== 1 || !["--write", "--check"].includes(args[0]!)) {
-      throw new Error("usage: --write | --check")
+    if (
+      args.length !== 1 ||
+      !["--write", "--refresh-inputs", "--check"].includes(args[0]!)
+    ) {
+      throw new Error("usage: --write | --refresh-inputs | --check")
     }
     if (args[0] === "--write") {
       refreshV137TruthfulInputsSetFairnessArtifacts(root)
+    } else if (args[0] === "--refresh-inputs") {
+      refreshV137TruthfulInputsSetFairnessInputBindings(root)
     } else {
       checkV137TruthfulInputsSetFairnessArtifacts(root)
     }

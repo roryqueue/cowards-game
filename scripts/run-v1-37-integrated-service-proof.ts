@@ -32,6 +32,7 @@ import {
   type V137PublicRestrictedEvidenceRef,
   type V137RestrictedEvidenceRecord,
 } from "./lib/v1-37-restricted-evidence-store.js"
+import type { ProofLocalActivationReport } from "./activate-v1-37-proof-local-runtime-authority.js"
 
 const SHA256 = /^sha256:[0-9a-f]{64}$/u
 const CURRENT_SELECTION_ROOT =
@@ -120,11 +121,26 @@ export interface V137IntegratedServiceLane {
   certificateId: string
   certificateSha256: `sha256:${string}`
   functionalConformance: "passed"
-  containmentEvidence: "unattested"
+  containmentEvidence: "attested"
   counted: false
-  limitationCode: "deployable-containment-unattested"
+  limitationCode: "proof-local-identity-non-counted"
+  containmentCertificates: Readonly<
+    Record<"bottom" | "top", { id: string; hash: `sha256:${string}` }>
+  >
+  laneIdentityHash: `sha256:${string}`
+  probeIdentityManifestRoot: `sha256:${string}`
   runs: V137IntegratedServiceLaneRun[]
 }
+
+type V137IntegratedServiceFunctionalLane = Pick<
+  V137IntegratedServiceLane,
+  | "languageId"
+  | "laneId"
+  | "certificateId"
+  | "certificateSha256"
+  | "functionalConformance"
+  | "runs"
+>
 
 export interface V137NoMutationRoots {
   gameplaySha256: `sha256:${string}`
@@ -146,7 +162,7 @@ export interface V137IntegratedServiceScenarioReceipt {
 
 export interface V137IntegratedServiceReceipt {
   schemaVersion: "v1.37-integrated-service-receipt-v1"
-  status: "passed-functional-containment-unattested"
+  status: "passed-functional-containment-attested-non-counted"
   authority: {
     semanticAuthorityKey: "runtime-v1.19"
     tupleId: `sha256:${string}`
@@ -203,9 +219,12 @@ const validRestrictedRef = (
     "v1.37-restricted-evidence-ref-v1" &&
   validHash((value as V137PublicRestrictedEvidenceRef).sha256) &&
   validHash((value as V137PublicRestrictedEvidenceRef).attestationSha256) &&
-  ["command-receipt", "service-trace", "rollback-trace", "privacy-scan"].includes(
-    (value as V137PublicRestrictedEvidenceRef).class,
-  ) &&
+  [
+    "command-receipt",
+    "service-trace",
+    "rollback-trace",
+    "privacy-scan",
+  ].includes((value as V137PublicRestrictedEvidenceRef).class) &&
   (value as V137PublicRestrictedEvidenceRef).retentionClass ===
     "certificate-plus-audit-window" &&
   (value as V137PublicRestrictedEvidenceRef).availabilityPosture === "available"
@@ -216,8 +235,7 @@ const validMutationRoots = (value: unknown): value is V137NoMutationRoots =>
     "memorySha256",
     "resultSha256",
     "standingsSha256",
-  ]) &&
-  Object.values(value as V137NoMutationRoots).every(validHash)
+  ]) && Object.values(value as V137NoMutationRoots).every(validHash)
 
 const sameMutationRoots = (
   left: V137NoMutationRoots,
@@ -246,7 +264,7 @@ export const validateV137IntegratedServiceReceipt = (
   const receipt = input as V137IntegratedServiceReceipt
   if (
     receipt.schemaVersion !== "v1.37-integrated-service-receipt-v1" ||
-    receipt.status !== "passed-functional-containment-unattested" ||
+    receipt.status !== "passed-functional-containment-attested-non-counted" ||
     !exactKeys(receipt.authority, [
       "semanticAuthorityKey",
       "tupleId",
@@ -290,6 +308,9 @@ export const validateV137IntegratedServiceReceipt = (
           "containmentEvidence",
           "counted",
           "limitationCode",
+          "containmentCertificates",
+          "laneIdentityHash",
+          "probeIdentityManifestRoot",
           "runs",
         ]) ||
         lane.languageId !== languages[index] ||
@@ -299,8 +320,20 @@ export const validateV137IntegratedServiceReceipt = (
         lane.certificateId.length === 0 ||
         !validHash(lane.certificateSha256) ||
         lane.functionalConformance !== "passed" ||
-        lane.containmentEvidence !== "unattested" ||
-        lane.limitationCode !== "deployable-containment-unattested" ||
+        lane.containmentEvidence !== "attested" ||
+        lane.limitationCode !== "proof-local-identity-non-counted" ||
+        !validHash(lane.laneIdentityHash) ||
+        !validHash(lane.probeIdentityManifestRoot) ||
+        !exactKeys(lane.containmentCertificates, ["bottom", "top"]) ||
+        (["bottom", "top"] as const).some((side) => {
+          const certificate = lane.containmentCertificates[side]
+          return (
+            !exactKeys(certificate, ["id", "hash"]) ||
+            typeof certificate.id !== "string" ||
+            certificate.id.length === 0 ||
+            !validHash(certificate.hash)
+          )
+        }) ||
         !Array.isArray(lane.runs) ||
         lane.runs.length !== 3
       ) {
@@ -311,50 +344,54 @@ export const validateV137IntegratedServiceReceipt = (
       }
       const runIds = new Set<string>()
       const processIdentityRoots = new Set<string>()
-      return lane.runs.some((run) => {
-        if (
-          !exactKeys(run, [
-            "runId",
-            "resultRootSha256",
-            "evidenceRootSha256",
-            "identityManifestRoot",
-            "toolchainSha256",
-            "artifactSha256",
-            "containmentPolicySha256",
-            "complete",
-            "freshProcess",
-            "freshWorkspace",
-            "skippedCaseCount",
-            "unsupportedCaseCount",
-            "fallbackUsed",
-            "syntheticEvidence",
-          ]) ||
-          typeof run.runId !== "string" ||
-          run.runId.length === 0 ||
-          [
-            run.resultRootSha256,
-            run.evidenceRootSha256,
-            run.identityManifestRoot,
-            run.toolchainSha256,
-            run.artifactSha256,
-            run.containmentPolicySha256,
-          ].some((value) => !validHash(value)) ||
-          !run.complete ||
-          !run.freshProcess ||
-          !run.freshWorkspace ||
-          run.skippedCaseCount !== 0 ||
-          run.unsupportedCaseCount !== 0 ||
-          run.fallbackUsed ||
-          run.syntheticEvidence
-        ) {
-          return true
-        }
-        runIds.add(run.runId)
-        processIdentityRoots.add(
-          `${run.runId}:${run.identityManifestRoot}:${run.evidenceRootSha256}`,
-        )
-        return false
-      }) || runIds.size !== 3 || processIdentityRoots.size !== 3
+      return (
+        lane.runs.some((run) => {
+          if (
+            !exactKeys(run, [
+              "runId",
+              "resultRootSha256",
+              "evidenceRootSha256",
+              "identityManifestRoot",
+              "toolchainSha256",
+              "artifactSha256",
+              "containmentPolicySha256",
+              "complete",
+              "freshProcess",
+              "freshWorkspace",
+              "skippedCaseCount",
+              "unsupportedCaseCount",
+              "fallbackUsed",
+              "syntheticEvidence",
+            ]) ||
+            typeof run.runId !== "string" ||
+            run.runId.length === 0 ||
+            [
+              run.resultRootSha256,
+              run.evidenceRootSha256,
+              run.identityManifestRoot,
+              run.toolchainSha256,
+              run.artifactSha256,
+              run.containmentPolicySha256,
+            ].some((value) => !validHash(value)) ||
+            !run.complete ||
+            !run.freshProcess ||
+            !run.freshWorkspace ||
+            run.skippedCaseCount !== 0 ||
+            run.unsupportedCaseCount !== 0 ||
+            run.fallbackUsed ||
+            run.syntheticEvidence
+          ) {
+            return true
+          }
+          runIds.add(run.runId)
+          processIdentityRoots.add(
+            `${run.runId}:${run.identityManifestRoot}:${run.evidenceRootSha256}`,
+          )
+          return false
+        }) ||
+        runIds.size !== 3 ||
+        processIdentityRoots.size !== 3
+      )
     })
   ) {
     fail("V137_SERVICE_PROOF_LANE_INVALID")
@@ -424,15 +461,15 @@ export const validateV137IntegratedServiceReceipt = (
     !validHash(receipt.chronicle.chronicleRootSha256) ||
     receipt.chronicle.chronicleRootSha256 !==
       receipt.chronicle.reconstructionRootSha256 ||
-    receipt.chronicle.chronicleRootSha256 !==
-      receipt.chronicle.replayRootSha256
+    receipt.chronicle.chronicleRootSha256 !== receipt.chronicle.replayRootSha256
   ) {
     fail("V137_SERVICE_PROOF_RECONSTRUCTION_MISMATCH")
   }
   return globalThis.structuredClone(receipt)
 }
 
-const fixtureHash = (label: string): `sha256:${string}` => sha256(`fixture:${label}`)
+const fixtureHash = (label: string): `sha256:${string}` =>
+  sha256(`fixture:${label}`)
 
 const fixtureRef = (
   evidenceClass: V137PublicRestrictedEvidenceRef["class"],
@@ -461,9 +498,21 @@ export const createV137IntegratedServiceReceiptFixture =
         certificateId: `certificate:${languageId}:v1.19`,
         certificateSha256: fixtureHash(`certificate:${languageId}`),
         functionalConformance: "passed",
-        containmentEvidence: "unattested",
+        containmentEvidence: "attested",
         counted: false,
-        limitationCode: "deployable-containment-unattested",
+        limitationCode: "proof-local-identity-non-counted",
+        containmentCertificates: {
+          bottom: {
+            id: `certificate:containment:${languageId}:bottom`,
+            hash: fixtureHash(`containment-certificate:${languageId}:bottom`),
+          },
+          top: {
+            id: `certificate:containment:${languageId}:top`,
+            hash: fixtureHash(`containment-certificate:${languageId}:top`),
+          },
+        },
+        laneIdentityHash: fixtureHash(`lane-identity:${languageId}`),
+        probeIdentityManifestRoot: fixtureHash(`probe-identity:${languageId}`),
         runs: [0, 1, 2].map((ordinal) => ({
           runId: `run:${languageId}:${ordinal}`,
           resultRootSha256: fixtureHash("lane-result"),
@@ -485,13 +534,12 @@ export const createV137IntegratedServiceReceiptFixture =
     const chronicleRoot = fixtureHash("chronicle-reconstruction-replay")
     return {
       schemaVersion: "v1.37-integrated-service-receipt-v1",
-      status: "passed-functional-containment-unattested",
+      status: "passed-functional-containment-attested-non-counted",
       authority: {
         semanticAuthorityKey: "runtime-v1.19",
         tupleId: fixtureHash("tuple"),
         runtimeAbiVersion: "strategy-runtime-abi-v1.19",
-        chronicleVersion:
-          "chronicle-recorder-current-events-v1.37-candidate-1",
+        chronicleVersion: "chronicle-recorder-current-events-v1.37-candidate-1",
         databaseSelectionRoot: CURRENT_SELECTION_ROOT,
       },
       topology: {
@@ -590,7 +638,10 @@ export const validateV137IntegratedServiceEnvironment = (
   if (isWithin(path.resolve(repoRoot), restrictedRoot)) {
     fail("V137_SERVICE_PROOF_RESTRICTED_ROOT_IN_REPOSITORY")
   }
-  if (existsSync(restrictedRoot) && lstatSync(restrictedRoot).isSymbolicLink()) {
+  if (
+    existsSync(restrictedRoot) &&
+    lstatSync(restrictedRoot).isSymbolicLink()
+  ) {
     fail("V137_SERVICE_PROOF_RESTRICTED_ROOT_SYMLINK")
   }
   return Object.freeze({
@@ -630,7 +681,11 @@ export const cleanupV137OwnedProcesses = async (
   signal: (pid: number, signal: "SIGTERM") => Promise<void>,
 ): Promise<void> => {
   for (const process of [...processes].reverse()) {
-    if (!process.owned || !Number.isSafeInteger(process.pid) || process.pid < 2) {
+    if (
+      !process.owned ||
+      !Number.isSafeInteger(process.pid) ||
+      process.pid < 2
+    ) {
       continue
     }
     await signal(process.pid, "SIGTERM")
@@ -654,7 +709,11 @@ export const runV137Command = (
     let stdoutBytes = 0
     let stderrBytes = 0
     const maxBytes = 64 * 1024 * 1024
-    const append = (target: Buffer[], chunk: Buffer, current: number): number => {
+    const append = (
+      target: Buffer[],
+      chunk: Buffer,
+      current: number,
+    ): number => {
       const next = current + chunk.byteLength
       if (next > maxBytes) {
         child.kill("SIGTERM")
@@ -692,12 +751,72 @@ export const runV137Command = (
     })
   })
 
-export const hashV137ServiceInput = (repoRoot: string, relativePath: string) => {
+export const hashV137ServiceInput = (
+  repoRoot: string,
+  relativePath: string,
+) => {
   const absolute = path.join(repoRoot, relativePath)
   if (!existsSync(absolute) || lstatSync(absolute).isSymbolicLink()) {
     fail("V137_SERVICE_PROOF_INPUT_MISSING")
   }
   return sha256(readFileSync(absolute))
+}
+
+interface V137ProtectedBaselineArtifact {
+  paths: Array<{
+    path: string
+    raw: {
+      exists: true
+      byteLength: number
+      sha256: `sha256:${string}`
+      mode: string
+    }
+  }>
+  baselineSha256: `sha256:${string}`
+}
+
+export const assertV137ProtectedBaselineRawBytes = (
+  repoRoot: string,
+): V137CommandReceipt => {
+  const artifact = parseJsonOutput<V137ProtectedBaselineArtifact>(
+    readFileSync(
+      path.join(
+        repoRoot,
+        ".planning/artifacts/v1.37-protected-working-tree-baseline.json",
+      ),
+    ),
+    "V137_SERVICE_PROOF_PROTECTED_BASELINE_INVALID",
+  )
+  if (
+    !validHash(artifact.baselineSha256) ||
+    !Array.isArray(artifact.paths) ||
+    artifact.paths.length === 0
+  ) {
+    fail("V137_SERVICE_PROOF_PROTECTED_BASELINE_INVALID")
+  }
+  for (const entry of artifact.paths) {
+    const absolute = path.join(repoRoot, entry.path)
+    const stat = existsSync(absolute) ? lstatSync(absolute) : undefined
+    if (stat === undefined || stat.isSymbolicLink() || !stat.isFile()) {
+      fail("V137_SERVICE_PROOF_PROTECTED_PATH_DRIFT")
+    }
+    const bytes = readFileSync(absolute)
+    const mode = `0${(stat.mode & 0o777).toString(8)}`
+    if (
+      bytes.byteLength !== entry.raw.byteLength ||
+      sha256(bytes) !== entry.raw.sha256 ||
+      mode !== entry.raw.mode
+    ) {
+      fail("V137_SERVICE_PROOF_PROTECTED_PATH_DRIFT")
+    }
+  }
+  return Object.freeze({
+    id: "protected-baseline-raw-bytes",
+    status: "passed",
+    exitCode: 0,
+    stdoutSha256: artifact.baselineSha256,
+    stderrSha256: sha256(Buffer.alloc(0)),
+  })
 }
 
 export interface V137IntegratedServiceProofControl {
@@ -708,6 +827,7 @@ export interface V137IntegratedServiceProofControl {
 
 const V137_SERVICE_INPUT_FILES = Object.freeze([
   "scripts/run-v1-37-integrated-service-proof.ts",
+  "scripts/activate-v1-37-proof-local-runtime-authority.ts",
   "scripts/run-v1-37-real-language-lane.ts",
   "scripts/lib/v1-37-integrated-proof-manifest.ts",
   "scripts/lib/v1-37-restricted-evidence-store.ts",
@@ -716,12 +836,20 @@ const V137_SERVICE_INPUT_FILES = Object.freeze([
   ".planning/artifacts/v1.37-observation-v1.19-language-conformance-rust.json",
   ".planning/artifacts/v1.37-observation-v1.19-language-conformance-zig.json",
   ".planning/artifacts/v1.37-observation-v1.19-language-conformance-import-receipts.json",
+  ".planning/artifacts/v1.37-protected-working-tree-baseline.json",
   ".planning/artifacts/v1.37-truthful-inputs-set-fairness-proof.json",
   "packages/spec/src/current-semantic-authority-source.ts",
   "packages/spec/src/current-semantic-authority-generated.ts",
+  "packages/spec/src/runtime-containment-trusted-producers-v1-37.ts",
   "apps/go-backend/current_semantic_authority_generated.go",
   "apps/runtime-service/src/execute-match.ts",
+  "apps/runtime-service/src/pinned-wasmtime-container-runtime.ts",
+  "apps/runtime-service/src/runtime-config.ts",
   "apps/runtime-service/src/server.ts",
+  "packages/runtime-js/src/abi-bridge.ts",
+  "packages/runtime-js/src/executor.ts",
+  "packages/runtime-wasm-wasi/src/wasm-wasi-subprocess-adapter.ts",
+  "packages/runtime-wasm-wasi/src/validation.ts",
   "packages/replay/src/record.ts",
   "packages/replay/src/reconstruct.test.ts",
   "packages/replay/src/replay-transition.ts",
@@ -794,7 +922,9 @@ const validateRecordShape = (record: unknown): V137RestrictedEvidenceRecord => {
       "deleteEligibleAt",
     ]) ||
     !validRestrictedRef((record as V137RestrictedEvidenceRecord).reference) ||
-    !Number.isSafeInteger((record as V137RestrictedEvidenceRecord).byteLength) ||
+    !Number.isSafeInteger(
+      (record as V137RestrictedEvidenceRecord).byteLength,
+    ) ||
     (record as V137RestrictedEvidenceRecord).byteLength < 1 ||
     typeof (record as V137RestrictedEvidenceRecord)
       .latestBoundCertificateValidUntil !== "string" ||
@@ -872,7 +1002,8 @@ const verifyRecordReadOnly = (
     ]) ||
     (attestation as Record<string, unknown>).schemaVersion !==
       "v1.37-restricted-evidence-attestation-v1" ||
-    (attestation as Record<string, unknown>).sha256 !== record.reference.sha256 ||
+    (attestation as Record<string, unknown>).sha256 !==
+      record.reference.sha256 ||
     (attestation as Record<string, unknown>).class !== record.reference.class ||
     (attestation as Record<string, unknown>).byteLength !== record.byteLength ||
     (attestation as Record<string, unknown>).retentionClass !==
@@ -1183,7 +1314,12 @@ const readLiveTopology = async (
   const postgres = await runCapturedCommand({
     id: "postgres-health",
     executable: "docker",
-    args: ["inspect", "--format", "{{json .State.Health.Status}}", "cowards-postgres"],
+    args: [
+      "inspect",
+      "--format",
+      "{{json .State.Health.Status}}",
+      "cowards-postgres",
+    ],
     cwd: repoRoot,
     environment: baseEnvironment,
     timeoutMs: 30_000,
@@ -1191,7 +1327,12 @@ const readLiveTopology = async (
   const redis = await runCapturedCommand({
     id: "redis-health",
     executable: "docker",
-    args: ["inspect", "--format", "{{json .State.Health.Status}}", "cowards-redis"],
+    args: [
+      "inspect",
+      "--format",
+      "{{json .State.Health.Status}}",
+      "cowards-redis",
+    ],
     cwd: repoRoot,
     environment: baseEnvironment,
     timeoutMs: 30_000,
@@ -1210,21 +1351,24 @@ const readLiveTopology = async (
   )
   const topology: V137IntegratedServiceTopology = {
     postgres:
-      parseJsonOutput<string>(postgres.stdout, "V137_SERVICE_PROOF_POSTGRES_HEALTH_INVALID") ===
-      "healthy"
+      parseJsonOutput<string>(
+        postgres.stdout,
+        "V137_SERVICE_PROOF_POSTGRES_HEALTH_INVALID",
+      ) === "healthy"
         ? "healthy"
         : "unhealthy",
     redis:
-      parseJsonOutput<string>(redis.stdout, "V137_SERVICE_PROOF_REDIS_HEALTH_INVALID") ===
-      "healthy"
+      parseJsonOutput<string>(
+        redis.stdout,
+        "V137_SERVICE_PROOF_REDIS_HEALTH_INVALID",
+      ) === "healthy"
         ? "healthy"
         : "unhealthy",
     goOwner: "ready",
     runtimeServiceOwner: "ready",
-    databaseHead: parseJsonOutput<V137IntegratedServiceTopology["databaseHead"]>(
-      head.stdout,
-      "V137_SERVICE_PROOF_DATABASE_HEAD_INVALID",
-    ),
+    databaseHead: parseJsonOutput<
+      V137IntegratedServiceTopology["databaseHead"]
+    >(head.stdout, "V137_SERVICE_PROOF_DATABASE_HEAD_INVALID"),
   }
   return {
     topology: assertV137IntegratedServiceTopology(topology),
@@ -1304,7 +1448,10 @@ interface Phase260ProofInput {
 const executeLiveLanes = async (
   repoRoot: string,
   environment: Record<string, string>,
-): Promise<{ lanes: V137IntegratedServiceLane[]; receipts: V137CommandReceipt[] }> => {
+): Promise<{
+  lanes: V137IntegratedServiceFunctionalLane[]
+  receipts: V137CommandReceipt[]
+}> => {
   const phase260 = parseJsonOutput<Phase260ProofInput>(
     readFileSync(
       path.join(
@@ -1315,13 +1462,21 @@ const executeLiveLanes = async (
     "V137_SERVICE_PROOF_PHASE260_INVALID",
   )
   const receipts: V137CommandReceipt[] = []
-  const lanes: V137IntegratedServiceLane[] = []
+  const lanes: V137IntegratedServiceFunctionalLane[] = []
   for (const languageId of ["typescript", "python", "rust", "zig"] as const) {
     const certificate = phase260.conformance.lanes.find(
       (candidate) => candidate.languageId === languageId,
     )
-    if (certificate === undefined) fail("V137_SERVICE_PROOF_CERTIFICATE_MISSING")
-    const candidate = parseJsonOutput<{ candidateBindings: unknown; expectedRunBinding: { resultRootSha256: string; evidenceRootSha256: string; requiredCaseCount: number } }>(
+    if (certificate === undefined)
+      fail("V137_SERVICE_PROOF_CERTIFICATE_MISSING")
+    const candidate = parseJsonOutput<{
+      candidateBindings: unknown
+      expectedRunBinding: {
+        resultRootSha256: string
+        evidenceRootSha256: string
+        requiredCaseCount: number
+      }
+    }>(
       readFileSync(
         path.join(
           repoRoot,
@@ -1361,9 +1516,10 @@ const executeLiveLanes = async (
             "--workspace",
             workspace,
             "--observation-v1-19-candidate-bindings-base64",
-            Buffer.from(JSON.stringify(candidate.candidateBindings), "utf8").toString(
-              "base64",
-            ),
+            Buffer.from(
+              JSON.stringify(candidate.candidateBindings),
+              "utf8",
+            ).toString("base64"),
           ],
           cwd: repoRoot,
           environment: {
@@ -1432,13 +1588,101 @@ const executeLiveLanes = async (
       certificateId: certificate.certificateId,
       certificateSha256: certificate.certificateSha256,
       functionalConformance: "passed",
-      containmentEvidence: "unattested",
-      counted: false,
-      limitationCode: "deployable-containment-unattested",
       runs,
     })
   }
   return { lanes, receipts }
+}
+
+const activateProofLocalRuntimeAuthority = async (
+  repoRoot: string,
+  environment: Record<string, string>,
+  functionalLanes: V137IntegratedServiceFunctionalLane[],
+): Promise<{
+  lanes: V137IntegratedServiceLane[]
+  report: ProofLocalActivationReport
+  receipt: V137CommandReceipt
+}> => {
+  const result = await runCapturedCommand({
+    id: "proof-local-runtime-authority-service-execution",
+    executable: process.execPath,
+    args: [
+      "--import",
+      "tsx",
+      "scripts/activate-v1-37-proof-local-runtime-authority.ts",
+      "--probe-lanes-base64",
+      Buffer.from(JSON.stringify(functionalLanes), "utf8").toString("base64"),
+    ],
+    cwd: repoRoot,
+    environment,
+    timeoutMs: 20 * 60 * 1_000,
+  })
+  const report = parseJsonOutput<ProofLocalActivationReport>(
+    result.stdout,
+    "V137_SERVICE_PROOF_AUTHORITY_ACTIVATION_INVALID",
+  )
+  const languages = ["typescript", "python", "rust", "zig"] as const
+  if (
+    report.schemaVersion !== "v1.37-proof-local-runtime-authority-v1" ||
+    report.status !== "passed" ||
+    report.authority.publicationCount !== 1 ||
+    report.authority.installationCount !== 1 ||
+    report.service.healthChecked !== true ||
+    report.service.contractVersion !== "runtime-execution-service-v1.18" ||
+    report.service.runtimeAbiVersion !== "strategy-runtime-abi-v1.19" ||
+    report.service.adapter !== "container-subprocess" ||
+    report.service.executionCount !== 4 ||
+    !validHash(report.proofRootSha256) ||
+    JSON.stringify(report.lanes.map(({ languageId }) => languageId)) !==
+      JSON.stringify(languages) ||
+    JSON.stringify(report.executions.map(({ languageId }) => languageId)) !==
+      JSON.stringify(languages)
+  ) {
+    fail("V137_SERVICE_PROOF_AUTHORITY_ACTIVATION_INVALID")
+  }
+  const lanes = functionalLanes.map(
+    (lane, index): V137IntegratedServiceLane => {
+      const activated = report.lanes[index]!
+      const execution = report.executions[index]!
+      if (
+        activated.languageId !== lane.languageId ||
+        activated.laneId !== lane.laneId ||
+        activated.counted !== false ||
+        activated.probeIdentityManifestRoot !==
+          lane.runs[0]?.identityManifestRoot ||
+        execution.languageId !== lane.languageId ||
+        execution.statusCode !== 200 ||
+        execution.resultClass !== "success" ||
+        execution.semanticValidation !== "passed" ||
+        execution.reconstructionEquivalent !== true ||
+        execution.replayEquivalent !== true ||
+        execution.laneIdentityHash !== activated.laneIdentityHash ||
+        execution.containmentCertificateIds.bottom !==
+          activated.containmentCertificates.bottom.id ||
+        execution.containmentCertificateIds.top !==
+          activated.containmentCertificates.top.id ||
+        !validHash(activated.laneIdentityHash) ||
+        !validHash(activated.containmentCertificates.bottom.hash) ||
+        !validHash(activated.containmentCertificates.top.hash) ||
+        !validHash(execution.chronicleCanonicalHash) ||
+        !validHash(execution.transitionTraceRoot) ||
+        !validHash(execution.finalStateCanonicalHash) ||
+        !validHash(execution.outcomeCanonicalHash)
+      ) {
+        fail("V137_SERVICE_PROOF_AUTHORITY_LANE_MISMATCH")
+      }
+      return {
+        ...lane,
+        containmentEvidence: "attested",
+        counted: false,
+        limitationCode: "proof-local-identity-non-counted",
+        containmentCertificates: activated.containmentCertificates,
+        laneIdentityHash: activated.laneIdentityHash,
+        probeIdentityManifestRoot: activated.probeIdentityManifestRoot,
+      }
+    },
+  )
+  return { lanes, report, receipt: result.receipt }
 }
 
 const readProofDataHandoff = async (
@@ -1496,6 +1740,8 @@ export const writeV137IntegratedServiceProof = async (
     environment,
   )
   const commandReceipts: V137CommandReceipt[] = []
+  const protectedBaselineReceipt = assertV137ProtectedBaselineRawBytes(repoRoot)
+  commandReceipts.push(protectedBaselineReceipt)
   try {
     commandReceipts.push(
       (
@@ -1592,25 +1838,18 @@ export const writeV137IntegratedServiceProof = async (
       environment,
       timeoutMs: 20 * 60 * 1_000,
     },
-    {
-      id: "protected-baseline",
-      executable: "pnpm",
-      args: [
-        "exec",
-        "tsx",
-        "scripts/capture-v1-37-protected-baseline.ts",
-        "--check",
-      ],
-      cwd: repoRoot,
-      environment,
-      timeoutMs: 60_000,
-    },
   ]
   for (const gate of gates) {
     commandReceipts.push((await runCapturedCommand(gate)).receipt)
   }
   const laneProof = await executeLiveLanes(repoRoot, environment)
   commandReceipts.push(...laneProof.receipts)
+  const runtimeAuthority = await activateProofLocalRuntimeAuthority(
+    repoRoot,
+    environment,
+    laneProof.lanes,
+  )
+  commandReceipts.push(runtimeAuthority.receipt)
   const after = await databaseMutationRoots(
     repoRoot,
     databaseEnvironment,
@@ -1628,18 +1867,21 @@ export const writeV137IntegratedServiceProof = async (
     ),
     "V137_SERVICE_PROOF_PHASE260_INVALID",
   )
-  const rootSeed = {
-    commandReceipts,
-    lanes: laneProof.lanes,
-    databaseBefore: before.roots,
-    databaseAfter: after.roots,
-    handoff: handoff.descriptor,
-  }
-  const chronicleRoot = sha256(JSON.stringify(rootSeed))
+  const chronicleRoot = sha256(
+    JSON.stringify(
+      runtimeAuthority.report.executions.map((execution) => ({
+        languageId: execution.languageId,
+        chronicleCanonicalHash: execution.chronicleCanonicalHash,
+        transitionTraceRoot: execution.transitionTraceRoot,
+        finalStateCanonicalHash: execution.finalStateCanonicalHash,
+        outcomeCanonicalHash: execution.outcomeCanonicalHash,
+      })),
+    ),
+  )
   const receipt = createV137IntegratedServiceReceiptFixture()
   receipt.authority.tupleId = phase260.authority.tupleId
   receipt.topology = liveTopology.topology
-  receipt.lanes = laneProof.lanes
+  receipt.lanes = runtimeAuthority.lanes
   receipt.chronicle = {
     semanticValidation: "passed",
     eventVocabulary: "current-exact",
@@ -1681,7 +1923,7 @@ export const writeV137IntegratedServiceProof = async (
       before: before.roots,
       after: after.roots,
       commandReceipts,
-      laneRoots: laneProof.lanes.map((lane) => ({
+      laneRoots: runtimeAuthority.lanes.map((lane) => ({
         languageId: lane.languageId,
         runIds: lane.runs.map(({ runId }) => runId),
         resultRoots: lane.runs.map(({ resultRootSha256 }) => resultRootSha256),
@@ -1689,6 +1931,16 @@ export const writeV137IntegratedServiceProof = async (
           ({ evidenceRootSha256 }) => evidenceRootSha256,
         ),
       })),
+      runtimeAuthority: runtimeAuthority.report.authority,
+      serviceExecution:
+        scenario.id.startsWith("lane-") && scenario.id.endsWith("-success")
+          ? runtimeAuthority.report.executions.find(
+              ({ languageId }) => scenario.id === `lane-${languageId}-success`,
+            )
+          : scenario.id === "current-chronicle-valid" ||
+              scenario.id === "reconstruction-equivalent"
+            ? runtimeAuthority.report.executions
+            : undefined,
     }
     return {
       id: scenario.id,
@@ -1705,7 +1957,11 @@ export const writeV137IntegratedServiceProof = async (
     }
   })
   receipt.proofDataHandoffRef = writeEvidence(
-    handoff.descriptor,
+    {
+      ...handoff.descriptor,
+      proofAuthorityPublicationId:
+        runtimeAuthority.report.authority.publicationId,
+    },
     "service-trace",
   ).reference
   receipt.serviceTraceRef = writeEvidence(
@@ -1713,11 +1969,15 @@ export const writeV137IntegratedServiceProof = async (
       schemaVersion: "v1.37-integrated-service-trace-v1",
       topology: liveTopology.topology,
       commandReceipts,
-      lanes: laneProof.lanes,
+      lanes: runtimeAuthority.lanes,
+      service: runtimeAuthority.report.service,
+      executions: runtimeAuthority.report.executions,
       containment: {
-        deployableAuthorityPublicationCount: 0,
-        installedAuthorityCount: 0,
-        disposition: "unattested-non-counted",
+        deployableAuthorityPublicationCount:
+          runtimeAuthority.report.authority.publicationCount,
+        installedAuthorityCount:
+          runtimeAuthority.report.authority.installationCount,
+        disposition: "proof-local-attested-identity-non-counted",
       },
     },
     "command-receipt",
@@ -1730,6 +1990,10 @@ export const writeV137IntegratedServiceProof = async (
     records,
   }
   writeControlAtomic(serviceEnvironment.restrictedRoot, control)
+  const protectedAfter = assertV137ProtectedBaselineRawBytes(repoRoot)
+  if (protectedAfter.stdoutSha256 !== protectedBaselineReceipt.stdoutSha256) {
+    fail("V137_SERVICE_PROOF_PROTECTED_PATH_DRIFT")
+  }
   checkV137IntegratedServiceProof(repoRoot, serviceEnvironment.restrictedRoot)
   return control
 }

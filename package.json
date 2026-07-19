@@ -62,6 +62,7 @@
     "v1.37:executable-conformance:write": "pnpm exec tsx scripts/evaluate-v1-37-executable-conformance.ts --write",
     "v1.37:executable-conformance:check": "pnpm exec tsx scripts/evaluate-v1-37-executable-conformance.ts --check",
     "v1.37:phase260-proof:write": "pnpm exec tsx scripts/evaluate-v1-37-truthful-inputs-set-fairness.ts --write",
+    "v1.37:phase260-proof:refresh-inputs": "pnpm exec tsx scripts/evaluate-v1-37-truthful-inputs-set-fairness.ts --refresh-inputs",
     "v1.37:phase260-proof:check": "pnpm exec tsx scripts/evaluate-v1-37-truthful-inputs-set-fairness.ts --check",
     "v1.37:integrated-service-proof:write": "pnpm exec tsx scripts/run-v1-37-integrated-service-proof.ts --write",
     "v1.37:integrated-service-proof:check": "pnpm exec tsx scripts/run-v1-37-integrated-service-proof.ts --check",

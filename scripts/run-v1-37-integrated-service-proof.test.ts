@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest"
 import {
   V137_INTEGRATED_SERVICE_PROOF_CONTROL_PATH,
   V137_INTEGRATED_SERVICE_SCENARIOS,
+  assertV137ProtectedBaselineRawBytes,
   assertV137IntegratedServiceTopology,
   checkV137IntegratedServiceProof,
   cleanupV137OwnedProcesses,
@@ -18,6 +19,13 @@ import {
 const repoRoot = path.resolve(import.meta.dirname, "..")
 
 describe("v1.37 integrated service proof preflight topology cleanup", () => {
+  it("binds protected paths to their captured raw bytes despite later HEAD movement", () => {
+    expect(assertV137ProtectedBaselineRawBytes(repoRoot)).toMatchObject({
+      id: "protected-baseline-raw-bytes",
+      status: "passed",
+    })
+  })
+
   it("fails closed unless every explicit DSN, restricted root, and current database head is exact", () => {
     expect(() =>
       validateV137IntegratedServiceEnvironment({}, repoRoot),
@@ -28,8 +36,7 @@ describe("v1.37 integrated service proof preflight topology cleanup", () => {
       validateV137IntegratedServiceEnvironment(
         {
           DATABASE_URL: "postgresql://proof.invalid/db",
-          COWARDS_GO_BACKEND_TEST_DATABASE_URL:
-            "postgresql://proof.invalid/db",
+          COWARDS_GO_BACKEND_TEST_DATABASE_URL: "postgresql://proof.invalid/db",
           COWARDS_V1_37_SIGNED_CONFORMANCE_TEST_DATABASE_URL:
             "postgresql://proof.invalid/db",
           COWARDS_V1_37_RESTRICTED_EVIDENCE_ROOT: outside,
@@ -42,8 +49,7 @@ describe("v1.37 integrated service proof preflight topology cleanup", () => {
       validateV137IntegratedServiceEnvironment(
         {
           DATABASE_URL: "postgresql://proof.invalid/db",
-          COWARDS_GO_BACKEND_TEST_DATABASE_URL:
-            "postgresql://other.invalid/db",
+          COWARDS_GO_BACKEND_TEST_DATABASE_URL: "postgresql://other.invalid/db",
           COWARDS_V1_37_SIGNED_CONFORMANCE_TEST_DATABASE_URL:
             "postgresql://proof.invalid/db",
           COWARDS_V1_37_RESTRICTED_EVIDENCE_ROOT: outside,
@@ -55,14 +61,10 @@ describe("v1.37 integrated service proof preflight topology cleanup", () => {
       validateV137IntegratedServiceEnvironment(
         {
           DATABASE_URL: "postgresql://proof.invalid/db",
-          COWARDS_GO_BACKEND_TEST_DATABASE_URL:
-            "postgresql://proof.invalid/db",
+          COWARDS_GO_BACKEND_TEST_DATABASE_URL: "postgresql://proof.invalid/db",
           COWARDS_V1_37_SIGNED_CONFORMANCE_TEST_DATABASE_URL:
             "postgresql://proof.invalid/db",
-          COWARDS_V1_37_RESTRICTED_EVIDENCE_ROOT: path.join(
-            repoRoot,
-            ".proof",
-          ),
+          COWARDS_V1_37_RESTRICTED_EVIDENCE_ROOT: path.join(repoRoot, ".proof"),
         },
         repoRoot,
       ),
@@ -142,9 +144,18 @@ describe("v1.37 integrated service proof four lanes typed failure Chronicle reco
     const validated = validateV137IntegratedServiceReceipt(receipt)
     expect(validated.lanes).toHaveLength(4)
     expect(validated.lanes.flatMap((lane) => lane.runs)).toHaveLength(12)
-    expect(validated.lanes.every((lane) => lane.functionalConformance === "passed")).toBe(true)
+    expect(
+      validated.lanes.every((lane) => lane.functionalConformance === "passed"),
+    ).toBe(true)
     expect(validated.lanes.every((lane) => !lane.counted)).toBe(true)
-    expect(validated.lanes.every((lane) => lane.containmentEvidence === "unattested")).toBe(true)
+    expect(
+      validated.lanes.every(
+        (lane) =>
+          lane.containmentEvidence === "attested" &&
+          lane.limitationCode === "proof-local-identity-non-counted" &&
+          lane.counted === false,
+      ),
+    ).toBe(true)
 
     const missingRun = globalThis.structuredClone(receipt)
     missingRun.lanes[0]!.runs.pop()
@@ -216,9 +227,9 @@ describe("v1.37 integrated service proof four lanes typed failure Chronicle reco
       unknown
     >
     delete missingHandoff.proofDataHandoffRef
-    expect(() =>
-      validateV137IntegratedServiceReceipt(missingHandoff),
-    ).toThrow("V137_SERVICE_PROOF_RECEIPT_SHAPE")
+    expect(() => validateV137IntegratedServiceReceipt(missingHandoff)).toThrow(
+      "V137_SERVICE_PROOF_RECEIPT_SHAPE",
+    )
   })
 })
 
@@ -233,10 +244,10 @@ describe("v1.37 integrated service proof deterministic write and read-only check
         path.join(root, V137_INTEGRATED_SERVICE_PROOF_CONTROL_PATH),
       )
       expect(checkV137IntegratedServiceProof(repoRoot, root).status).toBe(
-        "passed-functional-containment-unattested",
+        "passed-functional-containment-attested-non-counted",
       )
       expect(checkV137IntegratedServiceProof(repoRoot, root).status).toBe(
-        "passed-functional-containment-unattested",
+        "passed-functional-containment-attested-non-counted",
       )
       const after = await readFile(
         path.join(root, V137_INTEGRATED_SERVICE_PROOF_CONTROL_PATH),
@@ -257,7 +268,10 @@ describe("v1.37 integrated service proof deterministic write and read-only check
     const previous = process.env.COWARDS_V1_37_RESTRICTED_EVIDENCE_ROOT
     process.env.COWARDS_V1_37_RESTRICTED_EVIDENCE_ROOT = root
     try {
-      const control = await writeV137IntegratedServiceProofFixture(repoRoot, root)
+      const control = await writeV137IntegratedServiceProofFixture(
+        repoRoot,
+        root,
+      )
       const first = control.records[0]!
       const objectPath = path.join(
         root,
