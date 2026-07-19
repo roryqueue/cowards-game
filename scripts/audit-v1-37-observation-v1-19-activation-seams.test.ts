@@ -17,6 +17,7 @@ import {
   buildV119SelectorBytes,
 } from "./activate-v1-37-observation-v1-19.js"
 import {
+  CANDIDATE_ENGINE_GATE_PATH,
   DECLARED_STALE_SEAM_PATHS,
   STALE_SEAM_INVENTORY_PATH,
   auditV137ObservationV119ActivationSeams,
@@ -95,11 +96,14 @@ const inventory = (): ActivationSeamInventory => ({
     command: `${[
       "node_modules/.bin/vitest",
       "run",
+      CANDIDATE_ENGINE_GATE_PATH,
       ...DECLARED_STALE_SEAM_PATHS,
       "--maxWorkers=1",
       "--no-file-parallelism",
       "--no-cache",
-    ].join(" ")} && (cd apps/go-backend && /usr/local/go/bin/go test ./... -count=1 -run TestCandidatePairwiseFourConditionMatchesV119MatchTypeScriptCanonicalBytes|TestCandidateIntegrityCreationV119PostgresPublishesExactlyFourOrNothing|TestCreateExhibitionMatchSetIntegrityPostgresReceiptReconciliationAndPropagation)`,
+    ].join(
+      " ",
+    )} && (cd apps/go-backend && /usr/local/go/bin/go test ./... -count=1 -run TestCandidatePairwiseFourConditionMatchesV119MatchTypeScriptCanonicalBytes|TestCandidateIntegrityCreationV119PostgresPublishesExactlyFourOrNothing|TestCreateExhibitionMatchSetIntegrityPostgresReceiptReconciliationAndPropagation)`,
     status: "passed",
     exitCode: 0,
     stdoutNormalization: "composite-gate-stable-v1",
@@ -440,6 +444,7 @@ describe("v1.37 observation v1.19 activation seam audit", () => {
       expect(
         result.gate.command.startsWith("node_modules/.bin/vitest run"),
       ).toBe(true)
+      expect(result.gate.command).toContain(CANDIDATE_ENGINE_GATE_PATH)
       expect(result.gate.command).toContain(
         "TestCreateExhibitionMatchSetIntegrityPostgresReceiptReconciliationAndPropagation",
       )

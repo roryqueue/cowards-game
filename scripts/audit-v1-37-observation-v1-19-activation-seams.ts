@@ -43,6 +43,8 @@ export const DECLARED_STALE_SEAM_PATHS = Object.freeze([
   "apps/runtime-service/src/four-language-conformance-runner.test.ts",
 ])
 
+export const CANDIDATE_ENGINE_GATE_PATH = "packages/engine/src"
+
 const PROTECTED_PATHS = Object.freeze([
   ".planning/config.json",
   "CowardsGameSpec_Full_Consolidated_v1.md",
@@ -55,6 +57,7 @@ const GO_BACKEND_DATABASE_ENV = "COWARDS_GO_BACKEND_TEST_DATABASE_URL"
 const VITEST_GATE_COMMAND = Object.freeze([
   "node_modules/.bin/vitest",
   "run",
+  CANDIDATE_ENGINE_GATE_PATH,
   ...DECLARED_STALE_SEAM_PATHS,
   "--maxWorkers=1",
   "--no-file-parallelism",
