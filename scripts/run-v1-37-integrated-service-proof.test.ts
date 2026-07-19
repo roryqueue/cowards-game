@@ -82,7 +82,7 @@ describe("v1.37 integrated service proof preflight topology cleanup", () => {
   })
 
   it("terminates only processes registered as collector-owned", async () => {
-    const signalled: Array<[number, NodeJS.Signals]> = []
+    const signalled: Array<[number, "SIGTERM"]> = []
     await cleanupV137OwnedProcesses(
       [
         { pid: 41001, label: "runtime-service", owned: true },
