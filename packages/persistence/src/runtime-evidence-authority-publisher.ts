@@ -2606,7 +2606,7 @@ const loadPublicationSnapshot = async (
               row.certificate_record_hash,
               "certificate record hash",
             ),
-            laneIdentityHash: assertHash(
+            laneIdentityHash: prefixedHash(
               row.lane_identity_hash,
               "lane identity hash",
             ),

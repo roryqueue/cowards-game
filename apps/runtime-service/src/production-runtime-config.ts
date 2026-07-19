@@ -41,8 +41,11 @@ export const runtimeServiceConfigFromEnvironment = (
       semanticReceiptSecret:
         environment.COWARDS_RUNTIME_SERVICE_SEMANTIC_RECEIPT_SECRET,
       containerImage: environment.COWARDS_RUNTIME_TYPESCRIPT_CONTAINER_IMAGE,
-      pythonContainerImage:
-        environment.COWARDS_RUNTIME_PYTHON_CONTAINER_IMAGE,
+      pythonContainerImage: environment.COWARDS_RUNTIME_PYTHON_CONTAINER_IMAGE,
+      wasmtimeContainerImage:
+        environment.COWARDS_RUNTIME_WASMTIME_CONTAINER_IMAGE,
+      wasmtimeExecutablePath:
+        environment.COWARDS_RUNTIME_WASMTIME_EXECUTABLE_PATH,
     }),
     semanticAuthoritySelection:
       runtimeServiceSemanticSelectionFromEnvironment(),

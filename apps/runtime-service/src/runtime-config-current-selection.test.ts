@@ -16,9 +16,8 @@ import {
 } from "./runtime-config.js"
 
 describe("runtime-service compact current selection", () => {
-  const currentKey =
-    CURRENT_SEMANTIC_AUTHORITY_GENERATED.selection
-      .semanticAuthorityKey as SemanticAuthorityKey
+  const currentKey = CURRENT_SEMANTIC_AUTHORITY_GENERATED.selection
+    .semanticAuthorityKey as SemanticAuthorityKey
   const otherSelection = resolveSemanticAuthoritySelection({
     semanticAuthorityKey:
       currentKey === "runtime-v1.17" ? "runtime-v1.19" : "runtime-v1.17",
@@ -77,10 +76,7 @@ describe("runtime-service compact current selection", () => {
   it.each([
     [undefined, CURRENT_SEMANTIC_AUTHORITY_GENERATED.selection],
     [CURRENT_SEMANTIC_AUTHORITY_GENERATED.selection, undefined],
-    [
-      CURRENT_SEMANTIC_AUTHORITY_GENERATED.selection,
-      otherSelection,
-    ],
+    [CURRENT_SEMANTIC_AUTHORITY_GENERATED.selection, otherSelection],
     [
       CURRENT_SEMANTIC_AUTHORITY_GENERATED.selection,
       {
@@ -125,8 +121,8 @@ describe("runtime-service compact current selection", () => {
       "createPreparedRuntimeServiceDependenciesV118",
     )
     expect(startupSource).toContain("preparedV118Dependencies")
-    expect(executionSource).toContain(
-      "createCanonicalRuntimeForRevision: createCandidateV119RuntimeForRevision",
+    expect(executionSource).toMatch(
+      /createCanonicalRuntimeForRevision:\s*createCandidateV119RuntimeForRevision/u,
     )
   })
 })

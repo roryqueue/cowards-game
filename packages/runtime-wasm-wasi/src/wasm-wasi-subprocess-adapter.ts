@@ -1147,6 +1147,28 @@ export const runWasmWasiHistoricalV114MethodSyncTestSupport = (
     runtimeAbiVersion: "strategy-runtime-abi-v1.14",
   })
 
+/** Protected selected-current service bridge; the legacy entry stays closed. */
+export const runWasmWasiSelectedCurrentMethodV119Sync = (
+  request: WasmWasiStrategyRequestInput,
+): StrategyRuntimeResponseEnvelope => {
+  if (String(STRATEGY_RUNTIME_ABI_VERSION) !== "strategy-runtime-abi-v1.19") {
+    return {
+      ok: false,
+      abiVersion: STRATEGY_RUNTIME_ABI_VERSION,
+      failureKind: "systemFailure",
+      systemFailure: {
+        code: "MALFORMED_IPC",
+        message: "The selected v1.19 WASM/WASI runtime is unavailable.",
+        publicMessage: "Runtime system failure.",
+      },
+    }
+  }
+  return runWasmWasiStrategyMethodSyncInternal(request, {
+    allowSelectedPointerBypass: true,
+    runtimeAbiVersion: "strategy-runtime-abi-v1.19",
+  })
+}
+
 const normalizeStrategyOutput = (
   envelope: StrategyRuntimeResponseEnvelope,
 ): RuntimeResult<StrategyResult> => {
@@ -1274,6 +1296,21 @@ export const createWasmWasiRuntimeFromRevision = (
     revision,
     options,
     runWasmWasiStrategyMethodSync,
+  )
+
+/** Protected selected-current service bridge; absent from historical replay. */
+export const createWasmWasiSelectedCurrentRuntimeV119 = (
+  revision: StrategyRevision,
+  options: {
+    timeoutMs?: number | undefined
+    stdoutBytes?: number | undefined
+    stderrBytes?: number | undefined
+  } = {},
+): StrategyRuntime =>
+  createWasmWasiRuntimeFromRevisionWithRunner(
+    revision,
+    options,
+    runWasmWasiSelectedCurrentMethodV119Sync,
   )
 
 /** Selected-pointer nested Match-shape test support; not historical evidence. */

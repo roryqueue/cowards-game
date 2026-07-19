@@ -157,6 +157,21 @@ const invokeWasm = (
 }
 
 describe("Rust and Zig v1.19 observation transport", () => {
+  it.skipIf(!rustProbe.ok)(
+    "builds byte-identical Rust artifacts across fresh compiler workspaces",
+    () => {
+      const first = buildRustStrategyRevision({ source: rustSource })
+      const second = buildRustStrategyRevision({ source: rustSource })
+      expect(first.metadata.compiledArtifact?.hash).toBe(
+        second.metadata.compiledArtifact?.hash,
+      )
+      expect(first.metadata.compiledArtifact?.bytesBase64).toBe(
+        second.metadata.compiledArtifact?.bytesBase64,
+      )
+    },
+    30_000,
+  )
+
   it.skipIf(!rustProbe.ok || !zigProbe.ok)(
     "consumes every candidate field through both real WASM/WASI lanes",
     () => {

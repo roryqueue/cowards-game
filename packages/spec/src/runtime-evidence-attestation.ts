@@ -13,6 +13,7 @@ import {
   type ExecutableLaneCertificateKind,
   type ExecutableLaneIdentity,
 } from "./runtime-evidence.js"
+import { RUNTIME_EVIDENCE_TRUSTED_CONTAINMENT_PRODUCERS_V1_37 } from "./runtime-containment-trusted-producers-v1-37.js"
 
 const SHA256_PATTERN = /^[0-9a-f]{64}$/u
 const PAYLOAD_DOMAIN = "cowards-game:runtime-evidence-attestation:v1"
@@ -75,13 +76,8 @@ export interface RuntimeEvidenceTrustedProducer {
   publicKeyPem: string
 }
 
-/**
- * Phase 256 deliberately authorizes no production evidence producer. Phase 259
- * must add a reviewed executable producer before production verification can
- * mint any certificate input.
- */
 export const RUNTIME_EVIDENCE_TRUSTED_PRODUCERS: readonly RuntimeEvidenceTrustedProducer[] =
-  Object.freeze([])
+  RUNTIME_EVIDENCE_TRUSTED_CONTAINMENT_PRODUCERS_V1_37
 
 export interface RuntimeEvidenceGraphNode {
   nodeId: string

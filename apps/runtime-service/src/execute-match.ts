@@ -58,7 +58,9 @@ import {
   type RuntimeEntrantAuthorityReference,
   type Chronicle,
   type ExecutableLaneIdentity,
+  type SoldierBrainInput,
   type SoldierBrainResult,
+  type StrategyInput,
   type StrategyResult,
   type StrategyRevision,
 } from "@cowards/spec"
@@ -69,10 +71,17 @@ import {
   type CandidateObservationTransportRequestV119,
   type CandidateObservationTransportResultV119,
 } from "@cowards/runtime-js"
-import { createRuntimeFromRevision } from "@cowards/runtime-js/worker"
+import {
+  createRuntimeFromRevision,
+  createSelectedCurrentRuntimeFromRevisionV119,
+} from "@cowards/runtime-js/worker"
 import { createPythonRuntimeFromRevision } from "@cowards/runtime-python"
-import { createWasmWasiRuntimeFromRevision } from "@cowards/runtime-wasm-wasi"
+import {
+  createWasmWasiRuntimeFromRevision,
+  createWasmWasiSelectedCurrentRuntimeV119,
+} from "@cowards/runtime-wasm-wasi"
 import { createPinnedPythonContainerRuntime } from "./pinned-python-container-runtime.js"
+import { createPinnedWasmtimeContainerRuntime } from "./pinned-wasmtime-container-runtime.js"
 import {
   createCurrentReplay,
   createCandidateReplayV119,
@@ -96,6 +105,7 @@ import {
   type GameState,
   type CanonicalStrategyRuntime,
   type RunMatchInput,
+  type RuntimeResult,
   type StrategyRuntime,
 } from "@cowards/engine"
 import type { RuntimeServiceConfig } from "./runtime-config.js"
@@ -120,7 +130,9 @@ import {
 type RoutedRuntimeExecutionServiceRequest = RuntimeExecutionServiceRequest & {
   readonly match: RuntimeExecutionServiceRequest["match"] & {
     readonly initialInitiativePlayerId?: string | undefined
-    readonly candidateMatch?: RuntimeExecutionCandidateMatchAuthorityV119 | undefined
+    readonly candidateMatch?:
+      | RuntimeExecutionCandidateMatchAuthorityV119
+      | undefined
   }
 }
 
@@ -165,7 +177,9 @@ export interface RuntimeObservationDispatchInputV119<
   TCandidate = unknown,
 > {
   /** Omitted means the generated current/default route remains authoritative. */
-  readonly candidateRequest?: CandidateObservationTransportRequestV119 | undefined
+  readonly candidateRequest?:
+    | CandidateObservationTransportRequestV119
+    | undefined
   readonly executeCurrent: () => TCurrent
   readonly executeCandidate: (
     observation: AdmittedCandidateObservationV119,
@@ -342,7 +356,7 @@ const runtimeAbiForResponse = (rawRequest: unknown): string =>
     ? HISTORICAL_RUNTIME_EXECUTION_SERVICE_V1_16.runtimeAbiVersion
     : versionedRuntimeV117Request(rawRequest)
       ? "strategy-runtime-abi-v1.17"
-    : STRATEGY_RUNTIME_ABI_VERSION
+      : STRATEGY_RUNTIME_ABI_VERSION
 
 const parseRuntimeServiceResponse = (
   response: unknown,
@@ -352,7 +366,7 @@ const parseRuntimeServiceResponse = (
     ? HistoricalRuntimeExecutionServiceResponseV116Schema
     : versionedRuntimeV117Request(rawRequest)
       ? VersionedRuntimeExecutionServiceResponseV117Schema
-    : RuntimeExecutionServiceResponseSchema
+      : RuntimeExecutionServiceResponseSchema
   ).parse(response) as RuntimeExecutionServiceResponse
 
 const systemFailureResponse = (input: {
@@ -916,22 +930,49 @@ const createRuntimeForRevision = (
     }
   }
   if (registryEntry.runtimeTarget === "runtime-wasm-wasi") {
+    const deployed = runtimeConfig.resolveDeploymentLaneIdentity(revision)
+    const contained =
+      expectedRuntimeAbi === "strategy-runtime-abi-v1.19" &&
+      runtimeConfig.wasmtimeContainerImage !== undefined &&
+      runtimeConfig.wasmtimeExecutablePath !== undefined &&
+      deployed !== undefined
     return {
       ok: true,
-      runtime: createWasmWasiRuntimeFromRevision(revision, {
-        timeoutMs: Math.min(
-          limits.timeoutMs,
-          revision.runtime.limits.timeoutMs,
-        ),
-        stdoutBytes: Math.min(
-          limits.stdoutBytes,
-          revision.runtime.limits.stdoutBytes,
-        ),
-        stderrBytes: Math.min(
-          limits.stderrBytes,
-          revision.runtime.limits.stderrBytes,
-        ),
-      }),
+      runtime: contained
+        ? createPinnedWasmtimeContainerRuntime({
+            revision,
+            image: runtimeConfig.wasmtimeContainerImage!,
+            wasmtimeExecutablePath: runtimeConfig.wasmtimeExecutablePath!,
+            expectedWasmtimeSha256: deployed.implementationId,
+            timeoutMs: Math.min(
+              limits.timeoutMs,
+              revision.runtime.limits.timeoutMs,
+            ),
+            stdoutBytes: Math.min(
+              limits.stdoutBytes,
+              revision.runtime.limits.stdoutBytes,
+            ),
+            stderrBytes: Math.min(
+              limits.stderrBytes,
+              revision.runtime.limits.stderrBytes,
+            ),
+          })
+        : (expectedRuntimeAbi === "strategy-runtime-abi-v1.19"
+            ? createWasmWasiSelectedCurrentRuntimeV119
+            : createWasmWasiRuntimeFromRevision)(revision, {
+            timeoutMs: Math.min(
+              limits.timeoutMs,
+              revision.runtime.limits.timeoutMs,
+            ),
+            stdoutBytes: Math.min(
+              limits.stdoutBytes,
+              revision.runtime.limits.stdoutBytes,
+            ),
+            stderrBytes: Math.min(
+              limits.stderrBytes,
+              revision.runtime.limits.stderrBytes,
+            ),
+          }),
     }
   }
   const expectedJsAdapterId =
@@ -956,11 +997,18 @@ const createRuntimeForRevision = (
   }
   return {
     ok: true,
-    runtime: createRuntimeFromRevision(revision, {
-      adapter: runtimeConfig.adapter,
-      timeoutMs: limits.timeoutMs,
-      outputByteLimit: limits.stdoutBytes,
-    }),
+    runtime:
+      expectedRuntimeAbi === "strategy-runtime-abi-v1.19"
+        ? createSelectedCurrentRuntimeFromRevisionV119(revision, {
+            adapter: runtimeConfig.adapter,
+            timeoutMs: limits.timeoutMs,
+            outputByteLimit: limits.stdoutBytes,
+          })
+        : createRuntimeFromRevision(revision, {
+            adapter: runtimeConfig.adapter,
+            timeoutMs: limits.timeoutMs,
+            outputByteLimit: limits.stdoutBytes,
+          }),
   }
 }
 
@@ -1018,6 +1066,107 @@ export const validateNestedMatchRuntimeRevisionTestSupport = (
     expectedRuntimeAbi,
   )
   return admitted.ok ? { ok: true } : admitted
+}
+
+/**
+ * The selected v1.19 kernel owns observation admission and invokes the
+ * language runtime through the original one-argument ABI result shape. Keep
+ * that projection production-local: the v1.17 authenticated wrapper is a
+ * different contract, and its fixture adapter must never be reused here.
+ */
+const createCandidateV119RuntimeForRevision = (
+  revision: StrategyRevision,
+  runtimeConfig: RuntimeServiceConfig,
+  limits: RuntimeExecutionServiceRequest["limits"],
+  expectedRuntimeAbi?: string,
+):
+  | { ok: true; runtime: CanonicalStrategyRuntime }
+  | { ok: false; diagnostics: Record<string, unknown> } => {
+  if (expectedRuntimeAbi !== "strategy-runtime-abi-v1.19") {
+    if (process.env.COWARDS_CERTIFICATION_DEBUG === "1") {
+      console.error(
+        JSON.stringify({
+          nestedCode: "V119_RUNTIME_ADAPTER_REJECTED",
+          reason: "runtime-abi-mismatch",
+          expectedRuntimeAbi,
+        }),
+      )
+    }
+    return {
+      ok: false,
+      diagnostics: { reason: "candidate-v1.19-runtime-adapter-mismatch" },
+    }
+  }
+  const created = createRuntimeForRevision(
+    revision,
+    runtimeConfig,
+    limits,
+    expectedRuntimeAbi,
+  )
+  if (!created.ok) {
+    if (process.env.COWARDS_CERTIFICATION_DEBUG === "1") {
+      console.error(
+        JSON.stringify({
+          nestedCode: "V119_RUNTIME_ADAPTER_REJECTED",
+          languageId: revision.runtime.language.id,
+          reason: created.diagnostics.reason,
+        }),
+      )
+    }
+    return created
+  }
+  const runtime = created.runtime
+  const invokeRuntime = <T>(
+    invoke: () => RuntimeResult<T>,
+  ): RuntimeResult<T> => {
+    try {
+      return reportRuntimeFailure(invoke())
+    } catch (error) {
+      if (process.env.COWARDS_CERTIFICATION_DEBUG === "1") {
+        console.error(
+          JSON.stringify({
+            nestedCode: "V119_RUNTIME_INVOCATION_THROWN",
+            languageId: revision.runtime.language.id,
+            errorName: error instanceof Error ? error.name : "unknown",
+            errorMessage: error instanceof Error ? error.message : "unknown",
+          }),
+        )
+      }
+      throw error
+    }
+  }
+  const reportRuntimeFailure = <T>(
+    result: RuntimeResult<T>,
+  ): RuntimeResult<T> => {
+    if (
+      process.env.COWARDS_CERTIFICATION_DEBUG === "1" &&
+      !result.ok &&
+      "systemFailure" in result
+    ) {
+      console.error(
+        JSON.stringify({
+          nestedCode: "V119_RUNTIME_RESULT_FAILURE",
+          languageId: revision.runtime.language.id,
+          revisionRuntimeAbi: revision.runtime.abiVersion,
+          failureCode: result.systemFailure.code,
+        }),
+      )
+    }
+    return result
+  }
+  return {
+    ok: true,
+    runtime: {
+      selectActivations: ((input: StrategyInput) =>
+        invokeRuntime(() =>
+          runtime.selectActivations(input),
+        )) as unknown as CanonicalStrategyRuntime["selectActivations"],
+      runSoldierBrain: ((input: SoldierBrainInput) =>
+        invokeRuntime(() =>
+          runtime.runSoldierBrain(input),
+        )) as unknown as CanonicalStrategyRuntime["runSoldierBrain"],
+    },
+  }
 }
 
 export interface RuntimeExecutionServiceDependencies {
@@ -1516,10 +1665,11 @@ const executeRuntimeServiceRequestInternal = (
   rawRequest: unknown,
   runtimeConfig: RuntimeServiceConfig,
   dependencyOverrides: Partial<RuntimeExecutionServiceDependencies> = {},
-  allowSelectedV117NestedMatch = false,
+  allowInternalNestedMatch = false,
 ): RuntimeExecutionServiceResponse => {
-  const selectedRequest = RuntimeExecutionServiceRequestSchema.safeParse(rawRequest)
-  const versionedV117Request = allowSelectedV117NestedMatch
+  const selectedRequest =
+    RuntimeExecutionServiceRequestSchema.safeParse(rawRequest)
+  const versionedV117Request = allowInternalNestedMatch
     ? VersionedRuntimeExecutionServiceRequestV117Schema.safeParse(rawRequest)
     : undefined
   const historicalV116 =
@@ -1528,9 +1678,11 @@ const executeRuntimeServiceRequestInternal = (
     ? selectedRequest
     : versionedV117Request?.success
       ? versionedV117Request
-    : historicalV116
-      ? HistoricalRuntimeExecutionServiceRequestV116Schema.safeParse(rawRequest)
-      : selectedRequest
+      : historicalV116
+        ? HistoricalRuntimeExecutionServiceRequestV116Schema.safeParse(
+            rawRequest,
+          )
+        : selectedRequest
   if (!parsedRequest.success) {
     return systemFailureResponse({
       rawRequest,
@@ -1548,7 +1700,7 @@ const executeRuntimeServiceRequestInternal = (
     selectedRequest.success &&
     runtimeConfig.contractSelection.runtimeServiceVersion !==
       HISTORICAL_RUNTIME_EXECUTION_SERVICE_VERSION_V1_16 &&
-    !allowSelectedV117NestedMatch
+    !allowInternalNestedMatch
   ) {
     return systemFailureResponse({
       rawRequest: parsedRequest.data,
@@ -1774,8 +1926,9 @@ export const executePreparedRuntimeServiceRequestV117 = (
     })
   }
   const request = parsed.data
-  const nested =
-    VersionedRuntimeExecutionServiceRequestV117Schema.safeParse(request.match)
+  const nested = VersionedRuntimeExecutionServiceRequestV117Schema.safeParse(
+    request.match,
+  )
   if (!nested.success) {
     return preparedV117Failure({
       rawRequest: request,
@@ -2111,9 +2264,10 @@ export const admitRuntimeCertificateReferenceV118 = (input: {
     return undefined
   }
   return Object.freeze({
-    certificateRecordHash: active.certificate.certificateRecordHash as Sha256IdentityV118,
-    commonSupervisorEvidenceRoot:
-      active.attestation.attestationHash as Sha256IdentityV118,
+    certificateRecordHash: active.certificate
+      .certificateRecordHash as Sha256IdentityV118,
+    commonSupervisorEvidenceRoot: active.attestation
+      .attestationHash as Sha256IdentityV118,
     sourceIdentity: globalThis.structuredClone(input.reference.sourceIdentity),
   })
 }
@@ -2147,15 +2301,34 @@ export const createPreparedRuntimeServiceDependenciesV118 = (
     let captured:
       | Parameters<typeof recordChronicleFromExecution>[0]["execution"]
       | undefined
-    const response = executeRuntimeServiceRequest(request, input.runtimeConfig, {
-      authorityLoader: input.authorityLoader,
-      runMatchV119: (match) => {
-        const result = runVersionedMatchV119(match)
-        captured = result.execution
-        return result
+    const response = executeRuntimeServiceRequestInternal(
+      request,
+      input.runtimeConfig,
+      {
+        authorityLoader: input.authorityLoader,
+        createCanonicalRuntimeForRevision:
+          createCandidateV119RuntimeForRevision,
+        runMatchV119: (match) => {
+          const result = runVersionedMatchV119(match)
+          captured = result.execution
+          return result
+        },
       },
-    })
+      true,
+    )
     if (!response.ok || captured === undefined) {
+      if (process.env.COWARDS_CERTIFICATION_DEBUG === "1") {
+        console.error(
+          JSON.stringify({
+            nestedCode: response.ok
+              ? "EXECUTION_CAPTURE_MISSING"
+              : response.systemFailure.code,
+            nestedDiagnostics: response.ok
+              ? undefined
+              : response.systemFailure.diagnostics,
+          }),
+        )
+      }
       throw new TypeError("Selected current Match execution did not complete.")
     }
     const candidateMatch = (

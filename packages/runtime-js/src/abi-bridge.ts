@@ -251,6 +251,32 @@ export const executeSelectedStrategyRuntimeAbi = (
   return executeNestedMatchShapeRuntimeAbiTestSupport(input)
 }
 
+/**
+ * Selected v1.19 production bridge used only by the protected current service
+ * executor. Keeping this distinct from the retired nested-Match bridge makes
+ * activation explicit without reopening that legacy production entry point.
+ */
+export const executeSelectedCurrentStrategyRuntimeAbiV119 = (
+  input: ExecuteStrategyRuntimeAbiBridgeInput,
+): RuntimeResult<unknown> => {
+  if (String(STRATEGY_RUNTIME_ABI_VERSION) !== "strategy-runtime-abi-v1.19") {
+    return {
+      ok: false,
+      violation: {
+        type: "INVALID_OUTPUT",
+        message: "Strategy runtime ABI is not selected",
+      },
+      systemFailure: { code: "MALFORMED_IPC", retryable: false },
+    }
+  }
+  return executeStrategyRuntimeAbi(input, {
+    abiVersion: "strategy-runtime-abi-v1.19",
+    parseRequest: (value) => StrategyRuntimeRequestEnvelopeSchema.parse(value),
+    parseResponse: (value) =>
+      StrategyRuntimeResponseEnvelopeSchema.parse(value),
+  })
+}
+
 const textEncoder = new TextEncoder()
 
 export const RUNTIME_GUEST_FRAME_TAGS_V117 = Object.freeze({

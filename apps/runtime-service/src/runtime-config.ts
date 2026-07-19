@@ -39,6 +39,8 @@ export interface RuntimeServiceConfigInput {
   semanticReceiptSecret?: string | undefined
   containerImage?: string | undefined
   pythonContainerImage?: string | undefined
+  wasmtimeContainerImage?: string | undefined
+  wasmtimeExecutablePath?: string | undefined
 }
 
 export interface RuntimeServiceConfig {
@@ -53,6 +55,8 @@ export interface RuntimeServiceConfig {
   deploymentLaneRegistryId?: string | undefined
   semanticReceiptSecret: string
   pythonContainerImage?: string | undefined
+  wasmtimeContainerImage?: string | undefined
+  wasmtimeExecutablePath?: string | undefined
   contractSelection: RuntimeServiceContractSelection
   resolveContractSelectionForRequest(
     frozenSelection: unknown,
@@ -213,6 +217,12 @@ export const createRuntimeServiceConfig = (
         ...(input.pythonContainerImage === undefined
           ? {}
           : { pythonContainerImage: input.pythonContainerImage }),
+        ...(input.wasmtimeContainerImage === undefined
+          ? {}
+          : { wasmtimeContainerImage: input.wasmtimeContainerImage }),
+        ...(input.wasmtimeExecutablePath === undefined
+          ? {}
+          : { wasmtimeExecutablePath: input.wasmtimeExecutablePath }),
         contractSelection,
         resolveContractSelectionForRequest,
       }

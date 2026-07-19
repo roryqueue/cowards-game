@@ -23,6 +23,7 @@ import {
 import type { StrategyExecutionAdapter } from "./adapter.js"
 import {
   executeNestedMatchShapeRuntimeAbiTestSupport,
+  executeSelectedCurrentStrategyRuntimeAbiV119,
   executeSelectedStrategyRuntimeAbi,
   executeVersionedV117NestedMatchShapeRuntimeAbiTestSupport,
   type ExecuteStrategyRuntimeAbiBridgeInput,
@@ -183,8 +184,7 @@ const createRuntimeFromRevisionWithBridge = (
   const adapter = options.adapter ?? workerThreadStrategyExecutionAdapter
   const timeoutMs = options.timeoutMs ?? WORKER_STARTUP_TIMEOUT_MS
   const outputByteLimit = options.outputByteLimit ?? RUNTIME_OUTPUT_BYTES
-  const selectedRuntimeAbi =
-    revision.runtime.abiVersion === expectedRuntimeAbi
+  const selectedRuntimeAbi = revision.runtime.abiVersion === expectedRuntimeAbi
 
   return {
     selectActivations(input) {
@@ -245,6 +245,18 @@ export const createRuntimeFromRevision = (
     executeSelectedStrategyRuntimeAbi,
   )
 
+/** Protected selected-current service bridge; absent from the safe root API. */
+export const createSelectedCurrentRuntimeFromRevisionV119 = (
+  revision: StrategyRevision,
+  options: CreateRuntimeFromRevisionOptions = {},
+): StrategyRuntime =>
+  createRuntimeFromRevisionWithBridge(
+    revision,
+    options,
+    executeSelectedCurrentStrategyRuntimeAbiV119,
+    "strategy-runtime-abi-v1.19",
+  )
+
 /**
  * Selected-pointer nested Match-shape test support; not historical evidence
  * and intentionally absent from runtime-js package exports.
@@ -260,13 +272,14 @@ export const createNestedMatchShapeRuntimeFromRevisionTestSupport = (
   )
 
 /** Exact v1.17 fixture dispatch independent of the generated current pointer. */
-export const createVersionedV117NestedMatchShapeRuntimeFromRevisionTestSupport = (
-  revision: StrategyRevision,
-  options: CreateRuntimeFromRevisionOptions = {},
-): StrategyRuntime =>
-  createRuntimeFromRevisionWithBridge(
-    revision,
-    options,
-    executeVersionedV117NestedMatchShapeRuntimeAbiTestSupport,
-    "strategy-runtime-abi-v1.17",
-  )
+export const createVersionedV117NestedMatchShapeRuntimeFromRevisionTestSupport =
+  (
+    revision: StrategyRevision,
+    options: CreateRuntimeFromRevisionOptions = {},
+  ): StrategyRuntime =>
+    createRuntimeFromRevisionWithBridge(
+      revision,
+      options,
+      executeVersionedV117NestedMatchShapeRuntimeAbiTestSupport,
+      "strategy-runtime-abi-v1.17",
+    )

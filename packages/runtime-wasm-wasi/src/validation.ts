@@ -1275,8 +1275,9 @@ const compileRustWasmArtifactWithAbi = <D extends WasmArtifactAbiDeclaration>(
     writeFileSync(sourcePath, source, "utf8")
     const result = spawnSync(
       rustc.compilerResolvedPath,
-      ["--target", "wasm32-wasip1", "-O", sourcePath, "-o", artifactPath],
+      ["--target", "wasm32-wasip1", "-O", "strategy.rs", "-o", "strategy.wasm"],
       {
+        cwd: dir,
         encoding: "utf8",
         shell: false,
         env: { PATH: process.env.PATH ?? "" },
