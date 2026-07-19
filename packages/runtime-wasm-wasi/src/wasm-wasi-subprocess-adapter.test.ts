@@ -75,6 +75,7 @@ import {
   WASM_WASI_V1_17_EXECUTION_SETTINGS,
   classifyWasmtimeProcessObservationV117,
   createWasmWasiRuntimeFromRevision,
+  createWasmWasiSelectedCurrentRuntimeV119,
   runWasmWasiHistoricalV114MethodSyncTestSupport,
   runWasmWasiStrategyMethodV117Sync,
   wasmWasiSharedCaptureBufferBytesV117,
@@ -1697,6 +1698,39 @@ describe("WASM/WASI runtime alpha", () => {
               systemFailure: { code: "MALFORMED_IPC", retryable: true },
             },
       )
+    },
+  )
+
+  it.skipIf(!rustCompileProbe.ok)(
+    "runs the selected v1.19 Rust ABI only through its explicit current service bridge",
+    () => {
+      const revision = buildRustStrategyRevision({ source: rustSource })
+      const runtime = createWasmWasiSelectedCurrentRuntimeV119(revision)
+
+      expect(
+        runtime.selectActivations(
+          selectedStrategyInput({
+            phaseNumber: 1,
+            roundNumber: 1,
+            activationCount: 1,
+            initialInitiativePlayerId: "player:1",
+            hasInitialInitiative: true,
+            roundInitiativePlayerId: "player:1",
+            hasRoundInitiative: true,
+            board: {
+              bounds: { minX: 0, maxX: 11, minY: 0, maxY: 11 },
+              soldiers: [],
+              terrainStones: [],
+            },
+            mySoldiers: [],
+            enemySoldiers: [],
+            strategyMemory: null,
+          }),
+        ),
+      ).toEqual({
+        ok: true,
+        value: { activationOrders: [], strategyMemory: null },
+      })
     },
   )
 
