@@ -1065,6 +1065,7 @@ const validateVersionedTransitionV117 = (
 
 const projectionAsState = (
   projection: unknown,
+  versionedInitialInitiativePlayerId?: string | undefined,
 ): CanonicalSemanticGameState | undefined => {
   if (!isRecord(projection)) return undefined
   const players = Array.isArray(projection.players)
@@ -1081,6 +1082,10 @@ const projectionAsState = (
     ...projection,
     players,
     soldiers,
+    ...(versionedInitialInitiativePlayerId === undefined ||
+    String(STRATEGY_RUNTIME_ABI_VERSION) !== "strategy-runtime-abi-v1.19"
+      ? {}
+      : { initialInitiativePlayerId: versionedInitialInitiativePlayerId }),
     ...(projection.outcome === null ? { outcome: undefined } : {}),
   }
   const parsed = RuntimeExecutionFinalStateSchema.safeParse(current)
@@ -1331,9 +1336,23 @@ const validateChronicleSemanticsForAuthority = (
     return currentCodeFailure("CURRENT_EVENT_INVALID", ["chronicle", "events"])
   }
 
-  const parsedInitial = RuntimeExecutionFinalStateSchema.safeParse(
-    execution.recorderMaterial.initialState,
-  )
+  const versionedInitialInitiativePlayerId =
+    versionedV117 &&
+    isRecord(execution.recorderMaterial.initialState) &&
+    typeof execution.recorderMaterial.initialState.initiativePlayerId ===
+      "string"
+      ? execution.recorderMaterial.initialState.initiativePlayerId
+      : undefined
+  const parsedInitial = RuntimeExecutionFinalStateSchema.safeParse({
+    ...(execution.recorderMaterial.initialState as unknown as Record<
+      string,
+      unknown
+    >),
+    ...(versionedInitialInitiativePlayerId === undefined ||
+    String(STRATEGY_RUNTIME_ABI_VERSION) !== "strategy-runtime-abi-v1.19"
+      ? {}
+      : { initialInitiativePlayerId: versionedInitialInitiativePlayerId }),
+  })
   if (!parsedInitial.success) {
     return currentCodeFailure("CURRENT_INITIAL_STATE_INVALID")
   }
@@ -1393,8 +1412,14 @@ const validateChronicleSemanticsForAuthority = (
         transitionSemantic.truncated,
       )
     }
-    const before = projectionAsState(transition.beforeState)
-    const after = projectionAsState(transition.afterState)
+    const before = projectionAsState(
+      transition.beforeState,
+      versionedV117 ? versionedInitialInitiativePlayerId : undefined,
+    )
+    const after = projectionAsState(
+      transition.afterState,
+      versionedV117 ? versionedInitialInitiativePlayerId : undefined,
+    )
     if (before === undefined || after === undefined) {
       return currentCodeFailure("CURRENT_BOUNDARY_STATE_INVALID", [
         "execution",
@@ -1517,9 +1542,16 @@ const validateChronicleSemanticsForAuthority = (
     }
   }
 
-  const parsedFinal = RuntimeExecutionFinalStateSchema.safeParse(
-    execution.recorderMaterial.finalState,
-  )
+  const parsedFinal = RuntimeExecutionFinalStateSchema.safeParse({
+    ...(execution.recorderMaterial.finalState as unknown as Record<
+      string,
+      unknown
+    >),
+    ...(versionedInitialInitiativePlayerId === undefined ||
+    String(STRATEGY_RUNTIME_ABI_VERSION) !== "strategy-runtime-abi-v1.19"
+      ? {}
+      : { initialInitiativePlayerId: versionedInitialInitiativePlayerId }),
+  })
   const last = execution.transitions.at(-1)!
   const terminalEvent = chronicle.events.at(-1)
   const terminalSnapshot = chronicle.snapshots.at(-1)

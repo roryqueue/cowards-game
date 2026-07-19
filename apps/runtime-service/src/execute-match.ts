@@ -957,8 +957,50 @@ export const validateNestedMatchRuntimeRevisionTestSupport = (
   revision: StrategyRevision,
   runtimeConfig: RuntimeServiceConfig,
   limits: RuntimeExecutionServiceRequest["limits"],
+  expectedRuntimeAbi: string = STRATEGY_RUNTIME_ABI_VERSION,
 ): { ok: true } | { ok: false; diagnostics: Record<string, unknown> } => {
-  const admitted = createRuntimeForRevision(revision, runtimeConfig, limits)
+  if (
+    expectedRuntimeAbi === "strategy-runtime-abi-v1.17" &&
+    String(STRATEGY_RUNTIME_ABI_VERSION) !== "strategy-runtime-abi-v1.17"
+  ) {
+    const source = validateRevisionSource("bottom", revision)
+    if (!source.ok) return source
+    const artifact = validateRevisionArtifact(
+      "bottom",
+      revision,
+      expectedRuntimeAbi,
+    )
+    if (!artifact.ok) return artifact
+    if (
+      (revision.runtime.language.id === "javascript" ||
+        revision.runtime.language.id === "typescript") &&
+      revision.runtime.adapter.id !==
+        (runtimeConfig.metadata.id === "worker-thread"
+          ? "runtime-js-worker-thread"
+          : runtimeConfig.metadata.id === "subprocess"
+            ? "runtime-js-subprocess"
+            : runtimeConfig.metadata.id === "container-subprocess"
+              ? "runtime-js-container-subprocess"
+              : null)
+    ) {
+      return {
+        ok: false,
+        diagnostics: {
+          reason: "runtime-js-adapter-mismatch",
+          revisionId: revision.id,
+          declaredAdapterId: revision.runtime.adapter.id,
+          serviceAdapterId: runtimeConfig.metadata.id,
+        },
+      }
+    }
+    return { ok: true }
+  }
+  const admitted = createRuntimeForRevision(
+    revision,
+    runtimeConfig,
+    limits,
+    expectedRuntimeAbi,
+  )
   return admitted.ok ? { ok: true } : admitted
 }
 
