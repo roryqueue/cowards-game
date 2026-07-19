@@ -1214,7 +1214,7 @@ describe("Python subprocess Strategy provider ABI", () => {
       })
     }
   })
-  it("runs selectActivations through the v1.7 JSON ABI", async () => {
+  it("runs legacy selectActivations only when its historical ABI is selected", async () => {
     const response = await runPythonStrategyMethod({
       sourceText: pythonSource,
       methodName: "selectActivations",
@@ -1223,6 +1223,10 @@ describe("Python subprocess Strategy provider ABI", () => {
         phaseNumber: 1,
         roundNumber: 1,
         activationCount: 1,
+        initialInitiativePlayerId: "player:bottom",
+        hasInitialInitiative: true,
+        roundInitiativePlayerId: "player:bottom",
+        hasRoundInitiative: true,
         board: {
           bounds: { minX: 0, maxX: 1, minY: 0, maxY: 1 },
           soldiers: [],
@@ -1243,7 +1247,7 @@ describe("Python subprocess Strategy provider ABI", () => {
       },
     })
 
-    if (String(STRATEGY_RUNTIME_ABI_VERSION) === "strategy-runtime-abi-v1.17") {
+    if (!legacyPythonRuntimeIsSelected) {
       expect(response).toMatchObject({
         ok: false,
         failureKind: "systemFailure",
@@ -1346,9 +1350,9 @@ describe("Python subprocess Strategy provider ABI", () => {
     }
   })
 
-  it("replays immutable v1.14 evidence independently of the v1.17 pointer", () => {
+  it("replays immutable v1.14 evidence independently of the v1.19 pointer", () => {
     expect(String(STRATEGY_RUNTIME_ABI_VERSION)).toBe(
-      "strategy-runtime-abi-v1.17",
+      "strategy-runtime-abi-v1.19",
     )
     const revision = buildPythonLegacyStrategyRevision({
       source: pythonSource,
@@ -1376,7 +1380,7 @@ describe("Python subprocess Strategy provider ABI", () => {
     const production = runPythonStrategyMethodSync(request)
     expect(production).toMatchObject({
       ok: false,
-      abiVersion: "strategy-runtime-abi-v1.17",
+      abiVersion: "strategy-runtime-abi-v1.19",
       failureKind: "systemFailure",
       systemFailure: { code: "MALFORMED_IPC" },
     })
@@ -1445,7 +1449,7 @@ describe("Python subprocess Strategy provider ABI", () => {
           facing: "UP",
           lastSuccessfulMoveDirection: null,
         },
-        awarenessGrid: { cells: [] },
+        awarenessGrid: { cells: fixtureAwarenessCells(0, 0) },
         cycleIndex: 0,
         maxCycles: 12,
         soldierMemory: {},
@@ -1476,7 +1480,7 @@ describe("Python subprocess Strategy provider ABI", () => {
           facing: "UP",
           lastSuccessfulMoveDirection: null,
         },
-        awarenessGrid: { cells: [] },
+        awarenessGrid: { cells: fixtureAwarenessCells(0, 0) },
         cycleIndex: 0,
         maxCycles: 12,
         hasAdvancedThisActivation: false,
