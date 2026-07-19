@@ -321,7 +321,7 @@ Plans:
   4. Each counted scenario explicitly schedules every entrant on each side and in each initial-initiative state, proved at entrant level through TypeScript, Go, persistence, and service-backed tests.
   5. Arena and Set repair adds no official geometry or valid v1.4 gameplay change; any change to Strategy observation or reachable Match semantics stops for explicit compatibility approval.
 
-**Plans:** 46/49 plans executed
+**Plans:** 47/49 plans executed
 
 **Wave 1 — immutable semantic authorities**
 
@@ -464,7 +464,7 @@ Plans:
 
 **Wave 32 *(blocked on Wave 31 completion)* — selected-current runtime-service repair**
 
-- [ ] 260-49-PLAN.md — Separate immutable v1.17 service requests from selected-v1.19 defaults and exact successor Chronicle authority.
+- [x] 260-49-PLAN.md — Separate immutable v1.17 service requests from selected-v1.19 defaults and exact successor Chronicle authority.
 
 **Wave 33 *(blocked on Wave 32 completion)* — atomic activation**
 
@@ -514,5 +514,5 @@ Cycle-cap, inward-start, facing-only MOVE, reversal-history, attacker-facing/Adv
 | 257. Canonical Transition Kernel and v1.4 Semantic Integrity | 22/22 | Complete | 2026-07-13 |
 | 258. Canonical JSON, Failure Semantics, and Artifact Identity | 14/14 | Complete | 2026-07-16 |
 | 259. Executable Four-Language and Chronicle Conformance | 31/31 | Complete | 2026-07-16 |
-| 260. Truthful Strategy Inputs, Arena Authority, and Set Fairness | 45/48 | In Progress|  |
+| 260. Truthful Strategy Inputs, Arena Authority, and Set Fairness | 47/49 | In Progress|  |
 | 261. Integrated Service Proof, Drift Guards, and Release | 0/TBD | Not started | - |

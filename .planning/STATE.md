@@ -5,16 +5,16 @@ milestone_name: Rules Integrity and Strategy Evaluation Foundations — ACTIVE
 current_phase: 260
 current_phase_name: truthful-strategy-inputs-arena-authority-and-set-fairness
 status: executing
-stopped_at: Plan 260-39 complete; exact isolated selector audit has zero findings and Plan 260-33 is ready to persist readiness
-last_updated: "2026-07-18T18:20:00.000Z"
-last_activity: 2026-07-18
-last_activity_desc: Closed exact recorder identity admission and drove the isolated v1.19 selector audit to zero findings
+stopped_at: Plan 260-49 complete; released v1.17 and selected v1.19 service/replay gates pass and Plan 260-14 is ready
+last_updated: "2026-07-19T06:32:50.000Z"
+last_activity: 2026-07-19
+last_activity_desc: Closed selected-current runtime-service and replay authority with exact immutable v1.17 compatibility
 progress:
   total_phases: 6
   completed_phases: 4
-  total_plans: 125
-  completed_plans: 122
-  percent: 97
+  total_plans: 135
+  completed_plans: 133
+  percent: 99
 ---
 
 # State: Coward's Game
@@ -29,11 +29,11 @@ See: `.planning/PROJECT.md` (updated 2026-07-12)
 ## Current Position
 
 Phase: 260 (truthful-strategy-inputs-arena-authority-and-set-fairness) — EXECUTING
-Plan: 33 of 39
-Status: Ready to persist the zero seam inventory and regenerate exact preactivation readiness
-Last activity: 2026-07-18 — Plan 260-39 amended review PASS; exact isolated v1.19 selector audit passed with zero findings
+Plan: 47 of 49
+Status: Ready for the single Plan 260-14 selector and database-head activation transaction
+Last activity: 2026-07-19 — Plan 260-49 review PASS; released v1.17 and disposable selected v1.19 replay/service gates are green
 
-Progress: [█████████░] 92%
+Progress: [██████████] 96%
 
 ## Durable Decisions
 
@@ -69,6 +69,8 @@ Progress: [█████████░] 92%
 - One advisory-locked coordinator owns prepare through smoke, recovery, abort, and compensation; exact six-path restoration includes the Git index and reverse commit bytes.
 - The activation proof contains exactly five selector digests and no self-reference; final commit, tree, proof digest, smoke, and compensation bindings are validated externally against the database head.
 - Chronicle recorder admission is a closed exact v1.17/v1.19 set independent of current selection; v1.14 remains confined to immutable historical Chronicle validation.
+- Selected-current replay requires the exact persisted v1.19 Match/Set/arena/initiative reproducibility envelope; explicit v1.17 replay remains independently immutable.
+- Initial initiative is present in v1.19 replay state and absent from frozen v1.17 projections, so successor truth cannot rewrite historical evidence.
 
 ## Deferred Items
 
@@ -85,9 +87,9 @@ Progress: [█████████░] 92%
 
 **Resume file:** None
 
-Last session: 2026-07-18T15:10:00.000Z
-Stopped at: Plan 260-39 is complete; the exact selector audit passes its four declared files under the simulated v1.19 current selection with zero findings and unchanged dependency bytes. Development database remains exact v1.17 bootstrap with no pending intent.
-Next command: Execute Plan 260-33 zero-inventory persistence and authoritative preactivation proof regeneration.
+Last session: 2026-07-19T06:32:50.000Z
+Stopped at: Plan 260-49 is complete; released v1.17 and disposable selected v1.19 replay, spec, and runtime-service gates pass. Development database remains exact v1.17 bootstrap with no pending intent.
+Next command: Execute Plan 260-14 coordinated prepare, validate, rollback drill, stage, commit, finalize, and smoke.
 
 ## Performance Metrics
 
@@ -164,6 +166,7 @@ Next command: Execute Plan 260-33 zero-inventory persistence and authoritative p
 | Phase 260 P37 | 12min | 2 TDD tasks + independent review | 4 generator/fixture-helper files; 51 focused tests |
 | Phase 260 P38 | 18min | 1 TDD task + independent review | 2 engine files; 34 focused compatibility/replay tests |
 | Phase 260 P39 | 20min | 1 TDD task + amended review | 2 replay files; 22 focused tests and 61 exact-selector tests |
+| Phase 260 P49 | multi-session | 2 TDD tasks + review convergence | exact released/selected service and replay gates; refreshed preactivation proof |
 
 ## Decisions
 
