@@ -325,6 +325,24 @@ const normalizeHistoricalResponseForSelectedSchema = (
   const normalized = structuredClone(value)
   if (isRecord(normalized)) {
     normalized.runtimeAbiVersion = STRATEGY_RUNTIME_ABI_VERSION
+    if (
+      normalized.ok === true &&
+      isRecord(normalized.result) &&
+      isRecord(normalized.result.semanticReceipt)
+    ) {
+      normalized.result.semanticReceipt.schemaVersion =
+        RUNTIME_SEMANTIC_RECEIPT_SCHEMA_VERSION
+      if (
+        String(STRATEGY_RUNTIME_ABI_VERSION) ===
+          "strategy-runtime-abi-v1.19" &&
+        isRecord(normalized.result.finalState) &&
+        Array.isArray(normalized.result.finalState.players) &&
+        isRecord(normalized.result.finalState.players[0])
+      ) {
+        normalized.result.finalState.initialInitiativePlayerId =
+          normalized.result.finalState.players[0].id
+      }
+    }
   }
   return normalized
 }
