@@ -458,10 +458,11 @@ const resolveCompatibilityTupleFrom = (
     return undefined
   }
   const record = selector as Record<string, unknown>
+  const keys = Object.keys(record).sort()
   if (
-    Object.keys(record).length !== 2 ||
-    Object.keys(record)[0] !== "tupleId" ||
-    Object.keys(record)[1] !== "tuple" ||
+    keys.length !== 2 ||
+    keys[0] !== "tuple" ||
+    keys[1] !== "tupleId" ||
     typeof record.tupleId !== "string"
   ) {
     return undefined

@@ -187,6 +187,12 @@ describe("v1.37 canonical integrity authority", () => {
         tuple: { ...CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE },
       }),
     ).toEqual(VERSIONED_RUNTIME_V117_SEMANTIC_TUPLE_RECORD)
+    expect(
+      resolveCandidateRuntimeV117SemanticTuple({
+        tuple: { ...CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE },
+        tupleId: CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_ID,
+      }),
+    ).toEqual(VERSIONED_RUNTIME_V117_SEMANTIC_TUPLE_RECORD)
 
     const engineSource = readFileSync(
       path.join(repoRoot, "packages/engine/src/kernel/types.ts"),
