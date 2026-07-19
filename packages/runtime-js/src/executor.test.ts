@@ -55,25 +55,31 @@ const awarenessCells = (): AwarenessCell[] => {
   return cells
 }
 
-const strategyInput: StrategyInput = StrategyInputSchema.parse({
-  phaseNumber: 1,
-  roundNumber: 1,
-  activationCount: 1,
+const strategyInput = {
+  ...StrategyInputSchema.parse({
+    phaseNumber: 1,
+    roundNumber: 1,
+    activationCount: 1,
+    initialInitiativePlayerId: "bottom",
+    hasInitialInitiative: true,
+    roundInitiativePlayerId: "bottom",
+    hasRoundInitiative: true,
+    board: {
+      bounds: { minX: 0, maxX: 11, minY: 0, maxY: 11 },
+      soldiers: [bottomSoldier, topSoldier],
+      terrainStones: [],
+    },
+    mySoldiers: [bottomSoldier],
+    enemySoldiers: [topSoldier],
+    strategyMemory: {},
+  }),
   initialInitiativePlayerId: "bottom",
   hasInitialInitiative: true,
   roundInitiativePlayerId: "bottom",
   hasRoundInitiative: true,
-  board: {
-    bounds: { minX: 0, maxX: 11, minY: 0, maxY: 11 },
-    soldiers: [bottomSoldier, topSoldier],
-    terrainStones: [],
-  },
-  mySoldiers: [bottomSoldier],
-  enemySoldiers: [topSoldier],
-  strategyMemory: {},
-})
+}
 
-const soldierBrainInput: SoldierBrainInput = {
+const soldierBrainInput = {
   ...SoldierBrainInputSchema.parse({
     self: bottomSoldier,
     awarenessGrid: { cells: awarenessCells() },
@@ -83,6 +89,7 @@ const soldierBrainInput: SoldierBrainInput = {
     soldierMemory: {},
   }),
   objective: null,
+  hasAdvancedThisActivation: false,
 }
 
 const validSource = `

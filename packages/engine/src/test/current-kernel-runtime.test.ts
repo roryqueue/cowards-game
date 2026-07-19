@@ -31,7 +31,7 @@ const fixtureAwarenessCells = (x: number, y: number) =>
     }
   })
 
-const soldierBrainInput: SoldierBrainInput = {
+const soldierBrainInput = {
   ...SoldierBrainInputSchema.parse({
     self: {
       id: "soldier:historical-timeout",
@@ -48,6 +48,7 @@ const soldierBrainInput: SoldierBrainInput = {
     soldierMemory: {},
   }),
   objective: null,
+  hasAdvancedThisActivation: false,
 }
 
 const request: KernelSoldierBrainRequest = {

@@ -84,17 +84,30 @@ const transpileOrThrow = (source: string): string => {
   return transpiled.code
 }
 
-const runtimeInput: StrategyInput = StrategyInputSchema.parse({
-  phaseNumber: 1,
-  roundNumber: 1,
-  activationCount: 1,
-  initialInitiativePlayerId: "bottom",
-  hasInitialInitiative: true,
-  roundInitiativePlayerId: "bottom",
-  hasRoundInitiative: true,
-  board: {
-    bounds: { minX: 0, maxX: 11, minY: 0, maxY: 11 },
-    soldiers: [
+const runtimeInput = {
+  ...StrategyInputSchema.parse({
+    phaseNumber: 1,
+    roundNumber: 1,
+    activationCount: 1,
+    initialInitiativePlayerId: "bottom",
+    hasInitialInitiative: true,
+    roundInitiativePlayerId: "bottom",
+    hasRoundInitiative: true,
+    board: {
+      bounds: { minX: 0, maxX: 11, minY: 0, maxY: 11 },
+      soldiers: [
+        {
+          id: "bottom-1",
+          ownerPlayerId: "bottom",
+          status: "ACTIVE",
+          position: { x: 5, y: 10 },
+          facing: "UP",
+          lastSuccessfulMoveDirection: null,
+        },
+      ],
+      terrainStones: [],
+    },
+    mySoldiers: [
       {
         id: "bottom-1",
         ownerPlayerId: "bottom",
@@ -104,21 +117,14 @@ const runtimeInput: StrategyInput = StrategyInputSchema.parse({
         lastSuccessfulMoveDirection: null,
       },
     ],
-    terrainStones: [],
-  },
-  mySoldiers: [
-    {
-      id: "bottom-1",
-      ownerPlayerId: "bottom",
-      status: "ACTIVE",
-      position: { x: 5, y: 10 },
-      facing: "UP",
-      lastSuccessfulMoveDirection: null,
-    },
-  ],
-  enemySoldiers: [],
-  strategyMemory: {},
-})
+    enemySoldiers: [],
+    strategyMemory: {},
+  }),
+  initialInitiativePlayerId: "bottom",
+  hasInitialInitiative: true,
+  roundInitiativePlayerId: "bottom",
+  hasRoundInitiative: true,
+}
 
 const candidateIdentity: RuntimeInvocationSigningIdentityV117 = {
   keyId: RUNTIME_INVOCATION_V1_17_TEST_KEY_ID,

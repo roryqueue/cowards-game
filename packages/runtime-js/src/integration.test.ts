@@ -14,6 +14,14 @@ import { createScenarioStateParts } from "@cowards/test-utils"
 import { buildStrategyRevision } from "./revision.js"
 import { createNestedMatchShapeRuntimeFromRevisionTestSupport } from "./executor.js"
 
+const selectedStrategyInput = (input: unknown) => ({
+  ...StrategyInputSchema.parse(input),
+  initialInitiativePlayerId: "bottom",
+  hasInitialInitiative: true,
+  roundInitiativePlayerId: "bottom",
+  hasRoundInitiative: true,
+})
+
 const createInput = (
   source: string,
   overrides: Partial<RunMatchInput> = {},
@@ -103,7 +111,7 @@ describe("runtime-js engine and Chronicle integration", () => {
     const runtime =
       createNestedMatchShapeRuntimeFromRevisionTestSupport(revision)
     const result = runtime.selectActivations(
-      StrategyInputSchema.parse({
+      selectedStrategyInput({
         phaseNumber: 1,
         roundNumber: 1,
         activationCount: 1,

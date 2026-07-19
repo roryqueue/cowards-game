@@ -55,6 +55,20 @@ const fixtureAwarenessCells = (x: number, y: number) =>
           : ("EMPTY" as const),
     }
   })
+
+const selectedStrategyInput = (input: unknown) => ({
+  ...StrategyInputSchema.parse(input),
+  initialInitiativePlayerId: "player:1",
+  hasInitialInitiative: true,
+  roundInitiativePlayerId: "player:1",
+  hasRoundInitiative: true,
+})
+
+const selectedSoldierBrainInput = (input: unknown) => ({
+  ...SoldierBrainInputSchema.parse(input),
+  objective: null,
+  hasAdvancedThisActivation: false,
+})
 import { wasmWasiRuntimeMetadataV117 } from "./metadata.js"
 import {
   WASM_WASI_V1_17_EXECUTION_SETTINGS,
@@ -1606,7 +1620,7 @@ describe("WASM/WASI runtime alpha", () => {
       const runtime = createWasmWasiRuntimeFromRevision(revision)
 
       const selection = runtime.selectActivations(
-        StrategyInputSchema.parse({
+        selectedStrategyInput({
           phaseNumber: 1,
           roundNumber: 1,
           activationCount: 1,
@@ -1639,8 +1653,8 @@ describe("WASM/WASI runtime alpha", () => {
               systemFailure: { code: "MALFORMED_IPC", retryable: true },
             },
       )
-      const soldier = runtime.runSoldierBrain({
-        ...SoldierBrainInputSchema.parse({
+      const soldier = runtime.runSoldierBrain(
+        selectedSoldierBrainInput({
           self: {
             id: "soldier:1",
             ownerPlayerId: "player:1",
@@ -1655,8 +1669,7 @@ describe("WASM/WASI runtime alpha", () => {
           hasAdvancedThisActivation: false,
           soldierMemory: null,
         }),
-        objective: null,
-      })
+      )
       expect(soldier).toEqual(
         legacyRuntimeIsSelected
           ? {
@@ -1698,8 +1711,8 @@ describe("WASM/WASI runtime alpha", () => {
 
       const result = createWasmWasiRuntimeFromRevision(
         corruptRevision,
-      ).runSoldierBrain({
-        ...SoldierBrainInputSchema.parse({
+      ).runSoldierBrain(
+        selectedSoldierBrainInput({
           self: {
             id: "soldier:1",
             ownerPlayerId: "player:1",
@@ -1714,8 +1727,7 @@ describe("WASM/WASI runtime alpha", () => {
           hasAdvancedThisActivation: false,
           soldierMemory: null,
         }),
-        objective: null,
-      })
+      )
 
       expect(result).toMatchObject({
         ok: false,
@@ -1736,8 +1748,8 @@ describe("WASM/WASI runtime alpha", () => {
       const revision = buildZigStrategyRevision({ source: zigSource })
       const runtime = createWasmWasiRuntimeFromRevision(revision)
 
-      const result = runtime.runSoldierBrain({
-        ...SoldierBrainInputSchema.parse({
+      const result = runtime.runSoldierBrain(
+        selectedSoldierBrainInput({
           self: {
             id: "soldier:1",
             ownerPlayerId: "player:1",
@@ -1752,8 +1764,7 @@ describe("WASM/WASI runtime alpha", () => {
           hasAdvancedThisActivation: false,
           soldierMemory: null,
         }),
-        objective: null,
-      })
+      )
       expect(result).toEqual(
         legacyRuntimeIsSelected
           ? {

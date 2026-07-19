@@ -52,6 +52,12 @@ const fixtureAwarenessCells = (x: number, y: number) =>
     }
   })
 
+const selectedSoldierBrainInput = (input: unknown) => ({
+  ...SoldierBrainInputSchema.parse(input),
+  objective: null,
+  hasAdvancedThisActivation: false,
+})
+
 const pythonSource = `
 def select_activations(input):
     soldiers = [soldier for soldier in input["mySoldiers"] if soldier["status"] == "ACTIVE"]
@@ -1309,8 +1315,8 @@ describe("Python subprocess Strategy provider ABI", () => {
       stdoutBytes: 32 * 1024,
       stderrBytes: 4 * 1024,
     })
-    const result = runtime.runSoldierBrain({
-      ...SoldierBrainInputSchema.parse({
+    const result = runtime.runSoldierBrain(
+      selectedSoldierBrainInput({
         self: {
           id: "soldier:1",
           ownerPlayerId: "player:bottom",
@@ -1325,8 +1331,7 @@ describe("Python subprocess Strategy provider ABI", () => {
         hasAdvancedThisActivation: false,
         soldierMemory: {},
       }),
-      objective: null,
-    })
+    )
 
     if (legacyPythonRuntimeIsSelected) {
       expect(result.ok).toBe(true)
@@ -1461,8 +1466,8 @@ describe("Python subprocess Strategy provider ABI", () => {
     const runtime = createPythonRuntimeFromRevision(revision, {
       stdoutBytes: 64,
     })
-    const normalized = runtime.runSoldierBrain({
-      ...SoldierBrainInputSchema.parse({
+    const normalized = runtime.runSoldierBrain(
+      selectedSoldierBrainInput({
         self: {
           id: "soldier:1",
           ownerPlayerId: "player:bottom",
@@ -1477,8 +1482,7 @@ describe("Python subprocess Strategy provider ABI", () => {
         hasAdvancedThisActivation: false,
         soldierMemory: {},
       }),
-      objective: null,
-    })
+    )
     expect(normalized).toMatchObject({
       ok: false,
       systemFailure: {
