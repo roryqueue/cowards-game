@@ -1360,7 +1360,7 @@ const executeLiveLanes = async (
             ),
           ],
           cwd: repoRoot,
-          environment: { ...environment, HOME: workspace, TMPDIR: workspace },
+          environment: { ...environment, TMPDIR: workspace },
           timeoutMs: 20 * 60 * 1_000,
         })
         receipts.push(result.receipt)
