@@ -6,11 +6,13 @@ import {
   ChronicleSchema,
   COMPATIBILITY_VERSIONS,
   CURRENT_CANONICAL_COMPATIBILITY_TUPLE_RECORD,
+  VERSIONED_RUNTIME_V117_SEMANTIC_TUPLE_RECORD,
   STRATEGY_RUNTIME_ABI_VERSION,
   MatchExecutionExactEvidenceV137Schema,
   RuntimeExecutionFinalStateSchema,
   SET_CONDITION_POLICY_VERSION_V1_37,
   resolveCanonicalCompatibilityTuple,
+  resolveCandidateRuntimeV117SemanticTuple,
   resolveCandidateRuntimeV119SemanticTuple,
   resolveHistoricalRuntimeV114SemanticTuple,
   validateCanonicalArena,
@@ -236,9 +238,7 @@ const candidateCodeFailure = (
   truncated: false,
 })
 
-const candidateInputHasExactRoute = (
-  input: Record<string, unknown>,
-): boolean =>
+const candidateInputHasExactRoute = (input: Record<string, unknown>): boolean =>
   hasExactKeys(input, [
     "profile",
     "compatibility",
@@ -260,17 +260,13 @@ export const validateCandidateReplayV119 = (
     return candidateCodeFailure("CANDIDATE_ROUTE_INVALID")
   }
   if (!isRecord(input.compatibility)) {
-    return candidateCodeFailure("CANDIDATE_TUPLE_INVALID", [
-      "compatibility",
-    ])
+    return candidateCodeFailure("CANDIDATE_TUPLE_INVALID", ["compatibility"])
   }
   const compatibility = resolveCandidateRuntimeV119SemanticTuple(
     input.compatibility,
   )
   if (compatibility === undefined) {
-    return candidateCodeFailure("CANDIDATE_TUPLE_INVALID", [
-      "compatibility",
-    ])
+    return candidateCodeFailure("CANDIDATE_TUPLE_INVALID", ["compatibility"])
   }
 
   if (
@@ -300,7 +296,8 @@ export const validateCandidateReplayV119 = (
     ])
   }
 
-  const persistedMatch = input.persistedMatch as unknown as Readonly<CandidateReplayMatchAuthorityV119>
+  const persistedMatch =
+    input.persistedMatch as unknown as Readonly<CandidateReplayMatchAuthorityV119>
   const arena = CANONICAL_ARENA_CATALOG_V1_37.arenas.find(
     ({ id }) => id === persistedMatch.arenaVariantId,
   )
@@ -318,8 +315,7 @@ export const validateCandidateReplayV119 = (
     arena !== resolvedArena ||
     arena.status !== "active" ||
     !arena.schedulable ||
-    arena.semanticGeometryHash !==
-      persistedMatch.arenaSemanticGeometryHash
+    arena.semanticGeometryHash !== persistedMatch.arenaSemanticGeometryHash
   ) {
     return candidateCodeFailure("CANDIDATE_CATALOG_INVALID", [
       "persistedMatch",
@@ -1082,8 +1078,13 @@ const currentInputHasExactRoute = (input: Record<string, unknown>): boolean =>
     "execution",
   ])
 
-export const validateCurrentChronicleSemantics = (
+const validateChronicleSemanticsForAuthority = (
   input: unknown,
+  authority: Readonly<{
+    tupleId: string
+    tuple: Readonly<CanonicalCompatibilityTuple>
+  }>,
+  resolveCompatibility: typeof resolveCanonicalCompatibilityTuple,
 ): CurrentChronicleSemanticValidationResult => {
   if (
     !isRecord(input) ||
@@ -1095,10 +1096,8 @@ export const validateCurrentChronicleSemantics = (
   if (!isRecord(input.compatibility)) {
     return currentCodeFailure("CURRENT_TUPLE_INVALID")
   }
-  const resolvedCompatibility = resolveCanonicalCompatibilityTuple(
-    input.compatibility,
-  )
-  if (resolvedCompatibility?.tupleId !== V1_37_CURRENT_REPLAY_TUPLE.tupleId) {
+  const resolvedCompatibility = resolveCompatibility(input.compatibility)
+  if (resolvedCompatibility?.tupleId !== authority.tupleId) {
     return currentCodeFailure("CURRENT_TUPLE_INVALID", ["compatibility"])
   }
 
@@ -1133,10 +1132,10 @@ export const validateCurrentChronicleSemantics = (
   if (
     execution.transitions.some(
       (transition) =>
-        resolveCanonicalCompatibilityTuple({
+        resolveCompatibility({
           tupleId: transition.semanticTupleId,
           tuple: transition.semanticTuple,
-        })?.tupleId !== V1_37_CURRENT_REPLAY_TUPLE.tupleId,
+        })?.tupleId !== authority.tupleId,
     )
   ) {
     return currentCodeFailure("CURRENT_TUPLE_INVALID", ["execution"])
@@ -1146,8 +1145,8 @@ export const validateCurrentChronicleSemantics = (
     execution,
     metadata: {
       schemaVersion: "chronicle-v1.4",
-      semanticTupleId: V1_37_CURRENT_REPLAY_TUPLE.tupleId,
-      semanticTuple: V1_37_CURRENT_REPLAY_TUPLE.tuple,
+      semanticTupleId: authority.tupleId,
+      semanticTuple: authority.tuple,
     },
   })
   if (!trustedRecording.ok) {
@@ -1185,10 +1184,8 @@ export const validateCurrentChronicleSemantics = (
     eventErrors.length > 0 ||
     chronicle.events.some(
       ({ type }) =>
-        resolveReplayTransitionEventContract(
-          V1_37_CURRENT_REPLAY_TUPLE.tupleId,
-          type,
-        ) !== "current-exact",
+        resolveReplayTransitionEventContract(authority.tupleId, type) !==
+        "current-exact",
     )
   ) {
     return currentCodeFailure("CURRENT_EVENT_INVALID")
@@ -1433,10 +1430,33 @@ export const validateCurrentChronicleSemantics = (
   return currentSuccess()
 }
 
+export const validateCurrentChronicleSemantics = (
+  input: unknown,
+): CurrentChronicleSemanticValidationResult =>
+  validateChronicleSemanticsForAuthority(
+    input,
+    V1_37_CURRENT_REPLAY_TUPLE,
+    resolveCanonicalCompatibilityTuple,
+  )
+
+export const validateVersionedChronicleSemanticsV117 = (
+  input: unknown,
+): CurrentChronicleSemanticValidationResult =>
+  validateChronicleSemanticsForAuthority(
+    input,
+    VERSIONED_RUNTIME_V117_SEMANTIC_TUPLE_RECORD,
+    resolveCandidateRuntimeV117SemanticTuple,
+  )
+
 export const validateCurrentChronicle = (
   input: unknown,
 ): CurrentChronicleSemanticValidationResult =>
   validateCurrentChronicleSemantics(input)
+
+export const validateVersionedChronicleV117 = (
+  input: unknown,
+): CurrentChronicleSemanticValidationResult =>
+  validateVersionedChronicleSemanticsV117(input)
 
 export const assertChronicleCompatible = (chronicle: unknown): Chronicle => {
   const result = validateChronicle(chronicle)

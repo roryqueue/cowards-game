@@ -38,6 +38,7 @@ import {
   validateChronicle,
   validateCurrentChronicle,
   validateCurrentChronicleSemantics,
+  validateVersionedChronicleSemanticsV117,
   validateHistoricalV14Chronicle,
 } from "./validate.js"
 
@@ -405,8 +406,9 @@ const finalReplayState = (
     : { outcome: execution.recorderMaterial.finalState.outcome }),
 })
 
-export const validateCurrentReplayReconstruction = (
+const validateReplayReconstructionWithSemantics = (
   input: CurrentReplayReconstructionInput,
+  validateSemantics: typeof validateCurrentChronicleSemantics,
 ): CurrentReplayReconstructionResult => {
   const { chronicle, execution } = input
   if (execution.kind !== "completed" || execution.transitions.length === 0) {
@@ -453,7 +455,7 @@ export const validateCurrentReplayReconstruction = (
 
   const boundaryAnchors =
     input.boundaryAnchors ?? createChronicleBoundaryAnchors(execution)
-  const semanticAdmission = validateCurrentChronicleSemantics({
+  const semanticAdmission = validateSemantics({
     profile: "current-exact",
     compatibility: {
       tupleId: execution.transitions[0]!.semanticTupleId,
@@ -551,6 +553,20 @@ export const validateCurrentReplayReconstruction = (
     outcome,
   }
 }
+
+export const validateCurrentReplayReconstruction = (
+  input: CurrentReplayReconstructionInput,
+): CurrentReplayReconstructionResult =>
+  validateReplayReconstructionWithSemantics(input, (semanticInput) =>
+    validateCurrentChronicleSemantics(semanticInput),
+  )
+
+export const validateVersionedReplayReconstructionV117 = (
+  input: CurrentReplayReconstructionInput,
+): CurrentReplayReconstructionResult =>
+  validateReplayReconstructionWithSemantics(input, (semanticInput) =>
+    validateVersionedChronicleSemanticsV117(semanticInput),
+  )
 
 export type CreateCurrentReplayResult =
   | { readonly ok: true; readonly replay: Replay }

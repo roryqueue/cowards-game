@@ -15,6 +15,7 @@ import {
   type ExecutableLaneIdentity,
   type RuntimeEntrantExecutionEvidence,
   type RuntimeExecutionCompatibilityIdentity,
+  type RuntimeExecutionResolvedEvidenceSnapshot,
 } from "@cowards/spec"
 import type { Pool } from "pg"
 import { withTransaction } from "./db.js"
@@ -952,6 +953,24 @@ const createMatchSetIntegrityIdentityWithResolver = (
   return identity
 }
 
+const createMatchSetIntegrityIdentityForCompatibility = (
+  input: MatchSetIntegrityIdentityInput | unknown,
+): Readonly<MatchSetIntegrityIdentity> => {
+  if (
+    isRecord(input) &&
+    resolveCandidateRuntimeV117SemanticTuple(input.compatibility) !== undefined
+  ) {
+    return createCandidateMatchSetIntegrityIdentityV117(input)
+  }
+  if (
+    isRecord(input) &&
+    resolveCandidateRuntimeV119SemanticTuple(input.compatibility) !== undefined
+  ) {
+    return createCandidateMatchSetIntegrityIdentityV119(input)
+  }
+  return createMatchSetIntegrityIdentity(input)
+}
+
 export const createMatchSetIntegrityIdentity = (
   input: MatchSetIntegrityIdentityInput | unknown,
 ): Readonly<MatchSetIntegrityIdentity> =>
@@ -975,6 +994,70 @@ export const createCandidateMatchSetIntegrityIdentityV117 = (
     input,
     resolveCandidateRuntimeV117SemanticTuple,
   )
+
+export const parseRuntimeExecutionResolvedEvidenceSnapshot = (
+  value: RuntimeExecutionResolvedEvidenceSnapshot | unknown,
+): RuntimeExecutionResolvedEvidenceSnapshot => {
+  if (!isRecord(value)) {
+    throw new IntegrityEvidenceInputError(
+      "Runtime execution evidence snapshot is required.",
+    )
+  }
+  assertExactKeys(
+    value,
+    ["compatibility", "authorityBundleHash", "registryGeneration", "entrants"],
+    "Runtime execution evidence snapshot",
+  )
+  if (!isRecord(value.entrants)) {
+    throw new IntegrityEvidenceInputError(
+      "Runtime execution evidence entrants are required.",
+    )
+  }
+  assertExactKeys(
+    value.entrants,
+    ["bottom", "top"],
+    "Runtime execution evidence entrants",
+  )
+  const bottomRaw = value.entrants.bottom
+  const topRaw = value.entrants.top
+  if (!isRecord(bottomRaw) || !isRecord(topRaw)) {
+    throw new IntegrityEvidenceInputError(
+      "Runtime execution entrant evidence is malformed.",
+    )
+  }
+  const entrants = [bottomRaw, topRaw]
+  const identity = createMatchSetIntegrityIdentityForCompatibility({
+    compatibility: value.compatibility,
+    authorityBundleHash: value.authorityBundleHash,
+    registryGeneration: value.registryGeneration,
+    expectedEntrants: entrants.map((entrant) => ({
+      entrantKey: entrant.entrantKey,
+      strategyRevisionId: entrant.strategyRevisionId,
+    })),
+    entrants,
+  })
+  const pair = createMatchExecutionEvidencePair(identity, {
+    bottomEntrantKey: requiredString(
+      bottomRaw.entrantKey,
+      "Bottom entrant key",
+    ),
+    topEntrantKey: requiredString(topRaw.entrantKey, "Top entrant key"),
+    bottomStrategyRevisionId: requiredString(
+      bottomRaw.strategyRevisionId,
+      "Bottom Strategy Revision ID",
+    ),
+    topStrategyRevisionId: requiredString(
+      topRaw.strategyRevisionId,
+      "Top Strategy Revision ID",
+    ),
+  })
+  return globalThis.structuredClone({
+    compatibility: identity.compatibility,
+    authorityBundleHash: identity.authorityBundleHash,
+    registryGeneration: identity.registryGeneration,
+    entrants: { bottom: pair.bottom, top: pair.top },
+  })
+}
 
 export const createMatchExecutionEvidencePair = (
   identity: Readonly<MatchSetIntegrityIdentity>,
@@ -1146,7 +1229,7 @@ export const parseMatchSetIntegrityIdentityRows = (
       "Persisted execution evidence set is missing.",
     )
   }
-  const identity = createMatchSetIntegrityIdentity({
+  const identity = createMatchSetIntegrityIdentityForCompatibility({
     compatibility: {
       tupleId: matchSet.compatibility_tuple_id,
       tuple: {

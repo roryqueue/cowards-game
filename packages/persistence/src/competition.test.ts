@@ -729,10 +729,30 @@ describe("competition helpers", () => {
     expect(failed.calls.at(-1)).toBe("rollback")
 
     const historical = competitionSchedulingPool({ head: "pending" })
+    const historicalMatches = generateCompetitionPairwiseMatrix({
+      matchSetId: input.id,
+      presetId: "smoke-exhibition-v1",
+      entrants: selected,
+      semanticAuthorityKey: "runtime-v1.17",
+    })
+    const historicalIdentity = await resolveMatchSetExecutionEvidence({
+      resolver: createFixtureMatchSetEvidenceResolver({
+        semanticAuthorityKey: "runtime-v1.17",
+      }),
+      purpose: "exhibition",
+      evaluationInstant: "2026-07-12T12:00:00.000Z",
+      entrants: selected.map(({ strategyRevisionId }) => ({
+        entrantKey: strategyRevisionId,
+        strategyRevisionId,
+      })),
+      semanticAuthorityKey: "runtime-v1.17",
+    })
     await expect(
       createMatchSetService(historical.pool).createFromMatrix({
-        ...input,
+        id: input.id,
         semanticAuthorityKey: "runtime-v1.17",
+        matches: historicalMatches,
+        integrityIdentity: historicalIdentity,
       }),
     ).resolves.toMatchObject({ matchSetId: input.id })
     expect(

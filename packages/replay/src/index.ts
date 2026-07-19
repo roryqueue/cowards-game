@@ -10,6 +10,8 @@ export {
   resolveReplayCompatibilityIdentity,
   validateChronicle,
   validateCurrentChronicle,
+  validateVersionedChronicleV117,
+  validateVersionedChronicleSemanticsV117,
   validateHistoricalV14Chronicle,
   validateReplayInput,
   V1_37_CURRENT_REPLAY_TUPLE,

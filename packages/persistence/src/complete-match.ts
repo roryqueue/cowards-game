@@ -5,6 +5,8 @@ import {
   createChronicleContentHash,
   validateCurrentChronicle,
   validateCurrentReplayReconstruction,
+  validateVersionedChronicleV117,
+  validateVersionedReplayReconstructionV117,
   type ChronicleBoundaryAnchor,
   type ChronicleRecorderExecution,
 } from "@cowards/replay"
@@ -12,10 +14,9 @@ import {
   CANONICAL_COMPATIBILITY_TUPLES,
   CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE_ID,
   ARENA_CATALOG_VERSION_V1_37,
+  VERSIONED_RUNTIME_V117_SEMANTIC_TUPLE_RECORD,
   RuntimeExecutionFinalStateSchema,
   RuntimeExecutionServiceRequestV118Schema,
-  RuntimeExecutionResolvedEvidenceSnapshotSchema,
-  STRATEGY_RUNTIME_ABI_VERSION,
   createRuntimeSemanticAdmissionClaimV118,
   encodeCanonicalJson,
   hashExecutableLaneIdentity,
@@ -34,6 +35,7 @@ import { withTransaction } from "./db.js"
 import {
   createMatchExecutionEvidencePair,
   matchSetIntegritySqlValues,
+  parseRuntimeExecutionResolvedEvidenceSnapshot,
   parseMatchSetIntegrityIdentityRows,
   type MatchExecutionEvidencePair,
   type MatchSetExecutionEntrantRow,
@@ -394,10 +396,15 @@ export const admitCurrentMatchCompletion = (input: {
   boundaryAnchors: readonly ChronicleBoundaryAnchor[] | undefined
 }): CurrentMatchCompletionAdmission => {
   const activeCurrent = CANONICAL_COMPATIBILITY_TUPLES[0]
+  const historicalV117 = VERSIONED_RUNTIME_V117_SEMANTIC_TUPLE_RECORD
+  const usesHistoricalV117 = exactTupleMatches(
+    input.compatibility,
+    historicalV117,
+  )
   if (
     !activeCurrent ||
-    activeCurrent.tuple.runtimeAbi !== STRATEGY_RUNTIME_ABI_VERSION ||
-    !exactTupleMatches(input.compatibility, activeCurrent) ||
+    (!usesHistoricalV117 &&
+      !exactTupleMatches(input.compatibility, activeCurrent)) ||
     input.execution === undefined ||
     input.execution.kind !== "completed" ||
     !Array.isArray(input.boundaryAnchors)
@@ -413,11 +420,18 @@ export const admitCurrentMatchCompletion = (input: {
     execution: input.execution,
     boundaryAnchors: input.boundaryAnchors,
   }
-  const validation = validateCurrentChronicle(currentEnvelope)
-  const reconstruction = validateCurrentReplayReconstruction({
-    chronicle: input.chronicle,
-    execution: input.execution,
-  })
+  const validation = usesHistoricalV117
+    ? validateVersionedChronicleV117(currentEnvelope)
+    : validateCurrentChronicle(currentEnvelope)
+  const reconstruction = usesHistoricalV117
+    ? validateVersionedReplayReconstructionV117({
+        chronicle: input.chronicle,
+        execution: input.execution,
+      })
+    : validateCurrentReplayReconstruction({
+        chronicle: input.chronicle,
+        execution: input.execution,
+      })
   const terminalAnchor = input.boundaryAnchors.at(-1)
   if (
     !validation.ok ||
@@ -589,8 +603,8 @@ const admitCurrentMatchCompletionV118Unchecked = (input: {
     execution: input.execution,
     boundaryAnchors: input.boundaryAnchors,
   }
-  const validation = validateCurrentChronicle(currentEnvelope)
-  const reconstruction = validateCurrentReplayReconstruction({
+  const validation = validateVersionedChronicleV117(currentEnvelope)
+  const reconstruction = validateVersionedReplayReconstructionV117({
     chronicle: input.chronicle,
     execution: input.execution,
   })
@@ -691,16 +705,16 @@ const prepareCompletion = (
   // Parse the entire response evidence before route selection, semantic
   // admission, cloning any gameplay document, or deriving persisted fields.
   // This prevents a partial type cast from influencing either route.
-  const parsedIdentity =
-    RuntimeExecutionResolvedEvidenceSnapshotSchema.safeParse(
+  let integrityIdentity: RuntimeExecutionResolvedEvidenceSnapshot
+  try {
+    integrityIdentity = parseRuntimeExecutionResolvedEvidenceSnapshot(
       input.integrityIdentity,
     )
-  if (!parsedIdentity.success) {
+  } catch {
     throw new MatchCompletionSemanticSystemFailure(
       "COMPLETION_EVIDENCE_SHAPE_INVALID",
     )
   }
-  const integrityIdentity = globalThis.structuredClone(parsedIdentity.data)
   const currentV118Envelope = hasExactKeys(input, currentCompleteKeysV118)
   const currentEnvelope = hasExactKeys(input, currentCompleteKeys)
 
@@ -710,12 +724,8 @@ const prepareCompletion = (
         "CURRENT_V118_CERTIFICATE_AUTHORITY_MISSING",
       )
     }
-    const activeCurrent = CANONICAL_COMPATIBILITY_TUPLES[0]
-    if (
-      !activeCurrent ||
-      activeCurrent.tuple.runtimeAbi !== STRATEGY_RUNTIME_ABI_VERSION ||
-      !exactTupleMatches(integrityIdentity.compatibility, activeCurrent)
-    ) {
+    const activeCurrent = VERSIONED_RUNTIME_V117_SEMANTIC_TUPLE_RECORD
+    if (!exactTupleMatches(integrityIdentity.compatibility, activeCurrent)) {
       throw new MatchCompletionSemanticSystemFailure(
         "CURRENT_ROUTE_TUPLE_INVALID",
       )
@@ -754,10 +764,11 @@ const prepareCompletion = (
 
   if (currentEnvelope) {
     const activeCurrent = CANONICAL_COMPATIBILITY_TUPLES[0]
+    const historicalV117 = VERSIONED_RUNTIME_V117_SEMANTIC_TUPLE_RECORD
     if (
       !activeCurrent ||
-      activeCurrent.tuple.runtimeAbi !== STRATEGY_RUNTIME_ABI_VERSION ||
-      !exactTupleMatches(integrityIdentity.compatibility, activeCurrent)
+      (!exactTupleMatches(integrityIdentity.compatibility, activeCurrent) &&
+        !exactTupleMatches(integrityIdentity.compatibility, historicalV117))
     ) {
       throw new MatchCompletionSemanticSystemFailure(
         "CURRENT_ROUTE_TUPLE_INVALID",
@@ -818,8 +829,7 @@ export const validateCompletionIntegritySnapshot = (
     ) {
       throw new Error("locked pair mismatch")
     }
-    const parsed =
-      RuntimeExecutionResolvedEvidenceSnapshotSchema.parse(response)
+    const parsed = parseRuntimeExecutionResolvedEvidenceSnapshot(response)
     const expected: RuntimeExecutionResolvedEvidenceSnapshot = {
       compatibility: locked.identity.compatibility,
       authorityBundleHash: locked.identity.authorityBundleHash,
