@@ -10,10 +10,13 @@ import time
 
 ABI_VERSION = "strategy-runtime-abi-v1.14"
 CANDIDATE_ABI_VERSION = "strategy-runtime-abi-v1.17"
+CURRENT_MATCH_ABI_VERSION = "strategy-runtime-abi-v1.19"
 # The legacy JSON host is executable only while v1.14 is the selected lane.
 # v1.17 must use the authenticated candidate host protocol below; admitting it
 # here would create a second, unsigned ABI envelope after activation.
-SELECTABLE_LEGACY_ABI_VERSIONS = (ABI_VERSION,)
+# The selected v1.19 Match service retains this package-free JSON transport;
+# its counted admission remains gated by exact external conformance evidence.
+SELECTABLE_LEGACY_ABI_VERSIONS = (ABI_VERSION, CURRENT_MATCH_ABI_VERSION)
 CANDIDATE_HOST_PROTOCOL = "python-runtime-host-v1.17"
 CANDIDATE_PREFLIGHT_WATCHDOG_SECONDS = 1.0
 MAX_SAFE_INTEGER = 9_007_199_254_740_991

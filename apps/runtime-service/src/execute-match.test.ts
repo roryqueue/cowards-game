@@ -699,10 +699,10 @@ describe("runtime execution service", () => {
       top: currentRequest.strategies.top,
       effectiveStatus: "counted",
     })
-    const countedMatch = {
+    const countedMatch = bindFixtureCandidateMatchAuthorityV119({
       ...currentRequest,
       evidenceSnapshot: countedContext.evidenceSnapshot,
-    }
+    })
     const countedDependencies = {
       ...dependencies,
       authorityLoader: {

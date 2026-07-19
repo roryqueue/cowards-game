@@ -2179,19 +2179,53 @@ export const executePreparedRuntimeServiceRequestV118 = (
   const chronicle = executed.response.result.chronicle
   const finalState = executed.response.result.finalState
   const outcome = finalState.outcome
-  const semanticEnvelope = {
+  const candidateMatch = (
+    nestedRequest.match as RoutedRuntimeExecutionServiceRequest["match"]
+  ).candidateMatch
+  const candidateV119 =
+    resolveCandidateRuntimeV119SemanticTuple(
+      nestedRequest.evidenceSnapshot.compatibility,
+    ) !== undefined
+  const candidateReproducibility =
+    candidateV119 && candidateMatch !== undefined
+      ? {
+          profile: "candidate-v1.19" as const,
+          compatibility: nestedRequest.evidenceSnapshot.compatibility,
+          match: candidateMatch,
+        }
+      : undefined
+  const currentSemanticEnvelope = {
     profile: "current-exact" as const,
     compatibility: nestedRequest.evidenceSnapshot.compatibility,
     chronicle,
     execution: executed.execution,
     boundaryAnchors: executed.boundaryAnchors,
   }
-  const validation = validateCurrentChronicle(semanticEnvelope)
-  const reconstruction = validateCurrentReplayReconstruction({
+  const candidateSemanticEnvelope = {
+    profile: "candidate-v1.19" as const,
+    compatibility: nestedRequest.evidenceSnapshot.compatibility,
     chronicle,
     execution: executed.execution,
+    boundaryAnchors: executed.boundaryAnchors,
+    candidateReproducibility: candidateReproducibility!,
+    persistedMatch: candidateMatch!,
+  }
+  const validation = candidateV119
+    ? validateCandidateReplayV119(candidateSemanticEnvelope)
+    : validateCurrentChronicle(currentSemanticEnvelope)
+  const reconstructionInput = {
+    chronicle,
+    execution: executed.execution,
+    boundaryAnchors: executed.boundaryAnchors,
     transitionTraceRoot: executed.transitionTraceRoot,
-  })
+  }
+  const reconstruction = candidateV119
+    ? validateCandidateReplayReconstructionV119({
+        ...reconstructionInput,
+        candidateMatch: candidateMatch!,
+        candidateReproducibility: candidateReproducibility!,
+      })
+    : validateCurrentReplayReconstruction(reconstructionInput)
   const terminalAnchor = executed.boundaryAnchors.at(-1)
   if (
     executed.execution.kind !== "completed" ||

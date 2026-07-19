@@ -106,9 +106,7 @@ describe("runtime-service v1.19 observation dispatch", () => {
     )
     expect(
       runtimeServiceSemanticSelectionFromEnvironment().runtimeAbiVersion,
-    ).toBe(
-      "strategy-runtime-abi-v1.17",
-    )
+    ).toBe(CURRENT_SEMANTIC_AUTHORITY_GENERATED.selection.runtimeAbiVersion)
   })
 
   it("preserves provider failure ownership without leaking private input", () => {

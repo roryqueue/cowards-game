@@ -15,6 +15,7 @@ import {
   RUNTIME_INVOCATION_V1_17_PLAYER_VIOLATIONS,
   RuntimeExecutionServiceResponseSchema,
   SoldierBrainResultV117Schema,
+  STRATEGY_LANGUAGE_PROVIDER_CONTRACT_VERSION,
   STRATEGY_PROVIDER_VALIDATION_CONTRACT_V1_17,
   STRATEGY_RUNTIME_ABI_VERSION,
   STRATEGY_RUNTIME_ABI_VERSION_V1_17,
@@ -511,12 +512,14 @@ const validateStrategyRequest = (
     provider.id !== providerId ||
     String(provider.runtimeAbiVersion) !==
       String(revision.runtime.abiVersion) ||
-    (useV117Provider
-      ? String(provider.contractVersion) !==
-          STRATEGY_PROVIDER_VALIDATION_CONTRACT_V1_17 ||
-        revision.runtime.abiVersion !== STRATEGY_RUNTIME_ABI_VERSION_V1_17
-      : String(provider.contractVersion) ===
-        STRATEGY_PROVIDER_VALIDATION_CONTRACT_V1_17)
+    String(revision.runtime.abiVersion) !==
+      String(
+        options.selectedRuntimeAbiVersion ?? STRATEGY_RUNTIME_ABI_VERSION,
+      ) ||
+    String(provider.contractVersion) !==
+      String(STRATEGY_LANGUAGE_PROVIDER_CONTRACT_VERSION) ||
+    (useV117Provider &&
+      revision.runtime.abiVersion !== STRATEGY_RUNTIME_ABI_VERSION_V1_17)
   ) {
     throw new Error(
       "Runtime provider validation v1.17 authority is not selected atomically.",

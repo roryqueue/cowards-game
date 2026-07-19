@@ -13,13 +13,29 @@ import {
 } from "./runtime-config.js"
 
 describe("runtime-service compact current selection", () => {
-  it("keeps live configuration on the exact compact v1.17 selection", () => {
-    expect(selectedRuntimeServiceContract()).toEqual({
-      runtimeAbiVersion: "strategy-runtime-abi-v1.17",
-      runtimeServiceVersion: "runtime-execution-service-v1.17",
-      semanticReceiptVersion: "runtime-semantic-receipt-v1.17",
-      canonicalJsonVersion: "canonical-json-v1.1",
-    })
+  const currentKey =
+    CURRENT_SEMANTIC_AUTHORITY_GENERATED.selection.semanticAuthorityKey
+  const otherSelection = resolveSemanticAuthoritySelection({
+    semanticAuthorityKey:
+      currentKey === "runtime-v1.17" ? "runtime-v1.19" : "runtime-v1.17",
+  })
+
+  it("keeps live configuration on the exact compact selection", () => {
+    expect(selectedRuntimeServiceContract()).toEqual(
+      currentKey === "runtime-v1.17"
+        ? {
+            runtimeAbiVersion: "strategy-runtime-abi-v1.17",
+            runtimeServiceVersion: "runtime-execution-service-v1.17",
+            semanticReceiptVersion: "runtime-semantic-receipt-v1.17",
+            canonicalJsonVersion: "canonical-json-v1.1",
+          }
+        : {
+            runtimeAbiVersion: "strategy-runtime-abi-v1.19",
+            runtimeServiceVersion: "runtime-execution-service-v1.18",
+            semanticReceiptVersion: "runtime-semantic-receipt-v1.19",
+            canonicalJsonVersion: "canonical-json-v1.1",
+          },
+    )
 
     const config = createRuntimeServiceConfig({
       strategyExecutionAdapter: "worker-thread",
@@ -52,9 +68,7 @@ describe("runtime-service compact current selection", () => {
     [CURRENT_SEMANTIC_AUTHORITY_GENERATED.selection, undefined],
     [
       CURRENT_SEMANTIC_AUTHORITY_GENERATED.selection,
-      resolveSemanticAuthoritySelection({
-        semanticAuthorityKey: "runtime-v1.19",
-      }),
+      otherSelection,
     ],
     [
       CURRENT_SEMANTIC_AUTHORITY_GENERATED.selection,

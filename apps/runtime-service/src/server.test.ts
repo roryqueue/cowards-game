@@ -12,8 +12,8 @@ import {
   RUNTIME_INVOCATION_V1_17_TEST_KEY_ID,
   STRATEGY_LANGUAGE_PROVIDER_CONTRACT_VERSION,
   STRATEGY_RUNTIME_ABI_VERSION,
-  RuntimeExecutionServiceResponseSchema,
   RuntimeExecutionServiceResponseV117Schema,
+  RuntimeExecutionServiceResponseV118Schema,
   admitCanonicalJsonBytes,
   createAuthenticatedRuntimeInvocationResponseV117,
   createRuntimeInvocationExecutionReceiptV117,
@@ -1328,7 +1328,7 @@ export fn _start() void {
       const parsed =
         String(STRATEGY_RUNTIME_ABI_VERSION) === "strategy-runtime-abi-v1.17"
           ? RuntimeExecutionServiceResponseV117Schema.parse(body)
-          : RuntimeExecutionServiceResponseSchema.parse(body)
+          : RuntimeExecutionServiceResponseV118Schema.parse(body)
       expect(parsed).toMatchObject({
         ok: false,
         kind: "systemFailure",
