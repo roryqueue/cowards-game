@@ -780,7 +780,7 @@ export const SERVICE_API_ROUTES = {
             sourceHash: "sourcehash-demo",
             sourceBytes: 256,
             runtime: {
-              abiVersion: STRATEGY_RUNTIME_ABI_VERSION,
+              abiVersion: "strategy-runtime-abi-v1.17",
               language: { id: "typescript", version: "runtime-js-v1" },
               adapter: {
                 id: "runtime-js-worker-thread",

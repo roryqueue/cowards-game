@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest"
-import { PublicStrategyRuntimeMetadataSchema } from "./index.js"
+import {
+  PublicStrategyRuntimeMetadataSchema,
+  SERVICE_API_ROUTES,
+} from "./index.js"
 
 const metadataFor = (abiVersion: string) => ({
   abiVersion,
@@ -10,6 +13,14 @@ const metadataFor = (abiVersion: string) => ({
 })
 
 describe("public Strategy runtime metadata versioning", () => {
+  it("keeps the public Strategy contract example pinned to historical v1.17 evidence", () => {
+    const example = SERVICE_API_ROUTES.getPublicStrategyPage.examples[0]
+
+    expect(example.payload.strategy.runtime.abiVersion).toBe(
+      "strategy-runtime-abi-v1.17",
+    )
+  })
+
   it.each([
     "strategy-runtime-abi-v1.19",
     "strategy-runtime-abi-v1.17",
