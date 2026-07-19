@@ -6,7 +6,7 @@
  * every current projection after the complete successor proof passes.
  */
 export const CURRENT_SEMANTIC_AUTHORITY_SOURCE = Object.freeze({
-  semanticAuthorityKey: "runtime-v1.17",
+  semanticAuthorityKey: "runtime-v1.19",
 } as const)
 
 export type CurrentSemanticAuthoritySource = Readonly<{

@@ -17,16 +17,16 @@ type currentSemanticAuthorityGeneratedSelection struct {
 
 func currentSemanticAuthorityGenerated() currentSemanticAuthorityGeneratedSelection {
 	return currentSemanticAuthorityGeneratedSelection{
-		SemanticAuthorityKey: "runtime-v1.17",
-		TupleID: "sha256:0d8a04fdfe49e3aa7261728ee51beb0a9049b661aad978277f2892c3a4bc54fe",
+		SemanticAuthorityKey: "runtime-v1.19",
+		TupleID: "sha256:37c9a07425d454c74859112debcc3ef362d43e80d5767560d9bde28a3c8d5e73",
 		Rules: "cowards-rules-v1.4",
 		Engine: "engine-kernel-v1.37-candidate-1",
-		RuntimeABI: "strategy-runtime-abi-v1.17",
+		RuntimeABI: "strategy-runtime-abi-v1.19",
 		Chronicle: "chronicle-recorder-current-events-v1.37-candidate-1",
-		ArenaCatalog: "semantic-arena-catalog-v1.37-candidate-1",
-		SetPolicy: "canonical-set-policy-v1.4",
-		ConformanceCertificateVersion: "runtime-conformance-certificate-v1.17",
-		SourceSHA256: "sha256:14296beaf5e79d731dba3de3501dde7239731ce51b0c926bced3d76f5eff29e1",
-		OutputSHA256: "sha256:bb814addab77fd473103651eb9aac2980ed45770d5147fb54de1f703143b2ce0",
+		ArenaCatalog: "canonical-arena-catalog-v1.37",
+		SetPolicy: "canonical-set-policy-v1.37-four-condition-v1",
+		ConformanceCertificateVersion: "runtime-conformance-certificate-v1.19",
+		SourceSHA256: "sha256:110d30db98623cb90f07b473045cf04aca3433fb823964163191a0a8cba64b61",
+		OutputSHA256: "sha256:15030ee59b81a2bf04667e045344de36d1b11b9834e64f71be05ccf7b73d80d5",
 	}
 }

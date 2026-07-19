@@ -1,7 +1,7 @@
 {
   "schemaVersion": "v1.37-executable-conformance-registry-v1",
-  "activeVersion": "v2",
-  "corpusRootSha256": "sha256:238347225defaaabcf9e57141ac7a54b4b277bd149bebe2b21903febc9ce7ac2",
-  "corpusFileSha256": "sha256:8d51df780a1c9dcb35e28547f4891af0e28a4bd2cd8e854165a61a1726f3a0dd",
-  "path": "packages/golden/src/fixtures/v1-37-conformance-corpus/v2/corpus.json"
+  "activeVersion": "v3",
+  "corpusRootSha256": "sha256:06d0717a16047cace0364c94a15353e2d53b53da5e8bebef6912f9f30f3d681d",
+  "corpusFileSha256": "sha256:ec92ba7506907e65a032083a2c68005022c7ad8d8873a9ddbc59338db2d8d5d0",
+  "path": "packages/golden/src/fixtures/v1-37-conformance-corpus/v3/corpus.json"
 }
