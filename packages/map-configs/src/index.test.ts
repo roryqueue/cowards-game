@@ -26,7 +26,7 @@ const containsPosition = (bounds: BoardBounds, position: Position): boolean =>
   position.y <= bounds.maxY
 
 describe("curated arena variants", () => {
-  it("preserves the complete Phase-259 default branch byte-for-byte", () => {
+  it("preserves the complete historical v1.17 branch byte-for-byte", () => {
     expect(curatedArenaVariants).toEqual([
       {
         id: "arena:smoke:v1",
@@ -63,11 +63,9 @@ describe("curated arena variants", () => {
     expect(MAP_CONFIG_CATALOG_V1_17.schedulableArenaVariants).toBe(
       curatedArenaVariants,
     )
-    expect(resolveCurrentMapConfigCatalog()).toBe(MAP_CONFIG_CATALOG_V1_17)
-    expect(CURRENT_MAP_CONFIG_CATALOG).toBe(MAP_CONFIG_CATALOG_V1_17)
   })
 
-  it("projects the exact candidate catalog without treating Open Field as diversity", () => {
+  it("selects the activated v1.19 catalog without treating Open Field as diversity", () => {
     expect(MAP_CONFIG_CATALOG_V1_19_CANDIDATE.arenaVariants).toEqual(
       curatedArenaVariants,
     )
@@ -89,6 +87,12 @@ describe("curated arena variants", () => {
     expect(
       Object.isFrozen(MAP_CONFIG_CATALOG_V1_19_CANDIDATE.arenaVariants),
     ).toBe(true)
+    expect(resolveCurrentMapConfigCatalog()).toBe(
+      MAP_CONFIG_CATALOG_V1_19_CANDIDATE,
+    )
+    expect(CURRENT_MAP_CONFIG_CATALOG).toBe(
+      MAP_CONFIG_CATALOG_V1_19_CANDIDATE,
+    )
   })
 
   it("requires exact explicit v1.19 dispatch", () => {
