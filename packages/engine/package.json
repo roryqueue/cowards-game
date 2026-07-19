@@ -14,7 +14,7 @@
     "build": "tsc -b",
     "lint": "eslint .",
     "typecheck": "tsc -b",
-    "test": "vitest run"
+    "test": "vitest run --maxWorkers=1"
   },
   "dependencies": {
     "@cowards/spec": "workspace:*"
