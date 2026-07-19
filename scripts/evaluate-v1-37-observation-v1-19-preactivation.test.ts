@@ -115,6 +115,9 @@ describe("v1.37 observation-v1.19 preactivation proof", () => {
         "apps/runtime-service/src/four-language-conformance-runner.ts",
         "apps/runtime-service/src/four-language-conformance-runner.test.ts",
         "packages/golden/src/index.ts",
+        "packages/engine/src/state.ts",
+        "packages/engine/src/kernel/driver.ts",
+        "packages/engine/src/compatibility-fixtures.test.ts",
       ]),
     )
     expect(proof.seamAudit).toEqual({
