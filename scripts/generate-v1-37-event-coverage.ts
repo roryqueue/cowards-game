@@ -4,7 +4,11 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 import ts from "typescript"
-import { CURRENT_CANONICAL_COMPATIBILITY_TUPLE_ID } from "../packages/spec/src/integrity-authority.js"
+import {
+  CURRENT_CANONICAL_COMPATIBILITY_TUPLE_ID,
+  VERSIONED_RUNTIME_V117_SEMANTIC_TUPLE_RECORD,
+  VERSIONED_RUNTIME_V119_SEMANTIC_TUPLE_RECORD,
+} from "../packages/spec/src/integrity-authority.js"
 import { ChronicleEventTypeSchema } from "../packages/spec/src/schemas.js"
 
 const repoRoot = path.resolve(
@@ -14,8 +18,21 @@ const repoRoot = path.resolve(
 
 export const candidateEventCoverageArtifactPath =
   "packages/spec/artifacts/v1.37-candidate-event-coverage.json" as const
-export const currentEventCoverageArtifactPath =
-  "packages/spec/artifacts/v1.37-current-event-coverage.json" as const
+export const versionedCurrentEventCoverageArtifactPaths = Object.freeze({
+  [VERSIONED_RUNTIME_V117_SEMANTIC_TUPLE_RECORD.tupleId]:
+    "packages/spec/artifacts/v1.37-current-event-coverage.json",
+  [VERSIONED_RUNTIME_V119_SEMANTIC_TUPLE_RECORD.tupleId]:
+    "packages/spec/artifacts/v1.37-current-event-coverage-v1.19.json",
+} as const)
+
+const eventCoverageArtifactPathFor = (tupleId: string): string | undefined =>
+  versionedCurrentEventCoverageArtifactPaths[
+    tupleId as keyof typeof versionedCurrentEventCoverageArtifactPaths
+  ]
+
+export const currentEventCoverageArtifactPath = eventCoverageArtifactPathFor(
+  CURRENT_CANONICAL_COMPATIBILITY_TUPLE_ID,
+)!
 const candidateAuthorityArtifactPath =
   "packages/spec/artifacts/v1.37-kernel-integrity-candidate.json" as const
 
@@ -675,7 +692,7 @@ export const buildV137CurrentEventCoverage = (
   const sourceOverrides = options.sourceOverrides ?? {}
   const tupleId =
     options.currentTupleId ?? CURRENT_CANONICAL_COMPATIBILITY_TUPLE_ID
-  if (tupleId !== CURRENT_CANONICAL_COMPATIBILITY_TUPLE_ID) {
+  if (eventCoverageArtifactPathFor(tupleId) === undefined) {
     findings.push({
       code: "CURRENT_TUPLE_INVALID",
       message: "Current event coverage requires the exact activated tuple.",
@@ -820,28 +837,48 @@ export const renderV137CurrentEventCoverageArtifact = (
   artifact = buildV137CurrentEventCoverage(),
 ): string => `${JSON.stringify(artifact, null, 2)}\n`
 
-export const writeV137CurrentEventCoverageArtifact = (): void => {
-  const absolutePath = path.join(repoRoot, currentEventCoverageArtifactPath)
+export const writeV137CurrentEventCoverageArtifact = (
+  tupleId = CURRENT_CANONICAL_COMPATIBILITY_TUPLE_ID,
+): void => {
+  const relativePath = eventCoverageArtifactPathFor(tupleId)
+  if (relativePath === undefined) {
+    throw new Error(`Unsupported current event-coverage tuple: ${tupleId}`)
+  }
+  const absolutePath = path.join(repoRoot, relativePath)
   mkdirSync(path.dirname(absolutePath), { recursive: true })
-  writeFileSync(absolutePath, renderV137CurrentEventCoverageArtifact(), "utf8")
+  writeFileSync(
+    absolutePath,
+    renderV137CurrentEventCoverageArtifact(
+      buildV137CurrentEventCoverage({ currentTupleId: tupleId }),
+    ),
+    "utf8",
+  )
 }
 
-export const checkV137CurrentEventCoverageArtifact = (): string[] => {
-  const expected = renderV137CurrentEventCoverageArtifact()
+export const checkV137CurrentEventCoverageArtifact = (
+  tupleId = CURRENT_CANONICAL_COMPATIBILITY_TUPLE_ID,
+): string[] => {
+  const relativePath = eventCoverageArtifactPathFor(tupleId)
+  if (relativePath === undefined) return [String(tupleId)]
+  const expected = renderV137CurrentEventCoverageArtifact(
+    buildV137CurrentEventCoverage({ currentTupleId: tupleId }),
+  )
   try {
-    return readFileSync(
-      path.join(repoRoot, currentEventCoverageArtifactPath),
-      "utf8",
-    ) === expected
+    return readFileSync(path.join(repoRoot, relativePath), "utf8") === expected
       ? []
-      : [currentEventCoverageArtifactPath]
+      : [relativePath]
   } catch {
-    return [currentEventCoverageArtifactPath]
+    return [relativePath]
   }
 }
 
 const main = (): void => {
   const args = new Set(process.argv.slice(2))
+  const requestedTupleId = args.has("--runtime-v1.19")
+    ? VERSIONED_RUNTIME_V119_SEMANTIC_TUPLE_RECORD.tupleId
+    : args.has("--runtime-v1.17")
+      ? VERSIONED_RUNTIME_V117_SEMANTIC_TUPLE_RECORD.tupleId
+      : CURRENT_CANONICAL_COMPATIBILITY_TUPLE_ID
   try {
     if (args.has("--candidate") && args.has("--check")) {
       const stale = checkRetainedCandidateEventCoverageProvenance()
@@ -851,12 +888,12 @@ const main = (): void => {
       return
     }
     if (args.has("--current") && args.has("--write")) {
-      writeV137CurrentEventCoverageArtifact()
+      writeV137CurrentEventCoverageArtifact(requestedTupleId)
       console.log("v1.37 current event coverage artifact written")
       return
     }
     if (args.has("--current") && args.has("--check")) {
-      const stale = checkV137CurrentEventCoverageArtifact()
+      const stale = checkV137CurrentEventCoverageArtifact(requestedTupleId)
       if (stale.length > 0) {
         console.error(
           `v1.37 current event coverage is stale: ${stale.join(", ")}`,
@@ -873,7 +910,7 @@ const main = (): void => {
     return
   }
   console.error(
-    "Usage: generate-v1-37-event-coverage.ts --current --write | --current --check | --candidate --check",
+    "Usage: generate-v1-37-event-coverage.ts --current --write|--check [--runtime-v1.17|--runtime-v1.19] | --candidate --check",
   )
   process.exitCode = 1
 }

@@ -12,7 +12,11 @@ import {
   ChronicleEventTypeSchema,
   HistoricalV14ChronicleEventTypeSchema,
 } from "../packages/spec/src/schemas.js"
-import { CURRENT_CANONICAL_COMPATIBILITY_TUPLE_ID } from "../packages/spec/src/integrity-authority.js"
+import {
+  CURRENT_CANONICAL_COMPATIBILITY_TUPLE_ID,
+  VERSIONED_RUNTIME_V117_SEMANTIC_TUPLE_RECORD,
+  VERSIONED_RUNTIME_V119_SEMANTIC_TUPLE_RECORD,
+} from "../packages/spec/src/integrity-authority.js"
 import {
   CURRENT_CONSUMER_SURFACES,
   CurrentEventCoverageError,
@@ -23,6 +27,7 @@ import {
   checkV137CurrentEventCoverageArtifact,
   currentEventCoverageArtifactPath,
   renderV137CurrentEventCoverageArtifact,
+  versionedCurrentEventCoverageArtifactPaths,
 } from "./generate-v1-37-event-coverage.js"
 
 const repoRoot = path.resolve(
@@ -90,6 +95,25 @@ describe("v1.37 current event coverage generator", () => {
     expect(artifact.coverage).toHaveLength(
       artifact.currentEventVocabulary.length,
     )
+
+    for (const tuple of [
+      VERSIONED_RUNTIME_V117_SEMANTIC_TUPLE_RECORD,
+      VERSIONED_RUNTIME_V119_SEMANTIC_TUPLE_RECORD,
+    ]) {
+      const versionedArtifact = buildV137CurrentEventCoverage({
+        currentTupleId: tuple.tupleId,
+      })
+      expect(
+        readFileSync(
+          path.join(
+            repoRoot,
+            versionedCurrentEventCoverageArtifactPaths[tuple.tupleId],
+          ),
+          "utf8",
+        ),
+      ).toBe(renderV137CurrentEventCoverageArtifact(versionedArtifact))
+      expect(checkV137CurrentEventCoverageArtifact(tuple.tupleId)).toEqual([])
+    }
   })
 
   it("fails missing and stale current consumer declarations", () => {
