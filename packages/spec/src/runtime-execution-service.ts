@@ -16,7 +16,6 @@ import {
   type StrategyRuntimeLimits,
 } from "./runtime.js"
 import type { CanonicalCompatibilityTuple } from "./integrity-authority.js"
-import type { RuntimeExecutionCandidateMatchAuthorityV119 } from "./runtime-execution-service-v1-18.js"
 import type {
   ExecutableLaneCertificateReference,
   ExecutableLaneEvidenceReasonCode,
@@ -232,8 +231,6 @@ export interface RuntimeExecutionMatchInput {
   topPlayerId: PlayerId
   bottomStrategyRevisionId: StrategyRevisionId
   topStrategyRevisionId: StrategyRevisionId
-  initialInitiativePlayerId?: PlayerId | undefined
-  candidateMatch?: RuntimeExecutionCandidateMatchAuthorityV119 | undefined
   maxPhases?: number | undefined
 }
 
@@ -352,7 +349,6 @@ export interface RuntimeExecutionFinalState {
   phaseNumber: number
   roundNumber: RuntimeExecutionRoundNumber
   activationCount: RuntimeExecutionActivationCount
-  initialInitiativePlayerId?: PlayerId | undefined
   initiativePlayerId: PlayerId
   bounds: BoardBounds
   soldiers: Soldier[]
