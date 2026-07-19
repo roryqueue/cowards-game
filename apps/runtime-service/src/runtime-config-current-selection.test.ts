@@ -113,11 +113,20 @@ describe("runtime-service compact current selection", () => {
   })
 
   it("wires selected-current prepared v1.18 dependencies into production startup", () => {
-    const source = readFileSync(
+    const startupSource = readFileSync(
       path.join(import.meta.dirname, "index.ts"),
       "utf8",
     )
-    expect(source).toContain("createPreparedRuntimeServiceDependenciesV118")
-    expect(source).toContain("preparedV118Dependencies")
+    const executionSource = readFileSync(
+      path.join(import.meta.dirname, "execute-match.ts"),
+      "utf8",
+    )
+    expect(startupSource).toContain(
+      "createPreparedRuntimeServiceDependenciesV118",
+    )
+    expect(startupSource).toContain("preparedV118Dependencies")
+    expect(executionSource).toContain(
+      "createCanonicalRuntimeForRevision: createCandidateV119RuntimeForRevision",
+    )
   })
 })
