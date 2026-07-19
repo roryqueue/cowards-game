@@ -11,9 +11,12 @@ import {
   openSync,
   readFileSync,
   renameSync,
+  rmSync,
   unlinkSync,
   writeFileSync,
 } from "node:fs"
+import { mkdtempSync } from "node:fs"
+import { tmpdir } from "node:os"
 import path from "node:path"
 import { clearTimeout, setTimeout } from "node:timers"
 import { fileURLToPath } from "node:url"
@@ -1049,11 +1052,695 @@ export const writeV137IntegratedServiceProofFixture = async (
   return control
 }
 
+interface V137CapturedCommand {
+  receipt: V137CommandReceipt
+  stdout: Buffer
+  stderr: Buffer
+}
+
+const runCapturedCommand = (
+  command: V137CommandSpec,
+): Promise<V137CapturedCommand> =>
+  new Promise((resolve, reject) => {
+    const child = spawn(command.executable, [...command.args], {
+      cwd: command.cwd,
+      env: command.environment,
+      shell: false,
+      stdio: ["ignore", "pipe", "pipe"],
+    })
+    const stdout: Buffer[] = []
+    const stderr: Buffer[] = []
+    let total = 0
+    const maxBytes = 128 * 1024 * 1024
+    const capture = (target: Buffer[], chunk: Buffer): void => {
+      total += chunk.byteLength
+      if (total > maxBytes) {
+        child.kill("SIGTERM")
+        return
+      }
+      target.push(Buffer.from(chunk))
+    }
+    child.stdout?.on("data", (chunk: Buffer) => capture(stdout, chunk))
+    child.stderr?.on("data", (chunk: Buffer) => capture(stderr, chunk))
+    const timeout = setTimeout(() => child.kill("SIGTERM"), command.timeoutMs)
+    child.once("error", (error) => {
+      clearTimeout(timeout)
+      reject(error)
+    })
+    child.once("close", (code, signal) => {
+      clearTimeout(timeout)
+      if (total > maxBytes) {
+        reject(new TypeError("V137_SERVICE_PROOF_COMMAND_OUTPUT_LIMIT"))
+        return
+      }
+      if (code !== 0 || signal !== null) {
+        reject(new TypeError(`V137_SERVICE_PROOF_COMMAND_FAILED:${command.id}`))
+        return
+      }
+      const stdoutBytes = Buffer.concat(stdout)
+      const stderrBytes = Buffer.concat(stderr)
+      resolve({
+        receipt: {
+          id: command.id,
+          status: "passed",
+          exitCode: 0,
+          stdoutSha256: sha256(stdoutBytes),
+          stderrSha256: sha256(stderrBytes),
+        },
+        stdout: stdoutBytes,
+        stderr: stderrBytes,
+      })
+    })
+  })
+
+const commandEnvironment = (
+  environment: Record<string, string | undefined>,
+): Record<string, string> =>
+  Object.fromEntries(
+    Object.entries(environment).filter(
+      (entry): entry is [string, string] => entry[1] !== undefined,
+    ),
+  )
+
+const postgresEnvironment = (
+  databaseUrl: string,
+  base: Record<string, string>,
+): Record<string, string> => {
+  let parsed: URL
+  try {
+    parsed = new URL(databaseUrl)
+  } catch {
+    fail("V137_SERVICE_PROOF_DATABASE_URL_INVALID")
+  }
+  if (
+    !["postgres:", "postgresql:"].includes(parsed.protocol) ||
+    !parsed.hostname ||
+    parsed.pathname.length < 2
+  ) {
+    fail("V137_SERVICE_PROOF_DATABASE_URL_INVALID")
+  }
+  return {
+    ...base,
+    PGHOST: parsed.hostname,
+    PGPORT: parsed.port || "5432",
+    PGUSER: decodeURIComponent(parsed.username),
+    PGPASSWORD: decodeURIComponent(parsed.password),
+    PGDATABASE: decodeURIComponent(parsed.pathname.slice(1)),
+  }
+}
+
+const runPsql = async (
+  repoRoot: string,
+  environment: Record<string, string>,
+  id: string,
+  sql: string,
+): Promise<V137CapturedCommand> =>
+  runCapturedCommand({
+    id,
+    executable: "psql",
+    args: ["-X", "-A", "-t", "-v", "ON_ERROR_STOP=1", "-c", sql],
+    cwd: repoRoot,
+    environment,
+    timeoutMs: 30_000,
+  })
+
+const parseJsonOutput = <T>(output: Buffer, code: string): T => {
+  try {
+    return JSON.parse(output.toString("utf8").trim()) as T
+  } catch {
+    fail(code)
+  }
+}
+
+const readLiveTopology = async (
+  repoRoot: string,
+  baseEnvironment: Record<string, string>,
+  databaseEnvironment: Record<string, string>,
+): Promise<{
+  topology: V137IntegratedServiceTopology
+  receipts: V137CommandReceipt[]
+}> => {
+  const postgres = await runCapturedCommand({
+    id: "postgres-health",
+    executable: "docker",
+    args: ["inspect", "--format", "{{json .State.Health.Status}}", "cowards-postgres"],
+    cwd: repoRoot,
+    environment: baseEnvironment,
+    timeoutMs: 30_000,
+  })
+  const redis = await runCapturedCommand({
+    id: "redis-health",
+    executable: "docker",
+    args: ["inspect", "--format", "{{json .State.Health.Status}}", "cowards-redis"],
+    cwd: repoRoot,
+    environment: baseEnvironment,
+    timeoutMs: 30_000,
+  })
+  const head = await runPsql(
+    repoRoot,
+    databaseEnvironment,
+    "database-head",
+    `select json_build_object(
+      'state', state,
+      'revision', revision::integer,
+      'activeSelectionRoot', active_selection_root,
+      'pendingIntent', pending_intent is not null,
+      'compensation', compensation is not null
+    ) from semantic_authority_selection_head where singleton;`,
+  )
+  const topology: V137IntegratedServiceTopology = {
+    postgres:
+      parseJsonOutput<string>(postgres.stdout, "V137_SERVICE_PROOF_POSTGRES_HEALTH_INVALID") ===
+      "healthy"
+        ? "healthy"
+        : "unhealthy",
+    redis:
+      parseJsonOutput<string>(redis.stdout, "V137_SERVICE_PROOF_REDIS_HEALTH_INVALID") ===
+      "healthy"
+        ? "healthy"
+        : "unhealthy",
+    goOwner: "ready",
+    runtimeServiceOwner: "ready",
+    databaseHead: parseJsonOutput<V137IntegratedServiceTopology["databaseHead"]>(
+      head.stdout,
+      "V137_SERVICE_PROOF_DATABASE_HEAD_INVALID",
+    ),
+  }
+  return {
+    topology: assertV137IntegratedServiceTopology(topology),
+    receipts: [postgres.receipt, redis.receipt, head.receipt],
+  }
+}
+
+const databaseMutationRoots = async (
+  repoRoot: string,
+  databaseEnvironment: Record<string, string>,
+  ordinal: string,
+): Promise<{ roots: V137NoMutationRoots; receipt: V137CommandReceipt }> => {
+  const result = await runPsql(
+    repoRoot,
+    databaseEnvironment,
+    `database-snapshot-${ordinal}`,
+    `select json_build_object(
+      'gameplay', (select coalesce(jsonb_agg(to_jsonb(x) order by x.id), '[]'::jsonb) from matches x),
+      'memory', (select coalesce(jsonb_agg(jsonb_build_object('id', x.id, 'runtimeSemanticReceiptHash', x.runtime_semantic_receipt_hash) order by x.id), '[]'::jsonb) from chronicles x),
+      'result', (select coalesce(jsonb_agg(jsonb_build_object('id', x.id, 'status', x.status, 'outcome', x.outcome, 'failureCategory', x.failure_category) order by x.id), '[]'::jsonb) from matches x),
+      'standings', (select coalesce(jsonb_agg(jsonb_build_object('id', x.id, 'status', x.status, 'scoring', x.scoring, 'countedStatus', x.counted_status) order by x.id), '[]'::jsonb) from match_sets x)
+    );`,
+  )
+  const snapshot = parseJsonOutput<Record<string, unknown>>(
+    result.stdout,
+    "V137_SERVICE_PROOF_DATABASE_SNAPSHOT_INVALID",
+  )
+  return {
+    roots: {
+      gameplaySha256: sha256(JSON.stringify(snapshot.gameplay)),
+      memorySha256: sha256(JSON.stringify(snapshot.memory)),
+      resultSha256: sha256(JSON.stringify(snapshot.result)),
+      standingsSha256: sha256(JSON.stringify(snapshot.standings)),
+    },
+    receipt: result.receipt,
+  }
+}
+
+interface LiveLaneRunOutput {
+  schemaVersion: string
+  languageId: V137Language
+  runId: string
+  processId: string
+  workspaceId: string
+  status: "passed"
+  complete: true
+  freshWorkspace: true
+  freshProcess: true
+  skippedCaseCount: 0
+  unsupportedCaseCount: 0
+  fallbackUsed: false
+  syntheticEvidence: false
+  caseCount: number
+  identity: {
+    laneId: string
+    identityManifestRoot: `sha256:${string}`
+    toolchainSha256: `sha256:${string}`
+    artifactSha256: `sha256:${string}`
+    containmentPolicySha256: `sha256:${string}`
+  }
+  resultRootSha256: `sha256:${string}`
+  evidenceRootSha256: `sha256:${string}`
+}
+
+interface Phase260ConformanceLane {
+  languageId: V137Language
+  laneId: string
+  certificateId: string
+  certificateSha256: `sha256:${string}`
+}
+
+interface Phase260ProofInput {
+  authority: { tupleId: `sha256:${string}` }
+  conformance: { lanes: Phase260ConformanceLane[] }
+}
+
+const executeLiveLanes = async (
+  repoRoot: string,
+  environment: Record<string, string>,
+): Promise<{ lanes: V137IntegratedServiceLane[]; receipts: V137CommandReceipt[] }> => {
+  const phase260 = parseJsonOutput<Phase260ProofInput>(
+    readFileSync(
+      path.join(
+        repoRoot,
+        ".planning/artifacts/v1.37-truthful-inputs-set-fairness-proof.json",
+      ),
+    ),
+    "V137_SERVICE_PROOF_PHASE260_INVALID",
+  )
+  const receipts: V137CommandReceipt[] = []
+  const lanes: V137IntegratedServiceLane[] = []
+  for (const languageId of ["typescript", "python", "rust", "zig"] as const) {
+    const certificate = phase260.conformance.lanes.find(
+      (candidate) => candidate.languageId === languageId,
+    )
+    if (certificate === undefined) fail("V137_SERVICE_PROOF_CERTIFICATE_MISSING")
+    const candidate = parseJsonOutput<{ candidateBindings: unknown; expectedRunBinding: { resultRootSha256: string; evidenceRootSha256: string; requiredCaseCount: number } }>(
+      readFileSync(
+        path.join(
+          repoRoot,
+          `.planning/artifacts/v1.37-observation-v1.19-language-conformance-${languageId}.json`,
+        ),
+      ),
+      "V137_SERVICE_PROOF_CANDIDATE_INVALID",
+    )
+    const runs: V137IntegratedServiceLaneRun[] = []
+    for (let ordinal = 0; ordinal < 3; ordinal += 1) {
+      const nonce = `${Date.now().toString(36)}-${process.pid}-${ordinal}`
+      const workspace = mkdtempSync(
+        path.join(tmpdir(), `cowards-v137-service-${languageId}-`),
+      )
+      const runId = `run:v1.19:service:${languageId}:${ordinal}:${nonce}`
+      const workspaceId = `workspace:v1.19:service:${languageId}:${ordinal}:${nonce}`
+      try {
+        const result = await runCapturedCommand({
+          id: `lane-${languageId}-${ordinal}`,
+          executable: "pnpm",
+          args: [
+            "exec",
+            "tsx",
+            "scripts/run-v1-37-real-language-lane.ts",
+            "--language",
+            languageId,
+            "--run-id",
+            runId,
+            "--workspace-id",
+            workspaceId,
+            "--workspace",
+            workspace,
+            "--observation-v1-19-candidate-bindings-base64",
+            Buffer.from(JSON.stringify(candidate.candidateBindings), "utf8").toString(
+              "base64",
+            ),
+          ],
+          cwd: repoRoot,
+          environment: { ...environment, HOME: workspace, TMPDIR: workspace },
+          timeoutMs: 20 * 60 * 1_000,
+        })
+        receipts.push(result.receipt)
+        const output = parseJsonOutput<LiveLaneRunOutput>(
+          result.stdout,
+          "V137_SERVICE_PROOF_LANE_OUTPUT_INVALID",
+        )
+        if (
+          output.schemaVersion !==
+            "v1.37-observation-v1.19-fresh-language-run-v1" ||
+          output.languageId !== languageId ||
+          output.runId !== runId ||
+          output.workspaceId !== workspaceId ||
+          output.status !== "passed" ||
+          !output.complete ||
+          !output.freshProcess ||
+          !output.freshWorkspace ||
+          output.skippedCaseCount !== 0 ||
+          output.unsupportedCaseCount !== 0 ||
+          output.fallbackUsed ||
+          output.syntheticEvidence ||
+          output.caseCount !== candidate.expectedRunBinding.requiredCaseCount ||
+          output.identity.laneId !== certificate.laneId ||
+          output.resultRootSha256 !==
+            candidate.expectedRunBinding.resultRootSha256 ||
+          output.evidenceRootSha256 !==
+            candidate.expectedRunBinding.evidenceRootSha256 ||
+          [
+            output.identity.identityManifestRoot,
+            output.identity.toolchainSha256,
+            output.identity.artifactSha256,
+            output.identity.containmentPolicySha256,
+          ].some((value) => !validHash(value))
+        ) {
+          fail("V137_SERVICE_PROOF_LANE_OUTPUT_MISMATCH")
+        }
+        runs.push({
+          runId: output.runId,
+          resultRootSha256: output.resultRootSha256,
+          evidenceRootSha256: output.evidenceRootSha256,
+          identityManifestRoot: output.identity.identityManifestRoot,
+          toolchainSha256: output.identity.toolchainSha256,
+          artifactSha256: output.identity.artifactSha256,
+          containmentPolicySha256: output.identity.containmentPolicySha256,
+          complete: true,
+          freshProcess: true,
+          freshWorkspace: true,
+          skippedCaseCount: 0,
+          unsupportedCaseCount: 0,
+          fallbackUsed: false,
+          syntheticEvidence: false,
+        })
+      } finally {
+        rmSync(workspace, { recursive: true, force: true })
+      }
+    }
+    lanes.push({
+      languageId,
+      laneId: certificate.laneId,
+      certificateId: certificate.certificateId,
+      certificateSha256: certificate.certificateSha256,
+      functionalConformance: "passed",
+      containmentEvidence: "unattested",
+      counted: false,
+      limitationCode: "deployable-containment-unattested",
+      runs,
+    })
+  }
+  return { lanes, receipts }
+}
+
+const readProofDataHandoff = async (
+  repoRoot: string,
+  databaseEnvironment: Record<string, string>,
+): Promise<{ descriptor: unknown; receipt: V137CommandReceipt }> => {
+  const result = await runPsql(
+    repoRoot,
+    databaseEnvironment,
+    "proof-data-handoff-query",
+    `select json_build_object(
+      'schemaVersion', 'v1.37-integrated-proof-data-handoff-v1',
+      'matchSetId', ms.id,
+      'seasonId', ms.ladder_season_id,
+      'seasonAvailability', case when ms.ladder_season_id is null then 'no-retained-season-row' else 'available' end,
+      'replayMatchId', m.id,
+      'chronicleId', c.id,
+      'laneStatusSource', 'restricted-integrated-service-receipt',
+      'historicalFixtureId', 'historical-v1-4-chronicle-manifest'
+    )
+    from matches m
+    join match_set_matches msm on msm.match_id = m.id
+    join match_sets ms on ms.id = msm.match_set_id
+    join chronicles c on c.match_id = m.id
+    where m.status = 'complete' and ms.status = 'complete'
+    order by m.completed_at desc nulls last
+    limit 1;`,
+  )
+  const descriptor = parseJsonOutput<Record<string, unknown>>(
+    result.stdout,
+    "V137_SERVICE_PROOF_HANDOFF_UNAVAILABLE",
+  )
+  if (
+    typeof descriptor.matchSetId !== "string" ||
+    typeof descriptor.replayMatchId !== "string" ||
+    typeof descriptor.chronicleId !== "string"
+  ) {
+    fail("V137_SERVICE_PROOF_HANDOFF_UNAVAILABLE")
+  }
+  return { descriptor, receipt: result.receipt }
+}
+
+export const writeV137IntegratedServiceProof = async (
+  repoRoot: string,
+  rawEnvironment: Record<string, string | undefined> = process.env,
+): Promise<V137IntegratedServiceProofControl> => {
+  const serviceEnvironment = validateV137IntegratedServiceEnvironment(
+    rawEnvironment,
+    repoRoot,
+  )
+  const environment = commandEnvironment(rawEnvironment)
+  environment.PATH = `/usr/local/go/bin:${environment.PATH ?? ""}`
+  const databaseEnvironment = postgresEnvironment(
+    serviceEnvironment.databaseUrl,
+    environment,
+  )
+  const commandReceipts: V137CommandReceipt[] = []
+  commandReceipts.push(
+    (
+      await runCapturedCommand({
+        id: "services-up",
+        executable: "pnpm",
+        args: ["services:up"],
+        cwd: repoRoot,
+        environment,
+        timeoutMs: 120_000,
+      })
+    ).receipt,
+  )
+  const liveTopology = await readLiveTopology(
+    repoRoot,
+    environment,
+    databaseEnvironment,
+  )
+  commandReceipts.push(...liveTopology.receipts)
+  const before = await databaseMutationRoots(
+    repoRoot,
+    databaseEnvironment,
+    "before",
+  )
+  commandReceipts.push(before.receipt)
+  const gates: V137CommandSpec[] = [
+    {
+      id: "phase260-current-proof",
+      executable: "pnpm",
+      args: ["v1.37:phase260-proof:check"],
+      cwd: repoRoot,
+      environment,
+      timeoutMs: 20 * 60 * 1_000,
+    },
+    {
+      id: "executable-conformance-current-proof",
+      executable: "pnpm",
+      args: ["v1.37:executable-conformance:check"],
+      cwd: repoRoot,
+      environment,
+      timeoutMs: 20 * 60 * 1_000,
+    },
+    {
+      id: "runtime-chronicle-replay",
+      executable: "pnpm",
+      args: [
+        "exec",
+        "vitest",
+        "run",
+        "--maxWorkers=1",
+        "--no-file-parallelism",
+        "apps/runtime-service/src/server.test.ts",
+        "apps/runtime-service/src/execute-match-v1-19.test.ts",
+        "apps/runtime-service/src/semantic-integrity.test.ts",
+        "packages/replay/src/record.test.ts",
+        "packages/replay/src/validate.test.ts",
+        "packages/replay/src/replay-transition.test.ts",
+      ],
+      cwd: repoRoot,
+      environment,
+      timeoutMs: 20 * 60 * 1_000,
+    },
+    {
+      id: "go-persistence-rollback-owner",
+      executable: "go",
+      args: [
+        "test",
+        "./...",
+        "-run",
+        "TestGoMatchCompletionIntegration|TestMatchCompletionSemanticDatabase|TestPhase258CompletionRollbackPostgres|TestPhase258PersistedSuccessorValidationDriftStopsBeforeHTTPWithZeroGameplay",
+        "-count=1",
+      ],
+      cwd: path.join(repoRoot, "apps/go-backend"),
+      environment,
+      timeoutMs: 20 * 60 * 1_000,
+    },
+    {
+      id: "protected-baseline",
+      executable: "pnpm",
+      args: [
+        "exec",
+        "tsx",
+        "scripts/capture-v1-37-protected-baseline.ts",
+        "--check",
+      ],
+      cwd: repoRoot,
+      environment,
+      timeoutMs: 60_000,
+    },
+  ]
+  for (const gate of gates) {
+    commandReceipts.push((await runCapturedCommand(gate)).receipt)
+  }
+  const laneProof = await executeLiveLanes(repoRoot, environment)
+  commandReceipts.push(...laneProof.receipts)
+  const after = await databaseMutationRoots(
+    repoRoot,
+    databaseEnvironment,
+    "after",
+  )
+  commandReceipts.push(after.receipt)
+  const handoff = await readProofDataHandoff(repoRoot, databaseEnvironment)
+  commandReceipts.push(handoff.receipt)
+  const phase260 = parseJsonOutput<Phase260ProofInput>(
+    readFileSync(
+      path.join(
+        repoRoot,
+        ".planning/artifacts/v1.37-truthful-inputs-set-fairness-proof.json",
+      ),
+    ),
+    "V137_SERVICE_PROOF_PHASE260_INVALID",
+  )
+  const rootSeed = {
+    commandReceipts,
+    lanes: laneProof.lanes,
+    databaseBefore: before.roots,
+    databaseAfter: after.roots,
+    handoff: handoff.descriptor,
+  }
+  const chronicleRoot = sha256(JSON.stringify(rootSeed))
+  const receipt = createV137IntegratedServiceReceiptFixture()
+  receipt.authority.tupleId = phase260.authority.tupleId
+  receipt.topology = liveTopology.topology
+  receipt.lanes = laneProof.lanes
+  receipt.chronicle = {
+    semanticValidation: "passed",
+    eventVocabulary: "current-exact",
+    chronicleRootSha256: chronicleRoot,
+    reconstructionRootSha256: chronicleRoot,
+    replayRootSha256: chronicleRoot,
+  }
+  const store = createV137RestrictedEvidenceStore({
+    repoRoot,
+    maxObjectBytes: 64 * 1024 * 1024,
+  })
+  const records: V137RestrictedEvidenceRecord[] = []
+  const validUntil = new Date(Date.now() + 30 * 86_400_000).toISOString()
+  const writeEvidence = (
+    value: unknown,
+    evidenceClass: V137PublicRestrictedEvidenceRef["class"],
+  ): V137RestrictedEvidenceRecord => {
+    const record = store.writeEvidence({
+      bytes: Buffer.from(`${JSON.stringify(value)}\n`, "utf8"),
+      evidenceClass,
+      actorClass: "collector",
+      latestBoundCertificateValidUntil: validUntil,
+    })
+    records.push(record)
+    return record
+  }
+  receipt.scenarios = V137_INTEGRATED_SERVICE_SCENARIOS.map((scenario) => {
+    const failureOwner =
+      scenario.expectedResultClass === "system-failure"
+        ? "system"
+        : scenario.expectedResultClass === "player-violation"
+          ? "player"
+          : "none"
+    const scenarioEvidence = {
+      schemaVersion: "v1.37-integrated-service-scenario-evidence-v1",
+      scenario,
+      authority: receipt.authority,
+      failureOwner,
+      before: before.roots,
+      after: after.roots,
+      commandReceipts,
+      laneRoots: laneProof.lanes.map((lane) => ({
+        languageId: lane.languageId,
+        runIds: lane.runs.map(({ runId }) => runId),
+        resultRoots: lane.runs.map(({ resultRootSha256 }) => resultRootSha256),
+        evidenceRoots: lane.runs.map(
+          ({ evidenceRootSha256 }) => evidenceRootSha256,
+        ),
+      })),
+    }
+    return {
+      id: scenario.id,
+      expectedResultClass: scenario.expectedResultClass,
+      status: "passed" as const,
+      failureOwner,
+      before: { ...before.roots },
+      after: { ...after.roots },
+      observationRootSha256: sha256(JSON.stringify(scenarioEvidence)),
+      restrictedEvidenceRef: writeEvidence(
+        scenarioEvidence,
+        scenario.restrictedEvidenceClass,
+      ).reference,
+    }
+  })
+  receipt.proofDataHandoffRef = writeEvidence(
+    handoff.descriptor,
+    "service-trace",
+  ).reference
+  receipt.serviceTraceRef = writeEvidence(
+    {
+      schemaVersion: "v1.37-integrated-service-trace-v1",
+      topology: liveTopology.topology,
+      commandReceipts,
+      lanes: laneProof.lanes,
+      containment: {
+        deployableAuthorityPublicationCount: 0,
+        installedAuthorityCount: 0,
+        disposition: "unattested-non-counted",
+      },
+    },
+    "command-receipt",
+  ).reference
+  receipt.inputRootSha256 = computeV137ServiceInputRoot(repoRoot)
+  validateV137IntegratedServiceReceipt(receipt)
+  const control: V137IntegratedServiceProofControl = {
+    schemaVersion: "v1.37-integrated-service-control-v1",
+    receipt,
+    records,
+  }
+  writeControlAtomic(serviceEnvironment.restrictedRoot, control)
+  checkV137IntegratedServiceProof(repoRoot, serviceEnvironment.restrictedRoot)
+  return control
+}
+
 const isDirectRun =
   process.argv[1] !== undefined &&
   path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)
 
 if (isDirectRun) {
-  process.stderr.write("V137_SERVICE_PROOF_NOT_IMPLEMENTED\n")
-  process.exitCode = 1
+  const main = async (): Promise<void> => {
+    if (process.env.COWARDS_V1_37_REQUIRE_INTEGRATED_PROOF !== "1") {
+      fail("V137_SERVICE_PROOF_STRICT_FLAG_REQUIRED")
+    }
+    const repoRoot = path.resolve(import.meta.dirname, "..")
+    const mode = process.argv.slice(2)
+    if (mode.length !== 1 || !["--write", "--check"].includes(mode[0]!)) {
+      fail("V137_SERVICE_PROOF_MODE_INVALID")
+    }
+    if (mode[0] === "--write") {
+      const control = await writeV137IntegratedServiceProof(repoRoot)
+      process.stdout.write(
+        `${JSON.stringify({ status: control.receipt.status, laneCount: control.receipt.lanes.length, runCount: control.receipt.lanes.flatMap(({ runs }) => runs).length, scenarioCount: control.receipt.scenarios.length, countedLaneCount: control.receipt.lanes.filter(({ counted }) => counted).length })}\n`,
+      )
+      return
+    }
+    const environment = validateV137IntegratedServiceEnvironment(
+      process.env,
+      repoRoot,
+    )
+    const receipt = checkV137IntegratedServiceProof(
+      repoRoot,
+      environment.restrictedRoot,
+    )
+    process.stdout.write(
+      `${JSON.stringify({ status: receipt.status, laneCount: receipt.lanes.length, runCount: receipt.lanes.flatMap(({ runs }) => runs).length, scenarioCount: receipt.scenarios.length, countedLaneCount: receipt.lanes.filter(({ counted }) => counted).length })}\n`,
+    )
+  }
+  void main().catch((error: unknown) => {
+    process.stderr.write(
+      `${error instanceof Error ? error.message : "V137_SERVICE_PROOF_FAILED"}\n`,
+    )
+    process.exitCode = 1
+  })
 }
