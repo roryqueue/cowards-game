@@ -1368,7 +1368,6 @@ const executeLiveLanes = async (
           cwd: repoRoot,
           environment: {
             ...environment,
-            TMPDIR: workspace,
             DOCKER_CONFIG: dockerConfig,
           },
           timeoutMs: 20 * 60 * 1_000,
