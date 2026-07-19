@@ -4,6 +4,7 @@ import { getOccupyingSoldier, replaceSoldier } from "./selectors.js"
 import {
   BOTTOM_STARTING_POSITIONS,
   COMPATIBILITY_VERSIONS,
+  CURRENT_SEMANTIC_AUTHORITY_KEY,
   INITIAL_BOUNDS,
   TOP_STARTING_POSITIONS,
   fixtures,
@@ -69,7 +70,17 @@ describe("engine state foundation", () => {
     const candidate = createCandidateInitialGameState(input)
     expect(candidate.ok).toBe(true)
     if (!candidate.ok) return
-    expect(candidate.state).toEqual(active)
+    if (String(CURRENT_SEMANTIC_AUTHORITY_KEY) === "runtime-v1.19") {
+      expect(active.initialInitiativePlayerId).toBe(active.initiativePlayerId)
+      const {
+        initialInitiativePlayerId: _initialInitiativePlayerId,
+        ...gameplayState
+      } = active
+      expect(candidate.state).toEqual(gameplayState)
+    } else {
+      expect(candidate.state).toEqual(active)
+      expect(active.initialInitiativePlayerId).toBeUndefined()
+    }
   })
 
   it("keeps canonical constant values frozen and unchanged", () => {

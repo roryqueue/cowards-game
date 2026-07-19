@@ -1,6 +1,7 @@
 import {
   AuthenticatedRuntimeInvocationRequestV117Schema,
   COMPATIBILITY_VERSIONS,
+  CURRENT_SEMANTIC_AUTHORITY_KEY,
   HISTORICAL_RUNTIME_V114_SEMANTIC_TUPLE,
   HISTORICAL_RUNTIME_V114_SEMANTIC_TUPLE_ID,
   RuntimeInvocationResultV117Schema,
@@ -12,6 +13,7 @@ import {
 import {
   createCandidateInitialGameState,
   createCandidateInitialGameStateV119,
+  getInitialInitiativePlayerId,
 } from "./create-initial-state.js"
 import { stepCandidateMatch } from "./step.js"
 import type {
@@ -116,6 +118,16 @@ const assertMachine = (machine: MatchMachine): MatchMachine => {
 export const createCandidateMatchMachine = (
   input: Omit<CandidateMatchInput, "runtime">,
 ): MatchMachine => {
+  if (String(CURRENT_SEMANTIC_AUTHORITY_KEY) === "runtime-v1.19") {
+    return createCandidateMatchMachineV119({
+      ...input,
+      initialInitiativePlayerId: getInitialInitiativePlayerId(
+        input.seed,
+        input.bottomPlayerId,
+        input.topPlayerId,
+      ),
+    })
+  }
   const created = createCandidateInitialGameState(input)
   if (!created.ok) {
     throw new Error("CANDIDATE_INITIAL_STATE_REJECTED")
@@ -165,11 +177,16 @@ export const createCandidateMatchMachineV119 = (
   )
 }
 
-export const createCandidateActivationMachine = (input: {
+type CandidateActivationMachineInput = Readonly<{
   readonly state: GameState
   readonly soldierId: string
   readonly objective?: JsonValue | undefined
-}): MatchMachine => {
+}>
+
+const createActivationMachine = (
+  input: CandidateActivationMachineInput,
+  semanticTuple?: MatchMachine["semanticTuple"],
+): MatchMachine => {
   const state = globalThis.structuredClone(input.state)
   const soldier = getSoldier(state, input.soldierId)
   const slot: ActivationSlotState = {
@@ -188,52 +205,32 @@ export const createCandidateActivationMachine = (input: {
       stage: "prepare_slots",
       maxPhases: 100,
       slots: [slot],
+      ...(semanticTuple === undefined ? {} : { semanticTuple }),
     }),
   )
 }
 
-export const createCandidateActivationMachineV117 = (input: {
-  readonly state: GameState
-  readonly soldierId: string
-  readonly objective?: JsonValue | undefined
-}): MatchMachine => {
-  const state = globalThis.structuredClone(input.state)
-  const soldier = getSoldier(state, input.soldierId)
-  const slot: ActivationSlotState = {
-    activationId: `${state.phaseNumber}:${state.roundNumber}:0`,
-    activationIndex: 0,
-    actingPlayerId: soldier?.ownerPlayerId ?? state.players[0].id,
-    soldierId: input.soldierId,
-    ...(input.objective === undefined ? {} : { objective: input.objective }),
-    cycleIndex: 0,
-    advanced: false,
-    ended: false,
-  }
-  return assertMachine(
-    baseMachine(state, {
-      executionMode: "activation",
-      stage: "prepare_slots",
-      maxPhases: 100,
-      slots: [slot],
-      semanticTuple: {
-        tupleId: CANDIDATE_KERNEL_V117_SEMANTIC_TUPLE_ID,
-        tuple: CANDIDATE_KERNEL_V117_SEMANTIC_TUPLE,
-      },
-    }),
-  )
-}
+export const createCandidateActivationMachine = (
+  input: CandidateActivationMachineInput,
+): MatchMachine =>
+  String(CURRENT_SEMANTIC_AUTHORITY_KEY) === "runtime-v1.19"
+    ? createCandidateActivationMachineV119(input)
+    : createActivationMachine(input)
 
-export const createCandidateActivationMachineV119 = (input: {
-  readonly state: GameState
-  readonly soldierId: string
-  readonly objective?: JsonValue | undefined
-}): MatchMachine =>
-  assertMachine({
-    ...createCandidateActivationMachine(input),
-    semanticTuple: {
-      tupleId: CANDIDATE_KERNEL_V119_SEMANTIC_TUPLE_ID,
-      tuple: CANDIDATE_KERNEL_V119_SEMANTIC_TUPLE,
-    },
+export const createCandidateActivationMachineV117 = (
+  input: CandidateActivationMachineInput,
+): MatchMachine =>
+  createActivationMachine(input, {
+    tupleId: CANDIDATE_KERNEL_V117_SEMANTIC_TUPLE_ID,
+    tuple: CANDIDATE_KERNEL_V117_SEMANTIC_TUPLE,
+  })
+
+export const createCandidateActivationMachineV119 = (
+  input: CandidateActivationMachineInput,
+): MatchMachine =>
+  createActivationMachine(input, {
+    tupleId: CANDIDATE_KERNEL_V119_SEMANTIC_TUPLE_ID,
+    tuple: CANDIDATE_KERNEL_V119_SEMANTIC_TUPLE,
   })
 
 const runtimeResume = (
@@ -650,7 +647,7 @@ export const runHistoricalV14ActivationFromState = (
   let machine: MatchMachine
   try {
     machine = assertMachine({
-      ...createCandidateActivationMachine(input),
+      ...createCandidateActivationMachineV117(input),
       semanticTuple: {
         tupleId: HISTORICAL_RUNTIME_V114_SEMANTIC_TUPLE_ID,
         tuple: HISTORICAL_RUNTIME_V114_SEMANTIC_TUPLE,

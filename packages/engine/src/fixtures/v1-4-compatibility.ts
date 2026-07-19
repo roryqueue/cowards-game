@@ -20,7 +20,7 @@ import {
   runHistoricalV14RoundFromState,
 } from "../kernel/driver.js"
 import { resolveAction } from "../movement.js"
-import { createInitialGameState } from "../state.js"
+import { createCandidateInitialGameState } from "../kernel/create-initial-state.js"
 import {
   success,
   violation,
@@ -150,12 +150,18 @@ const soldier = (overrides: Partial<Soldier> & { id: string }): Soldier => ({
 const stateWith = (
   soldiers: Soldier[],
   overrides: Partial<GameState> = {},
-): GameState => ({
-  ...createInitialGameState(baseInput),
-  versions: HISTORICAL_V1_4_VERSIONS,
-  soldiers,
-  ...overrides,
-})
+): GameState => {
+  const created = createCandidateInitialGameState(baseInput)
+  if (!created.ok) {
+    throw new Error("Historical v1.4 fixture initial state was rejected.")
+  }
+  return {
+    ...created.state,
+    versions: HISTORICAL_V1_4_VERSIONS,
+    soldiers,
+    ...overrides,
+  }
+}
 
 const clone = <T>(value: T): T => globalThis.structuredClone(value)
 
