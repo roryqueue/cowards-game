@@ -1,5 +1,5 @@
 {
-  "abiVersion": "strategy-runtime-abi-v1.17",
+  "abiVersion": "strategy-runtime-abi-v1.19",
   "candidates": [
     {
       "countedResultsAllowed": true,
