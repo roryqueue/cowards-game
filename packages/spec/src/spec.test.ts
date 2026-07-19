@@ -97,7 +97,7 @@ import {
   RUNTIME_SEMANTIC_RECEIPT_SCHEMA_VERSION,
 } from "./runtime-execution-service.js"
 import { HISTORICAL_RUNTIME_EXECUTION_SERVICE_V1_16 } from "./runtime-execution-service-v1-16-compat.js"
-import { CANONICAL_COMPATIBILITY_TUPLES } from "./integrity-authority.js"
+import { CURRENT_CANONICAL_COMPATIBILITY_TUPLE_RECORD } from "./integrity-authority.js"
 import { COMPATIBILITY_VERSIONS } from "./versions.js"
 import { STRATEGY_SOURCE_BYTES } from "./constants.js"
 import { readFileSync } from "node:fs"
@@ -107,6 +107,51 @@ import {
 } from "./types.js"
 import type { AnalyticsGauntletRunSummary } from "./analytics.js"
 import * as publicSpec from "./index.js"
+
+const bindSelectedRuntimeMatchAuthority = <
+  TMatch extends {
+    matchId: string
+    seed: string
+    arenaVariant: { id: string }
+    bottomPlayerId: string
+    topPlayerId: string
+    bottomStrategyRevisionId: string
+    topStrategyRevisionId: string
+  },
+>(
+  match: TMatch,
+  bottomEntrantKey: string,
+  topEntrantKey: string,
+) =>
+  String(STRATEGY_RUNTIME_ABI_VERSION) !== "strategy-runtime-abi-v1.19"
+    ? match
+    : {
+        ...match,
+        initialInitiativePlayerId: match.bottomPlayerId,
+        candidateMatch: {
+          semanticAuthorityKey: "runtime-v1.19" as const,
+          matchId: match.matchId,
+          seed: match.seed,
+          arenaVariantId: match.arenaVariant.id,
+          bottomStrategyRevisionId: match.bottomStrategyRevisionId,
+          topStrategyRevisionId: match.topStrategyRevisionId,
+          bottomPlayerId: match.bottomPlayerId,
+          topPlayerId: match.topPlayerId,
+          bottomEntrantKey,
+          topEntrantKey,
+          setPolicyVersion:
+            "canonical-set-policy-v1.37-four-condition-v1" as const,
+          scenarioId: `set-scenario:sha256:${"1".repeat(64)}` as const,
+          conditionId: `set-condition:sha256:${"2".repeat(64)}` as const,
+          conditionOrdinal: 0 as const,
+          conditionSuffix: "a-bottom-a-first" as const,
+          requestIdentity: `set-request:sha256:${"3".repeat(64)}` as const,
+          arenaCatalogVersion: "canonical-arena-catalog-v1.37" as const,
+          arenaSemanticGeometryHash: `sha256:${"4".repeat(64)}` as const,
+          initialInitiativeEntrantKey: bottomEntrantKey,
+          initialInitiativePlayerId: match.bottomPlayerId,
+        },
+      }
 
 describe("Coward's Game spec contracts", () => {
   describe("versioned public semantic authority", () => {
@@ -882,7 +927,9 @@ describe("Coward's Game spec contracts", () => {
       expect(provider?.migrationNotes.length).toBeGreaterThan(0)
     }
     const expectedWasmProviderPosture =
-      "wasi-preview1-stdin-canonical-request-stdout-raw-canonical-payload"
+      String(STRATEGY_RUNTIME_ABI_VERSION) === "strategy-runtime-abi-v1.17"
+        ? "wasi-preview1-stdin-canonical-request-stdout-raw-canonical-payload"
+        : "wasi-preview1-stdin-stdout-json"
     expect(getStrategyLanguageProviderRecord("rust")?.abiPosture).toBe(
       expectedWasmProviderPosture,
     )
@@ -1927,7 +1974,7 @@ describe("Coward's Game spec contracts", () => {
   })
 
   it("RuntimeExecutionServiceRequestSchema accepts complete v1.16 Match execution inputs", () => {
-    const registered = CANONICAL_COMPATIBILITY_TUPLES[0]!
+    const registered = CURRENT_CANONICAL_COMPATIBILITY_TUPLE_RECORD
     const source =
       "export default { selectActivations() {}, soldierBrain() {} }"
     const sourceBytes = new TextEncoder().encode(source).length
@@ -1980,16 +2027,20 @@ describe("Coward's Game spec contracts", () => {
       contractVersion: RUNTIME_EXECUTION_SERVICE_VERSION,
       kind: "executeMatch",
       requestId: "runtime-request:spec",
-      match: {
-        matchId: "match:runtime-service-spec",
-        seed: "seed:runtime-service-spec",
-        arenaVariant: fixtures.valid.standardArenaVariant,
-        bottomPlayerId: "player:bottom",
-        topPlayerId: "player:top",
-        bottomStrategyRevisionId: "strategy-revision:bottom",
-        topStrategyRevisionId: "strategy-revision:top",
-        maxPhases: 2,
-      },
+      match: bindSelectedRuntimeMatchAuthority(
+        {
+          matchId: "match:runtime-service-spec",
+          seed: "seed:runtime-service-spec",
+          arenaVariant: fixtures.valid.standardArenaVariant,
+          bottomPlayerId: "player:bottom",
+          topPlayerId: "player:top",
+          bottomStrategyRevisionId: "strategy-revision:bottom",
+          topStrategyRevisionId: "strategy-revision:top",
+          maxPhases: 2,
+        },
+        "entrant:bottom",
+        "entrant:top",
+      ),
       strategies: {
         bottom: revision("strategy-revision:bottom"),
         top: revision("strategy-revision:top"),
@@ -2099,7 +2150,7 @@ describe("Coward's Game spec contracts", () => {
   })
 
   it("RuntimeExecutionServiceRequestSchema atomically validates execution evidence identity", () => {
-    const registered = CANONICAL_COMPATIBILITY_TUPLES[0]!
+    const registered = CURRENT_CANONICAL_COMPATIBILITY_TUPLE_RECORD
     const source =
       "export default { selectActivations() {}, soldierBrain() {} }"
     const sourceBytes = new TextEncoder().encode(source).length
@@ -2153,15 +2204,19 @@ describe("Coward's Game spec contracts", () => {
       contractVersion: RUNTIME_EXECUTION_SERVICE_VERSION,
       kind: "executeMatch",
       requestId: "runtime-request:evidence-identity",
-      match: {
-        matchId: "match:evidence-identity",
-        seed: "seed:evidence-identity",
-        arenaVariant: fixtures.valid.standardArenaVariant,
-        bottomPlayerId: "player:bottom",
-        topPlayerId: "player:top",
-        bottomStrategyRevisionId: "strategy-revision:bottom",
-        topStrategyRevisionId: "strategy-revision:top",
-      },
+      match: bindSelectedRuntimeMatchAuthority(
+        {
+          matchId: "match:evidence-identity",
+          seed: "seed:evidence-identity",
+          arenaVariant: fixtures.valid.standardArenaVariant,
+          bottomPlayerId: "player:bottom",
+          topPlayerId: "player:top",
+          bottomStrategyRevisionId: "strategy-revision:bottom",
+          topStrategyRevisionId: "strategy-revision:top",
+        },
+        "entrant:bottom",
+        "entrant:top",
+      ),
       strategies: {
         bottom: revision("strategy-revision:bottom"),
         top: revision("strategy-revision:top"),
@@ -2357,7 +2412,7 @@ describe("Coward's Game spec contracts", () => {
   })
 
   it("RuntimeExecutionServiceResponseSchema accepts success and system-failure envelopes", () => {
-    const registered = CANONICAL_COMPATIBILITY_TUPLES[0]!
+    const registered = CURRENT_CANONICAL_COMPATIBILITY_TUPLE_RECORD
     const board = {
       bounds: fixtures.valid.standardArenaVariant.initialBounds,
       soldiers: fixtures.valid.standardInitialSoldiers.map(
@@ -2422,6 +2477,9 @@ describe("Coward's Game spec contracts", () => {
       phaseNumber: 1,
       roundNumber: 1,
       activationCount: 1,
+      ...(String(STRATEGY_RUNTIME_ABI_VERSION) === "strategy-runtime-abi-v1.19"
+        ? { initialInitiativePlayerId: "player:bottom" }
+        : {}),
       initiativePlayerId: "player:bottom",
       bounds: fixtures.valid.standardArenaVariant.initialBounds,
       soldiers: fixtures.valid.standardInitialSoldiers,
