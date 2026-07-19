@@ -5636,6 +5636,9 @@ export const runBoundaryMonitorChecks = async (): Promise<
     "v1.37 executable conformance monitor wiring",
     () => validateV137ExecutableConformanceMonitorWiring(),
   ),
+  await check("contract_drift", "v1.37 Phase 260 closure monitor wiring", () =>
+    validateV137Phase260ClosureMonitorWiring(),
+  ),
 ]
 
 export const validateV137ExecutableConformanceMonitorWiring = (): string => {
@@ -5660,6 +5663,31 @@ export const validateV137ExecutableConformanceMonitorWiring = (): string => {
     throw new Error("v1.37 executable conformance monitor wiring drifted")
   }
   return "pure proof check is serialized exactly once without write-mode recursion"
+}
+
+export const validateV137Phase260ClosureMonitorWiring = (): string => {
+  const packageJson = readJson<{ scripts: Record<string, string> }>(
+    "package.json",
+  )
+  const writeCommand =
+    "pnpm exec tsx scripts/evaluate-v1-37-truthful-inputs-set-fairness.ts --write"
+  const checkCommand =
+    "pnpm exec tsx scripts/evaluate-v1-37-truthful-inputs-set-fairness.ts --check"
+  const boundary = packageJson.scripts["boundary:monitors"] ?? ""
+  const checkInvocation = "pnpm v1.37:phase260-proof:check"
+  if (
+    packageJson.scripts["v1.37:phase260-proof:write"] !== writeCommand ||
+    packageJson.scripts["v1.37:phase260-proof:check"] !== checkCommand ||
+    boundary.includes("v1.37:phase260-proof:write") ||
+    boundary.split(checkInvocation).length !== 2 ||
+    boundary.indexOf(checkInvocation) <
+      boundary.indexOf("pnpm v1.37:executable-conformance:check") ||
+    boundary.indexOf(checkInvocation) >
+      boundary.indexOf("pnpm exec tsx scripts/check-boundary-monitors.ts")
+  ) {
+    throw new Error("v1.37 Phase 260 closure monitor wiring drifted")
+  }
+  return "pure Phase 260 proof check is serialized exactly once without write-mode recursion"
 }
 
 const run = async (): Promise<number> => {

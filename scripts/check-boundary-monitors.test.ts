@@ -20,6 +20,7 @@ import {
   runBoundaryMonitorChecks,
   selectedGoRouteManifest,
   validateV137ExecutableConformanceMonitorWiring,
+  validateV137Phase260ClosureMonitorWiring,
   validateSelectedGoRouteManifest,
   validateV116FinalTypeScriptSurfaceLabels,
   validateV115LifecycleOwnershipManifest,
@@ -315,7 +316,7 @@ describe("boundary drift monitors", () => {
       "pnpm v1.36:final-proof:check",
     )
     expect(packageJson.scripts["boundary:monitors"]).toContain(
-      "pnpm v1.36:historical-proof:check && pnpm v1.37:integrity-authority:check && pnpm v1.37:worker-retirement:check && pnpm v1.37:integrity-boundaries:check && pnpm v1.37:kernel-integrity:check && pnpm v1.37:executable-conformance:check && pnpm exec tsx scripts/check-boundary-monitors.ts",
+      "pnpm v1.36:historical-proof:check && pnpm v1.37:integrity-authority:check && pnpm v1.37:worker-retirement:check && pnpm v1.37:integrity-boundaries:check && pnpm v1.37:kernel-integrity:check && pnpm v1.37:executable-conformance:check && pnpm v1.37:phase260-proof:check && pnpm exec tsx scripts/check-boundary-monitors.ts",
     )
     expect(
       packageJson.scripts["boundary:monitors"].match(
@@ -363,6 +364,25 @@ describe("boundary drift monitors", () => {
     expect(
       boundary.match(/pnpm v1\.37:executable-conformance:check/gu),
     ).toHaveLength(1)
+  })
+
+  it("serializes the pure Phase 260 closure check exactly once and after conformance", () => {
+    expect(validateV137Phase260ClosureMonitorWiring()).toContain("exactly once")
+    const packageJson = JSON.parse(readFileSync("package.json", "utf8")) as {
+      scripts: Record<string, string>
+    }
+    expect(packageJson.scripts["v1.37:phase260-proof:write"]).toBe(
+      "pnpm exec tsx scripts/evaluate-v1-37-truthful-inputs-set-fairness.ts --write",
+    )
+    expect(packageJson.scripts["v1.37:phase260-proof:check"]).toBe(
+      "pnpm exec tsx scripts/evaluate-v1-37-truthful-inputs-set-fairness.ts --check",
+    )
+    const boundary = packageJson.scripts["boundary:monitors"]!
+    expect(boundary).not.toContain("v1.37:phase260-proof:write")
+    expect(boundary.match(/pnpm v1\.37:phase260-proof:check/gu)).toHaveLength(1)
+    expect(
+      boundary.indexOf("pnpm v1.37:executable-conformance:check"),
+    ).toBeLessThan(boundary.indexOf("pnpm v1.37:phase260-proof:check"))
   })
 
   it("checks v1.35 account provider entry proof artifacts without live dependencies", () => {
@@ -1221,7 +1241,7 @@ describe("boundary drift monitors", () => {
           JSON.stringify({
             ok: true,
             service: "runtime-execution-service-v1.17",
-            runtimeAbiVersion: "strategy-runtime-abi-v1.17",
+            runtimeAbiVersion: "strategy-runtime-abi-v1.19",
             adapter: "runtime-js-worker-thread",
           }),
           { status: 200 },
