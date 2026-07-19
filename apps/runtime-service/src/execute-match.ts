@@ -7,6 +7,7 @@ import {
   HISTORICAL_RUNTIME_EXECUTION_SERVICE_V1_16,
   HistoricalRuntimeExecutionServiceRequestV116Schema,
   VersionedRuntimeExecutionServiceRequestV117Schema,
+  VersionedRuntimeExecutionServiceResponseV117Schema,
   HistoricalRuntimeExecutionServiceResponseV116Schema,
   isExactCommittedRuntimeExecutionServiceRequestV116,
   RuntimeExecutionServiceRequestSchema,
@@ -103,6 +104,7 @@ import type {
   VerifiedMountedRuntimeEvidenceAuthority,
 } from "./runtime-evidence-authority.js"
 import { issueRuntimeSemanticReceipt } from "./semantic-receipt.js"
+import { issueVersionedRuntimeSemanticReceiptV117 } from "./semantic-receipt-versioned-v1-17.js"
 import { issueRuntimeSemanticReceiptV117 } from "./semantic-receipt-v1-17.js"
 import {
   issueRuntimeSemanticReceiptV118,
@@ -329,9 +331,15 @@ const historicalRuntimeV116Request = (rawRequest: unknown): boolean =>
     HISTORICAL_RUNTIME_EXECUTION_SERVICE_V1_16.runtimeAbiVersion &&
   isExactCommittedRuntimeExecutionServiceRequestV116(rawRequest)
 
+const versionedRuntimeV117Request = (rawRequest: unknown): boolean =>
+  VersionedRuntimeExecutionServiceRequestV117Schema.safeParse(rawRequest)
+    .success
+
 const runtimeAbiForResponse = (rawRequest: unknown): string =>
   historicalRuntimeV116Request(rawRequest)
     ? HISTORICAL_RUNTIME_EXECUTION_SERVICE_V1_16.runtimeAbiVersion
+    : versionedRuntimeV117Request(rawRequest)
+      ? "strategy-runtime-abi-v1.17"
     : STRATEGY_RUNTIME_ABI_VERSION
 
 const parseRuntimeServiceResponse = (
@@ -340,6 +348,8 @@ const parseRuntimeServiceResponse = (
 ): RuntimeExecutionServiceResponse =>
   (historicalRuntimeV116Request(rawRequest)
     ? HistoricalRuntimeExecutionServiceResponseV116Schema
+    : versionedRuntimeV117Request(rawRequest)
+      ? VersionedRuntimeExecutionServiceResponseV117Schema
     : RuntimeExecutionServiceResponseSchema
   ).parse(response) as RuntimeExecutionServiceResponse
 
@@ -1403,14 +1413,17 @@ const executeParsedRequest = (
     integrity?: never
     storageMetadata?: never
   }
-  const semanticReceipt = issueRuntimeSemanticReceipt({
+  const semanticReceiptInput = {
     request,
     chronicle: responseChronicleData,
     finalState: responseFinalState.data,
     reconstructedTerminalStateHash: reconstructionValidation.terminalStateHash,
     runtimeViolationEventCount: violationCount,
     secret: runtimeConfig.semanticReceiptSecret,
-  })
+  }
+  const semanticReceipt = versionedV117
+    ? issueVersionedRuntimeSemanticReceiptV117(semanticReceiptInput)
+    : issueRuntimeSemanticReceipt(semanticReceiptInput)
   const response = {
     contractVersion: request.contractVersion,
     ok: true,
@@ -1430,7 +1443,9 @@ const executeParsedRequest = (
   const parsed = (
     historicalV116
       ? HistoricalRuntimeExecutionServiceResponseV116Schema
-      : RuntimeExecutionServiceResponseSchema
+      : versionedV117
+        ? VersionedRuntimeExecutionServiceResponseV117Schema
+        : RuntimeExecutionServiceResponseSchema
   ).safeParse(response)
   if (!parsed.success) {
     return systemFailureResponse({

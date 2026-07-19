@@ -756,6 +756,7 @@ describe("runtime execution service", () => {
       bottom: currentRequest.strategies.bottom,
       top: currentRequest.strategies.top,
       effectiveStatus: "counted",
+      compatibility: VERSIONED_RUNTIME_V117_SEMANTIC_TUPLE_RECORD,
     })
     const countedMatch = bindFixtureCandidateMatchAuthorityV119({
       ...currentRequest,

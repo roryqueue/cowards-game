@@ -7,9 +7,10 @@ import {
   StrategyRuntimeRequestEnvelopeSchema,
   StrategyRuntimeResponseEnvelopeSchema,
 } from "./schemas.js"
-import type {
-  RuntimeExecutionServiceRequest,
-  RuntimeExecutionServiceResponse,
+import {
+  RUNTIME_SEMANTIC_RECEIPT_SCHEMA_VERSION,
+  type RuntimeExecutionServiceRequest,
+  type RuntimeExecutionServiceResponse,
 } from "./runtime-execution-service.js"
 import type {
   StrategyRuntimeRequestEnvelope,
@@ -336,6 +337,61 @@ export const HistoricalRuntimeExecutionServiceResponseV116Schema =
         normalizeHistoricalResponseForSelectedSchema(value),
       ).success,
     { error: "historical runtime service v1.16 response is invalid" },
+  )
+
+const versionedV117ResponseHasExactIdentity = (value: unknown): boolean => {
+  if (
+    !isRecord(value) ||
+    value.contractVersion !==
+      HISTORICAL_RUNTIME_EXECUTION_SERVICE_V1_16.runtimeServiceVersion ||
+    value.runtimeAbiVersion !== "strategy-runtime-abi-v1.17"
+  ) {
+    return false
+  }
+  if (value.ok !== true) return value.ok === false
+  if (!isRecord(value.result) || !isRecord(value.result.semanticReceipt)) {
+    return false
+  }
+  const receipt = value.result.semanticReceipt
+  const tuple = VERSIONED_RUNTIME_V117_SEMANTIC_TUPLE_RECORD
+  return (
+    receipt.schemaVersion === "runtime-semantic-receipt-v1" &&
+    receipt.runtimeAbiVersion === tuple.tuple.runtimeAbi &&
+    receipt.compatibilityTupleId === tuple.tupleId &&
+    receipt.rulesVersion === tuple.tuple.rules &&
+    receipt.engineVersion === tuple.tuple.engine &&
+    receipt.chronicleVersion === tuple.tuple.chronicle &&
+    receipt.arenaCatalogVersion === tuple.tuple.arenaCatalog &&
+    receipt.setPolicyVersion === tuple.tuple.setPolicy
+  )
+}
+
+const normalizeVersionedV117ResponseForSelectedSchema = (
+  value: unknown,
+): unknown => {
+  const normalized = structuredClone(value)
+  if (!isRecord(normalized)) return normalized
+  normalized.runtimeAbiVersion = STRATEGY_RUNTIME_ABI_VERSION
+  if (
+    normalized.ok === true &&
+    isRecord(normalized.result) &&
+    isRecord(normalized.result.semanticReceipt)
+  ) {
+    normalized.result.semanticReceipt.schemaVersion =
+      RUNTIME_SEMANTIC_RECEIPT_SCHEMA_VERSION
+  }
+  return normalized
+}
+
+/** Immutable runtime-v1.17 Match response, independent of selected current. */
+export const VersionedRuntimeExecutionServiceResponseV117Schema =
+  z.custom<RuntimeExecutionServiceResponse>(
+    (value) =>
+      versionedV117ResponseHasExactIdentity(value) &&
+      RuntimeExecutionServiceResponseSchema.safeParse(
+        normalizeVersionedV117ResponseForSelectedSchema(value),
+      ).success,
+    { error: "versioned runtime service v1.17 response is invalid" },
   )
 
 const historicalRuntimeEnvelopeHasExactAbi = (value: unknown): boolean =>
