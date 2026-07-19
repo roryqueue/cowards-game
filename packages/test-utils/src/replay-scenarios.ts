@@ -7,7 +7,10 @@ import {
   adaptHistoricalRuntimeForCurrentKernel,
   adaptRuntimeForCurrentKernel,
 } from "@cowards/engine/test/current-kernel-runtime"
-import { recordChronicleFromExecution } from "@cowards/replay"
+import {
+  recordCurrentChronicleTestSupport as recordChronicleFromExecution,
+  runSelectedCurrentMatchForReplayTestSupport,
+} from "@cowards/replay/test/current-recording"
 import {
   INITIAL_BOUNDS,
   type Action,
@@ -217,7 +220,7 @@ const buildScenario = (
     historicalPlayerOwnedTimeout?: boolean | undefined
   } = {},
 ): CanonicalReplayScenario => {
-  const execution = MATCH_KERNEL.runMatch({
+  const execution = runSelectedCurrentMatchForReplayTestSupport({
     ...input,
     runtime: options.historicalPlayerOwnedTimeout
       ? adaptHistoricalRuntimeForCurrentKernel(input.runtime)

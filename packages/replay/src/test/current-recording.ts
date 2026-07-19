@@ -42,6 +42,16 @@ export const runCurrentMatchForReplayTestSupport = (
   })
 }
 
+export const runSelectedCurrentMatchForReplayTestSupport = (
+  input: CurrentMatchInput,
+): CurrentMatchResult =>
+  resolveCandidateRuntimeV119SemanticTuple({
+    tupleId: MATCH_KERNEL.tupleId,
+    tuple: MATCH_KERNEL.tuple,
+  }) === undefined
+    ? MATCH_KERNEL.runMatch(input)
+    : runCurrentMatchForReplayTestSupport(input)
+
 const deriveCandidateMatchAuthority = (
   input: RecordChronicleFromExecutionInput,
 ): CandidateReplayMatchAuthorityV119 => {
