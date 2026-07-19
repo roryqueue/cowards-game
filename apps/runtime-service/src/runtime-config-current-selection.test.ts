@@ -2,7 +2,9 @@ import { readFileSync } from "node:fs"
 import path from "node:path"
 import { describe, expect, it } from "vitest"
 import {
+  CURRENT_RUNTIME_EXECUTION_SERVICE_VERSION,
   CURRENT_SEMANTIC_AUTHORITY_GENERATED,
+  RUNTIME_EXECUTION_SERVICE_VERSION_V1_18,
   resolveSemanticAuthoritySelection,
   type SemanticAuthorityKey,
 } from "@cowards/spec"
@@ -48,6 +50,13 @@ describe("runtime-service compact current selection", () => {
         CURRENT_SEMANTIC_AUTHORITY_GENERATED.selection,
       ),
     ).toEqual(config.contractSelection)
+  })
+
+  it("exports the already-selected v1.18 service envelope as current", () => {
+    expect(currentKey).toBe("runtime-v1.19")
+    expect(CURRENT_RUNTIME_EXECUTION_SERVICE_VERSION).toBe(
+      RUNTIME_EXECUTION_SERVICE_VERSION_V1_18,
+    )
   })
 
   it("resolves an injected exact v1.19 file/request pair without lifecycle inference", () => {
@@ -101,5 +110,14 @@ describe("runtime-service compact current selection", () => {
     expect(source).toContain("resolveCurrentSemanticAuthoritySelection")
     expect(source).not.toMatch(/from ["'][^"']*(?:persistence|\bpg\b)/u)
     expect(source).not.toMatch(/DATABASE_URL|\.query\(|\.connect\(/u)
+  })
+
+  it("wires selected-current prepared v1.18 dependencies into production startup", () => {
+    const source = readFileSync(
+      path.join(import.meta.dirname, "index.ts"),
+      "utf8",
+    )
+    expect(source).toContain("createPreparedRuntimeServiceDependenciesV118")
+    expect(source).toContain("preparedV118Dependencies")
   })
 })
