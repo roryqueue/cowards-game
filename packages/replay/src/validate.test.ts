@@ -891,7 +891,10 @@ describe("validateChronicle", () => {
 
     const mixed = validateCandidateReplayV119({
       ...input,
-      compatibility: createCurrentReplayInput().compatibility,
+      compatibility: {
+        tupleId: VERSIONED_RUNTIME_V117_SEMANTIC_TUPLE_RECORD.tupleId,
+        tuple: VERSIONED_RUNTIME_V117_SEMANTIC_TUPLE_RECORD.tuple,
+      },
     })
     expect(mixed.ok).toBe(false)
     expect(!mixed.ok && mixed.issues.map(({ code }) => code)).toEqual([

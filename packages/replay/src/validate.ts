@@ -1126,7 +1126,7 @@ const projectStateForRecording = (state: CanonicalSemanticGameState) => ({
   phaseNumber: state.phaseNumber,
   roundNumber: state.roundNumber,
   activationCount: state.activationCount,
-  ...(state.initialInitiativePlayerId === undefined
+  ...(typeof state.initialInitiativePlayerId !== "string"
     ? {}
     : { initialInitiativePlayerId: state.initialInitiativePlayerId }),
   initiativePlayerId: state.initiativePlayerId,

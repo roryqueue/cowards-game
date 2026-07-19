@@ -573,6 +573,12 @@ describe("candidate replay reconstruction equivalence", () => {
       chronicle: input.chronicle,
       boundaryAnchors: input.boundaryAnchors,
       execution: input.execution,
+      ...(input.candidateMatch === undefined
+        ? {}
+        : {
+            candidateReproducibility: input.candidateReproducibility!,
+            persistedMatch: input.candidateMatch,
+          }),
     })
     expect(replay.ok).toBe(true)
     if (!replay.ok) return
