@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest"
 import {
   SoldierBrainInputSchema,
-  type SoldierBrainInput,
   type StrategyInput,
 } from "@cowards/spec"
 import type { StrategyRuntime } from "../types.js"

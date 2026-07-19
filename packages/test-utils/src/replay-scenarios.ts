@@ -1,8 +1,4 @@
-import {
-  MATCH_KERNEL,
-  type RunMatchInput,
-  type StrategyRuntime,
-} from "@cowards/engine"
+import type { RunMatchInput, StrategyRuntime } from "@cowards/engine"
 import {
   adaptHistoricalRuntimeForCurrentKernel,
   adaptRuntimeForCurrentKernel,
@@ -13,6 +9,8 @@ import {
 } from "@cowards/replay/test/current-recording"
 import {
   INITIAL_BOUNDS,
+  CURRENT_SEMANTIC_TUPLE,
+  CURRENT_SEMANTIC_TUPLE_ID,
   type Action,
   type Chronicle,
   type ChronicleEventType,
@@ -230,8 +228,8 @@ const buildScenario = (
     execution,
     metadata: {
       schemaVersion: "chronicle-v1.4",
-      semanticTupleId: MATCH_KERNEL.tupleId,
-      semanticTuple: MATCH_KERNEL.tuple,
+      semanticTupleId: CURRENT_SEMANTIC_TUPLE_ID,
+      semanticTuple: CURRENT_SEMANTIC_TUPLE,
     },
   })
   if (!recorded.ok) {

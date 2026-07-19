@@ -89,8 +89,9 @@ import {
 } from "@cowards/replay"
 import {
   MatchExecutionFailure,
-  MATCH_KERNEL,
   runMatch,
+  runVersionedMatchV117,
+  runVersionedMatchV119,
   type GameState,
   type CanonicalStrategyRuntime,
   type RunMatchInput,
@@ -1006,8 +1007,8 @@ export const validateNestedMatchRuntimeRevisionTestSupport = (
 
 export interface RuntimeExecutionServiceDependencies {
   runMatch: typeof runMatch
-  runMatchV117: typeof MATCH_KERNEL.runMatchV117
-  runMatchV119: typeof MATCH_KERNEL.runMatchV119
+  runMatchV117: typeof runVersionedMatchV117
+  runMatchV119: typeof runVersionedMatchV119
   recordChronicle: typeof recordChronicleFromExecution
   validateChronicle: typeof validateCurrentChronicle
   validateVersionedChronicle: typeof validateVersionedChronicleV117
@@ -1037,8 +1038,8 @@ export interface RuntimeExecutionServiceDependencies {
 
 const defaultDependencies: RuntimeExecutionServiceDependencies = {
   runMatch,
-  runMatchV117: MATCH_KERNEL.runMatchV117,
-  runMatchV119: MATCH_KERNEL.runMatchV119,
+  runMatchV117: runVersionedMatchV117,
+  runMatchV119: runVersionedMatchV119,
   recordChronicle: recordChronicleFromExecution,
   validateChronicle: validateCurrentChronicle,
   validateVersionedChronicle: validateVersionedChronicleV117,
@@ -1252,38 +1253,15 @@ const executeParsedRequest = (
   let result: ReturnType<typeof runMatch>
   try {
     if (candidateV119 && candidateMatch !== undefined) {
-      const execution = dependencies.runMatchV119({
+      result = dependencies.runMatchV119({
         ...runMatchInput,
-        initialInitiativePlayerId:
-          candidateMatch.initialInitiativePlayerId,
+        initialInitiativePlayerId: candidateMatch.initialInitiativePlayerId,
       })
-      if (execution.kind !== "completed") {
-        throw new MatchExecutionFailure(
-          execution.failure,
-          execution.unchangedState,
-        )
-      }
-      result = {
-        state: execution.result.state,
-        events: [...execution.result.events],
-        execution,
-      }
     } else if (
       versionedV117 &&
       String(STRATEGY_RUNTIME_ABI_VERSION) !== "strategy-runtime-abi-v1.17"
     ) {
-      const execution = dependencies.runMatchV117(runMatchInput)
-      if (execution.kind !== "completed") {
-        throw new MatchExecutionFailure(
-          execution.failure,
-          execution.unchangedState,
-        )
-      }
-      result = {
-        state: execution.result.state,
-        events: [...execution.result.events],
-        execution,
-      }
+      result = dependencies.runMatchV117(runMatchInput)
     } else {
       result = dependencies.runMatch(runMatchInput)
     }

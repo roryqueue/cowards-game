@@ -1,7 +1,8 @@
-import { MATCH_KERNEL } from "@cowards/engine"
+import { MatchExecutionFailure, runMatch } from "@cowards/engine"
 import {
   ARENA_CATALOG_VERSION_V1_37,
   CANONICAL_ARENA_CATALOG_V1_37,
+  CURRENT_SEMANTIC_AUTHORITY_KEY,
   SET_CONDITION_POLICY_VERSION_V1_37,
   createSetScenarioV137,
   resolveCandidateRuntimeV119SemanticTuple,
@@ -13,8 +14,27 @@ import {
   type RecordChronicleFromExecutionResult,
 } from "../record.js"
 
-type CurrentMatchInput = Parameters<typeof MATCH_KERNEL.runMatch>[0]
-type CurrentMatchResult = ReturnType<typeof MATCH_KERNEL.runMatch>
+type CurrentMatchInput = Parameters<typeof runMatch>[0]
+type RecorderExecution = RecordChronicleFromExecutionInput["execution"]
+type CurrentMatchResult =
+  | Extract<RecorderExecution, { readonly kind: "completed" }>
+  | (Extract<RecorderExecution, { readonly kind: "failure" }> & {
+      readonly failure: { readonly code: string }
+    })
+
+const executeCurrentMatch = (input: CurrentMatchInput): CurrentMatchResult => {
+  try {
+    return runMatch(input).execution
+  } catch (error) {
+    if (!(error instanceof MatchExecutionFailure)) throw error
+    return {
+      kind: "failure",
+      transitions: [],
+      failure: error.failure,
+      unchangedState: error.unchangedState,
+    }
+  }
+}
 
 const currentFixtureArena = () => {
   const arena = CANONICAL_ARENA_CATALOG_V1_37.arenas.find(
@@ -31,7 +51,7 @@ export const runCurrentMatchForReplayTestSupport = (
   input: CurrentMatchInput,
 ): CurrentMatchResult => {
   const arena = currentFixtureArena()
-  return MATCH_KERNEL.runMatch({
+  return executeCurrentMatch({
     ...input,
     arenaVariant: {
       id: arena.id,
@@ -45,11 +65,8 @@ export const runCurrentMatchForReplayTestSupport = (
 export const runSelectedCurrentMatchForReplayTestSupport = (
   input: CurrentMatchInput,
 ): CurrentMatchResult =>
-  resolveCandidateRuntimeV119SemanticTuple({
-    tupleId: MATCH_KERNEL.tupleId,
-    tuple: MATCH_KERNEL.tuple,
-  }) === undefined
-    ? MATCH_KERNEL.runMatch(input)
+  String(CURRENT_SEMANTIC_AUTHORITY_KEY) !== "runtime-v1.19"
+    ? executeCurrentMatch(input)
     : runCurrentMatchForReplayTestSupport(input)
 
 const deriveCandidateMatchAuthority = (

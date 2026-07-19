@@ -6,7 +6,7 @@ import type { AddressInfo } from "node:net"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { describe, expect, it, vi } from "vitest"
-import { MATCH_KERNEL } from "@cowards/engine"
+import { runVersionedMatchV119 } from "@cowards/engine"
 import {
   CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE,
   CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_ID,
@@ -324,8 +324,8 @@ const executeOverProductionConfiguredHttp = async (input: {
       const response = executeRuntimeServiceRequest(nested, runtimeConfig, {
         authorityLoader: input.authorityLoader,
         runMatchV119: (match) => {
-          const result = MATCH_KERNEL.runMatchV119(match)
-          captured = result
+          const result = runVersionedMatchV119(match)
+          captured = result.execution
           return result
         },
       })
