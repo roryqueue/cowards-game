@@ -72,10 +72,10 @@ files_reviewed_list:
   - scripts/v1-37-cli-dispatch.test.ts
   - scripts/v1-37-linux-language-probe.ts
 findings:
-  critical: 5
+  critical: 1
   warning: 0
   info: 0
-  total: 5
+  total: 1
 status: issues_found
 ---
 
@@ -88,44 +88,16 @@ status: issues_found
 
 ## Summary
 
-The phase has extensive source and fixture coverage, but its evidence and release closure gates are not fail-closed as claimed. In particular, the browser proof can pass after its restricted evidence or service-handoff binding has been removed, and the post-tag verifier can close PROOF-08 for an arbitrary historical commit. These defects undermine the proof chain rather than merely its diagnostics.
+The five previously reported blockers are addressed: browser checks now validate the exact restricted record and bound handoff, browser writes validate the restricted root before private output, rollback verification uses the no-follow store API, tag targets are bound to the expected archive commit, and both protected paths are rejected. The focused fix suites pass. One critical release-closure bypass remains because the archive checker still verifies only that required files exist, not that their committed bytes match readiness-bound values.
 
 ## Critical Issues
 
-### CR-01: Browser proof check does not validate restricted evidence or the current service handoff
+### CR-01: Tag checker permits an archive with substituted proof and audit artifacts
 
-**File:** `scripts/run-v1-37-browser-proof.ts:93-96`
-**Issue:** `checkV137BrowserProof` only loads the control JSON, compares a source-only `inputRootSha256`, and validates the public receipt shape. It neither checks `control.records` nor opens/verifies the referenced restricted object and attestation. It also never recomputes the current service handoff or compares it with `receipt.proofDataHandoffDigest`. Consequently, deleting/replacing browser evidence, setting `records` to an empty array, or replacing the service handoff with another valid digest can still produce a passed browser check; the aggregate evaluator then accepts that result at `evaluate-v1-37-integrated-service-proof.ts:104-111`.
+**File:** `scripts/check-v1-37-release-tag.ts:37-41`
+**Issue:** `verifyArchive` only compares `archiveBlobSha256` when that optional property exists. The canonical readiness validator explicitly rejects any extra top-level key at `scripts/evaluate-v1-37-release-readiness.ts:164-175`, and the checked readiness artifact has no `archiveBlobSha256`. Therefore the tag gate only checks that each required file exists; it does not bind the archive's prearchive proof, audit, or handoff bytes to the readiness hashes. A commit can retain a syntactically `release-ready` readiness JSON and tag-message fields while replacing the other required archive files with arbitrary content, then pass both archive verification and post-tag closure.
 
-**Fix:** Make check mode use the restricted-store no-follow verification for the exact one browser record, require its reference to equal `receipt.browserProofReceiptRef`, and recompute the service handoff through the already-validated service receipt. Reject a missing, extra, mismatched, deleted, or digest-divergent record/handoff. Add mutation tests for each condition.
-
-### CR-02: Browser collection writes private handoff data to an unvalidated root
-
-**File:** `scripts/run-v1-37-browser-proof.ts:140-146`
-**Issue:** The collector accepts `COWARDS_V1_37_RESTRICTED_EVIDENCE_ROOT` and immediately writes the private handoff descriptor beneath it. Validation by `createV137RestrictedEvidenceStore` does not happen until line 154, after Playwright runs and after the private write. A root inside the repository, a symlinked root/control directory, or an attacker-selected path can therefore receive the private descriptor before the store rejects it, violating the restricted-first/outside-Git boundary.
-
-**Fix:** Initialize and validate the restricted store before resolving or writing the handoff. Use a no-follow, root-confined control-file helper for both the handoff and observations paths, rejecting a repository-contained root and symlinked root/parents/files before any private bytes are written.
-
-### CR-03: Rollback proof check follows evidence symlinks instead of the restricted-store verifier
-
-**File:** `scripts/run-v1-37-rollback-proof.ts:419-427`
-**Issue:** Although the store rejects symlinks, the release-time rollback checker directly calls `readFileSync` for the access log, object, and attestation. It never checks their parent/file types or opens them with `O_NOFOLLOW`. A symlink to matching bytes outside the restricted store therefore passes the digest checks, defeating the store's confinement and no-symlink guarantees during a strict release check.
-
-**Fix:** Construct the restricted store in check mode and call its release-evidence verifier for every record; use its validated access-log API rather than direct reads. Add object, attestation, access-log, and parent-directory symlink mutations that must fail.
-
-### CR-04: Post-tag verification accepts a tag on any passing historical commit
-
-**File:** `scripts/check-v1-37-release-tag.ts:43-55`
-**Issue:** In post-tag mode the checker assigns the tag's peeled target to `archive` and validates that target in isolation. It never requires that target to be the just-created archive commit (for the live command, `HEAD`) or otherwise receives and checks the expected archive commit. An annotated tag pointing to any older commit containing the listed files and a superficially valid readiness blob closes PROOF-08, even if later archive/release changes were never tagged.
-
-**Fix:** Resolve the expected archive commit explicitly (default to `HEAD` for post-tag verification, or require a `--post-tag-archive <commit>` argument) and reject when `v1.37^{}` differs. Add fixtures with a valid older archive followed by a newer archive/current `HEAD`; only the latter may pass.
-
-### CR-05: Release-tag archive protection omits `.planning/config.json`
-
-**File:** `scripts/check-v1-37-release-tag.ts:40`
-**Issue:** The archive checker rejects a delta for `CowardsGameSpec_Full_Consolidated_v1.md` but does not protect `.planning/config.json`, despite both being protected user-owned paths for this phase. An archive commit can therefore include a user configuration change and still pass the pretag and post-tag checks.
-
-**Fix:** Maintain one closed protected-path list containing both files and reject any archive delta touching either one. Cover both paths in the Git fixtures, including a root/non-root archive commit case.
+**Fix:** Add a required, closed `archiveBlobSha256` map to the readiness schema (or derive an equivalent mandatory manifest from already trusted readiness prerequisites), populate it before archive, and make `verifyArchive` reject its absence, unknown paths, missing paths, and every digest mismatch. Add Git fixtures that replace each required archive blob while preserving the readiness file and tag message; each must fail.
 
 ---
 
