@@ -1,24 +1,24 @@
 ---
 phase: 261
-fixed_at: 2026-07-22T17:40:00-04:00
+fixed_at: 2026-07-22T17:47:00-04:00
 review_path: .planning/phases/261-integrated-service-proof-drift-guards-and-release/261-REVIEW.md
-iteration: 1
-findings_in_scope: 5
-fixed: 5
+iteration: 2
+findings_in_scope: 6
+fixed: 6
 skipped: 0
 status: all_fixed
 ---
 
 # Phase 261: Code Review Fix Report
 
-**Fixed at:** 2026-07-22T17:40:00-04:00
+**Fixed at:** 2026-07-22T17:47:00-04:00
 **Source review:** `.planning/phases/261-integrated-service-proof-drift-guards-and-release/261-REVIEW.md`
-**Iteration:** 1
+**Iteration:** 2
 
 **Summary:**
 
-- Findings in scope: 5
-- Fixed: 5
+- Findings in scope: 6
+- Fixed: 6
 - Skipped: 0
 
 ## Fixed Issues
@@ -53,8 +53,14 @@ status: all_fixed
 **Commit:** 16ff7aa1
 **Applied fix:** Uses one closed protected-path list for both the consolidated spec and `.planning/config.json`, with non-root archive mutation coverage for each path.
 
+### CR-06: Tag checker permits an archive with substituted proof and audit artifacts
+
+**Files modified:** `scripts/evaluate-v1-37-release-readiness.ts`, `scripts/evaluate-v1-37-release-readiness.test.ts`, `scripts/check-v1-37-release-tag.ts`, `scripts/check-v1-37-release-tag.test.ts`
+**Commit:** bed9347d
+**Applied fix:** Adds a required closed, non-self-referential archive blob manifest to readiness, verifies it exactly at tag time, and rejects absent, unknown, missing, or digest-divergent archive blobs. Added a substitution fixture for every required blob.
+
 ---
 
-_Fixed: 2026-07-22T17:40:00-04:00_
+_Fixed: 2026-07-22T17:47:00-04:00_
 _Fixer: the agent (gsd-code-fixer)_
-_Iteration: 1_
+_Iteration: 2_
