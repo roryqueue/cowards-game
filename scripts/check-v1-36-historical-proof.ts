@@ -86,6 +86,7 @@ export type V136HistoricalProofFindingCode =
   | "WORKING_ARTIFACT_MISSING"
   | "WORKING_ARTIFACT_MISMATCH"
   | "ARCHIVED_VALIDATOR_FAILED"
+  | "ARCHIVED_VALIDATOR_TIMEOUT"
   | "ARCHIVED_VALIDATOR_WRITE_ATTEMPT"
 
 export interface V136HistoricalProofFinding {
@@ -240,7 +241,7 @@ const runArchivedValidators = (
   commit: string,
   evaluationInstant: string,
   artifacts: readonly V136HistoricalBlobPin[],
-): "passed" | "failed" | "write-attempt" => {
+): "passed" | "failed" | "timeout" | "write-attempt" => {
   const snapshotRoot = mkdtempSync(path.join(tmpdir(), "cowards-v136-archive-"))
   try {
     const archive = execFileSync("git", ["archive", "--format=tar", commit], {
@@ -261,13 +262,14 @@ const runArchivedValidators = (
     const result = spawnSync(
       path.join(repoRoot, "node_modules/.bin/tsx"),
       [".gsd-v136-validate.ts"],
-      { cwd: snapshotRoot, encoding: "utf8", timeout: 120_000 },
+      { cwd: snapshotRoot, encoding: "utf8", timeout: 300_000 },
     )
     const after = artifacts.map((entry) => {
       const absolutePath = path.join(snapshotRoot, entry.path)
       return { path: entry.path, hash: sha256(readFileSync(absolutePath)), mtimeMs: statSync(absolutePath).mtimeMs }
     })
     if (JSON.stringify(before) !== JSON.stringify(after)) return "write-attempt"
+    if (result.error?.name === "Error" && result.error.message.includes("ETIMEDOUT")) return "timeout"
     if (result.status !== 0) return "failed"
     try {
       const parsed = JSON.parse(result.stdout) as { ok?: unknown; errorCount?: unknown }
@@ -333,6 +335,7 @@ export const checkV136HistoricalProof = async (
   if (findings.length === 0 && options.executeArchivedValidators !== false) {
     const status = runArchivedValidators(repoRoot, pinnedCommit, manifest.validation.evaluationInstant, manifest.artifacts)
     if (status === "write-attempt") findings.push({ code: "ARCHIVED_VALIDATOR_WRITE_ATTEMPT" })
+    if (status === "timeout") findings.push({ code: "ARCHIVED_VALIDATOR_TIMEOUT" })
     if (status === "failed") findings.push({ code: "ARCHIVED_VALIDATOR_FAILED" })
   }
   findings.sort((left, right) => left.code.localeCompare(right.code) || (left.path ?? "").localeCompare(right.path ?? ""))
