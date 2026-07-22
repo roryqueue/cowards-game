@@ -489,7 +489,7 @@ Plans:
   4. Boundary monitors detect duplicate transition ownership, mixed tuples, adapter-owned gameplay classification, stale identity, unsupported events, duplicate arenas, unfair scheduling, unproved counted lanes, and private-output leakage.
   5. The prearchive audit proves complete 56/56 traceability, 55 passed requirements, PROOF-08 release-ready/pending, one transition authority, passing drift guards, and no unapproved gameplay change; the archive commit is then tagged, and the actual annotated tag plus post-tag checker closes PROOF-08 before serious Strategy work begins.
 
-**Plans:** 4/13 plans executed
+**Plans:** 6/13 plans executed
 
 Plans:
 
@@ -498,7 +498,7 @@ Plans:
 - [x] 261-03-PLAN.md — Execute the real four-language production-shaped service topology and typed failure proof.
 - [x] 261-04-PLAN.md — Serialize and prove exact audit compatibility, persistence, rollback, recomputation, retry, and immutable history.
 - [x] 261-05-PLAN.md — Own and validate live desktop/mobile topology, proof-data handoff, network privacy, and replay-board realism.
-- [ ] 261-06-PLAN.md — Generate the deterministic public-safe integrated service proof.
+- [x] 261-06-PLAN.md — Generate the deterministic public-safe integrated service proof.
 - [ ] 261-07-PLAN.md — Produce the exact non-circular 48+7+1 prearchive requirement proof.
 - [ ] 261-08-PLAN.md — Render the truthful 56-traced/55-passed release-ready milestone audit.
 - [ ] 261-09-PLAN.md — Freeze the public-safe, non-authorizing Strategy-evaluation foundation.
@@ -531,4 +531,4 @@ Cycle-cap, inward-start, facing-only MOVE, reversal-history, attacker-facing/Adv
 | 258. Canonical JSON, Failure Semantics, and Artifact Identity | 14/14 | Complete | 2026-07-16 |
 | 259. Executable Four-Language and Chronicle Conformance | 31/31 | Complete | 2026-07-16 |
 | 260. Truthful Strategy Inputs, Arena Authority, and Set Fairness | 49/49 | Complete | 2026-07-19 |
-| 261. Integrated Service Proof, Drift Guards, and Release | 4/13 | In Progress|  |
+| 261. Integrated Service Proof, Drift Guards, and Release | 6/13 | In Progress|  |
