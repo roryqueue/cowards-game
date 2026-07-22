@@ -27,9 +27,12 @@ const main = async (): Promise<void> => {
   )
 }
 
-void main().catch((error: unknown) => {
-  process.stderr.write(
-    `${error instanceof Error ? error.message : "V137_ROLLBACK_FAILED"}\n`,
-  )
-  process.exitCode = 1
-})
+const keepAlive = setInterval(() => undefined, 1_000)
+void main()
+  .catch((error: unknown) => {
+    process.stderr.write(
+      `${error instanceof Error ? error.message : "V137_ROLLBACK_FAILED"}\n`,
+    )
+    process.exitCode = 1
+  })
+  .finally(() => clearInterval(keepAlive))
