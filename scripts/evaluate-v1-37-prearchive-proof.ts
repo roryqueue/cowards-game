@@ -1,6 +1,6 @@
 #!/usr/bin/env -S pnpm exec tsx
 import { createHash } from "node:crypto"
-import { existsSync, readFileSync, renameSync, writeFileSync } from "node:fs"
+import { existsSync, readFileSync, realpathSync, renameSync, writeFileSync } from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 import { assertPublicOutputLeakSafe } from "@cowards/spec"
@@ -91,5 +91,5 @@ export const renderV137PrearchiveProofMarkdown = (proof: unknown): string => { c
 export const writeV137PrearchiveProofArtifacts = (repoRoot: string): V137PrearchiveProof => { const proof = generateV137PrearchiveProof(repoRoot); for (const [kind, artifact] of Object.entries(V137_PREARCHIVE_PROOF_ARTIFACT_PATHS)) { const target = path.join(repoRoot, artifact); const bytes = kind === "json" ? renderV137PrearchiveProofJson(proof) : renderV137PrearchiveProofMarkdown(proof); const temporary = `${target}.tmp-${process.pid}`; writeFileSync(temporary, bytes, { flag: "w", mode: 0o644 }); renameSync(temporary, target) }; return proof }
 export const checkV137PrearchiveProofArtifacts = (repoRoot: string): V137PrearchiveProof => { const proof = generateV137PrearchiveProof(repoRoot); for (const [kind, artifact] of Object.entries(V137_PREARCHIVE_PROOF_ARTIFACT_PATHS)) { const target = path.join(repoRoot, artifact); if (!existsSync(target)) fail("V137_PREARCHIVE_ARTIFACT_MISSING"); const expected = kind === "json" ? renderV137PrearchiveProofJson(proof) : renderV137PrearchiveProofMarkdown(proof); if (readFileSync(target, "utf8") !== expected) fail("V137_PREARCHIVE_ARTIFACT_EDITED") }; return proof }
 
-const mode = process.argv.filter((argument) => argument === "--write" || argument === "--check")
-if (mode.length > 0) { try { const proof = mode.length === 1 && mode[0] === "--write" ? writeV137PrearchiveProofArtifacts(root) : mode.length === 1 && mode[0] === "--check" ? checkV137PrearchiveProofArtifacts(root) : fail("V137_PREARCHIVE_MODE_INVALID"); process.stdout.write(`${JSON.stringify({ releaseState: proof.releaseState, passed: proof.traceability.passed, pending: proof.releaseOperation.requirement })}\n`) } catch (error) { process.stderr.write(`${error instanceof Error ? error.message : "V137_PREARCHIVE_FAILED"}\n`); process.exitCode = 1 } }
+const isDirectRun = (): boolean => { const invokedScript = process.argv[1]; if (!invokedScript) return false; try { return realpathSync(path.resolve(invokedScript)) === realpathSync(fileURLToPath(import.meta.url)) } catch { return false } }
+if (isDirectRun()) { const mode = process.argv.slice(2); try { const proof = mode.length === 1 && mode[0] === "--write" ? writeV137PrearchiveProofArtifacts(root) : mode.length === 1 && mode[0] === "--check" ? checkV137PrearchiveProofArtifacts(root) : fail("V137_PREARCHIVE_MODE_INVALID"); process.stdout.write(`${JSON.stringify({ releaseState: proof.releaseState, passed: proof.traceability.passed, pending: proof.releaseOperation.requirement })}\n`) } catch (error) { process.stderr.write(`${error instanceof Error ? error.message : "V137_PREARCHIVE_FAILED"}\n`); process.exitCode = 1 } }

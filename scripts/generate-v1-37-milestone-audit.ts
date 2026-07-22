@@ -1,6 +1,6 @@
 #!/usr/bin/env -S pnpm exec tsx
 import { createHash } from "node:crypto"
-import { existsSync, readFileSync, renameSync, writeFileSync } from "node:fs"
+import { existsSync, readFileSync, realpathSync, renameSync, writeFileSync } from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 import { assertPublicOutputLeakSafe } from "@cowards/spec"
@@ -177,8 +177,13 @@ export const checkV137MilestoneAuditArtifacts = (repoRoot: string): V137Mileston
   return audit
 }
 
-const mode = process.argv.filter((argument) => argument === "--write" || argument === "--check")
-if (mode.length > 0) {
+const isDirectRun = (): boolean => {
+  const invokedScript = process.argv[1]
+  if (!invokedScript) return false
+  try { return realpathSync(path.resolve(invokedScript)) === realpathSync(fileURLToPath(import.meta.url)) } catch { return false }
+}
+if (isDirectRun()) {
+  const mode = process.argv.slice(2)
   try {
     const audit = mode.length === 1 && mode[0] === "--write" ? writeV137MilestoneAuditArtifacts(root) : mode.length === 1 && mode[0] === "--check" ? checkV137MilestoneAuditArtifacts(root) : fail("V137_AUDIT_MODE_INVALID")
     process.stdout.write(`${JSON.stringify({ status: audit.status, passed: audit.traceability.passed, pending: audit.releaseOperation.requirement })}\n`)

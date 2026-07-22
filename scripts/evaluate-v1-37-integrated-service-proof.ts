@@ -1,6 +1,6 @@
 #!/usr/bin/env -S pnpm exec tsx
 import { createHash } from "node:crypto"
-import { existsSync, readFileSync, renameSync, writeFileSync } from "node:fs"
+import { existsSync, readFileSync, realpathSync, renameSync, writeFileSync } from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 import { assertPublicOutputLeakSafe } from "@cowards/spec"
@@ -140,8 +140,13 @@ export const checkV137IntegratedProofArtifacts = (repoRoot: string, restrictedRo
   return proof
 }
 
-const mode = process.argv.filter((argument) => argument === "--write" || argument === "--check")
-if (mode.length > 0) {
+const isDirectRun = (): boolean => {
+  const invokedScript = process.argv[1]
+  if (!invokedScript) return false
+  try { return realpathSync(path.resolve(invokedScript)) === realpathSync(fileURLToPath(import.meta.url)) } catch { return false }
+}
+if (isDirectRun()) {
+  const mode = process.argv.slice(2)
   try {
     const restrictedRoot = process.env.COWARDS_V1_37_RESTRICTED_EVIDENCE_ROOT
     if (!restrictedRoot) fail("V137_INTEGRATED_PROOF_RESTRICTED_ROOT_REQUIRED")

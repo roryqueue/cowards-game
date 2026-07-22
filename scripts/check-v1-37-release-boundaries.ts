@@ -1,6 +1,6 @@
 #!/usr/bin/env -S pnpm exec tsx
 import { createHash } from "node:crypto"
-import { existsSync, readFileSync } from "node:fs"
+import { existsSync, readFileSync, realpathSync } from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 import { assertPublicOutputLeakSafe } from "@cowards/spec"
@@ -495,11 +495,14 @@ export const checkV137ReleaseBoundaries = (
   })
 }
 
-const modeArgs = process.argv.filter(
-  (argument) => argument === "--strict-release" || argument === "--source-fixture",
-)
+const isDirectRun = (): boolean => {
+  const invokedScript = process.argv[1]
+  if (!invokedScript) return false
+  try { return realpathSync(path.resolve(invokedScript)) === realpathSync(fileURLToPath(import.meta.url)) } catch { return false }
+}
 
-if (modeArgs.length > 0) {
+if (isDirectRun()) {
+  const modeArgs = process.argv.slice(2)
   if (modeArgs.length !== 1) {
     throw new TypeError("V137_RELEASE_BOUNDARY_MODE_INVALID")
   }

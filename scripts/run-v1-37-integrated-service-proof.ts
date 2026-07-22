@@ -10,6 +10,7 @@ import {
   lstatSync,
   openSync,
   readFileSync,
+  realpathSync,
   renameSync,
   rmSync,
   unlinkSync,
@@ -19,6 +20,7 @@ import { mkdtempSync } from "node:fs"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { clearTimeout, setTimeout } from "node:timers"
+import { fileURLToPath } from "node:url"
 import {
   V137_INTEGRATED_PROOF_SCENARIOS,
   type V137IntegratedProofScenario,
@@ -2034,11 +2036,20 @@ export const writeV137IntegratedServiceProof = async (
   return control
 }
 
-const isDirectRun = process.argv.some(
-  (argument) => argument === "--write" || argument === "--check",
-)
+const isDirectRun = (): boolean => {
+  const invokedScript = process.argv[1]
+  if (!invokedScript) return false
+  try {
+    return (
+      realpathSync(path.resolve(invokedScript)) ===
+      realpathSync(fileURLToPath(import.meta.url))
+    )
+  } catch {
+    return false
+  }
+}
 
-if (isDirectRun) {
+if (isDirectRun()) {
   const main = async (): Promise<void> => {
     if (process.env.COWARDS_V1_37_REQUIRE_INTEGRATED_PROOF !== "1") {
       fail("V137_SERVICE_PROOF_STRICT_FLAG_REQUIRED")
