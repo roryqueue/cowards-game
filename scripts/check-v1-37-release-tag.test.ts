@@ -1,0 +1,13 @@
+import { execFileSync } from "node:child_process"
+import { mkdtempSync, mkdirSync, writeFileSync } from "node:fs"
+import { tmpdir } from "node:os"
+import path from "node:path"
+import { describe, expect, it } from "vitest"
+import { checkV137ReleaseTag } from "./check-v1-37-release-tag.js"
+const git = (root: string, args: string[]) => execFileSync("git", args, { cwd: root, encoding: "utf8" }).trim()
+const fixture = () => { const root = mkdtempSync(path.join(tmpdir(), "v137-tag-")); git(root, ["init"]); git(root, ["config", "user.email", "fixture@example.invalid"]); git(root, ["config", "user.name", "fixture"]); for (const file of [".planning/ROADMAP.md", ".planning/REQUIREMENTS.md", ".planning/v1.37-MILESTONE-AUDIT.md", ".planning/artifacts/v1.37-prearchive-proof.json", ".planning/artifacts/v1.37-milestone-audit.json", ".planning/artifacts/v1.37-strategy-evaluation-foundation.json"]) { mkdirSync(path.join(root, path.dirname(file)), { recursive: true }); writeFileSync(path.join(root, file), "{}\n") } mkdirSync(path.join(root, ".planning/artifacts"), { recursive: true }); writeFileSync(path.join(root, ".planning/artifacts/v1.37-release-readiness.json"), JSON.stringify({ releaseState: "release-ready", releaseOperation: { completion: false }, tagMessageFieldSha256: { semanticTupleId: "sha256:" + "a".repeat(64), finalProof: "sha256:" + "b".repeat(64), milestoneAudit: "sha256:" + "c".repeat(64) } }) + "\n"); git(root, ["add", "."]); git(root, ["commit", "-m", "archive"]); return { root, commit: git(root, ["rev-parse", "HEAD"]) } }
+describe("v1.37 release tag checker", () => {
+  it("pretag validates archive membership and never closes PROOF-08", () => { const { root, commit } = fixture(); const result = checkV137ReleaseTag({ repoRoot: root, mode: "pretag-archive", archiveCommit: commit }); expect(result.findings).toEqual([]); expect(result.proof08).toBe(false) })
+  it("rejects absent/lightweight/wrong annotated tag targets", () => { const { root, commit } = fixture(); expect(checkV137ReleaseTag({ repoRoot: root }).proof08).toBe(false); git(root, ["tag", "v1.37"]); expect(checkV137ReleaseTag({ repoRoot: root }).findings.map((x) => x.code)).toContain("TAG_NOT_ANNOTATED"); git(root, ["tag", "-d", "v1.37"]); git(root, ["tag", "-a", "v1.37", "-m", "wrong", commit]); expect(checkV137ReleaseTag({ repoRoot: root }).findings.map((x) => x.code)).toContain("TAG_MESSAGE_MISMATCH") })
+  it("accepts exactly an annotated readiness-bound unsigned tag", () => { const { root, commit } = fixture(); const body = ["sha256:" + "a".repeat(64), "sha256:" + "b".repeat(64), "sha256:" + "c".repeat(64)].join("\n"); git(root, ["tag", "-a", "v1.37", "-m", body, commit]); expect(checkV137ReleaseTag({ repoRoot: root }).proof08).toBe(true) })
+})
