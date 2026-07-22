@@ -111,7 +111,7 @@
   "inputs": [
     {
       "path": ".planning/artifacts/v1.37-executable-conformance-proof.json",
-      "sha256": "sha256:d2829500db4b9463e13757610a2c57898229c36635b08704882ffafe257ff475"
+      "sha256": "sha256:053f2fda4a628d5d36d24ecb048d422e4a39de07d831630d6311bd1623fec109"
     },
     {
       "path": ".planning/artifacts/v1.37-kernel-integrity-proof.json",
