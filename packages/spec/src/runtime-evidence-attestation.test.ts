@@ -13,6 +13,10 @@ import {
   type RuntimeEvidenceGraph,
   type RuntimeEvidenceTrustedProducer,
 } from "./runtime-evidence-attestation.js"
+import {
+  createRuntimeEvidenceTrustedContainmentProducersV137,
+  RUNTIME_EVIDENCE_TRUSTED_CONTAINMENT_PRODUCERS_V1_37,
+} from "./runtime-containment-trusted-producers-v1-37.js"
 
 const sha256 = (value: Uint8Array | string): string =>
   createHash("sha256").update(value).digest("hex")
@@ -207,9 +211,15 @@ const verifyFixture = (
   })
 
 describe("runtime evidence attestation", () => {
-  it("activates only the four reviewed proof-local containment producers and verifies one exact fixture-domain graph", () => {
+  it("keeps the default production set frozen empty while retaining an explicit proof-local containment set", () => {
+    expect(RUNTIME_EVIDENCE_TRUSTED_PRODUCERS).toEqual([])
+    expect(Object.isFrozen(RUNTIME_EVIDENCE_TRUSTED_PRODUCERS)).toBe(true)
+    const proofLocal = createRuntimeEvidenceTrustedContainmentProducersV137(
+      publicKey.export({ type: "spki", format: "pem" }).toString(),
+    )
+    expect(RUNTIME_EVIDENCE_TRUSTED_CONTAINMENT_PRODUCERS_V1_37).toEqual([])
     expect(
-      RUNTIME_EVIDENCE_TRUSTED_PRODUCERS.map(({ producerId, kind }) => ({
+      proofLocal.map(({ producerId, kind }) => ({
         producerId,
         kind,
       })),
@@ -219,9 +229,8 @@ describe("runtime evidence attestation", () => {
         kind: "containment",
       })),
     )
-    expect(Object.isFrozen(RUNTIME_EVIDENCE_TRUSTED_PRODUCERS)).toBe(true)
     expect(
-      RUNTIME_EVIDENCE_TRUSTED_PRODUCERS.every((entry) =>
+      proofLocal.every((entry) =>
         Object.isFrozen(entry),
       ),
     ).toBe(true)

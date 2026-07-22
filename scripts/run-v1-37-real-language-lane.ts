@@ -2,9 +2,6 @@ import { Buffer } from "node:buffer"
 import { spawnSync } from "node:child_process"
 import { createHash, randomBytes } from "node:crypto"
 import {
-  chmodSync,
-  copyFileSync,
-  existsSync,
   readFileSync,
   writeFileSync,
 } from "node:fs"
@@ -48,12 +45,13 @@ import {
   type V137LinuxLanguageGuest,
   type V137LinuxLanguageProbeReceipt,
 } from "./v1-37-linux-language-probe.js"
+import {
+  V137_PINNED_WASMTIME_SHA256,
+  stageV137PinnedWasmtime,
+} from "./lib/v1-37-pinned-wasmtime.js"
 
 const WASMTIME_VERSION = "wasmtime 45.0.0 (377cd917a 2026-05-21)"
-const WASMTIME_URL =
-  "https://github.com/bytecodealliance/wasmtime/releases/download/v45.0.0/wasmtime-v45.0.0-x86_64-linux.tar.xz"
-const WASMTIME_SHA256 =
-  "sha256:d7b7317b34a717f4b809df14657975e2ce83221a697167219abdad6e44c7a12c" as const
+const WASMTIME_SHA256 = V137_PINNED_WASMTIME_SHA256
 const WASMTIME_RUN_FLAGS =
   "-C compiler=winch,parallel-compilation=n,cache=n -O memory-reservation=1048576,memory-reservation-for-growth=0,memory-guard-size=0"
 
@@ -130,32 +128,6 @@ const ensurePinnedImage = (image: string): void => {
 
 const write = (filePath: string, bytes: string): void => {
   writeFileSync(filePath, bytes, { encoding: "utf8", mode: 0o600, flag: "wx" })
-}
-
-const ensureWasmtime = (workspace: string): string => {
-  const cacheRoot = "/private/tmp/cowards-v1-37-wasmtime"
-  const cachedBinary = path.join(cacheRoot, "wasmtime")
-  if (!existsSync(cachedBinary) || hashFile(cachedBinary) !== WASMTIME_SHA256) {
-    const archive = path.join(workspace, "wasmtime.tar.xz")
-    run("curl", ["-fL", WASMTIME_URL, "-o", archive])
-    run("tar", [
-      "-xJf",
-      archive,
-      "-C",
-      workspace,
-      "--strip-components=1",
-      "wasmtime-v45.0.0-x86_64-linux/wasmtime",
-    ])
-    const extracted = path.join(workspace, "wasmtime")
-    if (hashFile(extracted) !== WASMTIME_SHA256) {
-      throw new TypeError("Pinned Linux Wasmtime archive is substituted")
-    }
-    return extracted
-  }
-  const staged = path.join(workspace, "wasmtime")
-  copyFileSync(cachedBinary, staged)
-  chmodSync(staged, 0o500)
-  return staged
 }
 
 const exactFixture = (
@@ -361,7 +333,7 @@ const prepareWasmLane = (
   const fixtureWasm = path.join(workspace, "fixture.wasm")
   write(fixtureSource, fixture.source)
   compileWasm(languageId, fixtureSource, fixtureWasm)
-  const wasmtime = ensureWasmtime(workspace)
+  const wasmtime = stageV137PinnedWasmtime({ stageDirectory: workspace })
   const inputSelect = path.join(workspace, "select.json")
   const inputBrain = path.join(workspace, "brain.json")
   write(

@@ -1,5 +1,4 @@
 import { createHash } from "node:crypto"
-import { RUNTIME_CONFORMANCE_TRUSTED_PRODUCERS_V1_17 } from "./runtime-conformance-trusted-producers-v1-17.js"
 import type { RuntimeEvidenceTrustedProducer } from "./runtime-evidence-attestation.js"
 
 export const RUNTIME_CONTAINMENT_LANGUAGE_IDS_V1_37 = Object.freeze([
@@ -60,10 +59,9 @@ export const runtimeContainmentManagedProducerIdV137 = (
   languageId: RuntimeContainmentLanguageIdV137,
 ): string => `proof-local:runtime-containment:${languageId}:v1`
 
-const managedPublicKeyPem =
-  RUNTIME_CONFORMANCE_TRUSTED_PRODUCERS_V1_17[0]!.publicKeyPem
-
-export const RUNTIME_EVIDENCE_TRUSTED_CONTAINMENT_PRODUCERS_V1_37: readonly RuntimeEvidenceTrustedProducer[] =
+export const createRuntimeEvidenceTrustedContainmentProducersV137 = (
+  publicKeyPem: string,
+): readonly RuntimeEvidenceTrustedProducer[] =>
   Object.freeze(
     RUNTIME_CONTAINMENT_LANGUAGE_IDS_V1_37.map((languageId) =>
       Object.freeze({
@@ -83,7 +81,11 @@ export const RUNTIME_EVIDENCE_TRUSTED_CONTAINMENT_PRODUCERS_V1_37: readonly Runt
           runtimeContainmentPolicyEvidenceBytesV137(languageId),
         ),
         requiredGateIds: Object.freeze(["containment"]),
-        publicKeyPem: managedPublicKeyPem,
+        publicKeyPem,
       }),
     ),
   )
+
+/** Historical/default production trust remains empty; proof-local callers create an ephemeral explicit list. */
+export const RUNTIME_EVIDENCE_TRUSTED_CONTAINMENT_PRODUCERS_V1_37: readonly RuntimeEvidenceTrustedProducer[] =
+  Object.freeze([])

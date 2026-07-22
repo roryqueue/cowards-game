@@ -21,7 +21,7 @@ import {
   DEFAULT_RUNTIME_LIMITS,
   RUNTIME_BUDGET_PROFILE_V1_18_SHA256,
   RUNTIME_EVIDENCE_AUTHORITY_TRUST_DOMAINS,
-  RUNTIME_EVIDENCE_TRUSTED_CONTAINMENT_PRODUCERS_V1_37,
+  createRuntimeEvidenceTrustedContainmentProducersV137,
   RUNTIME_EXECUTION_SERVICE_VERSION_V1_18,
   RuntimeExecutionServiceRequestV118Schema,
   RUNTIME_INVOCATION_V1_17_INITIAL_EXECUTION_LEDGER_ROOT,
@@ -91,6 +91,7 @@ import {
   V137_TYPESCRIPT_LINUX_IMAGE,
   V137_WASMTIME_LINUX_IMAGE,
 } from "./v1-37-linux-language-probe.js"
+import { stageV137PinnedWasmtime } from "./lib/v1-37-pinned-wasmtime.js"
 
 type LanguageId = "typescript" | "python" | "rust" | "zig"
 
@@ -204,10 +205,15 @@ export interface ProofLocalActivationReport {
   proofRootSha256: `sha256:${string}`
 }
 
+/** A collector-scoped, private-only lease for consumers that must observe the exact proof topology. */
+export interface ProofLocalRuntimeAuthorityLease {
+  runtimeServiceUrl: string
+  environment: Readonly<Record<string, string>>
+  report: ProofLocalActivationReport
+}
+
 const SHA256 = /^sha256:[0-9a-f]{64}$/u
 const PROOF_SCHEMA = "v1.37-proof-local-runtime-authority-v1" as const
-const WASMTIME_DIRECTORY = "/private/tmp/cowards-v1-37-wasmtime"
-
 const fail = (code: string): never => {
   throw new TypeError(code)
 }
@@ -478,6 +484,7 @@ const containmentFixture = (input: {
   issuedAt: string
   validUntil: string
   producerPrivateKey: ReturnType<typeof createPrivateKey>
+  trustedProducers: readonly RuntimeEvidenceTrustedProducer[]
   side: "bottom" | "top"
 }): {
   producer: RuntimeEvidenceTrustedProducer
@@ -518,7 +525,7 @@ const containmentFixture = (input: {
   const producerId = runtimeContainmentManagedProducerIdV137(
     input.lane.languageId,
   )
-  const producer = RUNTIME_EVIDENCE_TRUSTED_CONTAINMENT_PRODUCERS_V1_37.find(
+  const producer = input.trustedProducers.find(
     (candidate) => candidate.producerId === producerId,
   )
   if (
@@ -992,6 +999,8 @@ export const runProofLocalRuntimeAuthority = async (input: {
   repoRoot: string
   databaseUrl: string
   probeLanes: ProbeLane[]
+  providerValidationSecret?: string
+  whileActive?: (lease: ProofLocalRuntimeAuthorityLease) => Promise<void>
 }): Promise<ProofLocalActivationReport> => {
   const sourcePool = createDatabasePool({ connectionString: input.databaseUrl })
   const proofSchema = "proof_local_runtime_authority"
@@ -1010,24 +1019,18 @@ export const runProofLocalRuntimeAuthority = async (input: {
     `run-${Date.now()}-${process.pid}`,
   )
   await mkdir(proofRoot, { recursive: true, mode: 0o700 })
+  const wasmtimeExecutablePath = stageV137PinnedWasmtime({
+    stageDirectory: proofRoot,
+  })
   const authorityKeys = generateKeyPairSync("ed25519")
   const receiptKeys = generateKeyPairSync("ed25519")
-  const containmentPrivateKey = createPrivateKey(
-    await readFile(
-      process.env.COWARDS_RUNTIME_CONTAINMENT_PRODUCER_PRIVATE_KEY_PATH?.trim() ??
-        "/private/tmp/v1.37-conformance-producer-private.pem",
-    ),
-  )
+  const containmentKeys = generateKeyPairSync("ed25519")
+  const containmentPrivateKey = containmentKeys.privateKey
   const containmentPublicKeyPem = createPublicKey(containmentPrivateKey)
     .export({ type: "spki", format: "pem" })
     .toString()
-  if (
-    RUNTIME_EVIDENCE_TRUSTED_CONTAINMENT_PRODUCERS_V1_37.some(
-      ({ publicKeyPem }) => publicKeyPem !== containmentPublicKeyPem,
-    )
-  ) {
-    fail("V137_PROOF_LOCAL_MANAGED_PRODUCER_KEY")
-  }
+  const containmentTrustedProducers =
+    createRuntimeEvidenceTrustedContainmentProducersV137(containmentPublicKeyPem)
   const authorityKeyId = `proof-local:authority-key:${randomUUID()}`
   const receiptKeyId = `proof-local:semantic-receipt-key:${randomUUID()}`
   const authorityPath = path.join(proofRoot, "authority.json")
@@ -1072,10 +1075,11 @@ export const runProofLocalRuntimeAuthority = async (input: {
           issuedAt,
           validUntil,
           producerPrivateKey: containmentPrivateKey,
+          trustedProducers: containmentTrustedProducers,
           side,
         })
         const imported = await importVerifiedRuntimeEvidenceAttestation(pool, {
-          mode: "production",
+          mode: "proof-local",
           attestation: {
             ...fixture.payload,
             signatureBase64: sign(
@@ -1086,6 +1090,7 @@ export const runProofLocalRuntimeAuthority = async (input: {
           },
           evidenceBytes: fixture.evidenceBytes,
           verificationInstant: now.toISOString(),
+          trustedProducers: containmentTrustedProducers,
         })
         certificates[side] = {
           certificateId: imported.certificate.certificateId,
@@ -1116,7 +1121,7 @@ export const runProofLocalRuntimeAuthority = async (input: {
       containerImage: V137_TYPESCRIPT_LINUX_IMAGE,
       pythonContainerImage: V137_PYTHON_LINUX_IMAGE,
       wasmtimeContainerImage: V137_WASMTIME_LINUX_IMAGE,
-      wasmtimeExecutablePath: `${WASMTIME_DIRECTORY}/wasmtime`,
+      wasmtimeExecutablePath,
       semanticReceiptSecret: randomUUID(),
       deploymentLaneRegistryId: registry.registryId,
       resolveDeploymentLaneIdentity:
@@ -1200,7 +1205,7 @@ export const runProofLocalRuntimeAuthority = async (input: {
         stdio: ["ignore", "pipe", "pipe"],
         env: {
           ...process.env,
-          PATH: `${WASMTIME_DIRECTORY}:/usr/local/go/bin:${process.env.PATH ?? ""}`,
+          PATH: `${path.dirname(wasmtimeExecutablePath)}:/usr/local/go/bin:${process.env.PATH ?? ""}`,
           RUNTIME_SERVICE_HOST: "127.0.0.1",
           RUNTIME_SERVICE_PORT: String(port),
           STRATEGY_EXECUTION_ADAPTER: "container-subprocess",
@@ -1208,7 +1213,7 @@ export const runProofLocalRuntimeAuthority = async (input: {
             V137_TYPESCRIPT_LINUX_IMAGE,
           COWARDS_RUNTIME_PYTHON_CONTAINER_IMAGE: V137_PYTHON_LINUX_IMAGE,
           COWARDS_RUNTIME_WASMTIME_CONTAINER_IMAGE: V137_WASMTIME_LINUX_IMAGE,
-          COWARDS_RUNTIME_WASMTIME_EXECUTABLE_PATH: `${WASMTIME_DIRECTORY}/wasmtime`,
+          COWARDS_RUNTIME_WASMTIME_EXECUTABLE_PATH: wasmtimeExecutablePath,
           COWARDS_RUNTIME_SERVICE_SEMANTIC_RECEIPT_SECRET: randomUUID(),
           COWARDS_RUNTIME_DEPLOYMENT_LANE_REGISTRY: registryPath,
           COWARDS_RUNTIME_EVIDENCE_AUTHORITY_BUNDLE_PATH: authorityPath,
@@ -1224,6 +1229,12 @@ export const runProofLocalRuntimeAuthority = async (input: {
           COWARDS_RUNTIME_V118_RECEIPT_KEY_ID: receiptKeyId,
           COWARDS_RUNTIME_V118_RECEIPT_PRIVATE_KEY_PATH: receiptPrivatePath,
           COWARDS_RUNTIME_SERVICE_PRIVATE_ARTIFACT_TOKEN: serviceToken,
+          ...(input.providerValidationSecret
+            ? {
+                COWARDS_PROVIDER_VALIDATION_SECRET:
+                  input.providerValidationSecret,
+              }
+            : {}),
         },
       },
     )
@@ -1283,7 +1294,7 @@ export const runProofLocalRuntimeAuthority = async (input: {
       })),
       executions,
     }
-    return {
+    const report: ProofLocalActivationReport = {
       schemaVersion: PROOF_SCHEMA,
       status: "passed",
       authority: {
@@ -1332,6 +1343,22 @@ export const runProofLocalRuntimeAuthority = async (input: {
       executions,
       proofRootSha256: canonicalHash(reportSeed as unknown as JsonValue),
     }
+    await input.whileActive?.({
+      runtimeServiceUrl: `http://127.0.0.1:${port}`,
+      environment: Object.freeze({
+        DATABASE_URL: proofDatabaseUrl.toString(),
+        COWARDS_RUNTIME_SERVICE_URL: `http://127.0.0.1:${port}`,
+        COWARDS_RUNTIME_DEPLOYMENT_LANE_REGISTRY: registryPath,
+        COWARDS_RUNTIME_EVIDENCE_AUTHORITY_BUNDLE_PATH: authorityPath,
+        COWARDS_RUNTIME_EVIDENCE_AUTHORITY_PUBLIC_KEY_PATH: authorityPublicPath,
+        COWARDS_RUNTIME_EVIDENCE_AUTHORITY_HIGH_WATER_PATH: authorityHighWaterPath,
+        COWARDS_RUNTIME_EVIDENCE_AUTHORITY_MIN_GENERATION: prepared.generation,
+        COWARDS_RUNTIME_EVIDENCE_AUTHORITY_MIN_BUNDLE_HASH: prepared.payloadSha256,
+        COWARDS_RUNTIME_EVIDENCE_AUTHORITY_BOOTSTRAP: "1",
+      }),
+      report,
+    })
+    return report
   } finally {
     if (child !== undefined) await stopOwnedService(child)
     await pool.end()

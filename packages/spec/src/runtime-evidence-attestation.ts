@@ -13,7 +13,6 @@ import {
   type ExecutableLaneCertificateKind,
   type ExecutableLaneIdentity,
 } from "./runtime-evidence.js"
-import { RUNTIME_EVIDENCE_TRUSTED_CONTAINMENT_PRODUCERS_V1_37 } from "./runtime-containment-trusted-producers-v1-37.js"
 
 const SHA256_PATTERN = /^[0-9a-f]{64}$/u
 const PAYLOAD_DOMAIN = "cowards-game:runtime-evidence-attestation:v1"
@@ -56,7 +55,7 @@ export const RUNTIME_EVIDENCE_GRAPH_NODE_KINDS = Object.freeze([
 
 export type RuntimeEvidenceGraphNodeKind =
   (typeof RUNTIME_EVIDENCE_GRAPH_NODE_KINDS)[number]
-export type RuntimeEvidenceVerificationMode = "production" | "fixture"
+export type RuntimeEvidenceVerificationMode = "production" | "proof-local" | "fixture"
 export type RuntimeEvidenceTrustDomain = "production" | "fixture"
 export type RuntimeEvidenceBytes = Readonly<Record<string, Uint8Array>>
 
@@ -77,7 +76,7 @@ export interface RuntimeEvidenceTrustedProducer {
 }
 
 export const RUNTIME_EVIDENCE_TRUSTED_PRODUCERS: readonly RuntimeEvidenceTrustedProducer[] =
-  RUNTIME_EVIDENCE_TRUSTED_CONTAINMENT_PRODUCERS_V1_37
+  Object.freeze([])
 
 export interface RuntimeEvidenceGraphNode {
   nodeId: string
@@ -644,7 +643,11 @@ const cloneIdentity = (
 export const verifyRuntimeEvidenceAttestation = (
   input: VerifyRuntimeEvidenceAttestationInput,
 ): Readonly<VerifiedRuntimeEvidenceAttestation> => {
-  if (input.mode !== "production" && input.mode !== "fixture") {
+  if (
+    input.mode !== "production" &&
+    input.mode !== "proof-local" &&
+    input.mode !== "fixture"
+  ) {
     fail("Runtime evidence verification mode is invalid.")
   }
   const attestation = input.attestation

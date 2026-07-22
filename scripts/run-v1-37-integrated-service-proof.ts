@@ -750,7 +750,14 @@ export const runV137Command = (
     child.once("close", (code, signal) => {
       clearTimeout(timeout)
       if (code !== 0 || signal !== null) {
-        reject(new TypeError(`V137_SERVICE_PROOF_COMMAND_FAILED:${command.id}`))
+        const diagnostic = Buffer.concat(stderr)
+          .toString("utf8")
+          .match(/V137_[A-Z0-9_]+/u)?.[0]
+        reject(
+          new TypeError(
+            `V137_SERVICE_PROOF_COMMAND_FAILED:${command.id}${diagnostic === undefined ? "" : `:${diagnostic}`}`,
+          ),
+        )
         return
       }
       resolve(
@@ -843,6 +850,7 @@ const V137_SERVICE_INPUT_FILES = Object.freeze([
   "scripts/run-v1-37-integrated-service-proof.ts",
   "scripts/activate-v1-37-proof-local-runtime-authority.ts",
   "scripts/run-v1-37-real-language-lane.ts",
+  "scripts/lib/v1-37-pinned-wasmtime.ts",
   "scripts/lib/v1-37-integrated-proof-manifest.ts",
   "scripts/lib/v1-37-restricted-evidence-store.ts",
   ".planning/artifacts/v1.37-observation-v1.19-language-conformance-typescript.json",
@@ -1239,7 +1247,14 @@ const runCapturedCommand = (
         return
       }
       if (code !== 0 || signal !== null) {
-        reject(new TypeError(`V137_SERVICE_PROOF_COMMAND_FAILED:${command.id}`))
+        const diagnostic = Buffer.concat(stderr)
+          .toString("utf8")
+          .match(/V137_[A-Z0-9_]+/u)?.[0]
+        reject(
+          new TypeError(
+            `V137_SERVICE_PROOF_COMMAND_FAILED:${command.id}${diagnostic === undefined ? "" : `:${diagnostic}`}`,
+          ),
+        )
         return
       }
       const stdoutBytes = Buffer.concat(stdout)
