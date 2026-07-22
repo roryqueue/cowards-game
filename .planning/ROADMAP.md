@@ -497,7 +497,7 @@ Plans:
 - [x] 261-02-PLAN.md — Add mutation-tested release privacy and drift guards to the default boundary chain.
 - [x] 261-03-PLAN.md — Execute the real four-language production-shaped service topology and typed failure proof.
 - [x] 261-04-PLAN.md — Serialize and prove exact audit compatibility, persistence, rollback, recomputation, retry, and immutable history.
-- [ ] 261-05-PLAN.md — Own and validate live desktop/mobile topology, proof-data handoff, network privacy, and replay-board realism.
+- [x] 261-05-PLAN.md — Own and validate live desktop/mobile topology, proof-data handoff, network privacy, and replay-board realism.
 - [ ] 261-06-PLAN.md — Generate the deterministic public-safe integrated service proof.
 - [ ] 261-07-PLAN.md — Produce the exact non-circular 48+7+1 prearchive requirement proof.
 - [ ] 261-08-PLAN.md — Render the truthful 56-traced/55-passed release-ready milestone audit.
