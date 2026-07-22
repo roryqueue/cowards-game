@@ -55,6 +55,16 @@ const PREREQUISITE_PATHS = [
   "package.json",
 ] as const
 
+export const V137_RELEASE_ARCHIVE_BLOB_PATHS = [
+  ".planning/ROADMAP.md",
+  ".planning/REQUIREMENTS.md",
+  ".planning/v1.37-MILESTONE-AUDIT.md",
+  ".planning/artifacts/v1.37-prearchive-proof.json",
+  ".planning/artifacts/v1.37-milestone-audit.json",
+  ".planning/artifacts/v1.37-strategy-evaluation-foundation.json",
+] as const
+type ArchiveBlobSha256 = Record<(typeof V137_RELEASE_ARCHIVE_BLOB_PATHS)[number], `sha256:${string}`>
+
 type Hashes = {
   prearchiveProofSha256: `sha256:${string}`
   milestoneAuditSha256: `sha256:${string}`
@@ -91,6 +101,7 @@ export interface V137ReleaseReadiness {
     finalProof: `sha256:${string}`
     milestoneAudit: `sha256:${string}`
   }
+  archiveBlobSha256: ArchiveBlobSha256
 }
 
 const readJson = (repoRoot: string, file: string): unknown =>
@@ -156,6 +167,9 @@ export const createV137ReleaseReadinessFixture = (): V137ReleaseReadiness => ({
     finalProof: digest("prearchive"),
     milestoneAudit: digest("audit"),
   },
+  archiveBlobSha256: Object.fromEntries(
+    V137_RELEASE_ARCHIVE_BLOB_PATHS.map((file) => [file, digest(`fixture:${file}`)]),
+  ) as ArchiveBlobSha256,
 })
 
 export const validateV137ReleaseReadiness = (
@@ -163,6 +177,7 @@ export const validateV137ReleaseReadiness = (
 ): V137ReleaseReadiness => {
   const keys = [
     "guards",
+    "archiveBlobSha256",
     "milestone",
     "phase",
     "prerequisiteHashes",
@@ -255,6 +270,10 @@ export const validateV137ReleaseReadiness = (
       readiness.prerequisiteHashes.milestoneAuditSha256
   )
     fail("V137_RELEASE_READINESS_TAG_MESSAGE_INVALID")
+  if (
+    !exactKeys(readiness.archiveBlobSha256, V137_RELEASE_ARCHIVE_BLOB_PATHS) ||
+    !Object.values(readiness.archiveBlobSha256).every((hash) => SHA.test(hash))
+  ) fail("V137_RELEASE_READINESS_ARCHIVE_MANIFEST_INVALID")
   assertPublicOutputLeakSafe(readiness, "v1.37 release readiness")
   return readiness
 }
@@ -341,6 +360,9 @@ export const generateV137ReleaseReadiness = (
       finalProof: prerequisiteHashes.prearchiveProofSha256,
       milestoneAudit: prerequisiteHashes.milestoneAuditSha256,
     },
+    archiveBlobSha256: Object.fromEntries(
+      V137_RELEASE_ARCHIVE_BLOB_PATHS.map((file) => [file, hashFile(repoRoot, file)]),
+    ) as ArchiveBlobSha256,
   })
 }
 

@@ -33,6 +33,14 @@ describe("v1.37 non-circular release readiness", () => {
       strategyMilestoneAuthorized: false,
       evidenceRetentionDays: 90,
     })
+    expect(Object.keys(readiness.archiveBlobSha256)).toEqual([
+      ".planning/ROADMAP.md",
+      ".planning/REQUIREMENTS.md",
+      ".planning/v1.37-MILESTONE-AUDIT.md",
+      ".planning/artifacts/v1.37-prearchive-proof.json",
+      ".planning/artifacts/v1.37-milestone-audit.json",
+      ".planning/artifacts/v1.37-strategy-evaluation-foundation.json",
+    ])
     expect(renderV137ReleaseReadinessJson(readiness)).not.toMatch(
       /archiveCommit|tagObject|tagSha|futureGit|postgresql:\/\//i,
     )
@@ -65,6 +73,16 @@ describe("v1.37 non-circular release readiness", () => {
     expect(() =>
       validateV137ReleaseReadiness({ ...readiness, archiveCommit: "deadbeef" }),
     ).toThrow("V137_RELEASE_READINESS_SHAPE")
+    const { archiveBlobSha256: _archiveBlobSha256, ...withoutManifest } = readiness
+    expect(() => validateV137ReleaseReadiness(withoutManifest)).toThrow(
+      "V137_RELEASE_READINESS_SHAPE",
+    )
+    expect(() =>
+      validateV137ReleaseReadiness({
+        ...readiness,
+        archiveBlobSha256: { ...readiness.archiveBlobSha256, "unknown.json": "sha256:" + "a".repeat(64) },
+      }),
+    ).toThrow("V137_RELEASE_READINESS_ARCHIVE_MANIFEST_INVALID")
     expect(() =>
       validateV137ReleaseReadiness({
         ...readiness,

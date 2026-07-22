@@ -4,13 +4,12 @@ import { createHash } from "node:crypto"
 import { existsSync, readFileSync, realpathSync } from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
+import { V137_RELEASE_ARCHIVE_BLOB_PATHS } from "./evaluate-v1-37-release-readiness.js"
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
 const readinessPath = ".planning/artifacts/v1.37-release-readiness.json"
 const archivePaths = [
-  ".planning/ROADMAP.md", ".planning/REQUIREMENTS.md",
-  ".planning/v1.37-MILESTONE-AUDIT.md", ".planning/artifacts/v1.37-prearchive-proof.json",
-  ".planning/artifacts/v1.37-milestone-audit.json", ".planning/artifacts/v1.37-strategy-evaluation-foundation.json",
+  ...V137_RELEASE_ARCHIVE_BLOB_PATHS,
   readinessPath,
 ] as const
 const protectedArchivePaths = [
@@ -20,6 +19,7 @@ const protectedArchivePaths = [
 export type V137ReleaseTagFinding = { code: string; path?: string }
 export type V137ReleaseTagResult = { mode: "pretag-archive" | "post-tag"; proof08: boolean; findings: readonly V137ReleaseTagFinding[] }
 const sha = (value: Buffer | string) => `sha256:${createHash("sha256").update(value).digest("hex")}`
+const SHA = /^sha256:[0-9a-f]{64}$/u
 const git = (repo: string, args: string[]) => execFileSync("git", args, { cwd: repo, encoding: "utf8" }).trim()
 const add = (findings: V137ReleaseTagFinding[], code: string, file?: string) => findings.push(file ? { code, path: file } : { code })
 const blob = (repo: string, commit: string, file: string): Buffer | undefined => {
@@ -37,8 +37,21 @@ const verifyArchive = (repo: string, commit: string, findings: V137ReleaseTagFin
   const readiness = readReadiness(repo, commit)
   if (!readiness || readiness.releaseState !== "release-ready" || (readiness.releaseOperation as Record<string, unknown> | undefined)?.completion !== false) add(findings, "READINESS_INVALID")
   for (const file of archivePaths) if (!blob(repo, commit, file)) add(findings, "ARCHIVE_PATH_MISSING", file)
-  const hashes = readiness?.archiveBlobSha256 as Record<string, unknown> | undefined
-  if (hashes) for (const [file, expected] of Object.entries(hashes)) { const bytes = blob(repo, commit, file); if (!bytes || sha(bytes) !== expected) add(findings, "ARCHIVE_BLOB_MISMATCH", file) }
+  const hashes = readiness?.archiveBlobSha256
+  if (hashes === null || typeof hashes !== "object" || Array.isArray(hashes)) {
+    add(findings, "ARCHIVE_BLOB_MANIFEST_MISSING")
+  } else {
+    const entries = hashes as Record<string, unknown>
+    const keys = Object.keys(entries).sort()
+    const expectedKeys = [...V137_RELEASE_ARCHIVE_BLOB_PATHS].sort()
+    if (keys.length !== expectedKeys.length || keys.some((file, index) => file !== expectedKeys[index]) || !Object.values(entries).every((value) => typeof value === "string" && SHA.test(value))) {
+      add(findings, "ARCHIVE_BLOB_MANIFEST_INVALID")
+    } else for (const file of V137_RELEASE_ARCHIVE_BLOB_PATHS) {
+      const bytes = blob(repo, commit, file)
+      if (!bytes) add(findings, "ARCHIVE_BLOB_MISSING", file)
+      else if (sha(bytes) !== entries[file]) add(findings, "ARCHIVE_BLOB_MISMATCH", file)
+    }
+  }
   // A synthetic fixture may have a root archive commit. A real archive retains
   // history, but root commits have no protected-path delta to inspect.
   try { const changedPaths = git(repo, ["diff-tree", "--root", "--no-commit-id", "--name-only", "-r", commit]).split("\n"); if (changedPaths.some((file) => protectedArchivePaths.includes(file as typeof protectedArchivePaths[number]))) add(findings, "PROTECTED_PATH_INCLUDED") } catch { add(findings, "ARCHIVE_COMMIT_INVALID") }
