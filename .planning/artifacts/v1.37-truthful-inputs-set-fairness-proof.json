@@ -115,7 +115,7 @@
     },
     {
       "path": ".planning/artifacts/v1.37-kernel-integrity-proof.json",
-      "sha256": "sha256:6fca287169f2fb12ce5521a0e60a17eb7716e77d6039ea5d7d7be8880048e9c1"
+      "sha256": "sha256:13b4eaead59682e95469eaa69e146e6b6ec943f4748825e5c29ace33e6046be0"
     },
     {
       "path": ".planning/artifacts/v1.37-observation-v1.19-activation-transaction-proof.json",
