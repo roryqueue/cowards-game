@@ -2069,10 +2069,12 @@ if (isDirectRun) {
     )
   }
 
-  void main().catch((error: unknown) => {
+  try {
+    await main()
+  } catch (error: unknown) {
     process.stderr.write(
       `${error instanceof Error ? error.message : "V137_SERVICE_PROOF_FAILED"}\n`,
     )
     process.exitCode = 1
-  })
+  }
 }
