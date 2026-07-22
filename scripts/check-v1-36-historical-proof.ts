@@ -232,8 +232,10 @@ const errors = [
   ...checkV136CompetitionBoundaryArtifacts(repo, { now, requireServiceProof: true }),
   ...checkV136FinalProofArtifacts(repo, { now, requireServiceProof: true, boundaryOptions: { now, requireServiceProof: true } }),
 ]
-process.stdout.write(JSON.stringify({ ok: errors.length === 0, errorCount: errors.length }))
-process.exitCode = errors.length === 0 ? 0 : 1
+process.stdout.write(
+  JSON.stringify({ ok: errors.length === 0, errorCount: errors.length }),
+  () => process.exit(errors.length === 0 ? 0 : 1),
+)
 `
 
 const runArchivedValidators = (
