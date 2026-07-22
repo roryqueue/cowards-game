@@ -1,0 +1,27 @@
+#!/usr/bin/env -S pnpm exec tsx
+import path from "node:path"
+import {
+  checkV137RollbackProof,
+  writeV137RollbackProof,
+} from "./run-v1-37-rollback-proof.js"
+
+const fail = (code: string): never => {
+  throw new TypeError(code)
+}
+
+const main = async (): Promise<void> => {
+  const mode = process.argv[2]
+  if (mode !== "--write" && mode !== "--check") fail("V137_ROLLBACK_MODE_INVALID")
+  const restrictedRoot = process.env.COWARDS_V1_37_RESTRICTED_EVIDENCE_ROOT
+  if (!restrictedRoot) fail("V137_RESTRICTED_EVIDENCE_ROOT_REQUIRED")
+  const repoRoot = path.resolve(import.meta.dirname, "..")
+  const receipt = mode === "--write"
+    ? (await writeV137RollbackProof(repoRoot, restrictedRoot)).receipt
+    : checkV137RollbackProof(repoRoot, restrictedRoot)
+  process.stdout.write(`${JSON.stringify({ status: receipt.status, scenarioCount: receipt.scenarios.length, aggregateRootSha256: receipt.aggregateRootSha256 })}\n`)
+}
+
+void main().catch((error: unknown) => {
+  process.stderr.write(`${error instanceof Error ? error.message : "V137_ROLLBACK_FAILED"}\n`)
+  process.exitCode = 1
+})

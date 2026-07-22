@@ -10,7 +10,6 @@ import {
   writeFileSync,
 } from "node:fs"
 import path from "node:path"
-import { fileURLToPath } from "node:url"
 import { checkV136HistoricalProof } from "./check-v1-36-historical-proof.js"
 import { runV137AuditReproductionGate } from "./check-v1-37-audit-reproduction.js"
 import {
@@ -100,6 +99,7 @@ const scenarioKeys = [
 const controlKeys = ["inputRootSha256", "receipt", "records", "schemaVersion"] as const
 const inputPaths = [
   "scripts/run-v1-37-rollback-proof.ts",
+  "scripts/run-v1-37-rollback-proof-cli.ts",
   "scripts/run-v1-37-rollback-proof.test.ts",
   "scripts/check-v1-37-audit-reproduction.ts",
   "scripts/check-v1-37-audit-reproduction.test.ts",
@@ -427,22 +427,4 @@ export const checkV137RollbackProof = (
     if (!access.split("\n").some((line) => line.includes(`\"action\":\"write\"`) && line.includes(record.reference.sha256))) fail("V137_ROLLBACK_WRITE_RECORD_MISSING")
   })
   return receipt
-}
-
-const isMain = process.argv[1] !== undefined && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)
-if (isMain) {
-  const mode = process.argv.slice(2)
-  try {
-    if (mode.length !== 1 || !["--write", "--check"].includes(mode[0]!)) fail("V137_ROLLBACK_MODE_INVALID")
-    const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
-    const restrictedRoot = process.env.COWARDS_V1_37_RESTRICTED_EVIDENCE_ROOT
-    if (!restrictedRoot) fail("V137_RESTRICTED_EVIDENCE_ROOT_REQUIRED")
-    const receipt = mode[0] === "--write"
-      ? (await writeV137RollbackProof(repoRoot, restrictedRoot)).receipt
-      : checkV137RollbackProof(repoRoot, restrictedRoot)
-    process.stdout.write(`${JSON.stringify({ status: receipt.status, scenarioCount: receipt.scenarios.length, aggregateRootSha256: receipt.aggregateRootSha256 })}\n`)
-  } catch (error) {
-    process.stderr.write(`${error instanceof Error ? error.message : "V137_ROLLBACK_FAILED"}\n`)
-    process.exitCode = 1
-  }
 }
