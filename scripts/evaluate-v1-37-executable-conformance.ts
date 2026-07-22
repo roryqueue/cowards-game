@@ -2,7 +2,7 @@
 import { Buffer } from "node:buffer"
 import { createHash } from "node:crypto"
 import { spawnSync } from "node:child_process"
-import { readFileSync, renameSync, writeFileSync } from "node:fs"
+import { readFileSync, realpathSync, renameSync, writeFileSync } from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 
@@ -754,4 +754,7 @@ const main = (): void => {
   }
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) main()
+const isDirectRun = (): boolean => {
+  try { return !!process.argv[1] && realpathSync(path.resolve(process.argv[1])) === realpathSync(fileURLToPath(import.meta.url)) } catch { return false }
+}
+if (isDirectRun()) main()

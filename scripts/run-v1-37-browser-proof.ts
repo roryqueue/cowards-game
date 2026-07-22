@@ -1,9 +1,10 @@
 #!/usr/bin/env -S pnpm exec tsx
 import { createHash } from "node:crypto"
 import { spawnSync } from "node:child_process"
-import { existsSync, mkdirSync, readFileSync, renameSync, unlinkSync, writeFileSync } from "node:fs"
+import { existsSync, mkdirSync, readFileSync, realpathSync, renameSync, unlinkSync, writeFileSync } from "node:fs"
 import { createServer } from "node:net"
 import path from "node:path"
+import { fileURLToPath } from "node:url"
 import {
   createV137RestrictedEvidenceStore,
   v137RestrictedEvidenceObjectRelativePath,
@@ -162,7 +163,9 @@ export const writeV137BrowserProof = async (repoRoot: string, rawEnvironment: No
     if (existsSync(observationsPath)) unlinkSync(observationsPath)
   }
 }
-if (process.argv[1] && path.basename(process.argv[1]).startsWith("run-v1-37-browser-proof.")) {
-  const root = path.resolve(import.meta.dirname, ".."); const mode = process.argv[2]
+const isDirectRun = (): boolean => { try { return !!process.argv[1] && realpathSync(path.resolve(process.argv[1])) === realpathSync(fileURLToPath(import.meta.url)) } catch { return false } }
+if (isDirectRun()) {
+  const root = path.resolve(import.meta.dirname, ".."); const args = process.argv.slice(2); const mode = args[0]
+  if (args.length !== 1 || !["--write", "--check"].includes(mode ?? "")) fail("V137_BROWSER_PROOF_MODE_INVALID")
   void (async () => { try { const result = mode === "--write" ? await writeV137BrowserProof(root) : mode === "--check" ? checkV137BrowserProof(root, process.env.COWARDS_V1_37_RESTRICTED_EVIDENCE_ROOT ?? "") : fail("V137_BROWSER_PROOF_MODE_INVALID"); process.stdout.write(`${JSON.stringify(mode === "--write" ? { status: result.receipt.status, browserProofReceiptRef: result.receipt.browserProofReceiptRef } : { status: result.status, browserProofReceiptRef: result.browserProofReceiptRef })}\n`) } catch (error) { process.stderr.write(`${error instanceof Error ? error.message : "V137_BROWSER_PROOF_FAILED"}\n`); process.exitCode = 1 } })()
 }

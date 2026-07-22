@@ -2051,14 +2051,14 @@ const isDirectRun = (): boolean => {
 
 if (isDirectRun()) {
   const main = async (): Promise<void> => {
-    if (process.env.COWARDS_V1_37_REQUIRE_INTEGRATED_PROOF !== "1") {
-      fail("V137_SERVICE_PROOF_STRICT_FLAG_REQUIRED")
-    }
-    const repoRoot = path.resolve(import.meta.dirname, "..")
     const mode = process.argv.slice(2)
     if (mode.length !== 1 || !["--write", "--check"].includes(mode[0]!)) {
       fail("V137_SERVICE_PROOF_MODE_INVALID")
     }
+    if (process.env.COWARDS_V1_37_REQUIRE_INTEGRATED_PROOF !== "1") {
+      fail("V137_SERVICE_PROOF_STRICT_FLAG_REQUIRED")
+    }
+    const repoRoot = path.resolve(import.meta.dirname, "..")
     if (mode[0] === "--write") {
       const control = await writeV137IntegratedServiceProof(repoRoot)
       process.stdout.write(

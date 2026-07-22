@@ -46,16 +46,23 @@ describe("v1.37 CLI dispatch isolation", () => {
     const aggregate = runTsx(
       "scripts/evaluate-v1-37-integrated-service-proof.ts",
       ["--write", "--check"],
-      { COWARDS_V1_37_RESTRICTED_EVIDENCE_ROOT: tmpdir() },
     )
     expect(aggregate.status).toBe(1)
     expect(aggregate.stderr).toContain("V137_INTEGRATED_PROOF_MODE_INVALID")
+    for (const [script, code] of [["scripts/run-v1-37-rollback-proof-cli.ts", "V137_ROLLBACK_MODE_INVALID"], ["scripts/run-v1-37-browser-proof.ts", "V137_BROWSER_PROOF_MODE_INVALID"]] as const) {
+      const result = runTsx(script, ["--write", "--check"])
+      expect(result.status).toBe(1)
+      expect(result.stderr).toContain(code)
+    }
   }, 30_000)
 
   it("never dispatches imported service or evaluator modules from parent argv flags", () => {
     for (const target of [
       "scripts/run-v1-37-integrated-service-proof.ts",
       "scripts/evaluate-v1-37-integrated-service-proof.ts",
+      "scripts/evaluate-v1-37-executable-conformance.ts",
+      "scripts/run-v1-37-rollback-proof-cli.ts",
+      "scripts/run-v1-37-browser-proof.ts",
     ]) {
       const result = importFromParent(target, ["--write"])
       expect(result.status, result.stderr).toBe(0)

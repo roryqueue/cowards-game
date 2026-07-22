@@ -148,9 +148,10 @@ const isDirectRun = (): boolean => {
 if (isDirectRun()) {
   const mode = process.argv.slice(2)
   try {
+    if (mode.length !== 1 || !["--write", "--check"].includes(mode[0]!)) fail("V137_INTEGRATED_PROOF_MODE_INVALID")
     const restrictedRoot = process.env.COWARDS_V1_37_RESTRICTED_EVIDENCE_ROOT
     if (!restrictedRoot) fail("V137_INTEGRATED_PROOF_RESTRICTED_ROOT_REQUIRED")
-    const proof = mode.length === 1 && mode[0] === "--write" ? writeV137IntegratedProofArtifacts(root, restrictedRoot) : mode.length === 1 && mode[0] === "--check" ? checkV137IntegratedProofArtifacts(root, restrictedRoot) : fail("V137_INTEGRATED_PROOF_MODE_INVALID")
+    const proof = mode[0] === "--write" ? writeV137IntegratedProofArtifacts(root, restrictedRoot) : checkV137IntegratedProofArtifacts(root, restrictedRoot)
     process.stdout.write(`${JSON.stringify({ status: proof.status, inputRootSha256: proof.inputRootSha256 })}\n`)
   } catch (error) { process.stderr.write(`${error instanceof Error ? error.message : "V137_INTEGRATED_PROOF_FAILED"}\n`); process.exitCode = 1 }
 }
