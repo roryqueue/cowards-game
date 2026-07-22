@@ -66,6 +66,8 @@
     "v1.37:phase260-proof:check": "pnpm exec tsx scripts/evaluate-v1-37-truthful-inputs-set-fairness.ts --check",
     "v1.37:integrated-service-proof:write": "pnpm exec tsx scripts/run-v1-37-integrated-service-proof.ts --write",
     "v1.37:integrated-service-proof:check": "pnpm exec tsx scripts/run-v1-37-integrated-service-proof.ts --check",
+    "v1.37:rollback-proof:write": "pnpm exec tsx scripts/run-v1-37-rollback-proof.ts --write",
+    "v1.37:rollback-proof:check": "pnpm exec tsx scripts/run-v1-37-rollback-proof.ts --check",
     "v1.37:release-boundaries:source-check": "pnpm exec tsx scripts/check-v1-37-release-boundaries.ts --source-fixture",
     "v1.37:release-boundaries:check": "pnpm exec tsx scripts/check-v1-37-release-boundaries.ts --strict-release",
     "wasm-wasi:beta-evaluate": "pnpm exec tsx scripts/evaluate-v1-23-wasm-wasi-beta.ts",
