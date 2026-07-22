@@ -222,7 +222,7 @@
       },
       {
         "path": "apps/runtime-service/src/execute-match.ts",
-        "sha256": "db8cbc6e65591e1b2f68acd4a0152654ef3aef4084458a0792220c26652c5443"
+        "sha256": "25a9946a776880ec4ad15f194adb664cd58fdc0ee5cedbce8934bb231c08bd4e"
       },
       {
         "path": "apps/runtime-service/src/semantic-receipt.ts",
@@ -284,7 +284,7 @@
   },
   "browser": {
     "path": ".planning/artifacts/v1.37-phase-257-browser-playwright.json",
-    "sha256": "e2003d0ca92da423b730dd4e7b6d97d052a71340d8ee809dc9e28e433d648db3"
+    "sha256": "fdad2c77525a9b92ca043f83bbdc7a73f96c29c5eb59c7237eeeb0a476106b01"
   },
   "workingCopy": {
     "schemaVersion": "v1.37-working-copy-preservation-v1",
@@ -293,16 +293,16 @@
         "path": ".planning/config.json",
         "beforeBytesSha256": "a9502647c42da6e83564e56e35833a66d2daad6704f2ac2a2d98cf12cc953f7b",
         "afterBytesSha256": "a9502647c42da6e83564e56e35833a66d2daad6704f2ac2a2d98cf12cc953f7b",
-        "beforeBinaryDiffSha256": "1372d196c86ee3907fcac07a7075b06814f2eaedf328314a31641713c71e6765",
-        "afterBinaryDiffSha256": "1372d196c86ee3907fcac07a7075b06814f2eaedf328314a31641713c71e6765",
+        "beforeBinaryDiffSha256": "ec4fef76f2375980df2d8e7628b4a7805d9dd8d9d5d8fea923f967d4acd5b3b2",
+        "afterBinaryDiffSha256": "ec4fef76f2375980df2d8e7628b4a7805d9dd8d9d5d8fea923f967d4acd5b3b2",
         "preserved": true
       },
       {
         "path": "CowardsGameSpec_Full_Consolidated_v1.md",
         "beforeBytesSha256": "01b0a95c79e2ba5e8a089abe7106856e7f081bb10193d5ab8e86171f6ee0fa46",
         "afterBytesSha256": "01b0a95c79e2ba5e8a089abe7106856e7f081bb10193d5ab8e86171f6ee0fa46",
-        "beforeBinaryDiffSha256": "ae29a7dbf894437668f880f7775904eeb580b0e82c99a91cba0dbf9e611bcd2d",
-        "afterBinaryDiffSha256": "ae29a7dbf894437668f880f7775904eeb580b0e82c99a91cba0dbf9e611bcd2d",
+        "beforeBinaryDiffSha256": "374f10c1706644fb34ba8a25bfadd64974f57775656cf6339ee36e65da30c8a3",
+        "afterBinaryDiffSha256": "374f10c1706644fb34ba8a25bfadd64974f57775656cf6339ee36e65da30c8a3",
         "preserved": true
       }
     ],
@@ -538,7 +538,7 @@
       "id": "phase257-browser-playwright",
       "status": "passed",
       "inputSha256s": [
-        "e2003d0ca92da423b730dd4e7b6d97d052a71340d8ee809dc9e28e433d648db3"
+        "fdad2c77525a9b92ca043f83bbdc7a73f96c29c5eb59c7237eeeb0a476106b01"
       ]
     },
     {
