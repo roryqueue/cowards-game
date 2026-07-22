@@ -235,6 +235,7 @@ const capturePath = (
   const rawBytes = readFileSync(absolutePath)
   const unstaged = runGit(repoRoot, [
     "diff",
+    "--abbrev=7",
     "--binary",
     "--no-ext-diff",
     "--",
@@ -242,6 +243,7 @@ const capturePath = (
   ]).stdout
   const staged = runGit(repoRoot, [
     "diff",
+    "--abbrev=7",
     "--binary",
     "--no-ext-diff",
     "--cached",
