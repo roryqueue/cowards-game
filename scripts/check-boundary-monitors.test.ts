@@ -386,7 +386,7 @@ describe("boundary drift monitors", () => {
     ).toBeLessThan(boundary.indexOf("pnpm v1.37:phase260-proof:check"))
   })
 
-  it("serializes source-only v1.37 release boundaries exactly once without premature strict mode", () => {
+  it("serializes strict v1.37 release boundaries exactly once after lower pure checks", () => {
     expect(validateV137ReleaseBoundaryMonitorWiring()).toContain("exactly once")
     const packageJson = JSON.parse(readFileSync("package.json", "utf8")) as {
       scripts: Record<string, string>
@@ -403,17 +403,17 @@ describe("boundary drift monitors", () => {
     )
     expect(sourceCommand).not.toMatch(/--write|services:|playwright|database/iu)
     const boundary = packageJson.scripts["boundary:monitors"]!
-    expect(boundary).not.toContain("v1.37:release-boundaries:check")
-    expect(boundary).not.toContain("--strict-release")
+    expect(boundary).not.toContain("v1.37:release-boundaries:source-check")
+    expect(boundary).toContain("pnpm v1.37:release-boundaries:check")
     expect(boundary).not.toContain("check-v1-37-release-boundaries.ts --write")
     expect(
-      boundary.match(/pnpm v1\.37:release-boundaries:source-check/gu),
+      boundary.match(/pnpm v1\.37:release-boundaries:check/gu),
     ).toHaveLength(1)
     expect(boundary.indexOf("pnpm v1.37:phase260-proof:check")).toBeLessThan(
-      boundary.indexOf("pnpm v1.37:release-boundaries:source-check"),
+      boundary.indexOf("pnpm v1.37:release-boundaries:check"),
     )
     expect(
-      boundary.indexOf("pnpm v1.37:release-boundaries:source-check"),
+      boundary.indexOf("pnpm v1.37:release-boundaries:check"),
     ).toBeLessThan(
       boundary.indexOf("pnpm exec tsx scripts/check-boundary-monitors.ts"),
     )

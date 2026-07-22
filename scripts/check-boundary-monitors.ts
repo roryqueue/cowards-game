@@ -5701,24 +5701,23 @@ export const validateV137ReleaseBoundaryMonitorWiring = (): string => {
     "pnpm exec tsx scripts/check-v1-37-release-boundaries.ts --source-fixture"
   const strictCommand =
     "pnpm exec tsx scripts/check-v1-37-release-boundaries.ts --strict-release"
-  const sourceInvocation = "pnpm v1.37:release-boundaries:source-check"
+  const strictInvocation = "pnpm v1.37:release-boundaries:check"
   const boundary = packageJson.scripts["boundary:monitors"] ?? ""
   if (
     packageJson.scripts["v1.37:release-boundaries:source-check"] !==
       sourceCommand ||
     packageJson.scripts["v1.37:release-boundaries:check"] !== strictCommand ||
-    boundary.split(sourceInvocation).length !== 2 ||
-    boundary.includes("pnpm v1.37:release-boundaries:check") ||
-    boundary.includes("--strict-release") ||
+    boundary.split(strictInvocation).length !== 2 ||
+    boundary.includes("pnpm v1.37:release-boundaries:source-check") ||
     boundary.includes("check-v1-37-release-boundaries.ts --write") ||
-    boundary.indexOf(sourceInvocation) <
+    boundary.indexOf(strictInvocation) <
       boundary.indexOf("pnpm v1.37:phase260-proof:check") ||
-    boundary.indexOf(sourceInvocation) >
+    boundary.indexOf(strictInvocation) >
       boundary.indexOf("pnpm exec tsx scripts/check-boundary-monitors.ts")
   ) {
     throw new Error("v1.37 release boundary monitor wiring drifted")
   }
-  return "pure source/fixture release check is serialized exactly once; strict release remains reserved for final artifacts"
+  return "pure strict release check is serialized exactly once after all prerequisite proof checks"
 }
 
 const run = async (): Promise<number> => {

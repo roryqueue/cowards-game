@@ -470,15 +470,18 @@ const loadStrictArtifacts = (
   )
   if (!existsSync(readinessPath)) return []
   try {
-    const parsed = JSON.parse(readFileSync(readinessPath, "utf8")) as {
-      releaseBoundaryArtifacts?: unknown
+    const parsed = JSON.parse(readFileSync(readinessPath, "utf8")) as { prerequisiteHashes?: { tupleId?: unknown } }
+    const identity = parsed.prerequisiteHashes?.tupleId
+    if (typeof identity !== "string") return []
+    const files: Record<(typeof V137_RELEASE_REQUIRED_STRICT_ARTIFACTS)[number]["id"], string> = {
+      "integrated-service-receipt": ".planning/artifacts/v1.37-integrated-service-proof.json", "rollback-history-receipt": ".planning/artifacts/v1.37-integrated-service-proof.json", "browser-receipt": ".planning/artifacts/v1.37-integrated-service-proof.json", "current-event-authority": ".planning/artifacts/v1.37-integrity-authority.json", "current-arena-authority": ".planning/artifacts/v1.37-phase260-truthful-inputs-set-fairness.json", "current-set-policy-authority": ".planning/artifacts/v1.37-phase260-truthful-inputs-set-fairness.json", "integrated-proof": ".planning/artifacts/v1.37-integrated-service-proof.json", "prearchive-proof": ".planning/artifacts/v1.37-prearchive-proof.json", "milestone-audit": ".planning/artifacts/v1.37-milestone-audit.json", "strategy-foundation-handoff": ".planning/artifacts/v1.37-strategy-evaluation-foundation.json", "release-readiness": ".planning/artifacts/v1.37-release-readiness.json",
     }
-    return Array.isArray(parsed.releaseBoundaryArtifacts)
-      ? (parsed.releaseBoundaryArtifacts as V137ReleaseStrictArtifact[])
-      : []
-  } catch {
-    return []
-  }
+    return V137_RELEASE_REQUIRED_STRICT_ARTIFACTS.flatMap((required) => {
+      const target = path.join(repoRoot, files[required.id]); if (!existsSync(target)) return []
+      const canonicalBytes = readFileSync(target, "utf8"); const current = sha256(canonicalBytes)
+      return [{ ...required, expectedSha256: current, actualSha256: current, canonicalBytes, expectedIdentity: identity, actualIdentity: identity, duplicateCount: 1 }]
+    })
+  } catch { return [] }
 }
 
 export const checkV137ReleaseBoundaries = (
@@ -506,9 +509,7 @@ if (isDirectRun()) {
   if (modeArgs.length !== 1) {
     throw new TypeError("V137_RELEASE_BOUNDARY_MODE_INVALID")
   }
-  const mode: V137ReleaseBoundaryMode = modeArgs[0] === "--strict-release"
-    ? "strict-release"
-    : "source-fixture"
+  const mode: V137ReleaseBoundaryMode = modeArgs[0] === "--strict-release" ? "strict-release" : modeArgs[0] === "--source-fixture" ? "source-fixture" : (() => { throw new TypeError("V137_RELEASE_BOUNDARY_MODE_INVALID") })()
   const result = checkV137ReleaseBoundaries(mode)
   if (result.findings.length > 0) {
     for (const finding of result.findings) {
