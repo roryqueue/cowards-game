@@ -10,7 +10,7 @@ const fail = (code: string): never => {
 }
 
 const main = async (): Promise<void> => {
-  const mode = process.argv[2]
+  const mode = process.argv[1]
   if (mode !== "--write" && mode !== "--check") fail("V137_ROLLBACK_MODE_INVALID")
   const restrictedRoot = process.env.COWARDS_V1_37_RESTRICTED_EVIDENCE_ROOT
   if (!restrictedRoot) fail("V137_RESTRICTED_EVIDENCE_ROOT_REQUIRED")
