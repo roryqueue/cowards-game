@@ -1,5 +1,4 @@
 #!/usr/bin/env -S pnpm exec tsx
-import path from "node:path"
 import {
   checkV137RollbackProof,
   writeV137RollbackProof,
@@ -17,7 +16,7 @@ const main = async (): Promise<void> => {
     fail("V137_ROLLBACK_MODE_INVALID")
   const restrictedRoot = process.env.COWARDS_V1_37_RESTRICTED_EVIDENCE_ROOT
   if (!restrictedRoot) fail("V137_RESTRICTED_EVIDENCE_ROOT_REQUIRED")
-  const repoRoot = path.resolve(import.meta.dirname, "..")
+  const repoRoot = process.cwd()
   const receipt =
     mode === "--write"
       ? (await writeV137RollbackProof(repoRoot, restrictedRoot)).receipt
