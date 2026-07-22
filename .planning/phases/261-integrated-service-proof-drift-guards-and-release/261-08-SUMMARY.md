@@ -83,7 +83,16 @@ status: complete
 
 ## Deviations from Plan
 
-None - the planned package command change required the expected fail-closed refresh of rollback, browser, service, conformance, Phase 260, aggregate, and prearchive proof bindings before the audit could be written.
+### Auto-fixed Issues
+
+**1. [Rule 1 - Close-out ordering] Regenerated proof and audit after final tracking updates**
+- **Found during:** Post-completion spot-check
+- **Issue:** Updating REQUIREMENTS and ROADMAP after artifact generation changed a validated prearchive input, making the audit intentionally fail as edited.
+- **Fix:** Rechecked all lower inputs, regenerated the prearchive proof twice, regenerated the audit twice, and committed the refreshed artifacts after tracking was final.
+- **Files modified:** `.planning/artifacts/v1.37-prearchive-proof.json`, `.planning/artifacts/v1.37-milestone-audit.json`, `.planning/v1.37-MILESTONE-AUDIT.md`
+- **Committed in:** `75b37a6f`
+
+The planned package command change also required the expected fail-closed refresh of rollback, browser, service, conformance, Phase 260, aggregate, and prearchive proof bindings before the initial audit write.
 
 ## Verification
 
@@ -91,6 +100,7 @@ None - the planned package command change required the expected fail-closed refr
 - `pnpm v1.37:integrated-proof:write/check`, `pnpm v1.37:prearchive-proof:write/check`, and `pnpm v1.37:milestone-audit:write/check/check` — passed.
 - `pnpm v1.37:release-boundaries:source-check` — passed with zero strict artifacts and no boundary findings.
 - `pnpm exec tsx scripts/capture-v1-37-protected-baseline.ts --check` — verified both protected paths.
+- Post-close-out repair reran lower strict checks, prearchive write/check/check, audit write/check/check, and protected baseline verification against final tracking state.
 
 ## Known Stubs
 
