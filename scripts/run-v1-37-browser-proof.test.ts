@@ -22,10 +22,27 @@ afterEach(() => {
 })
 
 describe("v1.37 browser proof receipt", () => {
+  it("binds an owned live-web fixture complement to the current real service receipt without backend overclaim", () => {
+    const collector = readFileSync(
+      path.join(process.cwd(), "scripts/run-v1-37-browser-proof.ts"),
+      "utf8",
+    )
+    expect(collector).toContain("checkV137IntegratedServiceProof")
+    expect(collector).toContain('topology: "live-web-fixture-complement"')
+    expect(collector).toContain("liveBackendData: false")
+    expect(collector).toContain("serviceReceiptBound: true")
+    expect(collector).toContain('CI: "1"')
+    expect(collector).toContain('"v1-37-rules-integrity-proof.spec.ts"')
+    expect(collector).not.toContain("withGoBackend")
+    expect(collector).not.toContain("createDatabasePool")
+  })
+
   it("accepts only a complete live desktop/mobile receipt with safe restricted refs", () => {
     const receipt = createV137BrowserProofReceiptFixture()
     expect(validateV137BrowserProofReceipt(receipt)).toEqual(receipt)
     expect(receipt.projects).toEqual(["desktop", "mobile"])
+    expect(receipt.liveBackendData).toBe(false)
+    expect(receipt.serviceReceiptBound).toBe(true)
     expect(receipt.observations).toHaveLength(2)
     expect(receipt.browserProofReceiptRef.class).toBe("privacy-scan")
     expect(JSON.stringify(receipt)).not.toContain("match-set:")

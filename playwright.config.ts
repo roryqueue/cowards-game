@@ -52,6 +52,18 @@ export default defineConfig({
         ? { DATABASE_URL: process.env.DATABASE_URL }
         : {}),
       ...(process.env.REDIS_URL ? { REDIS_URL: process.env.REDIS_URL } : {}),
+      ...(process.env.COWARDS_V1_37_BROWSER_PROOF_HANDOFF_PATH
+        ? {
+            COWARDS_V1_37_BROWSER_PROOF_HANDOFF_PATH:
+              process.env.COWARDS_V1_37_BROWSER_PROOF_HANDOFF_PATH,
+          }
+        : {}),
+      ...(process.env.COWARDS_V1_37_BROWSER_PROOF_OBSERVATIONS_PATH
+        ? {
+            COWARDS_V1_37_BROWSER_PROOF_OBSERVATIONS_PATH:
+              process.env.COWARDS_V1_37_BROWSER_PROOF_OBSERVATIONS_PATH,
+          }
+        : {}),
     },
   },
   projects: [
