@@ -5,15 +5,15 @@ milestone_name: Rules Integrity and Strategy Evaluation Foundations — ACTIVE
 current_phase: 261
 current_phase_name: integrated-service-proof-drift-guards-and-release
 status: executing
-stopped_at: Completed 261-05-PLAN.md
-last_updated: "2026-07-22T15:28:01.379Z"
+stopped_at: Completed 261-08-PLAN.md
+last_updated: "2026-07-22T16:37:18.426Z"
 last_activity: 2026-07-22
 last_activity_desc: Phase 261 plan 05 desktop/mobile browser boundary proof passed without live-backend overclaim
 progress:
   total_phases: 6
   completed_phases: 5
   total_plans: 149
-  completed_plans: 141
+  completed_plans: 143
   percent: 83
 ---
 
@@ -29,7 +29,7 @@ See: `.planning/PROJECT.md` (updated 2026-07-12)
 ## Current Position
 
 Phase: 261 (integrated-service-proof-drift-guards-and-release) — EXECUTING
-Plan: 7 of 13
+Plan: 8 of 13
 Status: Ready to execute
 Last activity: 2026-07-22 — Phase 261 plan 05 desktop/mobile browser boundary proof passed without live-backend overclaim
 
@@ -89,8 +89,8 @@ Progress: [█████████░] 93%
 
 **Resume file:** None
 
-Last session: 2026-07-22T15:28:01.358Z
-Stopped at: Completed 261-05-PLAN.md
+Last session: 2026-07-22T16:37:18.403Z
+Stopped at: Completed 261-08-PLAN.md
 Next command: Execute 261-06 deterministic integrated proof rollup.
 
 ## Performance Metrics
@@ -174,6 +174,7 @@ Next command: Execute 261-06 deterministic integrated proof rollup.
 | Phase 261 P02 | 17min | 2 tasks | 5 files |
 | Phase 261 P03 | multi-session resumed | 3 tasks + production activation | 4 languages, 12 service runs, 23 scenarios; containment-attested and non-counted |
 | Phase 261 P04 | 23min | 3 tasks | 7 files |
+| Phase 261 P08 | 35 min | 2 tasks | 9 files |
 
 ## Decisions
 
@@ -376,3 +377,4 @@ Next command: Execute 261-06 deterministic integrated proof rollup.
 - [Phase 261]: D-11 release proof composes existing Go and persistence owners; release tooling adds no gameplay or proof-only production authority. — Production lifecycle, transaction, correction, and scoring seams remain authoritative.
 - [Phase 261]: Rollback determinism compares normalized structured test identities while timing, paths, diagnostics, and raw receipts remain restricted. — Deterministic safe roots must not depend on volatile or sensitive evidence.
 - [Phase 261]: v1.4, explicit v1.17, and annotated v1.36 evidence remain reachable only through original historical dispatch. — Historical bytes and semantics are never normalized to current authority.
+- [Phase 261]: Audit status remains release-ready with 56/56 traceability, 55 passed rows, and PROOF-08 ready_pending until archive/tag/post-check. — Complete traceability is not release completion.

@@ -85,7 +85,7 @@
 - [x] **PROOF-04**: Service-backed proof covers explicit Set side/initiative fairness, persistence, standings/governance recomputation, idempotency, retry, rollback, and immutable historical evidence.
 - [x] **PROOF-05**: Privacy scans cover APIs, public/default views, logs, fixtures, generated contracts, and proof artifacts for source, artifacts, memories, objectives, diagnostics, host data, credentials, and security internals.
 - [x] **PROOF-06**: Boundary monitors detect duplicate transition ownership, mixed tuples, adapter-owned gameplay classification, stale evidence identity, unsupported event vocabulary, duplicate arena authority, unfair scheduling, unproved counted lanes, and private-output leakage.
-- [ ] **PROOF-07**: The final milestone audit demonstrates one transition authority, complete requirements traceability, passing drift guards, and no unapproved gameplay change.
+- [x] **PROOF-07**: The final milestone audit demonstrates one transition authority, complete requirements traceability, passing drift guards, and no unapproved gameplay change.
 - [ ] **PROOF-08**: v1.37 is archived and tagged before the serious competitive Strategy milestone begins.
 
 ## Conditional Simplifications
@@ -175,7 +175,7 @@ These candidates are optional and are not required for v1.37 completion.
 | PROOF-04 | Phase 261 | Complete |
 | PROOF-05 | Phase 261 | Complete |
 | PROOF-06 | Phase 261 | Complete |
-| PROOF-07 | Phase 261 | Pending |
+| PROOF-07 | Phase 261 | Complete |
 | PROOF-08 | Phase 261 | Pending |
 
 **Coverage:**
