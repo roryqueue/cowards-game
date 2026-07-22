@@ -13,6 +13,10 @@ const archivePaths = [
   ".planning/artifacts/v1.37-milestone-audit.json", ".planning/artifacts/v1.37-strategy-evaluation-foundation.json",
   readinessPath,
 ] as const
+const protectedArchivePaths = [
+  "CowardsGameSpec_Full_Consolidated_v1.md",
+  ".planning/config.json",
+] as const
 export type V137ReleaseTagFinding = { code: string; path?: string }
 export type V137ReleaseTagResult = { mode: "pretag-archive" | "post-tag"; proof08: boolean; findings: readonly V137ReleaseTagFinding[] }
 const sha = (value: Buffer | string) => `sha256:${createHash("sha256").update(value).digest("hex")}`
@@ -37,7 +41,7 @@ const verifyArchive = (repo: string, commit: string, findings: V137ReleaseTagFin
   if (hashes) for (const [file, expected] of Object.entries(hashes)) { const bytes = blob(repo, commit, file); if (!bytes || sha(bytes) !== expected) add(findings, "ARCHIVE_BLOB_MISMATCH", file) }
   // A synthetic fixture may have a root archive commit. A real archive retains
   // history, but root commits have no protected-path delta to inspect.
-  try { const protectedPaths = git(repo, ["diff-tree", "--root", "--no-commit-id", "--name-only", "-r", commit]); if (protectedPaths.split("\n").some((file) => file === "CowardsGameSpec_Full_Consolidated_v1.md")) add(findings, "PROTECTED_PATH_INCLUDED") } catch { add(findings, "ARCHIVE_COMMIT_INVALID") }
+  try { const changedPaths = git(repo, ["diff-tree", "--root", "--no-commit-id", "--name-only", "-r", commit]).split("\n"); if (changedPaths.some((file) => protectedArchivePaths.includes(file as typeof protectedArchivePaths[number]))) add(findings, "PROTECTED_PATH_INCLUDED") } catch { add(findings, "ARCHIVE_COMMIT_INVALID") }
   return readiness
 }
 export const checkV137ReleaseTag = (options: { repoRoot?: string; archiveCommit?: string; expectedArchiveCommit?: string; mode?: "pretag-archive" | "post-tag" } = {}): V137ReleaseTagResult => {
