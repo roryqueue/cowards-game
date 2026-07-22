@@ -72,6 +72,8 @@
     "v1.37:prearchive-proof:check": "pnpm exec tsx scripts/evaluate-v1-37-prearchive-proof.ts --check",
     "v1.37:milestone-audit:write": "pnpm exec tsx scripts/generate-v1-37-milestone-audit.ts --write",
     "v1.37:milestone-audit:check": "pnpm exec tsx scripts/generate-v1-37-milestone-audit.ts --check",
+    "v1.37:strategy-foundation:write": "pnpm exec tsx scripts/generate-v1-37-strategy-foundation-handoff.ts --write",
+    "v1.37:strategy-foundation:check": "pnpm exec tsx scripts/generate-v1-37-strategy-foundation-handoff.ts --check",
     "v1.37:browser-proof:write": "pnpm exec tsx scripts/run-v1-37-browser-proof.ts --write",
     "v1.37:browser-proof:check": "pnpm exec tsx scripts/run-v1-37-browser-proof.ts --check",
     "v1.37:rollback-proof:write": "pnpm exec tsx scripts/run-v1-37-rollback-proof-cli.ts --write",
