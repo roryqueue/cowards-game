@@ -410,6 +410,7 @@ export const createV137RestrictedEvidenceStore = (options: Readonly<{
     limit = options.maxObjectBytes,
   ): Buffer => {
     const target = absolute(relativePath)
+    ensureDirectory(path.dirname(target))
     if (!existsSync(target)) fail(missingCode)
     assertRegularNoSymlink(target)
     const stat = lstatSync(target)

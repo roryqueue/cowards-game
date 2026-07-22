@@ -14,9 +14,6 @@ import { checkV136HistoricalProof } from "./check-v1-36-historical-proof.js"
 import { runV137AuditReproductionGate } from "./check-v1-37-audit-reproduction.js"
 import {
   createV137RestrictedEvidenceStore,
-  v137RestrictedEvidenceAttestationRelativePath,
-  v137RestrictedEvidenceObjectRelativePath,
-  V137_RESTRICTED_EVIDENCE_ACCESS_LOG_RELATIVE_PATH,
   type V137PublicRestrictedEvidenceRef,
   type V137RestrictedEvidenceRecord,
 } from "./lib/v1-37-restricted-evidence-store.js"
@@ -416,15 +413,11 @@ export const checkV137RollbackProof = (
   if (control.inputRootSha256 !== computeV137RollbackInputRoot(repoRoot)) fail("V137_ROLLBACK_INPUT_STALE")
   const receipt = validateV137RollbackProofReceipt(control.receipt)
   if (control.records.length !== scenarioIds.length) fail("V137_ROLLBACK_RECORD_INVENTORY_INVALID")
-  const accessPath = path.resolve(restrictedRoot, V137_RESTRICTED_EVIDENCE_ACCESS_LOG_RELATIVE_PATH)
-  const access = existsSync(accessPath) ? readFileSync(accessPath, "utf8") : ""
+  const store = createV137RestrictedEvidenceStore({ repoRoot, maxObjectBytes: 16 * 1024 * 1024 })
   control.records.forEach((record, index) => {
     const scenario = receipt.scenarios[index]!
     if (canonical(record.reference) !== canonical(scenario.restrictedEvidenceRef)) fail("V137_ROLLBACK_RECORD_INVENTORY_INVALID")
-    const object = readFileSync(path.resolve(restrictedRoot, v137RestrictedEvidenceObjectRelativePath(record.reference.sha256)))
-    const attestation = readFileSync(path.resolve(restrictedRoot, v137RestrictedEvidenceAttestationRelativePath(record.reference.attestationSha256)))
-    if (object.length !== record.byteLength || sha256(object) !== record.reference.sha256 || sha256(attestation) !== record.reference.attestationSha256) fail("V137_ROLLBACK_RECORD_DIGEST_INVALID")
-    if (!access.split("\n").some((line) => line.includes(`\"action\":\"write\"`) && line.includes(record.reference.sha256))) fail("V137_ROLLBACK_WRITE_RECORD_MISSING")
+    store.requireReleaseEvidence(record)
   })
   return receipt
 }

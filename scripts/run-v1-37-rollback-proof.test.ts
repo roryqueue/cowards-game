@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, rmSync, unlinkSync, writeFileSync } from "node:fs"
+import { mkdtempSync, readFileSync, renameSync, rmSync, symlinkSync, unlinkSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { afterEach, describe, expect, it } from "vitest"
@@ -69,5 +69,34 @@ describe("v1.37 restricted rollback and historical proof", () => {
     expect(() => checkV137RollbackProof(process.cwd(), root)).toThrow(
       "V137_ROLLBACK_INPUT_STALE",
     )
+  })
+
+  it("rejects symlinked rollback objects, attestations, access logs, and object parents", () => {
+    const mutate = (relativePath: string, parent = false): void => {
+      const root = makeRoot()
+      process.env.COWARDS_V1_37_RESTRICTED_EVIDENCE_ROOT = root
+      const control = writeV137RollbackProofFixture(process.cwd(), root)
+      const target = path.join(root, relativePath)
+      const linked = `${target}-outside`
+      if (parent) {
+        renameSync(target, linked)
+      } else {
+        writeFileSync(linked, readFileSync(target))
+        unlinkSync(target)
+      }
+      symlinkSync(linked, target)
+      expect(() => checkV137RollbackProof(process.cwd(), root)).toThrow("V137_RESTRICTED_EVIDENCE_SYMLINK")
+      expect(control.records).toHaveLength(17)
+    }
+    const root = makeRoot()
+    process.env.COWARDS_V1_37_RESTRICTED_EVIDENCE_ROOT = root
+    const control = writeV137RollbackProofFixture(process.cwd(), root)
+    const record = control.records[0]!
+    const object = path.join("objects", record.reference.sha256.slice(7, 9), record.reference.sha256.slice(9, 11), record.reference.sha256.slice(7))
+    const attestation = path.join("attestations", record.reference.attestationSha256.slice(7, 9), record.reference.attestationSha256.slice(9, 11), `${record.reference.attestationSha256.slice(7)}.json`)
+    mutate(object)
+    mutate(attestation)
+    mutate("access/v1.37.ndjson")
+    mutate(path.dirname(object), true)
   })
 })
