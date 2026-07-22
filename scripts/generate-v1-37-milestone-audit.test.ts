@@ -32,6 +32,6 @@ describe("v1.37 machine-derived release-ready milestone audit", () => {
     expect(() => validateV137MilestoneAudit({ ...audit, archiveCommit: "deadbeef" })).toThrow("V137_AUDIT_SHAPE")
     expect(() => validateV137MilestoneAudit({ ...audit, privateDiagnostics: "postgresql://private" })).toThrow("V137_AUDIT_SHAPE")
     expect(() => validateV137MilestoneAudit({ ...audit, renderedMarkdown: "manual edit" })).toThrow("V137_AUDIT_SHAPE")
-    expect(() => renderV137MilestoneAuditJson({ ...audit, limitations: ["PRIVATE_token"] })).toThrow(/private marker/i)
+    expect(() => renderV137MilestoneAuditJson({ ...audit, requirements: [{ ...audit.requirements[0]!, evidence: "postgresql://private" }, ...audit.requirements.slice(1)] })).toThrow(/private marker/i)
   })
 })
