@@ -16,7 +16,7 @@ describe("v1.37 public-safe Strategy foundation handoff", () => {
       semanticAuthorityKey: "runtime-v1.19",
       runtimeAbiVersion: "strategy-runtime-abi-v1.19",
       canonicalJsonVersion: "canonical-json-v1.1",
-      runtimeServiceVersion: "runtime-execution-service-v1.17",
+      runtimeServiceVersion: "runtime-execution-service-v1.18",
       receiptVersion: "runtime-semantic-receipt-v1.18",
     })
     expect(handoff.arenas.active).toHaveLength(2)
@@ -75,7 +75,10 @@ describe("v1.37 public-safe Strategy foundation handoff", () => {
     expect(() =>
       renderV137StrategyFoundationJson({
         ...handoff,
-        limitations: [...handoff.limitations, "postgresql://private"],
+        lanes: [
+          { ...handoff.lanes[0]!, providerId: "postgresql://private" },
+          ...handoff.lanes.slice(1),
+        ],
       }),
     ).toThrow(/private marker/i)
   })
