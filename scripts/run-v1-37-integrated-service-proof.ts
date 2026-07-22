@@ -19,7 +19,6 @@ import { mkdtempSync } from "node:fs"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { clearTimeout, setTimeout } from "node:timers"
-import { fileURLToPath } from "node:url"
 import {
   V137_INTEGRATED_PROOF_SCENARIOS,
   type V137IntegratedProofScenario,
