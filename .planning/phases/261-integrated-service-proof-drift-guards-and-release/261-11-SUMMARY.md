@@ -28,5 +28,6 @@ Independent annotated-tag validation and the final read-only strict release boun
 ### Auto-fixed Issues
 
 - **[Rule 1 - Bug]** Corrected package CLI mode validation order and strict authority artifact paths.
+- **[Rule 1 - Stale evidence]** Regenerated the TypeScript backend inventory and surface overlays, then recollected the dependent v1.37 proof chain before re-running the full boundary hub.
 
 ## Self-Check: PASSED
