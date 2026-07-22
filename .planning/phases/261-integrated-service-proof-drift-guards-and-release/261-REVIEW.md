@@ -72,10 +72,10 @@ files_reviewed_list:
   - scripts/v1-37-cli-dispatch.test.ts
   - scripts/v1-37-linux-language-probe.ts
 findings:
-  critical: 1
+  critical: 2
   warning: 0
   info: 0
-  total: 1
+  total: 2
 status: issues_found
 ---
 
@@ -88,16 +88,23 @@ status: issues_found
 
 ## Summary
 
-The five previously reported blockers are addressed: browser checks now validate the exact restricted record and bound handoff, browser writes validate the restricted root before private output, rollback verification uses the no-follow store API, tag targets are bound to the expected archive commit, and both protected paths are rejected. The focused fix suites pass. One critical release-closure bypass remains because the archive checker still verifies only that required files exist, not that their committed bytes match readiness-bound values.
+All six previously reported implementation defects have source-level fixes, and the focused readiness/tag/browser/rollback suites pass (17 tests). The final archive binding is still not release-ready: its required generated artifact is stale, and the independent post-tag verifier accepts a hand-authored manifest without validating the readiness contract that is supposed to authorize it.
 
 ## Critical Issues
 
-### CR-01: Tag checker permits an archive with substituted proof and audit artifacts
+### CR-01: Committed release-readiness artifact is stale against the mandatory archive manifest schema
 
-**File:** `scripts/check-v1-37-release-tag.ts:37-41`
-**Issue:** `verifyArchive` only compares `archiveBlobSha256` when that optional property exists. The canonical readiness validator explicitly rejects any extra top-level key at `scripts/evaluate-v1-37-release-readiness.ts:164-175`, and the checked readiness artifact has no `archiveBlobSha256`. Therefore the tag gate only checks that each required file exists; it does not bind the archive's prearchive proof, audit, or handoff bytes to the readiness hashes. A commit can retain a syntactically `release-ready` readiness JSON and tag-message fields while replacing the other required archive files with arbitrary content, then pass both archive verification and post-tag closure.
+**File:** `.planning/artifacts/v1.37-release-readiness.json:1`
+**Issue:** `bed9347d` makes `archiveBlobSha256` a required top-level field in `validateV137ReleaseReadiness` (`scripts/evaluate-v1-37-release-readiness.ts:175-190`), but the committed readiness JSON still has the old nine-key shape and no manifest. The changed commit does not regenerate this artifact. A release/archive performed from the current source/artifact state therefore fails the tag check with `ARCHIVE_BLOB_MANIFEST_MISSING` (and the readiness check cannot validate the committed pair once prerequisites are supplied).
 
-**Fix:** Add a required, closed `archiveBlobSha256` map to the readiness schema (or derive an equivalent mandatory manifest from already trusted readiness prerequisites), populate it before archive, and make `verifyArchive` reject its absence, unknown paths, missing paths, and every digest mismatch. Add Git fixtures that replace each required archive blob while preserving the readiness file and tag message; each must fail.
+**Fix:** Re-run the canonical readiness write only after its prerequisite checks succeed, commit the resulting JSON/Markdown pair, then run the strict readiness and tag checks. Add a test or release gate that compares the committed artifact shape with the current validator after every schema change.
+
+### CR-02: Post-tag verifier trusts a forged readiness manifest instead of validating readiness
+
+**File:** `scripts/check-v1-37-release-tag.ts:37-53`
+**Issue:** `verifyArchive` parses readiness as an unvalidated record and checks only `releaseState`, `releaseOperation.completion`, and the self-consistent `archiveBlobSha256` map. It never calls `validateV137ReleaseReadiness` or verifies the map's prearchive/audit/handoff entries against `prerequisiteHashes` and the archive blobs. An attacker can replace the readiness blob with a handcrafted `release-ready` object containing hashes of substituted required files, put those same arbitrary hashes in the tag message, and pass post-tag verification. This defeats the independent readiness-bound tuple/proof/audit/handoff join required for PROOF-08 closure.
+
+**Fix:** Parse the archive readiness blob with `validateV137ReleaseReadiness`; require the prearchive, milestone-audit, and Strategy-foundation manifest entries to equal their corresponding `prerequisiteHashes`, and independently hash those archive blobs against those prerequisite values. Add a Git fixture that changes readiness prerequisite hashes and the archive manifest/tag message together; it must still fail.
 
 ---
 
