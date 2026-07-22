@@ -1,24 +1,24 @@
 ---
 phase: 261
-fixed_at: 2026-07-22T17:47:00-04:00
+fixed_at: 2026-07-22T18:15:00-04:00
 review_path: .planning/phases/261-integrated-service-proof-drift-guards-and-release/261-REVIEW.md
-iteration: 2
-findings_in_scope: 6
-fixed: 6
+iteration: 3
+findings_in_scope: 9
+fixed: 9
 skipped: 0
 status: all_fixed
 ---
 
 # Phase 261: Code Review Fix Report
 
-**Fixed at:** 2026-07-22T17:47:00-04:00
+**Fixed at:** 2026-07-22T18:15:00-04:00
 **Source review:** `.planning/phases/261-integrated-service-proof-drift-guards-and-release/261-REVIEW.md`
-**Iteration:** 2
+**Iteration:** 3
 
 **Summary:**
 
-- Findings in scope: 6
-- Fixed: 6
+- Findings in scope: 9
+- Fixed: 9
 - Skipped: 0
 
 ## Fixed Issues
@@ -59,8 +59,26 @@ status: all_fixed
 **Commit:** bed9347d
 **Applied fix:** Adds a required closed, non-self-referential archive blob manifest to readiness, verifies it exactly at tag time, and rejects absent, unknown, missing, or digest-divergent archive blobs. Added a substitution fixture for every required blob.
 
+### CR-07: Post-tag verifier trusts a forged readiness manifest instead of validating readiness
+
+**Files modified:** `scripts/check-v1-37-release-tag.ts`, `scripts/check-v1-37-release-tag.test.ts`
+**Commit:** e262efba
+**Applied fix:** Parses archived readiness with the canonical validator and verifies that its prearchive, audit, and Strategy-foundation prerequisite hashes exactly join the manifest and archived blobs. Added a forged-readiness/tag fixture.
+
+### CR-08: Committed release-readiness artifact is stale against the mandatory archive manifest schema
+
+**Files modified:** `.planning/artifacts/v1.37-release-readiness.json`, `.planning/artifacts/v1.37-release-readiness.md`, and their commit-bound prerequisite proof/audit/handoff artifacts
+**Commits:** `8d2e079d`, `52b08f93`, `58447c4a`, `d1dadc03`, `9e729cdf`, `42b0e287`, `4d176694`
+**Applied fix:** Rebuilt the executable, Phase 260, integrated, prearchive, audit, Strategy-handoff, and readiness chain in the main checkout where the protected working-tree baseline is authoritative. The canonical readiness check now passes with the required closed archive manifest, 55 passed requirements, and PROOF-08 pending.
+
+### CR-09: Phase 260 CLI did not dispatch under `tsx`
+
+**Files modified:** `scripts/evaluate-v1-37-truthful-inputs-set-fairness.ts`, `scripts/v1-37-cli-dispatch.test.ts`
+**Commit:** `45b3ba2e`
+**Applied fix:** Replaced the path-string direct-entry check with the same realpath-based identity guard used by the other proof CLIs, added direct conflicting-mode coverage, and added imported-module isolation coverage. The focused dispatch suite passes.
+
 ---
 
-_Fixed: 2026-07-22T17:47:00-04:00_
+_Fixed: 2026-07-22T18:15:00-04:00_
 _Fixer: the agent (gsd-code-fixer)_
-_Iteration: 2_
+_Iteration: 3_
