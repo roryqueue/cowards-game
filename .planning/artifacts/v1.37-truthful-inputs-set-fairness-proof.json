@@ -111,7 +111,7 @@
   "inputs": [
     {
       "path": ".planning/artifacts/v1.37-executable-conformance-proof.json",
-      "sha256": "sha256:c6238badd57ffa14608144f5481647d5d2eba38bbbd5632f812a8ba83b66341d"
+      "sha256": "sha256:b9633fb562bd6a232d7f6c1c821afec4992b1da2d6ed72c3d0ff58d467bda67f"
     },
     {
       "path": ".planning/artifacts/v1.37-kernel-integrity-proof.json",
@@ -163,7 +163,7 @@
     },
     {
       "path": "package.json",
-      "sha256": "sha256:f2d43d5ccdcb76f1550c1777d7da50e8e8229de00c80877c3c498ddb0c969026"
+      "sha256": "sha256:820d831f23f83b833e06bedfde5b86422ece19697c74718f720108de3aaf2d41"
     },
     {
       "path": "packages/engine/src/test/strategy-observations-v1-19.test.ts",
