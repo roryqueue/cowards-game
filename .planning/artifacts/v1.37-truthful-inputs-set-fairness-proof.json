@@ -111,7 +111,7 @@
   "inputs": [
     {
       "path": ".planning/artifacts/v1.37-executable-conformance-proof.json",
-      "sha256": "sha256:d8b5be26b3d15bf64169ee87946ea23c0416df62686f99d6e57f89b233f40eab"
+      "sha256": "sha256:9afe6586b61d7de101b36ea3704120a8cdc97bbf77821e1bc96cfa0bd1a4729c"
     },
     {
       "path": ".planning/artifacts/v1.37-kernel-integrity-proof.json",
@@ -163,7 +163,7 @@
     },
     {
       "path": "package.json",
-      "sha256": "sha256:6503ff2bac93b9a029b7d86b4f99532c4da36928e31a06c0eebcb0417f5681e0"
+      "sha256": "sha256:28a98fec5a17518227ce1cef31a2f96f2a39eba28ac5b8c6535cd8383a7b81fa"
     },
     {
       "path": "packages/engine/src/test/strategy-observations-v1-19.test.ts",
@@ -624,7 +624,7 @@
       "status": "passed",
       "command": "pnpm exec tsx scripts/evaluate-v1-37-observation-v1-19-postactivation.ts --check --activation-id activation:phase260:plan14:production",
       "exitCode": 0,
-      "stdoutSha256": "sha256:fa85e634ad1082706a0e9de7a485c3cc4fd2fd14b4486e2328f1ff8f13847391",
+      "stdoutSha256": "sha256:1877dd788cf7823622358bdddc0ba2197bff7acd3a67ad59aec5577fe44c8493",
       "stderrSha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     {
@@ -632,7 +632,7 @@
       "status": "passed",
       "command": "pnpm exec vitest run --maxWorkers=1 --no-file-parallelism packages/spec/src/strategy-observation-abi-v1-19.test.ts packages/engine/src/test/strategy-observations-v1-19.test.ts apps/runtime-service/src/execute-match-v1-19.test.ts",
       "exitCode": 0,
-      "stdoutSha256": "sha256:00387e53f459ff0684bf36acbea491340982b432fef5c6a5326f276722a27fac",
+      "stdoutSha256": "sha256:b7c73724ee0203cf911b081510c5d1ca4b11929a909c923492a103d6c52f33a8",
       "stderrSha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     {
@@ -640,7 +640,7 @@
       "status": "passed",
       "command": "pnpm exec vitest run --maxWorkers=1 --no-file-parallelism packages/spec/src/arena-catalog-v1-37.test.ts packages/spec/src/set-condition-policy-v1-37.test.ts packages/persistence/src/matchset-service.test.ts packages/persistence/src/matchset-status.test.ts packages/persistence/src/scoring.test.ts",
       "exitCode": 0,
-      "stdoutSha256": "sha256:63a4704a35572d0b96c337947dd2a44c4e1bbe2ba26e521f49467e71c666b2ae",
+      "stdoutSha256": "sha256:f5ef462503b290e4377cd24871fc99b1fc4023b9c23e97c0b89b770be0d0e7e7",
       "stderrSha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     {
@@ -656,7 +656,7 @@
       "status": "passed",
       "command": "pnpm exec vitest run --maxWorkers=1 --no-file-parallelism apps/runtime-service/src/execute-match-v1-19.test.ts packages/replay/src/record.test.ts packages/replay/src/validate.test.ts packages/replay/src/historical-v1-4.test.ts",
       "exitCode": 0,
-      "stdoutSha256": "sha256:d2a3052b805e15305f60f5c86da71ec93f2ccd281357b637bb517343b067ab40",
+      "stdoutSha256": "sha256:df8a8df8e0eaa8e495fc4d754e0107d3c808a7e2e11f85cc6aa4be71249ded9a",
       "stderrSha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     {
@@ -664,7 +664,7 @@
       "status": "passed",
       "command": "pnpm exec vitest run --maxWorkers=1 --no-file-parallelism apps/runtime-service/src/four-language-conformance-runner.test.ts scripts/certify-v1-37-observation-v1-19-language-lane.test.ts scripts/sign-import-v1-37-observation-v1-19-certificates.test.ts",
       "exitCode": 0,
-      "stdoutSha256": "sha256:903ca0b54005bbc42cc51ade8ca56a8964a498923e6b11904bfe66868137c5fd",
+      "stdoutSha256": "sha256:a06d00023bb39ca2faf60bda0384a801c766c1ae1f50c7a95525a47735306882",
       "stderrSha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     {
@@ -672,7 +672,7 @@
       "status": "passed",
       "command": "pnpm exec vitest run --maxWorkers=1 --no-file-parallelism scripts/activate-v1-37-observation-v1-19.test.ts packages/persistence/src/semantic-authority-selection-head.test.ts scripts/evaluate-v1-37-observation-v1-19-postactivation.test.ts",
       "exitCode": 0,
-      "stdoutSha256": "sha256:8a3b335083d3d79f5b76a903a03ddd204306ca99dbeec19e8bd4a4ba50e4870c",
+      "stdoutSha256": "sha256:3aded87831e1ac4ee5c921ca9d596a9b15e97fb6461b39fcf8850d42154aeb19",
       "stderrSha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     {
@@ -688,7 +688,7 @@
       "status": "passed",
       "command": "pnpm v1.37:integrity-boundaries:check",
       "exitCode": 0,
-      "stdoutSha256": "sha256:cf1bc644b7962c398c874a646f29d3688aca0f734671b4b06ec29738a2faf5dc",
+      "stdoutSha256": "sha256:0aaa37d11939e4f5e4a9b4a026ad269bb9c8ed511d58513fe61a0486001d53dc",
       "stderrSha256": "sha256:47fdf52325f991adda4bf59fac3b405ba5cac3870a1f04a4c909d4079d1f32cc"
     },
     {
