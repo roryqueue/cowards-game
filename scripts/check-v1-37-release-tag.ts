@@ -4,7 +4,11 @@ import { createHash } from "node:crypto"
 import { existsSync, readFileSync, realpathSync } from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
-import { V137_RELEASE_ARCHIVE_BLOB_PATHS } from "./evaluate-v1-37-release-readiness.js"
+import {
+  V137_RELEASE_ARCHIVE_BLOB_PATHS,
+  validateV137ReleaseReadiness,
+  type V137ReleaseReadiness,
+} from "./evaluate-v1-37-release-readiness.js"
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
 const readinessPath = ".planning/artifacts/v1.37-release-readiness.json"
@@ -26,16 +30,16 @@ const blob = (repo: string, commit: string, file: string): Buffer | undefined =>
   const result = spawnSync("git", ["show", `${commit}:${file}`], { cwd: repo, encoding: "buffer" })
   return result.status === 0 ? result.stdout : undefined
 }
-const readReadiness = (repo: string, commit: string): Record<string, unknown> | undefined => {
+const readReadiness = (repo: string, commit: string): V137ReleaseReadiness | undefined => {
   const bytes = blob(repo, commit, readinessPath); if (!bytes) return undefined
-  try { return JSON.parse(bytes.toString("utf8")) as Record<string, unknown> } catch { return undefined }
+  try { return validateV137ReleaseReadiness(JSON.parse(bytes.toString("utf8"))) } catch { return undefined }
 }
-const verifyArchive = (repo: string, commit: string, findings: V137ReleaseTagFinding[]): Record<string, unknown> | undefined => {
+const verifyArchive = (repo: string, commit: string, findings: V137ReleaseTagFinding[]): V137ReleaseReadiness | undefined => {
   if (!/^[0-9a-f]{40}$/u.test(commit)) { add(findings, "ARCHIVE_COMMIT_INVALID"); return undefined }
   let tree: string; try { tree = git(repo, ["rev-parse", `${commit}^{tree}`]) } catch { add(findings, "ARCHIVE_COMMIT_MISSING"); return undefined }
   if (!tree) { add(findings, "ARCHIVE_COMMIT_MISSING"); return undefined }
   const readiness = readReadiness(repo, commit)
-  if (!readiness || readiness.releaseState !== "release-ready" || (readiness.releaseOperation as Record<string, unknown> | undefined)?.completion !== false) add(findings, "READINESS_INVALID")
+  if (!readiness || readiness.releaseState !== "release-ready" || readiness.releaseOperation.completion !== false) add(findings, "READINESS_INVALID")
   for (const file of archivePaths) if (!blob(repo, commit, file)) add(findings, "ARCHIVE_PATH_MISSING", file)
   const hashes = readiness?.archiveBlobSha256
   if (hashes === null || typeof hashes !== "object" || Array.isArray(hashes)) {
@@ -50,6 +54,19 @@ const verifyArchive = (repo: string, commit: string, findings: V137ReleaseTagFin
       const bytes = blob(repo, commit, file)
       if (!bytes) add(findings, "ARCHIVE_BLOB_MISSING", file)
       else if (sha(bytes) !== entries[file]) add(findings, "ARCHIVE_BLOB_MISMATCH", file)
+    }
+  }
+  if (readiness) {
+    const prerequisiteBlobs = [
+      [".planning/artifacts/v1.37-prearchive-proof.json", readiness.prerequisiteHashes.prearchiveProofSha256],
+      [".planning/artifacts/v1.37-milestone-audit.json", readiness.prerequisiteHashes.milestoneAuditSha256],
+      [".planning/artifacts/v1.37-strategy-evaluation-foundation.json", readiness.prerequisiteHashes.strategyFoundationSha256],
+    ] as const
+    for (const [file, expected] of prerequisiteBlobs) {
+      if (readiness.archiveBlobSha256[file] !== expected) add(findings, "ARCHIVE_PREREQUISITE_MANIFEST_MISMATCH", file)
+      const bytes = blob(repo, commit, file)
+      if (!bytes) add(findings, "ARCHIVE_PREREQUISITE_BLOB_MISSING", file)
+      else if (sha(bytes) !== expected) add(findings, "ARCHIVE_PREREQUISITE_BLOB_MISMATCH", file)
     }
   }
   // A synthetic fixture may have a root archive commit. A real archive retains
