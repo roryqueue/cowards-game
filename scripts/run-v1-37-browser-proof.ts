@@ -1,7 +1,7 @@
 #!/usr/bin/env -S pnpm exec tsx
 import { createHash } from "node:crypto"
 import { spawnSync } from "node:child_process"
-import { existsSync, mkdirSync, readFileSync, realpathSync, renameSync, unlinkSync, writeFileSync } from "node:fs"
+import { constants, closeSync, existsSync, lstatSync, mkdirSync, openSync, readFileSync, realpathSync, renameSync, unlinkSync, writeFileSync } from "node:fs"
 import { createServer } from "node:net"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
@@ -83,10 +83,35 @@ export const validateV137BrowserProofReceipt = (input: unknown): V137BrowserProo
 const inputRoot = (repoRoot: string): `sha256:${string}` => hash([
   "scripts/run-v1-37-browser-proof.ts", "scripts/run-v1-37-browser-proof.test.ts", "apps/web/e2e/v1-37-integrated-service-proof.spec.ts", "apps/web/e2e/v1-37-rules-integrity-proof.spec.ts", "package.json",
 ].map((file) => `${file}:${hash(readFileSync(path.join(repoRoot, file)))}`).join("\n"))
-const controlPath = (root: string): string => path.join(root, V137_BROWSER_PROOF_CONTROL_PATH)
+const controlPath = (root: string, relativePath = V137_BROWSER_PROOF_CONTROL_PATH): string => {
+  if (path.isAbsolute(relativePath)) fail("V137_BROWSER_PROOF_CONTROL_INVALID")
+  const absoluteRoot = path.resolve(root)
+  const target = path.resolve(absoluteRoot, relativePath)
+  if (!target.startsWith(`${absoluteRoot}${path.sep}`)) fail("V137_BROWSER_PROOF_CONTROL_INVALID")
+  if (lstatSync(absoluteRoot).isSymbolicLink()) fail("V137_BROWSER_PROOF_RESTRICTED_SYMLINK")
+  let cursor = absoluteRoot
+  for (const segment of path.relative(absoluteRoot, target).split(path.sep).filter(Boolean)) {
+    cursor = path.join(cursor, segment)
+    if (!existsSync(cursor)) break
+    if (lstatSync(cursor).isSymbolicLink()) fail("V137_BROWSER_PROOF_RESTRICTED_SYMLINK")
+  }
+  return target
+}
+const readControlFile = (root: string, relativePath = V137_BROWSER_PROOF_CONTROL_PATH): Buffer => {
+  const target = controlPath(root, relativePath)
+  if (!existsSync(target)) fail("V137_BROWSER_PROOF_CONTROL_MISSING")
+  if (!lstatSync(target).isFile() || lstatSync(target).isSymbolicLink()) fail("V137_BROWSER_PROOF_CONTROL_INVALID")
+  const descriptor = openSync(target, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0))
+  try { return readFileSync(descriptor) } finally { closeSync(descriptor) }
+}
+const ensureControlDirectory = (root: string): string => {
+  const directory = controlPath(root, "control")
+  if (!existsSync(directory)) mkdirSync(directory, { mode: 0o700 })
+  if (!lstatSync(directory).isDirectory() || lstatSync(directory).isSymbolicLink()) fail("V137_BROWSER_PROOF_RESTRICTED_SYMLINK")
+  return directory
+}
 const readControl = (root: string): Control => {
-  const target = controlPath(root); if (!existsSync(target)) fail("V137_BROWSER_PROOF_CONTROL_MISSING")
-  let raw: unknown; try { raw = JSON.parse(readFileSync(target, "utf8")) } catch { fail("V137_BROWSER_PROOF_CONTROL_INVALID") }
+  let raw: unknown; try { raw = JSON.parse(readControlFile(root).toString("utf8")) } catch { fail("V137_BROWSER_PROOF_CONTROL_INVALID") }
   if (raw === null || typeof raw !== "object" || Array.isArray(raw) || !exactKeys(raw as object, ["inputRootSha256", "receipt", "records", "schemaVersion"]) || (raw as Control).schemaVersion !== "v1.37-browser-proof-control-v1") fail("V137_BROWSER_PROOF_CONTROL_INVALID")
   return raw as Control
 }
@@ -108,7 +133,10 @@ export const checkV137BrowserProof = (repoRoot: string, restrictedRoot: string):
 }
 
 const writeControl = (root: string, control: Control): void => {
-  const target = controlPath(root); mkdirSync(path.dirname(target), { recursive: true, mode: 0o700 }); const temporary = `${target}.${process.pid}.tmp`; writeFileSync(temporary, `${JSON.stringify(control)}\n`, { mode: 0o600, flag: "wx" }); renameSync(temporary, target)
+  const target = controlPath(root)
+  ensureControlDirectory(root)
+  if (existsSync(target) && (!lstatSync(target).isFile() || lstatSync(target).isSymbolicLink())) fail("V137_BROWSER_PROOF_RESTRICTED_SYMLINK")
+  const temporary = `${target}.${process.pid}.tmp`; writeFileSync(temporary, `${JSON.stringify(control)}\n`, { mode: 0o600, flag: "wx" }); renameSync(temporary, target)
 }
 export const writeV137BrowserProofFixture = (repoRoot: string, restrictedRoot: string): Control => {
   const receipt = createV137BrowserProofReceiptFixture()
@@ -120,7 +148,7 @@ export const writeV137BrowserProofFixture = (repoRoot: string, restrictedRoot: s
 
 const readHandoff = (repoRoot: string, restrictedRoot: string): { digest: `sha256:${string}`; descriptor: { capabilityReceiptDigest: `sha256:${string}` } } => {
   const service = checkV137IntegratedServiceProof(repoRoot, restrictedRoot)
-  const control = JSON.parse(readFileSync(path.join(restrictedRoot, V137_INTEGRATED_SERVICE_PROOF_CONTROL_PATH), "utf8")) as { records: V137RestrictedEvidenceRecord[]; receipt: typeof service }
+  const control = JSON.parse(readControlFile(restrictedRoot, V137_INTEGRATED_SERVICE_PROOF_CONTROL_PATH).toString("utf8")) as { records: V137RestrictedEvidenceRecord[]; receipt: typeof service }
   const record = control.records.find((entry) => JSON.stringify(entry.reference) === JSON.stringify(service.proofDataHandoffRef))
   if (!record) fail("V137_BROWSER_PROOF_HANDOFF_MISSING")
   const store = createV137RestrictedEvidenceStore({ repoRoot, maxObjectBytes: 64 * 1024 * 1024 })
@@ -153,10 +181,12 @@ const reservePort = async (): Promise<number> =>
 export const writeV137BrowserProof = async (repoRoot: string, rawEnvironment: NodeJS.ProcessEnv = process.env): Promise<Control> => {
   if (rawEnvironment.COWARDS_V1_37_REQUIRE_INTEGRATED_PROOF !== "1") fail("V137_BROWSER_PROOF_STRICT_FLAG_REQUIRED")
   const restrictedRoot = rawEnvironment.COWARDS_V1_37_RESTRICTED_EVIDENCE_ROOT; if (!restrictedRoot) fail("V137_BROWSER_PROOF_RESTRICTED_ROOT_REQUIRED")
+  const store = createV137RestrictedEvidenceStore({ repoRoot, maxObjectBytes: 16 * 1024 * 1024 })
   const handoff = readHandoff(repoRoot, restrictedRoot)
-  const handoffPath = path.join(restrictedRoot, `control/v1.37-browser-proof-handoff-${process.pid}.json`)
+  ensureControlDirectory(restrictedRoot)
+  const handoffPath = controlPath(restrictedRoot, `control/v1.37-browser-proof-handoff-${process.pid}.json`)
   writeFileSync(handoffPath, JSON.stringify(handoff.descriptor), { mode: 0o600, flag: "wx" })
-  const observationsPath = path.join(restrictedRoot, `control/v1.37-browser-proof-observations-${process.pid}.json`)
+  const observationsPath = controlPath(restrictedRoot, `control/v1.37-browser-proof-observations-${process.pid}.json`)
   try {
     const webPort = await reservePort()
     run(repoRoot, ["exec", "playwright", "test", "--project=desktop", "--project=mobile", "--workers=1", "v1-37-integrated-service-proof.spec.ts", "v1-37-rules-integrity-proof.spec.ts"], { ...rawEnvironment, CI: "1", PLAYWRIGHT_TEST: "1", PLAYWRIGHT_BASE_URL: `http://localhost:${webPort}`, COWARDS_V1_37_BROWSER_PROOF_HANDOFF_PATH: handoffPath, COWARDS_V1_37_BROWSER_PROOF_OBSERVATIONS_PATH: observationsPath })
@@ -164,7 +194,6 @@ export const writeV137BrowserProof = async (repoRoot: string, rawEnvironment: No
     const observed = JSON.parse(readFileSync(observationsPath, "utf8")) as { observations: readonly Observation[] }
     const observations = observed.observations
     if (observations.length !== 2) fail("V137_BROWSER_PROOF_OBSERVATIONS_INVALID")
-    const store = createV137RestrictedEvidenceStore({ repoRoot, maxObjectBytes: 16 * 1024 * 1024 })
     const record = store.writeEvidence({ bytes: Buffer.from(JSON.stringify({ handoff: handoff.descriptor, limitation: "fixture-backed browser complement; live backend execution is proved by the bound service receipt", observations }), "utf8"), evidenceClass: "privacy-scan", actorClass: "collector", latestBoundCertificateValidUntil: new Date(Date.now() + 30 * 86_400_000).toISOString() })
     const receipt: V137BrowserProofReceipt = { ...createV137BrowserProofReceiptFixture(), proofDataHandoffDigest: handoff.digest, observations, browserProofReceiptRef: record.reference }
     validateV137BrowserProofReceipt(receipt)
