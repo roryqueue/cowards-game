@@ -2036,7 +2036,7 @@ export const writeV137IntegratedServiceProof = async (
 }
 
 const isDirectRun = process.argv.some(
-  (argument) => path.resolve(argument) === fileURLToPath(import.meta.url),
+  (argument) => argument === "--write" || argument === "--check",
 )
 
 if (isDirectRun) {
