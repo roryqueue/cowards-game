@@ -3,7 +3,7 @@
 import { Buffer } from "node:buffer"
 import { spawnSync } from "node:child_process"
 import { createHash, randomUUID } from "node:crypto"
-import { readFileSync, renameSync, writeFileSync } from "node:fs"
+import { readFileSync, realpathSync, renameSync, writeFileSync } from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 import { CANONICAL_ARENA_CATALOG_V1_37 } from "../packages/spec/src/arena-catalog-v1-37.js"
@@ -1542,4 +1542,17 @@ const main = (): void => {
   }
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) main()
+const isDirectRun = (): boolean => {
+  const invokedScript = process.argv[1]
+  if (!invokedScript) return false
+  try {
+    return (
+      realpathSync(path.resolve(invokedScript)) ===
+      realpathSync(fileURLToPath(import.meta.url))
+    )
+  } catch {
+    return false
+  }
+}
+
+if (isDirectRun()) main()

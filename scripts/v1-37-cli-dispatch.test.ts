@@ -49,6 +49,12 @@ describe("v1.37 CLI dispatch isolation", () => {
     )
     expect(aggregate.status).toBe(1)
     expect(aggregate.stderr).toContain("V137_INTEGRATED_PROOF_MODE_INVALID")
+    const phase260 = runTsx(
+      "scripts/evaluate-v1-37-truthful-inputs-set-fairness.ts",
+      ["--write", "--check"],
+    )
+    expect(phase260.status).toBe(1)
+    expect(phase260.stderr).toContain("usage: --write | --refresh-inputs | --check")
     for (const [script, code] of [["scripts/run-v1-37-rollback-proof-cli.ts", "V137_ROLLBACK_MODE_INVALID"], ["scripts/run-v1-37-browser-proof.ts", "V137_BROWSER_PROOF_MODE_INVALID"]] as const) {
       const result = runTsx(script, ["--write", "--check"])
       expect(result.status).toBe(1)
@@ -61,6 +67,7 @@ describe("v1.37 CLI dispatch isolation", () => {
       "scripts/run-v1-37-integrated-service-proof.ts",
       "scripts/evaluate-v1-37-integrated-service-proof.ts",
       "scripts/evaluate-v1-37-executable-conformance.ts",
+      "scripts/evaluate-v1-37-truthful-inputs-set-fairness.ts",
       "scripts/run-v1-37-rollback-proof-cli.ts",
       "scripts/run-v1-37-browser-proof.ts",
     ]) {
