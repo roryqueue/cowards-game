@@ -253,6 +253,20 @@
       "selectionAuthority": "apps/runtime-service/src/runtime-config.ts"
     },
     {
+      "path": "apps/runtime-service/src/pinned-python-container-runtime.ts",
+      "role": "runtime-service",
+      "lifecycle": "selected_by_pointer",
+      "gate": "selected-current runtime execution service schema from the authoritative activation pointer and DB-free boundary",
+      "selectionAuthority": "apps/runtime-service/src/runtime-config.ts"
+    },
+    {
+      "path": "apps/runtime-service/src/pinned-wasmtime-container-runtime.ts",
+      "role": "runtime-service",
+      "lifecycle": "selected_by_pointer",
+      "gate": "selected-current runtime execution service schema from the authoritative activation pointer and DB-free boundary",
+      "selectionAuthority": "apps/runtime-service/src/runtime-config.ts"
+    },
+    {
       "path": "apps/runtime-service/src/production-runtime-config.ts",
       "role": "runtime-service",
       "lifecycle": "selected_by_pointer",

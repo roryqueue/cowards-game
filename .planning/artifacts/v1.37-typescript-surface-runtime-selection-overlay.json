@@ -134,6 +134,22 @@
       "publicOutputPrivacy": "not-public-output"
     },
     {
+      "path": "packages/runtime-js/src/revision-v1-18.ts",
+      "taxonomyRole": "runtime-adapter",
+      "surfaceLabel": "runtime-adapter-execution-boundary",
+      "selectedNormal": true,
+      "gate": "selected-current Strategy runtime ABI from the authoritative activation pointer",
+      "publicOutputPrivacy": "not-public-output"
+    },
+    {
+      "path": "packages/runtime-js/src/revision-v1-19.ts",
+      "taxonomyRole": "runtime-adapter",
+      "surfaceLabel": "runtime-evidence-only",
+      "selectedNormal": false,
+      "gate": "candidate, fixture, or test evidence only; never selected normal runtime traffic",
+      "publicOutputPrivacy": "not-public-output"
+    },
+    {
       "path": "packages/runtime-js/src/revision.ts",
       "taxonomyRole": "runtime-adapter",
       "surfaceLabel": "runtime-adapter-execution-boundary",
@@ -175,6 +191,14 @@
     },
     {
       "path": "packages/runtime-js/src/subprocess-ipc.ts",
+      "taxonomyRole": "runtime-adapter",
+      "surfaceLabel": "runtime-adapter-execution-boundary",
+      "selectedNormal": true,
+      "gate": "selected-current Strategy runtime ABI from the authoritative activation pointer",
+      "publicOutputPrivacy": "not-public-output"
+    },
+    {
+      "path": "packages/runtime-js/src/supervised-subprocess-adapter.ts",
       "taxonomyRole": "runtime-adapter",
       "surfaceLabel": "runtime-adapter-execution-boundary",
       "selectedNormal": true,
@@ -246,7 +270,31 @@
       "publicOutputPrivacy": "not-public-output"
     },
     {
+      "path": "apps/runtime-service/src/four-language-conformance-runner.ts",
+      "taxonomyRole": "runtime-service",
+      "surfaceLabel": "runtime-service-execution-boundary",
+      "selectedNormal": true,
+      "gate": "selected-current runtime execution service schema from the authoritative activation pointer and DB-free boundary",
+      "publicOutputPrivacy": "not-public-output"
+    },
+    {
       "path": "apps/runtime-service/src/index.ts",
+      "taxonomyRole": "runtime-service",
+      "surfaceLabel": "runtime-service-execution-boundary",
+      "selectedNormal": true,
+      "gate": "selected-current runtime execution service schema from the authoritative activation pointer and DB-free boundary",
+      "publicOutputPrivacy": "not-public-output"
+    },
+    {
+      "path": "apps/runtime-service/src/pinned-python-container-runtime.ts",
+      "taxonomyRole": "runtime-service",
+      "surfaceLabel": "runtime-service-execution-boundary",
+      "selectedNormal": true,
+      "gate": "selected-current runtime execution service schema from the authoritative activation pointer and DB-free boundary",
+      "publicOutputPrivacy": "not-public-output"
+    },
+    {
+      "path": "apps/runtime-service/src/pinned-wasmtime-container-runtime.ts",
       "taxonomyRole": "runtime-service",
       "surfaceLabel": "runtime-service-execution-boundary",
       "selectedNormal": true,
@@ -267,6 +315,14 @@
       "surfaceLabel": "runtime-service-execution-boundary",
       "selectedNormal": true,
       "gate": "selected-current runtime execution service schema from the authoritative activation pointer and DB-free boundary",
+      "publicOutputPrivacy": "not-public-output"
+    },
+    {
+      "path": "apps/runtime-service/src/revalidate-strategy-revision-v1-19.ts",
+      "taxonomyRole": "runtime-service",
+      "surfaceLabel": "runtime-evidence-only",
+      "selectedNormal": false,
+      "gate": "candidate, fixture, or test evidence only; never selected normal runtime traffic",
       "publicOutputPrivacy": "not-public-output"
     },
     {
@@ -311,6 +367,22 @@
     },
     {
       "path": "apps/runtime-service/src/semantic-receipt-v1-17.ts",
+      "taxonomyRole": "runtime-service",
+      "surfaceLabel": "runtime-service-execution-boundary",
+      "selectedNormal": true,
+      "gate": "selected-current runtime execution service schema from the authoritative activation pointer and DB-free boundary",
+      "publicOutputPrivacy": "not-public-output"
+    },
+    {
+      "path": "apps/runtime-service/src/semantic-receipt-v1-18-issuer.ts",
+      "taxonomyRole": "runtime-service",
+      "surfaceLabel": "runtime-service-execution-boundary",
+      "selectedNormal": true,
+      "gate": "selected-current runtime execution service schema from the authoritative activation pointer and DB-free boundary",
+      "publicOutputPrivacy": "not-public-output"
+    },
+    {
+      "path": "apps/runtime-service/src/semantic-receipt-versioned-v1-17.ts",
       "taxonomyRole": "runtime-service",
       "surfaceLabel": "runtime-service-execution-boundary",
       "selectedNormal": true,
