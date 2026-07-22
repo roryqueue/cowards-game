@@ -5,16 +5,16 @@ milestone_name: Rules Integrity and Strategy Evaluation Foundations — ACTIVE
 current_phase: 261
 current_phase_name: integrated-service-proof-drift-guards-and-release
 status: executing
-stopped_at: Completed 261-03-PLAN.md
-last_updated: "2026-07-22T11:42:53Z"
+stopped_at: Completed 261-04-PLAN.md
+last_updated: "2026-07-22T12:09:44.376Z"
 last_activity: 2026-07-22
 last_activity_desc: Phase 261 plan 03 real four-language service proof passed with all lanes truthfully non-counted
 progress:
   total_phases: 6
   completed_phases: 5
   total_plans: 149
-  completed_plans: 138
-  percent: 93
+  completed_plans: 139
+  percent: 83
 ---
 
 # State: Coward's Game
@@ -29,9 +29,9 @@ See: `.planning/PROJECT.md` (updated 2026-07-12)
 ## Current Position
 
 Phase: 261 (integrated-service-proof-drift-guards-and-release) — EXECUTING
-Plan: 4 of 13
+Plan: 5 of 13
 Status: Ready to execute
-Last activity: 2026-07-22 — Phase 261 plan 03 real four-language service proof passed with all lanes truthfully non-counted
+Last activity: 2026-07-22 — Phase 261 plan 04 exact audit, D-11 rollback, recomputation, and immutable-history proof passed
 
 Progress: [█████████░] 93%
 
@@ -89,9 +89,9 @@ Progress: [█████████░] 93%
 
 **Resume file:** None
 
-Last session: 2026-07-22T11:42:53Z
-Stopped at: Completed 261-03-PLAN.md
-Next command: Execute 261-04 persistence and rollback proof.
+Last session: 2026-07-22T12:09:44.356Z
+Stopped at: Completed 261-04-PLAN.md
+Next command: Execute 261-05 browser and public-boundary proof.
 
 ## Performance Metrics
 
@@ -173,6 +173,7 @@ Next command: Execute 261-04 persistence and rollback proof.
 | Phase 261 P01 | 13min | 2 tasks | 7 files |
 | Phase 261 P02 | 17min | 2 tasks | 5 files |
 | Phase 261 P03 | multi-session resumed | 3 tasks + production activation | 4 languages, 12 service runs, 23 scenarios; containment-attested and non-counted |
+| Phase 261 P04 | 23min | 3 tasks | 7 files |
 
 ## Decisions
 
@@ -371,3 +372,7 @@ Next command: Execute 261-04 persistence and rollback proof.
 - [Phase 261]: Construction-time release monitoring uses source-fixture mode only; strict-release stays fail-closed until all collectors and rollups exist. — Future evidence cannot make the current build gate impossible, and final release cannot pass on missing artifacts.
 - [Phase 261]: Functional four-language conformance and counted containment are independent release facts. — An unattested lane remains non-counted even when functional execution passes.
 - [Phase 261]: Release findings expose only stable code, class, and logical artifact identity. — Source paths, diagnostics, and concrete restricted preimages never enter public or default results.
+- [Phase 261]: The depth-3000 repair is admitted only through the exact Phase-258 bounded-JSON ruling; all gameplay observations and successful-push history remain exact. — No valid Match semantic changed, so no compatibility checkpoint was required.
+- [Phase 261]: D-11 release proof composes existing Go and persistence owners; release tooling adds no gameplay or proof-only production authority. — Production lifecycle, transaction, correction, and scoring seams remain authoritative.
+- [Phase 261]: Rollback determinism compares normalized structured test identities while timing, paths, diagnostics, and raw receipts remain restricted. — Deterministic safe roots must not depend on volatile or sensitive evidence.
+- [Phase 261]: v1.4, explicit v1.17, and annotated v1.36 evidence remain reachable only through original historical dispatch. — Historical bytes and semantics are never normalized to current authority.

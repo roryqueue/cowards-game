@@ -79,10 +79,10 @@
 
 ### Integrated Proof and Release
 
-- [ ] **PROOF-01**: Every persisted core-rules audit reproduction passes or has an explicitly approved compatibility ruling retained with the regression suite.
+- [x] **PROOF-01**: Every persisted core-rules audit reproduction passes or has an explicitly approved compatibility ruling retained with the regression suite.
 - [ ] **PROOF-02**: Engine, spec, replay, runtime-service, and TypeScript/Python/Rust/Zig conformance suites pass with deterministic repeated results.
-- [ ] **PROOF-03**: Service-backed proof covers success, player violation, system failure, no-mutation failure behavior, Chronicle validation, reconstruction, and replay.
-- [ ] **PROOF-04**: Service-backed proof covers explicit Set side/initiative fairness, persistence, standings/governance recomputation, idempotency, retry, rollback, and immutable historical evidence.
+- [x] **PROOF-03**: Service-backed proof covers success, player violation, system failure, no-mutation failure behavior, Chronicle validation, reconstruction, and replay.
+- [x] **PROOF-04**: Service-backed proof covers explicit Set side/initiative fairness, persistence, standings/governance recomputation, idempotency, retry, rollback, and immutable historical evidence.
 - [ ] **PROOF-05**: Privacy scans cover APIs, public/default views, logs, fixtures, generated contracts, and proof artifacts for source, artifacts, memories, objectives, diagnostics, host data, credentials, and security internals.
 - [ ] **PROOF-06**: Boundary monitors detect duplicate transition ownership, mixed tuples, adapter-owned gameplay classification, stale evidence identity, unsupported event vocabulary, duplicate arena authority, unfair scheduling, unproved counted lanes, and private-output leakage.
 - [ ] **PROOF-07**: The final milestone audit demonstrates one transition authority, complete requirements traceability, passing drift guards, and no unapproved gameplay change.
@@ -169,10 +169,10 @@ These candidates are optional and are not required for v1.37 completion.
 | SET-03 | Phase 260 | Complete |
 | SET-04 | Phase 260 | Complete |
 | SET-05 | Phase 260 | Complete |
-| PROOF-01 | Phase 261 | Pending |
+| PROOF-01 | Phase 261 | Complete |
 | PROOF-02 | Phase 261 | Pending |
-| PROOF-03 | Phase 261 | Pending |
-| PROOF-04 | Phase 261 | Pending |
+| PROOF-03 | Phase 261 | Complete |
+| PROOF-04 | Phase 261 | Complete |
 | PROOF-05 | Phase 261 | Pending |
 | PROOF-06 | Phase 261 | Pending |
 | PROOF-07 | Phase 261 | Pending |
