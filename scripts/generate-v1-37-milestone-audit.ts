@@ -177,9 +177,10 @@ export const checkV137MilestoneAuditArtifacts = (repoRoot: string): V137Mileston
   return audit
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+const mode = process.argv.filter((argument) => argument === "--write" || argument === "--check")
+if (mode.length > 0) {
   try {
-    const audit = process.argv.includes("--write") ? writeV137MilestoneAuditArtifacts(root) : process.argv.includes("--check") ? checkV137MilestoneAuditArtifacts(root) : fail("V137_AUDIT_MODE_INVALID")
+    const audit = mode.length === 1 && mode[0] === "--write" ? writeV137MilestoneAuditArtifacts(root) : mode.length === 1 && mode[0] === "--check" ? checkV137MilestoneAuditArtifacts(root) : fail("V137_AUDIT_MODE_INVALID")
     process.stdout.write(`${JSON.stringify({ status: audit.status, passed: audit.traceability.passed, pending: audit.releaseOperation.requirement })}\n`)
   } catch (error) {
     process.stderr.write(`${error instanceof Error ? error.message : "V137_AUDIT_FAILED"}\n`)

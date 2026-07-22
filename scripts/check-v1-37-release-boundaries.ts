@@ -495,12 +495,15 @@ export const checkV137ReleaseBoundaries = (
   })
 }
 
-const isDirectRun =
-  process.argv[1] !== undefined &&
-  path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)
+const modeArgs = process.argv.filter(
+  (argument) => argument === "--strict-release" || argument === "--source-fixture",
+)
 
-if (isDirectRun) {
-  const mode: V137ReleaseBoundaryMode = process.argv.includes("--strict-release")
+if (modeArgs.length > 0) {
+  if (modeArgs.length !== 1) {
+    throw new TypeError("V137_RELEASE_BOUNDARY_MODE_INVALID")
+  }
+  const mode: V137ReleaseBoundaryMode = modeArgs[0] === "--strict-release"
     ? "strict-release"
     : "source-fixture"
   const result = checkV137ReleaseBoundaries(mode)

@@ -391,14 +391,12 @@ export const checkV137ReleaseReadinessArtifacts = (
   return readiness
 }
 
-if (
-  process.argv[1] &&
-  path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)
-) {
+const mode = process.argv.filter((argument) => argument === "--write" || argument === "--check")
+if (mode.length > 0) {
   try {
-    const readiness = process.argv.includes("--write")
+    const readiness = mode.length === 1 && mode[0] === "--write"
       ? writeV137ReleaseReadinessArtifacts(root)
-      : process.argv.includes("--check")
+      : mode.length === 1 && mode[0] === "--check"
         ? checkV137ReleaseReadinessArtifacts(root)
         : fail("V137_RELEASE_READINESS_MODE_INVALID")
     process.stdout.write(

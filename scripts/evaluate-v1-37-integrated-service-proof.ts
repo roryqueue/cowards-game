@@ -140,11 +140,12 @@ export const checkV137IntegratedProofArtifacts = (repoRoot: string, restrictedRo
   return proof
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+const mode = process.argv.filter((argument) => argument === "--write" || argument === "--check")
+if (mode.length > 0) {
   try {
     const restrictedRoot = process.env.COWARDS_V1_37_RESTRICTED_EVIDENCE_ROOT
     if (!restrictedRoot) fail("V137_INTEGRATED_PROOF_RESTRICTED_ROOT_REQUIRED")
-    const proof = process.argv.includes("--write") ? writeV137IntegratedProofArtifacts(root, restrictedRoot) : process.argv.includes("--check") ? checkV137IntegratedProofArtifacts(root, restrictedRoot) : fail("V137_INTEGRATED_PROOF_MODE_INVALID")
+    const proof = mode.length === 1 && mode[0] === "--write" ? writeV137IntegratedProofArtifacts(root, restrictedRoot) : mode.length === 1 && mode[0] === "--check" ? checkV137IntegratedProofArtifacts(root, restrictedRoot) : fail("V137_INTEGRATED_PROOF_MODE_INVALID")
     process.stdout.write(`${JSON.stringify({ status: proof.status, inputRootSha256: proof.inputRootSha256 })}\n`)
   } catch (error) { process.stderr.write(`${error instanceof Error ? error.message : "V137_INTEGRATED_PROOF_FAILED"}\n`); process.exitCode = 1 }
 }

@@ -381,9 +381,10 @@ export const checkV137StrategyFoundationArtifacts = (repoRoot: string): V137Stra
   return handoff
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+const mode = process.argv.filter((argument) => argument === "--write" || argument === "--check")
+if (mode.length > 0) {
   try {
-    const handoff = process.argv.includes("--write") ? writeV137StrategyFoundationArtifacts(root) : process.argv.includes("--check") ? checkV137StrategyFoundationArtifacts(root) : fail("V137_STRATEGY_FOUNDATION_MODE_INVALID")
+    const handoff = mode.length === 1 && mode[0] === "--write" ? writeV137StrategyFoundationArtifacts(root) : mode.length === 1 && mode[0] === "--check" ? checkV137StrategyFoundationArtifacts(root) : fail("V137_STRATEGY_FOUNDATION_MODE_INVALID")
     process.stdout.write(`${JSON.stringify({ authorized: handoff.strategyMilestoneAuthorized, lanes: handoff.lanes.length, releaseCompletion: handoff.proofBindings.releaseCompletion })}\n`)
   } catch (error) {
     process.stderr.write(`${error instanceof Error ? error.message : "V137_STRATEGY_FOUNDATION_FAILED"}\n`)
