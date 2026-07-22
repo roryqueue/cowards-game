@@ -1,5 +1,37 @@
 # Milestones
 
+## v1.37 Rules Integrity and Strategy Evaluation Foundations (Release-ready archive: 2026-07-22)
+
+**Status:** Release-ready at archive; annotated local `v1.37` tag and independent post-tag join are the external PROOF-08 closure evidence
+**Phases:** 6
+**Phase range:** 256-261
+**Plans:** 147/148 complete before the terminal archive operation; Plan 261-13 closes only through the archive/tag/post-check sequence
+**Requirements:** 56/56 traced; 55 passed and PROOF-08 `ready_pending` in the committed archive
+**Audit:** Release-ready - zero gaps, zero overrides, one transition authority, and zero unapproved semantic deltas
+**Roadmap:** .planning/milestones/v1.37-ROADMAP.md
+**Requirements archive:** .planning/milestones/v1.37-REQUIREMENTS.md
+**Audit archive:** .planning/milestones/v1.37-MILESTONE-AUDIT.md
+**Phase archive:** .planning/milestones/v1.37-phases/
+**Decision:** The committed archive remains a truthful pre-tag record. Only the actual annotated tag and read-only post-tag checker may close PROOF-08; serious Strategy work remains separately unauthorized.
+
+**Delivered:**
+
+- One canonical semantic/version authority and transition kernel now own engine execution, Chronicle recording, replay reconstruction, runtime/service interpretation, arena identity, and Set policy.
+- Semantic validators reject invalid arenas and Match states across initial, intermediate, final, ownership, occupancy, bounds, position/status, initiative, version, and outcome invariants.
+- Every confirmed lifecycle, precedence, constant-ownership, event-vocabulary, and stale-entry-point audit defect is fixed while valid v1.4 rulings and immutable historical evidence remain exact.
+- Canonical JSON, source/artifact identity, and success/player-violation/system-failure semantics are preserved end to end; system failure cannot mutate gameplay or become a player penalty.
+- Executable TypeScript, Python, Rust, and Zig conformance proves full-state, event, memory, objective, and failure-trace behavior under one documented ABI and runtime-budget envelope.
+- Production-shaped proof covers 4 containment-attested non-counted lanes, 12 runs, 23 service scenarios, 17 rollback/history scenarios, Chronicle reconstruction/replay, Set side/initiative fairness, persistence, privacy, and drift guards.
+
+### Active Constraints
+
+- The four demonstrated runtime lanes remain non-counted until current containment and exact executable evidence independently satisfy counted-entry policy.
+- Strategy execution remains outside web/API/Go and behind runtime-service / Runtime Broker / provider boundaries.
+- Public/default output remains source, artifact, memory, objective, diagnostics, host-data, credential, and security-internal safe.
+- Cycle-start Backstab removal and post-Advance HOLD/END_ACTIVATION remain deferred unless separately approved equivalence proof succeeds.
+- Cycle-cap, starting-position, facing/reversal, Backstab-rule, hidden-information, randomness, adaptive-rule, new-arena, rating, prize, moderation, language, TinyGo, package, and broad-UI experiments remain outside v1.37.
+- The Strategy-foundation handoff is non-authorizing; the next milestone requires its own explicit approval.
+
 ## v1.36 Competition Maturity (Shipped: 2026-07-12)
 
 **Status:** Shipped 2026-07-12

@@ -3,9 +3,9 @@
 ## Current State
 
 **Shipped version:** v1.36 Competition Maturity on 2026-07-12
-**Current milestone:** v1.37 Rules Integrity and Strategy Evaluation Foundations
-**Status:** v1.37 planning is active. The milestone will make canonical Matches deterministic, replayable, language-neutral, failure-safe, semantically validated, and suitable for trustworthy competitive Strategy research while preserving valid v1.4 gameplay and immutable historical evidence.
-**Last audit:** v1.36 passed with 39/39 requirements, 7/7 phases, 39/39 integration checks, and 5/5 end-to-end flows. Live proof completed 48/48 Matches through Go and runtime-service and verified standings, governance recomputation, privacy boundaries, and replay realism.
+**Release target:** v1.37 Rules Integrity and Strategy Evaluation Foundations
+**Status:** v1.37 is release-ready at archive. The committed tree truthfully retains 55 passed requirements plus PROOF-08 `ready_pending`; the annotated local tag and independent post-tag checker are the only release-closure evidence.
+**Last audit:** v1.37 traced 56/56 requirements with 55 passed, zero gaps, zero overrides, one transition authority, and zero unapproved semantic deltas. Production-shaped proof covers four containment-attested non-counted lanes, 12 runs, 23 service scenarios, 17 rollback/history scenarios, Chronicle reconstruction/replay, Set fairness, persistence, privacy, and rollback.
 
 Coward's Game is a deterministic two-player programmable strategy game for the web. Players can author immutable Strategy Revisions, save account-owned revisions, fork credible Starter and Advanced Strategies, enter exhibitions or resettable trial ladder seasons, inspect fair standings and replay evidence, study saved gauntlet analytics, and trust that public outputs do not expose private Strategy data. The project now has generated TypeScript service contracts, selected service-backed public/player/account/ladder/workshop analytics reads, live PostgreSQL-backed Go ownership for normal backend orchestration and selected API routes, artifact-backed Go Starter/Advanced forks, runtime isolation readiness gates, supported counted TypeScript, Python, Rust, and Zig Strategy languages, source-language artifact provenance for TypeScript/Python, executable Rust and Zig WASM/WASI artifact-backed lanes, repeatable local topology diagnostics, and boundary drift monitors. Go owns normal job lifecycle, Match completion, Chronicle persistence handoff, MatchSet scoring/status refresh, selected exhibition creation, public MatchSet summary, public replay metadata, and selected public replay evidence while hostile Strategy execution remains behind the Strategy Execution Service / Runtime Broker boundary. TinyGo has a documented spike/defer recommendation and is not production-visible.
 
@@ -38,6 +38,8 @@ Players can design, run, replay, and understand deterministic autonomous doctrin
 - No new official arena geometry beyond authority/fairness repair and no gameplay change justified only by the current toy Strategy matrix.
 - No durable ratings, prizes, staffed moderation, new languages, TinyGo promotion, package ecosystems, or broad UI redesign.
 - Strategy execution remains outside web/API/Go; public/default output remains source, artifact, memory, objective, diagnostics, host-data, security-internal, and private-runtime safe.
+
+**Release-ready archive:** `.planning/milestones/v1.37-ROADMAP.md`, `.planning/milestones/v1.37-REQUIREMENTS.md`, `.planning/milestones/v1.37-MILESTONE-AUDIT.md`, and `.planning/milestones/v1.37-phases/`. Serious Strategy initialization remains unauthorized until the separately approved next milestone.
 
 ## Latest Shipped Milestone: v1.36 Competition Maturity
 

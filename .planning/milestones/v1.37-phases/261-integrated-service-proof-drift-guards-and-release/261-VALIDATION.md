@@ -20,7 +20,7 @@ Every source/fixture test precedes its collector write. Service, rollback/histor
 | Collector order | service `:write/:check` -> rollback `:write/:check` -> browser `:write/:check` |
 | Full deterministic suite | `pnpm test:fast && pnpm e2e:smoke && pnpm e2e:visual && pnpm boundary:monitors` |
 | Prearchive gate | integrated proof -> prearchive proof -> release-ready audit -> handoff -> readiness -> strict release boundaries |
-| Postarchive gate | create annotated tag only after archive commit, then `pnpm v1.37:release-tag:check` |
+| Postarchive gate | create annotated tag only after archive commit, then `pnpm exec tsx scripts/check-v1-37-release-tag.ts` |
 
 ## Plan Task Verification Map
 
@@ -53,8 +53,8 @@ Every source/fixture test precedes its collector write. Service, rollback/histor
 | 261-11-02 | PROOF-05,06 | Final strict boundary mode, every missing/stale artifact mutation | `COWARDS_V1_37_REQUIRE_INTEGRATED_PROOF=1 pnpm v1.37:release-boundaries:check && COWARDS_V1_37_REQUIRE_INTEGRATED_PROOF=1 pnpm boundary:monitors` | pass / covered |
 | 261-12-01 | PROOF-01..08 | Zero-finding prearchive review/validation/UAT/audit convergence | `COWARDS_V1_37_REQUIRE_INTEGRATED_PROOF=1 pnpm boundary:monitors && pnpm v1.37:release-readiness:check` | pass / covered |
 | 261-12-02 | PROOF-01..08 | Requirements/roadmap/state agree on 55 passed + PROOF-08 pending | `pnpm v1.37:milestone-audit:check && pnpm exec tsx scripts/capture-v1-37-protected-baseline.ts --check` | pass / covered |
-| 261-13-01 | PROOF-08 | Dedicated archive commit contains truthful release-ready artifacts; pretag checker proves membership and tag absence | `test "$(git show -s --format=%s HEAD)" = "chore: archive v1.37 milestone" && pnpm v1.37:release-tag:check -- --pretag-archive HEAD` | pending — outer archive operation intentionally not performed |
-| 261-13-02 | PROOF-08 | Actual annotated tag closes outer operation through post-tag join | `pnpm v1.37:release-tag:check && test "$(git cat-file -t v1.37)" = "tag" && test "$(git rev-parse 'v1.37^{}')" = "$(git rev-parse HEAD)"` | pending — outer tag/post-check intentionally not performed |
+| 261-13-01 | PROOF-08 | Dedicated archive commit contains truthful release-ready artifacts; pretag checker proves membership and tag absence | `test "$(git show -s --format=%s HEAD)" = "chore: archive v1.37 milestone" && pnpm exec tsx scripts/check-v1-37-release-tag.ts --pretag-archive "$(git rev-parse HEAD)"` | pending — outer archive operation intentionally not performed |
+| 261-13-02 | PROOF-08 | Actual annotated tag closes outer operation through post-tag join | `pnpm exec tsx scripts/check-v1-37-release-tag.ts && test "$(git cat-file -t v1.37)" = "tag" && test "$(git rev-parse 'v1.37^{}')" = "$(git rev-parse HEAD)"` | pending — outer tag/post-check intentionally not performed |
 
 ## Wave Gates
 

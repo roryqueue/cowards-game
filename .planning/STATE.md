@@ -1,14 +1,14 @@
 ---
 gsd_state_version: 1.0
 milestone: v1.37
-milestone_name: Rules Integrity and Strategy Evaluation Foundations — ACTIVE
+milestone_name: Rules Integrity and Strategy Evaluation Foundations — RELEASE-READY AT ARCHIVE
 current_phase: 261
 current_phase_name: integrated-service-proof-drift-guards-and-release
-status: release-ready
-stopped_at: Completed 261-12-PLAN.md; Plan 261-13 archive/tag/post-check pending
-last_updated: "2026-07-22T22:57:18.000Z"
+status: release-ready-at-archive
+stopped_at: Plan 261-13 archive commit target; annotated v1.37 tag and post-tag join pending
+last_updated: "2026-07-22T23:18:00.000Z"
 last_activity: 2026-07-22
-last_activity_desc: Phase 261 review, validation, security, UAT, verification, and milestone audit converged with zero open findings
+last_activity_desc: Release-ready v1.37 archive assembled with zero findings; tag/post-check intentionally remains external
 progress:
   total_phases: 6
   completed_phases: 5
@@ -24,14 +24,14 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-07-12)
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
-**Current focus:** Phase 261 — integrated-service-proof-drift-guards-and-release
+**Current focus:** v1.37 outer release closure — archive commit, annotated local tag, and independent post-tag join
 
 ## Current Position
 
-Phase: 261 (integrated-service-proof-drift-guards-and-release) — RELEASE READY
-Plan: 12 of 13 complete
-Status: Plan 261-13 archive/tag/post-check pending
-Last activity: 2026-07-22 — Review, validation, security, all-phase UAT, verification, and milestone audit converged with zero open findings
+Phase: 261 (integrated-service-proof-drift-guards-and-release) — RELEASE READY AT ARCHIVE
+Plan: 13 of 13, terminal outer operation in progress
+Status: Archive commit target; annotated `v1.37` tag and post-tag join pending
+Last activity: 2026-07-22 — Release-ready archive assembled after zero-finding review, validation, security, UAT, verification, and audit convergence
 
 Progress: [██████████] 99%
 
@@ -89,9 +89,9 @@ Progress: [██████████] 99%
 
 **Resume file:** None
 
-Last session: 2026-07-22T22:57:18.000Z
-Stopped at: Completed 261-12-PLAN.md; Plan 261-13 archive/tag/post-check pending
-Next command: Execute the synchronous Plan 261-13 archive, annotated local tag, and independent post-tag join.
+Last session: 2026-07-22T23:18:00.000Z
+Stopped at: Plan 261-13 archive commit target; annotated `v1.37` tag and post-tag join pending
+Next command: Validate the dedicated archive commit, create annotated local `v1.37`, and run the independent post-tag checker without rewriting the worktree.
 
 ## Performance Metrics
 
@@ -176,6 +176,7 @@ Next command: Execute the synchronous Plan 261-13 archive, annotated local tag, 
 | Phase 261 P04 | 23min | 3 tasks | 7 files |
 | Phase 261 P08 | 35 min | 2 tasks | 9 files |
 | Phase 261 P12 | multi-session | 2 tasks + review/validation/security/UAT/audit convergence | 9 code-review findings fixed; zero open findings; 55 passed + PROOF-08 ready/pending |
+| Phase 261 P13 | terminal synchronous operation | archive commit + annotated tag + read-only join | Committed record remains release-ready-at-archive; PROOF-08 closes only outside the committed tree |
 
 ## Decisions
 

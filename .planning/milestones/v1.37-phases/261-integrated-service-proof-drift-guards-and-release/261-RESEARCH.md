@@ -306,7 +306,7 @@ Nyquist validation is enabled. Phase planning must create the missing Phase-261 
 | Quick run | `pnpm exec vitest run --maxWorkers=1 --no-file-parallelism scripts/evaluate-v1-37-prearchive-proof.test.ts scripts/check-v1-37-release-boundaries.test.ts scripts/generate-v1-37-strategy-foundation-handoff.test.ts scripts/check-v1-37-release-tag.test.ts` |
 | Current lower-proof smoke | `pnpm exec vitest run --maxWorkers=1 --no-file-parallelism scripts/evaluate-v1-37-truthful-inputs-set-fairness.test.ts scripts/evaluate-v1-37-kernel-integrity.test.ts scripts/evaluate-v1-37-executable-conformance.test.ts scripts/check-v1-37-integrity-boundaries.test.ts` |
 | Full deterministic suite | `pnpm test:fast && pnpm e2e:smoke && pnpm e2e:visual && pnpm boundary:monitors` |
-| Full release gate | `COWARDS_V1_37_REQUIRE_INTEGRATED_PROOF=1 pnpm v1.37:prearchive-proof:check && pnpm v1.37:release-tag:check` with the first command before archive and the second only after the annotated tag exists |
+| Full release gate | `COWARDS_V1_37_REQUIRE_INTEGRATED_PROOF=1 pnpm v1.37:prearchive-proof:check && pnpm exec tsx scripts/check-v1-37-release-tag.ts` with the first command before archive and the second only after the annotated tag exists |
 
 [VERIFIED: existing framework configuration and command patterns; new package script names are prescriptive Phase-261 seams]
 
@@ -321,7 +321,7 @@ Nyquist validation is enabled. Phase planning must create the missing Phase-261 
 | PROOF-05 | API/view/log/fixture/contract/proof privacy | security/unit/E2E | `pnpm v1.37:release-boundaries:check` plus browser network scan | Wave 0, reusing existing privacy seam |
 | PROOF-06 | Named drift monitor mutations | structural/mutation | `pnpm exec vitest run scripts/check-v1-37-release-boundaries.test.ts scripts/check-boundary-monitors.test.ts` | Wave 0 |
 | PROOF-07 | Exact 56-row traceability and release-ready audit | evaluator/integration | `COWARDS_V1_37_REQUIRE_INTEGRATED_PROOF=1 pnpm v1.37:prearchive-proof:check && pnpm v1.37:milestone-audit:check` | Wave 0 |
-| PROOF-08 | Archive/tag/handoff gate | Git integration | `pnpm v1.37:strategy-foundation:check && pnpm v1.37:release-tag:check` | Wave 0 |
+| PROOF-08 | Archive/tag/handoff gate | Git integration | `pnpm v1.37:strategy-foundation:check && pnpm exec tsx scripts/check-v1-37-release-tag.ts` | Wave 0 |
 
 ### Wave 0 Gaps
 
@@ -453,7 +453,7 @@ audit: .planning/milestones/v1.37-MILESTONE-AUDIT.md
 strategy-handoff: <sha256 of canonical v1.37 Strategy-foundation handoff JSON>
 release-readiness: <sha256 of canonical v1.37 release-readiness JSON>"
 
-pnpm v1.37:release-tag:check
+pnpm exec tsx scripts/check-v1-37-release-tag.ts
 git cat-file -t v1.37
 git rev-parse 'v1.37^{}'
 git status --short
