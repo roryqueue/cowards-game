@@ -2035,9 +2035,9 @@ export const writeV137IntegratedServiceProof = async (
   return control
 }
 
-const isDirectRun =
-  process.argv[1] !== undefined &&
-  path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)
+const isDirectRun = process.argv.some(
+  (argument) => path.resolve(argument) === fileURLToPath(import.meta.url),
+)
 
 if (isDirectRun) {
   const main = async (): Promise<void> => {
@@ -2068,6 +2068,7 @@ if (isDirectRun) {
       `${JSON.stringify({ status: receipt.status, laneCount: receipt.lanes.length, runCount: receipt.lanes.flatMap(({ runs }) => runs).length, scenarioCount: receipt.scenarios.length, countedLaneCount: receipt.lanes.filter(({ counted }) => counted).length })}\n`,
     )
   }
+
   void main().catch((error: unknown) => {
     process.stderr.write(
       `${error instanceof Error ? error.message : "V137_SERVICE_PROOF_FAILED"}\n`,
