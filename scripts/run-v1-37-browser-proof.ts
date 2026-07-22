@@ -93,7 +93,18 @@ const readControl = (root: string): Control => {
 export const checkV137BrowserProof = (repoRoot: string, restrictedRoot: string): V137BrowserProofReceipt => {
   const control = readControl(restrictedRoot)
   if (control.inputRootSha256 !== inputRoot(repoRoot)) fail("V137_BROWSER_PROOF_INPUT_STALE")
-  return validateV137BrowserProofReceipt(control.receipt)
+  const receipt = validateV137BrowserProofReceipt(control.receipt)
+  if (control.records.length !== 1) fail("V137_BROWSER_PROOF_RECORD_INVENTORY_INVALID")
+  const record = control.records[0]!
+  if (JSON.stringify(record.reference) !== JSON.stringify(receipt.browserProofReceiptRef)) {
+    fail("V137_BROWSER_PROOF_RECORD_INVENTORY_INVALID")
+  }
+  const store = createV137RestrictedEvidenceStore({ repoRoot, maxObjectBytes: 16 * 1024 * 1024 })
+  store.requireReleaseEvidence(record)
+  if (readHandoff(repoRoot, restrictedRoot).digest !== receipt.proofDataHandoffDigest) {
+    fail("V137_BROWSER_PROOF_HANDOFF_INVALID")
+  }
+  return receipt
 }
 
 const writeControl = (root: string, control: Control): void => {
@@ -101,17 +112,19 @@ const writeControl = (root: string, control: Control): void => {
 }
 export const writeV137BrowserProofFixture = (repoRoot: string, restrictedRoot: string): Control => {
   const receipt = createV137BrowserProofReceiptFixture()
-  const control: Control = { schemaVersion: "v1.37-browser-proof-control-v1", inputRootSha256: inputRoot(repoRoot), receipt, records: [] }
+  const store = createV137RestrictedEvidenceStore({ repoRoot, maxObjectBytes: 16 * 1024 * 1024 })
+  const record = store.writeEvidence({ bytes: Buffer.from("fixture-browser-proof", "utf8"), evidenceClass: "privacy-scan", actorClass: "collector", latestBoundCertificateValidUntil: "2099-01-01T00:00:00.000Z" })
+  const control: Control = { schemaVersion: "v1.37-browser-proof-control-v1", inputRootSha256: inputRoot(repoRoot), receipt: { ...receipt, browserProofReceiptRef: record.reference }, records: [record] }
   writeControl(restrictedRoot, control); return control
 }
 
 const readHandoff = (repoRoot: string, restrictedRoot: string): { digest: `sha256:${string}`; descriptor: { capabilityReceiptDigest: `sha256:${string}` } } => {
   const service = checkV137IntegratedServiceProof(repoRoot, restrictedRoot)
   const control = JSON.parse(readFileSync(path.join(restrictedRoot, V137_INTEGRATED_SERVICE_PROOF_CONTROL_PATH), "utf8")) as { records: V137RestrictedEvidenceRecord[]; receipt: typeof service }
-  const record = control.records.find((entry) => entry.reference.sha256 === service.proofDataHandoffRef.sha256)
+  const record = control.records.find((entry) => JSON.stringify(entry.reference) === JSON.stringify(service.proofDataHandoffRef))
   if (!record) fail("V137_BROWSER_PROOF_HANDOFF_MISSING")
-  const bytes = readFileSync(path.join(restrictedRoot, v137RestrictedEvidenceObjectRelativePath(record.reference.sha256)))
-  if (hash(bytes) !== record.reference.sha256) fail("V137_BROWSER_PROOF_HANDOFF_INVALID")
+  const store = createV137RestrictedEvidenceStore({ repoRoot, maxObjectBytes: 64 * 1024 * 1024 })
+  const bytes = store.readEvidence(record, { actorClass: "checker" })
   return { digest: hash(bytes), descriptor: { capabilityReceiptDigest: hash(bytes) } }
 }
 const run = (repoRoot: string, args: string[], environment: NodeJS.ProcessEnv): void => {

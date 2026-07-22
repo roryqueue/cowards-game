@@ -1,4 +1,5 @@
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
+import { createHash } from "node:crypto"
+import { mkdtempSync, readFileSync, rmSync, unlinkSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { afterEach, describe, expect, it } from "vitest"
@@ -9,6 +10,8 @@ import {
   validateV137BrowserProofReceipt,
   writeV137BrowserProofFixture,
 } from "./run-v1-37-browser-proof.js"
+import { writeV137IntegratedServiceProofFixture } from "./run-v1-37-integrated-service-proof.js"
+import { createV137RestrictedEvidenceStore } from "./lib/v1-37-restricted-evidence-store.js"
 
 const roots: string[] = []
 const root = (): string => {
@@ -68,19 +71,29 @@ describe("v1.37 browser proof receipt", () => {
     ).toThrow("V137_BROWSER_PROOF_RECEIPT_SHAPE")
   })
 
-  it("writes restricted-first evidence and checks twice without writes", () => {
+  it("fails closed when the browser evidence inventory, object, or bound service handoff diverges", async () => {
     const restrictedRoot = root()
+    process.env.COWARDS_V1_37_RESTRICTED_EVIDENCE_ROOT = restrictedRoot
+    const service = await writeV137IntegratedServiceProofFixture(process.cwd(), restrictedRoot)
     const control = writeV137BrowserProofFixture(process.cwd(), restrictedRoot)
+    const handoffRecord = service.records.find((record) => JSON.stringify(record.reference) === JSON.stringify(service.receipt.proofDataHandoffRef))!
+    const handoff = createV137RestrictedEvidenceStore({ repoRoot: process.cwd(), maxObjectBytes: 64 * 1024 * 1024 }).readEvidence(handoffRecord, { actorClass: "checker" })
+    const bound = { ...control, receipt: { ...control.receipt, proofDataHandoffDigest: `sha256:${createHash("sha256").update(handoff).digest("hex")}` } }
+    writeFileSync(path.join(restrictedRoot, V137_BROWSER_PROOF_CONTROL_PATH), `${JSON.stringify(bound)}\n`)
     const before = readFileSync(
       path.join(restrictedRoot, V137_BROWSER_PROOF_CONTROL_PATH),
     )
     expect(checkV137BrowserProof(process.cwd(), restrictedRoot).status).toBe("passed")
-    expect(checkV137BrowserProof(process.cwd(), restrictedRoot).status).toBe("passed")
     expect(readFileSync(path.join(restrictedRoot, V137_BROWSER_PROOF_CONTROL_PATH))).toEqual(before)
-    writeFileSync(
-      path.join(restrictedRoot, V137_BROWSER_PROOF_CONTROL_PATH),
-      `${JSON.stringify({ ...control, inputRootSha256: `sha256:${"f".repeat(64)}` })}\n`,
-    )
+    writeFileSync(path.join(restrictedRoot, V137_BROWSER_PROOF_CONTROL_PATH), `${JSON.stringify({ ...bound, records: [] })}\n`)
+    expect(() => checkV137BrowserProof(process.cwd(), restrictedRoot)).toThrow("V137_BROWSER_PROOF_RECORD_INVENTORY_INVALID")
+    writeFileSync(path.join(restrictedRoot, V137_BROWSER_PROOF_CONTROL_PATH), `${JSON.stringify(bound)}\n`)
+    writeFileSync(path.join(restrictedRoot, V137_BROWSER_PROOF_CONTROL_PATH), `${JSON.stringify({ ...bound, receipt: { ...bound.receipt, proofDataHandoffDigest: `sha256:${"f".repeat(64)}` } })}\n`)
+    expect(() => checkV137BrowserProof(process.cwd(), restrictedRoot)).toThrow("V137_BROWSER_PROOF_HANDOFF_INVALID")
+    writeFileSync(path.join(restrictedRoot, V137_BROWSER_PROOF_CONTROL_PATH), `${JSON.stringify(bound)}\n`)
+    unlinkSync(path.join(restrictedRoot, "objects", bound.records[0]!.reference.sha256.slice(7, 9), bound.records[0]!.reference.sha256.slice(9, 11), bound.records[0]!.reference.sha256.slice(7)))
+    expect(() => checkV137BrowserProof(process.cwd(), restrictedRoot)).toThrow("V137_RESTRICTED_EVIDENCE_RELEASE_OBJECT_MISSING")
+    writeFileSync(path.join(restrictedRoot, V137_BROWSER_PROOF_CONTROL_PATH), `${JSON.stringify({ ...bound, inputRootSha256: `sha256:${"f".repeat(64)}` })}\n`)
     expect(() => checkV137BrowserProof(process.cwd(), restrictedRoot)).toThrow(
       "V137_BROWSER_PROOF_INPUT_STALE",
     )
