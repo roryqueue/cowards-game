@@ -4,17 +4,17 @@ milestone: v1.37
 milestone_name: Rules Integrity and Strategy Evaluation Foundations — ACTIVE
 current_phase: 261
 current_phase_name: integrated-service-proof-drift-guards-and-release
-status: executing
-stopped_at: Completed 261-08-PLAN.md
-last_updated: "2026-07-22T16:37:18.426Z"
+status: release-ready
+stopped_at: Completed 261-12-PLAN.md; Plan 261-13 archive/tag/post-check pending
+last_updated: "2026-07-22T22:57:18.000Z"
 last_activity: 2026-07-22
-last_activity_desc: Phase 261 plan 05 desktop/mobile browser boundary proof passed without live-backend overclaim
+last_activity_desc: Phase 261 review, validation, security, UAT, verification, and milestone audit converged with zero open findings
 progress:
   total_phases: 6
   completed_phases: 5
-  total_plans: 149
-  completed_plans: 143
-  percent: 83
+  total_plans: 148
+  completed_plans: 147
+  percent: 99
 ---
 
 # State: Coward's Game
@@ -28,12 +28,12 @@ See: `.planning/PROJECT.md` (updated 2026-07-12)
 
 ## Current Position
 
-Phase: 261 (integrated-service-proof-drift-guards-and-release) — EXECUTING
-Plan: 8 of 13
-Status: Ready to execute
-Last activity: 2026-07-22 — Phase 261 plan 05 desktop/mobile browser boundary proof passed without live-backend overclaim
+Phase: 261 (integrated-service-proof-drift-guards-and-release) — RELEASE READY
+Plan: 12 of 13 complete
+Status: Plan 261-13 archive/tag/post-check pending
+Last activity: 2026-07-22 — Review, validation, security, all-phase UAT, verification, and milestone audit converged with zero open findings
 
-Progress: [█████████░] 93%
+Progress: [██████████] 99%
 
 ## Durable Decisions
 
@@ -89,9 +89,9 @@ Progress: [█████████░] 93%
 
 **Resume file:** None
 
-Last session: 2026-07-22T16:37:18.403Z
-Stopped at: Completed 261-08-PLAN.md
-Next command: Execute 261-06 deterministic integrated proof rollup.
+Last session: 2026-07-22T22:57:18.000Z
+Stopped at: Completed 261-12-PLAN.md; Plan 261-13 archive/tag/post-check pending
+Next command: Execute the synchronous Plan 261-13 archive, annotated local tag, and independent post-tag join.
 
 ## Performance Metrics
 
@@ -175,6 +175,7 @@ Next command: Execute 261-06 deterministic integrated proof rollup.
 | Phase 261 P03 | multi-session resumed | 3 tasks + production activation | 4 languages, 12 service runs, 23 scenarios; containment-attested and non-counted |
 | Phase 261 P04 | 23min | 3 tasks | 7 files |
 | Phase 261 P08 | 35 min | 2 tasks | 9 files |
+| Phase 261 P12 | multi-session | 2 tasks + review/validation/security/UAT/audit convergence | 9 code-review findings fixed; zero open findings; 55 passed + PROOF-08 ready/pending |
 
 ## Decisions
 
