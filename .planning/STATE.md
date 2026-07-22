@@ -5,16 +5,16 @@ milestone_name: Rules Integrity and Strategy Evaluation Foundations — ACTIVE
 current_phase: 261
 current_phase_name: integrated-service-proof-drift-guards-and-release
 status: executing
-stopped_at: Completed 261-02-PLAN.md
-last_updated: "2026-07-19T16:52:58.556Z"
-last_activity: 2026-07-19
-last_activity_desc: Phase 261 plan 02 release privacy and drift guards passed
+stopped_at: Completed 261-03-PLAN.md
+last_updated: "2026-07-22T11:42:53Z"
+last_activity: 2026-07-22
+last_activity_desc: Phase 261 plan 03 real four-language service proof passed with all lanes truthfully non-counted
 progress:
   total_phases: 6
   completed_phases: 5
   total_plans: 149
-  completed_plans: 137
-  percent: 92
+  completed_plans: 138
+  percent: 93
 ---
 
 # State: Coward's Game
@@ -29,11 +29,11 @@ See: `.planning/PROJECT.md` (updated 2026-07-12)
 ## Current Position
 
 Phase: 261 (integrated-service-proof-drift-guards-and-release) — EXECUTING
-Plan: 3 of 13
+Plan: 4 of 13
 Status: Ready to execute
-Last activity: 2026-07-19 — Phase 261 plan 02 release privacy and drift guards passed
+Last activity: 2026-07-22 — Phase 261 plan 03 real four-language service proof passed with all lanes truthfully non-counted
 
-Progress: [█████████░] 92%
+Progress: [█████████░] 93%
 
 ## Durable Decisions
 
@@ -89,9 +89,9 @@ Progress: [█████████░] 92%
 
 **Resume file:** None
 
-Last session: 2026-07-19T16:52:58.540Z
-Stopped at: Completed 261-02-PLAN.md
-Next command: Execute 261-03 integrated service proof.
+Last session: 2026-07-22T11:42:53Z
+Stopped at: Completed 261-03-PLAN.md
+Next command: Execute 261-04 persistence and rollback proof.
 
 ## Performance Metrics
 
@@ -172,8 +172,13 @@ Next command: Execute 261-03 integrated service proof.
 | Phase 260 P15 | multi-session resumed | 3 tasks + review/validation/verification | 9/9 requirements; 12 proof gates; full workspace suite; 44 boundary assertions |
 | Phase 261 P01 | 13min | 2 tasks | 7 files |
 | Phase 261 P02 | 17min | 2 tasks | 5 files |
+| Phase 261 P03 | multi-session resumed | 3 tasks + production activation | 4 languages, 12 service runs, 23 scenarios; containment-attested and non-counted |
 
 ## Decisions
+
+- [Phase 261]: Functional conformance, containment attestation, and counted eligibility remain three independent facts; the proof-local selected-v1.19 HTTP route passes all four lanes while all remain non-counted. — Real local service evidence cannot silently promote deployment authority.
+- [Phase 261]: Current v1.19 execution may traverse the additive v1.18 service envelope only under the complete selected semantic tuple. — Service activation preserves immutable historical v1.18 and v1.4 evidence and does not create a second gameplay authority.
+- [Phase 261]: Live integrated proof collection is restricted to the write command; strict check is deterministic and byte-read-only. — Release validation cannot manufacture or refresh its own evidence.
 
 - [Phase 260]: Candidate lane certification requires one complete explicit corpus-v3, trace-v4, Workshop-v1.19, and successor-tuple binding; current registries and implicit defaults are inadmissible. — Preactivation evidence cannot be manufactured by relabeling Phase-259 runs.
 - [Phase 260]: Any adapter source-byte change invalidates candidate lane evidence and requires all real runs to be repeated. — Tooling identity is executable evidence, not a documentation label.
