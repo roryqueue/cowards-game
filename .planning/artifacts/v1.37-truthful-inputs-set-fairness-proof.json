@@ -624,7 +624,7 @@
       "status": "passed",
       "command": "pnpm exec tsx scripts/evaluate-v1-37-observation-v1-19-postactivation.ts --check --activation-id activation:phase260:plan14:production",
       "exitCode": 0,
-      "stdoutSha256": "sha256:3c926e80da7dd2d339c5aef6752cab8135cd714a6fc1aa73ebdef617a4284497",
+      "stdoutSha256": "sha256:6e97cae28d04f96b2d6dfa3242911824496aab55803475c0bd97f804e2c06835",
       "stderrSha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     {
@@ -632,7 +632,7 @@
       "status": "passed",
       "command": "pnpm exec vitest run --maxWorkers=1 --no-file-parallelism packages/spec/src/strategy-observation-abi-v1-19.test.ts packages/engine/src/test/strategy-observations-v1-19.test.ts apps/runtime-service/src/execute-match-v1-19.test.ts",
       "exitCode": 0,
-      "stdoutSha256": "sha256:4a4b8928974b7439ab9fa615150900d3cf39bfbc29973df6195659efef9ce21d",
+      "stdoutSha256": "sha256:5cdeb869a0ec1bd46a84ff30443842d08d091ecc715d7659e82b099223774f80",
       "stderrSha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     {
@@ -640,7 +640,7 @@
       "status": "passed",
       "command": "pnpm exec vitest run --maxWorkers=1 --no-file-parallelism packages/spec/src/arena-catalog-v1-37.test.ts packages/spec/src/set-condition-policy-v1-37.test.ts packages/persistence/src/matchset-service.test.ts packages/persistence/src/matchset-status.test.ts packages/persistence/src/scoring.test.ts",
       "exitCode": 0,
-      "stdoutSha256": "sha256:44a1665f3f7ad744ffd574d84e834f90a34966b11622b294bce4c6e6f14284cc",
+      "stdoutSha256": "sha256:a0f688fb7af1b5c44cc6295e38cbdd65780b219cb8abb24ceb4ee40cf662b4bf",
       "stderrSha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     {
@@ -656,7 +656,7 @@
       "status": "passed",
       "command": "pnpm exec vitest run --maxWorkers=1 --no-file-parallelism apps/runtime-service/src/execute-match-v1-19.test.ts packages/replay/src/record.test.ts packages/replay/src/validate.test.ts packages/replay/src/historical-v1-4.test.ts",
       "exitCode": 0,
-      "stdoutSha256": "sha256:3001c3d9c100dfdcc218f040f2d7e090544173c1532246518dfe6801709a06c9",
+      "stdoutSha256": "sha256:1602f3dd06ecbfac824c0cc1685913f414a8c7840d51f0436bd518987f45289f",
       "stderrSha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     {
@@ -664,7 +664,7 @@
       "status": "passed",
       "command": "pnpm exec vitest run --maxWorkers=1 --no-file-parallelism apps/runtime-service/src/four-language-conformance-runner.test.ts scripts/certify-v1-37-observation-v1-19-language-lane.test.ts scripts/sign-import-v1-37-observation-v1-19-certificates.test.ts",
       "exitCode": 0,
-      "stdoutSha256": "sha256:bc0c320d19e5c88942abee4cc5d1811b51589e44393eb31665e14171b3cac7cb",
+      "stdoutSha256": "sha256:6bc2d3d806dee29ecea7e8387578493ad2c9f3879e2b8fe17500d3d299f87b9b",
       "stderrSha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     {
@@ -672,7 +672,7 @@
       "status": "passed",
       "command": "pnpm exec vitest run --maxWorkers=1 --no-file-parallelism scripts/activate-v1-37-observation-v1-19.test.ts packages/persistence/src/semantic-authority-selection-head.test.ts scripts/evaluate-v1-37-observation-v1-19-postactivation.test.ts",
       "exitCode": 0,
-      "stdoutSha256": "sha256:bb9e5cfd64cb9017c51bd973a4df08388bda1f803f0a5a4b260095ecee38b63b",
+      "stdoutSha256": "sha256:d4830c1f7d864712d65d2077a75fe4c13343249452c7151871a8f984a4443e8d",
       "stderrSha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     {
