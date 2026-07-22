@@ -10,18 +10,26 @@ const fail = (code: string): never => {
 }
 
 const main = async (): Promise<void> => {
-  const mode = process.argv[1]
-  if (mode !== "--write" && mode !== "--check") fail("V137_ROLLBACK_MODE_INVALID")
+  const mode = process.argv.find((argument) =>
+    argument === "--write" || argument === "--check" ? true : false,
+  )
+  if (mode !== "--write" && mode !== "--check")
+    fail("V137_ROLLBACK_MODE_INVALID")
   const restrictedRoot = process.env.COWARDS_V1_37_RESTRICTED_EVIDENCE_ROOT
   if (!restrictedRoot) fail("V137_RESTRICTED_EVIDENCE_ROOT_REQUIRED")
   const repoRoot = path.resolve(import.meta.dirname, "..")
-  const receipt = mode === "--write"
-    ? (await writeV137RollbackProof(repoRoot, restrictedRoot)).receipt
-    : checkV137RollbackProof(repoRoot, restrictedRoot)
-  process.stdout.write(`${JSON.stringify({ status: receipt.status, scenarioCount: receipt.scenarios.length, aggregateRootSha256: receipt.aggregateRootSha256 })}\n`)
+  const receipt =
+    mode === "--write"
+      ? (await writeV137RollbackProof(repoRoot, restrictedRoot)).receipt
+      : checkV137RollbackProof(repoRoot, restrictedRoot)
+  process.stdout.write(
+    `${JSON.stringify({ status: receipt.status, scenarioCount: receipt.scenarios.length, aggregateRootSha256: receipt.aggregateRootSha256 })}\n`,
+  )
 }
 
 void main().catch((error: unknown) => {
-  process.stderr.write(`${error instanceof Error ? error.message : "V137_ROLLBACK_FAILED"}\n`)
+  process.stderr.write(
+    `${error instanceof Error ? error.message : "V137_ROLLBACK_FAILED"}\n`,
+  )
   process.exitCode = 1
 })
