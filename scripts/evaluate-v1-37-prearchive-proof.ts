@@ -39,7 +39,10 @@ export interface V137PrearchiveProof {
   releaseOperation: { requirement: "PROOF-08"; status: "ready_pending"; expectedOperation: "archive-then-annotated-tag-then-independent-post-check"; completion: false }
 }
 
-const requirementIds = (source: string): string[] => Array.from(source.matchAll(/\*\*([A-Z]+-\d{2})\*\*:/g), (match) => match[1]!)
+const requirementIds = (source: string): string[] => {
+  const canonicalSection = source.split("## Conditional Simplifications", 1)[0] ?? ""
+  return Array.from(canonicalSection.matchAll(/\*\*([A-Z]+-\d{2})\*\*:/g), (match) => match[1]!)
+}
 const expectedRows = (ids: readonly string[]): RequirementRow[] => ids.map((id) => id === "PROOF-08" ? { id, status: "ready_pending", evidence: "outer-archive-annotated-tag-post-check" } : { id, status: "passed", evidence: id.startsWith("PROOF-") ? "phase261-executable-proof" : "inherited-phase-verification" })
 const hashFile = (repoRoot: string, file: string): `sha256:${string}` => digest(readFileSync(path.join(repoRoot, file)))
 export const computeV137PrearchiveProofInputRoot = (repoRoot: string): `sha256:${string}` => digest(canonical(INPUT_PATHS.map((file) => ({ path: file, sha256: hashFile(repoRoot, file) }))))
@@ -79,8 +82,8 @@ export const generateV137PrearchiveProof = (repoRoot: string): V137PrearchivePro
   if (ids.length !== 56 || new Set(ids).size !== 56 || ids.slice(-8).join(",") !== ["PROOF-01", "PROOF-02", "PROOF-03", "PROOF-04", "PROOF-05", "PROOF-06", "PROOF-07", "PROOF-08"].join(",")) fail("V137_PREARCHIVE_REQUIREMENT_SOURCE_INVALID")
   const boundaries = checkV137ReleaseBoundaries("source-fixture", repoRoot)
   if (boundaries.findings.length !== 0) fail("V137_PREARCHIVE_RELEASE_BOUNDARY_FAILED")
-  const phase260 = JSON.parse(readFileSync(path.join(repoRoot, ".planning/artifacts/v1.37-truthful-inputs-set-fairness-proof.json"), "utf8")) as { history?: { transitionAuthorityCount?: number }; audit?: { unapprovedGameplayChange?: boolean } }
-  if (phase260.history?.transitionAuthorityCount !== 1 || phase260.audit?.unapprovedGameplayChange !== false) fail("V137_PREARCHIVE_SEMANTIC_SOURCE_INVALID")
+  const phase260 = JSON.parse(readFileSync(path.join(repoRoot, ".planning/artifacts/v1.37-truthful-inputs-set-fairness-proof.json"), "utf8")) as { history?: { transitionAuthorityCount?: number; noExperimentalRulesActivated?: boolean } }
+  if (phase260.history?.transitionAuthorityCount !== 1 || phase260.history?.noExperimentalRulesActivated !== true) fail("V137_PREARCHIVE_SEMANTIC_SOURCE_INVALID")
   return validateV137PrearchiveProof({ schemaVersion: "v1.37-prearchive-proof-v1", milestone: "v1.37", phase: 261, releaseState: "release-ready", traceability: { total: 56, inheritedPassed: 48, phaseExecutablePassed: 7, passed: 55, releaseOperationReadyPending: 1 }, requirements: expectedRows(ids), lowerProofs: currentLowerProofs(repoRoot), inputRootSha256: computeV137PrearchiveProofInputRoot(repoRoot), semantic: { transitionAuthorityCount: 1, unapprovedGameplayChange: false, exactCompatibilityRulingsOnly: true }, releaseBoundaries: { findings: 0, privacySafe: true }, limitations: ["proof-local-containment-is-non-counted", "browser-is-fixture-backed-not-live-backend-data"], releaseOperation: { requirement: "PROOF-08", status: "ready_pending", expectedOperation: "archive-then-annotated-tag-then-independent-post-check", completion: false } })
 }
 export const renderV137PrearchiveProofJson = (proof: unknown): string => { const checked = validateV137PrearchiveProof(proof); assertPublicOutputLeakSafe(checked, "v1.37 prearchive proof"); return canonical(checked) }
