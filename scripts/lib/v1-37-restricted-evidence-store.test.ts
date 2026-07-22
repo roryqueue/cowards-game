@@ -117,14 +117,14 @@ describe("v1.37 restricted evidence store", () => {
         path.join(evidenceRoot, v137RestrictedEvidenceObjectRelativePath(expectedSha)),
       ),
     ).toEqual(bytes)
-    expect(() =>
+    expect(
       store.writeEvidence({
         bytes,
         evidenceClass: "service-trace",
         actorClass: "collector",
         latestBoundCertificateValidUntil: "2030-01-31T23:59:59.000Z",
       }),
-    ).toThrowError("V137_RESTRICTED_EVIDENCE_ALREADY_EXISTS")
+    ).toEqual(record)
   })
 
   it("enforces bounded writes and reads and verifies the content digest", () => {

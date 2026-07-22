@@ -672,12 +672,33 @@ export const createV137RestrictedEvidenceStore = (options: Readonly<{
         deleteEligibleAt,
       })
       parseRecord(record)
+      const objectPath = v137RestrictedEvidenceObjectRelativePath(objectSha256)
+      const attestationPath = v137RestrictedEvidenceAttestationRelativePath(
+        attestationSha256,
+      )
+      if (existsSync(absolute(objectPath))) {
+        const existingObject = boundedRead(
+          objectPath,
+          "V137_RESTRICTED_EVIDENCE_OBJECT_COLLISION",
+        )
+        if (!existingObject.equals(Buffer.from(input.bytes))) {
+          fail("V137_RESTRICTED_EVIDENCE_OBJECT_COLLISION")
+        }
+        const existingAttestation = boundedRead(
+          attestationPath,
+          "V137_RESTRICTED_EVIDENCE_ATTESTATION_COLLISION",
+        )
+        if (!existingAttestation.equals(attestationBytes)) {
+          fail("V137_RESTRICTED_EVIDENCE_ATTESTATION_COLLISION")
+        }
+        return record
+      }
       writeExclusive(
-        v137RestrictedEvidenceObjectRelativePath(objectSha256),
+        objectPath,
         input.bytes,
       )
       writeExclusive(
-        v137RestrictedEvidenceAttestationRelativePath(attestationSha256),
+        attestationPath,
         attestationBytes,
       )
       appendAccess("write", record, input.actorClass)
