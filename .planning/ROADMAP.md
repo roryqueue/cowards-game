@@ -4,9 +4,16 @@
 
 - **v1.35 Runtime, Account Ownership, Sandbox, and Package Policy Cleanup** - Phases 243-248, shipped 2026-06-15 ([archive](milestones/v1.35-ROADMAP.md))
 - **v1.36 Competition Maturity** - Phases 249-255, shipped 2026-07-12 ([archive](milestones/v1.36-ROADMAP.md))
-- **v1.37 Rules Integrity and Strategy Evaluation Foundations** - Phases 256-261, planning
+- **v1.37 Rules Integrity and Strategy Evaluation Foundations** - Phases 256-261, shipped 2026-07-22 ([archive](milestones/v1.37-ROADMAP.md))
 
-## v1.37 Rules Integrity and Strategy Evaluation Foundations — ACTIVE
+## v1.37 Rules Integrity and Strategy Evaluation Foundations — SHIPPED
+
+The annotated `v1.37` tag points to immutable archive commit
+`e704590df599b49d84745b0e828d5ab0f1d335ad`; the independent post-tag checker
+closes PROOF-08. A verified 2026-07-23 public-read/UI integration correction is
+recorded in
+[v1.37-post-tag-ui-integration-correction.md](artifacts/v1.37-post-tag-ui-integration-correction.md)
+without moving the tag or changing gameplay.
 
 ## Overview
 
@@ -17,9 +24,9 @@ v1.37 establishes the smallest complete trust substrate needed before serious co
 - [x] **Phase 256: Counted Safety and Canonical Authority** - Fail closed on unproved lanes and establish one atomic compatibility and ownership authority. (completed 2026-07-13)
 - [x] **Phase 257: Canonical Transition Kernel and v1.4 Semantic Integrity** - Make one validated kernel authoritative and close every confirmed rules-lifecycle defect without changing valid v1.4 behavior. (completed 2026-07-13)
 - [x] **Phase 258: Canonical JSON, Failure Semantics, and Artifact Identity** - Define a bounded language-neutral ABI with exact identity and atomic three-way failure behavior. (completed 2026-07-16)
-- [ ] **Phase 259: Executable Four-Language and Chronicle Conformance** - Prove full-trace parity through real adapters and version-strict, reconstruction-equivalent Chronicles.
-- [ ] **Phase 260: Truthful Strategy Inputs, Arena Authority, and Set Fairness** - Give every Strategy truthful observations and every entrant explicit side-by-initiative evaluation coverage.
-- [ ] **Phase 261: Integrated Service Proof, Drift Guards, and Release** - Prove the complete trust chain, audit compatibility and privacy, then archive and tag v1.37.
+- [x] **Phase 259: Executable Four-Language and Chronicle Conformance** - Prove full-trace parity through real adapters and version-strict, reconstruction-equivalent Chronicles. (completed 2026-07-16)
+- [x] **Phase 260: Truthful Strategy Inputs, Arena Authority, and Set Fairness** - Give every Strategy truthful observations and every entrant explicit side-by-initiative evaluation coverage. (completed 2026-07-19)
+- [x] **Phase 261: Integrated Service Proof, Drift Guards, and Release** - Prove the complete trust chain, audit compatibility and privacy, then archive and tag v1.37. (completed 2026-07-22)
 
 ## Phase Details
 
@@ -489,7 +496,7 @@ Plans:
   4. Boundary monitors detect duplicate transition ownership, mixed tuples, adapter-owned gameplay classification, stale identity, unsupported events, duplicate arenas, unfair scheduling, unproved counted lanes, and private-output leakage.
   5. The prearchive audit proves complete 56/56 traceability, 55 passed requirements, PROOF-08 release-ready/pending, one transition authority, passing drift guards, and no unapproved gameplay change; the archive commit is then tagged, and the actual annotated tag plus post-tag checker closes PROOF-08 before serious Strategy work begins.
 
-**Plans:** 12/13 plans executed
+**Plans:** 13/13 plans executed
 
 Plans:
 
@@ -505,7 +512,7 @@ Plans:
 - [x] 261-10-PLAN.md — Bind proof, audit, handoff, tuple, tag absence, and protected baseline into release readiness.
 - [x] 261-11-PLAN.md — Prepare the post-tag checker and promote strict missing/stale evidence into the default boundary gate.
 - [x] 261-12-PLAN.md — Converge review, validation, verification, and audit fixes to zero in the release-ready state.
-- [ ] 261-13-PLAN.md — Archive synchronously, create annotated v1.37, and close PROOF-08 through the actual post-tag join.
+- [x] 261-13-PLAN.md — Archive synchronously, create annotated v1.37, and close PROOF-08 through the actual post-tag join.
 
 ## Optional Compatibility-Gated Simplifications
 
@@ -531,4 +538,4 @@ Cycle-cap, inward-start, facing-only MOVE, reversal-history, attacker-facing/Adv
 | 258. Canonical JSON, Failure Semantics, and Artifact Identity | 14/14 | Complete | 2026-07-16 |
 | 259. Executable Four-Language and Chronicle Conformance | 31/31 | Complete | 2026-07-16 |
 | 260. Truthful Strategy Inputs, Arena Authority, and Set Fairness | 49/49 | Complete | 2026-07-19 |
-| 261. Integrated Service Proof, Drift Guards, and Release | 12/13 | Release Ready |  |
+| 261. Integrated Service Proof, Drift Guards, and Release | 13/13 | Complete | 2026-07-22 |

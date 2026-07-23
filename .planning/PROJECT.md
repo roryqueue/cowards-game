@@ -2,10 +2,10 @@
 
 ## Current State
 
-**Shipped version:** v1.36 Competition Maturity on 2026-07-12
-**Release target:** v1.37 Rules Integrity and Strategy Evaluation Foundations
-**Status:** v1.37 is release-ready at archive. The committed tree truthfully retains 55 passed requirements plus PROOF-08 `ready_pending`; the annotated local tag and independent post-tag checker are the only release-closure evidence.
-**Last audit:** v1.37 traced 56/56 requirements with 55 passed, zero gaps, zero overrides, one transition authority, and zero unapproved semantic deltas. Production-shaped proof covers four containment-attested non-counted lanes, 12 runs, 23 service scenarios, 17 rollback/history scenarios, Chronicle reconstruction/replay, Set fairness, persistence, privacy, and rollback.
+**Shipped version:** v1.37 Rules Integrity and Strategy Evaluation Foundations on 2026-07-22
+**Release target:** None activated; serious Strategy work still requires separate milestone approval
+**Status:** v1.37 is archived and annotated at immutable commit `e704590df599b49d84745b0e828d5ab0f1d335ad`; the independent post-tag checker closes PROOF-08. A verified 2026-07-23 integration correction preserves public runtime semantics, fails counted rendering closed, and makes the D-11 release matrix root-invokable without moving the tag.
+**Last audit:** v1.37 traced 56/56 requirements with zero gaps, zero overrides, one transition authority, and zero unapproved semantic deltas. The immutable pre-tag audit retains 55 passed plus PROOF-08 `ready_pending`; the actual annotated tag/post-tag join closes the final requirement. Refreshed production-shaped proof covers four containment-attested non-counted lanes, 12 runs, 23 service scenarios, 17 rollback/history scenarios, Chronicle reconstruction/replay, Set fairness, persistence, privacy, and rollback.
 
 Coward's Game is a deterministic two-player programmable strategy game for the web. Players can author immutable Strategy Revisions, save account-owned revisions, fork credible Starter and Advanced Strategies, enter exhibitions or resettable trial ladder seasons, inspect fair standings and replay evidence, study saved gauntlet analytics, and trust that public outputs do not expose private Strategy data. The project now has generated TypeScript service contracts, selected service-backed public/player/account/ladder/workshop analytics reads, live PostgreSQL-backed Go ownership for normal backend orchestration and selected API routes, artifact-backed Go Starter/Advanced forks, runtime isolation readiness gates, supported counted TypeScript, Python, Rust, and Zig Strategy languages, source-language artifact provenance for TypeScript/Python, executable Rust and Zig WASM/WASI artifact-backed lanes, repeatable local topology diagnostics, and boundary drift monitors. Go owns normal job lifecycle, Match completion, Chronicle persistence handoff, MatchSet scoring/status refresh, selected exhibition creation, public MatchSet summary, public replay metadata, and selected public replay evidence while hostile Strategy execution remains behind the Strategy Execution Service / Runtime Broker boundary. TinyGo has a documented spike/defer recommendation and is not production-visible.
 
@@ -13,7 +13,7 @@ Coward's Game is a deterministic two-player programmable strategy game for the w
 
 Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
 
-## Current Milestone: v1.37 Rules Integrity and Strategy Evaluation Foundations
+## Latest Shipped Milestone: v1.37 Rules Integrity and Strategy Evaluation Foundations
 
 **Goal:** Make canonical Matches deterministic, replayable, language-neutral, failure-safe, semantically validated, and suitable for trustworthy competitive Strategy research without changing valid v1.4 gameplay.
 
@@ -40,6 +40,8 @@ Players can design, run, replay, and understand deterministic autonomous doctrin
 - Strategy execution remains outside web/API/Go; public/default output remains source, artifact, memory, objective, diagnostics, host-data, security-internal, and private-runtime safe.
 
 **Release-ready archive:** `.planning/milestones/v1.37-ROADMAP.md`, `.planning/milestones/v1.37-REQUIREMENTS.md`, `.planning/milestones/v1.37-MILESTONE-AUDIT.md`, and `.planning/milestones/v1.37-phases/`. Serious Strategy initialization remains unauthorized until the separately approved next milestone.
+
+**Post-tag correction:** `.planning/artifacts/v1.37-post-tag-ui-integration-correction.md` records the 2026-07-23 public-read/UI integration fixes, refreshed evidence, unchanged gameplay ruling, and local test pages.
 
 ## Latest Shipped Milestone: v1.36 Competition Maturity
 

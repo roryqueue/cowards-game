@@ -1,18 +1,19 @@
 # Milestones
 
-## v1.37 Rules Integrity and Strategy Evaluation Foundations (Release-ready archive: 2026-07-22)
+## v1.37 Rules Integrity and Strategy Evaluation Foundations (Shipped: 2026-07-22)
 
-**Status:** Release-ready at archive; annotated local `v1.37` tag and independent post-tag join are the external PROOF-08 closure evidence
+**Status:** Shipped 2026-07-22; annotated `v1.37` and the independent post-tag join close PROOF-08
 **Phases:** 6
 **Phase range:** 256-261
-**Plans:** 147/148 complete before the terminal archive operation; Plan 261-13 closes only through the archive/tag/post-check sequence
-**Requirements:** 56/56 traced; 55 passed and PROOF-08 `ready_pending` in the committed archive
+**Plans:** 148/148 complete
+**Requirements:** 56/56 closed; the immutable pre-tag archive truthfully retains 55 passed plus PROOF-08 `ready_pending`, while the actual tag/post-tag join closes PROOF-08
 **Audit:** Release-ready - zero gaps, zero overrides, one transition authority, and zero unapproved semantic deltas
 **Roadmap:** .planning/milestones/v1.37-ROADMAP.md
 **Requirements archive:** .planning/milestones/v1.37-REQUIREMENTS.md
 **Audit archive:** .planning/milestones/v1.37-MILESTONE-AUDIT.md
 **Phase archive:** .planning/milestones/v1.37-phases/
 **Decision:** The committed archive remains a truthful pre-tag record. Only the actual annotated tag and read-only post-tag checker may close PROOF-08; serious Strategy work remains separately unauthorized.
+**Post-tag integration correction:** On 2026-07-23, public runtime-semantics retention, fail-closed MatchSet counted rendering, and root-invokable D-11 verification were corrected without moving `v1.37` or changing gameplay. See [the correction record](artifacts/v1.37-post-tag-ui-integration-correction.md).
 
 **Delivered:**
 

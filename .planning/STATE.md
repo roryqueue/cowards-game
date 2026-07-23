@@ -1,20 +1,20 @@
 ---
 gsd_state_version: 1.0
 milestone: v1.37
-milestone_name: Rules Integrity and Strategy Evaluation Foundations — RELEASE-READY AT ARCHIVE
+milestone_name: Rules Integrity and Strategy Evaluation Foundations — SHIPPED
 current_phase: 261
 current_phase_name: integrated-service-proof-drift-guards-and-release
-status: release-ready-at-archive
-stopped_at: Plan 261-13 archive commit target; annotated v1.37 tag and post-tag join pending
-last_updated: "2026-07-22T23:18:00.000Z"
-last_activity: 2026-07-22
-last_activity_desc: Release-ready v1.37 archive assembled with zero findings; tag/post-check intentionally remains external
+status: milestone-complete
+stopped_at: Post-tag public-read/UI integration correction verified; no successor milestone activated
+last_updated: "2026-07-23T11:10:00.000-04:00"
+last_activity: 2026-07-23
+last_activity_desc: Preserved runtime semantics, failed counted rendering closed, repaired root-invokable release verification, and refreshed the v1.37 proof chain without moving the tag
 progress:
   total_phases: 6
-  completed_phases: 5
+  completed_phases: 6
   total_plans: 148
-  completed_plans: 147
-  percent: 99
+  completed_plans: 148
+  percent: 100
 ---
 
 # State: Coward's Game
@@ -24,16 +24,16 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-07-12)
 
 **Core value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
-**Current focus:** v1.37 outer release closure — archive commit, annotated local tag, and independent post-tag join
+**Current focus:** v1.37 is shipped and post-tag integration-corrected; no successor milestone is active
 
 ## Current Position
 
-Phase: 261 (integrated-service-proof-drift-guards-and-release) — RELEASE READY AT ARCHIVE
-Plan: 13 of 13, terminal outer operation in progress
-Status: Archive commit target; annotated `v1.37` tag and post-tag join pending
-Last activity: 2026-07-22 — Release-ready archive assembled after zero-finding review, validation, security, UAT, verification, and audit convergence
+Phase: 261 (integrated-service-proof-drift-guards-and-release) — COMPLETE
+Plan: 13 of 13 complete
+Status: Shipped at annotated `v1.37`; verified post-tag correction retained as later evidence
+Last activity: 2026-07-23 — Corrected public runtime-semantics retention, fail-closed counted rendering, and normal-root D-11 verification without changing gameplay or the release tag
 
-Progress: [██████████] 99%
+Progress: [██████████] 100%
 
 ## Durable Decisions
 
@@ -89,9 +89,9 @@ Progress: [██████████] 99%
 
 **Resume file:** None
 
-Last session: 2026-07-22T23:18:00.000Z
-Stopped at: Plan 261-13 archive commit target; annotated `v1.37` tag and post-tag join pending
-Next command: Validate the dedicated archive commit, create annotated local `v1.37`, and run the independent post-tag checker without rewriting the worktree.
+Last session: 2026-07-23T11:10:00.000-04:00
+Stopped at: v1.37 post-tag integration correction verified; no successor milestone activated
+Next command: Start the separately approved serious-Strategy milestone when authorized.
 
 ## Performance Metrics
 
