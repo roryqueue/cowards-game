@@ -237,7 +237,7 @@ const formatEntrantRuntimeSummary = (
     result.contract.runtimeEvidence.eligibility.nonCountedExhibitionBeta,
   )
   const counted = result.entrants.filter((entrant) => {
-    if (countedState === "non_counted") {
+    if (countedState !== "counted") {
       return false
     }
     return (

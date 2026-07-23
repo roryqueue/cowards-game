@@ -13,7 +13,12 @@
     },
     "test": {
       "dependsOn": ["^test"],
-      "outputs": ["coverage/**"]
+      "outputs": ["coverage/**"],
+      "passThroughEnv": [
+        "DATABASE_URL",
+        "COWARDS_GO_BACKEND_TEST_DATABASE_URL",
+        "COWARDS_V1_37_SIGNED_CONFORMANCE_TEST_DATABASE_URL"
+      ]
     },
     "dev": {
       "cache": false,

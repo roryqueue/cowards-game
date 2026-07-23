@@ -81,9 +81,6 @@ const publicStrategyCard = {
   replayLinks: ["/matches/match:demo/replay"],
 } satisfies PublicStrategyCardDto
 
-const { runtimeSemantics: _runtimeSemantics, ...publicStrategyCardResponse } =
-  publicStrategyCard
-
 const publicPlayerProfile = {
   handle: "demo-player",
   displayName: "Demo Player",
@@ -99,11 +96,6 @@ const publicPlayerProfile = {
   ],
   results: [],
 } satisfies PublicPlayerProfileDto
-
-const publicPlayerProfileResponse = {
-  ...publicPlayerProfile,
-  strategies: [publicStrategyCardResponse],
-}
 
 const publicTrialLadderSeason = {
   seasonId: "ladder-season:demo",
@@ -435,7 +427,7 @@ describe("createCowardsLocalService", () => {
       page: "strategy",
       canonicalHref: "/strategies/strategy%3Ademo",
       payload: {
-        strategy: publicStrategyCardResponse,
+        strategy: publicStrategyCard,
       },
     })
   })
@@ -462,7 +454,7 @@ describe("createCowardsLocalService", () => {
       kind: "publicPage",
       page: "player",
       canonicalHref: "/players/demo-player",
-      payload: publicPlayerProfileResponse,
+      payload: publicPlayerProfile,
     })
   })
 

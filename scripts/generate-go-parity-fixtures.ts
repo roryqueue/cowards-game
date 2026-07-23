@@ -1434,15 +1434,16 @@ const runtimeSemantics = {
   readiness: "local-dev-fallback",
   readinessLabel: "Local/dev fallback",
   experimental: false,
-  countedPlayEligible: true,
-  countedPlayLabel: "Counted eligible",
-  countedPlayReason: null,
+  countedPlayEligible: false,
+  countedPlayLabel: "Not counted",
+  countedPlayReason:
+    "Proof-local fixture evidence does not authorize counted play.",
   sourcePolicyLabel: "Self-contained Strategy source",
   packagePolicyLabel: "No packages",
   docsReference: "runtime/languages",
   examplesReference: "samples/minimal-strategy",
   warnings: [],
-  validationIssueCodes: [],
+  validationIssueCodes: ["NON_COUNTED_RUNTIME"],
 } as const
 
 const PUBLIC_STRATEGY_ID = "strategy:go-parity:sentinel"

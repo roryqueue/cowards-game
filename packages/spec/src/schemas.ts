@@ -2056,6 +2056,8 @@ export const PublicStrategyCardDtoSchema = z.object({
   sourceHash: z.string().min(1),
   sourceBytes: z.number().int().min(0),
   runtime: PublicStrategyRuntimeMetadataSchema,
+  runtimeSemantics:
+    StrategyRevisionSummaryServiceDtoSchema.shape.runtimeSemantics,
   engineCompatibility: z.object({
     spec: z.string().min(1),
     engine: z.string().min(1),

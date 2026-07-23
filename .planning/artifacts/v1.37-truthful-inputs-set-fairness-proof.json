@@ -111,11 +111,11 @@
   "inputs": [
     {
       "path": ".planning/artifacts/v1.37-executable-conformance-proof.json",
-      "sha256": "sha256:73b014ad133b1f24e96e98550361dabd60957463f89e3d83a6c8964b1a1c5845"
+      "sha256": "sha256:5508f71d33c55fb2737c4da4cb1583feba102d0bffb44cda165548d4bca1cc46"
     },
     {
       "path": ".planning/artifacts/v1.37-kernel-integrity-proof.json",
-      "sha256": "sha256:13b4eaead59682e95469eaa69e146e6b6ec943f4748825e5c29ace33e6046be0"
+      "sha256": "sha256:e46f61d9e9306987a1c12745b9de84f35b36445ef5077aeea6bbbfeb60847aab"
     },
     {
       "path": ".planning/artifacts/v1.37-observation-v1.19-activation-transaction-proof.json",
@@ -624,7 +624,7 @@
       "status": "passed",
       "command": "pnpm exec tsx scripts/evaluate-v1-37-observation-v1-19-postactivation.ts --check --activation-id activation:phase260:plan14:production",
       "exitCode": 0,
-      "stdoutSha256": "sha256:40f8e74942db6bea0e28fa35862c762260cfa2aa3c61da244fa9912736d76012",
+      "stdoutSha256": "sha256:8ab005d9a138ec40f607750aa0abcfe3a56028ba06505dcff55e00643f81acf2",
       "stderrSha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     {
@@ -632,7 +632,7 @@
       "status": "passed",
       "command": "pnpm exec vitest run --maxWorkers=1 --no-file-parallelism packages/spec/src/strategy-observation-abi-v1-19.test.ts packages/engine/src/test/strategy-observations-v1-19.test.ts apps/runtime-service/src/execute-match-v1-19.test.ts",
       "exitCode": 0,
-      "stdoutSha256": "sha256:a40369bea217dd5b61a3787c588a0e37d51b1b2ff8b9c2ac0596bdd445569266",
+      "stdoutSha256": "sha256:a69cb37b726b46b34913531dab61b804bf6264ff2f1c63e0b95e6b9880571448",
       "stderrSha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     {
@@ -640,7 +640,7 @@
       "status": "passed",
       "command": "pnpm exec vitest run --maxWorkers=1 --no-file-parallelism packages/spec/src/arena-catalog-v1-37.test.ts packages/spec/src/set-condition-policy-v1-37.test.ts packages/persistence/src/matchset-service.test.ts packages/persistence/src/matchset-status.test.ts packages/persistence/src/scoring.test.ts",
       "exitCode": 0,
-      "stdoutSha256": "sha256:be32193f3bda9cb973634af6e4679c1eae23fe7507b28c15c698e1adfbede45b",
+      "stdoutSha256": "sha256:62909d73845cbfaaf21ec6afc42dc810165cc07d7013c93161cf5696cdf04cb0",
       "stderrSha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     {
@@ -656,7 +656,7 @@
       "status": "passed",
       "command": "pnpm exec vitest run --maxWorkers=1 --no-file-parallelism apps/runtime-service/src/execute-match-v1-19.test.ts packages/replay/src/record.test.ts packages/replay/src/validate.test.ts packages/replay/src/historical-v1-4.test.ts",
       "exitCode": 0,
-      "stdoutSha256": "sha256:d17cc4aac89eba20f5100e3cd819042a10fc529c6cff8bd1c7e4228ce0a212c8",
+      "stdoutSha256": "sha256:c41fe6d3ee1ba89582ab6b5a3a6759122b8a0b71b384cbe21a025e51aa045828",
       "stderrSha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     {
@@ -664,7 +664,7 @@
       "status": "passed",
       "command": "pnpm exec vitest run --maxWorkers=1 --no-file-parallelism apps/runtime-service/src/four-language-conformance-runner.test.ts scripts/certify-v1-37-observation-v1-19-language-lane.test.ts scripts/sign-import-v1-37-observation-v1-19-certificates.test.ts",
       "exitCode": 0,
-      "stdoutSha256": "sha256:7e702fe7bee6dba7e2b032ab7703ade6f673490cd3226d1c8a7a2b56a87e07b3",
+      "stdoutSha256": "sha256:8f29b940417542a2c7ee850497dd3c3fae72f23da36b404c6db55c024425d615",
       "stderrSha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     {
@@ -672,7 +672,7 @@
       "status": "passed",
       "command": "pnpm exec vitest run --maxWorkers=1 --no-file-parallelism scripts/activate-v1-37-observation-v1-19.test.ts packages/persistence/src/semantic-authority-selection-head.test.ts scripts/evaluate-v1-37-observation-v1-19-postactivation.test.ts",
       "exitCode": 0,
-      "stdoutSha256": "sha256:d46d90faa41db19e3013daf2aa41fcc2589751114c02aac8cf5a9c98835e01bd",
+      "stdoutSha256": "sha256:6afff77d21a1257817f68a72cd0232964e9e4dae6b83dddf3ae3bb7e4325e5bd",
       "stderrSha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     {

@@ -36,7 +36,7 @@ const runtimeLabel = (
     languageId: semantics?.languageId ?? entrant.runtime.language.id,
     countedPlayLabel: nonCountedByContract
       ? "Not counted"
-      : (semantics?.countedPlayLabel ?? "Counted eligible"),
+      : (semantics?.countedPlayLabel ?? "Not counted"),
   })
   return `${language} · ${semantics?.adapterLabel ?? entrant.runtime.adapter.id}`
 }
@@ -76,7 +76,7 @@ export default async function MatchSetResultPage({
   const nonCountedLanguages = new Set<string>(
     result.contract.runtimeEvidence.eligibility.nonCountedExhibitionBeta,
   )
-  if (countedState?.state === "non_counted") {
+  if (countedState?.state !== "counted") {
     for (const entrant of result.entrants) {
       nonCountedLanguages.add(entrant.runtime.language.id)
     }

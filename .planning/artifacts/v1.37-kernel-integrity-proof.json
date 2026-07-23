@@ -262,7 +262,7 @@
       },
       {
         "path": "packages/spec/src/match-execution-contract.ts",
-        "sha256": "7fb2f6aa0f73eb0bcb0a8a3d71f9bbc9f0f4779c91656993d3ea0c561d25bec1"
+        "sha256": "ee8ed2fc5ec43591a15ad3fa47d224ca9cce50b3994dd69d38b945be01d82a78"
       },
       {
         "path": "packages/spec/src/runtime-execution-service.ts",
@@ -284,7 +284,7 @@
   },
   "browser": {
     "path": ".planning/artifacts/v1.37-phase-257-browser-playwright.json",
-    "sha256": "fdad2c77525a9b92ca043f83bbdc7a73f96c29c5eb59c7237eeeb0a476106b01"
+    "sha256": "c21ff5e5960f453c8f4c1a6057c22e1aa83d5c40dee33de1f91fcfb9419ee278"
   },
   "workingCopy": {
     "schemaVersion": "v1.37-working-copy-preservation-v1",
@@ -308,8 +308,8 @@
     ],
     "generatedFile": {
       "path": "apps/web/next-env.d.ts",
-      "beforeBytesSha256": "2bdf4de86f5ca3f9fee29b0430911f0a5e36b2e3c161ba0e2ba3326737721aad",
-      "afterRestoreBytesSha256": "2bdf4de86f5ca3f9fee29b0430911f0a5e36b2e3c161ba0e2ba3326737721aad",
+      "beforeBytesSha256": "7ad303e40d4fddf44f156129e397511953a71481c5cfd86b1862649aaaf240cc",
+      "afterRestoreBytesSha256": "7ad303e40d4fddf44f156129e397511953a71481c5cfd86b1862649aaaf240cc",
       "preserved": true
     }
   },
@@ -538,7 +538,7 @@
       "id": "phase257-browser-playwright",
       "status": "passed",
       "inputSha256s": [
-        "fdad2c77525a9b92ca043f83bbdc7a73f96c29c5eb59c7237eeeb0a476106b01"
+        "c21ff5e5960f453c8f4c1a6057c22e1aa83d5c40dee33de1f91fcfb9419ee278"
       ]
     },
     {

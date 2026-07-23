@@ -335,4 +335,65 @@ describe("result workbench view model", () => {
       ]),
     )
   })
+
+  it.each([
+    {
+      state: "non_competitive" as const,
+      publicReason: "non_competitive" as const,
+    },
+    {
+      state: "pending" as const,
+      publicReason: "incomplete_evidence" as const,
+    },
+  ])(
+    "fails closed when the competition projection is $state",
+    ({ state, publicReason }) => {
+      const result = fixtureResult("complete")
+      const model = buildResultWorkbenchViewModel(
+        {
+          ...result,
+          competition: {
+            countedState: {
+              state,
+              publicLabel: "Not counted",
+              publicReason,
+              publicExplanation:
+                "This result is not authorized to affect standings.",
+              standingsEffect: "excluded",
+              evidenceAvailability: "available",
+            },
+          },
+        },
+        ["TypeScript · Counted eligible"],
+      )
+
+      expect(
+        model.sections.find((section) => section.id === "runtime")?.metrics,
+      ).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            value: expect.stringContaining("0 counted entrants"),
+          }),
+        ]),
+      )
+    },
+  )
+
+  it("fails closed when no competition projection is available", () => {
+    const result = fixtureResult("complete")
+    const model = buildResultWorkbenchViewModel(
+      { ...result, competition: undefined },
+      ["TypeScript · Counted eligible"],
+    )
+
+    expect(
+      model.sections.find((section) => section.id === "runtime")?.metrics,
+    ).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          value: expect.stringContaining("0 counted entrants"),
+        }),
+      ]),
+    )
+  })
 })

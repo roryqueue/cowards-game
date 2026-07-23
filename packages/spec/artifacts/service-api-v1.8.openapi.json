@@ -3102,6 +3102,136 @@
                         }
                       ]
                     },
+                    "runtimeSemantics": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "adapterId": {
+                          "enum": [
+                            "runtime-js-worker-thread",
+                            "runtime-js-subprocess",
+                            "runtime-js-container-subprocess",
+                            "runtime-python-subprocess-experimental",
+                            "runtime-wasm-wasi-wasmtime-preview1"
+                          ],
+                          "type": "string"
+                        },
+                        "adapterLabel": {
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "countedPlayEligible": {
+                          "type": "boolean"
+                        },
+                        "countedPlayLabel": {
+                          "enum": [
+                            "Counted eligible",
+                            "Not counted"
+                          ],
+                          "type": "string"
+                        },
+                        "countedPlayReason": {
+                          "anyOf": [
+                            {
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "docsReference": {
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "examplesReference": {
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "experimental": {
+                          "type": "boolean"
+                        },
+                        "languageId": {
+                          "enum": [
+                            "javascript",
+                            "typescript",
+                            "python",
+                            "rust",
+                            "zig"
+                          ],
+                          "type": "string"
+                        },
+                        "languageLabel": {
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "packagePolicyLabel": {
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "readiness": {
+                          "enum": [
+                            "production-candidate",
+                            "prototype",
+                            "local-dev-fallback",
+                            "experimental",
+                            "unknown"
+                          ],
+                          "type": "string"
+                        },
+                        "readinessLabel": {
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "sourcePolicyLabel": {
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "validationIssueCodes": {
+                          "items": {
+                            "enum": [
+                              "UNSUPPORTED_LANGUAGE",
+                              "UNSUPPORTED_PACKAGE_METADATA",
+                              "INCOMPATIBLE_ADAPTER",
+                              "ABI_MISMATCH",
+                              "SOURCE_TOO_LARGE",
+                              "MEMORY_LIMIT_EXCEEDED",
+                              "TIMEOUT",
+                              "FORBIDDEN_CAPABILITY",
+                              "NON_COUNTED_RUNTIME"
+                            ],
+                            "type": "string"
+                          },
+                          "type": "array"
+                        },
+                        "warnings": {
+                          "items": {
+                            "minLength": 1,
+                            "type": "string"
+                          },
+                          "type": "array"
+                        }
+                      },
+                      "required": [
+                        "languageId",
+                        "adapterId",
+                        "languageLabel",
+                        "adapterLabel",
+                        "readiness",
+                        "readinessLabel",
+                        "experimental",
+                        "countedPlayEligible",
+                        "countedPlayLabel",
+                        "countedPlayReason",
+                        "sourcePolicyLabel",
+                        "packagePolicyLabel",
+                        "docsReference",
+                        "examplesReference",
+                        "warnings",
+                        "validationIssueCodes"
+                      ],
+                      "type": "object"
+                    },
                     "sourceBytes": {
                       "maximum": 9007199254740991,
                       "minimum": 0,
@@ -3171,6 +3301,7 @@
                     "sourceHash",
                     "sourceBytes",
                     "runtime",
+                    "runtimeSemantics",
                     "engineCompatibility",
                     "validationStatus",
                     "record",
@@ -4398,6 +4529,136 @@
                       }
                     ]
                   },
+                  "runtimeSemantics": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "adapterId": {
+                        "enum": [
+                          "runtime-js-worker-thread",
+                          "runtime-js-subprocess",
+                          "runtime-js-container-subprocess",
+                          "runtime-python-subprocess-experimental",
+                          "runtime-wasm-wasi-wasmtime-preview1"
+                        ],
+                        "type": "string"
+                      },
+                      "adapterLabel": {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "countedPlayEligible": {
+                        "type": "boolean"
+                      },
+                      "countedPlayLabel": {
+                        "enum": [
+                          "Counted eligible",
+                          "Not counted"
+                        ],
+                        "type": "string"
+                      },
+                      "countedPlayReason": {
+                        "anyOf": [
+                          {
+                            "minLength": 1,
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "docsReference": {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "examplesReference": {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "experimental": {
+                        "type": "boolean"
+                      },
+                      "languageId": {
+                        "enum": [
+                          "javascript",
+                          "typescript",
+                          "python",
+                          "rust",
+                          "zig"
+                        ],
+                        "type": "string"
+                      },
+                      "languageLabel": {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "packagePolicyLabel": {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "readiness": {
+                        "enum": [
+                          "production-candidate",
+                          "prototype",
+                          "local-dev-fallback",
+                          "experimental",
+                          "unknown"
+                        ],
+                        "type": "string"
+                      },
+                      "readinessLabel": {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "sourcePolicyLabel": {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "validationIssueCodes": {
+                        "items": {
+                          "enum": [
+                            "UNSUPPORTED_LANGUAGE",
+                            "UNSUPPORTED_PACKAGE_METADATA",
+                            "INCOMPATIBLE_ADAPTER",
+                            "ABI_MISMATCH",
+                            "SOURCE_TOO_LARGE",
+                            "MEMORY_LIMIT_EXCEEDED",
+                            "TIMEOUT",
+                            "FORBIDDEN_CAPABILITY",
+                            "NON_COUNTED_RUNTIME"
+                          ],
+                          "type": "string"
+                        },
+                        "type": "array"
+                      },
+                      "warnings": {
+                        "items": {
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "type": "array"
+                      }
+                    },
+                    "required": [
+                      "languageId",
+                      "adapterId",
+                      "languageLabel",
+                      "adapterLabel",
+                      "readiness",
+                      "readinessLabel",
+                      "experimental",
+                      "countedPlayEligible",
+                      "countedPlayLabel",
+                      "countedPlayReason",
+                      "sourcePolicyLabel",
+                      "packagePolicyLabel",
+                      "docsReference",
+                      "examplesReference",
+                      "warnings",
+                      "validationIssueCodes"
+                    ],
+                    "type": "object"
+                  },
                   "sourceBytes": {
                     "maximum": 9007199254740991,
                     "minimum": 0,
@@ -4467,6 +4728,7 @@
                   "sourceHash",
                   "sourceBytes",
                   "runtime",
+                  "runtimeSemantics",
                   "engineCompatibility",
                   "validationStatus",
                   "record",
@@ -5390,6 +5652,26 @@
                               "mode": "none"
                             },
                             "requiredCapabilities": []
+                          },
+                          "runtimeSemantics": {
+                            "adapterId": "runtime-js-worker-thread",
+                            "adapterLabel": "runtime-js worker thread",
+                            "countedPlayEligible": false,
+                            "countedPlayLabel": "Not counted",
+                            "countedPlayReason": "The service example is not executable conformance evidence for counted play.",
+                            "docsReference": "runtime/languages",
+                            "examplesReference": "samples/minimal-strategy",
+                            "experimental": false,
+                            "languageId": "typescript",
+                            "languageLabel": "TypeScript",
+                            "packagePolicyLabel": "No packages",
+                            "readiness": "local-dev-fallback",
+                            "readinessLabel": "Local/dev fallback",
+                            "sourcePolicyLabel": "Self-contained Strategy source",
+                            "validationIssueCodes": [
+                              "NON_COUNTED_RUNTIME"
+                            ],
+                            "warnings": []
                           },
                           "sourceBytes": 256,
                           "sourceHash": "sourcehash-demo",

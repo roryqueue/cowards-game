@@ -124,6 +124,28 @@ describe("match execution fixture adapter", () => {
       },
     })
     await expect(
+      client?.getPublicMatchSetSummary("match-set:fixture:public-safe-replay"),
+    ).resolves.toMatchObject({
+      result: {
+        entrants: [
+          {
+            runtimeSemantics: {
+              countedPlayEligible: false,
+              countedPlayLabel: "Not counted",
+              validationIssueCodes: ["NON_COUNTED_RUNTIME"],
+            },
+          },
+          {
+            runtimeSemantics: {
+              countedPlayEligible: false,
+              countedPlayLabel: "Not counted",
+              validationIssueCodes: ["NON_COUNTED_RUNTIME"],
+            },
+          },
+        ],
+      },
+    })
+    await expect(
       client?.getPublicMatchSetSummary("match-set:fixture:missing-chronicle"),
     ).resolves.toMatchObject({
       matchSetId: "match-set:fixture:missing-chronicle",

@@ -546,6 +546,43 @@ func TestReplayMetadataUsesV18Shape(t *testing.T) {
 	}
 }
 
+func TestPublicStrategyRetainsFailClosedRuntimeSemantics(t *testing.T) {
+	response := httptest.NewRecorder()
+	request := httptest.NewRequest(
+		http.MethodGet,
+		"/public/strategies/strategy%3Ago-parity%3Asentinel",
+		nil,
+	)
+
+	NewServer().routes().ServeHTTP(response, request)
+
+	if response.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", response.Code)
+	}
+	body := decodeJSONMap(t, response.Body.Bytes())
+	payload, ok := body["payload"].(map[string]any)
+	if !ok {
+		t.Fatal("public Strategy page missing payload")
+	}
+	strategy, ok := payload["strategy"].(map[string]any)
+	if !ok {
+		t.Fatal("public Strategy page missing Strategy card")
+	}
+	semantics, ok := strategy["runtimeSemantics"].(map[string]any)
+	if !ok {
+		t.Fatal("public Strategy card missing runtime semantics")
+	}
+	if semantics["countedPlayEligible"] != false {
+		t.Fatal("proof-local public Strategy fixture must remain non-counted")
+	}
+	if semantics["countedPlayLabel"] != "Not counted" {
+		t.Fatalf(
+			"expected fail-closed counted-play label, got %v",
+			semantics["countedPlayLabel"],
+		)
+	}
+}
+
 func TestReplayEvidenceUsesPublicProjectionShape(t *testing.T) {
 	response := httptest.NewRecorder()
 	request := httptest.NewRequest(

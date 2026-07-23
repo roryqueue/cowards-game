@@ -40,6 +40,26 @@
         },
         "requiredCapabilities": []
       },
+      "runtimeSemantics": {
+        "adapterId": "runtime-js-worker-thread",
+        "adapterLabel": "runtime-js worker thread",
+        "countedPlayEligible": false,
+        "countedPlayLabel": "Not counted",
+        "countedPlayReason": "Proof-local fixture evidence does not authorize counted play.",
+        "docsReference": "runtime/languages",
+        "examplesReference": "samples/minimal-strategy",
+        "experimental": false,
+        "languageId": "typescript",
+        "languageLabel": "TypeScript",
+        "packagePolicyLabel": "No packages",
+        "readiness": "local-dev-fallback",
+        "readinessLabel": "Local/dev fallback",
+        "sourcePolicyLabel": "Self-contained Strategy source",
+        "validationIssueCodes": [
+          "NON_COUNTED_RUNTIME"
+        ],
+        "warnings": []
+      },
       "sourceBytes": 192,
       "sourceHash": "sha256:go-parity-sentinel",
       "strategyId": "strategy:go-parity:sentinel",

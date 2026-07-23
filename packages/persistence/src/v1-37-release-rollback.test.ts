@@ -2,6 +2,7 @@ import { createHash } from "node:crypto"
 import { readFileSync } from "node:fs"
 import path from "node:path"
 import { spawnSync } from "node:child_process"
+import { fileURLToPath } from "node:url"
 import { describe, expect, it } from "vitest"
 
 const expectedD11Scenarios = [
@@ -71,7 +72,9 @@ const ownerSuites = [
 const sha256 = (value: string): `sha256:${string}` =>
   `sha256:${createHash("sha256").update(value).digest("hex")}`
 
-const v137ReleaseRollbackScenarios = () =>
+const repositoryRoot = fileURLToPath(new URL("../../..", import.meta.url))
+
+const v137ReleaseRollbackScenarios = (repoRoot = repositoryRoot) =>
   expectedD11Scenarios.map((id) => {
     const owners = ownerSuites.filter(({ scenarios }) =>
       (scenarios as readonly string[]).includes(id),
@@ -81,7 +84,7 @@ const v137ReleaseRollbackScenarios = () =>
       id,
       ownerSourceHashes: owners.map(({ file }) => ({
         owner: file,
-        sha256: sha256(readFileSync(path.resolve(process.cwd(), file), "utf8")),
+        sha256: sha256(readFileSync(path.resolve(repoRoot, file), "utf8")),
       })),
     })
   })
@@ -115,7 +118,11 @@ const runV137ReleaseRollbackOwnerSuites = (repoRoot: string) => {
         maxBuffer: 32 * 1024 * 1024,
       },
     )
-    if (result.status !== 0 || result.signal !== null || result.stderr.trim() !== "") {
+    if (
+      result.status !== 0 ||
+      result.signal !== null ||
+      result.stderr.trim() !== ""
+    ) {
       throw new TypeError(`V137_D11_OWNER_FAILED:${owner}`)
     }
     let report: JsonReport
@@ -151,7 +158,7 @@ describe("v1.37 D-11 persistence rollback release matrix", () => {
 
   it("executes every database owner suite without a configured skip", () => {
     expect(process.env.DATABASE_URL).toMatch(/^postgresql:\/\//u)
-    const receipts = runV137ReleaseRollbackOwnerSuites(process.cwd())
+    const receipts = runV137ReleaseRollbackOwnerSuites(repositoryRoot)
     expect(receipts.every(({ status }) => status === "passed")).toBe(true)
     expect(receipts.map(({ owner }) => owner)).toEqual([
       "job-lifecycle",
