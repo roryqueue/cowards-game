@@ -135,10 +135,10 @@ Each requirement is complete only when its named behavior has an immutable evide
 - [ ] **CLOSE-03**: A clean-checkout reproducer verifies required non-secret artifacts, deterministic roots, task and matrix coverage, restart/shard invariance, tamper resistance, and bounded safe projections without access to private holdout preimages.
 - [ ] **CLOSE-04**: A named verifier who did not produce the evaluated root runs from a clean detached checkout with immutable input, tool, host, and output identities, reproduces the required roots and gate decisions with zero unexplained mismatch, and adversarially reviews oracle independence, candidate legality, information boundaries, compute equality, freeze order, holdout use, production reachability, privacy, claims, rollback, and conclusions.
 - [ ] **CLOSE-05**: Final artifacts produce zero blocking privacy, claim, reachability, identity, retention, or omission findings; artifact-wide key/value scans, claim lint, schema/import/deployment monitors, mutation tests, and positive bypass probes detect every seeded private leak, overclaim, experimental path, threshold override, missing failure, or stale identity; any unresolved blocking finding forces `gaps_found`.
-- [ ] **CLOSE-06**: The immutable pre-tag audit cross-references the REQUIREMENTS traceability table, phase VERIFICATION evidence, and requirements-completed summary; maps every requirement exactly once with no missing, duplicate, partial, or orphaned coverage; separates `process_status` from `empirical_outcome`; records zero silent overrides and no canonical gameplay/public-behavior change; and leaves exactly the annotated-tag/post-tag closure requirement `ready_pending`.
-- [ ] **CLOSE-07**: The complete roadmap, requirements, canonical pre-tag audit, phase artifacts, public-safe report, private-root commitments, decision or rejection packet, and verification instructions are archived at one immutable release commit, with the archived audit byte-identical to the active canonical audit.
-- [ ] **CLOSE-08**: The exact complete archive commit receives an annotated `v1.38` tag only after every pre-tag gate passes, and the annotation binds the semantic tuple, final evidence root, current-only certification root or `no_certifiable_current_finalist`, decision report, archived audit path/digest, and readiness digest.
-- [ ] **CLOSE-09**: A read-only independent post-tag checker resolves the actual annotated tag, verifies the tagged archive/root joins and clean tagged-tree reproducer, and emits a distinctly named content-addressed external attestation without rewriting or shadowing tagged audit files; any tag, archive commit, evidence root, report, or attestation mismatch fails closure.
+- [ ] **CLOSE-06**: The immutable pre-tag audit cross-references the REQUIREMENTS traceability table, phase VERIFICATION evidence, and requirements-completed summary; maps every requirement exactly once with no missing, duplicate, partial, or orphaned coverage; separates `process_status` from `empirical_outcome`; records zero silent overrides and no canonical gameplay/public-behavior change; and leaves exactly CLOSE-07, CLOSE-08, and CLOSE-09 `ready_pending` as the outer archive/tag/post-tag operations.
+- [ ] **CLOSE-07**: The complete roadmap, requirements, canonical pre-tag audit, phase artifacts, public-safe report, private-root commitments, decision or rejection packet, and verification instructions are archived at one immutable release commit, with the archived audit byte-identical to the active canonical audit; satisfaction is established from the actual commit by the release checker, never predicted inside that audit.
+- [ ] **CLOSE-08**: After every requirement other than the outer CLOSE-07, CLOSE-08, and CLOSE-09 operations passes, the actual complete archive commit passes the read-only pre-tag archive check and receives an annotated `v1.38` tag whose annotation binds the semantic tuple, final evidence root, current-only certification root or `no_certifiable_current_finalist`, decision report, archived audit path/digest, and readiness digest.
+- [ ] **CLOSE-09**: A read-only independent post-tag checker resolves the actual annotated tag, verifies the tagged archive/root joins and clean tagged-tree reproducer, closes CLOSE-07 through CLOSE-09 from those external identities, and emits a distinctly named content-addressed external attestation without rewriting or shadowing tagged audit files; any tag, archive commit, evidence root, report, or attestation mismatch fails closure.
 - [ ] **CLOSE-10**: The final report records `process_status`, `current_rules_outcome`, and `formation_outcome` separately; process or integrity failure blocks successful audit/archive/tag closure, while process-valid current-rules failure, bracket rejection, or bracket empirical pass is reported honestly without claiming Nash equilibrium, exact exploitability, optimality, permanent balance, a solved game, or authority to ship a rule change.
 
 ## Future Requirements
@@ -183,13 +183,108 @@ Roadmap creation assigns every v1.38 requirement to exactly one phase.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
+| ADMIT-01 | Phase 262 | Pending |
+| ADMIT-02 | Phase 262 | Pending |
+| ADMIT-03 | Phase 262 | Pending |
+| ADMIT-04 | Phase 262 | Pending |
+| MEAS-01 | Phase 262 | Pending |
+| MEAS-02 | Phase 262 | Pending |
+| MEAS-03 | Phase 262 | Pending |
+| MEAS-04 | Phase 262 | Pending |
+| MEAS-05 | Phase 262 | Pending |
+| MEAS-06 | Phase 262 | Pending |
+| MEAS-07 | Phase 262 | Pending |
+| MEAS-08 | Phase 262 | Pending |
+| MEAS-09 | Phase 262 | Pending |
+| MEAS-10 | Phase 262 | Pending |
+| PLAN-01 | Phase 263 | Pending |
+| PLAN-02 | Phase 263 | Pending |
+| PLAN-03 | Phase 263 | Pending |
+| PLAN-04 | Phase 263 | Pending |
+| PLAN-05 | Phase 263 | Pending |
+| PLAN-06 | Phase 263 | Pending |
+| FACT-01 | Phase 263 | Pending |
+| FACT-02 | Phase 263 | Pending |
+| FACT-03 | Phase 263 | Pending |
+| FACT-04 | Phase 263 | Pending |
+| FACT-05 | Phase 264 | Pending |
+| FACT-06 | Phase 264 | Pending |
+| FACT-07 | Phase 264 | Pending |
+| FACT-08 | Phase 264 | Pending |
+| ORCL-01 | Phase 264 | Pending |
+| ORCL-02 | Phase 264 | Pending |
+| ORCL-03 | Phase 264 | Pending |
+| ORCL-04 | Phase 264 | Pending |
+| ORCL-05 | Phase 264 | Pending |
+| ORCL-06 | Phase 264 | Pending |
+| ORCL-07 | Phase 264 | Pending |
+| LEAG-01 | Phase 265 | Pending |
+| LEAG-02 | Phase 265 | Pending |
+| LEAG-03 | Phase 265 | Pending |
+| LEAG-04 | Phase 265 | Pending |
+| LEAG-05 | Phase 265 | Pending |
+| LEAG-06 | Phase 265 | Pending |
+| LEAG-07 | Phase 265 | Pending |
+| LEAG-08 | Phase 265 | Pending |
+| LEAG-09 | Phase 265 | Pending |
+| FRZE-01 | Phase 266 | Pending |
+| FRZE-02 | Phase 266 | Pending |
+| FRZE-03 | Phase 266 | Pending |
+| FRZE-04 | Phase 266 | Pending |
+| LAB-01 | Phase 267 | Pending |
+| LAB-02 | Phase 267 | Pending |
+| LAB-03 | Phase 267 | Pending |
+| LAB-04 | Phase 267 | Pending |
+| LAB-05 | Phase 267 | Pending |
+| LAB-06 | Phase 267 | Pending |
+| LAB-07 | Phase 267 | Pending |
+| LAB-08 | Phase 267 | Pending |
+| EQAL-01 | Phase 268 | Pending |
+| EQAL-02 | Phase 268 | Pending |
+| EQAL-03 | Phase 268 | Pending |
+| EQAL-04 | Phase 268 | Pending |
+| EQAL-05 | Phase 268 | Pending |
+| EQAL-06 | Phase 268 | Pending |
+| EQAL-07 | Phase 268 | Pending |
+| EQAL-08 | Phase 268 | Pending |
+| SEAL-01 | Phase 262 | Pending |
+| SEAL-02 | Phase 269 | Pending |
+| SEAL-03 | Phase 269 | Pending |
+| SEAL-04 | Phase 269 | Pending |
+| SEAL-05 | Phase 269 | Pending |
+| SEAL-06 | Phase 269 | Pending |
+| SEAL-07 | Phase 269 | Pending |
+| DECI-01 | Phase 269 | Pending |
+| DECI-02 | Phase 262 | Pending |
+| DECI-03 | Phase 269 | Pending |
+| DECI-04 | Phase 269 | Pending |
+| DECI-05 | Phase 269 | Pending |
+| DECI-06 | Phase 269 | Pending |
+| DECI-07 | Phase 269 | Pending |
+| DECI-08 | Phase 269 | Pending |
+| CERT-01 | Phase 269 | Pending |
+| CERT-02 | Phase 269 | Pending |
+| CERT-03 | Phase 269 | Pending |
+| CERT-04 | Phase 269 | Pending |
+| CERT-05 | Phase 269 | Pending |
+| CLOSE-01 | Phase 270 | Pending |
+| CLOSE-02 | Phase 270 | Pending |
+| CLOSE-03 | Phase 270 | Pending |
+| CLOSE-04 | Phase 270 | Pending |
+| CLOSE-05 | Phase 270 | Pending |
+| CLOSE-06 | Phase 270 | Pending |
+| CLOSE-07 | Phase 270 | Pending |
+| CLOSE-08 | Phase 270 | Pending |
+| CLOSE-09 | Phase 270 | Pending |
+| CLOSE-10 | Phase 270 | Pending |
 
 **Coverage:**
 
 - v1.38 requirements: 94 total
-- Mapped to phases: 0
-- Unmapped: 94
+- Mapped to phases: 94
+- Unmapped: 0
+- Duplicate mappings: 0
 
 ---
 *Requirements defined: 2026-07-27*
-*Last updated: 2026-07-27 after research synthesis*
+*Last updated: 2026-07-27 after roadmap creation*
