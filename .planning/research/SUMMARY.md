@@ -1,140 +1,400 @@
-# Research Summary
+# Project Research Summary
 
-**Project:** Coward's Game v1.37 Rules Integrity and Strategy Evaluation Foundations
-**Researched:** 2026-07-12
-**Scope:** Approved integrity foundation only; preserve valid v1.4 gameplay and historical evidence
-**Overall confidence:** HIGH for repository-local findings and dependency order; MEDIUM for final phase sizing
+**Project:** Coward's Game v1.38 Competitive Strategy Factory and Adversarial League
+
+**Domain:** Reproducible offline Strategy generation, adversarial empirical-league evaluation, and lab-only causal starting-formation research
+
+**Researched:** 2026-07-27
+
+**Confidence:** HIGH for scope, trust boundaries, and dependency order; MEDIUM for final budgets, throughput, and oracle implementation details; outcomes intentionally UNKNOWN
 
 ## Executive Summary
 
-v1.37 should establish the smallest complete trust substrate required before serious Strategy development. The repository already has the right broad ownership split—TypeScript spec/engine/replay, runtime-service and language adapters, Go orchestration/persistence, and public web projections—but its contracts and proof are not yet strong enough to prevent those layers from drifting independently.
+v1.38 should build a private, reproducible research control plane beside Coward's Game, not a second game engine, production backend, runtime, rules version, or public league feature. The lab should reuse the exact v1.37-certified semantic tuple and the existing canonical `MATCH_KERNEL` as the sole transition authority. It should add deterministic task planning, immutable provenance, content-addressed evidence, materially independent response oracles, complete empirical payoff matrices, a frozen PSRO/double-oracle league, and current-rules finalist certification. Candidate source emitted by search, models, humans, or external submitters remains hostile and must execute behind the existing supervised runtime boundary; no Strategy source may execute in web, API, or Go.
 
-The milestone should converge existing components onto one canonical transition authority rather than introduce a new rules stack. `@cowards/spec` should own an atomic rules/engine/runtime-ABI/Chronicle/arena/Set-policy tuple and bounded language-neutral contracts; `@cowards/engine` should own the only Match transition kernel; `@cowards/replay` should record and reconstruct kernel transitions without scheduling a second Match; adapters should report success, player violation, or system failure without deciding gameplay; Go should continue to own job lifecycle, persistence, Set scoring, rollback, and public-safe evidence.
+The dependency order is binding. First admit the v1.37 foundation, reproduce the persisted current-rules matrix as a regression fixture, and freeze measurement, budget, claim, red-team, failure, holdout, and selection contracts. Then prove a legal hierarchical planner, build the immutable factory and independent oracles, run and red-team the serious current-rules league, and freeze its complete evidence root. Only that valid current-rules freeze may unlock executable formation-profile materialization. The formation study must then retrain current-edge, inward-rank, and bracket-shield populations separately from one precommitted common root under equal deterministic work, equal model/human scrutiny, isolated stores and caches, and the unchanged engine and rules. All three populations freeze before a separately controlled common holdout opens once.
 
-The current-HEAD reproductions are the acceptance baseline. All seven persisted probes still reproduce, and audited production source has not changed since the audit snapshot. They must become permanent regression inputs, not be replaced by changed expectations. Valid v1.4 behavior—including same-direction collision, successful-push reversal history, blocked MOVE/PUSH, terminal timing, and other ambiguous rulings—must be frozen with executable fixtures before refactoring. Any change to a valid Match state, Action legality, event order, outcome, or Strategy observation requires a compatibility approval stop.
+The principal risks are experimental code becoming production-reachable, baseline or holdout contamination, post-result threshold changes, correlated “independent” oracles, unequal cross-profile adaptation, hostile-source/runtime boundary erosion, privacy leakage, and claims broader than bounded evidence supports. Prevent these with disjoint evidence schemas, executable negative-reachability tests, separate holdout custody, append-only failed-attempt ledgers, content-addressed freeze receipts, exact equal-compute reconciliation, claim lint, and independent tagged-checkout verification. A failed practical anti-dominance gate, no robust pure finalist, or a rejected bracket is a valid empirical result when the process is sound. No result in v1.38 may claim mathematical optimality, exact exploitability, permanent balance, or authorize a production rule change.
 
-No new framework or third-party dependency is recommended. Use the existing pinned TypeScript, Zod, Vitest, Playwright, Go, PostgreSQL, runtime-service, and WASI infrastructure. Counted runtime eligibility must be derived from current executable containment and four-language conformance evidence tied to exact runtime, toolchain, adapter, policy, corpus, source, normalized-byte, artifact, and compatibility-tuple identities.
+## Binding Interpretation and Conflict Reconciliation
 
-## Scope Boundary
+The [v1.38 activation prompt](../milestone-proposals/v1.38-competitive-strategy-factory-and-adversarial-league/ACTIVATION-PROMPT.md) is the controlling contract. The research reports are consistent on the hard boundaries but differ in implementation granularity and phase grouping. Roadmapping should use these resolutions:
 
-### Committed Integrity Foundation
+1. **Core package versus separate oracle packages:** Use one private `@cowards/strategy-lab` core package for contracts, identity, ledgers, matrices, profile-independent orchestration, evidence, and analysis. Put the structured optimizer, search teacher/distiller, and model-guided explicit-program synthesizer in separate packages with a shared-helper allowlist. The stack report's single-package shape is the minimum; the architecture report's stronger physical separation should prevail because oracle independence is an experimental variable. CLI entry points and the holdout evaluator are offline executables, not new network services.
+2. **Direct-engine speed versus hostile-source isolation:** Trusted repository-owned search/teacher representations may call the canonical engine directly. Emitted Strategy source from any search, model, human, or external channel is hostile and must use the existing supervised provider/runtime boundary. There is no `eval`, `new Function`, Node `vm`, dynamic import, or worker-thread “sandbox.”
+3. **Current freeze versus formation protocol precommitment:** Phase 1 must precommit the exact three-profile scientific protocol, coordinate definitions, equal-compute dimensions, telemetry, and rejection logic. It must not materialize executable inward/bracket initial states, profile run manifests, or profile-trained candidates. Those artifacts require the later current-league freeze receipt.
+4. **Current league versus current-edge experimental control:** The pre-formation current-rules league establishes and freezes the serious baseline, oracle field, protocol, and permitted common root. After that freeze, the formation experiment independently retrains all three arms—including the current-edge control—under equal budgets. Fixed current-rules Strategies are screening inputs, not final formation evidence.
+5. **Pre-formation versus final certification:** Before freeze, current finalists need legal-information, deterministic-repeat, source/memory/objective/output, runtime-profile, and replay-review feasibility proof. Full product-path certification—supported runtime, runtime-service, canonical Chronicle/replay, Go completion, persistence, privacy, standings, and E2E—applies only to current-rules finalists and must be complete before milestone closure. Experimental artifacts never enter those paths.
+6. **Development evaluation versus sealed evaluation:** The current league may use frozen development, validation, and independent probe fields before formation. The common sealed arena/opponent holdout remains unopened until the separately retrained current, inward, and bracket populations, finalists, thresholds, and red-team outputs are all frozen.
+7. **Canonical Chronicle versus lab trace:** Current-rules finalist certification uses canonical Chronicle and persistence. Development Matches and all three formation-arm Matches use a distinct private `lab-only` trace/evidence class. Even the current-edge control in the formation experiment does not become canonical Match evidence merely because its starting coordinates match production.
+8. **“Exploitability” language:** Reports may state an **oracle-relative response gap** under named frozen oracles, budgets, populations, conditions, and versions. They may not report exact exploitability, convergence to Nash, an optimal Strategy, a solved game, permanent balance, or a meta-free future.
 
-- Fail closed for counted lanes without current containment and executable conformance evidence bound to exact identity.
-- Establish one canonical ownership and atomic version tuple for rules, engine, runtime ABI, Chronicle, arena catalog, and Set policy.
-- Replace the engine and Chronicle Match loops with one transition kernel whose transitions are recorded, semantically validated, reconstructed, and hash-compared.
-- Add bounded canonical JSON handling and semantic validation for arenas, all state boundaries, occupancy, ownership, bounds, status/position consistency, initiative, versions, and outcomes.
-- Repair every confirmed audit lifecycle defect while preserving approved v1.4 semantics: immediate outcome after no-Advance cleanup, Cycle-end Backstab closure/reason, excess-order precedence, stale contiguous-Activation export removal, immutable/cloned constants, and emitted-or-removed event vocabulary.
-- Preserve success, player violation, and system failure end to end; system failure cannot mutate gameplay, memory, standings, or become a player penalty.
-- Reconcile original bytes, normalized bytes, line endings, manifests, artifacts, runtimes, toolchains, ABI, corpus, and evidence identity.
-- Replace parity declarations with identical TypeScript/Python/Rust/Zig corpus execution and full state, event, memory, objective, and failure-trace comparison.
-- Make Chronicle validation version-strict, semantic, per activation slot, reconstruction-equivalent, and historically routed without rewriting v1.4 evidence.
-- Add explicit initiative and authoritative `hasAdvancedThisActivation`, one documented budget contract, and the same ABI envelope for every supported language.
-- Consolidate arena authority, deduplicate semantically identical geometry for diversity claims, and schedule explicit side and entrant-level initiative coverage.
-- Close with service-backed execution, failure, Chronicle, replay, persistence, fairness, rollback, privacy, and boundary-monitor proof.
+## Key Findings
 
-### Proof-Gated Behavior-Preserving Simplifications
+### Recommended Stack
 
-- Remove Cycle-start Backstab scans only if reachable-state differential proof establishes identical canonical state, outcome, event sequence, and Strategy observation behavior.
-- Add `HOLD`/`END_ACTIVATION` after Advance only after a separate approval and proof that scheduling, Backstab, Chronicle, replay, reachable outcomes, and observations preserve the intended existing hold behavior.
-- If either candidate changes any valid state, legality, event order, outcome, or observation, defer it. Neither is required to complete the integrity foundation.
+Keep the production stack and production dependency graph unchanged. Add offline packages and scripts using already pinned tools; the core path needs no new npm dependency.
 
-### Deferred Experiments
+**Core technologies:**
 
-- Cycle caps, inward starting rows, facing-only MOVE, reversal-history removal, attacker-facing or stronger Backstab rules.
-- Hidden information, randomness, adaptive rules, per-Match mutation, and new official arena geometries beyond authority/fairness repair.
-- Gameplay changes justified by the toy Strategy matrix, metagame selection machinery, or the proposal's broader experimental program.
-- Durable ratings, prizes, staffed moderation, new languages, TinyGo promotion, package ecosystems, and broad UI redesign.
-- The v2.0 proposal's full 63 requirements and 13 phases are source material only and must not be imported into active planning.
+- **Node.js 24.x:** Offline lab host, exact task planner, built-in cryptography, and bounded trusted worker pool. Every run records the exact Node patch, V8, OpenSSL, OS, architecture, CPU, and worker count.
+- **pnpm 11.1.2 workspaces:** Private package isolation and frozen-lockfile reproduction.
+- **TypeScript 6.0.3:** Lab contracts, search algorithms, provenance, orchestration, matrices, analysis, and report generation alongside the existing TypeScript engine/spec/replay seams.
+- **`@cowards/strategy-lab`:** New private core package. No production package, app, image, route, or generated contract may depend on it.
+- **Separate oracle packages:** Structured tactical optimizer, high-level search teacher/distillation, and model-guided explicit program synthesis. They may share literal legality, geometry, schemas, artifact creation, and reporting—not selectors, mission scoring, Action scoring, search trees, learned parameters, or prompts.
+- **`@cowards/engine`:** Sole transition authority through the exact selected `MATCH_KERNEL.createMachineV119` and `MATCH_KERNEL.stepMatch` identities.
+- **`@cowards/spec`:** Canonical types, strict Zod schemas, canonical JSON, hashes, runtime envelopes, semantic-tuple resolution, arena identity, and Set-condition identity.
+- **`@cowards/replay`:** Canonical current-finalist certification and sampled current-path reconstruction; it does not admit experimental traces.
+- **Existing runtime-service / Runtime Broker / supervisors:** Hostile Strategy validation and execution, with three-way success/player-violation/system-failure semantics and no fallback.
+- **Zod 4.4.3:** Strict lab manifests and process/file boundary validation using disjoint discriminants rather than optional experimental fields in production schemas.
+- **Vitest 4.1.6:** Determinism, property/invariant, tamper, hostile-input, boundary, matrix-completeness, algorithm, and negative-reachability tests. Benchmarks are capacity observations only.
+- **`tsx` 4.22.0:** Repository-local lab CLI entry points.
+- **Content-addressed filesystem artifacts:** Immutable canonical JSON/NDJSON objects, shards, roots, matrices, traces, receipts, and signatures outside production PostgreSQL.
+- **Node `crypto`:** Domain-separated SHA-256, HMAC-SHA-256, and Ed25519 evidence primitives using repository conventions.
+- **`worker_threads`:** Trusted CPU parallelism only, with preassigned tasks/seeds and canonical reduction. Worker count and completion order must not alter result bytes.
+- **Existing PostgreSQL, Go, Playwright, service, replay, and public-proof lanes:** Used only for ordinary current-rules finalist admission and final product-path certification.
+- **Optional `age` 1.3.1:** Only if encrypted holdout bytes must live near the repository. It is not a substitute for separate custody, and the decrypting identity stays outside the repository, ordinary CI, and lab store.
 
-## Key Research Conclusions
+**Required identity binding:**
 
-### Architecture and Ownership
+Every counted research root binds the exact Git commit and dirty-state declaration, lockfile digest, host/toolchain identities, selected semantic tuple, rules, engine, runtime ABI, Chronicle, arena catalog, Set policy, canonical JSON version, runtime/provider identities, algorithm and PRNG versions, task/profile/artifact schemas, corpus/split hashes, structural budgets, retry policy, task coverage, shard roots, and custody receipts. Observed labels include `cowards-rules-v1.4`, `engine-kernel-v1.37-candidate-1`, `strategy-runtime-abi-v1.19`, `chronicle-recorder-current-events-v1.37-candidate-1`, `canonical-arena-catalog-v1.37`, and `canonical-set-policy-v1.37-four-condition-v1`; implementations must resolve the selected tuple rather than trust copied strings.
 
-The safest architecture is a functional core with evidence adapters. The kernel accepts validated state plus explicit input and returns validated next state, canonical events, runtime requests/results, and terminal/failure status. Direct Match execution and Chronicle recording consume those same transition records. Replay validates and reconstructs them; it does not independently advance Phases, Rounds, Cycles, Activations, or Contractions.
+**Storage and execution rules:**
 
-The complete compatibility tuple must be treated atomically. Independent support checks for each version string are insufficient because individually supported components may never have been certified together. Missing, unknown, stale, or mixed tuples must fail before counted scheduling, execution, persistence, or replay. Historical v1.4 evidence routes through immutable original semantics and is never normalized to the latest tuple.
+- Lab artifacts live in a task-specific private store, not production tables.
+- Write complete temporary shards, validate coverage/digests, atomically publish, and merge in canonical task-id order.
+- System failure, missing work, duplicate/conflicting results, schema errors, or truncated shards invalidate the matrix/root; they are never imputed as losses or draws.
+- Keep full traces only for a precommitted sample, failures, finalist review, and sealed custody needs; retain compact outcomes and required telemetry for every Match.
+- Model calls occur outside the runner through immutable request/response bundles. Do not add provider SDKs, agent frameworks, live inference, or network access to Match execution.
+- No Match-time Strategy may access live models or humans, network, filesystem, clock, nondeterministic randomness, dynamic code, imports, external services, or other host capabilities. Offline authoring must distill to deterministic, self-contained, package-free source within the canonical ABI and limits.
+- Public/default reports, DTOs, pages, replays, logs, proofs, and archives must omit Strategy source and artifact bytes, StrategyMemory, SoldierMemory, objective payloads, raw observations/Awareness data, raw diagnostics, sealed identities/preimages, private evaluator state, host paths, environment values, credentials/tokens, database details, and security internals. Private research evidence stays access-controlled and receives a separate safe aggregate projection.
 
-### Validation and Failure Safety
+### Expected Features
 
-Shape validation is necessary but insufficient. Explicit semantic validators must cover cross-record invariants at arena admission, initial state, relevant transition postconditions, runtime final state, persistence, and Chronicle reconstruction. Canonical JSON limits must include bytes, depth, nodes/entries, strings, collections, Unicode, finite/safe numeric rules, duplicate keys, ordering/hashing, and serialization behavior. Traversal must be iterative and bounded so adversarial depth produces a typed result rather than `RangeError` or uncontrolled allocation.
+#### Must Have — Table Stakes
 
-All adapters must implement a common three-way result envelope. Only the canonical engine boundary may translate a valid player violation into the already-approved v1.4 consequence. Timeouts, crashes, unavailable runtimes/toolchains, transport errors, malformed envelopes, stale artifacts, and persistence failures remain system failures, produce zero gameplay/memory mutation, and follow Go-owned retry/rollback policy.
+1. **Foundation admission and regression:** Verify the v1.37 archive/tag/post-tag closure and exact selected tuple; reproduce the persisted current-rules matrix and treat Starter/Advanced only as smoke/regression fixtures.
+2. **Immutable measurement contract:** Freeze scoring, sides, initiative conditions, semantically distinct arenas, splits, opponent fields, candidate/node/Match budgets, model/prompt/token budgets, human procedure, replay review, runtime limits, retries, metrics, thresholds, stopping, finalist selection, claims, holdout commitment, and failure interpretation before candidate tuning.
+3. **Process/outcome separation:** Distinguish process or integrity failure, valid current-rules metagame failure, bracket rejection, bracket empirical pass, and holdout contamination. Failed empirical gates do not authorize threshold changes or rules changes.
+4. **Deterministic one-command lab:** Enumerate all work first, derive per-task streams from a root commitment and stable identity, reproduce results across worker/shard/order/restart permutations, and preserve append-only attempts and failures.
+5. **Legal hierarchical planner spike:** Prove full-board ordered Soldier/mission assignment and a 5x5 SoldierBrain that considers all nine Actions, stale objectives, exact visible rules, authoritative Advance state, both initiative hypotheses, and a cheap legal fallback within source/objective/memory/runtime limits.
+6. **Mission-capable coordination:** Support evacuation, rear entry, edge push, screen, anchor, graph-cut STONE, reserve, recovery, bait, and pincer missions with lexicographic survival/tactical constraints.
+7. **Immutable Strategy factory:** Emit exact source/build identities, compatibility, lineage, doctrine/oracle family, deterministic manifests, validation, runtime profile, behavior fingerprint, split identity, and accepted/rejected ledger entries. Accepted candidates never mutate.
+8. **Legal information-set enforcement:** Deployed decisions reproduce from canonical Strategy/SoldierBrain input, objective, and memory only. Privileged offline teachers may score counterfactuals but cannot leak hidden facts into emitted choices.
+9. **Independent response channels:** At least three materially independent automated response mechanisms plus a separately documented human/external channel. Preserve failed, invalid, duplicate, legal-but-weak, and successful attempts.
+10. **Complete current-rules league:** Complete mirrored payoff cells across both sides, both entrant-level initiative states, and each distinct design arena; frozen-snapshot PSRO/double-oracle iterations; mixture- and pure-targeted responses; clone rejection; meta-distributions; best-response graphs; and oracle-relative gaps.
+11. **Portfolio and robust pure selection:** Preserve a diverse pure portfolio and select a separate deployable pure finalist using precommitted mixture, strongest-pure, pure-worst-case, probe, invariance, legality, and runtime evidence. The mixture is diagnostic, never a deployable entrant.
+12. **Current-rules red team and hard freeze:** Exhaust the declared automated, model, and human attack budget; feed successful development counters through the frozen response policy; retain failed attacks; then freeze sources, populations, matrices, distributions, thresholds, ledgers, red-team logs, finalist choices, holdout policy, and interpretation before formation artifacts exist.
+13. **Exact lab-only profile boundary:** After the current freeze, materialize exactly current edge rank, full inward rank, and the specified edge-anchored bracket shield through a position-only initial-state adapter. All subsequent transitions use the unchanged canonical kernel.
+14. **Negative production reachability:** Experimental profiles and artifacts must fail canonical Strategy registration, account save, Match creation, runtime-service Match requests, arena admission, canonical Chronicle validation, persistence, counted/exhibition scheduling as canonical play, standings, Go/API creation, replay/result/discovery reads, public DTOs, and production deployment graphs.
+15. **Separate equal-compute retraining:** Retrain all three profiles independently with equal doctrine/core eligibility, common-root policy, candidate counts, response iterations, search nodes, model/human budgets, Match schedules, sides, initiatives, arena corpus, split/holdout policy, runtime limits, hardware class, cache/retry rules, and replay-review effort. No learned artifact or cache crosses profile namespaces.
+16. **Formation diagnostics and hard rejection gates:** Measure canonicalized opening entropy and clusters, forced evacuation, unselected first-Contraction reserves, first interaction, Backstabs by timing/cause, pushes/blocks, no-Advance STONE, center/wing/convoy/turtle behavior, draws, Match length, Contractions, ACTIVE survival, response gap, pure-policy worst case, and best-response graph.
+17. **Freeze all before one open:** Freeze every profile population, finalist, threshold, red-team output, and compute ledger before the common arena/opponent holdout opens once. No post-open tuning, candidate admission, threshold change, interpretation change, or second diagnostic query.
+18. **Invariance, leakage, and privacy proof:** Test side, initiative, horizontal symmetry, opaque IDs, Soldier/source ordering, deterministic repeat, held-out opponents, legal information sets, runtime boundaries, and private-data markers.
+19. **Current-only product certification:** Certify frozen current-rules finalists through supported runtimes, runtime-service, canonical Chronicle reconstruction, Go completion, persistence, replay, privacy, standings, and E2E. Experimental artifacts remain private lab evidence.
+20. **Persistent evidence and release closure:** Preserve runner, manifests, legal corpus, lineage, fingerprints, independence proof, populations, matrices, distributions, response graphs, attempt/failure logs, holdout access proof, current certification, profile manifests, causal comparison, and final report; finish with independent verification, adversarial review, privacy scans, complete requirements trace, audit, archive, annotated tag, and post-tag verification from the tagged tree.
 
-### Executable Language and Identity Proof
+#### Starting Gates to Calibrate and Freeze
 
-Language neutrality means equivalent observable ABI behavior, not four independent engines. One versioned, hash-addressed corpus should drive actual TypeScript, Python, Rust, and Zig adapters. It must compare complete canonical state transitions, events, StrategyMemory, SoldierMemory, objectives, failure classes, invalid/boundary JSON, timeouts/resource failures, stale artifacts, deterministic repeats, and exact runtime/toolchain identity.
+These are activation-prompt starting values, not outcomes or permission to tune after seeing candidates:
 
-Original source bytes, normalized bytes, normalization policy/version, line endings, artifact bytes, manifests, provider, runtime, toolchain, ABI, policy, corpus, and evidence hashes need explicit domains and bindings. Floating Rust `stable` or Wasmtime `latest` may support discovery but cannot identify counted evidence. A relevant dependency change must invalidate eligibility automatically.
+- zero accepted runtime violations, system failures, information-boundary violations, or private-data leaks;
+- source below 64 KB, preferably below 48 KB, and direct execution targeting below 5 ms p99 on one fixed identified benchmark;
+- at least 12 league Strategies across six behavioral families and five genuinely independent planner cores;
+- at least three structurally and behaviorally distinct finalists;
+- two consecutive response iterations above 55% Set score against the preceding frozen mixture on untouched conditions;
+- at least one deployable Strategy above 60% against an independent probe field;
+- above 70% against Advanced remains regression-only evidence;
+- a fresh red team either cannot exceed 60% against the robust finalist or finds a counter to which the next declared response iteration adapts; and
+- no leading result depends materially on side, initiative, duplicate arenas, opaque IDs, source/Soldier order, invalid output, runtime failure, or tie-break artifacts.
 
-### Chronicle, Strategy Inputs, and Competition Fairness
+Planning may justify different calibrated values only inside the pre-search contract. The final values and exact denominators must freeze before candidate output is inspected.
 
-Chronicle grammar state must be keyed per `activationId`; a global increasing sequence cannot detect duplicated, skipped, reopened, or out-of-order interleaved slots. Current evidence should require version-strict literals, semantic subject/state agreement, and reconstruction-equivalent transition hashes, while immutable historical evidence remains readable only under its original rules and Chronicle semantics.
+#### Exact Formation Contract
 
-Strategy observations must expose canonical facts rather than language-specific inference: explicit initiative and scheduler-owned `hasAdvancedThisActivation`. Budget terms must name measurement boundaries and units rather than reuse equal numbers with different meanings across adapters.
+The Phase 1 measurement contract precommits these literal profiles, but executable alternate-profile manifests, initial states, candidates, traces, and results cannot be materialized until the current-league freeze:
 
-Set fairness requires explicit scenario data. Swapping sides and changing a seed suffix can leave the same entrant with initiative in both Matches. Scheduling and service-backed proof must demonstrate that each entrant receives each side and each initial-initiative state. Arena diversity must be based on versioned semantic geometry identity, not duplicate IDs for the same empty geometry.
+| Profile | Top Soldiers | Bottom Soldiers | Role |
+|---|---|---|---|
+| Current edge rank | `y=0, x=2..9` | `y=11, x=2..9` | Canonical control |
+| Full inward rank | `y=1, x=2..9` | `y=10, x=2..9` | Control for moving the complete rank inward |
+| Edge-anchored bracket shield | Rear wings `y=0, x={2,3,8,9}`; forward center `y=1, x={4,5,6,7}` | Rear wings `y=11, x={2,3,8,9}`; forward center `y=10, x={4,5,6,7}` | Partial evacuation-relief challenger |
 
-## Recommended Compact Roadmap
+Every Soldier retains the current inward facing. The bracket rationale is part of the experiment contract:
 
-### Phase 1: Counted Safety and Canonical Authority
+- rear-wing behind squares are off-board;
+- the four empty center rear squares form an initially sealed pocket;
+- all eight directly inward squares are empty;
+- only four Soldiers remain on the first-Contraction boundary; and
+- protection decays as the formation moves rather than disabling Backstab globally.
 
-Quarantine unproved counted lanes; freeze current-HEAD audit evidence, valid v1.4 compatibility fixtures, privacy baselines, and rollback controls; define the ownership map, atomic compatibility tuple, historical routing, and evidence-derived eligibility. This phase prevents new untrusted evidence while later foundations are built.
+All three arms use the same lab-only construction path. The current Cycle cap, MOVE and reversal rules, collision and push behavior, Backstab geometry and scan timing, activation counts, arenas, runtime contract, scoring, Set conditions, Contraction, outcome rules, and every other non-position field remain byte- or identity-equivalent under the declared comparison. Cap, MOVE, Backstab, and scan changes require separately approved later experiments after the primary causal result.
 
-### Phase 2: Canonical Transition Kernel and v1.4 Semantic Integrity
+#### Should Have — Research Differentiators
 
-Add bounded arena/state/outcome validators and immutable/cloned constants; extract one transition kernel; route direct execution and Chronicle recording through it; remove the stale public contiguous-Activation route; repair the reproduced lifecycle, order, outcome, and event-vocabulary defects. Run differential compatibility fixtures throughout.
+- source-structure, lineage, dependency, legal-input decision, Chronicle-behavior, and matchup-response fingerprinting rather than label- or source-hash-only diversity;
+- mixture-targeted and strongest-pure-targeted responses in every declared response round;
+- failed attacks and rejected candidates as first-class, budget-charged evidence;
+- immutable stage roots and one-way dependency proofs;
+- a one-open common holdout under separate custody;
+- equal model and human scrutiny, disclosure, and replay-review effort across all profiles;
+- canonicalized opening/script and convoy/STONE/turtle classifiers with representative private replay review;
+- a privacy-safe causal decision packet containing explicit limitations and `production_authorized: false`; and
+- outcome-honest closure when the current gate fails, no pure finalist clears selection, or the bracket is rejected.
 
-**Approval stop:** If any proposed clarification or refactor changes valid state, legality, event order, outcome, terminal reason/timing, or Strategy observation, stop and obtain an explicit compatibility ruling before changing expectations.
+#### Defer or Forbid
 
-### Phase 3: Canonical JSON, Failure Semantics, and Artifact Identity
+- production adoption of inward/bracket starts, a generic production `initialStateProfile`, experimental rules/arena registration, canonical lab Chronicles, public profile toggles, or automatic promotion;
+- Cycle-cap reduction, facing-only MOVE, reversal changes, attacker-facing Backstab, Backstab scan changes, or combined interaction profiles in the primary experiment;
+- new official arenas, Strategy languages, package ecosystems, runtime migrations, production sandbox claims, durable ratings, prizes, tournaments, publishing, moderation, recovery, or broad league UI;
+- OpenSpiel as a game implementation, ML frameworks, distributed orchestration platforms, new databases/queues, provider SDKs, or exact-solver dependencies without a later measured need;
+- one handcrafted champion, one shared scorer under several oracle labels, aggregate-win-rate-only selection, or PSRO-mixture deployment; and
+- exact exploitability, Nash/optimality, solved-game, permanent-balance, or “cannot develop a meta” claims.
 
-Define iterative JSON limits, common three-way results, no-mutation system-failure semantics, exact source/normalized/artifact/manifest/toolchain identity, and one documented runtime-budget and ABI envelope. Prove atomic failure behavior before broad conformance work.
+### Architecture Approach
 
-### Phase 4: Executable Four-Language and Chronicle Conformance
+Use a functional canonical core with an offline content-addressed control plane and explicit evidence classes.
 
-Execute the identical positive/negative corpus through actual TypeScript, Python, Rust, and Zig adapters; compare complete traces; bind counted eligibility to fresh proof. Add version-strict per-slot Chronicle grammar, semantic validation, transition/reconstruction equality, and immutable historical routing.
+**Major components:**
 
-### Phase 5: Truthful Strategy Inputs, Arena Authority, and Set Fairness
+1. **Lab contracts and identity:** Strict schemas, tagged ids, canonical encoding, domain-separated hashes, evidence classes, and artifact roots; owns no production tuple or registration.
+2. **Measurement and budget contracts:** Conditions, splits, metrics, gates, retries, work units, report logic, equal-compute vectors, and holdout commitment.
+3. **Candidate factory and provenance DAG:** Immutable source/build nodes, lineage edges, validation, behavior fingerprints, split identity, and accepted/rejected decisions.
+4. **Deterministic scheduler and search ledger:** Preassigned node/task ordinals, independent seeds, bounded retries, canonical reductions, chained shards, and actual-consumption receipts.
+5. **Independent oracle packages:** Structured optimizer, search teacher/distiller, and explicit-program synthesis with enforced strategic-core isolation.
+6. **Human/model red-team intake:** Quarantine, exact prompts/model/tool/personnel/budget provenance, immutable source, strict validation, and preserved failures.
+7. **Lab runtime bridge:** Existing supervised providers and canonical ABI envelopes; never web/API/Go execution and never gameplay classification.
+8. **League coordinator and meta analysis:** Frozen populations, complete matrices, meta-distributions, strongest-pure targets, response admission, graphs, and oracle-relative metrics.
+9. **Lab trace and private artifact store:** Distinct non-Chronicle evidence envelopes, immutable artifacts, private replay review, and privacy-safe aggregate projections.
+10. **Current-league freeze gate:** One root binding every source, population, matrix, threshold, ledger, red-team attempt, finalist choice, holdout commitment, and interpretation.
+11. **Post-freeze position adapter:** Exact current/inward/bracket positions only; verifies zero non-position state drift and uses `stepMatch` exclusively afterward.
+12. **Equal-compute auditor:** Compares planned allocations and actual consumption across profile branches, including cache, retry, model, human, hardware, Match, and review units.
+13. **Separate holdout custodian/evaluator:** Private preimages and one-shot batch evaluation; the iterative coordinator sees only a commitment and bounded released receipt.
+14. **Current-only promotion bridge:** Re-admits exact current finalist source through ordinary canonical Strategy Revision validation and proves the source-hash join.
+15. **Decision and release proof:** Causal report, explicit pass/reject, non-authorization, privacy projection, independent reproduction, audit root, archive, annotated tag, and tagged-tree post-check.
 
-Add explicit initiative and authoritative Advance state across every language envelope; consolidate arena authority and semantic geometry identity; generate explicit side/initiative scenario matrices and prove entrant-level coverage in TypeScript, Go, persistence, and service-backed flows.
+**Required data flow:**
 
-### Phase 6: Integrated Service Proof, Drift Guards, and Release
+```text
+v1.37 admission
+  -> measurement, claim, budget, custody, and failure freeze
+  -> legal planner feasibility
+  -> deterministic factory + independent response channels
+  -> complete current-rules league + model/human red team
+  -> immutable current-league freeze
+  -> executable formation-profile materialization
+  -> isolated equal-compute current/inward/bracket retraining + equal red teams
+  -> freeze all three branches
+  -> one common sealed holdout open
+  -> causal pass/reject packet + current-only product certification
+  -> independent verification, audit, archive, annotated tag, post-tag check
+```
 
-Rerun every persisted audit reproduction and all compatibility fixtures. Prove service-backed execution, failure classification, no-mutation behavior, Chronicle reconstruction, replay, persistence, recomputation, Set fairness, idempotency, rollback, privacy, and public boundaries. Add structural monitors for duplicate loops/arenas, mixed tuples, adapter-owned gameplay classification, stale identity, unsupported events, unproved counted lanes, and private-output leakage. Audit one transition authority, then archive and tag before beginning the serious-Strategy milestone.
+**Production-denial direction:**
 
-This six-phase shape is dependency-ordered and intentionally smaller than the proposal. If implementation sizing requires a split, split within these integrity seams rather than importing deferred experimental phases.
+```text
+lab/oracle/holdout packages -> canonical engine/spec/runtime adapters
 
-## Acceptance and Approval Rules
+engine/spec/replay/runtime-service/Go/persistence/service/web/worker
+  -X-> strategy-lab profiles, traces, decision packets, or holdout data
 
-- Treat the seven current-HEAD reproductions as permanent acceptance tests; every probe must pass or have an explicitly approved compatibility ruling.
-- Freeze valid v1.4 state/event/observation fixtures before changing loops, validators, or Chronicle construction.
-- Do not re-record golden outputs to conceal semantic drift.
-- Do not count a runtime lane from documentation, registry metadata, readiness flags, or gate names. Require current executable proof bound to exact identity.
-- Do not rewrite or relabel historical v1.4 Chronicles/results; route by persisted tuple and original semantics.
-- Keep Strategy source, artifacts, memory, objectives, Awareness/private traces, raw diagnostics, host data, credentials, security internals, and proof secrets out of public/default output and generated public evidence.
-- Treat the two behavior-preserving candidates as optional gated work. Failed equivalence defers the candidate and does not block the committed foundation.
-- Final completion requires passing engine, spec, replay, runtime-service, four-language, privacy, boundary-monitor, and service-backed proof suites plus archive and tag.
+experimental artifacts
+  -X-> canonical registration
+  -X-> canonical persistence or Chronicle admission
+  -X-> counted scheduling or standings
+  -X-> public/default product surfaces
+  -X-> production deployment manifests
+```
 
-## Recommended Stack Position
+### Critical Pitfalls
 
-Retain the existing repository stack and package boundaries. Add contracts, validators, fixtures, generated artifacts, migrations, proof scripts, and exact CI pins as needed, but no new dependency is currently justified. TypeScript remains the canonical rules implementation; Go remains orchestration and persistence; the four Strategy languages share one data ABI behind runtime-service. WASI Preview 1 stdin/stdout JSON remains the Rust/Zig boundary for this milestone.
+1. **Lab profiles become production-reachable:** Optional production fields, shared enums, flags, canonical rows, or public replay switches are activation paths. Prevent them with disjoint schemas/stores, one-way imports, closed production DTOs, mutation-tested denial matrices, and proof that a synthetic passing bracket changes no selector.
+2. **Baseline or holdout contamination:** Formation work, score feedback, filenames, prompts, aggregate diagnostics, or shared reviewers can leak backward without a raw file open. Require an executable current-freeze prerequisite, separate custody/process/filesystem roles, one bounded batch release, access/query ledgers, contamination tests, and retirement after disclosure.
+3. **Post-hoc methods or unequal adaptation:** Threshold softening, sparse-cell imputation, profile-specific stopping, free retries, cached cross-profile work, or unequal model/human effort can manufacture a preferred result. Hash the analysis and stopping code, require complete matrices, charge failures, isolate branches/caches, and reconcile planned versus actual multi-resource budgets.
+4. **False independence or overstated convergence:** Several names around one selector and a bounded oracle plateau do not establish robustness. Enforce a shared-helper allowlist, dependency and counterfactual-correlation evidence, preserve pure worst cases and full iteration curves, and scope every response claim to the frozen oracle set and budget.
+5. **Runtime, provenance, privacy, or release-chain erosion:** Direct hostile-source imports, mutable “latest” artifacts, system failures scored as gameplay, private lab/holdout data in reports, or tags that omit actual attempts invalidate the result. Use supervised execution, complete content identities, three-way failure semantics, artifact-wide key/value privacy scans, one root manifest, clean tagged-checkout reproduction, and an annotated tag at the exact complete archive commit.
 
-## Principal Risks and Mitigations
+## Implications for Requirements and Roadmap
 
-| Risk | Mitigation |
-| --- | --- |
-| Compatibility drift disguised as clarification | Frozen differential fixtures and mandatory approval stop on any semantic delta |
-| Two Match authorities survive | One kernel, recorder-only Chronicle builder, stale export removal, structural monitor |
-| Shape-valid but impossible states | Explicit semantic validation at every trust boundary |
-| Deep JSON causes crash/DoS | Iterative byte/depth/node/value limits and shared adversarial corpus |
-| System failure becomes gameplay | Central three-way classification and atomic no-mutation tests |
-| Stale or ambiguous artifact identity | Explicit hash domains and complete identity/evidence closure |
-| Four-language parity remains declarative | Actual adapter execution with full-trace comparison |
-| Historical Chronicle reinterpretation | Tuple/version router and immutable v1.4 fixtures |
-| Apparent rather than real Set fairness | Explicit side/initiative Cartesian coverage per entrant |
-| Privacy leak in proof artifacts | Separate private/public schemas and scans over APIs, logs, fixtures, and generated evidence |
-| Scope expands to v2 experiments | Trace active requirements to committed integrity scope; keep conditional and deferred lists separate |
+Requirements should be organized by evidence gate rather than by UI or package. Each requirement needs an observable artifact or executable denial, an explicit failure disposition, and a statement of whether it applies to current canonical play, private lab evidence, or both.
 
-## Research Inputs
+Recommended requirement groups:
 
-This synthesis uses the approved milestone summary; the committed core-rules audit, reproduction artifact, proposal documents, competitive Strategy research, seed, v1/v1.4 rules and architecture specs; current `.planning/PROJECT.md`, `.planning/STATE.md`, and `.planning/MILESTONES.md`; and the repository-focused stack, features, architecture, and pitfalls research. The proposal was used selectively as source material and not as authority to activate its experimental program.
+- **ADMIT:** v1.37 tuple admission, predecessor proof, regression matrix, and fail-closed prerequisite handling.
+- **CONTRACT:** measurement, scoring, conditions, budgets, splits, metrics, thresholds, claims, retries, finalist selection, holdout, and report logic.
+- **PLANNER:** hierarchical planning, mission coverage, legal 5x5 brain, information-set discipline, deterministic fallback, and deployability limits.
+- **FACTORY:** immutable source/build provenance, lineage, ledger, reproducibility, behavior fingerprints, clone handling, and hostile-source validation.
+- **ORACLE:** three materially independent automated mechanisms, separate human/external intake, model/human procedures, and failed-attempt retention.
+- **LEAGUE:** complete mirrored matrices, frozen-snapshot responses, meta-distributions, pure targets, portfolio, robust pure selection, red-team closure, and oracle-relative reporting.
+- **FREEZE:** current-league root, one-way dependency graph, preliminary current certification, and executable prohibition on pre-freeze formation materialization.
+- **LAB:** exact three-profile position-only seam, canonical current equivalence, private trace class, unchanged rules/kernel, and negative production reachability.
+- **EQUAL:** isolated branches, common-root policy, planned/actual compute reconciliation, equal model/human attack, and no cross-profile learned/cache reuse.
+- **SEALED:** three freezes, separate custody, commitment verification, one open, no post-open tuning, invariance/leakage proof, and contamination disposition.
+- **DECIDE:** precommitted formation rejection logic, causal comparison, limitations, safe aggregate packet, rejection report or empirical-pass packet, and explicit non-authorization.
+- **CERTIFY:** current-only supported-runtime, runtime-service, Chronicle/replay, Go, persistence, privacy, standings, and E2E proof.
+- **CLOSE:** independent reproduction, adversarial review, requirement trace, audit, archive root, annotated tag, and tagged-tree post-check.
+
+### Suggested Phase Structure
+
+### Phase 1: Foundation Admission, Measurement Contract, Custody, and Containment Skeleton
+
+- **Rationale:** No candidate or empirical result is meaningful until the exact v1.37 authority, conditions, claims, budgets, and information-release policy are immutable. Containment expectations must exist before lab code can widen dependency graphs.
+- **Delivers:** Predecessor admission; current-matrix regression; exact tuple resolution; measurement/budget/claim/failure/finalist contracts; compute-unit ontology; profile protocol precommitment without executable alternate states; named holdout role and commitment procedure; privacy classifications; artifact/evidence schemas; negative import/deployment/schema monitors.
+- **Addresses:** ADMIT, CONTRACT, the policy part of LAB/EQUAL/SEALED, and starting-gate calibration.
+- **Avoids:** Contaminated baseline, post-hoc thresholds, holdout feedback, equal-compute theater, and production reachability.
+- **Stop condition:** Any predecessor defect returns to the integrity foundation. Do not repair canonical engine/runtime defects in v1.38.
+
+### Phase 2: Legal Planner Feasibility and Deterministic Runner
+
+- **Rationale:** Planner legality, deployability, and throughput are the largest technical uncertainties. Prove them before scaling candidate generation or fixing final Match budgets.
+- **Delivers:** Full-board ordered assignment spike; mission vocabulary; 5x5 all-Action SoldierBrain; legal-information-set and hidden-state-pair tests; source/objective/memory/runtime limits; cheap fallback; task identity/seed derivation; worker/shard/restart invariance; current-path effect-pump equivalence; one-command non-secret reproduction.
+- **Addresses:** PLANNER and the deterministic execution spine of FACTORY.
+- **Avoids:** Privileged teacher leakage, completion-order search, illegal undeployable planners, hidden machine state, and author-machine-only runs.
+- **Valid result:** Feasibility may fail honestly; do not compensate with more compute or relaxed runtime limits.
+
+### Phase 3: Immutable Factory, Independent Oracles, and Red-Team Intake
+
+- **Rationale:** The league needs immutable candidates, complete provenance, genuine strategic independence, clone evidence, and safely handled hostile submissions before payoffs can support claims.
+- **Delivers:** Candidate/lineage DAG; content-addressed store; append-only attempts; supervised runtime bridge; behavior fingerprints; clone corpus and frozen thresholds; three separate strategic-core packages; provider-neutral model bundles; human/external quarantine; exact budget/provenance records; shared-helper allowlist and independence proof.
+- **Addresses:** FACTORY and ORACLE.
+- **Avoids:** Mutable revisions, false diversity, correlated channels, hostile-source execution in the coordinator, censored failures, and provider drift.
+- **Gate:** At least three materially independent automated mechanisms plus the documented human channel must pass readiness before league claims.
+
+### Phase 4: Serious Current-Rules League and Development Red Team
+
+- **Rationale:** A fixed tournament cannot reveal counters, non-transitivity, or pure-policy brittleness. The canonical current field must be attacked to the full precommitted development budget before it can serve as a baseline.
+- **Delivers:** Complete side/initiative/distinct-arena matrices; deterministic meta-solver; frozen-snapshot PSRO/double-oracle rounds; mixture and strongest-pure targets; legal/novel/positive response admission; response-gap curves; best-response graph; diverse pure portfolio; robust pure finalist rule; independent probe field; model/human red team; one final declared response closure.
+- **Addresses:** LEAGUE and current development evaluation.
+- **Avoids:** Sparse-matrix solving, aggregate-win-rate champions, Advanced-library authority, PSRO-mixture deployment, weak-oracle “convergence,” and hidden pure counters.
+- **Boundary:** No executable inward/bracket state, run manifest, candidate, replay, or profile result exists in this phase.
+
+### Phase 5: Current-League Freeze and Pre-Formation Gate
+
+- **Rationale:** Formation causality requires a fixed, reviewable current-rules baseline and an executable one-way gate, not a date, branch, or mutable “latest” directory.
+- **Delivers:** One immutable root binding current sources, populations, matrices, meta-distributions, attempt/failure ledgers, thresholds, budgets, red-team logs, finalists, probe results, holdout commitment, and claim interpretation; preliminary legal/runtime/replay certification; source-hash promotion design; dependency proof that no current artifact depends on formation work.
+- **Addresses:** FREEZE.
+- **Avoids:** Moving-target comparisons, bracket-aware baseline tuning, retrospective threshold edits, and profile code racing ahead.
+- **Valid result:** A process-valid current metagame gate may fail and still be frozen as an honest result. Formation may proceed only if the process/evidence root is valid; a process or integrity failure blocks it.
+
+### Phase 6: Post-Freeze Formation Boundary and Negative-Reachability Proof
+
+- **Rationale:** Only the valid current freeze may unlock experimental state construction. The state seam and production denial belong together so convenience cannot create a latent shipping path.
+- **Delivers:** Exact current-edge, inward-rank, and bracket-shield manifests; position-only adapter; current-control byte/transition equivalence; zero non-position diff; board-bounds/occupancy/terrain/facing realism; distinct private trace schema; registration/arena/runtime/Go/persistence/scheduling/Chronicle/replay/public/deployment denial matrix; rollback proof with canonical hashes unchanged.
+- **Addresses:** LAB.
+- **Avoids:** Generic production profile switches, formation-as-arena, forked rules, canonical experimental Chronicles, public previews, and combined cap/MOVE/Backstab/scan changes.
+
+### Phase 7: Equal-Compute Three-Profile Retraining, Equal Red Teams, and Branch Freezes
+
+- **Rationale:** Fixed-policy transfer and equal Match counts do not measure adapted formation quality. Every arm needs isolated learning and equal creative pressure from the same frozen common root.
+- **Delivers:** Separate current/inward/bracket namespaces and stores; identical allocation manifests; isolated cache/lineage DAGs; separate retraining; complete matrices; equal automated/model/human attacks; actual-consumption audit; canonicalized opening/script diagnostics; convoy/STONE/turtle and interaction metrics; per-profile populations, pure finalists, and freeze roots.
+- **Addresses:** EQUAL and the experimental part of LEAGUE.
+- **Avoids:** Cross-profile warm starts, cache poisoning, unequal retries/tokens/review, cosmetic entropy, robust scripted openings, inert reserves, convoy or STONE-shield turtles, and compensating composite scores.
+- **Gate:** Any unproved compute/disclosure/review equality or cross-profile learned dependency invalidates the comparison and blocks holdout opening.
+
+### Phase 8: One-Shot Sealed Evaluation, Current Certification, Decision, and Release Closure
+
+- **Rationale:** Confirmatory evidence must be one-way and untouched, and a research result is not complete until claims, privacy, production boundaries, lineage, and the tagged archive are independently checked.
+- **Delivers:** One batch holdout request for all frozen profiles; commitment/opening receipt; no-second-open and no-post-open-tuning proof; side/initiative/symmetry/ID/order/repeat/held-out-opponent invariance; exact gate evaluation; bracket rejection report or later-milestone-only empirical-pass packet with `production_authorized: false`; full current-only runtime-service/Chronicle/replay/Go/persistence/privacy/standings/E2E certification; independent clean reproduction; adversarial review; privacy and claim scans; milestone audit; archive root; annotated tag; tagged-tree post-check.
+- **Addresses:** SEALED, DECIDE, CERTIFY, and CLOSE.
+- **Avoids:** Adaptive holdout use, selective reporting, private-data leakage, de facto rule authorization, cosmetic provenance, archive/tag mismatch, and overbroad claims.
+- **Terminal outcomes:** Process failure, valid current-rules empirical failure, bracket rejection, or bracket empirical pass are all reported without changing production rules. Only process-valid evidence can support a completed research claim.
+
+### Phase Ordering Rationale
+
+- Measurement and claims freeze before tuning; otherwise results influence the test.
+- Planner feasibility precedes scale; otherwise large compute is spent on a controller that cannot legally deploy.
+- Factory provenance and oracle independence precede payoffs; otherwise matrix rows do not represent stable or genuinely distinct policies.
+- Complete current development/red-team evidence precedes the current freeze; counters found within budget belong in the declared response loop.
+- The current freeze precedes executable alternate-profile materialization; this is an enforced dependency, not prose chronology.
+- All three arms retrain separately and freeze before the common holdout opens; fixed transfer and repeated holdout feedback are not final evidence.
+- Only current-rules finalists may cross ordinary product certification; formation artifacts remain lab-only even on empirical pass.
+- Verification, audit, archive, annotated tag, and tagged-tree post-check are release requirements, not aftercare.
+
+### Research Flags
+
+Phases needing deeper research or a contained spike during planning:
+
+- **Phase 1:** Exact gate denominators, deterministic compute-unit ontology, retry/burn policy, named holdout custody, contamination response, and report logic.
+- **Phase 2:** Planner/source/runtime feasibility, effect-pump equivalence, deterministic parallelism, throughput, and trace-retention envelope.
+- **Phase 3:** Strategic-core independence criteria, clone calibration, provider/model identity drift, external submission confidentiality, and hostile intake.
+- **Phase 4:** Complete-matrix scaling, canonical numeric meta-solver behavior, pure-finalist selection, and interpretation of bounded response gaps.
+- **Phase 6:** Position-only state seam, private replay-review format, and exhaustive negative-reachability/rollback proof.
+- **Phase 7:** Equal-work normalization, allowed common root, cache policy, canonical opening clusters, interaction/turtle classifiers, and branch-isolation tests.
+- **Phase 8:** Sacrificial mock one-open drill, safe receipt projection, full root-manifest verification, annotated-tag/post-tag join, and non-authorizing packet enforcement.
+
+Phase with established patterns that can usually skip a separate research pass:
+
+- **Phase 5:** Content-addressed freeze assembly and preliminary current-only certification should reuse the artifact, source-identity, runtime, replay, privacy, and release-evidence patterns already proven through v1.37. Planning still needs explicit acceptance criteria, but not a new technology survey.
+
+## Confidence Assessment
+
+| Area | Confidence | Notes |
+|---|---|---|
+| Stack | HIGH | Repository versions, package ownership, canonical engine/runtime boundaries, and available built-ins are directly verified by local research. Optional external tooling remains MEDIUM. |
+| Features | HIGH for required scope; MEDIUM for numeric calibration | The activation prompt and project contract agree on table stakes and anti-features. Starting percentages and final Match budgets must freeze before results. |
+| Architecture | HIGH for boundaries/order; MEDIUM for throughput/oracle details | One transition authority, disjoint evidence classes, current-only promotion, negative reachability, and one-open custody are well supported. Pool size, matrix volume, and oracle implementations need spikes. |
+| Pitfalls | HIGH for repository risks; MEDIUM for methodological transfer | Local boundaries and failure cases are explicit. PSRO, preregistration, holdout, and reproducibility guidance is appropriately adapted but does not predict empirical outcomes. |
+| Current-rules robustness | UNKNOWN by design | Must be discovered by the frozen league, independent probes, and red teams. |
+| Formation result | UNKNOWN by design | Must be discovered only after equal retraining, three freezes, and one-shot sealed evaluation. |
+
+**Overall confidence:** HIGH that the recommended scope, architecture boundaries, and order are correct; MEDIUM that initial budgets and phase sizing will hold after planner/runtime measurements.
+
+### Gaps and Open Decisions
+
+These must be resolved at the named gate, not improvised during evaluation:
+
+- **Holdout custody:** Name the custodian, private storage/volume, keyed or secret-salted commitment method, authorized opening actor, safe release projection, contamination response, and retirement policy in Phase 1.
+- **Compute contract:** Fix candidate/node/Match budgets, model tokens/attempts, human effort, retries, cache accounting, unused-budget disposition, hardware class, and replay-review effort before search.
+- **Gate definitions:** Operationalize “materially lower interaction,” robust scripted opening, convoy, persistent STONE shield, reserve hoarding, turtle behavior, pure-worst-case failure, and response progress with exact denominators and hard/non-compensating logic.
+- **Oracle independence:** Freeze the strategic-helper denylist, authorship/prompt separation, dependency tests, source/behavior/counterfactual correlation criteria, and remediation when channels correlate.
+- **Clone calibration:** Build a development-only corpus covering semantic rewrites, parameterized shared selectors, symmetry/ID variants, latent behavioral divergence, and false positives.
+- **Meta-solver:** Choose fixed-iteration regret matching or multiplicative weights, canonical numeric representation, tie-breaks, and whether an external exact-solver audit is useful. It is not required for core v1.38.
+- **Common-root policy:** Define the exact profile-agnostic seed population and any symmetric warm-start rule before the current freeze; prohibit all later cross-profile learned reuse.
+- **Runtime throughput:** Measure strong planner/provider latency and matrix growth before freezing full budgets. Wall-clock time remains operational metadata, never equal-compute currency.
+- **Trace and retention:** Precommit which Matches retain full private traces, failure/finalist sampling, replay-review counts, compression, and artifact retention.
+- **Model/human availability:** Pin exposed provider/model/version/settings and human submission/reviewer procedures. Drift or unavailable exact identity must fail loudly or create a new equally applied block.
+- **Finalist selection:** Freeze the robust-pure rule and the distinction between development selection, independent validation, common sealed evaluation, and product certification.
+- **Archive mechanics:** Define the complete root manifest, offline-store verification, clean-checkout reproducer, annotated tag policy, and post-tag checker before the final run.
+
+None of these gaps permits a production rules change or stronger mathematical claim. If a prerequisite cannot be resolved without changing the experiment after results, the correct outcome is an explicit process failure or a new approved contract.
+
+## Sources
+
+### Primary Repository Sources — HIGH Confidence
+
+- [v1.38 activation prompt](../milestone-proposals/v1.38-competitive-strategy-factory-and-adversarial-league/ACTIVATION-PROMPT.md)
+- [Project contract](../PROJECT.md)
+- [Stack research](STACK.md)
+- [Feature research](FEATURES.md)
+- [Architecture research](ARCHITECTURE.md)
+- [Pitfalls research](PITFALLS.md)
+- [Competitive Strategy research handoff](competitive-strategy-factory-and-adversarial-league.md)
+- [SEED-002](../seeds/SEED-002-competitive-strategy-factory-and-adversarial-league.md)
+- [v1.37 requirements](../milestones/v1.37-REQUIREMENTS.md)
+- [v1.37 roadmap](../milestones/v1.37-ROADMAP.md)
+- [v1.37 milestone audit](../milestones/v1.37-MILESTONE-AUDIT.md)
+- [v1.37 Strategy evaluation foundation](../artifacts/v1.37-strategy-evaluation-foundation.md)
+- [Core-rules, runtime, and metagame audit](v2.0-core-rules-enforcement-runtime-and-metagame-audit.md)
+- [Core-rules audit reproductions](../artifacts/v2.0-core-rules-audit/README.md)
+- [Canonical consolidated specification](../../CowardsGameSpec_Full_Consolidated_v1.md)
+- [Canonical Cycle-interleaved v1.4 specification](../../CowardsGameSpec_CycleInterleaved_v1.4.md)
+- [Technical architecture specification](../../CowardsGame_Technical_Architecture_Spec_V1.md)
+- Repository manifests, lockfile, and current spec/engine/replay/runtime-service/Go/persistence implementations cited by the four research reports
+
+### External Primary and Official Sources — MEDIUM Confidence for Project Adaptation
+
+- Lanctot et al., [Policy-Space Response Oracles](https://arxiv.org/abs/1711.00832) — restricted empirical games, meta-strategies, and approximate response oracles.
+- Lanctot et al., [OpenSpiel](https://arxiv.org/abs/1908.09453) — reproducible game-learning interfaces and evaluation concepts; not a second Coward's Game engine recommendation.
+- McAleer et al., [Anytime PSRO](https://arxiv.org/abs/2201.07700) — early PSRO iterations need not improve exploitability monotonically.
+- Dwork et al., [Generalization in Adaptive Data Analysis and Holdout Reuse](https://arxiv.org/abs/1506.02629) — adaptive feedback can overfit a holdout without direct file disclosure.
+- Patterson et al., [Empirical Design in Reinforcement Learning](https://www.jmlr.org/papers/v25/23-0183.html) — implementation, hyperparameter, aggregation, and experimenter choices affect validity.
+- Hardwicke and Wagenmakers, [Preregistration and confidence calibration](https://www.nature.com/articles/s41562-022-01497-2) — freeze study and analysis choices before outcomes and disclose deviations.
+- [SLSA Provenance v1.1](https://slsa.dev/spec/v1.1/provenance) — useful provenance shape, not a certification claim.
+- [Reproducible Builds definition](https://reproducible-builds.org/docs/definition/) — reproduction binds source, environment, and instructions.
+- [Node.js 24 worker threads](https://nodejs.org/download/release/v24.16.0/docs/api/worker_threads.html) and [crypto](https://nodejs.org/download/release/v24.16.0/docs/api/crypto.html) — trusted CPU parallelism and built-in integrity primitives.
+- [`age` official repository](https://github.com/FiloSottile/age) — optional encrypted bundle transport under separate custody.
+
+---
+*Research completed: 2026-07-27*
+
+*Ready for requirements and roadmap: yes*
