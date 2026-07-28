@@ -1,4 +1,6 @@
 import type {
+  ArenaCatalogRecordV137,
+  ArenaCatalogV137,
   ArenaVariant,
   ArenaVariantId,
   MatchId,
@@ -6,10 +8,278 @@ import type {
   StrategyRevision,
   StrategyRevisionId,
 } from "@cowards/spec"
-import { normalizeStrategyRuntimeMetadata } from "@cowards/spec"
+import {
+  hashCanonicalIdentity,
+  normalizeStrategyRuntimeMetadata,
+  parseArenaCatalogV137,
+  CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE_ID,
+} from "@cowards/spec"
+import { Buffer } from "node:buffer"
 import type { Pool, PoolClient } from "pg"
 
 export type Queryable = Pick<Pool | PoolClient, "query">
+
+export interface ReleasedArenaCatalogSnapshot {
+  catalogVersion: string
+  arenaId: string
+  arenaVersion: string
+  arenaName: string
+  status: ArenaCatalogRecordV137["status"]
+  schedulable: boolean
+  aliasOfArenaId: string | null
+  geometryHashProfile: string
+  semanticGeometryHash: `sha256:${string}`
+  config: ArenaCatalogRecordV137
+}
+
+type Sha256Identity = `sha256:${string}`
+
+export interface StrategyRevisionV119RevalidationInput {
+  id: string
+  strategyRevisionId: string
+  sourceHash: string
+  sourceBytes: number
+  artifactSha256: Sha256Identity
+  artifactBytes: number
+  languageId: "typescript" | "python" | "rust" | "zig"
+  providerId: string
+  laneId: string
+  runtimeAbiVersion: "strategy-runtime-abi-v1.19"
+  semanticRuntimeVersion: "runtime-v1.19"
+  semanticTupleId: string
+  executionKind: "real_service_execution"
+  syntheticEvidence: false
+  executionRequestRoot: Sha256Identity
+  executionResultRoot: Sha256Identity
+  executionReceiptRoot: Sha256Identity
+  serviceReceiptVersion: "runtime-semantic-receipt-v1.19"
+  reviewedCertificateId: string
+  reviewedCertificateSha256: Sha256Identity
+  reviewStatus: "reviewed"
+  evidenceStatus: "passed"
+  evidenceCreatedAt: string
+}
+
+export interface StrategyRevisionV119Admission {
+  brand: "strategy-revision-v1.19-admission"
+  revalidationId: string
+  strategyRevisionId: string
+  sourceHash: string
+  sourceBytes: number
+  artifactSha256: Sha256Identity
+  artifactBytes: number
+  languageId: StrategyRevisionV119RevalidationInput["languageId"]
+  providerId: string
+  laneId: string
+  runtimeAbiVersion: "strategy-runtime-abi-v1.19"
+  semanticRuntimeVersion: "runtime-v1.19"
+  semanticTupleId: string
+  executionRequestRoot: Sha256Identity
+  executionResultRoot: Sha256Identity
+  executionReceiptRoot: Sha256Identity
+  reviewedCertificateId: string
+  reviewedCertificateSha256: Sha256Identity
+}
+
+interface StrategyRevisionV119AdmissionRow {
+  id: string
+  strategy_revision_id: string
+  source_hash: string
+  source_bytes: number
+  artifact_sha256: Sha256Identity
+  artifact_bytes: number
+  language_id: StrategyRevisionV119RevalidationInput["languageId"]
+  provider_id: string
+  lane_id: string
+  runtime_abi_version: "strategy-runtime-abi-v1.19"
+  semantic_runtime_version: "runtime-v1.19"
+  semantic_tuple_id: string
+  execution_request_root: Sha256Identity
+  execution_result_root: Sha256Identity
+  execution_receipt_root: Sha256Identity
+  reviewed_certificate_id: string
+  reviewed_certificate_sha256: Sha256Identity
+}
+
+const freezeStrategyRevisionV119Admission = (
+  row: StrategyRevisionV119AdmissionRow,
+): Readonly<StrategyRevisionV119Admission> =>
+  Object.freeze({
+    brand: "strategy-revision-v1.19-admission",
+    revalidationId: row.id,
+    strategyRevisionId: row.strategy_revision_id,
+    sourceHash: row.source_hash,
+    sourceBytes: row.source_bytes,
+    artifactSha256: row.artifact_sha256,
+    artifactBytes: row.artifact_bytes,
+    languageId: row.language_id,
+    providerId: row.provider_id,
+    laneId: row.lane_id,
+    runtimeAbiVersion: row.runtime_abi_version,
+    semanticRuntimeVersion: row.semantic_runtime_version,
+    semanticTupleId: row.semantic_tuple_id,
+    executionRequestRoot: row.execution_request_root,
+    executionResultRoot: row.execution_result_root,
+    executionReceiptRoot: row.execution_receipt_root,
+    reviewedCertificateId: row.reviewed_certificate_id,
+    reviewedCertificateSha256: row.reviewed_certificate_sha256,
+  })
+
+const sha256IdentityPattern = /^sha256:[0-9a-f]{64}$/u
+
+const assertExactStrategyRevisionV119Revalidation = (
+  input: StrategyRevisionV119RevalidationInput,
+): void => {
+  if (
+    input.runtimeAbiVersion !== "strategy-runtime-abi-v1.19" ||
+    input.semanticRuntimeVersion !== "runtime-v1.19" ||
+    input.semanticTupleId !== CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE_ID ||
+    input.executionKind !== "real_service_execution" ||
+    input.syntheticEvidence !== false ||
+    input.serviceReceiptVersion !== "runtime-semantic-receipt-v1.19" ||
+    input.reviewStatus !== "reviewed" ||
+    input.evidenceStatus !== "passed" ||
+    ![
+      input.artifactSha256,
+      input.executionRequestRoot,
+      input.executionResultRoot,
+      input.executionReceiptRoot,
+      input.reviewedCertificateSha256,
+    ].every((value) => sha256IdentityPattern.test(value))
+  ) {
+    throw new Error("runtime-v1.19 revalidation requires exact real reviewed identity.")
+  }
+}
+
+interface ReleasedArenaCatalogRow {
+  catalog_version: string
+  arena_id: string
+  arena_version: string
+  arena_name: string
+  arena_status: ArenaCatalogRecordV137["status"]
+  schedulable: boolean
+  alias_of_arena_id: string | null
+  geometry_hash_profile: string
+  semantic_geometry_hash: `sha256:${string}`
+  config: ArenaCatalogRecordV137
+}
+
+const freezeReleasedArenaSnapshot = (
+  row: ReleasedArenaCatalogRow,
+): Readonly<ReleasedArenaCatalogSnapshot> =>
+  Object.freeze({
+    catalogVersion: row.catalog_version,
+    arenaId: row.arena_id,
+    arenaVersion: row.arena_version,
+    arenaName: row.arena_name,
+    status: row.arena_status,
+    schedulable: row.schedulable,
+    aliasOfArenaId: row.alias_of_arena_id,
+    geometryHashProfile: row.geometry_hash_profile,
+    semanticGeometryHash: row.semantic_geometry_hash,
+    config: Object.freeze(globalThis.structuredClone(row.config)),
+  })
+
+const hasPoolConnection = (db: Queryable): db is Pool =>
+  "connect" in db && typeof db.connect === "function"
+
+const withRepositoryTransaction = async <T>(
+  db: Queryable,
+  fn: (client: PoolClient) => Promise<T>,
+): Promise<T> => {
+  if (!hasPoolConnection(db)) {
+    throw new Error("Released catalog installation requires a database Pool.")
+  }
+  const client = await db.connect()
+  try {
+    await client.query("begin isolation level serializable")
+    const result = await fn(client)
+    await client.query("commit")
+    return result
+  } catch (error) {
+    await client.query("rollback")
+    throw error
+  } finally {
+    client.release()
+  }
+}
+
+export interface SourceIdentityV2PersistenceRecord {
+  sourceIdentityVersion: "strategy-source-identity-v2"
+  originalSourceHash: string
+  originalSourceBytes: number
+  normalizedSourceHash: string
+  normalizedSourceBytes: number
+  sourceNormalizationPolicy: "source-line-endings-lf-v1.17"
+  sourceLineEndings: {
+    kind: "none" | "lf" | "crlf" | "cr" | "mixed"
+    lf: number
+    crlf: number
+    cr: number
+  }
+  sourceHasFinalNewline: boolean
+}
+
+export const buildSourceIdentityV2PersistenceRecord = (
+  source: string,
+): SourceIdentityV2PersistenceRecord => {
+  const original = Buffer.from(source, "utf8")
+  let lf = 0
+  let crlf = 0
+  let cr = 0
+  for (let index = 0; index < source.length; index += 1) {
+    if (source[index] === "\r") {
+      if (source[index + 1] === "\n") {
+        crlf += 1
+        index += 1
+      } else {
+        cr += 1
+      }
+    } else if (source[index] === "\n") {
+      lf += 1
+    }
+  }
+  const present = [lf > 0, crlf > 0, cr > 0].filter(Boolean).length
+  const kind =
+    present === 0
+      ? "none"
+      : present > 1
+        ? "mixed"
+        : lf > 0
+          ? "lf"
+          : crlf > 0
+            ? "crlf"
+            : "cr"
+  const normalized = Buffer.from(source.replace(/\r\n?/gu, "\n"), "utf8")
+  return {
+    sourceIdentityVersion: "strategy-source-identity-v2",
+    originalSourceHash: hashCanonicalIdentity("originalSource", [original]),
+    originalSourceBytes: original.byteLength,
+    normalizedSourceHash: hashCanonicalIdentity("normalizedSource", [
+      normalized,
+    ]),
+    normalizedSourceBytes: normalized.byteLength,
+    sourceNormalizationPolicy: "source-line-endings-lf-v1.17",
+    sourceLineEndings: { kind, lf, crlf, cr },
+    sourceHasFinalNewline: source.endsWith("\n") || source.endsWith("\r"),
+  }
+}
+
+const sourceIdentityMatches = (
+  actual: SourceIdentityV2PersistenceRecord,
+  expected: SourceIdentityV2PersistenceRecord,
+): boolean =>
+  actual.sourceIdentityVersion === expected.sourceIdentityVersion &&
+  actual.originalSourceHash === expected.originalSourceHash &&
+  actual.originalSourceBytes === expected.originalSourceBytes &&
+  actual.normalizedSourceHash === expected.normalizedSourceHash &&
+  actual.normalizedSourceBytes === expected.normalizedSourceBytes &&
+  actual.sourceNormalizationPolicy === expected.sourceNormalizationPolicy &&
+  actual.sourceLineEndings.kind === expected.sourceLineEndings.kind &&
+  actual.sourceLineEndings.lf === expected.sourceLineEndings.lf &&
+  actual.sourceLineEndings.crlf === expected.sourceLineEndings.crlf &&
+  actual.sourceLineEndings.cr === expected.sourceLineEndings.cr &&
+  actual.sourceHasFinalNewline === expected.sourceHasFinalNewline
 
 export const REVISION_CONTENT_COLUMNS = [
   "source",
@@ -41,6 +311,212 @@ export const assertCanUpdateStrategyRevisionContent = (input: {
 }
 
 export const createRepositories = (db: Queryable) => ({
+  async installReleasedArenaCatalog(
+    input: unknown,
+  ): Promise<ReadonlyArray<Readonly<ReleasedArenaCatalogSnapshot>>> {
+    const catalog: ArenaCatalogV137 = parseArenaCatalogV137(input)
+    return withRepositoryTransaction(db, async (client) => {
+      await client.query(
+        "select pg_advisory_xact_lock(hashtext($1), hashtext($2))",
+        ["released-arena-catalog", catalog.catalogVersion],
+      )
+      const installed: Readonly<ReleasedArenaCatalogSnapshot>[] = []
+      for (const arena of catalog.arenas) {
+        await client.query(
+          `insert into arena_catalog_entries (
+             catalog_version, arena_id, arena_version, arena_name,
+             arena_status, schedulable, alias_of_arena_id,
+             geometry_hash_profile, semantic_geometry_hash, config
+           ) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+           on conflict (catalog_version, arena_id) do nothing`,
+          [
+            catalog.catalogVersion,
+            arena.id,
+            arena.version,
+            arena.name,
+            arena.status,
+            arena.schedulable,
+            arena.aliasOf ?? null,
+            catalog.geometryHashProfile,
+            arena.semanticGeometryHash,
+            arena,
+          ],
+        )
+        const result = await client.query<ReleasedArenaCatalogRow>(
+          `select * from arena_catalog_entries
+            where catalog_version = $1 and arena_id = $2
+              and arena_version = $3 and arena_name = $4
+              and arena_status = $5 and schedulable = $6
+              and alias_of_arena_id is not distinct from $7
+              and geometry_hash_profile = $8
+              and semantic_geometry_hash = $9
+              and config = $10::jsonb
+            for key share`,
+          [
+            catalog.catalogVersion,
+            arena.id,
+            arena.version,
+            arena.name,
+            arena.status,
+            arena.schedulable,
+            arena.aliasOf ?? null,
+            catalog.geometryHashProfile,
+            arena.semanticGeometryHash,
+            arena,
+          ],
+        )
+        const row = result.rows[0]
+        if (!row) {
+          throw new Error(
+            `Released arena catalog identity mismatch: ${catalog.catalogVersion}/${arena.id}`,
+          )
+        }
+        installed.push(freezeReleasedArenaSnapshot(row))
+      }
+      return Object.freeze(installed)
+    })
+  },
+
+  async getReleasedArenaCatalogEntry(
+    catalogVersion: string,
+    arenaId: string,
+  ): Promise<Readonly<ReleasedArenaCatalogSnapshot> | null> {
+    const result = await db.query<ReleasedArenaCatalogRow>(
+      `select * from arena_catalog_entries
+        where catalog_version = $1 and arena_id = $2`,
+      [catalogVersion, arenaId],
+    )
+    const row = result.rows[0]
+    return row ? freezeReleasedArenaSnapshot(row) : null
+  },
+
+  async getSchedulableArenaCatalogEntry(
+    catalogVersion: string,
+    arenaId: string,
+  ): Promise<Readonly<ReleasedArenaCatalogSnapshot> | null> {
+    const result = await db.query<ReleasedArenaCatalogRow>(
+      `select * from arena_catalog_entries
+        where catalog_version = $1 and arena_id = $2
+          and arena_status = 'active' and schedulable`,
+      [catalogVersion, arenaId],
+    )
+    const row = result.rows[0]
+    return row ? freezeReleasedArenaSnapshot(row) : null
+  },
+
+  async lockReleasedArenaCatalogEntry(
+    catalogVersion: string,
+    arenaId: string,
+  ): Promise<Readonly<ReleasedArenaCatalogSnapshot>> {
+    const result = await db.query<ReleasedArenaCatalogRow>(
+      `select * from arena_catalog_entries
+        where catalog_version = $1 and arena_id = $2
+          and arena_status = 'active' and schedulable
+        for key share`,
+      [catalogVersion, arenaId],
+    )
+    const row = result.rows[0]
+    if (!row) {
+      throw new Error(
+        `Released schedulable arena not found: ${catalogVersion}/${arenaId}`,
+      )
+    }
+    return freezeReleasedArenaSnapshot(row)
+  },
+
+  async appendStrategyRevisionV119Revalidation(
+    input: StrategyRevisionV119RevalidationInput,
+  ): Promise<Readonly<StrategyRevisionV119Admission>> {
+    assertExactStrategyRevisionV119Revalidation(input)
+    await db.query(
+      `insert into strategy_revision_v1_19_revalidations (
+         id, strategy_revision_id, source_hash, source_bytes, artifact_sha256,
+         artifact_bytes, language_id, provider_id, lane_id, runtime_abi_version,
+         semantic_runtime_version, semantic_tuple_id, execution_kind,
+         synthetic_evidence, execution_request_root, execution_result_root,
+         execution_receipt_root, service_receipt_version,
+         reviewed_certificate_id, reviewed_certificate_sha256, review_status,
+         evidence_status, evidence_created_at
+       ) values (
+         $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11,
+         $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23
+       )`,
+      [
+        input.id,
+        input.strategyRevisionId,
+        input.sourceHash,
+        input.sourceBytes,
+        input.artifactSha256,
+        input.artifactBytes,
+        input.languageId,
+        input.providerId,
+        input.laneId,
+        input.runtimeAbiVersion,
+        input.semanticRuntimeVersion,
+        input.semanticTupleId,
+        input.executionKind,
+        input.syntheticEvidence,
+        input.executionRequestRoot,
+        input.executionResultRoot,
+        input.executionReceiptRoot,
+        input.serviceReceiptVersion,
+        input.reviewedCertificateId,
+        input.reviewedCertificateSha256,
+        input.reviewStatus,
+        input.evidenceStatus,
+        input.evidenceCreatedAt,
+      ],
+    )
+    const admission = await this.getStrategyRevisionV119Admission(
+      input.strategyRevisionId,
+    )
+    if (!admission || admission.revalidationId !== input.id) {
+      throw new Error("runtime-v1.19 revalidation admission failed closed.")
+    }
+    return admission
+  },
+
+  async getStrategyRevisionV119Admission(
+    strategyRevisionId: string,
+  ): Promise<Readonly<StrategyRevisionV119Admission> | null> {
+    const result = await db.query<StrategyRevisionV119AdmissionRow>(
+      `select evidence.*
+         from strategy_revision_v1_19_revalidations evidence
+         left join strategy_revision_v1_19_revalidation_revocations revocation
+           on revocation.revalidation_id = evidence.id
+        where evidence.strategy_revision_id = $1
+          and evidence.runtime_abi_version = 'strategy-runtime-abi-v1.19'
+          and evidence.semantic_runtime_version = 'runtime-v1.19'
+          and evidence.semantic_tuple_id = $2
+          and evidence.execution_kind = 'real_service_execution'
+          and not evidence.synthetic_evidence
+          and evidence.service_receipt_version = 'runtime-semantic-receipt-v1.19'
+          and evidence.review_status = 'reviewed'
+          and evidence.evidence_status = 'passed'
+          and revocation.id is null`,
+      [strategyRevisionId, CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE_ID],
+    )
+    const row = result.rows[0]
+    return row ? freezeStrategyRevisionV119Admission(row) : null
+  },
+
+  async revokeStrategyRevisionV119Revalidation(input: {
+    id: string
+    revalidationId: string
+    reasonCode: string
+    evidenceRoot: Sha256Identity
+  }): Promise<void> {
+    if (!sha256IdentityPattern.test(input.evidenceRoot)) {
+      throw new Error("runtime-v1.19 revalidation revocation identity is invalid.")
+    }
+    await db.query(
+      `insert into strategy_revision_v1_19_revalidation_revocations (
+         id, revalidation_id, reason_code, evidence_root
+       ) values ($1, $2, $3, $4)`,
+      [input.id, input.revalidationId, input.reasonCode, input.evidenceRoot],
+    )
+  },
+
   async upsertUser(record: {
     id: string
     displayName: string
@@ -76,14 +552,35 @@ export const createRepositories = (db: Queryable) => ({
     )
   },
 
-  async insertStrategyRevision(revision: StrategyRevision): Promise<void> {
+  async insertStrategyRevision(
+    revision: StrategyRevision,
+    sourceIdentity?: SourceIdentityV2PersistenceRecord,
+  ): Promise<void> {
+    if (
+      sourceIdentity !== undefined &&
+      !sourceIdentityMatches(
+        sourceIdentity,
+        buildSourceIdentityV2PersistenceRecord(revision.source),
+      )
+    ) {
+      throw new Error(
+        "StrategyRevision source identity does not match revision source.",
+      )
+    }
     await db.query(
       `
         insert into strategy_revisions (
           id, strategy_id, source, source_hash, source_bytes, runtime,
-          engine_compatibility, validation, metadata, compiled_artifact
+          engine_compatibility, validation, metadata, compiled_artifact,
+          source_identity_version, original_source_hash, original_source_bytes,
+          normalized_source_hash, normalized_source_bytes,
+          source_normalization_policy, source_line_endings,
+          source_has_final_newline
         )
-        values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        values (
+          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+          $11, $12, $13, $14, $15, $16, $17, $18
+        )
         on conflict (id) do nothing
       `,
       [
@@ -97,6 +594,14 @@ export const createRepositories = (db: Queryable) => ({
         revision.validation,
         revision.metadata,
         revision.metadata.compiledArtifact ?? null,
+        sourceIdentity?.sourceIdentityVersion ?? null,
+        sourceIdentity?.originalSourceHash ?? null,
+        sourceIdentity?.originalSourceBytes ?? null,
+        sourceIdentity?.normalizedSourceHash ?? null,
+        sourceIdentity?.normalizedSourceBytes ?? null,
+        sourceIdentity?.sourceNormalizationPolicy ?? null,
+        sourceIdentity?.sourceLineEndings ?? null,
+        sourceIdentity?.sourceHasFinalNewline ?? null,
       ],
     )
   },

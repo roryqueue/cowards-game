@@ -1,0 +1,149 @@
+{
+  "schemaVersion": "runtime-abi-v1.17-validation-v1",
+  "milestone": "v1.37",
+  "phase": 258,
+  "status": "passed",
+  "posture": "activated-uncertified-pending-phase-259-conformance",
+  "activation": {
+    "activationCommit": "ba05038f5d9b232afa1cb6c24eef1079524ffcc8",
+    "manifestSha256": "sha256:396d4e96f2c821547da844bd6636d9cb55352c79a3a363b9aff325f278f228f4",
+    "activationPathCount": 23,
+    "manifestStatus": "verified"
+  },
+  "current": {
+    "runtimeAbi": "strategy-runtime-abi-v1.17",
+    "runtimeService": "runtime-execution-service-v1.17",
+    "semanticReceipt": "runtime-semantic-receipt-v1.17",
+    "canonicalJson": "canonical-json-v1.1",
+    "productionTrustedProducerCount": 0,
+    "countedEligibleLaneCount": 0
+  },
+  "testReceipt": {
+    "stage": "postactivation",
+    "testManifestSha256": "sha256:cf3654f1791b77554ee77cd47f9cbdbafa95f638db3832d96ed31e8594ffbc0c",
+    "selectedCommandCount": 18,
+    "passedCount": 1238,
+    "skippedCount": 0,
+    "databaseCommandCount": 8
+  },
+  "noMutationEvidenceCommandIds": [
+    "phase258.service-and-engine",
+    "phase258.database",
+    "phase258.go.mixed-fails-closed",
+    "phase258.full-engine-compatibility"
+  ],
+  "requirements": [
+    {
+      "id": "RABI-01",
+      "status": "proved"
+    },
+    {
+      "id": "RABI-02",
+      "status": "proved"
+    },
+    {
+      "id": "RABI-03",
+      "status": "proved"
+    },
+    {
+      "id": "RABI-04",
+      "status": "proved"
+    },
+    {
+      "id": "RABI-05",
+      "status": "proved"
+    },
+    {
+      "id": "RABI-06",
+      "status": "proved"
+    },
+    {
+      "id": "RABI-07",
+      "status": "proved"
+    },
+    {
+      "id": "RABI-08",
+      "status": "proved"
+    }
+  ],
+  "gates": [
+    {
+      "id": "canonical-json-corpus",
+      "status": "passed",
+      "vectorCount": 70,
+      "vectorRootSha256": "sha256:f658a8bcb6bd4457b2eb52b6628f7fc6ff4ca36661f685ab28d7b60c8b2722c0",
+      "successCount": 40,
+      "rejectionCount": 30
+    },
+    {
+      "id": "exclusive-outcome-no-mutation",
+      "status": "passed",
+      "variants": [
+        "success",
+        "player_violation",
+        "system_failure"
+      ],
+      "playerViolationDiscardsProposedValue": true,
+      "systemFailureCarriesNoProposedValue": true,
+      "ambiguousAttributionIsSystemFailure": true
+    },
+    {
+      "id": "runtime-budget-contract",
+      "status": "passed",
+      "dimensionCount": 10,
+      "exactPinCount": 10,
+      "laneCount": 5,
+      "countedEligibleLaneCount": 0,
+      "productionTrustedProducerCount": 0,
+      "phase259ConformanceRequired": true
+    },
+    {
+      "id": "source-normalization-identity",
+      "status": "passed",
+      "languages": [
+        "typescript",
+        "python",
+        "rust",
+        "zig"
+      ],
+      "normalizationPolicy": "source-line-endings-lf-v1.17",
+      "lineEndingKind": "mixed",
+      "originalAndNormalizedAreDistinct": true,
+      "languageNeutralRequestIdentity": true,
+      "domainFramedArtifactIdentity": true
+    },
+    {
+      "id": "exact-runtime-evidence-dag",
+      "status": "passed",
+      "nodeCount": 15,
+      "edgeCount": 26,
+      "exactPinCount": 10,
+      "rootKind": "evidenceBundle",
+      "productionTrustedProducerCount": 0,
+      "verifiedManagedAttestationCount": 4,
+      "verifiedCertificateCount": 4,
+      "verifiedEvidenceRootCount": 2
+    },
+    {
+      "id": "historical-v1.16-dispatch",
+      "status": "passed",
+      "runtimeService": "runtime-execution-service-v1.16",
+      "semanticReceipt": "runtime-semantic-receipt-v1",
+      "protectedDigestCount": 6
+    },
+    {
+      "id": "typescript-go-v1.17-wire-parity",
+      "status": "passed",
+      "runtimeService": "runtime-execution-service-v1.17",
+      "requestSha256": "sha256:f37eb9af3ba0dd290f2264c0fb047caf0f83f2ff757482dfd2767bf1221dbf03",
+      "responseSha256": "sha256:e2683f4fe8f89f2362960115313826f3e922043346a14c649e0d9a0694e835ed",
+      "receiptClaimSha256": "sha256:33f43ac6d4cdc5724357b2b44f070d8b5c8522def2e600c6e0f48d7df5932330",
+      "currentDescriptor": true
+    }
+  ],
+  "limitations": [
+    "phase259-four-language-full-state-event-memory-objective-and-failure-trace-conformance-required",
+    "production-trusted-producers-empty",
+    "counted-runtime-lanes-empty"
+  ]
+}

@@ -1,16 +1,16 @@
 {
   "files": {
     "analytics-run-summary.json": "sha256:8c09ab802236168752bc190c496830a836af332aff53ab62575919b5bb052608",
-    "degraded-match-set-summary.json": "sha256:a898c29e23113c280d02afc87dc705fbff03fa84caecd1a92865b07a8d51f5e1",
+    "degraded-match-set-summary.json": "sha256:2d8b43332b33f6d5b2d3513e30656a71be01ec955c6f705e1e9813d5d0a81647",
     "forbidden-error.json": "sha256:56f90864bfb3af1c065f825755b6dc20a4a321eaca4df759c9dde1a267af750a",
     "health.json": "sha256:56488b12b6397ceee7ddc05dfe54ca7f0f7d428a7073f16122443a7e5d37deb0",
     "not-found-error.json": "sha256:558857729a5410e46f11c58906b6642cddbeb888463ba96eec26256e5ffca538",
-    "public-ladder-page.json": "sha256:1955721d8b36d9eb741072936c82569f8bc9b8e5da130c1bb191afa5aecef522",
-    "public-match-set-summary.json": "sha256:8b6fffc9ca202b5950f41711eabb8e31679428120c9785a687768c9f1b2e9579",
-    "public-player-page.json": "sha256:8c1dd630741a281c4c9239e30a411c1b55a54fe40efa7f375f5ec9bc70b75235",
-    "public-replay-evidence.json": "sha256:bc5a96292e793dc6a317349c03c6d854ee0764d81b59fb37b2dc28b10043143b",
-    "public-replay-metadata.json": "sha256:21bfb503304b0367528544cba109fa6ec73543ff6af1df40ab0b74777e85baed",
-    "public-strategy-page.json": "sha256:4710b0ef0b9ec5a037a978dbe50564fbde109688e95a92ae258b56c42742cb58",
+    "public-ladder-page.json": "sha256:8d8488269d349e6dd3cc62809dbbb916459721a8607f14877422a50b3eb8c944",
+    "public-match-set-summary.json": "sha256:74f5742e6eb4be4350108e0fc72428814bcdfe79dda4f34a2c617b551e010b7f",
+    "public-player-page.json": "sha256:16893d30c92eac5a2211392c662b3fc993ff62c1c15f77c5837f9a8b061dcaf2",
+    "public-replay-evidence.json": "sha256:63d91b4ffb6d0a0287e3e4ac6ae309e2456a02950d78664a545e9419b1dba167",
+    "public-replay-metadata.json": "sha256:bd48f0fb4f195a68dd27fb2791d2e614490e4ce9a237427060e839e6aa3223be",
+    "public-strategy-page.json": "sha256:fee4d6406d5766ad7a9e672fe5c16f66a99a2d235f940ef0af1bebccfd390aab",
     "route-manifest.json": "sha256:fe804ec317619900371ffe5f7c0e3725f12692315dbfba5bb1e830124d95d68c"
   },
   "schemaVersion": "go-parity-fixtures-v1.8"

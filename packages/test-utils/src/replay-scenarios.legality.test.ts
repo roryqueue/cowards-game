@@ -457,9 +457,18 @@ describe("[engine legality] canonical replay scenario mechanics", () => {
     reconstructScenario(scenario)
     const event = findEvent(scenario, "RUNTIME_VIOLATION")
     const serializedPayload = JSON.stringify(event.payload)
+    const ownerPrivate = scenario.chronicle.private?.byPlayerId.bottom
+    const privatePayload =
+      event.privateRef !== undefined && isRecord(ownerPrivate)
+        ? ownerPrivate[event.privateRef]
+        : undefined
 
     expect(event.privacy).toBe("owner")
     expect(event.privateRef).toMatch(/^private:event:/)
+    expect(event.payload).toMatchObject({ type: "TIMEOUT" })
+    expect(privatePayload).toMatchObject({
+      violation: { type: "RESOURCE_EXHAUSTION" },
+    })
     expect(serializedPayload).not.toMatch(
       /source|strategyMemory|soldierMemory|objective|message|stack|Deterministic replay scenario/i,
     )

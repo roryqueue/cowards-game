@@ -17,6 +17,7 @@ import type {
 } from "./competition.js"
 import type { AnalyticsGauntletRunSummary } from "./analytics.js"
 import type { StrategyRuntimeProductSemantics } from "./runtime.js"
+import type { CountedEntryEligibilityCategory } from "./competition-entry-eligibility.js"
 import type {
   WorkshopAnalyticsComparisonSchema,
   WorkshopTestSummarySchema,
@@ -700,6 +701,24 @@ export const SERVICE_API_ROUTES = {
           status: "open",
           statusLabel: "Open",
           seasonSeed: "trial-ladder-demo-seed",
+          entryWindow: {
+            state: "open",
+            publicLabel: "Open for counted entries",
+          },
+          schedulingWindow: {
+            state: "not_started",
+            publicLabel: "Scheduling has not started",
+          },
+          outcome: {
+            status: "pending",
+            publicLabel: "Outcome pending",
+            publicExplanation:
+              "The Season has not reached a final scheduling outcome.",
+          },
+          links: {
+            seasonHref: "/ladder/demo-season",
+            standingsHref: "/ladder/demo-season#standings",
+          },
           policy: {
             oneEntryPerUser: true,
             replacementPolicy: "next-season-only",
@@ -758,7 +777,7 @@ export const SERVICE_API_ROUTES = {
             sourceHash: "sourcehash-demo",
             sourceBytes: 256,
             runtime: {
-              abiVersion: "strategy-runtime-abi-v1.14",
+              abiVersion: "strategy-runtime-abi-v1.17",
               language: { id: "typescript", version: "runtime-js-v1" },
               adapter: {
                 id: "runtime-js-worker-thread",
@@ -766,6 +785,25 @@ export const SERVICE_API_ROUTES = {
               },
               package: { mode: "none", entrypoint: "default" },
               requiredCapabilities: [],
+            },
+            runtimeSemantics: {
+              languageId: "typescript",
+              adapterId: "runtime-js-worker-thread",
+              languageLabel: "TypeScript",
+              adapterLabel: "runtime-js worker thread",
+              readiness: "local-dev-fallback",
+              readinessLabel: "Local/dev fallback",
+              experimental: false,
+              countedPlayEligible: false,
+              countedPlayLabel: "Not counted",
+              countedPlayReason:
+                "The service example is not executable conformance evidence for counted play.",
+              sourcePolicyLabel: "Self-contained Strategy source",
+              packagePolicyLabel: "No packages",
+              docsReference: "runtime/languages",
+              examplesReference: "samples/minimal-strategy",
+              warnings: [],
+              validationIssueCodes: ["NON_COUNTED_RUNTIME"],
             },
             engineCompatibility: {
               spec: "cowards-rules-v1.4",
@@ -840,6 +878,7 @@ export interface StrategyRevisionSummaryServiceDto {
   sourceHash: string
   sourceBytes: number
   runtimeSemantics: StrategyRuntimeProductSemantics
+  countedEntryEligibilityCategory: CountedEntryEligibilityCategory
   engineCompatibility: {
     spec: string
     engine: string

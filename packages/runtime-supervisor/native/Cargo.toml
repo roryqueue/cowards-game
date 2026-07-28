@@ -1,0 +1,17 @@
+[package]
+name = "cowards-runtime-supervisor"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[[bin]]
+name = "cowards-runtime-supervisor"
+path = "src/main.rs"
+
+[dependencies]
+
+[profile.release]
+codegen-units = 1
+lto = true
+panic = "abort"
+strip = true

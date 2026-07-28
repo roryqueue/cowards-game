@@ -17,11 +17,13 @@ export async function POST(
     }
     const { matchSetId } = await params
     const body = (await request.json()) as Record<string, unknown>
-    const result = await competitiveServer.flagMatchSetResult(user, {
+    const result = await competitiveServer.submitCompetitionReport(user, {
       matchSetId,
-      note: body.note,
+      submissionType: "dispute",
+      category: "result_integrity",
+      privateDetail: body.note,
     })
-    return Response.json(result, { status: 201 })
+    return Response.json({ flagId: result.submissionId }, { status: 201 })
   } catch (error) {
     return competitiveErrorResponse(error)
   }

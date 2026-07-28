@@ -1,21 +1,53 @@
+import { createHash } from "node:crypto"
+import { readFileSync } from "node:fs"
 import type {
   Chronicle,
   ChronicleBoundarySnapshot,
   ChronicleEvent,
   ChronicleValidationErrorCode,
   JsonValue,
+  Soldier,
   SoldierBrainInput,
   StrategyInput,
 } from "@cowards/spec"
 import {
+  ARENA_CATALOG_VERSION_V1_37,
+  CANONICAL_ARENA_CATALOG_V1_37,
+  CANONICAL_COMPATIBILITY_TUPLES,
+  CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE_RECORD,
+  VERSIONED_RUNTIME_V117_SEMANTIC_TUPLE_RECORD,
+  HISTORICAL_RUNTIME_V114_SEMANTIC_TUPLE,
+  HISTORICAL_RUNTIME_V114_SEMANTIC_TUPLE_ID,
+  SET_CONDITION_POLICY_VERSION_V1_37,
   ChronicleValidationErrorCodeSchema,
   COMPATIBILITY_VERSIONS,
+  createSetScenarioV137,
+  createMatchExecutionExactEvidenceV137,
 } from "@cowards/spec"
 import { describe, expect, it } from "vitest"
-import type { StrategyRuntime } from "@cowards/engine"
-import { buildChronicleFromMatch } from "./build.js"
+import { MATCH_KERNEL, type StrategyRuntime } from "@cowards/engine"
+import {
+  adaptRuntimeForCurrentKernel,
+  runCurrentMatchForReplayTestSupport,
+} from "@cowards/engine/test/current-kernel-runtime"
 import { createChronicleContentHash } from "./hash.js"
-import { migrateChronicle, validateChronicle } from "./validate.js"
+import { projectOwnerChronicle } from "./project.js"
+import {
+  recordCurrentChronicleTestSupport as recordChronicleFromExecution,
+  selectedCurrentSemanticAuthorityTestSupport,
+} from "./test/current-recording.js"
+import {
+  migrateChronicle,
+  resolveReplayCompatibilityIdentity,
+  validateCandidateReplayV119,
+  validateCurrentChronicle,
+  validateCurrentChronicleSemantics,
+  validateChronicle,
+  validateHistoricalV14Chronicle,
+  validateVersionedStoredChronicleV117,
+  validateVersionedChronicleV117,
+  validateReplayInput,
+} from "./validate.js"
 
 const asJson = (value: unknown): JsonValue => value as JsonValue
 
@@ -42,9 +74,56 @@ const runtime: StrategyRuntime = {
   },
 }
 
-const createChronicle = () =>
-  buildChronicleFromMatch({
-    matchId: "validation-match",
+const passiveRuntime: StrategyRuntime = {
+  selectActivations() {
+    return {
+      ok: true,
+      value: { activationOrders: [], strategyMemory: {} },
+    }
+  },
+  runSoldierBrain() {
+    return {
+      ok: true,
+      value: {
+        action: { type: "TURN", direction: "RIGHT" },
+        soldierMemory: {},
+      },
+    }
+  },
+}
+
+const playerViolationRuntime: StrategyRuntime = {
+  selectActivations(input) {
+    return input.mySoldiers[0]?.ownerPlayerId === "bottom"
+      ? {
+          ok: false,
+          violation: {
+            type: "INVALID_OUTPUT",
+            message: "fixture player violation",
+          },
+        }
+      : {
+          ok: true,
+          value: { activationOrders: [], strategyMemory: {} },
+        }
+  },
+  runSoldierBrain() {
+    return {
+      ok: false,
+      violation: {
+        type: "INVALID_OUTPUT",
+        message: "fixture player violation",
+      },
+    }
+  },
+}
+
+const createCurrentReplayInput = (
+  candidateRuntime: StrategyRuntime = runtime,
+  overrides: { readonly matchId?: string; readonly maxPhases?: number } = {},
+) => {
+  const execution = runCurrentMatchForReplayTestSupport({
+    matchId: overrides.matchId ?? "validation-match",
     seed: "validation-seed",
     arenaVariant: {
       id: "arena",
@@ -56,8 +135,221 @@ const createChronicle = () =>
     topPlayerId: "top",
     bottomStrategyRevisionId: "bottom-rev",
     topStrategyRevisionId: "top-rev",
+    runtime: adaptRuntimeForCurrentKernel(candidateRuntime),
+    ...(overrides.maxPhases === undefined
+      ? {}
+      : { maxPhases: overrides.maxPhases }),
+  })
+  const recorded = recordChronicleFromExecution({
+    execution,
+    metadata: {
+      schemaVersion: "chronicle-v1.4",
+      semanticTupleId: MATCH_KERNEL.tupleId,
+      semanticTuple: MATCH_KERNEL.tuple,
+    },
+  })
+  if (!recorded.ok) throw new Error(recorded.failure.code)
+  return {
+    profile: "current-exact" as const,
+    compatibility: recorded.semanticIdentity,
+    chronicle: recorded.chronicle,
+    boundaryAnchors: recorded.boundaryAnchors,
+    execution,
+    ...selectedCurrentSemanticAuthorityTestSupport(recorded),
+  }
+}
+
+const createVersionedReplayInputV117 = (
+  candidateRuntime: StrategyRuntime = runtime,
+) => {
+  const execution = MATCH_KERNEL.runMatchV117({
+    matchId: "validation-v1.17-match",
+    seed: "validation-v1.17-seed",
+    arenaVariant: {
+      id: "arena",
+      name: "Arena",
+      initialBounds: { minX: 0, maxX: 11, minY: 0, maxY: 11 },
+      terrainStones: [],
+    },
+    bottomPlayerId: "bottom",
+    topPlayerId: "top",
+    bottomStrategyRevisionId: "bottom-rev",
+    topStrategyRevisionId: "top-rev",
+    runtime: adaptRuntimeForCurrentKernel(candidateRuntime),
+  })
+  const recorded = recordChronicleFromExecution({
+    execution,
+    metadata: {
+      schemaVersion: "chronicle-v1.4",
+      semanticTupleId: VERSIONED_RUNTIME_V117_SEMANTIC_TUPLE_RECORD.tupleId,
+      semanticTuple: VERSIONED_RUNTIME_V117_SEMANTIC_TUPLE_RECORD.tuple,
+    },
+  })
+  if (!recorded.ok) throw new Error(recorded.failure.code)
+  return {
+    profile: "current-exact" as const,
+    compatibility: recorded.semanticIdentity,
+    chronicle: recorded.chronicle,
+    boundaryAnchors: recorded.boundaryAnchors,
+    execution,
+  }
+}
+
+const createChronicle = () => createCurrentReplayInput().chronicle
+
+const createCandidateReplayInputV119 = () => {
+  const arena = CANONICAL_ARENA_CATALOG_V1_37.arenas.find(
+    ({ id }) => id === "arena:smoke:v1",
+  )!
+  const scenario = createSetScenarioV137({
+    arenaCatalogVersion: ARENA_CATALOG_VERSION_V1_37,
+    arenaSemanticGeometryHash: arena.semanticGeometryHash,
+    entrantA: { entrantKey: "entrant:bottom", playerId: "bottom" },
+    entrantB: { entrantKey: "entrant:top", playerId: "top" },
+    baseSeed: "candidate-validation-seed",
+  })
+  const condition = scenario.conditions[0]!
+  const execution = MATCH_KERNEL.runMatchV119({
+    matchId: "candidate-validation-match",
+    seed: scenario.baseSeed,
+    arenaVariant: {
+      id: arena.id,
+      name: arena.name,
+      initialBounds: { ...arena.initialBounds },
+      terrainStones: arena.terrainStones.map((position) => ({ ...position })),
+    },
+    bottomPlayerId: condition.bottomPlayerId,
+    topPlayerId: condition.topPlayerId,
+    bottomStrategyRevisionId: "bottom-rev",
+    topStrategyRevisionId: "top-rev",
+    initialInitiativePlayerId: condition.initialInitiativePlayerId,
     runtime,
-  }).chronicle
+    maxPhases: 1,
+  })
+  const persistedMatch = {
+    semanticAuthorityKey: "runtime-v1.19" as const,
+    matchId: "candidate-validation-match",
+    seed: scenario.baseSeed,
+    arenaVariantId: arena.id,
+    bottomStrategyRevisionId: "bottom-rev",
+    topStrategyRevisionId: "top-rev",
+    bottomPlayerId: condition.bottomPlayerId,
+    topPlayerId: condition.topPlayerId,
+    bottomEntrantKey: condition.bottomEntrantKey,
+    topEntrantKey: condition.topEntrantKey,
+    setPolicyVersion: SET_CONDITION_POLICY_VERSION_V1_37,
+    scenarioId: scenario.scenarioId,
+    conditionId: condition.conditionId,
+    conditionOrdinal: condition.ordinal,
+    conditionSuffix: condition.suffix,
+    requestIdentity: condition.requestIdentity,
+    arenaCatalogVersion: ARENA_CATALOG_VERSION_V1_37,
+    arenaSemanticGeometryHash: arena.semanticGeometryHash,
+    initialInitiativeEntrantKey: condition.initialInitiativeEntrantKey,
+    initialInitiativePlayerId: condition.initialInitiativePlayerId,
+  }
+  const recording = recordChronicleFromExecution({
+    execution,
+    metadata: {
+      schemaVersion: "chronicle-v1.4",
+      semanticTupleId: CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE_RECORD.tupleId,
+      semanticTuple: CANDIDATE_RUNTIME_V119_SEMANTIC_TUPLE_RECORD.tuple,
+    },
+    candidateMatch: persistedMatch,
+  } as never)
+  if (!recording.ok || recording.candidateReproducibility === undefined) {
+    throw new Error(
+      recording.ok
+        ? "candidate reproducibility missing"
+        : recording.failure.code,
+    )
+  }
+  return {
+    profile: "candidate-v1.19" as const,
+    compatibility: recording.semanticIdentity,
+    chronicle: recording.chronicle,
+    boundaryAnchors: recording.boundaryAnchors,
+    execution,
+    candidateReproducibility: recording.candidateReproducibility,
+    persistedMatch,
+  }
+}
+
+const createExecutionEvidence = (
+  matchId: string,
+  status: "exhibition_only" | "counted" = "exhibition_only",
+) => {
+  const registered = CANONICAL_COMPATIBILITY_TUPLES[0]!
+  const entrant = (side: "bottom" | "top") => ({
+    entrantKey: `entrant:${side}`,
+    strategyRevisionId: `${side}-rev`,
+    laneIdentity: {
+      providerId: `provider:${side}`,
+      languageId: "typescript",
+      runtimeId: "runtime:node",
+      runtimeVersion: "1.0.0",
+      toolchainId: "toolchain:typescript",
+      toolchainVersion: "1.0.0",
+      adapterId: "adapter:node",
+      adapterVersion: "1.0.0",
+      policyId: "package-none",
+      policyVersion: "1.0.0",
+      corpusId: "corpus:v1.37",
+      corpusVersion: "1.0.0",
+      artifactId: `artifact:${side}`,
+      artifactSha256: `${side}:artifact:hash`,
+      implementationId: `implementation:${side}`,
+      buildId: `build:${side}`,
+      semanticTupleId: registered.tupleId,
+      semanticTuple: { ...registered.tuple },
+    },
+    containmentCertificateRef: {
+      kind: "containment" as const,
+      certificateId: `containment:${side}`,
+      certificateVersion: "1.0.0",
+      certificateRecordHash: `containment:${side}:hash`,
+      registryGeneration: "registry-generation:1",
+    },
+    ...(status === "counted"
+      ? {
+          conformanceCertificateRef: {
+            kind: "conformance" as const,
+            certificateId: `conformance:${side}`,
+            certificateVersion: "1.0.0",
+            certificateRecordHash: `conformance:${side}:hash`,
+            registryGeneration: "registry-generation:1",
+          },
+        }
+      : {}),
+    schedulingDecision: {
+      status,
+      reasonCode:
+        status === "counted"
+          ? ("EVIDENCE_CURRENT" as const)
+          : ("CONFORMANCE_UNVERIFIABLE" as const),
+      evaluatedAt: "2026-07-13T00:00:00.000Z",
+      freshUntil: "2026-08-13T00:00:00.000Z",
+      registryGeneration: "registry-generation:1",
+    },
+  })
+  return createMatchExecutionExactEvidenceV137({
+    matchId,
+    bottomEntrantKey: "entrant:bottom",
+    topEntrantKey: "entrant:top",
+    evidenceSnapshot: {
+      compatibility: {
+        tupleId: registered.tupleId,
+        tuple: { ...registered.tuple },
+      },
+      authorityBundleHash: "authority-bundle-hash:v1",
+      registryGeneration: "registry-generation:1",
+      entrants: {
+        bottom: entrant("bottom"),
+        top: entrant("top"),
+      },
+    },
+  })
+}
 
 const errorCodes = (value: unknown) => {
   const result = validateChronicle(value)
@@ -111,7 +403,766 @@ const grammarErrorCodes = [
   "SNAPSHOT_BOUNDARY_INVALID",
 ] as const satisfies readonly ChronicleValidationErrorCode[]
 
+const withHistoricalPushAttempt = (chronicle: Chronicle): Chronicle => {
+  const actionIndex = chronicle.events.findIndex(
+    ({ type }) => type === "ACTION_EMITTED",
+  )
+  const action = chronicle.events[actionIndex]!
+  const insertionSequence = action.sequence + 1
+  return {
+    ...chronicle,
+    reproducibility: {
+      ...chronicle.reproducibility,
+      versions: {
+        spec: "cowards-rules-v1.4",
+        engine: "0.1.4",
+        runtimeJs: "0.1.0",
+        chronicle: "chronicle-v1.4",
+        strategyRevision: "0.1.4",
+        arenaVariant: "0.1.0",
+      },
+    },
+    events: [
+      ...chronicle.events.slice(0, insertionSequence),
+      {
+        type: "PUSH_ATTEMPTED",
+        sequence: insertionSequence,
+        context: { ...action.context },
+        privacy: "public",
+        payload: {
+          soldierId: action.context.soldierId!,
+          targetSoldierId: "historical-target",
+        },
+      },
+      ...chronicle.events
+        .slice(insertionSequence)
+        .map((event) => ({ ...event, sequence: event.sequence + 1 })),
+    ],
+    snapshots: chronicle.snapshots.map((snapshot) => ({
+      ...snapshot,
+      sequence:
+        snapshot.sequence >= insertionSequence
+          ? snapshot.sequence + 1
+          : snapshot.sequence,
+    })),
+  }
+}
+
 describe("validateChronicle", () => {
+  it("keeps current semantic admission acyclic and single-invocation", () => {
+    const input = createCurrentReplayInput()
+    const validateSource = readFileSync(
+      new URL("./validate.ts", import.meta.url),
+      "utf8",
+    )
+    const reconstructSource = readFileSync(
+      new URL("./reconstruct.ts", import.meta.url),
+      "utf8",
+    )
+
+    expect(validateCurrentChronicleSemantics(input)).toEqual(
+      validateCurrentChronicle(input),
+    )
+    expect(validateSource).not.toContain("validateCurrentReplayReconstruction")
+    expect(
+      validateSource.match(/validateCurrentChronicleSemantics\(/gu) ?? [],
+    ).toHaveLength(1)
+    expect(
+      reconstructSource.match(/validateCurrentChronicleSemantics\(/gu) ?? [],
+    ).toHaveLength(1)
+    expect(
+      validateSource.match(/validateCurrentTransitionPostconditions\(/gu) ?? [],
+    ).toHaveLength(1)
+    expect(
+      reconstructSource.match(/validateCurrentTransitionPostconditions\(/gu) ??
+        [],
+    ).toHaveLength(1)
+  })
+
+  it("routes exact current evidence as current and publishable", () => {
+    const input = createCurrentReplayInput()
+
+    expect(validateCurrentChronicle(input)).toEqual({
+      ok: true,
+      profile: "current-exact",
+      publishable: true,
+      current: true,
+      issues: [],
+      truncated: false,
+    })
+    expect(validateReplayInput(input)).toEqual(validateCurrentChronicle(input))
+    expect(
+      resolveReplayCompatibilityIdentity({
+        profile: "current-exact",
+        compatibility: input.compatibility,
+        chronicle: input.chronicle,
+      }),
+    ).toEqual({
+      status: "current_exact",
+      tupleId: MATCH_KERNEL.tupleId,
+    })
+  })
+
+  it("accepts a passive empty-selection Match that reaches Contraction without an Activation window", () => {
+    const input = createCurrentReplayInput(passiveRuntime, {
+      matchId: "validation-passive-contraction",
+      maxPhases: 1,
+    })
+    const eventTypes = input.chronicle.events.map(({ type }) => type)
+
+    expect(eventTypes).toContain("CONTRACTION_RESOLVED")
+    expect(eventTypes).not.toContain("ACTIVATION_STARTED")
+    expect(eventTypes).not.toContain("AWARENESS_GRID_OBSERVED")
+    expect(eventTypes).not.toContain("ACTION_EMITTED")
+    expect(validateCurrentChronicle(input)).toEqual({
+      ok: true,
+      profile: "current-exact",
+      publishable: true,
+      current: true,
+      issues: [],
+      truncated: false,
+    })
+  })
+
+  it("accepts recorder-bound player violations with owner-private evidence", () => {
+    const input = createCurrentReplayInput(playerViolationRuntime, {
+      matchId: "validation-player-violation",
+      maxPhases: 1,
+    })
+
+    expect(input.chronicle.events).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          type: "RUNTIME_VIOLATION",
+          privacy: "owner",
+          privateRef: expect.stringMatching(/^private:event:/u),
+        }),
+      ]),
+    )
+    expect(validateCurrentChronicle(input)).toEqual({
+      ok: true,
+      profile: "current-exact",
+      publishable: true,
+      current: true,
+      issues: [],
+      truncated: false,
+    })
+  })
+
+  it("rejects owner-private relabeling before it can leak through owner projection", () => {
+    const input = createCurrentReplayInput()
+    const bottomPrivate = input.chronicle.private?.byPlayerId.bottom ?? {}
+    const topPrivate =
+      (input.chronicle.private?.byPlayerId.top as
+        | Record<string, JsonValue>
+        | undefined) ?? {}
+    const [privateRef, privatePayload] = Object.entries(bottomPrivate)[0] ?? []
+    expect(privateRef).toBeDefined()
+    const relabeled = {
+      ...input.chronicle,
+      private: {
+        byPlayerId: {
+          ...(input.chronicle.private?.byPlayerId ?? {}),
+          bottom: Object.fromEntries(
+            Object.entries(bottomPrivate).filter(([ref]) => ref !== privateRef),
+          ),
+          top: {
+            ...topPrivate,
+            [privateRef!]: privatePayload!,
+          },
+        },
+      },
+    }
+    const forged = {
+      ...relabeled,
+      integrity: createChronicleContentHash(relabeled),
+    }
+    expect(JSON.stringify(projectOwnerChronicle(forged, "top"))).toContain(
+      privateRef,
+    )
+    expect(
+      validateCurrentChronicle({ ...input, chronicle: forged }),
+    ).toMatchObject({
+      ok: false,
+      issues: [{ code: "CURRENT_EVENT_INVALID" }],
+    })
+  })
+
+  it("rejects forged event context even when public event identity is unchanged", () => {
+    const input = createCurrentReplayInput()
+    const events = input.chronicle.events.map((event) =>
+      event.type === "MATCH_STARTED"
+        ? { ...event, context: { actingPlayerId: "top" } }
+        : event,
+    )
+    expect(
+      validateCurrentChronicle({
+        ...input,
+        chronicle: { ...input.chronicle, events },
+      }),
+    ).toMatchObject({
+      ok: false,
+      issues: [{ code: "CURRENT_EVENT_INVALID" }],
+    })
+  })
+
+  it("rejects swapped and renumbered snapshots and anchors that no longer match recorder order", () => {
+    const input = createCurrentReplayInput()
+    const snapshots = input.chronicle.snapshots.map((snapshot) =>
+      globalThis.structuredClone(snapshot),
+    )
+    const anchors = input.boundaryAnchors.map((anchor) =>
+      globalThis.structuredClone(anchor),
+    )
+    expect(snapshots.length).toBeGreaterThan(2)
+    ;[snapshots[1], snapshots[2]] = [snapshots[2]!, snapshots[1]!]
+    ;[anchors[1], anchors[2]] = [anchors[2]!, anchors[1]!]
+    const boundaryAnchors = anchors.map((anchor, snapshotIndex) => ({
+      ...anchor,
+      snapshotIndex,
+    }))
+    const chronicleWithoutIntegrity = {
+      ...input.chronicle,
+      snapshots,
+      integrity: undefined,
+    }
+    const chronicle = {
+      ...chronicleWithoutIntegrity,
+      integrity: createChronicleContentHash(chronicleWithoutIntegrity),
+    }
+
+    expect(
+      validateCurrentChronicle({
+        ...input,
+        chronicle,
+        boundaryAnchors,
+      }),
+    ).toMatchObject({
+      ok: false,
+      issues: [{ code: "CURRENT_BOUNDARY_STATE_INVALID" }],
+    })
+  })
+
+  it("rejects in-place initiative drift despite recomputed public hashes", () => {
+    const input = createCurrentReplayInput()
+    if (input.execution.kind !== "completed") throw new Error("not completed")
+    const transition = input.execution.transitions[0]!
+    const beforeState = transition.beforeState as Record<string, unknown>
+    beforeState.initiativePlayerId = "top"
+    ;(transition as { beforeStateHash: string }).beforeStateHash =
+      `sha256:${createHash("sha256")
+        .update("cowards-game:candidate-game-state-projection:v1\0", "utf8")
+        .update(JSON.stringify(beforeState), "utf8")
+        .digest("hex")}`
+    ;(
+      input.execution.recorderMaterial as { integrityHash: string }
+    ).integrityHash = `sha256:${"f".repeat(64)}`
+
+    expect(validateCurrentChronicle(input)).toMatchObject({
+      ok: false,
+      issues: [{ code: "CURRENT_BOUNDARY_HASH_INVALID" }],
+    })
+  })
+
+  it.each([
+    "MATCH_STARTED",
+    "ROUND_STARTED",
+    "STRATEGY_EVALUATED",
+    "MATCH_ENDED",
+  ] as const)("rejects a candidate missing universal %s evidence", (type) => {
+    const input = createCurrentReplayInput()
+    const result = validateCurrentChronicle({
+      ...input,
+      chronicle: {
+        ...input.chronicle,
+        events: input.chronicle.events.filter((event) => event.type !== type),
+      },
+    })
+
+    expect(result.ok).toBe(false)
+    expect(!result.ok && result.issues.map(({ code }) => code)).toEqual([
+      "CURRENT_EVENT_INVALID",
+    ])
+  })
+
+  it("keeps the legacy PUSH_ATTEMPTED tail only on explicit active and historical routes", () => {
+    const input = createCurrentReplayInput()
+    const historical = withHistoricalPushAttempt(input.chronicle)
+
+    expect(validateChronicle(historical)).toMatchObject({
+      ok: false,
+      errors: [{ code: "SCHEMA_INVALID" }],
+    })
+    expect(validateHistoricalV14Chronicle(historical)).toEqual({ ok: true })
+    const candidate = validateCurrentChronicle({
+      ...input,
+      chronicle: historical,
+    })
+    expect(candidate.ok).toBe(false)
+    expect(!candidate.ok && candidate.issues.map(({ code }) => code)).toEqual([
+      "CURRENT_SHAPE_INVALID",
+    ])
+  })
+
+  it.each([
+    "rules",
+    "engine",
+    "runtimeAbi",
+    "chronicle",
+    "arenaCatalog",
+    "setPolicy",
+  ] as const)(
+    "rejects candidate %s identity drift with candidate-only codes",
+    (field) => {
+      const input = createCurrentReplayInput()
+      const result = validateCurrentChronicle({
+        ...input,
+        compatibility: {
+          ...input.compatibility,
+          tuple: { ...input.compatibility.tuple, [field]: `${field}:wrong` },
+        },
+      })
+      const routed = validateReplayInput({
+        ...input,
+        compatibility: {
+          ...input.compatibility,
+          tuple: { ...input.compatibility.tuple, [field]: `${field}:wrong` },
+        },
+      })
+
+      expect(result.ok).toBe(false)
+      if (result.ok) return
+      expect(result.issues.map(({ code }) => code)).toEqual([
+        "CURRENT_TUPLE_INVALID",
+      ])
+      expect(result).toMatchObject({
+        category: "CANONICAL_INTEGRITY_FAILURE",
+        ownership: "system_integrity",
+        current: true,
+        publishable: false,
+      })
+      expect(routed).toEqual(result)
+      expect(JSON.stringify(result)).not.toContain("ChronicleValidationError")
+    },
+  )
+
+  it("rejects the first invalid candidate state with bounded semantic codes", () => {
+    const input = createCurrentReplayInput()
+    if (input.execution.kind !== "completed") throw new Error("not completed")
+    const initialState = globalThis.structuredClone(
+      input.execution.recorderMaterial.initialState,
+    )
+    initialState.arenaVariant.terrainStones.push({ x: 2, y: 11 })
+    const execution = {
+      ...input.execution,
+      recorderMaterial: {
+        ...input.execution.recorderMaterial,
+        initialState,
+      },
+    }
+    const result = validateCurrentChronicle({ ...input, execution })
+
+    expect(result.ok).toBe(false)
+    if (result.ok) return
+    expect(result.issues.map(({ code }) => code)).toContain(
+      "CURRENT_BOUNDARY_HASH_INVALID",
+    )
+    expect(result.issues.length).toBeLessThanOrEqual(16)
+    expect(result.issues.every(({ path }) => path.length <= 8)).toBe(true)
+  })
+
+  it("admits the exact current tuple independent of JSON object key order", () => {
+    const input = createCurrentReplayInput()
+    const tuple = input.compatibility.tuple
+    const reorderedTuple = {
+      arenaCatalog: tuple.arenaCatalog,
+      chronicle: tuple.chronicle,
+      engine: tuple.engine,
+      rules: tuple.rules,
+      runtimeAbi: tuple.runtimeAbi,
+      setPolicy: tuple.setPolicy,
+    }
+    const reordered = {
+      ...input,
+      compatibility: {
+        tupleId: input.compatibility.tupleId,
+        tuple: reorderedTuple,
+      },
+    }
+
+    expect(validateCurrentChronicle(reordered)).toEqual({
+      ok: true,
+      profile: "current-exact",
+      publishable: true,
+      current: true,
+      issues: [],
+      truncated: false,
+    })
+    expect(
+      resolveReplayCompatibilityIdentity({
+        profile: reordered.profile,
+        compatibility: reordered.compatibility,
+        chronicle: reordered.chronicle,
+      }),
+    ).toEqual({
+      status: "current_exact",
+      tupleId: input.compatibility.tupleId,
+    })
+  })
+
+  it("admits exact runtime-v1.19 replay truth as inactive non-publishable evidence", () => {
+    const input = createCandidateReplayInputV119()
+    const expected = {
+      ok: true,
+      profile: "candidate-v1.19",
+      publishable: false,
+      current: false,
+      candidate: true,
+      issues: [],
+      truncated: false,
+    }
+
+    expect(validateCandidateReplayV119(input)).toEqual(expected)
+    expect(validateReplayInput(input)).toEqual(expected)
+    expect(resolveReplayCompatibilityIdentity(input)).toEqual({
+      status: "candidate_v1_19_exact",
+      tupleId: input.compatibility.tupleId,
+    })
+  })
+
+  it.each([
+    ["scenarioId", `set-scenario:sha256:${"0".repeat(64)}`],
+    ["conditionId", `set-condition:sha256:${"0".repeat(64)}`],
+    ["conditionOrdinal", 1],
+    ["conditionSuffix", "a-bottom-b-first"],
+    ["requestIdentity", `set-request:sha256:${"0".repeat(64)}`],
+    ["arenaCatalogVersion", "catalog:forged"],
+    ["arenaSemanticGeometryHash", `sha256:${"0".repeat(64)}`],
+    ["bottomEntrantKey", "entrant:forged"],
+    ["topEntrantKey", "entrant:forged"],
+    ["initialInitiativeEntrantKey", "entrant:top"],
+    ["initialInitiativePlayerId", "top"],
+  ] as const)(
+    "rejects replay/persistence agreement on forged candidate %s authority",
+    (field, replacement) => {
+      const input = createCandidateReplayInputV119()
+      const match = {
+        ...input.persistedMatch,
+        [field]: replacement,
+      }
+      const result = validateCandidateReplayV119({
+        ...input,
+        candidateReproducibility: {
+          ...input.candidateReproducibility,
+          match,
+        },
+        persistedMatch: match,
+      })
+
+      expect(result.ok, field).toBe(false)
+      if (result.ok) return
+      expect(
+        result.issues.map(({ code }) => code),
+        field,
+      ).toContain(
+        field === "arenaCatalogVersion" || field === "arenaSemanticGeometryHash"
+          ? "CANDIDATE_CATALOG_INVALID"
+          : "CANDIDATE_REPRODUCIBILITY_INVALID",
+      )
+    },
+  )
+
+  it("rejects alias substitution, mixed tuples, persisted relabeling, and private extras before reconstruction", () => {
+    const input = createCandidateReplayInputV119()
+    const aliasMatch = {
+      ...input.persistedMatch,
+      arenaVariantId: "arena:open-field:v1",
+    }
+    const alias = validateCandidateReplayV119({
+      ...input,
+      candidateReproducibility: {
+        ...input.candidateReproducibility,
+        match: aliasMatch,
+      },
+      persistedMatch: aliasMatch,
+    })
+    expect(alias.ok).toBe(false)
+    expect(!alias.ok && alias.issues.map(({ code }) => code)).toEqual([
+      "CANDIDATE_CATALOG_INVALID",
+    ])
+
+    const mixed = validateCandidateReplayV119({
+      ...input,
+      compatibility: {
+        tupleId: VERSIONED_RUNTIME_V117_SEMANTIC_TUPLE_RECORD.tupleId,
+        tuple: VERSIONED_RUNTIME_V117_SEMANTIC_TUPLE_RECORD.tuple,
+      },
+    })
+    expect(mixed.ok).toBe(false)
+    expect(!mixed.ok && mixed.issues.map(({ code }) => code)).toEqual([
+      "CANDIDATE_TUPLE_INVALID",
+    ])
+
+    const relabeled = validateCandidateReplayV119({
+      ...input,
+      persistedMatch: { ...input.persistedMatch, conditionOrdinal: 1 },
+    })
+    expect(relabeled.ok).toBe(false)
+    expect(!relabeled.ok && relabeled.issues.map(({ code }) => code)).toEqual([
+      "CANDIDATE_PERSISTED_MATCH_INVALID",
+    ])
+
+    const withPrivateExtra = validateCandidateReplayV119({
+      ...input,
+      persistedMatch: {
+        ...input.persistedMatch,
+        strategyMemory: { private: true },
+      },
+    })
+    expect(withPrivateExtra.ok).toBe(false)
+    expect(
+      !withPrivateExtra.ok && withPrivateExtra.issues.map(({ code }) => code),
+    ).toEqual(["CANDIDATE_PERSISTED_MATCH_INVALID"])
+  })
+
+  it("keeps candidate validation structural-only with no gameplay, runtime, or UI authority", () => {
+    const source = readFileSync(
+      new URL("./validate.ts", import.meta.url),
+      "utf8",
+    )
+    expect(source).not.toMatch(/MATCH_KERNEL|StrategyRuntime|runMatchV119/gu)
+    expect(source).not.toMatch(/runtime-service|strategy-provider|apps\/web/gu)
+    expect(source).not.toContain("initialInitiativePlayerId =")
+    expect(source).not.toMatch(
+      /seed.*(?:split|slice|substring)|(?:split|slice|substring).*seed/giu,
+    )
+  })
+
+  it("atomically validates current tuples while preserving explicit historical dispatch", () => {
+    const chronicle = createChronicle()
+    const registered = CANONICAL_COMPATIBILITY_TUPLES[0]!
+    const current = {
+      profile: "current-exact" as const,
+      compatibility: {
+        tupleId: registered.tupleId,
+        tuple: { ...registered.tuple },
+      },
+      chronicle,
+    }
+
+    expect(validateReplayInput(current)).toEqual({ ok: true })
+    expect(resolveReplayCompatibilityIdentity(current)).toMatchObject({
+      status: "current_exact",
+      tupleId: registered.tupleId,
+    })
+    const exhibitionEvidence = createExecutionEvidence(
+      chronicle.reproducibility.matchId,
+    )
+    expect(
+      validateReplayInput({
+        ...current,
+        executionEvidence: exhibitionEvidence,
+      }),
+    ).toEqual({ ok: true })
+    expect(
+      validateReplayInput({
+        ...current,
+        executionEvidence: createExecutionEvidence(
+          chronicle.reproducibility.matchId,
+          "counted",
+        ),
+      }),
+    ).toEqual({ ok: true })
+    expect(
+      validateReplayInput({
+        ...current,
+        executionEvidence: {
+          ...exhibitionEvidence,
+          evidenceSnapshot: {
+            ...exhibitionEvidence.evidenceSnapshot,
+            entrants: {
+              ...exhibitionEvidence.evidenceSnapshot.entrants,
+              bottom: {
+                ...exhibitionEvidence.evidenceSnapshot.entrants.bottom,
+                schedulingDecision: {
+                  ...exhibitionEvidence.evidenceSnapshot.entrants.bottom
+                    .schedulingDecision,
+                  status: "counted",
+                  reasonCode: "EVIDENCE_CURRENT",
+                },
+              },
+            },
+          },
+        },
+      }),
+    ).toMatchObject({
+      ok: false,
+      errors: [expect.objectContaining({ code: "VERSION_INCOMPATIBLE" })],
+    })
+    expect(
+      validateReplayInput({
+        ...current,
+        executionEvidence: {
+          ...exhibitionEvidence,
+          matchId: "match:other",
+        },
+      }),
+    ).toMatchObject({
+      ok: false,
+      errors: [expect.objectContaining({ code: "VERSION_INCOMPATIBLE" })],
+    })
+    expect(
+      validateReplayInput({
+        ...current,
+        compatibility: {
+          ...current.compatibility,
+          tuple: { ...current.compatibility.tuple, engine: "engine:latest" },
+        },
+      }),
+    ).toMatchObject({
+      ok: false,
+      errors: [expect.objectContaining({ code: "VERSION_INCOMPATIBLE" })],
+    })
+    expect(
+      validateReplayInput({ profile: "current-exact", chronicle }),
+    ).toMatchObject({
+      ok: false,
+      errors: [expect.objectContaining({ code: "VERSION_INCOMPATIBLE" })],
+    })
+
+    const historicalChronicle = {
+      ...chronicle,
+      reproducibility: {
+        ...chronicle.reproducibility,
+        versions: {
+          spec: "cowards-rules-v1.4",
+          engine: "0.1.4",
+          runtimeJs: "0.1.0",
+          chronicle: "chronicle-v1.4",
+          strategyRevision: "0.1.4",
+          arenaVariant: "0.1.0",
+        },
+      },
+    }
+    const historical = {
+      profile: "historical-v1.4" as const,
+      chronicle: historicalChronicle,
+    }
+    const before = JSON.stringify(historical)
+    expect(validateReplayInput(historical)).toEqual({ ok: true })
+    expect(validateHistoricalV14Chronicle(historicalChronicle)).toEqual({
+      ok: true,
+    })
+    expect(resolveReplayCompatibilityIdentity(historical)).toEqual({
+      status: "historical_original_semantics",
+      tupleResolution: "unresolved_legacy",
+    })
+    expect(JSON.stringify(historical)).toBe(before)
+
+    const historicalV116 = {
+      profile: "historical-v1.16" as const,
+      compatibility: {
+        tupleId: HISTORICAL_RUNTIME_V114_SEMANTIC_TUPLE_ID,
+        tuple: { ...HISTORICAL_RUNTIME_V114_SEMANTIC_TUPLE },
+      },
+      chronicle: historicalChronicle,
+    }
+    expect(validateReplayInput(historicalV116)).toEqual({ ok: true })
+    expect(resolveReplayCompatibilityIdentity(historicalV116)).toEqual({
+      status: "historical_v1_16_exact",
+      tupleId: HISTORICAL_RUNTIME_V114_SEMANTIC_TUPLE_ID,
+      tupleResolution: "resolved_v1.16",
+    })
+    expect(
+      validateReplayInput({
+        ...historicalV116,
+        compatibility: {
+          ...historicalV116.compatibility,
+          tuple: {
+            ...historicalV116.compatibility.tuple,
+            runtimeAbi: "strategy-runtime-abi-v1.17",
+          },
+        },
+      }),
+    ).toMatchObject({
+      ok: false,
+      errors: [expect.objectContaining({ code: "VERSION_INCOMPATIBLE" })],
+    })
+  })
+
+  it("keeps exact historical-v1.16 admission isolated from mutable current schema and grammar", () => {
+    const current = createCurrentReplayInput()
+    const historicalChronicle = withHistoricalPushAttempt(current.chronicle)
+    const input = {
+      profile: "historical-v1.16" as const,
+      compatibility: {
+        tupleId: HISTORICAL_RUNTIME_V114_SEMANTIC_TUPLE_ID,
+        tuple: { ...HISTORICAL_RUNTIME_V114_SEMANTIC_TUPLE },
+      },
+      chronicle: historicalChronicle,
+    }
+    const before = JSON.stringify(input)
+
+    expect(validateChronicle(historicalChronicle)).toMatchObject({
+      ok: false,
+      errors: [{ code: "SCHEMA_INVALID" }],
+    })
+    expect(validateHistoricalV14Chronicle(historicalChronicle)).toEqual({
+      ok: true,
+    })
+    expect(validateReplayInput(input)).toEqual({ ok: true })
+    expect(JSON.stringify(input)).toBe(before)
+  })
+
+  it("routes original historical evidence only through the frozen grammar without requiring current snapshots", () => {
+    const current = createCurrentReplayInput()
+    const historicalChronicle = {
+      ...current.chronicle,
+      reproducibility: {
+        ...current.chronicle.reproducibility,
+        versions: {
+          spec: "cowards-rules-v1.4",
+          engine: "0.1.4",
+          runtimeJs: "0.1.0",
+          chronicle: "chronicle-v1.4",
+          strategyRevision: "0.1.4",
+          arenaVariant: "0.1.0",
+        },
+      },
+      snapshots: [],
+    }
+    const input = {
+      profile: "historical-v1.4" as const,
+      chronicle: historicalChronicle,
+    }
+    const before = JSON.stringify(input)
+
+    expect(validateReplayInput(input)).toEqual({ ok: true })
+    expect(JSON.stringify(input)).toBe(before)
+  })
+
+  it("rejects an unknown current tuple before reading or probing Chronicle bytes", () => {
+    const current = createCurrentReplayInput()
+    let chronicleReads = 0
+    const input = {
+      profile: "current-exact" as const,
+      compatibility: {
+        ...current.compatibility,
+        tupleId: `sha256:${"0".repeat(64)}`,
+      },
+      get chronicle(): Chronicle {
+        chronicleReads += 1
+        throw new Error("Chronicle parser probing is forbidden.")
+      },
+    }
+
+    expect(validateReplayInput(input)).toMatchObject({
+      ok: false,
+      errors: [{ code: "VERSION_INCOMPATIBLE" }],
+    })
+    expect(chronicleReads).toBe(0)
+  })
+
   it("accepts a valid Chronicle with matching integrity", () => {
     const chronicle = createChronicle()
     const withIntegrity = {
@@ -120,6 +1171,48 @@ describe("validateChronicle", () => {
     }
 
     expect(validateChronicle(withIntegrity)).toEqual({ ok: true })
+  })
+
+  it("validates stored runtime-v1.17 Chronicles without selected-current version dispatch", () => {
+    expect(
+      validateVersionedStoredChronicleV117(
+        createVersionedReplayInputV117().chronicle,
+      ),
+    ).toEqual({ ok: true })
+  })
+
+  it("rejects hostile runtime-v1.17 Chronicle versions even when optional integrity is absent", () => {
+    const input = createVersionedReplayInputV117()
+    const chronicle = cloneChronicle(input.chronicle)
+    chronicle.reproducibility.versions.engine = "hostile-engine"
+    delete chronicle.integrity
+
+    expect(validateVersionedStoredChronicleV117(chronicle)).toMatchObject({
+      ok: false,
+      errors: [{ code: "VERSION_INCOMPATIBLE" }],
+    })
+    expect(
+      validateVersionedChronicleV117({ ...input, chronicle }),
+    ).toMatchObject({
+      ok: false,
+      issues: [{ code: "CURRENT_VERSION_INVALID" }],
+    })
+  })
+
+  it("rejects semantically invalid runtime-v1.17 intermediate state evidence", () => {
+    const input = createVersionedReplayInputV117()
+    const execution = globalThis.structuredClone(input.execution)
+    const beforeState = execution.transitions[0]!.beforeState as unknown as {
+      soldiers: Soldier[]
+    }
+    beforeState.soldiers[1] = {
+      ...beforeState.soldiers[1]!,
+      position: beforeState.soldiers[0]!.position,
+    }
+
+    expect(
+      validateVersionedChronicleV117({ ...input, execution }),
+    ).toMatchObject({ ok: false })
   })
 
   it("accepts grammar-specific validation codes in the schema contract", () => {

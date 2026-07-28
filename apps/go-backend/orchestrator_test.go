@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -39,9 +40,10 @@ func TestGoMatchOrchestratorIntegration(t *testing.T) {
 		strategyArtifacts: map[string]strategyArtifact{},
 	}
 	created, err := liveServer.createExhibitionMatchSet(ctx, userID, "smoke-exhibition-v1", revisionIDs, true)
-	if err != nil {
-		t.Fatal(err)
+	if err == nil || created != nil {
+		t.Fatalf("unproved fixture revisions created orchestratable work: created=%+v err=%v", created, err)
 	}
+	return
 	matchSetID := stringValue(created, "matchSetId")
 	rows, err := pool.Query(ctx, `
 		select match_id
@@ -69,6 +71,7 @@ func TestGoMatchOrchestratorIntegration(t *testing.T) {
 	}
 
 	var runtimeRequest runtimeServiceRequest
+	const semanticReceiptSecret = "fixture-semantic-receipt-secret-v1"
 	runtimeServer := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		if request.URL.Path != "/execute-match" {
 			t.Fatalf("unexpected runtime path %s", request.URL.Path)
@@ -76,6 +79,8 @@ func TestGoMatchOrchestratorIntegration(t *testing.T) {
 		if err := json.NewDecoder(request.Body).Decode(&runtimeRequest); err != nil {
 			t.Fatal(err)
 		}
+		chronicle := orchestratorChronicleForRequest(runtimeRequest, false)
+		finalState := orchestratorFinalStateForRequest(runtimeRequest)
 		writeRuntimeServiceTestJSON(t, writer, runtimeServiceResponse{
 			ContractVersion:   runtimeExecutionServiceVersion,
 			OK:                true,
@@ -83,18 +88,14 @@ func TestGoMatchOrchestratorIntegration(t *testing.T) {
 			RequestID:         runtimeRequest.RequestID,
 			MatchID:           runtimeRequest.Match.MatchID,
 			RuntimeABIVersion: strategyRuntimeABIVersion,
-			Result: map[string]any{
-				"privacy":                    "internal_runtime_result",
-				"chronicle":                  orchestratorChronicleForRequest(runtimeRequest, false),
-				"finalState":                 orchestratorFinalStateForRequest(runtimeRequest),
-				"runtimeViolationEventCount": 0,
-			},
+			Result:            signedRuntimeServiceSuccessResultForTest(t, runtimeRequest, chronicle, finalState, semanticReceiptSecret),
 		})
 	}))
 	defer runtimeServer.Close()
 
 	orchestrator := newGoMatchOrchestrator(pool, runtimeServer.URL)
-	orchestrator.lifecycle = newTestMatchJobLifecycle(pool, time.Date(2026, 5, 25, 1, 20, 0, 0, time.UTC), "lease:go:orchestrator")
+	orchestrator.runtime = newRuntimeServiceExecutionRouterWithSemanticReceiptSecret(runtimeServer.URL, semanticReceiptSecret)
+	orchestrator.lifecycle = newTestMatchJobLifecycle(pool, time.Now().UTC().Add(time.Minute), "lease:go:orchestrator")
 	for _, matchID := range matchIDs {
 		result, err := orchestrator.runOnce(ctx, []string{matchID})
 		if err != nil {
@@ -137,6 +138,257 @@ func TestMatchJobLeaseForRuntimeServiceBudget(t *testing.T) {
 	}
 }
 
+func TestRuntimeServiceStrategyRebindsLockedRevisionToClaimedLane(t *testing.T) {
+	fixture := newDeploymentLaneFixture(t)
+	strategy := fixture.Strategy
+	evidence := goEntrantExecutionEvidence{StrategyRevisionID: strategy.ID, LaneIdentity: fixture.Lane}
+	if !runtimeServiceStrategyMatchesClaim(strategy, evidence, fixture.Tuple, fixture.Registry) {
+		t.Fatal("exact locked revision did not match its claimed executable lane")
+	}
+
+	unlocked := strategy
+	unlocked.LockedAt = nil
+	if runtimeServiceStrategyMatchesClaim(unlocked, evidence, fixture.Tuple, fixture.Registry) {
+		t.Fatal("unlocked revision matched claimed executable lane")
+	}
+	swappedRevision := strategy
+	swappedRevision.ID = "revision:other"
+	if runtimeServiceStrategyMatchesClaim(swappedRevision, evidence, fixture.Tuple, fixture.Registry) {
+		t.Fatal("swapped revision matched claimed executable lane")
+	}
+	swappedArtifact := strategy
+	swappedArtifact.Metadata = cloneMap(strategy.Metadata)
+	mapValue(swappedArtifact.Metadata, "sourceArtifact")["hash"] = strings.Repeat("c", 64)
+	if runtimeServiceStrategyMatchesClaim(swappedArtifact, evidence, fixture.Tuple, fixture.Registry) {
+		t.Fatal("post-claim artifact swap matched claimed executable lane")
+	}
+}
+
+func TestGoMatchOrchestratorIntegrityPostResponseContract(t *testing.T) {
+	source, err := os.ReadFile("orchestrator.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := string(source)
+	recheckIndex := strings.Index(text, "recheckClaimedMatchIntegrity")
+	lastRecheckIndex := strings.LastIndex(text, "recheckClaimedMatchIntegrity")
+	executionIndex := strings.Index(text, "runtime.executeMatch")
+	completionIndex := strings.Index(text, "completion.completeMatch")
+	if recheckIndex < 0 || executionIndex < 0 || lastRecheckIndex < 0 || completionIndex < 0 ||
+		recheckIndex > executionIndex || executionIndex > lastRecheckIndex || lastRecheckIndex > completionIndex {
+		t.Fatal("orchestrator must recheck exact claimed identity before execution and completion")
+	}
+	if !strings.Contains(text, "RuntimeServiceEvidenceDrift") || !strings.Contains(text, "recordAttemptFailure") {
+		t.Fatal("in-flight integrity drift must route through system-failure recording")
+	}
+}
+
+func TestPhase258OrchestratorConsumesVersionedRuntimeServiceRouter(t *testing.T) {
+	source, err := os.ReadFile("orchestrator.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := string(source)
+	for _, required := range []string{
+		"*runtimeServiceExecutionRouter",
+		"newRuntimeServiceExecutionRouter(runtimeServiceURL)",
+		"buildRuntimeServiceExecutionRequestForClaimedJob",
+		"runtime.executeMatch",
+	} {
+		if !strings.Contains(text, required) {
+			t.Fatalf("production orchestration route is not versioned: missing %q", required)
+		}
+	}
+}
+
+func TestPhase258ClaimBuildServiceCompleteV117Postgres(t *testing.T) {
+	databaseURL := os.Getenv("COWARDS_GO_BACKEND_TEST_DATABASE_URL")
+	if databaseURL == "" {
+		t.Fatal("COWARDS_GO_BACKEND_TEST_DATABASE_URL is required")
+	}
+	ctx := context.Background()
+	pool := semanticCurrentIsolatedPool(t, ctx, databaseURL)
+	now := time.Date(2026, 7, 15, 13, 45, 0, 0, time.UTC)
+	fixture, registry := preparePhase258V117ClaimFixture(t, ctx, pool, now)
+	var productionSuccessorAuthorities int
+	if err := pool.QueryRow(ctx, `select count(*) from runtime_evidence_v1_17_installed_authorities where trust_domain=$1`, runtimeEvidenceAuthorityProductionTrustDomain).Scan(&productionSuccessorAuthorities); err != nil || productionSuccessorAuthorities != 0 {
+		t.Fatalf("pre-Phase-259 production successor authority is not empty: count=%d error=%v", productionSuccessorAuthorities, err)
+	}
+	seeded := fixture.seedMatch(t, ctx, pool, "claimed-v117")
+	if _, err := pool.Exec(ctx, `delete from match_job_attempts where job_id=$1`, seeded.jobID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := pool.Exec(ctx, `update match_jobs set status='queued',attempts=0,worker_id=null,lease_token=null,lease_expires_at=null,run_after=$2 where id=$1`, seeded.jobID, now); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := pool.Exec(ctx, `update matches set status='pending' where id=$1`, seeded.matchID); err != nil {
+		t.Fatal(err)
+	}
+	var fixtureEntrants, countedEntrants int
+	if err := pool.QueryRow(ctx, `select count(*), count(*) filter (where scheduling_status='counted') from match_set_execution_entrants where match_set_id=$1`, fixture.identity.MatchSetID).Scan(&fixtureEntrants, &countedEntrants); err != nil {
+		t.Fatal(err)
+	}
+	if fixtureEntrants != 2 || countedEntrants != 0 {
+		t.Fatalf("successor fixture escaped exhibition-only scheduling: entrants=%d counted=%d", fixtureEntrants, countedEntrants)
+	}
+	productionLifecycle := newMatchJobLifecycle(pool)
+	productionLifecycle.now = func() time.Time { return now }
+	productionLifecycle.newLeaseToken = func() (string, error) { return "phase258:production-probe:v117", nil }
+	productionLifecycle.loadAuthority = func() (*verifiedRuntimeEvidenceAuthority, error) { return fixture.authority, nil }
+	claimedProduction, err := productionLifecycle.claimNextMatchJob(ctx, claimMatchJobInput{WorkerID: "phase258:production-probe", MatchIDs: []string{seeded.matchID}})
+	if err != nil || claimedProduction != nil {
+		t.Fatalf("fixture authority became production-claimable before Phase 259: claimed=%+v error=%v", claimedProduction, err)
+	}
+	var attempts int
+	var jobStatus, matchStatus string
+	if err := pool.QueryRow(ctx, `select j.attempts,j.status,m.status from match_jobs j join matches m on m.id=j.match_id where j.id=$1`, seeded.jobID).Scan(&attempts, &jobStatus, &matchStatus); err != nil {
+		t.Fatal(err)
+	}
+	if attempts != 0 || jobStatus != "queued" || matchStatus != "pending" {
+		t.Fatalf("production fail-closed probe mutated gameplay: attempts=%d job=%s match=%s", attempts, jobStatus, matchStatus)
+	}
+
+	var observed runtimeServiceRequestV117
+	var observedNested runtimeServiceRequest
+	runtimeServer := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, incoming *http.Request) {
+		defer incoming.Body.Close()
+		payload, err := io.ReadAll(incoming.Body)
+		if err != nil {
+			t.Fatal(err)
+		}
+		canonical := decodeCanonicalJSONV11(payload, canonicalJSONV11Options{Context: canonicalJSONV11AuthenticatedOuterEnvelope, RequireCanonical: true})
+		if canonical.Error != nil || json.Unmarshal(canonical.CanonicalBytes, &observed) != nil {
+			t.Fatal("Go did not send a canonical v1.17 service request")
+		}
+		if err := decodeStrictJSONUseNumber(observed.Match, &observedNested); err != nil {
+			t.Fatal(err)
+		}
+		chronicle := orchestratorChronicleForRequest(observedNested, false)
+		finalState := orchestratorFinalStateForRequest(observedNested)
+		response := signedRuntimeServiceSuccessResponseV117ForTest(
+			t, observed, chronicle, finalState,
+			"sha256:"+strings.Repeat("8", 64), runtimeServiceV117FixtureSecret,
+		)
+		writer.Header().Set("content-type", "application/json")
+		_, _ = writer.Write(encodeRuntimeServiceResponseFixtureV117(t, response))
+	}))
+	defer runtimeServer.Close()
+
+	orchestrator := newGoMatchOrchestrator(pool, runtimeServer.URL)
+	orchestrator.deploymentLanes = registry
+	orchestrator.workerID = "phase258:worker:v117"
+	orchestrator.lifecycle.now = func() time.Time { return now }
+	orchestrator.lifecycle.newLeaseToken = func() (string, error) { return "phase258:lease:v117", nil }
+	orchestrator.lifecycle.loadAuthority = func() (*verifiedRuntimeEvidenceAuthority, error) { return fixture.authority, nil }
+	orchestrator.lifecycle.successorAuthorityTrustDomain = runtimeEvidenceAuthorityFixtureTrustDomain
+	orchestrator.completion.now = func() time.Time { return now }
+	orchestrator.completion.loadAuthority = func() (*verifiedRuntimeEvidenceAuthority, error) { return fixture.authority, nil }
+	orchestrator.completion.successorAuthorityTrustDomain = runtimeEvidenceAuthorityFixtureTrustDomain
+	orchestrator.completion.semanticReceiptSecret = runtimeServiceV117FixtureSecret
+	orchestrator.runtime = newRuntimeServiceExecutionRouterWithSemanticReceiptSecret(runtimeServer.URL, runtimeServiceV117FixtureSecret)
+	orchestrator.runtime.currentContractVersion = func() string { return runtimeExecutionServiceVersionV117 }
+
+	result, err := orchestrator.runOnce(ctx, []string{seeded.matchID})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Status != "complete" || result.MatchID != seeded.matchID || result.ChronicleID == "" {
+		var errorClass, errorMessage *string
+		var attemptClass, attemptMessage *string
+		var attemptDetails map[string]any
+		_ = pool.QueryRow(ctx, `select last_error_class,last_error_message from match_jobs where id=$1`, seeded.jobID).Scan(&errorClass, &errorMessage)
+		_ = pool.QueryRow(ctx, `select error_class,error_message,details from match_job_attempts where job_id=$1 order by attempt_number desc limit 1`, seeded.jobID).Scan(&attemptClass, &attemptMessage, &attemptDetails)
+		t.Fatalf("v1.17 fixture-domain exhibition job did not complete: %+v observedContract=%q errorClass=%v errorMessage=%v attemptClass=%v attemptMessage=%v details=%+v", result, observed.ContractVersion, errorClass, errorMessage, attemptClass, attemptMessage, attemptDetails)
+	}
+	if observed.ContractVersion != runtimeExecutionServiceVersionV117 ||
+		observed.Accounting.BudgetProfileSHA256 != runtimeServiceV117BudgetProfileSHA256 ||
+		observed.Accounting.LedgerPrestateRoot != runtimeServiceV117EmptyLedgerRoot {
+		t.Fatalf("v1.17 service request lost exact accounting: %+v", observed.Accounting)
+	}
+	if !validSuccessorRuntimeLimitsV117(observedNested.Limits) {
+		t.Fatalf("v1.17 nested Match request exposed noncanonical runtime limits: %+v", observedNested.Limits)
+	}
+	if observed.Authority.BundleHash != fixture.identity.RuntimeServiceV117.Authority.BundleHash ||
+		observed.Authority.SourceManifestHash != fixture.identity.RuntimeServiceV117.Authority.SourceManifestHash ||
+		observed.Authority.RegistryGeneration != fixture.identity.RuntimeServiceV117.Authority.RegistryGeneration ||
+		observed.LegacyAuthority.BundleHash != fixture.identity.AuthorityBundleHash ||
+		observed.LegacyAuthority.SourceManifestHash != fixture.identity.SourceManifestHash ||
+		observed.LegacyAuthority.RegistryGeneration != fixture.identity.RegistryGeneration {
+		t.Fatalf("v1.17 service request collapsed successor and historical authorities: successor=%+v legacy=%+v", observed.Authority, observed.LegacyAuthority)
+	}
+	wantBottomSource, bottomOK := runtimeServiceSourceIdentityFromPersistedRevisionV117(fixture.request.Strategies.Bottom, fixture.identity.Bottom)
+	wantTopSource, topOK := runtimeServiceSourceIdentityFromPersistedRevisionV117(fixture.request.Strategies.Top, fixture.identity.Top)
+	if !bottomOK || !topOK || observed.Entrants.Bottom.SourceIdentity != wantBottomSource || observed.Entrants.Top.SourceIdentity != wantTopSource ||
+		observed.Entrants.Bottom.IdentityManifestRoot != fixture.identity.RuntimeServiceV117.Bottom.IdentityManifestRoot ||
+		observed.Entrants.Top.IdentityManifestRoot != fixture.identity.RuntimeServiceV117.Top.IdentityManifestRoot {
+		t.Fatalf("v1.17 request did not derive exact persisted per-revision identities: bottom=%+v top=%+v", observed.Entrants.Bottom, observed.Entrants.Top)
+	}
+	var receiptVersion string
+	var receiptSchema string
+	if err := pool.QueryRow(ctx, `select runtime_semantic_receipt_version,runtime_semantic_receipt->>'schemaVersion' from chronicles where match_id=$1`, seeded.matchID).Scan(&receiptVersion, &receiptSchema); err != nil {
+		t.Fatal(err)
+	}
+	if receiptVersion != runtimeSemanticReceiptV117SchemaVersion || receiptSchema != receiptVersion {
+		t.Fatalf("persisted v1.17 receipt version drifted: version=%q schema=%q", receiptVersion, receiptSchema)
+	}
+}
+
+func preparePhase258V117ClaimFixture(t *testing.T, ctx context.Context, pool *pgxpool.Pool, now time.Time) (*semanticCurrentAuthorityFixture, *goDeploymentLaneRegistry) {
+	t.Helper()
+	return seedSemanticSuccessorAuthority(t, ctx, pool, now)
+}
+
+func TestGoMatchOrchestratorHasNoCandidateCompletionRoute(t *testing.T) {
+	source, err := os.ReadFile("orchestrator.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := string(source)
+	for _, retired := range []string{"rejectInactiveCandidateCompletion", "CandidateEvidence", "candidate_exhibition"} {
+		if strings.Contains(text, retired) {
+			t.Fatalf("retired candidate completion route remains executable: %s", retired)
+		}
+	}
+	completionIndex := strings.Index(text, "completion.completeMatch")
+	decodeIndex := strings.Index(text, "runtime.executeMatch")
+	if decodeIndex < 0 || completionIndex < 0 || decodeIndex > completionIndex {
+		t.Fatal("current runtime response must be admitted before canonical completion")
+	}
+}
+
+func TestPhase259OrchestratorRoutesBrandedV118AdmissionWithoutSemanticHelpers(t *testing.T) {
+	source, err := os.ReadFile("orchestrator.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := string(source)
+	start := strings.Index(text, "case runtimeExecutionServiceVersionV118:")
+	if start < 0 {
+		t.Fatal("normal orchestrator v1.18 completion route is missing")
+	}
+	end := strings.Index(text[start:], "case runtimeExecutionServiceVersion:")
+	if end < 0 {
+		t.Fatal("v1.18 completion route is not version-isolated")
+	}
+	route := text[start : start+end]
+	for _, required := range []string{
+		"VerifiedReceiptV118", "ReceiptBytesV118", "RuntimeRequestV118",
+		"response.V118.Chronicle", "response.V118.FinalState",
+	} {
+		if !strings.Contains(route, required) {
+			t.Fatalf("v1.18 route omitted authenticated completion field %q", required)
+		}
+	}
+	for _, forbidden := range []string{
+		"validateGoChronicle", "runtimeSemanticReconstructed", "reconstruct",
+		"terminalChronicleOutcome", "validateChronicleEvent",
+	} {
+		if strings.Contains(route, forbidden) {
+			t.Fatalf("orchestrator v1.18 route imported semantic authority %q", forbidden)
+		}
+	}
+}
+
 func TestStrategyFailureRevisionIDFromChronicle(t *testing.T) {
 	artifact, err := json.Marshal(map[string]any{
 		"events": []any{
@@ -164,20 +416,22 @@ func TestStrategyFailureRevisionIDFromChronicle(t *testing.T) {
 
 func orchestratorFinalStateForRequest(request runtimeServiceRequest) map[string]any {
 	return map[string]any{
-		"matchId":         request.Match.MatchID,
-		"seed":            request.Match.Seed,
-		"phaseNumber":     1,
-		"roundNumber":     1,
-		"activationCount": 1,
+		"matchId": request.Match.MatchID, "seed": request.Match.Seed,
+		"versions":     map[string]any{"spec": semanticCompatibilityVersions["spec"], "engine": semanticCompatibilityVersions["engine"], "runtimeJs": semanticCompatibilityVersions["runtimeJs"], "chronicle": semanticCompatibilityVersions["chronicle"], "strategyRevision": semanticCompatibilityVersions["strategyRevision"], "arenaVariant": semanticCompatibilityVersions["arenaVariant"]},
+		"arenaVariant": request.Match.ArenaVariant, "phase": "COMPLETE",
+		"phaseNumber": 1, "roundNumber": 1, "activationCount": 1,
+		"initiativePlayerId": request.Match.BottomPlayerID,
+		"bounds":             mapValue(request.Match.ArenaVariant, "initialBounds"),
 		"players": []any{
 			map[string]any{"id": request.Match.BottomPlayerID, "side": "bottom", "strategyRevisionId": request.Match.BottomStrategyRevisionID, "strategyMemory": map[string]any{}},
 			map[string]any{"id": request.Match.TopPlayerID, "side": "top", "strategyRevisionId": request.Match.TopStrategyRevisionID, "strategyMemory": map[string]any{}},
 		},
 		"soldiers": []any{
-			map[string]any{"id": "soldier:bottom:" + request.Match.MatchID, "ownerPlayerId": request.Match.BottomPlayerID, "status": "ACTIVE"},
-			map[string]any{"id": "soldier:top:" + request.Match.MatchID, "ownerPlayerId": request.Match.TopPlayerID, "status": "FALLEN"},
+			map[string]any{"id": "soldier:bottom:" + request.Match.MatchID, "ownerPlayerId": request.Match.BottomPlayerID, "status": "ACTIVE", "position": map[string]any{"x": 1, "y": 1}, "facing": "UP", "lastSuccessfulMoveDirection": nil, "soldierMemory": map[string]any{}},
+			map[string]any{"id": "soldier:top:" + request.Match.MatchID, "ownerPlayerId": request.Match.TopPlayerID, "status": "FALLEN", "position": nil, "facing": nil, "lastSuccessfulMoveDirection": nil, "soldierMemory": map[string]any{}},
 		},
-		"outcome": map[string]any{"type": "WIN", "winnerPlayerId": request.Match.BottomPlayerID},
+		"terrainStones": []any{},
+		"outcome":       map[string]any{"type": "WIN", "winnerPlayerId": request.Match.BottomPlayerID},
 	}
 }
 
@@ -185,8 +439,8 @@ func orchestratorChronicleForRequest(request runtimeServiceRequest, includeRunti
 	board := map[string]any{
 		"bounds": mapValue(request.Match.ArenaVariant, "initialBounds"),
 		"soldiers": []any{
-			map[string]any{"id": "soldier:bottom:" + request.Match.MatchID, "ownerPlayerId": request.Match.BottomPlayerID, "status": "ACTIVE", "position": map[string]any{"x": 1, "y": 1}},
-			map[string]any{"id": "soldier:top:" + request.Match.MatchID, "ownerPlayerId": request.Match.TopPlayerID, "status": "FALLEN", "position": map[string]any{"x": 2, "y": 2}},
+			map[string]any{"id": "soldier:bottom:" + request.Match.MatchID, "ownerPlayerId": request.Match.BottomPlayerID, "status": "ACTIVE", "position": map[string]any{"x": 1, "y": 1}, "facing": "UP", "lastSuccessfulMoveDirection": nil},
+			map[string]any{"id": "soldier:top:" + request.Match.MatchID, "ownerPlayerId": request.Match.TopPlayerID, "status": "FALLEN", "position": nil, "facing": nil, "lastSuccessfulMoveDirection": nil},
 		},
 		"terrainStones": []any{},
 	}
@@ -207,9 +461,9 @@ func orchestratorChronicleForRequest(request runtimeServiceRequest, includeRunti
 			"matchId":             request.Match.MatchID,
 			"seed":                request.Match.Seed,
 			"arenaVariantId":      stringValue(request.Match.ArenaVariant, "id"),
-			"arenaVariantVersion": "arena-v1",
+			"arenaVariantVersion": semanticCompatibilityVersions["arenaVariant"],
 			"strategyRevisionIds": []any{request.Match.BottomStrategyRevisionID, request.Match.TopStrategyRevisionID},
-			"versions":            map[string]any{"spec": "cowards-rules-v1.4", "engine": "0.1.4", "runtimeJs": "0.1.0", "chronicle": "chronicle-v1.4", "strategyRevision": "0.1.0", "arenaVariant": "arena-v1"},
+			"versions":            map[string]any{"spec": semanticCompatibilityVersions["spec"], "engine": semanticCompatibilityVersions["engine"], "runtimeJs": semanticCompatibilityVersions["runtimeJs"], "chronicle": semanticCompatibilityVersions["chronicle"], "strategyRevision": semanticCompatibilityVersions["strategyRevision"], "arenaVariant": semanticCompatibilityVersions["arenaVariant"]},
 		},
 		"events": events,
 		"snapshots": []any{

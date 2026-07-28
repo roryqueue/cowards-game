@@ -1,0 +1,246 @@
+{
+  "schemaVersion": "v1.35-sandbox-readiness-proof",
+  "milestone": "v1.35",
+  "phase": 246,
+  "generatedAt": "2026-06-15",
+  "generatedBy": "scripts/evaluate-v1-35-sandbox-readiness-proof.ts",
+  "contractVersion": "strategy-runtime-sandbox-readiness-v1.35",
+  "requiredRequirements": [
+    "SBOX-01",
+    "SBOX-02",
+    "LABEL-01",
+    "LABEL-02"
+  ],
+  "requiredEvidenceKinds": [
+    "runtime-containment-current-lanes",
+    "typescript-python-provenance-only",
+    "rust-zig-wasm-wasi-preview1-artifact",
+    "tinygo-hidden-spike-only",
+    "fail-loud-claim-drift-monitor"
+  ],
+  "guardrails": {
+    "productionSandboxCertification": false,
+    "typeScriptPythonWasmIsolation": false,
+    "tinyGoProductionSupport": false,
+    "packageEcosystemSupport": false,
+    "directExportOrComponentModelAbiPromotion": false
+  },
+  "laneClaims": [
+    {
+      "contractVersion": "strategy-runtime-sandbox-readiness-v1.35",
+      "laneId": "javascript",
+      "evidenceClass": "runtime-containment",
+      "artifactPosture": "source-backed",
+      "productionSandboxCertification": false,
+      "publicLabel": "Runtime containment evidence only",
+      "developerLabel": "JavaScript remains runtime-service/provider-gated containment evidence, not production sandbox certification.",
+      "unavailableInProduction": false,
+      "forbiddenStrongerClaims": [
+        "production sandbox certification",
+        "WASM isolation for TypeScript or Python",
+        "TinyGo production support",
+        "direct-export ABI promotion",
+        "Component Model/WIT ABI promotion",
+        "package ecosystem support"
+      ]
+    },
+    {
+      "contractVersion": "strategy-runtime-sandbox-readiness-v1.35",
+      "laneId": "typescript",
+      "evidenceClass": "source-artifact-provenance",
+      "artifactPosture": "source-language-artifact-provenance",
+      "productionSandboxCertification": false,
+      "publicLabel": "Provenance evidence only",
+      "developerLabel": "TypeScript provider proof binds source and transpiled artifact identity; it is not WASM/WASI isolation or sandbox certification.",
+      "unavailableInProduction": false,
+      "forbiddenStrongerClaims": [
+        "production sandbox certification",
+        "WASM isolation for TypeScript or Python",
+        "TinyGo production support",
+        "direct-export ABI promotion",
+        "Component Model/WIT ABI promotion",
+        "package ecosystem support"
+      ]
+    },
+    {
+      "contractVersion": "strategy-runtime-sandbox-readiness-v1.35",
+      "laneId": "python",
+      "evidenceClass": "source-artifact-provenance",
+      "artifactPosture": "source-language-artifact-provenance",
+      "productionSandboxCertification": false,
+      "publicLabel": "Provenance evidence only",
+      "developerLabel": "Python provider proof binds normalized source-bundle provenance; it is not WASM/WASI isolation or sandbox certification.",
+      "unavailableInProduction": false,
+      "forbiddenStrongerClaims": [
+        "production sandbox certification",
+        "WASM isolation for TypeScript or Python",
+        "TinyGo production support",
+        "direct-export ABI promotion",
+        "Component Model/WIT ABI promotion",
+        "package ecosystem support"
+      ]
+    },
+    {
+      "contractVersion": "strategy-runtime-sandbox-readiness-v1.35",
+      "laneId": "rust",
+      "evidenceClass": "immutable-wasm-wasi-preview1-artifact",
+      "artifactPosture": "immutable-wasm-wasi-preview1",
+      "productionSandboxCertification": false,
+      "publicLabel": "WASM/WASI artifact-backed evidence",
+      "developerLabel": "Rust is immutable WASM/WASI Preview 1 artifact-backed through provider proof; this is not broad production sandbox certification.",
+      "unavailableInProduction": false,
+      "forbiddenStrongerClaims": [
+        "production sandbox certification",
+        "WASM isolation for TypeScript or Python",
+        "TinyGo production support",
+        "direct-export ABI promotion",
+        "Component Model/WIT ABI promotion",
+        "package ecosystem support"
+      ]
+    },
+    {
+      "contractVersion": "strategy-runtime-sandbox-readiness-v1.35",
+      "laneId": "zig",
+      "evidenceClass": "immutable-wasm-wasi-preview1-artifact",
+      "artifactPosture": "immutable-wasm-wasi-preview1",
+      "productionSandboxCertification": false,
+      "publicLabel": "WASM/WASI artifact-backed evidence",
+      "developerLabel": "Zig is immutable WASM/WASI Preview 1 artifact-backed through provider proof; this is not broad production sandbox certification.",
+      "unavailableInProduction": false,
+      "forbiddenStrongerClaims": [
+        "production sandbox certification",
+        "WASM isolation for TypeScript or Python",
+        "TinyGo production support",
+        "direct-export ABI promotion",
+        "Component Model/WIT ABI promotion",
+        "package ecosystem support"
+      ]
+    },
+    {
+      "contractVersion": "strategy-runtime-sandbox-readiness-v1.35",
+      "laneId": "tinygo",
+      "evidenceClass": "spike-only-hidden",
+      "artifactPosture": "unavailable",
+      "productionSandboxCertification": false,
+      "publicLabel": "Hidden spike-only lane",
+      "developerLabel": "TinyGo remains hidden and spike-only until a future productionization milestone proves the required boundary evidence.",
+      "unavailableInProduction": true,
+      "forbiddenStrongerClaims": [
+        "production sandbox certification",
+        "WASM isolation for TypeScript or Python",
+        "TinyGo production support",
+        "direct-export ABI promotion",
+        "Component Model/WIT ABI promotion",
+        "package ecosystem support"
+      ]
+    }
+  ],
+  "sourceChecks": [],
+  "evidence": [
+    {
+      "id": "current-runtime-containment-no-certification",
+      "kind": "runtime-containment-current-lanes",
+      "requirements": [
+        "SBOX-01",
+        "SBOX-02",
+        "LABEL-01"
+      ],
+      "files": [
+        "packages/spec/src/runtime.ts",
+        "apps/go-backend/live_backend.go"
+      ],
+      "commands": [
+        "pnpm --filter @cowards/spec exec vitest run src/spec.test.ts",
+        "cd apps/go-backend && go test ./... -run 'Test.*Runtime.*Semantics|Test.*Provider|Test.*Readiness' -count=1"
+      ],
+      "outcome": "Current runtime labels describe evidence posture and explicitly leave production sandbox certification false for every lane.",
+      "limitations": [
+        "No broader production sandbox is certified by this milestone."
+      ]
+    },
+    {
+      "id": "typescript-python-provenance-not-wasm-isolation",
+      "kind": "typescript-python-provenance-only",
+      "requirements": [
+        "SBOX-01",
+        "LABEL-01",
+        "LABEL-02"
+      ],
+      "files": [
+        "packages/spec/src/runtime.ts",
+        "apps/go-backend/live_backend.go",
+        "apps/web/lib/public-discovery-service.test.ts"
+      ],
+      "commands": [
+        "pnpm exec vitest run scripts/evaluate-v1-35-sandbox-readiness-proof.test.ts"
+      ],
+      "outcome": "TypeScript and Python public labels are provenance evidence only, and developer labels deny WASM/WASI isolation or sandbox certification.",
+      "limitations": [
+        "Provider-grade provenance is evidence for source/artifact identity, not isolation."
+      ]
+    },
+    {
+      "id": "rust-zig-immutable-wasi-preview1",
+      "kind": "rust-zig-wasm-wasi-preview1-artifact",
+      "requirements": [
+        "SBOX-01",
+        "LABEL-01",
+        "LABEL-02"
+      ],
+      "files": [
+        "packages/spec/src/runtime.ts",
+        "packages/runtime-wasm-wasi/src/validation.ts",
+        "apps/go-backend/live_backend.go"
+      ],
+      "commands": [
+        "pnpm --filter @cowards/spec exec vitest run src/spec.test.ts",
+        "pnpm wasm-wasi:evaluate:check"
+      ],
+      "outcome": "Rust and Zig remain immutable WASM/WASI Preview 1 artifact-backed lanes with evidence-scoped labels.",
+      "limitations": [
+        "Direct-export, Component Model, and WIT ABI promotion remain future scoped."
+      ]
+    },
+    {
+      "id": "tinygo-hidden-spike-only",
+      "kind": "tinygo-hidden-spike-only",
+      "requirements": [
+        "SBOX-01",
+        "LABEL-01",
+        "LABEL-02"
+      ],
+      "files": [
+        "packages/spec/src/runtime.ts",
+        "apps/web/app/learn/page.test.ts",
+        "apps/web/app/matchsets/evidence-copy.test.ts",
+        "scripts/check-boundary-monitors.ts"
+      ],
+      "commands": [
+        "pnpm tinygo-wasi:spike:check",
+        "pnpm --filter @cowards/web exec vitest run app/learn/page.test.ts app/matchsets/evidence-copy.test.ts"
+      ],
+      "outcome": "TinyGo remains a hidden spike-only lane and is absent from public/default production-facing copy.",
+      "limitations": [
+        "TinyGo production support requires a future explicit productionization milestone."
+      ]
+    },
+    {
+      "id": "claim-drift-monitor",
+      "kind": "fail-loud-claim-drift-monitor",
+      "requirements": [
+        "SBOX-02",
+        "LABEL-02"
+      ],
+      "files": [
+        "scripts/evaluate-v1-35-sandbox-readiness-proof.ts",
+        "package.json"
+      ],
+      "commands": [
+        "pnpm v1.35:sandbox-readiness-proof:check",
+        "pnpm boundary:monitors"
+      ],
+      "outcome": "Boundary monitors include a fail-loud proof gate for forbidden sandbox, TinyGo, package, and ABI overclaims.",
+      "limitations": []
+    }
+  ]
+}

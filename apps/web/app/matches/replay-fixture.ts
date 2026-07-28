@@ -12,6 +12,7 @@ import type {
 } from "./types.js"
 import {
   buildReadyReplayFromChronicle,
+  resolveReplayArenaAuthority,
   trustedOwnerReplayOptions,
 } from "./replay-ready.js"
 
@@ -88,6 +89,12 @@ export const createReplayFixtureCatalog =
         getReplayFixtureMatchId(id),
       )}/replay`,
     }))
+
+export const createCandidateReplayFixtureReadiness = (result: unknown) =>
+  resolveReplayArenaAuthority({
+    profile: "runtime-v1.19-candidate",
+    result,
+  })
 
 const replayMetadataFromChronicle = (
   scenarioId: CanonicalReplayScenarioId,

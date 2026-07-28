@@ -1,4 +1,5 @@
 import { z } from "zod"
+import runtimeExecutionServiceResponseV116Wire from "../artifacts/runtime-execution-service-response.v1.16.wire.json" with { type: "json" }
 import type {
   PublicMatchEvidenceDto,
   PublicMatchSetResultDto,
@@ -9,6 +10,8 @@ import {
   PublicMatchSetSummaryServiceDtoSchema,
   PublicReplayEvidenceServiceDtoSchema,
   PublicReplayMetadataServiceDtoSchema,
+  RuntimeExecutionCompatibilityIdentitySchema,
+  RuntimeExecutionResolvedEvidenceSnapshotSchema,
 } from "./schemas.js"
 import {
   assertPublicServiceDtoLeakSafe,
@@ -17,14 +20,24 @@ import {
   type PublicReplayEvidenceServiceDto,
   type PublicReplayMetadataServiceDto,
 } from "./service.js"
+import { publicMatchSetSummaryExample } from "./service-fixtures.js"
 import {
-  publicMatchSetSummaryExample,
-  publicReplayEvidenceExample,
-  publicReplayMetadataExample,
-} from "./service-fixtures.js"
+  HISTORICAL_RUNTIME_EXECUTION_SERVICE_V1_16,
+  HistoricalRuntimeExecutionServiceResponseV116Schema,
+} from "./runtime-execution-service-v1-16-compat.js"
+import {
+  STRATEGY_RUNTIME_ABI_VERSION,
+  describeStrategyRuntimeProductSemantics,
+} from "./runtime.js"
+import { ARENA_CATALOG_VERSION_V1_37 } from "./arena-catalog-v1-37.js"
+import { CANONICAL_SET_CONDITION_ROWS_V1_37 } from "./set-condition-policy-v1-37.js"
+import { normalizePublicOutputKey } from "./public-output-privacy.js"
 
 export const MATCH_EXECUTION_APP_CONTRACT_VERSION =
   "match-execution-app-v1" as const
+
+export const MATCH_EXECUTION_PUBLIC_RESULT_VERSION_V119 =
+  "match-execution-public-result-v1.19-candidate-1" as const
 
 export const MATCH_EXECUTION_LIFECYCLE_STATES = [
   "queued",
@@ -122,6 +135,121 @@ export const MatchExecutionRuntimeEvidenceV1Schema = z.object({
   }),
 })
 
+export const MATCH_EXECUTION_EXACT_EVIDENCE_VERSION =
+  "match-execution-integrity-evidence-v1.37" as const
+
+export const MatchExecutionExactEvidenceV137Schema = z
+  .object({
+    schemaVersion: z.literal(MATCH_EXECUTION_EXACT_EVIDENCE_VERSION),
+    profile: z.literal("current-exact"),
+    matchId: z.string().min(1),
+    bottomEntrantKey: z.string().min(1),
+    topEntrantKey: z.string().min(1),
+    evidenceSnapshot: RuntimeExecutionResolvedEvidenceSnapshotSchema,
+  })
+  .strict()
+  .superRefine((evidence, ctx) => {
+    if (
+      evidence.bottomEntrantKey !==
+        evidence.evidenceSnapshot.entrants.bottom.entrantKey ||
+      evidence.topEntrantKey !==
+        evidence.evidenceSnapshot.entrants.top.entrantKey
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["evidenceSnapshot", "entrants"],
+        message:
+          "ordered entrant evidence must match the Match bottom/top bindings",
+      })
+    }
+    for (const side of ["bottom", "top"] as const) {
+      if (
+        evidence.evidenceSnapshot.entrants[side].schedulingDecision.status ===
+        "disabled"
+      ) {
+        ctx.addIssue({
+          code: "custom",
+          path: [
+            "evidenceSnapshot",
+            "entrants",
+            side,
+            "schedulingDecision",
+            "status",
+          ],
+          message: "disabled authority cannot produce Match execution evidence",
+        })
+      }
+    }
+  })
+
+const MatchExecutionPublicCertificateRefV137Schema = z
+  .object({
+    kind: z.enum(["containment", "conformance"]),
+    version: z.string().min(1),
+    hash: z.string().min(1),
+  })
+  .strict()
+
+const MatchExecutionPublicEntrantIntegrityV137Schema = z
+  .object({
+    entrantKey: z.string().min(1),
+    status: z.enum(["disabled", "exhibition_only", "counted"]),
+    reasonCode: z.string().min(1),
+    evaluatedAt: z.string().datetime({ offset: true }),
+    freshUntil: z.string().datetime({ offset: true }),
+    evidence: z.array(MatchExecutionPublicCertificateRefV137Schema).max(2),
+  })
+  .strict()
+  .superRefine((entrant, ctx) => {
+    const kinds = entrant.evidence.map((reference) => reference.kind)
+    if (new Set(kinds).size !== kinds.length) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["evidence"],
+        message: "public certificate evidence kinds must be unique",
+      })
+    }
+    if (entrant.status !== "disabled" && !kinds.includes("containment")) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["evidence"],
+        message: "exhibition-only and counted evidence requires containment",
+      })
+    }
+    if (entrant.status === "counted" && !kinds.includes("conformance")) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["evidence"],
+        message: "counted evidence requires conformance",
+      })
+    }
+  })
+
+export const MatchExecutionPublicIntegrityEvidenceV137Schema = z
+  .object({
+    profile: z.literal("current-exact"),
+    compatibility: RuntimeExecutionCompatibilityIdentitySchema,
+    authorityBundleHash: z.string().min(1),
+    registryGeneration: z.string().min(1),
+    entrants: z
+      .object({
+        bottom: MatchExecutionPublicEntrantIntegrityV137Schema,
+        top: MatchExecutionPublicEntrantIntegrityV137Schema,
+      })
+      .strict(),
+  })
+  .strict()
+
+export const MatchExecutionHistoricalEvidenceV14Schema = z
+  .object({
+    profile: z.literal("historical-v1.4"),
+    matchId: z.string().min(1),
+    rulesVersion: z.literal("cowards-rules-v1.4"),
+    chronicleVersion: z.literal("chronicle-v1.4"),
+    originalCountedStatus: z.enum(["counted", "non_counted"]),
+  })
+  .strict()
+
 export const MatchExecutionFailureEvidenceV1Schema = z.object({
   category: MatchExecutionFailureCategoryV1Schema,
   retryDisposition: MatchExecutionRetryDispositionV1Schema,
@@ -161,6 +289,118 @@ export const MatchExecutionMatchSetSummaryV1Schema = z.object({
   failureEvidence: z.array(MatchExecutionFailureEvidenceV1Schema),
   privacy: MatchExecutionPrivacyV1Schema,
 })
+
+const CandidateConditionLabelV119Schema = z.enum([
+  CANONICAL_SET_CONDITION_ROWS_V1_37[0]!.suffix,
+  CANONICAL_SET_CONDITION_ROWS_V1_37[1]!.suffix,
+  CANONICAL_SET_CONDITION_ROWS_V1_37[2]!.suffix,
+  CANONICAL_SET_CONDITION_ROWS_V1_37[3]!.suffix,
+])
+const CandidateConditionOrdinalV119Schema = z.union([
+  z.literal(0),
+  z.literal(1),
+  z.literal(2),
+  z.literal(3),
+])
+const CandidateSha256V119Schema = z
+  .string()
+  .regex(/^sha256:[0-9a-f]{64}$/u)
+const CandidateScenarioIdV119Schema = z
+  .string()
+  .regex(/^set-scenario:sha256:[0-9a-f]{64}$/u)
+const CandidateConditionIdV119Schema = z
+  .string()
+  .regex(/^set-condition:sha256:[0-9a-f]{64}$/u)
+
+const MatchExecutionPublicResultPayloadV119Schema = z
+  .object({
+    matchSetId: z.string().min(1),
+    matchId: z.string().min(1),
+    publicationStatus: z.enum(["pending", "degraded", "countable"]),
+    counted: z.boolean(),
+    arena: z
+      .object({
+        variantId: z.string().min(1),
+        catalogVersion: z.literal(ARENA_CATALOG_VERSION_V1_37),
+        catalogStatus: z.literal("active"),
+        semanticGeometryHash: CandidateSha256V119Schema,
+      })
+      .strict(),
+    condition: z
+      .object({
+        scenarioId: CandidateScenarioIdV119Schema,
+        conditionId: CandidateConditionIdV119Schema,
+        ordinal: CandidateConditionOrdinalV119Schema,
+        label: CandidateConditionLabelV119Schema,
+        sides: z
+          .object({
+            bottomEntrantKey: z.string().min(1),
+            topEntrantKey: z.string().min(1),
+          })
+          .strict(),
+        initialInitiativeEntrantKey: z.string().min(1),
+      })
+      .strict(),
+  })
+  .strict()
+
+const refineMatchExecutionPublicResultV119 = (
+  candidate: z.infer<typeof MatchExecutionPublicResultPayloadV119Schema>,
+  ctx: z.RefinementCtx,
+): void => {
+  if (candidate.counted !== (candidate.publicationStatus === "countable")) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["counted"],
+      message: "counted is true only for a countable complete condition matrix",
+    })
+  }
+  const canonicalRow =
+    CANONICAL_SET_CONDITION_ROWS_V1_37[candidate.condition.ordinal]
+  if (canonicalRow?.suffix !== candidate.condition.label) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["condition", "label"],
+      message: "condition label must match its canonical ordinal",
+    })
+  }
+  const { bottomEntrantKey, topEntrantKey } = candidate.condition.sides
+  if (bottomEntrantKey === topEntrantKey) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["condition", "sides"],
+      message: "candidate condition sides must bind distinct entrants",
+    })
+  }
+  const expectedInitialSide =
+    candidate.condition.label === "a-bottom-a-first" ||
+    candidate.condition.label === "a-top-b-first"
+      ? bottomEntrantKey
+      : topEntrantKey
+  if (candidate.condition.initialInitiativeEntrantKey !== expectedInitialSide) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["condition", "initialInitiativeEntrantKey"],
+      message:
+        "initial initiative entrant must agree with the canonical condition label and sides",
+    })
+  }
+}
+
+export const MatchExecutionPublicResultSourceV119Schema =
+  MatchExecutionPublicResultPayloadV119Schema.superRefine(
+    refineMatchExecutionPublicResultV119,
+  )
+
+export const MatchExecutionPublicResultV119Schema = z
+  .object({
+    contractVersion: z.literal(MATCH_EXECUTION_PUBLIC_RESULT_VERSION_V119),
+    kind: z.literal("matchExecutionPublicResult"),
+    semanticAuthorityKey: z.literal("runtime-v1.19"),
+    ...MatchExecutionPublicResultPayloadV119Schema.shape,
+  })
+  .strict()
+  .superRefine(refineMatchExecutionPublicResultV119)
 
 export const MatchExecutionReplayMetadataV1Schema = z.object({
   contractVersion: z.literal(MATCH_EXECUTION_APP_CONTRACT_VERSION),
@@ -221,6 +461,12 @@ export type MatchExecutionLifecycleV1 = z.infer<
 export type MatchExecutionRuntimeEvidenceV1 = z.infer<
   typeof MatchExecutionRuntimeEvidenceV1Schema
 >
+export type MatchExecutionExactEvidenceV137 = z.infer<
+  typeof MatchExecutionExactEvidenceV137Schema
+>
+export type MatchExecutionPublicIntegrityEvidenceV137 = z.infer<
+  typeof MatchExecutionPublicIntegrityEvidenceV137Schema
+>
 export type MatchExecutionFailureEvidenceV1 = z.infer<
   typeof MatchExecutionFailureEvidenceV1Schema
 >
@@ -229,6 +475,12 @@ export type MatchExecutionMatchResultV1 = z.infer<
 >
 export type MatchExecutionMatchSetSummaryV1 = z.infer<
   typeof MatchExecutionMatchSetSummaryV1Schema
+>
+export type MatchExecutionPublicResultSourceV119 = z.infer<
+  typeof MatchExecutionPublicResultSourceV119Schema
+>
+export type MatchExecutionPublicResultV119 = z.infer<
+  typeof MatchExecutionPublicResultV119Schema
 >
 export type MatchExecutionReplayMetadataV1 = z.infer<
   typeof MatchExecutionReplayMetadataV1Schema
@@ -249,6 +501,188 @@ type LifecycleOverride = {
 }
 
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T
+
+const MATCH_EXECUTION_PUBLIC_RESULT_FORBIDDEN_FIELDS_V119 = new Set(
+  [
+    "source",
+    "sources",
+    "artifact",
+    "artifacts",
+    "memory",
+    "memories",
+    "strategyMemory",
+    "soldierMemory",
+    "objective",
+    "objectives",
+    "objectivePayload",
+    "objectivePayloads",
+    "receipt",
+    "receipts",
+    "diagnostic",
+    "diagnostics",
+    "rawDiagnostics",
+    "signature",
+    "signatures",
+    "key",
+    "keys",
+    "keyMaterial",
+    "hostData",
+    "hostPath",
+    "hostPaths",
+    "credential",
+    "credentials",
+    "securityInternal",
+    "securityInternals",
+    "runtimeInternal",
+    "runtimeInternals",
+  ].map(normalizePublicOutputKey),
+)
+
+export const assertMatchExecutionPublicResultV119LeakSafe = (
+  value: unknown,
+): void => {
+  assertPublicServiceDtoLeakSafe(value)
+  const visit = (node: unknown, path: string): void => {
+    if (Array.isArray(node)) {
+      node.forEach((entry, index) => visit(entry, `${path}[${index}]`))
+      return
+    }
+    if (node === null || typeof node !== "object") {
+      return
+    }
+    for (const [key, entry] of Object.entries(
+      node as Record<string, unknown>,
+    )) {
+      if (
+        MATCH_EXECUTION_PUBLIC_RESULT_FORBIDDEN_FIELDS_V119.has(
+          normalizePublicOutputKey(key),
+        )
+      ) {
+        throw new Error(
+          `Candidate Match execution public result leaks private field: ${path}.${key}`,
+        )
+      }
+      visit(entry, `${path}.${key}`)
+    }
+  }
+  visit(value, "$")
+}
+
+export const projectMatchExecutionPublicResultV119 = (
+  input: unknown,
+): MatchExecutionPublicResultV119 => {
+  assertMatchExecutionPublicResultV119LeakSafe(input)
+  const source = MatchExecutionPublicResultSourceV119Schema.parse(input)
+  const result = MatchExecutionPublicResultV119Schema.parse({
+    contractVersion: MATCH_EXECUTION_PUBLIC_RESULT_VERSION_V119,
+    kind: "matchExecutionPublicResult",
+    semanticAuthorityKey: "runtime-v1.19",
+    ...source,
+  })
+  assertMatchExecutionPublicResultV119LeakSafe(result)
+  return result
+}
+
+export const parseMatchExecutionPublicResultV119 = (
+  input: unknown,
+): MatchExecutionPublicResultV119 => {
+  assertMatchExecutionPublicResultV119LeakSafe(input)
+  const result = MatchExecutionPublicResultV119Schema.parse(input)
+  assertMatchExecutionPublicResultV119LeakSafe(result)
+  return result
+}
+
+export const createMatchExecutionExactEvidenceV137 = (
+  input: Omit<
+    z.input<typeof MatchExecutionExactEvidenceV137Schema>,
+    "schemaVersion" | "profile"
+  >,
+): MatchExecutionExactEvidenceV137 =>
+  MatchExecutionExactEvidenceV137Schema.parse({
+    schemaVersion: MATCH_EXECUTION_EXACT_EVIDENCE_VERSION,
+    profile: "current-exact",
+    ...input,
+  })
+
+const projectPublicEntrantIntegrity = (
+  entrant: MatchExecutionExactEvidenceV137["evidenceSnapshot"]["entrants"]["bottom"],
+) => {
+  const evidence: {
+    kind: "containment" | "conformance"
+    version: string
+    hash: string
+  }[] = []
+  if (entrant.containmentCertificateRef) {
+    evidence.push({
+      kind: "containment",
+      version: entrant.containmentCertificateRef.certificateVersion,
+      hash: entrant.containmentCertificateRef.certificateRecordHash,
+    })
+  }
+  if (entrant.conformanceCertificateRef) {
+    evidence.push({
+      kind: "conformance",
+      version: entrant.conformanceCertificateRef.certificateVersion,
+      hash: entrant.conformanceCertificateRef.certificateRecordHash,
+    })
+  }
+  return {
+    entrantKey: entrant.entrantKey,
+    status: entrant.schedulingDecision.status,
+    reasonCode: entrant.schedulingDecision.reasonCode,
+    evaluatedAt: entrant.schedulingDecision.evaluatedAt,
+    freshUntil: entrant.schedulingDecision.freshUntil,
+    evidence,
+  }
+}
+
+export const projectPublicMatchExecutionIntegrityEvidenceV137 = (
+  evidence: MatchExecutionExactEvidenceV137,
+): MatchExecutionPublicIntegrityEvidenceV137 => {
+  const parsed = MatchExecutionExactEvidenceV137Schema.parse(evidence)
+  const projection = MatchExecutionPublicIntegrityEvidenceV137Schema.parse({
+    profile: "current-exact",
+    compatibility: parsed.evidenceSnapshot.compatibility,
+    authorityBundleHash: parsed.evidenceSnapshot.authorityBundleHash,
+    registryGeneration: parsed.evidenceSnapshot.registryGeneration,
+    entrants: {
+      bottom: projectPublicEntrantIntegrity(
+        parsed.evidenceSnapshot.entrants.bottom,
+      ),
+      top: projectPublicEntrantIntegrity(parsed.evidenceSnapshot.entrants.top),
+    },
+  })
+  assertPublicServiceDtoLeakSafe(projection)
+  return projection
+}
+
+export const parseMatchExecutionEvidenceByVersion = (
+  value: unknown,
+):
+  | {
+      classification: "current_exact"
+      evidence: MatchExecutionExactEvidenceV137
+    }
+  | {
+      classification: "historical_original_semantics"
+      evidence: z.infer<typeof MatchExecutionHistoricalEvidenceV14Schema>
+    } => {
+  if (
+    value !== null &&
+    typeof value === "object" &&
+    !Array.isArray(value) &&
+    (value as { profile?: unknown }).profile === "current-exact"
+  ) {
+    return {
+      classification: "current_exact",
+      evidence: MatchExecutionExactEvidenceV137Schema.parse(value),
+    }
+  }
+  return {
+    classification: "historical_original_semantics",
+    evidence: MatchExecutionHistoricalEvidenceV14Schema.parse(value),
+  }
+}
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   value !== null && typeof value === "object" && !Array.isArray(value)
@@ -573,6 +1007,15 @@ export const toMatchExecutionMatchSetSummaryV1 = (
       (evidence): evidence is MatchExecutionFailureEvidenceV1 =>
         evidence !== undefined,
     )
+  const result = {
+    ...serviceDto.result,
+    entrants: serviceDto.result.entrants.map((entrant) => ({
+      ...entrant,
+      runtimeSemantics:
+        entrant.runtimeSemantics ??
+        describeStrategyRuntimeProductSemantics(entrant.runtime),
+    })),
+  }
 
   return MatchExecutionMatchSetSummaryV1Schema.parse({
     contractVersion: MATCH_EXECUTION_APP_CONTRACT_VERSION,
@@ -585,7 +1028,7 @@ export const toMatchExecutionMatchSetSummaryV1 = (
       publicMessageKey,
       matches: serviceDto.result.matches,
     }),
-    result: serviceDto.result,
+    result,
     matches,
     runtimeEvidence,
     failureEvidence,
@@ -639,7 +1082,7 @@ const createScenarioSummary = (
   )
   const matchId = `match:fixture:${id}` as MatchId
   const runtime: PublicMatchSetResultDto["entrants"][number]["runtime"] = {
-    abiVersion: "strategy-runtime-abi-v1.14",
+    abiVersion: STRATEGY_RUNTIME_ABI_VERSION,
     language: { id: "typescript", version: "runtime-js-v1" },
     adapter: {
       id: "runtime-js-worker-thread",
@@ -648,6 +1091,26 @@ const createScenarioSummary = (
     package: { mode: "none", entrypoint: "default" },
     requiredCapabilities: [],
   }
+  const runtimeSemantics: PublicMatchSetResultDto["entrants"][number]["runtimeSemantics"] =
+    {
+      languageId: "typescript",
+      adapterId: "runtime-js-worker-thread",
+      languageLabel: "TypeScript",
+      adapterLabel: "runtime-js worker thread",
+      readiness: "local-dev-fallback",
+      readinessLabel: "Local/dev fallback",
+      experimental: false,
+      countedPlayEligible: false,
+      countedPlayLabel: "Not counted",
+      countedPlayReason:
+        "Proof-local fixture evidence does not authorize counted play.",
+      sourcePolicyLabel: "Self-contained Strategy source",
+      packagePolicyLabel: "No packages",
+      docsReference: "runtime/languages",
+      examplesReference: "samples/minimal-strategy",
+      warnings: [],
+      validationIssueCodes: ["NON_COUNTED_RUNTIME"],
+    }
   summary.matchSetId = `match-set:fixture:${id}` as MatchSetId
   summary.result.matchSetId = summary.matchSetId
   summary.result.status = resultState
@@ -666,6 +1129,7 @@ const createScenarioSummary = (
       sourceHash: "sourcehash-fixture-bottom",
       sourceBytes: 128,
       runtime,
+      runtimeSemantics,
       engineCompatibility: {
         spec: "cowards-rules-v1.4",
         engine: "engine-v1",
@@ -682,6 +1146,7 @@ const createScenarioSummary = (
       sourceHash: "sourcehash-fixture-top",
       sourceBytes: 128,
       runtime,
+      runtimeSemantics,
       engineCompatibility: {
         spec: "cowards-rules-v1.4",
         engine: "engine-v1",
@@ -741,7 +1206,8 @@ const createScenarioSummary = (
     matchExecutionMetadata.replayAvailability = override.replayAvailability
   }
   summary.result.metadata = { matchExecution: matchExecutionMetadata }
-  return PublicMatchSetSummaryServiceDtoSchema.parse(summary)
+  PublicMatchSetSummaryServiceDtoSchema.parse(summary)
+  return summary
 }
 
 const completeSummary = createScenarioSummary(
@@ -750,61 +1216,101 @@ const completeSummary = createScenarioSummary(
   "complete",
   "complete",
 )
+
+/**
+ * Test-only service-contract fixture. These public DTOs are projections of the
+ * committed v1.16 semantic service receipt; they are not evidence that a live
+ * Go/runtime-service/Postgres topology executed during a browser test.
+ */
+const publicSafeReplayServiceReceipt =
+  HistoricalRuntimeExecutionServiceResponseV116Schema.parse(
+    runtimeExecutionServiceResponseV116Wire,
+  )
+if (!publicSafeReplayServiceReceipt.ok) {
+  throw new Error("Committed v1.16 replay receipt must be a success response.")
+}
+const publicSafeReplayChronicle =
+  publicSafeReplayServiceReceipt.result.chronicle
+const publicSafeReplayReceipt =
+  publicSafeReplayServiceReceipt.result.semanticReceipt
+const publicSafeReplayMatchId = publicSafeReplayServiceReceipt.matchId
+const publicSafeReplayArenaVariantId =
+  publicSafeReplayChronicle.reproducibility.arenaVariantId
+const publicSafeReplayHash = publicSafeReplayReceipt.chronicleWireBytesHash
+const publicSafeReplayOutcome =
+  publicSafeReplayServiceReceipt.result.finalState.outcome
+const publicSafeReplayChronicleId =
+  "chronicle:fixture:runtime-execution-service-v1.16"
+
+const publicSafeReplayMetadataFields = {
+  matchId: publicSafeReplayMatchId,
+  chronicleId: publicSafeReplayChronicleId,
+  hash: publicSafeReplayHash,
+  schemaVersion: publicSafeReplayChronicle.schemaVersion,
+  eventCount: publicSafeReplayChronicle.events.length,
+  snapshotCount: publicSafeReplayChronicle.snapshots.length,
+  outcome: clone(publicSafeReplayOutcome),
+  bottomPlayerId: "bottom",
+  topPlayerId: "top",
+  arenaVariantId: publicSafeReplayArenaVariantId,
+} as const
+
 const replayMetadata = PublicReplayMetadataServiceDtoSchema.parse({
-  ...(publicReplayMetadataExample as PublicReplayMetadataServiceDto),
-  matchId: "match:fixture:public-safe-replay",
-  metadata: {
-    ...(publicReplayMetadataExample as PublicReplayMetadataServiceDto).metadata,
-    matchId: "match:fixture:public-safe-replay",
-    arenaVariantId: "arena:fixture-public-safe",
-  },
-})
+  apiVersion: SERVICE_API_VERSION,
+  kind: "publicReplayMetadata",
+  matchId: publicSafeReplayMatchId,
+  metadata: publicSafeReplayMetadataFields,
+}) as PublicReplayMetadataServiceDto
+
 const replayEvidence = PublicReplayEvidenceServiceDtoSchema.parse({
-  ...(publicReplayEvidenceExample as PublicReplayEvidenceServiceDto),
-  matchId: "match:fixture:public-safe-replay",
-  metadata: {
-    ...(publicReplayEvidenceExample as PublicReplayEvidenceServiceDto).metadata,
-    matchId: "match:fixture:public-safe-replay",
-    arenaVariantId: "arena:fixture-public-safe",
-  },
+  apiVersion: SERVICE_API_VERSION,
+  kind: "publicReplayEvidence",
+  matchId: publicSafeReplayMatchId,
+  metadata: publicSafeReplayMetadataFields,
   projection: {
-    ...(publicReplayEvidenceExample as PublicReplayEvidenceServiceDto)
-      .projection,
-    reproducibility: {
-      ...(publicReplayEvidenceExample as PublicReplayEvidenceServiceDto)
-        .projection.reproducibility,
-      matchId: "match:fixture:public-safe-replay",
-      arenaVariantId: "arena:fixture-public-safe",
-    },
-    snapshots: (
-      publicReplayEvidenceExample as PublicReplayEvidenceServiceDto
-    ).projection.snapshots.map((snapshot) => ({
-      ...snapshot,
-      board: {
-        bounds: { minX: 0, maxX: 4, minY: 0, maxY: 4 },
-        soldiers: [
-          {
-            id: "fixture-bottom-soldier-1",
-            ownerPlayerId: "player:bottom",
-            status: "ACTIVE",
-            position: { x: 1, y: 3 },
-            facing: "UP",
-            lastSuccessfulMoveDirection: null,
-          },
-          {
-            id: "fixture-top-soldier-1",
-            ownerPlayerId: "player:top",
-            status: "ACTIVE",
-            position: { x: 3, y: 1 },
-            facing: "DOWN",
-            lastSuccessfulMoveDirection: null,
-          },
-        ],
-        terrainStones: [{ x: 2, y: 2 }],
-      },
-    })),
+    schemaVersion: publicSafeReplayChronicle.schemaVersion,
+    viewer: { access: "public" },
+    reproducibility: clone(publicSafeReplayChronicle.reproducibility),
+    events: publicSafeReplayChronicle.events.map(
+      ({ privacy: _privacy, privateRef: _privateRef, ...event }) =>
+        clone(event),
+    ),
+    snapshots: clone(publicSafeReplayChronicle.snapshots),
   },
 }) as PublicReplayEvidenceServiceDto
+
+const publicSafeReplaySummary = (() => {
+  const summary = createScenarioSummary(
+    "public-safe-replay",
+    "Service-contract-backed replay fixture",
+    "complete",
+    "complete",
+    {
+      publicMessageKey:
+        "match_execution.fixture.public_safe_replay.service_contract_backed",
+    },
+    undefined,
+    true,
+  )
+  const match = summary.result.matches[0]!
+  match.matchId = publicSafeReplayMatchId
+  match.chronicleHash = publicSafeReplayHash
+  match.arenaVariantId = publicSafeReplayArenaVariantId
+  summary.result.provenance.chronicleHashes = [publicSafeReplayHash]
+  for (const [index, entrant] of summary.result.entrants.entries()) {
+    entrant.strategyRevisionId =
+      publicSafeReplayChronicle.reproducibility.strategyRevisionIds[index]!
+    entrant.runtime.language.version =
+      publicSafeReplayChronicle.reproducibility.versions.runtimeJs
+    entrant.runtime.abiVersion =
+      HISTORICAL_RUNTIME_EXECUTION_SERVICE_V1_16.runtimeAbiVersion
+    entrant.engineCompatibility = {
+      spec: publicSafeReplayChronicle.reproducibility.versions.spec,
+      engine: publicSafeReplayChronicle.reproducibility.versions.engine,
+    }
+  }
+  return PublicMatchSetSummaryServiceDtoSchema.parse(summary)
+})()
 
 export const MATCH_EXECUTION_CONTRACT_FIXTURES_V1 = [
   {
@@ -938,18 +1444,10 @@ export const MATCH_EXECUTION_CONTRACT_FIXTURES_V1 = [
   },
   {
     id: "public-safe-replay",
-    label: "Public-safe replay evidence",
+    label: "Public service-contract fixture replay evidence",
     classification: "public",
     service: {
-      matchSetSummary: createScenarioSummary(
-        "public-safe-replay",
-        "Public safe replay fixture",
-        "complete",
-        "complete",
-        {},
-        undefined,
-        true,
-      ),
+      matchSetSummary: publicSafeReplaySummary,
       replayMetadata,
       replayEvidence,
     },

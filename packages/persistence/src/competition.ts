@@ -7,26 +7,39 @@ import {
 import { Buffer } from "node:buffer"
 import {
   assertPublicMatchSetResultLeakSafe,
+  classifyCompetitionCountedState,
+  projectPublicCompetitionGovernance,
+  describeStrategyRuntimeProductSemantics,
   evaluateStrategyRuntimeCountedEligibility,
   getCompetitionPreset,
   normalizeStrategyRuntimeMetadata,
+  PublicStrategyRuntimeMetadataSchema,
   STRATEGY_RUNTIME_ABI_VERSION,
   type CompetitionEntrantSnapshot,
   type CompetitionPresetId,
+  type LadderMatchSetCountedStatus,
   type PublicMatchSetResultDto,
   type PublicPenaltyReason,
   type PublicStandingDto,
   type UserId,
 } from "@cowards/spec"
 import type { Pool } from "pg"
-import { createMatchSetService } from "./matchset-service.js"
-import type { CreateMatchInput } from "./match-service.js"
-import { getMatchSetPreset } from "./presets.js"
+import {
+  createMatchSetService,
+  generateCandidatePresetMatrixV119,
+  resolveMatchSetExecutionEvidence,
+  type MatchSetExecutionEvidenceResolver,
+} from "./matchset-service.js"
+import type { CreateMatchRecordInput } from "./match-service.js"
+import {
+  getMatchSetPresetV117,
+  resolveFileCurrentSchedulingSemanticAuthority,
+  type SchedulingSemanticAuthorityKey,
+} from "./presets.js"
 import { createRepositories } from "./repositories.js"
 import { createDevelopmentSeedData } from "./seed.js"
 import type { MatchSetStatus, MatchStatus } from "./schema.js"
 import type { MatchSetScore } from "./scoring.js"
-import { refreshMatchSetStatus } from "./matchset-status.js"
 
 export const TYPESCRIPT_COMPETITION_PERSISTENCE_ROLE = {
   normalBackend: false,
@@ -469,10 +482,75 @@ export const generateCompetitionPairwiseMatrix = (input: {
   matchSetId: string
   presetId: CompetitionPresetId
   entrants: readonly CompetitionEntrantSnapshot[]
-}): CreateMatchInput[] => {
+  semanticAuthorityKey?: SchedulingSemanticAuthorityKey | undefined
+}): CreateMatchRecordInput[] => {
+  if (
+    input.semanticAuthorityKey !== undefined &&
+    String(input.semanticAuthorityKey) !== "runtime-v1.17" &&
+    String(input.semanticAuthorityKey) !== "runtime-v1.19"
+  ) {
+    throw new CompetitionInputError(
+      "Unknown TypeScript competition scheduling semantic authority.",
+    )
+  }
+  const resolvedSemanticAuthorityKey =
+    input.semanticAuthorityKey ??
+    resolveFileCurrentSchedulingSemanticAuthority().selection
+      .semanticAuthorityKey
   const competitionPreset = getCompetitionPreset(input.presetId)
-  const matchSetPreset = getMatchSetPreset(competitionPreset.matchSetPresetId)
-  const matches: CreateMatchInput[] = []
+  if (resolvedSemanticAuthorityKey === "runtime-v1.19") {
+    const sortedEntrants = [...input.entrants].sort((left, right) =>
+      Buffer.compare(
+        Buffer.from(left.strategyRevisionId, "utf8"),
+        Buffer.from(right.strategyRevisionId, "utf8"),
+      ),
+    )
+    if (
+      new Set(
+        sortedEntrants.map(({ strategyRevisionId }) => strategyRevisionId),
+      ).size !== sortedEntrants.length
+    ) {
+      throw new CompetitionInputError(
+        "runtime-v1.19 competition entrants must have distinct immutable Strategy Revision ids.",
+      )
+    }
+    const matches: CreateMatchRecordInput[] = []
+    for (let left = 0; left < sortedEntrants.length; left += 1) {
+      for (let right = left + 1; right < sortedEntrants.length; right += 1) {
+        const entrantA = sortedEntrants[left]!
+        const entrantB = sortedEntrants[right]!
+        const pairHash = createHash("sha256")
+          .update(
+            JSON.stringify([
+              entrantA.strategyRevisionId,
+              entrantB.strategyRevisionId,
+            ]),
+            "utf8",
+          )
+          .digest("hex")
+        const playerIdFor = (strategyRevisionId: string): string =>
+          `player:revision:sha256:${createHash("sha256")
+            .update(strategyRevisionId, "utf8")
+            .digest("hex")}`
+        matches.push(
+          ...generateCandidatePresetMatrixV119({
+            id: `${input.matchSetId}:pair:sha256:${pairHash}`,
+            semanticAuthorityKey: "runtime-v1.19",
+            presetId: competitionPreset.matchSetPresetId,
+            bottomStrategyRevisionId: entrantA.strategyRevisionId,
+            topStrategyRevisionId: entrantB.strategyRevisionId,
+            bottomPlayerId: playerIdFor(entrantA.strategyRevisionId),
+            topPlayerId: playerIdFor(entrantB.strategyRevisionId),
+          }),
+        )
+      }
+    }
+    return matches
+  }
+  const matchSetPreset = getMatchSetPresetV117(
+    competitionPreset.matchSetPresetId,
+  )
+  const matches: CreateMatchRecordInput[] = []
   let index = 0
 
   for (let left = 0; left < input.entrants.length; left += 1) {
@@ -489,6 +567,8 @@ export const generateCompetitionPairwiseMatrix = (input: {
             seed: `${seed}:pair:${left}-${right}`,
             bottomPlayerId: `player:${input.matchSetId}:entrant:${left}`,
             topPlayerId: `player:${input.matchSetId}:entrant:${right}`,
+            bottomEntrantKey: bottom.strategyRevisionId,
+            topEntrantKey: top.strategyRevisionId,
           })
           index += 1
           if (competitionPreset.mirroredPairwise) {
@@ -500,6 +580,8 @@ export const generateCompetitionPairwiseMatrix = (input: {
               seed: `${seed}:pair:${left}-${right}:mirror`,
               bottomPlayerId: `player:${input.matchSetId}:entrant:${right}`,
               topPlayerId: `player:${input.matchSetId}:entrant:${left}`,
+              bottomEntrantKey: top.strategyRevisionId,
+              topEntrantKey: bottom.strategyRevisionId,
             })
             index += 1
           }
@@ -587,6 +669,7 @@ const loadOwnedRevisionSnapshots = async (
       sourceHash: row.source_hash,
       sourceBytes: row.source_bytes,
       runtime,
+      runtimeSemantics: describeStrategyRuntimeProductSemantics(runtime),
       engineCompatibility: row.engine_compatibility,
       lockedAt: input.lockedAt.toISOString(),
     }
@@ -602,6 +685,8 @@ export const createManualExhibitionMatchSet = async (
     matchSetId?: string | undefined
     now?: Date | undefined
     rateLimitPolicy?: ExhibitionRateLimitPolicy | undefined
+    evidenceResolver?: MatchSetExecutionEvidenceResolver | undefined
+    semanticAuthorityKey?: SchedulingSemanticAuthorityKey | undefined
   },
 ): Promise<{
   matchSetId: string
@@ -609,8 +694,31 @@ export const createManualExhibitionMatchSet = async (
   entrants: CompetitionEntrantSnapshot[]
 }> => {
   validateManualExhibitionRevisionIds(input.revisionIds)
+  if (
+    input.semanticAuthorityKey !== undefined &&
+    String(input.semanticAuthorityKey) !== "runtime-v1.17" &&
+    String(input.semanticAuthorityKey) !== "runtime-v1.19"
+  ) {
+    throw new CompetitionInputError(
+      "Unknown manual exhibition scheduling semantic authority.",
+    )
+  }
+  const resolvedSemanticAuthorityKey =
+    input.semanticAuthorityKey ??
+    resolveFileCurrentSchedulingSemanticAuthority().selection
+      .semanticAuthorityKey
   const preset = getCompetitionPreset(input.presetId)
   const now = input.now ?? new Date()
+  const integrityIdentity = await resolveMatchSetExecutionEvidence({
+    resolver: input.evidenceResolver,
+    purpose: "exhibition",
+    evaluationInstant: now.toISOString(),
+    entrants: input.revisionIds.map((strategyRevisionId) => ({
+      entrantKey: strategyRevisionId,
+      strategyRevisionId,
+    })),
+    semanticAuthorityKey: resolvedSemanticAuthorityKey,
+  })
   await assertExhibitionCreateRateLimit(pool, {
     userId: input.creatorUserId,
     now,
@@ -624,15 +732,33 @@ export const createManualExhibitionMatchSet = async (
   await ensureCompetitionArenas(pool)
 
   const matchSetId = input.matchSetId ?? `match-set:exhibition:${randomUUID()}`
-  const entrants = await loadOwnedRevisionSnapshots(pool, {
+  const loadedEntrants = await loadOwnedRevisionSnapshots(pool, {
     userId: input.creatorUserId,
     revisionIds: input.revisionIds,
     lockedAt: now,
   })
+  const entrants =
+    resolvedSemanticAuthorityKey === "runtime-v1.19"
+      ? [...loadedEntrants]
+          .sort((left, right) =>
+            Buffer.compare(
+              Buffer.from(left.strategyRevisionId, "utf8"),
+              Buffer.from(right.strategyRevisionId, "utf8"),
+            ),
+          )
+          .map((entrant, entrantIndex) => ({
+            ...entrant,
+            entrantId: `entrant:revision:sha256:${createHash("sha256")
+              .update(entrant.strategyRevisionId, "utf8")
+              .digest("hex")}`,
+            entrantIndex,
+          }))
+      : loadedEntrants
   const matches = generateCompetitionPairwiseMatrix({
     matchSetId,
     presetId: input.presetId,
     entrants,
+    semanticAuthorityKey: resolvedSemanticAuthorityKey,
   })
   const duplicateKey = buildExhibitionDuplicateKey({
     creatorUserId: input.creatorUserId,
@@ -641,10 +767,16 @@ export const createManualExhibitionMatchSet = async (
   })
   const created = await createMatchSetService(pool).createFromMatrix({
     id: matchSetId,
+    ...(input.semanticAuthorityKey !== undefined
+      ? { semanticAuthorityKey: input.semanticAuthorityKey }
+      : {}),
     matches,
+    integrityIdentity,
     matchSet: {
       presetId: preset.matchSetPresetId,
-      presetVersion: "v1",
+      ...(resolvedSemanticAuthorityKey === "runtime-v1.19"
+        ? {}
+        : { presetVersion: "v1" as const }),
       creatorUserId: input.creatorUserId,
       competitionPresetId: preset.id,
       competitionPresetVersion: preset.version,
@@ -662,6 +794,7 @@ export const createManualExhibitionMatchSet = async (
     competitionEntrants: entrants.map((entrant) => ({
       id: `${matchSetId}:${entrant.entrantId}`,
       entrantIndex: entrant.entrantIndex,
+      executionEntrantKey: entrant.strategyRevisionId,
       strategyRevisionId: entrant.strategyRevisionId,
       ownerUserId: entrant.ownerUserId,
       ownerHandle: entrant.ownerHandle,
@@ -722,7 +855,6 @@ export const buildPublicMatchSetResultDto = async (
   pool: Pool,
   matchSetId: string,
 ): Promise<PublicMatchSetResultDto | null> => {
-  await refreshMatchSetStatus(pool, matchSetId)
   const matchSetResult = await pool.query<{
     id: string
     status: MatchSetStatus
@@ -731,10 +863,10 @@ export const buildPublicMatchSetResultDto = async (
     scoring_policy_version: string | null
     visibility: "public" | null
     scoring: MatchSetScore | null
-    counted_status: string
-    public_counted_reason: string | null
-    public_counted_explanation: string | null
-    review_status: string
+    ladder_season_id: string | null
+    counted_status: LadderMatchSetCountedStatus
+    review_status: "none" | "under_review" | "disputed" | "resolved"
+    governance_changed_at: Date | null
   }>(
     `
       select
@@ -745,10 +877,10 @@ export const buildPublicMatchSetResultDto = async (
         scoring_policy_version,
         visibility,
         scoring,
+        ladder_season_id,
         counted_status,
-        public_counted_reason,
-        public_counted_explanation,
-        review_status
+        review_status,
+        governance_changed_at
       from match_sets
       where id = $1
     `,
@@ -770,10 +902,18 @@ export const buildPublicMatchSetResultDto = async (
     `,
     [matchSetId],
   )
-  const entrants = entrantsResult.rows.map((row) => ({
-    ...row.snapshot,
-    runtime: normalizeStrategyRuntimeMetadata(row.snapshot.runtime),
-  }))
+  const entrants = entrantsResult.rows.map((row) => {
+    const runtime = PublicStrategyRuntimeMetadataSchema.parse(
+      normalizeStrategyRuntimeMetadata(row.snapshot.runtime),
+    )
+    return {
+      ...row.snapshot,
+      runtime,
+      runtimeSemantics:
+        row.snapshot.runtimeSemantics ??
+        describeStrategyRuntimeProductSemantics(runtime),
+    }
+  })
   const entrantByRevision = new Map(
     entrants.map((entrant) => [entrant.strategyRevisionId, entrant]),
   )
@@ -847,16 +987,24 @@ export const buildPublicMatchSetResultDto = async (
       : {}),
     arenaVariantId: row.arena_variant_id,
   }))
-  const hasCompleteEvidence =
-    matchSet.status === "complete" &&
-    matches.length > 0 &&
-    matches.every(
-      (match) => match.status === "complete" && match.replayAvailable,
-    )
-  const derivedCountedStatus =
-    matchSet.counted_status === "pending" && hasCompleteEvidence
-      ? "counted"
-      : matchSet.counted_status
+  const countedState = classifyCompetitionCountedState({
+    executionStatus: mapStatus(matchSet.status),
+    storedState: matchSet.counted_status,
+    reviewState: matchSet.review_status,
+    origin: matchSet.ladder_season_id ? "trial" : "non_competitive",
+    expectedMatchCount: matches.length,
+    chronicleMatchCount: matches.filter((match) => match.replayAvailable)
+      .length,
+    scoringAvailable: Array.isArray(score?.rankings),
+  })
+  const governance = projectPublicCompetitionGovernance({
+    countedState,
+    reviewState: matchSet.review_status,
+    ...(matchSet.governance_changed_at
+      ? { changedAt: matchSet.governance_changed_at.toISOString() }
+      : {}),
+    replayAvailable: matches.some((match) => match.replayAvailable),
+  })
   const dto: PublicMatchSetResultDto = {
     matchSetId,
     preset: {
@@ -892,11 +1040,12 @@ export const buildPublicMatchSetResultDto = async (
         "private runtime internals",
       ],
     },
-    metadata: {
-      countedStatus: derivedCountedStatus,
-      publicReason: matchSet.public_counted_reason,
-      publicExplanation: matchSet.public_counted_explanation,
-      reviewStatus: matchSet.review_status,
+    competition: {
+      ...(matchSet.ladder_season_id
+        ? { seasonId: matchSet.ladder_season_id }
+        : {}),
+      countedState,
+      governance,
     },
   }
   assertPublicMatchSetResultLeakSafe(dto)

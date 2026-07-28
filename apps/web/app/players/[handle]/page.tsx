@@ -1,4 +1,5 @@
 import { getPublicPlayerProfile } from "../../../lib/public-service-boundary.js"
+import type { JSX } from "react"
 
 export const dynamic = "force-dynamic"
 
@@ -6,7 +7,7 @@ export default async function PlayerProfilePage({
   params,
 }: {
   params: Promise<{ handle: string }> | { handle: string }
-}) {
+}): Promise<JSX.Element> {
   const { handle } = await params
   const profile = await getPublicPlayerProfile(decodeURIComponent(handle))
   if (!profile) {
@@ -74,6 +75,25 @@ export default async function PlayerProfilePage({
               <a href={`/ladder/${encodeURIComponent(entry.seasonId)}`}>
                 Season
               </a>
+            </div>
+          ))}
+        </div>
+        <div className="app-section-header compact">
+          <h2>Competition evidence</h2>
+        </div>
+        <div className="app-table match-ledger-table" role="table">
+          <div className="app-table-row heading" role="row">
+            <span>MatchSet</span>
+            <span>Type</span>
+            <span>Status</span>
+            <span>Evidence</span>
+          </div>
+          {profile.results.map((result) => (
+            <div className="app-table-row" role="row" key={result.matchSetId}>
+              <span>{result.matchSetId}</span>
+              <span>{result.seasonId ? "Trial Season" : "Exhibition"}</span>
+              <span>{result.countedState.publicLabel}</span>
+              <a href={result.resultHref}>Result</a>
             </div>
           ))}
         </div>

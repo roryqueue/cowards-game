@@ -1,6 +1,9 @@
 package main
 
-import "sort"
+import (
+	"errors"
+	"sort"
+)
 
 const (
 	matchStatusPending      = "pending"
@@ -62,6 +65,143 @@ type matchSetScore struct {
 	Degraded bool                    `json:"degraded"`
 	Complete bool                    `json:"complete"`
 	Rankings []matchSetStrategyScore `json:"rankings"`
+}
+
+type successorRevisionEvidenceV119 struct {
+	StrategyRevisionID        string
+	ScheduledRevalidationID   string
+	CurrentRevalidationID     *string
+	ScheduledRevalidationRoot string
+	CurrentRevalidationRoot   *string
+	Revoked                   bool
+}
+
+type successorMatchScoreInputV119 struct {
+	matchScoreInput
+	SemanticAuthorityKey        string
+	ScenarioID                  string
+	ConditionID                 string
+	ConditionOrdinal            int
+	RequestIdentity             string
+	BottomEntrantKey            string
+	TopEntrantKey               string
+	InitialInitiativeEntrantKey string
+	TerminalKind                string
+	AttemptNumber               int
+	RetryableSystemFailure      bool
+	BottomRevisionEvidence      successorRevisionEvidenceV119
+	TopRevisionEvidence         successorRevisionEvidenceV119
+}
+
+type successorMatchSetScoreV119 struct {
+	Degraded              bool                    `json:"degraded"`
+	Complete              bool                    `json:"complete"`
+	Rankings              []matchSetStrategyScore `json:"rankings"`
+	Status                string                  `json:"status"`
+	Counted               bool                    `json:"counted"`
+	CanonicalConditionIDs []string                `json:"canonicalConditionIds"`
+}
+
+func successorRevisionEvidenceIsCurrentV119(evidence successorRevisionEvidenceV119, expectedRevisionID string) bool {
+	return evidence.StrategyRevisionID == expectedRevisionID &&
+		evidence.ScheduledRevalidationID != "" && evidence.CurrentRevalidationID != nil &&
+		*evidence.CurrentRevalidationID == evidence.ScheduledRevalidationID &&
+		evidence.ScheduledRevalidationRoot != "" && evidence.CurrentRevalidationRoot != nil &&
+		*evidence.CurrentRevalidationRoot == evidence.ScheduledRevalidationRoot && !evidence.Revoked
+}
+
+// scoreSuccessorMatchSetV119 is an admission gate around the unchanged current
+// scorer. Only the exact generated four-condition membership, terminal policy,
+// and still-current D-04 evidence can reach scoreMatchSet.
+func scoreSuccessorMatchSetV119(expected []candidateFourConditionMatchV119, matches []successorMatchScoreInputV119) (successorMatchSetScoreV119, error) {
+	canonical := append([]candidateFourConditionMatchV119(nil), expected...)
+	sort.Slice(canonical, func(i, j int) bool {
+		if canonical[i].ScenarioID != canonical[j].ScenarioID {
+			return canonical[i].ScenarioID < canonical[j].ScenarioID
+		}
+		return canonical[i].ConditionOrdinal < canonical[j].ConditionOrdinal
+	})
+	if len(canonical) != 4 {
+		return successorMatchSetScoreV119{}, errors.New("candidate scoring requires the exact four-condition matrix")
+	}
+	expectedByID := make(map[string]candidateFourConditionMatchV119, len(canonical))
+	canonicalIDs := make([]string, 0, len(canonical))
+	for ordinal, condition := range canonical {
+		if condition.SemanticAuthorityKey != "runtime-v1.19" || condition.ConditionOrdinal != ordinal ||
+			condition.ID == "" || condition.ConditionID == "" || condition.ScenarioID != canonical[0].ScenarioID ||
+			condition.RequestIdentity == "" || condition.BottomEntrantKey == condition.TopEntrantKey ||
+			condition.InitialInitiativeEntrantKey == "" {
+			return successorMatchSetScoreV119{}, errors.New("candidate scoring membership authority is noncanonical")
+		}
+		if _, duplicate := expectedByID[condition.ConditionID]; duplicate {
+			return successorMatchSetScoreV119{}, errors.New("candidate scoring membership contains a duplicate condition")
+		}
+		expectedByID[condition.ConditionID] = condition
+		canonicalIDs = append(canonicalIDs, condition.ConditionID)
+	}
+
+	ordered := append([]successorMatchScoreInputV119(nil), matches...)
+	sort.Slice(ordered, func(i, j int) bool {
+		if ordered[i].ScenarioID != ordered[j].ScenarioID {
+			return ordered[i].ScenarioID < ordered[j].ScenarioID
+		}
+		return ordered[i].ConditionOrdinal < ordered[j].ConditionOrdinal
+	})
+	seen := make(map[string]struct{}, len(ordered))
+	invalidEvidence := false
+	validTerminalCount := 0
+	retryableFailure := false
+	exhaustedFailure := false
+	currentInputs := make([]matchScoreInput, 0, len(ordered))
+	for _, match := range ordered {
+		condition, ok := expectedByID[match.ConditionID]
+		if !ok {
+			return successorMatchSetScoreV119{}, errors.New("candidate scoring contains a substituted condition")
+		}
+		if _, duplicate := seen[match.ConditionID]; duplicate {
+			return successorMatchSetScoreV119{}, errors.New("candidate scoring contains a duplicate condition")
+		}
+		seen[match.ConditionID] = struct{}{}
+		if match.SemanticAuthorityKey != condition.SemanticAuthorityKey || match.ScenarioID != condition.ScenarioID ||
+			match.ConditionOrdinal != condition.ConditionOrdinal || match.RequestIdentity != condition.RequestIdentity ||
+			match.MatchID != condition.ID || match.BottomEntrantKey != condition.BottomEntrantKey ||
+			match.TopEntrantKey != condition.TopEntrantKey || match.InitialInitiativeEntrantKey != condition.InitialInitiativeEntrantKey ||
+			match.BottomStrategyRevisionID != condition.BottomStrategyRevisionID || match.TopStrategyRevisionID != condition.TopStrategyRevisionID {
+			return successorMatchSetScoreV119{}, errors.New("candidate scoring condition identity mismatch")
+		}
+		if !successorRevisionEvidenceIsCurrentV119(match.BottomRevisionEvidence, condition.BottomStrategyRevisionID) ||
+			!successorRevisionEvidenceIsCurrentV119(match.TopRevisionEvidence, condition.TopStrategyRevisionID) {
+			invalidEvidence = true
+		}
+		if match.Status == matchStatusComplete && (match.TerminalKind == "success" || match.TerminalKind == "player_violation") {
+			validTerminalCount++
+		} else if match.Status == matchStatusFailedSystem {
+			if match.RetryableSystemFailure {
+				retryableFailure = true
+			} else {
+				exhaustedFailure = true
+			}
+		}
+		currentInputs = append(currentInputs, match.matchScoreInput)
+	}
+
+	status := matchSetStatusPending
+	if exhaustedFailure {
+		status = matchSetStatusDegraded
+	}
+	if len(ordered) != len(canonical) || len(seen) != len(canonical) || invalidEvidence || retryableFailure || validTerminalCount != len(canonical) {
+		return successorMatchSetScoreV119{
+			Degraded: status == matchSetStatusDegraded, Complete: false,
+			Rankings: []matchSetStrategyScore{}, Status: status, Counted: false,
+			CanonicalConditionIDs: canonicalIDs,
+		}, nil
+	}
+
+	current := scoreMatchSet(currentInputs)
+	return successorMatchSetScoreV119{
+		Degraded: current.Degraded, Complete: current.Complete, Rankings: current.Rankings,
+		Status: matchSetStatusComplete, Counted: true, CanonicalConditionIDs: canonicalIDs,
+	}, nil
 }
 
 func scoreMatchSet(matches []matchScoreInput) matchSetScore {

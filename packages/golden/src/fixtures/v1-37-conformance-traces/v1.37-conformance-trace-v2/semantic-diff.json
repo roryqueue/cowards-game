@@ -1,0 +1,161 @@
+{
+  "schemaVersion": "v1.37-conformance-trace-semantic-diff-v1",
+  "generatedBy": "scripts/generate-v1-37-conformance-traces.ts",
+  "baselineVersion": "v1.4-locked-compatibility-v1",
+  "candidateVersion": "v1.37-conformance-trace-v2",
+  "corpusVersion": "v1",
+  "corpusRootSha256": "sha256:4e13f5e14961c7b7efd6869c6e456c9f8cfeb1cdd2afd9ec17a93812ccbe76a9",
+  "candidateRootSha256": "sha256:ed75cc5b9f5441a727f98d566e70cf3e9a4147201b5fd7752becf9194e549d42",
+  "caseDiffs": [
+    {
+      "ordinal": 0,
+      "caseId": "boundary-canonical-json-duplicate-key",
+      "baselineTraceRef": "trace:boundary-canonical-json-duplicate-key",
+      "candidateTraceRoot": "sha256:7653ea1b7984bcc45638c80c382602445282fb32fc8a483a9151917f74cd783d",
+      "resultClass": "player_violation"
+    },
+    {
+      "ordinal": 1,
+      "caseId": "boundary-depth-limit",
+      "baselineTraceRef": "trace:boundary-depth-limit",
+      "candidateTraceRoot": "sha256:1f3d58cbf5ddb0237d624716577668617fab5c4c37a0ab6e8686e3955dabbd40",
+      "resultClass": "player_violation"
+    },
+    {
+      "ordinal": 2,
+      "caseId": "boundary-numeric-negative-zero",
+      "baselineTraceRef": "trace:boundary-numeric-negative-zero",
+      "candidateTraceRoot": "sha256:1f4325756588fb511d37e8e37e250f9d22cc931731c913c84fdcba00f90b896a",
+      "resultClass": "success"
+    },
+    {
+      "ordinal": 3,
+      "caseId": "boundary-unicode-scalar",
+      "baselineTraceRef": "trace:boundary-unicode-scalar",
+      "candidateTraceRoot": "sha256:5f86af1ae8454bc43aff2495c504c108b9529be2626a945653ddc814f1095db0",
+      "resultClass": "success"
+    },
+    {
+      "ordinal": 4,
+      "caseId": "failure-malformed-output-player",
+      "baselineTraceRef": "trace:failure-malformed-output-player",
+      "candidateTraceRoot": "sha256:10f24da5f188696bca37043b3d59ab9eae3fabc2f8b4a4068e35ae725bc22b14",
+      "resultClass": "player_violation"
+    },
+    {
+      "ordinal": 5,
+      "caseId": "failure-resource-proven-player",
+      "baselineTraceRef": "trace:failure-resource-proven-player",
+      "candidateTraceRoot": "sha256:7ab92634d7a17d8b2bc1c6a16fdc67f501abeb8a0c445652ee2b2949a65e2a5d",
+      "resultClass": "player_violation"
+    },
+    {
+      "ordinal": 6,
+      "caseId": "failure-stale-artifact-system",
+      "baselineTraceRef": "trace:failure-stale-artifact-system",
+      "candidateTraceRoot": "sha256:f14bd746032a15b94aed26caa46784358281d426427ff854b04aeb9702c86b56",
+      "resultClass": "system_failure"
+    },
+    {
+      "ordinal": 7,
+      "caseId": "failure-timeout-unattributed-system",
+      "baselineTraceRef": "trace:failure-timeout-unattributed-system",
+      "candidateTraceRoot": "sha256:3cb6379fc7638177d8a8d8f6f06d03bbaf9aab9c5ba2f562c9c96b957b539bd7",
+      "resultClass": "system_failure"
+    },
+    {
+      "ordinal": 8,
+      "caseId": "failure-toolchain-unavailable-system",
+      "baselineTraceRef": "trace:failure-toolchain-unavailable-system",
+      "candidateTraceRoot": "sha256:d44cd2154aa52904b6fbb4211b59c5e4cd75200cbdb9f17576172109f6230e0b",
+      "resultClass": "system_failure"
+    },
+    {
+      "ordinal": 9,
+      "caseId": "mutation-event-order-kill",
+      "baselineTraceRef": "trace:mutation-event-order-kill",
+      "candidateTraceRoot": "sha256:2e42f5c84bafb37acb3e291025db6f3f6eaab8e5a6e00fc67eed3de4ad32e28a",
+      "resultClass": "success"
+    },
+    {
+      "ordinal": 10,
+      "caseId": "normative-first-active-turn-to-stone",
+      "baselineTraceRef": "trace:normative-first-active-turn-to-stone",
+      "candidateTraceRoot": "sha256:045457e74739ddb332618cbad33c7321e90d573db68398294127f7508df0d42e",
+      "resultClass": "success"
+    },
+    {
+      "ordinal": 11,
+      "caseId": "probe-raw-envelope-authentication",
+      "baselineTraceRef": "trace:probe-raw-envelope-authentication",
+      "candidateTraceRoot": "sha256:6ea40afc2fc97b73a64048707a3ae9ca408e72df7d27147db951448eef854ee1",
+      "resultClass": "system_failure"
+    },
+    {
+      "ordinal": 12,
+      "caseId": "probe-raw-envelope-transport-truncation",
+      "baselineTraceRef": "trace:probe-raw-envelope-transport-truncation",
+      "candidateTraceRoot": "sha256:ccad210f6ef23c9138cb319bc0e68a347366cc65a3eb3e3d00ed8bd9acce1abd",
+      "resultClass": "system_failure"
+    },
+    {
+      "ordinal": 13,
+      "caseId": "property-deterministic-repeat-seed-001",
+      "baselineTraceRef": "trace:property-deterministic-repeat-seed-001",
+      "candidateTraceRoot": "sha256:df4a5c379c0dafe1ba4387c7147d4db838bbacc0386997753eedd876ec87215a",
+      "resultClass": "success"
+    },
+    {
+      "ordinal": 14,
+      "caseId": "property-differential-full-trace-seed-002",
+      "baselineTraceRef": "trace:property-differential-full-trace-seed-002",
+      "candidateTraceRoot": "sha256:f5dae60f51decea7c28eb52429b867ef46f3c3a7dabfcc45767eb90ab482a80e",
+      "resultClass": "success"
+    },
+    {
+      "ordinal": 15,
+      "caseId": "property-seeded-selection-seed-003",
+      "baselineTraceRef": "trace:property-seeded-selection-seed-003",
+      "candidateTraceRoot": "sha256:edbdc7a0d54ea21b73c014828816836a0a9a773d299f1a232b9df2e47afe0e4b",
+      "resultClass": "success"
+    }
+  ],
+  "protectedCategories": {
+    "validV14State": {
+      "baselineHash": "sha256:c46fdc14b65e130aaf9f63cde1e1efd416df81e3de629815b2cd36dba344beb5",
+      "candidateHash": "sha256:c46fdc14b65e130aaf9f63cde1e1efd416df81e3de629815b2cd36dba344beb5",
+      "changeCount": 0
+    },
+    "actionLegality": {
+      "baselineHash": "sha256:69efa4fcfe787e575cc2d9b2abbe7ff71c2b5a3dd966fd23f50b7923cc321768",
+      "candidateHash": "sha256:69efa4fcfe787e575cc2d9b2abbe7ff71c2b5a3dd966fd23f50b7923cc321768",
+      "changeCount": 0
+    },
+    "eventOrder": {
+      "baselineHash": "sha256:ee5477ea2eae1dfffd1d938afd96a058c23ba76f5809a4ccfcc3239bf4506c1d",
+      "candidateHash": "sha256:ee5477ea2eae1dfffd1d938afd96a058c23ba76f5809a4ccfcc3239bf4506c1d",
+      "changeCount": 0
+    },
+    "outcome": {
+      "baselineHash": "sha256:841541f014068df9a45269f420338fbc827b5a425ac5fb39ffe7a1c064d6bb1a",
+      "candidateHash": "sha256:841541f014068df9a45269f420338fbc827b5a425ac5fb39ffe7a1c064d6bb1a",
+      "changeCount": 0
+    },
+    "terminalTimingReason": {
+      "baselineHash": "sha256:ad68eb823bed0e27aebe802e666b8890cc3a13adc4965d19c3b4989b3be117c9",
+      "candidateHash": "sha256:ad68eb823bed0e27aebe802e666b8890cc3a13adc4965d19c3b4989b3be117c9",
+      "changeCount": 0
+    },
+    "strategyObservation": {
+      "baselineHash": "sha256:2793952f23e7b019f24e6c76eca1304ef9970e03ee752c2768a7a3c0fc5b1e50",
+      "candidateHash": "sha256:2793952f23e7b019f24e6c76eca1304ef9970e03ee752c2768a7a3c0fc5b1e50",
+      "changeCount": 0
+    },
+    "historicalInterpretation": {
+      "baselineHash": "sha256:69698d5f0cb3796046ee6d8bc760912ede025e3c3d6411214f5f70b04adff645",
+      "candidateHash": "sha256:69698d5f0cb3796046ee6d8bc760912ede025e3c3d6411214f5f70b04adff645",
+      "changeCount": 0
+    }
+  },
+  "semanticDiffRootSha256": "sha256:5d138ba953d51f395c1d116777dc5e7f175f47d7e6bf055f316bddab41ccd311"
+}

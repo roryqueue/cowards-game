@@ -3,11 +3,12 @@ import {
   EmptyStates,
   MatchSetDiscoveryCard,
 } from "../public-discovery-components.js"
+import type { JSX } from "react"
 import { getPublicWatchIndex } from "../../lib/public-discovery-service.js"
 
 export const dynamic = "force-dynamic"
 
-export default async function WatchPage() {
+export default async function WatchPage(): Promise<JSX.Element> {
   const watch = await getPublicWatchIndex()
 
   return (

@@ -1,0 +1,286 @@
+{
+  "schemaVersion": "v1.37-observation-trace-compatibility-disposition-v1",
+  "candidateVersion": "v1.37-observation-trace-v4",
+  "lifecycle": "inactive-candidate",
+  "current": false,
+  "status": "observation-only-compatible-candidate",
+  "bundleRootSha256": "sha256:11fee531edf255b80c2c9780b13c9daf9598581f3218fe5d4d38e38b879a04bd",
+  "semanticDiffRootSha256": "sha256:06a9e1403057e7f6e234a8d0ebbd4a567a2e3d27b4a5b981a6c0549869c5f4de",
+  "caseCount": 30,
+  "cases": [
+    {
+      "ordinal": 0,
+      "caseId": "boundary-canonical-json-duplicate-key",
+      "baselineTraceRoot": "sha256:defaf8e1c7710d7937a078dcbdf83a746b1aef869481499e18812b29e5cbaae2",
+      "candidateTraceRoot": "sha256:1a0063890d6137891c3b754e0e91344cf130e0b2be3225387946f0700726d193",
+      "disposition": "observation-or-fixture-identity-only"
+    },
+    {
+      "ordinal": 1,
+      "caseId": "boundary-depth-limit",
+      "baselineTraceRoot": "sha256:26bf7e342bf3bfe674d0a2e6c03987e1fe2a8b6aa152594c36500c6f230e0b5c",
+      "candidateTraceRoot": "sha256:ac9a41104d0484193e3f938ee939a5742bf5d055cb54e6c5f58876b67730bce3",
+      "disposition": "observation-or-fixture-identity-only"
+    },
+    {
+      "ordinal": 2,
+      "caseId": "boundary-numeric-negative-zero",
+      "baselineTraceRoot": "sha256:9c6efa3ebd8c900102b80f59c772dc4321274a7bcab6820597ef70fc3d559d60",
+      "candidateTraceRoot": "sha256:8d59e7cb7ecc87b2e0b7e915cedc4560076e0ab4632f19a575777b70a76c3b51",
+      "disposition": "observation-or-fixture-identity-only"
+    },
+    {
+      "ordinal": 3,
+      "caseId": "boundary-unicode-scalar",
+      "baselineTraceRoot": "sha256:41b800d54a4a1df75e433f2b215c80822eae7e5417328195a1d2d231f37a82de",
+      "candidateTraceRoot": "sha256:678ca78bf3e9577aa04a6e4d106659d617e37f16630b37375d7585600682a0b5",
+      "disposition": "observation-or-fixture-identity-only"
+    },
+    {
+      "ordinal": 4,
+      "caseId": "failure-malformed-output-player",
+      "baselineTraceRoot": "sha256:3007880a6ece34e415a4afb265837457fe63881d5d087263cd6867e8651382aa",
+      "candidateTraceRoot": "sha256:452a08d0aaa1a4dbd60bafd1e60d9620834651efd386fdcaa0ac2ff3df1ca992",
+      "disposition": "observation-or-fixture-identity-only"
+    },
+    {
+      "ordinal": 5,
+      "caseId": "failure-resource-proven-player",
+      "baselineTraceRoot": "sha256:842ea0bff7f59446499a7027e6f4984fe19e412bea4ba875b61b44b529ce89d4",
+      "candidateTraceRoot": "sha256:75b807abcc59ee31bff6cab848e3766c2900b13059092adf2679a1e32a0e9109",
+      "disposition": "observation-or-fixture-identity-only"
+    },
+    {
+      "ordinal": 6,
+      "caseId": "failure-stale-artifact-system",
+      "baselineTraceRoot": "sha256:1eeba87706d669529cee2e2f0858a084bb52e377a045bfc003ad123ef753fd52",
+      "candidateTraceRoot": "sha256:f60ad3ac21f8cd552c178bee05841911e9685abaee17b5ea850f4258456c2b5f",
+      "disposition": "observation-or-fixture-identity-only"
+    },
+    {
+      "ordinal": 7,
+      "caseId": "failure-timeout-unattributed-system",
+      "baselineTraceRoot": "sha256:ade73a9a33f34356da87a167b80d582c3787d3cb6caf00b9958356bed0120d9f",
+      "candidateTraceRoot": "sha256:fde6d14ee2fac12fdee452c4f1a11854e03620efee6a07faba0da41df088c6f7",
+      "disposition": "observation-or-fixture-identity-only"
+    },
+    {
+      "ordinal": 8,
+      "caseId": "failure-toolchain-unavailable-system",
+      "baselineTraceRoot": "sha256:d9fb01e8216e3eb8500cbbbe85827ae15f19cf44c19f76392d72f04addbcb3fe",
+      "candidateTraceRoot": "sha256:3fec81e57b490d6ee9c136ecb808940adcf334cd50c892949739406e6d26329f",
+      "disposition": "observation-or-fixture-identity-only"
+    },
+    {
+      "ordinal": 9,
+      "caseId": "mutation-event-order-kill",
+      "baselineTraceRoot": "sha256:ddd707bda9cf260e74788e9656ff2416bcb185173cf1ab489b485cccbd445fd2",
+      "candidateTraceRoot": "sha256:1737a861087ba8b7108a7d7acfea5192b6539a29e128b4e02348ad6db36085fd",
+      "disposition": "observation-or-fixture-identity-only"
+    },
+    {
+      "ordinal": 10,
+      "caseId": "normative-first-active-turn-to-stone",
+      "baselineTraceRoot": "sha256:d52578e1b271488928e9d827a5c6dde3d971a88ab78c9a60ef5e06f254f1ef94",
+      "candidateTraceRoot": "sha256:d4d7be0f9f9e7a3c333c23c7c91b66bb9ae8db8c2d8366b3504236b5e07bf3e6",
+      "disposition": "observation-or-fixture-identity-only"
+    },
+    {
+      "ordinal": 11,
+      "caseId": "observation-d01-initial-initiative-both-observers",
+      "baselineTraceRoot": null,
+      "candidateTraceRoot": "sha256:3b7f7e077555820968576e2cde3ed9de355ce8e1c7139a8a61fc6f2c43e0e22f",
+      "disposition": "observation-case-added"
+    },
+    {
+      "ordinal": 12,
+      "caseId": "observation-d02-round-initiative-later-round",
+      "baselineTraceRoot": null,
+      "candidateTraceRoot": "sha256:bc72f55ad4ea253470d752fefdd1efb79700ef5ed060126c8a18fb4e643d199e",
+      "disposition": "observation-case-added"
+    },
+    {
+      "ordinal": 13,
+      "caseId": "observation-d03-kernel-owned-signed-transport",
+      "baselineTraceRoot": null,
+      "candidateTraceRoot": "sha256:ad602a5bb04fa9b4b815cbc2d92635b4d068ed9e81d028e217d2b993bb918664",
+      "disposition": "observation-case-added"
+    },
+    {
+      "ordinal": 14,
+      "caseId": "observation-d04-real-revalidation-required",
+      "baselineTraceRoot": null,
+      "candidateTraceRoot": "sha256:a86ed9877f4fa8c501831ab5c38bcfe133844dcf4585e0241ff64e9e4b4051a0",
+      "disposition": "observation-case-added"
+    },
+    {
+      "ordinal": 15,
+      "caseId": "observation-d05-blocked-move-false",
+      "baselineTraceRoot": null,
+      "candidateTraceRoot": "sha256:fd7764cfba074d3a706f229fe95e25cfe21f26a5b07863eb3b69e7ddee2658d0",
+      "disposition": "observation-case-added"
+    },
+    {
+      "ordinal": 16,
+      "caseId": "observation-d05-blocked-push-false",
+      "baselineTraceRoot": null,
+      "candidateTraceRoot": "sha256:0e3739c882ceba11146bbec8a1a8043d677e1b1706728fa05a84c4796536573f",
+      "disposition": "observation-case-added"
+    },
+    {
+      "ordinal": 17,
+      "caseId": "observation-d05-pushed-target-false",
+      "baselineTraceRoot": null,
+      "candidateTraceRoot": "sha256:1f67208b7f5739d46459bffde85ca837bc43537efb6c79eee6bf866deb28da31",
+      "disposition": "observation-case-added"
+    },
+    {
+      "ordinal": 18,
+      "caseId": "observation-d05-successful-pusher-true",
+      "baselineTraceRoot": null,
+      "candidateTraceRoot": "sha256:6c554fb87b20e0096e2d1c026f596596139f62eb508ca2ba18bbf4244593e266",
+      "disposition": "observation-case-added"
+    },
+    {
+      "ordinal": 19,
+      "caseId": "observation-d05-turn-false",
+      "baselineTraceRoot": null,
+      "candidateTraceRoot": "sha256:6919f7b24aad6b71d0e9ee37bffe49e9a9c4e08177c998bcbf09f1687af4dad1",
+      "disposition": "observation-case-added"
+    },
+    {
+      "ordinal": 20,
+      "caseId": "observation-d06-first-call-false",
+      "baselineTraceRoot": null,
+      "candidateTraceRoot": "sha256:1f136c65bb6374a594d8433041b22acbdc6f14ce951815430e67d13c534e8322",
+      "disposition": "observation-case-added"
+    },
+    {
+      "ordinal": 21,
+      "caseId": "observation-d06-later-cycle-true",
+      "baselineTraceRoot": null,
+      "candidateTraceRoot": "sha256:d29bd396bce6c44418f2582b8e5b55c98d0a0a52525080f6f4db006b697396c6",
+      "disposition": "observation-case-added"
+    },
+    {
+      "ordinal": 22,
+      "caseId": "observation-d06-post-self-advance-true",
+      "baselineTraceRoot": null,
+      "candidateTraceRoot": "sha256:83b9ce2b06040fab3fa9968f7a6f3a717daa5a02258eab78cd5bf3e562ef1de3",
+      "disposition": "observation-case-added"
+    },
+    {
+      "ordinal": 23,
+      "caseId": "observation-d07-new-slot-reset-false",
+      "baselineTraceRoot": null,
+      "candidateTraceRoot": "sha256:ffd25b53a8c46f2e1842528a6e8ded7cacae30dc8578f5f6c8d1c9f6c5441699",
+      "disposition": "observation-case-added"
+    },
+    {
+      "ordinal": 24,
+      "caseId": "observation-d08-observational-only-no-hold",
+      "baselineTraceRoot": null,
+      "candidateTraceRoot": "sha256:839c445776166346724b065ad49db6268cd02aef6fcb23dd457937ca23d92633",
+      "disposition": "observation-case-added"
+    },
+    {
+      "ordinal": 25,
+      "caseId": "probe-raw-envelope-authentication",
+      "baselineTraceRoot": "sha256:c34af035f0d4b50a250f459dbe2a5bfd6924710c70aa2494457157cc9c8f479d",
+      "candidateTraceRoot": "sha256:6daff48fc825f72790a3e6cfe6e5d06360f589e4a7410104ae93862e10ac61ca",
+      "disposition": "observation-or-fixture-identity-only"
+    },
+    {
+      "ordinal": 26,
+      "caseId": "probe-raw-envelope-transport-truncation",
+      "baselineTraceRoot": "sha256:e783db702a6ab16c0c0bc54c790de13f5718835641fe219251c4b0a78cb0ed31",
+      "candidateTraceRoot": "sha256:1785bb74e46d3e14b644693c96d8598132a65336d0fbbb8b94324a15b59b179e",
+      "disposition": "observation-or-fixture-identity-only"
+    },
+    {
+      "ordinal": 27,
+      "caseId": "property-deterministic-repeat-seed-001",
+      "baselineTraceRoot": "sha256:dccb364cd8e4d99b1b0d7104c6395b58ed992a038f91119f0c986eccb1646491",
+      "candidateTraceRoot": "sha256:60f6c093184bfcf2ba173887b07b26fd9c8d1c2cb6ea6f8d7e3fb07d23961a39",
+      "disposition": "observation-or-fixture-identity-only"
+    },
+    {
+      "ordinal": 28,
+      "caseId": "property-differential-full-trace-seed-002",
+      "baselineTraceRoot": "sha256:20ca3a99dda8625aaceff533f5e966ac2ea145d407173aaba054a898562cdc83",
+      "candidateTraceRoot": "sha256:f8d40a7cb9e5ecc266ae1b98c5f46aaa62fb7bbe0082d3e851e2e86fbe84dd9e",
+      "disposition": "observation-or-fixture-identity-only"
+    },
+    {
+      "ordinal": 29,
+      "caseId": "property-seeded-selection-seed-003",
+      "baselineTraceRoot": "sha256:475e6c3b48f2c4d37d8cbf3a9594070515522de9f29fd0a99fa3be6699d690fb",
+      "candidateTraceRoot": "sha256:7b7870d5cae37280cad032cd1e3e3d1d0b4f15ac43ffe018e185379b80b94570",
+      "disposition": "observation-or-fixture-identity-only"
+    }
+  ],
+  "protectedSurfaces": {
+    "gameplayState": {
+      "baselineRoot": "sha256:c46fdc14b65e130aaf9f63cde1e1efd416df81e3de629815b2cd36dba344beb5",
+      "candidateRoot": "sha256:c46fdc14b65e130aaf9f63cde1e1efd416df81e3de629815b2cd36dba344beb5",
+      "changeCount": 0,
+      "disposition": "unchanged"
+    },
+    "actionLegality": {
+      "baselineRoot": "sha256:69efa4fcfe787e575cc2d9b2abbe7ff71c2b5a3dd966fd23f50b7923cc321768",
+      "candidateRoot": "sha256:69efa4fcfe787e575cc2d9b2abbe7ff71c2b5a3dd966fd23f50b7923cc321768",
+      "changeCount": 0,
+      "disposition": "unchanged"
+    },
+    "eventOrder": {
+      "baselineRoot": "sha256:ee5477ea2eae1dfffd1d938afd96a058c23ba76f5809a4ccfcc3239bf4506c1d",
+      "candidateRoot": "sha256:ee5477ea2eae1dfffd1d938afd96a058c23ba76f5809a4ccfcc3239bf4506c1d",
+      "changeCount": 0,
+      "disposition": "unchanged"
+    },
+    "cleanup": {
+      "baselineRoot": "sha256:815ca6de642c6d2af5061650f221df313a1e9f0124ace11bcc92bd5eda284ac4",
+      "candidateRoot": "sha256:815ca6de642c6d2af5061650f221df313a1e9f0124ace11bcc92bd5eda284ac4",
+      "changeCount": 0,
+      "disposition": "unchanged"
+    },
+    "terminalTimingReason": {
+      "baselineRoot": "sha256:ad68eb823bed0e27aebe802e666b8890cc3a13adc4965d19c3b4989b3be117c9",
+      "candidateRoot": "sha256:ad68eb823bed0e27aebe802e666b8890cc3a13adc4965d19c3b4989b3be117c9",
+      "changeCount": 0,
+      "disposition": "unchanged"
+    },
+    "outcome": {
+      "baselineRoot": "sha256:841541f014068df9a45269f420338fbc827b5a425ac5fb39ffe7a1c064d6bb1a",
+      "candidateRoot": "sha256:841541f014068df9a45269f420338fbc827b5a425ac5fb39ffe7a1c064d6bb1a",
+      "changeCount": 0,
+      "disposition": "unchanged"
+    },
+    "backstab": {
+      "baselineRoot": "sha256:01994d61dee8c9412151b9a8e352d1cb5576af889bb3eabdd1b2487487e98316",
+      "candidateRoot": "sha256:01994d61dee8c9412151b9a8e352d1cb5576af889bb3eabdd1b2487487e98316",
+      "changeCount": 0,
+      "disposition": "unchanged"
+    },
+    "arenaGeometry": {
+      "baselineRoot": "sha256:02eca52260fc4bb3f2d9708096bf61dfbfcb2e37360fe02988e50365c0ed865c",
+      "candidateRoot": "sha256:02eca52260fc4bb3f2d9708096bf61dfbfcb2e37360fe02988e50365c0ed865c",
+      "changeCount": 0,
+      "disposition": "unchanged"
+    },
+    "historicalInterpretation": {
+      "baselineRoot": "sha256:69698d5f0cb3796046ee6d8bc760912ede025e3c3d6411214f5f70b04adff645",
+      "candidateRoot": "sha256:69698d5f0cb3796046ee6d8bc760912ede025e3c3d6411214f5f70b04adff645",
+      "changeCount": 0,
+      "disposition": "unchanged"
+    },
+    "failureOwnership": {
+      "baselineRoot": "sha256:aa35771db627c0ed37c41d0b0631104186209bc49dd83a1eabadf6014f5f1797",
+      "candidateRoot": "sha256:aa35771db627c0ed37c41d0b0631104186209bc49dd83a1eabadf6014f5f1797",
+      "changeCount": 0,
+      "disposition": "unchanged"
+    }
+  },
+  "approval": null,
+  "compatibilityDispositionRootSha256": "sha256:7a4a6fc951f6d3d7e1e5bc5097180cdd3507cab21d145c8ea89f255e38a4709a"
+}

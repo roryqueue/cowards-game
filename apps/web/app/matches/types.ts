@@ -9,6 +9,7 @@ import type {
   MatchExecutionReplayEvidenceV1,
   MatchOutcome,
   PlayerId,
+  PublicMatchSetResultDto,
   SoldierInactivityExplanationDto,
 } from "@cowards/spec"
 
@@ -75,6 +76,12 @@ export interface ReplayFocusDto {
   fallback: "none" | "match_start" | "moment_not_found"
 }
 
+export type ReplayCompetitionContextDto = Pick<
+  PublicMatchSetResultDto,
+  "matchSetId"
+> &
+  NonNullable<PublicMatchSetResultDto["competition"]>
+
 export interface ReplayReadyDto {
   status: "ready"
   mode: ReplayViewMode
@@ -90,6 +97,7 @@ export interface ReplayReadyDto {
   states: ReplayStateDto[]
   initialSequence: number
   focus?: ReplayFocusDto | undefined
+  competition?: ReplayCompetitionContextDto | undefined
   ownerPlayerId?: PlayerId | undefined
   ownerDebug?:
     | {
@@ -103,6 +111,7 @@ export interface ReplayUnavailableDto {
   matchId: MatchId
   reason: ReplayUnavailableReason
   message: string
+  competition?: ReplayCompetitionContextDto | undefined
   evidenceRows?: { label: string; value: string }[] | undefined
 }
 

@@ -1,0 +1,39 @@
+{
+  "schemaVersion": "v1.37-v1.36-historical-proof-dispatch-v1",
+  "milestone": "v1.37",
+  "historicalVersion": "v1.36",
+  "tag": {
+    "name": "v1.36",
+    "object": "10177daad80cd0bcbecaaae51f46da5f7f08c6ea",
+    "peeledCommit": "38f4a83db9298502c12db44cd66d026878803d20",
+    "type": "annotated"
+  },
+  "validation": {
+    "mode": "archived-export-read-only",
+    "evaluationInstant": "2026-07-12T11:22:08.921Z",
+    "writeModesForbidden": true
+  },
+  "artifacts": [
+    { "path": ".planning/artifacts/v1.36-competition-surface-inventory.json", "blob": "951ef5f86be845a42c8135c17192288764febb34", "sha256": "8b0a3855e732da21f643cd44086426b63038de01d1d10209416d924cc357f4e7", "bytes": 62510 },
+    { "path": ".planning/artifacts/v1.36-competition-surface-inventory.md", "blob": "a8a5637f30fcccbf8c3ff4a23be1f293be8a7524", "sha256": "32214f6578b94245e0cdb46edb4c546ca2d613d579d11c0da322f7dffd3e10d3", "bytes": 23971 },
+    { "path": ".planning/artifacts/v1.36-competition-service-proof.json", "blob": "531c4799994bffa4154dec3ce478b74b5a2afb2d", "sha256": "1204e592b0cfc6e7bab999457e7790d813f092dc4b2856e128c060d82333e43d", "bytes": 6686 },
+    { "path": ".planning/artifacts/v1.36-competition-service-proof.md", "blob": "3a6588361c467314162bcc214ad37f617a2308dc", "sha256": "b47042a19f92a2b33dc3557baf293412495c83f8226fa6d0ca9b6536c7d33685", "bytes": 4880 },
+    { "path": ".planning/artifacts/v1.36-governance-boundary-proof.json", "blob": "4f5382672d76f4070bb0de820f6a4c6aa513db6f", "sha256": "c84ff0db52265c9cbe5e15ae1cd57e8f012b0a61efe5d6a9f3e1748e1df8a09b", "bytes": 10492 },
+    { "path": ".planning/artifacts/v1.36-governance-boundary-proof.md", "blob": "f0146f6a6e8a171085eaeb7362ada8e4a3f2723a", "sha256": "bf22df4f6531f0a8b330fbc37de66cd108cc81637afe4fae0a9a27e1867eb777", "bytes": 4444 },
+    { "path": ".planning/artifacts/v1.36-final-proof.json", "blob": "d634ee39a77e0896e923c5dad51df078cea4e41e", "sha256": "cd674ba56b327c932e507a16281935fb519360c05c0b70386c87d46b64228f7b", "bytes": 9947 },
+    { "path": ".planning/artifacts/v1.36-final-proof.md", "blob": "024fbeb2cd9a5688e7615f4495125ae1598d6a45", "sha256": "48aedd61ff8608b29dcc8d812718c415e1eb53edc380c417d0b6a7edd44e88b7", "bytes": 4560 }
+  ],
+  "sources": [
+    { "path": "scripts/evaluate-v1-36-competition-policy.ts", "blob": "f4d82fc741b7cc977b832b51dfe360b65ffb6d36", "sha256": "7d5df115b4d0f9927f914dfd186b3e707b5c7e313a15b12f9fb71597d8d26ce4", "bytes": 80349 },
+    { "path": "scripts/evaluate-v1-36-competition-policy.test.ts", "blob": "939b7d4d6f8373aadaa17c6ca4e6885881fde70c", "sha256": "70067c476a6f914e0d02909ec8ad1c8953b180b09234bcd9b5d21be21511a56c", "bytes": 31452 },
+    { "path": "scripts/evaluate-v1-36-service-proof.ts", "blob": "1782b2141b45512c3291d33e483c9b3bc44cec0a", "sha256": "94bf87290d22d2c50f5410cbf3b6f8574d118f64013811d4447067d188c449f7", "bytes": 28224 },
+    { "path": "scripts/evaluate-v1-36-service-proof.test.ts", "blob": "55c33b821feb3c9b95f04c2dfa38cd103d31dc45", "sha256": "11d55ce5b6fa37fddbda135fc5ad9758d80ed1155f30650325c1e4a3cffce11f", "bytes": 7695 },
+    { "path": "scripts/evaluate-v1-36-competition-boundaries.ts", "blob": "3d8b490368df1884da57c818312a0b9112bd977b", "sha256": "36b66fbc49449f2d06e34dd6e91d42ecc84ff0222024238357e4dd0dedcc68c7", "bytes": 19091 },
+    { "path": "scripts/evaluate-v1-36-competition-boundaries.test.ts", "blob": "3fc293bd66e9f411c7e7d9e948371c59b366c71b", "sha256": "7f6f651bce0d6ed74abb485d70c802aae31eb2ff57bb51ae87d713c804264761", "bytes": 7305 },
+    { "path": "scripts/evaluate-v1-36-final-proof.ts", "blob": "d2c45062bf0a552bbaa2bf5d5cbf0ac94a02243b", "sha256": "87df62cead81d86ac2cfc425942e98b35a766a8abfedb8d849807fb2f47ecbf6", "bytes": 21892 },
+    { "path": "scripts/evaluate-v1-36-final-proof.test.ts", "blob": "e62b15e712598d7d83d50d34ede13ddb86752965", "sha256": "c217bf0a1b993fc14eed7a81e9dc64e83acc51671867d941cbd9a5f22052275d", "bytes": 8275 },
+    { "path": "apps/web/e2e/v1-36-competition-service-proof.spec.ts", "blob": "f098e5c1629144b86fbd5379ea222ef9139053ff", "sha256": "34126e6b3698487006db48963dc04d3e59ba7c01778df6ce8a69008758d63cde", "bytes": 45125 },
+    { "path": "packages/spec/src/competition-policy-v1-36.ts", "blob": "b9eb4e7337145a96a9cecce6e941a0ee5b16169a", "sha256": "3723efa43bbaf0a6e28bd4221a7ec61e83150c63dbb9ea33ec9799bbcde50498", "bytes": 8934 },
+    { "path": "scripts/check-boundary-monitors.ts", "blob": "70dd750218f80a7dc393f6c829a57186129ae6ac", "sha256": "cece780dde7902e72dc1c8530ea16780869b6699023bfd886d46006c7935a0ac", "bytes": 188199 }
+  ]
+}

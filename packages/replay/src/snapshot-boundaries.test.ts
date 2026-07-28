@@ -6,9 +6,17 @@ import type {
   StrategyInput,
 } from "@cowards/spec"
 import { describe, expect, it } from "vitest"
-import type { StrategyRuntime } from "@cowards/engine"
-import { buildChronicleFromMatch } from "./build.js"
+import { MATCH_KERNEL, type StrategyRuntime } from "@cowards/engine"
+import {
+  adaptRuntimeForCurrentKernel,
+  runCurrentMatchForReplayTestSupport,
+} from "@cowards/engine/test/current-kernel-runtime"
+import {
+  recordCurrentChronicleTestSupport as recordChronicleFromExecution,
+  selectedCurrentSemanticAuthorityTestSupport,
+} from "./test/current-recording.js"
 import { validateSnapshotBoundaries } from "./snapshot-boundaries.js"
+import { validateCurrentChronicle } from "./validate.js"
 
 const turnToStoneRuntime: StrategyRuntime = {
   selectActivations(input: StrategyInput) {
@@ -54,8 +62,10 @@ const passiveRuntime: StrategyRuntime = {
   },
 }
 
-const createChronicle = (runtime: StrategyRuntime = turnToStoneRuntime) =>
-  buildChronicleFromMatch({
+const createChronicle = (
+  runtime: StrategyRuntime = turnToStoneRuntime,
+): Chronicle => {
+  const execution = runCurrentMatchForReplayTestSupport({
     matchId: "snapshot-boundary-match",
     seed: "snapshot-boundary-seed",
     arenaVariant: {
@@ -68,9 +78,29 @@ const createChronicle = (runtime: StrategyRuntime = turnToStoneRuntime) =>
     topPlayerId: "top",
     bottomStrategyRevisionId: "bottom-rev",
     topStrategyRevisionId: "top-rev",
-    runtime,
+    runtime: adaptRuntimeForCurrentKernel(runtime),
     maxPhases: 1,
-  }).chronicle
+  })
+  const recorded = recordChronicleFromExecution({
+    execution,
+    metadata: {
+      schemaVersion: "chronicle-v1.4",
+      semanticTupleId: MATCH_KERNEL.tupleId,
+      semanticTuple: MATCH_KERNEL.tuple,
+    },
+  })
+  if (!recorded.ok) throw new Error(recorded.failure.code)
+  const candidate = validateCurrentChronicle({
+    profile: "current-exact",
+    compatibility: recorded.semanticIdentity,
+    chronicle: recorded.chronicle,
+    boundaryAnchors: recorded.boundaryAnchors,
+    execution,
+    ...selectedCurrentSemanticAuthorityTestSupport(recorded),
+  })
+  if (!candidate.ok) throw new Error(candidate.issues[0]?.code)
+  return recorded.chronicle
+}
 
 const createContractionChronicle = (): Chronicle => {
   const chronicle = createChronicle(passiveRuntime)

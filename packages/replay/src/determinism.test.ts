@@ -1,9 +1,21 @@
 import type { SoldierBrainInput, StrategyInput } from "@cowards/spec"
 import { describe, expect, it } from "vitest"
-import type { RunMatchInput, StrategyRuntime } from "@cowards/engine"
-import { buildChronicleFromMatch } from "./build.js"
+import {
+  MATCH_KERNEL,
+  type RunMatchInput,
+  type StrategyRuntime,
+} from "@cowards/engine"
+import {
+  adaptRuntimeForCurrentKernel,
+  runCurrentMatchForReplayTestSupport,
+} from "@cowards/engine/test/current-kernel-runtime"
 import { createChronicleContentHash } from "./hash.js"
 import { normalizeChronicle } from "./normalize.js"
+import {
+  recordCurrentChronicleTestSupport as recordChronicleFromExecution,
+  selectedCurrentSemanticAuthorityTestSupport,
+} from "./test/current-recording.js"
+import { validateCurrentChronicle } from "./validate.js"
 
 const deterministicRuntime: StrategyRuntime = {
   selectActivations(input: StrategyInput) {
@@ -52,12 +64,34 @@ const createMatchInput = (
   topPlayerId: "top",
   bottomStrategyRevisionId: "bottom-rev",
   topStrategyRevisionId: "top-rev",
-  runtime: deterministicRuntime,
+  runtime: adaptRuntimeForCurrentKernel(deterministicRuntime),
   ...overrides,
 })
 
 const buildNormalized = (input: RunMatchInput) => {
-  const { chronicle } = buildChronicleFromMatch(input)
+  const execution = runCurrentMatchForReplayTestSupport({
+    ...input,
+    runtime: input.runtime,
+  })
+  const recorded = recordChronicleFromExecution({
+    execution,
+    metadata: {
+      schemaVersion: "chronicle-v1.4",
+      semanticTupleId: MATCH_KERNEL.tupleId,
+      semanticTuple: MATCH_KERNEL.tuple,
+    },
+  })
+  if (!recorded.ok) throw new Error(recorded.failure.code)
+  const candidate = validateCurrentChronicle({
+    profile: "current-exact",
+    compatibility: recorded.semanticIdentity,
+    chronicle: recorded.chronicle,
+    boundaryAnchors: recorded.boundaryAnchors,
+    execution,
+    ...selectedCurrentSemanticAuthorityTestSupport(recorded),
+  })
+  if (!candidate.ok) throw new Error(candidate.issues[0]?.code)
+  const chronicle = recorded.chronicle
   return {
     normalized: normalizeChronicle(chronicle),
     hash: createChronicleContentHash(chronicle),
@@ -84,5 +118,5 @@ describe("Chronicle determinism", () => {
 
     expect(seedChanged.hash).not.toEqual(baseline.hash)
     expect(strategyChanged.hash).not.toEqual(baseline.hash)
-  })
+  }, 15_000)
 })

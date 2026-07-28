@@ -1,0 +1,9 @@
+{
+  "schemaVersion": "v1.37-conformance-trace-compatibility-disposition-v1",
+  "candidateVersion": "v1.37-conformance-trace-v2",
+  "status": "no_semantic_delta",
+  "candidateRootSha256": "sha256:ed75cc5b9f5441a727f98d566e70cf3e9a4147201b5fd7752becf9194e549d42",
+  "semanticDiffRootSha256": "sha256:5d138ba953d51f395c1d116777dc5e7f175f47d7e6bf055f316bddab41ccd311",
+  "independentReviewSha256": "sha256:8b919d8f5e9160822284a81da57963f7b39cdee8a3689bc903ab65a50da1c19c",
+  "approval": null
+}

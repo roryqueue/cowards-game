@@ -1,0 +1,48 @@
+{
+  "schemaVersion": "v1.37-canonical-conformance-trace-v1",
+  "corpusVersion": "v1",
+  "corpusRootSha256": "sha256:4e13f5e14961c7b7efd6869c6e456c9f8cfeb1cdd2afd9ec17a93812ccbe76a9",
+  "caseId": "failure-toolchain-unavailable-system",
+  "semanticTupleId": "sha256:0d8a04fdfe49e3aa7261728ee51beb0a9049b661aad978277f2892c3a4bc54fe",
+  "resultClass": "system_failure",
+  "invocations": [
+    {
+      "ordinal": 0,
+      "invocationId": "invocation:failure-toolchain-unavailable-system:failure",
+      "methodName": "selectActivations",
+      "resultClass": "system_failure",
+      "stableCode": "TOOLCHAIN_UNAVAILABLE",
+      "failingBoundary": "preflight",
+      "canonicalPayloadHash": null,
+      "strategyMemoryHash": "sha256:42421863ad3f6e8d7f2076df0d123e3f0e4489928bc2296bbb3d5704f178d481",
+      "soldierMemoryHash": "sha256:42421863ad3f6e8d7f2076df0d123e3f0e4489928bc2296bbb3d5704f178d481",
+      "objectiveHash": "sha256:4f10a96fd9444bdb7758cc9eb84726f24074686b7326a65be477de45ae326311",
+      "beforeObjectiveHash": "sha256:4f10a96fd9444bdb7758cc9eb84726f24074686b7326a65be477de45ae326311",
+      "afterObjectiveHash": "sha256:4f10a96fd9444bdb7758cc9eb84726f24074686b7326a65be477de45ae326311",
+      "beforeStateHash": "sha256:f69cfd7ab8061cebdea1af5351e98ea331a2bbd85f32b8b9120eaa4a4e5819e1",
+      "afterStateHash": "sha256:f69cfd7ab8061cebdea1af5351e98ea331a2bbd85f32b8b9120eaa4a4e5819e1",
+      "beforeMemoryHash": "sha256:42421863ad3f6e8d7f2076df0d123e3f0e4489928bc2296bbb3d5704f178d481",
+      "afterMemoryHash": "sha256:42421863ad3f6e8d7f2076df0d123e3f0e4489928bc2296bbb3d5704f178d481",
+      "gameplayMutation": false,
+      "memoryMutation": false,
+      "terminalEffectHash": null,
+      "retryable": true
+    }
+  ],
+  "transitions": [],
+  "finalStateHash": "sha256:f69cfd7ab8061cebdea1af5351e98ea331a2bbd85f32b8b9120eaa4a4e5819e1",
+  "outcomeHash": "sha256:5ad5402fdef9e7020b799e75b7f8f14a1ff43f5c1bb85c782007ae3f8e444024",
+  "failure": {
+    "resultClass": "system_failure",
+    "stableCode": "TOOLCHAIN_UNAVAILABLE",
+    "failingBoundary": "preflight",
+    "invocationOrdinal": 0,
+    "transitionOrdinal": null,
+    "gameplayMutation": false,
+    "memoryMutation": false,
+    "terminalEffectHash": null,
+    "retryable": true
+  },
+  "transitionTraceRoot": "sha256:71562612ed4d24b5995747cee43d8a7b0269ed596a7cf7f694f0c17484faf4f6",
+  "traceRoot": "sha256:d44cd2154aa52904b6fbb4211b59c5e4cd75200cbdb9f17576172109f6230e0b"
+}

@@ -1,0 +1,48 @@
+{
+  "schemaVersion": "v1.37-canonical-conformance-trace-v1",
+  "corpusVersion": "v1",
+  "corpusRootSha256": "sha256:4e13f5e14961c7b7efd6869c6e456c9f8cfeb1cdd2afd9ec17a93812ccbe76a9",
+  "caseId": "failure-timeout-unattributed-system",
+  "semanticTupleId": "sha256:0d8a04fdfe49e3aa7261728ee51beb0a9049b661aad978277f2892c3a4bc54fe",
+  "resultClass": "system_failure",
+  "invocations": [
+    {
+      "ordinal": 0,
+      "invocationId": "invocation:failure-timeout-unattributed-system:failure",
+      "methodName": "selectActivations",
+      "resultClass": "system_failure",
+      "stableCode": "TIMEOUT_ATTRIBUTION_UNAVAILABLE",
+      "failingBoundary": "runtime-supervisor",
+      "canonicalPayloadHash": null,
+      "strategyMemoryHash": "sha256:3d69e62b58f6d851ff8c188cb279e295f592f4fc16760a710f1f208b43f49713",
+      "soldierMemoryHash": "sha256:3d69e62b58f6d851ff8c188cb279e295f592f4fc16760a710f1f208b43f49713",
+      "objectiveHash": "sha256:ceaa89c260d798f79acf96d43ceca12455c6a72102dc7cab67cc30f6c53b8660",
+      "beforeObjectiveHash": "sha256:ceaa89c260d798f79acf96d43ceca12455c6a72102dc7cab67cc30f6c53b8660",
+      "afterObjectiveHash": "sha256:ceaa89c260d798f79acf96d43ceca12455c6a72102dc7cab67cc30f6c53b8660",
+      "beforeStateHash": "sha256:325710c9d62df52980c87ef18fbf241c987e239394c2927d00cfe600c3d2a0bc",
+      "afterStateHash": "sha256:325710c9d62df52980c87ef18fbf241c987e239394c2927d00cfe600c3d2a0bc",
+      "beforeMemoryHash": "sha256:3d69e62b58f6d851ff8c188cb279e295f592f4fc16760a710f1f208b43f49713",
+      "afterMemoryHash": "sha256:3d69e62b58f6d851ff8c188cb279e295f592f4fc16760a710f1f208b43f49713",
+      "gameplayMutation": false,
+      "memoryMutation": false,
+      "terminalEffectHash": null,
+      "retryable": true
+    }
+  ],
+  "transitions": [],
+  "finalStateHash": "sha256:325710c9d62df52980c87ef18fbf241c987e239394c2927d00cfe600c3d2a0bc",
+  "outcomeHash": "sha256:eaef01a10f13b9fa6c4677d8eaecec888f2479bc16b5e686e2c46c1c78211db3",
+  "failure": {
+    "resultClass": "system_failure",
+    "stableCode": "TIMEOUT_ATTRIBUTION_UNAVAILABLE",
+    "failingBoundary": "runtime-supervisor",
+    "invocationOrdinal": 0,
+    "transitionOrdinal": null,
+    "gameplayMutation": false,
+    "memoryMutation": false,
+    "terminalEffectHash": null,
+    "retryable": true
+  },
+  "transitionTraceRoot": "sha256:71562612ed4d24b5995747cee43d8a7b0269ed596a7cf7f694f0c17484faf4f6",
+  "traceRoot": "sha256:3cb6379fc7638177d8a8d8f6f06d03bbaf9aab9c5ba2f562c9c96b957b539bd7"
+}

@@ -1,6 +1,8 @@
 import { COMPETITION_PRESETS } from "@cowards/spec"
+import type { JSX } from "react"
 import { ExhibitionClient } from "../../../exhibitions/new/exhibition-client.js"
 import { getSignedInCompetitionEntryDashboard } from "../../../../lib/public-discovery-service.js"
+import { LadderEntryClient } from "./ladder-entry-client.js"
 
 export const dynamic = "force-dynamic"
 
@@ -16,7 +18,7 @@ export default async function CompetitionEnterPage({
   params,
 }: {
   params: Promise<{ competitionId: string }> | { competitionId: string }
-}) {
+}): Promise<JSX.Element> {
   const { competitionId } = await params
   const dashboard = await getSignedInCompetitionEntryDashboard(competitionId)
 
@@ -60,6 +62,56 @@ export default async function CompetitionEnterPage({
             Entry requires a session-backed account so saved Strategy Revision
             ownership can be checked before competition creation.
           </p>
+        </section>
+      </main>
+    )
+  }
+
+  if (dashboard.entryMode === "counted-ladder-season") {
+    return (
+      <main className="app-page">
+        <section className="app-panel">
+          <div className="app-section-header">
+            <div>
+              <p className="workshop-muted">{dashboard.posture.publicLabel}</p>
+              <h1>{dashboard.competition.title}</h1>
+            </div>
+            <a href={dashboard.competition.href}>Competition detail</a>
+          </div>
+          <div className="status-strip">
+            <span>{dashboard.posture.standingsScope}</span>
+            <span>{dashboard.posture.durableRatingPromise}</span>
+          </div>
+          {dashboard.revisionsUnavailable ? (
+            <p className="workshop-muted">
+              Saved revisions are temporarily unavailable. Counted entry failed
+              closed.
+            </p>
+          ) : (
+            <LadderEntryClient
+              entryHref={dashboard.entryHref!}
+              competitionHref={dashboard.competition.href}
+              revisions={dashboard.eligibleRevisions.map((revision) => ({
+                strategyRevisionId: revision.strategyRevisionId,
+                label: revision.label,
+                languageLabel: revision.languageLabel,
+              }))}
+            />
+          )}
+          {dashboard.ineligibleRevisions.length ? (
+            <section className="app-subsection">
+              <h2>Other saved revisions</h2>
+              {dashboard.ineligibleRevisions.map((revision) => (
+                <div key={revision.strategyRevisionId}>
+                  <strong>{revision.label}</strong>
+                  <p>{revision.eligibility.publicMessage}</p>
+                  <p className="workshop-muted">
+                    {revision.eligibility.remediation}
+                  </p>
+                </div>
+              ))}
+            </section>
+          ) : null}
         </section>
       </main>
     )

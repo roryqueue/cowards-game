@@ -1,16 +1,36 @@
 #!/usr/bin/env -S pnpm exec tsx
-import { createHash } from "node:crypto"
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs"
+import { Buffer } from "node:buffer"
+import { spawnSync } from "node:child_process"
+import {
+  createHash,
+  createPrivateKey,
+  createPublicKey,
+  sign,
+} from "node:crypto"
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs"
 import path from "node:path"
-import { fileURLToPath } from "node:url"
-import { buildChronicleFromMatch } from "../packages/replay/src/build.ts"
-import { projectPublicChronicle } from "../packages/replay/src/project.ts"
+import { fileURLToPath, pathToFileURL } from "node:url"
+import { MATCH_KERNEL } from "../packages/engine/src/index.ts"
+import { adaptRuntimeForCurrentKernel } from "../packages/engine/src/test/current-kernel-runtime.ts"
+import {
+  projectPublicChronicle,
+  recordChronicleFromExecution,
+} from "../packages/replay/src/index.ts"
+import { issueRuntimeSemanticReceiptV117 } from "../apps/runtime-service/src/semantic-receipt-v1-17.ts"
+import { composeSuccessorRuntimeIdentityV117 } from "../apps/runtime-service/src/successor-runtime-identity.ts"
 import { createChronicleMetadata } from "../packages/persistence/src/chronicle-store.ts"
-import { createWorkshopAnalyticsDemoSnapshot } from "../packages/persistence/src/workshop-analytics.ts"
+import { verifyInstalledRuntimeEvidenceAuthorityV117 } from "../packages/persistence/src/runtime-evidence-authority-publisher.ts"
+import { createWorkshopAnalyticsDemoSnapshotV117 } from "../packages/persistence/src/workshop-analytics.ts"
 import { createCowardsLocalService } from "../packages/service/src/index.ts"
 import { createGoldenMatchInput } from "../packages/golden/src/index.ts"
+import { buildStrategyRevisionV117 } from "../packages/runtime-js/src/index.ts"
 import {
   AnalyticsRunSummaryServiceDtoSchema,
+  CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE,
+  CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_ID,
+  VERSIONED_RUNTIME_V117_SEMANTIC_TUPLE_RECORD,
+  CANONICAL_IDENTITY_DOMAINS,
+  CANONICAL_IDENTITY_DOMAIN_NAMES,
   EXHIBITION_SCORING_POLICY_V1,
   PublicLadderPageServiceDtoSchema,
   PublicMatchSetSummaryServiceDtoSchema,
@@ -23,8 +43,39 @@ import {
   ServiceHealthDtoSchema,
   assertAnalyticsPublicSummaryLeakSafe,
   assertPublicServiceDtoLeakSafe,
+  createAuthenticatedRuntimeInvocationRequestV117,
+  createAuthenticatedRuntimeInvocationResponseV117,
+  createRuntimeAbiV117ExecutionLedger,
+  createRuntimeInvocationExecutionReceiptV117,
+  createRuntimeInvocationBudgetV117,
+  createRuntimeInvocationTraceV117,
+  encodeCanonicalJson,
   serviceHealthExample,
   SERVICE_API_VERSION,
+  RUNTIME_EXECUTION_SERVICE_SYSTEM_FAILURE_CODES,
+  RUNTIME_INVOCATION_V1_17_SYSTEM_FAILURE_CODES,
+  RUNTIME_INVOCATION_V1_17_SYSTEM_FAILURE_RETRYABILITY,
+  RUNTIME_INVOCATION_V1_17_TEST_KEY_ID,
+  RUNTIME_EVIDENCE_GRAPH_NODE_KINDS_V1_17,
+  RUNTIME_EVIDENCE_AUTHORITY_PAYLOAD_SCHEMA_VERSION_V1_17,
+  RUNTIME_EVIDENCE_AUTHORITY_TRUST_DOMAINS,
+  RUNTIME_ABI_V1_17_BUDGET_PROFILE_SHA256,
+  SUCCESSOR_RUNTIME_IDENTITY_TEMPLATE_DOMAINS_V117,
+  SUCCESSOR_RUNTIME_IDENTITY_TEMPLATE_PROFILE_V117,
+  SUCCESSOR_RUNTIME_IDENTITY_TEMPLATE_SCHEMA_V117,
+  SUCCESSOR_RUNTIME_LANE_PROFILE_DOMAIN_V117,
+  SUCCESSOR_RUNTIME_LANE_PROFILE_FIELDS_V117,
+  hashRuntimeIdentityManifest,
+  hashCanonicalIdentity,
+  hashExecutableLaneIdentity,
+  hashSuccessorRuntimeLaneProfileV117,
+  hashRuntimeEvidenceCertificateRecordV117,
+  buildRuntimeEvidenceAuthorityEnvelope,
+  encodeRuntimeEvidenceAuthorityPayloadV117,
+  encodeRuntimeEvidenceAuthoritySignatureMessage,
+  HistoricalRuntimeExecutionServiceRequestV116Schema,
+  HistoricalRuntimeExecutionServiceResponseV116Schema,
+  encodeRuntimeSemanticReceiptClaims,
   type AnalyticsRunSummaryServiceDto,
   type PublicLadderPageServiceDto,
   type PublicMatchSetResultDto,
@@ -33,9 +84,38 @@ import {
   type PublicStrategyCardDto,
   type PublicStrategyPageServiceDto,
   type ServiceErrorDto,
+  type StrategyRevisionV117,
+  type ExecutableLaneIdentity,
+  type RuntimeEvidenceAuthorityBindingV117,
+  type RuntimeEvidenceAuthorityPayloadV117,
+  type SuccessorRuntimeIdentityTemplateV117,
+  type SuccessorRuntimeLaneProfileV117,
   publicLadderPageExample,
   publicPlayerPageExample,
+  serializeRuntimeInvocationRequestV117,
+  serializeRuntimeInvocationResponseV117,
 } from "../packages/spec/src/index.ts"
+import { StrategyRevisionValidationCodeSchema } from "../packages/spec/src/schemas.ts"
+import {
+  RUNTIME_EXECUTION_SERVICE_VERSION_V1_17,
+  RuntimeExecutionServiceResponseV117Schema,
+  encodeRuntimeSemanticReceiptClaimsV117,
+  serializeRuntimeExecutionServiceRequestV117,
+  serializeRuntimeExecutionServiceResponseV117,
+  type RuntimeExecutionServiceRequestV117,
+  type RuntimeExecutionServiceSuccessResponseV117,
+} from "../packages/spec/src/runtime-execution-service-v1-17.ts"
+import {
+  RUNTIME_EXECUTION_SERVICE_VERSION_V1_18,
+  createRuntimeSemanticAdmissionClaimV118,
+  createRuntimeSemanticTupleV118,
+  serializeRuntimeExecutionServiceRequestV118,
+  serializeRuntimeExecutionServiceResponseV118,
+  type RuntimeExecutionServiceRequestV118,
+  type RuntimeExecutionServiceSuccessResponseV118,
+  type RuntimeSemanticReceiptV118,
+} from "../packages/spec/src/runtime-execution-service-v1-18.ts"
+import { encodeRuntimeSemanticAdmissionClaimV118 } from "../packages/spec/src/runtime-semantic-receipt-v1-18.ts"
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const repoRoot = path.resolve(__dirname, "..")
@@ -66,6 +146,1275 @@ const stableValue = (value: unknown): unknown => {
 const withTrailingNewline = (value: unknown): string =>
   `${JSON.stringify(stableValue(value), null, 2)}\n`
 
+const V1_16_REQUEST_SHA256 =
+  "5d04fa4d82eb814bb034ce9b5f1d5c80945e3d4e02c9124ca39a6670e9c0eab5"
+const V1_16_RESPONSE_SHA256 =
+  "9c870d57e0125eb80ab2ba941ecbbede8a9a775f61c0b278abec25c491374d97"
+const V1_16_SIGNATURE_INPUT_SHA256 =
+  "cdebdf5892e23604803e1c081cd60388eb312f6d68720c17123c218c17da4fc1"
+const V1_16_SOURCE_SHA256 = Object.freeze({
+  "packages/spec/src/runtime-execution-service.ts":
+    "9a0a0411056d06ce4b426b7749256460369124fa752c6c2f81912b8b0bfb31fc",
+  "apps/runtime-service/src/semantic-receipt.ts":
+    "f97482b7824658579fcaf33f310613103da5afd93ccee09f6c0dc49cf82722ec",
+  "apps/go-backend/runtime_semantic_receipt.go":
+    "36052047a870068ab81ced8c78f3b7f4e8130034a57ee8d16bc3873a50507d1d",
+  "apps/go-backend/runtime_service_client.go":
+    "9c72e5b0ee3ddfb36a7aec51a5a1ead508b2fae29eace27a73b9fda7d55ce23c",
+  "apps/go-backend/runtime_service_client_test.go":
+    "4a52986d2a43598c0e9556504459143ab56d94d97b22b2296cf84067927e8185",
+  "packages/persistence/migrations/0017_runtime_semantic_receipts.sql":
+    "ac19e1d825217dfb72142685eb65e62933cea49541ceb39338235b32d2430a69",
+})
+const V1_17_IMMUTABLE_SHA256 = Object.freeze({
+  "packages/spec/src/runtime-execution-service-v1-17.ts":
+    "33608fca1ce710c33fff92a58e13d27fc2967dcc3a418f15284ec7f411b88806",
+  "apps/runtime-service/src/semantic-receipt-v1-17.ts":
+    "7f5cfd09a5f22eb3d8b232f068f719fb23d7b15d82541367c225ba14af374126",
+  "packages/spec/artifacts/runtime-invocation-request.v1.17.candidate.json":
+    "76d4568f6b0e7f9760f9a0f72d1140212ff28e9a1b60897126f433d4a07f61ae",
+  "packages/spec/artifacts/runtime-invocation-response.v1.17.candidate.wire.json":
+    "94dcf3bb2b3c7437cecf7cd59493e6be7d4d0c0de3475c747e8af888228f099e",
+  "packages/spec/artifacts/runtime-execution-service-request.v1.17.candidate.json":
+    "f37eb9af3ba0dd290f2264c0fb047caf0f83f2ff757482dfd2767bf1221dbf03",
+  "packages/spec/artifacts/runtime-execution-service-response.v1.17.candidate.wire.json":
+    "e2683f4fe8f89f2362960115313826f3e922043346a14c649e0d9a0694e835ed",
+  "packages/spec/artifacts/runtime-execution-service-request.v1.17.json":
+    "f37eb9af3ba0dd290f2264c0fb047caf0f83f2ff757482dfd2767bf1221dbf03",
+  "packages/spec/artifacts/runtime-execution-service-response.v1.17.wire.json":
+    "e2683f4fe8f89f2362960115313826f3e922043346a14c649e0d9a0694e835ed",
+  "packages/spec/artifacts/runtime-successor-authority-v1.17.fixture.json":
+    "a51928ecc7445bc9c6d454be7f0874897caad942d040dfe3f51ec48cee43f12c",
+})
+const runtimeInvocationFixtureSecret =
+  "fixture-only:runtime-invocation-v1.17:secret"
+
+const sha256Hex = (bytes: Uint8Array | string): string =>
+  createHash("sha256").update(bytes).digest("hex")
+const fixtureHash = (character: string): `sha256:${string}` =>
+  `sha256:${character.repeat(64)}`
+
+const versionPaths = (root: string) => ({
+  v116Request: path.join(
+    root,
+    "packages/spec/artifacts/runtime-execution-service-request.v1.16.json",
+  ),
+  v116Response: path.join(
+    root,
+    "packages/spec/artifacts/runtime-execution-service-response.v1.16.wire.json",
+  ),
+  v117InvocationRequest: path.join(
+    root,
+    "packages/spec/artifacts/runtime-invocation-request.v1.17.candidate.json",
+  ),
+  v117InvocationResponse: path.join(
+    root,
+    "packages/spec/artifacts/runtime-invocation-response.v1.17.candidate.wire.json",
+  ),
+  v117ServiceRequest: path.join(
+    root,
+    "packages/spec/artifacts/runtime-execution-service-request.v1.17.candidate.json",
+  ),
+  v117ServiceResponse: path.join(
+    root,
+    "packages/spec/artifacts/runtime-execution-service-response.v1.17.candidate.wire.json",
+  ),
+  v117CurrentServiceRequest: path.join(
+    root,
+    "packages/spec/artifacts/runtime-execution-service-request.v1.17.json",
+  ),
+  v117CurrentServiceResponse: path.join(
+    root,
+    "packages/spec/artifacts/runtime-execution-service-response.v1.17.wire.json",
+  ),
+  v117SuccessorAuthorityFixture: path.join(
+    root,
+    "packages/spec/artifacts/runtime-successor-authority-v1.17.fixture.json",
+  ),
+  v118ServiceRequest: path.join(
+    root,
+    "packages/spec/artifacts/runtime-execution-service-request.v1.18.candidate.json",
+  ),
+  v118ServiceResponse: path.join(
+    root,
+    "packages/spec/artifacts/runtime-execution-service-response.v1.18.candidate.wire.json",
+  ),
+  goContract: path.join(
+    root,
+    "apps/go-backend/runtime_execution_contract_gen.go",
+  ),
+})
+
+const createCandidateRequest = () =>
+  createAuthenticatedRuntimeInvocationRequestV117(
+    {
+      requestId: "request:candidate:v1.17:0001",
+      invocationId: "invocation:candidate:v1.17:0001",
+      kernelRequestId: "kernel-request:candidate:v1.17:0001",
+      method: "selectActivations",
+      semanticTuple: {
+        rules: "cowards-rules-v1.4",
+        engine: "engine-kernel-v1.37-candidate-1",
+        runtimeAbi: "strategy-runtime-abi-v1.17",
+        chronicle: "chronicle-recorder-current-events-v1.37-candidate-1",
+        arenaCatalog: "semantic-arena-catalog-v1.37-candidate-1",
+        setPolicy: "canonical-set-policy-v1.4",
+      },
+      sourceIdentity: {
+        strategyRevisionId: "strategy-revision:candidate:v1.17:bottom",
+        originalSourceSha256: fixtureHash("b"),
+        normalizedSourceSha256: fixtureHash("c"),
+        artifactSha256: fixtureHash("d"),
+      },
+      budget: createRuntimeInvocationBudgetV117("selectActivations"),
+      accounting: { prestate: createRuntimeAbiV117ExecutionLedger() },
+      input: { value: { cycleIndex: 0, phase: "ROUND" } },
+      retry: {
+        retryId: "retry:candidate:v1.17:0001",
+        attempt: 0,
+        previousRequestSha256: null,
+      },
+    },
+    {
+      keyId: RUNTIME_INVOCATION_V1_17_TEST_KEY_ID,
+      secret: runtimeInvocationFixtureSecret,
+    },
+  )
+
+const createCandidateResponse = (
+  request: ReturnType<typeof createCandidateRequest>,
+) => {
+  const prestate = request.accounting.prestate
+  const successValue = { activationOrders: [], strategyMemory: {} }
+  const canonicalPayload = encodeCanonicalJson(successValue, {
+    context: "authenticated-outer-envelope",
+  })
+  if (!canonicalPayload.ok) {
+    throw new TypeError(canonicalPayload.error.code)
+  }
+  const observedStdoutFrame = Buffer.concat([
+    Buffer.from("S", "utf8"),
+    Buffer.from(canonicalPayload.bytes),
+  ])
+  const observedStderr = Buffer.alloc(0)
+  const measuredCounter = (
+    name:
+      | "wallMilliseconds"
+      | "computeFuel"
+      | "payloadBytes"
+      | "stdoutBytes"
+      | "stderrBytes",
+    delta = 1,
+  ) => ({
+    status: "measured" as const,
+    delta,
+    cumulative: prestate.cumulative[name] + delta,
+  })
+  const receipt = createRuntimeInvocationExecutionReceiptV117(request, {
+    attribution: "proven_strategy",
+    counters: {
+      wallMilliseconds: measuredCounter("wallMilliseconds"),
+      computeFuel: measuredCounter("computeFuel"),
+      payloadBytes: measuredCounter(
+        "payloadBytes",
+        canonicalPayload.bytes.byteLength,
+      ),
+      stdoutBytes: measuredCounter(
+        "stdoutBytes",
+        observedStdoutFrame.byteLength,
+      ),
+      stderrBytes: measuredCounter("stderrBytes", observedStderr.byteLength),
+    },
+    memory: {
+      status: "measured",
+      peakBytes: 1,
+      cumulativePeakBytes: Math.max(prestate.cumulative.memoryBytes, 1),
+    },
+    process: {
+      status: "verified",
+      processes: 1,
+      threads: 1,
+      children: 0,
+    },
+    capabilities: {
+      status: "verified",
+      filesystem: "none",
+      network: "disabled",
+      environment: "empty",
+      shell: "disabled",
+    },
+    cancellation: {
+      status: "verified",
+      terminationRequired: false,
+      receiptPresent: false,
+      graceMilliseconds: 0,
+    },
+    accountingEvidence: {
+      status: "verified",
+      signatureVerified: true,
+      monotonic: true,
+    },
+  })
+  return createAuthenticatedRuntimeInvocationResponseV117(
+    request,
+    {
+      kind: "success",
+      value: successValue,
+      trace: createRuntimeInvocationTraceV117(request, [
+        "ADAPTER_AUTHENTICATED",
+        "PAYLOAD_CANONICAL",
+      ]),
+    },
+    receipt,
+    {
+      keyId: RUNTIME_INVOCATION_V1_17_TEST_KEY_ID,
+      secret: runtimeInvocationFixtureSecret,
+    },
+  )
+}
+
+const renderRuntimeInvocationContractSource = (
+  invocationRequestSha256: string,
+  invocationResponseSha256: string,
+  serviceRequestSha256: string,
+  serviceResponseSha256: string,
+  serviceReceiptClaimSha256: string,
+  serviceReceiptSignature: string,
+  successorAuthorityFixtureJson: string,
+  successorAuthorityFixtureSha256: string,
+  v118: {
+    requestSha256: string
+    responseSha256: string
+    receiptClaimSha256: string
+    receiptSignatureBase64: string
+    receiptKeyId: string
+    receiptPublicKeyPem: string
+    negativeVectors: readonly string[]
+  },
+): string => {
+  const source = `${[
+    "// Code generated by scripts/generate-go-parity-fixtures.ts; DO NOT EDIT.",
+    "package main",
+    "",
+    `const runtimeSuccessorSemanticTupleIDV117 = ${JSON.stringify(CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_ID)}`,
+    `const runtimeSuccessorSemanticTupleV117 = ${JSON.stringify(JSON.stringify(CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE))}`,
+    `const runtimeSuccessorSemanticTupleIdentityProfileV117 = ${JSON.stringify(VERSIONED_RUNTIME_V117_SEMANTIC_TUPLE_RECORD.identityProfile)}`,
+    `const runtimeSuccessorSemanticTupleEncodingIDV117 = ${JSON.stringify(VERSIONED_RUNTIME_V117_SEMANTIC_TUPLE_RECORD.encodingId)}`,
+    "",
+    `const runtimeSuccessorIdentityTemplateSchemaV117 = ${JSON.stringify(SUCCESSOR_RUNTIME_IDENTITY_TEMPLATE_SCHEMA_V117)}`,
+    `const runtimeSuccessorIdentityTemplateProfileV117 = ${JSON.stringify(SUCCESSOR_RUNTIME_IDENTITY_TEMPLATE_PROFILE_V117)}`,
+    `const runtimeSuccessorLaneProfileDomainV117 = ${JSON.stringify(SUCCESSOR_RUNTIME_LANE_PROFILE_DOMAIN_V117)}`,
+    "",
+    "var runtimeSuccessorIdentityTemplateDomainsV117 = [...]string{",
+    ...SUCCESSOR_RUNTIME_IDENTITY_TEMPLATE_DOMAINS_V117.map(
+      (domain) => `\t${JSON.stringify(domain)},`,
+    ),
+    "}",
+    "",
+    "var runtimeSuccessorLaneProfileFieldsV117 = [...]string{",
+    ...SUCCESSOR_RUNTIME_LANE_PROFILE_FIELDS_V117.map(
+      (field) => `\t${JSON.stringify(field)},`,
+    ),
+    "}",
+    "",
+    `func runtimeSuccessorStrategyValidationCodesV117() [${StrategyRevisionValidationCodeSchema.options.length}]string {`,
+    `\treturn [${StrategyRevisionValidationCodeSchema.options.length}]string{`,
+    ...StrategyRevisionValidationCodeSchema.options.map(
+      (code) => `\t\t${JSON.stringify(code)},`,
+    ),
+    "\t}",
+    "}",
+    "",
+    "func runtimeSuccessorStrategyValidationCodeKnownV117(code string) bool {",
+    "\tswitch code {",
+    ...StrategyRevisionValidationCodeSchema.options.map(
+      (code) => `\tcase ${JSON.stringify(code)}:\n\t\treturn true`,
+    ),
+    "\tdefault:",
+    "\t\treturn false",
+    "\t}",
+    "}",
+    "",
+    "var runtimeCanonicalIdentityDomainsV117 = [...]string{",
+    ...CANONICAL_IDENTITY_DOMAIN_NAMES.map(
+      (name) => `\t${JSON.stringify(name)},`,
+    ),
+    "}",
+    "",
+    "var runtimeCanonicalIdentityDomainTagsV117 = [...]string{",
+    ...CANONICAL_IDENTITY_DOMAIN_NAMES.map(
+      (name) => `\t${JSON.stringify(CANONICAL_IDENTITY_DOMAINS[name])},`,
+    ),
+    "}",
+    "",
+    `const runtimeSuccessorAuthorityFixtureV117JSON = ${JSON.stringify(successorAuthorityFixtureJson)}`,
+    `const runtimeSuccessorAuthorityFixtureV117SHA256 = ${JSON.stringify(successorAuthorityFixtureSha256)}`,
+    "",
+    `const runtimeSemanticReceiptDomainV118 = "cowards-game:runtime-semantic-receipt:v1.18"`,
+    `const runtimeSemanticReceiptKeyIDV118 = ${JSON.stringify(v118.receiptKeyId)}`,
+    `const runtimeSemanticReceiptPublicKeyPEMV118 = ${JSON.stringify(v118.receiptPublicKeyPem)}`,
+    "",
+    "var runtimeSemanticReceiptClaimFieldsV118 = [...]string{",
+    ...[
+      "schemaVersion",
+      "profile",
+      "serviceContractVersion",
+      "requestSha256",
+      "requestId",
+      "matchId",
+      "semanticTuple",
+      "authorityGeneration",
+      "evaluationInstant",
+      "certificateReferences",
+      "chronicleCanonicalHash",
+      "transitionTraceRoot",
+      "finalStateCanonicalHash",
+      "outcomeCanonicalHash",
+      "terminal",
+      "accounting",
+      "result",
+    ].map((field) => `\t${JSON.stringify(field)},`),
+    "}",
+    "",
+    "var runtimeCertificateReferenceFieldsV118 = [...]string{",
+    ...[
+      "side",
+      "certificateId",
+      "certificateRecordHash",
+      "registryGeneration",
+      "lane",
+      "freshUntil",
+      "sourceIdentity",
+    ].map((field) => `\t${JSON.stringify(field)},`),
+    "}",
+    "",
+    "var runtimeCertificateSourceIdentityFieldsV118 = [...]string{",
+    ...[
+      "side",
+      "strategyRevisionId",
+      "originalSourceSha256",
+      "normalizedSourceSha256",
+      "artifactSha256",
+      "identityManifestRoot",
+      "evidenceGraphRoot",
+      "laneIdentityHash",
+    ].map((field) => `\t${JSON.stringify(field)},`),
+    "}",
+    "",
+    "var runtimeSemanticReceiptNegativeVectorsV118 = [...]string{",
+    ...v118.negativeVectors.map((name) => `\t${JSON.stringify(name)},`),
+    "}",
+    "",
+    "type runtimeInvocationContractDescriptor struct {",
+    "\tContractVersion string",
+    "\tRequestSHA256 string",
+    "\tResponseSHA256 string",
+    "\tHistorical bool",
+    "\tCanonicalJSON bool",
+    "\tCurrent bool",
+    "\tReceiptClaimSHA256 string",
+    "\tReceiptSignature string",
+    "\tReceiptAlgorithm string",
+    "\tReceiptKeyID string",
+    "\tReceiptPublicKeyPEM string",
+    "}",
+    "",
+    "func runtimeInvocationContractForVersion(version string) (runtimeInvocationContractDescriptor, bool) {",
+    "\tswitch version {",
+    '\tcase "runtime-execution-service-v1.16":',
+    "\t\treturn runtimeInvocationContractDescriptor{",
+    '\t\t\tContractVersion: "runtime-execution-service-v1.16",',
+    `\t\t\tRequestSHA256: ${JSON.stringify(V1_16_REQUEST_SHA256)},`,
+    `\t\t\tResponseSHA256: ${JSON.stringify(V1_16_RESPONSE_SHA256)},`,
+    "\t\t\tHistorical: true,",
+    "\t\t\tCanonicalJSON: false,",
+    "\t\t\tCurrent: selectedRuntimeServiceContractVersion() == runtimeExecutionServiceVersion,",
+    "\t\t}, true",
+    '\tcase "runtime-invocation-v1.17":',
+    "\t\treturn runtimeInvocationContractDescriptor{",
+    '\t\t\tContractVersion: "runtime-invocation-v1.17",',
+    `\t\t\tRequestSHA256: ${JSON.stringify(invocationRequestSha256)},`,
+    `\t\t\tResponseSHA256: ${JSON.stringify(invocationResponseSha256)},`,
+    "\t\t\tHistorical: false,",
+    "\t\t\tCanonicalJSON: true,",
+    "\t\t\tCurrent: false,",
+    "\t\t}, true",
+    '\tcase "runtime-execution-service-v1.17":',
+    "\t\treturn runtimeInvocationContractDescriptor{",
+    '\t\t\tContractVersion: "runtime-execution-service-v1.17",',
+    `\t\t\tRequestSHA256: ${JSON.stringify(serviceRequestSha256)},`,
+    `\t\t\tResponseSHA256: ${JSON.stringify(serviceResponseSha256)},`,
+    "\t\t\tHistorical: false,",
+    "\t\t\tCanonicalJSON: true,",
+    "\t\t\tCurrent: selectedRuntimeServiceContractVersion() == runtimeExecutionServiceVersionV117,",
+    `\t\t\tReceiptClaimSHA256: ${JSON.stringify(serviceReceiptClaimSha256)},`,
+    `\t\t\tReceiptSignature: ${JSON.stringify(serviceReceiptSignature)},`,
+    "\t\t}, true",
+    '\tcase "runtime-execution-service-v1.18":',
+    "\t\treturn runtimeInvocationContractDescriptor{",
+    '\t\t\tContractVersion: "runtime-execution-service-v1.18",',
+    `\t\t\tRequestSHA256: ${JSON.stringify(v118.requestSha256)},`,
+    `\t\t\tResponseSHA256: ${JSON.stringify(v118.responseSha256)},`,
+    "\t\t\tHistorical: false,",
+    "\t\t\tCanonicalJSON: true,",
+    "\t\t\tCurrent: false,",
+    `\t\t\tReceiptClaimSHA256: ${JSON.stringify(v118.receiptClaimSha256)},`,
+    `\t\t\tReceiptSignature: ${JSON.stringify(v118.receiptSignatureBase64)},`,
+    '\t\t\tReceiptAlgorithm: "Ed25519",',
+    `\t\t\tReceiptKeyID: ${JSON.stringify(v118.receiptKeyId)},`,
+    `\t\t\tReceiptPublicKeyPEM: ${JSON.stringify(v118.receiptPublicKeyPem)},`,
+    "\t\t}, true",
+    "\tdefault:",
+    "\t\treturn runtimeInvocationContractDescriptor{}, false",
+    "\t}",
+    "}",
+    "",
+    "func runtimeInvocationContractsSnapshot() map[string]runtimeInvocationContractDescriptor {",
+    '\thistorical, _ := runtimeInvocationContractForVersion("runtime-execution-service-v1.16")',
+    '\tcandidate, _ := runtimeInvocationContractForVersion("runtime-invocation-v1.17")',
+    '\tserviceCandidate, _ := runtimeInvocationContractForVersion("runtime-execution-service-v1.17")',
+    '\tsemanticCandidate, _ := runtimeInvocationContractForVersion("runtime-execution-service-v1.18")',
+    "\treturn map[string]runtimeInvocationContractDescriptor{",
+    "\t\thistorical.ContractVersion: historical,",
+    "\t\tcandidate.ContractVersion: candidate,",
+    "\t\tserviceCandidate.ContractVersion: serviceCandidate,",
+    "\t\tsemanticCandidate.ContractVersion: semanticCandidate,",
+    "\t}",
+    "}",
+    "",
+    "func runtimeServiceContractFailureCodeKnown(code string) bool {",
+    "\tswitch code {",
+    ...RUNTIME_EXECUTION_SERVICE_SYSTEM_FAILURE_CODES.map(
+      (code) => `\tcase ${JSON.stringify(code)}:\n\t\treturn true`,
+    ),
+    "\tdefault:",
+    "\t\treturn false",
+    "\t}",
+    "}",
+    "",
+    "func runtimeServiceContractFailureCodesSnapshot() map[string]struct{} {",
+    "\treturn map[string]struct{}{",
+    ...RUNTIME_EXECUTION_SERVICE_SYSTEM_FAILURE_CODES.map(
+      (code) => `\t\t${JSON.stringify(code)}: {},`,
+    ),
+    "\t}",
+    "}",
+    "",
+    "func runtimeInvocationV117SystemFailureRetryable(code string) (bool, bool) {",
+    "\tswitch code {",
+    ...RUNTIME_INVOCATION_V1_17_SYSTEM_FAILURE_CODES.map(
+      (code) =>
+        `\tcase ${JSON.stringify(code)}:\n\t\treturn ${RUNTIME_INVOCATION_V1_17_SYSTEM_FAILURE_RETRYABILITY[code]}, true`,
+    ),
+    "\tdefault:",
+    "\t\treturn false, false",
+    "\t}",
+    "}",
+    "",
+    "func runtimeInvocationV117SystemFailureRetryabilitySnapshot() map[string]bool {",
+    "\treturn map[string]bool{",
+    ...RUNTIME_INVOCATION_V1_17_SYSTEM_FAILURE_CODES.map(
+      (code) =>
+        `\t\t${JSON.stringify(code)}: ${RUNTIME_INVOCATION_V1_17_SYSTEM_FAILURE_RETRYABILITY[code]},`,
+    ),
+    "\t}",
+    "}",
+  ].join("\n")}\n`
+  const formatted = spawnSync("gofmt", [], {
+    input: source,
+    encoding: "utf8",
+    maxBuffer: 32 * 1024 * 1024,
+  })
+  if (formatted.status !== 0) {
+    throw new Error(
+      `Generated Go contract formatting failed: ${String(formatted.stderr).trim()}`,
+    )
+  }
+  return formatted.stdout
+}
+
+const createV117InvocationArtifacts = () => {
+  const request = createCandidateRequest()
+  const requestBytes = Buffer.from(
+    serializeRuntimeInvocationRequestV117(request),
+  )
+  const responseBytes = Buffer.from(
+    serializeRuntimeInvocationResponseV117(createCandidateResponse(request)),
+  )
+  return {
+    requestBytes,
+    responseBytes,
+  }
+}
+
+const createV117ServiceArtifacts = () => {
+  const identity = (character: string) => fixtureHash(character)
+  const entrant = (side: "bottom" | "top", character: string) => {
+    const identityManifest = {
+      schemaVersion: "runtime-identity-manifest-v1" as const,
+      profile: "runtime-identity-v1" as const,
+      bindings: RUNTIME_EVIDENCE_GRAPH_NODE_KINDS_V1_17.map(
+        (domain, index) => ({
+          domain,
+          publicId:
+            domain === "canonicalJsonProfile"
+              ? "canonical-json-v1.1"
+              : domain === "containmentPolicy"
+                ? `fixture.containment.${side}.v1.17`
+                : `fixture.${side}.${domain}.v1.17`,
+          sha256:
+            domain === "budgetProfile"
+              ? RUNTIME_ABI_V1_17_BUDGET_PROFILE_SHA256.slice("sha256:".length)
+              : ((index + (side === "bottom" ? 1 : 16)) % 16)
+                  .toString(16)
+                  .repeat(64),
+        }),
+      ),
+    }
+    const binding = (
+      domain: (typeof RUNTIME_EVIDENCE_GRAPH_NODE_KINDS_V1_17)[number],
+    ) =>
+      identityManifest.bindings.find(
+        (candidate) => candidate.domain === domain,
+      )!
+    return {
+      strategyRevisionId: `strategy-revision:fixture:${side}:v1.17`,
+      laneIdentityHash: identity(character),
+      sourceIdentity: {
+        originalSourceSha256:
+          `sha256:${binding("originalSource").sha256}` as const,
+        normalizedSourceSha256:
+          `sha256:${binding("normalizedSource").sha256}` as const,
+        artifactSha256: `sha256:${binding("artifact").sha256}` as const,
+      },
+      identityManifestRoot:
+        `sha256:${hashRuntimeIdentityManifest(identityManifest)}` as const,
+      evidenceGraphRoot: identity(side === "bottom" ? "5" : "7"),
+      exactPins: [
+        [
+          "runtimeExecutableDigest",
+          `sha256:${binding("runtimeExecutable").sha256}`,
+        ],
+        ["reportedVersion", "node-v26.0.0"],
+        ["targetAbi", "linux-amd64-gnu"],
+        ["compilerFlags", identity("a")],
+        ["adapterBuildDigest", `sha256:${binding("adapterBuild").sha256}`],
+        [
+          "standardLibraryOrSysrootDigest",
+          `sha256:${binding("sysrootStdlib").sha256}`,
+        ],
+        ["containmentPolicyId", binding("containmentPolicy").publicId],
+        ["budgetProfileSha256", RUNTIME_ABI_V1_17_BUDGET_PROFILE_SHA256],
+        ["canonicalJsonProfileId", "canonical-json-v1.1"],
+        ["behaviorSettingsHash", identity("b")],
+      ] as const,
+    }
+  }
+  const request: RuntimeExecutionServiceRequestV117 = {
+    contractVersion: RUNTIME_EXECUTION_SERVICE_VERSION_V1_17,
+    kind: "executeMatch",
+    requestId: "request:full-service:v1.17:0001",
+    matchId: "match:full-service:v1.17:0001",
+    compatibilityTupleId: CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_ID,
+    authority: {
+      bundleHash: identity("2"),
+      sourceManifestHash: identity("3"),
+      registryGeneration: "7",
+    },
+    legacyAuthority: {
+      bundleHash: identity("c"),
+      sourceManifestHash: identity("d"),
+      registryGeneration: "6",
+    },
+    entrants: {
+      bottom: entrant("bottom", "4"),
+      top: entrant("top", "6"),
+    },
+    accounting: {
+      budgetProfileSha256: identity("8"),
+      ledgerPrestateRoot: identity("9"),
+    },
+    match: { seed: "fixture:v1.17", arenaVariantId: "arena:standard" },
+  }
+  const chronicle = { events: [], snapshots: [] }
+  const finalState = { matchId: request.matchId, status: "complete" }
+  const outcome = { kind: "draw", reason: "fixture" }
+  const ledgerPoststateRoot = identity("a")
+  const semanticReceipt = issueRuntimeSemanticReceiptV117({
+    request,
+    chronicle,
+    finalState,
+    outcome,
+    ledgerPoststateRoot,
+    reconstructedTerminalStateHash: identity("d"),
+    runtimeViolationEventCount: 0,
+    secret: "fixture-only:runtime-service-v1.17:secret",
+  })
+  const { signature, ...receiptClaims } = semanticReceipt
+  const response: RuntimeExecutionServiceSuccessResponseV117 = {
+    contractVersion: RUNTIME_EXECUTION_SERVICE_VERSION_V1_17,
+    ok: true,
+    kind: "executionResult",
+    requestId: request.requestId,
+    matchId: request.matchId,
+    result: {
+      privacy: "internal_runtime_result",
+      chronicle,
+      finalState,
+      outcome,
+      ledgerPoststateRoot,
+      runtimeViolationEventCount: 0,
+      semanticReceipt,
+    },
+  }
+  return {
+    requestBytes: Buffer.from(
+      serializeRuntimeExecutionServiceRequestV117(request),
+    ),
+    responseBytes: Buffer.from(
+      serializeRuntimeExecutionServiceResponseV117(response),
+    ),
+    receiptClaimSha256: sha256Hex(
+      encodeRuntimeSemanticReceiptClaimsV117(receiptClaims),
+    ),
+    receiptSignature: signature,
+  }
+}
+
+const fixturePrivateKeyPkcs8Base64 =
+  "MC4CAQAwBQYDK2VwBCIEIKsQBufiauOYnlm3Qhiye+3HmBbJ1JzFGuiG0ZKkjez8"
+
+const createV118ServiceArtifacts = () => {
+  const identity = (character: string): `sha256:${string}` =>
+    `sha256:${character.repeat(64)}`
+  const certificateReference = (side: "bottom" | "top") => ({
+    side,
+    certificateId: `certificate:fixture:${side}:v1.17`,
+    certificateRecordHash: identity(side === "bottom" ? "1" : "2"),
+    registryGeneration: "23",
+    lane: side === "bottom" ? "typescript-linux-amd64" : "rust-linux-amd64",
+    freshUntil: "2026-08-01T00:00:00.000Z",
+    sourceIdentity: {
+      side,
+      strategyRevisionId: `strategy-revision:fixture:${side}:v1.18`,
+      originalSourceSha256: identity(side === "bottom" ? "3" : "4"),
+      normalizedSourceSha256: identity(side === "bottom" ? "5" : "6"),
+      artifactSha256: identity(side === "bottom" ? "7" : "8"),
+      identityManifestRoot: identity(side === "bottom" ? "9" : "a"),
+      evidenceGraphRoot: identity(side === "bottom" ? "b" : "c"),
+      laneIdentityHash: identity(side === "bottom" ? "d" : "e"),
+    },
+  })
+  const request: RuntimeExecutionServiceRequestV118 = {
+    contractVersion: RUNTIME_EXECUTION_SERVICE_VERSION_V1_18,
+    kind: "executeMatch",
+    requestId: "request:full-service:v1.18:0001",
+    matchId: "match:full-service:v1.18:0001",
+    semanticTuple: createRuntimeSemanticTupleV118({
+      ...CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE,
+    }),
+    authorityGeneration: "23",
+    evaluationInstant: "2026-07-16T12:00:00.000Z",
+    certificateReferences: {
+      bottom: certificateReference("bottom"),
+      top: certificateReference("top"),
+    },
+    accounting: {
+      budgetProfileRoot: identity("f"),
+      ledgerPrestateRoot: identity("0"),
+    },
+    match: {
+      seed: "fixture:v1.18",
+      arenaVariantId: "arena:standard",
+    },
+  }
+  const claim = createRuntimeSemanticAdmissionClaimV118({
+    request,
+    chronicleCanonicalHash: identity("1"),
+    transitionTraceRoot: identity("2"),
+    finalStateCanonicalHash: identity("3"),
+    outcomeCanonicalHash: identity("4"),
+    terminal: {
+      status: "complete",
+      reason: "last-soldier-standing",
+    },
+    accounting: {
+      budgetProfileRoot: request.accounting.budgetProfileRoot,
+      ledgerPrestateRoot: request.accounting.ledgerPrestateRoot,
+      ledgerPoststateRoot: identity("5"),
+    },
+  })
+  const signingKey = createPrivateKey({
+    key: Buffer.from(fixturePrivateKeyPkcs8Base64, "base64"),
+    format: "der",
+    type: "pkcs8",
+  })
+  const receiptKeyId = "fixture-only:runtime-semantic-receipt:v1.18"
+  const receipt: RuntimeSemanticReceiptV118 = {
+    claim,
+    algorithm: "Ed25519",
+    keyId: receiptKeyId,
+    signatureBase64: sign(
+      null,
+      encodeRuntimeSemanticAdmissionClaimV118(claim),
+      signingKey,
+    ).toString("base64"),
+  }
+  const response: RuntimeExecutionServiceSuccessResponseV118 = {
+    contractVersion: RUNTIME_EXECUTION_SERVICE_VERSION_V1_18,
+    ok: true,
+    kind: "executionResult",
+    requestId: request.requestId,
+    matchId: request.matchId,
+    result: {
+      privacy: "public_receipt",
+      chronicleCanonicalHash: claim.chronicleCanonicalHash,
+      transitionTraceRoot: claim.transitionTraceRoot,
+      finalStateCanonicalHash: claim.finalStateCanonicalHash,
+      outcomeCanonicalHash: claim.outcomeCanonicalHash,
+      terminal: claim.terminal,
+      accounting: claim.accounting,
+      resultClass: "success",
+      ownership: "gameplay",
+      retryable: false,
+      mutationStatus: "committed",
+      semanticReceipt: receipt,
+    },
+  }
+  const requestBytes = Buffer.from(
+    serializeRuntimeExecutionServiceRequestV118(request),
+  )
+  const responseBytes = Buffer.from(
+    serializeRuntimeExecutionServiceResponseV118(response),
+  )
+  return {
+    requestBytes,
+    responseBytes,
+    receiptClaimSha256: sha256Hex(
+      encodeRuntimeSemanticAdmissionClaimV118(claim),
+    ),
+    receiptSignatureBase64: receipt.signatureBase64,
+    receiptKeyId,
+    receiptPublicKeyPem: createPublicKey(signingKey)
+      .export({ format: "pem", type: "spki" })
+      .toString(),
+    negativeVectors: [
+      "missing-bottom-certificate",
+      "missing-top-certificate",
+      "swapped-certificate-sides",
+      "duplicate-certificate-reference",
+      "stale-certificate",
+      "generation-mismatch",
+      "source-identity-mismatch",
+      "trace-root-mismatch",
+      "accounting-root-mismatch",
+      "signature-mismatch",
+      "key-id-mismatch",
+      "cross-version-relabel",
+      "private-output-field",
+    ] as const,
+  }
+}
+
+const createV117SuccessorAuthorityFixture = () => {
+  const digest = (value: string): `sha256:${string}` =>
+    `sha256:${sha256Hex(value)}`
+  const templateBindings = SUCCESSOR_RUNTIME_IDENTITY_TEMPLATE_DOMAINS_V117.map(
+    (domain) => ({
+      domain,
+      publicId:
+        domain === "canonicalJsonProfile"
+          ? "canonical-json-v1.1"
+          : domain === "containmentPolicy"
+            ? "fixture.containment.package-none.v1.17"
+            : domain === "semanticTuple"
+              ? CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_ID
+              : `fixture.same-lane.${domain}.v1.17`,
+      sha256:
+        domain === "budgetProfile"
+          ? RUNTIME_ABI_V1_17_BUDGET_PROFILE_SHA256.slice("sha256:".length)
+          : domain === "semanticTuple"
+            ? CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_ID.slice("sha256:".length)
+            : hashCanonicalIdentity(domain, [
+                Buffer.from(`fixture:same-lane:${domain}:v1.17`, "utf8"),
+              ]),
+    }),
+  )
+  const templateBinding = (
+    domain: (typeof SUCCESSOR_RUNTIME_IDENTITY_TEMPLATE_DOMAINS_V117)[number],
+  ) => templateBindings.find((candidate) => candidate.domain === domain)!
+  const laneProfile: SuccessorRuntimeLaneProfileV117 = {
+    providerId: "strategy-language-provider-js-ts",
+    languageId: "typescript",
+    languageVersion: "0.1.0",
+    runtimeId: "node",
+    runtimeVersion: "node-v26.0.0",
+    toolchainId: "typescript-transpileModule",
+    toolchainVersion: "6.0.3",
+    adapterId: "runtime-js-worker-thread",
+    adapterVersion: "0.1.0",
+    policyId: "fixture.containment.package-none.v1.17",
+    policyVersion: "v1.17",
+    corpusId: templateBinding("conformanceCorpus").publicId,
+    corpusVersion: "v1.17",
+    artifactKind: "source",
+    artifactIdPrefix: "artifact:",
+    implementationId: "runtime-service-successor-parity",
+    buildId: "runtime-service-successor-parity-build-v1",
+    semanticTupleId: CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_ID,
+    semanticTuple: { ...CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE },
+  }
+  const template: SuccessorRuntimeIdentityTemplateV117 = {
+    schemaVersion: SUCCESSOR_RUNTIME_IDENTITY_TEMPLATE_SCHEMA_V117,
+    profile: SUCCESSOR_RUNTIME_IDENTITY_TEMPLATE_PROFILE_V117,
+    bindings: templateBindings,
+    exactPins: [
+      [
+        "runtimeExecutableDigest",
+        `sha256:${templateBinding("runtimeExecutable").sha256}`,
+      ],
+      ["reportedVersion", "node-v26.0.0"],
+      ["targetAbi", "linux-amd64-gnu"],
+      ["compilerFlags", digest("fixture:compiler-flags:v1.17")],
+      [
+        "adapterBuildDigest",
+        `sha256:${templateBinding("adapterBuild").sha256}`,
+      ],
+      [
+        "standardLibraryOrSysrootDigest",
+        `sha256:${templateBinding("sysrootStdlib").sha256}`,
+      ],
+      ["containmentPolicyId", templateBinding("containmentPolicy").publicId],
+      ["budgetProfileSha256", RUNTIME_ABI_V1_17_BUDGET_PROFILE_SHA256],
+      ["canonicalJsonProfileId", "canonical-json-v1.1"],
+      ["behaviorSettingsHash", digest("fixture:behavior-settings:v1.17")],
+    ],
+    laneProfileSha256: hashSuccessorRuntimeLaneProfileV117(laneProfile),
+  }
+  const sourceFor = (side: "bottom" | "top") => `export default {
+  selectActivations() { return { activationOrders: [], strategyMemory: { side: "${side}" } } },
+  soldierBrain() { return { action: { type: "TURN_TO_STONE" }, soldierMemory: { side: "${side}" } } }
+}\n`
+  const revisionFor = (side: "bottom" | "top"): StrategyRevisionV117 =>
+    buildStrategyRevisionV117({
+      source: sourceFor(side),
+      strategyId: `strategy:successor-parity:${side}`,
+      providerId: "strategy-language-provider-js-ts",
+    })
+  const laneFor = (
+    revision: ReturnType<typeof revisionFor>,
+  ): ExecutableLaneIdentity => ({
+    providerId: "strategy-language-provider-js-ts",
+    languageId: revision.runtime.language.id,
+    runtimeId: "node",
+    runtimeVersion: "node-v26.0.0",
+    toolchainId: revision.metadata.sourceArtifact.toolchain.runtime,
+    toolchainVersion: revision.metadata.sourceArtifact.toolchain.runtimeVersion,
+    adapterId: revision.runtime.adapter.id,
+    adapterVersion: revision.runtime.adapter.version,
+    policyId: "fixture.containment.package-none.v1.17",
+    policyVersion: "v1.17",
+    corpusId: templateBinding("conformanceCorpus").publicId,
+    corpusVersion: "v1.17",
+    artifactId: `artifact:${revision.id}`,
+    artifactSha256: revision.metadata.sourceArtifact.hash,
+    implementationId: "runtime-service-successor-parity",
+    buildId: "runtime-service-successor-parity-build-v1",
+    semanticTupleId: CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_ID,
+    semanticTuple: { ...CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE },
+  })
+  const vectorFor = (side: "bottom" | "top") => {
+    const revision = revisionFor(side)
+    const deployed = laneFor(revision)
+    const composed = composeSuccessorRuntimeIdentityV117({
+      revision,
+      deployed,
+      template,
+    })
+    if (composed === undefined)
+      throw new Error("Successor identity parity fixture did not compose.")
+    return {
+      side,
+      revision,
+      deployed,
+      strategyRevisionId: revision.id,
+      laneIdentityHash: `sha256:${hashExecutableLaneIdentity(deployed)}`,
+      originalSourceBytesBase64: Buffer.from(revision.source, "utf8").toString(
+        "base64",
+      ),
+      artifactBytesBase64: revision.metadata.sourceArtifact.bytesBase64!,
+      deployedArtifactSha256: deployed.artifactSha256,
+      expected: {
+        sourceIdentity: composed.sourceIdentity,
+        identityManifest: composed.identityManifest,
+        identityManifestRoot: `sha256:${hashRuntimeIdentityManifest(
+          composed.identityManifest,
+        )}`,
+        exactPins: template.exactPins,
+      },
+    }
+  }
+  const vectors = [vectorFor("bottom"), vectorFor("top")] as const
+  const bindings: RuntimeEvidenceAuthorityBindingV117[] = vectors.map(
+    (vector, index) => ({
+      graphSchemaVersion: "runtime-evidence-graph-v1.17",
+      graphProfile: "runtime-identity-evidence-dag-v1",
+      identityManifestRoot: vector.expected.identityManifestRoot,
+      evidenceGraphRoot: digest(`fixture:evidence-graph:${index}:v1.17`),
+      exactPins: template.exactPins,
+    }),
+  )
+  const evidenceRecords = bindings.flatMap((binding, index) => {
+    const side = index === 0 ? "bottom" : "top"
+    return (["containment", "conformance"] as const).map((certificateKind) => {
+      const attestationId = `attestation:successor-parity:${side}:${certificateKind}:v1.17`
+      return {
+        side,
+        certificateKind,
+        binding,
+        attestation: {
+          attestationId,
+          attestationHash: digest(
+            `fixture:attestation:${side}:${certificateKind}:v1.17`,
+          ),
+          producerId: "fixture-only-successor-parity-producer",
+          producerKeyId: "fixture-only-ed25519-key-v1",
+          trustDomain: "fixture",
+          managedIdentity: true,
+          imports: [],
+          binding,
+        },
+      }
+    })
+  })
+  const certificates = evidenceRecords.map(
+    ({ side, attestation, binding, certificateKind }) => {
+      const certificateId = `certificate:successor-parity:${side}:${certificateKind}:v1.17`
+      const certificateVersion = "runtime-certificate-v1.17"
+      return {
+        certificateId,
+        certificateVersion,
+        certificateRecordHash: hashRuntimeEvidenceCertificateRecordV117({
+          certificateKind,
+          certificateId,
+          certificateVersion,
+          attestationId: attestation.attestationId,
+          binding,
+        }),
+        certificateKind,
+        attestationId: attestation.attestationId,
+        binding,
+      }
+    },
+  )
+  const payload: RuntimeEvidenceAuthorityPayloadV117 = {
+    schemaVersion: RUNTIME_EVIDENCE_AUTHORITY_PAYLOAD_SCHEMA_VERSION_V1_17,
+    bundleVersion: "bundle:successor-parity:v1.17",
+    registryGeneration: "17",
+    issuedAt: "2026-07-15T00:00:00.000Z",
+    validFrom: "2026-07-15T00:00:00.000Z",
+    validUntil: "2026-07-16T00:00:00.000Z",
+    semanticTupleManifestHash: CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_ID,
+    sourceManifestHash: digest(
+      "fixture:source-manifest:successor-parity:v1.17",
+    ),
+    attestations: evidenceRecords.map(({ attestation }) => attestation),
+    certificates,
+  }
+  const privateKey = createPrivateKey({
+    key: Buffer.from(fixturePrivateKeyPkcs8Base64, "base64"),
+    format: "der",
+    type: "pkcs8",
+  })
+  const publicKey = createPublicKey(privateKey)
+  const publicKeyPem = publicKey
+    .export({ format: "pem", type: "spki" })
+    .toString()
+  const trustDomain = RUNTIME_EVIDENCE_AUTHORITY_TRUST_DOMAINS.fixture
+  const signerKeyId = "fixture-only-ed25519-key-v1"
+  const payloadBytes = encodeRuntimeEvidenceAuthorityPayloadV117(payload)
+  const envelope = buildRuntimeEvidenceAuthorityEnvelope({
+    trustDomain,
+    keyId: signerKeyId,
+    payloadBytes,
+    signature: sign(
+      null,
+      encodeRuntimeEvidenceAuthoritySignatureMessage({
+        trustDomain,
+        keyId: signerKeyId,
+        payloadBytes,
+      }),
+      privateKey,
+    ),
+  })
+  const envelopeBytes = Buffer.from(JSON.stringify(envelope), "utf8")
+  const evaluationInstant = "2026-07-15T12:00:00.000Z"
+  const verified = verifyInstalledRuntimeEvidenceAuthorityV117({
+    envelopeBytes,
+    evaluationInstant,
+    installedAt: evaluationInstant,
+    expectedTrustDomain: trustDomain,
+    signerKeyId,
+    publicKeyPem,
+  })
+  return {
+    schemaVersion: "runtime-successor-authority-fixture-v1.17",
+    generatedBy: "scripts/generate-go-parity-fixtures.ts",
+    nonProduction: true,
+    semanticTupleId: CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_ID,
+    semanticTuple: CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE,
+    template,
+    revisionVectors: vectors,
+    negativeVectors: [
+      {
+        name: "swap-source-identities",
+        bottomSourceIdentity: vectors[1].expected.sourceIdentity,
+        topSourceIdentity: vectors[0].expected.sourceIdentity,
+        expectedCode: "AUTHORITY_BINDING_MISMATCH",
+      },
+      {
+        name: "swap-manifest-roots",
+        bottomIdentityManifestRoot: vectors[1].expected.identityManifestRoot,
+        topIdentityManifestRoot: vectors[0].expected.identityManifestRoot,
+        expectedCode: "AUTHORITY_BINDING_MISMATCH",
+      },
+    ],
+    installFixture: {
+      trustDomain,
+      signerKeyId,
+      publicKeyPem,
+      evaluationInstant,
+      installedAt: evaluationInstant,
+      payloadBytesBase64: Buffer.from(verified.payloadBytes).toString("base64"),
+      envelopeBytesBase64: envelopeBytes.toString("base64"),
+      expected: {
+        installReceiptId: verified.installReceiptId,
+        installReceiptHash: verified.installReceiptHash,
+        authorityBundleHash: verified.authorityBundleHash,
+        sourceManifestHash: verified.sourceManifestHash,
+        registryGeneration: verified.registryGeneration,
+        semanticTupleManifestHash: verified.semanticTupleManifestHash,
+        envelopeSha256: verified.envelopeSha256,
+        attestationIds: verified.attestationIds,
+        certificateIds: verified.certificateIds,
+        installReceipt: verified.installReceipt,
+      },
+    },
+  }
+}
+
+const createV117GeneratedSource = () => {
+  const invocation = createV117InvocationArtifacts()
+  const service = createV117ServiceArtifacts()
+  const v118 = createV118ServiceArtifacts()
+  const successorAuthorityFixtureJson = withTrailingNewline(
+    createV117SuccessorAuthorityFixture(),
+  )
+  return renderRuntimeInvocationContractSource(
+    sha256Hex(invocation.requestBytes),
+    sha256Hex(invocation.responseBytes),
+    sha256Hex(service.requestBytes),
+    sha256Hex(service.responseBytes),
+    service.receiptClaimSha256,
+    service.receiptSignature,
+    successorAuthorityFixtureJson,
+    sha256Hex(successorAuthorityFixtureJson),
+    {
+      requestSha256: sha256Hex(v118.requestBytes),
+      responseSha256: sha256Hex(v118.responseBytes),
+      receiptClaimSha256: v118.receiptClaimSha256,
+      receiptSignatureBase64: v118.receiptSignatureBase64,
+      receiptKeyId: v118.receiptKeyId,
+      receiptPublicKeyPem: v118.receiptPublicKeyPem,
+      negativeVectors: v118.negativeVectors,
+    },
+  )
+}
+
+const verifyImmutableV116 = (root: string): void => {
+  const paths = versionPaths(root)
+  const requestBytes = readFileSync(paths.v116Request)
+  HistoricalRuntimeExecutionServiceRequestV116Schema.parse(
+    JSON.parse(requestBytes.toString("utf8")),
+  )
+  const responseBytes = readFileSync(paths.v116Response)
+  const parsedResponse =
+    HistoricalRuntimeExecutionServiceResponseV116Schema.parse(
+      JSON.parse(responseBytes.toString("utf8")),
+    )
+  if (!parsedResponse.ok) {
+    throw new Error("Immutable v1.16 response is not a success receipt")
+  }
+  const { signature: _signature, ...receiptClaims } =
+    parsedResponse.result.semanticReceipt
+  if (
+    sha256Hex(requestBytes) !== V1_16_REQUEST_SHA256 ||
+    sha256Hex(responseBytes) !== V1_16_RESPONSE_SHA256 ||
+    sha256Hex(encodeRuntimeSemanticReceiptClaims(receiptClaims)) !==
+      V1_16_SIGNATURE_INPUT_SHA256
+  ) {
+    throw new Error("Immutable v1.16 runtime execution fixture bytes changed")
+  }
+  for (const [relative, expected] of Object.entries(V1_16_SOURCE_SHA256)) {
+    if (sha256Hex(readFileSync(path.join(root, relative))) !== expected) {
+      throw new Error("Immutable v1.16 runtime execution source changed")
+    }
+  }
+  console.log(
+    `[GO_PARITY:v1.16] request=${V1_16_REQUEST_SHA256} response=${V1_16_RESPONSE_SHA256} immutable=true`,
+  )
+}
+
+const verifyImmutableV117 = (root: string): void => {
+  for (const [relative, expected] of Object.entries(V1_17_IMMUTABLE_SHA256)) {
+    const target = path.join(root, relative)
+    if (!existsSync(target) || sha256Hex(readFileSync(target)) !== expected) {
+      throw new Error(
+        `Immutable v1.17 runtime execution byte changed: ${relative}`,
+      )
+    }
+  }
+  const response = RuntimeExecutionServiceResponseV117Schema.parse(
+    JSON.parse(
+      readFileSync(
+        path.join(
+          root,
+          "packages/spec/artifacts/runtime-execution-service-response.v1.17.candidate.wire.json",
+        ),
+        "utf8",
+      ),
+    ),
+  )
+  if (!response.ok) {
+    throw new Error("Immutable v1.17 runtime execution response is not success")
+  }
+  const { signature, ...receiptClaims } = response.result.semanticReceipt
+  if (
+    sha256Hex(encodeRuntimeSemanticReceiptClaimsV117(receiptClaims)) !==
+      "33f43ac6d4cdc5724357b2b44f070d8b5c8522def2e600c6e0f48d7df5932330" ||
+    signature !==
+      "hmac-sha256:4a9ab93d21aba2f67ba67eefb681f742db2fe594ea2e50cf51dc2a5d2c19a3ad"
+  ) {
+    throw new Error("Immutable v1.17 runtime execution receipt changed")
+  }
+}
+
+const writeV117InvocationArtifacts = (root: string): void => {
+  const paths = versionPaths(root)
+  const artifacts = createV117InvocationArtifacts()
+  for (const target of [
+    paths.v117InvocationRequest,
+    paths.v117InvocationResponse,
+    paths.goContract,
+  ]) {
+    mkdirSync(path.dirname(target), { recursive: true })
+  }
+  writeFileSync(paths.v117InvocationRequest, artifacts.requestBytes)
+  writeFileSync(paths.v117InvocationResponse, artifacts.responseBytes)
+  writeFileSync(paths.goContract, createV117GeneratedSource())
+}
+
+const writeV117ServiceArtifacts = (root: string): void => {
+  const paths = versionPaths(root)
+  const artifacts = createV117ServiceArtifacts()
+  const successorAuthorityFixture = Buffer.from(
+    withTrailingNewline(createV117SuccessorAuthorityFixture()),
+  )
+  for (const target of [
+    paths.v117ServiceRequest,
+    paths.v117ServiceResponse,
+    paths.v117SuccessorAuthorityFixture,
+    paths.goContract,
+  ]) {
+    mkdirSync(path.dirname(target), { recursive: true })
+  }
+  writeFileSync(paths.v117ServiceRequest, artifacts.requestBytes)
+  writeFileSync(paths.v117ServiceResponse, artifacts.responseBytes)
+  writeFileSync(paths.v117SuccessorAuthorityFixture, successorAuthorityFixture)
+  writeFileSync(paths.goContract, createV117GeneratedSource())
+}
+
+// Activation writes only the already-proved current service pair. Candidate
+// authority, generated Go tables, and immutable v1.16 evidence remain Task-1
+// inputs and are deliberately not regenerated after the pointer flip.
+const writeV117CurrentServiceArtifacts = (root: string): void => {
+  const paths = versionPaths(root)
+  const artifacts = createV117ServiceArtifacts()
+  for (const target of [
+    paths.v117CurrentServiceRequest,
+    paths.v117CurrentServiceResponse,
+  ]) {
+    mkdirSync(path.dirname(target), { recursive: true })
+  }
+  writeFileSync(paths.v117CurrentServiceRequest, artifacts.requestBytes)
+  writeFileSync(paths.v117CurrentServiceResponse, artifacts.responseBytes)
+}
+
+const writeV118ServiceArtifacts = (root: string): void => {
+  const paths = versionPaths(root)
+  const artifacts = createV118ServiceArtifacts()
+  for (const target of [
+    paths.v118ServiceRequest,
+    paths.v118ServiceResponse,
+    paths.goContract,
+  ]) {
+    mkdirSync(path.dirname(target), { recursive: true })
+  }
+  writeFileSync(paths.v118ServiceRequest, artifacts.requestBytes)
+  writeFileSync(paths.v118ServiceResponse, artifacts.responseBytes)
+  writeFileSync(paths.goContract, createV117GeneratedSource())
+}
+
+const verifyV117Artifacts = (
+  root: string,
+  families: readonly ("invocation" | "service")[],
+): void => {
+  const paths = versionPaths(root)
+  const invocation = createV117InvocationArtifacts()
+  const service = createV117ServiceArtifacts()
+  const expected = new Map<string, Uint8Array | string>()
+  if (families.includes("invocation")) {
+    expected.set(paths.v117InvocationRequest, invocation.requestBytes)
+    expected.set(paths.v117InvocationResponse, invocation.responseBytes)
+  }
+  if (families.includes("service")) {
+    expected.set(paths.v117ServiceRequest, service.requestBytes)
+    expected.set(paths.v117ServiceResponse, service.responseBytes)
+    expected.set(
+      paths.v117SuccessorAuthorityFixture,
+      withTrailingNewline(createV117SuccessorAuthorityFixture()),
+    )
+  }
+  if (families.length > 0)
+    expected.set(paths.goContract, createV117GeneratedSource())
+  for (const [target, bytes] of expected) {
+    if (
+      !existsSync(target) ||
+      !readFileSync(target).equals(Buffer.from(bytes))
+    ) {
+      throw new Error(`${path.basename(target)} is stale`)
+    }
+  }
+}
+
+const verifyV118Artifacts = (root: string): void => {
+  const paths = versionPaths(root)
+  const artifacts = createV118ServiceArtifacts()
+  const expected = new Map<string, Uint8Array | string>([
+    [paths.v118ServiceRequest, artifacts.requestBytes],
+    [paths.v118ServiceResponse, artifacts.responseBytes],
+    [paths.goContract, createV117GeneratedSource()],
+  ])
+  for (const [target, bytes] of expected) {
+    if (
+      !existsSync(target) ||
+      !readFileSync(target).equals(Buffer.from(bytes))
+    ) {
+      throw new Error(`${path.basename(target)} is stale`)
+    }
+  }
+}
+
 const runtime = {
   abiVersion: "strategy-runtime-abi-v1.14",
   language: { id: "typescript", version: "runtime-js-v1" },
@@ -77,7 +1426,45 @@ const runtime = {
   requiredCapabilities: [],
 } as const
 
+const runtimeSemantics = {
+  languageId: "typescript",
+  adapterId: "runtime-js-worker-thread",
+  languageLabel: "TypeScript",
+  adapterLabel: "runtime-js worker thread",
+  readiness: "local-dev-fallback",
+  readinessLabel: "Local/dev fallback",
+  experimental: false,
+  countedPlayEligible: false,
+  countedPlayLabel: "Not counted",
+  countedPlayReason:
+    "Proof-local fixture evidence does not authorize counted play.",
+  sourcePolicyLabel: "Self-contained Strategy source",
+  packagePolicyLabel: "No packages",
+  docsReference: "runtime/languages",
+  examplesReference: "samples/minimal-strategy",
+  warnings: [],
+  validationIssueCodes: ["NON_COUNTED_RUNTIME"],
+} as const
+
 const PUBLIC_STRATEGY_ID = "strategy:go-parity:sentinel"
+
+const recordGoldenChronicle = () => {
+  const input = createGoldenMatchInput()
+  const execution = MATCH_KERNEL.runMatchV117({
+    ...input,
+    runtime: adaptRuntimeForCurrentKernel(input.runtime),
+  })
+  const recorded = recordChronicleFromExecution({
+    execution,
+    metadata: {
+      schemaVersion: "chronicle-v1.4",
+      semanticTupleId: VERSIONED_RUNTIME_V117_SEMANTIC_TUPLE_RECORD.tupleId,
+      semanticTuple: VERSIONED_RUNTIME_V117_SEMANTIC_TUPLE_RECORD.tuple,
+    },
+  })
+  if (!recorded.ok) throw new Error(recorded.failure.code)
+  return recorded.chronicle
+}
 
 const createPublicStrategyCard = (): PublicStrategyCardDto => ({
   strategyId: PUBLIC_STRATEGY_ID,
@@ -90,6 +1477,7 @@ const createPublicStrategyCard = (): PublicStrategyCardDto => ({
   sourceHash: "sha256:go-parity-sentinel",
   sourceBytes: 192,
   runtime,
+  runtimeSemantics,
   engineCompatibility: {
     spec: "cowards-rules-v1.4",
     engine: "engine-v1",
@@ -106,7 +1494,7 @@ const createPublicStrategyCard = (): PublicStrategyCardDto => ({
 })
 
 const createGoldenMatchSetResult = (): PublicMatchSetResultDto => {
-  const { chronicle } = buildChronicleFromMatch(createGoldenMatchInput())
+  const chronicle = recordGoldenChronicle()
   const metadata = createChronicleMetadata(chronicle)
   return {
     matchSetId: "match-set:go-parity:golden",
@@ -129,6 +1517,7 @@ const createGoldenMatchSetResult = (): PublicMatchSetResultDto => {
         sourceHash: "sourcehash-bottom",
         sourceBytes: 128,
         runtime,
+        runtimeSemantics,
         engineCompatibility: {
           spec: "cowards-rules-v1.4",
           engine: "engine-v1",
@@ -145,6 +1534,7 @@ const createGoldenMatchSetResult = (): PublicMatchSetResultDto => {
         sourceHash: "sourcehash-top",
         sourceBytes: 128,
         runtime,
+        runtimeSemantics,
         engineCompatibility: {
           spec: "cowards-rules-v1.4",
           engine: "engine-v1",
@@ -211,12 +1601,12 @@ const createDegradedMatchSetResult = (): PublicMatchSetResultDto => ({
 })
 
 const createParityService = () => {
-  const { chronicle } = buildChronicleFromMatch(createGoldenMatchInput())
+  const chronicle = recordGoldenChronicle()
   const stored = {
     artifact: chronicle,
     metadata: createChronicleMetadata(chronicle),
   }
-  const analyticsSnapshot = createWorkshopAnalyticsDemoSnapshot()
+  const analyticsSnapshot = createWorkshopAnalyticsDemoSnapshotV117()
 
   return {
     service: createCowardsLocalService({
@@ -423,114 +1813,191 @@ const forbiddenError: ServiceErrorDto = {
   publicSafe: true,
 }
 
-const serviceFixtures = await createServiceFixtures()
-const serviceFixturePayloads = {
-  "health.json": ServiceHealthDtoSchema.parse(serviceHealthExample),
-  "public-player-page.json": serviceFixtures.publicPlayerPage,
-  "public-ladder-page.json": serviceFixtures.publicLadderPage,
-  "public-match-set-summary.json": PublicMatchSetSummaryServiceDtoSchema.parse(
-    serviceFixtures.publicMatchSetSummary,
-  ),
-  "degraded-match-set-summary.json":
-    PublicMatchSetSummaryServiceDtoSchema.parse(
-      serviceFixtures.degradedMatchSetSummary,
+const runServiceFixtureGenerator = async (
+  checkMode: boolean,
+): Promise<void> => {
+  const serviceFixtures = await createServiceFixtures()
+  const serviceFixturePayloads = {
+    "health.json": ServiceHealthDtoSchema.parse(serviceHealthExample),
+    "public-player-page.json": serviceFixtures.publicPlayerPage,
+    "public-ladder-page.json": serviceFixtures.publicLadderPage,
+    "public-match-set-summary.json":
+      PublicMatchSetSummaryServiceDtoSchema.parse(
+        serviceFixtures.publicMatchSetSummary,
+      ),
+    "degraded-match-set-summary.json":
+      PublicMatchSetSummaryServiceDtoSchema.parse(
+        serviceFixtures.degradedMatchSetSummary,
+      ),
+    "public-replay-metadata.json": PublicReplayMetadataServiceDtoSchema.parse(
+      serviceFixtures.publicReplayMetadata,
     ),
-  "public-replay-metadata.json": PublicReplayMetadataServiceDtoSchema.parse(
-    serviceFixtures.publicReplayMetadata,
-  ),
-  "public-replay-evidence.json": PublicReplayEvidenceServiceDtoSchema.parse(
-    serviceFixtures.publicReplayEvidence,
-  ),
-  "public-strategy-page.json": serviceFixtures.publicStrategyPage,
-  "analytics-run-summary.json": serviceFixtures.analyticsRunSummary,
-  "not-found-error.json": ServiceErrorDtoSchema.parse(notFoundError),
-  "forbidden-error.json": ServiceErrorDtoSchema.parse(forbiddenError),
-  "route-manifest.json": routeManifest,
-} as const
+    "public-replay-evidence.json": PublicReplayEvidenceServiceDtoSchema.parse(
+      serviceFixtures.publicReplayEvidence,
+    ),
+    "public-strategy-page.json": serviceFixtures.publicStrategyPage,
+    "analytics-run-summary.json": serviceFixtures.analyticsRunSummary,
+    "not-found-error.json": ServiceErrorDtoSchema.parse(notFoundError),
+    "forbidden-error.json": ServiceErrorDtoSchema.parse(forbiddenError),
+    "route-manifest.json": routeManifest,
+  } as const
 
-const hashFixture = (value: unknown): string =>
-  `sha256:${createHash("sha256").update(withTrailingNewline(value)).digest("hex")}`
+  const hashFixture = (value: unknown): string =>
+    `sha256:${createHash("sha256").update(withTrailingNewline(value)).digest("hex")}`
 
-const fixtureManifest = {
-  schemaVersion: "go-parity-fixtures-v1.8",
-  files: Object.fromEntries(
-    Object.entries(serviceFixturePayloads)
-      .sort(([left], [right]) => left.localeCompare(right))
-      .map(([fileName, value]) => [fileName, hashFixture(value)]),
-  ),
-} as const
+  const fixtureManifest = {
+    schemaVersion: "go-parity-fixtures-v1.8",
+    files: Object.fromEntries(
+      Object.entries(serviceFixturePayloads)
+        .sort(([left], [right]) => left.localeCompare(right))
+        .map(([fileName, value]) => [fileName, hashFixture(value)]),
+    ),
+  } as const
 
-const goChecksumEntries = Object.entries(fixtureManifest.files)
-const goChecksumKeyWidth = Math.max(
-  ...goChecksumEntries.map(([fileName]) => JSON.stringify(fileName).length),
-)
-const goChecksumSource = `${[
-  "// Code generated by scripts/generate-go-parity-fixtures.ts; DO NOT EDIT.",
-  "package main",
-  "",
-  "var expectedFixtureChecksumManifest = fixtureChecksumManifest{",
-  `\tSchemaVersion: ${JSON.stringify(fixtureManifest.schemaVersion)},`,
-  "\tFiles: map[string]string{",
-  ...goChecksumEntries.map(
-    ([fileName, checksum]) =>
-      `\t\t${JSON.stringify(fileName).padEnd(goChecksumKeyWidth)}: ${JSON.stringify(checksum)},`,
-  ),
-  "\t},",
-  "}",
-].join("\n")}\n`
+  const goChecksumEntries = Object.entries(fixtureManifest.files)
+  const goChecksumKeyWidth = Math.max(
+    ...goChecksumEntries.map(([fileName]) => JSON.stringify(fileName).length),
+  )
+  const goChecksumSource = `${[
+    "// Code generated by scripts/generate-go-parity-fixtures.ts; DO NOT EDIT.",
+    "package main",
+    "",
+    "var expectedFixtureChecksumManifest = fixtureChecksumManifest{",
+    `\tSchemaVersion: ${JSON.stringify(fixtureManifest.schemaVersion)},`,
+    "\tFiles: map[string]string{",
+    ...goChecksumEntries.map(
+      ([fileName, checksum]) =>
+        `\t\t${JSON.stringify(fileName).padEnd(goChecksumKeyWidth)}: ${JSON.stringify(checksum)},`,
+    ),
+    "\t},",
+    "}",
+  ].join("\n")}\n`
 
-const fixtures = {
-  ...serviceFixturePayloads,
-  "fixture-manifest.json": fixtureManifest,
-} as const
+  const fixtures = {
+    ...serviceFixturePayloads,
+    "fixture-manifest.json": fixtureManifest,
+  } as const
 
-for (const [fileName, value] of Object.entries(fixtures)) {
-  if (
-    fileName === "route-manifest.json" ||
-    fileName === "fixture-manifest.json"
-  ) {
-    continue
+  for (const [fileName, value] of Object.entries(fixtures)) {
+    if (
+      fileName === "route-manifest.json" ||
+      fileName === "fixture-manifest.json"
+    ) {
+      continue
+    }
+    assertPublicServiceDtoLeakSafe(value)
   }
-  assertPublicServiceDtoLeakSafe(value)
-}
 
-const checkMode = process.argv.includes("--check")
-mkdirSync(fixtureDir, { recursive: true })
+  mkdirSync(fixtureDir, { recursive: true })
 
-let stale = false
-for (const [fileName, value] of Object.entries(fixtures)) {
-  const target = path.join(fixtureDir, fileName)
-  const next = withTrailingNewline(value)
+  let stale = false
+  for (const [fileName, value] of Object.entries(fixtures)) {
+    const target = path.join(fixtureDir, fileName)
+    const next = withTrailingNewline(value)
+    if (checkMode) {
+      let current = ""
+      try {
+        current = readFileSync(target, "utf8")
+      } catch {
+        stale = true
+        continue
+      }
+      if (current !== next) {
+        stale = true
+      }
+      continue
+    }
+    writeFileSync(target, next)
+  }
+
   if (checkMode) {
     let current = ""
     try {
-      current = readFileSync(target, "utf8")
+      current = readFileSync(goChecksumSourcePath, "utf8")
     } catch {
       stale = true
-      continue
     }
-    if (current !== next) {
+    if (current !== goChecksumSource) {
       stale = true
     }
-    continue
+  } else {
+    writeFileSync(goChecksumSourcePath, goChecksumSource)
   }
-  writeFileSync(target, next)
+
+  if (stale) {
+    throw new Error(staleMessage)
+  }
 }
 
-if (checkMode) {
-  let current = ""
-  try {
-    current = readFileSync(goChecksumSourcePath, "utf8")
-  } catch {
-    stale = true
+export const main = async (args = process.argv.slice(2)): Promise<void> => {
+  if (args.includes("--write-v1.16")) {
+    throw new Error("Refusing to rewrite immutable v1.16 artifacts")
   }
-  if (current !== goChecksumSource) {
-    stale = true
+  const hasRoot = args.includes("--root")
+  const rootIndex = args.indexOf("--root")
+  if (hasRoot && (rootIndex < 0 || !args[rootIndex + 1])) {
+    throw new Error("--root requires a path")
   }
-} else {
-  writeFileSync(goChecksumSourcePath, goChecksumSource)
+  const root = hasRoot ? path.resolve(args[rootIndex + 1]!) : repoRoot
+  const versionsOnly = args.includes("--versions-only")
+  const writeV117Invocation = args.includes("--write-v1.17-invocation")
+  const writeV117Service = args.includes("--write-v1.17-service")
+  const writeV117CurrentService = args.includes("--write-v1.17-current-service")
+  const writeV118Service = args.includes("--write-v1.18-service")
+  const checkMode = args.includes("--check")
+  const historicalV116Only = args.includes("--historical-v1.16-only")
+
+  verifyImmutableV116(root)
+  if (
+    writeV118Service ||
+    (checkMode &&
+      existsSync(
+        path.join(root, "packages/spec/src/runtime-execution-service-v1-17.ts"),
+      ))
+  ) {
+    verifyImmutableV117(root)
+  }
+  if (writeV117Invocation) writeV117InvocationArtifacts(root)
+  if (writeV117Service) writeV117ServiceArtifacts(root)
+  if (writeV117CurrentService) writeV117CurrentServiceArtifacts(root)
+  if (writeV118Service) writeV118ServiceArtifacts(root)
+  const requireAllV117 =
+    checkMode &&
+    !historicalV116Only &&
+    !writeV117Invocation &&
+    !writeV117Service &&
+    !writeV118Service
+  const families = [
+    ...(requireAllV117 ||
+    writeV117Invocation ||
+    existsSync(versionPaths(root).v117InvocationRequest)
+      ? (["invocation"] as const)
+      : []),
+    ...(requireAllV117 ||
+    writeV117Service ||
+    existsSync(versionPaths(root).v117ServiceRequest)
+      ? (["service"] as const)
+      : []),
+  ]
+  verifyV117Artifacts(root, families)
+  const requireAllV118 =
+    checkMode &&
+    !historicalV116Only &&
+    !writeV117Invocation &&
+    !writeV117Service &&
+    !writeV117CurrentService
+  if (writeV118Service || requireAllV118) {
+    verifyV118Artifacts(root)
+  }
+  if (!versionsOnly) await runServiceFixtureGenerator(checkMode)
 }
 
-if (stale) {
-  throw new Error(staleMessage)
+if (
+  process.argv[1] &&
+  import.meta.url === pathToFileURL(process.argv[1]).href
+) {
+  main().catch((error: unknown) => {
+    console.error(error instanceof Error ? error.message : error)
+    process.exitCode = 1
+  })
 }

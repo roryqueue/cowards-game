@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
@@ -103,6 +104,328 @@ func TestMatchExecutionQuarantineHelpers(t *testing.T) {
 		if !strings.Contains(text, required) {
 			t.Fatalf("operator evidence omitted %q in %s", required, text)
 		}
+	}
+}
+
+func TestMatchJobLifecycleIntegrityClaimContract(t *testing.T) {
+	for _, required := range []string{
+		"runtime_evidence_authority_installed_head",
+		"authority_publication_id",
+		"authority_install_receipt_id",
+		"authority_source_manifest_hash",
+		"compatibility_tuple_id",
+		"bottom_execution_entrant_key",
+		"top_execution_entrant_key",
+		"bottom_containment",
+		"top_containment",
+		"scheduling_status = 'counted'",
+		"bottom_containment.fresh_until >= $1",
+		"bottom_execution_entrant.scheduling_fresh_until >= $1",
+		"runtimeServiceV117",
+		"identity_manifest_root",
+		"evidence_graph_root",
+		"exact_pin_expansion",
+		"graph_schema_version",
+		"runtime_evidence_v1_17_installed_authorities",
+		"successor_authority.authority_bundle_hash",
+		"successor_authority.source_manifest_hash",
+		"successor_authority.registry_generation",
+		"successor_authority.semantic_tuple_manifest_hash",
+		"successor_authority.install_receipt_id",
+		"successor_authority.install_receipt_hash",
+		"bottom_containment.certificate_kind",
+		"top_containment.certificate_kind",
+		"competing_successor.id <> successor_authority.id",
+	} {
+		if !strings.Contains(claimNextMatchJobSQL, required) {
+			t.Fatalf("integrity claim SQL is missing %q", required)
+		}
+	}
+	selectIndex := strings.Index(claimNextMatchJobSQL, "runtime_evidence_authority_installed_head")
+	updateIndex := strings.Index(claimNextMatchJobSQL, "update match_jobs")
+	if selectIndex < 0 || (updateIndex >= 0 && updateIndex < selectIndex) {
+		t.Fatal("integrity rejection must precede lifecycle mutation")
+	}
+	if !strings.Contains(recheckClaimedMatchIntegritySQL, "runtime_evidence_authority_installed_head") ||
+		!strings.Contains(recheckClaimedMatchIntegritySQL, "installed_head.install_receipt_id = ms.authority_install_receipt_id") ||
+		!strings.Contains(recheckClaimedMatchIntegritySQL, "runtime_evidence_v1_17_installed_authorities") ||
+		!strings.Contains(recheckClaimedMatchIntegritySQL, "successor_authority.install_receipt_hash") {
+		t.Fatal("in-flight recheck must require the canonical installed authority head")
+	}
+	if !strings.Contains(claimNextMatchJobSQL, "successor_authority.authority_bundle_hash <> 'sha256:' || ms.authority_bundle_hash") ||
+		!strings.Contains(recheckClaimedMatchIntegritySQL, "successor_authority.authority_bundle_hash <> 'sha256:' || ms.authority_bundle_hash") {
+		t.Fatal("successor and nested legacy authority identities must be distinct")
+	}
+}
+
+func TestPhase258SuccessorAuthorityTrustSelectionDefaultsProductionAndScopesFixtures(t *testing.T) {
+	for _, relation := range []string{"publication", "successor_authority"} {
+		if !strings.Contains(claimNextMatchJobSQL, relation+".trust_domain = '"+runtimeEvidenceAuthorityProductionTrustDomain+"'") {
+			t.Fatalf("live %s authority claim is not production-only", relation)
+		}
+	}
+	fixtureSQL := runtimeServiceV117AuthoritySQL(claimNextMatchJobSQLTemplate, runtimeEvidenceAuthorityFixtureTrustDomain)
+	for _, relation := range []string{"publication", "successor_authority"} {
+		if !strings.Contains(fixtureSQL, relation+".trust_domain = '"+runtimeEvidenceAuthorityFixtureTrustDomain+"'") {
+			t.Fatalf("fixture %s authority claim did not use its explicit isolated trust domain", relation)
+		}
+	}
+	if runtimeServiceV117AuthoritySQL(claimNextMatchJobSQLTemplate, "caller-selected") != "" ||
+		normalizedSuccessorAuthorityTrustDomain("caller-selected") != runtimeEvidenceAuthorityProductionTrustDomain {
+		t.Fatal("untrusted successor authority trust-domain selection did not fail closed")
+	}
+}
+
+func runtimeServiceExactPinsFixtureV117(seed byte) runtimeServiceExactPinsV117 {
+	hash := func(offset byte) string {
+		return "sha256:" + strings.Repeat(string("0123456789abcdef"[(seed+offset)%16]), 64)
+	}
+	return runtimeServiceExactPinsV117{
+		{"runtimeExecutableDigest", hash(0)},
+		{"reportedVersion", "fixture-v1.17"},
+		{"targetAbi", "fixture-abi-v1.17"},
+		{"compilerFlags", hash(1)},
+		{"adapterBuildDigest", hash(2)},
+		{"standardLibraryOrSysrootDigest", hash(3)},
+		{"containmentPolicyId", "fixture-containment-v1.17"},
+		{"budgetProfileSha256", runtimeServiceV117BudgetProfileSHA256},
+		{"canonicalJsonProfileId", canonicalJSONVersionV11},
+		{"behaviorSettingsHash", hash(4)},
+	}
+}
+
+func runtimeSuccessorIdentityTemplateFixtureV117(pins runtimeServiceExactPinsV117) *runtimeSuccessorIdentityTemplateV117 {
+	hashes := map[string]string{
+		"runtimeExecutable":    strings.TrimPrefix(pins[0][1], "sha256:"),
+		"compilerExecutable":   strings.Repeat("a", 64),
+		"sysrootStdlib":        strings.TrimPrefix(pins[5][1], "sha256:"),
+		"adapterBuild":         strings.TrimPrefix(pins[4][1], "sha256:"),
+		"semanticTuple":        strings.TrimPrefix(runtimeSuccessorSemanticTupleIDV117, "sha256:"),
+		"containmentPolicy":    strings.Repeat("c", 64),
+		"conformanceCorpus":    strings.Repeat("d", 64),
+		"budgetProfile":        strings.TrimPrefix(pins[7][1], "sha256:"),
+		"canonicalJsonProfile": strings.Repeat("e", 64),
+	}
+	publicIDs := map[string]string{
+		"containmentPolicy":    pins[6][1],
+		"canonicalJsonProfile": pins[8][1],
+		"semanticTuple":        runtimeSuccessorSemanticTupleIDV117,
+	}
+	bindings := make([]runtimeIdentityBindingV117, 0, len(runtimeSuccessorIdentityTemplateDomainsV117))
+	for _, domain := range runtimeSuccessorIdentityTemplateDomainsV117 {
+		publicID := publicIDs[domain]
+		if publicID == "" {
+			publicID = "fixture." + domain + ".v1.17"
+		}
+		bindings = append(bindings, runtimeIdentityBindingV117{Domain: domain, PublicID: publicID, SHA256: hashes[domain]})
+	}
+	return &runtimeSuccessorIdentityTemplateV117{
+		SchemaVersion:     runtimeSuccessorIdentityTemplateSchemaV117,
+		Profile:           runtimeSuccessorIdentityTemplateProfileV117,
+		Bindings:          bindings,
+		ExactPins:         pins,
+		LaneProfileSHA256: "sha256:" + strings.Repeat("f", 64),
+	}
+}
+
+func claimedRuntimeServiceFixtureV117(identity *claimedMatchIntegrityIdentity) *claimedRuntimeServiceV117 {
+	entrant := func(evidence goEntrantExecutionEvidence, seed byte) claimedRuntimeServiceEntrantV117 {
+		value := claimedRuntimeServiceEntrantV117{
+			StrategyRevisionID:         evidence.StrategyRevisionID,
+			LaneIdentityHash:           "sha256:" + hashCreationLaneIdentity(evidence.LaneIdentity),
+			ContainmentCertificateID:   evidence.ContainmentCertificateRef.CertificateID,
+			ContainmentCertificateKind: evidence.ContainmentCertificateRef.Kind,
+			IdentityManifestRoot:       "sha256:" + strings.Repeat(string("123456789abcdef0"[seed%16]), 64),
+			EvidenceGraphRoot:          "sha256:" + strings.Repeat(string("23456789abcdef01"[seed%16]), 64),
+			ExactPins:                  runtimeServiceExactPinsFixtureV117(seed),
+		}
+		if evidence.ConformanceCertificateRef != nil {
+			id, kind := evidence.ConformanceCertificateRef.CertificateID, evidence.ConformanceCertificateRef.Kind
+			value.ConformanceCertificateID, value.ConformanceCertificateKind = &id, &kind
+			lane := evidence.LaneIdentity.LanguageID + ":" + evidence.LaneIdentity.AdapterID
+			value.ConformanceLaneID = &lane
+		}
+		return value
+	}
+	return &claimedRuntimeServiceV117{
+		Authority: claimedRuntimeServiceAuthorityV117{
+			BundleHash:                "sha256:" + strings.Repeat("e", 64),
+			SourceManifestHash:        "sha256:" + strings.Repeat("f", 64),
+			RegistryGeneration:        "2",
+			SemanticTupleManifestHash: identity.CompatibilityTupleID,
+			InstallReceiptID:          "install-receipt:v1.17:fixture",
+			InstallReceiptHash:        "sha256:" + strings.Repeat("9", 64),
+		},
+		BudgetProfileSHA256: runtimeServiceV117BudgetProfileSHA256,
+		LedgerPrestateRoot:  runtimeServiceV117EmptyLedgerRoot,
+		Bottom:              entrant(identity.Bottom, 1),
+		Top:                 entrant(identity.Top, 3),
+	}
+}
+
+func runtimeServiceEntrantFixtureFromClaimedV117(claimed claimedRuntimeServiceEntrantV117, seed string) runtimeServiceEntrantV117 {
+	return runtimeServiceEntrantV117{
+		StrategyRevisionID: claimed.StrategyRevisionID,
+		LaneIdentityHash:   claimed.LaneIdentityHash,
+		SourceIdentity: runtimeServiceSourceIdentityV117{
+			OriginalSourceSHA256:   "sha256:" + strings.Repeat(seed, 64),
+			NormalizedSourceSHA256: "sha256:" + strings.Repeat(seed, 64),
+			ArtifactSHA256:         "sha256:" + strings.Repeat(seed, 64),
+		},
+		IdentityManifestRoot: claimed.IdentityManifestRoot,
+		EvidenceGraphRoot:    claimed.EvidenceGraphRoot,
+		ExactPins:            claimed.ExactPins,
+	}
+}
+
+func TestPhase258ClaimedV117IntegrityRequiresExactGraphAndAccountingSnapshot(t *testing.T) {
+	now := time.Date(2026, 7, 15, 13, 30, 0, 0, time.UTC)
+	authority, identity := claimedIntegrityFixture(t, now)
+	authority.SemanticTupleManifestHash = runtimeSuccessorSemanticTupleIDV117
+	authority.CompatibilityTuple = registeredCompatibilityTuple{
+		TupleID: runtimeSuccessorSemanticTupleIDV117,
+		Tuple:   runtimeSuccessorCanonicalTupleV117,
+	}
+	authority.Payload.SemanticTupleManifestHash = runtimeSuccessorSemanticTupleIDV117
+	identity.CompatibilityTupleID = runtimeSuccessorSemanticTupleIDV117
+	identity.CompatibilityTuple = runtimeSuccessorCanonicalTupleV117
+	identity.Bottom.LaneIdentity.SemanticTupleID = runtimeSuccessorSemanticTupleIDV117
+	identity.Bottom.LaneIdentity.SemanticTuple = runtimeSuccessorCanonicalTupleV117
+	identity.Top.LaneIdentity.SemanticTupleID = runtimeSuccessorSemanticTupleIDV117
+	identity.Top.LaneIdentity.SemanticTuple = runtimeSuccessorCanonicalTupleV117
+	for index, entrant := range []goEntrantExecutionEvidence{identity.Bottom, identity.Top} {
+		authority.Payload.Certificates[index].LaneIdentityHash = "sha256:" + hashCreationLaneIdentity(entrant.LaneIdentity)
+	}
+	recomputed, err := createGoMatchSetIntegrityIdentity(authority, []goEntrantExecutionEvidence{identity.Bottom, identity.Top})
+	if err != nil {
+		t.Fatal(err)
+	}
+	pair, err := recomputed.pair(identity.Bottom.EntrantKey, identity.Top.EntrantKey, identity.Bottom.StrategyRevisionID, identity.Top.StrategyRevisionID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	identity.EvidenceSetHash = recomputed.EvidenceSetHash
+	identity.PairHash = pair.PairHash
+	if err := validateClaimedMatchIntegrity(authority, identity, now); err == nil {
+		t.Fatal("v1.17 claim without exact graph roots, budget profile, and ledger prestate was admitted")
+	}
+	identity.RuntimeServiceV117 = claimedRuntimeServiceFixtureV117(identity)
+	if err := validateClaimedMatchIntegrity(authority, identity, now); err != nil {
+		t.Fatalf("exact v1.17 claim snapshot was rejected: %v", err)
+	}
+	mutations := []struct {
+		name   string
+		mutate func(*claimedRuntimeServiceV117)
+	}{
+		{"budget profile", func(value *claimedRuntimeServiceV117) {
+			value.BudgetProfileSHA256 = "sha256:" + strings.Repeat("5", 64)
+		}},
+		{"ledger prestate", func(value *claimedRuntimeServiceV117) { value.LedgerPrestateRoot = "sha256:" + strings.Repeat("6", 64) }},
+		{"bottom identity root", func(value *claimedRuntimeServiceV117) { value.Bottom.IdentityManifestRoot = "" }},
+		{"bottom evidence root", func(value *claimedRuntimeServiceV117) { value.Bottom.EvidenceGraphRoot = "" }},
+		{"top identity root", func(value *claimedRuntimeServiceV117) { value.Top.IdentityManifestRoot = "" }},
+		{"top evidence root", func(value *claimedRuntimeServiceV117) { value.Top.EvidenceGraphRoot = "" }},
+		{"successor authority equals legacy", func(value *claimedRuntimeServiceV117) { value.Authority.BundleHash = identity.AuthorityBundleHash }},
+		{"floating exact pin", func(value *claimedRuntimeServiceV117) { value.Bottom.ExactPins[1][1] = "latest" }},
+	}
+	for _, mutation := range mutations {
+		t.Run(mutation.name, func(t *testing.T) {
+			candidate := *identity
+			binding := *identity.RuntimeServiceV117
+			candidate.RuntimeServiceV117 = &binding
+			mutation.mutate(candidate.RuntimeServiceV117)
+			if err := validateClaimedMatchIntegrity(authority, &candidate, now); err == nil {
+				t.Fatal("mutated v1.17 claim snapshot was admitted")
+			}
+		})
+	}
+}
+
+func TestMatchJobLifecycleIntegrityValidation(t *testing.T) {
+	now := time.Date(2026, 7, 13, 12, 0, 0, 0, time.UTC)
+	if authority, identity := claimedIntegrityFixture(t, now); validateClaimedMatchIntegrity(authority, identity, now) != nil {
+		t.Fatalf("valid heterogeneous claimed identity was rejected: %v", validateClaimedMatchIntegrity(authority, identity, now))
+	}
+	tests := []struct {
+		name   string
+		mutate func(*verifiedRuntimeEvidenceAuthority, *claimedMatchIntegrityIdentity)
+	}{
+		{name: "bundle replacement", mutate: func(_ *verifiedRuntimeEvidenceAuthority, identity *claimedMatchIntegrityIdentity) {
+			identity.AuthorityBundleHash = "sha256:" + strings.Repeat("9", 64)
+		}},
+		{name: "generation drift", mutate: func(_ *verifiedRuntimeEvidenceAuthority, identity *claimedMatchIntegrityIdentity) {
+			identity.RegistryGeneration = "2"
+		}},
+		{name: "tuple drift", mutate: func(_ *verifiedRuntimeEvidenceAuthority, identity *claimedMatchIntegrityIdentity) {
+			identity.CompatibilityTuple.Engine = "engine:drift"
+		}},
+		{name: "ordered pair swap", mutate: func(_ *verifiedRuntimeEvidenceAuthority, identity *claimedMatchIntegrityIdentity) {
+			identity.Bottom, identity.Top = identity.Top, identity.Bottom
+		}},
+		{name: "receipt missing", mutate: func(_ *verifiedRuntimeEvidenceAuthority, identity *claimedMatchIntegrityIdentity) {
+			identity.InstallReceiptID = ""
+		}},
+		{name: "source set missing", mutate: func(_ *verifiedRuntimeEvidenceAuthority, identity *claimedMatchIntegrityIdentity) {
+			identity.SourceSet = nil
+		}},
+		{name: "per-side certificate revoked", mutate: func(authority *verifiedRuntimeEvidenceAuthority, identity *claimedMatchIntegrityIdentity) {
+			authority.Payload.Revocations = []runtimeEvidenceAuthorityRevocation{{CertificateID: identity.Top.ContainmentCertificateRef.CertificateID, CertificateRecordHash: "sha256:" + identity.Top.ContainmentCertificateRef.CertificateRecordHash}}
+		}},
+		{name: "decision stale", mutate: func(_ *verifiedRuntimeEvidenceAuthority, identity *claimedMatchIntegrityIdentity) {
+			identity.Bottom.SchedulingDecision.FreshUntil = now.Add(-time.Second).Format(canonicalJSONInstantLayout)
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			authority, identity := claimedIntegrityFixture(t, now)
+			test.mutate(authority, identity)
+			if err := validateClaimedMatchIntegrity(authority, identity, now); err == nil {
+				t.Fatal("expected claimed integrity drift to be rejected")
+			}
+		})
+	}
+}
+
+func claimedIntegrityFixture(t *testing.T, now time.Time) (*verifiedRuntimeEvidenceAuthority, *claimedMatchIntegrityIdentity) {
+	t.Helper()
+	tuple := registeredCompatibilityTuple{TupleID: "sha256:" + strings.Repeat("a", 64), Tuple: canonicalCompatibilityTuple{Rules: "rules-v1", Engine: "engine-v1", RuntimeABI: "abi-v1", Chronicle: "chronicle-v1", ArenaCatalog: "arenas-v1", SetPolicy: "set-v1"}}
+	authority := &verifiedRuntimeEvidenceAuthority{
+		AuthorityBundleHash: "sha256:" + strings.Repeat("b", 64),
+		EnvelopeSHA256:      "sha256:" + strings.Repeat("c", 64), RegistryGeneration: "1",
+		SemanticTupleManifestHash: tuple.TupleID, CompatibilityTuple: tuple,
+		TrustDomain: runtimeEvidenceAuthorityProductionTrustDomain,
+		Payload: runtimeEvidenceAuthorityPayload{
+			RegistryGeneration: "1", IssuedAt: now.Add(-time.Hour).Format(canonicalJSONInstantLayout),
+			ValidFrom: now.Add(-time.Hour).Format(canonicalJSONInstantLayout), ValidUntil: now.Add(time.Hour).Format(canonicalJSONInstantLayout),
+			SemanticTupleManifestHash: tuple.TupleID,
+		},
+	}
+	entrants := make([]goEntrantExecutionEvidence, 0, 2)
+	for index, language := range []string{"typescript", "python"} {
+		lane := goExecutableLaneIdentity{ProviderID: "provider:" + language, LanguageID: language, RuntimeID: "runtime:" + language, RuntimeVersion: "1", ToolchainID: "toolchain:" + language, ToolchainVersion: "1", AdapterID: "adapter:" + language, AdapterVersion: "1", PolicyID: "policy", PolicyVersion: "1", CorpusID: "corpus", CorpusVersion: "1", ArtifactID: fmt.Sprintf("artifact:%d", index), ArtifactSHA256: fmt.Sprintf("%064x", index+10), ImplementationID: "implementation", BuildID: fmt.Sprintf("build:%d", index), SemanticTupleID: tuple.TupleID, SemanticTuple: tuple.Tuple}
+		laneHash := hashCreationLaneIdentity(lane)
+		certificate := runtimeEvidenceAuthorityCertificate{Kind: "containment", CertificateID: fmt.Sprintf("certificate:containment:%d", index), CertificateVersion: "certificate-v1", CertificateRecordHash: "sha256:" + fmt.Sprintf("%064x", index+20), LaneIdentityHash: "sha256:" + laneHash}
+		authority.Payload.Certificates = append(authority.Payload.Certificates, certificate)
+		entrants = append(entrants, goEntrantExecutionEvidence{
+			EntrantKey: fmt.Sprintf("entrant:%d", index), StrategyRevisionID: fmt.Sprintf("revision:%d", index), LaneIdentity: lane,
+			ContainmentCertificateRef: creationCertificateSnapshot(runtimeEvidenceCertificateReferenceFor(certificate, "1")),
+			SchedulingDecision:        goSchedulingDecision{Status: executableLaneEvidenceExhibitionOnly, ReasonCode: "CONFORMANCE_MISSING", EvaluatedAt: now.Format(canonicalJSONInstantLayout), FreshUntil: now.Add(time.Hour).Format(canonicalJSONInstantLayout), RegistryGeneration: "1"},
+		})
+	}
+	recomputed, err := createGoMatchSetIntegrityIdentity(authority, entrants)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pair, err := recomputed.pair(entrants[0].EntrantKey, entrants[1].EntrantKey, entrants[0].StrategyRevisionID, entrants[1].StrategyRevisionID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return authority, &claimedMatchIntegrityIdentity{
+		MatchSetID: "match-set:integrity", CompatibilityTupleID: tuple.TupleID, CompatibilityTuple: tuple.Tuple,
+		AuthorityBundleHash: authority.AuthorityBundleHash, RegistryGeneration: "1", EvidenceSetHash: recomputed.EvidenceSetHash, PairHash: pair.PairHash,
+		PublicationID: "publication:1", InstallReceiptID: "receipt:1", PayloadSHA256: authority.AuthorityBundleHash, EnvelopeSHA256: authority.EnvelopeSHA256,
+		SourceManifestHash: "sha256:" + strings.Repeat("d", 64), SourceSet: map[string]any{"certificateIds": []any{"certificate:containment:0", "certificate:containment:1"}},
+		Bottom: entrants[0], Top: entrants[1],
 	}
 }
 
@@ -482,6 +805,7 @@ func newTestMatchJobLifecycle(pool *pgxpool.Pool, now time.Time, token string) *
 	lifecycle := newMatchJobLifecycle(pool)
 	lifecycle.now = func() time.Time { return now }
 	lifecycle.newLeaseToken = func() (string, error) { return token, nil }
+	lifecycle.allowLegacyTestClaims = true
 	return lifecycle
 }
 

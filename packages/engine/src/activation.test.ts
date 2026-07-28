@@ -1,17 +1,17 @@
 import { describe, expect, it } from "vitest"
 import type { Soldier } from "@cowards/spec"
-import {
-  getRoundPlayerOrder,
-  resolveActivation,
-  resolveActivationSelection,
-} from "./activation.js"
+import * as enginePackage from "./index.js"
+import { getRoundPlayerOrder } from "./activation.js"
+import { MATCH_KERNEL } from "./kernel/driver.js"
+import type { CandidateStrategyRuntime, MatchMachine } from "./kernel/types.js"
 import { createInitialGameState } from "./state.js"
 import {
   createStrategyInput,
   createSoldierBrainInput,
 } from "./runtime-inputs.js"
 import { createFakeRuntime } from "./test/fake-runtime.js"
-import { violation, type GameState, type StrategyRuntime } from "./types.js"
+import { adaptRuntimeForCurrentKernel } from "./test/current-kernel-runtime.js"
+import { violation, type GameState } from "./types.js"
 
 const baseInput = {
   matchId: "match-activation",
@@ -33,22 +33,72 @@ const stateWithSoldiers = (soldiers: Soldier[]): GameState => ({
   soldiers,
 })
 
+const runActivation = (
+  state: GameState,
+  runtime: CandidateStrategyRuntime,
+  soldierId: string,
+) => {
+  const execution = MATCH_KERNEL.runActivationFromState({
+    state,
+    runtime: adaptRuntimeForCurrentKernel(runtime),
+    soldierId,
+  })
+  expect(execution.kind).toBe("completed")
+  if (execution.kind !== "completed" || execution.result === undefined) {
+    throw new Error(
+      `candidate activation failed: ${execution.failure?.code ?? "missing result"}`,
+    )
+  }
+  return execution.result
+}
+
+const bottomSelectionEffect = (state: GameState) => {
+  const created = MATCH_KERNEL.createMachine(baseInput)
+  let machine: MatchMachine = {
+    ...created,
+    state,
+    initialState: state,
+    cursor: {
+      ...created.cursor,
+      phaseNumber: state.phaseNumber,
+      roundNumber: state.roundNumber,
+    },
+  }
+  const matchStarted = MATCH_KERNEL.stepMatch(machine, {
+    kind: "advance",
+  })
+  if (matchStarted.kind !== "transition") {
+    throw new Error("candidate match-start transition missing")
+  }
+  machine = matchStarted.machine
+  const roundStarted = MATCH_KERNEL.stepMatch(machine, {
+    kind: "advance",
+  })
+  if (roundStarted.kind !== "transition") {
+    throw new Error("candidate round-start transition missing")
+  }
+  const effect = MATCH_KERNEL.stepMatch(roundStarted.machine, {
+    kind: "advance",
+  })
+  if (effect.kind !== "effect") {
+    throw new Error("candidate selection effect missing")
+  }
+  return effect
+}
+
 describe("activation selection and runtime inputs", () => {
+  it("does not expose retired contiguous activation lifecycle routes from the package root", () => {
+    expect(enginePackage).not.toHaveProperty("resolveActivationSelection")
+    expect(enginePackage).not.toHaveProperty("resolveActivationCycle")
+  })
+
   it("uses the A B B A snake pattern for Round 2", () => {
     expect(getRoundPlayerOrder("A", "B", 2)).toEqual(["A", "B", "B", "A"])
   })
 
-  it("filters duplicate, STONE, FALLEN, and excess activation orders", () => {
+  it("rejects an invalid retained prefix without backfilling from excess orders", () => {
     const state = createInitialGameState(baseInput)
     const [first, second, third] = state.soldiers
-    const runtime = createFakeRuntime({
-      selectActivations: () => [
-        { soldierId: first!.id },
-        { soldierId: first!.id },
-        { soldierId: second!.id },
-        { soldierId: third!.id },
-      ],
-    })
     const withStatuses = {
       ...state,
       roundNumber: 2 as const,
@@ -61,12 +111,26 @@ describe("activation selection and runtime inputs", () => {
             : soldier,
       ),
     }
-    const result = resolveActivationSelection(
-      withStatuses,
-      runtime,
-      "bottom-player",
-    )
-    expect(result.state.orders).toEqual([{ soldierId: first!.id }])
+    const effect = bottomSelectionEffect(withStatuses)
+    const result = MATCH_KERNEL.stepMatch(effect.machine, {
+      kind: "runtime_resume",
+      requestId: effect.request.requestId,
+      effectKind: effect.request.kind,
+      classification: "success",
+      value: {
+        activationOrders: [
+          { soldierId: first!.id },
+          { soldierId: first!.id },
+          { soldierId: second!.id },
+          { soldierId: third!.id },
+        ],
+        strategyMemory: {},
+      },
+    })
+    expect(result.kind).toBe("transition")
+    if (result.kind !== "transition") return
+    expect(result.machine.selections.bottom).toEqual([])
+    expect(result.record.classification).toBe("player_violation")
   })
 
   it("builds StrategyInput and SoldierBrainInput with limited visibility", () => {
@@ -88,11 +152,12 @@ describe("activation selection and runtime inputs", () => {
 
   it("stones a Soldier after a RuntimeViolation with no-advance", () => {
     const state = createInitialGameState(baseInput)
-    const runtime: StrategyRuntime = {
+    const runtime: CandidateStrategyRuntime = {
       selectActivations: createFakeRuntime().selectActivations,
-      runSoldierBrain: () => violation("TIMEOUT", "RuntimeViolation timeout"),
+      runSoldierBrain: () =>
+        violation("INVALID_OUTPUT", "RuntimeViolation invalid output"),
     }
-    const result = resolveActivation(state, runtime, state.soldiers[0]!.id)
+    const result = runActivation(state, runtime, state.soldiers[0]!.id)
     expect(
       result.events.some((summary) => summary.type === "RUNTIME_VIOLATION"),
     ).toBe(true)
@@ -104,8 +169,12 @@ describe("activation selection and runtime inputs", () => {
   })
 
   it("does not stone a Soldier when an earlier Advance protects from no-advance cleanup", () => {
-    const [mover] = createInitialGameState(baseInput).soldiers
-    const state = stateWithSoldiers([{ ...mover!, position: { x: 5, y: 5 } }])
+    const [mover, , , , , , , , opponent] =
+      createInitialGameState(baseInput).soldiers
+    const state = stateWithSoldiers([
+      { ...mover!, position: { x: 5, y: 5 } },
+      { ...opponent!, position: { x: 9, y: 9 } },
+    ])
     let calls = 0
     const runtime = createFakeRuntime({
       action: () => {
@@ -115,7 +184,7 @@ describe("activation selection and runtime inputs", () => {
           : { type: "MOVE", direction: "DOWN" }
       },
     })
-    const result = resolveActivation(state, runtime, mover!.id)
+    const result = runActivation(state, runtime, mover!.id)
     expect(result.state.soldiers[0]!.status).toBe("ACTIVE")
   })
 
@@ -146,7 +215,7 @@ describe("activation selection and runtime inputs", () => {
       },
     })
 
-    const result = resolveActivation(
+    const result = runActivation(
       { ...state, terrainStones: [{ x: 5, y: 4 }] },
       runtime,
       "mover",
@@ -188,7 +257,7 @@ describe("activation selection and runtime inputs", () => {
       },
     })
 
-    const result = resolveActivation(state, runtime, "mover")
+    const result = runActivation(state, runtime, "mover")
 
     expect(calls).toBe(1)
     expect(result.state.outcome).toEqual({
@@ -200,3 +269,195 @@ describe("activation selection and runtime inputs", () => {
     )
   })
 })
+
+const orderMatrixInitialState = createInitialGameState(baseInput)
+const firstBottomId = orderMatrixInitialState.soldiers[0]!.id
+const secondBottomId = orderMatrixInitialState.soldiers[1]!.id
+const inactiveBottomId = orderMatrixInitialState.soldiers[2]!.id
+const firstTopId = orderMatrixInitialState.soldiers[8]!.id
+
+const retainedPrefixCases: Array<{
+  classification: string
+  position: "inside" | "outside"
+  quota: 1 | 2
+  rawOrders: unknown[]
+  expectedViolation: boolean
+  expectedOrderIds: string[]
+}> = [
+  {
+    classification: "valid",
+    position: "inside",
+    quota: 1,
+    rawOrders: [{ soldierId: firstBottomId }],
+    expectedViolation: false,
+    expectedOrderIds: [firstBottomId],
+  },
+  {
+    classification: "valid",
+    position: "outside",
+    quota: 1,
+    rawOrders: [{ soldierId: firstBottomId }, { soldierId: secondBottomId }],
+    expectedViolation: false,
+    expectedOrderIds: [firstBottomId],
+  },
+  {
+    classification: "malformed",
+    position: "inside",
+    quota: 1,
+    rawOrders: [{ soldierId: 42 }, { soldierId: firstBottomId }],
+    expectedViolation: true,
+    expectedOrderIds: [],
+  },
+  {
+    classification: "malformed",
+    position: "outside",
+    quota: 1,
+    rawOrders: [{ soldierId: firstBottomId }, { soldierId: 42 }],
+    expectedViolation: false,
+    expectedOrderIds: [firstBottomId],
+  },
+  {
+    classification: "duplicate",
+    position: "inside",
+    quota: 2,
+    rawOrders: [
+      { soldierId: firstBottomId },
+      { soldierId: firstBottomId },
+      { soldierId: secondBottomId },
+    ],
+    expectedViolation: true,
+    expectedOrderIds: [],
+  },
+  {
+    classification: "duplicate",
+    position: "outside",
+    quota: 1,
+    rawOrders: [{ soldierId: firstBottomId }, { soldierId: firstBottomId }],
+    expectedViolation: false,
+    expectedOrderIds: [firstBottomId],
+  },
+  {
+    classification: "unknown",
+    position: "inside",
+    quota: 1,
+    rawOrders: [{ soldierId: "unknown-soldier" }, { soldierId: firstBottomId }],
+    expectedViolation: true,
+    expectedOrderIds: [],
+  },
+  {
+    classification: "unknown",
+    position: "outside",
+    quota: 1,
+    rawOrders: [{ soldierId: firstBottomId }, { soldierId: "unknown-soldier" }],
+    expectedViolation: false,
+    expectedOrderIds: [firstBottomId],
+  },
+  {
+    classification: "wrong-owner",
+    position: "inside",
+    quota: 1,
+    rawOrders: [{ soldierId: firstTopId }, { soldierId: firstBottomId }],
+    expectedViolation: true,
+    expectedOrderIds: [],
+  },
+  {
+    classification: "wrong-owner",
+    position: "outside",
+    quota: 1,
+    rawOrders: [{ soldierId: firstBottomId }, { soldierId: firstTopId }],
+    expectedViolation: false,
+    expectedOrderIds: [firstBottomId],
+  },
+  {
+    classification: "inactive",
+    position: "inside",
+    quota: 1,
+    rawOrders: [{ soldierId: inactiveBottomId }, { soldierId: firstBottomId }],
+    expectedViolation: true,
+    expectedOrderIds: [],
+  },
+  {
+    classification: "inactive",
+    position: "outside",
+    quota: 1,
+    rawOrders: [{ soldierId: firstBottomId }, { soldierId: inactiveBottomId }],
+    expectedViolation: false,
+    expectedOrderIds: [firstBottomId],
+  },
+]
+
+describe.each(retainedPrefixCases)(
+  "retained prefix: $classification order $position the quota",
+  ({
+    classification,
+    position,
+    quota,
+    rawOrders,
+    expectedViolation,
+    expectedOrderIds,
+  }) => {
+    it("caps raw entries before shape and semantic validation", () => {
+      const state: GameState = {
+        ...orderMatrixInitialState,
+        roundNumber: quota === 2 ? 2 : 1,
+        activationCount: quota,
+        soldiers: orderMatrixInitialState.soldiers.map((candidate) =>
+          candidate.id === inactiveBottomId
+            ? { ...candidate, status: "STONE" as const }
+            : candidate,
+        ),
+      }
+      const caseId = `${classification}-${position}`
+      const effect = bottomSelectionEffect(state)
+      const result = MATCH_KERNEL.stepMatch(effect.machine, {
+        kind: "runtime_resume",
+        requestId: effect.request.requestId,
+        effectKind: effect.request.kind,
+        classification: "success",
+        value: {
+          activationOrders: rawOrders,
+          strategyMemory: { caseId },
+        },
+      })
+      expect(result.kind).toBe("transition")
+      if (result.kind !== "transition") return
+      const expectedState = expectedViolation
+        ? state
+        : {
+            ...state,
+            players: state.players.map((player) =>
+              player.id === "bottom-player"
+                ? { ...player, strategyMemory: { caseId } }
+                : player,
+            ),
+          }
+
+      expect(result.machine.selections.bottom).toEqual(
+        expectedOrderIds.map((soldierId) => ({ soldierId })),
+      )
+      expect(result.machine.state).toEqual(expectedState)
+      expect(
+        result.record.events.map(({ type, payload, context, privacy }) => ({
+          type,
+          payload,
+          context,
+          privacy,
+        })),
+      ).toEqual([
+        expectedViolation
+          ? {
+              type: "RUNTIME_VIOLATION",
+              payload: { playerId: "bottom-player", type: "INVALID_OUTPUT" },
+              context: { actingPlayerId: "bottom-player" },
+              privacy: "owner",
+            }
+          : {
+              type: "STRATEGY_EVALUATED",
+              payload: { playerId: "bottom-player" },
+              context: { actingPlayerId: "bottom-player" },
+              privacy: "owner",
+            },
+      ])
+    })
+  },
+)

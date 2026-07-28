@@ -326,6 +326,8 @@ export const createCowardsLocalService = (
               sourceHash: revision.sourceHash,
               sourceBytes: revision.sourceBytes,
               runtimeSemantics: revision.runtimeSemantics,
+              countedEntryEligibilityCategory:
+                revision.countedEntryEligibilityCategory,
               engineCompatibility: revision.engineCompatibility,
               validationStatus: revision.valid ? "valid" : "invalid",
               createdAt: revision.createdAt,

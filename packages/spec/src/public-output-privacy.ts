@@ -3,6 +3,12 @@ export const PUBLIC_OUTPUT_FORBIDDEN_FIELDS = [
   "sourceText",
   "bytesBase64",
   "artifactBytesBase64",
+  "certificateBytes",
+  "certificateBytesBase64",
+  "evidenceBytes",
+  "evidenceBytesBase64",
+  "originalSourceBytes",
+  "normalizedSourceBytes",
   "strategySource",
   "strategyMemory",
   "soldierMemory",
@@ -17,6 +23,8 @@ export const PUBLIC_OUTPUT_FORBIDDEN_FIELDS = [
   "runtimeDetails",
   "privateRuntime",
   "privateDiagnostics",
+  "toolchainDiagnostics",
+  "hostDiagnostics",
   "privateError",
   "stack",
   "stackTrace",
@@ -24,6 +32,9 @@ export const PUBLIC_OUTPUT_FORBIDDEN_FIELDS = [
   "password",
   "passwordHash",
   "authorization",
+  "credential",
+  "credentials",
+  "apiKey",
   "token",
   "tokens",
   "accessToken",
@@ -33,6 +44,12 @@ export const PUBLIC_OUTPUT_FORBIDDEN_FIELDS = [
   "sessionId",
   "hostPath",
   "hostPaths",
+  "artifactPath",
+  "artifactPaths",
+  "proofStoragePath",
+  "proofStoragePaths",
+  "evidenceStoragePath",
+  "evidenceStoragePaths",
   "packagePath",
   "packagePaths",
   "pythonRuntime",
@@ -45,6 +62,8 @@ export const PUBLIC_OUTPUT_FORBIDDEN_FIELDS = [
   "runtimeInternals",
   "privateRuntimeInternal",
   "privateRuntimeInternals",
+  "securityInternals",
+  "exploitDetails",
 ] as const
 
 export const PUBLIC_OUTPUT_FORBIDDEN_MARKERS = [
@@ -59,6 +78,9 @@ export const PUBLIC_OUTPUT_FORBIDDEN_MARKERS = [
   "site-packages",
   'File "',
   "/python_runtime_host.py",
+  "COWARDS_PROVIDER_VALIDATION_SECRET",
+  "/var/lib/cowards/",
+  "exploit payload",
 ] as const
 
 export const normalizePublicOutputKey = (key: string): string =>

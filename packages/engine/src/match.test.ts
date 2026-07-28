@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
-import { resolveRound, runMatch } from "./match.js"
+import { runHistoricalV14RoundFromState } from "./kernel/driver.js"
+import { runMatch } from "./match.js"
 import { createInitialGameState } from "./state.js"
 import { createFakeRuntime } from "./test/fake-runtime.js"
 
@@ -70,7 +71,7 @@ describe("runMatch golden behavior", () => {
       },
     })
 
-    resolveRound(state, runtime)
+    runHistoricalV14RoundFromState({ state, runtime })
 
     expect(calls.slice(0, 12)).toEqual([
       "bottom-soldier-1:0",

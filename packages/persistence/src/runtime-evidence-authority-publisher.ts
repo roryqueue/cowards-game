@@ -1,0 +1,3689 @@
+import { Buffer } from "node:buffer"
+import {
+  createHash,
+  createPublicKey,
+  randomUUID,
+  verify as verifySignature,
+  type KeyObject,
+} from "node:crypto"
+import { open as openFile, readFile, rename, unlink } from "node:fs/promises"
+import path from "node:path"
+import {
+  CANONICAL_COMPATIBILITY_TUPLES,
+  CANONICAL_COMPATIBILITY_TUPLE_FIELDS,
+  CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_ID,
+  RUNTIME_EVIDENCE_AUTHORITY_PAYLOAD_SCHEMA_VERSION,
+  RUNTIME_EVIDENCE_AUTHORITY_TRUST_DOMAINS,
+  buildRuntimeEvidenceAuthorityEnvelope,
+  encodeRuntimeEvidenceAuthorityPayload,
+  encodeRuntimeEvidenceAuthoritySignatureMessage,
+  hashRuntimeEvidenceAuthorityPayload,
+  inspectRuntimeEvidenceAuthorityBundle,
+  parseExecutableLaneIdentity,
+  type ExecutableLaneIdentity,
+  type RuntimeEvidenceAuthorityPayload,
+  RUNTIME_EVIDENCE_AUTHORITY_PAYLOAD_SCHEMA_VERSION_V1_17,
+  encodeCanonicalJson,
+  encodeRuntimeEvidenceAuthorityPayloadV117,
+  evaluateRuntimeConformanceFreshnessV117,
+  hashRuntimeEvidenceCertificateRecordV117,
+  inspectRuntimeEvidenceAuthorityBundleV117,
+  parseRuntimeEvidenceAuthorityBindingV117,
+  verifyRuntimeConformanceCertificateV117,
+  verifyRuntimeConformanceCertificateV119,
+  type RuntimeEvidenceAuthorityPayloadV117,
+  type RuntimeConformanceCertificateV117,
+  type RuntimeConformanceExpectedRunBindingV117,
+  type RuntimeConformanceIdentityBindingsV117,
+  type RuntimeConformanceTrustedProducerV117,
+  type RuntimeConformanceCertificateV119,
+  type RuntimeConformanceExpectedRunBindingV119,
+  type RuntimeConformanceTrustedProducerV119,
+  type JsonValue,
+} from "@cowards/spec"
+import type { Pool, PoolClient, QueryResultRow } from "pg"
+
+export const RUNTIME_EVIDENCE_AUTHORITY_IMPORT_SCHEMA_VERSION =
+  "v1.37-runtime-evidence-authority-import-v1" as const
+
+const IMPORT_PAYLOAD_KEYS = [
+  "schemaVersion",
+  "domain",
+  "eventId",
+  "producerId",
+  "producerKeyId",
+  "trustDomain",
+  "issuedAt",
+  "validUntil",
+  "action",
+  "laneIdentityHash",
+  "reasonCode",
+  "evidenceReferenceHash",
+  "compensatesEventId",
+  "targetCertificateId",
+  "targetCertificateRecordHash",
+  "replacementCertificateId",
+  "replacementCertificateRecordHash",
+] as const
+
+type ImportDomain =
+  | "lane-control"
+  | "certificate-revocation"
+  | "certificate-supersession"
+  | "conformance-certificate"
+
+export interface RuntimeEvidenceAuthorityImportPayload {
+  schemaVersion: typeof RUNTIME_EVIDENCE_AUTHORITY_IMPORT_SCHEMA_VERSION
+  domain: ImportDomain
+  eventId: string
+  producerId: string
+  producerKeyId: string
+  trustDomain: string
+  issuedAt: string
+  validUntil: string
+  action: "disable" | "enable" | null
+  laneIdentityHash: string | null
+  reasonCode: string
+  evidenceReferenceHash: string
+  compensatesEventId: string | null
+  targetCertificateId: string | null
+  targetCertificateRecordHash: string | null
+  replacementCertificateId: string | null
+  replacementCertificateRecordHash: string | null
+}
+
+export interface RuntimeEvidenceAuthorityImportEnvelope {
+  payload: RuntimeEvidenceAuthorityImportPayload
+  signatureBase64: string
+}
+
+export interface RuntimeEvidenceAuthorityImportTrustRoot {
+  producerId: string
+  keyId: string
+  trustDomain: string
+  publicKeyPem: string
+}
+
+export interface BootstrapRuntimeEvidenceAuthorityImportTrustRootsInput {
+  expectedDescriptorSha256: string
+  producerId: string
+  keyId: string
+  trustDomain: string
+  readDescriptorBytes(): Promise<Uint8Array>
+}
+
+export interface RuntimeEvidenceAuthorityImportTrustRootBootstrapReceipt {
+  status: "installed" | "idempotent"
+  descriptorSha256: string
+  producerId: string
+  keyId: string
+  trustDomain: string
+  publicKeyFingerprint: string
+  generation: string
+}
+
+export class RuntimeEvidenceAuthorityPublisherError extends Error {
+  constructor(
+    readonly code: string,
+    message: string,
+  ) {
+    super(message)
+    this.name = "RuntimeEvidenceAuthorityPublisherError"
+  }
+}
+
+const fail = (code: string, message: string): never => {
+  throw new RuntimeEvidenceAuthorityPublisherError(code, message)
+}
+
+const SHA256 = /^sha256:[0-9a-f]{64}$/u
+const INSTANT = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/u
+const BASE64 =
+  /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/u
+
+const assertString = (value: unknown, label: string): string => {
+  if (
+    typeof value !== "string" ||
+    value.length === 0 ||
+    Buffer.byteLength(value, "utf8") > 512
+  ) {
+    fail("INVALID_IMPORT", `${label} must be a bounded non-empty string.`)
+  }
+  return value as string
+}
+
+const assertHash = (value: unknown, label: string): string => {
+  const hash = assertString(value, label)
+  if (!SHA256.test(hash))
+    fail("INVALID_IMPORT", `${label} must be sha256 identity.`)
+  return hash
+}
+
+const assertInstant = (value: unknown, label: string): string => {
+  const instant = assertString(value, label)
+  const parsed = Date.parse(instant)
+  if (
+    !INSTANT.test(instant) ||
+    !Number.isFinite(parsed) ||
+    new Date(parsed).toISOString() !== instant
+  ) {
+    fail("INVALID_IMPORT", `${label} must be an exact UTC millisecond instant.`)
+  }
+  return instant
+}
+
+const nullableString = (value: unknown, label: string): string | null =>
+  value === null ? null : assertString(value, label)
+
+const nullableHash = (value: unknown, label: string): string | null =>
+  value === null ? null : assertHash(value, label)
+
+const exactPayload = (
+  value: unknown,
+): Readonly<RuntimeEvidenceAuthorityImportPayload> => {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    fail("INVALID_IMPORT", "Signed import payload must be an object.")
+  }
+  const record = value as Record<string, unknown>
+  const actual = Object.keys(record)
+  if (
+    actual.length !== IMPORT_PAYLOAD_KEYS.length ||
+    IMPORT_PAYLOAD_KEYS.some((key) => !Object.hasOwn(record, key))
+  ) {
+    fail(
+      "STRICT_SHAPE",
+      "Signed import payload has an unknown or missing field.",
+    )
+  }
+  if (
+    record.schemaVersion !== RUNTIME_EVIDENCE_AUTHORITY_IMPORT_SCHEMA_VERSION
+  ) {
+    fail("SCHEMA_VERSION", "Signed import schema version is unknown.")
+  }
+  if (
+    record.domain !== "lane-control" &&
+    record.domain !== "certificate-revocation" &&
+    record.domain !== "certificate-supersession" &&
+    record.domain !== "conformance-certificate"
+  ) {
+    fail("DOMAIN", "Signed import domain is unknown.")
+  }
+  const payload: RuntimeEvidenceAuthorityImportPayload = {
+    schemaVersion: RUNTIME_EVIDENCE_AUTHORITY_IMPORT_SCHEMA_VERSION,
+    domain: record.domain as ImportDomain,
+    eventId: assertString(record.eventId, "eventId"),
+    producerId: assertString(record.producerId, "producerId"),
+    producerKeyId: assertString(record.producerKeyId, "producerKeyId"),
+    trustDomain: assertString(record.trustDomain, "trustDomain"),
+    issuedAt: assertInstant(record.issuedAt, "issuedAt"),
+    validUntil: assertInstant(record.validUntil, "validUntil"),
+    action:
+      record.action === null ||
+      record.action === "disable" ||
+      record.action === "enable"
+        ? record.action
+        : fail("INVALID_IMPORT", "action is invalid."),
+    laneIdentityHash: nullableHash(record.laneIdentityHash, "laneIdentityHash"),
+    reasonCode: assertString(record.reasonCode, "reasonCode"),
+    evidenceReferenceHash: assertHash(
+      record.evidenceReferenceHash,
+      "evidenceReferenceHash",
+    ),
+    compensatesEventId: nullableString(
+      record.compensatesEventId,
+      "compensatesEventId",
+    ),
+    targetCertificateId: nullableString(
+      record.targetCertificateId,
+      "targetCertificateId",
+    ),
+    targetCertificateRecordHash: nullableHash(
+      record.targetCertificateRecordHash,
+      "targetCertificateRecordHash",
+    ),
+    replacementCertificateId: nullableString(
+      record.replacementCertificateId,
+      "replacementCertificateId",
+    ),
+    replacementCertificateRecordHash: nullableHash(
+      record.replacementCertificateRecordHash,
+      "replacementCertificateRecordHash",
+    ),
+  }
+  if (Date.parse(payload.issuedAt) > Date.parse(payload.validUntil)) {
+    fail("VALIDITY", "Signed import validity is incoherent.")
+  }
+  if (payload.domain === "lane-control") {
+    if (
+      payload.laneIdentityHash === null ||
+      payload.targetCertificateId !== null ||
+      payload.targetCertificateRecordHash !== null ||
+      payload.replacementCertificateId !== null ||
+      payload.replacementCertificateRecordHash !== null ||
+      (payload.action === "disable" && payload.compensatesEventId !== null) ||
+      (payload.action === "enable" && payload.compensatesEventId === null) ||
+      payload.action === null
+    ) {
+      fail("DOMAIN", "Lane-control payload fields do not match their domain.")
+    }
+  } else {
+    if (
+      payload.action !== null ||
+      payload.laneIdentityHash !== null ||
+      payload.compensatesEventId !== null ||
+      payload.targetCertificateId === null ||
+      payload.targetCertificateRecordHash === null
+    ) {
+      fail("DOMAIN", "Certificate-status fields do not match their domain.")
+    }
+    if (
+      payload.domain === "certificate-revocation" &&
+      (payload.replacementCertificateId !== null ||
+        payload.replacementCertificateRecordHash !== null)
+    ) {
+      fail("DOMAIN", "Revocation cannot contain a replacement certificate.")
+    }
+    if (
+      payload.domain === "certificate-supersession" &&
+      (payload.replacementCertificateId === null ||
+        payload.replacementCertificateRecordHash === null)
+    ) {
+      fail("DOMAIN", "Supersession requires an exact replacement certificate.")
+    }
+    if (
+      payload.domain === "conformance-certificate" &&
+      (payload.replacementCertificateId !== null ||
+        payload.replacementCertificateRecordHash !== null ||
+        (payload.reasonCode !== "REVIEWED_CONFORMANCE_CERTIFICATE" &&
+          payload.reasonCode !== "REVIEWED_INACTIVE_OBSERVATION_CERTIFICATE"))
+    ) {
+      fail(
+        "DOMAIN",
+        "Conformance certificate import fields do not match their domain.",
+      )
+    }
+  }
+  return Object.freeze(payload)
+}
+
+const parseStoredLaneIdentity = (
+  value: unknown,
+): Readonly<ExecutableLaneIdentity> => {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    fail("CLOSED_GRAPH", "Stored lane identity must be an object.")
+  }
+  const record = value as Record<string, unknown>
+  const tuple = record.semanticTuple
+  if (tuple === null || typeof tuple !== "object" || Array.isArray(tuple)) {
+    fail("CLOSED_GRAPH", "Stored lane semantic tuple must be an object.")
+  }
+  const tupleRecord = tuple as Record<string, unknown>
+  const tupleKeys = Object.keys(tupleRecord)
+  if (
+    tupleKeys.length !== CANONICAL_COMPATIBILITY_TUPLE_FIELDS.length ||
+    CANONICAL_COMPATIBILITY_TUPLE_FIELDS.some(
+      (field) => !Object.hasOwn(tupleRecord, field),
+    )
+  ) {
+    fail(
+      "CLOSED_GRAPH",
+      "Stored lane semantic tuple has an unknown or missing field.",
+    )
+  }
+  try {
+    return parseExecutableLaneIdentity({
+      ...record,
+      semanticTuple: Object.fromEntries(
+        CANONICAL_COMPATIBILITY_TUPLE_FIELDS.map((field) => [
+          field,
+          tupleRecord[field],
+        ]),
+      ),
+    } as unknown as ExecutableLaneIdentity)
+  } catch {
+    return fail("CLOSED_GRAPH", "Stored lane identity is not canonical.")
+  }
+}
+
+export const encodeRuntimeEvidenceAuthorityImportPayload = (
+  payload: RuntimeEvidenceAuthorityImportPayload,
+): Uint8Array => new TextEncoder().encode(JSON.stringify(exactPayload(payload)))
+
+interface VerifiedImport {
+  payload: Readonly<RuntimeEvidenceAuthorityImportPayload>
+  payloadBytes: Uint8Array
+  signatureBase64: string
+  envelopeHash: string
+}
+
+const verifyImport = (
+  envelope: RuntimeEvidenceAuthorityImportEnvelope,
+  expectedDomain: ImportDomain,
+  verificationInstant: string,
+  trustRoots: readonly RuntimeEvidenceAuthorityImportTrustRoot[],
+): VerifiedImport => {
+  const payload = exactPayload(globalThis.structuredClone(envelope.payload))
+  if (payload.domain !== expectedDomain) {
+    fail("DOMAIN", `Expected ${expectedDomain} signed import domain.`)
+  }
+  const instant = assertInstant(verificationInstant, "verificationInstant")
+  if (
+    Date.parse(instant) < Date.parse(payload.issuedAt) ||
+    Date.parse(instant) > Date.parse(payload.validUntil)
+  ) {
+    fail("VALIDITY", "Signed import is not current at verification time.")
+  }
+  const root = trustRoots.find(
+    (candidate) =>
+      candidate.producerId === payload.producerId &&
+      candidate.keyId === payload.producerKeyId &&
+      candidate.trustDomain === payload.trustDomain,
+  )
+  if (!root)
+    return fail(
+      "UNKNOWN_KEY",
+      "Signed import producer/key/domain is not trusted.",
+    )
+  const signature = assertString(envelope.signatureBase64, "signatureBase64")
+  if (!BASE64.test(signature) || signature.length % 4 !== 0) {
+    fail("SIGNATURE", "Signed import signature is not canonical base64.")
+  }
+  const signatureBytes = Buffer.from(signature, "base64")
+  if (
+    signatureBytes.length !== 64 ||
+    signatureBytes.toString("base64") !== signature
+  ) {
+    fail(
+      "SIGNATURE",
+      "Signed import signature must be an exact Ed25519 signature.",
+    )
+  }
+  const payloadBytes = encodeRuntimeEvidenceAuthorityImportPayload(payload)
+  let publicKey: KeyObject
+  try {
+    publicKey = createPublicKey(root.publicKeyPem)
+  } catch {
+    return fail("UNKNOWN_KEY", "Configured authority public key is invalid.")
+  }
+  if (!verifySignature(null, payloadBytes, publicKey, signatureBytes)) {
+    fail("SIGNATURE", "Signed import signature verification failed.")
+  }
+  const envelopeHash = createHash("sha256")
+    .update("cowards-game:runtime-evidence-authority-import-envelope:v1\0")
+    .update(payloadBytes)
+    .update("\0")
+    .update(signatureBytes)
+    .digest("hex")
+  return { payload, payloadBytes, signatureBase64: signature, envelopeHash }
+}
+
+const withSerializableTransaction = async <T>(
+  pool: Pool,
+  fn: (client: PoolClient) => Promise<T>,
+): Promise<T> => {
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    const client = await pool.connect()
+    try {
+      await client.query("begin isolation level serializable")
+      const result = await fn(client)
+      await client.query("commit")
+      return result
+    } catch (error) {
+      await client.query("rollback")
+      if (
+        attempt < 3 &&
+        typeof error === "object" &&
+        error !== null &&
+        "code" in error &&
+        error.code === "40001"
+      ) {
+        continue
+      }
+      throw error
+    } finally {
+      client.release()
+    }
+  }
+  return fail(
+    "SERIALIZATION_FAILURE",
+    "Serializable transaction retry exhausted.",
+  )
+}
+
+interface InspectedImportTrustRootDescriptor {
+  descriptorBytes: Uint8Array
+  descriptorSha256: string
+  selectedRoot: Readonly<RuntimeEvidenceAuthorityImportTrustRoot>
+  publicKeyFingerprint: string
+}
+
+const IMPORT_TRUST_ROOT_KEYS = Object.freeze([
+  "keyId",
+  "producerId",
+  "publicKeyPem",
+  "trustDomain",
+] as const)
+
+const inspectImportTrustRootDescriptor = (
+  bytesInput: Uint8Array,
+  input: Pick<
+    BootstrapRuntimeEvidenceAuthorityImportTrustRootsInput,
+    "expectedDescriptorSha256" | "producerId" | "keyId" | "trustDomain"
+  >,
+): InspectedImportTrustRootDescriptor => {
+  const bytes = new Uint8Array(bytesInput)
+  if (bytes.byteLength < 2 || bytes.byteLength > 64 * 1024) {
+    return fail(
+      "IMPORT_ROOT_DESCRIPTOR_SIZE",
+      "Import trust-root descriptor must be between 2 and 65536 bytes.",
+    )
+  }
+  if (!SHA256.test(input.expectedDescriptorSha256)) {
+    return fail(
+      "IMPORT_ROOT_EXPECTED_HASH",
+      "Expected import trust-root descriptor hash is invalid.",
+    )
+  }
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes))
+  } catch {
+    return fail(
+      "IMPORT_ROOT_DESCRIPTOR_JSON",
+      "Import trust-root descriptor is not strict UTF-8 JSON.",
+    )
+  }
+  if (!Array.isArray(parsed) || parsed.length === 0 || parsed.length > 32) {
+    return fail(
+      "IMPORT_ROOT_DESCRIPTOR_SCHEMA",
+      "Import trust-root descriptor must be a bounded plural array.",
+    )
+  }
+  const roots = parsed.map((entry, index) => {
+    if (entry === null || typeof entry !== "object" || Array.isArray(entry)) {
+      return fail(
+        "IMPORT_ROOT_DESCRIPTOR_SCHEMA",
+        `Import trust root ${index} is not an object.`,
+      )
+    }
+    const record = entry as Record<string, unknown>
+    const keys = Object.keys(record).sort()
+    if (
+      keys.length !== IMPORT_TRUST_ROOT_KEYS.length ||
+      keys.some((key, keyIndex) => key !== IMPORT_TRUST_ROOT_KEYS[keyIndex])
+    ) {
+      return fail(
+        "IMPORT_ROOT_DESCRIPTOR_SCHEMA",
+        `Import trust root ${index} is not closed.`,
+      )
+    }
+    return Object.freeze({
+      producerId: assertString(record.producerId, "producerId"),
+      keyId: assertString(record.keyId, "keyId"),
+      trustDomain: assertString(record.trustDomain, "trustDomain"),
+      publicKeyPem: assertString(record.publicKeyPem, "publicKeyPem"),
+    })
+  })
+  const identities = new Set<string>()
+  for (const root of roots) {
+    const identity = `${root.producerId}\0${root.keyId}\0${root.trustDomain}`
+    if (identities.has(identity)) {
+      return fail(
+        "IMPORT_ROOT_DUPLICATE",
+        "Import trust-root descriptor contains a duplicate identity.",
+      )
+    }
+    identities.add(identity)
+  }
+  const canonical = encodeCanonicalJson(roots as unknown as JsonValue, {
+    context: "canonical-manifest",
+  })
+  if (
+    !canonical.ok ||
+    !Buffer.from(canonical.bytes).equals(Buffer.from(bytes))
+  ) {
+    return fail(
+      "IMPORT_ROOT_DESCRIPTOR_CANONICAL",
+      "Import trust-root descriptor bytes are not canonical JSON.",
+    )
+  }
+  const descriptorSha256 = `sha256:${createHash("sha256")
+    .update(bytes)
+    .digest("hex")}`
+  if (descriptorSha256 !== input.expectedDescriptorSha256) {
+    return fail(
+      "IMPORT_ROOT_DESCRIPTOR_HASH",
+      "Import trust-root descriptor does not match the expected hash.",
+    )
+  }
+  const matches = roots.filter(
+    (root) =>
+      root.producerId === input.producerId &&
+      root.keyId === input.keyId &&
+      root.trustDomain === input.trustDomain,
+  )
+  if (matches.length !== 1) {
+    return fail(
+      "IMPORT_ROOT_PIN",
+      "Import trust-root descriptor does not contain the exact selected identity.",
+    )
+  }
+  let publicKey: KeyObject
+  try {
+    publicKey = createPublicKey(matches[0]!.publicKeyPem)
+  } catch {
+    return fail(
+      "IMPORT_ROOT_PUBLIC_KEY",
+      "Import trust-root public key is invalid.",
+    )
+  }
+  if (publicKey.asymmetricKeyType !== "ed25519") {
+    return fail(
+      "IMPORT_ROOT_PUBLIC_KEY",
+      "Import trust-root public key must be Ed25519.",
+    )
+  }
+  const publicKeyFingerprint = `sha256:${createHash("sha256")
+    .update(publicKey.export({ type: "spki", format: "der" }))
+    .digest("hex")}`
+  return {
+    descriptorBytes: bytes,
+    descriptorSha256,
+    selectedRoot: matches[0]!,
+    publicKeyFingerprint,
+  }
+}
+
+export const bootstrapRuntimeEvidenceAuthorityImportTrustRoots = async (
+  pool: Pool,
+  input: BootstrapRuntimeEvidenceAuthorityImportTrustRootsInput,
+): Promise<
+  Readonly<RuntimeEvidenceAuthorityImportTrustRootBootstrapReceipt>
+> => {
+  const expected = inspectImportTrustRootDescriptor(
+    await input.readDescriptorBytes(),
+    input,
+  )
+  return withSerializableTransaction(pool, async (client) => {
+    await client.query(
+      `select next_generation
+         from runtime_evidence_authority_import_trust_root_head
+        where singleton = true
+        for update`,
+    )
+    let checked: InspectedImportTrustRootDescriptor
+    try {
+      checked = inspectImportTrustRootDescriptor(
+        await input.readDescriptorBytes(),
+        input,
+      )
+    } catch {
+      return fail(
+        "IMPORT_ROOT_DESCRIPTOR_CHANGED",
+        "Import trust-root descriptor changed during bootstrap.",
+      )
+    }
+    if (
+      checked.descriptorSha256 !== expected.descriptorSha256 ||
+      !Buffer.from(checked.descriptorBytes).equals(
+        Buffer.from(expected.descriptorBytes),
+      ) ||
+      checked.publicKeyFingerprint !== expected.publicKeyFingerprint
+    ) {
+      return fail(
+        "IMPORT_ROOT_DESCRIPTOR_CHANGED",
+        "Import trust-root descriptor changed during bootstrap.",
+      )
+    }
+    const existing = await client.query<{
+      descriptor_sha256: string
+      descriptor_bytes: Buffer
+      public_key_fingerprint: string
+      generation: string
+    }>(
+      `select descriptor_sha256, descriptor_bytes, public_key_fingerprint,
+              generation::text
+         from runtime_evidence_authority_import_trust_root_deployments
+        where producer_id = $1 and key_id = $2 and trust_domain = $3`,
+      [input.producerId, input.keyId, input.trustDomain],
+    )
+    const row = existing.rows[0]
+    if (row !== undefined) {
+      if (
+        row.descriptor_sha256 !== checked.descriptorSha256 ||
+        !row.descriptor_bytes.equals(Buffer.from(checked.descriptorBytes)) ||
+        row.public_key_fingerprint !== checked.publicKeyFingerprint
+      ) {
+        return fail(
+          "IMPORT_ROOT_CONFLICT",
+          "Import trust-root identity is already pinned to different bytes.",
+        )
+      }
+      return Object.freeze({
+        status: "idempotent" as const,
+        descriptorSha256: checked.descriptorSha256,
+        producerId: input.producerId,
+        keyId: input.keyId,
+        trustDomain: input.trustDomain,
+        publicKeyFingerprint: checked.publicKeyFingerprint,
+        generation: row.generation,
+      })
+    }
+    const head = await client.query<{ next_generation: string }>(
+      `select next_generation::text
+         from runtime_evidence_authority_import_trust_root_head
+        where singleton = true`,
+    )
+    const generation = head.rows[0]?.next_generation
+    if (generation === undefined) {
+      return fail(
+        "IMPORT_ROOT_HEAD",
+        "Import trust-root generation head is unavailable.",
+      )
+    }
+    const id = `runtime-authority-import-root:${checked.descriptorSha256.slice(
+      "sha256:".length,
+    )}`
+    await client.query(
+      `insert into runtime_evidence_authority_import_trust_root_deployments
+        (id, descriptor_sha256, descriptor_bytes, producer_id, key_id,
+         trust_domain, public_key_fingerprint, generation)
+       values ($1,$2,$3,$4,$5,$6,$7,$8::bigint)`,
+      [
+        id,
+        checked.descriptorSha256,
+        Buffer.from(checked.descriptorBytes),
+        input.producerId,
+        input.keyId,
+        input.trustDomain,
+        checked.publicKeyFingerprint,
+        generation,
+      ],
+    )
+    await client.query(
+      `update runtime_evidence_authority_import_trust_root_head
+          set next_generation = next_generation + 1
+        where singleton = true`,
+    )
+    return Object.freeze({
+      status: "installed" as const,
+      descriptorSha256: checked.descriptorSha256,
+      producerId: input.producerId,
+      keyId: input.keyId,
+      trustDomain: input.trustDomain,
+      publicKeyFingerprint: checked.publicKeyFingerprint,
+      generation,
+    })
+  })
+}
+
+const storedHash = (hash: string): string => hash.slice("sha256:".length)
+
+const assertExactImportedRow = (
+  row: QueryResultRow,
+  verified: VerifiedImport,
+): void => {
+  if (
+    row.id !== verified.payload.eventId ||
+    row.signed_payload !==
+      Buffer.from(verified.payloadBytes).toString("utf8") ||
+    row.signature_base64 !== verified.signatureBase64 ||
+    row.envelope_hash !== verified.envelopeHash
+  ) {
+    fail(
+      "IMPORT_CONFLICT",
+      "Existing signed import conflicts with exact envelope.",
+    )
+  }
+}
+
+export interface ImportedRuntimeLaneControl {
+  controlId: string
+  envelopeHash: string
+  effectiveDisabled: boolean
+}
+
+export const importAuthenticatedRuntimeLaneControl = async (
+  pool: Pool,
+  input: {
+    envelope: RuntimeEvidenceAuthorityImportEnvelope
+    verificationInstant: string
+    expectedLaneIdentityHash: string
+    trustedOperators: readonly RuntimeEvidenceAuthorityImportTrustRoot[]
+  },
+): Promise<Readonly<ImportedRuntimeLaneControl>> => {
+  const expectedLane = assertHash(
+    input.expectedLaneIdentityHash,
+    "expectedLaneIdentityHash",
+  )
+  const immutable = globalThis.structuredClone(input.envelope)
+  const preflight = verifyImport(
+    immutable,
+    "lane-control",
+    input.verificationInstant,
+    input.trustedOperators,
+  )
+  if (preflight.payload.laneIdentityHash !== expectedLane) {
+    fail(
+      "LANE_MISMATCH",
+      "Signed control does not match the exact lane identity.",
+    )
+  }
+  return withSerializableTransaction(pool, async (client) => {
+    const verified = verifyImport(
+      immutable,
+      "lane-control",
+      input.verificationInstant,
+      input.trustedOperators,
+    )
+    const payload = verified.payload
+    if (payload.laneIdentityHash !== expectedLane) {
+      fail(
+        "LANE_MISMATCH",
+        "Signed control does not match the exact lane identity.",
+      )
+    }
+    await client.query("select pg_advisory_xact_lock(hashtext($1))", [
+      expectedLane,
+    ])
+    const existing = await client.query(
+      `select id, signed_payload, signature_base64, envelope_hash
+         from runtime_evidence_lane_controls where envelope_hash = $1`,
+      [verified.envelopeHash],
+    )
+    if (existing.rows[0]) {
+      assertExactImportedRow(existing.rows[0], verified)
+    } else {
+      if (payload.action === "enable") {
+        const compensated = await client.query(
+          `select id, action, lane_identity_hash
+             from runtime_evidence_lane_controls where id = $1 for update`,
+          [payload.compensatesEventId],
+        )
+        if (
+          compensated.rows[0]?.action !== "disable" ||
+          compensated.rows[0]?.lane_identity_hash !== expectedLane
+        ) {
+          fail(
+            "CONTROL_COMPENSATION",
+            "Enable does not compensate an exact disable.",
+          )
+        }
+      }
+      await client.query(
+        `insert into runtime_evidence_lane_controls
+          (id, action, lane_identity_hash, reason_code, evidence_reference_hash,
+           compensates_control_id, producer_id, producer_key_id, trust_domain,
+           schema_version, signed_payload, signature_base64, envelope_hash,
+           issued_at, valid_until)
+         values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)`,
+        [
+          payload.eventId,
+          payload.action,
+          expectedLane,
+          payload.reasonCode,
+          payload.evidenceReferenceHash,
+          payload.compensatesEventId,
+          payload.producerId,
+          payload.producerKeyId,
+          payload.trustDomain,
+          payload.schemaVersion,
+          Buffer.from(verified.payloadBytes).toString("utf8"),
+          verified.signatureBase64,
+          verified.envelopeHash,
+          payload.issuedAt,
+          payload.validUntil,
+        ],
+      )
+    }
+    const active = await client.query(
+      `select exists (
+         select 1 from runtime_evidence_lane_controls disabled
+          where disabled.lane_identity_hash = $1 and disabled.action = 'disable'
+            and not exists (
+              select 1 from runtime_evidence_lane_controls enabled
+               where enabled.compensates_control_id = disabled.id
+            )
+       ) as disabled`,
+      [expectedLane],
+    )
+    return Object.freeze({
+      controlId: payload.eventId,
+      envelopeHash: verified.envelopeHash,
+      effectiveDisabled: active.rows[0]?.disabled === true,
+    })
+  })
+}
+
+interface CertificateEvidenceRow extends QueryResultRow {
+  id: string
+  certificate_record_hash: string
+  verified_attestation_id: string
+  result_graph_hash: string
+}
+
+const loadExactCertificate = async (
+  client: PoolClient,
+  certificateId: string,
+  signedRecordHash: string,
+): Promise<CertificateEvidenceRow> => {
+  const result = await client.query<CertificateEvidenceRow>(
+    `select c.id, c.certificate_record_hash, c.verified_attestation_id,
+            a.result_graph_hash
+       from runtime_evidence_certificates c
+       join runtime_evidence_verified_attestations a
+         on a.id = c.verified_attestation_id
+        and a.verification_status = 'passed'
+        and a.result_graph_hash = c.result_graph_hash
+      where c.id = $1 and c.certificate_status = 'passed'`,
+    [certificateId],
+  )
+  const row = result.rows[0]
+  if (!row || row.certificate_record_hash !== storedHash(signedRecordHash)) {
+    fail(
+      "UNKNOWN_CERTIFICATE",
+      "Signed status target lacks exact verified evidence.",
+    )
+  }
+  return row as CertificateEvidenceRow
+}
+
+interface ImportedCertificateStatus {
+  statusId: string
+  envelopeHash: string
+}
+
+type StatusInput = {
+  envelope: RuntimeEvidenceAuthorityImportEnvelope
+  verificationInstant: string
+  trustedAuthorities: readonly RuntimeEvidenceAuthorityImportTrustRoot[]
+}
+
+const importCertificateStatus = async (
+  pool: Pool,
+  input: StatusInput,
+  domain: "certificate-revocation" | "certificate-supersession",
+): Promise<Readonly<ImportedCertificateStatus>> => {
+  const immutable = globalThis.structuredClone(input.envelope)
+  verifyImport(
+    immutable,
+    domain,
+    input.verificationInstant,
+    input.trustedAuthorities,
+  )
+  return withSerializableTransaction(pool, async (client) => {
+    const verified = verifyImport(
+      immutable,
+      domain,
+      input.verificationInstant,
+      input.trustedAuthorities,
+    )
+    const payload = verified.payload
+    await client.query(
+      "select pg_advisory_xact_lock(hashtext('runtime-evidence-certificate-status-v1'))",
+    )
+    const table =
+      domain === "certificate-revocation"
+        ? "runtime_evidence_certificate_revocations"
+        : "runtime_evidence_certificate_supersessions"
+    const existing = await client.query(
+      `select id, signed_payload, signature_base64, envelope_hash
+         from ${table} where envelope_hash = $1`,
+      [verified.envelopeHash],
+    )
+    if (existing.rows[0]) {
+      assertExactImportedRow(existing.rows[0], verified)
+      return Object.freeze({
+        statusId: payload.eventId,
+        envelopeHash: verified.envelopeHash,
+      })
+    }
+    const target = await loadExactCertificate(
+      client,
+      payload.targetCertificateId!,
+      payload.targetCertificateRecordHash!,
+    )
+    if (domain === "certificate-revocation") {
+      await client.query(
+        `insert into runtime_evidence_certificate_revocations
+          (id, target_certificate_id, target_certificate_record_hash,
+           verified_attestation_id, evidence_graph_hash, reason_code,
+           evidence_reference_hash, producer_id, producer_key_id, trust_domain,
+           schema_version, signed_payload, signature_base64, envelope_hash,
+           issued_at, valid_until)
+         values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)`,
+        [
+          payload.eventId,
+          target.id,
+          target.certificate_record_hash,
+          target.verified_attestation_id,
+          target.result_graph_hash,
+          payload.reasonCode,
+          payload.evidenceReferenceHash,
+          payload.producerId,
+          payload.producerKeyId,
+          payload.trustDomain,
+          payload.schemaVersion,
+          Buffer.from(verified.payloadBytes).toString("utf8"),
+          verified.signatureBase64,
+          verified.envelopeHash,
+          payload.issuedAt,
+          payload.validUntil,
+        ],
+      )
+    } else {
+      if (payload.targetCertificateId === payload.replacementCertificateId) {
+        fail("SUPERSESSION_CYCLE", "Certificate cannot supersede itself.")
+      }
+      const replacement = await loadExactCertificate(
+        client,
+        payload.replacementCertificateId!,
+        payload.replacementCertificateRecordHash!,
+      )
+      const cycle = await client.query(
+        `with recursive chain(certificate_id) as (
+           select $1::text
+           union all
+           select s.replacement_certificate_id
+             from runtime_evidence_certificate_supersessions s
+             join chain c on s.target_certificate_id = c.certificate_id
+         )
+         select exists (select 1 from chain where certificate_id = $2) as cycle`,
+        [replacement.id, target.id],
+      )
+      if (cycle.rows[0]?.cycle === true) {
+        fail(
+          "SUPERSESSION_CYCLE",
+          "Certificate supersession graph contains a cycle.",
+        )
+      }
+      await client.query(
+        `insert into runtime_evidence_certificate_supersessions
+          (id, target_certificate_id, target_certificate_record_hash,
+           target_verified_attestation_id, target_evidence_graph_hash,
+           replacement_certificate_id, replacement_certificate_record_hash,
+           replacement_verified_attestation_id, replacement_evidence_graph_hash,
+           reason_code, evidence_reference_hash, producer_id, producer_key_id,
+           trust_domain, schema_version, signed_payload, signature_base64,
+           envelope_hash, issued_at, valid_until)
+         values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)`,
+        [
+          payload.eventId,
+          target.id,
+          target.certificate_record_hash,
+          target.verified_attestation_id,
+          target.result_graph_hash,
+          replacement.id,
+          replacement.certificate_record_hash,
+          replacement.verified_attestation_id,
+          replacement.result_graph_hash,
+          payload.reasonCode,
+          payload.evidenceReferenceHash,
+          payload.producerId,
+          payload.producerKeyId,
+          payload.trustDomain,
+          payload.schemaVersion,
+          Buffer.from(verified.payloadBytes).toString("utf8"),
+          verified.signatureBase64,
+          verified.envelopeHash,
+          payload.issuedAt,
+          payload.validUntil,
+        ],
+      )
+    }
+    return Object.freeze({
+      statusId: payload.eventId,
+      envelopeHash: verified.envelopeHash,
+    })
+  })
+}
+
+export const importAuthenticatedCertificateRevocation = (
+  pool: Pool,
+  input: StatusInput,
+): Promise<Readonly<ImportedCertificateStatus>> =>
+  importCertificateStatus(pool, input, "certificate-revocation")
+
+export const importAuthenticatedCertificateSupersession = (
+  pool: Pool,
+  input: StatusInput,
+): Promise<Readonly<ImportedCertificateStatus>> =>
+  importCertificateStatus(pool, input, "certificate-supersession")
+
+export interface ImportRuntimeConformanceCertificateV117Input {
+  mode: "production" | "fixture"
+  certificate: RuntimeConformanceCertificateV117
+  currentIdentity: RuntimeConformanceIdentityBindingsV117
+  expectedRunBinding: RuntimeConformanceExpectedRunBindingV117
+  verificationInstant: string
+  trustedProducers?: readonly RuntimeConformanceTrustedProducerV117[]
+  importEnvelope: RuntimeEvidenceAuthorityImportEnvelope
+  trustedImportAuthorities: readonly RuntimeEvidenceAuthorityImportTrustRoot[]
+  requiredTrustRootBootstrap?: RuntimeEvidenceAuthorityImportTrustRootBootstrapReceipt
+}
+
+export interface ImportedRuntimeConformanceCertificateV117 {
+  status: "installed"
+  certificateId: string
+  certificateSha256: string
+  languageId: string
+  registryGeneration: string
+  importEnvelopeHash: string
+}
+
+export interface ImportRuntimeConformanceCertificateV119Input {
+  mode: "production" | "fixture"
+  certificate: RuntimeConformanceCertificateV119
+  expectedIdentity: RuntimeConformanceIdentityBindingsV117
+  expectedRunBinding: RuntimeConformanceExpectedRunBindingV119
+  verificationInstant: string
+  trustedProducers: readonly RuntimeConformanceTrustedProducerV119[]
+  importEnvelope: RuntimeEvidenceAuthorityImportEnvelope
+  trustedImportAuthorities: readonly RuntimeEvidenceAuthorityImportTrustRoot[]
+  requiredTrustRootBootstrap?: RuntimeEvidenceAuthorityImportTrustRootBootstrapReceipt
+}
+
+export interface ImportedRuntimeConformanceCertificateV119 {
+  status: "installed_inactive"
+  certificateId: string
+  certificateSha256: string
+  candidatePayloadSha256: string
+  languageId: string
+  registryGeneration: "candidate-0"
+  importEnvelopeHash: string
+}
+
+const canonicalManifestBytes = (value: JsonValue): Uint8Array => {
+  const encoded = encodeCanonicalJson(value, { context: "canonical-manifest" })
+  if (!encoded.ok) {
+    return fail(
+      "CERTIFICATE_CANONICAL_JSON",
+      "Runtime conformance certificate is not canonical JSON.",
+    )
+  }
+  return encoded.bytes
+}
+
+const insertStaticRecord = async (
+  client: PoolClient,
+  table: string,
+  columns: readonly string[],
+  values: readonly unknown[],
+  conflictColumn: string,
+): Promise<void> => {
+  if (columns.length !== values.length || columns.length === 0) {
+    return fail("IMPORT_INTERNAL", "Static certificate record is invalid.")
+  }
+  const placeholders = values.map((_, index) => `$${index + 1}`).join(",")
+  await client.query(
+    `insert into ${table} (${columns.join(",")})
+     values (${placeholders})
+     on conflict (${conflictColumn}) do nothing`,
+    [...values],
+  )
+}
+
+export const importRuntimeConformanceCertificateV117 = async (
+  pool: Pool,
+  input: ImportRuntimeConformanceCertificateV117Input,
+): Promise<Readonly<ImportedRuntimeConformanceCertificateV117>> => {
+  const certificate = globalThis.structuredClone(input.certificate)
+  const currentIdentity = globalThis.structuredClone(input.currentIdentity)
+  const expectedRunBinding = globalThis.structuredClone(
+    input.expectedRunBinding,
+  )
+  const importEnvelope = globalThis.structuredClone(input.importEnvelope)
+  const requiredTrustRootBootstrap =
+    input.requiredTrustRootBootstrap === undefined
+      ? undefined
+      : globalThis.structuredClone(input.requiredTrustRootBootstrap)
+  if (input.mode === "production" && requiredTrustRootBootstrap === undefined) {
+    return fail(
+      "IMPORT_ROOT_BOOTSTRAP_REQUIRED",
+      "Production conformance import requires a bootstrapped trust-root high-water receipt.",
+    )
+  }
+  if (
+    requiredTrustRootBootstrap !== undefined &&
+    ((requiredTrustRootBootstrap.status !== "installed" &&
+      requiredTrustRootBootstrap.status !== "idempotent") ||
+      !SHA256.test(requiredTrustRootBootstrap.descriptorSha256) ||
+      !SHA256.test(requiredTrustRootBootstrap.publicKeyFingerprint) ||
+      !/^(0|[1-9][0-9]*)$/u.test(requiredTrustRootBootstrap.generation))
+  ) {
+    return fail(
+      "IMPORT_ROOT_BOOTSTRAP_MISMATCH",
+      "Import trust-root bootstrap receipt is invalid.",
+    )
+  }
+  const snapshot = verifyRuntimeConformanceCertificateV117({
+    mode: input.mode,
+    certificate,
+    currentIdentity,
+    expectedRunBinding,
+    verificationInstant: input.verificationInstant,
+    ...(input.trustedProducers === undefined
+      ? {}
+      : { trustedProducers: input.trustedProducers }),
+  })
+  if (
+    evaluateRuntimeConformanceFreshnessV117({
+      certificate: snapshot,
+      currentIdentity,
+      verificationInstant: input.verificationInstant,
+    }).status !== "current"
+  ) {
+    return fail(
+      "CERTIFICATE_STALE",
+      "Runtime conformance certificate is stale.",
+    )
+  }
+  const preflightImport = verifyImport(
+    importEnvelope,
+    "conformance-certificate",
+    input.verificationInstant,
+    input.trustedImportAuthorities,
+  )
+  if (
+    (requiredTrustRootBootstrap !== undefined &&
+      (preflightImport.payload.producerId !==
+        requiredTrustRootBootstrap.producerId ||
+        preflightImport.payload.producerKeyId !==
+          requiredTrustRootBootstrap.keyId ||
+        preflightImport.payload.trustDomain !==
+          requiredTrustRootBootstrap.trustDomain)) ||
+    preflightImport.payload.targetCertificateId !== snapshot.certificateId ||
+    preflightImport.payload.targetCertificateRecordHash !==
+      snapshot.certificateSha256 ||
+    preflightImport.payload.evidenceReferenceHash !==
+      snapshot.identity.evidenceGraphRoot
+  ) {
+    return fail(
+      "CERTIFICATE_IMPORT_BINDING",
+      "Operator import does not bind the exact verified certificate.",
+    )
+  }
+  const certificateBytes = canonicalManifestBytes(
+    certificate as unknown as JsonValue,
+  )
+  if (
+    `sha256:${createHash("sha256").update(certificateBytes).digest("hex")}` !==
+    snapshot.certificateSha256
+  ) {
+    return fail(
+      "CERTIFICATE_BYTES",
+      "Verified certificate bytes changed before import.",
+    )
+  }
+  const identity = snapshot.identity
+  const certificateRecordHash = storedHash(snapshot.certificateSha256)
+  const attestationId = `runtime-conformance-attestation:${certificateRecordHash}`
+  const artifactId = `runtime-conformance-artifact:${identity.languageId}:${storedHash(identity.artifactSha256)}`
+  const laneIdentityHash = identity.identityManifestRoot
+  const attestationColumns = [
+    "id",
+    "attestation_sha256",
+    "verification_status",
+    "certificate_kind",
+    "producer_id",
+    "producer_key_id",
+    "trust_domain",
+    "schema_version",
+    "command_id",
+    "command_digest",
+    "corpus_id",
+    "corpus_hash",
+    "policy_id",
+    "policy_hash",
+    "runtime_id",
+    "runtime_version",
+    "toolchain_id",
+    "toolchain_version",
+    "adapter_id",
+    "adapter_version",
+    "artifact_id",
+    "artifact_hash",
+    "lane_identity_hash",
+    "semantic_tuple_id",
+    "result_manifest_hash",
+    "result_graph_hash",
+    "original_evidence_hash",
+    "derived_certificate_version",
+    "derived_certificate_record_hash",
+    "registry_generation",
+    "lane_identity",
+    "issued_at",
+    "valid_until",
+  ] as const
+  const attestationValues = [
+    attestationId,
+    certificateRecordHash,
+    "passed",
+    "conformance",
+    snapshot.producerId,
+    snapshot.producerKeyId,
+    snapshot.trustDomain,
+    snapshot.schemaVersion,
+    identity.laneId,
+    identity.adapterBuildSha256,
+    "v1.37-executable-conformance-corpus",
+    identity.corpusRootSha256,
+    identity.canonicalJsonProfileId,
+    identity.budgetPolicySha256,
+    identity.runtimeAbiVersion,
+    identity.runtimeAbiVersion,
+    identity.languageId,
+    identity.toolchainSha256,
+    identity.laneId,
+    identity.adapterBuildSha256,
+    artifactId,
+    identity.artifactSha256,
+    laneIdentityHash,
+    identity.semanticTupleSha256,
+    snapshot.resultRootSha256,
+    identity.evidenceGraphRoot,
+    snapshot.certificateSha256,
+    snapshot.certificateVersion,
+    certificateRecordHash,
+    snapshot.registryGeneration,
+    JSON.stringify(identity),
+    snapshot.issuedAt,
+    snapshot.freshUntil,
+  ] as const
+  const certificateColumns = [
+    "id",
+    "certificate_kind",
+    "certificate_version",
+    "certificate_record_hash",
+    "certificate_status",
+    "verified_attestation_id",
+    "verified_attestation_status",
+    "producer_id",
+    "schema_version",
+    "command_id",
+    "command_digest",
+    "corpus_id",
+    "corpus_hash",
+    "policy_id",
+    "policy_hash",
+    "toolchain_id",
+    "toolchain_version",
+    "artifact_id",
+    "artifact_hash",
+    "lane_identity_hash",
+    "lane_identity",
+    "result_graph_hash",
+    "registry_generation",
+    "issued_at",
+    "fresh_until",
+    "exact_certificate_bytes",
+    "exact_certificate_sha256",
+    "conformance_producer_key_id",
+    "conformance_trust_domain",
+    "conformance_managed_identity",
+    "conformance_language_id",
+    "conformance_lane_id",
+    "conformance_corpus_root_sha256",
+    "conformance_case_inventory_sha256",
+    "conformance_fixture_source_sha256",
+    "conformance_artifact_sha256",
+    "conformance_adapter_build_sha256",
+    "conformance_runtime_executable_sha256",
+    "conformance_toolchain_sha256",
+    "conformance_sysroot_stdlib_sha256",
+    "conformance_runtime_abi_version",
+    "conformance_canonical_json_profile_id",
+    "conformance_budget_policy_sha256",
+    "conformance_containment_policy_sha256",
+    "conformance_semantic_tuple_sha256",
+    "conformance_identity_manifest_root",
+    "conformance_evidence_graph_root",
+    "conformance_behavior_settings_sha256",
+    "conformance_run_count",
+    "conformance_result_root_sha256",
+    "conformance_evidence_root_sha256",
+    "conformance_requested_valid_until",
+    "conformance_import_producer_id",
+    "conformance_import_key_id",
+    "conformance_import_trust_domain",
+    "conformance_import_payload",
+    "conformance_import_signature_base64",
+    "conformance_import_envelope_hash",
+  ] as const
+  const certificateValues = [
+    snapshot.certificateId,
+    "conformance",
+    snapshot.certificateVersion,
+    certificateRecordHash,
+    "passed",
+    attestationId,
+    "passed",
+    snapshot.producerId,
+    snapshot.schemaVersion,
+    identity.laneId,
+    identity.adapterBuildSha256,
+    "v1.37-executable-conformance-corpus",
+    identity.corpusRootSha256,
+    identity.canonicalJsonProfileId,
+    identity.budgetPolicySha256,
+    identity.languageId,
+    identity.toolchainSha256,
+    artifactId,
+    identity.artifactSha256,
+    laneIdentityHash,
+    JSON.stringify(identity),
+    identity.evidenceGraphRoot,
+    snapshot.registryGeneration,
+    snapshot.issuedAt,
+    snapshot.freshUntil,
+    Buffer.from(certificateBytes),
+    snapshot.certificateSha256,
+    snapshot.producerKeyId,
+    snapshot.trustDomain,
+    true,
+    identity.languageId,
+    identity.laneId,
+    identity.corpusRootSha256,
+    identity.caseInventorySha256,
+    identity.fixtureSourceSha256,
+    identity.artifactSha256,
+    identity.adapterBuildSha256,
+    identity.runtimeExecutableSha256,
+    identity.toolchainSha256,
+    identity.sysrootStdlibSha256,
+    identity.runtimeAbiVersion,
+    identity.canonicalJsonProfileId,
+    identity.budgetPolicySha256,
+    identity.containmentPolicySha256,
+    identity.semanticTupleSha256,
+    identity.identityManifestRoot,
+    identity.evidenceGraphRoot,
+    identity.behaviorSettingsSha256,
+    3,
+    snapshot.resultRootSha256,
+    snapshot.evidenceRootSha256,
+    certificate.requestedValidUntil,
+    preflightImport.payload.producerId,
+    preflightImport.payload.producerKeyId,
+    preflightImport.payload.trustDomain,
+    Buffer.from(preflightImport.payloadBytes).toString("utf8"),
+    preflightImport.signatureBase64,
+    preflightImport.envelopeHash,
+  ] as const
+  return withSerializableTransaction(pool, async (client) => {
+    const verifiedImport = verifyImport(
+      importEnvelope,
+      "conformance-certificate",
+      input.verificationInstant,
+      input.trustedImportAuthorities,
+    )
+    if (
+      verifiedImport.envelopeHash !== preflightImport.envelopeHash ||
+      verifiedImport.payload.targetCertificateId !== snapshot.certificateId ||
+      verifiedImport.payload.targetCertificateRecordHash !==
+        snapshot.certificateSha256 ||
+      verifiedImport.payload.evidenceReferenceHash !==
+        snapshot.identity.evidenceGraphRoot
+    ) {
+      return fail(
+        "CERTIFICATE_IMPORT_BINDING",
+        "Operator import changed inside the authority transaction.",
+      )
+    }
+    await client.query(
+      "select pg_advisory_xact_lock(hashtext('cowards-game:runtime-conformance-certificate-import:v1.17'))",
+    )
+    if (requiredTrustRootBootstrap !== undefined) {
+      const selectedRoots = input.trustedImportAuthorities.filter(
+        (root) =>
+          root.producerId === requiredTrustRootBootstrap.producerId &&
+          root.keyId === requiredTrustRootBootstrap.keyId &&
+          root.trustDomain === requiredTrustRootBootstrap.trustDomain,
+      )
+      const selectedRoot = selectedRoots[0]
+      if (selectedRoots.length !== 1 || selectedRoot === undefined) {
+        return fail(
+          "IMPORT_ROOT_BOOTSTRAP_MISMATCH",
+          "Selected import root does not match the bootstrapped high-water receipt.",
+        )
+      }
+      let selectedFingerprint: string
+      try {
+        selectedFingerprint = `sha256:${createHash("sha256")
+          .update(
+            createPublicKey(selectedRoot.publicKeyPem).export({
+              type: "spki",
+              format: "der",
+            }),
+          )
+          .digest("hex")}`
+      } catch {
+        return fail(
+          "IMPORT_ROOT_BOOTSTRAP_MISMATCH",
+          "Selected import root public key is invalid.",
+        )
+      }
+      const deployment = await client.query<{
+        descriptor_sha256: string
+        public_key_fingerprint: string
+        generation: string
+        current_generation: string
+      }>(
+        `select d.descriptor_sha256, d.public_key_fingerprint,
+                d.generation::text,
+                (h.next_generation - 1)::text as current_generation
+           from runtime_evidence_authority_import_trust_root_deployments d
+           cross join runtime_evidence_authority_import_trust_root_head h
+          where h.singleton = true
+            and d.producer_id = $1
+            and d.key_id = $2
+            and d.trust_domain = $3
+            and d.generation = $4::bigint
+          for share of d, h`,
+        [
+          requiredTrustRootBootstrap.producerId,
+          requiredTrustRootBootstrap.keyId,
+          requiredTrustRootBootstrap.trustDomain,
+          requiredTrustRootBootstrap.generation,
+        ],
+      )
+      const deployed = deployment.rows[0]
+      if (
+        deployed === undefined ||
+        deployed.generation !== requiredTrustRootBootstrap.generation ||
+        deployed.current_generation !== requiredTrustRootBootstrap.generation ||
+        deployed.descriptor_sha256 !==
+          requiredTrustRootBootstrap.descriptorSha256 ||
+        deployed.public_key_fingerprint !==
+          requiredTrustRootBootstrap.publicKeyFingerprint ||
+        selectedFingerprint !== requiredTrustRootBootstrap.publicKeyFingerprint
+      ) {
+        return fail(
+          "IMPORT_ROOT_BOOTSTRAP_MISMATCH",
+          "Import root is not the exact bootstrapped high-water deployment.",
+        )
+      }
+    }
+    await insertStaticRecord(
+      client,
+      "runtime_evidence_verified_attestations",
+      attestationColumns,
+      attestationValues,
+      "id",
+    )
+    await insertStaticRecord(
+      client,
+      "runtime_evidence_certificates",
+      certificateColumns,
+      certificateValues,
+      "id",
+    )
+    for (const [ordinal, run] of certificate.runs.entries()) {
+      await insertStaticRecord(
+        client,
+        "runtime_evidence_conformance_certificate_runs",
+        [
+          "certificate_id",
+          "certificate_record_hash",
+          "run_ordinal",
+          "run_id",
+          "workspace_id",
+          "process_id",
+          "status",
+          "complete",
+          "fresh_workspace",
+          "fresh_process",
+          "skipped_case_count",
+          "unsupported_case_count",
+          "fallback_used",
+          "synthetic_evidence",
+          "case_count",
+          "started_at",
+          "completed_at",
+          "valid_until",
+          "identity",
+          "result_root_sha256",
+          "evidence_root_sha256",
+        ],
+        [
+          snapshot.certificateId,
+          certificateRecordHash,
+          ordinal,
+          run.runId,
+          run.workspaceId,
+          run.processId,
+          run.status,
+          run.complete,
+          run.freshWorkspace,
+          run.freshProcess,
+          run.skippedCaseCount,
+          run.unsupportedCaseCount,
+          run.fallbackUsed,
+          run.syntheticEvidence,
+          run.caseCount,
+          run.startedAt,
+          run.completedAt,
+          run.validUntil,
+          JSON.stringify(run.identity),
+          run.resultRootSha256,
+          run.evidenceRootSha256,
+        ],
+        "run_id",
+      )
+    }
+    const stored = await client.query<{
+      exact_certificate_bytes: Buffer
+      exact_certificate_sha256: string
+      conformance_language_id: string
+      conformance_identity_manifest_root: string
+      conformance_evidence_graph_root: string
+      conformance_result_root_sha256: string
+      conformance_evidence_root_sha256: string
+      conformance_import_envelope_hash: string
+      run_count: number
+    }>(
+      `select c.exact_certificate_bytes, c.exact_certificate_sha256,
+              c.conformance_language_id,
+              c.conformance_identity_manifest_root,
+              c.conformance_evidence_graph_root,
+              c.conformance_result_root_sha256,
+              c.conformance_evidence_root_sha256,
+              c.conformance_import_envelope_hash,
+              (select count(*)::integer
+                 from runtime_evidence_conformance_certificate_runs r
+                where r.certificate_id = c.id) as run_count
+         from runtime_evidence_certificates c where c.id = $1`,
+      [snapshot.certificateId],
+    )
+    const row = stored.rows[0]
+    if (
+      row === undefined ||
+      !row.exact_certificate_bytes.equals(Buffer.from(certificateBytes)) ||
+      row.exact_certificate_sha256 !== snapshot.certificateSha256 ||
+      row.conformance_language_id !== identity.languageId ||
+      row.conformance_identity_manifest_root !==
+        identity.identityManifestRoot ||
+      row.conformance_evidence_graph_root !== identity.evidenceGraphRoot ||
+      row.conformance_result_root_sha256 !== snapshot.resultRootSha256 ||
+      row.conformance_evidence_root_sha256 !== snapshot.evidenceRootSha256 ||
+      row.conformance_import_envelope_hash !== verifiedImport.envelopeHash ||
+      row.run_count !== 3
+    ) {
+      return fail(
+        "CERTIFICATE_IMPORT_CONFLICT",
+        "Existing conformance certificate conflicts with exact reviewed evidence.",
+      )
+    }
+    return Object.freeze({
+      status: "installed",
+      certificateId: snapshot.certificateId,
+      certificateSha256: snapshot.certificateSha256,
+      languageId: identity.languageId,
+      registryGeneration: snapshot.registryGeneration,
+      importEnvelopeHash: verifiedImport.envelopeHash,
+    })
+  })
+}
+
+/**
+ * Installs an exact v1.19 observation certificate into the existing immutable
+ * certificate/run ledger. Deliberately does not create a v1.17 candidate row,
+ * publication source, authority record, or current selector.
+ */
+export const importRuntimeConformanceCertificateV119Inactive = async (
+  pool: Pool,
+  input: ImportRuntimeConformanceCertificateV119Input,
+): Promise<Readonly<ImportedRuntimeConformanceCertificateV119>> => {
+  const certificate = globalThis.structuredClone(input.certificate)
+  const expectedIdentity = globalThis.structuredClone(input.expectedIdentity)
+  const expectedRunBinding = globalThis.structuredClone(
+    input.expectedRunBinding,
+  )
+  const importEnvelope = globalThis.structuredClone(input.importEnvelope)
+  const bootstrap =
+    input.requiredTrustRootBootstrap === undefined
+      ? undefined
+      : globalThis.structuredClone(input.requiredTrustRootBootstrap)
+  if (input.mode === "production" && bootstrap === undefined) {
+    return fail(
+      "IMPORT_ROOT_BOOTSTRAP_REQUIRED",
+      "Production observation-certificate import requires a bootstrapped plural operator root.",
+    )
+  }
+
+  let snapshot
+  try {
+    snapshot = verifyRuntimeConformanceCertificateV119({
+      mode: input.mode,
+      certificate,
+      expectedIdentity,
+      expectedRunBinding,
+      verificationInstant: input.verificationInstant,
+      trustedProducers: input.trustedProducers,
+    })
+  } catch {
+    return fail(
+      "CERTIFICATE_INVALID",
+      "Inactive observation certificate verification failed.",
+    )
+  }
+  if (
+    importEnvelope.payload.producerId === snapshot.producerId ||
+    importEnvelope.payload.producerKeyId === snapshot.producerKeyId
+  ) {
+    return fail(
+      "PRODUCER_OPERATOR_COLLISION",
+      "Certificate production and operator import identities must be distinct.",
+    )
+  }
+  const preflightImport = verifyImport(
+    importEnvelope,
+    "conformance-certificate",
+    input.verificationInstant,
+    input.trustedImportAuthorities,
+  )
+  if (
+    (bootstrap !== undefined &&
+      (preflightImport.payload.producerId !== bootstrap.producerId ||
+        preflightImport.payload.producerKeyId !== bootstrap.keyId ||
+        preflightImport.payload.trustDomain !== bootstrap.trustDomain)) ||
+    preflightImport.payload.targetCertificateId !== snapshot.certificateId ||
+    preflightImport.payload.targetCertificateRecordHash !==
+      snapshot.certificateSha256 ||
+    preflightImport.payload.evidenceReferenceHash !==
+      snapshot.identity.evidenceGraphRoot
+  ) {
+    return fail(
+      "CERTIFICATE_IMPORT_BINDING",
+      "Operator import does not bind the exact inactive observation certificate.",
+    )
+  }
+
+  const certificateBytes = canonicalManifestBytes(
+    certificate as unknown as JsonValue,
+  )
+  const certificateSha256 = `sha256:${createHash("sha256")
+    .update(certificateBytes)
+    .digest("hex")}`
+  if (certificateSha256 !== snapshot.certificateSha256) {
+    return fail(
+      "CERTIFICATE_BYTES",
+      "Verified observation certificate changed before import.",
+    )
+  }
+  const payload = certificate.candidatePayload
+  const identity = snapshot.identity
+  const certificateRecordHash = storedHash(snapshot.certificateSha256)
+  const attestationId = `runtime-conformance-attestation:${certificateRecordHash}`
+  const artifactId = `runtime-conformance-artifact:${identity.languageId}:${storedHash(identity.artifactSha256)}`
+  const attestationColumns = [
+    "id",
+    "attestation_sha256",
+    "verification_status",
+    "certificate_kind",
+    "producer_id",
+    "producer_key_id",
+    "trust_domain",
+    "schema_version",
+    "command_id",
+    "command_digest",
+    "corpus_id",
+    "corpus_hash",
+    "policy_id",
+    "policy_hash",
+    "runtime_id",
+    "runtime_version",
+    "toolchain_id",
+    "toolchain_version",
+    "adapter_id",
+    "adapter_version",
+    "artifact_id",
+    "artifact_hash",
+    "lane_identity_hash",
+    "semantic_tuple_id",
+    "result_manifest_hash",
+    "result_graph_hash",
+    "original_evidence_hash",
+    "derived_certificate_version",
+    "derived_certificate_record_hash",
+    "registry_generation",
+    "lane_identity",
+    "issued_at",
+    "valid_until",
+  ] as const
+  const attestationValues = [
+    attestationId,
+    certificateRecordHash,
+    "passed",
+    "conformance",
+    snapshot.producerId,
+    snapshot.producerKeyId,
+    snapshot.trustDomain,
+    snapshot.schemaVersion,
+    identity.laneId,
+    identity.adapterBuildSha256,
+    "v1.37-observation-conformance-corpus-v3",
+    identity.corpusRootSha256,
+    identity.canonicalJsonProfileId,
+    identity.budgetPolicySha256,
+    identity.runtimeAbiVersion,
+    identity.runtimeAbiVersion,
+    identity.languageId,
+    identity.toolchainSha256,
+    identity.laneId,
+    identity.adapterBuildSha256,
+    artifactId,
+    identity.artifactSha256,
+    identity.identityManifestRoot,
+    identity.semanticTupleSha256,
+    snapshot.resultRootSha256,
+    storedHash(identity.evidenceGraphRoot),
+    snapshot.candidatePayloadSha256,
+    snapshot.certificateVersion,
+    certificateRecordHash,
+    snapshot.registryGeneration,
+    JSON.stringify(identity),
+    snapshot.issuedAt,
+    snapshot.freshUntil,
+  ] as const
+  const certificateColumns = [
+    "id",
+    "certificate_kind",
+    "certificate_version",
+    "certificate_record_hash",
+    "certificate_status",
+    "verified_attestation_id",
+    "verified_attestation_status",
+    "producer_id",
+    "schema_version",
+    "command_id",
+    "command_digest",
+    "corpus_id",
+    "corpus_hash",
+    "policy_id",
+    "policy_hash",
+    "toolchain_id",
+    "toolchain_version",
+    "artifact_id",
+    "artifact_hash",
+    "lane_identity_hash",
+    "lane_identity",
+    "result_graph_hash",
+    "registry_generation",
+    "issued_at",
+    "fresh_until",
+    "exact_certificate_bytes",
+    "exact_certificate_sha256",
+    "conformance_producer_key_id",
+    "conformance_trust_domain",
+    "conformance_managed_identity",
+    "conformance_language_id",
+    "conformance_lane_id",
+    "conformance_corpus_root_sha256",
+    "conformance_case_inventory_sha256",
+    "conformance_fixture_source_sha256",
+    "conformance_artifact_sha256",
+    "conformance_adapter_build_sha256",
+    "conformance_runtime_executable_sha256",
+    "conformance_toolchain_sha256",
+    "conformance_sysroot_stdlib_sha256",
+    "conformance_runtime_abi_version",
+    "conformance_canonical_json_profile_id",
+    "conformance_budget_policy_sha256",
+    "conformance_containment_policy_sha256",
+    "conformance_semantic_tuple_sha256",
+    "conformance_identity_manifest_root",
+    "conformance_evidence_graph_root",
+    "conformance_behavior_settings_sha256",
+    "conformance_run_count",
+    "conformance_result_root_sha256",
+    "conformance_evidence_root_sha256",
+    "conformance_requested_valid_until",
+    "conformance_import_producer_id",
+    "conformance_import_key_id",
+    "conformance_import_trust_domain",
+    "conformance_import_payload",
+    "conformance_import_signature_base64",
+    "conformance_import_envelope_hash",
+  ] as const
+  const certificateValues = [
+    snapshot.certificateId,
+    "conformance",
+    snapshot.certificateVersion,
+    certificateRecordHash,
+    "passed",
+    attestationId,
+    "passed",
+    snapshot.producerId,
+    snapshot.schemaVersion,
+    identity.laneId,
+    identity.adapterBuildSha256,
+    "v1.37-observation-conformance-corpus-v3",
+    identity.corpusRootSha256,
+    identity.canonicalJsonProfileId,
+    identity.budgetPolicySha256,
+    identity.languageId,
+    identity.toolchainSha256,
+    artifactId,
+    identity.artifactSha256,
+    identity.identityManifestRoot,
+    JSON.stringify(identity),
+    storedHash(identity.evidenceGraphRoot),
+    snapshot.registryGeneration,
+    snapshot.issuedAt,
+    snapshot.freshUntil,
+    Buffer.from(certificateBytes),
+    snapshot.certificateSha256,
+    snapshot.producerKeyId,
+    snapshot.trustDomain,
+    true,
+    identity.languageId,
+    identity.laneId,
+    identity.corpusRootSha256,
+    identity.caseInventorySha256,
+    identity.fixtureSourceSha256,
+    identity.artifactSha256,
+    identity.adapterBuildSha256,
+    identity.runtimeExecutableSha256,
+    identity.toolchainSha256,
+    identity.sysrootStdlibSha256,
+    identity.runtimeAbiVersion,
+    identity.canonicalJsonProfileId,
+    identity.budgetPolicySha256,
+    identity.containmentPolicySha256,
+    identity.semanticTupleSha256,
+    identity.identityManifestRoot,
+    identity.evidenceGraphRoot,
+    identity.behaviorSettingsSha256,
+    3,
+    snapshot.resultRootSha256,
+    snapshot.evidenceRootSha256,
+    payload.requestedValidUntil,
+    preflightImport.payload.producerId,
+    preflightImport.payload.producerKeyId,
+    preflightImport.payload.trustDomain,
+    Buffer.from(preflightImport.payloadBytes).toString("utf8"),
+    preflightImport.signatureBase64,
+    preflightImport.envelopeHash,
+  ] as const
+
+  return withSerializableTransaction(pool, async (client) => {
+    const verifiedImport = verifyImport(
+      importEnvelope,
+      "conformance-certificate",
+      input.verificationInstant,
+      input.trustedImportAuthorities,
+    )
+    if (verifiedImport.envelopeHash !== preflightImport.envelopeHash) {
+      return fail(
+        "CERTIFICATE_IMPORT_BINDING",
+        "Operator import changed inside the authority transaction.",
+      )
+    }
+    await client.query(
+      "select pg_advisory_xact_lock(hashtext('cowards-game:runtime-conformance-certificate-import:v1.19-inactive'))",
+    )
+    if (bootstrap !== undefined) {
+      const selectedRoots = input.trustedImportAuthorities.filter(
+        (root) =>
+          root.producerId === bootstrap.producerId &&
+          root.keyId === bootstrap.keyId &&
+          root.trustDomain === bootstrap.trustDomain,
+      )
+      const selected = selectedRoots[0]
+      if (selectedRoots.length !== 1 || selected === undefined) {
+        return fail(
+          "IMPORT_ROOT_BOOTSTRAP_MISMATCH",
+          "Selected plural operator root does not match bootstrap evidence.",
+        )
+      }
+      const fingerprint = `sha256:${createHash("sha256")
+        .update(
+          createPublicKey(selected.publicKeyPem).export({
+            type: "spki",
+            format: "der",
+          }),
+        )
+        .digest("hex")}`
+      const deployment = await client.query<{
+        descriptor_sha256: string
+        public_key_fingerprint: string
+        generation: string
+        current_generation: string
+      }>(
+        `select d.descriptor_sha256, d.public_key_fingerprint,
+                d.generation::text,
+                (h.next_generation - 1)::text as current_generation
+           from runtime_evidence_authority_import_trust_root_deployments d
+           cross join runtime_evidence_authority_import_trust_root_head h
+          where h.singleton = true
+            and d.producer_id = $1 and d.key_id = $2
+            and d.trust_domain = $3 and d.generation = $4::bigint
+          for share of d, h`,
+        [
+          bootstrap.producerId,
+          bootstrap.keyId,
+          bootstrap.trustDomain,
+          bootstrap.generation,
+        ],
+      )
+      const row = deployment.rows[0]
+      if (
+        row === undefined ||
+        row.generation !== bootstrap.generation ||
+        row.current_generation !== bootstrap.generation ||
+        row.descriptor_sha256 !== bootstrap.descriptorSha256 ||
+        row.public_key_fingerprint !== bootstrap.publicKeyFingerprint ||
+        fingerprint !== bootstrap.publicKeyFingerprint
+      ) {
+        return fail(
+          "IMPORT_ROOT_BOOTSTRAP_MISMATCH",
+          "Operator import root is not the bootstrapped high-water deployment.",
+        )
+      }
+    }
+
+    const revoked = await client.query(
+      `select 1 from runtime_evidence_certificate_revocations
+        where target_certificate_id = $1
+          and target_certificate_record_hash = $2
+        limit 1`,
+      [snapshot.certificateId, storedHash(snapshot.certificateSha256)],
+    )
+    if ((revoked.rowCount ?? 0) !== 0) {
+      return fail(
+        "CERTIFICATE_REVOKED",
+        "Revoked observation evidence cannot be reimported.",
+      )
+    }
+
+    await insertStaticRecord(
+      client,
+      "runtime_evidence_verified_attestations",
+      attestationColumns,
+      attestationValues,
+      "id",
+    )
+    await insertStaticRecord(
+      client,
+      "runtime_evidence_certificates",
+      certificateColumns,
+      certificateValues,
+      "id",
+    )
+    for (const [ordinal, run] of payload.runs.entries()) {
+      await insertStaticRecord(
+        client,
+        "runtime_evidence_conformance_certificate_runs",
+        [
+          "certificate_id",
+          "certificate_record_hash",
+          "run_ordinal",
+          "run_id",
+          "workspace_id",
+          "process_id",
+          "status",
+          "complete",
+          "fresh_workspace",
+          "fresh_process",
+          "skipped_case_count",
+          "unsupported_case_count",
+          "fallback_used",
+          "synthetic_evidence",
+          "case_count",
+          "started_at",
+          "completed_at",
+          "valid_until",
+          "identity",
+          "result_root_sha256",
+          "evidence_root_sha256",
+        ],
+        [
+          snapshot.certificateId,
+          certificateRecordHash,
+          ordinal,
+          run.runId,
+          run.workspaceId,
+          run.processId,
+          run.status,
+          run.complete,
+          run.freshWorkspace,
+          run.freshProcess,
+          run.skippedCaseCount,
+          run.unsupportedCaseCount,
+          run.fallbackUsed,
+          run.syntheticEvidence,
+          run.caseCount,
+          run.startedAt,
+          run.completedAt,
+          run.validUntil,
+          JSON.stringify(run.identity),
+          run.resultRootSha256,
+          run.evidenceRootSha256,
+        ],
+        "run_id",
+      )
+    }
+    const stored = await client.query<{
+      exact_certificate_bytes: Buffer
+      exact_certificate_sha256: string
+      conformance_language_id: string
+      conformance_runtime_abi_version: string
+      conformance_import_envelope_hash: string
+      run_count: number
+      current_count: number
+    }>(
+      `select c.exact_certificate_bytes, c.exact_certificate_sha256,
+              c.conformance_language_id, c.conformance_runtime_abi_version,
+              c.conformance_import_envelope_hash,
+              (select count(*)::integer
+                 from runtime_evidence_conformance_certificate_runs r
+                where r.certificate_id = c.id) as run_count,
+              (select count(*)::integer
+                 from runtime_evidence_v1_17_candidates v
+                where v.certificate_id = c.id) as current_count
+         from runtime_evidence_certificates c where c.id = $1`,
+      [snapshot.certificateId],
+    )
+    const row = stored.rows[0]
+    if (
+      row === undefined ||
+      !row.exact_certificate_bytes.equals(Buffer.from(certificateBytes)) ||
+      row.exact_certificate_sha256 !== snapshot.certificateSha256 ||
+      row.conformance_language_id !== snapshot.languageId ||
+      row.conformance_runtime_abi_version !== "strategy-runtime-abi-v1.19" ||
+      row.conformance_import_envelope_hash !== verifiedImport.envelopeHash ||
+      row.run_count !== 3 ||
+      row.current_count !== 0
+    ) {
+      return fail(
+        "CERTIFICATE_IMPORT_CONFLICT",
+        "Existing inactive observation certificate conflicts with exact reviewed evidence.",
+      )
+    }
+    return Object.freeze({
+      status: "installed_inactive" as const,
+      certificateId: snapshot.certificateId,
+      certificateSha256: snapshot.certificateSha256,
+      candidatePayloadSha256: snapshot.candidatePayloadSha256,
+      languageId: snapshot.languageId,
+      registryGeneration: "candidate-0" as const,
+      importEnvelopeHash: verifiedImport.envelopeHash,
+    })
+  })
+}
+
+const PUBLICATION_BUNDLE_VERSION = "v1.37-runtime-evidence-authority-v1"
+const PUBLICATION_SOURCE_DOMAIN =
+  "cowards-game:runtime-evidence-authority-publication-sources:v1"
+const PUBLICATION_ENVELOPE_DOMAIN =
+  "cowards-game:runtime-evidence-authority-publication-envelope:v1"
+
+type PublicationSourceType =
+  | "attestation"
+  | "certificate"
+  | "revocation"
+  | "supersession"
+  | "lane-control"
+
+interface PublicationSource {
+  type: PublicationSourceType
+  id: string
+  recordHash: string
+}
+
+interface SnapshotAttestationRow extends QueryResultRow {
+  id: string
+  attestation_sha256: string
+  trust_domain: string
+  producer_id: string
+  result_graph_hash: string
+}
+
+interface SnapshotCertificateRow extends QueryResultRow {
+  id: string
+  certificate_kind: "containment" | "conformance"
+  certificate_version: string
+  certificate_record_hash: string
+  lane_identity_hash: string
+  lane_identity: ExecutableLaneIdentity
+  verified_attestation_id: string
+  result_graph_hash: string
+  issued_at: Date | string
+  fresh_until: Date | string
+}
+
+interface SnapshotControlRow extends QueryResultRow {
+  id: string
+  sequence: string | number
+  action: "disable" | "enable"
+  lane_identity_hash: string
+  reason_code: string
+  compensates_control_id: string | null
+  producer_id: string
+  producer_key_id: string
+  trust_domain: string
+  schema_version: string
+  signed_payload: string
+  signature_base64: string
+  envelope_hash: string
+  issued_at: Date | string
+  valid_until: Date | string
+  verification_status: "passed"
+}
+
+interface SnapshotRevocationRow extends QueryResultRow {
+  id: string
+  target_certificate_id: string
+  target_certificate_record_hash: string
+  verified_attestation_id: string
+  evidence_graph_hash: string
+  reason_code: string
+  producer_id: string
+  producer_key_id: string
+  trust_domain: string
+  schema_version: string
+  signed_payload: string
+  signature_base64: string
+  envelope_hash: string
+  issued_at: Date | string
+  valid_until: Date | string
+  verification_status: "passed"
+}
+
+interface SnapshotSupersessionRow extends QueryResultRow {
+  id: string
+  target_certificate_id: string
+  target_certificate_record_hash: string
+  target_verified_attestation_id: string
+  target_evidence_graph_hash: string
+  replacement_certificate_id: string
+  replacement_certificate_record_hash: string
+  replacement_verified_attestation_id: string
+  replacement_evidence_graph_hash: string
+  reason_code: string
+  producer_id: string
+  producer_key_id: string
+  trust_domain: string
+  schema_version: string
+  signed_payload: string
+  signature_base64: string
+  envelope_hash: string
+  issued_at: Date | string
+  valid_until: Date | string
+  verification_status: "passed"
+}
+
+export interface PrepareRuntimeEvidenceAuthorityPublicationInput {
+  bundleVersion?: string
+  issuedAt: string
+  validFrom: string
+  validUntil: string
+  trustDomain: string
+  signerKeyId: string
+  trustedImportAuthorities: readonly RuntimeEvidenceAuthorityImportTrustRoot[]
+  signMessage(
+    messageBytes: Uint8Array,
+  ): Uint8Array | Buffer | Promise<Uint8Array | Buffer>
+}
+
+export interface PreparedRuntimeEvidenceAuthorityPublication {
+  publicationId: string
+  generation: string
+  payloadSha256: string
+  envelopeSha256: string
+  sourceManifestHash: string
+  envelopeBytes: Uint8Array
+  sourceIds: Readonly<{
+    attestationIds: readonly string[]
+    certificateIds: readonly string[]
+    revocationIds: readonly string[]
+    supersessionIds: readonly string[]
+    laneControlIds: readonly string[]
+  }>
+}
+
+const prefixedHash = (value: string, label: string): string => {
+  const prefixed = value.startsWith("sha256:") ? value : `sha256:${value}`
+  return assertHash(prefixed, label)
+}
+
+const isoInstant = (value: Date | string, label: string): string =>
+  assertInstant(value instanceof Date ? value.toISOString() : value, label)
+
+const hashPublicationBytes = (domain: string, bytes: Uint8Array): string =>
+  `sha256:${createHash("sha256")
+    .update(domain)
+    .update("\0")
+    .update(bytes)
+    .digest("hex")}`
+
+const parsePersistedImport = (
+  row: {
+    id: string
+    signed_payload: string
+    signature_base64: string
+    envelope_hash: string
+  },
+  domain: ImportDomain,
+  verificationInstant: string,
+  trustRoots: readonly RuntimeEvidenceAuthorityImportTrustRoot[],
+): VerifiedImport => {
+  let payload: unknown
+  try {
+    payload = JSON.parse(row.signed_payload)
+  } catch {
+    return fail(
+      "UNVERIFIED_SOURCE",
+      "Persisted authority source payload is invalid.",
+    )
+  }
+  const verified = verifyImport(
+    {
+      payload: payload as RuntimeEvidenceAuthorityImportPayload,
+      signatureBase64: row.signature_base64,
+    },
+    domain,
+    verificationInstant,
+    trustRoots,
+  )
+  assertExactImportedRow(row as QueryResultRow, verified)
+  return verified
+}
+
+const assertStatusRowMatchesPayload = (
+  row: SnapshotRevocationRow | SnapshotSupersessionRow,
+  verified: VerifiedImport,
+): void => {
+  const payload = verified.payload
+  if (
+    payload.targetCertificateId !== row.target_certificate_id ||
+    storedHash(payload.targetCertificateRecordHash!) !==
+      row.target_certificate_record_hash ||
+    payload.reasonCode !== row.reason_code ||
+    payload.producerId !== row.producer_id ||
+    payload.producerKeyId !== row.producer_key_id ||
+    payload.trustDomain !== row.trust_domain ||
+    payload.schemaVersion !== row.schema_version
+  ) {
+    fail(
+      "UNVERIFIED_SOURCE",
+      "Certificate status source does not match its signed payload.",
+    )
+  }
+  if (
+    "replacement_certificate_id" in row &&
+    (payload.replacementCertificateId !== row.replacement_certificate_id ||
+      storedHash(payload.replacementCertificateRecordHash!) !==
+        row.replacement_certificate_record_hash)
+  ) {
+    fail(
+      "UNVERIFIED_SOURCE",
+      "Supersession replacement does not match its signed payload.",
+    )
+  }
+}
+
+const loadPublicationSnapshot = async (
+  client: PoolClient,
+  input: PrepareRuntimeEvidenceAuthorityPublicationInput,
+): Promise<{
+  payload: Omit<RuntimeEvidenceAuthorityPayload, "registryGeneration">
+  sources: readonly PublicationSource[]
+  sourceIds: PreparedRuntimeEvidenceAuthorityPublication["sourceIds"]
+}> => {
+  const certificatesResult = await client.query<SnapshotCertificateRow>(
+    `select c.id, c.certificate_kind, c.certificate_version,
+            c.certificate_record_hash, c.lane_identity_hash, c.lane_identity,
+            c.verified_attestation_id, c.result_graph_hash,
+            c.issued_at, c.fresh_until
+       from runtime_evidence_certificates c
+       join runtime_evidence_verified_attestations a
+         on a.id = c.verified_attestation_id
+        and a.verification_status = 'passed'
+        and a.result_graph_hash = c.result_graph_hash
+      where c.certificate_status = 'passed'
+        and c.issued_at <= $1::timestamptz
+        and c.fresh_until >= $2::timestamptz
+        and c.lane_identity->>'semanticTupleId' = $3
+        and c.lane_identity->'semanticTuple' = $4::jsonb
+      order by c.id`,
+    [
+      input.validFrom,
+      input.validUntil,
+      CANONICAL_COMPATIBILITY_TUPLES[0]!.tupleId,
+      JSON.stringify(CANONICAL_COMPATIBILITY_TUPLES[0]!.tuple),
+    ],
+  )
+  const certificates = certificatesResult.rows
+  const certificateIds = certificates.map((row) => row.id)
+  const selectedLaneIdentityHashes = [
+    ...new Set(certificates.map((row) => row.lane_identity_hash)),
+  ].sort((left, right) => left.localeCompare(right))
+  const attestationIds = [
+    ...new Set(certificates.map((row) => row.verified_attestation_id)),
+  ].sort((left, right) => left.localeCompare(right))
+  const attestationsResult =
+    attestationIds.length === 0
+      ? { rows: [] as SnapshotAttestationRow[] }
+      : await client.query<SnapshotAttestationRow>(
+          `select id, attestation_sha256, trust_domain, producer_id,
+                  result_graph_hash
+             from runtime_evidence_verified_attestations
+            where id = any($1::text[]) and verification_status = 'passed'
+            order by id`,
+          [attestationIds],
+        )
+  if (attestationsResult.rows.length !== attestationIds.length) {
+    fail("CLOSED_GRAPH", "Certificate snapshot has a dangling attestation.")
+  }
+
+  const controlsResult = await client.query<SnapshotControlRow>(
+    `select id, sequence, action, lane_identity_hash, reason_code,
+            compensates_control_id, producer_id, producer_key_id, trust_domain,
+            schema_version, signed_payload, signature_base64, envelope_hash,
+            issued_at, valid_until, verification_status
+       from runtime_evidence_lane_controls
+      where verification_status = 'passed'
+        and lane_identity_hash = any($1::text[])
+      order by sequence, id`,
+    [selectedLaneIdentityHashes],
+  )
+  for (const row of controlsResult.rows) {
+    const verified = parsePersistedImport(
+      row,
+      "lane-control",
+      input.validFrom,
+      input.trustedImportAuthorities,
+    )
+    if (
+      verified.payload.laneIdentityHash !== row.lane_identity_hash ||
+      verified.payload.action !== row.action ||
+      verified.payload.compensatesEventId !== row.compensates_control_id ||
+      verified.payload.reasonCode !== row.reason_code
+    ) {
+      fail(
+        "UNVERIFIED_SOURCE",
+        "Lane control does not match its signed payload.",
+      )
+    }
+  }
+
+  const revocationsResult = await client.query<SnapshotRevocationRow>(
+    `select r.* from runtime_evidence_certificate_revocations r
+       join runtime_evidence_certificates c
+         on c.id = r.target_certificate_id
+        and c.certificate_record_hash = r.target_certificate_record_hash
+        and c.verified_attestation_id = r.verified_attestation_id
+        and c.result_graph_hash = r.evidence_graph_hash
+      where r.verification_status = 'passed'
+        and r.target_certificate_id = any($1::text[])
+      order by r.id`,
+    [certificateIds],
+  )
+  for (const row of revocationsResult.rows) {
+    const verified = parsePersistedImport(
+      row,
+      "certificate-revocation",
+      input.validFrom,
+      input.trustedImportAuthorities,
+    )
+    assertStatusRowMatchesPayload(row, verified)
+  }
+
+  const supersessionsResult = await client.query<SnapshotSupersessionRow>(
+    `select s.* from runtime_evidence_certificate_supersessions s
+       join runtime_evidence_certificates target
+         on target.id = s.target_certificate_id
+        and target.certificate_record_hash = s.target_certificate_record_hash
+        and target.verified_attestation_id = s.target_verified_attestation_id
+        and target.result_graph_hash = s.target_evidence_graph_hash
+       join runtime_evidence_certificates replacement
+         on replacement.id = s.replacement_certificate_id
+        and replacement.certificate_record_hash = s.replacement_certificate_record_hash
+        and replacement.verified_attestation_id = s.replacement_verified_attestation_id
+        and replacement.result_graph_hash = s.replacement_evidence_graph_hash
+      where s.verification_status = 'passed'
+        and s.target_certificate_id = any($1::text[])
+        and s.replacement_certificate_id = any($1::text[])
+      order by s.id`,
+    [certificateIds],
+  )
+  for (const row of supersessionsResult.rows) {
+    const verified = parsePersistedImport(
+      row,
+      "certificate-supersession",
+      input.validFrom,
+      input.trustedImportAuthorities,
+    )
+    assertStatusRowMatchesPayload(row, verified)
+  }
+
+  const certificateIdSet = new Set(certificateIds)
+  for (const row of revocationsResult.rows) {
+    if (!certificateIdSet.has(row.target_certificate_id)) {
+      fail("CLOSED_GRAPH", "Revocation target is absent from the snapshot.")
+    }
+  }
+  const supersededBy = new Map<string, string>()
+  for (const row of supersessionsResult.rows) {
+    if (
+      !certificateIdSet.has(row.target_certificate_id) ||
+      !certificateIdSet.has(row.replacement_certificate_id)
+    ) {
+      fail("CLOSED_GRAPH", "Supersession target is absent from the snapshot.")
+    }
+    supersededBy.set(row.target_certificate_id, row.replacement_certificate_id)
+  }
+  for (const origin of supersededBy.keys()) {
+    const visited = new Set<string>()
+    let cursor: string | undefined = origin
+    while (cursor !== undefined) {
+      if (visited.has(cursor))
+        fail(
+          "SUPERSESSION_CYCLE",
+          "Snapshot supersession graph contains a cycle.",
+        )
+      visited.add(cursor)
+      cursor = supersededBy.get(cursor)
+    }
+  }
+
+  if (
+    input.trustDomain === RUNTIME_EVIDENCE_AUTHORITY_TRUST_DOMAINS.production
+  ) {
+    if (
+      attestationsResult.rows.some(
+        (row) =>
+          row.trust_domain.toLowerCase().includes("fixture") ||
+          row.producer_id.toLowerCase().includes("fixture"),
+      ) ||
+      controlsResult.rows.some(
+        (row) =>
+          row.trust_domain.toLowerCase().includes("fixture") ||
+          row.producer_id.toLowerCase().includes("fixture"),
+      ) ||
+      revocationsResult.rows.some(
+        (row) =>
+          row.trust_domain.toLowerCase().includes("fixture") ||
+          row.producer_id.toLowerCase().includes("fixture"),
+      ) ||
+      supersessionsResult.rows.some(
+        (row) =>
+          row.trust_domain.toLowerCase().includes("fixture") ||
+          row.producer_id.toLowerCase().includes("fixture"),
+      )
+    ) {
+      fail(
+        "PRODUCTION_FIXTURE",
+        "Fixture-domain evidence cannot enter production authority.",
+      )
+    }
+    if (certificates.some((row) => row.certificate_kind === "conformance")) {
+      fail(
+        "CONFORMANCE_NOT_ENABLED",
+        "Production conformance authority is unavailable until Phase 259.",
+      )
+    }
+  }
+
+  const uncompensated = new Map<string, SnapshotControlRow>()
+  for (const row of controlsResult.rows) {
+    if (row.action === "disable") {
+      uncompensated.set(row.id, row)
+    } else if (!uncompensated.delete(row.compensates_control_id!)) {
+      fail("CLOSED_GRAPH", "Lane enable has no selected disable.")
+    }
+  }
+  const activeDisableByLane = new Map<string, SnapshotControlRow>()
+  for (const row of uncompensated.values()) {
+    activeDisableByLane.set(row.lane_identity_hash, row)
+  }
+
+  const sources: PublicationSource[] = [
+    ...attestationsResult.rows.map((row) => ({
+      type: "attestation" as const,
+      id: row.id,
+      recordHash: prefixedHash(row.attestation_sha256, "attestation hash"),
+    })),
+    ...certificates.map((row) => ({
+      type: "certificate" as const,
+      id: row.id,
+      recordHash: prefixedHash(row.certificate_record_hash, "certificate hash"),
+    })),
+    ...revocationsResult.rows.map((row) => ({
+      type: "revocation" as const,
+      id: row.id,
+      recordHash: prefixedHash(row.envelope_hash, "revocation hash"),
+    })),
+    ...supersessionsResult.rows.map((row) => ({
+      type: "supersession" as const,
+      id: row.id,
+      recordHash: prefixedHash(row.envelope_hash, "supersession hash"),
+    })),
+    ...controlsResult.rows.map((row) => ({
+      type: "lane-control" as const,
+      id: row.id,
+      recordHash: prefixedHash(row.envelope_hash, "control hash"),
+    })),
+  ].sort((left, right) =>
+    left.type === right.type
+      ? left.id.localeCompare(right.id)
+      : left.type.localeCompare(right.type),
+  )
+
+  return {
+    payload: {
+      schemaVersion: RUNTIME_EVIDENCE_AUTHORITY_PAYLOAD_SCHEMA_VERSION,
+      bundleVersion: assertString(
+        input.bundleVersion ?? PUBLICATION_BUNDLE_VERSION,
+        "bundleVersion",
+      ),
+      issuedAt: assertInstant(input.issuedAt, "issuedAt"),
+      validFrom: assertInstant(input.validFrom, "validFrom"),
+      validUntil: assertInstant(input.validUntil, "validUntil"),
+      semanticTupleManifestHash: CANONICAL_COMPATIBILITY_TUPLES[0]!.tupleId,
+      attestations: Object.freeze(
+        attestationsResult.rows.map((row) =>
+          Object.freeze({
+            attestationId: row.id,
+            attestationHash: prefixedHash(
+              row.attestation_sha256,
+              "attestation hash",
+            ),
+            verified: true as const,
+            imports: Object.freeze([] as string[]),
+          }),
+        ),
+      ),
+      certificates: Object.freeze(
+        certificates.map((row) =>
+          Object.freeze({
+            kind: row.certificate_kind,
+            certificateId: row.id,
+            certificateVersion: row.certificate_version,
+            certificateRecordHash: prefixedHash(
+              row.certificate_record_hash,
+              "certificate record hash",
+            ),
+            laneIdentityHash: prefixedHash(
+              row.lane_identity_hash,
+              "lane identity hash",
+            ),
+            laneIdentity: parseStoredLaneIdentity(row.lane_identity),
+            issuedAt: isoInstant(row.issued_at, "certificate issuedAt"),
+            freshUntil: isoInstant(row.fresh_until, "certificate freshUntil"),
+            attestationIds: Object.freeze([row.verified_attestation_id]),
+          }),
+        ),
+      ),
+      revocations: Object.freeze(
+        revocationsResult.rows.map((row) =>
+          Object.freeze({
+            certificateId: row.target_certificate_id,
+            certificateRecordHash: prefixedHash(
+              row.target_certificate_record_hash,
+              "revocation certificate hash",
+            ),
+            revokedAt: isoInstant(row.issued_at, "revokedAt"),
+            reasonCode: row.reason_code,
+          }),
+        ),
+      ),
+      supersessions: Object.freeze(
+        supersessionsResult.rows.map((row) =>
+          Object.freeze({
+            certificateId: row.target_certificate_id,
+            supersededByCertificateId: row.replacement_certificate_id,
+          }),
+        ),
+      ),
+      operatorLaneDisables: Object.freeze(
+        [...activeDisableByLane.values()]
+          .sort((left, right) =>
+            left.lane_identity_hash.localeCompare(right.lane_identity_hash),
+          )
+          .map((row) =>
+            Object.freeze({
+              laneIdentityHash: row.lane_identity_hash,
+              disabledAt: isoInstant(row.issued_at, "disabledAt"),
+              reasonCode: row.reason_code,
+            }),
+          ),
+      ),
+    },
+    sources: Object.freeze(sources),
+    sourceIds: Object.freeze({
+      attestationIds: Object.freeze(attestationIds),
+      certificateIds: Object.freeze(certificateIds),
+      revocationIds: Object.freeze(revocationsResult.rows.map((row) => row.id)),
+      supersessionIds: Object.freeze(
+        supersessionsResult.rows.map((row) => row.id),
+      ),
+      laneControlIds: Object.freeze(controlsResult.rows.map((row) => row.id)),
+    }),
+  }
+}
+
+const sourceReferenceColumn = (sourceType: PublicationSourceType): string =>
+  ({
+    attestation: "attestation_id",
+    certificate: "certificate_id",
+    revocation: "revocation_id",
+    supersession: "supersession_id",
+    "lane-control": "lane_control_id",
+  })[sourceType]
+
+export const prepareRuntimeEvidenceAuthorityPublication = async (
+  pool: Pool,
+  input: PrepareRuntimeEvidenceAuthorityPublicationInput,
+): Promise<Readonly<PreparedRuntimeEvidenceAuthorityPublication>> => {
+  if (input.bundleVersion === "v1.37-kernel-integrity-candidate-v1") {
+    fail(
+      "CLOSED_GRAPH",
+      "Retained preactivation candidate evidence is not a publication source.",
+    )
+  }
+  assertString(input.trustDomain, "trustDomain")
+  assertString(input.signerKeyId, "signerKeyId")
+  assertInstant(input.issuedAt, "issuedAt")
+  assertInstant(input.validFrom, "validFrom")
+  assertInstant(input.validUntil, "validUntil")
+  return withSerializableTransaction(pool, async (client) => {
+    await client.query(
+      "select pg_advisory_xact_lock(hashtext('runtime-evidence-authority-publication-v1'))",
+    )
+    const head = await client.query<{ next_generation: string | number }>(
+      `select next_generation from runtime_evidence_authority_publication_head
+        where singleton = true for update`,
+    )
+    const generation = String(head.rows[0]?.next_generation ?? "")
+    if (!/^(?:0|[1-9][0-9]{0,15})$/u.test(generation)) {
+      fail("PUBLICATION_HEAD", "Authority publication head is invalid.")
+    }
+    const snapshot = await loadPublicationSnapshot(client, input)
+    const payload: RuntimeEvidenceAuthorityPayload = {
+      ...snapshot.payload,
+      registryGeneration: generation,
+    }
+    const payloadBytes = encodeRuntimeEvidenceAuthorityPayload(payload)
+    const signatureMessage = encodeRuntimeEvidenceAuthoritySignatureMessage({
+      trustDomain: input.trustDomain,
+      keyId: input.signerKeyId,
+      payloadBytes,
+    })
+    let signature: Uint8Array
+    try {
+      signature = new Uint8Array(
+        await input.signMessage(new Uint8Array(signatureMessage)),
+      )
+    } catch {
+      return fail("SIGNER_FAILURE", "External authority signer failed.")
+    }
+    const envelope = buildRuntimeEvidenceAuthorityEnvelope({
+      trustDomain: input.trustDomain,
+      keyId: input.signerKeyId,
+      payloadBytes,
+      signature,
+    })
+    const envelopeBytes = new TextEncoder().encode(JSON.stringify(envelope))
+    const payloadSha256 = hashRuntimeEvidenceAuthorityPayload(payloadBytes)
+    const envelopeSha256 = hashPublicationBytes(
+      PUBLICATION_ENVELOPE_DOMAIN,
+      envelopeBytes,
+    )
+    const sourceManifestHash = hashPublicationBytes(
+      PUBLICATION_SOURCE_DOMAIN,
+      new TextEncoder().encode(JSON.stringify(snapshot.sources)),
+    )
+    const publicationId = `runtime-evidence-authority:${generation}:${payloadSha256.slice("sha256:".length)}`
+    await client.query(
+      `insert into runtime_evidence_authority_publications
+        (id, generation, semantic_tuple_manifest_hash, source_manifest_hash,
+         payload_sha256, envelope_sha256, signer_key_id, trust_domain,
+         issued_at, valid_from, valid_until, payload_bytes, envelope_bytes,
+         attestation_ids, certificate_ids, revocation_ids, supersession_ids,
+         lane_control_ids)
+       values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)`,
+      [
+        publicationId,
+        generation,
+        payload.semanticTupleManifestHash,
+        sourceManifestHash,
+        payloadSha256,
+        envelopeSha256,
+        input.signerKeyId,
+        input.trustDomain,
+        payload.issuedAt,
+        payload.validFrom,
+        payload.validUntil,
+        Buffer.from(payloadBytes),
+        Buffer.from(envelopeBytes),
+        JSON.stringify(snapshot.sourceIds.attestationIds),
+        JSON.stringify(snapshot.sourceIds.certificateIds),
+        JSON.stringify(snapshot.sourceIds.revocationIds),
+        JSON.stringify(snapshot.sourceIds.supersessionIds),
+        JSON.stringify(snapshot.sourceIds.laneControlIds),
+      ],
+    )
+    for (const source of snapshot.sources) {
+      const referenceColumn = sourceReferenceColumn(source.type)
+      await client.query(
+        `insert into runtime_evidence_authority_publication_sources
+          (publication_id, source_type, source_id, source_record_hash, ${referenceColumn})
+         values ($1,$2,$3,$4,$3)`,
+        [publicationId, source.type, source.id, source.recordHash],
+      )
+    }
+    await client.query(
+      `insert into runtime_evidence_authority_publication_events
+        (id, publication_id, event_kind, attempt_id, envelope_sha256, receipt)
+       values ($1,$2,'prepared',$3,$4,$5)`,
+      [
+        `${publicationId}:prepared`,
+        publicationId,
+        `prepare:${generation}`,
+        envelopeSha256,
+        JSON.stringify({
+          schemaVersion:
+            "v1.37-runtime-evidence-authority-publication-receipt-v1",
+          generation,
+          payloadSha256,
+          sourceManifestHash,
+        }),
+      ],
+    )
+    await client.query(
+      `update runtime_evidence_authority_publication_head
+          set next_generation = next_generation + 1 where singleton = true`,
+    )
+    return Object.freeze({
+      publicationId,
+      generation,
+      payloadSha256,
+      envelopeSha256,
+      sourceManifestHash,
+      envelopeBytes: new Uint8Array(envelopeBytes),
+      sourceIds: snapshot.sourceIds,
+    })
+  })
+}
+
+export interface RuntimeEvidenceAuthorityInstallFileHandle {
+  writeFile(bytes: Uint8Array): Promise<unknown>
+  sync(): Promise<unknown>
+  close(): Promise<unknown>
+}
+
+export interface RuntimeEvidenceAuthorityInstallFileSystem {
+  readFile(filePath: string): Promise<Uint8Array>
+  open(
+    filePath: string,
+    flags: "wx" | "r",
+    mode?: number,
+  ): Promise<RuntimeEvidenceAuthorityInstallFileHandle>
+  rename(fromPath: string, toPath: string): Promise<unknown>
+  unlink(filePath: string): Promise<unknown>
+}
+
+const nodeInstallFileSystem: RuntimeEvidenceAuthorityInstallFileSystem = {
+  readFile,
+  open: (filePath, flags, mode) => openFile(filePath, flags, mode),
+  rename,
+  unlink,
+}
+
+export interface InstallRuntimeEvidenceAuthorityPublicationInput {
+  publicationId: string
+  targetPath: string
+  attemptId?: string
+  evaluationInstant: string
+  expectedTrustDomain: string
+  signerKeyId: string
+  publicKeyPem: string
+  fileSystem?: RuntimeEvidenceAuthorityInstallFileSystem
+}
+
+export interface InstalledRuntimeEvidenceAuthorityPublication {
+  publicationId: string
+  generation: string
+  envelopeSha256: string
+  reconciled: boolean
+}
+
+interface PublicationInstallRow extends QueryResultRow {
+  id: string
+  generation: string | number
+  semantic_tuple_manifest_hash: string
+  source_manifest_hash: string
+  payload_sha256: string
+  envelope_sha256: string
+  signer_key_id: string
+  trust_domain: string
+  envelope_bytes: Buffer
+  attestation_ids: readonly string[]
+  certificate_ids: readonly string[]
+  revocation_ids: readonly string[]
+  supersession_ids: readonly string[]
+  lane_control_ids: readonly string[]
+}
+
+const readIfPresent = async (
+  fileSystem: RuntimeEvidenceAuthorityInstallFileSystem,
+  filePath: string,
+): Promise<Uint8Array | undefined> => {
+  try {
+    return new Uint8Array(await fileSystem.readFile(filePath))
+  } catch (error) {
+    if (
+      typeof error === "object" &&
+      error !== null &&
+      "code" in error &&
+      error.code === "ENOENT"
+    ) {
+      return undefined
+    }
+    throw error
+  }
+}
+
+const bytesEqual = (left: Uint8Array, right: Uint8Array): boolean =>
+  left.byteLength === right.byteLength && Buffer.from(left).equals(right)
+
+const eventId = (
+  publicationId: string,
+  eventKind: "installed" | "failed" | "uncertain",
+  attemptId: string,
+): string =>
+  `${publicationId}:${eventKind}:${createHash("sha256")
+    .update(attemptId)
+    .digest("hex")}`
+
+const normalizeJson = (value: unknown): unknown => {
+  if (Array.isArray(value)) return value.map(normalizeJson)
+  if (value !== null && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>)
+        .sort(([left], [right]) => left.localeCompare(right))
+        .map(([key, entry]) => [key, normalizeJson(entry)]),
+    )
+  }
+  return value
+}
+
+const appendInstallEvent = async (
+  client: PoolClient,
+  publication: PublicationInstallRow,
+  eventKind: "installed" | "failed" | "uncertain",
+  attemptId: string,
+  reasonCode: string | null,
+  reconciled: boolean,
+): Promise<void> => {
+  const receipt = {
+    schemaVersion:
+      "v1.37-runtime-evidence-authority-install-receipt-v1" as const,
+    generation: String(publication.generation),
+    payloadSha256: publication.payload_sha256,
+    envelopeSha256: publication.envelope_sha256,
+    sourceManifestHash: publication.source_manifest_hash,
+    sourceIds: {
+      attestationIds: publication.attestation_ids,
+      certificateIds: publication.certificate_ids,
+      revocationIds: publication.revocation_ids,
+      supersessionIds: publication.supersession_ids,
+      laneControlIds: publication.lane_control_ids,
+    },
+    reconciled,
+  }
+  await client.query(
+    `insert into runtime_evidence_authority_publication_events
+      (id, publication_id, event_kind, attempt_id, envelope_sha256,
+       reason_code, receipt)
+     values ($1,$2,$3,$4,$5,$6,$7)
+     on conflict (publication_id, event_kind, attempt_id) do nothing`,
+    [
+      eventId(publication.id, eventKind, attemptId),
+      publication.id,
+      eventKind,
+      attemptId,
+      publication.envelope_sha256,
+      reasonCode,
+      JSON.stringify(receipt),
+    ],
+  )
+  const existing = await client.query<{
+    envelope_sha256: string
+    reason_code: string | null
+    receipt: unknown
+  }>(
+    `select envelope_sha256, reason_code, receipt
+       from runtime_evidence_authority_publication_events
+      where publication_id = $1 and event_kind = $2 and attempt_id = $3`,
+    [publication.id, eventKind, attemptId],
+  )
+  if (
+    existing.rows[0]?.envelope_sha256 !== publication.envelope_sha256 ||
+    existing.rows[0]?.reason_code !== reasonCode ||
+    JSON.stringify(normalizeJson(existing.rows[0]?.receipt)) !==
+      JSON.stringify(normalizeJson(receipt))
+  ) {
+    fail("INSTALL_EVENT_CONFLICT", "Install event collision is not exact.")
+  }
+}
+
+const verifyInstallPublication = (
+  publication: PublicationInstallRow,
+  input: InstallRuntimeEvidenceAuthorityPublicationInput,
+): void => {
+  if (
+    publication.signer_key_id !== input.signerKeyId ||
+    publication.trust_domain !== input.expectedTrustDomain
+  ) {
+    fail(
+      "INSTALL_IDENTITY",
+      "Publication signer identity does not match install trust.",
+    )
+  }
+  let publicKey: KeyObject
+  try {
+    publicKey = createPublicKey(input.publicKeyPem)
+  } catch {
+    return fail("INSTALL_KEY", "Configured authority public key is invalid.")
+  }
+  const inspected = inspectRuntimeEvidenceAuthorityBundle(
+    publication.envelope_bytes,
+    {
+      expectedTrustDomain: input.expectedTrustDomain,
+      evaluationInstant: input.evaluationInstant,
+      trustedKeyIds: [input.signerKeyId],
+      verifySignature: ({ signedMessageBytes, signature }) =>
+        verifySignature(null, signedMessageBytes, publicKey, signature),
+    },
+  )
+  if (
+    inspected.envelope.keyId !== publication.signer_key_id ||
+    inspected.payload.registryGeneration !== String(publication.generation) ||
+    inspected.payload.semanticTupleManifestHash !==
+      publication.semantic_tuple_manifest_hash ||
+    inspected.payloadSha256 !== publication.payload_sha256 ||
+    hashPublicationBytes(
+      PUBLICATION_ENVELOPE_DOMAIN,
+      publication.envelope_bytes,
+    ) !== publication.envelope_sha256
+  ) {
+    fail(
+      "INSTALL_PROVENANCE",
+      "Publication bytes do not match persisted provenance.",
+    )
+  }
+}
+
+const bestEffortInstallEvent = async (
+  client: PoolClient,
+  publication: PublicationInstallRow,
+  eventKind: "failed" | "uncertain",
+  attemptId: string,
+  reasonCode: string,
+): Promise<void> => {
+  try {
+    await appendInstallEvent(
+      client,
+      publication,
+      eventKind,
+      attemptId,
+      reasonCode,
+      false,
+    )
+  } catch {
+    // A failed event is supplementary evidence. Never mask the install failure.
+  }
+}
+
+export const installRuntimeEvidenceAuthorityPublication = async (
+  pool: Pool,
+  input: InstallRuntimeEvidenceAuthorityPublicationInput,
+): Promise<Readonly<InstalledRuntimeEvidenceAuthorityPublication>> => {
+  const publicationId = assertString(input.publicationId, "publicationId")
+  const targetPath = assertString(input.targetPath, "targetPath")
+  const attemptId = assertString(
+    input.attemptId ?? `install:${randomUUID()}`,
+    "attemptId",
+  )
+  assertInstant(input.evaluationInstant, "evaluationInstant")
+  assertString(input.expectedTrustDomain, "expectedTrustDomain")
+  assertString(input.signerKeyId, "signerKeyId")
+  const fileSystem = input.fileSystem ?? nodeInstallFileSystem
+  const client = await pool.connect()
+  const lockIdentity = createHash("sha256")
+    .update("cowards-game:runtime-evidence-authority-install-lock:v1\0")
+    .update(targetPath)
+    .digest("hex")
+  let locked = false
+  try {
+    await client.query("select pg_advisory_lock(hashtext($1))", [lockIdentity])
+    locked = true
+    const publicationResult = await client.query<PublicationInstallRow>(
+      `select id, generation, semantic_tuple_manifest_hash, source_manifest_hash,
+              payload_sha256, envelope_sha256, signer_key_id, trust_domain,
+              envelope_bytes, attestation_ids, certificate_ids, revocation_ids,
+              supersession_ids, lane_control_ids
+         from runtime_evidence_authority_publications where id = $1`,
+      [publicationId],
+    )
+    const publication = publicationResult.rows[0]
+    if (publication === undefined) {
+      throw new RuntimeEvidenceAuthorityPublisherError(
+        "UNKNOWN_PUBLICATION",
+        "Authority publication does not exist.",
+      )
+    }
+    verifyInstallPublication(publication, input)
+    const expectedBytes = new Uint8Array(publication.envelope_bytes)
+    const existingBytes = await readIfPresent(fileSystem, targetPath)
+    if (existingBytes && bytesEqual(existingBytes, expectedBytes)) {
+      let directoryHandle: RuntimeEvidenceAuthorityInstallFileHandle | undefined
+      try {
+        directoryHandle = await fileSystem.open(path.dirname(targetPath), "r")
+        await directoryHandle.sync()
+        await directoryHandle.close()
+        directoryHandle = undefined
+      } catch {
+        try {
+          await directoryHandle?.close()
+        } catch {
+          // Preserve the primary durability uncertainty.
+        }
+        await bestEffortInstallEvent(
+          client,
+          publication,
+          "uncertain",
+          attemptId,
+          "directory-fsync-uncertain",
+        )
+        return fail(
+          "INSTALL_UNCERTAIN",
+          "Authority installation remains uncertain until reconciliation.",
+        )
+      }
+      try {
+        await appendInstallEvent(
+          client,
+          publication,
+          "installed",
+          attemptId,
+          null,
+          true,
+        )
+      } catch {
+        return fail(
+          "INSTALL_RECEIPT_FAILURE",
+          "Durable authority requires receipt reconciliation.",
+        )
+      }
+      return Object.freeze({
+        publicationId,
+        generation: String(publication.generation),
+        envelopeSha256: publication.envelope_sha256,
+        reconciled: true,
+      })
+    }
+
+    const temporaryPath = path.join(
+      path.dirname(targetPath),
+      `.${path.basename(targetPath)}.tmp-${process.pid}-${randomUUID()}`,
+    )
+    let temporaryHandle: RuntimeEvidenceAuthorityInstallFileHandle | undefined
+    let renamed = false
+    try {
+      temporaryHandle = await fileSystem.open(temporaryPath, "wx", 0o600)
+      await temporaryHandle.writeFile(expectedBytes)
+      await temporaryHandle.sync()
+      await temporaryHandle.close()
+      temporaryHandle = undefined
+      await fileSystem.rename(temporaryPath, targetPath)
+      renamed = true
+    } catch {
+      try {
+        await temporaryHandle?.close()
+      } catch {
+        // Preserve the primary pre-rename failure.
+      }
+      if (!renamed) {
+        try {
+          await fileSystem.unlink(temporaryPath)
+        } catch {
+          // The temp file may not have been created or may already be gone.
+        }
+        await bestEffortInstallEvent(
+          client,
+          publication,
+          "failed",
+          attemptId,
+          "pre-rename-failure",
+        )
+        return fail(
+          "INSTALL_PRE_RENAME_FAILURE",
+          "Authority installation failed before replacement.",
+        )
+      }
+      throw new Error("unreachable post-rename failure")
+    }
+
+    let directoryHandle: RuntimeEvidenceAuthorityInstallFileHandle | undefined
+    try {
+      directoryHandle = await fileSystem.open(path.dirname(targetPath), "r")
+      await directoryHandle.sync()
+      await directoryHandle.close()
+      directoryHandle = undefined
+    } catch {
+      try {
+        await directoryHandle?.close()
+      } catch {
+        // Preserve the primary durability uncertainty.
+      }
+      await bestEffortInstallEvent(
+        client,
+        publication,
+        "uncertain",
+        attemptId,
+        "directory-fsync-uncertain",
+      )
+      return fail(
+        "INSTALL_UNCERTAIN",
+        "Authority installation remains uncertain until reconciliation.",
+      )
+    }
+
+    try {
+      await appendInstallEvent(
+        client,
+        publication,
+        "installed",
+        attemptId,
+        null,
+        false,
+      )
+    } catch {
+      await bestEffortInstallEvent(
+        client,
+        publication,
+        "failed",
+        attemptId,
+        "install-receipt-failed",
+      )
+      return fail(
+        "INSTALL_RECEIPT_FAILURE",
+        "Durable authority requires receipt reconciliation.",
+      )
+    }
+    return Object.freeze({
+      publicationId,
+      generation: String(publication.generation),
+      envelopeSha256: publication.envelope_sha256,
+      reconciled: false,
+    })
+  } finally {
+    if (locked) {
+      try {
+        await client.query("select pg_advisory_unlock(hashtext($1))", [
+          lockIdentity,
+        ])
+      } catch {
+        // Releasing the connection also releases a session advisory lock.
+      }
+    }
+    client.release()
+  }
+}
+
+export interface PrepareRuntimeEvidenceAuthorityPublicationV117Input {
+  mode: "production" | "fixture"
+  bundleVersion: string
+  registryGeneration: string
+  issuedAt: string
+  validFrom: string
+  validUntil: string
+  semanticTupleManifestHash: string
+  sourceManifestHash: string
+}
+
+export interface PreparedRuntimeEvidenceAuthorityPublicationV117 {
+  payload: Readonly<RuntimeEvidenceAuthorityPayloadV117>
+  payloadBytes: Uint8Array
+  payloadSha256: string
+}
+
+/** Candidate-only v1.17 publisher. The production path stays empty until Phase 259. */
+export const prepareRuntimeEvidenceAuthorityPublicationV117 = async (
+  pool: Pool,
+  input: PrepareRuntimeEvidenceAuthorityPublicationV117Input,
+): Promise<Readonly<PreparedRuntimeEvidenceAuthorityPublicationV117>> => {
+  const rows = await pool.query<{
+    attestation_id: string
+    attestation_sha256: string
+    certificate_kind: "containment" | "conformance"
+    certificate_id: string
+    certificate_version: string
+    certificate_record_hash: string
+    producer_id: string
+    producer_key_id: string
+    trust_domain: "production" | "fixture"
+    managed_identity: boolean
+    graph_schema_version: "runtime-evidence-graph-v1.17"
+    graph_profile: "runtime-identity-evidence-dag-v1"
+    identity_manifest_root: string
+    evidence_graph_root: string
+    exact_pin_expansion: unknown
+    registry_generation: string
+    issued_at: Date
+    valid_until: Date
+  }>(
+    `select attestation_id, attestation_sha256, certificate_kind,
+            certificate_id, certificate_version, certificate_record_hash,
+            producer_id, producer_key_id, trust_domain, managed_identity,
+            graph_schema_version, graph_profile, identity_manifest_root,
+            evidence_graph_root, exact_pin_expansion, registry_generation,
+            issued_at, valid_until
+       from runtime_evidence_v1_17_candidates
+      where trust_domain = $1
+      order by attestation_id`,
+    [input.mode],
+  )
+  if (input.mode === "production" && rows.rows.length !== 0) {
+    return fail(
+      "PRODUCTION_V117_UNAVAILABLE",
+      "Production v1.17 evidence producers are not authorized.",
+    )
+  }
+  const publicationIssuedAt = Date.parse(input.issuedAt)
+  const publicationValidFrom = Date.parse(input.validFrom)
+  const publicationValidUntil = Date.parse(input.validUntil)
+  if (
+    !Number.isFinite(publicationIssuedAt) ||
+    !Number.isFinite(publicationValidFrom) ||
+    !Number.isFinite(publicationValidUntil)
+  ) {
+    return fail("CANDIDATE_COVERAGE", "v1.17 candidate coverage is invalid.")
+  }
+  for (const row of rows.rows) {
+    if (
+      row.registry_generation !== input.registryGeneration ||
+      row.issued_at.getTime() > publicationIssuedAt ||
+      row.issued_at.getTime() > publicationValidFrom ||
+      row.valid_until.getTime() < publicationValidUntil
+    ) {
+      return fail("CANDIDATE_COVERAGE", "v1.17 candidate coverage is invalid.")
+    }
+  }
+  const attestations = rows.rows.map((row) => {
+    if (!row.managed_identity) {
+      return fail("CLOSED_GRAPH", "v1.17 evidence binding is invalid.")
+    }
+    const binding = parseRuntimeEvidenceAuthorityBindingV117({
+      graphSchemaVersion: row.graph_schema_version,
+      graphProfile: row.graph_profile,
+      identityManifestRoot: `sha256:${row.identity_manifest_root}`,
+      evidenceGraphRoot: `sha256:${row.evidence_graph_root}`,
+      exactPins: row.exact_pin_expansion as never,
+    })
+    const expectedRecordHash = hashRuntimeEvidenceCertificateRecordV117({
+      certificateKind: row.certificate_kind,
+      certificateId: row.certificate_id,
+      certificateVersion: row.certificate_version,
+      attestationId: row.attestation_id,
+      binding,
+    })
+    if (expectedRecordHash !== row.certificate_record_hash) {
+      return fail("CLOSED_GRAPH", "v1.17 certificate binding is invalid.")
+    }
+    return Object.freeze({
+      attestationId: row.attestation_id,
+      attestationHash: `sha256:${row.attestation_sha256}`,
+      producerId: row.producer_id,
+      producerKeyId: row.producer_key_id,
+      trustDomain: row.trust_domain,
+      managedIdentity: true as const,
+      imports: Object.freeze([] as string[]),
+      binding,
+    })
+  })
+  const certificates = rows.rows.map((row, index) =>
+    Object.freeze({
+      certificateId: row.certificate_id,
+      certificateVersion: row.certificate_version,
+      certificateRecordHash: row.certificate_record_hash,
+      certificateKind: row.certificate_kind,
+      attestationId: row.attestation_id,
+      binding: attestations[index]!.binding,
+    }),
+  )
+  const payload: RuntimeEvidenceAuthorityPayloadV117 = {
+    schemaVersion: RUNTIME_EVIDENCE_AUTHORITY_PAYLOAD_SCHEMA_VERSION_V1_17,
+    bundleVersion: input.bundleVersion,
+    registryGeneration: input.registryGeneration,
+    issuedAt: input.issuedAt,
+    validFrom: input.validFrom,
+    validUntil: input.validUntil,
+    semanticTupleManifestHash: input.semanticTupleManifestHash,
+    sourceManifestHash: input.sourceManifestHash,
+    attestations,
+    certificates,
+  }
+  const payloadBytes = encodeRuntimeEvidenceAuthorityPayloadV117(payload)
+  return Object.freeze({
+    payload,
+    payloadBytes,
+    payloadSha256: hashRuntimeEvidenceAuthorityPayload(payloadBytes),
+  })
+}
+
+export interface RecordInstalledRuntimeEvidenceAuthorityV117Input {
+  envelopeBytes: Uint8Array
+  evaluationInstant: string
+  installedAt: string
+  expectedTrustDomain: string
+  signerKeyId: string
+  publicKeyPem: string
+}
+
+export interface InstalledRuntimeEvidenceAuthorityV117 {
+  installReceiptId: string
+  installReceiptHash: string
+  authorityBundleHash: string
+  sourceManifestHash: string
+  registryGeneration: string
+  semanticTupleManifestHash: string
+  envelopeSha256: string
+}
+
+export interface VerifiedInstalledRuntimeEvidenceAuthorityV117 extends InstalledRuntimeEvidenceAuthorityV117 {
+  trustDomain: string
+  signerKeyId: string
+  issuedAt: string
+  validFrom: string
+  validUntil: string
+  installedAt: string
+  payloadBytes: Uint8Array
+  envelopeBytes: Uint8Array
+  attestationIds: readonly string[]
+  certificateIds: readonly string[]
+  installReceipt: JsonValue
+}
+
+const V117_INSTALL_RECEIPT_SCHEMA =
+  "v1.37-runtime-evidence-authority-install-receipt-v1.17" as const
+const V117_INSTALL_ID_DOMAIN =
+  "cowards-game:runtime-evidence-authority-install-id:v1.17"
+const V117_INSTALL_RECEIPT_DOMAIN =
+  "cowards-game:runtime-evidence-authority-install-receipt:v1.17"
+
+export const RUNTIME_EVIDENCE_V117_INSTALLED_AUTHORITY_HEAD_LOCK_SQL =
+  "select pg_advisory_xact_lock(hashtext('cowards-game:runtime-evidence-v1.17-installed-authority-head:v1'))" as const
+
+const compareUnsignedUTF8V117 = (left: string, right: string): number => {
+  const encoder = new TextEncoder()
+  const leftBytes = encoder.encode(left)
+  const rightBytes = encoder.encode(right)
+  const length = Math.min(leftBytes.byteLength, rightBytes.byteLength)
+  for (let index = 0; index < length; index += 1) {
+    const difference = leftBytes[index]! - rightBytes[index]!
+    if (difference !== 0) return difference
+  }
+  return leftBytes.byteLength - rightBytes.byteLength
+}
+
+export const sortRuntimeEvidenceAuthoritySourceIdsV117 = (
+  values: readonly string[],
+): readonly string[] => Object.freeze([...values].sort(compareUnsignedUTF8V117))
+
+export const encodeRuntimeEvidenceAuthorityInstallReceiptV117 = (
+  value: JsonValue,
+): Uint8Array => {
+  const encoded = encodeCanonicalJson(value, {
+    context: "canonical-manifest",
+  })
+  if (!encoded.ok) {
+    return fail(
+      "INSTALL_RECEIPT_CANONICAL_JSON",
+      "v1.17 install receipt is not canonical JSON.",
+    )
+  }
+  return encoded.bytes
+}
+
+export const verifyInstalledRuntimeEvidenceAuthorityV117 = (
+  input: RecordInstalledRuntimeEvidenceAuthorityV117Input,
+): Readonly<VerifiedInstalledRuntimeEvidenceAuthorityV117> => {
+  const evaluationInstant = assertInstant(
+    input.evaluationInstant,
+    "evaluationInstant",
+  )
+  const installedAt = assertInstant(input.installedAt, "installedAt")
+  const expectedTrustDomain = assertString(
+    input.expectedTrustDomain,
+    "expectedTrustDomain",
+  )
+  const signerKeyId = assertString(input.signerKeyId, "signerKeyId")
+  if (
+    expectedTrustDomain === RUNTIME_EVIDENCE_AUTHORITY_TRUST_DOMAINS.production
+  ) {
+    return fail(
+      "PRODUCTION_V117_UNAVAILABLE",
+      "Production v1.17 installed authority is unavailable until Phase 259.",
+    )
+  }
+  if (
+    expectedTrustDomain !== RUNTIME_EVIDENCE_AUTHORITY_TRUST_DOMAINS.fixture
+  ) {
+    return fail("INSTALL_IDENTITY", "v1.17 authority trust domain is unknown.")
+  }
+  let publicKey: KeyObject
+  try {
+    publicKey = createPublicKey(input.publicKeyPem)
+  } catch {
+    return fail("INSTALL_KEY", "Configured v1.17 authority key is invalid.")
+  }
+  const inspected = inspectRuntimeEvidenceAuthorityBundleV117(
+    input.envelopeBytes,
+    {
+      expectedTrustDomain,
+      evaluationInstant,
+      trustedKeyIds: [signerKeyId],
+      verifySignature: ({ signedMessageBytes, signature }) =>
+        verifySignature(null, signedMessageBytes, publicKey, signature),
+    },
+  )
+  if (
+    inspected.envelope.keyId !== signerKeyId ||
+    installedAt !== evaluationInstant ||
+    Date.parse(installedAt) < Date.parse(inspected.payload.validFrom) ||
+    Date.parse(installedAt) > Date.parse(inspected.payload.validUntil) ||
+    inspected.payload.semanticTupleManifestHash !==
+      CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_ID
+  ) {
+    return fail("INSTALL_IDENTITY", "v1.17 authority identity is unavailable.")
+  }
+  const authorityBundleHash = inspected.payloadSha256
+  const sourceManifestHash = inspected.payload.sourceManifestHash
+  const registryGeneration = inspected.payload.registryGeneration
+  const semanticTupleManifestHash = inspected.payload.semanticTupleManifestHash
+  const envelopeSha256 = hashPublicationBytes(
+    "cowards-game:runtime-evidence-authority-envelope:v1.17",
+    input.envelopeBytes,
+  )
+  const attestationIds = sortRuntimeEvidenceAuthoritySourceIdsV117(
+    inspected.payload.attestations.map(({ attestationId }) => attestationId),
+  )
+  const certificateIds = sortRuntimeEvidenceAuthoritySourceIdsV117(
+    inspected.payload.certificates.map(({ certificateId }) => certificateId),
+  )
+  const installIdentity = {
+    schemaVersion: V117_INSTALL_RECEIPT_SCHEMA,
+    authorityBundleHash,
+    sourceManifestHash,
+    registryGeneration,
+    semanticTupleManifestHash,
+    envelopeSha256,
+    installedAt,
+    attestationIds: [...attestationIds],
+    certificateIds: [...certificateIds],
+  }
+  const installReceiptId = `runtime-authority-install:v1.17:${hashPublicationBytes(
+    V117_INSTALL_ID_DOMAIN,
+    encodeRuntimeEvidenceAuthorityInstallReceiptV117(installIdentity),
+  ).slice("sha256:".length)}`
+  const installReceipt = { ...installIdentity, installReceiptId }
+  const installReceiptHash = hashPublicationBytes(
+    V117_INSTALL_RECEIPT_DOMAIN,
+    encodeRuntimeEvidenceAuthorityInstallReceiptV117(installReceipt),
+  )
+  return Object.freeze({
+    installReceiptId,
+    installReceiptHash,
+    authorityBundleHash,
+    sourceManifestHash,
+    registryGeneration,
+    semanticTupleManifestHash,
+    envelopeSha256,
+    trustDomain: expectedTrustDomain,
+    signerKeyId,
+    issuedAt: inspected.payload.issuedAt,
+    validFrom: inspected.payload.validFrom,
+    validUntil: inspected.payload.validUntil,
+    installedAt,
+    payloadBytes: inspected.payloadBytes,
+    envelopeBytes: new Uint8Array(input.envelopeBytes),
+    attestationIds,
+    certificateIds,
+    installReceipt: installReceipt as unknown as JsonValue,
+  })
+}
+
+/**
+ * Records only a separately verified mounted v1.17 authority. Production is
+ * deliberately unavailable until Phase 259 authorizes executable producers.
+ */
+export const recordInstalledRuntimeEvidenceAuthorityV117 = async (
+  pool: Pool,
+  input: RecordInstalledRuntimeEvidenceAuthorityV117Input,
+): Promise<Readonly<InstalledRuntimeEvidenceAuthorityV117>> => {
+  const verified = verifyInstalledRuntimeEvidenceAuthorityV117(input)
+  const {
+    installReceiptId,
+    installReceiptHash,
+    authorityBundleHash,
+    sourceManifestHash,
+    registryGeneration,
+    semanticTupleManifestHash,
+    envelopeSha256,
+    trustDomain: expectedTrustDomain,
+    signerKeyId,
+    installedAt,
+    attestationIds,
+    certificateIds,
+    installReceipt,
+  } = verified
+  const values: unknown[] = [
+    installReceiptId,
+    authorityBundleHash,
+    sourceManifestHash,
+    registryGeneration,
+    semanticTupleManifestHash,
+    envelopeSha256,
+    expectedTrustDomain,
+    signerKeyId,
+    installReceiptHash,
+    verified.issuedAt,
+    verified.validFrom,
+    verified.validUntil,
+    installedAt,
+    Buffer.from(verified.payloadBytes),
+    Buffer.from(verified.envelopeBytes),
+    JSON.stringify(attestationIds),
+    JSON.stringify(certificateIds),
+    JSON.stringify(installReceipt),
+  ]
+  return withSerializableTransaction(pool, async (client) => {
+    await client.query(RUNTIME_EVIDENCE_V117_INSTALLED_AUTHORITY_HEAD_LOCK_SQL)
+    await client.query(
+      `insert into runtime_evidence_v1_17_installed_authorities
+        (id, authority_bundle_hash, source_manifest_hash, registry_generation,
+         semantic_tuple_manifest_hash, envelope_sha256, trust_domain,
+         signer_key_id, install_receipt_id, install_receipt_hash, issued_at,
+         valid_from, valid_until, installed_at, payload_bytes, envelope_bytes,
+         attestation_ids, certificate_ids, install_receipt)
+       values ($1,$2,$3,$4,$5,$6,$7,$8,$1,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)
+       on conflict (id) do nothing`,
+      values,
+    )
+    const stored = await client.query<{
+      authority_bundle_hash: string
+      source_manifest_hash: string
+      registry_generation: string
+      semantic_tuple_manifest_hash: string
+      envelope_sha256: string
+      trust_domain: string
+      signer_key_id: string
+      install_receipt_hash: string
+      payload_bytes: Buffer
+      envelope_bytes: Buffer
+      attestation_ids: unknown
+      certificate_ids: unknown
+      install_receipt: unknown
+    }>(
+      `select authority_bundle_hash, source_manifest_hash, registry_generation,
+              semantic_tuple_manifest_hash, envelope_sha256, trust_domain,
+              signer_key_id, install_receipt_hash, payload_bytes, envelope_bytes,
+              attestation_ids, certificate_ids, install_receipt
+         from runtime_evidence_v1_17_installed_authorities
+        where id = $1 and install_receipt_id = $1`,
+      [installReceiptId],
+    )
+    const row = stored.rows[0]
+    if (
+      row === undefined ||
+      row.authority_bundle_hash !== authorityBundleHash ||
+      row.source_manifest_hash !== sourceManifestHash ||
+      row.registry_generation !== registryGeneration ||
+      row.semantic_tuple_manifest_hash !== semanticTupleManifestHash ||
+      row.envelope_sha256 !== envelopeSha256 ||
+      row.trust_domain !== expectedTrustDomain ||
+      row.signer_key_id !== signerKeyId ||
+      row.install_receipt_hash !== installReceiptHash ||
+      !bytesEqual(row.payload_bytes, verified.payloadBytes) ||
+      !bytesEqual(row.envelope_bytes, verified.envelopeBytes) ||
+      !bytesEqual(
+        encodeRuntimeEvidenceAuthorityInstallReceiptV117(
+          row.attestation_ids as JsonValue,
+        ),
+        encodeRuntimeEvidenceAuthorityInstallReceiptV117([...attestationIds]),
+      ) ||
+      !bytesEqual(
+        encodeRuntimeEvidenceAuthorityInstallReceiptV117(
+          row.certificate_ids as JsonValue,
+        ),
+        encodeRuntimeEvidenceAuthorityInstallReceiptV117([...certificateIds]),
+      ) ||
+      !bytesEqual(
+        encodeRuntimeEvidenceAuthorityInstallReceiptV117(
+          row.install_receipt as JsonValue,
+        ),
+        encodeRuntimeEvidenceAuthorityInstallReceiptV117(installReceipt),
+      )
+    ) {
+      return fail(
+        "INSTALL_RECEIPT_CONFLICT",
+        "v1.17 installed authority identity collided.",
+      )
+    }
+    return Object.freeze({
+      installReceiptId,
+      installReceiptHash,
+      authorityBundleHash,
+      sourceManifestHash,
+      registryGeneration,
+      semanticTupleManifestHash,
+      envelopeSha256,
+    })
+  })
+}

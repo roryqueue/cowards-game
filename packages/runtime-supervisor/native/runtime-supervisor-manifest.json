@@ -1,0 +1,18 @@
+{
+  "schemaVersion": "runtime-native-supervisor-build-manifest-v1.18",
+  "sourceSha256": "sha256:7e7376b0fb8922ccf13591252441453035b4f804138373e6469ebfd1c0c190e3",
+  "cargoLockSha256": "sha256:f347dcf650d26f6c3c158e9a2536467dabb5782fb7d6ee9de9bdab8cd3b924e5",
+  "seccompProfileSha256": "sha256:b3fd283dbb5189d9865c771d1a70a6ef08a1ef701bf4d026420e2869191396f0",
+  "builderImage": "rust:1.95.0-alpine@sha256:e98196986adced5602f6e21c54babdbf2a8700400c7a78868324a3630e0c5d15",
+  "rustcVersion": "rustc 1.95.0 (59807616e 2026-04-14)",
+  "cargoVersion": "cargo 1.95.0 (f2d3ce0bd 2026-03-21)",
+  "target": "x86_64-unknown-linux-musl",
+  "operatingSystem": "linux",
+  "cgroupVersion": 2,
+  "cgroupDriver": "cgroupfs",
+  "supervisorHostUid": 65532,
+  "guestNamespaceUid": 65534,
+  "delegatedControllers": ["cpu", "memory", "pids"],
+  "supervisorToolchainSha256": "sha256:22fe2fc0df67d44bd4978cbf3be775aec84fb9cc26fb6c680343b7343d952882",
+  "binarySha256": "sha256:c98b1b5447029f931975b5b4be6be70694d3cf53dd8d4a62cabd98fabc41d0e2"
+}

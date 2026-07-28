@@ -24,6 +24,18 @@ export default defineConfig({
               process.env.COWARDS_RUNTIME_SERVICE_URL,
           }
         : {}),
+      ...(process.env.COWARDS_GO_BACKEND_URL
+        ? { COWARDS_GO_BACKEND_URL: process.env.COWARDS_GO_BACKEND_URL }
+        : {}),
+      ...(process.env.COWARDS_GO_ACCOUNT_REVISIONS
+        ? {
+            COWARDS_GO_ACCOUNT_REVISIONS:
+              process.env.COWARDS_GO_ACCOUNT_REVISIONS,
+          }
+        : {}),
+      ...(process.env.COWARDS_GO_PUBLIC_READS
+        ? { COWARDS_GO_PUBLIC_READS: process.env.COWARDS_GO_PUBLIC_READS }
+        : {}),
       ...(process.env.COWARDS_PROVIDER_VALIDATION_SECRET
         ? {
             COWARDS_PROVIDER_VALIDATION_SECRET:
@@ -40,6 +52,18 @@ export default defineConfig({
         ? { DATABASE_URL: process.env.DATABASE_URL }
         : {}),
       ...(process.env.REDIS_URL ? { REDIS_URL: process.env.REDIS_URL } : {}),
+      ...(process.env.COWARDS_V1_37_BROWSER_PROOF_HANDOFF_PATH
+        ? {
+            COWARDS_V1_37_BROWSER_PROOF_HANDOFF_PATH:
+              process.env.COWARDS_V1_37_BROWSER_PROOF_HANDOFF_PATH,
+          }
+        : {}),
+      ...(process.env.COWARDS_V1_37_BROWSER_PROOF_OBSERVATIONS_PATH
+        ? {
+            COWARDS_V1_37_BROWSER_PROOF_OBSERVATIONS_PATH:
+              process.env.COWARDS_V1_37_BROWSER_PROOF_OBSERVATIONS_PATH,
+          }
+        : {}),
     },
   },
   projects: [

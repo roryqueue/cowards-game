@@ -1,0 +1,101 @@
+import { createHash } from "node:crypto"
+import { mkdtempSync, readFileSync, rmSync, unlinkSync, writeFileSync } from "node:fs"
+import { tmpdir } from "node:os"
+import path from "node:path"
+import { afterEach, describe, expect, it } from "vitest"
+import {
+  V137_BROWSER_PROOF_CONTROL_PATH,
+  checkV137BrowserProof,
+  createV137BrowserProofReceiptFixture,
+  validateV137BrowserProofReceipt,
+  writeV137BrowserProofFixture,
+} from "./run-v1-37-browser-proof.js"
+import { writeV137IntegratedServiceProofFixture } from "./run-v1-37-integrated-service-proof.js"
+import { createV137RestrictedEvidenceStore } from "./lib/v1-37-restricted-evidence-store.js"
+
+const roots: string[] = []
+const root = (): string => {
+  const value = mkdtempSync(path.join(tmpdir(), "cowards-v137-browser-proof-"))
+  roots.push(value)
+  return value
+}
+
+afterEach(() => {
+  for (const value of roots.splice(0)) rmSync(value, { recursive: true, force: true })
+})
+
+describe("v1.37 browser proof receipt", () => {
+  it("binds an owned live-web fixture complement to the current real service receipt without backend overclaim", () => {
+    const collector = readFileSync(
+      path.join(process.cwd(), "scripts/run-v1-37-browser-proof.ts"),
+      "utf8",
+    )
+    expect(collector).toContain("checkV137IntegratedServiceProof")
+    expect(collector).toContain('topology: "live-web-fixture-complement"')
+    expect(collector).toContain("liveBackendData: false")
+    expect(collector).toContain("serviceReceiptBound: true")
+    expect(collector).toContain('CI: "1"')
+    expect(collector).toContain('"v1-37-rules-integrity-proof.spec.ts"')
+    expect(collector).not.toContain("withGoBackend")
+    expect(collector).not.toContain("createDatabasePool")
+  })
+
+  it("accepts only a complete live desktop/mobile receipt with safe restricted refs", () => {
+    const receipt = createV137BrowserProofReceiptFixture()
+    expect(validateV137BrowserProofReceipt(receipt)).toEqual(receipt)
+    expect(receipt.projects).toEqual(["desktop", "mobile"])
+    expect(receipt.liveBackendData).toBe(false)
+    expect(receipt.serviceReceiptBound).toBe(true)
+    expect(receipt.observations).toHaveLength(2)
+    expect(receipt.browserProofReceiptRef.class).toBe("privacy-scan")
+    expect(JSON.stringify(receipt)).not.toContain("match-set:")
+    expect(JSON.stringify(receipt)).not.toContain("replay-match:")
+  })
+
+  it("rejects missing projects, stale handoffs, fixture substitution, and unsafe output", () => {
+    const receipt = createV137BrowserProofReceiptFixture()
+    expect(() =>
+      validateV137BrowserProofReceipt({ ...receipt, projects: ["desktop"] }),
+    ).toThrow("V137_BROWSER_PROOF_PROJECTS_INVALID")
+    expect(() =>
+      validateV137BrowserProofReceipt({ ...receipt, fixtureComplement: false }),
+    ).toThrow("V137_BROWSER_PROOF_FIXTURE_COMPLEMENT_REQUIRED")
+    expect(() =>
+      validateV137BrowserProofReceipt({
+        ...receipt,
+        proofDataHandoffDigest: "not-a-digest",
+      }),
+    ).toThrow("V137_BROWSER_PROOF_HANDOFF_INVALID")
+    expect(() =>
+      validateV137BrowserProofReceipt({ ...receipt, accountId: "private" }),
+    ).toThrow("V137_BROWSER_PROOF_RECEIPT_SHAPE")
+  })
+
+  it("fails closed when the browser evidence inventory, object, or bound service handoff diverges", async () => {
+    const restrictedRoot = root()
+    process.env.COWARDS_V1_37_RESTRICTED_EVIDENCE_ROOT = restrictedRoot
+    const service = await writeV137IntegratedServiceProofFixture(process.cwd(), restrictedRoot)
+    const control = writeV137BrowserProofFixture(process.cwd(), restrictedRoot)
+    const handoffRecord = service.records.find((record) => JSON.stringify(record.reference) === JSON.stringify(service.receipt.proofDataHandoffRef))!
+    const handoff = createV137RestrictedEvidenceStore({ repoRoot: process.cwd(), maxObjectBytes: 64 * 1024 * 1024 }).readEvidence(handoffRecord, { actorClass: "checker" })
+    const bound = { ...control, receipt: { ...control.receipt, proofDataHandoffDigest: `sha256:${createHash("sha256").update(handoff).digest("hex")}` } }
+    writeFileSync(path.join(restrictedRoot, V137_BROWSER_PROOF_CONTROL_PATH), `${JSON.stringify(bound)}\n`)
+    const before = readFileSync(
+      path.join(restrictedRoot, V137_BROWSER_PROOF_CONTROL_PATH),
+    )
+    expect(checkV137BrowserProof(process.cwd(), restrictedRoot).status).toBe("passed")
+    expect(readFileSync(path.join(restrictedRoot, V137_BROWSER_PROOF_CONTROL_PATH))).toEqual(before)
+    writeFileSync(path.join(restrictedRoot, V137_BROWSER_PROOF_CONTROL_PATH), `${JSON.stringify({ ...bound, records: [] })}\n`)
+    expect(() => checkV137BrowserProof(process.cwd(), restrictedRoot)).toThrow("V137_BROWSER_PROOF_RECORD_INVENTORY_INVALID")
+    writeFileSync(path.join(restrictedRoot, V137_BROWSER_PROOF_CONTROL_PATH), `${JSON.stringify(bound)}\n`)
+    writeFileSync(path.join(restrictedRoot, V137_BROWSER_PROOF_CONTROL_PATH), `${JSON.stringify({ ...bound, receipt: { ...bound.receipt, proofDataHandoffDigest: `sha256:${"f".repeat(64)}` } })}\n`)
+    expect(() => checkV137BrowserProof(process.cwd(), restrictedRoot)).toThrow("V137_BROWSER_PROOF_HANDOFF_INVALID")
+    writeFileSync(path.join(restrictedRoot, V137_BROWSER_PROOF_CONTROL_PATH), `${JSON.stringify(bound)}\n`)
+    unlinkSync(path.join(restrictedRoot, "objects", bound.records[0]!.reference.sha256.slice(7, 9), bound.records[0]!.reference.sha256.slice(9, 11), bound.records[0]!.reference.sha256.slice(7)))
+    expect(() => checkV137BrowserProof(process.cwd(), restrictedRoot)).toThrow("V137_RESTRICTED_EVIDENCE_RELEASE_OBJECT_MISSING")
+    writeFileSync(path.join(restrictedRoot, V137_BROWSER_PROOF_CONTROL_PATH), `${JSON.stringify({ ...bound, inputRootSha256: `sha256:${"f".repeat(64)}` })}\n`)
+    expect(() => checkV137BrowserProof(process.cwd(), restrictedRoot)).toThrow(
+      "V137_BROWSER_PROOF_INPUT_STALE",
+    )
+  })
+})

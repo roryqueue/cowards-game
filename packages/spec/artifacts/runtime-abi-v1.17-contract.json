@@ -1,0 +1,601 @@
+{
+  "schemaVersion": "runtime-abi-v1.17-contract-v1",
+  "versions": {
+    "runtimeAbi": "strategy-runtime-abi-v1.17",
+    "runtimeService": "runtime-execution-service-v1.17",
+    "semanticReceipt": "runtime-semantic-receipt-v1.17",
+    "canonicalJson": "canonical-json-v1.1",
+    "budget": "runtime-budget-v1",
+    "identity": "runtime-identity-v1"
+  },
+  "lifecycle": {
+    "status": "current",
+    "active": true,
+    "currentRuntimeAbi": "strategy-runtime-abi-v1.17",
+    "currentRuntimeService": "runtime-execution-service-v1.17",
+    "currentSemanticReceipt": "runtime-semantic-receipt-v1.17",
+    "activationOwner": "Phase-258-Plan-14"
+  },
+  "calibration": {
+    "receipt": ".planning/artifacts/v1.37-runtime-abi-calibration.json",
+    "inputManifest": "packages/spec/artifacts/runtime-abi-v1.17-calibration-inputs.json",
+    "inputManifestSha256": "eb507c6f21b454a1fe57e2358163d58b0f62c9ba84a18a4ac07615ed37d9e722",
+    "onlyCurrentValidClassesEstablishMaxima": true,
+    "localToolVersionsAreCountedPins": false
+  },
+  "canonicalJson": {
+    "admission": "raw-bytes-before-host-conversion",
+    "duplicateKeys": "reject-escaped-equivalent-before-object-conversion",
+    "grammar": "rfc8259-subset-with-finite-binary64-and-no-extensions",
+    "whitespace": "none-in-canonical-encoding",
+    "literals": [
+      "null",
+      "true",
+      "false"
+    ],
+    "numbers": {
+      "model": "finite-ieee-754-binary64",
+      "nonFinite": "reject",
+      "safeIntegerMinimum": -9007199254740991,
+      "safeIntegerMaximum": 9007199254740991,
+      "unsafeIntegers": "reject",
+      "negativeZero": "encode-as-0",
+      "encoding": "shortest-round-trip-decimal",
+      "exponent": "lowercase-e-no-plus-no-leading-zero"
+    },
+    "unicode": {
+      "input": "valid-utf8-and-unicode-scalars",
+      "loneSurrogates": "reject",
+      "normalization": "preserve-no-nfc-or-nfd",
+      "objectKeyOrder": "lexicographic-unsigned-utf8-bytes"
+    },
+    "ceilings": {
+      "rawUtf8Bytes": 8388608,
+      "depth": 64,
+      "nodes": 262144,
+      "decodedStringUtf8Bytes": 6291456,
+      "arrayEntries": 65536,
+      "objectEntries": 65536
+    },
+    "errorCodes": [
+      "INVALID_UTF8",
+      "INVALID_UNICODE_SCALAR",
+      "INVALID_GRAMMAR",
+      "DUPLICATE_KEY",
+      "NON_CANONICAL_KEY_ORDER",
+      "NON_CANONICAL_ENCODING",
+      "NON_CANONICAL_NUMBER",
+      "NUMBER_OUT_OF_RANGE",
+      "MAX_RAW_UTF8_BYTES_EXCEEDED",
+      "MAX_DEPTH_EXCEEDED",
+      "MAX_NODES_EXCEEDED",
+      "MAX_DECODED_STRING_UTF8_BYTES_EXCEEDED",
+      "MAX_ARRAY_ENTRIES_EXCEEDED",
+      "MAX_OBJECT_ENTRIES_EXCEEDED",
+      "FIELD_CAP_EXCEEDED"
+    ]
+  },
+  "fieldCaps": {
+    "strategySource": {
+      "value": 65536,
+      "unit": "raw-utf8-bytes"
+    },
+    "sourceArtifact": {
+      "value": 262144,
+      "unit": "raw-utf8-bytes"
+    },
+    "wasmArtifact": {
+      "value": 4194304,
+      "unit": "raw-utf8-bytes"
+    },
+    "strategyMemory": {
+      "value": 32768,
+      "unit": "canonical-payload-bytes"
+    },
+    "soldierMemory": {
+      "value": 2048,
+      "unit": "canonical-payload-bytes"
+    },
+    "objectivePayload": {
+      "value": 1024,
+      "unit": "canonical-payload-bytes"
+    },
+    "invocationOutput": {
+      "value": 262144,
+      "unit": "canonical-payload-bytes"
+    },
+    "stdout": {
+      "value": 262144,
+      "unit": "transport-frame-bytes"
+    },
+    "stderr": {
+      "value": 65536,
+      "unit": "raw-utf8-bytes"
+    },
+    "httpRequest": {
+      "value": 8388608,
+      "unit": "transport-frame-bytes"
+    },
+    "goResponse": {
+      "value": 8388608,
+      "unit": "transport-frame-bytes"
+    }
+  },
+  "outcomes": {
+    "discriminant": "kind",
+    "variants": {
+      "success": {
+        "required": [
+          "kind",
+          "value",
+          "trace"
+        ],
+        "forbidden": [
+          "violation",
+          "failure"
+        ]
+      },
+      "player_violation": {
+        "required": [
+          "kind",
+          "violation",
+          "trace"
+        ],
+        "forbidden": [
+          "value",
+          "failure"
+        ]
+      },
+      "system_failure": {
+        "required": [
+          "kind",
+          "failure",
+          "trace"
+        ],
+        "forbidden": [
+          "value",
+          "violation"
+        ]
+      }
+    },
+    "outerEnvelopeOwner": "adapter",
+    "decodedPayloadOwner": "strategy",
+    "playerViolationCommitPolicy": "discard-all-proposed-values-and-preserve-prior-memory",
+    "systemFailureMutationPolicy": "no-gameplay-mutation",
+    "retryOwner": "go"
+  },
+  "budgets": {
+    "requiredEquivalentMeters": [
+      "wall",
+      "compute",
+      "memory",
+      "payload",
+      "stdout",
+      "stderr",
+      "process",
+      "capabilities",
+      "cancellation",
+      "accountingEvidence"
+    ],
+    "signedRequestBindings": [
+      "selectActivations",
+      "soldierBrain",
+      "matchCumulative",
+      "preflightProfile",
+      "budgetProfileSha256"
+    ],
+    "selectActivations": {
+      "invocationCountMaximum": 20,
+      "vector": {
+        "wall": {
+          "value": 50,
+          "unit": "milliseconds",
+          "boundary": "guest-method-entry-to-adapter-observed-return-excludes-startup",
+          "overflow": "terminate-and-classify-by-proven-cause"
+        },
+        "compute": {
+          "value": 10000000,
+          "unit": "instruction-fuel",
+          "boundary": "guest-instructions-only",
+          "granularity": "runtime-reported-monotonic-counter",
+          "overflow": "terminate-before-next-guest-instruction"
+        },
+        "memory": {
+          "value": 67108864,
+          "unit": "bytes",
+          "boundary": "maximum-guest-plus-containing-process-working-set",
+          "overflow": "terminate-and-require-attribution-evidence"
+        },
+        "payload": {
+          "value": 262144,
+          "unit": "canonical-payload-bytes",
+          "boundary": "decoded-strategy-payload-before-schema-materialization"
+        },
+        "stdout": {
+          "value": 262144,
+          "unit": "transport-frame-bytes",
+          "boundary": "adapter-captured-stdout-including-payload-framing"
+        },
+        "stderr": {
+          "value": 65536,
+          "unit": "raw-utf8-bytes",
+          "boundary": "adapter-captured-private-stderr-never-public"
+        },
+        "process": {
+          "processes": 1,
+          "threads": 1,
+          "children": 0,
+          "boundary": "guest-containing-process-tree"
+        },
+        "capabilities": {
+          "filesystem": "none",
+          "network": "disabled",
+          "environment": "empty",
+          "shell": "disabled"
+        },
+        "cancellation": {
+          "terminationGraceMilliseconds": 100,
+          "evidence": "adapter-termination-receipt-required"
+        },
+        "accounting": {
+          "report": "signed-monotonic-delta",
+          "missingOrDecreasing": "system_failure",
+          "overLimit": "player_violation-only-with-proven-strategy-cause"
+        }
+      }
+    },
+    "soldierBrain": {
+      "invocationCountMaximum": 240,
+      "vector": {
+        "wall": {
+          "value": 50,
+          "unit": "milliseconds",
+          "boundary": "guest-method-entry-to-adapter-observed-return-excludes-startup",
+          "overflow": "terminate-and-classify-by-proven-cause"
+        },
+        "compute": {
+          "value": 10000000,
+          "unit": "instruction-fuel",
+          "boundary": "guest-instructions-only",
+          "granularity": "runtime-reported-monotonic-counter",
+          "overflow": "terminate-before-next-guest-instruction"
+        },
+        "memory": {
+          "value": 67108864,
+          "unit": "bytes",
+          "boundary": "maximum-guest-plus-containing-process-working-set",
+          "overflow": "terminate-and-require-attribution-evidence"
+        },
+        "payload": {
+          "value": 262144,
+          "unit": "canonical-payload-bytes",
+          "boundary": "decoded-strategy-payload-before-schema-materialization"
+        },
+        "stdout": {
+          "value": 262144,
+          "unit": "transport-frame-bytes",
+          "boundary": "adapter-captured-stdout-including-payload-framing"
+        },
+        "stderr": {
+          "value": 65536,
+          "unit": "raw-utf8-bytes",
+          "boundary": "adapter-captured-private-stderr-never-public"
+        },
+        "process": {
+          "processes": 1,
+          "threads": 1,
+          "children": 0,
+          "boundary": "guest-containing-process-tree"
+        },
+        "capabilities": {
+          "filesystem": "none",
+          "network": "disabled",
+          "environment": "empty",
+          "shell": "disabled"
+        },
+        "cancellation": {
+          "terminationGraceMilliseconds": 100,
+          "evidence": "adapter-termination-receipt-required"
+        },
+        "accounting": {
+          "report": "signed-monotonic-delta",
+          "missingOrDecreasing": "system_failure",
+          "overLimit": "player_violation-only-with-proven-strategy-cause"
+        }
+      }
+    },
+    "matchCumulative": {
+      "invocationCountMaximum": 260,
+      "wallMilliseconds": 13000,
+      "computeFuel": 2600000000,
+      "payloadBytes": 68157440,
+      "stdoutBytes": 68157440,
+      "stderrBytes": 17039360,
+      "memoryBytes": 67108864,
+      "accounting": "signed-monotonic-per-invocation-deltas-plus-cumulative-total",
+      "overflow": "stop-before-next-invocation-and-classify-by-proven-cause"
+    },
+    "preflight": {
+      "consumesMatchBudget": false,
+      "profiles": {
+        "sourceValidation": {
+          "wallMilliseconds": 500,
+          "computeFuel": 100000000,
+          "memoryBytes": 67108864,
+          "inputBytes": 65536,
+          "outputBytes": 32768,
+          "stderrBytes": 0,
+          "processes": 1,
+          "threads": 1,
+          "children": 0,
+          "network": "disabled",
+          "filesystem": "none",
+          "failureOwnership": {
+            "invalidInput": "submission_violation",
+            "unavailableInfrastructure": "system_failure"
+          }
+        },
+        "compilation": {
+          "wallMilliseconds": 90000,
+          "computeFuel": 2000000000,
+          "memoryBytes": 536870912,
+          "inputBytes": 262144,
+          "outputBytes": 4194304,
+          "stderrBytes": 65536,
+          "processes": 1,
+          "threads": 8,
+          "children": 0,
+          "network": "disabled",
+          "filesystem": "isolated-read-write-build-root-only",
+          "failureOwnership": {
+            "invalidInput": "submission_violation",
+            "unavailableInfrastructure": "system_failure"
+          }
+        },
+        "artifactValidation": {
+          "wallMilliseconds": 5000,
+          "computeFuel": 100000000,
+          "memoryBytes": 134217728,
+          "inputBytes": 4194304,
+          "outputBytes": 262144,
+          "stderrBytes": 0,
+          "processes": 1,
+          "threads": 1,
+          "children": 0,
+          "network": "disabled",
+          "filesystem": "artifact-read-only",
+          "failureOwnership": {
+            "invalidInput": "submission_violation",
+            "unavailableInfrastructure": "system_failure"
+          }
+        },
+        "conformance": {
+          "wallMilliseconds": 120000,
+          "computeFuel": 5000000000,
+          "memoryBytes": 536870912,
+          "inputBytes": 8388608,
+          "outputBytes": 8388608,
+          "stderrBytes": 0,
+          "processes": 1,
+          "threads": 1,
+          "children": 0,
+          "network": "disabled",
+          "filesystem": "closed-corpus-read-only",
+          "failureOwnership": {
+            "invalidInput": "submission_violation",
+            "unavailableInfrastructure": "system_failure"
+          }
+        }
+      }
+    }
+  },
+  "identity": {
+    "domains": {
+      "originalSource": "cowards-game:runtime-identity:v1:original-source",
+      "normalizedSource": "cowards-game:runtime-identity:v1:normalized-source",
+      "normalizationPolicy": "cowards-game:runtime-identity:v1:normalization-policy",
+      "artifact": "cowards-game:runtime-identity:v1:artifact",
+      "artifactManifest": "cowards-game:runtime-identity:v1:artifact-manifest",
+      "runtimeExecutable": "cowards-game:runtime-identity:v1:runtime-executable",
+      "compilerExecutable": "cowards-game:runtime-identity:v1:compiler-executable",
+      "sysrootStdlib": "cowards-game:runtime-identity:v1:sysroot-stdlib",
+      "adapterBuild": "cowards-game:runtime-identity:v1:adapter-build",
+      "semanticTuple": "cowards-game:runtime-identity:v1:semantic-tuple",
+      "containmentPolicy": "cowards-game:runtime-identity:v1:containment-policy",
+      "conformanceCorpus": "cowards-game:runtime-identity:v1:conformance-corpus",
+      "budgetProfile": "cowards-game:runtime-identity:v1:budget-profile",
+      "canonicalJsonProfile": "cowards-game:runtime-identity:v1:canonical-json-profile",
+      "evidenceBundle": "cowards-game:runtime-identity:v1:evidence-bundle"
+    },
+    "framing": {
+      "algorithm": "sha256",
+      "prefix": "cowards-game:runtime-identity:v1",
+      "segmentLength": "unsigned-64-bit-big-endian",
+      "order": "domain-tag-then-ordered-segments"
+    },
+    "source": {
+      "original": "immutable-exact-utf8-bytes",
+      "normalized": "separate-policy-versioned-derivative",
+      "lineEndings": [
+        "none",
+        "lf",
+        "crlf",
+        "cr",
+        "mixed"
+      ],
+      "artifactBindsBoth": true
+    },
+    "requiredExecutablePins": [
+      "runtimeExecutableDigest",
+      "reportedVersion",
+      "targetAbi",
+      "compilerFlags",
+      "adapterBuildDigest",
+      "standardLibraryOrSysrootDigest",
+      "containmentPolicyId",
+      "budgetProfileSha256",
+      "canonicalJsonProfileId",
+      "behaviorSettingsHash"
+    ],
+    "publicSafeFields": [
+      "sourceRevisionId",
+      "normalizedSourceId",
+      "artifactId",
+      "manifestId",
+      "runtimeLaneId",
+      "semanticTupleId",
+      "policyId",
+      "corpusId",
+      "evidenceBundleId"
+    ],
+    "privateFields": [
+      "originalSourceBytes",
+      "normalizedSourceBytes",
+      "artifactBytes",
+      "compilerFlags",
+      "toolchainPaths",
+      "hostPaths",
+      "environment",
+      "stderr",
+      "memory",
+      "objectivePayload",
+      "privateRuntimeDiagnostics",
+      "signingMaterial"
+    ],
+    "evidenceGraph": {
+      "closed": true,
+      "acyclic": true,
+      "deterministicNodeAndEdgeOrder": true,
+      "rejectMissingOrOrphanedNodes": true,
+      "exactRequiredCardinalities": true,
+      "managedPipelineAttestationRequired": true,
+      "productionTrustedProducers": []
+    }
+  },
+  "lanePosture": {
+    "javascript": {
+      "countedCertification": "uncertified",
+      "reason": "equivalent compute, containing-memory, process, and accounting evidence not yet proven"
+    },
+    "typescript": {
+      "countedCertification": "uncertified",
+      "reason": "equivalent compute, containing-memory, process, and accounting evidence not yet proven"
+    },
+    "python": {
+      "countedCertification": "uncertified",
+      "reason": "equivalent compute and memory meters are unavailable"
+    },
+    "rust": {
+      "countedCertification": "uncertified",
+      "reason": "WASM meters exist but equivalent complete v1.17 evidence is not yet proven"
+    },
+    "zig": {
+      "countedCertification": "uncertified",
+      "reason": "WASM meters exist but equivalent complete v1.17 evidence is not yet proven"
+    }
+  },
+  "migration": {
+    "strategy": "atomic-successor-activation",
+    "activationPlan": "258-14",
+    "v116ReadDispatchRetained": true,
+    "v116InsertionOrderedWireBytesRetained": true,
+    "v116ReceiptVerificationRetained": true,
+    "migration0017RewriteAllowed": false,
+    "newWritesBeforeActivation": false,
+    "packageOrGameplayChangesInThisPlan": false
+  },
+  "historicalV116": {
+    "serializer": "typescript-json-stringify-insertion-order",
+    "canonicalJsonV1Applied": false,
+    "protectedFiles": {
+      "packages/spec/artifacts/runtime-execution-service-response.v1.16.wire.json": "9c870d57e0125eb80ab2ba941ecbbede8a9a775f61c0b278abec25c491374d97",
+      "packages/spec/src/runtime-execution-service.ts": "9a0a0411056d06ce4b426b7749256460369124fa752c6c2f81912b8b0bfb31fc",
+      "apps/go-backend/runtime_semantic_receipt.go": "36052047a870068ab81ced8c78f3b7f4e8130034a57ee8d16bc3873a50507d1d",
+      "apps/go-backend/runtime_service_client.go": "9c72e5b0ee3ddfb36a7aec51a5a1ead508b2fae29eace27a73b9fda7d55ce23c",
+      "apps/go-backend/runtime_service_client_test.go": "4a52986d2a43598c0e9556504459143ab56d94d97b22b2296cf84067927e8185",
+      "packages/persistence/migrations/0017_runtime_semantic_receipts.sql": "ac19e1d825217dfb72142685eb65e62933cea49541ceb39338235b32d2430a69"
+    }
+  },
+  "decisionMap": [
+    {
+      "id": "D-01",
+      "owner": "canonical-json-raw-admission",
+      "rule": "Reject duplicate object keys, including escaped-equivalent keys, before host object conversion."
+    },
+    {
+      "id": "D-02",
+      "owner": "canonical-json-number-codec",
+      "rule": "Accept finite binary64, bound integers to the safe range, normalize negative zero, and emit shortest round-trip decimal."
+    },
+    {
+      "id": "D-03",
+      "owner": "canonical-json-unicode-codec",
+      "rule": "Require UTF-8 scalar values, preserve normalization form, and order keys by unsigned UTF-8 bytes."
+    },
+    {
+      "id": "D-04",
+      "owner": "canonical-json-limit-profile",
+      "rule": "Apply exact global parser ceilings and explicit lower field caps with named byte units."
+    },
+    {
+      "id": "D-05",
+      "owner": "runtime-budget-profile",
+      "rule": "Counted lanes require equivalent wall, compute, memory, output, process, capability, cancellation, and accounting meters."
+    },
+    {
+      "id": "D-06",
+      "owner": "signed-runtime-request-and-match-ledger",
+      "rule": "Bind per-method and cumulative Match budgets into the signed request and monotonic usage ledger."
+    },
+    {
+      "id": "D-07",
+      "owner": "runtime-attribution-boundary",
+      "rule": "Only proven Strategy exhaustion is a player violation; ambiguous or host accounting failure is a no-mutation system failure."
+    },
+    {
+      "id": "D-08",
+      "owner": "preflight-service",
+      "rule": "Use separate source, compilation, artifact, and conformance budgets that never consume Match budget."
+    },
+    {
+      "id": "D-09",
+      "owner": "adapter-exception-boundary",
+      "rule": "A proven Strategy exception is a player violation; adapter, runtime, transport, or host crashes are system failures."
+    },
+    {
+      "id": "D-10",
+      "owner": "adapter-outer-envelope-and-strategy-payload",
+      "rule": "The adapter authenticates the outer envelope; the Strategy owns only the decoded canonical payload."
+    },
+    {
+      "id": "D-11",
+      "owner": "match-kernel",
+      "rule": "A player violation discards all proposed values, preserves prior memory, and applies only the canonical gameplay consequence."
+    },
+    {
+      "id": "D-12",
+      "owner": "go-retry-policy",
+      "rule": "Retry only system failures from identical prestate, request identity, and budgets; never retry player violations."
+    },
+    {
+      "id": "D-13",
+      "owner": "source-and-artifact-identity",
+      "rule": "Hash immutable original source separately from policy-versioned normalized source and bind both into the artifact manifest."
+    },
+    {
+      "id": "D-14",
+      "owner": "identity-domain-registry",
+      "rule": "Use fixed domain tags, unsigned 64-bit big-endian length frames, and SHA-256 for every identity domain."
+    },
+    {
+      "id": "D-15",
+      "owner": "executable-lane-identity",
+      "rule": "Bind exact executable, target, flags, adapter, stdlib/sysroot, policy, budget, and behavior settings while exposing safe IDs only."
+    },
+    {
+      "id": "D-16",
+      "owner": "managed-evidence-pipeline",
+      "rule": "Require a closed acyclic validated hash graph with exact links, cardinality, and managed pipeline attestation."
+    }
+  ]
+}

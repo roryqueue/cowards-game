@@ -41,4 +41,19 @@ describe("engine purity", () => {
     })
     expect(offenders).toEqual([])
   })
+
+  it("keeps candidate initial-state admission free of runtime and host effects", () => {
+    const source = readFileSync(
+      join(
+        new URL(".", import.meta.url).pathname,
+        "kernel/create-initial-state.ts",
+      ),
+      "utf8",
+    )
+    expect(source).not.toMatch(
+      /StrategyRuntime|runMatch|resolveRound|resolveActivation|node:|fetch|process\.|Date|Math\.random/u,
+    )
+    expect(source).toContain("validateCanonicalArena")
+    expect(source).toContain("validateCanonicalInitialGameState")
+  })
 })

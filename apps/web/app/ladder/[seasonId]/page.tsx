@@ -1,5 +1,6 @@
 import { getPublicLadderSeason } from "../../../lib/public-service-boundary.js"
 import { getCurrentPublicReadUser } from "../../../lib/public-service-adapter.js"
+import type { JSX } from "react"
 
 export const dynamic = "force-dynamic"
 
@@ -7,7 +8,7 @@ export default async function TrialLadderSeasonPage({
   params,
 }: {
   params: Promise<{ seasonId: string }> | { seasonId: string }
-}) {
+}): Promise<JSX.Element> {
   const resolvedParams = await params
   const seasonId = decodeURIComponent(resolvedParams.seasonId)
   const [season, user] = await Promise.all([
@@ -89,7 +90,7 @@ export default async function TrialLadderSeasonPage({
               <span>Entry</span>
               <span>Points</span>
               <span>Record</span>
-              <span>Tie-breakers</span>
+              <span>Evidence</span>
             </div>
             {season.standings.map((standing) => (
               <div
@@ -104,8 +105,9 @@ export default async function TrialLadderSeasonPage({
                   {standing.wins}-{standing.losses}-{standing.draws}
                 </span>
                 <span>
-                  Soldiers {standing.survivingSoldiers}, turns{" "}
-                  {standing.survivalTurns}
+                  {standing.competitionEvidence
+                    ? `${standing.competitionEvidence.countedMatchSetCount} counted / ${standing.competitionEvidence.excludedMatchSetCount} excluded · ${standing.competitionEvidence.evidenceAvailability}`
+                    : "No competition evidence"}
                 </span>
               </div>
             ))}
@@ -152,8 +154,19 @@ export default async function TrialLadderSeasonPage({
             <div className="app-table-row" role="row" key={matchSet.matchSetId}>
               <span>{matchSet.matchSetId}</span>
               <span>{matchSet.status}</span>
-              <span>{matchSet.publicExplanation}</span>
-              <a href={matchSet.resultHref}>Result</a>
+              <span>
+                {matchSet.countedState.publicLabel}:{" "}
+                {matchSet.publicExplanation}
+              </span>
+              <span>
+                <a href={matchSet.resultHref}>Result</a>
+                {matchSet.replayHref ? (
+                  <>
+                    {" · "}
+                    <a href={matchSet.replayHref}>Replay</a>
+                  </>
+                ) : null}
+              </span>
             </div>
           ))}
         </div>

@@ -3,8 +3,10 @@ import {
   PublicReplayEvidenceServiceDtoSchema,
   PublicReplayMetadataServiceDtoSchema,
   PublicMatchSetSummaryServiceDtoSchema,
+  classifyCompetitionCountedState,
   getMatchExecutionContractFixtureByMatchId,
   getMatchExecutionContractFixtureByMatchSetId,
+  projectPublicCompetitionGovernance,
   toMatchExecutionMatchSetSummaryV1,
   type MatchExecutionContractFixtureV1,
   type MatchExecutionFailureCategoryV1,
@@ -20,6 +22,8 @@ import {
   type PublicMatchSetSummaryServiceDto,
   type PublicReplayEvidenceServiceDto,
   type PublicReplayMetadataServiceDto,
+  type StrategyRuntimeProductSemantics,
+  type StrategyRuntimeProductValidationCode,
 } from "@cowards/spec"
 
 export interface MatchExecutionFixtureEnv extends Record<
@@ -41,6 +45,13 @@ export interface MatchExecutionFixturePublicReadClient {
   getPublicReplayEvidence(
     matchId: MatchId,
   ): Promise<PublicReplayEvidenceServiceDto | null>
+  getPublicReplayCompetitionContext(
+    matchId: MatchId,
+  ): Promise<
+    | (Pick<PublicMatchSetResultDto, "matchSetId"> &
+        NonNullable<PublicMatchSetResultDto["competition"]>)
+    | null
+  >
   getPublicReplayState(matchId: MatchId): Promise<{
     label: string
     lifecycle: MatchExecutionLifecycleV1
@@ -65,6 +76,61 @@ const safeDecodeURIComponent = <T extends string>(value: T): T => {
 
 const cloneJson = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T
 
+const fixtureRuntimeReadiness = (
+  value: string,
+): StrategyRuntimeProductSemantics["readiness"] => {
+  switch (value) {
+    case "production-candidate":
+    case "prototype":
+    case "local-dev-fallback":
+    case "experimental":
+    case "unknown":
+      return value
+    default:
+      throw new Error(`invalid fixture runtime readiness: ${value}`)
+  }
+}
+
+const fixtureRuntimeValidationCode = (
+  value: string,
+): StrategyRuntimeProductValidationCode => {
+  switch (value) {
+    case "UNSUPPORTED_LANGUAGE":
+    case "UNSUPPORTED_PACKAGE_METADATA":
+    case "INCOMPATIBLE_ADAPTER":
+    case "ABI_MISMATCH":
+    case "SOURCE_TOO_LARGE":
+    case "MEMORY_LIMIT_EXCEEDED":
+    case "TIMEOUT":
+    case "FORBIDDEN_CAPABILITY":
+    case "NON_COUNTED_RUNTIME":
+      return value
+    default:
+      throw new Error(`invalid fixture runtime validation code: ${value}`)
+  }
+}
+
+export const toPublicMatchSetSummaryFixture = (
+  summary: NonNullable<
+    MatchExecutionContractFixtureV1["service"]["matchSetSummary"]
+  >,
+): PublicMatchSetSummaryServiceDto => ({
+  ...summary,
+  result: {
+    ...summary.result,
+    entrants: summary.result.entrants.map((entrant) => ({
+      ...entrant,
+      runtimeSemantics: {
+        ...entrant.runtimeSemantics,
+        readiness: fixtureRuntimeReadiness(entrant.runtimeSemantics.readiness),
+        validationIssueCodes: entrant.runtimeSemantics.validationIssueCodes.map(
+          fixtureRuntimeValidationCode,
+        ),
+      },
+    })),
+  },
+})
+
 const requiredBaseSummary = (): PublicMatchSetSummaryServiceDto => {
   const base = getMatchExecutionContractFixtureByMatchSetId(
     "match-set:fixture:stale-artifact",
@@ -72,7 +138,9 @@ const requiredBaseSummary = (): PublicMatchSetSummaryServiceDto => {
   if (!base) {
     throw new Error("missing stale-artifact fixture summary")
   }
-  return base as PublicMatchSetSummaryServiceDto
+  return toPublicMatchSetSummaryFixture(
+    PublicMatchSetSummaryServiceDtoSchema.parse(base),
+  )
 }
 
 const createAppOnlyMatchSetFixture = (
@@ -133,7 +201,9 @@ const createAppOnlyMatchSetFixture = (
       chronicleHashes: [],
     },
   }
-  const serviceSummary = PublicMatchSetSummaryServiceDtoSchema.parse(summary)
+  const serviceSummary = toPublicMatchSetSummaryFixture(
+    PublicMatchSetSummaryServiceDtoSchema.parse(summary),
+  )
   return MatchExecutionContractFixtureV1Schema.parse({
     id,
     label,
@@ -178,156 +248,29 @@ const getFixtureByMatchSetId = (
     (fixture) => fixture.service.matchSetSummary?.matchSetId === matchSetId,
   )
 
+const legacyPublicSafeReplayMatchId =
+  "match:fixture:public-safe-replay" as MatchId
+const canonicalPublicSafeReplayMatchId =
+  "match:runtime-service:golden" as MatchId
+
+const resolveFixtureMatchId = (matchId: MatchId): MatchId =>
+  matchId === legacyPublicSafeReplayMatchId
+    ? canonicalPublicSafeReplayMatchId
+    : matchId
+
 const getFixtureByMatchId = (
   matchId: MatchId,
-): MatchExecutionContractFixtureV1 | undefined =>
-  getMatchExecutionContractFixtureByMatchId(matchId) ??
-  appOnlyReplayTrustFixtures.find((fixture) =>
-    fixture.service.matchSetSummary?.result.matches.some(
-      (match) => match.matchId === matchId,
-    ),
+): MatchExecutionContractFixtureV1 | undefined => {
+  const resolvedMatchId = resolveFixtureMatchId(matchId)
+  return (
+    getMatchExecutionContractFixtureByMatchId(resolvedMatchId) ??
+    appOnlyReplayTrustFixtures.find((fixture) =>
+      fixture.service.matchSetSummary?.result.matches.some(
+        (match) => match.matchId === resolvedMatchId,
+      ),
+    )
   )
-
-const playableReplayMatchId = "match:fixture:public-safe-replay" as MatchId
-
-const createPlayableReplayEvidence = (
-  evidence: PublicReplayEvidenceServiceDto,
-): PublicReplayEvidenceServiceDto => {
-  if (evidence.matchId !== playableReplayMatchId) {
-    return evidence
-  }
-  const baseSnapshot = evidence.projection.snapshots[0]
-  if (!baseSnapshot) {
-    return evidence
-  }
-  const boardAt = (
-    bottomPosition: { x: number; y: number },
-    topPosition: { x: number; y: number },
-  ) => ({
-    ...baseSnapshot.board,
-    soldiers: baseSnapshot.board.soldiers.map((soldier) =>
-      soldier.id === "fixture-bottom-soldier-1"
-        ? {
-            ...soldier,
-            position: bottomPosition,
-            lastSuccessfulMoveDirection: "UP" as const,
-          }
-        : soldier.id === "fixture-top-soldier-1"
-          ? {
-              ...soldier,
-              position: topPosition,
-              lastSuccessfulMoveDirection: "DOWN" as const,
-            }
-          : soldier,
-    ),
-  })
-  const snapshots = [
-    {
-      ...baseSnapshot,
-      kind: "MATCH_START" as const,
-      sequence: 0,
-      context: {},
-      board: boardAt({ x: 1, y: 3 }, { x: 3, y: 1 }),
-      outcome: undefined,
-    },
-    {
-      ...baseSnapshot,
-      kind: "ROUND_START" as const,
-      sequence: 1,
-      context: { roundNumber: 1 },
-      board: boardAt({ x: 1, y: 3 }, { x: 3, y: 1 }),
-      outcome: undefined,
-    },
-    {
-      ...baseSnapshot,
-      kind: "ACTIVATION_END" as const,
-      sequence: 2,
-      context: {
-        roundNumber: 1,
-        activationIndex: 0,
-        activationId: "activation:fixture:1",
-        actingPlayerId: "player:bottom",
-        soldierId: "fixture-bottom-soldier-1",
-        cycleIndex: 0,
-      },
-      board: boardAt({ x: 1, y: 2 }, { x: 3, y: 1 }),
-      outcome: undefined,
-    },
-    {
-      ...baseSnapshot,
-      kind: "MATCH_END" as const,
-      sequence: 3,
-      context: {},
-      board: boardAt({ x: 1, y: 2 }, { x: 3, y: 1 }),
-      outcome: { type: "DRAW" as const },
-    },
-  ]
-  const events = [
-    {
-      type: "MATCH_STARTED" as const,
-      sequence: 0,
-      context: {},
-      payload: { matchId: playableReplayMatchId },
-    },
-    {
-      type: "ROUND_STARTED" as const,
-      sequence: 1,
-      context: { roundNumber: 1 },
-      payload: { roundNumber: 1 },
-    },
-    {
-      type: "MOVE_ADVANCED" as const,
-      sequence: 2,
-      context: {
-        roundNumber: 1,
-        activationIndex: 0,
-        activationId: "activation:fixture:1",
-        actingPlayerId: "player:bottom",
-        soldierId: "fixture-bottom-soldier-1",
-        cycleIndex: 0,
-      },
-      payload: {
-        soldierId: "fixture-bottom-soldier-1",
-        from: { x: 1, y: 3 },
-        to: { x: 1, y: 2 },
-      },
-    },
-    {
-      type: "MATCH_ENDED" as const,
-      sequence: 3,
-      context: {},
-      payload: { type: "DRAW" },
-    },
-  ]
-  return PublicReplayEvidenceServiceDtoSchema.parse({
-    ...evidence,
-    metadata: {
-      ...evidence.metadata,
-      eventCount: events.length,
-      snapshotCount: snapshots.length,
-      outcome: { type: "DRAW" },
-    },
-    projection: {
-      ...evidence.projection,
-      events,
-      snapshots,
-    },
-  }) as PublicReplayEvidenceServiceDto
 }
-
-const createPlayableReplayMetadata = (
-  metadata: PublicReplayMetadataServiceDto,
-): PublicReplayMetadataServiceDto =>
-  metadata.matchId === playableReplayMatchId
-    ? (PublicReplayMetadataServiceDtoSchema.parse({
-        ...metadata,
-        metadata: {
-          ...metadata.metadata,
-          eventCount: 4,
-          snapshotCount: 4,
-        },
-      }) as PublicReplayMetadataServiceDto)
-    : metadata
 
 export const createMatchExecutionFixturePublicReadClient = (
   env: MatchExecutionFixtureEnv = process.env,
@@ -340,25 +283,61 @@ export const createMatchExecutionFixturePublicReadClient = (
     async getPublicMatchSetSummary(matchSetId) {
       const summary = getFixtureByMatchSetId(safeDecodeURIComponent(matchSetId))
         ?.service.matchSetSummary
-      return (summary as PublicMatchSetSummaryServiceDto | undefined) ?? null
+      return summary
+        ? toPublicMatchSetSummaryFixture(
+            PublicMatchSetSummaryServiceDtoSchema.parse(summary),
+          )
+        : null
     },
     async getPublicReplayMetadata(matchId) {
       const metadata = getFixtureByMatchId(safeDecodeURIComponent(matchId))
         ?.service.replayMetadata
       return metadata
-        ? createPlayableReplayMetadata(
-            metadata as PublicReplayMetadataServiceDto,
-          )
+        ? (PublicReplayMetadataServiceDtoSchema.parse(
+            metadata,
+          ) as PublicReplayMetadataServiceDto)
         : null
     },
     async getPublicReplayEvidence(matchId) {
       const evidence = getFixtureByMatchId(safeDecodeURIComponent(matchId))
         ?.service.replayEvidence
       return evidence
-        ? createPlayableReplayEvidence(
-            evidence as PublicReplayEvidenceServiceDto,
-          )
+        ? (PublicReplayEvidenceServiceDtoSchema.parse(
+            evidence,
+          ) as PublicReplayEvidenceServiceDto)
         : null
+    },
+    async getPublicReplayCompetitionContext(matchId) {
+      const summary = getFixtureByMatchId(safeDecodeURIComponent(matchId))
+        ?.service.matchSetSummary
+      if (!summary) {
+        return null
+      }
+      const result = toPublicMatchSetSummaryFixture(
+        PublicMatchSetSummaryServiceDtoSchema.parse(summary),
+      ).result
+      if (result.competition) {
+        return { matchSetId: result.matchSetId, ...result.competition }
+      }
+      const countedState = classifyCompetitionCountedState({
+        executionStatus: result.status,
+        origin: "non_competitive",
+        expectedMatchCount: result.matches.length,
+        chronicleMatchCount: result.matches.filter(
+          (match) => match.replayAvailable,
+        ).length,
+        scoringAvailable: result.standings.length > 0,
+      })
+      return {
+        matchSetId: result.matchSetId,
+        countedState,
+        governance: projectPublicCompetitionGovernance({
+          countedState,
+          replayAvailable: result.matches.some(
+            (match) => match.replayAvailable,
+          ),
+        }),
+      }
     },
     async getPublicReplayState(matchId) {
       const fixture = getFixtureByMatchId(safeDecodeURIComponent(matchId))

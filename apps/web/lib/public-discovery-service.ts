@@ -1,4 +1,5 @@
 import {
+  COMPETITION_POLICY_V1_36_POSTURE,
   COMPETITION_PRESETS,
   SignedInCompetitionEntryDashboardDtoSchema,
   PublicCompetitionDetailDtoSchema,
@@ -6,8 +7,10 @@ import {
   PublicHomeDiscoveryDtoSchema,
   PublicWatchIndexDtoSchema,
   assertPublicDiscoveryDtoLeakSafe,
+  getCountedEntryEligibilityPublicCopy,
   publicDiscoveryBoundary,
   type CompetitionPreset,
+  type CountedEntryEligibilityPublicCopy,
   type PublicCompetitionDetailDto,
   type PublicCompetitionIndexDto,
   type PublicDiscoveryCompetitionCard,
@@ -163,6 +166,7 @@ const toLadderCompetitionCard = (
   ladder: PublicTrialLadderSeasonDto,
 ): PublicDiscoveryCompetitionCard => {
   const competitionId = `ladder:${ladder.seasonId}`
+  const openForEntry = ladder.status === "open"
   return {
     competitionId,
     title: ladder.name,
@@ -177,6 +181,7 @@ const toLadderCompetitionCard = (
             : "unavailable",
     statusLabel: ladder.statusLabel,
     href: competitionHref(competitionId),
+    ...(openForEntry ? { enterHref: competitionEnterHref(competitionId) } : {}),
     ...(ladder.description ? { description: ladder.description } : {}),
     entrantCount: ladder.entries.length,
     matchSetCount: ladder.matchSets.length,
@@ -248,6 +253,20 @@ const parseCompetitionId = (
 
 const revisionRuntimeLabel = (revision: AccountReadRevisionSummary): string =>
   runtimeExhibitionStatusLabel(revision.runtimeSemantics)
+
+const countedEntryEligibilityForRevision = (
+  revision: AccountReadRevisionSummary,
+): CountedEntryEligibilityPublicCopy => {
+  if (!revision.valid) {
+    return getCountedEntryEligibilityPublicCopy("invalid_strategy_revision")
+  }
+  if (!revision.lockedAt) {
+    return getCountedEntryEligibilityPublicCopy("mutable_draft")
+  }
+  return getCountedEntryEligibilityPublicCopy(
+    revision.countedEntryEligibilityCategory,
+  )
+}
 
 export const createPublicDiscoveryService = (
   options: PublicDiscoveryServiceDeps = {},
@@ -430,6 +449,9 @@ export const createPublicDiscoveryService = (
         label: standing.displayLabel,
         points: standing.points,
         record: `${standing.wins}-${standing.losses}-${standing.draws}`,
+        ...(standing.competitionEvidence
+          ? { competitionEvidence: standing.competitionEvidence }
+          : {}),
       })),
       matchSets,
       replayCoverage: {
@@ -489,12 +511,45 @@ export const createPublicDiscoveryService = (
       }
     }
 
-    const validRevisions = revisions.filter((revision) => revision.valid)
-    const invalidRevisions = revisions.filter((revision) => !revision.valid)
+    const parsedCompetition = parseCompetitionId(competitionId)
     const entryMode =
-      parseCompetitionId(competitionId)?.kind === "exhibition"
+      parsedCompetition?.kind === "exhibition"
         ? "exhibition-preset"
-        : "unavailable"
+        : parsedCompetition?.kind === "ladder" &&
+            detail.competition.status === "open"
+          ? "counted-ladder-season"
+          : "unavailable"
+    let existingSeasonEntryStatus:
+      | PublicTrialLadderSeasonDto["entries"][number]["status"]
+      | undefined
+    if (parsedCompetition?.kind === "ladder" && user) {
+      const ladder = await deps.getLadderSeason(parsedCompetition.seasonId)
+      existingSeasonEntryStatus = ladder?.entries.find(
+        (entry) => entry.ownerHandle === user.handle,
+      )?.status
+    }
+    const revisionsWithEligibility = revisions.map((revision) => ({
+      revision,
+      eligibility: existingSeasonEntryStatus
+        ? getCountedEntryEligibilityPublicCopy(
+            existingSeasonEntryStatus === "active"
+              ? "already_entered_season"
+              : "replacement_blocked",
+          )
+        : countedEntryEligibilityForRevision(revision),
+    }))
+    const eligibleRevisions =
+      entryMode === "counted-ladder-season"
+        ? revisionsWithEligibility.filter(
+            ({ eligibility }) => eligibility.category === "provider_validated",
+          )
+        : revisionsWithEligibility.filter(({ revision }) => revision.valid)
+    const ineligibleRevisions = revisionsWithEligibility.filter(
+      ({ revision, eligibility }) =>
+        entryMode === "counted-ladder-season"
+          ? eligibility.category !== "provider_validated"
+          : !revision.valid,
+    )
     const dto = SignedInCompetitionEntryDashboardDtoSchema.parse({
       kind: "signedInCompetitionEntryDashboard",
       boundary: publicDiscoveryBoundary(),
@@ -502,6 +557,7 @@ export const createPublicDiscoveryService = (
       signedIn: Boolean(user),
       accountUnavailable,
       revisionsUnavailable,
+      posture: COMPETITION_POLICY_V1_36_POSTURE,
       user: user
         ? {
             handle: user.handle,
@@ -509,7 +565,7 @@ export const createPublicDiscoveryService = (
             accountHref: "/account",
           }
         : null,
-      eligibleRevisions: validRevisions.map((revision) => ({
+      eligibleRevisions: eligibleRevisions.map(({ revision, eligibility }) => ({
         strategyRevisionId: revision.id,
         strategyId: revision.strategyId,
         label: revision.label ?? "Untitled revision",
@@ -523,18 +579,29 @@ export const createPublicDiscoveryService = (
         countedPlayEligible:
           revision.runtimeSemantics.countedPlayEligible === true,
         countedPlayReason: revision.runtimeSemantics.countedPlayReason,
+        eligibility,
         createdAt: revision.createdAt,
       })),
-      ineligibleRevisions: invalidRevisions.map((revision) => ({
-        strategyRevisionId: revision.id,
-        label: revision.label ?? "Untitled revision",
-        runtimeLabel: revisionRuntimeLabel(revision),
-        reason: "Revision must validate before competition entry.",
-      })),
+      ineligibleRevisions: ineligibleRevisions.map(
+        ({ revision, eligibility }) => ({
+          strategyRevisionId: revision.id,
+          label: revision.label ?? "Untitled revision",
+          runtimeLabel: revisionRuntimeLabel(revision),
+          reason: eligibility.publicMessage,
+          eligibility,
+        }),
+      ),
       entryMode,
       ...(entryMode === "exhibition-preset"
         ? { entryHref: "/api/exhibitions" }
-        : {}),
+        : entryMode === "counted-ladder-season" &&
+            parsedCompetition?.kind === "ladder"
+          ? {
+              entryHref: `/api/ladder/seasons/${encode(
+                parsedCompetition.seasonId,
+              )}/entries`,
+            }
+          : {}),
     })
     return assertDiscovery(dto)
   }

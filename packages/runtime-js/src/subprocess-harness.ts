@@ -1,3 +1,14 @@
+import { RUNTIME_ABI_V1_17 } from "@cowards/spec"
+import {
+  WORKER_HARNESS_V117_SOURCE,
+  WORKER_SIGNAL_V117,
+} from "./worker-harness.js"
+import {
+  CANDIDATE_HOST_ENVELOPE_MAGIC_V117,
+  CANDIDATE_HOST_ENVELOPE_OVERHEAD_V117,
+  CANDIDATE_HOST_ENVELOPE_VERSION_V117,
+} from "./candidate-host-envelope.js"
+
 export const SUBPROCESS_HARNESS_SOURCE = `
 import { exit, stderr, stdin, stdout } from "node:process"
 
@@ -303,5 +314,154 @@ const main = async () => {
   stdout.write(JSON.stringify(capRuntimeResult(request, result)))
 }
 
+void main()
+`
+
+/** Inactive v1.17 guest. Authentication and response signing remain host-only. */
+export const SUBPROCESS_HARNESS_V117_SOURCE = `
+import { Buffer } from "node:buffer"
+import { hrtime, stdin, stdout } from "node:process"
+import { MessageChannel, receiveMessageOnPort, Worker } from "node:worker_threads"
+
+const workerSource = ${JSON.stringify(WORKER_HARNESS_V117_SOURCE)}
+const workerUrl = new URL(
+  "data:text/javascript;charset=utf-8," + encodeURIComponent(workerSource),
+)
+const frame = (tag) => Uint8Array.of(tag.charCodeAt(0))
+const hostEnvelope = (rawFrame, goNanoseconds, terminationMilliseconds) => {
+  const header = Buffer.alloc(${CANDIDATE_HOST_ENVELOPE_OVERHEAD_V117})
+  header.write(${JSON.stringify(CANDIDATE_HOST_ENVELOPE_MAGIC_V117)}, 0, "ascii")
+  header.writeUInt8(${CANDIDATE_HOST_ENVELOPE_VERSION_V117}, 4)
+  header.writeUInt8(
+    (goNanoseconds === undefined ? 0 : 1) |
+      (terminationMilliseconds === undefined ? 0 : 2),
+    5,
+  )
+  header.writeUInt16BE(0, 6)
+  header.writeBigUInt64BE(goNanoseconds === undefined ? 0n : goNanoseconds, 8)
+  header.writeUInt32BE(
+    terminationMilliseconds === undefined ? 0 : terminationMilliseconds,
+    16,
+  )
+  header.writeUInt32BE(rawFrame.byteLength, 20)
+  return Buffer.concat([header, Buffer.from(rawFrame)])
+}
+const readInput = async () => {
+  const chunks = []
+  for await (const chunk of stdin) chunks.push(chunk)
+  return chunks.join("")
+}
+const main = async () => {
+  const launchStarted = hrtime.bigint()
+  let request
+  try {
+    request = JSON.parse(await readInput())
+  } catch {
+    stdout.write(hostEnvelope(frame("T")))
+    return
+  }
+  if (!request || typeof request !== "object" || Array.isArray(request) ||
+      Object.keys(request).length !== 5 ||
+      typeof request.source !== "string" || request.source.length === 0 ||
+      (request.methodName !== "selectActivations" && request.methodName !== "soldierBrain") ||
+      !Object.hasOwn(request, "input") ||
+      !Number.isSafeInteger(request.outputByteLimit) || request.outputByteLimit < 0 ||
+      request.outputByteLimit > 262144 ||
+      !Number.isSafeInteger(request.methodWallMilliseconds) ||
+      request.methodWallMilliseconds <= 0) {
+    stdout.write(hostEnvelope(frame("T")))
+    return
+  }
+
+  const signalBuffer = new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT)
+  const signal = new Int32Array(signalBuffer)
+  const { port1, port2 } = new MessageChannel()
+  const worker = new Worker(workerUrl, {
+    workerData: {
+      source: request.source,
+      methodName: request.methodName,
+      input: request.input,
+      outputByteLimit: request.outputByteLimit,
+      port: port2,
+      signalBuffer,
+    },
+    transferList: [port2],
+    env: {},
+    execArgv: [],
+    resourceLimits: {
+      maxOldGenerationSizeMb: 16,
+      maxYoungGenerationSizeMb: 8,
+      stackSizeMb: 4,
+    },
+  })
+
+  const launchElapsedMilliseconds =
+    Number(hrtime.bigint() - launchStarted) / 1000000
+  if (launchElapsedMilliseconds >
+      ${RUNTIME_ABI_V1_17.budgets.preflight.profiles.artifactValidation.wallMilliseconds}) {
+    await worker.terminate()
+    port1.close()
+    stdout.write(hostEnvelope(frame("H")))
+    return
+  }
+  const startupRemainingMilliseconds = Math.max(
+    0,
+    ${RUNTIME_ABI_V1_17.budgets.preflight.profiles.artifactValidation.wallMilliseconds} -
+      launchElapsedMilliseconds,
+  )
+  const startupWait = Atomics.wait(
+    signal,
+    0,
+    ${WORKER_SIGNAL_V117.starting},
+    startupRemainingMilliseconds,
+  )
+  if (startupWait === "timed-out" ||
+      Atomics.load(signal, 0) === ${WORKER_SIGNAL_V117.starting}) {
+    await worker.terminate()
+    port1.close()
+    stdout.write(hostEnvelope(frame("H")))
+    return
+  }
+  let methodStarted
+  if (Atomics.load(signal, 0) === ${WORKER_SIGNAL_V117.ready}) {
+    methodStarted = hrtime.bigint()
+    Atomics.store(signal, 0, ${WORKER_SIGNAL_V117.go})
+    Atomics.notify(signal, 0)
+    const methodWait = Atomics.wait(
+      signal,
+      0,
+      ${WORKER_SIGNAL_V117.go},
+      request.methodWallMilliseconds,
+    )
+    if (methodWait === "timed-out" ||
+        Atomics.load(signal, 0) !== ${WORKER_SIGNAL_V117.done}) {
+      const terminationStarted = hrtime.bigint()
+      await worker.terminate()
+      const terminationMilliseconds = Math.ceil(
+        Number(hrtime.bigint() - terminationStarted) / 1000000,
+      )
+      port1.close()
+      stdout.write(
+        terminationMilliseconds <= ${RUNTIME_ABI_V1_17.budgets.selectActivations.vector.cancellation.terminationGraceMilliseconds}
+          ? hostEnvelope(frame("D"), methodStarted, terminationMilliseconds)
+          : hostEnvelope(frame("H"), methodStarted),
+      )
+      return
+    }
+  }
+  if (Atomics.load(signal, 0) !== ${WORKER_SIGNAL_V117.done}) {
+    await worker.terminate()
+    port1.close()
+    stdout.write(hostEnvelope(frame("R"), methodStarted))
+    return
+  }
+  const received = receiveMessageOnPort(port1)
+  port1.close()
+  const output = received && received.message
+  stdout.write(hostEnvelope(
+    output instanceof Uint8Array ? output : frame("R"),
+    methodStarted,
+  ))
+}
 void main()
 `

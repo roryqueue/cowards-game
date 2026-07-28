@@ -8,6 +8,12 @@ importers:
 
   .:
     devDependencies:
+      '@cowards/golden':
+        specifier: workspace:*
+        version: link:packages/golden
+      '@cowards/spec':
+        specifier: workspace:*
+        version: link:packages/spec
       '@eslint/js':
         specifier: ^9.39.2
         version: 9.39.4
@@ -204,6 +210,9 @@ importers:
         specifier: ^8.20.0
         version: 8.20.0
     devDependencies:
+      '@cowards/runtime-wasm-wasi':
+        specifier: workspace:*
+        version: link:../runtime-wasm-wasi
       '@types/pg':
         specifier: ^8.20.0
         version: 8.20.0
@@ -222,6 +231,9 @@ importers:
       '@cowards/engine':
         specifier: workspace:*
         version: link:../engine
+      '@cowards/runtime-supervisor':
+        specifier: workspace:*
+        version: link:../runtime-supervisor
       '@cowards/spec':
         specifier: workspace:*
         version: link:../spec
@@ -241,6 +253,9 @@ importers:
       '@cowards/engine':
         specifier: workspace:*
         version: link:../engine
+      '@cowards/runtime-supervisor':
+        specifier: workspace:*
+        version: link:../runtime-supervisor
       '@cowards/spec':
         specifier: workspace:*
         version: link:../spec
@@ -249,11 +264,20 @@ importers:
         specifier: ^24.10.1
         version: 24.12.4
 
+  packages/runtime-supervisor:
+    dependencies:
+      '@cowards/spec':
+        specifier: workspace:*
+        version: link:../spec
+
   packages/runtime-wasm-wasi:
     dependencies:
       '@cowards/engine':
         specifier: workspace:*
         version: link:../engine
+      '@cowards/runtime-supervisor':
+        specifier: workspace:*
+        version: link:../runtime-supervisor
       '@cowards/spec':
         specifier: workspace:*
         version: link:../spec

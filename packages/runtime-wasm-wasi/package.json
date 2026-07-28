@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@cowards/engine": "workspace:*",
+    "@cowards/runtime-supervisor": "workspace:*",
     "@cowards/spec": "workspace:*"
   },
   "devDependencies": {

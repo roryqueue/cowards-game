@@ -1,0 +1,248 @@
+{
+  "schemaVersion": "v1.37-observation-v1.19-activation-proof-v1",
+  "lifecycle": "pending-precommit",
+  "activationId": "activation:phase260:plan14:production",
+  "parentHead": "bae1ee8f48cc63983a4fea71dac0a4ab20cee270",
+  "pendingSelectionRoot": "sha256:17954660f17c83e60e5d7df0b589cd89cf6b00eba4d4963e2d4bf43bc71c6ea2",
+  "selectorManifest": [
+    {
+      "path": "apps/go-backend/current_semantic_authority_generated.go",
+      "sha256": "sha256:9d4a90ccff3f471c9101f998b2cc43c3ded66b676b03cc5023b409a1811761d7"
+    },
+    {
+      "path": "packages/golden/src/fixtures/v1-37-conformance-corpus/registry.json",
+      "sha256": "sha256:120e87ea12028c6ba00d0a75fa8da50e9835661a4d5c4c6923ca45342679c57f"
+    },
+    {
+      "path": "packages/golden/src/fixtures/v1-37-conformance-traces/registry.json",
+      "sha256": "sha256:af699629a36376c85091ae24ad0075a0970e1856afce62205484d5d73780647e"
+    },
+    {
+      "path": "packages/golden/src/v1-37-conformance-corpus-pin.ts",
+      "sha256": "sha256:f88cf9e6b446b42b19e926591d83e2e1a7bd4663342c4ea5f49e6592b2004daa"
+    },
+    {
+      "path": "packages/spec/src/current-semantic-authority-source.ts",
+      "sha256": "sha256:2097b2a47131b19c5ecba3e6c3dc70754bb6f1ead6eb63f35f05f868c7230000"
+    }
+  ],
+  "selectorManifestRoot": "sha256:762fa68acd6cec3a4f2a3377a1c260d00b5786437794b19acc309f62e3b2657d",
+  "preimage": [
+    {
+      "path": ".planning/artifacts/v1.37-observation-v1.19-activation-transaction-proof.json",
+      "state": "absent"
+    },
+    {
+      "path": "apps/go-backend/current_semantic_authority_generated.go",
+      "state": "present",
+      "sha256": "sha256:512b83fc6bd300b17214b25b851e737aecb7c58b629642c33bbd6443f6807063"
+    },
+    {
+      "path": "packages/golden/src/fixtures/v1-37-conformance-corpus/registry.json",
+      "state": "present",
+      "sha256": "sha256:440869c22aaffca1e872245809823cded028fb07783f1e7d6ece7b0b3781f3a0"
+    },
+    {
+      "path": "packages/golden/src/fixtures/v1-37-conformance-traces/registry.json",
+      "state": "present",
+      "sha256": "sha256:f97efb668bd956da600c0ca9bc1514473ad79554eba2477042c49091a698494d"
+    },
+    {
+      "path": "packages/golden/src/v1-37-conformance-corpus-pin.ts",
+      "state": "present",
+      "sha256": "sha256:95435d61e57c9e12106b9825d64a0a009b2381ad42ee582da0849ed56a7963ef"
+    },
+    {
+      "path": "packages/spec/src/current-semantic-authority-source.ts",
+      "state": "present",
+      "sha256": "sha256:35c90bd1a7d8f69c3a39c72204334485aacd798ca99d5ed6185cf59d883ac9ae"
+    }
+  ],
+  "proofPreimageRoot": "sha256:7748a7a2d7fa7fe8e425faf9871d7738c3c6afb7407cedd7247f279c327324f4",
+  "validationReceipts": [
+    {
+      "id": "spec",
+      "command": "pnpm --filter @cowards/spec test",
+      "exitCode": 0,
+      "stdoutSha256": "sha256:6219e6b60019a113f7a3f25593fd1dcde848806d5d1b3cc8811f1e73d437511b",
+      "stderrSha256": "sha256:c8934e0b12a0c92941b40bf056831d66f8c2d46fcde2c8f8b66424bbbd4a788d",
+      "completedAt": "2026-07-19T13:04:54.546Z"
+    },
+    {
+      "id": "engine",
+      "command": "pnpm --filter @cowards/engine test",
+      "exitCode": 0,
+      "stdoutSha256": "sha256:2e3e1a2dad901fbd91d9ee2a23f5d5d62a8c3c75a017118c9e062236936328fc",
+      "stderrSha256": "sha256:b35c61caafdd716ec59fe8e693eac699b4c9e6bb615b2adacc4b2a4be1a90fb2",
+      "completedAt": "2026-07-19T13:06:17.012Z"
+    },
+    {
+      "id": "generator",
+      "command": "pnpm v1.37:integrity-authority:check",
+      "exitCode": 0,
+      "stdoutSha256": "sha256:75ed0e4c4d291f0ce9a6d82d0ae5e048217ec5b7b99118bef7d74edbce699add",
+      "stderrSha256": "sha256:9dd4561bc517975c3bdf09835f03e90997c9272d1d3c3cd9e891828d8ae45cf7",
+      "completedAt": "2026-07-19T13:06:39.689Z"
+    },
+    {
+      "id": "persistence",
+      "command": "pnpm --filter @cowards/persistence test",
+      "exitCode": 0,
+      "stdoutSha256": "sha256:a58cdc1f1ada9c74982897d586324eb9253e3e8d730016164ccda94f8c9d1126",
+      "stderrSha256": "sha256:0003e6a8ba6ad877fe502c7878f92501ba69dd3ffdb5da76a01b22c42da6ce46",
+      "completedAt": "2026-07-19T13:06:43.412Z"
+    },
+    {
+      "id": "postgresql",
+      "command": "pnpm exec vitest run packages/persistence/src/semantic-authority-selection-head.test.ts --maxWorkers=1",
+      "exitCode": 0,
+      "stdoutSha256": "sha256:223bab55bd289f808cbe421f706e7024d8820f045f0dadb7568b753ca6dee87d",
+      "stderrSha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "completedAt": "2026-07-19T13:10:58.287Z"
+    },
+    {
+      "id": "go",
+      "command": "pnpm go:parity",
+      "exitCode": 0,
+      "stdoutSha256": "sha256:bd2988aff6e007e499b7f56ab6ebea486dbf1432eebab086d86f048b685bf424",
+      "stderrSha256": "sha256:a3bf09b3c97105969ca9d97128057349bae1c637562678c25c7551003f6f48d3",
+      "completedAt": "2026-07-19T13:11:06.316Z"
+    },
+    {
+      "id": "runtime-service",
+      "command": "pnpm exec vitest run apps/runtime-service/src --maxWorkers=1",
+      "exitCode": 0,
+      "stdoutSha256": "sha256:f16627cba7cdd587a270564f033d0b6424bf74ebe82065871feaa311c146a5d6",
+      "stderrSha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "completedAt": "2026-07-19T13:11:34.140Z"
+    },
+    {
+      "id": "replay",
+      "command": "pnpm exec vitest run packages/replay/src",
+      "exitCode": 0,
+      "stdoutSha256": "sha256:b6a725e205bbe8d24c5e80c6789dd91270f729f9a582c4c0d4f0fcb5e0a8208a",
+      "stderrSha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "completedAt": "2026-07-19T13:14:08.875Z"
+    },
+    {
+      "id": "public-contract",
+      "command": "pnpm contract:check",
+      "exitCode": 0,
+      "stdoutSha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSha256": "sha256:211335e66af9f91f55b0a2b00130b5613e21454d2226dbf81faca480c844a849",
+      "completedAt": "2026-07-19T13:14:53.741Z"
+    },
+    {
+      "id": "web",
+      "command": "pnpm --filter @cowards/web test",
+      "exitCode": 0,
+      "stdoutSha256": "sha256:0181cf3700ac88505e33c462b3c0f30aee6cb6a8eff1c46d821d64b51581d4cc",
+      "stderrSha256": "sha256:a7a0e7d6805eb0bbadea33b1883680fde44c2628c85382db305224b6deaf8c30",
+      "completedAt": "2026-07-19T13:14:58.389Z"
+    },
+    {
+      "id": "privacy",
+      "command": "pnpm v1.37:integrity-boundaries:check",
+      "exitCode": 0,
+      "stdoutSha256": "sha256:4b6c14d4e05a2c04bab98b96f4e03976e07c4f897a446ae9489496c9c7cc01dc",
+      "stderrSha256": "sha256:47fdf52325f991adda4bf59fac3b405ba5cac3870a1f04a4c909d4079d1f32cc",
+      "completedAt": "2026-07-19T13:15:18.799Z"
+    },
+    {
+      "id": "boundary",
+      "command": "pnpm boundary:imports",
+      "exitCode": 0,
+      "stdoutSha256": "sha256:31bc96ec69bc66d2b245d755931fafd53f26576db3921cd6fea262bbcf6452ac",
+      "stderrSha256": "sha256:6b20f8fd976cb002e431f9215b567b618506db93c4347d073ea56d9ceb0b4ea5",
+      "completedAt": "2026-07-19T13:15:28.469Z"
+    },
+    {
+      "id": "history",
+      "command": "pnpm v1.36:historical-proof:check",
+      "exitCode": 0,
+      "stdoutSha256": "sha256:8691dbf3445f7d08fa344ef73838882001cb82fad5c83f34dd27f8b6f4976b8c",
+      "stderrSha256": "sha256:71ac77f574d9a32d0f978364a8d086ed7d3f210f0b92c3b49d8d7d2ae398ac00",
+      "completedAt": "2026-07-19T13:15:33.429Z"
+    },
+    {
+      "id": "certification",
+      "command": "pnpm v1.37:executable-conformance:check",
+      "exitCode": 0,
+      "stdoutSha256": "sha256:9efef72cfdb41a9a9048c84729fdf9fe71beb72b8e28b6c61618e94a60b9870d",
+      "stderrSha256": "sha256:99ceadce6751b2ae2315892bfca2ccd03b48bd4cbfae9895ea50be83ee08acd6",
+      "completedAt": "2026-07-19T13:15:56.814Z"
+    },
+    {
+      "id": "d04-admission",
+      "command": "pnpm exec vitest run packages/persistence/src/repositories.test.ts",
+      "exitCode": 0,
+      "stdoutSha256": "sha256:aca9d3af844aa3b8b943473cb54b601022c9d21ec890f38bd71dc62e9ef908ac",
+      "stderrSha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "completedAt": "2026-07-19T13:16:00.324Z"
+    },
+    {
+      "id": "corpus",
+      "command": "pnpm exec vitest run scripts/generate-v1-37-conformance-corpus.test.ts",
+      "exitCode": 0,
+      "stdoutSha256": "sha256:d01e386800669a6c19a78358200f3832b171290ac6cf1566c1f3cf275b22d7df",
+      "stderrSha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "completedAt": "2026-07-19T13:16:05.260Z"
+    },
+    {
+      "id": "trace",
+      "command": "pnpm exec vitest run scripts/generate-v1-37-conformance-traces.test.ts",
+      "exitCode": 0,
+      "stdoutSha256": "sha256:7eefc57787226ae7f64256c592af9b081ec3d7239f3e04a5a46c9e9fe87ea452",
+      "stderrSha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "completedAt": "2026-07-19T13:16:14.784Z"
+    },
+    {
+      "id": "workshop",
+      "command": "pnpm exec vitest run packages/persistence/src/workshop.test.ts",
+      "exitCode": 0,
+      "stdoutSha256": "sha256:4a4868d4272f8317323437b8ee100e2568c81063e2744047be6f539138e53dfb",
+      "stderrSha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "completedAt": "2026-07-19T13:18:24.020Z"
+    },
+    {
+      "id": "typecheck",
+      "command": "pnpm typecheck",
+      "exitCode": 0,
+      "stdoutSha256": "sha256:d378b9b583e8e34b004e495cea07ce0dc4c5cdb59f63e7555e5f996e67f1b22f",
+      "stderrSha256": "sha256:e3d014cc214ebcfd8f75a8c280470856f6da52967d640e7b2c3e832d7136a827",
+      "completedAt": "2026-07-19T13:21:02.088Z"
+    },
+    {
+      "id": "lint",
+      "command": "pnpm lint",
+      "exitCode": 0,
+      "stdoutSha256": "sha256:b2c37a6235c5ccb22a3a84f1e16565b5e7ffa522c12eceb726ad35ffa1194527",
+      "stderrSha256": "sha256:44aac55df644fc32b57ea0db5706a37beb7cdc307b95b34d9f048000e04a9129",
+      "completedAt": "2026-07-19T13:21:54.905Z"
+    },
+    {
+      "id": "build",
+      "command": "pnpm build",
+      "exitCode": 0,
+      "stdoutSha256": "sha256:07ed9fac42262cf944b66640c59f2325420ab52c7b080e128fc5ba1ab4a63bcc",
+      "stderrSha256": "sha256:3fd254bf971db9700e4db864bd2309c29f210c806687f6806005bb2b1b76a7f7",
+      "completedAt": "2026-07-19T13:22:39.319Z"
+    },
+    {
+      "id": "protected-baseline",
+      "command": "pnpm exec tsx scripts/capture-v1-37-protected-baseline.ts --check",
+      "exitCode": 0,
+      "stdoutSha256": "sha256:60d59b3d5a24c345eeba8b7d6509be838f755252dd5718f768e4de2d34d244c5",
+      "stderrSha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "completedAt": "2026-07-19T13:23:13.301Z"
+    }
+  ],
+  "rollbackReceipt": {
+    "id": "rollback",
+    "command": "git diff --exit-code -- apps/go-backend/current_semantic_authority_generated.go packages/golden/src/fixtures/v1-37-conformance-corpus/registry.json packages/golden/src/fixtures/v1-37-conformance-traces/registry.json packages/golden/src/v1-37-conformance-corpus-pin.ts packages/spec/src/current-semantic-authority-source.ts",
+    "exitCode": 0,
+    "stdoutSha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "stderrSha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "completedAt": "2026-07-19T13:23:16.783Z"
+  }
+}

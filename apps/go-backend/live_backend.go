@@ -1,16 +1,19 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"crypto/hmac"
 	"crypto/rand"
 	"crypto/sha256"
 	"crypto/subtle"
 	"encoding/base64"
+	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -27,31 +30,82 @@ import (
 const sessionCookieName = "cowards_session"
 const sessionDuration = 30 * 24 * time.Hour
 const strategySourceBytes = 64 * 1024
+const sourceIdentityVersionV2 = "strategy-source-identity-v2"
+const sourceNormalizationPolicyV117 = "source-line-endings-lf-v1.17"
+const originalSourceIdentityDomain = "cowards-game:runtime-identity:v1:original-source"
+const normalizedSourceIdentityDomain = "cowards-game:runtime-identity:v1:normalized-source"
 const strategyWasmArtifactBytes = 4 * 1024 * 1024
 const exhibitionRateLimit = 5
 const exhibitionRateLimitWindow = time.Hour
+const runMatchJobOnceBodyBytes = 64 * 1024
+const runMatchJobOnceMatchIDLimit = 100
 
 type LiveServer struct {
-	pool              *pgxpool.Pool
-	now               func() time.Time
-	strategyArtifacts map[string]strategyArtifact
-	orchestrator      *goMatchOrchestrator
-	stopOrchestrator  context.CancelFunc
+	pool                 *pgxpool.Pool
+	now                  func() time.Time
+	strategyArtifacts    map[string]strategyArtifact
+	deploymentLanes      *goDeploymentLaneRegistry
+	authority            *verifiedRuntimeEvidenceAuthority
+	loadAuthority        func() (*verifiedRuntimeEvidenceAuthority, error)
+	orchestrator         *goMatchOrchestrator
+	runOrchestrationOnce func(context.Context, []string) (*goMatchOrchestrationResult, error)
+	stopOrchestrator     context.CancelFunc
+}
+
+type liveServerDependencies struct {
+	loadAuthority       func() (*verifiedRuntimeEvidenceAuthority, error)
+	loadDeploymentLanes func() (*goDeploymentLaneRegistry, error)
+	connectPool         func(context.Context, string) (*pgxpool.Pool, error)
+	loadArtifacts       func() (map[string]strategyArtifact, error)
+	newOrchestrator     func(*pgxpool.Pool, string) *goMatchOrchestrator
+}
+
+func defaultLiveServerDependencies() liveServerDependencies {
+	return liveServerDependencies{
+		loadAuthority:       loadProductionRuntimeEvidenceAuthorityFromEnvironment,
+		loadDeploymentLanes: loadProductionDeploymentLaneRegistryFromEnvironment,
+		connectPool: func(ctx context.Context, databaseURL string) (*pgxpool.Pool, error) {
+			pool, err := pgxpool.New(ctx, databaseURL)
+			if err != nil {
+				return nil, err
+			}
+			if err := pool.Ping(ctx); err != nil {
+				pool.Close()
+				return nil, err
+			}
+			return pool, nil
+		},
+		loadArtifacts: func() (map[string]strategyArtifact, error) {
+			return loadStrategyArtifactManifest(defaultStrategyArtifactManifestPath())
+		},
+		newOrchestrator: newGoMatchOrchestrator,
+	}
 }
 
 func NewLiveServer(ctx context.Context, databaseURL string) (*LiveServer, error) {
+	return newLiveServerWithDependencies(ctx, databaseURL, defaultLiveServerDependencies())
+}
+
+func newLiveServerWithDependencies(ctx context.Context, databaseURL string, dependencies liveServerDependencies) (*LiveServer, error) {
+	authority, err := dependencies.loadAuthority()
+	if err != nil || authority == nil {
+		return nil, errors.New("live Go backend authority unavailable")
+	}
 	if strings.TrimSpace(databaseURL) == "" {
 		return nil, errors.New("live Go backend requires DATABASE_URL")
 	}
-	pool, err := pgxpool.New(ctx, databaseURL)
-	if err != nil {
-		return nil, fmt.Errorf("create live database pool")
+	if dependencies.loadDeploymentLanes == nil {
+		return nil, errors.New("live Go backend deployment lane registry unavailable")
 	}
-	if err := pool.Ping(ctx); err != nil {
-		pool.Close()
+	deploymentLanes, err := dependencies.loadDeploymentLanes()
+	if err != nil || !deploymentLanes.matchesAuthority(authority) {
+		return nil, errors.New("live Go backend deployment lane registry unavailable")
+	}
+	pool, err := dependencies.connectPool(ctx, databaseURL)
+	if err != nil || pool == nil {
 		return nil, fmt.Errorf("connect live database")
 	}
-	artifacts, err := loadStrategyArtifactManifest(defaultStrategyArtifactManifestPath())
+	artifacts, err := dependencies.loadArtifacts()
 	if err != nil {
 		pool.Close()
 		return nil, fmt.Errorf("load strategy artifacts: %w", err)
@@ -60,10 +114,24 @@ func NewLiveServer(ctx context.Context, databaseURL string) (*LiveServer, error)
 		pool:              pool,
 		now:               time.Now,
 		strategyArtifacts: artifacts,
-		orchestrator:      newGoMatchOrchestrator(pool, os.Getenv("COWARDS_RUNTIME_SERVICE_URL")),
+		deploymentLanes:   deploymentLanes,
+		authority:         authority,
+		loadAuthority:     dependencies.loadAuthority,
+		orchestrator:      dependencies.newOrchestrator(pool, os.Getenv("COWARDS_RUNTIME_SERVICE_URL")),
 	}
+	if server.orchestrator == nil {
+		pool.Close()
+		return nil, errors.New("live Go orchestration unavailable")
+	}
+	server.orchestrator.deploymentLanes = deploymentLanes
 	orchestrationMode := strings.TrimSpace(os.Getenv("COWARDS_GO_ORCHESTRATION"))
 	runtimeServiceURL := strings.TrimSpace(os.Getenv("COWARDS_RUNTIME_SERVICE_URL"))
+	if orchestrationMode != "0" && runtimeServiceURL != "" {
+		if err := requireRuntimeSemanticReceiptSecret(); err != nil {
+			pool.Close()
+			return nil, errors.New("live Go orchestration semantic admission unavailable")
+		}
+	}
 	if orchestrationMode != "0" && runtimeServiceURL != "" {
 		server.stopOrchestrator = server.orchestrator.start(ctx)
 	}
@@ -103,6 +171,7 @@ func (server *LiveServer) routes() http.Handler {
 	mux.HandleFunc("POST /internal/match-jobs/run-once", server.runMatchJobOnce)
 	mux.HandleFunc("POST /internal/match-execution/requeue", server.requeueMatchExecutionJob)
 	mux.HandleFunc("POST /internal/match-execution/rerun", server.rerunMatchExecutionJob)
+	mux.HandleFunc("GET /internal/integrity/matchsets/{matchSetId}/evidence", server.operatorMatchSetIntegrityEvidence)
 	return mux
 }
 
@@ -112,13 +181,62 @@ func (server *LiveServer) runMatchJobOnce(writer http.ResponseWriter, request *h
 		writeServiceError(writer, http.StatusForbidden, "FORBIDDEN", "Forbidden.")
 		return
 	}
-	result, err := server.orchestrator.runOnce(request.Context(), nil)
+	if !selectedRuntimeExecutionAuthorityCoherent() {
+		goOrchestrationHTTPError(writer, http.StatusServiceUnavailable)
+		return
+	}
+	matchIDs, ok := decodeRunMatchJobOnceAllowlist(writer, request)
+	if !ok {
+		return
+	}
+	runOnce := server.runOrchestrationOnce
+	if runOnce == nil {
+		if server.orchestrator == nil {
+			goOrchestrationHTTPError(writer, http.StatusBadGateway)
+			return
+		}
+		runOnce = server.orchestrator.runOnce
+	}
+	result, err := runOnce(request.Context(), matchIDs)
 	if err != nil {
-		server.orchestrator.logf("manual Go orchestration run failed: %v", err)
+		if server.orchestrator != nil {
+			server.orchestrator.logf("manual Go orchestration run failed: %v", err)
+		}
 		goOrchestrationHTTPError(writer, http.StatusBadGateway)
 		return
 	}
 	writeGoOrchestrationResult(writer, http.StatusOK, result)
+}
+
+func decodeRunMatchJobOnceAllowlist(writer http.ResponseWriter, request *http.Request) ([]string, bool) {
+	serialized, err := io.ReadAll(io.LimitReader(request.Body, runMatchJobOnceBodyBytes+1))
+	if err != nil || len(serialized) > runMatchJobOnceBodyBytes {
+		writeServiceError(writer, http.StatusBadRequest, "VALIDATION_FAILED", "Request body is invalid.")
+		return nil, false
+	}
+	if strings.TrimSpace(string(serialized)) == "" {
+		return nil, true
+	}
+	body := struct {
+		MatchIDs []string `json:"matchIds"`
+	}{}
+	if err := decodeStrictJSON(serialized, &body); err != nil || len(body.MatchIDs) == 0 || len(body.MatchIDs) > runMatchJobOnceMatchIDLimit {
+		writeServiceError(writer, http.StatusBadRequest, "VALIDATION_FAILED", "Request body is invalid.")
+		return nil, false
+	}
+	seen := make(map[string]struct{}, len(body.MatchIDs))
+	for _, matchID := range body.MatchIDs {
+		if strings.TrimSpace(matchID) == "" {
+			writeServiceError(writer, http.StatusBadRequest, "VALIDATION_FAILED", "Request body is invalid.")
+			return nil, false
+		}
+		if _, duplicated := seen[matchID]; duplicated {
+			writeServiceError(writer, http.StatusBadRequest, "VALIDATION_FAILED", "Request body is invalid.")
+			return nil, false
+		}
+		seen[matchID] = struct{}{}
+	}
+	return append([]string(nil), body.MatchIDs...), true
 }
 
 func (server *LiveServer) requeueMatchExecutionJob(writer http.ResponseWriter, request *http.Request) {
@@ -133,6 +251,10 @@ func (server *LiveServer) recoverMatchExecutionJob(writer http.ResponseWriter, r
 	token := os.Getenv("COWARDS_GO_BACKEND_INTERNAL_TOKEN")
 	if token == "" || request.Header.Get("X-Cowards-Internal-Token") != token {
 		writeServiceError(writer, http.StatusForbidden, "FORBIDDEN", "Forbidden.")
+		return
+	}
+	if !selectedRuntimeExecutionAuthorityCoherent() {
+		goOrchestrationHTTPError(writer, http.StatusServiceUnavailable)
 		return
 	}
 	var body struct {
@@ -231,6 +353,16 @@ type accountRevisionInsert struct {
 	Runtime             map[string]any
 	EngineCompatibility map[string]any
 	Validation          map[string]any
+}
+
+type strategyRevisionCreateBody struct {
+	StrategyID   string `json:"strategyId"`
+	Source       string `json:"source"`
+	SourceFormat string `json:"sourceFormat"`
+	Label        string `json:"label"`
+	Notes        string `json:"notes"`
+	StarterID    string `json:"starterId"`
+	AdvancedID   string `json:"advancedId"`
 }
 
 func (server *LiveServer) publicStrategyPage(writer http.ResponseWriter, request *http.Request) {
@@ -362,21 +494,28 @@ func (server *LiveServer) publicReplayMetadata(writer http.ResponseWriter, reque
 		writeStorageError(writer)
 		return
 	}
+	integrityEvidence, err := server.publicIntegrityEvidenceForMatch(request.Context(), matchID)
+	if err != nil {
+		writeStorageError(writer)
+		return
+	}
+	metadata := map[string]any{
+		"matchId":           matchID,
+		"chronicleId":       chronicleID,
+		"hash":              hash,
+		"schemaVersion":     schemaVersion,
+		"eventCount":        eventCount,
+		"snapshotCount":     snapshotCount,
+		"bottomPlayerId":    bottomPlayerID,
+		"topPlayerId":       topPlayerID,
+		"arenaVariantId":    arenaVariantID,
+		"integrityEvidence": integrityEvidence,
+	}
 	writeJSONValue(writer, http.StatusOK, map[string]any{
 		"apiVersion": serviceAPIVersion,
 		"kind":       "publicReplayMetadata",
 		"matchId":    matchID,
-		"metadata": map[string]any{
-			"matchId":        matchID,
-			"chronicleId":    chronicleID,
-			"hash":           hash,
-			"schemaVersion":  schemaVersion,
-			"eventCount":     eventCount,
-			"snapshotCount":  snapshotCount,
-			"bottomPlayerId": bottomPlayerID,
-			"topPlayerId":    topPlayerID,
-			"arenaVariantId": arenaVariantID,
-		},
+		"metadata":   metadata,
 	})
 }
 
@@ -392,6 +531,58 @@ func (server *LiveServer) publicReplayEvidence(writer http.ResponseWriter, reque
 		return
 	}
 	writeJSONValue(writer, http.StatusOK, result)
+}
+
+func (server *LiveServer) operatorMatchSetIntegrityEvidence(writer http.ResponseWriter, request *http.Request) {
+	token := os.Getenv("COWARDS_GO_BACKEND_INTERNAL_TOKEN")
+	if token == "" || request.Header.Get("X-Cowards-Internal-Token") != token {
+		writeServiceError(writer, http.StatusForbidden, "FORBIDDEN", "Forbidden.")
+		return
+	}
+	matchSetID := decodePathValue(request.PathValue("matchSetId"))
+	model, err := server.loadIntegrityEvidenceReadModel(request.Context(), matchSetID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		writeServiceError(writer, http.StatusNotFound, "NOT_FOUND", "Integrity evidence not found.")
+		return
+	}
+	if err != nil {
+		writeStorageError(writer)
+		return
+	}
+	response := map[string]any{
+		"apiVersion": serviceAPIVersion,
+		"kind":       "operatorIntegrityEvidence",
+		"matchSetId": matchSetID,
+		"profile":    model.Profile,
+	}
+	if model.Profile == "current" {
+		keys := make([]string, 0, len(model.OperatorByEntrant))
+		for key := range model.OperatorByEntrant {
+			keys = append(keys, key)
+		}
+		sort.Strings(keys)
+		lanes := make([]map[string]any, 0, len(keys))
+		for _, key := range keys {
+			lanes = append(lanes, map[string]any{"entrantKey": key, "evidence": model.OperatorByEntrant[key]})
+		}
+		response["semanticTupleId"] = model.SemanticTupleID
+		response["lanes"] = lanes
+	} else {
+		response["historical"] = cloneIntegrityEvidenceMap(model.Historical)
+	}
+	if model.EffectiveFinding != nil {
+		response["effectiveFinding"] = map[string]any{
+			"eventId": model.EffectiveFinding.EventID, "classification": model.EffectiveFinding.Classification,
+			"evidenceHash":   canonicalSafeEvidenceHash(model.EffectiveFinding.EvidenceHash),
+			"effectiveAt":    model.EffectiveFinding.EffectiveAt,
+			"restrictedLink": "/internal/integrity/matchsets/" + urlPathEscape(matchSetID) + "/evidence#effective-finding",
+		}
+	}
+	if err := assertIntegrityEvidenceProjectionPrivacySafe(response); err != nil {
+		writeServiceError(writer, http.StatusInternalServerError, "INTERNAL", "Integrity evidence is unavailable.")
+		return
+	}
+	writePrivateJSONValue(writer, http.StatusOK, response)
 }
 
 func (server *LiveServer) signUp(writer http.ResponseWriter, request *http.Request) {
@@ -555,15 +746,7 @@ func (server *LiveServer) createStrategyRevision(writer http.ResponseWriter, req
 	if err != nil || user == nil {
 		return
 	}
-	var body struct {
-		StrategyID   string `json:"strategyId"`
-		Source       string `json:"source"`
-		SourceFormat string `json:"sourceFormat"`
-		Label        string `json:"label"`
-		Notes        string `json:"notes"`
-		StarterID    string `json:"starterId"`
-		AdvancedID   string `json:"advancedId"`
-	}
+	var body strategyRevisionCreateBody
 	if !decodeBody(writer, request, &body) {
 		return
 	}
@@ -581,43 +764,16 @@ func (server *LiveServer) createStrategyRevision(writer http.ResponseWriter, req
 		Label:      body.Label,
 		Notes:      body.Notes,
 	}
-	if body.SourceFormat == "python" {
-		validation, failure := server.orchestrator.runtime.validateStrategy(request.Context(), body.SourceFormat, body.Source, body.StrategyID)
-		if failure != nil {
-			writeServiceError(writer, http.StatusServiceUnavailable, "RUNTIME_SERVICE_UNAVAILABLE", fmt.Sprintf("Python validation requires the runtime execution service: %s %s.", failure.Code, failure.ErrorMessage))
-			return
-		}
-		if !validation.OK {
-			input.Runtime = pythonRuntimeMetadata()
-			input.Validation = validation.Validation
-			input.Metadata = map[string]any{"tags": []string{"python", "provider", "invalid"}}
-		} else {
-			input.Runtime = validation.Runtime
-			input.Validation = validation.Validation
-			input.EngineCompatibility = validation.EngineCompatibility
-			input.Metadata = validation.Metadata
-		}
+	validation, failure := server.orchestrator.runtime.validateStrategy(request.Context(), body.SourceFormat, body.Source, body.StrategyID)
+	if failure != nil {
+		writeServiceError(writer, http.StatusServiceUnavailable, "RUNTIME_SERVICE_UNAVAILABLE", fmt.Sprintf("%s validation requires the runtime execution service: %s %s.", sourceFormatLabel(body.SourceFormat), failure.Code, failure.ErrorMessage))
+		return
 	}
-	if body.SourceFormat == "rust" || body.SourceFormat == "zig" {
-		languageLabel := "Rust"
-		if body.SourceFormat == "zig" {
-			languageLabel = "Zig"
-		}
-		validation, failure := server.orchestrator.runtime.validateStrategy(request.Context(), body.SourceFormat, body.Source, body.StrategyID)
-		if failure != nil {
-			writeServiceError(writer, http.StatusServiceUnavailable, "RUNTIME_SERVICE_UNAVAILABLE", fmt.Sprintf("%s validation requires the runtime execution service: %s %s.", languageLabel, failure.Code, failure.ErrorMessage))
-			return
-		}
-		if !validation.OK {
-			input.Runtime = wasmWasiRuntimeMetadata(body.SourceFormat)
-			input.Validation = validation.Validation
-			input.Metadata = map[string]any{"tags": []string{body.SourceFormat, "wasm-wasi", "non-counted", "exhibition-alpha"}}
-		} else {
-			input.Runtime = validation.Runtime
-			input.Validation = validation.Validation
-			input.EngineCompatibility = validation.EngineCompatibility
-			input.Metadata = validation.Metadata
-		}
+	var readiness revisionReadinessResult
+	input, readiness = accountRevisionInsertFromProviderValidation(user.ID, body, validation)
+	if readiness.State == revisionReadinessInvalid {
+		writeServiceError(writer, http.StatusBadRequest, "PROVIDER_PROOF_INVALID", "Strategy Revision could not be saved as execution-ready because provider proof did not match the submitted source and runtime metadata.")
+		return
 	}
 	if artifact, ok := server.matchSubmittedArtifact(body.Source, body.StarterID, "starter"); ok {
 		input.applyArtifact(artifact)
@@ -636,7 +792,119 @@ func (server *LiveServer) createStrategyRevision(writer http.ResponseWriter, req
 		"strategyId":         revision["strategyId"],
 		"strategyRevisionId": revision["strategyRevisionId"],
 		"validationStatus":   revision["validationStatus"],
+		"entryEligible":      readiness.EntryEligible,
+		"countedEligible":    readiness.CountedEligible,
 	})
+}
+
+func accountRevisionInsertFromProviderValidation(userID string, body strategyRevisionCreateBody, validation *runtimeServiceValidationResponse) (accountRevisionInsert, revisionReadinessResult) {
+	return accountRevisionInsertFromProviderValidationForSelectedABI(userID, body, validation, selectedStrategyRuntimeABIVersion())
+}
+
+func accountRevisionInsertFromProviderValidationForSelectedABI(userID string, body strategyRevisionCreateBody, validation *runtimeServiceValidationResponse, selectedRuntimeABI string) (accountRevisionInsert, revisionReadinessResult) {
+	input := accountRevisionInsert{
+		UserID:     userID,
+		StrategyID: body.StrategyID,
+		Source:     body.Source,
+		Label:      body.Label,
+		Notes:      body.Notes,
+		Runtime:    runtimeMetadataForSourceFormat(body.SourceFormat),
+		Validation: map[string]any{
+			"valid":       false,
+			"errors":      []map[string]any{validationIssue("PROVIDER_VALIDATION_MISSING", "Runtime-service validation did not return Strategy validation metadata.")},
+			"warnings":    []map[string]any{},
+			"sourceHash":  hashString(body.Source),
+			"sourceBytes": len([]byte(body.Source)),
+		},
+		EngineCompatibility: nil,
+		Metadata:            map[string]any{"tags": []string{body.SourceFormat, "provider", "invalid"}},
+		SourceHash:          hashString(body.Source),
+		SourceBytes:         len([]byte(body.Source)),
+	}
+	if validation != nil && validation.OK {
+		if validation.Runtime != nil {
+			input.Runtime = validation.Runtime
+		}
+		if validation.Validation != nil {
+			input.Validation = validation.Validation
+		}
+		if validation.EngineCompatibility != nil {
+			input.EngineCompatibility = validation.EngineCompatibility
+		}
+		if validation.Metadata != nil {
+			input.Metadata = cloneMap(validation.Metadata)
+		}
+		if validation.SourceHash != "" {
+			input.SourceHash = validation.SourceHash
+		}
+		if validation.SourceBytes > 0 {
+			input.SourceBytes = validation.SourceBytes
+		}
+	}
+	if input.Metadata == nil {
+		input.Metadata = map[string]any{}
+	}
+	if validationStatus(input.Validation) == "valid" {
+		runtimeABI := stringValue(input.Runtime, "abiVersion")
+		languageID := stringValue(mapValue(input.Runtime, "language"), "id")
+		if runtimeABI != selectedRuntimeABI ||
+			input.SourceHash != hashString(body.Source) ||
+			input.SourceBytes != len([]byte(body.Source)) ||
+			stringValue(input.Validation, "sourceHash") != hashString(body.Source) ||
+			intValue(input.Validation, "sourceBytes") != len([]byte(body.Source)) ||
+			!providerArtifactSourceIdentityMatchesWrite(body.Source, languageID, runtimeABI, input.Metadata) ||
+			!providerProofMatches(input.Metadata, input.SourceHash, input.SourceBytes, languageID, runtimeABI) {
+			readiness := revisionReadinessResult{
+				State:          revisionReadinessInvalid,
+				PublicCategory: "incompatible_runtime_metadata",
+			}
+			input.Metadata["readinessState"] = string(readiness.State)
+			input.Metadata["readinessCategory"] = readiness.PublicCategory
+			input.Metadata["entryEligible"] = false
+			input.Metadata["countedEligible"] = false
+			return input, readiness
+		}
+	}
+	readiness := classifyRevisionReadinessForSelectedABI(revisionReadinessInput{
+		SourceFormat:        body.SourceFormat,
+		Runtime:             input.Runtime,
+		Validation:          input.Validation,
+		Metadata:            input.Metadata,
+		EngineCompatibility: input.EngineCompatibility,
+		SourceHash:          input.SourceHash,
+		SourceBytes:         input.SourceBytes,
+	}, selectedRuntimeABI)
+	input.Metadata["readinessState"] = string(readiness.State)
+	input.Metadata["readinessCategory"] = readiness.PublicCategory
+	input.Metadata["entryEligible"] = readiness.EntryEligible
+	input.Metadata["countedEligible"] = readiness.CountedEligible
+	return input, readiness
+}
+
+func runtimeMetadataForSourceFormat(sourceFormat string) map[string]any {
+	switch sourceFormat {
+	case "python":
+		return pythonRuntimeMetadata()
+	case "rust", "zig":
+		return wasmWasiRuntimeMetadata(sourceFormat)
+	default:
+		return defaultRuntimeMetadata()
+	}
+}
+
+func sourceFormatLabel(sourceFormat string) string {
+	switch sourceFormat {
+	case "typescript":
+		return "TypeScript"
+	case "python":
+		return "Python"
+	case "rust":
+		return "Rust"
+	case "zig":
+		return "Zig"
+	default:
+		return "Strategy"
+	}
 }
 
 func (server *LiveServer) forkStarterStrategy(writer http.ResponseWriter, request *http.Request) {
@@ -717,7 +985,7 @@ func (server *LiveServer) forkableStrategyArtifact(kind string, artifactID strin
 	if stringValue(artifact.Validation, "sourceHash") != artifact.Source.Hash || artifact.Source.Hash != hashString(artifact.Source.Text) {
 		return strategyArtifact{}, errors.New("strategy artifact source hash drift")
 	}
-	if !runtimeAllowsCountedPlay(artifact.Runtime, nil, "", 0) {
+	if runtimeSemantics(artifact.Runtime)["countedPlayEligible"] != true {
 		return strategyArtifact{}, errors.New("strategy artifact runtime is not counted-play eligible")
 	}
 	return artifact, nil
@@ -931,6 +1199,7 @@ func (row revisionRow) publicCard() map[string]any {
 		"sourceHash":          row.SourceHash,
 		"sourceBytes":         row.SourceBytes,
 		"runtime":             publicRuntimeMetadata(row.Runtime),
+		"runtimeSemantics":    runtimeSemanticsForRevision(row.Runtime, row.Metadata, row.SourceHash, row.SourceBytes),
 		"engineCompatibility": row.Engine,
 		"validationStatus":    validationStatus(row.Validation),
 		"record": map[string]any{
@@ -953,7 +1222,12 @@ func (row revisionRow) publicCard() map[string]any {
 func (server *LiveServer) publicPlayerResults(ctx context.Context, userID string) ([]map[string]any, error) {
 	rows, err := server.pool.Query(ctx, `
 		select distinct ms.id, coalesce(ms.ladder_season_id, ''), ms.status,
-		       ms.counted_status, ms.public_counted_reason, ms.public_counted_explanation
+		       ms.counted_status, ms.review_status, ms.governance_changed_at, ms.scoring,
+		       (select count(*)::integer from match_set_matches msm where msm.match_set_id = ms.id),
+		       (select count(distinct c.match_id)::integer
+		        from match_set_matches msm
+		        join chronicles c on c.match_id = msm.match_id
+		        where msm.match_set_id = ms.id)
 		from match_sets ms
 		join competition_entrants ce on ce.match_set_id = ms.id
 		where ce.owner_user_id = $1
@@ -967,12 +1241,25 @@ func (server *LiveServer) publicPlayerResults(ctx context.Context, userID string
 	defer rows.Close()
 	results := []map[string]any{}
 	for rows.Next() {
-		var matchSetID, seasonID, status, countedStatus string
-		var reason, explanation *string
-		if err := rows.Scan(&matchSetID, &seasonID, &status, &countedStatus, &reason, &explanation); err != nil {
+		var matchSetID, seasonID, status, countedStatus, reviewStatus string
+		var governanceChangedAt *time.Time
+		var scoringRaw []byte
+		var matchCount, chronicleCount int
+		if err := rows.Scan(&matchSetID, &seasonID, &status, &countedStatus, &reviewStatus, &governanceChangedAt, &scoringRaw, &matchCount, &chronicleCount); err != nil {
 			return nil, err
 		}
-		result := ladderMatchSetSummary(matchSetID, seasonID, status, countedStatus, reason, explanation, []string{})
+		_, scoringAvailable := storedMatchSetScoring(scoringRaw)
+		countedState := classifyCompetitionCountedState(competitionCountedStateInput{
+			ExecutionStatus:     publicCompetitionExecutionStatus(status),
+			StoredState:         countedStatus,
+			ReviewState:         reviewStatus,
+			Origin:              "trial",
+			ExpectedMatchCount:  matchCount,
+			ChronicleMatchCount: chronicleCount,
+			ScoringAvailable:    scoringAvailable,
+		})
+		governance := projectPublicCompetitionGovernance(countedState, reviewStatus, governanceChangedAt, chronicleCount > 0)
+		result := ladderMatchSetSummaryWithCountedState(matchSetID, seasonID, status, countedState, []string{}, nil, governance)
 		results = append(results, result)
 	}
 	return results, rows.Err()
@@ -1008,14 +1295,17 @@ func (server *LiveServer) publicPlayerLadderHistory(ctx context.Context, userID 
 
 func (server *LiveServer) publicLadder(ctx context.Context, seasonIDOrSlug string) (map[string]any, error) {
 	var seasonID, slug, name, status, seed, stalePolicy string
-	var description *string
+	var description, outcomeStatus, outcomeExplanation *string
+	var openedAt, closedAt, scheduledAt, completedAt, archivedAt *time.Time
 	var minEntries, targetPodSize int
 	err := server.pool.QueryRow(ctx, `
 		select id, slug, name, description, status, season_seed,
-		       minimum_entries, target_pod_size, stale_revision_policy
+		       minimum_entries, target_pod_size, stale_revision_policy,
+		       opened_at, closed_at, scheduled_at, completed_at, archived_at,
+		       outcome_status, public_outcome_explanation
 		from trial_ladder_seasons
 		where id = $1 or slug = $1
-	`, seasonIDOrSlug).Scan(&seasonID, &slug, &name, &description, &status, &seed, &minEntries, &targetPodSize, &stalePolicy)
+	`, seasonIDOrSlug).Scan(&seasonID, &slug, &name, &description, &status, &seed, &minEntries, &targetPodSize, &stalePolicy, &openedAt, &closedAt, &scheduledAt, &completedAt, &archivedAt, &outcomeStatus, &outcomeExplanation)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
 	}
@@ -1031,12 +1321,22 @@ func (server *LiveServer) publicLadder(ctx context.Context, seasonIDOrSlug strin
 		return nil, err
 	}
 	dto := map[string]any{
-		"seasonId":    seasonID,
-		"slug":        slug,
-		"name":        name,
-		"status":      status,
-		"statusLabel": trialLadderStatusLabel(status),
-		"seasonSeed":  seed,
+		"seasonId":         seasonID,
+		"slug":             slug,
+		"name":             name,
+		"status":           status,
+		"statusLabel":      trialLadderStatusLabel(status),
+		"seasonSeed":       seed,
+		"entryWindow":      trialSeasonEntryWindow(status, openedAt, closedAt),
+		"schedulingWindow": trialSeasonSchedulingWindow(status, scheduledAt),
+		"outcome": trialSeasonOutcomeProjection(
+			valueOr(outcomeStatus, "pending"),
+			outcomeExplanation,
+		),
+		"links": map[string]any{
+			"seasonHref":    "/ladder/" + urlPathEscape(slug),
+			"standingsHref": "/ladder/" + urlPathEscape(slug) + "#standings",
+		},
 		"policy": map[string]any{
 			"oneEntryPerUser":     true,
 			"replacementPolicy":   "next-season-only",
@@ -1066,6 +1366,16 @@ func (server *LiveServer) publicLadder(ctx context.Context, seasonIDOrSlug strin
 	if description != nil && *description != "" {
 		dto["description"] = *description
 	}
+	copyTime := func(key string, value *time.Time) {
+		if value != nil {
+			dto[key] = value.UTC().Format(time.RFC3339Nano)
+		}
+	}
+	copyTime("openedAt", openedAt)
+	copyTime("closedAt", closedAt)
+	copyTime("scheduledAt", scheduledAt)
+	copyTime("completedAt", completedAt)
+	copyTime("archivedAt", archivedAt)
 	return dto, nil
 }
 
@@ -1102,10 +1412,12 @@ func (server *LiveServer) ladderMatchSetsAndStandings(ctx context.Context, seaso
 		  ms.ladder_schedule_run_id,
 		  ms.ladder_pod_index,
 		  ms.counted_status,
-		  ms.public_counted_reason,
-		  ms.public_counted_explanation,
+		  ms.review_status,
+		  ms.governance_changed_at,
+		  ms.scoring,
 		  count(distinct c.match_id)::integer as chronicle_count,
-		  count(distinct msm.match_id)::integer as match_count
+		  count(distinct msm.match_id)::integer as match_count,
+		  min(case when c.match_id is not null then msm.match_id end) as replay_match_id
 		from match_sets ms
 		left join match_set_matches msm on msm.match_set_id = ms.id
 		left join chronicles c on c.match_id = msm.match_id
@@ -1119,30 +1431,55 @@ func (server *LiveServer) ladderMatchSetsAndStandings(ctx context.Context, seaso
 	defer rows.Close()
 	matchSets := []map[string]any{}
 	totals := map[string]*matchSetStrategyScore{}
+	evidence := map[string]*standingCompetitionEvidence{}
 	for rows.Next() {
 		var matchSetID, status, countedStatus string
 		var scheduleRunID *string
 		var podIndex *int
-		var reason, explanation *string
+		var replayMatchID *string
+		var reviewStatus string
+		var governanceChangedAt *time.Time
+		var scoringRaw []byte
 		var chronicleCount, matchCount int
-		if err := rows.Scan(&matchSetID, &status, &scheduleRunID, &podIndex, &countedStatus, &reason, &explanation, &chronicleCount, &matchCount); err != nil {
+		if err := rows.Scan(&matchSetID, &status, &scheduleRunID, &podIndex, &countedStatus, &reviewStatus, &governanceChangedAt, &scoringRaw, &chronicleCount, &matchCount, &replayMatchID); err != nil {
 			return nil, nil, err
 		}
-		refreshedStatus, refreshedScoring, err := newMatchSetStatusService(server.pool).refreshMatchSetStatus(ctx, matchSetID)
-		if err != nil {
-			return nil, nil, err
-		}
-		classification := classifyLadderCountedStatus(refreshedStatus, countedStatus, reason, explanation, chronicleCount, matchCount)
-		if stringValue(classification, "countedStatus") == "counted" {
-			for _, ranking := range refreshedScoring.Rankings {
+		storedScoring, scoringAvailable := storedMatchSetScoring(scoringRaw)
+		countedState := classifyCompetitionCountedState(competitionCountedStateInput{
+			ExecutionStatus:     publicCompetitionExecutionStatus(status),
+			StoredState:         countedStatus,
+			ReviewState:         reviewStatus,
+			Origin:              "trial",
+			ExpectedMatchCount:  matchCount,
+			ChronicleMatchCount: chronicleCount,
+			ScoringAvailable:    scoringAvailable,
+		})
+		if stringValue(countedState, "state") == "counted" {
+			for _, ranking := range storedScoring.Rankings {
 				addMatchSetScore(totals, ranking)
 			}
 		}
-		entrantIDs, err := server.ladderMatchSetEntrantIDs(ctx, matchSetID)
+		entrantIDs, strategyRevisionIDs, err := server.ladderMatchSetEntrants(ctx, matchSetID)
 		if err != nil {
 			return nil, nil, err
 		}
-		summary := ladderMatchSetSummary(matchSetID, seasonID, refreshedStatus, stringValue(classification, "countedStatus"), stringPtrFromMap(classification, "publicReason"), stringPtrFromMap(classification, "publicExplanation"), entrantIDs)
+		governance := projectPublicCompetitionGovernance(countedState, reviewStatus, governanceChangedAt, replayMatchID != nil)
+		summary := ladderMatchSetSummaryWithCountedState(matchSetID, seasonID, status, countedState, entrantIDs, replayMatchID, governance)
+		resultHref := stringValue(summary, "resultHref")
+		replayHref := stringValue(summary, "replayHref")
+		for _, revisionID := range uniqueSortedStrings(strategyRevisionIDs) {
+			item := getStandingCompetitionEvidence(evidence, revisionID)
+			if stringValue(countedState, "state") == "counted" {
+				item.CountedMatchSetCount++
+			} else {
+				item.ExcludedMatchSetCount++
+			}
+			item.Availability = append(item.Availability, stringValue(countedState, "evidenceAvailability"))
+			item.ResultLinks[resultHref] = struct{}{}
+			if replayHref != "" {
+				item.ReplayLinks[replayHref] = struct{}{}
+			}
+		}
 		if scheduleRunID != nil && *scheduleRunID != "" {
 			summary["scheduleRunId"] = *scheduleRunID
 		}
@@ -1154,10 +1491,10 @@ func (server *LiveServer) ladderMatchSetsAndStandings(ctx context.Context, seaso
 	if err := rows.Err(); err != nil {
 		return nil, nil, err
 	}
-	return matchSets, ladderStandingsFromScores(totals, entries), nil
+	return matchSets, ladderStandingsFromScores(totals, entries, evidence), nil
 }
 
-func (server *LiveServer) ladderMatchSetEntrantIDs(ctx context.Context, matchSetID string) ([]string, error) {
+func (server *LiveServer) ladderMatchSetEntrants(ctx context.Context, matchSetID string) ([]string, []string, error) {
 	rows, err := server.pool.Query(ctx, `
 		select snapshot
 		from competition_entrants
@@ -1165,59 +1502,211 @@ func (server *LiveServer) ladderMatchSetEntrantIDs(ctx context.Context, matchSet
 		order by entrant_index asc
 	`, matchSetID)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	defer rows.Close()
 	entrantIDs := []string{}
+	strategyRevisionIDs := []string{}
 	for rows.Next() {
 		var snapshotRaw []byte
 		if err := rows.Scan(&snapshotRaw); err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		snapshot := jsonMap(snapshotRaw)
 		entrantIDs = append(entrantIDs, fallbackString(stringValue(snapshot, "entryId"), stringValue(snapshot, "entrantId")))
+		strategyRevisionIDs = append(strategyRevisionIDs, stringValue(snapshot, "strategyRevisionId"))
 	}
-	return entrantIDs, rows.Err()
+	return entrantIDs, strategyRevisionIDs, rows.Err()
 }
 
-func classifyLadderCountedStatus(status string, storedCountedStatus string, storedReason *string, storedExplanation *string, chronicleCount int, matchCount int) map[string]any {
-	if storedCountedStatus != "" && storedCountedStatus != "pending" {
-		result := map[string]any{
-			"countedStatus": storedCountedStatus,
-			"publicExplanation": func() string {
-				if storedCountedStatus == "under_review" {
-					return "Result is under review and excluded until review completes."
-				}
-				return valueOr(storedExplanation, "Result does not count for standings.")
-			}(),
+type competitionCountedStateInput struct {
+	ExecutionStatus     string
+	StoredState         string
+	ReviewState         string
+	Origin              string
+	ExpectedMatchCount  int
+	ChronicleMatchCount int
+	ScoringAvailable    bool
+}
+
+type competitionCountedStateCopy struct {
+	Label           string
+	Meaning         string
+	StandingsEffect string
+}
+
+var competitionCountedStatePublicCopy = map[string]competitionCountedStateCopy{
+	"pending": {
+		Label: "Pending", Meaning: "MatchSet has not reached a counted result yet.",
+		StandingsEffect: "No standings effect until counted evidence exists.",
+	},
+	"counted": {
+		Label: "Counted", Meaning: "Complete public evidence is eligible for trial standings.",
+		StandingsEffect: "Included in resettable Season-scoped standings.",
+	},
+	"retrying": {
+		Label: "Retrying", Meaning: "System retry is still attempting to produce public evidence.",
+		StandingsEffect: "No standings effect while retrying.",
+	},
+	"degraded_system_failure": {
+		Label: "Degraded system failure", Meaning: "A system-side failure prevented normal counted evidence from completing.",
+		StandingsEffect: "Excluded unless a later governance phase resolves it.",
+	},
+	"non_counted": {
+		Label: "Non-counted", Meaning: "The MatchSet is public evidence but not standings evidence.",
+		StandingsEffect: "Excluded from counted standings.",
+	},
+	"non_competitive": {
+		Label: "Non-competitive", Meaning: "The MatchSet is exhibition, study, or otherwise non-trial.",
+		StandingsEffect: "Excluded from counted standings.",
+	},
+	"under_review": {
+		Label: "Under review", Meaning: "A governance review is pending.",
+		StandingsEffect: "Held out of standings until resolved.",
+	},
+	"disputed": {
+		Label: "Disputed", Meaning: "A result dispute exists and is represented only coarsely.",
+		StandingsEffect: "Held or excluded according to public governance status.",
+	},
+	"invalid": {
+		Label: "Invalid", Meaning: "The result is not valid counted competition evidence.",
+		StandingsEffect: "Excluded from counted standings.",
+	},
+	"invalidated": {
+		Label: "Invalidated", Meaning: "A previously available result is no longer counted.",
+		StandingsEffect: "Excluded from counted standings and recompute inputs.",
+	},
+}
+
+func classifyCompetitionCountedState(input competitionCountedStateInput) map[string]any {
+	state := storedCompetitionGovernanceState(input)
+	if state == "" {
+		switch {
+		case input.StoredState == "degraded_system_failure" || input.ExecutionStatus == "degraded" || input.ExecutionStatus == "failed":
+			state = "degraded_system_failure"
+		case input.ExecutionStatus == "running":
+			state = "retrying"
+		case input.ExecutionStatus == "complete" && input.ExpectedMatchCount > 0 && input.ChronicleMatchCount == input.ExpectedMatchCount && input.ScoringAvailable:
+			state = "counted"
+		default:
+			state = "pending"
 		}
-		if storedReason != nil && *storedReason != "" {
-			result["publicReason"] = *storedReason
+	}
+	copy := competitionCountedStatePublicCopy[state]
+	projection := map[string]any{
+		"state":                state,
+		"publicLabel":          copy.Label,
+		"publicExplanation":    copy.Meaning,
+		"standingsEffect":      copy.StandingsEffect,
+		"evidenceAvailability": competitionEvidenceAvailability(input),
+	}
+	if reason := competitionCountedPublicReason(state); reason != "" {
+		projection["publicReason"] = reason
+	}
+	return projection
+}
+
+func projectPublicCompetitionGovernance(countedState map[string]any, reviewState string, changedAt *time.Time, replayAvailable bool) map[string]any {
+	state := stringValue(countedState, "state")
+	status := "clear"
+	if reviewState == "resolved" && state == "counted" {
+		status = "resolved"
+	} else {
+		switch state {
+		case "under_review", "disputed", "non_counted", "non_competitive", "invalid", "invalidated":
+			status = state
 		}
-		return result
 	}
-	if status == matchSetStatusComplete && matchCount > 0 && chronicleCount == matchCount {
-		return map[string]any{
-			"countedStatus":     "counted",
-			"publicExplanation": "Counts for trial ladder standings.",
+	projection := map[string]any{
+		"status":            status,
+		"publicExplanation": stringValue(countedState, "publicExplanation"),
+		"standingsEffect":   stringValue(countedState, "standingsEffect"),
+		"replayAvailable":   replayAvailable,
+	}
+	if reason := stringValue(countedState, "publicReason"); reason != "" {
+		projection["publicReason"] = reason
+	}
+	if changedAt != nil {
+		projection["changedAt"] = changedAt.UTC().Format(time.RFC3339Nano)
+	}
+	return projection
+}
+
+func storedCompetitionGovernanceState(input competitionCountedStateInput) string {
+	for _, state := range []string{"invalidated", "invalid", "disputed", "under_review", "non_competitive", "non_counted"} {
+		if input.StoredState == state {
+			return state
 		}
 	}
-	if status == matchSetStatusFailedSystem || status == matchSetStatusDegraded {
-		return map[string]any{
-			"countedStatus":     "non_counted",
-			"publicReason":      "system_failure",
-			"publicExplanation": "System failure prevented complete evidence; this result is excluded.",
-		}
+	if input.ReviewState == "disputed" {
+		return "disputed"
 	}
-	countedStatus := "pending"
-	if status == matchSetStatusRunning {
-		countedStatus = "retrying"
+	if input.ReviewState == "under_review" {
+		return "under_review"
 	}
-	return map[string]any{
-		"countedStatus":     countedStatus,
-		"publicReason":      "incomplete_evidence",
-		"publicExplanation": "Waiting for complete replay-backed evidence.",
+	if input.Origin == "non_competitive" {
+		return "non_competitive"
 	}
+	return ""
+}
+
+func competitionEvidenceAvailability(input competitionCountedStateInput) string {
+	if input.ExpectedMatchCount > 0 && input.ChronicleMatchCount == input.ExpectedMatchCount && input.ScoringAvailable {
+		return "available"
+	}
+	if input.ChronicleMatchCount > 0 || input.ScoringAvailable {
+		return "partial"
+	}
+	return "unavailable"
+}
+
+func competitionCountedPublicReason(state string) string {
+	switch state {
+	case "degraded_system_failure":
+		return "system_failure"
+	case "pending", "retrying":
+		return "incomplete_evidence"
+	case "invalid":
+		return "invalid_result"
+	case "invalidated":
+		return "invalidated"
+	case "under_review":
+		return "governance_hold"
+	case "disputed":
+		return "disputed"
+	case "non_counted":
+		return "non_counted"
+	case "non_competitive":
+		return "non_competitive"
+	default:
+		return ""
+	}
+}
+
+func publicCompetitionExecutionStatus(status string) string {
+	switch status {
+	case matchSetStatusComplete:
+		return "complete"
+	case matchSetStatusRunning:
+		return "running"
+	case matchSetStatusDegraded:
+		return "degraded"
+	case matchSetStatusFailedSystem, matchSetStatusBlocked:
+		return "failed"
+	default:
+		return "queued"
+	}
+}
+
+func storedMatchSetScoring(raw []byte) (matchSetScore, bool) {
+	if len(raw) == 0 || string(raw) == "null" {
+		return matchSetScore{}, false
+	}
+	var scoring matchSetScore
+	if err := json.Unmarshal(raw, &scoring); err != nil {
+		return matchSetScore{}, false
+	}
+	return scoring, true
 }
 
 func stringPtrFromMap(value map[string]any, key string) *string {
@@ -1248,7 +1737,72 @@ func addMatchSetScore(totals map[string]*matchSetStrategyScore, entry matchSetSt
 	current.SurvivalTurns += entry.SurvivalTurns
 }
 
-func ladderStandingsFromScores(totals map[string]*matchSetStrategyScore, entries []map[string]any) []map[string]any {
+type standingCompetitionEvidence struct {
+	CountedMatchSetCount  int
+	ExcludedMatchSetCount int
+	Availability          []string
+	ResultLinks           map[string]struct{}
+	ReplayLinks           map[string]struct{}
+}
+
+func getStandingCompetitionEvidence(values map[string]*standingCompetitionEvidence, strategyRevisionID string) *standingCompetitionEvidence {
+	if existing := values[strategyRevisionID]; existing != nil {
+		return existing
+	}
+	created := &standingCompetitionEvidence{
+		Availability: []string{},
+		ResultLinks:  map[string]struct{}{},
+		ReplayLinks:  map[string]struct{}{},
+	}
+	values[strategyRevisionID] = created
+	return created
+}
+
+func aggregateCompetitionEvidenceAvailability(values []string) string {
+	if len(values) == 0 {
+		return "unavailable"
+	}
+	allAvailable := true
+	allUnavailable := true
+	for _, value := range values {
+		allAvailable = allAvailable && value == "available"
+		allUnavailable = allUnavailable && value == "unavailable"
+	}
+	if allAvailable {
+		return "available"
+	}
+	if allUnavailable {
+		return "unavailable"
+	}
+	return "partial"
+}
+
+func sortedStringSet(values map[string]struct{}) []string {
+	result := make([]string, 0, len(values))
+	for value := range values {
+		result = append(result, value)
+	}
+	sort.Strings(result)
+	return result
+}
+
+func uniqueSortedStrings(values []string) []string {
+	set := map[string]struct{}{}
+	for _, value := range values {
+		if value != "" {
+			set[value] = struct{}{}
+		}
+	}
+	return sortedStringSet(set)
+}
+
+func ladderStandingsFromScores(totals map[string]*matchSetStrategyScore, entries []map[string]any, evidence map[string]*standingCompetitionEvidence) []map[string]any {
+	for _, entry := range entries {
+		revisionID := stringValue(entry, "strategyRevisionId")
+		if totals[revisionID] == nil {
+			totals[revisionID] = &matchSetStrategyScore{StrategyRevisionID: revisionID, Penalties: []scorePenalty{}}
+		}
+	}
 	rankings := make([]matchSetStrategyScore, 0, len(totals))
 	for _, ranking := range totals {
 		rankings = append(rankings, *ranking)
@@ -1278,6 +1832,7 @@ func ladderStandingsFromScores(totals map[string]*matchSetStrategyScore, entries
 	standings := []map[string]any{}
 	for index, ranking := range rankings {
 		entry := entryByRevision[ranking.StrategyRevisionID]
+		competitionEvidence := getStandingCompetitionEvidence(evidence, ranking.StrategyRevisionID)
 		standings = append(standings, map[string]any{
 			"rank":               index + 1,
 			"entrantId":          fallbackString(stringValue(entry, "entryId"), ranking.StrategyRevisionID),
@@ -1293,6 +1848,13 @@ func ladderStandingsFromScores(totals map[string]*matchSetStrategyScore, entries
 			"survivingSoldiers":  ranking.SurvivingSoldiers,
 			"survivalTurns":      ranking.SurvivalTurns,
 			"tieBreakerPath":     []string{"points", "wins", "survivingSoldiers", "survivalTurns", "strategyRevisionId"},
+			"competitionEvidence": map[string]any{
+				"countedMatchSetCount":  competitionEvidence.CountedMatchSetCount,
+				"excludedMatchSetCount": competitionEvidence.ExcludedMatchSetCount,
+				"evidenceAvailability":  aggregateCompetitionEvidenceAvailability(competitionEvidence.Availability),
+				"resultLinks":           sortedStringSet(competitionEvidence.ResultLinks),
+				"replayLinks":           sortedStringSet(competitionEvidence.ReplayLinks),
+			},
 		})
 	}
 	return standings
@@ -1304,23 +1866,44 @@ func (server *LiveServer) publicMatchSetResult(ctx context.Context, matchSetID s
 	} else if !ok {
 		return nil, nil
 	}
-	if _, _, err := newMatchSetStatusService(server.pool).refreshMatchSetStatus(ctx, matchSetID); err != nil {
-		return nil, err
-	}
-	var status, countedStatus string
-	var competitionPresetID, competitionPresetVersion, scoringPolicyVersion, visibility *string
-	var countedReason, countedExplanation *string
+	var status, countedStatus, reviewStatus string
+	var competitionPresetID, competitionPresetVersion, scoringPolicyVersion, visibility, seasonID *string
+	var governanceChangedAt *time.Time
 	var scoringRaw []byte
+	var matchCount, chronicleCount int
 	err := server.pool.QueryRow(ctx, `
 		select status, competition_preset_id, competition_preset_version,
 		       scoring_policy_version, visibility, scoring,
-		       counted_status, public_counted_reason, public_counted_explanation
+		       counted_status, review_status, governance_changed_at, ladder_season_id,
+		       (select count(*)::integer from match_set_matches msm where msm.match_set_id = match_sets.id),
+		       (select count(distinct c.match_id)::integer
+		        from match_set_matches msm
+		        join chronicles c on c.match_id = msm.match_id
+		        where msm.match_set_id = match_sets.id)
 		from match_sets
 		where id = $1
-	`, matchSetID).Scan(&status, &competitionPresetID, &competitionPresetVersion, &scoringPolicyVersion, &visibility, &scoringRaw, &countedStatus, &countedReason, &countedExplanation)
+	`, matchSetID).Scan(&status, &competitionPresetID, &competitionPresetVersion, &scoringPolicyVersion, &visibility, &scoringRaw, &countedStatus, &reviewStatus, &governanceChangedAt, &seasonID, &matchCount, &chronicleCount)
 	if errors.Is(err, pgx.ErrNoRows) || competitionPresetID == nil {
 		return nil, nil
 	}
+	if err != nil {
+		return nil, err
+	}
+	_, scoringAvailable := storedMatchSetScoring(scoringRaw)
+	origin := "non_competitive"
+	if seasonID != nil && *seasonID != "" {
+		origin = "trial"
+	}
+	countedState := classifyCompetitionCountedState(competitionCountedStateInput{
+		ExecutionStatus:     publicCompetitionExecutionStatus(status),
+		StoredState:         countedStatus,
+		ReviewState:         reviewStatus,
+		Origin:              origin,
+		ExpectedMatchCount:  matchCount,
+		ChronicleMatchCount: chronicleCount,
+		ScoringAvailable:    scoringAvailable,
+	})
+	integrityModel, err := server.loadIntegrityEvidenceReadModel(ctx, matchSetID)
 	if err != nil {
 		return nil, err
 	}
@@ -1328,21 +1911,40 @@ func (server *LiveServer) publicMatchSetResult(ctx context.Context, matchSetID s
 	if err != nil {
 		return nil, err
 	}
+	attachPublicIntegrityEvidenceToEntrants(entrants, integrityModel)
 	matches, err := server.matchSetEvidence(ctx, matchSetID, entrants)
 	if err != nil {
 		return nil, err
 	}
+	attachPublicIntegrityEvidenceToMatches(matches, integrityModel)
 	matchExecutionMetadata, err := server.matchSetExecutionMetadata(ctx, matchSetID)
 	if err != nil {
 		return nil, err
 	}
 	metadata := map[string]any{
-		"countedStatus":     countedStatus,
-		"publicReason":      countedReason,
-		"publicExplanation": countedExplanation,
+		"countedStatus":     stringValue(countedState, "state"),
+		"publicExplanation": stringValue(countedState, "publicExplanation"),
+	}
+	if publicReason := stringValue(countedState, "publicReason"); publicReason != "" {
+		metadata["publicReason"] = publicReason
 	}
 	if len(matchExecutionMetadata) > 0 {
 		metadata["matchExecution"] = matchExecutionMetadata
+	}
+	integrityProjection := projectPublicMatchSetIntegrityEvidence(integrityModel)
+	competition := map[string]any{"countedState": countedState}
+	governance := projectPublicCompetitionGovernance(
+		countedState,
+		reviewStatus,
+		governanceChangedAt,
+		matchSetReplayAvailable(matches),
+	)
+	if warning, ok := integrityProjection["warning"].(map[string]any); ok {
+		governance["integrityWarning"] = cloneIntegrityEvidenceMap(warning)
+	}
+	competition["governance"] = governance
+	if seasonID != nil && *seasonID != "" {
+		competition["seasonId"] = *seasonID
 	}
 	return map[string]any{
 		"matchSetId": matchSetID,
@@ -1361,10 +1963,12 @@ func (server *LiveServer) publicMatchSetResult(ctx context.Context, matchSetID s
 			"lossPoints":                   0,
 			"strategyFailurePenaltyPoints": -1,
 		},
-		"entrants":  entrants,
-		"standings": standingsFromScoring(scoringRaw, entrants),
-		"matches":   matches,
-		"metadata":  metadata,
+		"entrants":          entrants,
+		"standings":         standingsFromScoring(scoringRaw, entrants),
+		"matches":           matches,
+		"metadata":          metadata,
+		"competition":       competition,
+		"integrityEvidence": integrityProjection,
 		"provenance": map[string]any{
 			"matchSetId":           matchSetID,
 			"presetId":             *competitionPresetID,
@@ -1430,21 +2034,26 @@ func (server *LiveServer) publicReplayEvidenceResult(ctx context.Context, matchI
 	if err := json.Unmarshal(row.outcome, &outcome); err != nil {
 		return nil, err
 	}
+	integrityEvidence, err := server.publicIntegrityEvidenceForMatch(ctx, resolvedMatchID)
+	if err != nil {
+		return nil, err
+	}
 	return map[string]any{
 		"apiVersion": serviceAPIVersion,
 		"kind":       "publicReplayEvidence",
 		"matchId":    resolvedMatchID,
 		"metadata": map[string]any{
-			"matchId":        resolvedMatchID,
-			"chronicleId":    row.chronicleID,
-			"hash":           row.hash,
-			"schemaVersion":  row.schemaVersion,
-			"eventCount":     row.eventCount,
-			"snapshotCount":  row.snapshotCount,
-			"outcome":        outcome,
-			"bottomPlayerId": row.bottomPlayerID,
-			"topPlayerId":    row.topPlayerID,
-			"arenaVariantId": row.arenaVariantID,
+			"matchId":           resolvedMatchID,
+			"chronicleId":       row.chronicleID,
+			"hash":              row.hash,
+			"schemaVersion":     row.schemaVersion,
+			"eventCount":        row.eventCount,
+			"snapshotCount":     row.snapshotCount,
+			"outcome":           outcome,
+			"bottomPlayerId":    row.bottomPlayerID,
+			"topPlayerId":       row.topPlayerID,
+			"arenaVariantId":    row.arenaVariantID,
+			"integrityEvidence": integrityEvidence,
 		},
 		"projection": publicReplayProjectionFromChronicle(artifact),
 	}, nil
@@ -1552,7 +2161,8 @@ func (server *LiveServer) matchSetEvidence(ctx context.Context, matchSetID strin
 	}
 	rows, err := server.pool.Query(ctx, `
 		select m.id, m.status, m.bottom_strategy_revision_id, m.top_strategy_revision_id,
-		       m.arena_variant_id, m.failure_category, c.hash
+		       m.arena_variant_id, m.failure_category, c.hash,
+		       m.bottom_execution_entrant_key, m.top_execution_entrant_key
 		from match_set_matches msm
 		join matches m on m.id = msm.match_id
 		left join chronicles c on c.match_id = m.id
@@ -1568,7 +2178,8 @@ func (server *LiveServer) matchSetEvidence(ctx context.Context, matchSetID strin
 		var matchID, status, bottomRevisionID, topRevisionID, arenaVariantID string
 		var failureCategory *string
 		var chronicleHash *string
-		if err := rows.Scan(&matchID, &status, &bottomRevisionID, &topRevisionID, &arenaVariantID, &failureCategory, &chronicleHash); err != nil {
+		var bottomExecutionEntrantKey, topExecutionEntrantKey *string
+		if err := rows.Scan(&matchID, &status, &bottomRevisionID, &topRevisionID, &arenaVariantID, &failureCategory, &chronicleHash, &bottomExecutionEntrantKey, &topExecutionEntrantKey); err != nil {
 			return nil, err
 		}
 		dto := map[string]any{
@@ -1583,6 +2194,12 @@ func (server *LiveServer) matchSetEvidence(ctx context.Context, matchSetID strin
 		}
 		if chronicleHash != nil {
 			dto["chronicleHash"] = *chronicleHash
+		}
+		if bottomExecutionEntrantKey != nil {
+			dto["_bottomExecutionEntrantKey"] = *bottomExecutionEntrantKey
+		}
+		if topExecutionEntrantKey != nil {
+			dto["_topExecutionEntrantKey"] = *topExecutionEntrantKey
 		}
 		if status == matchStatusFailedSystem {
 			dto["publicReason"] = publicReasonForMatchFailureCategory(valueOr(failureCategory, matchFailureCategorySystemFailure))
@@ -1616,6 +2233,254 @@ func (server *LiveServer) matchSetExecutionMetadata(ctx context.Context, matchSe
 		}
 	}
 	return nil, rows.Err()
+}
+
+type integrityEvidenceReadCertificateRow struct {
+	Kind          string
+	ID            string
+	Version       string
+	RecordHash    string
+	Status        string
+	IssuedAt      time.Time
+	FreshUntil    time.Time
+	AttestationID string
+}
+
+func (server *LiveServer) loadIntegrityEvidenceReadModel(ctx context.Context, matchSetID string) (integrityEvidenceReadModel, error) {
+	var tupleID, rulesVersion, chronicleVersion, registryGeneration *string
+	var originalCountedStatus string
+	err := server.pool.QueryRow(ctx, `
+		select ms.compatibility_tuple_id,
+		       coalesce(ms.compatibility_rules_version,
+		         (select min(nullif(c.artifact #>> '{reproducibility,specVersion}', ''))
+		            from match_set_matches msm join chronicles c on c.match_id=msm.match_id
+		           where msm.match_set_id=ms.id),
+		         (select min(nullif(sr.engine_compatibility ->> 'spec', ''))
+		            from competition_entrants ce join strategy_revisions sr on sr.id=ce.strategy_revision_id
+		           where ce.match_set_id=ms.id)),
+		       coalesce(ms.compatibility_chronicle_version,
+		         (select min(c.schema_version) from match_set_matches msm join chronicles c on c.match_id=msm.match_id where msm.match_set_id=ms.id)),
+		       ms.counted_status, ms.authority_registry_generation
+		  from match_sets ms where ms.id=$1
+	`, matchSetID).Scan(&tupleID, &rulesVersion, &chronicleVersion, &originalCountedStatus, &registryGeneration)
+	if err != nil {
+		return integrityEvidenceReadModel{}, err
+	}
+	finding, err := server.loadEffectiveIntegrityFinding(ctx, matchSetID)
+	if err != nil {
+		return integrityEvidenceReadModel{}, err
+	}
+	if tupleID == nil || *tupleID == "" {
+		historical := projectHistoricalIntegrityEvidence(historicalIntegrityEvidenceInput{
+			RulesVersion: valueOr(rulesVersion, ""), ChronicleVersion: valueOr(chronicleVersion, ""),
+			OriginalCountedStatus: originalCountedStatus, EffectiveFinding: finding,
+		})
+		return integrityEvidenceReadModel{Profile: "historical", Historical: historical, EffectiveFinding: finding}, nil
+	}
+
+	authority := server.authority
+	if server.loadAuthority != nil {
+		loaded, loadErr := server.loadAuthority()
+		if loadErr != nil {
+			authority = nil
+		} else {
+			authority = loaded
+		}
+	}
+	evaluationTime := time.Now().UTC()
+	if server.now != nil {
+		evaluationTime = server.now().UTC()
+	}
+	evaluatedAt := evaluationTime.Format(canonicalJSONInstantLayout)
+	rows, err := server.pool.Query(ctx, `
+		select e.entrant_key, e.lane_identity, e.lane_identity_hash,
+		       e.containment_certificate_kind, e.containment_certificate_id,
+		       e.containment_certificate_version, e.containment_certificate_hash,
+		       containment.certificate_status, containment.issued_at,
+		       containment.fresh_until, containment.verified_attestation_id,
+		       e.conformance_certificate_kind, e.conformance_certificate_id,
+		       e.conformance_certificate_version, e.conformance_certificate_hash,
+		       conformance.certificate_status, conformance.issued_at,
+		       conformance.fresh_until, conformance.verified_attestation_id,
+		       e.authority_registry_generation
+		  from match_set_execution_entrants e
+		  join runtime_evidence_certificates containment
+		    on containment.id=e.containment_certificate_id
+		   and containment.certificate_record_hash=e.containment_certificate_hash
+		  left join runtime_evidence_certificates conformance
+		    on conformance.id=e.conformance_certificate_id
+		   and conformance.certificate_record_hash=e.conformance_certificate_hash
+		 where e.match_set_id=$1 order by e.entrant_key
+	`, matchSetID)
+	if err != nil {
+		return integrityEvidenceReadModel{}, err
+	}
+	defer rows.Close()
+	model := integrityEvidenceReadModel{
+		Profile: "current", SemanticTupleID: *tupleID,
+		PublicByEntrant:   map[string]publicIntegrityEvidenceProjection{},
+		OperatorByEntrant: map[string]operatorIntegrityEvidenceProjection{},
+		EffectiveFinding:  finding,
+	}
+	for rows.Next() {
+		var entrantKey, laneHash, containmentKind, containmentID, containmentVersion, containmentHash, storedGeneration string
+		var laneJSON []byte
+		var containment integrityEvidenceReadCertificateRow
+		var conformanceKind, conformanceID, conformanceVersion, conformanceHash, conformanceStatus, conformanceAttestation *string
+		var conformanceIssuedAt, conformanceFreshUntil *time.Time
+		if err := rows.Scan(
+			&entrantKey, &laneJSON, &laneHash,
+			&containmentKind, &containmentID, &containmentVersion, &containmentHash,
+			&containment.Status, &containment.IssuedAt, &containment.FreshUntil, &containment.AttestationID,
+			&conformanceKind, &conformanceID, &conformanceVersion, &conformanceHash,
+			&conformanceStatus, &conformanceIssuedAt, &conformanceFreshUntil, &conformanceAttestation,
+			&storedGeneration,
+		); err != nil {
+			return integrityEvidenceReadModel{}, err
+		}
+		containment.Kind, containment.ID, containment.Version, containment.RecordHash = containmentKind, containmentID, containmentVersion, containmentHash
+		var identity goExecutableLaneIdentity
+		if err := decodeStrictJSON(laneJSON, &identity); err != nil {
+			return integrityEvidenceReadModel{}, errors.New("persisted integrity evidence is invalid")
+		}
+		containmentReference := runtimeEvidenceCertificateReference{
+			Kind: containmentKind, CertificateID: containmentID, CertificateVersion: containmentVersion,
+			CertificateRecordHash: canonicalSafeEvidenceHash(containmentHash), RegistryGeneration: storedGeneration,
+		}
+		var conformanceReference *runtimeEvidenceCertificateReference
+		certificates := []integrityEvidenceCertificateProjectionInput{
+			integrityEvidenceReadCertificateProjection(matchSetID, containment),
+		}
+		if conformanceID != nil && conformanceKind != nil && conformanceVersion != nil && conformanceHash != nil && conformanceStatus != nil && conformanceIssuedAt != nil && conformanceFreshUntil != nil && conformanceAttestation != nil {
+			conformanceReference = &runtimeEvidenceCertificateReference{
+				Kind: *conformanceKind, CertificateID: *conformanceID, CertificateVersion: *conformanceVersion,
+				CertificateRecordHash: canonicalSafeEvidenceHash(*conformanceHash), RegistryGeneration: storedGeneration,
+			}
+			certificates = append(certificates, integrityEvidenceReadCertificateProjection(matchSetID, integrityEvidenceReadCertificateRow{
+				Kind: *conformanceKind, ID: *conformanceID, Version: *conformanceVersion, RecordHash: *conformanceHash,
+				Status: *conformanceStatus, IssuedAt: *conformanceIssuedAt, FreshUntil: *conformanceFreshUntil,
+				AttestationID: *conformanceAttestation,
+			}))
+		}
+		decision := executableLaneEvidenceResult{Status: executableLaneEvidenceDisabled, ReasonCode: "EVIDENCE_UNVERIFIABLE"}
+		activeGeneration := valueOr(registryGeneration, storedGeneration)
+		if authority != nil {
+			activeGeneration = authority.RegistryGeneration
+			containmentState := persistedRuntimeEvidenceCertificateState{
+				Reference: containmentReference, Status: containment.Status,
+				IssuedAt: containment.IssuedAt, FreshUntil: containment.FreshUntil,
+			}
+			var conformanceState *persistedRuntimeEvidenceCertificateState
+			if conformanceReference != nil && conformanceStatus != nil && conformanceIssuedAt != nil && conformanceFreshUntil != nil {
+				conformanceState = &persistedRuntimeEvidenceCertificateState{
+					Reference: *conformanceReference, Status: *conformanceStatus,
+					IssuedAt: *conformanceIssuedAt, FreshUntil: *conformanceFreshUntil,
+				}
+			}
+			decision = classifyPersistedExecutableLaneEvidence(executableLaneEvidenceInput{
+				Authority: authority, ExpectedLaneIdentityHash: canonicalSafeEvidenceHash(laneHash),
+				EvaluationInstant: evaluatedAt, ActiveRegistryGeneration: activeGeneration,
+			}, &containmentState, conformanceState)
+			if authority.SemanticTupleManifestHash != *tupleID || identity.SemanticTupleID != *tupleID {
+				decision = executableLaneEvidenceResult{Status: executableLaneEvidenceDisabled, ReasonCode: "TUPLE_UNCERTIFIED"}
+			}
+		}
+		input := integrityEvidenceProjectionInput{
+			Status: decision.Status, ReasonCode: decision.ReasonCode, EvaluatedAt: evaluatedAt,
+			RegistryGeneration: activeGeneration, SemanticTupleID: *tupleID, Identity: identity,
+			Certificates: certificates,
+		}
+		model.PublicByEntrant[entrantKey] = projectPublicIntegrityEvidence(input)
+		model.OperatorByEntrant[entrantKey] = projectOperatorIntegrityEvidence(input)
+	}
+	if err := rows.Err(); err != nil {
+		return integrityEvidenceReadModel{}, err
+	}
+	return model, nil
+}
+
+func integrityEvidenceReadCertificateProjection(matchSetID string, row integrityEvidenceReadCertificateRow) integrityEvidenceCertificateProjectionInput {
+	fragment := strings.NewReplacer(":", "-", "/", "-", " ", "-").Replace(row.ID)
+	return integrityEvidenceCertificateProjectionInput{
+		Kind: row.Kind, CertificateID: row.ID, CertificateVersion: row.Version,
+		CertificateRecordHash: row.RecordHash, Status: row.Status,
+		IssuedAt:           row.IssuedAt.UTC().Format(canonicalJSONInstantLayout),
+		FreshUntil:         row.FreshUntil.UTC().Format(canonicalJSONInstantLayout),
+		GateResults:        []integrityEvidenceGateResult{{GateID: "certificate_status", Passed: row.Status == "passed"}},
+		RestrictedProofIDs: []string{row.AttestationID},
+		RestrictedProofLinks: []string{
+			"/internal/integrity/matchsets/" + urlPathEscape(matchSetID) + "/evidence#" + fragment,
+		},
+	}
+}
+
+func (server *LiveServer) loadEffectiveIntegrityFinding(ctx context.Context, matchSetID string) (*integrityEvidenceFinding, error) {
+	var finding integrityEvidenceFinding
+	var effectiveAt time.Time
+	err := server.pool.QueryRow(ctx, `
+		select e.id, e.classification, e.evidence_hash, e.created_at
+		  from integrity_cohort_classification_events e
+		  left join integrity_compensation_events compensation on compensation.compensates_event_id=e.id
+		 where compensation.id is null
+		   and (coalesce(e.predicate->'ast', e.predicate)->'matchSetIds') ? $1
+		 order by e.id desc limit 1
+	`, matchSetID).Scan(&finding.EventID, &finding.Classification, &finding.EvidenceHash, &effectiveAt)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	finding.EffectiveAt = effectiveAt.UTC().Format(canonicalJSONInstantLayout)
+	return &finding, nil
+}
+
+func (server *LiveServer) publicIntegrityEvidenceForMatch(ctx context.Context, matchID string) (map[string]any, error) {
+	var matchSetID *string
+	err := server.pool.QueryRow(ctx, `
+		select coalesce(m.integrity_match_set_id, msm.match_set_id)
+		  from matches m left join match_set_matches msm on msm.match_id=m.id
+		 where m.id=$1 order by msm.match_set_id limit 1
+	`, matchID).Scan(&matchSetID)
+	if err != nil {
+		return nil, err
+	}
+	if matchSetID == nil || *matchSetID == "" {
+		var schemaVersion string
+		var artifactRaw []byte
+		if err := server.pool.QueryRow(ctx, `select schema_version, artifact from chronicles where match_id=$1`, matchID).Scan(&schemaVersion, &artifactRaw); err != nil {
+			return nil, err
+		}
+		artifact := jsonMap(artifactRaw)
+		return projectHistoricalIntegrityEvidence(historicalIntegrityEvidenceInput{
+			RulesVersion:          stringValue(mapValue(artifact, "reproducibility"), "specVersion"),
+			ChronicleVersion:      schemaVersion,
+			OriginalCountedStatus: "unrecorded",
+		}), nil
+	}
+	model, err := server.loadIntegrityEvidenceReadModel(ctx, *matchSetID)
+	if err != nil {
+		return nil, err
+	}
+	if model.Profile != "current" {
+		return cloneIntegrityEvidenceMap(model.Historical), nil
+	}
+	var bottomKey, topKey *string
+	if err := server.pool.QueryRow(ctx, "select bottom_execution_entrant_key, top_execution_entrant_key from matches where id=$1", matchID).Scan(&bottomKey, &topKey); err != nil {
+		return nil, err
+	}
+	if bottomKey == nil || topKey == nil {
+		return projectPublicMatchSetIntegrityEvidence(model), nil
+	}
+	bottom, bottomOK := model.PublicByEntrant[*bottomKey]
+	top, topOK := model.PublicByEntrant[*topKey]
+	if !bottomOK || !topOK {
+		return projectPublicMatchSetIntegrityEvidence(model), nil
+	}
+	return map[string]any{
+		"profile": "current", "semanticTupleId": model.SemanticTupleID,
+		"bottom": bottom, "top": top,
+	}, nil
 }
 
 func (server *LiveServer) authenticatedUser(ctx context.Context, request *http.Request, updateLastSeen bool) (*publicUser, error) {
@@ -1732,17 +2597,28 @@ func (server *LiveServer) accountRevisionSummaries(ctx context.Context, userID s
 		row.Engine = jsonMap(engineRaw)
 		row.Validation = jsonMap(validationRaw)
 		row.Metadata = jsonMap(metadataRaw)
+		readiness := classifyRevisionReadiness(revisionReadinessInput{
+			SourceFormat:        stringValue(mapValue(row.Runtime, "language"), "id"),
+			Runtime:             row.Runtime,
+			Validation:          row.Validation,
+			Metadata:            row.Metadata,
+			EngineCompatibility: row.Engine,
+			SourceHash:          row.SourceHash,
+			SourceBytes:         row.SourceBytes,
+		})
+		readinessCategory := publicCountedEntryEligibilityCategory(readiness, row.LockedAt != nil)
 		summary := map[string]any{
-			"apiVersion":          serviceAPIVersion,
-			"kind":                "strategyRevisionSummary",
-			"strategyId":          row.StrategyID,
-			"strategyRevisionId":  row.ID,
-			"sourceHash":          row.SourceHash,
-			"sourceBytes":         row.SourceBytes,
-			"runtimeSemantics":    runtimeSemanticsForRevision(row.Runtime, row.Metadata, row.SourceHash, row.SourceBytes),
-			"engineCompatibility": row.Engine,
-			"validationStatus":    validationStatus(row.Validation),
-			"createdAt":           row.CreatedAt.Format(time.RFC3339Nano),
+			"apiVersion":                      serviceAPIVersion,
+			"kind":                            "strategyRevisionSummary",
+			"strategyId":                      row.StrategyID,
+			"strategyRevisionId":              row.ID,
+			"sourceHash":                      row.SourceHash,
+			"sourceBytes":                     row.SourceBytes,
+			"runtimeSemantics":                runtimeSemanticsForRevision(row.Runtime, row.Metadata, row.SourceHash, row.SourceBytes),
+			"countedEntryEligibilityCategory": readinessCategory,
+			"engineCompatibility":             row.Engine,
+			"validationStatus":                validationStatus(row.Validation),
+			"createdAt":                       row.CreatedAt.Format(time.RFC3339Nano),
 		}
 		copyOptional(summary, row.Metadata, "label")
 		copyOptional(summary, row.Metadata, "notes")
@@ -1763,7 +2639,7 @@ func (server *LiveServer) insertAccountRevision(ctx context.Context, input accou
 	source := input.Source
 	label := input.Label
 	notes := input.Notes
-	if source == "" || utf8.RuneCountInString(source) == 0 || len([]byte(source)) > strategySourceBytes {
+	if source == "" || strings.TrimSpace(source) == "" || utf8.RuneCountInString(source) == 0 || len([]byte(source)) > strategySourceBytes {
 		return nil, errors.New("invalid source")
 	}
 	sourceHash := hashString(source)
@@ -1774,6 +2650,7 @@ func (server *LiveServer) insertAccountRevision(ctx context.Context, input accou
 	if input.SourceBytes > 0 {
 		sourceBytes = input.SourceBytes
 	}
+	sourceIdentity := sourceIdentityV2(source)
 	createStrategy := strategyID == ""
 	if createStrategy {
 		strategyID = "strategy:account:" + userID + ":" + randomID()
@@ -1848,11 +2725,19 @@ func (server *LiveServer) insertAccountRevision(ctx context.Context, input accou
 	if _, err := tx.Exec(ctx, `
 		insert into strategy_revisions (
 			id, strategy_id, source, source_hash, source_bytes,
-			runtime, engine_compatibility, validation, metadata, compiled_artifact
+			runtime, engine_compatibility, validation, metadata, compiled_artifact,
+			source_identity_version, original_source_hash, original_source_bytes,
+			normalized_source_hash, normalized_source_bytes,
+			source_normalization_policy, source_line_endings,
+			source_has_final_newline
 		)
-		values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+		values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+		        $11, $12, $13, $14, $15, $16, $17, $18)
 		on conflict (id) do nothing
-	`, revisionID, strategyID, source, sourceHash, sourceBytes, runtime, engine, validation, metadata, mapValue(metadata, "compiledArtifact")); err != nil {
+	`, revisionID, strategyID, source, sourceHash, sourceBytes, runtime, engine, validation, metadata, mapValue(metadata, "compiledArtifact"),
+		sourceIdentity.Version, sourceIdentity.OriginalHash, sourceIdentity.OriginalBytes,
+		sourceIdentity.NormalizedHash, sourceIdentity.NormalizedBytes,
+		sourceIdentity.Policy, sourceIdentity.LineEndings, sourceIdentity.HasFinalNewline); err != nil {
 		return nil, err
 	}
 	if err := tx.Commit(ctx); err != nil {
@@ -1866,6 +2751,10 @@ func (server *LiveServer) insertAccountRevision(ctx context.Context, input accou
 }
 
 func (server *LiveServer) createExhibitionMatchSet(ctx context.Context, userID string, presetID string, revisionIDs []string, counted bool) (map[string]any, error) {
+	return server.createExhibitionMatchSetWithDependencies(ctx, userID, presetID, revisionIDs, counted, server.defaultExhibitionCreationDependencies())
+}
+
+func (server *LiveServer) createExhibitionMatchSetWithDependencies(ctx context.Context, userID string, presetID string, revisionIDs []string, counted bool, dependencies exhibitionCreationDependencies) (map[string]any, error) {
 	matchSetPresetID, err := competitionMatchSetPresetID(presetID)
 	if err != nil || len(revisionIDs) < 2 || len(revisionIDs) > 8 {
 		return nil, errors.New("invalid exhibition input")
@@ -1879,22 +2768,49 @@ func (server *LiveServer) createExhibitionMatchSet(ctx context.Context, userID s
 	}
 	now := server.now()
 	matchSetID := "match-set:exhibition:" + randomID()
-	entrants, err := server.loadOwnedEntrants(ctx, userID, revisionIDs, now, counted)
-	if err != nil {
-		return nil, err
+	if dependencies.loadEntrants == nil || dependencies.loadAuthority == nil || dependencies.resolveEvidence == nil || dependencies.begin == nil {
+		return nil, errors.New("creation integrity unavailable")
 	}
-	if len(entrants) != len(revisionIDs) {
-		return nil, errors.New("revision ownership mismatch")
-	}
-	matches := generatePairwiseMatches(matchSetID, matchSetPresetID, entrants)
-	duplicateKey := buildDuplicateKey(userID, presetID, revisionIDs)
-	tx, err := server.pool.Begin(ctx)
+	tx, err := dependencies.begin(ctx)
 	if err != nil {
 		return nil, err
 	}
 	defer func() {
 		_ = tx.Rollback(ctx)
 	}()
+	if _, err := tx.Exec(ctx, "set transaction isolation level serializable"); err != nil {
+		return nil, errors.New("creation transaction isolation unavailable")
+	}
+	semanticSelection, semanticSelectionRoot, err := lockCurrentGoSemanticAuthorityHead(ctx, tx, currentSemanticAuthorityGenerated())
+	if err != nil {
+		return nil, errors.New("creation semantic authority unavailable")
+	}
+	entrants, err := dependencies.loadEntrants(ctx, tx, userID, revisionIDs, now)
+	if err != nil {
+		return nil, err
+	}
+	if len(entrants) != len(revisionIDs) {
+		return nil, errors.New("revision ownership mismatch")
+	}
+	authority, err := dependencies.loadAuthority()
+	if err != nil || authority == nil {
+		return nil, errors.New("creation integrity unavailable")
+	}
+	installedReceipt, err := server.lockInstalledAuthorityReceipt(ctx, tx, authority, now)
+	if err != nil || installedReceipt == nil {
+		return nil, errors.New("creation integrity unavailable")
+	}
+	integrityIdentity, err := dependencies.resolveEvidence(ctx, tx, authority, entrants, counted, now)
+	if err != nil || integrityIdentity == nil {
+		return nil, errors.New("creation integrity unavailable")
+	}
+	for _, entrant := range entrants {
+		delete(entrant, "_creationRuntime")
+		delete(entrant, "_creationValidation")
+		delete(entrant, "_creationMetadata")
+	}
+	matches := generatePairwiseMatches(matchSetID, matchSetPresetID, entrants)
+	duplicateKey := buildDuplicateKey(userID, presetID, revisionIDs)
 	var activeDuplicate string
 	err = tx.QueryRow(ctx, `
 		select id
@@ -1924,43 +2840,115 @@ func (server *LiveServer) createExhibitionMatchSet(ctx context.Context, userID s
 			competition_preset_id, competition_preset_version, scoring_policy_version,
 			visibility, entrant_snapshot_set, publication_policy, duplicate_key,
 			counted_status, public_counted_reason, public_counted_explanation,
-			locked_at
+			locked_at,
+			compatibility_tuple_id, compatibility_rules_version,
+			compatibility_engine_version, compatibility_runtime_abi_version,
+			compatibility_chronicle_version, compatibility_arena_catalog_version,
+			compatibility_set_policy_version, authority_bundle_hash,
+			authority_registry_generation, execution_evidence_set,
+			execution_evidence_set_hash, authority_publication_id,
+			authority_install_receipt_id, authority_payload_sha256,
+			authority_envelope_sha256, authority_source_manifest_hash,
+			authority_source_set, semantic_authority_selection,
+			semantic_authority_selection_root
 		)
 		values ($1, 'pending', $2, 'v1', $3, $4, $5, 'v1',
-		        'exhibition-points-v1:v1', 'public', $6, $7, $8, $9, $10, $11, $12)
+		        'exhibition-points-v1:v1', 'public', $6, $7, $8, $9, $10, $11, $12,
+		        $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23,
+		        $24, $25, $26, $27, $28, $29, $30, $31)
 	`, matchSetID, matchSetPresetID, matches, userID, presetID, entrants, map[string]any{
 		"publicResults":               true,
 		"publicReplayEvidence":        true,
 		"excludesPrivateStrategyData": true,
-	}, duplicateKey, exhibitionCountedStatus(counted), exhibitionCountedReason(counted), exhibitionCountedExplanation(counted), now); err != nil {
+	}, duplicateKey, exhibitionCountedStatus(counted), exhibitionCountedReason(counted), exhibitionCountedExplanation(counted), now,
+		integrityIdentity.Tuple.TupleID, integrityIdentity.Tuple.Tuple.Rules,
+		integrityIdentity.Tuple.Tuple.Engine, integrityIdentity.Tuple.Tuple.RuntimeABI,
+		integrityIdentity.Tuple.Tuple.Chronicle, integrityIdentity.Tuple.Tuple.ArenaCatalog,
+		integrityIdentity.Tuple.Tuple.SetPolicy, integrityIdentity.AuthorityBundleHash,
+		integrityIdentity.RegistryGeneration, integrityIdentity.Entrants,
+		integrityIdentity.EvidenceSetHash, installedReceipt.PublicationID,
+		installedReceipt.ReceiptID, installedReceipt.PayloadSHA256,
+		installedReceipt.EnvelopeSHA256, installedReceipt.SourceManifestHash,
+		installedReceipt.SourceSet, semanticSelection, semanticSelectionRoot); err != nil {
 		return nil, err
 	}
 	for _, entrant := range entrants {
+		evidence, ok := integrityIdentity.ByKey[stringValue(entrant, "entrantId")]
+		if !ok || evidence.StrategyRevisionID != stringValue(entrant, "strategyRevisionId") {
+			return nil, errors.New("creation integrity unavailable")
+		}
+		var conformanceKind, conformanceID, conformanceVersion, conformanceHash any
+		if evidence.ConformanceCertificateRef != nil {
+			conformanceKind = evidence.ConformanceCertificateRef.Kind
+			conformanceID = evidence.ConformanceCertificateRef.CertificateID
+			conformanceVersion = evidence.ConformanceCertificateRef.CertificateVersion
+			conformanceHash = evidence.ConformanceCertificateRef.CertificateRecordHash
+		}
+		if _, err := tx.Exec(ctx, `
+			insert into match_set_execution_entrants (
+				match_set_id, entrant_key, strategy_revision_id,
+				lane_identity, lane_identity_hash,
+				containment_certificate_kind, containment_certificate_id,
+				containment_certificate_version, containment_certificate_hash,
+				conformance_certificate_kind, conformance_certificate_id,
+				conformance_certificate_version, conformance_certificate_hash,
+				scheduling_status, scheduling_reason_code, scheduling_evaluated_at,
+				scheduling_fresh_until, authority_bundle_hash,
+				authority_registry_generation, execution_snapshot
+			)
+			values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)
+		`, matchSetID, evidence.EntrantKey, evidence.StrategyRevisionID,
+			evidence.LaneIdentity, hashCreationLaneIdentity(evidence.LaneIdentity),
+			evidence.ContainmentCertificateRef.Kind, evidence.ContainmentCertificateRef.CertificateID,
+			evidence.ContainmentCertificateRef.CertificateVersion, evidence.ContainmentCertificateRef.CertificateRecordHash,
+			conformanceKind, conformanceID, conformanceVersion, conformanceHash,
+			string(evidence.SchedulingDecision.Status), evidence.SchedulingDecision.ReasonCode,
+			evidence.SchedulingDecision.EvaluatedAt, evidence.SchedulingDecision.FreshUntil,
+			integrityIdentity.AuthorityBundleHash, integrityIdentity.RegistryGeneration, evidence); err != nil {
+			return nil, err
+		}
 		if _, err := tx.Exec(ctx, `
 			insert into competition_entrants (
 				id, match_set_id, entrant_index, strategy_revision_id, owner_user_id,
 				owner_handle, display_label, source_hash, source_bytes, runtime,
-				engine_compatibility, snapshot
+				engine_compatibility, snapshot, execution_entrant_key
 			)
-			values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-		`, matchSetID+":"+stringValue(entrant, "entrantId"), matchSetID, intValue(entrant, "entrantIndex"), stringValue(entrant, "strategyRevisionId"), stringValue(entrant, "ownerUserId"), stringValue(entrant, "ownerHandle"), stringValue(entrant, "displayLabel"), stringValue(entrant, "sourceHash"), intValue(entrant, "sourceBytes"), entrant["runtime"], entrant["engineCompatibility"], entrant); err != nil {
-			return nil, err
-		}
-		if _, err := tx.Exec(ctx, "update strategy_revisions set locked_at = coalesce(locked_at, $2) where id = $1", stringValue(entrant, "strategyRevisionId"), now); err != nil {
+			values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+		`, matchSetID+":"+stringValue(entrant, "entrantId"), matchSetID, intValue(entrant, "entrantIndex"), stringValue(entrant, "strategyRevisionId"), stringValue(entrant, "ownerUserId"), stringValue(entrant, "ownerHandle"), stringValue(entrant, "displayLabel"), stringValue(entrant, "sourceHash"), intValue(entrant, "sourceBytes"), entrant["runtime"], entrant["engineCompatibility"], entrant, evidence.EntrantKey); err != nil {
 			return nil, err
 		}
 	}
 	for index, match := range matches {
+		pair, err := integrityIdentity.pair(
+			stringValue(match, "bottomExecutionEntrantKey"),
+			stringValue(match, "topExecutionEntrantKey"),
+			stringValue(match, "bottomStrategyRevisionId"),
+			stringValue(match, "topStrategyRevisionId"),
+		)
+		if err != nil {
+			return nil, err
+		}
 		if _, err := tx.Exec(ctx, `
 			insert into matches (
 				id, bottom_strategy_revision_id, top_strategy_revision_id,
-				arena_variant_id, seed, bottom_player_id, top_player_id, status
+				arena_variant_id, seed, bottom_player_id, top_player_id, status,
+				integrity_match_set_id, bottom_execution_entrant_key,
+				top_execution_entrant_key, bottom_execution_evidence,
+				top_execution_evidence, execution_evidence_pair_hash,
+				semantic_authority_selection_root
 			)
-			values ($1, $2, $3, $4, $5, $6, $7, 'pending')
-		`, match["id"], match["bottomStrategyRevisionId"], match["topStrategyRevisionId"], match["arenaVariantId"], match["seed"], match["bottomPlayerId"], match["topPlayerId"]); err != nil {
+			values ($1, $2, $3, $4, $5, $6, $7, 'pending', $8, $9, $10, $11, $12, $13, $14)
+		`, match["id"], match["bottomStrategyRevisionId"], match["topStrategyRevisionId"], match["arenaVariantId"], match["seed"], match["bottomPlayerId"], match["topPlayerId"], matchSetID, pair.Bottom.EntrantKey, pair.Top.EntrantKey, pair.Bottom, pair.Top, pair.PairHash, semanticSelectionRoot); err != nil {
 			return nil, err
 		}
-		if _, err := tx.Exec(ctx, "insert into match_jobs (id, match_id, status) values ($1, $2, 'queued')", "match-job:"+stringValue(match, "id"), match["id"]); err != nil {
+		if _, err := tx.Exec(ctx, `
+			insert into match_jobs (
+				id, match_id, status, integrity_match_set_id,
+				bottom_execution_entrant_key, top_execution_entrant_key,
+				bottom_execution_evidence, top_execution_evidence,
+				execution_evidence_pair_hash, semantic_authority_selection_root
+			) values ($1, $2, 'queued', $3, $4, $5, $6, $7, $8, $9)
+		`, "match-job:"+stringValue(match, "id"), match["id"], matchSetID, pair.Bottom.EntrantKey, pair.Top.EntrantKey, pair.Bottom, pair.Top, pair.PairHash, semanticSelectionRoot); err != nil {
 			return nil, err
 		}
 		if _, err := tx.Exec(ctx, "insert into match_set_matches (match_set_id, match_id, matrix_index) values ($1, $2, $3)", matchSetID, match["id"], index); err != nil {
@@ -1988,8 +2976,11 @@ func (server *LiveServer) createExhibitionMatchSet(ctx context.Context, userID s
 	}, nil
 }
 
-func (server *LiveServer) loadOwnedEntrants(ctx context.Context, userID string, revisionIDs []string, lockedAt time.Time, counted bool) ([]map[string]any, error) {
-	rows, err := server.pool.Query(ctx, `
+func (server *LiveServer) loadOwnedEntrants(ctx context.Context, tx pgx.Tx, userID string, revisionIDs []string, lockedAt time.Time) ([]map[string]any, error) {
+	if tx == nil {
+		return nil, errors.New("creation transaction unavailable")
+	}
+	rows, err := tx.Query(ctx, `
 		select sr.id, sr.source_hash, sr.source_bytes, sr.runtime,
 		       sr.engine_compatibility, sr.validation, sr.metadata,
 		       s.owner_user_id, u.handle
@@ -1997,6 +2988,8 @@ func (server *LiveServer) loadOwnedEntrants(ctx context.Context, userID string, 
 		join strategies s on s.id = sr.strategy_id
 		join users u on u.id = s.owner_user_id
 		where sr.id = any($1::text[]) and s.owner_user_id = $2
+		order by sr.id
+		for update of sr
 	`, revisionIDs, userID)
 	if err != nil {
 		return nil, err
@@ -2016,12 +3009,6 @@ func (server *LiveServer) loadOwnedEntrants(ctx context.Context, userID string, 
 		}
 		runtime := jsonMap(runtimeRaw)
 		metadata := jsonMap(metadataRaw)
-		if counted && !runtimeAllowsCountedPlay(runtime, metadata, sourceHash, sourceBytes) {
-			return nil, errors.New("runtime is not counted-play eligible")
-		}
-		if !counted && !runtimeAllowsNonCountedExhibition(runtime) {
-			return nil, errors.New("runtime is not eligible for non-counted exhibition")
-		}
 		label := stringValue(metadata, "label")
 		if label == "" {
 			label = id
@@ -2034,11 +3021,23 @@ func (server *LiveServer) loadOwnedEntrants(ctx context.Context, userID string, 
 			"sourceHash":          sourceHash,
 			"sourceBytes":         sourceBytes,
 			"runtime":             publicRuntimeMetadata(runtime),
+			"_creationRuntime":    runtime,
+			"_creationValidation": validation,
+			"_creationMetadata":   metadata,
+			"runtimeSemantics":    runtimeSemanticsForRevision(runtime, metadata, sourceHash, sourceBytes),
 			"engineCompatibility": jsonMap(engineRaw),
 			"lockedAt":            lockedAt.Format(time.RFC3339Nano),
 		}
 	}
 	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	rows.Close()
+	if _, err := tx.Exec(ctx, `
+		update strategy_revisions
+		set locked_at = coalesce(locked_at, $2)
+		where id = any($1::text[])
+	`, revisionIDs, lockedAt); err != nil {
 		return nil, err
 	}
 	entrants := []map[string]any{}
@@ -2202,6 +3201,219 @@ func hashString(value string) string {
 	return hex.EncodeToString(sum[:])
 }
 
+type strategySourceIdentityV2 struct {
+	Version         string
+	OriginalHash    string
+	OriginalBytes   int
+	NormalizedHash  string
+	NormalizedBytes int
+	Policy          string
+	LineEndings     map[string]any
+	HasFinalNewline bool
+}
+
+func framedSourceIdentityHash(domain string, value []byte) string {
+	hasher := sha256.New()
+	for _, segment := range [][]byte{[]byte(domain), value} {
+		var length [8]byte
+		binary.BigEndian.PutUint64(length[:], uint64(len(segment)))
+		_, _ = hasher.Write(length[:])
+		_, _ = hasher.Write(segment)
+	}
+	return hex.EncodeToString(hasher.Sum(nil))
+}
+
+func normalizeSourceV117(source string) string {
+	return strings.ReplaceAll(strings.ReplaceAll(source, "\r\n", "\n"), "\r", "\n")
+}
+
+func sourceIdentityV2(source string) strategySourceIdentityV2 {
+	crlf := strings.Count(source, "\r\n")
+	withoutCRLF := strings.ReplaceAll(source, "\r\n", "")
+	cr := strings.Count(withoutCRLF, "\r")
+	lf := strings.Count(withoutCRLF, "\n")
+	present := 0
+	for _, count := range []int{lf, crlf, cr} {
+		if count > 0 {
+			present++
+		}
+	}
+	kind := "none"
+	if present > 1 {
+		kind = "mixed"
+	} else if lf > 0 {
+		kind = "lf"
+	} else if crlf > 0 {
+		kind = "crlf"
+	} else if cr > 0 {
+		kind = "cr"
+	}
+	normalized := normalizeSourceV117(source)
+	return strategySourceIdentityV2{
+		Version:         sourceIdentityVersionV2,
+		OriginalHash:    framedSourceIdentityHash(originalSourceIdentityDomain, []byte(source)),
+		OriginalBytes:   len([]byte(source)),
+		NormalizedHash:  framedSourceIdentityHash(normalizedSourceIdentityDomain, []byte(normalized)),
+		NormalizedBytes: len([]byte(normalized)),
+		Policy:          sourceNormalizationPolicyV117,
+		LineEndings:     map[string]any{"kind": kind, "lf": lf, "crlf": crlf, "cr": cr},
+		HasFinalNewline: strings.HasSuffix(source, "\n") || strings.HasSuffix(source, "\r"),
+	}
+}
+
+func sourceIdentityMetadataV2(source string) map[string]any {
+	identity := sourceIdentityV2(source)
+	return map[string]any{
+		"identityVersion":        identity.Version,
+		"normalizationPolicy":    identity.Policy,
+		"originalSourceSha256":   "sha256:" + identity.OriginalHash,
+		"originalSourceBytes":    identity.OriginalBytes,
+		"normalizedSourceSha256": "sha256:" + identity.NormalizedHash,
+		"normalizedSourceBytes":  identity.NormalizedBytes,
+		"lineEndings":            identity.LineEndings,
+		"hasFinalNewline":        identity.HasFinalNewline,
+	}
+}
+
+func sourceIdentityInteger(value any) (int64, bool) {
+	switch number := value.(type) {
+	case int:
+		return int64(number), number >= 0
+	case int64:
+		return number, number >= 0
+	case float64:
+		parsed := int64(number)
+		return parsed, number >= 0 && float64(parsed) == number
+	case json.Number:
+		parsed, err := number.Int64()
+		return parsed, err == nil && parsed >= 0
+	default:
+		return 0, false
+	}
+}
+
+func sourceIdentityMetadataV2MatchesSource(value any, source string) bool {
+	identity, ok := value.(map[string]any)
+	if !ok || !runtimeInvocationV117ExactKeys(identity,
+		"identityVersion", "normalizationPolicy", "originalSourceSha256", "originalSourceBytes",
+		"normalizedSourceSha256", "normalizedSourceBytes", "lineEndings", "hasFinalNewline",
+	) {
+		return false
+	}
+	expected := sourceIdentityMetadataV2(source)
+	if stringValue(identity, "identityVersion") != stringValue(expected, "identityVersion") ||
+		stringValue(identity, "normalizationPolicy") != stringValue(expected, "normalizationPolicy") ||
+		stringValue(identity, "originalSourceSha256") != stringValue(expected, "originalSourceSha256") ||
+		stringValue(identity, "normalizedSourceSha256") != stringValue(expected, "normalizedSourceSha256") ||
+		boolValue(identity, "hasFinalNewline") != boolValue(expected, "hasFinalNewline") {
+		return false
+	}
+	for _, key := range []string{"originalSourceBytes", "normalizedSourceBytes"} {
+		actualValue, actualOK := sourceIdentityInteger(identity[key])
+		expectedValue, expectedOK := sourceIdentityInteger(expected[key])
+		if !actualOK || !expectedOK || actualValue != expectedValue {
+			return false
+		}
+	}
+	actualLineEndings := mapValue(identity, "lineEndings")
+	expectedLineEndings := mapValue(expected, "lineEndings")
+	if !runtimeInvocationV117ExactKeys(actualLineEndings, "kind", "lf", "crlf", "cr") ||
+		stringValue(actualLineEndings, "kind") != stringValue(expectedLineEndings, "kind") {
+		return false
+	}
+	for _, key := range []string{"lf", "crlf", "cr"} {
+		actualValue, actualOK := sourceIdentityInteger(actualLineEndings[key])
+		expectedValue, expectedOK := sourceIdentityInteger(expectedLineEndings[key])
+		if !actualOK || !expectedOK || actualValue != expectedValue {
+			return false
+		}
+	}
+	_, finalNewlineOK := identity["hasFinalNewline"].(bool)
+	return finalNewlineOK
+}
+
+func sourceIdentityMetadataV2IsComplete(value any, originalSourceBytes int) bool {
+	identity, ok := value.(map[string]any)
+	if !ok || !runtimeInvocationV117ExactKeys(identity,
+		"identityVersion", "normalizationPolicy", "originalSourceSha256", "originalSourceBytes",
+		"normalizedSourceSha256", "normalizedSourceBytes", "lineEndings", "hasFinalNewline",
+	) || stringValue(identity, "identityVersion") != sourceIdentityVersionV2 ||
+		stringValue(identity, "normalizationPolicy") != sourceNormalizationPolicyV117 ||
+		!isPrefixedLowerSHA256(stringValue(identity, "originalSourceSha256")) ||
+		!isPrefixedLowerSHA256(stringValue(identity, "normalizedSourceSha256")) {
+		return false
+	}
+	originalBytes, originalOK := sourceIdentityInteger(identity["originalSourceBytes"])
+	normalizedBytes, normalizedOK := sourceIdentityInteger(identity["normalizedSourceBytes"])
+	if !originalOK || !normalizedOK || originalBytes != int64(originalSourceBytes) || normalizedBytes > originalBytes {
+		return false
+	}
+	lineEndings := mapValue(identity, "lineEndings")
+	if !runtimeInvocationV117ExactKeys(lineEndings, "kind", "lf", "crlf", "cr") {
+		return false
+	}
+	counts := make([]int64, 3)
+	for index, key := range []string{"lf", "crlf", "cr"} {
+		value, valid := sourceIdentityInteger(lineEndings[key])
+		if !valid {
+			return false
+		}
+		counts[index] = value
+	}
+	present := 0
+	for _, count := range counts {
+		if count > 0 {
+			present++
+		}
+	}
+	expectedKind := "none"
+	if present > 1 {
+		expectedKind = "mixed"
+	} else if counts[0] > 0 {
+		expectedKind = "lf"
+	} else if counts[1] > 0 {
+		expectedKind = "crlf"
+	} else if counts[2] > 0 {
+		expectedKind = "cr"
+	}
+	_, finalNewlineOK := identity["hasFinalNewline"].(bool)
+	return finalNewlineOK && stringValue(lineEndings, "kind") == expectedKind &&
+		normalizedBytes == originalBytes-counts[1]
+}
+
+func providerArtifactSourceIdentityMatchesWrite(source string, languageID string, runtimeABI string, metadata map[string]any) bool {
+	if runtimeABI == strategyRuntimeABIVersion {
+		return true
+	}
+	if runtimeABI != strategyRuntimeABIVersionV117 {
+		return false
+	}
+	artifactKey := "sourceArtifact"
+	if languageID == "rust" || languageID == "zig" {
+		artifactKey = "compiledArtifact"
+	} else if languageID != "typescript" && languageID != "python" {
+		return false
+	}
+	artifact := mapValue(metadata, artifactKey)
+	declaredIdentity, exists := artifact["sourceIdentity"]
+	if !exists || !sourceIdentityMetadataV2MatchesSource(declaredIdentity, source) {
+		return false
+	}
+	canonicalIdentity := sourceIdentityMetadataV2(source)
+	if languageID == "rust" || languageID == "zig" {
+		return stringValue(artifact, "sourceHash") == stringValue(canonicalIdentity, "normalizedSourceSha256")
+	}
+	if languageID == "python" {
+		encodedArtifact := stringValue(artifact, "bytesBase64")
+		artifactBytes, err := base64.StdEncoding.Strict().DecodeString(encodedArtifact)
+		normalizedBytes := []byte(normalizeSourceV117(source))
+		return err == nil && bytes.Equal(artifactBytes, normalizedBytes) &&
+			intValue(artifact, "bytes") == len(normalizedBytes) &&
+			stringValue(artifact, "hash") == hashString(string(normalizedBytes))
+	}
+	return true
+}
+
 func randomToken() string {
 	return randomTokenN(32)
 }
@@ -2243,8 +3455,13 @@ func validUsername(value string) bool {
 }
 
 func defaultRuntimeMetadata() map[string]any {
+	selectedRuntimeABI := selectedStrategyRuntimeABIVersion()
+	limits := historicalDefaultRuntimeMetadataLimits()
+	if selectedRuntimeABI == strategyRuntimeABIVersionV117 {
+		limits = defaultRuntimeServiceLimitsV117()
+	}
 	return map[string]any{
-		"abiVersion": "strategy-runtime-abi-v1.14",
+		"abiVersion": selectedRuntimeABI,
 		"language": map[string]any{
 			"id":      "typescript",
 			"version": "0.1.0",
@@ -2258,26 +3475,34 @@ func defaultRuntimeMetadata() map[string]any {
 			"entrypoint": "default",
 		},
 		"requiredCapabilities": []string{},
-		"limits": map[string]any{
-			"timeoutMs":             1000,
-			"stdoutBytes":           262144,
-			"stderrBytes":           65536,
-			"sourceBytes":           strategySourceBytes,
-			"strategyMemoryBytes":   32768,
-			"soldierMemoryBytes":    2048,
-			"objectivePayloadBytes": 1024,
-			"environment":           "empty",
-			"filesystem":            "host",
-			"network":               "inherited",
-			"shell":                 "disabled",
-			"packagePolicy":         "none",
-		},
+		"limits":               limits,
+	}
+}
+
+func historicalDefaultRuntimeMetadataLimits() map[string]any {
+	return map[string]any{
+		"timeoutMs":             1000,
+		"stdoutBytes":           262144,
+		"stderrBytes":           65536,
+		"sourceBytes":           strategySourceBytes,
+		"strategyMemoryBytes":   32768,
+		"soldierMemoryBytes":    2048,
+		"objectivePayloadBytes": 1024,
+		"environment":           "empty",
+		"filesystem":            "host",
+		"network":               "inherited",
+		"shell":                 "disabled",
+		"packagePolicy":         "none",
 	}
 }
 
 func pythonRuntimeMetadata() map[string]any {
+	entrypoint := "module"
+	if selectedStrategyRuntimeABIVersion() == strategyRuntimeABIVersionV117 {
+		entrypoint = "default"
+	}
 	return map[string]any{
-		"abiVersion": "strategy-runtime-abi-v1.14",
+		"abiVersion": selectedStrategyRuntimeABIVersion(),
 		"language": map[string]any{
 			"id":      "python",
 			"version": "3.9",
@@ -2288,7 +3513,7 @@ func pythonRuntimeMetadata() map[string]any {
 		},
 		"package": map[string]any{
 			"mode":       "none",
-			"entrypoint": "module",
+			"entrypoint": entrypoint,
 		},
 		"requiredCapabilities": []string{},
 		"limits": map[string]any{
@@ -2318,7 +3543,7 @@ func wasmWasiRuntimeMetadata(languageID string) map[string]any {
 		languageVersion = "0.16.0-wasm32-wasi"
 	}
 	return map[string]any{
-		"abiVersion": "strategy-runtime-abi-v1.14",
+		"abiVersion": selectedStrategyRuntimeABIVersion(),
 		"language": map[string]any{
 			"id":      languageID,
 			"version": languageVersion,
@@ -2352,7 +3577,7 @@ func wasmWasiRuntimeMetadata(languageID string) map[string]any {
 func engineCompatibility() map[string]any {
 	return map[string]any{
 		"spec":   "cowards-rules-v1.4",
-		"engine": "0.1.4",
+		"engine": "engine-kernel-v1.37-candidate-1",
 	}
 }
 
@@ -2397,6 +3622,33 @@ func validationIssue(code string, message string) map[string]any {
 	}
 }
 
+func sandboxReadinessLabel(languageID string) string {
+	switch languageID {
+	case "javascript":
+		return "Runtime containment evidence only"
+	case "typescript", "python":
+		return "Provenance evidence only"
+	case "rust", "zig":
+		return "WASM/WASI artifact-backed evidence"
+	default:
+		return "Readiness evidence only"
+	}
+}
+
+func packagePolicyLabel(runtime map[string]any) string {
+	if stringValue(mapValue(runtime, "package"), "mode") != "none" {
+		return "Package metadata unsupported"
+	}
+	return "No packages"
+}
+
+func packagePolicyIssueCodes(runtime map[string]any) []string {
+	if stringValue(mapValue(runtime, "package"), "mode") != "none" {
+		return []string{"UNSUPPORTED_PACKAGE_METADATA"}
+	}
+	return []string{}
+}
+
 func runtimeSemantics(runtime map[string]any) map[string]any {
 	language := mapValue(runtime, "language")
 	adapter := mapValue(runtime, "adapter")
@@ -2409,17 +3661,17 @@ func runtimeSemantics(runtime map[string]any) map[string]any {
 			"languageLabel":        "Python",
 			"adapterLabel":         "Python subprocess provider",
 			"readiness":            "production-candidate",
-			"readinessLabel":       "Production candidate",
+			"readinessLabel":       sandboxReadinessLabel(languageID),
 			"experimental":         false,
 			"countedPlayEligible":  true,
 			"countedPlayLabel":     "Counted eligible",
 			"countedPlayReason":    nil,
 			"sourcePolicyLabel":    "Self-contained Strategy source",
-			"packagePolicyLabel":   "No packages",
+			"packagePolicyLabel":   packagePolicyLabel(runtime),
 			"docsReference":        "runtime/languages",
 			"examplesReference":    "examples/python-strategy",
 			"warnings":             []string{},
-			"validationIssueCodes": []string{},
+			"validationIssueCodes": packagePolicyIssueCodes(runtime),
 		}
 	}
 	if languageID == "rust" {
@@ -2429,17 +3681,17 @@ func runtimeSemantics(runtime map[string]any) map[string]any {
 			"languageLabel":        "Rust",
 			"adapterLabel":         "WASM/WASI Wasmtime Preview 1",
 			"readiness":            "production-candidate",
-			"readinessLabel":       "Production candidate",
+			"readinessLabel":       sandboxReadinessLabel(languageID),
 			"experimental":         false,
 			"countedPlayEligible":  true,
 			"countedPlayLabel":     "Counted eligible",
 			"countedPlayReason":    nil,
 			"sourcePolicyLabel":    "Self-contained Rust source compiled to immutable WASM artifact",
-			"packagePolicyLabel":   "No packages",
+			"packagePolicyLabel":   packagePolicyLabel(runtime),
 			"docsReference":        "runtime/languages",
 			"examplesReference":    "examples/rust-wasi-strategy",
 			"warnings":             []string{},
-			"validationIssueCodes": []string{},
+			"validationIssueCodes": packagePolicyIssueCodes(runtime),
 		}
 	}
 	if languageID == "zig" {
@@ -2449,17 +3701,17 @@ func runtimeSemantics(runtime map[string]any) map[string]any {
 			"languageLabel":        "Zig",
 			"adapterLabel":         "WASM/WASI Wasmtime Preview 1",
 			"readiness":            "production-candidate",
-			"readinessLabel":       "Production candidate",
+			"readinessLabel":       sandboxReadinessLabel(languageID),
 			"experimental":         false,
 			"countedPlayEligible":  true,
 			"countedPlayLabel":     "Counted eligible",
 			"countedPlayReason":    nil,
 			"sourcePolicyLabel":    "Self-contained Zig source compiled to immutable WASM artifact",
-			"packagePolicyLabel":   "No packages",
+			"packagePolicyLabel":   packagePolicyLabel(runtime),
 			"docsReference":        "runtime/languages",
 			"examplesReference":    "examples/zig-wasi-strategy",
 			"warnings":             []string{},
-			"validationIssueCodes": []string{},
+			"validationIssueCodes": packagePolicyIssueCodes(runtime),
 		}
 	}
 	return map[string]any{
@@ -2467,18 +3719,18 @@ func runtimeSemantics(runtime map[string]any) map[string]any {
 		"adapterId":            "runtime-js-worker-thread",
 		"languageLabel":        "TypeScript",
 		"adapterLabel":         "runtime-js worker thread",
-		"readiness":            "local-dev-fallback",
-		"readinessLabel":       "Local/dev fallback",
+		"readiness":            "production-candidate",
+		"readinessLabel":       sandboxReadinessLabel("typescript"),
 		"experimental":         false,
 		"countedPlayEligible":  true,
 		"countedPlayLabel":     "Counted eligible",
 		"countedPlayReason":    nil,
 		"sourcePolicyLabel":    "Self-contained Strategy source",
-		"packagePolicyLabel":   "No packages",
+		"packagePolicyLabel":   packagePolicyLabel(runtime),
 		"docsReference":        "runtime/languages",
 		"examplesReference":    "samples/minimal-strategy",
 		"warnings":             []string{},
-		"validationIssueCodes": []string{},
+		"validationIssueCodes": packagePolicyIssueCodes(runtime),
 	}
 }
 
@@ -2494,13 +3746,25 @@ func publicRuntimeMetadata(runtime map[string]any) map[string]any {
 func runtimeSemanticsForRevision(runtime map[string]any, metadata map[string]any, sourceHash string, sourceBytes int) map[string]any {
 	semantics := runtimeSemantics(runtime)
 	languageID := stringValue(mapValue(runtime, "language"), "id")
+	runtimeABI := stringValue(runtime, "abiVersion")
+	if stringValue(mapValue(runtime, "package"), "mode") != "none" {
+		semantics["countedPlayEligible"] = false
+		semantics["countedPlayLabel"] = "Not counted"
+		semantics["countedPlayReason"] = "Package metadata is not supported for counted play."
+		return semantics
+	}
 	if languageID != "python" && languageID != "rust" && languageID != "zig" {
+		if languageID == "typescript" && !providerProofMatches(metadata, sourceHash, sourceBytes, languageID, runtimeABI) {
+			semantics["countedPlayEligible"] = false
+			semantics["countedPlayLabel"] = "Not counted"
+			semantics["countedPlayReason"] = "TypeScript counted play requires provider-validated revision provenance."
+		}
 		return semantics
 	}
-	if languageID == "python" && pythonProviderValidationMatches(metadata, sourceHash, sourceBytes) {
+	if languageID == "python" && pythonProviderValidationMatchesABI(metadata, sourceHash, sourceBytes, runtimeABI) {
 		return semantics
 	}
-	if (languageID == "rust" || languageID == "zig") && rustProviderValidationMatches(metadata, sourceHash, sourceBytes, languageID) {
+	if (languageID == "rust" || languageID == "zig") && rustProviderValidationMatchesABI(metadata, sourceHash, sourceBytes, languageID, runtimeABI) {
 		return semantics
 	}
 	languageLabel := "Python"
@@ -2523,7 +3787,8 @@ func validationStatus(validation map[string]any) string {
 }
 
 func runtimeAllowsCountedPlay(runtime map[string]any, metadata map[string]any, sourceHash string, sourceBytes int) bool {
-	if stringValue(runtime, "abiVersion") != "strategy-runtime-abi-v1.14" {
+	runtimeABI := stringValue(runtime, "abiVersion")
+	if runtimeABI != selectedStrategyRuntimeABIVersion() {
 		return false
 	}
 	language := mapValue(runtime, "language")
@@ -2535,18 +3800,21 @@ func runtimeAllowsCountedPlay(runtime map[string]any, metadata map[string]any, s
 		if adapterID != "runtime-python-subprocess-experimental" {
 			return false
 		}
-		if !pythonProviderValidationMatches(metadata, sourceHash, sourceBytes) {
+		if !pythonProviderValidationMatchesABI(metadata, sourceHash, sourceBytes, runtimeABI) {
 			return false
 		}
 	} else if languageID == "rust" || languageID == "zig" {
 		if adapterID != "runtime-wasm-wasi-wasmtime-preview1" {
 			return false
 		}
-		if !rustProviderValidationMatches(metadata, sourceHash, sourceBytes, languageID) {
+		if !rustProviderValidationMatchesABI(metadata, sourceHash, sourceBytes, languageID, runtimeABI) {
 			return false
 		}
 	} else if languageID == "typescript" {
 		if adapterID != "runtime-js-worker-thread" && adapterID != "runtime-js-subprocess" {
+			return false
+		}
+		if !sourceArtifactProviderValidationMatchesABI(metadata, sourceHash, sourceBytes, "strategy-language-provider-js-ts", "typescript", runtimeABI) {
 			return false
 		}
 	} else if languageID == "javascript" {
@@ -2563,10 +3831,18 @@ func runtimeAllowsCountedPlay(runtime map[string]any, metadata map[string]any, s
 }
 
 func pythonProviderValidationMatches(metadata map[string]any, sourceHash string, sourceBytes int) bool {
-	return sourceArtifactProviderValidationMatches(metadata, sourceHash, sourceBytes, "strategy-language-provider-python", "python")
+	return pythonProviderValidationMatchesABI(metadata, sourceHash, sourceBytes, strategyRuntimeABIVersion)
+}
+
+func pythonProviderValidationMatchesABI(metadata map[string]any, sourceHash string, sourceBytes int, runtimeABI string) bool {
+	return sourceArtifactProviderValidationMatchesABI(metadata, sourceHash, sourceBytes, "strategy-language-provider-python", "python", runtimeABI)
 }
 
 func sourceArtifactProviderValidationMatches(metadata map[string]any, sourceHash string, sourceBytes int, providerID string, languageID string) bool {
+	return sourceArtifactProviderValidationMatchesABI(metadata, sourceHash, sourceBytes, providerID, languageID, strategyRuntimeABIVersion)
+}
+
+func sourceArtifactProviderValidationMatchesABI(metadata map[string]any, sourceHash string, sourceBytes int, providerID string, languageID string, runtimeABI string) bool {
 	if sourceHash == "" || sourceBytes <= 0 {
 		return false
 	}
@@ -2577,8 +3853,11 @@ func sourceArtifactProviderValidationMatches(metadata map[string]any, sourceHash
 		return false
 	}
 	artifactBytesBase64 := stringValue(artifact, "bytesBase64")
-	artifactBytesRaw, err := base64.StdEncoding.DecodeString(artifactBytesBase64)
-	if err != nil || len(artifactBytesRaw) != artifactBytes {
+	if artifactBytesBase64 == "" {
+		return false
+	}
+	artifactBytesRaw, err := base64.StdEncoding.Strict().DecodeString(artifactBytesBase64)
+	if err != nil || len(artifactBytesRaw) != artifactBytes || base64.StdEncoding.EncodeToString(artifactBytesRaw) != artifactBytesBase64 {
 		return false
 	}
 	artifactDigest := sha256.Sum256(artifactBytesRaw)
@@ -2593,27 +3872,68 @@ func sourceArtifactProviderValidationMatches(metadata map[string]any, sourceHash
 	if stringValue(artifact, "format") != expectedFormat ||
 		stringValue(artifact, "sourceHash") != sourceHash ||
 		intValue(artifact, "sourceBytes") != sourceBytes ||
-		stringValue(artifact, "abiVersion") != "strategy-runtime-abi-v1.14" ||
+		stringValue(artifact, "abiVersion") != runtimeABI ||
 		stringValue(artifact, "validationStatus") != "valid" ||
 		stringValue(toolchain, "language") != languageID {
 		return false
 	}
 	providerValidation := mapValue(metadata, "providerValidation")
+	contractVersion := stringValue(providerValidation, "contractVersion")
 	if stringValue(providerValidation, "providerId") != providerID ||
-		stringValue(providerValidation, "contractVersion") != "strategy-language-provider-contract-v1.33" ||
 		stringValue(providerValidation, "sourceHash") != sourceHash ||
 		intValue(providerValidation, "sourceBytes") != sourceBytes ||
 		stringValue(providerValidation, "artifactHash") != artifactHash ||
 		intValue(providerValidation, "artifactBytes") != artifactBytes {
 		return false
 	}
+	expectedProof := ""
+	switch runtimeABI {
+	case strategyRuntimeABIVersion:
+		if contractVersion != "strategy-language-provider-contract-v1.33" {
+			return false
+		}
+		expectedProof = providerValidationProof(providerID, sourceHash, sourceBytes, artifactHash, artifactBytes)
+	case strategyRuntimeABIVersionV117:
+		if contractVersion != "runtime-provider-validation-v1.17" {
+			return false
+		}
+		expectedProof = providerValidationProofV117(providerID, contractVersion, sourceHash, sourceBytes, artifactHash, artifactBytes)
+	default:
+		return false
+	}
 	return subtle.ConstantTimeCompare(
 		[]byte(stringValue(providerValidation, "proof")),
-		[]byte(providerValidationProof(providerID, sourceHash, sourceBytes, artifactHash, artifactBytes)),
+		[]byte(expectedProof),
 	) == 1
 }
 
+func providerValidationProofV117(providerID string, contractVersion string, sourceHash string, sourceBytes int, artifactHash string, artifactBytes int) string {
+	payload, err := json.Marshal(struct {
+		ProviderID      string `json:"providerId"`
+		ContractVersion string `json:"contractVersion"`
+		SourceHash      string `json:"sourceHash"`
+		SourceBytes     int    `json:"sourceBytes"`
+		ArtifactHash    string `json:"artifactHash"`
+		ArtifactBytes   int    `json:"artifactBytes"`
+	}{
+		ProviderID: providerID, ContractVersion: contractVersion,
+		SourceHash: sourceHash, SourceBytes: sourceBytes,
+		ArtifactHash: artifactHash, ArtifactBytes: artifactBytes,
+	})
+	if err != nil {
+		return ""
+	}
+	hash := sha256.New()
+	_, _ = hash.Write([]byte("cowards-game:strategy-provider-validation:v1.17\x00"))
+	_, _ = hash.Write(payload)
+	return "sha256:" + hex.EncodeToString(hash.Sum(nil))
+}
+
 func rustProviderValidationMatches(metadata map[string]any, sourceHash string, sourceBytes int, languageID string) bool {
+	return rustProviderValidationMatchesABI(metadata, sourceHash, sourceBytes, languageID, strategyRuntimeABIVersion)
+}
+
+func rustProviderValidationMatchesABI(metadata map[string]any, sourceHash string, sourceBytes int, languageID string, runtimeABI string) bool {
 	if sourceHash == "" || sourceBytes <= 0 {
 		return false
 	}
@@ -2624,8 +3944,11 @@ func rustProviderValidationMatches(metadata map[string]any, sourceHash string, s
 		return false
 	}
 	artifactBytesBase64 := stringValue(artifact, "bytesBase64")
-	artifactBytesRaw, err := base64.StdEncoding.DecodeString(artifactBytesBase64)
-	if err != nil || len(artifactBytesRaw) != artifactBytes {
+	if artifactBytesBase64 == "" {
+		return false
+	}
+	artifactBytesRaw, err := base64.StdEncoding.Strict().DecodeString(artifactBytesBase64)
+	if err != nil || len(artifactBytesRaw) != artifactBytes || base64.StdEncoding.EncodeToString(artifactBytesRaw) != artifactBytesBase64 {
 		return false
 	}
 	artifactDigest := sha256.Sum256(artifactBytesRaw)
@@ -2638,26 +3961,55 @@ func rustProviderValidationMatches(metadata map[string]any, sourceHash string, s
 		providerID = "strategy-language-provider-zig-wasi"
 		targetTriple = "wasm32-wasi"
 	}
-	if stringValue(artifact, "sourceHash") != sourceHash ||
+	abiEnvelope := ""
+	artifactSourceHash := sourceHash
+	switch runtimeABI {
+	case strategyRuntimeABIVersion:
+		abiEnvelope = "stdin-stdout-json"
+	case strategyRuntimeABIVersionV117:
+		abiEnvelope = "stdin-canonical-request-stdout-raw-canonical-payload"
+		artifactSourceHash = stringValue(mapValue(artifact, "sourceIdentity"), "normalizedSourceSha256")
+		if !isPrefixedLowerSHA256(artifactSourceHash) {
+			return false
+		}
+	default:
+		return false
+	}
+	if stringValue(artifact, "sourceHash") != artifactSourceHash ||
 		stringValue(artifact, "targetTriple") != targetTriple ||
 		stringValue(artifact, "wasiProfile") != "preview1" ||
-		stringValue(artifact, "abiEnvelope") != "stdin-stdout-json" ||
-		stringValue(artifact, "abiVersion") != "strategy-runtime-abi-v1.14" ||
+		stringValue(artifact, "abiEnvelope") != abiEnvelope ||
+		stringValue(artifact, "abiVersion") != runtimeABI ||
 		stringValue(artifact, "validationStatus") != "valid" {
 		return false
 	}
 	providerValidation := mapValue(metadata, "providerValidation")
 	if stringValue(providerValidation, "providerId") != providerID ||
-		stringValue(providerValidation, "contractVersion") != "strategy-language-provider-contract-v1.33" ||
 		stringValue(providerValidation, "sourceHash") != sourceHash ||
 		intValue(providerValidation, "sourceBytes") != sourceBytes ||
 		stringValue(providerValidation, "artifactHash") != artifactHash ||
 		intValue(providerValidation, "artifactBytes") != artifactBytes {
 		return false
 	}
+	contractVersion := stringValue(providerValidation, "contractVersion")
+	expectedProof := ""
+	switch runtimeABI {
+	case strategyRuntimeABIVersion:
+		if contractVersion != "strategy-language-provider-contract-v1.33" {
+			return false
+		}
+		expectedProof = providerValidationProof(providerID, sourceHash, sourceBytes, artifactHash, artifactBytes)
+	case strategyRuntimeABIVersionV117:
+		if contractVersion != "runtime-provider-validation-v1.17" {
+			return false
+		}
+		expectedProof = providerValidationProofV117(providerID, contractVersion, sourceHash, sourceBytes, artifactHash, artifactBytes)
+	default:
+		return false
+	}
 	return subtle.ConstantTimeCompare(
 		[]byte(stringValue(providerValidation, "proof")),
-		[]byte(providerValidationProof(providerID, sourceHash, sourceBytes, artifactHash, artifactBytes)),
+		[]byte(expectedProof),
 	) == 1
 }
 
@@ -2692,8 +4044,9 @@ func providerValidationProof(providerID string, sourceHash string, sourceBytes i
 	return "hmac-sha256:" + hex.EncodeToString(mac.Sum(nil))
 }
 
-func runtimeAllowsNonCountedExhibition(runtime map[string]any) bool {
-	if stringValue(runtime, "abiVersion") != "strategy-runtime-abi-v1.14" {
+func runtimeAllowsNonCountedExhibition(runtime map[string]any, metadata map[string]any, sourceHash string, sourceBytes int) bool {
+	runtimeABI := stringValue(runtime, "abiVersion")
+	if runtimeABI != selectedStrategyRuntimeABIVersion() {
 		return false
 	}
 	language := mapValue(runtime, "language")
@@ -2707,11 +4060,17 @@ func runtimeAllowsNonCountedExhibition(runtime map[string]any) bool {
 	if len(stringSliceFromAny(runtime["requiredCapabilities"])) != 0 {
 		return false
 	}
+	if languageID == "typescript" {
+		return (adapterID == "runtime-js-worker-thread" || adapterID == "runtime-js-subprocess") &&
+			sourceArtifactProviderValidationMatchesABI(metadata, sourceHash, sourceBytes, "strategy-language-provider-js-ts", "typescript", runtimeABI)
+	}
 	if languageID == "python" {
-		return adapterID == "runtime-python-subprocess-experimental"
+		return adapterID == "runtime-python-subprocess-experimental" &&
+			pythonProviderValidationMatchesABI(metadata, sourceHash, sourceBytes, runtimeABI)
 	}
 	if languageID == "rust" || languageID == "zig" {
-		return adapterID == "runtime-wasm-wasi-wasmtime-preview1"
+		return adapterID == "runtime-wasm-wasi-wasmtime-preview1" &&
+			rustProviderValidationMatchesABI(metadata, sourceHash, sourceBytes, languageID, runtimeABI)
 	}
 	return runtimeAllowsCountedPlay(runtime, nil, "", 0)
 }
@@ -2781,6 +4140,657 @@ func matchSetPresetSpec(matchSetPresetID string) ([]string, []string, bool) {
 	}
 }
 
+const candidateSetScenarioIdentityDomainV119 = "cowards-game:set-scenario:v1.37"
+const candidateSetConditionIdentityDomainV119 = "cowards-game:set-condition:v1.37"
+const candidateSetRequestIdentityDomainV119 = "cowards-game:set-condition-request:v1.37"
+const candidateSemanticTupleIdentityDomainV119 = "cowards-game:runtime-identity:v1:semantic-tuple"
+
+type candidateSetEntrantV119 struct {
+	EntrantKey         string
+	StrategyRevisionID string
+	PlayerID           string
+}
+
+type candidateFourConditionMatchV119 struct {
+	ID                          string `json:"id"`
+	BottomStrategyRevisionID    string `json:"bottomStrategyRevisionId"`
+	TopStrategyRevisionID       string `json:"topStrategyRevisionId"`
+	ArenaVariantID              string `json:"arenaVariantId"`
+	Seed                        string `json:"seed"`
+	BottomPlayerID              string `json:"bottomPlayerId"`
+	TopPlayerID                 string `json:"topPlayerId"`
+	BottomEntrantKey            string `json:"bottomEntrantKey"`
+	TopEntrantKey               string `json:"topEntrantKey"`
+	SemanticAuthorityKey        string `json:"semanticAuthorityKey"`
+	SetPolicyVersion            string `json:"setPolicyVersion"`
+	ScenarioID                  string `json:"scenarioId"`
+	ConditionID                 string `json:"conditionId"`
+	ConditionOrdinal            int    `json:"conditionOrdinal"`
+	ConditionSuffix             string `json:"conditionSuffix"`
+	RequestIdentity             string `json:"requestIdentity"`
+	ArenaCatalogVersion         string `json:"arenaCatalogVersion"`
+	ArenaSemanticGeometryHash   string `json:"arenaSemanticGeometryHash"`
+	InitialInitiativeEntrantKey string `json:"initialInitiativeEntrantKey"`
+	InitialInitiativePlayerID   string `json:"initialInitiativePlayerId"`
+}
+
+const activeGoSemanticAuthoritySelectionRootV117 = "sha256:fd2cc24a345c0cb94dde9966262f128c663a4430022574729eb4a902177c4b5a"
+const reviewedGoSemanticAuthoritySelectionRootV119 = "sha256:17954660f17c83e60e5d7df0b589cd89cf6b00eba4d4963e2d4bf43bc71c6ea2"
+
+type goSemanticAuthoritySelection struct {
+	SchemaVersion                  string `json:"schemaVersion"`
+	SemanticAuthorityKey           string `json:"semanticAuthorityKey"`
+	TupleID                        string `json:"tupleId"`
+	RulesVersion                   string `json:"rulesVersion"`
+	EngineVersion                  string `json:"engineVersion"`
+	RuntimeABIVersion              string `json:"runtimeAbiVersion"`
+	ChronicleVersion               string `json:"chronicleVersion"`
+	ConformanceCertificateVersion  string `json:"conformanceCertificateVersion"`
+	ConformanceCorpusVersion       string `json:"conformanceCorpusVersion"`
+	ConformanceCorpusRoot          string `json:"conformanceCorpusRoot"`
+	ConformanceTraceVersion        string `json:"conformanceTraceVersion"`
+	ConformanceTraceRoot           string `json:"conformanceTraceRoot"`
+	WorkshopContractVersion        string `json:"workshopContractVersion"`
+	WorkshopContractRoot           string `json:"workshopContractRoot"`
+	ArenaCatalogVersion            string `json:"arenaCatalogVersion"`
+	SetPolicyVersion               string `json:"setPolicyVersion"`
+	StrategyRevisionEvidencePolicy string `json:"strategyRevisionEvidencePolicy"`
+}
+
+func activeGoSemanticAuthoritySelectionV117() goSemanticAuthoritySelection {
+	return goSemanticAuthoritySelection{
+		SchemaVersion: "semantic-authority-selection-v1", SemanticAuthorityKey: "runtime-v1.17",
+		TupleID:      "sha256:0d8a04fdfe49e3aa7261728ee51beb0a9049b661aad978277f2892c3a4bc54fe",
+		RulesVersion: "cowards-rules-v1.4", EngineVersion: "engine-kernel-v1.37-candidate-1",
+		RuntimeABIVersion: "strategy-runtime-abi-v1.17", ChronicleVersion: "chronicle-recorder-current-events-v1.37-candidate-1",
+		ConformanceCertificateVersion: "runtime-conformance-certificate-v1.17",
+		ConformanceCorpusVersion:      "v2", ConformanceCorpusRoot: "sha256:238347225defaaabcf9e57141ac7a54b4b277bd149bebe2b21903febc9ce7ac2",
+		ConformanceTraceVersion: "v1.37-conformance-trace-v3", ConformanceTraceRoot: "sha256:53ac4a34b8ea3a52b65b566dfb1da94cbc36ce220c590fe46c0bf43489668696",
+		WorkshopContractVersion: "workshop-contract-v1.17", WorkshopContractRoot: "sha256:1bed9b99ce512da13a3aa37554dc9b279f51dca619280ff3cbd85cc773ce18d3",
+		ArenaCatalogVersion: "semantic-arena-catalog-v1.37-candidate-1", SetPolicyVersion: "canonical-set-policy-v1.4",
+		StrategyRevisionEvidencePolicy: "phase259-explicit-current-evidence-v1",
+	}
+}
+
+func reviewedGoSemanticAuthoritySelectionV119() goSemanticAuthoritySelection {
+	return goSemanticAuthoritySelection{
+		SchemaVersion: "semantic-authority-selection-v1", SemanticAuthorityKey: "runtime-v1.19",
+		TupleID:      "sha256:37c9a07425d454c74859112debcc3ef362d43e80d5767560d9bde28a3c8d5e73",
+		RulesVersion: "cowards-rules-v1.4", EngineVersion: "engine-kernel-v1.37-candidate-1",
+		RuntimeABIVersion: "strategy-runtime-abi-v1.19", ChronicleVersion: "chronicle-recorder-current-events-v1.37-candidate-1",
+		ConformanceCertificateVersion: "runtime-conformance-certificate-v1.19",
+		ConformanceCorpusVersion:      "v3", ConformanceCorpusRoot: "sha256:06d0717a16047cace0364c94a15353e2d53b53da5e8bebef6912f9f30f3d681d",
+		ConformanceTraceVersion: "v1.37-observation-trace-v4", ConformanceTraceRoot: "sha256:f9821fd2b3a5a3cb17a01b4a8050ea70c2274df04601f314a25adac6da4f428a",
+		WorkshopContractVersion: "workshop-contract-v1.19", WorkshopContractRoot: "sha256:b455b4e44ccae14cb724c6d3e8f41e3fb8dfcdb36976d35058f859dcfc7a385d",
+		ArenaCatalogVersion: "canonical-arena-catalog-v1.37", SetPolicyVersion: "canonical-set-policy-v1.37-four-condition-v1",
+		StrategyRevisionEvidencePolicy: "strategy-revision-v1.19-revalidation-v1",
+	}
+}
+
+func (selection goSemanticAuthoritySelection) Root() string {
+	if selection == activeGoSemanticAuthoritySelectionV117() {
+		return activeGoSemanticAuthoritySelectionRootV117
+	}
+	if selection == reviewedGoSemanticAuthoritySelectionV119() {
+		return reviewedGoSemanticAuthoritySelectionRootV119
+	}
+	return ""
+}
+
+func resolveCurrentGoSemanticAuthoritySelection(current currentSemanticAuthorityGeneratedSelection) (goSemanticAuthoritySelection, string, error) {
+	var selection goSemanticAuthoritySelection
+	expectedSourceSHA256 := ""
+	expectedOutputSHA256 := ""
+	switch current.SemanticAuthorityKey {
+	case "runtime-v1.17":
+		selection = activeGoSemanticAuthoritySelectionV117()
+		expectedSourceSHA256 = "sha256:14296beaf5e79d731dba3de3501dde7239731ce51b0c926bced3d76f5eff29e1"
+		expectedOutputSHA256 = "sha256:bb814addab77fd473103651eb9aac2980ed45770d5147fb54de1f703143b2ce0"
+	case "runtime-v1.19":
+		selection = reviewedGoSemanticAuthoritySelectionV119()
+		expectedSourceSHA256 = "sha256:110d30db98623cb90f07b473045cf04aca3433fb823964163191a0a8cba64b61"
+		expectedOutputSHA256 = "sha256:15030ee59b81a2bf04667e045344de36d1b11b9834e64f71be05ccf7b73d80d5"
+	default:
+		return goSemanticAuthoritySelection{}, "", errors.New("generated Go semantic authority is unknown")
+	}
+	if current.TupleID != selection.TupleID || current.Rules != selection.RulesVersion || current.Engine != selection.EngineVersion ||
+		current.RuntimeABI != selection.RuntimeABIVersion || current.Chronicle != selection.ChronicleVersion ||
+		current.ArenaCatalog != selection.ArenaCatalogVersion || current.SetPolicy != selection.SetPolicyVersion ||
+		current.ConformanceCertificateVersion != selection.ConformanceCertificateVersion ||
+		current.SourceSHA256 != expectedSourceSHA256 || current.OutputSHA256 != expectedOutputSHA256 {
+		return goSemanticAuthoritySelection{}, "", errors.New("generated Go semantic authority is mixed")
+	}
+	return selection, selection.Root(), nil
+}
+
+type goSemanticAuthorityHeadSnapshot struct {
+	State               string
+	ActiveSelection     json.RawMessage
+	ActiveSelectionRoot string
+	PendingIntent       json.RawMessage
+}
+
+func validateCurrentGoSemanticAuthorityHead(current currentSemanticAuthorityGeneratedSelection, head goSemanticAuthorityHeadSnapshot) (goSemanticAuthoritySelection, string, error) {
+	expected, root, err := resolveCurrentGoSemanticAuthoritySelection(current)
+	if err != nil || (len(head.PendingIntent) != 0 && string(head.PendingIntent) != "null") {
+		return goSemanticAuthoritySelection{}, "", errors.New("semantic authority head is pending or invalid")
+	}
+	validState := current.SemanticAuthorityKey == "runtime-v1.17" && (head.State == "active-v1.17-bootstrap" || head.State == "active-v1.17-compensated")
+	validState = validState || current.SemanticAuthorityKey == "runtime-v1.19" && head.State == "active-v1.19-finalized"
+	if !validState || head.ActiveSelectionRoot != root {
+		return goSemanticAuthoritySelection{}, "", errors.New("semantic authority head does not match generated current")
+	}
+	var selected goSemanticAuthoritySelection
+	if err := decodeStrictJSON(head.ActiveSelection, &selected); err != nil || selected != expected || selected.Root() != root {
+		return goSemanticAuthoritySelection{}, "", errors.New("semantic authority head selection is mixed")
+	}
+	return selected, root, nil
+}
+
+func lockCurrentGoSemanticAuthorityHead(ctx context.Context, tx pgx.Tx, current currentSemanticAuthorityGeneratedSelection) (goSemanticAuthoritySelection, string, error) {
+	if tx == nil {
+		return goSemanticAuthoritySelection{}, "", errors.New("semantic authority transaction is unavailable")
+	}
+	var head goSemanticAuthorityHeadSnapshot
+	if err := tx.QueryRow(ctx, `
+		select state, active_selection, active_selection_root, pending_intent
+		  from semantic_authority_selection_head
+		 where singleton=true
+		 for update
+	`).Scan(&head.State, &head.ActiveSelection, &head.ActiveSelectionRoot, &head.PendingIntent); err != nil {
+		return goSemanticAuthoritySelection{}, "", errors.New("semantic authority head is unavailable")
+	}
+	return validateCurrentGoSemanticAuthorityHead(current, head)
+}
+
+func candidateSchedulingAuthorityV119(key string) (arenaSetAuthorityV137Candidate, error) {
+	return candidateSchedulingAuthorityV119ForCurrent(key, currentSemanticAuthorityGenerated())
+}
+
+func candidateSchedulingAuthorityV119ForCurrent(key string, current currentSemanticAuthorityGeneratedSelection) (arenaSetAuthorityV137Candidate, error) {
+	selection, _, err := resolveCurrentGoSemanticAuthoritySelection(current)
+	if err != nil {
+		return arenaSetAuthorityV137Candidate{}, err
+	}
+	if key == "" {
+		if selection.SemanticAuthorityKey != "runtime-v1.19" {
+			return arenaSetAuthorityV137Candidate{}, errors.New("v1.19 semantic authority is not current")
+		}
+		key = selection.SemanticAuthorityKey
+	}
+	candidate, ok := arenaSetAuthorityV137CandidateBySemanticAuthorityKey(key)
+	if !ok || candidate.SemanticAuthorityKey != "runtime-v1.19" || candidate.Policy.Active ||
+		candidate.Policy.ConditionCount != 4 || candidate.Policy.SeedCarriesFairnessSemantics ||
+		candidate.Tuple.TupleID != "sha256:37c9a07425d454c74859112debcc3ef362d43e80d5767560d9bde28a3c8d5e73" ||
+		candidate.Tuple.RuntimeABI != "strategy-runtime-abi-v1.19" ||
+		candidate.Tuple.ArenaCatalog != "canonical-arena-catalog-v1.37" ||
+		candidate.Tuple.SetPolicy != "canonical-set-policy-v1.37-four-condition-v1" ||
+		candidate.SourceSHA256 != arenaSetAuthorityV137SourceSHA256 ||
+		candidate.OutputSHA256 != arenaSetAuthorityV137OutputSHA256 {
+		return arenaSetAuthorityV137Candidate{}, errors.New("candidate Go semantic authority is unavailable")
+	}
+	return candidate, nil
+}
+
+func candidateSetIdentityHashV119(identityDomain string, value map[string]any) (string, error) {
+	canonical, err := runtimeInvocationV117CanonicalValue(value)
+	if err != nil {
+		return "", errors.New("candidate Set identity is not canonical")
+	}
+	framed := runtimeInvocationV117Frame(
+		candidateSemanticTupleIdentityDomainV119,
+		[]byte(identityDomain),
+		canonical,
+	)
+	digest := sha256.Sum256(framed)
+	return hex.EncodeToString(digest[:]), nil
+}
+
+func candidateArenaConfigV119(arena arenaSetAuthorityV137Arena) map[string]any {
+	stones := make([]map[string]any, 0, len(arena.TerrainStones))
+	for _, stone := range arena.TerrainStones {
+		stones = append(stones, map[string]any{"x": stone.X, "y": stone.Y})
+	}
+	return map[string]any{
+		"id":          arena.ID,
+		"version":     arena.Version,
+		"name":        arena.Name,
+		"status":      arena.Status,
+		"schedulable": arena.Schedulable,
+		"aliasOf": func() any {
+			if arena.AliasOf == "" {
+				return nil
+			}
+			return arena.AliasOf
+		}(),
+		"initialBounds": map[string]any{
+			"minX": arena.InitialBounds.MinX,
+			"maxX": arena.InitialBounds.MaxX,
+			"minY": arena.InitialBounds.MinY,
+			"maxY": arena.InitialBounds.MaxY,
+		},
+		"terrainStones":        stones,
+		"arenaOwnedSetup":      jsonMap([]byte(arena.ArenaOwnedSetupJSON)),
+		"semanticGeometryHash": arena.SemanticGeometryHash,
+	}
+}
+
+func ensureCandidateCompetitionArenasV119(ctx context.Context, tx pgx.Tx, semanticAuthorityKey string) error {
+	if tx == nil {
+		return errors.New("candidate catalog transaction is unavailable")
+	}
+	authority, err := candidateSchedulingAuthorityV119(semanticAuthorityKey)
+	if err != nil {
+		return err
+	}
+	if _, err := tx.Exec(ctx, "select pg_advisory_xact_lock(hashtext('cowards-game:arena-catalog-v1.37:install'))"); err != nil {
+		return errors.New("candidate catalog lock is unavailable")
+	}
+	for _, arena := range authority.Arenas {
+		config := candidateArenaConfigV119(arena)
+		var alias any
+		if arena.AliasOf != "" {
+			alias = arena.AliasOf
+		}
+		if _, err := tx.Exec(ctx, `
+			insert into arena_catalog_entries (
+				catalog_version, arena_id, arena_version, arena_name,
+				arena_status, schedulable, alias_of_arena_id,
+				geometry_hash_profile, semantic_geometry_hash, config
+			) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+			on conflict (catalog_version, arena_id) do nothing
+		`, authority.ArenaCatalogVersion, arena.ID, arena.Version, arena.Name,
+			arena.Status, arena.Schedulable, alias, authority.GeometryHashProfile,
+			arena.SemanticGeometryHash, config); err != nil {
+			return errors.New("candidate catalog installation failed")
+		}
+		var version, name, status, geometryProfile, geometryHash string
+		var schedulable bool
+		var persistedAlias *string
+		var persistedConfig []byte
+		if err := tx.QueryRow(ctx, `
+			select arena_version, arena_name, arena_status, schedulable,
+			       alias_of_arena_id, geometry_hash_profile,
+			       semantic_geometry_hash, config
+			  from arena_catalog_entries
+			 where catalog_version=$1 and arena_id=$2
+			 for share
+		`, authority.ArenaCatalogVersion, arena.ID).Scan(
+			&version, &name, &status, &schedulable, &persistedAlias,
+			&geometryProfile, &geometryHash, &persistedConfig,
+		); err != nil {
+			return errors.New("candidate catalog exact record is unavailable")
+		}
+		persistedAliasValue := ""
+		if persistedAlias != nil {
+			persistedAliasValue = *persistedAlias
+		}
+		if version != arena.Version || name != arena.Name || status != arena.Status ||
+			schedulable != arena.Schedulable || persistedAliasValue != arena.AliasOf ||
+			geometryProfile != authority.GeometryHashProfile || geometryHash != arena.SemanticGeometryHash ||
+			!jsonSemanticEqual(jsonMap(persistedConfig), config) {
+			return errors.New("candidate catalog exact record mismatch")
+		}
+	}
+	return nil
+}
+
+func generateCandidateFourConditionMatchesV119(
+	semanticAuthorityKey string,
+	matchSetID string,
+	arenaID string,
+	baseSeed string,
+	entrantA candidateSetEntrantV119,
+	entrantB candidateSetEntrantV119,
+) ([]candidateFourConditionMatchV119, error) {
+	authority, err := candidateSchedulingAuthorityV119(semanticAuthorityKey)
+	if err != nil || matchSetID == "" || baseSeed == "" || entrantA.EntrantKey == "" ||
+		entrantB.EntrantKey == "" || entrantA.EntrantKey == entrantB.EntrantKey ||
+		entrantA.StrategyRevisionID == "" || entrantB.StrategyRevisionID == "" ||
+		entrantA.PlayerID == "" || entrantB.PlayerID == "" || entrantA.PlayerID == entrantB.PlayerID {
+		return nil, errors.New("candidate four-condition input is invalid")
+	}
+	var arena *arenaSetAuthorityV137Arena
+	for index := range authority.Arenas {
+		entry := &authority.Arenas[index]
+		if entry.ID == arenaID {
+			arena = entry
+			break
+		}
+	}
+	if arena == nil || arena.Status != "active" || !arena.Schedulable || arena.AliasOf != "" {
+		return nil, errors.New("candidate arena is not schedulable")
+	}
+	scenarioHash, err := candidateSetIdentityHashV119(candidateSetScenarioIdentityDomainV119, map[string]any{
+		"setPolicyVersion":          authority.Policy.Version,
+		"arenaCatalogVersion":       authority.ArenaCatalogVersion,
+		"arenaSemanticGeometryHash": arena.SemanticGeometryHash,
+		"entrantAKey":               entrantA.EntrantKey,
+		"entrantBKey":               entrantB.EntrantKey,
+		"baseSeed":                  baseSeed,
+	})
+	if err != nil {
+		return nil, err
+	}
+	scenarioID := "set-scenario:sha256:" + scenarioHash
+	participant := func(value string) candidateSetEntrantV119 {
+		if value == "a" {
+			return entrantA
+		}
+		return entrantB
+	}
+	matches := make([]candidateFourConditionMatchV119, 0, len(authority.ConditionRows))
+	for _, row := range authority.ConditionRows {
+		if row.Ordinal != len(matches) || row.Ordinal < 0 || row.Ordinal > 3 {
+			return nil, errors.New("candidate condition authority is noncanonical")
+		}
+		bottom := participant(row.Bottom)
+		top := participant(row.Top)
+		initial := participant(row.InitialInitiative)
+		conditionHash, hashErr := candidateSetIdentityHashV119(candidateSetConditionIdentityDomainV119, map[string]any{
+			"scenarioId": scenarioID,
+			"suffix":     row.Suffix,
+		})
+		if hashErr != nil {
+			return nil, hashErr
+		}
+		conditionID := "set-condition:sha256:" + conditionHash
+		requestSource := map[string]any{
+			"scenarioId":                  scenarioID,
+			"conditionId":                 conditionID,
+			"ordinal":                     row.Ordinal,
+			"suffix":                      row.Suffix,
+			"baseSeed":                    baseSeed,
+			"bottomEntrantKey":            bottom.EntrantKey,
+			"topEntrantKey":               top.EntrantKey,
+			"initialInitiativeEntrantKey": initial.EntrantKey,
+			"bottomPlayerId":              bottom.PlayerID,
+			"topPlayerId":                 top.PlayerID,
+			"initialInitiativePlayerId":   initial.PlayerID,
+		}
+		requestHash, hashErr := candidateSetIdentityHashV119(candidateSetRequestIdentityDomainV119, requestSource)
+		if hashErr != nil {
+			return nil, hashErr
+		}
+		matches = append(matches, candidateFourConditionMatchV119{
+			ID:                          fmt.Sprintf("match:%s:%d", matchSetID, row.Ordinal),
+			BottomStrategyRevisionID:    bottom.StrategyRevisionID,
+			TopStrategyRevisionID:       top.StrategyRevisionID,
+			ArenaVariantID:              arena.ID,
+			Seed:                        baseSeed,
+			BottomPlayerID:              bottom.PlayerID,
+			TopPlayerID:                 top.PlayerID,
+			BottomEntrantKey:            bottom.EntrantKey,
+			TopEntrantKey:               top.EntrantKey,
+			SemanticAuthorityKey:        authority.SemanticAuthorityKey,
+			SetPolicyVersion:            authority.Policy.Version,
+			ScenarioID:                  scenarioID,
+			ConditionID:                 conditionID,
+			ConditionOrdinal:            row.Ordinal,
+			ConditionSuffix:             row.Suffix,
+			RequestIdentity:             "set-request:sha256:" + requestHash,
+			ArenaCatalogVersion:         authority.ArenaCatalogVersion,
+			ArenaSemanticGeometryHash:   arena.SemanticGeometryHash,
+			InitialInitiativeEntrantKey: initial.EntrantKey,
+			InitialInitiativePlayerID:   initial.PlayerID,
+		})
+	}
+	return matches, nil
+}
+
+type candidateFourConditionCreationInputV119 struct {
+	MatchSetID        string
+	CreatorUserID     string
+	ArenaID           string
+	BaseSeed          string
+	EntrantA          candidateSetEntrantV119
+	EntrantB          candidateSetEntrantV119
+	IntegrityIdentity *goMatchSetIntegrityIdentity
+}
+
+func loadCandidateRevisionAdmissionsV119(ctx context.Context, tx pgx.Tx, entrants []candidateSetEntrantV119) (map[string]candidateRevisionAdmissionV119, error) {
+	if tx == nil || len(entrants) != 2 {
+		return nil, errors.New("candidate revision admission unavailable")
+	}
+	sorted := append([]candidateSetEntrantV119(nil), entrants...)
+	sort.Slice(sorted, func(i, j int) bool { return sorted[i].StrategyRevisionID < sorted[j].StrategyRevisionID })
+	result := make(map[string]candidateRevisionAdmissionV119, 2)
+	for _, entrant := range sorted {
+		var lockedID string
+		if err := tx.QueryRow(ctx, `
+			select id from strategy_revisions
+			 where id=$1 and locked_at is not null
+			 for update
+		`, entrant.StrategyRevisionID).Scan(&lockedID); err != nil || lockedID != entrant.StrategyRevisionID {
+			return nil, errors.New("candidate Strategy Revision is not immutable")
+		}
+		var admission candidateRevisionAdmissionV119
+		err := tx.QueryRow(ctx, `
+			select evidence.id, evidence.strategy_revision_id,
+			       evidence.source_hash, evidence.source_bytes,
+			       evidence.artifact_sha256, evidence.artifact_bytes,
+			       evidence.language_id, evidence.provider_id, evidence.lane_id,
+			       evidence.runtime_abi_version, evidence.semantic_runtime_version,
+			       evidence.semantic_tuple_id, evidence.execution_kind,
+			       evidence.synthetic_evidence, evidence.execution_request_root,
+			       evidence.execution_result_root, evidence.execution_receipt_root,
+			       evidence.service_receipt_version, evidence.reviewed_certificate_id,
+			       evidence.reviewed_certificate_sha256, evidence.review_status,
+			       evidence.evidence_status
+			  from strategy_revision_v1_19_revalidations evidence
+			  left join strategy_revision_v1_19_revalidation_revocations revocation
+			    on revocation.revalidation_id=evidence.id
+			 where evidence.strategy_revision_id=$1
+			   and evidence.runtime_abi_version='strategy-runtime-abi-v1.19'
+			   and evidence.semantic_runtime_version='runtime-v1.19'
+			   and evidence.semantic_tuple_id='sha256:37c9a07425d454c74859112debcc3ef362d43e80d5767560d9bde28a3c8d5e73'
+			   and evidence.execution_kind='real_service_execution'
+			   and not evidence.synthetic_evidence
+			   and evidence.service_receipt_version='runtime-semantic-receipt-v1.19'
+			   and evidence.review_status='reviewed' and evidence.evidence_status='passed'
+			   and revocation.id is null
+			 for share of evidence
+		`, entrant.StrategyRevisionID).Scan(
+			&admission.RevalidationID, &admission.StrategyRevisionID,
+			&admission.SourceHash, &admission.SourceBytes,
+			&admission.ArtifactSHA256, &admission.ArtifactBytes,
+			&admission.LanguageID, &admission.ProviderID, &admission.LaneID,
+			&admission.RuntimeABIVersion, &admission.SemanticRuntimeVersion,
+			&admission.SemanticTupleID, &admission.ExecutionKind,
+			&admission.SyntheticEvidence, &admission.ExecutionRequestRoot,
+			&admission.ExecutionResultRoot, &admission.ExecutionReceiptRoot,
+			&admission.ServiceReceiptVersion, &admission.ReviewedCertificateID,
+			&admission.ReviewedCertificateSHA256, &admission.ReviewStatus,
+			&admission.EvidenceStatus,
+		)
+		if err != nil {
+			return nil, errors.New("candidate revision admission unavailable")
+		}
+		result[entrant.EntrantKey] = admission
+	}
+	return result, nil
+}
+
+func candidateConformanceValuesV119(evidence goEntrantExecutionEvidence) (any, any, any, any) {
+	if evidence.ConformanceCertificateRef == nil {
+		return nil, nil, nil, nil
+	}
+	return evidence.ConformanceCertificateRef.Kind, evidence.ConformanceCertificateRef.CertificateID,
+		evidence.ConformanceCertificateRef.CertificateVersion, evidence.ConformanceCertificateRef.CertificateRecordHash
+}
+
+func (server *LiveServer) createCandidateFourConditionMatchSetV119(ctx context.Context, input candidateFourConditionCreationInputV119) (map[string]any, error) {
+	authority, err := candidateSchedulingAuthorityV119("runtime-v1.19")
+	if err != nil || server.pool == nil || input.MatchSetID == "" || input.CreatorUserID == "" || input.IntegrityIdentity == nil {
+		return nil, errors.New("candidate creation input is invalid")
+	}
+	tuple := input.IntegrityIdentity.Tuple
+	if tuple.TupleID != authority.Tuple.TupleID || tuple.Tuple.Rules != authority.Tuple.Rules ||
+		tuple.Tuple.Engine != authority.Tuple.Engine || tuple.Tuple.RuntimeABI != authority.Tuple.RuntimeABI ||
+		tuple.Tuple.Chronicle != authority.Tuple.Chronicle || tuple.Tuple.ArenaCatalog != authority.Tuple.ArenaCatalog ||
+		tuple.Tuple.SetPolicy != authority.Tuple.SetPolicy || len(input.IntegrityIdentity.AuthorityBundleHash) != 64 ||
+		input.IntegrityIdentity.RegistryGeneration == "" || len(input.IntegrityIdentity.EvidenceSetHash) != 64 {
+		return nil, errors.New("candidate creation integrity is invalid")
+	}
+	matches, err := generateCandidateFourConditionMatchesV119(
+		"runtime-v1.19", input.MatchSetID, input.ArenaID, input.BaseSeed, input.EntrantA, input.EntrantB,
+	)
+	if err != nil || len(matches) != 4 {
+		return nil, errors.New("candidate four-condition matrix is invalid")
+	}
+	tx, err := server.pool.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.Serializable})
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	if _, _, err := lockCurrentGoSemanticAuthorityHead(ctx, tx, currentSemanticAuthorityGenerated()); err != nil {
+		return nil, errors.New("candidate creation semantic authority unavailable")
+	}
+	semanticSelection := reviewedGoSemanticAuthoritySelectionV119()
+	semanticSelectionRoot := semanticSelection.Root()
+	if _, err := tx.Exec(ctx, "select pg_advisory_xact_lock(hashtext('cowards-game:runtime-v1.19-candidate-creation:v1'))"); err != nil {
+		return nil, errors.New("candidate authority lock is unavailable")
+	}
+	if err := ensureCandidateCompetitionArenasV119(ctx, tx, "runtime-v1.19"); err != nil {
+		return nil, err
+	}
+	var catalogHash string
+	if err := tx.QueryRow(ctx, `
+		select semantic_geometry_hash from arena_catalog_entries
+		 where catalog_version=$1 and arena_id=$2 and arena_status='active' and schedulable
+		 for key share
+	`, authority.ArenaCatalogVersion, input.ArenaID).Scan(&catalogHash); err != nil || catalogHash != matches[0].ArenaSemanticGeometryHash {
+		return nil, errors.New("candidate arena identity is unavailable")
+	}
+	admissions, err := loadCandidateRevisionAdmissionsV119(ctx, tx, []candidateSetEntrantV119{input.EntrantA, input.EntrantB})
+	if err != nil {
+		return nil, err
+	}
+	candidateEvidence, err := validateCandidateRevisionAdmissionsV119(input.IntegrityIdentity, admissions)
+	if err != nil {
+		return nil, err
+	}
+	orderedEvidence := []candidateEntrantExecutionEvidenceV119{candidateEvidence[input.EntrantA.EntrantKey], candidateEvidence[input.EntrantB.EntrantKey]}
+	evidenceSetHash := framedCreationHash(candidateRevisionAdmissionDomainV119, []string{
+		input.IntegrityIdentity.EvidenceSetHash, orderedEvidence[0].RevisionAdmissionHash, orderedEvidence[1].RevisionAdmissionHash,
+	})
+	if _, err := tx.Exec(ctx, `
+		insert into match_sets (
+			id, status, preset_id, preset_version, matrix, creator_user_id,
+			competition_preset_id, competition_preset_version, scoring_policy_version,
+			visibility, entrant_snapshot_set, publication_policy, locked_at,
+			compatibility_tuple_id, compatibility_rules_version, compatibility_engine_version,
+			compatibility_runtime_abi_version, compatibility_chronicle_version,
+			compatibility_arena_catalog_version, compatibility_set_policy_version,
+			authority_bundle_hash, authority_registry_generation,
+			execution_evidence_set, execution_evidence_set_hash,
+			semantic_authority_selection, semantic_authority_selection_root
+		) values ($1,'pending','candidate-four-condition-v1','v1',$2,$3,
+		          'candidate-four-condition-v1','v1','exhibition-points-v1:v1',
+		          'private',$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)
+	`, input.MatchSetID, matches, input.CreatorUserID,
+		orderedEvidence, map[string]any{"publicResults": false, "candidateOnly": true}, server.now(),
+		tuple.TupleID, tuple.Tuple.Rules, tuple.Tuple.Engine, tuple.Tuple.RuntimeABI,
+		tuple.Tuple.Chronicle, tuple.Tuple.ArenaCatalog, tuple.Tuple.SetPolicy,
+		input.IntegrityIdentity.AuthorityBundleHash, input.IntegrityIdentity.RegistryGeneration,
+		orderedEvidence, evidenceSetHash, semanticSelection, semanticSelectionRoot); err != nil {
+		return nil, err
+	}
+	for _, entrant := range []candidateSetEntrantV119{input.EntrantA, input.EntrantB} {
+		evidence := candidateEvidence[entrant.EntrantKey]
+		conformanceKind, conformanceID, conformanceVersion, conformanceHash := candidateConformanceValuesV119(evidence.goEntrantExecutionEvidence)
+		if _, err := tx.Exec(ctx, `
+			insert into match_set_execution_entrants (
+				match_set_id, entrant_key, strategy_revision_id, lane_identity, lane_identity_hash,
+				containment_certificate_kind, containment_certificate_id, containment_certificate_version,
+				containment_certificate_hash, conformance_certificate_kind, conformance_certificate_id,
+				conformance_certificate_version, conformance_certificate_hash, scheduling_status,
+				scheduling_reason_code, scheduling_evaluated_at, scheduling_fresh_until,
+				authority_bundle_hash, authority_registry_generation, execution_snapshot
+			) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)
+		`, input.MatchSetID, entrant.EntrantKey, entrant.StrategyRevisionID,
+			evidence.LaneIdentity, hashCreationLaneIdentity(evidence.LaneIdentity),
+			evidence.ContainmentCertificateRef.Kind, evidence.ContainmentCertificateRef.CertificateID,
+			evidence.ContainmentCertificateRef.CertificateVersion, evidence.ContainmentCertificateRef.CertificateRecordHash,
+			conformanceKind, conformanceID, conformanceVersion, conformanceHash,
+			string(evidence.SchedulingDecision.Status), evidence.SchedulingDecision.ReasonCode,
+			evidence.SchedulingDecision.EvaluatedAt, evidence.SchedulingDecision.FreshUntil,
+			input.IntegrityIdentity.AuthorityBundleHash, input.IntegrityIdentity.RegistryGeneration, evidence); err != nil {
+			return nil, err
+		}
+	}
+	scenario := matches[0]
+	if _, err := tx.Exec(ctx, `
+		insert into set_scenarios (
+			match_set_id, scenario_id, set_policy_version, arena_catalog_version, arena_id,
+			arena_semantic_geometry_hash, entrant_a_key, entrant_b_key,
+			entrant_a_player_id, entrant_b_player_id, base_seed
+		) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+	`, input.MatchSetID, scenario.ScenarioID, scenario.SetPolicyVersion, scenario.ArenaCatalogVersion,
+		input.ArenaID, scenario.ArenaSemanticGeometryHash, input.EntrantA.EntrantKey, input.EntrantB.EntrantKey,
+		input.EntrantA.PlayerID, input.EntrantB.PlayerID, input.BaseSeed); err != nil {
+		return nil, err
+	}
+	for index, match := range matches {
+		pair, err := candidateEvidencePairV119(candidateEvidence, match)
+		if err != nil {
+			return nil, err
+		}
+		if _, err := tx.Exec(ctx, `
+			insert into set_conditions (
+				match_set_id, scenario_id, condition_id, condition_ordinal, condition_suffix,
+				request_identity, arena_catalog_version, arena_semantic_geometry_hash,
+				bottom_entrant_key, top_entrant_key, initial_initiative_entrant_key,
+				bottom_player_id, top_player_id, initial_initiative_player_id
+			) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
+		`, input.MatchSetID, match.ScenarioID, match.ConditionID, match.ConditionOrdinal, match.ConditionSuffix,
+			match.RequestIdentity, match.ArenaCatalogVersion, match.ArenaSemanticGeometryHash,
+			match.BottomEntrantKey, match.TopEntrantKey, match.InitialInitiativeEntrantKey,
+			match.BottomPlayerID, match.TopPlayerID, match.InitialInitiativePlayerID); err != nil {
+			return nil, err
+		}
+		if _, err := tx.Exec(ctx, `
+			insert into matches (
+				id, bottom_strategy_revision_id, top_strategy_revision_id, arena_variant_id, seed,
+				bottom_player_id, top_player_id, status, integrity_match_set_id,
+				bottom_execution_entrant_key, top_execution_entrant_key, bottom_execution_evidence,
+				top_execution_evidence, execution_evidence_pair_hash, successor_match_set_id,
+				successor_scenario_id, successor_condition_id, successor_condition_ordinal,
+				successor_arena_catalog_version, successor_arena_semantic_geometry_hash,
+				successor_bottom_entrant_key, successor_top_entrant_key,
+				successor_initial_initiative_entrant_key, initial_initiative_player_id,
+				semantic_authority_selection_root
+			) values ($1,$2,$3,$4,$5,$6,$7,'pending',$8,$9,$10,$11,$12,$13,
+			          $14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24)
+		`, match.ID, match.BottomStrategyRevisionID, match.TopStrategyRevisionID,
+			match.ArenaVariantID, match.Seed, match.BottomPlayerID, match.TopPlayerID,
+			input.MatchSetID, match.BottomEntrantKey, match.TopEntrantKey, pair.Bottom, pair.Top, pair.PairHash,
+			input.MatchSetID, match.ScenarioID, match.ConditionID, match.ConditionOrdinal,
+			match.ArenaCatalogVersion, match.ArenaSemanticGeometryHash, match.BottomEntrantKey,
+			match.TopEntrantKey, match.InitialInitiativeEntrantKey, match.InitialInitiativePlayerID,
+			semanticSelectionRoot); err != nil {
+			return nil, err
+		}
+		if _, err := tx.Exec(ctx, `
+			insert into match_jobs (
+				id, match_id, status, integrity_match_set_id, bottom_execution_entrant_key,
+				top_execution_entrant_key, bottom_execution_evidence, top_execution_evidence,
+				execution_evidence_pair_hash, semantic_authority_selection_root
+			) values ($1,$2,'queued',$3,$4,$5,$6,$7,$8,$9)
+		`, "match-job:"+match.ID, match.ID, input.MatchSetID, match.BottomEntrantKey,
+			match.TopEntrantKey, pair.Bottom, pair.Top, pair.PairHash, semanticSelectionRoot); err != nil {
+			return nil, err
+		}
+		if _, err := tx.Exec(ctx, `insert into match_set_matches (match_set_id, match_id, matrix_index) values ($1,$2,$3)`, input.MatchSetID, match.ID, index); err != nil {
+			return nil, err
+		}
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return nil, err
+	}
+	return map[string]any{"matchSetId": input.MatchSetID, "matchCount": len(matches), "status": "queued"}, nil
+}
+
 func generatePairwiseMatches(matchSetID string, matchSetPresetID string, entrants []map[string]any) []map[string]any {
 	arenaVariantIDs, seeds, mirrorSides := matchSetPresetSpec(matchSetPresetID)
 	matches := []map[string]any{}
@@ -2802,13 +4812,15 @@ func generatePairwiseMatches(matchSetID string, matchSetPresetID string, entrant
 							seedSuffix += ":mirror"
 						}
 						matches = append(matches, map[string]any{
-							"id":                       fmt.Sprintf("match:%s:%d", matchSetID, index),
-							"bottomStrategyRevisionId": stringValue(bottom, "strategyRevisionId"),
-							"topStrategyRevisionId":    stringValue(top, "strategyRevisionId"),
-							"arenaVariantId":           arenaVariantID,
-							"seed":                     seed + ":" + seedSuffix,
-							"bottomPlayerId":           fmt.Sprintf("player:%s:entrant:%d", matchSetID, intValue(bottom, "entrantIndex")),
-							"topPlayerId":              fmt.Sprintf("player:%s:entrant:%d", matchSetID, intValue(top, "entrantIndex")),
+							"id":                        fmt.Sprintf("match:%s:%d", matchSetID, index),
+							"bottomStrategyRevisionId":  stringValue(bottom, "strategyRevisionId"),
+							"topStrategyRevisionId":     stringValue(top, "strategyRevisionId"),
+							"arenaVariantId":            arenaVariantID,
+							"seed":                      seed + ":" + seedSuffix,
+							"bottomPlayerId":            fmt.Sprintf("player:%s:entrant:%d", matchSetID, intValue(bottom, "entrantIndex")),
+							"topPlayerId":               fmt.Sprintf("player:%s:entrant:%d", matchSetID, intValue(top, "entrantIndex")),
+							"bottomExecutionEntrantKey": stringValue(bottom, "entrantId"),
+							"topExecutionEntrantKey":    stringValue(top, "entrantId"),
 						})
 						index++
 					}
@@ -2996,7 +5008,17 @@ func intValue(value map[string]any, key string) int {
 	case int:
 		return item
 	case float64:
-		return int(item)
+		parsed := int(item)
+		if float64(parsed) == item {
+			return parsed
+		}
+		return 0
+	case json.Number:
+		parsed, err := item.Int64()
+		if err == nil && int64(int(parsed)) == parsed {
+			return int(parsed)
+		}
+		return 0
 	default:
 		return 0
 	}
@@ -3021,20 +5043,56 @@ func urlPathEscape(value string) string {
 	return replacer.Replace(value)
 }
 
-func ladderMatchSetSummary(matchSetID string, seasonID string, status string, countedStatus string, reason *string, explanation *string, entrantIDs []string) map[string]any {
+func ladderMatchSetSummary(matchSetID string, seasonID string, status string, countedStatus string, _ *string, _ *string, entrantIDs []string, replayMatchID *string) map[string]any {
+	matchCount := 0
+	chronicleCount := 0
+	scoringAvailable := false
+	if countedStatus == "counted" {
+		matchCount = 1
+		chronicleCount = 1
+		scoringAvailable = true
+	}
+	countedState := classifyCompetitionCountedState(competitionCountedStateInput{
+		ExecutionStatus:     publicCompetitionExecutionStatus(status),
+		StoredState:         countedStatus,
+		Origin:              "trial",
+		ExpectedMatchCount:  matchCount,
+		ChronicleMatchCount: chronicleCount,
+		ScoringAvailable:    scoringAvailable,
+	})
+	return ladderMatchSetSummaryWithCountedState(matchSetID, seasonID, status, countedState, entrantIDs, replayMatchID)
+}
+
+func ladderMatchSetSummaryWithCountedState(matchSetID string, seasonID string, status string, countedState map[string]any, entrantIDs []string, replayMatchID *string, governance ...map[string]any) map[string]any {
 	dto := map[string]any{
 		"matchSetId":        matchSetID,
 		"seasonId":          seasonID,
 		"status":            mapMatchSetStatus(status),
-		"countedStatus":     countedStatus,
-		"publicExplanation": valueOr(explanation, "Waiting for complete replay-backed evidence."),
+		"countedStatus":     stringValue(countedState, "state"),
+		"countedState":      countedState,
+		"publicExplanation": stringValue(countedState, "publicExplanation"),
 		"entrantIds":        entrantIDs,
 		"resultHref":        "/matchsets/" + urlPathEscape(matchSetID),
 	}
-	if reason != nil && *reason != "" {
-		dto["publicReason"] = *reason
+	if reason := stringValue(countedState, "publicReason"); reason != "" {
+		dto["publicReason"] = reason
+	}
+	if replayMatchID != nil && *replayMatchID != "" {
+		dto["replayHref"] = "/matches/" + urlPathEscape(*replayMatchID) + "/replay"
+	}
+	if len(governance) > 0 && governance[0] != nil {
+		dto["governance"] = governance[0]
 	}
 	return dto
+}
+
+func matchSetReplayAvailable(matches []map[string]any) bool {
+	for _, match := range matches {
+		if boolValue(match, "replayAvailable") {
+			return true
+		}
+	}
+	return false
 }
 
 func mapMatchSetStatus(status string) string {
@@ -3064,6 +5122,70 @@ func trialLadderStatusLabel(status string) string {
 		return "Archived"
 	default:
 		return status
+	}
+}
+
+func trialSeasonEntryWindow(status string, openedAt *time.Time, closedAt *time.Time) map[string]any {
+	state := "closed"
+	label := "Counted entries closed"
+	if status == "draft" {
+		state = "not_started"
+		label = "Counted entries not open yet"
+	} else if status == "open" {
+		state = "open"
+		label = "Open for counted entries"
+	}
+	window := map[string]any{"state": state, "publicLabel": label}
+	if openedAt != nil {
+		window["openedAt"] = openedAt.UTC().Format(time.RFC3339Nano)
+	}
+	if closedAt != nil {
+		window["closedAt"] = closedAt.UTC().Format(time.RFC3339Nano)
+	}
+	return window
+}
+
+func trialSeasonSchedulingWindow(status string, scheduledAt *time.Time) map[string]any {
+	state := "closed"
+	label := "Scheduling window closed"
+	if status == "draft" || status == "open" {
+		state = "not_started"
+		label = "Scheduling has not started"
+	} else if status == "scheduling" {
+		state = "open"
+		label = "Scheduling frozen entrant snapshots"
+	}
+	window := map[string]any{"state": state, "publicLabel": label}
+	if scheduledAt != nil {
+		formatted := scheduledAt.UTC().Format(time.RFC3339Nano)
+		window["openedAt"] = formatted
+		if state == "closed" {
+			window["closedAt"] = formatted
+		}
+	}
+	return window
+}
+
+func trialSeasonOutcomeProjection(status string, storedExplanation *string) map[string]any {
+	label := "Outcome pending"
+	explanation := "The Season has not reached a final scheduling outcome."
+	switch status {
+	case "scheduled":
+		label = "Scheduled evidence"
+		explanation = "The Season produced public MatchSet evidence for resettable Season-scoped standings."
+	case "insufficient_evidence":
+		label = "Insufficient evidence"
+		explanation = "The Season closed below its minimum entry requirement and produced no counted MatchSets."
+	default:
+		status = "pending"
+	}
+	if storedExplanation != nil && *storedExplanation != "" {
+		explanation = *storedExplanation
+	}
+	return map[string]any{
+		"status":            status,
+		"publicLabel":       label,
+		"publicExplanation": explanation,
 	}
 }
 

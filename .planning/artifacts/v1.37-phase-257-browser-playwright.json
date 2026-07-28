@@ -1,0 +1,39 @@
+{
+  "schemaVersion": "v1.37-phase-257-browser-playwright-v1",
+  "run": {
+    "commandId": "phase257-root-playwright-one-worker",
+    "ci": true,
+    "workers": 1,
+    "exitCode": 0,
+    "reportSha256": "7c3bd3ae9bffc69584fe4407d7a64bc5e6577addc2f78a6d182f5492957bbbe9",
+    "startedAt": "2026-07-23T14:25:09.434Z",
+    "durationMs": 71362.792,
+    "expected": 3,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "tests": [
+    {
+      "project": "desktop",
+      "file": "apps/web/e2e/v1-37-rules-integrity-proof.spec.ts",
+      "title": "result, APIs, and replay share one realistic public-safe terminal receipt",
+      "status": "passed",
+      "durationMs": 27215
+    },
+    {
+      "project": "mobile",
+      "file": "apps/web/e2e/v1-37-rules-integrity-proof.spec.ts",
+      "title": "result, APIs, and replay share one realistic public-safe terminal receipt",
+      "status": "passed",
+      "durationMs": 10310
+    },
+    {
+      "project": "tablet",
+      "file": "apps/web/e2e/v1-37-rules-integrity-proof.spec.ts",
+      "title": "result, APIs, and replay share one realistic public-safe terminal receipt",
+      "status": "passed",
+      "durationMs": 15169
+    }
+  ]
+}

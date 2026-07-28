@@ -1,0 +1,12 @@
+[
+  { "name": "ordinary-utc-millisecond", "value": "2026-07-12T12:34:56.789Z", "valid": true },
+  { "name": "valid-leap-day", "value": "2024-02-29T00:00:00.000Z", "valid": true },
+  { "name": "utc-offset", "value": "2026-07-12T08:34:56.789-04:00", "valid": false },
+  { "name": "missing-fraction", "value": "2026-07-12T12:34:56Z", "valid": false },
+  { "name": "short-fraction", "value": "2026-07-12T12:34:56.78Z", "valid": false },
+  { "name": "long-fraction", "value": "2026-07-12T12:34:56.7890Z", "valid": false },
+  { "name": "lowercase-zone", "value": "2026-07-12T12:34:56.789z", "valid": false },
+  { "name": "impossible-day", "value": "2026-02-30T12:34:56.789Z", "valid": false },
+  { "name": "non-leap-day", "value": "2025-02-29T00:00:00.000Z", "valid": false },
+  { "name": "impossible-hour", "value": "2026-07-12T24:00:00.000Z", "valid": false }
+]

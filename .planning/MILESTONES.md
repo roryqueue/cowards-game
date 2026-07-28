@@ -1,5 +1,102 @@
 # Milestones
 
+## v1.37 Rules Integrity and Strategy Evaluation Foundations (Shipped: 2026-07-22)
+
+**Status:** Shipped 2026-07-22; annotated `v1.37` and the independent post-tag join close PROOF-08
+**Phases:** 6
+**Phase range:** 256-261
+**Plans:** 148/148 complete
+**Requirements:** 56/56 closed; the immutable pre-tag archive truthfully retains 55 passed plus PROOF-08 `ready_pending`, while the actual tag/post-tag join closes PROOF-08
+**Audit:** Release-ready - zero gaps, zero overrides, one transition authority, and zero unapproved semantic deltas
+**Roadmap:** .planning/milestones/v1.37-ROADMAP.md
+**Requirements archive:** .planning/milestones/v1.37-REQUIREMENTS.md
+**Audit archive:** .planning/milestones/v1.37-MILESTONE-AUDIT.md
+**Phase archive:** .planning/milestones/v1.37-phases/
+**Decision:** The committed archive remains a truthful pre-tag record. Only the actual annotated tag and read-only post-tag checker may close PROOF-08; serious Strategy work remains separately unauthorized.
+**Post-tag integration correction:** On 2026-07-23, public runtime-semantics retention, fail-closed MatchSet counted rendering, and root-invokable D-11 verification were corrected without moving `v1.37` or changing gameplay. See [the correction record](artifacts/v1.37-post-tag-ui-integration-correction.md).
+
+**Delivered:**
+
+- One canonical semantic/version authority and transition kernel now own engine execution, Chronicle recording, replay reconstruction, runtime/service interpretation, arena identity, and Set policy.
+- Semantic validators reject invalid arenas and Match states across initial, intermediate, final, ownership, occupancy, bounds, position/status, initiative, version, and outcome invariants.
+- Every confirmed lifecycle, precedence, constant-ownership, event-vocabulary, and stale-entry-point audit defect is fixed while valid v1.4 rulings and immutable historical evidence remain exact.
+- Canonical JSON, source/artifact identity, and success/player-violation/system-failure semantics are preserved end to end; system failure cannot mutate gameplay or become a player penalty.
+- Executable TypeScript, Python, Rust, and Zig conformance proves full-state, event, memory, objective, and failure-trace behavior under one documented ABI and runtime-budget envelope.
+- Production-shaped proof covers 4 containment-attested non-counted lanes, 12 runs, 23 service scenarios, 17 rollback/history scenarios, Chronicle reconstruction/replay, Set side/initiative fairness, persistence, privacy, and drift guards.
+
+### Active Constraints
+
+- The four demonstrated runtime lanes remain non-counted until current containment and exact executable evidence independently satisfy counted-entry policy.
+- Strategy execution remains outside web/API/Go and behind runtime-service / Runtime Broker / provider boundaries.
+- Public/default output remains source, artifact, memory, objective, diagnostics, host-data, credential, and security-internal safe.
+- Cycle-start Backstab removal and post-Advance HOLD/END_ACTIVATION remain deferred unless separately approved equivalence proof succeeds.
+- Cycle-cap, starting-position, facing/reversal, Backstab-rule, hidden-information, randomness, adaptive-rule, new-arena, rating, prize, moderation, language, TinyGo, package, and broad-UI experiments remain outside v1.37.
+- The Strategy-foundation handoff is non-authorizing; the next milestone requires its own explicit approval.
+
+## v1.36 Competition Maturity (Shipped: 2026-07-12)
+
+**Status:** Shipped 2026-07-12
+**Phases:** 7
+**Phase range:** 249-255
+**Plans:** 22/22 complete
+**Requirements:** 39/39 complete
+**Audit:** Passed - 39/39 integration checks and 5/5 end-to-end flows
+**Roadmap:** .planning/milestones/v1.36-ROADMAP.md
+**Requirements archive:** .planning/milestones/v1.36-REQUIREMENTS.md
+**Audit archive:** .planning/milestones/v1.36-MILESTONE-AUDIT.md
+**Phase archive:** .planning/milestones/v1.36-phases/
+**Decision:** Competition is now an honest resettable public beta with Season-scoped standings, provider-proof-backed counted eligibility, canonical recomputation, and public-safe governance. It does not promise durable ratings, staffed moderation, full account recovery, production sandbox certification, package ecosystems, TinyGo production support, or a new runtime ABI.
+
+**Delivered:**
+
+- Locked competition policy, vocabulary, ownership, privacy exclusions, and public-beta/reset semantics.
+- Enforced immutable account-owned counted entry using current provider, language, runtime, provenance, artifact, and package-policy evidence, including one active revision per Season.
+- Added explicit Season lifecycle, entrant snapshots, scheduling/freeze/archive behavior, and separation of exhibition/self-play from counted competition.
+- Made counted, non-counted, degraded, disputed, invalid, and invalidated outcomes canonically classifiable and standings-recomputable.
+- Added minimal report/dispute/governance behavior plus honest abuse and recovery policy surfaces without exposing private evidence or operator internals.
+- Unified public trust projections across competition, standings, result, replay, player, and Strategy pages.
+- Proved a live 48-Match counted Season path through Go and runtime-service, negative entry cases, governance recomputation, privacy monitors, and desktop/mobile replay realism.
+
+### Active Constraints
+
+- Strategy execution remains outside web/API/Go and behind runtime-service / Runtime Broker / provider boundaries.
+- Current live worker-thread proof demonstrates ownership and integration, not production sandbox certification.
+- Durable ratings, staffed moderation and appeals, and full account recovery require future explicit milestones.
+- Package mode remains `none`; TinyGo remains hidden and spike-only.
+- Public/default output must not expose Strategy source, artifact bytes, memories, objectives, raw diagnostics, host/environment/package paths, tokens, database details, private runtime/provider data, dispute internals, recovery payloads, or operator-only governance detail.
+- Standalone Nyquist validation documents remain incomplete for six phases, but phase verification, strict proof evaluators, service-backed tests, integration review, and the milestone audit all passed.
+
+## v1.35 Runtime, Account Ownership, Sandbox, and Package Policy Cleanup (Shipped: 2026-06-15)
+
+**Status:** Shipped 2026-06-15
+**Phases:** 6
+**Phase range:** 243-248
+**Plans:** 11/11 complete
+**Requirements:** 32/32 complete
+**Roadmap:** .planning/milestones/v1.35-ROADMAP.md
+**Requirements archive:** .planning/milestones/v1.35-REQUIREMENTS.md
+**Audit:** .planning/milestones/v1.35-MILESTONE-AUDIT.md
+**Phase archive:** .planning/milestones/v1.35-phases/
+**Decision:** v1.35 closes runtime/account/security-policy edges by requiring provider-grade proof for account-owned Strategy readiness and entry eligibility, quarantining local trust shortcuts, deprecating Workshop source aliases, calibrating sandbox-readiness claims, enforcing no-package policy, and preserving runtime-service / Runtime Broker / provider boundaries as the hostile-code boundary. No production sandbox certification, rich package ecosystem, TinyGo production support, or runtime ownership migration is claimed.
+
+**Delivered:**
+
+- Authoritative boundary inventory covering account save, account source, owner-debug replay, Workshop aliases, entry gates, provider proof, sandbox claims, package policy, TinyGo, privacy monitors, and evidence artifacts.
+- Provider-proof-backed Go account save and entry gates for TypeScript, Python, Rust, and Zig, including service-backed PostgreSQL proof for TypeScript account save through runtime request construction.
+- Local Workshop trust quarantine, server-authorized account source and owner-debug/private replay evidence, deprecated Workshop source aliases, and a fixed Workshop Load source UI path that now uses account-owned source routes.
+- Evidence-scoped sandbox-readiness labels and fail-loud monitors that keep TypeScript/Python as provenance-only, Rust/Zig as WASM/WASI Preview 1 artifact-backed, TinyGo hidden, and all current lanes uncertified for production sandbox claims.
+- Enforced package mode `none` for current production Strategy lanes, public-safe package diagnostics, and documented future package-lane requirements.
+- Final proof artifact, privacy scans, generated artifact refreshes, and full boundary monitor pass.
+
+### Active Constraints
+
+- Strategy execution remains outside web/API/Go and behind runtime-service / Runtime Broker / provider boundaries.
+- TypeScript/Python artifact provenance is evidence, not WASM isolation or production sandbox certification.
+- Rust/Zig remain immutable WASM/WASI Preview 1 artifact-backed until a future ABI milestone proves otherwise.
+- TinyGo stays spike-only and hidden from production surfaces.
+- Package mode remains `none`; rich package ecosystems require a future explicit package-lane milestone.
+- Public/default output must not expose Strategy source, artifact bytes, host paths, env values, package paths, tokens, DB details, private runtime internals, StrategyMemory, SoldierMemory, objective payloads, owner-debug payloads, raw Awareness Grids, raw diagnostics, provider signing material, quarantine details, operator action details, or recovery payloads.
+
 ## v1.33 Source Artifact Provenance and TinyGo WASI Spike (Shipped: 2026-06-01)
 
 **Status:** Shipped 2026-06-01

@@ -3,6 +3,10 @@ import {
   type CanonicalReplayScenarioId,
 } from "@cowards/test-utils"
 import {
+  CANONICAL_ARENA_CATALOG_V1_37,
+  projectMatchExecutionPublicResultV119,
+} from "@cowards/spec"
+import {
   createReplay,
   projectOwnerChronicle,
   projectPublicChronicle,
@@ -10,6 +14,7 @@ import {
 import { describe, expect, it } from "vitest"
 import { GET as getReplayFixture } from "../api/test-support/replay-fixture/route.js"
 import {
+  createCandidateReplayFixtureReadiness,
   createReplayFixtureCatalog,
   createReplayFixtureData,
   defaultReplayFixtureScenarioId,
@@ -18,6 +23,7 @@ import {
   isReplayFixtureMatch,
   replayFixtureMatchId,
 } from "./replay-fixture.js"
+import { resolveReplayArenaAuthority } from "./replay-ready.js"
 import type { ReplayReadyDto } from "./types.js"
 
 const projectionScenarioIds = [
@@ -52,7 +58,129 @@ const expectReady = (data: ReturnType<typeof createReplayFixtureData>) => {
   return data as ReplayReadyDto
 }
 
+const candidatePublicResult = () => {
+  const arena = CANONICAL_ARENA_CATALOG_V1_37.arenas.find(
+    (candidate) => candidate.id === "arena:smoke:v1",
+  )
+  if (!arena) {
+    throw new Error("Missing canonical Smoke arena")
+  }
+  return projectMatchExecutionPublicResultV119({
+    matchSetId: "match-set:replay-candidate",
+    matchId: "match:replay-candidate:a-bottom-a-first",
+    publicationStatus: "countable",
+    counted: true,
+    arena: {
+      variantId: arena.id,
+      catalogVersion: CANONICAL_ARENA_CATALOG_V1_37.catalogVersion,
+      catalogStatus: arena.status,
+      semanticGeometryHash: arena.semanticGeometryHash,
+    },
+    condition: {
+      scenarioId: `set-scenario:sha256:${"1".repeat(64)}`,
+      conditionId: `set-condition:sha256:${"2".repeat(64)}`,
+      ordinal: 0,
+      label: "a-bottom-a-first",
+      sides: {
+        bottomEntrantKey: "entrant:a",
+        topEntrantKey: "entrant:b",
+      },
+      initialInitiativeEntrantKey: "entrant:a",
+    },
+  })
+}
+
 describe("replay fixture projection", () => {
+  it("stages exact candidate replay authority without selecting it as current", () => {
+    const result = candidatePublicResult()
+
+    expect(createCandidateReplayFixtureReadiness(result)).toEqual({
+      status: "candidate",
+      profile: "runtime-v1.19-candidate",
+      candidate: true,
+      current: false,
+      publishable: false,
+      matchSetId: result.matchSetId,
+      matchId: result.matchId,
+      arena: {
+        variantId: result.arena.variantId,
+        catalogVersion: result.arena.catalogVersion,
+        catalogStatus: result.arena.catalogStatus,
+      },
+      condition: {
+        scenarioId: result.condition.scenarioId,
+        conditionId: result.condition.conditionId,
+        ordinal: result.condition.ordinal,
+        label: result.condition.label,
+      },
+    })
+  })
+
+  it.each([
+    ["missing", undefined],
+    [
+      "unknown arena",
+      {
+        ...candidatePublicResult(),
+        arena: {
+          ...candidatePublicResult().arena,
+          variantId: "arena:unknown:v1",
+        },
+      },
+    ],
+    [
+      "historical alias",
+      {
+        ...candidatePublicResult(),
+        arena: {
+          ...candidatePublicResult().arena,
+          variantId: "arena:open-field:v1",
+        },
+      },
+    ],
+    [
+      "mixed version",
+      {
+        ...candidatePublicResult(),
+        contractVersion: "match-execution-app-v1",
+      },
+    ],
+  ])("keeps %s candidate replay data unavailable", (_label, result) => {
+    expect(createCandidateReplayFixtureReadiness(result)).toEqual({
+      status: "unavailable",
+      profile: "runtime-v1.19-candidate",
+      candidate: true,
+      current: false,
+      publishable: false,
+      reason: "candidate-data-unavailable",
+    })
+  })
+
+  it("keeps Phase-259 arena literals in the exact legacy dispatch", () => {
+    expect(
+      resolveReplayArenaAuthority({
+        profile: "phase-259-current",
+        arenaVariantId: "arena:open-field:v1",
+      }),
+    ).toEqual({
+      status: "current",
+      profile: "phase-259-current",
+      arenaVariantId: "arena:open-field:v1",
+      canonicalStartRequired: true,
+    })
+    expect(
+      resolveReplayArenaAuthority({
+        profile: "phase-259-current",
+        arenaVariantId: "arena:custom:v1",
+      }),
+    ).toEqual({
+      status: "current",
+      profile: "phase-259-current",
+      arenaVariantId: "arena:custom:v1",
+      canonicalStartRequired: false,
+    })
+  })
+
   it("matches encoded default and scenario-specific fixture Match ids", () => {
     expect(isReplayFixtureMatch("%E0%A4%A")).toBe(false)
     expect(isReplayFixtureMatch(encodeURIComponent(replayFixtureMatchId))).toBe(

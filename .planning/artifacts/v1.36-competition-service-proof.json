@@ -1,0 +1,192 @@
+{
+  "schemaVersion": "v1.36-competition-service-proof",
+  "milestone": "v1.36",
+  "phase": 255,
+  "generatedAt": "2026-07-12T11:22:08.921Z",
+  "generatedBy": "apps/web/e2e/v1-36-competition-service-proof.spec.ts",
+  "status": "passed-local-services",
+  "command": "pnpm e2e:v1.36-service-proof",
+  "limitation": null,
+  "topology": {
+    "accountRevisionWrite": "selected-go-account-revisions",
+    "competitionMutation": "next-persistence-baseline",
+    "execution": "go-worker-runtime-service",
+    "publicReads": "selected-go-public-reads"
+  },
+  "evidenceHashes": [
+    {
+      "id": "public-replay",
+      "sha256": "ae47c852a0f65394da2244d2ac428c87610c022bd29827f02325fa32366faaf0"
+    },
+    {
+      "id": "public-result",
+      "sha256": "0613bce7d92d56003c3c3fe718611b53ed21ed4d179d07b9deee406e4a975927"
+    },
+    {
+      "id": "public-standings",
+      "sha256": "669752a62f1692cdc8497ac30e39a3cd7bda1ba295b52f4f03d0933013e1ba00"
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "counted-season-flow",
+      "kind": "positive",
+      "status": "passed",
+      "outcome": "A counted Season completed through live services with deterministic standings and replay evidence.",
+      "durationMs": 47308,
+      "links": [
+        "/ladder/v136-service-proof-mrhpd0unygo",
+        "/matchsets/match-set%3Atrial%3Atrial-season%3A523ec15f-5e0e-4edc-a508-bdcb33227097%3A0%3A0",
+        "/matches/match%3Amatch-set%3Atrial%3Atrial-season%3A523ec15f-5e0e-4edc-a508-bdcb33227097%3A0%3A0%3A0/replay"
+      ]
+    },
+    {
+      "id": "degraded-result",
+      "kind": "governance",
+      "status": "passed",
+      "outcome": "A degraded result remained visible but contributed no counted standing."
+    },
+    {
+      "id": "deterministic-replay-events",
+      "kind": "browser",
+      "status": "passed",
+      "outcome": "Deterministic replay fixtures passed STONE, FALLEN, terrain, contraction, callout, and canonical-start checks."
+    },
+    {
+      "id": "entrant-dispute-hold",
+      "kind": "governance",
+      "status": "passed",
+      "outcome": "An entrant dispute created the canonical standings hold."
+    },
+    {
+      "id": "explicit-non-counted",
+      "kind": "governance",
+      "status": "passed",
+      "outcome": "An explicit non-counted action excluded the result from standings."
+    },
+    {
+      "id": "general-report-no-suppression",
+      "kind": "governance",
+      "status": "passed",
+      "outcome": "A general report left complete counted evidence in standings."
+    },
+    {
+      "id": "hidden-tinygo",
+      "kind": "negative",
+      "status": "passed",
+      "outcome": "The live counted-entry API rejected the revision without creating counted evidence.",
+      "category": "hidden_unsupported_provider"
+    },
+    {
+      "id": "invalid-provenance",
+      "kind": "negative",
+      "status": "passed",
+      "outcome": "The live counted-entry API rejected the revision without creating counted evidence.",
+      "category": "incompatible_runtime_metadata"
+    },
+    {
+      "id": "invalid-result",
+      "kind": "governance",
+      "status": "passed",
+      "outcome": "Invalid evidence was excluded with fixed public-safe copy."
+    },
+    {
+      "id": "invalidated-result",
+      "kind": "governance",
+      "status": "passed",
+      "outcome": "Invalidated evidence was excluded without removing public result evidence."
+    },
+    {
+      "id": "live-result-replay-desktop",
+      "kind": "browser",
+      "status": "passed",
+      "outcome": "Desktop result and replay rendered counted public evidence with an in-frame nonblank board."
+    },
+    {
+      "id": "live-result-replay-mobile",
+      "kind": "browser",
+      "status": "passed",
+      "outcome": "Mobile replay rendered an in-frame nonblank board with 2118 encoded canvas bytes."
+    },
+    {
+      "id": "mid-season-replacement",
+      "kind": "negative",
+      "status": "passed",
+      "outcome": "The live counted-entry API rejected the revision without creating counted evidence.",
+      "category": "replacement_blocked"
+    },
+    {
+      "id": "missing-provider-proof",
+      "kind": "negative",
+      "status": "passed",
+      "outcome": "The live counted-entry API rejected the revision without creating counted evidence.",
+      "category": "provider_proof_missing"
+    },
+    {
+      "id": "package-policy-violation",
+      "kind": "negative",
+      "status": "passed",
+      "outcome": "The live counted-entry API rejected the revision without creating counted evidence.",
+      "category": "package_policy_violation"
+    },
+    {
+      "id": "replay-availability-chronicle-derived",
+      "kind": "governance",
+      "status": "passed",
+      "outcome": "Replay availability remained derived from Chronicle evidence while governance excluded standings."
+    },
+    {
+      "id": "restore-counted-complete-evidence",
+      "kind": "governance",
+      "status": "passed",
+      "outcome": "Complete scoring and Chronicle evidence restored counted standing after review."
+    },
+    {
+      "id": "restore-counted-incomplete-evidence-rejected",
+      "kind": "governance",
+      "status": "passed",
+      "outcome": "Counted restoration failed closed while scoring evidence was incomplete."
+    },
+    {
+      "id": "same-user-duplicate-entry",
+      "kind": "negative",
+      "status": "passed",
+      "outcome": "The live counted-entry API rejected the revision without creating counted evidence.",
+      "category": "already_entered_season"
+    },
+    {
+      "id": "source-artifact-mismatch",
+      "kind": "negative",
+      "status": "passed",
+      "outcome": "The live counted-entry API rejected the revision without creating counted evidence.",
+      "category": "provider_proof_mismatched"
+    },
+    {
+      "id": "stale-provider-proof",
+      "kind": "negative",
+      "status": "passed",
+      "outcome": "The live counted-entry API rejected the revision without creating counted evidence.",
+      "category": "provider_proof_stale"
+    },
+    {
+      "id": "unavailable-runtime-lane",
+      "kind": "negative",
+      "status": "passed",
+      "outcome": "The live counted-entry API rejected the revision without creating counted evidence.",
+      "category": "runtime_service_unavailable"
+    },
+    {
+      "id": "under-review-disputed",
+      "kind": "governance",
+      "status": "passed",
+      "outcome": "Under-review and disputed states both excluded otherwise complete evidence."
+    },
+    {
+      "id": "unsupported-provider-language",
+      "kind": "negative",
+      "status": "passed",
+      "outcome": "The live counted-entry API rejected the revision without creating counted evidence.",
+      "category": "unsupported_source_format"
+    }
+  ]
+}

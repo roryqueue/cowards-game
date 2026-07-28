@@ -107,6 +107,7 @@ export interface AnalyzeServiceBoundaryOptions {
 export interface ServiceBoundaryAnalysis {
   strictOffenses: readonly ServiceBoundaryOffense[]
   reportOnlyOffenses: readonly ServiceBoundaryOffense[]
+  ownershipOffenses: readonly ServiceBoundaryOffense[]
   exitCode: 0 | 1
 }
 
@@ -115,6 +116,55 @@ interface ImportLikeStatement {
   source: string | undefined
   text: string
 }
+
+const phase260TypeScriptRoots = [
+  "apps/web",
+  "packages/persistence",
+  "packages/replay",
+] as const
+
+const phase260ExecutionModules = new Set([
+  "@cowards/engine",
+  "@cowards/runtime-js",
+  "@cowards/runtime-python",
+  "@cowards/runtime-wasm-wasi",
+])
+
+const isPhase260ExecutionModule = (source: string): boolean =>
+  [...phase260ExecutionModules].some(
+    (moduleName) => source === moduleName || source.startsWith(`${moduleName}/`),
+  )
+
+const phase260ExecutionSymbols = new Set([
+  "executeMatch",
+  "executeStrategy",
+  "evaluateStrategy",
+  "invokeStrategy",
+  "runMatch",
+  "runStrategy",
+  "StrategyExecutionAdapter",
+])
+
+const phase260HistoricalAuthorityFiles = new Set([
+  // Chronicle grammar validates recorded slot facts; it is not a Strategy input
+  // producer and remains an exact, separately tested semantic authority.
+  "packages/replay/src/grammar.ts",
+  "packages/replay/src/historical-v1-4-grammar.ts",
+  "packages/replay/src/historical-v1-4-transition.ts",
+])
+
+const phase260SeedFairnessLegacyFiles = new Set([
+  "packages/persistence/src/competition.ts",
+  "packages/persistence/src/matchset-service.ts",
+])
+
+const phase260CurrentSelectorFiles = new Set([
+  "packages/spec/src/current-semantic-authority-generated.ts",
+])
+
+const phase260ArenaAuthorityFiles = new Set([
+  "packages/spec/src/arena-catalog-v1-37.ts",
+])
 
 const toRepoPath = (repoRoot: string, absolutePath: string): string =>
   path.relative(repoRoot, absolutePath).split(path.sep).join("/")
@@ -158,6 +208,435 @@ const walkSourceFiles = (
   visit(root)
   return files.sort((left, right) =>
     toRepoPath(repoRoot, left).localeCompare(toRepoPath(repoRoot, right)),
+  )
+}
+
+const walkFilesWithExtensions = (
+  repoRoot: string,
+  rootRelativePath: string,
+  extensions: ReadonlySet<string>,
+): readonly string[] => {
+  const root = path.join(repoRoot, rootRelativePath)
+  if (!existsSync(root)) {
+    return []
+  }
+
+  const files: string[] = []
+  const visit = (absolutePath: string) => {
+    const stats = statSync(absolutePath)
+    if (stats.isDirectory()) {
+      if (isExcludedDirectory(path.basename(absolutePath))) {
+        return
+      }
+      for (const entry of readdirSync(absolutePath)) {
+        visit(path.join(absolutePath, entry))
+      }
+      return
+    }
+    if (stats.isFile() && extensions.has(path.extname(absolutePath))) {
+      files.push(absolutePath)
+    }
+  }
+  visit(root)
+  return files.sort((left, right) =>
+    toRepoPath(repoRoot, left).localeCompare(toRepoPath(repoRoot, right)),
+  )
+}
+
+const isPhase260ProductionSource = (repoPath: string): boolean =>
+  !repoPath.endsWith(".test.ts") &&
+  !repoPath.endsWith(".test.tsx") &&
+  !repoPath.endsWith("_test.go")
+
+const offenseAt = (
+  sourceFile: ts.SourceFile,
+  node: ts.Node,
+  repoPath: string,
+  pattern: string,
+): ServiceBoundaryOffense => ({
+  path: repoPath,
+  line: sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile)).line + 1,
+  pattern,
+})
+
+const importSpecifierName = (specifier: ts.ImportSpecifier): string =>
+  (specifier.propertyName ?? specifier.name).text
+
+const propertyNameText = (name: ts.PropertyName | ts.BindingName): string | undefined => {
+  if (ts.isIdentifier(name) || ts.isStringLiteral(name) || ts.isNumericLiteral(name)) {
+    return name.text
+  }
+  return undefined
+}
+
+const objectProperty = (
+  object: ts.ObjectLiteralExpression,
+  name: string,
+): ts.ObjectLiteralElementLike | undefined =>
+  object.properties.find((property) =>
+    "name" in property ? propertyNameText(property.name) === name : false,
+  )
+
+const containsNumericLiteral = (node: ts.Node): boolean => {
+  let found = false
+  const visit = (candidate: ts.Node) => {
+    if (ts.isNumericLiteral(candidate)) {
+      found = true
+      return
+    }
+    ts.forEachChild(candidate, visit)
+  }
+  visit(node)
+  return found
+}
+
+const phase260ObservationDerivationPattern = (
+  field: string,
+  initializer: ts.Expression,
+): string | undefined => {
+  const text = initializer.getText()
+  const derivesFromNonKernelState =
+    /\bseed\b|\broundNumber\b\s*%|\bevents?\b|MOVE_ADVANCED|\bpositions?\b|\.includes\s*\(|\.some\s*\(/u.test(
+      text,
+    )
+  return derivesFromNonKernelState
+    ? `kernel-observation-derivation:${field}`
+    : undefined
+}
+
+const analyzePhase260TypeScriptFile = (
+  repoPath: string,
+  sourceText: string,
+): readonly ServiceBoundaryOffense[] => {
+  if (!isPhase260ProductionSource(repoPath)) {
+    return []
+  }
+
+  const sourceFile = ts.createSourceFile(
+    repoPath,
+    sourceText,
+    ts.ScriptTarget.Latest,
+    true,
+    sourceKindForPath(repoPath),
+  )
+  const offenses: ServiceBoundaryOffense[] = []
+  const executionNamespaces = new Map<string, string>()
+
+  const recordExecutionSymbol = (node: ts.Node, symbol: string) => {
+    if (phase260ExecutionSymbols.has(symbol)) {
+      offenses.push(
+        offenseAt(
+          sourceFile,
+          node,
+          repoPath,
+          `strategy-execution-ownership:${symbol}`,
+        ),
+      )
+    }
+  }
+
+  const visit = (node: ts.Node) => {
+    if (
+      ts.isImportDeclaration(node) &&
+      ts.isStringLiteral(node.moduleSpecifier) &&
+      isPhase260ExecutionModule(node.moduleSpecifier.text)
+    ) {
+      const clause = node.importClause
+      if (clause?.name && phase260ExecutionSymbols.has(clause.name.text)) {
+        recordExecutionSymbol(node, clause.name.text)
+      }
+      if (clause?.namedBindings && ts.isNamedImports(clause.namedBindings)) {
+        for (const specifier of clause.namedBindings.elements) {
+          const importedName = importSpecifierName(specifier)
+          recordExecutionSymbol(node, importedName)
+        }
+      }
+      if (clause?.namedBindings && ts.isNamespaceImport(clause.namedBindings)) {
+        executionNamespaces.set(
+          clause.namedBindings.name.text,
+          node.moduleSpecifier.text,
+        )
+      }
+    }
+
+    if (
+      ts.isExportDeclaration(node) &&
+      node.moduleSpecifier &&
+      ts.isStringLiteral(node.moduleSpecifier) &&
+      isPhase260ExecutionModule(node.moduleSpecifier.text)
+    ) {
+      if (!node.exportClause) {
+        offenses.push(
+          offenseAt(
+            sourceFile,
+            node,
+            repoPath,
+            "strategy-execution-ownership:module-reexport",
+          ),
+        )
+      } else if (ts.isNamedExports(node.exportClause)) {
+        for (const specifier of node.exportClause.elements) {
+          recordExecutionSymbol(
+            node,
+            (specifier.propertyName ?? specifier.name).text,
+          )
+        }
+      }
+    }
+
+    if (
+      ts.isVariableDeclaration(node) &&
+      node.initializer &&
+      ts.isCallExpression(node.initializer) &&
+      node.initializer.arguments.length === 1 &&
+      ts.isStringLiteral(node.initializer.arguments[0]!) &&
+      isPhase260ExecutionModule(node.initializer.arguments[0]!.text) &&
+      ((ts.isIdentifier(node.initializer.expression) &&
+        node.initializer.expression.text === "require") ||
+        node.initializer.expression.kind === ts.SyntaxKind.ImportKeyword)
+    ) {
+      if (ts.isIdentifier(node.name)) {
+        executionNamespaces.set(node.name.text, node.initializer.arguments[0]!.text)
+      } else if (ts.isObjectBindingPattern(node.name)) {
+        for (const element of node.name.elements) {
+          const importedName = element.propertyName
+            ? propertyNameText(element.propertyName)
+            : propertyNameText(element.name)
+          if (importedName) {
+            recordExecutionSymbol(node, importedName)
+          }
+        }
+      }
+    }
+
+    if (
+      ts.isPropertyAccessExpression(node) &&
+      ts.isIdentifier(node.expression) &&
+      executionNamespaces.has(node.expression.text)
+    ) {
+      recordExecutionSymbol(node, node.name.text)
+    }
+
+    if (
+      ts.isElementAccessExpression(node) &&
+      ts.isIdentifier(node.expression) &&
+      executionNamespaces.has(node.expression.text) &&
+      node.argumentExpression &&
+      ts.isStringLiteral(node.argumentExpression)
+    ) {
+      recordExecutionSymbol(node, node.argumentExpression.text)
+    }
+
+    if (
+      !phase260HistoricalAuthorityFiles.has(repoPath) &&
+      (ts.isPropertyAssignment(node) || ts.isVariableDeclaration(node))
+    ) {
+      const field = propertyNameText(node.name)
+      if (
+        field &&
+        [
+          "initialInitiativePlayerId",
+          "roundInitiativePlayerId",
+          "hasAdvancedThisActivation",
+        ].includes(field) &&
+        node.initializer
+      ) {
+        const pattern = phase260ObservationDerivationPattern(
+          field,
+          node.initializer,
+        )
+        if (pattern) {
+          offenses.push(offenseAt(sourceFile, node, repoPath, pattern))
+        }
+      }
+    }
+
+    if (
+      ts.isObjectLiteralExpression(node) &&
+      !phase260ArenaAuthorityFiles.has(repoPath)
+    ) {
+      const bounds = objectProperty(node, "initialBounds")
+      const terrain = objectProperty(node, "terrainStones")
+      if (
+        bounds &&
+        terrain &&
+        containsNumericLiteral(bounds) &&
+        (sourceText.includes("runtime-v1.19") ||
+          sourceText.includes("canonical-arena-catalog-v1.37"))
+      ) {
+        offenses.push(
+          offenseAt(
+            sourceFile,
+            node,
+            repoPath,
+            "handwritten-successor-arena-geometry",
+          ),
+        )
+      }
+    }
+
+    ts.forEachChild(node, visit)
+  }
+  visit(sourceFile)
+
+  if (
+    !phase260SeedFairnessLegacyFiles.has(repoPath) &&
+    sourceText.includes("runtime-v1.19") &&
+    /\bseed\b[^\n;]*(?:endsWith|includes|split|slice|substring)[^\n;]*mirror|\bseed\b[^\n;]*:\s*mirror|\bseed\b[^\n;]*:mirror/u.test(
+      sourceText,
+    )
+  ) {
+    const match = /\bseed\b[^\n;]*(?:mirror)/u.exec(sourceText)
+    const position = match?.index ?? 0
+    offenses.push({
+      path: repoPath,
+      line: sourceFile.getLineAndCharacterOfPosition(position).line + 1,
+      pattern: "set-fairness-from-seed",
+    })
+  }
+
+  if (
+    !phase260CurrentSelectorFiles.has(repoPath) &&
+    /\b(?:CURRENT|current|DEFAULT|default)[A-Za-z0-9_]*(?:SEMANTIC|semantic|AUTHORITY|authority|VERSION|version)[A-Za-z0-9_]*\s*=\s*["'](?:runtime-v1\.19|strategy-runtime-abi-v1\.19)["']/u.test(
+      sourceText,
+    )
+  ) {
+    const match = /\b(?:CURRENT|current|DEFAULT|default)[A-Za-z0-9_]*/u.exec(
+      sourceText,
+    )
+    offenses.push({
+      path: repoPath,
+      line: sourceFile.getLineAndCharacterOfPosition(match?.index ?? 0).line + 1,
+      pattern: "current-selector-bypass",
+    })
+  }
+
+  return offenses
+}
+
+const analyzePhase260GoFile = (
+  repoPath: string,
+  sourceText: string,
+): readonly ServiceBoundaryOffense[] => {
+  if (!isPhase260ProductionSource(repoPath)) {
+    return []
+  }
+  const offenses: ServiceBoundaryOffense[] = []
+  const gameplaySymbols = [
+    "resolveBackstab",
+    "executeStrategy",
+    "evaluateStrategy",
+    "MOVE_ADVANCED",
+  ] as const
+  const functionPattern = /^func\s+(?:\([^\n)]*\)\s*)?([A-Za-z0-9_]+)[^{]*\{/gmu
+  const starts = [...sourceText.matchAll(functionPattern)]
+  for (let index = 0; index < starts.length; index += 1) {
+    const match = starts[index]!
+    const start = match.index
+    const end = starts[index + 1]?.index ?? sourceText.length
+    const functionText = sourceText.slice(start, end)
+    const candidateFunction =
+      /candidate|v119/iu.test(match[1] ?? "") ||
+      functionText.includes('"runtime-v1.19"')
+    if (!candidateFunction) {
+      continue
+    }
+    for (const symbol of gameplaySymbols) {
+      const symbolIndex = functionText.indexOf(symbol)
+      if (symbolIndex >= 0) {
+        offenses.push({
+          path: repoPath,
+          line: sourceText.slice(0, start + symbolIndex).split("\n").length,
+          pattern: `go-gameplay-ownership:${symbol}`,
+        })
+      }
+    }
+    const geometryMatch =
+      /initialBounds\s*:?=\s*map\[string\](?:any|interface\s*\{\})\s*\{[^}]*\d[^}]*\}[\s\S]*?terrainStones\s*:?=\s*\[\][^\n{]*\{/u.exec(
+        functionText,
+      )
+    if (geometryMatch) {
+      offenses.push({
+        path: repoPath,
+        line: sourceText
+          .slice(0, start + (geometryMatch.index ?? 0))
+          .split("\n").length,
+        pattern: "handwritten-successor-arena-geometry",
+      })
+    }
+    const fairnessMatch =
+      /\bseed\b[^\n]*(?::mirror|mirror)|mirror[^\n]*\bseed\b/iu.exec(functionText)
+    if (fairnessMatch) {
+      offenses.push({
+        path: repoPath,
+        line: sourceText
+          .slice(0, start + (fairnessMatch.index ?? 0))
+          .split("\n").length,
+        pattern: "set-fairness-from-seed",
+      })
+    }
+  }
+  return offenses
+}
+
+const collectPhase260TypeScriptGraph = (
+  repoRoot: string,
+): readonly string[] => {
+  const queue = phase260TypeScriptRoots.flatMap((root) =>
+    walkFilesWithExtensions(repoRoot, root, new Set([".ts", ".tsx"]))
+      .map((absolutePath) => toRepoPath(repoRoot, absolutePath))
+      .filter(isPhase260ProductionSource),
+  )
+  const seen = new Set<string>()
+
+  while (queue.length > 0) {
+    const repoPath = queue.shift()!
+    if (seen.has(repoPath)) {
+      continue
+    }
+    seen.add(repoPath)
+    const absolutePath = path.join(repoRoot, repoPath)
+    if (!existsSync(absolutePath)) {
+      continue
+    }
+    const sourceText = readFileSync(absolutePath, "utf8")
+    for (const statement of extractImportLikeStatements(repoPath, sourceText)) {
+      const localImport = resolveLocalImport(repoRoot, repoPath, statement.source)
+      if (localImport && !seen.has(localImport)) {
+        queue.push(localImport)
+      }
+    }
+  }
+
+  return [...seen].sort()
+}
+
+const analyzePhase260Ownership = (
+  repoRoot: string,
+): readonly ServiceBoundaryOffense[] => {
+  const typeScriptFiles = collectPhase260TypeScriptGraph(repoRoot)
+  const goFiles = walkFilesWithExtensions(
+    repoRoot,
+    "apps/go-backend",
+    new Set([".go"]),
+  )
+  return [
+    ...typeScriptFiles.flatMap((repoPath) => {
+      const absolutePath = path.join(repoRoot, repoPath)
+      return analyzePhase260TypeScriptFile(
+        repoPath,
+        readFileSync(absolutePath, "utf8"),
+      )
+    }),
+    ...goFiles.flatMap((absolutePath) => {
+      const repoPath = toRepoPath(repoRoot, absolutePath)
+      return analyzePhase260GoFile(repoPath, readFileSync(absolutePath, "utf8"))
+    }),
+  ].sort(
+    (left, right) =>
+      left.path.localeCompare(right.path) ||
+      left.line - right.line ||
+      left.pattern.localeCompare(right.pattern),
   )
 }
 
@@ -365,11 +844,14 @@ export const analyzeServiceBoundaryImports = (
   const reportOnlyOffenses = findOffenses(repoRoot, reportOnlyFiles).filter(
     (offense) => !strictFileSet.has(offense.path),
   )
+  const ownershipOffenses = analyzePhase260Ownership(repoRoot)
 
   return {
     strictOffenses,
     reportOnlyOffenses,
-    exitCode: strictOffenses.length > 0 ? 1 : 0,
+    ownershipOffenses,
+    exitCode:
+      strictOffenses.length > 0 || ownershipOffenses.length > 0 ? 1 : 0,
   }
 }
 
@@ -383,7 +865,10 @@ export const formatServiceBoundaryAnalysis = (
     ...analysis.reportOnlyOffenses.map((offense) =>
       formatOffense("REPORT", offense),
     ),
-    `strict_offenses=${analysis.strictOffenses.length} report_only_offenses=${analysis.reportOnlyOffenses.length}`,
+    ...analysis.ownershipOffenses.map((offense) =>
+      formatOffense("STRICT", offense),
+    ),
+    `strict_offenses=${analysis.strictOffenses.length} ownership_offenses=${analysis.ownershipOffenses.length} report_only_offenses=${analysis.reportOnlyOffenses.length}`,
   ]
   return `${lines.join("\n")}\n`
 }

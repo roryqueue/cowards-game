@@ -8,6 +8,8 @@ import {
 } from "../evidence-copy.js"
 import { buildResultWorkbenchViewModel } from "../result-view-model.js"
 import { runtimeExhibitionStatusLabel } from "../../../lib/runtime-labels.js"
+import { getCurrentPublicReadUser } from "../../../lib/public-service-adapter.js"
+import { CompetitionReportClient } from "./competition-report-client.js"
 
 export const dynamic = "force-dynamic"
 
@@ -18,17 +20,25 @@ const runtimeLabel = (
       adapter: { id: string }
       package: { mode: string }
     }
+    runtimeSemantics?: {
+      languageId: string
+      adapterLabel: string
+      countedPlayLabel: "Counted eligible" | "Not counted"
+    }
   },
   nonCountedLanguages: ReadonlySet<string>,
 ): string => {
   const nonCountedByContract = nonCountedLanguages.has(
     entrant.runtime.language.id,
   )
+  const semantics = entrant.runtimeSemantics
   const language = runtimeExhibitionStatusLabel({
-    languageId: entrant.runtime.language.id,
-    countedPlayLabel: nonCountedByContract ? "Not counted" : "Counted eligible",
+    languageId: semantics?.languageId ?? entrant.runtime.language.id,
+    countedPlayLabel: nonCountedByContract
+      ? "Not counted"
+      : (semantics?.countedPlayLabel ?? "Not counted"),
   })
-  return `${language} · ${entrant.runtime.adapter.id}`
+  return `${language} · ${semantics?.adapterLabel ?? entrant.runtime.adapter.id}`
 }
 
 export default async function MatchSetResultPage({
@@ -37,9 +47,10 @@ export default async function MatchSetResultPage({
   params: Promise<{ matchSetId: string }> | { matchSetId: string }
 }) {
   const resolvedParams = await params
-  const result = await getPublicMatchSetResult(
-    resolvedParams.matchSetId as MatchSetId,
-  )
+  const [result, user] = await Promise.all([
+    getPublicMatchSetResult(resolvedParams.matchSetId as MatchSetId),
+    getCurrentPublicReadUser(),
+  ])
 
   if (!result) {
     return (
@@ -60,20 +71,12 @@ export default async function MatchSetResultPage({
       </main>
     )
   }
-  const governance =
-    result.metadata &&
-    typeof result.metadata === "object" &&
-    !Array.isArray(result.metadata)
-      ? (result.metadata as {
-          countedStatus?: string
-          publicExplanation?: string
-          reviewStatus?: string
-        })
-      : {}
+  const countedState = result.competition?.countedState
+  const governance = result.competition?.governance
   const nonCountedLanguages = new Set<string>(
     result.contract.runtimeEvidence.eligibility.nonCountedExhibitionBeta,
   )
-  if (governance.countedStatus === "non_counted") {
+  if (countedState?.state !== "counted") {
     for (const entrant of result.entrants) {
       nonCountedLanguages.add(entrant.runtime.language.id)
     }
@@ -82,7 +85,7 @@ export default async function MatchSetResultPage({
     nonCountedLanguages.has(entrant.runtime.language.id),
   )
   const evidenceStatus =
-    governance.countedStatus ??
+    countedState?.state ??
     (hasNonCountedEntrant ? "non-counted exhibition" : "public exhibition")
   const entrantRuntimeLabels = result.entrants.map((entrant) =>
     runtimeLabel(entrant, nonCountedLanguages),
@@ -117,14 +120,22 @@ export default async function MatchSetResultPage({
           </span>
           <span>{workbench.lifecycleSummary}</span>
           <span>{workbench.availabilitySummary}</span>
-          {governance.countedStatus ? (
-            <span>{governance.countedStatus}</span>
-          ) : null}
+          {countedState ? <span>{countedState.publicLabel}</span> : null}
           <span>{result.scoringPolicy.id}</span>
           <span>{result.visibility}</span>
         </div>
-        {governance.publicExplanation ? (
-          <p className="workshop-muted">{governance.publicExplanation}</p>
+        {countedState ? (
+          <p className="workshop-muted">
+            {countedState.publicExplanation} {countedState.standingsEffect}
+          </p>
+        ) : null}
+        {governance ? (
+          <p className="workshop-muted">
+            {governance.publicExplanation}
+            {governance.changedAt
+              ? ` Updated ${new Date(governance.changedAt).toLocaleString()}.`
+              : ""}
+          </p>
         ) : null}
 
         <div
@@ -364,6 +375,22 @@ export default async function MatchSetResultPage({
             <dd>{publicPrivacyProvenanceCue}</dd>
           </dl>
         </details>
+
+        <section className="app-subsection" aria-label="Report this result">
+          <div className="app-section-header compact">
+            <h2>Report this result</h2>
+          </div>
+          <CompetitionReportClient
+            canDispute={Boolean(
+              user &&
+              result.entrants.some(
+                (entrant) => entrant.ownerUserId === user.id,
+              ),
+            )}
+            matchSetId={result.matchSetId}
+            signedIn={Boolean(user)}
+          />
+        </section>
       </section>
     </main>
   )

@@ -1,0 +1,141 @@
+{
+  "schemaVersion": "v1.35-ownership-alias-proof",
+  "milestone": "v1.35",
+  "phase": 245,
+  "generatedAt": "2026-06-15",
+  "generatedBy": "scripts/evaluate-v1-35-ownership-alias-proof.ts",
+  "requiredRequirements": [
+    "AUTH-01",
+    "AUTH-02",
+    "PRIV-01",
+    "PRIV-02",
+    "API-01",
+    "API-02",
+    "API-03"
+  ],
+  "requiredEvidenceKinds": [
+    "account-source-session-owner",
+    "local-workshop-owner-debug-quarantine",
+    "workshop-source-alias-deprecation",
+    "retained-workshop-route-scope",
+    "public-default-privacy"
+  ],
+  "guardrails": {
+    "localWorkshopPlayerAuthorizesPrivateReplay": false,
+    "workshopSourceAliasesReturnSource": false,
+    "accountSourceRequiresServerSession": true,
+    "publicDefaultOwnerDebugExcluded": true
+  },
+  "sourceChecks": [],
+  "evidence": [
+    {
+      "id": "account-source-server-authorized-owner-route",
+      "kind": "account-source-session-owner",
+      "requirements": [
+        "AUTH-01",
+        "AUTH-02",
+        "PRIV-02"
+      ],
+      "files": [
+        "apps/web/app/api/account/revisions/[revisionId]/source/route.ts",
+        "apps/go-backend/live_backend.go",
+        "apps/web/lib/go-backend-service-client.ts"
+      ],
+      "commands": [
+        "cd apps/go-backend && go test ./... -run 'Test.*Auth|Test.*Source|Test.*Owner' -count=1",
+        "pnpm exec vitest run tests/phase-105-selected-go-route-behavior.test.ts"
+      ],
+      "outcome": "Account source reads flow through a current session to Go and Go joins Strategy Revisions against the authenticated owner before returning private no-store source.",
+      "limitations": []
+    },
+    {
+      "id": "local-workshop-owner-debug-quarantined",
+      "kind": "local-workshop-owner-debug-quarantine",
+      "requirements": [
+        "AUTH-01",
+        "PRIV-01",
+        "PRIV-02"
+      ],
+      "files": [
+        "apps/web/app/matches/server.ts",
+        "apps/web/app/matches/server.test.ts",
+        "apps/web/app/workshop/workshop-client-state.ts",
+        "apps/web/app/workshop/workshop-client.test.tsx",
+        "apps/web/e2e/workshop-to-replay.spec.ts"
+      ],
+      "commands": [
+        "pnpm --filter @cowards/web exec vitest run app/matches/server.test.ts app/matches/[matchId]/replay/owner-debug.test.ts app/workshop/workshop-client.test.tsx"
+      ],
+      "outcome": "Query parameters can request owner-debug only after server-side authorization, and stale persisted rows using player:workshop-local remain public-only.",
+      "limitations": [
+        "General account-owner private replay for non-Workshop competitions remains future scoped unless a later milestone adds server session to replay pages."
+      ]
+    },
+    {
+      "id": "workshop-source-aliases-deprecated-no-source",
+      "kind": "workshop-source-alias-deprecation",
+      "requirements": [
+        "API-01",
+        "API-02",
+        "API-03",
+        "PRIV-02"
+      ],
+      "files": [
+        "apps/web/app/api/workshop/source/route.ts",
+        "apps/web/app/api/workshop/source/route.test.ts",
+        "apps/web/app/api/workshop/revisions/[revisionId]/source/route.ts",
+        "apps/web/app/api/workshop/revisions/[revisionId]/source/route.test.ts"
+      ],
+      "commands": [
+        "pnpm --filter @cowards/web exec vitest run app/api/workshop/source/route.test.ts app/api/workshop/revisions/[revisionId]/source/route.test.ts"
+      ],
+      "outcome": "Legacy Workshop source aliases return explicit public-safe 410 migration errors with private no-store cache policy and no Strategy source, revision id, or provider internals.",
+      "limitations": []
+    },
+    {
+      "id": "retained-workshop-routes-local-only",
+      "kind": "retained-workshop-route-scope",
+      "requirements": [
+        "AUTH-01",
+        "API-01",
+        "API-03"
+      ],
+      "files": [
+        "apps/web/app/api/workshop/revisions/route.ts",
+        "apps/web/app/api/workshop/validate/route.ts",
+        "apps/web/app/api/workshop/tests/route.ts",
+        "apps/web/app/api/exhibitions/route.ts",
+        "apps/web/app/api/ladder/seasons/[seasonId]/entries/route.ts"
+      ],
+      "commands": [
+        "pnpm --filter @cowards/web exec vitest run app/api/workshop/revisions/route.test.ts app/api/workshop/validate/route.test.ts"
+      ],
+      "outcome": "Retained Workshop submit, validation, test, and analytics routes remain local Workshop surfaces and do not authorize account source, Go exhibitions, ladder entry, or owner-private replay.",
+      "limitations": [
+        "Workshop-local storage still persists source for local Workshop workflows; it is not account ownership or counted competition authority."
+      ]
+    },
+    {
+      "id": "public-default-owner-private-redaction",
+      "kind": "public-default-privacy",
+      "requirements": [
+        "PRIV-01",
+        "PRIV-02",
+        "API-02",
+        "API-03"
+      ],
+      "files": [
+        "apps/web/app/matches/server.test.ts",
+        "apps/go-backend/main_test.go",
+        "packages/spec/src/public-output-privacy.ts",
+        "apps/web/e2e/workshop-to-replay.spec.ts"
+      ],
+      "commands": [
+        "pnpm --filter @cowards/web exec vitest run app/matches/server.test.ts",
+        "cd apps/go-backend && go test ./... -run TestPublicResponses -count=1"
+      ],
+      "outcome": "Public/default replay, metadata, and alias responses omit owner-debug payloads, owner-private projection data, Strategy source, memories, objective payloads, raw Awareness Grids, raw diagnostics, and private runtime internals.",
+      "limitations": []
+    }
+  ]
+}

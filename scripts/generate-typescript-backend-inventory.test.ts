@@ -1,4 +1,5 @@
 import {
+  existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -10,7 +11,10 @@ import path from "node:path"
 import { afterEach, describe, expect, it } from "vitest"
 import {
   allowedRoles,
+  checkTypeScriptBackendRuntimeSelectionOverlayArtifactsV137,
   checkTypeScriptBackendInventoryArtifacts,
+  classifyRuntimeSurfaceLifecycleV137,
+  generateTypeScriptBackendRuntimeSelectionOverlayV137,
   generateTypeScriptBackendInventory,
   renderTypeScriptBackendInventoryJson,
   renderTypeScriptBackendInventoryMarkdown,
@@ -20,6 +24,20 @@ import {
 } from "./generate-typescript-backend-inventory.ts"
 
 const tempRoots: string[] = []
+
+const resolvePlanningArtifact = (activePath: string): string => {
+  if (existsSync(activePath)) {
+    return activePath
+  }
+  const archivedPath = activePath.replace(
+    ".planning/phases/",
+    ".planning/milestones/v1.16-phases/",
+  )
+  if (existsSync(archivedPath)) {
+    return archivedPath
+  }
+  return activePath
+}
 
 const createTempRepo = (): string => {
   const root = mkdtempSync(path.join(tmpdir(), "cowards-ts-backend-inventory-"))
@@ -330,6 +348,7 @@ export const TYPE_SCRIPT_LIFECYCLE_QUARANTINE = { normalBackend: false }
       ".planning/phases/103-typescript-backend-inventory-and-retirement-contract/103-REVIEW.md",
       ".planning/phases/103-typescript-backend-inventory-and-retirement-contract/103-VALIDATION.md",
     ]
+      .map(resolvePlanningArtifact)
       .map((file) => readFileSync(file, "utf8"))
       .join("\n")
 
@@ -479,7 +498,64 @@ export const TYPE_SCRIPT_LIFECYCLE_QUARANTINE = { normalBackend: false }
     )
   })
 
-  it("keeps the committed v1.16 artifact synchronized with every scanner root for BASE-01", () => {
+  it("classifies only paired inactive-candidate contracts as candidate evidence", () => {
+    expect(
+      classifyRuntimeSurfaceLifecycleV137(
+        "packages/runtime-js/src/revision-v1-19.ts",
+        `export const CANDIDATE_OBSERVATION_TRANSPORT_V1_19 = Object.freeze({ candidateStatus: "inactive-candidate", current: false } as const)`,
+      ),
+    ).toBe("candidate_evidence")
+    expect(
+      classifyRuntimeSurfaceLifecycleV137(
+        "apps/runtime-service/src/revalidate-strategy-revision-v1-19.ts",
+        `export interface RevisionRevalidationCandidatePinsV119 { readonly candidateStatus: "inactive-candidate"; readonly current: false }`,
+      ),
+    ).toBe("candidate_evidence")
+    expect(
+      classifyRuntimeSurfaceLifecycleV137(
+        "apps/runtime-service/src/runtime-config.ts",
+        `export const current = true; const note = "inactive-candidate current: false"`,
+      ),
+    ).toBe("selected_by_pointer")
+    expect(
+      classifyRuntimeSurfaceLifecycleV137(
+        "packages/runtime-js/src/revision.ts",
+        `const status = { candidateStatus: "inactive-candidate" }; const selection = { current: false }`,
+      ),
+    ).toBe("selected_by_pointer")
+    expect(
+      classifyRuntimeSurfaceLifecycleV137(
+        "packages/runtime-js/src/revision-v1-19.ts",
+        `export const CANDIDATE_OBSERVATION_TRANSPORT_V1_19 = { candidateStatus: "inactive-candidate", current: true } as const`,
+      ),
+    ).toBe("selected_by_pointer")
+    expect(
+      classifyRuntimeSurfaceLifecycleV137(
+        "packages/runtime-js/src/revision-v1-19.ts",
+        `export const OtherContract = { candidateStatus: "inactive-candidate", current: false } as const`,
+      ),
+    ).toBe("selected_by_pointer")
+    expect(
+      classifyRuntimeSurfaceLifecycleV137(
+        "packages/runtime-js/src/revision-v1-19.ts",
+        `export const factory = () => { const CANDIDATE_OBSERVATION_TRANSPORT_V1_19 = { candidateStatus: "inactive-candidate", current: false } as const; return CANDIDATE_OBSERVATION_TRANSPORT_V1_19 }`,
+      ),
+    ).toBe("selected_by_pointer")
+    expect(
+      classifyRuntimeSurfaceLifecycleV137(
+        "packages/runtime-js/src/revision-v1-19.ts",
+        `const candidateStatus = "inactive-candidate"; const current = false; export const CANDIDATE_OBSERVATION_TRANSPORT_V1_19 = { candidateStatus, current } as const`,
+      ),
+    ).toBe("selected_by_pointer")
+    expect(
+      classifyRuntimeSurfaceLifecycleV137(
+        "apps/runtime-service/src/revalidate-strategy-revision-v1-19.ts",
+        `type Status = "inactive-candidate"; export interface RevisionRevalidationCandidatePinsV119 { candidateStatus: Status; current: false }`,
+      ),
+    ).toBe("selected_by_pointer")
+  })
+
+  it("keeps the committed v1.16 artifact immutable and overlays current runtime scanner roots for BASE-01", () => {
     const inventory = JSON.parse(
       readFileSync(
         ".planning/artifacts/v1.16-typescript-backend-inventory.json",
@@ -487,10 +563,95 @@ export const TYPE_SCRIPT_LIFECYCLE_QUARANTINE = { normalBackend: false }
       ),
     ) as TypeScriptBackendInventory
     const generated = generateTypeScriptBackendInventory()
+    const overlay = generateTypeScriptBackendRuntimeSelectionOverlayV137()
 
-    expect(inventory.surfaces.map((surface) => surface.path).sort()).toEqual(
-      generated.surfaces.map((surface) => surface.path).sort(),
+    expect(
+      checkTypeScriptBackendRuntimeSelectionOverlayArtifactsV137(),
+    ).toEqual([])
+    expect(overlay.historicalBaseline).toMatchObject({
+      scope: "immutable_v1_16_historical_evidence",
+      artifacts: expect.arrayContaining([
+        {
+          path: ".planning/artifacts/v1.16-typescript-backend-inventory.json",
+          sha256:
+            "ea45ff5b29c3b67c24d9c638c63936ec9f6c42159ae71aa189ce885ce4a25a09",
+        },
+        {
+          path: ".planning/artifacts/v1.16-typescript-backend-inventory.md",
+          sha256:
+            "31c8d96072fd24eecad76376b14408bdb4ff1c22f3b8b8cd425feb1d6a63377d",
+        },
+      ]),
+    })
+    expect(overlay.runtimeSurfaces.map((surface) => surface.path)).toEqual(
+      generated.surfaces
+        .filter(
+          (surface) =>
+            surface.role === "runtime-service" ||
+            surface.role === "runtime-adapter",
+        )
+        .map((surface) => surface.path),
     )
+    expect(overlay.selectedCurrentRuntimeOverlay).toMatchObject({
+      selectionAuthority: "packages/spec/src/versions.ts",
+      serviceSelectionAuthority: "apps/runtime-service/src/runtime-config.ts",
+      legacy: {
+        strategyRuntimeAbi: "strategy-runtime-abi-v1.14",
+        runtimeExecutionService: "runtime-execution-service-v1.16",
+      },
+      successor: {
+        strategyRuntimeAbi: "strategy-runtime-abi-v1.17",
+        runtimeExecutionService: "runtime-execution-service-v1.17",
+      },
+      invariant:
+        "selected_current_must_follow_authoritative_activation_pointer",
+    })
+    for (const surface of overlay.runtimeSurfaces.filter(
+      (entry) => entry.lifecycle === "selected_by_pointer",
+    )) {
+      expect(surface.gate).toContain("authoritative activation pointer")
+    }
+    for (const surface of overlay.runtimeSurfaces.filter(
+      (entry) => entry.lifecycle === "candidate_evidence",
+    )) {
+      expect(surface.selectionAuthority).toBeNull()
+      expect(surface.gate).toContain("never current by declaration")
+    }
+    expect(
+      overlay.runtimeSurfaces.find(
+        ({ path }) =>
+          path ===
+          "apps/runtime-service/src/runtime-execution-evidence.test-support.ts",
+      ),
+    ).toMatchObject({
+      lifecycle: "candidate_evidence",
+      selectionAuthority: null,
+    })
+    expect(
+      overlay.runtimeSurfaces.find(
+        ({ path }) => path === "packages/runtime-js/src/revision-v1-19.ts",
+      ),
+    ).toMatchObject({
+      lifecycle: "candidate_evidence",
+      selectionAuthority: null,
+    })
+    expect(
+      overlay.runtimeSurfaces.find(
+        ({ path }) =>
+          path ===
+          "apps/runtime-service/src/revalidate-strategy-revision-v1-19.ts",
+      ),
+    ).toMatchObject({
+      lifecycle: "candidate_evidence",
+      selectionAuthority: null,
+    })
+    expect(
+      overlay.runtimeSurfaces.find(
+        ({ path }) => path === "apps/runtime-service/src/runtime-config.ts",
+      ),
+    ).toMatchObject({
+      lifecycle: "selected_by_pointer",
+    })
     expect(inventory.surfaces.length).toBeGreaterThan(0)
     expect(
       inventory.surfaces.some((surface) => surface.kind === "next-api-route"),

@@ -5,6 +5,7 @@
     { "path": "apps/worker" },
     { "path": "apps/runtime-service" },
     { "path": "packages/spec" },
+    { "path": "packages/runtime-supervisor" },
     { "path": "packages/engine" },
     { "path": "packages/runtime-js" },
     { "path": "packages/runtime-python" },

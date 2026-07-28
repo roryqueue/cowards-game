@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest"
 import type { Soldier } from "@cowards/spec"
+import { MATCH_KERNEL } from "./kernel/driver.js"
 import { resolveAction } from "./movement.js"
 import { createInitialGameState } from "./state.js"
+import { createFakeRuntime } from "./test/fake-runtime.js"
 import type { GameState } from "./types.js"
 
 const baseInput = {
@@ -205,6 +207,55 @@ describe("movement rules", () => {
     expect(result.state.soldiers[0]!.position).toEqual({ x: 5, y: 5 })
     expect(result.state.soldiers[1]!.position).toEqual({ x: 6, y: 5 })
     expect(result.state.soldiers[1]!.lastSuccessfulMoveDirection).toBe("LEFT")
+  })
+
+  it("preserves successful-push reversal history through the candidate activation authority", () => {
+    const state = stateWith([
+      soldier({
+        id: "pusher",
+        position: { x: 4, y: 5 },
+        facing: "RIGHT",
+        lastSuccessfulMoveDirection: "UP",
+      }),
+      soldier({
+        id: "pushed",
+        ownerPlayerId: "top",
+        position: { x: 5, y: 5 },
+        facing: "UP",
+        lastSuccessfulMoveDirection: "LEFT",
+      }),
+    ])
+    let calls = 0
+    const execution = MATCH_KERNEL.runActivationFromState({
+      state,
+      soldierId: "pusher",
+      runtime: createFakeRuntime({
+        action: () => {
+          calls += 1
+          return calls === 1
+            ? { type: "MOVE", direction: "RIGHT" }
+            : { type: "TURN_TO_STONE" }
+        },
+      }),
+    })
+    expect(execution.kind).toBe("completed")
+    if (execution.kind !== "completed" || execution.result === undefined) {
+      throw new Error(
+        `candidate activation failed: ${execution.failure?.code ?? "missing result"}`,
+      )
+    }
+
+    expect(
+      execution.result.state.soldiers.find(({ id }) => id === "pusher")
+        ?.lastSuccessfulMoveDirection,
+    ).toBe("RIGHT")
+    expect(
+      execution.result.state.soldiers.find(({ id }) => id === "pushed")
+        ?.lastSuccessfulMoveDirection,
+    ).toBe("LEFT")
+    expect(execution.result.events.map(({ type }) => type)).toContain(
+      "PUSH_RESOLVED",
+    )
   })
 
   it("resolves blocked push and push off board", () => {

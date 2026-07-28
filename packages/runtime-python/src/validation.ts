@@ -2,14 +2,22 @@ import { createHash } from "node:crypto"
 import { Buffer } from "node:buffer"
 import { spawnSync } from "node:child_process"
 import {
+  CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE,
   COMPATIBILITY_VERSIONS,
   STRATEGY_RUNTIME_ABI_VERSION,
+  STRATEGY_RUNTIME_ABI_VERSION_V1_17,
+  STRATEGY_PROVIDER_VALIDATION_CONTRACT_V1_17,
   STRATEGY_SOURCE_BYTES,
   StrategyRevisionSchema,
+  StrategyRevisionV117Schema,
   runtimeCompatibilityKey,
+  hashStrategyProviderValidationV117,
+  hashCanonicalIdentity,
   type SourceLanguageStrategyArtifact,
+  type SourceLanguageStrategyRevisionV117,
   type StrategyRevision,
   type StrategyRevisionMetadata,
+  type StrategyRuntimeMetadataV117,
   type StrategyRevisionValidationIssue,
   type StrategyRevisionValidationReport,
 } from "@cowards/spec"
@@ -24,17 +32,88 @@ const validationHostPath = decodeURIComponent(
   new URL("./python_validation_host.py", import.meta.url).pathname,
 )
 
+const pythonValidationHostEnvironment = Object.freeze({
+  ...process.env,
+  ...PYTHON_RUNTIME_ENVIRONMENT,
+})
+
 const hashStrategySource = (source: string): string =>
   createHash("sha256").update(source).digest("hex")
 
 const normalizePythonArtifactSource = (source: string): string =>
   source.replace(/\r\n?/g, "\n")
 
+const prefixedByteSha256 = (bytes: Uint8Array): `sha256:${string}` =>
+  `sha256:${createHash("sha256").update(bytes).digest("hex")}`
+
+export const PYTHON_SOURCE_NORMALIZATION_POLICY_V1_17 =
+  "source-line-endings-lf-v1.17" as const
+
+export const buildPythonSourceIdentityV117 = (source: string) => {
+  let lf = 0
+  let crlf = 0
+  let cr = 0
+  for (let index = 0; index < source.length; index += 1) {
+    if (source[index] === "\r") {
+      if (source[index + 1] === "\n") {
+        crlf += 1
+        index += 1
+      } else {
+        cr += 1
+      }
+    } else if (source[index] === "\n") {
+      lf += 1
+    }
+  }
+  const present = [lf > 0, crlf > 0, cr > 0].filter(Boolean).length
+  const kind: "none" | "lf" | "crlf" | "cr" | "mixed" =
+    present === 0
+      ? "none"
+      : present > 1
+        ? "mixed"
+        : lf > 0
+          ? "lf"
+          : crlf > 0
+            ? "crlf"
+            : "cr"
+  const normalizedSource = normalizePythonArtifactSource(source)
+  return {
+    identityVersion: "strategy-source-identity-v2" as const,
+    normalizationPolicy: PYTHON_SOURCE_NORMALIZATION_POLICY_V1_17,
+    originalSourceSha256: `sha256:${hashCanonicalIdentity("originalSource", [
+      Buffer.from(source, "utf8"),
+    ])}` as const,
+    normalizedSourceSha256: `sha256:${hashCanonicalIdentity(
+      "normalizedSource",
+      [Buffer.from(normalizedSource, "utf8")],
+    )}` as const,
+    lineEndings: { kind, lf, crlf, cr },
+    hasFinalNewline: source.endsWith("\n") || source.endsWith("\r"),
+    normalizedSource,
+  }
+}
+
+/**
+ * Identity carried by a signed runtime request. Unlike the artifact manifest
+ * identity above, these are direct hashes of the exact byte strings so every
+ * language adapter receives the same language-neutral request envelope.
+ */
+export const buildPythonRequestSourceIdentityV117 = (source: string) => {
+  const normalizedSource = normalizePythonArtifactSource(source)
+  return Object.freeze({
+    originalSourceSha256: prefixedByteSha256(Buffer.from(source, "utf8")),
+    normalizedSourceSha256: prefixedByteSha256(
+      Buffer.from(normalizedSource, "utf8"),
+    ),
+  })
+}
+
 export const buildPythonSourceArtifact = (input: {
   source: string
   validation: StrategyRevisionValidationReport
 }): SourceLanguageStrategyArtifact => {
-  const normalizedSource = normalizePythonArtifactSource(input.source)
+  const sourceIdentity = buildPythonSourceIdentityV117(input.source)
+  const normalizedSource = sourceIdentity.normalizedSource
   const bytes = Buffer.from(normalizedSource, "utf8")
   return {
     format: "python-source-bundle",
@@ -45,6 +124,16 @@ export const buildPythonSourceArtifact = (input: {
     sourceBytes: input.validation.sourceBytes,
     abiVersion: STRATEGY_RUNTIME_ABI_VERSION,
     validationStatus: input.validation.valid ? "valid" : "invalid",
+    sourceIdentity: {
+      identityVersion: sourceIdentity.identityVersion,
+      normalizationPolicy: sourceIdentity.normalizationPolicy,
+      originalSourceSha256: sourceIdentity.originalSourceSha256,
+      originalSourceBytes: Buffer.byteLength(input.source),
+      normalizedSourceSha256: sourceIdentity.normalizedSourceSha256,
+      normalizedSourceBytes: bytes.byteLength,
+      lineEndings: sourceIdentity.lineEndings,
+      hasFinalNewline: sourceIdentity.hasFinalNewline,
+    },
     createdAt: "deterministic-python-source-bundle-v1.33",
     toolchain: {
       language: "python",
@@ -55,6 +144,27 @@ export const buildPythonSourceArtifact = (input: {
     },
     publicEvidence: {
       label: "Normalized Python source bundle provenance",
+      nonCounted: false,
+      sandboxClaim: "provenance-only",
+    },
+  }
+}
+
+export const buildPythonSourceArtifactV117 = (input: {
+  source: string
+  validation: StrategyRevisionValidationReport
+}): SourceLanguageStrategyArtifact => {
+  const current = buildPythonSourceArtifact(input)
+  return {
+    ...current,
+    abiVersion: STRATEGY_RUNTIME_ABI_VERSION_V1_17,
+    createdAt: "deterministic-python-source-bundle-v1.17",
+    toolchain: {
+      ...current.toolchain,
+      validationPolicy: "python-source-validation-v1.17",
+    },
+    publicEvidence: {
+      label: "Normalized Python v1.17 source bundle provenance",
       nonCounted: false,
       sandboxClaim: "provenance-only",
     },
@@ -155,7 +265,7 @@ const runPythonValidationHost = (
     {
       input: JSON.stringify({ source }),
       encoding: "utf8",
-      env: PYTHON_RUNTIME_ENVIRONMENT,
+      env: pythonValidationHostEnvironment,
       shell: false,
       timeout: 1_000,
       maxBuffer: 128 * 1024,
@@ -283,4 +393,92 @@ export const buildPythonStrategyRevision = (input: {
       sourceArtifact,
     },
   })
+}
+
+const deepFreeze = <T>(value: T): T => {
+  if (value !== null && typeof value === "object" && !Object.isFrozen(value)) {
+    for (const entry of Object.values(value)) deepFreeze(entry)
+    Object.freeze(value)
+  }
+  return value
+}
+
+export const buildPythonStrategyRevisionV117 = (input: {
+  source: string
+  strategyId?: string | undefined
+  providerId?: string | undefined
+  metadata?: Omit<
+    StrategyRevisionMetadata,
+    "compiledArtifact" | "providerValidation" | "sourceArtifact"
+  >
+}): SourceLanguageStrategyRevisionV117 => {
+  const currentRuntime = pythonExperimentalRuntimeMetadata()
+  const runtime: StrategyRuntimeMetadataV117 = {
+    ...currentRuntime,
+    abiVersion: STRATEGY_RUNTIME_ABI_VERSION_V1_17,
+    package: { ...currentRuntime.package, entrypoint: "default" },
+    limits: {
+      ...currentRuntime.limits,
+      environment: "empty",
+      filesystem: "none",
+      network: "disabled",
+      shell: "disabled",
+      packagePolicy: "none",
+    },
+  }
+  const currentValidation = validatePythonStrategySource(input.source)
+  if (!currentValidation.valid) {
+    throw new TypeError("v1.17 Python Strategy source is invalid.")
+  }
+  const validation: StrategyRevisionValidationReport = {
+    ...currentValidation,
+    runtimeVersion: runtime.adapter.version,
+    engineCompatibility: {
+      spec: CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE.rules,
+      engine: CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE.engine,
+    },
+  }
+  const sourceArtifact = buildPythonSourceArtifactV117({
+    source: input.source,
+    validation,
+  })
+  const compatibility = runtimeCompatibilityKey({
+    runtime,
+    sourceHash: validation.sourceHash,
+    artifactHash: sourceArtifact.hash,
+    specVersion: validation.engineCompatibility.spec,
+    engineVersion: validation.engineCompatibility.engine,
+  })
+  const compatibilityHash = createHash("sha256")
+    .update(JSON.stringify(compatibility))
+    .digest("hex")
+  const providerValidationInput = {
+    providerId: input.providerId ?? "strategy-language-provider-python",
+    contractVersion: STRATEGY_PROVIDER_VALIDATION_CONTRACT_V1_17,
+    sourceHash: validation.sourceHash,
+    sourceBytes: validation.sourceBytes,
+    artifactHash: sourceArtifact.hash,
+    artifactBytes: sourceArtifact.bytes,
+  } as const
+  const revision = {
+    id: `strategy-revision:python-v1.17:${validation.sourceHash}:${compatibilityHash.slice(0, 16)}`,
+    ...(input.strategyId === undefined ? {} : { strategyId: input.strategyId }),
+    source: input.source,
+    sourceHash: validation.sourceHash,
+    sourceBytes: validation.sourceBytes,
+    runtime,
+    engineCompatibility: validation.engineCompatibility,
+    validation,
+    metadata: {
+      ...input.metadata,
+      providerValidation: {
+        ...providerValidationInput,
+        proof: hashStrategyProviderValidationV117(providerValidationInput),
+      },
+      sourceArtifact,
+    },
+  }
+  return deepFreeze(
+    StrategyRevisionV117Schema.parse(revision),
+  ) as SourceLanguageStrategyRevisionV117
 }

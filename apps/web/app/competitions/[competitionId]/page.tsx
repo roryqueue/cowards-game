@@ -3,7 +3,9 @@ import {
   EmptyStates,
   MatchSetDiscoveryCard,
 } from "../../public-discovery-components.js"
+import type { JSX } from "react"
 import { getPublicCompetitionDetail } from "../../../lib/public-discovery-service.js"
+import { COMPETITION_POLICY_V1_36_POSTURE } from "@cowards/spec"
 
 export const dynamic = "force-dynamic"
 
@@ -11,7 +13,7 @@ export default async function CompetitionDetailPage({
   params,
 }: {
   params: Promise<{ competitionId: string }> | { competitionId: string }
-}) {
+}): Promise<JSX.Element> {
   const { competitionId } = await params
   const detail = await getPublicCompetitionDetail(competitionId)
 
@@ -59,6 +61,8 @@ export default async function CompetitionDetailPage({
           </span>
           <span>{detail.scheduleLabel}</span>
           <span>{detail.replayCoverage.label}</span>
+          <span>{COMPETITION_POLICY_V1_36_POSTURE.standingsScope}</span>
+          <span>{COMPETITION_POLICY_V1_36_POSTURE.durableRatingPromise}</span>
         </div>
         <BoundaryNotice
           privateFieldsExcluded={detail.boundary.privateFieldsExcluded}
@@ -137,7 +141,35 @@ export default async function CompetitionDetailPage({
                 <span>{standing.label}</span>
                 <span>{standing.points}</span>
                 <span>{standing.record}</span>
-                <span>Public standings</span>
+                <span>
+                  {standing.competitionEvidence ? (
+                    <>
+                      {standing.competitionEvidence.countedMatchSetCount}{" "}
+                      counted /{" "}
+                      {standing.competitionEvidence.excludedMatchSetCount}{" "}
+                      excluded · Evidence{" "}
+                      {standing.competitionEvidence.evidenceAvailability}
+                      {standing.competitionEvidence.resultLinks.map(
+                        (href, index) => (
+                          <span key={`result-${index}-${href}`}>
+                            {" · "}
+                            <a href={href}>Result {index + 1}</a>
+                          </span>
+                        ),
+                      )}
+                      {standing.competitionEvidence.replayLinks.map(
+                        (href, index) => (
+                          <span key={`replay-${index}-${href}`}>
+                            {" · "}
+                            <a href={href}>Replay {index + 1}</a>
+                          </span>
+                        ),
+                      )}
+                    </>
+                  ) : (
+                    "No competition evidence"
+                  )}
+                </span>
               </div>
             ))}
           </div>

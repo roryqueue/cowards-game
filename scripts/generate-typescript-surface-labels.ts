@@ -1,8 +1,10 @@
 #!/usr/bin/env -S pnpm exec tsx
+import { createHash } from "node:crypto"
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 import { assertPublicOutputLeakSafe } from "../packages/spec/src/public-output-privacy.ts"
+import { generateTypeScriptBackendRuntimeSelectionOverlayV137 } from "./generate-typescript-backend-inventory.ts"
 
 const repoRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -22,6 +24,182 @@ const artifactPaths = {
   json: ".planning/artifacts/v1.16-final-typescript-surface-labels.json",
   markdown: ".planning/artifacts/v1.16-final-typescript-surface-labels.md",
 } as const
+
+const runtimeSelectionOverlayArtifactPaths = {
+  json: ".planning/artifacts/v1.37-typescript-surface-runtime-selection-overlay.json",
+  markdown:
+    ".planning/artifacts/v1.37-typescript-surface-runtime-selection-overlay.md",
+} as const
+
+const immutableHistoricalArtifactSha256 = Object.freeze({
+  [artifactPaths.json]:
+    "58fe6083f173b7233c37bc1e8eab10a605bdf978810f5ff8f4001767bad958e4",
+  [artifactPaths.markdown]:
+    "538b232b22284eb033bf5024382c84db99cd4a1c5c03a4cec77d378629f55498",
+} as const)
+
+export interface TypeScriptSurfaceRuntimeSelectionOverlayV137 {
+  schemaVersion: "v1.37-typescript-surface-runtime-selection-overlay"
+  generatedBy: "scripts/generate-typescript-surface-labels.ts"
+  sourceInventoryOverlayPath: ".planning/artifacts/v1.37-typescript-backend-runtime-selection-overlay.json"
+  historicalBaseline: {
+    scope: "immutable_v1_16_historical_evidence"
+    artifacts: readonly { path: string; sha256: string }[]
+  }
+  selectedCurrentRuntimeOverlay: {
+    selectionAuthority: string
+    serviceSelectionAuthority: string
+    legacy: {
+      strategyRuntimeAbi: string
+      runtimeExecutionService: string
+    }
+    successor: {
+      strategyRuntimeAbi: string
+      runtimeExecutionService: string
+    }
+    invariant: string
+  }
+  surfaces: readonly {
+    path: string
+    taxonomyRole: "runtime-service" | "runtime-adapter"
+    surfaceLabel:
+      | "runtime-service-execution-boundary"
+      | "runtime-adapter-execution-boundary"
+      | "runtime-evidence-only"
+    selectedNormal: boolean
+    gate: string
+    publicOutputPrivacy: "not-public-output"
+  }[]
+}
+
+const sha256File = (absolutePath: string): string =>
+  createHash("sha256").update(readFileSync(absolutePath)).digest("hex")
+
+const checkImmutableHistoricalArtifacts = (root: string): readonly string[] =>
+  Object.entries(immutableHistoricalArtifactSha256).flatMap(
+    ([relativePath, expected]) => {
+      const absolutePath = path.join(root, relativePath)
+      if (!existsSync(absolutePath)) return [`${relativePath} is missing`]
+      return sha256File(absolutePath) === expected
+        ? []
+        : [`${relativePath} immutable historical bytes changed`]
+    },
+  )
+
+export const generateTypeScriptSurfaceRuntimeSelectionOverlayV137 = (
+  options: GenerateFinalTypeScriptSurfaceLabelsOptions = {},
+): TypeScriptSurfaceRuntimeSelectionOverlayV137 => {
+  const root = options.repoRoot ?? repoRoot
+  const inventoryOverlay = generateTypeScriptBackendRuntimeSelectionOverlayV137(
+    { repoRoot: root },
+  )
+  return {
+    schemaVersion: "v1.37-typescript-surface-runtime-selection-overlay",
+    generatedBy: "scripts/generate-typescript-surface-labels.ts",
+    sourceInventoryOverlayPath:
+      ".planning/artifacts/v1.37-typescript-backend-runtime-selection-overlay.json",
+    historicalBaseline: {
+      scope: "immutable_v1_16_historical_evidence",
+      artifacts: Object.entries(immutableHistoricalArtifactSha256).map(
+        ([artifactPath, sha256]) => ({ path: artifactPath, sha256 }),
+      ),
+    },
+    selectedCurrentRuntimeOverlay:
+      inventoryOverlay.selectedCurrentRuntimeOverlay,
+    surfaces: inventoryOverlay.runtimeSurfaces.map((surface) => {
+      const evidenceOnly = surface.lifecycle === "candidate_evidence"
+      return {
+        path: surface.path,
+        taxonomyRole: surface.role,
+        surfaceLabel: evidenceOnly
+          ? "runtime-evidence-only"
+          : surface.role === "runtime-service"
+            ? "runtime-service-execution-boundary"
+            : "runtime-adapter-execution-boundary",
+        selectedNormal: !evidenceOnly,
+        gate: evidenceOnly
+          ? "candidate, fixture, or test evidence only; never selected normal runtime traffic"
+          : surface.gate,
+        publicOutputPrivacy: "not-public-output",
+      }
+    }),
+  }
+}
+
+export const renderTypeScriptSurfaceRuntimeSelectionOverlayJsonV137 = (
+  overlay: TypeScriptSurfaceRuntimeSelectionOverlayV137,
+): string => `${JSON.stringify(overlay, null, 2)}\n`
+
+export const renderTypeScriptSurfaceRuntimeSelectionOverlayMarkdownV137 = (
+  overlay: TypeScriptSurfaceRuntimeSelectionOverlayV137,
+): string => `# TypeScript Surface Runtime Selection Overlay
+
+**Schema:** ${overlay.schemaVersion}
+**Source inventory overlay:** ${overlay.sourceInventoryOverlayPath}
+**Historical scope:** ${overlay.historicalBaseline.scope}
+
+The v1.16 final surface labels remain immutable historical evidence. This additive overlay labels selected-current runtime boundaries through the authoritative activation pointer without promoting fixture or test evidence.
+
+## Runtime Surfaces
+
+| Path | Taxonomy Role | Surface Label | Selected Normal | Gate |
+| --- | --- | --- | --- | --- |
+${overlay.surfaces.map((surface) => `| ${markdownEscape(surface.path)} | ${surface.taxonomyRole} | ${surface.surfaceLabel} | ${surface.selectedNormal} | ${markdownEscape(surface.gate)} |`).join("\n")}
+`
+
+export const writeTypeScriptSurfaceRuntimeSelectionOverlayArtifactsV137 = (
+  options: GenerateFinalTypeScriptSurfaceLabelsOptions = {},
+): TypeScriptSurfaceRuntimeSelectionOverlayV137 => {
+  const root = options.repoRoot ?? repoRoot
+  const historicalFailures = checkImmutableHistoricalArtifacts(root)
+  if (historicalFailures.length > 0) {
+    throw new Error(historicalFailures.join("\n"))
+  }
+  const overlay = generateTypeScriptSurfaceRuntimeSelectionOverlayV137({
+    repoRoot: root,
+  })
+  const jsonPath = path.join(root, runtimeSelectionOverlayArtifactPaths.json)
+  const markdownPath = path.join(
+    root,
+    runtimeSelectionOverlayArtifactPaths.markdown,
+  )
+  mkdirSync(path.dirname(jsonPath), { recursive: true })
+  writeFileSync(
+    jsonPath,
+    renderTypeScriptSurfaceRuntimeSelectionOverlayJsonV137(overlay),
+  )
+  writeFileSync(
+    markdownPath,
+    renderTypeScriptSurfaceRuntimeSelectionOverlayMarkdownV137(overlay),
+  )
+  return overlay
+}
+
+export const checkTypeScriptSurfaceRuntimeSelectionOverlayArtifactsV137 = (
+  options: GenerateFinalTypeScriptSurfaceLabelsOptions = {},
+): readonly string[] => {
+  const root = options.repoRoot ?? repoRoot
+  const overlay = generateTypeScriptSurfaceRuntimeSelectionOverlayV137({
+    repoRoot: root,
+  })
+  const failures = [...checkImmutableHistoricalArtifacts(root)]
+  for (const [relativePath, expected] of [
+    [
+      runtimeSelectionOverlayArtifactPaths.json,
+      renderTypeScriptSurfaceRuntimeSelectionOverlayJsonV137(overlay),
+    ],
+    [
+      runtimeSelectionOverlayArtifactPaths.markdown,
+      renderTypeScriptSurfaceRuntimeSelectionOverlayMarkdownV137(overlay),
+    ],
+  ] as const) {
+    const absolutePath = path.join(root, relativePath)
+    if (!existsSync(absolutePath)) failures.push(`${relativePath} is missing`)
+    else if (readFileSync(absolutePath, "utf8") !== expected)
+      failures.push(`${relativePath} is stale`)
+  }
+  return failures
+}
 
 const phase107DecisionCoverage = [
   "D-01",
@@ -400,7 +578,7 @@ const classifySurface = (
     return {
       surfaceLabel: "runtime-service-execution-boundary",
       capabilityGroup: "runtime-service",
-      gate: "runtime-execution-service-v1.15 schema, DB-free boundary, and no backend authority",
+      gate: "runtime-execution-service-v1.16 schema, DB-free boundary, and no backend authority",
       futureMigration:
         "May be fronted or replaced by a language-neutral Strategy Execution Service / Runtime Broker.",
       privacyClass: "internal-runtime-redacted",
@@ -801,23 +979,24 @@ export const checkFinalTypeScriptSurfaceLabelArtifacts = (
 const runCli = () => {
   const args = new Set(process.argv.slice(2))
   if (args.has("--write")) {
-    const artifact = writeFinalTypeScriptSurfaceLabelArtifacts()
+    const overlay = writeTypeScriptSurfaceRuntimeSelectionOverlayArtifactsV137()
     console.log(
-      `Wrote ${artifactPaths.json} and ${artifactPaths.markdown} (${artifact.surfaces.length} surfaces)`,
+      `Wrote ${runtimeSelectionOverlayArtifactPaths.json} and ${runtimeSelectionOverlayArtifactPaths.markdown} (${overlay.surfaces.length} runtime surfaces)`,
     )
     return
   }
   if (args.has("--check")) {
-    const failures = checkFinalTypeScriptSurfaceLabelArtifacts()
+    const failures =
+      checkTypeScriptSurfaceRuntimeSelectionOverlayArtifactsV137()
     if (failures.length > 0) {
-      console.error("Final TypeScript surface label artifacts are stale:")
+      console.error("TypeScript surface runtime selection overlay is stale:")
       for (const failure of failures) {
         console.error(`- ${failure}`)
       }
       process.exitCode = 1
       return
     }
-    console.log("Final TypeScript surface label artifacts are current")
+    console.log("TypeScript surface runtime selection overlay is current")
     return
   }
   process.stdout.write(

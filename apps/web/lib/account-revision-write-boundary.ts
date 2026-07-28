@@ -3,6 +3,21 @@ import {
   requireSelectedGoBackendClient,
 } from "./account-service-adapter.js"
 import { listAccountReadRevisions } from "./account-service-boundary.js"
+import { CompetitiveInputError } from "./competitive-errors.js"
+
+export const exactStrategySource = (value: unknown): string => {
+  if (typeof value !== "string") {
+    throw new CompetitiveInputError("Strategy source must be a string.", {
+      status: 400,
+    })
+  }
+  if (value.trim().length === 0) {
+    throw new CompetitiveInputError("Strategy source must not be empty.", {
+      status: 400,
+    })
+  }
+  return value
+}
 
 export async function saveAccountRevisionFromRequest(
   request: Request,
@@ -20,7 +35,7 @@ export async function saveAccountRevisionFromRequest(
   const created = await requireSelectedGoBackendClient(
     "account revisions",
   ).createStrategyRevision(await getAccountSessionId(), {
-    source: body.source,
+    source: exactStrategySource(body.source),
     sourceFormat: body.sourceFormat ?? "typescript",
     label: body.label,
     notes: body.notes,

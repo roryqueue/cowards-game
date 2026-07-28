@@ -1,0 +1,462 @@
+import { Buffer } from "node:buffer"
+import { spawnSync } from "node:child_process"
+import { createHash } from "node:crypto"
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs"
+import { tmpdir } from "node:os"
+import path from "node:path"
+import { describe, expect, it } from "vitest"
+import {
+  ACTIVATION_SELECTOR_PATHS,
+  buildV119SelectorBytes,
+} from "./activate-v1-37-observation-v1-19.js"
+import {
+  CANDIDATE_ENGINE_GATE_PATH,
+  DECLARED_STALE_SEAM_PATHS,
+  STALE_SEAM_INVENTORY_PATH,
+  auditV137ObservationV119ActivationSeams,
+  dependencyTreeDigest,
+  normalizeVitestGateStdout,
+  validateActivationSeamInventory,
+  type ActivationSeamInventory,
+} from "./audit-v1-37-observation-v1-19-activation-seams.js"
+
+const hash = (character: string): string => `sha256:${character.repeat(64)}`
+const activationTarget = buildV119SelectorBytes()
+const byteHash = (value: Uint8Array): string =>
+  `sha256:${createHash("sha256").update(value).digest("hex")}`
+const signedConformanceDatabaseEnv =
+  "COWARDS_V1_37_SIGNED_CONFORMANCE_TEST_DATABASE_URL"
+const goBackendDatabaseEnv = "COWARDS_GO_BACKEND_TEST_DATABASE_URL"
+const itSignedConformanceDatabase = process.env[signedConformanceDatabaseEnv]
+  ? it
+  : it.skip
+
+const withRequiredSignedConformanceDatabase = <T>(run: () => T): T => {
+  const previous = process.env[signedConformanceDatabaseEnv]
+  const previousGo = process.env[goBackendDatabaseEnv]
+  process.env[signedConformanceDatabaseEnv] ??=
+    "postgresql://injected-gate.invalid/cowards"
+  process.env[goBackendDatabaseEnv] ??=
+    "postgresql://injected-gate.invalid/cowards"
+  try {
+    return run()
+  } finally {
+    if (previous === undefined) delete process.env[signedConformanceDatabaseEnv]
+    else process.env[signedConformanceDatabaseEnv] = previous
+    if (previousGo === undefined) delete process.env[goBackendDatabaseEnv]
+    else process.env[goBackendDatabaseEnv] = previousGo
+  }
+}
+
+const inventory = (): ActivationSeamInventory => ({
+  schemaVersion: "v1.37-observation-v1.19-stale-seam-inventory-v1",
+  milestone: "v1.37",
+  phase: 260,
+  plan: 33,
+  lifecycle: "preactivation-only",
+  status: "passed",
+  simulation: {
+    isolation: "disposable-shared-clone",
+    mutationPolicy: "exact-five-selector-flip",
+    autoFix: false,
+    allowedMutationPaths: [...ACTIVATION_SELECTOR_PATHS].sort(),
+    selectorPreimage: [...ACTIVATION_SELECTOR_PATHS]
+      .sort()
+      .map((path) => ({ path, sha256: hash("1") })),
+    selectorTarget: [...ACTIVATION_SELECTOR_PATHS]
+      .sort()
+      .map((path) => ({ path, sha256: byteHash(activationTarget.get(path)!) })),
+    cloneDisposed: true,
+  },
+  mainTree: {
+    allowedDirtyPaths: [
+      ".planning/config.json",
+      "CowardsGameSpec_Full_Consolidated_v1.md",
+    ],
+    preStatusSha256: hash("3"),
+    postStatusSha256: hash("3"),
+    protectedBaselineSha256: hash("4"),
+    dependencyPreimageSha256: hash("7"),
+    dependencyPostimageSha256: hash("7"),
+    unchanged: true,
+  },
+  declaredSeams: DECLARED_STALE_SEAM_PATHS.map((path) => ({
+    path,
+    disposition: "historical-v1.17-plus-current-resolver",
+  })),
+  gate: {
+    id: "declared-stale-seams",
+    command: `${[
+      "node_modules/.bin/vitest",
+      "run",
+      CANDIDATE_ENGINE_GATE_PATH,
+      ...DECLARED_STALE_SEAM_PATHS,
+      "--maxWorkers=1",
+      "--no-file-parallelism",
+      "--no-cache",
+    ].join(
+      " ",
+    )} && (cd apps/go-backend && /usr/local/go/bin/go test ./... -count=1 -run TestCandidatePairwiseFourConditionMatchesV119MatchTypeScriptCanonicalBytes|TestCandidateIntegrityCreationV119PostgresPublishesExactlyFourOrNothing|TestCreateExhibitionMatchSetIntegrityPostgresReceiptReconciliationAndPropagation)`,
+    status: "passed",
+    exitCode: 0,
+    stdoutNormalization: "composite-gate-stable-v1",
+    stdoutSha256: hash("5"),
+    stderrSha256: hash("6"),
+    dependencyExecution: "already-installed-direct-vitest-and-go",
+    packageManagerInvoked: false,
+    databaseBackedExecution: "required-and-executed",
+    mixedAuthorityDatabaseProof:
+      "v1.19-file-selector-with-v1.17-head-zero-write",
+    dependencyPreimageSha256: hash("7"),
+    dependencyPostimageSha256: hash("7"),
+    dependencyTreeUnchanged: true,
+  },
+  findings: [],
+  findingCount: 0,
+})
+
+const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T
+
+describe("v1.37 observation v1.19 activation seam audit", () => {
+  it("normalizes only volatile Vitest paths, timing, and terminal decoration", () => {
+    const first = normalizeVitestGateStdout(
+      Buffer.from(
+        "\u001b[32m RUN\u001b[0m v4 /tmp/clone-a/worktree\n ✓ suite (2 tests) 12ms\n Start at 13:15:46\n Duration 1.25s (transform 80ms)\n",
+      ),
+      "/tmp/clone-a/worktree",
+    )
+    const second = normalizeVitestGateStdout(
+      Buffer.from(
+        " RUN v4 /tmp/clone-b/worktree\r\n ✓ suite (2 tests) 900ms\r\n Start at 18:22:01\r\n Duration 9.75s (transform 700ms)\r\n",
+      ),
+      "/tmp/clone-b/worktree",
+    )
+    const changed = normalizeVitestGateStdout(
+      Buffer.from(
+        " RUN v4 /tmp/clone-c/worktree\n ✓ suite (3 tests) 12ms\n Start at 13:15:46\n Duration 1.25s (transform 80ms)\n",
+      ),
+      "/tmp/clone-c/worktree",
+    )
+
+    expect(first).toEqual(second)
+    expect(first).not.toEqual(changed)
+    expect(first.toString("utf8")).toContain("<clone-root>")
+    expect(first.toString("utf8")).toContain("<duration>")
+  })
+
+  it("excludes execution caches but binds installed dependency bytes", () => {
+    const root = mkdtempSync(path.join(tmpdir(), "cowards-seam-deps-"))
+    const packageFile = path.join(root, "node_modules/example/index.js")
+    const cacheFile = path.join(root, "node_modules/.vite/vitest/results.json")
+    try {
+      mkdirSync(path.dirname(packageFile), { recursive: true })
+      mkdirSync(path.dirname(cacheFile), { recursive: true })
+      writeFileSync(packageFile, "export const version = 1\n")
+      writeFileSync(cacheFile, '{"duration":1}\n')
+      const baseline = dependencyTreeDigest(root)
+
+      writeFileSync(cacheFile, '{"duration":999}\n')
+      expect(dependencyTreeDigest(root)).toBe(baseline)
+
+      writeFileSync(packageFile, "export const version = 2\n")
+      expect(dependencyTreeDigest(root)).not.toBe(baseline)
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  it("accepts only the exact five-selector, nine-seam, zero-finding contract", () => {
+    expect(validateActivationSeamInventory(inventory())).toEqual([])
+    expect(ACTIVATION_SELECTOR_PATHS).toHaveLength(5)
+    expect(DECLARED_STALE_SEAM_PATHS).toHaveLength(9)
+    expect(ACTIVATION_SELECTOR_PATHS).not.toContain(".planning/config.json")
+    expect(ACTIVATION_SELECTOR_PATHS).not.toContain(
+      "CowardsGameSpec_Full_Consolidated_v1.md",
+    )
+  })
+
+  it.each([
+    [
+      "protected mutation",
+      (value: ActivationSeamInventory) => {
+        ;(value.simulation.allowedMutationPaths as string[]).push(
+          ".planning/config.json",
+        )
+      },
+    ],
+    [
+      "undeclared mutation",
+      (value: ActivationSeamInventory) => {
+        ;(value.simulation.allowedMutationPaths as string[]).push(
+          "packages/spec/src/versions.ts",
+        )
+      },
+    ],
+    [
+      "main-tree drift",
+      (value: ActivationSeamInventory) => {
+        ;(value.mainTree as { postStatusSha256: string }).postStatusSha256 =
+          hash("9")
+      },
+    ],
+    [
+      "auto-fix",
+      (value: ActivationSeamInventory) => {
+        ;(value.simulation as { autoFix: boolean }).autoFix = true
+      },
+    ],
+    [
+      "invalid dependency postimage",
+      (value: ActivationSeamInventory) => {
+        ;(
+          value.gate as { dependencyPostimageSha256: string }
+        ).dependencyPostimageSha256 = "not-a-hash"
+        ;(
+          value.gate as { dependencyTreeUnchanged: boolean }
+        ).dependencyTreeUnchanged = false
+        ;(value.gate as { status: string }).status = "failed"
+      },
+    ],
+    [
+      "failed gate without failed inventory or finding",
+      (value: ActivationSeamInventory) => {
+        ;(value.gate as { status: string }).status = "failed"
+        ;(value.gate as { exitCode: number }).exitCode = 1
+      },
+    ],
+    [
+      "skipped database-backed execution",
+      (value: ActivationSeamInventory) => {
+        ;(
+          value.gate as { databaseBackedExecution: string }
+        ).databaseBackedExecution = "skipped"
+      },
+    ],
+    [
+      "unknown status values",
+      (value: ActivationSeamInventory) => {
+        ;(value as { status: string }).status = "unknown"
+        ;(value.gate as { status: string }).status = "unknown"
+      },
+    ],
+    [
+      "fabricated activation target digest",
+      (value: ActivationSeamInventory) => {
+        ;(value.simulation.selectorTarget[0] as { sha256: string }).sha256 =
+          hash("9")
+      },
+    ],
+  ])("rejects %s", (_name, mutate) => {
+    const value = clone(inventory())
+    mutate(value)
+    expect(validateActivationSeamInventory(value)).not.toEqual([])
+  })
+
+  it("represents a nonzero gate result as a failed inventory, never success", () => {
+    const value = clone(inventory())
+    ;(value as { status: string }).status = "failed"
+    ;(value.gate as { status: string }).status = "failed"
+    ;(value.gate as { exitCode: number }).exitCode = 1
+    ;(value.findings as unknown as Array<Record<string, unknown>>).push({
+      id: "declared-stale-seam-gate-failed",
+      classification: "declared-gate-failure",
+      path: null,
+    })
+    ;(value as { findingCount: number }).findingCount = 1
+    expect(validateActivationSeamInventory(value)).toEqual([])
+    expect(value.status).toBe("failed")
+  })
+
+  it("refuses to certify a skipped database-backed seam", () => {
+    const previous = process.env[signedConformanceDatabaseEnv]
+    let gateCalled = false
+    delete process.env[signedConformanceDatabaseEnv]
+    try {
+      expect(() =>
+        auditV137ObservationV119ActivationSeams(process.cwd(), {
+          gateRunner: () => {
+            gateCalled = true
+            return {
+              exitCode: 0,
+              stdout: Buffer.from("would have skipped database test"),
+              stderr: Buffer.alloc(0),
+            }
+          },
+        }),
+      ).toThrow(
+        `${signedConformanceDatabaseEnv} and ${goBackendDatabaseEnv} are required`,
+      )
+      expect(gateCalled).toBe(false)
+    } finally {
+      if (previous === undefined)
+        delete process.env[signedConformanceDatabaseEnv]
+      else process.env[signedConformanceDatabaseEnv] = previous
+    }
+  })
+
+  it("keeps an injected failed gate isolated and dependency-preserving", () => {
+    const result = withRequiredSignedConformanceDatabase(() =>
+      auditV137ObservationV119ActivationSeams(process.cwd(), {
+        gateRunner: () => ({
+          exitCode: 1,
+          stdout: Buffer.from("declared gate output"),
+          stderr: Buffer.from("declared gate failed"),
+        }),
+      }),
+    )
+    expect(result.status).toBe("failed")
+    expect(result.findings).toEqual([
+      {
+        id: "declared-stale-seam-gate-failed",
+        classification: "declared-gate-failure",
+        path: null,
+      },
+    ])
+    expect(result.gate.dependencyExecution).toBe(
+      "already-installed-direct-vitest-and-go",
+    )
+    expect(result.gate.packageManagerInvoked).toBe(false)
+    expect(result.gate.dependencyTreeUnchanged).toBe(true)
+    expect(result.mainTree.dependencyPreimageSha256).toBe(
+      result.mainTree.dependencyPostimageSha256,
+    )
+    expect(result.simulation.cloneDisposed).toBe(true)
+  }, 120_000)
+
+  it("materializes dependency bytes so an injected clone mutation cannot reach the main tree", () => {
+    const dependencyPath = "node_modules/vitest/dist/index.js"
+    const mainDependencyPath = path.join(process.cwd(), dependencyPath)
+    const mainPreimage = readFileSync(mainDependencyPath)
+    let cloneMutationObserved = false
+
+    const result = withRequiredSignedConformanceDatabase(() =>
+      auditV137ObservationV119ActivationSeams(process.cwd(), {
+        gateRunner: (cwd) => {
+          const cloneDependencyPath = path.join(cwd, dependencyPath)
+          writeFileSync(
+            cloneDependencyPath,
+            Buffer.concat([
+              readFileSync(cloneDependencyPath),
+              Buffer.from("\n// injected disposable-clone mutation\n"),
+            ]),
+          )
+          cloneMutationObserved =
+            !readFileSync(cloneDependencyPath).equals(mainPreimage)
+          return {
+            exitCode: 0,
+            stdout: Buffer.from("dependency mutation attempted"),
+            stderr: Buffer.alloc(0),
+          }
+        },
+      }),
+    )
+
+    expect(cloneMutationObserved).toBe(true)
+    expect(readFileSync(mainDependencyPath)).toEqual(mainPreimage)
+    expect(result.status).toBe("failed")
+    expect(result.gate).toMatchObject({
+      status: "failed",
+      exitCode: 0,
+      dependencyTreeUnchanged: false,
+    })
+    expect(result.findings).toContainEqual({
+      id: "dependency-tree-mutated",
+      classification: "undeclared-mutation",
+      path: null,
+    })
+    expect(result.gate.dependencyPreimageSha256).not.toBe(
+      result.gate.dependencyPostimageSha256,
+    )
+    expect(result.mainTree.dependencyPreimageSha256).toBe(
+      result.mainTree.dependencyPostimageSha256,
+    )
+    expect(result.simulation.cloneDisposed).toBe(true)
+  }, 120_000)
+
+  it("fails closed when a successful injected gate creates an untracked clone file", () => {
+    const undeclaredPath = "packages/spec/src/undeclared-seam-probe.tmp"
+    const result = withRequiredSignedConformanceDatabase(() =>
+      auditV137ObservationV119ActivationSeams(process.cwd(), {
+        gateRunner: (cwd) => {
+          writeFileSync(path.join(cwd, undeclaredPath), "injected\n")
+          return {
+            exitCode: 0,
+            stdout: Buffer.from("untracked mutation attempted"),
+            stderr: Buffer.alloc(0),
+          }
+        },
+      }),
+    )
+
+    expect(result.status).toBe("failed")
+    expect(result.gate).toMatchObject({
+      status: "passed",
+      exitCode: 0,
+      dependencyTreeUnchanged: true,
+    })
+    expect(result.findings).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          classification: "undeclared-mutation",
+          path: undeclaredPath,
+        }),
+      ]),
+    )
+    expect(result.simulation.cloneDisposed).toBe(true)
+  }, 120_000)
+
+  it("rejects every auto-fix CLI and leaves the inventory bytes untouched", () => {
+    const existed = existsSync(STALE_SEAM_INVENTORY_PATH)
+    const before = existed
+      ? readFileSync(STALE_SEAM_INVENTORY_PATH)
+      : Buffer.alloc(0)
+    const result = spawnSync(
+      "pnpm",
+      [
+        "exec",
+        "tsx",
+        "scripts/audit-v1-37-observation-v1-19-activation-seams.ts",
+        "--auto-fix",
+      ],
+      { cwd: process.cwd(), encoding: "utf8" },
+    )
+    expect(result.status).not.toBe(0)
+    expect(result.stderr).toContain("usage: --write | --check")
+    expect(existsSync(STALE_SEAM_INVENTORY_PATH)).toBe(existed)
+    if (existed) expect(readFileSync(STALE_SEAM_INVENTORY_PATH)).toEqual(before)
+  })
+
+  itSignedConformanceDatabase(
+    "runs the real selector-only simulation in a disposed shared clone",
+    () => {
+      const result = auditV137ObservationV119ActivationSeams(process.cwd())
+      expect(result.status).toBe("passed")
+      expect(result.findings).toEqual([])
+      expect(result.findingCount).toBe(0)
+      expect(result.simulation.cloneDisposed).toBe(true)
+      expect(
+        result.gate.command.startsWith("node_modules/.bin/vitest run"),
+      ).toBe(true)
+      expect(result.gate.command).toContain(CANDIDATE_ENGINE_GATE_PATH)
+      expect(result.gate.command).toContain(
+        "TestCreateExhibitionMatchSetIntegrityPostgresReceiptReconciliationAndPropagation",
+      )
+      expect(result.gate.mixedAuthorityDatabaseProof).toBe(
+        "v1.19-file-selector-with-v1.17-head-zero-write",
+      )
+      expect(result.gate.packageManagerInvoked).toBe(false)
+      expect(result.gate.dependencyTreeUnchanged).toBe(true)
+      expect(result.mainTree.preStatusSha256).toBe(
+        result.mainTree.postStatusSha256,
+      )
+    },
+    120_000,
+  )
+})

@@ -10,8 +10,107 @@ import type {
   Position,
   SoldierSnapshot,
 } from "@cowards/spec"
-import { MatchOutcomeSchema } from "@cowards/spec"
+import {
+  MatchOutcomeSchema,
+  VERSIONED_RUNTIME_V117_SEMANTIC_TUPLE_RECORD,
+  classifyCanonicalCompatibilityTupleId,
+  type CanonicalCompatibilityTupleLifecycle,
+} from "@cowards/spec"
 import { stableStringify } from "./hash.js"
+import type { RecordedCanonicalTransitionV137 } from "./record.js"
+
+const V1_37_CURRENT_REPLAY_TRANSITION_EVENT_TYPES = new Set<string>([
+  "MATCH_STARTED",
+  "ROUND_STARTED",
+  "STRATEGY_EVALUATED",
+  "ACTIVATION_STARTED",
+  "ACTIVATION_SKIPPED",
+  "ACTIVATION_ENDED",
+  "CYCLE_STARTED",
+  "CYCLE_ENDED",
+  "AWARENESS_GRID_OBSERVED",
+  "ACTION_EMITTED",
+  "MOVE_ADVANCED",
+  "MOVE_BLOCKED",
+  "TURN_RESOLVED",
+  "PUSH_RESOLVED",
+  "PUSH_BLOCKED",
+  "BACKSTAB_RESOLVED",
+  "SOLDIER_STONED",
+  "SOLDIER_FELL",
+  "CONTRACTION_RESOLVED",
+  "MATCH_ENDED",
+  "RUNTIME_VIOLATION",
+])
+
+export const resolveReplayTransitionEventContract = (
+  semanticTupleId: string,
+  eventType: string,
+): CanonicalCompatibilityTupleLifecycle =>
+  V1_37_CURRENT_REPLAY_TRANSITION_EVENT_TYPES.has(eventType)
+    ? classifyCanonicalCompatibilityTupleId(semanticTupleId)
+    : "historical-or-unknown"
+
+export const resolveVersionedReplayTransitionEventContractV117 = (
+  semanticTupleId: string,
+  eventType: string,
+): CanonicalCompatibilityTupleLifecycle =>
+  semanticTupleId === VERSIONED_RUNTIME_V117_SEMANTIC_TUPLE_RECORD.tupleId &&
+  V1_37_CURRENT_REPLAY_TRANSITION_EVENT_TYPES.has(eventType)
+    ? "current-exact"
+    : "historical-or-unknown"
+
+export const CURRENT_REPLAY_TRANSITION_FIELD_ORDER = Object.freeze([
+  "ordinal",
+  "kind",
+  "semanticTupleId",
+  "coordinates",
+  "resultClass",
+  "canonicalOutputHash",
+  "strategyMemoryHash",
+  "soldierMemoryHash",
+  "objectiveHash",
+  "orderedEvents",
+  "orderedEventsHash",
+  "beforeStateHash",
+  "afterStateHash",
+  "beforeMachineHash",
+  "afterMachineHash",
+  "terminalStatus",
+  "failureStatus",
+  "terminalHash",
+  "accumulatedTraceRoot",
+] as const satisfies readonly (keyof RecordedCanonicalTransitionV137)[])
+
+export type CurrentReplayTransitionField =
+  (typeof CURRENT_REPLAY_TRANSITION_FIELD_ORDER)[number]
+
+export type CurrentReplayTransitionComparisonResult =
+  | { readonly ok: true }
+  | {
+      readonly ok: false
+      readonly code: "CURRENT_TRANSITION_FIELD_MISMATCH"
+      readonly transitionIndex: number
+      readonly field: CurrentReplayTransitionField
+    }
+
+export const compareCurrentReplayTransitionV137 = (
+  expected: RecordedCanonicalTransitionV137,
+  actual: RecordedCanonicalTransitionV137,
+  transitionIndex: number,
+): CurrentReplayTransitionComparisonResult => {
+  for (const field of CURRENT_REPLAY_TRANSITION_FIELD_ORDER) {
+    if (stableStringify(expected[field]) !== stableStringify(actual[field])) {
+      return Object.freeze({
+        ok: false,
+        code: "CURRENT_TRANSITION_FIELD_MISMATCH",
+        transitionIndex,
+        field,
+      })
+    }
+  }
+  return Object.freeze({ ok: true })
+}
 
 export interface ReplayState {
   board: FullBoardSnapshot

@@ -29,7 +29,11 @@ export default [
       },
       parserOptions: {
         projectService: {
-          allowDefaultProject: ["packages/spec/scripts/*.ts", "scripts/*.ts"],
+          allowDefaultProject: [
+            "packages/spec/scripts/*.ts",
+            "scripts/*.ts",
+            "scripts/lib/*.ts",
+          ],
         },
         tsconfigRootDir: import.meta.dirname,
       },
@@ -63,6 +67,14 @@ export default [
           ],
         },
       ],
+    },
+  },
+  {
+    files: ["packages/spec/src/runtime-execution-service-v1-16-compat.ts"],
+    languageOptions: {
+      globals: {
+        structuredClone: "readonly",
+      },
     },
   },
   {

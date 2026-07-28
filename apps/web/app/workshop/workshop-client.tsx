@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react"
 import type {
   StrategyArtifactSourceFormat,
   StrategyRevisionValidationReport,
+  WorkshopCheckerResponse,
 } from "@cowards/spec"
 import { StrategySourceEditor } from "./monaco-editor.js"
 import type {
@@ -17,10 +18,14 @@ import {
   canSubmitRevision,
   canOpenReplay,
   canOpenOwnerReplay,
+  checkerMatchesValidation,
   formatMatchOutcome,
   formatUsedInMatches,
+  formatCheckerDiagnosticGuidance,
+  formatCheckerDiagnosticHeading,
   formatValidationIssueGuidance,
   formatValidationIssueHeading,
+  getAccountRevisionSourceHref,
   getReplayHref,
   getOwnerReplayHref,
   getDraftStatusClass,
@@ -33,6 +38,7 @@ import {
   isTerminalTestStatus,
   prependRevision,
   validationStateFromReport,
+  validationStateFromChecker,
 } from "./workshop-client-state.js"
 import {
   WORKSHOP_EDITOR_SOURCE_FORMATS,
@@ -94,6 +100,7 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
     useState<StrategyRevisionValidationReport | null>(
       firstTemplate?.validation ?? initialData.templateValidation,
     )
+  const [checker, setChecker] = useState<WorkshopCheckerResponse | null>(null)
   const [validationSource, setValidationSource] = useState(
     firstTemplate?.source ?? initialData.templateSource,
   )
@@ -156,14 +163,28 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
     validationSource === source && validationSourceFormat === sourceFormat
       ? validation
       : null
-  const draftState = validationStateFromReport(currentValidation, checking)
+  const validationIsStale =
+    Boolean(validation) &&
+    (validationSource !== source || validationSourceFormat !== sourceFormat)
+  const displayedValidation = currentValidation ?? validation
+  const currentChecker =
+    validationIsStale || !checkerMatchesValidation(checker, currentValidation)
+      ? null
+      : checker
+  const displayedChecker = checker
+  const draftState = checker
+    ? validationStateFromChecker(currentChecker, checking, validationIsStale)
+    : validationStateFromReport(currentValidation, checking, validationIsStale)
   const submitEnabled = canSubmitRevision({
     validation: currentValidation,
+    checker: currentChecker,
     checking,
     submitting,
   })
   const submitBlockedReason = getSubmitBlockedReason({
     validation: currentValidation,
+    checker: currentChecker,
+    stale: validationIsStale,
     checking,
   })
   const displayedSubmitBlockedReason =
@@ -174,10 +195,14 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
     (revision) => revision.id === selectedRevisionId,
   )
   const canLaunchTest = Boolean(selectedRevision?.valid) && !launchingTest
-  const validationIssues = [
-    ...(currentValidation?.errors ?? []),
-    ...(currentValidation?.warnings ?? []),
-  ]
+  const checkerDiagnostics = displayedChecker?.diagnostics ?? []
+  const validationIssues =
+    checkerDiagnostics.length > 0
+      ? []
+      : [
+          ...(displayedValidation?.errors ?? []),
+          ...(displayedValidation?.warnings ?? []),
+        ]
   const selectedStarterMatchesDraft =
     Boolean(selectedStarter) &&
     source === selectedStarter?.source &&
@@ -203,9 +228,11 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
         body: JSON.stringify({ source: nextSource, sourceFormat }),
       })
       const body = (await response.json()) as {
+        checker?: WorkshopCheckerResponse
         validation: StrategyRevisionValidationReport
       }
       setValidation(body.validation)
+      setChecker(body.checker ?? null)
       setValidationSource(nextSource)
       setValidationSourceFormat(sourceFormat)
     } finally {
@@ -233,6 +260,7 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
     setSourceFormat(normalizeEditorSourceFormat(template.sourceFormat))
     setSource(template.source)
     setValidation(template.validation)
+    setChecker(null)
     setValidationSource(template.source)
     setValidationSourceFormat(
       normalizeEditorSourceFormat(template.sourceFormat),
@@ -251,6 +279,7 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
     setSourceFormat("typescript")
     setSource(starter.source)
     setValidation(starter.validation)
+    setChecker(null)
     setValidationSource(starter.source)
     setValidationSourceFormat("typescript")
     setLabel(starter.name)
@@ -271,6 +300,7 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
     setSourceFormat("typescript")
     setSource(advanced.source)
     setValidation(advanced.validation)
+    setChecker(null)
     setValidationSource(advanced.source)
     setValidationSourceFormat("typescript")
     setLabel(advanced.name)
@@ -289,6 +319,7 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
     setSourceFormat(normalizeEditorSourceFormat(sample.sourceFormat))
     setSource(sample.source)
     setValidation(sample.validation)
+    setChecker(null)
     setValidationSource(sample.source)
     setValidationSourceFormat(normalizeEditorSourceFormat(sample.sourceFormat))
     setIsDirty(false)
@@ -298,8 +329,7 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
     setSource(nextSource)
     setSelectedStarterId("")
     setSelectedAdvancedId("")
-    setValidation(null)
-    setValidationSource("")
+    setValidationSource(source)
     setValidationSourceFormat(sourceFormat)
     setIsDirty(true)
   }
@@ -325,12 +355,14 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
       }
       if (!response.ok || body.ok === false || !body.revision) {
         setValidation(body.validation ?? validation)
+        setChecker(null)
         setSubmitError(body.error ?? "Revision submission failed.")
         return
       }
       setRevisions((current) => prependRevision(current, body.revision!))
       setSelectedRevisionId(body.revision.id)
       setValidation(body.validation ?? body.revision.validation)
+      setChecker(null)
       setValidationSource(source)
       setSubmitMessage("Revision submitted")
     } finally {
@@ -430,21 +462,31 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
   }
 
   const loadRevisionSource = async (revisionId: string) => {
-    const response = await fetch(
-      `/api/workshop/revisions/${encodeURIComponent(revisionId)}/source`,
-    )
-    const body = (await response.json()) as { source?: string; error?: string }
-    if (!response.ok || typeof body.source !== "string") {
-      setSubmitError(body.error ?? "Revision source could not be loaded.")
+    const response = await fetch(getAccountRevisionSourceHref(revisionId))
+    const body = await response.text()
+    if (!response.ok) {
+      let error = "Revision source could not be loaded."
+      try {
+        const parsed = JSON.parse(body) as { error?: unknown }
+        if (typeof parsed.error === "string") {
+          error = parsed.error
+        }
+      } catch {
+        if (body.trim()) {
+          error = body.trim()
+        }
+      }
+      setSubmitError(error)
       return
     }
-    setSource(body.source)
+    setSource(body)
     setSourceFormat(
       normalizeEditorSourceFormat(
         revisions.find((revision) => revision.id === revisionId)?.sourceFormat,
       ),
     )
     setValidation(null)
+    setChecker(null)
     setValidationSource("")
     setValidationSourceFormat(
       normalizeEditorSourceFormat(
@@ -527,7 +569,11 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
                   ? "Valid"
                   : draftState === "invalid"
                     ? "Invalid"
-                    : "Draft"}
+                    : draftState === "stale"
+                      ? "Stale"
+                      : draftState === "unavailable"
+                        ? "Unavailable"
+                        : "Draft"}
               </span>
             </div>
             <p className="workshop-muted">Local Player</p>
@@ -855,20 +901,97 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
             <h2 className="workshop-heading">Validation</h2>
             <p>
               {getDraftStatusLabel(draftState)} ·{" "}
-              {validation?.errors.length ?? 0} errors ·{" "}
-              {validation?.warnings.length ?? 0} warnings
+              {checkerDiagnostics.filter((issue) => issue.severity === "error")
+                .length ||
+                displayedValidation?.errors.length ||
+                0}{" "}
+              errors ·{" "}
+              {checkerDiagnostics.filter(
+                (issue) => issue.severity === "warning",
+              ).length ||
+                displayedValidation?.warnings.length ||
+                0}{" "}
+              warnings
             </p>
             <p aria-live="polite" role="status">
               {getDraftStatusLabel(draftState)}
             </p>
-            {currentValidation?.valid ? (
-              <div className="validation-empty">
-                <p>No validation issues</p>
+            {validationIsStale ? (
+              <div className="validation-empty warning">
+                <p>Previous check is stale</p>
                 <p className="workshop-muted">
-                  This draft passes the Strategy API checks. Submit a revision
-                  or launch a Workshop test to inspect runtime behavior.
+                  Validate this draft before submitting.
                 </p>
               </div>
+            ) : null}
+            {currentChecker?.runtimeService.publicReason ? (
+              <div className="validation-empty warning">
+                <p>Runtime-service unavailable</p>
+                <p className="workshop-muted">
+                  {currentChecker.runtimeService.publicReason}
+                </p>
+              </div>
+            ) : null}
+            {currentChecker?.toolchain.publicReason ? (
+              <div className="validation-empty warning">
+                <p>{currentChecker.language.label} toolchain unavailable</p>
+                <p className="workshop-muted">
+                  {currentChecker.toolchain.publicReason}
+                </p>
+              </div>
+            ) : null}
+            {currentValidation?.valid ? (
+              <div className="validation-empty">
+                <p>Ready to submit</p>
+                <p className="workshop-muted">
+                  Submit and save will revalidate this source.
+                </p>
+              </div>
+            ) : null}
+            {checkerDiagnostics.length ? (
+              <ul
+                className="validation-list"
+                data-testid="workshop-checker-diagnostic-list"
+              >
+                {checkerDiagnostics.map((diagnostic, index) => (
+                  <li
+                    className={`validation-row ${diagnostic.severity === "warning" ? "warning" : ""}`}
+                    data-testid="workshop-checker-diagnostic-row"
+                    data-validation-code={diagnostic.code}
+                    data-validation-category={diagnostic.category}
+                    key={`${diagnostic.code}-${diagnostic.category}-${index}`}
+                  >
+                    <span className="validation-code">
+                      {formatCheckerDiagnosticHeading(diagnostic)}
+                    </span>
+                    {(() => {
+                      const guidance =
+                        formatCheckerDiagnosticGuidance(diagnostic)
+                      return (
+                        <>
+                          <span>Constraint: {guidance.constraint}</span>
+                          {guidance.message === guidance.constraint ? null : (
+                            <span>{guidance.message}</span>
+                          )}
+                          {guidance.remediation ? (
+                            <span>Next: {guidance.remediation}</span>
+                          ) : null}
+                          <span>Action: {guidance.actionability}</span>
+                          {guidance.reference ? (
+                            <span>Reference: {guidance.reference}</span>
+                          ) : null}
+                          {diagnostic.line ? (
+                            <span>
+                              Line/column: {diagnostic.line}
+                              {diagnostic.column ? `:${diagnostic.column}` : ""}
+                            </span>
+                          ) : null}
+                        </>
+                      )
+                    })()}
+                  </li>
+                ))}
+              </ul>
             ) : null}
             {validationIssues.length ? (
               <ul
@@ -906,22 +1029,30 @@ export function WorkshopClient({ initialData }: WorkshopClientProps) {
                 ))}
               </ul>
             ) : null}
-            {validation ? (
+            {displayedValidation ? (
               <details>
                 <summary>Advanced details</summary>
                 <dl className="details-grid">
                   <dt>sourceBytes</dt>
-                  <dd>{validation.sourceBytes}</dd>
+                  <dd>{displayedValidation.sourceBytes}</dd>
                   <dt>sourceHash</dt>
-                  <dd>{validation.sourceHash}</dd>
+                  <dd>{displayedValidation.sourceHash}</dd>
                   <dt>runtimeVersion</dt>
-                  <dd>{validation.runtimeVersion}</dd>
+                  <dd>{displayedValidation.runtimeVersion}</dd>
                   <dt>engineCompatibility.spec</dt>
-                  <dd>{validation.engineCompatibility.spec}</dd>
+                  <dd>{displayedValidation.engineCompatibility.spec}</dd>
                   <dt>engineCompatibility.engine</dt>
-                  <dd>{validation.engineCompatibility.engine}</dd>
-                  <dt>forbiddenPatterns</dt>
-                  <dd>{validation.forbiddenPatterns.join(", ") || "none"}</dd>
+                  <dd>{displayedValidation.engineCompatibility.engine}</dd>
+                  {displayedChecker ? (
+                    <>
+                      <dt>checkerStatus</dt>
+                      <dd>{displayedChecker.status}</dd>
+                      <dt>provider</dt>
+                      <dd>{displayedChecker.language.providerId}</dd>
+                      <dt>artifact</dt>
+                      <dd>{displayedChecker.artifact.state}</dd>
+                    </>
+                  ) : null}
                 </dl>
               </details>
             ) : null}

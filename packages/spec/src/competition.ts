@@ -6,8 +6,23 @@ import type {
   StrategyRevisionId,
   UserId,
 } from "./types.js"
-import type { StrategyRuntimeMetadata } from "./runtime.js"
+import type {
+  StrategyRuntimeMetadata,
+  StrategyRuntimeProductSemantics,
+} from "./runtime.js"
 import { assertPublicOutputLeakSafe } from "./public-output-privacy.js"
+import type {
+  TrialSeasonOutcomeProjection,
+  TrialSeasonPublicLinks,
+  TrialSeasonWindowProjection,
+} from "./competition-season-policy.js"
+import type {
+  CompetitionCountedPublicReason,
+  CompetitionCountedStateProjection,
+  CompetitionEvidenceAvailability,
+} from "./competition-counted-state.js"
+import type { CompetitionPolicyV136CountedStatePublicProjection } from "./competition-policy-v1-36.js"
+import type { PublicCompetitionGovernanceProjection } from "./competition-governance.js"
 
 export const COMPETITION_PRESET_IDS = [
   "smoke-exhibition-v1",
@@ -50,20 +65,9 @@ export type TrialLadderEntryStatus =
   (typeof TRIAL_LADDER_ENTRY_STATUSES)[number]
 
 export type LadderMatchSetCountedStatus =
-  | "pending"
-  | "counted"
-  | "retrying"
-  | "under_review"
-  | "invalid"
-  | "non_competitive"
-  | "non_counted"
+  CompetitionPolicyV136CountedStatePublicProjection
 
-export type LadderNonCountedReason =
-  | "system_failure"
-  | "incomplete_evidence"
-  | "invalid_result"
-  | "governance_hold"
-  | "non_counted"
+export type LadderNonCountedReason = CompetitionCountedPublicReason
 
 export interface TrialLadderPolicyDto {
   oneEntryPerUser: true
@@ -97,6 +101,10 @@ export interface PublicTrialLadderSeasonDto {
   scheduledAt?: string | undefined
   completedAt?: string | undefined
   archivedAt?: string | undefined
+  entryWindow: TrialSeasonWindowProjection
+  schedulingWindow: TrialSeasonWindowProjection
+  outcome: TrialSeasonOutcomeProjection
+  links: TrialSeasonPublicLinks
   policy: TrialLadderPolicyDto
   entries: TrialLadderEntrySnapshot[]
   standings: PublicStandingDto[]
@@ -116,6 +124,8 @@ export interface PublicLadderMatchSetSummaryDto {
   podIndex?: number | undefined
   status: CompetitionStatus
   countedStatus: LadderMatchSetCountedStatus
+  countedState: CompetitionCountedStateProjection
+  governance?: PublicCompetitionGovernanceProjection | undefined
   publicReason?: LadderNonCountedReason | undefined
   publicExplanation?: string | undefined
   entrantIds: string[]
@@ -147,6 +157,7 @@ export interface PublicStrategyCardDto {
   sourceHash: string
   sourceBytes: number
   runtime: PublicStrategyRuntimeMetadata
+  runtimeSemantics: StrategyRuntimeProductSemantics
   engineCompatibility: CompetitionEntrantSnapshot["engineCompatibility"]
   validationStatus: "valid" | "invalid"
   starterLineage?: {
@@ -172,10 +183,31 @@ export interface PublicStrategyCardDto {
   replayLinks: string[]
 }
 
-export type PublicStrategyRuntimeMetadata = Omit<
+type PublicStrategyRuntimeMetadataBase = Omit<
   StrategyRuntimeMetadata,
-  "limits"
+  "limits" | "abiVersion"
 >
+
+export type PublicStrategyRuntimeMetadataV119 =
+  PublicStrategyRuntimeMetadataBase & {
+    abiVersion: "strategy-runtime-abi-v1.19"
+  }
+
+export type HistoricalPublicStrategyRuntimeMetadataV117 =
+  PublicStrategyRuntimeMetadataBase & {
+    abiVersion: "strategy-runtime-abi-v1.17"
+  }
+
+export type HistoricalPublicStrategyRuntimeMetadataV114 =
+  PublicStrategyRuntimeMetadataBase & {
+    abiVersion: "strategy-runtime-abi-v1.14"
+  }
+
+/** Read-only public metadata admits each exact registered evidence generation. */
+export type PublicStrategyRuntimeMetadata =
+  | PublicStrategyRuntimeMetadataV119
+  | HistoricalPublicStrategyRuntimeMetadataV117
+  | HistoricalPublicStrategyRuntimeMetadataV114
 
 export interface CompetitionScoringPolicy {
   id: "exhibition-points-v1"
@@ -263,6 +295,7 @@ export interface CompetitionEntrantSnapshot {
   sourceHash: string
   sourceBytes: number
   runtime: StrategyRuntimeMetadata
+  runtimeSemantics: StrategyRuntimeProductSemantics
   engineCompatibility: {
     spec: string
     engine: string
@@ -304,6 +337,15 @@ export interface PublicStandingDto {
   survivingSoldiers: number
   survivalTurns: number
   tieBreakerPath: string[]
+  competitionEvidence?:
+    | {
+        countedMatchSetCount: number
+        excludedMatchSetCount: number
+        evidenceAvailability: CompetitionEvidenceAvailability
+        resultLinks: string[]
+        replayLinks: string[]
+      }
+    | undefined
 }
 
 export interface PublicMatchEvidenceDto {
@@ -344,6 +386,13 @@ export interface PublicMatchSetResultDto {
     publicReplayEvidence: true
     privateFieldsExcluded: string[]
   }
+  competition?:
+    | {
+        seasonId?: string | undefined
+        countedState: CompetitionCountedStateProjection
+        governance?: PublicCompetitionGovernanceProjection | undefined
+      }
+    | undefined
   metadata?: JsonValue | undefined
 }
 

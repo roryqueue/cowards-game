@@ -1,34 +1,55 @@
 import { describe, expect, it } from "vitest"
-import { runMatch, type RunMatchInput } from "@cowards/engine"
+import { MATCH_KERNEL, runMatch, type RunMatchInput } from "@cowards/engine"
+import { adaptRuntimeForCurrentKernel } from "@cowards/engine/test/current-kernel-runtime"
 import {
-  buildChronicleFromMatch,
   projectOwnerChronicle,
   projectPublicChronicle,
 } from "@cowards/replay"
-import { createScenarioStateParts } from "@cowards/test-utils"
+import { recordCurrentChronicleTestSupport as recordChronicleFromExecution } from "@cowards/replay/test/current-recording"
+import {
+  CANONICAL_ARENA_CATALOG_V1_37,
+  STRATEGY_RUNTIME_ABI_VERSION,
+  StrategyInputSchema,
+} from "@cowards/spec"
 import { buildStrategyRevision } from "./revision.js"
-import { createRuntimeFromRevision } from "./worker.js"
+import { createNestedMatchShapeRuntimeFromRevisionTestSupport } from "./executor.js"
+
+const integrationArena = CANONICAL_ARENA_CATALOG_V1_37.arenas.find(
+  ({ id }) => id === "arena:smoke:v1",
+)!
+
+const selectedStrategyInput = (input: unknown) => ({
+  ...StrategyInputSchema.parse(input),
+  initialInitiativePlayerId: "bottom",
+  hasInitialInitiative: true,
+  roundInitiativePlayerId: "bottom",
+  hasRoundInitiative: true,
+})
 
 const createInput = (
   source: string,
   overrides: Partial<RunMatchInput> = {},
 ): RunMatchInput => {
-  const scenario = createScenarioStateParts()
   const revision = buildStrategyRevision({ source })
 
   return {
     matchId: "runtime-js-integration",
     seed: "runtime-js-seed",
     arenaVariant: {
-      ...scenario.arenaVariant,
-      id: "runtime-js-arena",
-      terrainStones: [],
+      id: integrationArena.id,
+      name: integrationArena.name,
+      initialBounds: { ...integrationArena.initialBounds },
+      terrainStones: integrationArena.terrainStones.map((position) => ({
+        ...position,
+      })),
     },
     bottomPlayerId: "bottom",
     topPlayerId: "top",
     bottomStrategyRevisionId: revision.id,
     topStrategyRevisionId: revision.id,
-    runtime: createRuntimeFromRevision(revision),
+    runtime: adaptRuntimeForCurrentKernel(
+      createNestedMatchShapeRuntimeFromRevisionTestSupport(revision),
+    ),
     maxPhases: 1,
     ...overrides,
   }
@@ -64,6 +85,20 @@ export default {
 }
 `
 
+const recordInput = (input: RunMatchInput) => {
+  const execution = MATCH_KERNEL.runMatch(input)
+  const recorded = recordChronicleFromExecution({
+    execution,
+    metadata: {
+      schemaVersion: "chronicle-v1.4",
+      semanticTupleId: MATCH_KERNEL.tupleId,
+      semanticTuple: MATCH_KERNEL.tuple,
+    },
+  })
+  if (!recorded.ok) throw new Error(recorded.failure.code)
+  return recorded
+}
+
 describe("runtime-js engine and Chronicle integration", () => {
   it("runs a valid default-object strategy revision through runMatch", () => {
     const result = runMatch(createInput(validSource))
@@ -79,14 +114,40 @@ describe("runtime-js engine and Chronicle integration", () => {
 
   it("selectActivations receives full-board StrategyInput and returns activation orders plus StrategyMemory", () => {
     const revision = buildStrategyRevision({ source: validSource })
-    const runtime = createRuntimeFromRevision(revision)
-    const result = runtime.selectActivations({
-      phaseNumber: 1,
-      roundNumber: 1,
-      activationCount: 1,
-      board: {
-        bounds: { minX: 0, maxX: 11, minY: 0, maxY: 11 },
-        soldiers: [
+    const runtime =
+      createNestedMatchShapeRuntimeFromRevisionTestSupport(revision)
+    const result = runtime.selectActivations(
+      selectedStrategyInput({
+        phaseNumber: 1,
+        roundNumber: 1,
+        activationCount: 1,
+        initialInitiativePlayerId: "bottom",
+        hasInitialInitiative: true,
+        roundInitiativePlayerId: "bottom",
+        hasRoundInitiative: true,
+        board: {
+          bounds: { minX: 0, maxX: 11, minY: 0, maxY: 11 },
+          soldiers: [
+            {
+              id: "bottom-1",
+              ownerPlayerId: "bottom",
+              status: "ACTIVE",
+              position: { x: 5, y: 10 },
+              facing: "UP",
+              lastSuccessfulMoveDirection: null,
+            },
+            {
+              id: "top-1",
+              ownerPlayerId: "top",
+              status: "ACTIVE",
+              position: { x: 5, y: 1 },
+              facing: "DOWN",
+              lastSuccessfulMoveDirection: null,
+            },
+          ],
+          terrainStones: [],
+        },
+        mySoldiers: [
           {
             id: "bottom-1",
             ownerPlayerId: "bottom",
@@ -95,6 +156,8 @@ describe("runtime-js engine and Chronicle integration", () => {
             facing: "UP",
             lastSuccessfulMoveDirection: null,
           },
+        ],
+        enemySoldiers: [
           {
             id: "top-1",
             ownerPlayerId: "top",
@@ -104,30 +167,9 @@ describe("runtime-js engine and Chronicle integration", () => {
             lastSuccessfulMoveDirection: null,
           },
         ],
-        terrainStones: [],
-      },
-      mySoldiers: [
-        {
-          id: "bottom-1",
-          ownerPlayerId: "bottom",
-          status: "ACTIVE",
-          position: { x: 5, y: 10 },
-          facing: "UP",
-          lastSuccessfulMoveDirection: null,
-        },
-      ],
-      enemySoldiers: [
-        {
-          id: "top-1",
-          ownerPlayerId: "top",
-          status: "ACTIVE",
-          position: { x: 5, y: 1 },
-          facing: "DOWN",
-          lastSuccessfulMoveDirection: null,
-        },
-      ],
-      strategyMemory: {},
-    })
+        strategyMemory: {},
+      }),
+    )
 
     expect(result.ok).toBe(true)
     expect(result.ok && result.value.activationOrders).toEqual([
@@ -156,7 +198,7 @@ describe("runtime-js engine and Chronicle integration", () => {
   })
 
   it("thrown soldierBrain exception creates private Chronicle runtime violation details", () => {
-    const { chronicle } = buildChronicleFromMatch(
+    const { chronicle } = recordInput(
       createInput(`
 export default {
   selectActivations(input) {
@@ -187,7 +229,14 @@ export default {
     })
     expect(runtimeViolation?.context.soldierId).toBe("bottom-soldier-1")
     expect(JSON.stringify(publicProjection)).not.toContain("owner-only boom")
-    expect(JSON.stringify(ownerProjection)).toContain("owner-only boom")
+    if (String(STRATEGY_RUNTIME_ABI_VERSION) === "strategy-runtime-abi-v1.17") {
+      expect(JSON.stringify(ownerProjection)).not.toContain("owner-only boom")
+      expect(JSON.stringify(ownerProjection)).toContain(
+        "Strategy threw an exception.",
+      )
+    } else {
+      expect(JSON.stringify(ownerProjection)).toContain("owner-only boom")
+    }
   })
 
   it("invalid output interrupts activation and stones a Soldier that did not Advance", () => {

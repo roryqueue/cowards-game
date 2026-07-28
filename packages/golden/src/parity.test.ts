@@ -1,14 +1,17 @@
-import { runMatch } from "@cowards/engine"
+import { MATCH_KERNEL } from "@cowards/engine"
+import { adaptRuntimeForCurrentKernel } from "@cowards/engine/test/current-kernel-runtime"
 import {
-  buildChronicleFromMatch,
   createChronicleContentHash,
-  createReplay,
   projectPublicChronicle,
+  recordChronicleFromExecution,
 } from "@cowards/replay"
 import {
   assertPublicMatchSetResultLeakSafe,
   assertPublicServiceDtoLeakSafe,
+  CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE,
+  CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_ID,
   defaultRuntimeMetadata,
+  describeStrategyRuntimeProductSemantics,
   EXHIBITION_SCORING_POLICY_V1,
   SERVICE_API_VERSION,
   STRATEGY_RUNTIME_ABI_VERSION,
@@ -23,6 +26,24 @@ import {
   privateMarkers,
   GOLDEN_PARITY_VERSION,
 } from "./v1-7-fixtures.js"
+
+const recordGoldenChronicle = () => {
+  const input = createGoldenMatchInput()
+  const execution = MATCH_KERNEL.runMatchV117({
+    ...input,
+    runtime: adaptRuntimeForCurrentKernel(input.runtime),
+  })
+  const recorded = recordChronicleFromExecution({
+    execution,
+    metadata: {
+      schemaVersion: "chronicle-v1.4",
+      semanticTupleId: CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE_ID,
+      semanticTuple: CANDIDATE_RUNTIME_V117_SEMANTIC_TUPLE,
+    },
+  })
+  if (!recorded.ok) throw new Error(recorded.failure.code)
+  return recorded
+}
 
 const createGoldenPublicMatchSet = (): PublicMatchSetResultDto => ({
   matchSetId: "match-set:golden:v1-7",
@@ -45,6 +66,9 @@ const createGoldenPublicMatchSet = (): PublicMatchSetResultDto => ({
       sourceHash: "bottomhash",
       sourceBytes: 100,
       runtime: defaultRuntimeMetadata(),
+      runtimeSemantics: describeStrategyRuntimeProductSemantics(
+        defaultRuntimeMetadata(),
+      ),
       engineCompatibility: { spec: "cowards-rules-v1.4", engine: "engine-v1" },
       lockedAt: "2026-05-22T00:00:00.000Z",
     },
@@ -58,6 +82,9 @@ const createGoldenPublicMatchSet = (): PublicMatchSetResultDto => ({
       sourceHash: "tophash",
       sourceBytes: 100,
       runtime: defaultRuntimeMetadata(),
+      runtimeSemantics: describeStrategyRuntimeProductSemantics(
+        defaultRuntimeMetadata(),
+      ),
       engineCompatibility: { spec: "cowards-rules-v1.4", engine: "engine-v1" },
       lockedAt: "2026-05-22T00:00:00.000Z",
     },
@@ -93,9 +120,9 @@ const createGoldenPublicMatchSet = (): PublicMatchSetResultDto => ({
 })
 
 describe("v1.7 golden parity harness", () => {
-  it("keeps engine outcome, Chronicle projection, replay, and ordering deterministic", () => {
-    const first = buildChronicleFromMatch(createGoldenMatchInput())
-    const second = buildChronicleFromMatch(createGoldenMatchInput())
+  it("keeps engine outcome, Chronicle projection, terminal evidence, and ordering deterministic", () => {
+    const first = recordGoldenChronicle()
+    const second = recordGoldenChronicle()
 
     expect(first.finalState.outcome).toEqual(second.finalState.outcome)
     expect(first.chronicle.events.map((event) => event.type)).toEqual(
@@ -111,20 +138,19 @@ describe("v1.7 golden parity harness", () => {
       ...first.chronicle,
       integrity: createChronicleContentHash(first.chronicle),
     }
-    const replay = createReplay(chronicle)
-    expect(replay.ok).toBe(true)
-    if (!replay.ok) {
-      return
-    }
     const lastSequence = chronicle.events.at(-1)?.sequence ?? 0
-    const replayState = replay.replay.stateAt(lastSequence)
-    expect(replayState.ok ? replayState.state.outcome : undefined).toEqual(
+    expect(chronicle.snapshots.at(-1)).toMatchObject({
+      kind: "TERMINAL",
+      sequence: lastSequence,
+    })
+    expect(chronicle.snapshots.at(-1)?.outcome).toEqual(
       first.finalState.outcome,
     )
+    expect(first.boundaryAnchors.at(-1)?.kind).toBe("TERMINAL")
   })
 
   it("redacts public replay and service DTOs while preserving public evidence", () => {
-    const { chronicle } = buildChronicleFromMatch(createGoldenMatchInput())
+    const { chronicle } = recordGoldenChronicle()
     const chronicleWithIntegrity = {
       ...chronicle,
       integrity: createChronicleContentHash(chronicle),
@@ -175,8 +201,16 @@ describe("v1.7 golden parity harness", () => {
     expect(violation.failureKind).toBe("runtimeViolation")
     expect(systemFailure.failureKind).toBe("systemFailure")
     expect(GOLDEN_PARITY_VERSION).toBe("golden-parity-v1.7")
-    expect(runMatch(createGoldenMatchInput()).events.at(-1)?.type).toBe(
-      "MATCH_ENDED",
-    )
+    const input = createGoldenMatchInput()
+    const execution = MATCH_KERNEL.runMatch({
+      ...input,
+      runtime: adaptRuntimeForCurrentKernel(input.runtime),
+    })
+    expect(execution.kind).toBe("completed")
+    expect(
+      execution.kind === "completed"
+        ? execution.result.events.at(-1)?.type
+        : undefined,
+    ).toBe("MATCH_ENDED")
   })
 })

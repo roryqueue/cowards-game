@@ -5,8 +5,14 @@ import {
 } from "node:worker_threads"
 import type { RuntimeResult } from "@cowards/engine"
 import type { StrategyMethodName } from "./adapter.js"
+import type { JsonValue } from "@cowards/spec"
+import type { RuntimeGuestObservationV117 } from "./abi-bridge.js"
 import { RUNTIME_OUTPUT_BYTES, RUNTIME_TIMEOUT_MS } from "./guards.js"
-import { WORKER_HARNESS_SOURCE } from "./worker-harness.js"
+import {
+  WORKER_SIGNAL_V117,
+  WORKER_HARNESS_SOURCE,
+  WORKER_HARNESS_V117_SOURCE,
+} from "./worker-harness.js"
 
 type WorkerResult =
   | { ok: true; value: unknown }
@@ -27,9 +33,20 @@ const workerScriptUrl = (): URL =>
     )}`,
   )
 
-const thrown = (message: string): RuntimeResult<unknown> => ({
+const workerScriptUrlV117 = (): URL =>
+  new URL(
+    `data:text/javascript;charset=utf-8,${encodeURIComponent(
+      WORKER_HARNESS_V117_SOURCE,
+    )}`,
+  )
+
+const malformedIpc = (): RuntimeResult<unknown> => ({
   ok: false,
-  violation: { type: "THROWN_EXCEPTION", message },
+  violation: {
+    type: "THROWN_EXCEPTION",
+    message: "Runtime system failure.",
+  },
+  systemFailure: { code: "MALFORMED_IPC", retryable: true },
 })
 
 const isWorkerResult = (value: unknown): value is WorkerResult => {
@@ -91,8 +108,174 @@ export const runStrategyMethodInWorker = (args: {
   port1.close()
 
   if (!received || !isWorkerResult(received.message)) {
-    return thrown("Worker did not return a valid runtime message")
+    return malformedIpc()
   }
 
   return received.message
+}
+
+export const runStrategyMethodInWorkerV117 = (args: {
+  executableSource: string
+  methodName: StrategyMethodName
+  input: JsonValue
+  timeoutMs: number
+  startupTimeoutMs: number
+  cancellationGraceMilliseconds: number
+  outputByteLimit: number
+  stdoutByteLimit: number
+}): RuntimeGuestObservationV117 => {
+  const launchStarted = process.hrtime.bigint()
+  const signalBuffer = new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT)
+  const signal = new Int32Array(signalBuffer)
+  const { port1, port2 } = new MessageChannel()
+  const worker = new Worker(workerScriptUrlV117(), {
+    workerData: {
+      source: args.executableSource,
+      methodName: args.methodName,
+      input: args.input,
+      outputByteLimit: args.outputByteLimit,
+      port: port2,
+      signalBuffer,
+    },
+    transferList: [port2],
+    env: {},
+    execArgv: [],
+    resourceLimits: {
+      maxOldGenerationSizeMb: 16,
+      maxYoungGenerationSizeMb: 8,
+      stackSizeMb: 4,
+    },
+  })
+
+  const launchElapsedMilliseconds =
+    Number(process.hrtime.bigint() - launchStarted) / 1_000_000
+  if (launchElapsedMilliseconds > args.startupTimeoutMs) {
+    void worker.terminate()
+    port1.close()
+    return {
+      kind: "system_failure",
+      code: "HOST_CRASH",
+      retryable: true,
+    }
+  }
+  const startupRemainingMilliseconds = Math.max(
+    0,
+    args.startupTimeoutMs - launchElapsedMilliseconds,
+  )
+  const startupWait = Atomics.wait(
+    signal,
+    0,
+    WORKER_SIGNAL_V117.starting,
+    startupRemainingMilliseconds,
+  )
+  if (
+    startupWait === "timed-out" ||
+    Atomics.load(signal, 0) === WORKER_SIGNAL_V117.starting
+  ) {
+    void worker.terminate()
+    port1.close()
+    return {
+      kind: "system_failure",
+      code: "HOST_CRASH",
+      retryable: true,
+    }
+  }
+
+  if (Atomics.load(signal, 0) === WORKER_SIGNAL_V117.ready) {
+    const methodStarted = process.hrtime.bigint()
+    Atomics.store(signal, 0, WORKER_SIGNAL_V117.go)
+    Atomics.notify(signal, 0)
+    const methodWait = Atomics.wait(
+      signal,
+      0,
+      WORKER_SIGNAL_V117.go,
+      args.timeoutMs,
+    )
+    if (
+      methodWait === "timed-out" ||
+      Atomics.load(signal, 0) !== WORKER_SIGNAL_V117.done
+    ) {
+      void worker.terminate()
+      port1.close()
+      return {
+        kind: "system_failure",
+        code: "AMBIGUOUS_ATTRIBUTION",
+        retryable: false,
+        cancellation: {
+          terminationRequired: true,
+          receiptPresent: false,
+          graceMilliseconds: 0,
+        },
+      }
+    }
+
+    const received = receiveMessageOnPort(port1)
+    const methodElapsedMilliseconds =
+      Number(process.hrtime.bigint() - methodStarted) / 1_000_000
+    const message = received?.message
+    if (methodElapsedMilliseconds > args.timeoutMs) {
+      void worker.terminate()
+      port1.close()
+      return {
+        kind: "system_failure",
+        code: "AMBIGUOUS_ATTRIBUTION",
+        retryable: false,
+        stdoutBytes:
+          message instanceof Uint8Array ? message.byteLength : 0,
+        cancellation: {
+          terminationRequired: true,
+          receiptPresent: false,
+          graceMilliseconds: 0,
+        },
+      }
+    }
+    void worker.terminate()
+    port1.close()
+    if (!(message instanceof Uint8Array)) {
+      return {
+        kind: "system_failure",
+        code: "RUNTIME_CRASH",
+        retryable: true,
+      }
+    }
+    if (message.byteLength > args.stdoutByteLimit + 1) {
+      return {
+        kind: "system_failure",
+        code: "TRANSPORT_CRASH",
+        retryable: true,
+        stdoutBytes: message.byteLength,
+      }
+    }
+    return { kind: "raw_frame", bytes: Uint8Array.from(message) }
+  }
+
+  if (Atomics.load(signal, 0) !== WORKER_SIGNAL_V117.done) {
+    void worker.terminate()
+    port1.close()
+    return {
+      kind: "system_failure",
+      code: "RUNTIME_CRASH",
+      retryable: true,
+    }
+  }
+
+  const received = receiveMessageOnPort(port1)
+  void worker.terminate()
+  port1.close()
+  const message = received?.message
+  if (!(message instanceof Uint8Array)) {
+    return {
+      kind: "system_failure",
+      code: "RUNTIME_CRASH",
+      retryable: true,
+    }
+  }
+  if (message.byteLength > args.stdoutByteLimit + 1) {
+    return {
+      kind: "system_failure",
+      code: "TRANSPORT_CRASH",
+      retryable: true,
+    }
+  }
+  return { kind: "raw_frame", bytes: Uint8Array.from(message) }
 }

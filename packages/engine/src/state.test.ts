@@ -1,7 +1,15 @@
 import { describe, expect, it } from "vitest"
 import { createInitialGameState } from "./state.js"
 import { getOccupyingSoldier, replaceSoldier } from "./selectors.js"
-import { fixtures } from "@cowards/spec"
+import {
+  BOTTOM_STARTING_POSITIONS,
+  COMPATIBILITY_VERSIONS,
+  CURRENT_SEMANTIC_AUTHORITY_KEY,
+  INITIAL_BOUNDS,
+  TOP_STARTING_POSITIONS,
+  fixtures,
+} from "@cowards/spec"
+import { createCandidateInitialGameState } from "./kernel/create-initial-state.js"
 
 const input = {
   matchId: "match-1",
@@ -55,5 +63,39 @@ describe("engine state foundation", () => {
 
   it("is deterministic for repeated identical input", () => {
     expect(createInitialGameState(input)).toEqual(createInitialGameState(input))
+  })
+
+  it("keeps the inactive candidate clone-equivalent to valid v1.4 initial behavior", () => {
+    const active = createInitialGameState(input)
+    const candidate = createCandidateInitialGameState(input)
+    expect(candidate.ok).toBe(true)
+    if (!candidate.ok) return
+    if (String(CURRENT_SEMANTIC_AUTHORITY_KEY) === "runtime-v1.19") {
+      expect(active.initialInitiativePlayerId).toBe(active.initiativePlayerId)
+      const {
+        initialInitiativePlayerId: _initialInitiativePlayerId,
+        ...gameplayState
+      } = active
+      expect(candidate.state).toEqual(gameplayState)
+    } else {
+      expect(candidate.state).toEqual(active)
+      expect(active.initialInitiativePlayerId).toBeUndefined()
+    }
+  })
+
+  it("keeps canonical constant values frozen and unchanged", () => {
+    expect(INITIAL_BOUNDS).toEqual({ minX: 0, maxX: 11, minY: 0, maxY: 11 })
+    expect(BOTTOM_STARTING_POSITIONS).toHaveLength(8)
+    expect(TOP_STARTING_POSITIONS).toHaveLength(8)
+    expect(COMPATIBILITY_VERSIONS.spec).toBe("cowards-rules-v1.4")
+    expect(Object.isFrozen(INITIAL_BOUNDS)).toBe(true)
+    expect(Object.isFrozen(BOTTOM_STARTING_POSITIONS[0])).toBe(true)
+    expect(Object.isFrozen(TOP_STARTING_POSITIONS[0])).toBe(true)
+    const candidate = createCandidateInitialGameState(input)
+    expect(candidate.ok).toBe(true)
+    if (candidate.ok) {
+      expect(candidate.state.versions).not.toBe(COMPATIBILITY_VERSIONS)
+      expect(Object.isFrozen(candidate.state.versions)).toBe(true)
+    }
   })
 })

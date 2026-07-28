@@ -1,0 +1,61 @@
+{
+  "schemaVersion": "v1.37-conformance-trace-independent-review-v1",
+  "reviewedBy": "scripts/review-v1-37-conformance-trace-diff.ts",
+  "candidateVersion": "v1.37-conformance-trace-v3",
+  "corpusVersion": "v2",
+  "corpusRootSha256": "sha256:238347225defaaabcf9e57141ac7a54b4b277bd149bebe2b21903febc9ce7ac2",
+  "semanticTupleId": "sha256:0d8a04fdfe49e3aa7261728ee51beb0a9049b661aad978277f2892c3a4bc54fe",
+  "candidateManifestSha256": "sha256:8e98f858e865c59f1bfa957943c5ac296919ecff0048e9d0e1d8a7d93bb263bb",
+  "claimedCandidateRootSha256": "sha256:53ac4a34b8ea3a52b65b566dfb1da94cbc36ce220c590fe46c0bf43489668696",
+  "computedCandidateRootSha256": "sha256:53ac4a34b8ea3a52b65b566dfb1da94cbc36ce220c590fe46c0bf43489668696",
+  "semanticDiffSha256": "sha256:ec1bc0f551ec564fa09491550833bc2bbebaace79542091450480d059b5e9b44",
+  "claimedSemanticDiffRootSha256": "sha256:4b24bfb0bb113f6c314cb1c1ba913573d3025e9c7ee329d69e1f3cb85c5fb9e4",
+  "computedSemanticDiffRootSha256": "sha256:4b24bfb0bb113f6c314cb1c1ba913573d3025e9c7ee329d69e1f3cb85c5fb9e4",
+  "caseCount": 16,
+  "caseTraceRootsSha256": "sha256:57ce256f909344449d78966f0781f6701ae290ccad852e3a5521412c761d8dcc",
+  "protectedCategories": {
+    "validV14State": {
+      "baselineHash": "sha256:9a861545f83f2230c7817016caeb4e53f949aef8abd20c574d58eb12f6f6b8c3",
+      "candidateHash": "sha256:9a861545f83f2230c7817016caeb4e53f949aef8abd20c574d58eb12f6f6b8c3",
+      "recomputedCandidateHash": "sha256:9a861545f83f2230c7817016caeb4e53f949aef8abd20c574d58eb12f6f6b8c3",
+      "changeCount": 0
+    },
+    "actionLegality": {
+      "baselineHash": "sha256:dd88cc81c84cdd9a7430707328c0357a7073b6505df52bcaa7051eb50b3ecfa5",
+      "candidateHash": "sha256:dd88cc81c84cdd9a7430707328c0357a7073b6505df52bcaa7051eb50b3ecfa5",
+      "recomputedCandidateHash": "sha256:dd88cc81c84cdd9a7430707328c0357a7073b6505df52bcaa7051eb50b3ecfa5",
+      "changeCount": 0
+    },
+    "eventOrder": {
+      "baselineHash": "sha256:80de7508224e0f797b71740fa81d637417c052da00b875c33a3826828042afd8",
+      "candidateHash": "sha256:80de7508224e0f797b71740fa81d637417c052da00b875c33a3826828042afd8",
+      "recomputedCandidateHash": "sha256:80de7508224e0f797b71740fa81d637417c052da00b875c33a3826828042afd8",
+      "changeCount": 0
+    },
+    "outcome": {
+      "baselineHash": "sha256:96484b8230596da7f1d09bc79a0d44dbebf8e4f1893cd89c3ccbd5944c56047f",
+      "candidateHash": "sha256:96484b8230596da7f1d09bc79a0d44dbebf8e4f1893cd89c3ccbd5944c56047f",
+      "recomputedCandidateHash": "sha256:96484b8230596da7f1d09bc79a0d44dbebf8e4f1893cd89c3ccbd5944c56047f",
+      "changeCount": 0
+    },
+    "terminalTimingReason": {
+      "baselineHash": "sha256:da79477797127c90c48ce7531f2b03158b6999624557f109ccac5c8adcea0392",
+      "candidateHash": "sha256:da79477797127c90c48ce7531f2b03158b6999624557f109ccac5c8adcea0392",
+      "recomputedCandidateHash": "sha256:da79477797127c90c48ce7531f2b03158b6999624557f109ccac5c8adcea0392",
+      "changeCount": 0
+    },
+    "strategyObservation": {
+      "baselineHash": "sha256:fc5a039e75fe568e6accd95635e6ade63e323ab51710deeaafc8cda7e90f9155",
+      "candidateHash": "sha256:fc5a039e75fe568e6accd95635e6ade63e323ab51710deeaafc8cda7e90f9155",
+      "recomputedCandidateHash": "sha256:fc5a039e75fe568e6accd95635e6ade63e323ab51710deeaafc8cda7e90f9155",
+      "changeCount": 0
+    },
+    "historicalInterpretation": {
+      "baselineHash": "sha256:9b3e52fcb585fdca58a298518e6e6acfb328d1878260999483db0107864043e6",
+      "candidateHash": "sha256:9b3e52fcb585fdca58a298518e6e6acfb328d1878260999483db0107864043e6",
+      "recomputedCandidateHash": "sha256:9b3e52fcb585fdca58a298518e6e6acfb328d1878260999483db0107864043e6",
+      "changeCount": 0
+    }
+  },
+  "status": "no_semantic_delta"
+}

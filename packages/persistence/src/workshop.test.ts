@@ -5,36 +5,62 @@ import {
   type RuntimeResult,
   type StrategyRuntime,
 } from "@cowards/engine"
+import { adaptRuntimeForCurrentKernel } from "@cowards/engine/test/current-kernel-runtime"
 import {
+  buildStrategyRevisionV117,
   transpileStrategySource,
   validateStrategySource,
 } from "@cowards/runtime-js"
 import {
   buildPythonStrategyRevision,
+  buildPythonStrategyRevisionV117,
   createPythonRuntimeFromRevision,
 } from "@cowards/runtime-python"
 import {
+  buildRustStrategyRevisionV117,
+  buildZigStrategyRevisionV117,
+} from "@cowards/runtime-wasm-wasi"
+import {
   INITIAL_BOUNDS,
+  STRATEGY_RUNTIME_ABI_VERSION,
   type SoldierBrainResult,
+  type StrategyInput,
+  type StrategyInputV117,
+  type StrategyInputV119,
   type StrategyResult,
   type StrategyRevision,
 } from "@cowards/spec"
 import {
   assertWorkshopRevisionCanBeTested,
   buildWorkshopRevision,
+  createWorkshopTestMatchSet,
   GET_WORKSHOP_REVISION_SOURCE_SQL,
   getWorkshopTestSummary,
+  insertWorkshopRevision,
   LIST_WORKSHOP_REVISIONS_SQL,
   listWorkshopOpponents,
   listWorkshopPresets,
   listWorkshopSamples,
+  listWorkshopContractExamples,
   listWorkshopTemplates,
+  publicWorkshopRevisionMetadata,
+  rustWasiTacticalStarterSource,
+  pythonTacticalStarterSource,
+  zigWasiTacticalStarterSource,
   getWorkshopStaticSnapshot,
   WORKSHOP_STRATEGY_ID,
   WORKSHOP_MATCH_SET_PREFIX,
   WORKSHOP_OPPONENTS,
   workshopTemplateSource,
+  workshopRuntimeSemantics,
+  CURRENT_WORKSHOP_CONTRACT_GENERATED,
 } from "./workshop.js"
+import { WORKSHOP_CONTRACT_V1_19_CANDIDATE } from "./workshop-contract-v1-19-candidate.js"
+import type { Pool } from "pg"
+import {
+  createFixtureMatchSetEvidenceResolver,
+  type MatchSetExecutionEvidenceResolver,
+} from "./matchset-service.js"
 import {
   buildAdvancedStrategyRevision,
   listAdvancedStrategies,
@@ -46,6 +72,23 @@ import {
   type StarterStrategySummary,
 } from "./starter-strategies.js"
 import { MATCH_SET_STATUSES } from "./schema.js"
+import {
+  ACTIVE_V1_17_SEMANTIC_AUTHORITY_SELECTION,
+  ACTIVE_V1_17_SEMANTIC_AUTHORITY_SELECTION_ROOT,
+  REVIEWED_V1_19_SEMANTIC_AUTHORITY_SELECTION,
+  REVIEWED_V1_19_SEMANTIC_AUTHORITY_SELECTION_ROOT,
+  SEMANTIC_AUTHORITY_SELECTOR_PATHS,
+  hashSemanticAuthoritySelectorManifest,
+} from "./semantic-authority-selection-head.js"
+import {
+  TEST_CURRENT_IS_V119,
+  TEST_CURRENT_SEMANTIC_AUTHORITY_HEAD,
+  TEST_NONCURRENT_SEMANTIC_AUTHORITY_HEAD,
+} from "./test-current-semantic-authority.js"
+import {
+  WORKSHOP_CONTRACT_SELECTION_REGISTRY,
+  resolveWorkshopContractSelectionForSemanticAuthority,
+} from "./current-workshop-contract-generated.js"
 import {
   LIST_MATCH_STATUSES_FOR_SET_SQL,
   mapMatchSetMatchSummaryRow,
@@ -116,13 +159,269 @@ const createStarterSmokeAdapter = (): StarterSmokeAdapter => {
   }
 }
 
+const sha = (character: string): `sha256:${string}` =>
+  `sha256:${character.repeat(64)}`
+const gitObject = (character: string): string => character.repeat(40)
+const selectorManifest = SEMANTIC_AUTHORITY_SELECTOR_PATHS.map(
+  (memberPath, index) => ({
+    path: memberPath,
+    sha256: sha(String(index + 1)),
+  }),
+)
+const selectorManifestRoot =
+  hashSemanticAuthoritySelectorManifest(selectorManifest)
+
+const semanticHeadRow = (
+  state: "bootstrap" | "pending" | "mismatch",
+): Record<string, unknown> | undefined => {
+  if (state === "bootstrap") {
+    return TEST_CURRENT_SEMANTIC_AUTHORITY_HEAD
+  }
+  if (state === "pending") {
+    return {
+      state: "pending-precommit",
+      revision: 1,
+      active_selection: ACTIVE_V1_17_SEMANTIC_AUTHORITY_SELECTION,
+      active_selection_root: ACTIVE_V1_17_SEMANTIC_AUTHORITY_SELECTION_ROOT,
+      pending_intent: {
+        direction: "forward",
+        activationId: "activation:workshop:test",
+        expectedOldRoot: ACTIVE_V1_17_SEMANTIC_AUTHORITY_SELECTION_ROOT,
+        targetSelection: REVIEWED_V1_19_SEMANTIC_AUTHORITY_SELECTION,
+        targetRoot: REVIEWED_V1_19_SEMANTIC_AUTHORITY_SELECTION_ROOT,
+        parentHead: gitObject("a"),
+        selectorManifest,
+        selectorManifestRoot,
+        proofPreimageRoot: sha("b"),
+      },
+      finalization: null,
+      compensation: null,
+    }
+  }
+  return TEST_NONCURRENT_SEMANTIC_AUTHORITY_HEAD
+}
+
+const semanticHeadPool = (
+  state: "absent" | "bootstrap" | "pending" | "mismatch",
+) => {
+  const calls: string[] = []
+  const query = async (text: string) => {
+    calls.push(text)
+    if (!text.includes("from semantic_authority_selection_head")) {
+      throw new Error("Workshop mutated persistence after authority rejection")
+    }
+    const row = state === "absent" ? undefined : semanticHeadRow(state)
+    return { rows: row === undefined ? [] : [row], rowCount: row ? 1 : 0 }
+  }
+  const client = { query, release: () => undefined }
+  return {
+    calls,
+    pool: { query, connect: async () => client } as unknown as Pool,
+  }
+}
+
 describe("Workshop service contracts", () => {
+  it("fails closed on empty production authority before seeding Workshop rows", async () => {
+    const fixture = semanticHeadPool("bootstrap")
+
+    await expect(
+      createWorkshopTestMatchSet(fixture.pool, {
+        revisionId: "strategy-revision:workshop:test",
+        opponentId: "opponent:cautious",
+        presetId: "smoke-v1",
+        matchSetId: "match-set:workshop:test",
+      }),
+    ).rejects.toThrow(/containment.*unavailable|production.*empty/iu)
+    expect(fixture.calls).toHaveLength(1)
+  })
+
+  it("resolves Workshop revision and opponent as independent entrants", async () => {
+    let captured: readonly {
+      entrantKey: string
+      strategyRevisionId: string
+    }[] = []
+    const resolver: MatchSetExecutionEvidenceResolver = {
+      trustDomain: "fixture",
+      async resolve(input) {
+        captured = input.entrants
+        throw new Error("captured fixture resolution")
+      },
+    }
+    const fixture = semanticHeadPool("bootstrap")
+    await expect(
+      createWorkshopTestMatchSet(fixture.pool, {
+        revisionId: "strategy-revision:workshop:test",
+        opponentId: "opponent:cautious",
+        presetId: "smoke-v1",
+        evidenceResolver: resolver,
+      }),
+    ).rejects.toThrow("captured fixture resolution")
+    expect(fixture.calls).toHaveLength(1)
+    expect(captured).toEqual([
+      {
+        entrantKey: "strategy-revision:workshop:test",
+        strategyRevisionId: "strategy-revision:workshop:test",
+      },
+      {
+        entrantKey: WORKSHOP_OPPONENTS[0].revisionId,
+        strategyRevisionId: WORKSHOP_OPPONENTS[0].revisionId,
+      },
+    ])
+  })
+
   it("ships valid built-in template and opponent sources", () => {
     expect(validateStrategySource(workshopTemplateSource).valid).toBe(true)
 
     for (const opponent of WORKSHOP_OPPONENTS) {
       expect(opponent.revisionId).toMatch(/^strategy-revision:/)
     }
+  })
+
+  it("keeps every unversioned Workshop and SDK example on the exact generated current contract", () => {
+    const defaults = listWorkshopContractExamples()
+
+    expect(defaults.selection).toEqual(
+      CURRENT_WORKSHOP_CONTRACT_GENERATED.selection,
+    )
+    expect(defaults.selection).toMatchObject({
+      status: "current",
+      workshopContractVersion:
+        CURRENT_WORKSHOP_CONTRACT_GENERATED.selection.workshopContractVersion,
+      runtimeAbiVersion:
+        CURRENT_WORKSHOP_CONTRACT_GENERATED.selection.runtimeAbiVersion,
+      activationOwner: "Phase-260-Plan-14",
+    })
+    expect(
+      defaults.examples.map(({ language, source }) => [language, source]),
+    ).toEqual(
+      TEST_CURRENT_IS_V119
+        ? WORKSHOP_CONTRACT_V1_19_CANDIDATE.examples.map(
+            ({ language, source }) => [language, source],
+          )
+        : [
+            ["typescript", workshopTemplateSource],
+            ["python", pythonTacticalStarterSource],
+            ["rust", rustWasiTacticalStarterSource],
+            ["zig", zigWasiTacticalStarterSource],
+          ],
+    )
+    expect(defaults.examples.every(({ validation }) => validation.valid)).toBe(
+      true,
+    )
+    expect(
+      defaults.examples.some(({ source }) =>
+        WORKSHOP_CONTRACT_V1_19_CANDIDATE.examples.some(
+          (candidate) => candidate.source === source,
+        ),
+      ),
+    ).toBe(TEST_CURRENT_IS_V119)
+  })
+
+  it("stores two immutable pins and resolves static current from the compact selector", () => {
+    expect(Object.keys(WORKSHOP_CONTRACT_SELECTION_REGISTRY)).toEqual([
+      "runtime-v1.17",
+      "runtime-v1.19",
+    ])
+    expect(Object.isFrozen(WORKSHOP_CONTRACT_SELECTION_REGISTRY)).toBe(true)
+    expect(
+      resolveWorkshopContractSelectionForSemanticAuthority({
+        semanticAuthorityKey: "runtime-v1.17",
+      }),
+    ).toMatchObject({
+      status: "current",
+      workshopContractVersion: "workshop-contract-v1.17",
+      runtimeAbiVersion: "strategy-runtime-abi-v1.17",
+      workshopContractRoot:
+        ACTIVE_V1_17_SEMANTIC_AUTHORITY_SELECTION.workshopContractRoot,
+    })
+    expect(
+      resolveWorkshopContractSelectionForSemanticAuthority({
+        semanticAuthorityKey: "runtime-v1.19",
+      }),
+    ).toMatchObject({
+      status: "current",
+      workshopContractVersion: "workshop-contract-v1.19",
+      runtimeAbiVersion: "strategy-runtime-abi-v1.19",
+      workshopContractRoot:
+        REVIEWED_V1_19_SEMANTIC_AUTHORITY_SELECTION.workshopContractRoot,
+    })
+    expect(() =>
+      resolveWorkshopContractSelectionForSemanticAuthority({
+        semanticAuthorityKey: "runtime-v1.18",
+      }),
+    ).toThrow(/semantic authority/iu)
+    expect(() =>
+      resolveWorkshopContractSelectionForSemanticAuthority({
+        semanticAuthorityKey: "runtime-v1.17",
+        runtimeAbiVersion: "strategy-runtime-abi-v1.19",
+      }),
+    ).toThrow(/semantic authority/iu)
+  })
+
+  it.each(["absent", "pending", "mismatch"] as const)(
+    "fails closed before Workshop MatchSet persistence for a %s head",
+    async (state) => {
+      const fixture = semanticHeadPool(state)
+      await expect(
+        createWorkshopTestMatchSet(fixture.pool, {
+          revisionId: "strategy-revision:workshop:test",
+          opponentId: "opponent:cautious",
+          presetId: "smoke-v1",
+          evidenceResolver: createFixtureMatchSetEvidenceResolver(),
+        }),
+      ).rejects.toThrow(/authority|unavailable|mismatch/iu)
+      expect(fixture.calls).toHaveLength(1)
+    },
+  )
+
+  it("fails closed before Workshop revision persistence when the head is absent", async () => {
+    const fixture = semanticHeadPool("absent")
+    const revision = buildWorkshopRevision({ source: workshopTemplateSource })
+    await expect(
+      insertWorkshopRevision(fixture.pool, revision),
+    ).rejects.toThrow(/authority|unavailable/iu)
+    expect(fixture.calls).toHaveLength(1)
+  })
+
+  it("returns v1.19 examples only through an exact explicit candidate selector", () => {
+    const candidate = listWorkshopContractExamples({
+      workshopContractVersion: "workshop-contract-v1.19",
+      runtimeAbiVersion: "strategy-runtime-abi-v1.19",
+    })
+
+    expect(candidate.selection).toMatchObject({
+      status: TEST_CURRENT_IS_V119 ? "current" : "inactive-candidate",
+      workshopContractVersion: "workshop-contract-v1.19",
+      runtimeAbiVersion: "strategy-runtime-abi-v1.19",
+      activationOwner: "Phase-260-Plan-14",
+    })
+    expect(candidate.examples.map(({ source }) => source)).toEqual(
+      WORKSHOP_CONTRACT_V1_19_CANDIDATE.examples.map(({ source }) => source),
+    )
+    expect(candidate.examples.every(({ validation }) => validation.valid)).toBe(
+      true,
+    )
+  })
+
+  it.each([
+    {
+      workshopContractVersion: "workshop-contract-v1.19",
+      runtimeAbiVersion: "strategy-runtime-abi-v1.17",
+    },
+    {
+      workshopContractVersion: "workshop-contract-v1.17",
+      runtimeAbiVersion: "strategy-runtime-abi-v1.19",
+    },
+    { workshopContractVersion: "workshop-contract-v1.19" },
+    {
+      workshopContractVersion: "workshop-contract-v1.19",
+      runtimeAbiVersion: "strategy-runtime-abi-v1.19",
+      active: true,
+    },
+  ])("rejects premature or mixed Workshop contract selection", (selector) => {
+    expect(() => listWorkshopContractExamples(selector)).toThrow(
+      /exact Workshop contract selector/u,
+    )
   })
 
   it("summarizes presets without exposing Strategy source", () => {
@@ -179,9 +478,14 @@ describe("Workshop service contracts", () => {
     ).toEqual(
       expect.objectContaining({
         experimental: false,
-        countedPlayEligible: true,
+        countedPlayEligible: false,
       }),
     )
+    expect(
+      listWorkshopTemplates().some(
+        (template) => template.countedPlayEligible === true,
+      ),
+    ).toBe(false)
   })
 
   it("ships the full v1.4 Starter Strategy Library as distinct playable doctrines", () => {
@@ -264,7 +568,7 @@ describe("Workshop service contracts", () => {
         topPlayerId: "player:top",
         bottomStrategyRevisionId: `revision:${bottom.id}`,
         topStrategyRevisionId: `revision:${top.id}`,
-        runtime,
+        runtime: adaptRuntimeForCurrentKernel(runtime),
         maxPhases: 100,
       })
 
@@ -386,7 +690,7 @@ describe("Workshop service contracts", () => {
         topPlayerId: "player:starter",
         bottomStrategyRevisionId: `revision:${advanced.id}`,
         topStrategyRevisionId: `revision:${starter.id}`,
-        runtime,
+        runtime: adaptRuntimeForCurrentKernel(runtime),
         maxPhases: 100,
       })
 
@@ -483,18 +787,38 @@ describe("Workshop service contracts", () => {
     ).toEqual(["sample:rust-wasi-stone"])
   })
 
-  it("executes bundled Python starter samples through the Python provider runtime", () => {
+  it("validates bundled Python starter identities while the retired public runtime fails closed", () => {
     const pythonSamples = listWorkshopSamples().filter(
       (sample) => sample.sourceFormat === "python",
     )
 
     for (const sample of pythonSamples) {
-      const revision = buildPythonStrategyRevision({
+      const legacyShapeRevision = buildPythonStrategyRevision({
         source: sample.source,
         strategyId: WORKSHOP_STRATEGY_ID,
       })
-      const runtime = createPythonRuntimeFromRevision(revision)
-      const activation = runtime.selectActivations({
+      const revision = buildPythonStrategyRevisionV117({
+        source: sample.source,
+        strategyId: WORKSHOP_STRATEGY_ID,
+      })
+      const artifact = revision.metadata.sourceArtifact
+      expect(sample.validation.valid, sample.id).toBe(true)
+      expect(revision.validation.valid, sample.id).toBe(true)
+      expect(revision.runtime.abiVersion, sample.id).toBe(
+        "strategy-runtime-abi-v1.17",
+      )
+      expect(artifact, sample.id).toMatchObject({
+        abiVersion: "strategy-runtime-abi-v1.17",
+        format: "python-source-bundle",
+        sourceHash: revision.sourceHash,
+        sourceBytes: revision.sourceBytes,
+        validationStatus: "valid",
+        sourceIdentity: {
+          identityVersion: "strategy-source-identity-v2",
+          normalizationPolicy: "source-line-endings-lf-v1.17",
+        },
+      })
+      const activationInputV117: StrategyInputV117 = {
         phaseNumber: 1,
         roundNumber: 1,
         activationCount: 1,
@@ -515,34 +839,31 @@ describe("Workshop service contracts", () => {
         ],
         enemySoldiers: [],
         strategyMemory: {},
-      })
-      const brain = runtime.runSoldierBrain({
-        self: {
-          id: "soldier:sample",
-          ownerPlayerId: "player:workshop-local",
-          status: "ACTIVE",
-          position: { x: 0, y: 0 },
-          facing: "UP",
-          lastSuccessfulMoveDirection: null,
-        },
-        awarenessGrid: {
-          cells: [
-            {
-              dx: 1,
-              dy: 0,
-              absoluteX: 1,
-              absoluteY: 0,
-              contents: "ENEMY_ACTIVE",
-            },
-          ],
-        },
-        cycleIndex: 0,
-        maxCycles: 12,
-        soldierMemory: {},
-      })
+      }
+      const activationInput = (
+        String(STRATEGY_RUNTIME_ABI_VERSION) === "strategy-runtime-abi-v1.19"
+          ? ({
+              ...activationInputV117,
+              initialInitiativePlayerId: "player:workshop-local",
+              hasInitialInitiative: true,
+              roundInitiativePlayerId: "player:workshop-local",
+              hasRoundInitiative: true,
+            } satisfies StrategyInputV119)
+          : activationInputV117
+      ) as StrategyInput
 
-      expect(activation.ok, sample.id).toBe(true)
-      expect(brain.ok, sample.id).toBe(true)
+      expect(STRATEGY_RUNTIME_ABI_VERSION).toBe(
+        CURRENT_WORKSHOP_CONTRACT_GENERATED.selection.runtimeAbiVersion,
+      )
+      const selectedResult =
+        createPythonRuntimeFromRevision(legacyShapeRevision).selectActivations(
+          activationInput,
+        )
+      expect(selectedResult).toMatchObject({
+        ok: false,
+        systemFailure: { code: "MALFORMED_IPC", retryable: true },
+      })
+      expect(selectedResult).not.toHaveProperty("value")
     }
   }, 15_000)
 
@@ -709,6 +1030,142 @@ describe("Workshop service contracts", () => {
         localRevision.id,
       ),
     ).toThrow("valid Strategy revision")
+  })
+
+  it("admits only exact selected runtime-service revisions with collision-safe identity", () => {
+    const candidates = [
+      {
+        sourceFormat: "typescript" as const,
+        revision: buildStrategyRevisionV117({ source: workshopTemplateSource }),
+      },
+      {
+        sourceFormat: "python" as const,
+        revision: buildPythonStrategyRevisionV117({
+          source: pythonTacticalStarterSource,
+        }),
+      },
+      {
+        sourceFormat: "rust" as const,
+        revision: buildRustStrategyRevisionV117({
+          source: rustWasiTacticalStarterSource,
+        }),
+      },
+      {
+        sourceFormat: "zig" as const,
+        revision: buildZigStrategyRevisionV117({
+          source: zigWasiTacticalStarterSource,
+        }),
+      },
+    ]
+    const admit = (candidate: (typeof candidates)[number]) =>
+      buildWorkshopRevision({
+        source: candidate.revision.source,
+        sourceFormat: candidate.sourceFormat,
+        runtime: candidate.revision.runtime,
+        validation: candidate.revision.validation,
+        engineCompatibility: candidate.revision.engineCompatibility,
+        metadata: candidate.revision.metadata,
+        runtimeServiceValidated: true,
+      })
+
+    if (String(STRATEGY_RUNTIME_ABI_VERSION) !== "strategy-runtime-abi-v1.17") {
+      for (const candidate of candidates) {
+        expect(() => admit(candidate)).toThrow(
+          "runtime-service provider validation",
+        )
+      }
+      return
+    }
+
+    const admitted = candidates.map(admit)
+    for (const [index, revision] of admitted.entries()) {
+      expect(admit(candidates[index]!)).toEqual(revision)
+      expect(revision.id).toMatch(
+        /^strategy-revision:workshop:(typescript|python|rust|zig):sha256:[0-9a-f]{64}$/u,
+      )
+      expect(workshopRuntimeSemantics(revision)).toMatchObject({
+        countedPlayEligible: false,
+        countedPlayLabel: "Not counted",
+      })
+      const publicMetadata = publicWorkshopRevisionMetadata(revision.metadata)
+      expect(JSON.stringify(publicMetadata)).not.toContain("bytesBase64")
+      expect(JSON.stringify(publicMetadata)).not.toContain("sourceIdentity")
+    }
+
+    const proofDrift = globalThis.structuredClone(candidates[0]!)
+    proofDrift.revision.metadata.providerValidation.proof = `sha256:${"0".repeat(64)}`
+    expect(() => admit(proofDrift)).toThrow(
+      "runtime-service provider validation",
+    )
+
+    const historicalProof = globalThis.structuredClone(candidates[0]!)
+    historicalProof.revision.metadata.providerValidation.contractVersion =
+      "strategy-language-provider-contract-v1.33"
+    historicalProof.revision.metadata.providerValidation.proof = `hmac-sha256:${"0".repeat(64)}`
+    expect(() => admit(historicalProof)).toThrow(
+      "runtime-service provider validation",
+    )
+
+    const identityDrift = globalThis.structuredClone(candidates[0]!)
+    const identityArtifact = identityDrift.revision.metadata.sourceArtifact
+    if (identityArtifact?.sourceIdentity === undefined) {
+      throw new Error("TypeScript v1.17 fixture is missing source identity.")
+    }
+    identityArtifact.sourceIdentity.lineEndings = {
+      kind: "crlf",
+      lf: 0,
+      crlf: 1,
+      cr: 0,
+    }
+    expect(() => admit(identityDrift)).toThrow(
+      "runtime-service provider validation",
+    )
+
+    const distinctToolchain = globalThis.structuredClone(candidates[0]!)
+    const distinctArtifact = distinctToolchain.revision.metadata.sourceArtifact
+    if (distinctArtifact === undefined) {
+      throw new Error("TypeScript v1.17 fixture is missing its artifact.")
+    }
+    distinctArtifact.toolchain.commandSummary = `${distinctArtifact.toolchain.commandSummary} exact-distinct-toolchain`
+    const distinctAdmission = admit(distinctToolchain)
+    expect(distinctAdmission.sourceHash).toBe(admitted[0]!.sourceHash)
+    expect(distinctAdmission.id).not.toBe(admitted[0]!.id)
+  }, 30_000)
+
+  it("persists Workshop source identity as an all-or-none v2 record", async () => {
+    const revision = buildWorkshopRevision({ source: workshopTemplateSource })
+    const calls: { text: string; values?: readonly unknown[] | undefined }[] =
+      []
+    const query = async (text: string, values?: readonly unknown[]) => {
+      calls.push({ text, values })
+      if (text.includes("from semantic_authority_selection_head")) {
+        return { rows: [semanticHeadRow("bootstrap")], rowCount: 1 }
+      }
+      return { rows: [], rowCount: 0 }
+    }
+    const client = { query, release: () => undefined }
+    const pool = {
+      query,
+      connect: async () => client,
+    } as unknown as Pool
+
+    await insertWorkshopRevision(pool, revision)
+
+    const insert = calls.find(
+      ({ text, values }) =>
+        text.includes("insert into strategy_revisions") &&
+        values?.[0] === revision.id,
+    )
+    expect(insert?.values?.slice(10, 18)).toEqual([
+      "strategy-source-identity-v2",
+      expect.stringMatching(/^[0-9a-f]{64}$/u),
+      revision.sourceBytes,
+      expect.stringMatching(/^[0-9a-f]{64}$/u),
+      revision.sourceBytes,
+      "source-line-endings-lf-v1.17",
+      expect.objectContaining({ kind: expect.any(String) }),
+      false,
+    ])
   })
 
   it("does not expose non-Workshop MatchSets through Workshop status lookup", async () => {

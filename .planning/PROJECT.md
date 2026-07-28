@@ -2,16 +2,111 @@
 
 ## Current State
 
-**Shipped version:** v1.33 Source Artifact Provenance and TinyGo WASI Spike on 2026-06-01
-**Current milestone:** Ready for v1.34 planning
-**Status:** TypeScript, Python, Rust, and Zig are supported counted Strategy languages through provider-gated runtime evidence. TypeScript and Python now have source-language artifact provenance with runtime-service provider proof binding source hash/bytes and artifact hash/bytes. Rust and Zig remain artifact-backed through immutable WASM/WASI Preview 1 stdin/stdout JSON artifacts. TinyGo remains spike-only and hidden from production surfaces until a future milestone resolves its forbidden WASI imports and GA constraints.
-**Last audit:** v1.33 audit passed after validating artifact provenance, provider proofs, TinyGo spike evidence, public privacy, boundary monitors, browser review, and no Strategy execution in web/API/Go.
+**Shipped version:** v1.37 Rules Integrity and Strategy Evaluation Foundations on 2026-07-22
+**Release target:** None activated; serious Strategy work still requires separate milestone approval
+**Status:** v1.37 is archived and annotated at immutable commit `e704590df599b49d84745b0e828d5ab0f1d335ad`; the independent post-tag checker closes PROOF-08. A verified 2026-07-23 integration correction preserves public runtime semantics, fails counted rendering closed, and makes the D-11 release matrix root-invokable without moving the tag.
+**Last audit:** v1.37 traced 56/56 requirements with zero gaps, zero overrides, one transition authority, and zero unapproved semantic deltas. The immutable pre-tag audit retains 55 passed plus PROOF-08 `ready_pending`; the actual annotated tag/post-tag join closes the final requirement. Refreshed production-shaped proof covers four containment-attested non-counted lanes, 12 runs, 23 service scenarios, 17 rollback/history scenarios, Chronicle reconstruction/replay, Set fairness, persistence, privacy, and rollback.
 
 Coward's Game is a deterministic two-player programmable strategy game for the web. Players can author immutable Strategy Revisions, save account-owned revisions, fork credible Starter and Advanced Strategies, enter exhibitions or resettable trial ladder seasons, inspect fair standings and replay evidence, study saved gauntlet analytics, and trust that public outputs do not expose private Strategy data. The project now has generated TypeScript service contracts, selected service-backed public/player/account/ladder/workshop analytics reads, live PostgreSQL-backed Go ownership for normal backend orchestration and selected API routes, artifact-backed Go Starter/Advanced forks, runtime isolation readiness gates, supported counted TypeScript, Python, Rust, and Zig Strategy languages, source-language artifact provenance for TypeScript/Python, executable Rust and Zig WASM/WASI artifact-backed lanes, repeatable local topology diagnostics, and boundary drift monitors. Go owns normal job lifecycle, Match completion, Chronicle persistence handoff, MatchSet scoring/status refresh, selected exhibition creation, public MatchSet summary, public replay metadata, and selected public replay evidence while hostile Strategy execution remains behind the Strategy Execution Service / Runtime Broker boundary. TinyGo has a documented spike/defer recommendation and is not production-visible.
 
 ## Core Value
 
 Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
+
+## Latest Shipped Milestone: v1.37 Rules Integrity and Strategy Evaluation Foundations
+
+**Goal:** Make canonical Matches deterministic, replayable, language-neutral, failure-safe, semantically validated, and suitable for trustworthy competitive Strategy research without changing valid v1.4 gameplay.
+
+**Target features:**
+- Fail closed for counted runtime lanes without current containment and executable conformance evidence bound to exact runtime and toolchain identity.
+- Establish one canonical rules/engine/runtime ABI/Chronicle/arena/Set-policy version tuple and one transition kernel consumed by engine execution, Chronicle, replay, services, and competition scheduling.
+- Add semantic validation for arenas and Match states; fix every confirmed lifecycle, precedence, event-vocabulary, constant-ownership, and stale-entry-point defect preserved by the core-rules audit reproductions.
+- Preserve and explicitly document valid v1.4 behavior; require separate approval for any change to valid Match state, Action legality, event order, outcome, or Strategy observation.
+- Define canonical JSON limits and end-to-end success/player-violation/system-failure semantics, including exact source/artifact/runtime/toolchain identity.
+- Replace parity declarations with executable TypeScript, Python, Rust, and Zig full-state, event, memory, objective, and failure-trace conformance.
+- Make Chronicle validation per-slot, version-strict, semantic, reconstruction-equivalent, and historically compatible with immutable v1.4 evidence.
+- Add truthful initiative and activation-state Strategy inputs, one runtime-budget contract, and a common supported-language ABI envelope.
+- Consolidate arena authority and prove Set scheduling gives each entrant every side and initial-initiative state without treating duplicate empty geometries as diversity.
+- Close with engine, spec, replay, runtime-service, four-language, privacy, boundary-monitor, service-backed, persistence, rollback, archive, and tag proof.
+
+**Conditional simplifications:**
+- Remove Cycle-start Backstab scans only if reachable-state differential proof establishes identical state, outcome, and canonical-event behavior.
+- Add `HOLD`/`END_ACTIVATION` after Advance only after explicit semantic approval and equivalence proof; otherwise defer it.
+
+**Hard boundaries:**
+- No Cycle-cap, starting-position, facing-only MOVE, reversal-history, attacker-facing Backstab, hidden-information, randomness, adaptive-rule, or per-Match rule experiments in this milestone.
+- No new official arena geometry beyond authority/fairness repair and no gameplay change justified only by the current toy Strategy matrix.
+- No durable ratings, prizes, staffed moderation, new languages, TinyGo promotion, package ecosystems, or broad UI redesign.
+- Strategy execution remains outside web/API/Go; public/default output remains source, artifact, memory, objective, diagnostics, host-data, security-internal, and private-runtime safe.
+
+**Release-ready archive:** `.planning/milestones/v1.37-ROADMAP.md`, `.planning/milestones/v1.37-REQUIREMENTS.md`, `.planning/milestones/v1.37-MILESTONE-AUDIT.md`, and `.planning/milestones/v1.37-phases/`. Serious Strategy initialization remains unauthorized until the separately approved next milestone.
+
+**Post-tag correction:** `.planning/artifacts/v1.37-post-tag-ui-integration-correction.md` records the 2026-07-23 public-read/UI integration fixes, refreshed evidence, unchanged gameplay ruling, and local test pages.
+
+## Latest Shipped Milestone: v1.36 Competition Maturity
+
+**Goal:** Move Coward's Game competition from alpha/trial posture toward mature public beta by tightening season policy, entry eligibility, standings/result governance, abuse/dispute/recovery expectations, public trust copy, and replay/result proof while preserving deterministic rules and runtime ownership boundaries.
+
+**Target features:**
+- Inventory competition surfaces: exhibition MatchSets, trial ladder seasons, counted/non-counted/degraded result policy, standings recomputation, entry eligibility, one-active-revision rules, same-user/multi-revision/self-play behavior, public result/replay/player/Strategy pages, governance/status marking, and abuse/dispute/account-recovery assumptions.
+- Decide the honest v1.36 competition posture: what remains resettable or trial, what can be called public beta, whether durable ratings remain out of scope, and what public copy must say about resets, counted status, degraded Matches, and dispute outcomes.
+- Tighten counted entry and season rules so eligibility uses current provider-proof, language, runtime, provenance, sandbox-readiness, and package-policy evidence from v1.35 without admitting stale artifacts, unsupported providers, hidden TinyGo, invalid provenance, or unavailable runtime lanes.
+- Clarify same-user, multi-revision, and self-play behavior for exhibitions versus ranked/trial competition without changing deterministic game rules.
+- Mature standings and result governance so counted, non-counted, degraded, disputed, and invalidated states are recomputable, auditable, player-explainable, and public-safe.
+- Add abuse, dispute, and account-recovery policy surfaces appropriate for public beta, while clearly distinguishing product behavior now from future moderation or recovery work.
+- Improve public trust UX across standings, competition, result, replay, player, and Strategy pages so eligibility, counted status, season state, and evidence availability are understandable without exposing private internals.
+- Prove entry -> counted MatchSet -> execution -> result -> standings -> replay, degraded/non-counted/disputed/invalidated scenarios, privacy boundaries, public copy posture, and replay/result realism checks.
+
+**Hard boundaries:**
+- No game-rule changes unless explicitly justified and approved.
+- Strategy execution remains outside web/API/Go and behind runtime-service / Runtime Broker / provider boundaries.
+- No new runtime, sandbox, package, TinyGo, or durable permanent rating claims beyond proven v1.35 evidence.
+- Public/default output must not expose raw diagnostics, Strategy source, artifact bytes, host paths, env values, package paths, tokens, DB details, private runtime internals, StrategyMemory, SoldierMemory, objective payloads, account-recovery payloads, dispute internals, or operator-only governance details.
+
+## Latest Shipped Milestone: v1.35 Runtime, Account Ownership, Sandbox, and Package Policy Cleanup
+
+**Goal:** Close or explicitly reframe the remaining runtime/account/security-policy edges so Coward's Game has honest, testable, production-facing boundaries for account-owned Strategy Revisions, provider proof, sandbox-readiness evidence, and package/dependency policy without changing runtime ownership or making unsupported sandbox claims.
+
+**Delivered:**
+- Authoritative v1.35 boundary surface inventory and decision register.
+- TypeScript runtime-service validation parity in Go, provider-proof-backed account save readiness, and Go/persistence entry-gate parity.
+- Server-authorized account source and owner-debug/private replay boundaries, local Workshop trust quarantine, and deprecated Workshop source aliases.
+- Versioned sandbox-readiness contract and public/developer labels that avoid production sandbox overclaims.
+- Versioned package/dependency policy contract enforcing package mode `none` and documenting future package-lane requirements.
+- Final proof artifact covering service-backed PostgreSQL proof, privacy scans, generated proof artifacts, and boundary monitors.
+- Audit fix for Workshop Load source so the UI uses account-owned source routes instead of deprecated Workshop aliases.
+
+**Hard boundaries:**
+- Strategy execution remains outside web/API/Go and behind runtime-service / Runtime Broker / provider boundaries.
+- TypeScript/Python artifact provenance remains provenance evidence, not WASM isolation.
+- Rust/Zig remain immutable WASM/WASI Preview 1 artifact-backed unless a future ABI milestone explicitly changes that.
+- TinyGo remains spike-only and hidden from production surfaces.
+- No public/default output may expose raw diagnostics, Strategy source, artifact bytes, host paths, env values, package paths, tokens, DB details, private runtime internals, StrategyMemory, SoldierMemory, or objective payloads.
+
+**Archive:** `.planning/milestones/v1.35-ROADMAP.md`, `.planning/milestones/v1.35-REQUIREMENTS.md`, `.planning/milestones/v1.35-MILESTONE-AUDIT.md`, `.planning/milestones/v1.35-phases/`
+
+## Latest Shipped Milestone: v1.34 Workshop Provider Checker Parity
+
+**Goal:** Bring Workshop "Validate source" checker behavior for TypeScript, Python, Rust, and Zig up to the same practical quality by routing validation through provider/runtime-service semantics where appropriate, producing accurate public-safe diagnostics before submit, save, and entry without changing runtime ownership or making new sandbox claims.
+
+**Delivered:**
+- Inventoried Workshop Validate source, submit, save, and entry validation paths for TypeScript, Python, Rust, and Zig.
+- Added the shared `workshop-checker-v1.34` contract and provider-grade Validate source semantics for all four production checker paths.
+- Added language-specific Python, Rust, and Zig public-safe diagnostics for policy, capability, import, package, compile, artifact, no-std/helper, runtime-service, and toolchain failures.
+- Added honest, calm runtime-service-unavailable and toolchain-unavailable states.
+- Added debounce, caching, coalescing, stale-state UX, and boundary monitors so Rust/Zig validation is realistic and TinyGo remains hidden.
+- Preserved public/default privacy and runtime boundaries: no Strategy execution in web/API/Go, no new sandbox claims, no TinyGo production surfaces, and no private diagnostics or artifacts in public output.
+- Added focused tests plus a service-backed E2E proof covering all four Workshop checker paths.
+
+**Known limitations carried forward:** Browser validation covered the local unavailable-service UX while service-backed ready states were covered by API/proof tests; local `gsd-sdk query audit-open/audit-uat` remained unavailable, so the final audit used phase artifacts, review reports, browser inspection, and command evidence.
+
+## Proposed Next Milestones
+
+- **Competitive Operations and Account Recovery** - Build moderation queues, sanctions, appeals, recovery workflows, operator roles, and auditable service expectations before promising durable competitive identity.
+- **Durable Ratings and Competitive Identity** - Add placements, rating history, Season transitions, repair/rollback semantics, and all-time identity only after operational governance and recovery are proven.
+- **Tournament and League Operations** - Add registration, brackets or pods, scheduled rounds, tournament governance, spectator views, and event evidence on top of the mature competition substrate.
+- **Production Runtime Certification** - Prove deployable isolation, image and toolchain provenance, resource/failure controls, package supply-chain policy, and lane certification without weakening runtime ownership boundaries.
+- **Strategy Ecosystem and Creator League** - Add verified publishing, discovery, lineage/forks, benchmarks, curated events, and creator/team identity while preserving Strategy privacy.
 
 ## Latest Shipped Milestone: v1.33 Source Artifact Provenance and TinyGo WASI Spike
 
@@ -698,6 +793,9 @@ Planning archives live under `.planning/milestones/`:
 | Allow same-user multi-revision exhibition entry in alpha | Self-play is valuable for doctrine testing; one-strategy-per-user belongs with ranked or more formal competition. | ✓ Good |
 | Publish result evidence without Strategy internals | Public standings, replay links, hashes, and provenance are enough for alpha disputes while source/memory/objective data stays private. | ✓ Good |
 | Use resettable trial ladders before durable ratings | Ranking pressure is useful, but permanent ratings should wait until abuse, moderation, and sandbox behavior are better understood. | ✓ Good |
+| Promote competition to a resettable public beta | v1.36 adds credible entry, Season, standings, governance, and trust behavior while keeping durable ratings and staffed operations out of scope. | ✓ Implemented in v1.36 |
+| Derive counted eligibility from provider evidence | Account ownership, immutability, supported lane, current proof, provenance, runtime availability, and package policy must agree before counted entry. | ✓ Implemented in v1.36 |
+| Recompute standings from canonical evidence and governance state | Disputes and invalidations must change standings predictably without mutating deterministic Match rules or leaking private audit data. | ✓ Implemented in v1.36 |
 | Seed starter Strategies as forkable templates | Players should begin with readable, credible doctrines they choose to fork, not opaque auto-submissions. | ✓ Good |
 | Treat containerized subprocess as the production-candidate runtime path | It preserves the JS/TS Strategy API while adding a clearer process and container boundary than worker threads. | ✓ Revisit before real hostile public scale |
 | Interleave selected Soldiers by Cycle, not full Activation | The intended game is simultaneous-feeling tactical pressure where selected Soldiers respond between Cycles instead of one Soldier consuming its whole Cycle budget before the next slot acts. | ✓ Implemented in v1.4 |
@@ -736,12 +834,15 @@ Planning archives live under `.planning/milestones/`:
 | Promote four supported Strategy languages through one shared model, not one-off labels | v1.32 intentionally reopened execution/runtime/language eligibility contracts, but changes had to be explicit, versioned or migrated as needed, tested, audited, and kept behind the runtime-service / Runtime Broker boundary. | ✓ Implemented in v1.32 |
 | Treat source-language artifacts as provenance evidence, not automatic sandbox proof | v1.33 made TypeScript and Python provider proofs bind source and artifact hashes/bytes while clearly distinguishing artifact provenance from WASM isolation or production sandbox certification. | ✓ Implemented in v1.33 |
 | Keep TinyGo spike-only until separately approved | v1.33 proved minimal TinyGo WASI execution but deferred production support because the artifact imports forbidden WASI capabilities. | ✓ Implemented in v1.33 |
+| Use Workshop checker parity to improve feedback, not runtime ownership | v1.34 should make Validate source as useful as submit/save/entry for TypeScript, Python, Rust, and Zig while keeping hostile Strategy handling behind runtime-service / Runtime Broker / provider boundaries and avoiding new sandbox claims. | ✓ Implemented in v1.34 |
+| Treat account provider proof, sandbox-readiness claims, and package policy as one honesty cleanup | v1.35 should close or explicitly reframe lingering account-owned revision, provider-proof, sandbox-claim, and dependency-policy edges without moving Strategy execution into web/API/Go or making unsupported isolation claims. | Active in v1.35 |
+| Lock the v1.35 boundary inventory before behavior changes | Phase 243 makes the route/surface inventory, decision register, and drift monitors authoritative inputs for account/provider-proof, auth/privacy, sandbox-label, and package-policy phases. | ✓ Implemented in Phase 243 |
 
 ## Constraints
 
 The active constraints remain: deterministic engine behavior, engine purity, Strategy Revision immutability, hostile Strategy treatment, runtime isolation, memory/source/output limits, package boundaries, replay privacy, Chronicle compatibility, competitive integrity, Go-owned normal backend behavior, no silent TypeScript backend fallback, and representative page-load smoke for major page types.
 
-Future provider proof, artifact metadata, validation/build, docs/UI evidence copy, and spike tooling changes must be intentional, justified, versioned or migrated appropriately, tested, and audited. Strategy execution must remain behind runtime-service / Runtime Broker / language provider boundaries, source-language artifacts must fail closed if stale/missing/mismatched/unverifiable, TinyGo must remain spike-only unless explicitly approved for production, and public output must not expose Strategy source, StrategyMemory, SoldierMemory, objective payloads, raw diagnostics, host paths, env values, tokens, DB details, package paths, private runtime internals, quarantine details, operator action details, or recovery payloads.
+Future provider proof, artifact metadata, validation/build, Workshop checker behavior, docs/UI evidence copy, and spike tooling changes must be intentional, justified, versioned or migrated appropriately, tested, and audited. Strategy execution must remain behind runtime-service / Runtime Broker / language provider boundaries, source-language artifacts must fail closed if stale/missing/mismatched/unverifiable, TinyGo must remain spike-only unless explicitly approved for production, and public output must not expose Strategy source, StrategyMemory, SoldierMemory, objective payloads, raw diagnostics, artifact bytes, host paths, env values, tokens, DB details, package paths, private runtime internals, quarantine details, operator action details, or recovery payloads.
 
 Future competition work must preserve exhibition self-play, avoid durable rating promises until governance and abuse data support them, keep all counted standings backed by replay/provenance evidence, and keep public player/Strategy/analytics surfaces free of Strategy source, StrategyMemory, SoldierMemory, objective payloads, owner debug, raw Awareness Grid, stack traces, and private runtime internals by default. v1.5 created local example MatchSets and a completed example tournament for demonstration, and v1.6 created saved gauntlet analytics for study; neither establishes official public tournament operations or durable ratings.
 
@@ -758,4 +859,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-01 after shipping v1.33 milestone*
+*Last updated: 2026-07-12 after shipping milestone v1.36 Competition Maturity*

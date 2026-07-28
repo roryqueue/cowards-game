@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"net/http"
 	"os"
 	"strconv"
@@ -18,15 +19,26 @@ import (
 	"unicode/utf8"
 )
 
-const runtimeExecutionServiceVersion = "runtime-execution-service-v1.15"
+const runtimeExecutionServiceVersion = "runtime-execution-service-v1.16"
 const strategyRuntimeABIVersion = "strategy-runtime-abi-v1.14"
 const defaultRuntimeServiceResponseBytes = 8 * 1024 * 1024
 const defaultRuntimeServiceHTTPTimeout = 90 * time.Second
+const runtimeServicePrivateArtifactTokenHeader = "x-cowards-private-artifact-token"
+const runtimeSemanticReceiptSchemaVersion = "runtime-semantic-receipt-v1"
+const runtimeSemanticReceiptProfile = "current-exact"
+const runtimeSemanticReceiptAlgorithm = "hmac-sha256"
+const runtimeSemanticReceiptKeyID = "runtime-service-semantic-receipt:v1"
+const runtimeSemanticReceiptDomain = "cowards-game:runtime-semantic-receipt:v1"
+const runtimeSemanticChronicleWireDomain = "cowards-game:runtime-semantic-chronicle-json-wire:v1"
+const runtimeSemanticFinalStateWireDomain = "cowards-game:runtime-semantic-final-state-json-wire:v1"
+const runtimeSemanticOutcomeWireDomain = "cowards-game:runtime-semantic-outcome-json-wire:v1"
 
 type runtimeServiceClient struct {
-	endpoint         string
-	httpClient       *http.Client
-	maxResponseBytes int64
+	endpoint              string
+	httpClient            *http.Client
+	maxResponseBytes      int64
+	privateArtifactToken  string
+	semanticReceiptSecret string
 }
 
 type runtimeServiceMatch struct {
@@ -48,6 +60,7 @@ type runtimeServiceStrategyRevision struct {
 	EngineCompatibility map[string]any `json:"engineCompatibility"`
 	Validation          map[string]any `json:"validation"`
 	Metadata            map[string]any `json:"metadata,omitempty"`
+	LockedAt            *time.Time     `json:"-"`
 }
 
 type runtimeServiceRequest struct {
@@ -59,18 +72,135 @@ type runtimeServiceRequest struct {
 		Bottom runtimeServiceStrategyRevision `json:"bottom"`
 		Top    runtimeServiceStrategyRevision `json:"top"`
 	} `json:"strategies"`
-	Limits map[string]any `json:"limits"`
+	Limits           map[string]any                 `json:"limits"`
+	EvidenceSnapshot runtimeServiceEvidenceSnapshot `json:"evidenceSnapshot"`
+}
+
+type runtimeServiceCompatibilityReference struct {
+	TupleID string                      `json:"tupleId"`
+	Tuple   canonicalCompatibilityTuple `json:"tuple"`
+}
+
+type runtimeServicePublicationReference struct {
+	PublicationID      string `json:"publicationId"`
+	InstallReceiptID   string `json:"installReceiptId"`
+	PayloadSHA256      string `json:"payloadSha256"`
+	EnvelopeSHA256     string `json:"envelopeSha256"`
+	SourceManifestHash string `json:"sourceManifestHash"`
+}
+
+type runtimeServiceSchedulingDecisionReference struct {
+	Status             executableLaneEvidenceStatus `json:"status"`
+	ReasonCode         string                       `json:"reasonCode"`
+	EvaluatedAt        string                       `json:"evaluatedAt"`
+	FreshUntil         string                       `json:"freshUntil"`
+	RegistryGeneration string                       `json:"registryGeneration"`
+}
+
+type runtimeServiceEntrantAuthorityReference struct {
+	EntrantKey                 string                                    `json:"entrantKey"`
+	StrategyRevisionID         string                                    `json:"strategyRevisionId"`
+	LaneIdentityHash           string                                    `json:"laneIdentityHash"`
+	EffectiveStatus            executableLaneEvidenceStatus              `json:"effectiveStatus"`
+	SchedulingDecisionID       string                                    `json:"schedulingDecisionId"`
+	SchedulingDecisionHash     string                                    `json:"schedulingDecisionHash"`
+	SchedulingDecision         runtimeServiceSchedulingDecisionReference `json:"schedulingDecision"`
+	ContainmentCertificateID   string                                    `json:"containmentCertificateId"`
+	ContainmentCertificateHash string                                    `json:"containmentCertificateHash"`
+	ConformanceCertificateID   string                                    `json:"conformanceCertificateId,omitempty"`
+	ConformanceCertificateHash string                                    `json:"conformanceCertificateHash,omitempty"`
+}
+
+type runtimeServiceEvidenceSnapshot struct {
+	Compatibility       runtimeServiceCompatibilityReference `json:"compatibility"`
+	AuthorityBundleHash string                               `json:"authorityBundleHash"`
+	RegistryGeneration  string                               `json:"registryGeneration"`
+	Publication         runtimeServicePublicationReference   `json:"publication"`
+	Entrants            struct {
+		Bottom runtimeServiceEntrantAuthorityReference `json:"bottom"`
+		Top    runtimeServiceEntrantAuthorityReference `json:"top"`
+	} `json:"entrants"`
+}
+
+type runtimeSemanticReceipt struct {
+	SchemaVersion                  string `json:"schemaVersion"`
+	Profile                        string `json:"profile"`
+	ServiceContractVersion         string `json:"serviceContractVersion"`
+	RequestID                      string `json:"requestId"`
+	MatchID                        string `json:"matchId"`
+	CompatibilityTupleID           string `json:"compatibilityTupleId"`
+	RulesVersion                   string `json:"rulesVersion"`
+	EngineVersion                  string `json:"engineVersion"`
+	RuntimeABIVersion              string `json:"runtimeAbiVersion"`
+	ChronicleVersion               string `json:"chronicleVersion"`
+	ArenaCatalogVersion            string `json:"arenaCatalogVersion"`
+	SetPolicyVersion               string `json:"setPolicyVersion"`
+	AuthorityBundleHash            string `json:"authorityBundleHash"`
+	RegistryGeneration             string `json:"registryGeneration"`
+	ChronicleWireBytesHash         string `json:"chronicleWireBytesHash"`
+	FinalStateWireBytesHash        string `json:"finalStateWireBytesHash"`
+	ReconstructedTerminalStateHash string `json:"reconstructedTerminalStateHash"`
+	OutcomeWireBytesHash           string `json:"outcomeWireBytesHash"`
+	RuntimeViolationEventCount     int    `json:"runtimeViolationEventCount"`
+	Algorithm                      string `json:"algorithm"`
+	KeyID                          string `json:"keyId"`
+	Signature                      string `json:"signature"`
+}
+
+type runtimeServiceSuccessResult struct {
+	Privacy                    string                      `json:"privacy"`
+	ChronicleWire              json.RawMessage             `json:"chronicle"`
+	FinalStateWire             json.RawMessage             `json:"finalState"`
+	RuntimeViolationEventCount int                         `json:"runtimeViolationEventCount"`
+	SemanticReceipt            runtimeSemanticReceipt      `json:"semanticReceipt"`
+	Chronicle                  map[string]any              `json:"-"`
+	FinalState                 map[string]any              `json:"-"`
+	SemanticWireEvidence       runtimeSemanticWireEvidence `json:"-"`
+}
+
+func (result runtimeServiceSuccessResult) MarshalJSON() ([]byte, error) {
+	chronicle := result.ChronicleWire
+	if len(chronicle) == 0 && result.Chronicle != nil {
+		var err error
+		chronicle, err = json.Marshal(result.Chronicle)
+		if err != nil {
+			return nil, err
+		}
+	}
+	finalState := result.FinalStateWire
+	if len(finalState) == 0 && result.FinalState != nil {
+		var err error
+		finalState, err = json.Marshal(result.FinalState)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return json.Marshal(struct {
+		Privacy                    string                 `json:"privacy"`
+		Chronicle                  json.RawMessage        `json:"chronicle"`
+		FinalState                 json.RawMessage        `json:"finalState"`
+		RuntimeViolationEventCount int                    `json:"runtimeViolationEventCount"`
+		SemanticReceipt            runtimeSemanticReceipt `json:"semanticReceipt"`
+	}{
+		Privacy: result.Privacy, Chronicle: chronicle, FinalState: finalState,
+		RuntimeViolationEventCount: result.RuntimeViolationEventCount, SemanticReceipt: result.SemanticReceipt,
+	})
 }
 
 type runtimeServiceResponse struct {
-	ContractVersion   string                 `json:"contractVersion"`
-	OK                bool                   `json:"ok"`
-	Kind              string                 `json:"kind"`
-	RequestID         string                 `json:"requestId"`
-	MatchID           string                 `json:"matchId,omitempty"`
-	RuntimeABIVersion string                 `json:"runtimeAbiVersion"`
-	Result            map[string]any         `json:"result,omitempty"`
-	SystemFailure     *runtimeServiceFailure `json:"systemFailure,omitempty"`
+	ContractVersion   string                                `json:"contractVersion"`
+	OK                bool                                  `json:"ok"`
+	Kind              string                                `json:"kind"`
+	Profile           string                                `json:"profile,omitempty"`
+	Counted           bool                                  `json:"counted,omitempty"`
+	Publishable       bool                                  `json:"publishable,omitempty"`
+	Privacy           string                                `json:"privacy,omitempty"`
+	RequestID         string                                `json:"requestId"`
+	MatchID           string                                `json:"matchId,omitempty"`
+	RuntimeABIVersion string                                `json:"runtimeAbiVersion"`
+	Compatibility     *runtimeServiceCompatibilityReference `json:"compatibility,omitempty"`
+	Result            *runtimeServiceSuccessResult          `json:"result,omitempty"`
+	SystemFailure     *runtimeServiceFailure                `json:"systemFailure,omitempty"`
 }
 
 type runtimeServiceValidationResponse struct {
@@ -87,12 +217,15 @@ type runtimeServiceValidationResponse struct {
 }
 
 type runtimeServiceFailure struct {
-	Code          string         `json:"code"`
-	ErrorClass    string         `json:"-"`
-	ErrorMessage  string         `json:"message"`
-	PublicMessage string         `json:"publicMessage,omitempty"`
-	Retryable     bool           `json:"retryable"`
-	Details       map[string]any `json:"diagnostics,omitempty"`
+	Classification string         `json:"classification,omitempty"`
+	Ownership      string         `json:"ownership,omitempty"`
+	Code           string         `json:"code"`
+	ErrorClass     string         `json:"-"`
+	ErrorMessage   string         `json:"message"`
+	PublicMessage  string         `json:"publicMessage,omitempty"`
+	Retryable      bool           `json:"retryable"`
+	PlayerPenalty  bool           `json:"playerPenalty,omitempty"`
+	Details        map[string]any `json:"diagnostics,omitempty"`
 }
 
 func newRuntimeServiceClient(endpoint string) *runtimeServiceClient {
@@ -101,7 +234,9 @@ func newRuntimeServiceClient(endpoint string) *runtimeServiceClient {
 		httpClient: &http.Client{
 			Timeout: runtimeServiceHTTPTimeout(),
 		},
-		maxResponseBytes: defaultRuntimeServiceResponseBytes,
+		maxResponseBytes:      defaultRuntimeServiceResponseBytes,
+		privateArtifactToken:  runtimeServicePrivateArtifactToken(),
+		semanticReceiptSecret: runtimeServiceSemanticReceiptSecret(),
 	}
 }
 
@@ -115,6 +250,14 @@ func runtimeServiceHTTPTimeout() time.Duration {
 		return defaultRuntimeServiceHTTPTimeout
 	}
 	return time.Duration(timeoutMs) * time.Millisecond
+}
+
+func runtimeServicePrivateArtifactToken() string {
+	return strings.TrimSpace(os.Getenv("COWARDS_RUNTIME_SERVICE_PRIVATE_ARTIFACT_TOKEN"))
+}
+
+func runtimeServiceSemanticReceiptSecret() string {
+	return strings.TrimSpace(os.Getenv("COWARDS_RUNTIME_SERVICE_SEMANTIC_RECEIPT_SECRET"))
 }
 
 func (client *runtimeServiceClient) executeMatch(ctx context.Context, request runtimeServiceRequest) (*runtimeServiceResponse, *runtimeServiceFailure) {
@@ -159,33 +302,32 @@ func (client *runtimeServiceClient) executeMatch(ctx context.Context, request ru
 		return nil, newRuntimeServiceFailure("RuntimeServiceOversizedResponse", "Runtime service response exceeded the configured byte limit", true, map[string]any{"status": response.StatusCode, "capBytes": maxBytes})
 	}
 
-	var decoded runtimeServiceResponse
-	decoder := json.NewDecoder(bytes.NewReader(payload))
-	decoder.DisallowUnknownFields()
-	if err := decoder.Decode(&decoded); err != nil {
-		return nil, newRuntimeServiceFailure("RuntimeServiceMalformedResponse", "Runtime service response did not match the execution contract", true, map[string]any{"actualBytes": len(payload)})
-	}
-	if failure := validateRuntimeServiceResponse(request, &decoded); failure != nil {
+	decoded, failure := decodeRuntimeServiceResponseBytesWithSecret(request, payload, client.semanticReceiptSecret)
+	if failure != nil {
 		return nil, failure
+	}
+	if decoded == nil {
+		return nil, newRuntimeServiceFailure("RuntimeServiceMalformedResponse", "Runtime service response did not match the execution contract", true, nil)
 	}
 	if decoded.SystemFailure != nil {
 		failure := sanitizeRuntimeServiceFailure(*decoded.SystemFailure)
-		return &decoded, &failure
+		return decoded, &failure
 	}
-	return &decoded, nil
+	return decoded, nil
 }
 
 func (client *runtimeServiceClient) validateStrategy(ctx context.Context, sourceFormat string, source string, strategyID string) (*runtimeServiceValidationResponse, *runtimeServiceFailure) {
-	if sourceFormat != "python" && sourceFormat != "rust" && sourceFormat != "zig" {
-		return nil, newRuntimeServiceFailure("RuntimeServiceContractMismatch", "Runtime service validation only supports Python, Rust, and Zig provider sources in v1.32", false, nil)
+	if sourceFormat != "typescript" && sourceFormat != "python" && sourceFormat != "rust" && sourceFormat != "zig" {
+		return nil, newRuntimeServiceFailure("RuntimeServiceContractMismatch", "Runtime service validation only supports TypeScript, Python, Rust, and Zig provider sources", false, nil)
 	}
 	endpoint := client.endpoint
 	if endpoint == "" {
 		return nil, newRuntimeServiceFailure("RuntimeServiceStopped", "Runtime execution service endpoint is not configured", true, nil)
 	}
 	requestBody := map[string]any{
-		"sourceFormat": sourceFormat,
-		"source":       source,
+		"sourceFormat":           sourceFormat,
+		"source":                 source,
+		"includePrivateArtifact": true,
 	}
 	if strings.TrimSpace(strategyID) != "" {
 		requestBody["strategyId"] = strategyID
@@ -203,6 +345,9 @@ func (client *runtimeServiceClient) validateStrategy(ctx context.Context, source
 		return nil, newRuntimeServiceFailure("RuntimeServiceRequestCreate", "Runtime service validation request could not be created", false, nil)
 	}
 	httpRequest.Header.Set("content-type", "application/json")
+	if token := strings.TrimSpace(client.privateArtifactToken); token != "" {
+		httpRequest.Header.Set(runtimeServicePrivateArtifactTokenHeader, token)
+	}
 	response, err := httpClient.Do(httpRequest)
 	if err != nil {
 		return nil, newRuntimeServiceFailure("RuntimeServiceTransport", "Runtime execution service is unavailable", true, nil)
@@ -218,6 +363,9 @@ func (client *runtimeServiceClient) validateStrategy(ctx context.Context, source
 	}
 	if int64(len(payload)) > maxBytes {
 		return nil, newRuntimeServiceFailure("RuntimeServiceOversizedResponse", "Runtime service validation response exceeded the configured byte limit", true, map[string]any{"status": response.StatusCode, "capBytes": maxBytes})
+	}
+	if response.StatusCode == http.StatusForbidden {
+		return nil, newRuntimeServiceFailure("RuntimeServicePrivateArtifactUnauthorized", "Runtime service private artifact validation is not authorized", false, map[string]any{"status": response.StatusCode})
 	}
 	var decoded runtimeServiceValidationResponse
 	if err := json.NewDecoder(bytes.NewReader(payload)).Decode(&decoded); err != nil {
@@ -260,6 +408,9 @@ func validateRuntimeServiceRequest(request runtimeServiceRequest) *runtimeServic
 	if !hasRuntimeServiceLimits(request.Limits) {
 		return newRuntimeServiceFailure("RuntimeServiceContractMismatch", "Runtime service request limits are incomplete", false, nil)
 	}
+	if failure := validateRuntimeServiceEvidenceSnapshot(request); failure != nil {
+		return failure
+	}
 	if failure := validateRuntimeServiceStrategy("bottom", request.Strategies.Bottom); failure != nil {
 		return failure
 	}
@@ -267,6 +418,58 @@ func validateRuntimeServiceRequest(request runtimeServiceRequest) *runtimeServic
 		return failure
 	}
 	return nil
+}
+
+func validateRuntimeServiceEvidenceSnapshot(request runtimeServiceRequest) *runtimeServiceFailure {
+	snapshot := request.EvidenceSnapshot
+	tuple := snapshot.Compatibility.Tuple
+	if !isPrefixedLowerSHA256(snapshot.Compatibility.TupleID) || tuple.Rules == "" || tuple.Engine == "" || tuple.RuntimeABI == "" || tuple.Chronicle == "" || tuple.ArenaCatalog == "" || tuple.SetPolicy == "" ||
+		!isPrefixedLowerSHA256(snapshot.AuthorityBundleHash) ||
+		!validCanonicalGeneration(snapshot.RegistryGeneration) || snapshot.Publication.PublicationID == "" ||
+		snapshot.Publication.InstallReceiptID == "" || snapshot.Publication.PayloadSHA256 != snapshot.AuthorityBundleHash ||
+		!isPrefixedLowerSHA256(snapshot.Publication.EnvelopeSHA256) || !isPrefixedLowerSHA256(snapshot.Publication.SourceManifestHash) {
+		return newRuntimeServiceFailure("RuntimeServiceContractMismatch", "Runtime service request integrity identity is incomplete", false, nil)
+	}
+	for side, entrant := range map[string]runtimeServiceEntrantAuthorityReference{"bottom": snapshot.Entrants.Bottom, "top": snapshot.Entrants.Top} {
+		expectedRevision := request.Match.BottomStrategyRevisionID
+		if side == "top" {
+			expectedRevision = request.Match.TopStrategyRevisionID
+		}
+		if entrant.EntrantKey == "" || entrant.StrategyRevisionID != expectedRevision || !isPrefixedLowerSHA256(entrant.LaneIdentityHash) ||
+			entrant.EffectiveStatus == executableLaneEvidenceDisabled || entrant.SchedulingDecisionID == "" ||
+			!isPrefixedLowerSHA256(entrant.SchedulingDecisionHash) || entrant.ContainmentCertificateID == "" ||
+			!isPrefixedLowerSHA256(entrant.ContainmentCertificateHash) || entrant.SchedulingDecision.Status != entrant.EffectiveStatus ||
+			entrant.SchedulingDecision.RegistryGeneration != snapshot.RegistryGeneration {
+			return newRuntimeServiceFailure("RuntimeServiceContractMismatch", "Runtime service request entrant integrity is incomplete", false, map[string]any{"side": side})
+		}
+		if _, err := parseCanonicalInstant(entrant.SchedulingDecision.EvaluatedAt); err != nil {
+			return newRuntimeServiceFailure("RuntimeServiceContractMismatch", "Runtime service request decision instant is invalid", false, map[string]any{"side": side})
+		}
+		if _, err := parseCanonicalInstant(entrant.SchedulingDecision.FreshUntil); err != nil {
+			return newRuntimeServiceFailure("RuntimeServiceContractMismatch", "Runtime service request decision freshness is invalid", false, map[string]any{"side": side})
+		}
+		if entrant.EffectiveStatus == executableLaneEvidenceCounted && (entrant.ConformanceCertificateID == "" || !isPrefixedLowerSHA256(entrant.ConformanceCertificateHash)) {
+			return newRuntimeServiceFailure("RuntimeServiceContractMismatch", "Runtime service counted request lacks conformance reference", false, map[string]any{"side": side})
+		}
+		if hashRuntimeServiceSchedulingDecision(snapshot, entrant) != entrant.SchedulingDecisionHash {
+			return newRuntimeServiceFailure("RuntimeServiceContractMismatch", "Runtime service request decision reference is invalid", false, map[string]any{"side": side})
+		}
+	}
+	if snapshot.Entrants.Bottom.EntrantKey == snapshot.Entrants.Top.EntrantKey {
+		return newRuntimeServiceFailure("RuntimeServiceContractMismatch", "Runtime service request entrant keys must differ", false, nil)
+	}
+	return nil
+}
+
+func hashRuntimeServiceSchedulingDecision(snapshot runtimeServiceEvidenceSnapshot, entrant runtimeServiceEntrantAuthorityReference) string {
+	values := []string{snapshot.Compatibility.TupleID, snapshot.AuthorityBundleHash, snapshot.RegistryGeneration,
+		snapshot.Publication.PublicationID, snapshot.Publication.InstallReceiptID, snapshot.Publication.PayloadSHA256,
+		snapshot.Publication.EnvelopeSHA256, snapshot.Publication.SourceManifestHash,
+		entrant.EntrantKey, entrant.StrategyRevisionID, entrant.LaneIdentityHash, string(entrant.EffectiveStatus),
+		entrant.SchedulingDecisionID, entrant.SchedulingDecision.ReasonCode, entrant.SchedulingDecision.EvaluatedAt,
+		entrant.SchedulingDecision.FreshUntil, entrant.SchedulingDecision.RegistryGeneration,
+		entrant.ContainmentCertificateID, entrant.ContainmentCertificateHash, entrant.ConformanceCertificateID, entrant.ConformanceCertificateHash}
+	return "sha256:" + framedCreationHash("cowards-game:runtime-authority-decision-reference:v1", values)
 }
 
 func validateRuntimeServiceStrategy(side string, revision runtimeServiceStrategyRevision) *runtimeServiceFailure {
@@ -368,6 +571,11 @@ func runtimeBrokerMetadataIsRegistered(runtime map[string]any) bool {
 }
 
 func validateRuntimeServiceResponse(request runtimeServiceRequest, response *runtimeServiceResponse) *runtimeServiceFailure {
+	if response != nil && response.Profile != "" {
+		return semanticIntegrityFailure(createSemanticIntegrityResult([]semanticIntegrityIssue{
+			semanticIssue("TUPLE_SHAPE_INVALID", []any{"response"}, nil),
+		}))
+	}
 	if response.ContractVersion != runtimeExecutionServiceVersion || response.RequestID != request.RequestID || response.RuntimeABIVersion != strategyRuntimeABIVersion {
 		return newRuntimeServiceFailure("RuntimeServiceContractMismatch", "Runtime service response contract is not supported", true, nil)
 	}
@@ -431,17 +639,7 @@ func sanitizeRuntimeServiceFailureCode(code string) string {
 }
 
 func isRuntimeServiceContractFailureCode(code string) bool {
-	switch code {
-	case "MALFORMED_REQUEST",
-		"SOURCE_HASH_MISMATCH",
-		"SOURCE_BYTES_MISMATCH",
-		"UNSUPPORTED_RUNTIME_ADAPTER",
-		"EXECUTION_EXCEPTION",
-		"RESPONSE_SCHEMA_INVALID":
-		return true
-	default:
-		return false
-	}
+	return runtimeServiceContractFailureCodeKnown(code)
 }
 
 func sanitizeRuntimeServiceDetails(details map[string]any) map[string]any {
@@ -553,6 +751,12 @@ func runtimeServiceIntValue(value map[string]any, key string) int {
 		return int(typed)
 	case float64:
 		return int(typed)
+	case json.Number:
+		parsed, err := strconv.ParseInt(string(typed), 10, 64)
+		if err == nil && parsed >= math.MinInt && parsed <= math.MaxInt {
+			return int(parsed)
+		}
+		return 0
 	default:
 		return 0
 	}

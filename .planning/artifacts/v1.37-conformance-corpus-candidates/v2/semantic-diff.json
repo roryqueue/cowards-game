@@ -1,0 +1,33 @@
+{
+  "schemaVersion": "v1.37-executable-conformance-semantic-diff-v1",
+  "generatedBy": "scripts/generate-v1-37-conformance-corpus.ts",
+  "baseline": {
+    "version": "v1",
+    "corpusRootSha256": "sha256:4e13f5e14961c7b7efd6869c6e456c9f8cfeb1cdd2afd9ec17a93812ccbe76a9",
+    "path": "packages/golden/src/fixtures/v1-37-conformance-corpus/v1/corpus.json"
+  },
+  "candidate": {
+    "version": "v2",
+    "corpusRootSha256": "sha256:238347225defaaabcf9e57141ac7a54b4b277bd149bebe2b21903febc9ce7ac2",
+    "path": "v2/corpus.json"
+  },
+  "changedPaths": [
+    "corpusRootSha256",
+    "fixtures.rust.source",
+    "fixtures.rust.sourceSha256",
+    "fixtures.zig.source",
+    "fixtures.zig.sourceSha256",
+    "version"
+  ],
+  "fixtureChanges": [
+    "fixtures.rust.source",
+    "fixtures.rust.sourceSha256",
+    "fixtures.zig.source",
+    "fixtures.zig.sourceSha256"
+  ],
+  "sourceChanges": [
+    "rust",
+    "zig"
+  ],
+  "caseChanges": []
+}

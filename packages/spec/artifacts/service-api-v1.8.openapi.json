@@ -92,99 +92,442 @@
                       "type": "string"
                     },
                     "runtime": {
-                      "additionalProperties": false,
-                      "properties": {
-                        "abiVersion": {
-                          "const": "strategy-runtime-abi-v1.14",
-                          "type": "string"
-                        },
-                        "adapter": {
+                      "anyOf": [
+                        {
                           "additionalProperties": false,
                           "properties": {
-                            "id": {
-                              "enum": [
-                                "runtime-js-worker-thread",
-                                "runtime-js-subprocess",
-                                "runtime-js-container-subprocess",
-                                "runtime-python-subprocess-experimental",
-                                "runtime-wasm-wasi-wasmtime-preview1"
-                              ],
+                            "abiVersion": {
+                              "const": "strategy-runtime-abi-v1.19",
                               "type": "string"
                             },
-                            "version": {
-                              "minLength": 1,
-                              "type": "string"
-                            }
-                          },
-                          "required": [
-                            "id",
-                            "version"
-                          ],
-                          "type": "object"
-                        },
-                        "language": {
-                          "additionalProperties": false,
-                          "properties": {
-                            "id": {
-                              "enum": [
-                                "javascript",
-                                "typescript",
-                                "python",
-                                "rust",
-                                "zig"
+                            "adapter": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "id": {
+                                  "enum": [
+                                    "runtime-js-worker-thread",
+                                    "runtime-js-subprocess",
+                                    "runtime-js-container-subprocess",
+                                    "runtime-python-subprocess-experimental",
+                                    "runtime-wasm-wasi-wasmtime-preview1"
+                                  ],
+                                  "type": "string"
+                                },
+                                "version": {
+                                  "minLength": 1,
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "version"
                               ],
-                              "type": "string"
-                            },
-                            "version": {
-                              "minLength": 1,
-                              "type": "string"
-                            }
-                          },
-                          "required": [
-                            "id",
-                            "version"
-                          ],
-                          "type": "object"
-                        },
-                        "package": {
-                          "additionalProperties": false,
-                          "properties": {
-                            "declaredDependencies": {
-                              "additionalProperties": {
-                                "type": "string"
-                              },
-                              "propertyNames": {
-                                "type": "string"
-                              },
                               "type": "object"
                             },
-                            "entrypoint": {
-                              "minLength": 1,
-                              "type": "string"
-                            },
-                            "lockfileHash": {
-                              "minLength": 1,
-                              "type": "string"
-                            },
-                            "manifestHash": {
-                              "minLength": 1,
-                              "type": "string"
-                            },
-                            "mode": {
-                              "enum": [
-                                "none",
-                                "declared"
+                            "language": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "id": {
+                                  "enum": [
+                                    "javascript",
+                                    "typescript",
+                                    "python",
+                                    "rust",
+                                    "zig"
+                                  ],
+                                  "type": "string"
+                                },
+                                "version": {
+                                  "minLength": 1,
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "version"
                               ],
-                              "type": "string"
+                              "type": "object"
+                            },
+                            "package": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "declaredDependencies": {
+                                  "additionalProperties": {
+                                    "type": "string"
+                                  },
+                                  "propertyNames": {
+                                    "type": "string"
+                                  },
+                                  "type": "object"
+                                },
+                                "entrypoint": {
+                                  "minLength": 1,
+                                  "type": "string"
+                                },
+                                "lockfileHash": {
+                                  "minLength": 1,
+                                  "type": "string"
+                                },
+                                "manifestHash": {
+                                  "minLength": 1,
+                                  "type": "string"
+                                },
+                                "mode": {
+                                  "enum": [
+                                    "none",
+                                    "declared"
+                                  ],
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "mode",
+                                "entrypoint"
+                              ],
+                              "type": "object"
+                            },
+                            "requiredCapabilities": {
+                              "items": {
+                                "minLength": 1,
+                                "type": "string"
+                              },
+                              "type": "array"
                             }
                           },
                           "required": [
-                            "mode",
-                            "entrypoint"
+                            "language",
+                            "adapter",
+                            "package",
+                            "requiredCapabilities",
+                            "abiVersion"
                           ],
                           "type": "object"
                         },
-                        "requiredCapabilities": {
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "abiVersion": {
+                              "const": "strategy-runtime-abi-v1.17",
+                              "type": "string"
+                            },
+                            "adapter": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "id": {
+                                  "enum": [
+                                    "runtime-js-worker-thread",
+                                    "runtime-js-subprocess",
+                                    "runtime-js-container-subprocess",
+                                    "runtime-python-subprocess-experimental",
+                                    "runtime-wasm-wasi-wasmtime-preview1"
+                                  ],
+                                  "type": "string"
+                                },
+                                "version": {
+                                  "minLength": 1,
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "version"
+                              ],
+                              "type": "object"
+                            },
+                            "language": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "id": {
+                                  "enum": [
+                                    "javascript",
+                                    "typescript",
+                                    "python",
+                                    "rust",
+                                    "zig"
+                                  ],
+                                  "type": "string"
+                                },
+                                "version": {
+                                  "minLength": 1,
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "version"
+                              ],
+                              "type": "object"
+                            },
+                            "package": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "declaredDependencies": {
+                                  "additionalProperties": {
+                                    "type": "string"
+                                  },
+                                  "propertyNames": {
+                                    "type": "string"
+                                  },
+                                  "type": "object"
+                                },
+                                "entrypoint": {
+                                  "minLength": 1,
+                                  "type": "string"
+                                },
+                                "lockfileHash": {
+                                  "minLength": 1,
+                                  "type": "string"
+                                },
+                                "manifestHash": {
+                                  "minLength": 1,
+                                  "type": "string"
+                                },
+                                "mode": {
+                                  "enum": [
+                                    "none",
+                                    "declared"
+                                  ],
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "mode",
+                                "entrypoint"
+                              ],
+                              "type": "object"
+                            },
+                            "requiredCapabilities": {
+                              "items": {
+                                "minLength": 1,
+                                "type": "string"
+                              },
+                              "type": "array"
+                            }
+                          },
+                          "required": [
+                            "language",
+                            "adapter",
+                            "package",
+                            "requiredCapabilities",
+                            "abiVersion"
+                          ],
+                          "type": "object"
+                        },
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "abiVersion": {
+                              "const": "strategy-runtime-abi-v1.14",
+                              "type": "string"
+                            },
+                            "adapter": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "id": {
+                                  "enum": [
+                                    "runtime-js-worker-thread",
+                                    "runtime-js-subprocess",
+                                    "runtime-js-container-subprocess",
+                                    "runtime-python-subprocess-experimental",
+                                    "runtime-wasm-wasi-wasmtime-preview1"
+                                  ],
+                                  "type": "string"
+                                },
+                                "version": {
+                                  "minLength": 1,
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "version"
+                              ],
+                              "type": "object"
+                            },
+                            "language": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "id": {
+                                  "enum": [
+                                    "javascript",
+                                    "typescript",
+                                    "python",
+                                    "rust",
+                                    "zig"
+                                  ],
+                                  "type": "string"
+                                },
+                                "version": {
+                                  "minLength": 1,
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "version"
+                              ],
+                              "type": "object"
+                            },
+                            "package": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "declaredDependencies": {
+                                  "additionalProperties": {
+                                    "type": "string"
+                                  },
+                                  "propertyNames": {
+                                    "type": "string"
+                                  },
+                                  "type": "object"
+                                },
+                                "entrypoint": {
+                                  "minLength": 1,
+                                  "type": "string"
+                                },
+                                "lockfileHash": {
+                                  "minLength": 1,
+                                  "type": "string"
+                                },
+                                "manifestHash": {
+                                  "minLength": 1,
+                                  "type": "string"
+                                },
+                                "mode": {
+                                  "enum": [
+                                    "none",
+                                    "declared"
+                                  ],
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "mode",
+                                "entrypoint"
+                              ],
+                              "type": "object"
+                            },
+                            "requiredCapabilities": {
+                              "items": {
+                                "minLength": 1,
+                                "type": "string"
+                              },
+                              "type": "array"
+                            }
+                          },
+                          "required": [
+                            "language",
+                            "adapter",
+                            "package",
+                            "requiredCapabilities",
+                            "abiVersion"
+                          ],
+                          "type": "object"
+                        }
+                      ]
+                    },
+                    "runtimeSemantics": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "adapterId": {
+                          "enum": [
+                            "runtime-js-worker-thread",
+                            "runtime-js-subprocess",
+                            "runtime-js-container-subprocess",
+                            "runtime-python-subprocess-experimental",
+                            "runtime-wasm-wasi-wasmtime-preview1"
+                          ],
+                          "type": "string"
+                        },
+                        "adapterLabel": {
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "countedPlayEligible": {
+                          "type": "boolean"
+                        },
+                        "countedPlayLabel": {
+                          "enum": [
+                            "Counted eligible",
+                            "Not counted"
+                          ],
+                          "type": "string"
+                        },
+                        "countedPlayReason": {
+                          "anyOf": [
+                            {
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "docsReference": {
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "examplesReference": {
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "experimental": {
+                          "type": "boolean"
+                        },
+                        "languageId": {
+                          "enum": [
+                            "javascript",
+                            "typescript",
+                            "python",
+                            "rust",
+                            "zig"
+                          ],
+                          "type": "string"
+                        },
+                        "languageLabel": {
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "packagePolicyLabel": {
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "readiness": {
+                          "enum": [
+                            "production-candidate",
+                            "prototype",
+                            "local-dev-fallback",
+                            "experimental",
+                            "unknown"
+                          ],
+                          "type": "string"
+                        },
+                        "readinessLabel": {
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "sourcePolicyLabel": {
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "validationIssueCodes": {
+                          "items": {
+                            "enum": [
+                              "UNSUPPORTED_LANGUAGE",
+                              "UNSUPPORTED_PACKAGE_METADATA",
+                              "INCOMPATIBLE_ADAPTER",
+                              "ABI_MISMATCH",
+                              "SOURCE_TOO_LARGE",
+                              "MEMORY_LIMIT_EXCEEDED",
+                              "TIMEOUT",
+                              "FORBIDDEN_CAPABILITY",
+                              "NON_COUNTED_RUNTIME"
+                            ],
+                            "type": "string"
+                          },
+                          "type": "array"
+                        },
+                        "warnings": {
                           "items": {
                             "minLength": 1,
                             "type": "string"
@@ -193,11 +536,22 @@
                         }
                       },
                       "required": [
-                        "abiVersion",
-                        "language",
-                        "adapter",
-                        "package",
-                        "requiredCapabilities"
+                        "languageId",
+                        "adapterId",
+                        "languageLabel",
+                        "adapterLabel",
+                        "readiness",
+                        "readinessLabel",
+                        "experimental",
+                        "countedPlayEligible",
+                        "countedPlayLabel",
+                        "countedPlayReason",
+                        "sourcePolicyLabel",
+                        "packagePolicyLabel",
+                        "docsReference",
+                        "examplesReference",
+                        "warnings",
+                        "validationIssueCodes"
                       ],
                       "type": "object"
                     },
@@ -254,6 +608,7 @@
                     "sourceHash",
                     "sourceBytes",
                     "runtime",
+                    "runtimeSemantics",
                     "engineCompatibility",
                     "lockedAt",
                     "seasonId",
@@ -266,19 +621,131 @@
                 },
                 "type": "array"
               },
+              "entryWindow": {
+                "additionalProperties": false,
+                "properties": {
+                  "closedAt": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "openedAt": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "publicLabel": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "state": {
+                    "enum": [
+                      "not_started",
+                      "open",
+                      "closed"
+                    ],
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "state",
+                  "publicLabel"
+                ],
+                "type": "object"
+              },
+              "links": {
+                "additionalProperties": false,
+                "properties": {
+                  "seasonHref": {
+                    "pattern": "^\\/ladder\\/.*",
+                    "type": "string"
+                  },
+                  "standingsHref": {
+                    "pattern": "^\\/ladder\\/.*",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "seasonHref",
+                  "standingsHref"
+                ],
+                "type": "object"
+              },
               "matchSets": {
                 "items": {
                   "additionalProperties": false,
                   "properties": {
+                    "countedState": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "evidenceAvailability": {
+                          "enum": [
+                            "available",
+                            "partial",
+                            "unavailable"
+                          ],
+                          "type": "string"
+                        },
+                        "publicExplanation": {
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "publicLabel": {
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "publicReason": {
+                          "enum": [
+                            "system_failure",
+                            "incomplete_evidence",
+                            "invalid_result",
+                            "governance_hold",
+                            "non_counted",
+                            "non_competitive",
+                            "disputed",
+                            "invalidated"
+                          ],
+                          "type": "string"
+                        },
+                        "standingsEffect": {
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "state": {
+                          "enum": [
+                            "pending",
+                            "counted",
+                            "retrying",
+                            "degraded_system_failure",
+                            "non_counted",
+                            "non_competitive",
+                            "under_review",
+                            "disputed",
+                            "invalid",
+                            "invalidated"
+                          ],
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "state",
+                        "publicLabel",
+                        "publicExplanation",
+                        "standingsEffect",
+                        "evidenceAvailability"
+                      ],
+                      "type": "object"
+                    },
                     "countedStatus": {
                       "enum": [
                         "pending",
                         "counted",
                         "retrying",
-                        "under_review",
-                        "invalid",
+                        "degraded_system_failure",
+                        "non_counted",
                         "non_competitive",
-                        "non_counted"
+                        "under_review",
+                        "disputed",
+                        "invalid",
+                        "invalidated"
                       ],
                       "type": "string"
                     },
@@ -288,6 +755,60 @@
                         "type": "string"
                       },
                       "type": "array"
+                    },
+                    "governance": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "changedAt": {
+                          "format": "date-time",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
+                          "type": "string"
+                        },
+                        "publicExplanation": {
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "publicReason": {
+                          "enum": [
+                            "system_failure",
+                            "incomplete_evidence",
+                            "invalid_result",
+                            "governance_hold",
+                            "non_counted",
+                            "non_competitive",
+                            "disputed",
+                            "invalidated"
+                          ],
+                          "type": "string"
+                        },
+                        "replayAvailable": {
+                          "type": "boolean"
+                        },
+                        "standingsEffect": {
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "status": {
+                          "enum": [
+                            "clear",
+                            "under_review",
+                            "disputed",
+                            "resolved",
+                            "non_counted",
+                            "non_competitive",
+                            "invalid",
+                            "invalidated"
+                          ],
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "status",
+                        "publicExplanation",
+                        "standingsEffect",
+                        "replayAvailable"
+                      ],
+                      "type": "object"
                     },
                     "matchSetId": {
                       "minLength": 1,
@@ -308,7 +829,10 @@
                         "incomplete_evidence",
                         "invalid_result",
                         "governance_hold",
-                        "non_counted"
+                        "non_counted",
+                        "non_competitive",
+                        "disputed",
+                        "invalidated"
                       ],
                       "type": "string"
                     },
@@ -345,6 +869,7 @@
                     "seasonId",
                     "status",
                     "countedStatus",
+                    "countedState",
                     "entrantIds",
                     "resultHref"
                   ],
@@ -359,6 +884,33 @@
               "openedAt": {
                 "minLength": 1,
                 "type": "string"
+              },
+              "outcome": {
+                "additionalProperties": false,
+                "properties": {
+                  "publicExplanation": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "publicLabel": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "status": {
+                    "enum": [
+                      "pending",
+                      "scheduled",
+                      "insufficient_evidence"
+                    ],
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "status",
+                  "publicLabel",
+                  "publicExplanation"
+                ],
+                "type": "object"
               },
               "policy": {
                 "additionalProperties": false,
@@ -440,6 +992,36 @@
                 "minLength": 1,
                 "type": "string"
               },
+              "schedulingWindow": {
+                "additionalProperties": false,
+                "properties": {
+                  "closedAt": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "openedAt": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "publicLabel": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "state": {
+                    "enum": [
+                      "not_started",
+                      "open",
+                      "closed"
+                    ],
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "state",
+                  "publicLabel"
+                ],
+                "type": "object"
+              },
               "seasonId": {
                 "minLength": 1,
                 "type": "string"
@@ -456,6 +1038,51 @@
                 "items": {
                   "additionalProperties": false,
                   "properties": {
+                    "competitionEvidence": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "countedMatchSetCount": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "evidenceAvailability": {
+                          "enum": [
+                            "available",
+                            "partial",
+                            "unavailable"
+                          ],
+                          "type": "string"
+                        },
+                        "excludedMatchSetCount": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "replayLinks": {
+                          "items": {
+                            "minLength": 1,
+                            "type": "string"
+                          },
+                          "type": "array"
+                        },
+                        "resultLinks": {
+                          "items": {
+                            "minLength": 1,
+                            "type": "string"
+                          },
+                          "type": "array"
+                        }
+                      },
+                      "required": [
+                        "countedMatchSetCount",
+                        "excludedMatchSetCount",
+                        "evidenceAvailability",
+                        "resultLinks",
+                        "replayLinks"
+                      ],
+                      "type": "object"
+                    },
                     "displayLabel": {
                       "minLength": 1,
                       "type": "string"
@@ -593,6 +1220,10 @@
               "status",
               "statusLabel",
               "seasonSeed",
+              "entryWindow",
+              "schedulingWindow",
+              "outcome",
+              "links",
               "policy",
               "entries",
               "standings",
@@ -663,6 +1294,134 @@
           "result": {
             "additionalProperties": false,
             "properties": {
+              "competition": {
+                "additionalProperties": false,
+                "properties": {
+                  "countedState": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "evidenceAvailability": {
+                        "enum": [
+                          "available",
+                          "partial",
+                          "unavailable"
+                        ],
+                        "type": "string"
+                      },
+                      "publicExplanation": {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "publicLabel": {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "publicReason": {
+                        "enum": [
+                          "system_failure",
+                          "incomplete_evidence",
+                          "invalid_result",
+                          "governance_hold",
+                          "non_counted",
+                          "non_competitive",
+                          "disputed",
+                          "invalidated"
+                        ],
+                        "type": "string"
+                      },
+                      "standingsEffect": {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "state": {
+                        "enum": [
+                          "pending",
+                          "counted",
+                          "retrying",
+                          "degraded_system_failure",
+                          "non_counted",
+                          "non_competitive",
+                          "under_review",
+                          "disputed",
+                          "invalid",
+                          "invalidated"
+                        ],
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "state",
+                      "publicLabel",
+                      "publicExplanation",
+                      "standingsEffect",
+                      "evidenceAvailability"
+                    ],
+                    "type": "object"
+                  },
+                  "governance": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "changedAt": {
+                        "format": "date-time",
+                        "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
+                        "type": "string"
+                      },
+                      "publicExplanation": {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "publicReason": {
+                        "enum": [
+                          "system_failure",
+                          "incomplete_evidence",
+                          "invalid_result",
+                          "governance_hold",
+                          "non_counted",
+                          "non_competitive",
+                          "disputed",
+                          "invalidated"
+                        ],
+                        "type": "string"
+                      },
+                      "replayAvailable": {
+                        "type": "boolean"
+                      },
+                      "standingsEffect": {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "status": {
+                        "enum": [
+                          "clear",
+                          "under_review",
+                          "disputed",
+                          "resolved",
+                          "non_counted",
+                          "non_competitive",
+                          "invalid",
+                          "invalidated"
+                        ],
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "status",
+                      "publicExplanation",
+                      "standingsEffect",
+                      "replayAvailable"
+                    ],
+                    "type": "object"
+                  },
+                  "seasonId": {
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "countedState"
+                ],
+                "type": "object"
+              },
               "entrants": {
                 "items": {
                   "additionalProperties": false,
@@ -711,99 +1470,442 @@
                       "type": "string"
                     },
                     "runtime": {
-                      "additionalProperties": false,
-                      "properties": {
-                        "abiVersion": {
-                          "const": "strategy-runtime-abi-v1.14",
-                          "type": "string"
-                        },
-                        "adapter": {
+                      "anyOf": [
+                        {
                           "additionalProperties": false,
                           "properties": {
-                            "id": {
-                              "enum": [
-                                "runtime-js-worker-thread",
-                                "runtime-js-subprocess",
-                                "runtime-js-container-subprocess",
-                                "runtime-python-subprocess-experimental",
-                                "runtime-wasm-wasi-wasmtime-preview1"
-                              ],
+                            "abiVersion": {
+                              "const": "strategy-runtime-abi-v1.19",
                               "type": "string"
                             },
-                            "version": {
-                              "minLength": 1,
-                              "type": "string"
-                            }
-                          },
-                          "required": [
-                            "id",
-                            "version"
-                          ],
-                          "type": "object"
-                        },
-                        "language": {
-                          "additionalProperties": false,
-                          "properties": {
-                            "id": {
-                              "enum": [
-                                "javascript",
-                                "typescript",
-                                "python",
-                                "rust",
-                                "zig"
+                            "adapter": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "id": {
+                                  "enum": [
+                                    "runtime-js-worker-thread",
+                                    "runtime-js-subprocess",
+                                    "runtime-js-container-subprocess",
+                                    "runtime-python-subprocess-experimental",
+                                    "runtime-wasm-wasi-wasmtime-preview1"
+                                  ],
+                                  "type": "string"
+                                },
+                                "version": {
+                                  "minLength": 1,
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "version"
                               ],
-                              "type": "string"
-                            },
-                            "version": {
-                              "minLength": 1,
-                              "type": "string"
-                            }
-                          },
-                          "required": [
-                            "id",
-                            "version"
-                          ],
-                          "type": "object"
-                        },
-                        "package": {
-                          "additionalProperties": false,
-                          "properties": {
-                            "declaredDependencies": {
-                              "additionalProperties": {
-                                "type": "string"
-                              },
-                              "propertyNames": {
-                                "type": "string"
-                              },
                               "type": "object"
                             },
-                            "entrypoint": {
-                              "minLength": 1,
-                              "type": "string"
-                            },
-                            "lockfileHash": {
-                              "minLength": 1,
-                              "type": "string"
-                            },
-                            "manifestHash": {
-                              "minLength": 1,
-                              "type": "string"
-                            },
-                            "mode": {
-                              "enum": [
-                                "none",
-                                "declared"
+                            "language": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "id": {
+                                  "enum": [
+                                    "javascript",
+                                    "typescript",
+                                    "python",
+                                    "rust",
+                                    "zig"
+                                  ],
+                                  "type": "string"
+                                },
+                                "version": {
+                                  "minLength": 1,
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "version"
                               ],
-                              "type": "string"
+                              "type": "object"
+                            },
+                            "package": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "declaredDependencies": {
+                                  "additionalProperties": {
+                                    "type": "string"
+                                  },
+                                  "propertyNames": {
+                                    "type": "string"
+                                  },
+                                  "type": "object"
+                                },
+                                "entrypoint": {
+                                  "minLength": 1,
+                                  "type": "string"
+                                },
+                                "lockfileHash": {
+                                  "minLength": 1,
+                                  "type": "string"
+                                },
+                                "manifestHash": {
+                                  "minLength": 1,
+                                  "type": "string"
+                                },
+                                "mode": {
+                                  "enum": [
+                                    "none",
+                                    "declared"
+                                  ],
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "mode",
+                                "entrypoint"
+                              ],
+                              "type": "object"
+                            },
+                            "requiredCapabilities": {
+                              "items": {
+                                "minLength": 1,
+                                "type": "string"
+                              },
+                              "type": "array"
                             }
                           },
                           "required": [
-                            "mode",
-                            "entrypoint"
+                            "language",
+                            "adapter",
+                            "package",
+                            "requiredCapabilities",
+                            "abiVersion"
                           ],
                           "type": "object"
                         },
-                        "requiredCapabilities": {
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "abiVersion": {
+                              "const": "strategy-runtime-abi-v1.17",
+                              "type": "string"
+                            },
+                            "adapter": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "id": {
+                                  "enum": [
+                                    "runtime-js-worker-thread",
+                                    "runtime-js-subprocess",
+                                    "runtime-js-container-subprocess",
+                                    "runtime-python-subprocess-experimental",
+                                    "runtime-wasm-wasi-wasmtime-preview1"
+                                  ],
+                                  "type": "string"
+                                },
+                                "version": {
+                                  "minLength": 1,
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "version"
+                              ],
+                              "type": "object"
+                            },
+                            "language": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "id": {
+                                  "enum": [
+                                    "javascript",
+                                    "typescript",
+                                    "python",
+                                    "rust",
+                                    "zig"
+                                  ],
+                                  "type": "string"
+                                },
+                                "version": {
+                                  "minLength": 1,
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "version"
+                              ],
+                              "type": "object"
+                            },
+                            "package": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "declaredDependencies": {
+                                  "additionalProperties": {
+                                    "type": "string"
+                                  },
+                                  "propertyNames": {
+                                    "type": "string"
+                                  },
+                                  "type": "object"
+                                },
+                                "entrypoint": {
+                                  "minLength": 1,
+                                  "type": "string"
+                                },
+                                "lockfileHash": {
+                                  "minLength": 1,
+                                  "type": "string"
+                                },
+                                "manifestHash": {
+                                  "minLength": 1,
+                                  "type": "string"
+                                },
+                                "mode": {
+                                  "enum": [
+                                    "none",
+                                    "declared"
+                                  ],
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "mode",
+                                "entrypoint"
+                              ],
+                              "type": "object"
+                            },
+                            "requiredCapabilities": {
+                              "items": {
+                                "minLength": 1,
+                                "type": "string"
+                              },
+                              "type": "array"
+                            }
+                          },
+                          "required": [
+                            "language",
+                            "adapter",
+                            "package",
+                            "requiredCapabilities",
+                            "abiVersion"
+                          ],
+                          "type": "object"
+                        },
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "abiVersion": {
+                              "const": "strategy-runtime-abi-v1.14",
+                              "type": "string"
+                            },
+                            "adapter": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "id": {
+                                  "enum": [
+                                    "runtime-js-worker-thread",
+                                    "runtime-js-subprocess",
+                                    "runtime-js-container-subprocess",
+                                    "runtime-python-subprocess-experimental",
+                                    "runtime-wasm-wasi-wasmtime-preview1"
+                                  ],
+                                  "type": "string"
+                                },
+                                "version": {
+                                  "minLength": 1,
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "version"
+                              ],
+                              "type": "object"
+                            },
+                            "language": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "id": {
+                                  "enum": [
+                                    "javascript",
+                                    "typescript",
+                                    "python",
+                                    "rust",
+                                    "zig"
+                                  ],
+                                  "type": "string"
+                                },
+                                "version": {
+                                  "minLength": 1,
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "version"
+                              ],
+                              "type": "object"
+                            },
+                            "package": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "declaredDependencies": {
+                                  "additionalProperties": {
+                                    "type": "string"
+                                  },
+                                  "propertyNames": {
+                                    "type": "string"
+                                  },
+                                  "type": "object"
+                                },
+                                "entrypoint": {
+                                  "minLength": 1,
+                                  "type": "string"
+                                },
+                                "lockfileHash": {
+                                  "minLength": 1,
+                                  "type": "string"
+                                },
+                                "manifestHash": {
+                                  "minLength": 1,
+                                  "type": "string"
+                                },
+                                "mode": {
+                                  "enum": [
+                                    "none",
+                                    "declared"
+                                  ],
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "mode",
+                                "entrypoint"
+                              ],
+                              "type": "object"
+                            },
+                            "requiredCapabilities": {
+                              "items": {
+                                "minLength": 1,
+                                "type": "string"
+                              },
+                              "type": "array"
+                            }
+                          },
+                          "required": [
+                            "language",
+                            "adapter",
+                            "package",
+                            "requiredCapabilities",
+                            "abiVersion"
+                          ],
+                          "type": "object"
+                        }
+                      ]
+                    },
+                    "runtimeSemantics": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "adapterId": {
+                          "enum": [
+                            "runtime-js-worker-thread",
+                            "runtime-js-subprocess",
+                            "runtime-js-container-subprocess",
+                            "runtime-python-subprocess-experimental",
+                            "runtime-wasm-wasi-wasmtime-preview1"
+                          ],
+                          "type": "string"
+                        },
+                        "adapterLabel": {
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "countedPlayEligible": {
+                          "type": "boolean"
+                        },
+                        "countedPlayLabel": {
+                          "enum": [
+                            "Counted eligible",
+                            "Not counted"
+                          ],
+                          "type": "string"
+                        },
+                        "countedPlayReason": {
+                          "anyOf": [
+                            {
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "docsReference": {
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "examplesReference": {
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "experimental": {
+                          "type": "boolean"
+                        },
+                        "languageId": {
+                          "enum": [
+                            "javascript",
+                            "typescript",
+                            "python",
+                            "rust",
+                            "zig"
+                          ],
+                          "type": "string"
+                        },
+                        "languageLabel": {
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "packagePolicyLabel": {
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "readiness": {
+                          "enum": [
+                            "production-candidate",
+                            "prototype",
+                            "local-dev-fallback",
+                            "experimental",
+                            "unknown"
+                          ],
+                          "type": "string"
+                        },
+                        "readinessLabel": {
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "sourcePolicyLabel": {
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "validationIssueCodes": {
+                          "items": {
+                            "enum": [
+                              "UNSUPPORTED_LANGUAGE",
+                              "UNSUPPORTED_PACKAGE_METADATA",
+                              "INCOMPATIBLE_ADAPTER",
+                              "ABI_MISMATCH",
+                              "SOURCE_TOO_LARGE",
+                              "MEMORY_LIMIT_EXCEEDED",
+                              "TIMEOUT",
+                              "FORBIDDEN_CAPABILITY",
+                              "NON_COUNTED_RUNTIME"
+                            ],
+                            "type": "string"
+                          },
+                          "type": "array"
+                        },
+                        "warnings": {
                           "items": {
                             "minLength": 1,
                             "type": "string"
@@ -812,11 +1914,22 @@
                         }
                       },
                       "required": [
-                        "abiVersion",
-                        "language",
-                        "adapter",
-                        "package",
-                        "requiredCapabilities"
+                        "languageId",
+                        "adapterId",
+                        "languageLabel",
+                        "adapterLabel",
+                        "readiness",
+                        "readinessLabel",
+                        "experimental",
+                        "countedPlayEligible",
+                        "countedPlayLabel",
+                        "countedPlayReason",
+                        "sourcePolicyLabel",
+                        "packagePolicyLabel",
+                        "docsReference",
+                        "examplesReference",
+                        "warnings",
+                        "validationIssueCodes"
                       ],
                       "type": "object"
                     },
@@ -844,6 +1957,7 @@
                     "sourceHash",
                     "sourceBytes",
                     "runtime",
+                    "runtimeSemantics",
                     "engineCompatibility",
                     "lockedAt"
                   ],
@@ -1061,6 +2175,51 @@
                 "items": {
                   "additionalProperties": false,
                   "properties": {
+                    "competitionEvidence": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "countedMatchSetCount": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "evidenceAvailability": {
+                          "enum": [
+                            "available",
+                            "partial",
+                            "unavailable"
+                          ],
+                          "type": "string"
+                        },
+                        "excludedMatchSetCount": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "replayLinks": {
+                          "items": {
+                            "minLength": 1,
+                            "type": "string"
+                          },
+                          "type": "array"
+                        },
+                        "resultLinks": {
+                          "items": {
+                            "minLength": 1,
+                            "type": "string"
+                          },
+                          "type": "array"
+                        }
+                      },
+                      "required": [
+                        "countedMatchSetCount",
+                        "excludedMatchSetCount",
+                        "evidenceAvailability",
+                        "resultLinks",
+                        "replayLinks"
+                      ],
+                      "type": "object"
+                    },
                     "displayLabel": {
                       "minLength": 1,
                       "type": "string"
@@ -1292,15 +2451,79 @@
                 "items": {
                   "additionalProperties": false,
                   "properties": {
+                    "countedState": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "evidenceAvailability": {
+                          "enum": [
+                            "available",
+                            "partial",
+                            "unavailable"
+                          ],
+                          "type": "string"
+                        },
+                        "publicExplanation": {
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "publicLabel": {
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "publicReason": {
+                          "enum": [
+                            "system_failure",
+                            "incomplete_evidence",
+                            "invalid_result",
+                            "governance_hold",
+                            "non_counted",
+                            "non_competitive",
+                            "disputed",
+                            "invalidated"
+                          ],
+                          "type": "string"
+                        },
+                        "standingsEffect": {
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "state": {
+                          "enum": [
+                            "pending",
+                            "counted",
+                            "retrying",
+                            "degraded_system_failure",
+                            "non_counted",
+                            "non_competitive",
+                            "under_review",
+                            "disputed",
+                            "invalid",
+                            "invalidated"
+                          ],
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "state",
+                        "publicLabel",
+                        "publicExplanation",
+                        "standingsEffect",
+                        "evidenceAvailability"
+                      ],
+                      "type": "object"
+                    },
                     "countedStatus": {
                       "enum": [
                         "pending",
                         "counted",
                         "retrying",
-                        "under_review",
-                        "invalid",
+                        "degraded_system_failure",
+                        "non_counted",
                         "non_competitive",
-                        "non_counted"
+                        "under_review",
+                        "disputed",
+                        "invalid",
+                        "invalidated"
                       ],
                       "type": "string"
                     },
@@ -1310,6 +2533,60 @@
                         "type": "string"
                       },
                       "type": "array"
+                    },
+                    "governance": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "changedAt": {
+                          "format": "date-time",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
+                          "type": "string"
+                        },
+                        "publicExplanation": {
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "publicReason": {
+                          "enum": [
+                            "system_failure",
+                            "incomplete_evidence",
+                            "invalid_result",
+                            "governance_hold",
+                            "non_counted",
+                            "non_competitive",
+                            "disputed",
+                            "invalidated"
+                          ],
+                          "type": "string"
+                        },
+                        "replayAvailable": {
+                          "type": "boolean"
+                        },
+                        "standingsEffect": {
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "status": {
+                          "enum": [
+                            "clear",
+                            "under_review",
+                            "disputed",
+                            "resolved",
+                            "non_counted",
+                            "non_competitive",
+                            "invalid",
+                            "invalidated"
+                          ],
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "status",
+                        "publicExplanation",
+                        "standingsEffect",
+                        "replayAvailable"
+                      ],
+                      "type": "object"
                     },
                     "matchSetId": {
                       "minLength": 1,
@@ -1330,7 +2607,10 @@
                         "incomplete_evidence",
                         "invalid_result",
                         "governance_hold",
-                        "non_counted"
+                        "non_counted",
+                        "non_competitive",
+                        "disputed",
+                        "invalidated"
                       ],
                       "type": "string"
                     },
@@ -1367,6 +2647,7 @@
                     "seasonId",
                     "status",
                     "countedStatus",
+                    "countedState",
                     "entrantIds",
                     "resultHref"
                   ],
@@ -1488,99 +2769,442 @@
                       "type": "array"
                     },
                     "runtime": {
-                      "additionalProperties": false,
-                      "properties": {
-                        "abiVersion": {
-                          "const": "strategy-runtime-abi-v1.14",
-                          "type": "string"
-                        },
-                        "adapter": {
+                      "anyOf": [
+                        {
                           "additionalProperties": false,
                           "properties": {
-                            "id": {
-                              "enum": [
-                                "runtime-js-worker-thread",
-                                "runtime-js-subprocess",
-                                "runtime-js-container-subprocess",
-                                "runtime-python-subprocess-experimental",
-                                "runtime-wasm-wasi-wasmtime-preview1"
-                              ],
+                            "abiVersion": {
+                              "const": "strategy-runtime-abi-v1.19",
                               "type": "string"
                             },
-                            "version": {
-                              "minLength": 1,
-                              "type": "string"
-                            }
-                          },
-                          "required": [
-                            "id",
-                            "version"
-                          ],
-                          "type": "object"
-                        },
-                        "language": {
-                          "additionalProperties": false,
-                          "properties": {
-                            "id": {
-                              "enum": [
-                                "javascript",
-                                "typescript",
-                                "python",
-                                "rust",
-                                "zig"
+                            "adapter": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "id": {
+                                  "enum": [
+                                    "runtime-js-worker-thread",
+                                    "runtime-js-subprocess",
+                                    "runtime-js-container-subprocess",
+                                    "runtime-python-subprocess-experimental",
+                                    "runtime-wasm-wasi-wasmtime-preview1"
+                                  ],
+                                  "type": "string"
+                                },
+                                "version": {
+                                  "minLength": 1,
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "version"
                               ],
-                              "type": "string"
-                            },
-                            "version": {
-                              "minLength": 1,
-                              "type": "string"
-                            }
-                          },
-                          "required": [
-                            "id",
-                            "version"
-                          ],
-                          "type": "object"
-                        },
-                        "package": {
-                          "additionalProperties": false,
-                          "properties": {
-                            "declaredDependencies": {
-                              "additionalProperties": {
-                                "type": "string"
-                              },
-                              "propertyNames": {
-                                "type": "string"
-                              },
                               "type": "object"
                             },
-                            "entrypoint": {
-                              "minLength": 1,
-                              "type": "string"
-                            },
-                            "lockfileHash": {
-                              "minLength": 1,
-                              "type": "string"
-                            },
-                            "manifestHash": {
-                              "minLength": 1,
-                              "type": "string"
-                            },
-                            "mode": {
-                              "enum": [
-                                "none",
-                                "declared"
+                            "language": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "id": {
+                                  "enum": [
+                                    "javascript",
+                                    "typescript",
+                                    "python",
+                                    "rust",
+                                    "zig"
+                                  ],
+                                  "type": "string"
+                                },
+                                "version": {
+                                  "minLength": 1,
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "version"
                               ],
-                              "type": "string"
+                              "type": "object"
+                            },
+                            "package": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "declaredDependencies": {
+                                  "additionalProperties": {
+                                    "type": "string"
+                                  },
+                                  "propertyNames": {
+                                    "type": "string"
+                                  },
+                                  "type": "object"
+                                },
+                                "entrypoint": {
+                                  "minLength": 1,
+                                  "type": "string"
+                                },
+                                "lockfileHash": {
+                                  "minLength": 1,
+                                  "type": "string"
+                                },
+                                "manifestHash": {
+                                  "minLength": 1,
+                                  "type": "string"
+                                },
+                                "mode": {
+                                  "enum": [
+                                    "none",
+                                    "declared"
+                                  ],
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "mode",
+                                "entrypoint"
+                              ],
+                              "type": "object"
+                            },
+                            "requiredCapabilities": {
+                              "items": {
+                                "minLength": 1,
+                                "type": "string"
+                              },
+                              "type": "array"
                             }
                           },
                           "required": [
-                            "mode",
-                            "entrypoint"
+                            "language",
+                            "adapter",
+                            "package",
+                            "requiredCapabilities",
+                            "abiVersion"
                           ],
                           "type": "object"
                         },
-                        "requiredCapabilities": {
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "abiVersion": {
+                              "const": "strategy-runtime-abi-v1.17",
+                              "type": "string"
+                            },
+                            "adapter": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "id": {
+                                  "enum": [
+                                    "runtime-js-worker-thread",
+                                    "runtime-js-subprocess",
+                                    "runtime-js-container-subprocess",
+                                    "runtime-python-subprocess-experimental",
+                                    "runtime-wasm-wasi-wasmtime-preview1"
+                                  ],
+                                  "type": "string"
+                                },
+                                "version": {
+                                  "minLength": 1,
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "version"
+                              ],
+                              "type": "object"
+                            },
+                            "language": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "id": {
+                                  "enum": [
+                                    "javascript",
+                                    "typescript",
+                                    "python",
+                                    "rust",
+                                    "zig"
+                                  ],
+                                  "type": "string"
+                                },
+                                "version": {
+                                  "minLength": 1,
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "version"
+                              ],
+                              "type": "object"
+                            },
+                            "package": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "declaredDependencies": {
+                                  "additionalProperties": {
+                                    "type": "string"
+                                  },
+                                  "propertyNames": {
+                                    "type": "string"
+                                  },
+                                  "type": "object"
+                                },
+                                "entrypoint": {
+                                  "minLength": 1,
+                                  "type": "string"
+                                },
+                                "lockfileHash": {
+                                  "minLength": 1,
+                                  "type": "string"
+                                },
+                                "manifestHash": {
+                                  "minLength": 1,
+                                  "type": "string"
+                                },
+                                "mode": {
+                                  "enum": [
+                                    "none",
+                                    "declared"
+                                  ],
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "mode",
+                                "entrypoint"
+                              ],
+                              "type": "object"
+                            },
+                            "requiredCapabilities": {
+                              "items": {
+                                "minLength": 1,
+                                "type": "string"
+                              },
+                              "type": "array"
+                            }
+                          },
+                          "required": [
+                            "language",
+                            "adapter",
+                            "package",
+                            "requiredCapabilities",
+                            "abiVersion"
+                          ],
+                          "type": "object"
+                        },
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "abiVersion": {
+                              "const": "strategy-runtime-abi-v1.14",
+                              "type": "string"
+                            },
+                            "adapter": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "id": {
+                                  "enum": [
+                                    "runtime-js-worker-thread",
+                                    "runtime-js-subprocess",
+                                    "runtime-js-container-subprocess",
+                                    "runtime-python-subprocess-experimental",
+                                    "runtime-wasm-wasi-wasmtime-preview1"
+                                  ],
+                                  "type": "string"
+                                },
+                                "version": {
+                                  "minLength": 1,
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "version"
+                              ],
+                              "type": "object"
+                            },
+                            "language": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "id": {
+                                  "enum": [
+                                    "javascript",
+                                    "typescript",
+                                    "python",
+                                    "rust",
+                                    "zig"
+                                  ],
+                                  "type": "string"
+                                },
+                                "version": {
+                                  "minLength": 1,
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "version"
+                              ],
+                              "type": "object"
+                            },
+                            "package": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "declaredDependencies": {
+                                  "additionalProperties": {
+                                    "type": "string"
+                                  },
+                                  "propertyNames": {
+                                    "type": "string"
+                                  },
+                                  "type": "object"
+                                },
+                                "entrypoint": {
+                                  "minLength": 1,
+                                  "type": "string"
+                                },
+                                "lockfileHash": {
+                                  "minLength": 1,
+                                  "type": "string"
+                                },
+                                "manifestHash": {
+                                  "minLength": 1,
+                                  "type": "string"
+                                },
+                                "mode": {
+                                  "enum": [
+                                    "none",
+                                    "declared"
+                                  ],
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "mode",
+                                "entrypoint"
+                              ],
+                              "type": "object"
+                            },
+                            "requiredCapabilities": {
+                              "items": {
+                                "minLength": 1,
+                                "type": "string"
+                              },
+                              "type": "array"
+                            }
+                          },
+                          "required": [
+                            "language",
+                            "adapter",
+                            "package",
+                            "requiredCapabilities",
+                            "abiVersion"
+                          ],
+                          "type": "object"
+                        }
+                      ]
+                    },
+                    "runtimeSemantics": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "adapterId": {
+                          "enum": [
+                            "runtime-js-worker-thread",
+                            "runtime-js-subprocess",
+                            "runtime-js-container-subprocess",
+                            "runtime-python-subprocess-experimental",
+                            "runtime-wasm-wasi-wasmtime-preview1"
+                          ],
+                          "type": "string"
+                        },
+                        "adapterLabel": {
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "countedPlayEligible": {
+                          "type": "boolean"
+                        },
+                        "countedPlayLabel": {
+                          "enum": [
+                            "Counted eligible",
+                            "Not counted"
+                          ],
+                          "type": "string"
+                        },
+                        "countedPlayReason": {
+                          "anyOf": [
+                            {
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "docsReference": {
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "examplesReference": {
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "experimental": {
+                          "type": "boolean"
+                        },
+                        "languageId": {
+                          "enum": [
+                            "javascript",
+                            "typescript",
+                            "python",
+                            "rust",
+                            "zig"
+                          ],
+                          "type": "string"
+                        },
+                        "languageLabel": {
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "packagePolicyLabel": {
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "readiness": {
+                          "enum": [
+                            "production-candidate",
+                            "prototype",
+                            "local-dev-fallback",
+                            "experimental",
+                            "unknown"
+                          ],
+                          "type": "string"
+                        },
+                        "readinessLabel": {
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "sourcePolicyLabel": {
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "validationIssueCodes": {
+                          "items": {
+                            "enum": [
+                              "UNSUPPORTED_LANGUAGE",
+                              "UNSUPPORTED_PACKAGE_METADATA",
+                              "INCOMPATIBLE_ADAPTER",
+                              "ABI_MISMATCH",
+                              "SOURCE_TOO_LARGE",
+                              "MEMORY_LIMIT_EXCEEDED",
+                              "TIMEOUT",
+                              "FORBIDDEN_CAPABILITY",
+                              "NON_COUNTED_RUNTIME"
+                            ],
+                            "type": "string"
+                          },
+                          "type": "array"
+                        },
+                        "warnings": {
                           "items": {
                             "minLength": 1,
                             "type": "string"
@@ -1589,11 +3213,22 @@
                         }
                       },
                       "required": [
-                        "abiVersion",
-                        "language",
-                        "adapter",
-                        "package",
-                        "requiredCapabilities"
+                        "languageId",
+                        "adapterId",
+                        "languageLabel",
+                        "adapterLabel",
+                        "readiness",
+                        "readinessLabel",
+                        "experimental",
+                        "countedPlayEligible",
+                        "countedPlayLabel",
+                        "countedPlayReason",
+                        "sourcePolicyLabel",
+                        "packagePolicyLabel",
+                        "docsReference",
+                        "examplesReference",
+                        "warnings",
+                        "validationIssueCodes"
                       ],
                       "type": "object"
                     },
@@ -1666,6 +3301,7 @@
                     "sourceHash",
                     "sourceBytes",
                     "runtime",
+                    "runtimeSemantics",
                     "engineCompatibility",
                     "validationStatus",
                     "record",
@@ -1887,7 +3523,6 @@
                         "MOVE_ADVANCED",
                         "MOVE_BLOCKED",
                         "TURN_RESOLVED",
-                        "PUSH_ATTEMPTED",
                         "PUSH_RESOLVED",
                         "PUSH_BLOCKED",
                         "BACKSTAB_RESOLVED",
@@ -2561,99 +4196,442 @@
                     "type": "array"
                   },
                   "runtime": {
-                    "additionalProperties": false,
-                    "properties": {
-                      "abiVersion": {
-                        "const": "strategy-runtime-abi-v1.14",
-                        "type": "string"
-                      },
-                      "adapter": {
+                    "anyOf": [
+                      {
                         "additionalProperties": false,
                         "properties": {
-                          "id": {
-                            "enum": [
-                              "runtime-js-worker-thread",
-                              "runtime-js-subprocess",
-                              "runtime-js-container-subprocess",
-                              "runtime-python-subprocess-experimental",
-                              "runtime-wasm-wasi-wasmtime-preview1"
-                            ],
+                          "abiVersion": {
+                            "const": "strategy-runtime-abi-v1.19",
                             "type": "string"
                           },
-                          "version": {
-                            "minLength": 1,
-                            "type": "string"
-                          }
-                        },
-                        "required": [
-                          "id",
-                          "version"
-                        ],
-                        "type": "object"
-                      },
-                      "language": {
-                        "additionalProperties": false,
-                        "properties": {
-                          "id": {
-                            "enum": [
-                              "javascript",
-                              "typescript",
-                              "python",
-                              "rust",
-                              "zig"
+                          "adapter": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "id": {
+                                "enum": [
+                                  "runtime-js-worker-thread",
+                                  "runtime-js-subprocess",
+                                  "runtime-js-container-subprocess",
+                                  "runtime-python-subprocess-experimental",
+                                  "runtime-wasm-wasi-wasmtime-preview1"
+                                ],
+                                "type": "string"
+                              },
+                              "version": {
+                                "minLength": 1,
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "version"
                             ],
-                            "type": "string"
-                          },
-                          "version": {
-                            "minLength": 1,
-                            "type": "string"
-                          }
-                        },
-                        "required": [
-                          "id",
-                          "version"
-                        ],
-                        "type": "object"
-                      },
-                      "package": {
-                        "additionalProperties": false,
-                        "properties": {
-                          "declaredDependencies": {
-                            "additionalProperties": {
-                              "type": "string"
-                            },
-                            "propertyNames": {
-                              "type": "string"
-                            },
                             "type": "object"
                           },
-                          "entrypoint": {
-                            "minLength": 1,
-                            "type": "string"
-                          },
-                          "lockfileHash": {
-                            "minLength": 1,
-                            "type": "string"
-                          },
-                          "manifestHash": {
-                            "minLength": 1,
-                            "type": "string"
-                          },
-                          "mode": {
-                            "enum": [
-                              "none",
-                              "declared"
+                          "language": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "id": {
+                                "enum": [
+                                  "javascript",
+                                  "typescript",
+                                  "python",
+                                  "rust",
+                                  "zig"
+                                ],
+                                "type": "string"
+                              },
+                              "version": {
+                                "minLength": 1,
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "version"
                             ],
-                            "type": "string"
+                            "type": "object"
+                          },
+                          "package": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "declaredDependencies": {
+                                "additionalProperties": {
+                                  "type": "string"
+                                },
+                                "propertyNames": {
+                                  "type": "string"
+                                },
+                                "type": "object"
+                              },
+                              "entrypoint": {
+                                "minLength": 1,
+                                "type": "string"
+                              },
+                              "lockfileHash": {
+                                "minLength": 1,
+                                "type": "string"
+                              },
+                              "manifestHash": {
+                                "minLength": 1,
+                                "type": "string"
+                              },
+                              "mode": {
+                                "enum": [
+                                  "none",
+                                  "declared"
+                                ],
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "mode",
+                              "entrypoint"
+                            ],
+                            "type": "object"
+                          },
+                          "requiredCapabilities": {
+                            "items": {
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "type": "array"
                           }
                         },
                         "required": [
-                          "mode",
-                          "entrypoint"
+                          "language",
+                          "adapter",
+                          "package",
+                          "requiredCapabilities",
+                          "abiVersion"
                         ],
                         "type": "object"
                       },
-                      "requiredCapabilities": {
+                      {
+                        "additionalProperties": false,
+                        "properties": {
+                          "abiVersion": {
+                            "const": "strategy-runtime-abi-v1.17",
+                            "type": "string"
+                          },
+                          "adapter": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "id": {
+                                "enum": [
+                                  "runtime-js-worker-thread",
+                                  "runtime-js-subprocess",
+                                  "runtime-js-container-subprocess",
+                                  "runtime-python-subprocess-experimental",
+                                  "runtime-wasm-wasi-wasmtime-preview1"
+                                ],
+                                "type": "string"
+                              },
+                              "version": {
+                                "minLength": 1,
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "version"
+                            ],
+                            "type": "object"
+                          },
+                          "language": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "id": {
+                                "enum": [
+                                  "javascript",
+                                  "typescript",
+                                  "python",
+                                  "rust",
+                                  "zig"
+                                ],
+                                "type": "string"
+                              },
+                              "version": {
+                                "minLength": 1,
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "version"
+                            ],
+                            "type": "object"
+                          },
+                          "package": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "declaredDependencies": {
+                                "additionalProperties": {
+                                  "type": "string"
+                                },
+                                "propertyNames": {
+                                  "type": "string"
+                                },
+                                "type": "object"
+                              },
+                              "entrypoint": {
+                                "minLength": 1,
+                                "type": "string"
+                              },
+                              "lockfileHash": {
+                                "minLength": 1,
+                                "type": "string"
+                              },
+                              "manifestHash": {
+                                "minLength": 1,
+                                "type": "string"
+                              },
+                              "mode": {
+                                "enum": [
+                                  "none",
+                                  "declared"
+                                ],
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "mode",
+                              "entrypoint"
+                            ],
+                            "type": "object"
+                          },
+                          "requiredCapabilities": {
+                            "items": {
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "type": "array"
+                          }
+                        },
+                        "required": [
+                          "language",
+                          "adapter",
+                          "package",
+                          "requiredCapabilities",
+                          "abiVersion"
+                        ],
+                        "type": "object"
+                      },
+                      {
+                        "additionalProperties": false,
+                        "properties": {
+                          "abiVersion": {
+                            "const": "strategy-runtime-abi-v1.14",
+                            "type": "string"
+                          },
+                          "adapter": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "id": {
+                                "enum": [
+                                  "runtime-js-worker-thread",
+                                  "runtime-js-subprocess",
+                                  "runtime-js-container-subprocess",
+                                  "runtime-python-subprocess-experimental",
+                                  "runtime-wasm-wasi-wasmtime-preview1"
+                                ],
+                                "type": "string"
+                              },
+                              "version": {
+                                "minLength": 1,
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "version"
+                            ],
+                            "type": "object"
+                          },
+                          "language": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "id": {
+                                "enum": [
+                                  "javascript",
+                                  "typescript",
+                                  "python",
+                                  "rust",
+                                  "zig"
+                                ],
+                                "type": "string"
+                              },
+                              "version": {
+                                "minLength": 1,
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "version"
+                            ],
+                            "type": "object"
+                          },
+                          "package": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "declaredDependencies": {
+                                "additionalProperties": {
+                                  "type": "string"
+                                },
+                                "propertyNames": {
+                                  "type": "string"
+                                },
+                                "type": "object"
+                              },
+                              "entrypoint": {
+                                "minLength": 1,
+                                "type": "string"
+                              },
+                              "lockfileHash": {
+                                "minLength": 1,
+                                "type": "string"
+                              },
+                              "manifestHash": {
+                                "minLength": 1,
+                                "type": "string"
+                              },
+                              "mode": {
+                                "enum": [
+                                  "none",
+                                  "declared"
+                                ],
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "mode",
+                              "entrypoint"
+                            ],
+                            "type": "object"
+                          },
+                          "requiredCapabilities": {
+                            "items": {
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "type": "array"
+                          }
+                        },
+                        "required": [
+                          "language",
+                          "adapter",
+                          "package",
+                          "requiredCapabilities",
+                          "abiVersion"
+                        ],
+                        "type": "object"
+                      }
+                    ]
+                  },
+                  "runtimeSemantics": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "adapterId": {
+                        "enum": [
+                          "runtime-js-worker-thread",
+                          "runtime-js-subprocess",
+                          "runtime-js-container-subprocess",
+                          "runtime-python-subprocess-experimental",
+                          "runtime-wasm-wasi-wasmtime-preview1"
+                        ],
+                        "type": "string"
+                      },
+                      "adapterLabel": {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "countedPlayEligible": {
+                        "type": "boolean"
+                      },
+                      "countedPlayLabel": {
+                        "enum": [
+                          "Counted eligible",
+                          "Not counted"
+                        ],
+                        "type": "string"
+                      },
+                      "countedPlayReason": {
+                        "anyOf": [
+                          {
+                            "minLength": 1,
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "docsReference": {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "examplesReference": {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "experimental": {
+                        "type": "boolean"
+                      },
+                      "languageId": {
+                        "enum": [
+                          "javascript",
+                          "typescript",
+                          "python",
+                          "rust",
+                          "zig"
+                        ],
+                        "type": "string"
+                      },
+                      "languageLabel": {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "packagePolicyLabel": {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "readiness": {
+                        "enum": [
+                          "production-candidate",
+                          "prototype",
+                          "local-dev-fallback",
+                          "experimental",
+                          "unknown"
+                        ],
+                        "type": "string"
+                      },
+                      "readinessLabel": {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "sourcePolicyLabel": {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "validationIssueCodes": {
+                        "items": {
+                          "enum": [
+                            "UNSUPPORTED_LANGUAGE",
+                            "UNSUPPORTED_PACKAGE_METADATA",
+                            "INCOMPATIBLE_ADAPTER",
+                            "ABI_MISMATCH",
+                            "SOURCE_TOO_LARGE",
+                            "MEMORY_LIMIT_EXCEEDED",
+                            "TIMEOUT",
+                            "FORBIDDEN_CAPABILITY",
+                            "NON_COUNTED_RUNTIME"
+                          ],
+                          "type": "string"
+                        },
+                        "type": "array"
+                      },
+                      "warnings": {
                         "items": {
                           "minLength": 1,
                           "type": "string"
@@ -2662,11 +4640,22 @@
                       }
                     },
                     "required": [
-                      "abiVersion",
-                      "language",
-                      "adapter",
-                      "package",
-                      "requiredCapabilities"
+                      "languageId",
+                      "adapterId",
+                      "languageLabel",
+                      "adapterLabel",
+                      "readiness",
+                      "readinessLabel",
+                      "experimental",
+                      "countedPlayEligible",
+                      "countedPlayLabel",
+                      "countedPlayReason",
+                      "sourcePolicyLabel",
+                      "packagePolicyLabel",
+                      "docsReference",
+                      "examplesReference",
+                      "warnings",
+                      "validationIssueCodes"
                     ],
                     "type": "object"
                   },
@@ -2739,6 +4728,7 @@
                   "sourceHash",
                   "sourceBytes",
                   "runtime",
+                  "runtimeSemantics",
                   "engineCompatibility",
                   "validationStatus",
                   "record",
@@ -3103,8 +5093,21 @@
                       "page": "ladder",
                       "payload": {
                         "entries": [],
+                        "entryWindow": {
+                          "publicLabel": "Open for counted entries",
+                          "state": "open"
+                        },
+                        "links": {
+                          "seasonHref": "/ladder/demo-season",
+                          "standingsHref": "/ladder/demo-season#standings"
+                        },
                         "matchSets": [],
                         "name": "Demo Trial Ladder",
+                        "outcome": {
+                          "publicExplanation": "The Season has not reached a final scheduling outcome.",
+                          "publicLabel": "Outcome pending",
+                          "status": "pending"
+                        },
                         "policy": {
                           "minimumEntries": 2,
                           "noPermanentRatings": true,
@@ -3126,6 +5129,10 @@
                           "publicEntries": true,
                           "publicReplayEvidence": true,
                           "publicStandings": true
+                        },
+                        "schedulingWindow": {
+                          "publicLabel": "Scheduling has not started",
+                          "state": "not_started"
                         },
                         "seasonId": "ladder-season:demo",
                         "seasonSeed": "trial-ladder-demo-seed",
@@ -3631,7 +5638,7 @@
                             "/matchsets/match-set:demo"
                           ],
                           "runtime": {
-                            "abiVersion": "strategy-runtime-abi-v1.14",
+                            "abiVersion": "strategy-runtime-abi-v1.17",
                             "adapter": {
                               "id": "runtime-js-worker-thread",
                               "version": "runtime-js-v1"
@@ -3645,6 +5652,26 @@
                               "mode": "none"
                             },
                             "requiredCapabilities": []
+                          },
+                          "runtimeSemantics": {
+                            "adapterId": "runtime-js-worker-thread",
+                            "adapterLabel": "runtime-js worker thread",
+                            "countedPlayEligible": false,
+                            "countedPlayLabel": "Not counted",
+                            "countedPlayReason": "The service example is not executable conformance evidence for counted play.",
+                            "docsReference": "runtime/languages",
+                            "examplesReference": "samples/minimal-strategy",
+                            "experimental": false,
+                            "languageId": "typescript",
+                            "languageLabel": "TypeScript",
+                            "packagePolicyLabel": "No packages",
+                            "readiness": "local-dev-fallback",
+                            "readinessLabel": "Local/dev fallback",
+                            "sourcePolicyLabel": "Self-contained Strategy source",
+                            "validationIssueCodes": [
+                              "NON_COUNTED_RUNTIME"
+                            ],
+                            "warnings": []
                           },
                           "sourceBytes": 256,
                           "sourceHash": "sourcehash-demo",

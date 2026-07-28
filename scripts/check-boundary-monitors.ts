@@ -1,5 +1,7 @@
 #!/usr/bin/env -S pnpm exec tsx
+/* eslint-disable no-restricted-imports -- Repository boundary monitor inspects cross-package source contracts directly. */
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs"
+import { createHash } from "node:crypto"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 import ts from "typescript"
@@ -18,30 +20,47 @@ import {
   parseTopologyOptions,
   validateV116NoTypeScriptBackendTopologyArtifact,
 } from "./check-local-topology.ts"
+import {
+  checkV135BoundarySurfaceInventoryArtifacts,
+  type GenerateV135BoundarySurfaceInventoryOptions,
+} from "./evaluate-v1-35-boundary-surface-inventory.ts"
+import { checkV135AccountProviderEntryProofArtifacts } from "./evaluate-v1-35-account-provider-entry-proof.ts"
+import { analyzeV137IntegrityBoundaries } from "./check-v1-37-integrity-boundaries.ts"
+import { checkV136HistoricalProof } from "./check-v1-36-historical-proof.ts"
+import { analyzeWorkerRetirement } from "./check-v1-37-worker-retirement.ts"
+import {
+  checkV136CompetitionPolicyScan,
+  checkV136CompetitionSurfaceInventoryArtifacts,
+  createV136CompetitionPolicyPhase249ScanSuppressions,
+  type GenerateV136CompetitionSurfaceInventoryOptions,
+} from "./evaluate-v1-36-competition-policy.ts"
 
 export { validateV116NoTypeScriptBackendTopologyArtifact }
 import {
   SERVICE_API_ROUTES,
   STRATEGY_RUNTIME_ABI_VERSION,
-  RUNTIME_EXECUTION_SERVICE_VERSION,
+  CURRENT_CANONICAL_COMPATIBILITY_TUPLE_RECORD,
+  HISTORICAL_RUNTIME_EXECUTION_SERVICE_V1_16,
+  HISTORICAL_RUNTIME_V114_SEMANTIC_TUPLE,
   COMPATIBILITY_VERSIONS,
   assertAnalyticsPublicSummaryLeakSafe,
   assertPublicOutputLeakSafe,
   assertNonJsRuntimeGuardrails,
   assertPublicServiceDtoLeakSafe,
+  assertPublicCompetitionGovernanceLeakSafe,
   describeStrategyRuntimeProductSemantics,
   evaluateStrategyRuntimeCountedEligibility,
   getStrategyRuntimeAdapterRecord,
   NON_JS_RUNTIME_PROMOTION_CRITERIA,
   NON_JS_RUNTIME_SUPPORT_POLICY,
-  RUNTIME_BROKER_REGISTRY,
   RUNTIME_BROKER_REGISTRY_VERSION,
-  validateRuntimeBrokerRegistryMatch,
   STRATEGY_LANGUAGE_IDS,
   STRATEGY_LANGUAGE_PROVIDER_CONTRACT_VERSION,
   STRATEGY_LANGUAGE_PROVIDER_REGISTRY,
   SUPPORTED_STRATEGY_LANGUAGES,
+  WORKSHOP_CHECKER_CONTRACT_VERSION,
   getSupportedStrategyLanguageBySourceFormat,
+  isWorkshopCheckerSourceFormat,
   type StrategyRuntimeAdapterId,
 } from "../packages/spec/src/index.ts"
 
@@ -57,6 +76,7 @@ type MonitorLayer =
   | "language_provider"
   | "go_parity"
   | "go_promotion"
+  | "checker_contract"
   | "topology"
 
 export interface BoundaryMonitorCheck {
@@ -298,6 +318,8 @@ const v116TypeScriptBackendInventoryPath =
   ".planning/artifacts/v1.16-typescript-backend-inventory.json"
 const v117RuntimeBrokerRegistryArtifactPath =
   ".planning/artifacts/v1.17-runtime-broker-registry.json"
+const v117HistoricalRuntimeBrokerRegistrySha256 =
+  "aa9c754ad2ab29c62b99a23928255e22df47aab8636e8841ac39eedf2633f259"
 const v124RuntimeAbuseLabEvidencePath =
   ".planning/artifacts/v1.24-runtime-abuse-lab-evidence.json"
 const v124RuntimeAbuseLabEvidenceMarkdownPath =
@@ -343,18 +365,20 @@ const v130MatchIntelligenceProofMarkdownPath =
 
 export const knownReportOnlyBoundaryOffenses = new Set([
   'apps/web/app/api/admin/matchsets/[matchSetId]/governance/route.ts:1:competitive/server:import { competitiveServer, getCurrentCompetitiveUser, } from "../../../../../competitive/server.js"',
+  'apps/web/app/api/admin/matchsets/governance/route.ts:2:competitive/server:import { competitiveServer, getCurrentCompetitiveUser, } from "../../../../competitive/server.js"',
   'apps/web/app/api/ladder/seasons/[seasonId]/entries/route.ts:1:competitive/server:import { competitiveServer, getCurrentCompetitiveUser, } from "../../../../../competitive/server.js"',
   'apps/web/app/api/ladder/seasons/[seasonId]/schedule/route.ts:1:competitive/server:import { competitiveServer, getCurrentCompetitiveUser, } from "../../../../../competitive/server.js"',
   'apps/web/app/api/ladder/seasons/route.ts:1:competitive/server:import { competitiveServer, getCurrentCompetitiveUser, } from "../../../competitive/server.js"',
   'apps/web/app/api/matchsets/[matchSetId]/flags/route.ts:1:competitive/server:import { competitiveServer, getCurrentCompetitiveUser, } from "../../../../competitive/server.js"',
+  'apps/web/app/api/matchsets/[matchSetId]/reports/route.ts:2:competitive/server:import { competitiveServer, getCurrentCompetitiveUser, } from "../../../../competitive/server.js"',
   'apps/web/app/competitive/server.ts:2:@cowards/persistence:import { createDatabasePool } from "@cowards/persistence/db"',
   'apps/web/app/competitive/server.ts:3:@cowards/persistence:import { AuthInputError, authenticateAccount, createAccount, createSession, getSession, revokeSession, type PublicUserAccount, } from "@cowards/persistence/auth"',
   'apps/web/app/competitive/server.ts:12:@cowards/persistence:import { AccountRevisionError, createAccountStrategyRevision, forkAdvancedStrategyToAccount, forkStarterStrategyToAccount, getAccountStrategyRevisionSource, listAccountStrategyRevisions, type AccountStrategyRevisionSummary, } from "@cowards/persistence/account-revisions"',
   'apps/web/app/competitive/server.ts:21:@cowards/persistence:import { ActiveDuplicateExhibitionError, CompetitionInputError, ExhibitionRateLimitError, createManualExhibitionMatchSet, } from "@cowards/persistence/competition"',
   'apps/web/app/competitive/server.ts:28:@cowards/persistence:import { createTrialLadderSeason, enterTrialLadderSeason, LadderInputError, scheduleTrialLadderSeason, setTrialLadderSeasonStatus, withdrawTrialLadderEntry, } from "@cowards/persistence/ladder"',
-  'apps/web/app/competitive/server.ts:36:@cowards/persistence:import { assertAdminUser, flagMatchSetResult, GovernanceInputError, markMatchSetGovernanceStatus, } from "@cowards/persistence/governance"',
-  'apps/web/app/competitive/server.ts:42:@cowards/persistence:import { findAdvancedStrategy } from "@cowards/persistence/advanced-strategies"',
-  'apps/web/app/competitive/server.ts:43:@cowards/persistence:import { findStarterStrategy } from "@cowards/persistence/starter-strategies"',
+  'apps/web/app/competitive/server.ts:36:@cowards/persistence:import { assertAdminUser, applyCompetitionGovernanceAction, flagMatchSetResult, GovernanceInputError, markMatchSetGovernanceStatus, submitCompetitionReport, } from "@cowards/persistence/governance"',
+  'apps/web/app/competitive/server.ts:44:@cowards/persistence:import { findAdvancedStrategy } from "@cowards/persistence/advanced-strategies"',
+  'apps/web/app/competitive/server.ts:45:@cowards/persistence:import { findStarterStrategy } from "@cowards/persistence/starter-strategies"',
   'apps/web/app/matches/replay-fixture.ts:6:@cowards/persistence:import { createChronicleMetadata } from "@cowards/persistence/quarantine-lifecycle"',
   'apps/web/app/matches/replay-ready.ts:7:@cowards/persistence:import type { StoredChronicle } from "@cowards/persistence/quarantine-lifecycle"',
   'apps/web/app/matches/server.test.ts:8:@cowards/persistence:import { createChronicleMetadata, type StoredChronicle, } from "@cowards/persistence/quarantine-lifecycle"',
@@ -865,6 +889,7 @@ export const assertReportOnlyBoundaryOffenseCount = (
 
 export const assertMonitorPublicPayload = (value: unknown): void => {
   assertPublicServiceDtoLeakSafe(value)
+  assertPublicCompetitionGovernanceLeakSafe(value)
 }
 
 const assertOpenApiPublicSchemaLeakSafe = (
@@ -889,6 +914,9 @@ const assertOpenApiPublicSchemaLeakSafe = (
       )) {
         try {
           assertPublicServiceDtoLeakSafe({ [propertyName]: null })
+          assertPublicCompetitionGovernanceLeakSafe({
+            [propertyName]: null,
+          })
         } catch (error) {
           throw new Error(
             `OpenAPI public schema leaks private field at ${routePath}.properties.${propertyName}: ${
@@ -917,6 +945,47 @@ const check = async (
       detail: error instanceof Error ? error.message : String(error),
     }
   }
+}
+
+export const checkV135BoundarySurfaceInventoryMonitor = (
+  options: GenerateV135BoundarySurfaceInventoryOptions = {},
+): string => {
+  const failures = checkV135BoundarySurfaceInventoryArtifacts(options)
+  if (failures.length > 0) {
+    throw new Error(failures.join("; "))
+  }
+  return "v1.35 boundary surface inventory artifacts are current"
+}
+
+export const checkV135AccountProviderEntryProofMonitor = (): string => {
+  const failures = checkV135AccountProviderEntryProofArtifacts()
+  if (failures.length > 0) {
+    throw new Error(failures.join("; "))
+  }
+  return "v1.35 account provider entry proof artifacts are current"
+}
+
+export const checkV136CompetitionPolicyMonitor = (
+  options: GenerateV136CompetitionSurfaceInventoryOptions = {},
+): string => {
+  const monitorOptions: GenerateV136CompetitionSurfaceInventoryOptions = {
+    ...options,
+    suppressions: [
+      ...createV136CompetitionPolicyPhase249ScanSuppressions({
+        includePostureDeferrals: options.rows === undefined,
+        repoRoot: options.repoRoot,
+      }),
+      ...(options.suppressions ?? []),
+    ],
+  }
+  const failures = [
+    ...checkV136CompetitionSurfaceInventoryArtifacts(monitorOptions),
+    ...checkV136CompetitionPolicyScan(monitorOptions),
+  ]
+  if (failures.length > 0) {
+    throw new Error(failures.join("; "))
+  }
+  return "v1.36 competition policy artifacts are current"
 }
 
 const checkOpenApiContract = (): string => {
@@ -1428,7 +1497,10 @@ const checkV114RouteOwnershipManifest = (): string => {
   ) {
     throw new Error("v1.14 TypeScript role drifted")
   }
-  if (manifest.runtimeBoundary?.abiVersion !== STRATEGY_RUNTIME_ABI_VERSION) {
+  if (
+    manifest.runtimeBoundary?.abiVersion !==
+    HISTORICAL_RUNTIME_V114_SEMANTIC_TUPLE.runtimeAbi
+  ) {
     throw new Error("v1.14 runtime boundary ABI drifted")
   }
   if (
@@ -1650,7 +1722,8 @@ export const validateV115LifecycleOwnershipManifest = (
     throw new Error("v1.15 mixed DB-completing owners must stay forbidden")
   }
   if (
-    manifest.globalPolicies.runtimeAbiVersion !== STRATEGY_RUNTIME_ABI_VERSION
+    manifest.globalPolicies.runtimeAbiVersion !==
+    HISTORICAL_RUNTIME_V114_SEMANTIC_TUPLE.runtimeAbi
   ) {
     throw new Error("v1.15 runtime ABI drifted")
   }
@@ -1840,10 +1913,16 @@ export const validateV116RuntimeServiceBoundaryArtifact = (
   }
 
   const runtimeAbi = requireRecord(root.runtimeAbi, "runtimeAbi")
-  if (runtimeAbi.serviceContractVersion !== RUNTIME_EXECUTION_SERVICE_VERSION) {
+  if (
+    runtimeAbi.serviceContractVersion !==
+    HISTORICAL_RUNTIME_EXECUTION_SERVICE_V1_16.runtimeServiceVersion
+  ) {
     throw new Error("runtime execution service contract version drifted")
   }
-  if (runtimeAbi.strategyRuntimeAbiVersion !== STRATEGY_RUNTIME_ABI_VERSION) {
+  if (
+    runtimeAbi.strategyRuntimeAbiVersion !==
+    HISTORICAL_RUNTIME_V114_SEMANTIC_TUPLE.runtimeAbi
+  ) {
     throw new Error("runtime ABI version drifted")
   }
   if (runtimeAbi.languageSpecificShortcutsAllowed !== false) {
@@ -2526,6 +2605,20 @@ const checkTypeScriptWorkerQuarantineSource = (): string => {
     "utf8",
   )
 
+  if (indexSource.includes("TypeScriptWorkerRetiredError")) {
+    if (
+      !indexSource.includes("assertTypeScriptWorkerEntrypointAllowed") ||
+      indexSource.includes("createDatabasePool") ||
+      indexSource.includes("runWorkerOnce(") ||
+      indexSource.includes("runWorkerLoop(")
+    ) {
+      throw new Error(
+        "retired worker entrypoint regained lifecycle reachability",
+      )
+    }
+    return "worker entrypoint is permanently retired before lifecycle setup"
+  }
+
   const guardIndex = indexSource.indexOf(
     "assertTypeScriptWorkerEntrypointAllowed",
   )
@@ -2758,14 +2851,10 @@ export const checkRuntimeAdapterBridge = (
   } as const
   const semantics = describeStrategyRuntimeProductSemantics(metadata)
   const eligibility = evaluateStrategyRuntimeCountedEligibility(metadata)
-  if (isContainerCandidate) {
-    if (eligibility.ok || semantics.countedPlayEligible) {
-      throw new Error(
-        "container runtime product semantics must remain non-counted",
-      )
-    }
-  } else if (!eligibility.ok || !semantics.countedPlayEligible) {
-    throw new Error(`${bridge.specAdapterId} product semantics drifted`)
+  if (eligibility.ok || semantics.countedPlayEligible) {
+    throw new Error(
+      `${bridge.specAdapterId} promoted without current executable evidence`,
+    )
   }
   return `${bridge.selector} -> ${bridge.specAdapterId}`
 }
@@ -2803,38 +2892,33 @@ const checkRuntimeAdapters = (): string => {
     } as const
     const semantics = describeStrategyRuntimeProductSemantics(metadata)
     const eligibility = evaluateStrategyRuntimeCountedEligibility(metadata)
-    if (language.countedEligibility === "eligible") {
-      if (!eligibility.ok || !semantics.countedPlayEligible) {
-        throw new Error(`${language.id} product semantics are not counted`)
-      }
-    } else if (eligibility.ok || semantics.countedPlayEligible) {
-      throw new Error(`${language.id} product semantics promoted early`)
+    if (eligibility.ok || semantics.countedPlayEligible) {
+      throw new Error(
+        `${language.id} product semantics promoted without executable evidence`,
+      )
     }
   }
-  if (STRATEGY_RUNTIME_ABI_VERSION !== "strategy-runtime-abi-v1.14") {
-    throw new Error(`runtime ABI drifted to ${STRATEGY_RUNTIME_ABI_VERSION}`)
+  if (
+    STRATEGY_RUNTIME_ABI_VERSION !==
+    CURRENT_CANONICAL_COMPATIBILITY_TUPLE_RECORD.tuple.runtimeAbi
+  ) {
+    throw new Error(
+      `runtime ABI ${STRATEGY_RUNTIME_ABI_VERSION} split from current tuple ${CURRENT_CANONICAL_COMPATIBILITY_TUPLE_RECORD.tuple.runtimeAbi}`,
+    )
   }
   return `${runtimeAdapterBridges.length} JS/TS adapters and ${SUPPORTED_STRATEGY_LANGUAGES.length} supported provider default adapters checked`
 }
 
-const brokerEntryKey = (entry: {
-  abiVersion: string
-  languageId: string
-  languageVersion: string
-  adapterId: string
-  adapterVersion: string
-  packagePolicy: string
-}): string =>
-  [
-    entry.abiVersion,
-    entry.languageId,
-    entry.languageVersion,
-    entry.adapterId,
-    entry.adapterVersion,
-    entry.packagePolicy,
-  ].join("|")
-
 const checkRuntimeBrokerRegistryArtifact = (): string => {
+  const artifactBytes = readFileSync(
+    path.join(repoRoot, v117RuntimeBrokerRegistryArtifactPath),
+  )
+  if (
+    createHash("sha256").update(artifactBytes).digest("hex") !==
+    v117HistoricalRuntimeBrokerRegistrySha256
+  ) {
+    throw new Error("v1.17 historical runtime broker registry bytes drifted")
+  }
   const artifact = readJson<{
     schemaVersion?: unknown
     baseline?: Record<string, unknown>
@@ -2849,7 +2933,7 @@ const checkRuntimeBrokerRegistryArtifact = (): string => {
   }
   if (
     artifact.contract?.strategyRuntimeAbiVersion !==
-      STRATEGY_RUNTIME_ABI_VERSION ||
+      HISTORICAL_RUNTIME_V114_SEMANTIC_TUPLE.runtimeAbi ||
     artifact.contract?.selectionPolicy !==
       "exact-language-runtime-adapter-abi-package-match" ||
     artifact.contract?.fallbackPolicy !== "fail-closed-no-js-ts-or-go-fallback"
@@ -2859,81 +2943,16 @@ const checkRuntimeBrokerRegistryArtifact = (): string => {
   if (!Array.isArray(artifact.entries)) {
     throw new Error("v1.17 runtime broker registry entries missing")
   }
-
-  const registryByKey = new Map(
-    RUNTIME_BROKER_REGISTRY.map((entry) => [brokerEntryKey(entry), entry]),
-  )
-  const artifactKeys = new Set<string>()
   for (const rawEntry of artifact.entries) {
     const entry = requireRecord(rawEntry, "v1.17 runtime broker entry")
-    const key = brokerEntryKey({
-      abiVersion: String(entry.abiVersion),
-      languageId: String(entry.languageId),
-      languageVersion: String(entry.languageVersion),
-      adapterId: String(entry.adapterId),
-      adapterVersion: String(entry.adapterVersion),
-      packagePolicy: String(entry.packagePolicy),
-    })
-    const registryEntry = registryByKey.get(key)
-    if (!registryEntry) {
-      throw new Error(`v1.17 runtime broker artifact has unknown entry ${key}`)
-    }
-    artifactKeys.add(key)
     if (
-      entry.runtimeTarget !== registryEntry.runtimeTarget ||
-      entry.readiness !== registryEntry.readiness ||
-      entry.enabledForNormalPlay !== registryEntry.enabledForNormalPlay ||
-      entry.countedResultsAllowed !== registryEntry.countedResultsAllowed
+      entry.abiVersion !== HISTORICAL_RUNTIME_V114_SEMANTIC_TUPLE.runtimeAbi ||
+      entry.countedResultsAllowed !== false
     ) {
-      throw new Error(`v1.17 runtime broker artifact drifted for ${key}`)
-    }
-    const issues = validateRuntimeBrokerRegistryMatch({
-      abiVersion: entry.abiVersion,
-      language: {
-        id: entry.languageId,
-        version: entry.languageVersion,
-      },
-      adapter: {
-        id: entry.adapterId,
-        version: entry.adapterVersion,
-      },
-      package: {
-        mode: entry.packagePolicy,
-        entrypoint: "default",
-      },
-      requiredCapabilities: [],
-      limits: registryEntry.limits,
-    })
-    if (issues.length > 0) {
-      throw new Error(`v1.17 runtime broker cannot validate ${key}`)
+      throw new Error("v1.17 historical runtime broker entry drifted")
     }
   }
-
-  const missing = [...registryByKey.keys()].filter(
-    (key) => !artifactKeys.has(key),
-  )
-  if (missing.length > 0) {
-    throw new Error(
-      `v1.17 runtime broker artifact missing registry entries ${missing.join(", ")}`,
-    )
-  }
-  for (const language of SUPPORTED_STRATEGY_LANGUAGES) {
-    const entry = [...registryByKey.values()].find(
-      (candidate) =>
-        candidate.languageId === language.id &&
-        candidate.adapterId === language.defaultAdapterId,
-    )
-    if (!entry) {
-      throw new Error(`runtime broker registry missing ${language.id}`)
-    }
-    if (
-      language.countedEligibility === "eligible" &&
-      (!entry.enabledForNormalPlay || !entry.countedResultsAllowed)
-    ) {
-      throw new Error(`${language.id} runtime broker entry is not counted`)
-    }
-  }
-  return `${artifact.entries.length} v1.17 runtime broker registry entries checked`
+  return `${artifact.entries.length} immutable v1.17 historical runtime broker registry entries checked`
 }
 
 const checkV132SupportedLanguageProviders = (): string => {
@@ -3007,7 +3026,10 @@ const checkV132SupportedLanguageProviders = (): string => {
     if (
       (language.id === "rust" || language.id === "zig") &&
       (language.buildBehavior !== "compile-immutable-artifact" ||
-        provider.abiPosture !== "wasi-preview1-stdin-stdout-json" ||
+        provider.abiPosture !==
+          (String(STRATEGY_RUNTIME_ABI_VERSION) === "strategy-runtime-abi-v1.17"
+            ? "wasi-preview1-stdin-canonical-request-stdout-raw-canonical-payload"
+            : "wasi-preview1-stdin-stdout-json") ||
         language.artifactPolicyLabel !== "Immutable WASM/WASI artifact" ||
         !provider.evidenceRequirements.includes("immutable-artifact-metadata"))
     ) {
@@ -3039,6 +3061,66 @@ const checkV132SupportedLanguageProviders = (): string => {
   }
 
   return `${SUPPORTED_STRATEGY_LANGUAGES.length} supported language/provider records checked`
+}
+
+const checkV134WorkshopCheckerBoundary = (): string => {
+  if (WORKSHOP_CHECKER_CONTRACT_VERSION !== "workshop-checker-v1.34") {
+    throw new Error("Workshop checker contract version drifted")
+  }
+  const productionSourceFormats = SUPPORTED_STRATEGY_LANGUAGES.map(
+    (language) => language.sourceFormat,
+  )
+    .filter(isWorkshopCheckerSourceFormat)
+    .sort()
+  if (
+    JSON.stringify(productionSourceFormats) !==
+    JSON.stringify(["python", "rust", "typescript", "zig"])
+  ) {
+    throw new Error(
+      `production checker language set drifted: ${productionSourceFormats.join(", ")}`,
+    )
+  }
+  if (getSupportedStrategyLanguageBySourceFormat("tinygo") !== null) {
+    throw new Error("TinyGo leaked into production source-format lookup")
+  }
+
+  const routeSource = readFileSync(
+    path.join(repoRoot, "apps/web/app/api/workshop/validate/route.ts"),
+    "utf8",
+  )
+  for (const required of [
+    "createWorkshopCheckerResponse",
+    "createWorkshopCheckerUnavailableResponse",
+    "isWorkshopCheckerSourceFormat",
+    "runtimeServiceValidateStrategy",
+    "validateWithCache",
+  ]) {
+    if (!routeSource.includes(required)) {
+      throw new Error(`Workshop checker route missing ${required}`)
+    }
+  }
+  for (const forbidden of [
+    "workshopServer.validateSource",
+    "@cowards/runtime-js",
+    "@cowards/runtime-python",
+    "@cowards/runtime-wasm-wasi",
+    "node:vm",
+    "tinygo",
+    "TinyGo",
+  ]) {
+    if (routeSource.includes(forbidden)) {
+      throw new Error(`Workshop checker route contains forbidden ${forbidden}`)
+    }
+  }
+
+  const clientSource = readFileSync(
+    path.join(repoRoot, "apps/web/app/workshop/workshop-client.tsx"),
+    "utf8",
+  )
+  if (clientSource.includes("forbiddenPatterns")) {
+    throw new Error("Workshop UI exposes forbiddenPatterns in public details")
+  }
+  return "v1.34 Workshop checker route, source-format set, TinyGo absence, cache/coalescing, and public details checked"
 }
 
 const checkV118IsolationBaselineArtifact = (): string => {
@@ -4185,7 +4267,8 @@ const checkV124RuntimeAbuseLabArtifacts = (): string => {
     abuse.schemaVersion !== "v1.24-runtime-abuse-lab-evidence" ||
     abuse.milestone !== "v1.24" ||
     abuse.activeAbi !== "wasi-preview1-stdin-stdout-json" ||
-    abuse.runtimeAbiVersion !== STRATEGY_RUNTIME_ABI_VERSION ||
+    abuse.runtimeAbiVersion !==
+      HISTORICAL_RUNTIME_V114_SEMANTIC_TUPLE.runtimeAbi ||
     abuse.summary.fail !== 0 ||
     abuse.summary.nonProof !== 2 ||
     abuse.summary.publicSafe !== true ||
@@ -5371,6 +5454,48 @@ const checkV127ResultReplayWorkbenchBoundary = (): string => {
 export const runBoundaryMonitorChecks = async (): Promise<
   BoundaryMonitorCheck[]
 > => [
+  await check("contract_drift", "v1.37 integrity creation inventory", () => {
+    const analysis = analyzeV137IntegrityBoundaries()
+    if (analysis.findings.length > 0) {
+      throw new Error(
+        analysis.findings
+          .map(
+            (finding) =>
+              `${finding.code} ${finding.path}:${finding.line} ${finding.detail}`,
+          )
+          .join("; "),
+      )
+    }
+    return `accounted for ${analysis.creationCalls} creation calls and ${analysis.sqlWriters} direct SQL writers`
+  }),
+  await check("worker_quarantine", "v1.37 direct worker retirement", () => {
+    const analysis = analyzeWorkerRetirement()
+    if (analysis.findings.length > 0) {
+      throw new Error(
+        analysis.findings
+          .map((finding) => `${finding.code} ${finding.path}`)
+          .join("; "),
+      )
+    }
+    return "direct TypeScript worker remains unreachable for every purpose"
+  }),
+  await check(
+    "contract_drift",
+    "v1.36 immutable historical proof",
+    async () => {
+      const result = await checkV136HistoricalProof()
+      if (result.findings.length > 0) {
+        throw new Error(
+          result.findings
+            .map((finding) =>
+              finding.path ? `${finding.code} ${finding.path}` : finding.code,
+            )
+            .join("; "),
+        )
+      }
+      return `validated ${result.artifactCount} artifacts against ${result.sourceCount} archived source blobs`
+    },
+  ),
   await check("contract_drift", "OpenAPI public route artifact", () =>
     checkOpenApiContract(),
   ),
@@ -5388,6 +5513,17 @@ export const runBoundaryMonitorChecks = async (): Promise<
   ),
   await check("language_provider", "v1.33 supported language providers", () =>
     checkV132SupportedLanguageProviders(),
+  ),
+  await check(
+    "checker_contract",
+    "v1.34 Workshop checker provider boundary",
+    () => checkV134WorkshopCheckerBoundary(),
+  ),
+  await check("contract_drift", "v1.35 boundary surface inventory", () =>
+    checkV135BoundarySurfaceInventoryMonitor(),
+  ),
+  await check("contract_drift", "v1.35 account provider entry proof", () =>
+    checkV135AccountProviderEntryProofMonitor(),
   ),
   await check("runtime_adapter", "runtime registry and adapter metadata", () =>
     checkRuntimeAdapters(),
@@ -5495,7 +5631,94 @@ export const runBoundaryMonitorChecks = async (): Promise<
   await check("topology", "live v1.15 topology diagnostics", () =>
     checkTopologyDiagnostics(),
   ),
+  await check(
+    "contract_drift",
+    "v1.37 executable conformance monitor wiring",
+    () => validateV137ExecutableConformanceMonitorWiring(),
+  ),
+  await check("contract_drift", "v1.37 Phase 260 closure monitor wiring", () =>
+    validateV137Phase260ClosureMonitorWiring(),
+  ),
+  await check("contract_drift", "v1.37 release boundary monitor wiring", () =>
+    validateV137ReleaseBoundaryMonitorWiring(),
+  ),
 ]
+
+export const validateV137ExecutableConformanceMonitorWiring = (): string => {
+  const packageJson = readJson<{ scripts: Record<string, string> }>(
+    "package.json",
+  )
+  const writeCommand =
+    "pnpm exec tsx scripts/evaluate-v1-37-executable-conformance.ts --write"
+  const checkCommand =
+    "pnpm exec tsx scripts/evaluate-v1-37-executable-conformance.ts --check"
+  const boundary = packageJson.scripts["boundary:monitors"] ?? ""
+  if (
+    packageJson.scripts["v1.37:executable-conformance:write"] !==
+      writeCommand ||
+    packageJson.scripts["v1.37:executable-conformance:check"] !==
+      checkCommand ||
+    boundary.includes("v1.37:executable-conformance:write") ||
+    boundary.split("pnpm v1.37:executable-conformance:check").length !== 2 ||
+    boundary.indexOf("pnpm v1.37:executable-conformance:check") >
+      boundary.indexOf("pnpm exec tsx scripts/check-boundary-monitors.ts")
+  ) {
+    throw new Error("v1.37 executable conformance monitor wiring drifted")
+  }
+  return "pure proof check is serialized exactly once without write-mode recursion"
+}
+
+export const validateV137Phase260ClosureMonitorWiring = (): string => {
+  const packageJson = readJson<{ scripts: Record<string, string> }>(
+    "package.json",
+  )
+  const writeCommand =
+    "pnpm exec tsx scripts/evaluate-v1-37-truthful-inputs-set-fairness.ts --write"
+  const checkCommand =
+    "pnpm exec tsx scripts/evaluate-v1-37-truthful-inputs-set-fairness.ts --check"
+  const boundary = packageJson.scripts["boundary:monitors"] ?? ""
+  const checkInvocation = "pnpm v1.37:phase260-proof:check"
+  if (
+    packageJson.scripts["v1.37:phase260-proof:write"] !== writeCommand ||
+    packageJson.scripts["v1.37:phase260-proof:check"] !== checkCommand ||
+    boundary.includes("v1.37:phase260-proof:write") ||
+    boundary.split(checkInvocation).length !== 2 ||
+    boundary.indexOf(checkInvocation) <
+      boundary.indexOf("pnpm v1.37:executable-conformance:check") ||
+    boundary.indexOf(checkInvocation) >
+      boundary.indexOf("pnpm exec tsx scripts/check-boundary-monitors.ts")
+  ) {
+    throw new Error("v1.37 Phase 260 closure monitor wiring drifted")
+  }
+  return "pure Phase 260 proof check is serialized exactly once without write-mode recursion"
+}
+
+export const validateV137ReleaseBoundaryMonitorWiring = (): string => {
+  const packageJson = readJson<{ scripts: Record<string, string> }>(
+    "package.json",
+  )
+  const sourceCommand =
+    "pnpm exec tsx scripts/check-v1-37-release-boundaries.ts --source-fixture"
+  const strictCommand =
+    "pnpm exec tsx scripts/check-v1-37-release-boundaries.ts --strict-release"
+  const strictInvocation = "pnpm v1.37:release-boundaries:check"
+  const boundary = packageJson.scripts["boundary:monitors"] ?? ""
+  if (
+    packageJson.scripts["v1.37:release-boundaries:source-check"] !==
+      sourceCommand ||
+    packageJson.scripts["v1.37:release-boundaries:check"] !== strictCommand ||
+    boundary.split(strictInvocation).length !== 2 ||
+    boundary.includes("pnpm v1.37:release-boundaries:source-check") ||
+    boundary.includes("check-v1-37-release-boundaries.ts --write") ||
+    boundary.indexOf(strictInvocation) <
+      boundary.indexOf("pnpm v1.37:phase260-proof:check") ||
+    boundary.indexOf(strictInvocation) >
+      boundary.indexOf("pnpm exec tsx scripts/check-boundary-monitors.ts")
+  ) {
+    throw new Error("v1.37 release boundary monitor wiring drifted")
+  }
+  return "pure strict release check is serialized exactly once after all prerequisite proof checks"
+}
 
 const run = async (): Promise<number> => {
   const checks = await runBoundaryMonitorChecks()

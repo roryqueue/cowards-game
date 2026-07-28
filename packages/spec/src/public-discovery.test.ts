@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
 import {
+  PublicCompetitionDetailDtoSchema,
   PublicHomeDiscoveryDtoSchema,
   assertPublicDiscoveryDtoLeakSafe,
   isSafePublicDiscoveryHref,
@@ -62,6 +63,63 @@ describe("public discovery DTOs", () => {
         }),
       ).toThrow(/safe relative public path/)
     }
+  })
+
+  it("validates safe competition standing evidence links", () => {
+    const detail = {
+      kind: "publicCompetitionDetail",
+      boundary: publicDiscoveryBoundary(),
+      competition: {
+        competitionId: "ladder:season:test",
+        title: "Test Season",
+        kind: "ladder",
+        status: "active",
+        statusLabel: "Active",
+        href: "/competitions/ladder%3Aseason%3Atest",
+        origin: "configured-public-read",
+      },
+      entrants: [],
+      standings: [
+        {
+          rank: 1,
+          label: "Alpha",
+          points: 3,
+          record: "1-0-0",
+          competitionEvidence: {
+            countedMatchSetCount: 1,
+            excludedMatchSetCount: 2,
+            evidenceAvailability: "partial",
+            resultLinks: ["/matchsets/match-set%3Atest"],
+            replayLinks: ["/matches/match%3Atest/replay"],
+          },
+        },
+      ],
+      matchSets: [],
+      replayCoverage: {
+        replayReadyCount: 1,
+        matchCount: 3,
+        label: "Partial replay coverage.",
+      },
+      scheduleLabel: "Schedule published.",
+    } as const
+
+    expect(
+      PublicCompetitionDetailDtoSchema.parse(detail).standings[0],
+    ).toMatchObject(detail.standings[0])
+    expect(() =>
+      PublicCompetitionDetailDtoSchema.parse({
+        ...detail,
+        standings: [
+          {
+            ...detail.standings[0],
+            competitionEvidence: {
+              ...detail.standings[0].competitionEvidence,
+              resultLinks: ["https://example.invalid/private-result"],
+            },
+          },
+        ],
+      }),
+    ).toThrow(/safe relative public path/)
   })
 
   it("fails leak-safe validation for private fields", () => {

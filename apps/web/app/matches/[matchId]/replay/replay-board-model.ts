@@ -1,11 +1,45 @@
 import type {
+  CanonicalCompatibilityTupleLifecycle,
   Direction,
   FullBoardSnapshot,
   Position,
   SoldierSnapshot,
   SoldierStatus,
 } from "@cowards/spec"
+import { classifyCanonicalCompatibilityTupleId } from "@cowards/spec"
 import type { ReplayReadyDto, ReplayTimelineEntryDto } from "../../types.js"
+
+const V1_37_CURRENT_REPLAY_BOARD_EVENT_TYPES = new Set<string>([
+  "MATCH_STARTED",
+  "ROUND_STARTED",
+  "STRATEGY_EVALUATED",
+  "ACTIVATION_STARTED",
+  "ACTIVATION_SKIPPED",
+  "ACTIVATION_ENDED",
+  "CYCLE_STARTED",
+  "CYCLE_ENDED",
+  "AWARENESS_GRID_OBSERVED",
+  "ACTION_EMITTED",
+  "MOVE_ADVANCED",
+  "MOVE_BLOCKED",
+  "TURN_RESOLVED",
+  "PUSH_RESOLVED",
+  "PUSH_BLOCKED",
+  "BACKSTAB_RESOLVED",
+  "SOLDIER_STONED",
+  "SOLDIER_FELL",
+  "CONTRACTION_RESOLVED",
+  "MATCH_ENDED",
+  "RUNTIME_VIOLATION",
+])
+
+export const resolveReplayBoardEventContract = (
+  semanticTupleId: string,
+  eventType: string,
+): CanonicalCompatibilityTupleLifecycle =>
+  V1_37_CURRENT_REPLAY_BOARD_EVENT_TYPES.has(eventType)
+    ? classifyCanonicalCompatibilityTupleId(semanticTupleId)
+    : "historical-or-unknown"
 
 export const ReplayBoardColors = {
   ownerBottom: "#256d85",

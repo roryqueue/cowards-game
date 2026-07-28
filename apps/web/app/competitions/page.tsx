@@ -3,11 +3,13 @@ import {
   CompetitionDiscoveryCard,
   EmptyStates,
 } from "../public-discovery-components.js"
+import type { JSX } from "react"
 import { getPublicCompetitionIndex } from "../../lib/public-discovery-service.js"
+import { COMPETITION_POLICY_V1_36_POSTURE } from "@cowards/spec"
 
 export const dynamic = "force-dynamic"
 
-export default async function CompetitionsPage() {
+export default async function CompetitionsPage(): Promise<JSX.Element> {
   const index = await getPublicCompetitionIndex()
 
   return (
@@ -15,7 +17,9 @@ export default async function CompetitionsPage() {
       <section className="app-panel">
         <div className="app-section-header">
           <div>
-            <p className="workshop-muted">Competitions</p>
+            <p className="workshop-muted">
+              {COMPETITION_POLICY_V1_36_POSTURE.publicLabel}
+            </p>
             <h1>Tournaments, ladders, and exhibitions</h1>
             <p className="workshop-muted">
               Public competition discovery is separate from execution and only
@@ -26,6 +30,11 @@ export default async function CompetitionsPage() {
             <a href="/watch">Watch evidence</a>
             <a href="/workshop">Workshop</a>
           </div>
+        </div>
+        <div className="status-strip">
+          <span>{COMPETITION_POLICY_V1_36_POSTURE.standingsScope}</span>
+          <span>{COMPETITION_POLICY_V1_36_POSTURE.durableRatingPromise}</span>
+          <a href="/competitions/fair-play">Fair play and reports</a>
         </div>
         <BoundaryNotice
           privateFieldsExcluded={index.boundary.privateFieldsExcluded}

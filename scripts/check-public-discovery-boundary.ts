@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 import {
+  COMPETITION_POLICY_V1_36_POSTURE,
   PublicCompetitionDetailDtoSchema,
   PublicCompetitionIndexDtoSchema,
   PublicHomeDiscoveryDtoSchema,
@@ -196,6 +197,7 @@ const entry = SignedInCompetitionEntryDashboardDtoSchema.parse({
   signedIn: false,
   accountUnavailable: false,
   revisionsUnavailable: false,
+  posture: COMPETITION_POLICY_V1_36_POSTURE,
   user: null,
   eligibleRevisions: [],
   ineligibleRevisions: [],

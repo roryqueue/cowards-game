@@ -11,11 +11,17 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 import {
   assertMonitorPublicPayload,
   assertReportOnlyBoundaryOffenseCount,
+  checkV135AccountProviderEntryProofMonitor,
+  checkV135BoundarySurfaceInventoryMonitor,
+  checkV136CompetitionPolicyMonitor,
   checkRuntimeAdapterBridge,
   findDirectLanguageSpecialCases,
   findUnknownReportOnlyOffenses,
   runBoundaryMonitorChecks,
   selectedGoRouteManifest,
+  validateV137ExecutableConformanceMonitorWiring,
+  validateV137Phase260ClosureMonitorWiring,
+  validateV137ReleaseBoundaryMonitorWiring,
   validateSelectedGoRouteManifest,
   validateV116FinalTypeScriptSurfaceLabels,
   validateV115LifecycleOwnershipManifest,
@@ -23,6 +29,16 @@ import {
   validateV116TypeScriptWorkerQuarantineArtifact,
   validateV116RuntimeServiceBoundaryArtifact,
 } from "./check-boundary-monitors.ts"
+import {
+  generateV135BoundarySurfaceInventory,
+  writeV135BoundarySurfaceInventoryArtifacts,
+  type V135BoundarySurfaceRow,
+} from "./evaluate-v1-35-boundary-surface-inventory.ts"
+import {
+  generateV136CompetitionSurfaceInventory,
+  writeV136CompetitionSurfaceInventoryArtifacts,
+  type V136CompetitionSurfaceRow,
+} from "./evaluate-v1-36-competition-policy.ts"
 
 const requiredV115PublicOutputForbidden = [
   "Strategy source",
@@ -182,9 +198,443 @@ const createV116NoTypeScriptBackendTopologyArtifact = () =>
     ),
   ) as Record<string, unknown>
 
+const createTempRepo = () => mkdtempSync(path.join(tmpdir(), "cowards-v135-"))
+
+const writeTempFile = (
+  root: string,
+  relativePath: string,
+  text: string,
+): void => {
+  const absolutePath = path.join(root, relativePath)
+  mkdirSync(path.dirname(absolutePath), { recursive: true })
+  writeFileSync(absolutePath, text)
+}
+
+const clearPostureRequirement = (
+  row: V136CompetitionSurfaceRow,
+): V136CompetitionSurfaceRow => ({
+  ...row,
+  postureLabelRequired: false,
+  requiredPostureCopy: "",
+  requiredResetNoDurableCopy: "",
+})
+
 describe("boundary drift monitors", () => {
   afterEach(() => {
     vi.restoreAllMocks()
+  })
+
+  it("wires v1.35 boundary inventory package scripts into monitor commands", () => {
+    const packageJson = JSON.parse(readFileSync("package.json", "utf8")) as {
+      scripts: Record<string, string>
+    }
+
+    expect(packageJson.scripts["v1.35:boundary-inventory"]).toBe(
+      "pnpm exec tsx scripts/evaluate-v1-35-boundary-surface-inventory.ts --write",
+    )
+    expect(packageJson.scripts["v1.35:boundary-inventory:check"]).toBe(
+      "pnpm exec tsx scripts/evaluate-v1-35-boundary-surface-inventory.ts --check",
+    )
+    expect(packageJson.scripts["v1.35:account-provider-entry-proof"]).toBe(
+      "pnpm exec tsx scripts/evaluate-v1-35-account-provider-entry-proof.ts --write",
+    )
+    expect(
+      packageJson.scripts["v1.35:account-provider-entry-proof:check"],
+    ).toBe(
+      "pnpm exec tsx scripts/evaluate-v1-35-account-provider-entry-proof.ts --check",
+    )
+    expect(packageJson.scripts["boundary:monitors"]).toContain(
+      "pnpm v1.35:boundary-inventory:check",
+    )
+    expect(packageJson.scripts["boundary:monitors"]).toContain(
+      "pnpm v1.35:account-provider-entry-proof:check",
+    )
+    expect(
+      packageJson.scripts["boundary:monitors"].indexOf(
+        "pnpm v1.35:boundary-inventory:check",
+      ),
+    ).toBeLessThan(
+      packageJson.scripts["boundary:monitors"].indexOf(
+        "pnpm exec tsx scripts/check-boundary-monitors.ts",
+      ),
+    )
+    expect(
+      packageJson.scripts["boundary:monitors"].indexOf(
+        "pnpm v1.35:account-provider-entry-proof:check",
+      ),
+    ).toBeLessThan(
+      packageJson.scripts["boundary:monitors"].indexOf(
+        "pnpm exec tsx scripts/check-boundary-monitors.ts",
+      ),
+    )
+  })
+
+  it("dispatches v1.36 history by tag and active v1.37 checks after v1.35", () => {
+    const packageJson = JSON.parse(readFileSync("package.json", "utf8")) as {
+      scripts: Record<string, string>
+    }
+
+    expect(packageJson.scripts["v1.36:competition-policy"]).toBe(
+      "pnpm exec tsx scripts/evaluate-v1-36-competition-policy.ts --write",
+    )
+    expect(packageJson.scripts["v1.36:competition-policy:check"]).toBe(
+      "pnpm exec tsx scripts/evaluate-v1-36-competition-policy.ts --check",
+    )
+    expect(packageJson.scripts["v1.36:historical-proof:check"]).toBe(
+      "pnpm exec tsx scripts/check-v1-36-historical-proof.ts",
+    )
+    expect(packageJson.scripts["v1.36:competition-boundaries:check"]).toBe(
+      "pnpm exec tsx scripts/evaluate-v1-36-competition-boundaries.ts --check",
+    )
+    expect(packageJson.scripts["v1.36:final-proof:check"]).toBe(
+      "pnpm exec tsx scripts/evaluate-v1-36-final-proof.ts --check",
+    )
+    expect(packageJson.scripts["v1.37:integrity-authority:write"]).toBe(
+      "pnpm exec tsx scripts/generate-v1-37-integrity-authority.ts --write",
+    )
+    expect(packageJson.scripts["v1.37:integrity-authority:check"]).toBe(
+      "pnpm exec tsx scripts/generate-v1-37-integrity-authority.ts --check",
+    )
+    expect(packageJson.scripts["v1.37:worker-retirement:check"]).toBe(
+      "pnpm exec tsx scripts/check-v1-37-worker-retirement.ts",
+    )
+    expect(packageJson.scripts["v1.37:integrity-boundaries:check"]).toBe(
+      "pnpm exec tsx scripts/check-v1-37-integrity-boundaries.ts",
+    )
+    expect(packageJson.scripts["v1.37:kernel-integrity:write"]).toBe(
+      "pnpm exec tsx scripts/evaluate-v1-37-kernel-integrity.ts --write --run-browser",
+    )
+    expect(packageJson.scripts["v1.37:kernel-integrity:check"]).toBe(
+      "pnpm exec tsx scripts/evaluate-v1-37-kernel-integrity.ts --check",
+    )
+    expect(packageJson.scripts["boundary:monitors"]).not.toContain(
+      "pnpm v1.36:competition-policy:check",
+    )
+    expect(packageJson.scripts["boundary:monitors"]).not.toContain(
+      "pnpm v1.36:competition-boundaries:check",
+    )
+    expect(packageJson.scripts["boundary:monitors"]).not.toContain(
+      "pnpm v1.36:final-proof:check",
+    )
+    expect(packageJson.scripts["boundary:monitors"]).toContain(
+      "pnpm v1.36:historical-proof:check && pnpm v1.37:integrity-authority:check && pnpm v1.37:worker-retirement:check && pnpm v1.37:integrity-boundaries:check && pnpm v1.37:kernel-integrity:check && pnpm v1.37:executable-conformance:check && pnpm v1.37:phase260-proof:check && pnpm v1.37:release-boundaries:source-check && pnpm exec tsx scripts/check-boundary-monitors.ts",
+    )
+    expect(
+      packageJson.scripts["boundary:monitors"].match(
+        /pnpm v1\.37:kernel-integrity:check/gu,
+      ),
+    ).toHaveLength(1)
+    expect(
+      packageJson.scripts["boundary:monitors"].indexOf(
+        "pnpm v1.37:integrity-boundaries:check",
+      ),
+    ).toBeLessThan(
+      packageJson.scripts["boundary:monitors"].indexOf(
+        "pnpm v1.37:kernel-integrity:check",
+      ),
+    )
+    expect(
+      packageJson.scripts["boundary:monitors"].indexOf(
+        "pnpm v1.37:kernel-integrity:check",
+      ),
+    ).toBeLessThan(
+      packageJson.scripts["boundary:monitors"].indexOf(
+        "pnpm exec tsx scripts/check-boundary-monitors.ts",
+      ),
+    )
+    expect(
+      packageJson.scripts["boundary:monitors"].indexOf(
+        "pnpm v1.35:final-proof:check",
+      ),
+    ).toBeLessThan(
+      packageJson.scripts["boundary:monitors"].indexOf(
+        "pnpm v1.36:historical-proof:check",
+      ),
+    )
+  })
+
+  it("serializes the pure executable conformance check exactly once", () => {
+    expect(validateV137ExecutableConformanceMonitorWiring()).toContain(
+      "exactly once",
+    )
+    const packageJson = JSON.parse(readFileSync("package.json", "utf8")) as {
+      scripts: Record<string, string>
+    }
+    const boundary = packageJson.scripts["boundary:monitors"]!
+    expect(boundary).not.toContain("v1.37:executable-conformance:write")
+    expect(
+      boundary.match(/pnpm v1\.37:executable-conformance:check/gu),
+    ).toHaveLength(1)
+  })
+
+  it("serializes the pure Phase 260 closure check exactly once and after conformance", () => {
+    expect(validateV137Phase260ClosureMonitorWiring()).toContain("exactly once")
+    const packageJson = JSON.parse(readFileSync("package.json", "utf8")) as {
+      scripts: Record<string, string>
+    }
+    expect(packageJson.scripts["v1.37:phase260-proof:write"]).toBe(
+      "pnpm exec tsx scripts/evaluate-v1-37-truthful-inputs-set-fairness.ts --write",
+    )
+    expect(packageJson.scripts["v1.37:phase260-proof:check"]).toBe(
+      "pnpm exec tsx scripts/evaluate-v1-37-truthful-inputs-set-fairness.ts --check",
+    )
+    const boundary = packageJson.scripts["boundary:monitors"]!
+    expect(boundary).not.toContain("v1.37:phase260-proof:write")
+    expect(boundary.match(/pnpm v1\.37:phase260-proof:check/gu)).toHaveLength(1)
+    expect(
+      boundary.indexOf("pnpm v1.37:executable-conformance:check"),
+    ).toBeLessThan(boundary.indexOf("pnpm v1.37:phase260-proof:check"))
+  })
+
+  it("serializes strict v1.37 release boundaries exactly once after lower pure checks", () => {
+    expect(validateV137ReleaseBoundaryMonitorWiring()).toContain("exactly once")
+    const packageJson = JSON.parse(readFileSync("package.json", "utf8")) as {
+      scripts: Record<string, string>
+    }
+    const sourceCommand =
+      "pnpm exec tsx scripts/check-v1-37-release-boundaries.ts --source-fixture"
+    const strictCommand =
+      "pnpm exec tsx scripts/check-v1-37-release-boundaries.ts --strict-release"
+    expect(packageJson.scripts["v1.37:release-boundaries:source-check"]).toBe(
+      sourceCommand,
+    )
+    expect(packageJson.scripts["v1.37:release-boundaries:check"]).toBe(
+      strictCommand,
+    )
+    expect(sourceCommand).not.toMatch(/--write|services:|playwright|database/iu)
+    const boundary = packageJson.scripts["boundary:monitors"]!
+    expect(boundary).not.toContain("v1.37:release-boundaries:source-check")
+    expect(boundary).toContain("pnpm v1.37:release-boundaries:check")
+    expect(boundary).not.toContain("check-v1-37-release-boundaries.ts --write")
+    expect(
+      boundary.match(/pnpm v1\.37:release-boundaries:check/gu),
+    ).toHaveLength(1)
+    expect(boundary.indexOf("pnpm v1.37:phase260-proof:check")).toBeLessThan(
+      boundary.indexOf("pnpm v1.37:release-boundaries:check"),
+    )
+    expect(
+      boundary.indexOf("pnpm v1.37:release-boundaries:check"),
+    ).toBeLessThan(
+      boundary.indexOf("pnpm exec tsx scripts/check-boundary-monitors.ts"),
+    )
+  })
+
+  it("checks v1.35 account provider entry proof artifacts without live dependencies", () => {
+    expect(checkV135AccountProviderEntryProofMonitor()).toBe(
+      "v1.35 account provider entry proof artifacts are current",
+    )
+  })
+
+  it("checks v1.35 boundary inventory artifacts without live dependencies", () => {
+    const root = createTempRepo()
+    try {
+      writeV135BoundarySurfaceInventoryArtifacts({ repoRoot: root })
+
+      expect(checkV135BoundarySurfaceInventoryMonitor({ repoRoot: root })).toBe(
+        "v1.35 boundary surface inventory artifacts are current",
+      )
+    } finally {
+      rmSync(root, { force: true, recursive: true })
+    }
+  })
+
+  it("fails v1.35 boundary inventory monitor on missing and stale artifacts", () => {
+    const root = createTempRepo()
+    try {
+      expect(() =>
+        checkV135BoundarySurfaceInventoryMonitor({ repoRoot: root }),
+      ).toThrow(
+        ".planning/artifacts/v1.35-boundary-surface-inventory.json is missing",
+      )
+
+      writeV135BoundarySurfaceInventoryArtifacts({ repoRoot: root })
+      writeFileSync(
+        path.join(
+          root,
+          ".planning/artifacts/v1.35-boundary-surface-inventory.md",
+        ),
+        "# stale inventory artifact\n",
+      )
+
+      expect(() =>
+        checkV135BoundarySurfaceInventoryMonitor({ repoRoot: root }),
+      ).toThrow(
+        ".planning/artifacts/v1.35-boundary-surface-inventory.md is stale",
+      )
+    } finally {
+      rmSync(root, { force: true, recursive: true })
+    }
+  })
+
+  it("fails v1.35 boundary inventory monitor on row ID, disposition, downstream phase, and affected requirements drift", () => {
+    const root = createTempRepo()
+    try {
+      writeV135BoundarySurfaceInventoryArtifacts({ repoRoot: root })
+      const jsonPath = path.join(
+        root,
+        ".planning/artifacts/v1.35-boundary-surface-inventory.json",
+      )
+      const artifact = JSON.parse(readFileSync(jsonPath, "utf8")) as {
+        rows: V135BoundarySurfaceRow[]
+        surfaces: V135BoundarySurfaceRow[]
+      }
+      const driftedRow = {
+        ...artifact.rows[0]!,
+        id: "v135-account-save-go-typescript-proof-drifted",
+        disposition: "quarantine" as const,
+        downstreamPhase: 245 as const,
+        affectedRequirements: ["INV-01", "INV-02", "AUTH-01"] as const,
+      }
+      artifact.rows = [driftedRow, ...artifact.rows.slice(1)]
+      artifact.surfaces = artifact.rows
+      writeFileSync(jsonPath, `${JSON.stringify(artifact, null, 2)}\n`)
+
+      expect(() =>
+        checkV135BoundarySurfaceInventoryMonitor({ repoRoot: root }),
+      ).toThrow(/row presence|disposition|downstreamPhase|affectedRequirements/)
+    } finally {
+      rmSync(root, { force: true, recursive: true })
+    }
+  })
+
+  it("fails v1.35 boundary inventory monitor on forbidden overclaim patterns", () => {
+    const rows = [
+      "production sandbox certification",
+      "TinyGo production support",
+      "package ecosystem support",
+      "rich-package support",
+      "host import support",
+      "TypeScript/Python WASM isolation",
+    ].map((claim) => ({
+      ...generateV135BoundarySurfaceInventory().rows[0]!,
+      currentBehavior: `Claims ${claim}.`,
+    }))
+
+    for (const row of rows) {
+      expect(() =>
+        checkV135BoundarySurfaceInventoryMonitor({ rows: [row] }),
+      ).toThrow(/forbidden overclaim/)
+    }
+  })
+
+  it("fails v1.35 boundary inventory monitor on public/default leakage markers", () => {
+    const markers = [
+      "raw diagnostics",
+      "source",
+      "artifact bytes",
+      "host paths",
+      "env values",
+      "tokens",
+      "DB details",
+      "private runtime internals",
+      "StrategyMemory",
+      "SoldierMemory",
+      "objective payload",
+    ] as const
+
+    for (const marker of markers) {
+      expect(() =>
+        checkV135BoundarySurfaceInventoryMonitor({
+          rows: [
+            {
+              ...generateV135BoundarySurfaceInventory().rows[0]!,
+              dataClass: "public",
+              currentBehavior: `Returns ${marker}.`,
+            },
+          ],
+        }),
+      ).toThrow(/forbidden public\/default leakage/)
+    }
+  })
+
+  it("checks v1.36 competition policy artifacts and calibrated public beta trial competition copy", () => {
+    const root = createTempRepo()
+    try {
+      const rows = generateV136CompetitionSurfaceInventory().rows.map(
+        clearPostureRequirement,
+      )
+      writeV136CompetitionSurfaceInventoryArtifacts({ repoRoot: root, rows })
+      writeTempFile(
+        root,
+        "apps/web/app/competitions/page.tsx",
+        "public beta trial competition with resettable Season-scoped standings; no durable permanent rating promise",
+      )
+
+      expect(
+        checkV136CompetitionPolicyMonitor({
+          repoRoot: root,
+          rows,
+        }),
+      ).toBe("v1.36 competition policy artifacts are current")
+    } finally {
+      rmSync(root, { force: true, recursive: true })
+    }
+  })
+
+  it("fails v1.36 competition policy monitor on durable-rating, production-sandbox, package-ecosystem, TinyGo-production, raw-diagnostic, and private-runtime overclaims", () => {
+    const root = createTempRepo()
+    try {
+      writeV136CompetitionSurfaceInventoryArtifacts({ repoRoot: root })
+      const rows = generateV136CompetitionSurfaceInventory().rows.map(
+        clearPostureRequirement,
+      )
+
+      writeTempFile(
+        root,
+        "apps/web/app/competitions/page.tsx",
+        [
+          "Coward's Game has durable permanent ratings.",
+          "All runtime lanes provide production sandbox certification.",
+          "Strategies can use the full npm ecosystem.",
+          "TinyGo is a production Strategy lane.",
+          "Public results show raw runtime diagnostics.",
+          "Public pages expose private runtime internals.",
+        ].join("\n"),
+      )
+
+      expect(() =>
+        checkV136CompetitionPolicyMonitor({
+          repoRoot: root,
+          rows,
+          includeDefaultSuppressions: false,
+        }),
+      ).toThrow(
+        /durable-rating|production-sandbox|package-ecosystem|tinygo-production|raw-diagnostic|private-runtime/,
+      )
+    } finally {
+      rmSync(root, { force: true, recursive: true })
+    }
+  })
+
+  it("fails v1.36 competition policy monitor when posture-required inventory references lack required labels", () => {
+    const root = createTempRepo()
+    try {
+      const rows = generateV136CompetitionSurfaceInventory().rows.map(
+        clearPostureRequirement,
+      )
+      rows[0] = {
+        ...rows[0]!,
+        references: ["apps/web/app/competitions/page.tsx"],
+        postureLabelRequired: true,
+        requiredPostureCopy: "public beta trial competition",
+        requiredResetNoDurableCopy:
+          "resettable Season-scoped standings; no durable permanent rating promise",
+      }
+      writeV136CompetitionSurfaceInventoryArtifacts({ repoRoot: root, rows })
+      writeTempFile(root, "apps/web/app/competitions/page.tsx", "Competition")
+
+      expect(() =>
+        checkV136CompetitionPolicyMonitor({
+          repoRoot: root,
+          rows,
+          includeDefaultSuppressions: false,
+        }),
+      ).toThrow(
+        /public beta trial competition|resettable Season-scoped standings/,
+      )
+    } finally {
+      rmSync(root, { force: true, recursive: true })
+    }
   })
 
   it("allows removed baseline web offenses but fails unknown new ones", () => {
@@ -292,6 +742,12 @@ describe("boundary drift monitors", () => {
     expect(() =>
       assertMonitorPublicPayload({ privateDiagnostics: { stack: "nope" } }),
     ).toThrow(/private field/)
+    expect(() =>
+      assertMonitorPublicPayload({ reporterUserId: "user:private" }),
+    ).toThrow(/private field/i)
+    expect(() =>
+      assertMonitorPublicPayload({ recoveryEvidence: "private" }),
+    ).toThrow(/private field/i)
   })
 
   it("fails worker quarantine artifacts that contain private markers", () => {
@@ -818,8 +1274,8 @@ describe("boundary drift monitors", () => {
         return new Response(
           JSON.stringify({
             ok: true,
-            service: "runtime-execution-service-v1.15",
-            runtimeAbiVersion: "strategy-runtime-abi-v1.14",
+            service: "runtime-execution-service-v1.17",
+            runtimeAbiVersion: "strategy-runtime-abi-v1.19",
             adapter: "runtime-js-worker-thread",
           }),
           { status: 200 },
@@ -923,13 +1379,14 @@ describe("boundary drift monitors", () => {
 
     try {
       const checks = await runBoundaryMonitorChecks()
-      expect(checks.every((check) => check.ok)).toBe(true)
+      expect(checks.filter((check) => !check.ok)).toEqual([])
       expect(checks.map((check) => check.layer)).toEqual(
         expect.arrayContaining([
           "contract_drift",
           "privacy",
           "web_boundary",
           "language_provider",
+          "checker_contract",
           "runtime_adapter",
           "runtime_isolation",
           "non_js_runtime",
@@ -944,6 +1401,30 @@ describe("boundary drift monitors", () => {
       expect(topology?.detail).toContain(
         "required live v1.16 no-TypeScript-backend topology diagnostics checked",
       )
+      const inventory = checks.find(
+        (check) => check.name === "v1.35 boundary surface inventory",
+      )
+      expect(inventory).toMatchObject({
+        layer: "contract_drift",
+        ok: true,
+        detail: "v1.35 boundary surface inventory artifacts are current",
+      })
+      const v136History = checks.find(
+        (check) => check.name === "v1.36 immutable historical proof",
+      )
+      expect(v136History).toMatchObject({
+        layer: "contract_drift",
+        ok: true,
+        detail: "validated 8 artifacts against 11 archived source blobs",
+      })
+      expect(checks.map((check) => check.name)).toEqual(
+        expect.arrayContaining([
+          "v1.35 boundary surface inventory",
+          "v1.36 immutable historical proof",
+          "v1.37 direct worker retirement",
+          "v1.37 integrity creation inventory",
+        ]),
+      )
     } finally {
       if (previousLiveTopology === undefined) {
         delete process.env.COWARDS_REQUIRE_LIVE_TOPOLOGY
@@ -951,5 +1432,5 @@ describe("boundary drift monitors", () => {
         process.env.COWARDS_REQUIRE_LIVE_TOPOLOGY = previousLiveTopology
       }
     }
-  }, 30_000)
+  }, 60_000)
 })

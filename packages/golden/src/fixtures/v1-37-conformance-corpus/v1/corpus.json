@@ -1,0 +1,408 @@
+{
+  "schemaVersion": "v1.37-executable-conformance-corpus-v1",
+  "version": "v1",
+  "generatedBy": "scripts/generate-v1-37-conformance-corpus.ts",
+  "hashAlgorithm": "sha256",
+  "rootDomain": "cowards-game:v1.37:executable-conformance-corpus:v1",
+  "rootFraming": "unsigned-64-bit-big-endian-length-then-bytes",
+  "languageIds": ["typescript", "python", "rust", "zig"],
+  "behaviorManifest": {
+    "id": "behavior:first-active-turn-to-stone:v1",
+    "description": "Select the first ACTIVE Soldier, preserve private memory markers, and TURN_TO_STONE on the Soldier Brain call.",
+    "invocationScript": [
+      {
+        "ordinal": 0,
+        "methodName": "selectActivations",
+        "inputFixtureId": "fixture:select:first-active"
+      },
+      {
+        "ordinal": 1,
+        "methodName": "soldierBrain",
+        "inputFixtureId": "fixture:brain:turn-to-stone"
+      }
+    ],
+    "expectedSelection": {
+      "activationOrders": [
+        {
+          "soldierId": "soldier:fixture:active",
+          "objective": {
+            "fixture": "v1.37",
+            "intent": "stone"
+          }
+        }
+      ],
+      "strategyMemory": {
+        "fixture": "v1.37"
+      }
+    },
+    "expectedBrain": {
+      "action": {
+        "type": "TURN_TO_STONE"
+      },
+      "soldierMemory": {
+        "fixture": "v1.37"
+      }
+    }
+  },
+  "fixtures": [
+    {
+      "languageId": "typescript",
+      "providerId": "strategy-language-provider-js-ts",
+      "runtimeTarget": "runtime-js",
+      "behaviorManifestId": "behavior:first-active-turn-to-stone:v1",
+      "sourceEncoding": "utf-8",
+      "sourceSha256": "sha256:ff3f25b48102daecf40ed2d4d8f0348b6c5b1b6250af6a5fa41fe32be7c671aa",
+      "source": "export default {\n  selectActivations(input) {\n    const soldier = input.mySoldiers.find((candidate) => candidate.status === \"ACTIVE\")\n    return {\n      activationOrders: soldier\n        ? [{ soldierId: soldier.id, objective: { fixture: \"v1.37\", intent: \"stone\" } }]\n        : [],\n      strategyMemory: { fixture: \"v1.37\" },\n    }\n  },\n  soldierBrain() {\n    return {\n      action: { type: \"TURN_TO_STONE\" },\n      soldierMemory: { fixture: \"v1.37\" },\n    }\n  },\n}\n"
+    },
+    {
+      "languageId": "python",
+      "providerId": "strategy-language-provider-python",
+      "runtimeTarget": "runtime-python",
+      "behaviorManifestId": "behavior:first-active-turn-to-stone:v1",
+      "sourceEncoding": "utf-8",
+      "sourceSha256": "sha256:2e1b0541a0c0f7eb1ac007d1626c887b0a78ec28520ca463c3a3c1c39f5920d2",
+      "source": "def select_activations(input):\n    soldier = next(\n        (candidate for candidate in input[\"mySoldiers\"] if candidate[\"status\"] == \"ACTIVE\"),\n        None,\n    )\n    return {\n        \"activationOrders\": ([{\n            \"soldierId\": soldier[\"id\"],\n            \"objective\": {\"fixture\": \"v1.37\", \"intent\": \"stone\"},\n        }] if soldier else []),\n        \"strategyMemory\": {\"fixture\": \"v1.37\"},\n    }\n\n\ndef soldier_brain(input):\n    return {\n        \"action\": {\"type\": \"TURN_TO_STONE\"},\n        \"soldierMemory\": {\"fixture\": \"v1.37\"},\n    }\n"
+    },
+    {
+      "languageId": "rust",
+      "providerId": "strategy-language-provider-rust-wasi",
+      "runtimeTarget": "runtime-wasm-wasi",
+      "behaviorManifestId": "behavior:first-active-turn-to-stone:v1",
+      "sourceEncoding": "utf-8",
+      "sourceSha256": "sha256:7cea13b89f7fe2ec2750b90f39e06188e8c41d48580d13a39f2ad42681e58b68",
+      "source": "use std::io::{self, Read};\n\nfn main() {\n    let mut input = String::new();\n    io::stdin().read_to_string(&mut input).unwrap();\n    if input.contains(\"\\\"methodName\\\":\\\"soldierBrain\\\"\") {\n        println!(r#\"{\"action\":{\"type\":\"TURN_TO_STONE\"},\"soldierMemory\":{\"fixture\":\"v1.37\"}}\"#);\n    } else {\n        println!(r#\"{\"activationOrders\":[{\"soldierId\":\"soldier:fixture:active\",\"objective\":{\"fixture\":\"v1.37\",\"intent\":\"stone\"}}],\"strategyMemory\":{\"fixture\":\"v1.37\"}}\"#);\n    }\n}\n"
+    },
+    {
+      "languageId": "zig",
+      "providerId": "strategy-language-provider-zig-wasi",
+      "runtimeTarget": "runtime-wasm-wasi",
+      "behaviorManifestId": "behavior:first-active-turn-to-stone:v1",
+      "sourceEncoding": "utf-8",
+      "sourceSha256": "sha256:293626338bb3fbb169c68291818e4fb9cb60872b4520c171077f5be7bc6fb3ad",
+      "source": "const std = @import(\"std\");\n\npub fn main() !void {\n    var input_buffer: [16384]u8 = undefined;\n    const input = try std.fs.File.stdin().readToEnd(&input_buffer);\n    const output = if (std.mem.indexOf(u8, input, \"\\\"methodName\\\":\\\"soldierBrain\\\"\") != null)\n        \"{\\\"action\\\":{\\\"type\\\":\\\"TURN_TO_STONE\\\"},\\\"soldierMemory\\\":{\\\"fixture\\\":\\\"v1.37\\\"}}\\n\"\n    else\n        \"{\\\"activationOrders\\\":[{\\\"soldierId\\\":\\\"soldier:fixture:active\\\",\\\"objective\\\":{\\\"fixture\\\":\\\"v1.37\\\",\\\"intent\\\":\\\"stone\\\"}}],\\\"strategyMemory\\\":{\\\"fixture\\\":\\\"v1.37\\\"}}\\n\";\n    try std.fs.File.stdout().writeAll(output);\n}\n"
+    }
+  ],
+  "cases": [
+    {
+      "id": "boundary-canonical-json-duplicate-key",
+      "kind": "boundary",
+      "capability": "canonical-json",
+      "executionMode": "raw-envelope",
+      "seed": null,
+      "generatorId": null,
+      "mutationTarget": null,
+      "required": true,
+      "unsupportedDisposition": "fail-certification",
+      "requiredLanguageIds": ["typescript", "python", "rust", "zig"],
+      "expectation": {
+        "resultClass": "player_violation",
+        "reasonCode": "DUPLICATE_KEY",
+        "failingBoundary": "decoded-strategy-payload",
+        "gameplayMutation": false,
+        "retryable": false,
+        "traceRef": "trace:boundary-canonical-json-duplicate-key"
+      }
+    },
+    {
+      "id": "boundary-depth-limit",
+      "kind": "boundary",
+      "capability": "depth",
+      "executionMode": "raw-envelope",
+      "seed": null,
+      "generatorId": null,
+      "mutationTarget": null,
+      "required": true,
+      "unsupportedDisposition": "fail-certification",
+      "requiredLanguageIds": ["typescript", "python", "rust", "zig"],
+      "expectation": {
+        "resultClass": "player_violation",
+        "reasonCode": "MAX_DEPTH_EXCEEDED",
+        "failingBoundary": "decoded-strategy-payload",
+        "gameplayMutation": false,
+        "retryable": false,
+        "traceRef": "trace:boundary-depth-limit"
+      }
+    },
+    {
+      "id": "boundary-numeric-negative-zero",
+      "kind": "boundary",
+      "capability": "numeric",
+      "executionMode": "raw-envelope",
+      "seed": null,
+      "generatorId": null,
+      "mutationTarget": null,
+      "required": true,
+      "unsupportedDisposition": "fail-certification",
+      "requiredLanguageIds": ["typescript", "python", "rust", "zig"],
+      "expectation": {
+        "resultClass": "success",
+        "reasonCode": "NEGATIVE_ZERO_NORMALIZED",
+        "failingBoundary": "complete",
+        "gameplayMutation": false,
+        "retryable": false,
+        "traceRef": "trace:boundary-numeric-negative-zero"
+      }
+    },
+    {
+      "id": "boundary-unicode-scalar",
+      "kind": "boundary",
+      "capability": "unicode",
+      "executionMode": "raw-envelope",
+      "seed": null,
+      "generatorId": null,
+      "mutationTarget": null,
+      "required": true,
+      "unsupportedDisposition": "fail-certification",
+      "requiredLanguageIds": ["typescript", "python", "rust", "zig"],
+      "expectation": {
+        "resultClass": "success",
+        "reasonCode": "UNICODE_SCALAR_PRESERVED",
+        "failingBoundary": "complete",
+        "gameplayMutation": false,
+        "retryable": false,
+        "traceRef": "trace:boundary-unicode-scalar"
+      }
+    },
+    {
+      "id": "failure-malformed-output-player",
+      "kind": "positive-failure",
+      "capability": "malformed-output",
+      "executionMode": "strategy",
+      "seed": null,
+      "generatorId": null,
+      "mutationTarget": "strategy-output:truncated-json",
+      "required": true,
+      "unsupportedDisposition": "fail-certification",
+      "requiredLanguageIds": ["typescript", "python", "rust", "zig"],
+      "expectation": {
+        "resultClass": "player_violation",
+        "reasonCode": "INVALID_STRATEGY_PAYLOAD",
+        "failingBoundary": "decoded-strategy-payload",
+        "gameplayMutation": false,
+        "retryable": false,
+        "traceRef": "trace:failure-malformed-output-player"
+      }
+    },
+    {
+      "id": "failure-resource-proven-player",
+      "kind": "positive-failure",
+      "capability": "resource",
+      "executionMode": "strategy",
+      "seed": null,
+      "generatorId": null,
+      "mutationTarget": "guest:proven-resource-exhaustion",
+      "required": true,
+      "unsupportedDisposition": "fail-certification",
+      "requiredLanguageIds": ["typescript", "python", "rust", "zig"],
+      "expectation": {
+        "resultClass": "player_violation",
+        "reasonCode": "RESOURCE_EXHAUSTION",
+        "failingBoundary": "guest-method",
+        "gameplayMutation": false,
+        "retryable": false,
+        "traceRef": "trace:failure-resource-proven-player"
+      }
+    },
+    {
+      "id": "failure-stale-artifact-system",
+      "kind": "negative-failure",
+      "capability": "stale-artifact",
+      "executionMode": "strategy",
+      "seed": null,
+      "generatorId": null,
+      "mutationTarget": "identity:artifact-sha256",
+      "required": true,
+      "unsupportedDisposition": "fail-certification",
+      "requiredLanguageIds": ["typescript", "python", "rust", "zig"],
+      "expectation": {
+        "resultClass": "system_failure",
+        "reasonCode": "ARTIFACT_IDENTITY_MISMATCH",
+        "failingBoundary": "pre-invocation-identity",
+        "gameplayMutation": false,
+        "retryable": false,
+        "traceRef": "trace:failure-stale-artifact-system"
+      }
+    },
+    {
+      "id": "failure-timeout-unattributed-system",
+      "kind": "negative-failure",
+      "capability": "timeout",
+      "executionMode": "strategy",
+      "seed": null,
+      "generatorId": null,
+      "mutationTarget": "host:unattributed-timeout",
+      "required": true,
+      "unsupportedDisposition": "fail-certification",
+      "requiredLanguageIds": ["typescript", "python", "rust", "zig"],
+      "expectation": {
+        "resultClass": "system_failure",
+        "reasonCode": "TIMEOUT_ATTRIBUTION_UNAVAILABLE",
+        "failingBoundary": "runtime-supervisor",
+        "gameplayMutation": false,
+        "retryable": true,
+        "traceRef": "trace:failure-timeout-unattributed-system"
+      }
+    },
+    {
+      "id": "failure-toolchain-unavailable-system",
+      "kind": "negative-failure",
+      "capability": "valid-behavior",
+      "executionMode": "strategy",
+      "seed": null,
+      "generatorId": null,
+      "mutationTarget": "toolchain:unavailable",
+      "required": true,
+      "unsupportedDisposition": "fail-certification",
+      "requiredLanguageIds": ["typescript", "python", "rust", "zig"],
+      "expectation": {
+        "resultClass": "system_failure",
+        "reasonCode": "TOOLCHAIN_UNAVAILABLE",
+        "failingBoundary": "preflight",
+        "gameplayMutation": false,
+        "retryable": true,
+        "traceRef": "trace:failure-toolchain-unavailable-system"
+      }
+    },
+    {
+      "id": "mutation-event-order-kill",
+      "kind": "mutation-kill",
+      "capability": "mutation-kill",
+      "executionMode": "strategy",
+      "seed": "v1.37:mutation:event-order:001",
+      "generatorId": "generator:mutation:event-order:v1",
+      "mutationTarget": "trace:ordered-events",
+      "required": true,
+      "unsupportedDisposition": "fail-certification",
+      "requiredLanguageIds": ["typescript", "python", "rust", "zig"],
+      "expectation": {
+        "resultClass": "success",
+        "reasonCode": "MUTATION_REJECTED",
+        "failingBoundary": "trace-comparison",
+        "gameplayMutation": true,
+        "retryable": false,
+        "traceRef": "trace:mutation-event-order-kill"
+      }
+    },
+    {
+      "id": "normative-first-active-turn-to-stone",
+      "kind": "normative",
+      "capability": "valid-behavior",
+      "executionMode": "strategy",
+      "seed": null,
+      "generatorId": null,
+      "mutationTarget": null,
+      "required": true,
+      "unsupportedDisposition": "fail-certification",
+      "requiredLanguageIds": ["typescript", "python", "rust", "zig"],
+      "expectation": {
+        "resultClass": "success",
+        "reasonCode": "OK",
+        "failingBoundary": "complete",
+        "gameplayMutation": true,
+        "retryable": false,
+        "traceRef": "trace:normative-first-active-turn-to-stone"
+      }
+    },
+    {
+      "id": "probe-raw-envelope-authentication",
+      "kind": "raw-envelope",
+      "capability": "transport",
+      "executionMode": "raw-envelope",
+      "seed": null,
+      "generatorId": null,
+      "mutationTarget": "outer-envelope:signature",
+      "required": true,
+      "unsupportedDisposition": "fail-certification",
+      "requiredLanguageIds": ["typescript", "python", "rust", "zig"],
+      "expectation": {
+        "resultClass": "system_failure",
+        "reasonCode": "OUTER_ENVELOPE_AUTHENTICATION_FAILED",
+        "failingBoundary": "authenticated-outer-envelope",
+        "gameplayMutation": false,
+        "retryable": false,
+        "traceRef": "trace:probe-raw-envelope-authentication"
+      }
+    },
+    {
+      "id": "probe-raw-envelope-transport-truncation",
+      "kind": "raw-envelope",
+      "capability": "transport",
+      "executionMode": "raw-envelope",
+      "seed": null,
+      "generatorId": null,
+      "mutationTarget": "outer-envelope:truncated-frame",
+      "required": true,
+      "unsupportedDisposition": "fail-certification",
+      "requiredLanguageIds": ["typescript", "python", "rust", "zig"],
+      "expectation": {
+        "resultClass": "system_failure",
+        "reasonCode": "TRANSPORT_FRAME_TRUNCATED",
+        "failingBoundary": "transport",
+        "gameplayMutation": false,
+        "retryable": true,
+        "traceRef": "trace:probe-raw-envelope-transport-truncation"
+      }
+    },
+    {
+      "id": "property-deterministic-repeat-seed-001",
+      "kind": "seeded-property",
+      "capability": "deterministic-repeat",
+      "executionMode": "strategy",
+      "seed": "v1.37:repeat:001",
+      "generatorId": "generator:deterministic-repeat:v1",
+      "mutationTarget": null,
+      "required": true,
+      "unsupportedDisposition": "fail-certification",
+      "requiredLanguageIds": ["typescript", "python", "rust", "zig"],
+      "expectation": {
+        "resultClass": "success",
+        "reasonCode": "IDENTICAL_REPEAT_ROOT",
+        "failingBoundary": "complete",
+        "gameplayMutation": true,
+        "retryable": false,
+        "traceRef": "trace:property-deterministic-repeat-seed-001"
+      }
+    },
+    {
+      "id": "property-differential-full-trace-seed-002",
+      "kind": "seeded-property",
+      "capability": "differential",
+      "executionMode": "strategy",
+      "seed": "v1.37:differential:002",
+      "generatorId": "generator:differential-full-trace:v1",
+      "mutationTarget": null,
+      "required": true,
+      "unsupportedDisposition": "fail-certification",
+      "requiredLanguageIds": ["typescript", "python", "rust", "zig"],
+      "expectation": {
+        "resultClass": "success",
+        "reasonCode": "IDENTICAL_FULL_TRACE_ROOT",
+        "failingBoundary": "complete",
+        "gameplayMutation": true,
+        "retryable": false,
+        "traceRef": "trace:property-differential-full-trace-seed-002"
+      }
+    },
+    {
+      "id": "property-seeded-selection-seed-003",
+      "kind": "seeded-property",
+      "capability": "seeded-property",
+      "executionMode": "strategy",
+      "seed": "v1.37:selection:003",
+      "generatorId": "generator:selection-permutation:v1",
+      "mutationTarget": null,
+      "required": true,
+      "unsupportedDisposition": "fail-certification",
+      "requiredLanguageIds": ["typescript", "python", "rust", "zig"],
+      "expectation": {
+        "resultClass": "success",
+        "reasonCode": "PROPERTY_HOLDS",
+        "failingBoundary": "complete",
+        "gameplayMutation": true,
+        "retryable": false,
+        "traceRef": "trace:property-seeded-selection-seed-003"
+      }
+    }
+  ],
+  "corpusRootSha256": "sha256:4e13f5e14961c7b7efd6869c6e456c9f8cfeb1cdd2afd9ec17a93812ccbe76a9"
+}

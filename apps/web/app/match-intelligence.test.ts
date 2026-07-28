@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest"
 import {
   MATCH_EXECUTION_CONTRACT_FIXTURES_V1,
-  type PublicMatchSetSummaryServiceDto,
+  type MatchExecutionContractFixtureV1,
 } from "@cowards/spec"
 import { createReplayFixtureData } from "./matches/replay-fixture.js"
 import type { PublicReadMatchSetResultDto } from "../lib/public-service-boundary.js"
+import { toPublicMatchSetSummaryFixture } from "../lib/match-execution-fixture-adapter.js"
 import {
   buildReplayIntelligenceViewModel,
   buildResultIntelligenceViewModel,
@@ -23,13 +24,15 @@ const forbiddenPublicMarkers = [
 ] as const
 
 const readResult = (
-  summary: PublicMatchSetSummaryServiceDto,
+  fixture: MatchExecutionContractFixtureV1,
 ): PublicReadMatchSetResultDto => {
+  const fixtureSummary = fixture.service.matchSetSummary
+  if (!fixtureSummary) {
+    throw new Error(`Missing fixture summary for ${fixture.id}`)
+  }
+  const summary = toPublicMatchSetSummaryFixture(fixtureSummary)
   const result = summary.result
-  const contract =
-    MATCH_EXECUTION_CONTRACT_FIXTURES_V1.find(
-      (fixture) => fixture.service.matchSetSummary === summary,
-    )?.app.matchSetSummary ?? null
+  const contract = fixture.app.matchSetSummary ?? null
   if (!contract) {
     throw new Error(`Missing app contract for ${summary.matchSetId}`)
   }
@@ -66,10 +69,9 @@ describe("public Match intelligence derivation", () => {
       if (!fixture.service.matchSetSummary) {
         continue
       }
-      const model = buildResultIntelligenceViewModel(
-        readResult(fixture.service.matchSetSummary),
-        ["JS/TS - counted eligible"],
-      )
+      const model = buildResultIntelligenceViewModel(readResult(fixture), [
+        "JS/TS - counted eligible",
+      ])
       const serialized = JSON.stringify(model)
 
       expect(model.headline).not.toHaveLength(0)

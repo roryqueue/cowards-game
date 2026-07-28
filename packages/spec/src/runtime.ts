@@ -3,9 +3,163 @@ import type {
   StrategyArtifactSourceFormat,
   StrategyRevisionValidationIssue,
 } from "./types.js"
-import { COMPATIBILITY_VERSIONS } from "./versions.js"
+import {
+  COMPATIBILITY_VERSIONS,
+  STRATEGY_RUNTIME_ABI_VERSION,
+} from "./versions.js"
+import {
+  evaluateExecutableLaneEligibility,
+  type EvaluateExecutableLaneEligibilityInput,
+} from "./runtime-evidence.js"
+import type { SemanticAuthoritySelection } from "./current-semantic-authority-generated.js"
 
-export const STRATEGY_RUNTIME_ABI_VERSION = "strategy-runtime-abi-v1.14"
+export { STRATEGY_RUNTIME_ABI_VERSION } from "./versions.js"
+export {
+  CANONICAL_IDENTITY_DOMAINS,
+  CANONICAL_IDENTITY_DOMAIN_NAMES,
+  hashCanonicalIdentity,
+  hashCanonicalIdentityValue,
+  type CanonicalIdentityDomain,
+} from "./canonical-identity-domains.js"
+export { admitCanonicalJsonBytes } from "./canonical-json.js"
+export {
+  SoldierBrainResultV117Schema,
+  StrategyResultV117Schema,
+} from "./runtime-payload-v1-17.js"
+export {
+  RUNTIME_ABI_V1_17,
+  RUNTIME_ABI_V1_17_LEDGER_SCHEMA_VERSION,
+  createRuntimeAbiV117ExecutionLedger,
+  createRuntimeAbiV117PreflightLedger,
+  debitRuntimeAbiV117Ledger,
+  type RuntimeAbiV117AccountingEvidence,
+  type RuntimeAbiV117CancellationEvidence,
+  type RuntimeAbiV117CounterEvidence,
+  type RuntimeAbiV117ExecutionCapabilityEvidence,
+  type RuntimeAbiV117ExecutionCounterName,
+  type RuntimeAbiV117ExecutionLedger,
+  type RuntimeAbiV117ExecutionLedgerReceipt,
+  type RuntimeAbiV117ExecutionMethod,
+  type RuntimeAbiV117Ledger,
+  type RuntimeAbiV117LedgerAttribution,
+  type RuntimeAbiV117LedgerCommitment,
+  type RuntimeAbiV117LedgerDebitResult,
+  type RuntimeAbiV117LedgerFailureCode,
+  type RuntimeAbiV117LedgerReceipt,
+  type RuntimeAbiV117MemoryEvidence,
+  type RuntimeAbiV117PreflightCapabilityEvidence,
+  type RuntimeAbiV117PreflightCounterName,
+  type RuntimeAbiV117PreflightLedger,
+  type RuntimeAbiV117PreflightLedgerReceipt,
+  type RuntimeAbiV117PreflightProfile,
+  type RuntimeAbiV117ProcessEvidence,
+  type RuntimeAbiV117UnavailableEvidence,
+} from "./runtime-abi-v1-17.js"
+export { RUNTIME_ABI_V1_17_BUDGET_PROFILE_SHA256 } from "./runtime-budget-profile-v1-17.js"
+export {
+  AuthenticatedRuntimeInvocationRequestV117Schema,
+  AuthenticatedRuntimeInvocationResponseV117Schema,
+  RUNTIME_INVOCATION_V1_17_CANDIDATE,
+  RUNTIME_INVOCATION_V1_17_SELECTED_LIFECYCLE,
+  RUNTIME_INVOCATION_V1_17_AUTH_ALGORITHM,
+  RUNTIME_INVOCATION_V1_17_OWNERSHIP_MATRIX,
+  RUNTIME_INVOCATION_V1_17_PLAYER_VIOLATION_CODES,
+  RUNTIME_INVOCATION_V1_17_PLAYER_VIOLATIONS,
+  RUNTIME_INVOCATION_V1_17_SYSTEM_FAILURE_CODES,
+  RUNTIME_INVOCATION_V1_17_SYSTEM_FAILURE_RETRYABILITY,
+  RUNTIME_INVOCATION_V1_17_TEST_KEY_ID,
+  RUNTIME_INVOCATION_V1_17_INITIAL_EXECUTION_LEDGER_ROOT,
+  RuntimeInvocationResultV117Schema,
+  RuntimeInvocationTraceV117Schema,
+  classifyRuntimeInvocationV117,
+  createAuthenticatedRuntimeInvocationRequestV117,
+  createSelectedRuntimeInvocationRequestV117,
+  createAuthenticatedRuntimeInvocationResponseV117,
+  createRuntimeInvocationBudgetV117,
+  createRuntimeInvocationExecutionReceiptV117,
+  createRuntimeInvocationTraceV117,
+  getRuntimeInvocationRequestAdmissionV117,
+  runtimeInvocationExecutionLedgerPoststateRootV117,
+  runtimeInvocationExecutionLedgerPrestateRootV117,
+  serializeRuntimeInvocationRequestV117,
+  serializeRuntimeInvocationResponseV117,
+  verifyRuntimeInvocationRequestV117,
+  verifySelectedRuntimeInvocationRequestV117,
+  verifyRuntimeInvocationResponseV117,
+  type AuthenticatedRuntimeInvocationRequestV117,
+  type AuthenticatedRuntimeInvocationResponseV117,
+  type CreateRuntimeInvocationRequestV117Input,
+  type RuntimeInvocationAuthenticationV117,
+  type RuntimeInvocationBoundaryEventV117,
+  type RuntimeInvocationBudgetV117,
+  type RuntimeInvocationCounterLimitV117,
+  type RuntimeInvocationExecutionReceiptEvidenceV117,
+  type RuntimeInvocationExecutionReceiptV117,
+  type RuntimeInvocationInputV117,
+  type RuntimeInvocationMatchLimitV117,
+  type RuntimeInvocationMatchCumulativeBudgetV117,
+  type RuntimeInvocationMemoryLimitV117,
+  type RuntimeInvocationMethodLimitV117,
+  type RuntimeInvocationMethodV117,
+  type RuntimeInvocationPayloadBindingV117,
+  type RuntimeInvocationPlayerViolationCodeV117,
+  type RuntimeInvocationPlayerViolationV117,
+  type RuntimeInvocationRequestBindingV117,
+  type RuntimeInvocationRequestAdmissionV117,
+  type RuntimeInvocationRequestAccountingV117,
+  type RuntimeInvocationResponseAccountingV117,
+  type RuntimeInvocationResultV117,
+  type RuntimeInvocationRetryV117,
+  type RuntimeInvocationSemanticTupleV117,
+  type RuntimeInvocationSigningIdentityV117,
+  type RuntimeInvocationSourceIdentityV117,
+  type RuntimeInvocationSystemFailureCodeV117,
+  type RuntimeInvocationSystemFailureV117,
+  type RuntimeInvocationTraceV117,
+} from "./runtime-invocation-v1-17.js"
+export {
+  AuthenticatedRuntimePreflightReceiptV117Schema,
+  AuthenticatedRuntimePreflightRequestV117Schema,
+  AuthenticatedRuntimePreflightResponseV117Schema,
+  RUNTIME_PREFLIGHT_V1_17_AUTH_ALGORITHM,
+  RUNTIME_PREFLIGHT_V1_17_CANDIDATE,
+  createAuthenticatedRuntimePreflightReceiptV117,
+  createAuthenticatedRuntimePreflightRequestV117,
+  createAuthenticatedRuntimePreflightResponseV117,
+  createAuthenticatedRuntimePreflightRetryRequestV117,
+  createRuntimePreflightBudgetV117,
+  createRuntimePreflightObservedEvidenceV117,
+  serializeRuntimePreflightReceiptV117,
+  serializeRuntimePreflightRequestV117,
+  serializeRuntimePreflightResponseV117,
+  verifyRuntimePreflightReceiptV117,
+  verifyRuntimePreflightRequestV117,
+  verifyRuntimePreflightResponseV117,
+  type AuthenticatedRuntimePreflightReceiptV117,
+  type AuthenticatedRuntimePreflightRequestV117,
+  type AuthenticatedRuntimePreflightResponseV117,
+  type CreateRuntimePreflightRequestV117Input,
+  type RuntimePreflightAuthenticationV117,
+  type RuntimePreflightBudgetV117,
+  type RuntimePreflightContainmentIdentityV117,
+  type RuntimePreflightEvidenceContextV117,
+  type RuntimePreflightInputV117,
+  type RuntimePreflightLimitsV117,
+  type RuntimePreflightObservedEvidenceInputV117,
+  type RuntimePreflightObservedEvidenceV117,
+  type RuntimePreflightOperationResultV117,
+  type RuntimePreflightOutcomeV117,
+  type RuntimePreflightProducerIdentityV117,
+  type RuntimePreflightReceiptEvidenceV117,
+  type RuntimePreflightRequestAccountingV117,
+  type RuntimePreflightRequestBindingV117,
+  type RuntimePreflightResponseAccountingV117,
+  type RuntimePreflightRetryV117,
+  type RuntimePreflightSigningIdentityV117,
+  type RuntimePreflightToolchainIdentityV117,
+  type RuntimePreflightVerificationFailureCodeV117,
+  type RuntimePreflightVerificationResultV117,
+} from "./runtime-preflight-v1-17.js"
 
 export const STRATEGY_LANGUAGE_IDS = [
   "javascript",
@@ -39,6 +193,51 @@ export type StrategyRuntimeIsolationPromotionState =
   | "shadow-only"
   | "production-counted"
 
+export const STRATEGY_RUNTIME_SANDBOX_READINESS_CONTRACT_VERSION =
+  "strategy-runtime-sandbox-readiness-v1.35" as const
+
+export type StrategyRuntimeSandboxLaneId = StrategyLanguageId | "tinygo"
+
+export type StrategyRuntimeEvidenceClass =
+  | "runtime-containment"
+  | "source-artifact-provenance"
+  | "immutable-wasm-wasi-preview1-artifact"
+  | "spike-only-hidden"
+
+export type StrategyRuntimeArtifactPosture =
+  | "source-backed"
+  | "source-language-artifact-provenance"
+  | "immutable-wasm-wasi-preview1"
+  | "unavailable"
+
+export interface StrategyRuntimeSandboxReadinessClaim {
+  contractVersion: typeof STRATEGY_RUNTIME_SANDBOX_READINESS_CONTRACT_VERSION
+  laneId: StrategyRuntimeSandboxLaneId
+  evidenceClass: StrategyRuntimeEvidenceClass
+  artifactPosture: StrategyRuntimeArtifactPosture
+  productionSandboxCertification: false
+  publicLabel: string
+  developerLabel: string
+  unavailableInProduction: boolean
+  forbiddenStrongerClaims: readonly string[]
+}
+
+export const STRATEGY_RUNTIME_PACKAGE_POLICY_CONTRACT_VERSION =
+  "strategy-runtime-package-policy-v1.35" as const
+
+export interface StrategyRuntimePackagePolicyClaim {
+  contractVersion: typeof STRATEGY_RUNTIME_PACKAGE_POLICY_CONTRACT_VERSION
+  laneId: StrategyRuntimeSandboxLaneId
+  productionPackageMode: "none"
+  hostImportsAllowed: false
+  richPackagesAllowed: false
+  nativeDependenciesAllowed: false
+  publicLabel: string
+  developerLabel: string
+  currentRestrictions: readonly string[]
+  futureSupportRequirements: readonly string[]
+}
+
 export interface StrategyLanguageRecord {
   id: StrategyLanguageId
   label: string
@@ -58,7 +257,7 @@ export type SupportedStrategyLanguageCountedEligibility =
   | "pending-evidence"
 
 export const STRATEGY_LANGUAGE_PROVIDER_CONTRACT_VERSION =
-  "strategy-language-provider-contract-v1.33" as const
+  "runtime-provider-validation-v1.17" as const
 
 export interface SupportedStrategyLanguageRecord {
   id: StrategyLanguageId
@@ -96,6 +295,7 @@ export type StrategyRuntimeAbiPosture =
   | "runtime-js-source-artifact"
   | "python-source-provenance-json"
   | "wasi-preview1-stdin-stdout-json"
+  | "wasi-preview1-stdin-canonical-request-stdout-raw-canonical-payload"
 
 export interface StrategyLanguageProviderRecord {
   id: SupportedStrategyLanguageProviderId
@@ -185,8 +385,12 @@ export interface StrategyPackageMetadata {
   declaredDependencies?: Record<string, string> | undefined
 }
 
+export type StrategyRuntimeAbiVersion =
+  | "strategy-runtime-abi-v1.14"
+  | SemanticAuthoritySelection["runtimeAbiVersion"]
+
 export interface StrategyRuntimeMetadata {
-  abiVersion: typeof STRATEGY_RUNTIME_ABI_VERSION
+  abiVersion: StrategyRuntimeAbiVersion
   language: {
     id: StrategyLanguageId
     version: string
@@ -517,7 +721,7 @@ export const SUPPORTED_STRATEGY_LANGUAGES = [
     ],
     notes: [
       "Counted play requires runtime-service provider validation, immutable WASM/WASI artifact metadata, import audit, and provider proof bound to source and artifact hashes.",
-      "WASI Preview 1 stdin/stdout JSON remains the active Rust ABI; direct exports and Component Model/WIT stay deferred.",
+      "WASI Preview 1 reads one canonical v1.17 request from stdin and writes one raw canonical payload to stdout; direct exports and Component Model/WIT stay deferred.",
     ],
   },
   {
@@ -556,6 +760,252 @@ export const SUPPORTED_STRATEGY_LANGUAGES = [
   },
 ] as const satisfies readonly SupportedStrategyLanguageRecord[]
 
+const forbiddenSandboxClaimPhrases = [
+  "production sandbox certification",
+  "WASM isolation for TypeScript or Python",
+  "TinyGo production support",
+  "direct-export ABI promotion",
+  "Component Model/WIT ABI promotion",
+  "package ecosystem support",
+] as const
+
+export const STRATEGY_RUNTIME_SANDBOX_READINESS_CLAIMS = [
+  {
+    contractVersion: STRATEGY_RUNTIME_SANDBOX_READINESS_CONTRACT_VERSION,
+    laneId: "javascript",
+    evidenceClass: "runtime-containment",
+    artifactPosture: "source-backed",
+    productionSandboxCertification: false,
+    publicLabel: "Runtime containment evidence only",
+    developerLabel:
+      "JavaScript remains runtime-service/provider-gated containment evidence, not production sandbox certification.",
+    unavailableInProduction: false,
+    forbiddenStrongerClaims: forbiddenSandboxClaimPhrases,
+  },
+  {
+    contractVersion: STRATEGY_RUNTIME_SANDBOX_READINESS_CONTRACT_VERSION,
+    laneId: "typescript",
+    evidenceClass: "source-artifact-provenance",
+    artifactPosture: "source-language-artifact-provenance",
+    productionSandboxCertification: false,
+    publicLabel: "Provenance evidence only",
+    developerLabel:
+      "TypeScript provider proof binds source and transpiled artifact identity; it is not WASM/WASI isolation or sandbox certification.",
+    unavailableInProduction: false,
+    forbiddenStrongerClaims: forbiddenSandboxClaimPhrases,
+  },
+  {
+    contractVersion: STRATEGY_RUNTIME_SANDBOX_READINESS_CONTRACT_VERSION,
+    laneId: "python",
+    evidenceClass: "source-artifact-provenance",
+    artifactPosture: "source-language-artifact-provenance",
+    productionSandboxCertification: false,
+    publicLabel: "Provenance evidence only",
+    developerLabel:
+      "Python provider proof binds normalized source-bundle provenance; it is not WASM/WASI isolation or sandbox certification.",
+    unavailableInProduction: false,
+    forbiddenStrongerClaims: forbiddenSandboxClaimPhrases,
+  },
+  {
+    contractVersion: STRATEGY_RUNTIME_SANDBOX_READINESS_CONTRACT_VERSION,
+    laneId: "rust",
+    evidenceClass: "immutable-wasm-wasi-preview1-artifact",
+    artifactPosture: "immutable-wasm-wasi-preview1",
+    productionSandboxCertification: false,
+    publicLabel: "WASM/WASI artifact-backed evidence",
+    developerLabel:
+      "Rust is immutable WASM/WASI Preview 1 artifact-backed through provider proof; this is not broad production sandbox certification.",
+    unavailableInProduction: false,
+    forbiddenStrongerClaims: forbiddenSandboxClaimPhrases,
+  },
+  {
+    contractVersion: STRATEGY_RUNTIME_SANDBOX_READINESS_CONTRACT_VERSION,
+    laneId: "zig",
+    evidenceClass: "immutable-wasm-wasi-preview1-artifact",
+    artifactPosture: "immutable-wasm-wasi-preview1",
+    productionSandboxCertification: false,
+    publicLabel: "WASM/WASI artifact-backed evidence",
+    developerLabel:
+      "Zig is immutable WASM/WASI Preview 1 artifact-backed through provider proof; this is not broad production sandbox certification.",
+    unavailableInProduction: false,
+    forbiddenStrongerClaims: forbiddenSandboxClaimPhrases,
+  },
+  {
+    contractVersion: STRATEGY_RUNTIME_SANDBOX_READINESS_CONTRACT_VERSION,
+    laneId: "tinygo",
+    evidenceClass: "spike-only-hidden",
+    artifactPosture: "unavailable",
+    productionSandboxCertification: false,
+    publicLabel: "Hidden spike-only lane",
+    developerLabel:
+      "TinyGo remains hidden and spike-only until a future productionization milestone proves the required boundary evidence.",
+    unavailableInProduction: true,
+    forbiddenStrongerClaims: forbiddenSandboxClaimPhrases,
+  },
+] as const satisfies readonly StrategyRuntimeSandboxReadinessClaim[]
+
+export const getStrategyRuntimeSandboxReadinessClaim = (
+  laneId: unknown,
+): StrategyRuntimeSandboxReadinessClaim | null =>
+  STRATEGY_RUNTIME_SANDBOX_READINESS_CLAIMS.find(
+    (claim) => claim.laneId === laneId,
+  ) ?? null
+
+const futurePackageSupportRequirements = [
+  "versioned package-lane policy",
+  "reproducible dependency resolution",
+  "committed lockfile and manifest hashing",
+  "supply-chain allowlist and provenance",
+  "native-code and build-script policy",
+  "sandboxed build/install boundary",
+  "deterministic build output proof",
+  "cache invalidation and rollback",
+  "privacy redaction for diagnostics and paths",
+  "runtime-boundary proof before entry eligibility",
+] as const
+
+const packagePolicyClaims = [
+  {
+    laneId: "javascript",
+    developerLabel:
+      "JavaScript production Strategies are self-contained; npm packages, dynamic imports, host imports, and package installation are not supported.",
+    currentRestrictions: [
+      "no npm package metadata",
+      "no require/import/dynamic import",
+      "no host filesystem/network/process imports",
+    ],
+  },
+  {
+    laneId: "typescript",
+    developerLabel:
+      "TypeScript production Strategies are self-contained source/artifact revisions; npm packages, host imports, and package installation are not supported.",
+    currentRestrictions: [
+      "no npm package metadata",
+      "no require/import/dynamic import",
+      "no host filesystem/network/process imports",
+    ],
+  },
+  {
+    laneId: "python",
+    developerLabel:
+      "Python production Strategies are self-contained source bundles; PyPI packages, imports, site-packages, and host imports are not supported.",
+    currentRestrictions: [
+      "no PyPI package metadata",
+      "no import statements",
+      "no site-packages or host process access",
+    ],
+  },
+  {
+    laneId: "rust",
+    developerLabel:
+      "Rust production Strategies are self-contained immutable WASM/WASI Preview 1 artifacts; external crates and package installation are not supported.",
+    currentRestrictions: [
+      "no external crate package lane",
+      "no package installation",
+      "no host filesystem/network/process imports",
+    ],
+  },
+  {
+    laneId: "zig",
+    developerLabel:
+      "Zig production Strategies are self-contained no-std/helper WASM/WASI Preview 1 artifacts; Zig packages and host imports are not supported.",
+    currentRestrictions: [
+      "no Zig package lane",
+      "no std/host import capability beyond approved no-std helper lanes",
+      "no package installation",
+    ],
+  },
+  {
+    laneId: "tinygo",
+    developerLabel:
+      "TinyGo remains hidden and spike-only; no production package support exists.",
+    currentRestrictions: [
+      "no TinyGo production lane",
+      "no TinyGo packages",
+      "hidden from production surfaces",
+    ],
+  },
+] as const
+
+export const STRATEGY_RUNTIME_PACKAGE_POLICY_CLAIMS = packagePolicyClaims.map(
+  (claim): StrategyRuntimePackagePolicyClaim => ({
+    contractVersion: STRATEGY_RUNTIME_PACKAGE_POLICY_CONTRACT_VERSION,
+    laneId: claim.laneId,
+    productionPackageMode: "none",
+    hostImportsAllowed: false,
+    richPackagesAllowed: false,
+    nativeDependenciesAllowed: false,
+    publicLabel: "No packages",
+    developerLabel: claim.developerLabel,
+    currentRestrictions: claim.currentRestrictions,
+    futureSupportRequirements: futurePackageSupportRequirements,
+  }),
+) as readonly StrategyRuntimePackagePolicyClaim[]
+
+export const getStrategyRuntimePackagePolicyClaim = (
+  laneId: unknown,
+): StrategyRuntimePackagePolicyClaim | null =>
+  STRATEGY_RUNTIME_PACKAGE_POLICY_CLAIMS.find(
+    (claim) => claim.laneId === laneId,
+  ) ?? null
+
+const assertStrategyRuntimeSandboxReadinessClaim = (
+  claim: StrategyRuntimeSandboxReadinessClaim,
+): void => {
+  if (claim.productionSandboxCertification !== false) {
+    throw new Error(`${claim.laneId} must not be sandbox certified`)
+  }
+  if (
+    (claim.laneId === "typescript" || claim.laneId === "python") &&
+    claim.evidenceClass !== "source-artifact-provenance"
+  ) {
+    throw new Error(`${claim.laneId} must remain provenance-only`)
+  }
+  if (
+    (claim.laneId === "rust" || claim.laneId === "zig") &&
+    claim.artifactPosture !== "immutable-wasm-wasi-preview1"
+  ) {
+    throw new Error(
+      `${claim.laneId} must remain WASI Preview 1 artifact-backed`,
+    )
+  }
+  if (
+    claim.laneId === "tinygo" &&
+    (!claim.unavailableInProduction ||
+      claim.evidenceClass !== "spike-only-hidden")
+  ) {
+    throw new Error("TinyGo must remain hidden and spike-only")
+  }
+}
+
+export const assertStrategyRuntimeSandboxReadinessContract = (): void => {
+  for (const claim of STRATEGY_RUNTIME_SANDBOX_READINESS_CLAIMS) {
+    assertStrategyRuntimeSandboxReadinessClaim(claim)
+  }
+}
+
+export const assertStrategyRuntimePackagePolicyContract = (): void => {
+  for (const claim of STRATEGY_RUNTIME_PACKAGE_POLICY_CLAIMS) {
+    if (claim.productionPackageMode !== "none") {
+      throw new Error(`${claim.laneId} must remain package mode none`)
+    }
+    if (
+      claim.hostImportsAllowed ||
+      claim.richPackagesAllowed ||
+      claim.nativeDependenciesAllowed
+    ) {
+      throw new Error(`${claim.laneId} must not enable package support`)
+    }
+    if (
+      !claim.futureSupportRequirements.includes(
+        "runtime-boundary proof before entry eligibility",
+      )
+    ) {
+      throw new Error(`${claim.laneId} must retain future package proof gates`)
+    }
+  }
+}
+
 export const STRATEGY_LANGUAGE_REGISTRY = SUPPORTED_STRATEGY_LANGUAGES.map(
   (language): StrategyLanguageRecord => ({
     id: language.id,
@@ -565,6 +1015,11 @@ export const STRATEGY_LANGUAGE_REGISTRY = SUPPORTED_STRATEGY_LANGUAGES.map(
     notes: language.notes,
   }),
 ) as readonly StrategyLanguageRecord[]
+
+const selectedWasmWasiAbiPosture =
+  String(STRATEGY_RUNTIME_ABI_VERSION) === "strategy-runtime-abi-v1.17"
+    ? "wasi-preview1-stdin-canonical-request-stdout-raw-canonical-payload"
+    : "wasi-preview1-stdin-stdout-json"
 
 export const STRATEGY_LANGUAGE_PROVIDER_REGISTRY = [
   {
@@ -654,7 +1109,7 @@ export const STRATEGY_LANGUAGE_PROVIDER_REGISTRY = [
     runtimeTarget: "runtime-wasm-wasi",
     adapterIds: ["runtime-wasm-wasi-wasmtime-preview1"],
     runtimeAbiVersion: STRATEGY_RUNTIME_ABI_VERSION,
-    abiPosture: "wasi-preview1-stdin-stdout-json",
+    abiPosture: selectedWasmWasiAbiPosture,
     validationOwner: "runtime-service",
     buildOwner: "runtime-service",
     executionOwner: "runtime-service",
@@ -678,7 +1133,7 @@ export const STRATEGY_LANGUAGE_PROVIDER_REGISTRY = [
       "runtime-output-schema-validation-required",
     ],
     migrationNotes: [
-      "WASI Preview 1 stdin/stdout JSON remains active for Rust in Phase 224; direct exports and Component Model/WIT stay deferred.",
+      "Rust retains WASI Preview 1 while adopting the canonical v1.17 stdin request and raw canonical stdout payload envelope; direct exports and Component Model/WIT stay deferred.",
     ],
   },
   {
@@ -688,7 +1143,7 @@ export const STRATEGY_LANGUAGE_PROVIDER_REGISTRY = [
     runtimeTarget: "runtime-wasm-wasi",
     adapterIds: ["runtime-wasm-wasi-wasmtime-preview1"],
     runtimeAbiVersion: STRATEGY_RUNTIME_ABI_VERSION,
-    abiPosture: "wasi-preview1-stdin-stdout-json",
+    abiPosture: selectedWasmWasiAbiPosture,
     validationOwner: "runtime-service",
     buildOwner: "runtime-service",
     executionOwner: "runtime-service",
@@ -712,7 +1167,7 @@ export const STRATEGY_LANGUAGE_PROVIDER_REGISTRY = [
       "runtime-output-schema-validation-required",
     ],
     migrationNotes: [
-      "WASI Preview 1 stdin/stdout JSON remains active for Zig in Phase 224; direct exports and Component Model/WIT stay deferred.",
+      "Zig retains WASI Preview 1 while adopting the canonical v1.17 stdin request and raw canonical stdout payload envelope; direct exports and Component Model/WIT stay deferred.",
     ],
   },
 ] as const satisfies readonly StrategyLanguageProviderRecord[]
@@ -1108,7 +1563,7 @@ export const STRATEGY_RUNTIME_PRODUCT_VALIDATION_MESSAGES = {
 const readinessLabels = {
   "local-dev-fallback": "Local fallback",
   prototype: "Prototype",
-  "production-candidate": "Production candidate",
+  "production-candidate": "Readiness evidence only",
   experimental: "Experimental",
   unknown: "Unknown",
 } as const satisfies Record<StrategyRuntimeReadiness | "unknown", string>
@@ -1213,8 +1668,9 @@ export const RUNTIME_BROKER_REGISTRY =
           readiness: adapter.readiness,
           enabledForNormalPlay:
             language.enabledForNormalPlay && adapter.enabledForNormalPlay,
-          countedResultsAllowed:
-            language.enabledForNormalPlay && adapter.countedResultsAllowed,
+          // Compatibility-only field. Exact current containment and conformance
+          // evidence, not registry labels, is the sole counted authority.
+          countedResultsAllowed: false,
           limits: adapter.limits,
         }
       }),
@@ -1389,9 +1845,7 @@ export const validateStrategyRuntimeMetadataPolicy = (
   if (
     language &&
     adapter &&
-    (!language.enabledForNormalPlay ||
-      !adapter.enabledForNormalPlay ||
-      !adapter.countedResultsAllowed)
+    (!language.enabledForNormalPlay || !adapter.enabledForNormalPlay)
   ) {
     issues.push(productIssue("NON_COUNTED_RUNTIME", "warning"))
   }
@@ -1401,29 +1855,66 @@ export const validateStrategyRuntimeMetadataPolicy = (
 
 export const evaluateStrategyRuntimeCountedEligibility = (
   value: unknown,
+  evidence?: EvaluateExecutableLaneEligibilityInput | undefined,
 ): StrategyRuntimeCountedEligibility => {
+  const issues = validateStrategyRuntimeMetadataPolicy(value)
   const issue =
-    validateStrategyRuntimeMetadataPolicy(value).find((candidate) =>
+    issues.find((candidate) => candidate.code === "NON_COUNTED_RUNTIME") ??
+    issues.find((candidate) =>
       [
         "ABI_MISMATCH",
         "UNSUPPORTED_LANGUAGE",
         "INCOMPATIBLE_ADAPTER",
         "UNSUPPORTED_PACKAGE_METADATA",
-        "NON_COUNTED_RUNTIME",
       ].includes(candidate.code),
-    ) ?? null
+    ) ??
+    null
 
-  return issue
-    ? {
-        ok: false,
-        code: issue.code as StrategyRuntimeProductValidationCode,
-        publicMessage: issue.message,
-      }
-    : { ok: true, code: null, publicMessage: null }
+  if (issue) {
+    return {
+      ok: false,
+      code: issue.code as StrategyRuntimeProductValidationCode,
+      publicMessage: issue.message,
+    }
+  }
+
+  const runtime = coerceStrategyRuntimeMetadata(value)
+  const provider = runtime
+    ? getStrategyLanguageProviderRecord(runtime.language.id)
+    : null
+  const identityMatchesRuntime = Boolean(
+    runtime &&
+    provider &&
+    evidence &&
+    evidence.expectedIdentity.providerId === provider.id &&
+    evidence.expectedIdentity.languageId === runtime.language.id &&
+    evidence.expectedIdentity.adapterId === runtime.adapter.id &&
+    evidence.expectedIdentity.adapterVersion === runtime.adapter.version &&
+    evidence.expectedIdentity.semanticTuple.runtimeAbi === runtime.abiVersion,
+  )
+  if (!evidence || !identityMatchesRuntime) {
+    const nonCounted = countedMessage("NON_COUNTED_RUNTIME")
+    return {
+      ok: false,
+      code: nonCounted.code,
+      publicMessage: nonCounted.message,
+    }
+  }
+  const canonicalEligibility = evaluateExecutableLaneEligibility(evidence)
+  if (canonicalEligibility.status !== "counted") {
+    const nonCounted = countedMessage("NON_COUNTED_RUNTIME")
+    return {
+      ok: false,
+      code: nonCounted.code,
+      publicMessage: nonCounted.message,
+    }
+  }
+  return { ok: true, code: null, publicMessage: null }
 }
 
 export const describeStrategyRuntimeProductSemantics = (
   value: unknown,
+  evidence?: EvaluateExecutableLaneEligibilityInput | undefined,
 ): StrategyRuntimeProductSemantics => {
   const runtime = normalizeStrategyRuntimeMetadata(value)
   const language = getStrategyLanguageRecord(runtime.language.id)
@@ -1431,7 +1922,7 @@ export const describeStrategyRuntimeProductSemantics = (
     runtime.language.id,
   )
   const adapter = getStrategyRuntimeAdapterRecord(runtime.adapter.id)
-  const eligibility = evaluateStrategyRuntimeCountedEligibility(value)
+  const eligibility = evaluateStrategyRuntimeCountedEligibility(value, evidence)
   const issues = validateStrategyRuntimeMetadataPolicy(value)
   const readiness = adapter?.readiness ?? "unknown"
   const experimental =
@@ -1459,7 +1950,9 @@ export const describeStrategyRuntimeProductSemantics = (
       supportedLanguage?.label ?? language?.label ?? runtime.language.id,
     adapterLabel: adapter?.label ?? runtime.adapter.id,
     readiness,
-    readinessLabel: readinessLabels[readiness],
+    readinessLabel:
+      getStrategyRuntimeSandboxReadinessClaim(runtime.language.id)
+        ?.publicLabel ?? readinessLabels[readiness],
     experimental,
     countedPlayEligible: eligibility.ok,
     countedPlayLabel: eligibility.ok ? "Counted eligible" : "Not counted",
@@ -1469,7 +1962,7 @@ export const describeStrategyRuntimeProductSemantics = (
     packagePolicyLabel:
       runtime.package.mode === "none"
         ? (supportedLanguage?.packagePolicyLabel ?? "No packages")
-        : "Declared packages experimental",
+        : "Package metadata unsupported",
     docsReference: supportedLanguage?.docsReference ?? "runtime/languages",
     examplesReference:
       supportedLanguage?.examplesReference ?? "samples/minimal-strategy",
@@ -1485,7 +1978,9 @@ export const defaultRuntimeMetadata = (
     StrategyLanguageId,
     "javascript" | "typescript"
   > = "typescript",
-): StrategyRuntimeMetadata => {
+): StrategyRuntimeMetadata & {
+  abiVersion: typeof STRATEGY_RUNTIME_ABI_VERSION
+} => {
   const adapter = STRATEGY_RUNTIME_ADAPTER_REGISTRY[0]!
   const language =
     STRATEGY_LANGUAGE_REGISTRY.find(
@@ -1511,7 +2006,7 @@ export const defaultRuntimeMetadata = (
 }
 
 export const runtimeCompatibilityKey = (input: {
-  runtime: StrategyRuntimeMetadata
+  runtime: Omit<StrategyRuntimeMetadata, "abiVersion"> & { abiVersion: string }
   sourceHash: string
   artifactHash?: string | undefined
   artifactTargetTriple?: string | undefined

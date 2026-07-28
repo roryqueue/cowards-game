@@ -1,5 +1,5 @@
 import type { PublicStrategyCardDto, StrategyId } from "@cowards/spec"
-import { describeStrategyRuntimeProductSemantics } from "@cowards/spec"
+import type { JSX } from "react"
 import {
   getPublicStrategyCard,
   isPublicStrategyReadUnavailable,
@@ -17,7 +17,7 @@ export default async function StrategyCardPage({
   params,
 }: {
   params: Promise<{ strategyId: string }> | { strategyId: string }
-}) {
+}): Promise<JSX.Element> {
   const { strategyId } = await params
   let strategy: PublicStrategyCardDto | null
   try {
@@ -44,9 +44,7 @@ export default async function StrategyCardPage({
       </main>
     )
   }
-  const runtimeSemantics = describeStrategyRuntimeProductSemantics(
-    strategy.runtime,
-  )
+  const runtimeSemantics = strategy.runtimeSemantics
   return (
     <main className="app-page">
       <section className="app-panel">
@@ -103,6 +101,11 @@ export default async function StrategyCardPage({
           <dd>
             {strategy.record.wins}-{strategy.record.losses}-
             {strategy.record.draws}, {strategy.record.points} points
+          </dd>
+          <dt>record scope</dt>
+          <dd>
+            Counted trial evidence only. Exhibition, study, self-play, and
+            excluded results do not affect this record.
           </dd>
           {strategy.starterLineage ? (
             <>

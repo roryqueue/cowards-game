@@ -1,5 +1,42 @@
 # Retrospective
 
+## Milestone: v1.35 — Runtime, Account Ownership, Sandbox, and Package Policy Cleanup
+
+**Shipped:** 2026-06-15
+**Phases:** 6 | **Plans:** 11
+
+### What Was Built
+
+- A locked v1.35 boundary inventory and decision register across account save, source read, owner-debug replay, Workshop aliases, entry gates, provider proof, sandbox claims, package policy, TinyGo, privacy monitors, and evidence artifacts.
+- Provider-proof-backed Go account save, entry gates, public runtime semantics, and PostgreSQL-backed proof for TypeScript account revisions.
+- Server-authorized account source and owner-debug/private replay boundaries, local Workshop trust quarantine, and deprecated Workshop source aliases.
+- Evidence-scoped sandbox-readiness labels, explicit no-production-certification guardrails, and a versioned package/dependency policy enforcing package mode `none`.
+- A final proof rollup with privacy scans, service-backed proof, generated artifact freshness, and full boundary monitor coverage.
+
+### What Worked
+
+- The inventory-first phase made later cleanup coherent; each behavior change could point back to a locked surface and disposition.
+- Service-backed PostgreSQL proof was worth adding once the local database became available; it closed the difference between deterministic assembly tests and real account persistence.
+- Conservative labels made the milestone easier to audit because every current lane said exactly what it proved and what it did not.
+
+### What Was Inefficient
+
+- Generated artifact drift accumulated across older v1.16 and OpenAPI artifacts; the final `boundary:monitors` run was the right catch-all, but it took multiple refresh passes.
+- The integration checker found a UI route drift that local route deprecation tests did not catch: Workshop Load source still called the deprecated alias.
+- The local `gsd-sdk query` workflow helpers were unavailable in this checkout, so milestone archive/audit steps had to be executed directly from planning files and commands.
+
+### Patterns Established
+
+- Account-owned private source reads should have one explicit account route helper and tests that lock callers away from deprecated aliases.
+- Proof artifacts should scan generated proof outputs separately from inventories that intentionally name forbidden categories.
+- Milestone closeout should run full boundary monitors after any UI or generated-artifact fix, because the inventory and surface-label artifacts can drift from small source changes.
+
+### Key Lessons
+
+- A public-safe deprecation route is not enough if the UI still points at it; integration audit needs to check the complete user flow.
+- "No certification" and "no package ecosystem" are positive deliverables when they are backed by contracts, labels, tests, and monitors.
+- Generated evidence artifacts are part of the product boundary. Treat stale artifacts as closeout findings, not housekeeping.
+
 ## Milestone: v1.28 — Match Execution Operations, Recovery, and Incident Drills
 
 **Shipped:** 2026-05-30

@@ -1,0 +1,38 @@
+{
+  "schemaVersion": "v1.37-canonical-conformance-trace-v1",
+  "corpusVersion": "v1",
+  "corpusRootSha256": "sha256:4e13f5e14961c7b7efd6869c6e456c9f8cfeb1cdd2afd9ec17a93812ccbe76a9",
+  "caseId": "boundary-numeric-negative-zero",
+  "semanticTupleId": "sha256:0d8a04fdfe49e3aa7261728ee51beb0a9049b661aad978277f2892c3a4bc54fe",
+  "resultClass": "success",
+  "invocations": [
+    {
+      "ordinal": 0,
+      "invocationId": "invocation:boundary-numeric-negative-zero:raw-envelope",
+      "methodName": "selectActivations",
+      "resultClass": "success",
+      "stableCode": null,
+      "failingBoundary": "complete",
+      "canonicalPayloadHash": "sha256:04070c1e2a42633a17c5370f2be2cd9a3f6d01345ca5f418c94a0c1bfc067696",
+      "strategyMemoryHash": "sha256:14e1dd0bef03e0f62c30566f223423a6b0f4116b9ce1018e3f8c6a859f47a927",
+      "soldierMemoryHash": "sha256:14e1dd0bef03e0f62c30566f223423a6b0f4116b9ce1018e3f8c6a859f47a927",
+      "objectiveHash": "sha256:af1cc852ea00ad4faa175f4b5883f1522f7ed1ebc320c90b66ee4a023626d8a8",
+      "beforeObjectiveHash": "sha256:af1cc852ea00ad4faa175f4b5883f1522f7ed1ebc320c90b66ee4a023626d8a8",
+      "afterObjectiveHash": "sha256:af1cc852ea00ad4faa175f4b5883f1522f7ed1ebc320c90b66ee4a023626d8a8",
+      "beforeStateHash": "sha256:ab805019e889bd2ed35eb62cffec02dc371533ad6b9f413c083a846ee7a4eda9",
+      "afterStateHash": "sha256:ab805019e889bd2ed35eb62cffec02dc371533ad6b9f413c083a846ee7a4eda9",
+      "beforeMemoryHash": "sha256:14e1dd0bef03e0f62c30566f223423a6b0f4116b9ce1018e3f8c6a859f47a927",
+      "afterMemoryHash": "sha256:14e1dd0bef03e0f62c30566f223423a6b0f4116b9ce1018e3f8c6a859f47a927",
+      "gameplayMutation": false,
+      "memoryMutation": false,
+      "terminalEffectHash": null,
+      "retryable": false
+    }
+  ],
+  "transitions": [],
+  "finalStateHash": "sha256:ab805019e889bd2ed35eb62cffec02dc371533ad6b9f413c083a846ee7a4eda9",
+  "outcomeHash": "sha256:321eea27cab2f849999f08a5b19cc73501a2a8134ae5fabd628ea57a18b4ba80",
+  "failure": null,
+  "transitionTraceRoot": "sha256:71562612ed4d24b5995747cee43d8a7b0269ed596a7cf7f694f0c17484faf4f6",
+  "traceRoot": "sha256:1f4325756588fb511d37e8e37e250f9d22cc931731c913c84fdcba00f90b896a"
+}

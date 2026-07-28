@@ -1,5 +1,7 @@
 package main
 
+import "errors"
+
 const (
 	matchFailureCategorySystemFailure          = "system_failure"
 	matchFailureCategoryTimeout                = "timeout"
@@ -15,6 +17,40 @@ type matchFailureClassification struct {
 	RetryDisposition string
 	ReplayState      string
 	PublicMessageKey string
+}
+
+type successorSystemFailureRetryDecisionV119 struct {
+	Disposition       string
+	NextAttemptNumber int
+	Identity          successorConditionIdentityV119
+}
+
+func evaluateSuccessorSystemFailureRetryV119(
+	scheduled successorConditionIdentityV119,
+	attempted successorConditionIdentityV119,
+	retryable bool,
+	attemptNumber int,
+	maxAttempts int,
+	playerViolation bool,
+) (successorSystemFailureRetryDecisionV119, error) {
+	if err := validateSuccessorConditionIdentityV119(scheduled); err != nil {
+		return successorSystemFailureRetryDecisionV119{}, err
+	}
+	if err := validateSuccessorConditionIdentityV119(attempted); err != nil || scheduled != attempted {
+		return successorSystemFailureRetryDecisionV119{}, errors.New("successor frozen condition identity mismatch")
+	}
+	if playerViolation {
+		return successorSystemFailureRetryDecisionV119{}, errors.New("player violation is terminal evidence")
+	}
+	if attemptNumber < 1 || maxAttempts < 1 || attemptNumber > maxAttempts {
+		return successorSystemFailureRetryDecisionV119{}, errors.New("successor retry policy is invalid")
+	}
+	decision := successorSystemFailureRetryDecisionV119{Disposition: "degraded", Identity: scheduled}
+	if retryable && attemptNumber < maxAttempts {
+		decision.Disposition = "retry"
+		decision.NextAttemptNumber = attemptNumber + 1
+	}
+	return decision, nil
 }
 
 func classifyMatchFailure(errorClass string, retryable bool, details map[string]any) matchFailureClassification {

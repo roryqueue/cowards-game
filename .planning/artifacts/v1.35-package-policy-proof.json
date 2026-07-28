@@ -1,0 +1,313 @@
+{
+  "schemaVersion": "v1.35-package-policy-proof",
+  "milestone": "v1.35",
+  "phase": 247,
+  "generatedAt": "2026-06-15",
+  "generatedBy": "scripts/evaluate-v1-35-package-policy-proof.ts",
+  "contractVersion": "strategy-runtime-package-policy-v1.35",
+  "requiredRequirements": [
+    "PKG-01",
+    "PKG-02",
+    "PKG-03",
+    "PKG-04"
+  ],
+  "requiredEvidenceKinds": [
+    "spec-package-policy-contract",
+    "account-entry-package-mode-none-gates",
+    "language-validator-package-denial",
+    "public-safe-package-diagnostics",
+    "future-package-lane-requirements",
+    "fail-loud-package-drift-monitor"
+  ],
+  "guardrails": {
+    "productionPackageMode": "none",
+    "typeScriptPackages": false,
+    "pythonPackages": false,
+    "rustExternalCrates": false,
+    "zigPackages": false,
+    "tinyGoProductionPackages": false,
+    "hostImports": false,
+    "richPackageEcosystem": false
+  },
+  "laneClaims": [
+    {
+      "contractVersion": "strategy-runtime-package-policy-v1.35",
+      "laneId": "javascript",
+      "productionPackageMode": "none",
+      "hostImportsAllowed": false,
+      "richPackagesAllowed": false,
+      "nativeDependenciesAllowed": false,
+      "publicLabel": "No packages",
+      "developerLabel": "JavaScript production Strategies are self-contained; npm packages, dynamic imports, host imports, and package installation are not supported.",
+      "currentRestrictions": [
+        "no npm package metadata",
+        "no require/import/dynamic import",
+        "no host filesystem/network/process imports"
+      ],
+      "futureSupportRequirements": [
+        "versioned package-lane policy",
+        "reproducible dependency resolution",
+        "committed lockfile and manifest hashing",
+        "supply-chain allowlist and provenance",
+        "native-code and build-script policy",
+        "sandboxed build/install boundary",
+        "deterministic build output proof",
+        "cache invalidation and rollback",
+        "privacy redaction for diagnostics and paths",
+        "runtime-boundary proof before entry eligibility"
+      ]
+    },
+    {
+      "contractVersion": "strategy-runtime-package-policy-v1.35",
+      "laneId": "typescript",
+      "productionPackageMode": "none",
+      "hostImportsAllowed": false,
+      "richPackagesAllowed": false,
+      "nativeDependenciesAllowed": false,
+      "publicLabel": "No packages",
+      "developerLabel": "TypeScript production Strategies are self-contained source/artifact revisions; npm packages, host imports, and package installation are not supported.",
+      "currentRestrictions": [
+        "no npm package metadata",
+        "no require/import/dynamic import",
+        "no host filesystem/network/process imports"
+      ],
+      "futureSupportRequirements": [
+        "versioned package-lane policy",
+        "reproducible dependency resolution",
+        "committed lockfile and manifest hashing",
+        "supply-chain allowlist and provenance",
+        "native-code and build-script policy",
+        "sandboxed build/install boundary",
+        "deterministic build output proof",
+        "cache invalidation and rollback",
+        "privacy redaction for diagnostics and paths",
+        "runtime-boundary proof before entry eligibility"
+      ]
+    },
+    {
+      "contractVersion": "strategy-runtime-package-policy-v1.35",
+      "laneId": "python",
+      "productionPackageMode": "none",
+      "hostImportsAllowed": false,
+      "richPackagesAllowed": false,
+      "nativeDependenciesAllowed": false,
+      "publicLabel": "No packages",
+      "developerLabel": "Python production Strategies are self-contained source bundles; PyPI packages, imports, site-packages, and host imports are not supported.",
+      "currentRestrictions": [
+        "no PyPI package metadata",
+        "no import statements",
+        "no site-packages or host process access"
+      ],
+      "futureSupportRequirements": [
+        "versioned package-lane policy",
+        "reproducible dependency resolution",
+        "committed lockfile and manifest hashing",
+        "supply-chain allowlist and provenance",
+        "native-code and build-script policy",
+        "sandboxed build/install boundary",
+        "deterministic build output proof",
+        "cache invalidation and rollback",
+        "privacy redaction for diagnostics and paths",
+        "runtime-boundary proof before entry eligibility"
+      ]
+    },
+    {
+      "contractVersion": "strategy-runtime-package-policy-v1.35",
+      "laneId": "rust",
+      "productionPackageMode": "none",
+      "hostImportsAllowed": false,
+      "richPackagesAllowed": false,
+      "nativeDependenciesAllowed": false,
+      "publicLabel": "No packages",
+      "developerLabel": "Rust production Strategies are self-contained immutable WASM/WASI Preview 1 artifacts; external crates and package installation are not supported.",
+      "currentRestrictions": [
+        "no external crate package lane",
+        "no package installation",
+        "no host filesystem/network/process imports"
+      ],
+      "futureSupportRequirements": [
+        "versioned package-lane policy",
+        "reproducible dependency resolution",
+        "committed lockfile and manifest hashing",
+        "supply-chain allowlist and provenance",
+        "native-code and build-script policy",
+        "sandboxed build/install boundary",
+        "deterministic build output proof",
+        "cache invalidation and rollback",
+        "privacy redaction for diagnostics and paths",
+        "runtime-boundary proof before entry eligibility"
+      ]
+    },
+    {
+      "contractVersion": "strategy-runtime-package-policy-v1.35",
+      "laneId": "zig",
+      "productionPackageMode": "none",
+      "hostImportsAllowed": false,
+      "richPackagesAllowed": false,
+      "nativeDependenciesAllowed": false,
+      "publicLabel": "No packages",
+      "developerLabel": "Zig production Strategies are self-contained no-std/helper WASM/WASI Preview 1 artifacts; Zig packages and host imports are not supported.",
+      "currentRestrictions": [
+        "no Zig package lane",
+        "no std/host import capability beyond approved no-std helper lanes",
+        "no package installation"
+      ],
+      "futureSupportRequirements": [
+        "versioned package-lane policy",
+        "reproducible dependency resolution",
+        "committed lockfile and manifest hashing",
+        "supply-chain allowlist and provenance",
+        "native-code and build-script policy",
+        "sandboxed build/install boundary",
+        "deterministic build output proof",
+        "cache invalidation and rollback",
+        "privacy redaction for diagnostics and paths",
+        "runtime-boundary proof before entry eligibility"
+      ]
+    },
+    {
+      "contractVersion": "strategy-runtime-package-policy-v1.35",
+      "laneId": "tinygo",
+      "productionPackageMode": "none",
+      "hostImportsAllowed": false,
+      "richPackagesAllowed": false,
+      "nativeDependenciesAllowed": false,
+      "publicLabel": "No packages",
+      "developerLabel": "TinyGo remains hidden and spike-only; no production package support exists.",
+      "currentRestrictions": [
+        "no TinyGo production lane",
+        "no TinyGo packages",
+        "hidden from production surfaces"
+      ],
+      "futureSupportRequirements": [
+        "versioned package-lane policy",
+        "reproducible dependency resolution",
+        "committed lockfile and manifest hashing",
+        "supply-chain allowlist and provenance",
+        "native-code and build-script policy",
+        "sandboxed build/install boundary",
+        "deterministic build output proof",
+        "cache invalidation and rollback",
+        "privacy redaction for diagnostics and paths",
+        "runtime-boundary proof before entry eligibility"
+      ]
+    }
+  ],
+  "sourceChecks": [],
+  "evidence": [
+    {
+      "id": "spec-owned-package-policy-contract",
+      "kind": "spec-package-policy-contract",
+      "requirements": [
+        "PKG-01",
+        "PKG-04"
+      ],
+      "files": [
+        "packages/spec/src/runtime.ts",
+        "packages/spec/src/spec.test.ts"
+      ],
+      "commands": [
+        "pnpm --filter @cowards/spec exec vitest run src/spec.test.ts"
+      ],
+      "outcome": "Spec owns a versioned package policy contract for JavaScript, TypeScript, Python, Rust, Zig, and hidden TinyGo, with production package mode fixed at none.",
+      "limitations": [
+        "No rich package lane is enabled; future support remains a separate milestone."
+      ]
+    },
+    {
+      "id": "account-entry-package-mode-none-gates",
+      "kind": "account-entry-package-mode-none-gates",
+      "requirements": [
+        "PKG-02",
+        "PKG-03"
+      ],
+      "files": [
+        "apps/go-backend/provider_readiness.go",
+        "apps/go-backend/live_backend.go",
+        "apps/go-backend/runtime_service_client.go",
+        "apps/go-backend/main_test.go"
+      ],
+      "commands": [
+        "cd apps/go-backend && PATH=/usr/local/go/bin:$PATH go test ./... -run 'Test.*Package|TestTypeScriptRuntimeMetadataRequiresProviderProofForCountedPlay|Test.*Provider.*Readiness' -count=1"
+      ],
+      "outcome": "Go account-save, runtime compatibility, counted entry, and non-counted exhibition gates reject package mode other than none with public-safe categories and labels.",
+      "limitations": []
+    },
+    {
+      "id": "language-validators-deny-package-and-host-imports",
+      "kind": "language-validator-package-denial",
+      "requirements": [
+        "PKG-01",
+        "PKG-02",
+        "PKG-03"
+      ],
+      "files": [
+        "packages/runtime-js/src/validation.test.ts",
+        "packages/runtime-python/src/validation.ts",
+        "packages/runtime-wasm-wasi/src/validation.ts"
+      ],
+      "commands": [
+        "pnpm --filter @cowards/runtime-js exec vitest run src/validation.test.ts",
+        "pnpm --filter @cowards/runtime-python exec vitest run src/python-subprocess-adapter.test.ts",
+        "pnpm --filter @cowards/runtime-wasm-wasi exec vitest run src/wasm-wasi-subprocess-adapter.test.ts"
+      ],
+      "outcome": "Language validation denies declared package metadata, host imports, package imports, dynamic imports, package installation, and native/package capabilities.",
+      "limitations": []
+    },
+    {
+      "id": "public-safe-package-diagnostics",
+      "kind": "public-safe-package-diagnostics",
+      "requirements": [
+        "PKG-03"
+      ],
+      "files": [
+        "packages/spec/src/runtime.ts",
+        "apps/go-backend/provider_readiness.go",
+        "apps/go-backend/live_backend.go",
+        "scripts/evaluate-v1-35-package-policy-proof.ts"
+      ],
+      "commands": [
+        "pnpm v1.35:package-policy-proof:check"
+      ],
+      "outcome": "Generated package evidence and package diagnostics omit package paths, host paths, env values, tokens, DB details, raw diagnostics, source, and artifact bytes.",
+      "limitations": []
+    },
+    {
+      "id": "future-package-lane-requirements-only",
+      "kind": "future-package-lane-requirements",
+      "requirements": [
+        "PKG-04"
+      ],
+      "files": [
+        "packages/spec/src/runtime.ts",
+        ".planning/REQUIREMENTS.md"
+      ],
+      "commands": [
+        "pnpm v1.35:package-policy-proof:check"
+      ],
+      "outcome": "Future package support requirements cover reproducibility, lockfiles, supply chain, native code, deterministic builds, privacy, rollback, and runtime-boundary proof without enabling packages.",
+      "limitations": [
+        "Approval of any package lane is deferred to a future explicit package milestone."
+      ]
+    },
+    {
+      "id": "package-policy-drift-monitor",
+      "kind": "fail-loud-package-drift-monitor",
+      "requirements": [
+        "PKG-02",
+        "PKG-03",
+        "PKG-04"
+      ],
+      "files": [
+        "scripts/evaluate-v1-35-package-policy-proof.ts",
+        "package.json"
+      ],
+      "commands": [
+        "pnpm v1.35:package-policy-proof:check",
+        "pnpm boundary:monitors"
+      ],
+      "outcome": "Boundary monitors include a fail-loud proof gate for package mode, host import, rich-package, diagnostics, and future-support overclaim drift.",
+      "limitations": []
+    }
+  ]
+}

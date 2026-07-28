@@ -1,0 +1,375 @@
+{
+  "schemaVersion": "v1.37-typescript-backend-runtime-selection-overlay",
+  "generatedBy": "scripts/generate-typescript-backend-inventory.ts",
+  "historicalBaseline": {
+    "scope": "immutable_v1_16_historical_evidence",
+    "artifacts": [
+      {
+        "path": ".planning/artifacts/v1.16-typescript-backend-inventory.json",
+        "sha256": "ea45ff5b29c3b67c24d9c638c63936ec9f6c42159ae71aa189ce885ce4a25a09"
+      },
+      {
+        "path": ".planning/artifacts/v1.16-typescript-backend-inventory.md",
+        "sha256": "31c8d96072fd24eecad76376b14408bdb4ff1c22f3b8b8cd425feb1d6a63377d"
+      }
+    ]
+  },
+  "selectedCurrentRuntimeOverlay": {
+    "selectionAuthority": "packages/spec/src/versions.ts",
+    "serviceSelectionAuthority": "apps/runtime-service/src/runtime-config.ts",
+    "legacy": {
+      "strategyRuntimeAbi": "strategy-runtime-abi-v1.14",
+      "runtimeExecutionService": "runtime-execution-service-v1.16"
+    },
+    "successor": {
+      "strategyRuntimeAbi": "strategy-runtime-abi-v1.17",
+      "runtimeExecutionService": "runtime-execution-service-v1.17"
+    },
+    "invariant": "selected_current_must_follow_authoritative_activation_pointer"
+  },
+  "runtimeSurfaces": [
+    {
+      "path": "packages/runtime-js/src/abi-bridge.ts",
+      "role": "runtime-adapter",
+      "lifecycle": "selected_by_pointer",
+      "gate": "selected-current Strategy runtime ABI from the authoritative activation pointer",
+      "selectionAuthority": "packages/spec/src/versions.ts"
+    },
+    {
+      "path": "packages/runtime-js/src/adapter.ts",
+      "role": "runtime-adapter",
+      "lifecycle": "selected_by_pointer",
+      "gate": "selected-current Strategy runtime ABI from the authoritative activation pointer",
+      "selectionAuthority": "packages/spec/src/versions.ts"
+    },
+    {
+      "path": "packages/runtime-js/src/candidate-bounded-canonical-source.ts",
+      "role": "runtime-adapter",
+      "lifecycle": "candidate_evidence",
+      "gate": "immutable candidate, fixture, or test evidence only; never current by declaration",
+      "selectionAuthority": null
+    },
+    {
+      "path": "packages/runtime-js/src/candidate-evidence-fixture.ts",
+      "role": "runtime-adapter",
+      "lifecycle": "candidate_evidence",
+      "gate": "immutable candidate, fixture, or test evidence only; never current by declaration",
+      "selectionAuthority": null
+    },
+    {
+      "path": "packages/runtime-js/src/candidate-host-envelope.ts",
+      "role": "runtime-adapter",
+      "lifecycle": "candidate_evidence",
+      "gate": "immutable candidate, fixture, or test evidence only; never current by declaration",
+      "selectionAuthority": null
+    },
+    {
+      "path": "packages/runtime-js/src/candidate-process-runner.ts",
+      "role": "runtime-adapter",
+      "lifecycle": "candidate_evidence",
+      "gate": "immutable candidate, fixture, or test evidence only; never current by declaration",
+      "selectionAuthority": null
+    },
+    {
+      "path": "packages/runtime-js/src/candidate-subprocess-observation.ts",
+      "role": "runtime-adapter",
+      "lifecycle": "candidate_evidence",
+      "gate": "immutable candidate, fixture, or test evidence only; never current by declaration",
+      "selectionAuthority": null
+    },
+    {
+      "path": "packages/runtime-js/src/container-subprocess-adapter.ts",
+      "role": "runtime-adapter",
+      "lifecycle": "selected_by_pointer",
+      "gate": "selected-current Strategy runtime ABI from the authoritative activation pointer",
+      "selectionAuthority": "packages/spec/src/versions.ts"
+    },
+    {
+      "path": "packages/runtime-js/src/executor.ts",
+      "role": "runtime-adapter",
+      "lifecycle": "selected_by_pointer",
+      "gate": "selected-current Strategy runtime ABI from the authoritative activation pointer",
+      "selectionAuthority": "packages/spec/src/versions.ts"
+    },
+    {
+      "path": "packages/runtime-js/src/guards.ts",
+      "role": "runtime-adapter",
+      "lifecycle": "selected_by_pointer",
+      "gate": "selected-current Strategy runtime ABI from the authoritative activation pointer",
+      "selectionAuthority": "packages/spec/src/versions.ts"
+    },
+    {
+      "path": "packages/runtime-js/src/hash.ts",
+      "role": "runtime-adapter",
+      "lifecycle": "selected_by_pointer",
+      "gate": "selected-current Strategy runtime ABI from the authoritative activation pointer",
+      "selectionAuthority": "packages/spec/src/versions.ts"
+    },
+    {
+      "path": "packages/runtime-js/src/index.ts",
+      "role": "runtime-adapter",
+      "lifecycle": "selected_by_pointer",
+      "gate": "selected-current Strategy runtime ABI from the authoritative activation pointer",
+      "selectionAuthority": "packages/spec/src/versions.ts"
+    },
+    {
+      "path": "packages/runtime-js/src/revision-v1-17.ts",
+      "role": "runtime-adapter",
+      "lifecycle": "selected_by_pointer",
+      "gate": "selected-current Strategy runtime ABI from the authoritative activation pointer",
+      "selectionAuthority": "packages/spec/src/versions.ts"
+    },
+    {
+      "path": "packages/runtime-js/src/revision-v1-18.ts",
+      "role": "runtime-adapter",
+      "lifecycle": "selected_by_pointer",
+      "gate": "selected-current Strategy runtime ABI from the authoritative activation pointer",
+      "selectionAuthority": "packages/spec/src/versions.ts"
+    },
+    {
+      "path": "packages/runtime-js/src/revision-v1-19.ts",
+      "role": "runtime-adapter",
+      "lifecycle": "candidate_evidence",
+      "gate": "immutable candidate, fixture, or test evidence only; never current by declaration",
+      "selectionAuthority": null
+    },
+    {
+      "path": "packages/runtime-js/src/revision.ts",
+      "role": "runtime-adapter",
+      "lifecycle": "selected_by_pointer",
+      "gate": "selected-current Strategy runtime ABI from the authoritative activation pointer",
+      "selectionAuthority": "packages/spec/src/versions.ts"
+    },
+    {
+      "path": "packages/runtime-js/src/sandbox-evaluation.ts",
+      "role": "runtime-adapter",
+      "lifecycle": "selected_by_pointer",
+      "gate": "selected-current Strategy runtime ABI from the authoritative activation pointer",
+      "selectionAuthority": "packages/spec/src/versions.ts"
+    },
+    {
+      "path": "packages/runtime-js/src/source-artifact.ts",
+      "role": "runtime-adapter",
+      "lifecycle": "selected_by_pointer",
+      "gate": "selected-current Strategy runtime ABI from the authoritative activation pointer",
+      "selectionAuthority": "packages/spec/src/versions.ts"
+    },
+    {
+      "path": "packages/runtime-js/src/subprocess-adapter.ts",
+      "role": "runtime-adapter",
+      "lifecycle": "selected_by_pointer",
+      "gate": "selected-current Strategy runtime ABI from the authoritative activation pointer",
+      "selectionAuthority": "packages/spec/src/versions.ts"
+    },
+    {
+      "path": "packages/runtime-js/src/subprocess-harness.ts",
+      "role": "runtime-adapter",
+      "lifecycle": "selected_by_pointer",
+      "gate": "selected-current Strategy runtime ABI from the authoritative activation pointer",
+      "selectionAuthority": "packages/spec/src/versions.ts"
+    },
+    {
+      "path": "packages/runtime-js/src/subprocess-ipc.ts",
+      "role": "runtime-adapter",
+      "lifecycle": "selected_by_pointer",
+      "gate": "selected-current Strategy runtime ABI from the authoritative activation pointer",
+      "selectionAuthority": "packages/spec/src/versions.ts"
+    },
+    {
+      "path": "packages/runtime-js/src/supervised-subprocess-adapter.ts",
+      "role": "runtime-adapter",
+      "lifecycle": "selected_by_pointer",
+      "gate": "selected-current Strategy runtime ABI from the authoritative activation pointer",
+      "selectionAuthority": "packages/spec/src/versions.ts"
+    },
+    {
+      "path": "packages/runtime-js/src/transpile.ts",
+      "role": "runtime-adapter",
+      "lifecycle": "selected_by_pointer",
+      "gate": "selected-current Strategy runtime ABI from the authoritative activation pointer",
+      "selectionAuthority": "packages/spec/src/versions.ts"
+    },
+    {
+      "path": "packages/runtime-js/src/validation.ts",
+      "role": "runtime-adapter",
+      "lifecycle": "selected_by_pointer",
+      "gate": "selected-current Strategy runtime ABI from the authoritative activation pointer",
+      "selectionAuthority": "packages/spec/src/versions.ts"
+    },
+    {
+      "path": "packages/runtime-js/src/worker-bridge.ts",
+      "role": "runtime-adapter",
+      "lifecycle": "selected_by_pointer",
+      "gate": "selected-current Strategy runtime ABI from the authoritative activation pointer",
+      "selectionAuthority": "packages/spec/src/versions.ts"
+    },
+    {
+      "path": "packages/runtime-js/src/worker-harness.ts",
+      "role": "runtime-adapter",
+      "lifecycle": "selected_by_pointer",
+      "gate": "selected-current Strategy runtime ABI from the authoritative activation pointer",
+      "selectionAuthority": "packages/spec/src/versions.ts"
+    },
+    {
+      "path": "packages/runtime-js/src/worker-thread-adapter.ts",
+      "role": "runtime-adapter",
+      "lifecycle": "selected_by_pointer",
+      "gate": "selected-current Strategy runtime ABI from the authoritative activation pointer",
+      "selectionAuthority": "packages/spec/src/versions.ts"
+    },
+    {
+      "path": "packages/runtime-js/src/worker.ts",
+      "role": "runtime-adapter",
+      "lifecycle": "selected_by_pointer",
+      "gate": "selected-current Strategy runtime ABI from the authoritative activation pointer",
+      "selectionAuthority": "packages/spec/src/versions.ts"
+    },
+    {
+      "path": "apps/runtime-service/src/deployment-lane-registry.ts",
+      "role": "runtime-service",
+      "lifecycle": "selected_by_pointer",
+      "gate": "selected-current runtime execution service schema from the authoritative activation pointer and DB-free boundary",
+      "selectionAuthority": "apps/runtime-service/src/runtime-config.ts"
+    },
+    {
+      "path": "apps/runtime-service/src/execute-match.ts",
+      "role": "runtime-service",
+      "lifecycle": "selected_by_pointer",
+      "gate": "selected-current runtime execution service schema from the authoritative activation pointer and DB-free boundary",
+      "selectionAuthority": "apps/runtime-service/src/runtime-config.ts"
+    },
+    {
+      "path": "apps/runtime-service/src/four-language-conformance-runner.ts",
+      "role": "runtime-service",
+      "lifecycle": "selected_by_pointer",
+      "gate": "selected-current runtime execution service schema from the authoritative activation pointer and DB-free boundary",
+      "selectionAuthority": "apps/runtime-service/src/runtime-config.ts"
+    },
+    {
+      "path": "apps/runtime-service/src/index.ts",
+      "role": "runtime-service",
+      "lifecycle": "selected_by_pointer",
+      "gate": "selected-current runtime execution service schema from the authoritative activation pointer and DB-free boundary",
+      "selectionAuthority": "apps/runtime-service/src/runtime-config.ts"
+    },
+    {
+      "path": "apps/runtime-service/src/pinned-python-container-runtime.ts",
+      "role": "runtime-service",
+      "lifecycle": "selected_by_pointer",
+      "gate": "selected-current runtime execution service schema from the authoritative activation pointer and DB-free boundary",
+      "selectionAuthority": "apps/runtime-service/src/runtime-config.ts"
+    },
+    {
+      "path": "apps/runtime-service/src/pinned-wasmtime-container-runtime.ts",
+      "role": "runtime-service",
+      "lifecycle": "selected_by_pointer",
+      "gate": "selected-current runtime execution service schema from the authoritative activation pointer and DB-free boundary",
+      "selectionAuthority": "apps/runtime-service/src/runtime-config.ts"
+    },
+    {
+      "path": "apps/runtime-service/src/production-runtime-config.ts",
+      "role": "runtime-service",
+      "lifecycle": "selected_by_pointer",
+      "gate": "selected-current runtime execution service schema from the authoritative activation pointer and DB-free boundary",
+      "selectionAuthority": "apps/runtime-service/src/runtime-config.ts"
+    },
+    {
+      "path": "apps/runtime-service/src/redaction.ts",
+      "role": "runtime-service",
+      "lifecycle": "selected_by_pointer",
+      "gate": "selected-current runtime execution service schema from the authoritative activation pointer and DB-free boundary",
+      "selectionAuthority": "apps/runtime-service/src/runtime-config.ts"
+    },
+    {
+      "path": "apps/runtime-service/src/revalidate-strategy-revision-v1-19.ts",
+      "role": "runtime-service",
+      "lifecycle": "candidate_evidence",
+      "gate": "immutable candidate, fixture, or test evidence only; never current by declaration",
+      "selectionAuthority": null
+    },
+    {
+      "path": "apps/runtime-service/src/runtime-config.ts",
+      "role": "runtime-service",
+      "lifecycle": "selected_by_pointer",
+      "gate": "selected-current runtime execution service schema from the authoritative activation pointer and DB-free boundary",
+      "selectionAuthority": "apps/runtime-service/src/runtime-config.ts"
+    },
+    {
+      "path": "apps/runtime-service/src/runtime-evidence-authority.ts",
+      "role": "runtime-service",
+      "lifecycle": "selected_by_pointer",
+      "gate": "selected-current runtime execution service schema from the authoritative activation pointer and DB-free boundary",
+      "selectionAuthority": "apps/runtime-service/src/runtime-config.ts"
+    },
+    {
+      "path": "apps/runtime-service/src/runtime-execution-current-match.test-support.ts",
+      "role": "runtime-service",
+      "lifecycle": "candidate_evidence",
+      "gate": "immutable candidate, fixture, or test evidence only; never current by declaration",
+      "selectionAuthority": null
+    },
+    {
+      "path": "apps/runtime-service/src/runtime-execution-evidence.test-support.ts",
+      "role": "runtime-service",
+      "lifecycle": "candidate_evidence",
+      "gate": "immutable candidate, fixture, or test evidence only; never current by declaration",
+      "selectionAuthority": null
+    },
+    {
+      "path": "apps/runtime-service/src/runtime-execution-nested-match.test-support.ts",
+      "role": "runtime-service",
+      "lifecycle": "candidate_evidence",
+      "gate": "immutable candidate, fixture, or test evidence only; never current by declaration",
+      "selectionAuthority": null
+    },
+    {
+      "path": "apps/runtime-service/src/semantic-receipt-v1-17.ts",
+      "role": "runtime-service",
+      "lifecycle": "selected_by_pointer",
+      "gate": "selected-current runtime execution service schema from the authoritative activation pointer and DB-free boundary",
+      "selectionAuthority": "apps/runtime-service/src/runtime-config.ts"
+    },
+    {
+      "path": "apps/runtime-service/src/semantic-receipt-v1-18-issuer.ts",
+      "role": "runtime-service",
+      "lifecycle": "selected_by_pointer",
+      "gate": "selected-current runtime execution service schema from the authoritative activation pointer and DB-free boundary",
+      "selectionAuthority": "apps/runtime-service/src/runtime-config.ts"
+    },
+    {
+      "path": "apps/runtime-service/src/semantic-receipt-versioned-v1-17.ts",
+      "role": "runtime-service",
+      "lifecycle": "selected_by_pointer",
+      "gate": "selected-current runtime execution service schema from the authoritative activation pointer and DB-free boundary",
+      "selectionAuthority": "apps/runtime-service/src/runtime-config.ts"
+    },
+    {
+      "path": "apps/runtime-service/src/semantic-receipt.ts",
+      "role": "runtime-service",
+      "lifecycle": "selected_by_pointer",
+      "gate": "selected-current runtime execution service schema from the authoritative activation pointer and DB-free boundary",
+      "selectionAuthority": "apps/runtime-service/src/runtime-config.ts"
+    },
+    {
+      "path": "apps/runtime-service/src/server.ts",
+      "role": "runtime-service",
+      "lifecycle": "selected_by_pointer",
+      "gate": "selected-current runtime execution service schema from the authoritative activation pointer and DB-free boundary",
+      "selectionAuthority": "apps/runtime-service/src/runtime-config.ts"
+    },
+    {
+      "path": "apps/runtime-service/src/source-identity-proof-server.test-support.ts",
+      "role": "runtime-service",
+      "lifecycle": "candidate_evidence",
+      "gate": "immutable candidate, fixture, or test evidence only; never current by declaration",
+      "selectionAuthority": null
+    },
+    {
+      "path": "apps/runtime-service/src/successor-runtime-identity.ts",
+      "role": "runtime-service",
+      "lifecycle": "selected_by_pointer",
+      "gate": "selected-current runtime execution service schema from the authoritative activation pointer and DB-free boundary",
+      "selectionAuthority": "apps/runtime-service/src/runtime-config.ts"
+    }
+  ]
+}

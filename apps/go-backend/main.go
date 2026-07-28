@@ -847,11 +847,15 @@ func dataMode() string {
 }
 
 func handlerFromEnv(ctx context.Context) (http.Handler, func(), error) {
+	return handlerFromEnvWithDependencies(ctx, defaultLiveServerDependencies())
+}
+
+func handlerFromEnvWithDependencies(ctx context.Context, dependencies liveServerDependencies) (http.Handler, func(), error) {
 	switch dataMode() {
 	case "fixtures":
 		return NewServer().routes(), func() {}, nil
 	case "live":
-		server, err := NewLiveServer(ctx, os.Getenv("DATABASE_URL"))
+		server, err := newLiveServerWithDependencies(ctx, os.Getenv("DATABASE_URL"), dependencies)
 		if err != nil {
 			return nil, func() {}, err
 		}
@@ -861,15 +865,22 @@ func handlerFromEnv(ctx context.Context) (http.Handler, func(), error) {
 	}
 }
 
-func main() {
-	handler, closeHandler, err := handlerFromEnv(context.Background())
+func runGoBackendWithDependencies(ctx context.Context, dependencies liveServerDependencies, listen func(string, http.Handler) error) error {
+	handler, closeHandler, err := handlerFromEnvWithDependencies(ctx, dependencies)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	defer closeHandler()
 	addr := listenAddr()
 	log.Printf("cowards-go-backend listening on http://%s mode=%s", addr, dataMode())
-	if err := http.ListenAndServe(addr, handler); !errors.Is(err, http.ErrServerClosed) {
+	if err := listen(addr, handler); !errors.Is(err, http.ErrServerClosed) {
+		return err
+	}
+	return nil
+}
+
+func main() {
+	if err := runGoBackendWithDependencies(context.Background(), defaultLiveServerDependencies(), http.ListenAndServe); err != nil {
 		log.Fatal(err)
 	}
 }

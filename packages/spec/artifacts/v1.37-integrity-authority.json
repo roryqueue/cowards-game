@@ -1,0 +1,67 @@
+{
+  "schemaVersion": "v1.37-integrity-authority-v1",
+  "generatorVersion": "generate-v1-37-integrity-authority-v1",
+  "generatedBy": "scripts/generate-v1-37-integrity-authority.ts",
+  "tupleEncoding": {
+    "domainTag": "cowards-game:canonical-compatibility-tuple:v1",
+    "fieldOrder": [
+      "rules",
+      "engine",
+      "runtimeAbi",
+      "chronicle",
+      "arenaCatalog",
+      "setPolicy"
+    ],
+    "separator": "NUL",
+    "lengthUnit": "UTF-8 bytes",
+    "hashAlgorithm": "sha256",
+    "tupleIdFormat": "sha256:<lowercase-hex>"
+  },
+  "authorityRegistry": [
+    {
+      "domain": "rules",
+      "packageName": "@cowards/spec",
+      "symbol": "COMPATIBILITY_VERSIONS"
+    },
+    {
+      "domain": "transition-semantics",
+      "packageName": "@cowards/engine",
+      "symbol": "runMatch"
+    },
+    {
+      "domain": "runtime-classification",
+      "packageName": "@cowards/spec",
+      "symbol": "evaluateStrategyRuntimeCountedEligibility"
+    },
+    {
+      "domain": "chronicle-validation",
+      "packageName": "@cowards/replay",
+      "symbol": "validateCurrentChronicle"
+    },
+    {
+      "domain": "arena-authority",
+      "packageName": "@cowards/spec",
+      "symbol": "validateCanonicalArena"
+    },
+    {
+      "domain": "set-scheduling-policy",
+      "packageName": "@cowards/persistence",
+      "symbol": "scheduleTrialLadderSeason"
+    }
+  ],
+  "compatibilityTuples": [
+    {
+      "tupleId": "sha256:922a6857fdbc8354b744d6e766bff216f3fee85b5ed381355cb427f5a616b3ae",
+      "algorithm": "sha256",
+      "sha256": "922a6857fdbc8354b744d6e766bff216f3fee85b5ed381355cb427f5a616b3ae",
+      "tuple": {
+        "rules": "cowards-rules-v1.4",
+        "engine": "engine-kernel-v1.37-candidate-1",
+        "runtimeAbi": "strategy-runtime-abi-v1.14",
+        "chronicle": "chronicle-recorder-current-events-v1.37-candidate-1",
+        "arenaCatalog": "semantic-arena-catalog-v1.37-candidate-1",
+        "setPolicy": "canonical-set-policy-v1.4"
+      }
+    }
+  ]
+}

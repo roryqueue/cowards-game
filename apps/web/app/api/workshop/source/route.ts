@@ -1,9 +1,18 @@
-import type { StrategyRevisionId } from "@cowards/spec"
-import type {
-  WorkshopErrorResponse,
-  WorkshopSourceResponse,
-} from "../../../workshop/types.js"
-import { workshopServer } from "../../../workshop/server.js"
+import type { WorkshopErrorResponse } from "../../../workshop/types.js"
+
+const deprecatedWorkshopSourceAliasResponse = (): Response =>
+  Response.json(
+    {
+      error:
+        "Workshop source aliases are deprecated. Use account-owned Strategy source routes with a server-authorized account session.",
+    } satisfies WorkshopErrorResponse,
+    {
+      status: 410,
+      headers: {
+        "cache-control": "private, no-store",
+      },
+    },
+  )
 
 export async function GET(request: Request): Promise<Response> {
   const revisionId = new URL(request.url).searchParams.get("revisionId")
@@ -14,18 +23,5 @@ export async function GET(request: Request): Promise<Response> {
     )
   }
 
-  const source = await workshopServer.getRevisionSource(
-    revisionId as StrategyRevisionId,
-  )
-  if (source === null) {
-    return Response.json(
-      { error: "Revision source not found" } satisfies WorkshopErrorResponse,
-      { status: 404 },
-    )
-  }
-
-  return Response.json({
-    revisionId,
-    source,
-  } satisfies WorkshopSourceResponse)
+  return deprecatedWorkshopSourceAliasResponse()
 }

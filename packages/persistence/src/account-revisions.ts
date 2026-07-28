@@ -1,9 +1,4 @@
-import {
-  createHash,
-  createHmac,
-  randomUUID,
-  timingSafeEqual,
-} from "node:crypto"
+import { createHash, createHmac, randomUUID, timingSafeEqual } from "node:crypto"
 import { Buffer } from "node:buffer"
 import { buildStrategyRevision } from "@cowards/runtime-js"
 import {
@@ -14,6 +9,7 @@ import {
 } from "@cowards/spec"
 import type {
   StrategyId,
+  CountedEntryEligibilityCategory,
   StrategyRevision,
   StrategyRevisionId,
   StrategyRuntimeProductSemantics,
@@ -25,16 +21,51 @@ import {
   findAdvancedStrategy,
   type AdvancedStrategyId,
 } from "./advanced-strategies.js"
-import { createRepositories } from "./repositories.js"
+import {
+  buildSourceIdentityV2PersistenceRecord,
+  createRepositories,
+} from "./repositories.js"
 import {
   findStarterStrategy,
   type StarterStrategyId,
 } from "./starter-strategies.js"
+import { evaluateStoredRevisionCountedEligibility } from "./ladder.js"
 
 export class AccountRevisionError extends Error {
   constructor(message: string) {
     super(message)
     this.name = "AccountRevisionError"
+  }
+}
+
+export const SOURCE_IDENTITY_VERSION_V2 = "strategy-source-identity-v2" as const
+export const SOURCE_NORMALIZATION_POLICY_V1_17 =
+  "source-line-endings-lf-v1.17" as const
+
+export interface StrategyRevisionSourceIdentityV2 {
+  sourceIdentityVersion: typeof SOURCE_IDENTITY_VERSION_V2
+  originalSourceHash: string
+  originalSourceBytes: number
+  normalizedSourceHash: string
+  normalizedSourceBytes: number
+  sourceNormalizationPolicy: typeof SOURCE_NORMALIZATION_POLICY_V1_17
+  sourceLineEndings: {
+    kind: "none" | "lf" | "crlf" | "cr" | "mixed"
+    lf: number
+    crlf: number
+    cr: number
+  }
+  sourceHasFinalNewline: boolean
+  normalizedSource: string
+}
+
+export const buildSourceIdentityV2 = (
+  source: string,
+): StrategyRevisionSourceIdentityV2 => {
+  const normalizedSource = source.replace(/\r\n?/gu, "\n")
+  return {
+    ...buildSourceIdentityV2PersistenceRecord(source),
+    normalizedSource,
   }
 }
 
@@ -51,6 +82,7 @@ export interface AccountStrategyRevisionSummary {
   valid: boolean
   runtime: StrategyRevision["runtime"]
   runtimeSemantics: StrategyRuntimeProductSemantics
+  countedEntryEligibilityCategory: CountedEntryEligibilityCategory
   engineCompatibility: StrategyRevision["engineCompatibility"]
   createdAt: string
   lockedAt?: string | undefined
@@ -71,6 +103,9 @@ export const buildAccountStrategyRevision = (input: {
   advancedLineage?: StrategyRevisionMetadata["advancedLineage"] | undefined
   strategyId?: StrategyId | undefined
 }): StrategyRevision => {
+  if (typeof input.source !== "string" || input.source.trim().length === 0) {
+    throw new AccountRevisionError("Strategy source must not be empty.")
+  }
   const strategyId = input.strategyId ?? createAccountStrategyId(input.userId)
   return buildStrategyRevision({
     source: input.source,
@@ -103,6 +138,7 @@ export const createAccountStrategyRevision = async (
   },
 ): Promise<StrategyRevision> => {
   const revision = buildAccountStrategyRevision(input)
+  const sourceIdentity = buildSourceIdentityV2(input.source)
   const repositories = createRepositories(pool)
   await repositories.upsertStrategy({
     id: revision.strategyId!,
@@ -116,7 +152,9 @@ export const createAccountStrategyRevision = async (
         : {}),
     },
   })
-  await repositories.insertStrategyRevision(revision)
+  const { normalizedSource: _normalizedSource, ...persistedSourceIdentity } =
+    sourceIdentity
+  await repositories.insertStrategyRevision(revision, persistedSourceIdentity)
   return revision
 }
 
@@ -181,6 +219,17 @@ export const listAccountStrategyRevisions = async (
         sourceHash: row.source_hash,
         sourceBytes: row.source_bytes,
       }),
+      countedEntryEligibilityCategory: evaluateStoredRevisionCountedEligibility(
+        {
+          valid: row.validation.valid,
+          lockedAt: row.locked_at,
+          runtime: row.runtime,
+          metadata: row.metadata,
+          sourceHash: row.source_hash,
+          sourceBytes: row.source_bytes,
+          engineCompatibility: row.engine_compatibility,
+        },
+      ).category,
       engineCompatibility: row.engine_compatibility,
       createdAt: row.created_at.toISOString(),
       ...(row.locked_at ? { lockedAt: row.locked_at.toISOString() } : {}),

@@ -1,0 +1,305 @@
+{
+  "schemaVersion": "v1.36-final-proof",
+  "milestone": "v1.36",
+  "phase": 255,
+  "generatedAt": "2026-07-12T11:22:08.921Z",
+  "generatedBy": "scripts/evaluate-v1-36-final-proof.ts",
+  "status": "passed",
+  "strictServiceRequiredForPass": true,
+  "serviceStatus": "passed-local-services",
+  "boundaryStatus": "passed",
+  "requirements": [
+    {
+      "id": "PROOF-01",
+      "status": "passed",
+      "evidenceIds": [
+        "focused-phase-250-254-tests",
+        "live-counted-season-service-flow"
+      ]
+    },
+    {
+      "id": "PROOF-02",
+      "status": "passed",
+      "evidenceIds": [
+        "focused-phase-250-254-tests",
+        "live-entry-rejection-matrix"
+      ]
+    },
+    {
+      "id": "PROOF-03",
+      "status": "passed",
+      "evidenceIds": [
+        "focused-phase-250-254-tests",
+        "live-governance-recompute-flow"
+      ]
+    },
+    {
+      "id": "PROOF-04",
+      "status": "passed",
+      "evidenceIds": [
+        "focused-phase-250-254-tests",
+        "public-competition-privacy-scan"
+      ]
+    },
+    {
+      "id": "PROOF-05",
+      "status": "passed",
+      "evidenceIds": [
+        "focused-phase-250-254-tests",
+        "competition-ownership-boundary-monitor"
+      ]
+    },
+    {
+      "id": "PROOF-06",
+      "status": "passed",
+      "evidenceIds": [
+        "focused-phase-250-254-tests",
+        "live-desktop-mobile-replay-realism",
+        "deterministic-event-replay-realism"
+      ]
+    }
+  ],
+  "evidence": [
+    {
+      "id": "focused-phase-250-254-tests",
+      "kind": "focused-tests",
+      "status": "passed",
+      "requirements": [
+        "PROOF-01",
+        "PROOF-02",
+        "PROOF-03",
+        "PROOF-04",
+        "PROOF-05",
+        "PROOF-06"
+      ],
+      "command": "pnpm exec vitest run scripts/evaluate-v1-36-service-proof.test.ts scripts/evaluate-v1-36-competition-boundaries.test.ts scripts/evaluate-v1-36-final-proof.test.ts",
+      "artifacts": [
+        "packages/spec/src/competition-entry-eligibility.test.ts",
+        "apps/web/app/api/ladder/seasons/[seasonId]/entries/route.test.ts",
+        "packages/spec/src/competition-season-policy.test.ts",
+        "packages/persistence/src/ladder.test.ts",
+        "packages/spec/src/competition-counted-state.test.ts",
+        "packages/persistence/src/competition.test.ts",
+        "packages/spec/src/competition-governance.test.ts",
+        "packages/persistence/src/governance.test.ts",
+        "apps/web/app/api/admin/matchsets/governance/route.test.ts",
+        "apps/web/app/competition-trust-projections.test.ts",
+        "apps/web/lib/public-discovery-service.test.ts",
+        "packages/spec/src/public-discovery.test.ts"
+      ]
+    },
+    {
+      "id": "live-counted-season-service-flow",
+      "kind": "live-positive-service",
+      "status": "passed",
+      "requirements": [
+        "PROOF-01"
+      ],
+      "command": "pnpm e2e:v1.36-service-proof",
+      "artifacts": [
+        ".planning/artifacts/v1.36-competition-service-proof.json"
+      ]
+    },
+    {
+      "id": "live-entry-rejection-matrix",
+      "kind": "live-negative-matrix",
+      "status": "passed",
+      "requirements": [
+        "PROOF-02"
+      ],
+      "command": "pnpm e2e:v1.36-service-proof",
+      "artifacts": [
+        ".planning/artifacts/v1.36-competition-service-proof.json"
+      ]
+    },
+    {
+      "id": "live-governance-recompute-flow",
+      "kind": "live-governance",
+      "status": "passed",
+      "requirements": [
+        "PROOF-03"
+      ],
+      "command": "pnpm v1.36:competition-boundaries:check",
+      "artifacts": [
+        ".planning/artifacts/v1.36-governance-boundary-proof.json"
+      ]
+    },
+    {
+      "id": "public-competition-privacy-scan",
+      "kind": "privacy-scan",
+      "status": "passed",
+      "requirements": [
+        "PROOF-04"
+      ],
+      "command": "pnpm v1.36:competition-boundaries:check",
+      "artifacts": [
+        ".planning/artifacts/v1.36-governance-boundary-proof.json",
+        ".planning/artifacts/v1.36-competition-surface-inventory.json"
+      ]
+    },
+    {
+      "id": "competition-ownership-boundary-monitor",
+      "kind": "ownership-monitor",
+      "status": "passed",
+      "requirements": [
+        "PROOF-05"
+      ],
+      "command": "pnpm exec tsx scripts/check-boundary-monitors.ts",
+      "artifacts": [
+        ".planning/artifacts/v1.36-governance-boundary-proof.json"
+      ]
+    },
+    {
+      "id": "live-desktop-mobile-replay-realism",
+      "kind": "live-browser-realism",
+      "status": "passed",
+      "requirements": [
+        "PROOF-06"
+      ],
+      "command": "pnpm e2e:v1.36-realism-proof",
+      "artifacts": [
+        ".planning/artifacts/v1.36-competition-service-proof.json"
+      ]
+    },
+    {
+      "id": "deterministic-event-replay-realism",
+      "kind": "deterministic-browser-realism",
+      "status": "passed",
+      "requirements": [
+        "PROOF-06"
+      ],
+      "command": "PLAYWRIGHT_TEST=1 pnpm exec playwright test --project=desktop --project=mobile replay.visual.spec.ts replay.fixture.spec.ts",
+      "artifacts": [
+        ".planning/artifacts/v1.36-competition-service-proof.json"
+      ]
+    }
+  ],
+  "focusedTests": [
+    {
+      "id": "phase250-entry-eligibility",
+      "requirements": [
+        "PROOF-01",
+        "PROOF-02"
+      ],
+      "command": "pnpm exec vitest run packages/spec/src/competition-entry-eligibility.test.ts apps/web/app/api/ladder/seasons/[seasonId]/entries/route.test.ts",
+      "files": [
+        {
+          "path": "packages/spec/src/competition-entry-eligibility.test.ts",
+          "sha256": "cb7cde8aee62050d8f63fb1c9710b24518a864c92a02cb64e143dc5472adf5df"
+        },
+        {
+          "path": "apps/web/app/api/ladder/seasons/[seasonId]/entries/route.test.ts",
+          "sha256": "40d48150a5119527bb444357630febd70006c94eb4d415ec903a0bebc954f418"
+        }
+      ]
+    },
+    {
+      "id": "phase251-season-lifecycle",
+      "requirements": [
+        "PROOF-01",
+        "PROOF-02"
+      ],
+      "command": "pnpm exec vitest run packages/spec/src/competition-season-policy.test.ts packages/persistence/src/ladder.test.ts",
+      "files": [
+        {
+          "path": "packages/spec/src/competition-season-policy.test.ts",
+          "sha256": "7ba7a69010702d7454d40c67768a410496e9a65bcd428ab4ddb8e07dc7826b02"
+        },
+        {
+          "path": "packages/persistence/src/ladder.test.ts",
+          "sha256": "5c67454d3da34e2668bbd95cabde97511f9105ea948ab793cdfce5bf0df7e200"
+        }
+      ]
+    },
+    {
+      "id": "phase252-counted-standings",
+      "requirements": [
+        "PROOF-01",
+        "PROOF-03"
+      ],
+      "command": "pnpm exec vitest run packages/spec/src/competition-counted-state.test.ts packages/persistence/src/competition.test.ts",
+      "files": [
+        {
+          "path": "packages/spec/src/competition-counted-state.test.ts",
+          "sha256": "aa1cd1a1520a8985e04b5048b3ce177b434d2c54f525b1fc3f7df5f56c5dae37"
+        },
+        {
+          "path": "packages/persistence/src/competition.test.ts",
+          "sha256": "a7b4f3a7698856712e14b17492fb0fcdf832281a99b33e11c8e3ed785c15c875"
+        }
+      ]
+    },
+    {
+      "id": "phase253-governance",
+      "requirements": [
+        "PROOF-03",
+        "PROOF-04",
+        "PROOF-05"
+      ],
+      "command": "pnpm exec vitest run packages/spec/src/competition-governance.test.ts packages/persistence/src/governance.test.ts apps/web/app/api/admin/matchsets/governance/route.test.ts",
+      "files": [
+        {
+          "path": "packages/spec/src/competition-governance.test.ts",
+          "sha256": "801ae2f96d94baf5415186ea5afb77612a88134af96864888341f371ca449a45"
+        },
+        {
+          "path": "packages/persistence/src/governance.test.ts",
+          "sha256": "e2aff908c87a98e13cc990e66fdbc507ef327062d4cee24441fb545846da476d"
+        },
+        {
+          "path": "apps/web/app/api/admin/matchsets/governance/route.test.ts",
+          "sha256": "030e583850c694383df095af27996489b93513c1350cf88ee5c75b2d15606fd2"
+        }
+      ]
+    },
+    {
+      "id": "phase254-public-trust",
+      "requirements": [
+        "PROOF-04",
+        "PROOF-06"
+      ],
+      "command": "pnpm exec vitest run apps/web/app/competition-trust-projections.test.ts apps/web/lib/public-discovery-service.test.ts packages/spec/src/public-discovery.test.ts",
+      "files": [
+        {
+          "path": "apps/web/app/competition-trust-projections.test.ts",
+          "sha256": "5d6bc3f73fb89773a9dde74f8cf9ebcc11f28838aebe5a587bdb16bfc9f5be9d"
+        },
+        {
+          "path": "apps/web/lib/public-discovery-service.test.ts",
+          "sha256": "cae2f90d74eb48cac5679b17ed2d4edd3a9823a049956fda80ef39e48b2e9595"
+        },
+        {
+          "path": "packages/spec/src/public-discovery.test.ts",
+          "sha256": "e762b406d4980238b8bac5d310d0f5368632c2e2fec26feb0c065fdd5e5d5e9a"
+        }
+      ]
+    }
+  ],
+  "artifactHashes": [
+    {
+      "path": ".planning/artifacts/v1.36-competition-surface-inventory.json",
+      "sha256": "8b0a3855e732da21f643cd44086426b63038de01d1d10209416d924cc357f4e7"
+    },
+    {
+      "path": ".planning/artifacts/v1.36-competition-surface-inventory.md",
+      "sha256": "32214f6578b94245e0cdb46edb4c546ca2d613d579d11c0da322f7dffd3e10d3"
+    },
+    {
+      "path": ".planning/artifacts/v1.36-competition-service-proof.json",
+      "sha256": "1204e592b0cfc6e7bab999457e7790d813f092dc4b2856e128c060d82333e43d"
+    },
+    {
+      "path": ".planning/artifacts/v1.36-competition-service-proof.md",
+      "sha256": "b47042a19f92a2b33dc3557baf293412495c83f8226fa6d0ca9b6536c7d33685"
+    },
+    {
+      "path": ".planning/artifacts/v1.36-governance-boundary-proof.json",
+      "sha256": "c84ff0db52265c9cbe5e15ae1cd57e8f012b0a61efe5d6a9f3e1748e1df8a09b"
+    },
+    {
+      "path": ".planning/artifacts/v1.36-governance-boundary-proof.md",
+      "sha256": "bf22df4f6531f0a8b330fbc37de66cd108cc81637afe4fae0a9a27e1867eb777"
+    }
+  ],
+  "limitation": null
+}

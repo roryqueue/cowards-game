@@ -1,0 +1,121 @@
+{
+  "schemaVersion": "runtime-abi-v1.17-calibration-inputs-v1",
+  "purpose": "Closed, hash-pinned inputs for runtime ABI v1.17 limit calibration. Only current-valid-contract and current-valid-fixture rows may establish maxima.",
+  "privacy": "internal-build-evidence-no-private-payload-copy",
+  "denylist": [
+    ".git/**",
+    "node_modules/**",
+    ".next/**",
+    "dist/**",
+    "coverage/**",
+    "tmp/**",
+    ".env*",
+    ".planning/config.json",
+    "CowardsGameSpec_Full_Consolidated_v1.md",
+    ".planning/phases/**",
+    ".planning/artifacts/v1.37-runtime-abi-calibration.json",
+    ".planning/artifacts/v1.37-runtime-abi-calibration.md",
+    "packages/spec/artifacts/runtime-abi-v1.17-contract.json",
+    "**/*.log",
+    "**/logs/**",
+    "**/private/**"
+  ],
+  "inputs": [
+    {
+      "path": ".planning/artifacts/v1.37-kernel-integrity-proof.json",
+      "sha256": "d75af6304699bddbe446a26a793d5117ce05522660e75bca35dadad79a57b904",
+      "byteLength": 25446,
+      "classification": "current-valid-fixture",
+      "inclusionReason": "Current Phase 257 kernel-integrity proof fixture exercised by the Phase 258 baseline.",
+      "expectedLimitDomains": ["canonical-payload", "evidence-manifest"]
+    },
+    {
+      "path": ".planning/artifacts/v1.37-v1.36-historical-proof-dispatch.json",
+      "sha256": "108e3df9c07ed3f99a4907a8ef455ee8653169dffd1a9e4797c10a3621745e12",
+      "byteLength": 4547,
+      "classification": "historical-valid-control",
+      "inclusionReason": "Immutable v1.36 dispatch control; compatibility evidence only and never a current maximum source.",
+      "expectedLimitDomains": ["historical-compatibility-control"]
+    },
+    {
+      "path": "packages/spec/artifacts/runtime-execution-service-request.v1.16.json",
+      "sha256": "5d04fa4d82eb814bb034ce9b5f1d5c80945e3d4e02c9124ca39a6670e9c0eab5",
+      "byteLength": 8164,
+      "classification": "current-valid-contract",
+      "inclusionReason": "Current runtime-service request contract and lower runtime field caps.",
+      "expectedLimitDomains": ["transport-frame", "canonical-payload", "strategy-source", "strategy-memory", "soldier-memory", "objective-payload"]
+    },
+    {
+      "path": "packages/spec/artifacts/runtime-execution-service-response.v1.16.wire.json",
+      "sha256": "9c870d57e0125eb80ab2ba941ecbbede8a9a775f61c0b278abec25c491374d97",
+      "byteLength": 42025,
+      "classification": "historical-valid-control",
+      "inclusionReason": "Insertion-ordered TypeScript v1.16 wire golden; compatibility stop only, never canonicalized or used for maxima.",
+      "expectedLimitDomains": ["historical-compatibility-control", "transport-frame"]
+    },
+    {
+      "path": "packages/spec/artifacts/service-api-v1.8.openapi.json",
+      "sha256": "6bc82a632245c2ae440eeee5b2608ecabbc56a32e559195be0bac3ba623877a1",
+      "byteLength": 159050,
+      "classification": "current-valid-contract",
+      "inclusionReason": "Committed current service API contract.",
+      "expectedLimitDomains": ["canonical-payload", "service-contract"]
+    },
+    {
+      "path": "packages/spec/artifacts/strategy-artifacts.v1.14.json",
+      "sha256": "0f2879cae9695a7b1a73c837f444f45405821c1da3bf9fed0ada6ecf90c3dea3",
+      "byteLength": 210039,
+      "classification": "current-valid-contract",
+      "inclusionReason": "Committed current Strategy artifact contract with source and artifact field caps.",
+      "expectedLimitDomains": ["canonical-payload", "artifact-manifest", "strategy-source", "source-artifact", "wasm-artifact"]
+    },
+    {
+      "path": "packages/spec/artifacts/v1.37-candidate-event-coverage.json",
+      "sha256": "84055ef93ed8c73c89bcf19087bbba8904c2f5bc62c1ec1ba8bd10aa632b9f96",
+      "byteLength": 38089,
+      "classification": "current-valid-fixture",
+      "inclusionReason": "Committed candidate event-coverage fixture consumed by current integrity checks.",
+      "expectedLimitDomains": ["canonical-payload", "evidence-manifest"]
+    },
+    {
+      "path": "packages/spec/artifacts/v1.37-integrity-authority-hash-vectors.json",
+      "sha256": "59c548d29ac905a8834c7b52351abff7a6bc449c6176179c7240bbecea6848b2",
+      "byteLength": 12776,
+      "classification": "current-valid-fixture",
+      "inclusionReason": "Current cross-language integrity authority hash vectors.",
+      "expectedLimitDomains": ["canonical-payload", "identity-vector"]
+    },
+    {
+      "path": "packages/spec/artifacts/v1.37-integrity-authority.json",
+      "sha256": "afa81345bb2d697befa590a07e613649c7b759bb9a471887104c83bfeaea1b1e",
+      "byteLength": 1982,
+      "classification": "current-valid-contract",
+      "inclusionReason": "Current canonical integrity authority contract.",
+      "expectedLimitDomains": ["canonical-payload", "authority-contract"]
+    },
+    {
+      "path": "packages/spec/artifacts/v1.37-kernel-integrity-candidate-hash-vectors.json",
+      "sha256": "6af19cb7adb123fbd4eff74ebc66d184847153444b046565eeba870519ff2f60",
+      "byteLength": 6129,
+      "classification": "current-valid-fixture",
+      "inclusionReason": "Current candidate kernel integrity hash vectors.",
+      "expectedLimitDomains": ["canonical-payload", "identity-vector"]
+    },
+    {
+      "path": "packages/spec/artifacts/v1.37-kernel-integrity-candidate.json",
+      "sha256": "4234567bc758b6fcc27085b523d642ad765803ce5e97a301e272ab351a208d11",
+      "byteLength": 3922,
+      "classification": "current-valid-contract",
+      "inclusionReason": "Current inactive kernel integrity candidate contract.",
+      "expectedLimitDomains": ["canonical-payload", "authority-contract"]
+    },
+    {
+      "path": "packages/spec/artifacts/v1.37-runtime-evidence-authority-vectors.json",
+      "sha256": "a9edd0337e43535aad856159db552f3967326825b15c7b42ba9ea5adff64ec53",
+      "byteLength": 14676,
+      "classification": "current-valid-fixture",
+      "inclusionReason": "Current runtime-evidence authority validation vectors.",
+      "expectedLimitDomains": ["canonical-payload", "evidence-manifest", "identity-vector"]
+    }
+  ]
+}

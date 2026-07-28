@@ -109,6 +109,10 @@ export const standardStrategyInput: StrategyInput = StrategyInputSchema.parse({
   phaseNumber: 1,
   roundNumber: 1,
   activationCount: 1,
+  initialInitiativePlayerId: "bottom",
+  hasInitialInitiative: true,
+  roundInitiativePlayerId: "bottom",
+  hasRoundInitiative: true,
   board: {
     bounds: INITIAL_BOUNDS,
     soldiers: standardInitialSoldiers.map(toSnapshot),
@@ -127,6 +131,7 @@ export const standardSoldierBrainInput: SoldierBrainInput =
     },
     cycleIndex: 0,
     maxCycles: MAX_ACTIVATION_CYCLES,
+    hasAdvancedThisActivation: false,
     objective: { role: "advance" },
     soldierMemory: {},
   }) as SoldierBrainInput

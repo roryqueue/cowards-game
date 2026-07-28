@@ -25,6 +25,7 @@ export interface AccountReadRevisionSummary {
   sourceBytes: number
   valid: boolean
   runtimeSemantics: ListStrategyRevisionsServiceDto["revisions"][number]["runtimeSemantics"]
+  countedEntryEligibilityCategory: ListStrategyRevisionsServiceDto["revisions"][number]["countedEntryEligibilityCategory"]
   engineCompatibility: ListStrategyRevisionsServiceDto["revisions"][number]["engineCompatibility"]
   createdAt: string
   lockedAt?: string | undefined
@@ -48,6 +49,7 @@ const toAccountReadRevision = (
   sourceBytes: revision.sourceBytes,
   valid: revision.validationStatus === "valid",
   runtimeSemantics: revision.runtimeSemantics,
+  countedEntryEligibilityCategory: revision.countedEntryEligibilityCategory,
   engineCompatibility: revision.engineCompatibility,
   createdAt: revision.createdAt,
   ...(revision.lockedAt ? { lockedAt: revision.lockedAt } : {}),

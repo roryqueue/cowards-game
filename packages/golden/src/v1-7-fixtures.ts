@@ -50,7 +50,11 @@ export const goldenRuntime: StrategyRuntime = {
   },
 }
 
-export const createGoldenMatchInput = (): RunMatchInput => ({
+export type GoldenMatchFixtureInput = Omit<RunMatchInput, "runtime"> & {
+  runtime: StrategyRuntime
+}
+
+export const createGoldenMatchInput = (): GoldenMatchFixtureInput => ({
   matchId: "golden:v1-7:match",
   seed: "golden:v1-7:seed",
   arenaVariant: {

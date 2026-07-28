@@ -84,6 +84,7 @@ export function ReplayClient({ data }: ReplayClientProps) {
   const playbackIntervalMs = getPlaybackIntervalMs(playbackSpeed)
   const ownerDebugAvailable = canShowOwnerDebug(data)
   const statusLabel = data.mode === "owner" ? "Owner debug" : "Public view"
+  const countedState = data.competition?.countedState
   const evidenceRows = replayEvidenceRows(data)
   const annotationCategories = useMemo(
     () => [
@@ -149,6 +150,11 @@ export function ReplayClient({ data }: ReplayClientProps) {
         </div>
         <div className="replay-header-status">
           <span className="replay-status-chip">{statusLabel}</span>
+          {countedState ? (
+            <span className="replay-status-chip">
+              {countedState.publicLabel}
+            </span>
+          ) : null}
           <span className="replay-muted">Public-safe projection</span>
           <div className="app-actions">
             <a href="/watch">Watch</a>

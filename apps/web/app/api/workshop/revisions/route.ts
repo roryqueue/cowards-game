@@ -6,25 +6,68 @@ import type {
   WorkshopSubmitRequest,
 } from "../../../workshop/types.js"
 
+const runtimeServiceSubmitError = (
+  sourceFormat: "typescript" | "python" | "rust" | "zig",
+): string => {
+  const label =
+    getSupportedStrategyLanguageBySourceFormat(sourceFormat)?.label ??
+    "Strategy"
+  return `${label} submission could not reach runtime-service provider validation. The Strategy has not been judged invalid.`
+}
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  value !== null && typeof value === "object" && !Array.isArray(value)
+
 const runtimeServiceValidateStrategy = async (
   sourceFormat: "typescript" | "python" | "rust" | "zig",
   source: string,
 ): Promise<Partial<WorkshopSubmitRequest> | { error: string }> => {
   const endpoint = process.env.COWARDS_RUNTIME_SERVICE_URL?.replace(/\/$/, "")
-  const label =
-    getSupportedStrategyLanguageBySourceFormat(sourceFormat)?.label ??
-    "Strategy"
   if (!endpoint) {
     return {
-      error: `${label} submission requires runtime-service provider validation.`,
+      error: runtimeServiceSubmitError(sourceFormat),
     }
   }
-  const response = await fetch(`${endpoint}/validate-strategy`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ sourceFormat, source }),
-  })
-  const result = (await response.json()) as Record<string, unknown>
+  const privateArtifactToken =
+    process.env.COWARDS_RUNTIME_SERVICE_PRIVATE_ARTIFACT_TOKEN?.trim()
+  if (!privateArtifactToken) {
+    return {
+      error: runtimeServiceSubmitError(sourceFormat),
+    }
+  }
+  let response: globalThis.Response
+  try {
+    response = await fetch(`${endpoint}/validate-strategy`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-cowards-private-artifact-token": privateArtifactToken,
+      },
+      body: JSON.stringify({
+        sourceFormat,
+        source,
+        includePrivateArtifact: true,
+      }),
+    })
+  } catch {
+    return { error: runtimeServiceSubmitError(sourceFormat) }
+  }
+  let result: Record<string, unknown>
+  try {
+    const parsed = await response.json()
+    if (!isRecord(parsed)) {
+      return {
+        error:
+          "Strategy submission could not complete because runtime-service returned an unsupported response.",
+      }
+    }
+    result = parsed
+  } catch {
+    return {
+      error:
+        "Strategy submission could not complete because runtime-service returned an unsupported response.",
+    }
+  }
   if (!response.ok || result.ok !== true) {
     return {
       validation: result.validation as WorkshopSubmitRequest["validation"],

@@ -4,7 +4,7 @@ import {
   isReplayFixtureEnabled,
   replayFixtureMatchId,
 } from "../../../matches/replay-fixture.js"
-import { GET } from "./route.js"
+import { createReplayFixtureGetHandler } from "./route.js"
 
 describe("replay fixture test-support route", () => {
   it("is unavailable outside test/playwright or explicit fixture gates", async () => {
@@ -13,9 +13,8 @@ describe("replay fixture test-support route", () => {
       isReplayFixtureEnabled({ COWARDS_ENABLE_REPLAY_FIXTURES: "1" }),
     ).toBe(true)
 
-    const response = await GET(
+    const response = await createReplayFixtureGetHandler({ env: {} })(
       new Request("http://local.test/api/test-support/replay-fixture"),
-      { env: {} },
     )
 
     expect(response.status).toBe(404)
@@ -25,10 +24,9 @@ describe("replay fixture test-support route", () => {
   })
 
   it("returns a bounded fixture catalog only when explicitly enabled", async () => {
-    const response = await GET(
-      new Request("http://local.test/api/test-support/replay-fixture"),
-      { env: { COWARDS_ENABLE_REPLAY_FIXTURES: "1" } },
-    )
+    const response = await createReplayFixtureGetHandler({
+      env: { COWARDS_ENABLE_REPLAY_FIXTURES: "1" },
+    })(new Request("http://local.test/api/test-support/replay-fixture"))
 
     expect(response.status).toBe(200)
     const body = await response.json()

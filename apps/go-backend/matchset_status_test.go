@@ -11,6 +11,85 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+func TestPublicCompetitionReadsDoNotMutateLifecycle(t *testing.T) {
+	source, err := os.ReadFile("live_backend.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, functionName := range []string{"ladderMatchSetsAndStandings", "publicMatchSetResult"} {
+		body := goFunctionSource(t, string(source), functionName)
+		for _, forbidden := range []string{"refreshMatchSetStatus", "update match_sets", "insert into match_sets", "delete from match_sets"} {
+			if strings.Contains(body, forbidden) {
+				t.Fatalf("public read %s contains lifecycle mutation %q", functionName, forbidden)
+			}
+		}
+	}
+}
+
+func TestCandidateMatchSetStatusV119(t *testing.T) {
+	tests := []struct {
+		name     string
+		evidence successorMatchSetStatusEvidenceV119
+		status   string
+		counted  bool
+	}{
+		{name: "exact", evidence: successorMatchSetStatusEvidenceV119{CanonicalConditionCount: 4, ValidTerminalConditionCount: 4}, status: "complete", counted: true},
+		{name: "partial", evidence: successorMatchSetStatusEvidenceV119{CanonicalConditionCount: 4, ValidTerminalConditionCount: 3}, status: "pending"},
+		{name: "retryable", evidence: successorMatchSetStatusEvidenceV119{CanonicalConditionCount: 4, ValidTerminalConditionCount: 3, RetryableSystemFailure: true}, status: "pending"},
+		{name: "exhausted", evidence: successorMatchSetStatusEvidenceV119{CanonicalConditionCount: 4, ValidTerminalConditionCount: 3, ExhaustedSystemFailure: true}, status: "degraded"},
+		{name: "invalid D-04", evidence: successorMatchSetStatusEvidenceV119{CanonicalConditionCount: 4, ValidTerminalConditionCount: 4, InvalidRevisionEvidence: true}, status: "pending"},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got := determineSuccessorMatchSetStatusV119(test.evidence)
+			if got.Status != test.status || got.Counted != test.counted {
+				t.Fatalf("unexpected status: %+v", got)
+			}
+		})
+	}
+}
+
+func TestCandidateMatchSetStatusV119IsStructuralOnly(t *testing.T) {
+	source, err := os.ReadFile("matchset_status.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+	body := goFunctionSource(t, string(source), "refreshSuccessorMatchSetStatusTxV119")
+	for _, forbidden := range []string{"chronicle", "strategyFailureRevisionIDFromChronicle", "validateChronicle", "gameState", "transition"} {
+		if strings.Contains(body, forbidden) {
+			t.Fatalf("candidate status branch reintroduced Go gameplay semantics through %q", forbidden)
+		}
+	}
+}
+
+func goFunctionSource(t *testing.T, source string, functionName string) string {
+	t.Helper()
+	marker := "func "
+	start := strings.Index(source, marker)
+	for start >= 0 {
+		lineEnd := strings.Index(source[start:], "\n")
+		if lineEnd < 0 {
+			lineEnd = len(source) - start
+		}
+		header := source[start : start+lineEnd]
+		if strings.Contains(header, functionName+"(") {
+			rest := source[start+lineEnd:]
+			next := strings.Index(rest, "\nfunc ")
+			if next < 0 {
+				return source[start:]
+			}
+			return source[start : start+lineEnd+next]
+		}
+		next := strings.Index(source[start+len(marker):], marker)
+		if next < 0 {
+			break
+		}
+		start += len(marker) + next
+	}
+	t.Fatalf("function %s not found", functionName)
+	return ""
+}
+
 func TestGoMatchSetStatusIntegration(t *testing.T) {
 	databaseURL := os.Getenv("COWARDS_GO_BACKEND_TEST_DATABASE_URL")
 	if databaseURL == "" {
@@ -116,7 +195,7 @@ func TestGoMatchSetStatusIntegration(t *testing.T) {
 		assertPhase100MatchSetStored(t, ctx, pool, "match-set:"+prefix, matchSetStatusDegraded, true, true)
 	})
 
-	t.Run("public MatchSet summary refreshes stale stored scoring", func(t *testing.T) {
+	t.Run("public MatchSet summary does not mutate stale stored lifecycle", func(t *testing.T) {
 		prefix := "phase100-public-refresh"
 		cleanupPhase100Rows(t, ctx, pool, prefix)
 		defer cleanupPhase100Rows(t, ctx, pool, prefix)
@@ -141,12 +220,12 @@ func TestGoMatchSetStatusIntegration(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if stringValue(result, "status") != matchSetStatusComplete {
-			t.Fatalf("expected refreshed public complete status, got %+v", result["status"])
+		if stringValue(result, "status") != "queued" {
+			t.Fatalf("expected stored queued status without read-time refresh, got %+v", result["status"])
 		}
 		standings, ok := result["standings"].([]map[string]any)
-		if !ok || len(standings) != 2 {
-			t.Fatalf("expected refreshed public standings, got %+v", result["standings"])
+		if !ok || len(standings) != 0 {
+			t.Fatalf("expected no standings without stored scoring, got %+v", result["standings"])
 		}
 		matches, ok := result["matches"].([]map[string]any)
 		if !ok || len(matches) != 2 {
@@ -156,7 +235,38 @@ func TestGoMatchSetStatusIntegration(t *testing.T) {
 		if firstEntrants["bottom"] != "entrant:"+prefix+":bottom" || stringValue(matches[0], "arenaVariantId") != ids.arenaID {
 			t.Fatalf("expected entrant-mapped evidence with arena, got %+v", matches[0])
 		}
-		assertPhase100MatchSetStored(t, ctx, pool, ids.matchSetID, matchSetStatusComplete, false, true)
+		countedState := mapValue(mapValue(result, "competition"), "countedState")
+		if stringValue(countedState, "state") != "non_competitive" {
+			t.Fatalf("expected exhibition counted-state projection, got %+v", countedState)
+		}
+		assertPhase100MatchSetLifecycleUnchanged(t, ctx, pool, ids.matchSetID)
+	})
+
+	t.Run("public ladder does not mutate stale stored lifecycle", func(t *testing.T) {
+		prefix := "phase252-ladder-read-only"
+		cleanupPhase100Rows(t, ctx, pool, prefix)
+		defer cleanupPhase100Rows(t, ctx, pool, prefix)
+		ids := seedPhase100MatchSet(t, ctx, pool, prefix)
+		seedPhase100CompetitionEntrants(t, ctx, pool, ids)
+		seedPhase100Ladder(t, ctx, pool, ids)
+		setMatchCompleteForScoring(t, ctx, pool, ids.matchA, ids.bottomRevision, ids.bottomPlayerA, 2, 0, 10)
+		setMatchCompleteForScoring(t, ctx, pool, ids.matchB, ids.topRevision, ids.bottomPlayerB, 0, 3, 12)
+		insertPhase100ChronicleRow(t, ctx, pool, ids.matchA, "a")
+		insertPhase100ChronicleRow(t, ctx, pool, ids.matchB, "b")
+
+		result, err := (&LiveServer{pool: pool}).publicLadder(ctx, "trial-ladder:"+prefix)
+		if err != nil {
+			t.Fatal(err)
+		}
+		matchSets, ok := result["matchSets"].([]map[string]any)
+		if !ok || len(matchSets) != 1 {
+			t.Fatalf("expected one projected MatchSet, got %+v", result["matchSets"])
+		}
+		countedState := mapValue(matchSets[0], "countedState")
+		if stringValue(countedState, "state") != "pending" || stringValue(countedState, "evidenceAvailability") != "partial" {
+			t.Fatalf("expected incomplete stored evidence to remain pending, got %+v", countedState)
+		}
+		assertPhase100MatchSetLifecycleUnchanged(t, ctx, pool, ids.matchSetID)
 	})
 
 	t.Run("public MatchSet summary projects failure category metadata", func(t *testing.T) {
@@ -214,9 +324,10 @@ func TestGoMatchSetStatusIntegration(t *testing.T) {
 			pool: pool,
 			now:  func() time.Time { return time.Date(2026, 5, 24, 12, 0, 0, 0, time.UTC) },
 		}).createExhibitionMatchSet(ctx, userID, "smoke-exhibition-v1", revisionIDs, true)
-		if err != nil {
-			t.Fatal(err)
+		if err == nil || result != nil {
+			t.Fatalf("unproved fixture revisions created executable work: result=%+v err=%v", result, err)
 		}
+		return
 		matchSetID := stringValue(result, "matchSetId")
 		if stringValue(result, "status") != "queued" || intValue(result, "matchCount") != 2 {
 			t.Fatalf("unexpected exhibition creation result: %+v", result)
@@ -250,6 +361,9 @@ func TestGoMatchSetStatusIntegration(t *testing.T) {
 		setMatchCompleteForScoring(t, ctx, pool, ids.matchB, ids.topRevision, ids.bottomPlayerB, 0, 3, 12)
 		insertPhase100ChronicleRow(t, ctx, pool, ids.matchA, "a")
 		insertPhase100ChronicleRow(t, ctx, pool, ids.matchB, "b")
+		if _, _, err := newMatchSetStatusService(pool).refreshMatchSetStatus(ctx, ids.matchSetID); err != nil {
+			t.Fatal(err)
+		}
 
 		result, err := (&LiveServer{pool: pool}).publicLadder(ctx, "trial-ladder:"+prefix)
 		if err != nil {
@@ -265,6 +379,23 @@ func TestGoMatchSetStatusIntegration(t *testing.T) {
 		matchSets, ok := result["matchSets"].([]map[string]any)
 		if !ok || len(matchSets) != 1 || matchSets[0]["countedStatus"] != "counted" {
 			t.Fatalf("expected counted ladder MatchSet, got %+v", result["matchSets"])
+		}
+		if stringValue(mapValue(result, "entryWindow"), "state") != "closed" || stringValue(mapValue(result, "schedulingWindow"), "state") != "closed" {
+			t.Fatalf("expected active Season windows to be closed, got %+v", result)
+		}
+		if stringValue(mapValue(result, "links"), "standingsHref") != "/ladder/phase100-ladder#standings" {
+			t.Fatalf("expected stable Season standings link, got %+v", result["links"])
+		}
+		if stringValue(matchSets[0], "replayHref") == "" || stringValue(matchSets[0], "resultHref") == "" {
+			t.Fatalf("expected Chronicle-backed result and replay links, got %+v", matchSets[0])
+		}
+		countedState := mapValue(matchSets[0], "countedState")
+		if stringValue(countedState, "state") != "counted" || stringValue(countedState, "evidenceAvailability") != "available" {
+			t.Fatalf("expected canonical counted-state projection, got %+v", countedState)
+		}
+		competitionEvidence := mapValue(standings[0], "competitionEvidence")
+		if intValue(competitionEvidence, "countedMatchSetCount") != 1 || intValue(competitionEvidence, "excludedMatchSetCount") != 0 || stringValue(competitionEvidence, "evidenceAvailability") != "available" {
+			t.Fatalf("expected standing competition evidence, got %+v", competitionEvidence)
 		}
 	})
 
@@ -572,6 +703,23 @@ func assertPhase100MatchSetStored(t *testing.T, ctx context.Context, pool *pgxpo
 	}
 }
 
+func assertPhase100MatchSetLifecycleUnchanged(t *testing.T, ctx context.Context, pool *pgxpool.Pool, matchSetID string) {
+	t.Helper()
+	var status string
+	var completedAt *string
+	var scoringRaw []byte
+	if err := pool.QueryRow(ctx, `
+		select status::text, completed_at::text, scoring
+		from match_sets
+		where id = $1
+	`, matchSetID).Scan(&status, &completedAt, &scoringRaw); err != nil {
+		t.Fatal(err)
+	}
+	if status != matchSetStatusPending || completedAt != nil || len(scoringRaw) != 0 {
+		t.Fatalf("public read mutated MatchSet lifecycle: status=%s completedAt=%v scoring=%s", status, completedAt, string(scoringRaw))
+	}
+}
+
 func insertPhase100ChronicleRow(t *testing.T, ctx context.Context, pool *pgxpool.Pool, matchID string, suffix string) {
 	t.Helper()
 	if _, err := pool.Exec(ctx, `
@@ -622,6 +770,7 @@ func insertPhase101ChronicleArtifact(t *testing.T, ctx context.Context, pool *pg
 
 func seedPhase102OwnedRevisions(t *testing.T, ctx context.Context, pool *pgxpool.Pool, prefix string) (string, []string) {
 	t.Helper()
+	t.Setenv("COWARDS_PROVIDER_VALIDATION_SECRET", "cowards-provider-validation-test-secret-v1.33")
 	userID := "user:" + prefix
 	if _, err := pool.Exec(ctx, `
 		insert into users (id, username, handle, display_name, metadata)
@@ -640,6 +789,15 @@ func seedPhase102OwnedRevisions(t *testing.T, ctx context.Context, pool *pgxpool
 		source := "export default { async selectActivations() { return []; } } // " + side
 		sourceHash := hashStrategySourceForGo(source)
 		sourceBytes := len([]byte(source))
+		metadata := providerReadinessSourceArtifactMetadata(
+			t,
+			"typescript",
+			"strategy-language-provider-js-ts",
+			sourceHash,
+			sourceBytes,
+			true,
+		)
+		metadata["label"] = "Phase 102 " + side
 		if _, err := pool.Exec(ctx, `
 			insert into strategies (id, owner_user_id, name, metadata)
 			values ($1, $2, $3, '{}'::jsonb)
@@ -669,9 +827,7 @@ func seedPhase102OwnedRevisions(t *testing.T, ctx context.Context, pool *pgxpool
 			"valid":       true,
 			"sourceHash":  sourceHash,
 			"sourceBytes": sourceBytes,
-		}, map[string]any{
-			"label": "Phase 102 " + side,
-		}); err != nil {
+		}, metadata); err != nil {
 			t.Fatal(err)
 		}
 		revisions = append(revisions, revisionID)

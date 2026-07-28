@@ -269,6 +269,42 @@ describe("reliability evidence copy", () => {
     }
   })
 
+  it("renders typed counted and governance context without Chronicle contract data", () => {
+    const rows = replayEvidenceRows({
+      status: "ready",
+      mode: "public",
+      competition: {
+        matchSetId: "match-set:trial:1",
+        seasonId: "season:trial:1",
+        countedState: {
+          state: "under_review",
+          publicLabel: "Under review",
+          publicExplanation:
+            "This result is being reviewed before standings include it.",
+          standingsEffect: "Held out of standings during review.",
+          evidenceAvailability: "available",
+          publicReason: "governance_hold",
+        },
+        governance: {
+          status: "under_review",
+          publicReason: "governance_hold",
+          publicExplanation:
+            "This result is being reviewed and is held out of standings for now.",
+          standingsEffect: "Held out of standings during review.",
+          replayAvailable: true,
+        },
+      },
+    } as ReplayReadyDto)
+
+    expect(rowValue(rows, "counted status")).toContain("Under review")
+    expect(rowValue(rows, "standings effect")).toBe(
+      "Held out of standings during review.",
+    )
+    expect(rowValue(rows, "evidence availability")).toBe("available")
+    expect(rowValue(rows, "governance")).toContain("held out of standings")
+    expect(rowValue(rows, "lifecycle")).toBe("")
+  })
+
   it("maps MatchSet status to compact chip classes", () => {
     expect(statusChipClass("complete")).toBe("valid")
     expect(statusChipClass("degraded")).toBe("warning")

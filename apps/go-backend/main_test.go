@@ -1,10 +1,10 @@
 package main
 
 import (
+	"context"
 	"crypto/sha256"
-	"encoding/base64"
-	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -13,7 +13,127 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/jackc/pgx/v5/pgxpool"
 )
+
+func selectedStrategyRuntimeABIVersionForTest() string {
+	return selectedStrategyRuntimeABIVersion()
+}
+
+func TestNewLiveServerRejectsAuthorityBeforePoolOrOrchestrator(t *testing.T) {
+	poolCalls := 0
+	orchestratorCalls := 0
+	dependencies := defaultLiveServerDependencies()
+	dependencies.loadAuthority = func() (*verifiedRuntimeEvidenceAuthority, error) {
+		return nil, authorityError("SIGNATURE")
+	}
+	dependencies.connectPool = func(context.Context, string) (*pgxpool.Pool, error) {
+		poolCalls++
+		return nil, errors.New("database connection must not be attempted")
+	}
+	dependencies.newOrchestrator = func(*pgxpool.Pool, string) *goMatchOrchestrator {
+		orchestratorCalls++
+		return nil
+	}
+
+	_, err := newLiveServerWithDependencies(context.Background(), "postgres://must-not-connect", dependencies)
+	if err == nil || err.Error() != "live Go backend authority unavailable" {
+		t.Fatalf("expected stable public-safe authority failure, got %v", err)
+	}
+	if poolCalls != 0 || orchestratorCalls != 0 {
+		t.Fatalf("authority must fail before mutable dependencies, pool=%d orchestrator=%d", poolCalls, orchestratorCalls)
+	}
+}
+
+func TestNewLiveServerRejectsDeploymentRegistryBeforePool(t *testing.T) {
+	fixture := newDeploymentLaneFixture(t)
+	poolCalls := 0
+	dependencies := defaultLiveServerDependencies()
+	dependencies.loadAuthority = func() (*verifiedRuntimeEvidenceAuthority, error) {
+		return &verifiedRuntimeEvidenceAuthority{CompatibilityTuple: fixture.Tuple}, nil
+	}
+	dependencies.loadDeploymentLanes = func() (*goDeploymentLaneRegistry, error) {
+		return nil, errors.New("registry unavailable")
+	}
+	dependencies.connectPool = func(context.Context, string) (*pgxpool.Pool, error) {
+		poolCalls++
+		return nil, errors.New("database must not be reached")
+	}
+
+	_, err := newLiveServerWithDependencies(context.Background(), "postgres://must-not-connect", dependencies)
+	if err == nil || err.Error() != "live Go backend deployment lane registry unavailable" {
+		t.Fatalf("expected stable deployment registry failure, got %v", err)
+	}
+	if poolCalls != 0 {
+		t.Fatalf("deployment registry must fail before mutable database, calls=%d", poolCalls)
+	}
+}
+
+func TestHandlerFromEnvRejectsAuthorityBeforeReturningHandler(t *testing.T) {
+	t.Setenv("COWARDS_GO_BACKEND_DATA_MODE", "live")
+	t.Setenv("DATABASE_URL", "postgres://must-not-connect")
+	dependencies := defaultLiveServerDependencies()
+	dependencies.loadAuthority = func() (*verifiedRuntimeEvidenceAuthority, error) {
+		return nil, authorityError("ROLLBACK")
+	}
+	dependencies.connectPool = func(context.Context, string) (*pgxpool.Pool, error) {
+		t.Fatal("handlerFromEnv reached the database after invalid authority")
+		return nil, nil
+	}
+
+	handler, closeHandler, err := handlerFromEnvWithDependencies(context.Background(), dependencies)
+	if handler != nil {
+		t.Fatal("invalid authority returned a live handler")
+	}
+	closeHandler()
+	if err == nil || err.Error() != "live Go backend authority unavailable" {
+		t.Fatalf("expected stable public-safe authority failure, got %v", err)
+	}
+}
+
+func TestRunGoBackendDoesNotListenWhenAuthorityInvalid(t *testing.T) {
+	t.Setenv("COWARDS_GO_BACKEND_DATA_MODE", "live")
+	t.Setenv("DATABASE_URL", "postgres://must-not-connect")
+	dependencies := defaultLiveServerDependencies()
+	dependencies.loadAuthority = func() (*verifiedRuntimeEvidenceAuthority, error) {
+		return nil, authorityError("GENERATION_FORK")
+	}
+	listenCalls := 0
+	err := runGoBackendWithDependencies(context.Background(), dependencies, func(string, http.Handler) error {
+		listenCalls++
+		return nil
+	})
+	if err == nil || err.Error() != "live Go backend authority unavailable" {
+		t.Fatalf("expected stable public-safe authority failure, got %v", err)
+	}
+	if listenCalls != 0 {
+		t.Fatalf("listener started %d time(s) after authority failure", listenCalls)
+	}
+}
+
+func TestRunGoBackendFixtureModeDoesNotLoadProductionAuthority(t *testing.T) {
+	t.Setenv("COWARDS_GO_BACKEND_DATA_MODE", "fixtures")
+	dependencies := defaultLiveServerDependencies()
+	dependencies.loadAuthority = func() (*verifiedRuntimeEvidenceAuthority, error) {
+		t.Fatal("fixture mode attempted to load production authority")
+		return nil, nil
+	}
+	listenCalls := 0
+	err := runGoBackendWithDependencies(context.Background(), dependencies, func(_ string, handler http.Handler) error {
+		listenCalls++
+		if handler == nil {
+			t.Fatal("fixture mode returned a nil handler")
+		}
+		return http.ErrServerClosed
+	})
+	if err != nil {
+		t.Fatalf("fixture backend failed: %v", err)
+	}
+	if listenCalls != 1 {
+		t.Fatalf("expected one fixture listener, got %d", listenCalls)
+	}
+}
 
 func TestEndpointFixturesMatchCanonicalJSON(t *testing.T) {
 	tests := []struct {
@@ -190,7 +310,8 @@ func TestLiveStrategyArtifactManifestSupportsForkLookups(t *testing.T) {
 	if insert.Source == "" || insert.SourceHash == "" || insert.SourceHash != hashString(insert.Source) {
 		t.Fatalf("fork insert did not preserve manifest source hash")
 	}
-	if insert.Runtime == nil || stringValue(insert.Runtime, "abiVersion") != "strategy-runtime-abi-v1.14" {
+	expectedRuntimeABI := stringValue(artifact.Runtime, "abiVersion")
+	if expectedRuntimeABI == "" || insert.Runtime == nil || stringValue(insert.Runtime, "abiVersion") != expectedRuntimeABI {
 		t.Fatalf("fork insert did not preserve runtime ABI metadata")
 	}
 	if insert.Validation == nil || !boolValue(insert.Validation, "valid") {
@@ -218,7 +339,7 @@ func TestPublicRuntimeMetadataOmitsPrivateLimits(t *testing.T) {
 	if _, ok := runtime["limits"]; !ok {
 		t.Fatalf("public runtime projection mutated source runtime")
 	}
-	if stringValue(publicRuntime, "abiVersion") != "strategy-runtime-abi-v1.14" {
+	if stringValue(publicRuntime, "abiVersion") != selectedStrategyRuntimeABIVersionForTest() {
 		t.Fatalf("public runtime lost ABI metadata")
 	}
 }
@@ -228,34 +349,7 @@ func TestPythonRuntimeMetadataIsCountedProviderEligible(t *testing.T) {
 	runtime := pythonRuntimeMetadata()
 	sourceHash := "sourcehash:python"
 	sourceBytes := 123
-	artifactPayload := []byte("python-artifact")
-	artifactDigest := sha256.Sum256(artifactPayload)
-	artifactHash := hex.EncodeToString(artifactDigest[:])
-	artifactBytes := len(artifactPayload)
-	metadata := map[string]any{
-		"sourceArtifact": map[string]any{
-			"format":           "python-source-bundle",
-			"hash":             artifactHash,
-			"bytes":            artifactBytes,
-			"bytesBase64":      base64.StdEncoding.EncodeToString(artifactPayload),
-			"sourceHash":       sourceHash,
-			"sourceBytes":      sourceBytes,
-			"abiVersion":       "strategy-runtime-abi-v1.14",
-			"validationStatus": "valid",
-			"toolchain": map[string]any{
-				"language": "python",
-			},
-		},
-		"providerValidation": map[string]any{
-			"providerId":      "strategy-language-provider-python",
-			"contractVersion": "strategy-language-provider-contract-v1.33",
-			"sourceHash":      sourceHash,
-			"sourceBytes":     sourceBytes,
-			"artifactHash":    artifactHash,
-			"artifactBytes":   artifactBytes,
-			"proof":           providerValidationProof("strategy-language-provider-python", sourceHash, sourceBytes, artifactHash, artifactBytes),
-		},
-	}
+	metadata := providerReadinessSourceArtifactMetadata(t, "python", "strategy-language-provider-python", sourceHash, sourceBytes, true)
 	semantics := runtimeSemantics(runtime)
 
 	if stringValue(mapValue(runtime, "language"), "id") != "python" {
@@ -270,7 +364,7 @@ func TestPythonRuntimeMetadataIsCountedProviderEligible(t *testing.T) {
 	if runtimeSemanticsForRevision(runtime, metadata, sourceHash, sourceBytes)["countedPlayEligible"] != true {
 		t.Fatalf("Python revision semantics rejected matching provider validation")
 	}
-	if !runtimeAllowsNonCountedExhibition(runtime) ||
+	if !runtimeAllowsNonCountedExhibition(runtime, metadata, sourceHash, sourceBytes) ||
 		!runtimeAllowsCountedPlay(runtime, metadata, sourceHash, sourceBytes) {
 		t.Fatalf("Python runtime eligibility gate drifted")
 	}
@@ -281,37 +375,45 @@ func TestPythonRuntimeMetadataIsCountedProviderEligible(t *testing.T) {
 	}
 }
 
+func TestTypeScriptRuntimeMetadataRequiresProviderProofForCountedPlay(t *testing.T) {
+	t.Setenv("COWARDS_PROVIDER_VALIDATION_SECRET", "cowards-provider-validation-test-secret-v1.33")
+	runtime := defaultRuntimeMetadata()
+	source := "export default { selectActivations() { return []; }, soldierBrain() { return { action: { type: \"TURN_TO_STONE\" }, soldierMemory: null }; } }"
+	sourceHash := hashString(source)
+	sourceBytes := len([]byte(source))
+	metadata := providerReadinessSourceArtifactMetadata(t, "typescript", "strategy-language-provider-js-ts", sourceHash, sourceBytes, true)
+
+	if runtimeAllowsCountedPlay(runtime, nil, sourceHash, sourceBytes) {
+		t.Fatalf("TypeScript counted gate accepted missing provider validation")
+	}
+	if runtimeAllowsNonCountedExhibition(runtime, nil, sourceHash, sourceBytes) {
+		t.Fatalf("TypeScript non-counted gate accepted missing provider validation")
+	}
+	if !runtimeAllowsCountedPlay(runtime, metadata, sourceHash, sourceBytes) ||
+		!runtimeAllowsNonCountedExhibition(runtime, metadata, sourceHash, sourceBytes) {
+		t.Fatalf("TypeScript gates rejected matching provider validation")
+	}
+	if runtimeSemanticsForRevision(runtime, nil, sourceHash, sourceBytes)["countedPlayEligible"] == true {
+		t.Fatalf("TypeScript revision semantics accepted missing provider validation")
+	}
+	if runtimeSemanticsForRevision(runtime, metadata, sourceHash, sourceBytes)["countedPlayEligible"] != true {
+		t.Fatalf("TypeScript revision semantics rejected matching provider validation")
+	}
+	runtime["package"] = map[string]any{"mode": "npm", "entrypoint": "default"}
+	semantics := runtimeSemanticsForRevision(runtime, metadata, sourceHash, sourceBytes)
+	if semantics["countedPlayEligible"] == true ||
+		semantics["packagePolicyLabel"] != "Package metadata unsupported" ||
+		semantics["countedPlayReason"] != "Package metadata is not supported for counted play." {
+		t.Fatalf("TypeScript revision semantics accepted unsupported package metadata: %+v", semantics)
+	}
+}
+
 func TestRustRuntimeMetadataRequiresArtifactProviderProofForCountedPlay(t *testing.T) {
 	t.Setenv("COWARDS_PROVIDER_VALIDATION_SECRET", "cowards-provider-validation-test-secret-v1.33")
 	runtime := rustWasmRuntimeMetadata()
 	sourceHash := "sourcehash:rust"
 	sourceBytes := 456
-	artifactPayload := []byte("rust-artifact")
-	artifactDigest := sha256.Sum256(artifactPayload)
-	artifactHash := hex.EncodeToString(artifactDigest[:])
-	artifactBytes := len(artifactPayload)
-	metadata := map[string]any{
-		"compiledArtifact": map[string]any{
-			"hash":             artifactHash,
-			"bytes":            artifactBytes,
-			"bytesBase64":      base64.StdEncoding.EncodeToString(artifactPayload),
-			"sourceHash":       sourceHash,
-			"targetTriple":     "wasm32-wasip1",
-			"wasiProfile":      "preview1",
-			"abiEnvelope":      "stdin-stdout-json",
-			"abiVersion":       "strategy-runtime-abi-v1.14",
-			"validationStatus": "valid",
-		},
-		"providerValidation": map[string]any{
-			"providerId":      "strategy-language-provider-rust-wasi",
-			"contractVersion": "strategy-language-provider-contract-v1.33",
-			"sourceHash":      sourceHash,
-			"sourceBytes":     sourceBytes,
-			"artifactHash":    artifactHash,
-			"artifactBytes":   artifactBytes,
-			"proof":           providerValidationProof("strategy-language-provider-rust-wasi", sourceHash, sourceBytes, artifactHash, artifactBytes),
-		},
-	}
+	metadata := providerReadinessCompiledArtifactMetadata(t, "rust", sourceHash, sourceBytes)
 
 	if runtimeSemantics(runtime)["countedPlayEligible"] != true {
 		t.Fatalf("Rust runtime semantics should be counted provider eligible")
@@ -334,32 +436,7 @@ func TestZigRuntimeMetadataRequiresArtifactProviderProofForCountedPlay(t *testin
 	runtime := wasmWasiRuntimeMetadata("zig")
 	sourceHash := "sourcehash:zig"
 	sourceBytes := 345
-	artifactPayload := []byte("zig-artifact")
-	artifactDigest := sha256.Sum256(artifactPayload)
-	artifactHash := hex.EncodeToString(artifactDigest[:])
-	artifactBytes := len(artifactPayload)
-	metadata := map[string]any{
-		"compiledArtifact": map[string]any{
-			"hash":             artifactHash,
-			"bytes":            artifactBytes,
-			"bytesBase64":      base64.StdEncoding.EncodeToString(artifactPayload),
-			"sourceHash":       sourceHash,
-			"targetTriple":     "wasm32-wasi",
-			"wasiProfile":      "preview1",
-			"abiEnvelope":      "stdin-stdout-json",
-			"abiVersion":       "strategy-runtime-abi-v1.14",
-			"validationStatus": "valid",
-		},
-		"providerValidation": map[string]any{
-			"providerId":      "strategy-language-provider-zig-wasi",
-			"contractVersion": "strategy-language-provider-contract-v1.33",
-			"sourceHash":      sourceHash,
-			"sourceBytes":     sourceBytes,
-			"artifactHash":    artifactHash,
-			"artifactBytes":   artifactBytes,
-			"proof":           providerValidationProof("strategy-language-provider-zig-wasi", sourceHash, sourceBytes, artifactHash, artifactBytes),
-		},
-	}
+	metadata := providerReadinessCompiledArtifactMetadata(t, "zig", sourceHash, sourceBytes)
 
 	if runtimeSemantics(runtime)["countedPlayEligible"] != true {
 		t.Fatalf("Zig runtime semantics should be counted provider eligible")
@@ -466,6 +543,43 @@ func TestReplayMetadataUsesV18Shape(t *testing.T) {
 	}
 	if !strings.Contains(response.Body.String(), `"metadata"`) {
 		t.Fatal("replay metadata missing v1.8 metadata envelope")
+	}
+}
+
+func TestPublicStrategyRetainsFailClosedRuntimeSemantics(t *testing.T) {
+	response := httptest.NewRecorder()
+	request := httptest.NewRequest(
+		http.MethodGet,
+		"/public/strategies/strategy%3Ago-parity%3Asentinel",
+		nil,
+	)
+
+	NewServer().routes().ServeHTTP(response, request)
+
+	if response.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", response.Code)
+	}
+	body := decodeJSONMap(t, response.Body.Bytes())
+	payload, ok := body["payload"].(map[string]any)
+	if !ok {
+		t.Fatal("public Strategy page missing payload")
+	}
+	strategy, ok := payload["strategy"].(map[string]any)
+	if !ok {
+		t.Fatal("public Strategy page missing Strategy card")
+	}
+	semantics, ok := strategy["runtimeSemantics"].(map[string]any)
+	if !ok {
+		t.Fatal("public Strategy card missing runtime semantics")
+	}
+	if semantics["countedPlayEligible"] != false {
+		t.Fatal("proof-local public Strategy fixture must remain non-counted")
+	}
+	if semantics["countedPlayLabel"] != "Not counted" {
+		t.Fatalf(
+			"expected fail-closed counted-play label, got %v",
+			semantics["countedPlayLabel"],
+		)
 	}
 }
 

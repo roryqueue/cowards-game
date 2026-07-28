@@ -1,14 +1,16 @@
 import type {
   MatchExecutionFailureCategoryV1,
   MatchExecutionLifecycleStateV1,
+  MatchExecutionPublicResultV119,
   MatchExecutionReplayAvailabilityV1,
 } from "@cowards/spec"
-import { describeStrategyRuntimeProductSemantics } from "@cowards/spec"
+import { parseMatchExecutionPublicResultV119 } from "@cowards/spec"
 import type { PublicReadMatchSetResultDto } from "../../lib/public-service-boundary.js"
 import {
   buildResultIntelligenceViewModel,
   type ResultIntelligenceViewModel,
 } from "../match-intelligence.js"
+import { resolveReplayArenaAuthority } from "../matches/replay-ready.js"
 import {
   candidateLaneCue,
   publicMatchEvidenceLabel,
@@ -230,24 +232,16 @@ const formatEntrantRuntimeSummary = (
   result: PublicReadMatchSetResultDto,
   entrantRuntimeLabels: readonly string[],
 ): string => {
-  const storedCountedStatus =
-    result.metadata &&
-    typeof result.metadata === "object" &&
-    !Array.isArray(result.metadata) &&
-    "countedStatus" in result.metadata &&
-    typeof result.metadata.countedStatus === "string"
-      ? result.metadata.countedStatus
-      : null
+  const countedState = result.competition?.countedState.state
   const nonCountedLanguages = new Set<string>(
     result.contract.runtimeEvidence.eligibility.nonCountedExhibitionBeta,
   )
   const counted = result.entrants.filter((entrant) => {
-    if (storedCountedStatus === "non_counted") {
+    if (countedState !== "counted") {
       return false
     }
     return (
-      describeStrategyRuntimeProductSemantics(entrant.runtime)
-        .countedPlayEligible &&
+      entrant.runtimeSemantics.countedPlayEligible &&
       !nonCountedLanguages.has(entrant.runtime.language.id)
     )
   }).length
@@ -259,6 +253,82 @@ const formatEntrantRuntimeSummary = (
       : "no non-counted exhibition beta entrants",
     entrantRuntimeLabels.join(", "),
   ].join("; ")
+}
+
+export type CandidateResultWorkbenchViewModel =
+  | {
+      status: "candidate"
+      profile: "runtime-v1.19-candidate"
+      candidate: true
+      current: false
+      publishable: false
+      matchSetId: string
+      matchId: string
+      publicationStatus: MatchExecutionPublicResultV119["publicationStatus"]
+      counted: boolean
+      labels: {
+        arena: string
+        arenaCatalog: string
+        arenaCatalogStatus: "active"
+        condition: MatchExecutionPublicResultV119["condition"]["label"]
+        bottom: string
+        top: string
+        initialInitiative: string
+      }
+    }
+  | {
+      status: "unavailable"
+      profile: "runtime-v1.19-candidate"
+      candidate: true
+      current: false
+      publishable: false
+      reason: "candidate-data-unavailable"
+    }
+
+const candidateResultUnavailable = (): CandidateResultWorkbenchViewModel => ({
+  status: "unavailable",
+  profile: "runtime-v1.19-candidate",
+  candidate: true,
+  current: false,
+  publishable: false,
+  reason: "candidate-data-unavailable",
+})
+
+export const buildCandidateResultWorkbenchViewModel = (
+  input: unknown,
+): CandidateResultWorkbenchViewModel => {
+  try {
+    const result = parseMatchExecutionPublicResultV119(input)
+    const arenaAuthority = resolveReplayArenaAuthority({
+      profile: "runtime-v1.19-candidate",
+      result,
+    })
+    if (arenaAuthority.status !== "candidate") {
+      return candidateResultUnavailable()
+    }
+    return {
+      status: "candidate",
+      profile: arenaAuthority.profile,
+      candidate: arenaAuthority.candidate,
+      current: arenaAuthority.current,
+      publishable: arenaAuthority.publishable,
+      matchSetId: result.matchSetId,
+      matchId: result.matchId,
+      publicationStatus: result.publicationStatus,
+      counted: result.counted,
+      labels: {
+        arena: result.arena.variantId,
+        arenaCatalog: result.arena.catalogVersion,
+        arenaCatalogStatus: result.arena.catalogStatus,
+        condition: result.condition.label,
+        bottom: result.condition.sides.bottomEntrantKey,
+        top: result.condition.sides.topEntrantKey,
+        initialInitiative: result.condition.initialInitiativeEntrantKey,
+      },
+    }
+  } catch {
+    return candidateResultUnavailable()
+  }
 }
 
 export const buildResultWorkbenchViewModel = (

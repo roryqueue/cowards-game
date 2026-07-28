@@ -1,6 +1,8 @@
+import type { JSX } from "react"
+
 export const dynamic = "force-dynamic"
 
-export default function LearnPage() {
+export default function LearnPage(): JSX.Element {
   return (
     <main className="app-page">
       <section className="app-panel">

@@ -2,13 +2,16 @@ import { describe, expect, it } from "vitest"
 import { readFileSync } from "node:fs"
 import type {
   AwarenessCell,
-  SoldierBrainInput,
   SoldierSnapshot,
-  StrategyInput,
   StrategyRevision,
 } from "@cowards/spec"
+import { SoldierBrainInputSchema, StrategyInputSchema } from "@cowards/spec"
 import type { StrategyExecutionAdapter } from "./adapter.js"
-import { createRuntimeFromRevision } from "./executor.js"
+import {
+  createNestedMatchShapeRuntimeFromRevisionTestSupport,
+  createRuntimeFromRevision,
+  createSelectedCurrentRuntimeFromRevisionV119,
+} from "./executor.js"
 import {
   createRuntimeViolation,
   toInvalidOutputViolation,
@@ -51,26 +54,41 @@ const awarenessCells = (): AwarenessCell[] => {
   return cells
 }
 
-const strategyInput: StrategyInput = {
-  phaseNumber: 1,
-  roundNumber: 1,
-  activationCount: 1,
-  board: {
-    bounds: { minX: 0, maxX: 11, minY: 0, maxY: 11 },
-    soldiers: [bottomSoldier, topSoldier],
-    terrainStones: [],
-  },
-  mySoldiers: [bottomSoldier],
-  enemySoldiers: [topSoldier],
-  strategyMemory: {},
+const strategyInput = {
+  ...StrategyInputSchema.parse({
+    phaseNumber: 1,
+    roundNumber: 1,
+    activationCount: 1,
+    initialInitiativePlayerId: "bottom",
+    hasInitialInitiative: true,
+    roundInitiativePlayerId: "bottom",
+    hasRoundInitiative: true,
+    board: {
+      bounds: { minX: 0, maxX: 11, minY: 0, maxY: 11 },
+      soldiers: [bottomSoldier, topSoldier],
+      terrainStones: [],
+    },
+    mySoldiers: [bottomSoldier],
+    enemySoldiers: [topSoldier],
+    strategyMemory: {},
+  }),
+  initialInitiativePlayerId: "bottom",
+  hasInitialInitiative: true,
+  roundInitiativePlayerId: "bottom",
+  hasRoundInitiative: true,
 }
 
-const soldierBrainInput: SoldierBrainInput = {
-  self: bottomSoldier,
-  awarenessGrid: { cells: awarenessCells() },
-  cycleIndex: 0,
-  maxCycles: 12,
-  soldierMemory: {},
+const soldierBrainInput = {
+  ...SoldierBrainInputSchema.parse({
+    self: bottomSoldier,
+    awarenessGrid: { cells: awarenessCells() },
+    cycleIndex: 0,
+    maxCycles: 12,
+    hasAdvancedThisActivation: false,
+    soldierMemory: {},
+  }),
+  objective: null,
+  hasAdvancedThisActivation: false,
 }
 
 const validSource = `
@@ -94,7 +112,9 @@ export default {
 `
 
 const runtimeForSource = (source: string) =>
-  createRuntimeFromRevision(buildStrategyRevision({ source }))
+  createNestedMatchShapeRuntimeFromRevisionTestSupport(
+    buildStrategyRevision({ source }),
+  )
 
 const forgedValidRevision = (source: string): StrategyRevision => {
   const revision = buildStrategyRevision({ source: validSource })
@@ -183,7 +203,7 @@ describe("StrategyRuntime execution adapter", () => {
       },
     } satisfies StrategyExecutionAdapter
 
-    const runtime = createRuntimeFromRevision(
+    const runtime = createNestedMatchShapeRuntimeFromRevisionTestSupport(
       buildStrategyRevision({ source: validSource }),
       { adapter, timeoutMs: 77 },
     )
@@ -205,6 +225,82 @@ describe("StrategyRuntime execution adapter", () => {
       },
     })
     expect(calls).toEqual(["selectActivations", "soldierBrain"])
+  })
+
+  it("keeps the legacy nested Match executor fail-closed on the selected production path", () => {
+    let adapterCalls = 0
+    const revision = buildStrategyRevision({ source: validSource })
+    const runtime = createRuntimeFromRevision(revision, {
+      adapter: {
+        metadata: {
+          id: "selected-path-test-adapter",
+          label: "Selected path test adapter",
+          default: false,
+          isolationBoundary: "Unit test double.",
+          notes: [],
+          runtimeControls: {
+            timeout: true,
+            outputByteLimit: true,
+            environment: "minimal",
+            execArgv: "empty",
+            resourceLimits: [],
+          },
+        },
+        execute() {
+          adapterCalls += 1
+          return {
+            ok: true,
+            value: { activationOrders: [], strategyMemory: {} },
+          }
+        },
+      },
+    })
+
+    expect(runtime.selectActivations(strategyInput)).toEqual({
+      ok: false,
+      violation: {
+        type: "INVALID_OUTPUT",
+        message: "Strategy runtime ABI is not selected",
+      },
+      systemFailure: { code: "MALFORMED_IPC", retryable: false },
+    })
+    expect(adapterCalls).toBe(0)
+  })
+
+  it("executes the selected v1.19 ABI only through its explicit current service bridge", () => {
+    let adapterCalls = 0
+    const revision = buildStrategyRevision({ source: validSource })
+    const runtime = createSelectedCurrentRuntimeFromRevisionV119(revision, {
+      adapter: {
+        metadata: {
+          id: "selected-v119-test-adapter",
+          label: "Selected v1.19 test adapter",
+          default: false,
+          isolationBoundary: "Unit test double.",
+          notes: [],
+          runtimeControls: {
+            timeout: true,
+            outputByteLimit: true,
+            environment: "minimal",
+            execArgv: "empty",
+            resourceLimits: [],
+          },
+        },
+        execute() {
+          adapterCalls += 1
+          return {
+            ok: true,
+            value: { activationOrders: [], strategyMemory: {} },
+          }
+        },
+      },
+    })
+
+    expect(runtime.selectActivations(strategyInput)).toEqual({
+      ok: true,
+      value: { activationOrders: [], strategyMemory: {} },
+    })
+    expect(adapterCalls).toBe(1)
   })
 
   it("keeps executable runtime APIs out of the safe root entrypoint", async () => {

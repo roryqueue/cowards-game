@@ -21,6 +21,11 @@ import type {
   StrategyResult,
   StrategyRevisionId,
 } from "@cowards/spec"
+import type {
+  CandidateBoundRuntimeInvocationV117,
+  KernelSelectActivationsRequest,
+  KernelSoldierBrainRequest,
+} from "./kernel/types.js"
 
 export type PlayerSide = "bottom" | "top"
 export type MatchPhase = "ROUND" | "CONTRACTION" | "COMPLETE"
@@ -50,6 +55,8 @@ export interface GameState {
   phaseNumber: number
   roundNumber: RoundNumber
   activationCount: ActivationCount
+  /** Present only for explicit v1.19 successor dispatch. */
+  readonly initialInitiativePlayerId?: PlayerId | undefined
   initiativePlayerId: PlayerId
   bounds: BoardBounds
   soldiers: Soldier[]
@@ -74,13 +81,37 @@ export interface TransitionResult<TState = GameState> {
 export type RuntimeResult<T> =
   | { ok: true; value: T }
   | { ok: false; violation: RuntimeViolation }
+  | {
+      ok: false
+      /** Compatibility projection for non-gameplay runtime diagnostics. */
+      violation: RuntimeViolation
+      systemFailure: { readonly code: string; readonly retryable: boolean }
+    }
 
 export interface StrategyRuntime {
   selectActivations(input: StrategyInput): RuntimeResult<StrategyResult>
   runSoldierBrain(input: SoldierBrainInput): RuntimeResult<SoldierBrainResult>
 }
 
+/**
+ * Current public runtime boundary accepted by the canonical kernel. Every
+ * invocation is bound to the required kernel effect request and returns the
+ * authenticated v1.17 request/outcome envelope. CandidateStrategyRuntime
+ * remains the broader internal boundary for explicit historical dispatch.
+ */
+export interface CanonicalStrategyRuntime {
+  selectActivations(
+    input: StrategyInput,
+    request: KernelSelectActivationsRequest,
+  ): CandidateBoundRuntimeInvocationV117<StrategyResult>
+  runSoldierBrain(
+    input: SoldierBrainInput,
+    request: KernelSoldierBrainRequest,
+  ): CandidateBoundRuntimeInvocationV117<SoldierBrainResult>
+}
+
 export type ActivationTerminalReason =
+  | "BACKSTABBED"
   | "CYCLE_EXHAUSTED"
   | "MOVE_BLOCKED"
   | "INVALID_MOVE"
@@ -111,8 +142,13 @@ export interface CreateInitialGameStateInput {
   topStrategyRevisionId: StrategyRevisionId
 }
 
+export interface CreateInitialGameStateInputV119
+  extends CreateInitialGameStateInput {
+  readonly initialInitiativePlayerId: PlayerId
+}
+
 export interface RunMatchInput extends CreateInitialGameStateInput {
-  runtime: StrategyRuntime
+  runtime: CanonicalStrategyRuntime
   maxPhases?: number | undefined
 }
 

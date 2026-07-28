@@ -2,11 +2,18 @@ import { describe, expect, it } from "vitest"
 import {
   createAnalyticsCompatibilityHash,
   createWorkshopAnalyticsDemoSnapshot,
+  createWorkshopAnalyticsDemoSnapshotV117,
   createWorkshopAnalyticsExport,
   escapeAnalyticsCsvCell,
 } from "./workshop-analytics.js"
 
 describe("Workshop analytics", () => {
+  it("keeps explicit v1.17 demo generation equal to the Phase-259 default", () => {
+    expect(createWorkshopAnalyticsDemoSnapshotV117()).toEqual(
+      createWorkshopAnalyticsDemoSnapshot(),
+    )
+  })
+
   it("creates deterministic owner-safe demo summaries", () => {
     const first = createWorkshopAnalyticsDemoSnapshot()
     const second = createWorkshopAnalyticsDemoSnapshot()

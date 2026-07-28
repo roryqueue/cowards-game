@@ -1,0 +1,916 @@
+{
+  "schemaVersion": "v1.37-executable-conformance-corpus-v1",
+  "version": "v3",
+  "generatedBy": "scripts/generate-v1-37-conformance-corpus.ts",
+  "hashAlgorithm": "sha256",
+  "rootDomain": "cowards-game:v1.37:executable-conformance-corpus:v1",
+  "rootFraming": "unsigned-64-bit-big-endian-length-then-bytes",
+  "languageIds": [
+    "typescript",
+    "python",
+    "rust",
+    "zig"
+  ],
+  "behaviorManifest": {
+    "id": "behavior:truthful-strategy-observations:v1.19",
+    "description": "Consume kernel-owned initial and Round initiative plus pre-Action activation-slot Advance observations without changing gameplay.",
+    "invocationScript": [
+      {
+        "ordinal": 0,
+        "methodName": "selectActivations",
+        "inputFixtureId": "fixture:observation-d01-initial-initiative-both-observers"
+      },
+      {
+        "ordinal": 1,
+        "methodName": "selectActivations",
+        "inputFixtureId": "fixture:observation-d02-round-initiative-later-round"
+      },
+      {
+        "ordinal": 2,
+        "methodName": "selectActivations",
+        "inputFixtureId": "fixture:observation-d03-kernel-owned-signed-transport"
+      },
+      {
+        "ordinal": 3,
+        "methodName": "selectActivations",
+        "inputFixtureId": "fixture:observation-d04-real-revalidation-required"
+      },
+      {
+        "ordinal": 4,
+        "methodName": "soldierBrain",
+        "inputFixtureId": "fixture:observation-d05-blocked-move-false"
+      },
+      {
+        "ordinal": 5,
+        "methodName": "soldierBrain",
+        "inputFixtureId": "fixture:observation-d05-blocked-push-false"
+      },
+      {
+        "ordinal": 6,
+        "methodName": "soldierBrain",
+        "inputFixtureId": "fixture:observation-d05-pushed-target-false"
+      },
+      {
+        "ordinal": 7,
+        "methodName": "soldierBrain",
+        "inputFixtureId": "fixture:observation-d05-successful-pusher-true"
+      },
+      {
+        "ordinal": 8,
+        "methodName": "soldierBrain",
+        "inputFixtureId": "fixture:observation-d05-turn-false"
+      },
+      {
+        "ordinal": 9,
+        "methodName": "soldierBrain",
+        "inputFixtureId": "fixture:observation-d06-first-call-false"
+      },
+      {
+        "ordinal": 10,
+        "methodName": "soldierBrain",
+        "inputFixtureId": "fixture:observation-d06-later-cycle-true"
+      },
+      {
+        "ordinal": 11,
+        "methodName": "soldierBrain",
+        "inputFixtureId": "fixture:observation-d06-post-self-advance-true"
+      },
+      {
+        "ordinal": 12,
+        "methodName": "soldierBrain",
+        "inputFixtureId": "fixture:observation-d07-new-slot-reset-false"
+      },
+      {
+        "ordinal": 13,
+        "methodName": "soldierBrain",
+        "inputFixtureId": "fixture:observation-d08-observational-only-no-hold"
+      }
+    ],
+    "expectedSelection": {
+      "activationOrders": [
+        {
+          "soldierId": "soldier:fixture:active",
+          "objective": {
+            "fixture": "v1.37-observation-v1.19",
+            "initiative": {
+              "initialInitiativePlayerId": "player:bottom",
+              "hasInitialInitiative": true,
+              "roundInitiativePlayerId": "player:bottom",
+              "hasRoundInitiative": true
+            },
+            "intent": "stone"
+          }
+        }
+      ],
+      "strategyMemory": {
+        "fixture": "v1.37-observation-v1.19",
+        "initiative": {
+          "initialInitiativePlayerId": "player:bottom",
+          "hasInitialInitiative": true,
+          "roundInitiativePlayerId": "player:bottom",
+          "hasRoundInitiative": true
+        }
+      }
+    },
+    "expectedBrain": {
+      "action": {
+        "type": "TURN_TO_STONE"
+      },
+      "soldierMemory": {
+        "fixture": "v1.37-observation-v1.19",
+        "hasAdvancedThisActivation": false
+      }
+    }
+  },
+  "fixtures": [
+    {
+      "languageId": "typescript",
+      "providerId": "strategy-language-provider-js-ts",
+      "runtimeTarget": "runtime-js",
+      "behaviorManifestId": "behavior:truthful-strategy-observations:v1.19",
+      "sourceEncoding": "utf-8",
+      "sourceSha256": "sha256:a84f3ac5d34c8484269670c5d70013e11ee65baf822e3f585fe50f0ea0232859",
+      "source": "const initiative = (input) => ({\n  initialInitiativePlayerId: input.initialInitiativePlayerId,\n  hasInitialInitiative: input.hasInitialInitiative,\n  roundInitiativePlayerId: input.roundInitiativePlayerId,\n  hasRoundInitiative: input.hasRoundInitiative,\n})\n\nexport default {\n  selectActivations(input) {\n    const soldier = input.mySoldiers.find((candidate) => candidate.status === \"ACTIVE\")\n    const observed = initiative(input)\n    return {\n      activationOrders: soldier\n        ? [{ soldierId: soldier.id, objective: { fixture: \"v1.37-observation-v1.19\", initiative: observed, intent: \"stone\" } }]\n        : [],\n      strategyMemory: { fixture: \"v1.37-observation-v1.19\", initiative: observed },\n    }\n  },\n  soldierBrain(input) {\n    return {\n      action: { type: \"TURN_TO_STONE\" },\n      soldierMemory: {\n        fixture: \"v1.37-observation-v1.19\",\n        hasAdvancedThisActivation: input.hasAdvancedThisActivation,\n      },\n    }\n  },\n}\n"
+    },
+    {
+      "languageId": "python",
+      "providerId": "strategy-language-provider-python",
+      "runtimeTarget": "runtime-python",
+      "behaviorManifestId": "behavior:truthful-strategy-observations:v1.19",
+      "sourceEncoding": "utf-8",
+      "sourceSha256": "sha256:5085cb384fe3560394d5399e762b8595e7613b3abed370c4587a6634d725131a",
+      "source": "def select_activations(input):\n    observed = {\n        \"initialInitiativePlayerId\": input[\"initialInitiativePlayerId\"],\n        \"hasInitialInitiative\": input[\"hasInitialInitiative\"],\n        \"roundInitiativePlayerId\": input[\"roundInitiativePlayerId\"],\n        \"hasRoundInitiative\": input[\"hasRoundInitiative\"],\n    }\n    soldier = next(\n        (candidate for candidate in input[\"mySoldiers\"] if candidate[\"status\"] == \"ACTIVE\"),\n        None,\n    )\n    return {\n        \"activationOrders\": ([{\n            \"soldierId\": soldier[\"id\"],\n            \"objective\": {\"fixture\": \"v1.37-observation-v1.19\", \"initiative\": observed, \"intent\": \"stone\"},\n        }] if soldier else []),\n        \"strategyMemory\": {\"fixture\": \"v1.37-observation-v1.19\", \"initiative\": observed},\n    }\n\n\ndef soldier_brain(input):\n    return {\n        \"action\": {\"type\": \"TURN_TO_STONE\"},\n        \"soldierMemory\": {\n            \"fixture\": \"v1.37-observation-v1.19\",\n            \"hasAdvancedThisActivation\": input[\"hasAdvancedThisActivation\"],\n        },\n    }\n"
+    },
+    {
+      "languageId": "rust",
+      "providerId": "strategy-language-provider-rust-wasi",
+      "runtimeTarget": "runtime-wasm-wasi",
+      "behaviorManifestId": "behavior:truthful-strategy-observations:v1.19",
+      "sourceEncoding": "utf-8",
+      "sourceSha256": "sha256:6569a860516476eb02270a95f894e193a84f05b12e72dce015e51abbea81aadb",
+      "source": "use std::io::{self, Read};\n\nfn has(input: &str, field: &str) -> bool {\n    input.contains(field)\n}\n\nfn main() {\n    let mut input = String::new();\n    io::stdin().read_to_string(&mut input).unwrap();\n    let has_initiative = has(&input, \"initialInitiativePlayerId\")\n        && has(&input, \"hasInitialInitiative\")\n        && has(&input, \"roundInitiativePlayerId\")\n        && has(&input, \"hasRoundInitiative\");\n    let is_brain = input.contains(\"\\\"methodName\\\":\\\"soldierBrain\\\"\");\n    let has_advanced = has(&input, \"hasAdvancedThisActivation\");\n    if is_brain && has_advanced {\n        println!(\"{}\", r#\"{\"action\":{\"type\":\"TURN_TO_STONE\"},\"soldierMemory\":{\"fixture\":\"v1.37-observation-v1.19\",\"hasAdvancedThisActivation\":false}}\"#);\n    } else if has_initiative {\n        println!(\"{}\", r#\"{\"activationOrders\":[{\"soldierId\":\"soldier:fixture:active\",\"objective\":{\"fixture\":\"v1.37-observation-v1.19\",\"initiative\":{\"hasInitialInitiative\":true,\"hasRoundInitiative\":true,\"initialInitiativePlayerId\":\"player:bottom\",\"roundInitiativePlayerId\":\"player:bottom\"},\"intent\":\"stone\"}}],\"strategyMemory\":{\"fixture\":\"v1.37-observation-v1.19\",\"initiative\":{\"hasInitialInitiative\":true,\"hasRoundInitiative\":true,\"initialInitiativePlayerId\":\"player:bottom\",\"roundInitiativePlayerId\":\"player:bottom\"}}}\"#);\n    } else {\n        println!(\"{}\", r#\"{\"error\":\"missing-observation\"}\"#);\n    }\n}\n"
+    },
+    {
+      "languageId": "zig",
+      "providerId": "strategy-language-provider-zig-wasi",
+      "runtimeTarget": "runtime-wasm-wasi",
+      "behaviorManifestId": "behavior:truthful-strategy-observations:v1.19",
+      "sourceEncoding": "utf-8",
+      "sourceSha256": "sha256:4afe9c23baf9c5577023ec0a140ea62507a8c7600293938efb8e16aadb279b32",
+      "source": "const std = @import(\"std\");\n\npub fn main(init: std.process.Init) !void {\n    var input_buffer: [16384]u8 = undefined;\n    var reader_buffer: [4096]u8 = undefined;\n    var reader = std.Io.File.stdin().reader(init.io, &reader_buffer);\n    const count = try reader.interface.readSliceShort(&input_buffer);\n    const input = input_buffer[0..count];\n    const has_initiative = std.mem.indexOf(u8, input, \"initialInitiativePlayerId\") != null and\n        std.mem.indexOf(u8, input, \"hasInitialInitiative\") != null and\n        std.mem.indexOf(u8, input, \"roundInitiativePlayerId\") != null and\n        std.mem.indexOf(u8, input, \"hasRoundInitiative\") != null;\n    const is_brain = std.mem.indexOf(u8, input, \"\\\"methodName\\\":\\\"soldierBrain\\\"\") != null;\n    const has_advanced = std.mem.indexOf(u8, input, \"hasAdvancedThisActivation\") != null;\n    const output = if (is_brain and has_advanced)\n        \"{\\\"action\\\":{\\\"type\\\":\\\"TURN_TO_STONE\\\"},\\\"soldierMemory\\\":{\\\"fixture\\\":\\\"v1.37-observation-v1.19\\\",\\\"hasAdvancedThisActivation\\\":false}}\\n\"\n    else if (has_initiative)\n        \"{\\\"activationOrders\\\":[{\\\"soldierId\\\":\\\"soldier:fixture:active\\\",\\\"objective\\\":{\\\"fixture\\\":\\\"v1.37-observation-v1.19\\\",\\\"initiative\\\":{\\\"hasInitialInitiative\\\":true,\\\"hasRoundInitiative\\\":true,\\\"initialInitiativePlayerId\\\":\\\"player:bottom\\\",\\\"roundInitiativePlayerId\\\":\\\"player:bottom\\\"},\\\"intent\\\":\\\"stone\\\"}}],\\\"strategyMemory\\\":{\\\"fixture\\\":\\\"v1.37-observation-v1.19\\\",\\\"initiative\\\":{\\\"hasInitialInitiative\\\":true,\\\"hasRoundInitiative\\\":true,\\\"initialInitiativePlayerId\\\":\\\"player:bottom\\\",\\\"roundInitiativePlayerId\\\":\\\"player:bottom\\\"}}}\\n\"\n    else\n        \"{\\\"error\\\":\\\"missing-observation\\\"}\\n\";\n    try std.Io.File.stdout().writeStreamingAll(init.io, output);\n}\n"
+    }
+  ],
+  "cases": [
+    {
+      "id": "boundary-canonical-json-duplicate-key",
+      "kind": "boundary",
+      "capability": "canonical-json",
+      "executionMode": "raw-envelope",
+      "seed": null,
+      "generatorId": null,
+      "mutationTarget": null,
+      "required": true,
+      "unsupportedDisposition": "fail-certification",
+      "requiredLanguageIds": [
+        "typescript",
+        "python",
+        "rust",
+        "zig"
+      ],
+      "expectation": {
+        "resultClass": "player_violation",
+        "reasonCode": "DUPLICATE_KEY",
+        "failingBoundary": "decoded-strategy-payload",
+        "gameplayMutation": false,
+        "retryable": false,
+        "traceRef": "trace:boundary-canonical-json-duplicate-key"
+      }
+    },
+    {
+      "id": "boundary-depth-limit",
+      "kind": "boundary",
+      "capability": "depth",
+      "executionMode": "raw-envelope",
+      "seed": null,
+      "generatorId": null,
+      "mutationTarget": null,
+      "required": true,
+      "unsupportedDisposition": "fail-certification",
+      "requiredLanguageIds": [
+        "typescript",
+        "python",
+        "rust",
+        "zig"
+      ],
+      "expectation": {
+        "resultClass": "player_violation",
+        "reasonCode": "MAX_DEPTH_EXCEEDED",
+        "failingBoundary": "decoded-strategy-payload",
+        "gameplayMutation": false,
+        "retryable": false,
+        "traceRef": "trace:boundary-depth-limit"
+      }
+    },
+    {
+      "id": "boundary-numeric-negative-zero",
+      "kind": "boundary",
+      "capability": "numeric",
+      "executionMode": "raw-envelope",
+      "seed": null,
+      "generatorId": null,
+      "mutationTarget": null,
+      "required": true,
+      "unsupportedDisposition": "fail-certification",
+      "requiredLanguageIds": [
+        "typescript",
+        "python",
+        "rust",
+        "zig"
+      ],
+      "expectation": {
+        "resultClass": "success",
+        "reasonCode": "NEGATIVE_ZERO_NORMALIZED",
+        "failingBoundary": "complete",
+        "gameplayMutation": false,
+        "retryable": false,
+        "traceRef": "trace:boundary-numeric-negative-zero"
+      }
+    },
+    {
+      "id": "boundary-unicode-scalar",
+      "kind": "boundary",
+      "capability": "unicode",
+      "executionMode": "raw-envelope",
+      "seed": null,
+      "generatorId": null,
+      "mutationTarget": null,
+      "required": true,
+      "unsupportedDisposition": "fail-certification",
+      "requiredLanguageIds": [
+        "typescript",
+        "python",
+        "rust",
+        "zig"
+      ],
+      "expectation": {
+        "resultClass": "success",
+        "reasonCode": "UNICODE_SCALAR_PRESERVED",
+        "failingBoundary": "complete",
+        "gameplayMutation": false,
+        "retryable": false,
+        "traceRef": "trace:boundary-unicode-scalar"
+      }
+    },
+    {
+      "id": "failure-malformed-output-player",
+      "kind": "positive-failure",
+      "capability": "malformed-output",
+      "executionMode": "strategy",
+      "seed": null,
+      "generatorId": null,
+      "mutationTarget": "strategy-output:truncated-json",
+      "required": true,
+      "unsupportedDisposition": "fail-certification",
+      "requiredLanguageIds": [
+        "typescript",
+        "python",
+        "rust",
+        "zig"
+      ],
+      "expectation": {
+        "resultClass": "player_violation",
+        "reasonCode": "INVALID_STRATEGY_PAYLOAD",
+        "failingBoundary": "decoded-strategy-payload",
+        "gameplayMutation": false,
+        "retryable": false,
+        "traceRef": "trace:failure-malformed-output-player"
+      }
+    },
+    {
+      "id": "failure-resource-proven-player",
+      "kind": "positive-failure",
+      "capability": "resource",
+      "executionMode": "strategy",
+      "seed": null,
+      "generatorId": null,
+      "mutationTarget": "guest:proven-resource-exhaustion",
+      "required": true,
+      "unsupportedDisposition": "fail-certification",
+      "requiredLanguageIds": [
+        "typescript",
+        "python",
+        "rust",
+        "zig"
+      ],
+      "expectation": {
+        "resultClass": "player_violation",
+        "reasonCode": "RESOURCE_EXHAUSTION",
+        "failingBoundary": "guest-method",
+        "gameplayMutation": false,
+        "retryable": false,
+        "traceRef": "trace:failure-resource-proven-player"
+      }
+    },
+    {
+      "id": "failure-stale-artifact-system",
+      "kind": "negative-failure",
+      "capability": "stale-artifact",
+      "executionMode": "strategy",
+      "seed": null,
+      "generatorId": null,
+      "mutationTarget": "identity:artifact-sha256",
+      "required": true,
+      "unsupportedDisposition": "fail-certification",
+      "requiredLanguageIds": [
+        "typescript",
+        "python",
+        "rust",
+        "zig"
+      ],
+      "expectation": {
+        "resultClass": "system_failure",
+        "reasonCode": "ARTIFACT_IDENTITY_MISMATCH",
+        "failingBoundary": "pre-invocation-identity",
+        "gameplayMutation": false,
+        "retryable": false,
+        "traceRef": "trace:failure-stale-artifact-system"
+      }
+    },
+    {
+      "id": "failure-timeout-unattributed-system",
+      "kind": "negative-failure",
+      "capability": "timeout",
+      "executionMode": "strategy",
+      "seed": null,
+      "generatorId": null,
+      "mutationTarget": "host:unattributed-timeout",
+      "required": true,
+      "unsupportedDisposition": "fail-certification",
+      "requiredLanguageIds": [
+        "typescript",
+        "python",
+        "rust",
+        "zig"
+      ],
+      "expectation": {
+        "resultClass": "system_failure",
+        "reasonCode": "TIMEOUT_ATTRIBUTION_UNAVAILABLE",
+        "failingBoundary": "runtime-supervisor",
+        "gameplayMutation": false,
+        "retryable": true,
+        "traceRef": "trace:failure-timeout-unattributed-system"
+      }
+    },
+    {
+      "id": "failure-toolchain-unavailable-system",
+      "kind": "negative-failure",
+      "capability": "valid-behavior",
+      "executionMode": "strategy",
+      "seed": null,
+      "generatorId": null,
+      "mutationTarget": "toolchain:unavailable",
+      "required": true,
+      "unsupportedDisposition": "fail-certification",
+      "requiredLanguageIds": [
+        "typescript",
+        "python",
+        "rust",
+        "zig"
+      ],
+      "expectation": {
+        "resultClass": "system_failure",
+        "reasonCode": "TOOLCHAIN_UNAVAILABLE",
+        "failingBoundary": "preflight",
+        "gameplayMutation": false,
+        "retryable": true,
+        "traceRef": "trace:failure-toolchain-unavailable-system"
+      }
+    },
+    {
+      "id": "mutation-event-order-kill",
+      "kind": "mutation-kill",
+      "capability": "mutation-kill",
+      "executionMode": "strategy",
+      "seed": "v1.37:mutation:event-order:001",
+      "generatorId": "generator:mutation:event-order:v1",
+      "mutationTarget": "trace:ordered-events",
+      "required": true,
+      "unsupportedDisposition": "fail-certification",
+      "requiredLanguageIds": [
+        "typescript",
+        "python",
+        "rust",
+        "zig"
+      ],
+      "expectation": {
+        "resultClass": "success",
+        "reasonCode": "MUTATION_REJECTED",
+        "failingBoundary": "trace-comparison",
+        "gameplayMutation": true,
+        "retryable": false,
+        "traceRef": "trace:mutation-event-order-kill"
+      }
+    },
+    {
+      "id": "normative-first-active-turn-to-stone",
+      "kind": "normative",
+      "capability": "valid-behavior",
+      "executionMode": "strategy",
+      "seed": null,
+      "generatorId": null,
+      "mutationTarget": null,
+      "required": true,
+      "unsupportedDisposition": "fail-certification",
+      "requiredLanguageIds": [
+        "typescript",
+        "python",
+        "rust",
+        "zig"
+      ],
+      "expectation": {
+        "resultClass": "success",
+        "reasonCode": "OK",
+        "failingBoundary": "complete",
+        "gameplayMutation": true,
+        "retryable": false,
+        "traceRef": "trace:normative-first-active-turn-to-stone"
+      }
+    },
+    {
+      "id": "observation-d01-initial-initiative-both-observers",
+      "kind": "normative",
+      "capability": "valid-behavior",
+      "executionMode": "strategy",
+      "seed": null,
+      "generatorId": null,
+      "mutationTarget": null,
+      "required": true,
+      "unsupportedDisposition": "fail-certification",
+      "requiredLanguageIds": [
+        "typescript",
+        "python",
+        "rust",
+        "zig"
+      ],
+      "expectation": {
+        "resultClass": "success",
+        "reasonCode": "OBSERVATION_CONSUMED",
+        "failingBoundary": "none",
+        "gameplayMutation": false,
+        "retryable": false,
+        "traceRef": "trace:observation-d01-initial-initiative-both-observers"
+      }
+    },
+    {
+      "id": "observation-d02-round-initiative-later-round",
+      "kind": "normative",
+      "capability": "valid-behavior",
+      "executionMode": "strategy",
+      "seed": null,
+      "generatorId": null,
+      "mutationTarget": null,
+      "required": true,
+      "unsupportedDisposition": "fail-certification",
+      "requiredLanguageIds": [
+        "typescript",
+        "python",
+        "rust",
+        "zig"
+      ],
+      "expectation": {
+        "resultClass": "success",
+        "reasonCode": "OBSERVATION_CONSUMED",
+        "failingBoundary": "none",
+        "gameplayMutation": false,
+        "retryable": false,
+        "traceRef": "trace:observation-d02-round-initiative-later-round"
+      }
+    },
+    {
+      "id": "observation-d03-kernel-owned-signed-transport",
+      "kind": "normative",
+      "capability": "valid-behavior",
+      "executionMode": "strategy",
+      "seed": null,
+      "generatorId": null,
+      "mutationTarget": null,
+      "required": true,
+      "unsupportedDisposition": "fail-certification",
+      "requiredLanguageIds": [
+        "typescript",
+        "python",
+        "rust",
+        "zig"
+      ],
+      "expectation": {
+        "resultClass": "success",
+        "reasonCode": "OBSERVATION_CONSUMED",
+        "failingBoundary": "none",
+        "gameplayMutation": false,
+        "retryable": false,
+        "traceRef": "trace:observation-d03-kernel-owned-signed-transport"
+      }
+    },
+    {
+      "id": "observation-d04-real-revalidation-required",
+      "kind": "normative",
+      "capability": "valid-behavior",
+      "executionMode": "strategy",
+      "seed": null,
+      "generatorId": null,
+      "mutationTarget": null,
+      "required": true,
+      "unsupportedDisposition": "fail-certification",
+      "requiredLanguageIds": [
+        "typescript",
+        "python",
+        "rust",
+        "zig"
+      ],
+      "expectation": {
+        "resultClass": "success",
+        "reasonCode": "OBSERVATION_CONSUMED",
+        "failingBoundary": "none",
+        "gameplayMutation": false,
+        "retryable": false,
+        "traceRef": "trace:observation-d04-real-revalidation-required"
+      }
+    },
+    {
+      "id": "observation-d05-blocked-move-false",
+      "kind": "normative",
+      "capability": "valid-behavior",
+      "executionMode": "strategy",
+      "seed": null,
+      "generatorId": null,
+      "mutationTarget": null,
+      "required": true,
+      "unsupportedDisposition": "fail-certification",
+      "requiredLanguageIds": [
+        "typescript",
+        "python",
+        "rust",
+        "zig"
+      ],
+      "expectation": {
+        "resultClass": "success",
+        "reasonCode": "OBSERVATION_CONSUMED",
+        "failingBoundary": "none",
+        "gameplayMutation": false,
+        "retryable": false,
+        "traceRef": "trace:observation-d05-blocked-move-false"
+      }
+    },
+    {
+      "id": "observation-d05-blocked-push-false",
+      "kind": "normative",
+      "capability": "valid-behavior",
+      "executionMode": "strategy",
+      "seed": null,
+      "generatorId": null,
+      "mutationTarget": null,
+      "required": true,
+      "unsupportedDisposition": "fail-certification",
+      "requiredLanguageIds": [
+        "typescript",
+        "python",
+        "rust",
+        "zig"
+      ],
+      "expectation": {
+        "resultClass": "success",
+        "reasonCode": "OBSERVATION_CONSUMED",
+        "failingBoundary": "none",
+        "gameplayMutation": false,
+        "retryable": false,
+        "traceRef": "trace:observation-d05-blocked-push-false"
+      }
+    },
+    {
+      "id": "observation-d05-pushed-target-false",
+      "kind": "normative",
+      "capability": "valid-behavior",
+      "executionMode": "strategy",
+      "seed": null,
+      "generatorId": null,
+      "mutationTarget": null,
+      "required": true,
+      "unsupportedDisposition": "fail-certification",
+      "requiredLanguageIds": [
+        "typescript",
+        "python",
+        "rust",
+        "zig"
+      ],
+      "expectation": {
+        "resultClass": "success",
+        "reasonCode": "OBSERVATION_CONSUMED",
+        "failingBoundary": "none",
+        "gameplayMutation": false,
+        "retryable": false,
+        "traceRef": "trace:observation-d05-pushed-target-false"
+      }
+    },
+    {
+      "id": "observation-d05-successful-pusher-true",
+      "kind": "normative",
+      "capability": "valid-behavior",
+      "executionMode": "strategy",
+      "seed": null,
+      "generatorId": null,
+      "mutationTarget": null,
+      "required": true,
+      "unsupportedDisposition": "fail-certification",
+      "requiredLanguageIds": [
+        "typescript",
+        "python",
+        "rust",
+        "zig"
+      ],
+      "expectation": {
+        "resultClass": "success",
+        "reasonCode": "OBSERVATION_CONSUMED",
+        "failingBoundary": "none",
+        "gameplayMutation": false,
+        "retryable": false,
+        "traceRef": "trace:observation-d05-successful-pusher-true"
+      }
+    },
+    {
+      "id": "observation-d05-turn-false",
+      "kind": "normative",
+      "capability": "valid-behavior",
+      "executionMode": "strategy",
+      "seed": null,
+      "generatorId": null,
+      "mutationTarget": null,
+      "required": true,
+      "unsupportedDisposition": "fail-certification",
+      "requiredLanguageIds": [
+        "typescript",
+        "python",
+        "rust",
+        "zig"
+      ],
+      "expectation": {
+        "resultClass": "success",
+        "reasonCode": "OBSERVATION_CONSUMED",
+        "failingBoundary": "none",
+        "gameplayMutation": false,
+        "retryable": false,
+        "traceRef": "trace:observation-d05-turn-false"
+      }
+    },
+    {
+      "id": "observation-d06-first-call-false",
+      "kind": "normative",
+      "capability": "valid-behavior",
+      "executionMode": "strategy",
+      "seed": null,
+      "generatorId": null,
+      "mutationTarget": null,
+      "required": true,
+      "unsupportedDisposition": "fail-certification",
+      "requiredLanguageIds": [
+        "typescript",
+        "python",
+        "rust",
+        "zig"
+      ],
+      "expectation": {
+        "resultClass": "success",
+        "reasonCode": "OBSERVATION_CONSUMED",
+        "failingBoundary": "none",
+        "gameplayMutation": false,
+        "retryable": false,
+        "traceRef": "trace:observation-d06-first-call-false"
+      }
+    },
+    {
+      "id": "observation-d06-later-cycle-true",
+      "kind": "normative",
+      "capability": "valid-behavior",
+      "executionMode": "strategy",
+      "seed": null,
+      "generatorId": null,
+      "mutationTarget": null,
+      "required": true,
+      "unsupportedDisposition": "fail-certification",
+      "requiredLanguageIds": [
+        "typescript",
+        "python",
+        "rust",
+        "zig"
+      ],
+      "expectation": {
+        "resultClass": "success",
+        "reasonCode": "OBSERVATION_CONSUMED",
+        "failingBoundary": "none",
+        "gameplayMutation": false,
+        "retryable": false,
+        "traceRef": "trace:observation-d06-later-cycle-true"
+      }
+    },
+    {
+      "id": "observation-d06-post-self-advance-true",
+      "kind": "normative",
+      "capability": "valid-behavior",
+      "executionMode": "strategy",
+      "seed": null,
+      "generatorId": null,
+      "mutationTarget": null,
+      "required": true,
+      "unsupportedDisposition": "fail-certification",
+      "requiredLanguageIds": [
+        "typescript",
+        "python",
+        "rust",
+        "zig"
+      ],
+      "expectation": {
+        "resultClass": "success",
+        "reasonCode": "OBSERVATION_CONSUMED",
+        "failingBoundary": "none",
+        "gameplayMutation": false,
+        "retryable": false,
+        "traceRef": "trace:observation-d06-post-self-advance-true"
+      }
+    },
+    {
+      "id": "observation-d07-new-slot-reset-false",
+      "kind": "normative",
+      "capability": "valid-behavior",
+      "executionMode": "strategy",
+      "seed": null,
+      "generatorId": null,
+      "mutationTarget": null,
+      "required": true,
+      "unsupportedDisposition": "fail-certification",
+      "requiredLanguageIds": [
+        "typescript",
+        "python",
+        "rust",
+        "zig"
+      ],
+      "expectation": {
+        "resultClass": "success",
+        "reasonCode": "OBSERVATION_CONSUMED",
+        "failingBoundary": "none",
+        "gameplayMutation": false,
+        "retryable": false,
+        "traceRef": "trace:observation-d07-new-slot-reset-false"
+      }
+    },
+    {
+      "id": "observation-d08-observational-only-no-hold",
+      "kind": "normative",
+      "capability": "valid-behavior",
+      "executionMode": "strategy",
+      "seed": null,
+      "generatorId": null,
+      "mutationTarget": null,
+      "required": true,
+      "unsupportedDisposition": "fail-certification",
+      "requiredLanguageIds": [
+        "typescript",
+        "python",
+        "rust",
+        "zig"
+      ],
+      "expectation": {
+        "resultClass": "success",
+        "reasonCode": "OBSERVATION_CONSUMED",
+        "failingBoundary": "none",
+        "gameplayMutation": false,
+        "retryable": false,
+        "traceRef": "trace:observation-d08-observational-only-no-hold"
+      }
+    },
+    {
+      "id": "probe-raw-envelope-authentication",
+      "kind": "raw-envelope",
+      "capability": "transport",
+      "executionMode": "raw-envelope",
+      "seed": null,
+      "generatorId": null,
+      "mutationTarget": "outer-envelope:signature",
+      "required": true,
+      "unsupportedDisposition": "fail-certification",
+      "requiredLanguageIds": [
+        "typescript",
+        "python",
+        "rust",
+        "zig"
+      ],
+      "expectation": {
+        "resultClass": "system_failure",
+        "reasonCode": "OUTER_ENVELOPE_AUTHENTICATION_FAILED",
+        "failingBoundary": "authenticated-outer-envelope",
+        "gameplayMutation": false,
+        "retryable": false,
+        "traceRef": "trace:probe-raw-envelope-authentication"
+      }
+    },
+    {
+      "id": "probe-raw-envelope-transport-truncation",
+      "kind": "raw-envelope",
+      "capability": "transport",
+      "executionMode": "raw-envelope",
+      "seed": null,
+      "generatorId": null,
+      "mutationTarget": "outer-envelope:truncated-frame",
+      "required": true,
+      "unsupportedDisposition": "fail-certification",
+      "requiredLanguageIds": [
+        "typescript",
+        "python",
+        "rust",
+        "zig"
+      ],
+      "expectation": {
+        "resultClass": "system_failure",
+        "reasonCode": "TRANSPORT_FRAME_TRUNCATED",
+        "failingBoundary": "transport",
+        "gameplayMutation": false,
+        "retryable": true,
+        "traceRef": "trace:probe-raw-envelope-transport-truncation"
+      }
+    },
+    {
+      "id": "property-deterministic-repeat-seed-001",
+      "kind": "seeded-property",
+      "capability": "deterministic-repeat",
+      "executionMode": "strategy",
+      "seed": "v1.37:repeat:001",
+      "generatorId": "generator:deterministic-repeat:v1",
+      "mutationTarget": null,
+      "required": true,
+      "unsupportedDisposition": "fail-certification",
+      "requiredLanguageIds": [
+        "typescript",
+        "python",
+        "rust",
+        "zig"
+      ],
+      "expectation": {
+        "resultClass": "success",
+        "reasonCode": "IDENTICAL_REPEAT_ROOT",
+        "failingBoundary": "complete",
+        "gameplayMutation": true,
+        "retryable": false,
+        "traceRef": "trace:property-deterministic-repeat-seed-001"
+      }
+    },
+    {
+      "id": "property-differential-full-trace-seed-002",
+      "kind": "seeded-property",
+      "capability": "differential",
+      "executionMode": "strategy",
+      "seed": "v1.37:differential:002",
+      "generatorId": "generator:differential-full-trace:v1",
+      "mutationTarget": null,
+      "required": true,
+      "unsupportedDisposition": "fail-certification",
+      "requiredLanguageIds": [
+        "typescript",
+        "python",
+        "rust",
+        "zig"
+      ],
+      "expectation": {
+        "resultClass": "success",
+        "reasonCode": "IDENTICAL_FULL_TRACE_ROOT",
+        "failingBoundary": "complete",
+        "gameplayMutation": true,
+        "retryable": false,
+        "traceRef": "trace:property-differential-full-trace-seed-002"
+      }
+    },
+    {
+      "id": "property-seeded-selection-seed-003",
+      "kind": "seeded-property",
+      "capability": "seeded-property",
+      "executionMode": "strategy",
+      "seed": "v1.37:selection:003",
+      "generatorId": "generator:selection-permutation:v1",
+      "mutationTarget": null,
+      "required": true,
+      "unsupportedDisposition": "fail-certification",
+      "requiredLanguageIds": [
+        "typescript",
+        "python",
+        "rust",
+        "zig"
+      ],
+      "expectation": {
+        "resultClass": "success",
+        "reasonCode": "PROPERTY_HOLDS",
+        "failingBoundary": "complete",
+        "gameplayMutation": true,
+        "retryable": false,
+        "traceRef": "trace:property-seeded-selection-seed-003"
+      }
+    }
+  ],
+  "corpusRootSha256": "sha256:06d0717a16047cace0364c94a15353e2d53b53da5e8bebef6912f9f30f3d681d"
+}

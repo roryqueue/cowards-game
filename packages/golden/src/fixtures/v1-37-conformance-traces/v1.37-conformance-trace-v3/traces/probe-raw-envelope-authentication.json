@@ -1,0 +1,48 @@
+{
+  "schemaVersion": "v1.37-canonical-conformance-trace-v1",
+  "corpusVersion": "v2",
+  "corpusRootSha256": "sha256:238347225defaaabcf9e57141ac7a54b4b277bd149bebe2b21903febc9ce7ac2",
+  "caseId": "probe-raw-envelope-authentication",
+  "semanticTupleId": "sha256:0d8a04fdfe49e3aa7261728ee51beb0a9049b661aad978277f2892c3a4bc54fe",
+  "resultClass": "system_failure",
+  "invocations": [
+    {
+      "ordinal": 0,
+      "invocationId": "invocation:probe-raw-envelope-authentication:failure",
+      "methodName": "selectActivations",
+      "resultClass": "system_failure",
+      "stableCode": "OUTER_ENVELOPE_AUTHENTICATION_FAILED",
+      "failingBoundary": "authenticated-outer-envelope",
+      "canonicalPayloadHash": null,
+      "strategyMemoryHash": "sha256:1dc105e2da8d1914ba0b65f0d4b5cb940e5a665305c536c10d3725a7a0ba4142",
+      "soldierMemoryHash": "sha256:1dc105e2da8d1914ba0b65f0d4b5cb940e5a665305c536c10d3725a7a0ba4142",
+      "objectiveHash": "sha256:bdc59f7a896fb561d0383566f4a20e526813af5912adfa9d1338ed3b29419df5",
+      "beforeObjectiveHash": "sha256:bdc59f7a896fb561d0383566f4a20e526813af5912adfa9d1338ed3b29419df5",
+      "afterObjectiveHash": "sha256:bdc59f7a896fb561d0383566f4a20e526813af5912adfa9d1338ed3b29419df5",
+      "beforeStateHash": "sha256:5bcadc2c6e52de8cd7b99ff3b555635ee5498855d364267c15db3f0920937fca",
+      "afterStateHash": "sha256:5bcadc2c6e52de8cd7b99ff3b555635ee5498855d364267c15db3f0920937fca",
+      "beforeMemoryHash": "sha256:1dc105e2da8d1914ba0b65f0d4b5cb940e5a665305c536c10d3725a7a0ba4142",
+      "afterMemoryHash": "sha256:1dc105e2da8d1914ba0b65f0d4b5cb940e5a665305c536c10d3725a7a0ba4142",
+      "gameplayMutation": false,
+      "memoryMutation": false,
+      "terminalEffectHash": null,
+      "retryable": false
+    }
+  ],
+  "transitions": [],
+  "finalStateHash": "sha256:5bcadc2c6e52de8cd7b99ff3b555635ee5498855d364267c15db3f0920937fca",
+  "outcomeHash": "sha256:5cca68bb84ba85b55aeeb11a2530c503748e9add135d8c76dc4f6937ae391c4b",
+  "failure": {
+    "resultClass": "system_failure",
+    "stableCode": "OUTER_ENVELOPE_AUTHENTICATION_FAILED",
+    "failingBoundary": "authenticated-outer-envelope",
+    "invocationOrdinal": 0,
+    "transitionOrdinal": null,
+    "gameplayMutation": false,
+    "memoryMutation": false,
+    "terminalEffectHash": null,
+    "retryable": false
+  },
+  "transitionTraceRoot": "sha256:71562612ed4d24b5995747cee43d8a7b0269ed596a7cf7f694f0c17484faf4f6",
+  "traceRoot": "sha256:c34af035f0d4b50a250f459dbe2a5bfd6924710c70aa2494457157cc9c8f479d"
+}

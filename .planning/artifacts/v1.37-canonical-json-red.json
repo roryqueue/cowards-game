@@ -1,0 +1,34 @@
+{
+  "schemaVersion": "canonical-json-v1.1-red-receipt-v1",
+  "profile": "canonical-json-v1",
+  "stage": "green",
+  "vectorCount": 70,
+  "vectorRootSha256": "f658a8bcb6bd4457b2eb52b6628f7fc6ff4ca36661f685ab28d7b60c8b2722c0",
+  "ownerPlans": {
+    "typescriptCodec": "258-04",
+    "goCodec": "258-11",
+    "greenRetirement": "258-11"
+  },
+  "consumers": [
+    {
+      "language": "TS",
+      "command": "pnpm exec vitest run packages/spec/src/canonical-json-corpus.test.ts --reporter=verbose",
+      "exitCode": 0,
+      "result": "green",
+      "sentinel": null,
+      "vectorCount": 70,
+      "vectorRootSha256": "f658a8bcb6bd4457b2eb52b6628f7fc6ff4ca36661f685ab28d7b60c8b2722c0",
+      "enumerationSha256": "0a70be7877b11ffa3d1147c3efaa7ad38fc114fca1c3ee2028900baf786e8ef7"
+    },
+    {
+      "language": "GO",
+      "command": "go test -run ^TestCanonicalJSONV11SharedCorpus$ -count=1 -v .",
+      "exitCode": 0,
+      "result": "green",
+      "sentinel": null,
+      "vectorCount": 70,
+      "vectorRootSha256": "f658a8bcb6bd4457b2eb52b6628f7fc6ff4ca36661f685ab28d7b60c8b2722c0",
+      "enumerationSha256": "0a70be7877b11ffa3d1147c3efaa7ad38fc114fca1c3ee2028900baf786e8ef7"
+    }
+  ]
+}

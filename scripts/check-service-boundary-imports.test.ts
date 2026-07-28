@@ -2,7 +2,10 @@ import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { afterEach, describe, expect, it } from "vitest"
-import { analyzeServiceBoundaryImports } from "./check-service-boundary-imports.ts"
+import {
+  analyzeServiceBoundaryImports,
+  formatServiceBoundaryAnalysis,
+} from "./check-service-boundary-imports.ts"
 
 const strictFiles = [
   "apps/web/app/api/service/health/route.ts",
@@ -307,5 +310,283 @@ describe("service boundary import guard", () => {
       },
     ])
     expect(result.exitCode).toBe(1)
+  })
+
+  it("fails Phase 260 consumers that import Strategy execution or evaluator ownership", () => {
+    repoRoot = mkdtempSync(path.join(tmpdir(), "cowards-boundary-"))
+    writeRepoFile(
+      repoRoot,
+      "packages/replay/src/unsafe-execution.ts",
+      "import { executeMatch } from '@cowards/engine'\nexport const replay = executeMatch\n",
+    )
+    writeRepoFile(
+      repoRoot,
+      "packages/persistence/src/unsafe-evaluator.ts",
+      "import { evaluateStrategy } from '@cowards/runtime-js'\nexport const evaluate = evaluateStrategy\n",
+    )
+
+    const result = analyzeServiceBoundaryImports({ repoRoot })
+
+    expect(result.ownershipOffenses).toEqual([
+      {
+        path: "packages/persistence/src/unsafe-evaluator.ts",
+        line: 1,
+        pattern: "strategy-execution-ownership:evaluateStrategy",
+      },
+      {
+        path: "packages/replay/src/unsafe-execution.ts",
+        line: 1,
+        pattern: "strategy-execution-ownership:executeMatch",
+      },
+    ])
+    expect(result.exitCode).toBe(1)
+  })
+
+  it("fails non-kernel observation derivation and seed-encoded fairness", () => {
+    repoRoot = mkdtempSync(path.join(tmpdir(), "cowards-boundary-"))
+    writeRepoFile(
+      repoRoot,
+      "packages/persistence/src/derived-observations.ts",
+      [
+        "export const observe = (seed: string, roundNumber: number, events: readonly string[]) => ({",
+        "  initialInitiativePlayerId: seed.endsWith(':first') ? 'player:a' : 'player:b',",
+        "  roundInitiativePlayerId: roundNumber % 2 === 0 ? 'player:a' : 'player:b',",
+        "  hasAdvancedThisActivation: events.includes('MOVE_ADVANCED'),",
+        "})",
+      ].join("\n"),
+    )
+    writeRepoFile(
+      repoRoot,
+      "packages/persistence/src/candidate-fairness.ts",
+      [
+        "export const candidate = { semanticAuthorityKey: 'runtime-v1.19' }",
+        "export const fairness = (seed: string) => seed.endsWith(':mirror')",
+      ].join("\n"),
+    )
+
+    const result = analyzeServiceBoundaryImports({ repoRoot })
+
+    expect(result.ownershipOffenses.map(({ pattern }) => pattern)).toEqual([
+      "set-fairness-from-seed",
+      "kernel-observation-derivation:initialInitiativePlayerId",
+      "kernel-observation-derivation:roundInitiativePlayerId",
+      "kernel-observation-derivation:hasAdvancedThisActivation",
+    ])
+    expect(result.exitCode).toBe(1)
+  })
+
+  it("fails handwritten successor geometry, Go rules ownership, and current-selector bypass", () => {
+    repoRoot = mkdtempSync(path.join(tmpdir(), "cowards-boundary-"))
+    writeRepoFile(
+      repoRoot,
+      "apps/web/app/candidate-arena.ts",
+      [
+        "export const arena = {",
+        "  semanticAuthorityKey: 'runtime-v1.19',",
+        "  id: 'arena:smoke:v1',",
+        "  initialBounds: { minX: 0, maxX: 11, minY: 0, maxY: 11 },",
+        "  terrainStones: [],",
+        "}",
+      ].join("\n"),
+    )
+    writeRepoFile(
+      repoRoot,
+      "apps/web/app/current-semantic-authority.ts",
+      "export const CURRENT_SEMANTIC_AUTHORITY_KEY = 'runtime-v1.19'\n",
+    )
+    writeRepoFile(
+      repoRoot,
+      "apps/go-backend/candidate_rules.go",
+      [
+        "package main",
+        "func candidateRules() string {",
+        "  authority := \"runtime-v1.19\"",
+        "  _ = resolveBackstab()",
+        "  return authority",
+        "}",
+      ].join("\n"),
+    )
+
+    const result = analyzeServiceBoundaryImports({ repoRoot })
+
+    expect(result.ownershipOffenses.map(({ pattern }) => pattern)).toEqual([
+      "go-gameplay-ownership:resolveBackstab",
+      "handwritten-successor-arena-geometry",
+      "current-selector-bypass",
+    ])
+    expect(result.exitCode).toBe(1)
+  })
+
+  it("allows exact spec projections, transport-only consumers, and historical dispatch", () => {
+    repoRoot = mkdtempSync(path.join(tmpdir(), "cowards-boundary-"))
+    writeRepoFile(
+      repoRoot,
+      "packages/spec/src/arena-catalog-v1-37.ts",
+      [
+        "export const arena = {",
+        "  id: 'arena:smoke:v1',",
+        "  initialBounds: { minX: 0, maxX: 11, minY: 0, maxY: 11 },",
+        "  terrainStones: [],",
+        "}",
+      ].join("\n"),
+    )
+    writeRepoFile(
+      repoRoot,
+      "packages/replay/src/candidate-transport.ts",
+      [
+        "import { CANONICAL_ARENA_CATALOG_V1_37 } from '@cowards/spec'",
+        "export const transport = (input: { initialInitiativePlayerId: string }) => ({",
+        "  catalog: CANONICAL_ARENA_CATALOG_V1_37,",
+        "  initialInitiativePlayerId: input.initialInitiativePlayerId,",
+        "})",
+      ].join("\n"),
+    )
+    writeRepoFile(
+      repoRoot,
+      "packages/replay/src/historical-v1-4-transition.ts",
+      "export const historical = { seed: 'seed:old:mirror' }\n",
+    )
+
+    const result = analyzeServiceBoundaryImports({ repoRoot })
+
+    expect(result.ownershipOffenses).toEqual([])
+    expect(result.exitCode).toBe(0)
+  })
+
+  it("rejects re-exports, aliases, computed access, and helper indirection", () => {
+    repoRoot = mkdtempSync(path.join(tmpdir(), "cowards-boundary-"))
+    writeRepoFile(
+      repoRoot,
+      "apps/web/app/candidate-entry.ts",
+      "import { project } from '../../../shared/generated-helper.js'\nexport const result = project\n",
+    )
+    writeRepoFile(
+      repoRoot,
+      "shared/generated-helper.ts",
+      [
+        "// Code generated by a trusted-looking tool. DO NOT EDIT.",
+        "export { executeMatch as project } from '@cowards/engine'",
+      ].join("\n"),
+    )
+    writeRepoFile(
+      repoRoot,
+      "packages/replay/src/namespace-bypass.ts",
+      [
+        "import * as harmless from '@cowards/runtime-js'",
+        "export const run = harmless['executeStrategy']",
+      ].join("\n"),
+    )
+    writeRepoFile(
+      repoRoot,
+      "packages/replay/src/reexport-bypass.ts",
+      [
+        "export { evaluateStrategy as render } from '@cowards/runtime-js/private'",
+        "export * from '@cowards/engine'",
+      ].join("\n"),
+    )
+
+    const result = analyzeServiceBoundaryImports({ repoRoot })
+
+    expect(result.ownershipOffenses).toEqual([
+      {
+        path: "packages/replay/src/namespace-bypass.ts",
+        line: 2,
+        pattern: "strategy-execution-ownership:executeStrategy",
+      },
+      {
+        path: "packages/replay/src/reexport-bypass.ts",
+        line: 1,
+        pattern: "strategy-execution-ownership:evaluateStrategy",
+      },
+      {
+        path: "packages/replay/src/reexport-bypass.ts",
+        line: 2,
+        pattern: "strategy-execution-ownership:module-reexport",
+      },
+      {
+        path: "shared/generated-helper.ts",
+        line: 2,
+        pattern: "strategy-execution-ownership:executeMatch",
+      },
+    ])
+    expect(result.exitCode).toBe(1)
+  })
+
+  it("does not exempt generated-looking or fixture-directory authority spoofs", () => {
+    repoRoot = mkdtempSync(path.join(tmpdir(), "cowards-boundary-"))
+    writeRepoFile(
+      repoRoot,
+      "packages/persistence/src/fixtures/generated-candidate.ts",
+      [
+        "// Code generated. DO NOT EDIT.",
+        "export const arena = {",
+        "  semanticAuthorityKey: 'runtime-v1.19',",
+        "  initialBounds: { minX: 0, maxX: 11, minY: 0, maxY: 11 },",
+        "  terrainStones: [],",
+        "}",
+      ].join("\n"),
+    )
+    writeRepoFile(
+      repoRoot,
+      "apps/go-backend/fixtures/generated_candidate.go",
+      [
+        "// Code generated. DO NOT EDIT.",
+        "package fixtures",
+        "func candidateAuthority(seed string) any {",
+        "  authority := \"runtime-v1.19\"",
+        "  initialBounds := map[string]any{\"minX\": 0, \"maxX\": 11}",
+        "  terrainStones := []any{}",
+        "  fairness := seed + \":mirror\"",
+        "  return []any{authority, initialBounds, terrainStones, fairness}",
+        "}",
+      ].join("\n"),
+    )
+
+    const result = analyzeServiceBoundaryImports({ repoRoot })
+
+    expect(result.ownershipOffenses).toEqual([
+      {
+        path: "apps/go-backend/fixtures/generated_candidate.go",
+        line: 5,
+        pattern: "handwritten-successor-arena-geometry",
+      },
+      {
+        path: "apps/go-backend/fixtures/generated_candidate.go",
+        line: 7,
+        pattern: "set-fairness-from-seed",
+      },
+      {
+        path: "packages/persistence/src/fixtures/generated-candidate.ts",
+        line: 2,
+        pattern: "handwritten-successor-arena-geometry",
+      },
+    ])
+    expect(result.exitCode).toBe(1)
+  })
+
+  it("keeps failure diagnostics deterministic and private-payload safe", () => {
+    repoRoot = mkdtempSync(path.join(tmpdir(), "cowards-boundary-"))
+    writeRepoFile(
+      repoRoot,
+      "packages/replay/src/private-bypass.ts",
+      [
+        "import { executeMatch as alias } from '@cowards/engine'",
+        "const privatePayload = 'StrategyMemory SoldierMemory objective secret-token'",
+        "export const run = alias",
+      ].join("\n"),
+    )
+
+    const first = analyzeServiceBoundaryImports({ repoRoot })
+    const second = analyzeServiceBoundaryImports({ repoRoot })
+    const output = formatServiceBoundaryAnalysis(first)
+
+    expect(first).toEqual(second)
+    expect(output).toContain(
+      "STRICT packages/replay/src/private-bypass.ts:1 forbidden strategy-execution-ownership:executeMatch",
+    )
+    expect(output).not.toMatch(
+      /StrategyMemory|SoldierMemory|objective|secret-token|privatePayload/u,
+    )
+    expect(first.exitCode).toBe(1)
   })
 })

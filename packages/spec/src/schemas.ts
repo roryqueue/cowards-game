@@ -25,17 +25,43 @@ import {
 import {
   RUNTIME_EXECUTION_SERVICE_SYSTEM_FAILURE_CODES,
   RUNTIME_EXECUTION_SERVICE_VERSION,
+  RUNTIME_SEMANTIC_RECEIPT_ALGORITHM,
+  RUNTIME_SEMANTIC_RECEIPT_KEY_ID,
+  RUNTIME_SEMANTIC_RECEIPT_PROFILE,
+  RUNTIME_SEMANTIC_RECEIPT_SCHEMA_VERSION,
   type RuntimeExecutionFinalState,
+  type RuntimeSemanticReceipt,
   type RuntimeExecutionServiceRequest,
 } from "./runtime-execution-service.js"
+import type { RuntimeExecutionCandidateMatchAuthorityV119 } from "./runtime-execution-service-v1-18.js"
+import {
+  CANONICAL_COMPATIBILITY_TUPLE_FIELDS,
+  resolveCanonicalCompatibilityTuple,
+} from "./integrity-authority.js"
+import {
+  EXECUTABLE_LANE_EVIDENCE_REASON_CODES,
+  EXECUTABLE_LANE_EVIDENCE_STATUSES,
+} from "./runtime-evidence.js"
 import {
   DEFAULT_RUNTIME_LIMITS,
   STRATEGY_LANGUAGE_IDS,
   STRATEGY_RUNTIME_ABI_VERSION,
   STRATEGY_RUNTIME_ADAPTER_IDS,
+  STRATEGY_RUNTIME_PRODUCT_VALIDATION_CODES,
   STRATEGY_RUNTIME_SYSTEM_FAILURE_CODES,
   STRATEGY_RUNTIME_VIOLATION_CODES,
 } from "./runtime.js"
+import { COUNTED_ENTRY_ELIGIBILITY_CATEGORIES } from "./competition-entry-eligibility.js"
+import { parseCanonicalJsonInstant } from "./canonical-instant.js"
+import { CURRENT_SEMANTIC_RUNTIME_ABI_VERSION } from "./current-semantic-authority-generated.js"
+export {
+  CanonicalJsonValueV117Schema,
+  ObjectivePayloadV117Schema,
+  SoldierBrainResultV117Schema,
+  SoldierMemoryV117Schema,
+  StrategyMemoryV117Schema,
+  StrategyResultV117Schema,
+} from "./runtime-payload-v1-17.js"
 
 export const jsonByteLength = (value: unknown): number =>
   new TextEncoder().encode(JSON.stringify(value)).length
@@ -358,7 +384,7 @@ export const FullBoardSnapshotSchema = z.object({
   terrainStones: z.array(PositionSchema),
 })
 
-export const StrategyInputSchema = z.object({
+export const StrategyInputV117Schema = z.object({
   phaseNumber: z.number().int().positive(),
   roundNumber: z.union([
     z.literal(1),
@@ -381,6 +407,33 @@ export const StrategyInputSchema = z.object({
   ),
 })
 
+export const StrategyInputV119Schema = StrategyInputV117Schema.extend({
+  initialInitiativePlayerId: z.string().min(1),
+  hasInitialInitiative: z.boolean(),
+  roundInitiativePlayerId: z.string().min(1),
+  hasRoundInitiative: z.boolean(),
+}).strict()
+
+export const resolveStrategyInputSchema = (runtimeAbiVersion: unknown) => {
+  if (runtimeAbiVersion === "strategy-runtime-abi-v1.17") {
+    return StrategyInputV117Schema
+  }
+  if (runtimeAbiVersion === "strategy-runtime-abi-v1.19") {
+    return StrategyInputV119Schema
+  }
+  return undefined
+}
+
+export const StrategyInputSchema = (() => {
+  const schema = resolveStrategyInputSchema(
+    CURRENT_SEMANTIC_RUNTIME_ABI_VERSION,
+  )
+  if (!schema) {
+    throw new Error("Unsupported current StrategyInput runtime ABI selection.")
+  }
+  return schema
+})()
+
 export const ActivationOrderSchema = z.object({
   soldierId: z.string().min(1),
   objective: JsonValueSchema.refine(
@@ -397,7 +450,7 @@ export const StrategyResultSchema = z.object({
   ),
 })
 
-export const SoldierBrainInputSchema = z.object({
+export const SoldierBrainInputV117Schema = z.object({
   self: SoldierSnapshotSchema,
   awarenessGrid: AwarenessGrid5x5Schema,
   cycleIndex: z.number().int().min(0),
@@ -411,6 +464,32 @@ export const SoldierBrainInputSchema = z.object({
     "SoldierMemory exceeds 2KB",
   ),
 })
+
+export const SoldierBrainInputV119Schema = SoldierBrainInputV117Schema.extend({
+  hasAdvancedThisActivation: z.boolean(),
+}).strict()
+
+export const resolveSoldierBrainInputSchema = (runtimeAbiVersion: unknown) => {
+  if (runtimeAbiVersion === "strategy-runtime-abi-v1.17") {
+    return SoldierBrainInputV117Schema
+  }
+  if (runtimeAbiVersion === "strategy-runtime-abi-v1.19") {
+    return SoldierBrainInputV119Schema
+  }
+  return undefined
+}
+
+export const SoldierBrainInputSchema = (() => {
+  const schema = resolveSoldierBrainInputSchema(
+    CURRENT_SEMANTIC_RUNTIME_ABI_VERSION,
+  )
+  if (!schema) {
+    throw new Error(
+      "Unsupported current SoldierBrainInput runtime ABI selection.",
+    )
+  }
+  return schema
+})()
 
 export const SoldierBrainResultSchema = z.object({
   action: ActionSchema,
@@ -498,10 +577,33 @@ export const StrategyRuntimeMetadataSchema = z.object({
   limits: StrategyRuntimeLimitsSchema,
 })
 
-export const PublicStrategyRuntimeMetadataSchema =
+const PublicStrategyRuntimeMetadataBaseSchema =
   StrategyRuntimeMetadataSchema.omit({
+    abiVersion: true,
     limits: true,
   })
+
+export const HistoricalPublicStrategyRuntimeMetadataV114Schema =
+  PublicStrategyRuntimeMetadataBaseSchema.extend({
+    abiVersion: z.literal("strategy-runtime-abi-v1.14"),
+  })
+
+export const HistoricalPublicStrategyRuntimeMetadataV117Schema =
+  PublicStrategyRuntimeMetadataBaseSchema.extend({
+    abiVersion: z.literal("strategy-runtime-abi-v1.17"),
+  })
+
+export const PublicStrategyRuntimeMetadataV119Schema =
+  PublicStrategyRuntimeMetadataBaseSchema.extend({
+    abiVersion: z.literal("strategy-runtime-abi-v1.19"),
+  })
+
+/** Read-only public DTO admission; execution remains selected-current-only. */
+export const PublicStrategyRuntimeMetadataSchema = z.union([
+  PublicStrategyRuntimeMetadataV119Schema,
+  HistoricalPublicStrategyRuntimeMetadataV117Schema,
+  HistoricalPublicStrategyRuntimeMetadataV114Schema,
+])
 
 export const StrategyRuntimeViolationEnvelopeSchema = z.object({
   ok: z.literal(false),
@@ -746,6 +848,26 @@ export const SourceLanguageStrategyArtifactSchema = z.object({
   sourceBytes: z.number().int().positive().max(STRATEGY_SOURCE_BYTES),
   abiVersion: z.literal(STRATEGY_RUNTIME_ABI_VERSION),
   validationStatus: z.enum(["valid", "invalid"]),
+  sourceIdentity: z
+    .object({
+      identityVersion: z.literal("strategy-source-identity-v2"),
+      normalizationPolicy: z.literal("source-line-endings-lf-v1.17"),
+      originalSourceSha256: z.string().regex(/^sha256:[0-9a-f]{64}$/u),
+      originalSourceBytes: z.number().int().nonnegative(),
+      normalizedSourceSha256: z.string().regex(/^sha256:[0-9a-f]{64}$/u),
+      normalizedSourceBytes: z.number().int().nonnegative(),
+      lineEndings: z
+        .object({
+          kind: z.enum(["none", "lf", "crlf", "cr", "mixed"]),
+          lf: z.number().int().nonnegative(),
+          crlf: z.number().int().nonnegative(),
+          cr: z.number().int().nonnegative(),
+        })
+        .strict(),
+      hasFinalNewline: z.boolean(),
+    })
+    .strict()
+    .optional(),
   createdAt: z.string().min(1),
   toolchain: SourceLanguageStrategyArtifactToolchainEvidenceSchema,
   publicEvidence: z.object({
@@ -788,9 +910,10 @@ const CompiledStrategyArtifactPublicSchema =
     bytesBase64: true,
   })
 
-const SourceLanguageStrategyArtifactPublicSchema =
+export const SourceLanguageStrategyArtifactPublicSchema =
   SourceLanguageStrategyArtifactSchema.omit({
     bytesBase64: true,
+    sourceIdentity: true,
   })
 
 export const StrategyRevisionSchema = z
@@ -1248,7 +1371,13 @@ export const StrategyRevisionSummaryServiceDtoSchema = z.object({
     adapterId: StrategyRuntimeAdapterIdSchema,
     languageLabel: z.string().min(1),
     adapterLabel: z.string().min(1),
-    readiness: z.string().min(1),
+    readiness: z.enum([
+      "production-candidate",
+      "prototype",
+      "local-dev-fallback",
+      "experimental",
+      "unknown",
+    ]),
     readinessLabel: z.string().min(1),
     experimental: z.boolean(),
     countedPlayEligible: z.boolean(),
@@ -1259,8 +1388,11 @@ export const StrategyRevisionSummaryServiceDtoSchema = z.object({
     docsReference: z.string().min(1),
     examplesReference: z.string().min(1),
     warnings: z.array(z.string().min(1)),
-    validationIssueCodes: z.array(z.string().min(1)),
+    validationIssueCodes: z.array(
+      z.enum(STRATEGY_RUNTIME_PRODUCT_VALIDATION_CODES),
+    ),
   }),
+  countedEntryEligibilityCategory: z.enum(COUNTED_ENTRY_ELIGIBILITY_CATEGORIES),
   engineCompatibility: z.object({
     spec: z.string().min(1),
     engine: z.string().min(1),
@@ -1329,6 +1461,32 @@ const CompetitionEntrantSnapshotServiceDtoSchema = z.object({
   sourceHash: z.string().min(1),
   sourceBytes: z.number().int().min(0),
   runtime: PublicStrategyRuntimeMetadataSchema,
+  runtimeSemantics: z.object({
+    languageId: StrategyLanguageIdSchema,
+    adapterId: StrategyRuntimeAdapterIdSchema,
+    languageLabel: z.string().min(1),
+    adapterLabel: z.string().min(1),
+    readiness: z.enum([
+      "production-candidate",
+      "prototype",
+      "local-dev-fallback",
+      "experimental",
+      "unknown",
+    ]),
+    readinessLabel: z.string().min(1),
+    experimental: z.boolean(),
+    countedPlayEligible: z.boolean(),
+    countedPlayLabel: z.enum(["Counted eligible", "Not counted"]),
+    countedPlayReason: z.string().min(1).nullable(),
+    sourcePolicyLabel: z.string().min(1),
+    packagePolicyLabel: z.string().min(1),
+    docsReference: z.string().min(1),
+    examplesReference: z.string().min(1),
+    warnings: z.array(z.string().min(1)),
+    validationIssueCodes: z.array(
+      z.enum(STRATEGY_RUNTIME_PRODUCT_VALIDATION_CODES),
+    ),
+  }),
   engineCompatibility: z.object({
     spec: z.string().min(1),
     engine: z.string().min(1),
@@ -1347,6 +1505,132 @@ const PublicScorePenaltyServiceDtoSchema = z.object({
   points: z.number().int(),
 })
 
+export const CompetitionCountedStateProjectionSchema = z.object({
+  state: z.enum([
+    "pending",
+    "counted",
+    "retrying",
+    "degraded_system_failure",
+    "non_counted",
+    "non_competitive",
+    "under_review",
+    "disputed",
+    "invalid",
+    "invalidated",
+  ]),
+  publicLabel: z.string().min(1),
+  publicExplanation: z.string().min(1),
+  standingsEffect: z.string().min(1),
+  evidenceAvailability: z.enum(["available", "partial", "unavailable"]),
+  publicReason: z
+    .enum([
+      "system_failure",
+      "incomplete_evidence",
+      "invalid_result",
+      "governance_hold",
+      "non_counted",
+      "non_competitive",
+      "disputed",
+      "invalidated",
+    ])
+    .optional(),
+})
+
+export const PublicCompetitionGovernanceProjectionSchema = z.object({
+  status: z.enum([
+    "clear",
+    "under_review",
+    "disputed",
+    "resolved",
+    "non_counted",
+    "non_competitive",
+    "invalid",
+    "invalidated",
+  ]),
+  publicReason: z
+    .enum([
+      "system_failure",
+      "incomplete_evidence",
+      "invalid_result",
+      "governance_hold",
+      "non_counted",
+      "non_competitive",
+      "disputed",
+      "invalidated",
+    ])
+    .optional(),
+  publicExplanation: z.string().min(1),
+  changedAt: z.string().datetime().optional(),
+  standingsEffect: z.string().min(1),
+  replayAvailable: z.boolean(),
+})
+
+export const SubmitCompetitionReportRequestBodySchema = z
+  .object({
+    submissionType: z.enum(["report", "dispute"]),
+    category: z.enum([
+      "result_integrity",
+      "entry_eligibility",
+      "identity_or_coordination",
+      "abusive_conduct",
+      "other",
+    ]),
+    privateDetail: z
+      .string()
+      .trim()
+      .max(500)
+      .refine(
+        (value) => !/\p{Cc}/u.test(value),
+        "Unsupported control character",
+      )
+      .optional(),
+  })
+  .strict()
+
+export const CompetitionReportReceiptSchema = z
+  .object({
+    submissionId: z.string().min(1),
+    disposition: z.enum(["created", "already_open"]),
+    publicMessage: z.string().min(1),
+  })
+  .strict()
+
+export const CompetitionGovernanceActionRequestBodySchema = z
+  .object({
+    action: z.enum([
+      "under_review",
+      "counted",
+      "non_counted",
+      "non_competitive",
+      "invalid",
+      "invalidated",
+    ]),
+    category: z.enum([
+      "integrity_review",
+      "entrant_dispute",
+      "evidence_incomplete",
+      "competition_policy",
+      "result_invalid",
+      "result_invalidated",
+      "review_resolved_counted",
+    ]),
+    privateReason: z.string().trim().min(3).max(1000),
+  })
+  .strict()
+
+export const CompetitionGovernanceGroupRequestBodySchema =
+  CompetitionGovernanceActionRequestBodySchema.extend({
+    matchSetIds: z.array(z.string().min(1)).min(1).max(100),
+  }).superRefine((value, context) => {
+    if (new Set(value.matchSetIds).size !== value.matchSetIds.length) {
+      context.addIssue({
+        code: "custom",
+        path: ["matchSetIds"],
+        message: "MatchSet ids must be unique.",
+      })
+    }
+  })
+
 const PublicStandingServiceDtoSchema = z.object({
   rank: z.number().int().positive(),
   entrantId: z.string().min(1),
@@ -1362,6 +1646,15 @@ const PublicStandingServiceDtoSchema = z.object({
   survivingSoldiers: z.number().int().nonnegative(),
   survivalTurns: z.number().int().nonnegative(),
   tieBreakerPath: z.array(z.string().min(1)),
+  competitionEvidence: z
+    .object({
+      countedMatchSetCount: z.number().int().nonnegative(),
+      excludedMatchSetCount: z.number().int().nonnegative(),
+      evidenceAvailability: z.enum(["available", "partial", "unavailable"]),
+      resultLinks: z.array(z.string().min(1)),
+      replayLinks: z.array(z.string().min(1)),
+    })
+    .optional(),
 })
 
 const PublicMatchEvidenceServiceDtoSchema = z.object({
@@ -1417,6 +1710,13 @@ export const PublicMatchSetResultServiceDtoSchema = z.object({
     publicReplayEvidence: z.literal(true),
     privateFieldsExcluded: z.array(z.string().min(1)),
   }),
+  competition: z
+    .object({
+      seasonId: z.string().min(1).optional(),
+      countedState: CompetitionCountedStateProjectionSchema,
+      governance: PublicCompetitionGovernanceProjectionSchema.optional(),
+    })
+    .optional(),
   metadata: JsonValueSchema.optional(),
 })
 
@@ -1639,11 +1939,16 @@ export const PublicLadderMatchSetSummaryDtoSchema = z.object({
     "pending",
     "counted",
     "retrying",
-    "under_review",
-    "invalid",
-    "non_competitive",
+    "degraded_system_failure",
     "non_counted",
+    "non_competitive",
+    "under_review",
+    "disputed",
+    "invalid",
+    "invalidated",
   ]),
+  countedState: CompetitionCountedStateProjectionSchema,
+  governance: PublicCompetitionGovernanceProjectionSchema.optional(),
   publicReason: z
     .enum([
       "system_failure",
@@ -1651,6 +1956,9 @@ export const PublicLadderMatchSetSummaryDtoSchema = z.object({
       "invalid_result",
       "governance_hold",
       "non_counted",
+      "non_competitive",
+      "disputed",
+      "invalidated",
     ])
     .optional(),
   publicExplanation: z.string().min(1).optional(),
@@ -1705,6 +2013,27 @@ export const PublicTrialLadderSeasonDtoSchema = z.object({
   scheduledAt: z.string().min(1).optional(),
   completedAt: z.string().min(1).optional(),
   archivedAt: z.string().min(1).optional(),
+  entryWindow: z.object({
+    state: z.enum(["not_started", "open", "closed"]),
+    publicLabel: z.string().min(1),
+    openedAt: z.string().min(1).optional(),
+    closedAt: z.string().min(1).optional(),
+  }),
+  schedulingWindow: z.object({
+    state: z.enum(["not_started", "open", "closed"]),
+    publicLabel: z.string().min(1),
+    openedAt: z.string().min(1).optional(),
+    closedAt: z.string().min(1).optional(),
+  }),
+  outcome: z.object({
+    status: z.enum(["pending", "scheduled", "insufficient_evidence"]),
+    publicLabel: z.string().min(1),
+    publicExplanation: z.string().min(1),
+  }),
+  links: z.object({
+    seasonHref: z.string().startsWith("/ladder/"),
+    standingsHref: z.string().startsWith("/ladder/"),
+  }),
   policy: TrialLadderPolicyDtoSchema,
   entries: z.array(TrialLadderEntrySnapshotSchema),
   standings: z.array(PublicStandingServiceDtoSchema),
@@ -1727,6 +2056,8 @@ export const PublicStrategyCardDtoSchema = z.object({
   sourceHash: z.string().min(1),
   sourceBytes: z.number().int().min(0),
   runtime: PublicStrategyRuntimeMetadataSchema,
+  runtimeSemantics:
+    StrategyRevisionSummaryServiceDtoSchema.shape.runtimeSemantics,
   engineCompatibility: z.object({
     spec: z.string().min(1),
     engine: z.string().min(1),
@@ -1839,7 +2170,8 @@ export const MatchOutcomeSchema = z.discriminatedUnion("type", [
   }),
 ])
 
-export const ChronicleEventTypeSchema = z.enum([
+/** Literal decoder vocabulary retained for immutable v1.4 evidence. */
+export const HistoricalV14ChronicleEventTypeSchema = z.enum([
   "MATCH_STARTED",
   "ROUND_STARTED",
   "STRATEGY_EVALUATED",
@@ -1863,6 +2195,10 @@ export const ChronicleEventTypeSchema = z.enum([
   "MATCH_ENDED",
   "RUNTIME_VIOLATION",
 ])
+
+/** Current Chronicle vocabulary. PUSH_ATTEMPTED was never emitted canonically. */
+export const ChronicleEventTypeSchema =
+  HistoricalV14ChronicleEventTypeSchema.exclude(["PUSH_ATTEMPTED"])
 
 export const ChronicleSchemaVersionSchema = z.union([
   z.literal("chronicle-v1"),
@@ -1910,7 +2246,7 @@ const OptionalReasonPayloadSchema = SoldierIdPayloadSchema.extend({
   reason: z.string().min(1).optional(),
 })
 
-export const ChronicleEventSchema = z.discriminatedUnion("type", [
+export const HistoricalV14ChronicleEventSchema = z.discriminatedUnion("type", [
   ChronicleEventBaseSchema.extend({
     type: z.literal("MATCH_STARTED"),
     payload: z.object({
@@ -2062,6 +2398,11 @@ export const ChronicleEventSchema = z.discriminatedUnion("type", [
   }),
 ])
 
+export const ChronicleEventSchema = HistoricalV14ChronicleEventSchema.refine(
+  (event) => event.type !== "PUSH_ATTEMPTED",
+  { message: "PUSH_ATTEMPTED is historical-only Chronicle vocabulary." },
+)
+
 export const ChronicleBoundarySnapshotSchema = z.object({
   kind: ChronicleSnapshotKindSchema,
   sequence: z.number().int().nonnegative(),
@@ -2099,9 +2440,431 @@ export const ChronicleSchema = z.object({
   storageMetadata: JsonValueSchema.optional(),
 })
 
+const HistoricalV14CompatibilityVersionsSchema = z.object({
+  spec: z.literal("cowards-rules-v1.4"),
+  engine: z.literal("0.1.4"),
+  runtimeJs: z.literal("0.1.0"),
+  chronicle: z.literal("chronicle-v1.4"),
+  strategyRevision: z.literal("0.1.4"),
+  arenaVariant: z.literal("0.1.0"),
+})
+
+/** Frozen original-semantics decoder; never used for current publication. */
+export const HistoricalV14ChronicleSchema = ChronicleSchema.extend({
+  schemaVersion: z.literal("chronicle-v1.4"),
+  reproducibility: ChronicleReproducibilityEnvelopeSchema.extend({
+    versions: HistoricalV14CompatibilityVersionsSchema,
+  }),
+  events: z.array(HistoricalV14ChronicleEventSchema),
+})
+
 export const RuntimeExecutionServiceSystemFailureCodeSchema = z.enum(
   RUNTIME_EXECUTION_SERVICE_SYSTEM_FAILURE_CODES,
 )
+
+const RuntimeExecutionCanonicalTupleSchema = z
+  .object({
+    rules: z.string().min(1),
+    engine: z.string().min(1),
+    runtimeAbi: z.string().min(1),
+    chronicle: z.string().min(1),
+    arenaCatalog: z.string().min(1),
+    setPolicy: z.string().min(1),
+  })
+  .strict()
+
+export const RuntimeExecutionCompatibilityIdentitySchema = z
+  .object({
+    tupleId: z.string().regex(/^sha256:[0-9a-f]{64}$/u),
+    tuple: RuntimeExecutionCanonicalTupleSchema,
+  })
+  .strict()
+  .superRefine((identity, ctx) => {
+    if (!resolveCanonicalCompatibilityTuple(identity)) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["tupleId"],
+        message:
+          "compatibility tuple id and expansion must resolve as one registered exact tuple",
+      })
+    }
+  })
+
+const RuntimeExecutionLaneIdentitySchema = z
+  .object({
+    providerId: z.string().min(1),
+    languageId: z.string().min(1),
+    runtimeId: z.string().min(1),
+    runtimeVersion: z.string().min(1),
+    toolchainId: z.string().min(1),
+    toolchainVersion: z.string().min(1),
+    adapterId: z.string().min(1),
+    adapterVersion: z.string().min(1),
+    policyId: z.string().min(1),
+    policyVersion: z.string().min(1),
+    corpusId: z.string().min(1),
+    corpusVersion: z.string().min(1),
+    artifactId: z.string().min(1),
+    artifactSha256: z.string().min(1),
+    implementationId: z.string().min(1),
+    buildId: z.string().min(1),
+    semanticTupleId: z.string().regex(/^sha256:[0-9a-f]{64}$/u),
+    semanticTuple: RuntimeExecutionCanonicalTupleSchema,
+  })
+  .strict()
+  .superRefine((identity, ctx) => {
+    if (
+      !resolveCanonicalCompatibilityTuple({
+        tupleId: identity.semanticTupleId,
+        tuple: identity.semanticTuple,
+      })
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["semanticTupleId"],
+        message: "lane identity must name one registered exact semantic tuple",
+      })
+    }
+  })
+
+const RuntimeExecutionCertificateReferenceSchema = z
+  .object({
+    kind: z.enum(["containment", "conformance"]),
+    certificateId: z.string().min(1),
+    certificateVersion: z.string().min(1),
+    certificateRecordHash: z.string().min(1),
+    registryGeneration: z.string().min(1),
+  })
+  .strict()
+
+const RuntimeExecutionSchedulingDecisionSchema = z
+  .object({
+    status: z.enum(EXECUTABLE_LANE_EVIDENCE_STATUSES),
+    reasonCode: z.enum(EXECUTABLE_LANE_EVIDENCE_REASON_CODES),
+    evaluatedAt: z.string().refine(isCanonicalJsonInstant, {
+      message: "must be an exact UTC millisecond instant",
+    }),
+    freshUntil: z.string().refine(isCanonicalJsonInstant, {
+      message: "must be an exact UTC millisecond instant",
+    }),
+    registryGeneration: z.string().min(1),
+  })
+  .strict()
+  .superRefine((decision, ctx) => {
+    const evaluatedAt = parseCanonicalJsonInstant(decision.evaluatedAt)
+    const freshUntil = parseCanonicalJsonInstant(decision.freshUntil)
+    if (
+      evaluatedAt !== undefined &&
+      freshUntil !== undefined &&
+      freshUntil < evaluatedAt
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["freshUntil"],
+        message: "scheduling evidence freshness cannot precede evaluation",
+      })
+    }
+    if (
+      (decision.status === "counted") !==
+      (decision.reasonCode === "EVIDENCE_CURRENT")
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["reasonCode"],
+        message: "counted scheduling requires current executable evidence",
+      })
+    }
+  })
+
+function isCanonicalJsonInstant(value: string): boolean {
+  return parseCanonicalJsonInstant(value) !== undefined
+}
+
+const RuntimeEntrantExecutionEvidenceSchema = z
+  .object({
+    entrantKey: z.string().min(1),
+    strategyRevisionId: z.string().min(1),
+    laneIdentity: RuntimeExecutionLaneIdentitySchema,
+    containmentCertificateRef:
+      RuntimeExecutionCertificateReferenceSchema.extend({
+        kind: z.literal("containment"),
+      })
+        .strict()
+        .optional(),
+    conformanceCertificateRef:
+      RuntimeExecutionCertificateReferenceSchema.extend({
+        kind: z.literal("conformance"),
+      })
+        .strict()
+        .optional(),
+    schedulingDecision: RuntimeExecutionSchedulingDecisionSchema,
+  })
+  .strict()
+  .superRefine((entrant, ctx) => {
+    if (
+      entrant.schedulingDecision.status !== "disabled" &&
+      !entrant.containmentCertificateRef
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["containmentCertificateRef"],
+        message:
+          "exhibition-only and counted execution evidence requires containment",
+      })
+    }
+    if (
+      entrant.schedulingDecision.status === "counted" &&
+      !entrant.conformanceCertificateRef
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["conformanceCertificateRef"],
+        message: "counted execution evidence requires conformance",
+      })
+    }
+  })
+
+const addExecutionIdentityIssue = (
+  ctx: z.RefinementCtx,
+  path: PropertyKey[],
+  message: string,
+): void => {
+  ctx.addIssue({ code: "custom", path, message })
+}
+
+export const RuntimeExecutionResolvedEvidenceSnapshotSchema = z
+  .object({
+    compatibility: RuntimeExecutionCompatibilityIdentitySchema,
+    authorityBundleHash: z.string().min(1),
+    registryGeneration: z.string().min(1),
+    entrants: z
+      .object({
+        bottom: RuntimeEntrantExecutionEvidenceSchema,
+        top: RuntimeEntrantExecutionEvidenceSchema,
+      })
+      .strict(),
+  })
+  .strict()
+  .superRefine((snapshot, ctx) => {
+    for (const side of ["bottom", "top"] as const) {
+      const entrant = snapshot.entrants[side]
+      if (
+        entrant.laneIdentity.semanticTupleId !== snapshot.compatibility.tupleId
+      ) {
+        addExecutionIdentityIssue(
+          ctx,
+          ["entrants", side, "laneIdentity", "semanticTupleId"],
+          "entrant lane tuple id must match the request compatibility tuple",
+        )
+      }
+      for (const field of CANONICAL_COMPATIBILITY_TUPLE_FIELDS) {
+        if (
+          entrant.laneIdentity.semanticTuple[field] !==
+          snapshot.compatibility.tuple[field]
+        ) {
+          addExecutionIdentityIssue(
+            ctx,
+            ["entrants", side, "laneIdentity", "semanticTuple", field],
+            "entrant lane tuple expansion must match the request compatibility tuple",
+          )
+        }
+      }
+      for (const generation of [
+        entrant.containmentCertificateRef?.registryGeneration,
+        entrant.conformanceCertificateRef?.registryGeneration,
+        entrant.schedulingDecision.registryGeneration,
+      ].filter((value): value is string => value !== undefined)) {
+        if (generation !== snapshot.registryGeneration) {
+          addExecutionIdentityIssue(
+            ctx,
+            ["entrants", side],
+            "all entrant evidence must use the snapshot registry generation",
+          )
+        }
+      }
+    }
+    if (
+      snapshot.entrants.bottom.entrantKey === snapshot.entrants.top.entrantKey
+    ) {
+      addExecutionIdentityIssue(
+        ctx,
+        ["entrants", "top", "entrantKey"],
+        "bottom and top entrant keys must differ",
+      )
+    }
+  })
+
+const RuntimeEntrantAuthorityReferenceSchema = z
+  .object({
+    entrantKey: z.string().min(1),
+    strategyRevisionId: z.string().min(1),
+    laneIdentityHash: z.string().regex(/^sha256:[0-9a-f]{64}$/u),
+    effectiveStatus: z.enum(EXECUTABLE_LANE_EVIDENCE_STATUSES),
+    schedulingDecisionId: z.string().min(1),
+    schedulingDecisionHash: z.string().regex(/^sha256:[0-9a-f]{64}$/u),
+    schedulingDecision: RuntimeExecutionSchedulingDecisionSchema,
+    containmentCertificateId: z.string().min(1).optional(),
+    containmentCertificateHash: z
+      .string()
+      .regex(/^sha256:[0-9a-f]{64}$/u)
+      .optional(),
+    conformanceCertificateId: z.string().min(1).optional(),
+    conformanceCertificateHash: z
+      .string()
+      .regex(/^sha256:[0-9a-f]{64}$/u)
+      .optional(),
+  })
+  .strict()
+  .superRefine((entrant, ctx) => {
+    const containmentPair =
+      entrant.containmentCertificateId !== undefined &&
+      entrant.containmentCertificateHash !== undefined
+    const conformancePair =
+      entrant.conformanceCertificateId !== undefined &&
+      entrant.conformanceCertificateHash !== undefined
+    if (
+      (entrant.containmentCertificateId === undefined) !==
+      (entrant.containmentCertificateHash === undefined)
+    ) {
+      addExecutionIdentityIssue(
+        ctx,
+        ["containmentCertificateId"],
+        "containment certificate id and hash must be supplied together",
+      )
+    }
+    if (
+      (entrant.conformanceCertificateId === undefined) !==
+      (entrant.conformanceCertificateHash === undefined)
+    ) {
+      addExecutionIdentityIssue(
+        ctx,
+        ["conformanceCertificateId"],
+        "conformance certificate id and hash must be supplied together",
+      )
+    }
+    if (entrant.effectiveStatus !== "disabled" && !containmentPair) {
+      addExecutionIdentityIssue(
+        ctx,
+        ["containmentCertificateId"],
+        "exhibition-only and counted authority requires containment evidence",
+      )
+    }
+    if (entrant.effectiveStatus === "counted" && !conformancePair) {
+      addExecutionIdentityIssue(
+        ctx,
+        ["conformanceCertificateId"],
+        "counted authority requires conformance evidence",
+      )
+    }
+    if (
+      entrant.effectiveStatus !== "counted" &&
+      (entrant.conformanceCertificateId !== undefined ||
+        entrant.conformanceCertificateHash !== undefined)
+    ) {
+      addExecutionIdentityIssue(
+        ctx,
+        ["conformanceCertificateId"],
+        "only counted authority may carry conformance evidence",
+      )
+    }
+    if (entrant.schedulingDecision.status !== entrant.effectiveStatus) {
+      addExecutionIdentityIssue(
+        ctx,
+        ["schedulingDecision", "status"],
+        "scheduling decision status must match effective authority status",
+      )
+    }
+  })
+
+export const RuntimeExecutionEvidenceSnapshotSchema = z
+  .object({
+    compatibility: RuntimeExecutionCompatibilityIdentitySchema,
+    authorityBundleHash: z.string().regex(/^sha256:[0-9a-f]{64}$/u),
+    registryGeneration: z.string().regex(/^(?:0|[1-9][0-9]{0,15})$/u),
+    publication: z
+      .object({
+        publicationId: z.string().min(1),
+        installReceiptId: z.string().min(1),
+        payloadSha256: z.string().regex(/^sha256:[0-9a-f]{64}$/u),
+        envelopeSha256: z.string().regex(/^sha256:[0-9a-f]{64}$/u),
+        sourceManifestHash: z.string().regex(/^sha256:[0-9a-f]{64}$/u),
+      })
+      .strict(),
+    entrants: z
+      .object({
+        bottom: RuntimeEntrantAuthorityReferenceSchema,
+        top: RuntimeEntrantAuthorityReferenceSchema,
+      })
+      .strict(),
+  })
+  .strict()
+  .superRefine((snapshot, ctx) => {
+    if (snapshot.publication.payloadSha256 !== snapshot.authorityBundleHash) {
+      addExecutionIdentityIssue(
+        ctx,
+        ["publication", "payloadSha256"],
+        "publication payload must match authority bundle",
+      )
+    }
+    if (
+      snapshot.entrants.bottom.entrantKey === snapshot.entrants.top.entrantKey
+    ) {
+      addExecutionIdentityIssue(
+        ctx,
+        ["entrants", "top", "entrantKey"],
+        "bottom and top entrant keys must differ",
+      )
+    }
+  })
+
+export const RuntimeExecutionCandidateMatchAuthorityV119Schema = z
+  .object({
+    semanticAuthorityKey: z.literal("runtime-v1.19"),
+    matchId: z.string().min(1),
+    seed: z.string().min(1),
+    arenaVariantId: z.string().min(1),
+    bottomStrategyRevisionId: z.string().min(1),
+    topStrategyRevisionId: z.string().min(1),
+    bottomPlayerId: z.string().min(1),
+    topPlayerId: z.string().min(1),
+    bottomEntrantKey: z.string().min(1),
+    topEntrantKey: z.string().min(1),
+    setPolicyVersion: z.literal("canonical-set-policy-v1.37-four-condition-v1"),
+    scenarioId: z
+      .string()
+      .regex(
+        /^set-scenario:sha256:[0-9a-f]{64}$/u,
+      ) as z.ZodType<`set-scenario:sha256:${string}`>,
+    conditionId: z
+      .string()
+      .regex(
+        /^set-condition:sha256:[0-9a-f]{64}$/u,
+      ) as z.ZodType<`set-condition:sha256:${string}`>,
+    conditionOrdinal: z.union([
+      z.literal(0),
+      z.literal(1),
+      z.literal(2),
+      z.literal(3),
+    ]),
+    conditionSuffix: z.enum([
+      "a-bottom-a-first",
+      "a-bottom-b-first",
+      "a-top-a-first",
+      "a-top-b-first",
+    ]),
+    requestIdentity: z
+      .string()
+      .regex(
+        /^set-request:sha256:[0-9a-f]{64}$/u,
+      ) as z.ZodType<`set-request:sha256:${string}`>,
+    arenaCatalogVersion: z.literal("canonical-arena-catalog-v1.37"),
+    arenaSemanticGeometryHash: z
+      .string()
+      .regex(/^sha256:[0-9a-f]{64}$/u) as z.ZodType<`sha256:${string}`>,
+    initialInitiativeEntrantKey: z.string().min(1),
+    initialInitiativePlayerId: z.string().min(1),
+  })
+  .strict() satisfies z.ZodType<RuntimeExecutionCandidateMatchAuthorityV119>
 
 export const RuntimeExecutionMatchInputSchema = z
   .object({
@@ -2112,14 +2875,50 @@ export const RuntimeExecutionMatchInputSchema = z
     topPlayerId: z.string().min(1),
     bottomStrategyRevisionId: z.string().min(1),
     topStrategyRevisionId: z.string().min(1),
+    initialInitiativePlayerId: z.string().min(1).optional(),
+    candidateMatch:
+      RuntimeExecutionCandidateMatchAuthorityV119Schema.optional(),
     maxPhases: z.number().int().positive().optional(),
   })
+  .strict()
   .superRefine((match, ctx) => {
     if (match.bottomPlayerId === match.topPlayerId) {
       ctx.addIssue({
         code: "custom",
         path: ["topPlayerId"],
         message: "bottomPlayerId and topPlayerId must differ",
+      })
+    }
+    const successorSelected =
+      String(CURRENT_SEMANTIC_RUNTIME_ABI_VERSION) ===
+      "strategy-runtime-abi-v1.19"
+    if (
+      successorSelected !==
+      (match.initialInitiativePlayerId !== undefined &&
+        match.candidateMatch !== undefined)
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["candidateMatch"],
+        message: "selected Match authority must be complete and version-exact",
+      })
+    }
+    const candidate = match.candidateMatch
+    if (
+      candidate !== undefined &&
+      (candidate.matchId !== match.matchId ||
+        candidate.seed !== match.seed ||
+        candidate.arenaVariantId !== match.arenaVariant.id ||
+        candidate.bottomPlayerId !== match.bottomPlayerId ||
+        candidate.topPlayerId !== match.topPlayerId ||
+        candidate.bottomStrategyRevisionId !== match.bottomStrategyRevisionId ||
+        candidate.topStrategyRevisionId !== match.topStrategyRevisionId ||
+        candidate.initialInitiativePlayerId !== match.initialInitiativePlayerId)
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["candidateMatch"],
+        message: "candidate Match authority does not bind the Match input",
       })
     }
   })
@@ -2160,7 +2959,9 @@ export const RuntimeExecutionServiceRequestSchema = z
         }
       }
     }),
+    evidenceSnapshot: RuntimeExecutionEvidenceSnapshotSchema,
   })
+  .strict()
   .superRefine((request, ctx) => {
     if (
       request.match.bottomStrategyRevisionId !== request.strategies.bottom.id
@@ -2178,6 +2979,45 @@ export const RuntimeExecutionServiceRequestSchema = z
         message: "top Strategy Revision id must match Match input",
       })
     }
+    for (const side of ["bottom", "top"] as const) {
+      const expectedRevisionId =
+        side === "bottom"
+          ? request.match.bottomStrategyRevisionId
+          : request.match.topStrategyRevisionId
+      if (
+        request.evidenceSnapshot.entrants[side].effectiveStatus === "disabled"
+      ) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["evidenceSnapshot", "entrants", side, "effectiveStatus"],
+          message: `${side} disabled authority cannot execute`,
+        })
+      }
+      if (
+        request.evidenceSnapshot.entrants[side].strategyRevisionId !==
+        expectedRevisionId
+      ) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["evidenceSnapshot", "entrants", side, "strategyRevisionId"],
+          message: `${side} execution evidence must bind the Match Strategy Revision`,
+        })
+      }
+    }
+    const candidate = request.match.candidateMatch
+    if (
+      candidate !== undefined &&
+      (candidate.bottomEntrantKey !==
+        request.evidenceSnapshot.entrants.bottom.entrantKey ||
+        candidate.topEntrantKey !==
+          request.evidenceSnapshot.entrants.top.entrantKey)
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["match", "candidateMatch"],
+        message: "candidate Match entrants do not bind execution evidence",
+      })
+    }
   }) satisfies z.ZodType<RuntimeExecutionServiceRequest>
 
 export const RuntimeExecutionEnginePlayerSchema = z.object({
@@ -2187,35 +3027,88 @@ export const RuntimeExecutionEnginePlayerSchema = z.object({
   strategyMemory: JsonValueSchema,
 })
 
-export const RuntimeExecutionFinalStateSchema = z.object({
-  matchId: z.string().min(1),
-  seed: z.string().min(1),
-  versions: CompatibilityVersionsSchema,
-  arenaVariant: ArenaVariantSchema,
-  players: z.tuple([
-    RuntimeExecutionEnginePlayerSchema,
-    RuntimeExecutionEnginePlayerSchema,
-  ]),
-  phase: z.enum(["ROUND", "CONTRACTION", "COMPLETE"]),
-  phaseNumber: z.number().int().positive(),
-  roundNumber: z.union([
-    z.literal(1),
-    z.literal(2),
-    z.literal(3),
-    z.literal(4),
-  ]),
-  activationCount: z.union([
-    z.literal(1),
-    z.literal(2),
-    z.literal(3),
-    z.literal(4),
-  ]),
-  initiativePlayerId: z.string().min(1),
-  bounds: BoardBoundsSchema,
-  soldiers: z.array(SoldierSchema),
-  terrainStones: z.array(PositionSchema),
-  outcome: MatchOutcomeSchema.optional(),
-}) satisfies z.ZodType<RuntimeExecutionFinalState>
+export const RuntimeExecutionFinalStateSchema = z
+  .object({
+    matchId: z.string().min(1),
+    seed: z.string().min(1),
+    versions: CompatibilityVersionsSchema,
+    arenaVariant: ArenaVariantSchema,
+    players: z.tuple([
+      RuntimeExecutionEnginePlayerSchema,
+      RuntimeExecutionEnginePlayerSchema,
+    ]),
+    phase: z.enum(["ROUND", "CONTRACTION", "COMPLETE"]),
+    phaseNumber: z.number().int().positive(),
+    roundNumber: z.union([
+      z.literal(1),
+      z.literal(2),
+      z.literal(3),
+      z.literal(4),
+    ]),
+    activationCount: z.union([
+      z.literal(1),
+      z.literal(2),
+      z.literal(3),
+      z.literal(4),
+    ]),
+    initialInitiativePlayerId: z.string().min(1).optional(),
+    initiativePlayerId: z.string().min(1),
+    bounds: BoardBoundsSchema,
+    soldiers: z.array(SoldierSchema),
+    terrainStones: z.array(PositionSchema),
+    outcome: MatchOutcomeSchema.optional(),
+  })
+  .superRefine((state, ctx) => {
+    const successorSelected =
+      String(CURRENT_SEMANTIC_RUNTIME_ABI_VERSION) ===
+      "strategy-runtime-abi-v1.19"
+    if (successorSelected !== (state.initialInitiativePlayerId !== undefined)) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["initialInitiativePlayerId"],
+        message: "final-state initiative authority is version-exact",
+      })
+    }
+    if (
+      state.initialInitiativePlayerId !== undefined &&
+      !state.players.some(({ id }) => id === state.initialInitiativePlayerId)
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["initialInitiativePlayerId"],
+        message: "initial initiative must identify a Match player",
+      })
+    }
+  }) satisfies z.ZodType<RuntimeExecutionFinalState>
+
+const PrefixedSha256Schema = z.string().regex(/^sha256:[0-9a-f]{64}$/u)
+
+export const RuntimeSemanticReceiptSchema = z
+  .object({
+    schemaVersion: z.literal(RUNTIME_SEMANTIC_RECEIPT_SCHEMA_VERSION),
+    profile: z.literal(RUNTIME_SEMANTIC_RECEIPT_PROFILE),
+    serviceContractVersion: z.literal(RUNTIME_EXECUTION_SERVICE_VERSION),
+    requestId: z.string().min(1),
+    matchId: z.string().min(1),
+    compatibilityTupleId: PrefixedSha256Schema,
+    rulesVersion: z.string().min(1),
+    engineVersion: z.string().min(1),
+    runtimeAbiVersion: z.string().min(1),
+    chronicleVersion: z.string().min(1),
+    arenaCatalogVersion: z.string().min(1),
+    setPolicyVersion: z.string().min(1),
+    authorityBundleHash: PrefixedSha256Schema,
+    registryGeneration: z.string().regex(/^(?:0|[1-9][0-9]*)$/u),
+    chronicleWireBytesHash: PrefixedSha256Schema,
+    finalStateWireBytesHash: PrefixedSha256Schema,
+    reconstructedTerminalStateHash: PrefixedSha256Schema,
+    outcomeWireBytesHash: PrefixedSha256Schema,
+    runtimeViolationEventCount: z.number().int().nonnegative(),
+    algorithm: z.literal(RUNTIME_SEMANTIC_RECEIPT_ALGORITHM),
+    keyId: z.literal(RUNTIME_SEMANTIC_RECEIPT_KEY_ID),
+    signature: z.string().regex(/^hmac-sha256:[0-9a-f]{64}$/u),
+  })
+  .strict() satisfies z.ZodType<RuntimeSemanticReceipt>
 
 export const RuntimeExecutionServiceSuccessResponseSchema = z.object({
   contractVersion: z.literal(RUNTIME_EXECUTION_SERVICE_VERSION),
@@ -2224,12 +3117,18 @@ export const RuntimeExecutionServiceSuccessResponseSchema = z.object({
   requestId: z.string().min(1),
   matchId: z.string().min(1),
   runtimeAbiVersion: z.literal(STRATEGY_RUNTIME_ABI_VERSION),
-  result: z.object({
-    privacy: z.literal("internal_runtime_result"),
-    chronicle: ChronicleSchema,
-    finalState: RuntimeExecutionFinalStateSchema,
-    runtimeViolationEventCount: z.number().int().nonnegative(),
-  }),
+  result: z
+    .object({
+      privacy: z.literal("internal_runtime_result"),
+      chronicle: ChronicleSchema.omit({
+        integrity: true,
+        storageMetadata: true,
+      }).strict(),
+      finalState: RuntimeExecutionFinalStateSchema,
+      runtimeViolationEventCount: z.number().int().nonnegative(),
+      semanticReceipt: RuntimeSemanticReceiptSchema,
+    })
+    .strict(),
 })
 
 export const RuntimeExecutionServiceSystemFailureResponseSchema = z.object({

@@ -14,6 +14,18 @@ import {
   getCompetitionPreset,
 } from "./competition.js"
 import {
+  assertCompetitionPolicyV136PublicLeakSafe,
+  COMPETITION_POLICY_V1_36_AUTHORITY_OWNERS,
+  COMPETITION_POLICY_V1_36_COUNTED_STATE_PUBLIC_PROJECTIONS,
+  COMPETITION_POLICY_V1_36_COUNTED_STATE_SCOPE,
+  COMPETITION_POLICY_V1_36_FORBIDDEN_CLAIMS,
+  COMPETITION_POLICY_V1_36_ID,
+  COMPETITION_POLICY_V1_36_POSTURE,
+  COMPETITION_POLICY_V1_36_PRIVACY_EXCLUSIONS,
+  COMPETITION_POLICY_V1_36_PUBLIC_PAYLOAD,
+  COMPETITION_POLICY_V1_36_TRUST_SURFACES,
+} from "./competition-policy-v1-36.js"
+import {
   assertPublicServiceDtoLeakSafe,
   SERVICE_API_ROUTES,
   SERVICE_API_VERSION,
@@ -51,6 +63,8 @@ import {
   getSupportedStrategyLanguageRecord,
   getStrategyLanguageProviderRecord,
   assertNonJsRuntimeGuardrails,
+  assertStrategyRuntimeSandboxReadinessContract,
+  assertStrategyRuntimePackagePolicyContract,
   NON_JS_RUNTIME_PROMOTION_CRITERIA,
   NON_JS_RUNTIME_SUPPORT_POLICY,
   RUNTIME_BROKER_REGISTRY,
@@ -60,7 +74,11 @@ import {
   SUPPORTED_STRATEGY_LANGUAGES,
   STRATEGY_RUNTIME_ADAPTER_REGISTRY,
   STRATEGY_RUNTIME_ABI_VERSION,
+  STRATEGY_RUNTIME_PACKAGE_POLICY_CLAIMS,
+  STRATEGY_RUNTIME_SANDBOX_READINESS_CLAIMS,
   STRATEGY_RUNTIME_PRODUCT_VALIDATION_CODES,
+  getStrategyRuntimePackagePolicyClaim,
+  getStrategyRuntimeSandboxReadinessClaim,
   runtimeCompatibilityKey,
   validateStrategyLanguageProviderRuntimeCompatibility,
   validateRuntimeBrokerRegistryMatch,
@@ -73,7 +91,13 @@ import {
   RUNTIME_EXECUTION_SERVICE_FAILURE_PRIVACY_POLICY,
   RUNTIME_EXECUTION_SERVICE_TRANSPORT_BINDING,
   RUNTIME_EXECUTION_SERVICE_VERSION,
+  RUNTIME_SEMANTIC_RECEIPT_ALGORITHM,
+  RUNTIME_SEMANTIC_RECEIPT_KEY_ID,
+  RUNTIME_SEMANTIC_RECEIPT_PROFILE,
+  RUNTIME_SEMANTIC_RECEIPT_SCHEMA_VERSION,
 } from "./runtime-execution-service.js"
+import { HISTORICAL_RUNTIME_EXECUTION_SERVICE_V1_16 } from "./runtime-execution-service-v1-16-compat.js"
+import { CURRENT_CANONICAL_COMPATIBILITY_TUPLE_RECORD } from "./integrity-authority.js"
 import { COMPATIBILITY_VERSIONS } from "./versions.js"
 import { STRATEGY_SOURCE_BYTES } from "./constants.js"
 import { readFileSync } from "node:fs"
@@ -82,8 +106,392 @@ import {
   SOLDIER_INACTIVITY_EXPLANATION_CAUSES,
 } from "./types.js"
 import type { AnalyticsGauntletRunSummary } from "./analytics.js"
+import * as publicSpec from "./index.js"
+
+const bindSelectedRuntimeMatchAuthority = <
+  TMatch extends {
+    matchId: string
+    seed: string
+    arenaVariant: { id: string }
+    bottomPlayerId: string
+    topPlayerId: string
+    bottomStrategyRevisionId: string
+    topStrategyRevisionId: string
+  },
+>(
+  match: TMatch,
+  bottomEntrantKey: string,
+  topEntrantKey: string,
+) =>
+  String(STRATEGY_RUNTIME_ABI_VERSION) !== "strategy-runtime-abi-v1.19"
+    ? match
+    : {
+        ...match,
+        initialInitiativePlayerId: match.bottomPlayerId,
+        candidateMatch: {
+          semanticAuthorityKey: "runtime-v1.19" as const,
+          matchId: match.matchId,
+          seed: match.seed,
+          arenaVariantId: match.arenaVariant.id,
+          bottomStrategyRevisionId: match.bottomStrategyRevisionId,
+          topStrategyRevisionId: match.topStrategyRevisionId,
+          bottomPlayerId: match.bottomPlayerId,
+          topPlayerId: match.topPlayerId,
+          bottomEntrantKey,
+          topEntrantKey,
+          setPolicyVersion:
+            "canonical-set-policy-v1.37-four-condition-v1" as const,
+          scenarioId: `set-scenario:sha256:${"1".repeat(64)}` as const,
+          conditionId: `set-condition:sha256:${"2".repeat(64)}` as const,
+          conditionOrdinal: 0 as const,
+          conditionSuffix: "a-bottom-a-first" as const,
+          requestIdentity: `set-request:sha256:${"3".repeat(64)}` as const,
+          arenaCatalogVersion: "canonical-arena-catalog-v1.37" as const,
+          arenaSemanticGeometryHash: `sha256:${"4".repeat(64)}` as const,
+          initialInitiativeEntrantKey: bottomEntrantKey,
+          initialInitiativePlayerId: match.bottomPlayerId,
+        },
+      }
 
 describe("Coward's Game spec contracts", () => {
+  describe("versioned public semantic authority", () => {
+    it("keeps unversioned observation schemas on the generated Phase-259 selection", () => {
+      const currentIsV119 =
+        String(
+          publicSpec.CURRENT_SEMANTIC_AUTHORITY_GENERATED.selection
+            .runtimeAbiVersion,
+        ) === "strategy-runtime-abi-v1.19"
+      expect(publicSpec.CURRENT_SEMANTIC_RUNTIME_ABI_VERSION).toBe(
+        publicSpec.CURRENT_SEMANTIC_AUTHORITY_GENERATED.selection
+          .runtimeAbiVersion,
+      )
+      expect(publicSpec.StrategyInputSchema).toBe(
+        currentIsV119
+          ? publicSpec.StrategyInputV119Schema
+          : publicSpec.StrategyInputV117Schema,
+      )
+      expect(publicSpec.SoldierBrainInputSchema).toBe(
+        currentIsV119
+          ? publicSpec.SoldierBrainInputV119Schema
+          : publicSpec.SoldierBrainInputV117Schema,
+      )
+    })
+
+    it("exports the exact v1.19 observation, arena, and Set candidates from the package root", () => {
+      const currentInput = fixtures.valid.standardStrategyInput
+      const historicalInput = {
+        ...currentInput,
+      } as Record<string, unknown>
+      delete historicalInput.initialInitiativePlayerId
+      delete historicalInput.hasInitialInitiative
+      delete historicalInput.roundInitiativePlayerId
+      delete historicalInput.hasRoundInitiative
+      const candidateInput = {
+        ...historicalInput,
+        initialInitiativePlayerId: "player:bottom",
+        hasInitialInitiative: true,
+        roundInitiativePlayerId: "player:top",
+        hasRoundInitiative: false,
+      }
+
+      expect(publicSpec.StrategyInputV119Schema.parse(candidateInput)).toEqual(
+        candidateInput,
+      )
+      expect(
+        publicSpec.StrategyInputV119Schema.safeParse(historicalInput).success,
+      ).toBe(false)
+      expect(
+        publicSpec.StrategyInputV119Schema.safeParse({
+          ...candidateInput,
+          initiativePlayerId: "player:bottom",
+        }).success,
+      ).toBe(false)
+      expect(publicSpec.STRATEGY_OBSERVATION_ABI_V1_19).toMatchObject({
+        runtimeAbiVersion: "strategy-runtime-abi-v1.19",
+        lifecycle: { active: false },
+      })
+      expect(publicSpec.CANONICAL_ARENA_CATALOG_V1_37.catalogVersion).toBe(
+        "canonical-arena-catalog-v1.37",
+      )
+      expect(publicSpec.SET_CONDITION_POLICY_V1_37.version).toBe(
+        "canonical-set-policy-v1.37-four-condition-v1",
+      )
+    })
+
+    it("projects the shared truthful fixtures through exact v1.17 and v1.19 schemas", () => {
+      const historicalStrategyInput = {
+        ...fixtures.valid.standardStrategyInput,
+      } as Record<string, unknown>
+      delete historicalStrategyInput.initialInitiativePlayerId
+      delete historicalStrategyInput.hasInitialInitiative
+      delete historicalStrategyInput.roundInitiativePlayerId
+      delete historicalStrategyInput.hasRoundInitiative
+      const historicalSoldierBrainInput = {
+        ...fixtures.valid.standardSoldierBrainInput,
+      } as Record<string, unknown>
+      delete historicalSoldierBrainInput.hasAdvancedThisActivation
+
+      const historicalStrategy = publicSpec.StrategyInputV117Schema.parse(
+        historicalStrategyInput,
+      )
+      const historicalSoldierBrain =
+        publicSpec.SoldierBrainInputV117Schema.parse(
+          historicalSoldierBrainInput,
+        )
+
+      expect(historicalStrategy).not.toHaveProperty("initialInitiativePlayerId")
+      expect(historicalStrategy).not.toHaveProperty("hasInitialInitiative")
+      expect(historicalStrategy).not.toHaveProperty("roundInitiativePlayerId")
+      expect(historicalStrategy).not.toHaveProperty("hasRoundInitiative")
+      expect(historicalSoldierBrain).not.toHaveProperty(
+        "hasAdvancedThisActivation",
+      )
+
+      const candidateStrategy = publicSpec.StrategyInputV119Schema.parse({
+        ...historicalStrategy,
+        initialInitiativePlayerId: "bottom",
+        hasInitialInitiative: true,
+        roundInitiativePlayerId: "bottom",
+        hasRoundInitiative: true,
+      })
+      const candidateSoldierBrain =
+        publicSpec.SoldierBrainInputV119Schema.parse({
+          ...historicalSoldierBrain,
+          hasAdvancedThisActivation: false,
+        })
+
+      expect(candidateStrategy).toMatchObject({
+        initialInitiativePlayerId: "bottom",
+        hasInitialInitiative: true,
+        roundInitiativePlayerId: "bottom",
+        hasRoundInitiative: true,
+      })
+      expect(candidateSoldierBrain.hasAdvancedThisActivation).toBe(false)
+      expect(
+        publicSpec.StrategyInputSchema.parse(
+          fixtures.valid.standardStrategyInput,
+        ),
+      ).toEqual(fixtures.valid.standardStrategyInput)
+      expect(
+        publicSpec.SoldierBrainInputSchema.parse(
+          fixtures.valid.standardSoldierBrainInput,
+        ),
+      ).toEqual(fixtures.valid.standardSoldierBrainInput)
+      expect(
+        publicSpec.StrategyInputV119Schema.safeParse({
+          ...candidateStrategy,
+          hasRoundInitiative: undefined,
+        }).success,
+      ).toBe(false)
+      expect(
+        publicSpec.SoldierBrainInputV119Schema.safeParse({
+          ...candidateSoldierBrain,
+          hasAdvancedThisActivation: undefined,
+        }).success,
+      ).toBe(false)
+    })
+
+    it("rejects partial, mixed, and premature current selectors", () => {
+      const current = publicSpec.CURRENT_SEMANTIC_AUTHORITY_GENERATED.selection
+      const alternateKey =
+        String(current.semanticAuthorityKey) === "runtime-v1.17"
+          ? "runtime-v1.19"
+          : "runtime-v1.17"
+      const alternateRuntimeAbi =
+        String(current.runtimeAbiVersion) === "strategy-runtime-abi-v1.17"
+          ? "strategy-runtime-abi-v1.19"
+          : "strategy-runtime-abi-v1.17"
+      expect(
+        publicSpec.resolveCurrentSemanticAuthoritySelection({
+          semanticAuthorityKey: current.semanticAuthorityKey,
+        }),
+      ).toEqual(current)
+      for (const selector of [
+        { semanticAuthorityKey: alternateKey },
+        { runtimeAbiVersion: current.runtimeAbiVersion },
+        {
+          semanticAuthorityKey: current.semanticAuthorityKey,
+          runtimeAbiVersion: alternateRuntimeAbi,
+        },
+      ]) {
+        expect(
+          publicSpec.resolveCurrentSemanticAuthoritySelection(selector),
+        ).toBeUndefined()
+      }
+    })
+  })
+
+  describe("competition-policy-v1.36", () => {
+    it("POST-01/D-02 locks the exact public beta trial competition posture", () => {
+      expect(COMPETITION_POLICY_V1_36_ID).toBe("competition-policy-v1.36")
+      expect(COMPETITION_POLICY_V1_36_POSTURE.publicLabel).toBe(
+        "public beta trial competition",
+      )
+    })
+
+    it("POST-01/D-03/D-04 preserves resettable Season copy and the no durable rating promise", () => {
+      expect(COMPETITION_POLICY_V1_36_POSTURE.standingsScope).toBe(
+        "resettable Season-scoped standings",
+      )
+      expect(COMPETITION_POLICY_V1_36_POSTURE.durableRatingPromise).toBe(
+        "no durable permanent rating promise",
+      )
+      expect(COMPETITION_POLICY_V1_36_POSTURE.completedSeasonLabel).toContain(
+        "completed Seasons remain resettable public beta trial competition evidence",
+      )
+      expect(COMPETITION_POLICY_V1_36_POSTURE.completedSeasonLabel).toContain(
+        "not durable rating truth",
+      )
+      expect(COMPETITION_POLICY_V1_36_POSTURE.archivedSeasonLabel).toContain(
+        "archived Seasons remain resettable public beta trial competition evidence",
+      )
+      expect(COMPETITION_POLICY_V1_36_POSTURE.archivedSeasonLabel).toContain(
+        "not durable rating truth",
+      )
+    })
+
+    it("POST-03/D-11 defines counted-state public projection vocabulary only", () => {
+      expect(
+        COMPETITION_POLICY_V1_36_COUNTED_STATE_PUBLIC_PROJECTIONS.map(
+          (projection) => projection.state,
+        ),
+      ).toEqual([
+        "pending",
+        "counted",
+        "retrying",
+        "degraded_system_failure",
+        "non_counted",
+        "non_competitive",
+        "under_review",
+        "disputed",
+        "invalid",
+        "invalidated",
+      ])
+      expect(
+        COMPETITION_POLICY_V1_36_COUNTED_STATE_PUBLIC_PROJECTIONS.map(
+          (projection) => projection.publicMeaning,
+        ).join(" "),
+      ).toMatch(
+        /pending|counted|retrying|degraded system failure|non-counted|non-competitive|under review|disputed|invalid|invalidated/,
+      )
+      expect(COMPETITION_POLICY_V1_36_COUNTED_STATE_SCOPE).toContain(
+        "public projection vocabulary only",
+      )
+      expect(COMPETITION_POLICY_V1_36_COUNTED_STATE_SCOPE).toContain(
+        "Phase 252 owns final persistence enum mappings",
+      )
+    })
+
+    it("POST-02/D-12 represents forbidden claim categories with concrete examples", () => {
+      expect(
+        COMPETITION_POLICY_V1_36_FORBIDDEN_CLAIMS.map(
+          (claim) => claim.category,
+        ),
+      ).toEqual([
+        "durable-rating",
+        "production-sandbox",
+        "package-ecosystem",
+        "tinygo-production",
+        "raw-diagnostic",
+        "private-runtime",
+        "mature-staffed-moderation",
+        "rating-refund",
+        "all-time-ranking",
+      ])
+      for (const claim of COMPETITION_POLICY_V1_36_FORBIDDEN_CLAIMS) {
+        expect(claim.examples.length).toBeGreaterThanOrEqual(2)
+        expect(claim.examples.every((example) => example.length > 0)).toBe(true)
+      }
+    })
+
+    it("POST-03 keeps authoritative owners outside React rules and web/API Strategy execution", () => {
+      expect(COMPETITION_POLICY_V1_36_TRUST_SURFACES).toEqual(
+        expect.arrayContaining([
+          "competition-index",
+          "competition-detail",
+          "entry",
+          "season",
+          "standings",
+          "result",
+          "replay",
+          "player",
+          "strategy",
+          "governance",
+          "docs",
+          "fixtures",
+          "snapshots",
+          "proof-artifacts",
+          "monitors",
+        ]),
+      )
+      expect(COMPETITION_POLICY_V1_36_AUTHORITY_OWNERS).toMatchObject({
+        specContract: expect.stringContaining("vocabulary"),
+        goBackendOrchestration: expect.stringContaining("normal orchestration"),
+        runtimeServiceProviderBoundary: expect.stringContaining(
+          "hostile Strategy validation/build/execution",
+        ),
+        persistence: expect.stringContaining("canonical stored evidence"),
+        webProjection: expect.stringContaining("public projections only"),
+        staticMonitorProof: expect.stringContaining("static drift checks"),
+      })
+      expect(COMPETITION_POLICY_V1_36_AUTHORITY_OWNERS.webProjection).toContain(
+        "no game rules",
+      )
+      expect(
+        COMPETITION_POLICY_V1_36_AUTHORITY_OWNERS.goBackendOrchestration,
+      ).toContain("no Strategy execution")
+    })
+
+    it("POST-03 public payload is leak-safe and rejects private competition markers", () => {
+      expect(COMPETITION_POLICY_V1_36_PRIVACY_EXCLUSIONS).toEqual(
+        expect.arrayContaining([
+          "Strategy source",
+          "StrategyMemory",
+          "SoldierMemory",
+          "objective payloads",
+          "raw diagnostics",
+          "artifact bytes",
+          "host paths",
+          "env values",
+          "tokens",
+          "DB details",
+          "package paths",
+          "private runtime internals",
+          "dispute internals",
+          "account-recovery payloads",
+          "operator-only governance details",
+        ]),
+      )
+      expect(() =>
+        assertCompetitionPolicyV136PublicLeakSafe(
+          COMPETITION_POLICY_V1_36_PUBLIC_PAYLOAD,
+        ),
+      ).not.toThrow()
+
+      for (const privateMarker of [
+        { strategySource: "private strategy code" },
+        { StrategyMemory: { hidden: true } },
+        { SoldierMemory: { hidden: true } },
+        { objectivePayload: { hidden: true } },
+        { rawDiagnostics: "Traceback" },
+        { artifactBytesBase64: "abc123" },
+        { hostPaths: ["/private/path"] },
+        { envValues: { DATABASE_URL: "postgres://private" } },
+        { tokens: ["Bearer private"] },
+        { dbDetails: "private DSN" },
+        { packagePaths: ["site-packages/private"] },
+        { privateRuntimeInternals: { stderr: "private" } },
+        { disputeInternals: { operatorNote: "private" } },
+        { accountRecoveryPayloads: { secret: "private" } },
+        { operatorOnlyGovernance: { hidden: true } },
+      ]) {
+        expect(() =>
+          assertCompetitionPolicyV136PublicLeakSafe(privateMarker),
+        ).toThrow(/private/)
+      }
+    })
+  })
+
   it("exposes generation-ready v1.8 service route metadata and public DTO schemas", () => {
     expect(SERVICE_API_VERSION).toBe("service-api-v1.8")
     expect(SERVICE_API_ROUTES.getPublicStrategyPage).toMatchObject({
@@ -262,10 +670,10 @@ describe("Coward's Game spec contracts", () => {
     expect(RuntimeViolationUserGuidanceSchema.parse(guidance)).toEqual(guidance)
   })
 
-  it("runtime product semantics keep JS, Python, Rust, and Zig counted through providers", () => {
+  it("runtime product semantics quarantine every provider without exact evidence", () => {
     const jsRuntime = defaultRuntimeMetadata()
     const pythonRuntime = {
-      abiVersion: "strategy-runtime-abi-v1.14",
+      abiVersion: STRATEGY_RUNTIME_ABI_VERSION,
       language: { id: "python", version: "3.9" },
       adapter: {
         id: "runtime-python-subprocess-experimental",
@@ -277,21 +685,23 @@ describe("Coward's Game spec contracts", () => {
     }
 
     expect(evaluateStrategyRuntimeCountedEligibility(jsRuntime)).toEqual({
-      ok: true,
-      code: null,
-      publicMessage: null,
+      ok: false,
+      code: "NON_COUNTED_RUNTIME",
+      publicMessage:
+        "Strategy runtime is experimental and not counted-play eligible.",
     })
     expect(evaluateStrategyRuntimeCountedEligibility(pythonRuntime)).toEqual({
-      ok: true,
-      code: null,
-      publicMessage: null,
+      ok: false,
+      code: "NON_COUNTED_RUNTIME",
+      publicMessage:
+        "Strategy runtime is experimental and not counted-play eligible.",
     })
     expect(
       describeStrategyRuntimeProductSemantics(pythonRuntime),
     ).toMatchObject({
       languageLabel: "Python",
-      readinessLabel: "Production candidate",
-      countedPlayLabel: "Counted eligible",
+      readinessLabel: "Provenance evidence only",
+      countedPlayLabel: "Not counted",
       experimental: false,
     })
     expect(
@@ -346,11 +756,78 @@ describe("Coward's Game spec contracts", () => {
       describeStrategyRuntimeProductSemantics(containerRuntime),
     ).toMatchObject({
       adapterLabel: "runtime-js container subprocess",
-      readinessLabel: "Production candidate",
+      readinessLabel: "Provenance evidence only",
       countedPlayLabel: "Not counted",
       countedPlayEligible: false,
     })
     expect(() => assertNonJsRuntimeGuardrails()).not.toThrow()
+    expect(() => assertStrategyRuntimeSandboxReadinessContract()).not.toThrow()
+    expect(() => assertStrategyRuntimePackagePolicyContract()).not.toThrow()
+    expect(
+      STRATEGY_RUNTIME_SANDBOX_READINESS_CLAIMS.every(
+        (claim) => claim.productionSandboxCertification === false,
+      ),
+    ).toBe(true)
+    expect(getStrategyRuntimeSandboxReadinessClaim("typescript")).toMatchObject(
+      {
+        evidenceClass: "source-artifact-provenance",
+        artifactPosture: "source-language-artifact-provenance",
+        publicLabel: "Provenance evidence only",
+      },
+    )
+    expect(getStrategyRuntimeSandboxReadinessClaim("python")).toMatchObject({
+      evidenceClass: "source-artifact-provenance",
+      artifactPosture: "source-language-artifact-provenance",
+      publicLabel: "Provenance evidence only",
+    })
+    expect(getStrategyRuntimeSandboxReadinessClaim("rust")).toMatchObject({
+      evidenceClass: "immutable-wasm-wasi-preview1-artifact",
+      artifactPosture: "immutable-wasm-wasi-preview1",
+      publicLabel: "WASM/WASI artifact-backed evidence",
+    })
+    expect(getStrategyRuntimeSandboxReadinessClaim("zig")).toMatchObject({
+      evidenceClass: "immutable-wasm-wasi-preview1-artifact",
+      artifactPosture: "immutable-wasm-wasi-preview1",
+      publicLabel: "WASM/WASI artifact-backed evidence",
+    })
+    expect(getStrategyRuntimeSandboxReadinessClaim("tinygo")).toMatchObject({
+      evidenceClass: "spike-only-hidden",
+      unavailableInProduction: true,
+      publicLabel: "Hidden spike-only lane",
+    })
+    expect(
+      STRATEGY_RUNTIME_PACKAGE_POLICY_CLAIMS.every(
+        (claim) =>
+          claim.productionPackageMode === "none" &&
+          claim.hostImportsAllowed === false &&
+          claim.richPackagesAllowed === false &&
+          claim.nativeDependenciesAllowed === false,
+      ),
+    ).toBe(true)
+    expect(getStrategyRuntimePackagePolicyClaim("typescript")).toMatchObject({
+      productionPackageMode: "none",
+      publicLabel: "No packages",
+      hostImportsAllowed: false,
+      richPackagesAllowed: false,
+    })
+    expect(getStrategyRuntimePackagePolicyClaim("python")).toMatchObject({
+      productionPackageMode: "none",
+      publicLabel: "No packages",
+      hostImportsAllowed: false,
+      richPackagesAllowed: false,
+    })
+    expect(getStrategyRuntimePackagePolicyClaim("rust")).toMatchObject({
+      productionPackageMode: "none",
+      nativeDependenciesAllowed: false,
+    })
+    expect(getStrategyRuntimePackagePolicyClaim("zig")).toMatchObject({
+      productionPackageMode: "none",
+      nativeDependenciesAllowed: false,
+    })
+    expect(getStrategyRuntimePackagePolicyClaim("tinygo")).toMatchObject({
+      productionPackageMode: "none",
+      richPackagesAllowed: false,
+    })
     expect(NON_JS_RUNTIME_SUPPORT_POLICY).toMatchObject({
       status: "partial-production-supported",
       productionSupportedLanguageIds: [
@@ -425,9 +902,9 @@ describe("Coward's Game spec contracts", () => {
     expect(getSupportedStrategyLanguageBySourceFormat("tinygo")).toBeNull()
   })
 
-  it("v1.32 strategy language providers declare ABI and boundary posture", () => {
+  it("selected strategy language providers declare ABI and boundary posture", () => {
     expect(STRATEGY_LANGUAGE_PROVIDER_CONTRACT_VERSION).toBe(
-      "strategy-language-provider-contract-v1.33",
+      "runtime-provider-validation-v1.17",
     )
     expect(STRATEGY_LANGUAGE_PROVIDER_REGISTRY).toHaveLength(4)
     for (const language of SUPPORTED_STRATEGY_LANGUAGES) {
@@ -449,11 +926,15 @@ describe("Coward's Game spec contracts", () => {
       )
       expect(provider?.migrationNotes.length).toBeGreaterThan(0)
     }
+    const expectedWasmProviderPosture =
+      String(STRATEGY_RUNTIME_ABI_VERSION) === "strategy-runtime-abi-v1.17"
+        ? "wasi-preview1-stdin-canonical-request-stdout-raw-canonical-payload"
+        : "wasi-preview1-stdin-stdout-json"
     expect(getStrategyLanguageProviderRecord("rust")?.abiPosture).toBe(
-      "wasi-preview1-stdin-stdout-json",
+      expectedWasmProviderPosture,
     )
     expect(getStrategyLanguageProviderRecord("zig")?.abiPosture).toBe(
-      "wasi-preview1-stdin-stdout-json",
+      expectedWasmProviderPosture,
     )
     expect(
       validateStrategyLanguageProviderRuntimeCompatibility(
@@ -473,7 +954,7 @@ describe("Coward's Game spec contracts", () => {
     )
   })
 
-  it("v1.17 runtime broker registry uses exact metadata and promotes Python counted eligibility", () => {
+  it("v1.17 runtime broker registry uses exact metadata without granting counted eligibility", () => {
     const jsRuntime = defaultRuntimeMetadata()
     const pythonRuntime = {
       abiVersion: STRATEGY_RUNTIME_ABI_VERSION,
@@ -498,21 +979,21 @@ describe("Coward's Game spec contracts", () => {
         expect.objectContaining({
           languageId: "typescript",
           runtimeTarget: "runtime-js",
-          countedResultsAllowed: true,
+          countedResultsAllowed: false,
         }),
         expect.objectContaining({
           languageId: "python",
           runtimeTarget: "runtime-python",
           adapterId: "runtime-python-subprocess-experimental",
           enabledForNormalPlay: true,
-          countedResultsAllowed: true,
+          countedResultsAllowed: false,
         }),
         expect.objectContaining({
           languageId: "rust",
           runtimeTarget: "runtime-wasm-wasi",
           adapterId: "runtime-wasm-wasi-wasmtime-preview1",
           enabledForNormalPlay: true,
-          countedResultsAllowed: true,
+          countedResultsAllowed: false,
         }),
       ]),
     )
@@ -525,7 +1006,7 @@ describe("Coward's Game spec contracts", () => {
     ).toContain("INCOMPATIBLE_ADAPTER")
   })
 
-  it("WASM/WASI Rust metadata is counted eligible and artifact-backed", () => {
+  it("WASM/WASI Rust metadata remains artifact-backed but evidence-quarantined", () => {
     const wasmLimits =
       STRATEGY_RUNTIME_ADAPTER_REGISTRY.find(
         (adapter) => adapter.id === "runtime-wasm-wasi-wasmtime-preview1",
@@ -546,13 +1027,13 @@ describe("Coward's Game spec contracts", () => {
     expect(
       evaluateStrategyRuntimeCountedEligibility(rustRuntime),
     ).toMatchObject({
-      ok: true,
+      ok: false,
     })
     expect(describeStrategyRuntimeProductSemantics(rustRuntime)).toMatchObject({
       languageLabel: "Rust",
       adapterLabel: "WASM/WASI Wasmtime Preview 1",
-      countedPlayEligible: true,
-      countedPlayLabel: "Counted eligible",
+      countedPlayEligible: false,
+      countedPlayLabel: "Not counted",
       examplesReference: "examples/rust-wasi-strategy",
     })
   })
@@ -1492,7 +1973,8 @@ describe("Coward's Game spec contracts", () => {
     ).toBe(false)
   })
 
-  it("RuntimeExecutionServiceRequestSchema accepts complete v1.15 Match execution inputs", () => {
+  it("RuntimeExecutionServiceRequestSchema accepts complete v1.16 Match execution inputs", () => {
+    const registered = CURRENT_CANONICAL_COMPATIBILITY_TUPLE_RECORD
     const source =
       "export default { selectActivations() {}, soldierBrain() {} }"
     const sourceBytes = new TextEncoder().encode(source).length
@@ -1521,30 +2003,121 @@ describe("Coward's Game spec contracts", () => {
       },
       metadata: {},
     })
+    const evidenceEntrant = (side: "bottom" | "top") => ({
+      entrantKey: `entrant:${side}`,
+      strategyRevisionId: `strategy-revision:${side}`,
+      laneIdentityHash: `sha256:${side === "bottom" ? "a" : "b"}`.padEnd(
+        71,
+        side === "bottom" ? "a" : "b",
+      ),
+      effectiveStatus: "exhibition_only" as const,
+      schedulingDecisionId: `scheduling-decision:${side}`,
+      schedulingDecisionHash: `sha256:${"f".repeat(64)}`,
+      schedulingDecision: {
+        status: "exhibition_only" as const,
+        reasonCode: "CONFORMANCE_MISSING" as const,
+        evaluatedAt: "2026-07-12T00:00:00.000Z",
+        freshUntil: "2026-07-14T00:00:00.000Z",
+        registryGeneration: "1",
+      },
+      containmentCertificateId: `containment:${side}`,
+      containmentCertificateHash: `sha256:${"c".repeat(64)}`,
+    })
     const request = {
       contractVersion: RUNTIME_EXECUTION_SERVICE_VERSION,
       kind: "executeMatch",
       requestId: "runtime-request:spec",
-      match: {
-        matchId: "match:runtime-service-spec",
-        seed: "seed:runtime-service-spec",
-        arenaVariant: fixtures.valid.standardArenaVariant,
-        bottomPlayerId: "player:bottom",
-        topPlayerId: "player:top",
-        bottomStrategyRevisionId: "strategy-revision:bottom",
-        topStrategyRevisionId: "strategy-revision:top",
-        maxPhases: 2,
-      },
+      match: bindSelectedRuntimeMatchAuthority(
+        {
+          matchId: "match:runtime-service-spec",
+          seed: "seed:runtime-service-spec",
+          arenaVariant: fixtures.valid.standardArenaVariant,
+          bottomPlayerId: "player:bottom",
+          topPlayerId: "player:top",
+          bottomStrategyRevisionId: "strategy-revision:bottom",
+          topStrategyRevisionId: "strategy-revision:top",
+          maxPhases: 2,
+        },
+        "entrant:bottom",
+        "entrant:top",
+      ),
       strategies: {
         bottom: revision("strategy-revision:bottom"),
         top: revision("strategy-revision:top"),
       },
       limits: defaultRuntimeMetadata().limits,
+      evidenceSnapshot: {
+        compatibility: {
+          tupleId: registered.tupleId,
+          tuple: { ...registered.tuple },
+        },
+        authorityBundleHash: `sha256:${"e".repeat(64)}`,
+        registryGeneration: "1",
+        publication: {
+          publicationId: "publication:runtime-service-spec",
+          installReceiptId: "install-receipt:runtime-service-spec",
+          payloadSha256: `sha256:${"e".repeat(64)}`,
+          envelopeSha256: `sha256:${"d".repeat(64)}`,
+          sourceManifestHash: `sha256:${"9".repeat(64)}`,
+        },
+        entrants: {
+          bottom: evidenceEntrant("bottom"),
+          top: evidenceEntrant("top"),
+        },
+      },
     }
 
     expect(RuntimeExecutionServiceRequestSchema.parse(request)).toEqual(request)
+    const instantVectors = JSON.parse(
+      readFileSync(
+        new URL("./fixtures/canonical-instant-vectors.json", import.meta.url),
+        "utf8",
+      ),
+    ) as Array<{ name: string; value: string; valid: boolean }>
+    for (const vector of instantVectors) {
+      expect(
+        RuntimeExecutionServiceRequestSchema.safeParse({
+          ...request,
+          evidenceSnapshot: {
+            ...request.evidenceSnapshot,
+            entrants: {
+              ...request.evidenceSnapshot.entrants,
+              bottom: {
+                ...request.evidenceSnapshot.entrants.bottom,
+                schedulingDecision: {
+                  ...request.evidenceSnapshot.entrants.bottom
+                    .schedulingDecision,
+                  evaluatedAt: vector.value,
+                  freshUntil: vector.value,
+                },
+              },
+            },
+          },
+        }).success,
+        vector.name,
+      ).toBe(vector.valid)
+    }
     expect(
-      RuntimeExecutionServiceRequestSchema.parse({
+      RuntimeExecutionServiceRequestSchema.safeParse({
+        ...request,
+        evidenceSnapshot: {
+          ...request.evidenceSnapshot,
+          entrants: {
+            ...request.evidenceSnapshot.entrants,
+            bottom: {
+              ...request.evidenceSnapshot.entrants.bottom,
+              schedulingDecision: {
+                ...request.evidenceSnapshot.entrants.bottom.schedulingDecision,
+                evaluatedAt: "2026-07-12T00:00:00.001Z",
+                freshUntil: "2026-07-12T00:00:00.000Z",
+              },
+            },
+          },
+        },
+      }).success,
+    ).toBe(false)
+    expect(
+      RuntimeExecutionServiceRequestSchema.safeParse({
         ...request,
         match: {
           ...request.match,
@@ -1554,13 +2127,8 @@ describe("Coward's Game spec contracts", () => {
           ...request.strategies,
           top: request.strategies.bottom,
         },
-      }),
-    ).toMatchObject({
-      match: {
-        bottomStrategyRevisionId: "strategy-revision:bottom",
-        topStrategyRevisionId: "strategy-revision:bottom",
-      },
-    })
+      }).success,
+    ).toBe(false)
     expect(
       RuntimeExecutionServiceRequestSchema.safeParse({
         ...request,
@@ -1581,7 +2149,270 @@ describe("Coward's Game spec contracts", () => {
     ).toBe(false)
   })
 
+  it("RuntimeExecutionServiceRequestSchema atomically validates execution evidence identity", () => {
+    const registered = CURRENT_CANONICAL_COMPATIBILITY_TUPLE_RECORD
+    const source =
+      "export default { selectActivations() {}, soldierBrain() {} }"
+    const sourceBytes = new TextEncoder().encode(source).length
+    const revision = (id: string) => ({
+      id,
+      source,
+      sourceHash: `hash:${id}`,
+      sourceBytes,
+      runtime: defaultRuntimeMetadata(),
+      engineCompatibility: {
+        spec: COMPATIBILITY_VERSIONS.spec,
+        engine: COMPATIBILITY_VERSIONS.engine,
+      },
+      validation: {
+        valid: true,
+        errors: [],
+        warnings: [],
+        sourceBytes,
+        forbiddenPatterns: [],
+        sourceHash: `hash:${id}`,
+        runtimeVersion: COMPATIBILITY_VERSIONS.runtimeJs,
+        engineCompatibility: {
+          spec: COMPATIBILITY_VERSIONS.spec,
+          engine: COMPATIBILITY_VERSIONS.engine,
+        },
+      },
+      metadata: {},
+    })
+    const entrant = (side: "bottom" | "top", languageId: string) => ({
+      entrantKey: `entrant:${side}`,
+      strategyRevisionId: `strategy-revision:${side}`,
+      laneIdentityHash:
+        `sha256:${languageId === "typescript" ? "1" : "2"}`.padEnd(
+          71,
+          languageId === "typescript" ? "1" : "2",
+        ),
+      effectiveStatus: "exhibition_only" as const,
+      schedulingDecisionId: `scheduling-decision:${side}`,
+      schedulingDecisionHash: `sha256:${"6".repeat(64)}`,
+      schedulingDecision: {
+        status: "exhibition_only" as const,
+        reasonCode: "CONFORMANCE_UNVERIFIABLE" as const,
+        evaluatedAt: "2026-07-12T00:00:00.000Z",
+        freshUntil: "2026-07-14T00:00:00.000Z",
+        registryGeneration: "1",
+      },
+      containmentCertificateId: `certificate:containment:${side}`,
+      containmentCertificateHash: `sha256:${"3".repeat(64)}`,
+    })
+    const request = {
+      contractVersion: RUNTIME_EXECUTION_SERVICE_VERSION,
+      kind: "executeMatch",
+      requestId: "runtime-request:evidence-identity",
+      match: bindSelectedRuntimeMatchAuthority(
+        {
+          matchId: "match:evidence-identity",
+          seed: "seed:evidence-identity",
+          arenaVariant: fixtures.valid.standardArenaVariant,
+          bottomPlayerId: "player:bottom",
+          topPlayerId: "player:top",
+          bottomStrategyRevisionId: "strategy-revision:bottom",
+          topStrategyRevisionId: "strategy-revision:top",
+        },
+        "entrant:bottom",
+        "entrant:top",
+      ),
+      strategies: {
+        bottom: revision("strategy-revision:bottom"),
+        top: revision("strategy-revision:top"),
+      },
+      limits: defaultRuntimeMetadata().limits,
+      evidenceSnapshot: {
+        compatibility: {
+          tupleId: registered.tupleId,
+          tuple: { ...registered.tuple },
+        },
+        authorityBundleHash: `sha256:${"5".repeat(64)}`,
+        registryGeneration: "1",
+        publication: {
+          publicationId: "publication:evidence-identity",
+          installReceiptId: "install-receipt:evidence-identity",
+          payloadSha256: `sha256:${"5".repeat(64)}`,
+          envelopeSha256: `sha256:${"7".repeat(64)}`,
+          sourceManifestHash: `sha256:${"8".repeat(64)}`,
+        },
+        entrants: {
+          bottom: entrant("bottom", "typescript"),
+          top: entrant("top", "python"),
+        },
+      },
+    }
+
+    expect(RuntimeExecutionServiceRequestSchema.parse(request)).toEqual(request)
+    expect(
+      RuntimeExecutionServiceRequestSchema.safeParse({
+        ...request,
+        evidenceSnapshot: {
+          ...request.evidenceSnapshot,
+          entrants: {
+            ...request.evidenceSnapshot.entrants,
+            bottom: {
+              ...request.evidenceSnapshot.entrants.bottom,
+              effectiveStatus: "counted",
+              schedulingDecision: {
+                ...request.evidenceSnapshot.entrants.bottom.schedulingDecision,
+                status: "counted",
+                reasonCode: "EVIDENCE_CURRENT",
+              },
+              conformanceCertificateId: "certificate:conformance:bottom",
+              conformanceCertificateHash: `sha256:${"4".repeat(64)}`,
+            },
+            top: {
+              ...request.evidenceSnapshot.entrants.top,
+              effectiveStatus: "counted",
+              schedulingDecision: {
+                ...request.evidenceSnapshot.entrants.top.schedulingDecision,
+                status: "counted",
+                reasonCode: "EVIDENCE_CURRENT",
+              },
+              conformanceCertificateId: "certificate:conformance:top",
+              conformanceCertificateHash: `sha256:${"4".repeat(64)}`,
+            },
+          },
+        },
+      }).success,
+    ).toBe(true)
+
+    const mutations = [
+      {
+        ...request,
+        evidenceSnapshot: undefined,
+      },
+      {
+        ...request,
+        evidenceSnapshot: {
+          ...request.evidenceSnapshot,
+          publication: {
+            ...request.evidenceSnapshot.publication,
+            installReceiptId: undefined,
+          },
+        },
+      },
+      {
+        ...request,
+        evidenceSnapshot: {
+          ...request.evidenceSnapshot,
+          compatibility: {
+            ...request.evidenceSnapshot.compatibility,
+            tuple: {
+              ...request.evidenceSnapshot.compatibility.tuple,
+              engine: "engine-vlatest",
+            },
+          },
+        },
+      },
+      {
+        ...request,
+        evidenceSnapshot: {
+          ...request.evidenceSnapshot,
+          entrants: {
+            ...request.evidenceSnapshot.entrants,
+            bottom: {
+              ...request.evidenceSnapshot.entrants.bottom,
+              strategyRevisionId: "strategy-revision:top",
+            },
+          },
+        },
+      },
+      {
+        ...request,
+        evidenceSnapshot: {
+          ...request.evidenceSnapshot,
+          entrants: {
+            ...request.evidenceSnapshot.entrants,
+            top: {
+              ...request.evidenceSnapshot.entrants.top,
+              laneIdentityHash: "latest",
+            },
+          },
+        },
+      },
+      {
+        ...request,
+        evidenceSnapshot: {
+          ...request.evidenceSnapshot,
+          entrants: {
+            ...request.evidenceSnapshot.entrants,
+            top: {
+              ...request.evidenceSnapshot.entrants.top,
+              containmentCertificateId: undefined,
+            },
+          },
+        },
+      },
+      {
+        ...request,
+        evidenceSnapshot: {
+          ...request.evidenceSnapshot,
+          entrants: {
+            ...request.evidenceSnapshot.entrants,
+            top: {
+              ...request.evidenceSnapshot.entrants.top,
+              effectiveStatus: "counted",
+              conformanceCertificateId: "certificate:conformance:top",
+              conformanceCertificateHash: `sha256:${"4".repeat(64)}`,
+            },
+          },
+        },
+      },
+      {
+        ...request,
+        evidenceSnapshot: {
+          ...request.evidenceSnapshot,
+          entrants: {
+            ...request.evidenceSnapshot.entrants,
+            top: {
+              ...request.evidenceSnapshot.entrants.top,
+              effectiveStatus: "disabled",
+            },
+          },
+        },
+      },
+      {
+        ...request,
+        evidenceSnapshot: {
+          ...request.evidenceSnapshot,
+          entrants: {
+            ...request.evidenceSnapshot.entrants,
+            top: {
+              ...request.evidenceSnapshot.entrants.top,
+              purpose: "exhibition",
+            },
+          },
+        },
+      },
+    ]
+    for (const mutation of mutations) {
+      expect(
+        RuntimeExecutionServiceRequestSchema.safeParse(mutation).success,
+      ).toBe(false)
+    }
+
+    expect(
+      RuntimeExecutionServiceResponseSchema.safeParse({
+        contractVersion: RUNTIME_EXECUTION_SERVICE_VERSION,
+        ok: false,
+        kind: "systemFailure",
+        requestId: request.requestId,
+        matchId: request.match.matchId,
+        runtimeAbiVersion: STRATEGY_RUNTIME_ABI_VERSION,
+        systemFailure: {
+          code: "EVIDENCE_REGISTRY_DRIFT",
+          message: "Execution evidence changed during execution.",
+          publicMessage: "Runtime execution could not be completed safely.",
+          retryable: true,
+        },
+      }).success,
+    ).toBe(true)
+  })
+
   it("RuntimeExecutionServiceResponseSchema accepts success and system-failure envelopes", () => {
+    const registered = CURRENT_CANONICAL_COMPATIBILITY_TUPLE_RECORD
     const board = {
       bounds: fixtures.valid.standardArenaVariant.initialBounds,
       soldiers: fixtures.valid.standardInitialSoldiers.map(
@@ -1646,6 +2477,9 @@ describe("Coward's Game spec contracts", () => {
       phaseNumber: 1,
       roundNumber: 1,
       activationCount: 1,
+      ...(String(STRATEGY_RUNTIME_ABI_VERSION) === "strategy-runtime-abi-v1.19"
+        ? { initialInitiativePlayerId: "player:bottom" }
+        : {}),
       initiativePlayerId: "player:bottom",
       bounds: fixtures.valid.standardArenaVariant.initialBounds,
       soldiers: fixtures.valid.standardInitialSoldiers,
@@ -1663,6 +2497,30 @@ describe("Coward's Game spec contracts", () => {
         chronicle,
         finalState,
         runtimeViolationEventCount: 0,
+        semanticReceipt: {
+          schemaVersion: RUNTIME_SEMANTIC_RECEIPT_SCHEMA_VERSION,
+          profile: RUNTIME_SEMANTIC_RECEIPT_PROFILE,
+          serviceContractVersion: RUNTIME_EXECUTION_SERVICE_VERSION,
+          requestId: "runtime-request:spec",
+          matchId: "match:runtime-service-spec",
+          compatibilityTupleId: registered.tupleId,
+          rulesVersion: registered.tuple.rules,
+          engineVersion: registered.tuple.engine,
+          runtimeAbiVersion: registered.tuple.runtimeAbi,
+          chronicleVersion: registered.tuple.chronicle,
+          arenaCatalogVersion: registered.tuple.arenaCatalog,
+          setPolicyVersion: registered.tuple.setPolicy,
+          authorityBundleHash: `sha256:${"a".repeat(64)}`,
+          registryGeneration: "1",
+          chronicleWireBytesHash: `sha256:${"b".repeat(64)}`,
+          finalStateWireBytesHash: `sha256:${"c".repeat(64)}`,
+          reconstructedTerminalStateHash: `sha256:${"c".repeat(64)}`,
+          outcomeWireBytesHash: `sha256:${"d".repeat(64)}`,
+          runtimeViolationEventCount: 0,
+          algorithm: RUNTIME_SEMANTIC_RECEIPT_ALGORITHM,
+          keyId: RUNTIME_SEMANTIC_RECEIPT_KEY_ID,
+          signature: `hmac-sha256:${"e".repeat(64)}`,
+        },
       },
     }
     const systemFailure = {
@@ -1687,20 +2545,41 @@ describe("Coward's Game spec contracts", () => {
     expect(RuntimeExecutionServiceResponseSchema.parse(success)).toEqual(
       success,
     )
+    for (const forbidden of ["integrity", "storageMetadata"] as const) {
+      const injected = globalThis.structuredClone(success)
+      ;(injected.result.chronicle as Record<string, unknown>)[forbidden] =
+        forbidden === "integrity"
+          ? {
+              algorithm: "sha256",
+              normalizedContentHash: `sha256:${"f".repeat(64)}`,
+            }
+          : { hostPath: "/private/runtime/storage" }
+      expect(
+        RuntimeExecutionServiceResponseSchema.safeParse(injected).success,
+      ).toBe(false)
+    }
     expect(RuntimeExecutionServiceResponseSchema.parse(systemFailure)).toEqual(
       systemFailure,
     )
   })
 
-  it("publishes the v1.16 Strategy Execution Service / Runtime Broker boundary contract", () => {
+  it("publishes the immutable v1.16 Strategy Execution Service / Runtime Broker boundary contract", () => {
+    expect(HISTORICAL_RUNTIME_EXECUTION_SERVICE_V1_16).toMatchObject({
+      runtimeServiceVersion: "runtime-execution-service-v1.16",
+      runtimeAbiVersion: "strategy-runtime-abi-v1.14",
+      semanticReceiptVersion: "runtime-semantic-receipt-v1",
+      canonicalJsonVersion: "legacy-json-stringify-v1.16",
+      semanticTupleId:
+        "sha256:922a6857fdbc8354b744d6e766bff216f3fee85b5ed381355cb427f5a616b3ae",
+    })
     expect(RUNTIME_EXECUTION_SERVICE_VERSION).toBe(
-      "runtime-execution-service-v1.15",
+      HISTORICAL_RUNTIME_EXECUTION_SERVICE_V1_16.runtimeServiceVersion,
     )
     expect(RUNTIME_EXECUTION_SERVICE_BOUNDARY_CONTRACT).toMatchObject({
       publicName: "Strategy Execution Service / Runtime Broker",
       currentImplementationLabel: "isolated JS/TS runtime service",
-      contractVersion: "runtime-execution-service-v1.15",
-      runtimeAbiVersion: "strategy-runtime-abi-v1.14",
+      contractVersion:
+        HISTORICAL_RUNTIME_EXECUTION_SERVICE_V1_16.runtimeServiceVersion,
     })
     expect(RUNTIME_EXECUTION_SERVICE_CURRENT_IMPLEMENTATION).toMatchObject({
       label: "isolated JS/TS runtime service",
@@ -1787,7 +2666,7 @@ describe("Coward's Game spec contracts", () => {
     )
     expect(artifact.transport.currentBinding).toBe("HTTP+JSON")
     expect(artifact.runtimeAbi).toMatchObject({
-      serviceContractVersion: "runtime-execution-service-v1.15",
+      serviceContractVersion: "runtime-execution-service-v1.16",
       strategyRuntimeAbiVersion: "strategy-runtime-abi-v1.14",
       languageSpecificShortcutsAllowed: false,
     })

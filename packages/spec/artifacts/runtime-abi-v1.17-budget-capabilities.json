@@ -1,0 +1,972 @@
+{
+  "schemaVersion": "runtime-abi-v1.17-budget-capabilities-v1",
+  "runtimeAbiVersion": "strategy-runtime-abi-v1.17",
+  "budgetProfileSha256": "sha256:13c061efc6954b7734b967177f07300b4c3c0dd18651b55510158b9a3c29c49f",
+  "contractDigest": "sha256:4bb404544b47a530051df2643d03a5afd25b421e35c9fc4d068e2083fa7cafb4",
+  "evidenceInputsDigest": "sha256:5b6a07b34e42a91523b8a5de67828dd8848c4412c5ffe4ec9502c517149acd24",
+  "dimensions": [
+    {
+      "id": "wall",
+      "equivalentUnit": "monotonic-milliseconds"
+    },
+    {
+      "id": "compute",
+      "equivalentUnit": "language-neutral-instruction-fuel"
+    },
+    {
+      "id": "memory",
+      "equivalentUnit": "peak-guest-plus-containing-process-bytes"
+    },
+    {
+      "id": "payload",
+      "equivalentUnit": "canonical-payload-bytes"
+    },
+    {
+      "id": "stdout",
+      "equivalentUnit": "transport-frame-bytes"
+    },
+    {
+      "id": "stderr",
+      "equivalentUnit": "raw-utf8-bytes"
+    },
+    {
+      "id": "process",
+      "equivalentUnit": "process-thread-child-counts"
+    },
+    {
+      "id": "capabilities",
+      "equivalentUnit": "denied-capability-set"
+    },
+    {
+      "id": "cancellation",
+      "equivalentUnit": "termination-receipt"
+    },
+    {
+      "id": "accountingEvidence",
+      "equivalentUnit": "signed-monotonic-budget-delta"
+    }
+  ],
+  "identityPins": [
+    {
+      "id": "runtimeExecutableDigest",
+      "exactRequirement": "immutable-runtime-executable-sha256"
+    },
+    {
+      "id": "reportedVersion",
+      "exactRequirement": "exact-runtime-or-toolchain-version"
+    },
+    {
+      "id": "targetAbi",
+      "exactRequirement": "exact-target-and-runtime-abi"
+    },
+    {
+      "id": "compilerFlags",
+      "exactRequirement": "ordered-compiler-flags-digest"
+    },
+    {
+      "id": "adapterBuildDigest",
+      "exactRequirement": "immutable-adapter-build-sha256"
+    },
+    {
+      "id": "standardLibraryOrSysrootDigest",
+      "exactRequirement": "immutable-standard-library-or-sysroot-sha256"
+    },
+    {
+      "id": "containmentPolicyId",
+      "exactRequirement": "exact-contained-deployment-policy-id"
+    },
+    {
+      "id": "budgetProfileSha256",
+      "exactRequirement": "exact-runtime-budget-profile-sha256"
+    },
+    {
+      "id": "canonicalJsonProfileId",
+      "exactRequirement": "canonical-json-v1.1"
+    },
+    {
+      "id": "behaviorSettingsHash",
+      "exactRequirement": "all-behavior-significant-settings-sha256"
+    }
+  ],
+  "policy": {
+    "certificationStatus": "uncertified",
+    "allDimensionsRequiredInOrder": true,
+    "allPinsRequiredInOrder": true,
+    "allPinsMustBeExactDeployment": true,
+    "productionTrustedProducerRequired": true,
+    "localDiagnosticsCanCertify": false,
+    "floatingPinsCanCertify": false,
+    "missingPinsCanCertify": false,
+    "phase259ConformanceRequired": true,
+    "productionTrustedProducers": [],
+    "countedEligibleLaneIds": []
+  },
+  "lanes": [
+    {
+      "laneId": "javascript",
+      "languageId": "javascript",
+      "laneRole": "substrate-only",
+      "entrant": false,
+      "certificationStatus": "uncertified",
+      "countedEligible": false,
+      "certificationReasons": [
+        "equivalent compute, containing-memory, process, and accounting evidence not yet proven",
+        "javascript-is-a-host-substrate-not-a-Strategy-entrant-language",
+        "substrate-observation-cannot-create-counted-language-authority"
+      ],
+      "capabilities": [
+        {
+          "dimension": "wall",
+          "unit": "unavailable",
+          "scope": "substrate-only-not-an-entrant-lane",
+          "measurement": "unavailable",
+          "enforcement": "fail-closed-as-system-failure",
+          "status": "unsupported",
+          "evidenceSafeDigest": "sha256:85b2f5594d7b5c72406ce1988549e4116d91421757215325990d01f5143cbabe"
+        },
+        {
+          "dimension": "compute",
+          "unit": "unavailable",
+          "scope": "substrate-only-not-an-entrant-lane",
+          "measurement": "unavailable",
+          "enforcement": "fail-closed-as-system-failure",
+          "status": "unsupported",
+          "evidenceSafeDigest": "sha256:3d6aa1f724d5add76f4f1c0210793a4c417429e9320bf19e5f3cb5568700008a"
+        },
+        {
+          "dimension": "memory",
+          "unit": "unavailable",
+          "scope": "substrate-only-not-an-entrant-lane",
+          "measurement": "unavailable",
+          "enforcement": "fail-closed-as-system-failure",
+          "status": "unsupported",
+          "evidenceSafeDigest": "sha256:f7fd4fcba8d6c1c99891c15bd57332abfaabc7dd3184b27aaf7ace407c9d5b5d"
+        },
+        {
+          "dimension": "payload",
+          "unit": "unavailable",
+          "scope": "substrate-only-not-an-entrant-lane",
+          "measurement": "unavailable",
+          "enforcement": "fail-closed-as-system-failure",
+          "status": "unsupported",
+          "evidenceSafeDigest": "sha256:db0d2ca7ff8584a610d9de24b4c513d1c82f71a27cc231dfe7d1a8ac14aabf6c"
+        },
+        {
+          "dimension": "stdout",
+          "unit": "unavailable",
+          "scope": "substrate-only-not-an-entrant-lane",
+          "measurement": "unavailable",
+          "enforcement": "fail-closed-as-system-failure",
+          "status": "unsupported",
+          "evidenceSafeDigest": "sha256:075591bce2baf1a02d3cd91fea4be60a190b0a4d373565d17c290d6425fa95ec"
+        },
+        {
+          "dimension": "stderr",
+          "unit": "unavailable",
+          "scope": "substrate-only-not-an-entrant-lane",
+          "measurement": "unavailable",
+          "enforcement": "fail-closed-as-system-failure",
+          "status": "unsupported",
+          "evidenceSafeDigest": "sha256:92d38627721bcf0fa20a1aa68f7c67052604269eddac7265af310ae7d3e61499"
+        },
+        {
+          "dimension": "process",
+          "unit": "unavailable",
+          "scope": "substrate-only-not-an-entrant-lane",
+          "measurement": "unavailable",
+          "enforcement": "fail-closed-as-system-failure",
+          "status": "unsupported",
+          "evidenceSafeDigest": "sha256:354550528bf8894591ade9d12f6340f08748543feb7d0b1ebc9f28a5ac305c97"
+        },
+        {
+          "dimension": "capabilities",
+          "unit": "unavailable",
+          "scope": "substrate-only-not-an-entrant-lane",
+          "measurement": "unavailable",
+          "enforcement": "fail-closed-as-system-failure",
+          "status": "unsupported",
+          "evidenceSafeDigest": "sha256:0e749340dca7082bb9598eb9f76e0f7024ecc7f5e1c415e18475c19a4c2c6421"
+        },
+        {
+          "dimension": "cancellation",
+          "unit": "unavailable",
+          "scope": "substrate-only-not-an-entrant-lane",
+          "measurement": "unavailable",
+          "enforcement": "fail-closed-as-system-failure",
+          "status": "unsupported",
+          "evidenceSafeDigest": "sha256:3399df7750d4239ed98dcb70b92fcabc98c97c3f2f36273550aad9f99c3febbb"
+        },
+        {
+          "dimension": "accountingEvidence",
+          "unit": "unavailable",
+          "scope": "substrate-only-not-an-entrant-lane",
+          "measurement": "unavailable",
+          "enforcement": "fail-closed-as-system-failure",
+          "status": "unsupported",
+          "evidenceSafeDigest": "sha256:36fd96b00adcf304a01e34b0a3fdbfd9c41902ab13fad6ab760b86ef59684031"
+        }
+      ],
+      "identityPins": [
+        {
+          "pin": "runtimeExecutableDigest",
+          "status": "floating",
+          "bindingSafeId": "floating:javascript-runtime-executable",
+          "evidenceSafeDigest": "sha256:ff22824c51609349b37775450b303316843ff7790da14fe171edb56b160bc130"
+        },
+        {
+          "pin": "reportedVersion",
+          "status": "floating",
+          "bindingSafeId": "floating:javascript-reported-version",
+          "evidenceSafeDigest": "sha256:a5ada7ecc7f0387a45e39a4e84cf61b5836059c726780742b6441224a3d33f5b"
+        },
+        {
+          "pin": "targetAbi",
+          "status": "missing",
+          "bindingSafeId": null,
+          "evidenceSafeDigest": "sha256:075405848def45759dce2170a1cab23bca7715f4058a204bb90a8e7b8fd759fa"
+        },
+        {
+          "pin": "compilerFlags",
+          "status": "missing",
+          "bindingSafeId": null,
+          "evidenceSafeDigest": "sha256:0dec23016fb5c39e15c7136c4bc65356fb0574f81aa567ccab27c1910ad04cf5"
+        },
+        {
+          "pin": "adapterBuildDigest",
+          "status": "local-diagnostic",
+          "bindingSafeId": "local-diagnostic:javascript-adapter-build",
+          "evidenceSafeDigest": "sha256:227718f5c0c40533d10957e4acf73617d1140a6f4bc864c40cc5774e6728ce7c"
+        },
+        {
+          "pin": "standardLibraryOrSysrootDigest",
+          "status": "missing",
+          "bindingSafeId": null,
+          "evidenceSafeDigest": "sha256:da885fe0914b3369a67d9f2324b615681c2e7adb94a0b786446d790ac2034ae7"
+        },
+        {
+          "pin": "containmentPolicyId",
+          "status": "local-diagnostic",
+          "bindingSafeId": "local-diagnostic:javascript-containment-policy",
+          "evidenceSafeDigest": "sha256:86e32562b49f7d4c5e1ca2f5c063b585dd53554fdd300916b8169216fa31946e"
+        },
+        {
+          "pin": "budgetProfileSha256",
+          "status": "exact-deployment",
+          "bindingSafeId": "sha256:13c061efc6954b7734b967177f07300b4c3c0dd18651b55510158b9a3c29c49f",
+          "evidenceSafeDigest": "sha256:a09689134b242afe5b32384b60054d519e5d790d603395713a58ae8a25cac48f"
+        },
+        {
+          "pin": "canonicalJsonProfileId",
+          "status": "exact-deployment",
+          "bindingSafeId": "canonical-json-v1.1",
+          "evidenceSafeDigest": "sha256:5466bd98d1e19b230aa048f97ae43b6e3c3df676a5dc6bde4940acfef0c7ea3a"
+        },
+        {
+          "pin": "behaviorSettingsHash",
+          "status": "local-diagnostic",
+          "bindingSafeId": "local-diagnostic:javascript-behavior-settings",
+          "evidenceSafeDigest": "sha256:49b9e6e3c1c7ef7ee5373cd96a92232235a074a106738ac28738ed2a6431f6be"
+        }
+      ],
+      "localProbe": {
+        "disposition": "diagnostic-only",
+        "evidenceSafeDigest": "sha256:5cb1c5078927cf9c1aed7dde56fe073d1e3cf920c7e5c99fe765356bb53ee224"
+      },
+      "productionTrustedProducers": []
+    },
+    {
+      "laneId": "typescript",
+      "languageId": "typescript",
+      "laneRole": "entrant-language",
+      "entrant": true,
+      "certificationStatus": "uncertified",
+      "countedEligible": false,
+      "certificationReasons": [
+        "equivalent compute, containing-memory, process, and accounting evidence not yet proven",
+        "language-neutral-compute-and-containing-memory-meters-are-unavailable",
+        "process-capability-cancellation-and-accounting-evidence-are-not-exact-deployment-proof",
+        "phase-259-full-conformance-and-production-producer-evidence-are-absent"
+      ],
+      "capabilities": [
+        {
+          "dimension": "wall",
+          "unit": "monotonic-milliseconds",
+          "scope": "guest-entry-through-complete-host-response",
+          "measurement": "host-observed-wall-deadline",
+          "enforcement": "worker-or-subprocess-termination",
+          "status": "diagnostic-only",
+          "evidenceSafeDigest": "sha256:f1f77cbaa5d5a19713efc26e0416c7c279490f2bff43147daee22c68b9a668dd"
+        },
+        {
+          "dimension": "compute",
+          "unit": "unavailable",
+          "scope": "guest-instruction-execution",
+          "measurement": "unavailable",
+          "enforcement": "fail-closed-as-system-failure",
+          "status": "unsupported",
+          "evidenceSafeDigest": "sha256:ed8e620216320be0355401cc93b5953c96585f3da5d318f144d0481c333473ef"
+        },
+        {
+          "dimension": "memory",
+          "unit": "optional-container-process-bytes",
+          "scope": "optional-local-container-process",
+          "measurement": "container-limit-observation-when-present",
+          "enforcement": "optional-container-termination",
+          "status": "diagnostic-only",
+          "evidenceSafeDigest": "sha256:d32056d8a5734b2ac3f31386d891f6719f40bd8cfe61a9b8933be5365b59d0c3"
+        },
+        {
+          "dimension": "payload",
+          "unit": "canonical-payload-bytes",
+          "scope": "decoded-strategy-payload-before-materialization",
+          "measurement": "bounded-canonical-parser-byte-count",
+          "enforcement": "reject-before-payload-consumption",
+          "status": "equivalent-enforced",
+          "evidenceSafeDigest": "sha256:a26493cc6442d7bda3fea53c300693e557998b9b9f326d1944b4298720f17225"
+        },
+        {
+          "dimension": "stdout",
+          "unit": "transport-frame-bytes",
+          "scope": "complete-host-owned-response-frame",
+          "measurement": "bounded-host-bridge-byte-count",
+          "enforcement": "terminate-or-reject-before-transport-acceptance",
+          "status": "equivalent-enforced",
+          "evidenceSafeDigest": "sha256:6aa4588cdc7fcc337aef96a9ebe9f56a0ac281519343059eb023eb6c8b65f90b"
+        },
+        {
+          "dimension": "stderr",
+          "unit": "adapter-private-capture-bytes",
+          "scope": "private-subprocess-diagnostic-stream-when-present",
+          "measurement": "adapter-specific-private-capture",
+          "enforcement": "redact-and-fail-closed-on-overrun",
+          "status": "diagnostic-only",
+          "evidenceSafeDigest": "sha256:af92f40c1eba94ae5d250bed4c92d2e578846eb75d239aaa6e3304bc90bb5b85"
+        },
+        {
+          "dimension": "process",
+          "unit": "optional-container-process-counts",
+          "scope": "optional-local-container-process-tree",
+          "measurement": "container-process-observation-when-present",
+          "enforcement": "optional-container-process-limit",
+          "status": "diagnostic-only",
+          "evidenceSafeDigest": "sha256:7ce627b72940759954ecd81552586ca9e93d12a960e027e85e1de2eecb91e4a7"
+        },
+        {
+          "dimension": "capabilities",
+          "unit": "host-denial-probe-set",
+          "scope": "worker-subprocess-and-optional-container-surfaces",
+          "measurement": "hostile-capability-probes",
+          "enforcement": "host-bridge-and-containment-denial",
+          "status": "diagnostic-only",
+          "evidenceSafeDigest": "sha256:f8c20b23a12312ab712f3b5261d8208b76e5f8c86fd3ee970344081276c46609"
+        },
+        {
+          "dimension": "cancellation",
+          "unit": "host-termination-observation",
+          "scope": "worker-or-subprocess-invocation",
+          "measurement": "host-cancellation-observation",
+          "enforcement": "host-owned-termination",
+          "status": "diagnostic-only",
+          "evidenceSafeDigest": "sha256:b4cfe6c22465c7e5ab658c3c354f62b1dae931e384bdb296e9346a727a1ea03b"
+        },
+        {
+          "dimension": "accountingEvidence",
+          "unit": "unavailable",
+          "scope": "signed-per-invocation-and-match-cumulative-ledger",
+          "measurement": "unavailable",
+          "enforcement": "fail-closed-as-system-failure",
+          "status": "unsupported",
+          "evidenceSafeDigest": "sha256:ec75e554cebeab600aff85d5594e3e5aae5648b14509c5e3fb4bef1a1ac8db49"
+        }
+      ],
+      "identityPins": [
+        {
+          "pin": "runtimeExecutableDigest",
+          "status": "floating",
+          "bindingSafeId": "floating:typescript-runtime-executable",
+          "evidenceSafeDigest": "sha256:fdc7c87f12dfc79cb4a8eb05ccd5b876bff9f35fa8eedbb987c5ae5e7ce15104"
+        },
+        {
+          "pin": "reportedVersion",
+          "status": "local-diagnostic",
+          "bindingSafeId": "local-diagnostic:typescript-reported-version",
+          "evidenceSafeDigest": "sha256:0dc3225226af02eae701181ffe36a38ca95ed057cc8b9a8e8f140b8f00aa9e61"
+        },
+        {
+          "pin": "targetAbi",
+          "status": "local-diagnostic",
+          "bindingSafeId": "local-diagnostic:typescript-target-abi",
+          "evidenceSafeDigest": "sha256:a9d4da27990a521356c5b1f2f42de734eb36e63ff30cf93e506e8bce13cec45c"
+        },
+        {
+          "pin": "compilerFlags",
+          "status": "missing",
+          "bindingSafeId": null,
+          "evidenceSafeDigest": "sha256:3f32114a51ca44aeba627a2c370a9db630141014ea539c66fcf58c9826da02c2"
+        },
+        {
+          "pin": "adapterBuildDigest",
+          "status": "local-diagnostic",
+          "bindingSafeId": "local-diagnostic:typescript-adapter-build",
+          "evidenceSafeDigest": "sha256:d9463c443e9be6702760fbe161af11c1bc09c8e8c854857fcae12a04f02b8cbd"
+        },
+        {
+          "pin": "standardLibraryOrSysrootDigest",
+          "status": "missing",
+          "bindingSafeId": null,
+          "evidenceSafeDigest": "sha256:a9742f643f133f53ea607de1f61e23638591c7e9739b9d4cfa2435a0d9828ebf"
+        },
+        {
+          "pin": "containmentPolicyId",
+          "status": "local-diagnostic",
+          "bindingSafeId": "local-diagnostic:typescript-containment-policy",
+          "evidenceSafeDigest": "sha256:0d37f6355ce9b4651d17f5b348a03d4e56e6c6c1949fdf6ed72f9ea300a803bb"
+        },
+        {
+          "pin": "budgetProfileSha256",
+          "status": "exact-deployment",
+          "bindingSafeId": "sha256:13c061efc6954b7734b967177f07300b4c3c0dd18651b55510158b9a3c29c49f",
+          "evidenceSafeDigest": "sha256:45a6837b18537493d3eb0dec5d6735fa0ef9f70a38f3693e6d8dfc4e13bb17f5"
+        },
+        {
+          "pin": "canonicalJsonProfileId",
+          "status": "exact-deployment",
+          "bindingSafeId": "canonical-json-v1.1",
+          "evidenceSafeDigest": "sha256:5daf0f1b1bdc57012144676efac99297f404785c238bc71e22d8ba8044b08103"
+        },
+        {
+          "pin": "behaviorSettingsHash",
+          "status": "local-diagnostic",
+          "bindingSafeId": "local-diagnostic:typescript-behavior-settings",
+          "evidenceSafeDigest": "sha256:c20f95aa26c2ac61f9626e7d2b681b1afbe9ddc52ac552db44bfbf89c60340d5"
+        }
+      ],
+      "localProbe": {
+        "disposition": "diagnostic-only",
+        "evidenceSafeDigest": "sha256:a0ea181f4d0feca0baa5627c3879f70463ccce9a3a4552e399c2400b21ccece8"
+      },
+      "productionTrustedProducers": []
+    },
+    {
+      "laneId": "python",
+      "languageId": "python",
+      "laneRole": "entrant-language",
+      "entrant": true,
+      "certificationStatus": "uncertified",
+      "countedEligible": false,
+      "certificationReasons": [
+        "equivalent compute and memory meters are unavailable",
+        "compute-and-containing-memory-meters-are-unavailable",
+        "local-runtime-and-containment-observation-is-not-an-exact-deployment-pin",
+        "phase-259-full-conformance-and-production-producer-evidence-are-absent"
+      ],
+      "capabilities": [
+        {
+          "dimension": "wall",
+          "unit": "monotonic-milliseconds",
+          "scope": "guest-go-signal-through-complete-response-eof",
+          "measurement": "fork-supervisor-monotonic-deadline",
+          "enforcement": "uncatchable-parent-termination",
+          "status": "diagnostic-only",
+          "evidenceSafeDigest": "sha256:949cf261c18ac61e087a2289bf29e44e0f02834d7920095c0d5a7f3ede8c375f"
+        },
+        {
+          "dimension": "compute",
+          "unit": "unavailable",
+          "scope": "guest-python-execution",
+          "measurement": "unavailable",
+          "enforcement": "fail-closed-as-system-failure",
+          "status": "unsupported",
+          "evidenceSafeDigest": "sha256:a182e1320e934dd7aaa73e8674ff50ace80bf772d558c6a69061ef88acdffaa7"
+        },
+        {
+          "dimension": "memory",
+          "unit": "unavailable",
+          "scope": "guest-plus-containing-python-process-working-set",
+          "measurement": "unavailable",
+          "enforcement": "fail-closed-as-system-failure",
+          "status": "unsupported",
+          "evidenceSafeDigest": "sha256:570f0bde0d10d756bca3ec437fb3d282d0c5b7a24f6bb763e1e19cb289ca0631"
+        },
+        {
+          "dimension": "payload",
+          "unit": "canonical-payload-bytes",
+          "scope": "decoded-strategy-payload-before-materialization",
+          "measurement": "bounded-canonical-parser-byte-count",
+          "enforcement": "reject-before-payload-consumption",
+          "status": "equivalent-enforced",
+          "evidenceSafeDigest": "sha256:1721ff7181b241bf37c9a69ac0b8152bc2629d8769d86d904ff34b0ac27fd3c1"
+        },
+        {
+          "dimension": "stdout",
+          "unit": "transport-frame-bytes",
+          "scope": "complete-host-owned-response-frame",
+          "measurement": "parent-captured-frame-byte-count",
+          "enforcement": "terminate-or-reject-before-transport-acceptance",
+          "status": "equivalent-enforced",
+          "evidenceSafeDigest": "sha256:a21dc548f58bc07618e83deaa23f4bf5a6cf9e4c0c46093e609dab12a17aa832"
+        },
+        {
+          "dimension": "stderr",
+          "unit": "raw-utf8-bytes",
+          "scope": "private-child-stderr",
+          "measurement": "bounded-parent-private-capture",
+          "enforcement": "terminate-and-redact-on-overrun",
+          "status": "diagnostic-only",
+          "evidenceSafeDigest": "sha256:8b9735c7de6a143d37789f375b4f2f210fa5b45228a728fcecd733c70a434432"
+        },
+        {
+          "dimension": "process",
+          "unit": "process-thread-child-counts",
+          "scope": "fork-supervised-python-child",
+          "measurement": "parent-child-lifecycle-observation",
+          "enforcement": "single-child-empty-environment-policy",
+          "status": "diagnostic-only",
+          "evidenceSafeDigest": "sha256:9762a9f5792d9424feaf185a319f5270d0f39cc52fd2994ac5fdc7d61926d303"
+        },
+        {
+          "dimension": "capabilities",
+          "unit": "denied-capability-set",
+          "scope": "python-validation-and-empty-environment-child",
+          "measurement": "ast-compile-and-host-capability-probes",
+          "enforcement": "validation-denial-and-isolated-child-policy",
+          "status": "diagnostic-only",
+          "evidenceSafeDigest": "sha256:89bbb35f56aa97945de229d9694f377003d07663df721570bf082bc42e2a45c4"
+        },
+        {
+          "dimension": "cancellation",
+          "unit": "termination-receipt",
+          "scope": "fork-supervised-python-child",
+          "measurement": "parent-owned-child-exit-observation",
+          "enforcement": "parent-kill-and-eof-requirement",
+          "status": "diagnostic-only",
+          "evidenceSafeDigest": "sha256:7be6445d582d2792633e91737b86b8e6e7df7c55e529b85e5d4d0cfefbb33117"
+        },
+        {
+          "dimension": "accountingEvidence",
+          "unit": "unavailable",
+          "scope": "signed-per-invocation-and-match-cumulative-ledger",
+          "measurement": "unavailable",
+          "enforcement": "fail-closed-as-system-failure",
+          "status": "unsupported",
+          "evidenceSafeDigest": "sha256:8f7dd712af608a84a2e452c1bc91b91cc6136bd107cbecfd03bd0c4159daf5ea"
+        }
+      ],
+      "identityPins": [
+        {
+          "pin": "runtimeExecutableDigest",
+          "status": "floating",
+          "bindingSafeId": "floating:python-runtime-executable",
+          "evidenceSafeDigest": "sha256:ac9d43377c19c7cdcd3828211d8ed972d3cd02eb28a3a9c94d8a8f78d7959c52"
+        },
+        {
+          "pin": "reportedVersion",
+          "status": "local-diagnostic",
+          "bindingSafeId": "local-diagnostic:python-reported-version",
+          "evidenceSafeDigest": "sha256:1f2a3ceb78007df2ce0f2828c3b19b67a01a954e52c8fc19fa66f402ae0b88a8"
+        },
+        {
+          "pin": "targetAbi",
+          "status": "missing",
+          "bindingSafeId": null,
+          "evidenceSafeDigest": "sha256:c2300fe6428db11dbba81f1760a33652c898fd38e81075250a1e66edbe21d8c6"
+        },
+        {
+          "pin": "compilerFlags",
+          "status": "missing",
+          "bindingSafeId": null,
+          "evidenceSafeDigest": "sha256:f56056cca0d4e112f0b42c062a4459ab459a2332083f6c55a24460955c2b2aa1"
+        },
+        {
+          "pin": "adapterBuildDigest",
+          "status": "local-diagnostic",
+          "bindingSafeId": "local-diagnostic:python-adapter-build",
+          "evidenceSafeDigest": "sha256:1413919fa5b376895029de2327f10e140c4d7e189ed36771e5c608b11f4a818e"
+        },
+        {
+          "pin": "standardLibraryOrSysrootDigest",
+          "status": "missing",
+          "bindingSafeId": null,
+          "evidenceSafeDigest": "sha256:c2df2011d68d2f34bf1e97c2df7be6df6f9e3ad7847dadeb6568672535da7478"
+        },
+        {
+          "pin": "containmentPolicyId",
+          "status": "local-diagnostic",
+          "bindingSafeId": "local-diagnostic:python-containment-policy",
+          "evidenceSafeDigest": "sha256:291a191060f1130f65847a829e67d1cddbc53939263c6912809cc6c4aa94a72c"
+        },
+        {
+          "pin": "budgetProfileSha256",
+          "status": "exact-deployment",
+          "bindingSafeId": "sha256:13c061efc6954b7734b967177f07300b4c3c0dd18651b55510158b9a3c29c49f",
+          "evidenceSafeDigest": "sha256:f817f6e233810787dbf6815dad9cb11fad441a590ffe63a8b586089f9fcf292b"
+        },
+        {
+          "pin": "canonicalJsonProfileId",
+          "status": "exact-deployment",
+          "bindingSafeId": "canonical-json-v1.1",
+          "evidenceSafeDigest": "sha256:6f65968b69db39d40f05ba77bbb645e7f9332a5a0da4c0736237919720d503e4"
+        },
+        {
+          "pin": "behaviorSettingsHash",
+          "status": "local-diagnostic",
+          "bindingSafeId": "local-diagnostic:python-behavior-settings",
+          "evidenceSafeDigest": "sha256:8617029c42961a94eaf85012478e329f4caf8acd9c984f4c0729091fb8b73770"
+        }
+      ],
+      "localProbe": {
+        "disposition": "diagnostic-only",
+        "evidenceSafeDigest": "sha256:980c101e259fe8937783a459fc7c611053cfc89afb62cd81ef304ade81c10134"
+      },
+      "productionTrustedProducers": []
+    },
+    {
+      "laneId": "rust",
+      "languageId": "rust",
+      "laneRole": "entrant-language",
+      "entrant": true,
+      "certificationStatus": "uncertified",
+      "countedEligible": false,
+      "certificationReasons": [
+        "WASM meters exist but equivalent complete v1.17 evidence is not yet proven",
+        "wasmtime-fuel-and-linear-memory-units-are-not-cross-language-equivalent",
+        "stderr-and-cumulative-accounting-evidence-are-unavailable",
+        "all-runtime-toolchain-observations-are-local-diagnostic-only",
+        "phase-259-full-conformance-and-production-producer-evidence-are-absent"
+      ],
+      "capabilities": [
+        {
+          "dimension": "wall",
+          "unit": "monotonic-milliseconds",
+          "scope": "wasmtime-command-invocation",
+          "measurement": "local-wasmtime-timeout-observation",
+          "enforcement": "host-owned-wasmtime-termination",
+          "status": "diagnostic-only",
+          "evidenceSafeDigest": "sha256:5f814069536d24fcca0fc0ec518da3fd92539d9bc68b164599bb3c0c883e620c"
+        },
+        {
+          "dimension": "compute",
+          "unit": "wasmtime-fuel-units",
+          "scope": "wasm-guest-instructions",
+          "measurement": "local-wasmtime-fuel-counter",
+          "enforcement": "wasmtime-fuel-ceiling",
+          "status": "diagnostic-only",
+          "evidenceSafeDigest": "sha256:fb39bd30aadfe305a31eae69ef873ba728c52d74319f265d1009cfc107987071"
+        },
+        {
+          "dimension": "memory",
+          "unit": "wasm-linear-memory-bytes",
+          "scope": "wasm-linear-memory-not-containing-process-working-set",
+          "measurement": "local-wasmtime-linear-memory-limit",
+          "enforcement": "wasmtime-memory-and-stack-ceilings",
+          "status": "diagnostic-only",
+          "evidenceSafeDigest": "sha256:8b2dd9b805ec4414d0e37e2657f7f1390fc93d7fde56196fb91a484a470af47a"
+        },
+        {
+          "dimension": "payload",
+          "unit": "canonical-payload-bytes",
+          "scope": "decoded-strategy-payload-before-materialization",
+          "measurement": "bounded-canonical-parser-byte-count",
+          "enforcement": "reject-before-payload-consumption",
+          "status": "equivalent-enforced",
+          "evidenceSafeDigest": "sha256:0aaebd0ca76b3ee5e92db0dc9cadf31caa57b59c85f7f596408b322a81bf6714"
+        },
+        {
+          "dimension": "stdout",
+          "unit": "transport-frame-bytes",
+          "scope": "complete-host-owned-response-frame",
+          "measurement": "host-stdout-byte-meter",
+          "enforcement": "terminate-or-reject-before-transport-acceptance",
+          "status": "equivalent-enforced",
+          "evidenceSafeDigest": "sha256:3a5c13c4824774f051725182cc75f5375031dbdfc5a3241d7a573c4189e8dbb8"
+        },
+        {
+          "dimension": "stderr",
+          "unit": "shared-post-capture-buffer-bytes",
+          "scope": "shared-private-capture-not-independent-stderr-meter",
+          "measurement": "post-capture-safety-buffer",
+          "enforcement": "fail-closed-without-player-attribution",
+          "status": "unsupported",
+          "evidenceSafeDigest": "sha256:4e75611798629612e7b21cdaba6b554e6027ce3de78c6dcd48463cfaa21f7e15"
+        },
+        {
+          "dimension": "process",
+          "unit": "process-thread-child-counts",
+          "scope": "single-wasmtime-command-with-empty-wasi-environment",
+          "measurement": "local-process-lifecycle-observation",
+          "enforcement": "single-process-no-preopen-policy",
+          "status": "diagnostic-only",
+          "evidenceSafeDigest": "sha256:24e5695fa5981380e9aa1803d6295ef9fa60db31823edeb1edf75c871096e1ba"
+        },
+        {
+          "dimension": "capabilities",
+          "unit": "denied-capability-set",
+          "scope": "wasi-preview1-import-and-preopen-surface",
+          "measurement": "artifact-import-and-hostile-capability-probes",
+          "enforcement": "empty-environment-no-preopen-no-network-policy",
+          "status": "diagnostic-only",
+          "evidenceSafeDigest": "sha256:70aebdc72475c1e4d48ad06aa3f6e9536a56cbf4bafc4d06ec44c87862b3d9e6"
+        },
+        {
+          "dimension": "cancellation",
+          "unit": "termination-receipt",
+          "scope": "wasmtime-command-invocation",
+          "measurement": "host-owned-process-exit-observation",
+          "enforcement": "host-owned-wasmtime-termination",
+          "status": "diagnostic-only",
+          "evidenceSafeDigest": "sha256:ce654d2f222454217171b1beb1abd637430e5e61fe072df301b076b939a019bc"
+        },
+        {
+          "dimension": "accountingEvidence",
+          "unit": "unavailable",
+          "scope": "signed-per-invocation-and-match-cumulative-ledger",
+          "measurement": "unavailable",
+          "enforcement": "fail-closed-as-system-failure",
+          "status": "unsupported",
+          "evidenceSafeDigest": "sha256:fac6f43ea83387a1b3b045142521aed9f7c4bb1f37c9b62a496a5f67dd7f12df"
+        }
+      ],
+      "identityPins": [
+        {
+          "pin": "runtimeExecutableDigest",
+          "status": "local-diagnostic",
+          "bindingSafeId": "local-diagnostic:rust-runtime-executable",
+          "evidenceSafeDigest": "sha256:105af1fc5a1f831dd9d4a783bcb14d572de529b14544cc65168517395ae441a5"
+        },
+        {
+          "pin": "reportedVersion",
+          "status": "local-diagnostic",
+          "bindingSafeId": "local-diagnostic:rust-reported-version",
+          "evidenceSafeDigest": "sha256:4b3779d52ef2283209e5b9da2330cfa31ce67d1116d1b0fc08978f9ed07fe2c3"
+        },
+        {
+          "pin": "targetAbi",
+          "status": "local-diagnostic",
+          "bindingSafeId": "local-diagnostic:rust-target-abi",
+          "evidenceSafeDigest": "sha256:df789d8233b522a19e62910053efea12cd557f61b116a62b93f85b299e1e9d42"
+        },
+        {
+          "pin": "compilerFlags",
+          "status": "local-diagnostic",
+          "bindingSafeId": "local-diagnostic:rust-compiler-flags",
+          "evidenceSafeDigest": "sha256:640a18d5c61ccf5a55c0f43fc64eb3457be15a4f8a8c44a768aacd1c4f0eb0ef"
+        },
+        {
+          "pin": "adapterBuildDigest",
+          "status": "local-diagnostic",
+          "bindingSafeId": "local-diagnostic:rust-adapter-build",
+          "evidenceSafeDigest": "sha256:a43a4a31593c135536a81da4953b69c5489a4e0fcce08b3c093b4076b7a392b5"
+        },
+        {
+          "pin": "standardLibraryOrSysrootDigest",
+          "status": "local-diagnostic",
+          "bindingSafeId": "local-diagnostic:rust-stdlib-sysroot",
+          "evidenceSafeDigest": "sha256:93078ebac9f653a3a58377c57cb99e03d54235c7a651f37937026ba7f6b5e470"
+        },
+        {
+          "pin": "containmentPolicyId",
+          "status": "local-diagnostic",
+          "bindingSafeId": "local-diagnostic:rust-containment-policy",
+          "evidenceSafeDigest": "sha256:f9f8f8b1084b7bda5e69a2a1a57a79a6124f45ddb5d43870d714250cad807447"
+        },
+        {
+          "pin": "budgetProfileSha256",
+          "status": "exact-deployment",
+          "bindingSafeId": "sha256:13c061efc6954b7734b967177f07300b4c3c0dd18651b55510158b9a3c29c49f",
+          "evidenceSafeDigest": "sha256:304ff2de73bc7c2ae968a564d688df6534fb0b8494ca61f7aff115ab47c28d84"
+        },
+        {
+          "pin": "canonicalJsonProfileId",
+          "status": "exact-deployment",
+          "bindingSafeId": "canonical-json-v1.1",
+          "evidenceSafeDigest": "sha256:8306c4feb7a5926bb06cf9de6b57a5ebaaccce0486d676105061ec3e1167957a"
+        },
+        {
+          "pin": "behaviorSettingsHash",
+          "status": "local-diagnostic",
+          "bindingSafeId": "local-diagnostic:rust-behavior-settings",
+          "evidenceSafeDigest": "sha256:b9cd87765bd0c1056dd9d501bca53484811e7f8c002e20ad2945db61d2fd21fe"
+        }
+      ],
+      "localProbe": {
+        "disposition": "diagnostic-only",
+        "evidenceSafeDigest": "sha256:7c8fe34f1a1b3f0779eecd54d2d591c4a165f09e58de81671b4532938357f47d"
+      },
+      "productionTrustedProducers": []
+    },
+    {
+      "laneId": "zig",
+      "languageId": "zig",
+      "laneRole": "entrant-language",
+      "entrant": true,
+      "certificationStatus": "uncertified",
+      "countedEligible": false,
+      "certificationReasons": [
+        "WASM meters exist but equivalent complete v1.17 evidence is not yet proven",
+        "wasmtime-fuel-and-linear-memory-units-are-not-cross-language-equivalent",
+        "stderr-and-cumulative-accounting-evidence-are-unavailable",
+        "all-runtime-toolchain-observations-are-local-diagnostic-only",
+        "phase-259-full-conformance-and-production-producer-evidence-are-absent"
+      ],
+      "capabilities": [
+        {
+          "dimension": "wall",
+          "unit": "monotonic-milliseconds",
+          "scope": "wasmtime-command-invocation",
+          "measurement": "local-wasmtime-timeout-observation",
+          "enforcement": "host-owned-wasmtime-termination",
+          "status": "diagnostic-only",
+          "evidenceSafeDigest": "sha256:cc763b7d5061b4ccc9f8ba7530e3f37b1e882c6ff04f5c60bf2fbc2a1b5239e5"
+        },
+        {
+          "dimension": "compute",
+          "unit": "wasmtime-fuel-units",
+          "scope": "wasm-guest-instructions",
+          "measurement": "local-wasmtime-fuel-counter",
+          "enforcement": "wasmtime-fuel-ceiling",
+          "status": "diagnostic-only",
+          "evidenceSafeDigest": "sha256:b467bcb72d6c500a51244daa50c97d69c6cc84156e550b9823d22cf95772a242"
+        },
+        {
+          "dimension": "memory",
+          "unit": "wasm-linear-memory-bytes",
+          "scope": "wasm-linear-memory-not-containing-process-working-set",
+          "measurement": "local-wasmtime-linear-memory-limit",
+          "enforcement": "wasmtime-memory-and-stack-ceilings",
+          "status": "diagnostic-only",
+          "evidenceSafeDigest": "sha256:c06845a6339c2a3a0b6eafa1e72577f5f78deb5b36cc78fae7131a1cc2d992b2"
+        },
+        {
+          "dimension": "payload",
+          "unit": "canonical-payload-bytes",
+          "scope": "decoded-strategy-payload-before-materialization",
+          "measurement": "bounded-canonical-parser-byte-count",
+          "enforcement": "reject-before-payload-consumption",
+          "status": "equivalent-enforced",
+          "evidenceSafeDigest": "sha256:2a4585162e6fd81a026ae28ac275ad5756a4e0dbecb28732d978e5c29e79a7cc"
+        },
+        {
+          "dimension": "stdout",
+          "unit": "transport-frame-bytes",
+          "scope": "complete-host-owned-response-frame",
+          "measurement": "host-stdout-byte-meter",
+          "enforcement": "terminate-or-reject-before-transport-acceptance",
+          "status": "equivalent-enforced",
+          "evidenceSafeDigest": "sha256:8b765080d90c0d529cee44832093fd8a92296cfe1fa72d4395a1320debdb495d"
+        },
+        {
+          "dimension": "stderr",
+          "unit": "shared-post-capture-buffer-bytes",
+          "scope": "shared-private-capture-not-independent-stderr-meter",
+          "measurement": "post-capture-safety-buffer",
+          "enforcement": "fail-closed-without-player-attribution",
+          "status": "unsupported",
+          "evidenceSafeDigest": "sha256:6ce77a0497d9ca6fba41177a89d01364b0fcf1458fd9427b3f844856d8ac0439"
+        },
+        {
+          "dimension": "process",
+          "unit": "process-thread-child-counts",
+          "scope": "single-wasmtime-command-with-empty-wasi-environment",
+          "measurement": "local-process-lifecycle-observation",
+          "enforcement": "single-process-no-preopen-policy",
+          "status": "diagnostic-only",
+          "evidenceSafeDigest": "sha256:69dc63171ca685e4930ae987e8e318f231a261755920482c33b41acc4536f355"
+        },
+        {
+          "dimension": "capabilities",
+          "unit": "denied-capability-set",
+          "scope": "wasi-preview1-import-and-preopen-surface",
+          "measurement": "artifact-import-and-hostile-capability-probes",
+          "enforcement": "empty-environment-no-preopen-no-network-policy",
+          "status": "diagnostic-only",
+          "evidenceSafeDigest": "sha256:dec809581b36a23383cb23569854ba22400cc44af261c96876b8a65b45edb782"
+        },
+        {
+          "dimension": "cancellation",
+          "unit": "termination-receipt",
+          "scope": "wasmtime-command-invocation",
+          "measurement": "host-owned-process-exit-observation",
+          "enforcement": "host-owned-wasmtime-termination",
+          "status": "diagnostic-only",
+          "evidenceSafeDigest": "sha256:15d40d6acf1bff1ee90f67760aa40789423335bb6b0acc688e012fd98ff8a22c"
+        },
+        {
+          "dimension": "accountingEvidence",
+          "unit": "unavailable",
+          "scope": "signed-per-invocation-and-match-cumulative-ledger",
+          "measurement": "unavailable",
+          "enforcement": "fail-closed-as-system-failure",
+          "status": "unsupported",
+          "evidenceSafeDigest": "sha256:1da49d885a3f94f8ae2ae95892a547a4a1c15d5857c9dbfc82303a7598ceb6cf"
+        }
+      ],
+      "identityPins": [
+        {
+          "pin": "runtimeExecutableDigest",
+          "status": "local-diagnostic",
+          "bindingSafeId": "local-diagnostic:zig-runtime-executable",
+          "evidenceSafeDigest": "sha256:9510f104d7a8c628ba73e8c04e71bf6c8df0c1365da0e07cafb8e072d2dab9ef"
+        },
+        {
+          "pin": "reportedVersion",
+          "status": "local-diagnostic",
+          "bindingSafeId": "local-diagnostic:zig-reported-version",
+          "evidenceSafeDigest": "sha256:22ae60aa9c998d3f05b7617d0d706e8fc15bd7e0671ec0d1717b8f929057b602"
+        },
+        {
+          "pin": "targetAbi",
+          "status": "local-diagnostic",
+          "bindingSafeId": "local-diagnostic:zig-target-abi",
+          "evidenceSafeDigest": "sha256:3fe306e1e2ad3aa628845ad162d4b8fe4a1d3e1181a38538fe55e0d6614e574f"
+        },
+        {
+          "pin": "compilerFlags",
+          "status": "local-diagnostic",
+          "bindingSafeId": "local-diagnostic:zig-compiler-flags",
+          "evidenceSafeDigest": "sha256:8cc192f4334a6fd18b091beb76ecf76efb604f213cf01a5d98b55277f1985bd4"
+        },
+        {
+          "pin": "adapterBuildDigest",
+          "status": "local-diagnostic",
+          "bindingSafeId": "local-diagnostic:zig-adapter-build",
+          "evidenceSafeDigest": "sha256:74fcf2ce0fe96a20d75b3273683f046186c15e1d8896d2692a1d124c888224de"
+        },
+        {
+          "pin": "standardLibraryOrSysrootDigest",
+          "status": "local-diagnostic",
+          "bindingSafeId": "local-diagnostic:zig-stdlib-sysroot",
+          "evidenceSafeDigest": "sha256:350303a57419cbfe889d08c3ded215d9a3e00d704b1490638c4b78b29cd8eeca"
+        },
+        {
+          "pin": "containmentPolicyId",
+          "status": "local-diagnostic",
+          "bindingSafeId": "local-diagnostic:zig-containment-policy",
+          "evidenceSafeDigest": "sha256:35fb30b3191a60bf124eb9ec1b2498174046db5659526dd45dfb1e2a9b3d7eea"
+        },
+        {
+          "pin": "budgetProfileSha256",
+          "status": "exact-deployment",
+          "bindingSafeId": "sha256:13c061efc6954b7734b967177f07300b4c3c0dd18651b55510158b9a3c29c49f",
+          "evidenceSafeDigest": "sha256:a85eb9c68a2b2e266a3172a475602136293a394347dc5539c13c83c94b739f85"
+        },
+        {
+          "pin": "canonicalJsonProfileId",
+          "status": "exact-deployment",
+          "bindingSafeId": "canonical-json-v1.1",
+          "evidenceSafeDigest": "sha256:18321107c8be7ea1b695bde922f39ba171d78d9e1131897ca8c45209cb24784a"
+        },
+        {
+          "pin": "behaviorSettingsHash",
+          "status": "local-diagnostic",
+          "bindingSafeId": "local-diagnostic:zig-behavior-settings",
+          "evidenceSafeDigest": "sha256:f6c07de7af5ec0f5624f3a34497d7d9cf765c9221737f467528d618183dc1fd2"
+        }
+      ],
+      "localProbe": {
+        "disposition": "diagnostic-only",
+        "evidenceSafeDigest": "sha256:94a1753c81954de789de130e5f2795dda10b654f844c85c2e87fe7fe45132684"
+      },
+      "productionTrustedProducers": []
+    }
+  ]
+}

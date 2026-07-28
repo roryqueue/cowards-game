@@ -1,4 +1,5 @@
 import type { RuntimeResult } from "@cowards/engine"
+import type { RuntimeInvocationSigningIdentityV117 } from "@cowards/spec"
 
 export type StrategyMethodName = "selectActivations" | "soldierBrain"
 
@@ -48,6 +49,40 @@ export interface StrategyExecutionRequest extends StrategyExecutionAdapterOption
 export interface StrategyExecutionAdapter {
   readonly metadata: StrategyExecutionAdapterMetadata
   execute(request: StrategyExecutionRequest): RuntimeResult<unknown>
+}
+
+export interface StrategyExecutionRequestV117 {
+  /** Exact authenticated canonical request bytes supplied by the host. */
+  readonly requestBytes: Uint8Array
+  /** Host-resolved executable artifact; never serialized into a public trace. */
+  readonly executableSource: string
+  /** Host-only authority. Successor guest harnesses never receive this value. */
+  readonly signingIdentity: RuntimeInvocationSigningIdentityV117
+}
+
+export interface StrategyExecutionAccountingObservationV117 {
+  /** Bytes after the one-byte guest frame tag, or the proven N+1 sentinel. */
+  readonly payloadBytes: number
+  /** Complete guest transport frame bytes, including its one-byte tag. */
+  readonly stdoutBytes: number
+  /** Host-observed diagnostic bytes; diagnostic contents never cross here. */
+  readonly stderrBytes: number
+  /** True only when the READY/GO method watchdog reached its signed bound. */
+  readonly methodDeadlineExceeded: boolean
+  /** Host-owned cancellation evidence bound to this exact observation. */
+  readonly cancellation: Readonly<{
+    terminationRequired: boolean
+    receiptPresent: boolean
+    graceMilliseconds: number
+  }>
+}
+
+export interface StrategyExecutionAdapterV117 extends StrategyExecutionAdapter {
+  /**
+   * Inactive v1.17 candidate path. The returned bytes are one authenticated,
+   * canonical response envelope; current v1.14 execute semantics are unchanged.
+   */
+  executeV117(request: StrategyExecutionRequestV117): Uint8Array
 }
 
 export const workerThreadStrategyExecutionAdapterMetadata: StrategyExecutionAdapterMetadata =

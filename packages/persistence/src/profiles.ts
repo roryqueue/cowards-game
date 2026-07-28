@@ -1,17 +1,15 @@
 import {
   assertPublicMatchSetResultLeakSafe,
+  classifyCompetitionCountedState,
+  projectPublicCompetitionGovernance,
+  describeStrategyRuntimeProductSemantics,
   normalizeStrategyRuntimeMetadata,
+  PublicStrategyRuntimeMetadataSchema,
   type PublicPlayerProfileDto,
   type PublicStrategyCardDto,
 } from "@cowards/spec"
 import type { Pool } from "pg"
 import type { MatchSetStrategyScore } from "./scoring.js"
-
-const isCountablePublicStatus = (status: string): boolean =>
-  status !== "invalid" &&
-  status !== "non_competitive" &&
-  status !== "under_review" &&
-  status !== "non_counted"
 
 const loadPublicRecordsByRevision = async (
   pool: Pool,
@@ -32,7 +30,11 @@ const loadPublicRecordsByRevision = async (
   const rows = await pool.query<{
     id: string
     scoring: { rankings?: MatchSetStrategyScore[] } | null
-    counted_status: string
+    counted_status: PublicPlayerProfileDto["results"][number]["countedStatus"]
+    review_status: "none" | "under_review" | "disputed" | "resolved"
+    ladder_season_id: string | null
+    chronicle_count: number
+    match_count: number
     match_ids: string[]
   }>(
     `
@@ -40,10 +42,15 @@ const loadPublicRecordsByRevision = async (
         ms.id,
         ms.scoring,
         ms.counted_status,
-        array_remove(array_agg(distinct msm.match_id order by msm.match_id), null) as match_ids
+        ms.review_status,
+        ms.ladder_season_id,
+        count(distinct msm.match_id)::integer as match_count,
+        count(distinct c.match_id)::integer as chronicle_count,
+        array_remove(array_agg(distinct case when c.match_id is not null then msm.match_id end order by case when c.match_id is not null then msm.match_id end), null) as match_ids
       from match_sets ms
       join competition_entrants ce on ce.match_set_id = ms.id
       left join match_set_matches msm on msm.match_set_id = ms.id
+      left join chronicles c on c.match_id = msm.match_id
       where ce.owner_user_id = $1
         and ms.status = 'complete'
         and ms.scoring is not null
@@ -64,7 +71,16 @@ const loadPublicRecordsByRevision = async (
     }
   >()
   for (const row of rows.rows) {
-    if (!isCountablePublicStatus(row.counted_status)) {
+    const countedState = classifyCompetitionCountedState({
+      executionStatus: "complete",
+      storedState: row.counted_status,
+      reviewState: row.review_status,
+      origin: row.ladder_season_id ? "trial" : "non_competitive",
+      expectedMatchCount: row.match_count,
+      chronicleMatchCount: row.chronicle_count,
+      scoringAvailable: Array.isArray(row.scoring?.rankings),
+    })
+    if (countedState.state !== "counted") {
       continue
     }
     for (const ranking of row.scoring?.rankings ?? []) {
@@ -146,6 +162,11 @@ export const buildPublicPlayerProfileDto = async (
       | PublicPlayerProfileDto["results"][number]["publicReason"]
       | null
     public_counted_explanation: string | null
+    scoring: { rankings?: MatchSetStrategyScore[] } | null
+    review_status: "none" | "under_review" | "disputed" | "resolved"
+    governance_changed_at: Date | null
+    chronicle_count: number
+    match_count: number
   }>(
     `
       select distinct
@@ -154,7 +175,12 @@ export const buildPublicPlayerProfileDto = async (
         ms.status,
         ms.counted_status,
         ms.public_counted_reason,
-        ms.public_counted_explanation
+        ms.public_counted_explanation,
+        ms.scoring,
+        ms.review_status,
+        ms.governance_changed_at,
+        (select count(*)::integer from match_set_matches msm where msm.match_set_id = ms.id) as match_count,
+        (select count(*)::integer from match_set_matches msm join chronicles c on c.match_id = msm.match_id where msm.match_set_id = ms.id) as chronicle_count
       from match_sets ms
       join competition_entrants ce on ce.match_set_id = ms.id
       where ce.owner_user_id = $1
@@ -176,25 +202,46 @@ export const buildPublicPlayerProfileDto = async (
         return total + (record?.points ?? 0)
       }, 0),
     })),
-    results: resultRows.rows.map((row) => ({
-      matchSetId: row.match_set_id,
-      seasonId: row.season_id ?? "",
-      status:
+    results: resultRows.rows.map((row) => {
+      const status =
         row.status === "pending"
           ? "queued"
           : row.status === "failed_system" || row.status === "blocked"
             ? "failed"
-            : row.status,
-      countedStatus: row.counted_status,
-      ...(row.public_counted_reason
-        ? { publicReason: row.public_counted_reason }
-        : {}),
-      ...(row.public_counted_explanation
-        ? { publicExplanation: row.public_counted_explanation }
-        : {}),
-      entrantIds: [],
-      resultHref: `/matchsets/${encodeURIComponent(row.match_set_id)}`,
-    })),
+            : row.status
+      const countedState = classifyCompetitionCountedState({
+        executionStatus: status,
+        storedState: row.counted_status,
+        reviewState: row.review_status,
+        origin: row.season_id ? "trial" : "non_competitive",
+        expectedMatchCount: row.match_count,
+        chronicleMatchCount: row.chronicle_count,
+        scoringAvailable: Array.isArray(row.scoring?.rankings),
+      })
+      const governance = projectPublicCompetitionGovernance({
+        countedState,
+        reviewState: row.review_status,
+        ...(row.governance_changed_at
+          ? { changedAt: row.governance_changed_at.toISOString() }
+          : {}),
+        replayAvailable: row.chronicle_count > 0,
+      })
+      return {
+        matchSetId: row.match_set_id,
+        seasonId: row.season_id ?? "",
+        status,
+        countedStatus: countedState.state,
+        countedState,
+        governance,
+        ...(countedState.publicReason
+          ? { publicReason: countedState.publicReason }
+          : {}),
+        publicExplanation:
+          row.public_counted_explanation ?? countedState.publicExplanation,
+        entrantIds: [],
+        resultHref: `/matchsets/${encodeURIComponent(row.match_set_id)}`,
+      }
+    }),
   }
   assertPublicMatchSetResultLeakSafe(dto)
   return dto
@@ -247,39 +294,45 @@ export const listPublicStrategyCardsForUser = async (
     [userId],
   )
   const recordsByRevision = await loadPublicRecordsByRevision(pool, userId)
-  return result.rows.map((row) => ({
-    strategyId: row.strategy_id,
-    strategyRevisionId: row.revision_id,
-    name: row.strategy_name,
-    ...(row.strategy_description
-      ? { description: row.strategy_description }
-      : {}),
-    tags: row.strategy_tags.length
-      ? row.strategy_tags
-      : (row.metadata.tags ?? []),
-    authorHandle: row.handle,
-    sourceHash: row.source_hash,
-    sourceBytes: row.source_bytes,
-    runtime: normalizeStrategyRuntimeMetadata(row.runtime),
-    engineCompatibility: row.engine_compatibility,
-    validationStatus: row.validation.valid ? "valid" : "invalid",
-    ...(row.metadata.starterLineage
-      ? { starterLineage: row.metadata.starterLineage }
-      : {}),
-    ...(row.metadata.advancedLineage
-      ? { advancedLineage: row.metadata.advancedLineage }
-      : {}),
-    record: recordsByRevision.get(row.revision_id) ?? {
-      wins: 0,
-      losses: 0,
-      draws: 0,
-      points: 0,
-      resultLinks: [],
-      replayLinks: [],
-    },
-    resultLinks: recordsByRevision.get(row.revision_id)?.resultLinks ?? [],
-    replayLinks: recordsByRevision.get(row.revision_id)?.replayLinks ?? [],
-  }))
+  return result.rows.map((row) => {
+    const runtime = PublicStrategyRuntimeMetadataSchema.parse(
+      normalizeStrategyRuntimeMetadata(row.runtime),
+    )
+    return {
+      strategyId: row.strategy_id,
+      strategyRevisionId: row.revision_id,
+      name: row.strategy_name,
+      ...(row.strategy_description
+        ? { description: row.strategy_description }
+        : {}),
+      tags: row.strategy_tags.length
+        ? row.strategy_tags
+        : (row.metadata.tags ?? []),
+      authorHandle: row.handle,
+      sourceHash: row.source_hash,
+      sourceBytes: row.source_bytes,
+      runtime,
+      runtimeSemantics: describeStrategyRuntimeProductSemantics(runtime),
+      engineCompatibility: row.engine_compatibility,
+      validationStatus: row.validation.valid ? "valid" : "invalid",
+      ...(row.metadata.starterLineage
+        ? { starterLineage: row.metadata.starterLineage }
+        : {}),
+      ...(row.metadata.advancedLineage
+        ? { advancedLineage: row.metadata.advancedLineage }
+        : {}),
+      record: recordsByRevision.get(row.revision_id) ?? {
+        wins: 0,
+        losses: 0,
+        draws: 0,
+        points: 0,
+        resultLinks: [],
+        replayLinks: [],
+      },
+      resultLinks: recordsByRevision.get(row.revision_id)?.resultLinks ?? [],
+      replayLinks: recordsByRevision.get(row.revision_id)?.replayLinks ?? [],
+    }
+  })
 }
 
 export const buildPublicStrategyCardDto = async (

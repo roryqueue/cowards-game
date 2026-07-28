@@ -1,0 +1,209 @@
+{
+  "contractVersion": "runtime-execution-service-v1.16",
+  "kind": "executeMatch",
+  "requestId": "runtime-request:golden:v1.16",
+  "match": {
+    "matchId": "match:runtime-service:golden",
+    "seed": "seed:runtime-service:golden",
+    "arenaVariant": {
+      "id": "arena-empty-12x12",
+      "name": "Empty 12x12",
+      "initialBounds": {
+        "minX": 0,
+        "maxX": 11,
+        "minY": 0,
+        "maxY": 11
+      },
+      "terrainStones": []
+    },
+    "bottomPlayerId": "bottom",
+    "topPlayerId": "top",
+    "bottomStrategyRevisionId": "strategy-revision:193798ed69b6692a2e05aa330ed457ce4cd02f909f018bb8a56d80791209142c",
+    "topStrategyRevisionId": "strategy-revision:3aa6dbe47d9542b6880ed660dd3d15eca34209f61d53e490de4902f2b764365d",
+    "maxPhases": 1
+  },
+  "strategies": {
+    "bottom": {
+      "id": "strategy-revision:193798ed69b6692a2e05aa330ed457ce4cd02f909f018bb8a56d80791209142c",
+      "strategyId": "strategy:runtime-service:bottom",
+      "source": "export default {\n  selectActivations() { return { activationOrders: [], strategyMemory: {} } },\n  soldierBrain() { return { action: { type: \"TURN_TO_STONE\" }, soldierMemory: {} } },\n}\n",
+      "sourceHash": "e95417480e6c6c00b1c2c370775804167aea994aa7db545f47f89e8b635bb27d",
+      "sourceBytes": 184,
+      "runtime": {
+        "abiVersion": "strategy-runtime-abi-v1.14",
+        "language": {
+          "id": "typescript",
+          "version": "0.1.0"
+        },
+        "adapter": {
+          "id": "runtime-js-worker-thread",
+          "version": "0.1.0"
+        },
+        "package": {
+          "mode": "none",
+          "entrypoint": "default"
+        },
+        "requiredCapabilities": [],
+        "limits": {
+          "timeoutMs": 1000,
+          "stdoutBytes": 262144,
+          "stderrBytes": 65536,
+          "sourceBytes": 65536,
+          "strategyMemoryBytes": 32768,
+          "soldierMemoryBytes": 2048,
+          "objectivePayloadBytes": 1024,
+          "environment": "empty",
+          "filesystem": "host",
+          "network": "inherited",
+          "shell": "disabled",
+          "packagePolicy": "none"
+        }
+      },
+      "engineCompatibility": {
+        "spec": "cowards-rules-v1.4",
+        "engine": "engine-kernel-v1.37-candidate-1"
+      },
+      "validation": {
+        "valid": true,
+        "errors": [],
+        "warnings": [],
+        "sourceBytes": 184,
+        "forbiddenPatterns": [],
+        "sourceHash": "e95417480e6c6c00b1c2c370775804167aea994aa7db545f47f89e8b635bb27d",
+        "runtimeVersion": "0.1.0",
+        "engineCompatibility": {
+          "spec": "cowards-rules-v1.4",
+          "engine": "engine-kernel-v1.37-candidate-1"
+        }
+      },
+      "metadata": {}
+    },
+    "top": {
+      "id": "strategy-revision:3aa6dbe47d9542b6880ed660dd3d15eca34209f61d53e490de4902f2b764365d",
+      "strategyId": "strategy:runtime-service:top",
+      "source": "export default {\n  selectActivations() { return { activationOrders: [], strategyMemory: {} } },\n  soldierBrain() { return { action: { type: \"TURN_TO_STONE\" }, soldierMemory: {} } },\n}\n",
+      "sourceHash": "e95417480e6c6c00b1c2c370775804167aea994aa7db545f47f89e8b635bb27d",
+      "sourceBytes": 184,
+      "runtime": {
+        "abiVersion": "strategy-runtime-abi-v1.14",
+        "language": {
+          "id": "typescript",
+          "version": "0.1.0"
+        },
+        "adapter": {
+          "id": "runtime-js-worker-thread",
+          "version": "0.1.0"
+        },
+        "package": {
+          "mode": "none",
+          "entrypoint": "default"
+        },
+        "requiredCapabilities": [],
+        "limits": {
+          "timeoutMs": 1000,
+          "stdoutBytes": 262144,
+          "stderrBytes": 65536,
+          "sourceBytes": 65536,
+          "strategyMemoryBytes": 32768,
+          "soldierMemoryBytes": 2048,
+          "objectivePayloadBytes": 1024,
+          "environment": "empty",
+          "filesystem": "host",
+          "network": "inherited",
+          "shell": "disabled",
+          "packagePolicy": "none"
+        }
+      },
+      "engineCompatibility": {
+        "spec": "cowards-rules-v1.4",
+        "engine": "engine-kernel-v1.37-candidate-1"
+      },
+      "validation": {
+        "valid": true,
+        "errors": [],
+        "warnings": [],
+        "sourceBytes": 184,
+        "forbiddenPatterns": [],
+        "sourceHash": "e95417480e6c6c00b1c2c370775804167aea994aa7db545f47f89e8b635bb27d",
+        "runtimeVersion": "0.1.0",
+        "engineCompatibility": {
+          "spec": "cowards-rules-v1.4",
+          "engine": "engine-kernel-v1.37-candidate-1"
+        }
+      },
+      "metadata": {}
+    }
+  },
+  "limits": {
+    "timeoutMs": 250,
+    "stdoutBytes": 32768,
+    "stderrBytes": 65536,
+    "sourceBytes": 65536,
+    "strategyMemoryBytes": 32768,
+    "soldierMemoryBytes": 2048,
+    "objectivePayloadBytes": 1024,
+    "environment": "minimal",
+    "filesystem": "host",
+    "network": "inherited",
+    "shell": "disabled",
+    "packagePolicy": "none"
+  },
+  "evidenceSnapshot": {
+    "compatibility": {
+      "tupleId": "sha256:922a6857fdbc8354b744d6e766bff216f3fee85b5ed381355cb427f5a616b3ae",
+      "tuple": {
+        "rules": "cowards-rules-v1.4",
+        "engine": "engine-kernel-v1.37-candidate-1",
+        "runtimeAbi": "strategy-runtime-abi-v1.14",
+        "chronicle": "chronicle-recorder-current-events-v1.37-candidate-1",
+        "arenaCatalog": "semantic-arena-catalog-v1.37-candidate-1",
+        "setPolicy": "canonical-set-policy-v1.4"
+      }
+    },
+  "authorityBundleHash": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+  "registryGeneration": "0",
+  "publication": {
+    "publicationId": "fixture-only:publication:golden-v1.16",
+    "installReceiptId": "fixture-only:install-receipt:golden-v1.16",
+    "payloadSha256": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+    "envelopeSha256": "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+    "sourceManifestHash": "sha256:9999999999999999999999999999999999999999999999999999999999999999"
+  },
+    "entrants": {
+      "bottom": {
+        "entrantKey": "fixture-only:entrant:golden-v1.16:bottom",
+        "strategyRevisionId": "strategy-revision:193798ed69b6692a2e05aa330ed457ce4cd02f909f018bb8a56d80791209142c",
+        "laneIdentityHash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "effectiveStatus": "exhibition_only",
+        "schedulingDecisionId": "fixture-only:scheduling-decision:golden-v1.16:bottom:typescript",
+      "schedulingDecisionHash": "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "schedulingDecision": {
+        "status": "exhibition_only",
+        "reasonCode": "CONFORMANCE_MISSING",
+        "evaluatedAt": "2026-07-12T00:00:00.000Z",
+        "freshUntil": "2026-07-14T00:00:00.000Z",
+        "registryGeneration": "0"
+      },
+        "containmentCertificateId": "fixture-only:untrusted-containment:golden-v1.16:bottom:typescript",
+        "containmentCertificateHash": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+      },
+      "top": {
+        "entrantKey": "fixture-only:entrant:golden-v1.16:top",
+        "strategyRevisionId": "strategy-revision:3aa6dbe47d9542b6880ed660dd3d15eca34209f61d53e490de4902f2b764365d",
+        "laneIdentityHash": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "effectiveStatus": "exhibition_only",
+        "schedulingDecisionId": "fixture-only:scheduling-decision:golden-v1.16:top:typescript",
+      "schedulingDecisionHash": "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "schedulingDecision": {
+        "status": "exhibition_only",
+        "reasonCode": "CONFORMANCE_MISSING",
+        "evaluatedAt": "2026-07-12T00:00:00.000Z",
+        "freshUntil": "2026-07-14T00:00:00.000Z",
+        "registryGeneration": "0"
+      },
+        "containmentCertificateId": "fixture-only:untrusted-containment:golden-v1.16:top:typescript",
+        "containmentCertificateHash": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+      }
+    }
+  }
+}

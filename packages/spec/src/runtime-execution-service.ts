@@ -15,9 +15,89 @@ import {
   STRATEGY_RUNTIME_ABI_VERSION,
   type StrategyRuntimeLimits,
 } from "./runtime.js"
+import type { CanonicalCompatibilityTuple } from "./integrity-authority.js"
+import type {
+  ExecutableLaneCertificateReference,
+  ExecutableLaneEvidenceReasonCode,
+  ExecutableLaneEvidenceStatus,
+  ExecutableLaneIdentity,
+} from "./runtime-evidence.js"
 
 export const RUNTIME_EXECUTION_SERVICE_VERSION =
-  "runtime-execution-service-v1.15" as const
+  "runtime-execution-service-v1.16" as const
+
+export const RUNTIME_SEMANTIC_RECEIPT_SCHEMA_VERSION =
+  "runtime-semantic-receipt-v1" as const
+export const RUNTIME_SEMANTIC_RECEIPT_PROFILE = "current-exact" as const
+export const RUNTIME_SEMANTIC_RECEIPT_ALGORITHM = "hmac-sha256" as const
+export const RUNTIME_SEMANTIC_RECEIPT_KEY_ID =
+  "runtime-service-semantic-receipt:v1" as const
+export const RUNTIME_SEMANTIC_RECEIPT_DOMAIN =
+  "cowards-game:runtime-semantic-receipt:v1" as const
+export const RUNTIME_SEMANTIC_CHRONICLE_WIRE_DOMAIN =
+  "cowards-game:runtime-semantic-chronicle-json-wire:v1" as const
+export const RUNTIME_SEMANTIC_FINAL_STATE_WIRE_DOMAIN =
+  "cowards-game:runtime-semantic-final-state-json-wire:v1" as const
+export const RUNTIME_SEMANTIC_OUTCOME_WIRE_DOMAIN =
+  "cowards-game:runtime-semantic-outcome-json-wire:v1" as const
+
+export interface RuntimeSemanticReceiptClaims {
+  schemaVersion: typeof RUNTIME_SEMANTIC_RECEIPT_SCHEMA_VERSION
+  profile: typeof RUNTIME_SEMANTIC_RECEIPT_PROFILE
+  serviceContractVersion: typeof RUNTIME_EXECUTION_SERVICE_VERSION
+  requestId: string
+  matchId: MatchId
+  compatibilityTupleId: string
+  rulesVersion: string
+  engineVersion: string
+  runtimeAbiVersion: string
+  chronicleVersion: string
+  arenaCatalogVersion: string
+  setPolicyVersion: string
+  authorityBundleHash: string
+  registryGeneration: string
+  chronicleWireBytesHash: string
+  finalStateWireBytesHash: string
+  reconstructedTerminalStateHash: string
+  outcomeWireBytesHash: string
+  runtimeViolationEventCount: number
+  algorithm: typeof RUNTIME_SEMANTIC_RECEIPT_ALGORITHM
+  keyId: typeof RUNTIME_SEMANTIC_RECEIPT_KEY_ID
+}
+
+export interface RuntimeSemanticReceipt extends RuntimeSemanticReceiptClaims {
+  signature: string
+}
+
+export const encodeRuntimeSemanticReceiptClaims = (
+  claims: RuntimeSemanticReceiptClaims,
+): Uint8Array =>
+  new TextEncoder().encode(
+    [
+      RUNTIME_SEMANTIC_RECEIPT_DOMAIN,
+      claims.schemaVersion,
+      claims.profile,
+      claims.serviceContractVersion,
+      claims.requestId,
+      claims.matchId,
+      claims.compatibilityTupleId,
+      claims.rulesVersion,
+      claims.engineVersion,
+      claims.runtimeAbiVersion,
+      claims.chronicleVersion,
+      claims.arenaCatalogVersion,
+      claims.setPolicyVersion,
+      claims.authorityBundleHash,
+      claims.registryGeneration,
+      claims.chronicleWireBytesHash,
+      claims.finalStateWireBytesHash,
+      claims.reconstructedTerminalStateHash,
+      claims.outcomeWireBytesHash,
+      String(claims.runtimeViolationEventCount),
+      claims.algorithm,
+      claims.keyId,
+    ].join("\n"),
+  )
 
 export const RUNTIME_EXECUTION_SERVICE_PUBLIC_NAME =
   "Strategy Execution Service / Runtime Broker" as const
@@ -123,8 +203,15 @@ export const RUNTIME_EXECUTION_SERVICE_SYSTEM_FAILURE_CODES = [
   "SOURCE_HASH_MISMATCH",
   "SOURCE_BYTES_MISMATCH",
   "UNSUPPORTED_RUNTIME_ADAPTER",
+  "MATCH_EXECUTION_FAILED",
+  "CHRONICLE_INTEGRITY_FAILED",
   "EXECUTION_EXCEPTION",
   "RESPONSE_SCHEMA_INVALID",
+  "EVIDENCE_STALE",
+  "EVIDENCE_REVOKED",
+  "EVIDENCE_IDENTITY_MISMATCH",
+  "EVIDENCE_UNVERIFIABLE",
+  "EVIDENCE_REGISTRY_DRIFT",
 ] as const
 
 export type RuntimeExecutionServiceSystemFailureCode =
@@ -147,6 +234,91 @@ export interface RuntimeExecutionMatchInput {
   maxPhases?: number | undefined
 }
 
+export interface RuntimeExecutionCompatibilityIdentity {
+  tupleId: string
+  tuple: CanonicalCompatibilityTuple
+}
+
+export interface RuntimeExecutionSchedulingDecisionSnapshot {
+  status: ExecutableLaneEvidenceStatus
+  reasonCode: ExecutableLaneEvidenceReasonCode
+  evaluatedAt: string
+  freshUntil: string
+  registryGeneration: string
+}
+
+export interface RuntimeEntrantExecutionEvidence {
+  entrantKey: string
+  strategyRevisionId: StrategyRevisionId
+  laneIdentity: ExecutableLaneIdentity
+  containmentCertificateRef: ExecutableLaneCertificateReference & {
+    kind: "containment"
+  }
+  conformanceCertificateRef?:
+    | (ExecutableLaneCertificateReference & { kind: "conformance" })
+    | undefined
+  schedulingDecision: RuntimeExecutionSchedulingDecisionSnapshot
+}
+
+export interface RuntimeResolvedEntrantExecutionEvidence {
+  entrantKey: string
+  strategyRevisionId: StrategyRevisionId
+  laneIdentity: ExecutableLaneIdentity
+  containmentCertificateRef?:
+    | (ExecutableLaneCertificateReference & { kind: "containment" })
+    | undefined
+  conformanceCertificateRef?:
+    | (ExecutableLaneCertificateReference & { kind: "conformance" })
+    | undefined
+  schedulingDecision: RuntimeExecutionSchedulingDecisionSnapshot
+}
+
+export interface RuntimeExecutionEvidencePair {
+  bottom: RuntimeEntrantExecutionEvidence
+  top: RuntimeEntrantExecutionEvidence
+}
+
+export interface RuntimeExecutionResolvedEvidenceSnapshot {
+  compatibility: RuntimeExecutionCompatibilityIdentity
+  authorityBundleHash: string
+  registryGeneration: string
+  entrants: {
+    bottom: RuntimeResolvedEntrantExecutionEvidence
+    top: RuntimeResolvedEntrantExecutionEvidence
+  }
+}
+
+export interface RuntimeEntrantAuthorityReference {
+  entrantKey: string
+  strategyRevisionId: StrategyRevisionId
+  laneIdentityHash: string
+  effectiveStatus: ExecutableLaneEvidenceStatus
+  schedulingDecisionId: string
+  schedulingDecisionHash: string
+  schedulingDecision: RuntimeExecutionSchedulingDecisionSnapshot
+  containmentCertificateId?: string | undefined
+  containmentCertificateHash?: string | undefined
+  conformanceCertificateId?: string | undefined
+  conformanceCertificateHash?: string | undefined
+}
+
+export interface RuntimeExecutionEvidenceSnapshot {
+  compatibility: RuntimeExecutionCompatibilityIdentity
+  authorityBundleHash: string
+  registryGeneration: string
+  publication: {
+    publicationId: string
+    installReceiptId: string
+    payloadSha256: string
+    envelopeSha256: string
+    sourceManifestHash: string
+  }
+  entrants: {
+    bottom: RuntimeEntrantAuthorityReference
+    top: RuntimeEntrantAuthorityReference
+  }
+}
+
 export interface RuntimeExecutionServiceRequest {
   contractVersion: typeof RUNTIME_EXECUTION_SERVICE_VERSION
   kind: "executeMatch"
@@ -157,6 +329,7 @@ export interface RuntimeExecutionServiceRequest {
     top: StrategyRevision
   }
   limits: StrategyRuntimeLimits
+  evidenceSnapshot: RuntimeExecutionEvidenceSnapshot
 }
 
 export interface RuntimeExecutionEnginePlayer {
@@ -192,9 +365,13 @@ export interface RuntimeExecutionServiceSuccessResponse {
   runtimeAbiVersion: typeof STRATEGY_RUNTIME_ABI_VERSION
   result: {
     privacy: "internal_runtime_result"
-    chronicle: Chronicle
+    chronicle: Omit<Chronicle, "integrity" | "storageMetadata"> & {
+      integrity?: never
+      storageMetadata?: never
+    }
     finalState: RuntimeExecutionFinalState
     runtimeViolationEventCount: number
+    semanticReceipt: RuntimeSemanticReceipt
   }
 }
 

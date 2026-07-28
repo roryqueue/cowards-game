@@ -1,0 +1,48 @@
+{
+  "schemaVersion": "v1.37-canonical-conformance-trace-v1",
+  "corpusVersion": "v2",
+  "corpusRootSha256": "sha256:238347225defaaabcf9e57141ac7a54b4b277bd149bebe2b21903febc9ce7ac2",
+  "caseId": "probe-raw-envelope-transport-truncation",
+  "semanticTupleId": "sha256:0d8a04fdfe49e3aa7261728ee51beb0a9049b661aad978277f2892c3a4bc54fe",
+  "resultClass": "system_failure",
+  "invocations": [
+    {
+      "ordinal": 0,
+      "invocationId": "invocation:probe-raw-envelope-transport-truncation:failure",
+      "methodName": "selectActivations",
+      "resultClass": "system_failure",
+      "stableCode": "TRANSPORT_FRAME_TRUNCATED",
+      "failingBoundary": "transport",
+      "canonicalPayloadHash": null,
+      "strategyMemoryHash": "sha256:4c7d6d16696cd45e07401bf1c7aa8955213da30422a9138398d3d0547e45f8f7",
+      "soldierMemoryHash": "sha256:4c7d6d16696cd45e07401bf1c7aa8955213da30422a9138398d3d0547e45f8f7",
+      "objectiveHash": "sha256:ffa526f0745fac37e21501dc418f573bb4539d4804b20822b2704cdd19783c2d",
+      "beforeObjectiveHash": "sha256:ffa526f0745fac37e21501dc418f573bb4539d4804b20822b2704cdd19783c2d",
+      "afterObjectiveHash": "sha256:ffa526f0745fac37e21501dc418f573bb4539d4804b20822b2704cdd19783c2d",
+      "beforeStateHash": "sha256:6ddba14a0a3dd20a3c20358fd8c58e52afab33d5c0a5deea42da6a9782433e67",
+      "afterStateHash": "sha256:6ddba14a0a3dd20a3c20358fd8c58e52afab33d5c0a5deea42da6a9782433e67",
+      "beforeMemoryHash": "sha256:4c7d6d16696cd45e07401bf1c7aa8955213da30422a9138398d3d0547e45f8f7",
+      "afterMemoryHash": "sha256:4c7d6d16696cd45e07401bf1c7aa8955213da30422a9138398d3d0547e45f8f7",
+      "gameplayMutation": false,
+      "memoryMutation": false,
+      "terminalEffectHash": null,
+      "retryable": true
+    }
+  ],
+  "transitions": [],
+  "finalStateHash": "sha256:6ddba14a0a3dd20a3c20358fd8c58e52afab33d5c0a5deea42da6a9782433e67",
+  "outcomeHash": "sha256:e93386d636754f22b5b9eb593b278c6fbaf6f8707133fdbda9f09b62a4a512f8",
+  "failure": {
+    "resultClass": "system_failure",
+    "stableCode": "TRANSPORT_FRAME_TRUNCATED",
+    "failingBoundary": "transport",
+    "invocationOrdinal": 0,
+    "transitionOrdinal": null,
+    "gameplayMutation": false,
+    "memoryMutation": false,
+    "terminalEffectHash": null,
+    "retryable": true
+  },
+  "transitionTraceRoot": "sha256:71562612ed4d24b5995747cee43d8a7b0269ed596a7cf7f694f0c17484faf4f6",
+  "traceRoot": "sha256:e783db702a6ab16c0c0bc54c790de13f5718835641fe219251c4b0a78cb0ed31"
+}

@@ -2,6 +2,7 @@ import {
   MATCH_EXECUTION_APP_CONTRACT_VERSION,
   MATCH_EXECUTION_CONTRACT_FIXTURES_V1,
 } from "@cowards/spec"
+import type { JSX } from "react"
 import { isMatchExecutionFixtureEnabled } from "../../../lib/match-execution-fixture-adapter.js"
 
 export const dynamic = "force-dynamic"
@@ -20,7 +21,7 @@ const matchSetHref = (fixtureId: string): string =>
 const replayHref = (matchId: string): string =>
   `/matches/${encodeURIComponent(matchId)}/replay`
 
-export default function MatchExecutionFixtureCatalogPage() {
+export default function MatchExecutionFixtureCatalogPage(): JSX.Element {
   if (!isMatchExecutionFixtureEnabled()) {
     notFound()
   }

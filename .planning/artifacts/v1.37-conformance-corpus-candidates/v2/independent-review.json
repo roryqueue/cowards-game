@@ -1,0 +1,31 @@
+{
+  "schemaVersion": "v1.37-executable-conformance-independent-review-v1",
+  "reviewedBy": "phase-259-plan-16-pinned-toolchain-revalidation",
+  "candidateVersion": "v2",
+  "candidateCorpusRootSha256": "sha256:238347225defaaabcf9e57141ac7a54b4b277bd149bebe2b21903febc9ce7ac2",
+  "candidateCorpusFileSha256": "sha256:8d51df780a1c9dcb35e28547f4891af0e28a4bd2cd8e854165a61a1726f3a0dd",
+  "semanticDiffFileSha256": "sha256:f5120aeeeb4877b626637a6ef5905ebc710a1630433642243e0d6d036ceb3707",
+  "sourceChanges": [
+    "rust",
+    "zig"
+  ],
+  "caseChanges": [],
+  "behaviorManifestChanged": false,
+  "expectedSelectionChanged": false,
+  "expectedBrainChanged": false,
+  "rust": {
+    "toolchain": "rustc 1.95.0 (59807616e 2026-04-14)",
+    "target": "wasm32-wasip1",
+    "artifactSha256": "sha256:fef2bad9e18a53e6e0de72573096dfd37165fdd824c1e5992b99f87a6a19ffbd",
+    "selectActivationsEquivalent": true,
+    "soldierBrainEquivalent": true
+  },
+  "zig": {
+    "toolchain": "0.16.0",
+    "target": "wasm32-wasi",
+    "artifactSha256": "sha256:76b3d99310baa72b05a13631f2b086f0f0829d95dbcbb98e9835f18303e7d08c",
+    "selectActivationsEquivalent": true,
+    "soldierBrainEquivalent": true
+  },
+  "status": "behavior_preserving_toolchain_repair"
+}

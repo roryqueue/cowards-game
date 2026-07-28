@@ -37,6 +37,14 @@ describe("ReplayClient", () => {
     expect(source).toContain("getTimelineEntryAt(data, selectedIndex)")
   })
 
+  it("renders typed counted context independently from replay lifecycle evidence", () => {
+    expect(source).toContain(
+      "const countedState = data.competition?.countedState",
+    )
+    expect(source).toContain("countedState.publicLabel")
+    expect(source).not.toContain("metadata.countedStatus")
+  })
+
   it("shows owner debug only when owner projection data exists", () => {
     expect(source).toContain(
       "const ownerDebugAvailable = canShowOwnerDebug(data)",

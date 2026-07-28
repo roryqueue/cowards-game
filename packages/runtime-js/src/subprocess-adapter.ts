@@ -1,16 +1,31 @@
 import {
   spawnSync,
+  type SpawnSyncOptionsWithBufferEncoding,
   type SpawnSyncOptionsWithStringEncoding,
   type SpawnSyncReturns,
 } from "node:child_process"
+import type { Buffer } from "node:buffer"
 import type { RuntimeResult } from "@cowards/engine"
 import type {
-  StrategyExecutionAdapter,
+  StrategyExecutionAdapterV117,
   StrategyExecutionAdapterMetadata,
   StrategyExecutionRequest,
 } from "./adapter.js"
+import {
+  createRuntimeGuestExecutionV117,
+  executeStrategyRuntimeAbiV117,
+  observeRuntimeGuestAccountingV117,
+  type RuntimeGuestObservationV117,
+} from "./abi-bridge.js"
+import { consumeCandidateEvidenceFixture } from "./candidate-evidence-fixture.js"
+import { CANDIDATE_HOST_ENVELOPE_OVERHEAD_V117 } from "./candidate-host-envelope.js"
+import { runCandidateProcessSync } from "./candidate-process-runner.js"
+import { observeCandidateSubprocessV117 } from "./candidate-subprocess-observation.js"
 import { RUNTIME_TIMEOUT_MS } from "./guards.js"
-import { SUBPROCESS_HARNESS_SOURCE } from "./subprocess-harness.js"
+import {
+  SUBPROCESS_HARNESS_SOURCE,
+  SUBPROCESS_HARNESS_V117_SOURCE,
+} from "./subprocess-harness.js"
 import {
   assertWithinByteCap,
   encodeSubprocessIpcRequest,
@@ -25,6 +40,12 @@ type SpawnSyncLike = (
   args: readonly string[],
   options: SpawnSyncOptionsWithStringEncoding,
 ) => SpawnSyncReturns<string>
+
+type SpawnSyncBufferLike = (
+  command: string,
+  args: readonly string[],
+  options: SpawnSyncOptionsWithBufferEncoding,
+) => SpawnSyncReturns<Buffer>
 
 export interface SubprocessStrategyExecutionAdapterOptions {
   nodePath?: string | undefined
@@ -95,8 +116,9 @@ const asString = (value: string | null | undefined): string => {
 
 export const createSubprocessStrategyExecutionAdapter = (
   options: SubprocessStrategyExecutionAdapterOptions = {},
-): StrategyExecutionAdapter => {
+): StrategyExecutionAdapterV117 => {
   const spawn = options.spawnSync ?? spawnSync
+  const spawnCandidate = spawn as unknown as SpawnSyncBufferLike
   const nodePath = options.nodePath ?? process.execPath
   const env = { ...(options.env ?? defaultEnv) }
   const harnessSource = options.harnessSource ?? SUBPROCESS_HARNESS_SOURCE
@@ -171,6 +193,93 @@ export const createSubprocessStrategyExecutionAdapter = (
       }
 
       return parseSubprocessIpcResponse(stdout, stdoutBytes)
+    },
+    executeV117(request) {
+      return executeStrategyRuntimeAbiV117({
+        requestBytes: request.requestBytes,
+        executableSource: request.executableSource,
+        signingIdentity: request.signingIdentity,
+        invokeGuest(guest) {
+          const observed = (
+            observation: RuntimeGuestObservationV117,
+          ) =>
+            createRuntimeGuestExecutionV117(
+              observation,
+              consumeCandidateEvidenceFixture(
+                request,
+                observeRuntimeGuestAccountingV117(
+                  observation,
+                  guest.outputByteLimit,
+                ),
+              ),
+            )
+          const input = JSON.stringify({
+            source: guest.executableSource,
+            methodName: guest.methodName,
+            input: guest.input,
+            outputByteLimit: guest.outputByteLimit,
+            methodWallMilliseconds: guest.timeoutMs,
+          })
+          const launchStartedNanoseconds = process.hrtime.bigint()
+          const timeoutMilliseconds =
+            guest.startupTimeoutMs +
+            guest.timeoutMs +
+            guest.cancellationGraceMilliseconds
+          const stderrByteLimit = Math.min(
+            guest.stderrByteLimit,
+            stderrBytes,
+          )
+          const result =
+            options.spawnSync !== undefined && process.env.NODE_ENV === "test"
+              ? spawnCandidate(
+                  nodePath,
+                  harnessArgs(SUBPROCESS_HARNESS_V117_SOURCE),
+                  {
+                    env,
+                    input,
+                    killSignal: "SIGKILL",
+                    // Test-only injected transports are still held to the
+                    // smaller physical stream ceiling.
+                    maxBuffer: Math.min(
+                      guest.stdoutByteLimit + 1,
+                      stderrByteLimit + 1,
+                    ),
+                    shell: false,
+                    stdio: ["pipe", "pipe", "pipe"],
+                    timeout: timeoutMilliseconds,
+                    windowsHide: true,
+                  },
+                )
+              : runCandidateProcessSync({
+                  command: nodePath,
+                  args: harnessArgs(SUBPROCESS_HARNESS_V117_SOURCE),
+                  env,
+                  input,
+                  killSignal: "SIGKILL",
+                  launchStartedNanoseconds,
+                  timeoutMilliseconds,
+                  stdoutByteLimit:
+                    CANDIDATE_HOST_ENVELOPE_OVERHEAD_V117 +
+                    guest.stdoutByteLimit,
+                  stderrByteLimit,
+                })
+          const receivedAtNanoseconds = process.hrtime.bigint()
+          return observed(
+            observeCandidateSubprocessV117({
+              result,
+              launchStartedNanoseconds,
+              receivedAtNanoseconds,
+              startupTimeoutMilliseconds: guest.startupTimeoutMs,
+              methodWallMilliseconds: guest.timeoutMs,
+              cancellationGraceMilliseconds:
+                guest.cancellationGraceMilliseconds,
+              outputByteLimit: guest.outputByteLimit,
+              stdoutByteLimit: guest.stdoutByteLimit,
+              stderrByteLimit,
+            }),
+          )
+        },
+      })
     },
   }
 }

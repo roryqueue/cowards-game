@@ -4,6 +4,7 @@ import { ReplayClient } from "./replay-client.js"
 import { ReplayUnavailable } from "./replay-unavailable.js"
 import type { AnalyticsReplayMomentType } from "@cowards/spec"
 import type { ReplayFocusRequest } from "../../types.js"
+import type { JSX } from "react"
 
 export const dynamic = "force-dynamic"
 
@@ -51,7 +52,7 @@ const resolveReplayFocus = (
 export default async function ReplayPage({
   params,
   searchParams,
-}: ReplayPageProps) {
+}: ReplayPageProps): Promise<JSX.Element> {
   const resolvedParams = await Promise.resolve(params)
   const resolvedSearchParams =
     searchParams === undefined ? undefined : await Promise.resolve(searchParams)
