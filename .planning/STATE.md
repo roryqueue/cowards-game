@@ -1,20 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.37
-milestone_name: Rules Integrity and Strategy Evaluation Foundations — SHIPPED
-current_phase: 261
-current_phase_name: integrated-service-proof-drift-guards-and-release
-status: milestone-complete
-stopped_at: Post-tag public-read/UI integration correction verified; no successor milestone activated
-last_updated: "2026-07-23T11:10:00.000-04:00"
-last_activity: 2026-07-23
-last_activity_desc: Preserved runtime semantics, failed counted rendering closed, repaired root-invokable release verification, and refreshed the v1.37 proof chain without moving the tag
+milestone: v1.38
+milestone_name: Competitive Strategy Factory and Adversarial League
+status: planning
+last_updated: "2026-07-28T01:39:09.882Z"
+last_activity: 2026-07-28
 progress:
-  total_phases: 6
-  completed_phases: 6
-  total_plans: 148
-  completed_plans: 148
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # State: Coward's Game
@@ -28,12 +24,10 @@ See: `.planning/PROJECT.md` (updated 2026-07-12)
 
 ## Current Position
 
-Phase: 261 (integrated-service-proof-drift-guards-and-release) — COMPLETE
-Plan: 13 of 13 complete
-Status: Shipped at annotated `v1.37`; verified post-tag correction retained as later evidence
-Last activity: 2026-07-23 — Corrected public runtime-semantics retention, fail-closed counted rendering, and normal-root D-11 verification without changing gameplay or the release tag
-
-Progress: [██████████] 100%
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-07-28 — Milestone v1.38 started
 
 ## Durable Decisions
 

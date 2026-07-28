@@ -3,8 +3,8 @@
 ## Current State
 
 **Shipped version:** v1.37 Rules Integrity and Strategy Evaluation Foundations on 2026-07-22
-**Release target:** None activated; serious Strategy work still requires separate milestone approval
-**Status:** v1.37 is archived and annotated at immutable commit `e704590df599b49d84745b0e828d5ab0f1d335ad`; the independent post-tag checker closes PROOF-08. A verified 2026-07-23 integration correction preserves public runtime semantics, fails counted rendering closed, and makes the D-11 release matrix root-invokable without moving the tag.
+**Release target:** v1.38 Competitive Strategy Factory and Adversarial League
+**Status:** v1.38 is approved for research-first planning after the v1.37 audit, archive, annotated tag, and independent post-tag checker closed the predecessor gate. No workstream is active.
 **Last audit:** v1.37 traced 56/56 requirements with zero gaps, zero overrides, one transition authority, and zero unapproved semantic deltas. The immutable pre-tag audit retains 55 passed plus PROOF-08 `ready_pending`; the actual annotated tag/post-tag join closes the final requirement. Refreshed production-shaped proof covers four containment-attested non-counted lanes, 12 runs, 23 service scenarios, 17 rollback/history scenarios, Chronicle reconstruction/replay, Set fairness, persistence, privacy, and rollback.
 
 Coward's Game is a deterministic two-player programmable strategy game for the web. Players can author immutable Strategy Revisions, save account-owned revisions, fork credible Starter and Advanced Strategies, enter exhibitions or resettable trial ladder seasons, inspect fair standings and replay evidence, study saved gauntlet analytics, and trust that public outputs do not expose private Strategy data. The project now has generated TypeScript service contracts, selected service-backed public/player/account/ladder/workshop analytics reads, live PostgreSQL-backed Go ownership for normal backend orchestration and selected API routes, artifact-backed Go Starter/Advanced forks, runtime isolation readiness gates, supported counted TypeScript, Python, Rust, and Zig Strategy languages, source-language artifact provenance for TypeScript/Python, executable Rust and Zig WASM/WASI artifact-backed lanes, repeatable local topology diagnostics, and boundary drift monitors. Go owns normal job lifecycle, Match completion, Chronicle persistence handoff, MatchSet scoring/status refresh, selected exhibition creation, public MatchSet summary, public replay metadata, and selected public replay evidence while hostile Strategy execution remains behind the Strategy Execution Service / Runtime Broker boundary. TinyGo has a documented spike/defer recommendation and is not production-visible.
@@ -12,6 +12,32 @@ Coward's Game is a deterministic two-player programmable strategy game for the w
 ## Core Value
 
 Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
+
+## Current Milestone: v1.38 Competitive Strategy Factory and Adversarial League
+
+**Goal:** Build and freeze a reproducible serious current-rules Strategy league, then use that fixed competitive baseline for an equal-compute, lab-only starting-formation experiment without shipping a rule change.
+
+**Target features:**
+- Freeze a measurement and evaluation contract before candidate search, including deterministic budgets, oracle-relative exploitability, interaction and opening diagnostics, replay review, and sealed holdout policy.
+- Build an immutable Strategy factory for independently developed legal deterministic candidates, with doctrine diversity, hierarchical planning, behavioral/clone fingerprints, reproducible provenance, and no live inference during Matches.
+- Run independent oracle, model, and human red-team channels through a frozen multi-oracle PSRO/double-oracle league; select robust pure and portfolio finalists only from reproducible current-rules evidence.
+- Red-team and certify the serious current-rules league before any alternate starting profile is evaluated; gate current-profile finalists through the unchanged runtime, privacy, Chronicle, replay, and evidence boundaries.
+- Only after that baseline is frozen, compare current edge rank, full inward rank, and the specified edge-anchored bracket using the unchanged canonical transition engine and otherwise identical rules.
+- Retrain Strategies separately for every profile under equal doctrine, candidate, oracle, model/human, search-node, Match, side, initiative, arena, holdout, and replay-review budgets.
+- Make experimental-profile artifacts impossible to register as canonical Strategies, persist as canonical evidence, schedule as counted play, or expose through public/default surfaces.
+- Reject the bracket if best responses converge on a scripted opening, convoy/STONE-shield turtle, materially lower interaction, or worse oracle-relative exploitability; do not soften thresholds after seeing results.
+- If the bracket passes, produce a causal decision packet for a later rules milestone only. Do not ship it from v1.38.
+- Close with independent verification, adversarial review, sealed-holdout proof, privacy and information-boundary scans, milestone audit, archive, and annotated tag.
+
+**Hard boundaries:**
+- The primary formation experiment changes initial state only. Cycle cap, facing-only MOVE, attacker-facing Backstab, Backstab scan timing, activation counts, arenas, runtime, and every other rule remain fixed.
+- Cap reduction, MOVE, Backstab, and scan-timing changes remain separately attributable follow-up experiments.
+- Starter and Advanced Strategies remain regression fixtures rather than balance evidence; claims remain oracle-relative and may not assert mathematical optimality or permanent balance.
+- Strategy execution remains outside web/API/Go and behind the unchanged runtime-service / Runtime Broker boundary.
+- Public/default evidence must not expose Strategy source, artifacts, StrategyMemory, SoldierMemory, objective payloads, raw diagnostics, host data, security internals, sealed holdouts, or private evaluator state.
+- A failed gate is a valid result. Experimental evidence cannot authorize production gameplay, canonical registration, counted scheduling, or public exposure.
+
+**Milestone contract:** `.planning/milestone-proposals/v1.38-competitive-strategy-factory-and-adversarial-league/ACTIVATION-PROMPT.md`
 
 ## Latest Shipped Milestone: v1.37 Rules Integrity and Strategy Evaluation Foundations
 
@@ -852,6 +878,13 @@ Future rule-correction work must treat the rules docs, engine, Chronicle/replay 
 
 This document evolves at phase transitions and milestone boundaries.
 
+**After each phase transition** (via `$gsd-transition`):
+1. Requirements invalidated? -> Move to Out of Scope with reason
+2. Requirements validated? -> Move to Validated with phase reference
+3. New requirements emerged? -> Add to Active
+4. Decisions to log? -> Add to Key Decisions
+5. "What This Is" still accurate? -> Update if drifted
+
 **After each milestone** (via `$gsd-complete-milestone`):
 1. Full review of all sections
 2. Core Value check -> still the right priority?
@@ -859,4 +892,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-12 after shipping milestone v1.36 Competition Maturity*
+*Last updated: 2026-07-27 after starting milestone v1.38 Competitive Strategy Factory and Adversarial League*
