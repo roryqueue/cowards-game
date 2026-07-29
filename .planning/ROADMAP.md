@@ -50,12 +50,15 @@ v1.38 builds a private, content-addressed research control plane beside Coward's
   4. A separately permissioned custodian can demonstrate the profile-agnostic commitment, storage, access/query ledger, one-open authorization, safe receipt, contamination response, and retirement workflow whose lineage contains no profile-conditioned or current-trained input, while reports keep process failure, current-rules failure, formation rejection, formation pass, and contamination distinct and forbid threshold softening.
   5. The literal three profiles, equal-compute dimensions, telemetry, classifiers, and rejection thresholds are precommitted with validated profile-agnostic fixtures, while executable formation namespaces, manifests, states, caches, prompts, traces, replays, and results remain absent.
 
-**Plans:** 2/7 plans executed
+**Plans:** 2/10 plans executed
 
 Plans:
 
 - [x] 262-01-PLAN.md — Admit the exact immutable v1.37 release and selected semantic/runtime authority.
 - [x] 262-02-PLAN.md — Execution terminal: supervised historical matrix reproduction stopped on resource pressure with zero accepted cells; ADMIT-03 remains pending.
+- [ ] 262-08-PLAN.md — Bind an independent pre-v1.38 historical expectation and exact mutation-detecting predicate.
+- [ ] 262-09-PLAN.md — Implement deterministic resource-bounded parallel supervision, accounting, cancellation, and cleanup.
+- [ ] 262-10-PLAN.md — Calibrate and execute the exact 540-cell authoritative run under the unchanged 90-minute gate.
 - [ ] 262-03-PLAN.md — Define and calibrate the immutable study and two-ledger accounting contract.
 - [ ] 262-04-PLAN.md — Freeze numeric gates, report states, and bounded empirical claims.
 - [ ] 262-05-PLAN.md — Precommit profile-neutral classifiers and prove pre-formation containment.
