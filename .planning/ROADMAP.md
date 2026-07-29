@@ -50,16 +50,18 @@ v1.38 builds a private, content-addressed research control plane beside Coward's
   4. A separately permissioned custodian can demonstrate the profile-agnostic commitment, storage, access/query ledger, one-open authorization, safe receipt, contamination response, and retirement workflow whose lineage contains no profile-conditioned or current-trained input, while reports keep process failure, current-rules failure, formation rejection, formation pass, and contamination distinct and forbid threshold softening.
   5. The literal three profiles, equal-compute dimensions, telemetry, classifiers, and rejection thresholds are precommitted with validated profile-agnostic fixtures, while executable formation namespaces, manifests, states, caches, prompts, traces, replays, and results remain absent.
 
-**Plans:** 7 plans
+**Plans:** 1/7 plans executed
 
 Plans:
-- [ ] 262-01-PLAN.md — Admit the exact immutable v1.37 release and selected semantic/runtime authority.
+
+- [x] 262-01-PLAN.md — Admit the exact immutable v1.37 release and selected semantic/runtime authority.
 - [ ] 262-02-PLAN.md — Reproduce the historical current-rules matrix through the supervised canonical runtime path.
 - [ ] 262-03-PLAN.md — Define and calibrate the immutable study and two-ledger accounting contract.
 - [ ] 262-04-PLAN.md — Freeze numeric gates, report states, and bounded empirical claims.
 - [ ] 262-05-PLAN.md — Precommit profile-neutral classifiers and prove pre-formation containment.
 - [ ] 262-06-PLAN.md — Prove synthetic custody mechanics and obtain genuine operational authorization.
 - [ ] 262-07-PLAN.md — Bind the safe custody reference and all passed gates into the aggregate foundation root.
+
 **Research flag:** Begin with contained calibration spikes for denominators, structural work units, retry/burn policy, holdout custody, contamination response, and report logic; these spikes are contract-only and may not materialize a formation state.
 
 ### Phase 263: Legal Planner and Deterministic Runner Feasibility
@@ -195,7 +197,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 262. Foundation Admission, Measurement, Custody, and Containment Contract | 0/TBD | Not started | - |
+| 262. Foundation Admission, Measurement, Custody, and Containment Contract | 1/7 | In Progress | - |
 | 263. Legal Planner and Deterministic Runner Feasibility | 0/TBD | Not started | - |
 | 264. Immutable Factory, Independent Oracles, and Quarantined Intake | 0/TBD | Not started | - |
 | 265. Serious Current-Rules League and Development Red Team | 0/TBD | Not started | - |
