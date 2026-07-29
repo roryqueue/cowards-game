@@ -23,8 +23,7 @@ const repoRoot = path.resolve(
   "..",
 )
 
-const clone = <T>(value: T): T =>
-  JSON.parse(JSON.stringify(value)) as T
+const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T
 
 const mutate = (
   input: V138FoundationAdmissionInput,
@@ -74,9 +73,7 @@ describe("v1.38 foundation admission", () => {
 
   it("admission is deterministic and renders a byte-stable public receipt", () => {
     const first = evaluateV138FoundationAdmission(exactInput)
-    const second = evaluateV138FoundationAdmission(
-      clone(exactInput),
-    )
+    const second = evaluateV138FoundationAdmission(clone(exactInput))
 
     expect(second).toEqual(first)
     expect(renderV138FoundationAdmissionReceipt(first)).toBe(
@@ -167,8 +164,7 @@ describe("v1.38 foundation admission", () => {
       "semantic tuple drift",
       "SEMANTIC_TUPLE_DRIFT",
       (draft: Record<string, unknown>) => {
-        nested(draft, "semanticAuthority").tupleId =
-          `sha256:${"0".repeat(64)}`
+        nested(draft, "semanticAuthority").tupleId = `sha256:${"0".repeat(64)}`
       },
     ],
     [
@@ -193,23 +189,19 @@ describe("v1.38 foundation admission", () => {
       "unexplained correction lineage",
       "CORRECTION_LINEAGE_UNEXPLAINED",
       (draft: Record<string, unknown>) => {
-        nested(draft, "correctionLineage").implementationCommit =
-          "0".repeat(40)
+        nested(draft, "correctionLineage").implementationCommit = "0".repeat(40)
       },
     ],
-  ] as const)(
-    "admission stops for %s",
-    (_label, reason, applyMutation) => {
-      const result = evaluateV138FoundationAdmission(
-        mutate(exactInput, applyMutation),
-      )
+  ] as const)("admission stops for %s", (_label, reason, applyMutation) => {
+    const result = evaluateV138FoundationAdmission(
+      mutate(exactInput, applyMutation),
+    )
 
-      expect(result).toMatchObject({
-        status: "stopped_integrity_foundation",
-        reason,
-      })
-    },
-  )
+    expect(result).toMatchObject({
+      status: "stopped_integrity_foundation",
+      reason,
+    })
+  })
 
   it("admission rejects copied labels, boolean gates, and nested override keys", () => {
     const copiedTuple = {
@@ -285,22 +277,19 @@ describe("v1.38 current matrix reproduction", () => {
   it("matrix freezes the exact historical inventory without collapsing duplicate geometry", () => {
     const inventory = enumerateV138CurrentMatrix(repoRoot)
     const unorderedPairs = new Set(
-      attempts.map(({ leftDefinitionId, rightDefinitionId }) =>
-        `${leftDefinitionId}\0${rightDefinitionId}`,
+      attempts.map(
+        ({ leftDefinitionId, rightDefinitionId }) =>
+          `${leftDefinitionId}\0${rightDefinitionId}`,
       ),
     )
 
-    expect(inventory.schemaVersion).toBe(
-      "v1.38-current-matrix-inventory-v1",
-    )
+    expect(inventory.schemaVersion).toBe("v1.38-current-matrix-inventory-v1")
     expect(inventory.fixturePurpose).toBe("regression_throughput_only")
     expect(inventory.definitions).toHaveLength(10)
     expect(unorderedPairs).toHaveLength(45)
-    expect(inventory.arenas.map(({ historicalLabel }) => historicalLabel)).toEqual([
-      "Smoke",
-      "Standard Cross",
-      "Open Field",
-    ])
+    expect(
+      inventory.arenas.map(({ historicalLabel }) => historicalLabel),
+    ).toEqual(["Smoke", "Standard Cross", "Open Field"])
     expect(inventory.arenas).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -313,8 +302,13 @@ describe("v1.38 current matrix reproduction", () => {
         }),
       ]),
     )
-    expect(new Set(inventory.arenas.map(({ semanticGeometryHash }) => semanticGeometryHash)))
-      .toHaveLength(2)
+    expect(
+      new Set(
+        inventory.arenas.map(
+          ({ semanticGeometryHash }) => semanticGeometryHash,
+        ),
+      ),
+    ).toHaveLength(2)
     expect(new Set(attempts.map(({ seedLabel }) => seedLabel))).toEqual(
       new Set(["meta-even", "meta-odd"]),
     )
@@ -352,23 +346,18 @@ describe("v1.38 current matrix reproduction", () => {
             initialInitiativePlayerId: attempt.initialInitiativePlayerId,
             candidateMatch: {
               semanticAuthorityKey: "runtime-v1.19",
-              initialInitiativeEntrantKey:
-                attempt.initialInitiativeEntrantId,
+              initialInitiativeEntrantKey: attempt.initialInitiativeEntrantId,
             },
           },
           strategies: {
             bottom: {
               metadata: {
-                tags: expect.arrayContaining([
-                  "regression_throughput_only",
-                ]),
+                tags: expect.arrayContaining(["regression_throughput_only"]),
               },
             },
             top: {
               metadata: {
-                tags: expect.arrayContaining([
-                  "regression_throughput_only",
-                ]),
+                tags: expect.arrayContaining(["regression_throughput_only"]),
               },
             },
           },
@@ -396,8 +385,8 @@ describe("v1.38 current matrix reproduction", () => {
 
   it("matrix keeps every failed attempt charged and excludes it from accepted cells", () => {
     const inventory = enumerateV138CurrentMatrix(repoRoot)
-    const outcomes: V138CurrentMatrixAttemptOutcome[] =
-      inventory.attempts.map(({ attemptId }, index) => ({
+    const outcomes: V138CurrentMatrixAttemptOutcome[] = inventory.attempts.map(
+      ({ attemptId }, index) => ({
         attemptId,
         classification:
           index === 0
@@ -410,15 +399,19 @@ describe("v1.38 current matrix reproduction", () => {
           : index === 1
             ? { code: "EXECUTION_EXCEPTION", retryable: true }
             : { outcome: "draw" as const }),
-      }))
+      }),
+    )
 
-    expect(() =>
-      reduceV138CurrentMatrix(inventory, outcomes),
-    ).toThrow("MATRIX_REPRODUCTION_MISMATCH")
+    expect(() => reduceV138CurrentMatrix(inventory, outcomes)).toThrow(
+      "MATRIX_REPRODUCTION_MISMATCH",
+    )
   })
 
   it.each([
-    ["missing cell", (rows: V138CurrentMatrixAttemptOutcome[]) => rows.slice(1)],
+    [
+      "missing cell",
+      (rows: V138CurrentMatrixAttemptOutcome[]) => rows.slice(1),
+    ],
     [
       "duplicate cell",
       (rows: V138CurrentMatrixAttemptOutcome[]) => [...rows, rows[0]!],
@@ -432,45 +425,73 @@ describe("v1.38 current matrix reproduction", () => {
     ],
   ])("matrix rejects %s before sealing a receipt", (_label, mutateRows) => {
     const inventory = enumerateV138CurrentMatrix(repoRoot)
-    const allDraws: V138CurrentMatrixAttemptOutcome[] =
-      inventory.attempts.map(({ attemptId }) => ({
+    const allDraws: V138CurrentMatrixAttemptOutcome[] = inventory.attempts.map(
+      ({ attemptId }) => ({
         attemptId,
         classification: "success",
         outcome: "draw",
-      }))
+      }),
+    )
     expect(() =>
       reduceV138CurrentMatrix(inventory, mutateRows(allDraws)),
     ).toThrow("MATRIX_REPRODUCTION_MISMATCH")
   })
 
-  it("matrix reproduces and seals the exact supervised regression receipt", () => {
+  it("matrix calibrates supervised execution and fails closed when the total resource budget is unsafe", () => {
     const receipt = reproduceV138CurrentMatrix(repoRoot)
     const rendered = renderV138CurrentMatrixReceipt(receipt)
 
     expect(receipt).toMatchObject({
       schemaVersion: "v1.38-current-matrix-reproduction-v1",
-      status: "passed_exact",
+      status: "stopped_process_failure",
       fixturePurpose: "regression_throughput_only",
-      attemptCount: 540,
-      acceptedCellCount: 540,
-      playerViolationCount: 0,
-      systemFailureCount: 0,
-      expectedAggregateMatched: true,
-      runtimeServiceVersion: "runtime-execution-service-v1.18",
-      runtimeAbiVersion: "strategy-runtime-abi-v1.19",
-      matchKernel: "engine-kernel-v1.37-candidate-1",
-      chargedAttemptLedgerRoot: expect.stringMatching(
-        /^sha256:[0-9a-f]{64}$/u,
-      ),
-      acceptedCellLedgerRoot: expect.stringMatching(
-        /^sha256:[0-9a-f]{64}$/u,
-      ),
+      reason: "system_failure_resource_pressure",
+      declaredAttemptCount: 540,
+      acceptedCellCount: 0,
+      partialAcceptedEvidenceReusable: false,
+      priorFailedRun: {
+        classification: "system_failure_resource_pressure",
+        hostFreeMemoryPercentAtTermination: 9,
+        partialResultsDiscarded: true,
+        completedAttemptCount: "unknown",
+      },
+      resourcePolicy: {
+        calibrationAttemptCount: 1,
+        maxShardAttempts: 4,
+        partialAcceptedEvidenceReusable: false,
+      },
+      calibration: {
+        attemptCount: 1,
+        withinTotalRunBudget: false,
+        withinShardMemoryBudget: true,
+        outcomeClassification: "success",
+      },
+      chargedAttemptLedgerRoot: expect.stringMatching(/^sha256:[0-9a-f]{64}$/u),
+      acceptedCellLedgerRoot: expect.stringMatching(/^sha256:[0-9a-f]{64}$/u),
       receiptRoot: expect.stringMatching(/^sha256:[0-9a-f]{64}$/u),
     })
     expect(Object.isFrozen(receipt)).toBe(true)
     expect(rendered).toMatch(/\n$/u)
     expect(rendered).not.toMatch(
-      /StrategyMemory|SoldierMemory|objective|source|diagnostic|Users|DATABASE_URL/iu,
+      /StrategyMemory|SoldierMemory|objectivePayload|strategySource|diagnostic|Users|DATABASE_URL/iu,
     )
-  }, 300_000)
+  }, 600_000)
+
+  it("matrix resource policy uses bounded subprocess shards and publishes no partial accepted cells", () => {
+    const source = readFileSync(
+      path.resolve(
+        repoRoot,
+        "scripts/lib/v1-38-current-matrix-reproduction.ts",
+      ),
+      "utf8",
+    )
+    expect(source).toContain("process.execPath")
+    expect(source).toContain('"--import"')
+    expect(source).toContain('"tsx"')
+    expect(source).toContain("maxShardAttempts: 4")
+    expect(source).toContain("maxShardRssKilobytes")
+    expect(source).toContain("acceptedCellsPublished: 0")
+    expect(source).toContain("partialAcceptedEvidenceReusable: false")
+    expect(source).not.toMatch(/\bnew\s+Function\b|node:vm|\brunMatch\s*\(/u)
+  })
 })

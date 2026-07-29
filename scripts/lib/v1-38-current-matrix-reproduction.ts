@@ -1,10 +1,20 @@
+/* eslint-disable no-restricted-imports -- Offline regression admission must bind the selected runtime-service implementation without widening its production barrel. */
+import { Buffer } from "node:buffer"
 import { createHash, generateKeyPairSync, sign } from "node:crypto"
 import { readFileSync } from "node:fs"
 import path from "node:path"
+import { spawnSync } from "node:child_process"
+import { fileURLToPath } from "node:url"
 import {
   createPreparedRuntimeServiceDependenciesV118,
   executePreparedRuntimeServiceRequestV118,
+  hashRuntimeAuthoritySchedulingDecisionReference,
+  type PreparedRuntimeServiceExecutionV118,
 } from "../../apps/runtime-service/src/execute-match.js"
+import type {
+  RuntimeEvidenceAuthorityLoader,
+  VerifiedMountedRuntimeEvidenceAuthority,
+} from "../../apps/runtime-service/src/runtime-evidence-authority.js"
 import { createRuntimeServiceConfig } from "../../apps/runtime-service/src/runtime-config.js"
 import {
   ADVANCED_STRATEGY_DEFINITIONS,
@@ -14,25 +24,45 @@ import {
   CANONICAL_ARENA_CATALOG_V1_37,
   CANONICAL_COMPATIBILITY_TUPLES,
   DEFAULT_RUNTIME_LIMITS,
+  RUNTIME_BUDGET_PROFILE_V1_18_SHA256,
+  RUNTIME_EVIDENCE_AUTHORITY_PAYLOAD_SCHEMA_VERSION,
+  RUNTIME_EVIDENCE_AUTHORITY_TRUST_DOMAINS,
   RUNTIME_EXECUTION_SERVICE_VERSION,
   RUNTIME_EXECUTION_SERVICE_VERSION_V1_18,
   createRuntimeSemanticTupleV118,
   createSetScenarioV137,
+  hashExecutableLaneIdentity,
+  parseRuntimeEvidenceAuthorityPayload,
+  type ExecutableLaneIdentity,
+  type RuntimeEntrantAuthorityReference,
   type JsonValue,
   type RuntimeCertificateReferenceV118,
   type RuntimeExecutionServiceRequest,
   type RuntimeExecutionServiceRequestV118,
   type StrategyRevision,
-} from "../../packages/spec/src/index.js"
+} from "@cowards/spec"
 
 const FIXTURE_PURPOSE = "regression_throughput_only" as const
 const HISTORICAL_MATRIX_SOURCE =
   ".planning/artifacts/v2.0-core-rules-audit/run-current-meta-matrix.ts"
-const ADMISSION_RECEIPT =
-  ".planning/artifacts/v1.38-foundation-admission.json"
+const ADMISSION_RECEIPT = ".planning/artifacts/v1.38-foundation-admission.json"
 const MATRIX_SCHEMA_VERSION = "v1.38-current-matrix-inventory-v1" as const
 const FIXED_EVALUATION_INSTANT = "2026-07-28T00:00:00.000Z"
 const FIXED_AUTHORITY_GENERATION = "0"
+const FIXED_AUTHORITY_BUNDLE_HASH = sha256Text(
+  "v1.38-current-matrix-authority-v1",
+)
+const FIXED_PUBLICATION = {
+  publicationId: "publication:v138-matrix:v1",
+  installReceiptId: "install:v138-matrix:v1",
+  payloadSha256: FIXED_AUTHORITY_BUNDLE_HASH,
+  envelopeSha256: sha256Text("v1.38-matrix-authority-envelope-v1"),
+  sourceManifestHash: sha256Text("v1.38-matrix-authority-source-manifest-v1"),
+} as const
+const FIXED_LEDGER_PRESTATE_ROOT = sha256Text("v1.38-matrix-ledger-prestate-v1")
+function sha256Text(value: string): `sha256:${string}` {
+  return `sha256:${createHash("sha256").update(value).digest("hex")}`
+}
 
 const sha256 = (value: string | Uint8Array): `sha256:${string}` =>
   `sha256:${createHash("sha256").update(value).digest("hex")}`
@@ -46,6 +76,17 @@ const deepFreeze = <T>(value: T): Readonly<T> => {
   }
   return value
 }
+
+const RESOURCE_POLICY = deepFreeze({
+  policyId: "v1.38-matrix-resource-policy-v1",
+  calibrationAttemptCount: 1,
+  maxProjectedTotalMilliseconds: 90 * 60 * 1_000,
+  maxShardAttempts: 4,
+  maxShardMilliseconds: 10 * 60 * 1_000,
+  maxShardRssKilobytes: 2 * 1024 * 1024,
+  progressEmission: "stderr_after_each_terminal_shard",
+  partialAcceptedEvidenceReusable: false,
+})
 
 const revisionFor = (
   definition: (typeof ADVANCED_STRATEGY_DEFINITIONS)[number],
@@ -70,12 +111,84 @@ const artifactHash = (revision: StrategyRevision): `sha256:${string}` => {
   return `sha256:${artifact.hash.replace(/^sha256:/u, "")}`
 }
 
+const laneIdentity = (
+  revision: StrategyRevision,
+  compatibility = CANONICAL_COMPATIBILITY_TUPLES.find(
+    ({ tuple }) => tuple.runtimeAbi === "strategy-runtime-abi-v1.19",
+  )!,
+): ExecutableLaneIdentity => ({
+  providerId: "v1.38-matrix-typescript-provider",
+  languageId: revision.runtime.language.id,
+  runtimeId: "node",
+  runtimeVersion:
+    revision.metadata.sourceArtifact?.toolchain.runtimeVersion ??
+    revision.validation.runtimeVersion,
+  toolchainId:
+    revision.metadata.sourceArtifact?.toolchain.language ?? "typescript",
+  toolchainVersion:
+    revision.metadata.sourceArtifact?.toolchain.runtimeVersion ??
+    revision.runtime.language.version,
+  adapterId: revision.runtime.adapter.id,
+  adapterVersion: revision.runtime.adapter.version,
+  policyId: "v1.38-matrix-package-none-policy",
+  policyVersion: "v1",
+  corpusId: "v1.38-historical-advanced-regression",
+  corpusVersion: "v1",
+  artifactId: `artifact:${revision.id}`,
+  artifactSha256: artifactHash(revision).replace(/^sha256:/u, ""),
+  implementationId: "runtime-execution-service-v1.18",
+  buildId: "v1.38-matrix-reproduction-v1",
+  semanticTupleId: compatibility.tupleId,
+  semanticTuple: { ...compatibility.tuple },
+})
+
+const entrantEvidence = (input: {
+  side: "bottom" | "top"
+  attemptId: string
+  entrantId: string
+  revision: StrategyRevision
+  compatibility: (typeof CANONICAL_COMPATIBILITY_TUPLES)[number]
+}): RuntimeEntrantAuthorityReference => {
+  const lane = laneIdentity(input.revision, input.compatibility)
+  const entrant: RuntimeEntrantAuthorityReference = {
+    entrantKey: input.entrantId,
+    strategyRevisionId: input.revision.id,
+    laneIdentityHash: `sha256:${hashExecutableLaneIdentity(lane)}`,
+    effectiveStatus: "exhibition_only",
+    schedulingDecisionId: `schedule:v138-matrix:${input.attemptId}:${input.side}`,
+    schedulingDecisionHash: `sha256:${"0".repeat(64)}`,
+    schedulingDecision: {
+      status: "exhibition_only",
+      reasonCode: "CONFORMANCE_MISSING",
+      evaluatedAt: FIXED_EVALUATION_INSTANT,
+      freshUntil: "2099-12-31T23:59:59.999Z",
+      registryGeneration: FIXED_AUTHORITY_GENERATION,
+    },
+    containmentCertificateId: `certificate:v138-matrix:${input.attemptId}:${input.side}`,
+    containmentCertificateHash: sha256(
+      `v1.38-matrix-certificate\0${input.attemptId}\0${input.side}\0${input.revision.id}`,
+    ),
+  }
+  return {
+    ...entrant,
+    schedulingDecisionHash: hashRuntimeAuthoritySchedulingDecisionReference({
+      compatibilityTupleId: input.compatibility.tupleId,
+      authorityBundleHash: FIXED_AUTHORITY_BUNDLE_HASH,
+      registryGeneration: FIXED_AUTHORITY_GENERATION,
+      publication: FIXED_PUBLICATION,
+      entrant,
+    }),
+  }
+}
+
 const certificateReference = (
   side: "bottom" | "top",
   attemptId: string,
   revision: StrategyRevision,
 ): RuntimeCertificateReferenceV118 => {
   const sourceDigest = sha256(revision.source)
+  const laneIdentityHash =
+    `sha256:${hashExecutableLaneIdentity(laneIdentity(revision))}` as const
   return {
     side,
     certificateId: `certificate:v138-matrix:${attemptId}:${side}`,
@@ -93,15 +206,9 @@ const certificateReference = (
         revision.source.replaceAll("\r\n", "\n").replaceAll("\r", "\n"),
       ),
       artifactSha256: artifactHash(revision),
-      identityManifestRoot: sha256(
-        `v1.38-matrix-identity\0${revision.id}`,
-      ),
-      evidenceGraphRoot: sha256(
-        `v1.38-matrix-supervision\0${revision.id}`,
-      ),
-      laneIdentityHash: sha256(
-        `v1.38-matrix-lane\0${revision.id}`,
-      ),
+      identityManifestRoot: laneIdentityHash,
+      evidenceGraphRoot: sha256(`v1.38-matrix-supervision\0${revision.id}`),
+      laneIdentityHash,
     },
   }
 }
@@ -196,14 +303,11 @@ export const enumerateV138CurrentMatrix = (
             const bottomPlayerId = `player:${bottom.definition.id}:bottom`
             const topPlayerId = `player:${top.definition.id}:top`
             const initialInitiativeEntrantId =
-              seedLabel === "meta-even"
-                ? bottomEntrantId
-                : topEntrantId
+              seedLabel === "meta-even" ? bottomEntrantId : topEntrantId
             const initialInitiativePlayerId =
               seedLabel === "meta-even" ? bottomPlayerId : topPlayerId
             const scenario = createSetScenarioV137({
-              arenaCatalogVersion:
-                CANONICAL_ARENA_CATALOG_V1_37.catalogVersion,
+              arenaCatalogVersion: CANONICAL_ARENA_CATALOG_V1_37.catalogVersion,
               arenaSemanticGeometryHash: arena.semanticGeometryHash,
               entrantA: {
                 entrantKey: `entrant:${left.definition.id}`,
@@ -234,66 +338,24 @@ export const enumerateV138CurrentMatrix = (
                 tupleId: tuple.tupleId,
                 tuple: { ...tuple.tuple },
               },
-              authorityBundleHash: sha256(
-                `v1.38-matrix-authority\0${attemptId}`,
-              ),
+              authorityBundleHash: FIXED_AUTHORITY_BUNDLE_HASH,
               registryGeneration: FIXED_AUTHORITY_GENERATION,
-              publication: {
-                publicationId: `publication:v138-matrix:${attemptId}`,
-                installReceiptId: `install:v138-matrix:${attemptId}`,
-                payloadSha256: sha256(`payload\0${attemptId}`),
-                envelopeSha256: sha256(`envelope\0${attemptId}`),
-                sourceManifestHash: sha256(`manifest\0${attemptId}`),
-              },
+              publication: FIXED_PUBLICATION,
               entrants: {
-                bottom: {
-                  entrantKey: bottomEntrantId,
-                  strategyRevisionId: bottom.revision.id,
-                  laneIdentityHash: sha256(
-                    `v1.38-matrix-lane\0${bottom.revision.id}`,
-                  ),
-                  effectiveStatus: "exhibition_only" as const,
-                  schedulingDecisionId: `schedule:v138-matrix:${attemptId}:bottom`,
-                  schedulingDecisionHash: sha256(
-                    `schedule\0${attemptId}\0bottom`,
-                  ),
-                  schedulingDecision: {
-                    status: "exhibition_only" as const,
-                    reasonCode: "CONFORMANCE_MISSING",
-                    evaluatedAt: FIXED_EVALUATION_INSTANT,
-                    freshUntil: "2099-12-31T23:59:59.999Z",
-                    registryGeneration: FIXED_AUTHORITY_GENERATION,
-                  },
-                  containmentCertificateId:
-                    `certificate:v138-matrix:${attemptId}:bottom`,
-                  containmentCertificateHash: sha256(
-                    `v1.38-matrix-certificate\0${attemptId}\0bottom\0${bottom.revision.id}`,
-                  ),
-                },
-                top: {
-                  entrantKey: topEntrantId,
-                  strategyRevisionId: top.revision.id,
-                  laneIdentityHash: sha256(
-                    `v1.38-matrix-lane\0${top.revision.id}`,
-                  ),
-                  effectiveStatus: "exhibition_only" as const,
-                  schedulingDecisionId: `schedule:v138-matrix:${attemptId}:top`,
-                  schedulingDecisionHash: sha256(
-                    `schedule\0${attemptId}\0top`,
-                  ),
-                  schedulingDecision: {
-                    status: "exhibition_only" as const,
-                    reasonCode: "CONFORMANCE_MISSING",
-                    evaluatedAt: FIXED_EVALUATION_INSTANT,
-                    freshUntil: "2099-12-31T23:59:59.999Z",
-                    registryGeneration: FIXED_AUTHORITY_GENERATION,
-                  },
-                  containmentCertificateId:
-                    `certificate:v138-matrix:${attemptId}:top`,
-                  containmentCertificateHash: sha256(
-                    `v1.38-matrix-certificate\0${attemptId}\0top\0${top.revision.id}`,
-                  ),
-                },
+                bottom: entrantEvidence({
+                  side: "bottom",
+                  attemptId,
+                  entrantId: bottomEntrantId,
+                  revision: bottom.revision,
+                  compatibility: tuple,
+                }),
+                top: entrantEvidence({
+                  side: "top",
+                  attemptId,
+                  entrantId: topEntrantId,
+                  revision: top.revision,
+                  compatibility: tuple,
+                }),
               },
             }
             const nestedRequest: RuntimeExecutionServiceRequest = {
@@ -334,8 +396,7 @@ export const enumerateV138CurrentMatrix = (
                   conditionSuffix: condition.suffix,
                   requestIdentity: condition.requestIdentity,
                   arenaCatalogVersion: scenario.arenaCatalogVersion,
-                  arenaSemanticGeometryHash:
-                    scenario.arenaSemanticGeometryHash,
+                  arenaSemanticGeometryHash: scenario.arenaSemanticGeometryHash,
                   initialInitiativeEntrantKey:
                     condition.initialInitiativeEntrantKey,
                   initialInitiativePlayerId:
@@ -367,10 +428,8 @@ export const enumerateV138CurrentMatrix = (
               evaluationInstant: FIXED_EVALUATION_INSTANT,
               certificateReferences: references,
               accounting: {
-                budgetProfileRoot: sha256("v1.38-matrix-budget-v1"),
-                ledgerPrestateRoot: sha256(
-                  `v1.38-matrix-ledger-prestate\0${attemptId}`,
-                ),
+                budgetProfileRoot: RUNTIME_BUDGET_PROFILE_V1_18_SHA256,
+                ledgerPrestateRoot: FIXED_LEDGER_PRESTATE_ROOT,
               },
               match: nestedRequest as unknown as JsonValue,
             }
@@ -426,11 +485,675 @@ export const enumerateV138CurrentMatrix = (
   })
 }
 
-// Task 2 fills the executor/reducer. Keeping the selected functions referenced
-// here makes the authority dependency explicit at the module boundary.
-void createRuntimeServiceConfig
-void createPreparedRuntimeServiceDependenciesV118
-void executePreparedRuntimeServiceRequestV118
-void generateKeyPairSync
-void sign
+export type V138CurrentMatrixAttemptOutcome =
+  | Readonly<{
+      attemptId: string
+      classification: "success"
+      outcome: "bottom_win" | "top_win" | "draw"
+    }>
+  | Readonly<{
+      attemptId: string
+      classification: "player_violation"
+      code: string
+    }>
+  | Readonly<{
+      attemptId: string
+      classification: "system_failure"
+      code: string
+      retryable: boolean
+    }>
 
+interface MatrixRecord {
+  wins: number
+  losses: number
+  draws: number
+}
+
+export interface V138CurrentMatrixReceipt {
+  readonly schemaVersion: "v1.38-current-matrix-reproduction-v1"
+  readonly status: "passed_exact"
+  readonly fixturePurpose: typeof FIXTURE_PURPOSE
+  readonly admissionRoot: `sha256:${string}`
+  readonly historicalMatrixSourceSha256: `sha256:${string}`
+  readonly historicalExpectedAggregateRoot: `sha256:${string}`
+  readonly expectedAggregateMatched: true
+  readonly arenaMapping: V138CurrentMatrixInventory["arenas"]
+  readonly definitionCount: 10
+  readonly unorderedPairCount: 45
+  readonly historicalArenaLabelCount: 3
+  readonly semanticGeometryCount: 2
+  readonly seedParityCount: 2
+  readonly mirroredSideCount: 2
+  readonly attemptCount: 540
+  readonly acceptedCellCount: 540
+  readonly playerViolationCount: 0
+  readonly systemFailureCount: 0
+  readonly runtimeServiceVersion: "runtime-execution-service-v1.18"
+  readonly runtimeAbiVersion: "strategy-runtime-abi-v1.19"
+  readonly matchKernel: "engine-kernel-v1.37-candidate-1"
+  readonly chargedAttemptLedgerRoot: `sha256:${string}`
+  readonly acceptedCellLedgerRoot: `sha256:${string}`
+  readonly reducerSourceRoot: `sha256:${string}`
+  readonly aggregate: Readonly<{
+    standings: readonly Readonly<
+      MatrixRecord & { id: string; winRateBasisPoints: number }
+    >[]
+    nonTransitiveCycleCount: number
+  }>
+  readonly receiptRoot: `sha256:${string}`
+}
+
+export interface V138CurrentMatrixStoppedReceipt {
+  readonly schemaVersion: "v1.38-current-matrix-reproduction-v1"
+  readonly status: "stopped_process_failure"
+  readonly fixturePurpose: typeof FIXTURE_PURPOSE
+  readonly reason: "system_failure_resource_pressure"
+  readonly admissionRoot: `sha256:${string}`
+  readonly historicalMatrixSourceSha256: `sha256:${string}`
+  readonly arenaMapping: V138CurrentMatrixInventory["arenas"]
+  readonly declaredAttemptCount: 540
+  readonly acceptedCellCount: 0
+  readonly partialAcceptedEvidenceReusable: false
+  readonly priorFailedRun: Readonly<{
+    classification: "system_failure_resource_pressure"
+    elapsedSecondsAtTermination: 14_390
+    hostFreeMemoryPercentAtTermination: 9
+    partialResultsDiscarded: true
+    completedAttemptCount: "unknown"
+  }>
+  readonly resourcePolicy: typeof RESOURCE_POLICY
+  readonly calibration: Readonly<{
+    attemptCount: 1
+    elapsedMilliseconds: number
+    maxRssKilobytes: number
+    projectedTotalMilliseconds: number
+    withinTotalRunBudget: false
+    withinShardMemoryBudget: boolean
+    outcomeClassification: "success" | "player_violation" | "system_failure"
+  }>
+  readonly chargedAttemptLedgerRoot: `sha256:${string}`
+  readonly acceptedCellLedgerRoot: `sha256:${string}`
+  readonly reducerSourceRoot: `sha256:${string}`
+  readonly runtimeServiceVersion: "runtime-execution-service-v1.18"
+  readonly runtimeAbiVersion: "strategy-runtime-abi-v1.19"
+  readonly matchKernel: "engine-kernel-v1.37-candidate-1"
+  readonly receiptRoot: `sha256:${string}`
+}
+
+export type V138CurrentMatrixReproductionReceipt =
+  | V138CurrentMatrixReceipt
+  | V138CurrentMatrixStoppedReceipt
+
+const canonical = (value: unknown): string => JSON.stringify(value)
+
+const HISTORICAL_EXPECTED_AGGREGATE_ROOT = `sha256:${"0".repeat(64)}` as const
+
+const aggregateOutcomes = (
+  inventory: Readonly<V138CurrentMatrixInventory>,
+  outcomes: readonly V138CurrentMatrixAttemptOutcome[],
+) => {
+  const records = new Map<string, MatrixRecord>(
+    inventory.definitions.map(({ id }) => [
+      id,
+      { wins: 0, losses: 0, draws: 0 },
+    ]),
+  )
+  const matchupRecords = new Map<
+    string,
+    { left: string; right: string; leftWins: number; rightWins: number }
+  >()
+  const accepted = outcomes
+    .filter(
+      (
+        outcome,
+      ): outcome is Extract<
+        V138CurrentMatrixAttemptOutcome,
+        { classification: "success" }
+      > => outcome.classification === "success",
+    )
+    .map((outcome) => {
+      const attempt = inventory.attempts.find(
+        ({ attemptId }) => attemptId === outcome.attemptId,
+      )!
+      const left = records.get(attempt.leftDefinitionId)!
+      const right = records.get(attempt.rightDefinitionId)!
+      const matchupKey = `${attempt.leftDefinitionId}\0${attempt.rightDefinitionId}`
+      const matchup = matchupRecords.get(matchupKey) ?? {
+        left: attempt.leftDefinitionId,
+        right: attempt.rightDefinitionId,
+        leftWins: 0,
+        rightWins: 0,
+      }
+      if (outcome.outcome === "draw") {
+        left.draws += 1
+        right.draws += 1
+      } else {
+        const bottomWon = outcome.outcome === "bottom_win"
+        const winnerId = bottomWon
+          ? attempt.bottomEntrantId.replace(/^entrant:/u, "")
+          : attempt.topEntrantId.replace(/^entrant:/u, "")
+        const loserId =
+          winnerId === attempt.leftDefinitionId
+            ? attempt.rightDefinitionId
+            : attempt.leftDefinitionId
+        records.get(winnerId)!.wins += 1
+        records.get(loserId)!.losses += 1
+        if (winnerId === attempt.leftDefinitionId) matchup.leftWins += 1
+        else matchup.rightWins += 1
+      }
+      matchupRecords.set(matchupKey, matchup)
+      return {
+        attemptId: outcome.attemptId,
+        outcome: outcome.outcome,
+      }
+    })
+
+  const standings = [...records.entries()]
+    .map(([id, record]) => ({
+      id,
+      ...record,
+      winRateBasisPoints: Math.round(
+        (record.wins * 10_000) /
+          Math.max(1, record.wins + record.losses + record.draws),
+      ),
+    }))
+    .sort(
+      (left, right) =>
+        right.winRateBasisPoints - left.winRateBasisPoints ||
+        left.id.localeCompare(right.id),
+    )
+  const beats = new Set(
+    [...matchupRecords.values()].flatMap((matchup) =>
+      matchup.leftWins === matchup.rightWins
+        ? []
+        : [
+            matchup.leftWins > matchup.rightWins
+              ? `${matchup.left}>${matchup.right}`
+              : `${matchup.right}>${matchup.left}`,
+          ],
+    ),
+  )
+  const ids = inventory.definitions.map(({ id }) => id)
+  let nonTransitiveCycleCount = 0
+  for (let first = 0; first < ids.length; first += 1) {
+    for (let second = first + 1; second < ids.length; second += 1) {
+      for (let third = second + 1; third < ids.length; third += 1) {
+        const [a, b, c] = [ids[first]!, ids[second]!, ids[third]!]
+        if (
+          (beats.has(`${a}>${b}`) &&
+            beats.has(`${b}>${c}`) &&
+            beats.has(`${c}>${a}`)) ||
+          (beats.has(`${a}>${c}`) &&
+            beats.has(`${c}>${b}`) &&
+            beats.has(`${b}>${a}`))
+        ) {
+          nonTransitiveCycleCount += 1
+        }
+      }
+    }
+  }
+  return {
+    accepted,
+    aggregate: { standings, nonTransitiveCycleCount },
+  }
+}
+
+export const reduceV138CurrentMatrix = (
+  inventory: Readonly<V138CurrentMatrixInventory>,
+  outcomes: readonly V138CurrentMatrixAttemptOutcome[],
+): Readonly<V138CurrentMatrixReceipt> => {
+  const expectedIds = inventory.attempts.map(({ attemptId }) => attemptId)
+  const actualIds = outcomes.map(({ attemptId }) => attemptId)
+  if (
+    outcomes.length !== 540 ||
+    new Set(actualIds).size !== 540 ||
+    canonical(actualIds) !== canonical(expectedIds)
+  ) {
+    throw new TypeError("MATRIX_REPRODUCTION_MISMATCH")
+  }
+  const playerViolationCount = outcomes.filter(
+    ({ classification }) => classification === "player_violation",
+  ).length
+  const systemFailureCount = outcomes.filter(
+    ({ classification }) => classification === "system_failure",
+  ).length
+  const { accepted, aggregate } = aggregateOutcomes(inventory, outcomes)
+  const chargedAttemptLedgerRoot = sha256(
+    canonical(
+      outcomes.map((outcome) =>
+        outcome.classification === "success"
+          ? {
+              attemptId: outcome.attemptId,
+              classification: outcome.classification,
+              outcome: outcome.outcome,
+            }
+          : outcome,
+      ),
+    ),
+  )
+  const acceptedCellLedgerRoot = sha256(canonical(accepted))
+  const observedAggregateRoot = sha256(
+    canonical({ acceptedCellLedgerRoot, aggregate }),
+  )
+  if (
+    playerViolationCount !== 0 ||
+    systemFailureCount !== 0 ||
+    accepted.length !== 540 ||
+    observedAggregateRoot !== HISTORICAL_EXPECTED_AGGREGATE_ROOT
+  ) {
+    throw new TypeError(
+      `MATRIX_REPRODUCTION_MISMATCH:${observedAggregateRoot}:accepted=${accepted.length}:player=${playerViolationCount}:system=${systemFailureCount}:first=${outcomes.find(({ classification }) => classification !== "success")?.code ?? "none"}`,
+    )
+  }
+  const reducerSourceRoot = sha256(readFileSync(new URL(import.meta.url)))
+  const withoutRoot = {
+    schemaVersion: "v1.38-current-matrix-reproduction-v1" as const,
+    status: "passed_exact" as const,
+    fixturePurpose: FIXTURE_PURPOSE,
+    admissionRoot: inventory.admissionRoot,
+    historicalMatrixSourceSha256: inventory.historicalSourceSha256,
+    historicalExpectedAggregateRoot: HISTORICAL_EXPECTED_AGGREGATE_ROOT,
+    expectedAggregateMatched: true as const,
+    arenaMapping: inventory.arenas,
+    definitionCount: 10 as const,
+    unorderedPairCount: 45 as const,
+    historicalArenaLabelCount: 3 as const,
+    semanticGeometryCount: 2 as const,
+    seedParityCount: 2 as const,
+    mirroredSideCount: 2 as const,
+    attemptCount: 540 as const,
+    acceptedCellCount: 540 as const,
+    playerViolationCount: 0 as const,
+    systemFailureCount: 0 as const,
+    runtimeServiceVersion: "runtime-execution-service-v1.18" as const,
+    runtimeAbiVersion: "strategy-runtime-abi-v1.19" as const,
+    matchKernel: "engine-kernel-v1.37-candidate-1" as const,
+    chargedAttemptLedgerRoot,
+    acceptedCellLedgerRoot,
+    reducerSourceRoot,
+    aggregate,
+  }
+  return deepFreeze({
+    ...withoutRoot,
+    receiptRoot: sha256(canonical(withoutRoot)),
+  }) as Readonly<V138CurrentMatrixReceipt>
+}
+
+const authorityForAttempt = (
+  attempt: V138CurrentMatrixAttempt,
+): Readonly<VerifiedMountedRuntimeEvidenceAuthority> => {
+  const nested = attempt.request
+    .match as unknown as RuntimeExecutionServiceRequest
+  const attestations = (["bottom", "top"] as const).map((side) => ({
+    attestationId: `attestation:v138-matrix:${attempt.attemptId}:${side}`,
+    attestationHash:
+      attempt.request.certificateReferences[side].sourceIdentity
+        .evidenceGraphRoot,
+    verified: true as const,
+    imports: [] as const,
+  }))
+  const certificates = (["bottom", "top"] as const).map((side, index) => {
+    const entrant = nested.evidenceSnapshot.entrants[side]
+    const revision = nested.strategies[side]
+    return {
+      kind: "containment" as const,
+      certificateId: entrant.containmentCertificateId!,
+      certificateVersion: "v1.38-matrix-containment-v1",
+      certificateRecordHash: entrant.containmentCertificateHash!,
+      laneIdentityHash: entrant.laneIdentityHash,
+      laneIdentity: laneIdentity(revision),
+      issuedAt: "2026-07-27T00:00:00.000Z",
+      freshUntil: "2099-12-31T23:59:59.999Z",
+      attestationIds: [attestations[index]!.attestationId],
+    }
+  })
+  const payload = parseRuntimeEvidenceAuthorityPayload({
+    schemaVersion: RUNTIME_EVIDENCE_AUTHORITY_PAYLOAD_SCHEMA_VERSION,
+    bundleVersion: "v1.38-matrix-regression-v1",
+    registryGeneration: FIXED_AUTHORITY_GENERATION,
+    issuedAt: "2026-07-27T00:00:00.000Z",
+    validFrom: "2026-07-27T00:00:00.000Z",
+    validUntil: "2099-12-31T23:59:59.999Z",
+    semanticTupleManifestHash: nested.evidenceSnapshot.compatibility.tupleId,
+    attestations,
+    certificates,
+    revocations: [],
+    supersessions: [],
+    operatorLaneDisables: [],
+  })
+  return deepFreeze({
+    authorityBundleHash: FIXED_AUTHORITY_BUNDLE_HASH,
+    registryGeneration: FIXED_AUTHORITY_GENERATION,
+    semanticTupleManifestHash: nested.evidenceSnapshot.compatibility.tupleId,
+    trustDomain: RUNTIME_EVIDENCE_AUTHORITY_TRUST_DOMAINS.fixture,
+    keyId: "v1.38-matrix-regression-authority",
+    payload,
+  }) as Readonly<VerifiedMountedRuntimeEvidenceAuthority>
+}
+
+const executeAttemptsInProcess = (
+  inventory: Readonly<V138CurrentMatrixInventory>,
+  selectedAttempts: readonly V138CurrentMatrixAttempt[],
+): V138CurrentMatrixAttemptOutcome[] => {
+  let currentAuthority:
+    | Readonly<VerifiedMountedRuntimeEvidenceAuthority>
+    | undefined
+  const authorityLoader: RuntimeEvidenceAuthorityLoader = {
+    load: () => {
+      if (currentAuthority === undefined) {
+        throw new TypeError("MATRIX_AUTHORITY_NOT_MOUNTED")
+      }
+      return currentAuthority
+    },
+    current: () => currentAuthority,
+  }
+  const runtimeConfig = createRuntimeServiceConfig({
+    strategyExecutionAdapter: "worker-thread",
+    semanticReceiptSecret: "v1.38-matrix-regression-receipt-v1",
+    resolveDeploymentLaneIdentity: laneIdentity,
+  })
+  const keys = generateKeyPairSync("ed25519")
+  const dependencies = createPreparedRuntimeServiceDependenciesV118({
+    runtimeConfig,
+    authorityLoader,
+    signer: {
+      keyId: "v1.38-matrix-regression-signer",
+      publicKeyPem: keys.publicKey.export({
+        format: "pem",
+        type: "spki",
+      }) as string,
+      sign: (bytes) => sign(null, bytes, keys.privateKey),
+    },
+    budgetProfileRoot: RUNTIME_BUDGET_PROFILE_V1_18_SHA256,
+    ledgerPrestateRoot: FIXED_LEDGER_PRESTATE_ROOT,
+    evaluationInstant: () => FIXED_EVALUATION_INSTANT,
+  })
+  const outcomes: V138CurrentMatrixAttemptOutcome[] = []
+  for (const attempt of selectedAttempts) {
+    currentAuthority = authorityForAttempt(attempt)
+    let captured: PreparedRuntimeServiceExecutionV118 | undefined
+    const response = executePreparedRuntimeServiceRequestV118(attempt.request, {
+      ...dependencies,
+      executeCurrentMatchWithAccounting: (request) => {
+        captured = dependencies.executeCurrentMatchWithAccounting(request)
+        return captured
+      },
+    })
+    if (!response.ok || captured === undefined) {
+      outcomes.push({
+        attemptId: attempt.attemptId,
+        classification: "system_failure",
+        code: response.ok
+          ? "EXECUTION_CAPTURE_MISSING"
+          : response.systemFailure.code,
+        retryable: response.ok ? false : response.systemFailure.retryable,
+      })
+      continue
+    }
+    const finalState = captured.response.ok
+      ? captured.response.result.finalState
+      : undefined
+    const outcome = finalState?.outcome
+    if (outcome === undefined || outcome.type === "FAILED") {
+      outcomes.push({
+        attemptId: attempt.attemptId,
+        classification: "player_violation",
+        code:
+          outcome?.type === "FAILED" ? outcome.reason : "MISSING_MATCH_OUTCOME",
+      })
+      continue
+    }
+    outcomes.push({
+      attemptId: attempt.attemptId,
+      classification: "success",
+      outcome:
+        outcome.type === "DRAW"
+          ? "draw"
+          : outcome.winnerPlayerId ===
+              (
+                attempt.request
+                  .match as unknown as RuntimeExecutionServiceRequest
+              ).match.bottomPlayerId
+            ? "bottom_win"
+            : "top_win",
+    })
+  }
+  return outcomes
+}
+
+interface ShardExecutionResult {
+  outcomes: V138CurrentMatrixAttemptOutcome[]
+  maxRssKilobytes: number
+}
+
+const executeShardSubprocess = (
+  repoRoot: string,
+  attemptIds: readonly string[],
+): Readonly<{
+  elapsedMilliseconds: number
+  result: ShardExecutionResult
+}> => {
+  const started = process.hrtime.bigint()
+  const child = spawnSync(
+    process.execPath,
+    [
+      "--import",
+      "tsx",
+      fileURLToPath(import.meta.url),
+      "--execute-shard",
+      Buffer.from(JSON.stringify({ repoRoot, attemptIds }), "utf8").toString(
+        "base64",
+      ),
+    ],
+    {
+      cwd: repoRoot,
+      encoding: "utf8",
+      timeout: RESOURCE_POLICY.maxShardMilliseconds,
+      maxBuffer: 4 * 1024 * 1024,
+    },
+  )
+  const elapsedMilliseconds = Math.ceil(
+    Number(process.hrtime.bigint() - started) / 1_000_000,
+  )
+  if (child.status !== 0) {
+    return {
+      elapsedMilliseconds,
+      result: {
+        maxRssKilobytes: 0,
+        outcomes: attemptIds.map((attemptId) => ({
+          attemptId,
+          classification: "system_failure",
+          code:
+            child.error?.name === "Error" &&
+            child.error.message.includes("ETIMEDOUT")
+              ? "RESOURCE_POLICY_SHARD_TIMEOUT"
+              : "RESOURCE_POLICY_SHARD_FAILED",
+          retryable: false,
+        })),
+      },
+    }
+  }
+  try {
+    const result = JSON.parse(child.stdout) as ShardExecutionResult
+    if (
+      !Array.isArray(result.outcomes) ||
+      result.outcomes.length !== attemptIds.length ||
+      !Number.isFinite(result.maxRssKilobytes)
+    ) {
+      throw new TypeError("invalid shard result")
+    }
+    return { elapsedMilliseconds, result }
+  } catch {
+    return {
+      elapsedMilliseconds,
+      result: {
+        maxRssKilobytes: 0,
+        outcomes: attemptIds.map((attemptId) => ({
+          attemptId,
+          classification: "system_failure",
+          code: "RESOURCE_POLICY_SHARD_OUTPUT_INVALID",
+          retryable: false,
+        })),
+      },
+    }
+  }
+}
+
+const stoppedForResourcePolicy = (
+  inventory: Readonly<V138CurrentMatrixInventory>,
+  calibration: Readonly<{
+    elapsedMilliseconds: number
+    maxRssKilobytes: number
+    projectedTotalMilliseconds: number
+    withinShardMemoryBudget: boolean
+    outcomeClassification: "success" | "player_violation" | "system_failure"
+  }>,
+): Readonly<V138CurrentMatrixStoppedReceipt> => {
+  const chargedAttemptLedgerRoot = sha256(
+    canonical({
+      priorFailedRun: {
+        classification: "system_failure_resource_pressure",
+        elapsedSecondsAtTermination: 14_390,
+        hostFreeMemoryPercentAtTermination: 9,
+        partialResultsDiscarded: true,
+        completedAttemptCount: "unknown",
+      },
+      calibration,
+    }),
+  )
+  const acceptedCellLedgerRoot = sha256(canonical([]))
+  const reducerSourceRoot = sha256(readFileSync(new URL(import.meta.url)))
+  const withoutRoot = {
+    schemaVersion: "v1.38-current-matrix-reproduction-v1" as const,
+    status: "stopped_process_failure" as const,
+    fixturePurpose: FIXTURE_PURPOSE,
+    reason: "system_failure_resource_pressure" as const,
+    admissionRoot: inventory.admissionRoot,
+    historicalMatrixSourceSha256: inventory.historicalSourceSha256,
+    arenaMapping: inventory.arenas,
+    declaredAttemptCount: 540 as const,
+    acceptedCellCount: 0 as const,
+    partialAcceptedEvidenceReusable: false as const,
+    priorFailedRun: {
+      classification: "system_failure_resource_pressure" as const,
+      elapsedSecondsAtTermination: 14_390 as const,
+      hostFreeMemoryPercentAtTermination: 9 as const,
+      partialResultsDiscarded: true as const,
+      completedAttemptCount: "unknown" as const,
+    },
+    resourcePolicy: RESOURCE_POLICY,
+    calibration: {
+      attemptCount: 1 as const,
+      ...calibration,
+      withinTotalRunBudget: false as const,
+    },
+    chargedAttemptLedgerRoot,
+    acceptedCellLedgerRoot,
+    reducerSourceRoot,
+    runtimeServiceVersion: "runtime-execution-service-v1.18" as const,
+    runtimeAbiVersion: "strategy-runtime-abi-v1.19" as const,
+    matchKernel: "engine-kernel-v1.37-candidate-1" as const,
+  }
+  return deepFreeze({
+    ...withoutRoot,
+    receiptRoot: sha256(canonical(withoutRoot)),
+  }) as Readonly<V138CurrentMatrixStoppedReceipt>
+}
+
+export const reproduceV138CurrentMatrix = (
+  repoRoot: string,
+): Readonly<V138CurrentMatrixReproductionReceipt> => {
+  const inventory = enumerateV138CurrentMatrix(repoRoot)
+  const calibrationAttempt = inventory.attempts[0]!
+  const calibrationShard = executeShardSubprocess(repoRoot, [
+    calibrationAttempt.attemptId,
+  ])
+  const calibrationOutcome = calibrationShard.result.outcomes[0]!
+  const projectedTotalMilliseconds =
+    calibrationShard.elapsedMilliseconds * inventory.attempts.length
+  const withinShardMemoryBudget =
+    calibrationShard.result.maxRssKilobytes <=
+    RESOURCE_POLICY.maxShardRssKilobytes
+  const calibration = {
+    elapsedMilliseconds: calibrationShard.elapsedMilliseconds,
+    maxRssKilobytes: calibrationShard.result.maxRssKilobytes,
+    projectedTotalMilliseconds,
+    withinShardMemoryBudget,
+    outcomeClassification: calibrationOutcome.classification,
+  }
+  if (
+    projectedTotalMilliseconds >
+      RESOURCE_POLICY.maxProjectedTotalMilliseconds ||
+    !withinShardMemoryBudget ||
+    calibrationOutcome.classification !== "success"
+  ) {
+    return stoppedForResourcePolicy(inventory, calibration)
+  }
+
+  const outcomes: V138CurrentMatrixAttemptOutcome[] = []
+  for (
+    let offset = 0;
+    offset < inventory.attempts.length;
+    offset += RESOURCE_POLICY.maxShardAttempts
+  ) {
+    const shard = inventory.attempts.slice(
+      offset,
+      offset + RESOURCE_POLICY.maxShardAttempts,
+    )
+    const executed = executeShardSubprocess(
+      repoRoot,
+      shard.map(({ attemptId }) => attemptId),
+    )
+    outcomes.push(...executed.result.outcomes)
+    process.stderr.write(
+      `${JSON.stringify({
+        event: "v1.38_matrix_shard_terminal",
+        completedAttempts: outcomes.length,
+        declaredAttempts: inventory.attempts.length,
+        acceptedCellsPublished: 0,
+        partialAcceptedEvidenceReusable: false,
+      })}\n`,
+    )
+  }
+  return reduceV138CurrentMatrix(inventory, outcomes)
+}
+
+export const renderV138CurrentMatrixReceipt = (
+  receipt: Readonly<V138CurrentMatrixReproductionReceipt>,
+): string => `${JSON.stringify(receipt)}\n`
+
+const runShardCli = (): void => {
+  if (
+    process.argv[1] !== fileURLToPath(import.meta.url) ||
+    process.argv[2] !== "--execute-shard"
+  ) {
+    return
+  }
+  try {
+    const decoded = JSON.parse(
+      Buffer.from(process.argv[3] ?? "", "base64").toString("utf8"),
+    ) as { repoRoot: string; attemptIds: string[] }
+    const inventory = enumerateV138CurrentMatrix(decoded.repoRoot)
+    const byId = new Map(
+      inventory.attempts.map((attempt) => [attempt.attemptId, attempt]),
+    )
+    const attempts = decoded.attemptIds.map((attemptId) => {
+      const attempt = byId.get(attemptId)
+      if (attempt === undefined) {
+        throw new TypeError("MATRIX_SHARD_ATTEMPT_UNKNOWN")
+      }
+      return attempt
+    })
+    const outcomes = executeAttemptsInProcess(inventory, attempts)
+    process.stdout.write(
+      JSON.stringify({
+        outcomes,
+        maxRssKilobytes: process.resourceUsage().maxRSS,
+      }),
+    )
+  } catch {
+    process.exitCode = 1
+  }
+}
+
+runShardCli()
