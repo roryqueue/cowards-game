@@ -1044,6 +1044,7 @@ const defaultParallelClock: V138ParallelClock = Object.freeze({
 })
 
 type V138ParallelStopReason =
+  | "RESOURCE_SAMPLER_SPAWN_DENIED"
   | "RESOURCE_MEASUREMENT_UNAVAILABLE"
   | "RESOURCE_POLICY_CHILD_RSS"
   | "RESOURCE_POLICY_AGGREGATE_RSS"
@@ -1077,8 +1078,8 @@ const runnerExceptionTerminal = (
   cleanup: {
     gracefulTerminationSent: false,
     forceTerminationSent: false,
-    exitAwaited: true,
-    orphanProcessIds: [],
+    exitAwaited: false,
+    orphanProcessIds: [-1],
   },
   outcomes: shard.attempts.map(({ executionAttemptId }) => ({
     attemptId: executionAttemptId,
@@ -2724,27 +2725,129 @@ interface ShardExecutionResult {
   maxRssKilobytes: number
 }
 
-const childRssKilobytes = (pid: number): Promise<number | undefined> =>
+export interface V138RssCommandAdapter {
+  readonly adapterId: string
+  readonly command: "ps"
+  readonly args: readonly ["-o", "rss=", "-p", "{pid}"]
+  readonly units: "kilobytes"
+  readonly execFile: (
+    command: string,
+    args: readonly string[],
+    options: Readonly<{ encoding: "utf8"; timeout: 1_000 }>,
+    callback: (
+      error: NodeJS.ErrnoException | null,
+      stdout: string,
+      stderr: string,
+    ) => void,
+  ) => void
+}
+
+export type V138RssSample =
+  | Readonly<{ status: "measured"; rssKilobytes: number }>
+  | Readonly<{
+      status: "unavailable"
+      code:
+        | "RESOURCE_SAMPLER_SPAWN_DENIED"
+        | "RESOURCE_MEASUREMENT_UNAVAILABLE"
+    }>
+
+const defaultV138RssCommandAdapter: V138RssCommandAdapter = Object.freeze({
+  adapterId: "node-execfile-ps-rss-exact-pid-v1",
+  command: "ps",
+  args: ["-o", "rss=", "-p", "{pid}"],
+  units: "kilobytes",
+  execFile: (command, args, options, callback) => {
+    execFile(command, [...args], options, (error, stdout, stderr) => {
+      callback(
+        error,
+        typeof stdout === "string" ? stdout : stdout.toString("utf8"),
+        typeof stderr === "string" ? stderr : stderr.toString("utf8"),
+      )
+    })
+  },
+})
+
+const samplerFailureCode = (
+  error: NodeJS.ErrnoException | null,
+):
+  | "RESOURCE_SAMPLER_SPAWN_DENIED"
+  | "RESOURCE_MEASUREMENT_UNAVAILABLE" =>
+  error?.code === "EPERM" || error?.code === "EACCES"
+    ? "RESOURCE_SAMPLER_SPAWN_DENIED"
+    : "RESOURCE_MEASUREMENT_UNAVAILABLE"
+
+export const sampleV138ChildRss = (
+  pid: number,
+  adapter: V138RssCommandAdapter = defaultV138RssCommandAdapter,
+): Promise<V138RssSample> =>
   new Promise((resolve) => {
-    if (process.platform === "win32") {
-      resolve(undefined)
+    if (
+      process.platform === "win32" ||
+      !Number.isSafeInteger(pid) ||
+      pid <= 0 ||
+      adapter.command !== "ps" ||
+      canonical(adapter.args) !== canonical(["-o", "rss=", "-p", "{pid}"]) ||
+      adapter.units !== "kilobytes"
+    ) {
+      resolve({
+        status: "unavailable",
+        code: "RESOURCE_MEASUREMENT_UNAVAILABLE",
+      })
       return
     }
-    execFile(
-      "ps",
-      ["-o", "rss=", "-p", String(pid)],
-      { encoding: "utf8", timeout: 1_000 },
-      (error, stdout) => {
-        if (error) {
-          resolve(undefined)
-          return
-        }
-        const rss = Number(String(stdout).trim())
+    let callbackCount = 0
+    let settled = false
+    const settle = (sample: V138RssSample): void => {
+      queueMicrotask(() => {
+        if (settled) return
+        settled = true
         resolve(
-          Number.isSafeInteger(rss) && rss >= 0 ? rss : undefined,
+          callbackCount === 1
+            ? sample
+            : {
+                status: "unavailable",
+                code: "RESOURCE_MEASUREMENT_UNAVAILABLE",
+              },
         )
-      },
-    )
+      })
+    }
+    try {
+      adapter.execFile(
+        adapter.command,
+        ["-o", "rss=", "-p", String(pid)],
+        { encoding: "utf8", timeout: 1_000 },
+        (error, stdout) => {
+          callbackCount += 1
+          if (error !== null) {
+            settle({ status: "unavailable", code: samplerFailureCode(error) })
+            return
+          }
+          const trimmed = stdout.trim()
+          if (!/^[1-9][0-9]*$/u.test(trimmed)) {
+            settle({
+              status: "unavailable",
+              code: "RESOURCE_MEASUREMENT_UNAVAILABLE",
+            })
+            return
+          }
+          const rssKilobytes = Number(trimmed)
+          settle(
+            Number.isSafeInteger(rssKilobytes)
+              ? { status: "measured", rssKilobytes }
+              : {
+                  status: "unavailable",
+                  code: "RESOURCE_MEASUREMENT_UNAVAILABLE",
+                },
+          )
+        },
+      )
+    } catch (error) {
+      callbackCount = 1
+      settle({
+        status: "unavailable",
+        code: samplerFailureCode(error as NodeJS.ErrnoException),
+      })
+    }
   })
 
 const processGroupSignal = (
@@ -2767,20 +2870,27 @@ const processGroupSignal = (
   }
 }
 
-const processGroupIsAlive = (pid: number): boolean => {
+const probeV138ProcessGroup = (
+  pid: number,
+): Readonly<{ completed: boolean; orphanProcessIds: readonly number[] }> => {
   try {
     process.kill(process.platform === "win32" ? pid : -pid, 0)
-    return true
-  } catch {
-    return false
+    return { completed: true, orphanProcessIds: [pid] }
+  } catch (error) {
+    return (error as NodeJS.ErrnoException).code === "ESRCH"
+      ? { completed: true, orphanProcessIds: [] }
+      : { completed: false, orphanProcessIds: [-1] }
   }
 }
 
 const delayMilliseconds = (milliseconds: number): Promise<void> =>
   new Promise((resolve) => setTimeout(resolve, milliseconds))
 
-function createV138SubprocessShardRunner(
+export function createV138SubprocessShardRunner(
   repoRoot: string,
+  options: Readonly<{
+    rssCommandAdapter?: V138RssCommandAdapter | undefined
+  }> = {},
 ): V138ParallelShardRunner {
   return {
     run: async (shard, control) => {
@@ -2844,6 +2954,11 @@ function createV138SubprocessShardRunner(
       let closed = false
       let status: number | null = null
       let closeSignal: NodeJS.Signals | null = null
+      let terminalEventCaptured = false
+      let samplerCode:
+        | "RESOURCE_SAMPLER_SPAWN_DENIED"
+        | "RESOURCE_MEASUREMENT_UNAVAILABLE"
+        | undefined
       let terminationPromise: Promise<void> | undefined
       const terminate = (): Promise<void> => {
         if (terminationPromise !== undefined) return terminationPromise
@@ -2877,9 +2992,12 @@ function createV138SubprocessShardRunner(
       const closeReceipt = new Promise<void>((resolve) => {
         child.on("error", () => {
           spawnError = true
+          terminalEventCaptured = true
+          resolve()
         })
         child.on("close", (exitStatus, signal) => {
           closed = true
+          terminalEventCaptured = true
           status = exitStatus
           closeSignal = signal
           resolve()
@@ -2909,35 +3027,45 @@ function createV138SubprocessShardRunner(
       )
       const sample = async (): Promise<void> => {
         if (closed || child.pid === undefined) return
-        const rss = await childRssKilobytes(child.pid)
+        const rss = await sampleV138ChildRss(
+          child.pid,
+          options.rssCommandAdapter ?? defaultV138RssCommandAdapter,
+        )
         const hostTotal = Math.floor(totalmem() / 1024)
         const hostFree = Math.floor(freemem() / 1024)
-        if (rss === undefined) {
+        if (rss.status === "unavailable") {
+          samplerCode = rss.code
           control.onResourceSample({
             childId: `pid:${child.pid}`,
             childRssKilobytes: -1,
             hostTotalMemoryKilobytes: hostTotal,
             hostFreeMemoryKilobytes: hostFree,
           })
+          await terminate()
           return
         }
-        maximumRssKilobytes = Math.max(maximumRssKilobytes, rss)
+        maximumRssKilobytes = Math.max(
+          maximumRssKilobytes,
+          rss.rssKilobytes,
+        )
         control.onResourceSample({
           childId: `pid:${child.pid}`,
-          childRssKilobytes: rss,
+          childRssKilobytes: rss.rssKilobytes,
           hostTotalMemoryKilobytes: hostTotal,
           hostFreeMemoryKilobytes: hostFree,
         })
       }
       await sample()
-      const interval = setInterval(() => {
-        void sample()
-      }, V138_PARALLEL_RESOURCE_POLICY.resourceSampleMilliseconds)
+      const interval = closed || samplerCode !== undefined
+        ? undefined
+        : setInterval(() => {
+            void sample()
+          }, V138_PARALLEL_RESOURCE_POLICY.resourceSampleMilliseconds)
       const timeout = setTimeout(() => {
         void terminate()
       }, V138_PARALLEL_RESOURCE_POLICY.maxShardMilliseconds)
       await closeReceipt
-      clearInterval(interval)
+      if (interval !== undefined) clearInterval(interval)
       clearTimeout(timeout)
       control.signal.removeEventListener("abort", onAbort)
       if (terminationPromise !== undefined) await terminationPromise
@@ -2945,12 +3073,15 @@ function createV138SubprocessShardRunner(
         Number(process.hrtime.bigint() - started) / 1_000_000,
       )
       const pid = child.pid
-      if (pid !== undefined && processGroupIsAlive(pid)) {
+      let orphanProbe =
+        pid === undefined
+          ? { completed: false, orphanProcessIds: [-1] as readonly number[] }
+          : probeV138ProcessGroup(pid)
+      if (pid !== undefined && orphanProbe.orphanProcessIds.length > 0) {
         forceTerminationSent = processGroupSignal(child, "SIGKILL")
         await delayMilliseconds(25)
+        orphanProbe = probeV138ProcessGroup(pid)
       }
-      const orphanProcessIds =
-        pid !== undefined && processGroupIsAlive(pid) ? [pid] : []
       const cancelled = control.signal.aborted
       const failureCode = outputOverflow
         ? "RESOURCE_POLICY_SHARD_OUTPUT_INVALID"
@@ -2959,6 +3090,8 @@ function createV138SubprocessShardRunner(
           ? "RESOURCE_POLICY_SHARD_TIMEOUT"
           : spawnError
             ? "RESOURCE_POLICY_SHARD_SPAWN_FAILED"
+            : samplerCode !== undefined
+              ? samplerCode
             : status !== 0 || closeSignal !== null
               ? "RESOURCE_POLICY_SHARD_FAILED"
               : undefined
@@ -3031,8 +3164,10 @@ function createV138SubprocessShardRunner(
         cleanup: {
           gracefulTerminationSent,
           forceTerminationSent,
-          exitAwaited: closed || spawnError,
-          orphanProcessIds,
+          exitAwaited: terminalEventCaptured,
+          orphanProcessIds: orphanProbe.completed
+            ? orphanProbe.orphanProcessIds
+            : [-1],
         },
         outcomes: mappedOutcomes,
       }
@@ -3133,6 +3268,249 @@ export const reproduceV138CurrentMatrix = (
 export const renderV138CurrentMatrixReceipt = (
   receipt: Readonly<V138CurrentMatrixReproductionReceipt>,
 ): string => `${JSON.stringify(receipt)}\n`
+
+const PLAN_262_10_PREDECESSOR = Object.freeze({
+  path: ".planning/artifacts/v1.38-current-matrix-reproduction.json",
+  fileSha256:
+    "sha256:ac890d84767a09265265b21d80852ff6c63615ea9d4a0cc9fbf549f520f5aeec",
+  gitBlob: "166fbe91525623fa99fc7035462c76301f98785d",
+  producingCommit: "c5665b756f7e9f3ec1e8c57e5c64ad6f2a136c66",
+  receiptRoot:
+    "sha256:99187d35b9a14e263be6cc35a6335bdd3957d5fede647345326c8e015891b280",
+} as const)
+
+const assertPlan26210Predecessor = (
+  repoRoot: string,
+): typeof PLAN_262_10_PREDECESSOR => {
+  const predecessorPath = path.resolve(
+    repoRoot,
+    PLAN_262_10_PREDECESSOR.path,
+  )
+  const bytes = readFileSync(predecessorPath)
+  const parsed = JSON.parse(bytes.toString("utf8")) as { receiptRoot?: unknown }
+  if (
+    sha256(bytes) !== PLAN_262_10_PREDECESSOR.fileSha256 ||
+    git(repoRoot, ["hash-object", PLAN_262_10_PREDECESSOR.path]) !==
+      PLAN_262_10_PREDECESSOR.gitBlob ||
+    parsed.receiptRoot !== PLAN_262_10_PREDECESSOR.receiptRoot ||
+    git(repoRoot, [
+      "rev-list",
+      "--all",
+      "--objects",
+    ]).length === 0
+  ) {
+    throw new TypeError("MATRIX_PLAN_262_10_PREDECESSOR_INVALID")
+  }
+  const producingBytes = gitBlob(
+    repoRoot,
+    PLAN_262_10_PREDECESSOR.producingCommit,
+    PLAN_262_10_PREDECESSOR.path,
+  )
+  if (
+    sha256(producingBytes) !== PLAN_262_10_PREDECESSOR.fileSha256 ||
+    sha256(bytes) !== sha256(producingBytes)
+  ) {
+    throw new TypeError("MATRIX_PLAN_262_10_PREDECESSOR_INVALID")
+  }
+  return PLAN_262_10_PREDECESSOR
+}
+
+export interface V138MatrixDiagnosticV2Receipt {
+  readonly schemaVersion: "v1.38-current-matrix-diagnostic-v2"
+  readonly status: "diagnostic_complete"
+  readonly predecessor: typeof PLAN_262_10_PREDECESSOR
+  readonly declaredIdentityIds: readonly string[]
+  readonly executedIdentityIds: readonly string[]
+  readonly terminals: readonly Readonly<V138ParallelShardTerminal>[]
+  readonly samplerPolicy: Readonly<{
+    authorization: null
+    adapterId: string
+    command: "ps"
+    args: readonly ["-o", "rss=", "-p", "{pid}"]
+    units: "kilobytes"
+  }>
+  readonly sourceRoots: Readonly<{
+    implementation: Sha256
+    resourcePolicy: Sha256
+    samplerAdapter: Sha256
+  }>
+  readonly chargedRoot: Sha256
+  readonly acceptedCellCount: 0
+  readonly partialAcceptedEvidenceReusable: false
+  readonly receiptRoot: Sha256
+}
+
+const diagnosticV2WithoutRoot = (
+  receipt: V138MatrixDiagnosticV2Receipt,
+): Omit<V138MatrixDiagnosticV2Receipt, "receiptRoot"> => {
+  const { receiptRoot: _receiptRoot, ...withoutRoot } = receipt
+  return withoutRoot
+}
+
+const diagnosticAssignments = (
+  inventory: Readonly<V138CurrentMatrixInventory>,
+): readonly Readonly<V138ParallelShardAssignment>[] => {
+  const selected = inventory.attempts.slice(0, 5)
+  return selected.map((attempt, ordinal) => ({
+    kind: "calibration" as const,
+    shardId:
+      ordinal === 0
+        ? "diagnostic_test:v2:single"
+        : `diagnostic_test:v2:wide:${ordinal - 1}`,
+    laneId: `diagnostic_test:v2:lane:${Math.max(0, ordinal - 1)}`,
+    ordinal,
+    attempts: [{
+      executionAttemptId: `diagnostic_test:v2:${ordinal}:${attempt!.attemptId}`,
+      templateAttemptId: attempt!.attemptId,
+      request: attempt!.request,
+    }],
+  }))
+}
+
+const runDiagnosticAssignment = (
+  runner: V138ParallelShardRunner,
+  assignment: Readonly<V138ParallelShardAssignment>,
+): Promise<Readonly<V138ParallelShardTerminal>> =>
+  runner.run(assignment, {
+    signal: new AbortController().signal,
+    onResourceSample: () => undefined,
+  })
+
+export const buildV138MatrixDiagnosticV2Receipt = (input: {
+  repoRoot: string
+  terminals: readonly Readonly<V138ParallelShardTerminal>[]
+}): Readonly<V138MatrixDiagnosticV2Receipt> => {
+  const predecessor = assertPlan26210Predecessor(input.repoRoot)
+  const inventory = enumerateV138CurrentMatrix(input.repoRoot)
+  const assignments = diagnosticAssignments(inventory)
+  const declaredIdentityIds = assignments.flatMap(({ attempts }) =>
+    attempts.map(({ executionAttemptId }) => executionAttemptId),
+  )
+  const terminalByShard = new Map(
+    input.terminals.map((terminal) => [terminal.shardId, terminal]),
+  )
+  const terminals = assignments.map((assignment) => {
+    const terminal = terminalByShard.get(assignment.shardId)
+    if (terminal === undefined) {
+      throw new TypeError("MATRIX_DIAGNOSTIC_V2_TERMINAL_MISSING")
+    }
+    return terminal
+  })
+  const executedIdentityIds = terminals.flatMap(({ outcomes }) =>
+    outcomes.map(({ attemptId }) => attemptId),
+  )
+  if (
+    canonical(declaredIdentityIds) !== canonical(executedIdentityIds) ||
+    new Set(executedIdentityIds).size !== executedIdentityIds.length ||
+    terminals.some(
+      ({ cleanup }) =>
+        !cleanup.exitAwaited || cleanup.orphanProcessIds.length > 0,
+    )
+  ) {
+    throw new TypeError("MATRIX_DIAGNOSTIC_V2_ACCOUNTING_INVALID")
+  }
+  const sourceRoots = {
+    implementation: sha256(
+      canonical({
+        implementationId: "v1.38-matrix-diagnostic-v2-boundary-v1",
+        samplerContract:
+          "exact-positive-integer-kilobytes-for-bound-pid-or-public-safe-unavailable",
+        cleanupContract:
+          "idempotent-group-signal-terminal-event-and-completed-orphan-probe",
+        receiptContract:
+          "exact-diagnostic-identities-observed-terminals-and-charged-zero-publication",
+      }),
+    ),
+    resourcePolicy: sha256(canonical(V138_PARALLEL_RESOURCE_POLICY)),
+    samplerAdapter: sha256(
+      canonical({
+        adapterId: defaultV138RssCommandAdapter.adapterId,
+        command: defaultV138RssCommandAdapter.command,
+        args: defaultV138RssCommandAdapter.args,
+        units: defaultV138RssCommandAdapter.units,
+      }),
+    ),
+  }
+  const chargedRoot = sha256(
+    canonical({
+      predecessorReceiptRoot: predecessor.receiptRoot,
+      declaredIdentityIds,
+      executedIdentityIds,
+      terminals,
+      sourceRoots,
+      acceptedCellCount: 0,
+    }),
+  )
+  const withoutRoot = {
+    schemaVersion: "v1.38-current-matrix-diagnostic-v2" as const,
+    status: "diagnostic_complete" as const,
+    predecessor,
+    declaredIdentityIds,
+    executedIdentityIds,
+    terminals,
+    samplerPolicy: {
+      authorization: null,
+      adapterId: defaultV138RssCommandAdapter.adapterId,
+      command: defaultV138RssCommandAdapter.command,
+      args: defaultV138RssCommandAdapter.args,
+      units: defaultV138RssCommandAdapter.units,
+    },
+    sourceRoots,
+    chargedRoot,
+    acceptedCellCount: 0 as const,
+    partialAcceptedEvidenceReusable: false as const,
+  }
+  return deepFreeze({
+    ...withoutRoot,
+    receiptRoot: sha256(canonical(withoutRoot)),
+  })
+}
+
+export const checkV138MatrixDiagnosticV2Receipt = (
+  repoRoot: string,
+  input: unknown,
+): Readonly<V138MatrixDiagnosticV2Receipt> => {
+  try {
+    if (input === null || typeof input !== "object" || Array.isArray(input)) {
+      throw new TypeError()
+    }
+    const receipt = input as V138MatrixDiagnosticV2Receipt
+    const expected = buildV138MatrixDiagnosticV2Receipt({
+      repoRoot,
+      terminals: receipt.terminals,
+    })
+    if (
+      canonical(Object.keys(receipt)) !== canonical(Object.keys(expected)) ||
+      canonical(receipt) !== canonical(expected)
+    ) {
+      throw new TypeError()
+    }
+    return expected
+  } catch {
+    throw new TypeError("MATRIX_DIAGNOSTIC_V2_RECEIPT_INVALID")
+  }
+}
+
+export const writeV138MatrixDiagnosticV2Receipt = async (
+  repoRoot: string,
+  targetPath: string,
+): Promise<Readonly<V138MatrixDiagnosticV2Receipt>> => {
+  const inventory = enumerateV138CurrentMatrix(repoRoot)
+  const assignments = diagnosticAssignments(inventory)
+  const runner = createV138SubprocessShardRunner(repoRoot)
+  const single = await runDiagnosticAssignment(runner, assignments[0]!)
+  const wide = await Promise.all(
+    assignments.slice(1).map((assignment) =>
+      runDiagnosticAssignment(runner, assignment),
+    ),
+  )
+  const receipt = buildV138MatrixDiagnosticV2Receipt({
+    repoRoot,
+    terminals: [single, ...wide],
+  })
+  writeReceiptAtomically(targetPath, receipt)
+  return receipt
+}
 
 const calibrationSuccessorWithoutRoot = (
   receipt: Readonly<V138ParallelCalibrationSuccessorReceipt>,
@@ -3391,6 +3769,36 @@ const runShardCli = (): void => {
 const runReceiptCli = async (): Promise<void> => {
   if (process.argv[1] !== fileURLToPath(import.meta.url)) return
   const command = process.argv[2]
+  const repoRoot = path.resolve(
+    path.dirname(fileURLToPath(import.meta.url)),
+    "../..",
+  )
+  if (
+    command === "--write-diagnostic-v2-receipt" ||
+    command === "--check-diagnostic-v2-receipt"
+  ) {
+    if (process.argv.length !== 4 || process.argv[3] === undefined) {
+      throw new TypeError("MATRIX_DIAGNOSTIC_V2_CLI_ARGUMENTS_INVALID")
+    }
+    const targetPath = path.resolve(repoRoot, process.argv[3])
+    const receipt =
+      command === "--write-diagnostic-v2-receipt"
+        ? await writeV138MatrixDiagnosticV2Receipt(repoRoot, targetPath)
+        : checkV138MatrixDiagnosticV2Receipt(
+            repoRoot,
+            JSON.parse(readFileSync(targetPath, "utf8")),
+          )
+    process.stdout.write(
+      `${canonical({
+        status: receipt.status,
+        receiptRoot: receipt.receiptRoot,
+        chargedRoot: receipt.chargedRoot,
+        diagnosticIdentityCount: receipt.executedIdentityIds.length,
+        acceptedCellCount: receipt.acceptedCellCount,
+      })}\n`,
+    )
+    return
+  }
   if (
     ![
       "--calibrate-parallel-receipt",
@@ -3404,10 +3812,6 @@ const runReceiptCli = async (): Promise<void> => {
   if (process.argv.length !== 4 || process.argv[3] === undefined) {
     throw new TypeError("MATRIX_CALIBRATION_CLI_ARGUMENTS_INVALID")
   }
-  const repoRoot = path.resolve(
-    path.dirname(fileURLToPath(import.meta.url)),
-    "../..",
-  )
   const targetPath = path.resolve(repoRoot, process.argv[3])
   const receipt =
     command === "--calibrate-parallel-receipt"
