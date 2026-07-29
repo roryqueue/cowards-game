@@ -5,16 +5,16 @@ milestone_name: Competitive Strategy Factory and Adversarial League — ACTIVE
 current_phase: 262
 current_phase_name: foundation-admission-measurement-custody-and-containment-con
 status: blocked
-stopped_at: Plan 262-02 stopped_process_failure; ADMIT-03 blocked
-last_updated: "2026-07-29T04:59:13.073Z"
+stopped_at: Plan 262-08 complete; ADMIT-03 blocked pending Plans 262-09 and 262-10
+last_updated: "2026-07-29T05:35:39.684Z"
 last_activity: 2026-07-29
-last_activity_desc: Plan 262-02 stopped fail-closed on supervised matrix resource pressure
+last_activity_desc: Plan 262-08 closed the independent historical expectation gap
 progress:
   total_phases: 9
   completed_phases: 0
-  total_plans: 7
-  completed_plans: 2
-  percent: 29
+  total_plans: 10
+  completed_plans: 3
+  percent: 30
 ---
 
 # State: Coward's Game
@@ -29,21 +29,22 @@ See: `.planning/PROJECT.md` (updated 2026-07-27)
 ## Current Position
 
 Phase: 262 (foundation-admission-measurement-custody-and-containment-con) — BLOCKED
-Plan: 3 of 7
-Status: ADMIT-03 hard stop from Plan 262-02; do not begin Plan 262-03
-Last activity: 2026-07-29 — Plan 262-02 stopped fail-closed on supervised matrix resource pressure
+Plan: 3 of 10
+Status: ADMIT-03 expectation gap closed; supervised resource/execution gaps remain in Plans 262-09 and 262-10
+Last activity: 2026-07-29 — Plan 262-08 bound the independent historical predicate
 
-Progress: [███░░░░░░░] 29%
+Progress: [███░░░░░░░] 30%
 
 ## Performance Metrics
 
-**Current milestone:** 2 of 7 Phase 262 plans terminal; Plan 262-02 did not satisfy ADMIT-03.
+**Current milestone:** 3 of 10 Phase 262 plans complete; ADMIT-03 remains blocked pending Plans 262-09 and 262-10.
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 262-270 | 0 | - | - |
 | Phase 262 P01 | 12min | 2 tasks | 3 files |
 | Phase 262 P02 | 260min | 2 tasks | 3 files |
+| Phase 262 P08 | 9min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -61,6 +62,8 @@ Decisions are logged in `.planning/PROJECT.md`. Current milestone decisions:
 - [Phase 262]: Bind the full tagged runtime authority, current generated semantic authority, retained audit reproduction, source digests, and non-semantic correction lineage under distinct domain-separated roots.
 - [Phase 262]: Bound supervised historical matrix execution to calibrated subprocess shards; partial shard work remains charged and never becomes accepted evidence. — The initial in-process run reached system resource pressure without terminal-safe per-attempt observability.
 - [Phase 262]: Stop ADMIT-03 as system_failure_resource_pressure when the calibrated 540-attempt projection exceeds the frozen 90-minute resource budget. — The one-attempt supervised calibration projected about 5h22m and the prior full run reached 9% host free memory.
+- [Phase 262]: Bind the historical matrix expectation only to the admitted v1.37 archive commit, exact README and runner Git blobs, and a delimited derivation-code root; observed outcomes cannot define or rewrite it.
+- [Phase 262]: Evaluate the exact documented leaders, third-place record, cycle count, inventory, and Smoke/Open Field equality while keeping expectation, observed aggregate, and accepted-ledger roots separate.
 
 ### Pending Todos
 
@@ -73,6 +76,7 @@ None.
 - Formation materialization remains blocked until Phase 266 emits a valid root; a process-valid current-rules empirical failure may still proceed under the original contract.
 - Holdout contamination or unproved cross-branch compute equality invalidates the comparison and blocks successful release closure.
 - ADMIT-03 stopped: supervised 540-Match historical matrix projected 5h22m and the initial unbounded run reached 9% host free memory; zero cells accepted.
+- ADMIT-03 independent-expectation gap is closed by Plan 262-08; bounded parallel supervision and the authoritative 540-cell run remain required.
 
 ## Deferred Items
 
@@ -85,7 +89,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-07-29T04:58:53.679Z
-Stopped at: Plan 262-02 stopped_process_failure; ADMIT-03 blocked
+Last session: 2026-07-29T05:35:27.306Z
+Stopped at: Plan 262-08 complete; ADMIT-03 blocked pending Plans 262-09 and 262-10
 Resume file: None
-Next command: Resolve the ADMIT-03 supervised matrix resource blocker before resuming Phase 262.
+Next command: Execute Plan 262-09 bounded parallel supervision before Plan 262-10 authoritative reproduction.
