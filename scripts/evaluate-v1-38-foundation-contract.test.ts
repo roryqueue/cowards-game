@@ -598,12 +598,15 @@ describe("v1.38 matrix reduction", () => {
     return {
       standings: inventory.definitions
         .map(({ id }) => {
-          const [wins, losses, draws] = records.get(id) ?? [54, 54, 0]
-          const smoke = {
-            wins: Math.floor(wins / 3),
-            losses: Math.floor(losses / 3),
-            draws: Math.floor(draws / 3),
-          }
+          const [wins, losses, draws] = records.get(id) ?? [51, 57, 0]
+          const smoke =
+            draws === 2
+              ? { wins: 21, losses: 14, draws: 1 }
+              : {
+                  wins: wins / 3,
+                  losses: losses / 3,
+                  draws: 0,
+                }
           const open = { ...smoke }
           const standard = {
             wins: wins - smoke.wins - open.wins,

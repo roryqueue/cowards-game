@@ -767,14 +767,39 @@ interface MatrixRecord {
   draws: number
 }
 
+type HistoricalArenaLabel = "Smoke" | "Standard Cross" | "Open Field"
+type HistoricalArenaRecords = Record<HistoricalArenaLabel, MatrixRecord>
+type MatrixAggregateRecord = MatrixRecord & {
+  byHistoricalArena: HistoricalArenaRecords
+}
+
+export interface V138HistoricalMatrixObservedAggregate {
+  readonly standings: readonly Readonly<
+    MatrixRecord & {
+      id: string
+      winRateBasisPoints: number
+      byHistoricalArena: HistoricalArenaRecords
+    }
+  >[]
+  readonly nonTransitiveCycleCount: number
+}
+
 export interface V138CurrentMatrixReceipt {
   readonly schemaVersion: "v1.38-current-matrix-reproduction-v1"
   readonly status: "passed_exact"
   readonly fixturePurpose: typeof FIXTURE_PURPOSE
   readonly admissionRoot: `sha256:${string}`
   readonly historicalMatrixSourceSha256: `sha256:${string}`
-  readonly historicalExpectedAggregateRoot: `sha256:${string}`
-  readonly expectedAggregateMatched: true
+  readonly historicalExpectationRoot: `sha256:${string}`
+  readonly historicalPredicateVersion: "v1.38-historical-matrix-predicate-v1"
+  readonly historicalExpectationSourceBindings: Readonly<{
+    archiveCommit: string
+    sourceBlobOid: string
+    runnerBlobOid: string
+    derivationSourceRoot: `sha256:${string}`
+  }>
+  readonly observedAggregateRoot: `sha256:${string}`
+  readonly historicalPredicateMatched: true
   readonly arenaMapping: V138CurrentMatrixInventory["arenas"]
   readonly definitionCount: 10
   readonly unorderedPairCount: 45
@@ -792,12 +817,7 @@ export interface V138CurrentMatrixReceipt {
   readonly chargedAttemptLedgerRoot: `sha256:${string}`
   readonly acceptedCellLedgerRoot: `sha256:${string}`
   readonly reducerSourceRoot: `sha256:${string}`
-  readonly aggregate: Readonly<{
-    standings: readonly Readonly<
-      MatrixRecord & { id: string; winRateBasisPoints: number }
-    >[]
-    nonTransitiveCycleCount: number
-  }>
+  readonly aggregate: Readonly<V138HistoricalMatrixObservedAggregate>
   readonly receiptRoot: `sha256:${string}`
 }
 
@@ -844,16 +864,211 @@ export type V138CurrentMatrixReproductionReceipt =
 
 const canonical = (value: unknown): string => JSON.stringify(value)
 
-const HISTORICAL_EXPECTED_AGGREGATE_ROOT = `sha256:${"0".repeat(64)}` as const
+const hasExactKeys = (
+  value: unknown,
+  expected: readonly string[],
+): value is Record<string, unknown> =>
+  value !== null &&
+  typeof value === "object" &&
+  !Array.isArray(value) &&
+  canonical(Object.keys(value)) === canonical(expected)
+
+const isRecord = (value: unknown): value is MatrixRecord =>
+  hasExactKeys(value, ["wins", "losses", "draws"]) &&
+  ["wins", "losses", "draws"].every((key) => {
+    const count = value[key]
+    return Number.isSafeInteger(count) && (count as number) >= 0
+  })
+
+const mismatch = (): never => {
+  throw new TypeError("MATRIX_REPRODUCTION_MISMATCH")
+}
+
+export const evaluateV138HistoricalMatrixPredicate = (
+  repoRoot: string,
+  inventory: Readonly<V138CurrentMatrixInventory>,
+  aggregate: unknown,
+): Readonly<{
+  matched: true
+  predicateVersion: "v1.38-historical-matrix-predicate-v1"
+  historicalExpectationRoot: Sha256
+  sourceBindings: Readonly<{
+    archiveCommit: string
+    sourceBlobOid: string
+    runnerBlobOid: string
+    derivationSourceRoot: Sha256
+  }>
+}> => {
+  let expectation: Readonly<V138HistoricalMatrixExpectation>
+  try {
+    expectation = loadV138HistoricalMatrixExpectation(repoRoot)
+  } catch {
+    return mismatch()
+  }
+  const declared = expectation.declaredResults
+  const definitionIds = inventory.definitions.map(({ id }) => id)
+  const unorderedPairs = new Set(
+    inventory.attempts.map(
+      ({ leftDefinitionId, rightDefinitionId }) =>
+        `${leftDefinitionId}\0${rightDefinitionId}`,
+    ),
+  )
+  if (
+    inventory.definitions.length !== declared.definitionCount ||
+    unorderedPairs.size !== declared.unorderedPairCount ||
+    inventory.arenas.length !== declared.configuredArenaCount ||
+    new Set(inventory.attempts.map(({ seedLabel }) => seedLabel)).size !==
+      declared.seedParityCount ||
+    new Set(inventory.attempts.map(({ mirrored }) => mirrored)).size !== 2 ||
+    !declared.mirroredSides ||
+    inventory.attempts.length !== declared.totalMatchCount ||
+    !hasExactKeys(aggregate, ["standings", "nonTransitiveCycleCount"]) ||
+    !Array.isArray(aggregate.standings) ||
+    aggregate.standings.length !== declared.definitionCount ||
+    aggregate.nonTransitiveCycleCount !== declared.majorityEdgeCycleCount
+  ) {
+    return mismatch()
+  }
+  const arenaLabels = inventory.arenas.map(
+    ({ historicalLabel }) => historicalLabel,
+  )
+  if (
+    canonical(arenaLabels) !==
+    canonical(["Smoke", "Standard Cross", "Open Field"])
+  ) {
+    return mismatch()
+  }
+  const standings = aggregate.standings
+  for (const standing of standings) {
+    if (
+      !hasExactKeys(standing, [
+        "id",
+        "wins",
+        "losses",
+        "draws",
+        "winRateBasisPoints",
+        "byHistoricalArena",
+      ]) ||
+      typeof standing.id !== "string" ||
+      !isRecord({
+        wins: standing.wins,
+        losses: standing.losses,
+        draws: standing.draws,
+      }) ||
+      !Number.isSafeInteger(standing.winRateBasisPoints) ||
+      standing.wins + standing.losses + standing.draws !== 108 ||
+      standing.winRateBasisPoints !==
+        Math.round((standing.wins * 10_000) / 108) ||
+      !hasExactKeys(standing.byHistoricalArena, arenaLabels)
+    ) {
+      return mismatch()
+    }
+    const byArena = standing.byHistoricalArena
+    for (const label of arenaLabels) {
+      const record = byArena[label]
+      if (
+        !isRecord(record) ||
+        record.wins + record.losses + record.draws !== 36
+      ) {
+        return mismatch()
+      }
+    }
+    const summed = arenaLabels.reduce(
+      (record, label) => ({
+        wins: record.wins + (byArena[label] as MatrixRecord).wins,
+        losses: record.losses + (byArena[label] as MatrixRecord).losses,
+        draws: record.draws + (byArena[label] as MatrixRecord).draws,
+      }),
+      { wins: 0, losses: 0, draws: 0 },
+    )
+    if (
+      canonical(summed) !==
+        canonical({
+          wins: standing.wins,
+          losses: standing.losses,
+          draws: standing.draws,
+        }) ||
+      canonical(byArena[declared.arenaRecordEquality.leftArenaLabel]) !==
+        canonical(byArena[declared.arenaRecordEquality.rightArenaLabel])
+    ) {
+      return mismatch()
+    }
+  }
+  const sortedIds = [...standings]
+    .sort(
+      (left, right) =>
+        (right.winRateBasisPoints as number) -
+          (left.winRateBasisPoints as number) ||
+        (left.id as string).localeCompare(right.id as string),
+    )
+    .map(({ id }) => id)
+  if (
+    canonical(standings.map(({ id }) => id)) !== canonical(sortedIds) ||
+    canonical([...standings].map(({ id }) => id).sort()) !==
+      canonical([...definitionIds].sort())
+  ) {
+    return mismatch()
+  }
+  const expectedLeadingRecords = [
+    ...declared.leaders,
+    declared.thirdPlace,
+  ]
+  for (const [index, expected] of expectedLeadingRecords.entries()) {
+    const observed = standings[index]
+    if (
+      observed === undefined ||
+      canonical({
+        strategyId: observed.id,
+        wins: observed.wins,
+        losses: observed.losses,
+        draws: observed.draws,
+      }) !== canonical(expected)
+    ) {
+      return mismatch()
+    }
+  }
+  const totals = standings.reduce(
+    (result, standing) => ({
+      wins: result.wins + (standing.wins as number),
+      losses: result.losses + (standing.losses as number),
+      draws: result.draws + (standing.draws as number),
+    }),
+    { wins: 0, losses: 0, draws: 0 },
+  )
+  if (totals.wins !== totals.losses || totals.wins * 2 + totals.draws !== 1080) {
+    return mismatch()
+  }
+  return deepFreeze({
+    matched: true as const,
+    predicateVersion: expectation.predicateVersion,
+    historicalExpectationRoot: expectation.historicalExpectationRoot,
+    sourceBindings: {
+      archiveCommit: expectation.provenance.archiveCommit,
+      sourceBlobOid: expectation.provenance.sourceBlobOid,
+      runnerBlobOid: expectation.provenance.runnerBlobOid,
+      derivationSourceRoot: expectation.provenance.derivationSourceRoot,
+    },
+  })
+}
 
 const aggregateOutcomes = (
   inventory: Readonly<V138CurrentMatrixInventory>,
   outcomes: readonly V138CurrentMatrixAttemptOutcome[],
 ) => {
-  const records = new Map<string, MatrixRecord>(
+  const records = new Map<string, MatrixAggregateRecord>(
     inventory.definitions.map(({ id }) => [
       id,
-      { wins: 0, losses: 0, draws: 0 },
+      {
+        wins: 0,
+        losses: 0,
+        draws: 0,
+        byHistoricalArena: Object.fromEntries(
+          inventory.arenas.map(({ historicalLabel }) => [
+            historicalLabel,
+            { wins: 0, losses: 0, draws: 0 },
+          ]),
+        ) as HistoricalArenaRecords,
+      },
     ]),
   )
   const matchupRecords = new Map<
@@ -885,6 +1100,12 @@ const aggregateOutcomes = (
       if (outcome.outcome === "draw") {
         left.draws += 1
         right.draws += 1
+        left.byHistoricalArena[
+          attempt.historicalArenaLabel as HistoricalArenaLabel
+        ].draws += 1
+        right.byHistoricalArena[
+          attempt.historicalArenaLabel as HistoricalArenaLabel
+        ].draws += 1
       } else {
         const bottomWon = outcome.outcome === "bottom_win"
         const winnerId = bottomWon
@@ -896,6 +1117,12 @@ const aggregateOutcomes = (
             : attempt.leftDefinitionId
         records.get(winnerId)!.wins += 1
         records.get(loserId)!.losses += 1
+        records.get(winnerId)!.byHistoricalArena[
+          attempt.historicalArenaLabel as HistoricalArenaLabel
+        ].wins += 1
+        records.get(loserId)!.byHistoricalArena[
+          attempt.historicalArenaLabel as HistoricalArenaLabel
+        ].losses += 1
         if (winnerId === attempt.leftDefinitionId) matchup.leftWins += 1
         else matchup.rightWins += 1
       }
@@ -996,13 +1223,21 @@ export const reduceV138CurrentMatrix = (
   if (
     playerViolationCount !== 0 ||
     systemFailureCount !== 0 ||
-    accepted.length !== 540 ||
-    observedAggregateRoot !== HISTORICAL_EXPECTED_AGGREGATE_ROOT
+    accepted.length !== 540
   ) {
     throw new TypeError(
       `MATRIX_REPRODUCTION_MISMATCH:${observedAggregateRoot}:accepted=${accepted.length}:player=${playerViolationCount}:system=${systemFailureCount}:first=${outcomes.find(({ classification }) => classification !== "success")?.code ?? "none"}`,
     )
   }
+  const repoRoot = path.resolve(
+    path.dirname(fileURLToPath(import.meta.url)),
+    "../..",
+  )
+  const predicate = evaluateV138HistoricalMatrixPredicate(
+    repoRoot,
+    inventory,
+    aggregate,
+  )
   const reducerSourceRoot = sha256(readFileSync(new URL(import.meta.url)))
   const withoutRoot = {
     schemaVersion: "v1.38-current-matrix-reproduction-v1" as const,
@@ -1010,8 +1245,11 @@ export const reduceV138CurrentMatrix = (
     fixturePurpose: FIXTURE_PURPOSE,
     admissionRoot: inventory.admissionRoot,
     historicalMatrixSourceSha256: inventory.historicalSourceSha256,
-    historicalExpectedAggregateRoot: HISTORICAL_EXPECTED_AGGREGATE_ROOT,
-    expectedAggregateMatched: true as const,
+    historicalExpectationRoot: predicate.historicalExpectationRoot,
+    historicalPredicateVersion: predicate.predicateVersion,
+    historicalExpectationSourceBindings: predicate.sourceBindings,
+    observedAggregateRoot,
+    historicalPredicateMatched: true as const,
     arenaMapping: inventory.arenas,
     definitionCount: 10 as const,
     unorderedPairCount: 45 as const,
