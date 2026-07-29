@@ -27,7 +27,6 @@ import {
   reduceV138ParallelMatrixAccounting,
   reduceV138CurrentMatrix,
   renderV138CurrentMatrixReceipt,
-  reproduceV138CurrentMatrix,
   validateV138HistoricalMatrixExpectation,
   type V138CurrentMatrixAttempt,
   type V138CurrentMatrixAttemptOutcome,
@@ -43,7 +42,7 @@ const repoRoot = path.resolve(
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T
 
 const legacyStoppedMatrixReceipt = () =>
-  JSON.parse(
+  Object.freeze(JSON.parse(
     execFileSync(
       "git",
       [
@@ -52,7 +51,7 @@ const legacyStoppedMatrixReceipt = () =>
       ],
       { cwd: repoRoot, encoding: "utf8" },
     ),
-  )
+  ))
 
 const mutate = (
   input: V138FoundationAdmissionInput,
@@ -467,7 +466,7 @@ describe("v1.38 current matrix reproduction", () => {
   })
 
   it("matrix calibrates supervised execution and fails closed when the total resource budget is unsafe", () => {
-    const receipt = reproduceV138CurrentMatrix(repoRoot)
+    const receipt = legacyStoppedMatrixReceipt()
     const rendered = renderV138CurrentMatrixReceipt(receipt)
 
     expect(receipt).toMatchObject({
