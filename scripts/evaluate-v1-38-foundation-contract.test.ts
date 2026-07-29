@@ -1,6 +1,7 @@
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 import { beforeAll, describe, expect, it } from "vitest"
+import { runV137AuditReproductionGate } from "./check-v1-37-audit-reproduction.js"
 import {
   evaluateV138FoundationAdmission,
   renderV138FoundationAdmissionReceipt,
@@ -73,6 +74,22 @@ describe("v1.38 foundation admission", () => {
       renderV138FoundationAdmissionReceipt(second),
     )
     expect(renderV138FoundationAdmissionReceipt(first)).toMatch(/\n$/u)
+  })
+
+  it("admission audit reproduction does not depend on the tsx CLI IPC server", () => {
+    const originalPath = process.env.PATH
+    try {
+      process.env.PATH = "/v1.38-admission-no-cli-path"
+      expect(runV137AuditReproductionGate(repoRoot)).toMatchObject({
+        schemaVersion: "v1.37-audit-reproduction-receipt-v1",
+        status: "passed-exact",
+        hashes: {
+          joinSha256: expect.stringMatching(/^sha256:[0-9a-f]{64}$/u),
+        },
+      })
+    } finally {
+      process.env.PATH = originalPath
+    }
   })
 
   it("admission stops for missing or extra-keyed authority inputs", () => {

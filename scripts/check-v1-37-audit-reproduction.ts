@@ -286,8 +286,8 @@ export const runV137AuditReproductionGate = (
 ): V137AuditReproductionReceipt => {
   const fixture = createV137AuditReproductionFixture(repoRoot)
   const command = spawnSync(
-    "pnpm",
-    ["exec", "tsx", paths.reproduction],
+    process.execPath,
+    ["--import", "tsx", paths.reproduction],
     { cwd: repoRoot, encoding: "utf8", env: process.env },
   )
   if (command.status !== 0 || command.signal !== null || command.stderr.trim() !== "") {
