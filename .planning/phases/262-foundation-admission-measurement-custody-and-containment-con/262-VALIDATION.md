@@ -23,8 +23,8 @@ created: 2026-07-28
 
 ## Sampling Rate
 
-- **After every task commit:** Run the focused `-t` selector for the touched gate plus the affected workspace typecheck.
-- **After every plan wave:** Run the complete Phase 262 test file, artifact `--check`, admission checker, and containment monitor.
+- **After every task commit:** Run the focused `-t` selector for the touched gate followed by `pnpm typecheck`.
+- **After every plan wave:** Run `pnpm exec vitest run scripts/evaluate-v1-38-foundation-contract.test.ts --maxWorkers=1 && pnpm typecheck`. Also run each immutable checker whose producer exists in that wave: admission/reproduction checks after Waves 1–2, pre-search regeneration after Wave 4, the containment monitor after Wave 5, and `pnpm v1.38:foundation-contract:check` after the authorized Wave 7 route.
 - **Before `$gsd-verify-work`:** The serialized full suite, exact regeneration checks, and forbidden-artifact inventory must be green.
 - **Max feedback latency:** 60 seconds for focused checks; long matrix reproduction is a separately reported integration gate.
 
@@ -58,7 +58,6 @@ created: 2026-07-28
 | Behavior | Requirement | Why Manual | Test Instructions |
 |----------|-------------|------------|-------------------|
 | Real custody role and encrypted private-store authorization | SEAL-01 | Repository code cannot name or authorize an external human/store | Record the named custodian role, opening actor, store identity, and authorization receipt; verify no secret/preimage enters Git |
-| Calibration freeze decision | MEAS-05, MEAS-06, MEAS-07 | Final numeric values must derive from pre-candidate calibration evidence | Run the contained calibration, review its exact denominators, then freeze the resulting contract root before any candidate output |
 
 ## Validation Sign-Off
 
@@ -67,6 +66,7 @@ created: 2026-07-28
 - [x] Wave 0 covers every missing test reference.
 - [x] Commands use no watch-mode flags.
 - [x] Focused feedback latency target is under 60 seconds.
+- [x] Numeric freeze is automated by the preregistered deterministic selector policy; only real custody authority/store naming remains manual.
 - [x] `nyquist_compliant: true` is set in frontmatter.
 
 **Approval:** approved for planning 2026-07-28; Wave 0 completion remains pending execution

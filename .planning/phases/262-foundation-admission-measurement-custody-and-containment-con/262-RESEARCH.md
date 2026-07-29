@@ -269,7 +269,7 @@ Every root should bind:
 - exact upstream root(s);
 - tool/runtime/platform identity where behavior can vary;
 - status and typed reason;
-- complete output inventory and its digests;
+- exact output inventory and digests, with a non-circular self rule: an aggregate artifact binds every authorized output except its own path/digest/root field, hashes a canonical component frame that excludes those self fields, and separately validates its closed-schema derived bytes;
 - no mutable timestamp as the semantic identity of reproducible content.
 
 Operational timestamps may appear in access ledgers, but deterministic study identities must not depend on wall clock. [VERIFIED: engine purity boundary and existing evidence patterns]
@@ -776,34 +776,24 @@ expect(canonicalOpeningCluster(genuinelyDifferentOpening)).not.toBe(base)
 
 | # | Claim | Section | Risk if Wrong |
 |---|---|---|---|
-| — | None. Recommendations that still require calibration or an operator choice are listed as Open Questions rather than asserted as facts. | — | — |
+| — | None. Calibration and arena mapping have deterministic dispositions below; only the explicitly named custody/store authorization checkpoint remains operational. | — | — |
 
-## Open Questions
+## RESOLVED Questions
 
-1. **Who is the named custodian and authorized opening actor?**
-   - What we know: The role must be separately permissioned and cannot be the iterative coordinator. [VERIFIED: SEAL-01]
-   - What's unclear: No person/service identity is named in the repository.
-   - Recommendation: Make naming and permission verification an explicit Phase 262 checkpoint; absence blocks the contract root.
+1. **RESOLVED — named custodian and authorized opening actor**
+   - Disposition: Phase 262 has exactly one narrow operational checkpoint after all autonomous admission, reproduction, calibration, classifier, containment-monitor, and synthetic-custody checks pass. That checkpoint must identify a genuinely separately permissioned custodian role and authorized one-open actor/command using opaque authorization references. Absence selects `stop_no_custody_authority`, creates no authoritative root, and blocks Phase 263 authoritative work. Repository code never invents either identity. [VERIFIED: SEAL-01; D-19]
 
-2. **Which encrypted private-store mechanism is actually available to that custodian?**
-   - What we know: Node, OpenSSL, and Docker are installed; `age` and `gpg` are absent. [VERIFIED: environment audit]
-   - What's unclear: Whether an organizational KMS, encrypted volume, or managed secret store exists outside this checkout.
-   - Recommendation: Run a synthetic custody spike against the real permission boundary; do not invent local encryption as a substitute for separate custody.
+2. **RESOLVED — encrypted private-store mechanism**
+   - Disposition: The same sole operational checkpoint must identify an organization-approved external encrypted store and its opaque control-plane authorization evidence. The repository supplies only synthetic outside-repository storage drills. `age`, GnuPG, a local temporary directory, or locally invented encryption cannot substitute for the separately authorized real store. Missing or unverifiable controls select `stop_no_custody_authority`. [VERIFIED: environment audit; D-19]
 
-3. **Does an existing managed signing identity cover v1.38 custody receipts?**
-   - What we know: The repository has existing managed-signing patterns and trust-root artifacts, but fixture/ephemeral keys are common in tests. [VERIFIED: codebase]
-   - What's unclear: Whether the operator authorizes an existing identity for this new trust domain.
-   - Recommendation: Use it only after exact key/trust-domain authorization is proved; otherwise freeze HMAC commitment plus custody proof without signature theater.
+3. **RESOLVED — managed signing identity**
+   - Disposition: Managed signing is optional and may be recorded only when the checkpoint proves an existing authorized key identifier, trust domain, verifier policy, and authorization receipt covering the exact canonical handoff digest. Phase 262 creates no keypair or trust root. When no existing identity is authorized, the handoff uses the approved control-plane authorization receipt plus the custodian-held HMAC commitment and makes no signature claim. [VERIFIED: codebase; D-19 discretion]
 
-4. **What exact numeric budgets, retry ceilings, materiality thresholds, and classifier cutoffs pass calibration?**
-   - What we know: Starting values and required dimensions are locked.
-   - What's unclear: Feasible exact numbers and denominators on the identified hardware/runtime.
-   - Recommendation: Plan a contained calibration wave and a human-verifiable freeze checkpoint before any candidate-producing task.
+4. **RESOLVED — numeric budgets, retry ceilings, materiality thresholds, and classifier cutoffs**
+   - Disposition: Freeze is deterministic and requires no post-calibration human choice. Before running calibration, `V138CalibrationFreezePolicy` hashes each starting value, exact denominator, fixed benchmark/fixture roots, admissibility bounds, and a pure parameter-specific selector. After profile-neutral calibration, `freezeV138CalibratedContract` applies those selectors to the canonical calibration receipt in parameter-ID order: an admissible derived replacement is selected exactly as the preregistered selector specifies; otherwise the starting value is retained; missing/ambiguous/non-finite evidence stops the freeze. Candidate, profile-result, and holdout-result fields are rejected before selection. The resulting values and justifications freeze automatically before any candidate-producing task, so no calibration-freeze checkpoint is required. [VERIFIED: D-14, D-15, D-17]
 
-5. **How should the historical three-arena inventory map to current semantic geometry identities?**
-   - What we know: Historical Smoke and Open Field were duplicate empty geometries; the current active catalog exposes Smoke and Standard Cross. [VERIFIED: historical README and v1.37 foundation]
-   - What's unclear: Whether the third historical label is still resolvable through current authority without a compatibility record.
-   - Recommendation: Require an explicit mapping receipt; any unresolved label or semantic mismatch stops reproduction rather than dropping/replacing an arena.
+5. **RESOLVED — historical three-arena mapping**
+   - Disposition: Codebase discovery resolves all three historical IDs through `OFFICIAL_ARENA_CATALOG_V1_37`: `arena:smoke:v1` and active `arena:standard-cross:v1` retain their own semantic geometry identities, while `arena:open-field:v1` is a non-schedulable `historical_alias` whose `aliasOf` is `arena:smoke:v1` and whose semantic geometry hash must equal Smoke. Reproduction must test this exact catalog mapping and preserve the duplicate-geometry annotation; any missing alias, changed status, changed target, or hash mismatch stops rather than substituting an arena. [VERIFIED: `packages/spec/src/arena-catalog-v1-37.ts`; historical matrix README]
 
 ## Environment Availability
 
