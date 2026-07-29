@@ -5,16 +5,16 @@ milestone_name: Competitive Strategy Factory and Adversarial League — ACTIVE
 current_phase: 262
 current_phase_name: foundation-admission-measurement-custody-and-containment-con
 status: blocked
-stopped_at: Plan 262-08 complete; ADMIT-03 blocked pending Plans 262-09 and 262-10
-last_updated: "2026-07-29T05:35:39.684Z"
+stopped_at: Plan 262-09 complete; ADMIT-03 blocked pending Plan 262-10
+last_updated: "2026-07-29T06:06:14.805Z"
 last_activity: 2026-07-29
-last_activity_desc: Plan 262-08 closed the independent historical expectation gap
+last_activity_desc: Plan 262-09 froze bounded parallel supervision and cleanup
 progress:
   total_phases: 9
   completed_phases: 0
   total_plans: 10
-  completed_plans: 3
-  percent: 30
+  completed_plans: 4
+  percent: 40
 ---
 
 # State: Coward's Game
@@ -29,15 +29,15 @@ See: `.planning/PROJECT.md` (updated 2026-07-27)
 ## Current Position
 
 Phase: 262 (foundation-admission-measurement-custody-and-containment-con) — BLOCKED
-Plan: 3 of 10
-Status: ADMIT-03 expectation gap closed; supervised resource/execution gaps remain in Plans 262-09 and 262-10
-Last activity: 2026-07-29 — Plan 262-08 bound the independent historical predicate
+Plan: 4 of 10
+Status: ADMIT-03 policy/supervision gaps closed; real calibration and authoritative execution remain in Plan 262-10
+Last activity: 2026-07-29 — Plan 262-09 froze bounded parallel supervision, accounting, cancellation, and cleanup
 
-Progress: [███░░░░░░░] 30%
+Progress: [████░░░░░░] 40%
 
 ## Performance Metrics
 
-**Current milestone:** 3 of 10 Phase 262 plans complete; ADMIT-03 remains blocked pending Plans 262-09 and 262-10.
+**Current milestone:** 4 of 10 Phase 262 plans complete; ADMIT-03 remains blocked pending Plan 262-10.
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
@@ -45,6 +45,7 @@ Progress: [███░░░░░░░] 30%
 | Phase 262 P01 | 12min | 2 tasks | 3 files |
 | Phase 262 P02 | 260min | 2 tasks | 3 files |
 | Phase 262 P08 | 9min | 2 tasks | 3 files |
+| Phase 262 P09 | 26min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -64,6 +65,9 @@ Decisions are logged in `.planning/PROJECT.md`. Current milestone decisions:
 - [Phase 262]: Stop ADMIT-03 as system_failure_resource_pressure when the calibrated 540-attempt projection exceeds the frozen 90-minute resource budget. — The one-attempt supervised calibration projected about 5h22m and the prior full run reached 9% host free memory.
 - [Phase 262]: Bind the historical matrix expectation only to the admitted v1.37 archive commit, exact README and runner Git blobs, and a delimited derivation-code root; observed outcomes cannot define or rewrite it.
 - [Phase 262]: Evaluate the exact documented leaders, third-place record, cycle count, inventory, and Smoke/Open Field equality while keeping expectation, observed aggregate, and accepted-ledger roots separate.
+- [Phase 262]: Freeze Plan 262-09 calibration to eight non-cell identities in four two-attempt shards under policy root sha256:13ca3f9ef5e564f5f8de742534c14ae33562334ab9fda1cec0388521b4fe3a3b.
+- [Phase 262]: Require an exact admitted parallel calibration receipt before any authoritative 540-cell execution can launch.
+- [Phase 262]: Canonicalize parallel terminals and outcomes by predeclared shard and attempt identity; completion order cannot alter charged or cleanup roots.
 
 ### Pending Todos
 
@@ -76,7 +80,7 @@ None.
 - Formation materialization remains blocked until Phase 266 emits a valid root; a process-valid current-rules empirical failure may still proceed under the original contract.
 - Holdout contamination or unproved cross-branch compute equality invalidates the comparison and blocks successful release closure.
 - ADMIT-03 stopped: supervised 540-Match historical matrix projected 5h22m and the initial unbounded run reached 9% host free memory; zero cells accepted.
-- ADMIT-03 independent-expectation gap is closed by Plan 262-08; bounded parallel supervision and the authoritative 540-cell run remain required.
+- ADMIT-03 expectation and bounded-supervision gaps are closed by Plans 262-08 and 262-09; the real admitted calibration and authoritative 540-cell run remain required in Plan 262-10.
 
 ## Deferred Items
 
@@ -89,7 +93,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-07-29T05:35:27.306Z
-Stopped at: Plan 262-08 complete; ADMIT-03 blocked pending Plans 262-09 and 262-10
+Last session: 2026-07-29T06:06:14.794Z
+Stopped at: Plan 262-09 complete; ADMIT-03 blocked pending Plan 262-10
 Resume file: None
-Next command: Execute Plan 262-09 bounded parallel supervision before Plan 262-10 authoritative reproduction.
+Next command: Execute Plan 262-10 real parallel calibration and authoritative reproduction.
