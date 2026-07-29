@@ -12,6 +12,8 @@ import {
 } from "./lib/v1-38-foundation-admission.js"
 import {
   V138ParallelCalibrationPolicySchema,
+  buildV138AuthoritativeMatrixV3Receipt,
+  buildV138ParallelCalibrationV2SuccessorReceipt,
   buildV138ParallelCalibrationSuccessorReceipt,
   calibrateV138ParallelMatrix,
   checkV138MatrixDiagnosticV2Receipt,
@@ -25,6 +27,7 @@ import {
   isV138ParallelProjectedTotalAdmitted,
   loadV138HistoricalMatrixExpectation,
   planV138MatrixShards,
+  parseV138SamplerAuthorization,
   projectV138ParallelMatrix,
   reduceV138ParallelMatrixAccounting,
   reduceV138CurrentMatrix,
@@ -1094,6 +1097,159 @@ describe("v1.38 matrix real process boundary", () => {
       checkV138MatrixDiagnosticV2Receipt(repoRoot, mutated),
     ).toThrow("MATRIX_DIAGNOSTIC_V2_RECEIPT_INVALID")
   }, 180_000)
+})
+
+describe("v1.38 matrix sampler authorization", () => {
+  it("matrix sampler authorization accepts only the explicit approved policy", () => {
+    expect(parseV138SamplerAuthorization("authorized-unsandboxed-ps")).toMatchObject({
+      selection: "authorized-unsandboxed-ps",
+      permissionBoundary:
+        "exact-read-only-ps-rss-and-process-group-orphan-probe",
+      policyRoot: expect.stringMatching(/^sha256:[0-9a-f]{64}$/u),
+    })
+    for (const invalid of [
+      "",
+      "default",
+      "approved",
+      "previously-approved",
+      "approved-equivalent-sampler",
+    ]) {
+      expect(() => parseV138SamplerAuthorization(invalid)).toThrow(
+        "MATRIX_SAMPLER_AUTHORIZATION_REQUIRED",
+      )
+    }
+  })
+})
+
+describe("v1.38 matrix successor lineage", () => {
+  it("matrix calibration v2 branches bind diagnostic, authorization, and predecessor", async () => {
+    const inventory = enumerateV138CurrentMatrix(repoRoot)
+    const diagnostic = checkV138MatrixDiagnosticV2Receipt(
+      repoRoot,
+      JSON.parse(
+        readFileSync(
+          path.resolve(
+            repoRoot,
+            ".planning/artifacts/v1.38-current-matrix-diagnostic-v2.json",
+          ),
+          "utf8",
+        ),
+      ),
+    )
+    const calibration = await calibrateV138ParallelMatrix({
+      inventory,
+      policy: deriveV138ParallelCalibrationPolicy(inventory),
+      runner: successfulInjectedRunner(),
+      hardwareIdentity: {
+        operatingSystem: "test-os",
+        architecture: "test-arch",
+        nodeVersion: "test-node",
+        cpuIdentity: "test-cpu",
+      },
+      executionIdentityVersion: "v2",
+    })
+    const receipt = buildV138ParallelCalibrationV2SuccessorReceipt({
+      repoRoot,
+      diagnostic,
+      authorization: parseV138SamplerAuthorization(
+        "authorized-unsandboxed-ps",
+      ),
+      calibration,
+    })
+
+    expect(receipt).toMatchObject({
+      status: "calibration_admitted",
+      diagnosticV2ReceiptRoot: diagnostic.receiptRoot,
+      predecessor: {
+        receiptRoot:
+          "sha256:99187d35b9a14e263be6cc35a6335bdd3957d5fede647345326c8e015891b280",
+      },
+      acceptedCellCount: 0,
+      fullRunLaunched: false,
+    })
+    expect(
+      receipt.calibration.terminals.flatMap(({ outcomes }) =>
+        outcomes.map(({ attemptId }) => attemptId),
+      ).every((id) => id.startsWith("calibration:v2:")),
+    ).toBe(true)
+  })
+
+  it("matrix authoritative v3 receipt preserves zero publication on full-run failure", async () => {
+    const inventory = enumerateV138CurrentMatrix(repoRoot)
+    const diagnostic = checkV138MatrixDiagnosticV2Receipt(
+      repoRoot,
+      JSON.parse(
+        readFileSync(
+          path.resolve(
+            repoRoot,
+            ".planning/artifacts/v1.38-current-matrix-diagnostic-v2.json",
+          ),
+          "utf8",
+        ),
+      ),
+    )
+    const calibration = await calibrateV138ParallelMatrix({
+      inventory,
+      runner: successfulInjectedRunner(),
+      hardwareIdentity: {
+        operatingSystem: "test-os",
+        architecture: "test-arch",
+        nodeVersion: "test-node",
+        cpuIdentity: "test-cpu",
+      },
+      executionIdentityVersion: "v2",
+    })
+    const calibrationV2 = buildV138ParallelCalibrationV2SuccessorReceipt({
+      repoRoot,
+      diagnostic,
+      authorization: parseV138SamplerAuthorization(
+        "authorized-unsandboxed-ps",
+      ),
+      calibration,
+    })
+    const failedRunner: V138ParallelShardRunner = {
+      async run(shard) {
+        return {
+          shardId: shard.shardId,
+          laneId: shard.laneId,
+          classification: "failed",
+          elapsedMilliseconds: 1,
+          maxRssKilobytes: 1,
+          cleanup: {
+            gracefulTerminationSent: false,
+            forceTerminationSent: false,
+            exitAwaited: true,
+            orphanProcessIds: [],
+          },
+          outcomes: shard.attempts.map(({ executionAttemptId }) => ({
+            attemptId: executionAttemptId,
+            classification: "system_failure" as const,
+            code: "INJECTED_FAILURE",
+            retryable: false,
+          })),
+        }
+      },
+    }
+    const execution = await executeV138ParallelMatrix({
+      inventory,
+      calibration,
+      runner: failedRunner,
+      executionIdentityVersion: "v3",
+    })
+    const receipt = buildV138AuthoritativeMatrixV3Receipt({
+      repoRoot,
+      calibrationV2,
+      execution,
+    })
+
+    expect(receipt).toMatchObject({
+      status: "stopped_process_failure",
+      acceptedCellCount: 0,
+      historicalPredicateMatched: false,
+      canonicalReceipt: null,
+    })
+    expect(receipt.execution.canonicalOutcomes).toHaveLength(16)
+  }, 30_000)
 })
 
 describe("v1.38 matrix calibration receipt branches", () => {
