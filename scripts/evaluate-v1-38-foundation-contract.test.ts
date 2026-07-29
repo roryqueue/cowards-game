@@ -12,6 +12,7 @@ import {
 import {
   deriveV138HistoricalMatrixExpectation,
   enumerateV138CurrentMatrix,
+  evaluateV138HistoricalMatrixPredicate,
   loadV138HistoricalMatrixExpectation,
   reduceV138CurrentMatrix,
   renderV138CurrentMatrixReceipt,
@@ -19,6 +20,7 @@ import {
   validateV138HistoricalMatrixExpectation,
   type V138CurrentMatrixAttempt,
   type V138CurrentMatrixAttemptOutcome,
+  type V138HistoricalMatrixObservedAggregate,
 } from "./lib/v1-38-current-matrix-reproduction.js"
 
 const repoRoot = path.resolve(
@@ -582,5 +584,112 @@ describe("v1.38 matrix expectation", () => {
     expect(() =>
       validateV138HistoricalMatrixExpectation(repoRoot, mutated),
     ).toThrow("MATRIX_EXPECTATION_INVALID")
+  })
+})
+
+describe("v1.38 matrix reduction", () => {
+  const exactAggregate = (): V138HistoricalMatrixObservedAggregate => {
+    const inventory = enumerateV138CurrentMatrix(repoRoot)
+    const records = new Map([
+      ["advanced:stonewall-shear", [62, 44, 2]],
+      ["advanced:vanguard-pressure", [62, 44, 2]],
+      ["advanced:rear-guard-sentinel", [57, 51, 0]],
+    ])
+    return {
+      standings: inventory.definitions
+        .map(({ id }) => {
+          const [wins, losses, draws] = records.get(id) ?? [54, 54, 0]
+          const smoke = {
+            wins: Math.floor(wins / 3),
+            losses: Math.floor(losses / 3),
+            draws: Math.floor(draws / 3),
+          }
+          const open = { ...smoke }
+          const standard = {
+            wins: wins - smoke.wins - open.wins,
+            losses: losses - smoke.losses - open.losses,
+            draws: draws - smoke.draws - open.draws,
+          }
+          return {
+            id,
+            wins,
+            losses,
+            draws,
+            winRateBasisPoints: Math.round((wins * 10_000) / 108),
+            byHistoricalArena: {
+              Smoke: smoke,
+              "Standard Cross": standard,
+              "Open Field": open,
+            },
+          }
+        })
+        .sort(
+          (left, right) =>
+            right.winRateBasisPoints - left.winRateBasisPoints ||
+            left.id.localeCompare(right.id),
+        ),
+      nonTransitiveCycleCount: 9,
+    }
+  }
+
+  it("matrix reduction evaluates the complete aggregate against the independent predicate", () => {
+    const inventory = enumerateV138CurrentMatrix(repoRoot)
+    const aggregate = exactAggregate()
+    const result = evaluateV138HistoricalMatrixPredicate(
+      repoRoot,
+      inventory,
+      aggregate,
+    )
+
+    expect(result).toEqual({
+      matched: true,
+      predicateVersion: "v1.38-historical-matrix-predicate-v1",
+      historicalExpectationRoot:
+        "sha256:758c31a37318edfb1c94cb1d9715ae3cfe49cabdff13d906f155f00cc71abdce",
+      sourceBindings: {
+        archiveCommit: "e704590df599b49d84745b0e828d5ab0f1d335ad",
+        sourceBlobOid: "ab5c9feae17f28bd4eb8aeff90516a05c9633363",
+        runnerBlobOid: "3de4aa6f2397925d1d0de012cd8e749554455a06",
+        derivationSourceRoot:
+          "sha256:a3d0cd5c66f9b8f60b0a2a03e543d0cb602fc359abd45f6dcbcacb71172c88d3",
+      },
+    })
+  })
+
+  it.each([
+    ["leader record", (draft: any) => (draft.standings[0].wins = 61)],
+    ["record total", (draft: any) => (draft.standings[2].losses = 50)],
+    ["cycle count", (draft: any) => (draft.nonTransitiveCycleCount = 8)],
+    [
+      "Smoke/Open Field equality",
+      (draft: any) => (draft.standings[0].byHistoricalArena.Smoke.wins += 1),
+    ],
+    ["extra standing", (draft: any) => draft.standings.push(draft.standings[0])],
+    ["missing standing", (draft: any) => draft.standings.pop()],
+    ["extra aggregate key", (draft: any) => (draft.expected = draft)],
+  ])("matrix reduction rejects mutated %s", (_label, change) => {
+    const aggregate = clone(exactAggregate()) as any
+    change(aggregate)
+    expect(() =>
+      evaluateV138HistoricalMatrixPredicate(
+        repoRoot,
+        enumerateV138CurrentMatrix(repoRoot),
+        aggregate,
+      ),
+    ).toThrow("MATRIX_REPRODUCTION_MISMATCH")
+  })
+
+  it("matrix reduction keeps observed roots separate from the expectation", () => {
+    const source = readFileSync(
+      path.resolve(
+        repoRoot,
+        "scripts/lib/v1-38-current-matrix-reproduction.ts",
+      ),
+      "utf8",
+    )
+    expect(source).toContain("observedAggregateRoot")
+    expect(source).toContain("historicalExpectationRoot")
+    expect(source).not.toContain("HISTORICAL_EXPECTED_AGGREGATE_ROOT")
+    expect(source).not.toContain(`sha256:${"0".repeat(64)}`)
   })
 })
