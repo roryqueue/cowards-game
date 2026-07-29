@@ -3,7 +3,7 @@ import { Buffer } from "node:buffer"
 import { createHash, generateKeyPairSync, sign } from "node:crypto"
 import { readFileSync } from "node:fs"
 import path from "node:path"
-import { spawnSync } from "node:child_process"
+import { execFileSync, spawnSync } from "node:child_process"
 import { fileURLToPath } from "node:url"
 import {
   createPreparedRuntimeServiceDependenciesV118,
@@ -45,6 +45,10 @@ import {
 const FIXTURE_PURPOSE = "regression_throughput_only" as const
 const HISTORICAL_MATRIX_SOURCE =
   ".planning/artifacts/v2.0-core-rules-audit/run-current-meta-matrix.ts"
+const HISTORICAL_MATRIX_README =
+  ".planning/artifacts/v2.0-core-rules-audit/README.md"
+const HISTORICAL_EXPECTATION_ARTIFACT =
+  ".planning/artifacts/v1.38-historical-matrix-expectation.json"
 const ADMISSION_RECEIPT = ".planning/artifacts/v1.38-foundation-admission.json"
 const MATRIX_SCHEMA_VERSION = "v1.38-current-matrix-inventory-v1" as const
 const FIXED_EVALUATION_INSTANT = "2026-07-28T00:00:00.000Z"
@@ -66,6 +70,260 @@ function sha256Text(value: string): `sha256:${string}` {
 
 const sha256 = (value: string | Uint8Array): `sha256:${string}` =>
   `sha256:${createHash("sha256").update(value).digest("hex")}`
+
+type Sha256 = `sha256:${string}`
+
+export interface V138HistoricalMatrixExpectation {
+  readonly schemaVersion: "v1.38-historical-matrix-expectation-v1"
+  readonly predicateVersion: "v1.38-historical-matrix-predicate-v1"
+  readonly provenance: Readonly<{
+    archiveCommit: string
+    reviewedCodeSnapshot: string
+    sourcePath: typeof HISTORICAL_MATRIX_README
+    sourceBlobOid: string
+    sourceSha256: Sha256
+    runnerPath: typeof HISTORICAL_MATRIX_SOURCE
+    runnerBlobOid: string
+    runnerSourceSha256: Sha256
+    derivationSourceRoot: Sha256
+  }>
+  readonly declaredResults: Readonly<{
+    definitionCount: 10
+    unorderedPairCount: 45
+    configuredArenaCount: 3
+    seedParityCount: 2
+    mirroredSides: true
+    totalMatchCount: 540
+    leaders: readonly [
+      Readonly<{
+        strategyId: "advanced:stonewall-shear"
+        wins: 62
+        losses: 44
+        draws: 2
+      }>,
+      Readonly<{
+        strategyId: "advanced:vanguard-pressure"
+        wins: 62
+        losses: 44
+        draws: 2
+      }>,
+    ]
+    thirdPlace: Readonly<{
+      strategyId: "advanced:rear-guard-sentinel"
+      wins: 57
+      losses: 51
+      draws: 0
+    }>
+    majorityEdgeCycleCount: 9
+    arenaRecordEquality: Readonly<{
+      leftArenaLabel: "Smoke"
+      rightArenaLabel: "Open Field"
+      scope: "per_strategy_wins_losses_draws"
+    }>
+  }>
+  readonly historicalExpectationRoot: Sha256
+}
+
+const git = (repoRoot: string, args: readonly string[]): string =>
+  execFileSync("git", [...args], {
+    cwd: repoRoot,
+    encoding: "utf8",
+    maxBuffer: 8 * 1024 * 1024,
+  }).trim()
+
+const gitBlob = (
+  repoRoot: string,
+  commit: string,
+  repoPath: string,
+): Buffer =>
+  execFileSync("git", ["show", `${commit}:${repoPath}`], {
+    cwd: repoRoot,
+    maxBuffer: 8 * 1024 * 1024,
+  })
+
+// BEGIN V1.38 HISTORICAL EXPECTATION DERIVATION SOURCE
+const onlyMatch = (source: string, pattern: RegExp): RegExpMatchArray => {
+  const flags = pattern.flags.includes("g") ? pattern.flags : `${pattern.flags}g`
+  const matches = [...source.matchAll(new RegExp(pattern.source, flags))]
+  if (matches.length !== 1) {
+    throw new TypeError("MATRIX_EXPECTATION_SOURCE_AMBIGUOUS")
+  }
+  return matches[0]!
+}
+
+const deriveHistoricalDeclarations = (
+  readmeBytes: Uint8Array,
+): V138HistoricalMatrixExpectation["declaredResults"] => {
+  const source = Buffer.from(readmeBytes).toString("utf8")
+  const reviewedCodeSnapshot = onlyMatch(
+    source,
+    /^Reviewed code snapshot: `([0-9a-f]{40})`$/mu,
+  )[1]
+  if (reviewedCodeSnapshot !== "38f4a83db9298502c12db44cd66d026878803d20") {
+    throw new TypeError("MATRIX_EXPECTATION_SOURCE_DECLARATION_INVALID")
+  }
+  const exactLines = [
+    "- 10 Advanced Strategy definitions",
+    "- 45 unordered pairings",
+    "- 3 configured arenas",
+    "- 2 seed parities",
+    "- mirrored sides",
+    "- 540 total Matches",
+  ]
+  for (const line of exactLines) {
+    onlyMatch(source, new RegExp(`^${line}$`, "mu"))
+  }
+  const rows = [
+    onlyMatch(
+      source,
+      /^\| `advanced:stonewall-shear` \| 62-44-2 \| 57\.4% \|$/mu,
+    ),
+    onlyMatch(
+      source,
+      /^\| `advanced:vanguard-pressure` \| 62-44-2 \| 57\.4% \|$/mu,
+    ),
+    onlyMatch(
+      source,
+      /^\| `advanced:rear-guard-sentinel` \| 57-51-0 \| 52\.8% \|$/mu,
+    ),
+  ]
+  if (rows.some((row) => row[0] === undefined)) {
+    throw new TypeError("MATRIX_EXPECTATION_SOURCE_DECLARATION_INVALID")
+  }
+  onlyMatch(
+    source,
+    /^The matrix found nine majority-edge non-transitive three-cycles, but neither leading Strategy had a majority-losing matchup\. All detected cycles were below the leading pair\. Smoke and Open Field produced identical per-Strategy records because both are empty geometries\.$/mu,
+  )
+  return {
+    definitionCount: 10,
+    unorderedPairCount: 45,
+    configuredArenaCount: 3,
+    seedParityCount: 2,
+    mirroredSides: true,
+    totalMatchCount: 540,
+    leaders: [
+      {
+        strategyId: "advanced:stonewall-shear",
+        wins: 62,
+        losses: 44,
+        draws: 2,
+      },
+      {
+        strategyId: "advanced:vanguard-pressure",
+        wins: 62,
+        losses: 44,
+        draws: 2,
+      },
+    ],
+    thirdPlace: {
+      strategyId: "advanced:rear-guard-sentinel",
+      wins: 57,
+      losses: 51,
+      draws: 0,
+    },
+    majorityEdgeCycleCount: 9,
+    arenaRecordEquality: {
+      leftArenaLabel: "Smoke",
+      rightArenaLabel: "Open Field",
+      scope: "per_strategy_wins_losses_draws",
+    },
+  }
+}
+
+const derivationSourceRoot = (): Sha256 => {
+  const source = readFileSync(new URL(import.meta.url), "utf8")
+  const match = source.match(
+    /\/\/ BEGIN V1\.38 HISTORICAL EXPECTATION DERIVATION SOURCE\n([\s\S]*?)\/\/ END V1\.38 HISTORICAL EXPECTATION DERIVATION SOURCE/u,
+  )
+  if (match?.[1] === undefined) {
+    throw new TypeError("MATRIX_EXPECTATION_DERIVATION_SOURCE_MISSING")
+  }
+  return sha256(match[1])
+}
+
+export const deriveV138HistoricalMatrixExpectation = (
+  repoRoot: string,
+): Readonly<V138HistoricalMatrixExpectation> => {
+  const admission = JSON.parse(
+    readFileSync(path.resolve(repoRoot, ADMISSION_RECEIPT), "utf8"),
+  ) as { archiveCommit?: unknown; status?: unknown }
+  if (
+    admission.status !== "passed_exact" ||
+    typeof admission.archiveCommit !== "string" ||
+    !/^[0-9a-f]{40}$/u.test(admission.archiveCommit) ||
+    git(repoRoot, ["rev-parse", "refs/tags/v1.37^{}"]) !==
+      admission.archiveCommit
+  ) {
+    throw new TypeError("MATRIX_EXPECTATION_ADMISSION_INVALID")
+  }
+  const archiveCommit = admission.archiveCommit
+  const sourceBytes = gitBlob(repoRoot, archiveCommit, HISTORICAL_MATRIX_README)
+  const runnerBytes = gitBlob(repoRoot, archiveCommit, HISTORICAL_MATRIX_SOURCE)
+  const sourceBlobOid = git(repoRoot, [
+    "rev-parse",
+    `${archiveCommit}:${HISTORICAL_MATRIX_README}`,
+  ])
+  const runnerBlobOid = git(repoRoot, [
+    "rev-parse",
+    `${archiveCommit}:${HISTORICAL_MATRIX_SOURCE}`,
+  ])
+  const reviewedCodeSnapshot = onlyMatch(
+    sourceBytes.toString("utf8"),
+    /^Reviewed code snapshot: `([0-9a-f]{40})`$/mu,
+  )[1]!
+  const withoutRoot = {
+    schemaVersion: "v1.38-historical-matrix-expectation-v1" as const,
+    predicateVersion: "v1.38-historical-matrix-predicate-v1" as const,
+    provenance: {
+      archiveCommit,
+      reviewedCodeSnapshot,
+      sourcePath: HISTORICAL_MATRIX_README,
+      sourceBlobOid,
+      sourceSha256: sha256(sourceBytes),
+      runnerPath: HISTORICAL_MATRIX_SOURCE,
+      runnerBlobOid,
+      runnerSourceSha256: sha256(runnerBytes),
+      derivationSourceRoot: derivationSourceRoot(),
+    },
+    declaredResults: deriveHistoricalDeclarations(sourceBytes),
+  }
+  return deepFreeze({
+    ...withoutRoot,
+    historicalExpectationRoot: sha256(canonical(withoutRoot)),
+  }) as Readonly<V138HistoricalMatrixExpectation>
+}
+// END V1.38 HISTORICAL EXPECTATION DERIVATION SOURCE
+
+export const validateV138HistoricalMatrixExpectation = (
+  repoRoot: string,
+  input: unknown,
+): Readonly<V138HistoricalMatrixExpectation> => {
+  const expected = deriveV138HistoricalMatrixExpectation(repoRoot)
+  if (canonical(input) !== canonical(expected)) {
+    throw new TypeError("MATRIX_EXPECTATION_INVALID")
+  }
+  return expected
+}
+
+export const loadV138HistoricalMatrixExpectation = (
+  repoRoot: string,
+): Readonly<V138HistoricalMatrixExpectation> => {
+  const bytes = readFileSync(
+    path.resolve(repoRoot, HISTORICAL_EXPECTATION_ARTIFACT),
+    "utf8",
+  )
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(bytes)
+  } catch {
+    throw new TypeError("MATRIX_EXPECTATION_INVALID")
+  }
+  const expectation = validateV138HistoricalMatrixExpectation(repoRoot, parsed)
+  if (bytes !== `${canonical(expectation)}\n`) {
+    throw new TypeError("MATRIX_EXPECTATION_INVALID")
+  }
+  return expectation
+}
 
 const deepFreeze = <T>(value: T): Readonly<T> => {
   if (value !== null && typeof value === "object" && !Object.isFrozen(value)) {
