@@ -11,7 +11,11 @@ import {
 } from "./lib/v1-38-foundation-admission.js"
 import {
   enumerateV138CurrentMatrix,
+  reduceV138CurrentMatrix,
+  renderV138CurrentMatrixReceipt,
+  reproduceV138CurrentMatrix,
   type V138CurrentMatrixAttempt,
+  type V138CurrentMatrixAttemptOutcome,
 } from "./lib/v1-38-current-matrix-reproduction.js"
 
 const repoRoot = path.resolve(
@@ -389,4 +393,84 @@ describe("v1.38 current matrix reproduction", () => {
     expect(source).not.toMatch(/node:vm|from\s+["'][^"']*engine[^"']*["']/u)
     expect(source).not.toMatch(/\brunMatch\s*\(/u)
   })
+
+  it("matrix keeps every failed attempt charged and excludes it from accepted cells", () => {
+    const inventory = enumerateV138CurrentMatrix(repoRoot)
+    const outcomes: V138CurrentMatrixAttemptOutcome[] =
+      inventory.attempts.map(({ attemptId }, index) => ({
+        attemptId,
+        classification:
+          index === 0
+            ? "player_violation"
+            : index === 1
+              ? "system_failure"
+              : "success",
+        ...(index === 0
+          ? { code: "INVALID_OUTPUT" }
+          : index === 1
+            ? { code: "EXECUTION_EXCEPTION", retryable: true }
+            : { outcome: "draw" as const }),
+      }))
+
+    expect(() =>
+      reduceV138CurrentMatrix(inventory, outcomes),
+    ).toThrow("MATRIX_REPRODUCTION_MISMATCH")
+  })
+
+  it.each([
+    ["missing cell", (rows: V138CurrentMatrixAttemptOutcome[]) => rows.slice(1)],
+    [
+      "duplicate cell",
+      (rows: V138CurrentMatrixAttemptOutcome[]) => [...rows, rows[0]!],
+    ],
+    [
+      "conflicting duplicate",
+      (rows: V138CurrentMatrixAttemptOutcome[]) => [
+        ...rows,
+        { ...rows[0]!, outcome: "bottom_win" as const },
+      ],
+    ],
+  ])("matrix rejects %s before sealing a receipt", (_label, mutateRows) => {
+    const inventory = enumerateV138CurrentMatrix(repoRoot)
+    const allDraws: V138CurrentMatrixAttemptOutcome[] =
+      inventory.attempts.map(({ attemptId }) => ({
+        attemptId,
+        classification: "success",
+        outcome: "draw",
+      }))
+    expect(() =>
+      reduceV138CurrentMatrix(inventory, mutateRows(allDraws)),
+    ).toThrow("MATRIX_REPRODUCTION_MISMATCH")
+  })
+
+  it("matrix reproduces and seals the exact supervised regression receipt", () => {
+    const receipt = reproduceV138CurrentMatrix(repoRoot)
+    const rendered = renderV138CurrentMatrixReceipt(receipt)
+
+    expect(receipt).toMatchObject({
+      schemaVersion: "v1.38-current-matrix-reproduction-v1",
+      status: "passed_exact",
+      fixturePurpose: "regression_throughput_only",
+      attemptCount: 540,
+      acceptedCellCount: 540,
+      playerViolationCount: 0,
+      systemFailureCount: 0,
+      expectedAggregateMatched: true,
+      runtimeServiceVersion: "runtime-execution-service-v1.18",
+      runtimeAbiVersion: "strategy-runtime-abi-v1.19",
+      matchKernel: "engine-kernel-v1.37-candidate-1",
+      chargedAttemptLedgerRoot: expect.stringMatching(
+        /^sha256:[0-9a-f]{64}$/u,
+      ),
+      acceptedCellLedgerRoot: expect.stringMatching(
+        /^sha256:[0-9a-f]{64}$/u,
+      ),
+      receiptRoot: expect.stringMatching(/^sha256:[0-9a-f]{64}$/u),
+    })
+    expect(Object.isFrozen(receipt)).toBe(true)
+    expect(rendered).toMatch(/\n$/u)
+    expect(rendered).not.toMatch(
+      /StrategyMemory|SoldierMemory|objective|source|diagnostic|Users|DATABASE_URL/iu,
+    )
+  }, 300_000)
 })
