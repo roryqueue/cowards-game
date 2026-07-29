@@ -14,7 +14,9 @@ import {
   V138ParallelCalibrationPolicySchema,
   buildV138ParallelCalibrationSuccessorReceipt,
   calibrateV138ParallelMatrix,
+  checkV138MatrixDiagnosticV2Receipt,
   checkV138ParallelCalibrationSuccessorReceipt,
+  createV138SubprocessShardRunner,
   deriveV138ParallelCalibrationPolicy,
   deriveV138HistoricalMatrixExpectation,
   enumerateV138CurrentMatrix,
@@ -27,11 +29,14 @@ import {
   reduceV138ParallelMatrixAccounting,
   reduceV138CurrentMatrix,
   renderV138CurrentMatrixReceipt,
+  sampleV138ChildRss,
   validateV138HistoricalMatrixExpectation,
+  writeV138MatrixDiagnosticV2Receipt,
   type V138CurrentMatrixAttempt,
   type V138CurrentMatrixAttemptOutcome,
   type V138HistoricalMatrixObservedAggregate,
   type V138ParallelShardRunner,
+  type V138RssCommandAdapter,
 } from "./lib/v1-38-current-matrix-reproduction.js"
 
 const repoRoot = path.resolve(
@@ -977,6 +982,119 @@ const admittedInjectedCalibration = (
       cpuIdentity: "test-cpu",
     },
   })
+
+describe("v1.38 matrix real process boundary", () => {
+  const adapter = (
+    invoke: V138RssCommandAdapter["execFile"],
+  ): V138RssCommandAdapter => ({
+    adapterId: "test-rss-command-adapter-v1",
+    command: "ps",
+    args: ["-o", "rss=", "-p", "{pid}"],
+    units: "kilobytes",
+    execFile: invoke,
+  })
+
+  it("matrix sampler denial classifies synchronous and callback permission denial", async () => {
+    const denied = Object.assign(new Error("denied"), { code: "EPERM" })
+    const synchronous = adapter(() => {
+      throw denied
+    })
+    const callback = adapter((_command, _args, _options, done) => {
+      done(denied, "", "")
+    })
+
+    await expect(sampleV138ChildRss(123, synchronous)).resolves.toEqual({
+      status: "unavailable",
+      code: "RESOURCE_SAMPLER_SPAWN_DENIED",
+    })
+    await expect(sampleV138ChildRss(123, callback)).resolves.toEqual({
+      status: "unavailable",
+      code: "RESOURCE_SAMPLER_SPAWN_DENIED",
+    })
+  })
+
+  it.each(["", "0", "-1", "12 13", "12.5", "unknown"])(
+    "matrix sampler denial rejects ambiguous RSS output %j",
+    async (stdout) => {
+      const ambiguous = adapter((_command, _args, _options, done) => {
+        done(null, stdout, "")
+      })
+      await expect(sampleV138ChildRss(123, ambiguous)).resolves.toEqual({
+        status: "unavailable",
+        code: "RESOURCE_MEASUREMENT_UNAVAILABLE",
+      })
+    },
+  )
+
+  it("matrix real cleanup proof terminates a spawned shard after sampler denial", async () => {
+    const inventory = enumerateV138CurrentMatrix(repoRoot)
+    const attempt = inventory.attempts[0]!
+    const denied = Object.assign(new Error("denied"), { code: "EPERM" })
+    const runner = createV138SubprocessShardRunner(repoRoot, {
+      rssCommandAdapter: adapter(() => {
+        throw denied
+      }),
+    })
+    const terminal = await runner.run(
+      {
+        kind: "calibration",
+        shardId: "diagnostic-test-shard:denied",
+        laneId: "diagnostic-test-lane:0",
+        ordinal: 0,
+        attempts: [{
+          executionAttemptId: `diagnostic_test:v2:denied:${attempt.attemptId}`,
+          templateAttemptId: attempt.attemptId,
+          request: attempt.request,
+        }],
+      },
+      {
+        signal: new AbortController().signal,
+        onResourceSample: () => undefined,
+      },
+    )
+
+    expect(terminal).toMatchObject({
+      classification: "failed",
+      cleanup: {
+        exitAwaited: true,
+        orphanProcessIds: [],
+      },
+      outcomes: [{
+        classification: "system_failure",
+        code: "RESOURCE_SAMPLER_SPAWN_DENIED",
+      }],
+    })
+  }, 60_000)
+
+  it("matrix diagnostic v2 receipt seals exact charged real-boundary evidence", async () => {
+    const target = path.resolve(
+      repoRoot,
+      ".planning/artifacts/v1.38-current-matrix-diagnostic-v2.json",
+    )
+    const receipt = await writeV138MatrixDiagnosticV2Receipt(repoRoot, target)
+    expect(checkV138MatrixDiagnosticV2Receipt(repoRoot, clone(receipt))).toEqual(
+      receipt,
+    )
+    expect(receipt).toMatchObject({
+      schemaVersion: "v1.38-current-matrix-diagnostic-v2",
+      acceptedCellCount: 0,
+      partialAcceptedEvidenceReusable: false,
+      predecessor: {
+        fileSha256:
+          "sha256:ac890d84767a09265265b21d80852ff6c63615ea9d4a0cc9fbf549f520f5aeec",
+        gitBlob: "166fbe91525623fa99fc7035462c76301f98785d",
+        producingCommit: "c5665b756f7e9f3ec1e8c57e5c64ad6f2a136c66",
+        receiptRoot:
+          "sha256:99187d35b9a14e263be6cc35a6335bdd3957d5fede647345326c8e015891b280",
+      },
+    })
+    const mutated = clone(receipt) as any
+    mutated.executedIdentityIds.reverse()
+    expect(() =>
+      checkV138MatrixDiagnosticV2Receipt(repoRoot, mutated),
+    ).toThrow("MATRIX_DIAGNOSTIC_V2_RECEIPT_INVALID")
+  }, 180_000)
+})
 
 describe("v1.38 matrix calibration receipt branches", () => {
   it("matrix supervised parallel calibration seals an admitted zero-cell successor", async () => {
