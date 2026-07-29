@@ -10,10 +10,13 @@ import {
   type V138FoundationAdmissionInput,
 } from "./lib/v1-38-foundation-admission.js"
 import {
+  deriveV138HistoricalMatrixExpectation,
   enumerateV138CurrentMatrix,
+  loadV138HistoricalMatrixExpectation,
   reduceV138CurrentMatrix,
   renderV138CurrentMatrixReceipt,
   reproduceV138CurrentMatrix,
+  validateV138HistoricalMatrixExpectation,
   type V138CurrentMatrixAttempt,
   type V138CurrentMatrixAttemptOutcome,
 } from "./lib/v1-38-current-matrix-reproduction.js"
@@ -493,5 +496,91 @@ describe("v1.38 current matrix reproduction", () => {
     expect(source).toContain("acceptedCellsPublished: 0")
     expect(source).toContain("partialAcceptedEvidenceReusable: false")
     expect(source).not.toMatch(/\bnew\s+Function\b|node:vm|\brunMatch\s*\(/u)
+  })
+})
+
+describe("v1.38 matrix expectation", () => {
+  it("matrix expectation is reproduced only from immutable v1.37 Git evidence", () => {
+    const persisted = loadV138HistoricalMatrixExpectation(repoRoot)
+    const derived = deriveV138HistoricalMatrixExpectation(repoRoot)
+
+    expect(derived).toEqual(persisted)
+    expect(persisted).toMatchObject({
+      schemaVersion: "v1.38-historical-matrix-expectation-v1",
+      predicateVersion: "v1.38-historical-matrix-predicate-v1",
+      provenance: {
+        archiveCommit: "e704590df599b49d84745b0e828d5ab0f1d335ad",
+        sourceBlobOid: "ab5c9feae17f28bd4eb8aeff90516a05c9633363",
+        sourceSha256:
+          "sha256:0313904594dab8b874292a6876e2d7500ed0e362dd6086333282c489b0a21d1d",
+        runnerBlobOid: "3de4aa6f2397925d1d0de012cd8e749554455a06",
+        runnerSourceSha256:
+          "sha256:5eee4d3b9171749ccdcf0faa6378c3aa4442a5f0e17ffb92ff97ded7622ca243",
+        derivationSourceRoot: expect.stringMatching(
+          /^sha256:(?!0{64})[0-9a-f]{64}$/u,
+        ),
+      },
+      declaredResults: {
+        definitionCount: 10,
+        unorderedPairCount: 45,
+        configuredArenaCount: 3,
+        seedParityCount: 2,
+        mirroredSides: true,
+        totalMatchCount: 540,
+        leaders: [
+          {
+            strategyId: "advanced:stonewall-shear",
+            wins: 62,
+            losses: 44,
+            draws: 2,
+          },
+          {
+            strategyId: "advanced:vanguard-pressure",
+            wins: 62,
+            losses: 44,
+            draws: 2,
+          },
+        ],
+        thirdPlace: {
+          strategyId: "advanced:rear-guard-sentinel",
+          wins: 57,
+          losses: 51,
+          draws: 0,
+        },
+        majorityEdgeCycleCount: 9,
+        arenaRecordEquality: {
+          leftArenaLabel: "Smoke",
+          rightArenaLabel: "Open Field",
+          scope: "per_strategy_wins_losses_draws",
+        },
+      },
+      historicalExpectationRoot: expect.stringMatching(
+        /^sha256:(?!0{64})[0-9a-f]{64}$/u,
+      ),
+    })
+    expect(Object.isFrozen(persisted)).toBe(true)
+  })
+
+  it.each([
+    ["source commit", (draft: any) => (draft.provenance.archiveCommit = "0".repeat(40))],
+    ["source blob", (draft: any) => (draft.provenance.sourceBlobOid = "0".repeat(40))],
+    ["source bytes", (draft: any) => (draft.provenance.sourceSha256 = `sha256:${"0".repeat(64)}`)],
+    ["runner blob", (draft: any) => (draft.provenance.runnerBlobOid = "0".repeat(40))],
+    ["runner bytes", (draft: any) => (draft.provenance.runnerSourceSha256 = `sha256:${"0".repeat(64)}`)],
+    ["derivation code", (draft: any) => (draft.provenance.derivationSourceRoot = `sha256:${"0".repeat(64)}`)],
+    ["declared leader", (draft: any) => (draft.declaredResults.leaders[0].wins = 61)],
+    ["record denominator", (draft: any) => (draft.declaredResults.thirdPlace.losses = 50)],
+    ["cycle count", (draft: any) => (draft.declaredResults.majorityEdgeCycleCount = 8)],
+    ["arena equality", (draft: any) => (draft.declaredResults.arenaRecordEquality.rightArenaLabel = "Standard Cross")],
+    ["expectation root", (draft: any) => (draft.historicalExpectationRoot = `sha256:${"0".repeat(64)}`)],
+    ["extra key", (draft: any) => (draft.observedAggregateRoot = `sha256:${"f".repeat(64)}`)],
+    ["missing key", (draft: any) => delete draft.declaredResults.totalMatchCount],
+    ["duplicate leader", (draft: any) => draft.declaredResults.leaders.push(draft.declaredResults.leaders[0])],
+  ])("matrix expectation rejects mutated %s", (_label, change) => {
+    const mutated = clone(loadV138HistoricalMatrixExpectation(repoRoot)) as any
+    change(mutated)
+    expect(() =>
+      validateV138HistoricalMatrixExpectation(repoRoot, mutated),
+    ).toThrow("MATRIX_EXPECTATION_INVALID")
   })
 })
