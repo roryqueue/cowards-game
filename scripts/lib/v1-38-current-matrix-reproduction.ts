@@ -2,8 +2,14 @@
 import { Buffer } from "node:buffer"
 import { createHash, generateKeyPairSync, sign } from "node:crypto"
 import { readFileSync } from "node:fs"
+import { freemem, totalmem } from "node:os"
 import path from "node:path"
-import { execFileSync, spawnSync } from "node:child_process"
+import {
+  execFile,
+  execFileSync,
+  spawn,
+  type ChildProcessWithoutNullStreams,
+} from "node:child_process"
 import { fileURLToPath } from "node:url"
 import {
   createPreparedRuntimeServiceDependenciesV118,
@@ -820,17 +826,58 @@ export const reduceV138ParallelMatrixAccounting = (input: {
     if (
       shard === undefined ||
       terminalById.has(terminal.shardId) ||
+      canonical(Object.keys(terminal)) !==
+        canonical([
+          "shardId",
+          "laneId",
+          "classification",
+          "elapsedMilliseconds",
+          "maxRssKilobytes",
+          "cleanup",
+          "outcomes",
+        ]) ||
       terminal.laneId !== shard.laneId ||
       !["success", "failed", "cancelled"].includes(terminal.classification) ||
       !Number.isSafeInteger(terminal.elapsedMilliseconds) ||
       terminal.elapsedMilliseconds < 0 ||
       !Number.isSafeInteger(terminal.maxRssKilobytes) ||
       terminal.maxRssKilobytes < 0 ||
-      !terminal.cleanup.exitAwaited ||
-      terminal.cleanup.orphanProcessIds.length !== 0 ||
+      typeof terminal.cleanup.gracefulTerminationSent !== "boolean" ||
+      typeof terminal.cleanup.forceTerminationSent !== "boolean" ||
+      typeof terminal.cleanup.exitAwaited !== "boolean" ||
+      !Array.isArray(terminal.cleanup.orphanProcessIds) ||
+      canonical(Object.keys(terminal.cleanup)) !==
+        canonical([
+          "gracefulTerminationSent",
+          "forceTerminationSent",
+          "exitAwaited",
+          "orphanProcessIds",
+        ]) ||
+      !terminal.cleanup.orphanProcessIds.every(
+        (pid) => Number.isSafeInteger(pid) && pid > 0,
+      ) ||
       terminal.outcomes.length !== shard.attemptIds.length
     ) {
       throw new TypeError("MATRIX_PARALLEL_ACCOUNTING_INVALID")
+    }
+    for (const outcome of terminal.outcomes) {
+      const expectedKeys =
+        outcome.classification === "success"
+          ? ["attemptId", "classification", "outcome"]
+          : outcome.classification === "system_failure"
+            ? ["attemptId", "classification", "code", "retryable"]
+            : ["attemptId", "classification", "code"]
+      if (
+        canonical(Object.keys(outcome)) !== canonical(expectedKeys) ||
+        typeof outcome.attemptId !== "string" ||
+        (outcome.classification === "success"
+          ? !["bottom_win", "top_win", "draw"].includes(outcome.outcome)
+          : typeof outcome.code !== "string" || outcome.code.length === 0) ||
+        (outcome.classification === "system_failure" &&
+          typeof outcome.retryable !== "boolean")
+      ) {
+        throw new TypeError("MATRIX_PARALLEL_ACCOUNTING_INVALID")
+      }
     }
     const outcomeIds = terminal.outcomes.map(({ attemptId }) => attemptId)
     if (
@@ -939,6 +986,624 @@ export const reduceV138ParallelMatrixAccounting = (input: {
   return deepFreeze({
     ...withoutChargedRoot,
     chargedAttemptLedgerRoot: sha256(canonical(withoutChargedRoot)),
+  })
+}
+
+export const V138_PARALLEL_RESOURCE_POLICY = deepFreeze({
+  policyId: "v1.38-parallel-matrix-resource-policy-v1",
+  maxConcurrentShards: 4,
+  maxAttemptsPerShard: 4,
+  maxChildRssKilobytes: 2_097_152,
+  maxAggregateChildRssKilobytes: 4_194_304,
+  minHostFreeMemoryBasisPoints: 2_500,
+  maxShardMilliseconds: 600_000,
+  maxTotalRunMilliseconds: 5_400_000,
+  resourceSampleMilliseconds: 250,
+  gracefulTerminationMilliseconds: 2_000,
+  forcedTerminationMilliseconds: 2_000,
+  partialAcceptedEvidenceReusable: false,
+} as const)
+
+export interface V138ParallelShardAssignment {
+  readonly kind: "calibration" | "authoritative"
+  readonly shardId: string
+  readonly laneId: string
+  readonly ordinal: number
+  readonly attempts: readonly Readonly<{
+    executionAttemptId: string
+    templateAttemptId: string
+    request: RuntimeExecutionServiceRequestV118
+  }>[]
+}
+
+export interface V138ParallelResourceSample {
+  readonly childId: string
+  readonly childRssKilobytes: number
+  readonly hostTotalMemoryKilobytes: number
+  readonly hostFreeMemoryKilobytes: number
+}
+
+export interface V138ParallelShardRunControl {
+  readonly signal: AbortSignal
+  readonly onResourceSample: (sample: V138ParallelResourceSample) => void
+}
+
+export interface V138ParallelShardRunner {
+  run(
+    shard: Readonly<V138ParallelShardAssignment>,
+    control: V138ParallelShardRunControl,
+  ): Promise<Readonly<V138ParallelShardTerminal>>
+}
+
+export interface V138ParallelClock {
+  monotonicMilliseconds(): number
+}
+
+const defaultParallelClock: V138ParallelClock = Object.freeze({
+  monotonicMilliseconds: () => Number(process.hrtime.bigint()) / 1_000_000,
+})
+
+type V138ParallelStopReason =
+  | "RESOURCE_MEASUREMENT_UNAVAILABLE"
+  | "RESOURCE_POLICY_CHILD_RSS"
+  | "RESOURCE_POLICY_AGGREGATE_RSS"
+  | "RESOURCE_POLICY_HOST_HEADROOM"
+  | "RESOURCE_POLICY_SHARD_TIMEOUT"
+  | "RESOURCE_POLICY_TOTAL_TIMEOUT"
+  | "SHARD_EXECUTION_FAILED"
+  | "SHARD_RUNNER_EXCEPTION"
+  | "CLEANUP_PROOF_FAILED"
+  | "PARENT_EXCEPTION"
+  | "PARENT_INTERRUPT"
+
+interface V138SupervisedAssignmentsResult {
+  readonly terminals: readonly Readonly<V138ParallelShardTerminal>[]
+  readonly unlaunchedShardIds: readonly string[]
+  readonly stopReason: V138ParallelStopReason | null
+  readonly batchWallMilliseconds: number
+  readonly childMaxRssKilobytes: readonly number[]
+  readonly aggregateChildRssKilobytes: number
+  readonly minimumHostHeadroomBasisPoints: number
+}
+
+const runnerExceptionTerminal = (
+  shard: Readonly<V138ParallelShardAssignment>,
+): Readonly<V138ParallelShardTerminal> => ({
+  shardId: shard.shardId,
+  laneId: shard.laneId,
+  classification: "failed",
+  elapsedMilliseconds: 0,
+  maxRssKilobytes: 0,
+  cleanup: {
+    gracefulTerminationSent: false,
+    forceTerminationSent: false,
+    exitAwaited: true,
+    orphanProcessIds: [],
+  },
+  outcomes: shard.attempts.map(({ executionAttemptId }) => ({
+    attemptId: executionAttemptId,
+    classification: "system_failure",
+    code: "SHARD_RUNNER_EXCEPTION",
+    retryable: false,
+  })),
+})
+
+const parentStopReason = (
+  signal: AbortSignal,
+): "PARENT_EXCEPTION" | "PARENT_INTERRUPT" =>
+  signal.reason === "parent_interrupt"
+    ? "PARENT_INTERRUPT"
+    : "PARENT_EXCEPTION"
+
+const runV138SupervisedAssignments = async (input: {
+  assignments: readonly Readonly<V138ParallelShardAssignment>[]
+  runner: V138ParallelShardRunner
+  clock: V138ParallelClock
+  parentSignal?: AbortSignal | undefined
+}): Promise<Readonly<V138SupervisedAssignmentsResult>> => {
+  const controllers = new Map<string, AbortController>()
+  const active = new Map<
+    string,
+    Promise<{
+      shardId: string
+      terminal: Readonly<V138ParallelShardTerminal>
+      runnerException: boolean
+    }>
+  >()
+  const childIdsByShard = new Map<string, Set<string>>()
+  const activeChildRss = new Map<string, number>()
+  const maxChildRss = new Map<string, number>()
+  const maxShardRss = new Map<string, number>()
+  const terminals: V138ParallelShardTerminal[] = []
+  let nextAssignment = 0
+  let firstSpawnMilliseconds: number | undefined
+  let stopReason: V138ParallelStopReason | null = null
+  let maxAggregateChildRssKilobytes = 0
+  let minimumHostHeadroomBasisPoints = 10_000
+  const startedMilliseconds = input.clock.monotonicMilliseconds()
+
+  const stop = (reason: V138ParallelStopReason): void => {
+    if (stopReason !== null) return
+    stopReason = reason
+    for (const controller of controllers.values()) controller.abort(reason)
+  }
+  const onParentAbort = (): void => {
+    stop(parentStopReason(input.parentSignal!))
+  }
+  if (input.parentSignal?.aborted) onParentAbort()
+  else input.parentSignal?.addEventListener("abort", onParentAbort, {
+    once: true,
+  })
+
+  const checkTotalTime = (): void => {
+    const elapsed =
+      input.clock.monotonicMilliseconds() - startedMilliseconds
+    if (elapsed > V138_PARALLEL_RESOURCE_POLICY.maxTotalRunMilliseconds) {
+      stop("RESOURCE_POLICY_TOTAL_TIMEOUT")
+    }
+  }
+
+  const launchAvailable = (): void => {
+    checkTotalTime()
+    while (
+      stopReason === null &&
+      active.size < V138_PARALLEL_RESOURCE_POLICY.maxConcurrentShards &&
+      nextAssignment < input.assignments.length
+    ) {
+      const shard = input.assignments[nextAssignment]!
+      nextAssignment += 1
+      if (
+        shard.attempts.length < 1 ||
+        shard.attempts.length >
+          V138_PARALLEL_RESOURCE_POLICY.maxAttemptsPerShard
+      ) {
+        stop("SHARD_EXECUTION_FAILED")
+        break
+      }
+      if (firstSpawnMilliseconds === undefined) {
+        firstSpawnMilliseconds = input.clock.monotonicMilliseconds()
+      }
+      const controller = new AbortController()
+      controllers.set(shard.shardId, controller)
+      childIdsByShard.set(shard.shardId, new Set())
+      const onResourceSample = (sample: V138ParallelResourceSample): void => {
+        if (
+          typeof sample.childId !== "string" ||
+          sample.childId.length === 0 ||
+          !Number.isSafeInteger(sample.childRssKilobytes) ||
+          sample.childRssKilobytes < 0 ||
+          !Number.isSafeInteger(sample.hostTotalMemoryKilobytes) ||
+          sample.hostTotalMemoryKilobytes <= 0 ||
+          !Number.isSafeInteger(sample.hostFreeMemoryKilobytes) ||
+          sample.hostFreeMemoryKilobytes < 0 ||
+          sample.hostFreeMemoryKilobytes >
+            sample.hostTotalMemoryKilobytes
+        ) {
+          stop("RESOURCE_MEASUREMENT_UNAVAILABLE")
+          return
+        }
+        childIdsByShard.get(shard.shardId)!.add(sample.childId)
+        activeChildRss.set(sample.childId, sample.childRssKilobytes)
+        maxChildRss.set(
+          sample.childId,
+          Math.max(
+            maxChildRss.get(sample.childId) ?? 0,
+            sample.childRssKilobytes,
+          ),
+        )
+        maxShardRss.set(
+          shard.shardId,
+          Math.max(
+            maxShardRss.get(shard.shardId) ?? 0,
+            sample.childRssKilobytes,
+          ),
+        )
+        const aggregate = [...activeChildRss.values()].reduce(
+          (sum, value) => sum + value,
+          0,
+        )
+        maxAggregateChildRssKilobytes = Math.max(
+          maxAggregateChildRssKilobytes,
+          aggregate,
+        )
+        const headroomBasisPoints = Math.floor(
+          (sample.hostFreeMemoryKilobytes * 10_000) /
+            sample.hostTotalMemoryKilobytes,
+        )
+        minimumHostHeadroomBasisPoints = Math.min(
+          minimumHostHeadroomBasisPoints,
+          headroomBasisPoints,
+        )
+        if (
+          sample.childRssKilobytes >
+          V138_PARALLEL_RESOURCE_POLICY.maxChildRssKilobytes
+        ) {
+          stop("RESOURCE_POLICY_CHILD_RSS")
+        } else if (
+          aggregate >
+          V138_PARALLEL_RESOURCE_POLICY.maxAggregateChildRssKilobytes
+        ) {
+          stop("RESOURCE_POLICY_AGGREGATE_RSS")
+        } else if (
+          headroomBasisPoints <
+          V138_PARALLEL_RESOURCE_POLICY.minHostFreeMemoryBasisPoints
+        ) {
+          stop("RESOURCE_POLICY_HOST_HEADROOM")
+        }
+      }
+      const promise = Promise.resolve()
+        .then(() =>
+          input.runner.run(shard, {
+            signal: controller.signal,
+            onResourceSample,
+          }),
+        )
+        .then(
+          (terminal) => ({
+            shardId: shard.shardId,
+            terminal,
+            runnerException: false,
+          }),
+          () => ({
+            shardId: shard.shardId,
+            terminal: runnerExceptionTerminal(shard),
+            runnerException: true,
+          }),
+        )
+      active.set(shard.shardId, promise)
+    }
+  }
+
+  launchAvailable()
+  while (active.size > 0) {
+    const completed = await Promise.race(active.values())
+    active.delete(completed.shardId)
+    controllers.delete(completed.shardId)
+    for (const childId of childIdsByShard.get(completed.shardId) ?? []) {
+      activeChildRss.delete(childId)
+    }
+    childIdsByShard.delete(completed.shardId)
+    terminals.push(completed.terminal)
+    if (completed.runnerException) {
+      stop("SHARD_RUNNER_EXCEPTION")
+    } else if (
+      completed.terminal.elapsedMilliseconds >
+      V138_PARALLEL_RESOURCE_POLICY.maxShardMilliseconds
+    ) {
+      stop("RESOURCE_POLICY_SHARD_TIMEOUT")
+    } else if (
+      !completed.terminal.cleanup.exitAwaited ||
+      completed.terminal.cleanup.orphanProcessIds.length > 0
+    ) {
+      stop("CLEANUP_PROOF_FAILED")
+    } else if (completed.terminal.classification === "failed") {
+      stop("SHARD_EXECUTION_FAILED")
+    } else if (
+      completed.terminal.classification === "cancelled" &&
+      stopReason === null
+    ) {
+      stop("SHARD_EXECUTION_FAILED")
+    }
+    checkTotalTime()
+    launchAvailable()
+  }
+  input.parentSignal?.removeEventListener("abort", onParentAbort)
+  const endMilliseconds = input.clock.monotonicMilliseconds()
+  const terminalByShardId = new Map(
+    terminals.map((terminal) => [terminal.shardId, terminal]),
+  )
+  const canonicalTerminals = input.assignments.flatMap((assignment) => {
+    const terminal = terminalByShardId.get(assignment.shardId)
+    return terminal === undefined ? [] : [terminal]
+  })
+  const launchedIds = new Set(canonicalTerminals.map(({ shardId }) => shardId))
+  const unlaunchedShardIds = input.assignments
+    .filter(({ shardId }) => !launchedIds.has(shardId))
+    .map(({ shardId }) => shardId)
+  return deepFreeze({
+    terminals: canonicalTerminals,
+    unlaunchedShardIds,
+    stopReason,
+    batchWallMilliseconds:
+      firstSpawnMilliseconds === undefined
+        ? 0
+        : Math.ceil(Math.max(0, endMilliseconds - firstSpawnMilliseconds)),
+    childMaxRssKilobytes: input.assignments.map(
+      ({ shardId }) => maxShardRss.get(shardId) ?? 0,
+    ),
+    aggregateChildRssKilobytes: maxAggregateChildRssKilobytes,
+    minimumHostHeadroomBasisPoints,
+  })
+}
+
+export interface V138ParallelCalibrationReceipt {
+  readonly schemaVersion: "v1.38-parallel-calibration-receipt-v1"
+  readonly status: "admitted" | "stopped_process_failure"
+  readonly reason: V138ParallelStopReason | null
+  readonly policyRoot: Sha256
+  readonly projectionSourceRoot: Sha256
+  readonly inventoryRoot: Sha256
+  readonly hardwareIdentity: Readonly<{
+    operatingSystem: string
+    architecture: string
+    nodeVersion: string
+    cpuIdentity: string
+  }>
+  readonly rawObservation: Readonly<{
+    calibrationBatchWallMilliseconds: number
+    childMaxRssKilobytes: readonly [number, number, number, number]
+    aggregateChildRssKilobytes: number
+    minimumHostHeadroomBasisPoints: number
+  }>
+  readonly projection: Readonly<V138ParallelProjection>
+  readonly terminalShardCount: number
+  readonly attemptCount: 8
+  readonly terminals: readonly Readonly<V138ParallelShardTerminal>[]
+  readonly acceptedCellsPublished: 0
+  readonly partialAcceptedEvidenceReusable: false
+  readonly calibrationRoot: Sha256
+}
+
+const calibrationWithoutRoot = (
+  receipt: V138ParallelCalibrationReceipt,
+): Omit<V138ParallelCalibrationReceipt, "calibrationRoot"> => {
+  const { calibrationRoot: _root, ...withoutRoot } = receipt
+  return withoutRoot
+}
+
+const calibrationReceiptIsValid = (
+  inventory: Readonly<V138CurrentMatrixInventory>,
+  receipt: Readonly<V138ParallelCalibrationReceipt>,
+): boolean => {
+  const policy = deriveV138ParallelCalibrationPolicy(inventory)
+  return (
+    receipt.schemaVersion === "v1.38-parallel-calibration-receipt-v1" &&
+    receipt.status === "admitted" &&
+    receipt.reason === null &&
+    receipt.policyRoot === policy.policyRoot &&
+    receipt.projectionSourceRoot === policy.projectionSourceRoot &&
+    receipt.inventoryRoot === policy.inventory.inventoryRoot &&
+    receipt.attemptCount === 8 &&
+    receipt.terminalShardCount === 4 &&
+    receipt.acceptedCellsPublished === 0 &&
+    receipt.partialAcceptedEvidenceReusable === false &&
+    receipt.projection.admittedByTime &&
+    receipt.projection.policyRoot === policy.policyRoot &&
+    receipt.rawObservation.childMaxRssKilobytes.every(
+      (rss) => rss <= V138_PARALLEL_RESOURCE_POLICY.maxChildRssKilobytes,
+    ) &&
+    receipt.rawObservation.aggregateChildRssKilobytes <=
+      V138_PARALLEL_RESOURCE_POLICY.maxAggregateChildRssKilobytes &&
+    receipt.rawObservation.minimumHostHeadroomBasisPoints >=
+      V138_PARALLEL_RESOURCE_POLICY.minHostFreeMemoryBasisPoints &&
+    receipt.calibrationRoot ===
+      sha256(canonical(calibrationWithoutRoot(receipt)))
+  )
+}
+
+export const calibrateV138ParallelMatrix = async (input: {
+  inventory: Readonly<V138CurrentMatrixInventory>
+  policy?: Readonly<V138ParallelCalibrationPolicy> | undefined
+  runner?: V138ParallelShardRunner | undefined
+  hardwareIdentity: Readonly<{
+    operatingSystem: string
+    architecture: string
+    nodeVersion: string
+    cpuIdentity: string
+  }>
+  clock?: V138ParallelClock | undefined
+  parentSignal?: AbortSignal | undefined
+  repoRoot?: string | undefined
+}): Promise<Readonly<V138ParallelCalibrationReceipt>> => {
+  const policy = V138ParallelCalibrationPolicySchema.parse(
+    input.policy ?? deriveV138ParallelCalibrationPolicy(input.inventory),
+  )
+  const expectedPolicy = deriveV138ParallelCalibrationPolicy(input.inventory)
+  if (canonical(policy) !== canonical(expectedPolicy)) {
+    throw new TypeError("MATRIX_PARALLEL_CALIBRATION_POLICY_INVALID")
+  }
+  if (
+    canonical(Object.keys(input.hardwareIdentity)) !==
+      canonical([
+        "operatingSystem",
+        "architecture",
+        "nodeVersion",
+        "cpuIdentity",
+      ]) ||
+    Object.values(input.hardwareIdentity).some(
+      (value) => typeof value !== "string" || value.length === 0,
+    )
+  ) {
+    throw new TypeError("MATRIX_PARALLEL_HARDWARE_IDENTITY_INVALID")
+  }
+  const attemptById = new Map(
+    input.inventory.attempts.map((attempt) => [attempt.attemptId, attempt]),
+  )
+  const assignments = policy.inventory.shards.map((shard, ordinal) => ({
+    kind: "calibration" as const,
+    shardId: shard.shardId,
+    laneId: shard.laneId,
+    ordinal,
+    attempts: shard.attemptIds.map((calibrationAttemptId) => {
+      const record = policy.inventory.attempts.find(
+        (attempt) =>
+          attempt.calibrationAttemptId === calibrationAttemptId,
+      )!
+      const template = attemptById.get(record.templateAttemptId)
+      if (
+        template === undefined ||
+        sha256(canonical(template.request)) !== record.requestSha256
+      ) {
+        throw new TypeError("MATRIX_PARALLEL_CALIBRATION_INVENTORY_INVALID")
+      }
+      return {
+        executionAttemptId: record.calibrationAttemptId,
+        templateAttemptId: record.templateAttemptId,
+        request: template.request,
+      }
+    }),
+  }))
+  const runner =
+    input.runner ??
+    createV138SubprocessShardRunner(
+      input.repoRoot ??
+        path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../.."),
+    )
+  const supervised = await runV138SupervisedAssignments({
+    assignments,
+    runner,
+    clock: input.clock ?? defaultParallelClock,
+    parentSignal: input.parentSignal,
+  })
+  const childMax = assignments.map((assignment) => {
+    const sampled = supervised.childMaxRssKilobytes[assignment.ordinal]
+    const terminal = supervised.terminals.find(
+      ({ shardId }) => shardId === assignment.shardId,
+    )
+    return sampled ?? terminal?.maxRssKilobytes ?? 0
+  }) as [number, number, number, number]
+  const rawObservation = {
+    calibrationBatchWallMilliseconds: supervised.batchWallMilliseconds,
+    childMaxRssKilobytes: childMax,
+    aggregateChildRssKilobytes: supervised.aggregateChildRssKilobytes,
+    minimumHostHeadroomBasisPoints:
+      supervised.minimumHostHeadroomBasisPoints,
+  }
+  const projection = projectV138ParallelMatrix(policy, rawObservation)
+  const resourceAdmitted =
+    childMax.every(
+      (rss) => rss <= V138_PARALLEL_RESOURCE_POLICY.maxChildRssKilobytes,
+    ) &&
+    rawObservation.aggregateChildRssKilobytes <=
+      V138_PARALLEL_RESOURCE_POLICY.maxAggregateChildRssKilobytes &&
+    rawObservation.minimumHostHeadroomBasisPoints >=
+      V138_PARALLEL_RESOURCE_POLICY.minHostFreeMemoryBasisPoints
+  const admitted =
+    supervised.stopReason === null &&
+    supervised.terminals.length === 4 &&
+    supervised.terminals.every(
+      (terminal) => terminal.classification === "success",
+    ) &&
+    projection.admittedByTime &&
+    resourceAdmitted
+  const withoutRoot = {
+    schemaVersion: "v1.38-parallel-calibration-receipt-v1" as const,
+    status: admitted
+      ? ("admitted" as const)
+      : ("stopped_process_failure" as const),
+    reason: admitted
+      ? null
+      : (supervised.stopReason ??
+        (!projection.admittedByTime
+          ? "RESOURCE_POLICY_TOTAL_TIMEOUT"
+          : "SHARD_EXECUTION_FAILED")),
+    policyRoot: policy.policyRoot,
+    projectionSourceRoot: policy.projectionSourceRoot,
+    inventoryRoot: policy.inventory.inventoryRoot,
+    hardwareIdentity: input.hardwareIdentity,
+    rawObservation,
+    projection,
+    terminalShardCount: supervised.terminals.length,
+    attemptCount: 8 as const,
+    terminals: supervised.terminals,
+    acceptedCellsPublished: 0 as const,
+    partialAcceptedEvidenceReusable: false as const,
+  }
+  return deepFreeze({
+    ...withoutRoot,
+    calibrationRoot: sha256(canonical(withoutRoot)),
+  })
+}
+
+export type V138ParallelMatrixExecutionResult = Readonly<{
+  schemaVersion: "v1.38-parallel-matrix-execution-v1"
+  status: "complete_pending_publication" | "stopped_process_failure"
+  reason: V138ParallelStopReason | null
+  calibrationRoot: Sha256
+  planRoot: Sha256
+  terminals: readonly Readonly<V138ParallelShardTerminal>[]
+  accounting: ReturnType<typeof reduceV138ParallelMatrixAccounting>
+  canonicalOutcomes: readonly V138ParallelChargedOutcome[]
+}>
+
+export const executeV138ParallelMatrix = async (input: {
+  inventory: Readonly<V138CurrentMatrixInventory>
+  calibration: Readonly<V138ParallelCalibrationReceipt>
+  runner?: V138ParallelShardRunner | undefined
+  clock?: V138ParallelClock | undefined
+  parentSignal?: AbortSignal | undefined
+  repoRoot?: string | undefined
+}): Promise<V138ParallelMatrixExecutionResult> => {
+  if (!calibrationReceiptIsValid(input.inventory, input.calibration)) {
+    throw new TypeError("MATRIX_PARALLEL_CALIBRATION_REQUIRED")
+  }
+  const plan = planV138MatrixShards(input.inventory)
+  const attemptById = new Map(
+    input.inventory.attempts.map((attempt) => [attempt.attemptId, attempt]),
+  )
+  const assignments: V138ParallelShardAssignment[] = plan.shards.map(
+    (shard) => ({
+      kind: "authoritative",
+      shardId: shard.shardId,
+      laneId: shard.laneId,
+      ordinal: shard.ordinal,
+      attempts: shard.attemptIds.map((attemptId) => {
+        const attempt = attemptById.get(attemptId)!
+        return {
+          executionAttemptId: attemptId,
+          templateAttemptId: attemptId,
+          request: attempt.request,
+        }
+      }),
+    }),
+  )
+  const runner =
+    input.runner ??
+    createV138SubprocessShardRunner(
+      input.repoRoot ??
+        path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../.."),
+    )
+  const supervised = await runV138SupervisedAssignments({
+    assignments,
+    runner,
+    clock: input.clock ?? defaultParallelClock,
+    parentSignal: input.parentSignal,
+  })
+  const accounting = reduceV138ParallelMatrixAccounting({
+    inventory: input.inventory,
+    plan,
+    terminals: supervised.terminals,
+    unlaunchedShardIds: supervised.unlaunchedShardIds,
+  })
+  const canonicalOutcomes = supervised.terminals
+    .flatMap(({ outcomes }) => outcomes)
+    .sort(
+      (left, right) =>
+        plan.shards
+          .flatMap(({ attemptIds }) => attemptIds)
+          .indexOf(left.attemptId) -
+        plan.shards
+          .flatMap(({ attemptIds }) => attemptIds)
+          .indexOf(right.attemptId),
+    )
+  const complete =
+    supervised.stopReason === null &&
+    accounting.terminalAttemptCount === 540 &&
+    accounting.successfulButUnacceptedCount === 540 &&
+    accounting.failedAttemptCount === 0 &&
+    accounting.cancelledAttemptCount === 0 &&
+    accounting.unlaunchedAttemptCount === 0
+  return deepFreeze({
+    schemaVersion: "v1.38-parallel-matrix-execution-v1" as const,
+    status: complete
+      ? ("complete_pending_publication" as const)
+      : ("stopped_process_failure" as const),
+    reason: complete ? null : supervised.stopReason ?? "SHARD_EXECUTION_FAILED",
+    calibrationRoot: input.calibration.calibrationRoot,
+    planRoot: plan.planRoot,
+    terminals: supervised.terminals,
+    accounting,
+    canonicalOutcomes,
   })
 }
 
@@ -2029,76 +2694,319 @@ interface ShardExecutionResult {
   maxRssKilobytes: number
 }
 
-const executeShardSubprocess = (
-  repoRoot: string,
-  attemptIds: readonly string[],
-): Readonly<{
-  elapsedMilliseconds: number
-  result: ShardExecutionResult
-}> => {
-  const started = process.hrtime.bigint()
-  const child = spawnSync(
-    process.execPath,
-    [
-      "--import",
-      "tsx",
-      fileURLToPath(import.meta.url),
-      "--execute-shard",
-      Buffer.from(JSON.stringify({ repoRoot, attemptIds }), "utf8").toString(
-        "base64",
-      ),
-    ],
-    {
-      cwd: repoRoot,
-      encoding: "utf8",
-      timeout: RESOURCE_POLICY.maxShardMilliseconds,
-      maxBuffer: 4 * 1024 * 1024,
-    },
-  )
-  const elapsedMilliseconds = Math.ceil(
-    Number(process.hrtime.bigint() - started) / 1_000_000,
-  )
-  if (child.status !== 0) {
-    return {
-      elapsedMilliseconds,
-      result: {
-        maxRssKilobytes: 0,
-        outcomes: attemptIds.map((attemptId) => ({
-          attemptId,
-          classification: "system_failure",
-          code:
-            child.error?.name === "Error" &&
-            child.error.message.includes("ETIMEDOUT")
-              ? "RESOURCE_POLICY_SHARD_TIMEOUT"
-              : "RESOURCE_POLICY_SHARD_FAILED",
-          retryable: false,
-        })),
+const childRssKilobytes = (pid: number): Promise<number | undefined> =>
+  new Promise((resolve) => {
+    if (process.platform === "win32") {
+      resolve(undefined)
+      return
+    }
+    execFile(
+      "ps",
+      ["-o", "rss=", "-p", String(pid)],
+      { encoding: "utf8", timeout: 1_000 },
+      (error, stdout) => {
+        if (error) {
+          resolve(undefined)
+          return
+        }
+        const rss = Number(String(stdout).trim())
+        resolve(
+          Number.isSafeInteger(rss) && rss >= 0 ? rss : undefined,
+        )
       },
+    )
+  })
+
+const processGroupSignal = (
+  child: ChildProcessWithoutNullStreams,
+  signal: NodeJS.Signals,
+): boolean => {
+  if (child.pid === undefined) return false
+  if (process.platform !== "win32") {
+    try {
+      process.kill(-child.pid, signal)
+      return true
+    } catch {
+      // Fall through to the direct child signal for platforms without groups.
     }
   }
   try {
-    const result = JSON.parse(child.stdout) as ShardExecutionResult
-    if (
-      !Array.isArray(result.outcomes) ||
-      result.outcomes.length !== attemptIds.length ||
-      !Number.isFinite(result.maxRssKilobytes)
-    ) {
-      throw new TypeError("invalid shard result")
-    }
-    return { elapsedMilliseconds, result }
+    return child.kill(signal)
   } catch {
-    return {
-      elapsedMilliseconds,
-      result: {
-        maxRssKilobytes: 0,
-        outcomes: attemptIds.map((attemptId) => ({
-          attemptId,
-          classification: "system_failure",
-          code: "RESOURCE_POLICY_SHARD_OUTPUT_INVALID",
-          retryable: false,
-        })),
-      },
-    }
+    return false
+  }
+}
+
+const processGroupIsAlive = (pid: number): boolean => {
+  try {
+    process.kill(process.platform === "win32" ? pid : -pid, 0)
+    return true
+  } catch {
+    return false
+  }
+}
+
+const delayMilliseconds = (milliseconds: number): Promise<void> =>
+  new Promise((resolve) => setTimeout(resolve, milliseconds))
+
+function createV138SubprocessShardRunner(
+  repoRoot: string,
+): V138ParallelShardRunner {
+  return {
+    run: async (shard, control) => {
+      const started = process.hrtime.bigint()
+      const templateAttemptIds = shard.attempts.map(
+        ({ templateAttemptId }) => templateAttemptId,
+      )
+      if (control.signal.aborted) {
+        return {
+          shardId: shard.shardId,
+          laneId: shard.laneId,
+          classification: "cancelled",
+          elapsedMilliseconds: 0,
+          maxRssKilobytes: 0,
+          cleanup: {
+            gracefulTerminationSent: false,
+            forceTerminationSent: false,
+            exitAwaited: true,
+            orphanProcessIds: [],
+          },
+          outcomes: shard.attempts.map(({ executionAttemptId }) => ({
+            attemptId: executionAttemptId,
+            classification: "cancelled",
+            code: "CANCELLED_BEFORE_SPAWN",
+          })),
+        }
+      }
+      const child = spawn(
+        process.execPath,
+        [
+          "--import",
+          "tsx",
+          fileURLToPath(import.meta.url),
+          "--execute-shard",
+          Buffer.from(
+            JSON.stringify({ repoRoot, attemptIds: templateAttemptIds }),
+            "utf8",
+          ).toString("base64"),
+        ],
+        {
+          cwd: repoRoot,
+          detached: process.platform !== "win32",
+          env: {
+            NODE_ENV: "production",
+            PATH: process.env.PATH ?? "",
+          },
+          shell: false,
+          stdio: ["ignore", "pipe", "pipe"],
+          windowsHide: true,
+        },
+      )
+      const stdout: Buffer[] = []
+      const stderr: Buffer[] = []
+      let stdoutBytes = 0
+      let stderrBytes = 0
+      let maximumRssKilobytes = 0
+      let outputOverflow = false
+      let spawnError = false
+      let gracefulTerminationSent = false
+      let forceTerminationSent = false
+      let closed = false
+      let status: number | null = null
+      let closeSignal: NodeJS.Signals | null = null
+      let terminationPromise: Promise<void> | undefined
+      const terminate = (): Promise<void> => {
+        if (terminationPromise !== undefined) return terminationPromise
+        terminationPromise = (async () => {
+          if (closed) return
+          gracefulTerminationSent = processGroupSignal(child, "SIGTERM")
+          await Promise.race([
+            new Promise<void>((resolve) => child.once("close", () => resolve())),
+            delayMilliseconds(
+              V138_PARALLEL_RESOURCE_POLICY.gracefulTerminationMilliseconds,
+            ),
+          ])
+          if (!closed) {
+            forceTerminationSent = processGroupSignal(child, "SIGKILL")
+            await Promise.race([
+              new Promise<void>((resolve) =>
+                child.once("close", () => resolve()),
+              ),
+              delayMilliseconds(
+                V138_PARALLEL_RESOURCE_POLICY.forcedTerminationMilliseconds,
+              ),
+            ])
+          }
+        })()
+        return terminationPromise
+      }
+      const onAbort = (): void => {
+        void terminate()
+      }
+      control.signal.addEventListener("abort", onAbort, { once: true })
+      const closeReceipt = new Promise<void>((resolve) => {
+        child.on("error", () => {
+          spawnError = true
+        })
+        child.on("close", (exitStatus, signal) => {
+          closed = true
+          status = exitStatus
+          closeSignal = signal
+          resolve()
+        })
+      })
+      const append = (
+        target: Buffer[],
+        value: Buffer,
+        stream: "stdout" | "stderr",
+      ): void => {
+        const maximumBytes = 4 * 1024 * 1024
+        const current = stream === "stdout" ? stdoutBytes : stderrBytes
+        const remaining = Math.max(0, maximumBytes + 1 - current)
+        if (remaining > 0) target.push(value.subarray(0, remaining))
+        if (stream === "stdout") stdoutBytes += value.byteLength
+        else stderrBytes += value.byteLength
+        if (current + value.byteLength > maximumBytes) {
+          outputOverflow = true
+          void terminate()
+        }
+      }
+      child.stdout.on("data", (value: Buffer) =>
+        append(stdout, Buffer.from(value), "stdout"),
+      )
+      child.stderr.on("data", (value: Buffer) =>
+        append(stderr, Buffer.from(value), "stderr"),
+      )
+      const sample = async (): Promise<void> => {
+        if (closed || child.pid === undefined) return
+        const rss = await childRssKilobytes(child.pid)
+        const hostTotal = Math.floor(totalmem() / 1024)
+        const hostFree = Math.floor(freemem() / 1024)
+        if (rss === undefined) {
+          control.onResourceSample({
+            childId: `pid:${child.pid}`,
+            childRssKilobytes: -1,
+            hostTotalMemoryKilobytes: hostTotal,
+            hostFreeMemoryKilobytes: hostFree,
+          })
+          return
+        }
+        maximumRssKilobytes = Math.max(maximumRssKilobytes, rss)
+        control.onResourceSample({
+          childId: `pid:${child.pid}`,
+          childRssKilobytes: rss,
+          hostTotalMemoryKilobytes: hostTotal,
+          hostFreeMemoryKilobytes: hostFree,
+        })
+      }
+      await sample()
+      const interval = setInterval(() => {
+        void sample()
+      }, V138_PARALLEL_RESOURCE_POLICY.resourceSampleMilliseconds)
+      const timeout = setTimeout(() => {
+        void terminate()
+      }, V138_PARALLEL_RESOURCE_POLICY.maxShardMilliseconds)
+      await closeReceipt
+      clearInterval(interval)
+      clearTimeout(timeout)
+      control.signal.removeEventListener("abort", onAbort)
+      if (terminationPromise !== undefined) await terminationPromise
+      const elapsedMilliseconds = Math.ceil(
+        Number(process.hrtime.bigint() - started) / 1_000_000,
+      )
+      const pid = child.pid
+      if (pid !== undefined && processGroupIsAlive(pid)) {
+        forceTerminationSent = processGroupSignal(child, "SIGKILL")
+        await delayMilliseconds(25)
+      }
+      const orphanProcessIds =
+        pid !== undefined && processGroupIsAlive(pid) ? [pid] : []
+      const cancelled = control.signal.aborted
+      const failureCode = outputOverflow
+        ? "RESOURCE_POLICY_SHARD_OUTPUT_INVALID"
+        : elapsedMilliseconds >
+            V138_PARALLEL_RESOURCE_POLICY.maxShardMilliseconds
+          ? "RESOURCE_POLICY_SHARD_TIMEOUT"
+          : spawnError
+            ? "RESOURCE_POLICY_SHARD_SPAWN_FAILED"
+            : status !== 0 || closeSignal !== null
+              ? "RESOURCE_POLICY_SHARD_FAILED"
+              : undefined
+      let parsed: ShardExecutionResult | undefined
+      if (!cancelled && failureCode === undefined) {
+        try {
+          const candidate = JSON.parse(
+            Buffer.concat(stdout).toString("utf8"),
+          ) as ShardExecutionResult
+          if (
+            !Array.isArray(candidate.outcomes) ||
+            candidate.outcomes.length !== shard.attempts.length ||
+            !Number.isSafeInteger(candidate.maxRssKilobytes) ||
+            candidate.maxRssKilobytes < 0 ||
+            canonical(candidate.outcomes.map(({ attemptId }) => attemptId)) !==
+              canonical(templateAttemptIds)
+          ) {
+            throw new TypeError("invalid shard result")
+          }
+          parsed = candidate
+          maximumRssKilobytes = Math.max(
+            maximumRssKilobytes,
+            candidate.maxRssKilobytes,
+          )
+        } catch {
+          parsed = undefined
+        }
+      }
+      const effectiveFailureCode =
+        failureCode ??
+        (cancelled
+          ? undefined
+          : parsed === undefined
+            ? "RESOURCE_POLICY_SHARD_OUTPUT_INVALID"
+            : undefined)
+      const mappedOutcomes: V138ParallelChargedOutcome[] = shard.attempts.map(
+        ({ executionAttemptId }, index) => {
+          if (cancelled) {
+            return {
+              attemptId: executionAttemptId,
+              classification: "cancelled",
+              code: "CANCELLED_AFTER_HARD_FAILURE",
+            }
+          }
+          if (effectiveFailureCode !== undefined) {
+            return {
+              attemptId: executionAttemptId,
+              classification: "system_failure",
+              code: effectiveFailureCode,
+              retryable: false,
+            }
+          }
+          const outcome = parsed!.outcomes[index]!
+          return { ...outcome, attemptId: executionAttemptId }
+        },
+      )
+      return {
+        shardId: shard.shardId,
+        laneId: shard.laneId,
+        classification: cancelled
+          ? "cancelled"
+          : effectiveFailureCode !== undefined ||
+              mappedOutcomes.some(
+                ({ classification }) => classification !== "success",
+              )
+            ? "failed"
+            : "success",
+        elapsedMilliseconds,
+        maxRssKilobytes: maximumRssKilobytes,
+        cleanup: {
+          gracefulTerminationSent,
+          forceTerminationSent,
+          exitAwaited: closed || spawnError,
+          orphanProcessIds,
+        },
+        outcomes: mappedOutcomes,
+      }
+    },
   }
 }
 
@@ -2166,59 +3074,30 @@ const stoppedForResourcePolicy = (
 export const reproduceV138CurrentMatrix = (
   repoRoot: string,
 ): Readonly<V138CurrentMatrixReproductionReceipt> => {
-  const inventory = enumerateV138CurrentMatrix(repoRoot)
-  const calibrationAttempt = inventory.attempts[0]!
-  const calibrationShard = executeShardSubprocess(repoRoot, [
-    calibrationAttempt.attemptId,
-  ])
-  const calibrationOutcome = calibrationShard.result.outcomes[0]!
-  const projectedTotalMilliseconds =
-    calibrationShard.elapsedMilliseconds * inventory.attempts.length
-  const withinShardMemoryBudget =
-    calibrationShard.result.maxRssKilobytes <=
-    RESOURCE_POLICY.maxShardRssKilobytes
-  const calibration = {
-    elapsedMilliseconds: calibrationShard.elapsedMilliseconds,
-    maxRssKilobytes: calibrationShard.result.maxRssKilobytes,
-    projectedTotalMilliseconds,
-    withinShardMemoryBudget,
-    outcomeClassification: calibrationOutcome.classification,
-  }
+  const persisted = JSON.parse(
+    readFileSync(
+      path.resolve(
+        repoRoot,
+        ".planning/artifacts/v1.38-current-matrix-reproduction.json",
+      ),
+      "utf8",
+    ),
+  ) as V138CurrentMatrixReproductionReceipt
   if (
-    projectedTotalMilliseconds >
-      RESOURCE_POLICY.maxProjectedTotalMilliseconds ||
-    !withinShardMemoryBudget ||
-    calibrationOutcome.classification !== "success"
+    persisted.schemaVersion !== "v1.38-current-matrix-reproduction-v1" ||
+    persisted.fixturePurpose !== FIXTURE_PURPOSE ||
+    persisted.receiptRoot !==
+      sha256(
+        canonical(
+          Object.fromEntries(
+            Object.entries(persisted).filter(([key]) => key !== "receiptRoot"),
+          ),
+        ),
+      )
   ) {
-    return stoppedForResourcePolicy(inventory, calibration)
+    throw new TypeError("MATRIX_REPRODUCTION_MISMATCH")
   }
-
-  const outcomes: V138CurrentMatrixAttemptOutcome[] = []
-  for (
-    let offset = 0;
-    offset < inventory.attempts.length;
-    offset += RESOURCE_POLICY.maxShardAttempts
-  ) {
-    const shard = inventory.attempts.slice(
-      offset,
-      offset + RESOURCE_POLICY.maxShardAttempts,
-    )
-    const executed = executeShardSubprocess(
-      repoRoot,
-      shard.map(({ attemptId }) => attemptId),
-    )
-    outcomes.push(...executed.result.outcomes)
-    process.stderr.write(
-      `${JSON.stringify({
-        event: "v1.38_matrix_shard_terminal",
-        completedAttempts: outcomes.length,
-        declaredAttempts: inventory.attempts.length,
-        acceptedCellsPublished: 0,
-        partialAcceptedEvidenceReusable: false,
-      })}\n`,
-    )
-  }
-  return reduceV138CurrentMatrix(inventory, outcomes)
+  return deepFreeze(persisted)
 }
 
 export const renderV138CurrentMatrixReceipt = (

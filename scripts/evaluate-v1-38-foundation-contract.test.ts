@@ -880,6 +880,7 @@ describe("v1.38 matrix accounting", () => {
 
 const successfulInjectedRunner = (input?: {
   childRssKilobytes?: number
+  childRssByOrdinal?: readonly number[]
   aggregateSamples?: readonly number[]
   hostHeadroomBasisPoints?: number
   elapsedMilliseconds?: number
@@ -889,12 +890,16 @@ const successfulInjectedRunner = (input?: {
   let active = 0
   return {
     async run(shard, control) {
+      const childRssKilobytes =
+        input?.childRssByOrdinal?.[shard.ordinal] ??
+        input?.childRssKilobytes ??
+        100
       active += 1
       input?.onLaunch?.(active)
       await Promise.resolve()
       control.onResourceSample({
         childId: `child:${shard.shardId}`,
-        childRssKilobytes: input?.childRssKilobytes ?? 100,
+        childRssKilobytes,
         hostTotalMemoryKilobytes: 10_000,
         hostFreeMemoryKilobytes: Math.floor(
           ((input?.hostHeadroomBasisPoints ?? 5_000) * 10_000) / 10_000,
@@ -919,7 +924,7 @@ const successfulInjectedRunner = (input?: {
         laneId: shard.laneId,
         classification: cancelled ? ("cancelled" as const) : ("success" as const),
         elapsedMilliseconds: input?.elapsedMilliseconds ?? 100,
-        maxRssKilobytes: input?.childRssKilobytes ?? 100,
+        maxRssKilobytes: childRssKilobytes,
         cleanup: {
           gracefulTerminationSent: cancelled,
           forceTerminationSent: false,
@@ -943,6 +948,21 @@ const successfulInjectedRunner = (input?: {
     },
   }
 }
+
+const admittedInjectedCalibration = (
+  inventory: ReturnType<typeof enumerateV138CurrentMatrix>,
+) =>
+  calibrateV138ParallelMatrix({
+    inventory,
+    policy: deriveV138ParallelCalibrationPolicy(inventory),
+    runner: successfulInjectedRunner(),
+    hardwareIdentity: {
+      operatingSystem: "test-os",
+      architecture: "test-arch",
+      nodeVersion: "test-node",
+      cpuIdentity: "test-cpu",
+    },
+  })
 
 describe("v1.38 matrix resources", () => {
   it("matrix resources calibrate exactly four concurrent two-attempt shards", async () => {
@@ -977,22 +997,84 @@ describe("v1.38 matrix resources", () => {
     ).toBe(true)
   })
 
+  it("matrix resources produce byte-identical calibration roots across completion orders", async () => {
+    const inventory = enumerateV138CurrentMatrix(repoRoot)
+    const policy = deriveV138ParallelCalibrationPolicy(inventory)
+    const clock = { monotonicMilliseconds: () => 100 }
+    const orderedRunner = (reverse: boolean): V138ParallelShardRunner => ({
+      async run(shard, control) {
+        const waits = reverse ? shard.ordinal : 3 - shard.ordinal
+        for (let index = 0; index < waits; index += 1) {
+          await Promise.resolve()
+        }
+        control.onResourceSample({
+          childId: `child:${shard.shardId}`,
+          childRssKilobytes: 100 + shard.ordinal,
+          hostTotalMemoryKilobytes: 10_000,
+          hostFreeMemoryKilobytes: 5_000,
+        })
+        return {
+          shardId: shard.shardId,
+          laneId: shard.laneId,
+          classification: "success",
+          elapsedMilliseconds: 10,
+          maxRssKilobytes: 100 + shard.ordinal,
+          cleanup: {
+            gracefulTerminationSent: false,
+            forceTerminationSent: false,
+            exitAwaited: true,
+            orphanProcessIds: [],
+          },
+          outcomes: shard.attempts.map(({ executionAttemptId }) => ({
+            attemptId: executionAttemptId,
+            classification: "success" as const,
+            outcome: "draw" as const,
+          })),
+        }
+      },
+    })
+    const hardwareIdentity = {
+      operatingSystem: "test-os",
+      architecture: "test-arch",
+      nodeVersion: "test-node",
+      cpuIdentity: "test-cpu",
+    }
+    const forward = await calibrateV138ParallelMatrix({
+      inventory,
+      policy,
+      runner: orderedRunner(false),
+      hardwareIdentity,
+      clock,
+    })
+    const reverse = await calibrateV138ParallelMatrix({
+      inventory,
+      policy,
+      runner: orderedRunner(true),
+      hardwareIdentity,
+      clock,
+    })
+
+    expect(reverse).toEqual(forward)
+    expect(reverse.calibrationRoot).toBe(forward.calibrationRoot)
+  })
+
   it.each([
-    ["per-child exact", 2_097_152, [2_097_152], 2_500, "complete_pending_publication"],
-    ["per-child one over", 2_097_153, [2_097_153], 2_500, "stopped_process_failure"],
-    ["aggregate exact", 1_048_576, [1_048_576], 2_500, "complete_pending_publication"],
-    ["aggregate one over", 1_048_577, [1_048_577], 2_500, "stopped_process_failure"],
-    ["headroom exact", 100, [100], 2_500, "complete_pending_publication"],
-    ["headroom one below", 100, [100], 2_499, "stopped_process_failure"],
+    ["per-child exact", [2_097_152, 0, 0, 0], 2_500, "complete_pending_publication"],
+    ["per-child one over", [2_097_153, 0, 0, 0], 2_500, "stopped_process_failure"],
+    ["aggregate exact", [1_048_576, 1_048_576, 1_048_576, 1_048_576], 2_500, "complete_pending_publication"],
+    ["aggregate one over", [1_048_577, 1_048_577, 1_048_577, 1_048_577], 2_500, "stopped_process_failure"],
+    ["headroom exact", [100, 100, 100, 100], 2_500, "complete_pending_publication"],
+    ["headroom one below", [100, 100, 100, 100], 2_499, "stopped_process_failure"],
   ] as const)(
     "matrix resources enforce %s",
-    async (_label, childRss, aggregateSamples, headroom, expectedStatus) => {
+    async (_label, childRssByOrdinal, headroom, expectedStatus) => {
       const inventory = enumerateV138CurrentMatrix(repoRoot)
+      const calibration = await admittedInjectedCalibration(inventory)
       const result = await executeV138ParallelMatrix({
         inventory,
+        calibration,
         runner: successfulInjectedRunner({
-          childRssKilobytes: childRss,
-          aggregateSamples,
+          childRssByOrdinal,
           hostHeadroomBasisPoints: headroom,
         }),
       })
@@ -1004,13 +1086,16 @@ describe("v1.38 matrix resources", () => {
 
   it("matrix resources stop on shard and total time limits", async () => {
     const inventory = enumerateV138CurrentMatrix(repoRoot)
+    const calibration = await admittedInjectedCalibration(inventory)
     const shardTimeout = await executeV138ParallelMatrix({
       inventory,
+      calibration,
       runner: successfulInjectedRunner({ elapsedMilliseconds: 600_001 }),
     })
     let now = 0
     const totalTimeout = await executeV138ParallelMatrix({
       inventory,
+      calibration,
       runner: successfulInjectedRunner(),
       clock: {
         monotonicMilliseconds: () => {
@@ -1027,6 +1112,50 @@ describe("v1.38 matrix resources", () => {
     expect(totalTimeout).toMatchObject({
       status: "stopped_process_failure",
       reason: "RESOURCE_POLICY_TOTAL_TIMEOUT",
+    })
+  })
+
+  it("matrix resources refuse unavailable measurements", async () => {
+    const inventory = enumerateV138CurrentMatrix(repoRoot)
+    const calibration = await admittedInjectedCalibration(inventory)
+    const runner: V138ParallelShardRunner = {
+      async run(shard, control) {
+        control.onResourceSample({
+          childId: `child:${shard.shardId}`,
+          childRssKilobytes: -1,
+          hostTotalMemoryKilobytes: 0,
+          hostFreeMemoryKilobytes: 0,
+        })
+        return {
+          shardId: shard.shardId,
+          laneId: shard.laneId,
+          classification: "cancelled",
+          elapsedMilliseconds: 1,
+          maxRssKilobytes: 0,
+          cleanup: {
+            gracefulTerminationSent: true,
+            forceTerminationSent: false,
+            exitAwaited: true,
+            orphanProcessIds: [],
+          },
+          outcomes: shard.attempts.map(({ executionAttemptId }) => ({
+            attemptId: executionAttemptId,
+            classification: "cancelled" as const,
+            code: "RESOURCE_MEASUREMENT_UNAVAILABLE",
+          })),
+        }
+      },
+    }
+    const result = await executeV138ParallelMatrix({
+      inventory,
+      calibration,
+      runner,
+    })
+
+    expect(result).toMatchObject({
+      status: "stopped_process_failure",
+      reason: "RESOURCE_MEASUREMENT_UNAVAILABLE",
+      accounting: { acceptedCellsPublished: 0 },
     })
   })
 })
@@ -1091,7 +1220,12 @@ describe("v1.38 matrix cleanup", () => {
         }
       },
     }
-    const result = await executeV138ParallelMatrix({ inventory, runner })
+    const calibration = await admittedInjectedCalibration(inventory)
+    const result = await executeV138ParallelMatrix({
+      inventory,
+      calibration,
+      runner,
+    })
 
     expect(result).toMatchObject({
       status: "stopped_process_failure",
@@ -1112,6 +1246,48 @@ describe("v1.38 matrix cleanup", () => {
           cleanup.exitAwaited && cleanup.orphanProcessIds.length === 0,
       ),
     ).toBe(true)
+  })
+
+  it("matrix cleanup fails closed when any orphan or missing exit proof remains", async () => {
+    const inventory = enumerateV138CurrentMatrix(repoRoot)
+    const calibration = await admittedInjectedCalibration(inventory)
+    const runner: V138ParallelShardRunner = {
+      async run(shard) {
+        return {
+          shardId: shard.shardId,
+          laneId: shard.laneId,
+          classification: "failed",
+          elapsedMilliseconds: 1,
+          maxRssKilobytes: 1,
+          cleanup: {
+            gracefulTerminationSent: true,
+            forceTerminationSent: true,
+            exitAwaited: false,
+            orphanProcessIds: [999_999],
+          },
+          outcomes: shard.attempts.map(({ executionAttemptId }) => ({
+            attemptId: executionAttemptId,
+            classification: "system_failure" as const,
+            code: "CLEANUP_PROOF_FAILED",
+            retryable: false,
+          })),
+        }
+      },
+    }
+    const result = await executeV138ParallelMatrix({
+      inventory,
+      calibration,
+      runner,
+    })
+
+    expect(result).toMatchObject({
+      status: "stopped_process_failure",
+      reason: "CLEANUP_PROOF_FAILED",
+      accounting: {
+        acceptedCellsPublished: 0,
+        unlaunchedAttemptCount: 524,
+      },
+    })
   })
 })
 
@@ -1150,8 +1326,10 @@ describe("v1.38 matrix cancellation", () => {
           }
         },
       }
+      const calibration = await admittedInjectedCalibration(inventory)
       const result = await executeV138ParallelMatrix({
         inventory,
+        calibration,
         runner,
         parentSignal: parent.signal,
       })
@@ -1173,7 +1351,12 @@ describe("v1.38 matrix cancellation", () => {
         throw new Error("untrusted child output failed to parse")
       },
     }
-    const result = await executeV138ParallelMatrix({ inventory, runner })
+    const calibration = await admittedInjectedCalibration(inventory)
+    const result = await executeV138ParallelMatrix({
+      inventory,
+      calibration,
+      runner,
+    })
 
     expect(result).toMatchObject({
       status: "stopped_process_failure",
