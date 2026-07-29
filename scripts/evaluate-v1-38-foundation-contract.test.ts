@@ -10,10 +10,16 @@ import {
   type V138FoundationAdmissionInput,
 } from "./lib/v1-38-foundation-admission.js"
 import {
+  V138ParallelCalibrationPolicySchema,
+  deriveV138ParallelCalibrationPolicy,
   deriveV138HistoricalMatrixExpectation,
   enumerateV138CurrentMatrix,
   evaluateV138HistoricalMatrixPredicate,
+  isV138ParallelProjectedTotalAdmitted,
   loadV138HistoricalMatrixExpectation,
+  planV138MatrixShards,
+  projectV138ParallelMatrix,
+  reduceV138ParallelMatrixAccounting,
   reduceV138CurrentMatrix,
   renderV138CurrentMatrixReceipt,
   reproduceV138CurrentMatrix,
@@ -498,6 +504,286 @@ describe("v1.38 current matrix reproduction", () => {
     expect(source).toContain("acceptedCellsPublished: 0")
     expect(source).toContain("partialAcceptedEvidenceReusable: false")
     expect(source).not.toMatch(/\bnew\s+Function\b|node:vm|\brunMatch\s*\(/u)
+  })
+})
+
+describe("v1.38 matrix calibration policy", () => {
+  it("matrix calibration policy precommits the exact eight-attempt four-shard inventory", () => {
+    const inventory = enumerateV138CurrentMatrix(repoRoot)
+    const policy = deriveV138ParallelCalibrationPolicy(inventory)
+
+    expect(policy).toMatchObject({
+      schemaVersion: "v1.38-parallel-calibration-policy-v1",
+      sampleAttemptCount: 8,
+      sampleShardCount: 4,
+      attemptsPerShard: 2,
+      concurrency: 4,
+      authoritativeAttemptDenominator: 540,
+      marginBasisPoints: 750,
+      fixedOverheadMilliseconds: 60_000,
+      maxProjectedTotalMilliseconds: 5_400_000,
+      aggregationRules: {
+        calibrationBatchWall:
+          "ceil_parent_monotonic_first_spawn_through_cleanup_barrier_ms",
+        perChildRss: "maximum_sample_per_child_kilobytes",
+        aggregateChildRss:
+          "maximum_tick_sum_of_all_active_children_kilobytes",
+        hostHeadroom:
+          "minimum_floor_free_over_total_basis_points_across_ticks",
+      },
+      roundingRules: {
+        observedBatchWall: "ceil_integer_milliseconds",
+        baseProjection: "ceil_integer_milliseconds",
+        margin: "ceil_integer_milliseconds",
+        hostHeadroom: "floor_integer_basis_points",
+      },
+      admissionComparator: "inclusive_less_than_or_equal",
+    })
+    expect(policy.inventory.attempts).toEqual(
+      inventory.attempts.slice(0, 8).map((attempt, index) => ({
+        calibrationAttemptId: `calibration:v1:${index}:${attempt.attemptId}`,
+        templateAttemptId: attempt.attemptId,
+        shardId: `calibration-shard:${Math.floor(index / 2)}`,
+        laneId: `lane:${Math.floor(index / 2)}`,
+        ordinalInShard: index % 2,
+        requestSha256: expect.stringMatching(/^sha256:[0-9a-f]{64}$/u),
+      })),
+    )
+    expect(
+      policy.inventory.attempts.map(({ calibrationAttemptId }) =>
+        inventory.attempts.some(
+          ({ attemptId }) => attemptId === calibrationAttemptId,
+        ),
+      ),
+    ).toEqual(Array(8).fill(false))
+    expect(policy.inventory.shards).toEqual([
+      {
+        shardId: "calibration-shard:0",
+        laneId: "lane:0",
+        attemptIds: [
+          `calibration:v1:0:${inventory.attempts[0]!.attemptId}`,
+          `calibration:v1:1:${inventory.attempts[1]!.attemptId}`,
+        ],
+      },
+      {
+        shardId: "calibration-shard:1",
+        laneId: "lane:1",
+        attemptIds: [
+          `calibration:v1:2:${inventory.attempts[2]!.attemptId}`,
+          `calibration:v1:3:${inventory.attempts[3]!.attemptId}`,
+        ],
+      },
+      {
+        shardId: "calibration-shard:2",
+        laneId: "lane:2",
+        attemptIds: [
+          `calibration:v1:4:${inventory.attempts[4]!.attemptId}`,
+          `calibration:v1:5:${inventory.attempts[5]!.attemptId}`,
+        ],
+      },
+      {
+        shardId: "calibration-shard:3",
+        laneId: "lane:3",
+        attemptIds: [
+          `calibration:v1:6:${inventory.attempts[6]!.attemptId}`,
+          `calibration:v1:7:${inventory.attempts[7]!.attemptId}`,
+        ],
+      },
+    ])
+    expect(V138ParallelCalibrationPolicySchema.parse(clone(policy))).toEqual(
+      policy,
+    )
+    expect(Object.isFrozen(policy)).toBe(true)
+  })
+
+  it.each([
+    ["inventory ID", (draft: any) => (draft.inventory.attempts[0].calibrationAttemptId += ":mutated")],
+    ["inventory order", (draft: any) => draft.inventory.attempts.reverse()],
+    ["inventory count", (draft: any) => draft.inventory.attempts.pop()],
+    ["shard assignment", (draft: any) => (draft.inventory.attempts[0].shardId = "calibration-shard:1")],
+    ["concurrency", (draft: any) => (draft.concurrency = 3)],
+    ["denominator", (draft: any) => (draft.authoritativeAttemptDenominator = 539)],
+    ["margin", (draft: any) => (draft.marginBasisPoints = 749)],
+    ["fixed overhead", (draft: any) => (draft.fixedOverheadMilliseconds = 59_999)],
+    ["projection source", (draft: any) => (draft.projectionSourceRoot = `sha256:${"0".repeat(64)}`)],
+    ["aggregation rule", (draft: any) => (draft.aggregationRules.perChildRss = "last_sample")],
+    ["rounding rule", (draft: any) => (draft.roundingRules.margin = "floor_integer_milliseconds")],
+    ["comparator", (draft: any) => (draft.admissionComparator = "strict_less_than")],
+    ["policy root", (draft: any) => (draft.policyRoot = `sha256:${"0".repeat(64)}`)],
+  ])("matrix calibration policy rejects mutated %s", (_label, change) => {
+    const policy = clone(
+      deriveV138ParallelCalibrationPolicy(
+        enumerateV138CurrentMatrix(repoRoot),
+      ),
+    ) as any
+    change(policy)
+    expect(() => V138ParallelCalibrationPolicySchema.parse(policy)).toThrow(
+      "MATRIX_PARALLEL_CALIBRATION_POLICY_INVALID",
+    )
+  })
+
+  it("matrix calibration policy uses exact integer projection and inclusive admission", () => {
+    const policy = deriveV138ParallelCalibrationPolicy(
+      enumerateV138CurrentMatrix(repoRoot),
+    )
+    const projection = projectV138ParallelMatrix(policy, {
+      calibrationBatchWallMilliseconds: 10_001,
+      childMaxRssKilobytes: [100, 200, 300, 400],
+      aggregateChildRssKilobytes: 850,
+      minimumHostHeadroomBasisPoints: 2_500,
+    })
+
+    expect(projection).toMatchObject({
+      calibrationBatchWallMilliseconds: 10_001,
+      baseProjectedMilliseconds: 675_068,
+      marginMilliseconds: 50_631,
+      projectedTotalMilliseconds: 785_699,
+      admittedByTime: true,
+    })
+    expect(isV138ParallelProjectedTotalAdmitted(5_400_000)).toBe(true)
+    expect(isV138ParallelProjectedTotalAdmitted(5_400_001)).toBe(false)
+  })
+})
+
+describe("v1.38 matrix scheduler", () => {
+  it("matrix scheduler preallocates stable four-attempt shards without changing requests", () => {
+    const inventory = enumerateV138CurrentMatrix(repoRoot)
+    const requestBytesBefore = inventory.attempts.map(({ request }) =>
+      JSON.stringify(request),
+    )
+    const plan = planV138MatrixShards(inventory)
+
+    expect(plan.schemaVersion).toBe("v1.38-parallel-matrix-plan-v1")
+    expect(plan.maxConcurrentShards).toBe(4)
+    expect(plan.shards).toHaveLength(135)
+    expect(plan.shards.every(({ attemptIds }) => attemptIds.length === 4)).toBe(
+      true,
+    )
+    expect(plan.shards.flatMap(({ attemptIds }) => attemptIds)).toEqual(
+      inventory.attempts.map(({ attemptId }) => attemptId),
+    )
+    expect(new Set(plan.shards.map(({ shardId }) => shardId))).toHaveLength(135)
+    expect(new Set(plan.shards.map(({ laneId }) => laneId))).toEqual(
+      new Set(["lane:0", "lane:1", "lane:2", "lane:3"]),
+    )
+    expect(
+      inventory.attempts.map(({ request }) => JSON.stringify(request)),
+    ).toEqual(requestBytesBefore)
+    expect(Object.isFrozen(plan)).toBe(true)
+  })
+})
+
+describe("v1.38 matrix accounting", () => {
+  const successTerminals = () => {
+    const inventory = enumerateV138CurrentMatrix(repoRoot)
+    const plan = planV138MatrixShards(inventory)
+    return {
+      inventory,
+      plan,
+      terminals: plan.shards.map((shard) => ({
+        shardId: shard.shardId,
+        laneId: shard.laneId,
+        classification: "success" as const,
+        elapsedMilliseconds: 100,
+        maxRssKilobytes: 200,
+        cleanup: {
+          gracefulTerminationSent: false,
+          forceTerminationSent: false,
+          exitAwaited: true,
+          orphanProcessIds: [] as number[],
+        },
+        outcomes: [...shard.attemptIds].reverse().map((attemptId) => ({
+          attemptId,
+          classification: "success" as const,
+          outcome: "draw" as const,
+        })),
+      })),
+    }
+  }
+
+  it("matrix accounting is invariant to valid terminal completion order", () => {
+    const { inventory, plan, terminals } = successTerminals()
+    const forward = reduceV138ParallelMatrixAccounting({
+      inventory,
+      plan,
+      terminals,
+    })
+    const reversed = reduceV138ParallelMatrixAccounting({
+      inventory,
+      plan,
+      terminals: [...terminals].reverse(),
+    })
+
+    expect(reversed).toEqual(forward)
+    expect(forward).toMatchObject({
+      declaredAttemptCount: 540,
+      launchedAttemptCount: 540,
+      terminalAttemptCount: 540,
+      successfulButUnacceptedCount: 540,
+      failedAttemptCount: 0,
+      cancelledAttemptCount: 0,
+      unlaunchedAttemptCount: 0,
+      acceptedCellsPublished: 0,
+      partialAcceptedEvidenceReusable: false,
+    })
+    expect(forward.progressReceipts).toHaveLength(135)
+    expect(
+      forward.progressReceipts.every(
+        ({ acceptedCellsPublished }) => acceptedCellsPublished === 0,
+      ),
+    ).toBe(true)
+  })
+
+  it.each([
+    ["missing", (rows: any[]) => rows.slice(1)],
+    ["duplicate", (rows: any[]) => [...rows, rows[0]]],
+    ["conflicting", (rows: any[]) => [
+      ...rows,
+      {
+        ...rows[0],
+        outcomes: [
+          {
+            ...rows[0].outcomes[0],
+            classification: "system_failure",
+            code: "CONFLICT",
+            retryable: false,
+          },
+          ...rows[0].outcomes.slice(1),
+        ],
+      },
+    ]],
+    ["unknown", (rows: any[]) => [
+      {
+        ...rows[0],
+        outcomes: [
+          { ...rows[0].outcomes[0], attemptId: "matrix:unknown" },
+          ...rows[0].outcomes.slice(1),
+        ],
+      },
+      ...rows.slice(1),
+    ]],
+    ["calibration alias", (rows: any[]) => [
+      {
+        ...rows[0],
+        outcomes: [
+          {
+            ...rows[0].outcomes[0],
+            attemptId: `calibration:v1:0:${rows[0].outcomes[0].attemptId}`,
+          },
+          ...rows[0].outcomes.slice(1),
+        ],
+      },
+      ...rows.slice(1),
+    ]],
+  ])("matrix accounting rejects %s terminal identities", (_label, change) => {
+    const { inventory, plan, terminals } = successTerminals()
+    expect(() =>
+      reduceV138ParallelMatrixAccounting({
+        inventory,
+        plan,
+        terminals: change(clone(terminals)),
+      }),
+    ).toThrow("MATRIX_PARALLEL_ACCOUNTING_INVALID")
   })
 })
 
