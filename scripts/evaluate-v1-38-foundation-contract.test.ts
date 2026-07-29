@@ -11,10 +11,12 @@ import {
 } from "./lib/v1-38-foundation-admission.js"
 import {
   V138ParallelCalibrationPolicySchema,
+  calibrateV138ParallelMatrix,
   deriveV138ParallelCalibrationPolicy,
   deriveV138HistoricalMatrixExpectation,
   enumerateV138CurrentMatrix,
   evaluateV138HistoricalMatrixPredicate,
+  executeV138ParallelMatrix,
   isV138ParallelProjectedTotalAdmitted,
   loadV138HistoricalMatrixExpectation,
   planV138MatrixShards,
@@ -27,6 +29,7 @@ import {
   type V138CurrentMatrixAttempt,
   type V138CurrentMatrixAttemptOutcome,
   type V138HistoricalMatrixObservedAggregate,
+  type V138ParallelShardRunner,
 } from "./lib/v1-38-current-matrix-reproduction.js"
 
 const repoRoot = path.resolve(
@@ -872,6 +875,315 @@ describe("v1.38 matrix accounting", () => {
         terminals,
       }),
     ).toThrow("MATRIX_PARALLEL_ACCOUNTING_INVALID")
+  })
+})
+
+const successfulInjectedRunner = (input?: {
+  childRssKilobytes?: number
+  aggregateSamples?: readonly number[]
+  hostHeadroomBasisPoints?: number
+  elapsedMilliseconds?: number
+  onLaunch?: ((active: number) => void) | undefined
+  onExit?: ((active: number) => void) | undefined
+}): V138ParallelShardRunner => {
+  let active = 0
+  return {
+    async run(shard, control) {
+      active += 1
+      input?.onLaunch?.(active)
+      await Promise.resolve()
+      control.onResourceSample({
+        childId: `child:${shard.shardId}`,
+        childRssKilobytes: input?.childRssKilobytes ?? 100,
+        hostTotalMemoryKilobytes: 10_000,
+        hostFreeMemoryKilobytes: Math.floor(
+          ((input?.hostHeadroomBasisPoints ?? 5_000) * 10_000) / 10_000,
+        ),
+      })
+      for (const sample of input?.aggregateSamples ?? []) {
+        control.onResourceSample({
+          childId: `child:${shard.shardId}`,
+          childRssKilobytes: sample,
+          hostTotalMemoryKilobytes: 10_000,
+          hostFreeMemoryKilobytes: Math.floor(
+            ((input?.hostHeadroomBasisPoints ?? 5_000) * 10_000) / 10_000,
+          ),
+        })
+      }
+      await Promise.resolve()
+      const cancelled = control.signal.aborted
+      active -= 1
+      input?.onExit?.(active)
+      return {
+        shardId: shard.shardId,
+        laneId: shard.laneId,
+        classification: cancelled ? ("cancelled" as const) : ("success" as const),
+        elapsedMilliseconds: input?.elapsedMilliseconds ?? 100,
+        maxRssKilobytes: input?.childRssKilobytes ?? 100,
+        cleanup: {
+          gracefulTerminationSent: cancelled,
+          forceTerminationSent: false,
+          exitAwaited: true,
+          orphanProcessIds: [],
+        },
+        outcomes: shard.attempts.map(({ executionAttemptId }) =>
+          cancelled
+            ? {
+                attemptId: executionAttemptId,
+                classification: "cancelled" as const,
+                code: "CANCELLED_AFTER_HARD_FAILURE",
+              }
+            : {
+                attemptId: executionAttemptId,
+                classification: "success" as const,
+                outcome: "draw" as const,
+              },
+        ),
+      }
+    },
+  }
+}
+
+describe("v1.38 matrix resources", () => {
+  it("matrix resources calibrate exactly four concurrent two-attempt shards", async () => {
+    const inventory = enumerateV138CurrentMatrix(repoRoot)
+    const policy = deriveV138ParallelCalibrationPolicy(inventory)
+    let maximumActive = 0
+    const calibration = await calibrateV138ParallelMatrix({
+      inventory,
+      policy,
+      runner: successfulInjectedRunner({
+        onLaunch: (active) => {
+          maximumActive = Math.max(maximumActive, active)
+        },
+      }),
+      hardwareIdentity: {
+        operatingSystem: "test-os",
+        architecture: "test-arch",
+        nodeVersion: "test-node",
+        cpuIdentity: "test-cpu",
+      },
+    })
+
+    expect(maximumActive).toBe(4)
+    expect(calibration.policyRoot).toBe(policy.policyRoot)
+    expect(calibration.terminalShardCount).toBe(4)
+    expect(calibration.attemptCount).toBe(8)
+    expect(calibration.projection.admittedByTime).toBe(true)
+    expect(calibration.acceptedCellsPublished).toBe(0)
+    expect(calibration.partialAcceptedEvidenceReusable).toBe(false)
+    expect(
+      calibration.terminals.every(({ outcomes }) => outcomes.length === 2),
+    ).toBe(true)
+  })
+
+  it.each([
+    ["per-child exact", 2_097_152, [2_097_152], 2_500, "complete_pending_publication"],
+    ["per-child one over", 2_097_153, [2_097_153], 2_500, "stopped_process_failure"],
+    ["aggregate exact", 1_048_576, [1_048_576], 2_500, "complete_pending_publication"],
+    ["aggregate one over", 1_048_577, [1_048_577], 2_500, "stopped_process_failure"],
+    ["headroom exact", 100, [100], 2_500, "complete_pending_publication"],
+    ["headroom one below", 100, [100], 2_499, "stopped_process_failure"],
+  ] as const)(
+    "matrix resources enforce %s",
+    async (_label, childRss, aggregateSamples, headroom, expectedStatus) => {
+      const inventory = enumerateV138CurrentMatrix(repoRoot)
+      const result = await executeV138ParallelMatrix({
+        inventory,
+        runner: successfulInjectedRunner({
+          childRssKilobytes: childRss,
+          aggregateSamples,
+          hostHeadroomBasisPoints: headroom,
+        }),
+      })
+
+      expect(result.status).toBe(expectedStatus)
+      expect(result.accounting.acceptedCellsPublished).toBe(0)
+    },
+  )
+
+  it("matrix resources stop on shard and total time limits", async () => {
+    const inventory = enumerateV138CurrentMatrix(repoRoot)
+    const shardTimeout = await executeV138ParallelMatrix({
+      inventory,
+      runner: successfulInjectedRunner({ elapsedMilliseconds: 600_001 }),
+    })
+    let now = 0
+    const totalTimeout = await executeV138ParallelMatrix({
+      inventory,
+      runner: successfulInjectedRunner(),
+      clock: {
+        monotonicMilliseconds: () => {
+          now += 5_400_001
+          return now
+        },
+      },
+    })
+
+    expect(shardTimeout).toMatchObject({
+      status: "stopped_process_failure",
+      reason: "RESOURCE_POLICY_SHARD_TIMEOUT",
+    })
+    expect(totalTimeout).toMatchObject({
+      status: "stopped_process_failure",
+      reason: "RESOURCE_POLICY_TOTAL_TIMEOUT",
+    })
+  })
+})
+
+describe("v1.38 matrix cleanup", () => {
+  it("matrix cleanup cancels active shards, awaits exits, and leaves later shards unlaunched", async () => {
+    const inventory = enumerateV138CurrentMatrix(repoRoot)
+    let launched = 0
+    let exited = 0
+    const runner: V138ParallelShardRunner = {
+      async run(shard, control) {
+        launched += 1
+        await Promise.resolve()
+        if (shard.ordinal === 0) {
+          return {
+            shardId: shard.shardId,
+            laneId: shard.laneId,
+            classification: "failed",
+            elapsedMilliseconds: 10,
+            maxRssKilobytes: 100,
+            cleanup: {
+              gracefulTerminationSent: false,
+              forceTerminationSent: false,
+              exitAwaited: true,
+              orphanProcessIds: [],
+            },
+            outcomes: shard.attempts.map(({ executionAttemptId }, index) =>
+              index === 0
+                ? {
+                    attemptId: executionAttemptId,
+                    classification: "system_failure" as const,
+                    code: "SPAWN_FAILED",
+                    retryable: false,
+                  }
+                : {
+                    attemptId: executionAttemptId,
+                    classification: "cancelled" as const,
+                    code: "CANCELLED_AFTER_HARD_FAILURE",
+                  },
+            ),
+          }
+        }
+        while (!control.signal.aborted) await Promise.resolve()
+        exited += 1
+        return {
+          shardId: shard.shardId,
+          laneId: shard.laneId,
+          classification: "cancelled",
+          elapsedMilliseconds: 10,
+          maxRssKilobytes: 100,
+          cleanup: {
+            gracefulTerminationSent: true,
+            forceTerminationSent: true,
+            exitAwaited: true,
+            orphanProcessIds: [],
+          },
+          outcomes: shard.attempts.map(({ executionAttemptId }) => ({
+            attemptId: executionAttemptId,
+            classification: "cancelled" as const,
+            code: "CANCELLED_AFTER_HARD_FAILURE",
+          })),
+        }
+      },
+    }
+    const result = await executeV138ParallelMatrix({ inventory, runner })
+
+    expect(result).toMatchObject({
+      status: "stopped_process_failure",
+      reason: "SHARD_EXECUTION_FAILED",
+      accounting: {
+        launchedAttemptCount: 16,
+        terminalAttemptCount: 16,
+        cancelledAttemptCount: 15,
+        unlaunchedAttemptCount: 524,
+        acceptedCellsPublished: 0,
+      },
+    })
+    expect(launched).toBe(4)
+    expect(exited).toBe(3)
+    expect(
+      result.terminals.every(
+        ({ cleanup }) =>
+          cleanup.exitAwaited && cleanup.orphanProcessIds.length === 0,
+      ),
+    ).toBe(true)
+  })
+})
+
+describe("v1.38 matrix cancellation", () => {
+  it.each(["parent_exception", "parent_interrupt"] as const)(
+    "matrix cancellation handles %s with the same fail-closed cleanup",
+    async (reason) => {
+      const inventory = enumerateV138CurrentMatrix(repoRoot)
+      const parent = new AbortController()
+      let launched = 0
+      const runner: V138ParallelShardRunner = {
+        async run(shard, control) {
+          launched += 1
+          if (launched === 4) parent.abort(reason)
+          while (!control.signal.aborted) await Promise.resolve()
+          return {
+            shardId: shard.shardId,
+            laneId: shard.laneId,
+            classification: "cancelled",
+            elapsedMilliseconds: 1,
+            maxRssKilobytes: 1,
+            cleanup: {
+              gracefulTerminationSent: true,
+              forceTerminationSent: false,
+              exitAwaited: true,
+              orphanProcessIds: [],
+            },
+            outcomes: shard.attempts.map(({ executionAttemptId }) => ({
+              attemptId: executionAttemptId,
+              classification: "cancelled" as const,
+              code:
+                reason === "parent_interrupt"
+                  ? "PARENT_INTERRUPT"
+                  : "PARENT_EXCEPTION",
+            })),
+          }
+        },
+      }
+      const result = await executeV138ParallelMatrix({
+        inventory,
+        runner,
+        parentSignal: parent.signal,
+      })
+
+      expect(result.status).toBe("stopped_process_failure")
+      expect(result.reason).toBe(
+        reason === "parent_interrupt" ? "PARENT_INTERRUPT" : "PARENT_EXCEPTION",
+      )
+      expect(result.accounting.acceptedCellsPublished).toBe(0)
+      expect(result.accounting.launchedAttemptCount).toBe(16)
+      expect(result.accounting.unlaunchedAttemptCount).toBe(524)
+    },
+  )
+
+  it("matrix cancellation converts runner exceptions to charged system failure", async () => {
+    const inventory = enumerateV138CurrentMatrix(repoRoot)
+    const runner: V138ParallelShardRunner = {
+      async run() {
+        throw new Error("untrusted child output failed to parse")
+      },
+    }
+    const result = await executeV138ParallelMatrix({ inventory, runner })
+
+    expect(result).toMatchObject({
+      status: "stopped_process_failure",
+      reason: "SHARD_RUNNER_EXCEPTION",
+      accounting: {
+        failedAttemptCount: 16,
+        unlaunchedAttemptCount: 524,
+        acceptedCellsPublished: 0,
+      },
+    })
   })
 })
 
