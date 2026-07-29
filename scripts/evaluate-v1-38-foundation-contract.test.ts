@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs"
+import { execFileSync } from "node:child_process"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 import { beforeAll, describe, expect, it } from "vitest"
@@ -40,6 +41,18 @@ const repoRoot = path.resolve(
 )
 
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T
+
+const legacyStoppedMatrixReceipt = () =>
+  JSON.parse(
+    execFileSync(
+      "git",
+      [
+        "show",
+        "724388c3:.planning/artifacts/v1.38-current-matrix-reproduction.json",
+      ],
+      { cwd: repoRoot, encoding: "utf8" },
+    ),
+  )
 
 const mutate = (
   input: V138FoundationAdmissionInput,
@@ -969,7 +982,7 @@ const admittedInjectedCalibration = (
 describe("v1.38 matrix calibration receipt branches", () => {
   it("matrix supervised parallel calibration seals an admitted zero-cell successor", async () => {
     const inventory = enumerateV138CurrentMatrix(repoRoot)
-    const predecessor = reproduceV138CurrentMatrix(repoRoot)
+    const predecessor = legacyStoppedMatrixReceipt()
     const calibration = await admittedInjectedCalibration(inventory)
     const receipt = buildV138ParallelCalibrationSuccessorReceipt({
       repoRoot,
@@ -1002,7 +1015,7 @@ describe("v1.38 matrix calibration receipt branches", () => {
 
   it("matrix calibration receipt branches preserve a stopped calibration with all attempts charged", async () => {
     const inventory = enumerateV138CurrentMatrix(repoRoot)
-    const predecessor = reproduceV138CurrentMatrix(repoRoot)
+    const predecessor = legacyStoppedMatrixReceipt()
     const calibration = await calibrateV138ParallelMatrix({
       inventory,
       policy: deriveV138ParallelCalibrationPolicy(inventory),

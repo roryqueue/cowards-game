@@ -1,8 +1,8 @@
 /* eslint-disable no-restricted-imports -- Offline regression admission must bind the selected runtime-service implementation without widening its production barrel. */
 import { Buffer } from "node:buffer"
 import { createHash, generateKeyPairSync, sign } from "node:crypto"
-import { readFileSync } from "node:fs"
-import { freemem, totalmem } from "node:os"
+import { readFileSync, renameSync, writeFileSync } from "node:fs"
+import { arch, cpus, freemem, platform, release, totalmem } from "node:os"
 import path from "node:path"
 import {
   execFile,
@@ -2134,6 +2134,36 @@ export type V138CurrentMatrixReproductionReceipt =
   | V138CurrentMatrixReceipt
   | V138CurrentMatrixStoppedReceipt
 
+export interface V138ParallelCalibrationSuccessorReceipt {
+  readonly schemaVersion: "v1.38-current-matrix-reproduction-v2"
+  readonly status: "calibration_admitted" | "stopped_process_failure"
+  readonly stage: "parallel_calibration"
+  readonly fixturePurpose: typeof FIXTURE_PURPOSE
+  readonly reason: V138ParallelStopReason | null
+  readonly predecessorReceiptRoot: Sha256
+  readonly predecessorChargedAttemptLedgerRoot: Sha256
+  readonly admissionRoot: Sha256
+  readonly historicalExpectationRoot: Sha256
+  readonly runtimeServiceVersion: "runtime-execution-service-v1.18"
+  readonly runtimeAbiVersion: "strategy-runtime-abi-v1.19"
+  readonly matchKernel: "engine-kernel-v1.37-candidate-1"
+  readonly calibrationPolicyRoot: Sha256
+  readonly calibrationInventoryRoot: Sha256
+  readonly projectionSourceRoot: Sha256
+  readonly authoritativePlanRoot: Sha256
+  readonly resourcePolicyRoot: Sha256
+  readonly schedulerSourceRoot: Sha256
+  readonly reducerSourceRoot: Sha256
+  readonly calibration: Readonly<V138ParallelCalibrationReceipt>
+  readonly chargedCalibrationAttemptCount: 8
+  readonly chargedAttemptLedgerRoot: Sha256
+  readonly acceptedCellLedgerRoot: Sha256
+  readonly acceptedCellCount: 0
+  readonly fullRunLaunched: false
+  readonly partialAcceptedEvidenceReusable: false
+  readonly receiptRoot: Sha256
+}
+
 const canonical = (value: unknown): string => JSON.stringify(value)
 
 const hasExactKeys = (
@@ -3104,6 +3134,226 @@ export const renderV138CurrentMatrixReceipt = (
   receipt: Readonly<V138CurrentMatrixReproductionReceipt>,
 ): string => `${JSON.stringify(receipt)}\n`
 
+const calibrationSuccessorWithoutRoot = (
+  receipt: Readonly<V138ParallelCalibrationSuccessorReceipt>,
+): Omit<V138ParallelCalibrationSuccessorReceipt, "receiptRoot"> => {
+  const { receiptRoot: _root, ...withoutRoot } = receipt
+  return withoutRoot
+}
+
+const currentSourceRoot = (): Sha256 =>
+  sha256(readFileSync(new URL(import.meta.url)))
+
+const assertLegacyStoppedPredecessor = (
+  predecessor: Readonly<V138CurrentMatrixReproductionReceipt>,
+): asserts predecessor is Readonly<V138CurrentMatrixStoppedReceipt> => {
+  if (
+    predecessor.status !== "stopped_process_failure" ||
+    predecessor.receiptRoot !== PRIOR_CHARGED_LINEAGE.stoppedReceiptRoot ||
+    predecessor.acceptedCellCount !== 0 ||
+    predecessor.partialAcceptedEvidenceReusable !== false ||
+    predecessor.admissionRoot !==
+      "sha256:eb881964ed2cf8b8cf2d24c35a2d8eb6a744917f2659bef8fd41b6f3c7ab491c"
+  ) {
+    throw new TypeError("MATRIX_CALIBRATION_PREDECESSOR_INVALID")
+  }
+}
+
+const validateParallelCalibrationReceipt = (
+  inventory: Readonly<V138CurrentMatrixInventory>,
+  receipt: Readonly<V138ParallelCalibrationReceipt>,
+): void => {
+  const policy = deriveV138ParallelCalibrationPolicy(inventory)
+  const projection = projectV138ParallelMatrix(policy, receipt.rawObservation)
+  const expectedAttemptIds = policy.inventory.shards.flatMap(
+    ({ attemptIds }) => attemptIds,
+  )
+  const actualAttemptIds = receipt.terminals.flatMap(({ outcomes }) =>
+    outcomes.map(({ attemptId }) => attemptId),
+  )
+  const cleanupComplete = receipt.terminals.every(
+    ({ cleanup }) =>
+      cleanup.exitAwaited && cleanup.orphanProcessIds.length === 0,
+  )
+  const allSuccessful =
+    receipt.terminals.length === 4 &&
+    receipt.terminals.every(
+      ({ classification, outcomes }) =>
+        classification === "success" &&
+        outcomes.every(({ classification: outcome }) => outcome === "success"),
+    )
+  const resourcesAdmitted =
+    receipt.rawObservation.childMaxRssKilobytes.every(
+      (rss) => rss <= V138_PARALLEL_RESOURCE_POLICY.maxChildRssKilobytes,
+    ) &&
+    receipt.rawObservation.aggregateChildRssKilobytes <=
+      V138_PARALLEL_RESOURCE_POLICY.maxAggregateChildRssKilobytes &&
+    receipt.rawObservation.minimumHostHeadroomBasisPoints >=
+      V138_PARALLEL_RESOURCE_POLICY.minHostFreeMemoryBasisPoints
+  const shouldAdmit =
+    allSuccessful &&
+    cleanupComplete &&
+    projection.admittedByTime &&
+    resourcesAdmitted
+  if (
+    receipt.schemaVersion !== "v1.38-parallel-calibration-receipt-v1" ||
+    receipt.policyRoot !== policy.policyRoot ||
+    receipt.projectionSourceRoot !== policy.projectionSourceRoot ||
+    receipt.inventoryRoot !== policy.inventory.inventoryRoot ||
+    receipt.attemptCount !== 8 ||
+    receipt.terminalShardCount !== receipt.terminals.length ||
+    receipt.acceptedCellsPublished !== 0 ||
+    receipt.partialAcceptedEvidenceReusable !== false ||
+    canonical(receipt.projection) !== canonical(projection) ||
+    receipt.calibrationRoot !==
+      sha256(canonical(calibrationWithoutRoot(receipt))) ||
+    new Set(actualAttemptIds).size !== actualAttemptIds.length ||
+    actualAttemptIds.some((attemptId) => !expectedAttemptIds.includes(attemptId)) ||
+    (receipt.status === "admitted") !== shouldAdmit ||
+    (receipt.status === "admitted"
+      ? receipt.reason !== null ||
+        canonical([...actualAttemptIds].sort()) !==
+          canonical([...expectedAttemptIds].sort())
+      : receipt.reason === null)
+  ) {
+    throw new TypeError("MATRIX_CALIBRATION_RECEIPT_INVALID")
+  }
+}
+
+export const buildV138ParallelCalibrationSuccessorReceipt = (input: {
+  repoRoot: string
+  inventory: Readonly<V138CurrentMatrixInventory>
+  predecessor: Readonly<V138CurrentMatrixReproductionReceipt>
+  calibration: Readonly<V138ParallelCalibrationReceipt>
+}): Readonly<V138ParallelCalibrationSuccessorReceipt> => {
+  assertLegacyStoppedPredecessor(input.predecessor)
+  validateParallelCalibrationReceipt(input.inventory, input.calibration)
+  const policy = deriveV138ParallelCalibrationPolicy(input.inventory)
+  const expectation = loadV138HistoricalMatrixExpectation(input.repoRoot)
+  const sourceRoot = currentSourceRoot()
+  const chargedAttemptLedgerRoot = sha256(
+    canonical({
+      predecessorReceiptRoot: input.predecessor.receiptRoot,
+      predecessorChargedAttemptLedgerRoot:
+        input.predecessor.chargedAttemptLedgerRoot,
+      calibrationRoot: input.calibration.calibrationRoot,
+      calibrationAttemptIds: input.calibration.terminals.flatMap(({ outcomes }) =>
+        outcomes.map(({ attemptId, classification }) => ({
+          attemptId,
+          classification,
+        })),
+      ),
+      chargedCalibrationAttemptCount: 8,
+      acceptedCellCount: 0,
+    }),
+  )
+  const withoutRoot = {
+    schemaVersion: "v1.38-current-matrix-reproduction-v2" as const,
+    status:
+      input.calibration.status === "admitted"
+        ? ("calibration_admitted" as const)
+        : ("stopped_process_failure" as const),
+    stage: "parallel_calibration" as const,
+    fixturePurpose: FIXTURE_PURPOSE,
+    reason: input.calibration.reason,
+    predecessorReceiptRoot: input.predecessor.receiptRoot,
+    predecessorChargedAttemptLedgerRoot:
+      input.predecessor.chargedAttemptLedgerRoot,
+    admissionRoot: input.inventory.admissionRoot,
+    historicalExpectationRoot: expectation.historicalExpectationRoot,
+    runtimeServiceVersion: "runtime-execution-service-v1.18" as const,
+    runtimeAbiVersion: "strategy-runtime-abi-v1.19" as const,
+    matchKernel: "engine-kernel-v1.37-candidate-1" as const,
+    calibrationPolicyRoot: policy.policyRoot,
+    calibrationInventoryRoot: policy.inventory.inventoryRoot,
+    projectionSourceRoot: policy.projectionSourceRoot,
+    authoritativePlanRoot: planV138MatrixShards(input.inventory).planRoot,
+    resourcePolicyRoot: sha256(canonical(V138_PARALLEL_RESOURCE_POLICY)),
+    schedulerSourceRoot: sourceRoot,
+    reducerSourceRoot: sourceRoot,
+    calibration: input.calibration,
+    chargedCalibrationAttemptCount: 8 as const,
+    chargedAttemptLedgerRoot,
+    acceptedCellLedgerRoot: sha256(canonical([])),
+    acceptedCellCount: 0 as const,
+    fullRunLaunched: false as const,
+    partialAcceptedEvidenceReusable: false as const,
+  }
+  return deepFreeze({
+    ...withoutRoot,
+    receiptRoot: sha256(canonical(withoutRoot)),
+  })
+}
+
+export const checkV138ParallelCalibrationSuccessorReceipt = (
+  repoRoot: string,
+  input: unknown,
+): Readonly<V138ParallelCalibrationSuccessorReceipt> => {
+  try {
+    if (input === null || typeof input !== "object" || Array.isArray(input)) {
+      throw new TypeError()
+    }
+    const receipt = input as V138ParallelCalibrationSuccessorReceipt
+    const inventory = enumerateV138CurrentMatrix(repoRoot)
+    const predecessor = JSON.parse(
+      gitBlob(
+        repoRoot,
+        "724388c3",
+        ".planning/artifacts/v1.38-current-matrix-reproduction.json",
+      ).toString("utf8"),
+    ) as V138CurrentMatrixReproductionReceipt
+    const expected = buildV138ParallelCalibrationSuccessorReceipt({
+      repoRoot,
+      inventory,
+      predecessor,
+      calibration: receipt.calibration,
+    })
+    if (canonical(receipt) !== canonical(expected)) throw new TypeError()
+    return expected
+  } catch {
+    throw new TypeError("MATRIX_CALIBRATION_RECEIPT_INVALID")
+  }
+}
+
+const writeReceiptAtomically = (
+  targetPath: string,
+  receipt: unknown,
+): void => {
+  const temporaryPath = `${targetPath}.tmp-${process.pid}`
+  writeFileSync(temporaryPath, `${canonical(receipt)}\n`, {
+    encoding: "utf8",
+    mode: 0o600,
+  })
+  renameSync(temporaryPath, targetPath)
+}
+
+export const runV138ParallelMatrixCalibration = async (
+  repoRoot: string,
+  targetPath: string,
+): Promise<Readonly<V138ParallelCalibrationSuccessorReceipt>> => {
+  const predecessor = reproduceV138CurrentMatrix(repoRoot)
+  const inventory = enumerateV138CurrentMatrix(repoRoot)
+  const calibration = await calibrateV138ParallelMatrix({
+    inventory,
+    policy: deriveV138ParallelCalibrationPolicy(inventory),
+    hardwareIdentity: {
+      operatingSystem: `${platform()} ${release()}`,
+      architecture: arch(),
+      nodeVersion: process.version,
+      cpuIdentity: cpus()[0]?.model ?? "unavailable",
+    },
+    repoRoot,
+  })
+  const receipt = buildV138ParallelCalibrationSuccessorReceipt({
+    repoRoot,
+    inventory,
+    predecessor,
+    calibration,
+  })
+  writeReceiptAtomically(targetPath, receipt)
+  return receipt
+}
+
 const runShardCli = (): void => {
   if (
     process.argv[1] !== fileURLToPath(import.meta.url) ||
@@ -3138,4 +3388,63 @@ const runShardCli = (): void => {
   }
 }
 
+const runReceiptCli = async (): Promise<void> => {
+  if (process.argv[1] !== fileURLToPath(import.meta.url)) return
+  const command = process.argv[2]
+  if (
+    ![
+      "--calibrate-parallel-receipt",
+      "--check-calibration-receipt",
+      "--require-calibration-admitted",
+      "--require-stopped-process-failure",
+    ].includes(command ?? "")
+  ) {
+    return
+  }
+  if (process.argv.length !== 4 || process.argv[3] === undefined) {
+    throw new TypeError("MATRIX_CALIBRATION_CLI_ARGUMENTS_INVALID")
+  }
+  const repoRoot = path.resolve(
+    path.dirname(fileURLToPath(import.meta.url)),
+    "../..",
+  )
+  const targetPath = path.resolve(repoRoot, process.argv[3])
+  const receipt =
+    command === "--calibrate-parallel-receipt"
+      ? await runV138ParallelMatrixCalibration(repoRoot, targetPath)
+      : checkV138ParallelCalibrationSuccessorReceipt(
+          repoRoot,
+          JSON.parse(readFileSync(targetPath, "utf8")),
+        )
+  if (
+    command === "--require-calibration-admitted" &&
+    receipt.status !== "calibration_admitted"
+  ) {
+    throw new TypeError("MATRIX_PARALLEL_CALIBRATION_NOT_ADMITTED")
+  }
+  if (
+    command === "--require-stopped-process-failure" &&
+    receipt.status !== "stopped_process_failure"
+  ) {
+    throw new TypeError("MATRIX_PARALLEL_CALIBRATION_NOT_STOPPED")
+  }
+  process.stdout.write(
+    `${canonical({
+      status: receipt.status,
+      receiptRoot: receipt.receiptRoot,
+      calibrationRoot: receipt.calibration.calibrationRoot,
+      projectedTotalMilliseconds:
+        receipt.calibration.projection.projectedTotalMilliseconds,
+      acceptedCellCount: receipt.acceptedCellCount,
+    })}\n`,
+  )
+  if (
+    command === "--calibrate-parallel-receipt" &&
+    receipt.status === "stopped_process_failure"
+  ) {
+    process.exitCode = 1
+  }
+}
+
+await runReceiptCli()
 runShardCli()
