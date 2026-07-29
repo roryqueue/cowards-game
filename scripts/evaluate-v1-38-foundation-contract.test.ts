@@ -13,11 +13,14 @@ const repoRoot = path.resolve(
   "..",
 )
 
+const clone = <T>(value: T): T =>
+  JSON.parse(JSON.stringify(value)) as T
+
 const mutate = (
   input: V138FoundationAdmissionInput,
   change: (draft: Record<string, unknown>) => void,
 ): unknown => {
-  const draft = structuredClone(input) as unknown as Record<string, unknown>
+  const draft = clone(input) as unknown as Record<string, unknown>
   change(draft)
   return draft
 }
@@ -62,7 +65,7 @@ describe("v1.38 foundation admission", () => {
   it("admission is deterministic and renders a byte-stable public receipt", () => {
     const first = evaluateV138FoundationAdmission(exactInput)
     const second = evaluateV138FoundationAdmission(
-      structuredClone(exactInput),
+      clone(exactInput),
     )
 
     expect(second).toEqual(first)
@@ -110,6 +113,14 @@ describe("v1.38 foundation admission", () => {
       "TAG_OBJECT_MISMATCH",
       (draft: Record<string, unknown>) => {
         nested(draft, "release").tagObject = "0".repeat(40)
+      },
+    ],
+    [
+      "stale release-readiness evidence",
+      "RELEASE_READINESS_DRIFT",
+      (draft: Record<string, unknown>) => {
+        nested(draft, "release").releaseReadinessSha256 =
+          `sha256:${"0".repeat(64)}`
       },
     ],
     [
@@ -201,6 +212,18 @@ describe("v1.38 foundation admission", () => {
         reason: "INPUT_SCHEMA_INVALID",
       })
     }
+  })
+
+  it("admission rejects inputs beyond the canonical bounded envelope", () => {
+    expect(
+      evaluateV138FoundationAdmission({
+        ...exactInput,
+        oversized: "x".repeat(600 * 1024),
+      }),
+    ).toMatchObject({
+      status: "stopped_integrity_foundation",
+      reason: "INPUT_BOUNDS_INVALID",
+    })
   })
 
   it("admission stopped results expose no waiver, repair, tag mutation, or root", () => {
