@@ -11,7 +11,9 @@ import {
 } from "./lib/v1-38-foundation-admission.js"
 import {
   V138ParallelCalibrationPolicySchema,
+  buildV138ParallelCalibrationSuccessorReceipt,
   calibrateV138ParallelMatrix,
+  checkV138ParallelCalibrationSuccessorReceipt,
   deriveV138ParallelCalibrationPolicy,
   deriveV138HistoricalMatrixExpectation,
   enumerateV138CurrentMatrix,
@@ -963,6 +965,81 @@ const admittedInjectedCalibration = (
       cpuIdentity: "test-cpu",
     },
   })
+
+describe("v1.38 matrix calibration receipt branches", () => {
+  it("matrix supervised parallel calibration seals an admitted zero-cell successor", async () => {
+    const inventory = enumerateV138CurrentMatrix(repoRoot)
+    const predecessor = reproduceV138CurrentMatrix(repoRoot)
+    const calibration = await admittedInjectedCalibration(inventory)
+    const receipt = buildV138ParallelCalibrationSuccessorReceipt({
+      repoRoot,
+      inventory,
+      predecessor,
+      calibration,
+    })
+
+    expect(receipt).toMatchObject({
+      schemaVersion: "v1.38-current-matrix-reproduction-v2",
+      status: "calibration_admitted",
+      stage: "parallel_calibration",
+      predecessorReceiptRoot: predecessor.receiptRoot,
+      acceptedCellCount: 0,
+      fullRunLaunched: false,
+      partialAcceptedEvidenceReusable: false,
+      calibration: {
+        status: "admitted",
+        attemptCount: 8,
+        terminalShardCount: 4,
+      },
+    })
+    expect(
+      checkV138ParallelCalibrationSuccessorReceipt(
+        repoRoot,
+        clone(receipt),
+      ),
+    ).toEqual(receipt)
+  })
+
+  it("matrix calibration receipt branches preserve a stopped calibration with all attempts charged", async () => {
+    const inventory = enumerateV138CurrentMatrix(repoRoot)
+    const predecessor = reproduceV138CurrentMatrix(repoRoot)
+    const calibration = await calibrateV138ParallelMatrix({
+      inventory,
+      policy: deriveV138ParallelCalibrationPolicy(inventory),
+      runner: successfulInjectedRunner({
+        hostHeadroomBasisPoints: 2_499,
+      }),
+      hardwareIdentity: {
+        operatingSystem: "test-os",
+        architecture: "test-arch",
+        nodeVersion: "test-node",
+        cpuIdentity: "test-cpu",
+      },
+    })
+    const receipt = buildV138ParallelCalibrationSuccessorReceipt({
+      repoRoot,
+      inventory,
+      predecessor,
+      calibration,
+    })
+
+    expect(receipt).toMatchObject({
+      status: "stopped_process_failure",
+      stage: "parallel_calibration",
+      acceptedCellCount: 0,
+      fullRunLaunched: false,
+      chargedCalibrationAttemptCount: 8,
+      calibration: {
+        status: "stopped_process_failure",
+      },
+    })
+    const mutated = clone(receipt) as any
+    mutated.calibration.projection.projectedTotalMilliseconds += 1
+    expect(() =>
+      checkV138ParallelCalibrationSuccessorReceipt(repoRoot, mutated),
+    ).toThrow("MATRIX_CALIBRATION_RECEIPT_INVALID")
+  })
+})
 
 describe("v1.38 matrix resources", () => {
   it("matrix resources calibrate exactly four concurrent two-attempt shards", async () => {
