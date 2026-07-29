@@ -19,13 +19,15 @@ tech-stack:
     - exact-key bounded authority admission
     - domain-separated canonical roots
     - immutable tag authority with separately bound correction lineage
+    - IPC-free TypeScript subprocess execution through the Node tsx import hook
 
 key-files:
   created:
     - scripts/evaluate-v1-38-foundation-contract.test.ts
     - scripts/lib/v1-38-foundation-admission.ts
     - .planning/artifacts/v1.38-foundation-admission.json
-  modified: []
+  modified:
+    - scripts/check-v1-37-audit-reproduction.ts
 
 key-decisions:
   - "Resolve the v1.37 archive and annotated tag from Git, then independently join them to the correction record rather than trusting a copied release label."
@@ -67,11 +69,11 @@ coverage:
     requirement: ADMIT-01
     verification:
       - kind: integration
-        ref: "pnpm exec tsx scripts/lib/v1-38-foundation-admission.ts --check"
+        ref: "node --import tsx scripts/lib/v1-38-foundation-admission.ts --check"
         status: pass
     human_judgment: false
 
-duration: 12min
+duration: 16min
 completed: 2026-07-29
 status: complete
 ---
@@ -82,17 +84,18 @@ status: complete
 
 ## Performance
 
-- **Duration:** 12 min
+- **Duration:** 16 min
 - **Started:** 2026-07-29T00:17:51Z
-- **Completed:** 2026-07-29T00:29:44Z
+- **Completed:** 2026-07-29T00:35:18Z
 - **Tasks:** 2
-- **Files modified:** 3
+- **Files modified:** 4
 
 ## Accomplishments
 
 - Added a mutation-heavy shared Wave 0 admission suite that pins released v1.37 identities only in tests and derives the repository root from `import.meta.url`.
 - Implemented an exact-key, bounded evaluator that resolves live Git/tag/checker evidence and joins it to the selected semantic/runtime authority without repair, waiver, normalization, or tag mutation.
-- Generated a deterministic public-safe receipt rooted at `sha256:32c69ce85f93c3268f2e74773435841bba89cea9373b106997a524ad0935230f`.
+- Generated a deterministic public-safe receipt rooted at `sha256:eb881964ed2cf8b8cf2d24c35a2d8eb6a744917f2659bef8fd41b6f3c7ab491c`.
+- Made retained audit reproduction deterministic in restricted clean runners by replacing the tsx CLI IPC path with Node's `--import tsx` hook.
 
 ## Task Commits
 
@@ -100,11 +103,13 @@ Each task was committed atomically:
 
 1. **Task 1: Create the Wave 0 admission and mutation-test harness** - `8d3f3161` (test)
 2. **Task 2: Implement the exact predecessor join and immutable receipt** - `d3893cc2` (feat)
+3. **Post-wave correction: Make audit reproduction IPC-free** - `d5bfb7e2` (fix)
 
 ## Files Created/Modified
 
 - `scripts/evaluate-v1-38-foundation-contract.test.ts` - Shared Phase 262 admission selector with exact-pass, mutation, bounded-input, and safe-stop coverage.
 - `scripts/lib/v1-38-foundation-admission.ts` - Machine authority resolver, exact admission evaluator, domain-separated roots, and immutable write/check command.
+- `scripts/check-v1-37-audit-reproduction.ts` - Executes the same retained historical source through Node's tsx import hook without a CLI IPC server.
 - `.planning/artifacts/v1.38-foundation-admission.json` - Public-safe content-addressed admission receipt.
 
 ## Decisions Made
@@ -115,11 +120,25 @@ Each task was committed atomically:
 
 ## Deviations from Plan
 
-None - plan executed exactly as written.
+### Auto-fixed Issues
+
+**1. [Rule 3 - Blocking] Removed tsx CLI IPC dependence from retained audit reproduction**
+
+- **Found during:** Post-wave clean verification after Task 2
+- **Issue:** `runV137AuditReproductionGate` spawned `pnpm exec tsx`, whose CLI opens a local IPC server. Restricted clean runners reject that socket with `listen EPERM`, so suite setup stopped with `V137_AUDIT_REPRODUCTION_FAILED` and skipped all admission tests.
+- **Fix:** Invoke the exact same immutable historical TypeScript source with `process.execPath --import tsx`, which uses the installed loader without opening the CLI IPC server. Added a regression that removes `PATH` and still requires the exact audit receipt.
+- **Files modified:** `scripts/check-v1-37-audit-reproduction.ts`, `scripts/evaluate-v1-38-foundation-contract.test.ts`, `.planning/artifacts/v1.38-foundation-admission.json`
+- **Verification:** Exact admission command passed twice from a clean working tree with 17/17 tests; artifact check and 27/27 typecheck tasks passed.
+- **Committed in:** `d5bfb7e2`
+
+---
+
+**Total deviations:** 1 auto-fixed (1 blocking issue)
+**Impact on plan:** The correction changes only the TypeScript loader invocation. It preserves the exact historical source bytes, observation analyzer, authority joins, and fail-closed behavior.
 
 ## Issues Encountered
 
-- The sandbox blocked the nested historical `tsx` reproducer from creating its local IPC socket. The exact planned commands passed outside that sandbox restriction; no alternate loader or execution path was added.
+- The first verification incorrectly treated the tsx CLI socket failure as sandbox-only and relied on an elevated rerun. Clean post-wave verification exposed that as a reproducibility defect. The retained gate now passes without elevation or an alternate authority path.
 
 ## Known Stubs
 
@@ -138,8 +157,9 @@ None - no external custody inputs or service configuration are required by this 
 ## Self-Check: PASSED
 
 - Created files exist: test harness, admission evaluator, and immutable receipt.
-- Task commits exist: `8d3f3161` and `d3893cc2`.
-- Focused and plan-level Vitest verification passed 16/16 tests.
+- Task/fix commits exist: `8d3f3161`, `d3893cc2`, and `d5bfb7e2`.
+- The exact focused admission command passed twice from a clean working tree with 17/17 tests each time.
+- Artifact check passed with admission root `sha256:eb881964ed2cf8b8cf2d24c35a2d8eb6a744917f2659bef8fd41b6f3c7ab491c`.
 - Workspace typecheck passed 27/27 tasks.
 
 ---
