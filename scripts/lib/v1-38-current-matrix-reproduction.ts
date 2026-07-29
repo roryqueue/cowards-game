@@ -335,6 +335,613 @@ const deepFreeze = <T>(value: T): Readonly<T> => {
   return value
 }
 
+const PARALLEL_PROJECTION_SOURCE = [
+  "baseProjectedMilliseconds=ceil(calibrationBatchWallMilliseconds*540/8)",
+  "marginMilliseconds=ceil(baseProjectedMilliseconds*750/10000)",
+  "projectedTotalMilliseconds=baseProjectedMilliseconds+marginMilliseconds+60000",
+  "admittedByTime=projectedTotalMilliseconds<=5400000",
+].join("\n")
+
+const PARALLEL_AGGREGATION_RULES = deepFreeze({
+  calibrationBatchWall:
+    "ceil_parent_monotonic_first_spawn_through_cleanup_barrier_ms",
+  perChildRss: "maximum_sample_per_child_kilobytes",
+  aggregateChildRss:
+    "maximum_tick_sum_of_all_active_children_kilobytes",
+  hostHeadroom:
+    "minimum_floor_free_over_total_basis_points_across_ticks",
+} as const)
+
+const PARALLEL_ROUNDING_RULES = deepFreeze({
+  observedBatchWall: "ceil_integer_milliseconds",
+  baseProjection: "ceil_integer_milliseconds",
+  margin: "ceil_integer_milliseconds",
+  hostHeadroom: "floor_integer_basis_points",
+} as const)
+
+export interface V138ParallelCalibrationPolicy {
+  readonly schemaVersion: "v1.38-parallel-calibration-policy-v1"
+  readonly sampleAttemptCount: 8
+  readonly sampleShardCount: 4
+  readonly attemptsPerShard: 2
+  readonly concurrency: 4
+  readonly authoritativeAttemptDenominator: 540
+  readonly marginBasisPoints: 750
+  readonly fixedOverheadMilliseconds: 60_000
+  readonly maxProjectedTotalMilliseconds: 5_400_000
+  readonly aggregationRules: typeof PARALLEL_AGGREGATION_RULES
+  readonly roundingRules: typeof PARALLEL_ROUNDING_RULES
+  readonly admissionComparator: "inclusive_less_than_or_equal"
+  readonly projectionSourceRoot: Sha256
+  readonly inventory: Readonly<{
+    attempts: readonly Readonly<{
+      calibrationAttemptId: string
+      templateAttemptId: string
+      shardId: string
+      laneId: string
+      ordinalInShard: number
+      requestSha256: Sha256
+    }>[]
+    shards: readonly Readonly<{
+      shardId: string
+      laneId: string
+      attemptIds: readonly string[]
+    }>[]
+    inventoryRoot: Sha256
+  }>
+  readonly policyRoot: Sha256
+}
+
+const parallelPolicyWithoutRoot = (
+  policy: V138ParallelCalibrationPolicy,
+): Omit<V138ParallelCalibrationPolicy, "policyRoot"> => {
+  const { policyRoot: _policyRoot, ...withoutRoot } = policy
+  return withoutRoot
+}
+
+const invalidParallelCalibrationPolicy = (): never => {
+  throw new TypeError("MATRIX_PARALLEL_CALIBRATION_POLICY_INVALID")
+}
+
+export const V138ParallelCalibrationPolicySchema = Object.freeze({
+  parse(input: unknown): Readonly<V138ParallelCalibrationPolicy> {
+    if (
+      input === null ||
+      typeof input !== "object" ||
+      Array.isArray(input)
+    ) {
+      return invalidParallelCalibrationPolicy()
+    }
+    const policy = input as V138ParallelCalibrationPolicy
+    if (
+      canonical(Object.keys(policy)) !==
+        canonical([
+          "schemaVersion",
+          "sampleAttemptCount",
+          "sampleShardCount",
+          "attemptsPerShard",
+          "concurrency",
+          "authoritativeAttemptDenominator",
+          "marginBasisPoints",
+          "fixedOverheadMilliseconds",
+          "maxProjectedTotalMilliseconds",
+          "aggregationRules",
+          "roundingRules",
+          "admissionComparator",
+          "projectionSourceRoot",
+          "inventory",
+          "policyRoot",
+        ]) ||
+      policy.schemaVersion !== "v1.38-parallel-calibration-policy-v1" ||
+      policy.sampleAttemptCount !== 8 ||
+      policy.sampleShardCount !== 4 ||
+      policy.attemptsPerShard !== 2 ||
+      policy.concurrency !== 4 ||
+      policy.authoritativeAttemptDenominator !== 540 ||
+      policy.marginBasisPoints !== 750 ||
+      policy.fixedOverheadMilliseconds !== 60_000 ||
+      policy.maxProjectedTotalMilliseconds !== 5_400_000 ||
+      canonical(policy.aggregationRules) !==
+        canonical(PARALLEL_AGGREGATION_RULES) ||
+      canonical(policy.roundingRules) !== canonical(PARALLEL_ROUNDING_RULES) ||
+      policy.admissionComparator !== "inclusive_less_than_or_equal" ||
+      policy.projectionSourceRoot !== sha256(PARALLEL_PROJECTION_SOURCE) ||
+      policy.inventory === null ||
+      typeof policy.inventory !== "object" ||
+      canonical(Object.keys(policy.inventory)) !==
+        canonical(["attempts", "shards", "inventoryRoot"]) ||
+      !Array.isArray(policy.inventory.attempts) ||
+      policy.inventory.attempts.length !== 8 ||
+      !Array.isArray(policy.inventory.shards) ||
+      policy.inventory.shards.length !== 4
+    ) {
+      return invalidParallelCalibrationPolicy()
+    }
+    const expectedAttempts = policy.inventory.attempts.map(
+      (attempt, index) => {
+        const shardOrdinal = Math.floor(index / 2)
+        if (
+          attempt === null ||
+          typeof attempt !== "object" ||
+          canonical(Object.keys(attempt)) !==
+            canonical([
+              "calibrationAttemptId",
+              "templateAttemptId",
+              "shardId",
+              "laneId",
+              "ordinalInShard",
+              "requestSha256",
+            ]) ||
+          typeof attempt.templateAttemptId !== "string" ||
+          attempt.calibrationAttemptId !==
+            `calibration:v1:${index}:${attempt.templateAttemptId}` ||
+          attempt.shardId !== `calibration-shard:${shardOrdinal}` ||
+          attempt.laneId !== `lane:${shardOrdinal}` ||
+          attempt.ordinalInShard !== index % 2 ||
+          !/^sha256:[0-9a-f]{64}$/u.test(attempt.requestSha256)
+        ) {
+          return invalidParallelCalibrationPolicy()
+        }
+        return attempt
+      },
+    )
+    const expectedShards = Array.from({ length: 4 }, (_, shardOrdinal) => ({
+      shardId: `calibration-shard:${shardOrdinal}`,
+      laneId: `lane:${shardOrdinal}`,
+      attemptIds: expectedAttempts
+        .slice(shardOrdinal * 2, shardOrdinal * 2 + 2)
+        .map(({ calibrationAttemptId }) => calibrationAttemptId),
+    }))
+    if (
+      canonical(policy.inventory.shards) !== canonical(expectedShards) ||
+      policy.inventory.inventoryRoot !==
+        sha256(canonical({ attempts: expectedAttempts, shards: expectedShards })) ||
+      policy.policyRoot !==
+        sha256(canonical(parallelPolicyWithoutRoot(policy)))
+    ) {
+      return invalidParallelCalibrationPolicy()
+    }
+    return deepFreeze(globalThis.structuredClone(policy))
+  },
+  safeParse(
+    input: unknown,
+  ):
+    | { success: true; data: Readonly<V138ParallelCalibrationPolicy> }
+    | { success: false; error: TypeError } {
+    try {
+      return { success: true, data: this.parse(input) }
+    } catch (error) {
+      return {
+        success: false,
+        error:
+          error instanceof TypeError
+            ? error
+            : new TypeError("MATRIX_PARALLEL_CALIBRATION_POLICY_INVALID"),
+      }
+    }
+  },
+})
+
+export const deriveV138ParallelCalibrationPolicy = (
+  inventory: Readonly<V138CurrentMatrixInventory>,
+): Readonly<V138ParallelCalibrationPolicy> => {
+  if (
+    inventory.attempts.length !== 540 ||
+    new Set(inventory.attempts.map(({ attemptId }) => attemptId)).size !== 540
+  ) {
+    return invalidParallelCalibrationPolicy()
+  }
+  const attempts = inventory.attempts.slice(0, 8).map((attempt, index) => {
+    const shardOrdinal = Math.floor(index / 2)
+    return {
+      calibrationAttemptId: `calibration:v1:${index}:${attempt.attemptId}`,
+      templateAttemptId: attempt.attemptId,
+      shardId: `calibration-shard:${shardOrdinal}`,
+      laneId: `lane:${shardOrdinal}`,
+      ordinalInShard: index % 2,
+      requestSha256: sha256(canonical(attempt.request)),
+    }
+  })
+  const shards = Array.from({ length: 4 }, (_, shardOrdinal) => ({
+    shardId: `calibration-shard:${shardOrdinal}`,
+    laneId: `lane:${shardOrdinal}`,
+    attemptIds: attempts
+      .slice(shardOrdinal * 2, shardOrdinal * 2 + 2)
+      .map(({ calibrationAttemptId }) => calibrationAttemptId),
+  }))
+  const inventoryManifest = {
+    attempts,
+    shards,
+    inventoryRoot: sha256(canonical({ attempts, shards })),
+  }
+  const withoutRoot = {
+    schemaVersion: "v1.38-parallel-calibration-policy-v1" as const,
+    sampleAttemptCount: 8 as const,
+    sampleShardCount: 4 as const,
+    attemptsPerShard: 2 as const,
+    concurrency: 4 as const,
+    authoritativeAttemptDenominator: 540 as const,
+    marginBasisPoints: 750 as const,
+    fixedOverheadMilliseconds: 60_000 as const,
+    maxProjectedTotalMilliseconds: 5_400_000 as const,
+    aggregationRules: PARALLEL_AGGREGATION_RULES,
+    roundingRules: PARALLEL_ROUNDING_RULES,
+    admissionComparator: "inclusive_less_than_or_equal" as const,
+    projectionSourceRoot: sha256(PARALLEL_PROJECTION_SOURCE),
+    inventory: inventoryManifest,
+  }
+  return V138ParallelCalibrationPolicySchema.parse({
+    ...withoutRoot,
+    policyRoot: sha256(canonical(withoutRoot)),
+  })
+}
+
+export interface V138ParallelProjection {
+  readonly schemaVersion: "v1.38-parallel-matrix-projection-v1"
+  readonly policyRoot: Sha256
+  readonly projectionSourceRoot: Sha256
+  readonly calibrationBatchWallMilliseconds: number
+  readonly childMaxRssKilobytes: readonly [number, number, number, number]
+  readonly aggregateChildRssKilobytes: number
+  readonly minimumHostHeadroomBasisPoints: number
+  readonly baseProjectedMilliseconds: number
+  readonly marginMilliseconds: number
+  readonly projectedTotalMilliseconds: number
+  readonly admittedByTime: boolean
+  readonly projectionRoot: Sha256
+}
+
+export const isV138ParallelProjectedTotalAdmitted = (
+  projectedTotalMilliseconds: number,
+): boolean =>
+  Number.isSafeInteger(projectedTotalMilliseconds) &&
+  projectedTotalMilliseconds >= 0 &&
+  projectedTotalMilliseconds <= 5_400_000
+
+export const projectV138ParallelMatrix = (
+  rawPolicy: Readonly<V138ParallelCalibrationPolicy>,
+  observation: Readonly<{
+    calibrationBatchWallMilliseconds: number
+    childMaxRssKilobytes: readonly number[]
+    aggregateChildRssKilobytes: number
+    minimumHostHeadroomBasisPoints: number
+  }>,
+): Readonly<V138ParallelProjection> => {
+  const policy = V138ParallelCalibrationPolicySchema.parse(rawPolicy)
+  if (
+    !Number.isSafeInteger(observation.calibrationBatchWallMilliseconds) ||
+    observation.calibrationBatchWallMilliseconds < 0 ||
+    !Array.isArray(observation.childMaxRssKilobytes) ||
+    observation.childMaxRssKilobytes.length !== 4 ||
+    !observation.childMaxRssKilobytes.every(
+      (value) => Number.isSafeInteger(value) && value >= 0,
+    ) ||
+    !Number.isSafeInteger(observation.aggregateChildRssKilobytes) ||
+    observation.aggregateChildRssKilobytes < 0 ||
+    !Number.isSafeInteger(observation.minimumHostHeadroomBasisPoints) ||
+    observation.minimumHostHeadroomBasisPoints < 0 ||
+    observation.minimumHostHeadroomBasisPoints > 10_000
+  ) {
+    throw new TypeError("MATRIX_PARALLEL_PROJECTION_INVALID")
+  }
+  const baseProjectedMilliseconds = Math.ceil(
+    (observation.calibrationBatchWallMilliseconds *
+      policy.authoritativeAttemptDenominator) /
+      policy.sampleAttemptCount,
+  )
+  const marginMilliseconds = Math.ceil(
+    (baseProjectedMilliseconds * policy.marginBasisPoints) / 10_000,
+  )
+  const projectedTotalMilliseconds =
+    baseProjectedMilliseconds +
+    marginMilliseconds +
+    policy.fixedOverheadMilliseconds
+  const withoutRoot = {
+    schemaVersion: "v1.38-parallel-matrix-projection-v1" as const,
+    policyRoot: policy.policyRoot,
+    projectionSourceRoot: policy.projectionSourceRoot,
+    calibrationBatchWallMilliseconds:
+      observation.calibrationBatchWallMilliseconds,
+    childMaxRssKilobytes: [
+      observation.childMaxRssKilobytes[0]!,
+      observation.childMaxRssKilobytes[1]!,
+      observation.childMaxRssKilobytes[2]!,
+      observation.childMaxRssKilobytes[3]!,
+    ] as const,
+    aggregateChildRssKilobytes: observation.aggregateChildRssKilobytes,
+    minimumHostHeadroomBasisPoints:
+      observation.minimumHostHeadroomBasisPoints,
+    baseProjectedMilliseconds,
+    marginMilliseconds,
+    projectedTotalMilliseconds,
+    admittedByTime: isV138ParallelProjectedTotalAdmitted(
+      projectedTotalMilliseconds,
+    ),
+  }
+  return deepFreeze({
+    ...withoutRoot,
+    projectionRoot: sha256(canonical(withoutRoot)),
+  })
+}
+
+export interface V138ParallelMatrixPlan {
+  readonly schemaVersion: "v1.38-parallel-matrix-plan-v1"
+  readonly maxConcurrentShards: 4
+  readonly maxAttemptsPerShard: 4
+  readonly attemptCount: 540
+  readonly inventoryRoot: Sha256
+  readonly shards: readonly Readonly<{
+    shardId: string
+    laneId: "lane:0" | "lane:1" | "lane:2" | "lane:3"
+    ordinal: number
+    attemptIds: readonly string[]
+    requestRoot: Sha256
+  }>[]
+  readonly planRoot: Sha256
+}
+
+export const planV138MatrixShards = (
+  inventory: Readonly<V138CurrentMatrixInventory>,
+): Readonly<V138ParallelMatrixPlan> => {
+  const attemptIds = inventory.attempts.map(({ attemptId }) => attemptId)
+  if (
+    attemptIds.length !== 540 ||
+    new Set(attemptIds).size !== 540
+  ) {
+    throw new TypeError("MATRIX_PARALLEL_PLAN_INVALID")
+  }
+  const shards = Array.from({ length: 135 }, (_, ordinal) => {
+    const attempts = inventory.attempts.slice(ordinal * 4, ordinal * 4 + 4)
+    const laneId = `lane:${ordinal % 4}` as const
+    return {
+      shardId: `matrix-shard:${String(ordinal).padStart(3, "0")}`,
+      laneId,
+      ordinal,
+      attemptIds: attempts.map(({ attemptId }) => attemptId),
+      requestRoot: sha256(
+        canonical(
+          attempts.map(({ attemptId, request }) => ({
+            attemptId,
+            request: canonical(request),
+          })),
+        ),
+      ),
+    }
+  })
+  const inventoryRoot = sha256(
+    canonical(
+      inventory.attempts.map(({ attemptId, request }) => ({
+        attemptId,
+        requestSha256: sha256(canonical(request)),
+      })),
+    ),
+  )
+  const withoutRoot = {
+    schemaVersion: "v1.38-parallel-matrix-plan-v1" as const,
+    maxConcurrentShards: 4 as const,
+    maxAttemptsPerShard: 4 as const,
+    attemptCount: 540 as const,
+    inventoryRoot,
+    shards,
+  }
+  return deepFreeze({
+    ...withoutRoot,
+    planRoot: sha256(canonical(withoutRoot)),
+  })
+}
+
+export type V138ParallelChargedOutcome =
+  | V138CurrentMatrixAttemptOutcome
+  | Readonly<{
+      attemptId: string
+      classification: "timeout" | "cancelled"
+      code: string
+    }>
+
+export interface V138ParallelShardTerminal {
+  readonly shardId: string
+  readonly laneId: string
+  readonly classification: "success" | "failed" | "cancelled"
+  readonly elapsedMilliseconds: number
+  readonly maxRssKilobytes: number
+  readonly cleanup: Readonly<{
+    gracefulTerminationSent: boolean
+    forceTerminationSent: boolean
+    exitAwaited: boolean
+    orphanProcessIds: readonly number[]
+  }>
+  readonly outcomes: readonly V138ParallelChargedOutcome[]
+}
+
+const PRIOR_CHARGED_LINEAGE = deepFreeze({
+  stoppedReceiptRoot:
+    "sha256:bd64a793603ee444f8671e8391d5bd9bd4a2b494d32a2d09fce1864aed675a33",
+  priorUnboundedRun: {
+    classification: "system_failure_resource_pressure",
+    elapsedSecondsAtTermination: 14_390,
+    hostFreeMemoryPercentAtTermination: 9,
+    completedAttemptCount: "unknown",
+    partialResultsDiscarded: true,
+  },
+  priorSerialCalibration: {
+    attemptCount: 1,
+    elapsedMilliseconds: 35_812,
+    maxRssKilobytes: 721_088,
+    reusable: false,
+  },
+} as const)
+
+export const reduceV138ParallelMatrixAccounting = (input: {
+  inventory: Readonly<V138CurrentMatrixInventory>
+  plan: Readonly<V138ParallelMatrixPlan>
+  terminals: readonly Readonly<V138ParallelShardTerminal>[]
+  unlaunchedShardIds?: readonly string[]
+}): Readonly<{
+  schemaVersion: "v1.38-parallel-matrix-accounting-v1"
+  declaredAttemptCount: 540
+  launchedAttemptCount: number
+  terminalAttemptCount: number
+  successfulButUnacceptedCount: number
+  failedAttemptCount: number
+  cancelledAttemptCount: number
+  unlaunchedAttemptCount: number
+  acceptedCellsPublished: 0
+  partialAcceptedEvidenceReusable: false
+  allocationRoot: Sha256
+  launchRoot: Sha256
+  attemptRoot: Sha256
+  shardTerminalRoot: Sha256
+  progressRoot: Sha256
+  cleanupRoot: Sha256
+  chargedAttemptLedgerRoot: Sha256
+  acceptedCellLedgerRoot: Sha256
+  progressReceipts: readonly Readonly<Record<string, unknown>>[]
+}> => {
+  const expectedPlan = planV138MatrixShards(input.inventory)
+  if (canonical(input.plan) !== canonical(expectedPlan)) {
+    throw new TypeError("MATRIX_PARALLEL_ACCOUNTING_INVALID")
+  }
+  const shardById = new Map(
+    expectedPlan.shards.map((shard) => [shard.shardId, shard]),
+  )
+  const unlaunchedShardIds = [...(input.unlaunchedShardIds ?? [])]
+  const terminalIds = input.terminals.map(({ shardId }) => shardId)
+  const allDispositionIds = [...terminalIds, ...unlaunchedShardIds]
+  if (
+    new Set(allDispositionIds).size !== expectedPlan.shards.length ||
+    allDispositionIds.length !== expectedPlan.shards.length ||
+    allDispositionIds.some((shardId) => !shardById.has(shardId))
+  ) {
+    throw new TypeError("MATRIX_PARALLEL_ACCOUNTING_INVALID")
+  }
+  const terminalById = new Map<string, Readonly<V138ParallelShardTerminal>>()
+  for (const terminal of input.terminals) {
+    const shard = shardById.get(terminal.shardId)
+    if (
+      shard === undefined ||
+      terminalById.has(terminal.shardId) ||
+      terminal.laneId !== shard.laneId ||
+      !["success", "failed", "cancelled"].includes(terminal.classification) ||
+      !Number.isSafeInteger(terminal.elapsedMilliseconds) ||
+      terminal.elapsedMilliseconds < 0 ||
+      !Number.isSafeInteger(terminal.maxRssKilobytes) ||
+      terminal.maxRssKilobytes < 0 ||
+      !terminal.cleanup.exitAwaited ||
+      terminal.cleanup.orphanProcessIds.length !== 0 ||
+      terminal.outcomes.length !== shard.attemptIds.length
+    ) {
+      throw new TypeError("MATRIX_PARALLEL_ACCOUNTING_INVALID")
+    }
+    const outcomeIds = terminal.outcomes.map(({ attemptId }) => attemptId)
+    if (
+      new Set(outcomeIds).size !== shard.attemptIds.length ||
+      outcomeIds.some((attemptId) => !shard.attemptIds.includes(attemptId))
+    ) {
+      throw new TypeError("MATRIX_PARALLEL_ACCOUNTING_INVALID")
+    }
+    const classifications = terminal.outcomes.map(
+      ({ classification }) => classification,
+    )
+    if (
+      (terminal.classification === "success" &&
+        classifications.some((classification) => classification !== "success")) ||
+      (terminal.classification === "cancelled" &&
+        !classifications.includes("cancelled")) ||
+      (terminal.classification === "failed" &&
+        classifications.every((classification) => classification === "success"))
+    ) {
+      throw new TypeError("MATRIX_PARALLEL_ACCOUNTING_INVALID")
+    }
+    terminalById.set(terminal.shardId, terminal)
+  }
+  const canonicalTerminals = expectedPlan.shards.flatMap((shard) => {
+    const terminal = terminalById.get(shard.shardId)
+    if (terminal === undefined) return []
+    const outcomeById = new Map(
+      terminal.outcomes.map((outcome) => [outcome.attemptId, outcome]),
+    )
+    return [
+      {
+        ...terminal,
+        outcomes: shard.attemptIds.map((attemptId) => outcomeById.get(attemptId)!),
+      },
+    ]
+  })
+  const outcomes = canonicalTerminals.flatMap(({ outcomes }) => outcomes)
+  const successfulButUnacceptedCount = outcomes.filter(
+    ({ classification }) => classification === "success",
+  ).length
+  const cancelledAttemptCount = outcomes.filter(
+    ({ classification }) => classification === "cancelled",
+  ).length
+  const failedAttemptCount =
+    outcomes.length - successfulButUnacceptedCount - cancelledAttemptCount
+  const unlaunchedAttemptCount = expectedPlan.shards
+    .filter(({ shardId }) => unlaunchedShardIds.includes(shardId))
+    .reduce((count, { attemptIds: ids }) => count + ids.length, 0)
+  let cumulativeTerminalAttempts = 0
+  let cumulativeFailedAttempts = 0
+  let cumulativeCancelledAttempts = 0
+  const progressReceipts = canonicalTerminals.map((terminal, index) => {
+    cumulativeTerminalAttempts += terminal.outcomes.length
+    cumulativeFailedAttempts += terminal.outcomes.filter(
+      ({ classification }) =>
+        classification !== "success" && classification !== "cancelled",
+    ).length
+    cumulativeCancelledAttempts += terminal.outcomes.filter(
+      ({ classification }) => classification === "cancelled",
+    ).length
+    return {
+      schemaVersion: "v1.38-parallel-matrix-progress-v1",
+      sequence: index,
+      shardId: terminal.shardId,
+      attemptIds: terminal.outcomes.map(({ attemptId }) => attemptId),
+      classification: terminal.classification,
+      elapsedMilliseconds: terminal.elapsedMilliseconds,
+      maxRssKilobytes: terminal.maxRssKilobytes,
+      cumulativeLaunchedAttempts: outcomes.length,
+      cumulativeTerminalAttempts,
+      cumulativeFailedAttempts,
+      cumulativeCancelledAttempts,
+      unlaunchedAttemptCount,
+      acceptedCellsPublished: 0,
+      partialAcceptedEvidenceReusable: false,
+    }
+  })
+  const roots = {
+    allocationRoot: expectedPlan.planRoot,
+    launchRoot: sha256(canonical(canonicalTerminals.map(({ shardId }) => shardId))),
+    attemptRoot: sha256(canonical(outcomes)),
+    shardTerminalRoot: sha256(canonical(canonicalTerminals)),
+    progressRoot: sha256(canonical(progressReceipts)),
+    cleanupRoot: sha256(
+      canonical(
+        canonicalTerminals.map(({ shardId, cleanup }) => ({ shardId, cleanup })),
+      ),
+    ),
+  }
+  const withoutChargedRoot = {
+    schemaVersion: "v1.38-parallel-matrix-accounting-v1" as const,
+    declaredAttemptCount: 540 as const,
+    launchedAttemptCount: outcomes.length,
+    terminalAttemptCount: outcomes.length,
+    successfulButUnacceptedCount,
+    failedAttemptCount,
+    cancelledAttemptCount,
+    unlaunchedAttemptCount,
+    acceptedCellsPublished: 0 as const,
+    partialAcceptedEvidenceReusable: false as const,
+    priorChargedLineage: PRIOR_CHARGED_LINEAGE,
+    ...roots,
+    acceptedCellLedgerRoot: sha256(canonical([])),
+    progressReceipts,
+  }
+  return deepFreeze({
+    ...withoutChargedRoot,
+    chargedAttemptLedgerRoot: sha256(canonical(withoutChargedRoot)),
+  })
+}
+
 const RESOURCE_POLICY = deepFreeze({
   policyId: "v1.38-matrix-resource-policy-v1",
   calibrationAttemptCount: 1,

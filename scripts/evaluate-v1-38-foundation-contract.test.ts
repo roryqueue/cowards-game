@@ -775,6 +775,32 @@ describe("v1.38 matrix accounting", () => {
       },
       ...rows.slice(1),
     ]],
+    ["prior partial alias", (rows: any[]) => [
+      {
+        ...rows[0],
+        outcomes: [
+          {
+            ...rows[0].outcomes[0],
+            attemptId: `prior-partial:${rows[0].outcomes[0].attemptId}`,
+          },
+          ...rows[0].outcomes.slice(1),
+        ],
+      },
+      ...rows.slice(1),
+    ]],
+    ["retry alias", (rows: any[]) => [
+      {
+        ...rows[0],
+        outcomes: [
+          {
+            ...rows[0].outcomes[0],
+            attemptId: `retry:1:${rows[0].outcomes[0].attemptId}`,
+          },
+          ...rows[0].outcomes.slice(1),
+        ],
+      },
+      ...rows.slice(1),
+    ]],
   ])("matrix accounting rejects %s terminal identities", (_label, change) => {
     const { inventory, plan, terminals } = successTerminals()
     expect(() =>
@@ -782,6 +808,68 @@ describe("v1.38 matrix accounting", () => {
         inventory,
         plan,
         terminals: change(clone(terminals)),
+      }),
+    ).toThrow("MATRIX_PARALLEL_ACCOUNTING_INVALID")
+  })
+
+  it("matrix accounting charges every failure class and publishes no partial evidence", () => {
+    const { inventory, plan, terminals } = successTerminals()
+    const mutated = clone(terminals)
+    mutated[0] = {
+      ...mutated[0]!,
+      classification: "failed",
+      outcomes: [
+        {
+          attemptId: mutated[0]!.outcomes[0]!.attemptId,
+          classification: "player_violation",
+          code: "INVALID_OUTPUT",
+        },
+        {
+          attemptId: mutated[0]!.outcomes[1]!.attemptId,
+          classification: "system_failure",
+          code: "EXECUTION_EXCEPTION",
+          retryable: true,
+        },
+        {
+          attemptId: mutated[0]!.outcomes[2]!.attemptId,
+          classification: "timeout",
+          code: "RESOURCE_POLICY_SHARD_TIMEOUT",
+        },
+        {
+          attemptId: mutated[0]!.outcomes[3]!.attemptId,
+          classification: "cancelled",
+          code: "CANCELLED_AFTER_HARD_FAILURE",
+        },
+      ],
+    }
+    const accounting = reduceV138ParallelMatrixAccounting({
+      inventory,
+      plan,
+      terminals: mutated,
+    })
+
+    expect(accounting).toMatchObject({
+      successfulButUnacceptedCount: 536,
+      failedAttemptCount: 3,
+      cancelledAttemptCount: 1,
+      acceptedCellsPublished: 0,
+      partialAcceptedEvidenceReusable: false,
+    })
+    expect(accounting.acceptedCellLedgerRoot).toBe(
+      "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    )
+  })
+
+  it("matrix accounting rejects reordered or mutated allocation plans", () => {
+    const { inventory, plan, terminals } = successTerminals()
+    const mutatedPlan = clone(plan)
+    mutatedPlan.shards.reverse()
+
+    expect(() =>
+      reduceV138ParallelMatrixAccounting({
+        inventory,
+        plan: mutatedPlan,
+        terminals,
       }),
     ).toThrow("MATRIX_PARALLEL_ACCOUNTING_INVALID")
   })
