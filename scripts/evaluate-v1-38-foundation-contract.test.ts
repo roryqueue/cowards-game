@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 import { beforeAll, describe, expect, it } from "vitest"
@@ -8,6 +9,10 @@ import {
   resolveV138FoundationAdmissionInput,
   type V138FoundationAdmissionInput,
 } from "./lib/v1-38-foundation-admission.js"
+import {
+  enumerateV138CurrentMatrix,
+  type V138CurrentMatrixAttempt,
+} from "./lib/v1-38-current-matrix-reproduction.js"
 
 const repoRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -263,5 +268,125 @@ describe("v1.38 foundation admission", () => {
     expect(serialized).not.toMatch(
       /waiver|override|acceptAnyway|repairCallback|moveTag|admissionRoot|authoritativeRoot/iu,
     )
+  })
+})
+
+describe("v1.38 current matrix reproduction", () => {
+  let attempts: readonly V138CurrentMatrixAttempt[]
+
+  beforeAll(() => {
+    attempts = enumerateV138CurrentMatrix(repoRoot).attempts
+  })
+
+  it("matrix freezes the exact historical inventory without collapsing duplicate geometry", () => {
+    const inventory = enumerateV138CurrentMatrix(repoRoot)
+    const unorderedPairs = new Set(
+      attempts.map(({ leftDefinitionId, rightDefinitionId }) =>
+        `${leftDefinitionId}\0${rightDefinitionId}`,
+      ),
+    )
+
+    expect(inventory.schemaVersion).toBe(
+      "v1.38-current-matrix-inventory-v1",
+    )
+    expect(inventory.fixturePurpose).toBe("regression_throughput_only")
+    expect(inventory.definitions).toHaveLength(10)
+    expect(unorderedPairs).toHaveLength(45)
+    expect(inventory.arenas.map(({ historicalLabel }) => historicalLabel)).toEqual([
+      "Smoke",
+      "Standard Cross",
+      "Open Field",
+    ])
+    expect(inventory.arenas).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          historicalLabel: "Smoke",
+          duplicateGeometryGroup: "empty-v1",
+        }),
+        expect.objectContaining({
+          historicalLabel: "Open Field",
+          duplicateGeometryGroup: "empty-v1",
+        }),
+      ]),
+    )
+    expect(new Set(inventory.arenas.map(({ semanticGeometryHash }) => semanticGeometryHash)))
+      .toHaveLength(2)
+    expect(new Set(attempts.map(({ seedLabel }) => seedLabel))).toEqual(
+      new Set(["meta-even", "meta-odd"]),
+    )
+    expect(new Set(attempts.map(({ mirrored }) => mirrored))).toEqual(
+      new Set([false, true]),
+    )
+    expect(attempts).toHaveLength(540)
+    expect(new Set(attempts.map(({ attemptId }) => attemptId))).toHaveLength(
+      540,
+    )
+    expect(Object.isFrozen(inventory)).toBe(true)
+  })
+
+  it("matrix builds immutable Advanced requests with explicit entrant initiative and selected authority", () => {
+    for (const attempt of attempts) {
+      expect(attempt.fixturePurpose).toBe("regression_throughput_only")
+      expect(attempt.initialInitiativeEntrantId).toBe(
+        attempt.seedLabel === "meta-even"
+          ? attempt.bottomEntrantId
+          : attempt.topEntrantId,
+      )
+      expect(attempt.request).toMatchObject({
+        contractVersion: "runtime-execution-service-v1.18",
+        kind: "executeMatch",
+        semanticTuple: {
+          tupleId:
+            "sha256:37c9a07425d454c74859112debcc3ef362d43e80d5767560d9bde28a3c8d5e73",
+          components: {
+            engine: "engine-kernel-v1.37-candidate-1",
+            runtimeAbi: "strategy-runtime-abi-v1.19",
+          },
+        },
+        match: {
+          match: {
+            initialInitiativePlayerId: attempt.initialInitiativePlayerId,
+            candidateMatch: {
+              semanticAuthorityKey: "runtime-v1.19",
+              initialInitiativeEntrantKey:
+                attempt.initialInitiativeEntrantId,
+            },
+          },
+          strategies: {
+            bottom: {
+              metadata: {
+                tags: expect.arrayContaining([
+                  "regression_throughput_only",
+                ]),
+              },
+            },
+            top: {
+              metadata: {
+                tags: expect.arrayContaining([
+                  "regression_throughput_only",
+                ]),
+              },
+            },
+          },
+        },
+      })
+      expect(Object.isFrozen(attempt)).toBe(true)
+    }
+  })
+
+  it("matrix source contains no historical loader or alternate transition authority", () => {
+    const source = readFileSync(
+      path.resolve(
+        repoRoot,
+        "scripts/lib/v1-38-current-matrix-reproduction.ts",
+      ),
+      "utf8",
+    )
+
+    expect(source).toContain("executePreparedRuntimeServiceRequestV118")
+    expect(source).toContain("createPreparedRuntimeServiceDependenciesV118")
+    expect(source).not.toMatch(/\bnew\s+Function\b/u)
+    expect(source).not.toMatch(/node:vm|from\s+["'][^"']*engine[^"']*["']/u)
+    expect(source).not.toMatch(/\brunMatch\s*\(/u)
   })
 })
