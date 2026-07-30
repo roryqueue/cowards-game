@@ -1,7 +1,21 @@
 /* eslint-disable no-restricted-imports -- Offline regression admission must bind the selected runtime-service implementation without widening its production barrel. */
 import { Buffer } from "node:buffer"
-import { createHash, generateKeyPairSync, sign } from "node:crypto"
-import { existsSync, readFileSync, writeFileSync } from "node:fs"
+import {
+  createHash,
+  generateKeyPairSync,
+  randomBytes,
+  sign,
+} from "node:crypto"
+import {
+  closeSync,
+  existsSync,
+  fsyncSync,
+  linkSync,
+  openSync,
+  readFileSync,
+  unlinkSync,
+  writeFileSync,
+} from "node:fs"
 import { arch, cpus, freemem, platform, release, totalmem } from "node:os"
 import path from "node:path"
 import {
@@ -59,7 +73,6 @@ const HISTORICAL_MATRIX_README =
   ".planning/artifacts/v2.0-core-rules-audit/README.md"
 const HISTORICAL_EXPECTATION_ARTIFACT =
   ".planning/artifacts/v1.38-historical-matrix-expectation.json"
-const ADMISSION_RECEIPT = ".planning/artifacts/v1.38-foundation-admission.json"
 const MATRIX_SCHEMA_VERSION = "v1.38-current-matrix-inventory-v1" as const
 const FIXED_EVALUATION_INSTANT = "2026-07-28T00:00:00.000Z"
 const FIXED_AUTHORITY_GENERATION = "0"
@@ -6562,28 +6575,100 @@ export const checkV138ParallelCalibrationSuccessorReceipt = (
   }
 }
 
-const writeReceiptAtomically = (
+export interface V138ImmutableReceiptPublicationOptions {
+  readonly writeTemporaryFile?: (
+    fileDescriptor: number,
+    bytes: Uint8Array,
+  ) => void
+}
+
+const errorCode = (error: unknown): string | undefined =>
+  error !== null &&
+  typeof error === "object" &&
+  "code" in error &&
+  typeof error.code === "string"
+    ? error.code
+    : undefined
+
+const createExclusiveReceiptTemporaryFile = (
+  targetPath: string,
+): Readonly<{ fileDescriptor: number; temporaryPath: string }> => {
+  const directory = path.dirname(targetPath)
+  const basename = path.basename(targetPath)
+  for (let attempt = 0; attempt < 32; attempt += 1) {
+    const temporaryPath = path.join(
+      directory,
+      `.${basename}.${process.pid}.${randomBytes(16).toString("hex")}.tmp`,
+    )
+    try {
+      return {
+        fileDescriptor: openSync(temporaryPath, "wx", 0o600),
+        temporaryPath,
+      }
+    } catch (error) {
+      if (errorCode(error) !== "EEXIST") throw error
+    }
+  }
+  throw new TypeError("MATRIX_SUCCESSOR_TEMPORARY_FILE_UNAVAILABLE")
+}
+
+export const writeV138ImmutableReceipt = (
   targetPath: string,
   receipt: unknown,
+  options: V138ImmutableReceiptPublicationOptions = {},
 ): void => {
+  const resolvedTarget = path.resolve(targetPath)
+  const bytes = Buffer.from(`${canonical(receipt)}\n`, "utf8")
+  let fileDescriptor: number | undefined
+  let temporaryPath: string | undefined
+  let failure: unknown
   try {
-    writeFileSync(targetPath, `${canonical(receipt)}\n`, {
-      encoding: "utf8",
-      mode: 0o600,
-      flag: "wx",
-    })
-  } catch (error) {
-    if (
-      error !== null &&
-      typeof error === "object" &&
-      "code" in error &&
-      error.code === "EEXIST"
-    ) {
-      throw new TypeError("MATRIX_SUCCESSOR_TARGET_NOT_FRESH")
+    const temporary = createExclusiveReceiptTemporaryFile(resolvedTarget)
+    fileDescriptor = temporary.fileDescriptor
+    temporaryPath = temporary.temporaryPath
+    ;(options.writeTemporaryFile ?? ((descriptor, completeBytes) => {
+      writeFileSync(descriptor, completeBytes)
+    }))(fileDescriptor, bytes)
+    fsyncSync(fileDescriptor)
+    closeSync(fileDescriptor)
+    fileDescriptor = undefined
+
+    try {
+      linkSync(temporaryPath, resolvedTarget)
+    } catch (error) {
+      if (errorCode(error) === "EEXIST") {
+        throw new TypeError("MATRIX_SUCCESSOR_TARGET_NOT_FRESH")
+      }
+      throw error
     }
-    throw error
+
+    const directoryDescriptor = openSync(path.dirname(resolvedTarget), "r")
+    try {
+      fsyncSync(directoryDescriptor)
+    } finally {
+      closeSync(directoryDescriptor)
+    }
+  } catch (error) {
+    failure = error
   }
+  if (fileDescriptor !== undefined) {
+    try {
+      closeSync(fileDescriptor)
+    } catch (error) {
+      failure ??= error
+    }
+  }
+  if (temporaryPath !== undefined) {
+    try {
+      unlinkSync(temporaryPath)
+    } catch (error) {
+      if (errorCode(error) !== "ENOENT") failure ??= error
+    }
+  }
+  if (failure !== undefined) throw failure
 }
+
+const writeReceiptAtomically = writeV138ImmutableReceipt
 
 export const runV138ParallelMatrixCalibration = async (
   repoRoot: string,
