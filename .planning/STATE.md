@@ -5,16 +5,16 @@ milestone_name: Competitive Strategy Factory and Adversarial League — ACTIVE
 current_phase: 262
 current_phase_name: foundation-admission-measurement-custody-and-containment-con
 status: blocked
-stopped_at: Plan 262-10 stopped_process_failure; ADMIT-03 remains blocked
-last_updated: "2026-07-29T06:27:22.141Z"
+stopped_at: "Completed 262-11-PLAN.md with stopped calibration:v2; ADMIT-03 remains blocked"
+last_updated: "2026-07-30T00:03:23.644Z"
 last_activity: 2026-07-29
-last_activity_desc: Plan 262-10 calibration stopped on four shard-runner exceptions; zero cells accepted
+last_activity_desc: Plan 262-11 repaired sampler cleanup and stopped calibration:v2 at the unchanged host-headroom gate with zero accepted cells
 progress:
   total_phases: 9
   completed_phases: 0
-  total_plans: 10
-  completed_plans: 5
-  percent: 50
+  total_plans: 11
+  completed_plans: 6
+  percent: 55
 ---
 
 # State: Coward's Game
@@ -29,15 +29,15 @@ See: `.planning/PROJECT.md` (updated 2026-07-27)
 ## Current Position
 
 Phase: 262 (foundation-admission-measurement-custody-and-containment-con) — BLOCKED
-Plan: 5 of 10
-Status: ADMIT-03 stopped after the exact Plan 262-10 calibration; authoritative execution was not launched
-Last activity: 2026-07-29 — Plan 262-10 charged all eight calibration identities and published zero accepted cells
+Plan: 6 of 11
+Status: ADMIT-03 stopped after Plan 262-11 calibration:v2 measured 3.45% host headroom; reproduction:v3 was not launched
+Last activity: 2026-07-29 — Plan 262-11 charged all five diagnostic and eight calibration:v2 identities and published zero accepted cells
 
-Progress: [█████░░░░░] 50%
+Progress: [██████░░░░] 55%
 
 ## Performance Metrics
 
-**Current milestone:** 5 of 10 Phase 262 plans complete; ADMIT-03 remains blocked after Plan 262-10 stopped.
+**Current milestone:** 6 of 11 Phase 262 plans complete; ADMIT-03 remains blocked after Plan 262-11 stopped.
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
@@ -47,6 +47,7 @@ Progress: [█████░░░░░] 50%
 | Phase 262 P08 | 9min | 2 tasks | 3 files |
 | Phase 262 P09 | 26min | 2 tasks | 2 files |
 | Phase 262 P10 | 16min | 1 task | 4 files |
+| Phase 262 P11 | 15min | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -72,6 +73,9 @@ Decisions are logged in `.planning/PROJECT.md`. Current milestone decisions:
 - [Phase 262]: Treat the exact four-shard calibration's SHARD_RUNNER_EXCEPTION as a terminal process refusal: charge all eight identities, publish zero cells, and do not launch the 540-cell matrix.
 - [Phase 262]: Keep the frozen 90-minute gate unchanged; time projection admission cannot override failed classification or absent resource observations.
 - [Phase 262]: Preserve the Plan 262-02 stopped receipt from its producing Git commit while the working artifact advances to a newly rooted successor.
+- [Phase 262]: Record the user's literal authorized-unsandboxed-ps selection and limit escalation to exact read-only RSS sampling and process-group probing.
+- [Phase 262]: Stop calibration:v2 at 345 basis points host headroom under the unchanged 2,500-basis-point gate despite an admitted time projection.
+- [Phase 262]: Charge all diagnostic:v2 and calibration:v2 identities and prohibit reproduction:v3 after the stopped calibration.
 
 ### Pending Todos
 
@@ -85,6 +89,7 @@ None.
 - Holdout contamination or unproved cross-branch compute equality invalidates the comparison and blocks successful release closure.
 - ADMIT-03 stopped: the exact Plan 262-10 calibration produced four `SHARD_RUNNER_EXCEPTION` terminals, charged all eight calibration identities, recorded no successful resource samples, and accepted zero cells.
 - Plan 262-10 did not launch the 540-cell run; any future retry requires a newly authorized successor that retains every stopped root and charged attempt.
+- ADMIT-03 remains blocked: Plan 262-11 calibration:v2 stopped at 3.45% host headroom under the unchanged 25% gate; reproduction:v3 was not launched and zero cells were accepted.
 
 ## Deferred Items
 
@@ -97,7 +102,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-07-29T06:27:22.131Z
-Stopped at: Plan 262-10 stopped_process_failure; ADMIT-03 remains blocked
+Last session: 2026-07-30T00:03:23.463Z
+Stopped at: Completed 262-11-PLAN.md with stopped calibration:v2; ADMIT-03 remains blocked
 Resume file: None
-Next command: Decide whether to authorize a newly rooted calibration-successor plan; do not rerun Plan 262-10.
+Next command: Decide whether to authorize a new content-addressed successor after the Plan 262-11 host-headroom stop; do not rerun or mutate Plan 262-11.
