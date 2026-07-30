@@ -12,11 +12,16 @@ import {
 } from "./lib/v1-38-foundation-admission.js"
 import {
   V138ParallelCalibrationPolicySchema,
+  PLAN_262_12_EXECUTION_AUTHORIZATION_LITERAL,
+  buildV138AuthoritativeMatrixV4Receipt,
+  buildV138HostHeadroomPreflightV3Receipt,
+  buildV138ParallelCalibrationV3Receipt,
   buildV138AuthoritativeMatrixV3Receipt,
   buildV138ParallelCalibrationV2SuccessorReceipt,
   buildV138ParallelCalibrationSuccessorReceipt,
   calibrateV138ParallelMatrix,
   checkV138MatrixDiagnosticV2Receipt,
+  checkV138SuccessorV3V4Branch,
   checkV138ParallelCalibrationSuccessorReceipt,
   createV138SubprocessShardRunner,
   deriveV138ParallelCalibrationPolicy,
@@ -28,6 +33,7 @@ import {
   loadV138HistoricalMatrixExpectation,
   planV138MatrixShards,
   parseV138SamplerAuthorization,
+  parseV138Plan26212ExecutionAuthorization,
   projectV138ParallelMatrix,
   reduceV138ParallelMatrixAccounting,
   reduceV138CurrentMatrix,
@@ -1119,6 +1125,267 @@ describe("v1.38 matrix sampler authorization", () => {
       )
     }
   })
+})
+
+describe("v1.38 matrix retry authorization v3", () => {
+  it("matrix retry authorization v3 accepts only the exact unused single-use grant", () => {
+    const authorization = parseV138Plan26212ExecutionAuthorization(
+      PLAN_262_12_EXECUTION_AUTHORIZATION_LITERAL,
+    )
+    expect(authorization).toMatchObject({
+      planId: "262-12",
+      headroomPreflightCount: 1,
+      calibrationSetCount: 1,
+      calibrationAttemptCount: 8,
+      reproductionCount: 1,
+      reproductionCellCount: 540,
+      reproductionConditionalOnCalibrationAdmission: true,
+      singleUse: true,
+      expiresAtFirstTerminalOutcome: true,
+      consumed: false,
+      terminalOutcome: null,
+      samplerPolicyRoot:
+        "sha256:cf3104a41dc7e34ec698a2f187fa0f3785d402549af28fdb60d091b2600339d9",
+      executionAuthorizationRoot: expect.stringMatching(
+        /^sha256:[0-9a-f]{64}$/u,
+      ),
+    })
+    expect(authorization.executionAuthorizationRoot).not.toBe(
+      authorization.samplerPolicyRoot,
+    )
+    for (const invalid of [
+      "",
+      "authorized",
+      "default",
+      "previously authorized",
+      PLAN_262_12_EXECUTION_AUTHORIZATION_LITERAL.replace("one 540-cell", "two 540-cell"),
+      PLAN_262_12_EXECUTION_AUTHORIZATION_LITERAL.replace("Plan 262-12", "Plan 262-11"),
+      `${PLAN_262_12_EXECUTION_AUTHORIZATION_LITERAL} Retry if needed.`,
+    ]) {
+      expect(() =>
+        parseV138Plan26212ExecutionAuthorization(invalid),
+      ).toThrow("MATRIX_PLAN_262_12_EXECUTION_AUTHORIZATION_REQUIRED")
+    }
+    expect(() =>
+      parseV138Plan26212ExecutionAuthorization(
+        PLAN_262_12_EXECUTION_AUTHORIZATION_LITERAL,
+        { consumed: true, terminalOutcome: null },
+      ),
+    ).toThrow("MATRIX_PLAN_262_12_EXECUTION_AUTHORIZATION_CONSUMED")
+    expect(() =>
+      parseV138Plan26212ExecutionAuthorization(
+        PLAN_262_12_EXECUTION_AUTHORIZATION_LITERAL,
+        {
+          consumed: true,
+          terminalOutcome: "stopped_process_failure",
+        },
+      ),
+    ).toThrow("MATRIX_PLAN_262_12_EXECUTION_AUTHORIZATION_EXPIRED")
+  })
+})
+
+describe("v1.38 matrix headroom preflight v3", () => {
+  it.each([
+    [4_000, 1_000, 2_500, "preflight_admitted"],
+    [4_001, 1_000, 2_499, "preflight_refused"],
+  ] as const)(
+    "matrix headroom preflight v3 applies exact floor semantics",
+    (total, free, basisPoints, disposition) => {
+      const authorization = parseV138Plan26212ExecutionAuthorization(
+        PLAN_262_12_EXECUTION_AUTHORIZATION_LITERAL,
+      )
+      const receipt = buildV138HostHeadroomPreflightV3Receipt({
+        repoRoot,
+        executionAuthorization: authorization,
+        hostTotalMemoryKilobytes: total,
+        hostFreeMemoryKilobytes: free,
+      })
+      expect(receipt).toMatchObject({
+        schemaVersion: "v1.38-current-matrix-headroom-preflight-v3",
+        chargedIdentityId: "preflight:v3:0",
+        hostTotalMemoryKilobytes: total,
+        hostFreeMemoryKilobytes: free,
+        hostHeadroomBasisPoints: basisPoints,
+        requiredHostHeadroomBasisPoints: 2_500,
+        disposition,
+        samplerPolicyRoot: authorization.samplerPolicyRoot,
+        executionAuthorizationRoot:
+          authorization.executionAuthorizationRoot,
+        resourcePolicyRoot:
+          "sha256:ba5ea05c5067be4aaf996d3fe67cc7f8d13931b7a19301cc1429f185e72747a7",
+      })
+    },
+  )
+})
+
+describe("v1.38 matrix calibration v3 lineage", () => {
+  it("matrix calibration v3 lineage charges an admitted eight-attempt successor", async () => {
+    const inventory = enumerateV138CurrentMatrix(repoRoot)
+    const authorization = parseV138Plan26212ExecutionAuthorization(
+      PLAN_262_12_EXECUTION_AUTHORIZATION_LITERAL,
+    )
+    const preflight = buildV138HostHeadroomPreflightV3Receipt({
+      repoRoot,
+      executionAuthorization: authorization,
+      hostTotalMemoryKilobytes: 4_000,
+      hostFreeMemoryKilobytes: 1_000,
+    })
+    const calibration = await calibrateV138ParallelMatrix({
+      inventory,
+      runner: successfulInjectedRunner(),
+      hardwareIdentity: {
+        operatingSystem: "test-os",
+        architecture: "test-arch",
+        nodeVersion: "test-node",
+        cpuIdentity: "test-cpu",
+      },
+      executionIdentityVersion: "v3",
+    })
+    const receipt = buildV138ParallelCalibrationV3Receipt({
+      repoRoot,
+      preflight,
+      executionAuthorization: authorization,
+      calibration,
+    })
+    expect(receipt).toMatchObject({
+      schemaVersion: "v1.38-current-matrix-calibration-v3",
+      status: "calibration_admitted",
+      preflightV3ReceiptRoot: preflight.receiptRoot,
+      chargedCalibrationAttemptCount: 8,
+      acceptedCellCount: 0,
+      fullRunLaunched: false,
+      executionAuthorization: {
+        consumed: true,
+        expired: false,
+        terminalOutcome: null,
+      },
+    })
+    expect(receipt.declaredCalibrationIdentityIds).toHaveLength(8)
+    expect(
+      receipt.declaredCalibrationIdentityIds.every((id) =>
+        id.startsWith("calibration:v3:"),
+      ),
+    ).toBe(true)
+  })
+
+  it("matrix calibration v3 lineage refuses below threshold without children", () => {
+    const authorization = parseV138Plan26212ExecutionAuthorization(
+      PLAN_262_12_EXECUTION_AUTHORIZATION_LITERAL,
+    )
+    const preflight = buildV138HostHeadroomPreflightV3Receipt({
+      repoRoot,
+      executionAuthorization: authorization,
+      hostTotalMemoryKilobytes: 4_001,
+      hostFreeMemoryKilobytes: 1_000,
+    })
+    const receipt = buildV138ParallelCalibrationV3Receipt({
+      repoRoot,
+      preflight,
+      executionAuthorization: authorization,
+    })
+    expect(receipt).toMatchObject({
+      status: "stopped_process_failure",
+      reason: "RESOURCE_POLICY_HOST_HEADROOM",
+      calibration: null,
+      terminals: [],
+      acceptedCellCount: 0,
+      fullRunLaunched: false,
+      executionAuthorization: {
+        consumed: true,
+        expired: true,
+        terminalOutcome: "stopped_process_failure",
+      },
+    })
+    expect(receipt.chargedDispositions).toHaveLength(8)
+    expect(
+      receipt.chargedDispositions.every(
+        ({ disposition }) =>
+          disposition === "unfilled_resource_preflight_refusal",
+      ),
+    ).toBe(true)
+  })
+})
+
+describe("v1.38 matrix authoritative v4 branches", () => {
+  it("matrix authoritative v4 branches require admitted calibration and fresh v4 identities", async () => {
+    const inventory = enumerateV138CurrentMatrix(repoRoot)
+    const authorization = parseV138Plan26212ExecutionAuthorization(
+      PLAN_262_12_EXECUTION_AUTHORIZATION_LITERAL,
+    )
+    const preflight = buildV138HostHeadroomPreflightV3Receipt({
+      repoRoot,
+      executionAuthorization: authorization,
+      hostTotalMemoryKilobytes: 4_000,
+      hostFreeMemoryKilobytes: 1_000,
+    })
+    const calibration = await calibrateV138ParallelMatrix({
+      inventory,
+      runner: successfulInjectedRunner(),
+      hardwareIdentity: {
+        operatingSystem: "test-os",
+        architecture: "test-arch",
+        nodeVersion: "test-node",
+        cpuIdentity: "test-cpu",
+      },
+      executionIdentityVersion: "v3",
+    })
+    const calibrationV3 = buildV138ParallelCalibrationV3Receipt({
+      repoRoot,
+      preflight,
+      executionAuthorization: authorization,
+      calibration,
+    })
+    const failedRunner: V138ParallelShardRunner = {
+      async run(shard) {
+        return {
+          shardId: shard.shardId,
+          laneId: shard.laneId,
+          classification: "failed",
+          elapsedMilliseconds: 1,
+          maxRssKilobytes: 1,
+          cleanup: {
+            gracefulTerminationSent: false,
+            forceTerminationSent: false,
+            exitAwaited: true,
+            orphanProcessIds: [],
+          },
+          outcomes: shard.attempts.map(({ executionAttemptId }) => ({
+            attemptId: executionAttemptId,
+            classification: "system_failure" as const,
+            code: "INJECTED_FAILURE",
+            retryable: false,
+          })),
+        }
+      },
+    }
+    const execution = await executeV138ParallelMatrix({
+      inventory,
+      calibration,
+      runner: failedRunner,
+      executionIdentityVersion: "v4",
+    })
+    const v4 = buildV138AuthoritativeMatrixV4Receipt({
+      repoRoot,
+      calibrationV3,
+      execution,
+    })
+    expect(v4).toMatchObject({
+      schemaVersion: "v1.38-current-matrix-reproduction-v4",
+      status: "stopped_process_failure",
+      acceptedCellCount: 0,
+      fullRunLaunched: true,
+      calibrationV3ReceiptRoot: calibrationV3.receiptRoot,
+      executionAuthorizationExpired: true,
+    })
+    expect(
+      v4.execution.terminals.flatMap(({ outcomes }) => outcomes).every(
+        ({ attemptId }) => attemptId.startsWith("reproduction:v4:"),
+      ),
+    ).toBe(true)
+    expect(() =>
+      checkV138SuccessorV3V4Branch(repoRoot, calibrationV3, undefined),
+    ).toThrow("MATRIX_ADMITTED_CALIBRATION_V4_REQUIRED")
+  }, 30_000)
 })
 
 describe("v1.38 matrix successor lineage", () => {
