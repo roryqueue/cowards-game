@@ -5,6 +5,7 @@ import {
   closeSync,
   existsSync,
   fsyncSync,
+  mkdirSync,
   mkdtempSync,
   readFileSync,
   readdirSync,
@@ -29,8 +30,11 @@ import {
   parseMemoryPressureQ,
 } from "./lib/v1-38-darwin-headroom.js"
 import {
+  checkPlan26215ArtifactBranch,
+  checkSelectedRouteEdgeInventory,
   deriveSelectedRouteClosureAtCommit,
   inspectSourceCustody,
+  writePlan26215Terminal,
 } from "./lib/v1-38-successor-source-seal.js"
 import {
   V138_FOUNDATION_LIVE_SOURCE_PATHS,
@@ -48,6 +52,8 @@ import {
   buildV138ExecutionContextV4Receipt,
   buildV138HostHeadroomPreflightV4Receipt,
   buildV138HostHeadroomPreflightV3Receipt,
+  buildV138HostHeadroomPreflightV5Receipt,
+  buildV138ParallelCalibrationV5PreflightTerminal,
   buildV138ParallelCalibrationV4Receipt,
   buildV138ParallelCalibrationV3Receipt,
   buildV138AuthoritativeMatrixV3Receipt,
@@ -55,6 +61,7 @@ import {
   buildV138ParallelCalibrationSuccessorReceipt,
   calibrateV138ParallelMatrix,
   checkV138ExecutionContextV4Receipt,
+  checkV138Plan26216TerminalBranch,
   checkV138SuccessorV4V5Branch,
   checkV138MatrixDiagnosticV2Receipt,
   checkV138ParallelCalibrationSuccessorReceipt,
@@ -228,6 +235,42 @@ describe("v1.38 darwin headroom", () => {
       reason: "resource_measurement_unavailable",
     })
   })
+
+  it.each([
+    ["nonzero exit", { exitCode: 1 }],
+    ["signal", { signal: "SIGTERM" as const }],
+    ["stderr", { stderr: Buffer.from("warning\n") }],
+    ["timeout", { timedOut: true }],
+    ["oversize", { stdout: Buffer.alloc(4_097, 0x41) }],
+    [
+      "page relation",
+      {
+        stdout: Buffer.from(
+          "The system has 4096 (2 pages with a page size of 4096).\nSystem-wide memory free percentage: 25%\n",
+        ),
+      },
+    ],
+    [
+      "out-of-range percentage",
+      {
+        stdout: Buffer.from(
+          "The system has 4096 (1 pages with a page size of 4096).\nSystem-wide memory free percentage: 101%\n",
+        ),
+      },
+    ],
+  ])("darwin headroom rejects %s process contract", (_label, change) => {
+    expect(parseMemoryPressureQ({
+      stdout: stdout(25),
+      stderr: Buffer.alloc(0),
+      exitCode: 0,
+      signal: null,
+      timedOut: false,
+      ...change,
+    })).toEqual({
+      ok: false,
+      reason: "resource_measurement_unavailable",
+    })
+  })
 })
 
 describe("v1.38 selected route closure and source custody", () => {
@@ -242,7 +285,27 @@ describe("v1.38 selected route closure and source custody", () => {
     )
     expect(closure.paths).toEqual([...closure.paths].sort())
     expect(closure.closureRoot).toMatch(/^sha256:[0-9a-f]{64}$/u)
-  })
+    for (let index = 0; index < closure.edges.length; index += 1) {
+      const edge = closure.edges[index]!
+      for (const mutation of [
+        closure.edges.filter((_, candidate) => candidate !== index),
+        closure.edges.map((candidate, candidateIndex) =>
+          candidateIndex === index
+            ? { ...candidate, to: edge.from }
+            : candidate,
+        ),
+        closure.edges.map((candidate, candidateIndex) =>
+          candidateIndex === index
+            ? { ...candidate, to: "scripts/lib/unresolved.ts" }
+            : candidate,
+        ),
+      ]) {
+        expect(() =>
+          checkSelectedRouteEdgeInventory(closure, mutation),
+        ).toThrow("V138_SELECTED_ROUTE_EDGE_INVENTORY_MISMATCH")
+      }
+    }
+  }, 60_000)
 
   it("source custody uses the aggregate sourceBase..A four-path delta", () => {
     const custody = inspectSourceCustody({
@@ -259,6 +322,100 @@ describe("v1.38 selected route closure and source custody", () => {
       "scripts/lib/v1-38-darwin-headroom.ts",
       "scripts/lib/v1-38-successor-source-seal.ts",
     ])
+  })
+})
+
+describe("v1.38 plan 262-15 terminal artifact presence", () => {
+  const paths = {
+    authorization: ".planning/artifacts/v1.38-plan-262-15-authorization-v1.json",
+    seal: ".planning/artifacts/v1.38-successor-source-seal-v1.json",
+    terminal: ".planning/artifacts/v1.38-plan-262-15-terminal-v1.json",
+    review: ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-15-REVIEW.md",
+    reviewFix: ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-15-REVIEW-FIX.md",
+  } as const
+
+  it.each(["seal_refused", "seal_failed", "sealed"] as const)(
+    "plan 262-15 terminal enforces %s artifact presence",
+    (disposition) => {
+      const root = mkdtempSync(path.join(tmpdir(), "cowards-262-15-terminal-"))
+      try {
+        mkdirSync(path.dirname(path.resolve(root, paths.authorization)), { recursive: true })
+        mkdirSync(path.dirname(path.resolve(root, paths.review)), { recursive: true })
+        writeFileSync(path.resolve(root, paths.review), "reviewed\n")
+        if (disposition !== "seal_refused") {
+          writeFileSync(path.resolve(root, paths.authorization), "{}\n")
+        }
+        if (disposition === "sealed") {
+          writeFileSync(path.resolve(root, paths.seal), "{}\n")
+        } else {
+          writePlan26215Terminal(root, paths.terminal, disposition)
+        }
+        expect(checkPlan26215ArtifactBranch(root, paths)).toBe(disposition)
+        const forbidden =
+          disposition === "seal_refused"
+            ? paths.authorization
+            : disposition === "seal_failed"
+              ? paths.seal
+              : paths.terminal
+        writeFileSync(path.resolve(root, forbidden), "{}\n")
+        expect(() => checkPlan26215ArtifactBranch(root, paths)).toThrow()
+      } finally {
+        rmSync(root, { recursive: true, force: true })
+      }
+    },
+  )
+})
+
+describe("v1.38 plan 262-16 terminal artifact presence", () => {
+  it("plan 262-16 terminal validates the preflight-refused charged branch", () => {
+    const root = mkdtempSync(path.join(tmpdir(), "cowards-262-16-terminal-"))
+    const paths = {
+      authorization: ".planning/artifacts/v1.38-plan-262-15-authorization-v1.json",
+      seal: ".planning/artifacts/v1.38-successor-source-seal-v1.json",
+      context: ".planning/artifacts/v1.38-current-matrix-execution-context-v5.json",
+      preflight: ".planning/artifacts/v1.38-current-matrix-headroom-preflight-v5.json",
+      calibration: ".planning/artifacts/v1.38-current-matrix-calibration-v5.json",
+      reproduction: ".planning/artifacts/v1.38-current-matrix-reproduction-v6.json",
+      terminal: ".planning/artifacts/v1.38-plan-262-16-terminal-v1.json",
+    } as const
+    try {
+      mkdirSync(path.resolve(root, ".planning/artifacts"), { recursive: true })
+      const preflight = buildV138HostHeadroomPreflightV5Receipt(
+        parseMemoryPressureQ({
+          stdout: Buffer.from(
+            "The system has 4096 (1 pages with a page size of 4096).\nSystem-wide memory free percentage: 24%\n",
+          ),
+          stderr: Buffer.alloc(0),
+          exitCode: 0,
+          signal: null,
+          timedOut: false,
+        }),
+      )
+      const calibration = buildV138ParallelCalibrationV5PreflightTerminal(preflight)
+      const artifacts: ReadonlyArray<readonly [string, unknown]> = [
+        [paths.authorization, {}],
+        [paths.seal, {}],
+        [paths.context, { schemaVersion: "v1.38-current-matrix-execution-context-v5" }],
+        [paths.preflight, preflight],
+        [paths.calibration, calibration],
+        [paths.terminal, {
+          schemaVersion: "v1.38-plan-262-16-terminal-v1",
+          disposition: "preflight_refused",
+          authorityExpired: true,
+          noRetry: true,
+        }],
+      ]
+      for (const [repoPath, value] of artifacts) {
+        writeFileSync(path.resolve(root, repoPath), `${JSON.stringify(value)}\n`)
+      }
+      expect(checkV138Plan26216TerminalBranch(root, paths)).toBe("preflight_refused")
+      writeFileSync(path.resolve(root, paths.reproduction), "{}\n")
+      expect(() => checkV138Plan26216TerminalBranch(root, paths)).toThrow(
+        "MATRIX_PLAN_262_16_ARTIFACT_MUST_BE_ABSENT",
+      )
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
   })
 })
 

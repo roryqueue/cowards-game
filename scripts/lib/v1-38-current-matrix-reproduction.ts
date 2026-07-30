@@ -8,9 +8,11 @@ import {
 } from "node:crypto"
 import {
   closeSync,
+  constants,
   existsSync,
   fsyncSync,
   linkSync,
+  lstatSync,
   openSync,
   readFileSync,
   unlinkSync,
@@ -29,6 +31,13 @@ import {
   checkV138FoundationAdmissionReceipt,
   type V138FoundationAdmissionPassed,
 } from "./v1-38-foundation-admission.js"
+import {
+  V138_DARWIN_HEADROOM_METRIC_ID,
+  V138_DARWIN_HEADROOM_PARSER_ID,
+  V138_DARWIN_HEADROOM_PROVIDER_ID,
+  V138_DARWIN_HEADROOM_THRESHOLD_BASIS_POINTS,
+  type V138DarwinHeadroomResult,
+} from "./v1-38-darwin-headroom.js"
 import {
   createPreparedRuntimeServiceDependenciesV118,
   executePreparedRuntimeServiceRequestV118,
@@ -6885,6 +6894,251 @@ const runShardCli = (): void => {
   }
 }
 
+export const buildV138HostHeadroomPreflightV5Receipt = (
+  result: V138DarwinHeadroomResult,
+) => {
+  const body = {
+    schemaVersion: "v1.38-current-matrix-headroom-preflight-v5" as const,
+    status: result.ok ? "preflight_complete" as const : "preflight_unavailable" as const,
+    chargedIdentityId: "preflight:v5:0" as const,
+    metricId: V138_DARWIN_HEADROOM_METRIC_ID,
+    providerId: V138_DARWIN_HEADROOM_PROVIDER_ID,
+    parserId: V138_DARWIN_HEADROOM_PARSER_ID,
+    requiredHostHeadroomBasisPoints: V138_DARWIN_HEADROOM_THRESHOLD_BASIS_POINTS,
+    observation: result.ok
+      ? {
+          stdoutByteLength: result.observation.stdoutByteLength,
+          stdoutSha256: result.observation.stdoutSha256,
+          totalBytes: result.observation.totalBytes,
+          pageCount: result.observation.pageCount,
+          pageSizeBytes: result.observation.pageSizeBytes,
+          percentage: result.observation.percentage,
+          observedBasisPoints: result.observation.observedBasisPoints,
+        }
+      : null,
+    disposition: result.ok
+      ? result.observation.disposition
+      : "preflight_unavailable" as const,
+    acceptedCellCount: 0 as const,
+    noRetry: true as const,
+  }
+  return deepFreeze({ ...body, receiptRoot: sha256(canonical(body)) })
+}
+
+export const buildV138ParallelCalibrationV5PreflightTerminal = (
+  preflight: ReturnType<typeof buildV138HostHeadroomPreflightV5Receipt>,
+) => {
+  if (preflight.disposition === "preflight_admitted") {
+    throw new TypeError("MATRIX_CALIBRATION_V5_LIVE_EXECUTION_REQUIRED")
+  }
+  const body = {
+    schemaVersion: "v1.38-current-matrix-calibration-v5" as const,
+    status: "stopped_process_failure" as const,
+    chargedAttemptCount: 8 as const,
+    childLaunchCount: 0 as const,
+    acceptedCellCount: 0 as const,
+    noRetry: true as const,
+  }
+  return deepFreeze({ ...body, receiptRoot: sha256(canonical(body)) })
+}
+
+export type V138Plan26216TerminalDisposition =
+  | "tool_identity_failed"
+  | "protected_history_failed"
+  | "formation_absence_failed"
+  | "pattern_c_ownership_failed"
+  | "preflight_unavailable"
+  | "preflight_refused"
+  | "calibration_stopped"
+  | "reproduction_stopped"
+  | "reproduction_passed"
+
+const PLAN_262_16_PATHS = {
+  authorization: ".planning/artifacts/v1.38-plan-262-15-authorization-v1.json",
+  seal: ".planning/artifacts/v1.38-successor-source-seal-v1.json",
+  context: ".planning/artifacts/v1.38-current-matrix-execution-context-v5.json",
+  preflight: ".planning/artifacts/v1.38-current-matrix-headroom-preflight-v5.json",
+  calibration: ".planning/artifacts/v1.38-current-matrix-calibration-v5.json",
+  reproduction: ".planning/artifacts/v1.38-current-matrix-reproduction-v6.json",
+  terminal: ".planning/artifacts/v1.38-plan-262-16-terminal-v1.json",
+} as const
+
+type Plan26216Paths = Readonly<Record<keyof typeof PLAN_262_16_PATHS, string>>
+
+const plan26216Path = (
+  repoRoot: string,
+  supplied: string,
+  key: keyof typeof PLAN_262_16_PATHS,
+): string => {
+  const resolved = path.resolve(repoRoot, supplied)
+  if (resolved !== path.resolve(repoRoot, PLAN_262_16_PATHS[key])) {
+    throw new TypeError("MATRIX_PLAN_262_16_CANONICAL_PATH_REQUIRED")
+  }
+  return resolved
+}
+
+const plan26216Read = (
+  target: string,
+  required: boolean,
+): Record<string, unknown> | undefined => {
+  try {
+    const stat = lstatSync(target)
+    if (!stat.isFile() || stat.isSymbolicLink()) {
+      throw new TypeError("MATRIX_PLAN_262_16_ARTIFACT_TYPE_INVALID")
+    }
+    if (!required) throw new TypeError("MATRIX_PLAN_262_16_ARTIFACT_MUST_BE_ABSENT")
+    const descriptor = openSync(
+      target,
+      constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0),
+    )
+    try {
+      const parsed: unknown = JSON.parse(readFileSync(descriptor, "utf8"))
+      if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
+        throw new TypeError("MATRIX_PLAN_262_16_ARTIFACT_INVALID")
+      }
+      return parsed as Record<string, unknown>
+    } finally {
+      closeSync(descriptor)
+    }
+  } catch (error) {
+    if (
+      error instanceof TypeError ||
+      (error as NodeJS.ErrnoException).code !== "ENOENT"
+    ) throw error
+    if (required) throw new TypeError("MATRIX_PLAN_262_16_ARTIFACT_REQUIRED")
+    return undefined
+  }
+}
+
+const plan26216Needs = (disposition: V138Plan26216TerminalDisposition) => {
+  const beforeObservation = [
+    "tool_identity_failed",
+    "protected_history_failed",
+    "formation_absence_failed",
+    "pattern_c_ownership_failed",
+  ].includes(disposition)
+  return {
+    context: !beforeObservation,
+    preflight: !beforeObservation,
+    calibration: !beforeObservation,
+    reproduction:
+      disposition === "reproduction_stopped" ||
+      disposition === "reproduction_passed",
+  }
+}
+
+export const checkV138Plan26216TerminalBranch = (
+  repoRoot: string,
+  supplied: Plan26216Paths,
+): V138Plan26216TerminalDisposition => {
+  const resolved = Object.fromEntries(
+    (Object.keys(PLAN_262_16_PATHS) as Array<keyof typeof PLAN_262_16_PATHS>)
+      .map((key) => [key, plan26216Path(repoRoot, supplied[key], key)]),
+  ) as Record<keyof typeof PLAN_262_16_PATHS, string>
+  // Discriminator first: no evidence path is inspected before this read.
+  const terminal = plan26216Read(resolved.terminal, true)!
+  const disposition = terminal.disposition
+  const allowed = [
+    "tool_identity_failed",
+    "protected_history_failed",
+    "formation_absence_failed",
+    "pattern_c_ownership_failed",
+    "preflight_unavailable",
+    "preflight_refused",
+    "calibration_stopped",
+    "reproduction_stopped",
+    "reproduction_passed",
+  ]
+  if (
+    terminal.schemaVersion !== "v1.38-plan-262-16-terminal-v1" ||
+    typeof disposition !== "string" ||
+    !allowed.includes(disposition) ||
+    terminal.authorityExpired !== true ||
+    terminal.noRetry !== true
+  ) throw new TypeError("MATRIX_PLAN_262_16_TERMINAL_INVALID")
+  const typed = disposition as V138Plan26216TerminalDisposition
+  plan26216Read(resolved.authorization, true)
+  plan26216Read(resolved.seal, true)
+  const needs = plan26216Needs(typed)
+  plan26216Read(resolved.context, needs.context)
+  const preflight = plan26216Read(resolved.preflight, needs.preflight)
+  const calibration = plan26216Read(resolved.calibration, needs.calibration)
+  const reproduction = plan26216Read(resolved.reproduction, needs.reproduction)
+  if (
+    preflight !== undefined &&
+    (preflight.schemaVersion !== "v1.38-current-matrix-headroom-preflight-v5" ||
+      preflight.acceptedCellCount !== 0)
+  ) throw new TypeError("MATRIX_PLAN_262_16_PREFLIGHT_INVALID")
+  if (
+    calibration !== undefined &&
+    (calibration.schemaVersion !== "v1.38-current-matrix-calibration-v5" ||
+      calibration.chargedAttemptCount !== 8 ||
+      calibration.acceptedCellCount !== 0 ||
+      calibration.noRetry !== true)
+  ) throw new TypeError("MATRIX_PLAN_262_16_CALIBRATION_INVALID")
+  if (
+    (typed === "preflight_unavailable" || typed === "preflight_refused") &&
+    calibration?.childLaunchCount !== 0
+  ) throw new TypeError("MATRIX_PLAN_262_16_CHILD_COUNT_INVALID")
+  if (
+    reproduction !== undefined &&
+    (reproduction.schemaVersion !== "v1.38-current-matrix-reproduction-v6" ||
+      reproduction.chargedAttemptCount !== 540 ||
+      reproduction.partialAcceptedEvidenceReusable !== false ||
+      reproduction.noRetry !== true ||
+      reproduction.acceptedCellCount !==
+        (typed === "reproduction_passed" ? 540 : 0))
+  ) throw new TypeError("MATRIX_PLAN_262_16_REPRODUCTION_INVALID")
+  return typed
+}
+
+export const writeV138Plan26216Terminal = (
+  repoRoot: string,
+  supplied: Plan26216Paths,
+  disposition: V138Plan26216TerminalDisposition,
+) => {
+  if (![
+    "tool_identity_failed",
+    "protected_history_failed",
+    "formation_absence_failed",
+    "pattern_c_ownership_failed",
+    "preflight_unavailable",
+    "preflight_refused",
+    "calibration_stopped",
+    "reproduction_stopped",
+    "reproduction_passed",
+  ].includes(disposition)) {
+    throw new TypeError("MATRIX_PLAN_262_16_DISPOSITION_INVALID")
+  }
+  const needs = plan26216Needs(disposition)
+  const rootFor = (key: keyof typeof PLAN_262_16_PATHS, required: boolean) => {
+    const target = plan26216Path(repoRoot, supplied[key], key)
+    const value = plan26216Read(target, required)
+    return value === undefined ? null : sha256(readFileSync(target))
+  }
+  const body = {
+    schemaVersion: "v1.38-plan-262-16-terminal-v1" as const,
+    disposition,
+    authorityExpired: true as const,
+    noRetry: true as const,
+    artifactRoots: {
+      authorization: rootFor("authorization", true),
+      seal: rootFor("seal", true),
+      context: rootFor("context", needs.context),
+      preflight: rootFor("preflight", needs.preflight),
+      calibration: rootFor("calibration", needs.calibration),
+      reproduction: rootFor("reproduction", needs.reproduction),
+    },
+  }
+  const terminal = deepFreeze({ ...body, terminalRoot: sha256(canonical(body)) })
+  writeV138ImmutableReceipt(
+    plan26216Path(repoRoot, supplied.terminal, "terminal"),
+    terminal,
+  )
+  checkV138Plan26216TerminalBranch(repoRoot, supplied)
+  return terminal
+}
+
 const runReceiptCli = async (): Promise<void> => {
   if (process.argv[1] !== fileURLToPath(import.meta.url)) return
   const command = process.argv[2]
@@ -6892,6 +7146,45 @@ const runReceiptCli = async (): Promise<void> => {
     path.dirname(fileURLToPath(import.meta.url)),
     "../..",
   )
+  if (
+    command === "--write-plan-262-16-terminal-v1" ||
+    command === "--check-plan-262-16-terminal"
+  ) {
+    const write = command === "--write-plan-262-16-terminal-v1"
+    const flags = write
+      ? ["--disposition", "--authorization", "--seal", "--context", "--preflight", "--calibration", "--reproduction"]
+      : ["--authorization", "--seal", "--context", "--preflight", "--calibration", "--reproduction", "--terminal"]
+    if (process.argv.length !== (write ? 18 : 17)) {
+      throw new TypeError("MATRIX_PLAN_262_16_CLI_ARGUMENTS_INVALID")
+    }
+    const values = new Map<string, string>()
+    if (write) values.set("--terminal", process.argv[3]!)
+    const offset = write ? 4 : 3
+    for (const [index, flag] of flags.entries()) {
+      if (process.argv[offset + index * 2] !== flag) {
+        throw new TypeError("MATRIX_PLAN_262_16_CLI_ARGUMENTS_INVALID")
+      }
+      values.set(flag, process.argv[offset + index * 2 + 1]!)
+    }
+    const supplied = {
+      authorization: values.get("--authorization")!,
+      seal: values.get("--seal")!,
+      context: values.get("--context")!,
+      preflight: values.get("--preflight")!,
+      calibration: values.get("--calibration")!,
+      reproduction: values.get("--reproduction")!,
+      terminal: values.get("--terminal")!,
+    }
+    const disposition = write
+      ? writeV138Plan26216Terminal(
+          repoRoot,
+          supplied,
+          values.get("--disposition") as V138Plan26216TerminalDisposition,
+        ).disposition
+      : checkV138Plan26216TerminalBranch(repoRoot, supplied)
+    process.stdout.write(`${canonical({ disposition })}\n`)
+    return
+  }
   if (
     command === "--write-diagnostic-v2-receipt" ||
     command === "--check-diagnostic-v2-receipt"
