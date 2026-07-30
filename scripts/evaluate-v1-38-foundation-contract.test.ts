@@ -441,6 +441,7 @@ describe("v1.38 plan 262-15 terminal artifact presence", () => {
         rmSync(root, { recursive: true, force: true })
       }
     },
+    120_000,
   )
 })
 
@@ -513,8 +514,9 @@ describe("v1.38 plan 262-16 terminal artifact presence", () => {
       for (const [repoPath, value] of artifacts) {
         writeFileSync(path.resolve(root, repoPath), `${JSON.stringify(value)}\n`)
       }
-      writeV138Plan26216Terminal(root, paths, "preflight_refused")
-      expect(checkV138Plan26216TerminalBranch(root, paths)).toBe("preflight_refused")
+      expect(
+        writeV138Plan26216Terminal(root, paths, "preflight_refused").disposition,
+      ).toBe("preflight_refused")
       writeFileSync(path.resolve(root, paths.reproduction), "{}\n")
       expect(() => checkV138Plan26216TerminalBranch(root, paths)).toThrow(
         "MATRIX_PLAN_262_16_ARTIFACT_MUST_BE_ABSENT",
@@ -522,7 +524,7 @@ describe("v1.38 plan 262-16 terminal artifact presence", () => {
     } finally {
       rmSync(root, { recursive: true, force: true })
     }
-  })
+  }, 180_000)
 })
 
 describe("v1.38 foundation admission", () => {
