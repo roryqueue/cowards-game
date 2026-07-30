@@ -25,6 +25,7 @@ import path from "node:path"
 import { PassThrough } from "node:stream"
 import { fileURLToPath } from "node:url"
 import { beforeAll, describe, expect, it } from "vitest"
+import { encodeCanonicalJson, type JsonValue } from "@cowards/spec"
 import { runV137AuditReproductionGate } from "./check-v1-37-audit-reproduction.js"
 import {
   MEMORY_PRESSURE_Q_REQUEST,
@@ -39,6 +40,7 @@ import {
   checkSelectedRouteClosureAtCommit,
   checkSelectedRouteEdgeInventory,
   checkPlan26215ArtifactBranch,
+  checkV138SuccessorSealCommit,
   deriveFormationAbsence,
   deriveSelectedRouteClosureAtCommit,
   deriveV138StaticSourceEdgesFromSnapshot,
@@ -75,6 +77,7 @@ import {
   checkV138ExecutionContextV4Receipt,
   checkV138ExecutionContextV5Receipt,
   checkV138HostHeadroomPreflightV5Receipt,
+  checkV138HistoricalFoundationAdmission,
   checkV138ParallelCalibrationV5Receipt,
   checkV138AuthoritativeMatrixV6Receipt,
   checkV138Plan26216TerminalBranch,
@@ -114,6 +117,7 @@ import {
   type V138RssCommandAdapter,
   type V138ShardProcessFactory,
   type V138ProducingGitObjectContract,
+  type V138HistoricalAdmissionGitObjects,
   type V138V4V5BranchVerificationContract,
 } from "./lib/v1-38-current-matrix-reproduction.js"
 
@@ -142,6 +146,14 @@ status: clean
 `
 
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T
+
+const canonicalManifest = (value: unknown): string => {
+  const encoded = encodeCanonicalJson(value as JsonValue, {
+    context: "canonical-manifest",
+  })
+  if (!encoded.ok) throw new TypeError("test canonical manifest invalid")
+  return `${Buffer.from(encoded.bytes).toString("utf8")}\n`
+}
 
 const currentMatrixArtifactHashes = (): Readonly<Record<string, string>> =>
   Object.freeze(Object.fromEntries(
@@ -448,6 +460,8 @@ describe("v1.38 selected route closure and source custody", () => {
     const root = mkdtempSync(path.join(tmpdir(), "cowards-v138-closure-git-"))
     try {
       execFileSync("git", ["clone", "--shared", "--quiet", repoRoot, root])
+      execFileSync("git", ["config", "user.name", "v1.38 B test"], { cwd: root })
+      execFileSync("git", ["config", "user.email", "b@test.invalid"], { cwd: root })
       execFileSync("git", ["checkout", "--quiet", V138_REVIEWED_SOURCE_A_FIXTURE], {
         cwd: root,
       })
@@ -551,6 +565,74 @@ describe("v1.38 selected route closure and source custody", () => {
       ).toThrow("V138_SELECTED_ROUTE_LOCKFILE_INVALID")
 
       reset()
+      mkdirSync(path.resolve(root, "config"), { recursive: true })
+      mkdirSync(path.resolve(root, "configs/nested"), { recursive: true })
+      mkdirSync(path.resolve(root, "configs/packages/spec/src"), {
+        recursive: true,
+      })
+      writeFileSync(
+        path.resolve(root, "config/tsconfig.json"),
+        JSON.stringify({
+          compilerOptions: {
+            module: "NodeNext",
+            moduleResolution: "NodeNext",
+            baseUrl: "..",
+            paths: { "@cowards/spec": ["packages/spec/src/index.ts"] },
+          },
+        }),
+      )
+      writeFileSync(
+        path.resolve(root, "configs/nested/tsconfig.json"),
+        JSON.stringify({
+          extends: "../../config/tsconfig.json",
+          references: [{ path: "../../packages/spec" }],
+        }),
+      )
+      writeFileSync(
+        path.resolve(root, "configs/packages/spec/src/index.ts"),
+        "export const shadow = true\n",
+      )
+      writeFileSync(
+        path.resolve(root, "apps/runtime-service/tsconfig.json"),
+        readFileSync(path.resolve(root, "apps/runtime-service/tsconfig.json"), "utf8")
+          .replace("../../tsconfig.base.json", "../../configs/nested/tsconfig.json"),
+      )
+      const recursiveConfigCommit = commitMutation("test: recursive config provenance")
+      const recursiveClosure = deriveSelectedRouteClosureAtCommit(
+        root,
+        recursiveConfigCommit,
+      )
+      expect(
+        recursiveClosure.edges
+          .filter(({ specifier }) => specifier === "@cowards/spec")
+          .every(({ to }) => to === "packages/spec/src/index.ts"),
+      ).toBe(true)
+      expect(recursiveClosure.paths).not.toContain(
+        "configs/packages/spec/src/index.ts",
+      )
+
+      reset()
+      mkdirSync(path.resolve(root, "config"), { recursive: true })
+      mkdirSync(path.resolve(root, "configs/nested"), { recursive: true })
+      writeFileSync(
+        path.resolve(root, "config/tsconfig.json"),
+        JSON.stringify({ extends: "../configs/nested/tsconfig.json" }),
+      )
+      writeFileSync(
+        path.resolve(root, "configs/nested/tsconfig.json"),
+        JSON.stringify({ extends: "../../config/tsconfig.json" }),
+      )
+      writeFileSync(
+        path.resolve(root, "apps/runtime-service/tsconfig.json"),
+        readFileSync(path.resolve(root, "apps/runtime-service/tsconfig.json"), "utf8")
+          .replace("../../tsconfig.base.json", "../../configs/nested/tsconfig.json"),
+      )
+      const cycleCommit = commitMutation("test: recursive config cycle")
+      expect(() =>
+        deriveSelectedRouteClosureAtCommit(root, cycleCommit),
+      ).toThrow("V138_SELECTED_ROUTE_TSCONFIG_EXTENDS_CYCLE")
+
+      reset()
       const ambiguous = baseline.edges.find((edge) => {
         if (!edge.specifier.startsWith(".") || !edge.to.endsWith(".ts")) {
           return false
@@ -628,6 +710,165 @@ describe("v1.38 selected route closure and source custody", () => {
       rmSync(root, { recursive: true, force: true })
     }
   }, 180_000)
+
+  it("successor B is one exact two-artifact commit and matches checked working bytes", () => {
+    const root = mkdtempSync(path.join(tmpdir(), "cowards-v138-source-b-"))
+    const authorizationPath =
+      ".planning/artifacts/v1.38-plan-262-15-authorization-v1.json"
+    const sealPath =
+      ".planning/artifacts/v1.38-successor-source-seal-v1.json"
+    const terminalPath =
+      ".planning/artifacts/v1.38-plan-262-15-terminal-v1.json"
+    try {
+      execFileSync("git", ["clone", "--shared", "--quiet", repoRoot, root])
+      execFileSync("git", ["checkout", "--quiet", V138_REVIEWED_SOURCE_A_FIXTURE], {
+        cwd: root,
+      })
+      execFileSync("git", ["config", "user.name", "v1.38 source B test"], {
+        cwd: root,
+      })
+      execFileSync("git", ["config", "user.email", "source-b@test.invalid"], {
+        cwd: root,
+      })
+      const reviewPath =
+        ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-15-REVIEW.md"
+      mkdirSync(path.dirname(path.resolve(root, reviewPath)), { recursive: true })
+      writeFileSync(path.resolve(root, reviewPath), cleanPlan26215Review())
+      const sourceA = V138_REVIEWED_SOURCE_A_FIXTURE
+      const authorization = buildV138Plan26215Authorization(
+        root,
+        sourceA,
+        Buffer.from(v138Plan26215AuthorizationLiteral(sourceA), "utf8"),
+      )
+      const seal = buildV138SuccessorSourceSeal({
+        repoRoot: root,
+        sourceBase: "30c0949692017f425795213972482568cdd73f64",
+        sourceA,
+        authorization,
+        reviewRoots: [],
+        protectedEvidencePaths: [],
+        frozenPolicy: { schemaVersion: "v1.38-frozen-policy-v1" },
+        toolIdentity: { schemaVersion: "v1.38-tool-identity-v1" },
+        hostIdentity: { schemaVersion: "v1.38-host-identity-v1" },
+        formationAbsence: {
+          schemaVersion: "v1.38-formation-absence-v1",
+          absent: true,
+        },
+      })
+      const reset = (): void => {
+        execFileSync("git", ["reset", "--hard", sourceA], {
+          cwd: root,
+          stdio: "ignore",
+        })
+      }
+      const commitB = (
+        mutate?: (paths: { authorization: string; seal: string }) => void,
+        extraPaths: readonly string[] = [],
+      ): string => {
+        reset()
+        writeFileSync(path.resolve(root, authorizationPath), canonicalManifest(authorization))
+        writeFileSync(path.resolve(root, sealPath), canonicalManifest(seal))
+        mutate?.({ authorization: authorizationPath, seal: sealPath })
+        execFileSync("git", ["add", authorizationPath, sealPath, ...extraPaths], {
+          cwd: root,
+        })
+        execFileSync("git", ["commit", "--quiet", "-m", "test: source B"], {
+          cwd: root,
+        })
+        return execFileSync("git", ["rev-parse", "HEAD"], {
+          cwd: root,
+          encoding: "utf8",
+        }).trim()
+      }
+      const validB = commitB()
+      expect(checkV138SuccessorSealCommit({ repoRoot: root, sourceA, sourceB: validB })).toBe(true)
+      expect(() =>
+        checkV138SuccessorSealCommit({ repoRoot: root, sourceA, sourceB: "0".repeat(40) })
+      ).toThrow()
+
+      writeFileSync(path.resolve(root, sealPath), "{}\n")
+      expect(() =>
+        checkV138SuccessorSealCommit({ repoRoot: root, sourceA, sourceB: validB })
+      ).toThrow("V138_SUCCESSOR_SEAL_B_WORKTREE_DRIFT")
+
+      reset()
+      writeFileSync(path.resolve(root, authorizationPath), canonicalManifest(authorization))
+      execFileSync("git", ["add", authorizationPath], { cwd: root })
+      execFileSync("git", ["commit", "--quiet", "-m", "test: missing seal"], {
+        cwd: root,
+      })
+      const missingSealB = execFileSync("git", ["rev-parse", "HEAD"], {
+        cwd: root,
+        encoding: "utf8",
+      }).trim()
+      expect(() =>
+        checkV138SuccessorSealCommit({ repoRoot: root, sourceA, sourceB: missingSealB })
+      ).toThrow("V138_SUCCESSOR_SEAL_B_DELTA_INVALID")
+
+      execFileSync("git", ["checkout", "--quiet", `${sourceA}^`], { cwd: root })
+      writeFileSync(path.resolve(root, authorizationPath), canonicalManifest(authorization))
+      writeFileSync(path.resolve(root, sealPath), canonicalManifest(seal))
+      execFileSync("git", ["add", authorizationPath, sealPath], { cwd: root })
+      execFileSync("git", ["commit", "--quiet", "-m", "test: wrong parent B"], {
+        cwd: root,
+      })
+      const wrongParentB = execFileSync("git", ["rev-parse", "HEAD"], {
+        cwd: root,
+        encoding: "utf8",
+      }).trim()
+      expect(() =>
+        checkV138SuccessorSealCommit({ repoRoot: root, sourceA, sourceB: wrongParentB })
+      ).toThrow("V138_SUCCESSOR_SEAL_B_PARENT_INVALID")
+
+      reset()
+      writeFileSync(path.resolve(root, ".planning/artifacts/v1.38-merge-side.json"), "{}\n")
+      execFileSync("git", ["add", ".planning/artifacts/v1.38-merge-side.json"], {
+        cwd: root,
+      })
+      execFileSync("git", ["commit", "--quiet", "-m", "test: merge side"], {
+        cwd: root,
+      })
+      const sideCommit = execFileSync("git", ["rev-parse", "HEAD"], {
+        cwd: root,
+        encoding: "utf8",
+      }).trim()
+      execFileSync("git", ["checkout", "--quiet", validB], { cwd: root })
+      execFileSync("git", ["merge", "--quiet", "--no-ff", sideCommit, "-m", "test: merge B"], {
+        cwd: root,
+      })
+      const mergeB = execFileSync("git", ["rev-parse", "HEAD"], {
+        cwd: root,
+        encoding: "utf8",
+      }).trim()
+      expect(() =>
+        checkV138SuccessorSealCommit({ repoRoot: root, sourceA, sourceB: mergeB })
+      ).toThrow("V138_SUCCESSOR_SEAL_B_PARENT_INVALID")
+
+      const extraPath = ".planning/artifacts/v1.38-source-b-extra.json"
+      const extraB = commitB((_paths) => {
+        writeFileSync(path.resolve(root, extraPath), "{}\n")
+      }, [extraPath])
+      expect(() =>
+        checkV138SuccessorSealCommit({ repoRoot: root, sourceA, sourceB: extraB })
+      ).toThrow("V138_SUCCESSOR_SEAL_B_DELTA_INVALID")
+
+      const mutatedB = commitB(({ authorization: target }) => {
+        writeFileSync(path.resolve(root, target), "{}\n")
+      })
+      expect(() =>
+        checkV138SuccessorSealCommit({ repoRoot: root, sourceA, sourceB: mutatedB })
+      ).toThrow()
+
+      const terminalB = commitB((_paths) => {
+        writeFileSync(path.resolve(root, terminalPath), "{}\n")
+      }, [terminalPath])
+      expect(() =>
+        checkV138SuccessorSealCommit({ repoRoot: root, sourceA, sourceB: terminalB })
+      ).toThrow()
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  }, 300_000)
 })
 
 describe("v1.38 plan 262-15 terminal artifact presence", () => {
@@ -1062,9 +1303,21 @@ describe("v1.38 plan 262-16 terminal artifact presence", () => {
         },
       )
       const calibration = buildV138ParallelCalibrationV5PreflightTerminal(preflight)
-      const artifacts: ReadonlyArray<readonly [string, unknown]> = [
+      for (const [repoPath, value] of [
         [paths.authorization, authorization],
         [paths.seal, seal],
+      ] as const) {
+        writeFileSync(path.resolve(root, repoPath), canonicalManifest(value))
+      }
+      execFileSync("git", ["add", paths.authorization, paths.seal], { cwd: root })
+      execFileSync("git", ["commit", "--quiet", "-m", "chore: seal B"], {
+        cwd: root,
+      })
+      const sourceB = execFileSync("git", ["rev-parse", "HEAD"], {
+        cwd: root,
+        encoding: "utf8",
+      }).trim()
+      const artifacts: ReadonlyArray<readonly [string, unknown]> = [
         [paths.context, context],
         [paths.preflight, preflight],
         [paths.calibration, calibration],
@@ -1073,10 +1326,18 @@ describe("v1.38 plan 262-16 terminal artifact presence", () => {
         writeFileSync(path.resolve(root, repoPath), `${JSON.stringify(value)}\n`)
       }
       expect(
-        writeV138Plan26216Terminal(root, paths, "preflight_refused").disposition,
+        writeV138Plan26216Terminal(
+          root,
+          paths,
+          "preflight_refused",
+          sourceA,
+          sourceB,
+        ).disposition,
       ).toBe("preflight_refused")
       writeFileSync(path.resolve(root, paths.reproduction), "{}\n")
-      expect(() => checkV138Plan26216TerminalBranch(root, paths)).toThrow(
+      expect(() =>
+        checkV138Plan26216TerminalBranch(root, paths, sourceA, sourceB)
+      ).toThrow(
         "MATRIX_PLAN_262_16_ARTIFACT_MUST_BE_ABSENT",
       )
       unlinkSync(path.resolve(root, paths.reproduction))
@@ -1162,7 +1423,9 @@ describe("v1.38 plan 262-16 terminal artifact presence", () => {
           calibration: false,
           reproduction: false,
         })
-        expect(checkV138Plan26216TerminalBranch(root, paths)).toBe(disposition)
+        expect(
+          checkV138Plan26216TerminalBranch(root, paths, sourceA, sourceB),
+        ).toBe(disposition)
       }
 
       publish(paths.context, context)
@@ -1181,7 +1444,7 @@ describe("v1.38 plan 262-16 terminal artifact presence", () => {
         calibration: true,
         reproduction: false,
       })
-      expect(checkV138Plan26216TerminalBranch(root, paths)).toBe(
+      expect(checkV138Plan26216TerminalBranch(root, paths, sourceA, sourceB)).toBe(
         "preflight_unavailable",
       )
 
@@ -1222,7 +1485,7 @@ describe("v1.38 plan 262-16 terminal artifact presence", () => {
         calibration: true,
         reproduction: false,
       })
-      expect(checkV138Plan26216TerminalBranch(root, paths)).toBe(
+      expect(checkV138Plan26216TerminalBranch(root, paths, sourceA, sourceB)).toBe(
         "calibration_stopped",
       )
 
@@ -1232,33 +1495,43 @@ describe("v1.38 plan 262-16 terminal artifact presence", () => {
         unknown
       >
       publish(paths.terminal, { ...terminalValue, unexpected: true })
-      expect(() => checkV138Plan26216TerminalBranch(root, paths)).toThrow(
+      expect(() =>
+        checkV138Plan26216TerminalBranch(root, paths, sourceA, sourceB)
+      ).toThrow(
         "MATRIX_PLAN_262_16_TERMINAL_INVALID",
       )
       writeFileSync(path.resolve(root, paths.terminal), terminalBytes)
       expect(() =>
-        checkV138Plan26216TerminalBranch(root, {
-          ...paths,
-          terminal: "../outside-terminal.json",
-        }),
+        checkV138Plan26216TerminalBranch(
+          root,
+          { ...paths, terminal: "../outside-terminal.json" },
+          sourceA,
+          sourceB,
+        ),
       ).toThrow("MATRIX_PLAN_262_16_CANONICAL_PATH_REQUIRED")
       const reproductionPath = path.resolve(root, paths.calibration)
       const reproductionBytes = readFileSync(reproductionPath)
       unlinkSync(reproductionPath)
       symlinkSync(path.resolve(root, "outside-calibration"), reproductionPath)
-      expect(() => checkV138Plan26216TerminalBranch(root, paths)).toThrow(
+      expect(() =>
+        checkV138Plan26216TerminalBranch(root, paths, sourceA, sourceB)
+      ).toThrow(
         "MATRIX_PLAN_262_16_ARTIFACT_TYPE_INVALID",
       )
       unlinkSync(reproductionPath)
       mkdirSync(reproductionPath)
-      expect(() => checkV138Plan26216TerminalBranch(root, paths)).toThrow(
+      expect(() =>
+        checkV138Plan26216TerminalBranch(root, paths, sourceA, sourceB)
+      ).toThrow(
         "MATRIX_PLAN_262_16_ARTIFACT_TYPE_INVALID",
       )
       rmSync(reproductionPath, { recursive: true })
       writeFileSync(reproductionPath, reproductionBytes)
       const preflightPath = path.resolve(root, paths.preflight)
       chmodSync(preflightPath, 0o000)
-      expect(() => checkV138Plan26216TerminalBranch(root, paths)).toThrow()
+      expect(() =>
+        checkV138Plan26216TerminalBranch(root, paths, sourceA, sourceB)
+      ).toThrow()
       chmodSync(preflightPath, 0o600)
     } finally {
       rmSync(root, { recursive: true, force: true })
@@ -1594,6 +1867,34 @@ describe("v1.38 current matrix reproduction", () => {
 
   beforeAll(() => {
     attempts = enumerateV138CurrentMatrix(repoRoot).attempts
+  })
+
+  it("uses the immutable historical admission Git object while current A advances", () => {
+    const admission = checkV138HistoricalFoundationAdmission(repoRoot)
+    expect(admission.admissionRoot).toBe(
+      "sha256:eb881964ed2cf8b8cf2d24c35a2d8eb6a744917f2659bef8fd41b6f3c7ab491c",
+    )
+    expect(enumerateV138CurrentMatrix(repoRoot).attempts).toHaveLength(540)
+    for (const kind of ["blob", "content"] as const) {
+      const corrupt: V138HistoricalAdmissionGitObjects = {
+        resolveCommitPath(input) {
+          const resolved = producingGitObjects().resolveCommitPath(input)
+          return {
+            blob:
+              kind === "blob"
+                ? "0000000000000000000000000000000000000000"
+                : resolved.blob,
+            content:
+              kind === "content"
+                ? Buffer.from("mutated historical admission", "utf8")
+                : resolved.content,
+          }
+        },
+      }
+      expect(() =>
+        checkV138HistoricalFoundationAdmission(repoRoot, corrupt),
+      ).toThrow("MATRIX_HISTORICAL_ADMISSION_INVALID")
+    }
   })
 
   it("matrix admission rechecks protected inputs after a prior pass", () => {
@@ -2791,6 +3092,49 @@ describe("v1.38 shared Darwin scheduler observation", () => {
     )
     expect(Object.isFrozen(ticks[0])).toBe(true)
     void legacySamplerCalls
+  })
+
+  it("runs direct A inventory through injected v5 calibration and v6 execution without live observation", async () => {
+    const inventory = enumerateV138CurrentMatrix(repoRoot)
+    const observe = async () =>
+      parseMemoryPressureQ({
+        stdout: Buffer.from(
+          "The system has 4096 (1 pages with a page size of 4096).\nSystem-wide memory free percentage: 25%\n",
+        ),
+        stderr: Buffer.alloc(0),
+        exitCode: 0,
+        signal: null,
+        timedOut: false,
+      })
+    const calibration = await calibrateV138ParallelMatrix({
+      inventory,
+      policy: deriveV138ParallelCalibrationPolicy(inventory),
+      runner: successfulInjectedRunner(),
+      hardwareIdentity: {
+        operatingSystem: "test-darwin",
+        architecture: "test-arch",
+        nodeVersion: "test-node",
+        cpuIdentity: "test-cpu",
+      },
+      executionIdentityVersion: "v5",
+      sharedHeadroomObserver: observe,
+    })
+    expect(calibration.status).toBe("admitted")
+    const execution = await executeV138ParallelMatrix({
+      inventory,
+      calibration,
+      runner: successfulInjectedRunner(),
+      executionIdentityVersion: "v5",
+      sharedHeadroomObserver: observe,
+    })
+    expect(execution).toMatchObject({
+      status: "complete_pending_publication",
+      accounting: {
+        terminalAttemptCount: 540,
+        successfulButUnacceptedCount: 540,
+        acceptedCellsPublished: 0,
+      },
+    })
   })
 })
 
