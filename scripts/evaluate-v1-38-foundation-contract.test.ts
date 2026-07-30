@@ -106,11 +106,13 @@ import {
   v138SuccessorRoot,
   writeV138AuthoritativeMatrixV5Receipt,
   writeV138ExecutionContextV4Receipt,
+  writeV138AuthoritativeMatrixV6Receipt,
   writeV138HostHeadroomPreflightV5Receipt,
   writeV138HostHeadroomPreflightV4Receipt,
   writeV138ImmutableReceipt,
   writeV138MatrixDiagnosticV2Receipt,
   writeV138ParallelCalibrationV4Receipt,
+  writeV138ParallelCalibrationV5Receipt,
   writeV138Plan26216Terminal,
   type V138CurrentMatrixAttempt,
   type V138CurrentMatrixAttemptOutcome,
@@ -1192,6 +1194,11 @@ describe("v1.38 plan 262-16 hostile receipt validation", () => {
       (draft: Record<string, unknown>) => {
         draft.disposition = "invented_status"
       },
+      (draft: Record<string, unknown>) => {
+        ;(draft.observation as Record<string, unknown>).totalBytes = 0
+        draft.status = "preflight_unavailable"
+        draft.disposition = "preflight_unavailable"
+      },
     ]) {
       const forged = clone(valid) as unknown as Record<string, unknown>
       mutateReceipt(forged)
@@ -1446,6 +1453,25 @@ describe("v1.38 plan 262-16 terminal artifact presence", () => {
         signal: null,
         timedOut: false,
       })
+      writeFileSync(path.resolve(root, paths.preflight), "{}\n")
+      let occupiedPreflightObservationCount = 0
+      await expect(
+        writeV138HostHeadroomPreflightV5Receipt(
+          root,
+          paths.preflight,
+          paths.context,
+          paths.authorization,
+          paths.seal,
+          sourceA,
+          sourceB,
+          async () => {
+            occupiedPreflightObservationCount += 1
+            return injectedResult
+          },
+        ),
+      ).rejects.toThrow("MATRIX_SUCCESSOR_TARGET_NOT_FRESH")
+      expect(occupiedPreflightObservationCount).toBe(0)
+      unlinkSync(path.resolve(root, paths.preflight))
       const preflight = await writeV138HostHeadroomPreflightV5Receipt(
         root,
         paths.preflight,
@@ -1482,6 +1508,42 @@ describe("v1.38 plan 262-16 terminal artifact presence", () => {
         ),
       ).rejects.toThrow()
       expect(invalidBObservationCount).toBe(0)
+      writeFileSync(path.resolve(root, paths.calibration), "{}\n")
+      let occupiedCalibrationRunCount = 0
+      await expect(
+        writeV138ParallelCalibrationV5Receipt(
+          root,
+          paths.calibration,
+          paths.preflight,
+          paths.context,
+          sourceA,
+          sourceB,
+          async () => {
+            occupiedCalibrationRunCount += 1
+            throw new TypeError("INJECTED_CALIBRATION_MUST_NOT_RUN")
+          },
+        ),
+      ).rejects.toThrow("MATRIX_SUCCESSOR_TARGET_NOT_FRESH")
+      expect(occupiedCalibrationRunCount).toBe(0)
+      unlinkSync(path.resolve(root, paths.calibration))
+      writeFileSync(path.resolve(root, paths.reproduction), "{}\n")
+      let occupiedReproductionRunCount = 0
+      await expect(
+        writeV138AuthoritativeMatrixV6Receipt(
+          root,
+          paths.reproduction,
+          paths.calibration,
+          paths.context,
+          sourceA,
+          sourceB,
+          async () => {
+            occupiedReproductionRunCount += 1
+            throw new TypeError("INJECTED_REPRODUCTION_MUST_NOT_RUN")
+          },
+        ),
+      ).rejects.toThrow("MATRIX_SUCCESSOR_TARGET_NOT_FRESH")
+      expect(occupiedReproductionRunCount).toBe(0)
+      unlinkSync(path.resolve(root, paths.reproduction))
       const calibration = buildV138ParallelCalibrationV5PreflightTerminal(preflight)
       const artifacts: ReadonlyArray<readonly [string, unknown]> = [
         [paths.calibration, calibration],
@@ -1498,6 +1560,31 @@ describe("v1.38 plan 262-16 terminal artifact presence", () => {
           sourceB,
         ).disposition,
       ).toBe("preflight_refused")
+      const inspectionOrder: string[] = []
+      expect(
+        checkV138Plan26216TerminalBranch(
+          root,
+          paths,
+          sourceA,
+          sourceB,
+          {
+            onInspection: (event) => {
+              inspectionOrder.push(
+                event.kind === "sourceB"
+                  ? "sourceB"
+                  : path.basename(event.target),
+              )
+            },
+          },
+        ),
+      ).toBe("preflight_refused")
+      expect(inspectionOrder.slice(0, 2)).toEqual([
+        path.basename(paths.terminal),
+        "sourceB",
+      ])
+      expect(inspectionOrder.indexOf(path.basename(paths.authorization))).toBeGreaterThan(
+        inspectionOrder.indexOf("sourceB"),
+      )
       writeFileSync(path.resolve(root, paths.reproduction), "{}\n")
       expect(() =>
         checkV138Plan26216TerminalBranch(root, paths, sourceA, sourceB)
@@ -1567,6 +1654,74 @@ describe("v1.38 plan 262-16 terminal artifact presence", () => {
           ),
         })
       }
+
+      for (const identityField of [
+        "selectedRouteClosureRoot",
+        "frozenPolicyRoot",
+        "toolIdentityRoot",
+        "hostIdentityRoot",
+      ] as const) {
+        const forgedContext = clone(context) as unknown as Record<
+          string,
+          unknown
+        >
+        forgedContext[identityField] =
+          `sha256:${createHash("sha256").update(`forged:${identityField}`).digest("hex")}`
+        const { receiptRoot: _contextRoot, ...contextBody } = forgedContext
+        forgedContext.receiptRoot = v138SuccessorRoot(
+          "evidenceBundle",
+          String(forgedContext.schemaVersion),
+          contextBody,
+        )
+        const forgedPreflight = clone(preflight) as unknown as Record<
+          string,
+          unknown
+        >
+        forgedPreflight.executionContextRoot = forgedContext.receiptRoot
+        const { receiptRoot: _preflightRoot, ...preflightBody } =
+          forgedPreflight
+        forgedPreflight.receiptRoot = v138SuccessorRoot(
+          "canonicalJsonProfile",
+          String(forgedPreflight.schemaVersion),
+          preflightBody,
+        )
+        const forgedCalibration = clone(calibration) as unknown as Record<
+          string,
+          unknown
+        >
+        forgedCalibration.executionContextRoot = forgedContext.receiptRoot
+        forgedCalibration.preflightRoot = forgedPreflight.receiptRoot
+        const { receiptRoot: _calibrationRoot, ...calibrationBody } =
+          forgedCalibration
+        forgedCalibration.receiptRoot = v138SuccessorRoot(
+          "budgetProfile",
+          String(forgedCalibration.schemaVersion),
+          calibrationBody,
+        )
+        publish(paths.context, forgedContext)
+        publish(paths.preflight, forgedPreflight)
+        publish(paths.calibration, forgedCalibration)
+        removeIfPresent(paths.terminal)
+        publishTerminal("preflight_refused", {
+          context: true,
+          preflight: true,
+          calibration: true,
+          reproduction: false,
+        })
+        expect(() =>
+          checkV138Plan26216TerminalBranch(root, paths, sourceA, sourceB),
+        ).toThrow("MATRIX_PLAN_262_16_CONTEXT_JOIN_INVALID")
+      }
+      publish(paths.context, context)
+      publish(paths.preflight, preflight)
+      publish(paths.calibration, calibration)
+      removeIfPresent(paths.terminal)
+      publishTerminal("preflight_refused", {
+        context: true,
+        preflight: true,
+        calibration: true,
+        reproduction: false,
+      })
 
       // Every before-observation disposition has the same exact absence row
       // but a distinct terminal reason that the production checker must accept.
