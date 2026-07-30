@@ -7467,13 +7467,19 @@ export const buildV138ParallelCalibrationV5Receipt = (input: {
   const admitted =
     accepted === 8 &&
     input.attempts.every((attempt) => attempt.outcome === "accepted")
+  const chargedAttempts = input.attempts.map((attempt) =>
+    Object.freeze({
+      ...attempt,
+      accepted: admitted && attempt.accepted,
+    }),
+  )
   const body = {
     schemaVersion: "v1.38-current-matrix-calibration-v5" as const,
     executionContextRoot: preflight.executionContextRoot,
     preflightRoot: preflight.receiptRoot,
     status: admitted ? "admitted" as const : "stopped_process_failure" as const,
     chargedAttemptCount: 8 as const,
-    chargedAttempts: Object.freeze([...input.attempts]),
+    chargedAttempts: Object.freeze(chargedAttempts),
     shardCount: 4 as const,
     samplerMode: "one_shared_observation_per_tick" as const,
     sharedObservationTicks: Object.freeze([...input.sharedObservationTicks]),

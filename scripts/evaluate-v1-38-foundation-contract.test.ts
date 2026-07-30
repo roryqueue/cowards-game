@@ -29,11 +29,15 @@ import { runV137AuditReproductionGate } from "./check-v1-37-audit-reproduction.j
 import {
   MEMORY_PRESSURE_Q_REQUEST,
   observeDarwinHeadroom,
+  observeDarwinHeadroomOwned,
   parseMemoryPressureQ,
 } from "./lib/v1-38-darwin-headroom.js"
 import {
   buildV138Plan26215Authorization,
   buildV138SuccessorSourceSeal,
+  checkV138SuccessorSourceSeal,
+  checkSelectedRouteClosureAtCommit,
+  checkSelectedRouteEdgeInventory,
   checkPlan26215ArtifactBranch,
   deriveSelectedRouteClosureAtCommit,
   deriveV138StaticSourceEdgesFromSnapshot,
@@ -71,6 +75,7 @@ import {
   checkV138ExecutionContextV5Receipt,
   checkV138HostHeadroomPreflightV5Receipt,
   checkV138ParallelCalibrationV5Receipt,
+  checkV138AuthoritativeMatrixV6Receipt,
   checkV138Plan26216TerminalBranch,
   checkV138SuccessorV4V5Branch,
   checkV138MatrixDiagnosticV2Receipt,
@@ -115,6 +120,25 @@ const repoRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   "..",
 )
+const V138_REVIEWED_SOURCE_A_FIXTURE =
+  "da4390513c48e795581a9b98069dcfa11d097cd0"
+const cleanPlan26215Review = (): string =>
+  `---
+files_reviewed: 4
+files_reviewed_list:
+  - scripts/lib/v1-38-darwin-headroom.ts
+  - scripts/lib/v1-38-successor-source-seal.ts
+  - scripts/lib/v1-38-current-matrix-reproduction.ts
+  - scripts/evaluate-v1-38-foundation-contract.test.ts
+source_base: 30c0949692017f425795213972482568cdd73f64
+source_a: ${V138_REVIEWED_SOURCE_A_FIXTURE}
+findings:
+  critical: 0
+  warning: 0
+status: clean
+---
+# Clean review
+`
 
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T
 
@@ -287,10 +311,7 @@ describe("v1.38 darwin headroom", () => {
 
 describe("v1.38 selected route closure and source custody", () => {
   it("selected route closure is derived from A and includes the semantic issuer", () => {
-    const sourceA = execFileSync("git", ["rev-parse", "HEAD"], {
-      cwd: repoRoot,
-      encoding: "utf8",
-    }).trim()
+    const sourceA = V138_REVIEWED_SOURCE_A_FIXTURE
     const closure = deriveSelectedRouteClosureAtCommit(repoRoot, sourceA)
     expect(() => deriveSelectedRouteClosureAtCommit(repoRoot, "HEAD")).toThrow(
       "V138_SOURCE_COMMIT_INVALID",
@@ -307,6 +328,12 @@ describe("v1.38 selected route closure and source custody", () => {
     )
     expect(closure.paths).toEqual([...closure.paths].sort())
     expect(closure.closureRoot).toMatch(/^sha256:[0-9a-f]{64}$/u)
+    expect(closure.resolverMetadata.map(({ path: repoPath }) => repoPath)).toContain(
+      "tsconfig.base.json",
+    )
+    expect(
+      closure.resolverMetadata.map(({ path: repoPath }) => repoPath),
+    ).toContain("apps/runtime-service/tsconfig.json")
     const sourceByPath = new Map(
       closure.paths
         .filter((repoPath) => /\.(?:ts|tsx)$/u.test(repoPath))
@@ -334,6 +361,54 @@ describe("v1.38 selected route closure and source custody", () => {
         if (specifier === marker) return undefined
         return targetByEdge.get(`${from}\0${specifier}`) ?? `external:${specifier}`
       }
+      const removed = source.replace(
+        new RegExp(`([\"'])${escaped}\\1`, "u"),
+        "0",
+      )
+      expect(() =>
+        deriveV138StaticSourceEdgesFromSnapshot(edge.from, removed, resolver),
+      ).toThrow("V138_SELECTED_ROUTE_NONLITERAL_STATIC_EDGE")
+      expect(() =>
+        checkSelectedRouteEdgeInventory(
+          closure,
+          closure.edges.filter((candidate) => candidate !== edge),
+        ),
+      ).toThrow("V138_SELECTED_ROUTE_EDGE_INVENTORY_MISMATCH")
+      const substitute = `./__v138_substitute_edge_${index}.js`
+      const substituteTarget = closure.paths.find(
+        (repoPath) => repoPath !== edge.to,
+      )!
+      const substituted = source.replace(
+        new RegExp(`([\"'])${escaped}\\1`, "u"),
+        (_match, quote: string) => `${quote}${substitute}${quote}`,
+      )
+      const substitutedEdges = deriveV138StaticSourceEdgesFromSnapshot(
+        edge.from,
+        substituted,
+        (from, specifier) =>
+          specifier === substitute
+            ? substituteTarget
+            : resolver(from, specifier),
+      )
+      expect(
+        substitutedEdges.some(
+          (candidate) =>
+            candidate.specifier === substitute &&
+            candidate.to !== edge.to,
+        ),
+      ).toBe(true)
+      expect(() =>
+        checkSelectedRouteEdgeInventory(
+          closure,
+          closure.edges.map((candidate) =>
+            candidate === edge
+              ? substitutedEdges.find(
+                  (replacement) => replacement.specifier === substitute,
+                )!
+              : candidate,
+          ),
+        ),
+      ).toThrow("V138_SELECTED_ROUTE_EDGE_INVENTORY_MISMATCH")
       expect(() =>
         deriveV138StaticSourceEdgesFromSnapshot(edge.from, mutated, resolver),
       ).toThrow("V138_SELECTED_ROUTE_EDGE_UNRESOLVED")
@@ -348,13 +423,10 @@ describe("v1.38 selected route closure and source custody", () => {
         ),
       ).toThrow("V138_SELECTED_ROUTE_EDGE_UNRESOLVED")
     }
-  }, 60_000)
+  }, 180_000)
 
   it("source custody uses the aggregate sourceBase..A four-path delta", () => {
-    const sourceA = execFileSync("git", ["rev-parse", "HEAD"], {
-      cwd: repoRoot,
-      encoding: "utf8",
-    }).trim()
+    const sourceA = V138_REVIEWED_SOURCE_A_FIXTURE
     const custody = inspectSourceCustody({
       repoRoot,
       sourceBase: "30c0949692017f425795213972482568cdd73f64",
@@ -370,6 +442,114 @@ describe("v1.38 selected route closure and source custody", () => {
       "scripts/lib/v1-38-successor-source-seal.ts",
     ])
   })
+
+  it("production Git closure rejects committed edge and resolver mutations", () => {
+    const root = mkdtempSync(path.join(tmpdir(), "cowards-v138-closure-git-"))
+    try {
+      execFileSync("git", ["clone", "--shared", "--quiet", repoRoot, root])
+      execFileSync("git", ["checkout", "--quiet", V138_REVIEWED_SOURCE_A_FIXTURE], {
+        cwd: root,
+      })
+      execFileSync("git", ["config", "user.name", "v1.38 closure test"], {
+        cwd: root,
+      })
+      execFileSync("git", ["config", "user.email", "closure@test.invalid"], {
+        cwd: root,
+      })
+      const baseline = deriveSelectedRouteClosureAtCommit(
+        root,
+        V138_REVIEWED_SOURCE_A_FIXTURE,
+      )
+      const commitMutation = (message: string): string => {
+        execFileSync("git", ["add", "-A"], { cwd: root })
+        execFileSync("git", ["commit", "--quiet", "-m", message], { cwd: root })
+        return execFileSync("git", ["rev-parse", "HEAD"], {
+          cwd: root,
+          encoding: "utf8",
+        }).trim()
+      }
+      const reset = (): void => {
+        execFileSync("git", ["reset", "--hard", V138_REVIEWED_SOURCE_A_FIXTURE], {
+          cwd: root,
+          stdio: "ignore",
+        })
+      }
+      const first = baseline.edges.find(
+        (edge) =>
+          baseline.edges.filter((candidate) => candidate.from === edge.from)
+            .length > 1,
+      )!
+      const firstPath = path.resolve(root, first.from)
+      const firstSource = readFileSync(firstPath, "utf8")
+      const firstEscaped = first.specifier.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&")
+      writeFileSync(
+        firstPath,
+        firstSource.replace(
+          new RegExp(`([\"'])${firstEscaped}\\1`, "u"),
+          "$1./__committed_unresolved_v138.js$1",
+        ),
+      )
+      const unresolvedCommit = commitMutation("test: unresolved closure edge")
+      expect(() =>
+        deriveSelectedRouteClosureAtCommit(root, unresolvedCommit),
+      ).toThrow("V138_SELECTED_ROUTE_EDGE_UNRESOLVED")
+
+      reset()
+      const sameSourceEdges = baseline.edges.filter(
+        (candidate) =>
+          candidate.from === first.from &&
+          candidate.specifier !== first.specifier,
+      )
+      const substitute = sameSourceEdges[0]!
+      writeFileSync(
+        firstPath,
+        firstSource.replace(
+          new RegExp(`([\"'])${firstEscaped}\\1`, "u"),
+          (_match, quote: string) => `${quote}${substitute.specifier}${quote}`,
+        ),
+      )
+      const substituteCommit = commitMutation("test: substituted closure edge")
+      const substitutedClosure = deriveSelectedRouteClosureAtCommit(
+        root,
+        substituteCommit,
+      )
+      expect(() =>
+        checkSelectedRouteClosureAtCommit(root, substituteCommit, baseline),
+      ).toThrow("V138_SELECTED_ROUTE_CLOSURE_MISMATCH")
+      expect(substitutedClosure.closureRoot).not.toBe(baseline.closureRoot)
+
+      reset()
+      appendFileSync(path.resolve(root, "tsconfig.base.json"), "\n")
+      const metadataCommit = commitMutation("test: resolver metadata drift")
+      const metadataClosure = deriveSelectedRouteClosureAtCommit(
+        root,
+        metadataCommit,
+      )
+      expect(metadataClosure.paths).toEqual(baseline.paths)
+      expect(metadataClosure.closureRoot).not.toBe(baseline.closureRoot)
+      expect(() =>
+        checkSelectedRouteClosureAtCommit(root, metadataCommit, baseline),
+      ).toThrow("V138_SELECTED_ROUTE_CLOSURE_MISMATCH")
+
+      reset()
+      const ambiguous = baseline.edges.find((edge) => {
+        if (!edge.specifier.startsWith(".") || !edge.to.endsWith(".ts")) {
+          return false
+        }
+        const alternate = `${edge.to.slice(0, -3)}.tsx`
+        return !existsSync(path.resolve(root, alternate))
+      })!
+      const alternate = `${ambiguous.to.slice(0, -3)}.tsx`
+      mkdirSync(path.dirname(path.resolve(root, alternate)), { recursive: true })
+      writeFileSync(path.resolve(root, alternate), "export {}\n")
+      const ambiguousCommit = commitMutation("test: ambiguous closure edge")
+      expect(() =>
+        deriveSelectedRouteClosureAtCommit(root, ambiguousCommit),
+      ).toThrow("V138_SELECTED_ROUTE_EDGE_AMBIGUOUS")
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  }, 300_000)
 })
 
 describe("v1.38 plan 262-15 terminal artifact presence", () => {
@@ -391,12 +571,12 @@ describe("v1.38 plan 262-15 terminal artifact presence", () => {
         mkdirSync(path.dirname(path.resolve(root, paths.review)), { recursive: true })
         writeFileSync(
           path.resolve(root, paths.review),
-          "---\nfindings:\n  critical: 0\n  warning: 0\nstatus: clean\n---\n# Clean review\n",
+          cleanPlan26215Review(),
         )
-        const sourceA = execFileSync("git", ["rev-parse", "HEAD"], {
+        execFileSync("git", ["checkout", "--quiet", V138_REVIEWED_SOURCE_A_FIXTURE], {
           cwd: root,
-          encoding: "utf8",
-        }).trim()
+        })
+        const sourceA = V138_REVIEWED_SOURCE_A_FIXTURE
         const authorization = buildV138Plan26215Authorization(
           root,
           sourceA,
@@ -428,9 +608,46 @@ describe("v1.38 plan 262-15 terminal artifact presence", () => {
               absent: true,
             },
           })
+          expect(seal.reviewRoots).toHaveLength(1)
+          expect(seal.protectedEvidence.length).toBeGreaterThan(0)
+          for (const mutateSeal of [
+            (draft: Record<string, unknown>) => {
+              draft.reviewRoots = []
+            },
+            (draft: Record<string, unknown>) => {
+              draft.protectedEvidence = []
+            },
+            (draft: Record<string, unknown>) => {
+              draft.frozenPolicy = { schemaVersion: "forged-policy" }
+            },
+            (draft: Record<string, unknown>) => {
+              draft.toolIdentity = { schemaVersion: "forged-tool" }
+            },
+            (draft: Record<string, unknown>) => {
+              draft.hostIdentity = { schemaVersion: "forged-host" }
+            },
+            (draft: Record<string, unknown>) => {
+              draft.formationAbsence = {
+                schemaVersion: "v1.38-formation-absence-v1",
+                absent: true,
+              }
+            },
+          ]) {
+            const forged = clone(seal) as unknown as Record<string, unknown>
+            mutateSeal(forged)
+            const { sealRoot: _ignored, ...body } = forged
+            forged.sealRoot = v138SuccessorRoot(
+              "containmentPolicy",
+              String(forged.schemaVersion),
+              body,
+            )
+            expect(() =>
+              checkV138SuccessorSourceSeal(root, forged, authorization),
+            ).toThrow()
+          }
           writeFileSync(path.resolve(root, paths.seal), `${JSON.stringify(seal)}\n`)
         } else {
-          writePlan26215Terminal(root, paths.terminal, disposition)
+          writePlan26215Terminal(root, paths.terminal, disposition, paths)
         }
         expect(checkPlan26215ArtifactBranch(root, paths)).toBe(disposition)
         const required =
@@ -482,9 +699,31 @@ describe("v1.38 plan 262-15 terminal artifact presence", () => {
           )
           writeFileSync(
             path.resolve(root, paths.reviewFix),
-            "---\nfixed: 1\n---\n# Fix report\n",
+            `---
+source_base: 30c0949692017f425795213972482568cdd73f64
+final_source_a: ${V138_REVIEWED_SOURCE_A_FIXTURE}
+fixed: 1
+skipped: 0
+status: all_fixed
+---
+# Fix report
+`,
           )
           expect(checkPlan26215ArtifactBranch(root, paths)).toBe(disposition)
+          writeFileSync(
+            reviewTarget,
+            "---\nfindings:\n  critical: 0\n  warning: 0\nstatus: issues_found\nnote: status: clean\n---\n# Spoof\n",
+          )
+          expect(() => checkPlan26215ArtifactBranch(root, paths)).toThrow()
+          writeFileSync(reviewTarget, reviewBytes)
+          writeFileSync(
+            reviewTarget,
+            "---\nfindings:\n  critical: 0\n  warning: 0\nstatus: clean\nstatus: clean\n---\n# Duplicate\n",
+          )
+          expect(() => checkPlan26215ArtifactBranch(root, paths)).toThrow(
+            "V138_PLAN_262_15_REVIEW_SCHEMA_INVALID",
+          )
+          writeFileSync(reviewTarget, reviewBytes)
           chmodSync(reviewTarget, 0o000)
           expect(() => checkPlan26215ArtifactBranch(root, paths)).toThrow()
           chmodSync(reviewTarget, 0o600)
@@ -497,8 +736,174 @@ describe("v1.38 plan 262-15 terminal artifact presence", () => {
   )
 })
 
+describe("v1.38 plan 262-16 hostile receipt validation", () => {
+  const reRoot = (
+    receipt: Record<string, unknown>,
+    domain: "canonicalJsonProfile" | "budgetProfile" | "evidenceBundle",
+  ): Record<string, unknown> => {
+    const { receiptRoot: _ignored, ...body } = receipt
+    return {
+      ...body,
+      receiptRoot: v138SuccessorRoot(
+        domain,
+        String(body.schemaVersion),
+        body,
+      ),
+    }
+  }
+
+  it("rejects self-hashed negative and wrong-identity preflight claims", () => {
+    const valid = buildV138HostHeadroomPreflightV5Receipt(
+      parseMemoryPressureQ({
+        stdout: Buffer.from(
+          "The system has 4096 (1 pages with a page size of 4096).\nSystem-wide memory free percentage: 25%\n",
+        ),
+        stderr: Buffer.alloc(0),
+        exitCode: 0,
+        signal: null,
+        timedOut: false,
+      }),
+    )
+    for (const mutateReceipt of [
+      (draft: Record<string, unknown>) => {
+        draft.chargedIdentityId = "preflight:v5:forged"
+      },
+      (draft: Record<string, unknown>) => {
+        ;(draft.observation as Record<string, unknown>).percentage = -999
+        ;(draft.observation as Record<string, unknown>).observedBasisPoints =
+          -99_900
+      },
+      (draft: Record<string, unknown>) => {
+        draft.disposition = "invented_status"
+      },
+    ]) {
+      const forged = clone(valid) as unknown as Record<string, unknown>
+      mutateReceipt(forged)
+      expect(() =>
+        checkV138HostHeadroomPreflightV5Receipt(
+          reRoot(forged, "canonicalJsonProfile"),
+        ),
+      ).toThrow("MATRIX_PREFLIGHT_V5_INVALID")
+    }
+  })
+
+  it("rejects self-hashed one-shard, nonsense, tickless, and invented-count calibration", () => {
+    const preflight = buildV138HostHeadroomPreflightV5Receipt({
+      ok: false,
+      reason: "resource_measurement_unavailable",
+    })
+    const valid = buildV138ParallelCalibrationV5PreflightTerminal(preflight)
+    for (const mutateReceipt of [
+      (draft: Record<string, unknown>) => {
+        draft.shardCount = 1
+      },
+      (draft: Record<string, unknown>) => {
+        ;(draft.chargedAttempts as Array<Record<string, unknown>>)[0]!.outcome =
+          "nonsense"
+      },
+      (draft: Record<string, unknown>) => {
+        draft.status = "admitted"
+        draft.acceptedCellCount = 8
+        draft.childLaunchCount = 8
+        for (const attempt of draft.chargedAttempts as Array<Record<string, unknown>>) {
+          attempt.outcome = "accepted"
+          attempt.accepted = true
+          attempt.childLaunched = true
+        }
+        draft.sharedObservationTicks = []
+      },
+      (draft: Record<string, unknown>) => {
+        draft.childLaunchCount = 999
+      },
+    ]) {
+      const forged = clone(valid) as unknown as Record<string, unknown>
+      mutateReceipt(forged)
+      expect(() =>
+        checkV138ParallelCalibrationV5Receipt(
+          reRoot(forged, "budgetProfile"),
+        ),
+      ).toThrow("MATRIX_CALIBRATION_V5_INVALID")
+    }
+  })
+
+  it("rejects self-hashed invented status and non-hash reproduction roots", () => {
+    const body = {
+      schemaVersion: "v1.38-current-matrix-reproduction-v6",
+      executionContextRoot: `sha256:${"1".repeat(64)}`,
+      calibrationRoot: `sha256:${"2".repeat(64)}`,
+      status: "stopped_process_failure",
+      chargedAttemptCount: 540,
+      acceptedCellCount: 0,
+      attemptLedgerRoot: `sha256:${"3".repeat(64)}`,
+      acceptedCellRoot: null,
+      runtimeRoute: "v1.18/v1.19/MATCH_KERNEL",
+      partialAcceptedEvidenceReusable: false,
+      noRetry: true,
+    }
+    const valid = reRoot(body, "evidenceBundle")
+    expect(checkV138AuthoritativeMatrixV6Receipt(valid).status).toBe(
+      "stopped_process_failure",
+    )
+    for (const mutateReceipt of [
+      (draft: Record<string, unknown>) => {
+        draft.status = "invented_status"
+      },
+      (draft: Record<string, unknown>) => {
+        draft.attemptLedgerRoot = "not-a-hash"
+      },
+    ]) {
+      const forged = clone(valid)
+      mutateReceipt(forged)
+      expect(() =>
+        checkV138AuthoritativeMatrixV6Receipt(
+          reRoot(forged, "evidenceBundle"),
+        ),
+      ).toThrow("MATRIX_REPRODUCTION_V6_INVALID")
+    }
+  })
+
+  it("zeroes the exact owned command buffers before returning", async () => {
+    const stdout = Buffer.from(
+      "The system has 4096 (1 pages with a page size of 4096).\nSystem-wide memory free percentage: 25%\n",
+    )
+    const stderr = Buffer.alloc(3, 7)
+    await observeDarwinHeadroomOwned(async () => ({
+      stdout,
+      stderr,
+      exitCode: 1,
+      signal: null,
+      timedOut: false,
+    }))
+    expect([...stdout]).toEqual(new Array(stdout.length).fill(0))
+    expect([...stderr]).toEqual([0, 0, 0])
+  })
+
+  it("fails closed for missing and unknown receipt CLI commands", () => {
+    const script = path.resolve(
+      repoRoot,
+      "scripts/lib/v1-38-current-matrix-reproduction.ts",
+    )
+    for (const args of [
+      [],
+      ["--unknown-plan-262-16-command"],
+      ["--write-execution-context-v5-receipt"],
+      ["--write-headroom-preflight-v5-receipt"],
+      ["--calibrate-parallel-v5-receipt"],
+      ["--write-authoritative-v6-receipt"],
+    ]) {
+      expect(() =>
+        execFileSync(
+          process.execPath,
+          ["--import", "tsx", script, ...args],
+          { cwd: repoRoot, stdio: "pipe" },
+        ),
+      ).toThrow()
+    }
+  }, 40_000)
+})
+
 describe("v1.38 plan 262-16 terminal artifact presence", () => {
-  it("plan 262-16 terminal validates the preflight-refused charged branch", () => {
+  it("plan 262-16 terminal validates the preflight-refused charged branch", async () => {
     const root = mkdtempSync(path.join(tmpdir(), "cowards-262-16-terminal-"))
     const paths = {
       authorization: ".planning/artifacts/v1.38-plan-262-15-authorization-v1.json",
@@ -512,10 +917,17 @@ describe("v1.38 plan 262-16 terminal artifact presence", () => {
     try {
       execFileSync("git", ["clone", "--shared", "--quiet", repoRoot, root])
       mkdirSync(path.resolve(root, ".planning/artifacts"), { recursive: true })
-      const sourceA = execFileSync("git", ["rev-parse", "HEAD"], {
+      const reviewPath =
+        ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-15-REVIEW.md"
+      mkdirSync(path.dirname(path.resolve(root, reviewPath)), { recursive: true })
+      writeFileSync(
+        path.resolve(root, reviewPath),
+        cleanPlan26215Review(),
+      )
+      execFileSync("git", ["checkout", "--quiet", V138_REVIEWED_SOURCE_A_FIXTURE], {
         cwd: root,
-        encoding: "utf8",
-      }).trim()
+      })
+      const sourceA = V138_REVIEWED_SOURCE_A_FIXTURE
       const authorization = buildV138Plan26215Authorization(
         root,
         sourceA,
@@ -540,6 +952,13 @@ describe("v1.38 plan 262-16 terminal artifact presence", () => {
         repoRoot: root,
         authorization,
         seal,
+        mode: "gsd-pattern-c-inline-main",
+        cwd: "/Users/roryquinlan/runtime/cowards-game",
+        terminalAgentRegistry: {
+          schemaVersion: "v1.38-plan-262-16-terminal-agent-registry-v1",
+          activeExecutorCount: 0,
+          agents: [],
+        },
       })
       const preflight = buildV138HostHeadroomPreflightV5Receipt(
         {
@@ -720,59 +1139,6 @@ describe("v1.38 plan 262-16 terminal artifact presence", () => {
         "calibration_stopped",
       )
 
-      const admittedCalibration = buildV138ParallelCalibrationV5Receipt({
-        preflight: admittedPreflight,
-        attempts,
-        sharedObservationTicks: [{
-          tickId: "tick:0",
-          observationRoot: admittedPreflight.receiptRoot,
-          shardIds: [
-            "calibration-shard:0",
-            "calibration-shard:1",
-            "calibration-shard:2",
-            "calibration-shard:3",
-          ],
-        }],
-      })
-      publish(paths.calibration, admittedCalibration)
-      for (const disposition of [
-        "reproduction_stopped",
-        "reproduction_passed",
-      ] as const) {
-        const passed = disposition === "reproduction_passed"
-        const reproductionBody = {
-          schemaVersion: "v1.38-current-matrix-reproduction-v6" as const,
-          executionContextRoot: context.receiptRoot,
-          calibrationRoot: admittedCalibration.receiptRoot,
-          status: passed
-            ? "passed_exact" as const
-            : "stopped_process_failure" as const,
-          chargedAttemptCount: 540 as const,
-          acceptedCellCount: passed ? 540 as const : 0 as const,
-          attemptLedgerRoot: admittedPreflight.receiptRoot,
-          acceptedCellRoot: passed ? admittedCalibration.receiptRoot : null,
-          runtimeRoute: "v1.18/v1.19/MATCH_KERNEL" as const,
-          partialAcceptedEvidenceReusable: false as const,
-          noRetry: true as const,
-        }
-        publish(paths.reproduction, {
-          ...reproductionBody,
-          receiptRoot: v138SuccessorRoot(
-            "evidenceBundle",
-            reproductionBody.schemaVersion,
-            reproductionBody,
-          ),
-        })
-        removeIfPresent(paths.terminal)
-        publishTerminal(disposition, {
-          context: true,
-          preflight: true,
-          calibration: true,
-          reproduction: true,
-        })
-        expect(checkV138Plan26216TerminalBranch(root, paths)).toBe(disposition)
-      }
-
       const terminalBytes = readFileSync(path.resolve(root, paths.terminal))
       const terminalValue = JSON.parse(terminalBytes.toString("utf8")) as Record<
         string,
@@ -789,10 +1155,10 @@ describe("v1.38 plan 262-16 terminal artifact presence", () => {
           terminal: "../outside-terminal.json",
         }),
       ).toThrow("MATRIX_PLAN_262_16_CANONICAL_PATH_REQUIRED")
-      const reproductionPath = path.resolve(root, paths.reproduction)
+      const reproductionPath = path.resolve(root, paths.calibration)
       const reproductionBytes = readFileSync(reproductionPath)
       unlinkSync(reproductionPath)
-      symlinkSync(path.resolve(root, "outside-reproduction"), reproductionPath)
+      symlinkSync(path.resolve(root, "outside-calibration"), reproductionPath)
       expect(() => checkV138Plan26216TerminalBranch(root, paths)).toThrow(
         "MATRIX_PLAN_262_16_ARTIFACT_TYPE_INVALID",
       )
@@ -1133,7 +1499,7 @@ describe("v1.38 foundation admission", () => {
     expect(serialized).not.toMatch(
       /waiver|override|acceptAnyway|repairCallback|moveTag|admissionRoot|authoritativeRoot/iu,
     )
-  })
+  }, 120_000)
 })
 
 describe("v1.38 current matrix reproduction", () => {

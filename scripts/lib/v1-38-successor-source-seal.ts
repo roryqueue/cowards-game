@@ -12,6 +12,7 @@ import {
 } from "node:fs"
 import { execFileSync } from "node:child_process"
 import { builtinModules } from "node:module"
+import { arch, platform, release } from "node:os"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 import ts from "typescript"
@@ -396,11 +397,19 @@ const candidatePaths = (base: string): string[] => {
   ]
 }
 
+const selectedRouteClosureCache = new Map<
+  string,
+  Readonly<V138SelectedRouteClosure>
+>()
+
 export const deriveSelectedRouteClosureAtCommit = (
   repoRoot: string,
   sourceAInput: string,
 ): Readonly<V138SelectedRouteClosure> => {
   const sourceA = fullCommit(repoRoot, sourceAInput)
+  const cacheKey = `${path.resolve(repoRoot)}\0${sourceA}`
+  const cached = selectedRouteClosureCache.get(cacheKey)
+  if (cached !== undefined) return cached
   const inventory = new Set(
     gitText(repoRoot, ["ls-tree", "-r", "--name-only", sourceA])
       .split("\n")
@@ -459,13 +468,22 @@ export const deriveSelectedRouteClosureAtCommit = (
   const lockText = readCommitFile(repoRoot, sourceA, "pnpm-lock.yaml").toString(
     "utf8",
   )
+  const lockedPackageNames = new Set<string>()
+  for (const line of lockText.split("\n")) {
+    const match = /^\s{2,6}['"]?\/?((?:@[^/'":\s]+\/)?[^@'":\s/]+)@[^:]+:\s*$/u.exec(
+      line,
+    )
+    if (match !== null) lockedPackageNames.add(match[1]!)
+  }
   const tsconfigPaths = sorted(
-    [...inventory].filter((repoPath) => /(?:^|\/)tsconfig\.json$/u.test(repoPath)),
+    [...inventory].filter((repoPath) =>
+      /(?:^|\/)tsconfig(?:\.[^/]+)?\.json$/u.test(repoPath)),
   )
   const pathMappings: Array<{
     pattern: string
     targets: string[]
     base: string
+    scope: string
   }> = []
   for (const configPath of tsconfigPaths) {
     const parsed = ts.parseConfigFileTextToJson(
@@ -505,6 +523,7 @@ export const deriveSelectedRouteClosureAtCommit = (
         base: path.posix.normalize(
           path.posix.join(path.posix.dirname(configPath), baseUrl),
         ),
+        scope: path.posix.dirname(configPath),
       })
     }
   }
@@ -523,7 +542,16 @@ export const deriveSelectedRouteClosureAtCommit = (
       }
       bases = [candidate]
     } else {
-      const aliasBases = pathMappings.flatMap((mapping) => {
+      const applicableMappings = pathMappings
+        .filter(
+          ({ scope }) =>
+            scope === "." || from === scope || from.startsWith(`${scope}/`),
+        )
+        .sort((left, right) => right.scope.length - left.scope.length)
+      const nearestScopeLength = applicableMappings[0]?.scope.length
+      const aliasBases = applicableMappings
+        .filter(({ scope }) => scope.length === nearestScopeLength)
+        .flatMap((mapping) => {
         const star = mapping.pattern.indexOf("*")
         const matches =
           star < 0
@@ -556,11 +584,7 @@ export const deriveSelectedRouteClosureAtCommit = (
           const packageName = specifier.startsWith("@")
             ? specifier.split("/").slice(0, 2).join("/")
             : specifier.split("/")[0]!
-          if (
-            !lockText.includes(`/${packageName}@`) &&
-            !lockText.includes(`'${packageName}@`) &&
-            !lockText.includes(` ${packageName}:`)
-          ) {
+          if (!lockedPackageNames.has(packageName)) {
             fail("V138_SELECTED_ROUTE_EXTERNAL_UNPROVEN")
           }
           return undefined
@@ -642,7 +666,7 @@ export const deriveSelectedRouteClosureAtCommit = (
     "package.json",
     "pnpm-lock.yaml",
     "pnpm-workspace.yaml",
-    "tsconfig.json",
+    ...tsconfigPaths,
     ...packageJsonPaths,
     ...paths
       .map((repoPath) => {
@@ -666,7 +690,7 @@ export const deriveSelectedRouteClosureAtCommit = (
     sourceBlobs,
     resolverMetadata,
   }
-  return Object.freeze({
+  const closure = Object.freeze({
     ...identity,
     roots: V138_SELECTED_ROUTE_ROOTS,
     paths: Object.freeze(paths),
@@ -679,6 +703,8 @@ export const deriveSelectedRouteClosureAtCommit = (
       identity,
     ),
   })
+  selectedRouteClosureCache.set(cacheKey, closure)
+  return closure
 }
 
 export const checkSelectedRouteClosureAtCommit = (
@@ -844,6 +870,184 @@ export interface V138SuccessorSourceSeal {
   readonly sealRoot: Sha256
 }
 
+const PROTECTED_EVIDENCE_PATHS = Object.freeze([
+  ".planning/artifacts/v1.38-current-matrix-calibration-v2.json",
+  ".planning/artifacts/v1.38-current-matrix-calibration-v3.json",
+  ".planning/artifacts/v1.38-current-matrix-calibration-v4.json",
+  ".planning/artifacts/v1.38-current-matrix-diagnostic-v2.json",
+  ".planning/artifacts/v1.38-current-matrix-execution-context-v4.json",
+  ".planning/artifacts/v1.38-current-matrix-headroom-preflight-v3.json",
+  ".planning/artifacts/v1.38-current-matrix-headroom-preflight-v4.json",
+  ".planning/artifacts/v1.38-current-matrix-reproduction.json",
+  ".planning/artifacts/v1.38-foundation-admission.json",
+  ".planning/artifacts/v1.38-historical-matrix-expectation.json",
+] as const)
+
+const strictReviewMetadata = (
+  bytes: Uint8Array,
+): Readonly<{ fixesApplied: boolean; sourceA: string }> => {
+  const text = Buffer.from(bytes).toString("utf8")
+  const match = /^---\n([\s\S]*?)\n---(?:\n|$)/u.exec(text)
+  if (match === null) fail("V138_PLAN_262_15_REVIEW_NOT_CLEAN")
+  const values = new Map<string, string>()
+  const files: string[] = []
+  let parent = ""
+  for (const line of match[1]!.split("\n")) {
+    if (line.length === 0) continue
+    const listItem = /^  - (.+)$/u.exec(line)
+    const nested = /^  ([a-z_]+):\s*(.*?)\s*$/u.exec(line)
+    const top = /^([a-z_]+):\s*(.*?)\s*$/u.exec(line)
+    if (listItem !== null && parent === "files_reviewed_list") {
+      files.push(listItem[1]!)
+    } else if (nested !== null && parent !== "") {
+      const key = `${parent}.${nested[1]}`
+      if (values.has(key)) fail("V138_PLAN_262_15_REVIEW_SCHEMA_INVALID")
+      values.set(key, nested[2]!)
+    } else if (top !== null) {
+      parent = top[2] === "" ? top[1]! : ""
+      if (values.has(top[1]!)) {
+        fail("V138_PLAN_262_15_REVIEW_SCHEMA_INVALID")
+      }
+      values.set(top[1]!, top[2]!)
+    } else {
+      fail("V138_PLAN_262_15_REVIEW_SCHEMA_INVALID")
+    }
+  }
+  if (
+    values.get("status") !== "clean" ||
+    values.get("findings.critical") !== "0" ||
+    values.get("findings.warning") !== "0" ||
+    values.get("files_reviewed") !== "4" ||
+    values.get("source_base") !== "30c0949692017f425795213972482568cdd73f64" ||
+    !/^[0-9a-f]{40}$/u.test(values.get("source_a") ?? "") ||
+    canonical(sorted(files)) !==
+      canonical(sorted(V138_SUCCESSOR_AUTHORIZED_SOURCE_PATHS))
+  ) fail("V138_PLAN_262_15_REVIEW_NOT_CLEAN")
+  const fixesValue =
+    values.get("fixes_applied") ?? values.get("review_fix_required") ?? "false"
+  if (fixesValue !== "true" && fixesValue !== "false") {
+    fail("V138_PLAN_262_15_REVIEW_SCHEMA_INVALID")
+  }
+  return Object.freeze({
+    fixesApplied: fixesValue === "true",
+    sourceA: values.get("source_a")!,
+  })
+}
+
+const deriveReviewRoots = (
+  repoRoot: string,
+  sourceA: string,
+): V138SuccessorSourceSeal["reviewRoots"] => {
+  const reviewPath =
+    ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-15-REVIEW.md"
+  const reviewBytes = readFileSync(path.resolve(repoRoot, reviewPath))
+  const metadata = strictReviewMetadata(reviewBytes)
+  if (metadata.sourceA !== sourceA) {
+    fail("V138_PLAN_262_15_REVIEW_SOURCE_JOIN_INVALID")
+  }
+  const roots: Array<{ path: string; sha256: Sha256 }> = [{
+    path: reviewPath,
+    sha256: sha256(reviewBytes),
+  }]
+  if (metadata.fixesApplied) {
+    const fixPath =
+      ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-15-REVIEW-FIX.md"
+    const fixBytes = readFileSync(path.resolve(repoRoot, fixPath))
+    if (strictFixReportMetadata(fixBytes).finalSourceA !== sourceA) {
+      fail("V138_PLAN_262_15_REVIEW_FIX_RELATION_INVALID")
+    }
+    roots.push({ path: fixPath, sha256: sha256(fixBytes) })
+  }
+  return Object.freeze(roots.map((root) => Object.freeze(root)))
+}
+
+const strictFixReportMetadata = (
+  bytes: Uint8Array,
+): Readonly<{ finalSourceA: string }> => {
+  const text = Buffer.from(bytes).toString("utf8")
+  const match = /^---\n([\s\S]*?)\n---(?:\n|$)/u.exec(text)
+  if (match === null) fail("V138_PLAN_262_15_REVIEW_FIX_RELATION_INVALID")
+  const values = new Map<string, string>()
+  for (const line of match[1]!.split("\n")) {
+    if (line.length === 0) continue
+    const scalar = /^([a-z_]+):\s*(.*?)\s*$/u.exec(line)
+    if (scalar === null || values.has(scalar[1]!)) {
+      fail("V138_PLAN_262_15_REVIEW_FIX_RELATION_INVALID")
+    }
+    values.set(scalar[1]!, scalar[2]!)
+  }
+  if (
+    values.get("status") !== "all_fixed" ||
+    values.get("skipped") !== "0" ||
+    !/^[1-9][0-9]*$/u.test(values.get("fixed") ?? "") ||
+    values.get("source_base") !== "30c0949692017f425795213972482568cdd73f64" ||
+    !/^[0-9a-f]{40}$/u.test(values.get("final_source_a") ?? "")
+  ) fail("V138_PLAN_262_15_REVIEW_FIX_RELATION_INVALID")
+  return Object.freeze({ finalSourceA: values.get("final_source_a")! })
+}
+
+const deriveFrozenPolicy = (): Readonly<Record<string, JsonValue>> =>
+  Object.freeze({
+    schemaVersion: "v1.38-frozen-policy-v1",
+    requiredHostHeadroomBasisPoints: 2_500,
+    calibrationAttemptCount: 8,
+    calibrationShardCount: 4,
+    reproductionAttemptCount: 540,
+    maximumConcurrency: 4,
+    acceptedCellCountRule: "exactly_zero_or_540",
+    runtimeRoute: "v1.18/v1.19/MATCH_KERNEL",
+  })
+
+const deriveToolIdentity = (): Readonly<Record<string, JsonValue>> => {
+  const toolPath = "/usr/bin/memory_pressure"
+  const stat = lstatSync(toolPath)
+  if (!stat.isFile() || stat.isSymbolicLink()) {
+    fail("V138_SUCCESSOR_SEAL_TOOL_IDENTITY_INVALID")
+  }
+  const bytes = readFileSync(toolPath)
+  return Object.freeze({
+    schemaVersion: "v1.38-tool-identity-v1",
+    path: toolPath,
+    byteLength: bytes.byteLength,
+    sha256: sha256(bytes),
+    mode: stat.mode,
+    uid: stat.uid,
+    gid: stat.gid,
+    command: "/usr/bin/memory_pressure -Q",
+    environment: "LC_ALL=C LANG=C PATH=/usr/bin:/bin:/usr/sbin:/sbin",
+  })
+}
+
+const deriveHostIdentity = (): Readonly<Record<string, JsonValue>> => {
+  if (platform() !== "darwin") {
+    fail("V138_SUCCESSOR_SEAL_HOST_IDENTITY_INVALID")
+  }
+  return Object.freeze({
+    schemaVersion: "v1.38-host-identity-v1",
+    platform: platform(),
+    release: release(),
+    architecture: arch(),
+  })
+}
+
+const deriveFormationAbsence = (
+  repoRoot: string,
+  sourceA: string,
+): Readonly<Record<string, JsonValue>> => {
+  const forbidden = gitText(repoRoot, [
+    "ls-tree", "-r", "--name-only", sourceA, ".planning/artifacts",
+  ])
+    .split("\n")
+    .filter((repoPath) => /formation.*(?:profile|comparison)|(?:profile|comparison).*formation/iu.test(repoPath))
+  if (forbidden.length !== 0) fail("V138_SUCCESSOR_SEAL_FORMATION_PRESENT")
+  return Object.freeze({
+    schemaVersion: "v1.38-formation-absence-v1",
+    absent: true,
+    scannedRoot: sha256(canonical(sorted(PROTECTED_EVIDENCE_PATHS))),
+    forbiddenPathCount: 0,
+  })
+}
+
 const SEAL_KEYS = [
   "schemaVersion",
   "sealOrdinal",
@@ -885,7 +1089,7 @@ export const buildV138SuccessorSourceSeal = (input: {
     input.repoRoot,
     input.sourceA,
   )
-  const protectedEvidence = sorted(input.protectedEvidencePaths).map((repoPath) =>
+  const protectedEvidence = sorted(PROTECTED_EVIDENCE_PATHS).map((repoPath) =>
     blobRecord(input.repoRoot, input.sourceA, repoPath),
   )
   const body = {
@@ -894,12 +1098,12 @@ export const buildV138SuccessorSourceSeal = (input: {
     canonicalizationId: "canonical-json-v1.1" as const,
     sourceCustody,
     selectedRouteClosure,
-    reviewRoots: Object.freeze([...input.reviewRoots]),
+    reviewRoots: deriveReviewRoots(input.repoRoot, input.sourceA),
     protectedEvidence: Object.freeze(protectedEvidence),
-    frozenPolicy: input.frozenPolicy,
-    toolIdentity: input.toolIdentity,
-    hostIdentity: input.hostIdentity,
-    formationAbsence: input.formationAbsence,
+    frozenPolicy: deriveFrozenPolicy(),
+    toolIdentity: deriveToolIdentity(),
+    hostIdentity: deriveHostIdentity(),
+    formationAbsence: deriveFormationAbsence(input.repoRoot, input.sourceA),
     authorizationRoot: authorization.authorizationRoot,
   }
   return Object.freeze({
@@ -940,14 +1144,32 @@ export const checkV138SuccessorSourceSeal = (
     sourceBase: candidate.sourceCustody.sourceBase,
     sourceA: candidate.sourceCustody.sourceA,
   })
+  const expectedReviewRoots = deriveReviewRoots(
+    repoRoot,
+    candidate.sourceCustody.sourceA,
+  )
+  const expectedProtectedEvidence = sorted(PROTECTED_EVIDENCE_PATHS).map(
+    (repoPath) =>
+      blobRecord(repoRoot, candidate.sourceCustody.sourceA, repoPath),
+  )
+  if (
+    canonical(custody) !== canonical(candidate.sourceCustody) ||
+    canonical(candidate.reviewRoots) !== canonical(expectedReviewRoots) ||
+    canonical(candidate.protectedEvidence) !==
+      canonical(expectedProtectedEvidence) ||
+    canonical(candidate.frozenPolicy) !== canonical(deriveFrozenPolicy()) ||
+    canonical(candidate.toolIdentity) !== canonical(deriveToolIdentity()) ||
+    canonical(candidate.hostIdentity) !== canonical(deriveHostIdentity()) ||
+    canonical(candidate.formationAbsence) !==
+      canonical(deriveFormationAbsence(repoRoot, candidate.sourceCustody.sourceA))
+  ) {
+    fail("V138_SUCCESSOR_SEAL_SOURCE_JOIN_INVALID")
+  }
   const closure = deriveSelectedRouteClosureAtCommit(
     repoRoot,
     candidate.sourceCustody.sourceA,
   )
-  if (
-    canonical(custody) !== canonical(candidate.sourceCustody) ||
-    canonical(closure) !== canonical(candidate.selectedRouteClosure)
-  ) {
+  if (canonical(closure) !== canonical(candidate.selectedRouteClosure)) {
     fail("V138_SUCCESSOR_SEAL_SOURCE_JOIN_INVALID")
   }
   for (const record of candidate.protectedEvidence) {
@@ -984,6 +1206,9 @@ export const checkV138SuccessorSealCommit = (input: {
 }): true => {
   const sourceA = fullCommit(input.repoRoot, input.sourceA)
   const sourceB = fullCommit(input.repoRoot, input.sourceB)
+  if (
+    gitText(input.repoRoot, ["rev-parse", `${sourceB}^`]) !== sourceA
+  ) fail("V138_SUCCESSOR_SEAL_B_PARENT_INVALID")
   try {
     execFileSync("git", ["merge-base", "--is-ancestor", sourceA, sourceB], {
       cwd: input.repoRoot,
@@ -1014,6 +1239,41 @@ export const checkV138SuccessorSealCommit = (input: {
     if (gitText(input.repoRoot, ["cat-file", "-t", `${sourceB}:${repoPath}`]) !== "blob") {
       fail("V138_SUCCESSOR_SEAL_B_BLOB_INVALID")
     }
+  }
+  const authorizationBytes = readCommitFile(
+    input.repoRoot,
+    sourceB,
+    CANONICAL_PATHS.authorization,
+  )
+  const sealBytes = readCommitFile(
+    input.repoRoot,
+    sourceB,
+    CANONICAL_PATHS.seal,
+  )
+  const authorization: unknown = JSON.parse(authorizationBytes.toString("utf8"))
+  const seal: unknown = JSON.parse(sealBytes.toString("utf8"))
+  const checkedAuthorization = checkV138Plan26215Authorization(
+    input.repoRoot,
+    authorization,
+  )
+  const checkedSeal = checkV138SuccessorSourceSeal(
+    input.repoRoot,
+    seal,
+    checkedAuthorization,
+  )
+  if (
+    !authorizationBytes.equals(Buffer.from(canonical(checkedAuthorization))) ||
+    !sealBytes.equals(Buffer.from(canonical(checkedSeal))) ||
+    checkedAuthorization.sourceA !== sourceA ||
+    checkedSeal.sourceCustody.sourceA !== sourceA
+  ) fail("V138_SUCCESSOR_SEAL_B_BYTES_INVALID")
+  try {
+    gitText(input.repoRoot, [
+      "cat-file", "-e", `${sourceB}:${CANONICAL_PATHS.terminal}`,
+    ])
+    fail("V138_SUCCESSOR_SEAL_TERMINAL_PRESENT_AT_B")
+  } catch (error) {
+    if (error instanceof TypeError) throw error
   }
   try {
     gitText(input.repoRoot, ["cat-file", "-e", `${sourceA}:${CANONICAL_PATHS.seal}`])
@@ -1164,8 +1424,46 @@ export const writePlan26215Terminal = (
   repoRoot: string,
   targetPath: string,
   disposition: V138Plan26215Terminal["disposition"],
+  paths: Readonly<{
+    authorization: string
+    seal: string
+    terminal: string
+    review: string
+    reviewFix: string
+  }>,
 ): Readonly<V138Plan26215Terminal> => {
   const target = canonicalPath(repoRoot, targetPath, CANONICAL_PATHS.terminal)
+  const resolved = {
+    authorization: canonicalPath(
+      repoRoot,
+      paths.authorization,
+      CANONICAL_PATHS.authorization,
+    ),
+    seal: canonicalPath(repoRoot, paths.seal, CANONICAL_PATHS.seal),
+    terminal: canonicalPath(repoRoot, paths.terminal, CANONICAL_PATHS.terminal),
+    review: canonicalPath(repoRoot, paths.review, CANONICAL_PATHS.review),
+    reviewFix: canonicalPath(repoRoot, paths.reviewFix, CANONICAL_PATHS.reviewFix),
+  }
+  regularFile(resolved.terminal, "absent")
+  const reviewMetadata = strictReviewMetadata(
+    regularFile(resolved.review, "required")!,
+  )
+  const reviewFix = regularFile(
+    resolved.reviewFix,
+    reviewMetadata.fixesApplied ? "required" : "optional",
+  )
+  if (reviewFix !== undefined) strictFixReportMetadata(reviewFix)
+  const authorizationBytes = regularFile(
+    resolved.authorization,
+    disposition === "seal_failed" ? "required" : "absent",
+  )
+  regularFile(resolved.seal, "absent")
+  if (authorizationBytes !== undefined) {
+    checkV138Plan26215Authorization(
+      repoRoot,
+      JSON.parse(authorizationBytes.toString("utf8")),
+    )
+  }
   const body = {
     schemaVersion: "v1.38-plan-262-15-terminal-v1" as const,
     disposition,
@@ -1256,30 +1554,16 @@ export const checkPlan26215ArtifactBranch = (
     }
     disposition = candidate.disposition as V138Plan26215Disposition
   }
-  const reviewText = regularFile(resolved.review, "required")!.toString("utf8")
-  const reviewFrontmatter = /^---\n([\s\S]*?)\n---(?:\n|$)/u.exec(reviewText)?.[1]
-  if (
-    reviewFrontmatter === undefined ||
-    !/(?:^|\n)status:\s*clean(?:\n|$)/u.test(reviewFrontmatter) ||
-    !/(?:^|\n)\s*critical:\s*0(?:\n|$)/u.test(reviewFrontmatter) ||
-    !/(?:^|\n)\s*warning:\s*0(?:\n|$)/u.test(reviewFrontmatter)
-  ) {
-    fail("V138_PLAN_262_15_REVIEW_NOT_CLEAN")
-  }
-  const fixesRecorded =
-    /\n(?:fixes_applied|review_fix_required):\s*true(?:\n|$)/u.test(reviewText)
+  const reviewBytes = regularFile(resolved.review, "required")!
+  const fixesRecorded = strictReviewMetadata(reviewBytes).fixesApplied
   const reviewFixBytes = regularFile(
     resolved.reviewFix,
     fixesRecorded ? "required" : "optional",
   )
   if (
-    !fixesRecorded &&
-    reviewFixBytes !== undefined &&
-    !/^---\n[\s\S]*?\nfixed:\s*[1-9][0-9]*\n[\s\S]*?\n---\n/u.test(
-      reviewFixBytes.toString("utf8"),
-    )
+    reviewFixBytes !== undefined
   ) {
-    fail("V138_PLAN_262_15_REVIEW_FIX_RELATION_INVALID")
+    strictFixReportMetadata(reviewFixBytes)
   }
   const authorizationBytes = regularFile(
     resolved.authorization,
@@ -1374,6 +1658,13 @@ const runCli = (): void => {
       repoRoot,
       args[1]!,
       args[3] as V138Plan26215Terminal["disposition"],
+      {
+        authorization: args[5]!,
+        seal: args[7]!,
+        terminal: args[1]!,
+        review: args[9]!,
+        reviewFix: args[11]!,
+      },
     )
   } else if (args[0] === "--check-plan-262-15-authorization-v1") {
     if (
@@ -1406,8 +1697,19 @@ const runCli = (): void => {
     }
     canonicalPath(repoRoot, args[6]!, CANONICAL_PATHS.review)
     canonicalPath(repoRoot, args[8]!, CANONICAL_PATHS.reviewFix)
-    regularFile(path.resolve(repoRoot, args[6]!), "required")
-    regularFile(path.resolve(repoRoot, args[8]!), "optional")
+    const reviewBytes = regularFile(
+      path.resolve(repoRoot, args[6]!),
+      "required",
+    )!
+    const reviewMetadata = strictReviewMetadata(reviewBytes)
+    if (reviewMetadata.sourceA !== args[4]) {
+      fail("V138_PLAN_262_15_REVIEW_SOURCE_JOIN_INVALID")
+    }
+    const reviewFixBytes = regularFile(
+      path.resolve(repoRoot, args[8]!),
+      reviewMetadata.fixesApplied ? "required" : "optional",
+    )
+    if (reviewFixBytes !== undefined) strictFixReportMetadata(reviewFixBytes)
     const custody = inspectSourceCustody({
       repoRoot,
       sourceBase: args[2]!,
@@ -1437,21 +1739,28 @@ const runCli = (): void => {
       fail("V138_SELECTED_ROUTE_CLI_INVALID")
     }
     const sealPath = canonicalPath(repoRoot, args[2]!, CANONICAL_PATHS.seal)
-    const parsed = JSON.parse(
+    const parsed: unknown = JSON.parse(
       regularFile(sealPath, "required")!.toString("utf8"),
-    ) as { sourceA?: unknown; selectedRouteClosure?: unknown }
-    if (
-      typeof parsed.sourceA !== "string" ||
-      parsed.selectedRouteClosure === null ||
-      typeof parsed.selectedRouteClosure !== "object" ||
-      Array.isArray(parsed.selectedRouteClosure)
-    ) {
-      fail("V138_SUCCESSOR_SEAL_CLOSURE_INVALID")
-    }
+    )
+    const authorization: unknown = JSON.parse(
+      regularFile(
+        canonicalPath(
+          repoRoot,
+          CANONICAL_PATHS.authorization,
+          CANONICAL_PATHS.authorization,
+        ),
+        "required",
+      )!.toString("utf8"),
+    )
+    const checked = checkV138SuccessorSourceSeal(
+      repoRoot,
+      parsed,
+      authorization,
+    )
     const closure = checkSelectedRouteClosureAtCommit(
       repoRoot,
-      parsed.sourceA as string,
-      parsed.selectedRouteClosure as V138SelectedRouteClosure,
+      checked.sourceCustody.sourceA,
+      checked.selectedRouteClosure,
     )
     process.stdout.write(
       canonical({
