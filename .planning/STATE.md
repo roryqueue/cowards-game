@@ -5,16 +5,16 @@ milestone_name: Competitive Strategy Factory and Adversarial League — ACTIVE
 current_phase: 262
 current_phase_name: foundation-admission-measurement-custody-and-containment-con
 status: blocked
-stopped_at: "Completed 262-13-PLAN.md with stopped preflight:v4 and a test-isolation gap; ADMIT-03 remains blocked"
-last_updated: "2026-07-30T12:43:00.924Z"
+stopped_at: Completed 262-14-PLAN.md; ADMIT-03 and downstream remain blocked
+last_updated: "2026-07-30T13:14:01.918Z"
 last_activity: 2026-07-30
-last_activity_desc: "Plan 262-13 stopped at 4.37% node:os host headroom, charged all eight calibration:v4 identities without spawning children, and recorded an ambient-artifact test-isolation gap"
+last_activity_desc: "Plan 262-14 repaired sealed historical receipt verification and synthetic branch isolation without measurement authority; ADMIT-03 remains blocked"
 progress:
   total_phases: 9
   completed_phases: 0
-  total_plans: 13
-  completed_plans: 8
-  percent: 62
+  total_plans: 14
+  completed_plans: 9
+  percent: 64
 ---
 
 # State: Coward's Game
@@ -29,15 +29,15 @@ See: `.planning/PROJECT.md` (updated 2026-07-27)
 ## Current Position
 
 Phase: 262 (foundation-admission-measurement-custody-and-containment-con) — BLOCKED
-Plan: 8 of 13
-Status: ADMIT-03 stopped after Plan 262-13 preflight:v4 measured 4.37% node:os host headroom; no calibration child or reproduction:v5 was launched
-Last activity: 2026-07-30 — Plan 262-13 charged one preflight and all eight calibration:v4 identities, accepted zero cells, and expired its single-use authorization
+Plan: 9 of 14
+Status: Plan 262-14 repaired historical verification and synthetic branch isolation without measurement authority; ADMIT-03 remains blocked
+Last activity: 2026-07-30 — Plan 262-14 verified the sealed stopped v4 branch from producing Git objects and preserved every prior artifact byte
 
-Progress: [██████░░░░] 62%
+Progress: [██████░░░░] 64%
 
 ## Performance Metrics
 
-**Current milestone:** 8 of 13 Phase 262 plans complete; ADMIT-03 remains blocked after Plan 262-13 stopped.
+**Current milestone:** 9 of 14 Phase 262 plans complete; ADMIT-03 remains blocked after the verification-only Plan 262-14 repair.
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
@@ -50,6 +50,7 @@ Progress: [██████░░░░] 62%
 | Phase 262 P11 | 15min | 3 tasks | 4 files |
 | Phase 262 P12 | 13min | 3 tasks | 5 files |
 | Phase 262 P13 | 24min | 3 tasks | 5 files |
+| Phase 262 P14 | 20min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -80,6 +81,9 @@ Decisions are logged in `.planning/PROJECT.md`. Current milestone decisions:
 - [Phase 262]: Charge all diagnostic:v2 and calibration:v2 identities and prohibit reproduction:v3 after the stopped calibration.
 - [Phase 262]: Bind Plan 262-12 exact single-use execution authorization under sha256:a903e1e58315aec0751db4e5df99ce8cf31a4b4e92536d0291a25aa31ce484c4, distinct from the unchanged sampler-policy root. — The previously frozen sampler permission did not authorize a new environmental retry; exact scope, cardinality, single use, and terminal expiry required a separate root.
 - [Phase 262]: Stop Plan 262-12 at 402 basis points host headroom under the unchanged 2500-basis-point gate; charge all eight calibration:v3 identities without child or reproduction:v4 launch. — The authoritative node:os preflight was below the immutable admission threshold, so the fail-closed branch consumes the allocation without executing child work.
+- [Phase 262]: Verify sealed Plan 262-13 history from exact producing Git commit, receipt blob, and source blobs rather than mutable current HEAD bytes.
+- [Phase 262]: Require explicit persisted or supplied v4/v5 branch evidence; supplied synthetic branches never consult ambient artifact paths.
+- [Phase 262]: Keep ADMIT-03 incomplete after the verification-only repair; no measurement authority or accepted evidence was created.
 
 ### Pending Todos
 
@@ -95,7 +99,7 @@ None.
 - Plan 262-10 did not launch the 540-cell run; any future retry requires a newly authorized successor that retains every stopped root and charged attempt.
 - ADMIT-03 remains blocked: Plan 262-11 calibration:v2 stopped at 3.45% host headroom under the unchanged 25% gate; reproduction:v3 was not launched and zero cells were accepted.
 - ADMIT-03 remains blocked: Plan 262-12 terminally stopped at 4.02% host headroom, accepted zero cells, launched no calibration children or reproduction:v4, and its single-use authorization is expired.
-- ADMIT-03 remains blocked: Plan 262-13 terminally stopped at 4.37% node:os headroom, charged all eight calibration:v4 identities, launched zero children and no reproduction:v5, and exposed an ambient-artifact isolation gap in two synthetic v5 branch tests.
+- ADMIT-03 remains blocked: Plan 262-13 terminally stopped at 4.37% node:os headroom, charged all eight calibration:v4 identities, launched zero children and no reproduction:v5; Plan 262-14 repaired the historical-source and ambient-artifact verification gaps without creating evidence.
 
 ## Deferred Items
 
@@ -108,7 +112,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-07-30T12:43:00.913Z
-Stopped at: Completed 262-13-PLAN.md with stopped preflight:v4 and a test-isolation gap; ADMIT-03 remains blocked
+Last session: 2026-07-30T13:14:01.908Z
+Stopped at: Completed 262-14-PLAN.md; ADMIT-03 and downstream remain blocked
 Resume file: None
-Next command: Repair the Plan 262-13 ambient-artifact test-isolation gap on a new source branch; any further measurement successor requires new planning and exact authorization while preserving every charged root.
+Next command: Any measurement successor requires new planning and exact authorization while preserving every charged root; Plan 262-03 remains blocked pending a successful 540-cell admission gate.
