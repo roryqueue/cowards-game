@@ -1585,6 +1585,69 @@ describe("v1.38 plan 262-16 terminal artifact presence", () => {
       expect(inspectionOrder.indexOf(path.basename(paths.authorization))).toBeGreaterThan(
         inspectionOrder.indexOf("sourceB"),
       )
+      const validTerminalBytes = readFileSync(path.resolve(root, paths.terminal))
+      for (const mutateArtifactRoots of [
+        (terminal: Record<string, unknown>) => {
+          terminal.artifactRoots = null
+        },
+        (terminal: Record<string, unknown>) => {
+          ;(terminal.artifactRoots as Record<string, unknown>).unexpected =
+            `sha256:${createHash("sha256").update("unexpected").digest("hex")}`
+        },
+        (terminal: Record<string, unknown>) => {
+          delete (terminal.artifactRoots as Record<string, unknown>).context
+        },
+        (terminal: Record<string, unknown>) => {
+          ;(terminal.artifactRoots as Record<string, unknown>).authorization =
+            "not-a-hash"
+        },
+        (terminal: Record<string, unknown>) => {
+          ;(terminal.artifactRoots as Record<string, unknown>).reproduction =
+            `sha256:${createHash("sha256").update("forged-reproduction").digest("hex")}`
+        },
+      ]) {
+        const malformed = JSON.parse(
+          validTerminalBytes.toString("utf8"),
+        ) as Record<string, unknown>
+        mutateArtifactRoots(malformed)
+        const { terminalRoot: _oldTerminalRoot, ...terminalBody } = malformed
+        malformed.terminalRoot = v138SuccessorRoot(
+          "canonicalJsonProfile",
+          String(malformed.schemaVersion),
+          terminalBody,
+        )
+        writeFileSync(
+          path.resolve(root, paths.terminal),
+          `${JSON.stringify(malformed)}\n`,
+        )
+        let malformedBCheckCount = 0
+        let malformedNonTerminalReadCount = 0
+        expect(() =>
+          checkV138Plan26216TerminalBranch(
+            root,
+            paths,
+            sourceA,
+            sourceB,
+            {
+              checkSourceB: () => {
+                malformedBCheckCount += 1
+                throw new TypeError("INJECTED_B_MUST_NOT_BE_CHECKED")
+              },
+              onInspection: (event) => {
+                if (
+                  event.kind === "artifact" &&
+                  event.target !== path.resolve(root, paths.terminal)
+                ) {
+                  malformedNonTerminalReadCount += 1
+                }
+              },
+            },
+          ),
+        ).toThrow("MATRIX_PLAN_262_16_TERMINAL_ROOTS_INVALID")
+        expect(malformedBCheckCount).toBe(0)
+        expect(malformedNonTerminalReadCount).toBe(0)
+      }
+      writeFileSync(path.resolve(root, paths.terminal), validTerminalBytes)
       writeFileSync(path.resolve(root, paths.reproduction), "{}\n")
       expect(() =>
         checkV138Plan26216TerminalBranch(root, paths, sourceA, sourceB)
@@ -1699,8 +1762,60 @@ describe("v1.38 plan 262-16 terminal artifact presence", () => {
           calibrationBody,
         )
         publish(paths.context, forgedContext)
+        removeIfPresent(paths.preflight)
+        let forgedPreflightObserverCount = 0
+        await expect(
+          writeV138HostHeadroomPreflightV5Receipt(
+            root,
+            paths.preflight,
+            paths.context,
+            paths.authorization,
+            paths.seal,
+            sourceA,
+            sourceB,
+            async () => {
+              forgedPreflightObserverCount += 1
+              return injectedResult
+            },
+          ),
+        ).rejects.toThrow("MATRIX_PREFLIGHT_V5_CONTEXT_JOIN_INVALID")
+        expect(forgedPreflightObserverCount).toBe(0)
         publish(paths.preflight, forgedPreflight)
+        removeIfPresent(paths.calibration)
+        let forgedCalibrationRunCount = 0
+        await expect(
+          writeV138ParallelCalibrationV5Receipt(
+            root,
+            paths.calibration,
+            paths.preflight,
+            paths.context,
+            sourceA,
+            sourceB,
+            async () => {
+              forgedCalibrationRunCount += 1
+              throw new TypeError("INJECTED_CALIBRATION_MUST_NOT_RUN")
+            },
+          ),
+        ).rejects.toThrow("MATRIX_CALIBRATION_V5_CONTEXT_JOIN_INVALID")
+        expect(forgedCalibrationRunCount).toBe(0)
         publish(paths.calibration, forgedCalibration)
+        removeIfPresent(paths.reproduction)
+        let forgedReproductionRunCount = 0
+        await expect(
+          writeV138AuthoritativeMatrixV6Receipt(
+            root,
+            paths.reproduction,
+            paths.calibration,
+            paths.context,
+            sourceA,
+            sourceB,
+            async () => {
+              forgedReproductionRunCount += 1
+              throw new TypeError("INJECTED_REPRODUCTION_MUST_NOT_RUN")
+            },
+          ),
+        ).rejects.toThrow("MATRIX_REPRODUCTION_V6_CONTEXT_JOIN_INVALID")
+        expect(forgedReproductionRunCount).toBe(0)
         removeIfPresent(paths.terminal)
         publishTerminal("preflight_refused", {
           context: true,

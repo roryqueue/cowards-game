@@ -8079,6 +8079,129 @@ const executeOwnedMemoryPressureQ = async (
     })
   })
 
+const checkV138ExecutionContextSealJoin = (input: {
+  context: Readonly<V138ExecutionContextV5Receipt>
+  authorization: Readonly<V138Plan26215Authorization>
+  seal: Readonly<V138SuccessorSourceSeal>
+  sourceBCustody: Readonly<V138SourceBCustody>
+  failureCode: string
+}): void => {
+  if (
+    input.context.authorizationRoot !== input.authorization.authorizationRoot ||
+    input.context.sealRoot !== input.seal.sealRoot ||
+    input.context.sourceA !== input.authorization.sourceA ||
+    input.context.sourceB !== input.sourceBCustody.sourceB ||
+    input.context.sourceBCustodyRoot !== input.sourceBCustody.custodyRoot ||
+    input.context.selectedRouteClosureRoot !==
+      input.seal.selectedRouteClosure.closureRoot ||
+    input.context.frozenPolicyRoot !==
+      v138SuccessorRoot(
+        "budgetProfile",
+        "v1.38-current-matrix-frozen-policy-v5",
+        input.seal.frozenPolicy,
+      ) ||
+    input.context.toolIdentityRoot !==
+      v138SuccessorRoot(
+        "artifactManifest",
+        "v1.38-current-matrix-tool-identity-v5",
+        input.seal.toolIdentity,
+      ) ||
+    input.context.hostIdentityRoot !==
+      v138SuccessorRoot(
+        "containmentPolicy",
+        "v1.38-current-matrix-host-identity-v5",
+        input.seal.hostIdentity,
+      )
+  ) throw new TypeError(input.failureCode)
+}
+
+const checkedV138AuthorizationSealRoutes = new Map<
+  string,
+  Readonly<{
+    authorization: Readonly<V138Plan26215Authorization>
+    seal: Readonly<V138SuccessorSourceSeal>
+  }>
+>()
+
+const checkV138AuthorizationSealRoute = (input: {
+  repoRoot: string
+  authorizationValue: unknown
+  sealValue: unknown
+  sourceBCustody: Readonly<V138SourceBCustody>
+  failureCode: string
+}) => {
+  const key = `${path.resolve(input.repoRoot)}\0${input.sourceBCustody.sourceA}\0${input.sourceBCustody.sourceB}`
+  const cached = checkedV138AuthorizationSealRoutes.get(key)
+  if (cached !== undefined) {
+    if (
+      !Buffer.from(v138SuccessorCanonicalBytes(input.authorizationValue)).equals(
+        Buffer.from(v138SuccessorCanonicalBytes(cached.authorization)),
+      ) ||
+      !Buffer.from(v138SuccessorCanonicalBytes(input.sealValue)).equals(
+        Buffer.from(v138SuccessorCanonicalBytes(cached.seal)),
+      )
+    ) throw new TypeError(input.failureCode)
+    return cached
+  }
+  const authorization = checkV138Plan26215Authorization(
+    input.repoRoot,
+    input.authorizationValue,
+  )
+  if (authorization.sourceA !== input.sourceBCustody.sourceA) {
+    throw new TypeError(input.failureCode)
+  }
+  const seal = checkV138SuccessorSourceSeal(
+    input.repoRoot,
+    input.sealValue,
+    authorization,
+  )
+  const checked = Object.freeze({ authorization, seal })
+  checkedV138AuthorizationSealRoutes.set(key, checked)
+  return checked
+}
+
+const checkV138LiveWriterContextRoute = (input: {
+  repoRoot: string
+  executionContextPath: string
+  authorizationPath: string
+  sealPath: string
+  sourceA: string
+  sourceB: string
+  failureCode: string
+}) => {
+  const sourceBCustody = checkV138SuccessorSealCommit(input)
+  const authorizationValue = plan26216Read(
+    plan26216Path(input.repoRoot, input.authorizationPath, "authorization"),
+    true,
+  )!.value
+  const sealValue = plan26216Read(
+    plan26216Path(input.repoRoot, input.sealPath, "seal"),
+    true,
+  )!.value
+  const { authorization, seal } = checkV138AuthorizationSealRoute({
+    repoRoot: input.repoRoot,
+    authorizationValue,
+    sealValue,
+    sourceBCustody,
+    failureCode: input.failureCode,
+  })
+  const context = checkV138ExecutionContextV5Receipt(
+    plan26216Read(
+      plan26216Path(input.repoRoot, input.executionContextPath, "context"),
+      true,
+    )!.value,
+    sourceBCustody,
+  )
+  checkV138ExecutionContextSealJoin({
+    context,
+    authorization,
+    seal,
+    sourceBCustody,
+    failureCode: input.failureCode,
+  })
+  return { sourceBCustody, authorization, seal, context }
+}
+
 export const writeV138ExecutionContextV5Receipt = (
   repoRoot: string,
   targetPath: string,
@@ -8132,34 +8255,15 @@ export const writeV138HostHeadroomPreflightV5Receipt = async (
 ): Promise<Readonly<V138HostHeadroomPreflightV5Receipt>> => {
   const target = plan26216Path(repoRoot, targetPath, "preflight")
   assertV138FreshImmutableTarget(target)
-  const sourceBCustody = checkV138SuccessorSealCommit({ repoRoot, sourceA, sourceB })
-  const authorization = checkV138Plan26215Authorization(
+  const { context } = checkV138LiveWriterContextRoute({
     repoRoot,
-    plan26216Read(
-      plan26216Path(repoRoot, authorizationPath, "authorization"),
-      true,
-    )!.value,
-  )
-  if (authorization.sourceA !== sourceBCustody.sourceA) {
-    throw new TypeError("MATRIX_PREFLIGHT_V5_SOURCE_CUSTODY_JOIN_INVALID")
-  }
-  const seal = checkV138SuccessorSourceSeal(
-    repoRoot,
-    plan26216Read(plan26216Path(repoRoot, sealPath, "seal"), true)!.value,
-    authorization,
-  )
-  const context = checkV138ExecutionContextV5Receipt(
-    plan26216Read(
-      plan26216Path(repoRoot, executionContextPath, "context"),
-      true,
-    )!.value,
-  )
-  if (
-    context.authorizationRoot !== authorization.authorizationRoot ||
-    context.sealRoot !== seal.sealRoot ||
-    context.sourceB !== sourceBCustody.sourceB ||
-    context.sourceBCustodyRoot !== sourceBCustody.custodyRoot
-  ) throw new TypeError("MATRIX_PREFLIGHT_V5_CONTEXT_JOIN_INVALID")
+    executionContextPath,
+    authorizationPath,
+    sealPath,
+    sourceA,
+    sourceB,
+    failureCode: "MATRIX_PREFLIGHT_V5_CONTEXT_JOIN_INVALID",
+  })
   const receipt = buildV138HostHeadroomPreflightV5Receipt({
     result: await observeHeadroom(),
     executionContext: context,
@@ -8180,14 +8284,15 @@ export const writeV138ParallelCalibrationV5Receipt = async (
 ): Promise<Readonly<Record<string, unknown>>> => {
   const target = plan26216Path(repoRoot, targetPath, "calibration")
   assertV138FreshImmutableTarget(target)
-  const sourceBCustody = checkV138SuccessorSealCommit({ repoRoot, sourceA, sourceB })
-  const context = checkV138ExecutionContextV5Receipt(
-    plan26216Read(
-      plan26216Path(repoRoot, executionContextPath, "context"),
-      true,
-    )!.value,
-    sourceBCustody,
-  )
+  const { context } = checkV138LiveWriterContextRoute({
+    repoRoot,
+    executionContextPath,
+    authorizationPath: PLAN_262_16_PATHS.authorization,
+    sealPath: PLAN_262_16_PATHS.seal,
+    sourceA,
+    sourceB,
+    failureCode: "MATRIX_CALIBRATION_V5_CONTEXT_JOIN_INVALID",
+  })
   const preflight = checkV138HostHeadroomPreflightV5Receipt(
     plan26216Read(
       plan26216Path(repoRoot, preflightPath, "preflight"),
@@ -8263,14 +8368,15 @@ export const writeV138AuthoritativeMatrixV6Receipt = async (
 ): Promise<Readonly<V138AuthoritativeMatrixV6Receipt>> => {
   const target = plan26216Path(repoRoot, targetPath, "reproduction")
   assertV138FreshImmutableTarget(target)
-  const sourceBCustody = checkV138SuccessorSealCommit({ repoRoot, sourceA, sourceB })
-  const context = checkV138ExecutionContextV5Receipt(
-    plan26216Read(
-      plan26216Path(repoRoot, executionContextPath, "context"),
-      true,
-    )!.value,
-    sourceBCustody,
-  )
+  const { context } = checkV138LiveWriterContextRoute({
+    repoRoot,
+    executionContextPath,
+    authorizationPath: PLAN_262_16_PATHS.authorization,
+    sealPath: PLAN_262_16_PATHS.seal,
+    sourceA,
+    sourceB,
+    failureCode: "MATRIX_REPRODUCTION_V6_CONTEXT_JOIN_INVALID",
+  })
   const calibration = checkV138ParallelCalibrationV5Receipt(
     plan26216Read(
       plan26216Path(repoRoot, calibrationPath, "calibration"),
@@ -8480,6 +8586,31 @@ export const checkV138Plan26216TerminalBranch = (
       terminalBody,
     )
   ) throw new TypeError("MATRIX_PLAN_262_16_TERMINAL_INVALID")
+  const typed = disposition as V138Plan26216TerminalDisposition
+  const needs = plan26216Needs(typed)
+  const artifactRoots = exactRecord(
+    terminalValue.artifactRoots,
+    [
+      "authorization", "seal", "context", "preflight", "calibration",
+      "reproduction",
+    ],
+    "MATRIX_PLAN_262_16_TERMINAL_ROOTS_INVALID",
+  )
+  const requiredRoots = {
+    authorization: true,
+    seal: true,
+    context: needs.context,
+    preflight: needs.preflight,
+    calibration: needs.calibration,
+    reproduction: needs.reproduction,
+  }
+  if (
+    Object.entries(requiredRoots).some(([key, required]) =>
+      required
+        ? !isV138CanonicalSha256(artifactRoots[key])
+        : artifactRoots[key] !== null,
+    )
+  ) throw new TypeError("MATRIX_PLAN_262_16_TERMINAL_ROOTS_INVALID")
   inspection.onInspection?.({ kind: "sourceB" })
   const sourceBCustody = (
     inspection.checkSourceB ?? checkV138SuccessorSealCommit
@@ -8488,19 +8619,15 @@ export const checkV138Plan26216TerminalBranch = (
     terminalValue.sourceB !== sourceBCustody.sourceB ||
     terminalValue.sourceBCustodyRoot !== sourceBCustody.custodyRoot
   ) throw new TypeError("MATRIX_PLAN_262_16_TERMINAL_INVALID")
-  const typed = disposition as V138Plan26216TerminalDisposition
   const authorizationArtifact = readArtifact(resolved.authorization, true)!
-  const authorization = checkV138Plan26215Authorization(
-    repoRoot,
-    authorizationArtifact.value,
-  )
   const sealArtifact = readArtifact(resolved.seal, true)!
-  const seal = checkV138SuccessorSourceSeal(
+  const { authorization, seal } = checkV138AuthorizationSealRoute({
     repoRoot,
-    sealArtifact.value,
-    authorization,
-  )
-  const needs = plan26216Needs(typed)
+    authorizationValue: authorizationArtifact.value,
+    sealValue: sealArtifact.value,
+    sourceBCustody,
+    failureCode: "MATRIX_PLAN_262_16_SEAL_JOIN_INVALID",
+  })
   const contextArtifact = readArtifact(resolved.context, needs.context)
   const preflightArtifact = readArtifact(resolved.preflight, needs.preflight)
   const calibrationArtifact = readArtifact(resolved.calibration, needs.calibration)
@@ -8521,33 +8648,15 @@ export const checkV138Plan26216TerminalBranch = (
         executionContext: context!,
         calibration: calibration!,
       })
-  if (
-    context !== undefined &&
-    (context.authorizationRoot !== authorization.authorizationRoot ||
-      context.sealRoot !== seal.sealRoot ||
-      context.sourceB !== sourceBCustody.sourceB ||
-      context.sourceBCustodyRoot !== sourceBCustody.custodyRoot ||
-      context.selectedRouteClosureRoot !==
-        seal.selectedRouteClosure.closureRoot ||
-      context.frozenPolicyRoot !==
-        v138SuccessorRoot(
-          "budgetProfile",
-          "v1.38-current-matrix-frozen-policy-v5",
-          seal.frozenPolicy,
-        ) ||
-      context.toolIdentityRoot !==
-        v138SuccessorRoot(
-          "artifactManifest",
-          "v1.38-current-matrix-tool-identity-v5",
-          seal.toolIdentity,
-        ) ||
-      context.hostIdentityRoot !==
-        v138SuccessorRoot(
-          "containmentPolicy",
-          "v1.38-current-matrix-host-identity-v5",
-          seal.hostIdentity,
-        ))
-  ) throw new TypeError("MATRIX_PLAN_262_16_CONTEXT_JOIN_INVALID")
+  if (context !== undefined) {
+    checkV138ExecutionContextSealJoin({
+      context,
+      authorization,
+      seal,
+      sourceBCustody,
+      failureCode: "MATRIX_PLAN_262_16_CONTEXT_JOIN_INVALID",
+    })
+  }
   if (
     preflight !== undefined &&
     (preflight.executionContextRoot !== context?.receiptRoot ||
@@ -8599,14 +8708,6 @@ export const checkV138Plan26216TerminalBranch = (
   if (!dispositionValid) {
     throw new TypeError("MATRIX_PLAN_262_16_DISPOSITION_JOIN_INVALID")
   }
-  const artifactRoots = exactRecord(
-    terminalValue.artifactRoots,
-    [
-      "authorization", "seal", "context", "preflight", "calibration",
-      "reproduction",
-    ],
-    "MATRIX_PLAN_262_16_TERMINAL_ROOTS_INVALID",
-  )
   const actualRoots = {
     authorization: authorizationArtifact.root,
     seal: sealArtifact.root,
