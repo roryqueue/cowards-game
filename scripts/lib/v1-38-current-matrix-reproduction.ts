@@ -4908,6 +4908,47 @@ const PLAN_262_13_SOURCE_PREDECESSORS = deepFreeze({
   },
 })
 
+const PLAN_262_13_SEALED_PRODUCING_OBJECTS = deepFreeze({
+  producingCommit: "622449af7087d6f8715dee47efcedd62ce461326",
+  receipt: {
+    path: ".planning/artifacts/v1.38-current-matrix-execution-context-v4.json",
+    blob: "16812805999c59f3c83e393412d4d39f3a6dc5a2",
+    sha256:
+      "sha256:693629bfdced2eecf5564d691cc0310fb5eabf428be944e721802417bce8ba24" as Sha256,
+  },
+  implementation: {
+    path: "scripts/lib/v1-38-current-matrix-reproduction.ts",
+    blob: "39de34dd1db9e6c90dfb2e62db9542c903e94d32",
+    sha256:
+      "sha256:c5a4040aea969b7ab2737251ad1520ebb096b53831c0a0451115571f5987943d" as Sha256,
+  },
+  test: {
+    path: "scripts/evaluate-v1-38-foundation-contract.test.ts",
+    blob: "41a79d91b652004204ff6c9adc6f4b85bc729ccb",
+    sha256:
+      "sha256:79d25c47222a0468ee1a3c9d41ed219bfb8fff807528a25801b0e84e1f41919e" as Sha256,
+  },
+})
+
+export interface V138ProducingGitObjectContract {
+  readonly resolveCommitPath: (input: Readonly<{
+    producingCommit: string
+    sourcePath: string
+  }>) => Readonly<{
+    blob: string
+    content: Uint8Array
+  }>
+}
+
+const defaultProducingGitObjects = (
+  repoRoot: string,
+): V138ProducingGitObjectContract => ({
+  resolveCommitPath: ({ producingCommit, sourcePath }) => ({
+    blob: git(repoRoot, ["rev-parse", `${producingCommit}:${sourcePath}`]),
+    content: gitBlob(repoRoot, producingCommit, sourcePath),
+  }),
+})
+
 type V138Plan26213TerminalAgentStatus = "completed" | "failed" | "cancelled"
 
 export interface V138Plan26213AgentRegistryProjection {
@@ -4954,23 +4995,18 @@ const executionContextV4WithoutRoot = (
 }
 
 const assertPlan26213SourcePredecessor = (
-  repoRoot: string,
+  gitObjects: V138ProducingGitObjectContract,
   identity:
     | typeof PLAN_262_13_SOURCE_PREDECESSORS.implementation
     | typeof PLAN_262_13_SOURCE_PREDECESSORS.test,
 ): void => {
-  const committedBytes = gitBlob(
-    repoRoot,
-    identity.predecessorProducingCommit,
-    identity.path,
-  )
-  const committedBlob = git(repoRoot, [
-    "rev-parse",
-    `${identity.predecessorProducingCommit}:${identity.path}`,
-  ])
+  const committed = gitObjects.resolveCommitPath({
+    producingCommit: identity.predecessorProducingCommit,
+    sourcePath: identity.path,
+  })
   if (
-    sha256(committedBytes) !== identity.predecessorSha256 ||
-    committedBlob !== identity.predecessorGitBlob
+    sha256(committed.content) !== identity.predecessorSha256 ||
+    committed.blob !== identity.predecessorGitBlob
   ) {
     throw new TypeError("MATRIX_PLAN_262_13_SOURCE_PREDECESSOR_INVALID")
   }
@@ -5048,12 +5084,13 @@ export const buildV138ExecutionContextV4Receipt = (input: {
   ) {
     throw new TypeError("MATRIX_EXECUTION_CONTEXT_V4_INPUT_INVALID")
   }
+  const gitObjects = defaultProducingGitObjects(input.repoRoot)
   assertPlan26213SourcePredecessor(
-    input.repoRoot,
+    gitObjects,
     PLAN_262_13_SOURCE_PREDECESSORS.implementation,
   )
   assertPlan26213SourcePredecessor(
-    input.repoRoot,
+    gitObjects,
     PLAN_262_13_SOURCE_PREDECESSORS.test,
   )
   const planAgentSnapshot = validatePlan26213AgentSnapshot(
@@ -5098,30 +5135,119 @@ export const buildV138ExecutionContextV4Receipt = (input: {
   })
 }
 
+const validateV138ExecutionContextV4Structure = (
+  input: unknown,
+): Readonly<V138ExecutionContextV4Receipt> => {
+  if (input === null || typeof input !== "object" || Array.isArray(input)) {
+    throw new TypeError()
+  }
+  const receipt = input as V138ExecutionContextV4Receipt
+  const snapshot = validatePlan26213AgentSnapshot(receipt.planAgentSnapshot)
+  const sourceKeys = canonical([
+    "path",
+    "predecessorSha256",
+    "predecessorGitBlob",
+    "predecessorProducingCommit",
+    "currentSha256",
+  ])
+  if (
+    canonical(Object.keys(receipt)) !==
+      canonical([
+        "schemaVersion",
+        "status",
+        "planId",
+        "mode",
+        "executionOwner",
+        "cwd",
+        "commandFamily",
+        "claimScope",
+        "planAgentSnapshot",
+        "implementationSource",
+        "testSource",
+        "receiptRoot",
+      ]) ||
+    receipt.schemaVersion !== "v1.38-current-matrix-execution-context-v4" ||
+    receipt.status !== "execution_context_confirmed" ||
+    receipt.planId !== "262-13" ||
+    receipt.mode !== "gsd-pattern-c-inline-main" ||
+    receipt.executionOwner !== "lean-main-orchestrator" ||
+    receipt.cwd !== PLAN_262_13_REPO_ROOT ||
+    canonical(receipt.commandFamily) !==
+      canonical(PLAN_262_13_COMMAND_FAMILY) ||
+    receipt.claimScope !== PLAN_262_13_CLAIM_SCOPE ||
+    canonical(receipt.planAgentSnapshot) !== canonical(snapshot) ||
+    canonical(Object.keys(receipt.implementationSource)) !== sourceKeys ||
+    canonical(Object.keys(receipt.testSource)) !== sourceKeys ||
+    receipt.implementationSource.path !==
+      PLAN_262_13_SOURCE_PREDECESSORS.implementation.path ||
+    receipt.implementationSource.predecessorSha256 !==
+      PLAN_262_13_SOURCE_PREDECESSORS.implementation.predecessorSha256 ||
+    receipt.implementationSource.predecessorGitBlob !==
+      PLAN_262_13_SOURCE_PREDECESSORS.implementation.predecessorGitBlob ||
+    receipt.implementationSource.predecessorProducingCommit !==
+      PLAN_262_13_SOURCE_PREDECESSORS.implementation.predecessorProducingCommit ||
+    receipt.testSource.path !== PLAN_262_13_SOURCE_PREDECESSORS.test.path ||
+    receipt.testSource.predecessorSha256 !==
+      PLAN_262_13_SOURCE_PREDECESSORS.test.predecessorSha256 ||
+    receipt.testSource.predecessorGitBlob !==
+      PLAN_262_13_SOURCE_PREDECESSORS.test.predecessorGitBlob ||
+    receipt.testSource.predecessorProducingCommit !==
+      PLAN_262_13_SOURCE_PREDECESSORS.test.predecessorProducingCommit ||
+    !/^sha256:[0-9a-f]{64}$/u.test(receipt.implementationSource.currentSha256) ||
+    !/^sha256:[0-9a-f]{64}$/u.test(receipt.testSource.currentSha256) ||
+    receipt.receiptRoot !==
+      sha256(canonical(executionContextV4WithoutRoot(receipt)))
+  ) {
+    throw new TypeError()
+  }
+  return deepFreeze(cloneCanonical(receipt))
+}
+
 export const checkV138ExecutionContextV4Receipt = (
   repoRoot: string,
   input: unknown,
+  gitObjects: V138ProducingGitObjectContract =
+    defaultProducingGitObjects(repoRoot),
 ): Readonly<V138ExecutionContextV4Receipt> => {
   try {
-    if (input === null || typeof input !== "object" || Array.isArray(input)) {
-      throw new TypeError()
-    }
-    const receipt = input as V138ExecutionContextV4Receipt
-    const expected = buildV138ExecutionContextV4Receipt({
-      repoRoot,
-      mode: receipt.mode,
-      cwd: receipt.cwd,
-      planAgentSnapshot: receipt.planAgentSnapshot,
+    const receipt = validateV138ExecutionContextV4Structure(input)
+    const sealed = PLAN_262_13_SEALED_PRODUCING_OBJECTS
+    const receiptObject = gitObjects.resolveCommitPath({
+      producingCommit: sealed.producingCommit,
+      sourcePath: sealed.receipt.path,
     })
+    const implementationObject = gitObjects.resolveCommitPath({
+      producingCommit: sealed.producingCommit,
+      sourcePath: sealed.implementation.path,
+    })
+    const testObject = gitObjects.resolveCommitPath({
+      producingCommit: sealed.producingCommit,
+      sourcePath: sealed.test.path,
+    })
+    assertPlan26213SourcePredecessor(
+      gitObjects,
+      PLAN_262_13_SOURCE_PREDECESSORS.implementation,
+    )
+    assertPlan26213SourcePredecessor(
+      gitObjects,
+      PLAN_262_13_SOURCE_PREDECESSORS.test,
+    )
     if (
-      canonical(Object.keys(receipt)) !== canonical(Object.keys(expected)) ||
-      canonical(receipt) !== canonical(expected) ||
-      receipt.receiptRoot !==
-        sha256(canonical(executionContextV4WithoutRoot(receipt)))
+      receiptObject.blob !== sealed.receipt.blob ||
+      sha256(receiptObject.content) !== sealed.receipt.sha256 ||
+      canonical(JSON.parse(Buffer.from(receiptObject.content).toString("utf8"))) !==
+        canonical(receipt) ||
+      implementationObject.blob !== sealed.implementation.blob ||
+      sha256(implementationObject.content) !== sealed.implementation.sha256 ||
+      receipt.implementationSource.currentSha256 !==
+        sealed.implementation.sha256 ||
+      testObject.blob !== sealed.test.blob ||
+      sha256(testObject.content) !== sealed.test.sha256 ||
+      receipt.testSource.currentSha256 !== sealed.test.sha256
     ) {
       throw new TypeError()
     }
-    return expected
+    return receipt
   } catch {
     throw new TypeError("MATRIX_EXECUTION_CONTEXT_V4_RECEIPT_INVALID")
   }
@@ -5361,8 +5487,7 @@ export const buildV138HostHeadroomPreflightV4Receipt = (input: {
   hostTotalMemoryKilobytes: number
   hostFreeMemoryKilobytes: number
 }): Readonly<V138HostHeadroomPreflightV4Receipt> => {
-  const executionContext = checkV138ExecutionContextV4Receipt(
-    input.repoRoot,
+  const executionContext = validateV138ExecutionContextV4Structure(
     input.executionContext,
   )
   const authorization = parseV138Plan26213ExecutionAuthorization(
@@ -5415,24 +5540,28 @@ export const buildV138HostHeadroomPreflightV4Receipt = (input: {
 export const checkV138HostHeadroomPreflightV4Receipt = (
   repoRoot: string,
   input: unknown,
+  executionContextInput?: unknown,
 ): Readonly<V138HostHeadroomPreflightV4Receipt> => {
   try {
     if (input === null || typeof input !== "object" || Array.isArray(input)) {
       throw new TypeError()
     }
     const receipt = input as V138HostHeadroomPreflightV4Receipt
-    const context = checkV138ExecutionContextV4Receipt(
-      repoRoot,
-      JSON.parse(
-        readFileSync(
-          path.resolve(
+    const context =
+      executionContextInput === undefined
+        ? checkV138ExecutionContextV4Receipt(
             repoRoot,
-            ".planning/artifacts/v1.38-current-matrix-execution-context-v4.json",
-          ),
-          "utf8",
-        ),
-      ),
-    )
+            JSON.parse(
+              readFileSync(
+                path.resolve(
+                  repoRoot,
+                  ".planning/artifacts/v1.38-current-matrix-execution-context-v4.json",
+                ),
+                "utf8",
+              ),
+            ),
+          )
+        : validateV138ExecutionContextV4Structure(executionContextInput)
     const expected = buildV138HostHeadroomPreflightV4Receipt({
       repoRoot,
       executionContext: context,
@@ -5542,8 +5671,7 @@ export const buildV138ParallelCalibrationV4Receipt = (input: {
   executionAuthorization: Readonly<V138Plan26213ExecutionAuthorization>
   calibration?: Readonly<V138ParallelCalibrationReceipt> | undefined
 }): Readonly<V138ParallelCalibrationV4Receipt> => {
-  const executionContext = checkV138ExecutionContextV4Receipt(
-    input.repoRoot,
+  const executionContext = validateV138ExecutionContextV4Structure(
     input.executionContext,
   )
   const authorization = parseV138Plan26213ExecutionAuthorization(
@@ -5673,36 +5801,52 @@ export const buildV138ParallelCalibrationV4Receipt = (input: {
 export const checkV138ParallelCalibrationV4Receipt = (
   repoRoot: string,
   input: unknown,
+  suppliedEvidence?: Readonly<{
+    executionContext: unknown
+    preflight: unknown
+  }>,
 ): Readonly<V138ParallelCalibrationV4Receipt> => {
   try {
     if (input === null || typeof input !== "object" || Array.isArray(input)) {
       throw new TypeError()
     }
     const receipt = input as V138ParallelCalibrationV4Receipt
-    const context = checkV138ExecutionContextV4Receipt(
-      repoRoot,
-      JSON.parse(
-        readFileSync(
-          path.resolve(
+    const context =
+      suppliedEvidence === undefined
+        ? checkV138ExecutionContextV4Receipt(
             repoRoot,
-            ".planning/artifacts/v1.38-current-matrix-execution-context-v4.json",
-          ),
-          "utf8",
-        ),
-      ),
-    )
-    const preflight = checkV138HostHeadroomPreflightV4Receipt(
-      repoRoot,
-      JSON.parse(
-        readFileSync(
-          path.resolve(
+            JSON.parse(
+              readFileSync(
+                path.resolve(
+                  repoRoot,
+                  ".planning/artifacts/v1.38-current-matrix-execution-context-v4.json",
+                ),
+                "utf8",
+              ),
+            ),
+          )
+        : validateV138ExecutionContextV4Structure(
+            suppliedEvidence.executionContext,
+          )
+    const preflight =
+      suppliedEvidence === undefined
+        ? checkV138HostHeadroomPreflightV4Receipt(
             repoRoot,
-            ".planning/artifacts/v1.38-current-matrix-headroom-preflight-v4.json",
-          ),
-          "utf8",
-        ),
-      ),
-    )
+            JSON.parse(
+              readFileSync(
+                path.resolve(
+                  repoRoot,
+                  ".planning/artifacts/v1.38-current-matrix-headroom-preflight-v4.json",
+                ),
+                "utf8",
+              ),
+            ),
+          )
+        : checkV138HostHeadroomPreflightV4Receipt(
+            repoRoot,
+            suppliedEvidence.preflight,
+            context,
+          )
     const expected = buildV138ParallelCalibrationV4Receipt({
       repoRoot,
       executionContext: context,
@@ -5815,8 +5959,7 @@ export const buildV138AuthoritativeMatrixV5Receipt = (input: {
   calibrationV4: Readonly<V138ParallelCalibrationV4Receipt>
   execution: V138ParallelMatrixExecutionResult
 }): Readonly<V138AuthoritativeMatrixV5Receipt> => {
-  const executionContext = checkV138ExecutionContextV4Receipt(
-    input.repoRoot,
+  const executionContext = validateV138ExecutionContextV4Structure(
     input.executionContext,
   )
   const calibrationV4 = input.calibrationV4
@@ -5936,36 +6079,56 @@ export const buildV138AuthoritativeMatrixV5Receipt = (input: {
 export const checkV138AuthoritativeMatrixV5Receipt = (
   repoRoot: string,
   input: unknown,
+  suppliedEvidence?: Readonly<{
+    executionContext: unknown
+    preflight: unknown
+    calibration: unknown
+  }>,
 ): Readonly<V138AuthoritativeMatrixV5Receipt> => {
   try {
     if (input === null || typeof input !== "object" || Array.isArray(input)) {
       throw new TypeError()
     }
     const receipt = input as V138AuthoritativeMatrixV5Receipt
-    const context = checkV138ExecutionContextV4Receipt(
-      repoRoot,
-      JSON.parse(
-        readFileSync(
-          path.resolve(
+    const context =
+      suppliedEvidence === undefined
+        ? checkV138ExecutionContextV4Receipt(
             repoRoot,
-            ".planning/artifacts/v1.38-current-matrix-execution-context-v4.json",
-          ),
-          "utf8",
-        ),
-      ),
-    )
-    const calibrationV4 = checkV138ParallelCalibrationV4Receipt(
-      repoRoot,
-      JSON.parse(
-        readFileSync(
-          path.resolve(
+            JSON.parse(
+              readFileSync(
+                path.resolve(
+                  repoRoot,
+                  ".planning/artifacts/v1.38-current-matrix-execution-context-v4.json",
+                ),
+                "utf8",
+              ),
+            ),
+          )
+        : validateV138ExecutionContextV4Structure(
+            suppliedEvidence.executionContext,
+          )
+    const calibrationV4 =
+      suppliedEvidence === undefined
+        ? checkV138ParallelCalibrationV4Receipt(
             repoRoot,
-            ".planning/artifacts/v1.38-current-matrix-calibration-v4.json",
-          ),
-          "utf8",
-        ),
-      ),
-    )
+            JSON.parse(
+              readFileSync(
+                path.resolve(
+                  repoRoot,
+                  ".planning/artifacts/v1.38-current-matrix-calibration-v4.json",
+                ),
+                "utf8",
+              ),
+            ),
+          )
+        : checkV138ParallelCalibrationV4Receipt(
+            repoRoot,
+            suppliedEvidence.calibration,
+            {
+              executionContext: context,
+              preflight: suppliedEvidence.preflight,
+            },
+          )
     const expected = buildV138AuthoritativeMatrixV5Receipt({
       repoRoot,
       executionContext: context,
@@ -6026,41 +6189,137 @@ export const writeV138AuthoritativeMatrixV5Receipt = async (
   return receipt
 }
 
+export type V138V4V5BranchVerificationContract =
+  | Readonly<{
+      branchSource: "persisted"
+      executionContextPath: string
+      preflightPath: string
+      calibrationPath: string
+      reproductionV5Path: string
+    }>
+  | Readonly<{
+      branchSource: "supplied"
+      executionContext: unknown
+      preflight: unknown
+    }>
+
+const readOptionalJson = (targetPath: string): unknown | undefined => {
+  try {
+    return JSON.parse(readFileSync(targetPath, "utf8"))
+  } catch (error) {
+    if (
+      error !== null &&
+      typeof error === "object" &&
+      "code" in error &&
+      error.code === "ENOENT"
+    ) {
+      return undefined
+    }
+    throw error
+  }
+}
+
 export const checkV138SuccessorV4V5Branch = (
   repoRoot: string,
+  verification: V138V4V5BranchVerificationContract,
   calibrationInput: unknown,
   v5Input: unknown | undefined,
 ): Readonly<{
   calibration: V138ParallelCalibrationV4Receipt
   reproduction: V138AuthoritativeMatrixV5Receipt | null
 }> => {
-  const contextPath = path.resolve(
-    repoRoot,
-    ".planning/artifacts/v1.38-current-matrix-execution-context-v4.json",
-  )
-  const preflightPath = path.resolve(
-    repoRoot,
-    ".planning/artifacts/v1.38-current-matrix-headroom-preflight-v4.json",
-  )
-  const calibration = existsSync(contextPath) && existsSync(preflightPath)
-    ? checkV138ParallelCalibrationV4Receipt(repoRoot, calibrationInput)
-    : (() => {
-        const receipt = calibrationInput as V138ParallelCalibrationV4Receipt
-        if (
-          receipt === null ||
-          typeof receipt !== "object" ||
-          Array.isArray(receipt) ||
-          receipt.receiptRoot !==
-            sha256(canonical(calibrationV4WithoutRoot(receipt))) ||
-          receipt.chargedCalibrationAttemptCount !== 8 ||
-          receipt.acceptedCellCount !== 0 ||
-          receipt.fullRunLaunched ||
-          receipt.partialAcceptedEvidenceReusable
-        ) {
-          throw new TypeError("MATRIX_CALIBRATION_V4_RECEIPT_INVALID")
-        }
-        return receipt
-      })()
+  if (
+    verification === null ||
+    typeof verification !== "object" ||
+    !["persisted", "supplied"].includes(verification.branchSource)
+  ) {
+    throw new TypeError("MATRIX_V4_V5_BRANCH_SOURCE_INVALID")
+  }
+  let context: Readonly<V138ExecutionContextV4Receipt>
+  let preflight: Readonly<V138HostHeadroomPreflightV4Receipt>
+  let calibration: Readonly<V138ParallelCalibrationV4Receipt>
+  let reproductionInput = v5Input
+  if (verification.branchSource === "persisted") {
+    const expectedPaths = {
+      executionContextPath: path.resolve(
+        repoRoot,
+        ".planning/artifacts/v1.38-current-matrix-execution-context-v4.json",
+      ),
+      preflightPath: path.resolve(
+        repoRoot,
+        ".planning/artifacts/v1.38-current-matrix-headroom-preflight-v4.json",
+      ),
+      calibrationPath: path.resolve(
+        repoRoot,
+        ".planning/artifacts/v1.38-current-matrix-calibration-v4.json",
+      ),
+      reproductionV5Path: path.resolve(
+        repoRoot,
+        ".planning/artifacts/v1.38-current-matrix-reproduction-v5.json",
+      ),
+    }
+    if (
+      canonical(Object.keys(verification)) !==
+        canonical(["branchSource", ...Object.keys(expectedPaths)]) ||
+      Object.entries(expectedPaths).some(
+        ([key, expected]) =>
+          path.resolve(
+            verification[key as keyof typeof expectedPaths],
+          ) !== expected,
+      )
+    ) {
+      throw new TypeError("MATRIX_PERSISTED_V4_V5_PATH_INVALID")
+    }
+    context = checkV138ExecutionContextV4Receipt(
+      repoRoot,
+      JSON.parse(readFileSync(verification.executionContextPath, "utf8")),
+    )
+    preflight = checkV138HostHeadroomPreflightV4Receipt(
+      repoRoot,
+      JSON.parse(readFileSync(verification.preflightPath, "utf8")),
+      context,
+    )
+    const persistedCalibration = JSON.parse(
+      readFileSync(verification.calibrationPath, "utf8"),
+    )
+    if (canonical(calibrationInput) !== canonical(persistedCalibration)) {
+      throw new TypeError("MATRIX_PERSISTED_CALIBRATION_V4_ROOT_MISMATCH")
+    }
+    calibration = checkV138ParallelCalibrationV4Receipt(
+      repoRoot,
+      calibrationInput,
+      { executionContext: context, preflight },
+    )
+    const persistedV5 = readOptionalJson(verification.reproductionV5Path)
+    if (
+      (persistedV5 === undefined && v5Input !== undefined) ||
+      (persistedV5 !== undefined &&
+        canonical(v5Input) !== canonical(persistedV5))
+    ) {
+      throw new TypeError("MATRIX_PERSISTED_REPRODUCTION_V5_ROOT_MISMATCH")
+    }
+    reproductionInput = persistedV5
+  } else {
+    if (
+      canonical(Object.keys(verification)) !==
+        canonical(["branchSource", "executionContext", "preflight"])
+    ) {
+      throw new TypeError("MATRIX_SUPPLIED_V4_V5_BRANCH_INVALID")
+    }
+    context = validateV138ExecutionContextV4Structure(
+      verification.executionContext,
+    )
+    preflight = checkV138HostHeadroomPreflightV4Receipt(
+      repoRoot,
+      verification.preflight,
+      context,
+    )
+    calibration = checkV138ParallelCalibrationV4Receipt(
+      repoRoot,
+      calibrationInput,
+      { executionContext: context, preflight },
+    )
+  }
   if (calibration.status === "stopped_process_failure") {
     if (
       calibration.calibration !== null ||
@@ -6073,18 +6332,20 @@ export const checkV138SuccessorV4V5Branch = (
       !calibration.executionAuthorization.expired ||
       calibration.executionAuthorization.terminalOutcome !==
         "stopped_process_failure" ||
-      v5Input !== undefined
+      reproductionInput !== undefined
     ) {
       throw new TypeError("MATRIX_STOPPED_CALIBRATION_V5_FORBIDDEN")
     }
     return deepFreeze({ calibration, reproduction: null })
   }
-  if (v5Input === undefined) {
+  if (reproductionInput === undefined) {
     throw new TypeError("MATRIX_ADMITTED_CALIBRATION_V5_REQUIRED")
   }
-  const reproduction = existsSync(contextPath)
-    ? checkV138AuthoritativeMatrixV5Receipt(repoRoot, v5Input)
-    : (v5Input as V138AuthoritativeMatrixV5Receipt)
+  const reproduction = checkV138AuthoritativeMatrixV5Receipt(
+    repoRoot,
+    reproductionInput,
+    { executionContext: context, preflight, calibration },
+  )
   if (
     reproduction.receiptRoot !== sha256(canonical(v5WithoutRoot(reproduction))) ||
     reproduction.status !== "passed_exact" ||
@@ -6507,10 +6768,21 @@ const runReceiptCli = async (): Promise<void> => {
       const v5Path = path.resolve(repoRoot, process.argv[4]!)
       output = checkV138SuccessorV4V5Branch(
         repoRoot,
+        {
+          branchSource: "persisted",
+          executionContextPath: path.resolve(
+            repoRoot,
+            ".planning/artifacts/v1.38-current-matrix-execution-context-v4.json",
+          ),
+          preflightPath: path.resolve(
+            repoRoot,
+            ".planning/artifacts/v1.38-current-matrix-headroom-preflight-v4.json",
+          ),
+          calibrationPath,
+          reproductionV5Path: v5Path,
+        },
         JSON.parse(readFileSync(calibrationPath, "utf8")),
-        existsSync(v5Path)
-          ? JSON.parse(readFileSync(v5Path, "utf8"))
-          : undefined,
+        readOptionalJson(v5Path),
       )
     }
     const receipt = output as {

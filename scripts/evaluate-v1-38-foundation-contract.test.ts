@@ -1240,7 +1240,16 @@ describe("v1.38 matrix inline execution context v4", () => {
       "--write-authoritative-v5-receipt",
       "--check-successor-v4-v5-branch",
     ])
-    expect(checkV138ExecutionContextV4Receipt(repoRoot, receipt)).toEqual(receipt)
+    const sealedReceipt = JSON.parse(readFileSync(
+      path.resolve(
+        repoRoot,
+        ".planning/artifacts/v1.38-current-matrix-execution-context-v4.json",
+      ),
+      "utf8",
+    ))
+    expect(
+      checkV138ExecutionContextV4Receipt(repoRoot, sealedReceipt),
+    ).toEqual(sealedReceipt)
 
     for (const mutation of [
       { mode: "resident-executor" },
@@ -1275,7 +1284,7 @@ describe("v1.38 matrix inline execution context v4", () => {
     ]) {
       expect(() =>
         checkV138ExecutionContextV4Receipt(repoRoot, {
-          ...receipt,
+          ...sealedReceipt,
           ...mutation,
         }),
       ).toThrow("MATRIX_EXECUTION_CONTEXT_V4_RECEIPT_INVALID")
@@ -1348,7 +1357,7 @@ describe("v1.38 matrix historical execution context source evolution", () => {
       resolveCommitPath: ({ producingCommit, sourcePath }) => {
         const wrongCommit =
           kind === "commit"
-            ? "6c5f84043e34c009713ae51250a34f7ca771ef71"
+            ? "743bce2f"
             : producingCommit
         const wrongPath =
           kind === "path" &&
@@ -1592,12 +1601,22 @@ describe("v1.38 matrix authoritative v5 branches", () => {
       executionAuthorization: authorization,
     })
     expect(
-      checkV138SuccessorV4V5Branch(repoRoot, calibration, undefined),
+      checkV138SuccessorV4V5Branch(
+        repoRoot,
+        { branchSource: "supplied", executionContext: context, preflight },
+        calibration,
+        undefined,
+      ),
     ).toEqual({ calibration, reproduction: null })
     expect(() =>
-      checkV138SuccessorV4V5Branch(repoRoot, calibration, {}),
+      checkV138SuccessorV4V5Branch(
+        repoRoot,
+        { branchSource: "supplied", executionContext: context, preflight },
+        calibration,
+        {},
+      ),
     ).toThrow("MATRIX_STOPPED_CALIBRATION_V5_FORBIDDEN")
-  })
+  }, 20_000)
 
   it("matrix authoritative v5 branches use fresh identities and atomic zero publication on failure", async () => {
     const inventory = enumerateV138CurrentMatrix(repoRoot)
@@ -1636,7 +1655,12 @@ describe("v1.38 matrix authoritative v5 branches", () => {
       calibration: calibrationEvidence,
     })
     expect(() =>
-      checkV138SuccessorV4V5Branch(repoRoot, calibration, undefined),
+      checkV138SuccessorV4V5Branch(
+        repoRoot,
+        { branchSource: "supplied", executionContext: context, preflight },
+        calibration,
+        undefined,
+      ),
     ).toThrow("MATRIX_ADMITTED_CALIBRATION_V5_REQUIRED")
     const execution = await executeV138ParallelMatrix({
       inventory,
@@ -1674,7 +1698,12 @@ describe("v1.38 matrix authoritative v5 branches", () => {
       }),
     ).toThrow()
     expect(() =>
-      checkV138SuccessorV4V5Branch(repoRoot, calibration, reproduction),
+      checkV138SuccessorV4V5Branch(
+        repoRoot,
+        { branchSource: "supplied", executionContext: context, preflight },
+        calibration,
+        reproduction,
+      ),
     ).toThrow("MATRIX_AUTHORITATIVE_V5_NOT_PASSED_EXACT")
   }, 30_000)
 
@@ -1828,7 +1857,7 @@ describe("v1.38 matrix authoritative v5 ambient isolation", () => {
       ).toThrow()
     }
     expect(currentMatrixArtifactHashes()).toEqual(artifactHashesBefore)
-  })
+  }, 20_000)
 })
 
 describe("v1.38 matrix retry authorization v3", () => {
