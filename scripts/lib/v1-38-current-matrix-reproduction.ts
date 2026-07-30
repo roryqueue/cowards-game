@@ -2775,6 +2775,87 @@ interface ShardExecutionResult {
   maxRssKilobytes: number
 }
 
+const isV138CurrentMatrixAttemptOutcome = (
+  value: unknown,
+): value is V138CurrentMatrixAttemptOutcome => {
+  if (!hasExactKeys(value, ["attemptId", "classification", "outcome"]) &&
+      !hasExactKeys(value, ["attemptId", "classification", "code"]) &&
+      !hasExactKeys(value, [
+        "attemptId",
+        "classification",
+        "code",
+        "retryable",
+      ])) {
+    return false
+  }
+  if (typeof value.attemptId !== "string") return false
+  if (value.classification === "success") {
+    return (
+      hasExactKeys(value, ["attemptId", "classification", "outcome"]) &&
+      (value.outcome === "bottom_win" ||
+        value.outcome === "top_win" ||
+        value.outcome === "draw")
+    )
+  }
+  if (value.classification === "player_violation") {
+    return (
+      hasExactKeys(value, ["attemptId", "classification", "code"]) &&
+      typeof value.code === "string" &&
+      value.code.length > 0
+    )
+  }
+  return (
+    value.classification === "system_failure" &&
+    hasExactKeys(value, [
+      "attemptId",
+      "classification",
+      "code",
+      "retryable",
+    ]) &&
+    typeof value.code === "string" &&
+    value.code.length > 0 &&
+    typeof value.retryable === "boolean"
+  )
+}
+
+const parseV138ShardExecutionResult = (
+  value: unknown,
+  expectedAttemptIds: readonly string[],
+): ShardExecutionResult => {
+  if (
+    !hasExactKeys(value, ["outcomes", "maxRssKilobytes"]) ||
+    !Array.isArray(value.outcomes) ||
+    value.outcomes.length !== expectedAttemptIds.length ||
+    !value.outcomes.every(isV138CurrentMatrixAttemptOutcome) ||
+    !Number.isSafeInteger(value.maxRssKilobytes) ||
+    (value.maxRssKilobytes as number) < 0 ||
+    !value.outcomes.every(
+      ({ attemptId }, index) => attemptId === expectedAttemptIds[index],
+    )
+  ) {
+    throw new TypeError("invalid shard result")
+  }
+  return {
+    outcomes: value.outcomes,
+    maxRssKilobytes: value.maxRssKilobytes as number,
+  }
+}
+
+export interface V138ShardProcessFactory {
+  readonly spawn: (
+    command: string,
+    args: readonly string[],
+    options: Readonly<{
+      cwd: string
+      detached: boolean
+      env: Readonly<Record<string, string>>
+      shell: false
+      stdio: readonly ["ignore", "pipe", "pipe"]
+      windowsHide: true
+    }>,
+  ) => ChildProcessWithoutNullStreams
+}
+
 export interface V138RssCommandAdapter {
   readonly adapterId: string
   readonly command: "ps"
@@ -2940,6 +3021,7 @@ export function createV138SubprocessShardRunner(
   repoRoot: string,
   options: Readonly<{
     rssCommandAdapter?: V138RssCommandAdapter | undefined
+    shardProcessFactory?: V138ShardProcessFactory | undefined
   }> = {},
 ): V138ParallelShardRunner {
   return {
@@ -2968,9 +3050,7 @@ export function createV138SubprocessShardRunner(
           })),
         }
       }
-      const child = spawn(
-        process.execPath,
-        [
+      const childArguments = [
           "--import",
           "tsx",
           fileURLToPath(import.meta.url),
@@ -2979,8 +3059,8 @@ export function createV138SubprocessShardRunner(
             JSON.stringify({ repoRoot, attemptIds: templateAttemptIds }),
             "utf8",
           ).toString("base64"),
-        ],
-        {
+        ]
+      const childOptions = {
           cwd: repoRoot,
           detached: process.platform !== "win32",
           env: {
@@ -2988,10 +3068,16 @@ export function createV138SubprocessShardRunner(
             PATH: process.env.PATH ?? "",
           },
           shell: false,
-          stdio: ["ignore", "pipe", "pipe"],
+          stdio: ["ignore", "pipe", "pipe"] as const,
           windowsHide: true,
-        },
-      )
+        } as const
+      const child =
+        options.shardProcessFactory?.spawn(
+          process.execPath,
+          childArguments,
+          childOptions,
+        ) ??
+        spawn(process.execPath, childArguments, childOptions)
       const stdout: Buffer[] = []
       const stderr: Buffer[] = []
       let stdoutBytes = 0
@@ -3148,23 +3234,13 @@ export function createV138SubprocessShardRunner(
       let parsed: ShardExecutionResult | undefined
       if (!cancelled && failureCode === undefined) {
         try {
-          const candidate = JSON.parse(
-            Buffer.concat(stdout).toString("utf8"),
-          ) as ShardExecutionResult
-          if (
-            !Array.isArray(candidate.outcomes) ||
-            candidate.outcomes.length !== shard.attempts.length ||
-            !Number.isSafeInteger(candidate.maxRssKilobytes) ||
-            candidate.maxRssKilobytes < 0 ||
-            canonical(candidate.outcomes.map(({ attemptId }) => attemptId)) !==
-              canonical(templateAttemptIds)
-          ) {
-            throw new TypeError("invalid shard result")
-          }
-          parsed = candidate
+          parsed = parseV138ShardExecutionResult(
+            JSON.parse(Buffer.concat(stdout).toString("utf8")),
+            templateAttemptIds,
+          )
           maximumRssKilobytes = Math.max(
             maximumRssKilobytes,
-            candidate.maxRssKilobytes,
+            parsed.maxRssKilobytes,
           )
         } catch {
           parsed = undefined

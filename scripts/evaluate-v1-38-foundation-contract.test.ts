@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto"
+import { EventEmitter } from "node:events"
 import {
   appendFileSync,
   closeSync,
@@ -12,9 +13,13 @@ import {
   writeFileSync,
   writeSync,
 } from "node:fs"
-import { execFileSync } from "node:child_process"
+import {
+  execFileSync,
+  type ChildProcessWithoutNullStreams,
+} from "node:child_process"
 import { tmpdir } from "node:os"
 import path from "node:path"
+import { PassThrough } from "node:stream"
 import { fileURLToPath } from "node:url"
 import { beforeAll, describe, expect, it } from "vitest"
 import { runV137AuditReproductionGate } from "./check-v1-37-audit-reproduction.js"
@@ -73,6 +78,7 @@ import {
   type V138HistoricalMatrixObservedAggregate,
   type V138ParallelShardRunner,
   type V138RssCommandAdapter,
+  type V138ShardProcessFactory,
   type V138ProducingGitObjectContract,
   type V138V4V5BranchVerificationContract,
 } from "./lib/v1-38-current-matrix-reproduction.js"
@@ -1626,6 +1632,207 @@ describe("v1.38 matrix real process boundary", () => {
     units: "kilobytes",
     execFile: invoke,
   })
+
+  const injectedShardProcessFactory = (
+    mutateResult: (
+      result: Record<string, unknown>,
+    ) => Record<string, unknown>,
+  ): V138ShardProcessFactory => ({
+    spawn: (_command, args) => {
+      const encodedPayload = args.at(-1)
+      if (encodedPayload === undefined) {
+        throw new TypeError("missing injected shard payload")
+      }
+      const payload = JSON.parse(
+        Buffer.from(encodedPayload, "base64").toString("utf8"),
+      ) as { attemptIds: string[] }
+      const child = new EventEmitter() as ChildProcessWithoutNullStreams
+      const stdout = new PassThrough()
+      const stderr = new PassThrough()
+      const stdin = new PassThrough()
+      Object.assign(child, {
+        stdin,
+        stdout,
+        stderr,
+        kill: () => true,
+      })
+      const result = mutateResult({
+        outcomes: payload.attemptIds.map((attemptId) => ({
+          attemptId,
+          classification: "success",
+          outcome: "draw",
+        })),
+        maxRssKilobytes: 100,
+      })
+      setImmediate(() => {
+        stdout.end(JSON.stringify(result))
+        stderr.end()
+        child.emit("close", 0, null)
+      })
+      return child
+    },
+  })
+
+  it.each([
+    [
+      "success missing outcome",
+      (result: Record<string, unknown>) => {
+        const outcomes = result.outcomes as Record<string, unknown>[]
+        delete outcomes[0]!.outcome
+        return result
+      },
+    ],
+    [
+      "success with invalid outcome enum",
+      (result: Record<string, unknown>) => {
+        const outcomes = result.outcomes as Record<string, unknown>[]
+        outcomes[0]!.outcome = "invented"
+        return result
+      },
+    ],
+    [
+      "success with a private field",
+      (result: Record<string, unknown>) => {
+        const outcomes = result.outcomes as Record<string, unknown>[]
+        outcomes[0]!.strategyMemory = { secret: true }
+        return result
+      },
+    ],
+    [
+      "player violation with an empty code",
+      (result: Record<string, unknown>) => {
+        const outcomes = result.outcomes as Record<string, unknown>[]
+        outcomes[0] = {
+          attemptId: outcomes[0]!.attemptId,
+          classification: "player_violation",
+          code: "",
+        }
+        return result
+      },
+    ],
+    [
+      "player violation with an extra field",
+      (result: Record<string, unknown>) => {
+        const outcomes = result.outcomes as Record<string, unknown>[]
+        outcomes[0] = {
+          attemptId: outcomes[0]!.attemptId,
+          classification: "player_violation",
+          code: "INVALID_OUTPUT",
+          retryable: false,
+        }
+        return result
+      },
+    ],
+    [
+      "system failure with a non-boolean retryable field",
+      (result: Record<string, unknown>) => {
+        const outcomes = result.outcomes as Record<string, unknown>[]
+        outcomes[0] = {
+          attemptId: outcomes[0]!.attemptId,
+          classification: "system_failure",
+          code: "EXECUTION_EXCEPTION",
+          retryable: "false",
+        }
+        return result
+      },
+    ],
+    [
+      "system failure with an empty code",
+      (result: Record<string, unknown>) => {
+        const outcomes = result.outcomes as Record<string, unknown>[]
+        outcomes[0] = {
+          attemptId: outcomes[0]!.attemptId,
+          classification: "system_failure",
+          code: "",
+          retryable: false,
+        }
+        return result
+      },
+    ],
+    [
+      "system failure with an extra field",
+      (result: Record<string, unknown>) => {
+        const outcomes = result.outcomes as Record<string, unknown>[]
+        outcomes[0] = {
+          attemptId: outcomes[0]!.attemptId,
+          classification: "system_failure",
+          code: "EXECUTION_EXCEPTION",
+          retryable: false,
+          diagnostic: "private",
+        }
+        return result
+      },
+    ],
+    [
+      "out-of-order attempt IDs",
+      (result: Record<string, unknown>) => {
+        const outcomes = result.outcomes as Record<string, unknown>[]
+        outcomes.reverse()
+        return result
+      },
+    ],
+    [
+      "extra top-level field",
+      (result: Record<string, unknown>) => ({
+        ...result,
+        diagnostic: "private",
+      }),
+    ],
+  ] as const)(
+    "matrix parent boundary rejects %s without run admission",
+    async (_label, mutateResult) => {
+      const runner = createV138SubprocessShardRunner(repoRoot, {
+        shardProcessFactory: injectedShardProcessFactory(mutateResult),
+      })
+      const terminal = await runner.run(
+        {
+          kind: "calibration",
+          shardId: "injected-parent-boundary-shard",
+          laneId: "injected-parent-boundary-lane",
+          ordinal: 0,
+          attempts: [0, 1].map((index) => ({
+            executionAttemptId: `injected:execution:${index}`,
+            templateAttemptId: `injected:template:${index}`,
+            request: {} as V138CurrentMatrixAttempt["request"],
+          })),
+        },
+        {
+          signal: new AbortController().signal,
+          onResourceSample: () => undefined,
+        },
+      )
+      const disposition =
+        terminal.classification === "success"
+          ? "calibration_admitted"
+          : "stopped_process_failure"
+      const acceptedCellCount = terminal.outcomes.filter(
+        ({ classification }) => classification === "success",
+      ).length
+
+      expect(disposition).toBe("stopped_process_failure")
+      expect(acceptedCellCount).toBe(0)
+      expect(terminal.outcomes).toHaveLength(2)
+      expect(
+        terminal.classification === "failed" &&
+          terminal.outcomes.every(
+            (outcome) =>
+              outcome.classification === "system_failure" &&
+              outcome.code === "RESOURCE_POLICY_SHARD_OUTPUT_INVALID" &&
+              outcome.retryable === false,
+          ),
+      ).toBe(true)
+      expect(
+        terminal.outcomes.map(({ attemptId }) => attemptId),
+      ).toEqual(
+        ["injected:execution:0", "injected:execution:1"],
+      )
+      expect(
+        terminal.outcomes.every(
+          ({ classification }) => classification !== "success",
+        ),
+      ).toBe(true)
+    },
+  )
 
   it("matrix sampler denial classifies synchronous and callback permission denial", async () => {
     const denied = Object.assign(new Error("denied"), { code: "EPERM" })
