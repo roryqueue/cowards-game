@@ -304,6 +304,30 @@ describe("v1.38 darwin headroom", () => {
       },
     ],
     [
+      "page relation below exact product",
+      {
+        stdout: Buffer.from(
+          "The system has 4095 (1 pages with a page size of 4096).\nSystem-wide memory free percentage: 25%\n",
+        ),
+      },
+    ],
+    [
+      "page relation above exact product",
+      {
+        stdout: Buffer.from(
+          "The system has 4097 (1 pages with a page size of 4096).\nSystem-wide memory free percentage: 25%\n",
+        ),
+      },
+    ],
+    [
+      "unsafe page product",
+      {
+        stdout: Buffer.from(
+          "The system has 9007199254740991 (9007199254740991 pages with a page size of 2).\nSystem-wide memory free percentage: 25%\n",
+        ),
+      },
+    ],
+    [
       "out-of-range percentage",
       {
         stdout: Buffer.from(
@@ -1198,6 +1222,19 @@ describe("v1.38 plan 262-16 hostile receipt validation", () => {
         ;(draft.observation as Record<string, unknown>).totalBytes = 0
         draft.status = "preflight_unavailable"
         draft.disposition = "preflight_unavailable"
+      },
+      (draft: Record<string, unknown>) => {
+        ;(draft.observation as Record<string, unknown>).totalBytes = 4_095
+      },
+      (draft: Record<string, unknown>) => {
+        ;(draft.observation as Record<string, unknown>).totalBytes = 4_097
+      },
+      (draft: Record<string, unknown>) => {
+        ;(draft.observation as Record<string, unknown>).totalBytes =
+          Number.MAX_SAFE_INTEGER
+        ;(draft.observation as Record<string, unknown>).pageCount =
+          Number.MAX_SAFE_INTEGER
+        ;(draft.observation as Record<string, unknown>).pageSizeBytes = 2
       },
     ]) {
       const forged = clone(valid) as unknown as Record<string, unknown>

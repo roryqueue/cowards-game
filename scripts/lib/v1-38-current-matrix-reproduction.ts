@@ -7594,8 +7594,11 @@ export const checkV138HostHeadroomPreflightV5Receipt = (
     Number(observation.pageCount) > 0 &&
     Number.isSafeInteger(observation.pageSizeBytes) &&
     Number(observation.pageSizeBytes) > 0 &&
-    Number(observation.pageCount) ===
-      Math.floor(Number(observation.totalBytes) / Number(observation.pageSizeBytes)) &&
+    Number.isSafeInteger(
+      Number(observation.pageCount) * Number(observation.pageSizeBytes),
+    ) &&
+    Number(observation.totalBytes) ===
+      Number(observation.pageCount) * Number(observation.pageSizeBytes) &&
     Number.isSafeInteger(observation.percentage) &&
     Number(observation.percentage) >= 0 &&
     Number(observation.percentage) <= 100 &&
