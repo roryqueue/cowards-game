@@ -8,6 +8,7 @@ import {
   readdirSync,
   rmSync,
   symlinkSync,
+  writeFileSync,
   writeSync,
 } from "node:fs"
 import { execFileSync } from "node:child_process"
@@ -773,6 +774,15 @@ describe("v1.38 current matrix reproduction", () => {
 })
 
 describe("v1.38 immutable receipt publication", () => {
+  const capturePublicationFailure = (operation: () => void): unknown => {
+    try {
+      operation()
+    } catch (error) {
+      return error
+    }
+    throw new Error("EXPECTED_PUBLICATION_FAILURE")
+  }
+
   it("rejects a partial temporary writer that returns normally", () => {
     const temporaryRoot = mkdtempSync(
       path.join(tmpdir(), "cowards-v138-publication-short-write-"),
@@ -971,6 +981,111 @@ describe("v1.38 immutable receipt publication", () => {
       expect(JSON.parse(readFileSync(target, "utf8"))).toEqual(receipt)
       expect(readdirSync(temporaryRoot)).toEqual(["receipt.json"])
       expect(fsyncPhases).toEqual(["publication", "cleanup"])
+    } finally {
+      rmSync(temporaryRoot, { recursive: true, force: true })
+    }
+  })
+
+  it("reports unlink cleanup failure alongside a primary link failure", () => {
+    const temporaryRoot = mkdtempSync(
+      path.join(tmpdir(), "cowards-v138-link-unlink-fault-"),
+    )
+    const target = path.join(temporaryRoot, "receipt.json")
+    try {
+      const error = capturePublicationFailure(() =>
+        writeV138ImmutableReceipt(
+          target,
+          { schemaVersion: "test-receipt-v1", status: "complete" },
+          {
+            linkTemporaryFile: () => {
+              throw new Error("INJECTED_PUBLICATION_LINK_FAILURE")
+            },
+            unlinkTemporaryFile: () => {
+              throw new Error("INJECTED_TEMPORARY_UNLINK_FAILURE")
+            },
+          },
+        ),
+      )
+      expect(error).toBeInstanceOf(AggregateError)
+      expect(error).toMatchObject({
+        message: "MATRIX_SUCCESSOR_TEMPORARY_CLEANUP_FAILED",
+      })
+      expect((error as AggregateError).errors).toHaveLength(2)
+      expect(existsSync(target)).toBe(false)
+      expect(readdirSync(temporaryRoot)).toHaveLength(1)
+    } finally {
+      rmSync(temporaryRoot, { recursive: true, force: true })
+    }
+  })
+
+  it("reports cleanup durability uncertainty alongside a short write", () => {
+    const temporaryRoot = mkdtempSync(
+      path.join(tmpdir(), "cowards-v138-short-cleanup-fsync-fault-"),
+    )
+    const target = path.join(temporaryRoot, "receipt.json")
+    try {
+      const error = capturePublicationFailure(() =>
+        writeV138ImmutableReceipt(
+          target,
+          { schemaVersion: "test-receipt-v1", status: "complete" },
+          {
+            writeTemporaryFile: (fileDescriptor, bytes) => {
+              writeSync(
+                fileDescriptor,
+                bytes,
+                0,
+                Math.max(1, Math.floor(bytes.byteLength / 2)),
+              )
+            },
+            fsyncDirectory: (_directoryDescriptor, phase) => {
+              if (phase === "cleanup") {
+                throw new Error("INJECTED_CLEANUP_FSYNC_FAILURE")
+              }
+            },
+          },
+        ),
+      )
+      expect(error).toBeInstanceOf(AggregateError)
+      expect(error).toMatchObject({
+        message:
+          "MATRIX_SUCCESSOR_CLEANUP_DURABILITY_INDETERMINATE",
+      })
+      expect((error as AggregateError).errors).toHaveLength(2)
+      expect(existsSync(target)).toBe(false)
+      expect(readdirSync(temporaryRoot)).toEqual([])
+    } finally {
+      rmSync(temporaryRoot, { recursive: true, force: true })
+    }
+  })
+
+  it("reports cleanup durability uncertainty alongside target contention", () => {
+    const temporaryRoot = mkdtempSync(
+      path.join(tmpdir(), "cowards-v138-exists-cleanup-fsync-fault-"),
+    )
+    const target = path.join(temporaryRoot, "receipt.json")
+    writeFileSync(target, "{}\n")
+    try {
+      const error = capturePublicationFailure(() =>
+        writeV138ImmutableReceipt(
+          target,
+          { schemaVersion: "test-receipt-v1", status: "complete" },
+          {
+            fsyncDirectory: (_directoryDescriptor, phase) => {
+              if (phase === "cleanup") {
+                throw new Error("INJECTED_CLEANUP_FSYNC_FAILURE")
+              }
+            },
+          },
+        ),
+      )
+      expect(error).toBeInstanceOf(AggregateError)
+      expect(error).toMatchObject({
+        message:
+          "MATRIX_SUCCESSOR_CLEANUP_DURABILITY_INDETERMINATE",
+      })
+      expect((error as AggregateError).errors).toHaveLength(2)
+      expect(readFileSync(target, "utf8")).toBe("{}\n")
+      expect(readdirSync(temporaryRoot)).toEqual(["receipt.json"])
     } finally {
       rmSync(temporaryRoot, { recursive: true, force: true })
     }

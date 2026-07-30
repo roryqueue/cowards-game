@@ -6599,6 +6599,22 @@ const errorCode = (error: unknown): string | undefined =>
     ? error.code
     : undefined
 
+const combineReceiptPublicationFailures = (
+  primaryFailure: unknown,
+  secondaryFailure: unknown,
+  secondaryCode: string,
+): unknown => {
+  const classifiedSecondary = new TypeError(secondaryCode, {
+    cause: secondaryFailure,
+  })
+  return primaryFailure === undefined
+    ? classifiedSecondary
+    : new AggregateError(
+        [primaryFailure, classifiedSecondary],
+        secondaryCode,
+      )
+}
+
 const createExclusiveReceiptTemporaryFile = (
   targetPath: string,
 ): Readonly<{ fileDescriptor: number; temporaryPath: string }> => {
@@ -6703,7 +6719,9 @@ export const writeV138ImmutableReceipt = (
       if (errorCode(error) === "ENOENT") {
         temporaryUnlinked = false
       } else {
-        failure ??= new TypeError(
+        failure = combineReceiptPublicationFailures(
+          failure,
+          error,
           "MATRIX_SUCCESSOR_TEMPORARY_CLEANUP_FAILED",
         )
       }
@@ -6711,8 +6729,10 @@ export const writeV138ImmutableReceipt = (
     if (temporaryUnlinked) {
       try {
         fsyncContainingDirectory("cleanup")
-      } catch {
-        failure ??= new TypeError(
+      } catch (error) {
+        failure = combineReceiptPublicationFailures(
+          failure,
+          error,
           "MATRIX_SUCCESSOR_CLEANUP_DURABILITY_INDETERMINATE",
         )
       }
