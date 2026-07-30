@@ -1071,8 +1071,8 @@ describe("v1.38 matrix real process boundary", () => {
 
   it("matrix diagnostic v2 receipt seals exact charged real-boundary evidence", async () => {
     const target = path.resolve(
-      repoRoot,
-      ".planning/artifacts/v1.38-current-matrix-diagnostic-v2.json",
+      "/tmp",
+      `v1.38-current-matrix-diagnostic-v2-${process.pid}.json`,
     )
     const receipt = await writeV138MatrixDiagnosticV2Receipt(repoRoot, target)
     expect(checkV138MatrixDiagnosticV2Receipt(repoRoot, clone(receipt))).toEqual(
