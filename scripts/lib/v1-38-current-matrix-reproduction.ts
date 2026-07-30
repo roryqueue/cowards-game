@@ -29,7 +29,6 @@ import {
 } from "node:child_process"
 import { fileURLToPath } from "node:url"
 import {
-  checkV138FoundationAdmissionReceipt,
   type V138FoundationAdmissionPassed,
 } from "./v1-38-foundation-admission.js"
 import {
@@ -82,6 +81,7 @@ import {
 } from "@cowards/spec"
 import {
   checkV138Plan26215Authorization,
+  checkV138SuccessorSealCommit,
   checkV138SuccessorSourceSeal,
   type V138Plan26215Authorization,
   type V138SuccessorSourceSeal,
@@ -185,10 +185,86 @@ const gitBlob = (
     maxBuffer: 8 * 1024 * 1024,
   })
 
+const HISTORICAL_FOUNDATION_ADMISSION = Object.freeze({
+  producingCommit: "d5bfb7e28112702ea0e37a4f6ffd3d9b781ac3ad",
+  path: ".planning/artifacts/v1.38-foundation-admission.json",
+  blob: "4f85041061488b3222ef37474ecc4ef75f9e271b",
+  byteLength: 963,
+  sha256:
+    "sha256:1017d27d502ba27588479243613a7bd719a3ee6bb0bdf183d6aa3ade3c2dc196" as Sha256,
+  admissionRoot:
+    "sha256:eb881964ed2cf8b8cf2d24c35a2d8eb6a744917f2659bef8fd41b6f3c7ab491c" as Sha256,
+})
+
+export interface V138HistoricalAdmissionGitObjects {
+  readonly resolveCommitPath: (input: Readonly<{
+    producingCommit: string
+    sourcePath: string
+  }>) => Readonly<{ blob: string; content: Uint8Array }>
+}
+
+export const checkV138HistoricalFoundationAdmission = (
+  repoRoot: string,
+  gitObjects: V138HistoricalAdmissionGitObjects = {
+    resolveCommitPath: ({ producingCommit, sourcePath }) => ({
+      blob: git(repoRoot, ["rev-parse", `${producingCommit}:${sourcePath}`]),
+      content: gitBlob(repoRoot, producingCommit, sourcePath),
+    }),
+  },
+): V138FoundationAdmissionPassed => {
+  try {
+    const sealed = gitObjects.resolveCommitPath({
+      producingCommit: HISTORICAL_FOUNDATION_ADMISSION.producingCommit,
+      sourcePath: HISTORICAL_FOUNDATION_ADMISSION.path,
+    })
+    const headBlob = git(repoRoot, [
+      "rev-parse",
+      `HEAD:${HISTORICAL_FOUNDATION_ADMISSION.path}`,
+    ])
+    const target = path.resolve(repoRoot, HISTORICAL_FOUNDATION_ADMISSION.path)
+    const pathStat = lstatSync(target)
+    if (!pathStat.isFile() || pathStat.isSymbolicLink()) {
+      throw new TypeError()
+    }
+    const descriptor = openSync(
+      target,
+      constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0),
+    )
+    let workingBytes: Buffer
+    try {
+      const opened = fstatSync(descriptor)
+      if (
+        !opened.isFile() ||
+        opened.dev !== pathStat.dev ||
+        opened.ino !== pathStat.ino
+      ) throw new TypeError()
+      workingBytes = readFileSync(descriptor)
+    } finally {
+      closeSync(descriptor)
+    }
+    const sealedBytes = Buffer.from(sealed.content)
+    const parsed = JSON.parse(sealedBytes.toString("utf8")) as
+      V138FoundationAdmissionPassed
+    if (
+      sealed.blob !== HISTORICAL_FOUNDATION_ADMISSION.blob ||
+      headBlob !== HISTORICAL_FOUNDATION_ADMISSION.blob ||
+      sealedBytes.byteLength !== HISTORICAL_FOUNDATION_ADMISSION.byteLength ||
+      sha256(sealedBytes) !== HISTORICAL_FOUNDATION_ADMISSION.sha256 ||
+      !workingBytes.equals(sealedBytes) ||
+      parsed.schemaVersion !== "v1.38-foundation-admission-v1" ||
+      parsed.status !== "passed_exact" ||
+      parsed.admissionRoot !== HISTORICAL_FOUNDATION_ADMISSION.admissionRoot
+    ) throw new TypeError()
+    return deepFreeze(cloneCanonical(parsed))
+  } catch {
+    throw new TypeError("MATRIX_HISTORICAL_ADMISSION_INVALID")
+  }
+}
+
 const verifiedFoundationAdmission = (
   repoRoot: string,
 ): V138FoundationAdmissionPassed =>
-  checkV138FoundationAdmissionReceipt(path.resolve(repoRoot))
+  checkV138HistoricalFoundationAdmission(path.resolve(repoRoot))
 
 // BEGIN V1.38 HISTORICAL EXPECTATION DERIVATION SOURCE
 const onlyMatch = (source: string, pattern: RegExp): RegExpMatchArray => {
@@ -7871,7 +7947,10 @@ export const writeV138ExecutionContextV5Receipt = (
   terminalAgentRegistry: unknown,
   authorizationPath: string,
   sealPath: string,
+  sourceA: string,
+  sourceB: string,
 ): Readonly<V138ExecutionContextV5Receipt> => {
+  checkV138SuccessorSealCommit({ repoRoot, sourceA, sourceB })
   const target = plan26216Path(repoRoot, targetPath, "context")
   const authorizationArtifact = plan26216Read(
     plan26216Path(repoRoot, authorizationPath, "authorization"),
@@ -7905,7 +7984,10 @@ export const writeV138HostHeadroomPreflightV5Receipt = async (
   executionContextPath: string,
   authorizationPath: string,
   sealPath: string,
+  sourceA: string,
+  sourceB: string,
 ): Promise<Readonly<V138HostHeadroomPreflightV5Receipt>> => {
+  checkV138SuccessorSealCommit({ repoRoot, sourceA, sourceB })
   const target = plan26216Path(repoRoot, targetPath, "preflight")
   const authorization = checkV138Plan26215Authorization(
     repoRoot,
@@ -7942,7 +8024,10 @@ export const writeV138ParallelCalibrationV5Receipt = async (
   targetPath: string,
   preflightPath: string,
   executionContextPath: string,
+  sourceA: string,
+  sourceB: string,
 ): Promise<Readonly<Record<string, unknown>>> => {
+  checkV138SuccessorSealCommit({ repoRoot, sourceA, sourceB })
   const target = plan26216Path(repoRoot, targetPath, "calibration")
   const context = checkV138ExecutionContextV5Receipt(
     plan26216Read(
@@ -8014,7 +8099,10 @@ export const writeV138AuthoritativeMatrixV6Receipt = async (
   targetPath: string,
   calibrationPath: string,
   executionContextPath: string,
+  sourceA: string,
+  sourceB: string,
 ): Promise<Readonly<V138AuthoritativeMatrixV6Receipt>> => {
+  checkV138SuccessorSealCommit({ repoRoot, sourceA, sourceB })
   const target = plan26216Path(repoRoot, targetPath, "reproduction")
   const context = checkV138ExecutionContextV5Receipt(
     plan26216Read(
@@ -8165,7 +8253,10 @@ const plan26216Needs = (disposition: V138Plan26216TerminalDisposition) => {
 export const checkV138Plan26216TerminalBranch = (
   repoRoot: string,
   supplied: Plan26216Paths,
+  sourceA: string,
+  sourceB: string,
 ): V138Plan26216TerminalDisposition => {
+  checkV138SuccessorSealCommit({ repoRoot, sourceA, sourceB })
   const resolved = Object.fromEntries(
     (Object.keys(PLAN_262_16_PATHS) as Array<keyof typeof PLAN_262_16_PATHS>)
       .map((key) => [key, plan26216Path(repoRoot, supplied[key], key)]),
@@ -8318,7 +8409,10 @@ export const writeV138Plan26216Terminal = (
   repoRoot: string,
   supplied: Plan26216Paths,
   disposition: V138Plan26216TerminalDisposition,
+  sourceA: string,
+  sourceB: string,
 ) => {
+  checkV138SuccessorSealCommit({ repoRoot, sourceA, sourceB })
   if (![
     "tool_identity_failed",
     "protected_history_failed",
@@ -8364,7 +8458,7 @@ export const writeV138Plan26216Terminal = (
     plan26216Path(repoRoot, supplied.terminal, "terminal"),
     terminal,
   )
-  checkV138Plan26216TerminalBranch(repoRoot, supplied)
+  checkV138Plan26216TerminalBranch(repoRoot, supplied, sourceA, sourceB)
   return terminal
 }
 
@@ -8384,12 +8478,14 @@ const runReceiptCli = async (): Promise<void> => {
     let output: unknown
     if (command === "--write-execution-context-v5-receipt") {
       if (
-        process.argv.length !== 14 ||
+        process.argv.length !== 18 ||
         process.argv[4] !== "--mode" ||
         process.argv[6] !== "--cwd" ||
         process.argv[8] !== "--terminal-agent-registry-json" ||
         process.argv[10] !== "--authorization" ||
-        process.argv[12] !== "--seal"
+        process.argv[12] !== "--seal" ||
+        process.argv[14] !== "--source-a" ||
+        process.argv[16] !== "--source-b"
       ) throw new TypeError("MATRIX_EXECUTION_CONTEXT_V5_CLI_ARGUMENTS_INVALID")
       output = writeV138ExecutionContextV5Receipt(
         repoRoot,
@@ -8399,13 +8495,17 @@ const runReceiptCli = async (): Promise<void> => {
         JSON.parse(process.argv[9]!),
         process.argv[11]!,
         process.argv[13]!,
+        process.argv[15]!,
+        process.argv[17]!,
       )
     } else if (command === "--write-headroom-preflight-v5-receipt") {
       if (
-        process.argv.length !== 10 ||
+        process.argv.length !== 14 ||
         process.argv[4] !== "--execution-context" ||
         process.argv[6] !== "--authorization" ||
-        process.argv[8] !== "--seal"
+        process.argv[8] !== "--seal" ||
+        process.argv[10] !== "--source-a" ||
+        process.argv[12] !== "--source-b"
       ) throw new TypeError("MATRIX_PREFLIGHT_V5_CLI_ARGUMENTS_INVALID")
       output = await writeV138HostHeadroomPreflightV5Receipt(
         repoRoot,
@@ -8413,30 +8513,40 @@ const runReceiptCli = async (): Promise<void> => {
         process.argv[5]!,
         process.argv[7]!,
         process.argv[9]!,
+        process.argv[11]!,
+        process.argv[13]!,
       )
     } else if (command === "--calibrate-parallel-v5-receipt") {
       if (
-        process.argv.length !== 8 ||
+        process.argv.length !== 12 ||
         process.argv[4] !== "--preflight" ||
-        process.argv[6] !== "--execution-context"
+        process.argv[6] !== "--execution-context" ||
+        process.argv[8] !== "--source-a" ||
+        process.argv[10] !== "--source-b"
       ) throw new TypeError("MATRIX_CALIBRATION_V5_CLI_ARGUMENTS_INVALID")
       output = await writeV138ParallelCalibrationV5Receipt(
         repoRoot,
         process.argv[3]!,
         process.argv[5]!,
         process.argv[7]!,
+        process.argv[9]!,
+        process.argv[11]!,
       )
     } else {
       if (
-        process.argv.length !== 8 ||
+        process.argv.length !== 12 ||
         process.argv[4] !== "--calibration" ||
-        process.argv[6] !== "--execution-context"
+        process.argv[6] !== "--execution-context" ||
+        process.argv[8] !== "--source-a" ||
+        process.argv[10] !== "--source-b"
       ) throw new TypeError("MATRIX_REPRODUCTION_V6_CLI_ARGUMENTS_INVALID")
       output = await writeV138AuthoritativeMatrixV6Receipt(
         repoRoot,
         process.argv[3]!,
         process.argv[5]!,
         process.argv[7]!,
+        process.argv[9]!,
+        process.argv[11]!,
       )
     }
     const receipt = output as Record<string, unknown>
@@ -8455,9 +8565,9 @@ const runReceiptCli = async (): Promise<void> => {
   ) {
     const write = command === "--write-plan-262-16-terminal-v1"
     const flags = write
-      ? ["--disposition", "--authorization", "--seal", "--context", "--preflight", "--calibration", "--reproduction"]
-      : ["--authorization", "--seal", "--context", "--preflight", "--calibration", "--reproduction", "--terminal"]
-    if (process.argv.length !== (write ? 18 : 17)) {
+      ? ["--disposition", "--authorization", "--seal", "--context", "--preflight", "--calibration", "--reproduction", "--source-a", "--source-b"]
+      : ["--authorization", "--seal", "--context", "--preflight", "--calibration", "--reproduction", "--terminal", "--source-a", "--source-b"]
+    if (process.argv.length !== (write ? 22 : 21)) {
       throw new TypeError("MATRIX_PLAN_262_16_CLI_ARGUMENTS_INVALID")
     }
     const values = new Map<string, string>()
@@ -8483,8 +8593,15 @@ const runReceiptCli = async (): Promise<void> => {
           repoRoot,
           supplied,
           values.get("--disposition") as V138Plan26216TerminalDisposition,
+          values.get("--source-a")!,
+          values.get("--source-b")!,
         ).disposition
-      : checkV138Plan26216TerminalBranch(repoRoot, supplied)
+      : checkV138Plan26216TerminalBranch(
+          repoRoot,
+          supplied,
+          values.get("--source-a")!,
+          values.get("--source-b")!,
+        )
     process.stdout.write(`${canonical({ disposition })}\n`)
     return
   }
