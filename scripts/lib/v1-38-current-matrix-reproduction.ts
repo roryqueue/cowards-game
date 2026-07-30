@@ -151,50 +151,10 @@ const gitBlob = (
     maxBuffer: 8 * 1024 * 1024,
   })
 
-const verifiedAdmissions = new Map<
-  string,
-  Readonly<{
-    authorityFingerprint: string
-    persistedBytes: string
-    receipt: V138FoundationAdmissionPassed
-  }>
->()
-
 const verifiedFoundationAdmission = (
   repoRoot: string,
-): V138FoundationAdmissionPassed => {
-  const root = path.resolve(repoRoot)
-  const persistedBytes = readFileSync(
-    path.resolve(root, ADMISSION_RECEIPT),
-    "utf8",
-  )
-  const authorityFingerprint = [
-    git(root, ["rev-parse", "refs/tags/v1.37"]),
-    git(root, ["rev-parse", "refs/tags/v1.37^{}"]),
-    sha256(
-      readFileSync(
-        path.resolve(
-          root,
-          ".planning/artifacts/v1.37-post-tag-ui-integration-correction.md",
-        ),
-      ),
-    ),
-  ].join("\0")
-  const cached = verifiedAdmissions.get(root)
-  if (
-    cached?.persistedBytes === persistedBytes &&
-    cached.authorityFingerprint === authorityFingerprint
-  ) {
-    return cached.receipt
-  }
-  const receipt = checkV138FoundationAdmissionReceipt(root)
-  verifiedAdmissions.set(root, {
-    authorityFingerprint,
-    persistedBytes,
-    receipt,
-  })
-  return receipt
-}
+): V138FoundationAdmissionPassed =>
+  checkV138FoundationAdmissionReceipt(path.resolve(repoRoot))
 
 // BEGIN V1.38 HISTORICAL EXPECTATION DERIVATION SOURCE
 const onlyMatch = (source: string, pattern: RegExp): RegExpMatchArray => {
