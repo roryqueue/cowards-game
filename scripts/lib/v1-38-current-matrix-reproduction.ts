@@ -1055,6 +1055,20 @@ export interface V138ParallelResourceSample {
   readonly hostFreeMemoryKilobytes: number
 }
 
+export interface V138SharedDarwinObservationTick {
+  readonly tickId: string
+  readonly observationRoot: Sha256
+  readonly observedBasisPoints: number
+  readonly shardIds: readonly string[]
+  readonly fanout: readonly Readonly<{
+    shardId: string
+    observationRoot: Sha256
+  }>[]
+}
+
+export type V138SharedDarwinHeadroomObserver = () =>
+  Promise<V138DarwinHeadroomResult>
+
 export interface V138ParallelShardRunControl {
   readonly signal: AbortSignal
   readonly onResourceSample: (sample: V138ParallelResourceSample) => void
@@ -1097,6 +1111,8 @@ interface V138SupervisedAssignmentsResult {
   readonly childMaxRssKilobytes: readonly number[]
   readonly aggregateChildRssKilobytes: number
   readonly minimumHostHeadroomBasisPoints: number
+  readonly sharedObservationTicks?:
+    readonly Readonly<V138SharedDarwinObservationTick>[]
 }
 
 const runnerExceptionTerminal = (
@@ -1133,6 +1149,7 @@ const runV138SupervisedAssignments = async (input: {
   runner: V138ParallelShardRunner
   clock: V138ParallelClock
   parentSignal?: AbortSignal | undefined
+  sharedHeadroomObserver?: V138SharedDarwinHeadroomObserver | undefined
 }): Promise<Readonly<V138SupervisedAssignmentsResult>> => {
   const controllers = new Map<string, AbortController>()
   const active = new Map<
@@ -1148,6 +1165,7 @@ const runV138SupervisedAssignments = async (input: {
   const maxChildRss = new Map<string, number>()
   const maxShardRss = new Map<string, number>()
   const terminals: V138ParallelShardTerminal[] = []
+  const sharedObservationTicks: V138SharedDarwinObservationTick[] = []
   let nextAssignment = 0
   let firstSpawnMilliseconds: number | undefined
   let stopReason: V138ParallelStopReason | null = null
@@ -1174,6 +1192,45 @@ const runV138SupervisedAssignments = async (input: {
     if (elapsed > V138_PARALLEL_RESOURCE_POLICY.maxTotalRunMilliseconds) {
       stop("RESOURCE_POLICY_TOTAL_TIMEOUT")
     }
+  }
+
+  const observeSharedHeadroom = async (): Promise<void> => {
+    if (
+      input.sharedHeadroomObserver === undefined ||
+      active.size === 0 ||
+      stopReason !== null
+    ) return
+    const shardIds = [...active.keys()].sort()
+    let result: V138DarwinHeadroomResult
+    try {
+      result = await input.sharedHeadroomObserver()
+    } catch {
+      stop("RESOURCE_MEASUREMENT_UNAVAILABLE")
+      return
+    }
+    if (!result.ok) {
+      stop("RESOURCE_MEASUREMENT_UNAVAILABLE")
+      return
+    }
+    const observationRoot = sha256(canonical(result.observation))
+    const tick = deepFreeze({
+      tickId: `shared-darwin-tick:${sharedObservationTicks.length}`,
+      observationRoot,
+      observedBasisPoints: result.observation.observedBasisPoints,
+      shardIds: Object.freeze(shardIds),
+      fanout: Object.freeze(
+        shardIds.map((shardId) => Object.freeze({ shardId, observationRoot })),
+      ),
+    })
+    sharedObservationTicks.push(tick)
+    minimumHostHeadroomBasisPoints = Math.min(
+      minimumHostHeadroomBasisPoints,
+      result.observation.observedBasisPoints,
+    )
+    if (
+      result.observation.observedBasisPoints <
+      V138_PARALLEL_RESOURCE_POLICY.minHostFreeMemoryBasisPoints
+    ) stop("RESOURCE_POLICY_HOST_HEADROOM")
   }
 
   const launchAvailable = (): void => {
@@ -1205,12 +1262,13 @@ const runV138SupervisedAssignments = async (input: {
           sample.childId.length === 0 ||
           !Number.isSafeInteger(sample.childRssKilobytes) ||
           sample.childRssKilobytes < 0 ||
-          !Number.isSafeInteger(sample.hostTotalMemoryKilobytes) ||
-          sample.hostTotalMemoryKilobytes <= 0 ||
-          !Number.isSafeInteger(sample.hostFreeMemoryKilobytes) ||
-          sample.hostFreeMemoryKilobytes < 0 ||
-          sample.hostFreeMemoryKilobytes >
-            sample.hostTotalMemoryKilobytes
+          (input.sharedHeadroomObserver === undefined &&
+            (!Number.isSafeInteger(sample.hostTotalMemoryKilobytes) ||
+              sample.hostTotalMemoryKilobytes <= 0 ||
+              !Number.isSafeInteger(sample.hostFreeMemoryKilobytes) ||
+              sample.hostFreeMemoryKilobytes < 0 ||
+              sample.hostFreeMemoryKilobytes >
+                sample.hostTotalMemoryKilobytes))
         ) {
           stop("RESOURCE_MEASUREMENT_UNAVAILABLE")
           return
@@ -1239,14 +1297,13 @@ const runV138SupervisedAssignments = async (input: {
           maxAggregateChildRssKilobytes,
           aggregate,
         )
-        const headroomBasisPoints = Math.floor(
-          (sample.hostFreeMemoryKilobytes * 10_000) /
-            sample.hostTotalMemoryKilobytes,
-        )
-        minimumHostHeadroomBasisPoints = Math.min(
-          minimumHostHeadroomBasisPoints,
-          headroomBasisPoints,
-        )
+        const headroomBasisPoints =
+          input.sharedHeadroomObserver === undefined
+            ? Math.floor(
+                (sample.hostFreeMemoryKilobytes * 10_000) /
+                  sample.hostTotalMemoryKilobytes,
+              )
+            : minimumHostHeadroomBasisPoints
         if (
           sample.childRssKilobytes >
           V138_PARALLEL_RESOURCE_POLICY.maxChildRssKilobytes
@@ -1288,8 +1345,20 @@ const runV138SupervisedAssignments = async (input: {
   }
 
   launchAvailable()
+  await observeSharedHeadroom()
   while (active.size > 0) {
-    const completed = await Promise.race(active.values())
+    const completed = await Promise.race([
+      ...active.values(),
+      ...(input.sharedHeadroomObserver === undefined
+        ? []
+        : [delayMilliseconds(
+            V138_PARALLEL_RESOURCE_POLICY.resourceSampleMilliseconds,
+          ).then(() => undefined)]),
+    ])
+    if (completed === undefined) {
+      await observeSharedHeadroom()
+      continue
+    }
     active.delete(completed.shardId)
     controllers.delete(completed.shardId)
     for (const childId of childIdsByShard.get(completed.shardId) ?? []) {
@@ -1346,6 +1415,7 @@ const runV138SupervisedAssignments = async (input: {
     ),
     aggregateChildRssKilobytes: maxAggregateChildRssKilobytes,
     minimumHostHeadroomBasisPoints,
+    sharedObservationTicks: Object.freeze(sharedObservationTicks),
   })
 }
 
@@ -1368,6 +1438,8 @@ export interface V138ParallelCalibrationReceipt {
     aggregateChildRssKilobytes: number
     minimumHostHeadroomBasisPoints: number
   }>
+  readonly sharedObservationTicks:
+    readonly Readonly<V138SharedDarwinObservationTick>[]
   readonly projection: Readonly<V138ParallelProjection>
   readonly terminalShardCount: number
   readonly attemptCount: 8
@@ -1383,6 +1455,34 @@ const calibrationWithoutRoot = (
   const { calibrationRoot: _root, ...withoutRoot } = receipt
   return withoutRoot
 }
+
+const sharedDarwinTicksAreValid = (
+  ticks: readonly Readonly<V138SharedDarwinObservationTick>[] | undefined,
+  minimumObservedBasisPoints: number,
+): boolean =>
+  ticks !== undefined &&
+  ticks.length > 0 &&
+  ticks.every((tick, ordinal) => {
+    const shardIds = [...tick.shardIds]
+    return (
+      tick.tickId === `shared-darwin-tick:${ordinal}` &&
+      /^sha256:[0-9a-f]{64}$/u.test(tick.observationRoot) &&
+      Number.isSafeInteger(tick.observedBasisPoints) &&
+      tick.observedBasisPoints >= 0 &&
+      tick.observedBasisPoints <= 10_000 &&
+      shardIds.length > 0 &&
+      new Set(shardIds).size === shardIds.length &&
+      canonical(tick.fanout) ===
+        canonical(
+          shardIds.map((shardId) => ({
+            shardId,
+            observationRoot: tick.observationRoot,
+          })),
+        )
+    )
+  }) &&
+  Math.min(...ticks.map(({ observedBasisPoints }) => observedBasisPoints)) ===
+    minimumObservedBasisPoints
 
 const calibrationReceiptIsValid = (
   inventory: Readonly<V138CurrentMatrixInventory>,
@@ -1409,6 +1509,11 @@ const calibrationReceiptIsValid = (
       V138_PARALLEL_RESOURCE_POLICY.maxAggregateChildRssKilobytes &&
     receipt.rawObservation.minimumHostHeadroomBasisPoints >=
       V138_PARALLEL_RESOURCE_POLICY.minHostFreeMemoryBasisPoints &&
+    (receipt.sharedObservationTicks === undefined ||
+      sharedDarwinTicksAreValid(
+        receipt.sharedObservationTicks,
+        receipt.rawObservation.minimumHostHeadroomBasisPoints,
+      )) &&
     receipt.calibrationRoot ===
       sha256(canonical(calibrationWithoutRoot(receipt)))
   )
@@ -1426,6 +1531,7 @@ export const calibrateV138ParallelMatrix = async (input: {
   }>
   clock?: V138ParallelClock | undefined
   parentSignal?: AbortSignal | undefined
+  sharedHeadroomObserver?: V138SharedDarwinHeadroomObserver | undefined
   repoRoot?: string | undefined
   executionIdentityVersion?: "v1" | "v2" | "v3" | "v4" | "v5" | undefined
 }): Promise<Readonly<V138ParallelCalibrationReceipt>> => {
@@ -1509,6 +1615,7 @@ export const calibrateV138ParallelMatrix = async (input: {
     runner,
     clock: input.clock ?? defaultParallelClock,
     parentSignal: input.parentSignal,
+    sharedHeadroomObserver: input.sharedHeadroomObserver,
   })
   const childMax = assignments.map((assignment) => {
     const sampled = supervised.childMaxRssKilobytes[assignment.ordinal]
@@ -1557,6 +1664,9 @@ export const calibrateV138ParallelMatrix = async (input: {
     inventoryRoot: policy.inventory.inventoryRoot,
     hardwareIdentity: input.hardwareIdentity,
     rawObservation,
+    ...(input.sharedHeadroomObserver === undefined
+      ? {}
+      : { sharedObservationTicks: supervised.sharedObservationTicks }),
     projection,
     terminalShardCount: supervised.terminals.length,
     attemptCount: 8 as const,
@@ -1580,6 +1690,8 @@ export type V138ParallelMatrixExecutionResult = Readonly<{
   accounting: ReturnType<typeof reduceV138ParallelMatrixAccounting>
   canonicalOutcomes: readonly V138ParallelChargedOutcome[]
   batchWallMilliseconds: number
+  sharedObservationTicks?:
+    readonly Readonly<V138SharedDarwinObservationTick>[]
 }>
 
 export const executeV138ParallelMatrix = async (input: {
@@ -1588,6 +1700,7 @@ export const executeV138ParallelMatrix = async (input: {
   runner?: V138ParallelShardRunner | undefined
   clock?: V138ParallelClock | undefined
   parentSignal?: AbortSignal | undefined
+  sharedHeadroomObserver?: V138SharedDarwinHeadroomObserver | undefined
   repoRoot?: string | undefined
   executionIdentityVersion?: "canonical" | "v3" | "v4" | "v5" | undefined
 }): Promise<V138ParallelMatrixExecutionResult> => {
@@ -1632,6 +1745,7 @@ export const executeV138ParallelMatrix = async (input: {
     runner,
     clock: input.clock ?? defaultParallelClock,
     parentSignal: input.parentSignal,
+    sharedHeadroomObserver: input.sharedHeadroomObserver,
   })
   const canonicalTerminalIds = supervised.terminals.map((terminal) => ({
     ...terminal,
@@ -1687,6 +1801,9 @@ export const executeV138ParallelMatrix = async (input: {
     accounting,
     canonicalOutcomes,
     batchWallMilliseconds: supervised.batchWallMilliseconds,
+    ...(input.sharedHeadroomObserver === undefined
+      ? {}
+      : { sharedObservationTicks: supervised.sharedObservationTicks }),
   })
 }
 
@@ -3048,6 +3165,11 @@ export function createV138SubprocessShardRunner(
   options: Readonly<{
     rssCommandAdapter?: V138RssCommandAdapter | undefined
     shardProcessFactory?: V138ShardProcessFactory | undefined
+    useLegacyHostMemory?: boolean | undefined
+    legacyHostMemorySampler?: (() => Readonly<{
+      totalKilobytes: number
+      freeKilobytes: number
+    }>) | undefined
   }> = {},
 ): V138ParallelShardRunner {
   return {
@@ -3193,15 +3315,20 @@ export function createV138SubprocessShardRunner(
           child.pid,
           options.rssCommandAdapter ?? defaultV138RssCommandAdapter,
         )
-        const hostTotal = Math.floor(totalmem() / 1024)
-        const hostFree = Math.floor(freemem() / 1024)
+        const legacyHostMemory =
+          options.useLegacyHostMemory === false
+            ? { totalKilobytes: 1, freeKilobytes: 1 }
+            : (options.legacyHostMemorySampler?.() ?? {
+                totalKilobytes: Math.floor(totalmem() / 1024),
+                freeKilobytes: Math.floor(freemem() / 1024),
+              })
         if (rss.status === "unavailable") {
           samplerCode = rss.code
           control.onResourceSample({
             childId: `pid:${child.pid}`,
             childRssKilobytes: -1,
-            hostTotalMemoryKilobytes: hostTotal,
-            hostFreeMemoryKilobytes: hostFree,
+            hostTotalMemoryKilobytes: legacyHostMemory.totalKilobytes,
+            hostFreeMemoryKilobytes: legacyHostMemory.freeKilobytes,
           })
           await terminate()
           return
@@ -3213,8 +3340,8 @@ export function createV138SubprocessShardRunner(
         control.onResourceSample({
           childId: `pid:${child.pid}`,
           childRssKilobytes: rss.rssKilobytes,
-          hostTotalMemoryKilobytes: hostTotal,
-          hostFreeMemoryKilobytes: hostFree,
+          hostTotalMemoryKilobytes: legacyHostMemory.totalKilobytes,
+          hostFreeMemoryKilobytes: legacyHostMemory.freeKilobytes,
         })
       }
       await sample()
@@ -6559,6 +6686,12 @@ const validateParallelCalibrationReceipt = (
     cleanupComplete &&
     projection.admittedByTime &&
     resourcesAdmitted
+  const sharedTicksValid =
+    executionIdentityVersion !== "v5" ||
+    sharedDarwinTicksAreValid(
+      receipt.sharedObservationTicks,
+      receipt.rawObservation.minimumHostHeadroomBasisPoints,
+    )
   if (
     receipt.schemaVersion !== "v1.38-parallel-calibration-receipt-v1" ||
     receipt.policyRoot !== policy.policyRoot ||
@@ -6568,6 +6701,7 @@ const validateParallelCalibrationReceipt = (
     receipt.terminalShardCount !== receipt.terminals.length ||
     receipt.acceptedCellsPublished !== 0 ||
     receipt.partialAcceptedEvidenceReusable !== false ||
+    !sharedTicksValid ||
     canonical(receipt.projection) !== canonical(projection) ||
     receipt.calibrationRoot !==
       sha256(canonical(calibrationWithoutRoot(receipt))) ||
@@ -7276,8 +7410,15 @@ export const checkV138HostHeadroomPreflightV5Receipt = (
       ? "preflight_admitted"
       : "preflight_refused"
     : "preflight_unavailable"
+  const isCanonicalRoot = (candidate: unknown): candidate is Sha256 =>
+    typeof candidate === "string" &&
+    /^sha256:[0-9a-f]{64}$/u.test(candidate) &&
+    !/^sha256:([0-9a-f])\1{63}$/u.test(candidate)
   if (
     record.schemaVersion !== "v1.38-current-matrix-headroom-preflight-v5" ||
+    !isCanonicalRoot(record.executionContextRoot) ||
+    !isCanonicalRoot(record.authorizationRoot) ||
+    !isCanonicalRoot(record.sealRoot) ||
     record.metricId !== V138_DARWIN_HEADROOM_METRIC_ID ||
     record.providerId !== V138_DARWIN_HEADROOM_PROVIDER_ID ||
     record.parserId !== V138_DARWIN_HEADROOM_PARSER_ID ||
@@ -7337,7 +7478,13 @@ export const checkV138ParallelCalibrationV5Receipt = (
     ? record.sharedObservationTicks.map((tick) =>
         exactRecord(
           tick,
-          ["tickId", "observationRoot", "shardIds"],
+          [
+            "tickId",
+            "observationRoot",
+            "observedBasisPoints",
+            "shardIds",
+            "fanout",
+          ],
           "MATRIX_CALIBRATION_V5_INVALID",
         ),
       )
@@ -7352,8 +7499,14 @@ export const checkV138ParallelCalibrationV5Receipt = (
   const supervisedOutcomes = supervised?.terminals
     .flatMap((terminal) => terminal.outcomes)
     .sort((left, right) => left.attemptId.localeCompare(right.attemptId))
+  const isCanonicalRoot = (candidate: unknown): candidate is Sha256 =>
+    typeof candidate === "string" &&
+    /^sha256:[0-9a-f]{64}$/u.test(candidate) &&
+    !/^sha256:([0-9a-f])\1{63}$/u.test(candidate)
   if (
     record.schemaVersion !== "v1.38-current-matrix-calibration-v5" ||
+    !isCanonicalRoot(record.executionContextRoot) ||
+    !isCanonicalRoot(record.preflightRoot) ||
     record.chargedAttemptCount !== 8 ||
     record.shardCount !== 4 ||
     record.samplerMode !== "one_shared_observation_per_tick" ||
@@ -7385,6 +7538,9 @@ export const checkV138ParallelCalibrationV5Receipt = (
       (tick) =>
         typeof tick.tickId !== "string" ||
         !/^sha256:[0-9a-f]{64}$/u.test(String(tick.observationRoot)) ||
+        !Number.isSafeInteger(tick.observedBasisPoints) ||
+        Number(tick.observedBasisPoints) < 0 ||
+        Number(tick.observedBasisPoints) > 10_000 ||
         !Array.isArray(tick.shardIds) ||
         tick.shardIds.length === 0 ||
         new Set(tick.shardIds).size !== tick.shardIds.length ||
@@ -7392,7 +7548,15 @@ export const checkV138ParallelCalibrationV5Receipt = (
           (id) =>
             typeof id !== "string" ||
             !/^calibration-shard:[0-3]$/u.test(id),
-        ),
+        ) ||
+        !Array.isArray(tick.fanout) ||
+        canonical(tick.fanout) !==
+          canonical(
+            (tick.shardIds as string[]).map((shardId) => ({
+              shardId,
+              observationRoot: tick.observationRoot,
+            })),
+          ),
     ) ||
     (admitted &&
       new Set(ticks.flatMap((tick) => tick.shardIds as string[])).size !== 4) ||
@@ -7410,6 +7574,8 @@ export const checkV138ParallelCalibrationV5Receipt = (
             return true
           }
         })() ||
+        canonical(ticks) !==
+          canonical(supervised?.sharedObservationTicks ?? []) ||
         canonical(
           parsedAttempts.map((attempt) => ({
             attemptId: attempt.attemptId,
@@ -7444,11 +7610,8 @@ export const buildV138ParallelCalibrationV5Receipt = (input: {
     childLaunched: boolean
     accepted: boolean
   }>[]
-  readonly sharedObservationTicks: readonly Readonly<{
-    tickId: string
-    observationRoot: Sha256
-    shardIds: readonly string[]
-  }>[]
+  readonly sharedObservationTicks:
+    readonly Readonly<V138SharedDarwinObservationTick>[]
   readonly supervisedCalibration?: Readonly<V138ParallelCalibrationReceipt>
 }): Readonly<Record<string, unknown>> => {
   const preflight = checkV138HostHeadroomPreflightV5Receipt(input.preflight)
@@ -7506,6 +7669,7 @@ export interface V138AuthoritativeMatrixV6Receipt {
   readonly acceptedCellCount: 0 | 540
   readonly attemptLedgerRoot: Sha256
   readonly acceptedCellRoot: Sha256 | null
+  readonly execution: V138ParallelMatrixExecutionResult
   readonly runtimeRoute: "v1.18/v1.19/MATCH_KERNEL"
   readonly partialAcceptedEvidenceReusable: false
   readonly noRetry: true
@@ -7591,6 +7755,7 @@ export const buildV138AuthoritativeMatrixV6Receipt = (input: {
     acceptedCellCount: passed ? 540 as const : 0 as const,
     attemptLedgerRoot,
     acceptedCellRoot: canonicalReceipt?.acceptedCellLedgerRoot ?? null,
+    execution: input.execution,
     runtimeRoute: "v1.18/v1.19/MATCH_KERNEL" as const,
     partialAcceptedEvidenceReusable: false as const,
     noRetry: true as const,
@@ -7603,27 +7768,36 @@ export const buildV138AuthoritativeMatrixV6Receipt = (input: {
 
 export const checkV138AuthoritativeMatrixV6Receipt = (
   value: unknown,
+  suppliedEvidence?: Readonly<{
+    repoRoot: string
+    executionContext: V138ExecutionContextV5Receipt
+    calibration: Record<string, unknown>
+  }>,
 ): Readonly<V138AuthoritativeMatrixV6Receipt> => {
   const record = exactRecord(
     value,
     [
       "schemaVersion", "executionContextRoot", "calibrationRoot", "status",
       "chargedAttemptCount", "acceptedCellCount", "attemptLedgerRoot",
-      "acceptedCellRoot", "runtimeRoute", "partialAcceptedEvidenceReusable",
+      "acceptedCellRoot", "execution", "runtimeRoute", "partialAcceptedEvidenceReusable",
       "noRetry", "receiptRoot",
     ],
     "MATRIX_REPRODUCTION_V6_INVALID",
   ) as unknown as V138AuthoritativeMatrixV6Receipt
   const { receiptRoot, ...body } = record
   const passed = record.status === "passed_exact"
+  const isCanonicalRoot = (candidate: unknown): candidate is Sha256 =>
+    typeof candidate === "string" &&
+    /^sha256:[0-9a-f]{64}$/u.test(candidate) &&
+    !/^sha256:([0-9a-f])\1{63}$/u.test(candidate)
   if (
     record.schemaVersion !== "v1.38-current-matrix-reproduction-v6" ||
     !["passed_exact", "stopped_process_failure"].includes(record.status) ||
-    !/^sha256:[0-9a-f]{64}$/u.test(record.executionContextRoot) ||
-    !/^sha256:[0-9a-f]{64}$/u.test(record.calibrationRoot) ||
-    !/^sha256:[0-9a-f]{64}$/u.test(record.attemptLedgerRoot) ||
+    !isCanonicalRoot(record.executionContextRoot) ||
+    !isCanonicalRoot(record.calibrationRoot) ||
+    !isCanonicalRoot(record.attemptLedgerRoot) ||
     (record.acceptedCellRoot !== null &&
-      !/^sha256:[0-9a-f]{64}$/u.test(record.acceptedCellRoot)) ||
+      !isCanonicalRoot(record.acceptedCellRoot)) ||
     record.chargedAttemptCount !== 540 ||
     record.acceptedCellCount !== (passed ? 540 : 0) ||
     (passed ? record.acceptedCellRoot === null : record.acceptedCellRoot !== null) ||
@@ -7632,7 +7806,19 @@ export const checkV138AuthoritativeMatrixV6Receipt = (
     record.noRetry !== true ||
     receiptRoot !== v138SuccessorRoot("evidenceBundle", record.schemaVersion, body)
   ) throw new TypeError("MATRIX_REPRODUCTION_V6_INVALID")
-  return record
+  if (suppliedEvidence === undefined) {
+    throw new TypeError("MATRIX_REPRODUCTION_V6_EVIDENCE_REQUIRED")
+  }
+  const expected = buildV138AuthoritativeMatrixV6Receipt({
+    repoRoot: suppliedEvidence.repoRoot,
+    executionContext: suppliedEvidence.executionContext,
+    calibration: suppliedEvidence.calibration,
+    execution: record.execution,
+  })
+  if (canonical(expected) !== canonical(record)) {
+    throw new TypeError("MATRIX_REPRODUCTION_V6_INVALID")
+  }
+  return expected
 }
 
 const executeOwnedMemoryPressureQ = async (
@@ -7779,6 +7965,11 @@ export const writeV138ParallelCalibrationV5Receipt = async (
   } else {
     const calibration = await calibrateV138ParallelMatrix({
       inventory: enumerateV138CurrentMatrix(repoRoot),
+      runner: createV138SubprocessShardRunner(repoRoot, {
+        useLegacyHostMemory: false,
+      }),
+      sharedHeadroomObserver: () =>
+        observeDarwinHeadroomOwned(executeOwnedMemoryPressureQ),
       hardwareIdentity: {
         operatingSystem: `${platform()} ${release()}`,
         architecture: arch(),
@@ -7810,16 +8001,7 @@ export const writeV138ParallelCalibrationV5Receipt = async (
     receipt = buildV138ParallelCalibrationV5Receipt({
       preflight,
       attempts,
-      sharedObservationTicks: [{
-        tickId: "supervisor-summary:v5:0",
-        observationRoot: sha256(canonical(calibration.rawObservation)),
-        shardIds: [
-          "calibration-shard:0",
-          "calibration-shard:1",
-          "calibration-shard:2",
-          "calibration-shard:3",
-        ],
-      }],
+      sharedObservationTicks: calibration.sharedObservationTicks ?? [],
       supervisedCalibration: calibration,
     })
   }
@@ -7856,14 +8038,24 @@ export const writeV138AuthoritativeMatrixV6Receipt = async (
     inventory: enumerateV138CurrentMatrix(repoRoot),
     calibration:
       calibration.supervisedCalibration as V138ParallelCalibrationReceipt,
+    runner: createV138SubprocessShardRunner(repoRoot, {
+      useLegacyHostMemory: false,
+    }),
+    sharedHeadroomObserver: () =>
+      observeDarwinHeadroomOwned(executeOwnedMemoryPressureQ),
     repoRoot,
     executionIdentityVersion: "v5",
   })
-  const receipt = buildV138AuthoritativeMatrixV6Receipt({
+  const built = buildV138AuthoritativeMatrixV6Receipt({
     repoRoot,
     executionContext: context,
     calibration,
     execution,
+  })
+  const receipt = checkV138AuthoritativeMatrixV6Receipt(built, {
+    repoRoot,
+    executionContext: context,
+    calibration,
   })
   writeV138ImmutableReceipt(target, receipt)
   return receipt
@@ -8045,7 +8237,11 @@ export const checkV138Plan26216TerminalBranch = (
     : checkV138ParallelCalibrationV5Receipt(calibrationArtifact.value, repoRoot)
   const reproduction = reproductionArtifact === undefined
     ? undefined
-    : checkV138AuthoritativeMatrixV6Receipt(reproductionArtifact.value)
+    : checkV138AuthoritativeMatrixV6Receipt(reproductionArtifact.value, {
+        repoRoot,
+        executionContext: context!,
+        calibration: calibration!,
+      })
   if (
     context !== undefined &&
     (context.authorizationRoot !== authorization.authorizationRoot ||
