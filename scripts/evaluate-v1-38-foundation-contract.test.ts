@@ -2,6 +2,7 @@ import { createHash } from "node:crypto"
 import {
   appendFileSync,
   existsSync,
+  fsyncSync,
   mkdtempSync,
   readFileSync,
   readdirSync,
@@ -16,6 +17,7 @@ import { fileURLToPath } from "node:url"
 import { beforeAll, describe, expect, it } from "vitest"
 import { runV137AuditReproductionGate } from "./check-v1-37-audit-reproduction.js"
 import {
+  V138_FOUNDATION_LIVE_SOURCE_PATHS,
   evaluateV138FoundationAdmission,
   renderV138FoundationAdmissionReceipt,
   resolveV138FoundationAdmissionInput,
@@ -509,6 +511,45 @@ describe("v1.38 current matrix reproduction", () => {
     }
   }, 120_000)
 
+  it("admission and matrix enumeration reject every dirty live gate source", () => {
+    const temporaryRoot = mkdtempSync(
+      path.join(tmpdir(), "cowards-v138-live-gate-drift-"),
+    )
+    const checkout = path.join(temporaryRoot, "checkout")
+    execFileSync(
+      "git",
+      ["worktree", "add", "--detach", checkout, "HEAD"],
+      { cwd: repoRoot },
+    )
+    try {
+      symlinkSync(
+        path.resolve(repoRoot, "node_modules"),
+        path.resolve(checkout, "node_modules"),
+        "dir",
+      )
+      for (const sourcePath of V138_FOUNDATION_LIVE_SOURCE_PATHS) {
+        appendFileSync(
+          path.resolve(checkout, sourcePath),
+          "\n// Deliberate live-source drift for admission authentication.\n",
+        )
+        expect(() =>
+          resolveV138FoundationAdmissionInput(checkout),
+        ).toThrow("V138_ADMISSION_LIVE_SOURCE_DRIFT")
+        expect(() => enumerateV138CurrentMatrix(checkout)).toThrow(
+          "MATRIX_ADMISSION_INVALID",
+        )
+        execFileSync("git", ["checkout", "--", sourcePath], {
+          cwd: checkout,
+        })
+      }
+    } finally {
+      execFileSync("git", ["worktree", "remove", "--force", checkout], {
+        cwd: repoRoot,
+      })
+      rmSync(temporaryRoot, { recursive: true, force: true })
+    }
+  }, 120_000)
+
   it("matrix freezes the exact historical inventory without collapsing duplicate geometry", () => {
     const inventory = enumerateV138CurrentMatrix(repoRoot)
     const unorderedPairs = new Set(
@@ -732,6 +773,35 @@ describe("v1.38 current matrix reproduction", () => {
 })
 
 describe("v1.38 immutable receipt publication", () => {
+  it("rejects a partial temporary writer that returns normally", () => {
+    const temporaryRoot = mkdtempSync(
+      path.join(tmpdir(), "cowards-v138-publication-short-write-"),
+    )
+    const target = path.join(temporaryRoot, "receipt.json")
+    try {
+      expect(() =>
+        writeV138ImmutableReceipt(
+          target,
+          { schemaVersion: "test-receipt-v1", status: "complete" },
+          {
+            writeTemporaryFile: (fileDescriptor, bytes) => {
+              writeSync(
+                fileDescriptor,
+                bytes,
+                0,
+                Math.max(1, Math.floor(bytes.byteLength / 2)),
+              )
+            },
+          },
+        ),
+      ).toThrow("MATRIX_SUCCESSOR_TEMPORARY_WRITE_INCOMPLETE")
+      expect(existsSync(target)).toBe(false)
+      expect(readdirSync(temporaryRoot)).toEqual([])
+    } finally {
+      rmSync(temporaryRoot, { recursive: true, force: true })
+    }
+  })
+
   it("keeps the canonical target absent after a partial temporary write fails", () => {
     const temporaryRoot = mkdtempSync(
       path.join(tmpdir(), "cowards-v138-publication-fault-"),
@@ -777,6 +847,130 @@ describe("v1.38 immutable receipt publication", () => {
       )
       expect(JSON.parse(readFileSync(target, "utf8"))).toEqual(first)
       expect(readdirSync(temporaryRoot)).toEqual(["receipt.json"])
+    } finally {
+      rmSync(temporaryRoot, { recursive: true, force: true })
+    }
+  })
+
+  it("cleans and durably records a publication link failure", () => {
+    const temporaryRoot = mkdtempSync(
+      path.join(tmpdir(), "cowards-v138-publication-link-fault-"),
+    )
+    const target = path.join(temporaryRoot, "receipt.json")
+    const fsyncPhases: string[] = []
+    try {
+      expect(() =>
+        writeV138ImmutableReceipt(
+          target,
+          { schemaVersion: "test-receipt-v1", status: "complete" },
+          {
+            linkTemporaryFile: () => {
+              throw new Error("INJECTED_PUBLICATION_LINK_FAILURE")
+            },
+            fsyncDirectory: (directoryDescriptor, phase) => {
+              fsyncPhases.push(phase)
+              fsyncSync(directoryDescriptor)
+            },
+          },
+        ),
+      ).toThrow("INJECTED_PUBLICATION_LINK_FAILURE")
+      expect(existsSync(target)).toBe(false)
+      expect(readdirSync(temporaryRoot)).toEqual([])
+      expect(fsyncPhases).toEqual(["cleanup"])
+    } finally {
+      rmSync(temporaryRoot, { recursive: true, force: true })
+    }
+  })
+
+  it("preserves the canonical link when publication fsync is indeterminate", () => {
+    const temporaryRoot = mkdtempSync(
+      path.join(tmpdir(), "cowards-v138-publication-fsync-fault-"),
+    )
+    const target = path.join(temporaryRoot, "receipt.json")
+    const receipt = {
+      schemaVersion: "test-receipt-v1",
+      status: "complete",
+    }
+    const fsyncPhases: string[] = []
+    try {
+      expect(() =>
+        writeV138ImmutableReceipt(target, receipt, {
+          fsyncDirectory: (directoryDescriptor, phase) => {
+            fsyncPhases.push(phase)
+            if (phase === "publication") {
+              throw new Error("INJECTED_PUBLICATION_FSYNC_FAILURE")
+            }
+            fsyncSync(directoryDescriptor)
+          },
+        }),
+      ).toThrow(
+        "MATRIX_SUCCESSOR_PUBLICATION_DURABILITY_INDETERMINATE",
+      )
+      expect(JSON.parse(readFileSync(target, "utf8"))).toEqual(receipt)
+      expect(readdirSync(temporaryRoot)).toEqual(["receipt.json"])
+      expect(fsyncPhases).toEqual(["publication", "cleanup"])
+    } finally {
+      rmSync(temporaryRoot, { recursive: true, force: true })
+    }
+  })
+
+  it("preserves the canonical link and reports temporary unlink failure", () => {
+    const temporaryRoot = mkdtempSync(
+      path.join(tmpdir(), "cowards-v138-publication-unlink-fault-"),
+    )
+    const target = path.join(temporaryRoot, "receipt.json")
+    const fsyncPhases: string[] = []
+    try {
+      expect(() =>
+        writeV138ImmutableReceipt(
+          target,
+          { schemaVersion: "test-receipt-v1", status: "complete" },
+          {
+            fsyncDirectory: (directoryDescriptor, phase) => {
+              fsyncPhases.push(phase)
+              fsyncSync(directoryDescriptor)
+            },
+            unlinkTemporaryFile: () => {
+              throw new Error("INJECTED_TEMPORARY_UNLINK_FAILURE")
+            },
+          },
+        ),
+      ).toThrow("MATRIX_SUCCESSOR_TEMPORARY_CLEANUP_FAILED")
+      expect(existsSync(target)).toBe(true)
+      expect(readdirSync(temporaryRoot)).toHaveLength(2)
+      expect(fsyncPhases).toEqual(["publication"])
+    } finally {
+      rmSync(temporaryRoot, { recursive: true, force: true })
+    }
+  })
+
+  it("reports cleanup-fsync failure without removing the canonical link", () => {
+    const temporaryRoot = mkdtempSync(
+      path.join(tmpdir(), "cowards-v138-cleanup-fsync-fault-"),
+    )
+    const target = path.join(temporaryRoot, "receipt.json")
+    const receipt = {
+      schemaVersion: "test-receipt-v1",
+      status: "complete",
+    }
+    const fsyncPhases: string[] = []
+    try {
+      expect(() =>
+        writeV138ImmutableReceipt(target, receipt, {
+          fsyncDirectory: (directoryDescriptor, phase) => {
+            fsyncPhases.push(phase)
+            if (phase === "cleanup") {
+              throw new Error("INJECTED_CLEANUP_FSYNC_FAILURE")
+            }
+            fsyncSync(directoryDescriptor)
+          },
+        }),
+      ).toThrow(
+        "MATRIX_SUCCESSOR_CLEANUP_DURABILITY_INDETERMINATE",
+      )
+      expect(JSON.parse(readFileSync(target, "utf8"))).toEqual(receipt)
+      expect(readdirSync(temporaryRoot)).toEqual(["receipt.json"])
+      expect(fsyncPhases).toEqual(["publication", "cleanup"])
     } finally {
       rmSync(temporaryRoot, { recursive: true, force: true })
     }

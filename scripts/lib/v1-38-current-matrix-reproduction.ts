@@ -6580,6 +6580,15 @@ export interface V138ImmutableReceiptPublicationOptions {
     fileDescriptor: number,
     bytes: Uint8Array,
   ) => void
+  readonly linkTemporaryFile?: (
+    temporaryPath: string,
+    targetPath: string,
+  ) => void
+  readonly fsyncDirectory?: (
+    directoryDescriptor: number,
+    phase: "publication" | "cleanup",
+  ) => void
+  readonly unlinkTemporaryFile?: (temporaryPath: string) => void
 }
 
 const errorCode = (error: unknown): string | undefined =>
@@ -6622,6 +6631,20 @@ export const writeV138ImmutableReceipt = (
   let fileDescriptor: number | undefined
   let temporaryPath: string | undefined
   let failure: unknown
+  const fsyncContainingDirectory = (
+    phase: "publication" | "cleanup",
+  ): void => {
+    const directoryDescriptor = openSync(path.dirname(resolvedTarget), "r")
+    try {
+      if (options.fsyncDirectory === undefined) {
+        fsyncSync(directoryDescriptor)
+      } else {
+        options.fsyncDirectory(directoryDescriptor, phase)
+      }
+    } finally {
+      closeSync(directoryDescriptor)
+    }
+  }
   try {
     const temporary = createExclusiveReceiptTemporaryFile(resolvedTarget)
     fileDescriptor = temporary.fileDescriptor
@@ -6641,7 +6664,10 @@ export const writeV138ImmutableReceipt = (
     }
 
     try {
-      linkSync(temporaryPath, resolvedTarget)
+      ;(options.linkTemporaryFile ?? linkSync)(
+        temporaryPath,
+        resolvedTarget,
+      )
     } catch (error) {
       if (errorCode(error) === "EEXIST") {
         throw new TypeError("MATRIX_SUCCESSOR_TARGET_NOT_FRESH")
@@ -6649,11 +6675,14 @@ export const writeV138ImmutableReceipt = (
       throw error
     }
 
-    const directoryDescriptor = openSync(path.dirname(resolvedTarget), "r")
     try {
-      fsyncSync(directoryDescriptor)
-    } finally {
-      closeSync(directoryDescriptor)
+      fsyncContainingDirectory("publication")
+    } catch {
+      // The canonical hard link may already be durable. Preserve it and
+      // distinguish this indeterminate publication from a safe fresh retry.
+      throw new TypeError(
+        "MATRIX_SUCCESSOR_PUBLICATION_DURABILITY_INDETERMINATE",
+      )
     }
   } catch (error) {
     failure = error
@@ -6666,10 +6695,27 @@ export const writeV138ImmutableReceipt = (
     }
   }
   if (temporaryPath !== undefined) {
+    let temporaryUnlinked = false
     try {
-      unlinkSync(temporaryPath)
+      ;(options.unlinkTemporaryFile ?? unlinkSync)(temporaryPath)
+      temporaryUnlinked = true
     } catch (error) {
-      if (errorCode(error) !== "ENOENT") failure ??= error
+      if (errorCode(error) === "ENOENT") {
+        temporaryUnlinked = false
+      } else {
+        failure ??= new TypeError(
+          "MATRIX_SUCCESSOR_TEMPORARY_CLEANUP_FAILED",
+        )
+      }
+    }
+    if (temporaryUnlinked) {
+      try {
+        fsyncContainingDirectory("cleanup")
+      } catch {
+        failure ??= new TypeError(
+          "MATRIX_SUCCESSOR_CLEANUP_DURABILITY_INDETERMINATE",
+        )
+      }
     }
   }
   if (failure !== undefined) throw failure
