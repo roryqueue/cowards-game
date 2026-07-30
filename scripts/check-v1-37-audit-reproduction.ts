@@ -285,10 +285,15 @@ export const runV137AuditReproductionGate = (
   repoRoot = process.cwd(),
 ): V137AuditReproductionReceipt => {
   const fixture = createV137AuditReproductionFixture(repoRoot)
+  const childEnv = {
+    PATH: process.env.PATH ?? "",
+    HOME: process.env.HOME ?? "",
+    LANG: "C",
+  }
   const command = spawnSync(
     process.execPath,
     ["--import", "tsx", paths.reproduction],
-    { cwd: repoRoot, encoding: "utf8", env: process.env },
+    { cwd: repoRoot, encoding: "utf8", env: childEnv },
   )
   if (command.status !== 0 || command.signal !== null || command.stderr.trim() !== "") {
     fail("V137_AUDIT_REPRODUCTION_FAILED")
