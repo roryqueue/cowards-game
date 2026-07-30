@@ -39,6 +39,7 @@ import {
   checkSelectedRouteClosureAtCommit,
   checkSelectedRouteEdgeInventory,
   checkPlan26215ArtifactBranch,
+  deriveFormationAbsence,
   deriveSelectedRouteClosureAtCommit,
   deriveV138StaticSourceEdgesFromSnapshot,
   inspectSourceCustody,
@@ -532,6 +533,24 @@ describe("v1.38 selected route closure and source custody", () => {
       ).toThrow("V138_SELECTED_ROUTE_CLOSURE_MISMATCH")
 
       reset()
+      writeFileSync(
+        path.resolve(root, "apps/runtime-service/tsconfig.json"),
+        readFileSync(path.resolve(root, "apps/runtime-service/tsconfig.json"), "utf8")
+          .replace("../../tsconfig.base.json", "../../missing-base.json"),
+      )
+      const missingExtendsCommit = commitMutation("test: missing tsconfig extends")
+      expect(() =>
+        deriveSelectedRouteClosureAtCommit(root, missingExtendsCommit),
+      ).toThrow("V138_SELECTED_ROUTE_TSCONFIG_EXTENDS_UNPROVEN")
+
+      reset()
+      appendFileSync(path.resolve(root, "pnpm-lock.yaml"), "\npackages:\n")
+      const malformedLockCommit = commitMutation("test: duplicate lock mapping")
+      expect(() =>
+        deriveSelectedRouteClosureAtCommit(root, malformedLockCommit),
+      ).toThrow("V138_SELECTED_ROUTE_LOCKFILE_INVALID")
+
+      reset()
       const ambiguous = baseline.edges.find((edge) => {
         if (!edge.specifier.startsWith(".") || !edge.to.endsWith(".ts")) {
           return false
@@ -550,6 +569,65 @@ describe("v1.38 selected route closure and source custody", () => {
       rmSync(root, { recursive: true, force: true })
     }
   }, 300_000)
+
+  it("formation absence seals the actual inventory and rejects namespaces and executable state", () => {
+    const root = mkdtempSync(path.join(tmpdir(), "cowards-v138-formation-git-"))
+    try {
+      execFileSync("git", ["clone", "--shared", "--quiet", repoRoot, root])
+      execFileSync("git", ["checkout", "--quiet", V138_REVIEWED_SOURCE_A_FIXTURE], {
+        cwd: root,
+      })
+      execFileSync("git", ["config", "user.name", "v1.38 formation test"], {
+        cwd: root,
+      })
+      execFileSync("git", ["config", "user.email", "formation@test.invalid"], {
+        cwd: root,
+      })
+      const baseline = deriveFormationAbsence(root, V138_REVIEWED_SOURCE_A_FIXTURE)
+      expect(baseline).toMatchObject({
+        absent: true,
+        forbiddenPathCount: 0,
+        forbiddenContentCount: 0,
+        scannedRoot: expect.stringMatching(/^sha256:[0-9a-f]{64}$/u),
+      })
+      const commit = (message: string): string => {
+        execFileSync("git", ["add", "-A"], { cwd: root })
+        execFileSync("git", ["commit", "--quiet", "-m", message], { cwd: root })
+        return execFileSync("git", ["rev-parse", "HEAD"], {
+          cwd: root,
+          encoding: "utf8",
+        }).trim()
+      }
+      mkdirSync(path.resolve(root, ".planning/artifacts/formation-profiles"), {
+        recursive: true,
+      })
+      writeFileSync(
+        path.resolve(root, ".planning/artifacts/formation-profiles/candidate.json"),
+        "{}\n",
+      )
+      expect(() =>
+        deriveFormationAbsence(root, commit("test: forbidden formation namespace")),
+      ).toThrow("V138_SUCCESSOR_SEAL_FORMATION_PRESENT")
+
+      execFileSync("git", ["reset", "--hard", V138_REVIEWED_SOURCE_A_FIXTURE], {
+        cwd: root,
+        stdio: "ignore",
+      })
+      rmSync(path.resolve(root, ".planning/artifacts/formation-profiles"), {
+        recursive: true,
+        force: true,
+      })
+      writeFileSync(
+        path.resolve(root, ".planning/artifacts/v1.38-innocent.json"),
+        "{\"adapter\":\"materializeFormation\",\"state\":\"GameState\"}\n",
+      )
+      expect(() =>
+        deriveFormationAbsence(root, commit("test: executable formation state")),
+      ).toThrow("V138_SUCCESSOR_SEAL_FORMATION_PRESENT")
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  }, 180_000)
 })
 
 describe("v1.38 plan 262-15 terminal artifact presence", () => {
@@ -815,6 +893,15 @@ describe("v1.38 plan 262-16 hostile receipt validation", () => {
       (draft: Record<string, unknown>) => {
         draft.childLaunchCount = 999
       },
+      (draft: Record<string, unknown>) => {
+        draft.executionContextRoot = "garbage"
+      },
+      (draft: Record<string, unknown>) => {
+        draft.authorizationRoot = `sha256:${"1".repeat(64)}`
+      },
+      (draft: Record<string, unknown>) => {
+        draft.sealRoot = `sha256:${"2".repeat(64)}`
+      },
     ]) {
       const forged = clone(valid) as unknown as Record<string, unknown>
       mutateReceipt(forged)
@@ -841,8 +928,8 @@ describe("v1.38 plan 262-16 hostile receipt validation", () => {
       noRetry: true,
     }
     const valid = reRoot(body, "evidenceBundle")
-    expect(checkV138AuthoritativeMatrixV6Receipt(valid).status).toBe(
-      "stopped_process_failure",
+    expect(() => checkV138AuthoritativeMatrixV6Receipt(valid)).toThrow(
+      "MATRIX_REPRODUCTION_V6_INVALID",
     )
     for (const mutateReceipt of [
       (draft: Record<string, unknown>) => {
@@ -2649,6 +2736,64 @@ const admittedInjectedCalibration = (
     },
   })
 
+describe("v1.38 shared Darwin scheduler observation", () => {
+  it("observes once for one tick and fans the immutable observation to all four active shards", async () => {
+    const inventory = {
+      schemaVersion: "test-inventory",
+      fixturePurpose: "test-fixture",
+      historicalSourceSha256: `sha256:${"a".repeat(64)}`,
+      admissionRoot: `sha256:${"b".repeat(64)}`,
+      definitions: [],
+      arenas: [],
+      attempts: Array.from({ length: 540 }, (_, index) => ({
+        attemptId: `test-attempt:${index}`,
+        request: {},
+      })),
+    } as unknown as ReturnType<typeof enumerateV138CurrentMatrix>
+    let providerCalls = 0
+    let legacySamplerCalls = 0
+    const calibration = await calibrateV138ParallelMatrix({
+        inventory,
+        policy: deriveV138ParallelCalibrationPolicy(inventory),
+        runner: successfulInjectedRunner(),
+        hardwareIdentity: {
+          operatingSystem: "test-darwin",
+          architecture: "test-arch",
+          nodeVersion: "test-node",
+          cpuIdentity: "test-cpu",
+        },
+        executionIdentityVersion: "v5",
+        sharedHeadroomObserver: async () => {
+          providerCalls += 1
+          return parseMemoryPressureQ({
+            stdout: Buffer.from(
+              "The system has 4096 (1 pages with a page size of 4096).\nSystem-wide memory free percentage: 25%\n",
+            ),
+            stderr: Buffer.alloc(0),
+            exitCode: 0,
+            signal: null,
+            timedOut: false,
+          })
+        },
+    })
+    const ticks = calibration.sharedObservationTicks ?? []
+    expect(providerCalls).toBe(1)
+    expect(legacySamplerCalls).toBe(0)
+    expect(ticks).toHaveLength(1)
+    expect(ticks[0]!.shardIds).toEqual([
+      "calibration-shard:0",
+      "calibration-shard:1",
+      "calibration-shard:2",
+      "calibration-shard:3",
+    ])
+    expect(new Set(ticks[0]!.fanout.map(({ observationRoot }) => observationRoot))).toEqual(
+      new Set([ticks[0]!.observationRoot]),
+    )
+    expect(Object.isFrozen(ticks[0])).toBe(true)
+    void legacySamplerCalls
+  })
+})
+
 describe("v1.38 matrix real process boundary", () => {
   const adapter = (
     invoke: V138RssCommandAdapter["execFile"],
@@ -2698,6 +2843,40 @@ describe("v1.38 matrix real process boundary", () => {
       })
       return child
     },
+  })
+
+  it("shared-observer runner mode never calls the legacy host-memory sampler", async () => {
+    let legacySamplerCalls = 0
+    const runner = createV138SubprocessShardRunner(repoRoot, {
+      useLegacyHostMemory: false,
+      legacyHostMemorySampler: () => {
+        legacySamplerCalls += 1
+        return { totalKilobytes: 10_000, freeKilobytes: 5_000 }
+      },
+      rssCommandAdapter: adapter((_command, _args, _options, callback) => {
+        callback(null, "100\n", "")
+        return new EventEmitter() as ReturnType<V138RssCommandAdapter["execFile"]>
+      }),
+      shardProcessFactory: injectedShardProcessFactory((value) => value),
+    })
+    await runner.run(
+      {
+        kind: "calibration",
+        shardId: "calibration-shard:test",
+        laneId: "lane:0",
+        ordinal: 0,
+        attempts: [{
+          executionAttemptId: "calibration:test",
+          templateAttemptId: "template:test",
+          request: {},
+        }],
+      },
+      {
+        signal: new AbortController().signal,
+        onResourceSample: () => undefined,
+      },
+    )
+    expect(legacySamplerCalls).toBe(0)
   })
 
   it.each([
