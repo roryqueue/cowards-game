@@ -397,6 +397,74 @@ const candidatePaths = (base: string): string[] => {
   ]
 }
 
+type YamlMap = Record<string, YamlMap | string>
+
+const parseYamlMapping = (text: string): YamlMap => {
+  const root: YamlMap = {}
+  const stack: Array<{ indentation: number; value: YamlMap }> = [
+    { indentation: -1, value: root },
+  ]
+  for (const rawLine of text.split("\n")) {
+    if (rawLine.trim().length === 0 || rawLine.trimStart().startsWith("#")) {
+      continue
+    }
+    const indentation = rawLine.length - rawLine.trimStart().length
+    if (indentation % 2 !== 0) fail("V138_SELECTED_ROUTE_LOCKFILE_INVALID")
+    const line = rawLine.trim()
+    if (line.startsWith("- ")) continue
+    let quoted = false
+    let quote = ""
+    let separator = -1
+    for (let index = 0; index < line.length; index += 1) {
+      const character = line[index]!
+      if ((character === "'" || character === '"') && line[index - 1] !== "\\") {
+        if (!quoted) {
+          quoted = true
+          quote = character
+        } else if (quote === character) {
+          quoted = false
+        }
+      } else if (character === ":" && !quoted) {
+        separator = index
+        break
+      }
+    }
+    if (separator < 1) fail("V138_SELECTED_ROUTE_LOCKFILE_INVALID")
+    let key = line.slice(0, separator).trim()
+    if (
+      (key.startsWith("'") && key.endsWith("'")) ||
+      (key.startsWith('"') && key.endsWith('"'))
+    ) key = key.slice(1, -1)
+    if (key.length === 0) fail("V138_SELECTED_ROUTE_LOCKFILE_INVALID")
+    while (stack.at(-1)!.indentation >= indentation) stack.pop()
+    const parent = stack.at(-1)?.value
+    if (parent === undefined || Object.hasOwn(parent, key)) {
+      fail("V138_SELECTED_ROUTE_LOCKFILE_INVALID")
+    }
+    const scalar = line.slice(separator + 1).trim()
+    if (scalar.length === 0) {
+      const value: YamlMap = {}
+      parent[key] = value
+      stack.push({ indentation, value })
+    } else {
+      parent[key] = scalar
+    }
+  }
+  return root
+}
+
+const packageNameFromLockKey = (key: string): string => {
+  const normalized = key.replace(/^\//u, "")
+  if (normalized.startsWith("@")) {
+    const separator = normalized.indexOf("@", normalized.indexOf("/") + 1)
+    if (separator <= 0) fail("V138_SELECTED_ROUTE_LOCKFILE_INVALID")
+    return normalized.slice(0, separator)
+  }
+  const separator = normalized.indexOf("@")
+  if (separator <= 0) fail("V138_SELECTED_ROUTE_LOCKFILE_INVALID")
+  return normalized.slice(0, separator)
+}
+
 const selectedRouteClosureCache = new Map<
   string,
   Readonly<V138SelectedRouteClosure>
@@ -468,33 +536,153 @@ export const deriveSelectedRouteClosureAtCommit = (
   const lockText = readCommitFile(repoRoot, sourceA, "pnpm-lock.yaml").toString(
     "utf8",
   )
+  const lock = parseYamlMapping(lockText)
   const lockedPackageNames = new Set<string>()
-  for (const line of lockText.split("\n")) {
-    const match = /^\s{2,6}['"]?\/?((?:@[^/'":\s]+\/)?[^@'":\s/]+)@[^:]+:\s*$/u.exec(
-      line,
-    )
-    if (match !== null) lockedPackageNames.add(match[1]!)
+  for (const sectionName of ["packages", "snapshots"] as const) {
+    const section = lock[sectionName]
+    if (section === undefined) continue
+    if (typeof section === "string") {
+      fail("V138_SELECTED_ROUTE_LOCKFILE_INVALID")
+    }
+    for (const key of Object.keys(section)) {
+      lockedPackageNames.add(packageNameFromLockKey(key))
+    }
   }
   const tsconfigPaths = sorted(
     [...inventory].filter((repoPath) =>
       /(?:^|\/)tsconfig(?:\.[^/]+)?\.json$/u.test(repoPath)),
   )
-  const pathMappings: Array<{
-    pattern: string
-    targets: string[]
-    base: string
-    scope: string
-  }> = []
+  type CompilerOptionsSnapshot = {
+    baseUrl?: unknown
+    paths?: unknown
+    module?: unknown
+    moduleResolution?: unknown
+  }
+  type ConfigSnapshot = {
+    path: string
+    extends?: string
+    compilerOptions: CompilerOptionsSnapshot
+    references: string[]
+  }
+  const configs = new Map<string, ConfigSnapshot>()
   for (const configPath of tsconfigPaths) {
     const parsed = ts.parseConfigFileTextToJson(
       configPath,
       readCommitFile(repoRoot, sourceA, configPath).toString("utf8"),
     )
-    if (parsed.error !== undefined) fail("V138_SELECTED_ROUTE_TSCONFIG_INVALID")
-    const compilerOptions = (parsed.config?.compilerOptions ?? {}) as {
-      baseUrl?: unknown
-      paths?: unknown
+    if (
+      parsed.error !== undefined ||
+      parsed.config === null ||
+      typeof parsed.config !== "object"
+    ) fail("V138_SELECTED_ROUTE_TSCONFIG_INVALID")
+    const config = parsed.config as Record<string, unknown>
+    if (config.extends !== undefined && typeof config.extends !== "string") {
+      fail("V138_SELECTED_ROUTE_TSCONFIG_INVALID")
     }
+    const compilerOptions = (config.compilerOptions ?? {}) as CompilerOptionsSnapshot
+    if (
+      compilerOptions === null ||
+      typeof compilerOptions !== "object" ||
+      Array.isArray(compilerOptions) ||
+      (config.references !== undefined && !Array.isArray(config.references))
+    ) fail("V138_SELECTED_ROUTE_TSCONFIG_INVALID")
+    const references = ((config.references ?? []) as unknown[]).map((entry) => {
+      if (
+        entry === null ||
+        typeof entry !== "object" ||
+        Array.isArray(entry) ||
+        typeof (entry as { path?: unknown }).path !== "string"
+      ) fail("V138_SELECTED_ROUTE_TSCONFIG_INVALID")
+      return (entry as { path: string }).path
+    })
+    configs.set(configPath, {
+      path: configPath,
+      ...(typeof config.extends === "string" ? { extends: config.extends } : {}),
+      compilerOptions,
+      references,
+    })
+  }
+  const resolveConfigPath = (
+    from: string,
+    target: string,
+    relationship: "extends" | "reference" = "extends",
+  ): string => {
+    if (relationship === "extends" && !target.startsWith(".")) {
+      fail("V138_SELECTED_ROUTE_TSCONFIG_EXTENDS_UNPROVEN")
+    }
+    const base = path.posix.normalize(
+      path.posix.join(path.posix.dirname(from), target),
+    )
+    if (base.startsWith("../") || path.posix.isAbsolute(base)) {
+      fail("V138_SELECTED_ROUTE_PATH_ESCAPE")
+    }
+    const candidates = sorted([
+      base.endsWith(".json") ? base : `${base}.json`,
+      path.posix.join(base, "tsconfig.json"),
+    ].filter((candidate) => configs.has(candidate)))
+    if (candidates.length !== 1) {
+      fail(
+        candidates.length === 0
+          ? "V138_SELECTED_ROUTE_TSCONFIG_EXTENDS_UNPROVEN"
+          : "V138_SELECTED_ROUTE_TSCONFIG_EXTENDS_AMBIGUOUS",
+      )
+    }
+    return candidates[0]!
+  }
+  const effectiveConfigs = new Map<string, CompilerOptionsSnapshot>()
+  const resolveEffective = (
+    configPath: string,
+    ancestors: readonly string[] = [],
+  ): CompilerOptionsSnapshot => {
+    const cachedOptions = effectiveConfigs.get(configPath)
+    if (cachedOptions !== undefined) return cachedOptions
+    if (ancestors.includes(configPath)) {
+      fail("V138_SELECTED_ROUTE_TSCONFIG_EXTENDS_CYCLE")
+    }
+    const config = configs.get(configPath)
+    if (config === undefined) fail("V138_SELECTED_ROUTE_TSCONFIG_INVALID")
+    const parent =
+      config.extends === undefined
+        ? {}
+        : resolveEffective(
+            resolveConfigPath(configPath, config.extends),
+            [...ancestors, configPath],
+          )
+    const effective = { ...parent, ...config.compilerOptions }
+    if (
+      effective.paths !== undefined &&
+      (effective.paths === null ||
+        typeof effective.paths !== "object" ||
+        Array.isArray(effective.paths))
+    ) fail("V138_SELECTED_ROUTE_TSCONFIG_INVALID")
+    if (
+      effective.module !== undefined &&
+      effective.module !== "NodeNext" &&
+      effective.module !== "Node16"
+    ) fail("V138_SELECTED_ROUTE_TSCONFIG_MODE_UNSUPPORTED")
+    if (
+      effective.moduleResolution !== undefined &&
+      effective.moduleResolution !== "NodeNext" &&
+      effective.moduleResolution !== "Node16"
+    ) fail("V138_SELECTED_ROUTE_TSCONFIG_MODE_UNSUPPORTED")
+    effectiveConfigs.set(configPath, effective)
+    return effective
+  }
+  for (const config of configs.values()) {
+    for (const reference of config.references) {
+      resolveConfigPath(config.path, reference, "reference")
+    }
+    resolveEffective(config.path)
+  }
+  const pathMappings: Array<{
+    pattern: string
+    targets: string[]
+    base: string
+    scope: string
+    configPath: string
+  }> = []
+  for (const configPath of tsconfigPaths) {
+    const compilerOptions = resolveEffective(configPath)
     if (
       compilerOptions.paths !== undefined &&
       (compilerOptions.paths === null ||
@@ -521,9 +709,17 @@ export const deriveSelectedRouteClosureAtCommit = (
         pattern,
         targets: targets as string[],
         base: path.posix.normalize(
-          path.posix.join(path.posix.dirname(configPath), baseUrl),
+          path.posix.join(
+            path.posix.dirname(
+              configs.get(configPath)?.extends === undefined
+                ? configPath
+                : resolveConfigPath(configPath, configs.get(configPath)!.extends!),
+            ),
+            baseUrl,
+          ),
         ),
         scope: path.posix.dirname(configPath),
+        configPath,
       })
     }
   }
@@ -994,8 +1190,32 @@ const deriveFrozenPolicy = (): Readonly<Record<string, JsonValue>> =>
     calibrationShardCount: 4,
     reproductionAttemptCount: 540,
     maximumConcurrency: 4,
+    maximumAttemptsPerShard: 4,
+    maximumChildRssKilobytes: 2_097_152,
+    maximumAggregateChildRssKilobytes: 4_194_304,
+    maximumShardMilliseconds: 600_000,
+    maximumTotalRunMilliseconds: 5_400_000,
+    resourceSampleMilliseconds: 250,
+    gracefulTerminationMilliseconds: 2_000,
+    forcedTerminationMilliseconds: 2_000,
     acceptedCellCountRule: "exactly_zero_or_540",
+    partialAcceptedEvidenceReusable: false,
+    noRetry: true,
     runtimeRoute: "v1.18/v1.19/MATCH_KERNEL",
+    runtimeServiceVersion: "runtime-execution-service-v1.18",
+    runtimeAbiVersion: "strategy-runtime-abi-v1.19",
+    matchKernel: "engine-kernel-v1.37-candidate-1",
+    requestSchemaVersion: "runtime-execution-service-request-v1.18",
+    reducerId: "v1.38-current-matrix-reducer-v1",
+    accountingId: "v1.38-parallel-matrix-accounting-v1",
+    privacyRule:
+      "no_strategy_source_memory_soldier_memory_or_objective_payload",
+    cardinalityRule:
+      "8_calibration_attempts_4_shards_then_exactly_540_or_zero",
+    hostMetricId:
+      "darwin-memorystatus-effective-available-basis-points-v1",
+    hostProviderId: "apple-memory-pressure-q-v1",
+    hostParserId: "apple-memory-pressure-q-c-locale-parser-v1",
   })
 
 const deriveToolIdentity = (): Readonly<Record<string, JsonValue>> => {
@@ -1004,47 +1224,149 @@ const deriveToolIdentity = (): Readonly<Record<string, JsonValue>> => {
   if (!stat.isFile() || stat.isSymbolicLink()) {
     fail("V138_SUCCESSOR_SEAL_TOOL_IDENTITY_INVALID")
   }
-  const bytes = readFileSync(toolPath)
-  return Object.freeze({
-    schemaVersion: "v1.38-tool-identity-v1",
-    path: toolPath,
-    byteLength: bytes.byteLength,
-    sha256: sha256(bytes),
-    mode: stat.mode,
-    uid: stat.uid,
-    gid: stat.gid,
-    command: "/usr/bin/memory_pressure -Q",
-    environment: "LC_ALL=C LANG=C PATH=/usr/bin:/bin:/usr/sbin:/sbin",
-  })
+  const descriptor = openSync(
+    toolPath,
+    constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0),
+  )
+  try {
+    const opened = fstatSync(descriptor)
+    if (
+      !opened.isFile() ||
+      opened.dev !== stat.dev ||
+      opened.ino !== stat.ino
+    ) fail("V138_SUCCESSOR_SEAL_TOOL_IDENTITY_INVALID")
+    const bytes = readFileSync(descriptor)
+    return Object.freeze({
+      schemaVersion: "v1.38-tool-identity-v1",
+      path: toolPath,
+      device: opened.dev,
+      inode: opened.ino,
+      byteLength: bytes.byteLength,
+      sha256: sha256(bytes),
+      mode: opened.mode,
+      uid: opened.uid,
+      gid: opened.gid,
+      command: "/usr/bin/memory_pressure -Q",
+      environment: "LC_ALL=C LANG=C PATH=/usr/bin:/bin:/usr/sbin:/sbin",
+    })
+  } finally {
+    closeSync(descriptor)
+  }
 }
 
 const deriveHostIdentity = (): Readonly<Record<string, JsonValue>> => {
   if (platform() !== "darwin") {
     fail("V138_SUCCESSOR_SEAL_HOST_IDENTITY_INVALID")
   }
+  const systemVersionPath =
+    "/System/Library/CoreServices/SystemVersion.plist"
+  const descriptor = openSync(
+    systemVersionPath,
+    constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0),
+  )
+  let systemVersionBytes: Buffer
+  let systemVersionStat
+  try {
+    systemVersionStat = fstatSync(descriptor)
+    if (!systemVersionStat.isFile()) {
+      fail("V138_SUCCESSOR_SEAL_HOST_IDENTITY_INVALID")
+    }
+    systemVersionBytes = readFileSync(descriptor)
+  } finally {
+    closeSync(descriptor)
+  }
+  const systemVersion = systemVersionBytes.toString("utf8")
+  const plistScalar = (key: string): string => {
+    const escaped = key.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&")
+    const match = new RegExp(
+      `<key>\\s*${escaped}\\s*</key>\\s*<string>\\s*([^<]+?)\\s*</string>`,
+      "u",
+    ).exec(systemVersion)
+    if (match === null || match[1]!.trim().length === 0) {
+      fail("V138_SUCCESSOR_SEAL_HOST_IDENTITY_INVALID")
+    }
+    return match[1]!.trim()
+  }
   return Object.freeze({
     schemaVersion: "v1.38-host-identity-v1",
     platform: platform(),
     release: release(),
     architecture: arch(),
+    productVersion: plistScalar("ProductVersion"),
+    productBuildVersion: plistScalar("ProductBuildVersion"),
+    darwinKernelIdentity: `${platform()}:${release()}:${arch()}`,
+    systemVersionPlist: Object.freeze({
+      path: systemVersionPath,
+      device: systemVersionStat.dev,
+      inode: systemVersionStat.ino,
+      byteLength: systemVersionBytes.byteLength,
+      sha256: sha256(systemVersionBytes),
+    }),
   })
 }
 
-const deriveFormationAbsence = (
+export const deriveFormationAbsence = (
   repoRoot: string,
   sourceA: string,
 ): Readonly<Record<string, JsonValue>> => {
-  const forbidden = gitText(repoRoot, [
-    "ls-tree", "-r", "--name-only", sourceA, ".planning/artifacts",
+  const inventory = gitText(repoRoot, [
+    "ls-tree", "-r", "--name-only", sourceA,
   ])
     .split("\n")
-    .filter((repoPath) => /formation.*(?:profile|comparison)|(?:profile|comparison).*formation/iu.test(repoPath))
-  if (forbidden.length !== 0) fail("V138_SUCCESSOR_SEAL_FORMATION_PRESENT")
+    .filter(Boolean)
+    .map(normalize)
+  const monitoredPaths = sorted([
+    ...inventory.filter((repoPath) =>
+      repoPath.startsWith(".planning/artifacts/"),
+    ),
+    ...V138_SUCCESSOR_AUTHORIZED_SOURCE_PATHS.filter(
+      (repoPath) =>
+        repoPath !== "scripts/lib/v1-38-successor-source-seal.ts" &&
+        repoPath !== "scripts/evaluate-v1-38-foundation-contract.test.ts",
+    ),
+    "scripts/lib/v1-38-successor-source-seal.ts",
+  ])
+  const forbiddenNamespace =
+    /(?:^|\/)(?:formation(?:s|-profiles?)?|profiles?|candidates?|prompts?|cache|traces?|replays?|results?)(?:\/|$)/iu
+  const forbiddenPaths = monitoredPaths.filter(
+    (repoPath) =>
+      repoPath.startsWith(".planning/artifacts/") &&
+      (/(?:^|\/)formation(?:s|-profiles?)?(?:\/|$)/iu.test(repoPath) ||
+        (/v1[.-]38/iu.test(repoPath) && forbiddenNamespace.test(repoPath))),
+  )
+  const executableFormation =
+    /\b(?:GameState|createSetScenario|initialState|materializeFormation|formationToGameState|createFormationGameState|buildFormationScenario)\b/u
+  const forbiddenContents = monitoredPaths.filter((repoPath) => {
+    if (repoPath === "scripts/lib/v1-38-successor-source-seal.ts") return false
+    const source = readCommitFile(repoRoot, sourceA, repoPath).toString("utf8")
+    if (repoPath.startsWith(".planning/artifacts/")) {
+      return /v1[.-]38/iu.test(repoPath) && executableFormation.test(source)
+    }
+    return /(?:from|import\s*\()\s*["'][^"']*(?:formation|profile|candidate|prompt|cache|trace|replay|result)[^"']*["']/iu.test(
+      source,
+    ) || executableFormation.test(source)
+  })
+  if (forbiddenPaths.length !== 0 || forbiddenContents.length !== 0) {
+    fail("V138_SUCCESSOR_SEAL_FORMATION_PRESENT")
+  }
+  const scannedInventory = monitoredPaths.map((repoPath) =>
+    blobRecord(repoRoot, sourceA, repoPath),
+  )
+  const monitorPath = "scripts/lib/v1-38-successor-source-seal.ts"
+  const monitorBlob = blobRecord(repoRoot, sourceA, monitorPath)
   return Object.freeze({
     schemaVersion: "v1.38-formation-absence-v1",
     absent: true,
-    scannedRoot: sha256(canonical(sorted(PROTECTED_EVIDENCE_PATHS))),
+    monitorPath,
+    monitorBlob,
+    scannedInventory: Object.freeze(scannedInventory),
+    scannedRoot: identityRoot(
+      "artifactManifest",
+      "v1.38-formation-absence-inventory-v1",
+      scannedInventory,
+    ),
     forbiddenPathCount: 0,
+    forbiddenContentCount: 0,
   })
 }
 
@@ -1702,14 +2024,20 @@ const runCli = (): void => {
       "required",
     )!
     const reviewMetadata = strictReviewMetadata(reviewBytes)
-    if (reviewMetadata.sourceA !== args[4]) {
+    if (
+      args[2] !== "30c0949692017f425795213972482568cdd73f64" ||
+      reviewMetadata.sourceA !== args[4]
+    ) {
       fail("V138_PLAN_262_15_REVIEW_SOURCE_JOIN_INVALID")
     }
     const reviewFixBytes = regularFile(
       path.resolve(repoRoot, args[8]!),
-      reviewMetadata.fixesApplied ? "required" : "optional",
+      reviewMetadata.fixesApplied ? "required" : "absent",
     )
-    if (reviewFixBytes !== undefined) strictFixReportMetadata(reviewFixBytes)
+    if (
+      reviewFixBytes !== undefined &&
+      strictFixReportMetadata(reviewFixBytes).finalSourceA !== args[4]
+    ) fail("V138_PLAN_262_15_REVIEW_FIX_RELATION_INVALID")
     const custody = inspectSourceCustody({
       repoRoot,
       sourceBase: args[2]!,
