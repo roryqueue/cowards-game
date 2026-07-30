@@ -24,6 +24,15 @@ import { fileURLToPath } from "node:url"
 import { beforeAll, describe, expect, it } from "vitest"
 import { runV137AuditReproductionGate } from "./check-v1-37-audit-reproduction.js"
 import {
+  MEMORY_PRESSURE_Q_REQUEST,
+  observeDarwinHeadroom,
+  parseMemoryPressureQ,
+} from "./lib/v1-38-darwin-headroom.js"
+import {
+  deriveSelectedRouteClosureAtCommit,
+  inspectSourceCustody,
+} from "./lib/v1-38-successor-source-seal.js"
+import {
   V138_FOUNDATION_LIVE_SOURCE_PATHS,
   evaluateV138FoundationAdmission,
   renderV138FoundationAdmissionReceipt,
@@ -151,6 +160,107 @@ const nested = (
   draft: Record<string, unknown>,
   key: string,
 ): Record<string, unknown> => draft[key] as Record<string, unknown>
+
+describe("v1.38 darwin headroom", () => {
+  const stdout = (percentage: number): Buffer =>
+    Buffer.from(
+      `The system has 4096 (1 pages with a page size of 4096).\nSystem-wide memory free percentage: ${percentage}%\n`,
+      "utf8",
+    )
+
+  it.each([
+    [24, 2_400, "preflight_refused"],
+    [25, 2_500, "preflight_admitted"],
+    [26, 2_600, "preflight_admitted"],
+  ] as const)("darwin headroom maps %i percent without inventing precision", async (
+    percentage,
+    observedBasisPoints,
+    disposition,
+  ) => {
+    let invocationCount = 0
+    const result = await observeDarwinHeadroom(async (request) => {
+      invocationCount += 1
+      expect(request).toEqual(MEMORY_PRESSURE_Q_REQUEST)
+      return {
+        stdout: stdout(percentage),
+        stderr: Buffer.alloc(0),
+        exitCode: 0,
+        signal: null,
+        timedOut: false,
+      }
+    })
+    expect(invocationCount).toBe(1)
+    expect(result).toEqual({
+      ok: true,
+      observation: {
+        metricId: "darwin-memorystatus-effective-available-basis-points-v1",
+        providerId: "apple-memory-pressure-q-v1",
+        parserId: "apple-memory-pressure-q-c-locale-parser-v1",
+        stdoutByteLength: stdout(percentage).byteLength,
+        stdoutSha256: expect.stringMatching(/^sha256:[0-9a-f]{64}$/u),
+        totalBytes: 4096,
+        pageCount: 1,
+        pageSizeBytes: 4096,
+        percentage,
+        observedBasisPoints,
+        disposition,
+      },
+    })
+    expect(JSON.stringify(result)).not.toContain(stdout(percentage).toString("utf8"))
+  })
+
+  it.each([
+    ["CRLF", (value: Buffer) => Buffer.from(value.toString("utf8").replaceAll("\n", "\r\n"))],
+    ["missing final LF", (value: Buffer) => value.subarray(0, value.length - 1)],
+    ["extra line", (value: Buffer) => Buffer.concat([value, Buffer.from("warning\n")])],
+    ["decimal", (value: Buffer) => Buffer.from(value.toString("utf8").replace("25%", "25.0%"))],
+    ["NUL", (value: Buffer) => Buffer.concat([value, Buffer.from([0])])],
+    ["invalid UTF-8", (value: Buffer) => Buffer.concat([value, Buffer.from([0xff])])],
+  ])("darwin headroom rejects %s output", (_label, mutateBytes) => {
+    expect(parseMemoryPressureQ({
+      stdout: mutateBytes(stdout(25)),
+      stderr: Buffer.alloc(0),
+      exitCode: 0,
+      signal: null,
+      timedOut: false,
+    })).toEqual({
+      ok: false,
+      reason: "resource_measurement_unavailable",
+    })
+  })
+})
+
+describe("v1.38 selected route closure and source custody", () => {
+  it("selected route closure is derived from A and includes the semantic issuer", () => {
+    const closure = deriveSelectedRouteClosureAtCommit(repoRoot, "HEAD")
+    expect(closure.roots).toEqual([
+      "apps/runtime-service/src/execute-match.ts",
+      "scripts/lib/v1-38-current-matrix-reproduction.ts",
+    ])
+    expect(closure.paths).toContain(
+      "apps/runtime-service/src/semantic-receipt-v1-18-issuer.ts",
+    )
+    expect(closure.paths).toEqual([...closure.paths].sort())
+    expect(closure.closureRoot).toMatch(/^sha256:[0-9a-f]{64}$/u)
+  })
+
+  it("source custody uses the aggregate sourceBase..A four-path delta", () => {
+    const custody = inspectSourceCustody({
+      repoRoot,
+      sourceBase: "30c0949692017f425795213972482568cdd73f64",
+      sourceA: "HEAD",
+    })
+    expect(custody.sourceBase).toBe(
+      "30c0949692017f425795213972482568cdd73f64",
+    )
+    expect(custody.aggregateChangedPaths).toEqual([
+      "scripts/evaluate-v1-38-foundation-contract.test.ts",
+      "scripts/lib/v1-38-current-matrix-reproduction.ts",
+      "scripts/lib/v1-38-darwin-headroom.ts",
+      "scripts/lib/v1-38-successor-source-seal.ts",
+    ])
+  })
+})
 
 describe("v1.38 foundation admission", () => {
   let exactInput: V138FoundationAdmissionInput
