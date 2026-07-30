@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto"
 import {
   appendFileSync,
+  closeSync,
   existsSync,
   fsyncSync,
   mkdtempSync,
@@ -991,6 +992,8 @@ describe("v1.38 immutable receipt publication", () => {
       path.join(tmpdir(), "cowards-v138-link-unlink-fault-"),
     )
     const target = path.join(temporaryRoot, "receipt.json")
+    const primaryFailure = new Error("INJECTED_PUBLICATION_LINK_FAILURE")
+    const cleanupFailure = new Error("INJECTED_TEMPORARY_UNLINK_FAILURE")
     try {
       const error = capturePublicationFailure(() =>
         writeV138ImmutableReceipt(
@@ -998,10 +1001,10 @@ describe("v1.38 immutable receipt publication", () => {
           { schemaVersion: "test-receipt-v1", status: "complete" },
           {
             linkTemporaryFile: () => {
-              throw new Error("INJECTED_PUBLICATION_LINK_FAILURE")
+              throw primaryFailure
             },
             unlinkTemporaryFile: () => {
-              throw new Error("INJECTED_TEMPORARY_UNLINK_FAILURE")
+              throw cleanupFailure
             },
           },
         ),
@@ -1010,7 +1013,13 @@ describe("v1.38 immutable receipt publication", () => {
       expect(error).toMatchObject({
         message: "MATRIX_SUCCESSOR_TEMPORARY_CLEANUP_FAILED",
       })
-      expect((error as AggregateError).errors).toHaveLength(2)
+      const errors = (error as AggregateError).errors
+      expect(errors).toHaveLength(2)
+      expect(errors[0]).toBe(primaryFailure)
+      expect(errors[1]).toMatchObject({
+        message: "MATRIX_SUCCESSOR_TEMPORARY_CLEANUP_FAILED",
+        cause: cleanupFailure,
+      })
       expect(existsSync(target)).toBe(false)
       expect(readdirSync(temporaryRoot)).toHaveLength(1)
     } finally {
@@ -1023,6 +1032,7 @@ describe("v1.38 immutable receipt publication", () => {
       path.join(tmpdir(), "cowards-v138-short-cleanup-fsync-fault-"),
     )
     const target = path.join(temporaryRoot, "receipt.json")
+    const cleanupFailure = new Error("INJECTED_CLEANUP_FSYNC_FAILURE")
     try {
       const error = capturePublicationFailure(() =>
         writeV138ImmutableReceipt(
@@ -1039,7 +1049,7 @@ describe("v1.38 immutable receipt publication", () => {
             },
             fsyncDirectory: (_directoryDescriptor, phase) => {
               if (phase === "cleanup") {
-                throw new Error("INJECTED_CLEANUP_FSYNC_FAILURE")
+                throw cleanupFailure
               }
             },
           },
@@ -1050,7 +1060,16 @@ describe("v1.38 immutable receipt publication", () => {
         message:
           "MATRIX_SUCCESSOR_CLEANUP_DURABILITY_INDETERMINATE",
       })
-      expect((error as AggregateError).errors).toHaveLength(2)
+      const errors = (error as AggregateError).errors
+      expect(errors).toHaveLength(2)
+      expect(errors[0]).toMatchObject({
+        message: "MATRIX_SUCCESSOR_TEMPORARY_WRITE_INCOMPLETE",
+      })
+      expect(errors[1]).toMatchObject({
+        message:
+          "MATRIX_SUCCESSOR_CLEANUP_DURABILITY_INDETERMINATE",
+        cause: cleanupFailure,
+      })
       expect(existsSync(target)).toBe(false)
       expect(readdirSync(temporaryRoot)).toEqual([])
     } finally {
@@ -1064,6 +1083,7 @@ describe("v1.38 immutable receipt publication", () => {
     )
     const target = path.join(temporaryRoot, "receipt.json")
     writeFileSync(target, "{}\n")
+    const cleanupFailure = new Error("INJECTED_CLEANUP_FSYNC_FAILURE")
     try {
       const error = capturePublicationFailure(() =>
         writeV138ImmutableReceipt(
@@ -1072,7 +1092,7 @@ describe("v1.38 immutable receipt publication", () => {
           {
             fsyncDirectory: (_directoryDescriptor, phase) => {
               if (phase === "cleanup") {
-                throw new Error("INJECTED_CLEANUP_FSYNC_FAILURE")
+                throw cleanupFailure
               }
             },
           },
@@ -1083,9 +1103,59 @@ describe("v1.38 immutable receipt publication", () => {
         message:
           "MATRIX_SUCCESSOR_CLEANUP_DURABILITY_INDETERMINATE",
       })
-      expect((error as AggregateError).errors).toHaveLength(2)
+      const errors = (error as AggregateError).errors
+      expect(errors).toHaveLength(2)
+      expect(errors[0]).toMatchObject({
+        message: "MATRIX_SUCCESSOR_TARGET_NOT_FRESH",
+      })
+      expect(errors[1]).toMatchObject({
+        message:
+          "MATRIX_SUCCESSOR_CLEANUP_DURABILITY_INDETERMINATE",
+        cause: cleanupFailure,
+      })
       expect(readFileSync(target, "utf8")).toBe("{}\n")
       expect(readdirSync(temporaryRoot)).toEqual(["receipt.json"])
+    } finally {
+      rmSync(temporaryRoot, { recursive: true, force: true })
+    }
+  })
+
+  it("reports descriptor cleanup failure alongside a primary write failure", () => {
+    const temporaryRoot = mkdtempSync(
+      path.join(tmpdir(), "cowards-v138-write-close-fault-"),
+    )
+    const target = path.join(temporaryRoot, "receipt.json")
+    const primaryFailure = new Error("INJECTED_TEMPORARY_WRITE_FAILURE")
+    const cleanupFailure = new Error("INJECTED_DESCRIPTOR_CLOSE_FAILURE")
+    try {
+      const error = capturePublicationFailure(() =>
+        writeV138ImmutableReceipt(
+          target,
+          { schemaVersion: "test-receipt-v1", status: "complete" },
+          {
+            writeTemporaryFile: () => {
+              throw primaryFailure
+            },
+            closeTemporaryFile: (fileDescriptor) => {
+              closeSync(fileDescriptor)
+              throw cleanupFailure
+            },
+          },
+        ),
+      )
+      expect(error).toBeInstanceOf(AggregateError)
+      expect(error).toMatchObject({
+        message: "MATRIX_SUCCESSOR_DESCRIPTOR_CLEANUP_FAILED",
+      })
+      const errors = (error as AggregateError).errors
+      expect(errors).toHaveLength(2)
+      expect(errors[0]).toBe(primaryFailure)
+      expect(errors[1]).toMatchObject({
+        message: "MATRIX_SUCCESSOR_DESCRIPTOR_CLEANUP_FAILED",
+        cause: cleanupFailure,
+      })
+      expect(existsSync(target)).toBe(false)
+      expect(readdirSync(temporaryRoot)).toEqual([])
     } finally {
       rmSync(temporaryRoot, { recursive: true, force: true })
     }

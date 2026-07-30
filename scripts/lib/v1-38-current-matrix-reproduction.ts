@@ -6589,6 +6589,7 @@ export interface V138ImmutableReceiptPublicationOptions {
     phase: "publication" | "cleanup",
   ) => void
   readonly unlinkTemporaryFile?: (temporaryPath: string) => void
+  readonly closeTemporaryFile?: (fileDescriptor: number) => void
 }
 
 const errorCode = (error: unknown): string | undefined =>
@@ -6669,7 +6670,7 @@ export const writeV138ImmutableReceipt = (
       writeFileSync(descriptor, completeBytes)
     }))(fileDescriptor, bytes)
     fsyncSync(fileDescriptor)
-    closeSync(fileDescriptor)
+    ;(options.closeTemporaryFile ?? closeSync)(fileDescriptor)
     fileDescriptor = undefined
     const persisted = readFileSync(temporaryPath)
     if (
@@ -6705,9 +6706,13 @@ export const writeV138ImmutableReceipt = (
   }
   if (fileDescriptor !== undefined) {
     try {
-      closeSync(fileDescriptor)
+      ;(options.closeTemporaryFile ?? closeSync)(fileDescriptor)
     } catch (error) {
-      failure ??= error
+      failure = combineReceiptPublicationFailures(
+        failure,
+        error,
+        "MATRIX_SUCCESSOR_DESCRIPTOR_CLEANUP_FAILED",
+      )
     }
   }
   if (temporaryPath !== undefined) {
