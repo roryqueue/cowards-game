@@ -1,7 +1,7 @@
 /* eslint-disable no-restricted-imports -- Offline regression admission must bind the selected runtime-service implementation without widening its production barrel. */
 import { Buffer } from "node:buffer"
 import { createHash, generateKeyPairSync, sign } from "node:crypto"
-import { existsSync, readFileSync, renameSync, writeFileSync } from "node:fs"
+import { existsSync, readFileSync, writeFileSync } from "node:fs"
 import { arch, cpus, freemem, platform, release, totalmem } from "node:os"
 import path from "node:path"
 import {
@@ -11,6 +11,10 @@ import {
   type ChildProcessWithoutNullStreams,
 } from "node:child_process"
 import { fileURLToPath } from "node:url"
+import {
+  checkV138FoundationAdmissionReceipt,
+  type V138FoundationAdmissionPassed,
+} from "./v1-38-foundation-admission.js"
 import {
   createPreparedRuntimeServiceDependenciesV118,
   executePreparedRuntimeServiceRequestV118,
@@ -147,6 +151,51 @@ const gitBlob = (
     maxBuffer: 8 * 1024 * 1024,
   })
 
+const verifiedAdmissions = new Map<
+  string,
+  Readonly<{
+    authorityFingerprint: string
+    persistedBytes: string
+    receipt: V138FoundationAdmissionPassed
+  }>
+>()
+
+const verifiedFoundationAdmission = (
+  repoRoot: string,
+): V138FoundationAdmissionPassed => {
+  const root = path.resolve(repoRoot)
+  const persistedBytes = readFileSync(
+    path.resolve(root, ADMISSION_RECEIPT),
+    "utf8",
+  )
+  const authorityFingerprint = [
+    git(root, ["rev-parse", "refs/tags/v1.37"]),
+    git(root, ["rev-parse", "refs/tags/v1.37^{}"]),
+    sha256(
+      readFileSync(
+        path.resolve(
+          root,
+          ".planning/artifacts/v1.37-post-tag-ui-integration-correction.md",
+        ),
+      ),
+    ),
+  ].join("\0")
+  const cached = verifiedAdmissions.get(root)
+  if (
+    cached?.persistedBytes === persistedBytes &&
+    cached.authorityFingerprint === authorityFingerprint
+  ) {
+    return cached.receipt
+  }
+  const receipt = checkV138FoundationAdmissionReceipt(root)
+  verifiedAdmissions.set(root, {
+    authorityFingerprint,
+    persistedBytes,
+    receipt,
+  })
+  return receipt
+}
+
 // BEGIN V1.38 HISTORICAL EXPECTATION DERIVATION SOURCE
 const onlyMatch = (source: string, pattern: RegExp): RegExpMatchArray => {
   const flags = pattern.flags.includes("g") ? pattern.flags : `${pattern.flags}g`
@@ -250,18 +299,7 @@ const derivationSourceRoot = (): Sha256 => {
 export const deriveV138HistoricalMatrixExpectation = (
   repoRoot: string,
 ): Readonly<V138HistoricalMatrixExpectation> => {
-  const admission = JSON.parse(
-    readFileSync(path.resolve(repoRoot, ADMISSION_RECEIPT), "utf8"),
-  ) as { archiveCommit?: unknown; status?: unknown }
-  if (
-    admission.status !== "passed_exact" ||
-    typeof admission.archiveCommit !== "string" ||
-    !/^[0-9a-f]{40}$/u.test(admission.archiveCommit) ||
-    git(repoRoot, ["rev-parse", "refs/tags/v1.37^{}"]) !==
-      admission.archiveCommit
-  ) {
-    throw new TypeError("MATRIX_EXPECTATION_ADMISSION_INVALID")
-  }
+  const admission = verifiedFoundationAdmission(repoRoot)
   const archiveCommit = admission.archiveCommit
   const sourceBytes = gitBlob(repoRoot, archiveCommit, HISTORICAL_MATRIX_README)
   const runnerBytes = gitBlob(repoRoot, archiveCommit, HISTORICAL_MATRIX_SOURCE)
@@ -1826,17 +1864,11 @@ export interface V138CurrentMatrixInventory {
 }
 
 const admissionRoot = (repoRoot: string): `sha256:${string}` => {
-  const parsed = JSON.parse(
-    readFileSync(path.resolve(repoRoot, ADMISSION_RECEIPT), "utf8"),
-  ) as { admissionRoot?: unknown; status?: unknown }
-  if (
-    parsed.status !== "passed_exact" ||
-    typeof parsed.admissionRoot !== "string" ||
-    !/^sha256:[0-9a-f]{64}$/u.test(parsed.admissionRoot)
-  ) {
+  try {
+    return verifiedFoundationAdmission(repoRoot).admissionRoot
+  } catch {
     throw new TypeError("MATRIX_ADMISSION_INVALID")
   }
-  return parsed.admissionRoot as `sha256:${string}`
 }
 
 export const enumerateV138CurrentMatrix = (
@@ -6322,17 +6354,38 @@ export const checkV138SuccessorV4V5Branch = (
   }
   if (calibration.status === "stopped_process_failure") {
     if (
-      calibration.calibration !== null ||
-      calibration.terminals.length !== 0 ||
+      reproductionInput !== undefined ||
       calibration.chargedDispositions.length !== 8 ||
-      calibration.chargedDispositions.some(
-        ({ disposition }) =>
-          disposition !== "unfilled_resource_preflight_refusal",
-      ) ||
       !calibration.executionAuthorization.expired ||
       calibration.executionAuthorization.terminalOutcome !==
         "stopped_process_failure" ||
-      reproductionInput !== undefined
+      calibration.acceptedCellCount !== 0 ||
+      calibration.fullRunLaunched ||
+      calibration.partialAcceptedEvidenceReusable
+    ) {
+      throw new TypeError("MATRIX_STOPPED_CALIBRATION_V5_FORBIDDEN")
+    }
+    if (preflight.disposition === "preflight_refused") {
+      if (
+        calibration.calibration !== null ||
+        calibration.terminals.length !== 0 ||
+        calibration.chargedDispositions.some(
+          ({ disposition }) =>
+            disposition !== "unfilled_resource_preflight_refusal",
+        )
+      ) {
+        throw new TypeError("MATRIX_STOPPED_CALIBRATION_V5_FORBIDDEN")
+      }
+    } else if (
+      calibration.calibration === null ||
+      calibration.calibration.status === "admitted" ||
+      calibration.terminals.length === 0 ||
+      canonical(calibration.terminals) !==
+        canonical(calibration.calibration.terminals) ||
+      calibration.chargedDispositions.some(
+        ({ disposition }) =>
+          disposition !== "terminal_calibration_outcome",
+      )
     ) {
       throw new TypeError("MATRIX_STOPPED_CALIBRATION_V5_FORBIDDEN")
     }
@@ -6553,12 +6606,23 @@ const writeReceiptAtomically = (
   targetPath: string,
   receipt: unknown,
 ): void => {
-  const temporaryPath = `${targetPath}.tmp-${process.pid}`
-  writeFileSync(temporaryPath, `${canonical(receipt)}\n`, {
-    encoding: "utf8",
-    mode: 0o600,
-  })
-  renameSync(temporaryPath, targetPath)
+  try {
+    writeFileSync(targetPath, `${canonical(receipt)}\n`, {
+      encoding: "utf8",
+      mode: 0o600,
+      flag: "wx",
+    })
+  } catch (error) {
+    if (
+      error !== null &&
+      typeof error === "object" &&
+      "code" in error &&
+      error.code === "EEXIST"
+    ) {
+      throw new TypeError("MATRIX_SUCCESSOR_TARGET_NOT_FRESH")
+    }
+    throw error
+  }
 }
 
 export const runV138ParallelMatrixCalibration = async (
