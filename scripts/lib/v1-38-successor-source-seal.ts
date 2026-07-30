@@ -21,6 +21,13 @@ import {
   hashCanonicalIdentity,
   type JsonValue,
 } from "@cowards/spec"
+import {
+  MEMORY_PRESSURE_Q_REQUEST,
+  V138_DARWIN_HEADROOM_METRIC_ID,
+  V138_DARWIN_HEADROOM_PARSER_ID,
+  V138_DARWIN_HEADROOM_PROVIDER_ID,
+  V138_DARWIN_HEADROOM_THRESHOLD_BASIS_POINTS,
+} from "./v1-38-darwin-headroom.js"
 
 type Sha256 = `sha256:${string}`
 
@@ -634,6 +641,7 @@ export const deriveSelectedRouteClosureAtCommit = (
     baseUrlDeclaredAt?: string
     paths?: unknown
     pathsDeclaredAt?: string
+    pathsBasePath?: string
     module?: unknown
     moduleDeclaredAt?: string
     moduleResolution?: unknown
@@ -674,6 +682,8 @@ export const deriveSelectedRouteClosureAtCommit = (
     if (config.compilerOptions.paths !== undefined) {
       effective.paths = config.compilerOptions.paths
       effective.pathsDeclaredAt = configPath
+      effective.pathsBasePath =
+        effective.baseUrl ?? path.posix.dirname(configPath)
     }
     if (config.compilerOptions.module !== undefined) {
       effective.module = config.compilerOptions.module
@@ -736,7 +746,7 @@ export const deriveSelectedRouteClosureAtCommit = (
         fail("V138_SELECTED_ROUTE_TSCONFIG_INVALID")
       }
       const base =
-        compilerOptions.baseUrl ??
+        compilerOptions.pathsBasePath ??
         path.posix.dirname(compilerOptions.pathsDeclaredAt ?? configPath)
       pathMappings.push({
         pattern,
@@ -1086,6 +1096,7 @@ export interface V138SuccessorSourceSeal {
   readonly toolIdentity: Readonly<Record<string, JsonValue>>
   readonly hostIdentity: Readonly<Record<string, JsonValue>>
   readonly formationAbsence: Readonly<Record<string, JsonValue>>
+  readonly replacementMetricContract: Readonly<Record<string, JsonValue>>
   readonly authorizationRoot: Sha256
   readonly sealRoot: Sha256
 }
@@ -1241,6 +1252,90 @@ const deriveFrozenPolicy = (): Readonly<Record<string, JsonValue>> =>
     hostProviderId: "apple-memory-pressure-q-v1",
     hostParserId: "apple-memory-pressure-q-c-locale-parser-v1",
   })
+
+const deriveReplacementMetricContract = (
+  repoRoot: string,
+  sourceA: string,
+): Readonly<Record<string, JsonValue>> => {
+  const command = Object.freeze({
+    executable: MEMORY_PRESSURE_Q_REQUEST.executable,
+    argv: Object.freeze([...MEMORY_PRESSURE_Q_REQUEST.args]),
+    environment: Object.freeze({ ...MEMORY_PRESSURE_Q_REQUEST.env }),
+    stdin: MEMORY_PRESSURE_Q_REQUEST.stdin,
+    shell: MEMORY_PRESSURE_Q_REQUEST.shell,
+    timeoutMilliseconds: MEMORY_PRESSURE_Q_REQUEST.timeoutMilliseconds,
+    maximumOutputBytes: MEMORY_PRESSURE_Q_REQUEST.maximumOutputBytes,
+  })
+  const metric = Object.freeze({
+    metricId: V138_DARWIN_HEADROOM_METRIC_ID,
+    unit: "basis_points",
+    derivation: "memorystatus_whole_percentage_times_100",
+    quantization: "xnu_floor_integer_percentage",
+  })
+  const provider = Object.freeze({
+    providerId: V138_DARWIN_HEADROOM_PROVIDER_ID,
+    observationCountPerPreflight: 1,
+    schedulerObservationMode: "one_shared_observation_per_tick",
+  })
+  const parser = Object.freeze({
+    parserId: V138_DARWIN_HEADROOM_PARSER_ID,
+    locale: "C",
+    outputGrammar: "memory_pressure_q_two_line_exact_v1",
+    diagnosticsRetained: false,
+  })
+  const threshold = Object.freeze({
+    comparator: "inclusive_greater_than_or_equal",
+    requiredBasisPoints: V138_DARWIN_HEADROOM_THRESHOLD_BASIS_POINTS,
+  })
+  const semanticReferences = Object.freeze([
+    Object.freeze({
+      repository: "apple-oss-distributions/system_cmds",
+      commit: "408bba7453608006b89772db185defbac8fe2fd0",
+      path: "memory_pressure/memory_pressure.c",
+      semanticClaim: "quiet_mode_calls_memorystatus_get_level",
+    }),
+    Object.freeze({
+      repository: "apple-oss-distributions/xnu",
+      commit: "f6217f891ac0bb64f3d375211650a4c1ff8ca1ea",
+      path: "osfmk/vm/vm_pageout.c",
+      semanticClaim: "available_pages_times_100_divided_by_total_pages",
+    }),
+  ])
+  const providerSource = blobRecord(
+    repoRoot,
+    sourceA,
+    "scripts/lib/v1-38-darwin-headroom.ts",
+  )
+  const domains = Object.freeze({
+    commandRoot: identityRoot("containmentPolicy", "v1.38-memory-pressure-q-command-v1", command),
+    metricRoot: identityRoot("canonicalJsonProfile", "v1.38-darwin-headroom-metric-v1", metric),
+    providerRoot: identityRoot("artifactManifest", "v1.38-darwin-headroom-provider-v1", { provider, providerSource }),
+    parserRoot: identityRoot("canonicalJsonProfile", "v1.38-darwin-headroom-parser-v1", parser),
+    thresholdRoot: identityRoot("budgetProfile", "v1.38-darwin-headroom-threshold-v1", threshold),
+    semanticReferencesRoot: identityRoot("artifactManifest", "v1.38-darwin-headroom-semantic-references-v1", semanticReferences),
+  })
+  const body = {
+    schemaVersion: "v1.38-replacement-metric-contract-v1",
+    command, metric, provider, parser, threshold, semanticReferences,
+    providerSource, domains,
+  }
+  return Object.freeze({
+    ...body,
+    contractRoot: identityRoot("containmentPolicy", body.schemaVersion, body),
+  })
+}
+
+export const checkV138ReplacementMetricContract = (
+  repoRoot: string,
+  sourceA: string,
+  value: unknown,
+): Readonly<Record<string, JsonValue>> => {
+  const expected = deriveReplacementMetricContract(repoRoot, sourceA)
+  if (canonical(value) !== canonical(expected)) {
+    fail("V138_REPLACEMENT_METRIC_CONTRACT_INVALID")
+  }
+  return expected
+}
 
 const deriveToolIdentity = (): Readonly<Record<string, JsonValue>> => {
   const toolPath = "/usr/bin/memory_pressure"
@@ -1406,6 +1501,7 @@ const SEAL_KEYS = [
   "toolIdentity",
   "hostIdentity",
   "formationAbsence",
+  "replacementMetricContract",
   "authorizationRoot",
   "sealRoot",
 ] as const
@@ -1450,6 +1546,10 @@ export const buildV138SuccessorSourceSeal = (input: {
     toolIdentity: deriveToolIdentity(),
     hostIdentity: deriveHostIdentity(),
     formationAbsence: deriveFormationAbsence(input.repoRoot, input.sourceA),
+    replacementMetricContract: deriveReplacementMetricContract(
+      input.repoRoot,
+      input.sourceA,
+    ),
     authorizationRoot: authorization.authorizationRoot,
   }
   return Object.freeze({
@@ -1507,7 +1607,14 @@ export const checkV138SuccessorSourceSeal = (
     canonical(candidate.toolIdentity) !== canonical(deriveToolIdentity()) ||
     canonical(candidate.hostIdentity) !== canonical(deriveHostIdentity()) ||
     canonical(candidate.formationAbsence) !==
-      canonical(deriveFormationAbsence(repoRoot, candidate.sourceCustody.sourceA))
+      canonical(deriveFormationAbsence(repoRoot, candidate.sourceCustody.sourceA)) ||
+    canonical(
+      checkV138ReplacementMetricContract(
+        repoRoot,
+        candidate.sourceCustody.sourceA,
+        candidate.replacementMetricContract,
+      ),
+    ) !== canonical(candidate.replacementMetricContract)
   ) {
     fail("V138_SUCCESSOR_SEAL_SOURCE_JOIN_INVALID")
   }
@@ -1547,14 +1654,34 @@ const CANONICAL_PATHS = Object.freeze({
 
 const checkedSuccessorSealCommits = new Map<
   string,
-  Readonly<{ authorizationBytes: Buffer; sealBytes: Buffer }>
+  Readonly<{
+    authorizationBytes: Buffer
+    sealBytes: Buffer
+    custody: V138SourceBCustody
+  }>
 >()
+
+export interface V138SourceBCustody {
+  readonly schemaVersion: "v1.38-source-b-custody-v1"
+  readonly sourceA: string
+  readonly sourceB: string
+  readonly sourceBTree: string
+  readonly sourceBParent: string
+  readonly changedPaths: readonly string[]
+  readonly blobs: readonly Readonly<{
+    path: string
+    blobOid: string
+    byteLength: number
+    sha256: Sha256
+  }>[]
+  readonly custodyRoot: Sha256
+}
 
 export const checkV138SuccessorSealCommit = (input: {
   readonly repoRoot: string
   readonly sourceA: string
   readonly sourceB: string
-}): true => {
+}): Readonly<V138SourceBCustody> => {
   const sourceA = fullCommit(input.repoRoot, input.sourceA)
   const sourceB = fullCommit(input.repoRoot, input.sourceB)
   const ancestry = gitText(input.repoRoot, [
@@ -1606,6 +1733,41 @@ export const checkV138SuccessorSealCommit = (input: {
     sourceB,
     CANONICAL_PATHS.seal,
   )
+  const blobs = [
+    {
+      path: CANONICAL_PATHS.authorization,
+      blobOid: gitText(input.repoRoot, [
+        "rev-parse", `${sourceB}:${CANONICAL_PATHS.authorization}`,
+      ]),
+      byteLength: authorizationBytes.byteLength,
+      sha256: sha256(authorizationBytes),
+    },
+    {
+      path: CANONICAL_PATHS.seal,
+      blobOid: gitText(input.repoRoot, [
+        "rev-parse", `${sourceB}:${CANONICAL_PATHS.seal}`,
+      ]),
+      byteLength: sealBytes.byteLength,
+      sha256: sha256(sealBytes),
+    },
+  ]
+  const custodyBody = {
+    schemaVersion: "v1.38-source-b-custody-v1" as const,
+    sourceA,
+    sourceB,
+    sourceBTree: gitText(input.repoRoot, ["rev-parse", `${sourceB}^{tree}`]),
+    sourceBParent: sourceA,
+    changedPaths: Object.freeze([...changed]),
+    blobs: Object.freeze(blobs.map((record) => Object.freeze(record))),
+  }
+  const custody = Object.freeze({
+    ...custodyBody,
+    custodyRoot: identityRoot(
+      "containmentPolicy",
+      custodyBody.schemaVersion,
+      custodyBody,
+    ),
+  })
   const workingAuthorizationBytes = regularFile(
     path.resolve(input.repoRoot, CANONICAL_PATHS.authorization),
     "required",
@@ -1621,7 +1783,7 @@ export const checkV138SuccessorSealCommit = (input: {
       !workingAuthorizationBytes.equals(cached.authorizationBytes) ||
       !workingSealBytes.equals(cached.sealBytes)
     ) fail("V138_SUCCESSOR_SEAL_B_WORKTREE_DRIFT")
-    return true
+    return cached.custody
   }
   if (
     workingAuthorizationBytes.byteLength !== authorizationBytes.byteLength ||
@@ -1669,8 +1831,9 @@ export const checkV138SuccessorSealCommit = (input: {
   checkedSuccessorSealCommits.set(cacheKey, Object.freeze({
     authorizationBytes: Buffer.from(authorizationBytes),
     sealBytes: Buffer.from(sealBytes),
+    custody,
   }))
-  return true
+  return custody
 }
 
 const canonicalPath = (

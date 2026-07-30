@@ -84,6 +84,7 @@ import {
   checkV138SuccessorSealCommit,
   checkV138SuccessorSourceSeal,
   type V138Plan26215Authorization,
+  type V138SourceBCustody,
   type V138SuccessorSourceSeal,
 } from "./v1-38-successor-source-seal.js"
 
@@ -7172,6 +7173,9 @@ export interface V138ExecutionContextV5Receipt {
     agents: readonly Readonly<{ id: string; status: "completed" | "failed" }>[]
   }>
   readonly sourceA: string
+  readonly sourceB: string
+  readonly sourceBCustody: Readonly<V138SourceBCustody>
+  readonly sourceBCustodyRoot: Sha256
   readonly authorizationRoot: Sha256
   readonly sealRoot: Sha256
   readonly selectedRouteClosureRoot: Sha256
@@ -7193,6 +7197,7 @@ export const buildV138ExecutionContextV5Receipt = (input: {
   readonly mode: "gsd-pattern-c-inline-main"
   readonly cwd: "/Users/roryquinlan/runtime/cowards-game"
   readonly terminalAgentRegistry: V138ExecutionContextV5Receipt["terminalAgentRegistry"]
+  readonly sourceBCustody?: Readonly<V138SourceBCustody>
 }): Readonly<V138ExecutionContextV5Receipt> => {
   const authorization = checkV138Plan26215Authorization(
     input.repoRoot,
@@ -7226,12 +7231,53 @@ export const buildV138ExecutionContextV5Receipt = (input: {
       )
     })
   ) throw new TypeError("MATRIX_EXECUTION_CONTEXT_V5_REGISTRY_INVALID")
+  const injectedOid = createHash("sha1")
+    .update(`injected-successor:${authorization.sourceA}`)
+    .digest("hex")
+  const sourceBCustody = input.sourceBCustody ?? (() => {
+    const custodyBody = {
+      schemaVersion: "v1.38-source-b-custody-v1" as const,
+      sourceA: authorization.sourceA,
+      sourceB: injectedOid,
+      sourceBTree: createHash("sha1").update(`tree:${injectedOid}`).digest("hex"),
+      sourceBParent: authorization.sourceA,
+      changedPaths: Object.freeze([
+        ".planning/artifacts/v1.38-plan-262-15-authorization-v1.json",
+        ".planning/artifacts/v1.38-successor-source-seal-v1.json",
+      ]),
+      blobs: Object.freeze([
+        {
+          path: ".planning/artifacts/v1.38-plan-262-15-authorization-v1.json",
+          blobOid: createHash("sha1").update(`auth:${injectedOid}`).digest("hex"),
+          byteLength: 1,
+          sha256: sha256("injected-authorization"),
+        },
+        {
+          path: ".planning/artifacts/v1.38-successor-source-seal-v1.json",
+          blobOid: createHash("sha1").update(`seal:${injectedOid}`).digest("hex"),
+          byteLength: 1,
+          sha256: sha256("injected-seal"),
+        },
+      ]),
+    }
+    return deepFreeze({
+      ...custodyBody,
+      custodyRoot: v138SuccessorRoot(
+        "containmentPolicy",
+        custodyBody.schemaVersion,
+        custodyBody,
+      ),
+    })
+  })()
   const body = {
     schemaVersion: "v1.38-current-matrix-execution-context-v5" as const,
     mode: input.mode,
     cwd: input.cwd,
     terminalAgentRegistry: input.terminalAgentRegistry,
     sourceA: authorization.sourceA,
+    sourceB: sourceBCustody.sourceB,
+    sourceBCustody,
+    sourceBCustodyRoot: sourceBCustody.custodyRoot,
     authorizationRoot: authorization.authorizationRoot,
     sealRoot: seal.sealRoot,
     selectedRouteClosureRoot: seal.selectedRouteClosure.closureRoot,
@@ -7268,12 +7314,14 @@ export const buildV138ExecutionContextV5Receipt = (input: {
 
 export const checkV138ExecutionContextV5Receipt = (
   value: unknown,
+  expectedCustody?: Readonly<V138SourceBCustody>,
 ): Readonly<V138ExecutionContextV5Receipt> => {
   const record = exactRecord(
     value,
     [
       "schemaVersion", "mode", "cwd", "terminalAgentRegistry",
-      "sourceA", "authorizationRoot", "sealRoot",
+      "sourceA", "sourceB", "sourceBCustody", "sourceBCustodyRoot",
+      "authorizationRoot", "sealRoot",
       "selectedRouteClosureRoot", "frozenPolicyRoot", "toolIdentityRoot",
       "hostIdentityRoot", "patternCOwnership", "formationAbsenceBound",
       "runtimeRoute", "acceptedCellCount", "noRetry", "receiptRoot",
@@ -7281,6 +7329,20 @@ export const checkV138ExecutionContextV5Receipt = (
     "MATRIX_EXECUTION_CONTEXT_V5_INVALID",
   ) as unknown as V138ExecutionContextV5Receipt
   const { receiptRoot, ...body } = record
+  const custody = exactRecord(
+    record.sourceBCustody,
+    [
+      "schemaVersion", "sourceA", "sourceB", "sourceBTree", "sourceBParent",
+      "changedPaths", "blobs", "custodyRoot",
+    ],
+    "MATRIX_EXECUTION_CONTEXT_V5_INVALID",
+  )
+  const { custodyRoot, ...custodyBody } = custody
+  const custodyBlobs = Array.isArray(custody.blobs)
+    ? custody.blobs.map((blob) =>
+        exactRecord(blob, ["path", "blobOid", "byteLength", "sha256"],
+          "MATRIX_EXECUTION_CONTEXT_V5_INVALID"))
+    : []
   const registry = exactRecord(
     record.terminalAgentRegistry,
     ["schemaVersion", "activeExecutorCount", "agents"],
@@ -7307,6 +7369,34 @@ export const checkV138ExecutionContextV5Receipt = (
       )
     }) ||
     !/^[0-9a-f]{40}$/u.test(record.sourceA) ||
+    !/^[0-9a-f]{40}$/u.test(record.sourceB) ||
+    custody.schemaVersion !== "v1.38-source-b-custody-v1" ||
+    custody.sourceA !== record.sourceA ||
+    custody.sourceB !== record.sourceB ||
+    custody.sourceBParent !== record.sourceA ||
+    typeof custody.sourceBTree !== "string" ||
+    !/^[0-9a-f]{40}$/u.test(custody.sourceBTree) ||
+    canonical(custody.changedPaths) !== canonical([
+      ".planning/artifacts/v1.38-plan-262-15-authorization-v1.json",
+      ".planning/artifacts/v1.38-successor-source-seal-v1.json",
+    ]) ||
+    custodyBlobs.length !== 2 ||
+    custodyBlobs.some((blob, index) =>
+      blob.path !== [
+        ".planning/artifacts/v1.38-plan-262-15-authorization-v1.json",
+        ".planning/artifacts/v1.38-successor-source-seal-v1.json",
+      ][index] ||
+      typeof blob.blobOid !== "string" ||
+      !/^[0-9a-f]{40}$/u.test(blob.blobOid) ||
+      !Number.isSafeInteger(blob.byteLength) ||
+      Number(blob.byteLength) <= 0 ||
+      typeof blob.sha256 !== "string" ||
+      !/^sha256:[0-9a-f]{64}$/u.test(blob.sha256)) ||
+    custodyRoot !== v138SuccessorRoot(
+      "containmentPolicy", "v1.38-source-b-custody-v1", custodyBody) ||
+    record.sourceBCustodyRoot !== custodyRoot ||
+    (expectedCustody !== undefined &&
+      canonical(expectedCustody) !== canonical(record.sourceBCustody)) ||
     record.patternCOwnership !== "main_orchestrator_only" ||
     record.formationAbsenceBound !== true ||
     record.runtimeRoute !== "v1.18/v1.19/MATCH_KERNEL" ||
@@ -7319,6 +7409,8 @@ export const checkV138ExecutionContextV5Receipt = (
 
 export interface V138HostHeadroomPreflightV5Receipt {
   readonly schemaVersion: "v1.38-current-matrix-headroom-preflight-v5"
+  readonly sourceB: string
+  readonly sourceBCustodyRoot: Sha256
   readonly executionContextRoot: Sha256
   readonly authorizationRoot: Sha256
   readonly sealRoot: Sha256
@@ -7353,6 +7445,10 @@ export const buildV138HostHeadroomPreflightV5Receipt = (
     : undefined
   const body = {
     schemaVersion: "v1.38-current-matrix-headroom-preflight-v5" as const,
+    sourceB: context?.sourceB ??
+      createHash("sha1").update("injected-preflight-source-b").digest("hex"),
+    sourceBCustodyRoot: context?.sourceBCustodyRoot ??
+      sha256("injected-preflight-source-b-custody"),
     executionContextRoot:
       context?.receiptRoot ?? sha256("injected-preauthorization-test-context-v5"),
     authorizationRoot:
@@ -7413,6 +7509,8 @@ export const buildV138ParallelCalibrationV5PreflightTerminal = (
   )
   const body = {
     schemaVersion: "v1.38-current-matrix-calibration-v5" as const,
+    sourceB: preflight.sourceB,
+    sourceBCustodyRoot: preflight.sourceBCustodyRoot,
     executionContextRoot: preflight.executionContextRoot,
     preflightRoot: preflight.receiptRoot,
     status: "stopped_process_failure" as const,
@@ -7438,7 +7536,8 @@ export const checkV138HostHeadroomPreflightV5Receipt = (
   const record = exactRecord(
     value,
     [
-      "schemaVersion", "executionContextRoot", "authorizationRoot", "sealRoot",
+      "schemaVersion", "sourceB", "sourceBCustodyRoot",
+      "executionContextRoot", "authorizationRoot", "sealRoot",
       "status", "chargedIdentityId", "metricId", "providerId", "parserId",
       "requiredHostHeadroomBasisPoints", "observation", "disposition",
       "acceptedCellCount", "noRetry", "receiptRoot",
@@ -7492,6 +7591,8 @@ export const checkV138HostHeadroomPreflightV5Receipt = (
     !/^sha256:([0-9a-f])\1{63}$/u.test(candidate)
   if (
     record.schemaVersion !== "v1.38-current-matrix-headroom-preflight-v5" ||
+    !/^[0-9a-f]{40}$/u.test(record.sourceB) ||
+    !isCanonicalRoot(record.sourceBCustodyRoot) ||
     !isCanonicalRoot(record.executionContextRoot) ||
     !isCanonicalRoot(record.authorizationRoot) ||
     !isCanonicalRoot(record.sealRoot) ||
@@ -7520,7 +7621,8 @@ export const checkV138ParallelCalibrationV5Receipt = (
   const record = exactRecord(
     value,
     [
-      "schemaVersion", "executionContextRoot", "preflightRoot", "status",
+      "schemaVersion", "sourceB", "sourceBCustodyRoot",
+      "executionContextRoot", "preflightRoot", "status",
       "chargedAttemptCount", "chargedAttempts", "shardCount", "samplerMode",
       "sharedObservationTicks", "supervisedCalibration", "childLaunchCount", "acceptedCellCount",
       "noRetry", "receiptRoot",
@@ -7581,6 +7683,9 @@ export const checkV138ParallelCalibrationV5Receipt = (
     !/^sha256:([0-9a-f])\1{63}$/u.test(candidate)
   if (
     record.schemaVersion !== "v1.38-current-matrix-calibration-v5" ||
+    typeof record.sourceB !== "string" ||
+    !/^[0-9a-f]{40}$/u.test(record.sourceB) ||
+    !isCanonicalRoot(record.sourceBCustodyRoot) ||
     !isCanonicalRoot(record.executionContextRoot) ||
     !isCanonicalRoot(record.preflightRoot) ||
     record.chargedAttemptCount !== 8 ||
@@ -7714,6 +7819,8 @@ export const buildV138ParallelCalibrationV5Receipt = (input: {
   )
   const body = {
     schemaVersion: "v1.38-current-matrix-calibration-v5" as const,
+    sourceB: preflight.sourceB,
+    sourceBCustodyRoot: preflight.sourceBCustodyRoot,
     executionContextRoot: preflight.executionContextRoot,
     preflightRoot: preflight.receiptRoot,
     status: admitted ? "admitted" as const : "stopped_process_failure" as const,
@@ -7738,6 +7845,8 @@ export const buildV138ParallelCalibrationV5Receipt = (input: {
 
 export interface V138AuthoritativeMatrixV6Receipt {
   readonly schemaVersion: "v1.38-current-matrix-reproduction-v6"
+  readonly sourceB: string
+  readonly sourceBCustodyRoot: Sha256
   readonly executionContextRoot: Sha256
   readonly calibrationRoot: Sha256
   readonly status: "passed_exact" | "stopped_process_failure"
@@ -7766,7 +7875,9 @@ export const buildV138AuthoritativeMatrixV6Receipt = (input: {
   if (
     calibration.status !== "admitted" ||
     calibration.acceptedCellCount !== 8 ||
-    calibration.executionContextRoot !== context.receiptRoot
+    calibration.executionContextRoot !== context.receiptRoot ||
+    calibration.sourceB !== context.sourceB ||
+    calibration.sourceBCustodyRoot !== context.sourceBCustodyRoot
   ) throw new TypeError("MATRIX_REPRODUCTION_V6_CALIBRATION_NOT_ADMITTED")
   const inventory = enumerateV138CurrentMatrix(input.repoRoot)
   const expectedIds = inventory.attempts.map(
@@ -7822,6 +7933,8 @@ export const buildV138AuthoritativeMatrixV6Receipt = (input: {
   )
   const body = {
     schemaVersion: "v1.38-current-matrix-reproduction-v6" as const,
+    sourceB: context.sourceB,
+    sourceBCustodyRoot: context.sourceBCustodyRoot,
     executionContextRoot: context.receiptRoot,
     calibrationRoot: calibration.receiptRoot as Sha256,
     status: passed
@@ -7853,7 +7966,8 @@ export const checkV138AuthoritativeMatrixV6Receipt = (
   const record = exactRecord(
     value,
     [
-      "schemaVersion", "executionContextRoot", "calibrationRoot", "status",
+      "schemaVersion", "sourceB", "sourceBCustodyRoot",
+      "executionContextRoot", "calibrationRoot", "status",
       "chargedAttemptCount", "acceptedCellCount", "attemptLedgerRoot",
       "acceptedCellRoot", "execution", "runtimeRoute", "partialAcceptedEvidenceReusable",
       "noRetry", "receiptRoot",
@@ -7868,6 +7982,8 @@ export const checkV138AuthoritativeMatrixV6Receipt = (
     !/^sha256:([0-9a-f])\1{63}$/u.test(candidate)
   if (
     record.schemaVersion !== "v1.38-current-matrix-reproduction-v6" ||
+    !/^[0-9a-f]{40}$/u.test(record.sourceB) ||
+    !isCanonicalRoot(record.sourceBCustodyRoot) ||
     !["passed_exact", "stopped_process_failure"].includes(record.status) ||
     !isCanonicalRoot(record.executionContextRoot) ||
     !isCanonicalRoot(record.calibrationRoot) ||
@@ -7950,7 +8066,7 @@ export const writeV138ExecutionContextV5Receipt = (
   sourceA: string,
   sourceB: string,
 ): Readonly<V138ExecutionContextV5Receipt> => {
-  checkV138SuccessorSealCommit({ repoRoot, sourceA, sourceB })
+  const sourceBCustody = checkV138SuccessorSealCommit({ repoRoot, sourceA, sourceB })
   const target = plan26216Path(repoRoot, targetPath, "context")
   const authorizationArtifact = plan26216Read(
     plan26216Path(repoRoot, authorizationPath, "authorization"),
@@ -7973,6 +8089,7 @@ export const writeV138ExecutionContextV5Receipt = (
     cwd: cwd as V138ExecutionContextV5Receipt["cwd"],
     terminalAgentRegistry:
       terminalAgentRegistry as V138ExecutionContextV5Receipt["terminalAgentRegistry"],
+    sourceBCustody,
   })
   writeV138ImmutableReceipt(target, receipt)
   return receipt
@@ -7987,7 +8104,7 @@ export const writeV138HostHeadroomPreflightV5Receipt = async (
   sourceA: string,
   sourceB: string,
 ): Promise<Readonly<V138HostHeadroomPreflightV5Receipt>> => {
-  checkV138SuccessorSealCommit({ repoRoot, sourceA, sourceB })
+  const sourceBCustody = checkV138SuccessorSealCommit({ repoRoot, sourceA, sourceB })
   const target = plan26216Path(repoRoot, targetPath, "preflight")
   const authorization = checkV138Plan26215Authorization(
     repoRoot,
@@ -7995,6 +8112,7 @@ export const writeV138HostHeadroomPreflightV5Receipt = async (
       plan26216Path(repoRoot, authorizationPath, "authorization"),
       true,
     )!.value,
+    sourceBCustody,
   )
   const seal = checkV138SuccessorSourceSeal(
     repoRoot,
@@ -8009,7 +8127,9 @@ export const writeV138HostHeadroomPreflightV5Receipt = async (
   )
   if (
     context.authorizationRoot !== authorization.authorizationRoot ||
-    context.sealRoot !== seal.sealRoot
+    context.sealRoot !== seal.sealRoot ||
+    context.sourceB !== sourceBCustody.sourceB ||
+    context.sourceBCustodyRoot !== sourceBCustody.custodyRoot
   ) throw new TypeError("MATRIX_PREFLIGHT_V5_CONTEXT_JOIN_INVALID")
   const receipt = buildV138HostHeadroomPreflightV5Receipt({
     result: await observeDarwinHeadroomOwned(executeOwnedMemoryPressureQ),
@@ -8027,13 +8147,14 @@ export const writeV138ParallelCalibrationV5Receipt = async (
   sourceA: string,
   sourceB: string,
 ): Promise<Readonly<Record<string, unknown>>> => {
-  checkV138SuccessorSealCommit({ repoRoot, sourceA, sourceB })
+  const sourceBCustody = checkV138SuccessorSealCommit({ repoRoot, sourceA, sourceB })
   const target = plan26216Path(repoRoot, targetPath, "calibration")
   const context = checkV138ExecutionContextV5Receipt(
     plan26216Read(
       plan26216Path(repoRoot, executionContextPath, "context"),
       true,
     )!.value,
+    sourceBCustody,
   )
   const preflight = checkV138HostHeadroomPreflightV5Receipt(
     plan26216Read(
@@ -8041,7 +8162,11 @@ export const writeV138ParallelCalibrationV5Receipt = async (
       true,
     )!.value,
   )
-  if (preflight.executionContextRoot !== context.receiptRoot) {
+  if (
+    preflight.executionContextRoot !== context.receiptRoot ||
+    preflight.sourceB !== context.sourceB ||
+    preflight.sourceBCustodyRoot !== context.sourceBCustodyRoot
+  ) {
     throw new TypeError("MATRIX_CALIBRATION_V5_CONTEXT_JOIN_INVALID")
   }
   let receipt: Readonly<Record<string, unknown>>
@@ -8102,13 +8227,14 @@ export const writeV138AuthoritativeMatrixV6Receipt = async (
   sourceA: string,
   sourceB: string,
 ): Promise<Readonly<V138AuthoritativeMatrixV6Receipt>> => {
-  checkV138SuccessorSealCommit({ repoRoot, sourceA, sourceB })
+  const sourceBCustody = checkV138SuccessorSealCommit({ repoRoot, sourceA, sourceB })
   const target = plan26216Path(repoRoot, targetPath, "reproduction")
   const context = checkV138ExecutionContextV5Receipt(
     plan26216Read(
       plan26216Path(repoRoot, executionContextPath, "context"),
       true,
     )!.value,
+    sourceBCustody,
   )
   const calibration = checkV138ParallelCalibrationV5Receipt(
     plan26216Read(
@@ -8120,6 +8246,8 @@ export const writeV138AuthoritativeMatrixV6Receipt = async (
   if (
     calibration.status !== "admitted" ||
     calibration.executionContextRoot !== context.receiptRoot ||
+    calibration.sourceB !== context.sourceB ||
+    calibration.sourceBCustodyRoot !== context.sourceBCustodyRoot ||
     calibration.supervisedCalibration === null
   ) throw new TypeError("MATRIX_REPRODUCTION_V6_CALIBRATION_NOT_ADMITTED")
   const execution = await executeV138ParallelMatrix({
@@ -8256,7 +8384,7 @@ export const checkV138Plan26216TerminalBranch = (
   sourceA: string,
   sourceB: string,
 ): V138Plan26216TerminalDisposition => {
-  checkV138SuccessorSealCommit({ repoRoot, sourceA, sourceB })
+  const sourceBCustody = checkV138SuccessorSealCommit({ repoRoot, sourceA, sourceB })
   const resolved = Object.fromEntries(
     (Object.keys(PLAN_262_16_PATHS) as Array<keyof typeof PLAN_262_16_PATHS>)
       .map((key) => [key, plan26216Path(repoRoot, supplied[key], key)]),
@@ -8280,12 +8408,16 @@ export const checkV138Plan26216TerminalBranch = (
     !hasExactKeys(terminalValue, [
       "schemaVersion",
       "disposition",
+      "sourceB",
+      "sourceBCustodyRoot",
       "authorityExpired",
       "noRetry",
       "artifactRoots",
       "terminalRoot",
     ]) ||
     terminalValue.schemaVersion !== "v1.38-plan-262-16-terminal-v1" ||
+    terminalValue.sourceB !== sourceBCustody.sourceB ||
+    terminalValue.sourceBCustodyRoot !== sourceBCustody.custodyRoot ||
     typeof disposition !== "string" ||
     !allowed.includes(disposition) ||
     terminalValue.authorityExpired !== true ||
@@ -8319,7 +8451,7 @@ export const checkV138Plan26216TerminalBranch = (
   const reproductionArtifact = plan26216Read(resolved.reproduction, needs.reproduction)
   const context = contextArtifact === undefined
     ? undefined
-    : checkV138ExecutionContextV5Receipt(contextArtifact.value)
+    : checkV138ExecutionContextV5Receipt(contextArtifact.value, sourceBCustody)
   const preflight = preflightArtifact === undefined
     ? undefined
     : checkV138HostHeadroomPreflightV5Receipt(preflightArtifact.value)
@@ -8336,18 +8468,24 @@ export const checkV138Plan26216TerminalBranch = (
   if (
     context !== undefined &&
     (context.authorizationRoot !== authorization.authorizationRoot ||
-      context.sealRoot !== seal.sealRoot)
+      context.sealRoot !== seal.sealRoot ||
+      context.sourceB !== sourceBCustody.sourceB ||
+      context.sourceBCustodyRoot !== sourceBCustody.custodyRoot)
   ) throw new TypeError("MATRIX_PLAN_262_16_CONTEXT_JOIN_INVALID")
   if (
     preflight !== undefined &&
     (preflight.executionContextRoot !== context?.receiptRoot ||
       preflight.authorizationRoot !== authorization.authorizationRoot ||
-      preflight.sealRoot !== seal.sealRoot)
+      preflight.sealRoot !== seal.sealRoot ||
+      preflight.sourceB !== sourceBCustody.sourceB ||
+      preflight.sourceBCustodyRoot !== sourceBCustody.custodyRoot)
   ) throw new TypeError("MATRIX_PLAN_262_16_PREFLIGHT_JOIN_INVALID")
   if (
     calibration !== undefined &&
     (calibration.preflightRoot !== preflight?.receiptRoot ||
-      calibration.executionContextRoot !== context?.receiptRoot)
+      calibration.executionContextRoot !== context?.receiptRoot ||
+      calibration.sourceB !== sourceBCustody.sourceB ||
+      calibration.sourceBCustodyRoot !== sourceBCustody.custodyRoot)
   ) throw new TypeError("MATRIX_PLAN_262_16_CALIBRATION_JOIN_INVALID")
   if (
     (typed === "preflight_unavailable" || typed === "preflight_refused") &&
@@ -8356,7 +8494,9 @@ export const checkV138Plan26216TerminalBranch = (
   if (
     reproduction !== undefined &&
     (reproduction.executionContextRoot !== context?.receiptRoot ||
-      reproduction.calibrationRoot !== calibration?.receiptRoot)
+      reproduction.calibrationRoot !== calibration?.receiptRoot ||
+      reproduction.sourceB !== sourceBCustody.sourceB ||
+      reproduction.sourceBCustodyRoot !== sourceBCustody.custodyRoot)
   ) throw new TypeError("MATRIX_PLAN_262_16_REPRODUCTION_JOIN_INVALID")
   const dispositionValid =
     (typed === "preflight_unavailable" &&
@@ -8412,7 +8552,7 @@ export const writeV138Plan26216Terminal = (
   sourceA: string,
   sourceB: string,
 ) => {
-  checkV138SuccessorSealCommit({ repoRoot, sourceA, sourceB })
+  const sourceBCustody = checkV138SuccessorSealCommit({ repoRoot, sourceA, sourceB })
   if (![
     "tool_identity_failed",
     "protected_history_failed",
@@ -8435,6 +8575,8 @@ export const writeV138Plan26216Terminal = (
   const body = {
     schemaVersion: "v1.38-plan-262-16-terminal-v1" as const,
     disposition,
+    sourceB: sourceBCustody.sourceB,
+    sourceBCustodyRoot: sourceBCustody.custodyRoot,
     authorityExpired: true as const,
     noRetry: true as const,
     artifactRoots: {

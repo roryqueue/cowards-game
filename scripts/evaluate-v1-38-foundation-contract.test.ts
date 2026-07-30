@@ -36,6 +36,7 @@ import {
 import {
   buildV138Plan26215Authorization,
   buildV138SuccessorSourceSeal,
+  checkV138ReplacementMetricContract,
   checkV138SuccessorSourceSeal,
   checkSelectedRouteClosureAtCommit,
   checkSelectedRouteEdgeInventory,
@@ -585,6 +586,7 @@ describe("v1.38 selected route closure and source custody", () => {
         path.resolve(root, "configs/nested/tsconfig.json"),
         JSON.stringify({
           extends: "../../config/tsconfig.json",
+          compilerOptions: { baseUrl: ".." },
           references: [{ path: "../../packages/spec" }],
         }),
       )
@@ -609,6 +611,57 @@ describe("v1.38 selected route closure and source custody", () => {
       ).toBe(true)
       expect(recursiveClosure.paths).not.toContain(
         "configs/packages/spec/src/index.ts",
+      )
+
+      reset()
+      mkdirSync(path.resolve(root, "config"), { recursive: true })
+      mkdirSync(path.resolve(root, "configs/nested"), { recursive: true })
+      mkdirSync(path.resolve(root, "configs/nested/packages/spec/src"), {
+        recursive: true,
+      })
+      writeFileSync(
+        path.resolve(root, "config/tsconfig.json"),
+        JSON.stringify({
+          compilerOptions: {
+            module: "NodeNext",
+            moduleResolution: "NodeNext",
+            baseUrl: "..",
+          },
+        }),
+      )
+      writeFileSync(
+        path.resolve(root, "configs/nested/tsconfig.json"),
+        JSON.stringify({
+          extends: "../../config/tsconfig.json",
+          compilerOptions: {
+            paths: { "@cowards/spec": ["packages/spec/src/index.ts"] },
+          },
+          references: [{ path: "../../packages/spec" }],
+        }),
+      )
+      writeFileSync(
+        path.resolve(root, "configs/nested/packages/spec/src/index.ts"),
+        "export const shadow = true\n",
+      )
+      writeFileSync(
+        path.resolve(root, "apps/runtime-service/tsconfig.json"),
+        readFileSync(path.resolve(root, "apps/runtime-service/tsconfig.json"), "utf8")
+          .replace("../../tsconfig.base.json", "../../configs/nested/tsconfig.json"),
+      )
+      const inheritedBaseCommit = commitMutation(
+        "test: child paths inherit parent baseUrl origin",
+      )
+      const inheritedBaseClosure = deriveSelectedRouteClosureAtCommit(
+        root,
+        inheritedBaseCommit,
+      )
+      expect(
+        inheritedBaseClosure.edges
+          .filter(({ specifier }) => specifier === "@cowards/spec")
+          .every(({ to }) => to === "packages/spec/src/index.ts"),
+      ).toBe(true)
+      expect(inheritedBaseClosure.paths).not.toContain(
+        "configs/nested/packages/spec/src/index.ts",
       )
 
       reset()
@@ -781,7 +834,18 @@ describe("v1.38 selected route closure and source custody", () => {
         }).trim()
       }
       const validB = commitB()
-      expect(checkV138SuccessorSealCommit({ repoRoot: root, sourceA, sourceB: validB })).toBe(true)
+      const custody = checkV138SuccessorSealCommit({
+        repoRoot: root,
+        sourceA,
+        sourceB: validB,
+      })
+      expect(custody).toMatchObject({
+        sourceA,
+        sourceB: validB,
+        sourceBParent: sourceA,
+        changedPaths: [authorizationPath, sealPath],
+      })
+      expect(custody.blobs).toHaveLength(2)
       expect(() =>
         checkV138SuccessorSealCommit({ repoRoot: root, sourceA, sourceB: "0".repeat(40) })
       ).toThrow()
@@ -929,6 +993,35 @@ describe("v1.38 plan 262-15 terminal artifact presence", () => {
           })
           expect(seal.reviewRoots).toHaveLength(1)
           expect(seal.protectedEvidence.length).toBeGreaterThan(0)
+          const metricMutations: ReadonlyArray<
+            readonly [string, string, unknown]
+          > = [
+            ["command", "executable", "/usr/bin/memory_pressurf"],
+            ["command", "argv", ["-P"]],
+            ["command", "environment", { LC_ALL: "C", LANG: "C", PATH: "/usr/bin:/bin:/usr/sbin:/sbim" }],
+            ["command", "stdin", "pipe"],
+            ["command", "shell", true],
+            ["command", "timeoutMilliseconds", 201],
+            ["command", "maximumOutputBytes", 4_095],
+            ["metric", "metricId", "darwin-memorystatus-effective-available-basis-points-v2"],
+            ["provider", "providerId", "apple-memory-pressure-q-v2"],
+            ["parser", "parserId", "apple-memory-pressure-q-c-locale-parser-v2"],
+            ["threshold", "requiredBasisPoints", 2_499],
+            ["domains", "commandRoot", `sha256:${"1".repeat(64)}`],
+          ]
+          for (const [section, field, replacement] of metricMutations) {
+            const forged = clone(seal.replacementMetricContract) as Record<string, unknown>
+            ;(forged[section] as Record<string, unknown>)[field] = replacement
+            expect(() =>
+              checkV138ReplacementMetricContract(root, sourceA, forged),
+            ).toThrow("V138_REPLACEMENT_METRIC_CONTRACT_INVALID")
+          }
+          const forgedReference = clone(seal.replacementMetricContract) as Record<string, unknown>
+          ;(forgedReference.semanticReferences as Array<Record<string, unknown>>)[0]!.commit =
+            "408bba7453608006b89772db185defbac8fe2fd0e"
+          expect(() =>
+            checkV138ReplacementMetricContract(root, sourceA, forgedReference),
+          ).toThrow("V138_REPLACEMENT_METRIC_CONTRACT_INVALID")
           for (const mutateSeal of [
             (draft: Record<string, unknown>) => {
               draft.reviewRoots = []
@@ -950,6 +1043,9 @@ describe("v1.38 plan 262-15 terminal artifact presence", () => {
                 schemaVersion: "v1.38-formation-absence-v1",
                 absent: true,
               }
+            },
+            (draft: Record<string, unknown>) => {
+              draft.replacementMetricContract = { schemaVersion: "forged" }
             },
           ]) {
             const forged = clone(seal) as unknown as Record<string, unknown>
@@ -1276,33 +1372,6 @@ describe("v1.38 plan 262-16 terminal artifact presence", () => {
           absent: true,
         },
       })
-      const context = buildV138ExecutionContextV5Receipt({
-        repoRoot: root,
-        authorization,
-        seal,
-        mode: "gsd-pattern-c-inline-main",
-        cwd: "/Users/roryquinlan/runtime/cowards-game",
-        terminalAgentRegistry: {
-          schemaVersion: "v1.38-plan-262-16-terminal-agent-registry-v1",
-          activeExecutorCount: 0,
-          agents: [],
-        },
-      })
-      const preflight = buildV138HostHeadroomPreflightV5Receipt(
-        {
-          executionContext: context,
-          result: parseMemoryPressureQ({
-            stdout: Buffer.from(
-              "The system has 4096 (1 pages with a page size of 4096).\nSystem-wide memory free percentage: 24%\n",
-            ),
-            stderr: Buffer.alloc(0),
-            exitCode: 0,
-            signal: null,
-            timedOut: false,
-          }),
-        },
-      )
-      const calibration = buildV138ParallelCalibrationV5PreflightTerminal(preflight)
       for (const [repoPath, value] of [
         [paths.authorization, authorization],
         [paths.seal, seal],
@@ -1317,6 +1386,61 @@ describe("v1.38 plan 262-16 terminal artifact presence", () => {
         cwd: root,
         encoding: "utf8",
       }).trim()
+      const sourceBCustody = checkV138SuccessorSealCommit({
+        repoRoot: root,
+        sourceA,
+        sourceB,
+      })
+      const context = buildV138ExecutionContextV5Receipt({
+        repoRoot: root,
+        authorization,
+        seal,
+        mode: "gsd-pattern-c-inline-main",
+        cwd: "/Users/roryquinlan/runtime/cowards-game",
+        terminalAgentRegistry: {
+          schemaVersion: "v1.38-plan-262-16-terminal-agent-registry-v1",
+          activeExecutorCount: 0,
+          agents: [],
+        },
+        sourceBCustody,
+      })
+      for (const field of ["sourceB", "sourceBTree", "sourceBParent"] as const) {
+        const forged = clone(context) as unknown as Record<string, unknown>
+        const forgedCustody = forged.sourceBCustody as Record<string, unknown>
+        const original = String(forgedCustody[field])
+        forgedCustody[field] =
+          `${original.slice(0, -1)}${original.endsWith("0") ? "1" : "0"}`
+        if (field === "sourceB") forged.sourceB = forgedCustody[field]
+        const { custodyRoot: _oldCustody, ...custodyBody } = forgedCustody
+        forgedCustody.custodyRoot = v138SuccessorRoot(
+          "containmentPolicy",
+          String(forgedCustody.schemaVersion),
+          custodyBody,
+        )
+        forged.sourceBCustodyRoot = forgedCustody.custodyRoot
+        const { receiptRoot: _oldReceipt, ...contextBody } = forged
+        forged.receiptRoot = v138SuccessorRoot(
+          "evidenceBundle",
+          String(forged.schemaVersion),
+          contextBody,
+        )
+        expect(() =>
+          checkV138ExecutionContextV5Receipt(forged, sourceBCustody),
+        ).toThrow("MATRIX_EXECUTION_CONTEXT_V5_INVALID")
+      }
+      const preflight = buildV138HostHeadroomPreflightV5Receipt({
+        executionContext: context,
+        result: parseMemoryPressureQ({
+          stdout: Buffer.from(
+            "The system has 4096 (1 pages with a page size of 4096).\nSystem-wide memory free percentage: 24%\n",
+          ),
+          stderr: Buffer.alloc(0),
+          exitCode: 0,
+          signal: null,
+          timedOut: false,
+        }),
+      })
+      const calibration = buildV138ParallelCalibrationV5PreflightTerminal(preflight)
       const artifacts: ReadonlyArray<readonly [string, unknown]> = [
         [paths.context, context],
         [paths.preflight, preflight],
@@ -1377,6 +1501,8 @@ describe("v1.38 plan 262-16 terminal artifact presence", () => {
         const body = {
           schemaVersion: "v1.38-plan-262-16-terminal-v1" as const,
           disposition,
+          sourceB,
+          sourceBCustodyRoot: sourceBCustody.custodyRoot,
           authorityExpired: true as const,
           noRetry: true as const,
           artifactRoots: {
