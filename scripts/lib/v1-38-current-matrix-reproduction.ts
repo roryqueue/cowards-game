@@ -10,6 +10,7 @@ import {
   closeSync,
   constants,
   existsSync,
+  fstatSync,
   fsyncSync,
   linkSync,
   lstatSync,
@@ -65,6 +66,8 @@ import {
   createRuntimeSemanticTupleV118,
   createSetScenarioV137,
   hashExecutableLaneIdentity,
+  hashCanonicalIdentity,
+  encodeCanonicalJson,
   parseRuntimeEvidenceAuthorityPayload,
   type ExecutableLaneIdentity,
   type RuntimeEntrantAuthorityReference,
@@ -74,6 +77,12 @@ import {
   type RuntimeExecutionServiceRequestV118,
   type StrategyRevision,
 } from "@cowards/spec"
+import {
+  checkV138Plan26215Authorization,
+  checkV138SuccessorSourceSeal,
+  type V138Plan26215Authorization,
+  type V138SuccessorSourceSeal,
+} from "./v1-38-successor-source-seal.js"
 
 const FIXTURE_PURPOSE = "regression_throughput_only" as const
 const HISTORICAL_MATRIX_SOURCE =
@@ -6894,11 +6903,181 @@ const runShardCli = (): void => {
   }
 }
 
+const v138SuccessorCanonicalBytes = (value: unknown): Uint8Array => {
+  const encoded = encodeCanonicalJson(value as JsonValue, {
+    context: "canonical-manifest",
+  })
+  if (encoded.ok === false) {
+    throw new TypeError("MATRIX_SUCCESSOR_CANONICAL_JSON_INVALID")
+  }
+  return encoded.bytes
+}
+
+const v138SuccessorRoot = (
+  domain:
+    | "evidenceBundle"
+    | "containmentPolicy"
+    | "budgetProfile"
+    | "artifactManifest"
+    | "canonicalJsonProfile",
+  schemaVersion: string,
+  value: unknown,
+): Sha256 =>
+  `sha256:${hashCanonicalIdentity(domain, [
+    Buffer.from(schemaVersion, "utf8"),
+    v138SuccessorCanonicalBytes(value),
+  ])}`
+
+const exactRecord = (
+  value: unknown,
+  keys: readonly string[],
+  code: string,
+): Record<string, unknown> => {
+  if (
+    value === null ||
+    typeof value !== "object" ||
+    Array.isArray(value) ||
+    !hasExactKeys(value as Record<string, unknown>, keys)
+  ) throw new TypeError(code)
+  return value as Record<string, unknown>
+}
+
+export interface V138ExecutionContextV5Receipt {
+  readonly schemaVersion: "v1.38-current-matrix-execution-context-v5"
+  readonly sourceA: string
+  readonly authorizationRoot: Sha256
+  readonly sealRoot: Sha256
+  readonly selectedRouteClosureRoot: Sha256
+  readonly frozenPolicyRoot: Sha256
+  readonly toolIdentityRoot: Sha256
+  readonly hostIdentityRoot: Sha256
+  readonly patternCOwnership: "main_orchestrator_only"
+  readonly formationAbsenceBound: true
+  readonly runtimeRoute: "v1.18/v1.19/MATCH_KERNEL"
+  readonly acceptedCellCount: 0
+  readonly noRetry: true
+  readonly receiptRoot: Sha256
+}
+
+export const buildV138ExecutionContextV5Receipt = (input: {
+  readonly repoRoot: string
+  readonly authorization: V138Plan26215Authorization
+  readonly seal: V138SuccessorSourceSeal
+}): Readonly<V138ExecutionContextV5Receipt> => {
+  const authorization = checkV138Plan26215Authorization(
+    input.repoRoot,
+    input.authorization,
+  )
+  const seal = checkV138SuccessorSourceSeal(
+    input.repoRoot,
+    input.seal,
+    authorization,
+  )
+  const body = {
+    schemaVersion: "v1.38-current-matrix-execution-context-v5" as const,
+    sourceA: authorization.sourceA,
+    authorizationRoot: authorization.authorizationRoot,
+    sealRoot: seal.sealRoot,
+    selectedRouteClosureRoot: seal.selectedRouteClosure.closureRoot,
+    frozenPolicyRoot: v138SuccessorRoot(
+      "budgetProfile",
+      "v1.38-current-matrix-frozen-policy-v5",
+      seal.frozenPolicy,
+    ),
+    toolIdentityRoot: v138SuccessorRoot(
+      "artifactManifest",
+      "v1.38-current-matrix-tool-identity-v5",
+      seal.toolIdentity,
+    ),
+    hostIdentityRoot: v138SuccessorRoot(
+      "containmentPolicy",
+      "v1.38-current-matrix-host-identity-v5",
+      seal.hostIdentity,
+    ),
+    patternCOwnership: "main_orchestrator_only" as const,
+    formationAbsenceBound: true as const,
+    runtimeRoute: "v1.18/v1.19/MATCH_KERNEL" as const,
+    acceptedCellCount: 0 as const,
+    noRetry: true as const,
+  }
+  return deepFreeze({
+    ...body,
+    receiptRoot: v138SuccessorRoot(
+      "evidenceBundle",
+      body.schemaVersion,
+      body,
+    ),
+  })
+}
+
+export const checkV138ExecutionContextV5Receipt = (
+  value: unknown,
+): Readonly<V138ExecutionContextV5Receipt> => {
+  const record = exactRecord(
+    value,
+    [
+      "schemaVersion", "sourceA", "authorizationRoot", "sealRoot",
+      "selectedRouteClosureRoot", "frozenPolicyRoot", "toolIdentityRoot",
+      "hostIdentityRoot", "patternCOwnership", "formationAbsenceBound",
+      "runtimeRoute", "acceptedCellCount", "noRetry", "receiptRoot",
+    ],
+    "MATRIX_EXECUTION_CONTEXT_V5_INVALID",
+  ) as unknown as V138ExecutionContextV5Receipt
+  const { receiptRoot, ...body } = record
+  if (
+    record.schemaVersion !== "v1.38-current-matrix-execution-context-v5" ||
+    !/^[0-9a-f]{40}$/u.test(record.sourceA) ||
+    record.patternCOwnership !== "main_orchestrator_only" ||
+    record.formationAbsenceBound !== true ||
+    record.runtimeRoute !== "v1.18/v1.19/MATCH_KERNEL" ||
+    record.acceptedCellCount !== 0 ||
+    record.noRetry !== true ||
+    receiptRoot !== v138SuccessorRoot("evidenceBundle", record.schemaVersion, body)
+  ) throw new TypeError("MATRIX_EXECUTION_CONTEXT_V5_INVALID")
+  return record
+}
+
+export interface V138HostHeadroomPreflightV5Receipt {
+  readonly schemaVersion: "v1.38-current-matrix-headroom-preflight-v5"
+  readonly executionContextRoot: Sha256
+  readonly authorizationRoot: Sha256
+  readonly sealRoot: Sha256
+  readonly status: "preflight_complete" | "preflight_unavailable"
+  readonly chargedIdentityId: "preflight:v5:0"
+  readonly metricId: typeof V138_DARWIN_HEADROOM_METRIC_ID
+  readonly providerId: typeof V138_DARWIN_HEADROOM_PROVIDER_ID
+  readonly parserId: typeof V138_DARWIN_HEADROOM_PARSER_ID
+  readonly requiredHostHeadroomBasisPoints: 2500
+  readonly observation: Readonly<Record<string, number | Sha256>> | null
+  readonly disposition:
+    | "preflight_admitted"
+    | "preflight_refused"
+    | "preflight_unavailable"
+  readonly acceptedCellCount: 0
+  readonly noRetry: true
+  readonly receiptRoot: Sha256
+}
+
 export const buildV138HostHeadroomPreflightV5Receipt = (
-  result: V138DarwinHeadroomResult,
-) => {
+  input:
+    | V138DarwinHeadroomResult
+    | Readonly<{
+        result: V138DarwinHeadroomResult
+        executionContext: V138ExecutionContextV5Receipt
+      }>,
+): Readonly<V138HostHeadroomPreflightV5Receipt> => {
+  const wrapped = "result" in input
+  const result = wrapped ? input.result : input
+  const context = wrapped
+    ? checkV138ExecutionContextV5Receipt(input.executionContext)
+    : undefined
   const body = {
     schemaVersion: "v1.38-current-matrix-headroom-preflight-v5" as const,
+    executionContextRoot:
+      context?.receiptRoot ?? sha256("injected-preauthorization-test-context-v5"),
+    authorizationRoot:
+      context?.authorizationRoot ?? sha256("injected-preauthorization-test-authority-v5"),
+    sealRoot: context?.sealRoot ?? sha256("injected-preauthorization-test-seal-v5"),
     status: result.ok ? "preflight_complete" as const : "preflight_unavailable" as const,
     chargedIdentityId: "preflight:v5:0" as const,
     metricId: V138_DARWIN_HEADROOM_METRIC_ID,
@@ -6922,24 +7101,251 @@ export const buildV138HostHeadroomPreflightV5Receipt = (
     acceptedCellCount: 0 as const,
     noRetry: true as const,
   }
-  return deepFreeze({ ...body, receiptRoot: sha256(canonical(body)) })
+  return deepFreeze({
+    ...body,
+    receiptRoot: v138SuccessorRoot(
+      "canonicalJsonProfile",
+      body.schemaVersion,
+      body,
+    ),
+  })
 }
 
 export const buildV138ParallelCalibrationV5PreflightTerminal = (
-  preflight: ReturnType<typeof buildV138HostHeadroomPreflightV5Receipt>,
+  preflightInput: unknown,
 ) => {
+  const preflight = checkV138HostHeadroomPreflightV5Receipt(preflightInput)
   if (preflight.disposition === "preflight_admitted") {
     throw new TypeError("MATRIX_CALIBRATION_V5_LIVE_EXECUTION_REQUIRED")
   }
+  const reason =
+    preflight.disposition === "preflight_refused"
+      ? "unfilled_resource_preflight_refusal"
+      : "unfilled_resource_measurement_unavailable"
+  const chargedAttempts = Array.from({ length: 8 }, (_, index) =>
+    deepFreeze({
+      attemptId: `calibration:v5:${index}`,
+      shardId: `calibration-shard:${index % 4}`,
+      outcome: reason,
+      childLaunched: false as const,
+      accepted: false as const,
+    }),
+  )
   const body = {
     schemaVersion: "v1.38-current-matrix-calibration-v5" as const,
+    executionContextRoot: preflight.executionContextRoot,
+    preflightRoot: preflight.receiptRoot,
     status: "stopped_process_failure" as const,
     chargedAttemptCount: 8 as const,
+    chargedAttempts,
+    shardCount: 4 as const,
+    samplerMode: "one_shared_observation_per_tick" as const,
+    sharedObservationTicks: Object.freeze([]),
     childLaunchCount: 0 as const,
     acceptedCellCount: 0 as const,
     noRetry: true as const,
   }
-  return deepFreeze({ ...body, receiptRoot: sha256(canonical(body)) })
+  return deepFreeze({
+    ...body,
+    receiptRoot: v138SuccessorRoot("budgetProfile", body.schemaVersion, body),
+  })
+}
+
+export const checkV138HostHeadroomPreflightV5Receipt = (
+  value: unknown,
+): Readonly<V138HostHeadroomPreflightV5Receipt> => {
+  const record = exactRecord(
+    value,
+    [
+      "schemaVersion", "executionContextRoot", "authorizationRoot", "sealRoot",
+      "status", "chargedIdentityId", "metricId", "providerId", "parserId",
+      "requiredHostHeadroomBasisPoints", "observation", "disposition",
+      "acceptedCellCount", "noRetry", "receiptRoot",
+    ],
+    "MATRIX_PREFLIGHT_V5_INVALID",
+  ) as unknown as V138HostHeadroomPreflightV5Receipt
+  const { receiptRoot, ...body } = record
+  if (
+    record.schemaVersion !== "v1.38-current-matrix-headroom-preflight-v5" ||
+    record.metricId !== V138_DARWIN_HEADROOM_METRIC_ID ||
+    record.providerId !== V138_DARWIN_HEADROOM_PROVIDER_ID ||
+    record.parserId !== V138_DARWIN_HEADROOM_PARSER_ID ||
+    record.requiredHostHeadroomBasisPoints !== 2_500 ||
+    record.acceptedCellCount !== 0 ||
+    record.noRetry !== true ||
+    (record.disposition === "preflight_unavailable") !==
+      (record.status === "preflight_unavailable") ||
+    receiptRoot !==
+      v138SuccessorRoot("canonicalJsonProfile", record.schemaVersion, body)
+  ) throw new TypeError("MATRIX_PREFLIGHT_V5_INVALID")
+  return record
+}
+
+export const checkV138ParallelCalibrationV5Receipt = (
+  value: unknown,
+): Readonly<Record<string, unknown>> => {
+  const record = exactRecord(
+    value,
+    [
+      "schemaVersion", "executionContextRoot", "preflightRoot", "status",
+      "chargedAttemptCount", "chargedAttempts", "shardCount", "samplerMode",
+      "sharedObservationTicks", "childLaunchCount", "acceptedCellCount",
+      "noRetry", "receiptRoot",
+    ],
+    "MATRIX_CALIBRATION_V5_INVALID",
+  )
+  const { receiptRoot, ...body } = record
+  const attempts = record.chargedAttempts
+  if (
+    record.schemaVersion !== "v1.38-current-matrix-calibration-v5" ||
+    record.chargedAttemptCount !== 8 ||
+    record.shardCount !== 4 ||
+    record.samplerMode !== "one_shared_observation_per_tick" ||
+    !Array.isArray(attempts) ||
+    attempts.length !== 8 ||
+    new Set(
+      attempts.map((attempt) =>
+        exactRecord(
+          attempt,
+          ["attemptId", "shardId", "outcome", "childLaunched", "accepted"],
+          "MATRIX_CALIBRATION_V5_INVALID",
+        ).attemptId,
+      ),
+    ).size !== 8 ||
+    record.noRetry !== true ||
+    receiptRoot !== v138SuccessorRoot("budgetProfile", String(record.schemaVersion), body)
+  ) throw new TypeError("MATRIX_CALIBRATION_V5_INVALID")
+  return deepFreeze(record)
+}
+
+export const buildV138ParallelCalibrationV5Receipt = (input: {
+  readonly preflight: V138HostHeadroomPreflightV5Receipt
+  readonly attempts: readonly Readonly<{
+    attemptId: string
+    shardId: string
+    outcome: "accepted" | "player_violation" | "system_failure" | "unfilled"
+    childLaunched: boolean
+    accepted: boolean
+  }>[]
+  readonly sharedObservationTicks: readonly Readonly<{
+    tickId: string
+    observationRoot: Sha256
+    shardIds: readonly string[]
+  }>[]
+}): Readonly<Record<string, unknown>> => {
+  const preflight = checkV138HostHeadroomPreflightV5Receipt(input.preflight)
+  if (preflight.disposition !== "preflight_admitted") {
+    throw new TypeError("MATRIX_CALIBRATION_V5_PREFLIGHT_NOT_ADMITTED")
+  }
+  if (
+    input.attempts.length !== 8 ||
+    new Set(input.attempts.map((attempt) => attempt.attemptId)).size !== 8 ||
+    new Set(input.attempts.map((attempt) => attempt.shardId)).size !== 4
+  ) throw new TypeError("MATRIX_CALIBRATION_V5_ATTEMPT_INVENTORY_INVALID")
+  const accepted = input.attempts.filter((attempt) => attempt.accepted).length
+  const admitted =
+    accepted === 8 &&
+    input.attempts.every((attempt) => attempt.outcome === "accepted")
+  const body = {
+    schemaVersion: "v1.38-current-matrix-calibration-v5" as const,
+    executionContextRoot: preflight.executionContextRoot,
+    preflightRoot: preflight.receiptRoot,
+    status: admitted ? "admitted" as const : "stopped_process_failure" as const,
+    chargedAttemptCount: 8 as const,
+    chargedAttempts: Object.freeze([...input.attempts]),
+    shardCount: 4 as const,
+    samplerMode: "one_shared_observation_per_tick" as const,
+    sharedObservationTicks: Object.freeze([...input.sharedObservationTicks]),
+    childLaunchCount: input.attempts.filter((attempt) => attempt.childLaunched).length,
+    acceptedCellCount: admitted ? 8 as const : 0 as const,
+    noRetry: true as const,
+  }
+  return deepFreeze({
+    ...body,
+    receiptRoot: v138SuccessorRoot("budgetProfile", body.schemaVersion, body),
+  })
+}
+
+export interface V138AuthoritativeMatrixV6Receipt {
+  readonly schemaVersion: "v1.38-current-matrix-reproduction-v6"
+  readonly executionContextRoot: Sha256
+  readonly calibrationRoot: Sha256
+  readonly status: "passed_exact" | "stopped_process_failure"
+  readonly chargedAttemptCount: 540
+  readonly acceptedCellCount: 0 | 540
+  readonly attemptLedgerRoot: Sha256
+  readonly acceptedCellRoot: Sha256 | null
+  readonly runtimeRoute: "v1.18/v1.19/MATCH_KERNEL"
+  readonly partialAcceptedEvidenceReusable: false
+  readonly noRetry: true
+  readonly receiptRoot: Sha256
+}
+
+export const buildV138AuthoritativeMatrixV6Receipt = (input: {
+  readonly repoRoot: string
+  readonly executionContext: V138ExecutionContextV5Receipt
+  readonly calibration: Record<string, unknown>
+  readonly v5Receipt: V138AuthoritativeMatrixV5Receipt
+}): Readonly<V138AuthoritativeMatrixV6Receipt> => {
+  const context = checkV138ExecutionContextV5Receipt(input.executionContext)
+  const calibration = checkV138ParallelCalibrationV5Receipt(input.calibration)
+  if (
+    calibration.status !== "admitted" ||
+    calibration.acceptedCellCount !== 8 ||
+    calibration.executionContextRoot !== context.receiptRoot
+  ) throw new TypeError("MATRIX_REPRODUCTION_V6_CALIBRATION_NOT_ADMITTED")
+  const v5 = checkV138AuthoritativeMatrixV5Receipt(
+    input.repoRoot,
+    input.v5Receipt,
+  )
+  const passed = v5.status === "passed_exact" && v5.acceptedCellCount === 540
+  const body = {
+    schemaVersion: "v1.38-current-matrix-reproduction-v6" as const,
+    executionContextRoot: context.receiptRoot,
+    calibrationRoot: calibration.receiptRoot as Sha256,
+    status: passed
+      ? "passed_exact" as const
+      : "stopped_process_failure" as const,
+    chargedAttemptCount: 540 as const,
+    acceptedCellCount: passed ? 540 as const : 0 as const,
+    attemptLedgerRoot: v5.chargedAttemptLedgerRoot,
+    acceptedCellRoot: passed ? v5.acceptedCellLedgerRoot : null,
+    runtimeRoute: "v1.18/v1.19/MATCH_KERNEL" as const,
+    partialAcceptedEvidenceReusable: false as const,
+    noRetry: true as const,
+  }
+  return deepFreeze({
+    ...body,
+    receiptRoot: v138SuccessorRoot("evidenceBundle", body.schemaVersion, body),
+  })
+}
+
+export const checkV138AuthoritativeMatrixV6Receipt = (
+  value: unknown,
+): Readonly<V138AuthoritativeMatrixV6Receipt> => {
+  const record = exactRecord(
+    value,
+    [
+      "schemaVersion", "executionContextRoot", "calibrationRoot", "status",
+      "chargedAttemptCount", "acceptedCellCount", "attemptLedgerRoot",
+      "acceptedCellRoot", "runtimeRoute", "partialAcceptedEvidenceReusable",
+      "noRetry", "receiptRoot",
+    ],
+    "MATRIX_REPRODUCTION_V6_INVALID",
+  ) as unknown as V138AuthoritativeMatrixV6Receipt
+  const { receiptRoot, ...body } = record
+  const passed = record.status === "passed_exact"
+  if (
+    record.schemaVersion !== "v1.38-current-matrix-reproduction-v6" ||
+    record.chargedAttemptCount !== 540 ||
+    record.acceptedCellCount !== (passed ? 540 : 0) ||
+    (passed ? record.acceptedCellRoot === null : record.acceptedCellRoot !== null) ||
+    record.runtimeRoute !== "v1.18/v1.19/MATCH_KERNEL" ||
+    record.partialAcceptedEvidenceReusable !== false ||
+    record.noRetry !== true ||
+    receiptRoot !== v138SuccessorRoot("evidenceBundle", record.schemaVersion, body)
+  ) throw new TypeError("MATRIX_REPRODUCTION_V6_INVALID")
+  return record
 }
 
 export type V138Plan26216TerminalDisposition =
@@ -6980,7 +7386,11 @@ const plan26216Path = (
 const plan26216Read = (
   target: string,
   required: boolean,
-): Record<string, unknown> | undefined => {
+): Readonly<{
+  value: Record<string, unknown>
+  bytes: Buffer
+  root: Sha256
+}> | undefined => {
   try {
     const stat = lstatSync(target)
     if (!stat.isFile() || stat.isSymbolicLink()) {
@@ -6992,11 +7402,23 @@ const plan26216Read = (
       constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0),
     )
     try {
-      const parsed: unknown = JSON.parse(readFileSync(descriptor, "utf8"))
+      const opened = fstatSync(descriptor)
+      if (!opened.isFile() || opened.dev !== stat.dev || opened.ino !== stat.ino) {
+        throw new TypeError("MATRIX_PLAN_262_16_ARTIFACT_IDENTITY_INVALID")
+      }
+      const bytes = readFileSync(descriptor)
+      if (bytes.byteLength > 16 * 1024 * 1024) {
+        throw new TypeError("MATRIX_PLAN_262_16_ARTIFACT_SIZE_INVALID")
+      }
+      const parsed: unknown = JSON.parse(bytes.toString("utf8"))
       if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
         throw new TypeError("MATRIX_PLAN_262_16_ARTIFACT_INVALID")
       }
-      return parsed as Record<string, unknown>
+      return {
+        value: parsed as Record<string, unknown>,
+        bytes,
+        root: sha256(bytes),
+      }
     } finally {
       closeSync(descriptor)
     }
@@ -7037,7 +7459,8 @@ export const checkV138Plan26216TerminalBranch = (
   ) as Record<keyof typeof PLAN_262_16_PATHS, string>
   // Discriminator first: no evidence path is inspected before this read.
   const terminal = plan26216Read(resolved.terminal, true)!
-  const disposition = terminal.disposition
+  const terminalValue = terminal.value
+  const disposition = terminalValue.disposition
   const allowed = [
     "tool_identity_failed",
     "protected_history_failed",
@@ -7050,45 +7473,127 @@ export const checkV138Plan26216TerminalBranch = (
     "reproduction_passed",
   ]
   if (
-    terminal.schemaVersion !== "v1.38-plan-262-16-terminal-v1" ||
+    !hasExactKeys(terminalValue, [
+      "schemaVersion",
+      "disposition",
+      "authorityExpired",
+      "noRetry",
+      "artifactRoots",
+      "terminalRoot",
+    ]) ||
+    terminalValue.schemaVersion !== "v1.38-plan-262-16-terminal-v1" ||
     typeof disposition !== "string" ||
     !allowed.includes(disposition) ||
-    terminal.authorityExpired !== true ||
-    terminal.noRetry !== true
+    terminalValue.authorityExpired !== true ||
+    terminalValue.noRetry !== true
+  ) throw new TypeError("MATRIX_PLAN_262_16_TERMINAL_INVALID")
+  const { terminalRoot, ...terminalBody } = terminalValue
+  if (
+    terminalRoot !==
+    v138SuccessorRoot(
+      "canonicalJsonProfile",
+      "v1.38-plan-262-16-terminal-v1",
+      terminalBody,
+    )
   ) throw new TypeError("MATRIX_PLAN_262_16_TERMINAL_INVALID")
   const typed = disposition as V138Plan26216TerminalDisposition
-  plan26216Read(resolved.authorization, true)
-  plan26216Read(resolved.seal, true)
+  const authorizationArtifact = plan26216Read(resolved.authorization, true)!
+  const authorization = checkV138Plan26215Authorization(
+    repoRoot,
+    authorizationArtifact.value,
+  )
+  const sealArtifact = plan26216Read(resolved.seal, true)!
+  const seal = checkV138SuccessorSourceSeal(
+    repoRoot,
+    sealArtifact.value,
+    authorization,
+  )
   const needs = plan26216Needs(typed)
-  plan26216Read(resolved.context, needs.context)
-  const preflight = plan26216Read(resolved.preflight, needs.preflight)
-  const calibration = plan26216Read(resolved.calibration, needs.calibration)
-  const reproduction = plan26216Read(resolved.reproduction, needs.reproduction)
+  const contextArtifact = plan26216Read(resolved.context, needs.context)
+  const preflightArtifact = plan26216Read(resolved.preflight, needs.preflight)
+  const calibrationArtifact = plan26216Read(resolved.calibration, needs.calibration)
+  const reproductionArtifact = plan26216Read(resolved.reproduction, needs.reproduction)
+  const context = contextArtifact === undefined
+    ? undefined
+    : checkV138ExecutionContextV5Receipt(contextArtifact.value)
+  const preflight = preflightArtifact === undefined
+    ? undefined
+    : checkV138HostHeadroomPreflightV5Receipt(preflightArtifact.value)
+  const calibration = calibrationArtifact === undefined
+    ? undefined
+    : checkV138ParallelCalibrationV5Receipt(calibrationArtifact.value)
+  const reproduction = reproductionArtifact === undefined
+    ? undefined
+    : checkV138AuthoritativeMatrixV6Receipt(reproductionArtifact.value)
+  if (
+    context !== undefined &&
+    (context.authorizationRoot !== authorization.authorizationRoot ||
+      context.sealRoot !== seal.sealRoot)
+  ) throw new TypeError("MATRIX_PLAN_262_16_CONTEXT_JOIN_INVALID")
   if (
     preflight !== undefined &&
-    (preflight.schemaVersion !== "v1.38-current-matrix-headroom-preflight-v5" ||
-      preflight.acceptedCellCount !== 0)
-  ) throw new TypeError("MATRIX_PLAN_262_16_PREFLIGHT_INVALID")
+    (preflight.executionContextRoot !== context?.receiptRoot ||
+      preflight.authorizationRoot !== authorization.authorizationRoot ||
+      preflight.sealRoot !== seal.sealRoot)
+  ) throw new TypeError("MATRIX_PLAN_262_16_PREFLIGHT_JOIN_INVALID")
   if (
     calibration !== undefined &&
-    (calibration.schemaVersion !== "v1.38-current-matrix-calibration-v5" ||
-      calibration.chargedAttemptCount !== 8 ||
-      calibration.acceptedCellCount !== 0 ||
-      calibration.noRetry !== true)
-  ) throw new TypeError("MATRIX_PLAN_262_16_CALIBRATION_INVALID")
+    (calibration.preflightRoot !== preflight?.receiptRoot ||
+      calibration.executionContextRoot !== context?.receiptRoot)
+  ) throw new TypeError("MATRIX_PLAN_262_16_CALIBRATION_JOIN_INVALID")
   if (
     (typed === "preflight_unavailable" || typed === "preflight_refused") &&
     calibration?.childLaunchCount !== 0
   ) throw new TypeError("MATRIX_PLAN_262_16_CHILD_COUNT_INVALID")
   if (
     reproduction !== undefined &&
-    (reproduction.schemaVersion !== "v1.38-current-matrix-reproduction-v6" ||
-      reproduction.chargedAttemptCount !== 540 ||
-      reproduction.partialAcceptedEvidenceReusable !== false ||
-      reproduction.noRetry !== true ||
-      reproduction.acceptedCellCount !==
-        (typed === "reproduction_passed" ? 540 : 0))
-  ) throw new TypeError("MATRIX_PLAN_262_16_REPRODUCTION_INVALID")
+    (reproduction.executionContextRoot !== context?.receiptRoot ||
+      reproduction.calibrationRoot !== calibration?.receiptRoot)
+  ) throw new TypeError("MATRIX_PLAN_262_16_REPRODUCTION_JOIN_INVALID")
+  const dispositionValid =
+    (typed === "preflight_unavailable" &&
+      preflight?.disposition === "preflight_unavailable" &&
+      calibration?.status === "stopped_process_failure") ||
+    (typed === "preflight_refused" &&
+      preflight?.disposition === "preflight_refused" &&
+      calibration?.status === "stopped_process_failure") ||
+    (typed === "calibration_stopped" &&
+      preflight?.disposition === "preflight_admitted" &&
+      calibration?.status === "stopped_process_failure") ||
+    (typed === "reproduction_stopped" &&
+      calibration?.status === "admitted" &&
+      reproduction?.status === "stopped_process_failure") ||
+    (typed === "reproduction_passed" &&
+      calibration?.status === "admitted" &&
+      reproduction?.status === "passed_exact") ||
+    ([
+      "tool_identity_failed",
+      "protected_history_failed",
+      "formation_absence_failed",
+      "pattern_c_ownership_failed",
+    ] as string[]).includes(typed)
+  if (!dispositionValid) {
+    throw new TypeError("MATRIX_PLAN_262_16_DISPOSITION_JOIN_INVALID")
+  }
+  const artifactRoots = exactRecord(
+    terminalValue.artifactRoots,
+    [
+      "authorization", "seal", "context", "preflight", "calibration",
+      "reproduction",
+    ],
+    "MATRIX_PLAN_262_16_TERMINAL_ROOTS_INVALID",
+  )
+  const actualRoots = {
+    authorization: authorizationArtifact.root,
+    seal: sealArtifact.root,
+    context: contextArtifact?.root ?? null,
+    preflight: preflightArtifact?.root ?? null,
+    calibration: calibrationArtifact?.root ?? null,
+    reproduction: reproductionArtifact?.root ?? null,
+  }
+  if (canonical(artifactRoots) !== canonical(actualRoots)) {
+    throw new TypeError("MATRIX_PLAN_262_16_TERMINAL_ROOTS_INVALID")
+  }
   return typed
 }
 
@@ -7114,7 +7619,7 @@ export const writeV138Plan26216Terminal = (
   const rootFor = (key: keyof typeof PLAN_262_16_PATHS, required: boolean) => {
     const target = plan26216Path(repoRoot, supplied[key], key)
     const value = plan26216Read(target, required)
-    return value === undefined ? null : sha256(readFileSync(target))
+    return value?.root ?? null
   }
   const body = {
     schemaVersion: "v1.38-plan-262-16-terminal-v1" as const,
@@ -7130,7 +7635,14 @@ export const writeV138Plan26216Terminal = (
       reproduction: rootFor("reproduction", needs.reproduction),
     },
   }
-  const terminal = deepFreeze({ ...body, terminalRoot: sha256(canonical(body)) })
+  const terminal = deepFreeze({
+    ...body,
+    terminalRoot: v138SuccessorRoot(
+      "canonicalJsonProfile",
+      body.schemaVersion,
+      body,
+    ),
+  })
   writeV138ImmutableReceipt(
     plan26216Path(repoRoot, supplied.terminal, "terminal"),
     terminal,
