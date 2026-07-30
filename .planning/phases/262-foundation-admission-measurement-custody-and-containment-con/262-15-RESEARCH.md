@@ -124,7 +124,7 @@ The source currently imports `freemem` and `totalmem`, samples them in the real 
 | Component | Purpose | When to Use |
 |---|---|---|
 | `/usr/bin/sw_vers` and `/usr/bin/uname` | Capture macOS product/build and Darwin kernel release identity | Only in the authorized writer path; absence or parse failure fails closed. [VERIFIED: local macOS manual pages and paths] |
-| Node `crypto` SHA-256 | Bind tool bytes, raw stdout, source blobs, canonical records, and aggregate roots | Every immutable evidence boundary. [VERIFIED: codebase] |
+| Node `crypto` SHA-256 | Bind tool bytes, ephemeral stdout while it remains in process memory, source blobs, canonical records, and aggregate roots | Every immutable evidence boundary. [VERIFIED: codebase] |
 | Existing `ps`-based child RSS sampler | Retain child and aggregate RSS enforcement | Continue unchanged; only the host-headroom observation changes. [VERIFIED: codebase] |
 
 ### Alternatives Considered
@@ -201,12 +201,12 @@ Every preflight and scheduler sample should bind:
 - absolute executable, exact argv, environment policy, timeout, and output cap;
 - executable SHA-256 and file identity recorded by the seal;
 - macOS product/build and Darwin kernel identities;
-- raw stdout SHA-256, byte length, parsed total bytes/pages/page size, parsed percentage, and derived basis points;
+- ephemeral stdout SHA-256, byte length, parsed total bytes/pages/page size, parsed percentage, and derived basis points;
 - observation ordinal and scheduler tick identity;
 - frozen resource-policy root, authorization root, predecessor aggregate root, and source-seal root;
 - disposition or termination cause.
 
-The receipt need not publish raw stdout if privacy policy prefers the digest plus parsed public fields, but the private authoritative evidence must retain the exact bytes required for deterministic re-verification. [RECOMMENDED]
+The receipt must not publish or retain raw stdout. Keep the bytes only in process memory long enough to validate UTF-8 and the exact grammar and compute SHA-256 and byte length, persist only the digest/length and allowlisted parsed fields, then discard the raw buffer. Deterministic validation is supplied by sealed parser/provider code, injected exact-byte fixtures, and the persisted digest rather than a retained host-diagnostic payload. [RESOLVED]
 
 ## Independent Successor Source Seal
 
@@ -243,7 +243,7 @@ Reject short/ambiguous OIDs, ref or tag substitution, missing/extra paths, reord
 The planning checkpoint should show the authorizer the final full A OID and require this exact literal, with the OID inserted before approval:
 
 ```text
-Authorize Phase 262 Plan 262-15 for exactly one independently committed successor-source seal over reviewed source commit <FULL_A_OID>, exactly one effective-available-memory headroom-preflight:v5, exactly one calibration:v5 eight-attempt/four-shard set, and—only if calibration:v5 is admitted—at most one fresh reproduction:v6 540-cell run, using darwin-memorystatus-effective-available-basis-points-v1 at the unchanged inclusive 2,500-basis-point threshold and every other unchanged frozen policy, resource, lineage, accounting, runtime, semantic, privacy, and formation-absence bound. This authorization is single-use and expires at the first terminal Plan 262-15 outcome.
+Authorize Phase 262 Plans 262-15 and 262-16 over independently reviewed source commit <FULL_A_OID> as roryquinlan-repository-operator for exactly one separately committed successor-source seal B, exactly one Pattern C main-orchestrator effective-available-memory headroom-preflight:v5, exactly one calibration:v5 eight-attempt/four-shard allocation, and—only if calibration:v5 is admitted—at most one fresh reproduction:v6 540-cell run, using darwin-memorystatus-effective-available-basis-points-v1 at the unchanged inclusive 2,500-basis-point threshold and every other unchanged frozen policy, resource, lineage, accounting, runtime, semantic, privacy, and formation-absence bound. This authorization is single-use, has no retry, and expires at the first terminal seal or Plan 262-16 outcome.
 ```
 
 Do not accept earlier Plan 262-12/13 wording, a placeholder OID, a short OID, Unicode-normalized variants, extra whitespace, or an equivalent paraphrase. The authorization root should bind the literal bytes, full A OID, exact cardinalities, metric contract root, frozen policy root, predecessor aggregate root, seal schema, and terminal expiry rule. [RECOMMENDED]
@@ -461,7 +461,7 @@ This successor is a measurement-schema migration, so runtime state was audited e
 
 **What goes wrong:** The same execution path creates its own authority and calls it independent.  
 **Why it happens:** Actor identity is confused with content hashing.  
-**How to avoid:** Require the human checkpoint to bind full A and record an independent approving reference; prefer a separate B commit after approval.  
+**How to avoid:** Require the human checkpoint to bind full A and the exact public-safe approving reference `roryquinlan-repository-operator`; create B separately after approval.
 **Warning signs:** The authorization root can be constructed without user-supplied exact bytes.
 
 ### Pitfall 7: Reusing terminal predecessor authority
@@ -655,17 +655,11 @@ The following audit checked paths and versions without invoking the measurement 
 |---|---|---|---|
 | — | None. Recommendations are explicit design choices; repository facts were inspected directly and platform semantics were cited to primary source. | — | — |
 
-## Open Questions
+## Resolved Decisions
 
-1. **Who supplies the independent approving reference and, preferably, authors seal commit B?**
-   - What we know: the context permits an existing managed signing identity but forbids inventing an ad hoc trust system. [VERIFIED: 262-CONTEXT.md]
-   - What's unclear: the repository does not name a managed signer for this successor.
-   - Recommendation: require the human authorization checkpoint to name the approving actor/reference; prefer a distinct B commit author if operationally available, but do not block on a new signing system.
+1. **Approver reference:** The exact public-safe role/reference is `roryquinlan-repository-operator`. The future authorization literal must contain that byte string and the complete final reviewed A OID. Planning approval, option 1, or an inferred repository identity is not authorization. Seal B remains a separate post-authorization commit and no ad hoc signing system is introduced. [RESOLVED]
 
-2. **Should raw `memory_pressure` stdout be retained privately or only its digest plus parsed fields?**
-   - What we know: deterministic re-verification is strongest with exact raw bytes, and the output contains only host memory size/page facts and percentage. [CITED: https://github.com/apple-oss-distributions/system_cmds/blob/408bba7453608006b89772db185defbac8fe2fd0/memory_pressure/memory_pressure.c]
-   - What's unclear: the milestone's private artifact retention policy may prefer minimizing raw host diagnostics.
-   - Recommendation: retain raw bytes in private authoritative custody and expose only digest/parsed fields in bounded summaries.
+2. **Raw stdout custody:** Raw `memory_pressure` stdout is never persisted, including under `.planning/artifacts/private`. It exists only ephemerally in process memory long enough to validate exact UTF-8/grammar and compute SHA-256 and byte length, then is discarded. Receipts retain only digest, byte length, and allowlisted parsed fields. Parser/provider source and injected fixtures provide reproducibility without retaining live host diagnostic bytes. [RESOLVED]
 
 ## Sources
 

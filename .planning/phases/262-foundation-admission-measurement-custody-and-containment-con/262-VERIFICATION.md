@@ -56,7 +56,7 @@ gaps:
       - path: ".planning/artifacts/v1.38-pre-search-contract.json"
         issue: "missing"
     missing:
-      - "Execute Plans 262-03 and 262-04 only after a successful ADMIT-03 successor"
+      - "Execute Plans 262-03 and 262-04 only after Plan 262-17 independently verifies a Plan 262-16 `reproduction_passed` terminal with exactly 540/540 accepted cells and every prerequisite truth; planning, source A, seal B, a raw live terminal, or any stopped/gapped route cannot satisfy this dependency"
   - truth: "A separately permissioned custodian can demonstrate commitment, storage, access/query, one-open, safe-receipt, contamination, retirement, and orthogonal reporting controls."
     status: failed
     reason: "Plans 262-06 and 262-07 remain blocked and unexecuted. No synthetic custody state machine, genuine authorized custody handoff, public custody reference, containment receipt, or aggregate foundation root exists."
@@ -92,7 +92,7 @@ gaps:
 **Phase Goal:** Maintainers can begin v1.38 research only under the exact released v1.37 authority and an immutable pre-search scientific, budget, custody, claim, and containment contract.
 **Verified:** 2026-07-30T14:35:49Z
 **Status:** gaps_found
-**Re-verification:** Yes — after Plans 262-08 through 262-14, deep code-review closure, and partial Nyquist audit
+**Re-verification:** Yes — after Plans 262-08 through 262-14, deep code-review closure, and partial Nyquist audit. Plans 262-15/16/17 now separate source custody, live evidence, and independent post-terminal verification/tracking; all are unexecuted.
 
 ## Verdict
 
@@ -103,7 +103,7 @@ The decisive facts are:
 - Exact ADMIT-03 reproduction has not succeeded: no branch has produced `passed_exact` with 540/540 accepted cells.
 - The latest persisted branch stopped at **437 basis points** of `node:os` headroom against the frozen **2,500-basis-point** threshold. The policy was not changed.
 - Accepted cells remain **0**, every stopped allocation remains charged, and partial evidence remains non-reusable.
-- Plans 262-03 through 262-07 remain blocked and unexecuted.
+- Plans 262-03 through 262-07 remain blocked and unexecuted; Plan 262-03 now requires a successful independently verified Plan 262-17 route over a Plan 262-16 `reproduction_passed` terminal with 540/540 accepted cells and passed prerequisite truths.
 - Current post-review HEAD lacks an independently sealed successor attestation. This is an external authority blocker, not a code-review defect.
 - Deep code review is clean. Nyquist coverage remains partial: **3/17 covered, 7 partial, 7 missing**.
 - Phase 263 and every later phase remain prohibited from starting.
@@ -179,7 +179,7 @@ The accepted-cell data flow terminates at the frozen resource gate:
 | Historical expectation | pre-v1.38 Git evidence | Exact commit/blob/bytes/derivation | ✓ WIRED | Artifact and source bindings are present and mutation-protected. |
 | Stopped matrix branch | accepted-cell ledger | Atomic 0-or-540 publication | ✓ WIRED as stop | All persisted stopped branches publish zero accepted cells and forbid reuse. |
 | Current post-review HEAD | independent successor seal | External authority | ✗ NOT WIRED | No authorized attestation binds current source/Git objects to the immutable predecessor chain. |
-| Passed matrix receipt | Plan 262-03 study contract | Required `passed_exact` 540/540 root | ✗ NOT WIRED | The receipt does not exist and Plan 262-03 is explicitly blocked. |
+| Successful independently verified Plan 262-17 route | Plan 262-03 study contract | Required read-only verification of a `reproduction_passed` fresh 540/540 v6 root after exact A/B derived-route authority and Pattern C main ownership | ✗ NOT WIRED | Plans 262-15/16/17 are planned but unexecuted; no A, computed closure, independent review, authorization, B, observation, terminal, or post-terminal verifier exists, and Plan 262-03 remains explicitly blocked. |
 | Custody handoff | aggregate foundation root | Bounded approved reference | ✗ NOT WIRED | Both producer and consumer artifacts are missing. |
 
 ## Behavioral Spot-Checks
@@ -200,17 +200,17 @@ No Phase 262 probe scripts are declared. No audit reproducer, sampler, preflight
 
 | Requirement | Source Plan | Status | Evidence |
 |---|---|---|---|
-| ADMIT-01 | 262-01 | ⚠️ PARTIAL | Historical admission implementation/receipt exists; current successor HEAD lacks independent sealing. |
-| ADMIT-02 | 262-01 | ⚠️ PARTIAL | Exact tuple resolution exists; no current-HEAD authority seal. |
-| ADMIT-03 | 262-02, 262-08..14 | ✗ BLOCKED | No `passed_exact` 540/540 reproduction; accepted cells are zero. |
-| ADMIT-04 | 262-01 | ⚠️ PARTIAL | Fail-closed implementation exists, but current source is not independently attested. |
-| MEAS-01..MEAS-04 | 262-03 | ✗ BLOCKED | Plan unexecuted; study/accounting/calibration artifacts missing. |
+| ADMIT-01 | 262-01, 262-15, 262-16, 262-17 | ⚠️ PARTIAL | Historical admission implementation/receipt exists; the new plans require derived selected-route A/B custody, live terminal enforcement, and independent recheck, but none exists yet. |
+| ADMIT-02 | 262-01, 262-15, 262-16, 262-17 | ⚠️ PARTIAL | Exact tuple resolution exists and the new plans preserve it; no current-source authority seal or independent route recomputation exists yet. |
+| ADMIT-03 | 262-02, 262-08..17 | ✗ BLOCKED | No `reproduction_passed` 540/540 reproduction; accepted cells are zero, and Plans 262-15/16/17 are unexecuted. |
+| ADMIT-04 | 262-01, 262-15, 262-16, 262-17 | ⚠️ PARTIAL | Fail-closed implementation exists and the new plans specify source/closure/terminal/reverification branches, but current source is not independently attested. |
+| MEAS-01..MEAS-04 | 262-03 | ✗ BLOCKED | Plan unexecuted and now depends on a successful independently verified 262-17 route; study/accounting/calibration artifacts remain missing. |
 | MEAS-05..MEAS-09 | 262-04 | ✗ BLOCKED | Plan unexecuted; gate/report/claim artifacts missing. |
 | MEAS-10 | 262-05 | ✗ BLOCKED | Protocol-only profile and containment implementation missing. |
 | SEAL-01 | 262-06/07 | ✗ BLOCKED | Synthetic custody and genuine operational authorization are absent. |
 | DECI-02 | 262-05 | ✗ BLOCKED | Classifier definitions, denominators, fixtures, and thresholds are absent. |
 
-All 17 Phase 262 requirements are claimed by a plan; none is orphaned. None of these gaps is clearly assigned to a later phase. Phases 263–270 depend on Phase 262 rather than completing its missing admission/contract work, so no gap is deferred.
+All 16 Phase 262 requirements are claimed by a plan; none is orphaned. None of these gaps is clearly assigned to a later phase. Phases 263–270 depend on Phase 262 rather than completing its missing admission/contract work, so no gap is deferred.
 
 ## Validation and Review Status
 
@@ -249,7 +249,7 @@ There are no code-review blockers. The blockers are absent authority/evidence an
 
 ## Gaps Summary
 
-The repair/review cycle improved correctness without moving the scientific gate. The exact current-rules reproduction still has zero accepted cells, and the latest observed host policy result is 437 bp against the unchanged 2,500-bp minimum. Plans 262-03 through 262-07 therefore remain correctly blocked.
+The repair/review cycle improved correctness without moving the scientific gate. The exact current-rules reproduction still has zero accepted cells, and the latest observed host policy result is 437 bp against the unchanged 2,500-bp minimum. Plan 262-15 now owns sourceBase..A custody, the derived selected-route closure, independent review, exact A authorization, and B; Plan 262-16 exclusively owns Pattern C live evidence; Plan 262-17 owns independent recheck, validation, verification, and tracking. Plans 262-03 through 262-07 remain correctly blocked until a successful independently verified 262-17 route exists.
 
 The current source also postdates the sealed Plan 262-13 evidence. A successor-HEAD attestation is required before any new authoritative checker or measurement run. No later phase may start.
 

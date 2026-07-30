@@ -50,23 +50,75 @@ v1.38 builds a private, content-addressed research control plane beside Coward's
   4. A separately permissioned custodian can demonstrate the profile-agnostic commitment, storage, access/query ledger, one-open authorization, safe receipt, contamination response, and retirement workflow whose lineage contains no profile-conditioned or current-trained input, while reports keep process failure, current-rules failure, formation rejection, formation pass, and contamination distinct and forbid threshold softening.
   5. The literal three profiles, equal-compute dimensions, telemetry, classifiers, and rejection thresholds are precommitted with validated profile-agnostic fixtures, while executable formation namespaces, manifests, states, caches, prompts, traces, replays, and results remain absent.
 
-**Plans:** 9/14 plans executed
+**Plans:** 9/17 plans executed
 
 Plans:
+**Wave 1**
 
 - [x] 262-01-PLAN.md — Admit the exact immutable v1.37 release and selected semantic/runtime authority.
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [x] 262-02-PLAN.md — Execution terminal: supervised historical matrix reproduction stopped on resource pressure with zero accepted cells; ADMIT-03 remains pending.
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
 - [x] 262-08-PLAN.md — Bind an independent pre-v1.38 historical expectation and exact mutation-detecting predicate.
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
 - [x] 262-09-PLAN.md — Implement deterministic resource-bounded parallel supervision, accounting, cancellation, and cleanup.
+
+**Wave 5** *(blocked on Wave 4 completion)*
+
 - [x] 262-10-PLAN.md — Execution terminal: exact parallel calibration stopped on shard-runner failure; all eight attempts charged, zero cells accepted, and the 540-cell run was not launched.
+
+**Wave 6** *(blocked on Wave 5 completion)*
+
 - [x] 262-11-PLAN.md — Repair real sampler/cleanup boundaries, require explicit sampler authorization, and write only new calibration:v2/reproduction:v3 successors.
+
+**Wave 7** *(blocked on Wave 6 completion)*
+
 - [x] 262-12-PLAN.md — Require exact single-use retry authorization, then run one preflighted calibration:v3/reproduction:v4 environmental successor.
+
+**Wave 8** *(blocked on Wave 7 completion)*
+
 - [x] 262-13-PLAN.md — Route one authorized preflight:v4/calibration:v4/reproduction:v5 successor inline through a lean Pattern C main orchestrator.
+
+**Wave 9** *(blocked on Wave 8 completion)*
+
 - [x] 262-14-PLAN.md — Repair producing-source verification and ambient-artifact test isolation without measurement authority.
-- [ ] 262-03-PLAN.md — Define and calibrate the immutable study and two-ledger accounting contract.
+
+**Wave 10** *(blocked on Wave 9 completion)*
+
+- [ ] 262-15-PLAN.md — Bind sourceBase through final reviewed A, derive the selected-route source closure at A, require the exact full-A/operator literal, and create/check one sealed or stopped authority branch.
+
+**Wave 11** *(blocked on Wave 10 completion)*
+
+- [ ] 262-16-PLAN.md — Main-orchestrator-only Pattern C preflight:v5/calibration:v5/conditional reproduction:v6 with one exclusive immutable terminal; no tracking mutation.
+
+**Wave 12** *(blocked on Wave 11 completion)*
+
+- [ ] 262-17-PLAN.md — Independently recheck the terminal route, refresh Nyquist and full verification, and update tracking from the actual verifier verdict.
+
+**Wave 13** *(blocked on Wave 12 completion)*
+
+- [ ] 262-03-PLAN.md — Only after a successful independently verified 262-17 route over a 262-16 reproduction-passed 540/540 terminal, define and calibrate the immutable study and two-ledger accounting contract.
+
+**Wave 14** *(blocked on Wave 13 completion)*
+
 - [ ] 262-04-PLAN.md — Freeze numeric gates, report states, and bounded empirical claims.
+
+**Wave 15** *(blocked on Wave 14 completion)*
+
 - [ ] 262-05-PLAN.md — Precommit profile-neutral classifiers and prove pre-formation containment.
+
+**Wave 16** *(blocked on Wave 15 completion)*
+
 - [ ] 262-06-PLAN.md — Prove synthetic custody mechanics and obtain genuine operational authorization.
+
+**Wave 17** *(blocked on Wave 16 completion)*
+
 - [ ] 262-07-PLAN.md — Bind the safe custody reference and all passed gates into the aggregate foundation root.
 
 **Research flag:** Begin with contained calibration spikes for denominators, structural work units, retry/burn policy, holdout custody, contamination response, and report logic; these spikes are contract-only and may not materialize a formation state.
@@ -204,7 +256,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 262. Foundation Admission, Measurement, Custody, and Containment Contract | 9/14 | In Progress|  |
+| 262. Foundation Admission, Measurement, Custody, and Containment Contract | 9/17 | In Progress|  |
 | 263. Legal Planner and Deterministic Runner Feasibility | 0/TBD | Not started | - |
 | 264. Immutable Factory, Independent Oracles, and Quarantined Intake | 0/TBD | Not started | - |
 | 265. Serious Current-Rules League and Development Red Team | 0/TBD | Not started | - |

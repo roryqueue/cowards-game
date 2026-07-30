@@ -6,15 +6,15 @@ current_phase: 262
 current_phase_name: foundation-admission-measurement-custody-and-containment-con
 status: blocked
 stopped_at: Completed 262-14-PLAN.md; ADMIT-03 and downstream remain blocked
-last_updated: "2026-07-30T13:14:01.918Z"
+last_updated: "2026-07-30T17:10:26.846Z"
 last_activity: 2026-07-30
-last_activity_desc: "Plan 262-14 repaired sealed historical receipt verification and synthetic branch isolation without measurement authority; ADMIT-03 remains blocked"
+last_activity_desc: Plan 262-14 verified the sealed stopped v4 branch from producing Git objects and preserved every prior artifact byte
 progress:
   total_phases: 9
   completed_phases: 0
-  total_plans: 14
+  total_plans: 17
   completed_plans: 9
-  percent: 64
+  percent: 53
 ---
 
 # State: Coward's Game
@@ -29,15 +29,15 @@ See: `.planning/PROJECT.md` (updated 2026-07-27)
 ## Current Position
 
 Phase: 262 (foundation-admission-measurement-custody-and-containment-con) — BLOCKED
-Plan: 9 of 14
-Status: Plan 262-14 repaired historical verification and synthetic branch isolation without measurement authority; ADMIT-03 remains blocked
+Plan: 9 of 17
+Status: Plans 262-15, 262-16, and 262-17 separate source/authority custody, Pattern C live evidence, and independent post-terminal verification/tracking; none is executed and ADMIT-03 remains blocked
 Last activity: 2026-07-30 — Plan 262-14 verified the sealed stopped v4 branch from producing Git objects and preserved every prior artifact byte
 
-Progress: [██████░░░░] 64%
+Progress: [█████░░░░░] 53%
 
 ## Performance Metrics
 
-**Current milestone:** 9 of 14 Phase 262 plans complete; ADMIT-03 remains blocked after the verification-only Plan 262-14 repair.
+**Current milestone:** 9 of 17 Phase 262 plans complete; Plans 262-15 through 262-17 are planned but unexecuted, so ADMIT-03 remains blocked.
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
@@ -100,6 +100,9 @@ None.
 - ADMIT-03 remains blocked: Plan 262-11 calibration:v2 stopped at 3.45% host headroom under the unchanged 25% gate; reproduction:v3 was not launched and zero cells were accepted.
 - ADMIT-03 remains blocked: Plan 262-12 terminally stopped at 4.02% host headroom, accepted zero cells, launched no calibration children or reproduction:v4, and its single-use authorization is expired.
 - ADMIT-03 remains blocked: Plan 262-13 terminally stopped at 4.37% node:os headroom, charged all eight calibration:v4 identities, launched zero children and no reproduction:v5; Plan 262-14 repaired the historical-source and ambient-artifact verification gaps without creating evidence.
+- Plan 262-15 must record pre-implementation sourceBase, preserve atomic candidate/fix lineage through final reviewed A, derive and seal the complete selected-route closure at A, obtain the future exact full-A plus `roryquinlan-repository-operator` authorization, and check one sealed or stopped branch before Plan 262-16 can run.
+- Plan 262-16 must be executed directly by the main orchestrator under Pattern C and may modify only immutable live evidence plus its summary.
+- Plan 262-17 must independently recompute/recheck the route, refresh Nyquist and verifier artifacts, and update tracking; Plan 262-03 depends only on a successful independently verified 262-17 route over a 262-16 `reproduction_passed` terminal with 540/540 accepted cells and passed prerequisite truths.
 
 ## Deferred Items
 
@@ -115,4 +118,4 @@ None.
 Last session: 2026-07-30T13:14:01.908Z
 Stopped at: Completed 262-14-PLAN.md; ADMIT-03 and downstream remain blocked
 Resume file: None
-Next command: Any measurement successor requires new planning and exact authorization while preserving every charged root; Plan 262-03 remains blocked pending a successful 540-cell admission gate.
+Next command: Execute Plan 262-15 implementation only, terminate the executor, then have the main orchestrator independently review/fix to zero warnings and present exact source A plus its derived selected-route closure for the future full-A/operator checkpoint. Plans 262-16, 262-17, and 262-03 remain blocked.
