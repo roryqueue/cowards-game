@@ -8202,6 +8202,47 @@ const checkV138LiveWriterContextRoute = (input: {
   return { sourceBCustody, authorization, seal, context }
 }
 
+const checkV138LiveWriterPreflightRoute = (input: {
+  preflightValue: unknown
+  route: ReturnType<typeof checkV138LiveWriterContextRoute>
+  failureCode: string
+}) => {
+  const preflight = checkV138HostHeadroomPreflightV5Receipt(
+    input.preflightValue,
+  )
+  if (
+    preflight.authorizationRoot !== input.route.authorization.authorizationRoot ||
+    preflight.sealRoot !== input.route.seal.sealRoot ||
+    preflight.executionContextRoot !== input.route.context.receiptRoot ||
+    preflight.sourceB !== input.route.sourceBCustody.sourceB ||
+    preflight.sourceBCustodyRoot !== input.route.sourceBCustody.custodyRoot
+  ) throw new TypeError(input.failureCode)
+  return preflight
+}
+
+const checkV138LiveWriterCalibrationRoute = (input: {
+  repoRoot: string
+  calibrationValue: unknown
+  route: ReturnType<typeof checkV138LiveWriterContextRoute>
+  preflight: Readonly<V138HostHeadroomPreflightV5Receipt>
+  failureCode: string
+}) => {
+  const calibration = checkV138ParallelCalibrationV5Receipt(
+    input.calibrationValue,
+    input.repoRoot,
+  )
+  if (
+    input.preflight.disposition !== "preflight_admitted" ||
+    calibration.status !== "admitted" ||
+    calibration.preflightRoot !== input.preflight.receiptRoot ||
+    calibration.executionContextRoot !== input.route.context.receiptRoot ||
+    calibration.sourceB !== input.route.sourceBCustody.sourceB ||
+    calibration.sourceBCustodyRoot !== input.route.sourceBCustody.custodyRoot ||
+    calibration.supervisedCalibration === null
+  ) throw new TypeError(input.failureCode)
+  return calibration
+}
+
 export const writeV138ExecutionContextV5Receipt = (
   repoRoot: string,
   targetPath: string,
@@ -8255,7 +8296,7 @@ export const writeV138HostHeadroomPreflightV5Receipt = async (
 ): Promise<Readonly<V138HostHeadroomPreflightV5Receipt>> => {
   const target = plan26216Path(repoRoot, targetPath, "preflight")
   assertV138FreshImmutableTarget(target)
-  const { context } = checkV138LiveWriterContextRoute({
+  const route = checkV138LiveWriterContextRoute({
     repoRoot,
     executionContextPath,
     authorizationPath,
@@ -8266,7 +8307,7 @@ export const writeV138HostHeadroomPreflightV5Receipt = async (
   })
   const receipt = buildV138HostHeadroomPreflightV5Receipt({
     result: await observeHeadroom(),
-    executionContext: context,
+    executionContext: route.context,
   })
   writeV138ImmutableReceipt(target, receipt)
   return receipt
@@ -8284,7 +8325,7 @@ export const writeV138ParallelCalibrationV5Receipt = async (
 ): Promise<Readonly<Record<string, unknown>>> => {
   const target = plan26216Path(repoRoot, targetPath, "calibration")
   assertV138FreshImmutableTarget(target)
-  const { context } = checkV138LiveWriterContextRoute({
+  const route = checkV138LiveWriterContextRoute({
     repoRoot,
     executionContextPath,
     authorizationPath: PLAN_262_16_PATHS.authorization,
@@ -8293,19 +8334,14 @@ export const writeV138ParallelCalibrationV5Receipt = async (
     sourceB,
     failureCode: "MATRIX_CALIBRATION_V5_CONTEXT_JOIN_INVALID",
   })
-  const preflight = checkV138HostHeadroomPreflightV5Receipt(
-    plan26216Read(
+  const preflight = checkV138LiveWriterPreflightRoute({
+    preflightValue: plan26216Read(
       plan26216Path(repoRoot, preflightPath, "preflight"),
       true,
     )!.value,
-  )
-  if (
-    preflight.executionContextRoot !== context.receiptRoot ||
-    preflight.sourceB !== context.sourceB ||
-    preflight.sourceBCustodyRoot !== context.sourceBCustodyRoot
-  ) {
-    throw new TypeError("MATRIX_CALIBRATION_V5_CONTEXT_JOIN_INVALID")
-  }
+    route,
+    failureCode: "MATRIX_CALIBRATION_V5_CONTEXT_JOIN_INVALID",
+  })
   let receipt: Readonly<Record<string, unknown>>
   if (preflight.disposition !== "preflight_admitted") {
     receipt = buildV138ParallelCalibrationV5PreflightTerminal(preflight)
@@ -8368,7 +8404,7 @@ export const writeV138AuthoritativeMatrixV6Receipt = async (
 ): Promise<Readonly<V138AuthoritativeMatrixV6Receipt>> => {
   const target = plan26216Path(repoRoot, targetPath, "reproduction")
   assertV138FreshImmutableTarget(target)
-  const { context } = checkV138LiveWriterContextRoute({
+  const route = checkV138LiveWriterContextRoute({
     repoRoot,
     executionContextPath,
     authorizationPath: PLAN_262_16_PATHS.authorization,
@@ -8377,20 +8413,24 @@ export const writeV138AuthoritativeMatrixV6Receipt = async (
     sourceB,
     failureCode: "MATRIX_REPRODUCTION_V6_CONTEXT_JOIN_INVALID",
   })
-  const calibration = checkV138ParallelCalibrationV5Receipt(
-    plan26216Read(
+  const preflight = checkV138LiveWriterPreflightRoute({
+    preflightValue: plan26216Read(
+      plan26216Path(repoRoot, PLAN_262_16_PATHS.preflight, "preflight"),
+      true,
+    )!.value,
+    route,
+    failureCode: "MATRIX_REPRODUCTION_V6_CALIBRATION_NOT_ADMITTED",
+  })
+  const calibration = checkV138LiveWriterCalibrationRoute({
+    repoRoot,
+    calibrationValue: plan26216Read(
       plan26216Path(repoRoot, calibrationPath, "calibration"),
       true,
     )!.value,
-    repoRoot,
-  )
-  if (
-    calibration.status !== "admitted" ||
-    calibration.executionContextRoot !== context.receiptRoot ||
-    calibration.sourceB !== context.sourceB ||
-    calibration.sourceBCustodyRoot !== context.sourceBCustodyRoot ||
-    calibration.supervisedCalibration === null
-  ) throw new TypeError("MATRIX_REPRODUCTION_V6_CALIBRATION_NOT_ADMITTED")
+    route,
+    preflight,
+    failureCode: "MATRIX_REPRODUCTION_V6_CALIBRATION_NOT_ADMITTED",
+  })
   const execution = await runReproduction({
     inventory: enumerateV138CurrentMatrix(repoRoot),
     calibration:
@@ -8405,13 +8445,13 @@ export const writeV138AuthoritativeMatrixV6Receipt = async (
   })
   const built = buildV138AuthoritativeMatrixV6Receipt({
     repoRoot,
-    executionContext: context,
+    executionContext: route.context,
     calibration,
     execution,
   })
   const receipt = checkV138AuthoritativeMatrixV6Receipt(built, {
     repoRoot,
-    executionContext: context,
+    executionContext: route.context,
     calibration,
   })
   writeV138ImmutableReceipt(target, receipt)

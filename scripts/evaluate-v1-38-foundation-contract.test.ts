@@ -1827,6 +1827,194 @@ describe("v1.38 plan 262-16 terminal artifact presence", () => {
           checkV138Plan26216TerminalBranch(root, paths, sourceA, sourceB),
         ).toThrow("MATRIX_PLAN_262_16_CONTEXT_JOIN_INVALID")
       }
+
+      publish(paths.context, context)
+      const liveAdmittedPreflight = buildV138HostHeadroomPreflightV5Receipt({
+        executionContext: context,
+        result: parseMemoryPressureQ({
+          stdout: Buffer.from(
+            "The system has 4096 (1 pages with a page size of 4096).\nSystem-wide memory free percentage: 25%\n",
+          ),
+          stderr: Buffer.alloc(0),
+          exitCode: 0,
+          signal: null,
+          timedOut: false,
+        }),
+      })
+      for (const preflightField of [
+        "authorizationRoot",
+        "sealRoot",
+        "executionContextRoot",
+        "sourceB",
+        "sourceBCustodyRoot",
+      ] as const) {
+        const forged = clone(liveAdmittedPreflight) as unknown as Record<
+          string,
+          unknown
+        >
+        forged[preflightField] =
+          preflightField === "sourceB"
+            ? "0".repeat(40)
+            : `sha256:${createHash("sha256")
+                .update(`forged-preflight:${preflightField}`)
+                .digest("hex")}`
+        const { receiptRoot: _oldRoot, ...body } = forged
+        forged.receiptRoot = v138SuccessorRoot(
+          "canonicalJsonProfile",
+          String(forged.schemaVersion),
+          body,
+        )
+        publish(paths.preflight, forged)
+        removeIfPresent(paths.calibration)
+        let runCount = 0
+        await expect(
+          writeV138ParallelCalibrationV5Receipt(
+            root,
+            paths.calibration,
+            paths.preflight,
+            paths.context,
+            sourceA,
+            sourceB,
+            async () => {
+              runCount += 1
+              throw new TypeError("INJECTED_CALIBRATION_MUST_NOT_RUN")
+            },
+          ),
+        ).rejects.toThrow("MATRIX_CALIBRATION_V5_CONTEXT_JOIN_INVALID")
+        expect(runCount).toBe(0)
+      }
+
+      publish(paths.preflight, liveAdmittedPreflight)
+      removeIfPresent(paths.calibration)
+      const liveAdmittedCalibration =
+        await writeV138ParallelCalibrationV5Receipt(
+          root,
+          paths.calibration,
+          paths.preflight,
+          paths.context,
+          sourceA,
+          sourceB,
+          async () =>
+            admittedInjectedCalibration(enumerateV138CurrentMatrix(root)),
+        )
+      for (const preflightField of [
+        "authorizationRoot",
+        "sealRoot",
+        "executionContextRoot",
+        "sourceB",
+        "sourceBCustodyRoot",
+      ] as const) {
+        const forged = clone(liveAdmittedPreflight) as unknown as Record<
+          string,
+          unknown
+        >
+        forged[preflightField] =
+          preflightField === "sourceB"
+            ? "0".repeat(40)
+            : `sha256:${createHash("sha256")
+                .update(`forged-reproduction-preflight:${preflightField}`)
+                .digest("hex")}`
+        const { receiptRoot: _oldRoot, ...body } = forged
+        forged.receiptRoot = v138SuccessorRoot(
+          "canonicalJsonProfile",
+          String(forged.schemaVersion),
+          body,
+        )
+        publish(paths.preflight, forged)
+        publish(paths.calibration, liveAdmittedCalibration)
+        removeIfPresent(paths.reproduction)
+        let runCount = 0
+        await expect(
+          writeV138AuthoritativeMatrixV6Receipt(
+            root,
+            paths.reproduction,
+            paths.calibration,
+            paths.context,
+            sourceA,
+            sourceB,
+            async () => {
+              runCount += 1
+              throw new TypeError("INJECTED_REPRODUCTION_MUST_NOT_RUN")
+            },
+          ),
+        ).rejects.toThrow("MATRIX_REPRODUCTION_V6_CALIBRATION_NOT_ADMITTED")
+        expect(runCount).toBe(0)
+      }
+
+      publish(paths.preflight, liveAdmittedPreflight)
+      for (const calibrationField of [
+        "preflightRoot",
+        "executionContextRoot",
+        "sourceB",
+        "sourceBCustodyRoot",
+      ] as const) {
+        const forged = clone(liveAdmittedCalibration) as unknown as Record<
+          string,
+          unknown
+        >
+        forged[calibrationField] =
+          calibrationField === "sourceB"
+            ? "0".repeat(40)
+            : `sha256:${createHash("sha256")
+                .update(`forged-calibration:${calibrationField}`)
+                .digest("hex")}`
+        const { receiptRoot: _oldRoot, ...body } = forged
+        forged.receiptRoot = v138SuccessorRoot(
+          "budgetProfile",
+          String(forged.schemaVersion),
+          body,
+        )
+        publish(paths.calibration, forged)
+        removeIfPresent(paths.reproduction)
+        let runCount = 0
+        await expect(
+          writeV138AuthoritativeMatrixV6Receipt(
+            root,
+            paths.reproduction,
+            paths.calibration,
+            paths.context,
+            sourceA,
+            sourceB,
+            async () => {
+              runCount += 1
+              throw new TypeError("INJECTED_REPRODUCTION_MUST_NOT_RUN")
+            },
+          ),
+        ).rejects.toThrow("MATRIX_REPRODUCTION_V6_CALIBRATION_NOT_ADMITTED")
+        expect(runCount).toBe(0)
+      }
+      const stoppedPriorCalibration = buildV138ParallelCalibrationV5Receipt({
+        preflight: liveAdmittedPreflight,
+        attempts: Array.from({ length: 8 }, (_, index) => ({
+          attemptId: `calibration:v5:${index}`,
+          shardId: `calibration-shard:${index % 4}`,
+          outcome: index === 0
+            ? "system_failure" as const
+            : "accepted" as const,
+          childLaunched: true,
+          accepted: index !== 0,
+        })),
+        sharedObservationTicks: [],
+      })
+      publish(paths.calibration, stoppedPriorCalibration)
+      removeIfPresent(paths.reproduction)
+      let stoppedPriorRunCount = 0
+      await expect(
+        writeV138AuthoritativeMatrixV6Receipt(
+          root,
+          paths.reproduction,
+          paths.calibration,
+          paths.context,
+          sourceA,
+          sourceB,
+          async () => {
+            stoppedPriorRunCount += 1
+            throw new TypeError("INJECTED_REPRODUCTION_MUST_NOT_RUN")
+          },
+        ),
+      ).rejects.toThrow("MATRIX_REPRODUCTION_V6_CALIBRATION_NOT_ADMITTED")
+      expect(stoppedPriorRunCount).toBe(0)
+
       publish(paths.context, context)
       publish(paths.preflight, preflight)
       publish(paths.calibration, calibration)
