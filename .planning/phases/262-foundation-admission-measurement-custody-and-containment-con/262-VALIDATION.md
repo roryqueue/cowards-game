@@ -38,7 +38,7 @@ created: 2026-07-28
 | 262-G2 | 262-09 | 4 | ADMIT-03 | T-262-34 | Precommitted calibration policy/projector, deterministic bounded scheduler, exact accounting, resource refusal, cancellation, and cleanup | property + mutation | `pnpm exec vitest run scripts/evaluate-v1-38-foundation-contract.test.ts -t "matrix calibration policy\|matrix scheduler\|matrix accounting\|matrix resources\|matrix cleanup\|matrix cancellation"` | ✅ | ✅ green |
 | 262-G3 | 262-10 | 5 | ADMIT-03 | T-262-40 | Exact calibration CLI with admitted/stopped receipt verification and exact 540-cell authoritative receipt under the unchanged 90-minute gate | integration + mutation | Plan 262-10 calibration/check commands | ✅ | ❌ stopped |
 | 262-G4 | 262-11 | 6 | ADMIT-03 | T-262-45 | Repaired sampler/cleanup, immutable diagnostic:v2, recorded authorization, and stopped calibration:v2 with no v3 launch | real process + mutation + integration | Plan 262-11 diagnostic:v2, calibration:v2, and stopped branch checkers | ✅ | ❌ stopped at 3.45% headroom |
-| 262-G5 | 262-12 | 7 | ADMIT-03 | T-262-51 | Existing authority reuse, exact preflight, one charged calibration:v3 set, and fresh reproduction:v4 only after admission | real process + mutation + integration | `pnpm exec vitest run scripts/evaluate-v1-38-foundation-contract.test.ts -t "matrix headroom preflight v3\|matrix calibration v3 lineage\|matrix authoritative v4 branches\|matrix real cleanup proof"` plus preflight, calibration:v3, and v3/v4 branch checkers | ✅ | ⬜ pending execution |
+| 262-G5 | 262-12 | 7 | ADMIT-03 | T-262-51 | Separate exact single-use retry authorization, unchanged sampler policy, exact preflight, one charged calibration:v3 set, and conditional fresh reproduction:v4 | real process + mutation + integration | `pnpm exec vitest run scripts/evaluate-v1-38-foundation-contract.test.ts -t "matrix retry authorization v3\|matrix headroom preflight v3\|matrix calibration v3 lineage\|matrix authoritative v4 branches\|matrix real cleanup proof"` plus preflight, calibration:v3, and v3/v4 branch checkers | ✅ | ⬜ pending authorization |
 | 262-03 | 262-03 | 8 | MEAS-01, MEAS-02, MEAS-03 | T-262-08 | Contract, complete cells, opportunity vector, and claims are immutable | unit + property | `pnpm exec vitest run scripts/evaluate-v1-38-foundation-contract.test.ts -t contract` | ✅ | ⬜ blocked by 262-12 |
 | 262-04 | 262-03 | 8 | MEAS-04 | T-262-09 | Failures remain charged and cannot become accepted cells | mutation | `pnpm exec vitest run scripts/evaluate-v1-38-foundation-contract.test.ts -t accounting` | ✅ | ⬜ blocked by 262-12 |
 | 262-05 | 262-04 | 9 | MEAS-05, MEAS-06, MEAS-07, MEAS-08 | T-262-12 | Numeric gates have frozen denominators and claims stay oracle-relative | unit | `pnpm exec vitest run scripts/evaluate-v1-38-foundation-contract.test.ts -t gates` | ✅ | ⬜ pending |
@@ -63,7 +63,8 @@ created: 2026-07-28
 | Behavior | Requirement | Why Manual | Test Instructions |
 |----------|-------------|------------|-------------------|
 | Real custody role and encrypted private-store authorization | SEAL-01 | Repository code cannot name or authorize an external human/store | Record the named custodian role, opening actor, store identity, and authorization receipt; verify no secret/preimage enters Git |
-| Recorded Plan 262-11 resource sampler authority | ADMIT-03 | Host process sampling required explicit external permission | Verify the recorded `authorized-unsandboxed-ps` selection, literal authorization, exact read-only boundary, and policy root; Plan 262-12 introduces no new choice |
+| Recorded Plan 262-11 resource sampler policy | ADMIT-03 | Host process sampling required explicit external permission | Verify the recorded `authorized-unsandboxed-ps` selection, literal authorization, exact read-only boundary, and policy root; Plan 262-12 does not broaden or replace this policy |
+| Plan 262-12 single-use environmental retry | ADMIT-03 | The frozen sampler policy does not authorize a new resource-consuming retry | Grant the exact literal scoped to one preflight:v3, one eight-attempt calibration:v3 set, and conditionally one 540-cell reproduction:v4; verify distinct root, no default, single use, and expiry at terminal outcome |
 
 ## Validation Sign-Off
 
@@ -72,7 +73,7 @@ created: 2026-07-28
 - [x] Wave 0 covers every missing test reference.
 - [x] Commands use no watch-mode flags.
 - [x] Focused feedback latency target is under 60 seconds.
-- [x] Numeric freeze is automated by the preregistered deterministic selector policy; the two named manual checkpoints are the already-completed Plan 262-11 sampler-policy authorization and the still-pending real custody authority/encrypted-store naming.
+- [x] Numeric freeze is automated by the preregistered deterministic selector policy; the three named manual checkpoints are completed Plan 262-11 sampler-policy authorization, pending Plan 262-12 exact single-use retry authorization, and pending real custody authority/encrypted-store naming.
 - [x] `nyquist_compliant: true` is set in frontmatter.
 
 **Approval:** approved for planning 2026-07-28; Wave 0 completion remains pending execution

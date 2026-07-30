@@ -60,7 +60,7 @@ Plans:
 - [x] 262-09-PLAN.md — Implement deterministic resource-bounded parallel supervision, accounting, cancellation, and cleanup.
 - [x] 262-10-PLAN.md — Execution terminal: exact parallel calibration stopped on shard-runner failure; all eight attempts charged, zero cells accepted, and the 540-cell run was not launched.
 - [x] 262-11-PLAN.md — Repair real sampler/cleanup boundaries, require explicit sampler authorization, and write only new calibration:v2/reproduction:v3 successors.
-- [ ] 262-12-PLAN.md — Reuse the recorded sampler authority for one preflighted calibration:v3/reproduction:v4 environmental successor.
+- [ ] 262-12-PLAN.md — Require exact single-use retry authorization, then run one preflighted calibration:v3/reproduction:v4 environmental successor.
 - [ ] 262-03-PLAN.md — Define and calibrate the immutable study and two-ledger accounting contract.
 - [ ] 262-04-PLAN.md — Freeze numeric gates, report states, and bounded empirical claims.
 - [ ] 262-05-PLAN.md — Precommit profile-neutral classifiers and prove pre-formation containment.
