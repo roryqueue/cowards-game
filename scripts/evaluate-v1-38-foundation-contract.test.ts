@@ -1,4 +1,5 @@
-import { readFileSync } from "node:fs"
+import { createHash } from "node:crypto"
+import { readFileSync, readdirSync } from "node:fs"
 import { execFileSync } from "node:child_process"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
@@ -57,6 +58,8 @@ import {
   type V138HistoricalMatrixObservedAggregate,
   type V138ParallelShardRunner,
   type V138RssCommandAdapter,
+  type V138ProducingGitObjectContract,
+  type V138V4V5BranchVerificationContract,
 } from "./lib/v1-38-current-matrix-reproduction.js"
 
 const repoRoot = path.resolve(
@@ -65,6 +68,42 @@ const repoRoot = path.resolve(
 )
 
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T
+
+const currentMatrixArtifactHashes = (): Readonly<Record<string, string>> =>
+  Object.freeze(Object.fromEntries(
+    readdirSync(path.resolve(repoRoot, ".planning/artifacts"))
+      .filter((name) =>
+        /^v1\.38-current-matrix-.*\.json$/u.test(name))
+      .sort()
+      .map((name) => {
+        const artifactPath = path.resolve(
+          repoRoot,
+          ".planning/artifacts",
+          name,
+        )
+        return [
+          name,
+          createHash("sha256")
+            .update(readFileSync(artifactPath))
+            .digest("hex"),
+        ]
+      }),
+  ))
+
+const producingGitObjects = (): V138ProducingGitObjectContract => ({
+  resolveCommitPath: ({ producingCommit, sourcePath }) => ({
+    blob: execFileSync(
+      "git",
+      ["rev-parse", `${producingCommit}:${sourcePath}`],
+      { cwd: repoRoot, encoding: "utf8" },
+    ).trim(),
+    content: execFileSync(
+      "git",
+      ["show", `${producingCommit}:${sourcePath}`],
+      { cwd: repoRoot },
+    ),
+  }),
+})
 
 const legacyStoppedMatrixReceipt = () =>
   Object.freeze(JSON.parse(
@@ -1244,6 +1283,108 @@ describe("v1.38 matrix inline execution context v4", () => {
   })
 })
 
+describe("v1.38 matrix historical execution context source evolution", () => {
+  it("matrix historical execution context source evolution verifies sealed producing objects after HEAD changes", () => {
+    const artifactHashesBefore = currentMatrixArtifactHashes()
+    const receipt = JSON.parse(readFileSync(
+      path.resolve(
+        repoRoot,
+        ".planning/artifacts/v1.38-current-matrix-execution-context-v4.json",
+      ),
+      "utf8",
+    ))
+    const successorTestBytes = readFileSync(
+      path.resolve(
+        repoRoot,
+        "scripts/evaluate-v1-38-foundation-contract.test.ts",
+      ),
+    )
+    expect(
+      `sha256:${createHash("sha256").update(successorTestBytes).digest("hex")}`,
+    ).not.toBe(receipt.testSource.currentSha256)
+
+    expect(
+      checkV138ExecutionContextV4Receipt(
+        repoRoot,
+        receipt,
+        producingGitObjects(),
+      ),
+    ).toEqual(receipt)
+
+    const invalidReceiptMutations = [
+      {
+        implementationSource: {
+          ...receipt.implementationSource,
+          path: "scripts/lib/not-the-producing-path.ts",
+        },
+      },
+      {
+        implementationSource: {
+          ...receipt.implementationSource,
+          currentSha256: `sha256:${"0".repeat(64)}`,
+        },
+      },
+      {
+        testSource: {
+          ...receipt.testSource,
+          currentSha256: `sha256:${"f".repeat(64)}`,
+        },
+      },
+      { receiptRoot: `sha256:${"1".repeat(64)}` },
+    ]
+    for (const mutation of invalidReceiptMutations) {
+      expect(() =>
+        checkV138ExecutionContextV4Receipt(
+          repoRoot,
+          { ...receipt, ...mutation },
+          producingGitObjects(),
+        ),
+      ).toThrow("MATRIX_EXECUTION_CONTEXT_V4_RECEIPT_INVALID")
+    }
+
+    const corruptingResolver = (
+      kind: "commit" | "path" | "blob" | "content",
+    ): V138ProducingGitObjectContract => ({
+      resolveCommitPath: ({ producingCommit, sourcePath }) => {
+        const wrongCommit =
+          kind === "commit"
+            ? "6c5f84043e34c009713ae51250a34f7ca771ef71"
+            : producingCommit
+        const wrongPath =
+          kind === "path" &&
+          sourcePath ===
+            "scripts/lib/v1-38-current-matrix-reproduction.ts"
+            ? "scripts/evaluate-v1-38-foundation-contract.test.ts"
+            : sourcePath
+        const resolved = producingGitObjects().resolveCommitPath({
+          producingCommit: wrongCommit,
+          sourcePath: wrongPath,
+        })
+        return {
+          blob:
+            kind === "blob"
+              ? "0000000000000000000000000000000000000000"
+              : resolved.blob,
+          content:
+            kind === "content"
+              ? Buffer.from("mutated producing content", "utf8")
+              : resolved.content,
+        }
+      },
+    })
+    for (const kind of ["commit", "path", "blob", "content"] as const) {
+      expect(() =>
+        checkV138ExecutionContextV4Receipt(
+          repoRoot,
+          receipt,
+          corruptingResolver(kind),
+        ),
+      ).toThrow("MATRIX_EXECUTION_CONTEXT_V4_RECEIPT_INVALID")
+    }
+    expect(currentMatrixArtifactHashes()).toEqual(artifactHashesBefore)
+  })
+})
+
 describe("v1.38 matrix retry authorization v4", () => {
   it("matrix retry authorization v4 accepts only the exact unused single-use lean grant", () => {
     const authorization = parseV138Plan26213ExecutionAuthorization(
@@ -1583,6 +1724,110 @@ describe("v1.38 matrix authoritative v5 branches", () => {
         "/not-read",
       ),
     ).rejects.toThrow("MATRIX_SUCCESSOR_TARGET_NOT_FRESH")
+  })
+})
+
+describe("v1.38 matrix authoritative v5 ambient isolation", () => {
+  it("matrix authoritative v5 ambient isolation requires explicit persisted or supplied evidence", () => {
+    const artifactHashesBefore = currentMatrixArtifactHashes()
+    const context = buildV138ExecutionContextV4Receipt({
+      repoRoot,
+      mode: "gsd-pattern-c-inline-main",
+      cwd: "/Users/roryquinlan/runtime/cowards-game",
+      planAgentSnapshot: terminalPlan26213Snapshot(),
+    })
+    const authorization = parseV138Plan26213ExecutionAuthorization(
+      PLAN_262_13_EXECUTION_AUTHORIZATION_LITERAL,
+    )
+    const preflight = buildV138HostHeadroomPreflightV4Receipt({
+      repoRoot,
+      executionContext: context,
+      executionAuthorization: authorization,
+      hostTotalMemoryKilobytes: 4_001,
+      hostFreeMemoryKilobytes: 1_000,
+    })
+    const calibration = buildV138ParallelCalibrationV4Receipt({
+      repoRoot,
+      executionContext: context,
+      preflight,
+      executionAuthorization: authorization,
+    })
+    const suppliedBranch: V138V4V5BranchVerificationContract = {
+      branchSource: "supplied",
+      executionContext: context,
+      preflight,
+    }
+    expect(
+      checkV138SuccessorV4V5Branch(
+        repoRoot,
+        suppliedBranch,
+        calibration,
+        undefined,
+      ),
+    ).toEqual({ calibration, reproduction: null })
+
+    const persistedContextPath = path.resolve(
+      repoRoot,
+      ".planning/artifacts/v1.38-current-matrix-execution-context-v4.json",
+    )
+    const persistedPreflightPath = path.resolve(
+      repoRoot,
+      ".planning/artifacts/v1.38-current-matrix-headroom-preflight-v4.json",
+    )
+    const persistedCalibrationPath = path.resolve(
+      repoRoot,
+      ".planning/artifacts/v1.38-current-matrix-calibration-v4.json",
+    )
+    const persistedV5Path = path.resolve(
+      repoRoot,
+      ".planning/artifacts/v1.38-current-matrix-reproduction-v5.json",
+    )
+    const persistedCalibration = JSON.parse(
+      readFileSync(persistedCalibrationPath, "utf8"),
+    )
+    const persistedBranch: V138V4V5BranchVerificationContract = {
+      branchSource: "persisted",
+      executionContextPath: persistedContextPath,
+      preflightPath: persistedPreflightPath,
+      calibrationPath: persistedCalibrationPath,
+      reproductionV5Path: persistedV5Path,
+    }
+    expect(
+      checkV138SuccessorV4V5Branch(
+        repoRoot,
+        persistedBranch,
+        persistedCalibration,
+        undefined,
+      ),
+    ).toEqual({ calibration: persistedCalibration, reproduction: null })
+
+    for (const invalidContract of [
+      {
+        ...suppliedBranch,
+        branchSource: "ambient",
+      },
+      {
+        ...suppliedBranch,
+        preflight: JSON.parse(readFileSync(persistedPreflightPath, "utf8")),
+      },
+      {
+        ...persistedBranch,
+        calibrationPath: path.resolve(
+          repoRoot,
+          ".planning/artifacts/v1.38-current-matrix-calibration-v3.json",
+        ),
+      },
+    ]) {
+      expect(() =>
+        checkV138SuccessorV4V5Branch(
+          repoRoot,
+          invalidContract as V138V4V5BranchVerificationContract,
+          calibration,
+          undefined,
+        ),
+      ).toThrow()
+    }
+    expect(currentMatrixArtifactHashes()).toEqual(artifactHashesBefore)
   })
 })
 
