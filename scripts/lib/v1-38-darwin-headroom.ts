@@ -99,14 +99,19 @@ export const parseMemoryPressureQ = (
   const pageCount = safePositiveInteger(match[2]!)
   const pageSizeBytes = safePositiveInteger(match[3]!)
   const percentage = Number(match[4])
+  const expectedTotalBytes =
+    pageCount === undefined || pageSizeBytes === undefined
+      ? undefined
+      : pageCount * pageSizeBytes
   if (
     totalBytes === undefined ||
     pageCount === undefined ||
     pageSizeBytes === undefined ||
+    !Number.isSafeInteger(expectedTotalBytes) ||
+    totalBytes !== expectedTotalBytes ||
     !Number.isSafeInteger(percentage) ||
     percentage < 0 ||
-    percentage > 100 ||
-    pageCount !== Math.floor(totalBytes / pageSizeBytes)
+    percentage > 100
   ) {
     return unavailable
   }
