@@ -41,6 +41,8 @@ const READINESS_PATH =
   ".planning/artifacts/v1.37-release-readiness.json"
 const CORRECTION_PATH =
   ".planning/artifacts/v1.37-post-tag-ui-integration-correction.md"
+const ADMISSION_PRODUCING_COMMIT =
+  "d3893cc27a967f0b382a14571e274b5451dbdbbd"
 
 const SOURCE_PATHS = [
   "scripts/check-v1-37-audit-reproduction.ts",
@@ -172,6 +174,8 @@ export type V138FoundationAdmissionStopped = Readonly<{
 export type V138FoundationAdmissionResult =
   | V138FoundationAdmissionPassed
   | V138FoundationAdmissionStopped
+
+const resolvedAuthorityInputs = new WeakSet<object>()
 
 const deepFreeze = <T>(value: T): Readonly<T> => {
   if (value !== null && typeof value === "object" && !Object.isFrozen(value)) {
@@ -471,7 +475,15 @@ const runtimeAuthorityPayload = (
 
 export const evaluateV138FoundationAdmission = (
   value: unknown,
+  trusted: Readonly<V138FoundationAdmissionInput>,
 ): V138FoundationAdmissionResult => {
+  if (
+    trusted === null ||
+    typeof trusted !== "object" ||
+    !resolvedAuthorityInputs.has(trusted)
+  ) {
+    return stopped("SOURCE_BINDING_DRIFT", value)
+  }
   if (!inputWithinBounds(value)) {
     return stopped("INPUT_BOUNDS_INVALID", value)
   }
@@ -570,6 +582,9 @@ export const evaluateV138FoundationAdmission = (
     correction.changesGameplay !== false
   ) {
     return stopped("CORRECTION_LINEAGE_UNEXPLAINED", input)
+  }
+  if (canonicalSha256(input) !== canonicalSha256(trusted)) {
+    return stopped("SOURCE_BINDING_DRIFT", input)
   }
 
   const sourceBindingsRoot = domainSeparatedRoot(
@@ -907,9 +922,7 @@ export const resolveV138FoundationAdmissionInput = (
   for (const repoPath of SOURCE_PATHS) {
     sourceDigests.set(
       repoPath,
-      repoPath === FOUNDATION_PATH
-        ? rawSha256(foundationBytes)
-        : rawSha256(readFileSync(path.join(root, repoPath))),
+      rawSha256(gitBlob(root, ADMISSION_PRODUCING_COMMIT, repoPath)),
     )
   }
 
@@ -941,7 +954,9 @@ export const resolveV138FoundationAdmissionInput = (
       }),
     },
   }
-  return deepFreeze(input) as V138FoundationAdmissionInput
+  const resolved = deepFreeze(input) as V138FoundationAdmissionInput
+  resolvedAuthorityInputs.add(resolved)
+  return resolved
 }
 
 export const renderV138FoundationAdmissionReceipt = (
@@ -961,9 +976,8 @@ export const renderV138FoundationAdmissionReceipt = (
 export const generateV138FoundationAdmissionReceipt = (
   repoRoot: string,
 ): V138FoundationAdmissionPassed => {
-  const result = evaluateV138FoundationAdmission(
-    resolveV138FoundationAdmissionInput(repoRoot),
-  )
+  const trusted = resolveV138FoundationAdmissionInput(repoRoot)
+  const result = evaluateV138FoundationAdmission(trusted, trusted)
   if (result.status !== "passed_exact") {
     throw new TypeError(`V138_ADMISSION_STOPPED:${result.reason}`)
   }
