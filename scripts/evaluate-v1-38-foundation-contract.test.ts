@@ -12,14 +12,21 @@ import {
 } from "./lib/v1-38-foundation-admission.js"
 import {
   V138ParallelCalibrationPolicySchema,
+  PLAN_262_13_EXECUTION_AUTHORIZATION_LITERAL,
   PLAN_262_12_EXECUTION_AUTHORIZATION_LITERAL,
+  buildV138AuthoritativeMatrixV5Receipt,
   buildV138AuthoritativeMatrixV4Receipt,
+  buildV138ExecutionContextV4Receipt,
+  buildV138HostHeadroomPreflightV4Receipt,
   buildV138HostHeadroomPreflightV3Receipt,
+  buildV138ParallelCalibrationV4Receipt,
   buildV138ParallelCalibrationV3Receipt,
   buildV138AuthoritativeMatrixV3Receipt,
   buildV138ParallelCalibrationV2SuccessorReceipt,
   buildV138ParallelCalibrationSuccessorReceipt,
   calibrateV138ParallelMatrix,
+  checkV138ExecutionContextV4Receipt,
+  checkV138SuccessorV4V5Branch,
   checkV138MatrixDiagnosticV2Receipt,
   checkV138ParallelCalibrationSuccessorReceipt,
   createV138SubprocessShardRunner,
@@ -32,6 +39,7 @@ import {
   loadV138HistoricalMatrixExpectation,
   planV138MatrixShards,
   parseV138SamplerAuthorization,
+  parseV138Plan26213ExecutionAuthorization,
   parseV138Plan26212ExecutionAuthorization,
   projectV138ParallelMatrix,
   reduceV138ParallelMatrixAccounting,
@@ -1124,6 +1132,371 @@ describe("v1.38 matrix sampler authorization", () => {
       )
     }
   })
+})
+
+const terminalPlan26213Snapshot = () => ({
+  planId: "262-13" as const,
+  agents: [
+    {
+      agentId: "task-1-helper",
+      taskName: "implement_262_13_task1",
+      agentType: "worker",
+      status: "completed",
+    },
+  ],
+  activePlan26213AgentCount: 0 as const,
+  activePlan26213GsdExecutorCount: 0 as const,
+  claimScope: "plan_scoped_orchestrator_registry_not_os_global" as const,
+})
+
+describe("v1.38 matrix inline execution context v4", () => {
+  it("matrix inline execution context v4 binds lean main ownership and terminal plan agents", () => {
+    const receipt = buildV138ExecutionContextV4Receipt({
+      repoRoot,
+      mode: "gsd-pattern-c-inline-main",
+      cwd: "/Users/roryquinlan/runtime/cowards-game",
+      planAgentSnapshot: terminalPlan26213Snapshot(),
+    })
+
+    expect(receipt).toMatchObject({
+      schemaVersion: "v1.38-current-matrix-execution-context-v4",
+      mode: "gsd-pattern-c-inline-main",
+      executionOwner: "lean-main-orchestrator",
+      cwd: "/Users/roryquinlan/runtime/cowards-game",
+      claimScope: "plan_scoped_orchestrator_registry_not_os_global",
+      implementationSource: {
+        path: "scripts/lib/v1-38-current-matrix-reproduction.ts",
+        currentSha256: expect.stringMatching(/^sha256:[0-9a-f]{64}$/u),
+        predecessorSha256:
+          "sha256:e9f0bd91000dd4d089e627d9c6b7d93249ba58bd62724fbc413c450ca5c2ae84",
+        predecessorGitBlob: "3eb530a64fc899810237d3fdf1b65202e6891627",
+        predecessorProducingCommit:
+          "02e25166652263fd6187937a1e02d81fb59a590d",
+      },
+      testSource: {
+        path: "scripts/evaluate-v1-38-foundation-contract.test.ts",
+        currentSha256: expect.stringMatching(/^sha256:[0-9a-f]{64}$/u),
+        predecessorSha256:
+          "sha256:dcbe73205d4d49cf5ea7e223a379bf0c64865d4069929499798700a5fc184352",
+        predecessorGitBlob: "e76cd133de615d6b7bf89ff91103f76699ee2849",
+        predecessorProducingCommit:
+          "f27f3165083f8c2cdc7c45b441ec1386191234ac",
+      },
+      planAgentSnapshot: {
+        activePlan26213AgentCount: 0,
+        activePlan26213GsdExecutorCount: 0,
+      },
+    })
+    expect(receipt.commandFamily).toEqual([
+      "--write-execution-context-v4-receipt",
+      "--check-execution-context-v4-receipt",
+      "--write-headroom-preflight-v4-receipt",
+      "--check-headroom-preflight-v4-receipt",
+      "--calibrate-parallel-v4-receipt",
+      "--check-calibration-v4-receipt",
+      "--write-authoritative-v5-receipt",
+      "--check-successor-v4-v5-branch",
+    ])
+    expect(checkV138ExecutionContextV4Receipt(repoRoot, receipt)).toEqual(receipt)
+
+    for (const mutation of [
+      { mode: "resident-executor" },
+      { executionOwner: "gsd-executor" },
+      { cwd: "/tmp/cowards-game" },
+      { commandFamily: receipt.commandFamily.slice(1) },
+      {
+        implementationSource: {
+          ...receipt.implementationSource,
+          currentSha256: `sha256:${"0".repeat(64)}`,
+        },
+      },
+      { claimScope: "os_global_process_absence" },
+      {
+        planAgentSnapshot: {
+          ...terminalPlan26213Snapshot(),
+          activePlan26213AgentCount: 1,
+          agents: [
+            {
+              ...terminalPlan26213Snapshot().agents[0],
+              status: "running",
+            },
+          ],
+        },
+      },
+      {
+        planAgentSnapshot: {
+          ...terminalPlan26213Snapshot(),
+          activePlan26213GsdExecutorCount: 1,
+        },
+      },
+    ]) {
+      expect(() =>
+        checkV138ExecutionContextV4Receipt(repoRoot, {
+          ...receipt,
+          ...mutation,
+        }),
+      ).toThrow("MATRIX_EXECUTION_CONTEXT_V4_RECEIPT_INVALID")
+    }
+  })
+})
+
+describe("v1.38 matrix retry authorization v4", () => {
+  it("matrix retry authorization v4 accepts only the exact unused single-use lean grant", () => {
+    const authorization = parseV138Plan26213ExecutionAuthorization(
+      PLAN_262_13_EXECUTION_AUTHORIZATION_LITERAL,
+    )
+    expect(authorization).toMatchObject({
+      planId: "262-13",
+      leanOrchestratorOnly: true,
+      headroomPreflightCount: 1,
+      calibrationSetCount: 1,
+      calibrationAttemptCount: 8,
+      reproductionMaximumCount: 1,
+      reproductionCellCount: 540,
+      reproductionConditionalOnCalibrationAdmission: true,
+      singleUse: true,
+      expiresAtFirstTerminalOutcome: true,
+      consumed: false,
+      terminalOutcome: null,
+    })
+    expect(authorization.executionAuthorizationRoot).not.toBe(
+      authorization.samplerPolicyRoot,
+    )
+    expect(authorization.executionAuthorizationRoot).not.toBe(
+      "sha256:a903e1e58315aec0751db4e5df99ce8cf31a4b4e92536d0291a25aa31ce484c4",
+    )
+    for (const invalid of [
+      "",
+      "default",
+      PLAN_262_12_EXECUTION_AUTHORIZATION_LITERAL,
+      PLAN_262_13_EXECUTION_AUTHORIZATION_LITERAL.replace(
+        "at most one",
+        "two",
+      ),
+      `${PLAN_262_13_EXECUTION_AUTHORIZATION_LITERAL} Retry if needed.`,
+    ]) {
+      expect(() =>
+        parseV138Plan26213ExecutionAuthorization(invalid),
+      ).toThrow("MATRIX_PLAN_262_13_EXECUTION_AUTHORIZATION_REQUIRED")
+    }
+    expect(() =>
+      parseV138Plan26213ExecutionAuthorization(
+        PLAN_262_13_EXECUTION_AUTHORIZATION_LITERAL,
+        { consumed: true, terminalOutcome: null },
+      ),
+    ).toThrow("MATRIX_PLAN_262_13_EXECUTION_AUTHORIZATION_CONSUMED")
+    expect(() =>
+      parseV138Plan26213ExecutionAuthorization(
+        PLAN_262_13_EXECUTION_AUTHORIZATION_LITERAL,
+        {
+          consumed: true,
+          terminalOutcome: "stopped_process_failure",
+        },
+      ),
+    ).toThrow("MATRIX_PLAN_262_13_EXECUTION_AUTHORIZATION_EXPIRED")
+  })
+})
+
+describe("v1.38 matrix headroom preflight v4", () => {
+  it.each([
+    [4_000, 1_000, 2_500, "preflight_admitted"],
+    [4_001, 1_000, 2_499, "preflight_refused"],
+  ] as const)(
+    "matrix headroom preflight v4 preserves exact KiB floor semantics and predecessor custody",
+    (total, free, basisPoints, disposition) => {
+      const context = buildV138ExecutionContextV4Receipt({
+        repoRoot,
+        mode: "gsd-pattern-c-inline-main",
+        cwd: "/Users/roryquinlan/runtime/cowards-game",
+        planAgentSnapshot: terminalPlan26213Snapshot(),
+      })
+      const authorization = parseV138Plan26213ExecutionAuthorization(
+        PLAN_262_13_EXECUTION_AUTHORIZATION_LITERAL,
+      )
+      const receipt = buildV138HostHeadroomPreflightV4Receipt({
+        repoRoot,
+        executionContext: context,
+        executionAuthorization: authorization,
+        hostTotalMemoryKilobytes: total,
+        hostFreeMemoryKilobytes: free,
+      })
+      expect(receipt).toMatchObject({
+        schemaVersion: "v1.38-current-matrix-headroom-preflight-v4",
+        chargedIdentityId: "preflight:v4:0",
+        hostHeadroomBasisPoints: basisPoints,
+        requiredHostHeadroomBasisPoints: 2_500,
+        disposition,
+        executionContextV4ReceiptRoot: context.receiptRoot,
+        predecessorRoots: {
+          plan26212Preflight: {
+            fileSha256:
+              "sha256:b432f5640bb23f6ce66d3705f292151fdff8ff09c961b5693e30c25fc5f5420f",
+            receiptRoot:
+              "sha256:4e52cccbc6384cda9bef1c26c9e4f36d666e26506f760f749b4f0195677cb20d",
+            chargedRoot:
+              "sha256:8703f882e659a24d29b4e51e6e45a172afc35389b955038d6da83d304ca22de7",
+          },
+          plan26212Calibration: {
+            fileSha256:
+              "sha256:29a406e67f7163152c99c07c0f75ed5a0af8840b6c34372668265f2df10bc79d",
+            receiptRoot:
+              "sha256:911a6bbc700036f9d3916ac9b171b246a676b2b7dd33f24c8b85a8c4dbdb3ffd",
+            chargedRoot:
+              "sha256:2103fbb3bbc98427fdd81b8435f42e7d8c13ee2d2a995be4da463e02efcb4e35",
+          },
+        },
+      })
+    },
+  )
+})
+
+describe("v1.38 matrix calibration v4 lineage", () => {
+  it("matrix calibration v4 lineage charges all eight identities without children below gate", () => {
+    const context = buildV138ExecutionContextV4Receipt({
+      repoRoot,
+      mode: "gsd-pattern-c-inline-main",
+      cwd: "/Users/roryquinlan/runtime/cowards-game",
+      planAgentSnapshot: terminalPlan26213Snapshot(),
+    })
+    const authorization = parseV138Plan26213ExecutionAuthorization(
+      PLAN_262_13_EXECUTION_AUTHORIZATION_LITERAL,
+    )
+    const preflight = buildV138HostHeadroomPreflightV4Receipt({
+      repoRoot,
+      executionContext: context,
+      executionAuthorization: authorization,
+      hostTotalMemoryKilobytes: 4_001,
+      hostFreeMemoryKilobytes: 1_000,
+    })
+    const receipt = buildV138ParallelCalibrationV4Receipt({
+      repoRoot,
+      executionContext: context,
+      preflight,
+      executionAuthorization: authorization,
+    })
+    expect(receipt).toMatchObject({
+      schemaVersion: "v1.38-current-matrix-calibration-v4",
+      status: "stopped_process_failure",
+      reason: "RESOURCE_POLICY_HOST_HEADROOM",
+      calibration: null,
+      terminals: [],
+      chargedCalibrationAttemptCount: 8,
+      acceptedCellCount: 0,
+      fullRunLaunched: false,
+      executionAuthorization: {
+        consumed: true,
+        expired: true,
+        terminalOutcome: "stopped_process_failure",
+      },
+    })
+    expect(receipt.declaredCalibrationIdentityIds).toHaveLength(8)
+    expect(receipt.declaredCalibrationIdentityIds[0]).toMatch(
+      /^calibration:v4:0:/u,
+    )
+    expect(receipt.chargedDispositions).toHaveLength(8)
+    expect(receipt.chargedDispositions.every(
+      ({ disposition }) =>
+        disposition === "unfilled_resource_preflight_refusal",
+    )).toBe(true)
+  })
+})
+
+describe("v1.38 matrix authoritative v5 branches", () => {
+  it("matrix authoritative v5 branches forbid v5 after a stopped calibration", () => {
+    const context = buildV138ExecutionContextV4Receipt({
+      repoRoot,
+      mode: "gsd-pattern-c-inline-main",
+      cwd: "/Users/roryquinlan/runtime/cowards-game",
+      planAgentSnapshot: terminalPlan26213Snapshot(),
+    })
+    const authorization = parseV138Plan26213ExecutionAuthorization(
+      PLAN_262_13_EXECUTION_AUTHORIZATION_LITERAL,
+    )
+    const preflight = buildV138HostHeadroomPreflightV4Receipt({
+      repoRoot,
+      executionContext: context,
+      executionAuthorization: authorization,
+      hostTotalMemoryKilobytes: 4_001,
+      hostFreeMemoryKilobytes: 1_000,
+    })
+    const calibration = buildV138ParallelCalibrationV4Receipt({
+      repoRoot,
+      executionContext: context,
+      preflight,
+      executionAuthorization: authorization,
+    })
+    expect(
+      checkV138SuccessorV4V5Branch(repoRoot, calibration, undefined),
+    ).toEqual({ calibration, reproduction: null })
+    expect(() =>
+      checkV138SuccessorV4V5Branch(repoRoot, calibration, {}),
+    ).toThrow("MATRIX_STOPPED_CALIBRATION_V5_FORBIDDEN")
+  })
+
+  it("matrix authoritative v5 branches use fresh identities and atomic zero publication on failure", async () => {
+    const inventory = enumerateV138CurrentMatrix(repoRoot)
+    const context = buildV138ExecutionContextV4Receipt({
+      repoRoot,
+      mode: "gsd-pattern-c-inline-main",
+      cwd: "/Users/roryquinlan/runtime/cowards-game",
+      planAgentSnapshot: terminalPlan26213Snapshot(),
+    })
+    const authorization = parseV138Plan26213ExecutionAuthorization(
+      PLAN_262_13_EXECUTION_AUTHORIZATION_LITERAL,
+    )
+    const preflight = buildV138HostHeadroomPreflightV4Receipt({
+      repoRoot,
+      executionContext: context,
+      executionAuthorization: authorization,
+      hostTotalMemoryKilobytes: 4_000,
+      hostFreeMemoryKilobytes: 1_000,
+    })
+    const calibrationEvidence = await calibrateV138ParallelMatrix({
+      inventory,
+      runner: successfulInjectedRunner(),
+      hardwareIdentity: {
+        operatingSystem: "test-os",
+        architecture: "test-arch",
+        nodeVersion: "test-node",
+        cpuIdentity: "test-cpu",
+      },
+      executionIdentityVersion: "v4",
+    })
+    const calibration = buildV138ParallelCalibrationV4Receipt({
+      repoRoot,
+      executionContext: context,
+      preflight,
+      executionAuthorization: authorization,
+      calibration: calibrationEvidence,
+    })
+    const execution = await executeV138ParallelMatrix({
+      inventory,
+      calibration: calibrationEvidence,
+      runner: successfulInjectedRunner({ hostHeadroomBasisPoints: 1_000 }),
+      executionIdentityVersion: "v5",
+    })
+    const reproduction = buildV138AuthoritativeMatrixV5Receipt({
+      repoRoot,
+      executionContext: context,
+      calibrationV4: calibration,
+      execution,
+    })
+    expect(reproduction).toMatchObject({
+      schemaVersion: "v1.38-current-matrix-reproduction-v5",
+      status: "stopped_process_failure",
+      acceptedCellCount: 0,
+      fullRunLaunched: true,
+      executionAuthorizationExpired: true,
+      calibrationV4ReceiptRoot: calibration.receiptRoot,
+    })
+    expect(
+      reproduction.execution.terminals.flatMap(({ outcomes }) => outcomes)
+        .every(({ attemptId }) => attemptId.startsWith("reproduction:v5:")),
+    ).toBe(true)
+    expect(() =>
+      checkV138SuccessorV4V5Branch(repoRoot, calibration, reproduction),
+    ).toThrow("MATRIX_AUTHORITATIVE_V5_NOT_PASSED_EXACT")
+  }, 30_000)
 })
 
 describe("v1.38 matrix retry authorization v3", () => {
