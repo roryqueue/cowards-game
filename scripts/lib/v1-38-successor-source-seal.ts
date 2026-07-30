@@ -360,6 +360,27 @@ const collectSpecifiers = (repoPath: string, source: string): string[] => {
   return values
 }
 
+/**
+ * Deterministic compiler-host seam used by mutation tests. It deliberately
+ * reuses the production TypeScript parser and requires one exact resolver
+ * selection for every parsed static edge; copied closure arrays cannot satisfy
+ * this contract.
+ */
+export const deriveV138StaticSourceEdgesFromSnapshot = (
+  repoPath: string,
+  source: string,
+  resolve: (from: string, specifier: string) => string | undefined,
+): readonly Readonly<{ from: string; specifier: string; to: string }>[] =>
+  Object.freeze(
+    collectSpecifiers(repoPath, source).map((specifier) => {
+      const target = resolve(repoPath, specifier)
+      if (target === undefined) {
+        fail("V138_SELECTED_ROUTE_EDGE_UNRESOLVED")
+      }
+      return Object.freeze({ from: repoPath, specifier, to: target })
+    }),
+  )
+
 const candidatePaths = (base: string): string[] => {
   const extension = path.posix.extname(base)
   if (extension === ".js" || extension === ".mjs" || extension === ".cjs") {

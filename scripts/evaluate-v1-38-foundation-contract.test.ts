@@ -30,10 +30,13 @@ import {
   parseMemoryPressureQ,
 } from "./lib/v1-38-darwin-headroom.js"
 import {
+  buildV138Plan26215Authorization,
+  buildV138SuccessorSourceSeal,
   checkPlan26215ArtifactBranch,
-  checkSelectedRouteEdgeInventory,
   deriveSelectedRouteClosureAtCommit,
+  deriveV138StaticSourceEdgesFromSnapshot,
   inspectSourceCustody,
+  v138Plan26215AuthorizationLiteral,
   writePlan26215Terminal,
 } from "./lib/v1-38-successor-source-seal.js"
 import {
@@ -53,6 +56,7 @@ import {
   buildV138HostHeadroomPreflightV4Receipt,
   buildV138HostHeadroomPreflightV3Receipt,
   buildV138HostHeadroomPreflightV5Receipt,
+  buildV138ExecutionContextV5Receipt,
   buildV138ParallelCalibrationV5PreflightTerminal,
   buildV138ParallelCalibrationV4Receipt,
   buildV138ParallelCalibrationV3Receipt,
@@ -61,6 +65,9 @@ import {
   buildV138ParallelCalibrationSuccessorReceipt,
   calibrateV138ParallelMatrix,
   checkV138ExecutionContextV4Receipt,
+  checkV138ExecutionContextV5Receipt,
+  checkV138HostHeadroomPreflightV5Receipt,
+  checkV138ParallelCalibrationV5Receipt,
   checkV138Plan26216TerminalBranch,
   checkV138SuccessorV4V5Branch,
   checkV138MatrixDiagnosticV2Receipt,
@@ -89,6 +96,7 @@ import {
   writeV138ImmutableReceipt,
   writeV138MatrixDiagnosticV2Receipt,
   writeV138ParallelCalibrationV4Receipt,
+  writeV138Plan26216Terminal,
   type V138CurrentMatrixAttempt,
   type V138CurrentMatrixAttemptOutcome,
   type V138HistoricalMatrixObservedAggregate,
@@ -275,7 +283,17 @@ describe("v1.38 darwin headroom", () => {
 
 describe("v1.38 selected route closure and source custody", () => {
   it("selected route closure is derived from A and includes the semantic issuer", () => {
-    const closure = deriveSelectedRouteClosureAtCommit(repoRoot, "HEAD")
+    const sourceA = execFileSync("git", ["rev-parse", "HEAD"], {
+      cwd: repoRoot,
+      encoding: "utf8",
+    }).trim()
+    const closure = deriveSelectedRouteClosureAtCommit(repoRoot, sourceA)
+    expect(() => deriveSelectedRouteClosureAtCommit(repoRoot, "HEAD")).toThrow(
+      "V138_SOURCE_COMMIT_INVALID",
+    )
+    expect(() =>
+      deriveSelectedRouteClosureAtCommit(repoRoot, sourceA.slice(0, 12)),
+    ).toThrow("V138_SOURCE_COMMIT_INVALID")
     expect(closure.roots).toEqual([
       "apps/runtime-service/src/execute-match.ts",
       "scripts/lib/v1-38-current-matrix-reproduction.ts",
@@ -285,33 +303,58 @@ describe("v1.38 selected route closure and source custody", () => {
     )
     expect(closure.paths).toEqual([...closure.paths].sort())
     expect(closure.closureRoot).toMatch(/^sha256:[0-9a-f]{64}$/u)
-    for (let index = 0; index < closure.edges.length; index += 1) {
-      const edge = closure.edges[index]!
-      for (const mutation of [
-        closure.edges.filter((_, candidate) => candidate !== index),
-        closure.edges.map((candidate, candidateIndex) =>
-          candidateIndex === index
-            ? { ...candidate, to: edge.from }
-            : candidate,
-        ),
-        closure.edges.map((candidate, candidateIndex) =>
-          candidateIndex === index
-            ? { ...candidate, to: "scripts/lib/unresolved.ts" }
-            : candidate,
-        ),
-      ]) {
-        expect(() =>
-          checkSelectedRouteEdgeInventory(closure, mutation),
-        ).toThrow("V138_SELECTED_ROUTE_EDGE_INVENTORY_MISMATCH")
+    const sourceByPath = new Map(
+      closure.paths
+        .filter((repoPath) => /\.(?:ts|tsx)$/u.test(repoPath))
+        .map((repoPath) => [
+          repoPath,
+          execFileSync("git", ["show", `${sourceA}:${repoPath}`], {
+            cwd: repoRoot,
+            encoding: "utf8",
+          }),
+        ]),
+    )
+    const targetByEdge = new Map(
+      closure.edges.map((edge) => [`${edge.from}\0${edge.specifier}`, edge.to]),
+    )
+    for (const [index, edge] of closure.edges.entries()) {
+      const source = sourceByPath.get(edge.from)!
+      const marker = `./__v138_unresolved_edge_${index}.js`
+      const escaped = edge.specifier.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&")
+      const mutated = source.replace(
+        new RegExp(`([\"'])${escaped}\\1`, "u"),
+        (_match, quote: string) => `${quote}${marker}${quote}`,
+      )
+      expect(mutated).not.toBe(source)
+      const resolver = (from: string, specifier: string): string | undefined => {
+        if (specifier === marker) return undefined
+        return targetByEdge.get(`${from}\0${specifier}`) ?? `external:${specifier}`
       }
+      expect(() =>
+        deriveV138StaticSourceEdgesFromSnapshot(edge.from, mutated, resolver),
+      ).toThrow("V138_SELECTED_ROUTE_EDGE_UNRESOLVED")
+      expect(() =>
+        deriveV138StaticSourceEdgesFromSnapshot(
+          edge.from,
+          source,
+          (from, specifier) =>
+            from === edge.from && specifier === edge.specifier
+              ? undefined
+              : resolver(from, specifier),
+        ),
+      ).toThrow("V138_SELECTED_ROUTE_EDGE_UNRESOLVED")
     }
   }, 60_000)
 
   it("source custody uses the aggregate sourceBase..A four-path delta", () => {
+    const sourceA = execFileSync("git", ["rev-parse", "HEAD"], {
+      cwd: repoRoot,
+      encoding: "utf8",
+    }).trim()
     const custody = inspectSourceCustody({
       repoRoot,
       sourceBase: "30c0949692017f425795213972482568cdd73f64",
-      sourceA: "HEAD",
+      sourceA,
     })
     expect(custody.sourceBase).toBe(
       "30c0949692017f425795213972482568cdd73f64",
@@ -339,14 +382,49 @@ describe("v1.38 plan 262-15 terminal artifact presence", () => {
     (disposition) => {
       const root = mkdtempSync(path.join(tmpdir(), "cowards-262-15-terminal-"))
       try {
+        execFileSync("git", ["clone", "--shared", "--quiet", repoRoot, root])
         mkdirSync(path.dirname(path.resolve(root, paths.authorization)), { recursive: true })
         mkdirSync(path.dirname(path.resolve(root, paths.review)), { recursive: true })
-        writeFileSync(path.resolve(root, paths.review), "reviewed\n")
+        writeFileSync(
+          path.resolve(root, paths.review),
+          "---\nfindings:\n  critical: 0\n  warning: 0\nstatus: clean\n---\n# Clean review\n",
+        )
+        const sourceA = execFileSync("git", ["rev-parse", "HEAD"], {
+          cwd: root,
+          encoding: "utf8",
+        }).trim()
+        const authorization = buildV138Plan26215Authorization(
+          root,
+          sourceA,
+          Buffer.from(v138Plan26215AuthorizationLiteral(sourceA), "utf8"),
+        )
         if (disposition !== "seal_refused") {
-          writeFileSync(path.resolve(root, paths.authorization), "{}\n")
+          writeFileSync(
+            path.resolve(root, paths.authorization),
+            `${JSON.stringify(authorization)}\n`,
+          )
         }
         if (disposition === "sealed") {
-          writeFileSync(path.resolve(root, paths.seal), "{}\n")
+          const reviewBytes = readFileSync(path.resolve(root, paths.review))
+          const seal = buildV138SuccessorSourceSeal({
+            repoRoot: root,
+            sourceBase: "30c0949692017f425795213972482568cdd73f64",
+            sourceA,
+            authorization,
+            reviewRoots: [{
+              path: paths.review,
+              sha256: `sha256:${createHash("sha256").update(reviewBytes).digest("hex")}`,
+            }],
+            protectedEvidencePaths: [],
+            frozenPolicy: { schemaVersion: "v1.38-frozen-policy-v1" },
+            toolIdentity: { schemaVersion: "v1.38-tool-identity-v1" },
+            hostIdentity: { schemaVersion: "v1.38-host-identity-v1" },
+            formationAbsence: {
+              schemaVersion: "v1.38-formation-absence-v1",
+              absent: true,
+            },
+          })
+          writeFileSync(path.resolve(root, paths.seal), `${JSON.stringify(seal)}\n`)
         } else {
           writePlan26215Terminal(root, paths.terminal, disposition)
         }
@@ -379,35 +457,63 @@ describe("v1.38 plan 262-16 terminal artifact presence", () => {
       terminal: ".planning/artifacts/v1.38-plan-262-16-terminal-v1.json",
     } as const
     try {
+      execFileSync("git", ["clone", "--shared", "--quiet", repoRoot, root])
       mkdirSync(path.resolve(root, ".planning/artifacts"), { recursive: true })
+      const sourceA = execFileSync("git", ["rev-parse", "HEAD"], {
+        cwd: root,
+        encoding: "utf8",
+      }).trim()
+      const authorization = buildV138Plan26215Authorization(
+        root,
+        sourceA,
+        Buffer.from(v138Plan26215AuthorizationLiteral(sourceA), "utf8"),
+      )
+      const seal = buildV138SuccessorSourceSeal({
+        repoRoot: root,
+        sourceBase: "30c0949692017f425795213972482568cdd73f64",
+        sourceA,
+        authorization,
+        reviewRoots: [],
+        protectedEvidencePaths: [],
+        frozenPolicy: { schemaVersion: "v1.38-frozen-policy-v1" },
+        toolIdentity: { schemaVersion: "v1.38-tool-identity-v1" },
+        hostIdentity: { schemaVersion: "v1.38-host-identity-v1" },
+        formationAbsence: {
+          schemaVersion: "v1.38-formation-absence-v1",
+          absent: true,
+        },
+      })
+      const context = buildV138ExecutionContextV5Receipt({
+        repoRoot: root,
+        authorization,
+        seal,
+      })
       const preflight = buildV138HostHeadroomPreflightV5Receipt(
-        parseMemoryPressureQ({
-          stdout: Buffer.from(
-            "The system has 4096 (1 pages with a page size of 4096).\nSystem-wide memory free percentage: 24%\n",
-          ),
-          stderr: Buffer.alloc(0),
-          exitCode: 0,
-          signal: null,
-          timedOut: false,
-        }),
+        {
+          executionContext: context,
+          result: parseMemoryPressureQ({
+            stdout: Buffer.from(
+              "The system has 4096 (1 pages with a page size of 4096).\nSystem-wide memory free percentage: 24%\n",
+            ),
+            stderr: Buffer.alloc(0),
+            exitCode: 0,
+            signal: null,
+            timedOut: false,
+          }),
+        },
       )
       const calibration = buildV138ParallelCalibrationV5PreflightTerminal(preflight)
       const artifacts: ReadonlyArray<readonly [string, unknown]> = [
-        [paths.authorization, {}],
-        [paths.seal, {}],
-        [paths.context, { schemaVersion: "v1.38-current-matrix-execution-context-v5" }],
+        [paths.authorization, authorization],
+        [paths.seal, seal],
+        [paths.context, context],
         [paths.preflight, preflight],
         [paths.calibration, calibration],
-        [paths.terminal, {
-          schemaVersion: "v1.38-plan-262-16-terminal-v1",
-          disposition: "preflight_refused",
-          authorityExpired: true,
-          noRetry: true,
-        }],
       ]
       for (const [repoPath, value] of artifacts) {
         writeFileSync(path.resolve(root, repoPath), `${JSON.stringify(value)}\n`)
       }
+      writeV138Plan26216Terminal(root, paths, "preflight_refused")
       expect(checkV138Plan26216TerminalBranch(root, paths)).toBe("preflight_refused")
       writeFileSync(path.resolve(root, paths.reproduction), "{}\n")
       expect(() => checkV138Plan26216TerminalBranch(root, paths)).toThrow(
