@@ -5,16 +5,16 @@ milestone_name: Competitive Strategy Factory and Adversarial League — ACTIVE
 current_phase: 262
 current_phase_name: foundation-admission-measurement-custody-and-containment-con
 status: blocked
-stopped_at: "Completed 262-11-PLAN.md with stopped calibration:v2; ADMIT-03 remains blocked"
-last_updated: "2026-07-30T00:03:23.644Z"
+stopped_at: "Completed 262-12-PLAN.md with stopped preflight:v3; ADMIT-03 remains blocked"
+last_updated: "2026-07-30T02:36:37.974Z"
 last_activity: 2026-07-29
-last_activity_desc: Plan 262-11 repaired sampler cleanup and stopped calibration:v2 at the unchanged host-headroom gate with zero accepted cells
+last_activity_desc: "Plan 262-12 stopped at 4.02% host headroom, charged all eight calibration:v3 identities without spawning children, and published zero cells"
 progress:
   total_phases: 9
   completed_phases: 0
-  total_plans: 11
-  completed_plans: 6
-  percent: 55
+  total_plans: 12
+  completed_plans: 7
+  percent: 58
 ---
 
 # State: Coward's Game
@@ -29,15 +29,15 @@ See: `.planning/PROJECT.md` (updated 2026-07-27)
 ## Current Position
 
 Phase: 262 (foundation-admission-measurement-custody-and-containment-con) — BLOCKED
-Plan: 6 of 11
-Status: ADMIT-03 stopped after Plan 262-11 calibration:v2 measured 3.45% host headroom; reproduction:v3 was not launched
-Last activity: 2026-07-29 — Plan 262-11 charged all five diagnostic and eight calibration:v2 identities and published zero accepted cells
+Plan: 7 of 12
+Status: ADMIT-03 stopped after Plan 262-12 preflight:v3 measured 4.02% host headroom; no calibration child or reproduction:v4 was launched
+Last activity: 2026-07-29 — Plan 262-12 charged one preflight and all eight calibration:v3 identities, accepted zero cells, and expired its single-use authorization
 
-Progress: [██████░░░░] 55%
+Progress: [██████░░░░] 58%
 
 ## Performance Metrics
 
-**Current milestone:** 6 of 11 Phase 262 plans complete; ADMIT-03 remains blocked after Plan 262-11 stopped.
+**Current milestone:** 7 of 12 Phase 262 plans complete; ADMIT-03 remains blocked after Plan 262-12 stopped.
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
@@ -48,6 +48,7 @@ Progress: [██████░░░░] 55%
 | Phase 262 P09 | 26min | 2 tasks | 2 files |
 | Phase 262 P10 | 16min | 1 task | 4 files |
 | Phase 262 P11 | 15min | 3 tasks | 4 files |
+| Phase 262 P12 | 13min | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -76,6 +77,8 @@ Decisions are logged in `.planning/PROJECT.md`. Current milestone decisions:
 - [Phase 262]: Record the user's literal authorized-unsandboxed-ps selection and limit escalation to exact read-only RSS sampling and process-group probing.
 - [Phase 262]: Stop calibration:v2 at 345 basis points host headroom under the unchanged 2,500-basis-point gate despite an admitted time projection.
 - [Phase 262]: Charge all diagnostic:v2 and calibration:v2 identities and prohibit reproduction:v3 after the stopped calibration.
+- [Phase 262]: Bind Plan 262-12 exact single-use execution authorization under sha256:a903e1e58315aec0751db4e5df99ce8cf31a4b4e92536d0291a25aa31ce484c4, distinct from the unchanged sampler-policy root. — The previously frozen sampler permission did not authorize a new environmental retry; exact scope, cardinality, single use, and terminal expiry required a separate root.
+- [Phase 262]: Stop Plan 262-12 at 402 basis points host headroom under the unchanged 2500-basis-point gate; charge all eight calibration:v3 identities without child or reproduction:v4 launch. — The authoritative node:os preflight was below the immutable admission threshold, so the fail-closed branch consumes the allocation without executing child work.
 
 ### Pending Todos
 
@@ -90,6 +93,7 @@ None.
 - ADMIT-03 stopped: the exact Plan 262-10 calibration produced four `SHARD_RUNNER_EXCEPTION` terminals, charged all eight calibration identities, recorded no successful resource samples, and accepted zero cells.
 - Plan 262-10 did not launch the 540-cell run; any future retry requires a newly authorized successor that retains every stopped root and charged attempt.
 - ADMIT-03 remains blocked: Plan 262-11 calibration:v2 stopped at 3.45% host headroom under the unchanged 25% gate; reproduction:v3 was not launched and zero cells were accepted.
+- ADMIT-03 remains blocked: Plan 262-12 terminally stopped at 4.02% host headroom, accepted zero cells, launched no calibration children or reproduction:v4, and its single-use authorization is expired.
 
 ## Deferred Items
 
@@ -102,7 +106,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-07-30T00:03:23.463Z
-Stopped at: Completed 262-11-PLAN.md with stopped calibration:v2; ADMIT-03 remains blocked
+Last session: 2026-07-30T02:36:07.833Z
+Stopped at: Completed 262-12-PLAN.md with stopped preflight:v3; ADMIT-03 remains blocked
 Resume file: None
-Next command: Decide whether to authorize a new content-addressed successor after the Plan 262-11 host-headroom stop; do not rerun or mutate Plan 262-11.
+Next command: Do not rerun or reuse Plan 262-12 authorization; any further successor requires new planning and explicit authority while preserving all charged roots.
