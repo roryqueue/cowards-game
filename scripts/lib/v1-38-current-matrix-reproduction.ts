@@ -6632,6 +6632,13 @@ export const writeV138ImmutableReceipt = (
     fsyncSync(fileDescriptor)
     closeSync(fileDescriptor)
     fileDescriptor = undefined
+    const persisted = readFileSync(temporaryPath)
+    if (
+      persisted.byteLength !== bytes.byteLength ||
+      !persisted.equals(bytes)
+    ) {
+      throw new TypeError("MATRIX_SUCCESSOR_TEMPORARY_WRITE_INCOMPLETE")
+    }
 
     try {
       linkSync(temporaryPath, resolvedTarget)
