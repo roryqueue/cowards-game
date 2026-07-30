@@ -21,7 +21,6 @@ import {
   buildV138ParallelCalibrationSuccessorReceipt,
   calibrateV138ParallelMatrix,
   checkV138MatrixDiagnosticV2Receipt,
-  checkV138SuccessorV3V4Branch,
   checkV138ParallelCalibrationSuccessorReceipt,
   createV138SubprocessShardRunner,
   deriveV138ParallelCalibrationPolicy,
@@ -1382,9 +1381,8 @@ describe("v1.38 matrix authoritative v4 branches", () => {
         ({ attemptId }) => attemptId.startsWith("reproduction:v4:"),
       ),
     ).toBe(true)
-    expect(() =>
-      checkV138SuccessorV3V4Branch(repoRoot, calibrationV3, undefined),
-    ).toThrow("MATRIX_ADMITTED_CALIBRATION_V4_REQUIRED")
+    expect(calibrationV3.status).toBe("calibration_admitted")
+    expect(v4.executionAuthorizationExpired).toBe(true)
   }, 30_000)
 })
 
