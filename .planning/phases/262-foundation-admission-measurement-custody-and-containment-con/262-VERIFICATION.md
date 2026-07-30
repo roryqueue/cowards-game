@@ -79,7 +79,7 @@ gaps:
 
 **Score:** 1/5 truths verified (0 present, behavior-unverified)
 
-The later Phase 262 plans are correctly blocked. `262-03-PLAN.md` depends on `262-02`; Plans 04–07 form a dependent chain after it. `STATE.md` records `status: blocked`, `ADMIT-03 hard stop`, and “do not begin Plan 262-03.”
+The later Phase 262 plans remain correctly blocked. Plans 262-08 through 262-13 added independent expectation, bounded supervision, repaired sampling/cleanup, successor-only retry accounting, and Pattern C context evidence, but every authoritative branch stopped with zero accepted cells. Plan 262-14 is source/test repair only. `262-03-PLAN.md` depends on that repair but carries an explicit `future-successful-measurement-successor` blocker; Plans 04–07 remain chained after it.
 
 ## Charged Resource-Pressure Evidence
 
@@ -98,6 +98,22 @@ Therefore:
 - prior failure and calibration work: **charged and retained**, never erased or converted to gameplay.
 
 ## ADMIT-03 Gap Closure Contract
+
+### Plan 262-13 terminal evidence and Plan 262-14 repair boundary
+
+Plan 262-13 preserved the frozen gate and stopped before child launch at 437 basis points of host headroom. Its exact evidence remains:
+
+- execution-context:v4 root `sha256:7ff8e5b8a3d580ba6b1f821ebe35ff8688fb3247b4772ada979c2975f46c0a71`;
+- preflight:v4 root `sha256:c03b7c78f7c7328223b5bba21a0b9bdbfd3ab212b89203e9339f0a064e11f31b`;
+- calibration:v4 root `sha256:03aec2996ab34d6d5b6182d26f7575eb162d6e03ea4025878bdcc88384764174`;
+- zero spawned children, zero accepted cells, expired authorization, and no reproduction:v5.
+
+Post-terminal verification exposed two source/test defects rather than a measurement-policy defect:
+
+1. historical execution-context verification recomputes mutable current-HEAD file hashes instead of verifying the immutable producing Git objects;
+2. synthetic v5 branch checking selects persisted context merely because ambient files exist.
+
+Plan 262-14 may repair only those verifier/test-isolation defects. It must preserve every measurement artifact and charged root byte-for-byte, grant no authorization, run no sampler/preflight/calibration/reproduction, and produce no accepted evidence. Completing Plan 262-14 does not close ADMIT-03 or unblock Plan 262-03; a later separately planned, authorized, successful 540/540 measurement successor remains mandatory.
 
 ### Is bounded parallel supervised execution legitimate?
 
