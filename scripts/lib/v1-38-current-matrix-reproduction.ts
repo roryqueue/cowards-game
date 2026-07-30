@@ -8103,6 +8103,8 @@ export const writeV138HostHeadroomPreflightV5Receipt = async (
   sealPath: string,
   sourceA: string,
   sourceB: string,
+  observeHeadroom: () => Promise<V138DarwinHeadroomResult> = () =>
+    observeDarwinHeadroomOwned(executeOwnedMemoryPressureQ),
 ): Promise<Readonly<V138HostHeadroomPreflightV5Receipt>> => {
   const sourceBCustody = checkV138SuccessorSealCommit({ repoRoot, sourceA, sourceB })
   const target = plan26216Path(repoRoot, targetPath, "preflight")
@@ -8112,8 +8114,10 @@ export const writeV138HostHeadroomPreflightV5Receipt = async (
       plan26216Path(repoRoot, authorizationPath, "authorization"),
       true,
     )!.value,
-    sourceBCustody,
   )
+  if (authorization.sourceA !== sourceBCustody.sourceA) {
+    throw new TypeError("MATRIX_PREFLIGHT_V5_SOURCE_CUSTODY_JOIN_INVALID")
+  }
   const seal = checkV138SuccessorSourceSeal(
     repoRoot,
     plan26216Read(plan26216Path(repoRoot, sealPath, "seal"), true)!.value,
@@ -8132,7 +8136,7 @@ export const writeV138HostHeadroomPreflightV5Receipt = async (
     context.sourceBCustodyRoot !== sourceBCustody.custodyRoot
   ) throw new TypeError("MATRIX_PREFLIGHT_V5_CONTEXT_JOIN_INVALID")
   const receipt = buildV138HostHeadroomPreflightV5Receipt({
-    result: await observeDarwinHeadroomOwned(executeOwnedMemoryPressureQ),
+    result: await observeHeadroom(),
     executionContext: context,
   })
   writeV138ImmutableReceipt(target, receipt)

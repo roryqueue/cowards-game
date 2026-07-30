@@ -106,6 +106,7 @@ import {
   v138SuccessorRoot,
   writeV138AuthoritativeMatrixV5Receipt,
   writeV138ExecutionContextV4Receipt,
+  writeV138HostHeadroomPreflightV5Receipt,
   writeV138HostHeadroomPreflightV4Receipt,
   writeV138ImmutableReceipt,
   writeV138MatrixDiagnosticV2Receipt,
@@ -1428,22 +1429,61 @@ describe("v1.38 plan 262-16 terminal artifact presence", () => {
           checkV138ExecutionContextV5Receipt(forged, sourceBCustody),
         ).toThrow("MATRIX_EXECUTION_CONTEXT_V5_INVALID")
       }
-      const preflight = buildV138HostHeadroomPreflightV5Receipt({
-        executionContext: context,
-        result: parseMemoryPressureQ({
-          stdout: Buffer.from(
-            "The system has 4096 (1 pages with a page size of 4096).\nSystem-wide memory free percentage: 24%\n",
-          ),
-          stderr: Buffer.alloc(0),
-          exitCode: 0,
-          signal: null,
-          timedOut: false,
-        }),
+      writeFileSync(
+        path.resolve(root, paths.context),
+        `${JSON.stringify(context)}\n`,
+      )
+      expect(() =>
+        Buffer.from(sourceBCustody as unknown as Uint8Array),
+      ).toThrow(/Received an instance of Object/u)
+      let injectedObservationCount = 0
+      const injectedResult = parseMemoryPressureQ({
+        stdout: Buffer.from(
+          "The system has 4096 (1 pages with a page size of 4096).\nSystem-wide memory free percentage: 24%\n",
+        ),
+        stderr: Buffer.alloc(0),
+        exitCode: 0,
+        signal: null,
+        timedOut: false,
       })
+      const preflight = await writeV138HostHeadroomPreflightV5Receipt(
+        root,
+        paths.preflight,
+        paths.context,
+        paths.authorization,
+        paths.seal,
+        sourceA,
+        sourceB,
+        async () => {
+          injectedObservationCount += 1
+          return injectedResult
+        },
+      )
+      expect(injectedObservationCount).toBe(1)
+      expect(preflight).toMatchObject({
+        sourceB,
+        sourceBCustodyRoot: sourceBCustody.custodyRoot,
+        disposition: "preflight_refused",
+      })
+      let invalidBObservationCount = 0
+      await expect(
+        writeV138HostHeadroomPreflightV5Receipt(
+          root,
+          paths.preflight,
+          paths.context,
+          paths.authorization,
+          paths.seal,
+          sourceA,
+          "0".repeat(40),
+          async () => {
+            invalidBObservationCount += 1
+            return injectedResult
+          },
+        ),
+      ).rejects.toThrow()
+      expect(invalidBObservationCount).toBe(0)
       const calibration = buildV138ParallelCalibrationV5PreflightTerminal(preflight)
       const artifacts: ReadonlyArray<readonly [string, unknown]> = [
-        [paths.context, context],
-        [paths.preflight, preflight],
         [paths.calibration, calibration],
       ]
       for (const [repoPath, value] of artifacts) {
