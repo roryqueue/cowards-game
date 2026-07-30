@@ -1,6 +1,16 @@
 import { createHash } from "node:crypto"
-import { readFileSync, readdirSync } from "node:fs"
+import {
+  appendFileSync,
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  symlinkSync,
+  writeSync,
+} from "node:fs"
 import { execFileSync } from "node:child_process"
+import { tmpdir } from "node:os"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 import { beforeAll, describe, expect, it } from "vitest"
@@ -51,6 +61,7 @@ import {
   writeV138AuthoritativeMatrixV5Receipt,
   writeV138ExecutionContextV4Receipt,
   writeV138HostHeadroomPreflightV4Receipt,
+  writeV138ImmutableReceipt,
   writeV138MatrixDiagnosticV2Receipt,
   writeV138ParallelCalibrationV4Receipt,
   type V138CurrentMatrixAttempt,
@@ -461,6 +472,43 @@ describe("v1.38 current matrix reproduction", () => {
     attempts = enumerateV138CurrentMatrix(repoRoot).attempts
   })
 
+  it("matrix admission rechecks protected inputs after a prior pass", () => {
+    const temporaryRoot = mkdtempSync(
+      path.join(tmpdir(), "cowards-v138-admission-drift-"),
+    )
+    const checkout = path.join(temporaryRoot, "checkout")
+    execFileSync(
+      "git",
+      ["worktree", "add", "--detach", checkout, "HEAD"],
+      { cwd: repoRoot },
+    )
+    try {
+      symlinkSync(
+        path.resolve(repoRoot, "node_modules"),
+        path.resolve(checkout, "node_modules"),
+        "dir",
+      )
+      expect(enumerateV138CurrentMatrix(checkout).attempts).toHaveLength(540)
+
+      appendFileSync(
+        path.resolve(
+          checkout,
+          "packages/engine/src/compatibility-fixtures.test.ts",
+        ),
+        "\n// Deliberate protected-input drift for admission-cache regression.\n",
+      )
+
+      expect(() => enumerateV138CurrentMatrix(checkout)).toThrow(
+        "MATRIX_ADMISSION_INVALID",
+      )
+    } finally {
+      execFileSync("git", ["worktree", "remove", "--force", checkout], {
+        cwd: repoRoot,
+      })
+      rmSync(temporaryRoot, { recursive: true, force: true })
+    }
+  }, 120_000)
+
   it("matrix freezes the exact historical inventory without collapsing duplicate geometry", () => {
     const inventory = enumerateV138CurrentMatrix(repoRoot)
     const unorderedPairs = new Set(
@@ -680,6 +728,58 @@ describe("v1.38 current matrix reproduction", () => {
     expect(source).toContain("acceptedCellsPublished: 0")
     expect(source).toContain("partialAcceptedEvidenceReusable: false")
     expect(source).not.toMatch(/\bnew\s+Function\b|node:vm|\brunMatch\s*\(/u)
+  })
+})
+
+describe("v1.38 immutable receipt publication", () => {
+  it("keeps the canonical target absent after a partial temporary write fails", () => {
+    const temporaryRoot = mkdtempSync(
+      path.join(tmpdir(), "cowards-v138-publication-fault-"),
+    )
+    const target = path.join(temporaryRoot, "receipt.json")
+    try {
+      expect(() =>
+        writeV138ImmutableReceipt(
+          target,
+          { schemaVersion: "test-receipt-v1", status: "complete" },
+          {
+            writeTemporaryFile: (fileDescriptor, bytes) => {
+              writeSync(
+                fileDescriptor,
+                bytes,
+                0,
+                Math.max(1, Math.floor(bytes.byteLength / 2)),
+              )
+              expect(existsSync(target)).toBe(false)
+              throw new Error("INJECTED_PARTIAL_TEMPORARY_WRITE_FAILURE")
+            },
+          },
+        ),
+      ).toThrow("INJECTED_PARTIAL_TEMPORARY_WRITE_FAILURE")
+      expect(existsSync(target)).toBe(false)
+      expect(readdirSync(temporaryRoot)).toEqual([])
+    } finally {
+      rmSync(temporaryRoot, { recursive: true, force: true })
+    }
+  })
+
+  it("allows exactly one complete receipt to win competing publication", () => {
+    const temporaryRoot = mkdtempSync(
+      path.join(tmpdir(), "cowards-v138-publication-race-"),
+    )
+    const target = path.join(temporaryRoot, "receipt.json")
+    const first = { schemaVersion: "test-receipt-v1", writer: "first" }
+    const second = { schemaVersion: "test-receipt-v1", writer: "second" }
+    try {
+      writeV138ImmutableReceipt(target, first)
+      expect(() => writeV138ImmutableReceipt(target, second)).toThrow(
+        "MATRIX_SUCCESSOR_TARGET_NOT_FRESH",
+      )
+      expect(JSON.parse(readFileSync(target, "utf8"))).toEqual(first)
+      expect(readdirSync(temporaryRoot)).toEqual(["receipt.json"])
+    } finally {
+      rmSync(temporaryRoot, { recursive: true, force: true })
+    }
   })
 })
 
