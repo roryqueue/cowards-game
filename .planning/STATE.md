@@ -5,16 +5,16 @@ milestone_name: Competitive Strategy Factory and Adversarial League — ACTIVE
 current_phase: 262
 current_phase_name: foundation-admission-measurement-custody-and-containment-con
 status: blocked
-stopped_at: "Completed 262-12-PLAN.md with stopped preflight:v3; ADMIT-03 remains blocked"
-last_updated: "2026-07-30T02:36:37.974Z"
-last_activity: 2026-07-29
-last_activity_desc: "Plan 262-12 stopped at 4.02% host headroom, charged all eight calibration:v3 identities without spawning children, and published zero cells"
+stopped_at: "Completed 262-13-PLAN.md with stopped preflight:v4 and a test-isolation gap; ADMIT-03 remains blocked"
+last_updated: "2026-07-30T12:43:00.924Z"
+last_activity: 2026-07-30
+last_activity_desc: "Plan 262-13 stopped at 4.37% node:os host headroom, charged all eight calibration:v4 identities without spawning children, and recorded an ambient-artifact test-isolation gap"
 progress:
   total_phases: 9
   completed_phases: 0
-  total_plans: 12
-  completed_plans: 7
-  percent: 58
+  total_plans: 13
+  completed_plans: 8
+  percent: 62
 ---
 
 # State: Coward's Game
@@ -29,15 +29,15 @@ See: `.planning/PROJECT.md` (updated 2026-07-27)
 ## Current Position
 
 Phase: 262 (foundation-admission-measurement-custody-and-containment-con) — BLOCKED
-Plan: 7 of 12
-Status: ADMIT-03 stopped after Plan 262-12 preflight:v3 measured 4.02% host headroom; no calibration child or reproduction:v4 was launched
-Last activity: 2026-07-29 — Plan 262-12 charged one preflight and all eight calibration:v3 identities, accepted zero cells, and expired its single-use authorization
+Plan: 8 of 13
+Status: ADMIT-03 stopped after Plan 262-13 preflight:v4 measured 4.37% node:os host headroom; no calibration child or reproduction:v5 was launched
+Last activity: 2026-07-30 — Plan 262-13 charged one preflight and all eight calibration:v4 identities, accepted zero cells, and expired its single-use authorization
 
-Progress: [██████░░░░] 58%
+Progress: [██████░░░░] 62%
 
 ## Performance Metrics
 
-**Current milestone:** 7 of 12 Phase 262 plans complete; ADMIT-03 remains blocked after Plan 262-12 stopped.
+**Current milestone:** 8 of 13 Phase 262 plans complete; ADMIT-03 remains blocked after Plan 262-13 stopped.
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
@@ -49,6 +49,7 @@ Progress: [██████░░░░] 58%
 | Phase 262 P10 | 16min | 1 task | 4 files |
 | Phase 262 P11 | 15min | 3 tasks | 4 files |
 | Phase 262 P12 | 13min | 3 tasks | 5 files |
+| Phase 262 P13 | 24min | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -94,6 +95,7 @@ None.
 - Plan 262-10 did not launch the 540-cell run; any future retry requires a newly authorized successor that retains every stopped root and charged attempt.
 - ADMIT-03 remains blocked: Plan 262-11 calibration:v2 stopped at 3.45% host headroom under the unchanged 25% gate; reproduction:v3 was not launched and zero cells were accepted.
 - ADMIT-03 remains blocked: Plan 262-12 terminally stopped at 4.02% host headroom, accepted zero cells, launched no calibration children or reproduction:v4, and its single-use authorization is expired.
+- ADMIT-03 remains blocked: Plan 262-13 terminally stopped at 4.37% node:os headroom, charged all eight calibration:v4 identities, launched zero children and no reproduction:v5, and exposed an ambient-artifact isolation gap in two synthetic v5 branch tests.
 
 ## Deferred Items
 
@@ -106,7 +108,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-07-30T02:36:07.833Z
-Stopped at: Completed 262-12-PLAN.md with stopped preflight:v3; ADMIT-03 remains blocked
+Last session: 2026-07-30T12:43:00.913Z
+Stopped at: Completed 262-13-PLAN.md with stopped preflight:v4 and a test-isolation gap; ADMIT-03 remains blocked
 Resume file: None
-Next command: Do not rerun or reuse Plan 262-12 authorization; any further successor requires new planning and explicit authority while preserving all charged roots.
+Next command: Repair the Plan 262-13 ambient-artifact test-isolation gap on a new source branch; any further measurement successor requires new planning and exact authorization while preserving every charged root.

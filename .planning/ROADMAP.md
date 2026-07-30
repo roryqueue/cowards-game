@@ -50,7 +50,7 @@ v1.38 builds a private, content-addressed research control plane beside Coward's
   4. A separately permissioned custodian can demonstrate the profile-agnostic commitment, storage, access/query ledger, one-open authorization, safe receipt, contamination response, and retirement workflow whose lineage contains no profile-conditioned or current-trained input, while reports keep process failure, current-rules failure, formation rejection, formation pass, and contamination distinct and forbid threshold softening.
   5. The literal three profiles, equal-compute dimensions, telemetry, classifiers, and rejection thresholds are precommitted with validated profile-agnostic fixtures, while executable formation namespaces, manifests, states, caches, prompts, traces, replays, and results remain absent.
 
-**Plans:** 7/13 plans executed
+**Plans:** 8/13 plans executed
 
 Plans:
 
@@ -61,7 +61,7 @@ Plans:
 - [x] 262-10-PLAN.md — Execution terminal: exact parallel calibration stopped on shard-runner failure; all eight attempts charged, zero cells accepted, and the 540-cell run was not launched.
 - [x] 262-11-PLAN.md — Repair real sampler/cleanup boundaries, require explicit sampler authorization, and write only new calibration:v2/reproduction:v3 successors.
 - [x] 262-12-PLAN.md — Require exact single-use retry authorization, then run one preflighted calibration:v3/reproduction:v4 environmental successor.
-- [ ] 262-13-PLAN.md — Route one authorized preflight:v4/calibration:v4/reproduction:v5 successor inline through a lean Pattern C main orchestrator.
+- [x] 262-13-PLAN.md — Route one authorized preflight:v4/calibration:v4/reproduction:v5 successor inline through a lean Pattern C main orchestrator.
 - [ ] 262-03-PLAN.md — Define and calibrate the immutable study and two-ledger accounting contract.
 - [ ] 262-04-PLAN.md — Freeze numeric gates, report states, and bounded empirical claims.
 - [ ] 262-05-PLAN.md — Precommit profile-neutral classifiers and prove pre-formation containment.
@@ -203,7 +203,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 262. Foundation Admission, Measurement, Custody, and Containment Contract | 7/13 | In Progress|  |
+| 262. Foundation Admission, Measurement, Custody, and Containment Contract | 8/13 | In Progress|  |
 | 263. Legal Planner and Deterministic Runner Feasibility | 0/TBD | Not started | - |
 | 264. Immutable Factory, Independent Oracles, and Quarantined Intake | 0/TBD | Not started | - |
 | 265. Serious Current-Rules League and Development Red Team | 0/TBD | Not started | - |
