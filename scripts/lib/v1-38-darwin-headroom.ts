@@ -129,8 +129,6 @@ export const parseMemoryPressureQ = (
         ? ("preflight_admitted" as const)
         : ("preflight_refused" as const),
   })
-  // Drop the only decoded copy before returning the closed public-safe projection.
-  text = ""
   return Object.freeze({ ok: true as const, observation })
 }
 
@@ -145,9 +143,27 @@ export type V138DarwinHeadroomExecutor = (
 export const observeDarwinHeadroom = async (
   execute: V138DarwinHeadroomExecutor,
 ): Promise<V138DarwinHeadroomResult> => {
+  let owned: MemoryPressureQCommandResult | undefined
   try {
-    return parseMemoryPressureQ(await execute(MEMORY_PRESSURE_Q_REQUEST))
+    const result = await execute(MEMORY_PRESSURE_Q_REQUEST)
+    // The live adapter takes ownership of mutable copies so the command-result
+    // object and its diagnostic buffers never cross the projection boundary.
+    owned = {
+      stdout: Uint8Array.from(result.stdout),
+      stderr: Uint8Array.from(result.stderr),
+      exitCode: result.exitCode,
+      signal: result.signal,
+      timedOut: result.timedOut,
+    }
+    return parseMemoryPressureQ(owned)
   } catch {
     return unavailable
+  } finally {
+    // JavaScript cannot guarantee when the decoder's immutable string is
+    // collected. It can guarantee that the owned mutable diagnostic buffers
+    // are overwritten immediately after validation, digest, and projection.
+    owned?.stdout.fill(0)
+    owned?.stderr.fill(0)
+    owned = undefined
   }
 }
