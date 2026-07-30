@@ -1395,7 +1395,7 @@ export const calibrateV138ParallelMatrix = async (input: {
   clock?: V138ParallelClock | undefined
   parentSignal?: AbortSignal | undefined
   repoRoot?: string | undefined
-  executionIdentityVersion?: "v1" | "v2" | "v3" | undefined
+  executionIdentityVersion?: "v1" | "v2" | "v3" | "v4" | undefined
 }): Promise<Readonly<V138ParallelCalibrationReceipt>> => {
   const policy = V138ParallelCalibrationPolicySchema.parse(
     input.policy ?? deriveV138ParallelCalibrationPolicy(input.inventory),
@@ -1450,6 +1450,11 @@ export const calibrateV138ParallelMatrix = async (input: {
                   /^calibration:v1:/u,
                   "calibration:v3:",
                 )
+              : input.executionIdentityVersion === "v4"
+                ? record.calibrationAttemptId.replace(
+                    /^calibration:v1:/u,
+                    "calibration:v4:",
+                  )
               : record.calibrationAttemptId,
         templateAttemptId: record.templateAttemptId,
         request: template.request,
@@ -1547,7 +1552,7 @@ export const executeV138ParallelMatrix = async (input: {
   clock?: V138ParallelClock | undefined
   parentSignal?: AbortSignal | undefined
   repoRoot?: string | undefined
-  executionIdentityVersion?: "canonical" | "v3" | "v4" | undefined
+  executionIdentityVersion?: "canonical" | "v3" | "v4" | "v5" | undefined
 }): Promise<V138ParallelMatrixExecutionResult> => {
   if (!calibrationReceiptIsValid(input.inventory, input.calibration)) {
     throw new TypeError("MATRIX_PARALLEL_CALIBRATION_REQUIRED")
@@ -1570,6 +1575,8 @@ export const executeV138ParallelMatrix = async (input: {
               ? `reproduction:v3:${attemptId}`
               : input.executionIdentityVersion === "v4"
                 ? `reproduction:v4:${attemptId}`
+                : input.executionIdentityVersion === "v5"
+                  ? `reproduction:v5:${attemptId}`
                 : attemptId,
           templateAttemptId: attemptId,
           request: attempt.request,
@@ -1598,6 +1605,8 @@ export const executeV138ParallelMatrix = async (input: {
           ? outcome.attemptId.replace(/^reproduction:v3:/u, "")
           : input.executionIdentityVersion === "v4"
             ? outcome.attemptId.replace(/^reproduction:v4:/u, "")
+            : input.executionIdentityVersion === "v5"
+              ? outcome.attemptId.replace(/^reproduction:v5:/u, "")
             : outcome.attemptId,
     })),
   }))
@@ -4866,6 +4875,1229 @@ export const checkV138SuccessorV3V4Branch = (
   return deepFreeze({ calibration, reproduction })
 }
 
+const PLAN_262_13_REPO_ROOT = "/Users/roryquinlan/runtime/cowards-game" as const
+const PLAN_262_13_CLAIM_SCOPE =
+  "plan_scoped_orchestrator_registry_not_os_global" as const
+const PLAN_262_13_COMMAND_FAMILY = [
+  "--write-execution-context-v4-receipt",
+  "--check-execution-context-v4-receipt",
+  "--write-headroom-preflight-v4-receipt",
+  "--check-headroom-preflight-v4-receipt",
+  "--calibrate-parallel-v4-receipt",
+  "--check-calibration-v4-receipt",
+  "--write-authoritative-v5-receipt",
+  "--check-successor-v4-v5-branch",
+] as const
+
+const PLAN_262_13_SOURCE_PREDECESSORS = deepFreeze({
+  implementation: {
+    path: "scripts/lib/v1-38-current-matrix-reproduction.ts" as const,
+    predecessorSha256:
+      "sha256:e9f0bd91000dd4d089e627d9c6b7d93249ba58bd62724fbc413c450ca5c2ae84" as Sha256,
+    predecessorGitBlob: "3eb530a64fc899810237d3fdf1b65202e6891627",
+    predecessorProducingCommit:
+      "02e25166652263fd6187937a1e02d81fb59a590d",
+  },
+  test: {
+    path: "scripts/evaluate-v1-38-foundation-contract.test.ts" as const,
+    predecessorSha256:
+      "sha256:dcbe73205d4d49cf5ea7e223a379bf0c64865d4069929499798700a5fc184352" as Sha256,
+    predecessorGitBlob: "e76cd133de615d6b7bf89ff91103f76699ee2849",
+    predecessorProducingCommit:
+      "f27f3165083f8c2cdc7c45b441ec1386191234ac",
+  },
+})
+
+type V138Plan26213TerminalAgentStatus = "completed" | "failed" | "cancelled"
+
+export interface V138Plan26213AgentRegistryProjection {
+  readonly planId: "262-13"
+  readonly agents: readonly Readonly<{
+    agentId: string
+    taskName: string
+    agentType: string
+    status: V138Plan26213TerminalAgentStatus
+  }>[]
+  readonly activePlan26213AgentCount: 0
+  readonly activePlan26213GsdExecutorCount: 0
+  readonly claimScope: typeof PLAN_262_13_CLAIM_SCOPE
+}
+
+export interface V138ExecutionContextV4Receipt {
+  readonly schemaVersion: "v1.38-current-matrix-execution-context-v4"
+  readonly status: "execution_context_confirmed"
+  readonly planId: "262-13"
+  readonly mode: "gsd-pattern-c-inline-main"
+  readonly executionOwner: "lean-main-orchestrator"
+  readonly cwd: typeof PLAN_262_13_REPO_ROOT
+  readonly commandFamily: typeof PLAN_262_13_COMMAND_FAMILY
+  readonly claimScope: typeof PLAN_262_13_CLAIM_SCOPE
+  readonly planAgentSnapshot: Readonly<V138Plan26213AgentRegistryProjection>
+  readonly implementationSource: Readonly<
+    typeof PLAN_262_13_SOURCE_PREDECESSORS.implementation & {
+      currentSha256: Sha256
+    }
+  >
+  readonly testSource: Readonly<
+    typeof PLAN_262_13_SOURCE_PREDECESSORS.test & {
+      currentSha256: Sha256
+    }
+  >
+  readonly receiptRoot: Sha256
+}
+
+const executionContextV4WithoutRoot = (
+  receipt: V138ExecutionContextV4Receipt,
+): Omit<V138ExecutionContextV4Receipt, "receiptRoot"> => {
+  const { receiptRoot: _root, ...withoutRoot } = receipt
+  return withoutRoot
+}
+
+const assertPlan26213SourcePredecessor = (
+  repoRoot: string,
+  identity:
+    | typeof PLAN_262_13_SOURCE_PREDECESSORS.implementation
+    | typeof PLAN_262_13_SOURCE_PREDECESSORS.test,
+): void => {
+  const committedBytes = gitBlob(
+    repoRoot,
+    identity.predecessorProducingCommit,
+    identity.path,
+  )
+  const committedBlob = git(repoRoot, [
+    "rev-parse",
+    `${identity.predecessorProducingCommit}:${identity.path}`,
+  ])
+  if (
+    sha256(committedBytes) !== identity.predecessorSha256 ||
+    committedBlob !== identity.predecessorGitBlob
+  ) {
+    throw new TypeError("MATRIX_PLAN_262_13_SOURCE_PREDECESSOR_INVALID")
+  }
+}
+
+const validatePlan26213AgentSnapshot = (
+  input: unknown,
+): Readonly<V138Plan26213AgentRegistryProjection> => {
+  if (input === null || typeof input !== "object" || Array.isArray(input)) {
+    throw new TypeError("MATRIX_PLAN_262_13_AGENT_SNAPSHOT_INVALID")
+  }
+  const snapshot = input as V138Plan26213AgentRegistryProjection
+  if (
+    canonical(Object.keys(snapshot)) !==
+      canonical([
+        "planId",
+        "agents",
+        "activePlan26213AgentCount",
+        "activePlan26213GsdExecutorCount",
+        "claimScope",
+      ]) ||
+    snapshot.planId !== "262-13" ||
+    !Array.isArray(snapshot.agents) ||
+    snapshot.activePlan26213AgentCount !== 0 ||
+    snapshot.activePlan26213GsdExecutorCount !== 0 ||
+    snapshot.claimScope !== PLAN_262_13_CLAIM_SCOPE
+  ) {
+    throw new TypeError("MATRIX_PLAN_262_13_AGENT_SNAPSHOT_INVALID")
+  }
+  const seen = new Set<string>()
+  for (const agent of snapshot.agents) {
+    if (
+      agent === null ||
+      typeof agent !== "object" ||
+      Array.isArray(agent) ||
+      canonical(Object.keys(agent)) !==
+        canonical(["agentId", "taskName", "agentType", "status"]) ||
+      typeof agent.agentId !== "string" ||
+      agent.agentId.length === 0 ||
+      seen.has(agent.agentId) ||
+      typeof agent.taskName !== "string" ||
+      agent.taskName.length === 0 ||
+      typeof agent.agentType !== "string" ||
+      agent.agentType.length === 0 ||
+      !["completed", "failed", "cancelled"].includes(agent.status)
+    ) {
+      throw new TypeError("MATRIX_PLAN_262_13_AGENT_SNAPSHOT_INVALID")
+    }
+    seen.add(agent.agentId)
+  }
+  const safeProjection = JSON.stringify(snapshot)
+  if (
+    /(?:prompt|message|process(?:es)?|pid|commandLine|environment|StrategyMemory|SoldierMemory|objective)/iu.test(
+      safeProjection,
+    )
+  ) {
+    throw new TypeError("MATRIX_PLAN_262_13_AGENT_SNAPSHOT_UNSAFE")
+  }
+  return deepFreeze(cloneCanonical(snapshot))
+}
+
+const cloneCanonical = <T>(value: T): T =>
+  JSON.parse(canonical(value)) as T
+
+export const buildV138ExecutionContextV4Receipt = (input: {
+  repoRoot: string
+  mode: string
+  cwd: string
+  planAgentSnapshot: unknown
+}): Readonly<V138ExecutionContextV4Receipt> => {
+  if (
+    path.resolve(input.repoRoot) !== PLAN_262_13_REPO_ROOT ||
+    input.mode !== "gsd-pattern-c-inline-main" ||
+    input.cwd !== PLAN_262_13_REPO_ROOT
+  ) {
+    throw new TypeError("MATRIX_EXECUTION_CONTEXT_V4_INPUT_INVALID")
+  }
+  assertPlan26213SourcePredecessor(
+    input.repoRoot,
+    PLAN_262_13_SOURCE_PREDECESSORS.implementation,
+  )
+  assertPlan26213SourcePredecessor(
+    input.repoRoot,
+    PLAN_262_13_SOURCE_PREDECESSORS.test,
+  )
+  const planAgentSnapshot = validatePlan26213AgentSnapshot(
+    input.planAgentSnapshot,
+  )
+  const withoutRoot = {
+    schemaVersion: "v1.38-current-matrix-execution-context-v4" as const,
+    status: "execution_context_confirmed" as const,
+    planId: "262-13" as const,
+    mode: "gsd-pattern-c-inline-main" as const,
+    executionOwner: "lean-main-orchestrator" as const,
+    cwd: PLAN_262_13_REPO_ROOT,
+    commandFamily: PLAN_262_13_COMMAND_FAMILY,
+    claimScope: PLAN_262_13_CLAIM_SCOPE,
+    planAgentSnapshot,
+    implementationSource: {
+      ...PLAN_262_13_SOURCE_PREDECESSORS.implementation,
+      currentSha256: sha256(
+        readFileSync(
+          path.resolve(
+            input.repoRoot,
+            PLAN_262_13_SOURCE_PREDECESSORS.implementation.path,
+          ),
+        ),
+      ),
+    },
+    testSource: {
+      ...PLAN_262_13_SOURCE_PREDECESSORS.test,
+      currentSha256: sha256(
+        readFileSync(
+          path.resolve(
+            input.repoRoot,
+            PLAN_262_13_SOURCE_PREDECESSORS.test.path,
+          ),
+        ),
+      ),
+    },
+  }
+  return deepFreeze({
+    ...withoutRoot,
+    receiptRoot: sha256(canonical(withoutRoot)),
+  })
+}
+
+export const checkV138ExecutionContextV4Receipt = (
+  repoRoot: string,
+  input: unknown,
+): Readonly<V138ExecutionContextV4Receipt> => {
+  try {
+    if (input === null || typeof input !== "object" || Array.isArray(input)) {
+      throw new TypeError()
+    }
+    const receipt = input as V138ExecutionContextV4Receipt
+    const expected = buildV138ExecutionContextV4Receipt({
+      repoRoot,
+      mode: receipt.mode,
+      cwd: receipt.cwd,
+      planAgentSnapshot: receipt.planAgentSnapshot,
+    })
+    if (
+      canonical(Object.keys(receipt)) !== canonical(Object.keys(expected)) ||
+      canonical(receipt) !== canonical(expected) ||
+      receipt.receiptRoot !==
+        sha256(canonical(executionContextV4WithoutRoot(receipt)))
+    ) {
+      throw new TypeError()
+    }
+    return expected
+  } catch {
+    throw new TypeError("MATRIX_EXECUTION_CONTEXT_V4_RECEIPT_INVALID")
+  }
+}
+
+export const writeV138ExecutionContextV4Receipt = (
+  repoRoot: string,
+  targetPath: string,
+  mode: string,
+  cwd: string,
+  planAgentSnapshot: unknown,
+): Readonly<V138ExecutionContextV4Receipt> => {
+  exactSuccessorTarget(
+    repoRoot,
+    targetPath,
+    ".planning/artifacts/v1.38-current-matrix-execution-context-v4.json",
+  )
+  const receipt = buildV138ExecutionContextV4Receipt({
+    repoRoot,
+    mode,
+    cwd,
+    planAgentSnapshot,
+  })
+  writeReceiptAtomically(targetPath, receipt)
+  return receipt
+}
+
+export const PLAN_262_13_EXECUTION_AUTHORIZATION_LITERAL =
+  "Authorize Plan 262-13 for exactly one lean-orchestrator headroom-preflight:v4, exactly one calibration:v4 eight-attempt set, and—only if calibration:v4 is admitted—at most one reproduction:v5 540-cell run, using the unchanged frozen authorized-unsandboxed-ps sampler policy. This authorization is single-use and expires at the first terminal Plan 262-13 outcome." as const
+
+const PLAN_262_13_AUTHORIZATION_SELECTION =
+  "authorize-plan-262-13-lean-single-run" as const
+const PLAN_262_12_AUTHORIZATION_ROOT =
+  "sha256:a903e1e58315aec0751db4e5df99ce8cf31a4b4e92536d0291a25aa31ce484c4" as const
+
+export interface V138Plan26213ExecutionAuthorization {
+  readonly literalAuthorization: typeof PLAN_262_13_EXECUTION_AUTHORIZATION_LITERAL
+  readonly planId: "262-13"
+  readonly leanOrchestratorOnly: true
+  readonly headroomPreflightCount: 1
+  readonly calibrationSetCount: 1
+  readonly calibrationAttemptCount: 8
+  readonly reproductionMaximumCount: 1
+  readonly reproductionCellCount: 540
+  readonly reproductionConditionalOnCalibrationAdmission: true
+  readonly samplerPolicyRoot: typeof PLAN_262_11_SAMPLER_POLICY_ROOT
+  readonly singleUse: true
+  readonly expiresAtFirstTerminalOutcome: true
+  readonly consumed: false
+  readonly terminalOutcome: null
+  readonly executionAuthorizationRoot: Sha256
+}
+
+export const parseV138Plan26213ExecutionAuthorization = (
+  literalAuthorization: string,
+  usage: Readonly<{
+    consumed: boolean
+    terminalOutcome: "passed_exact" | "stopped_process_failure" | null
+  }> = { consumed: false, terminalOutcome: null },
+): Readonly<V138Plan26213ExecutionAuthorization> => {
+  if (literalAuthorization !== PLAN_262_13_EXECUTION_AUTHORIZATION_LITERAL) {
+    throw new TypeError(
+      "MATRIX_PLAN_262_13_EXECUTION_AUTHORIZATION_REQUIRED",
+    )
+  }
+  if (usage.terminalOutcome !== null) {
+    throw new TypeError("MATRIX_PLAN_262_13_EXECUTION_AUTHORIZATION_EXPIRED")
+  }
+  if (usage.consumed) {
+    throw new TypeError("MATRIX_PLAN_262_13_EXECUTION_AUTHORIZATION_CONSUMED")
+  }
+  const authority = {
+    literalAuthorization: PLAN_262_13_EXECUTION_AUTHORIZATION_LITERAL,
+    planId: "262-13" as const,
+    leanOrchestratorOnly: true as const,
+    headroomPreflightCount: 1 as const,
+    calibrationSetCount: 1 as const,
+    calibrationAttemptCount: 8 as const,
+    reproductionMaximumCount: 1 as const,
+    reproductionCellCount: 540 as const,
+    reproductionConditionalOnCalibrationAdmission: true as const,
+    samplerPolicyRoot: PLAN_262_11_SAMPLER_POLICY_ROOT,
+    singleUse: true as const,
+    expiresAtFirstTerminalOutcome: true as const,
+    consumed: false as const,
+    terminalOutcome: null,
+  }
+  const executionAuthorizationRoot = sha256(canonical(authority))
+  if (
+    executionAuthorizationRoot === PLAN_262_11_SAMPLER_POLICY_ROOT ||
+    executionAuthorizationRoot === PLAN_262_12_AUTHORIZATION_ROOT
+  ) {
+    throw new TypeError(
+      "MATRIX_PLAN_262_13_EXECUTION_AUTHORIZATION_ROOT_COLLISION",
+    )
+  }
+  return deepFreeze({ ...authority, executionAuthorizationRoot })
+}
+
+const parseV138Plan26213AuthorizationSelection = (
+  selection: string,
+): Readonly<V138Plan26213ExecutionAuthorization> => {
+  if (selection !== PLAN_262_13_AUTHORIZATION_SELECTION) {
+    throw new TypeError(
+      "MATRIX_PLAN_262_13_EXECUTION_AUTHORIZATION_REQUIRED",
+    )
+  }
+  return parseV138Plan26213ExecutionAuthorization(
+    PLAN_262_13_EXECUTION_AUTHORIZATION_LITERAL,
+  )
+}
+
+const PLAN_262_12_IMMUTABLE_LINEAGE = deepFreeze({
+  preflight: {
+    path: ".planning/artifacts/v1.38-current-matrix-headroom-preflight-v3.json",
+    fileSha256:
+      "sha256:b432f5640bb23f6ce66d3705f292151fdff8ff09c961b5693e30c25fc5f5420f" as Sha256,
+    gitBlob: "252c996fe64ed117964e542235a6af20698c3c74",
+    producingCommit: "f27f3165083f8c2cdc7c45b441ec1386191234ac",
+    receiptRoot:
+      "sha256:4e52cccbc6384cda9bef1c26c9e4f36d666e26506f760f749b4f0195677cb20d" as Sha256,
+    chargedRoot:
+      "sha256:8703f882e659a24d29b4e51e6e45a172afc35389b955038d6da83d304ca22de7" as Sha256,
+    executionAuthorizationRoot: PLAN_262_12_AUTHORIZATION_ROOT,
+    disposition: "preflight_refused" as const,
+  },
+  calibration: {
+    path: ".planning/artifacts/v1.38-current-matrix-calibration-v3.json",
+    fileSha256:
+      "sha256:29a406e67f7163152c99c07c0f75ed5a0af8840b6c34372668265f2df10bc79d" as Sha256,
+    gitBlob: "41e78c25f341c190a306f794355e7e732811c881",
+    producingCommit: "f27f3165083f8c2cdc7c45b441ec1386191234ac",
+    receiptRoot:
+      "sha256:911a6bbc700036f9d3916ac9b171b246a676b2b7dd33f24c8b85a8c4dbdb3ffd" as Sha256,
+    chargedRoot:
+      "sha256:2103fbb3bbc98427fdd81b8435f42e7d8c13ee2d2a995be4da463e02efcb4e35" as Sha256,
+    disposition: "stopped_process_failure" as const,
+  },
+})
+
+const assertPlan26212ImmutableLineage = (
+  repoRoot: string,
+): Readonly<{
+  plan26212Preflight: typeof PLAN_262_12_IMMUTABLE_LINEAGE.preflight
+  plan26212Calibration: typeof PLAN_262_12_IMMUTABLE_LINEAGE.calibration
+  orderedChargedLineage: readonly Sha256[]
+}> => {
+  const preflightBytes = readFileSync(
+    path.resolve(repoRoot, PLAN_262_12_IMMUTABLE_LINEAGE.preflight.path),
+  )
+  const calibrationBytes = readFileSync(
+    path.resolve(repoRoot, PLAN_262_12_IMMUTABLE_LINEAGE.calibration.path),
+  )
+  const preflight = JSON.parse(preflightBytes.toString("utf8")) as
+    V138HostHeadroomPreflightV3Receipt
+  const calibration = JSON.parse(calibrationBytes.toString("utf8")) as
+    V138ParallelCalibrationV3Receipt
+  const identities = [
+    [PLAN_262_12_IMMUTABLE_LINEAGE.preflight, preflightBytes],
+    [PLAN_262_12_IMMUTABLE_LINEAGE.calibration, calibrationBytes],
+  ] as const
+  for (const [identity, bytes] of identities) {
+    if (
+      sha256(bytes) !== identity.fileSha256 ||
+      git(repoRoot, ["hash-object", identity.path]) !== identity.gitBlob ||
+      sha256(gitBlob(repoRoot, identity.producingCommit, identity.path)) !==
+        identity.fileSha256
+    ) {
+      throw new TypeError("MATRIX_PLAN_262_12_LINEAGE_INVALID")
+    }
+  }
+  if (
+    preflight.receiptRoot !==
+      PLAN_262_12_IMMUTABLE_LINEAGE.preflight.receiptRoot ||
+    preflight.chargedRoot !==
+      PLAN_262_12_IMMUTABLE_LINEAGE.preflight.chargedRoot ||
+    preflight.executionAuthorizationRoot !==
+      PLAN_262_12_IMMUTABLE_LINEAGE.preflight.executionAuthorizationRoot ||
+    preflight.disposition !==
+      PLAN_262_12_IMMUTABLE_LINEAGE.preflight.disposition ||
+    calibration.receiptRoot !==
+      PLAN_262_12_IMMUTABLE_LINEAGE.calibration.receiptRoot ||
+    calibration.chargedAttemptLedgerRoot !==
+      PLAN_262_12_IMMUTABLE_LINEAGE.calibration.chargedRoot ||
+    calibration.status !==
+      PLAN_262_12_IMMUTABLE_LINEAGE.calibration.disposition ||
+    calibration.executionAuthorization.root !== PLAN_262_12_AUTHORIZATION_ROOT ||
+    !calibration.executionAuthorization.expired
+  ) {
+    throw new TypeError("MATRIX_PLAN_262_12_LINEAGE_INVALID")
+  }
+  return deepFreeze({
+    plan26212Preflight: PLAN_262_12_IMMUTABLE_LINEAGE.preflight,
+    plan26212Calibration: PLAN_262_12_IMMUTABLE_LINEAGE.calibration,
+    orderedChargedLineage: [
+      ...calibration.predecessorRoots.orderedChargedLineage,
+      preflight.chargedRoot,
+      calibration.chargedAttemptLedgerRoot,
+    ],
+  })
+}
+
+export interface V138HostHeadroomPreflightV4Receipt {
+  readonly schemaVersion: "v1.38-current-matrix-headroom-preflight-v4"
+  readonly status: "preflight_complete"
+  readonly chargedIdentityId: "preflight:v4:0"
+  readonly hostTotalMemoryKilobytes: number
+  readonly hostFreeMemoryKilobytes: number
+  readonly hostHeadroomBasisPoints: number
+  readonly requiredHostHeadroomBasisPoints: 2500
+  readonly disposition: "preflight_admitted" | "preflight_refused"
+  readonly executionContextV4ReceiptRoot: Sha256
+  readonly resourcePolicyRoot: typeof V138_RESOURCE_POLICY_ROOT
+  readonly samplerPolicyRoot: typeof PLAN_262_11_SAMPLER_POLICY_ROOT
+  readonly executionAuthorizationRoot: Sha256
+  readonly sourceRoot: Sha256
+  readonly predecessorRoots: Readonly<{
+    plan26212Preflight: typeof PLAN_262_12_IMMUTABLE_LINEAGE.preflight
+    plan26212Calibration: typeof PLAN_262_12_IMMUTABLE_LINEAGE.calibration
+    orderedChargedLineage: readonly Sha256[]
+  }>
+  readonly chargedRoot: Sha256
+  readonly receiptRoot: Sha256
+}
+
+const preflightV4WithoutRoot = (
+  receipt: V138HostHeadroomPreflightV4Receipt,
+): Omit<V138HostHeadroomPreflightV4Receipt, "receiptRoot"> => {
+  const { receiptRoot: _root, ...withoutRoot } = receipt
+  return withoutRoot
+}
+
+export const buildV138HostHeadroomPreflightV4Receipt = (input: {
+  repoRoot: string
+  executionContext: Readonly<V138ExecutionContextV4Receipt>
+  executionAuthorization: Readonly<V138Plan26213ExecutionAuthorization>
+  hostTotalMemoryKilobytes: number
+  hostFreeMemoryKilobytes: number
+}): Readonly<V138HostHeadroomPreflightV4Receipt> => {
+  const executionContext = checkV138ExecutionContextV4Receipt(
+    input.repoRoot,
+    input.executionContext,
+  )
+  const authorization = parseV138Plan26213ExecutionAuthorization(
+    input.executionAuthorization.literalAuthorization,
+  )
+  if (
+    canonical(input.executionAuthorization) !== canonical(authorization) ||
+    !Number.isSafeInteger(input.hostTotalMemoryKilobytes) ||
+    input.hostTotalMemoryKilobytes <= 0 ||
+    !Number.isSafeInteger(input.hostFreeMemoryKilobytes) ||
+    input.hostFreeMemoryKilobytes < 0 ||
+    input.hostFreeMemoryKilobytes > input.hostTotalMemoryKilobytes
+  ) {
+    throw new TypeError("MATRIX_HEADROOM_PREFLIGHT_V4_INPUT_INVALID")
+  }
+  const predecessors = assertPlan26212ImmutableLineage(input.repoRoot)
+  const hostHeadroomBasisPoints = Math.floor(
+    (input.hostFreeMemoryKilobytes * 10_000) /
+      input.hostTotalMemoryKilobytes,
+  )
+  const chargedFrame = {
+    chargedIdentityId: "preflight:v4:0" as const,
+    hostTotalMemoryKilobytes: input.hostTotalMemoryKilobytes,
+    hostFreeMemoryKilobytes: input.hostFreeMemoryKilobytes,
+    hostHeadroomBasisPoints,
+    requiredHostHeadroomBasisPoints: 2_500 as const,
+    executionContextV4ReceiptRoot: executionContext.receiptRoot,
+    resourcePolicyRoot: V138_RESOURCE_POLICY_ROOT,
+    samplerPolicyRoot: authorization.samplerPolicyRoot,
+    executionAuthorizationRoot: authorization.executionAuthorizationRoot,
+    sourceRoot: executionContext.implementationSource.currentSha256,
+    predecessorRoots: predecessors,
+  }
+  const withoutRoot = {
+    schemaVersion: "v1.38-current-matrix-headroom-preflight-v4" as const,
+    status: "preflight_complete" as const,
+    ...chargedFrame,
+    disposition:
+      hostHeadroomBasisPoints >= 2_500
+        ? ("preflight_admitted" as const)
+        : ("preflight_refused" as const),
+    chargedRoot: sha256(canonical(chargedFrame)),
+  }
+  return deepFreeze({
+    ...withoutRoot,
+    receiptRoot: sha256(canonical(withoutRoot)),
+  })
+}
+
+export const checkV138HostHeadroomPreflightV4Receipt = (
+  repoRoot: string,
+  input: unknown,
+): Readonly<V138HostHeadroomPreflightV4Receipt> => {
+  try {
+    if (input === null || typeof input !== "object" || Array.isArray(input)) {
+      throw new TypeError()
+    }
+    const receipt = input as V138HostHeadroomPreflightV4Receipt
+    const context = checkV138ExecutionContextV4Receipt(
+      repoRoot,
+      JSON.parse(
+        readFileSync(
+          path.resolve(
+            repoRoot,
+            ".planning/artifacts/v1.38-current-matrix-execution-context-v4.json",
+          ),
+          "utf8",
+        ),
+      ),
+    )
+    const expected = buildV138HostHeadroomPreflightV4Receipt({
+      repoRoot,
+      executionContext: context,
+      executionAuthorization: parseV138Plan26213ExecutionAuthorization(
+        PLAN_262_13_EXECUTION_AUTHORIZATION_LITERAL,
+      ),
+      hostTotalMemoryKilobytes: receipt.hostTotalMemoryKilobytes,
+      hostFreeMemoryKilobytes: receipt.hostFreeMemoryKilobytes,
+    })
+    if (
+      canonical(Object.keys(receipt)) !== canonical(Object.keys(expected)) ||
+      canonical(receipt) !== canonical(expected) ||
+      receipt.receiptRoot !== sha256(canonical(preflightV4WithoutRoot(receipt)))
+    ) {
+      throw new TypeError()
+    }
+    return expected
+  } catch {
+    throw new TypeError("MATRIX_HEADROOM_PREFLIGHT_V4_RECEIPT_INVALID")
+  }
+}
+
+export const writeV138HostHeadroomPreflightV4Receipt = (
+  repoRoot: string,
+  targetPath: string,
+  executionContextPath: string,
+  authorizationSelection: string,
+): Readonly<V138HostHeadroomPreflightV4Receipt> => {
+  exactSuccessorTarget(
+    repoRoot,
+    targetPath,
+    ".planning/artifacts/v1.38-current-matrix-headroom-preflight-v4.json",
+  )
+  const executionContext = checkV138ExecutionContextV4Receipt(
+    repoRoot,
+    JSON.parse(readFileSync(executionContextPath, "utf8")),
+  )
+  const receipt = buildV138HostHeadroomPreflightV4Receipt({
+    repoRoot,
+    executionContext,
+    executionAuthorization: parseV138Plan26213AuthorizationSelection(
+      authorizationSelection,
+    ),
+    hostTotalMemoryKilobytes: Math.floor(totalmem() / 1024),
+    hostFreeMemoryKilobytes: Math.floor(freemem() / 1024),
+  })
+  writeReceiptAtomically(targetPath, receipt)
+  return receipt
+}
+
+export interface V138ParallelCalibrationV4Receipt {
+  readonly schemaVersion: "v1.38-current-matrix-calibration-v4"
+  readonly status: "calibration_admitted" | "stopped_process_failure"
+  readonly stage: "parallel_calibration_v4"
+  readonly reason: V138ParallelStopReason | null
+  readonly executionContextV4ReceiptRoot: Sha256
+  readonly preflightV4ReceiptRoot: Sha256
+  readonly preflightV4ChargedRoot: Sha256
+  readonly executionAuthorization: Readonly<{
+    root: Sha256
+    consumed: true
+    expired: boolean
+    terminalOutcome: "stopped_process_failure" | null
+  }>
+  readonly samplerPolicyRoot: typeof PLAN_262_11_SAMPLER_POLICY_ROOT
+  readonly resourcePolicyRoot: typeof V138_RESOURCE_POLICY_ROOT
+  readonly predecessorRoots: V138HostHeadroomPreflightV4Receipt["predecessorRoots"]
+  readonly runtimeServiceVersion: "runtime-execution-service-v1.18"
+  readonly runtimeAbiVersion: "strategy-runtime-abi-v1.19"
+  readonly matchKernel: "engine-kernel-v1.37-candidate-1"
+  readonly declaredCalibrationIdentityIds: readonly string[]
+  readonly chargedDispositions: readonly Readonly<{
+    attemptId: string
+    disposition:
+      | "terminal_calibration_outcome"
+      | "unfilled_resource_preflight_refusal"
+  }>[]
+  readonly calibration: Readonly<V138ParallelCalibrationReceipt> | null
+  readonly terminals: readonly Readonly<V138ParallelShardTerminal>[]
+  readonly chargedCalibrationAttemptCount: 8
+  readonly chargedAttemptLedgerRoot: Sha256
+  readonly acceptedCellLedgerRoot: Sha256
+  readonly acceptedCellCount: 0
+  readonly fullRunLaunched: false
+  readonly partialAcceptedEvidenceReusable: false
+  readonly receiptRoot: Sha256
+}
+
+const calibrationV4WithoutRoot = (
+  receipt: V138ParallelCalibrationV4Receipt,
+): Omit<V138ParallelCalibrationV4Receipt, "receiptRoot"> => {
+  const { receiptRoot: _root, ...withoutRoot } = receipt
+  return withoutRoot
+}
+
+const declaredCalibrationV4Ids = (repoRoot: string): readonly string[] =>
+  deriveV138ParallelCalibrationPolicy(enumerateV138CurrentMatrix(repoRoot))
+    .inventory.attempts.map(
+      ({ calibrationAttemptId, templateAttemptId }, ordinal) =>
+        `calibration:v4:${ordinal}:${templateAttemptId}`,
+    )
+
+export const buildV138ParallelCalibrationV4Receipt = (input: {
+  repoRoot: string
+  executionContext: Readonly<V138ExecutionContextV4Receipt>
+  preflight: Readonly<V138HostHeadroomPreflightV4Receipt>
+  executionAuthorization: Readonly<V138Plan26213ExecutionAuthorization>
+  calibration?: Readonly<V138ParallelCalibrationReceipt> | undefined
+}): Readonly<V138ParallelCalibrationV4Receipt> => {
+  const executionContext = checkV138ExecutionContextV4Receipt(
+    input.repoRoot,
+    input.executionContext,
+  )
+  const authorization = parseV138Plan26213ExecutionAuthorization(
+    input.executionAuthorization.literalAuthorization,
+  )
+  if (canonical(input.executionAuthorization) !== canonical(authorization)) {
+    throw new TypeError(
+      "MATRIX_PLAN_262_13_EXECUTION_AUTHORIZATION_REQUIRED",
+    )
+  }
+  const expectedPreflight = buildV138HostHeadroomPreflightV4Receipt({
+    repoRoot: input.repoRoot,
+    executionContext,
+    executionAuthorization: authorization,
+    hostTotalMemoryKilobytes: input.preflight.hostTotalMemoryKilobytes,
+    hostFreeMemoryKilobytes: input.preflight.hostFreeMemoryKilobytes,
+  })
+  if (canonical(input.preflight) !== canonical(expectedPreflight)) {
+    throw new TypeError("MATRIX_PREFLIGHT_V4_RECEIPT_INVALID")
+  }
+  const policyAttempts = deriveV138ParallelCalibrationPolicy(
+    enumerateV138CurrentMatrix(input.repoRoot),
+  ).inventory.attempts
+  const declaredCalibrationIdentityIds = declaredCalibrationV4Ids(
+    input.repoRoot,
+  )
+  const refused = input.preflight.disposition === "preflight_refused"
+  if (refused !== (input.calibration === undefined)) {
+    throw new TypeError("MATRIX_CALIBRATION_V4_BRANCH_INVALID")
+  }
+  if (input.calibration !== undefined) {
+    validateParallelCalibrationReceipt(
+      enumerateV138CurrentMatrix(input.repoRoot),
+      input.calibration,
+      "v4",
+    )
+  }
+  const calibration = input.calibration ?? null
+  const actualIds =
+    calibration?.terminals.flatMap(({ outcomes }) =>
+      outcomes.map(({ attemptId }) => attemptId),
+    ) ?? []
+  const runnerIdsToDeclared = actualIds.map((attemptId) => {
+    const recordIndex = policyAttempts.findIndex(
+      ({ calibrationAttemptId }) =>
+        attemptId ===
+        calibrationAttemptId.replace(/^calibration:v1:/u, "calibration:v4:"),
+    )
+    return recordIndex < 0
+      ? attemptId
+      : declaredCalibrationIdentityIds[recordIndex]!
+  })
+  if (
+    calibration !== null &&
+    (canonical(runnerIdsToDeclared) !==
+      canonical(declaredCalibrationIdentityIds) ||
+      new Set(actualIds).size !== 8)
+  ) {
+    throw new TypeError("MATRIX_CALIBRATION_V4_IDENTITIES_INVALID")
+  }
+  const admitted = calibration?.status === "admitted"
+  const chargedDispositions = declaredCalibrationIdentityIds.map(
+    (attemptId) => ({
+      attemptId,
+      disposition: refused
+        ? ("unfilled_resource_preflight_refusal" as const)
+        : ("terminal_calibration_outcome" as const),
+    }),
+  )
+  const executionAuthorization = {
+    root: authorization.executionAuthorizationRoot,
+    consumed: true as const,
+    expired: !admitted,
+    terminalOutcome: admitted
+      ? null
+      : ("stopped_process_failure" as const),
+  }
+  const chargedAttemptLedgerRoot = sha256(
+    canonical({
+      priorChargedLineage:
+        input.preflight.predecessorRoots.orderedChargedLineage,
+      preflightV4ChargedRoot: input.preflight.chargedRoot,
+      declaredCalibrationIdentityIds,
+      chargedDispositions,
+      calibrationRoot: calibration?.calibrationRoot ?? null,
+      terminals: calibration?.terminals ?? [],
+      executionAuthorization,
+      acceptedCellCount: 0,
+    }),
+  )
+  const withoutRoot = {
+    schemaVersion: "v1.38-current-matrix-calibration-v4" as const,
+    status: admitted
+      ? ("calibration_admitted" as const)
+      : ("stopped_process_failure" as const),
+    stage: "parallel_calibration_v4" as const,
+    reason: refused
+      ? ("RESOURCE_POLICY_HOST_HEADROOM" as const)
+      : (calibration?.reason ?? null),
+    executionContextV4ReceiptRoot: executionContext.receiptRoot,
+    preflightV4ReceiptRoot: input.preflight.receiptRoot,
+    preflightV4ChargedRoot: input.preflight.chargedRoot,
+    executionAuthorization,
+    samplerPolicyRoot: authorization.samplerPolicyRoot,
+    resourcePolicyRoot: V138_RESOURCE_POLICY_ROOT,
+    predecessorRoots: input.preflight.predecessorRoots,
+    runtimeServiceVersion: "runtime-execution-service-v1.18" as const,
+    runtimeAbiVersion: "strategy-runtime-abi-v1.19" as const,
+    matchKernel: "engine-kernel-v1.37-candidate-1" as const,
+    declaredCalibrationIdentityIds,
+    chargedDispositions,
+    calibration,
+    terminals: calibration?.terminals ?? [],
+    chargedCalibrationAttemptCount: 8 as const,
+    chargedAttemptLedgerRoot,
+    acceptedCellLedgerRoot: sha256(canonical([])),
+    acceptedCellCount: 0 as const,
+    fullRunLaunched: false as const,
+    partialAcceptedEvidenceReusable: false as const,
+  }
+  return deepFreeze({
+    ...withoutRoot,
+    receiptRoot: sha256(canonical(withoutRoot)),
+  })
+}
+
+export const checkV138ParallelCalibrationV4Receipt = (
+  repoRoot: string,
+  input: unknown,
+): Readonly<V138ParallelCalibrationV4Receipt> => {
+  try {
+    if (input === null || typeof input !== "object" || Array.isArray(input)) {
+      throw new TypeError()
+    }
+    const receipt = input as V138ParallelCalibrationV4Receipt
+    const context = checkV138ExecutionContextV4Receipt(
+      repoRoot,
+      JSON.parse(
+        readFileSync(
+          path.resolve(
+            repoRoot,
+            ".planning/artifacts/v1.38-current-matrix-execution-context-v4.json",
+          ),
+          "utf8",
+        ),
+      ),
+    )
+    const preflight = checkV138HostHeadroomPreflightV4Receipt(
+      repoRoot,
+      JSON.parse(
+        readFileSync(
+          path.resolve(
+            repoRoot,
+            ".planning/artifacts/v1.38-current-matrix-headroom-preflight-v4.json",
+          ),
+          "utf8",
+        ),
+      ),
+    )
+    const expected = buildV138ParallelCalibrationV4Receipt({
+      repoRoot,
+      executionContext: context,
+      preflight,
+      executionAuthorization: parseV138Plan26213ExecutionAuthorization(
+        PLAN_262_13_EXECUTION_AUTHORIZATION_LITERAL,
+      ),
+      ...(receipt.calibration === null
+        ? {}
+        : { calibration: receipt.calibration }),
+    })
+    if (
+      canonical(Object.keys(receipt)) !== canonical(Object.keys(expected)) ||
+      canonical(receipt) !== canonical(expected) ||
+      receipt.receiptRoot !==
+        sha256(canonical(calibrationV4WithoutRoot(receipt)))
+    ) {
+      throw new TypeError()
+    }
+    return expected
+  } catch {
+    throw new TypeError("MATRIX_CALIBRATION_V4_RECEIPT_INVALID")
+  }
+}
+
+export const writeV138ParallelCalibrationV4Receipt = async (
+  repoRoot: string,
+  targetPath: string,
+  preflightPath: string,
+  executionContextPath: string,
+): Promise<Readonly<V138ParallelCalibrationV4Receipt>> => {
+  exactSuccessorTarget(
+    repoRoot,
+    targetPath,
+    ".planning/artifacts/v1.38-current-matrix-calibration-v4.json",
+  )
+  const executionContext = checkV138ExecutionContextV4Receipt(
+    repoRoot,
+    JSON.parse(readFileSync(executionContextPath, "utf8")),
+  )
+  const preflight = checkV138HostHeadroomPreflightV4Receipt(
+    repoRoot,
+    JSON.parse(readFileSync(preflightPath, "utf8")),
+  )
+  const calibration =
+    preflight.disposition === "preflight_admitted"
+      ? await calibrateV138ParallelMatrix({
+          inventory: enumerateV138CurrentMatrix(repoRoot),
+          hardwareIdentity: {
+            operatingSystem: `${platform()} ${release()}`,
+            architecture: arch(),
+            nodeVersion: process.version,
+            cpuIdentity: cpus()[0]?.model ?? "unavailable",
+          },
+          repoRoot,
+          executionIdentityVersion: "v4",
+        })
+      : undefined
+  const receipt = buildV138ParallelCalibrationV4Receipt({
+    repoRoot,
+    executionContext,
+    preflight,
+    executionAuthorization: parseV138Plan26213ExecutionAuthorization(
+      PLAN_262_13_EXECUTION_AUTHORIZATION_LITERAL,
+    ),
+    ...(calibration === undefined ? {} : { calibration }),
+  })
+  writeReceiptAtomically(targetPath, receipt)
+  return receipt
+}
+
+export interface V138AuthoritativeMatrixV5Receipt {
+  readonly schemaVersion: "v1.38-current-matrix-reproduction-v5"
+  readonly status: "passed_exact" | "stopped_process_failure"
+  readonly fixturePurpose: typeof FIXTURE_PURPOSE
+  readonly reason: V138ParallelStopReason | null
+  readonly executionContextV4ReceiptRoot: Sha256
+  readonly calibrationV4ReceiptRoot: Sha256
+  readonly calibrationV4ChargedAttemptLedgerRoot: Sha256
+  readonly preflightV4ReceiptRoot: Sha256
+  readonly executionAuthorizationRoot: Sha256
+  readonly executionAuthorizationExpired: true
+  readonly runtimeServiceVersion: "runtime-execution-service-v1.18"
+  readonly runtimeAbiVersion: "strategy-runtime-abi-v1.19"
+  readonly matchKernel: "engine-kernel-v1.37-candidate-1"
+  readonly execution: V138ParallelMatrixExecutionResult
+  readonly executionIdentityRoot: Sha256
+  readonly chargedAttemptLedgerRoot: Sha256
+  readonly acceptedCellLedgerRoot: Sha256
+  readonly acceptedCellCount: 0 | 540
+  readonly fullRunLaunched: true
+  readonly totalWallMilliseconds: number
+  readonly maximumChildRssKilobytes: number
+  readonly historicalPredicateMatched: boolean
+  readonly canonicalReceipt: Readonly<V138CurrentMatrixReceipt> | null
+  readonly partialAcceptedEvidenceReusable: false
+  readonly receiptRoot: Sha256
+}
+
+const v5WithoutRoot = (
+  receipt: V138AuthoritativeMatrixV5Receipt,
+): Omit<V138AuthoritativeMatrixV5Receipt, "receiptRoot"> => {
+  const { receiptRoot: _root, ...withoutRoot } = receipt
+  return withoutRoot
+}
+
+export const buildV138AuthoritativeMatrixV5Receipt = (input: {
+  repoRoot: string
+  executionContext: Readonly<V138ExecutionContextV4Receipt>
+  calibrationV4: Readonly<V138ParallelCalibrationV4Receipt>
+  execution: V138ParallelMatrixExecutionResult
+}): Readonly<V138AuthoritativeMatrixV5Receipt> => {
+  const executionContext = checkV138ExecutionContextV4Receipt(
+    input.repoRoot,
+    input.executionContext,
+  )
+  const calibrationV4 = input.calibrationV4
+  if (
+    calibrationV4.receiptRoot !==
+      sha256(canonical(calibrationV4WithoutRoot(calibrationV4))) ||
+    calibrationV4.status !== "calibration_admitted" ||
+    calibrationV4.calibration === null ||
+    calibrationV4.executionAuthorization.expired ||
+    calibrationV4.executionContextV4ReceiptRoot !== executionContext.receiptRoot
+  ) {
+    throw new TypeError("MATRIX_CALIBRATION_V4_NOT_ADMITTED")
+  }
+  const inventory = enumerateV138CurrentMatrix(input.repoRoot)
+  validateParallelCalibrationReceipt(inventory, calibrationV4.calibration, "v4")
+  const plan = planV138MatrixShards(inventory)
+  const expectedV5Ids = inventory.attempts.map(
+    ({ attemptId }) => `reproduction:v5:${attemptId}`,
+  )
+  const actualV5Ids = input.execution.terminals.flatMap(({ outcomes }) =>
+    outcomes.map(({ attemptId }) => attemptId),
+  )
+  const canonicalTerminals = input.execution.terminals.map((terminal) => ({
+    ...terminal,
+    outcomes: terminal.outcomes.map((outcome) => ({
+      ...outcome,
+      attemptId: outcome.attemptId.replace(/^reproduction:v5:/u, ""),
+    })),
+  }))
+  const recomputedAccounting = reduceV138ParallelMatrixAccounting({
+    inventory,
+    plan,
+    terminals: canonicalTerminals,
+    unlaunchedShardIds: plan.shards
+      .filter(
+        ({ shardId }) =>
+          !input.execution.terminals.some(
+            (terminal) => terminal.shardId === shardId,
+          ),
+      )
+      .map(({ shardId }) => shardId),
+  })
+  if (
+    canonical(input.execution.accounting) !== canonical(recomputedAccounting) ||
+    input.execution.batchWallMilliseconds >
+      V138_PARALLEL_RESOURCE_POLICY.maxTotalRunMilliseconds ||
+    actualV5Ids.some((id) => !id.startsWith("reproduction:v5:")) ||
+    new Set(actualV5Ids).size !== actualV5Ids.length ||
+    (input.execution.status === "complete_pending_publication" &&
+      canonical(actualV5Ids) !== canonical(expectedV5Ids))
+  ) {
+    throw new TypeError("MATRIX_AUTHORITATIVE_V5_EXECUTION_INVALID")
+  }
+  const canonicalOutcomes = input.execution.canonicalOutcomes.map((outcome) => ({
+    ...outcome,
+    attemptId: outcome.attemptId.replace(/^reproduction:v5:/u, ""),
+  })) as V138CurrentMatrixAttemptOutcome[]
+  const passed = input.execution.status === "complete_pending_publication"
+  const canonicalReceipt = passed
+    ? reduceV138CurrentMatrix(inventory, canonicalOutcomes)
+    : null
+  const executionIdentityRoot = sha256(canonical(actualV5Ids))
+  const chargedAttemptLedgerRoot = sha256(
+    canonical({
+      priorChargedLineage:
+        calibrationV4.predecessorRoots.orderedChargedLineage,
+      preflightV4ChargedRoot: calibrationV4.preflightV4ChargedRoot,
+      calibrationV4ChargedAttemptLedgerRoot:
+        calibrationV4.chargedAttemptLedgerRoot,
+      executionIdentityRoot,
+      execution: input.execution,
+      canonicalChargedAttemptLedgerRoot:
+        canonicalReceipt?.chargedAttemptLedgerRoot ?? sha256(canonical([])),
+    }),
+  )
+  const withoutRoot = {
+    schemaVersion: "v1.38-current-matrix-reproduction-v5" as const,
+    status: passed
+      ? ("passed_exact" as const)
+      : ("stopped_process_failure" as const),
+    fixturePurpose: FIXTURE_PURPOSE,
+    reason: passed ? null : input.execution.reason,
+    executionContextV4ReceiptRoot: executionContext.receiptRoot,
+    calibrationV4ReceiptRoot: calibrationV4.receiptRoot,
+    calibrationV4ChargedAttemptLedgerRoot:
+      calibrationV4.chargedAttemptLedgerRoot,
+    preflightV4ReceiptRoot: calibrationV4.preflightV4ReceiptRoot,
+    executionAuthorizationRoot: calibrationV4.executionAuthorization.root,
+    executionAuthorizationExpired: true as const,
+    runtimeServiceVersion: "runtime-execution-service-v1.18" as const,
+    runtimeAbiVersion: "strategy-runtime-abi-v1.19" as const,
+    matchKernel: "engine-kernel-v1.37-candidate-1" as const,
+    execution: input.execution,
+    executionIdentityRoot,
+    chargedAttemptLedgerRoot,
+    acceptedCellLedgerRoot:
+      canonicalReceipt?.acceptedCellLedgerRoot ?? sha256(canonical([])),
+    acceptedCellCount: passed ? (540 as const) : (0 as const),
+    fullRunLaunched: true as const,
+    totalWallMilliseconds: input.execution.batchWallMilliseconds,
+    maximumChildRssKilobytes: Math.max(
+      0,
+      ...input.execution.terminals.map(
+        ({ maxRssKilobytes }) => maxRssKilobytes,
+      ),
+    ),
+    historicalPredicateMatched: canonicalReceipt !== null,
+    canonicalReceipt,
+    partialAcceptedEvidenceReusable: false as const,
+  }
+  return deepFreeze({
+    ...withoutRoot,
+    receiptRoot: sha256(canonical(withoutRoot)),
+  })
+}
+
+export const checkV138AuthoritativeMatrixV5Receipt = (
+  repoRoot: string,
+  input: unknown,
+): Readonly<V138AuthoritativeMatrixV5Receipt> => {
+  try {
+    if (input === null || typeof input !== "object" || Array.isArray(input)) {
+      throw new TypeError()
+    }
+    const receipt = input as V138AuthoritativeMatrixV5Receipt
+    const context = checkV138ExecutionContextV4Receipt(
+      repoRoot,
+      JSON.parse(
+        readFileSync(
+          path.resolve(
+            repoRoot,
+            ".planning/artifacts/v1.38-current-matrix-execution-context-v4.json",
+          ),
+          "utf8",
+        ),
+      ),
+    )
+    const calibrationV4 = checkV138ParallelCalibrationV4Receipt(
+      repoRoot,
+      JSON.parse(
+        readFileSync(
+          path.resolve(
+            repoRoot,
+            ".planning/artifacts/v1.38-current-matrix-calibration-v4.json",
+          ),
+          "utf8",
+        ),
+      ),
+    )
+    const expected = buildV138AuthoritativeMatrixV5Receipt({
+      repoRoot,
+      executionContext: context,
+      calibrationV4,
+      execution: receipt.execution,
+    })
+    if (
+      canonical(Object.keys(receipt)) !== canonical(Object.keys(expected)) ||
+      canonical(receipt) !== canonical(expected) ||
+      receipt.receiptRoot !== sha256(canonical(v5WithoutRoot(receipt)))
+    ) {
+      throw new TypeError()
+    }
+    return expected
+  } catch {
+    throw new TypeError("MATRIX_AUTHORITATIVE_V5_RECEIPT_INVALID")
+  }
+}
+
+export const writeV138AuthoritativeMatrixV5Receipt = async (
+  repoRoot: string,
+  targetPath: string,
+  calibrationPath: string,
+  executionContextPath: string,
+): Promise<Readonly<V138AuthoritativeMatrixV5Receipt>> => {
+  exactSuccessorTarget(
+    repoRoot,
+    targetPath,
+    ".planning/artifacts/v1.38-current-matrix-reproduction-v5.json",
+  )
+  const executionContext = checkV138ExecutionContextV4Receipt(
+    repoRoot,
+    JSON.parse(readFileSync(executionContextPath, "utf8")),
+  )
+  const calibrationV4 = checkV138ParallelCalibrationV4Receipt(
+    repoRoot,
+    JSON.parse(readFileSync(calibrationPath, "utf8")),
+  )
+  if (
+    calibrationV4.status !== "calibration_admitted" ||
+    calibrationV4.calibration === null
+  ) {
+    throw new TypeError("MATRIX_CALIBRATION_V4_NOT_ADMITTED")
+  }
+  const execution = await executeV138ParallelMatrix({
+    inventory: enumerateV138CurrentMatrix(repoRoot),
+    calibration: calibrationV4.calibration,
+    repoRoot,
+    executionIdentityVersion: "v5",
+  })
+  const receipt = buildV138AuthoritativeMatrixV5Receipt({
+    repoRoot,
+    executionContext,
+    calibrationV4,
+    execution,
+  })
+  writeReceiptAtomically(targetPath, receipt)
+  return receipt
+}
+
+export const checkV138SuccessorV4V5Branch = (
+  repoRoot: string,
+  calibrationInput: unknown,
+  v5Input: unknown | undefined,
+): Readonly<{
+  calibration: V138ParallelCalibrationV4Receipt
+  reproduction: V138AuthoritativeMatrixV5Receipt | null
+}> => {
+  const contextPath = path.resolve(
+    repoRoot,
+    ".planning/artifacts/v1.38-current-matrix-execution-context-v4.json",
+  )
+  const preflightPath = path.resolve(
+    repoRoot,
+    ".planning/artifacts/v1.38-current-matrix-headroom-preflight-v4.json",
+  )
+  const calibration = existsSync(contextPath) && existsSync(preflightPath)
+    ? checkV138ParallelCalibrationV4Receipt(repoRoot, calibrationInput)
+    : (() => {
+        const receipt = calibrationInput as V138ParallelCalibrationV4Receipt
+        if (
+          receipt === null ||
+          typeof receipt !== "object" ||
+          Array.isArray(receipt) ||
+          receipt.receiptRoot !==
+            sha256(canonical(calibrationV4WithoutRoot(receipt))) ||
+          receipt.chargedCalibrationAttemptCount !== 8 ||
+          receipt.acceptedCellCount !== 0 ||
+          receipt.fullRunLaunched ||
+          receipt.partialAcceptedEvidenceReusable
+        ) {
+          throw new TypeError("MATRIX_CALIBRATION_V4_RECEIPT_INVALID")
+        }
+        return receipt
+      })()
+  if (calibration.status === "stopped_process_failure") {
+    if (
+      calibration.calibration !== null ||
+      calibration.terminals.length !== 0 ||
+      calibration.chargedDispositions.length !== 8 ||
+      calibration.chargedDispositions.some(
+        ({ disposition }) =>
+          disposition !== "unfilled_resource_preflight_refusal",
+      ) ||
+      !calibration.executionAuthorization.expired ||
+      calibration.executionAuthorization.terminalOutcome !==
+        "stopped_process_failure" ||
+      v5Input !== undefined
+    ) {
+      throw new TypeError("MATRIX_STOPPED_CALIBRATION_V5_FORBIDDEN")
+    }
+    return deepFreeze({ calibration, reproduction: null })
+  }
+  if (v5Input === undefined) {
+    throw new TypeError("MATRIX_ADMITTED_CALIBRATION_V5_REQUIRED")
+  }
+  const reproduction = existsSync(contextPath)
+    ? checkV138AuthoritativeMatrixV5Receipt(repoRoot, v5Input)
+    : (v5Input as V138AuthoritativeMatrixV5Receipt)
+  if (
+    reproduction.receiptRoot !== sha256(canonical(v5WithoutRoot(reproduction))) ||
+    reproduction.status !== "passed_exact" ||
+    reproduction.acceptedCellCount !== 540 ||
+    !reproduction.fullRunLaunched ||
+    !reproduction.executionAuthorizationExpired ||
+    reproduction.partialAcceptedEvidenceReusable
+  ) {
+    throw new TypeError("MATRIX_AUTHORITATIVE_V5_NOT_PASSED_EXACT")
+  }
+  return deepFreeze({ calibration, reproduction })
+}
+
 const calibrationSuccessorWithoutRoot = (
   receipt: Readonly<V138ParallelCalibrationSuccessorReceipt>,
 ): Omit<V138ParallelCalibrationSuccessorReceipt, "receiptRoot"> => {
@@ -4894,7 +6126,7 @@ const assertLegacyStoppedPredecessor = (
 const validateParallelCalibrationReceipt = (
   inventory: Readonly<V138CurrentMatrixInventory>,
   receipt: Readonly<V138ParallelCalibrationReceipt>,
-  executionIdentityVersion: "v1" | "v2" | "v3" = "v1",
+  executionIdentityVersion: "v1" | "v2" | "v3" | "v4" = "v1",
 ): void => {
   const policy = deriveV138ParallelCalibrationPolicy(inventory)
   const projection = projectV138ParallelMatrix(policy, receipt.rawObservation)
@@ -4905,6 +6137,8 @@ const validateParallelCalibrationReceipt = (
         ? attemptId.replace(/^calibration:v1:/u, "calibration:v2:")
         : executionIdentityVersion === "v3"
           ? attemptId.replace(/^calibration:v1:/u, "calibration:v3:")
+          : executionIdentityVersion === "v4"
+            ? attemptId.replace(/^calibration:v1:/u, "calibration:v4:")
           : attemptId,
     )
   const actualAttemptIds = receipt.terminals.flatMap(({ outcomes }) =>
@@ -5156,6 +6390,157 @@ const runReceiptCli = async (): Promise<void> => {
         chargedRoot: receipt.chargedRoot,
         diagnosticIdentityCount: receipt.executedIdentityIds.length,
         acceptedCellCount: receipt.acceptedCellCount,
+      })}\n`,
+    )
+    return
+  }
+  if (
+    [
+      "--write-execution-context-v4-receipt",
+      "--check-execution-context-v4-receipt",
+      "--write-headroom-preflight-v4-receipt",
+      "--check-headroom-preflight-v4-receipt",
+      "--calibrate-parallel-v4-receipt",
+      "--check-calibration-v4-receipt",
+      "--write-authoritative-v5-receipt",
+      "--check-successor-v4-v5-branch",
+    ].includes(command ?? "")
+  ) {
+    let output: unknown
+    if (command === "--write-execution-context-v4-receipt") {
+      if (
+        process.argv.length !== 10 ||
+        process.argv[4] !== "--mode" ||
+        process.argv[6] !== "--cwd" ||
+        process.argv[8] !== "--plan-agent-snapshot-json"
+      ) {
+        throw new TypeError(
+          "MATRIX_EXECUTION_CONTEXT_V4_CLI_ARGUMENTS_INVALID",
+        )
+      }
+      output = writeV138ExecutionContextV4Receipt(
+        repoRoot,
+        path.resolve(repoRoot, process.argv[3]!),
+        process.argv[5]!,
+        process.argv[7]!,
+        JSON.parse(process.argv[9]!),
+      )
+    } else if (command === "--check-execution-context-v4-receipt") {
+      if (process.argv.length !== 4) {
+        throw new TypeError(
+          "MATRIX_EXECUTION_CONTEXT_V4_CLI_ARGUMENTS_INVALID",
+        )
+      }
+      output = checkV138ExecutionContextV4Receipt(
+        repoRoot,
+        JSON.parse(
+          readFileSync(path.resolve(repoRoot, process.argv[3]!), "utf8"),
+        ),
+      )
+    } else if (command === "--write-headroom-preflight-v4-receipt") {
+      if (
+        process.argv.length !== 8 ||
+        process.argv[4] !== "--execution-context" ||
+        process.argv[6] !== "--authorization"
+      ) {
+        throw new TypeError("MATRIX_PREFLIGHT_V4_CLI_ARGUMENTS_INVALID")
+      }
+      output = writeV138HostHeadroomPreflightV4Receipt(
+        repoRoot,
+        path.resolve(repoRoot, process.argv[3]!),
+        path.resolve(repoRoot, process.argv[5]!),
+        process.argv[7]!,
+      )
+    } else if (command === "--check-headroom-preflight-v4-receipt") {
+      if (process.argv.length !== 4) {
+        throw new TypeError("MATRIX_PREFLIGHT_V4_CLI_ARGUMENTS_INVALID")
+      }
+      output = checkV138HostHeadroomPreflightV4Receipt(
+        repoRoot,
+        JSON.parse(
+          readFileSync(path.resolve(repoRoot, process.argv[3]!), "utf8"),
+        ),
+      )
+    } else if (command === "--calibrate-parallel-v4-receipt") {
+      if (
+        process.argv.length !== 8 ||
+        process.argv[4] !== "--preflight" ||
+        process.argv[6] !== "--execution-context"
+      ) {
+        throw new TypeError("MATRIX_CALIBRATION_V4_CLI_ARGUMENTS_INVALID")
+      }
+      output = await writeV138ParallelCalibrationV4Receipt(
+        repoRoot,
+        path.resolve(repoRoot, process.argv[3]!),
+        path.resolve(repoRoot, process.argv[5]!),
+        path.resolve(repoRoot, process.argv[7]!),
+      )
+    } else if (command === "--check-calibration-v4-receipt") {
+      if (process.argv.length !== 4) {
+        throw new TypeError("MATRIX_CALIBRATION_V4_CLI_ARGUMENTS_INVALID")
+      }
+      output = checkV138ParallelCalibrationV4Receipt(
+        repoRoot,
+        JSON.parse(
+          readFileSync(path.resolve(repoRoot, process.argv[3]!), "utf8"),
+        ),
+      )
+    } else if (command === "--write-authoritative-v5-receipt") {
+      if (
+        process.argv.length !== 8 ||
+        process.argv[4] !== "--calibration" ||
+        process.argv[6] !== "--execution-context"
+      ) {
+        throw new TypeError("MATRIX_AUTHORITATIVE_V5_CLI_ARGUMENTS_INVALID")
+      }
+      output = await writeV138AuthoritativeMatrixV5Receipt(
+        repoRoot,
+        path.resolve(repoRoot, process.argv[3]!),
+        path.resolve(repoRoot, process.argv[5]!),
+        path.resolve(repoRoot, process.argv[7]!),
+      )
+    } else {
+      if (process.argv.length !== 5) {
+        throw new TypeError("MATRIX_SUCCESSOR_BRANCH_CLI_ARGUMENTS_INVALID")
+      }
+      const calibrationPath = path.resolve(repoRoot, process.argv[3]!)
+      const v5Path = path.resolve(repoRoot, process.argv[4]!)
+      output = checkV138SuccessorV4V5Branch(
+        repoRoot,
+        JSON.parse(readFileSync(calibrationPath, "utf8")),
+        existsSync(v5Path)
+          ? JSON.parse(readFileSync(v5Path, "utf8"))
+          : undefined,
+      )
+    }
+    const receipt = output as {
+      status?: unknown
+      receiptRoot?: unknown
+      acceptedCellCount?: unknown
+      hostHeadroomBasisPoints?: unknown
+      disposition?: unknown
+      calibration?: { status?: unknown }
+      reproduction?: {
+        status?: unknown
+        receiptRoot?: unknown
+        acceptedCellCount?: unknown
+      } | null
+    }
+    process.stdout.write(
+      `${canonical({
+        status:
+          receipt.status ??
+          receipt.reproduction?.status ??
+          receipt.calibration?.status,
+        disposition: receipt.disposition ?? null,
+        receiptRoot:
+          receipt.receiptRoot ?? receipt.reproduction?.receiptRoot ?? null,
+        hostHeadroomBasisPoints:
+          receipt.hostHeadroomBasisPoints ?? null,
+        acceptedCellCount:
+          receipt.acceptedCellCount ??
+          receipt.reproduction?.acceptedCellCount ??
+          0,
       })}\n`,
     )
     return

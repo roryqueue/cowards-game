@@ -47,7 +47,11 @@ import {
   renderV138CurrentMatrixReceipt,
   sampleV138ChildRss,
   validateV138HistoricalMatrixExpectation,
+  writeV138AuthoritativeMatrixV5Receipt,
+  writeV138ExecutionContextV4Receipt,
+  writeV138HostHeadroomPreflightV4Receipt,
   writeV138MatrixDiagnosticV2Receipt,
+  writeV138ParallelCalibrationV4Receipt,
   type V138CurrentMatrixAttempt,
   type V138CurrentMatrixAttemptOutcome,
   type V138HistoricalMatrixObservedAggregate,
@@ -1398,6 +1402,27 @@ describe("v1.38 matrix calibration v4 lineage", () => {
       ({ disposition }) =>
         disposition === "unfilled_resource_preflight_refusal",
     )).toBe(true)
+
+    const reorderedPredecessor = clone(preflight)
+    reorderedPredecessor.predecessorRoots.orderedChargedLineage.reverse()
+    expect(() =>
+      buildV138ParallelCalibrationV4Receipt({
+        repoRoot,
+        executionContext: context,
+        preflight: reorderedPredecessor,
+        executionAuthorization: authorization,
+      }),
+    ).toThrow("MATRIX_PREFLIGHT_V4_RECEIPT_INVALID")
+
+    expect(() =>
+      buildV138ParallelCalibrationV4Receipt({
+        repoRoot,
+        executionContext: context,
+        preflight,
+        executionAuthorization: authorization,
+        calibration: {} as never,
+      }),
+    ).toThrow("MATRIX_CALIBRATION_V4_BRANCH_INVALID")
   })
 })
 
@@ -1469,6 +1494,9 @@ describe("v1.38 matrix authoritative v5 branches", () => {
       executionAuthorization: authorization,
       calibration: calibrationEvidence,
     })
+    expect(() =>
+      checkV138SuccessorV4V5Branch(repoRoot, calibration, undefined),
+    ).toThrow("MATRIX_ADMITTED_CALIBRATION_V5_REQUIRED")
     const execution = await executeV138ParallelMatrix({
       inventory,
       calibration: calibrationEvidence,
@@ -1493,10 +1521,69 @@ describe("v1.38 matrix authoritative v5 branches", () => {
       reproduction.execution.terminals.flatMap(({ outcomes }) => outcomes)
         .every(({ attemptId }) => attemptId.startsWith("reproduction:v5:")),
     ).toBe(true)
+    const duplicateExecution = clone(execution)
+    duplicateExecution.terminals[0]!.outcomes[1]!.attemptId =
+      duplicateExecution.terminals[0]!.outcomes[0]!.attemptId
+    expect(() =>
+      buildV138AuthoritativeMatrixV5Receipt({
+        repoRoot,
+        executionContext: context,
+        calibrationV4: calibration,
+        execution: duplicateExecution,
+      }),
+    ).toThrow()
     expect(() =>
       checkV138SuccessorV4V5Branch(repoRoot, calibration, reproduction),
     ).toThrow("MATRIX_AUTHORITATIVE_V5_NOT_PASSED_EXACT")
   }, 30_000)
+
+  it("matrix authoritative v5 branches reject every predecessor artifact path", async () => {
+    expect(() =>
+      writeV138ExecutionContextV4Receipt(
+        repoRoot,
+        path.resolve(
+          repoRoot,
+          ".planning/artifacts/v1.38-current-matrix-headroom-preflight-v3.json",
+        ),
+        "gsd-pattern-c-inline-main",
+        "/Users/roryquinlan/runtime/cowards-game",
+        terminalPlan26213Snapshot(),
+      ),
+    ).toThrow("MATRIX_SUCCESSOR_TARGET_NOT_FRESH")
+    expect(() =>
+      writeV138HostHeadroomPreflightV4Receipt(
+        repoRoot,
+        path.resolve(
+          repoRoot,
+          ".planning/artifacts/v1.38-current-matrix-headroom-preflight-v3.json",
+        ),
+        "/not-read",
+        "authorize-plan-262-13-lean-single-run",
+      ),
+    ).toThrow("MATRIX_SUCCESSOR_TARGET_NOT_FRESH")
+    await expect(
+      writeV138ParallelCalibrationV4Receipt(
+        repoRoot,
+        path.resolve(
+          repoRoot,
+          ".planning/artifacts/v1.38-current-matrix-calibration-v3.json",
+        ),
+        "/not-read",
+        "/not-read",
+      ),
+    ).rejects.toThrow("MATRIX_SUCCESSOR_TARGET_NOT_FRESH")
+    await expect(
+      writeV138AuthoritativeMatrixV5Receipt(
+        repoRoot,
+        path.resolve(
+          repoRoot,
+          ".planning/artifacts/v1.38-current-matrix-reproduction.json",
+        ),
+        "/not-read",
+        "/not-read",
+      ),
+    ).rejects.toThrow("MATRIX_SUCCESSOR_TARGET_NOT_FRESH")
+  })
 })
 
 describe("v1.38 matrix retry authorization v3", () => {
