@@ -139,7 +139,7 @@ describe("v1.38 foundation admission", () => {
   }, 60_000)
 
   it("admission accepts only the resolved immutable v1.37 authority", () => {
-    const result = evaluateV138FoundationAdmission(exactInput)
+    const result = evaluateV138FoundationAdmission(exactInput, exactInput)
 
     expect(result).toMatchObject({
       schemaVersion: "v1.38-foundation-admission-v1",
@@ -164,8 +164,11 @@ describe("v1.38 foundation admission", () => {
   })
 
   it("admission is deterministic and renders a byte-stable public receipt", () => {
-    const first = evaluateV138FoundationAdmission(exactInput)
-    const second = evaluateV138FoundationAdmission(clone(exactInput))
+    const first = evaluateV138FoundationAdmission(exactInput, exactInput)
+    const second = evaluateV138FoundationAdmission(
+      clone(exactInput),
+      exactInput,
+    )
 
     expect(second).toEqual(first)
     expect(renderV138FoundationAdmissionReceipt(first)).toBe(
@@ -190,13 +193,31 @@ describe("v1.38 foundation admission", () => {
     }
   })
 
+  it("admission audit reproduction excludes hostile Node bootstrap hooks", () => {
+    const originalNodeOptions = process.env.NODE_OPTIONS
+    try {
+      process.env.NODE_OPTIONS =
+        "--require /v1.38-hostile-preload-must-not-execute.cjs"
+      expect(runV137AuditReproductionGate(repoRoot)).toMatchObject({
+        schemaVersion: "v1.37-audit-reproduction-receipt-v1",
+        status: "passed-exact",
+      })
+    } finally {
+      if (originalNodeOptions === undefined) {
+        delete process.env.NODE_OPTIONS
+      } else {
+        process.env.NODE_OPTIONS = originalNodeOptions
+      }
+    }
+  })
+
   it("admission stops for missing or extra-keyed authority inputs", () => {
     const { release: _release, ...missing } = exactInput
-    const stoppedMissing = evaluateV138FoundationAdmission(missing)
+    const stoppedMissing = evaluateV138FoundationAdmission(missing, exactInput)
     const stoppedExtra = evaluateV138FoundationAdmission({
       ...exactInput,
       override: true,
-    })
+    }, exactInput)
 
     expect(stoppedMissing).toMatchObject({
       status: "stopped_integrity_foundation",
@@ -287,6 +308,7 @@ describe("v1.38 foundation admission", () => {
   ] as const)("admission stops for %s", (_label, reason, applyMutation) => {
     const result = evaluateV138FoundationAdmission(
       mutate(exactInput, applyMutation),
+      exactInput,
     )
 
     expect(result).toMatchObject({
@@ -294,6 +316,76 @@ describe("v1.38 foundation admission", () => {
       reason,
     })
   })
+
+  it.each([
+    [
+      "audit actual and resolved hashes",
+      (draft: Record<string, unknown>) => {
+        const audit = nested(draft, "audit")
+        audit.joinSha256 = `sha256:${"1".repeat(64)}`
+        audit.resolvedJoinSha256 = audit.joinSha256
+      },
+    ],
+    [
+      "annotated tag actual and resolved objects",
+      (draft: Record<string, unknown>) => {
+        const release = nested(draft, "release")
+        release.tagObject = "1".repeat(40)
+        release.resolvedTagObject = release.tagObject
+      },
+    ],
+    [
+      "release-readiness actual and resolved hashes",
+      (draft: Record<string, unknown>) => {
+        const release = nested(draft, "release")
+        release.releaseReadinessSha256 = `sha256:${"1".repeat(64)}`
+        release.resolvedReleaseReadinessSha256 =
+          release.releaseReadinessSha256
+      },
+    ],
+    [
+      "archive and correction lineage join",
+      (draft: Record<string, unknown>) => {
+        const release = nested(draft, "release")
+        const correction = nested(draft, "correctionLineage")
+        release.archiveCommit = "1".repeat(40)
+        release.resolvedTagTarget = release.archiveCommit
+        correction.baseArchiveCommit = release.archiveCommit
+        correction.implementationParent = release.archiveCommit
+      },
+    ],
+    [
+      "source actual and expected hashes",
+      (draft: Record<string, unknown>) => {
+        const bindings = nested(draft, "sources").bindings as Array<
+          Record<string, unknown>
+        >
+        bindings[0]!.sha256 = `sha256:${"1".repeat(64)}`
+        bindings[0]!.expectedSha256 = bindings[0]!.sha256
+      },
+    ],
+    [
+      "correction record actual and committed hashes",
+      (draft: Record<string, unknown>) => {
+        const correction = nested(draft, "correctionLineage")
+        correction.recordSha256 = `sha256:${"1".repeat(64)}`
+        correction.committedRecordSha256 = correction.recordSha256
+      },
+    ],
+  ] as const)(
+    "admission rejects paired forgery of %s",
+    (_label, applyMutation) => {
+      expect(
+        evaluateV138FoundationAdmission(
+          mutate(exactInput, applyMutation),
+          exactInput,
+        ),
+      ).toMatchObject({
+        status: "stopped_integrity_foundation",
+        reason: "SOURCE_BINDING_DRIFT",
+      })
+    },
+  )
 
   it("admission rejects copied labels, boolean gates, and nested override keys", () => {
     const copiedTuple = {
@@ -317,7 +409,9 @@ describe("v1.38 foundation admission", () => {
     ]
 
     for (const mutation of mutations) {
-      expect(evaluateV138FoundationAdmission(mutation)).toMatchObject({
+      expect(
+        evaluateV138FoundationAdmission(mutation, exactInput),
+      ).toMatchObject({
         status: "stopped_integrity_foundation",
         reason: "INPUT_SCHEMA_INVALID",
       })
@@ -329,7 +423,7 @@ describe("v1.38 foundation admission", () => {
       evaluateV138FoundationAdmission({
         ...exactInput,
         oversized: "x".repeat(600 * 1024),
-      }),
+      }, exactInput),
     ).toMatchObject({
       status: "stopped_integrity_foundation",
       reason: "INPUT_BOUNDS_INVALID",
@@ -343,6 +437,7 @@ describe("v1.38 foundation admission", () => {
           { code: "TAG_TARGET_NOT_EXPECTED_ARCHIVE" },
         ]
       }),
+      exactInput,
     )
     const serialized = JSON.stringify(stopped)
 
@@ -1616,6 +1711,97 @@ describe("v1.38 matrix authoritative v5 branches", () => {
         {},
       ),
     ).toThrow("MATRIX_STOPPED_CALIBRATION_V5_FORBIDDEN")
+  }, 20_000)
+
+  it("matrix authoritative v5 branches verify admitted-preflight calibration failure custody", async () => {
+    const inventory = enumerateV138CurrentMatrix(repoRoot)
+    const context = buildV138ExecutionContextV4Receipt({
+      repoRoot,
+      mode: "gsd-pattern-c-inline-main",
+      cwd: "/Users/roryquinlan/runtime/cowards-game",
+      planAgentSnapshot: terminalPlan26213Snapshot(),
+    })
+    const authorization = parseV138Plan26213ExecutionAuthorization(
+      PLAN_262_13_EXECUTION_AUTHORIZATION_LITERAL,
+    )
+    const preflight = buildV138HostHeadroomPreflightV4Receipt({
+      repoRoot,
+      executionContext: context,
+      executionAuthorization: authorization,
+      hostTotalMemoryKilobytes: 4_000,
+      hostFreeMemoryKilobytes: 1_000,
+    })
+    const failedRunner: V138ParallelShardRunner = {
+      async run(shard) {
+        return {
+          shardId: shard.shardId,
+          laneId: shard.laneId,
+          classification: "failed",
+          elapsedMilliseconds: 1,
+          maxRssKilobytes: 1,
+          cleanup: {
+            gracefulTerminationSent: false,
+            forceTerminationSent: false,
+            exitAwaited: true,
+            orphanProcessIds: [],
+          },
+          outcomes: shard.attempts.map(({ executionAttemptId }) => ({
+            attemptId: executionAttemptId,
+            classification: "system_failure" as const,
+            code: "INJECTED_CALIBRATION_FAILURE",
+            retryable: false,
+          })),
+        }
+      },
+    }
+    const calibrationEvidence = await calibrateV138ParallelMatrix({
+      inventory,
+      runner: failedRunner,
+      hardwareIdentity: {
+        operatingSystem: "test-os",
+        architecture: "test-arch",
+        nodeVersion: "test-node",
+        cpuIdentity: "test-cpu",
+      },
+      executionIdentityVersion: "v4",
+    })
+    const calibration = buildV138ParallelCalibrationV4Receipt({
+      repoRoot,
+      executionContext: context,
+      preflight,
+      executionAuthorization: authorization,
+      calibration: calibrationEvidence,
+    })
+
+    expect(calibration).toMatchObject({
+      status: "stopped_process_failure",
+      acceptedCellCount: 0,
+      fullRunLaunched: false,
+      partialAcceptedEvidenceReusable: false,
+      executionAuthorization: {
+        expired: true,
+        terminalOutcome: "stopped_process_failure",
+      },
+    })
+    expect(calibration.declaredCalibrationIdentityIds).toHaveLength(8)
+    expect(calibration.chargedDispositions).toHaveLength(8)
+    expect(
+      calibration.chargedDispositions.every(
+        ({ disposition }) =>
+          disposition === "terminal_calibration_outcome",
+      ),
+    ).toBe(true)
+    expect(
+      calibration.terminals.flatMap(({ outcomes }) => outcomes),
+    ).toHaveLength(8)
+    expect(
+      checkV138SuccessorV4V5Branch(
+        repoRoot,
+        { branchSource: "supplied", executionContext: context, preflight },
+        calibration,
+        undefined,
+      ),
+    ).toEqual({ calibration, reproduction: null })
   }, 20_000)
 
   it("matrix authoritative v5 branches use fresh identities and atomic zero publication on failure", async () => {
