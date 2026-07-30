@@ -629,11 +629,21 @@ export const deriveSelectedRouteClosureAtCommit = (
     }
     return candidates[0]!
   }
-  const effectiveConfigs = new Map<string, CompilerOptionsSnapshot>()
+  type EffectiveCompilerOptions = {
+    baseUrl?: string
+    baseUrlDeclaredAt?: string
+    paths?: unknown
+    pathsDeclaredAt?: string
+    module?: unknown
+    moduleDeclaredAt?: string
+    moduleResolution?: unknown
+    moduleResolutionDeclaredAt?: string
+  }
+  const effectiveConfigs = new Map<string, EffectiveCompilerOptions>()
   const resolveEffective = (
     configPath: string,
     ancestors: readonly string[] = [],
-  ): CompilerOptionsSnapshot => {
+  ): EffectiveCompilerOptions => {
     const cachedOptions = effectiveConfigs.get(configPath)
     if (cachedOptions !== undefined) return cachedOptions
     if (ancestors.includes(configPath)) {
@@ -648,7 +658,31 @@ export const deriveSelectedRouteClosureAtCommit = (
             resolveConfigPath(configPath, config.extends),
             [...ancestors, configPath],
           )
-    const effective = { ...parent, ...config.compilerOptions }
+    const effective: EffectiveCompilerOptions = { ...parent }
+    if (config.compilerOptions.baseUrl !== undefined) {
+      if (typeof config.compilerOptions.baseUrl !== "string") {
+        fail("V138_SELECTED_ROUTE_TSCONFIG_INVALID")
+      }
+      effective.baseUrl = path.posix.normalize(
+        path.posix.join(
+          path.posix.dirname(configPath),
+          config.compilerOptions.baseUrl,
+        ),
+      )
+      effective.baseUrlDeclaredAt = configPath
+    }
+    if (config.compilerOptions.paths !== undefined) {
+      effective.paths = config.compilerOptions.paths
+      effective.pathsDeclaredAt = configPath
+    }
+    if (config.compilerOptions.module !== undefined) {
+      effective.module = config.compilerOptions.module
+      effective.moduleDeclaredAt = configPath
+    }
+    if (config.compilerOptions.moduleResolution !== undefined) {
+      effective.moduleResolution = config.compilerOptions.moduleResolution
+      effective.moduleResolutionDeclaredAt = configPath
+    }
     if (
       effective.paths !== undefined &&
       (effective.paths === null ||
@@ -701,23 +735,13 @@ export const deriveSelectedRouteClosureAtCommit = (
       ) {
         fail("V138_SELECTED_ROUTE_TSCONFIG_INVALID")
       }
-      const baseUrl =
-        typeof compilerOptions.baseUrl === "string"
-          ? compilerOptions.baseUrl
-          : "."
+      const base =
+        compilerOptions.baseUrl ??
+        path.posix.dirname(compilerOptions.pathsDeclaredAt ?? configPath)
       pathMappings.push({
         pattern,
         targets: targets as string[],
-        base: path.posix.normalize(
-          path.posix.join(
-            path.posix.dirname(
-              configs.get(configPath)?.extends === undefined
-                ? configPath
-                : resolveConfigPath(configPath, configs.get(configPath)!.extends!),
-            ),
-            baseUrl,
-          ),
-        ),
+        base,
         scope: path.posix.dirname(configPath),
         configPath,
       })
@@ -1521,6 +1545,11 @@ const CANONICAL_PATHS = Object.freeze({
     ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-15-REVIEW-FIX.md",
 })
 
+const checkedSuccessorSealCommits = new Map<
+  string,
+  Readonly<{ authorizationBytes: Buffer; sealBytes: Buffer }>
+>()
+
 export const checkV138SuccessorSealCommit = (input: {
   readonly repoRoot: string
   readonly sourceA: string
@@ -1528,8 +1557,13 @@ export const checkV138SuccessorSealCommit = (input: {
 }): true => {
   const sourceA = fullCommit(input.repoRoot, input.sourceA)
   const sourceB = fullCommit(input.repoRoot, input.sourceB)
+  const ancestry = gitText(input.repoRoot, [
+    "rev-list", "--parents", "-n", "1", sourceB,
+  ]).split(" ")
   if (
-    gitText(input.repoRoot, ["rev-parse", `${sourceB}^`]) !== sourceA
+    ancestry.length !== 2 ||
+    ancestry[0] !== sourceB ||
+    ancestry[1] !== sourceA
   ) fail("V138_SUCCESSOR_SEAL_B_PARENT_INVALID")
   try {
     execFileSync("git", ["merge-base", "--is-ancestor", sourceA, sourceB], {
@@ -1572,6 +1606,31 @@ export const checkV138SuccessorSealCommit = (input: {
     sourceB,
     CANONICAL_PATHS.seal,
   )
+  const workingAuthorizationBytes = regularFile(
+    path.resolve(input.repoRoot, CANONICAL_PATHS.authorization),
+    "required",
+  )!
+  const workingSealBytes = regularFile(
+    path.resolve(input.repoRoot, CANONICAL_PATHS.seal),
+    "required",
+  )!
+  const cacheKey = `${path.resolve(input.repoRoot)}\0${sourceA}\0${sourceB}`
+  const cached = checkedSuccessorSealCommits.get(cacheKey)
+  if (cached !== undefined) {
+    if (
+      !workingAuthorizationBytes.equals(cached.authorizationBytes) ||
+      !workingSealBytes.equals(cached.sealBytes)
+    ) fail("V138_SUCCESSOR_SEAL_B_WORKTREE_DRIFT")
+    return true
+  }
+  if (
+    workingAuthorizationBytes.byteLength !== authorizationBytes.byteLength ||
+    sha256(workingAuthorizationBytes) !== sha256(authorizationBytes) ||
+    !workingAuthorizationBytes.equals(authorizationBytes) ||
+    workingSealBytes.byteLength !== sealBytes.byteLength ||
+    sha256(workingSealBytes) !== sha256(sealBytes) ||
+    !workingSealBytes.equals(sealBytes)
+  ) fail("V138_SUCCESSOR_SEAL_B_WORKTREE_DRIFT")
   const authorization: unknown = JSON.parse(authorizationBytes.toString("utf8"))
   const seal: unknown = JSON.parse(sealBytes.toString("utf8"))
   const checkedAuthorization = checkV138Plan26215Authorization(
@@ -1583,9 +1642,13 @@ export const checkV138SuccessorSealCommit = (input: {
     seal,
     checkedAuthorization,
   )
+  if (!authorizationBytes.equals(Buffer.from(canonical(checkedAuthorization)))) {
+    fail("V138_SUCCESSOR_SEAL_B_AUTHORIZATION_BYTES_INVALID")
+  }
+  if (!sealBytes.equals(Buffer.from(canonical(checkedSeal)))) {
+    fail("V138_SUCCESSOR_SEAL_B_SEAL_BYTES_INVALID")
+  }
   if (
-    !authorizationBytes.equals(Buffer.from(canonical(checkedAuthorization))) ||
-    !sealBytes.equals(Buffer.from(canonical(checkedSeal))) ||
     checkedAuthorization.sourceA !== sourceA ||
     checkedSeal.sourceCustody.sourceA !== sourceA
   ) fail("V138_SUCCESSOR_SEAL_B_BYTES_INVALID")
@@ -1603,6 +1666,10 @@ export const checkV138SuccessorSealCommit = (input: {
   } catch (error) {
     if (error instanceof TypeError) throw error
   }
+  checkedSuccessorSealCommits.set(cacheKey, Object.freeze({
+    authorizationBytes: Buffer.from(authorizationBytes),
+    sealBytes: Buffer.from(sealBytes),
+  }))
   return true
 }
 
@@ -2050,6 +2117,22 @@ const runCli = (): void => {
         lineageCount: custody.lineage.length,
       }),
     )
+  } else if (args[0] === "--check-successor-seal-commit") {
+    if (
+      args.length !== 5 ||
+      args[1] !== "--source-a" ||
+      args[3] !== "--source-b"
+    ) fail("V138_SUCCESSOR_SEAL_B_CLI_INVALID")
+    checkV138SuccessorSealCommit({
+      repoRoot,
+      sourceA: args[2]!,
+      sourceB: args[4]!,
+    })
+    process.stdout.write(canonical({
+      sourceA: args[2],
+      sourceB: args[4],
+      checked: true,
+    }))
   } else if (args[0] === "--check-selected-route-closure-at-a") {
     if (args.length !== 3 || args[1] !== "--source-a") {
       fail("V138_SELECTED_ROUTE_CLI_INVALID")
